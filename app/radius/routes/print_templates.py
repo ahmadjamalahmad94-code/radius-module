@@ -379,6 +379,60 @@ def _batch_id_from_request() -> int | None:
         raise RadiusValidationError("معرّف الحزمة غير صحيح.") from exc
 
 
+def _yes_no(value: object) -> str:
+    return "نعم" if bool(value) else "لا"
+
+
+def _preview_rows(preview: dict | None) -> list[dict]:
+    if not isinstance(preview, dict):
+        return []
+    data = preview.get("preview")
+    if not isinstance(data, dict):
+        return []
+
+    card = data.get("card") if isinstance(data.get("card"), dict) else {}
+    design = data.get("design") if isinstance(data.get("design"), dict) else {}
+    sample = data.get("sample") if isinstance(data.get("sample"), dict) else {}
+    capabilities = data.get("capabilities") if isinstance(data.get("capabilities"), dict) else {}
+
+    enabled_caps = [
+        label
+        for key, label in (
+            ("sample_pdf", "PDF عينة"),
+            ("batch_pdf", "PDF دفعة"),
+            ("csv", "CSV"),
+            ("excel", "Excel"),
+            ("png", "PNG"),
+        )
+        if capabilities.get(key)
+    ]
+
+    return [
+        {
+            "label": "محرك المعاينة",
+            "value": "معاينة البطاقة المرئية"
+            if data.get("renderer") == "visual_card_preview"
+            else str(data.get("renderer") or "غير محدد"),
+        },
+        {
+            "label": "عدد البطاقات في الصفحة",
+            "value": str(data.get("cards_per_page") or "غير محدد"),
+        },
+        {"label": "دعم QR", "value": _yes_no(data.get("qr_supported"))},
+        {
+            "label": "مقاس البطاقة",
+            "value": (
+                f"{card.get('width_mm') or '؟'} × {card.get('height_mm') or '؟'} مم"
+            ),
+        },
+        {"label": "اسم الشبكة/العلامة", "value": str(design.get("brand_name") or "—")},
+        {"label": "عنوان البطاقة", "value": str(design.get("card_title") or "—")},
+        {"label": "نمط التصميم", "value": str(design.get("preset") or "—")},
+        {"label": "عينة اسم المستخدم", "value": str(sample.get("username") or "—")},
+        {"label": "مخرجات متاحة", "value": "، ".join(enabled_caps) if enabled_caps else "لا توجد"},
+    ]
+
+
 def _page_context(
     *,
     preview: dict | None = None,
@@ -408,6 +462,7 @@ def _page_context(
         "jobs": ops.list_print_jobs(tenant_id=tenant_id, limit=30),
         "presets": ops.list_print_template_presets(),
         "preview": preview,
+        "preview_rows": _preview_rows(preview),
         "form_state": form_state or {},
         "form_error": form_error,
         "edit_template_id": selected_edit_id if form_state else None,

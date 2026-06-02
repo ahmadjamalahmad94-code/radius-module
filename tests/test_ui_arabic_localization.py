@@ -263,6 +263,20 @@ def test_mikrotik_operation_forms_do_not_keep_old_english_placeholders():
         assert token not in content, f"{token!r} remained in mt_dashboard.js"
 
 
+def test_print_template_preview_does_not_render_raw_json():
+    content = Path("app/templates/radius/print_templates.html").read_text(
+        encoding="utf-8"
+    )
+    forbidden = [
+        "{{ preview.preview | tojson(indent=2) }}",
+        'class="pr-json"',
+        "معاينة Backend",
+    ]
+
+    for token in forbidden:
+        assert token not in content, f"{token!r} remained in print_templates.html"
+
+
 def test_operational_pages_hide_raw_technical_copy(client):
     _web_login(client)
     routes = [

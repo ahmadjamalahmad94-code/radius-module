@@ -306,6 +306,11 @@ def test_print_templates_create_and_visual_preview(client):
     # new mount + the per-card sample username.
     assert "data-designer-svg-mount" in html
     assert "QA123" in html
+    assert "data-print-preview-summary" in html
+    assert "تفاصيل المعاينة" in html
+    assert "محرك المعاينة" in html
+    assert "{{ preview.preview | tojson" not in html
+    assert "{&#34;renderer&#34;" not in html
 
     export = client.get(
         f"/admin/radius/print-templates/{template['id']}/export.pdf",

@@ -303,7 +303,6 @@
   .pr-pager{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border-top:1px solid var(--hub-border-soft);background:var(--hub-bg-soft);font-weight:900;color:var(--hub-text-soft)}
   .pr-pager-buttons{display:flex;gap:8px;align-items:center}
   .pr-pager button[disabled]{opacity:.48;cursor:not-allowed}
-  .pr-json{direction:ltr;text-align:left;white-space:pre-wrap;background:#0f172a;color:#e2e8f0;border-radius:14px;padding:12px;font-size:11px;overflow:auto;max-height:260px}
   .pr-export-grid{display:grid;gap:10px;margin-top:12px}
   .pr-export-card{border:1px solid var(--hub-border-soft);border-radius:14px;background:var(--hub-bg-soft);padding:12px;display:grid;gap:10px}
   .pr-export-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
@@ -1000,8 +999,19 @@
       </div>
       {% if preview %}
       <div class="pr-panel-body">
-        <h3 style="margin:0 0 8px">معاينة Backend</h3>
-        <pre class="pr-json">{{ preview.preview | tojson(indent=2) }}</pre>
+        <h3 style="margin:0 0 8px">تفاصيل المعاينة</h3>
+        <div class="hub-table-wrap" style="border:none;border-radius:0">
+          <table class="hub-table" data-print-preview-summary>
+            <tbody>
+              {% for row in preview_rows %}
+              <tr data-print-preview-row>
+                <td>{{ row.label }}</td>
+                <td><strong>{{ row.value }}</strong></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
       </div>
       {% endif %}
     </section>
