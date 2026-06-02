@@ -70,7 +70,7 @@
     const lower = raw.toLowerCase();
     if (!raw) return "حدث خطأ غير واضح. أعد المحاولة أو ارجع خطوة واحدة.";
     if (lower.includes("vpn/radius verification is required first")) {
-      return "لم يكتمل فحص ربط الراوتر بالخادم بعد. ارجع إلى خطوة تحقق الربط، الصق مخرجات MikroTik، ثم اضغط تحليل المخرجات.";
+      return "لم يكتمل فحص ربط الراوتر بالخادم بعد. ارجع إلى خطوة تحقق الربط، الصق مخرجات الراوتر، ثم اضغط تحليل المخرجات.";
     }
     if (lower.includes("generated script is required before dry-run")) {
       return "ولّد السكربت أولًا قبل تشغيل المراجعة الجافة.";
@@ -79,10 +79,10 @@
       return "أكمل فحص الإنترنت أولًا قبل المتابعة.";
     }
     if (lower.includes("router public key is required")) {
-      return "لم نلتقط مفتاح الراوتر بعد. الصق مخرجات WireGuard من MikroTik في خطوة تحقق الربط.";
+      return "لم نلتقط مفتاح الراوتر بعد. الصق مخرجات نفق الإدارة من الراوتر في خطوة تحقق الربط.";
     }
     if (lower.includes("duplicate wireguard public key")) {
-      return "هذا الراوتر ظاهر على الخادم مسبقًا بنفس مفتاح WireGuard. إذا كان ping و handshake ناجحين، أكمل للخطوة التالية ولا تحتاج تجهيزًا إضافيًا.";
+      return "هذا الراوتر ظاهر على الخادم مسبقًا بنفس مفتاح نفق الإدارة. إذا كان فحص الوصول والمصافحة ناجحين، أكمل للخطوة التالية ولا تحتاج تجهيزًا إضافيًا.";
     }
     if (lower.includes("duplicate wireguard allowed ip")) {
       return "عنوان الربط الخاص هذا مستخدم مسبقًا على الخادم. اختر تشغيلًا جديدًا أو نظّف الحجز القديم قبل إعادة التجربة.";
@@ -94,7 +94,7 @@
       return "التجهيز الحقيقي على الخادم غير مفعّل إلا في وضع المختبر الداخلي. إذا كان ping ناجحًا يمكنك المتابعة بدون هذه الخطوة.";
     }
     if (lower.includes("server_wg_readiness_not_ready")) {
-      return "الخادم غير جاهز لتنفيذ الربط من داخل HobeRadius الآن. تحقق من جاهزية WireGuard أو تابع إذا كان الربط يعمل فعلًا.";
+      return "الخادم غير جاهز لتنفيذ الربط من داخل النظام الآن. تحقق من جاهزية نفق الإدارة أو تابع إذا كان الربط يعمل فعلًا.";
     }
     if (lower.includes("at least one") && lower.includes("interface")) {
       return "اختر منفذ شبكة واحدًا على الأقل قبل توليد السكربت.";
@@ -123,7 +123,7 @@
     nat_enabled: "تفعيل NAT",
     peer: "بيانات الربط",
     plan_status: "حالة الخطة",
-    prepared_wireguard_peer: "ربط WireGuard",
+    prepared_wireguard_peer: "ربط نفق الإدارة",
     recommendation_ar: "التوصية",
     rollback_notes: "ملاحظات الرجوع",
     router_provisioning: "بيانات الراوتر المحجوزة",
@@ -134,7 +134,7 @@
     status: "الحالة",
     use_peer_dns: "استخدام DNS من المزود",
     warnings: "التحذيرات",
-    wireguard_peer_name: "اسم ربط WireGuard",
+    wireguard_peer_name: "اسم ربط نفق الإدارة",
   };
 
   function escapeHtml(text) {
@@ -491,7 +491,7 @@
     const warnings = plan.warnings || [];
     const missingServerKey = warnings.some((item) => String(item || "").includes("HOBERADIUS_WG_SERVER_PUBKEY"));
     setVpnScriptLoading(missingServerKey
-      ? "مفتاح السيرفر غير مضبوط؛ لن يتم إنشاء peer حتى تضبط إعدادات WireGuard على الخادم."
+      ? "مفتاح الخادم غير مضبوط؛ لن يتم إنشاء الربط حتى تضبط إعدادات نفق الإدارة على الخادم."
       : "تم تجهيز بيانات الربط تلقائيًا لهذا الراوتر.");
   }
 
@@ -596,7 +596,7 @@
         return submitRouterPublicKey(publicKey, true);
       }
       if (routerKeyStatus) {
-        routerKeyStatus.textContent = "لم نتمكن من تجهيز مفتاح الربط تلقائيًا. أعد لصق مخرجات MikroTik التي تحتوي على public-key.";
+        routerKeyStatus.textContent = "لم نتمكن من تجهيز مفتاح الربط تلقائيًا. أعد لصق مخرجات الراوتر التي تحتوي على المفتاح العام.";
       }
     }
   }
@@ -633,7 +633,7 @@
   function markServerPeerAlreadyConnected() {
     if (serverPeerSimple) serverPeerSimple.hidden = true;
     if (serverPeerStatus) {
-      serverPeerStatus.textContent = "تم تأكيد الربط من مخرجات MikroTik. لا تحتاج دخول VPS أو خطوة خادم إضافية الآن.";
+      serverPeerStatus.textContent = "تم تأكيد الربط من مخرجات الراوتر. لا تحتاج دخول خادم الربط أو خطوة خادم إضافية الآن.";
     }
     if (serverPeerResult) {
       serverPeerResult.textContent = "تم تأكيد الربط عبر ping/handshake. أكمل للخطوة التالية.";

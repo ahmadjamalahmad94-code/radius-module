@@ -104,12 +104,12 @@
             الخدمات التي ستُفتح على input chain
           </h4>
           {% set toggles = [
-              ('allow_winbox',       'Winbox (TCP 8291)', 'مرتفع'),
+              ('allow_winbox',       'برنامج الإدارة (TCP 8291)', 'مرتفع'),
               ('allow_ssh',          'الوصول الآمن (TCP 22)',      'متوسط'),
               ('allow_api',          'واجهة الربط غير المشفّرة (TCP 8728)', 'مرتفع'),
               ('allow_api_ssl',      'واجهة الربط المشفّرة (TCP 8729)', 'متوسط'),
-              ('allow_webfig_http',  'WebFig HTTP (80) — غير مشفّر', 'مرتفع'),
-              ('allow_webfig_https', 'WebFig HTTPS (443)', 'منخفض'),
+              ('allow_webfig_http',  'واجهة الويب غير المشفّرة (80)', 'مرتفع'),
+              ('allow_webfig_https', 'واجهة الويب الآمنة (443)', 'منخفض'),
           ] %}
           {% for key, label, risk in toggles %}
             <label class="npc-check-row" for="{{ key }}">
@@ -189,7 +189,7 @@
         {% elif service.key == 'walled_garden' %}
           <div class="npc-field">
             <label for="hotspot_profile">
-              نطاق ملف الـ Hotspot (اختياري)
+              نطاق ملف بوابة الدخول (اختياري)
             </label>
             <input type="text" name="hotspot_profile"
                    id="hotspot_profile"

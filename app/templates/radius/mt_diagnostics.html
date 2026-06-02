@@ -96,7 +96,7 @@
             <div>
               <span class="opsx-router-name">{{ r.host }}:{{ r.port }}</span>
               <span class="opsx-router-sub" data-mt-conn-mode="{{ r.connection_mode }}">
-                {% if r.connection_mode == 'vpn' %}WireGuard{% else %}اتصال مباشر{% endif %}
+                {% if r.connection_mode == 'vpn' %}نفق الإدارة{% else %}اتصال مباشر{% endif %}
               </span>
             </div>
           </div>
@@ -138,7 +138,7 @@
             {% if r.connection_mode == 'vpn' %}
               {% set repair_address = wg_subnet %}
               {% set repair_src = wg_subnet %}
-              {% set repair_label = "على الراوتر عبر الاتصال المشفّر" %}
+              {% set repair_label = "على الراوتر عبر نفق الإدارة المشفّر" %}
             {% else %}
               {% set repair_address = vps_ip ~ '/32' %}
               {% set repair_src = vps_ip %}

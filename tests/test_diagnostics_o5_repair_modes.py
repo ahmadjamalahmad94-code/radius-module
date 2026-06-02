@@ -124,7 +124,7 @@ def test_vpn_row_shows_wireguard_badge(app, client, monkeypatch):
     _login(client)
     html = client.get("/admin/radius/diagnostics").get_data(as_text=True)
     assert 'data-mt-conn-mode="vpn"' in html
-    assert "WireGuard" in html
+    assert "نفق الإدارة" in html
 
 
 def test_direct_row_shows_direct_badge(app, client, monkeypatch):
@@ -152,8 +152,8 @@ def test_vpn_repair_script_uses_wg_subnet(app, client, monkeypatch):
     # Public-IP placeholder MUST NOT appear in a VPN fix block —
     # that's the bug O5 prevents.
     assert "YOUR_VPS_IP/32" not in html
-    # The label tells the operator it's the VPN branch.
-    assert "VPN" in html
+    # The label tells the operator it's the management tunnel branch.
+    assert "نفق الإدارة" in html
 
 
 def test_direct_repair_script_uses_public_ip(app, client, monkeypatch):

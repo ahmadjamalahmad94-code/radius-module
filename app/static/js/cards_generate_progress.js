@@ -44,7 +44,7 @@
       preparing: "تجهيز",
       batch: "إنشاء الحزمة",
       generating: "توليد البطاقات",
-      syncing: "تجهيز RADIUS",
+      syncing: "تجهيز خدمة المصادقة",
       done: "اكتمل",
       error: "خطأ"
     }[phase] || "جارٍ العمل";

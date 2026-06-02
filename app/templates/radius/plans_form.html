@@ -218,7 +218,7 @@
             <select class="hub-select" name="service_type">
               {% for t in ["Hotspot","PPPoE","Balance","Voucher","Others"] %}
                 <option value="{{ t }}" {% if plan.service_type == t %}selected{% endif %}>
-                  {% if t == 'Hotspot' %}هوتسبوت{% elif t == 'PPPoE' %}PPPoE{% elif t == 'Balance' %}رصيد{% elif t == 'Voucher' %}قسيمة{% elif t == 'Others' %}أخرى{% else %}{{ t }}{% endif %}
+                  {% if t == 'Hotspot' %}بوابة الدخول{% elif t == 'PPPoE' %}برودباند{% elif t == 'Balance' %}رصيد{% elif t == 'Voucher' %}قسيمة{% elif t == 'Others' %}أخرى{% else %}{{ t }}{% endif %}
                 </option>
               {% endfor %}
             </select></div>

@@ -2112,7 +2112,7 @@
     <div class="np-svc-grid">
       {% for svc in [
         {'key': 'public-ip',     'title': 'تغيير IP الخروج',   'sub': 'توجيه المشتركين عبر IP عام جديد',     'icon': 'globe',           'color': 'amber'},
-        {'key': 'remote-access', 'title': 'اتصال عن بُعد',       'sub': 'نفذ VPN آمن لإدارة الراوتر',          'icon': 'key',             'color': 'purple'},
+        {'key': 'remote-access', 'title': 'اتصال عن بُعد',       'sub': 'نفذ نفق إدارة آمن للراوتر',          'icon': 'key',             'color': 'purple'},
         {'key': 'hotspot',       'title': 'برمجة بوابة الدخول', 'sub': 'بوابة دخول عامّة مع صفحة تسجيل',      'icon': 'wifi',            'color': 'blue'},
         {'key': 'broadband',     'title': 'برمجة البرودباند',   'sub': 'اشتراك ثابت لكل مستخدم',             'icon': 'ethernet',        'color': 'green'},
         {'key': 'block-sites',   'title': 'حجب المواقع',        'sub': 'منع الوصول لمواقع محدّدة',             'icon': 'ban',             'color': 'red'},
@@ -2200,7 +2200,7 @@
         <i class="fa-solid fa-spinner fa-spin"></i>
         <span data-rh-inv-loading-text>جارٍ الاتصال بالراوتر…</span>
         <small class="rh-inv-loading-hint">
-          نقرأ 6 خدمات عبر الـ VPN — قد يستغرق ذلك حتى ثانيتَين.
+          نقرأ 6 خدمات عبر نفق الإدارة، وقد يستغرق ذلك حتى ثانيتَين.
         </small>
       </div>
       <div class="rh-inv-empty" data-rh-inv-empty hidden>
@@ -2925,8 +2925,8 @@
   // back in `data.timings` and are logged to the console.
   const LOADING_STEPS = [
     "جارٍ الاتصال بالراوتر…",
-    "قراءة Hotspot…",
-    "قراءة Broadband…",
+    "قراءة بوابة الدخول…",
+    "قراءة البرودباند…",
     "قراءة قوائم المواقع…",
     "قراءة قواعد الـ NAT…",
     "قراءة قواعد الاتصال عن بُعد…",
@@ -3024,7 +3024,7 @@
       clearTimeout(timeoutId);
       if (err && err.name === "AbortError") {
         errorEl.textContent = "انتهت مهلة الاتصال بالراوتر (20 ثانية). "
-          + "تأكد من اتصال الـ VPN، ثم اضغط «تحديث».";
+          + "تأكد من اتصال نفق الإدارة، ثم اضغط «تحديث».";
       } else {
         errorEl.textContent = "خطأ في الاتصال: "
           + String(err && err.message || err);
@@ -3094,7 +3094,7 @@
     if (pubHost && !urls.length) {
       rows.push(`
         <div class="rh-inv-conn-row">
-          <span class="rh-inv-conn-label">عنوان VPS</span>
+          <span class="rh-inv-conn-label">عنوان خادم الربط</span>
           <code class="rh-inv-conn-value">${safe(pubHost)}</code>
           <button type="button" class="rh-inv-copy-btn"
                   data-rh-inv-copy="${safe(pubHost)}" title="نسخ">
@@ -3130,7 +3130,7 @@
         <div class="rh-inv-conn-row">
           <span class="rh-inv-conn-empty">
             <i class="fa-solid fa-circle-info"></i>
-            لم يتمّ ضبط <strong>عنوان VPS العام</strong> بعد.
+            لم يتمّ ضبط <strong>عنوان خادم الربط العام</strong> بعد.
             <a href="{{ url_for('radius.settings_page') }}"
                class="rh-inv-conn-link">
               <i class="fa-solid fa-arrow-up-right-from-square"></i>
@@ -3144,7 +3144,7 @@
       <div class="rh-inv-conn-banner">
         <div class="rh-inv-conn-head">
           <i class="fa-solid fa-network-wired"></i>
-          <strong>عناوين الاتصال (عبر VPS — ثابتة)</strong>
+          <strong>عناوين الاتصال عبر خادم الربط</strong>
         </div>
         ${rows.join("")}
       </div>`;

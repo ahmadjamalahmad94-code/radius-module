@@ -139,7 +139,7 @@ def test_site_exit_page_renders_for_valid_router(app, client):
     html = res.get_data(as_text=True)
     assert "data-mt-site-exit" in html
     assert 'data-mt-site-exit-nas="1"' in html
-    assert "توجيه مواقع عبر VPS" in html
+    assert "توجيه مواقع عبر خادم الربط" in html
     # No policy yet → the create-policy form is visible.
     assert "data-mt-site-exit-policy-form" in html
 

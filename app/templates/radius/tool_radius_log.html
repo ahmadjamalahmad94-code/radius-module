@@ -10,15 +10,15 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}سجل RADIUS الحيّ{% endblock %}
+{% block title %}سجل خدمة المصادقة الحيّ{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-rss"></i>{% endblock %}
-{% block page_title %}سجل قرارات RADIUS — حيّ{% endblock %}
+{% block page_title %}سجل قرارات خدمة المصادقة الحيّ{% endblock %}
 
 {% block content %}
 
 {{ hub.hero(
-  "سجل قرارات RADIUS الحيّ",
-  subtitle="آخر قرارات FreeRADIUS من جدول radpostauth — يتحدّث ذاتيًا.",
+  "سجل قرارات خدمة المصادقة الحيّ",
+  subtitle="آخر قرارات خدمة المصادقة من سجل الدخول — يتحدّث ذاتيًا.",
   icon="rss"
 ) }}
 
@@ -60,7 +60,7 @@
 {% endcall %}
 
 <div class="hub-text-mute" style="margin-top:10px;font-size:12.5px;text-align:start">
-  يُكتب هذا السجل من FreeRADIUS بعد كل طلب دخول، سواء تم قبوله أو رفضه.
+  يُكتب هذا السجل من خدمة المصادقة بعد كل طلب دخول، سواء تم قبوله أو رفضه.
 </div>
 
 <script>

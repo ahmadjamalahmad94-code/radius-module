@@ -11,9 +11,9 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}توجيه مواقع عبر VPS{% endblock %}
+{% block title %}توجيه مواقع عبر خادم الربط{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-route"></i>{% endblock %}
-{% block page_title %}توجيه مواقع عبر VPS{% endblock %}
+{% block page_title %}توجيه مواقع عبر خادم الربط{% endblock %}
 {% block page_sub %}<span class="sub">{{ nas.name }} · {{ nas.address }}</span>{% endblock %}
 
 {% block head_extra %}
@@ -153,8 +153,8 @@
          data-mt-site-exit-policy="{{ policy.id if policy else '' }}">
 
   {{ hub.hero(
-    "توجيه مواقع عبر VPS",
-    subtitle="إخراج وجهات مختارة فقط عبر نفق WireGuard على VPS — وليس كل الترافيك.",
+    "توجيه مواقع عبر خادم الربط",
+    subtitle="إخراج وجهات مختارة فقط عبر نفق الإدارة على خادم الربط، وليس كل الحركة.",
     icon="route",
   ) }}
 
@@ -218,7 +218,7 @@
   {# ── 2) VPS exit node ──────────────────────────────────── #}
   <section class="mt-card" data-mt-site-exit-node-card>
     <header class="mt-card-head">
-      <h3><i class="fa-solid fa-shield-halved"></i> عقدة VPS الخروج</h3>
+      <h3><i class="fa-solid fa-shield-halved"></i> عقدة الخروج</h3>
     </header>
     <div class="mt-card-body">
       {% if vps_nodes %}
@@ -226,8 +226,8 @@
         <thead>
           <tr style="text-align:start;background:var(--hub-surface-2,#f7f8fa)">
             <th style="padding:6px 8px">الاسم</th>
-            <th style="padding:6px 8px">IP عام</th>
-            <th style="padding:6px 8px">واجهة WireGuard</th>
+            <th style="padding:6px 8px">العنوان العام</th>
+            <th style="padding:6px 8px">واجهة النفق</th>
             <th style="padding:6px 8px">البوابة</th>
             <th style="padding:6px 8px">الصحة</th>
             <th style="padding:6px 8px">الحالة</th>
@@ -254,7 +254,7 @@
       </table>
       {% else %}
       <p class="vx2-empty" data-mt-site-exit-no-nodes>
-        لا توجد عقد VPS بعد. أنشئ عقدة قبل توليد السياسة.
+        لا توجد عقد خروج بعد. أنشئ عقدة قبل توليد السياسة.
       </p>
       {% endif %}
     </div>
@@ -293,7 +293,7 @@
           <label>اسم السياسة
             <input type="text" name="name" required>
           </label>
-          <label>عقدة VPS
+          <label>عقدة الخروج
             <select name="exit_node_id" required>
               <option value="">— اختر —</option>
               {% for n in vps_nodes %}
@@ -606,7 +606,7 @@
                    name="confirm_vps_exit_understood"
                    value="1" required>
             <span>أفهم أنّ ترافيك الوجهات المختارة سيخرج عبر
-              IP الـ VPS العام، وليس IP الراوتر.</span>
+              العنوان العام لخادم الربط، وليس عنوان الراوتر.</span>
           </label>
 
           <label style="display:flex;gap:8px;align-items:flex-start">
@@ -674,14 +674,14 @@
       <ol>
         <li>
           <span class="vx2-step-num">1</span>
-          <strong>تحقّق من عقدة VPS</strong>
-          — لازم تكون مفعّلة + IP عام + اسم WireGuard
+          <strong>تحقّق من عقدة الخروج</strong>
+          — لازم تكون مفعّلة + عنوان عام + اسم واجهة النفق
           interface مطابق للراوتر.
         </li>
         <li>
           <span class="vx2-step-num">2</span>
           <strong>أنشئ سياسة</strong>
-          — اختر عقدة VPS + وضع الفشل
+          — اختر عقدة الخروج + وضع الفشل
           <code>block_when_vps_down</code> الموصى به.
         </li>
         <li>

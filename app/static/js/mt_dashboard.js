@@ -239,7 +239,7 @@
 
     const dialed = (payload && payload.connection && payload.connection.address) || "—";
     const mode = (payload && payload.connection && payload.connection.mode) || "—";
-    setKpi("dialed", dialed, mode === "vpn" ? "عبر WireGuard" : "اتصال مباشر");
+    setKpi("dialed", dialed, mode === "vpn" ? "عبر نفق الإدارة" : "اتصال مباشر");
   }
 
   async function refreshOverview() {
@@ -771,7 +771,7 @@
           ${data.size ? `<dt>الحجم</dt><dd>${safeHtml(data.size)}</dd>` : ""}
         </dl>
         <div class="mt-action-result-summary">
-          ✓ ملف backup محفوظ على الراوتر. يمكنك تنزيله من File List في Winbox.
+          تم حفظ ملف النسخة الاحتياطية على الراوتر. يمكنك تنزيله من قائمة الملفات في أداة إدارة الراوتر.
         </div>
       `);
     }
@@ -838,13 +838,13 @@
    */
   const PROGRESS_STAGES = {
     ping: [
-      { label: "الاتصال بالراوتر عبر VPN",     hint: "إنشاء قناة آمنة عبر WireGuard", t: 400 },
+      { label: "الاتصال بالراوتر عبر نفق الإدارة",     hint: "إنشاء قناة آمنة مشفّرة", t: 400 },
       { label: "إرسال حزم Ping من الراوتر",    hint: "نطلب من الراوتر أن يُرسل الحزم للهدف", t: 1200 },
       { label: "انتظار الردود من الهدف",        hint: "كل حزمة تنتظر TTL لإلتقاط ردّها", t: 1600 },
       { label: "جلب النتيجة من الراوتر",        hint: "جمع الإحصائيات النهائية", t: 400 },
     ],
     traceroute: [
-      { label: "الاتصال بالراوتر عبر VPN",     hint: "إنشاء قناة آمنة عبر WireGuard", t: 400 },
+      { label: "الاتصال بالراوتر عبر نفق الإدارة",     hint: "إنشاء قناة آمنة مشفّرة", t: 400 },
       { label: "تنفيذ traceroute على الراوتر",  hint: "خطوة-بخطوة عبر شبكة الـ ISP", t: 4000 },
       { label: "جمع القفزات",                   hint: "بعض القفزات قد تتأخّر — لا تقلق", t: 3000 },
       { label: "إرسال النتيجة",                 hint: "جلب الجدول النهائي", t: 400 },
@@ -944,7 +944,7 @@
           <div class="mt-action-progress-bar-fill"></div>
         </div>
         <div class="mt-action-result-summary">
-          ⚡ نُنفّذ الأمر على الراوتر عبر الـ VPN. لا تُغلق الصفحة.
+          نُنفّذ الأمر على الراوتر عبر نفق الإدارة. لا تُغلق الصفحة.
         </div>
       </div>
     `;

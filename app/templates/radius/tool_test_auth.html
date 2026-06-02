@@ -15,7 +15,7 @@
 {% block content %}
 
 {{ hub.hero(
-  "محاكاة طلب دخول RADIUS",
+  "محاكاة طلب دخول خدمة المصادقة",
   subtitle="يستدعي محرّك السماح مباشرة بنفس مسار خدمة المصادقة الداخلية — بدون شبكة.",
   icon="vial",
   actions_html='
@@ -43,7 +43,7 @@
                     placeholder="AA:BB:CC:DD:EE:FF") }}
       {{ hub.field("معرّف نقطة الوصول (Called-Station-Id)", "called_station_id",
                     value=form.called_station_id) }}
-      {{ hub.field("عنوان جهاز الشبكة (NAS-IP)", "nas_ip", value=form.nas_ip,
+      {{ hub.field("عنوان جهاز الشبكة", "nas_ip", value=form.nas_ip,
                     placeholder="10.0.0.1") }}
       <div class="hub-field">
         <label class="hub-field-label" for="hub-f-nas_port_type">نوع منفذ جهاز الشبكة</label>
@@ -106,7 +106,7 @@
 {% endif %}
 
 <div class="hub-text-mute" style="margin-top:12px;font-size:12.5px">
-  هذا الاختبار يستدعي محرك السماح مباشرة بنفس المسار الذي تستخدمه خدمة RADIUS الداخلية.
+  هذا الاختبار يستدعي محرك السماح مباشرة بنفس المسار الذي تستخدمه خدمة المصادقة الداخلية.
 </div>
 
 {% endblock %}

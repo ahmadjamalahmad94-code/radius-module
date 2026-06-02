@@ -9,7 +9,7 @@
 <h2>تغيير IP الخروج (Site Exit)</h2>
 <p class="swsvf-pane-sub">
   تستطيع توجيه مشتركي هذا الراوتر للخروج عبر IP عام مختلف، بربط الراوتر بـ
-  <strong>VPS exit node</strong> له IP منفصل. مفيد لتغيير الموقع الجغرافي
+  <strong>عقدة خروج خادم الربط</strong> لها عنوان عام منفصل. مفيد لتغيير الموقع الجغرافي
   المرئي، أو لفصل بعض المواقع عن باقي الحركة.
 </p>
 
@@ -53,13 +53,13 @@
 
 <div class="swip-loading" data-swip-loading>
   <i class="fa-solid fa-spinner fa-spin"></i>
-  جارٍ تحميل قائمة الـ VPS exit nodes…
+  جارٍ تحميل قائمة عقد الخروج…
 </div>
 
 <div data-swip-noNodes hidden>
   <div class="swip-warning">
     <i class="fa-solid fa-circle-exclamation"></i>
-    <strong>لا توجد VPS exit nodes معرّفة بعد.</strong><br>
+    <strong>لا توجد عقد خروج معرّفة بعد.</strong><br>
     لاستخدام هذه الخدمة، أضِف عقدة خروج (Exit Node) من إعدادات النظام أولاً —
     العقدة تحتوي على IP العام الذي ستوجَّه الحركة عبره.
   </div>
@@ -67,9 +67,9 @@
 
 <div data-swip-form hidden>
   <div class="swip-section">
-    <div class="swip-section-title">عقدة الخروج (VPS exit node)</div>
+    <div class="swip-section-title">عقدة خروج خادم الربط</div>
     <p class="swip-help">
-      اختر الـ VPS الذي ستمرّ منه الحركة. كل عقدة لها IP عام منفصل.
+      اختر خادم الربط الذي ستمرّ منه الحركة. كل عقدة لها عنوان عام منفصل.
     </p>
     <select class="swip-select" data-swip-node>
       <option value="">— اختر عقدة —</option>
@@ -149,7 +149,7 @@ streaming.service.com"></textarea>
     });
     if (node) {
       nodeMeta.textContent =
-        `IP العام: ${node.public_ip || '—'} · واجهة WireGuard: ${node.wireguard_interface_name || '—'}`;
+        `العنوان العام: ${node.public_ip || '—'} · واجهة النفق: ${node.wireguard_interface_name || '—'}`;
     } else {
       nodeMeta.textContent = "";
     }

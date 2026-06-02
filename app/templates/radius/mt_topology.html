@@ -3,7 +3,7 @@
 {% block title %}خريطة الشبكة{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-diagram-project"></i>{% endblock %}
 {% block page_title %}خريطة الشبكة{% endblock %}
-{% block page_sub %}<span class="sub">VPS، الراوترات، وحالة الربط من قاعدة البيانات والـ health overlay</span>{% endblock %}
+{% block page_sub %}<span class="sub">خادم الربط، الراوترات، وحالة الاتصال والصحة من قاعدة البيانات</span>{% endblock %}
 
 {% block head_extra %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/mt_dashboard.css') }}">
@@ -16,7 +16,7 @@
   <header class="opsx-hero">
     <div>
       <h2>خريطة الشبكة</h2>
-      <p>عرض تشغيلي للـ VPS والراوترات المرتبطة به، مع فلترة حسب الاتصال والصحة وطريقة الربط. كل بطاقة تفتح لوحة الراوتر مباشرة.</p>
+      <p>عرض تشغيلي لخادم الربط والراوترات المرتبطة به، مع فلترة حسب الاتصال والصحة وطريقة الربط. كل بطاقة تفتح لوحة الراوتر مباشرة.</p>
     </div>
     <span class="opsx-hero-icon"><i class="fa-solid fa-network-wired"></i></span>
   </header>
@@ -26,9 +26,9 @@
       <div class="opsx-guide-title"><i class="fa-solid fa-route"></i> قراءة الخريطة</div>
       <p>الخريطة لا تتصل بالراوترات مباشرة؛ هي تقرأ آخر snapshot وصحة الراوتر حتى تبقى سريعة وآمنة.</p>
       <ul class="opsx-guide-list">
-        <li><i class="fa-solid fa-server"></i><span>الـ VPS هو مركز الربط ومرجع كل علاقة.</span></li>
-        <li><i class="fa-solid fa-shield-halved"></i><span>WireGuard يعني أن الراوتر يدار عبر النفق.</span></li>
-        <li><i class="fa-solid fa-gauge-high"></i><span>خط الصحة داخل البطاقة يمثل score الراوتر.</span></li>
+        <li><i class="fa-solid fa-server"></i><span>خادم الربط هو مركز الشبكة ومرجع كل علاقة.</span></li>
+        <li><i class="fa-solid fa-shield-halved"></i><span>نفق الإدارة يعني أن الراوتر يدار عبر اتصال مشفّر.</span></li>
+        <li><i class="fa-solid fa-gauge-high"></i><span>خط الصحة داخل البطاقة يمثل تقييم سلامة الراوتر.</span></li>
       </ul>
     </aside>
 
@@ -93,7 +93,7 @@
               <span class="opsx-router-icon"><i class="fa-solid fa-server"></i></span>
               <div>
                 <span class="opsx-router-name">{{ server.label }}</span>
-                <span class="opsx-router-sub">قلب الشبكة - VPS</span>
+                <span class="opsx-router-sub">قلب الشبكة - خادم الربط</span>
               </div>
             </div>
             <div class="opsx-router-line"><span style="--score:100%"></span></div>
@@ -135,7 +135,7 @@
                 <span class="opsx-chip opsx-chip--warn">غير معروف</span>
                 {% endif %}
                 {% if r.connection_mode == 'vpn' %}
-                <span class="opsx-chip opsx-chip--blue">WireGuard</span>
+                <span class="opsx-chip opsx-chip--blue">نفق الإدارة</span>
                 {% elif r.connection_mode == 'direct' %}
                 <span class="opsx-chip">مباشر</span>
                 {% endif %}

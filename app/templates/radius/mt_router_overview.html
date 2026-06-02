@@ -223,12 +223,12 @@
         <li>العنوان: <code>{{ ov.address }}</code></li>
         <li>الحالة: {% if ov.enabled %}مفعّل{% else %}معطّل{% endif %}</li>
         <li>نوع الاتصال:
-          {% if ov.connection_mode == "vpn" %}WireGuard
+          {% if ov.connection_mode == "vpn" %}نفق الإدارة
           {% elif ov.connection_mode == "direct" %}اتصال مباشر
           {% else %}{{ ov.connection_mode or '—' }}{% endif %}
         </li>
         {% if ov.vpn_peer_address %}
-        <li>عنوان WireGuard peer: <code>{{ ov.vpn_peer_address }}</code></li>
+        <li>عنوان نفق الإدارة: <code>{{ ov.vpn_peer_address }}</code></li>
         {% endif %}
       </ul>
     </div>

@@ -162,7 +162,7 @@
     }
     try {
       await navigator.clipboard.writeText(text);
-      toast("✅ تم النسخ — الصقه في MikroTik Terminal", "ok");
+      toast("تم النسخ، الصقه في شاشة أوامر الراوتر", "ok");
     } catch (err) {
       // Fallback for older browsers
       const ta = document.createElement("textarea");
@@ -349,7 +349,7 @@
       showScript("step2", plan.script);
       const nextBtn = root.querySelector('[data-swz-next="2"]');
       if (nextBtn) nextBtn.hidden = false;
-      toast("✅ السكربت جاهز. انسخه والصقه في MikroTik.", "ok");
+      toast("السكربت جاهز. انسخه والصقه في شاشة أوامر الراوتر.", "ok");
     } catch (err) {
       toast("خطأ: " + err.message, "error");
     } finally {
@@ -427,7 +427,7 @@
       );
       if (genBtn) genBtn.hidden = true;
       if (submitBtn) submitBtn.hidden = false;
-      toast("✅ سكربت الربط جاهز. الصقه في MikroTik ثم انسخ الإخراج هنا.", "ok");
+      toast("سكربت الربط جاهز. الصقه في شاشة أوامر الراوتر ثم انسخ الإخراج هنا.", "ok");
     } catch (err) {
       toast("خطأ: " + err.message, "error");
     } finally {
@@ -440,7 +440,7 @@
     try {
       const output = getValue("[data-swz-step3-output]");
       if (!output) {
-        toast("الصق إخراج MikroTik أوّلاً.", "error");
+        toast("الصق إخراج الراوتر أوّلاً.", "error");
         return;
       }
       await api(
@@ -627,7 +627,7 @@
       );
       if (appliedNote) appliedNote.hidden = false;
       toast(
-        "✅ تم ربط RADIUS بالخادم. سيُحمَّل خلال ~5 ثوانٍ.",
+        "تم ربط خدمة المصادقة بالخادم. سيُحمَّل خلال نحو 5 ثوانٍ.",
         "ok",
       );
     } catch (err) {

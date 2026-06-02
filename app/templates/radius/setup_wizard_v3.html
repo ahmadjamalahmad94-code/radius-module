@@ -40,7 +40,7 @@ Steps:
   <header class="swz-hero">
     <div>
       <h2>معالج الإعداد الذكي</h2>
-      <p>مسار واحد لإضافة الراوتر وربطه بالإنترنت وWireGuard وRADIUS، مع إبقاء السكربتات والتفاصيل التقنية خلف خطوات واضحة.</p>
+      <p>مسار واحد لإضافة الراوتر وربطه بالإنترنت وخادم المصادقة ونفق الإدارة، مع إبقاء السكربتات والتفاصيل التقنية خلف خطوات واضحة.</p>
     </div>
     <span class="swz-hero-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
   </header>
@@ -48,11 +48,11 @@ Steps:
   <div class="swz-shell">
     <aside class="swz-guide" aria-label="شرح معالج الإعداد">
       <div class="swz-guide-title"><i class="fa-solid fa-route"></i> مسار التنفيذ</div>
-      <p>اتبع الخطوات بالترتيب. المعالج يحفظ run واحد، ويستخدم نفس الـ endpoints الحالية بدون تغيير في منطق السيرفر.</p>
+      <p>اتبع الخطوات بالترتيب. المعالج يحفظ جلسة إعداد واحدة، ويستخدم نفس مسارات الخدمة الحالية بدون تغيير في منطق الخادم.</p>
       <ul>
         <li><i class="fa-solid fa-router"></i><span>ابدأ باسم الراوتر ونوع الخدمة.</span></li>
         <li><i class="fa-solid fa-globe"></i><span>حدد مصدر الإنترنت ثم ولّد السكربت.</span></li>
-        <li><i class="fa-solid fa-shield-halved"></i><span>اربط الراوتر بالخادم عبر WireGuard وRADIUS.</span></li>
+        <li><i class="fa-solid fa-shield-halved"></i><span>اربط الراوتر بالخادم عبر نفق الإدارة وخدمة المصادقة.</span></li>
         <li><i class="fa-solid fa-check-double"></i><span>تحقق، ثم سجل الراوتر نهائياً.</span></li>
       </ul>
     </aside>
@@ -372,7 +372,7 @@ Steps:
     <div class="swz-radius-secret-card" data-swz-radius-secret hidden>
       <header>
         <strong>🔐 ربط المصادقة بالخادم</strong>
-        <p>اضغط الزر لإكمال ربط الراوتر بـ FreeRADIUS — سيتم
+        <p>اضغط الزر لإكمال ربط الراوتر بخدمة المصادقة — سيتم
            إعداد كل شيء تلقائياً على الخادم بدون الحاجة للدخول
            اليدوي أو النسخ اليدوي.</p>
       </header>
@@ -383,7 +383,7 @@ Steps:
         </button>
       </div>
       <p class="swz-radius-secret-hint" data-swz-radius-applied hidden>
-        ✅ تم الربط على الخادم وإعادة تشغيل FreeRADIUS
+        تم الربط على الخادم وإعادة تشغيل خدمة المصادقة
         تلقائياً. لا حاجة لأي خطوة إضافيّة.
       </p>
 
@@ -582,7 +582,7 @@ Steps:
                    autocomplete="off"
                    placeholder="سيتم توليده تلقائياً">
             <small>⚠️ احفظ هذا السرّ — يجب إدخاله في
-              FreeRADIUS clients.conf على الخادم لقبول
+              ملف عملاء خدمة المصادقة على الخادم لقبول
               طلبات المصادقة من هذا الراوتر.</small>
           </div>
           <button type="button" class="swz-btn swz-btn-primary"

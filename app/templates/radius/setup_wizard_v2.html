@@ -423,13 +423,13 @@
           <div class="swv2-readiness-panel" data-swv2-server-wg-readiness>
             <div class="swv2-readiness-head">
               <div>
-                <strong>جاهزية سيرفر WireGuard</strong>
-                <span>فحص قراءة فقط يوضح هل VPS جاهز لمعاينة peer مخبرية عند الحاجة.</span>
+                <strong>جاهزية خادم نفق الإدارة</strong>
+                <span>فحص قراءة فقط يوضح هل خادم الربط جاهز لمعاينة ربط مخبرية عند الحاجة.</span>
               </div>
               <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-server-wg-readiness-check>فحص الجاهزية</button>
             </div>
             <div class="swv2-readiness-grid">
-              <div><span>أمر WireGuard</span><strong data-swv2-readiness-item="wg_show_readable">معطل</strong></div>
+              <div><span>أمر نفق الإدارة</span><strong data-swv2-readiness-item="wg_show_readable">معطل</strong></div>
               <div><span>الواجهة</span><strong data-swv2-readiness-item="wg_interface_exists">غير مفحوص</strong></div>
               <div><span>عنوان السيرفر</span><strong data-swv2-readiness-item="server_ip_assigned">غير مفحوص</strong></div>
               <div><span>النسخة الاحتياطية</span><strong data-swv2-readiness-item="backup_dir_configured">غير مضبوط</strong></div>
@@ -444,17 +444,17 @@
           <div class="swv2-peer-health-panel" data-swv2-peer-health-panel>
             <div class="swv2-peer-health-head">
               <div>
-                <strong>صحة اتصال WireGuard Peer</strong>
-                <span>قراءة فقط لحالة handshake وحركة RX/TX بعد تطبيق peer في المختبر.</span>
+                <strong>صحة اتصال نفق الإدارة</strong>
+                <span>قراءة فقط لحالة المصافحة وحركة الاستقبال والإرسال بعد تطبيق الربط في المختبر.</span>
               </div>
               <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-server-peer-health>فحص صحة peer</button>
             </div>
             <div class="swv2-peer-health-grid">
               <div><span>الحالة</span><strong data-swv2-peer-health="status">غير مفحوص</strong></div>
               <div><span>النقاط</span><strong data-swv2-peer-health="score">--</strong></div>
-              <div><span>آخر handshake</span><strong data-swv2-peer-health="handshake">--</strong></div>
-              <div><span>RX</span><strong data-swv2-peer-health="rx">--</strong></div>
-              <div><span>TX</span><strong data-swv2-peer-health="tx">--</strong></div>
+              <div><span>آخر مصافحة</span><strong data-swv2-peer-health="handshake">--</strong></div>
+              <div><span>استقبال</span><strong data-swv2-peer-health="rx">--</strong></div>
+              <div><span>إرسال</span><strong data-swv2-peer-health="tx">--</strong></div>
               <div><span>التوصية</span><strong data-swv2-peer-health="recommendation">ألصق wg show ثم افحص.</strong></div>
             </div>
             <details class="swv2-advanced">
@@ -463,16 +463,16 @@
             </details>
           </div>
           <div class="swv2-action-row">
-            <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-server-peer-dry-run>مراجعة خطة Peer</button>
+            <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-server-peer-dry-run>مراجعة خطة الربط</button>
             <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-server-peer-verify>فحص wg show</button>
-            <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-server-peer-apply disabled data-swv2-server-peer-simple-apply title="يتطلب كل flags المختبر وجاهزية VPS">تطبيق مختبري مغلق</button>
-            <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-server-peer-rollback disabled title="يتطلب عملية applied سابقة وconfirmation">تمرين رجوع مغلق</button>
+            <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-server-peer-apply disabled data-swv2-server-peer-simple-apply title="يتطلب كل شروط المختبر وجاهزية خادم الربط">تطبيق مختبري مغلق</button>
+            <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-server-peer-rollback disabled title="يتطلب تطبيقًا سابقًا وتأكيدًا واضحًا">تمرين رجوع مغلق</button>
           </div>
           <label class="swv2-lab-confirmation">تأكيد وضع المختبر الداخلي
             <input type="text" data-swv2-server-peer-confirmation placeholder="APPLY SERVER PEER IN LAB أو ROLLBACK SERVER PEER IN LAB">
-            <span>مختبر داخلي فقط. لا تستخدمه على VPS إنتاجي أو راوتر عميل.</span>
+            <span>مختبر داخلي فقط. لا تستخدمه على خادم إنتاجي أو راوتر عميل.</span>
           </label>
-          <textarea data-swv2-server-peer-output placeholder="اختياري: الصق wg show للتحقق من وجود peer و handshake"></textarea>
+          <textarea data-swv2-server-peer-output placeholder="اختياري: الصق مخرجات فحص النفق للتحقق من وجود الربط والمصافحة"></textarea>
           <div class="swv2-summary-box" data-swv2-server-peer-result>لم يتم تشغيل معاينة التنفيذ بعد.</div>
         </div>
         </details>
@@ -538,7 +538,7 @@
             <h3>تجهيز الربط الكامل بضغطة واحدة</h3>
             <p>
               الراوتر خلف NAT أو الـ IP العامّ متغيّر؟ لا
-              مشكلة. ألصق مخرجات WireGuard من الراوتر هنا
+              مشكلة. ألصق مخرجات نفق الإدارة من الراوتر هنا
               وسنقوم بكل البقيّة تلقائياً — استخراج المفتاح،
               تسجيله على الخادم، والتحقّق من الـ handshake.
             </p>
@@ -549,7 +549,7 @@
             <button type="button"
                     class="swv2-mode-tab is-active"
                     data-swv2-mode-tab="paste">
-              📋 لصق مخرجات WireGuard (موصى به)
+              لصق مخرجات نفق الإدارة (موصى به)
             </button>
             <button type="button"
                     class="swv2-mode-tab"
@@ -877,7 +877,7 @@
             <i class="fa-solid fa-gamepad"></i>
             <strong>مركز ألعاب</strong>
             <span>تغيير عنوان الخروج عند توفر المسار المخصص + حجب محدود.</span>
-            <small>يحتاج إعداد VPS مسبقًا.</small>
+            <small>يحتاج إعداد خادم الربط مسبقًا.</small>
           </button>
         </div>
         <div class="swv2-service-grid" data-swv2-added-services>
