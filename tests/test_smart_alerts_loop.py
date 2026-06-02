@@ -71,13 +71,17 @@ def test_loop_ingest_stores_probe_and_opens_alert_when_bound(app, client):
     res = _ingest(client, 77, [
         {"interface": "ether2", "status": "bound",
          "address": "10.0.0.7/24", "server": "10.0.0.1"},
+        {"interface": 7, "status": "searching",
+         "address": "", "server": 0},
     ])
     assert res.status_code == 200, res.get_json()
-    assert res.get_json()["data"]["probes_recorded"] == 1
+    assert res.get_json()["data"]["probes_recorded"] == 2
     with app.app_context():
         from app.radius.db.repos import alerts_repo, router_loop_probes_repo
         probes = router_loop_probes_repo.list_for_router(1, 77)
-        assert probes and probes[0]["last_status"] == "bound"
+        by_iface = {p["interface"]: p for p in probes}
+        assert by_iface["ether2"]["last_status"] == "bound"
+        assert {p["interface"] for p in probes} == {"ether2", "7"}
         open_alerts = {a["dedup_key"]: a for a in alerts_repo.list_open(1)}
         assert "auto.router.loop:77:ether2" in open_alerts
         # the loop IP is surfaced in the alert
@@ -114,3 +118,17 @@ def test_loop_setup_page_renders(app, client):
     assert "/loop/ingest" in html        # generated script targets the endpoint
     assert "راوتر الفرع" in html          # router picker option
     assert "lp-script-body" in html       # script panel present
+
+
+def test_my_services_tab_has_loop_tracking_tile(app, client):
+    """The «خدماتي» tab shows a «تتبّع اللوب» tile that opens the loop page."""
+    with app.app_context():
+        _seed_router(77, name="راوتر الفرع")
+    _login(client)
+    html = client.get("/admin/radius/mt/77/dashboard").get_data(as_text=True)
+    assert "data-rh-loop-tile" in html                              # the tile
+    assert "تتبّع اللوب" in html                                     # title
+    assert "كشف اللوب عبر مجس DHCP على منافذ الزبائن" in html        # description
+    assert "/admin/radius/alerts/loop-setup" in html                # links to loop page
+    # no probes for this router yet → غير مفعّل badge
+    assert "غير مفعّل" in html

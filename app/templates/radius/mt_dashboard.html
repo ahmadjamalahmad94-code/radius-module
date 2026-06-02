@@ -2130,7 +2130,7 @@
       <div>
         <h4>
           إدارة الخدمات
-          <span class="np-section-badge">6</span>
+          <span class="np-section-badge">7</span>
         </h4>
         <p>إضافة وضبط وإدارة جميع الخدمات على الراوتر — 4 مراحل لكل خدمة.</p>
       </div>
@@ -2163,6 +2163,24 @@
         </span>
       </a>
       {% endfor %}
+
+      {# «تتبّع اللوب» — يفتح صفحة التتبّع المخصّصة (ليست خدمة معالج v3).
+         بطاقة ثابتة مع شارة الحالة من loop_active (قراءة فقط). #}
+      <a class="np-svc-card"
+         href="{{ url_for('radius.mt_loop_setup') }}"
+         data-rh-loop-tile>
+        <span class="np-svc-icon np-svc-icon--purple">
+          <i class="fa-solid fa-arrows-spin"></i>
+        </span>
+        <h5 class="np-svc-title">
+          تتبّع اللوب
+          <span style="display:inline-block;margin-inline-start:6px;padding:1px 9px;border-radius:999px;font-size:10.5px;font-weight:800;{% if loop_active %}background:#dcfce7;color:#15803d{% else %}background:#f1f5f9;color:#64748b{% endif %}">{{ 'مفعّل' if loop_active else 'غير مفعّل' }}</span>
+        </h5>
+        <p class="np-svc-desc">كشف اللوب عبر مجس DHCP على منافذ الزبائن</p>
+        <span class="np-svc-arrow">
+          <i class="fa-solid fa-arrow-left"></i>
+        </span>
+      </a>
     </div>
 
     {# ── B) Added services status area — filter + groups ────

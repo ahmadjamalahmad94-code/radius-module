@@ -62,9 +62,21 @@ def mt_dashboard(nas_id: int):
     if not row:
         abort(404)
     nas = dict(row)
+    # Loop-tracking status for the «خدماتي» tile (read-only; no engine change).
+    # مفعّل = the loop detector is enabled AND this router has probes pushing.
+    try:
+        from ..db.repos import router_loop_probes_repo
+        from ..services import smart_alerts
+        loop_active = bool(
+            smart_alerts.global_settings(_tid()).get("loop")
+            and router_loop_probes_repo.list_for_router(_tid(), nas_id)
+        )
+    except Exception:  # noqa: BLE001 — never break the dashboard over a badge
+        loop_active = False
     return render_template(
         "radius/mt_dashboard.html",
         nas=nas,
         api_base="/api/v1",
         api_token=_ui_api_token(),
+        loop_active=loop_active,
     )
