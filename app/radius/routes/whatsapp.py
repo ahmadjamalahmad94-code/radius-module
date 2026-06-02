@@ -43,6 +43,7 @@ def register_whatsapp_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/whatsapp", "whatsapp", whatsapp_page, methods=["GET"])
     bp.add_url_rule("/whatsapp/settings", "whatsapp_settings", whatsapp_settings, methods=["POST"])
     bp.add_url_rule("/whatsapp/test", "whatsapp_test", whatsapp_test, methods=["POST"])
+    bp.add_url_rule("/whatsapp/cloud-test", "whatsapp_cloud_test", whatsapp_cloud_test, methods=["POST"])
 
 
 def _tid() -> int:
@@ -191,6 +192,42 @@ def whatsapp_test():
             "تأكد من ربط واتساب وتفعيل الجسر في صفحة «ملف التراخيص» ثم أعد المحاولة.",
             "error",
         )
+    return redirect(url_for("radius.whatsapp"))
+
+
+def whatsapp_cloud_test():
+    """POST — ask the panel to send a test message via its HOUSE Cloud API
+    credentials (the panel settings), through the signed bridge.
+
+    This is the companion to ``whatsapp_test`` (per-customer): it verifies the
+    panel's house WhatsApp pipe end-to-end from radius-module. Test-only; the
+    recipient phone is NOT logged.
+    """
+    phone = (request.form.get("recipient_phone") or "").strip()
+    if not phone:
+        flash("أدخل رقم هاتف لإرسال رسالة الاختبار.", "error")
+        return redirect(url_for("radius.whatsapp"))
+    template_name = (request.form.get("template_name") or "").strip()
+    language = (request.form.get("language") or "").strip()
+
+    from ..services.admin_panel_client import AdminPanelClient
+
+    try:
+        result = AdminPanelClient().send_whatsapp_cloud_test(
+            recipient_phone=phone, template_name=template_name, language=language,
+        )
+    except Exception:  # noqa: BLE001 — bridge errors must never 500 the page
+        result = {"ok": False, "status": "unavailable"}
+
+    # The bridge wraps the panel's JSON under ``response`` and reports its OWN
+    # ``ok`` for transport success. A real send requires BOTH: the bridge call
+    # succeeded AND the panel reported ok.
+    panel = result.get("response") if isinstance(result.get("response"), dict) else {}
+    if result.get("ok") and panel.get("ok"):
+        flash("تم إرسال رسالة الاختبار عبر بيانات اللوحة (Cloud API). تحقّق من واتساب المستلم.", "success")
+    else:
+        reason = panel.get("message_ar") or _status_label(result.get("status"))
+        flash("تعذّر إرسال رسالة الاختبار: " + str(reason), "error")
     return redirect(url_for("radius.whatsapp"))
 
 

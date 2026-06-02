@@ -47,6 +47,7 @@ GDRIVE_STATUS_PATH = "/api/integration/hoberadius/google-drive/status"
 WHATSAPP_STATUS_PATH = "/api/integration/hoberadius/whatsapp/status"
 WHATSAPP_ENQUEUE_PATH = "/api/integration/hoberadius/whatsapp/messages/enqueue"
 WHATSAPP_TEST_PATH = "/api/integration/hoberadius/whatsapp/messages/test"
+WHATSAPP_CLOUD_TEST_PATH = "/api/integration/hoberadius/whatsapp/cloud-test"
 WHATSAPP_PREFERENCES_SYNC_PATH = "/api/integration/hoberadius/whatsapp/subscriber-preferences/sync"
 WHATSAPP_MESSAGE_STATUS_PATH = "/api/integration/hoberadius/whatsapp/messages/status"
 RESTORE_POLL_PATH = "/api/integration/hoberadius/backup-restore/poll"
@@ -682,6 +683,26 @@ class AdminPanelClient:
             payload=self._license_check_payload({
                 "recipient_phone": str(recipient_phone or "").strip(),
                 "idempotency_key": str(idempotency_key or "").strip(),
+            }),
+        )
+
+    def send_whatsapp_cloud_test(
+        self, recipient_phone: str, *, template_name: str = "", language: str = ""
+    ) -> dict[str, Any]:
+        """Ask the panel to send a TEST WhatsApp message via its HOUSE Cloud API
+        credentials (the settings panel) — test-only, no customer queue.
+
+        Returns the panel's JSON ({"ok": True, "provider_message_id": ...} or
+        {"ok": False, "message_ar": ...}). Never raises.
+        """
+        if not str(self.config.base_url or "").lower().startswith("https://"):
+            return {"ok": False, "status": "https_required"}
+        return self._post_bridge_payload(
+            path=WHATSAPP_CLOUD_TEST_PATH,
+            payload=self._license_check_payload({
+                "recipient_phone": str(recipient_phone or "").strip(),
+                "template_name": str(template_name or "").strip(),
+                "language": str(language or "").strip(),
             }),
         )
 
