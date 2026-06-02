@@ -69,11 +69,15 @@ def _seed_nas(app, *, nas_id=1):
 # ─── Sidebar entries ──────────────────────────────────────────
 
 
-def test_sidebar_lists_topology_link(app, client):
+def test_sidebar_omits_topology_link_kept_inside_router_management(app, client):
+    """«خريطة الشبكة» was removed from the sidebar (operator request) — it's
+    reachable from inside the «إدارة الراوترات» page. The sidebar keeps the
+    router-management entry instead (which still highlights on /topology)."""
     _login(client)
     html = client.get("/admin/radius/").get_data(as_text=True)
-    assert 'href="/admin/radius/topology"' in html
-    assert "خريطة الشبكة" in html
+    assert "إدارة الراوترات" in html
+    assert 'href="/admin/radius/topology"' not in html
+    assert "خريطة الشبكة" not in html
 
 
 def test_sidebar_lists_alerts_link(app, client):
