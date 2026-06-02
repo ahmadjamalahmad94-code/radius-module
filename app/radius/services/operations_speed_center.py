@@ -80,16 +80,31 @@ class OperationsSpeedCenterService:
         preset: str = "normal",
         multiplier: float | None = None,
         profile_ids: list[int] | None = None,
+        overrides: dict[int, dict[str, float]] | None = None,
     ) -> dict[str, Any]:
+        """Dry-run impact preview.
+
+        ``multiplier`` applies one factor to every selected profile (legacy/unified
+        path). ``overrides`` optionally maps profile_id -> {"down": factor, "up":
+        factor} to allow separate per-profile download/upload factors without
+        changing the legacy contract: when a profile has no override it falls back
+        to ``multiplier``.
+        """
         preset_def = SPEED_PRESETS.get(preset or "normal", SPEED_PRESETS["normal"])
         mult = float(multiplier if multiplier is not None else preset_def["multiplier"])
-        if mult <= 0 or mult > 5:
+        # 0 is allowed (a 0% limit = fully throttled, a valid dry-run edge case);
+        # the upper bound stays at 5x to keep previews within a safe range.
+        if mult < 0 or mult > 5:
             raise OperationsSpeedError("multiplier out of safe preview range")
+        overrides = overrides or {}
         plans = self._plans(profile_ids=profile_ids)
         impacts = []
         for plan in plans:
             down = int(plan.get("speed_down_kbps") or 0)
             up = int(plan.get("speed_up_kbps") or 0)
+            ov = overrides.get(int(plan["id"])) or {}
+            down_mult = self._safe_factor(ov.get("down"), mult)
+            up_mult = self._safe_factor(ov.get("up"), mult)
             sub_count = self._subscriber_count_for_plan(int(plan["id"]))
             online = self._online_count_for_plan(int(plan["id"]))
             impacts.append(
@@ -101,8 +116,10 @@ class OperationsSpeedCenterService:
                     "base_down_kbps": down,
                     "base_up_kbps": up,
                     "multiplier": mult,
-                    "effective_down_kbps": int(down * mult),
-                    "effective_up_kbps": int(up * mult),
+                    "down_multiplier": down_mult,
+                    "up_multiplier": up_mult,
+                    "effective_down_kbps": int(down * down_mult),
+                    "effective_up_kbps": int(up * up_mult),
                     "coa_required": online > 0,
                     "online_sessions": online,
                 }
@@ -126,9 +143,13 @@ class OperationsSpeedCenterService:
         preset: str = "normal",
         multiplier: float | None = None,
         profile_ids: list[int] | None = None,
+        overrides: dict[int, dict[str, float]] | None = None,
+        mode: str = "unified",
         actor: str = "system",
     ) -> dict[str, Any]:
-        preview = self.speed_preview(preset=preset, multiplier=multiplier, profile_ids=profile_ids)
+        preview = self.speed_preview(
+            preset=preset, multiplier=multiplier, profile_ids=profile_ids, overrides=overrides
+        )
         now = now_iso()
         try:
             key = self._key(policy_key or f"{preset}-{now}")
@@ -169,7 +190,11 @@ class OperationsSpeedCenterService:
                 clean_title,
                 preset,
                 preview["multiplier"],
-                _json({"profile_ids": profile_ids or []}),
+                _json({
+                    "profile_ids": profile_ids or [],
+                    "mode": mode or "unified",
+                    "overrides": {str(k): v for k, v in (overrides or {}).items()},
+                }),
                 _json(preview),
                 "dry_run_ready",
                 0,
@@ -204,6 +229,64 @@ class OperationsSpeedCenterService:
                 (self.tenant_id, int(limit)),
             ).fetchall()
         ]
+
+    def control_profiles(self) -> list[dict[str, Any]]:
+        """Rich per-profile feed for the speed-control UI (dry-run only).
+
+        Returns every active plan with its base speeds, subscriber/online counts,
+        whether it is a group default, and whether advanced speed control is
+        enabled on it (used to seed the controlled/uncontrolled split)."""
+        default_ids = self._default_plan_ids()
+        rows = db().execute(
+            """
+            SELECT id, name, speed_down_kbps, speed_up_kbps,
+                   COALESCE(speed_control_enabled, 0) AS speed_control_enabled,
+                   COALESCE(priority, 100) AS priority
+            FROM access_plans
+            WHERE tenant_id=? AND deleted_at IS NULL AND COALESCE(enabled, 1)=1
+            ORDER BY priority ASC, id ASC LIMIT 200
+            """,
+            (self.tenant_id,),
+        ).fetchall()
+        profiles: list[dict[str, Any]] = []
+        for row in rows:
+            plan = row_to_dict(row)
+            pid = int(plan["id"])
+            profiles.append(
+                {
+                    "id": pid,
+                    "name": plan["name"],
+                    "down_kbps": int(plan.get("speed_down_kbps") or 0),
+                    "up_kbps": int(plan.get("speed_up_kbps") or 0),
+                    "controlled": bool(plan.get("speed_control_enabled")),
+                    "is_default": pid in default_ids,
+                    "subscribers": self._subscriber_count_for_plan(pid),
+                    "online": self._online_count_for_plan(pid),
+                }
+            )
+        return profiles
+
+    def _default_plan_ids(self) -> set[int]:
+        try:
+            rows = db().execute(
+                "SELECT DISTINCT default_plan_id FROM subscriber_groups "
+                "WHERE tenant_id=? AND default_plan_id IS NOT NULL",
+                (self.tenant_id,),
+            ).fetchall()
+            return {int(r["default_plan_id"]) for r in rows if r["default_plan_id"]}
+        except Exception:  # noqa: BLE001 — table may be absent in minimal schemas
+            return set()
+
+    @staticmethod
+    def _safe_factor(value: Any, fallback: float) -> float:
+        """Clamp an override factor to the safe [0, 5] preview range."""
+        if value is None:
+            return float(fallback)
+        try:
+            factor = float(value)
+        except (TypeError, ValueError):
+            return float(fallback)
+        return max(0.0, min(5.0, factor))
 
     def _plans(self, *, profile_ids: list[int] | None = None) -> list[dict[str, Any]]:
         params: list[Any] = [self.tenant_id]
