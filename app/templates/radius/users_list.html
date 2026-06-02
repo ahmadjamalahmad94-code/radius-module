@@ -127,7 +127,7 @@
   }
   .usq-loan-acts label:has(input:checked){ border-color:var(--hub-brand,#7c3aed); background:#f5f3ff; color:#5b21b6; }
   .usq-loan-acts input{ position:absolute; opacity:0; width:0; height:0; }
-  /* SMS ready-template chips */
+  /* أزرار قوالب الرسائل القصيرة الجاهزة */
   .usq-sms-tpls{ display:flex; flex-wrap:wrap; gap:6px; }
   .usq-sms-tpl{
     padding:5px 11px; border:1px solid var(--hub-border); border-radius:999px;
@@ -443,7 +443,7 @@
       </summary>
       <div class="usq-menu-panel">
         <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-usq-open="sms">
-          <i class="fa-solid fa-paper-plane"></i> إرسال SMS
+          <i class="fa-solid fa-paper-plane"></i> إرسال رسالة قصيرة
         </button>
         <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-usq-open="plan">
           <i class="fa-solid fa-right-left"></i> تغيير العرض
@@ -703,7 +703,7 @@
                 </button>
               </div>
 
-              {# ── «إدارية» menu — SMS / disable / disconnect / plan / archive ── #}
+              {# ── «إدارية» menu — رسائل قصيرة / تعطيل / فصل / عرض / أرشفة ── #}
               <button type="button" class="hub-btn hub-btn--ghost hub-btn--sm urow-menu-btn"
                       data-urow-trigger aria-haspopup="true" aria-expanded="false">
                 <i class="fa-solid fa-sliders"></i> إدارية <i class="fa-solid fa-chevron-down urow-caret"></i>
@@ -888,7 +888,7 @@
   <div class="usq-dialog" role="dialog" aria-modal="true" aria-labelledby="usq-sms-title">
     <form method="post" data-usq-modal-form="sms" data-action-template="{{ url_for('radius.users_send_sms', username='__USERNAME__') }}">
       <div class="usq-head">
-        <h3 id="usq-sms-title">إرسال SMS للمشترك</h3>
+        <h3 id="usq-sms-title">إرسال رسالة قصيرة للمشترك</h3>
         <button class="hub-btn hub-btn--ghost hub-btn--icon" type="button" data-usq-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="usq-body">
@@ -1767,7 +1767,7 @@
   // Smart-activation interactivity: live coverage + segmented reveals.
   page.querySelector("[data-usq-balance-amount]")?.addEventListener("input", updateBalanceCoverage);
   page.querySelector("[data-usq-modal='payment'] [name='amount']")?.addEventListener("input", () => syncMoneyCoverage("payment"));
-  // SMS ready templates — fill the message, substituting the active subscriber.
+  // قوالب الرسائل القصيرة — تملأ نص الرسالة ببيانات المشترك النشط.
   page.querySelectorAll("[data-sms-tpl]").forEach((btn) => {
     btn.addEventListener("click", () => {
       const ta = page.querySelector("[data-usq-modal='sms'] [name='message']");

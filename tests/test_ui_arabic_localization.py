@@ -707,6 +707,13 @@ def test_router_operator_pages_hide_raw_vendor_copy():
             "فعّل SMS",
             "WhatsApp",
         ],
+        Path("app/templates/radius/communications_notifications.html"): [
+            "قنوات SMS",
+        ],
+        Path("app/templates/radius/users_list.html"): [
+            "إرسال SMS",
+            "SMS ready",
+        ],
     }
 
     for path, forbidden in files.items():

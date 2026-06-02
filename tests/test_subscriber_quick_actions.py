@@ -451,7 +451,7 @@ def test_subscribers_page_exposes_only_implemented_quick_actions(client, app):
     assert res.status_code == 200
     assert "تغيير العرض" in quick_panel
     assert "إضافة وقت" in quick_panel
-    assert "إرسال SMS" in quick_panel
+    assert "إرسال رسالة قصيرة" in quick_panel
     assert "استعادة الكوتة اليومية" in quick_panel
     assert "إضافة كوتة" in quick_panel
     assert "إضافة رصيد نقدي" in quick_panel
