@@ -64,7 +64,7 @@
       {{ w.name }}
     </div>
     <div class="sub">آخر نبضة قبل {{ w.last_beat_age_sec }} ثانية</div>
-    {% if w.info %}<div class="sub mono">{{ w.info|tojson }}</div>{% endif %}
+    {% if w.info_summary %}<div class="sub">{{ w.info_summary }}</div>{% endif %}
   </div>
   {% else %}
   <div class="st-worker">

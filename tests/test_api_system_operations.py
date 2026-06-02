@@ -104,6 +104,20 @@ def test_system_status_includes_vps_probe_payload(client, monkeypatch):
     assert data["system"]["network"]["ping_ms"] == 22.4
 
 
+def test_worker_info_summary_is_readable_arabic(app):
+    from app.radius.routes import status as status_routes
+
+    summary = status_routes._worker_info_summary(
+        {"interval_sec": 60, "ok": True, "identity_synced_count": 2}
+    )
+
+    assert "فترة التشغيل: 60" in summary
+    assert "النتيجة: نعم" in summary
+    assert "حسابات متزامنة: 2" in summary
+    assert "{" not in summary
+    assert "}" not in summary
+
+
 def test_system_diagnostics_uses_backend_service(client, monkeypatch):
     from app.radius.services import mt_diagnostics
 

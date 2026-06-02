@@ -190,6 +190,7 @@ def test_source_templates_do_not_keep_old_english_operator_labels():
         Path("app/templates/radius/mt_dashboard.html"),
         Path("app/templates/radius/mt_diagnostics.html"),
         Path("app/templates/radius/setup_wizard.html"),
+        Path("app/templates/radius/_status.html"),
         Path("app/templates/radius/users_form.html"),
     ]
     forbidden = [
@@ -226,6 +227,7 @@ def test_source_templates_do_not_keep_old_english_operator_labels():
         "Secondary DNS (PPP)",
         "{{ r.payload_json }}",
         'title="{{ r.payload_json }}"',
+        "{{ w.info|tojson }}",
     ]
 
     for path in paths:

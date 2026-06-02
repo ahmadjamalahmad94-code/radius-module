@@ -51,6 +51,21 @@ _PAYLOAD_KEY_LABELS = {
     "currency": "العملة",
     "reference": "المرجع",
     "reference_code": "رمز المرجع",
+    "interval_sec": "فترة التشغيل",
+    "threshold_sec": "حد الإغلاق",
+    "last_processed": "آخر عناصر تمت معالجتها",
+    "last_reaped": "آخر جلسات مغلقة",
+    "last_scanned": "آخر عناصر مفحوصة",
+    "last_reclaimed": "آخر عناصر مسترجعة",
+    "last_closed": "آخر جلسات مغلقة",
+    "last_routers_ok": "راوترات متصلة",
+    "last_routers_skipped": "راوترات متجاوزة",
+    "ok": "النتيجة",
+    "license_active": "الترخيص مفعل",
+    "capacity_snapshot_id": "لقطة الحدود",
+    "identity_ok": "مزامنة الهوية",
+    "identity_synced_count": "حسابات متزامنة",
+    "last_sessions_seen": "آخر جلسات مقروءة",
 }
 
 
@@ -77,6 +92,22 @@ def _payload_summary(raw: object) -> str:
     if len(payload) > 4:
         parts.append(f"{len(payload) - 4} حقل إضافي")
     return "، ".join(parts)
+
+
+def _worker_info_summary(raw: object) -> str:
+    summary = _payload_summary(raw)
+    if summary == "لا توجد تفاصيل إضافية.":
+        return ""
+    return summary
+
+
+def _workers_for_html(workers: list[dict]) -> list[dict]:
+    decorated: list[dict] = []
+    for worker in workers:
+        item = dict(worker)
+        item["info_summary"] = _worker_info_summary(item.get("info"))
+        decorated.append(item)
+    return decorated
 
 
 def mt_push_setup():
@@ -221,7 +252,9 @@ def system_status():
     if "application/json" in (request.headers.get("Accept") or "") \
        or request.args.get("format") == "json":
         return jsonify(data)
-    return render_template("radius/_status.html", s=data)
+    html_data = dict(data)
+    html_data["workers"] = _workers_for_html(list(data.get("workers") or []))
+    return render_template("radius/_status.html", s=html_data)
 
 
 # ─────────────── sync queue ───────────────
