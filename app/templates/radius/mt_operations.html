@@ -1,12 +1,10 @@
-{# L5 — Operations Center: unified list of MikroTik routers
-   (sources nas_devices, excludes soft-deleted). Each row deep-links
-   into the K9 dashboard. The hero CTA opens the L3 setup wizard. #}
+{# غرفة عمليات الراوترات: قائمة موحّدة للأجهزة المدارة. #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}غرفة عمليات MikroTik{% endblock %}
+{% block title %}غرفة عمليات الراوترات{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-network-wired"></i>{% endblock %}
-{% block page_title %}غرفة عمليات MikroTik{% endblock %}
+{% block page_title %}غرفة عمليات الراوترات{% endblock %}
 {% block page_sub %}<span class="sub">{{ items|length }} راوتر</span>{% endblock %}
 
 {% block head_extra %}
@@ -24,15 +22,15 @@
 
 {{ hub.hero(
   "إدارة الراوترات",
-  subtitle="كل الراوترات المُدارة عبر HobeRadius في مكان واحد — التجهيز، الصحّة الحيّة، وخدمات كل راوتر. اضغط 'إعداد خدمات' للراوتر للوصول لـ Hotspot/Broadband/حجب-فتح مواقع.",
+  subtitle="كل الراوترات المُدارة عبر هوبي راديوس في مكان واحد — التجهيز، الصحة الحية، وخدمات كل راوتر. افتح خدمات الراوتر للوصول لبوابة الدخول والبرودباند وحجب أو فتح المواقع.",
   icon="network-wired",
   actions_html='
     <a class="hub-btn hub-btn--primary" href="' + url_for('radius.mt_setup_form') + '">
       <i class="fa-solid fa-wand-magic-sparkles"></i> إضافة بالمعالج
     </a>
     <button type="button" class="hub-btn hub-btn--ghost" data-mt-reclaim-expired
-            title="إعادة تخصيص عناوين الـ VPN لمحاولات التجهيز المنتهية الصلاحية">
-      <i class="fa-solid fa-recycle"></i> إعادة تخصيص IPs
+            title="إعادة تخصيص عناوين خدمة الربط لمحاولات التجهيز المنتهية الصلاحية">
+      <i class="fa-solid fa-recycle"></i> إعادة تخصيص العناوين
     </button>
     <button type="button" class="hub-btn hub-btn--danger" data-mt-emergency-reset
             title="تفريغ كل سجلات تجهيز الراوترات والبدء من الصفر. للحالات الحرجة فقط.">
@@ -54,13 +52,13 @@
     <h2 id="mt-emergency-title">تفريغ طوارئ لأسطول التجهيز</h2>
     <p class="mt-emergency-warning">
       هذا الإجراء يحذف <b>كل</b> سجلات تجهيز الراوترات من قاعدة البيانات
-      (السجل، تخصيصات الـ IP، أحداث الدورة الحياتية، نظراء WireGuard،
+      (السجل، تخصيصات العناوين، أحداث الدورة الحياتية، نظراء الربط،
       جلسات المعالج، ومخرجات v3). يُستخدم فقط عندما يحدث اختلاف بين
-      مفاتيح WireGuard وعناوين الـ VPN ولا يمكن استعادة الحالة.
+      مفاتيح الربط وعناوين الإدارة ولا يمكن استعادة الحالة.
     </p>
     <p class="mt-emergency-warning">
       <b>لن يلمس</b>: المشتركين، البطاقات، سياسات NPC غير المرتبطة بالمعالج،
-      أو إعدادات الراوترات نفسها على MikroTik.
+      أو إعدادات الراوترات نفسها.
     </p>
     <div class="mt-emergency-counts" data-mt-emergency-counts>
       <p>جاري حساب ما سيتم حذفه...</p>
@@ -72,7 +70,7 @@
     </label>
     <label class="mt-emergency-check">
       <input type="checkbox" data-mt-emergency-files checked>
-      احذف أيضاً ملفات نظراء WireGuard من <code dir="ltr">peers.d</code>
+      احذف أيضاً ملفات نظراء الربط من <code dir="ltr">peers.d</code>
     </label>
     <div class="mt-emergency-actions">
       <button type="button" class="hub-btn hub-btn--ghost" data-mt-emergency-cancel>إلغاء</button>
@@ -87,11 +85,7 @@
 {% if items %}
 {% set _enabled  = items|selectattr('enabled')|list|length %}
 {% set _disabled = items|length - _enabled %}
-{# O4 — Fleet health summary. Baseline counts come from the DB
-   on every page load (total / enabled / disabled). The three
-   live cells (متصل / غير متصل / جزئي) start at 0 + em-dash and
-   the JS counter loop updates them as each row's live status
-   pill changes. #}
+{# ملخص صحة الأسطول: الأرقام الأساسية من قاعدة البيانات، والحالة الحية تُحدّثها الجافاسكربت. #}
 <div class="hub-kpi-grid" data-mt-fleet-summary>
   {{ hub.kpi("الإجمالي",  items|length, icon="server", variant="brand") }}
   <div class="hub-kpi hub-kpi--green" data-mt-fleet="connected">
@@ -99,7 +93,7 @@
     <div class="hub-kpi-body">
       <div class="hub-kpi-label">متصل</div>
       <div class="hub-kpi-value" data-mt-fleet-value>—</div>
-      <div class="hub-kpi-sub">تجاوب تامّ من الـ API</div>
+      <div class="hub-kpi-sub">تجاوب تام من واجهة الربط</div>
     </div>
   </div>
   <div class="hub-kpi hub-kpi--red" data-mt-fleet="unreachable">
@@ -107,7 +101,7 @@
     <div class="hub-kpi-body">
       <div class="hub-kpi-label">غير متصل</div>
       <div class="hub-kpi-value" data-mt-fleet-value>—</div>
-      <div class="hub-kpi-sub">timeout / لا يرد</div>
+      <div class="hub-kpi-sub">انتهت المهلة أو لا يرد</div>
     </div>
   </div>
   <div class="hub-kpi hub-kpi--amber" data-mt-fleet="partial">
@@ -185,15 +179,14 @@
         <th>العنوان</th>
         <th>الحالة</th>
         <th>المتصلون</th>
-        <th>الترافيك</th>
-        <th>RouterOS</th>
+        <th>حركة الإنترنت</th>
+        <th>نظام الراوتر</th>
         <th>إجراءات</th>
       </tr>
     </thead>
     <tbody>
     {% for item in items %}
-      {# Provisioning rows have no reachable API yet — skip the counter
-         poll attribute so JS doesn't fire failing requests every 10s. #}
+      {# صفوف التجهيز لا تملك اتصالًا حيًا بعد، لذلك لا يتم فحص العدادات لها. #}
       <tr {% if not item.is_provisioning %}data-mt-row-counters{% endif %}
           data-mt-router-id="{{ item.id }}"
           data-mt-enabled="{{ 'true' if item.enabled else 'false' }}"
@@ -241,8 +234,8 @@
         </td>
         <td>
           <span class="mt-row-users" data-mt-row-users>
-            <span data-mt-row-hotspot>—</span> hotspot ·
-            <span data-mt-row-ppp>—</span> ppp
+            <span data-mt-row-hotspot>—</span> بوابة ·
+            <span data-mt-row-ppp>—</span> برودباند
           </span>
         </td>
         <td>
@@ -253,13 +246,13 @@
         </td>
         <td>
           {% if item.ros_version %}
-            RouterOS {{ item.ros_version }}.x
+            إصدار {{ item.ros_version }}.x
           {% else %}
             <span class="hub-pill hub-pill--grey"><span class="dot"></span> غير محدد</span>
           {% endif %}
-          {# ── VPN tunnels (migration 092) — management + optional traffic ── #}
+          {# ── أنفاق الإدارة وحركة الإنترنت ── #}
           {% set _mtype = item.management_tunnel_type %}
-          {% set _mlabel = {'wireguard':'WireGuard','sstp_mgmt':'SSTP','direct':'مباشر'}.get(_mtype, _mtype) %}
+          {% set _mlabel = {'wireguard':'نفق حديث','sstp_mgmt':'نفق إدارة','direct':'مباشر'}.get(_mtype, _mtype) %}
           {% set _scolor = {'connected':'green','pending':'amber','failed':'red','disabled':'grey'}.get(item.management_tunnel_status, 'grey') %}
           <div data-mt-tunnels style="display:flex;flex-direction:column;gap:3px;margin-top:6px;font-size:11px">
             {% if _mtype and _mtype != 'none' %}
@@ -273,14 +266,14 @@
             {% endif %}
             {% if item.traffic_enabled and item.traffic_tunnel_type != 'none' %}
               {% set _is_pptp = item.traffic_tunnel_type == 'pptp_traffic' %}
-              <span title="نفق الترافيك (تغيير IP / توجيه)">
+              <span title="نفق حركة الإنترنت وتغيير العنوان">
                 <i class="fa-solid fa-route" style="color:#7c3aed"></i>
-                ترافيك:
+                حركة الإنترنت:
                 {% if _is_pptp %}
-                  <strong style="color:#b91c1c">PPTP</strong>
+                  <strong style="color:#b91c1c">نفق قديم</strong>
                   <span class="hub-pill hub-pill--red" style="font-size:10px"><span class="dot"></span>غير آمن</span>
                 {% else %}
-                  <strong>L2TP/IPsec</strong>
+                  <strong>نفق مشفّر</strong>
                 {% endif %}
                 <span class="hub-pill hub-pill--grey" style="font-size:10px"><span class="dot"></span>{{ item.traffic_mode }}</span>
               </span>
@@ -289,10 +282,7 @@
         </td>
         <td>
           {# Primary action — opens the unified Router Hub at
-             /mt/<id>/dashboard. The «خدمات الراوتر» section is at
-             the top of that page (Hotspot, Broadband, حجب/فتح
-             مواقع, تغيير IP, اتصال عن بُعد). Single entry point for
-             everything per-router. #}
+             المدخل الواحد لكل خدمات الراوتر ومراقبته. #}
           <a class="hub-btn hub-btn--sm hub-btn--primary"
              href="{{ url_for('radius.mt_dashboard', nas_id=item.id) }}"
              title="فتح صفحة الراوتر — خدمات + مراقبة + أدوات">
@@ -300,8 +290,7 @@
           </a>
           {% if item.is_provisioning and item.wizard_run_id %}
           {# Show only while the wizard run is still mid-progress —
-             gives the operator a single click back into the v3
-             wizard to finish what was left undone. #}
+             يعيد المشغّل للمعالج لإكمال ما تبقى. #}
           <a class="hub-btn hub-btn--sm hub-btn--amber"
              href="{{ url_for('radius.setup_wizard_v3_page') }}?run={{ item.wizard_run_id }}"
              title="متابعة معالج التجهيز من حيث توقّف">
@@ -315,7 +304,7 @@
              pages so an operator can reach them in one click. #}
           <a class="hub-btn hub-btn--sm"
              href="{{ url_for('radius.mt_program_form', nas_id=item.id) }}"
-             title="برمجة الشبكة (Hotspot / PPPoE)"
+             title="برمجة الشبكة: بوابة الدخول والبرودباند"
              data-mt-row-link="program">
             <i class="fa-solid fa-diagram-project"></i> برمجة
           </a>
@@ -359,14 +348,11 @@
             <i class="fa-solid fa-pen-to-square"></i> تعديل
           </a>
           {% if item.registry_id and item.lifecycle_state == 'failed' %}
-          {# Failed provisioning attempts can be retired so the IP is
-             freed back into the pool. Only shown when the registry
-             row exists AND lifecycle is failed — for active routers
-             use the regular «تعطيل» path above. #}
+          {# محاولات التجهيز الفاشلة يمكن أرشفتها لتحرير العنوان. #}
           <button type="button" class="hub-btn hub-btn--sm hub-btn--danger"
                   data-mt-retire="{{ item.registry_id }}"
                   data-mt-retire-name="{{ item.name|e }}"
-                  title="تقاعد محاولة تجهيز فاشلة وتحرير عنوان الـ VPN">
+                  title="تقاعد محاولة تجهيز فاشلة وتحرير عنوان الربط">
             <i class="fa-solid fa-box-archive"></i> تقاعد
           </button>
           {% endif %}
@@ -478,11 +464,32 @@
     return data;
   }
 
-  /* ─── Reclaim expired IPs (header button) ─── */
+  function resetSummaryText(reset) {
+    reset = reset || {};
+    const lines = [];
+    if (reset.deleted_rows !== undefined) {
+      lines.push(`الصفوف المحذوفة: ${reset.deleted_rows}`);
+    }
+    if (reset.deleted_peer_files !== undefined) {
+      lines.push(`ملفات الربط المحذوفة: ${reset.deleted_peer_files}`);
+    }
+    if (reset.cleared_tables && typeof reset.cleared_tables === "object") {
+      lines.push("الجداول التي تم تنظيفها:");
+      Object.entries(reset.cleared_tables).forEach(([name, count]) => {
+        lines.push(`- ${name}: ${count}`);
+      });
+    }
+    if (!lines.length) {
+      lines.push("تم تنفيذ التفريغ بنجاح.");
+    }
+    return lines.join("\n");
+  }
+
+  /* تنظيف العناوين المنتهية من زر أعلى الصفحة */
   const reclaimBtn = document.querySelector("[data-mt-reclaim-expired]");
   if (reclaimBtn) {
     reclaimBtn.addEventListener("click", async () => {
-      if (!window.confirm("إعادة تخصيص عناوين IP للمحاولات المنتهية الصلاحية؟")) return;
+      if (!window.confirm("إعادة تخصيص العناوين للمحاولات المنتهية الصلاحية؟")) return;
       const originalHtml = reclaimBtn.innerHTML;
       reclaimBtn.disabled = true;
       reclaimBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جارٍ التنظيف...';
@@ -620,7 +627,7 @@
         if (!res.ok || data.ok === false) throw new Error(data.error || `رمز ${res.status}`);
         if (emergencyResult) {
           emergencyResult.hidden = false;
-          emergencyResult.textContent = JSON.stringify(data.reset, null, 2);
+          emergencyResult.textContent = resetSummaryText(data.reset);
         }
         emergencyExecute.textContent = "تم التفريغ ✓";
         window.setTimeout(() => window.location.reload(), 2500);

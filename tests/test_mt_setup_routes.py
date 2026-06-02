@@ -280,7 +280,7 @@ def test_operations_empty_state(app, client):
     assert res.status_code == 200
     html = res.get_data(as_text=True)
     # Header + CTA is always there.
-    assert "غرفة عمليات MikroTik" in html
+    assert "غرفة عمليات الراوترات" in html
     assert url_safe(url_for_setup := "/admin/radius/mt/setup") in html
     # Empty-state copy when no NAS rows.
     assert "لا توجد راوترات" in html
@@ -298,7 +298,7 @@ def test_operations_lists_wizard_provisioned_router(app, client):
     # NOT the (ignored) operator-typed 10.20.30.40.
     assert "10.10.0.2" in html
     assert "معالَج آليًّا" in html              # provisioned_at pill
-    assert "RouterOS 7.x" in html               # ros_version cell
+    assert "إصدار 7.x" in html
 
 
 def test_operations_sequential_numbering(app, client):

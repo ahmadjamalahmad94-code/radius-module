@@ -10,7 +10,7 @@
      • المحاسبة                  (4 items)
      • الدعم                     (2 items)
      • الإدارة                   (5 items)
-     • التكامل                   (3 items + API docs)
+     • التكامل                   (3 عناصر + توثيق الربط)
 
    Active-state matchers are macro-driven so logic stays uniform.
    Section open/closed state is restored via JS from localStorage,
@@ -334,17 +334,17 @@
       </div></div>
     </div>
 
-    {# ───────── التحكم بالباندويث (قسم رئيسي مستقل) ───────── #}
+    {# ───────── التحكم بعرض الحزمة (قسم رئيسي مستقل) ───────── #}
     <div class="hb-side-section{% if m_operations_speed %} is-open has-active{% endif %}"
          data-hb-section="bandwidth-control" data-hb-tone="violet">
       <button type="button" class="hb-side-section-head"
-              data-hb-section-toggle data-hb-label="التحكم بالباندويث">
+              data-hb-section-toggle data-hb-label="التحكم بعرض الحزمة">
         <span class="hb-side-icon"><i class="fa-solid fa-gauge-high"></i></span>
-        <span class="hb-side-text">التحكم بالباندويث</span>
+        <span class="hb-side-text">التحكم بعرض الحزمة</span>
         <span class="hb-side-chevron"><i class="fa-solid fa-chevron-down"></i></span>
       </button>
       <div class="hb-side-section-body"><div class="hb-side-section-body-inner">
-        {{ sub_item('radius.operations_speed_control', 'لوحة التحكم', m_operations_speed) }}
+        {{ sub_item('radius.operations_speed_control', 'إدارة السرعات', m_operations_speed) }}
       </div></div>
     </div>
 
@@ -366,11 +366,8 @@
     </div>
 
     {# ───────── الشبكة (موحَّد) ─────────
-       Merged in pass 2: "الإعداد والتشغيل" + "الشبكة" became a
-       single section. The three NPC sub-service entries were
-       removed — they now live inside each router's dashboard
-       (see /admin/radius/mt/<id>/dashboard quicknav). Renames:
-       «أجهزة الشبكة» → «NAS» per operator request. #}
+       تم دمج "الإعداد والتشغيل" + "الشبكة" في قسم واحد.
+       بنود سياسات الشبكة الفرعية تعيش الآن داخل لوحة كل راوتر. #}
     <div class="hb-side-section{% if sec_network_active or sec_setup_ops_active %} is-open has-active{% endif %}"
          data-hb-section="network" data-hb-tone="emerald">
       <button type="button" class="hb-side-section-head"
@@ -394,8 +391,8 @@
         {# Inventory + operational view — mt_operations is now THE
            unified router management page (replaced the old separate
            «أسطول الراوترات» link). #}
-        {{ sub_item('radius.devices_list',     'NAS',                  m_devices) }}
-        {# «إدارة الراوترات» تأتي مباشرة تحت NAS (المدخل التشغيلي العام).
+        {{ sub_item('radius.devices_list',     'أجهزة الشبكة',         m_devices) }}
+        {# «إدارة الراوترات» تأتي مباشرة تحت أجهزة الشبكة (المدخل التشغيلي العام).
            «خريطة الشبكة» أُزيلت من القائمة الجانبية لأنها متاحة من داخل
            صفحة إدارة الراوترات — نُبقي m_topology ضمن مُطابقة التحديد حتى
            يبقى البند مُبرزًا عند فتح الخريطة. #}
@@ -409,8 +406,7 @@
            Routes stay REGISTERED (no 404 for any bookmarks);
            background monitor is gated by HOBERADIUS_NETWORK_OPS_ENABLED.
            Re-enable: uncomment the 3 lines + flip the env var.
-           Status: قيد التطوير — sealed pending UX polish + WG-LAN
-           routing prerequisite docs.
+           الحالة: قيد التطوير حتى اكتمال صقل التجربة وتوثيق متطلبات التوجيه.
            ────────────────────────────────────────────────── #}
         {# {{ sub_item('radius.network_devices_list', '📡 تابع أجهزة الشبكة', '/network/devices' in path) }} #}
         {# {{ sub_item('radius.network_ip_scan_page', '🛰️ مسح الشبكة', '/network/scan' in path) }} #}
@@ -420,7 +416,7 @@
            every router. #}
         {{ sub_item('radius.mt_alerts_index',      'التنبيهات الذكيّة',  m_alerts) }}
         {{ sub_item('radius.audit_log_index',      'سجل العمليات',     m_audit_log) }}
-        {{ sub_item('radius.mt_push_setup',        'دفع DHCP (MT Push)', m_push) }}
+        {{ sub_item('radius.mt_push_setup',        'دفع بيانات التوزيع', m_push) }}
       </div></div>
     </div>
 

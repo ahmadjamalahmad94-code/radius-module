@@ -64,7 +64,7 @@ def test_business_os_sidebar_contains_existing_get_html_routes(app):
         "التواصل والحملات": "/admin/radius/communications",
         "الأحداث والمخاطر": "/admin/radius/events",
         "مركز العمليات": "/admin/radius/operations",
-        "التحكم بالسرعة": "/admin/radius/operations/speed-control",
+        "إدارة السرعات": "/admin/radius/operations/speed-control",
         # Reports are consolidated into 5 hubs; the per-report links live in
         # each report page's two-level in-section nav, not the sidebar.
         "التقارير التنفيذية": "/admin/radius/reports",

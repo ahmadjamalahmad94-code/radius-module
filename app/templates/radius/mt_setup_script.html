@@ -1,6 +1,4 @@
-{# L3 — Setup wizard step 2: copy-paste RouterOS script.
-   Minimal markup. L4 adds the copy-button JS, the syntax-highlighted
-   <pre>, and a step-by-step visual checklist. #}
+{# خطوة نسخ سكربت إعداد الراوتر. #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
@@ -16,7 +14,7 @@
 
 {{ hub.hero(
   "السكربت الجاهز للنسخ — " ~ nas.name,
-  subtitle="انسخ السكربت كاملاً والصقه في طرفية RouterOS على " ~ nas.address ~ ". يحتاج 3 ثوانٍ تقريبًا.",
+  subtitle="انسخ السكربت كاملاً والصقه في شاشة أوامر الراوتر على " ~ nas.address ~ ". يحتاج 3 ثوانٍ تقريبًا.",
   icon="code"
 ) }}
 
@@ -25,12 +23,12 @@
 
   <header class="mt-setup-script-head">
     <div class="mt-setup-script-meta">
-      <span><strong>NAS #{{ nas.id }}</strong></span>
-      <span>RouterOS {{ ros_version }}.x</span>
+      <span><strong>جهاز الشبكة #{{ nas.id }}</strong></span>
+      <span>الإصدار {{ ros_version }}.x</span>
       <span>
         {% if is_vpn_row %}
-          IP في الـ tunnel: <code>{{ nas.address }}</code>
-          <span class="hub-pill hub-pill--purple" style="font-size:10px"><span class="dot"></span> WireGuard</span>
+          عنوان داخل نفق الربط: <code>{{ nas.address }}</code>
+          <span class="hub-pill hub-pill--purple" style="font-size:10px"><span class="dot"></span> نفق ربط</span>
         {% else %}
           عنوان الراوتر: <code>{{ nas.address }}</code>
         {% endif %}
@@ -41,7 +39,7 @@
 
   {% if is_vpn_row and not wg_priv_revealed %}
   <div class="hub-pill hub-pill--amber" style="display:block;padding:10px 14px">
-    <strong>⚠️ تنبيه:</strong> المفتاح الخاص للراوتر (router private key) تم إصداره مرة واحدة فقط
+    <strong>⚠️ تنبيه:</strong> المفتاح الخاص للراوتر تم إصداره مرة واحدة فقط
     وحُذف من الجلسة. السكربت أدناه لا يحتوي على المفتاح — لو فقدته،
     احذف الراوتر وأعد المعالج لتدوير المفاتيح.
   </div>
@@ -65,19 +63,19 @@
   </div>
 
   <ol class="mt-setup-checklist">
-    <li>افتح طرفية RouterOS (من WinBox اختر نافذة أوامر جديدة، أو اتصل عبر SSH على <code>{{ nas.address }}</code>).</li>
-    <li>اضغط <strong>نسخ السكربت</strong> فوق ثم الصقه في الـ Terminal واضغط Enter.</li>
+    <li>افتح شاشة أوامر الراوتر من أداة الإدارة المتاحة لديك.</li>
+    <li>اضغط <strong>نسخ السكربت</strong> فوق ثم الصقه في شاشة الأوامر واضغط تنفيذ.</li>
     <li>تحقّق من السطر الأخير <code>HobeRadius provisioning done</code>.</li>
-    <li>ارجع هنا واضغط <strong>اختبار الاتصال</strong> — يفتح dashboard الراوتر.</li>
-    <li>لو طلعت 🟢 ”الراوتر متصل” — كل شيء جاهز.</li>
+    <li>ارجع هنا واضغط <strong>اختبار الاتصال</strong> — تفتح لوحة الراوتر.</li>
+    <li>لو ظهرت حالة ”الراوتر متصل” — كل شيء جاهز.</li>
   </ol>
 
   <details class="mt-setup-script-warning">
     <summary>⚠️ تنبيه أمان — اقرأه مرة واحدة</summary>
     <ul>
-      <li>السكربت يحتوي على <strong>كلمة سرّ API + RADIUS secret</strong>. لا تشارك هذه الصفحة.</li>
-      <li>الـ user <code>{{ nas.api_user }}</code> له صلاحيات إدارية واسعة على الراوتر — لا تستعمله من جهاز غير موثوق.</li>
-      <li>لتدوير المفاتيح: احذف الـ NAS وأعد المعالج. القديم يبقى في الـ DB لكن لا يُستعمل.</li>
+      <li>السكربت يحتوي على <strong>كلمة سر واجهة الربط + سر المصادقة المشترك</strong>. لا تشارك هذه الصفحة.</li>
+      <li>المستخدم <code>{{ nas.api_user }}</code> له صلاحيات إدارية واسعة على الراوتر — لا تستعمله من جهاز غير موثوق.</li>
+      <li>لتدوير المفاتيح: احذف جهاز الشبكة وأعد المعالج. القديم يبقى محفوظًا لكنه لا يُستعمل.</li>
     </ul>
   </details>
 </section>
