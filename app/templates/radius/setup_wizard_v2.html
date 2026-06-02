@@ -176,7 +176,7 @@
             <i class="fa-solid fa-key"></i>
             <strong>اتصال مزود الإنترنت</strong>
             <span>اسم مستخدم وكلمة مرور من مزود الإنترنت.</span>
-            <small>مثال: اشتراك DSL أو Fiber PPPoE</small>
+            <small>مثال: اشتراك ألياف أو خط مزود إنترنت</small>
           </button>
           <button type="button" class="swv2-source-card" data-source-type="static">
             <i class="fa-solid fa-location-crosshairs"></i>
@@ -215,7 +215,7 @@
             <details class="swv2-advanced swv2-form-advanced">
               <summary>إعدادات تلقائية</summary>
               <div class="swv2-toggle-line">
-                <label><input type="checkbox" name="dhcp_add_default_route" checked> إضافة default route</label>
+                <label><input type="checkbox" name="dhcp_add_default_route" checked> إضافة المسار الافتراضي</label>
                 <label><input type="checkbox" name="dhcp_use_peer_dns" checked> استخدام DNS من المزود</label>
                 <label><input type="checkbox" name="dhcp_nat_enabled" checked> تفعيل NAT لهذه الواجهة</label>
               </div>
@@ -223,7 +223,7 @@
           </section>
 
           <section class="swv2-form-panel" data-source-form="pppoe">
-            <label>واجهة PPPoE
+            <label>واجهة اتصال المزوّد
               <input type="text" name="pppoe_interface" value="ether1" placeholder="ether1">
               <span>الواجهة التي عليها خط المزود.</span>
             </label>
@@ -235,17 +235,17 @@
               <span>تظهر داخل السكربت فقط عند التوليد لأن العميل سيقوم بلصقه يدويًا.</span>
             </label>
             <label>اسم الخدمة اختياري
-              <input type="text" name="pppoe_service_name" placeholder="ISP-PPPOE">
+              <input type="text" name="pppoe_service_name" placeholder="اسم الخدمة لدى المزوّد">
             </label>
             <details class="swv2-advanced swv2-form-advanced">
               <summary>إعدادات متقدمة اختيارية</summary>
-              <label>Fixed IP اختياري
+              <label>عنوان ثابت اختياري
               <input type="text" name="pppoe_fixed_ip" placeholder="203.0.113.20">
               </label>
               <div class="swv2-toggle-line">
-                <label><input type="checkbox" name="pppoe_add_default_route" checked> إضافة default route</label>
+                <label><input type="checkbox" name="pppoe_add_default_route" checked> إضافة المسار الافتراضي</label>
                 <label><input type="checkbox" name="pppoe_use_peer_dns" checked> استخدام DNS من المزود</label>
-                <label><input type="checkbox" name="pppoe_nat_enabled" checked> NAT على اتصال PPPoE</label>
+                <label><input type="checkbox" name="pppoe_nat_enabled" checked> ترجمة العناوين على اتصال المزوّد</label>
               </div>
             </details>
           </section>
@@ -342,7 +342,7 @@
       <div class="swv2-step-card">
         <span class="swv2-eyebrow">تحقق الإنترنت</span>
         <h2>هل أصبح الإنترنت جاهزًا؟</h2>
-        <p>الصق مخرجات Terminal هنا. سنحللها بصريًا ونوضح النتيجة بدون إظهار تفاصيل مزعجة.</p>
+        <p>الصق مخرجات شاشة الأوامر هنا. سنحللها بصريًا ونوضح النتيجة بدون إظهار تفاصيل مزعجة.</p>
         <div class="swv2-verification-panel" data-swv2-verification-panel="internet">
           <textarea data-swv2-verify-output="internet" placeholder="مثال: sent=5 received=5 packet-loss=0%"></textarea>
           <div class="swv2-action-row">
@@ -390,15 +390,15 @@
             <label>هوية الراوتر
               <input type="text" name="vpn_router_identity" placeholder="mikrotik-branch-01">
             </label>
-            <label>VPS endpoint
+            <label>عنوان الخادم العام
               <input type="text" name="vpn_vps_endpoint" value="187.77.70.18" placeholder="187.77.70.18">
             </label>
-            <label>WireGuard port
+            <label>منفذ نفق الإدارة
               <input type="number" name="vpn_endpoint_port" value="51820" min="1" max="65535">
             </label>
           </form>
           <div class="swv2-provisioning-grid" aria-label="بيانات حجز الراوتر">
-            <div><span>سر RADIUS</span><strong data-swv2-provisioning="radius_secret">***</strong></div>
+            <div><span>سر المصادقة</span><strong data-swv2-provisioning="radius_secret">***</strong></div>
             <div><span>رقم الحجز</span><strong data-swv2-provisioning="registry_id">--</strong></div>
             <div><span>مرحلة الراوتر</span><strong data-swv2-provisioning="lifecycle_state">reserved</strong></div>
             <div><span>حالة الربط</span><strong data-swv2-provisioning="peer_status">--</strong></div>
@@ -588,7 +588,7 @@
                data-swv2-mode-panel="api" hidden>
             <div class="swv2-auto-finalize-grid">
               <label class="swv2-field">
-                <span>عنوان الراوتر (WAN IP أو الدومين)</span>
+                <span>عنوان الراوتر على الإنترنت أو الدومين</span>
                 <input type="text"
                        data-swv2-auto-router-address
                        placeholder="مثال: 213.6.169.138"
@@ -692,7 +692,7 @@
       <div class="swv2-step-card">
         <span class="swv2-eyebrow">اختيار الواجهات</span>
         <h2>اختر منافذ الشبكة الآمنة للخدمة</h2>
-        <p>سنحاول استبعاد WAN وواجهة VPN بصريًا. إذا لم تتوفر snapshot من الراوتر يمكنك استخدام القائمة اليدوية المؤقتة.</p>
+        <p>سنحاول استبعاد واجهة الإنترنت ونفق الإدارة بصريًا. إذا لم تتوفر لقطة من الراوتر يمكنك استخدام القائمة اليدوية المؤقتة.</p>
         <div class="swv2-action-row">
           <button type="button" class="swv2-btn swv2-btn-primary" data-swv2-load-interfaces>عرض الواجهات المقترحة</button>
         </div>
@@ -700,53 +700,53 @@
         <div class="swv2-interface-grid" data-swv2-interface-picker>
           <button type="button" class="swv2-interface-card is-disabled" data-interface-name="ether1" disabled>
             <strong>ether1</strong>
-            <span>WAN</span>
+            <span>واجهة الإنترنت</span>
             <small>مستبعد: واجهة الإنترنت</small>
           </button>
           <button type="button" class="swv2-interface-card is-recommended" data-interface-name="ether2">
             <strong>ether2</strong>
-            <span>LAN</span>
+            <span>منفذ محلي</span>
             <small>موصى به</small>
           </button>
           <button type="button" class="swv2-interface-card is-recommended" data-interface-name="ether3">
             <strong>ether3</strong>
-            <span>LAN</span>
+            <span>منفذ محلي</span>
             <small>موصى به</small>
           </button>
           <button type="button" class="swv2-interface-card is-recommended" data-interface-name="ether4">
             <strong>ether4</strong>
-            <span>LAN</span>
+            <span>منفذ محلي</span>
             <small>موصى به</small>
           </button>
           <button type="button" class="swv2-interface-card is-recommended" data-interface-name="ether5">
             <strong>ether5</strong>
-            <span>LAN</span>
+            <span>منفذ محلي</span>
             <small>موصى به</small>
           </button>
           <button type="button" class="swv2-interface-card is-recommended" data-interface-name="ether6">
             <strong>ether6</strong>
-            <span>LAN</span>
+            <span>منفذ محلي</span>
             <small>موصى به</small>
           </button>
           <button type="button" class="swv2-interface-card is-recommended" data-interface-name="ether7">
             <strong>ether7</strong>
-            <span>LAN</span>
+            <span>منفذ محلي</span>
             <small>موصى به</small>
           </button>
           <button type="button" class="swv2-interface-card is-recommended" data-interface-name="ether8">
             <strong>ether8</strong>
-            <span>LAN</span>
+            <span>منفذ محلي</span>
             <small>موصى به</small>
           </button>
           <button type="button" class="swv2-interface-card is-disabled" data-interface-name="hr-wg" disabled>
             <strong>hr-wg</strong>
-            <span>VPN</span>
+            <span>نفق الإدارة</span>
             <small>مستبعد: نفق الإدارة</small>
           </button>
         </div>
         <details class="swv2-advanced">
           <summary>تجاوز يدوي متقدم</summary>
-          <p>استخدم هذا فقط إذا كنت متأكدًا أن الواجهة ليست WAN ولا VPN. الاختيار الخاطئ قد يقطع إدارة الراوتر.</p>
+          <p>استخدم هذا فقط إذا كنت متأكدًا أن الواجهة ليست واجهة الإنترنت ولا نفق الإدارة. الاختيار الخاطئ قد يقطع إدارة الراوتر.</p>
           <input type="text" data-swv2-manual-interfaces placeholder="ether2,ether3">
         </details>
       </div>
@@ -797,8 +797,8 @@
     <article class="swv2-step" data-swv2-step="broadband-flow">
       <div class="swv2-step-card">
         <span class="swv2-eyebrow">برودباند</span>
-        <h2>تجهيز PPPoE بمعاينة آمنة</h2>
-        <p>سيتم توليد profile و pool و PPPoE server مع NAT scoped على pool فقط. لا يوجد تطبيق مباشر.</p>
+        <h2>تجهيز البرودباند بمعاينة آمنة</h2>
+        <p>سيتم توليد ملف التشغيل ومجموعة العناوين وخادم البرودباند مع ترجمة عناوين محدودة على مجموعة العملاء فقط. لا يوجد تطبيق مباشر.</p>
         <div class="swv2-mode-toggle" data-swv2-mode-toggle="broadband">
           <button type="button" class="is-selected" data-mode-target="broadband" data-mode-value="smart">الوضع الذكي</button>
           <button type="button" data-mode-target="broadband" data-mode-value="manual">إعداد يدوي</button>
@@ -811,7 +811,7 @@
           <label>واجهات الخدمة
             <input type="text" name="broadband_interfaces" value="ether2" placeholder="ether2,ether3">
           </label>
-          <label>اسم خدمة PPPoE
+          <label>اسم خدمة البرودباند
             <input type="text" name="broadband_service_name" value="hoberadius-pppoe">
           </label>
           <label>عنوان الراوتر المحلي
@@ -833,7 +833,7 @@
           <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-service-dry-run="broadband">مراجعة جافة</button>
           <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-service-verify="broadband">تحقق</button>
         </div>
-        <textarea data-swv2-service-output="broadband" placeholder="ألصق مخرجات PPPoE أو تحقق RADIUS هنا"></textarea>
+        <textarea data-swv2-service-output="broadband" placeholder="ألصق مخرجات اتصال البرودباند أو تحقق المصادقة هنا"></textarea>
         <div class="swv2-script-card">
           <div><strong>معاينة سكربت البرودباند</strong><span data-swv2-service-status="broadband">لم يتم توليد السكربت بعد.</span><button type="button" class="swv2-copy-chip" data-copy-target="broadband-script-code">نسخ</button></div>
           <pre id="broadband-script-code">-- لم يتم توليد سكربت البرودباند بعد --</pre>

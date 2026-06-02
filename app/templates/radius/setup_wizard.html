@@ -54,14 +54,14 @@
         <div class="sw-field">
           <label>نوع المصدر</label>
           <select name="source_type" required>
-            <option value="dhcp">DHCP مباشر</option>
+            <option value="dhcp">عنوان تلقائي مباشر</option>
             <option value="static">عنوان شبكي ثابت</option>
-            <option value="vlan">VLAN (شبكة افتراضيّة)</option>
-            <option value="pppoe">PPPoE</option>
+            <option value="vlan">شبكة افتراضية</option>
+            <option value="pppoe">اتصال مزوّد الإنترنت</option>
           </select>
         </div>
         <div class="sw-field">
-          <label>واجهة WAN المختارة</label>
+          <label>واجهة الإنترنت المختارة</label>
           <input name="selected_wan_interface" placeholder="ether1" required>
         </div>
         <input type="hidden" name="payload_json" value="">
@@ -92,20 +92,20 @@
     </section>
 
     <section class="sw-panel">
-      <h2>2) VPN / RADIUS</h2>
+      <h2>2) الربط والمصادقة</h2>
       <form data-sw-form="vpn-radius">
         {{ csrf_token_input()|safe }}
         <input type="hidden" name="payload_json" value="">
         <div class="sw-field-grid" aria-label="بيانات الربط والمصادقة">
-          <label class="sw-field"><span>اسم واجهة WireGuard</span><input name="wg_interface_name" value="hr-wg"></label>
-          <label class="sw-field"><span>اسم peer على الراوتر</span><input name="peer_name" value="vps-peer"></label>
+          <label class="sw-field"><span>اسم نفق الإدارة</span><input name="wg_interface_name" value="hr-wg"></label>
+          <label class="sw-field"><span>اسم نظير الربط على الراوتر</span><input name="peer_name" value="vps-peer"></label>
           <label class="sw-field"><span>عنوان الراوتر داخل النفق</span><input name="router_vpn_ip" value="10.10.0.3"></label>
           <label class="sw-field"><span>عنوان الخادم داخل النفق</span><input name="vps_vpn_ip" value="10.10.0.1"></label>
           <label class="sw-field"><span>العنوان المسموح للمرور</span><input name="allowed_address" value="10.10.0.1/32"></label>
-          <label class="sw-field"><span>عنوان VPS العام</span><input name="vps_public_endpoint" value="187.77.70.18"></label>
-          <label class="sw-field"><span>منفذ WireGuard</span><input name="endpoint_port" type="number" min="1" max="65535" value="51820"></label>
-          <label class="sw-field"><span>عنوان خادم RADIUS</span><input name="radius_server_ip" value="10.10.0.1"></label>
-          <label class="sw-field"><span>سر RADIUS</span><input name="radius_secret" value="CHANGE_ME"></label>
+          <label class="sw-field"><span>عنوان الخادم العام</span><input name="vps_public_endpoint" value="187.77.70.18"></label>
+          <label class="sw-field"><span>منفذ نفق الإدارة</span><input name="endpoint_port" type="number" min="1" max="65535" value="51820"></label>
+          <label class="sw-field"><span>عنوان خادم المصادقة</span><input name="radius_server_ip" value="10.10.0.1"></label>
+          <label class="sw-field"><span>سر المصادقة</span><input name="radius_secret" value="CHANGE_ME"></label>
           <label class="sw-field"><span>مستخدم الربط للراوتر</span><input name="api_username" value="hr_api_setup"></label>
         </div>
         <div class="sw-inline-actions">
@@ -150,7 +150,7 @@
         </div>
         <div class="sw-field">
           <label>مخرجات تحقق بوابة الدخول</label>
-          <textarea name="verify_output" rows="4" spellcheck="false" placeholder="/ip hotspot print detail&#10;/ip hotspot profile print detail"></textarea>
+          <textarea name="verify_output" rows="4" spellcheck="false" placeholder="ألصق مخرجات فحص بوابة الدخول هنا"></textarea>
         </div>
       </form>
     </section>
@@ -185,7 +185,7 @@
         </div>
         <div class="sw-field">
           <label>مخرجات تحقق البرودباند</label>
-          <textarea name="verify_output" rows="4" spellcheck="false" placeholder="/interface pppoe-server server print detail&#10;/ppp profile print detail"></textarea>
+          <textarea name="verify_output" rows="4" spellcheck="false" placeholder="ألصق مخرجات فحص البرودباند هنا"></textarea>
         </div>
       </form>
     </section>
@@ -205,10 +205,10 @@
     <p class="sw-muted">المعاينة بدون تنفيذ آمنة. التطبيق والتراجع يبقيان محظورين ما لم تكن HOBERADIUS_SETUP_WIZARD_LIVE_APPLY=true و HOBERADIUS_SETUP_WIZARD_LAB_MODE=true مع جرد حديث ومعاينة تنفيذ ومعاينة تراجع وتأكيد.</p>
     <div class="sw-inline-actions">
       <select data-sw-operation-step>
-        <option value="internet">internet</option>
-        <option value="vpn">vpn</option>
-        <option value="hotspot">hotspot</option>
-        <option value="broadband">broadband</option>
+        <option value="internet">الإنترنت</option>
+        <option value="vpn">الربط والمصادقة</option>
+        <option value="hotspot">بوابة الدخول</option>
+        <option value="broadband">البرودباند</option>
       </select>
       <button class="hub-btn" type="button" data-sw-action="dry-run">معاينة التنفيذ</button>
       <button class="hub-btn" type="button" data-sw-action="list-operations">العمليات</button>
@@ -217,7 +217,7 @@
     </div>
     <div class="sw-field">
       <label>عبارة التأكيد</label>
-      <input data-sw-confirmation placeholder="APPLY SETUP WIZARD 1 internet">
+      <input data-sw-confirmation placeholder="اكتب عبارة التأكيد التي تظهر لك قبل التطبيق">
     </div>
   </section>
 
