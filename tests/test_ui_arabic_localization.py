@@ -381,6 +381,13 @@ def test_core_operations_do_not_show_old_service_english_labels():
             ">Hotspot<",
             ">PPP<",
         ],
+        Path("app/templates/radius/svc_partials/open-sites.html"): [
+            "لتسجيل الدخول في Hotspot",
+            "<strong>Hotspot مفعّلاً</strong>",
+            "برمجة Hotspot",
+            "Walled Garden",
+            "اكتب domain",
+        ],
     }
 
     for path, forbidden in files.items():
