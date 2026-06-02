@@ -147,7 +147,7 @@ def setup_wizard_overview():
                 "can_create_run": True,
                 "can_apply_router_changes": False,
                 "can_apply_server_peer": False,
-                "reason_ar": "هذا الـ API مخصص للقراءة وبدء التشغيل فقط. تطبيق إعدادات الراوتر يبقى من شاشة الويب المحمية.",
+                "reason_ar": "هذا المسار مخصص للقراءة وبدء التشغيل فقط. تطبيق إعدادات الراوتر يبقى من شاشة الويب المحمية.",
             },
         }
     )
