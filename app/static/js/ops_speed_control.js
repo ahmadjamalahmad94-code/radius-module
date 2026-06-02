@@ -22,6 +22,13 @@
   function mb(kbps) { return (kbps / 1000).toFixed(2); }
   function avg(list) { return list.length ? list.reduce(function (a, b) { return a + b; }, 0) / list.length : 0; }
 
+  // Boost zones: ≤100% base color, 100–200% amber, 200–300% red.
+  function applyZone(el, v) {
+    if (!el) return;
+    el.classList.toggle("is-warn", v > 100 && v <= 200);
+    el.classList.toggle("is-danger", v > 200);
+  }
+
   // ── slider registry (for accurate px positioning + resize) ─────────────
   var sliders = [];
   function bindSlider(input, onInput) {
@@ -39,6 +46,7 @@
       var center = THUMB / 2 + frac * (w - THUMB);
       if (fill) fill.style.width = center + "px";
       if (bubble) { bubble.style.left = center + "px"; bubble.textContent = Math.round(val) + "%"; }
+      applyZone(wrap, val);
     }
     function schedule() { if (raf) return; raf = requestAnimationFrame(function () { raf = null; render(); }); }
 
@@ -54,6 +62,13 @@
 
     var rec = { render: render, input: input };
     sliders.push(rec);
+    // Re-measure whenever the rail's width changes — covers window resize AND
+    // sidebar collapse/expand (which reflows the layout without a resize event),
+    // so the px-positioned fill/bubble never drift over neighbouring elements.
+    if (window.ResizeObserver) {
+      var ro = new ResizeObserver(function () { render(); });
+      ro.observe(rail);
+    }
     render();
     return rec;
   }
@@ -79,7 +94,6 @@
       isDefault: el.getAttribute("data-default") === "1",
       enabled: !!$("[data-enable]", el) && $("[data-enable]", el).checked,
       uni: 100, dn: 100, upp: 100,
-      effUniEl: $("[data-eff-uni]", el),
       effDownEl: $("[data-eff-down]", el),
       effUpEl: $("[data-eff-up]", el),
       statusEl: $("[data-status]", el)
@@ -91,14 +105,14 @@
   function recompute() {
     var enabled = profiles.filter(function (p) { return p.enabled; });
 
-    // per-profile effective speeds
+    // per-profile effective speeds — always show both directions. In unified
+    // mode the single % applies to download AND upload; in separate mode each
+    // direction uses its own %.
     profiles.forEach(function (p) {
-      var effDown = p.down * (p.dn / 100);
-      var effUp = p.up * (p.upp / 100);
-      var effUni = p.down * (p.uni / 100);
-      if (p.effUniEl) p.effUniEl.innerHTML = mb(effUni) + " <i>Mb</i>";
-      if (p.effDownEl) p.effDownEl.textContent = mb(effDown);
-      if (p.effUpEl) p.effUpEl.textContent = mb(effUp);
+      var fd = (state.mode === "unified" ? p.uni : p.dn) / 100;
+      var fu = (state.mode === "unified" ? p.uni : p.upp) / 100;
+      if (p.effDownEl) p.effDownEl.textContent = mb(p.down * fd);
+      if (p.effUpEl) p.effUpEl.textContent = mb(p.up * fu);
     });
 
     // KPIs
@@ -123,13 +137,18 @@
 
   function renderRing(pct) {
     var bar = $("[data-ring]");
-    if (bar) { bar.style.strokeDasharray = RING_C; bar.style.strokeDashoffset = RING_C * (1 - pct / 100); }
+    // Ring fills 0→100% (reaching "full" at the original speed); beyond 100% it
+    // stays full and the colour escalates (amber → red) to flag the boost.
+    var frac = clamp(pct, 0, 100) / 100;
+    if (bar) { bar.style.strokeDasharray = RING_C; bar.style.strokeDashoffset = RING_C * (1 - frac); }
     setText("[data-ring-value]", Math.round(pct));
+    applyZone($(".spdx-ring"), pct);
   }
 
   function renderImpact(enabled) {
-    var base = enabled.reduce(function (s, p) { return s + p.down; }, 0);
-    var eff = enabled.reduce(function (s, p) { return s + p.down * (p.uni / 100); }, 0);
+    // Totals cover download + upload (the unified % applies to both directions).
+    var base = enabled.reduce(function (s, p) { return s + p.down + p.up; }, 0);
+    var eff = enabled.reduce(function (s, p) { return s + (p.down + p.up) * (p.uni / 100); }, 0);
     var note = $("[data-impact-note]");
     if (note) note.innerHTML = "سيتم تطبيق <b>" + Math.round(state.globalUni) + "%</b> على <b>" + enabled.length + "</b> باقات.";
     setText("[data-impact-base]", mb(base) + " Mb");

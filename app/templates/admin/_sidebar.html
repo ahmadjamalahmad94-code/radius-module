@@ -213,8 +213,8 @@
 {%- set sec_subs_active     = m_users_list or m_users_new or m_online_users or m_subscriber_groups or m_subscribers_360 or m_subscribers_overview -%}
 {%- set sec_cards_active    = m_cards_overview or m_cards_checker or m_cards_batches or m_cards_generate or m_cards_online or m_print_templates or m_cards_print -%}
 {%- set m_cards_recharge    = '/cards/recharge' in path -%}
-{%- set sec_e_cards_active  = m_card_users or m_card_marketplace or m_cards_recharge -%}
-{%- set sec_offers_active   = m_plans_list or m_plans_new or m_bw_list or m_bw_sched or m_operations_speed -%}
+{%- set sec_e_cards_active  = m_card_users or m_card_marketplace or m_cards_recharge or m_operations_speed -%}
+{%- set sec_offers_active   = m_plans_list or m_plans_new or m_bw_list or m_bw_sched -%}
 {%- set sec_network_active  = m_devices or m_pools or m_mt
                                 or m_topology or m_alerts
                                 or m_audit_log or m_jobs
@@ -331,6 +331,7 @@
         {{ sub_item('radius.card_marketplace', 'سوق البطاقات', m_card_marketplace) }}
         {{ sub_item('radius.card_users_list', 'مستخدمو البطاقات', m_card_users) }}
         {{ sub_item('radius.cards_recharge_list', '⚡ بطاقات الشحن المسبق', m_cards_recharge) }}
+        {{ sub_item('radius.operations_speed_control', 'التحكم بالباندويث', m_operations_speed) }}
       </div></div>
     </div>
 
@@ -348,7 +349,6 @@
         {{ sub_item('radius.plans_new',           'إضافة عرض',     m_plans_new) }}
         {{ sub_item('radius.bw_list',             'السرعات',       m_bw_list) }}
         {{ sub_item('radius.bandwidth_schedules', 'جدولة السرعات', m_bw_sched) }}
-        {{ sub_item('radius.operations_speed_control', 'التحكم بالسرعة', m_operations_speed) }}
       </div></div>
     </div>
 
