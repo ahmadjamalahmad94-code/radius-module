@@ -1,0 +1,179 @@
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+{% block title %}إعداد دفع مقاييس الراوتر{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-gauge-high"></i>{% endblock %}
+{% block page_title %}إعداد دفع مقاييس الراوتر{% endblock %}
+{% block page_sub %}<span class="sub">الراوتر يرسل مقاييسه للخادم كل دقيقتين حتى تعمل تنبيهات الفصل والاستهلاك</span>{% endblock %}
+
+{% block head_extra %}
+<style>
+  .mx-card{background:#fff;border:1px solid var(--hub-border,#cbd5e1);border-radius:14px;box-shadow:var(--hub-sh-sm,0 1px 3px rgba(15,23,42,.06));margin-bottom:14px;padding:16px 20px}
+  .mx-card h3{margin:0 0 10px;font-size:15px;color:#5b21b6;display:flex;align-items:center;gap:8px}
+  .mx-row{display:grid;grid-template-columns:150px 1fr;gap:10px;align-items:center;margin-bottom:10px}
+  .mx-row label{font-size:13px;font-weight:800;color:#475569}
+  .mx-row input,.mx-row select{width:100%;padding:8px 12px;border:1px solid #d5ccf5;border-radius:8px;font-size:13px;direction:ltr}
+  .mx-script{background:#0f172a;color:#e2e8f0;border-radius:10px;padding:14px 16px;margin-top:10px;position:relative;overflow:auto}
+  .mx-script pre{margin:0;font-family:var(--hub-mono,monospace);font-size:12px;line-height:1.65;color:#bfdbfe;direction:ltr;white-space:pre}
+  .mx-copy{position:absolute;inset-inline-end:10px;top:10px;background:#1e293b;color:#cbd5e1;border:1px solid #334155;padding:5px 12px;border-radius:6px;font-size:11.5px;font-weight:800;cursor:pointer}
+  .mx-copy:hover{color:#fff;background:#334155}
+  .mx-copy.is-copied{background:#16a34a;color:#fff;border-color:#16a34a}
+  .mx-step{font-size:13.5px;line-height:1.9;color:#1f2937}
+  .mx-warn{background:#fffbeb;border:1px solid #fcd34d;color:#92400e;padding:10px 14px;border-radius:8px;font-size:12.5px;margin-bottom:12px}
+  .mx-muted{font-size:12px;color:#64748b;margin:4px 0 0;line-height:1.7}
+  .mx-muted a{font-weight:800;color:#5b21b6}
+  @media (max-width:640px){.mx-row{grid-template-columns:1fr}.mx-card{padding:14px}}
+</style>
+{% endblock %}
+
+{% block content %}
+{{ hub.hero("إعداد دفع مقاييس الراوتر",
+    subtitle="سكربت يُلصق مرة واحدة على الراوتر، وبعدها يرسل حالة الواجهات وعدادات النقل إلى الخادم",
+    icon="gauge-high") }}
+
+<div class="mx-card">
+  <h3><i class="fa-solid fa-circle-info"></i> الفكرة باختصار</h3>
+  <p style="font-size:13.5px;line-height:1.8;color:#475569;margin:0">
+    التنبيهات الذكية تحتاج بيانات حيّة من الراوتر. وبما أن الراوتر غالبًا خلف شبكة داخلية ولا يستطيع الخادم الوصول إليه مباشرة،
+    يعكس النظام الاتجاه: الراوتر هو الذي يرسل المقاييس للخادم كل دقيقتين. إذا توقف الإرسال بعد المدة المحددة،
+    يفتح النظام تنبيهًا واضحًا بأن الراوتر مفصول.
+  </p>
+</div>
+
+{% if not tokens %}
+<div class="mx-warn">
+  <i class="fa-solid fa-triangle-exclamation"></i>
+  لا يوجد رمز ربط مفعل بعد. أنشئ رمزًا من
+  <a href="{{ url_for('radius.tok_list') }}" target="_blank" rel="noopener" style="font-weight:800;color:#92400e;text-decoration:underline">إدارة رموز الربط</a>
+  ثم ارجع والصقه في الحقل أدناه.
+</div>
+{% endif %}
+
+<div class="mx-card">
+  <h3><i class="fa-solid fa-screwdriver-wrench"></i> بيانات التوليد</h3>
+  <div class="mx-row">
+    <label>الراوتر</label>
+    <select id="mx-router">
+      {% for r in routers %}
+      <option value="{{ r.id }}">{{ r.name }} (#{{ r.id }})</option>
+      {% endfor %}
+      {% if not routers %}<option value="">لا توجد راوترات مسجلة</option>{% endif %}
+    </select>
+  </div>
+  <div class="mx-row">
+    <label>عنوان الخادم</label>
+    <input type="text" id="mx-url" value="{{ base_url }}" dir="ltr">
+  </div>
+  <div class="mx-row">
+    <label>رمز الربط</label>
+    <input type="text" id="mx-token" value="" autocomplete="off" placeholder="الصق رمز الربط من شاشة إدارة الرموز">
+  </div>
+  <p class="mx-muted">
+    لديك <strong>{{ tokens|length }}</strong> رمز مفعل{% if suggested_token_name %}، مثل: <strong>{{ suggested_token_name }}</strong>{% endif %}.
+    <a href="{{ url_for('radius.tok_list') }}">إدارة الرموز</a>
+  </p>
+</div>
+
+<div class="mx-card">
+  <h3><i class="fa-solid fa-list-ol"></i> خطوات التطبيق</h3>
+  <div class="mx-step">
+    1. اختر الراوتر، وتأكد من عنوان الخادم، والصق رمز الربط.
+    <br>2. انسخ السكربت الناتج من الصندوق التالي.
+    <br>3. الصقه مرة واحدة في طرفية الراوتر واضغط إدخال.
+    <br>4. بعد دقيقتين تقريبًا ستبدأ التنبيهات الذكية باستقبال المقاييس لهذا الراوتر.
+  </div>
+</div>
+
+<div class="mx-card">
+  <h3><i class="fa-solid fa-code"></i> سكربت الراوتر</h3>
+  <div class="mx-script">
+    <button class="mx-copy" type="button" data-copy-script><i class="fa-solid fa-copy"></i> نسخ</button>
+<pre id="mx-script-body" dir="ltr">جاري توليد السكربت...</pre>
+  </div>
+</div>
+
+<div class="mx-card">
+  <h3><i class="fa-solid fa-vial"></i> اختبار سريع قبل الجدولة</h3>
+  <p class="mx-muted">انسخ الأمر التالي إذا أردت تجربة إرسال عينة واحدة قبل تشغيل المجدول الدائم.</p>
+  <div class="mx-script">
+    <button class="mx-copy" type="button" data-copy-test><i class="fa-solid fa-copy"></i> نسخ</button>
+<pre id="mx-test-body" dir="ltr">جاري توليد أمر الاختبار...</pre>
+  </div>
+</div>
+
+<div class="mx-card">
+  <h3><i class="fa-solid fa-broom"></i> إيقاف دفع المقاييس من الراوتر</h3>
+  <p class="mx-muted">استخدم هذا الأمر على الراوتر إذا أردت إيقاف إرسال المقاييس لهذا الخادم.</p>
+  <div class="mx-script"><pre dir="ltr">/system scheduler remove [find name=hoberadius-push-metrics]</pre></div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var routerSel = document.getElementById("mx-router");
+  var urlInp = document.getElementById("mx-url");
+  var tokInp = document.getElementById("mx-token");
+  var scriptEl = document.getElementById("mx-script-body");
+  var testEl = document.getElementById("mx-test-body");
+
+  function rebuild(){
+    var url = (urlInp.value || "").trim().replace(/\/+$/, "");
+    var tok = (tokInp.value || "").trim();
+    var rid = (routerSel && routerSel.value) || "";
+    var endpoint = url + "/api/v1/routers/" + rid + "/metrics/ingest";
+    var isSecure = /^https:\/\//i.test(url);
+    var modeAndCert = isSecure ? "mode=https check-certificate=no" : "mode=http";
+
+    var script =
+      '/system scheduler remove [find name=hoberadius-push-metrics]\n' +
+      '\n' +
+      '/system scheduler add name="hoberadius-push-metrics" interval=2m \\\n' +
+      '    start-time=startup comment="HobeRadius metrics push" \\\n' +
+      '    on-event="\n' +
+      ':local body \\"{\\\\\\"interfaces\\\\\\":[\\";\n' +
+      ':local first true;\n' +
+      ':foreach i in=[/interface find] do={\n' +
+      '  :local nm [/interface get \\$i name];\n' +
+      '  :local rx [/interface get \\$i rx-byte];\n' +
+      '  :local tx [/interface get \\$i tx-byte];\n' +
+      '  :if (!\\$first) do={ :set body (\\$body . \\",\\") };\n' +
+      '  :set body (\\$body . \\"{\\\\\\"name\\\\\\":\\\\\\"\\" . \\$nm . \\"\\\\\\",\\\\\\"rx_bytes\\\\\\":\\" . \\$rx . \\",\\\\\\"tx_bytes\\\\\\":\\" . \\$tx . \\"}\\");\n' +
+      '  :set first false;\n' +
+      '};\n' +
+      ':set body (\\$body . \\"]}\\");\n' +
+      '/tool fetch url=\\"' + endpoint + '\\" \\\\\n' +
+      '    http-method=post ' + modeAndCert + ' \\\\\n' +
+      '    http-header-field=\\"Content-Type: application/json,Authorization: Bearer ' + tok + '\\" \\\\\n' +
+      '    http-data=\\$body output=none;\n' +
+      '"';
+    scriptEl.textContent = script;
+
+    testEl.textContent =
+      '/tool fetch url="' + endpoint + '" \\\n' +
+      '    http-method=post ' + modeAndCert + ' \\\n' +
+      '    http-header-field="Content-Type: application/json,Authorization: Bearer ' + tok + '" \\\n' +
+      '    http-data="{\\"interfaces\\":[{\\"name\\":\\"ether1\\",\\"rx_bytes\\":1000,\\"tx_bytes\\":2000}]}" \\\n' +
+      '    output=user';
+  }
+
+  function copy(text, btn){
+    navigator.clipboard.writeText(text).then(function(){
+      var old = btn.innerHTML;
+      btn.innerHTML = '<i class="fa-solid fa-check"></i> منسوخ';
+      btn.classList.add("is-copied");
+      setTimeout(function(){ btn.innerHTML = old; btn.classList.remove("is-copied"); }, 1700);
+    });
+  }
+
+  [routerSel, urlInp, tokInp].forEach(function(el){
+    if(!el) return;
+    el.addEventListener("input", rebuild);
+    el.addEventListener("change", rebuild);
+  });
+  var scriptBtn = document.querySelector("[data-copy-script]");
+  if(scriptBtn) scriptBtn.addEventListener("click", function(){ copy(scriptEl.textContent, this); });
+  var testBtn = document.querySelector("[data-copy-test]");
+  if(testBtn) testBtn.addEventListener("click", function(){ copy(testEl.textContent, this); });
+  rebuild();
+})();
+</script>
+{% endblock %}

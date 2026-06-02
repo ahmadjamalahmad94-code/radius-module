@@ -21,7 +21,12 @@
       <h2>التنبيهات الذكية</h2>
       <p>كل صف هنا ناتج من قاعدة تنبيه محفوظة: راوتر، شدة، قاعدة، وآخر وقت رصد. الهدف أن ترى ما يستحق الانتباه بدون ضوضاء.</p>
     </div>
-    <span class="opsx-hero-icon"><i class="fa-solid fa-bell"></i></span>
+    <div class="opsx-hero-side">
+      <button type="button" class="sa-gear" data-sa-open>
+        <i class="fa-solid fa-gear"></i> إعدادات التنبيهات
+      </button>
+      <span class="opsx-hero-icon"><i class="fa-solid fa-bell"></i></span>
+    </div>
   </header>
 
   <div class="opsx-layout">
@@ -131,4 +136,137 @@
     </main>
   </div>
 </section>
+
+{# ───────────── floating: smart-alerts settings ───────────── #}
+<div class="sa-modal" data-sa-modal hidden>
+  <div class="sa-backdrop" data-sa-close></div>
+  <form class="sa-dialog" method="post" action="{{ url_for('radius.mt_alerts_settings_save') }}" role="dialog" aria-modal="true">
+    <div class="sa-head">
+      <h3><i class="fa-solid fa-gear"></i> إعدادات التنبيهات الذكية</h3>
+      <button type="button" class="sa-x" data-sa-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="sa-body">
+      <div class="sa-note">
+        <i class="fa-solid fa-circle-info"></i>
+        الكشف يعتمد على دفع الراوتر لمقاييسه كل دقيقتين.
+        <a href="{{ url_for('radius.mt_metrics_setup') }}">إعداد عميل المقاييس على الراوتر ←</a>
+      </div>
+
+      <div class="sa-card">
+        <div class="sa-card-title">التشغيل العام</div>
+        <label class="sa-toggle"><input type="checkbox" name="enabled" value="1" {% if settings.enabled %}checked{% endif %}><span>تفعيل التنبيهات الذكية</span></label>
+        <label class="sa-toggle"><input type="checkbox" name="telegram" value="1" {% if settings.telegram %}checked{% endif %}><span>إرسال إشعار تيليجرام عند تنبيه جديد</span></label>
+      </div>
+
+      <div class="sa-card">
+        <div class="sa-card-title">أنواع الكشف</div>
+        <label class="sa-toggle"><input type="checkbox" name="offline" value="1" {% if settings.offline %}checked{% endif %}><span>راوتر مفصول (توقّف عن الإرسال)</span></label>
+        <label class="sa-toggle"><input type="checkbox" name="high_traffic" value="1" {% if settings.high_traffic %}checked{% endif %}><span>ترافيك عالٍ فوق الحد <small>(قيد التفعيل)</small></span></label>
+        <label class="sa-toggle"><input type="checkbox" name="high_usage" value="1" {% if settings.high_usage %}checked{% endif %}><span>استهلاك عالٍ فوق الحد <small>(قيد التفعيل)</small></span></label>
+        <div class="sa-grid">
+          <label class="sa-field">يُعدّ مفصولًا بعد (دقيقة)
+            <input type="number" min="2" name="offline_after_min" value="{{ settings.offline_after_min }}">
+          </label>
+        </div>
+      </div>
+
+      <div class="sa-card">
+        <div class="sa-card-title">الحدود الافتراضية (لكل الراوترات)</div>
+        <div class="sa-grid">
+          <label class="sa-field">السرعة الطبيعية (Mbps)
+            <input type="number" min="0" name="default_speed_mbps" value="{{ settings.default_speed_mbps }}">
+          </label>
+          <label class="sa-field">الاستهلاك الطبيعي (GB)
+            <input type="number" min="0" name="default_usage_gb" value="{{ settings.default_usage_gb }}">
+          </label>
+          <label class="sa-field">نافذة الاستهلاك
+            <select name="usage_window">
+              <option value="day" {% if settings.usage_window == 'day' %}selected{% endif %}>يومي</option>
+              <option value="month" {% if settings.usage_window == 'month' %}selected{% endif %}>شهري</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      {% if routers %}
+      <div class="sa-card">
+        <div class="sa-card-title">حدود مخصّصة لكل راوتر <small>(فارغ = يستخدم الافتراضي)</small></div>
+        <div class="sa-routers">
+          {% for r in routers %}
+          <div class="sa-router">
+            <input type="hidden" name="r_{{ r.id }}_present" value="1">
+            <div class="sa-router-head">
+              <label class="sa-toggle sa-toggle--sm"><input type="checkbox" name="r_{{ r.id }}_enabled" value="1" {% if r.enabled %}checked{% endif %}><span>{{ r.name }}</span></label>
+            </div>
+            <div class="sa-grid sa-grid--4">
+              <label class="sa-field">مفصول بعد (د)<input type="number" min="2" name="r_{{ r.id }}_offline" value="{{ r.offline_after_min }}"></label>
+              <label class="sa-field">سرعة (Mbps)<input type="number" min="0" name="r_{{ r.id }}_speed" value="{{ r.normal_speed_mbps }}"></label>
+              <label class="sa-field">استهلاك (GB)<input type="number" min="0" name="r_{{ r.id }}_usage" value="{{ r.normal_usage_gb }}"></label>
+              <label class="sa-field">النافذة
+                <select name="r_{{ r.id }}_window">
+                  <option value="day" {% if r.usage_window == 'day' %}selected{% endif %}>يومي</option>
+                  <option value="month" {% if r.usage_window == 'month' %}selected{% endif %}>شهري</option>
+                </select>
+              </label>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+    <div class="sa-foot">
+      <button type="button" class="opsx-btn" data-sa-close>إغلاق</button>
+      <button type="submit" class="opsx-btn opsx-btn--primary"><i class="fa-solid fa-floppy-disk"></i> حفظ</button>
+    </div>
+  </form>
+</div>
+
+<style>
+  .opsx-hero-side{ display:flex; align-items:center; gap:12px; }
+  .sa-gear{ display:inline-flex; align-items:center; gap:7px; padding:9px 14px; border-radius:11px; cursor:pointer;
+    background:rgba(255,255,255,.16); color:#fff; border:1px solid rgba(255,255,255,.32); font:inherit; font-size:13px; font-weight:800; }
+  .sa-gear:hover{ background:rgba(255,255,255,.26); }
+  .sa-modal{ position:fixed; inset:0; z-index:1200; display:none; }
+  .sa-modal:not([hidden]){ display:block; }
+  .sa-backdrop{ position:absolute; inset:0; background:rgba(15,23,42,.55); backdrop-filter:blur(4px); }
+  .sa-dialog{ position:relative; margin:32px auto; width:min(720px,94vw); max-height:88vh; overflow:auto; background:#fff;
+    border-radius:16px; box-shadow:0 28px 80px rgba(15,23,42,.34); display:flex; flex-direction:column; }
+  .sa-head{ position:sticky; top:0; background:#fff; display:flex; align-items:center; justify-content:space-between;
+    padding:15px 18px; border-bottom:1px solid #e2e8f0; }
+  .sa-head h3{ margin:0; font-size:16px; font-weight:900; color:#0f172a; display:flex; align-items:center; gap:8px; }
+  .sa-x{ border:0; background:transparent; color:#94a3b8; font-size:18px; cursor:pointer; }
+  .sa-body{ padding:16px 18px; display:flex; flex-direction:column; gap:14px; }
+  .sa-foot{ position:sticky; bottom:0; background:#fbfdff; display:flex; justify-content:flex-end; gap:8px;
+    padding:13px 18px; border-top:1px solid #e2e8f0; }
+  .sa-note{ font-size:12.5px; font-weight:700; color:#5b21b6; background:#f5f3ff; border:1px solid #e9d5ff;
+    border-radius:10px; padding:10px 12px; line-height:1.7; }
+  .sa-note a{ color:#7c3aed; font-weight:800; }
+  .sa-card{ border:1px solid #e2e8f0; border-radius:12px; padding:12px 14px; }
+  .sa-card-title{ font-size:13px; font-weight:900; color:#0f172a; margin-bottom:8px; }
+  .sa-card-title small{ color:#94a3b8; font-weight:700; }
+  .sa-toggle{ display:flex; align-items:center; gap:9px; padding:6px 0; font-size:13px; font-weight:700; color:#334155; cursor:pointer; }
+  .sa-toggle input{ width:17px; height:17px; accent-color:#7c3aed; }
+  .sa-toggle small{ color:#d97706; font-weight:700; }
+  .sa-toggle--sm{ font-weight:800; color:#0f172a; }
+  .sa-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-top:8px; }
+  .sa-grid--4{ grid-template-columns:repeat(4,minmax(0,1fr)); }
+  .sa-field{ display:flex; flex-direction:column; gap:4px; font-size:11.5px; font-weight:800; color:#64748b; }
+  .sa-field input, .sa-field select{ padding:7px 9px; border:1px solid #cbd5e1; border-radius:9px; font:inherit; font-size:13px; color:#0f172a; }
+  .sa-routers{ display:flex; flex-direction:column; gap:10px; }
+  .sa-router{ border:1px solid #eef2f7; border-radius:10px; padding:10px 12px; background:#fafbfc; }
+  .sa-router-head{ margin-bottom:4px; }
+  @media (max-width:560px){ .sa-grid--4{ grid-template-columns:repeat(2,1fr); } }
+</style>
+<script>
+(() => {
+  const modal = document.querySelector("[data-sa-modal]");
+  if (!modal) return;
+  const open = () => { modal.hidden = false; };
+  const close = () => { modal.hidden = true; };
+  document.querySelectorAll("[data-sa-open]").forEach(b => b.addEventListener("click", open));
+  modal.querySelectorAll("[data-sa-close]").forEach(b => b.addEventListener("click", close));
+  document.addEventListener("keydown", e => { if (e.key === "Escape") close(); });
+})();
+</script>
 {% endblock %}

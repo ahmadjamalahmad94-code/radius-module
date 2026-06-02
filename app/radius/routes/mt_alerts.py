@@ -1,12 +1,20 @@
 """S6.2 — Smart alerts center.
 
 Routes:
-  GET /admin/radius/alerts          list (filterable)
-  GET /admin/radius/alerts/<id>     detail
+  GET  /admin/radius/alerts                list (filterable)
+  GET  /admin/radius/alerts/<id>           detail
+  POST /admin/radius/alerts/settings       save toggles + per-router thresholds
+  GET  /admin/radius/alerts/agent-setup    router metrics-push agent script
+
+Opening the list runs a cheap DB-only refresh: an offline heartbeat sweep
+(smart_alerts.sweep_offline) plus the problems→alerts bridge, so the page
+always reflects current state without a background worker.
 """
 from __future__ import annotations
 
-from flask import Blueprint, abort, g, render_template, request
+from flask import (
+    Blueprint, abort, flash, g, redirect, render_template, request, url_for,
+)
 
 from ..core.tenant import DEFAULT_TENANT_ID
 from ..db.repos import alerts_repo
@@ -26,13 +34,65 @@ def register_mt_alerts_routes(bp: Blueprint) -> None:
         methods=["GET"],
     )
     bp.add_url_rule(
+        "/alerts/settings", "mt_alerts_settings_save",
+        requires_perm(PERM_DIAGNOSTICS)(mt_alerts_settings_save),
+        methods=["POST"],
+    )
+    bp.add_url_rule(
+        "/alerts/agent-setup", "mt_metrics_setup",
+        requires_perm(PERM_DIAGNOSTICS)(mt_metrics_setup),
+        methods=["GET"],
+    )
+    bp.add_url_rule(
         "/alerts/<int:alert_id>", "mt_alerts_detail",
         requires_perm(PERM_DIAGNOSTICS)(mt_alerts_detail),
         methods=["GET"],
     )
 
 
+def _routers_with_thresholds(tid: int) -> list[dict]:
+    """Every router + its effective alert thresholds (per-router over global)."""
+    from ..db.repos import nas_repo, router_alert_settings_repo
+    from ..services import smart_alerts
+
+    glob = smart_alerts.global_settings(tid)
+    per_router = router_alert_settings_repo.list_for_tenant(tid)
+    try:
+        devices = nas_repo.list_nas(tid, limit=1000)
+    except Exception:  # noqa: BLE001
+        devices = []
+    out: list[dict] = []
+    for d in devices:
+        rid = int(getattr(d, "id"))
+        eff = smart_alerts.effective_for_router(rid, glob, per_router)
+        out.append({
+            "id": rid,
+            "name": getattr(d, "name", None) or f"#{rid}",
+            "enabled": eff["enabled"],
+            "offline_after_min": eff["offline_after_min"],
+            "normal_speed_mbps": eff["normal_speed_mbps"],
+            "normal_usage_gb": eff["normal_usage_gb"],
+            "usage_window": eff["usage_window"],
+        })
+    return out
+
+
 def mt_alerts_index():
+    from ..services import mt_alerts_generator, smart_alerts
+
+    tid = _tid()
+    # Cheap, DB-only refresh so the page reflects reality on every open:
+    #  1) heartbeat sweep → offline alerts from routers that stopped pushing
+    #  2) bridge existing problems (snapshot/backup/audit) into the alerts table
+    try:
+        smart_alerts.sweep_offline(tid)
+    except Exception:  # noqa: BLE001
+        pass
+    try:
+        mt_alerts_generator.refresh_alerts_from_problems(tid)
+    except Exception:  # noqa: BLE001
+        pass
+
     status = (request.args.get("status") or "open").strip().lower()
     if status not in {"open", "resolved"}:
         status = "open"
@@ -44,20 +104,90 @@ def mt_alerts_index():
         router_id = None
 
     if status == "open":
-        rows = alerts_repo.list_open(
-            _tid(), router_id=router_id, severity=severity,
-        )
+        rows = alerts_repo.list_open(tid, router_id=router_id, severity=severity)
     else:
-        rows = alerts_repo.list_resolved(
-            _tid(), router_id=router_id,
-        )
+        rows = alerts_repo.list_resolved(tid, router_id=router_id)
 
     return render_template(
         "radius/mt_alerts_index.html",
         rows=rows,
-        filters={"status": status, "severity": severity,
-                 "router_id": router_id},
+        filters={"status": status, "severity": severity, "router_id": router_id},
         severities=["info", "warning", "critical"],
+        settings=smart_alerts.global_settings(tid),
+        routers=_routers_with_thresholds(tid),
+    )
+
+
+def mt_alerts_settings_save():
+    """Persist global toggles + per-router thresholds from the settings modal."""
+    from ..db.repos import router_alert_settings_repo
+    from ..services import smart_alerts
+
+    tid = _tid()
+    form = request.form
+
+    def _checkbox(name: str) -> bool:
+        return form.get(name) in {"1", "on", "true", "yes"}
+
+    def _opt_int(name: str):
+        raw = (form.get(name) or "").strip()
+        if not raw:
+            return None
+        try:
+            return max(0, int(float(raw)))
+        except (TypeError, ValueError):
+            return None
+
+    smart_alerts.save_global_settings(tid, {
+        "enabled": _checkbox("enabled"),
+        "telegram": _checkbox("telegram"),
+        "offline": _checkbox("offline"),
+        "high_traffic": _checkbox("high_traffic"),
+        "high_usage": _checkbox("high_usage"),
+        "offline_after_min": _opt_int("offline_after_min") or 6,
+        "default_speed_mbps": _opt_int("default_speed_mbps") or 100,
+        "default_usage_gb": _opt_int("default_usage_gb") or 200,
+        "usage_window": (form.get("usage_window") or "day").strip(),
+    })
+
+    # Per-router rows: present only for routers the operator actually edited.
+    for key in form.keys():
+        if not key.startswith("r_") or not key.endswith("_present"):
+            continue
+        try:
+            rid = int(key[2:-len("_present")])
+        except (TypeError, ValueError):
+            continue
+        router_alert_settings_repo.upsert(
+            tenant_id=tid, router_id=rid,
+            enabled=_checkbox(f"r_{rid}_enabled"),
+            offline_after_min=_opt_int(f"r_{rid}_offline"),
+            normal_speed_mbps=_opt_int(f"r_{rid}_speed"),
+            normal_usage_gb=_opt_int(f"r_{rid}_usage"),
+            usage_window=(form.get(f"r_{rid}_window") or "").strip() or None,
+        )
+
+    flash("تم حفظ إعدادات التنبيهات الذكية.", "success")
+    return redirect(url_for("radius.mt_alerts_index"))
+
+
+def mt_metrics_setup():
+    """Router metrics-push agent: generates a /system scheduler script the
+    operator pastes once into the router (clone of «دفع DHCP», for metrics)."""
+    from ..db.repos import api_tokens_repo
+
+    tid = _tid()
+    tokens = [t for t in api_tokens_repo.list_tokens(tid) if not t.get("revoked")]
+    forwarded_proto = request.headers.get("X-Forwarded-Proto", "")
+    forwarded_host = request.headers.get("X-Forwarded-Host", "")
+    proto = forwarded_proto or ("https" if request.is_secure else "http")
+    host = forwarded_host or request.host
+    return render_template(
+        "radius/mt_metrics_setup.html",
+        base_url=f"{proto}://{host}",
+        tokens=tokens,
+        suggested_token_name=(tokens[0]["name"] if tokens else ""),
+        routers=_routers_with_thresholds(tid),
     )
 
 
@@ -65,5 +195,4 @@ def mt_alerts_detail(alert_id: int):
     row = alerts_repo.get_by_id(_tid(), int(alert_id))
     if not row:
         abort(404)
-    return render_template("radius/mt_alerts_detail.html",
-                           alert=row)
+    return render_template("radius/mt_alerts_detail.html", alert=row)
