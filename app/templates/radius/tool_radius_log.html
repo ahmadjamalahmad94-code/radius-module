@@ -1,10 +1,10 @@
 {# ═══════════════════════════════════════════════════════════════════════
-   Live RADIUS log — REBUILT (Night N4, 2026-05-21)
+   Live RADIUS log — UNIFIED DESIGN SYSTEM (megahero + worklayout + help).
 
    Backend untouched (route tool_radius_log + JSON endpoint
    tool_radius_log_json). Same polling loop and DOM contracts:
-     • #log-body  — tbody injected by JS
-     • #poll-int  — interval select (2s/5s/10s/off)
+     • #log-body   — tbody injected by JS
+     • #poll-int   — interval select (2s/5s/10s/off)
      • #last-update — status label updated after each fetch
    ═══════════════════════════════════════════════════════════════════════ #}
 {% extends "admin/_admin_layout.html" %}
@@ -16,58 +16,65 @@
 
 {% block content %}
 
-{{ hub.hero(
+{# ───── Merged hero: title + subtitle + integrated interval control ───── #}
+{% call hub.megahero(
   "سجل قرارات خدمة المصادقة الحيّ",
   subtitle="آخر قرارات خدمة المصادقة من سجل الدخول — يتحدّث ذاتيًا.",
   icon="rss"
-) }}
-
-{# Toolbar (interval + last-update) #}
-<form class="hub-filterbar" onsubmit="return false">
-  <label class="hub-field" style="flex-direction:row;align-items:center;gap:8px;margin-bottom:0">
-    <span class="hub-field-label" style="margin:0">تحديث:</span>
-    <select id="poll-int" class="hub-select" style="width:auto">
-      <option value="2000">كل 2 ثانية</option>
-      <option value="5000" selected>كل 5 ثوانٍ</option>
-      <option value="10000">كل 10 ثوانٍ</option>
-      <option value="0">إيقاف</option>
-    </select>
-  </label>
+) %}
+  <select id="poll-int" class="hub-select grow" title="معدّل التحديث">
+    <option value="2000">كل 2 ثانية</option>
+    <option value="5000" selected>كل 5 ثوانٍ</option>
+    <option value="10000">كل 10 ثوانٍ</option>
+    <option value="0">إيقاف التحديث</option>
+  </select>
+  {{ hub.btn("تحديث الآن", icon="rotate", variant="primary", type="button", size="sm",
+             attrs='id="refresh-now"') }}
   <span class="hub-spacer"></span>
   <span id="last-update" class="hub-text-mute" style="font-size:12.5px"></span>
-</form>
-
-{% call hub.section("آخر القرارات (radpostauth)", icon="bolt-lightning", flush=True) %}
-  <div class="hub-table-wrap" style="border:none;border-radius:0">
-    <table class="hub-table">
-      <thead>
-        <tr>
-          <th class="num" style="width:70px">#</th>
-          <th style="width:170px">الوقت</th>
-          <th>المستخدم</th>
-          <th style="width:120px">النتيجة</th>
-          <th style="width:140px">جهاز الشبكة</th>
-          <th>السبب</th>
-        </tr>
-      </thead>
-      <tbody id="log-body">
-        <tr><td colspan="6" style="text-align:center;padding:28px;color:var(--hub-text-mute)">
-          <i class="fa-solid fa-spinner fa-spin"></i> يتمّ التحميل…
-        </td></tr>
-      </tbody>
-    </table>
-  </div>
 {% endcall %}
 
-<div class="hub-text-mute" style="margin-top:10px;font-size:12.5px;text-align:start">
-  يُكتب هذا السجل من خدمة المصادقة بعد كل طلب دخول، سواء تم قبوله أو رفضه.
-</div>
+{# ───── Main (carded live table) + help panel on the LEFT ───── #}
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "كيف تقرأ هذا السجل؟",
+  intro="كل صف هو قرار مصادقة كتبته خدمة RADIUS بعد طلب دخول — قبولًا أو رفضًا — ويظهر فور وصوله.",
+  items=[
+    {'icon': 'bolt-lightning', 'text': 'القائمة تتحدّث ذاتيًا حسب الفاصل المختار في الأعلى؛ اختر «إيقاف» لتجميدها.'},
+    {'icon': 'circle-check',   'text': 'النتيجة «قبول» تعني نجاح المصادقة، و«رفض» تعني فشلها.'},
+    {'icon': 'server',         'text': 'جهاز الشبكة هو الـ NAS الذي أرسل طلب الدخول (راوتر/مجمّع).'},
+    {'icon': 'comment-dots',   'text': 'السبب يوضّح لماذا قُبل أو رُفض الطلب كما سجّلته الخدمة.'},
+  ],
+  note="يُكتب هذا السجل من خدمة المصادقة بعد كل طلب دخول؛ هذه الصفحة للقراءة فقط."
+)) %}
+  {% call hub.section("آخر القرارات (radpostauth)", icon="bolt-lightning", flush=True) %}
+    <div class="hub-table-wrap uds-table-wrap" style="border:none;border-radius:0">
+      <table class="hub-table">
+        <thead>
+          <tr>
+            <th class="num" style="width:70px">#</th>
+            <th style="width:170px">الوقت</th>
+            <th>المستخدم</th>
+            <th style="width:120px">النتيجة</th>
+            <th style="width:140px">جهاز الشبكة</th>
+            <th>السبب</th>
+          </tr>
+        </thead>
+        <tbody id="log-body">
+          <tr><td colspan="6" style="text-align:center;padding:28px;color:var(--hub-text-mute)">
+            <i class="fa-solid fa-spinner fa-spin"></i> يتمّ التحميل…
+          </td></tr>
+        </tbody>
+      </table>
+    </div>
+  {% endcall %}
+{% endcall %}
 
 <script>
 (function(){
   const body = document.getElementById('log-body');
   const lastEl = document.getElementById('last-update');
   const sel = document.getElementById('poll-int');
+  const refreshBtn = document.getElementById('refresh-now');
   let timer = null;
   const knownIds = new Set();
 
@@ -92,12 +99,12 @@
         body.innerHTML = rows.map(it => {
           const isNew = !knownIds.has(it.id);
           return `<tr ${isNew ? 'class="is-live"' : ''}>
-            <td class="num mono">${it.id}</td>
-            <td class="mono small">${esc(it.authdate)}</td>
+            <td class="num mono" style="direction:ltr">${it.id}</td>
+            <td class="mono small" style="direction:ltr">${esc(it.authdate)}</td>
             <td><strong>${esc(it.username)}</strong></td>
             <td>${pill(it.ok)}</td>
-            <td class="mono small">${esc(it.nas)}</td>
-            <td class="mono small">${esc(it.reason)}</td>
+            <td class="mono small" style="direction:ltr">${esc(it.nas)}</td>
+            <td class="mono small" style="direction:ltr">${esc(it.reason)}</td>
           </tr>`;
         }).join('');
         rows.forEach(it => knownIds.add(it.id));
@@ -114,6 +121,7 @@
     if (ms > 0) { timer = setTimeout(() => { load().finally(schedule); }, ms); }
   }
   sel.addEventListener('change', schedule);
+  if (refreshBtn) refreshBtn.addEventListener('click', () => { load().finally(schedule); });
   load().finally(schedule);
 })();
 </script>
