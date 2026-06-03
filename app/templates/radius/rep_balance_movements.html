@@ -1,7 +1,12 @@
-{# تحويلات الرصيد وحركة رصيد المديرين — accounting_ledger_entries + distributor_ledger_entries #}
+{# ═══════════════════════════════════════════════════════════════════════
+   تحويلات الرصيد وحركة رصيد المديرين — UNIFIED DESIGN SYSTEM
+   (megahero + worklayout + help). accounting_ledger_entries + distributor_ledger_entries.
+
+   نفس بيانات الـ backend: `items` (حركات الرصيد), `total`, `filters`.
+   صفر تغيير في المسار/السلوك.
+   ═══════════════════════════════════════════════════════════════════════ #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
-{% import "_partials/repfilter.html" as rf %}
 
 {% block title %}تحويلات الرصيد{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-right-left"></i>{% endblock %}
@@ -10,9 +15,7 @@
 
 {% block content %}
 {% include "radius/reports_nav.html" %}
-{{ hub.hero("تحويلات الرصيد وحركة رصيد المديرين",
-   subtitle="حركات الرصيد المالية — إضافة وخصم — للمشتركين والمدراء والموزعين.",
-   icon="right-left") }}
+
 {% set entry_labels = {
   'wallet_credit':'إضافة رصيد',
   'wallet_debit':'خصم رصيد',
@@ -36,33 +39,99 @@
   'failed':'فاشلة'
 } %}
 
-{{ rf.bar('radius.rep_balance_movements', filters, show_date=True, q_placeholder='بحث (طرف / منفّذ / نوع)…') }}
+{# ── credit/debit totals for KPI strip ── #}
+{% set ns = namespace(credit=0, debit=0) %}
+{% for r in items %}
+  {% if r.direction == 'credit' %}{% set ns.credit = ns.credit + (r.amount or 0) %}
+  {% else %}{% set ns.debit = ns.debit + (r.amount or 0) %}{% endif %}
+{% endfor %}
+
+{# ───── Merged hero: title + subtitle + KPI strip + integrated filters ───── #}
+{% call hub.megahero(
+  "تحويلات الرصيد وحركة رصيد المديرين",
+  subtitle="حركات الرصيد المالية — إضافة وخصم — للمشتركين والمدراء والموزعين.",
+  icon="right-left",
+  kpis=[
+    {'label': 'إجمالي الحركات', 'value': total, 'icon': 'right-left', 'variant': 'brand'},
+    {'label': 'إجمالي الإضافات', 'value': ns.credit|money, 'icon': 'arrow-up', 'variant': 'green'},
+    {'label': 'إجمالي الخصومات', 'value': ns.debit|money, 'icon': 'arrow-down', 'variant': 'red'},
+  ],
+  search_action=url_for('radius.rep_balance_movements')
+) %}
+  <input class="hub-input grow" type="text" name="q"
+         value="{{ filters.q if filters else '' }}"
+         placeholder="بحث (طرف / منفّذ / نوع)…">
+  <input class="hub-input" type="date" name="date_from"
+         value="{{ filters.date_from if filters else '' }}" title="من تاريخ">
+  <input class="hub-input" type="date" name="date_to"
+         value="{{ filters.date_to if filters else '' }}" title="إلى تاريخ">
+  {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
+  {% if filters and (filters.q or filters.date_from or filters.date_to) %}
+    {{ hub.btn("مسح", icon="rotate-left", variant="ghost", size="sm",
+               attrs='onclick="window.location=' + "'" + url_for('radius.rep_balance_movements') + "'" + '"') }}
+  {% endif %}
+{% endcall %}
 
 {% if items %}
-{% call hub.section("حركات الرصيد", icon="table-list", meta=items|length|string + " حركة", flush=True) %}
-  <div class="hub-table-wrap" style="border:none;border-radius:0">
-    <table class="hub-table rep-table" data-paginated="1" data-page-size="25" data-page-sizes="10,25,50,100" data-persist-key="rep-balance-movements">
-      <thead><tr><th>الوقت</th><th>النوع</th><th>الاتجاه</th><th>المبلغ</th><th>الطرف</th><th>المنفّذ</th><th>المصدر</th><th>الحالة</th><th>ملاحظات</th></tr></thead>
-      <tbody>
-        {% for r in items %}
-        <tr class="{{ 'is-fail' if r.direction == 'debit' else '' }}">
-          {% set _dl = r.created_at|dt_local if r.created_at else '' %}
-          <td class="rep-mono"><span class="rep-primary">{{ _dl[:10] }}</span><span class="rep-sub">{{ _dl[11:16] }}</span></td>
-          <td>{{ entry_labels.get(r.entry_type, r.entry_type|replace('_', ' ') if r.entry_type else '—') }}</td>
-          <td>{% if r.direction == 'credit' %}{{ hub.pill("إضافة", variant="green") }}{% else %}{{ hub.pill("خصم", variant="red") }}{% endif %}</td>
-          <td class="rep-mono"><span class="rep-primary">{{ r.amount|money }}</span></td>
-          <td>{{ r.username or '—' }}</td>
-          <td>{{ r.operator or '—' }}</td>
-          <td><span class="rep-src {% if r.scope=='distributor' %}src-network{% else %}src-panel{% endif %}">{{ 'موزّع' if r.scope=='distributor' else source_labels.get(r.source_type, 'عام') }}</span></td>
-          <td>{{ status_labels.get(r.status, r.status|replace('_', ' ') if r.status else '—') }}</td>
-          <td class="rep-sub" style="max-width:220px">{{ r.notes or '—' }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+{# ───── Main (carded table) + help panel on the LEFT ───── #}
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "كيف تقرأ هذا التقرير؟",
+  intro="كل صف هو حركة رصيد مالية واحدة — مرتبًا حسب الوقت من الأحدث.",
+  items=[
+    {'icon': 'arrow-up',     'text': '«إضافة» تعني زيادة الرصيد، و«خصم» تعني نقصانه.'},
+    {'icon': 'user',         'text': '«الطرف» هو صاحب الرصيد (مشترك / مدير / موزّع).'},
+    {'icon': 'user-gear',    'text': '«المنفّذ» هو من قام بإجراء الحركة.'},
+    {'icon': 'circle-check', 'text': '«الحالة» تبيّن إن كانت الحركة مثبتة أو قيد المراجعة أو ملغاة.'},
+  ],
+  note="هذا التقرير للقراءة فقط — البيانات تأتي من سجلات الرصيد المحاسبية وسجلات الموزّعين."
+)) %}
+  {% call hub.section("حركات الرصيد", icon="table-list",
+                      meta=items|length|string + " حركة", flush=True) %}
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25"
+         style="border:none;border-radius:0">
+      <table class="hub-table rep-table">
+        <thead>
+          <tr>
+            <th>الوقت</th>
+            <th>النوع</th>
+            <th data-uds-nosort>الاتجاه</th>
+            <th class="num">المبلغ</th>
+            <th>الطرف</th>
+            <th>المنفّذ</th>
+            <th>المصدر</th>
+            <th data-uds-nosort>الحالة</th>
+            <th data-uds-nosort data-uds-nocol>ملاحظات</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in items %}
+          <tr class="{{ 'is-fail' if r.direction == 'debit' else '' }}">
+            {% set _dl = r.created_at|dt_local if r.created_at else '' %}
+            <td class="mono"
+                style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
+              <span class="rep-primary">{{ _dl[:10] }}</span>
+              <span class="rep-sub">{{ _dl[11:16] }}</span>
+            </td>
+            <td>{{ entry_labels.get(r.entry_type, r.entry_type|replace('_', ' ') if r.entry_type else '—') }}</td>
+            <td>{% if r.direction == 'credit' %}{{ hub.pill("إضافة", variant="green") }}{% else %}{{ hub.pill("خصم", variant="red") }}{% endif %}</td>
+            <td class="num mono"
+                style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
+              {{ r.amount|money }}
+            </td>
+            <td>{{ r.username or '—' }}</td>
+            <td>{{ r.operator or '—' }}</td>
+            <td><span class="rep-src {% if r.scope=='distributor' %}src-network{% else %}src-panel{% endif %}">{{ 'موزّع' if r.scope=='distributor' else source_labels.get(r.source_type, 'عام') }}</span></td>
+            <td>{{ status_labels.get(r.status, r.status|replace('_', ' ') if r.status else '—') }}</td>
+            <td class="rep-sub" style="max-width:220px">{{ r.notes or '—' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endcall %}
 {% endcall %}
 {% else %}
-{{ hub.empty("لا حركات رصيد مطابقة", sub="غيّر الفلاتر أو لا توجد حركات بعد.", icon="right-left") }}
+{{ hub.empty("لا حركات رصيد مطابقة",
+   sub="غيّر الفلاتر أو لا توجد حركات بعد.", icon="right-left") }}
 {% endif %}
 {% endblock %}
