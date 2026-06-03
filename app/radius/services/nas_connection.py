@@ -23,6 +23,20 @@ _VPN_MODE = "vpn"
 _DIRECT_MODE = "direct"
 
 
+def _as_dict(nas: Any) -> dict:
+    """Tolerate raw ``sqlite3.Row`` (and other Mapping-likes) — many callers
+    pass a fetched row straight in. ``sqlite3.Row`` supports ``[]``/``keys()``
+    but not ``.get()``, so coerce to a plain dict first."""
+    if not nas:
+        return {}
+    if isinstance(nas, dict):
+        return nas
+    try:
+        return dict(nas)
+    except (TypeError, ValueError):
+        return {}
+
+
 def resolve_connection_address(nas: Mapping[str, Any]) -> str:
     """Return the address the admin should dial for this router.
 
@@ -34,6 +48,7 @@ def resolve_connection_address(nas: Mapping[str, Any]) -> str:
 
     Empty input → empty string (callers check before dialling).
     """
+    nas = _as_dict(nas)
     if not nas:
         return ""
     mode = str(nas.get("connection_mode") or _DIRECT_MODE).strip().lower()
@@ -57,6 +72,7 @@ def resolve_connection_descriptor(nas: Mapping[str, Any]) -> dict:
     AND the originally-configured public IP so operators can spot
     misconfigurations (e.g. VPN selected but no peer IP set).
     """
+    nas = _as_dict(nas)
     mode = str(nas.get("connection_mode") or _DIRECT_MODE).strip().lower()
     public = ""
     for key in ("address", "nasname", "ip", "host"):
@@ -79,6 +95,7 @@ def resolve_connection_descriptor(nas: Mapping[str, Any]) -> dict:
 
 def is_vpn_mode(nas: Mapping[str, Any]) -> bool:
     """True if this NAS is configured for VPN-based connection."""
+    nas = _as_dict(nas)
     return str(nas.get("connection_mode") or _DIRECT_MODE).strip().lower() == _VPN_MODE
 
 

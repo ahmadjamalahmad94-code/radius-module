@@ -16,6 +16,7 @@ from ..db.connection import db
 from . import mikrotik_admin_client as mac
 from . import mt_health
 from .jobs_runner import progress, register_handler
+from .nas_connection import resolve_connection_address
 
 
 # ─── shared helpers ──────────────────────────────────────────
@@ -27,7 +28,7 @@ def _load_nas(nas_id: int, tenant_id: int) -> dict | None:
     importing the route layer."""
     row = db().execute(
         "SELECT id, name, address, api_port, api_user, api_password, "
-        "       api_use_tls, enabled, connection_mode "
+        "       api_use_tls, enabled, connection_mode, vpn_peer_address "
         "FROM nas_devices "
         "WHERE id=? AND tenant_id=? "
         "  AND (deleted_at IS NULL OR deleted_at='')",
@@ -43,7 +44,7 @@ def _nas_to_admin_client_shape(nas: dict) -> dict[str, Any]:
     return {
         "id":          nas["id"],
         "name":        nas["name"],
-        "host":        nas["address"],
+        "host":        resolve_connection_address(nas),
         "port":        int(nas.get("api_port") or 8728),
         "username":    nas.get("api_user") or "admin",
         "password":    nas.get("api_password") or "",

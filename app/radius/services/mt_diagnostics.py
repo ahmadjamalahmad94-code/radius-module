@@ -25,6 +25,7 @@ from typing import Any
 
 from ..integration.mikrotik.client import MikrotikClient
 from ..integration.mikrotik.errors import AuthError, ConnectError, MikrotikError
+from .nas_connection import resolve_connection_address
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -127,7 +128,7 @@ def _collect_routers(tenant_id: int) -> list[dict[str, Any]]:
             (int(tenant_id),),
         )
         for row in cur.fetchall():
-            host = (row["address"] or "").strip()
+            host = (resolve_connection_address(row) or "").strip()
             api_user = (row["api_user"] or "").strip()
             if not host or not api_user or host in out:
                 continue

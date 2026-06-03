@@ -26,6 +26,7 @@ from ..db.repos import router_backups_repo
 from ..integration.mikrotik.client import MikrotikClient
 from ..services import mikrotik_admin_client as mac
 from ..services.audit import get_audit_service
+from ..services.nas_connection import resolve_connection_address
 from ..services.mt_permissions import (
     PERM_BACKUP, PERM_RESTORE, requires_perm,
 )
@@ -38,7 +39,8 @@ def _tid() -> int:
 def _load_nas(nas_id: int) -> dict | None:
     row = db().execute(
         "SELECT id, name, address, api_port, api_user, "
-        "       api_password, api_use_tls, enabled "
+        "       api_password, api_use_tls, enabled, "
+        "       connection_mode, vpn_peer_address "
         "FROM nas_devices "
         "WHERE id=? AND tenant_id=? "
         "  AND (deleted_at IS NULL OR deleted_at='')",
@@ -117,7 +119,7 @@ def mt_backups_save(nas_id: int):
     backup_id = None
 
     client = MikrotikClient(
-        host=nas["address"],
+        host=resolve_connection_address(nas),
         port=int(nas.get("api_port") or 8728),
         username=nas.get("api_user") or "admin",
         password=nas.get("api_password") or "",
@@ -179,7 +181,7 @@ def mt_backups_save(nas_id: int):
 def _nas_for_mac(nas: dict) -> dict:
     return {
         "id": nas["id"], "name": nas.get("name"),
-        "host": nas["address"],
+        "host": resolve_connection_address(nas),
         "port": int(nas.get("api_port") or 8728),
         "username": nas.get("api_user") or "admin",
         "password": nas.get("api_password") or "",

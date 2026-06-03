@@ -13,8 +13,10 @@ from ..core.constants import NAS_VENDORS, NAS_VENDOR_MIKROTIK
 from ..core.errors import RadiusError
 from ..core.tenant import DEFAULT_TENANT_ID
 from ..core.types import NasDevice
+from ..db.connection import db
 from ..db.repos import nas_repo
 from ..services.devices import get_nas_devices_service
+from ..services.nas_connection import resolve_connection_address
 
 
 def register_devices_routes(bp: Blueprint) -> None:
@@ -149,7 +151,16 @@ def devices_test(nas_id: int):
         dev = get_nas_devices_service().get(nas_id)
     except RadiusError:
         abort(404)
-    ip = dev.address; port = int(dev.api_port or 8728)
+    # VPN-only: probe the resolved tunnel peer for a VPN-mode router (the
+    # NasDevice dataclass doesn't carry the VPN columns, so load them raw).
+    nas_row = db().execute(
+        "SELECT address, connection_mode, vpn_peer_address "
+        "FROM nas_devices WHERE id=? AND tenant_id=? "
+        "  AND (deleted_at IS NULL OR deleted_at='')",
+        (nas_id, _tid()),
+    ).fetchone()
+    ip = (resolve_connection_address(dict(nas_row)) if nas_row else dev.address)
+    port = int(dev.api_port or 8728)
     status = "unknown"
     try:
         with socket.create_connection((ip, port), timeout=2.0):

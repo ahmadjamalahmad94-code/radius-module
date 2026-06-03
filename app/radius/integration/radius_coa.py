@@ -35,6 +35,8 @@ import struct
 from dataclasses import dataclass
 from typing import Optional
 
+from ..services.nas_connection import resolve_connection_address
+
 _LOG = logging.getLogger(__name__)
 
 # ─────────────── RFC codes ───────────────
@@ -396,7 +398,8 @@ def find_all_nas_for_sessions(tenant_id: int, username: str) -> list[dict]:
     for row in rows:
         nas_ip = row["nasipaddress"]
         nas_row = db().execute(
-            "SELECT secret, coa_port FROM nas_devices "
+            "SELECT secret, coa_port, address, connection_mode, vpn_peer_address "
+            "FROM nas_devices "
             "WHERE tenant_id = ? AND address = ? AND enabled = 1 LIMIT 1",
             (tenant_id, nas_ip)).fetchone()
         if not nas_row or not nas_row["secret"]:
@@ -411,7 +414,10 @@ def find_all_nas_for_sessions(tenant_id: int, username: str) -> list[dict]:
         except (TypeError, ValueError, KeyError):
             coa_port = 3799
         results.append({
-            "nas_ip": nas_ip,
+            # VPN-only: dial the resolved tunnel peer when the NAS is in VPN
+            # mode, falling back to the accounting source IP. Keeps CoA on the
+            # WireGuard path even if a row's accounting ever arrives publicly.
+            "nas_ip": resolve_connection_address(nas_row) or nas_ip,
             "nas_secret": nas_row["secret"],
             "coa_port": coa_port,
             "session_id": row["acctsessionid"],

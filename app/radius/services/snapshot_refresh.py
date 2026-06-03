@@ -17,6 +17,7 @@ from ..db.connection import db
 from ..db.repos import router_snapshots_repo
 from . import mikrotik_admin_client as mac
 from . import mt_counters
+from .nas_connection import resolve_connection_address
 
 
 def _load_routers(tenant_id: int) -> list[dict]:
@@ -35,7 +36,7 @@ def _load_routers(tenant_id: int) -> list[dict]:
 def _nas_dict(row: dict) -> dict[str, Any]:
     return {
         "id": row["id"], "name": row["name"],
-        "host": row["address"],
+        "host": resolve_connection_address(row),
         "port": int(row.get("api_port") or 8728),
         "username": row.get("api_user") or "admin",
         "password": row.get("api_password") or "",
