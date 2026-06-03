@@ -7,35 +7,59 @@
 {% block page_sub %}<span class="sub">مساعد تنقل إداري فقط إلى بوابات المشتركين ومستخدمي البطاقات.</span>{% endblock %}
 
 {% block content %}
-{{ hub.hero(
+
+{# ───── Merged hero: title + subtitle + KPI strip (collapses the stacked header) ───── #}
+{{ hub.megahero(
   "بوابات العملاء",
   subtitle="هذه الصفحة لا تغير مصادقة البوابات ولا تضيف منطقًا تجاريًا جديدًا. هي فقط تساعد المدير على فتح مداخل العملاء الموجودة.",
-  icon="door-open"
+  icon="door-open",
+  kpis=[
+    {'label': 'البوابات المتاحة', 'value': 2,                'icon': 'door-open', 'variant': 'brand'},
+    {'label': 'بوابة المشترك',    'value': 'متاحة',          'icon': 'user',      'variant': 'green'},
+    {'label': 'بوابة الكروت',      'value': 'متاحة',          'icon': 'id-card',   'variant': 'blue'},
+  ]
 ) }}
 
-<div class="hub-grid hub-grid--2">
-  {{ hub.action_card(
-    "بوابة المشترك",
-    sub="تسجيل دخول المشترك لعرض الاشتراك، الاستخدام، الطلبات، والمدفوعات.",
-    icon="user",
-    href=url_for('radius.portal_subscriber_login'),
-    variant="brand",
-    attrs='target="_blank" rel="noopener"'
-  ) }}
-  {{ hub.action_card(
-    "بوابة مستخدم البطاقة",
-    sub="تسجيل دخول مستخدم البطاقة وواجهة الشراء الذاتية الموجودة.",
-    icon="id-card",
-    href=url_for('radius.portal_card_login'),
-    variant="blue",
-    attrs='target="_blank" rel="noopener"'
-  ) }}
-</div>
+{# ───── Main (portal entry cards) + help panel on the LEFT ───── #}
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "ما هذه الصفحة؟",
+  intro="هذه مجرد لوحة وصول سريع. كل بطاقة تفتح بوابة عميل موجودة في نافذة جديدة — لا يتم هنا أي تسجيل دخول أو تغيير إعدادات.",
+  items=[
+    {'icon': 'user',    'text': 'بوابة المشترك: يدخل المشترك لعرض اشتراكه واستخدامه وطلباته ومدفوعاته.'},
+    {'icon': 'id-card', 'text': 'بوابة مستخدم البطاقة: يدخل صاحب البطاقة إلى واجهة الشراء الذاتية الموجودة.'},
+    {'icon': 'shield-halved', 'text': 'المصادقة والمنطق التجاري يبقيان داخل صفحات البوابة الأصلية.'},
+  ],
+  note="مساعد تنقل إداري فقط — لا تنفّذ هذه الصفحة شراء بطاقات أو طلب قرض أو تجديد أو أي تغيير في خدمة المصادقة."
+)) %}
+  {% call hub.section("مداخل البوابات", icon="door-open") %}
+    <div class="hub-grid hub-grid--2">
+      {{ hub.action_card(
+        "بوابة المشترك",
+        sub="تسجيل دخول المشترك لعرض الاشتراك، الاستخدام، الطلبات، والمدفوعات.",
+        icon="user",
+        href=url_for('radius.portal_subscriber_login'),
+        variant="brand",
+        attrs='target="_blank" rel="noopener"'
+      ) }}
+      {{ hub.action_card(
+        "بوابة مستخدم البطاقة",
+        sub="تسجيل دخول مستخدم البطاقة وواجهة الشراء الذاتية الموجودة.",
+        icon="id-card",
+        href=url_for('radius.portal_card_login'),
+        variant="blue",
+        attrs='target="_blank" rel="noopener"'
+      ) }}
+    </div>
+  {% endcall %}
 
-{% call hub.section("قيود الأمان", icon="shield-halved") %}
-  <div class="hub-empty" style="text-align:initial">
-    <div class="hub-empty-msg">مساعد تنقل إداري فقط</div>
-    <div class="hub-empty-sub">لا تنفذ هذه الصفحة شراء بطاقات، طلب قرض، تجديد، أو أي تغيير في خدمة المصادقة. المسارات التفاعلية تبقى داخل صفحات البوابة الأصلية.</div>
-  </div>
+  {% call hub.section("قيود الأمان", icon="shield-halved") %}
+    <div class="hub-empty" style="text-align:initial">
+      <div class="hub-empty-msg">مساعد تنقل إداري فقط</div>
+      <div class="hub-empty-sub">لا تنفذ هذه الصفحة شراء بطاقات، طلب قرض، تجديد، أو أي تغيير في خدمة المصادقة. المسارات التفاعلية تبقى داخل صفحات البوابة الأصلية.</div>
+    </div>
+  {% endcall %}
 {% endcall %}
+
 {% endblock %}
+</content>
+</invoke>
