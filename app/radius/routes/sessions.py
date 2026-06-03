@@ -20,6 +20,7 @@ def register_sessions_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/online/disconnect", "online_disconnect", online_disconnect, methods=["POST"])
     bp.add_url_rule("/online/lock-mac", "online_lock_mac", online_lock_mac, methods=["POST"])
     bp.add_url_rule("/online/lock-ip", "online_lock_ip", online_lock_ip, methods=["POST"])
+    bp.add_url_rule("/online/temp-speed", "online_temp_speed", online_temp_speed, methods=["POST"])
 
 
 def _actor() -> str:
@@ -259,7 +260,11 @@ def online_list():
     selected_group_id = int(selected_group_raw) if selected_group_raw.isdigit() else None
     now = datetime.utcnow()
     try:
-        _expire_temporary_speeds(now)
+        # Authoritative expiry path: pushes a revert CoA to the live session
+        # (not just a DB flag flip) so a page load can't silently leave a
+        # session throttled. The background worker calls the same function.
+        from ..services.temp_speed import expire_due_temp_speeds
+        expire_due_temp_speeds(tenant_id=_tid(), now=now)
     except Exception:
         pass
 
@@ -426,4 +431,47 @@ def online_lock_ip():
         flash(f"تم تثبيت IP {ip} على المشترك {username}.", "success")
     except RadiusError as e:
         flash(e.message or "تعذّر تثبيت IP", "error")
+    return _return_to_online()
+
+
+def online_temp_speed():
+    """Apply a temporary speed to one active session — LIVE.
+
+    Throttles the selected live session immediately via a rate-CoA and schedules
+    an automatic revert at expiry (the temp_speed_expiry worker). Subscribers
+    only (cards have no per-user override). Tenant-scoped + audited in the
+    service; gated by ``users.edit`` in the blueprint permission guard.
+    """
+    try:
+        row = _selected_online_row()
+        username = row["username"]
+        if row["card_id"]:
+            raise RadiusError("السرعة المؤقتة متاحة للمشتركين فقط.")
+        from ..services.temp_speed import apply_temp_speed
+        try:
+            result = apply_temp_speed(
+                tenant_id=_tid(),
+                actor=_actor(),
+                username=username,
+                down_kbps=_int_or_zero(request.form.get("down_kbps")),
+                up_kbps=_int_or_zero(request.form.get("up_kbps")),
+                duration_minutes=_int_or_zero(request.form.get("duration_minutes")),
+            )
+        except ValueError as exc:
+            raise RadiusError(str(exc)) from exc
+        if result["coa"].get("ok"):
+            flash(
+                f"تم تطبيق سرعة مؤقتة ({result['rate']}) على {username} "
+                f"حتى {result['ends_at']} وأُرسل التغيير للجلسة مباشرةً.",
+                "success",
+            )
+        else:
+            flash(
+                f"حُفظت السرعة المؤقتة ({result['rate']}) لـ {username} حتى "
+                f"{result['ends_at']}، لكن لم تُؤكَّد على الجلسة الحيّة "
+                f"({result['coa'].get('code') or 'no_coa'}) — ستُطبَّق عند إعادة الاتصال.",
+                "warning",
+            )
+    except RadiusError as e:
+        flash(e.message or "تعذّر تطبيق السرعة المؤقتة", "error")
     return _return_to_online()

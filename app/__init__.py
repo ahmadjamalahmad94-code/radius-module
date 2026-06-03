@@ -170,7 +170,8 @@ def _start_workers(app: Flask) -> None:
                                   start_lifecycle_worker,
                                   start_mt_reconciler,
                                   start_stale_session_reaper,
-                                  start_sync_worker)
+                                  start_sync_worker,
+                                  start_temp_speed_expiry)
         start_sync_worker()
         start_accounting_puller()
         start_stale_session_reaper()
@@ -180,6 +181,7 @@ def _start_workers(app: Flask) -> None:
         start_mt_reconciler()
         start_backup_scheduler_worker()
         start_dunning_worker()
+        start_temp_speed_expiry()
     except Exception:  # noqa: BLE001
         app.logger.exception("workers start failed")
     try:

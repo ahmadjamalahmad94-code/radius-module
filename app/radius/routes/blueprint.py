@@ -311,6 +311,8 @@ _PERM_GUARDED: dict[str, str] = {
     "finance_ledger_void": _PERM_SUPER,
     # حفظ إعدادات النظام — تتطلّب صلاحية settings.edit (تُفحص على الكتابة فقط)
     "settings_page": "settings.edit",
+    # التحكّم بالسرعة المؤقتة من شاشة المتصلين — صلاحية تعديل المشتركين
+    "online_temp_speed": "users.edit",
 }
 
 
