@@ -38,6 +38,12 @@ def configured_plan(app):
     with transaction() as conn:
         conn.execute(
             """
+            INSERT OR IGNORE INTO tenants(id, name, slug, created_at)
+            VALUES (1, 'Default Tenant', 'default', '2026-01-01T00:00:00Z')
+            """
+        )
+        conn.execute(
+            """
             INSERT OR IGNORE INTO access_plans(
               id, tenant_id, name, code, plan_type, service_type, typebp,
               limit_type, price, duration_minutes, validity_days, enabled
