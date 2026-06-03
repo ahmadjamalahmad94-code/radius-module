@@ -396,7 +396,7 @@ def find_all_nas_for_sessions(tenant_id: int, username: str) -> list[dict]:
     for row in rows:
         nas_ip = row["nasipaddress"]
         nas_row = db().execute(
-            "SELECT secret FROM nas_devices "
+            "SELECT secret, coa_port FROM nas_devices "
             "WHERE tenant_id = ? AND address = ? AND enabled = 1 LIMIT 1",
             (tenant_id, nas_ip)).fetchone()
         if not nas_row or not nas_row["secret"]:
@@ -406,9 +406,14 @@ def find_all_nas_for_sessions(tenant_id: int, username: str) -> list[dict]:
                 row["acctsessionid"], nas_ip,
             )
             continue
+        try:
+            coa_port = int(nas_row["coa_port"] or 3799)
+        except (TypeError, ValueError, KeyError):
+            coa_port = 3799
         results.append({
             "nas_ip": nas_ip,
             "nas_secret": nas_row["secret"],
+            "coa_port": coa_port,
             "session_id": row["acctsessionid"],
             "framed_ip": row["framedipaddress"] or "",
             "calling_station_id": row["callingstationid"] or "",
@@ -476,6 +481,7 @@ def disconnect_user(tenant_id: int, username: str,
             username=username, session_id=info["session_id"],
             framed_ip=info.get("framed_ip", ""),
             calling_station_id=info.get("calling_station_id", ""),
+            port=info.get("coa_port", 3799),
         )
         for info in sessions
     ]
@@ -514,6 +520,7 @@ def change_user_rate(tenant_id: int, username: str, *,
             framed_ip=info.get("framed_ip", ""),
             calling_station_id=info.get("calling_station_id", ""),
             new_rate_limit=new_rate_limit,
+            port=info.get("coa_port", 3799),
         )
         for info in sessions
     ]
@@ -551,6 +558,7 @@ def change_user_session_timeout(tenant_id: int, username: str,
             framed_ip=info.get("framed_ip", ""),
             calling_station_id=info.get("calling_station_id", ""),
             session_timeout=int(session_timeout),
+            port=info.get("coa_port", 3799),
         )
         for info in sessions
     ]

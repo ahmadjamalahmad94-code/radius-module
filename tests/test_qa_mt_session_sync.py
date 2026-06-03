@@ -152,3 +152,40 @@ def test_vanished_synthetic_is_closed_by_orphan_pass(app):
         assert closed == 1
         r = _db().execute("SELECT acctstoptime FROM radacct WHERE username='ahmad'").fetchone()
         assert r["acctstoptime"] is not None
+
+
+# ── Pieces 3+4: coa_port threading + cookie session is CoA-targetable ───────
+def _nas(address="10.10.0.2", secret="testsecret", coa_port=3799):
+    _db().execute(
+        "INSERT INTO nas_devices(tenant_id, name, address, secret, vendor, "
+        "nas_type, coa_port, enabled, created_at, updated_at) "
+        "VALUES(1,'ccr3',?,?,'mikrotik','hotspot',?,1,datetime('now'),datetime('now'))",
+        (address, secret, coa_port))
+
+
+def test_cookie_session_is_coa_targetable_by_router_ip_mac(app):
+    """End-to-end: a materialized cookie session (no real RADIUS row) is found
+    by the CoA resolver, addressable by the router-sourced framed-IP/MAC."""
+    from app.radius.integration.radius_coa import find_all_nas_for_sessions
+    from app.workers.mt_reconciler import _materialize_nas
+    with app.app_context():
+        _nas(coa_port=3799)
+        _materialize_nas(1, "10.10.0.2", _hotspot())     # cookie session -> synthetic row
+        infos = find_all_nas_for_sessions(1, "ahmad")
+        assert len(infos) == 1
+        i = infos[0]
+        assert i["nas_ip"] == "10.10.0.2"
+        assert i["framed_ip"] == "10.19.6.254"           # from the router list
+        assert i["calling_station_id"] == "9E:49:36:50:27:A4"
+        assert i["nas_secret"] == "testsecret"
+        assert i["coa_port"] == 3799
+
+
+def test_find_all_nas_honors_custom_coa_port(app):
+    from app.radius.integration.radius_coa import find_all_nas_for_sessions
+    from app.workers.mt_reconciler import _materialize_nas
+    with app.app_context():
+        _nas(coa_port=3899)                              # non-default
+        _materialize_nas(1, "10.10.0.2", _hotspot())
+        infos = find_all_nas_for_sessions(1, "ahmad")
+        assert infos and infos[0]["coa_port"] == 3899
