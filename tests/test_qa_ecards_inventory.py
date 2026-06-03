@@ -236,6 +236,34 @@ def test_inventory_generate_via_route(app):
         assert pkg["inventory_total"] == 4
 
 
+def test_inventory_file_import_via_route_reuses_engine(app):
+    import io as _io
+    with app.app_context():
+        s = _svc()(tenant_id=1)
+        pkg = _inventory_package(s)
+        pid = pkg["id"]
+    _bind(app)
+    client = app.test_client()
+    _login(client)
+    # a CSV the shared cards_import_engine parses into username/password rows
+    csv = b"username,password\nimpuser1,pw1\nimpuser2,pw2\nimpuser3,pw3\n"
+    r = client.post(
+        f"/admin/radius/card-marketplace/packages/{pid}/inventory",
+        data={"file": (_io.BytesIO(csv), "stock.csv"), "_csrf_token": "t"},
+        content_type="multipart/form-data", follow_redirects=False,
+    )
+    assert r.status_code in {302, 303}
+    _bind(app)
+    with app.app_context():
+        s = _svc()(tenant_id=1)
+        pkg = s.get_package(pid)
+        assert pkg["inventory_total"] == 3
+        got = {row["username"] for row in db().execute(
+            "SELECT c.username FROM cards c JOIN card_batches b ON b.id=c.batch_id "
+            "WHERE b.package_id=?", (pid,)).fetchall()}
+        assert {"impuser1", "impuser2", "impuser3"} <= got
+
+
 def test_section_default_mode_and_per_offer_override(app):
     with app.app_context():
         s = _svc()(tenant_id=1)
