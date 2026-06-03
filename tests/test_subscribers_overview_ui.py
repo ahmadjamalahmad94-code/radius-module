@@ -42,32 +42,35 @@ def configured_plan(app):
             VALUES (1, 'Default Tenant', 'default', '2026-01-01T00:00:00Z')
             """
         )
-        conn.execute(
-            """
-            INSERT OR IGNORE INTO access_plans(
-              id, tenant_id, name, code, plan_type, service_type, typebp,
-              limit_type, price, duration_minutes, validity_days, enabled
-            )
-            VALUES (
-              1, 1, 'Subscribers Overview Plan', 'sov_plan', 'time',
-              'Hotspot', 'Limited', 'Time_Limit', 150, 43200, 30, 1
-            )
-            """
-        )
-        conn.execute(
-            """
-            UPDATE access_plans
-            SET price = 150, duration_minutes = 43200, validity_days = 30
-            WHERE tenant_id = 1 AND id = 1
-            """
-        )
 
 
 def _username() -> str:
     return "sov_" + secrets.token_hex(5)
 
 
-def _create_subscriber(client, *, plan_id: int = 1) -> dict:
+def _ensure_plan() -> int:
+    from app.radius.core.types import AccessPlan
+    from app.radius.db.repos import plans_repo
+
+    token = secrets.token_hex(5)
+    plan = plans_repo.upsert_plan(
+        AccessPlan(
+            id=None,
+            tenant_id=1,
+            name=f"Subscribers Overview Plan {token}",
+            code=f"sov_{token}",
+            duration_minutes=43200,
+            validity_days=30,
+            price=150,
+            enabled=True,
+        )
+    )
+    assert plan.id is not None
+    return int(plan.id)
+
+
+def _create_subscriber(client, *, plan_id: int | None = None) -> dict:
+    plan_id = plan_id or _ensure_plan()
     username = _username()
     res = client.post(
         "/api/v1/accounts",
@@ -79,10 +82,11 @@ def _create_subscriber(client, *, plan_id: int = 1) -> dict:
 
 
 def _seed_payment_and_loan(client) -> dict:
-    sub = _create_subscriber(client)
+    plan_id = _ensure_plan()
+    sub = _create_subscriber(client, plan_id=plan_id)
     pay = client.post(
         "/api/v1/payments",
-        json={"username": sub["username"], "plan_id": 1, "amount": 50},
+        json={"username": sub["username"], "plan_id": plan_id, "amount": 50},
         headers=AUTH,
     )
     assert pay.status_code == 201, pay.get_json()
@@ -96,7 +100,7 @@ def _seed_payment_and_loan(client) -> dict:
 
 
 def _seed_large_open_loan(client) -> dict:
-    sub = _create_subscriber(client)
+    sub = _create_subscriber(client, plan_id=_ensure_plan())
     loan = client.post(
         "/api/v1/loans",
         json={
