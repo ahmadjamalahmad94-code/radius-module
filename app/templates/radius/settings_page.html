@@ -1,24 +1,52 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
+{% from "_partials/toggle_switch.html" import toggle_switch %}
 {% block title %}الإعدادات{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-gear"></i>{% endblock %}
 {% block page_title %}إعدادات النظام{% endblock %}
-{% block page_sub %}<span class="sub">هوية النظام والعملة والتوقيت والقيم العامة</span>{% endblock %}
 
 {% block content %}
 {# lookup: key → current value #}
 {% set vals = {} %}{% for it in items %}{% if vals.update({it.key: it.value}) %}{% endif %}{% endfor %}
 {% set identity_keys = ['system.name','branding.logo_url','branding.primary_color','radius.default_country','billing.currency','billing.timezone_offset'] %}
+{# boolean on/off settings rendered as toggle switches (excluded from the generic loop) #}
+{% set bool_keys = ['auth.allow_password_reset'] %}
+{% set numeric_keys = [
+     'billing.tax_pct',
+     'api.rate_limit_per_minute',
+     'session.timeout_minutes',
+     'display.records_per_page',
+     'cards.default_username_length',
+     'cards.default_password_length',
+   ] %}
 {% set currencies = [('JOD','دينار أردني'),('ILS','شيكل ₪'),('USD','دولار $'),('IQD','دينار عراقي'),('SAR','ريال سعودي'),('EGP','جنيه مصري'),('AED','درهم إماراتي'),('EUR','يورو €'),('TRY','ليرة تركية')] %}
 {% set offsets = [('2','+2 (مصر)'),('3','+3 (الأردن/فلسطين/العراق/السعودية)'),('3.5','+3:30 (إيران)'),('4','+4 (الإمارات)'),('0','UTC (0)')] %}
 
 {{ hub.hero(
   "إعدادات النظام",
   subtitle="حدّد هوية نظامك: الاسم، الشعار، الدولة، العملة، والتوقيت — تنعكس فورًا على كل الصفحات.",
-  icon="gear"
+  icon="gear",
+  actions_html='
+    <button class="hub-btn hub-btn--primary" type="submit" form="settings-form">
+      <i class="fa-solid fa-floppy-disk"></i> حفظ
+    </button>
+  '
 ) }}
 
-<form method="post">
+{% set help_aside = hub.helppanel(
+     "كيف تُقرأ الإعدادات",
+     intro="هذه القيم تشكّل هوية نظامك وسلوكه العام. أي تعديل ينعكس فورًا على كل الصفحات بعد الحفظ.",
+     items=[
+       {'icon': 'id-badge', 'text': 'هوية النظام: الاسم، الشعار، اللون، الدولة، العملة والتوقيت — تظهر في كل مكان.'},
+       {'icon': 'sliders',  'text': 'القيم العامة: حدود الـ API، المهل، طول البطاقات، وصفوف الصفحة.'},
+       {'icon': 'toggle-on','text': 'مفاتيح التشغيل/الإيقاف تُحفظ كما هي — التفعيل يحفظ «1» والإيقاف يحفظ «0».'},
+     ],
+     icon="compass",
+     note="العملة والتوقيت يؤثران على الفواتير وحسابات الوقت في كل الباقات."
+   ) %}
+
+<form method="post" id="settings-form">
+{% call hub.worklayout(aside_html=help_aside) %}
 
   {# ── System identity ── #}
   {% call hub.section("هوية النظام", icon="id-badge", meta='تنعكس على كل الصفحات والعملة والوقت') %}
@@ -33,7 +61,7 @@
       </div>
       <div class="hub-field">
         <label class="hub-field-label">العملة</label>
-        <select class="hub-input" name="billing.currency">
+        <select class="hub-select" name="billing.currency">
           {% for code, label in currencies %}
             <option value="{{ code }}" {{ 'selected' if vals.get('billing.currency','JOD') == code else '' }}>{{ label }} — {{ code }}</option>
           {% endfor %}
@@ -41,7 +69,7 @@
       </div>
       <div class="hub-field">
         <label class="hub-field-label">توقيت النظام</label>
-        <select class="hub-input" name="billing.timezone_offset">
+        <select class="hub-select" name="billing.timezone_offset">
           {% set cur_off = vals.get('billing.timezone_offset','3') %}
           {% for off, label in offsets %}
             <option value="{{ off }}" {{ 'selected' if cur_off == off else '' }}>{{ label }}</option>
@@ -56,7 +84,7 @@
         <label class="hub-field-label">رابط الشعار (URL)</label>
         <input class="hub-input" type="text" name="branding.logo_url" value="{{ vals.get('branding.logo_url','') }}" placeholder="https://…/logo.png">
         {% if vals.get('branding.logo_url') %}
-          <div style="margin-top:10px"><img src="{{ vals.get('branding.logo_url') }}" alt="شعار" style="max-height:54px;border:1px solid #e2e8f0;border-radius:10px;padding:6px;background:#fff"></div>
+          <div style="margin-top:10px"><img src="{{ vals.get('branding.logo_url') }}" alt="شعار" style="max-height:54px;border:1px solid var(--hub-border);border-radius:10px;padding:6px;background:#fff"></div>
         {% else %}
           <div class="hub-field-hint">أدخل رابط صورة شعارك ليظهر في النظام.</div>
         {% endif %}
@@ -64,18 +92,25 @@
     </div>
   {% endcall %}
 
+  {# ── Access / behaviour toggles ── #}
+  {% call hub.section("الوصول والسلوك", icon="toggle-on", meta='مفاتيح التشغيل/الإيقاف') %}
+    <div class="hub-form-row">
+      <div class="hub-field">
+        <label class="hub-field-label">السماح بإعادة تعيين كلمة المرور</label>
+        {# hidden "0" first so an unchecked toggle still posts the field → route persists OFF #}
+        <input type="hidden" name="auth.allow_password_reset" value="0">
+        {{ toggle_switch(name="auth.allow_password_reset",
+             checked=(vals.get('auth.allow_password_reset','1') in ['1','true','t','on','True']),
+             value="1", id="set-apr") }}
+        <div class="hub-field-hint mono">auth.allow_password_reset</div>
+      </div>
+    </div>
+  {% endcall %}
+
   {# ── Everything else ── #}
-  {% set numeric_keys = [
-       'billing.tax_pct',
-       'api.rate_limit_per_minute',
-       'session.timeout_minutes',
-       'display.records_per_page',
-       'cards.default_username_length',
-       'cards.default_password_length',
-     ] %}
   {% call hub.section("القيم العامة", icon="sliders") %}
     <div class="hub-form-row">
-      {% for it in items if it.key not in identity_keys %}
+      {% for it in items if it.key not in identity_keys and it.key not in bool_keys %}
         <div class="hub-field">
           <label class="hub-field-label">{{ it.label }}</label>
           <input class="hub-input" type="{{ 'number' if it.key in numeric_keys else 'text' }}" name="{{ it.key }}" value="{{ it.value }}">
@@ -89,5 +124,7 @@
     {{ hub.btn("حفظ", icon="floppy-disk", variant="primary", type="submit") }}
     {{ hub.btn("إلغاء", variant="ghost", href=url_for('radius.dashboard')) }}
   </div>
+
+{% endcall %}{# /worklayout #}
 </form>
 {% endblock %}

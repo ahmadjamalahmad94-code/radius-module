@@ -7,28 +7,42 @@
 
 {% block content %}
 {% include "radius/data_protection_nav.html" %}
-{{ hub.hero(
-  "الأرشفة التلقائية والاحتفاظ",
-  subtitle="نقل المنتهي إلى سلة المحذوفات مع بقاء العدد الأصلي للحزم ثابتًا للمحاسبة.",
-  icon="box-archive"
-) }}
 
 {% set totals = preview.get('totals') or {} %}
 
-<div class="hub-flash hub-flash--info" style="margin-bottom:14px">
-  <i class="fa-solid fa-circle-info"></i>
-  هذه الصفحة لا تحذف بيانات نهائيًا. أي عملية هنا تعني <strong>أرشفة آمنة</strong>
-  إلى سلة المحذوفات، مع تسجيل الحدث والسياسة والاحتفاظ بالعدد الأصلي للحزمة للمحاسبة.
-</div>
+{# ───── Merged hero: title + subtitle + icon + KPI strip + run action ───── #}
+{{ hub.megahero(
+  "الأرشفة التلقائية والاحتفاظ",
+  subtitle="نقل المنتهي إلى سلة المحذوفات مع بقاء العدد الأصلي للحزم ثابتًا للمحاسبة. لا حذف نهائي — أرشفة آمنة مع تسجيل الحدث والسياسة.",
+  icon="box-archive",
+  actions_html='
+    <form method="post" action="' + url_for('radius.lifecycle_run') + '"
+          onsubmit="return confirm(\'سيتم نقل العناصر المؤهلة إلى سلة المحذوفات فقط. هل تريد المتابعة؟\')"
+          style="margin:0">
+      <button class="hub-btn hub-btn--primary" type="submit">
+        <i class="fa-solid fa-play"></i> تشغيل الأرشفة الآن
+      </button>
+    </form>',
+  kpis=[
+    {'label': 'كروت جاهزة للأرشفة',     'value': totals.get('cards', 0),            'icon': 'id-card',        'variant': 'brand', 'sub': 'حسب السياسات المفعّلة للكروت المنتهية.'},
+    {'label': 'مشتركين جاهزين للأرشفة', 'value': totals.get('subscribers', 0),      'icon': 'users',          'variant': 'blue',  'sub': 'حسب سياسات انتهاء الاشتراك وعدم التجديد.'},
+    {'label': 'حزم متأثرة',             'value': totals.get('batches_impacted', 0), 'icon': 'boxes-stacked',  'variant': 'amber', 'sub': 'الأرشفة لا تغيّر العدد الأصلي للحزمة.'},
+  ]
+) }}
 
-<div class="hub-kpi-grid">
-  {{ hub.kpi("كروت جاهزة للأرشفة", totals.get('cards', 0), icon="id-card", variant="brand",
-             sub="حسب السياسات المفعّلة للكروت المنتهية.") }}
-  {{ hub.kpi("مشتركين جاهزين للأرشفة", totals.get('subscribers', 0), icon="users", variant="blue",
-             sub="حسب سياسات انتهاء الاشتراك وعدم التجديد.") }}
-  {{ hub.kpi("حزم متأثرة", totals.get('batches_impacted', 0), icon="boxes-stacked", variant="amber",
-             sub="الأرشفة لا تغيّر العدد الأصلي للحزمة.") }}
-</div>
+{# ───── Main column + help panel on the LEFT ───── #}
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "كيف تعمل الأرشفة الآمنة؟",
+  intro="هذه الصفحة لا تحذف بيانات نهائيًا. كل عملية تعني نقلًا آمنًا إلى سلة المحذوفات مع بقاء العدد الأصلي للحزمة ثابتًا للمحاسبة.",
+  icon="shield-halved",
+  items=[
+    {'icon': 'circle-plus', 'text': 'أضف سياسة تحدّد العنصر وشرط الأرشفة ومدة التأخير بعد الانتهاء.'},
+    {'icon': 'clock',       'text': 'الاحتفاظ في السلة يحكم كم تبقى العناصر قبل حذفها نهائيًا.'},
+    {'icon': 'eye',         'text': 'المعاينة تُظهر عدد العناصر المؤهلة لكل سياسة قبل التشغيل.'},
+    {'icon': 'pause',       'text': 'يمكنك تعطيل أي سياسة مفعّلة دون فقدان إعداداتها.'},
+  ],
+  note="«تشغيل الأرشفة الآن» ينقل العناصر المؤهلة إلى سلة المحذوفات فقط — يمكن استعادتها لاحقًا."
+)) %}
 
 {% call hub.section("إضافة سياسة أرشفة", icon="circle-plus") %}
   <form method="post" action="{{ url_for('radius.lifecycle_policy_create') }}">
@@ -79,14 +93,7 @@
   </form>
 {% endcall %}
 
-{% call hub.section("معاينة التنفيذ", icon="eye",
-   meta='<form method="post" action="' ~ url_for('radius.lifecycle_run') ~ '"
-                onsubmit="return confirm(\'سيتم نقل العناصر المؤهلة إلى سلة المحذوفات فقط. هل تريد المتابعة؟\')"
-                style="margin:0">
-           <button class="hub-btn hub-btn--primary hub-btn--sm" type="submit">
-             <i class="fa-solid fa-play"></i> تشغيل الأرشفة الآن
-           </button>
-         </form>') %}
+{% call hub.section("معاينة التنفيذ", icon="eye") %}
   {% for item in preview.get('policies') or [] %}
     {% set policy = item.get('policy') or {} %}
     <div class="hub-flash hub-flash--info" style="margin-bottom:10px">
@@ -107,7 +114,7 @@
 
 {% call hub.section("السياسات الحالية", icon="list", meta=(policies|length ~ ' سياسة') if policies else '', flush=True) %}
   {% if policies %}
-    <div class="hub-table-wrap" style="border:none">
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="15" style="border:none;border-radius:0">
       <table class="hub-table">
         <thead>
           <tr>
@@ -117,7 +124,7 @@
             <th>التأخير</th>
             <th>الاحتفاظ</th>
             <th>الحالة</th>
-            <th>إجراء</th>
+            <th data-uds-nosort data-uds-nocol>إجراء</th>
           </tr>
         </thead>
         <tbody>
@@ -126,8 +133,8 @@
             <td class="num">{{ policy.get('id') }}</td>
             <td>{{ policy.get('entity_type') }}</td>
             <td>{{ policy.get('trigger_type') }}</td>
-            <td>{{ policy.get('delay_value') }} {{ policy.get('delay_unit') }}</td>
-            <td>{{ policy.get('retention_value') }} {{ policy.get('retention_unit') }}</td>
+            <td class="num">{{ policy.get('delay_value') }} {{ policy.get('delay_unit') }}</td>
+            <td class="num">{{ policy.get('retention_value') }} {{ policy.get('retention_unit') }}</td>
             <td>
               {% if policy.get('enabled') %}
                 <span class="hub-pill hub-pill--green"><span class="dot"></span>مفعلة</span>
@@ -155,4 +162,8 @@
     {{ hub.empty("لا توجد سياسات أرشفة محفوظة.", icon="clock") }}
   {% endif %}
 {% endcall %}
+
+{% endcall %}
 {% endblock %}
+</content>
+</invoke>
