@@ -16,6 +16,7 @@ Steps:
 #}
 
 {% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
 
 {% block title %}{{ page_title or "معالج إضافة راوتر" }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-wand-magic-sparkles"></i>{% endblock %}
@@ -37,13 +38,11 @@ Steps:
 
 <div class="swz" data-swz dir="rtl">
 
-  <header class="swz-hero">
-    <div>
-      <h2>معالج الإعداد الذكي</h2>
-      <p>مسار واحد لإضافة الراوتر وربطه بالإنترنت وخادم المصادقة ونفق الإدارة، مع إبقاء السكربتات والتفاصيل التقنية خلف خطوات واضحة.</p>
-    </div>
-    <span class="swz-hero-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
-  </header>
+  {{ hub.hero(
+    "معالج الإعداد الذكي",
+    subtitle="مسار واحد لإضافة الراوتر وربطه بالإنترنت وخادم المصادقة ونفق الإدارة، مع إبقاء السكربتات والتفاصيل التقنية خلف خطوات واضحة.",
+    icon="wand-magic-sparkles"
+  ) }}
 
   <div class="swz-shell">
     <aside class="swz-guide" aria-label="شرح معالج الإعداد">

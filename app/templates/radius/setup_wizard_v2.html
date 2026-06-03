@@ -1,4 +1,5 @@
 {% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
 {% block title %}معالج إعداد HobeRadius{% endblock %}
 {% block head_extra %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/setup_wizard_v2.css') }}">
@@ -7,30 +8,18 @@
 {% block content %}
 <main class="swv2-page" dir="rtl" data-setup-wizard-v2>
   {{ csrf_token_input()|safe }}
-  <section class="swv2-hero" aria-labelledby="swv2-title">
-    <div class="swv2-hero-copy">
-      <span class="swv2-kicker"><i class="fa-solid fa-wand-magic-sparkles"></i> إعداد موجه وآمن</span>
-      <h1 id="swv2-title">معالج إعداد HobeRadius</h1>
-      <p>اكتب الأشياء الضرورية فقط: اسم الموقع، ونوع الإنترنت، وبيانات المزود عند الحاجة. الباقي يجهزه المعالج تلقائيًا ويخفي التفاصيل الهندسية.</p>
-      <div class="swv2-hero-actions">
-        <button type="button" class="swv2-btn swv2-btn-primary" data-swv2-go="source">ابدأ الإعداد</button>
-      </div>
-    </div>
-    <div class="swv2-hero-status" aria-label="حالة المعالج">
-      <div class="swv2-status-pill is-ready">
-        <i class="fa-solid fa-shield-halved"></i>
-        <span>التطبيق الحي مغلق افتراضيًا</span>
-      </div>
-      <div class="swv2-status-pill">
-        <i class="fa-solid fa-clock"></i>
-        <span>الوقت المتوقع 10 إلى 20 دقيقة</span>
-      </div>
-      <div class="swv2-status-pill">
-        <i class="fa-solid fa-terminal"></i>
-        <span>كل سكربت جاهز للنسخ إلى الراوتر</span>
-      </div>
-    </div>
-  </section>
+  {{ hub.megahero(
+    "معالج إعداد HobeRadius",
+    subtitle="اكتب الأشياء الضرورية فقط: اسم الموقع، ونوع الإنترنت، وبيانات المزود عند الحاجة. الباقي يجهزه المعالج تلقائيًا ويخفي التفاصيل الهندسية.",
+    icon="wand-magic-sparkles",
+    actions_html='
+      <button type="button" class="hub-btn hub-btn--primary" data-swv2-go="source">ابدأ الإعداد</button>',
+    kpis=[
+      {'label': 'التطبيق الحي', 'value': 'مغلق افتراضيًا', 'icon': 'shield-halved', 'variant': 'green'},
+      {'label': 'الوقت المتوقع', 'value': '10–20 دقيقة',   'icon': 'clock',         'variant': 'blue'},
+      {'label': 'كل سكربت',     'value': 'جاهز للنسخ',     'icon': 'terminal',      'variant': 'brand'}
+    ]
+  ) }}
 
   <section class="swv2-confidence-journey" data-swv2-confidence-journey aria-label="رحلة الثقة في معالج الإعداد">
     <div class="is-current" data-confidence-state="started">

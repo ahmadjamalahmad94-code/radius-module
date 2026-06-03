@@ -1,4 +1,5 @@
 {% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
 
 {% block title %}معالج الإعداد الذكي{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-wand-magic-sparkles"></i>{% endblock %}
@@ -10,16 +11,14 @@
 
 {% block content %}
 <div class="sw-page" data-setup-wizard-page data-current-run-id="{{ summary.run.id if summary else '' }}">
-  <header class="sw-header">
-    <div>
-      <h1>معالج إعداد HobeRadius</h1>
-      <p>إعداد الإنترنت ثم الربط والمصادقة ثم الخدمات الاختيارية بخطوات واضحة وآمنة.</p>
-    </div>
-    <div class="sw-header-actions">
+  {{ hub.megahero(
+    "معالج إعداد HobeRadius",
+    subtitle="إعداد الإنترنت ثم الربط والمصادقة ثم الخدمات الاختيارية بخطوات واضحة وآمنة — ٧ مراحل.",
+    icon="wand-magic-sparkles",
+    actions_html='
       <button type="button" class="hub-btn hub-btn--primary" data-sw-action="create-run">بدء تشغيل جديد</button>
-      <button type="button" class="hub-btn" data-sw-action="refresh-summary" {% if not summary %}disabled{% endif %}>تحديث الحالة</button>
-    </div>
-  </header>
+      <button type="button" class="hub-btn hub-btn--secondary" data-sw-action="refresh-summary"' + (' disabled' if not summary else '') + '>تحديث الحالة</button>'
+  ) }}
 
   <section class="sw-stepper" aria-label="مراحل المعالج">
     <div class="sw-step">1. اختيار مصدر الإنترنت</div>

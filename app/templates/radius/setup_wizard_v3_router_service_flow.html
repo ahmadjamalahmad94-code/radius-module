@@ -1,4 +1,5 @@
 {% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
 {% block title %}{{ page_title }}{% endblock %}
 
 {% block head_extra %}
@@ -298,18 +299,11 @@ li[data-status="pending"] .swsvf-verify-icon{
   </a>
 
   {# ─── Service header ─── #}
-  <div class="swsvf-header">
-    <span class="swsvf-icon swsvf-icon-{{ card.color }}">
-      <i class="fa-solid fa-{{ card.icon }}"></i>
-    </span>
-    <div>
-      <h1>{{ card.title_ar }}</h1>
-      <p class="swsvf-sub">
-        {{ card.subtitle_ar }}
-        {% if router %} · الراوتر «{{ router.name }}»{% endif %}
-      </p>
-    </div>
-  </div>
+  {{ hub.hero(
+    card.title_ar,
+    subtitle=card.subtitle_ar ~ (" · الراوتر «" ~ router.name ~ "»" if router else ""),
+    icon=card.icon
+  ) }}
 
   {# ─── 4-phase stepper ─── #}
   <div class="swsvf-stepper" data-swsvf-stepper>
