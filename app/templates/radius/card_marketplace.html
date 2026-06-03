@@ -544,6 +544,13 @@
         <span>السعر</span>
         <input name="price" data-market-price type="number" min="0.01" step="0.01" placeholder="5.00" required>
       </label>
+      <label class="market-field">
+        <span>نمط البيع</span>
+        <select name="sale_mode">
+          <option value="instant" {{ 'selected' if (default_sale_mode or 'instant') != 'inventory' else '' }}>كرت توليد فوري</option>
+          <option value="inventory" {{ 'selected' if (default_sale_mode or 'instant') == 'inventory' else '' }}>نظام حزم / مخزون</option>
+        </select>
+      </label>
       <div class="market-form-submit">
         <button class="market-btn market-btn--primary" type="submit"><i class="fa-solid fa-plus"></i> إضافة الباقة</button>
         <span class="market-pill"><i class="fa-solid fa-eye"></i> تظهر مباشرة في بوابة الزبون</span>
@@ -561,7 +568,17 @@
         <h2>عروض الشراء الظاهرة للزبائن</h2>
         <p>هذه هي الباقات التي تظهر في بوابة مستخدم البطاقة.</p>
       </div>
-      <span class="market-pill">{{ num(packages|length) }} عرض</span>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <form method="post" action="{{ url_for('radius.card_marketplace_default_mode') }}"
+              style="display:flex;gap:6px;align-items:center">
+          <span class="market-pill" style="background:#eef2ff;color:#4338ca">النمط الافتراضي للعروض الجديدة</span>
+          <select name="sale_mode" onchange="this.form.submit()" style="padding:6px 10px;border-radius:10px;border:1px solid #dfe7f3">
+            <option value="instant" {{ 'selected' if (default_sale_mode or 'instant') != 'inventory' else '' }}>توليد فوري</option>
+            <option value="inventory" {{ 'selected' if (default_sale_mode or 'instant') == 'inventory' else '' }}>مخزون</option>
+          </select>
+        </form>
+        <span class="market-pill">{{ num(packages|length) }} عرض</span>
+      </div>
     </header>
     <div class="package-grid">
       {% for package in packages %}
@@ -577,6 +594,37 @@
             <div class="market-stat"><small>رفع</small><strong>{{ speed_label(up) }}</strong></div>
             <div class="market-stat"><small>الحالة</small><strong>{{ "فعال" if package.active else "متوقف" }}</strong></div>
           </div>
+          {% set _mode = package.sale_mode or 'instant' %}
+          {% if _mode == 'inventory' %}
+            {% set _rem = (package.inventory_total or 0) - (package.inventory_sold or 0) %}
+            <div class="market-stats" style="margin-top:6px">
+              <div class="market-stat"><small>المخزون</small><strong>{{ num(package.inventory_total or 0) }}</strong></div>
+              <div class="market-stat"><small>المباع</small><strong>{{ num(package.inventory_sold or 0) }}</strong></div>
+              <div class="market-stat"><small>المتبقي</small><strong>{{ num(_rem if _rem > 0 else 0) }}</strong></div>
+            </div>
+          {% endif %}
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px">
+            <a class="market-btn market-btn--ghost" href="{{ url_for('radius.card_marketplace_package_file', package_id=package.id) }}">
+              <i class="fa-solid fa-file-invoice"></i> ملف المشتريات
+            </a>
+            <form method="post" action="{{ url_for('radius.card_marketplace_package_mode', package_id=package.id) }}" style="margin:0">
+              <select name="sale_mode" onchange="this.form.submit()" style="padding:6px 10px;border-radius:10px;border:1px solid #dfe7f3">
+                <option value="instant" {{ 'selected' if _mode != 'inventory' else '' }}>توليد فوري</option>
+                <option value="inventory" {{ 'selected' if _mode == 'inventory' else '' }}>مخزون</option>
+              </select>
+            </form>
+          </div>
+          {% if _mode == 'inventory' %}
+          <form method="post" enctype="multipart/form-data"
+                action="{{ url_for('radius.card_marketplace_inventory_upload', package_id=package.id) }}"
+                style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;border-top:1px dashed #e6ebf5;padding-top:10px">
+            <input type="number" name="count" min="1" placeholder="توليد عدد"
+                   style="width:110px;padding:6px 10px;border-radius:10px;border:1px solid #dfe7f3">
+            <span style="color:#8a97ad;font-size:12px">أو استورد ملفاً</span>
+            <input type="file" name="file" accept=".csv,.tsv,.txt,.xlsx,.pdf" style="font-size:12px;max-width:170px">
+            <button class="market-btn market-btn--primary" type="submit"><i class="fa-solid fa-boxes-stacked"></i> إضافة مخزون</button>
+          </form>
+          {% endif %}
         </article>
       {% else %}
         <div class="market-empty">لا توجد عروض بيع حتى الآن. أضف أول باقة من النموذج بالأعلى.</div>
@@ -627,16 +675,16 @@
     <header class="market-panel-head">
       <div>
         <h2>آخر عمليات الشراء</h2>
-        <p>تأكيد أن الشراء يولد بطاقة ويحفظ الحركة المالية.</p>
+        <p>نظرة سريعة على المبيعات عبر كل العروض. لكل عرض ملف مشتريات مفصّل.</p>
       </div>
-      <span class="market-pill">{{ num(purchases|length) }} عملية</span>
+      <span class="market-pill">{{ num(recent_purchases.total if recent_purchases else 0) }} عملية</span>
     </header>
     <div class="market-table-wrap">
       <table class="market-table">
         <thead>
           <tr>
-            <th>المستخدم</th>
-            <th>الحزمة</th>
+            <th>المشتري</th>
+            <th>العرض</th>
             <th>الكرت</th>
             <th>المبلغ</th>
             <th>الحالة</th>
@@ -644,14 +692,14 @@
           </tr>
         </thead>
         <tbody>
-          {% for purchase in purchases %}
+          {% for it in (recent_purchases['items'] if recent_purchases else []) %}
             <tr>
-              <td>{{ purchase.card_user_name or ("#" ~ purchase.card_user_id) }}</td>
-              <td>{{ purchase.package_name or purchase.batch_code or "حزمة إلكترونية" }}</td>
-              <td>{{ purchase.card_username or ("#" ~ purchase.card_id) }}</td>
-              <td>{{ money(purchase.amount, purchase.currency) }}</td>
-              <td>{{ "مكتملة" if purchase.status == "completed" else purchase.status }}</td>
-              <td>{{ date_label(purchase.created_at) }}</td>
+              <td>{{ it.buyer_name or it.buyer_mobile or ("#" ~ (it.card_user_id or "")) }}</td>
+              <td>{{ it.package_name or "عرض إلكتروني" }}</td>
+              <td class="mono">{{ it.username or ("#" ~ (it.card_id or "")) }}</td>
+              <td>{{ money((it.amount_minor or 0) / 100, it.currency) }}</td>
+              <td>{{ "مكتملة" if it.status == "completed" else it.status }}</td>
+              <td>{{ date_label(it.created_at) }}</td>
             </tr>
           {% else %}
             <tr><td colspan="6">لا توجد عمليات شراء إلكترونية بعد.</td></tr>
@@ -659,6 +707,17 @@
         </tbody>
       </table>
     </div>
+    {% if recent_purchases and recent_purchases.pages > 1 %}
+    <nav style="display:flex;gap:10px;justify-content:center;align-items:center;margin-top:12px">
+      {% if recent_purchases.page > 1 %}
+        <a class="market-btn market-btn--ghost" href="{{ url_for('radius.card_marketplace', rp_page=recent_purchases.page - 1) }}">السابق</a>
+      {% endif %}
+      <span class="market-pill">{{ recent_purchases.page }} / {{ recent_purchases.pages }}</span>
+      {% if recent_purchases.page < recent_purchases.pages %}
+        <a class="market-btn market-btn--ghost" href="{{ url_for('radius.card_marketplace', rp_page=recent_purchases.page + 1) }}">التالي</a>
+      {% endif %}
+    </nav>
+    {% endif %}
   </section>
 </div>
 

@@ -40,6 +40,8 @@ docs/*
 !docs/section_hubs/*.md
 !docs/router_vpn/
 !docs/router_vpn/*.md
+!docs/ecards/
+!docs/ecards/*.md
 !app/radius/core/
 !app/radius/core/customer_roadmap.py
 

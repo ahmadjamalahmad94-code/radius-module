@@ -1,0 +1,68 @@
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+{% from "_components/table.html" import hub_table %}
+{% from "_components/pagination.html" import hub_pagination %}
+
+{% block title %}ملف مشتريات — {{ package.name }}{% endblock %}
+{% block page_title %}ملف المشتريات{% endblock %}
+{% block page_sub %}<span class="sub">{{ package.name }}</span>{% endblock %}
+
+{% block content %}
+{{ hub.hero(
+     "ملف مشتريات — " ~ package.name,
+     subtitle="كل البطاقات المباعة ضمن هذا العرض، مع تفاصيل كل بطاقة (المستخدم، كلمة المرور، المشتري، السعر، الوقت، الحالة، الاستهلاك).",
+     icon="file-invoice",
+     actions_html='<a class="hub-btn hub-btn--ghost" href="' ~ url_for('radius.card_marketplace') ~ '"><i class="fa-solid fa-arrow-right-long"></i> عودة للسوق</a>') }}
+
+<div class="hub-kpi-grid">
+  {{ hub.kpi("إجمالي المبيعات", total, icon="receipt") }}
+  {% if package.sale_mode == 'inventory' %}
+    {{ hub.kpi("المخزون الكلي", stock_total, icon="boxes-stacked", variant="brand") }}
+    {{ hub.kpi("المباع", sold, icon="cart-shopping", variant="amber") }}
+    {{ hub.kpi("المتبقي", remaining, icon="warehouse", variant=("green" if remaining > 0 else "rose")) }}
+  {% else %}
+    {{ hub.kpi("نمط البيع", "توليد فوري", icon="bolt", variant="brand") }}
+  {% endif %}
+</div>
+
+{% call hub.section("البطاقات المباعة", icon="list", meta=(total ~ " عملية"), flush=True) %}
+  {% set rows = [] %}
+  {% for it in items %}
+    {% set _status = "ملغاة" if it.revoked else ("مستخدمة" if it.used else "جاهزة") %}
+    {% set _ = rows.append({
+        "username": it.username or "—",
+        "password": it.password or "—",
+        "buyer": it.buyer_name or it.buyer_mobile or ("#" ~ (it.card_user_id or "")),
+        "price": ((it.amount_minor or 0) / 100) | money,
+        "when": (it.created_at | dt_local) if it.created_at else "—",
+        "status": _status,
+        "down": (it.download_bytes or 0) | filesizeformat,
+        "up": (it.upload_bytes or 0) | filesizeformat,
+    }) %}
+  {% endfor %}
+  {{ hub_table(
+       columns=[
+         {"label": "المستخدم", "key": "username", "mono": true},
+         {"label": "كلمة المرور", "key": "password", "mono": true},
+         {"label": "المشتري", "key": "buyer"},
+         {"label": "السعر", "key": "price", "numeric": true},
+         {"label": "التاريخ", "key": "when"},
+         {"label": "الحالة", "key": "status"},
+         {"label": "تنزيل", "key": "down", "numeric": true},
+         {"label": "رفع", "key": "up", "numeric": true},
+       ],
+       rows=rows,
+       wide=true,
+       empty_message="لا توجد مشتريات لهذا العرض بعد.") }}
+
+  {% if pages > 1 or per_page != 20 %}
+  <form method="get" action="{{ url_for('radius.card_marketplace_package_file', package_id=package.id) }}">
+    {{ hub_pagination(
+         page=page, total_pages=pages,
+         base_url=url_for('radius.card_marketplace_package_file', package_id=package.id),
+         per_page=per_page, per_page_options=[20, 50, 100],
+         info_text=("عرض %s من %s" | format(items|length, total))) }}
+  </form>
+  {% endif %}
+{% endcall %}
+{% endblock %}

@@ -23,6 +23,10 @@ from .business_os_finance import (
 )
 
 
+VALID_SALE_MODES = ("instant", "inventory")
+_DEFAULT_SALE_MODE_KEY = "cards.default_sale_mode"
+
+
 class CardMarketplaceError(ValueError):
     """Raised for safe marketplace validation errors."""
 
@@ -176,10 +180,12 @@ class CardUsersMarketplaceService:
         speed_up_kbps: int = 0,
         currency: str = "",
         card_color: str = "#14b8a6",
+        sale_mode: str = "",
         metadata: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         if not str(name or "").strip():
             raise CardMarketplaceError("اسم الباقة مطلوب.")
+        mode = self._resolve_sale_mode(sale_mode)
         price_minor = money_to_minor(price)
         if price_minor <= 0:
             raise CardMarketplaceError("سعر الباقة يجب أن يكون أكبر من صفر.")
@@ -196,9 +202,9 @@ class CardUsersMarketplaceService:
                 """
                 INSERT INTO card_marketplace_packages(
                     tenant_id, name, plan_id, duration_minutes, speed_down_kbps,
-                    speed_up_kbps, price_minor, currency, active, metadata_json,
-                    created_at, updated_at
-                ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)
+                    speed_up_kbps, price_minor, currency, active, sale_mode,
+                    metadata_json, created_at, updated_at
+                ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)
                 """,
                 (
                     self.tenant_id,
@@ -210,12 +216,221 @@ class CardUsersMarketplaceService:
                     price_minor,
                     str(currency or default_currency()).upper()[:8],
                     1,
+                    mode,
                     _json(meta),
                     now,
                     now,
                 ),
             )
         return self.get_package(int(cur.lastrowid))
+
+    # ───────────────────────── sale mode + inventory ─────────────────────────
+    def _resolve_sale_mode(self, sale_mode: str = "") -> str:
+        """Per-offer mode if given, else the section-wide default, else instant."""
+        mode = str(sale_mode or "").strip().lower()
+        if mode in VALID_SALE_MODES:
+            return mode
+        return self._default_sale_mode()
+
+    def _default_sale_mode(self) -> str:
+        try:
+            from ..db.repos import tenants_repo
+            value = str(tenants_repo.get_setting(self.tenant_id, _DEFAULT_SALE_MODE_KEY, "instant") or "instant").strip().lower()
+        except Exception:  # noqa: BLE001 — settings must never break a sale
+            value = "instant"
+        return value if value in VALID_SALE_MODES else "instant"
+
+    def set_default_sale_mode(self, sale_mode: str) -> str:
+        mode = str(sale_mode or "").strip().lower()
+        if mode not in VALID_SALE_MODES:
+            raise CardMarketplaceError("نمط البيع غير صالح.")
+        from ..db.repos import tenants_repo
+        tenants_repo.set_setting(self.tenant_id, _DEFAULT_SALE_MODE_KEY, mode)
+        return mode
+
+    def set_package_sale_mode(self, package_id: int, sale_mode: str) -> dict[str, Any]:
+        mode = str(sale_mode or "").strip().lower()
+        if mode not in VALID_SALE_MODES:
+            raise CardMarketplaceError("نمط البيع غير صالح.")
+        self.get_package(package_id)  # ownership / existence (tenant-scoped)
+        db().execute(
+            "UPDATE card_marketplace_packages SET sale_mode=?, updated_at=? WHERE tenant_id=? AND id=?",
+            (mode, now_iso(), self.tenant_id, int(package_id)),
+        )
+        return self.get_package(package_id)
+
+    def _inventory_remaining(self, package: dict[str, Any]) -> int:
+        total = int(package.get("inventory_total") or 0)
+        sold = int(package.get("inventory_sold") or 0)
+        return max(0, total - sold)
+
+    def add_inventory_stock(
+        self,
+        *,
+        package_id: int,
+        cards: list[dict[str, str]] | None = None,
+        count: int = 0,
+        actor: str = "system",
+        password_length: int = 8,
+    ) -> dict[str, Any]:
+        """Add stock to an inventory offer: either pre-made (username/password)
+        rows parsed by the shared import engine, or `count` generated cards.
+
+        Cards are inserted into a NEW batch linked to the offer (package_id) and
+        start life in stock (purchase_id IS NULL). inventory_total is bumped by
+        the number actually added.
+        """
+        package = self.get_package(package_id)
+        rows = self._normalise_stock_rows(cards, count, password_length)
+        if not rows:
+            raise CardMarketplaceError("لا توجد بطاقات صالحة للإضافة إلى المخزون.")
+        if len(rows) > 5000:
+            raise CardMarketplaceError("الحد الأقصى 5000 بطاقة في الدفعة الواحدة.")
+        now = now_iso()
+        plan_id = int(package["plan_id"])
+        code = f"INV-{int(package_id)}-{now.replace(':', '').replace('.', '')[-8:]}"
+        added = 0
+        with transaction() as conn:
+            batch_cur = conn.execute(
+                """
+                INSERT INTO card_batches(
+                    tenant_id, batch_code, package_name, plan_id, count, generated,
+                    price_per_card, price_bulk, username_prefix, password_length,
+                    password_charset, created_by, status, package_id, metadata, created_at
+                ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                """,
+                (
+                    self.tenant_id, code, package["name"], plan_id, len(rows), len(rows),
+                    float(package.get("price") or 0), float(package.get("price") or 0),
+                    "inv", int(password_length or 8), "digits", str(actor or "system"),
+                    "active", int(package_id),
+                    _json({"source": "card_marketplace_inventory", "electronic": True,
+                           "package_id": int(package_id)}),
+                    now,
+                ),
+            )
+            batch_id = int(batch_cur.lastrowid)
+            for r in rows:
+                u = str(r.get("username") or "").strip()
+                p = str(r.get("password") or "").strip()
+                if not u:
+                    continue
+                try:
+                    conn.execute(
+                        """
+                        INSERT INTO cards(tenant_id, batch_id, username, password,
+                                          plan_id, used, created_at)
+                        VALUES(?,?,?,?,?,?,?)
+                        """,
+                        (self.tenant_id, batch_id, u, p, plan_id, 0, now),
+                    )
+                    added += 1
+                except Exception:  # noqa: BLE001 — duplicate username, skip it
+                    continue
+            conn.execute(
+                "UPDATE card_marketplace_packages SET inventory_total = inventory_total + ?, "
+                "updated_at=? WHERE tenant_id=? AND id=?",
+                (added, now, self.tenant_id, int(package_id)),
+            )
+        return {"batch_id": batch_id, "added": added, "requested": len(rows)}
+
+    def _normalise_stock_rows(self, cards, count, password_length) -> list[dict[str, str]]:
+        if cards:
+            out = []
+            for c in cards:
+                u = str((c or {}).get("username") or "").strip()
+                if not u:
+                    continue
+                out.append({"username": u, "password": str((c or {}).get("password") or "").strip()})
+            return out
+        n = int(count or 0)
+        if n <= 0:
+            return []
+        import secrets
+        plen = max(4, min(16, int(password_length or 8)))
+        rows = []
+        for _ in range(n):
+            uid = secrets.token_hex(5)
+            rows.append({
+                "username": f"inv{uid}",
+                "password": "".join(secrets.choice("0123456789") for _ in range(plen)),
+            })
+        return rows
+
+    def _claim_inventory_card(self, package: dict[str, Any]) -> dict[str, Any]:
+        """Atomically claim the next free stock card for this offer.
+
+        Uses a guarded UPDATE (purchase_id sentinel -1 = reserved) so two
+        concurrent buyers can never grab the same card. Bumps inventory_sold.
+        Raises if the offer is out of stock.
+        """
+        package_id = int(package["id"])
+        with transaction() as conn:
+            row = conn.execute(
+                """
+                SELECT c.id FROM cards c
+                JOIN card_batches b
+                  ON b.tenant_id = c.tenant_id AND b.id = c.batch_id
+                WHERE c.tenant_id = ?
+                  AND b.package_id = ?
+                  AND c.purchase_id IS NULL
+                  AND c.used = 0
+                  AND COALESCE(c.revoked, 0) = 0
+                  AND c.deleted_at IS NULL
+                ORDER BY c.id ASC
+                LIMIT 1
+                """,
+                (self.tenant_id, package_id),
+            ).fetchone()
+            if not row:
+                raise CardMarketplaceError("نفد مخزون هذه الباقة. أضف مخزوناً أو حوّلها للتوليد الفوري.")
+            card_id = int(row["id"])
+            claimed = conn.execute(
+                "UPDATE cards SET purchase_id = -1 WHERE tenant_id=? AND id=? AND purchase_id IS NULL",
+                (self.tenant_id, card_id),
+            )
+            if claimed.rowcount != 1:
+                # lost the race to another buyer — surface as out-of-stock retry
+                raise CardMarketplaceError("تعذّر حجز البطاقة، حاول مرة أخرى.")
+            conn.execute(
+                "UPDATE card_marketplace_packages SET inventory_sold = inventory_sold + 1, "
+                "updated_at=? WHERE tenant_id=? AND id=?",
+                (now_iso(), self.tenant_id, package_id),
+            )
+        return row_to_dict(
+            db().execute("SELECT * FROM cards WHERE tenant_id=? AND id=?",
+                         (self.tenant_id, card_id)).fetchone()
+        )
+
+    def _release_inventory_card(self, card: dict[str, Any], package_id: int) -> None:
+        """Compensation: return a reserved card to stock + un-count the sale."""
+        try:
+            with transaction() as conn:
+                conn.execute(
+                    "UPDATE cards SET purchase_id = NULL WHERE tenant_id=? AND id=?",
+                    (self.tenant_id, int(card["id"])),
+                )
+                conn.execute(
+                    "UPDATE card_marketplace_packages "
+                    "SET inventory_sold = MAX(0, inventory_sold - 1), updated_at=? "
+                    "WHERE tenant_id=? AND id=?",
+                    (now_iso(), self.tenant_id, int(package_id)),
+                )
+        except Exception:  # noqa: BLE001 — best-effort compensation
+            pass
+
+    def _discard_minted_card(self, card: dict[str, Any]) -> None:
+        """Compensation for instant mode: remove the just-minted card + batch."""
+        try:
+            with transaction() as conn:
+                conn.execute("DELETE FROM cards WHERE tenant_id=? AND id=?",
+                             (self.tenant_id, int(card["id"])))
+                batch_id = int(card.get("batch_id") or 0)
+                if batch_id:
+                    conn.execute("DELETE FROM card_batches WHERE tenant_id=? AND id=?",
+                                 (self.tenant_id, batch_id))
+        except Exception:  # noqa: BLE001
+            pass
 
     def list_packages(self, *, active_only: bool = True, limit: int = 100) -> list[dict[str, Any]]:
         sql = """
@@ -286,8 +501,13 @@ class CardUsersMarketplaceService:
         price_minor = int(package["price_minor"])
         if int(wallet.get("balance_minor") or 0) < price_minor:
             raise CardMarketplaceError("رصيد المحفظة غير كاف.")
+        mode = self._resolve_sale_mode(package.get("sale_mode"))
+        if mode == "inventory" and self._inventory_remaining(package) <= 0:
+            raise CardMarketplaceError("نفد مخزون هذه الباقة. أضف مخزوناً أو حوّلها للتوليد الفوري.")
 
-        card = self._generate_card_for_package(package, card_user)
+        # (1) Take payment FIRST. No card exists yet, so a failure here can never
+        #     orphan a card. The finance services each commit independently, so
+        #     we use a compensation (refund + undo) instead of one big txn.
         debit = self.wallets.debit(
             tenant_id=self.tenant_id,
             wallet_id=int(wallet["id"]),
@@ -296,59 +516,96 @@ class CardUsersMarketplaceService:
             actor_id=int(card_user_id),
             reference_type="card_marketplace_purchase",
             notes=f"شراء من سوق الكروت بواسطة {actor}",
-            metadata={"package_id": int(package_id), "card_id": int(card["id"])},
+            metadata={"package_id": int(package_id), "sale_mode": mode},
         )
-        purchase_id = self._create_purchase(
-            card_user=card_user,
-            package=package,
-            card=card,
-            wallet=debit["wallet"],
-            wallet_transaction=debit["transaction"],
-        )
-        ledger_entry = self.ledger.write_entry(
-            tenant_id=self.tenant_id,
-            entry_type="card_sale",
-            debit_account=f"wallet:card_user:{card_user_id}",
-            credit_account="card_marketplace_revenue",
-            amount=minor_to_money(price_minor),
-            currency=package["currency"],
-            actor_type="card_user",
-            actor_id=int(card_user_id),
-            target_type="card_user",
-            target_id=int(card_user_id),
-            reference_type="card_user_purchase",
-            reference_id=purchase_id,
-            metadata={"package_id": int(package_id), "card_id": int(card["id"])},
-        )
-        revenue_id = self._create_revenue_record(
-            purchase_id=purchase_id,
-            package=package,
-            ledger_entry_id=int(ledger_entry["id"]),
-        )
-        db().execute(
-            """
-            UPDATE card_user_purchases
-            SET ledger_entry_id=?, revenue_record_id=?
-            WHERE tenant_id=? AND id=?
-            """,
-            (int(ledger_entry["id"]), revenue_id, self.tenant_id, purchase_id),
-        )
-        self.events.record_event(
-            tenant_id=self.tenant_id,
-            category="card",
-            event_key="card_user.card_purchased",
-            message="اشترى مستخدم الكروت بطاقة من السوق.",
-            actor_type="card_user",
-            actor_id=int(card_user_id),
-            target_type="card_user",
-            target_id=int(card_user_id),
-            metadata={
-                "purchase_id": purchase_id,
-                "package_id": int(package_id),
-                "card_id": int(card["id"]),
-                "delivery_status": "event_only",
-            },
-        )
+
+        # (2) Obtain the card (mint for instant, atomic claim for inventory) and
+        #     write the records. On ANY failure: refund the debit and undo the
+        #     card, so we never leave an orphan card or a charged-but-no-card.
+        card = None
+        try:
+            if mode == "inventory":
+                card = self._claim_inventory_card(package)
+            else:
+                card = self._generate_card_for_package(package, card_user)
+            purchase_id = self._create_purchase(
+                card_user=card_user,
+                package=package,
+                card=card,
+                wallet=debit["wallet"],
+                wallet_transaction=debit["transaction"],
+            )
+            if mode == "inventory":
+                # link the reserved card (sentinel -1) to its real purchase
+                db().execute(
+                    "UPDATE cards SET purchase_id=? WHERE tenant_id=? AND id=?",
+                    (int(purchase_id), self.tenant_id, int(card["id"])),
+                )
+            ledger_entry = self.ledger.write_entry(
+                tenant_id=self.tenant_id,
+                entry_type="card_sale",
+                debit_account=f"wallet:card_user:{card_user_id}",
+                credit_account="card_marketplace_revenue",
+                amount=minor_to_money(price_minor),
+                currency=package["currency"],
+                actor_type="card_user",
+                actor_id=int(card_user_id),
+                target_type="card_user",
+                target_id=int(card_user_id),
+                reference_type="card_user_purchase",
+                reference_id=purchase_id,
+                metadata={"package_id": int(package_id), "card_id": int(card["id"])},
+            )
+            revenue_id = self._create_revenue_record(
+                purchase_id=purchase_id,
+                package=package,
+                ledger_entry_id=int(ledger_entry["id"]),
+            )
+            db().execute(
+                """
+                UPDATE card_user_purchases
+                SET ledger_entry_id=?, revenue_record_id=?
+                WHERE tenant_id=? AND id=?
+                """,
+                (int(ledger_entry["id"]), revenue_id, self.tenant_id, purchase_id),
+            )
+            self.events.record_event(
+                tenant_id=self.tenant_id,
+                category="card",
+                event_key="card_user.card_purchased",
+                message="اشترى مستخدم الكروت بطاقة من السوق.",
+                actor_type="card_user",
+                actor_id=int(card_user_id),
+                target_type="card_user",
+                target_id=int(card_user_id),
+                metadata={
+                    "purchase_id": purchase_id,
+                    "package_id": int(package_id),
+                    "card_id": int(card["id"]),
+                    "sale_mode": mode,
+                    "delivery_status": "event_only",
+                },
+            )
+        except Exception:
+            try:
+                self.wallets.credit(
+                    tenant_id=self.tenant_id,
+                    wallet_id=int(wallet["id"]),
+                    amount=minor_to_money(price_minor),
+                    actor_type="card_user",
+                    actor_id=int(card_user_id),
+                    reference_type="card_marketplace_refund",
+                    notes="استرجاع تلقائي: تعذّر إتمام عملية الشراء",
+                    metadata={"package_id": int(package_id)},
+                )
+            except Exception:  # noqa: BLE001 — best-effort refund
+                pass
+            if card is not None:
+                if mode == "inventory":
+                    self._release_inventory_card(card, int(package_id))
+                else:
+                    self._discard_minted_card(card)
+            raise
         return self.get_purchase(purchase_id)
 
     def get_purchase(self, purchase_id: int) -> dict[str, Any]:
@@ -369,6 +626,92 @@ class CardUsersMarketplaceService:
         sql += " ORDER BY id DESC LIMIT ?"
         params.append(int(limit))
         return [_row(row) for row in db().execute(sql, tuple(params)).fetchall()]
+
+    # ─────────────────────── purchases file (paginated) ───────────────────────
+    @staticmethod
+    def _page_args(page: int, per_page: int) -> tuple[int, int, int]:
+        per_page = max(1, min(100, int(per_page or 20)))
+        page = max(1, int(page or 1))
+        return page, per_page, (page - 1) * per_page
+
+    _PURCHASES_SELECT = """
+        SELECT cup.id            AS purchase_id,
+               cup.created_at    AS created_at,
+               cup.amount_minor  AS amount_minor,
+               cup.currency      AS currency,
+               cup.status        AS status,
+               cup.package_id    AS package_id,
+               c.id              AS card_id,
+               c.username        AS username,
+               c.password        AS password,
+               c.used            AS used,
+               COALESCE(c.revoked, 0) AS revoked,
+               c.expire_at       AS expire_at,
+               cu.id             AS card_user_id,
+               cu.display_name   AS buyer_name,
+               cu.mobile         AS buyer_mobile,
+               COALESCE(u.down_bytes, 0) AS download_bytes,
+               COALESCE(u.up_bytes, 0)   AS upload_bytes
+        FROM card_user_purchases cup
+        LEFT JOIN cards c       ON c.tenant_id = cup.tenant_id AND c.id = cup.card_id
+        LEFT JOIN card_users cu ON cu.tenant_id = cup.tenant_id AND cu.id = cup.card_user_id
+        LEFT JOIN (
+            SELECT username,
+                   SUM(COALESCE(acctoutputoctets, 0)) AS down_bytes,
+                   SUM(COALESCE(acctinputoctets, 0))  AS up_bytes
+            FROM radacct WHERE tenant_id = ? GROUP BY username
+        ) u ON u.username = c.username
+    """
+
+    def purchases_file(self, package_id: int, *, page: int = 1, per_page: int = 20) -> dict[str, Any]:
+        """Paginated sales file for one offer — the cards sold under it with
+        full per-card detail (user/pass, buyer, price, datetime, status,
+        download/upload from radacct)."""
+        package = self.get_package(package_id)
+        page, per_page, offset = self._page_args(page, per_page)
+        total = int(db().execute(
+            "SELECT COUNT(*) n FROM card_user_purchases WHERE tenant_id=? AND package_id=?",
+            (self.tenant_id, int(package_id)),
+        ).fetchone()["n"])
+        rows = db().execute(
+            self._PURCHASES_SELECT
+            + " WHERE cup.tenant_id = ? AND cup.package_id = ? ORDER BY cup.id DESC LIMIT ? OFFSET ?",
+            (self.tenant_id, self.tenant_id, int(package_id), per_page, offset),
+        ).fetchall()
+        return {
+            "package": package,
+            "items": [row_to_dict(r) for r in rows],
+            "page": page, "per_page": per_page, "total": total,
+            "pages": max(1, (total + per_page - 1) // per_page),
+            "remaining": self._inventory_remaining(package),
+            "sold": int(package.get("inventory_sold") or 0),
+            "stock_total": int(package.get("inventory_total") or 0),
+        }
+
+    def recent_purchases(self, *, page: int = 1, per_page: int = 20) -> dict[str, Any]:
+        """Global paginated recent-purchases panel across all offers."""
+        page, per_page, offset = self._page_args(page, per_page)
+        total = int(db().execute(
+            "SELECT COUNT(*) n FROM card_user_purchases WHERE tenant_id=?",
+            (self.tenant_id,),
+        ).fetchone()["n"])
+        rows = db().execute(
+            self._PURCHASES_SELECT.replace(
+                "cu.mobile         AS buyer_mobile,",
+                "cu.mobile         AS buyer_mobile, p.name AS package_name,",
+            ).replace(
+                "LEFT JOIN card_users cu ON cu.tenant_id = cup.tenant_id AND cu.id = cup.card_user_id",
+                "LEFT JOIN card_users cu ON cu.tenant_id = cup.tenant_id AND cu.id = cup.card_user_id\n"
+                "        LEFT JOIN card_marketplace_packages p ON p.tenant_id = cup.tenant_id AND p.id = cup.package_id",
+            )
+            + " WHERE cup.tenant_id = ? ORDER BY cup.id DESC LIMIT ? OFFSET ?",
+            (self.tenant_id, self.tenant_id, per_page, offset),
+        ).fetchall()
+        return {
+            "items": [row_to_dict(r) for r in rows],
+            "page": page, "per_page": per_page, "total": total,
+            "pages": max(1, (total + per_page - 1) // per_page),
+        }
 
     def card_user_360(self, card_user_id: int) -> dict[str, Any]:
         card_user = self.get_card_user(card_user_id)
@@ -430,8 +773,8 @@ class CardUsersMarketplaceService:
                 INSERT INTO card_batches(
                     tenant_id, batch_code, package_name, plan_id, count, generated,
                     price_per_card, price_bulk, username_prefix, password_length,
-                    password_charset, created_by, status, metadata, created_at
-                ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                    password_charset, created_by, status, package_id, metadata, created_at
+                ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                 """,
                 (
                     self.tenant_id,
@@ -447,6 +790,7 @@ class CardUsersMarketplaceService:
                     "digits",
                     "card_marketplace",
                     "active",
+                    int(package["id"]),
                     _json(
                         {
                             "source": "card_marketplace",

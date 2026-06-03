@@ -35,6 +35,10 @@ def register_card_users_marketplace_routes(bp: Blueprint) -> None:
     )
     bp.add_url_rule("/card-marketplace", "card_marketplace", card_marketplace, methods=["GET"])
     bp.add_url_rule("/card-marketplace/packages", "card_marketplace_package_create", card_marketplace_package_create, methods=["POST"])
+    bp.add_url_rule("/card-marketplace/default-mode", "card_marketplace_default_mode", card_marketplace_default_mode, methods=["POST"])
+    bp.add_url_rule("/card-marketplace/packages/<int:package_id>/mode", "card_marketplace_package_mode", card_marketplace_package_mode, methods=["POST"])
+    bp.add_url_rule("/card-marketplace/packages/<int:package_id>/inventory", "card_marketplace_inventory_upload", card_marketplace_inventory_upload, methods=["POST"])
+    bp.add_url_rule("/card-marketplace/packages/<int:package_id>/file", "card_marketplace_package_file", card_marketplace_package_file, methods=["GET"])
 
 
 def _tid() -> int:
@@ -362,6 +366,11 @@ def card_marketplace():
     all_electronic_batches = _electronic_batch_rows(_tid())
     electronic_batches = all_electronic_batches[:4]
     marketplace_plans = _marketplace_plans(_tid())
+    try:
+        page = int(request.args.get("rp_page") or 1)
+    except (TypeError, ValueError):
+        page = 1
+    recent = service.recent_purchases(page=page, per_page=10)
     return render_template(
         "radius/card_marketplace.html",
         packages=service.list_packages(limit=200),
@@ -369,6 +378,8 @@ def card_marketplace():
         purchases=_recent_electronic_purchases(_tid()),
         electronic_batches=electronic_batches,
         market_summary=_market_summary(all_electronic_batches),
+        recent_purchases=recent,
+        default_sale_mode=service._default_sale_mode(),
     )
 
 
@@ -382,6 +393,7 @@ def card_marketplace_package_create():
             speed_down_kbps=int(request.form.get("speed_down_kbps") or 0),
             speed_up_kbps=int(request.form.get("speed_up_kbps") or 0),
             card_color=request.form.get("card_color") or "#14b8a6",
+            sale_mode=request.form.get("sale_mode") or "",
             metadata={
                 "sale_note": request.form.get("sale_note") or "",
             },
@@ -390,3 +402,76 @@ def card_marketplace_package_create():
     except (CardMarketplaceError, ValueError) as exc:
         flash(str(exc), "error")
     return redirect(url_for("radius.card_marketplace"))
+
+
+def card_marketplace_default_mode():
+    """Section-wide default sale mode that new offers inherit."""
+    try:
+        _service().set_default_sale_mode(request.form.get("sale_mode") or "instant")
+        flash("تم حفظ نمط البيع الافتراضي للقسم.", "success")
+    except (CardMarketplaceError, ValueError) as exc:
+        flash(str(exc), "error")
+    return redirect(url_for("radius.card_marketplace"))
+
+
+def card_marketplace_package_mode(package_id: int):
+    """Per-offer override: instant (توليد فوري) vs inventory (مخزون)."""
+    try:
+        _service().set_package_sale_mode(package_id, request.form.get("sale_mode") or "instant")
+        flash("تم تحديث نمط بيع الباقة.", "success")
+    except (CardMarketplaceError, ValueError) as exc:
+        flash(str(exc), "error")
+    return redirect(url_for("radius.card_marketplace"))
+
+
+def card_marketplace_inventory_upload(package_id: int):
+    """Add stock to an inventory offer — generate N cards, OR import a file
+    (Excel/CSV/PDF) of pre-made username/password stock via the shared engine."""
+    from ..services import cards_import_engine
+
+    _IMPORT_MAX_BYTES = 12 * 1024 * 1024
+    try:
+        upload = request.files.get("file")
+        if upload is not None and upload.filename:
+            raw = upload.read(_IMPORT_MAX_BYTES + 1)
+            if not raw:
+                raise CardMarketplaceError("الملف فارغ أو غير قابل للقراءة.")
+            if len(raw) > _IMPORT_MAX_BYTES:
+                raise CardMarketplaceError("حجم الملف يتجاوز 12MB — قسّمه إلى دفعات أصغر.")
+            result = cards_import_engine.parse(raw, upload.filename or "")
+            rows = [{"username": c.username, "password": c.password} for c in result.cards]
+            if not rows:
+                raise CardMarketplaceError("لم يتم استخراج أي بطاقات من الملف.")
+            res = _service().add_inventory_stock(package_id=package_id, cards=rows, actor=_actor())
+            flash(f"تم استيراد {res['added']} بطاقة إلى مخزون الباقة.", "success")
+        else:
+            count = int(request.form.get("count") or 0)
+            if count <= 0:
+                raise CardMarketplaceError("حدّد عدد البطاقات أو ارفع ملفاً.")
+            res = _service().add_inventory_stock(
+                package_id=package_id, count=count, actor=_actor(),
+                password_length=int(request.form.get("password_length") or 8),
+            )
+            flash(f"تم توليد {res['added']} بطاقة في مخزون الباقة.", "success")
+    except (CardMarketplaceError, ValueError) as exc:
+        flash(str(exc), "error")
+    return redirect(url_for("radius.card_marketplace"))
+
+
+def card_marketplace_package_file(package_id: int):
+    """Per-offer paginated purchases file."""
+    try:
+        page = int(request.args.get("page") or 1)
+    except (TypeError, ValueError):
+        page = 1
+    try:
+        # hub_pagination's size <select> submits as "page_size"
+        per_page = int(request.args.get("page_size") or request.args.get("per_page") or 20)
+    except (TypeError, ValueError):
+        per_page = 20
+    try:
+        data = _service().purchases_file(package_id, page=page, per_page=per_page)
+    except CardMarketplaceError as exc:
+        flash(str(exc), "error")
+        return redirect(url_for("radius.card_marketplace"))
+    return render_template("radius/card_marketplace_package_file.html", **data)
