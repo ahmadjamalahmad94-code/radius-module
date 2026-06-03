@@ -1,5 +1,6 @@
 """Card users and electronic-card marketplace API contracts."""
 from __future__ import annotations
+from ...radius.core.system_config import default_currency
 
 from typing import Any
 
@@ -139,7 +140,7 @@ def _summary(users: list[dict[str, Any]]) -> dict[str, Any]:
         "cards": sum(int(user.get("owned_cards_count") or 0) for user in users),
         "purchases": sum(int(user.get("purchase_count") or 0) for user in users),
         "balance": round(sum(float(user.get("balance") or 0) for user in users), 2),
-        "currency": next((user.get("wallet_currency") for user in users if user.get("wallet_currency")), "ILS"),
+        "currency": next((user.get("wallet_currency") for user in users if user.get("wallet_currency")), default_currency()),
     }
 
 
@@ -245,7 +246,7 @@ def card_marketplace_package_create():
             duration_minutes=int(body.get("duration_minutes") or 0),
             speed_down_kbps=int(body.get("speed_down_kbps") or 0),
             speed_up_kbps=int(body.get("speed_up_kbps") or 0),
-            currency=str(body.get("currency") or "ILS"),
+            currency=str(body.get("currency") or default_currency()),
             card_color=str(body.get("card_color") or "#14b8a6"),
             metadata=body.get("metadata") if isinstance(body.get("metadata"), dict) else {},
         )

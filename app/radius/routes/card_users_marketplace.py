@@ -1,5 +1,6 @@
 """Card users and card marketplace web routes."""
 from __future__ import annotations
+from ..core.system_config import default_currency
 
 from typing import Any
 
@@ -136,7 +137,7 @@ def _electronic_batch_rows(tenant_id: int, *, limit: int = 200) -> list[dict[str
         batch.update(
             metadata=metadata,
             display_name=batch.get("package_name") or batch.get("plan_name") or batch.get("batch_code") or "حزمة إلكترونية",
-            currency=metadata.get("currency") or "ILS",
+            currency=metadata.get("currency") or default_currency(),
             total_cards=total_cards,
             unit_price=unit_price,
             wholesale_price=_money(batch.get("price_bulk")),
@@ -197,7 +198,7 @@ def _market_summary(batches: list[dict[str, Any]]) -> dict[str, Any]:
         "available": sum(int(batch.get("available_count") or 0) for batch in batches),
         "sold": sum(int(batch.get("sold_count") or 0) for batch in batches),
         "revenue": _money(sum(float(batch.get("revenue") or 0) for batch in batches)),
-        "currency": next((batch.get("currency") for batch in batches if batch.get("currency")), "ILS"),
+        "currency": next((batch.get("currency") for batch in batches if batch.get("currency")), default_currency()),
     }
 
 
@@ -222,7 +223,7 @@ def _marketplace_plans(tenant_id: int, *, limit: int = 300) -> list[dict[str, An
         plan["speed_down_kbps"] = int(plan.get("speed_down_kbps") or 0)
         plan["speed_up_kbps"] = int(plan.get("speed_up_kbps") or 0)
         plan["quota_total_mb"] = int(plan.get("quota_total_mb") or 0)
-        plan["currency"] = plan.get("currency") or "ILS"
+        plan["currency"] = plan.get("currency") or default_currency()
     return plans
 
 
@@ -260,7 +261,7 @@ def _card_user_rows(tenant_id: int, *, limit: int = 200) -> list[dict[str, Any]]
         user["balance"] = _money(int(user.get("balance_minor") or 0) / 100)
         user["pending_balance"] = _money(int(user.get("pending_balance_minor") or 0) / 100)
         user["spent"] = _money(int(user.get("spent_minor") or 0) / 100)
-        user["wallet_currency"] = user.get("wallet_currency") or "ILS"
+        user["wallet_currency"] = user.get("wallet_currency") or default_currency()
         user["purchase_count"] = int(user.get("purchase_count") or 0)
         user["owned_cards_count"] = int(user.get("owned_cards_count") or 0)
     return users
@@ -273,7 +274,7 @@ def _card_users_summary(users: list[dict[str, Any]]) -> dict[str, Any]:
         "cards": sum(int(user.get("owned_cards_count") or 0) for user in users),
         "purchases": sum(int(user.get("purchase_count") or 0) for user in users),
         "balance": _money(sum(float(user.get("balance") or 0) for user in users)),
-        "currency": next((user.get("wallet_currency") for user in users if user.get("wallet_currency")), "ILS"),
+        "currency": next((user.get("wallet_currency") for user in users if user.get("wallet_currency")), default_currency()),
     }
 
 

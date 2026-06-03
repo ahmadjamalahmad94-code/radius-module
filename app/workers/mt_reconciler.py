@@ -60,10 +60,12 @@ HOBERADIUS_RECONCILER_ENABLED      (default 1 → on)
 """
 from __future__ import annotations
 
+import hashlib
 import logging
 import os
 import threading
 import time
+from datetime import datetime, timedelta
 
 from .heartbeat import beat
 
@@ -99,6 +101,71 @@ def _norm_mac(s: str) -> str:
     if len(cleaned) != 12:
         return s.strip().upper()  # last-ditch: trust the input casing
     return ":".join(cleaned[i:i+2] for i in range(0, 12, 2)).upper()
+
+
+def _safe_int(v) -> int:
+    try:
+        return int(float(str(v).strip()))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _parse_ros_uptime(s: str) -> int:
+    """RouterOS uptime → seconds. Handles the API unit form ('1w2d3h4m5s',
+    '22m54s', '3h') AND the colon form ('00:22:54', '1:02:03'). 0 on junk."""
+    import re
+
+    s = (s or "").strip().lower()
+    if not s:
+        return 0
+    units = {"w": 604800, "d": 86400, "h": 3600, "m": 60, "s": 1}
+    matches = re.findall(r"(\d+)\s*([wdhms])", s)
+    if matches:
+        return sum(int(n) * units[u] for n, u in matches)
+    if ":" in s:  # H:M:S or M:S (left-to-right, smallest on the right)
+        try:
+            parts = [int(p) for p in s.split(":")]
+        except ValueError:
+            return 0
+        total = 0
+        for p in parts:
+            total = total * 60 + p
+        return total
+    return _safe_int(s)
+
+
+def _map_active_rows(hotspot_rows, ppp_rows) -> list[dict]:
+    """Pure mapper: RouterOS active-session attr dicts → normalized session
+    dicts. Hotspot uses user/mac-address; PPP uses name/caller-id. PPP
+    caller-id is a real MAC only for PPPoE, so it is best-effort."""
+    out: list[dict] = []
+    for r in (hotspot_rows or []):
+        user = (r.get("user") or "").strip()
+        if not user:
+            continue
+        out.append({
+            "username":   user,
+            "mac":        _norm_mac(r.get("mac-address") or ""),
+            "framed_ip":  (r.get("address") or "").strip(),
+            "uptime_sec": _parse_ros_uptime(r.get("uptime") or ""),
+            "bytes_in":   _safe_int(r.get("bytes-in")),
+            "bytes_out":  _safe_int(r.get("bytes-out")),
+            "source":     "hotspot",
+        })
+    for r in (ppp_rows or []):
+        user = (r.get("name") or "").strip()
+        if not user:
+            continue
+        out.append({
+            "username":   user,
+            "mac":        _norm_mac(r.get("caller-id") or ""),
+            "framed_ip":  (r.get("address") or "").strip(),
+            "uptime_sec": _parse_ros_uptime(r.get("uptime") or ""),
+            "bytes_in":   _safe_int(r.get("bytes-in")),
+            "bytes_out":  _safe_int(r.get("bytes-out")),
+            "source":     "ppp",
+        })
+    return out
 
 
 def _collect_router_configs(tenant_id: int) -> list[dict]:
@@ -154,34 +221,22 @@ def _collect_router_configs(tenant_id: int) -> list[dict]:
     return list(out.values())
 
 
-def _fetch_active_sessions(cfg: dict) -> set[tuple[str, str]] | None:
-    """Returns a set of (username_lower, mac_upper) for every active
-    session on this router across hotspot AND ppp. Returns None on
-    failure — caller treats None as 'router unreachable, skip close
-    for its NAS this cycle'.
-    """
+def _fetch_active_rows(cfg: dict) -> list[dict] | None:
+    """Returns normalized active-session rows (username, mac, framed_ip,
+    uptime_sec, bytes_in/out, source) across hotspot AND ppp. Returns None
+    on failure — caller treats None as 'router unreachable, skip this NAS'."""
     from app.radius.integration.mikrotik.errors import MikrotikError
     from app.radius.integration.mikrotik.pool import acquire as acquire_mt
 
-    keys: set[tuple[str, str]] = set()
+    hotspot: list[dict] = []
+    ppp: list[dict] = []
     try:
         with acquire_mt(cfg) as client:
-            # Hotspot active sessions
-            for r in client.print_("/ip/hotspot/active/print"):
-                user = (r.get("user") or "").strip().lower()
-                mac  = _norm_mac(r.get("mac-address") or "")
-                if user:
-                    keys.add((user, mac))
-            # PPPoE / PPTP / L2TP / SSTP active sessions
+            hotspot = list(client.print_("/ip/hotspot/active/print"))
             try:
-                for r in client.print_("/ppp/active/print"):
-                    user = (r.get("name") or "").strip().lower()
-                    mac  = _norm_mac(r.get("caller-id") or "")
-                    if user:
-                        keys.add((user, mac))
+                ppp = list(client.print_("/ppp/active/print"))
             except MikrotikError:
-                # /ppp/active may not exist (hotspot-only router); fine.
-                pass
+                ppp = []  # /ppp/active may not exist (hotspot-only router)
     except MikrotikError as e:
         _LOG.warning("mt_reconciler: router=%s unreachable: %s",
                      cfg.get("host"), e)
@@ -190,7 +245,19 @@ def _fetch_active_sessions(cfg: dict) -> set[tuple[str, str]] | None:
         _LOG.exception("mt_reconciler: unexpected error router=%s",
                        cfg.get("host"))
         return None
-    return keys
+    return _map_active_rows(hotspot, ppp)
+
+
+def _keys_from_rows(rows: list[dict]) -> set[tuple[str, str]]:
+    """(username_lower, mac_upper) set used by the close-orphans pass."""
+    return {((r["username"] or "").strip().lower(), r.get("mac") or "")
+            for r in rows if (r.get("username") or "").strip()}
+
+
+def _fetch_active_sessions(cfg: dict) -> set[tuple[str, str]] | None:
+    """Back-compat wrapper: the (username, mac) set (close-orphans view)."""
+    rows = _fetch_active_rows(cfg)
+    return None if rows is None else _keys_from_rows(rows)
 
 
 def _reconcile_nas(tenant_id: int, nas_addr: str,
@@ -260,6 +327,88 @@ def _reconcile_nas(tenant_id: int, nas_addr: str,
     return closed
 
 
+_MTSYNC_PREFIX = "mtsync:"
+
+
+def _utcnow() -> str:
+    return datetime.utcnow().isoformat() + "Z"
+
+
+def _materialize_enabled() -> bool:
+    raw = (os.environ.get("HOBERADIUS_SESSION_SYNC_MATERIALIZE") or "1").strip().lower()
+    return raw not in ("0", "false", "no", "off")
+
+
+def _materialize_nas(tenant_id: int, nas_addr: str, rows: list[dict]) -> dict:
+    """Bring radacct UP to match the router: for each live router session
+    with no open radacct row, INSERT a synthetic open row tagged
+    `mtsync:` (so cookie/auto-login sessions — which never hit RADIUS —
+    show in /online and are CoA-targetable). Refresh octets/uptime on our
+    own synthetic rows; NEVER touch a real RADIUS row. Closing is handled
+    by the existing orphan pass (a vanished session drops from the live
+    set → gets closed)."""
+    if not _materialize_enabled() or not rows:
+        return {"inserted": 0, "updated": 0}
+    from app.radius.db.connection import db, transaction
+
+    open_rows = db().execute(
+        "SELECT radacctid, username, callingstationid, acctuniqueid "
+        "FROM radacct WHERE tenant_id = ? AND nasipaddress = ? AND acctstoptime IS NULL",
+        (tenant_id, nas_addr),
+    ).fetchall()
+    existing: dict[tuple[str, str], dict] = {}
+    for r in open_rows:
+        key = ((r["username"] or "").strip().lower(), _norm_mac(r["callingstationid"] or ""))
+        existing[key] = r
+
+    now = _utcnow()
+    inserted = updated = 0
+    for row in rows:
+        user = (row.get("username") or "").strip()
+        if not user:
+            continue
+        mac = row.get("mac") or ""
+        key = (user.lower(), mac)
+        match = existing.get(key)
+        if match is not None:
+            # Refresh ONLY our own synthetic rows; a real RADIUS row wins untouched.
+            if str(match["acctuniqueid"] or "").startswith(_MTSYNC_PREFIX):
+                db().execute(
+                    "UPDATE radacct SET acctupdatetime = ?, acctinputoctets = ?, "
+                    "acctoutputoctets = ?, acctsessiontime = ?, "
+                    "framedipaddress = COALESCE(NULLIF(?, ''), framedipaddress) "
+                    "WHERE radacctid = ?",
+                    (now, int(row.get("bytes_in") or 0), int(row.get("bytes_out") or 0),
+                     int(row.get("uptime_sec") or 0), row.get("framed_ip") or "",
+                     match["radacctid"]),
+                )
+                updated += 1
+            continue
+        # No open row for this (user, mac) — materialize a synthetic session.
+        uniq = f"{_MTSYNC_PREFIX}{nas_addr}:{user.lower()}:{mac}"
+        sid = "mtsync-" + hashlib.md5(uniq.encode("utf-8")).hexdigest()[:16]
+        start = (datetime.utcnow()
+                 - timedelta(seconds=int(row.get("uptime_sec") or 0))).isoformat() + "Z"
+        try:
+            with transaction() as conn:
+                conn.execute(
+                    "INSERT INTO radacct(tenant_id, acctsessionid, acctuniqueid, username, "
+                    "nasipaddress, acctstarttime, acctupdatetime, callingstationid, "
+                    "framedipaddress, acctinputoctets, acctoutputoctets, acctsessiontime) "
+                    "VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
+                    (tenant_id, sid, uniq, user, nas_addr, start, now, mac,
+                     row.get("framed_ip") or "", int(row.get("bytes_in") or 0),
+                     int(row.get("bytes_out") or 0), int(row.get("uptime_sec") or 0)),
+                )
+            inserted += 1
+        except Exception:  # noqa: BLE001 — a racing real Acct-Start can win; skip
+            existing[key] = {"radacctid": None, "acctuniqueid": ""}
+    if inserted or updated:
+        _LOG.info("mt_reconciler: materialized %d new + refreshed %d session(s) "
+                  "tenant=%d nas=%s", inserted, updated, tenant_id, nas_addr)
+    return {"inserted": inserted, "updated": updated}
+
+
 def _all_tenants() -> list[int]:
     from app.radius.db.connection import db
     return [r["id"] for r in db().execute(
@@ -271,18 +420,22 @@ def reconcile_once() -> dict:
     """One full pass. Returns {tenants, routers_ok, routers_skipped,
     closed_total} for the heartbeat + manual debugging."""
     stats = {"tenants": 0, "routers_ok": 0, "routers_skipped": 0,
-             "closed_total": 0}
+             "closed_total": 0, "materialized_total": 0}
     for tenant_id in _all_tenants():
         stats["tenants"] += 1
         routers = _collect_router_configs(tenant_id)
         for cfg in routers:
-            active = _fetch_active_sessions(cfg)
-            if active is None:
+            rows = _fetch_active_rows(cfg)
+            if rows is None:
                 stats["routers_skipped"] += 1
                 continue
             stats["routers_ok"] += 1
-            closed = _reconcile_nas(tenant_id, cfg["host"], active)
+            # Close ghosts (radacct rows no longer on the router)…
+            closed = _reconcile_nas(tenant_id, cfg["host"], _keys_from_rows(rows))
             stats["closed_total"] += closed
+            # …and open missed/cookie sessions (on the router, absent from radacct).
+            mat = _materialize_nas(tenant_id, cfg["host"], rows)
+            stats["materialized_total"] += mat["inserted"]
     return stats
 
 

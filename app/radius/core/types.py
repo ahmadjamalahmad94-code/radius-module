@@ -117,7 +117,7 @@ class AccessPlan:
     price_card: float = 0.0
     price_bulk: float = 0.0
     price: float = 0.0
-    currency: str = "JOD"
+    currency: str = ""                       # فارغ = اتبع عملة لوحة التحكم (cfg.currency)
     plan_tier: str = "Personal"              # Personal/Business
     prepaid: bool = True
     project: str = ""

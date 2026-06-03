@@ -49,6 +49,7 @@ def get_radius_blueprint() -> Blueprint:
     _register_tenants(bp)
     _register_all(bp)
     _install_global_login_guard(bp)
+    _install_permission_guard(bp)
     return bp
 
 
@@ -285,6 +286,61 @@ def _install_global_login_guard(bp: Blueprint) -> None:
             from flask import redirect, url_for, flash
             flash("سجّل الدخول للمتابعة.", "warning")
             return redirect(url_for("radius.auth_login", next=request.path))
+        return None
+
+
+# الحارس الثاني: صلاحيات الدور (RBAC) على المسارات الحسّاسة.
+# super_admin يمرّ دائمًا؛ غيره يُمنع (403) من إدارة المسؤولين/الأدوار/الـ tenants،
+# والنسخ الاحتياطي (استرجاع/حذف/تنزيل)، وعكس قيود المحاسبة، وحفظ إعدادات النظام.
+_PERM_SUPER = "__super__"
+_PERM_GUARDED: dict[str, str] = {
+    # إدارة المسؤولين والأدوار — سطح تصعيد الصلاحيات (super_admin فقط)
+    "admins_create": _PERM_SUPER, "admins_update": _PERM_SUPER, "admins_delete": _PERM_SUPER,
+    "roles_create": _PERM_SUPER, "roles_update": _PERM_SUPER, "roles_save": _PERM_SUPER,
+    "roles_delete": _PERM_SUPER,
+    # إدارة الـ tenants (super_admin فقط)
+    "tenants_create": _PERM_SUPER, "tenants_update": _PERM_SUPER,
+    # النسخ الاحتياطي: عمليات مدمّرة أو تسريب بيانات (super_admin فقط)
+    "backups_run": _PERM_SUPER, "backups_run_all": _PERM_SUPER, "backups_restore": _PERM_SUPER,
+    "backups_delete": _PERM_SUPER, "backups_schedule": _PERM_SUPER, "backups_settings": _PERM_SUPER,
+    "backups_upload_computer": _PERM_SUPER, "backups_upload_panel": _PERM_SUPER,
+    "backups_download": _PERM_SUPER, "backups_content": _PERM_SUPER,
+    "backups_gdrive_save": _PERM_SUPER, "backups_gdrive_start": _PERM_SUPER,
+    "backups_gdrive_disconnect": _PERM_SUPER,
+    # عكس قيد محاسبي (مدمّر) — super_admin فقط
+    "finance_ledger_void": _PERM_SUPER,
+    # حفظ إعدادات النظام — تتطلّب صلاحية settings.edit (تُفحص على الكتابة فقط)
+    "settings_page": "settings.edit",
+    # التحكّم بالسرعة المؤقتة من شاشة المتصلين — صلاحية تعديل المشتركين
+    "online_temp_speed": "users.edit",
+    "online_temp_speed_cancel": "users.edit",
+}
+
+
+def _install_permission_guard(bp: Blueprint) -> None:
+    """RBAC server-side: يمنع الأدوار المحدودة من المسارات الحسّاسة."""
+    from flask import session, abort
+
+    @bp.before_request
+    def _perm_guard():
+        ep = request.endpoint or ""
+        if not ep.startswith("radius."):
+            return None
+        name = ep.split(".", 1)[1]
+        required = _PERM_GUARDED.get(name)
+        if required is None:
+            return None
+        # المسارات التي تخدم GET للعرض و POST للحفظ: نحرس الكتابة فقط
+        if name == "settings_page" and request.method in ("GET", "HEAD", "OPTIONS"):
+            return None
+        # super_admin يمرّ دائمًا
+        if session.get("is_super_admin"):
+            return None
+        if required == _PERM_SUPER:
+            abort(403)
+        perms = session.get("permissions") or []
+        if required not in perms:
+            abort(403)
         return None
 
 

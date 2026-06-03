@@ -457,10 +457,10 @@ def validate_service_scope(value: str) -> str:
 def _validate_time(value: str, field: str) -> str:
     raw = (value or "").strip()
     if not _TIME_RE.match(raw):
-        raise RadiusValidationError(f"{field} must be HH:MM")
+        raise RadiusValidationError("يجب إدخال الوقت بصيغة ساعة:دقيقة (HH:MM)")
     hour, minute = [int(part) for part in raw.split(":", 1)]
     if hour > 23 or minute > 59:
-        raise RadiusValidationError(f"{field} must be a valid time")
+        raise RadiusValidationError("الوقت المُدخل غير صالح")
     return raw
 
 

@@ -18,6 +18,7 @@ from typing import Iterator
 
 from .client import MikrotikClient
 from .errors import ConnectError, MikrotikError
+from ...services.nas_connection import resolve_connection_address
 
 _LOG = logging.getLogger(__name__)
 
@@ -73,7 +74,13 @@ def acquire(router_cfg: dict) -> Iterator[MikrotikClient]:
         if e.client is None:
             try:
                 e.client = MikrotikClient(
-                    host=router_cfg["host"], port=int(router_cfg["port"]),
+                    # VPN-only: the single dial chokepoint. Resolves to the
+                    # WireGuard peer for VPN-mode rows; idempotent for callers
+                    # that already resolved the host (resolver falls back to it).
+                    # Routes the legacy router_sync MT-API disconnect through the
+                    # resolver too, instead of a raw public host.
+                    host=resolve_connection_address(router_cfg) or router_cfg["host"],
+                    port=int(router_cfg["port"]),
                     username=router_cfg["username"], password=router_cfg["password"],
                     use_tls=bool(router_cfg["use_tls"]),
                     verify_tls=bool(router_cfg["verify_tls"]),

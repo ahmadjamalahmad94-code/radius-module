@@ -170,7 +170,8 @@ def _start_workers(app: Flask) -> None:
                                   start_lifecycle_worker,
                                   start_mt_reconciler,
                                   start_stale_session_reaper,
-                                  start_sync_worker)
+                                  start_sync_worker,
+                                  start_temp_speed_expiry)
         start_sync_worker()
         start_accounting_puller()
         start_stale_session_reaper()
@@ -180,6 +181,7 @@ def _start_workers(app: Flask) -> None:
         start_mt_reconciler()
         start_backup_scheduler_worker()
         start_dunning_worker()
+        start_temp_speed_expiry()
     except Exception:  # noqa: BLE001
         app.logger.exception("workers start failed")
     try:
@@ -331,8 +333,16 @@ def _install_stubs(app: Flask) -> None:
             from app.radius.core.system_config import system_config
             return {"cfg": system_config()}
         except Exception:  # noqa: BLE001 — never break a page on config read
-            return {"cfg": {"currency": "JOD", "currency_symbol": "د.أ", "tz_offset": 3.0,
-                            "system_name": "HobeRadius", "country": "", "logo_url": "", "primary_color": "#2BAACC"}}
+            # اشتقّ عملة الاحتياط من الإعداد الافتراضي الموحّد بدل تثبيت JOD هنا.
+            from app.radius.core.system_config import (
+                CURRENCY_NAMES, CURRENCY_SYMBOLS, _DEFAULTS,
+            )
+            cur = (_DEFAULTS.get("billing.currency") or "ILS").upper()
+            return {"cfg": {"currency": cur,
+                            "currency_symbol": CURRENCY_SYMBOLS.get(cur, cur),
+                            "currency_name": CURRENCY_NAMES.get(cur, cur),
+                            "tz_offset": 3.0, "system_name": "HobeRadius", "country": "",
+                            "logo_url": "", "primary_color": "#2BAACC"}}
 
     from app.radius.core.system_config import (
         format_duration_days as _dur_days,

@@ -722,8 +722,8 @@
         <div class="row"><span class="k">VLAN</span><span class="v">{{ sub.vlan_id or "—" }}</span></div>
         <div class="row"><span class="k">حد الجلسات المتزامنة</span><span class="v">{{ sub.override_concurrent or "—" }}</span></div>
         <div class="row"><span class="k">حد الأجهزة</span><span class="v">{{ sub.device_count or "—" }}</span></div>
-        <div class="row"><span class="k">Pool</span><span class="v mono">{{ sub.pool or "—" }}</span></div>
-        <div class="row"><span class="k">Caller-ID</span><span class="v mono">{{ sub.caller_id or "—" }}</span></div>
+        <div class="row"><span class="k">المجمّع</span><span class="v mono">{{ sub.pool or "—" }}</span></div>
+        <div class="row"><span class="k">معرّف المتّصل</span><span class="v mono">{{ sub.caller_id or "—" }}</span></div>
       </div>
     {% endcall %}
   </div>

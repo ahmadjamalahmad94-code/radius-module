@@ -541,6 +541,41 @@
                   <i class="fa-solid fa-plug-circle-xmark"></i>
                 </button>
               </form>
+              <details class="online-temp-speed" style="display:inline-block;position:relative;">
+                <summary class="hub-btn hub-btn--secondary hub-btn--sm" title="سرعة مؤقتة (تطبيق فوري + رجوع تلقائي)"
+                         style="list-style:none;cursor:pointer;">
+                  <i class="fa-solid fa-gauge-simple-high"></i>
+                </summary>
+                <form method="post" action="{{ url_for('radius.online_temp_speed') }}"
+                      style="position:absolute;z-index:30;inset-inline-end:0;margin-top:6px;min-width:240px;
+                             background:#fff;border:1px solid var(--hub-border,#e2e8f0);border-radius:12px;
+                             box-shadow:0 12px 32px rgba(15,23,42,.18);padding:12px;text-align:start;">
+                  <input type="hidden" name="next" value="{{ request.full_path }}">
+                  <input type="hidden" name="username" value="{{ s.username }}">
+                  <input type="hidden" name="session_id" value="{{ s.session_id }}">
+                  <div style="font-weight:800;font-size:12.5px;margin-bottom:8px;color:var(--hub-text,#0f172a);">
+                    سرعة مؤقتة لـ «{{ s.username }}»
+                  </div>
+                  <label style="display:block;font-size:11px;font-weight:700;color:#64748b;margin:0 0 2px;">التنزيل (كيلوبت/ث)</label>
+                  <input type="number" name="down_kbps" min="64" max="1000000" step="64" value="1024" required
+                         class="hub-input" style="width:100%;height:34px;margin-bottom:8px;">
+                  <label style="display:block;font-size:11px;font-weight:700;color:#64748b;margin:0 0 2px;">الرفع (كيلوبت/ث)</label>
+                  <input type="number" name="up_kbps" min="64" max="1000000" step="64" value="1024" required
+                         class="hub-input" style="width:100%;height:34px;margin-bottom:8px;">
+                  <label style="display:block;font-size:11px;font-weight:700;color:#64748b;margin:0 0 2px;">المدة (دقائق)</label>
+                  <input type="number" name="duration_minutes" min="1" max="1440" value="5" required
+                         class="hub-input" style="width:100%;height:34px;margin-bottom:10px;">
+                  <button type="submit" class="hub-btn hub-btn--primary hub-btn--sm" style="width:100%;">
+                    <i class="fa-solid fa-bolt"></i> تطبيق فوري
+                  </button>
+                  {% if _temp_active %}
+                  <button type="submit" formaction="{{ url_for('radius.online_temp_speed_cancel') }}"
+                          class="hub-btn hub-btn--secondary hub-btn--sm" style="width:100%;margin-top:6px;">
+                    <i class="fa-solid fa-rotate-left"></i> إلغاء السرعة المؤقتة الآن
+                  </button>
+                  {% endif %}
+                </form>
+              </details>
             </div>
           </td>
         </tr>

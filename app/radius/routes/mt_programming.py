@@ -20,6 +20,7 @@ from ..db.connection import db
 from ..services import mt_programming
 from ..services import mikrotik_admin_client as mac
 from ..services.audit import get_audit_service
+from ..services.nas_connection import resolve_connection_address
 from ..services.mt_permissions import (
     PERM_PROGRAM, PERM_ROLLBACK, requires_perm,
 )
@@ -49,7 +50,7 @@ def _nas_for_mac(nas: dict) -> dict:
     return {
         "id":          nas["id"],
         "name":        nas["name"],
-        "host":        nas["address"],
+        "host":        resolve_connection_address(nas),
         "port":        int(nas.get("api_port") or 8728),
         "username":    nas.get("api_user") or "admin",
         "password":    nas.get("api_password") or "",
@@ -255,7 +256,7 @@ def _connect_client(nas: dict):
     caching; for apply we want a raw session so we can stream
     one command at a time and stop on the first failure."""
     return MikrotikClient(
-        host=nas["address"],
+        host=resolve_connection_address(nas),
         port=int(nas.get("api_port") or 8728),
         username=nas.get("api_user") or "admin",
         password=nas.get("api_password") or "",

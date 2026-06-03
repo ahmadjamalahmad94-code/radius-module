@@ -35,6 +35,8 @@ import struct
 from dataclasses import dataclass
 from typing import Optional
 
+from ..services.nas_connection import resolve_connection_address
+
 _LOG = logging.getLogger(__name__)
 
 # ─────────────── RFC codes ───────────────
@@ -396,7 +398,8 @@ def find_all_nas_for_sessions(tenant_id: int, username: str) -> list[dict]:
     for row in rows:
         nas_ip = row["nasipaddress"]
         nas_row = db().execute(
-            "SELECT secret FROM nas_devices "
+            "SELECT secret, coa_port, address, connection_mode, vpn_peer_address "
+            "FROM nas_devices "
             "WHERE tenant_id = ? AND address = ? AND enabled = 1 LIMIT 1",
             (tenant_id, nas_ip)).fetchone()
         if not nas_row or not nas_row["secret"]:
@@ -406,9 +409,17 @@ def find_all_nas_for_sessions(tenant_id: int, username: str) -> list[dict]:
                 row["acctsessionid"], nas_ip,
             )
             continue
+        try:
+            coa_port = int(nas_row["coa_port"] or 3799)
+        except (TypeError, ValueError, KeyError):
+            coa_port = 3799
         results.append({
-            "nas_ip": nas_ip,
+            # VPN-only: dial the resolved tunnel peer when the NAS is in VPN
+            # mode, falling back to the accounting source IP. Keeps CoA on the
+            # WireGuard path even if a row's accounting ever arrives publicly.
+            "nas_ip": resolve_connection_address(nas_row) or nas_ip,
             "nas_secret": nas_row["secret"],
+            "coa_port": coa_port,
             "session_id": row["acctsessionid"],
             "framed_ip": row["framedipaddress"] or "",
             "calling_station_id": row["callingstationid"] or "",
@@ -476,6 +487,7 @@ def disconnect_user(tenant_id: int, username: str,
             username=username, session_id=info["session_id"],
             framed_ip=info.get("framed_ip", ""),
             calling_station_id=info.get("calling_station_id", ""),
+            port=info.get("coa_port", 3799),
         )
         for info in sessions
     ]
@@ -514,6 +526,7 @@ def change_user_rate(tenant_id: int, username: str, *,
             framed_ip=info.get("framed_ip", ""),
             calling_station_id=info.get("calling_station_id", ""),
             new_rate_limit=new_rate_limit,
+            port=info.get("coa_port", 3799),
         )
         for info in sessions
     ]
@@ -551,6 +564,7 @@ def change_user_session_timeout(tenant_id: int, username: str,
             framed_ip=info.get("framed_ip", ""),
             calling_station_id=info.get("calling_station_id", ""),
             session_timeout=int(session_timeout),
+            port=info.get("coa_port", 3799),
         )
         for info in sessions
     ]

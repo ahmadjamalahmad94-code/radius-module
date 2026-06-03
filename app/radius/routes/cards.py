@@ -15,6 +15,7 @@ from datetime import date, datetime, timedelta
 from flask import Blueprint, Response, current_app, flash, g, jsonify, redirect, render_template, request, session, url_for
 
 from ..core.errors import RadiusError, RadiusValidationError
+from ..core.system_config import default_currency
 from ..db.connection import db
 from ..db.helpers import json_dump
 from ..db.repos import admins_repo, operations_repo
@@ -309,20 +310,6 @@ def _cards_overview_snapshot(tenant_id: int) -> dict:
     if not alerts:
         alerts.append({"level": "green", "text": "وضع الكروت مستقر ولا توجد ملاحظات عاجلة."})
 
-    time_minutes = _form_int("time_limit_minutes")
-    time_value = _form_int("time_value")
-    time_unit = _form_str("time_unit") or "days"
-    if time_minutes > 0:
-        if time_minutes % 1440 == 0:
-            time_value = time_minutes // 1440
-            time_unit = "days"
-        elif time_minutes % 60 == 0:
-            time_value = time_minutes // 60
-            time_unit = "hours"
-        else:
-            time_value = time_minutes
-            time_unit = "minutes"
-
     return {
         "cards": {
             "total": total,
@@ -491,6 +478,9 @@ def _electronic_sales_total(tenant_id: int, period: str, filters: dict) -> dict:
 def _recent_printed_sales(tenant_id: int, limit: int = 8, period: str | None = None, filters: dict | None = None) -> list[dict]:
     period_sql = ""
     params: list[object] = [tenant_id]
+    # عملة العرض الافتراضية = عملة لوحة التحكم المضبوطة (وليست JOD ثابتة).
+    _cur = default_currency()
+    _cur = _cur if _cur.isalpha() else "ILS"
     if period:
         where, values = _period_condition("c.first_used_at", period, filters or _sales_period_filters())
         period_sql = f"AND {where}"
@@ -512,7 +502,7 @@ def _recent_printed_sales(tenant_id: int, limit: int = 8, period: str | None = N
                      WHEN b.total_price > 0 AND b.generated > 0 THEN b.total_price * 1.0 / b.generated
                      ELSE 0
                    END AS amount,
-                   COALESCE(p.currency, 'JOD') AS currency,
+                   COALESCE(NULLIF(p.currency, ''), '{_cur}') AS currency,
                    '' AS buyer_name
             FROM cards c
             JOIN card_batches b ON b.tenant_id = c.tenant_id AND b.id = c.batch_id
@@ -767,6 +757,21 @@ def _collect_batch_options() -> dict:
         "quota": {"value": quota_value, "unit": quota_unit} if quota_value > 0 else None,
         "seconds_validity": {"value": validity_value, "unit": validity_unit} if validity_value > 0 else None,
     }
+    # مدة البطاقة: نقبل إمّا time_limit_minutes (من شاشة التوليد) أو time_value/time_unit
+    # (من تعديل الحزمة). نطبّع القيمة إلى value+unit قبل التمرير لـ generate_batch.
+    time_minutes = _form_int("time_limit_minutes")
+    time_value = _form_int("time_value")
+    time_unit = _form_str("time_unit") or "days"
+    if time_minutes > 0:
+        if time_minutes % 1440 == 0:
+            time_value = time_minutes // 1440
+            time_unit = "days"
+        elif time_minutes % 60 == 0:
+            time_value = time_minutes // 60
+            time_unit = "hours"
+        else:
+            time_value = time_minutes
+            time_unit = "minutes"
     return {
         # توليد
         "username_prefix":           _form_str("username_prefix"),
@@ -2013,8 +2018,10 @@ def _card_remaining_meta(row: dict, now: datetime) -> dict:
 
 
 def _batch_cards_details(tenant_id: int, batch_id: int) -> list[dict]:
+    _cur = default_currency()
+    _cur = _cur if _cur.isalpha() else "ILS"
     rows = db().execute(
-        """
+        f"""
         WITH acct AS (
           SELECT tenant_id,
                  username,
@@ -2078,7 +2085,7 @@ def _batch_cards_details(tenant_id: int, batch_id: int) -> list[dict]:
                c.frozen_remaining_seconds,
                c.deleted_at,
                COALESCE(p.name, '') AS plan_name,
-               COALESCE(p.currency, 'ILS') AS currency,
+               COALESCE(NULLIF(p.currency, ''), '{_cur}') AS currency,
                COALESCE(a.sessions_count, 0) AS sessions_count,
                COALESCE(a.unique_macs, 0) AS unique_macs,
                COALESCE(a.online_sessions, 0) AS online_sessions,

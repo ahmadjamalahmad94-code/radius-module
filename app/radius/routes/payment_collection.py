@@ -1,5 +1,6 @@
 """Admin web UI for Payment Collection Center."""
 from __future__ import annotations
+from ..core.system_config import default_currency
 
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 
@@ -83,7 +84,7 @@ def payment_collection_settings():
                 enabled=bool(form.get("enabled")),
                 wallet_number=form.get("wallet_number") or "",
                 wallet_owner_name=form.get("wallet_owner_name") or "",
-                currency=form.get("currency") or (existing.currency if existing else "ILS"),
+                currency=form.get("currency") or (existing.currency if existing else default_currency()),
                 confirmation_mode=form.get("confirmation_mode") or "manual",
                 auto_apply=bool(form.get("auto_apply")),
                 allow_cards=bool(form.get("allow_cards")),
@@ -201,17 +202,17 @@ def payment_collection_reject_web(request_id: int):
 
 def payment_collection_apply_service_web(request_id: int):
     try:
+        # ملاحظة: simulate_failure أداة اختبار عبر API فقط ولا تُمرَّر من الويب.
         PaymentServiceApplyRepository().apply_paid_request(
             tenant_id=_tid(),
             request_id=request_id,
             actor="admin-web",
-            simulate_failure=bool(request.form.get("simulate_failure")),
         )
     except ValueError as exc:
         if str(exc) == "status":
-            flash("Only paid requests can be applied.", "warning")
+            flash("لا يمكن تطبيق سوى الطلبات المدفوعة.", "warning")
         else:
-            flash(f"Service apply failed: {exc}", "danger")
+            flash(f"فشل تطبيق الخدمة: {exc}", "danger")
     else:
         flash("تم تسجيل تطبيق الخدمة بدون أي إجراء مباشر على RADIUS أو CoA أو MikroTik.", "success")
     return redirect(url_for("radius.payment_collection_request_detail", request_id=request_id))

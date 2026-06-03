@@ -59,7 +59,7 @@ def events_risk():
     result = None
     if request.method == "POST":
         result = svc.run_risk_rules()
-        flash(f"Risk scan created {result['flags_created']} flag(s).", "success")
+        flash(f"أنشأ فحص المخاطر {result['flags_created']} إشارة.", "success")
     return render_template("radius/events_risk.html", flags=svc.list_fraud_flags(), result=result, summary=svc.dashboard())
 
 
@@ -83,7 +83,7 @@ def events_investigations():
                 summary=request.form.get("summary") or "",
                 actor=_actor(),
             )
-            flash("Investigation opened.", "success")
+            flash("تم فتح تحقيق.", "success")
         except EventsRiskError as exc:
             flash(str(exc), "error")
         return redirect(url_for("radius.events_investigations"))

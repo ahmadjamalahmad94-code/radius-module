@@ -6,6 +6,9 @@
 {% block page_sub %}<span class="sub">سياسات احتفاظ آمنة للكروت والمشتركين بدون حذف نهائي</span>{% endblock %}
 
 {% block content %}
+{% set lc_entity = {'card':'بطاقة','subscriber':'مشترك','card_batch':'حزمة بطاقات','external_file':'ملف خارجي'} %}
+{% set lc_trigger = {'expired_at':'بعد الانتهاء','disabled_at':'بعد التعطيل','created_at':'بعد الإنشاء'} %}
+{% set lc_unit = {'days':'أيام','hours':'ساعات','minutes':'دقائق','months':'أشهر','weeks':'أسابيع'} %}
 {% include "radius/data_protection_nav.html" %}
 {{ hub.hero(
   "الأرشفة التلقائية والاحتفاظ",
@@ -91,7 +94,7 @@
     {% set policy = item.get('policy') or {} %}
     <div class="hub-flash hub-flash--info" style="margin-bottom:10px">
       <strong>سياسة #{{ policy.get('id') }}</strong>:
-      {{ policy.get('entity_type') }} بعد {{ policy.get('delay_value') }} {{ policy.get('delay_unit') }}
+      {{ lc_entity.get(policy.get('entity_type'), policy.get('entity_type')) }} بعد {{ policy.get('delay_value') }} {{ lc_unit.get(policy.get('delay_unit'), policy.get('delay_unit')) }}
       &nbsp;·&nbsp; كروت: <strong>{{ item.get('cards_count', 0) }}</strong>
       &nbsp;·&nbsp; مشتركين: <strong>{{ item.get('subscribers_count', 0) }}</strong>
       {% if not item.get('supported') %}
@@ -124,10 +127,10 @@
           {% for policy in policies %}
           <tr>
             <td class="num">{{ policy.get('id') }}</td>
-            <td>{{ policy.get('entity_type') }}</td>
-            <td>{{ policy.get('trigger_type') }}</td>
-            <td>{{ policy.get('delay_value') }} {{ policy.get('delay_unit') }}</td>
-            <td>{{ policy.get('retention_value') }} {{ policy.get('retention_unit') }}</td>
+            <td>{{ lc_entity.get(policy.get('entity_type'), policy.get('entity_type')) }}</td>
+            <td>{{ lc_trigger.get(policy.get('trigger_type'), policy.get('trigger_type')) }}</td>
+            <td>{{ policy.get('delay_value') }} {{ lc_unit.get(policy.get('delay_unit'), policy.get('delay_unit')) }}</td>
+            <td>{{ policy.get('retention_value') }} {{ lc_unit.get(policy.get('retention_unit'), policy.get('retention_unit')) }}</td>
             <td>
               {% if policy.get('enabled') %}
                 <span class="hub-pill hub-pill--green"><span class="dot"></span>مفعلة</span>

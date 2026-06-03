@@ -65,7 +65,7 @@ from ...radius.db.connection import db
 from ...radius.services import mikrotik_admin_client as mac
 from ...radius.services import mt_counters as counters_svc
 from ...radius.services.audit import get_audit_service
-from ...radius.services.nas_connection import resolve_connection_descriptor
+from ...radius.services.nas_connection import resolve_connection_address, resolve_connection_descriptor
 from ..auth import require_api_token
 from ..responses import fail, ok
 
@@ -1127,7 +1127,7 @@ def mt_backup_restore(nas_id: int, backup_id: int):
     try:
         from app.radius.integration.mikrotik import MikrotikClient
         with MikrotikClient(
-            host=str(nas.get("address") or ""),
+            host=str(resolve_connection_address(nas) or ""),
             username=str(nas.get("api_user") or "admin"),
             password=str(nas.get("api_password") or ""),
             port=int(nas.get("api_port") or 8728),

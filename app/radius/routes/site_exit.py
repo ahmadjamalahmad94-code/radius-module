@@ -41,6 +41,7 @@ from ..db.repos import (
     vps_exit_nodes_repo        as nodes_repo,
 )
 from ..integration.mikrotik.client import MikrotikClient
+from ..services.nas_connection import resolve_connection_address
 from ..services import (
     mt_programming,
     site_exit_classifier      as classifier,
@@ -75,6 +76,7 @@ def _load_nas(nas_id: int) -> Optional[dict]:
     # or password (6)".
     row = db().execute(
         "SELECT id, name, address, enabled, connection_mode, "
+        "       vpn_peer_address, "
         "       api_user, api_password, api_port, api_use_tls "
         "FROM nas_devices "
         "WHERE id=? AND tenant_id=? "
@@ -517,7 +519,7 @@ def _connect_client(nas: dict):
     """Open a live MikrotikClient using the same shape as
     mt_programming. Caller is responsible for `.close()`."""
     return MikrotikClient(
-        host=nas["address"],
+        host=resolve_connection_address(nas),
         port=int(nas.get("api_port") or 8728),
         username=nas.get("api_user") or "admin",
         password=nas.get("api_password") or "",

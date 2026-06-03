@@ -21,6 +21,7 @@ from ..db.repos import hotspot_designs_repo
 from ..integration.mikrotik.client import MikrotikClient
 from ..services import hotspot_templates as ht
 from ..services.audit import get_audit_service
+from ..services.nas_connection import resolve_connection_address
 from ..services.mt_permissions import (
     PERM_DEPLOY_LOGIN, PERM_MANAGE, PERM_VIEW, requires_perm,
 )
@@ -73,7 +74,7 @@ def register_mt_login_designer_routes(bp: Blueprint) -> None:
 def _connect_client(nas_id: int):
     row = db().execute(
         "SELECT address, api_port, api_user, api_password, "
-        "       api_use_tls "
+        "       api_use_tls, connection_mode, vpn_peer_address "
         "FROM nas_devices "
         "WHERE id=? AND tenant_id=? "
         "  AND (deleted_at IS NULL OR deleted_at='')",
@@ -82,7 +83,7 @@ def _connect_client(nas_id: int):
     if not row:
         return None
     return MikrotikClient(
-        host=row["address"], port=int(row["api_port"] or 8728),
+        host=resolve_connection_address(row), port=int(row["api_port"] or 8728),
         username=row["api_user"] or "admin",
         password=row["api_password"] or "",
         use_tls=bool(row["api_use_tls"]),
