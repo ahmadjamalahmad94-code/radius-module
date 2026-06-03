@@ -1,25 +1,47 @@
+{# Share Groups list — UNIFIED DESIGN SYSTEM (merged hero + help panel).
+   Same backend data: items list. Zero route/behaviour change. #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
+
 {% block title %}مجموعات المشاركة{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-people-arrows"></i>{% endblock %}
 {% block page_title %}مجموعات المشاركة (Share Groups){% endblock %}
 {% block page_sub %}<span class="sub">({{ items|length }})</span>{% endblock %}
-{% block head_buttons %}
-  <a class="hub-btn hub-btn--primary hub-btn--sm" href="{{ url_for('radius.sgrp_new') }}">
-    <i class="fa-solid fa-plus"></i> إضافة مجموعة
-  </a>
-{% endblock %}
 
 {% block content %}
-{{ hub.hero(
+
+{% set _enabled = items|selectattr('enabled')|list|length %}
+
+{# ───── Merged hero: title + actions + KPI strip ───── #}
+{{ hub.megahero(
   "مجموعات المشاركة",
   subtitle="مجموعات لمشاركة الكروت والباقات بين الموزّعين.",
-  icon="people-arrows"
+  icon="people-arrows",
+  actions_html='
+    <a class="hub-btn hub-btn--primary" href="' + url_for('radius.sgrp_new') + '">
+      <i class="fa-solid fa-plus"></i> إضافة مجموعة
+    </a>',
+  kpis=[
+    {'label': 'الإجمالي', 'value': items|length,            'icon': 'layer-group', 'variant': 'brand'},
+    {'label': 'مفعَّلة',  'value': _enabled,                'icon': 'toggle-on',   'variant': 'green'},
+    {'label': 'معطَّلة',  'value': items|length - _enabled, 'icon': 'toggle-off',  'variant': 'amber'},
+  ]
 ) }}
 
-{% call hub.section("جميع المجموعات", icon="layer-group", meta=(items|length ~ ' مجموعة') if items else '', flush=True) %}
-  {% if items %}
-    <div class="hub-table-wrap" style="border:none">
+{% if items %}
+{# ───── Main (carded table) + help panel on the LEFT ───── #}
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "كيف تقرأ هذه الصفحة؟",
+  intro="كل صف هو مجموعة مشاركة يتقاسم أعضاؤها الكوتا والسرعة المحددة لها.",
+  items=[
+    {'icon': 'database',     'text': 'الكوتا المشتركة هي إجمالي البيانات المتاحة لكل الأعضاء؛ «غير محدود» يعني بلا سقف.'},
+    {'icon': 'gauge-high',   'text': 'السرعة تُعرض تنزيلًا / رفعًا بالـ Kbps وتُطبَّق على كامل المجموعة.'},
+    {'icon': 'users',        'text': 'الأعضاء يبيّن العدد الحالي مقابل حدّ الأعضاء (∞ يعني بلا حد).'},
+    {'icon': 'toggle-on',    'text': 'المجموعة المعطَّلة تبقى محفوظة لكنها لا تُستخدم للمشاركة.'},
+  ]
+)) %}
+  {% call hub.section("جميع المجموعات", icon="layer-group", meta=(items|length ~ ' مجموعة') if items else '', flush=True) %}
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
       <table class="hub-table">
         <thead>
           <tr>
@@ -30,7 +52,7 @@
             <th class="num">الأعضاء</th>
             <th class="num">حد الأعضاء</th>
             <th>الحالة</th>
-            <th style="width:160px"></th>
+            <th style="width:160px" data-uds-nosort data-uds-nocol></th>
           </tr>
         </thead>
         <tbody>
@@ -78,8 +100,10 @@
         </tbody>
       </table>
     </div>
-  {% else %}
-    {{ hub.empty("لا توجد مجموعات بعد.", icon="people-arrows") }}
-  {% endif %}
+  {% endcall %}
 {% endcall %}
+{% else %}
+{{ hub.empty("لا توجد مجموعات بعد.", icon="people-arrows") }}
+{% endif %}
+
 {% endblock %}
