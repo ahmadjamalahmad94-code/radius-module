@@ -1,11 +1,24 @@
-{# O1 — Router status overview.
+{# O1 — Router status overview — UNIFIED DESIGN SYSTEM.
 
    Display-only. All values come pre-composed from
    mt_router_overview.build_overview() — the template makes no
    business decisions, no time-math, no severity choices.
 
-   Layout follows the existing mt-card / mt-iface-state /
-   mt-router-quicknav tokens. RTL Arabic.
+   Same backend data: overview (ov), health. Zero route/behaviour change.
+   Merged hero (header + KPI strip), help panel on the LEFT, every group
+   rendered inside a hub.section card. RTL Arabic.
+
+   All JS hooks / data-* attributes preserved verbatim:
+     data-mt-router-overview, data-mt-router-id, data-mt-overview-safe,
+     data-mt-health-state/score/signal, data-mt-health-pill,
+     data-mt-health-recommendation, data-mt-health-reasons,
+     data-mt-overview-safe-banner, data-mt-overview-kpis,
+     data-mt-overview-kpi / -status / -alerts-total / -crit / -warn /
+     -backup-status, data-mt-overview-actions / -action / -action-severity,
+     data-mt-overview-identity, data-mt-overview-snapshot,
+     data-mt-overview-counters / -counter-row, data-mt-overview-recent-issues,
+     data-mt-overview-last-failed-link / -last-danger-link,
+     data-mt-overview-link.
 #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
@@ -17,345 +30,261 @@
 {% block page_title %}نظرة عامة على الراوتر — {{ ov.name }}{% endblock %}
 {% block page_sub %}<span class="sub">جهاز شبكة #{{ ov.nas_id }} · {{ ov.address }}</span>{% endblock %}
 
-{% block head_extra %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/mt_dashboard.css') }}">
-{% endblock %}
-
 {% block content %}
 
-<section class="mt-dashboard"
-         data-mt-router-overview
+<section data-mt-router-overview
          data-mt-router-id="{{ ov.nas_id }}"
          data-mt-overview-safe="{{ 'true' if ov.safe_to_modify else 'false' }}"
          data-mt-health-state="{{ health.state }}"
          data-mt-health-score="{{ health.score }}"
          data-mt-health-signal="{{ health.primary_signal }}">
 
-  {{ hub.hero(
+  {# ───── Merged hero: title + subtitle + live KPI strip ───── #}
+  {{ hub.megahero(
     "نظرة عامة — " ~ ov.name,
     subtitle="حالة الراوتر، تنبيهاته، آخر نسخة احتياطية، وأقرب خطوات يجب اتّخاذها.",
     icon="clipboard-check",
+    kpis=[
+      {
+        'label': 'حالة الاتصال',
+        'value': ('متصل' if ov.snapshot_status == 'fresh'
+                  else ('بيانات قديمة' if ov.snapshot_status == 'stale'
+                  else ('فشل الاتصال' if ov.snapshot_status == 'failed'
+                  else 'غير معروف'))),
+        'icon': 'signal',
+        'variant': ('green' if ov.snapshot_status == 'fresh'
+                    else ('amber' if ov.snapshot_status == 'stale' else 'grey')),
+        'sub': (('آخر نجاح: ' ~ ov.snapshot_last_success_at) if ov.snapshot_last_success_at else 'لا توجد بيانات'),
+      },
+      {
+        'label': 'التنبيهات النشطة',
+        'value': ov.active_alerts_total,
+        'icon': 'triangle-exclamation',
+        'variant': ('brand' if ov.active_alerts_critical > 0
+                    else ('amber' if ov.active_alerts_warning > 0 else 'green')),
+        'sub': (ov.active_alerts_critical|string ~ ' حرج · ' ~ ov.active_alerts_warning|string ~ ' تحذير'),
+      },
+      {
+        'label': 'آخر نسخة احتياطية',
+        'value': ('حديثة' if ov.backup_status == 'fresh'
+                  else ('قديمة' if ov.backup_status == 'stale'
+                  else ('لا توجد' if ov.backup_status == 'missing'
+                  else ('آخر محاولة فشلت' if ov.backup_status == 'failed'
+                  else 'غير معروفة')))),
+        'icon': 'floppy-disk',
+        'variant': ('green' if ov.backup_status == 'fresh'
+                    else ('amber' if ov.backup_status == 'stale' else 'grey')),
+        'sub': (ov.last_backup_at if ov.last_backup_at else '—'),
+      },
+      {
+        'label': 'آخر نشاط مسجَّل',
+        'value': (ov.last_audit_action if ov.last_audit_action else '—'),
+        'icon': 'clock-rotate-left',
+        'variant': 'blue',
+        'sub': ((ov.last_audit_at or '—') ~ ((' · ' ~ ov.last_audit_actor) if ov.last_audit_actor else '')),
+      },
+    ]
   ) }}
 
-  {# ── O2 Health pill — single-glance verdict ── #}
-  <div class="mt-program-banner
-              {% if health.state == 'healthy' %}mt-program-banner--warn{% elif health.state in ('risky', 'offline') %}mt-program-banner--risk{% else %}mt-program-banner--warn{% endif %}"
-       data-mt-health-pill
-       {% if health.state == 'healthy' %}
-       style="background:#DCFCE7;border-color:#86EFAC;color:#166534"
-       {% elif health.state == 'attention' %}
-       style="background:#FFFBEB;border-color:#FDE68A;color:#92400E"
-       {% elif health.state == 'unknown' %}
-       style="background:#F1F5F9;border-color:#CBD5E1;color:#475569"
-       {% endif %}>
-    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-      {% if health.state == 'healthy' %}
-      <i class="fa-solid fa-heart-pulse"></i>
-      <strong>الراوتر صحّي — درجة الصحة {{ health.score }}/100</strong>
-      {% elif health.state == 'attention' %}
-      <i class="fa-solid fa-circle-info"></i>
-      <strong>يحتاج انتباهًا — درجة الصحة {{ health.score }}/100</strong>
-      {% elif health.state == 'risky' %}
-      <i class="fa-solid fa-shield-halved"></i>
-      <strong>خطر تشغيلي — درجة الصحة {{ health.score }}/100</strong>
-      {% elif health.state == 'offline' %}
-      <i class="fa-solid fa-plug-circle-xmark"></i>
-      <strong>غير متصل — درجة الصحة {{ health.score }}/100</strong>
-      {% else %}
-      <i class="fa-solid fa-question"></i>
-      <strong>الحالة غير معروفة — لا توجد بيانات كافية</strong>
+  {# ───── Main column + help panel on the LEFT ───── #}
+  {% call hub.worklayout(aside_html=hub.helppanel(
+    "دليل القراءة",
+    intro="هذه نظرة واحدة سريعة على صحّة الراوتر: حالته، تنبيهاته، آخر نسخة احتياطية، وأقرب خطوة يجب اتّخاذها.",
+    icon="clipboard-check",
+    items=[
+      {'icon': 'heart-pulse', 'text': 'درجة الصحة تلخّص حالة الراوتر في رقم واحد من 100.'},
+      {'icon': 'shield-halved', 'text': '«آمن للتعديل» يعني أنه لا توجد عملية حسّاسة جارية تمنع التغيير.'},
+      {'icon': 'list-check', 'text': 'الخطوات الموصى بها مرتّبة حسب الأهمية — ابدأ بالأعلى.'},
+    ]
+  )) %}
+
+    {# ── O2 Health pill — single-glance verdict (banner + JS hooks kept) ── #}
+    <div class="mt-program-banner
+                {% if health.state == 'healthy' %}mt-program-banner--warn{% elif health.state in ('risky', 'offline') %}mt-program-banner--risk{% else %}mt-program-banner--warn{% endif %}"
+         data-mt-health-pill
+         {% if health.state == 'healthy' %}
+         style="background:#DCFCE7;border-color:#86EFAC;color:#166534"
+         {% elif health.state == 'attention' %}
+         style="background:#FFFBEB;border-color:#FDE68A;color:#92400E"
+         {% elif health.state == 'unknown' %}
+         style="background:#F1F5F9;border-color:#CBD5E1;color:#475569"
+         {% endif %}>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        {% if health.state == 'healthy' %}
+        <i class="fa-solid fa-heart-pulse"></i>
+        <strong>الراوتر صحّي — درجة الصحة {{ health.score }}/100</strong>
+        {% elif health.state == 'attention' %}
+        <i class="fa-solid fa-circle-info"></i>
+        <strong>يحتاج انتباهًا — درجة الصحة {{ health.score }}/100</strong>
+        {% elif health.state == 'risky' %}
+        <i class="fa-solid fa-shield-halved"></i>
+        <strong>خطر تشغيلي — درجة الصحة {{ health.score }}/100</strong>
+        {% elif health.state == 'offline' %}
+        <i class="fa-solid fa-plug-circle-xmark"></i>
+        <strong>غير متصل — درجة الصحة {{ health.score }}/100</strong>
+        {% else %}
+        <i class="fa-solid fa-question"></i>
+        <strong>الحالة غير معروفة — لا توجد بيانات كافية</strong>
+        {% endif %}
+        <span data-mt-health-recommendation>{{ health.recommended_action_ar }}</span>
+      </div>
+      {% if health.reasons %}
+      <ul style="margin-top:6px;list-style:disc;padding-inline-start:24px"
+          data-mt-health-reasons>
+        {% for r in health.reasons %}<li>{{ r }}</li>{% endfor %}
+      </ul>
       {% endif %}
-      <span data-mt-health-recommendation>{{ health.recommended_action_ar }}</span>
     </div>
-    {% if health.reasons %}
-    <ul style="margin-top:6px;list-style:disc;padding-inline-start:24px"
-        data-mt-health-reasons>
-      {% for r in health.reasons %}<li>{{ r }}</li>{% endfor %}
-    </ul>
+
+    {# ── Safety banner — the single most important signal ── #}
+    {% if ov.safe_to_modify %}
+    <div class="mt-program-banner mt-program-banner--warn"
+         data-mt-overview-safe-banner="safe"
+         style="background:#DCFCE7;border-color:#86EFAC;color:#166534">
+      <li><i class="fa-solid fa-circle-check"></i>
+        الراوتر آمن للتعديل حاليًا.</li>
+    </div>
+    {% else %}
+    <div class="mt-program-banner mt-program-banner--risk"
+         data-mt-overview-safe-banner="unsafe">
+      <i class="fa-solid fa-shield-halved"></i>
+      <strong>الراوتر غير آمن للتعديل الآن — راجع الأسباب:</strong>
+      {% for r in ov.safety_reasons %}
+      <li>{{ r }}</li>
+      {% endfor %}
+    </div>
     {% endif %}
-  </div>
 
-  {# ── Safety banner — the single most important signal ── #}
-  {% if ov.safe_to_modify %}
-  <div class="mt-program-banner mt-program-banner--warn"
-       data-mt-overview-safe-banner="safe"
-       style="background:#DCFCE7;border-color:#86EFAC;color:#166534">
-    <li><i class="fa-solid fa-circle-check"></i>
-      الراوتر آمن للتعديل حاليًا.</li>
-  </div>
-  {% else %}
-  <div class="mt-program-banner mt-program-banner--risk"
-       data-mt-overview-safe-banner="unsafe">
-    <i class="fa-solid fa-shield-halved"></i>
-    <strong>الراوتر غير آمن للتعديل الآن — راجع الأسباب:</strong>
-    {% for r in ov.safety_reasons %}
-    <li>{{ r }}</li>
-    {% endfor %}
-  </div>
-  {% endif %}
-
-  {# ── Top KPI strip ── #}
-  <div class="hub-kpi-grid" data-mt-overview-kpis>
-
-    {# Connectivity #}
-    <div class="hub-kpi {{ 'hub-kpi--green' if ov.snapshot_status == 'fresh'
-                          else ('hub-kpi--amber' if ov.snapshot_status == 'stale'
-                                else 'hub-kpi--grey') }}"
-         data-mt-overview-kpi="snapshot"
-         data-mt-overview-status="{{ ov.snapshot_status }}">
-      <span class="hub-kpi-icon"><i class="fa-solid fa-signal"></i></span>
-      <div class="hub-kpi-body">
-        <div class="hub-kpi-label">حالة الاتصال</div>
-        <div class="hub-kpi-value">
-          {% if ov.snapshot_status == "fresh"   %}متصل
-          {% elif ov.snapshot_status == "stale" %}بيانات قديمة
-          {% elif ov.snapshot_status == "failed" %}فشل الاتصال
-          {% else %}غير معروف
-          {% endif %}
-        </div>
-        <div class="hub-kpi-sub">
-          {% if ov.snapshot_last_success_at %}
-          آخر نجاح: <code>{{ ov.snapshot_last_success_at }}</code>
-          {% else %}لا توجد بيانات{% endif %}
-        </div>
-      </div>
-    </div>
-
-    {# Alerts #}
-    <div class="hub-kpi {{ 'hub-kpi--brand'
-                            if ov.active_alerts_critical > 0
-                            else ('hub-kpi--amber'
-                                  if ov.active_alerts_warning > 0
-                                  else 'hub-kpi--green') }}"
-         data-mt-overview-kpi="alerts"
-         data-mt-overview-alerts-total="{{ ov.active_alerts_total }}">
-      <span class="hub-kpi-icon"><i class="fa-solid fa-triangle-exclamation"></i></span>
-      <div class="hub-kpi-body">
-        <div class="hub-kpi-label">التنبيهات النشطة</div>
-        <div class="hub-kpi-value">{{ ov.active_alerts_total }}</div>
-        <div class="hub-kpi-sub">
-          <span data-mt-overview-crit>{{ ov.active_alerts_critical }}</span> حرج ·
-          <span data-mt-overview-warn>{{ ov.active_alerts_warning }}</span> تحذير
-        </div>
-      </div>
-    </div>
-
-    {# Backup #}
-    <div class="hub-kpi {{ 'hub-kpi--green' if ov.backup_status == 'fresh'
-                          else ('hub-kpi--amber' if ov.backup_status == 'stale'
-                                else 'hub-kpi--grey') }}"
-         data-mt-overview-kpi="backup"
-         data-mt-overview-backup-status="{{ ov.backup_status }}">
-      <span class="hub-kpi-icon"><i class="fa-solid fa-floppy-disk"></i></span>
-      <div class="hub-kpi-body">
-        <div class="hub-kpi-label">آخر نسخة احتياطية</div>
-        <div class="hub-kpi-value">
-          {% if ov.backup_status == "fresh" %}حديثة
-          {% elif ov.backup_status == "stale" %}قديمة
-          {% elif ov.backup_status == "missing" %}لا توجد
-          {% elif ov.backup_status == "failed" %}آخر محاولة فشلت
-          {% else %}غير معروفة{% endif %}
-        </div>
-        <div class="hub-kpi-sub">
-          {% if ov.last_backup_at %}
-          <code>{{ ov.last_backup_at }}</code>
-          {% else %}—{% endif %}
-        </div>
-      </div>
-    </div>
-
-    {# Last activity #}
-    <div class="hub-kpi hub-kpi--blue"
-         data-mt-overview-kpi="last-activity">
-      <span class="hub-kpi-icon"><i class="fa-solid fa-clock-rotate-left"></i></span>
-      <div class="hub-kpi-body">
-        <div class="hub-kpi-label">آخر نشاط مسجَّل</div>
-        <div class="hub-kpi-value">
-          {% if ov.last_audit_action %}
-          <code>{{ ov.last_audit_action }}</code>
-          {% else %}—{% endif %}
-        </div>
-        <div class="hub-kpi-sub">
-          {{ ov.last_audit_at or '—' }}
-          {% if ov.last_audit_actor %} · {{ ov.last_audit_actor }}{% endif %}
-        </div>
-      </div>
-    </div>
-  </div>
-
-  {# ── Suggested actions ── #}
-  {% if ov.suggested_actions %}
-  <section class="mt-card" data-mt-overview-actions>
-    <header class="mt-card-head">
-      <h3><i class="fa-solid fa-list-check"></i> الخطوات الموصى بها</h3>
-    </header>
-    <div class="mt-card-body">
-      <div class="mt-router-quicknav">
+    {# ── Suggested actions ── #}
+    {% if ov.suggested_actions %}
+    {% call hub.section("الخطوات الموصى بها", icon="list-check") %}
+      <div class="hub-actions" data-mt-overview-actions>
         {% for a in ov.suggested_actions %}
-        <a class="mt-router-quicknav-link"
-           href="{{ a.href }}"
-           data-mt-overview-action="{{ a.code }}"
-           data-mt-overview-action-severity="{{ a.severity }}">
-          {% if a.severity == "critical" %}
-          <i class="fa-solid fa-circle-exclamation"></i>
-          {% elif a.severity == "warning" %}
-          <i class="fa-solid fa-triangle-exclamation"></i>
-          {% else %}
-          <i class="fa-solid fa-arrow-right"></i>
-          {% endif %}
-          <span class="mt-router-quicknav-label">{{ a.label_ar }}</span>
-          <span class="mt-router-quicknav-sub">{{ a.severity }}</span>
-        </a>
+        {{ hub.action_card(
+            a.label_ar,
+            sub=a.severity,
+            icon=('circle-exclamation' if a.severity == 'critical'
+                  else ('triangle-exclamation' if a.severity == 'warning'
+                  else 'arrow-right')),
+            href=a.href,
+            variant=('red' if a.severity == 'critical'
+                     else ('amber' if a.severity == 'warning' else 'brand')),
+            attrs='data-mt-overview-action="' ~ a.code ~ '" data-mt-overview-action-severity="' ~ a.severity ~ '"'
+        ) }}
         {% endfor %}
       </div>
-    </div>
-  </section>
-  {% endif %}
+    {% endcall %}
+    {% endif %}
 
-  {# ── Identity + connection details ── #}
-  <section class="mt-card">
-    <header class="mt-card-head">
-      <h3><i class="fa-solid fa-circle-info"></i> هوية الراوتر</h3>
-    </header>
-    <div class="mt-card-body">
-      <ul class="mt-program-summary" data-mt-overview-identity>
-        <li>الاسم: <strong>{{ ov.name }}</strong></li>
-        <li>العنوان: <code>{{ ov.address }}</code></li>
-        <li>الحالة: {% if ov.enabled %}مفعّل{% else %}معطّل{% endif %}</li>
-        <li>نوع الاتصال:
-          {% if ov.connection_mode == "vpn" %}نفق الإدارة
-          {% elif ov.connection_mode == "direct" %}اتصال مباشر
-          {% else %}{{ ov.connection_mode or '—' }}{% endif %}
-        </li>
-        {% if ov.vpn_peer_address %}
-        <li>عنوان نفق الإدارة: <code>{{ ov.vpn_peer_address }}</code></li>
-        {% endif %}
-      </ul>
-    </div>
-  </section>
-
-  {# ── Snapshot details (counters/resource) ── #}
-  {% if ov.has_snapshot %}
-  <section class="mt-card" data-mt-overview-snapshot>
-    <header class="mt-card-head">
-      <h3><i class="fa-solid fa-camera"></i> آخر snapshot</h3>
-      <span class="mt-card-meta">
-        {% if ov.snapshot_status == "fresh" %}
-        <span class="mt-iface-state mt-iface-state--up">حديث</span>
-        {% elif ov.snapshot_status == "stale" %}
-        <span class="mt-iface-state mt-iface-state--down">قديم</span>
-        {% elif ov.snapshot_status == "failed" %}
-        <span class="mt-iface-state mt-iface-state--off">فشل</span>
-        {% else %}
-        <span class="mt-iface-state mt-iface-state--down">غير معروف</span>
-        {% endif %}
-      </span>
-    </header>
-    <div class="mt-card-body">
-      {% if ov.snapshot_last_error %}
-      <p style="color:#991B1B"><i class="fa-solid fa-circle-exclamation"></i>
-        آخر خطأ: {{ ov.snapshot_last_error }}</p>
+    {# ── Identity + connection details ── #}
+    {% call hub.section("هوية الراوتر", icon="circle-info") %}
+      {{ hub.kv([
+        {'label': 'الاسم', 'value': ov.name},
+        {'label': 'العنوان', 'value': ov.address, 'mono': True},
+        {'label': 'الحالة', 'value': ('مفعّل' if ov.enabled else 'معطّل')},
+        {'label': 'نوع الاتصال', 'value': ('نفق الإدارة' if ov.connection_mode == 'vpn'
+                                            else ('اتصال مباشر' if ov.connection_mode == 'direct'
+                                            else (ov.connection_mode or '—')))},
+      ]) }}
+      {% if ov.vpn_peer_address %}
+      <dl class="uds-kv" data-mt-overview-identity>
+        <div class="uds-kv-row">
+          <span class="uds-kv-label">عنوان نفق الإدارة</span>
+          <span class="uds-kv-value mono">{{ ov.vpn_peer_address }}</span>
+        </div>
+      </dl>
+      {% else %}
+      <div data-mt-overview-identity hidden></div>
       {% endif %}
-      {% if ov.counter_rows %}
-      <div class="hub-table-wrap" style="border:none;border-radius:0" data-mt-overview-counters>
-        <table class="hub-table">
-          <thead>
-            <tr>
-              <th>المؤشر</th>
-              <th class="num" style="width:180px">القيمة</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for row in ov.counter_rows %}
-            <tr data-mt-overview-counter-row="{{ row.key }}">
-              <td>{{ row.label_ar }}</td>
-              <td class="num"><strong>{{ row.value_ar }}</strong></td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+    {% endcall %}
+
+    {# ── Snapshot details (counters/resource) ── #}
+    {% if ov.has_snapshot %}
+    {% set _snap_meta =
+         ('حديث','green')      if ov.snapshot_status == 'fresh'  else
+         ('قديم','red')        if ov.snapshot_status == 'stale'  else
+         ('فشل','red')         if ov.snapshot_status == 'failed' else
+         ('غير معروف','grey') %}
+    {% call hub.section("آخر snapshot", icon="camera") %}
+      <div data-mt-overview-snapshot>
+        <div style="margin-bottom:14px">{{ hub.pill(_snap_meta[0], variant=_snap_meta[1]) }}</div>
+        {% if ov.snapshot_last_error %}
+        <p style="color:#991B1B"><i class="fa-solid fa-circle-exclamation"></i>
+          آخر خطأ: {{ ov.snapshot_last_error }}</p>
+        {% endif %}
+        {% if ov.counter_rows %}
+        <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="15"
+             data-mt-overview-counters style="border:none;border-radius:0">
+          <table class="hub-table">
+            <thead>
+              <tr>
+                <th>المؤشر</th>
+                <th class="num" style="width:180px">القيمة</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in ov.counter_rows %}
+              <tr data-mt-overview-counter-row="{{ row.key }}">
+                <td>{{ row.label_ar }}</td>
+                <td class="num mono" style="white-space:nowrap;direction:ltr;unicode-bidi:plaintext"><strong>{{ row.value_ar }}</strong></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% endif %}
       </div>
-      {% endif %}
-    </div>
-  </section>
-  {% endif %}
+    {% endcall %}
+    {% endif %}
 
-  {# ── Last failed / last danger (if any) ── #}
-  {% if ov.last_failed_id or ov.last_danger_id %}
-  <section class="mt-card" data-mt-overview-recent-issues>
-    <header class="mt-card-head">
-      <h3><i class="fa-solid fa-clock-rotate-left"></i> أحداث تستحق الانتباه</h3>
-    </header>
-    <div class="mt-card-body">
-      <ul class="mt-program-summary">
+    {# ── Last failed / last danger (if any) ── #}
+    {% if ov.last_failed_id or ov.last_danger_id %}
+    {% call hub.section("أحداث تستحق الانتباه", icon="clock-rotate-left") %}
+      <ul class="mt-program-summary" data-mt-overview-recent-issues>
         {% if ov.last_failed_id %}
         <li>
-          <span class="mt-iface-state mt-iface-state--off">فشل</span>
-          <code>{{ ov.last_failed_action }}</code>
-          · {{ ov.last_failed_at }}
+          {{ hub.pill("فشل", variant="red") }}
+          <code style="font-family:var(--hub-mono,ui-monospace,monospace)">{{ ov.last_failed_action }}</code>
+          · <span class="mono" style="white-space:nowrap;direction:ltr;unicode-bidi:plaintext">{{ ov.last_failed_at }}</span>
           · <a href="{{ url_for('radius.audit_log_detail', audit_id=ov.last_failed_id) }}"
                data-mt-overview-last-failed-link>تفاصيل</a>
         </li>
         {% endif %}
         {% if ov.last_danger_id and ov.last_danger_id != ov.last_failed_id %}
         <li>
-          <span class="mt-iface-state mt-iface-state--down">حسّاسة</span>
-          <code>{{ ov.last_danger_action }}</code>
-          · {{ ov.last_danger_at }}
+          {{ hub.pill("حسّاسة", variant="amber") }}
+          <code style="font-family:var(--hub-mono,ui-monospace,monospace)">{{ ov.last_danger_action }}</code>
+          · <span class="mono" style="white-space:nowrap;direction:ltr;unicode-bidi:plaintext">{{ ov.last_danger_at }}</span>
           · <a href="{{ url_for('radius.audit_log_detail', audit_id=ov.last_danger_id) }}"
                data-mt-overview-last-danger-link>تفاصيل</a>
         </li>
         {% endif %}
       </ul>
-    </div>
-  </section>
-  {% endif %}
+    {% endcall %}
+    {% endif %}
 
-  {# ── Bottom links bar — full dashboards and centers ── #}
-  <section class="mt-card">
-    <header class="mt-card-head">
-      <h3><i class="fa-solid fa-link"></i> روابط مرتبطة</h3>
-    </header>
-    <div class="mt-card-body">
-      <div class="mt-router-quicknav">
-        <a class="mt-router-quicknav-link"
-           href="{{ url_for('radius.mt_dashboard', nas_id=ov.nas_id) }}"
-           data-mt-overview-link="dashboard">
-          <i class="fa-solid fa-gauge-high"></i>
-          <span class="mt-router-quicknav-label">لوحة الراوتر</span>
-          <span class="mt-router-quicknav-sub">ملخص وتبويبات</span>
-        </a>
-        <a class="mt-router-quicknav-link"
-           href="{{ url_for('radius.mt_audit_timeline', nas_id=ov.nas_id) }}"
-           data-mt-overview-link="timeline">
-          <i class="fa-solid fa-timeline"></i>
-          <span class="mt-router-quicknav-label">سجلّ النشاط</span>
-          <span class="mt-router-quicknav-sub">مقروء بشريًا</span>
-        </a>
-        <a class="mt-router-quicknav-link"
-           href="{{ url_for('radius.audit_log_index') }}?router_id={{ ov.nas_id }}"
-           data-mt-overview-link="audit">
-          <i class="fa-solid fa-clipboard-list"></i>
-          <span class="mt-router-quicknav-label">سجل عمليات الراوتر</span>
-          <span class="mt-router-quicknav-sub">سجل تفصيلي</span>
-        </a>
-        <a class="mt-router-quicknav-link"
-           href="{{ url_for('radius.mt_alerts_index') }}?router_id={{ ov.nas_id }}"
-           data-mt-overview-link="alerts">
-          <i class="fa-solid fa-triangle-exclamation"></i>
-          <span class="mt-router-quicknav-label">تنبيهات الراوتر</span>
-          <span class="mt-router-quicknav-sub">مفلتر</span>
-        </a>
-        <a class="mt-router-quicknav-link"
-           href="{{ url_for('radius.mt_backups_list', nas_id=ov.nas_id) }}"
-           data-mt-overview-link="backups">
-          <i class="fa-solid fa-floppy-disk"></i>
-          <span class="mt-router-quicknav-label">النسخ الاحتياطية</span>
-          <span class="mt-router-quicknav-sub">حفظ + فحص</span>
-        </a>
+    {# ── Bottom links bar — full dashboards and centers ── #}
+    {% call hub.section("روابط مرتبطة", icon="link") %}
+      <div class="hub-actions">
+        {{ hub.action_card("لوحة الراوتر", sub="ملخص وتبويبات", icon="gauge-high",
+            href=url_for('radius.mt_dashboard', nas_id=ov.nas_id),
+            variant="brand", attrs='data-mt-overview-link="dashboard"') }}
+        {{ hub.action_card("سجلّ النشاط", sub="مقروء بشريًا", icon="timeline",
+            href=url_for('radius.mt_audit_timeline', nas_id=ov.nas_id),
+            variant="brand", attrs='data-mt-overview-link="timeline"') }}
+        {{ hub.action_card("سجل عمليات الراوتر", sub="سجل تفصيلي", icon="clipboard-list",
+            href=url_for('radius.audit_log_index') ~ '?router_id=' ~ ov.nas_id,
+            variant="brand", attrs='data-mt-overview-link="audit"') }}
+        {{ hub.action_card("تنبيهات الراوتر", sub="مفلتر", icon="triangle-exclamation",
+            href=url_for('radius.mt_alerts_index') ~ '?router_id=' ~ ov.nas_id,
+            variant="amber", attrs='data-mt-overview-link="alerts"') }}
+        {{ hub.action_card("النسخ الاحتياطية", sub="حفظ + فحص", icon="floppy-disk",
+            href=url_for('radius.mt_backups_list', nas_id=ov.nas_id),
+            variant="brand", attrs='data-mt-overview-link="backups"') }}
       </div>
-    </div>
-  </section>
+    {% endcall %}
+
+  {% endcall %}
 
 </section>
 

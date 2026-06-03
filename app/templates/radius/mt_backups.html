@@ -1,3 +1,11 @@
+{# MikroTik backup center — UNIFIED DESIGN SYSTEM.
+   Same backend data: nas, backups, restore planner (restore_disabled_reason,
+   restore_error, restore_plan_rows). Zero route/behaviour change.
+
+   Merged hero (title + subtitle + icon + backup-count KPIs + save-backup
+   action), help panel on the LEFT, every block inside a hub.section card.
+   The backups table becomes a unified data-table. ALL forms, field names,
+   and data-* hooks (data-mt-backups-*) are preserved verbatim. #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
@@ -6,109 +14,108 @@
 {% block page_title %}النسخ الاحتياطية — {{ nas.name }}{% endblock %}
 {% block page_sub %}<span class="sub">جهاز شبكة #{{ nas.id }} · {{ nas.address }}</span>{% endblock %}
 
-{% block head_extra %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/mt_dashboard.css') }}">
-{% endblock %}
-
 {% block content %}
+
+{% set _ok    = backups|selectattr('status', 'equalto', 'success')|list|length %}
+{% set _fail  = backups|length - _ok %}
+{% set _sens  = backups|selectattr('sensitive')|list|length %}
 
 <section class="mt-dashboard" data-mt-backups-page
          data-mt-backups-router-id="{{ nas.id }}">
 
-  {{ hub.hero(
-    "النسخ الاحتياطية — " ~ nas.name,
-    subtitle="حفظ نسخة من إعدادات الراوتر وفحص ملفات الاستعادة بأمان دون تنفيذ تغيير مباشر.",
-    icon="floppy-disk",
-  ) }}
+{# ───── Merged hero: title + subtitle + save-backup action + KPI strip ───── #}
+{% call hub.megahero(
+  "النسخ الاحتياطية — " ~ nas.name,
+  subtitle="حفظ نسخة من إعدادات الراوتر وفحص ملفات الاستعادة بأمان دون تنفيذ تغيير مباشر.",
+  icon="floppy-disk",
+  actions_html=(
+    '<form method="post" action="' ~ url_for('radius.mt_backups_save', nas_id=nas.id) ~ '"'
+      ~ ' class="mt-program-apply-form" data-mt-backups-save-form data-mt-backups-save-card style="display:inline;margin:0">'
+    ~ (csrf_token_input() | string if csrf_token_input is defined else '')
+    ~ '<button type="submit" class="hub-btn hub-btn--primary" data-mt-backups-save-submit>'
+      ~ '<i class="fa-solid fa-floppy-disk"></i> حفظ نسخة جديدة</button></form>'
+  ),
+  kpis=[
+    {'label': 'إجمالي النسخ', 'value': backups|length, 'icon': 'layer-group',     'variant': 'brand'},
+    {'label': 'ناجحة',        'value': _ok,            'icon': 'circle-check',     'variant': 'green'},
+    {'label': 'فاشلة',        'value': _fail,          'icon': 'circle-xmark',     'variant': 'red'},
+    {'label': 'حسّاسة',       'value': _sens,          'icon': 'shield-halved',    'variant': 'amber'},
+  ]
+) %}{% endcall %}
 
-  <section class="mt-card" data-mt-backups-save-card>
-    <header class="mt-card-head">
-      <h3><i class="fa-solid fa-cloud-arrow-down"></i> حفظ نسخة جديدة</h3>
-    </header>
-    <div class="mt-card-body">
-      <p class="mt-tab-hint">
-        تطلب من الراوتر إنشاء ملف <code>.backup</code> ثنائي.
-        قد يحتوي بيانات حسّاسة، لذلك تنزيل الملف مقيّد بـ
-        صلاحية <code>mikrotik.backup</code>.
-      </p>
-      <form method="post"
-            action="{{ url_for('radius.mt_backups_save', nas_id=nas.id) }}"
-            class="mt-program-apply-form"
-            data-mt-backups-save-form>
-        {{ csrf_token_input() | safe if csrf_token_input is defined else '' }}
-        <div class="mt-program-actions">
-          <button type="submit" class="mt-action-btn"
-                  data-mt-backups-save-submit>
-            <i class="fa-solid fa-floppy-disk"></i> حفظ الآن
-          </button>
-        </div>
-      </form>
+{# ───── Main column + help panel on the LEFT ───── #}
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "كيف تتعامل مع النسخ؟",
+  intro="هذه الصفحة تحفظ نسخة من إعدادات الراوتر وتتيح فحص ملفات الاستعادة قبل أي تنفيذ.",
+  icon="shield-halved",
+  items=[
+    {'icon': 'cloud-arrow-down', 'text': 'حفظ نسخة جديدة يطلب من الراوتر إنشاء ملف .backup ثنائي.'},
+    {'icon': 'lock',             'text': 'الملفات قد تحتوي بيانات حسّاسة؛ تنزيلها مقيّد بصلاحية mikrotik.backup.'},
+    {'icon': 'magnifying-glass', 'text': 'خطة الاستعادة تفحص الملف وتعرض بياناته دون تطبيق أي تغيير.'},
+  ],
+  note="تطبيق الاستعادة مقفل لحماية الراوتر ويتطلب موافقة تشغيلية منفصلة."
+)) %}
+
+  {# ── النسخ السابقة → جدول موحّد ── #}
+  {% call hub.section("النسخ السابقة", icon="list",
+                      meta=backups|length|string ~ " نسخة", flush=True) %}
+    {% if not backups %}
+    {{ hub.empty(
+      "لا توجد نسخ احتياطية بعد",
+      sub="احفظ أول نسخة من زر «حفظ نسخة جديدة» في الأعلى.",
+      icon="floppy-disk"
+    ) }}
+    <span hidden data-mt-backups-empty></span>
+    <span hidden data-mt-backups-count>{{ backups|length }}</span>
+    {% else %}
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="15"
+         data-mt-backups-table style="border:none;border-radius:0">
+      <table class="hub-table">
+        <thead>
+          <tr>
+            <th>الوقت</th>
+            <th>النوع</th>
+            <th>اسم الملف</th>
+            <th data-uds-nosort>الحالة</th>
+            <th data-uds-nosort>حسّاس</th>
+          </tr>
+        </thead>
+        <tbody data-mt-backups-rows>
+          {% for b in backups %}
+          <tr data-mt-backup-row="{{ b.id }}">
+            <td class="mono small" style="white-space:nowrap"><span dir="ltr">{{ b.created_at|dt_local }}</span></td>
+            <td>{{ b.backup_type }}</td>
+            <td class="mono small" style="white-space:nowrap"><span dir="ltr">{{ b.filename }}</span></td>
+            <td>
+              {% if b.status == 'success' %}
+              {{ hub.pill("نجح", variant="green") }}
+              {% else %}
+              {{ hub.pill("فشل", variant="red") }}
+              {% endif %}
+            </td>
+            <td>
+              {% if b.sensitive %}
+              {{ hub.pill("نعم", variant="amber") }}
+              {% else %}
+              {{ hub.pill("لا", variant="green") }}
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
-  </section>
+    <span hidden data-mt-backups-count>{{ backups|length }}</span>
+    {% endif %}
+  {% endcall %}
 
-  <section class="mt-card" data-mt-backups-list-card>
-    <header class="mt-card-head">
-      <h3><i class="fa-solid fa-list"></i> النسخ السابقة</h3>
-      <span class="mt-card-meta">
-        <span data-mt-backups-count>{{ backups|length }}</span> نسخة
-      </span>
-    </header>
-    <div class="mt-card-body">
-      {% if not backups %}
-      <p class="mt-empty" data-mt-backups-empty>
-        لا توجد نسخ احتياطية بعد.
-      </p>
-      {% else %}
-      <div class="mt-table-wrap">
-        <table class="mt-iface-table" data-mt-backups-table>
-          <thead>
-            <tr>
-              <th>الوقت</th>
-              <th>النوع</th>
-              <th>اسم الملف</th>
-              <th>الحالة</th>
-              <th>حسّاس</th>
-            </tr>
-          </thead>
-          <tbody data-mt-backups-rows>
-            {% for b in backups %}
-            <tr data-mt-backup-row="{{ b.id }}">
-              <td class="mt-iface-mac">{{ b.created_at|dt_local }}</td>
-              <td>{{ b.backup_type }}</td>
-              <td class="mt-iface-name">{{ b.filename }}</td>
-              <td>
-                {% if b.status == 'success' %}
-                <span class="mt-iface-state mt-iface-state--up">نجح</span>
-                {% else %}
-                <span class="mt-iface-state mt-iface-state--off">فشل</span>
-                {% endif %}
-              </td>
-              <td>
-                {% if b.sensitive %}
-                <span class="mt-iface-state mt-iface-state--down">نعم</span>
-                {% else %}
-                <span class="mt-iface-state mt-iface-state--up">لا</span>
-                {% endif %}
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-      {% endif %}
-    </div>
-  </section>
-
-  {# S8.4 — Restore planner (gated). #}
-  <section class="mt-card" data-mt-backups-restore-card>
-    <header class="mt-card-head">
-      <h3><i class="fa-solid fa-rotate-left"></i> خطة الاستعادة</h3>
-    </header>
-    <div class="mt-card-body">
-      <div class="mt-program-banner mt-program-banner--warn"
+  {# ── S8.4 — Restore planner (gated) ── #}
+  {% call hub.section("خطة الاستعادة", icon="rotate-left") %}
+    <div data-mt-backups-restore-card>
+      <div class="uds-modal-warn uds-modal-warn--amber" style="margin-bottom:14px"
            data-mt-backups-restore-disabled>
-        <li><i class="fa-solid fa-triangle-exclamation"></i>
-          {{ restore_disabled_reason }}</li>
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <span>{{ restore_disabled_reason }}</span>
       </div>
 
       <form method="post"
@@ -117,18 +124,18 @@
             class="mt-program-apply-form"
             data-mt-backups-restore-form>
         {{ csrf_token_input() | safe if csrf_token_input is defined else '' }}
-        <label class="mt-program-field">
-          <span>ملف النسخة الاحتياطية للفحص</span>
-          <input type="file" name="backup_file"
+        <label class="hub-field" style="display:block;margin-bottom:14px">
+          <span class="hub-field-label">ملف النسخة الاحتياطية للفحص</span>
+          <input class="hub-input" type="file" name="backup_file"
                  data-mt-backups-restore-file>
         </label>
-        <div class="mt-program-actions">
-          <button type="submit" class="mt-action-btn"
+        <div class="hub-flex-row" style="gap:8px;flex-wrap:wrap">
+          <button type="submit" class="hub-btn hub-btn--primary"
                   data-mt-backups-restore-inspect>
             <i class="fa-solid fa-magnifying-glass"></i> افحص الملف
           </button>
           <button type="button"
-                  class="mt-action-btn mt-action-btn--danger"
+                  class="hub-btn hub-btn--danger"
                   disabled
                   title="مقفل لحماية الراوتر ويتطلب موافقة تشغيلية منفصلة"
                   data-mt-backups-restore-apply>
@@ -138,14 +145,14 @@
       </form>
 
       {% if restore_error %}
-      <div class="mt-program-error" role="alert">
+      <div class="uds-modal-warn uds-modal-warn--red" role="alert" style="margin-top:14px">
         <i class="fa-solid fa-circle-exclamation"></i>
-        {{ restore_error }}
+        <span>{{ restore_error }}</span>
       </div>
       {% endif %}
 
       {% if restore_plan_rows %}
-      <div class="hub-table-wrap" style="border:none;border-radius:0" data-mt-backups-restore-plan>
+      <div class="hub-table-wrap" style="border:none;border-radius:0;margin-top:14px" data-mt-backups-restore-plan>
         <table class="hub-table">
           <thead>
             <tr>
@@ -165,8 +172,9 @@
       </div>
       {% endif %}
     </div>
-  </section>
+  {% endcall %}
 
+{% endcall %}
 </section>
 
 {% endblock %}

@@ -1,8 +1,10 @@
-{# O4 — Per-router human-readable activity timeline.
+{# O4 — Per-router human-readable activity timeline — UNIFIED DESIGN SYSTEM.
 
-   Reads from the same audit_log rows the existing center
-   shows; this view just formats them for operators. Each
-   item links back to the raw audit detail page.
+   Same backend data: `nas` (id/name/address) and `entries` (presented
+   audit rows). Zero route/behaviour change. Merged hero (title + subtitle +
+   KPI strip), help panel on the LEFT, and the activity timeline kept as a
+   vertical list inside a hub.section card (it is chronological, not tabular).
+   All JS hooks / data-* attributes preserved verbatim.
 #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
@@ -12,108 +14,141 @@
 {% block page_title %}سجلّ نشاط الراوتر — {{ nas.name }}{% endblock %}
 {% block page_sub %}<span class="sub">جهاز شبكة #{{ nas.id }} · {{ nas.address }}</span>{% endblock %}
 
-{% block head_extra %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/mt_dashboard.css') }}">
-{% endblock %}
-
 {% block content %}
+
+{# ───── KPIs derived from the same `entries` (no backend change) ───── #}
+{% set _critical = entries|selectattr('severity', 'equalto', 'critical')|list|length %}
+{% set _warning  = entries|selectattr('severity', 'equalto', 'warning')|list|length %}
+{% set _failed   = entries|selectattr('result_status', 'equalto', 'failed')|list|length %}
 
 <section class="mt-dashboard" data-mt-audit-timeline
          data-mt-timeline-router-id="{{ nas.id }}"
          data-mt-timeline-count="{{ entries|length }}">
 
-  {{ hub.hero(
-    "سجلّ نشاط — " ~ nas.name,
-    subtitle="ما حدث على هذا الراوتر — بلغة المشغّل وبدون عرض الاستجابة الخام.",
-    icon="timeline",
-  ) }}
+{# ───── Merged hero: title + subtitle + raw-detail action + KPI strip ───── #}
+{% call hub.megahero(
+  "سجلّ نشاط — " ~ nas.name,
+  subtitle="ما حدث على هذا الراوتر — بلغة المشغّل وبدون عرض الاستجابة الخام. جهاز شبكة #" ~ nas.id ~ " · " ~ nas.address,
+  icon="timeline",
+  actions_html='
+    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.audit_log_index') + '?router_id=' + nas.id|string + '" data-mt-timeline-raw-link>
+      <i class="fa-solid fa-code"></i> التفاصيل الفنية
+    </a>',
+  kpis=[
+    {'label': 'الأحداث', 'value': entries|length, 'icon': 'clock-rotate-left', 'variant': 'brand'},
+    {'label': 'حرجة',    'value': _critical,      'icon': 'triangle-exclamation', 'variant': 'red'},
+    {'label': 'تحذيرات', 'value': _warning,       'icon': 'circle-exclamation',   'variant': 'amber'},
+    {'label': 'إخفاقات', 'value': _failed,        'icon': 'circle-xmark',         'variant': 'red'},
+  ]
+) %}{% endcall %}
 
-  <section class="mt-card">
-    <header class="mt-card-head">
-      <h3><i class="fa-solid fa-clock-rotate-left"></i> آخر النشاط</h3>
-      <span class="mt-card-meta">
-        <span data-mt-timeline-total>{{ entries|length }}</span> حدث
-        ·
-        <a class="mt-mini-btn"
-           href="{{ url_for('radius.audit_log_index') }}?router_id={{ nas.id }}"
-           data-mt-timeline-raw-link>
-          <i class="fa-solid fa-code"></i> التفاصيل الفنية
-        </a>
-      </span>
-    </header>
-    <div class="mt-card-body">
+{# ───── Main column + help panel on the LEFT ───── #}
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "كيف تقرأ السجلّ؟",
+  intro="كل سطر هو حدث جرى على هذا الراوتر، مرتّب من الأحدث للأقدم، ومصاغ بلغة المشغّل.",
+  icon="clipboard-check",
+  items=[
+    {'icon': 'triangle-exclamation', 'text': 'الشارة الأولى تبيّن خطورة الحدث: حرجة، تحذير، أو معلومة.'},
+    {'icon': 'circle-check', 'text': 'الشارة الثانية تبيّن نتيجة العملية: نجح، فشل، أو جزئي.'},
+    {'icon': 'life-ring', 'text': 'عند الفشل يظهر اقتراح إصلاح قابل للتنفيذ مباشرة.'},
+    {'icon': 'code', 'text': '«تفاصيل الراو» يفتح الاستجابة الخام لهذا الحدث للمراجعة الفنية.'},
+  ],
+  note="هذا السجلّ للقراءة فقط — يقرأ من نفس صفوف audit_log التي يعرضها مركز التدقيق."
+)) %}
 
-      {% if not entries %}
-      <p class="mt-empty" data-mt-timeline-empty>
-        لا يوجد نشاط مسجَّل لهذا الراوتر بعد.
-      </p>
-      {% else %}
-      <ul class="mt-health-list" data-mt-timeline-rows>
-        {% for e in entries %}
-        <li class="mt-health-row mt-health-row--{{ e.severity }}"
-            data-mt-timeline-entry="{{ e.audit_id }}"
-            data-mt-timeline-action="{{ e.action }}"
-            data-mt-timeline-severity="{{ e.severity }}"
-            data-mt-timeline-result="{{ e.result_status }}">
-          <div class="mt-health-row-head">
+  {% call hub.section("آخر النشاط", icon="clock-rotate-left") %}
+    <div class="hub-text-mute" style="font-size:12px;margin-bottom:10px">
+      <span data-mt-timeline-total>{{ entries|length }}</span> حدث
+    </div>
+
+    {% if not entries %}
+    {{ hub.empty(
+      "لا يوجد نشاط مسجَّل لهذا الراوتر بعد.",
+      sub="ستظهر هنا الأحداث فور تنفيذ أول عملية على هذا الراوتر.",
+      icon="clock-rotate-left"
+    ) }}
+    <p hidden data-mt-timeline-empty></p>
+    {% else %}
+    <ul data-mt-timeline-rows
+        style="list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px">
+      {% for e in entries %}
+      {%- set _accent =
+           '#DC2626' if e.severity == 'critical' else
+           '#D97706' if e.severity == 'warning' else
+           '#2563EB' -%}
+      <li data-mt-timeline-entry="{{ e.audit_id }}"
+          data-mt-timeline-action="{{ e.action }}"
+          data-mt-timeline-severity="{{ e.severity }}"
+          data-mt-timeline-result="{{ e.result_status }}"
+          style="border:1px solid var(--hub-border,#e2e8f0);border-radius:12px;
+                 border-inline-start:3px solid {{ _accent }};
+                 background:var(--hub-bg,#fff);padding:13px 16px">
+        <div>
+          <div class="hub-flex-row" style="gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:6px">
             {% if e.severity == "critical" %}
-            <span class="mt-iface-state mt-iface-state--off">حرجة</span>
+            {{ hub.pill("حرجة", variant="red") }}
             {% elif e.severity == "warning" %}
-            <span class="mt-iface-state mt-iface-state--down">تحذير</span>
+            {{ hub.pill("تحذير", variant="amber") }}
             {% else %}
-            <span class="mt-iface-state mt-iface-state--up">معلومة</span>
+            {{ hub.pill("معلومة", variant="blue") }}
             {% endif %}
 
             {% if e.result_status == "success" %}
-            <span class="mt-iface-state mt-iface-state--up">نجح</span>
+            {{ hub.pill("نجح", variant="green") }}
             {% elif e.result_status == "failed" %}
-            <span class="mt-iface-state mt-iface-state--off">فشل</span>
+            {{ hub.pill("فشل", variant="red") }}
             {% elif e.result_status == "partial" %}
-            <span class="mt-iface-state mt-iface-state--down">جزئي</span>
+            {{ hub.pill("جزئي", variant="amber") }}
             {% endif %}
 
-            <span class="mt-health-row-msg">{{ e.headline_ar | safe }}</span>
+            <span class="uds-timeline-msg" style="font-weight:600">{{ e.headline_ar | safe }}</span>
           </div>
 
           {% if e.detail_ar %}
-          <p style="margin:4px 0 0;font-size:12px;color:#475569">
+          <p class="hub-text-mute" style="margin:4px 0 0;font-size:13px">
             {{ e.detail_ar }}
           </p>
           {% endif %}
 
           {% if e.recovery_hint_ar %}
-          <p style="margin-top:6px;font-size:12px;color:#92400E;
-                    background:#FFFBEB;border-inline-start:3px solid #FDE68A;
-                    padding:6px 10px;border-radius:6px"
-             data-mt-timeline-recovery>
-            <i class="fa-solid fa-life-ring"></i> {{ e.recovery_hint_ar }}
-          </p>
+          <div data-mt-timeline-recovery
+               style="margin-top:8px;display:flex;gap:8px;align-items:flex-start;
+                      font-size:12px;color:#92400E;background:#FFFBEB;
+                      border-inline-start:3px solid #FDE68A;padding:7px 11px;
+                      border-radius:8px">
+            <i class="fa-solid fa-life-ring" style="margin-top:2px"></i>
+            <span>{{ e.recovery_hint_ar }}</span>
+          </div>
           {% endif %}
 
-          <div style="display:flex;gap:12px;flex-wrap:wrap;
-                      margin-top:6px;font-size:12px;color:#64748B">
-            <span><code>{{ e.created_at|dt_local }}</code></span>
+          <div class="hub-flex-row" style="gap:12px;flex-wrap:wrap;margin-top:10px;font-size:12px">
+            <span class="mono" style="white-space:nowrap;direction:ltr;font-variant-numeric:tabular-nums">
+              <i class="fa-solid fa-clock hub-text-mute"></i> {{ e.created_at|dt_local }}
+            </span>
             <a href="{{ url_for('radius.audit_log_detail', audit_id=e.audit_id) }}"
-               class="mt-mini-btn"
+               class="hub-btn hub-btn--ghost hub-btn--sm"
                data-mt-timeline-raw="{{ e.audit_id }}">
               <i class="fa-solid fa-magnifying-glass"></i>
               تفاصيل الراو
             </a>
             {% if e.related_job_id %}
             <a href="{{ url_for('radius.jobs_show', job_id=e.related_job_id) }}"
-               class="mt-mini-btn"
+               class="hub-btn hub-btn--ghost hub-btn--sm"
                data-mt-timeline-job="{{ e.related_job_id }}">
               <i class="fa-solid fa-list-check"></i>
               مهمة #{{ e.related_job_id }}
             </a>
             {% endif %}
           </div>
-        </li>
-        {% endfor %}
-      </ul>
-      {% endif %}
-    </div>
-  </section>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+
+  {% endcall %}
+
+{% endcall %}
 
 </section>
 
