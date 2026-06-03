@@ -1770,7 +1770,8 @@ class OperationsService:
         return {"job": operations_repo.ensure_backup_job(tenant_id), "run": log, "verified": verified}
 
     # ── Local backup files: listing / retention / download / restore ──
-    LOCAL_BACKUP_RETENTION_DAYS = 30
+    # Time-based window (days). Env-overridable; 0 disables time pruning.
+    LOCAL_BACKUP_RETENTION_DAYS = max(0, int(os.environ.get("HOBERADIUS_BACKUP_RETENTION_DAYS") or 30))
 
     def _backup_dir(self) -> Path:
         backup_dir = Path(db_path()).parent / "backups"
@@ -1804,7 +1805,11 @@ class OperationsService:
         return removed
 
     # ── Count-based retention (cap how many backups are kept) ──
-    BACKUP_MAX_COUNT_DEFAULT = 60
+    # Default cap on retained local backups. Lowered from 60 (~2 GB) to keep
+    # instance/backups/ small by default; override with HOBERADIUS_BACKUP_MAX_COUNT.
+    # A per-tenant DB setting / license-contract value still takes precedence
+    # (see backup_max_count + _contract_backup_max_count below).
+    BACKUP_MAX_COUNT_DEFAULT = max(1, int(os.environ.get("HOBERADIUS_BACKUP_MAX_COUNT") or 10))
 
     def _contract_backup_max_count(self, *, tenant_id: int) -> int | None:
         """Backup cap defined on the license panel (per edition/fees), delivered
