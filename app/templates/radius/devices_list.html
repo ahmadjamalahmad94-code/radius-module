@@ -1,4 +1,5 @@
-{# قائمة أجهزة الشبكة — تعتمد نفس بيانات الخلفية الحالية. #}
+{# قائمة أجهزة الشبكة — UNIFIED DESIGN SYSTEM (merged hero + help panel).
+   نفس بيانات الخلفية: قائمة items. لا تغيير في المسارات أو السلوك. #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
@@ -13,120 +14,131 @@
 {% endblock %}
 
 {% block content %}
-<div class="hr-page-shell" data-admin-rhythm data-devices-page>
 
-{{ hub.hero(
+{% set _enabled   = items|selectattr('enabled')|list|length %}
+{% set _reachable = items|selectattr('last_check_status','equalto','reachable')|list|length %}
+{% set _down      = items|selectattr('last_check_status','equalto','unreachable')|list|length %}
+
+{# ───── Merged hero: title + actions + KPI strip ───── #}
+{% call hub.megahero(
   "أجهزة الشبكة",
-  subtitle="إدارة الراوترات: العنوان، المنافذ، الحالة، والصلاحيات.",
+  subtitle="إدارة الراوترات: العنوان، المنافذ، الحالة، والصلاحيات — كل أجهزة الشبكة التي تتصل بنظام الراديوس في مكان واحد.",
   icon="server",
   actions_html='
     <a class="hub-btn hub-btn--primary" href="' + url_for('radius.devices_new') + '">
       <i class="fa-solid fa-plus"></i> إضافة راوتر
-    </a>
-  '
-) }}
+    </a>',
+  kpis=[
+    {'label': 'الإجمالي',   'value': items|length, 'icon': 'server',       'variant': 'brand'},
+    {'label': 'مفعَّل',      'value': _enabled,     'icon': 'toggle-on',    'variant': 'green'},
+    {'label': 'متاح حاليًا', 'value': _reachable,   'icon': 'circle-check', 'variant': 'blue'},
+    {'label': 'غير متاح',   'value': _down,        'icon': 'circle-xmark', 'variant': 'red'},
+  ]
+) %}
+{% endcall %}
 
 {% if items %}
-{% set _enabled   = items|selectattr('enabled')|list|length %}
-{% set _reachable = items|selectattr('last_check_status','equalto','reachable')|list|length %}
-{% set _down      = items|selectattr('last_check_status','equalto','unreachable')|list|length %}
-<div class="hub-kpi-grid hr-stat-grid">
-  {{ hub.kpi("الإجمالي",    items|length, icon="server",        variant="brand") }}
-  {{ hub.kpi("مفعَّل",       _enabled,     icon="toggle-on",     variant="green") }}
-  {{ hub.kpi("متاح حاليًا",  _reachable,   icon="circle-check",  variant="blue") }}
-  {{ hub.kpi("غير متاح",    _down,        icon="circle-xmark",  variant="red") }}
-</div>
-
-{% call hub.section("قائمة الأجهزة", icon="table-list", meta=items|length|string + " جهاز", flush=True) %}
-  <div class="hub-table-wrap hr-table-scroll" style="border:none;border-radius:0">
-    <table class="hub-table hr-data-table" data-paginated="1" data-page-size="20" data-persist-key="nas-devices">
-      <thead>
-        <tr>
-          <th class="num" style="width:60px">#</th>
-          <th>الاسم</th>
-          <th>العنوان</th>
-          <th>المُصنِّع</th>
-          <th>النوع</th>
-          <th>الموقع</th>
-          <th>المنافذ</th>
-          <th>آخر فحص</th>
-          <th>الحالة</th>
-          <th style="width:170px">إجراءات</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for d in items %}
-        <tr>
-          <td class="num mono">{{ d.id }}</td>
-          <td>
-            <strong>{{ d.name }}</strong>
-            {% if d.shortname %}
-              <div class="hub-text-mono hub-text-mute" style="font-size:11px">{{ d.shortname }}</div>
-            {% endif %}
-          </td>
-          <td class="mono small">
-            {{ d.address }}
-            {% if d.tags %}
-              <div class="hub-text-mono hub-text-mute" style="font-size:11px">{{ d.tags }}</div>
-            {% endif %}
-          </td>
-          <td>{{ hub.pill(d.vendor, variant="grey", dot=False) }}</td>
-          <td>{{ hub.pill(d.nas_type, variant="blue", dot=False) }}</td>
-          <td>{{ d.location or '—' }}</td>
-          <td class="mono small">
-            {{ d.auth_port }}/{{ d.acct_port }}
-            <div class="hub-text-mute" style="font-size:11px">
-              قطع الجلسة: {{ d.coa_port }} · واجهة الربط: {{ d.api_port }}
-            </div>
-          </td>
-          <td>
-            {% set st = d.last_check_status or '' %}
-            {% if st == 'reachable' %}{{ hub.pill("متاح", variant="green") }}
-            {% elif st == 'timeout' %}{{ hub.pill("انتهت المهلة", variant="amber") }}
-            {% elif st == 'unreachable' %}{{ hub.pill("غير متاح", variant="red") }}
-            {% else %}<span class="hub-text-mute">—</span>{% endif %}
-            {% if d.last_check_at %}
-              <div class="hub-text-mono hub-text-mute" style="font-size:10.5px;margin-top:3px">
-                {{ (d.last_check_at|dt_local)[11:16] if d.last_check_at else '—' }}
+{# ───── Main (carded table) + help panel on the LEFT ───── #}
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "كيف تقرأ هذه الصفحة؟",
+  intro="كل صف هو جهاز شبكة (راوتر/موجِّه) يتصل بنظام الراديوس للمصادقة والمحاسبة.",
+  items=[
+    {'icon': 'plug',         'text': 'العنوان والمنافذ تحدد كيف يتصل النظام بالجهاز للمصادقة والمحاسبة.'},
+    {'icon': 'circle-check', 'text': 'حالة آخر فحص تعرض ما إذا كان الجهاز متاحًا — استخدم زر الفحص لتحديثها.'},
+    {'icon': 'toggle-on',    'text': 'الجهاز المعطَّل يبقى محفوظًا لكنه لا يخدم طلبات الراديوس.'},
+  ],
+  note="الأرشفة لا تحذف الجهاز نهائيًا — يمكنك استعادته من سلة المحذوفات."
+)) %}
+  {% call hub.section("قائمة الأجهزة", icon="table-list", meta=items|length|string + " جهاز", flush=True) %}
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
+      <table class="hub-table">
+        <thead>
+          <tr>
+            <th class="num" style="width:60px">#</th>
+            <th>الاسم</th>
+            <th>العنوان</th>
+            <th>المُصنِّع</th>
+            <th>النوع</th>
+            <th>الموقع</th>
+            <th>المنافذ</th>
+            <th>آخر فحص</th>
+            <th>الحالة</th>
+            <th style="width:170px" data-uds-nosort>إجراءات</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for d in items %}
+          <tr>
+            <td class="num mono">{{ d.id }}</td>
+            <td>
+              <strong>{{ d.name }}</strong>
+              {% if d.shortname %}
+                <div class="hub-text-mono hub-text-mute" style="font-size:11px">{{ d.shortname }}</div>
+              {% endif %}
+            </td>
+            <td class="mono small">
+              {{ d.address }}
+              {% if d.tags %}
+                <div class="hub-text-mono hub-text-mute" style="font-size:11px">{{ d.tags }}</div>
+              {% endif %}
+            </td>
+            <td>{{ hub.pill(d.vendor, variant="grey", dot=False) }}</td>
+            <td>{{ hub.pill(d.nas_type, variant="blue", dot=False) }}</td>
+            <td>{{ d.location or '—' }}</td>
+            <td class="mono small">
+              {{ d.auth_port }}/{{ d.acct_port }}
+              <div class="hub-text-mute" style="font-size:11px">
+                قطع الجلسة: {{ d.coa_port }} · واجهة الربط: {{ d.api_port }}
               </div>
-            {% endif %}
-          </td>
-          <td>
-            {% if d.enabled %}{{ hub.pill("مفعَّل", variant="green") }}
-            {% else %}{{ hub.pill("معطَّل", variant="red") }}{% endif %}
-          </td>
-          <td>
-            <div class="hub-flex-row" style="gap:4px;flex-wrap:nowrap">
-              <form method="post" action="{{ url_for('radius.devices_test', nas_id=d.id) }}" style="display:inline">
-                <button type="submit" class="hub-btn hub-btn--secondary hub-btn--icon" title="فحص اتصال جهاز الشبكة">
-                  <i class="fa-solid fa-bolt"></i>
-                </button>
-              </form>
-              <a class="hub-btn hub-btn--ghost hub-btn--icon" title="تعديل"
-                 href="{{ url_for('radius.devices_edit', nas_id=d.id) }}">
-                <i class="fa-solid fa-pen"></i>
-              </a>
-              <form method="post" action="{{ url_for('radius.devices_delete', nas_id=d.id) }}"
-                    onsubmit="return confirm('أرشفة «{{ d.name|e }}»؟ يمكن استعادته من سلة المحذوفات.');" style="display:inline">
-                <button type="submit" class="hub-btn hub-btn--danger hub-btn--icon" title="أرشفة">
-                  <i class="fa-solid fa-box-archive"></i>
-                </button>
-              </form>
-            </div>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+            </td>
+            <td>
+              {% set st = d.last_check_status or '' %}
+              {% if st == 'reachable' %}{{ hub.pill("متاح", variant="green") }}
+              {% elif st == 'timeout' %}{{ hub.pill("انتهت المهلة", variant="amber") }}
+              {% elif st == 'unreachable' %}{{ hub.pill("غير متاح", variant="red") }}
+              {% else %}<span class="hub-text-mute">—</span>{% endif %}
+              {% if d.last_check_at %}
+                <div class="hub-text-mono hub-text-mute" style="font-size:10.5px;margin-top:3px">
+                  {{ (d.last_check_at|dt_local)[11:16] if d.last_check_at else '—' }}
+                </div>
+              {% endif %}
+            </td>
+            <td>
+              {% if d.enabled %}{{ hub.pill("مفعَّل", variant="green") }}
+              {% else %}{{ hub.pill("معطَّل", variant="red") }}{% endif %}
+            </td>
+            <td>
+              <div class="hub-flex-row" style="gap:4px;flex-wrap:nowrap">
+                <form method="post" action="{{ url_for('radius.devices_test', nas_id=d.id) }}" style="display:inline">
+                  <button type="submit" class="hub-btn hub-btn--secondary hub-btn--icon" title="فحص اتصال جهاز الشبكة">
+                    <i class="fa-solid fa-bolt"></i>
+                  </button>
+                </form>
+                <a class="hub-btn hub-btn--ghost hub-btn--icon" title="تعديل"
+                   href="{{ url_for('radius.devices_edit', nas_id=d.id) }}">
+                  <i class="fa-solid fa-pen"></i>
+                </a>
+                <form method="post" action="{{ url_for('radius.devices_delete', nas_id=d.id) }}"
+                      onsubmit="return confirm('أرشفة «{{ d.name|e }}»؟ يمكن استعادته من سلة المحذوفات.');" style="display:inline">
+                  <button type="submit" class="hub-btn hub-btn--danger hub-btn--icon" title="أرشفة">
+                    <i class="fa-solid fa-box-archive"></i>
+                  </button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endcall %}
 {% endcall %}
 {% else %}
 {{ hub.empty(
   "لا أجهزة شبكة بعد",
-  sub="أضف أوّل موجِّه راديوس من زرّ «إضافة جهاز» أعلى الصفحة لتبدأ تشغيل الخدمة.",
+  sub="أضف أوّل موجِّه راديوس من زرّ «إضافة راوتر» أعلى الصفحة لتبدأ تشغيل الخدمة.",
   icon="server"
 ) }}
 {% endif %}
 
-</div>
 {% endblock %}
