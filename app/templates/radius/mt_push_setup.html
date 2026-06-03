@@ -1,52 +1,48 @@
+{# MikroTik DHCP push-setup — UNIFIED DESIGN SYSTEM.
+   Same backend data: base_url, tokens, suggested_token_name.
+   Zero route / behaviour change. Merged megahero (header + KPI strip),
+   network-ops nav kept, help panel on the LEFT, every block rendered
+   inside a hub.section card. All JS hooks preserved verbatim:
+     • input IDs  #pushp-url / #pushp-token  (read by the generator)
+     • <pre> IDs  #pushp-script-body / #pushp-test-body
+     • data-copy-script / data-copy-test buttons + clipboard handlers #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
+
 {% block title %}إعداد دفع بيانات الأجهزة من الراوتر{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-arrow-up-from-bracket"></i>{% endblock %}
 {% block page_title %}إعداد دفع بيانات الأجهزة من الراوتر{% endblock %}
-{% block page_sub %}
-  <span class="sub">
-    حلّ شامل لمشكلة "الجهاز / النظام" عندما يكون الراوتر خلف ترجمة عناوين أو واجهة الربط مغلقة.
-  </span>
-{% endblock %}
+{% block page_sub %}<span class="sub">حلّ شامل لمشكلة «الجهاز / النظام» عندما يكون الراوتر خلف ترجمة عناوين أو واجهة الربط مغلقة.</span>{% endblock %}
 
 {% block head_extra %}
+{{ super() }}
 <style>
-  .pushp-card{
-    background:#fff;border:1px solid var(--hub-border);
-    border-radius:var(--hub-r-lg);box-shadow:var(--hub-sh-sm);
-    margin-bottom:14px;padding:18px 22px;
-  }
-  .pushp-card h3{
-    margin:0 0 12px;font-size:15px;color:#5B4BD6;
-    display:flex;align-items:center;gap:8px;
-  }
+  /* Numbered steps — retained, re-skinned to UDS tokens */
+  .pushp-steps{ counter-reset:pushp; }
   .pushp-step{
     counter-increment:pushp;
-    margin-bottom:10px;padding-inline-start:32px;position:relative;
-    font-size:13.5px;line-height:1.7;
+    margin-bottom:10px;padding-inline-start:34px;position:relative;
+    font-size:13.5px;line-height:1.7;color:var(--hub-text-soft,#475569);
   }
   .pushp-step::before{
     content:counter(pushp);
     position:absolute;inset-inline-start:0;top:1px;
-    background:#5B4BD6;color:#fff;
-    width:22px;height:22px;border-radius:50%;
+    background:linear-gradient(135deg,var(--hub-brand,#6b5aed),var(--hub-brand-ink,#5B4BD6));
+    color:#fff;width:23px;height:23px;border-radius:50%;
     display:inline-flex;align-items:center;justify-content:center;
     font-size:11px;font-weight:800;
   }
-  .pushp-steps{ counter-reset:pushp; }
 
+  /* Copyable script block — retained, re-skinned */
   .pushp-script{
-    background:#0f172a;color:#e2e8f0;
-    border-radius:10px;
-    padding:14px 16px;
-    margin-top:10px;
-    position:relative;
-    overflow:auto;
+    position:relative;overflow:auto;
+    background:#0f172a;border-radius:12px;
+    padding:14px 16px;margin-top:4px;
   }
   .pushp-script pre{
-    margin:0;font-family:var(--hub-mono);font-size:12.5px;
-    line-height:1.65;color:#bfdbfe;direction:ltr;
-    white-space:pre;
+    margin:0;font-family:var(--hub-mono,ui-monospace,monospace);
+    font-size:12.5px;line-height:1.65;color:#bfdbfe;
+    direction:ltr;white-space:pre;
   }
   .pushp-script .copy-btn{
     position:absolute;inset-inline-end:10px;top:10px;
@@ -56,186 +52,129 @@
   }
   .pushp-script .copy-btn:hover{ color:#fff;background:#334155; }
   .pushp-script .copy-btn.is-copied{ background:#16a34a;color:#fff;border-color:#16a34a; }
-
-  .pushp-config-row{
-    display:grid;grid-template-columns:140px 1fr;gap:10px;
-    margin-bottom:10px;align-items:center;
-  }
-  .pushp-config-row label{
-    font-size:13px;font-weight:700;color:#475569;
-  }
-  .pushp-config-row input{
-    width:100%;padding:8px 12px;
-    border:1px solid #D5CCF5;border-radius:8px;
-    font-family:var(--hub-mono);font-size:13px;
-    direction:ltr;
-  }
-  .pushp-config-row input:focus{
-    outline:none;border-color:#5B4BD6;
-    box-shadow:0 0 0 3px rgba(91,75,214,.12);
-  }
-  .pushp-warn{
-    background:#fffbeb;border:1px solid #fcd34d;color:#92400e;
-    padding:10px 14px;border-radius:8px;font-size:13px;
-    margin-bottom:14px;
-  }
-  .pushp-ok{
-    background:#f0fdf4;border:1px solid #86efac;color:#15803d;
-    padding:10px 14px;border-radius:8px;font-size:13px;
-    margin-bottom:14px;
-  }
-  .pushp-btn{
-    display:inline-flex;align-items:center;gap:6px;
-    padding:8px 14px;
-    background:#5B4BD6;color:#fff;
-    border:none;border-radius:8px;
-    font-size:13px;font-weight:700;
-    cursor:pointer;
-  }
-  .pushp-btn:hover{ background:#4836b8; }
-  .pushp-btn.secondary{
-    background:#fff;color:#5B4BD6;border:1px solid #D5CCF5;
-  }
-  .pushp-btn.secondary:hover{ background:#F4F1FE; }
 </style>
 {% endblock %}
 
 {% block content %}
+{% include "radius/network_ops_nav.html" %}
 
-{{ hub.hero(
+<section data-mt-push-setup-page>
+
+{# ───── Merged hero: title + subtitle + KPI summary strip ───── #}
+{% call hub.megahero(
   "إعداد دفع بيانات الأجهزة من الراوتر",
-  subtitle="تجهيز السكربت الذي يدفع بيانات الأجهزة من الراوتر",
-  icon="arrow-up-from-bracket"
-) }}
+  subtitle="تجهيز السكربت الذي يدفع بيانات أجهزة DHCP من الراوتر إلى الخادم كل دقيقتين — بديل عام عندما تكون واجهة الربط مغلقة أو الراوتر خلف ترجمة عناوين.",
+  icon="arrow-up-from-bracket",
+  actions_html=('
+    <a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.tok_list') ~ '" target="_blank" rel="noopener">
+      <i class="fa-solid fa-key"></i> إدارة رموز الربط
+    </a>'),
+  kpis=[
+    {'label': 'رموز مفعّلة', 'value': tokens|length,                'icon': 'key',          'variant': ('green' if tokens else 'amber')},
+    {'label': 'فترة الدفع',  'value': '2 دقيقة',                    'icon': 'clock-rotate-left', 'variant': 'brand'},
+    {'label': 'منفذ الربط',  'value': '8728',                       'icon': 'plug',         'variant': 'brand'},
+    {'label': 'الحالة',      'value': ('جاهز' if tokens else 'بانتظار رمز'), 'icon': ('circle-check' if tokens else 'hourglass-half'), 'variant': ('green' if tokens else 'amber')},
+  ]
+) %}{% endcall %}
 
-<div class="pushp-card">
-  <h3><i class="fa-solid fa-circle-info"></i> لماذا هذا الحلّ؟</h3>
-  <p style="font-size:13.5px;line-height:1.8;color:#475569;margin:0">
-    عمود <strong>«الجهاز / النظام»</strong> في فحص البطاقة يحتاج معرفة اسم الجهاز
-    اسم الجهاز ونوع نظام التشغيل لكل عنوان جهاز. الحلّ الأصلي كان
-    أن يسحب الخادم هذه البيانات من واجهة ربط الراوتر على المنفذ <code>8728</code>،
-    لكن عندما يكون الراوتر خلف ترجمة عناوين أو جدار ناري مغلق، لا تصل واجهة الربط من الخادم.
-  </p>
-  <p style="font-size:13.5px;line-height:1.8;color:#475569;margin:8px 0 0">
-    هذا الحلّ يعكس الاتجاه: نخلّي <strong>الراوتر يدفع</strong> البيانات إلى
-    الخادم عبر اتصال خارجي مشفّر كل دقيقتين. الاتصال الخارجي المشفّر مفتوح في أغلب الراوترات
-    لأنه نفس المسار المستخدم للوصول للإنترنت، فلا يحتاج فتح
-    منافذ خارجية ولا اتصالاً خاصاً ولا تحويل منافذ.
-  </p>
-</div>
+{# ───── Main column + help panel on the LEFT ───── #}
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "كيف يعمل هذا الحلّ؟",
+  intro="عمود «الجهاز / النظام» يحتاج اسم الجهاز ونوع نظام التشغيل لكل عنوان. الحلّ الأصلي يسحب هذه البيانات من واجهة ربط الراوتر، لكنه يفشل عندما تكون مغلقة.",
+  icon="circle-question",
+  items=[
+    {'icon': 'arrow-up-from-bracket', 'text': 'نعكس الاتجاه: الراوتر يدفع البيانات إلى الخادم بدل أن يسحبها الخادم.'},
+    {'icon': 'lock', 'text': 'الاتصال خارجي مشفّر كل دقيقتين — نفس مسار الإنترنت، فلا يحتاج فتح منافذ ولا تحويل منافذ.'},
+    {'icon': 'key', 'text': 'تحتاج رمز ربط واحد فقط؛ نحفظ بصمته فقط فالقيمة لا تظهر مرة ثانية.'},
+  ],
+  note="لو ضاع منك رمز الربط، أنشئ رمزًا جديدًا واستبدله في السكربت."
+)) %}
 
-{# Quick start block — explains the token flow before showing the
-   config form. This was missing in the first version, so operators
-   landed on the page and saw "ضع التوكن هنا" with no idea where to
-   get it from. #}
-<div class="pushp-card" style="border-color:#A593F2;background:linear-gradient(180deg,#fff,#F4F1FE)">
-  <h3 style="color:#5B4BD6">
-    <i class="fa-solid fa-key"></i> من أين تجلب رمز الربط؟
-  </h3>
-  <ol style="margin:8px 0 0;padding-inline-start:22px;font-size:14px;line-height:1.9;color:#1F2937">
-    <li>
-      افتح صفحة
-      <a href="{{ url_for('radius.tok_list') }}"
-         style="font-weight:800;color:#5B4BD6;text-decoration:underline"
-         target="_blank" rel="noopener">
-        إدارة رموز الربط
-      </a>
-      (تفتح في تبويب جديد)
-    </li>
-    <li>اضغط <strong>«إنشاء رمز جديد»</strong> وسمّه «دفع بيانات الأجهزة» أو أي اسم واضح.</li>
-    <li>
-      بعد الإنشاء يظهر رمز الربط كاملاً <strong>مرة واحدة فقط</strong>
-      في بنر أصفر — انسخه فوراً.
-    </li>
-    <li>ارجع لهذه الصفحة، الصق رمز الربط في الحقل أدناه.</li>
-  </ol>
-  <p style="margin:10px 0 0;padding:8px 12px;background:#fef3c7;border:1px solid #fcd34d;
-            border-radius:6px;font-size:12.5px;color:#92400e">
-    <i class="fa-solid fa-triangle-exclamation"></i>
-    <strong>تنبيه:</strong> لأمان النظام نحفظ في قاعدة البيانات
-    بصمة من رمز الربط فقط، فالقيمة الأصلية لا تظهر مرة ثانية.
-    لو ضاع منك أنشئ رمزًا جديدًا واستبدله في السكربت.
-  </p>
-</div>
+  {# ── Token-acquisition guide ── #}
+  {% call hub.section("من أين تجلب رمز الربط؟", icon="key") %}
+    <ol style="margin:0;padding-inline-start:22px;font-size:13.5px;line-height:1.9;color:var(--hub-text-soft,#1F2937)">
+      <li>
+        افتح صفحة
+        <a href="{{ url_for('radius.tok_list') }}"
+           style="font-weight:800;color:var(--hub-brand-ink,#5B4BD6);text-decoration:underline"
+           target="_blank" rel="noopener">إدارة رموز الربط</a>
+        (تفتح في تبويب جديد).
+      </li>
+      <li>اضغط <strong>«إنشاء رمز جديد»</strong> وسمّه «دفع بيانات الأجهزة» أو أي اسم واضح.</li>
+      <li>بعد الإنشاء يظهر رمز الربط كاملاً <strong>مرة واحدة فقط</strong> في بنر أصفر — انسخه فوراً.</li>
+      <li>ارجع لهذه الصفحة، الصق رمز الربط في الحقل أدناه.</li>
+    </ol>
+  {% endcall %}
 
-{% if not tokens %}
-<div class="pushp-warn">
-  <i class="fa-solid fa-triangle-exclamation"></i>
-  لا يوجد عندك أي رمز بعد. اضغط الرابط بالأعلى لإنشاء واحد.
-</div>
-{% else %}
+  {% if not tokens %}
+  {{ hub.empty(
+    "لا يوجد عندك أي رمز بعد",
+    sub="اضغط «إدارة رموز الربط» بالأعلى لإنشاء واحد، ثم ارجع لهذه الصفحة.",
+    icon="key"
+  ) }}
+  {% else %}
 
-<div class="pushp-card">
-  <h3><i class="fa-solid fa-screwdriver-wrench"></i> الإعدادات</h3>
-  <div class="pushp-config-row">
-    <label>عنوان الخادم</label>
-    <input type="text" id="pushp-url" value="{{ base_url }}" dir="ltr">
-  </div>
-  <div class="pushp-config-row">
-    <label>رمز الربط</label>
-    <input type="text" id="pushp-token" value="" autocomplete="off"
-           placeholder="الصق قيمة رمز الربط من شاشة إدارة الرموز">
-  </div>
-  <p style="font-size:12.5px;color:#64748B;margin:4px 0 0">
-    لديك حالياً <strong>{{ tokens|length }}</strong> رمز مفعّل. اسم أحدها:
-    <strong>{{ suggested_token_name or '—' }}</strong>.
-    <a href="{{ url_for('radius.tok_list') }}" style="font-weight:700;color:#5B4BD6">
-      إدارة الرموز →
-    </a>
-  </p>
-</div>
-
-<div class="pushp-card">
-  <h3><i class="fa-solid fa-list-ol"></i> الخطوات (3 دقائق)</h3>
-  <div class="pushp-steps">
-    <div class="pushp-step">
-      افتح برنامج إدارة الراوتر أو واجهة الويب، ثم افتح نافذة الأوامر.
+  {# ── Settings (JS-driven script generator inputs) ── #}
+  {% call hub.section("الإعدادات", icon="screwdriver-wrench") %}
+    <div class="hub-field">
+      <label class="hub-field-label" for="pushp-url">عنوان الخادم</label>
+      <input class="hub-input" type="text" id="pushp-url" value="{{ base_url }}" dir="ltr"
+             style="font-family:var(--hub-mono,ui-monospace,monospace)">
     </div>
-    <div class="pushp-step">
-      عبّئ عنوان الخادم ورمز الربط بالأعلى. السكربت سيتولّد تلقائيًا بالأسفل.
+    <div class="hub-field">
+      <label class="hub-field-label" for="pushp-token">رمز الربط</label>
+      <input class="hub-input" type="text" id="pushp-token" value="" autocomplete="off" dir="ltr"
+             placeholder="الصق قيمة رمز الربط من شاشة إدارة الرموز"
+             style="font-family:var(--hub-mono,ui-monospace,monospace)">
+      <div class="hub-field-hint">
+        لديك حالياً <strong>{{ tokens|length }}</strong> رمز مفعّل. اسم أحدها:
+        <strong>{{ suggested_token_name or '—' }}</strong>.
+        <a href="{{ url_for('radius.tok_list') }}" style="font-weight:700;color:var(--hub-brand-ink,#5B4BD6)">إدارة الرموز ←</a>
+      </div>
     </div>
-    <div class="pushp-step">
-      اضغط زر <strong>نسخ</strong> بجوار السكربت.
-    </div>
-    <div class="pushp-step">
-      الصقه في نافذة أوامر الراوتر واضغط Enter. ستظهر مهمة مجدولة جديدة في الراوتر.
-    </div>
-    <div class="pushp-step">
-      انتظر ~3 دقائق ثم افتح أي بطاقة في الفحص — عمود الجهاز/النظام رح يمتلئ.
-    </div>
-  </div>
-</div>
+  {% endcall %}
 
-<div class="pushp-card">
-  <h3><i class="fa-solid fa-code"></i> سكربت الراوتر</h3>
-  <div class="pushp-script">
-    <button class="copy-btn" type="button" data-copy-script>
-      <i class="fa-solid fa-copy"></i> نسخ
-    </button>
+  {# ── Steps ── #}
+  {% call hub.section("الخطوات (3 دقائق)", icon="list-ol") %}
+    <div class="pushp-steps">
+      <div class="pushp-step">افتح برنامج إدارة الراوتر أو واجهة الويب، ثم افتح نافذة الأوامر.</div>
+      <div class="pushp-step">عبّئ عنوان الخادم ورمز الربط بالأعلى. السكربت سيتولّد تلقائيًا بالأسفل.</div>
+      <div class="pushp-step">اضغط زر <strong>نسخ</strong> بجوار السكربت.</div>
+      <div class="pushp-step">الصقه في نافذة أوامر الراوتر واضغط Enter. ستظهر مهمة مجدولة جديدة في الراوتر.</div>
+      <div class="pushp-step">انتظر ~3 دقائق ثم افتح أي بطاقة في الفحص — عمود الجهاز/النظام رح يمتلئ.</div>
+    </div>
+  {% endcall %}
+
+  {# ── Generated scheduler script ── #}
+  {% call hub.section("سكربت الراوتر", icon="code") %}
+    <div class="pushp-script">
+      <button class="copy-btn" type="button" data-copy-script>
+        <i class="fa-solid fa-copy"></i> نسخ
+      </button>
 <pre id="pushp-script-body" dir="ltr">جارٍ توليد السكربت…</pre>
-  </div>
-</div>
+    </div>
+  {% endcall %}
 
-<div class="pushp-card">
-  <h3><i class="fa-solid fa-vial"></i> اختبار سريع</h3>
-  <p style="font-size:13px;color:#475569;margin:0 0 10px">
-    تأكّد من وصول الراوتر قبل تركيب المهمة المجدولة: انسخ الأمر التالي وألصقه في الراوتر.
-    يجب أن يرجع رد نجاح من الخادم.
-  </p>
-  <div class="pushp-script">
-    <button class="copy-btn" type="button" data-copy-test>
-      <i class="fa-solid fa-copy"></i> نسخ
-    </button>
+  {# ── One-shot test command ── #}
+  {% call hub.section("اختبار سريع", icon="vial") %}
+    <p style="font-size:13px;color:var(--hub-text-soft,#475569);margin:0 0 10px">
+      تأكّد من وصول الراوتر قبل تركيب المهمة المجدولة: انسخ الأمر التالي وألصقه في الراوتر.
+      يجب أن يرجع رد نجاح من الخادم.
+    </p>
+    <div class="pushp-script">
+      <button class="copy-btn" type="button" data-copy-test>
+        <i class="fa-solid fa-copy"></i> نسخ
+      </button>
 <pre id="pushp-test-body" dir="ltr">جارٍ توليد الأمر…</pre>
-  </div>
-</div>
+    </div>
+  {% endcall %}
 
-<div class="pushp-card">
-  <h3><i class="fa-solid fa-magnifying-glass-chart"></i> التحقّق + استكشاف الأخطاء</h3>
-  <p style="font-size:13px;color:#475569;margin:0 0 8px">
-    لو ركّبت المهمة المجدولة لكن البيانات لم تظهر، نفّذ الأوامر التالية على الراوتر للتحقّق:
-  </p>
-  <div class="pushp-script">
+  {# ── Verify + troubleshoot ── #}
+  {% call hub.section("التحقّق + استكشاف الأخطاء", icon="magnifying-glass-chart") %}
+    <p style="font-size:13px;color:var(--hub-text-soft,#475569);margin:0 0 8px">
+      لو ركّبت المهمة المجدولة لكن البيانات لم تظهر، نفّذ الأوامر التالية على الراوتر للتحقّق:
+    </p>
+    <div class="pushp-script">
 <pre dir="ltr"># 1) تحقق أن المهمة المجدولة موجودة وفعّالة
 /system scheduler print where name=hoberadius-push-dhcp
 
@@ -253,26 +192,33 @@
 
 # 6) شوف أول lease كمثال (تأكد أن host-name وclient-id فيهم بيانات)
 /ip/dhcp-server/lease/print detail count-only=2</pre>
-  </div>
-  <p style="font-size:12.5px;color:#92400e;background:#fffbeb;
-            border:1px solid #fcd34d;border-radius:6px;padding:8px 12px;margin-top:10px">
-    <i class="fa-solid fa-triangle-exclamation"></i>
-    <strong>تنبيه شائع:</strong> لو عنوان الخادم يبدأ بـ <code>http://</code> (وليس https)
-    فلازم يكون <code>mode=http</code> في الـ fetch — وليس <code>mode=https</code>.
-    السكربت أعلاه يضبط هذا تلقائيًا بناءً على عنوان الخادم.
-  </p>
-</div>
+    </div>
+    <div class="hub-empty" style="text-align:initial;background:#fffbeb;border-color:#fcd34d;margin-top:10px;padding:10px 14px">
+      <div class="hub-empty-sub" style="color:#92400e">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <strong>تنبيه شائع:</strong> لو عنوان الخادم يبدأ بـ <code>http://</code> (وليس https)
+        فلازم يكون <code>mode=http</code> في الـ fetch — وليس <code>mode=https</code>.
+        السكربت أعلاه يضبط هذا تلقائيًا بناءً على عنوان الخادم.
+      </div>
+    </div>
+  {% endcall %}
 
-<div class="pushp-card">
-  <h3><i class="fa-solid fa-broom"></i> إزالة المهمة المجدولة</h3>
-  <p style="font-size:13px;color:#475569;margin:0 0 10px">
-    إذا تريد تعطيل الدفع (مثلاً بعد إصلاح واجهة الربط على الراوتر) نفّذ:
-  </p>
-  <div class="pushp-script">
+  {# ── Removal ── #}
+  {% call hub.section("إزالة المهمة المجدولة", icon="broom") %}
+    <p style="font-size:13px;color:var(--hub-text-soft,#475569);margin:0 0 10px">
+      إذا تريد تعطيل الدفع (مثلاً بعد إصلاح واجهة الربط على الراوتر) نفّذ:
+    </p>
+    <div class="pushp-script">
 <pre dir="ltr">/system scheduler remove [find name=hoberadius-push-dhcp]</pre>
-  </div>
-</div>
+    </div>
+  {% endcall %}
 
+  {% endif %}
+
+{% endcall %}
+</section>
+
+{% if tokens %}
 <script>
 (function(){
   'use strict';
