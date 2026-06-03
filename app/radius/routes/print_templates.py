@@ -37,6 +37,12 @@ def register_print_template_routes(bp: Blueprint) -> None:
         methods=["GET"],
     )
     bp.add_url_rule(
+        "/print-templates/<int:template_id>/thumbnail.svg",
+        "print_templates_thumbnail",
+        print_templates_thumbnail,
+        methods=["GET"],
+    )
+    bp.add_url_rule(
         "/print-templates/designer-svg",
         "print_templates_designer_svg",
         print_templates_designer_svg,
@@ -269,6 +275,9 @@ def _payload(*, allow_data_url_background: bool = True) -> dict:
         "accent_color": request.form.get("accent_color") or "#f59e0b",
         "text_color": request.form.get("text_color") or request.form.get("color") or "#ffffff",
         "surface_color": request.form.get("surface_color") or "#e8f7fb",
+        # Data-strip / pill transparency (0..1). Matches the renderer's
+        # surface_opacity default so untouched templates are unchanged.
+        "surface_opacity": _float("surface_opacity", 0.95),
         "credential_text_color": request.form.get("credential_text_color") or "#0f172a",
         "credential_label_color": request.form.get("credential_label_color") or "#64748b",
         "username_surface_color": request.form.get("username_surface_color") or request.form.get("surface_color") or "#e8f7fb",
@@ -280,6 +289,9 @@ def _payload(*, allow_data_url_background: bool = True) -> dict:
         "qr_background_color": request.form.get("qr_background_color") or "#ffffff",
         "qr_size_pct": _float("qr_size_pct"),
         "pattern_style": request.form.get("pattern_style") or "signal",
+        # Decorative line/grid/signal/circle colour. Default white keeps the
+        # legacy look for templates that never set it.
+        "pattern_color": request.form.get("pattern_color") or "#ffffff",
         "image_opacity": _float("image_opacity", 0.82),
         "qr_style": request.form.get("qr_style") or "boxed",
         "text_direction": text_direction,
@@ -307,6 +319,11 @@ def _payload(*, allow_data_url_background: bool = True) -> dict:
         "username_surface_enabled": _checked("username_surface_enabled", True),
         "password_surface_enabled": _checked("password_surface_enabled", True),
     }
+    # Decorative pattern transparency (0..1) is only forwarded when the
+    # designer actually exposes the control, so templates without it keep
+    # the renderer's legacy per-pattern alpha instead of a forced overlay.
+    if (request.form.get("pattern_opacity") or "").strip() != "":
+        layout["pattern_opacity"] = _float("pattern_opacity", 1.0)
     uploaded_background = _uploaded_background(allow_data_url=allow_data_url_background)
     if uploaded_background:
         layout["background_style"] = "image"
@@ -456,6 +473,13 @@ def _page_context(
         )
         if edit_template:
             form_state = {**edit_template, "layout": edit_template.get("layout_json") or {}}
+
+    # Real per-template preview thumbnails are served lazily, one small SVG
+    # per template via `print_templates_thumbnail` (rendered with the SAME
+    # unified renderer the PDF export uses). The picker loads them on scroll
+    # (loading="lazy"), so a tenant with 100s of templates stays light.
+    templates = [dict(t) for t in templates]
+
     return {
         "templates": templates,
         "batches": get_cards_service().list_batch_operations(limit=200, offset=0),
@@ -471,6 +495,35 @@ def _page_context(
         # the matching row.
         "default_template_id": ops.get_default_print_template_id(tenant_id=tenant_id),
     }
+
+
+def print_templates_thumbnail(template_id: int):
+    """Lazy per-template preview thumbnail: the saved template's REAL card
+    rendered as SVG by the same engine the PDF export uses. Served one-by-one
+    so a tenant with hundreds of templates loads them only as they scroll
+    into view (loading="lazy")."""
+    from flask import Response, abort
+    ops = get_operations_service()
+    tenant_id = _tid()
+    templates = ops.list_print_templates(tenant_id=tenant_id, limit=1000)
+    tpl = next(
+        (dict(row) for row in templates if int(row.get("id") or 0) == int(template_id)),
+        None,
+    )
+    if not tpl:
+        abort(404)
+    try:
+        from ..services.card_renderer import build_card_render_model, render_card_svg
+        sample = {"id": "", "username": "CARD1234", "password": "********", "qr_payload": "CARD1234"}
+        layout = tpl.get("layout_json") or {}
+        model = build_card_render_model({**tpl, "layout_json": layout}, sample)
+        svg = render_card_svg(model, mask_password=True)
+    except Exception:
+        abort(404)
+    resp = Response(svg, mimetype="image/svg+xml")
+    resp.headers["Cache-Control"] = "private, max-age=600"
+    resp.headers["X-Content-Type-Options"] = "nosniff"
+    return resp
 
 
 def print_templates():

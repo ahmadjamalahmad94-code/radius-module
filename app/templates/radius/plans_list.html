@@ -1,4 +1,5 @@
-{# Plans list — REBUILT N6 (hub-v2). Same backend data: items list. #}
+{# Plans list — UNIFIED DESIGN SYSTEM reference (merged hero + help panel).
+   Same backend data: items list. Zero route/behaviour change. #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
@@ -9,9 +10,12 @@
 
 {% block content %}
 
-{{ hub.hero(
+{% set _enabled = items|selectattr('enabled')|list|length %}
+
+{# ───── Merged hero: title + actions + KPI strip + integrated search ───── #}
+{% call hub.megahero(
   "العروض والخطط",
-  subtitle="إدارة الباقات: السعر، السرعة، الكوتا، المدة، الأولوية",
+  subtitle="إدارة الباقات: السعر، السرعة، الكوتا، المدة، الأولوية — كل ما يبيعه مشغّلك للمشتركين في مكان واحد.",
   icon="tags",
   actions_html='
     <a class="hub-btn hub-btn--primary" href="' + url_for('radius.plans_new') + '">
@@ -19,87 +23,96 @@
     </a>
     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.plans_overview') + '">
       <i class="fa-solid fa-chart-pie"></i> النظرة العامة
-    </a>
-  '
-) }}
-
-<form method="get" class="hub-filterbar">
-  <input class="hub-input grow" type="text" name="q" placeholder="بحث باسم/كود العرض...">
+    </a>',
+  kpis=[
+    {'label': 'الإجمالي', 'value': items|length,            'icon': 'layer-group', 'variant': 'brand'},
+    {'label': 'مفعَّلة',  'value': _enabled,                'icon': 'toggle-on',   'variant': 'green'},
+    {'label': 'معطَّلة',  'value': items|length - _enabled, 'icon': 'toggle-off',  'variant': 'amber'},
+  ],
+  search_action=url_for('radius.plans_list')
+) %}
+  <input class="hub-input grow" type="text" name="q"
+         placeholder="بحث باسم/كود العرض..." value="{{ request.args.get('q', '') }}">
   {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
   <span class="hub-spacer"></span>
   {{ hub.btn("CSV", icon="file-csv", variant="secondary", size="sm") }}
-</form>
+{% endcall %}
 
 {% if items %}
-{% set _enabled = items|selectattr('enabled')|list|length %}
-<div class="hub-kpi-grid">
-  {{ hub.kpi("الإجمالي", items|length, icon="layer-group", variant="brand") }}
-  {{ hub.kpi("مفعَّلة",  _enabled,      icon="toggle-on",  variant="green") }}
-  {{ hub.kpi("معطَّلة",  items|length - _enabled, icon="toggle-off", variant="amber") }}
-</div>
-
-{% call hub.section("الباقات", icon="table-list", meta=items|length|string + " عرض", flush=True) %}
-  <div class="hub-table-wrap" style="border:none;border-radius:0">
-    <table class="hub-table" data-paginated="1" data-page-size="20" data-page-sizes="10,20,50,100" data-persist-key="plans-list">
-      <thead>
-        <tr>
-          <th style="width:36px"><input type="checkbox"></th>
-          <th class="num" style="width:60px">#</th>
-          <th>الاسم</th>
-          <th>الكود</th>
-          <th>النوع</th>
-          <th>المدة</th>
-          <th>الكوتا</th>
-          <th>السرعة</th>
-          <th class="num">السعر</th>
-          <th style="width:120px">إجراءات</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for p in items %}
-        <tr>
-          <td><input type="checkbox"></td>
-          <td class="num mono">{{ p.id }}</td>
-          <td>
-            <div class="hub-flex-row" style="gap:8px;flex-wrap:nowrap">
-              <span style="display:inline-block;width:6px;height:22px;border-radius:3px;background:{{ p.color or '#6B5AED' }};flex-shrink:0"></span>
-              <strong style="color:var(--hub-text)">{{ p.name }}</strong>
-            </div>
-          </td>
-          <td class="mono small">{{ p.code or '—' }}</td>
-          <td>{{ hub.pill(p.plan_type or '—', variant="brand", dot=False) }}</td>
-          <td class="mono small">
-            {% if p.duration_minutes %}{{ p.duration_minutes }} د{% endif %}
-            {% if p.validity_days %}{% if p.duration_minutes %} · {% endif %}{{ p.validity_days }} يوم{% endif %}
-            {% if not p.duration_minutes and not p.validity_days %}<span class="hub-text-mute">غير محدود</span>{% endif %}
-          </td>
-          <td class="mono small">
-            {% if p.quota_total_mb %}{{ "%.1f"|format(p.quota_total_mb/1024) }} GB
-            {% else %}<span class="hub-text-mute">غير محدود</span>{% endif %}
-          </td>
-          <td class="mono small">{{ p.speed_down_kbps or 0 }} ↓ / {{ p.speed_up_kbps or 0 }} ↑ Kbps</td>
-          <td class="num">
-            <strong>{{ p.price|money }}</strong>
-          </td>
-          <td>
-            <div class="hub-flex-row" style="gap:4px;flex-wrap:nowrap">
-              <a class="hub-btn hub-btn--ghost hub-btn--icon" title="تعديل"
-                 href="{{ url_for('radius.plans_edit', plan_id=p.id) }}">
-                <i class="fa-solid fa-pen"></i>
-              </a>
-              <form method="post" action="{{ url_for('radius.plans_delete', plan_id=p.id) }}"
-                    onsubmit="return confirm('أرشفة «{{ p.name|e }}»؟ يمكن استعادتها من سلة المحذوفات.');" style="display:inline">
-                <button type="submit" class="hub-btn hub-btn--danger hub-btn--icon" title="أرشفة">
+{# ───── Main (carded table) + help panel on the LEFT ───── #}
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "كيف تقرأ هذه الصفحة؟",
+  intro="كل صف هو عرض/باقة يبيعها مشغّلك للمشتركين. اللون يميّز الباقة بصريًا في بقية النظام.",
+  items=[
+    {'icon': 'gauge-high', 'text': 'السرعة تُعرض تنزيلًا ↓ / رفعًا ↑ بالـ Kbps — عدّلها من زر التعديل.'},
+    {'icon': 'database',   'text': 'الكوتا هي حجم البيانات المسموح؛ «غير محدود» يعني بلا سقف.'},
+    {'icon': 'clock',      'text': 'المدة والصلاحية تحكمان متى تنتهي الباقة بعد التفعيل.'},
+    {'icon': 'toggle-on',  'text': 'الباقة المعطَّلة تبقى محفوظة لكنها لا تظهر للبيع.'},
+  ],
+  note="الأرشفة لا تحذف الباقة نهائيًا — يمكنك استعادتها من سلة المحذوفات."
+)) %}
+  {% call hub.section("الباقات", icon="table-list", meta=items|length|string + " عرض", flush=True) %}
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
+      <table class="hub-table">
+        <thead>
+          <tr>
+            <th style="width:36px" data-uds-nosort data-uds-nocol><input type="checkbox"></th>
+            <th class="num" style="width:60px">#</th>
+            <th>الاسم</th>
+            <th>الكود</th>
+            <th>النوع</th>
+            <th>المدة</th>
+            <th>الكوتا</th>
+            <th>السرعة</th>
+            <th class="num">السعر</th>
+            <th style="width:120px" data-uds-nosort>إجراءات</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in items %}
+          <tr>
+            <td><input type="checkbox"></td>
+            <td class="num mono">{{ p.id }}</td>
+            <td>
+              <div class="hub-flex-row" style="gap:8px;flex-wrap:nowrap">
+                <span style="display:inline-block;width:6px;height:22px;border-radius:3px;background:{{ p.color or '#6B5AED' }};flex-shrink:0"></span>
+                <strong style="color:var(--hub-text)">{{ p.name }}</strong>
+              </div>
+            </td>
+            <td class="mono small">{{ p.code or '—' }}</td>
+            <td>{{ hub.pill(p.plan_type or '—', variant="brand", dot=False) }}</td>
+            <td class="mono small">
+              {% if p.duration_minutes %}{{ p.duration_minutes }} د{% endif %}
+              {% if p.validity_days %}{% if p.duration_minutes %} · {% endif %}{{ p.validity_days }} يوم{% endif %}
+              {% if not p.duration_minutes and not p.validity_days %}<span class="hub-text-mute">غير محدود</span>{% endif %}
+            </td>
+            <td class="mono small">
+              {% if p.quota_total_mb %}{{ "%.1f"|format(p.quota_total_mb/1024) }} GB
+              {% else %}<span class="hub-text-mute">غير محدود</span>{% endif %}
+            </td>
+            <td class="mono small">{{ p.speed_down_kbps or 0 }} ↓ / {{ p.speed_up_kbps or 0 }} ↑ Kbps</td>
+            <td class="num">
+              <strong>{{ p.price|money }}</strong>
+            </td>
+            <td>
+              <div class="hub-flex-row" style="gap:4px;flex-wrap:nowrap">
+                <a class="hub-btn hub-btn--ghost hub-btn--icon" title="تعديل"
+                   href="{{ url_for('radius.plans_edit', plan_id=p.id) }}">
+                  <i class="fa-solid fa-pen"></i>
+                </a>
+                <button type="button" class="hub-btn hub-btn--danger hub-btn--icon" title="أرشفة"
+                        data-plan-archive data-plan-name="{{ p.name|e }}"
+                        data-plan-action="{{ url_for('radius.plans_delete', plan_id=p.id) }}">
                   <i class="fa-solid fa-box-archive"></i>
                 </button>
-              </form>
-            </div>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endcall %}
 {% endcall %}
 {% else %}
 {{ hub.empty(
@@ -108,5 +121,31 @@
   icon="tags"
 ) }}
 {% endif %}
+
+{# ───── Shared floating modal for archive confirmation (replaces inline confirm()) ───── #}
+{% call hub.modal("planArchiveModal", "تأكيد أرشفة العرض", icon="box-archive", size="sm",
+   footer_html='<button type="button" class="hub-btn hub-btn--ghost" data-uds-modal-close>إلغاء</button>'
+     ~ '<form method="post" data-plan-archive-form style="display:inline;margin:0">'
+     ~ '<button type="submit" class="hub-btn hub-btn--danger"><i class="fa-solid fa-box-archive"></i> أرشفة</button></form>') %}
+  <div class="uds-modal-warn uds-modal-warn--amber">
+    <i class="fa-solid fa-circle-info"></i>
+    <span>سيتم أرشفة العرض «<strong data-plan-archive-name></strong>». يمكن استعادته لاحقًا من سلة المحذوفات.</span>
+  </div>
+{% endcall %}
+<script>
+(function(){
+  var modal = document.getElementById("planArchiveModal");
+  if (!modal) return;
+  var nameEl = modal.querySelector("[data-plan-archive-name]");
+  var form   = modal.querySelector("[data-plan-archive-form]");
+  document.addEventListener("click", function(e){
+    var btn = e.target.closest("[data-plan-archive]");
+    if (!btn) return;
+    if (nameEl) nameEl.textContent = btn.getAttribute("data-plan-name") || "";
+    if (form)   form.action = btn.getAttribute("data-plan-action") || "";
+    modal.hidden = false;
+  });
+})();
+</script>
 
 {% endblock %}

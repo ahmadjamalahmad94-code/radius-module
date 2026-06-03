@@ -67,7 +67,10 @@
   .pr-design-source-head small{font-size:11px;color:var(--hub-text-mute);font-weight:800;line-height:1.6;text-align:left}
   .pr-design-source-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
   @media(max-width:520px){.pr-design-source-options{grid-template-columns:1fr}}
-  .pr-design-source-option{border:1px solid var(--hub-border-soft);background:var(--hub-bg-soft);border-radius:14px;padding:12px;display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:10px;cursor:pointer;text-align:right;font-family:inherit;color:var(--hub-text);transition:border-color .15s ease,box-shadow .15s ease,transform .15s ease}
+  .pr-design-source-option{border:1px solid var(--hub-border-soft);background:var(--hub-bg-soft);border-radius:14px;padding:12px;display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-rows:auto auto;column-gap:10px;row-gap:2px;align-items:center;cursor:pointer;text-align:right;font-family:inherit;color:var(--hub-text);transition:border-color .15s ease,box-shadow .15s ease,transform .15s ease}
+  .pr-design-source-option i{grid-row:1 / span 2;align-self:center}
+  .pr-design-source-option span{grid-column:2;grid-row:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pr-design-source-option em{grid-column:2;grid-row:2}
   .pr-design-source-option:hover,.pr-design-source-option.is-selected{border-color:rgba(34,167,189,.76);box-shadow:0 12px 24px rgba(15,23,42,.08);transform:translateY(-1px)}
   .pr-design-source-option.is-selected{outline:2px solid rgba(34,167,189,.18);background:#fff}
   .pr-design-source-option i{width:38px;height:38px;border-radius:12px;background:rgba(34,167,189,.12);color:var(--pr-cyan);display:grid;place-items:center;font-size:18px}
@@ -446,7 +449,50 @@
      picker so the export flow stays focused: choose batch, choose saved
      design, review preview, then export. #}
   <section id="export" data-export-room>
-    <div class="pr-export-room-shell">
+    <div class="pt-export">
+      <aside class="pt-strip">
+        <div class="pt-strip-head">
+          <button type="button" class="pt-strip-toggle" data-pt-strip-toggle
+                  aria-label="طيّ أو فتح قائمة القوالب" title="طيّ / فتح القائمة">
+            <i class="fa-solid fa-angles-right"></i>
+          </button>
+          <span class="pt-strip-head-label"><i class="fa-solid fa-images"></i> القوالب المحفوظة</span>
+          <span class="pt-strip-count">{{ templates|length }}</span>
+        </div>
+        <div class="pt-strip-search">
+          <input class="hub-input" type="search" placeholder="بحث في القوالب..." data-pt-strip-search aria-label="بحث في القوالب">
+        </div>
+        <div class="pt-strip-list" data-pt-strip-list>
+          {% for item in templates %}
+            {% set layout = item.layout_json or {} %}
+            {% set is_default = layout.is_default or (default_template_id == item.id) %}
+            {% set orientation = layout.card_orientation or 'horizontal' %}
+            <button type="button" class="pt-strip-item{% if is_default %} is-active{% endif %}"
+                    data-export-template-card
+                    data-template-id="{{ item.id }}"
+                    data-template-name="{{ item.name|e }}"
+                    data-template-meta="{{ layout.design_preset or 'custom' }} · {{ orientation }}"
+                    data-template-gradient-start="{{ layout.gradient_start or '#0f172a' }}"
+                    data-template-gradient-end="{{ layout.gradient_end or '#22a7bd' }}"
+                    data-template-accent="{{ layout.accent_color or '#f59e0b' }}"
+                    data-pt-search="{{ (item.name or '')|e }}"
+                    {% if is_default %}data-is-default="1"{% endif %}>
+              <span class="pt-thumb{% if orientation == 'vertical' %} is-vertical{% endif %}">
+                <img class="pt-thumb-img" loading="lazy" decoding="async"
+                     src="{{ url_for('radius.print_templates_thumbnail', template_id=item.id) }}"
+                     alt="{{ item.name|e }}">
+              </span>
+              <span class="pt-strip-item-body">
+                <span class="pt-strip-item-name">{{ item.name or 'قالب بدون اسم' }}{% if is_default %} <i class="fa-solid fa-star pt-default-star" title="القالب الافتراضي"></i>{% endif %}</span>
+                <span class="pt-strip-item-meta">{{ layout.design_preset or 'custom' }} · {{ 'عمودي' if orientation == 'vertical' else 'أفقي' }}</span>
+              </span>
+            </button>
+          {% else %}
+            <div class="pt-strip-empty">لا توجد قوالب محفوظة بعد.<br>أنشئ قالبًا من مركز التصميم بالأسفل ليظهر هنا بمعاينته الحقيقية.</div>
+          {% endfor %}
+        </div>
+      </aside>
+      <div class="pt-main pr-export-room-shell">
       <section class="export-panel">
         <div class="pr-panel-head">
           <h3><i class="fa-solid fa-list-check"></i> إعداد التصدير</h3>
@@ -485,46 +531,42 @@
               <strong><i class="fa-solid fa-table-cells-large"></i> إعدادات الورقة والرص</strong>
               <small>هذه الإعدادات خاصة بالتصدير فقط، ولا تغيّر شكل القالب المحفوظ.</small>
             </div>
-            <div class="pr-grid2">
-              <label class="pr-field">حجم الورقة
+            <div class="pt-settings-grid">
+              <label class="pt-field">حجم الورقة
                 <select class="hub-select" name="print_page_size" data-export-print-setting>
                   <option value="A4" selected>A4</option>
                   <option value="Letter">Letter</option>
                 </select>
               </label>
-              <label class="pr-field">اتجاه الورقة
+              <label class="pt-field">اتجاه الورقة
                 <select class="hub-select" name="print_orientation" data-export-print-setting>
                   <option value="portrait" selected>عمودي</option>
                   <option value="landscape">أفقي</option>
                 </select>
               </label>
-              <label class="pr-field">عدد الأعمدة
+              <label class="pt-field">عدد الأعمدة
                 <input class="hub-input" type="number" name="print_columns" min="1" max="12" value="2" data-export-print-setting>
               </label>
-              <label class="pr-field">عدد الصفوف
+              <label class="pt-field">عدد الصفوف
                 <input class="hub-input" type="number" name="print_rows" min="1" max="20" value="5" data-export-print-setting>
               </label>
-            </div>
-            <div class="pr-grid2">
-              <label class="pr-field">المسافة بين الأعمدة mm
-                <input class="hub-input" type="number" name="print_column_gap_mm" min="0" max="60" step="0.5" value="4" data-export-print-setting>
+              <label class="pt-field">المسافة بين الأعمدة
+                <span class="pt-unit"><input type="number" name="print_column_gap_mm" min="0" max="60" step="0.5" value="4" data-export-print-setting><span class="pt-unit-suffix">mm</span></span>
               </label>
-              <label class="pr-field">المسافة بين الصفوف mm
-                <input class="hub-input" type="number" name="print_row_gap_mm" min="0" max="60" step="0.5" value="4" data-export-print-setting>
+              <label class="pt-field">المسافة بين الصفوف
+                <span class="pt-unit"><input type="number" name="print_row_gap_mm" min="0" max="60" step="0.5" value="4" data-export-print-setting><span class="pt-unit-suffix">mm</span></span>
               </label>
-            </div>
-            <div class="pr-grid4">
-              <label class="pr-field">هامش علوي mm
-                <input class="hub-input" type="number" name="print_margin_top_mm" min="0" max="80" step="0.5" value="10" data-export-print-setting>
+              <label class="pt-field">هامش علوي
+                <span class="pt-unit"><input type="number" name="print_margin_top_mm" min="0" max="80" step="0.5" value="10" data-export-print-setting><span class="pt-unit-suffix">mm</span></span>
               </label>
-              <label class="pr-field">هامش أيمن mm
-                <input class="hub-input" type="number" name="print_margin_right_mm" min="0" max="80" step="0.5" value="10" data-export-print-setting>
+              <label class="pt-field">هامش أيمن
+                <span class="pt-unit"><input type="number" name="print_margin_right_mm" min="0" max="80" step="0.5" value="10" data-export-print-setting><span class="pt-unit-suffix">mm</span></span>
               </label>
-              <label class="pr-field">هامش سفلي mm
-                <input class="hub-input" type="number" name="print_margin_bottom_mm" min="0" max="80" step="0.5" value="10" data-export-print-setting>
+              <label class="pt-field">هامش سفلي
+                <span class="pt-unit"><input type="number" name="print_margin_bottom_mm" min="0" max="80" step="0.5" value="10" data-export-print-setting><span class="pt-unit-suffix">mm</span></span>
               </label>
-              <label class="pr-field">هامش أيسر mm
-                <input class="hub-input" type="number" name="print_margin_left_mm" min="0" max="80" step="0.5" value="10" data-export-print-setting>
+              <label class="pt-field">هامش أيسر
+                <span class="pt-unit"><input type="number" name="print_margin_left_mm" min="0" max="80" step="0.5" value="10" data-export-print-setting><span class="pt-unit-suffix">mm</span></span>
               </label>
             </div>
           </div>
@@ -586,11 +628,12 @@
           </div>
         </div>
         <div class="pr-export-body">
-          <div data-preview-mount>
-            <div class="hub-empty">لم تُختَر بطاقة بعد. اضغط على قالب من اليسار ثم اختر حزمة.</div>
+          <div data-preview-mount data-preview-thumb-url="{{ url_for('radius.print_templates_thumbnail', template_id=0) }}">
+            <div class="pt-preview-stage"><span class="pt-preview-loading"><i class="fa-solid fa-image"></i> اختر قالبًا من القائمة لعرض تصميمه هنا</span></div>
           </div>
         </div>
       </section>
+      </div>
     </div>
     <div class="pr-template-modal" data-template-modal hidden aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="template-picker-title">
       <div class="pr-template-modal-backdrop" data-close-template-picker></div>
@@ -647,6 +690,42 @@
       </section>
     </div>
   </section>
+
+  <script>
+  (function(){
+    var exportRoot = document.querySelector('[data-export-room]');
+    if (!exportRoot) return;
+    var grid = exportRoot.querySelector('.pt-export');
+
+    /* ── collapsible template strip (remembered) ── */
+    var toggle = exportRoot.querySelector('[data-pt-strip-toggle]');
+    var KEY = 'uds-pt-strip-collapsed';
+    try { if (grid && localStorage.getItem(KEY) === '1') grid.classList.add('is-strip-collapsed'); } catch(e){}
+    if (toggle && grid){
+      toggle.addEventListener('click', function(){
+        var collapsed = grid.classList.toggle('is-strip-collapsed');
+        try { localStorage.setItem(KEY, collapsed ? '1' : '0'); } catch(e){}
+      });
+    }
+    /* keep the active strip item highlighted on selection */
+    exportRoot.querySelectorAll('.pt-strip-item').forEach(function(card){
+      card.addEventListener('click', function(){
+        exportRoot.querySelectorAll('.pt-strip-item.is-active').forEach(function(el){ el.classList.remove('is-active'); });
+        card.classList.add('is-active');
+      });
+    });
+
+    /* auto-select the default/first template on load so the live preview is
+       never empty — fires the existing selection logic (which now renders the
+       real design via refreshLivePreview). */
+    window.addEventListener('load', function(){
+      if (window.__ptSelected) return;
+      var initial = exportRoot.querySelector('.pt-strip-item.is-active, [data-export-template-card][data-is-default]')
+                 || exportRoot.querySelector('.pt-strip-item, [data-export-template-card]');
+      if (initial){ window.__ptSelected = true; initial.click(); }
+    });
+  })();
+  </script>
 
   {# Designer drawer: closed by default — the export workflow above is the
      primary surface; the full designer opens on-demand. #}
@@ -1750,9 +1829,29 @@
     }
     const seq = ++previewSeq;
     previewMount.classList.add('pt-fragment-loading');
-    if(previewHint) previewHint.textContent = selectedBatchId()
-      ? 'جاري جلب أول ٤ بطاقات من الحزمة...'
-      : 'اختر حزمة لمعاينة بيانات حقيقية.';
+    // No batch chosen yet → show the template's REAL design (thumbnail SVG,
+    // same renderer as the PDF). Reliable and fast; the big preview is never
+    // empty once a template is selected. Real card data appears once a batch
+    // is picked (fragment path below).
+    if(!selectedBatchId()){
+      const turl = (previewMount.getAttribute('data-preview-thumb-url')||'')
+        .replace(/\/0\/thumbnail\.svg$/, '/' + selectedExportTemplateId + '/thumbnail.svg');
+      if(previewHint) previewHint.textContent = 'معاينة تصميم القالب — اختر حزمة لعرض بطاقات فعلية.';
+      fetch(turl, {credentials:'same-origin'})
+        .then(r => r.ok ? r.text() : Promise.reject(new Error('HTTP '+r.status)))
+        .then(svg => {
+          if(seq !== previewSeq) return;
+          previewMount.innerHTML = '<div class="pt-preview-stage">' + svg + '</div>';
+          previewMount.classList.remove('pt-fragment-loading');
+        })
+        .catch(err => {
+          if(seq !== previewSeq) return;
+          previewMount.classList.remove('pt-fragment-loading');
+          previewMount.innerHTML = '<div class="hub-empty">تعذّر جلب المعاينة ('+ (err && err.message || err) +').</div>';
+        });
+      return;
+    }
+    if(previewHint) previewHint.textContent = 'جاري جلب أول ٤ بطاقات من الحزمة...';
     const params = new URLSearchParams();
     if(selectedBatchId()) params.set('batch_id', selectedBatchId());
     exportOverrides.forEach(field => {

@@ -1,0 +1,693 @@
+/* ╔════════════════════════════════════════════════════════════════════╗
+   ║  UNIFIED DESIGN SYSTEM (UDS)                                          ║
+   ║                                                                      ║
+   ║  One shared look across every section, layered on the hub-v2 tokens  ║
+   ║  (var(--hub-*) in hub_v2.css — single source of truth for colour,    ║
+   ║  spacing, radius, shadow, type). NOTHING here re-declares a colour    ║
+   ║  literal that a token already covers.                                ║
+   ║                                                                      ║
+   ║  Provides the pieces the per-page rebuilds kept re-implementing:     ║
+   ║    1) .uds-hero      — ONE merged hero = title + KPIs + search        ║
+   ║    2) .uds-worklayout/.uds-help — main + help panel (help on the     ║
+   ║       LEFT, opposite the RTL sidebar), consistently                  ║
+   ║    3) spacing / card utilities so no block floats without a surface  ║
+   ║                                                                      ║
+   ║  Companion macros live in _partials/hub.html:                        ║
+   ║    hub.megahero(), hub.worklayout(), hub.helppanel()                 ║
+   ║  Switches → _partials/toggle_switch.html (canonical)                 ║
+   ║  Unit inputs → _partials/unit_input.html (canonical)                 ║
+   ║                                                                      ║
+   ║  RTL-safe: every directional property uses logical sides.            ║
+   ╚════════════════════════════════════════════════════════════════════╝ */
+
+
+/* ═════════════════════════════════════════════════════════════════════
+   1. PAGE RHYTHM — consistent vertical spacing between top-level blocks
+      so no section is glued to the next.
+   ═════════════════════════════════════════════════════════════════════ */
+.uds-stack{
+  display: flex;
+  flex-direction: column;
+  gap: var(--hub-gap-section);
+}
+.uds-stack > *{ margin-block: 0; }   /* gap owns the rhythm, not margins */
+
+
+/* ═════════════════════════════════════════════════════════════════════
+   2. MERGED HERO — title + subtitle + actions + KPI strip + search,
+      all inside ONE elegant block (replaces hero / stats / filterbar
+      stacked as three separate pieces).
+   ═════════════════════════════════════════════════════════════════════ */
+.uds-hero{
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;                 /* comfortable rhythm between hero bands */
+  padding: 22px 22px;
+  border-radius: var(--hub-r-card);
+  background:
+    radial-gradient(680px 320px at 100% 0%, rgba(107,90,237,.10) 0%, transparent 60%),
+    linear-gradient(180deg, #FBFAFF 0%, var(--hub-bg-card) 100%);
+  border: 1px solid var(--hub-border-strong);
+  box-shadow: var(--hub-sh-card);
+  overflow: hidden;
+}
+
+.uds-hero-top{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.uds-hero-id{ display: flex; align-items: center; gap: 14px; min-width: 0; }
+.uds-hero-icon{
+  width: 48px; height: 48px; flex: 0 0 auto;
+  border-radius: var(--hub-r-xl);
+  display: grid; place-items: center;
+  font-size: 20px; color: #fff;
+  background: linear-gradient(135deg, var(--hub-brand), var(--hub-brand-deep));
+  box-shadow: 0 8px 18px rgba(107,90,237,.32);
+}
+.uds-hero-title{
+  margin: 0; font-size: 21px; font-weight: 900;
+  color: var(--hub-text); line-height: 1.15;
+}
+.uds-hero-sub{
+  margin-top: 4px; font-size: 13px; color: var(--hub-text-soft);
+  line-height: 1.6; max-width: 74ch;
+}
+.uds-hero-actions{
+  display: inline-flex; gap: var(--hub-gap-sm);
+  align-items: center; flex-wrap: wrap;
+}
+
+/* KPI strip inside the hero — reuses .hub-kpi, just slightly translucent
+   so it reads as "part of" the hero surface, not a separate panel. */
+.uds-hero-kpis{
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
+  gap: 10px;
+  /* clear, consistent separation from the hero header band above */
+  padding-top: 18px;
+  border-top: 1px solid var(--hub-border-soft);
+}
+/* If the hero has no actions/KPIs divider is undesirable, keep it only when KPIs follow a header */
+.uds-hero-top + .uds-hero-kpis{ margin-top: 0; }
+.uds-hero-kpis .hub-kpi{
+  background: rgba(255,255,255,.74);
+  margin-bottom: 0;
+}
+.uds-hero-kpis .hub-kpi:hover{ transform: none; }
+
+/* Integrated search / filter row — merged into the hero, set off by a
+   hairline rather than living in its own stand-alone bar. */
+.uds-hero-search{
+  display: flex; align-items: center; flex-wrap: wrap;
+  gap: var(--hub-gap-sm);
+  padding-top: 18px;            /* matches the header→KPI separation for consistency */
+  border-top: 1px solid var(--hub-border-soft);
+}
+.uds-search-ic{
+  display: inline-grid; place-items: center; flex: 0 0 auto;
+  width: 34px; height: 34px;
+  border-radius: var(--hub-r-md);
+  color: var(--hub-brand-ink); background: var(--hub-brand-soft);
+}
+.uds-hero-search .hub-input,
+.uds-hero-search .hub-select{
+  background: var(--hub-bg-card);
+  font-size: 12.5px; padding: 7px 11px;
+  width: auto; flex: 0 1 auto;
+}
+.uds-hero-search .grow{ flex: 1 1 220px; min-width: 160px; }
+.uds-hero-search .hub-spacer{ flex: 1; }
+
+
+/* ═════════════════════════════════════════════════════════════════════
+   3. WORK LAYOUT — main column + help/explanation aside.
+      In this RTL app the sidebar is on the RIGHT, so the help panel sits
+      on the LEFT (the aside is the LAST grid child → visual inline-end →
+      left in RTL). Consistent everywhere.
+   ═════════════════════════════════════════════════════════════════════ */
+.uds-worklayout{
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: var(--hub-gap-section);
+  align-items: start;
+}
+.uds-main{
+  min-width: 0;
+  display: flex; flex-direction: column;
+  gap: var(--hub-gap-section);
+}
+.uds-aside{ position: sticky; top: 78px; }   /* clears the fixed topbar */
+
+
+/* ═════════════════════════════════════════════════════════════════════
+   4. HELP / EXPLANATION PANEL — one component, always on the left.
+   ═════════════════════════════════════════════════════════════════════ */
+.uds-help{
+  background: linear-gradient(180deg, #FBFAFF, var(--hub-bg-card));
+  border: 1px solid var(--hub-border-strong);
+  border-radius: var(--hub-r-card);
+  box-shadow: var(--hub-sh-sm);
+  overflow: hidden;
+}
+.uds-help-head{
+  display: flex; align-items: center; gap: 9px;
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--hub-border-soft);
+}
+.uds-help-ic{
+  width: 30px; height: 30px; flex: 0 0 auto;
+  border-radius: var(--hub-r-md);
+  display: grid; place-items: center;
+  background: var(--hub-brand-soft); color: var(--hub-brand-ink);
+  font-size: 13px;
+}
+.uds-help-title{ font-size: 13.5px; font-weight: 900; color: var(--hub-text); }
+.uds-help-body{ padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
+.uds-help-intro{ font-size: 12.5px; color: var(--hub-text-soft); line-height: 1.75; }
+.uds-help-list{ list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.uds-help-list li{
+  display: flex; gap: 9px;
+  font-size: 12.5px; color: var(--hub-text-soft); line-height: 1.6;
+}
+.uds-help-list li i{ color: var(--hub-brand); margin-top: 3px; font-size: 12px; flex: 0 0 auto; }
+.uds-help-note{
+  display: flex; gap: 8px; align-items: flex-start;
+  padding: 10px 12px; border-radius: var(--hub-r-md);
+  background: var(--hub-bg-soft); border: 1px solid var(--hub-border-soft);
+  font-size: 12px; color: var(--hub-text-soft); line-height: 1.6;
+}
+.uds-help-note i{ color: var(--hub-amber-ink); margin-top: 2px; }
+
+
+/* ═════════════════════════════════════════════════════════════════════
+   5. GENERIC CARD — so no text/block ever floats without a surface.
+   ═════════════════════════════════════════════════════════════════════ */
+.uds-card{
+  background: var(--hub-bg-card);
+  border: 1px solid var(--hub-border);
+  border-radius: var(--hub-r-card);
+  box-shadow: var(--hub-sh-card);
+  padding: 16px 18px;
+}
+
+
+/* ═════════════════════════════════════════════════════════════════════
+   6. RESPONSIVE — help panel drops under the main column; hero relaxes.
+   ═════════════════════════════════════════════════════════════════════ */
+@media (max-width: 1080px){
+  .uds-worklayout{ grid-template-columns: 1fr; }
+  .uds-aside{ position: static; }
+}
+@media (max-width: 720px){
+  .uds-hero{ padding: 16px; }
+  .uds-hero-actions{ flex: 1 1 100%; }
+}
+
+
+/* ═════════════════════════════════════════════════════════════════════
+   7. EQUAL-HEIGHT SIDE-BY-SIDE CARDS — for two/three panels that must
+      line up (no taller-than-the-other, no glued blocks). Replaces ad-hoc
+      .hub-grid-1-1 usage where heights diverged.
+   ═════════════════════════════════════════════════════════════════════ */
+.uds-cols{
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: var(--hub-gap-section);
+  align-items: stretch;            /* equal height */
+}
+.uds-cols > *{ min-width: 0; }
+.uds-cols .hub-section{ margin-bottom: 0; display: flex; flex-direction: column; }
+.uds-cols .hub-section-body{ flex: 1; }
+/* tables inside equal-height cards never force a horizontal scrollbar */
+.uds-cols .hub-table-wrap{ overflow-x: hidden; }
+.uds-cols .hub-table{ width: 100%; table-layout: auto; }
+
+
+/* ═════════════════════════════════════════════════════════════════════
+   8. CARD SELECTION — 2–4 mutually-relevant options chosen as cards
+      instead of a <select>. Radio- or checkbox-backed; posts like a
+      normal form control. (Extracted from users_form .uf-svc-card.)
+   ═════════════════════════════════════════════════════════════════════ */
+.uds-cardselect{
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px;
+}
+.uds-cardselect-opt{
+  position: relative;
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 12px 14px;
+  background: var(--hub-bg-card);
+  border: 1.5px solid var(--hub-border);
+  border-radius: var(--hub-r-lg);
+  cursor: pointer;
+  transition: border-color var(--hub-anim-fast) var(--hub-ease),
+              background var(--hub-anim-fast) var(--hub-ease),
+              box-shadow var(--hub-anim-fast) var(--hub-ease);
+}
+.uds-cardselect-opt input{ position: absolute; opacity: 0; pointer-events: none; }
+.uds-cardselect-opt:hover{ border-color: var(--hub-brand-line); }
+.uds-cardselect-opt:has(input:checked),
+.uds-cardselect-opt.is-checked{
+  background: linear-gradient(135deg, var(--hub-brand-soft), var(--hub-bg-card));
+  border-color: var(--hub-brand);
+  box-shadow: 0 2px 8px rgba(107,90,237,.15);
+}
+.uds-cardselect-ic{
+  width: 38px; height: 38px; flex: 0 0 auto;
+  display: grid; place-items: center;
+  border-radius: var(--hub-r-md);
+  background: var(--hub-brand-soft); color: var(--hub-brand-ink);
+  font-size: 16px;
+}
+.uds-cardselect-opt:has(input:checked) .uds-cardselect-ic,
+.uds-cardselect-opt.is-checked .uds-cardselect-ic{
+  background: linear-gradient(135deg, var(--hub-brand), var(--hub-brand-deep));
+  color: #fff;
+}
+.uds-cardselect-body{ display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.uds-cardselect-title{ font-weight: 800; color: var(--hub-text); font-size: 14px; }
+.uds-cardselect-sub{ font-size: 11.5px; color: var(--hub-text-mute); line-height: 1.5; }
+.uds-cardselect-opt:has(input:checked) .uds-cardselect-title{ color: var(--hub-brand-ink); }
+/* selected tick (top inline-end corner) */
+.uds-cardselect-opt::after{
+  content: "\f00c"; font-family: "Font Awesome 6 Free"; font-weight: 900;
+  position: absolute; inset-block-start: 9px; inset-inline-end: 11px;
+  font-size: 11px; color: var(--hub-brand);
+  opacity: 0; transition: opacity var(--hub-anim-fast) var(--hub-ease);
+}
+.uds-cardselect-opt:has(input:checked)::after,
+.uds-cardselect-opt.is-checked::after{ opacity: 1; }
+
+
+/* ═════════════════════════════════════════════════════════════════════
+   9. FLOATING POPUP MODAL — the ONE style for every alert / warning /
+      disable / delete confirmation. Overlay + centered card.
+   ═════════════════════════════════════════════════════════════════════ */
+.uds-modal{
+  position: fixed; inset: 0; z-index: 1000;
+  display: grid; place-items: center;
+  padding: 20px;
+  background: rgba(15,23,42,.5);
+  -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px);
+}
+.uds-modal[hidden]{ display: none; }
+.uds-modal-dialog{
+  width: min(560px, 100%);
+  max-height: calc(100vh - 42px); overflow: auto;
+  background: var(--hub-bg-card);
+  border: 1px solid var(--hub-border-soft);
+  border-radius: var(--hub-r-xl);
+  box-shadow: var(--hub-sh-lg);
+  animation: uds-modal-in .16s var(--hub-ease);
+}
+@keyframes uds-modal-in{
+  from{ opacity: 0; transform: translateY(8px) scale(.98); }
+  to{ opacity: 1; transform: none; }
+}
+.uds-modal--sm .uds-modal-dialog{ width: min(440px, 100%); }
+.uds-modal--lg .uds-modal-dialog{ width: min(780px, 100%); }
+.uds-modal-head{
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 16px 20px; border-bottom: 1px solid var(--hub-border-soft);
+}
+.uds-modal-head h3{
+  margin: 0; font-size: 17px; font-weight: 900; color: var(--hub-text);
+  display: flex; align-items: center; gap: 9px;
+}
+.uds-modal-body{
+  padding: 18px 20px; display: flex; flex-direction: column; gap: 14px;
+  font-size: 13px; color: var(--hub-text-soft); line-height: 1.7;
+}
+.uds-modal-foot{
+  display: flex; justify-content: flex-end; gap: 8px;
+  padding: 14px 20px; border-top: 1px solid var(--hub-border-soft);
+  background: var(--hub-bg-soft);
+}
+.uds-modal-warn{
+  display: flex; gap: 10px; padding: 12px 14px;
+  border-radius: var(--hub-r-md);
+  background: var(--hub-red-soft); color: var(--hub-red-ink);
+  border: 1px solid #FECACA; font-size: 12.5px; line-height: 1.7;
+}
+.uds-modal-warn i{ margin-top: 2px; flex: 0 0 auto; }
+.uds-modal-warn--amber{ background: var(--hub-amber-soft); color: var(--hub-amber-ink); border-color: #FDE68A; }
+
+
+/* ═════════════════════════════════════════════════════════════════════
+   10. DROPDOWN ACTION MENU — layers cleanly ABOVE content (high z-index),
+       positioned by JS (RTL-aware), click-outside / ESC to close.
+   ═════════════════════════════════════════════════════════════════════ */
+.uds-menu{
+  position: fixed; z-index: 900; min-width: 210px;
+  display: flex; flex-direction: column; gap: 2px; padding: 7px;
+  background: var(--hub-bg-card);
+  border: 1px solid var(--hub-border-soft);
+  border-radius: var(--hub-r-lg);
+  box-shadow: 0 14px 36px rgba(15,23,42,.18);
+}
+.uds-menu[hidden]{ display: none; }
+.uds-menu-item{
+  display: flex; align-items: center; gap: 9px; width: 100%;
+  padding: 8px 10px; border: 0; border-radius: var(--hub-r-md);
+  cursor: pointer; background: transparent;
+  color: var(--hub-text); font: inherit; font-size: 13px; font-weight: 700;
+  text-align: start; text-decoration: none;
+}
+.uds-menu-item:hover{ background: var(--hub-bg-soft); }
+.uds-menu-item i{ width: 16px; text-align: center; color: var(--hub-text-mute); flex: 0 0 auto; }
+.uds-menu-item:hover i{ color: var(--hub-brand-ink); }
+.uds-menu-sep{ height: 1px; background: var(--hub-border-soft); margin: 4px 2px; }
+.uds-menu form{ margin: 0; }              /* form-wrapped menu items align like the rest */
+.uds-menu form .uds-menu-item{ width: 100%; }
+.uds-menu-item--danger{ color: var(--hub-red-ink); }
+.uds-menu-item--danger i{ color: var(--hub-red-ink); }
+.uds-menu-item--danger:hover{ background: var(--hub-red-soft); }
+
+
+/* ═════════════════════════════════════════════════════════════════════
+   11. STICKY ACTION TOOLBAR — floats above the list on a SOLID surface
+       (never transparent) with a stacking context that sits above rows
+       but below dropdowns/modals. Fixes toolbars that bled over content.
+       Layering contract:  rows 0  <  toolbar 40  <  menu 900  <  modal 1000
+   ═════════════════════════════════════════════════════════════════════ */
+.uds-toolbar{
+  position: sticky; z-index: 40;
+  background: var(--hub-bg-card);
+  border: 1px solid var(--hub-border-strong);
+  border-radius: var(--hub-r-lg);
+  box-shadow: var(--hub-sh-md);
+  /* own stacking context so children never escape behind/over siblings */
+  isolation: isolate;
+}
+.uds-toolbar--top{ top: 78px; }
+.uds-toolbar--bottom{ bottom: 14px; }
+
+
+/* ═════════════════════════════════════════════════════════════════════
+   12. UNIFIED DATA TABLE — one style for EVERY table. Opt in by adding
+       data-uds-table (+ optional data-uds-page-size) to the wrap around a
+       <table>. JS (uds_table.js) builds the top toolbar (أعمدة column
+       toggle), sortable centered headers, and the bottom pager (rows-per-
+       page + page nav). No horizontal scroll — columns fit or are hidden.
+   ═════════════════════════════════════════════════════════════════════ */
+.uds-table-wrap{ overflow-x: hidden; }
+.uds-table{
+  width: 100%; border-collapse: collapse; table-layout: auto;
+  font-size: 13px;
+}
+.uds-table thead th{
+  text-align: center !important; vertical-align: middle;
+  padding: 11px 12px;
+  font-weight: 900; font-size: 12.5px; color: var(--hub-text-soft);
+  background: linear-gradient(180deg, #FAFBFF, #F4F1FE);
+  border-bottom: 1px solid var(--hub-border-strong);
+  white-space: nowrap; user-select: none;
+}
+.uds-table thead th.uds-sortable{ cursor: pointer; transition: background var(--hub-anim-fast) var(--hub-ease), color var(--hub-anim-fast) var(--hub-ease); }
+.uds-table thead th.uds-sortable:hover{ color: var(--hub-brand-ink); background: var(--hub-brand-soft); }
+.uds-sort-ind{ margin-inline-start: 5px; font-size: 10px; color: var(--hub-text-faint); }
+.uds-table thead th.uds-sorted{ color: var(--hub-brand-ink); }
+.uds-table thead th.uds-sorted .uds-sort-ind{ color: var(--hub-brand); }
+.uds-table tbody td{
+  text-align: center !important; vertical-align: middle;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--hub-border-soft);
+  color: var(--hub-text);
+}
+.uds-table tbody tr.uds-rowalt{ background: var(--hub-bg-soft); }
+.uds-table tbody tr:hover{ background: var(--hub-brand-soft); }
+.uds-table tbody tr:last-child td{ border-bottom: 0; }
+/* centre any inline flex groups (action buttons, coloured name chips) */
+.uds-table td .hub-flex-row{ justify-content: center; }
+
+/* top toolbar */
+.uds-table-toolbar{
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; flex-wrap: wrap; padding: 10px 14px;
+  border-bottom: 1px solid var(--hub-border-soft);
+}
+.uds-table-meta{ font-size: 12px; color: var(--hub-text-mute); font-weight: 800; }
+.uds-table-cols{ display: inline-flex; }
+
+/* bottom pager */
+.uds-table-pager{
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap; padding: 11px 14px;
+  border-top: 1px solid var(--hub-border-soft);
+  background: linear-gradient(180deg, #fff, var(--hub-bg-soft));
+}
+.uds-pager-size{ display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--hub-text-soft); font-weight: 800; }
+.uds-pager-size select{
+  font-family: inherit; font-size: 12.5px; font-weight: 800;
+  color: var(--hub-text); background: var(--hub-bg-card);
+  border: 1px solid var(--hub-border); border-radius: var(--hub-r-md);
+  padding: 5px 9px; cursor: pointer;
+}
+.uds-pager-info{ font-size: 12px; color: var(--hub-text-mute); font-weight: 700; }
+.uds-pager-nav{ display: flex; align-items: center; gap: 4px; }
+.uds-pager-btn{
+  min-width: 30px; height: 30px; padding: 0 9px;
+  display: inline-grid; place-items: center;
+  border: 1px solid var(--hub-border); border-radius: var(--hub-r-md);
+  background: var(--hub-bg-card); color: var(--hub-text-soft);
+  font-family: inherit; font-weight: 800; font-size: 12.5px; cursor: pointer;
+  transition: border-color var(--hub-anim-fast) var(--hub-ease), color var(--hub-anim-fast) var(--hub-ease);
+}
+.uds-pager-btn:hover:not(:disabled){ border-color: var(--hub-brand-line); color: var(--hub-brand-ink); }
+.uds-pager-btn.is-active{
+  background: linear-gradient(135deg, var(--hub-brand), var(--hub-brand-deep));
+  color: #fff; border-color: transparent;
+}
+.uds-pager-btn:disabled{ opacity: .45; cursor: default; }
+.uds-pager-dots{ padding: 0 4px; color: var(--hub-text-faint); font-weight: 800; }
+/* column-toggle menu items sit flush-start, not centred */
+.uds-table-colsmenu .uds-menu-item{ justify-content: flex-start; }
+
+
+/* ═════════════════════════════════════════════════════════════════════
+   13. KEY / VALUE DETAIL LIST — one readable definition-list pattern.
+       Label on the right (muted), value on the left (strong), aligned in
+       two columns with a comfortable gap, rows separated by hairlines.
+       Styles both .uds-kv (new) and the legacy .hub-detail-list so every
+       existing label/value block is fixed at once (no more glued rows).
+   ═════════════════════════════════════════════════════════════════════ */
+.uds-kv{ display: flex; flex-direction: column; }
+.uds-kv-row,
+.hub-detail-list > div{
+  display: grid;
+  grid-template-columns: minmax(130px, 36%) 1fr;
+  gap: 16px;
+  align-items: baseline;
+  padding: 11px 2px;
+  border-bottom: 1px solid var(--hub-border-soft);
+}
+.uds-kv-row:last-child,
+.hub-detail-list > div:last-child{ border-bottom: 0; }
+.uds-kv-label,
+.hub-detail-list > div > span{
+  color: var(--hub-text-mute);
+  font-size: 12.5px; font-weight: 700;
+  text-align: start; line-height: 1.6;
+}
+.uds-kv-value,
+.hub-detail-list > div > strong{
+  color: var(--hub-text);
+  font-size: 13.5px; font-weight: 800;
+  text-align: start; line-height: 1.6;
+  word-break: break-word; min-width: 0;
+}
+.uds-kv-value.mono,
+.hub-detail-list .mono{ font-family: var(--hub-mono); }
+
+
+/* ═════════════════════════════════════════════════════════════════════
+   14. TOKEN FALLBACKS — some pages reference legacy --cc-* variables for
+       the primary button and input focus. When the file that defines them
+       isn't loaded, the button rendered transparent (white-on-white) and
+       focus states were inconsistent. These fallbacks guarantee a visible
+       primary button + a clean focus everywhere. (Only apply when undefined.)
+   ═════════════════════════════════════════════════════════════════════ */
+:root{
+  --cc-hero-grad: linear-gradient(135deg, var(--hub-brand), var(--hub-brand-deep));
+  --cc-brand:     var(--hub-brand);
+  --cc-brand-ink: var(--hub-brand-ink);
+  --cc-card-bg:   var(--hub-bg-card);
+  --cc-sh-focus:  0 0 0 3px rgba(107,90,237,.18);
+  --batch-purple:      var(--hub-brand);
+  --batch-purple-dark: var(--hub-brand-deep);
+}
+/* Guarantee the primary buttons are always visible (fixes the all-white PDF
+   button — both the .hub-btn and the embedded .batch-btn variants whose
+   gradient referenced an undefined var) — solid brand gradient, white text. */
+.hub-btn--primary,
+.batch-btn--primary{
+  background: linear-gradient(135deg, var(--hub-brand), var(--hub-brand-deep));
+  color: #fff;
+  border-color: transparent;
+}
+.hub-btn--primary:hover:not(:disabled),
+.batch-btn--primary:hover:not(:disabled){ filter: brightness(1.06); }
+/* Clean, consistent field focus (no lingering blue) — purple ring, no
+   persistent state after blur. */
+.hub-input:focus-visible,
+.hub-select:focus-visible,
+.hub-textarea:focus-visible{
+  outline: none;
+  border-color: var(--hub-brand);
+  box-shadow: 0 0 0 3px var(--hub-brand-soft);
+}
+
+
+/* ═════════════════════════════════════════════════════════════════════
+   15. CARD-DESIGN EXPORT ROOM — template side strip (scales to 100+),
+       real preview thumbnails, and clean mm unit fields.
+   ═════════════════════════════════════════════════════════════════════ */
+.pt-export{
+  display: grid;
+  grid-template-columns: 290px minmax(0, 1fr);
+  gap: var(--hub-gap-section);
+  align-items: start;
+}
+/* template side strip */
+.pt-strip{
+  display: flex; flex-direction: column;
+  background: var(--hub-bg-card);
+  border: 1px solid var(--hub-border);
+  border-radius: var(--hub-r-card);
+  box-shadow: var(--hub-sh-card);
+  max-height: calc(100vh - 190px);
+  overflow: hidden;
+  position: sticky; top: 86px;
+}
+.pt-strip-head{
+  display: flex; align-items: center; gap: 9px;
+  padding: 13px 15px;
+  border-bottom: 1px solid var(--hub-border-soft);
+  font-weight: 900; font-size: 13px; color: var(--hub-text);
+}
+.pt-strip-head .pt-strip-count{
+  margin-inline-start: auto; font-size: 11.5px; font-weight: 800;
+  color: var(--hub-brand-ink); background: var(--hub-brand-soft);
+  padding: 2px 9px; border-radius: var(--hub-r-pill);
+}
+.pt-strip-search{ padding: 10px 12px; border-bottom: 1px solid var(--hub-border-soft); }
+.pt-strip-search input{ width: 100%; box-sizing: border-box; }
+.pt-strip-list{
+  overflow-y: auto; padding: 8px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.pt-strip-item{
+  display: flex; gap: 11px; align-items: center;
+  padding: 8px; width: 100%;
+  border: 1.5px solid var(--hub-border); border-radius: var(--hub-r-lg);
+  background: var(--hub-bg-card); cursor: pointer; text-align: start;
+  transition: border-color var(--hub-anim-fast) var(--hub-ease),
+              background var(--hub-anim-fast) var(--hub-ease),
+              box-shadow var(--hub-anim-fast) var(--hub-ease);
+}
+.pt-strip-item:hover{ border-color: var(--hub-brand-line); background: var(--hub-bg-soft); }
+.pt-strip-item.is-active{
+  border-color: var(--hub-brand); background: var(--hub-brand-soft);
+  box-shadow: 0 2px 8px rgba(107,90,237,.15);
+}
+/* real card thumbnail (server-rendered SVG, single source of truth) */
+.pt-thumb{
+  width: 86px; height: 55px; flex: 0 0 auto;
+  border-radius: 9px; overflow: hidden;
+  background: var(--hub-bg-soft); border: 1px solid var(--hub-border-soft);
+  display: grid; place-items: center;
+}
+.pt-thumb svg{ width: 100%; height: 100%; display: block; }
+.pt-thumb-img{ width: 100%; height: 100%; object-fit: contain; display: block; background: var(--hub-bg-soft); }
+/* embedded print-package picker thumbnails (real card preview, lazy) */
+.batch-template-option__thumb{ overflow: hidden; position: relative; }
+.batch-template-option__thumb img.pt-thumb-img{ width: 100%; height: 100%; object-fit: contain; background: transparent; }
+.pt-thumb.is-vertical{ width: 46px; height: 66px; }
+.pt-thumb-ph{ color: var(--hub-text-faint); font-size: 16px; }
+.pt-strip-item-body{ min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 3px; }
+.pt-strip-item-name{
+  font-weight: 800; font-size: 13px; color: var(--hub-text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  display: flex; align-items: center; gap: 6px;
+}
+.pt-strip-item-meta{ font-size: 11px; color: var(--hub-text-mute); }
+.pt-strip-item.is-active .pt-strip-item-name{ color: var(--hub-brand-ink); }
+.pt-strip-empty{ padding: 22px 16px; text-align: center; color: var(--hub-text-mute); font-size: 12.5px; line-height: 1.7; }
+.pt-default-star{ color: var(--hub-amber); font-size: 11px; }
+
+/* preview main */
+.pt-preview{ min-width: 0; }
+
+/* clean mm / unit fields (wrap existing inputs — names preserved) */
+.pt-settings-grid{ display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.pt-field{ display: flex; flex-direction: column; gap: 6px; font-size: 12px; font-weight: 800; color: var(--hub-text-soft); }
+.pt-unit{
+  display: flex; align-items: stretch;
+  border: 1px solid var(--hub-border); border-radius: var(--hub-r-md);
+  overflow: hidden; background: var(--hub-bg-card);
+  transition: border-color var(--hub-anim-fast) var(--hub-ease), box-shadow var(--hub-anim-fast) var(--hub-ease);
+}
+.pt-unit:focus-within{ border-color: var(--hub-brand); box-shadow: 0 0 0 3px var(--hub-brand-soft); }
+.pt-unit input, .pt-unit select{
+  flex: 1; min-width: 0; border: 0; outline: none; background: transparent;
+  padding: 8px 11px; font: inherit; font-size: 13.5px; font-weight: 700; color: var(--hub-text);
+}
+.pt-unit input::-webkit-outer-spin-button,
+.pt-unit input::-webkit-inner-spin-button{ -webkit-appearance: none; margin: 0; }
+.pt-unit-suffix{
+  display: inline-grid; place-items: center; padding: 0 12px;
+  background: var(--hub-brand-soft); color: var(--hub-brand-ink);
+  font-size: 12px; font-weight: 900;
+  border-inline-start: 1px solid var(--hub-border);
+}
+/* collapsible strip — fold it away so the live preview gets the room */
+.pt-export{ transition: grid-template-columns .26s var(--hub-ease); }
+.pt-export.is-strip-collapsed{ grid-template-columns: 52px minmax(0, 1fr); }
+.pt-strip-head{ position: relative; }
+.pt-strip-toggle{
+  width: 30px; height: 30px; flex: 0 0 auto;
+  display: grid; place-items: center;
+  border: 1px solid var(--hub-border); border-radius: var(--hub-r-md);
+  background: var(--hub-bg-card); color: var(--hub-text-soft); cursor: pointer;
+  transition: color var(--hub-anim-fast) var(--hub-ease), border-color var(--hub-anim-fast) var(--hub-ease);
+}
+.pt-strip-toggle:hover{ border-color: var(--hub-brand-line); color: var(--hub-brand-ink); }
+.pt-strip-toggle i{ transition: transform .22s var(--hub-ease); }
+.is-strip-collapsed .pt-strip-toggle i{ transform: rotate(180deg); }
+.pt-strip-head-label{ display: inline-flex; align-items: center; gap: 7px; }
+.is-strip-collapsed .pt-strip{ overflow: hidden; }
+.is-strip-collapsed .pt-strip-head{ flex-direction: column; gap: 12px; padding: 12px 6px; }
+.is-strip-collapsed .pt-strip-head-label{ writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap; font-size: 12px; color: var(--hub-text-soft); }
+.is-strip-collapsed .pt-strip-count,
+.is-strip-collapsed .pt-strip-search,
+.is-strip-collapsed .pt-strip-list{ display: none; }
+
+/* big LIVE PREVIEW stage — the centerpiece of the export room */
+.pt-preview-stage{
+  display: grid; place-items: center; gap: 12px;
+  padding: 20px; min-height: 340px;
+  background: linear-gradient(180deg, #F8FAFC, #EEF7FB);
+  border-radius: var(--hub-r-xl);
+}
+.pt-preview-stage svg,
+.pt-preview-stage img{
+  width: 100%; max-width: 580px; height: auto; display: block;
+  border-radius: 10px;
+  filter: drop-shadow(0 18px 40px rgba(15,23,42,.22));
+}
+.pt-preview-stage.is-vertical svg,
+.pt-preview-stage.is-vertical img{ max-width: 340px; }
+.pt-preview-loading{ color: var(--hub-text-mute); font-size: 13px; font-weight: 800; display: inline-flex; align-items: center; gap: 8px; }
+.pt-preview-caption{ font-size: 12px; color: var(--hub-text-soft); font-weight: 800; }
+
+@media (max-width: 980px){
+  .pt-export{ grid-template-columns: 1fr; }
+  .pt-export.is-strip-collapsed{ grid-template-columns: 1fr; }
+  .pt-strip{ position: static; max-height: 360px; }
+}

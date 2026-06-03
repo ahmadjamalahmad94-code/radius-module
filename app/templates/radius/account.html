@@ -12,14 +12,14 @@
 
 <div class="hub-grid hub-grid--2">
   {% call hub.section("بيانات الحساب", icon="id-card") %}
-    <div class="hub-detail-list">
-      <div><span>اسم المستخدم</span><strong class="mono">{{ admin.username }}</strong></div>
-      <div><span>الاسم</span><strong>{{ admin.full_name or "—" }}</strong></div>
-      <div><span>البريد</span><strong class="mono">{{ admin.email or "—" }}</strong></div>
-      <div><span>نوع الإدارة</span><strong>{{ "من لوحة التراخيص" if admin.managed_by_license_admin else "محلي" }}</strong></div>
-      <div><span>معرّف المستخدم في لوحة التراخيص</span><strong class="mono">{{ admin.external_subject or "—" }}</strong></div>
-      <div><span>إصدار كلمة المرور</span><strong class="mono">{{ admin.external_password_version or 0 }}</strong></div>
-    </div>
+    {{ hub.kv([
+      {'label': 'اسم المستخدم', 'value': admin.username, 'mono': True},
+      {'label': 'الاسم', 'value': admin.full_name or '—'},
+      {'label': 'البريد', 'value': admin.email or '—', 'mono': True},
+      {'label': 'نوع الإدارة', 'value': 'من لوحة التراخيص' if admin.managed_by_license_admin else 'محلي'},
+      {'label': 'معرّف المستخدم في لوحة التراخيص', 'value': admin.external_subject or '—', 'mono': True},
+      {'label': 'إصدار كلمة المرور', 'value': admin.external_password_version or 0, 'mono': True},
+    ]) }}
   {% endcall %}
 
   {% call hub.section("تغيير كلمة المرور", icon="key") %}
