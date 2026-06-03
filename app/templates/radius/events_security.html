@@ -7,24 +7,97 @@
 {% block page_sub %}<span class="sub">أحداث الأمان ومحاولات الدخول والتنبيهات المفتوحة التي تحتاج مراجعة.</span>{% endblock %}
 {% block head_extra %}{{ super() }}<link rel="stylesheet" href="{{ url_for('static', filename='css/ops_risk_redesign.css') }}">{% endblock %}
 
+{# ── Severity → pill variant ─────────────────────────────────── #}
+{% set _sev_variant = {'info': 'blue', 'warning': 'amber', 'error': 'red', 'critical': 'red'} %}
+
 {% block content %}
-<div class="opsx-redesign">
-{{ hub.hero("أحداث الأمان", subtitle="يتم تجميع محاولات الدخول الفاشلة وأحداث الصلاحيات والتنبيهات المفتوحة هنا للمراجعة.", icon="lock") }}
+
+{# ───── Unified hero: title + subtitle + KPI strip (no filters on this page) ───── #}
+{{ hub.megahero(
+  "أحداث الأمان",
+  subtitle="يتم تجميع محاولات الدخول الفاشلة وأحداث الصلاحيات والتنبيهات المفتوحة هنا للمراجعة. هذه الصفحة للعرض فقط.",
+  icon="lock",
+  kpis=[
+    {'label': 'أحداث الأمان',       'value': events|length, 'icon': 'lock',  'variant': 'brand'},
+    {'label': 'التنبيهات المفتوحة', 'value': flags|length,  'icon': 'flag',  'variant': 'amber'},
+  ]
+) }}
+
 {% include "radius/events_nav.html" %}
 
-{% call hub.section("أحداث الأمان", icon="lock", flush=True) %}
-  <div class="hub-table-wrap">
-    <table class="hub-table" data-testid="security-events-table">
-      <thead><tr><th>الرقم</th><th>الخطورة</th><th>المفتاح</th><th>الهدف</th><th>الرسالة</th></tr></thead>
-      <tbody>
-        {% for event in events %}
-          <tr><td>#{{ event.id }}</td><td>{{ event.severity }}</td><td>{{ event.event_key }}</td><td>{{ event.target_type }} #{{ event.target_id or '' }}</td><td>{{ event.message }}</td></tr>
-        {% else %}
-          <tr><td colspan="5">لا توجد أحداث أمان حتى الآن.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+{# ───── Main (carded tables) + help panel on the LEFT ───── #}
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "كيف تقرأ هذه الصفحة؟",
+  intro="تعرض هذه الصفحة أحداث الأمان المسجَّلة والتنبيهات المفتوحة التي تحتاج إلى مراجعة.",
+  items=[
+    {'icon': 'hashtag',               'text': 'الرقم هو معرّف الحدث أو التنبيه داخل النظام.'},
+    {'icon': 'triangle-exclamation',  'text': 'الخطورة تساعدك على تمييز الأحداث الحرجة عن العادية.'},
+    {'icon': 'key',                   'text': 'المفتاح يحدّد نوع الحدث ومصدره.'},
+    {'icon': 'flag',                  'text': 'التنبيهات المفتوحة تحتاج إلى متابعة قبل إغلاقها.'},
+  ],
+  note="هذه الصفحة للعرض فقط — لا توجد إجراءات حذف أو تعديل من هنا."
+)) %}
+
+  {% call hub.section("أحداث الأمان", icon="lock", meta=events|length|string + " حدث", flush=True) %}
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="15" style="border:none;border-radius:0">
+      <table class="hub-table" data-uds-table data-testid="security-events-table">
+        <thead>
+          <tr>
+            <th class="num">الرقم</th>
+            <th>الخطورة</th>
+            <th data-uds-nosort>المفتاح</th>
+            <th data-uds-nosort>الهدف</th>
+            <th data-uds-nosort>الرسالة</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for event in events %}
+            <tr>
+              <td class="num">#{{ event.id }}</td>
+              <td>{{ hub.pill(event.severity, variant=_sev_variant.get(event.severity, 'grey')) }}</td>
+              <td class="mono small">{{ event.event_key }}</td>
+              <td>{{ event.target_type }} #{{ event.target_id or '' }}</td>
+              <td>{{ event.message }}</td>
+            </tr>
+          {% else %}
+            <tr><td colspan="5">{{ hub.empty("لا توجد أحداث أمان حتى الآن.", icon="lock") }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endcall %}
+
+  {% call hub.section("التنبيهات المفتوحة", icon="flag", meta=flags|length|string + " تنبيه", flush=True) %}
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="15" style="border:none;border-radius:0">
+      <table class="hub-table" data-uds-table data-testid="security-flags-table">
+        <thead>
+          <tr>
+            <th class="num">الرقم</th>
+            <th data-uds-nosort>المفتاح</th>
+            <th>الخطورة</th>
+            <th class="num">النقاط</th>
+            <th data-uds-nosort>الكيان</th>
+            <th data-uds-nosort>الملخص</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for flag in flags %}
+            <tr>
+              <td class="num">#{{ flag.id }}</td>
+              <td class="mono small">{{ flag.flag_key }}</td>
+              <td>{{ hub.pill(flag.severity, variant=_sev_variant.get(flag.severity, 'grey')) }}</td>
+              <td class="num">{{ flag.risk_score }}</td>
+              <td>{{ flag.entity_type }} #{{ flag.entity_id or '' }}</td>
+              <td>{{ flag.summary }}</td>
+            </tr>
+          {% else %}
+            <tr><td colspan="6">{{ hub.empty("لا توجد تنبيهات مفتوحة حتى الآن.", icon="flag") }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endcall %}
+
 {% endcall %}
-</div>
+
 {% endblock %}

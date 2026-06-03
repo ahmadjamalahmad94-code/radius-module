@@ -8,42 +8,83 @@
 {% block head_extra %}{{ super() }}<link rel="stylesheet" href="{{ url_for('static', filename='css/ops_risk_redesign.css') }}">{% endblock %}
 
 {% block content %}
-<div class="opsx-redesign">
-{{ hub.hero("التحقيقات", subtitle="افتح حالات مراجعة مرتبطة بالأحداث والتنبيهات. هذا تتبع فقط وليس إصلاحًا تلقائيًا.", icon="magnifying-glass-chart") }}
+
+{% set _open = investigations|selectattr('status', 'equalto', 'open')|list|length %}
+{% set _critical = investigations|selectattr('severity', 'equalto', 'critical')|list|length %}
+
+{# ───── Unified hero: title + subtitle + KPI strip (no filters on this page) ───── #}
+{{ hub.megahero(
+  "التحقيقات",
+  subtitle="افتح حالات مراجعة مرتبطة بالأحداث والتنبيهات. هذا تتبع فقط وليس إصلاحًا تلقائيًا.",
+  icon="magnifying-glass-chart",
+  kpis=[
+    {'label': 'إجمالي التحقيقات', 'value': investigations|length, 'icon': 'folder-open',          'variant': 'brand'},
+    {'label': 'مفتوحة',          'value': _open,                  'icon': 'folder-tree',          'variant': 'amber'},
+    {'label': 'حرجة',            'value': _critical,              'icon': 'triangle-exclamation', 'variant': 'red'},
+  ]
+) }}
+
 {% include "radius/events_nav.html" %}
 
-{% call hub.section("فتح تحقيق", icon="plus") %}
-  <form method="post" class="hub-form-grid" data-testid="investigation-form">
-    <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-    <label>العنوان <input name="title" required></label>
-    <label>الخطورة
-      <select name="severity">
-        <option value="info">معلومة</option>
-        <option value="warning">تحذير</option>
-        <option value="error">خطأ</option>
-        <option value="critical">حرج</option>
-      </select>
-    </label>
-    <label>نوع الكيان <input name="entity_type"></label>
-    <label>رقم الكيان <input name="entity_id" type="number"></label>
-    <label class="hub-form-span">الملخص <textarea name="summary" rows="4"></textarea></label>
-    <button class="hub-btn hub-btn--primary" type="submit">فتح التحقيق</button>
-  </form>
+{# ───── Main (open form + carded table) + help panel on the LEFT ───── #}
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "كيف تقرأ هذه الصفحة؟",
+  intro="كل صف هو حالة مراجعة بشرية فُتحت لملاحظة مخاطر أو احتيال. هذه الصفحة للتتبع فقط.",
+  items=[
+    {'icon': 'plus',                 'text': 'استخدم نموذج «فتح تحقيق» لبدء حالة مراجعة جديدة مرتبطة بكيان.'},
+    {'icon': 'triangle-exclamation', 'text': 'الخطورة تساعدك على ترتيب الحالات الحرجة قبل العادية.'},
+    {'icon': 'link',                 'text': 'نوع الكيان ورقمه يربطان التحقيق بالعنصر المعني في النظام.'},
+    {'icon': 'folder-open',          'text': 'الحالة تبقى «مفتوحة» حتى تكتمل المراجعة البشرية.'},
+  ],
+  note="فتح تحقيق لا يطبّق أي إجراء تلقائي — إنه سجل مراجعة بشرية فقط."
+)) %}
+  {% call hub.section("فتح تحقيق", icon="plus") %}
+    <form method="post" class="hub-form-grid" data-testid="investigation-form">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+      <label>العنوان <input class="hub-input" name="title" required></label>
+      <label>الخطورة
+        <select class="hub-input" name="severity">
+          <option value="info">معلومة</option>
+          <option value="warning">تحذير</option>
+          <option value="error">خطأ</option>
+          <option value="critical">حرج</option>
+        </select>
+      </label>
+      <label>نوع الكيان <input class="hub-input" name="entity_type"></label>
+      <label>رقم الكيان <input class="hub-input" name="entity_id" type="number"></label>
+      <label class="hub-form-span">الملخص <textarea class="hub-input" name="summary" rows="4"></textarea></label>
+      {{ hub.btn("فتح التحقيق", icon="folder-plus", variant="primary", type="submit") }}
+    </form>
+  {% endcall %}
+
+  {% call hub.section("التحقيقات", icon="folder-open", meta=investigations|length|string + " تحقيق", flush=True) %}
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="15" style="border:none;border-radius:0">
+      <table class="hub-table" data-testid="investigations-table">
+        <thead>
+          <tr>
+            <th class="num">الرقم</th>
+            <th>العنوان</th>
+            <th>الحالة</th>
+            <th>الخطورة</th>
+            <th>الكيان</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in investigations %}
+            <tr>
+              <td class="num mono">#{{ item.id }}</td>
+              <td>{{ item.title }}</td>
+              <td>{{ hub.pill(item.status, variant=("green" if item.status == "closed" else "amber"), dot=True) }}</td>
+              <td>{{ hub.pill(item.severity, variant=("red" if item.severity in ("critical", "error") else ("amber" if item.severity == "warning" else "grey")), dot=False) }}</td>
+              <td>{{ item.entity_type }} #{{ item.entity_id or '' }}</td>
+            </tr>
+          {% else %}
+            <tr><td colspan="5">لا توجد تحقيقات بعد.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endcall %}
 {% endcall %}
 
-{% call hub.section("التحقيقات", icon="folder-open", flush=True) %}
-  <div class="hub-table-wrap">
-    <table class="hub-table" data-testid="investigations-table">
-      <thead><tr><th>الرقم</th><th>العنوان</th><th>الحالة</th><th>الخطورة</th><th>الكيان</th></tr></thead>
-      <tbody>
-        {% for item in investigations %}
-          <tr><td>#{{ item.id }}</td><td>{{ item.title }}</td><td>{{ item.status }}</td><td>{{ item.severity }}</td><td>{{ item.entity_type }} #{{ item.entity_id or '' }}</td></tr>
-        {% else %}
-          <tr><td colspan="5">لا توجد تحقيقات بعد.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-{% endcall %}
-</div>
 {% endblock %}
