@@ -5,46 +5,58 @@
 {% set cost = result.cost %}
 
 {% block title %}تفاصيل الدفعة المالية — Hobe Hub{% endblock %}
-{% block page_icon %}<i class="fa-solid fa-file-invoice-dollar"></i>{% endblock %}
-{% block page_title %}تفاصيل تكلفة الدفعة{% endblock %}
-{% block page_sub %}<span class="sub">لقطة مالية للدفعة والكروت المرتبطة بها</span>{% endblock %}
 
 {% block content %}
-{{ hub.hero(
+{{ hub.megahero(
   batch.batch_code,
-  subtitle="تفاصيل الدفعة المالية بدون حذف أو تعديل مباشر.",
+  subtitle="تفاصيل الدفعة المالية بدون حذف أو تعديل مباشر — لقطة مالية للدفعة والكروت المرتبطة بها.",
   icon="file-invoice-dollar",
-  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.card_pricing') ~ '"><i class="fa-solid fa-arrow-right"></i> التسعير</a>'
+  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.card_pricing') ~ '"><i class="fa-solid fa-arrow-right"></i> التسعير</a>',
+  kpis=[
+    {'label': 'العدد', 'value': cost.count or batch.count, 'icon': 'ticket'},
+    {'label': 'إجمالي البيع', 'value': (cost.total_retail_minor or 0) / 100, 'icon': 'tag', 'variant': 'green'},
+    {'label': 'إجمالي التكلفة', 'value': (cost.total_wholesale_minor or 0) / 100, 'icon': 'calculator', 'variant': 'amber'},
+    {'label': 'الحالة', 'value': cost.status or batch.status, 'icon': 'signal', 'variant': 'blue'},
+  ]
 ) }}
 
-<div class="hub-kpi-grid" data-testid="batch-financial-summary">
-  {{ hub.kpi("العدد", cost.count or batch.count, icon="ticket") }}
-  {{ hub.kpi("إجمالي البيع", (cost.total_retail_minor or 0) / 100, icon="tag", variant="green") }}
-  {{ hub.kpi("إجمالي التكلفة", (cost.total_wholesale_minor or 0) / 100, icon="calculator", variant="amber") }}
-  {{ hub.kpi("الحالة", cost.status or batch.status, icon="signal", variant="blue") }}
-</div>
+{% set _help = hub.helppanel(
+  "كيف تقرأ هذه الصفحة",
+  intro="لقطة مالية للدفعة: ملخص التكلفة، روابط القيود المحاسبية، وقائمة الكروت المولدة.",
+  icon="compass",
+  items=[
+    {'icon': 'tags', 'text': 'الملخص أعلى الصفحة يوضح العدد وإجمالي البيع والتكلفة والحالة.'},
+    {'icon': 'book', 'text': 'سجل التكلفة يربط الدفعة بحركة المحفظة والقيد المحاسبي ولقطة السعر.'},
+    {'icon': 'ticket', 'text': 'جدول الكروت يعرض الكروت المولدة في هذا المسار المالي وحالة استخدامها.'},
+  ],
+  note="هذه الصفحة للعرض فقط — لا تتم أي عملية حذف أو تعديل مباشر منها."
+) %}
 
-{% call hub.section("سجل التكلفة", icon="book") %}
-  <div class="hub-tile-grid">
-    {{ hub.tile("حركة المحفظة", cost.wallet_transaction_id or "—", icon="wallet") }}
-    {{ hub.tile("قيد المحاسبة", cost.ledger_entry_id or "—", icon="book") }}
-    {{ hub.tile("سجل الإيراد", cost.revenue_record_id or "—", icon="sack-dollar") }}
-    {{ hub.tile("لقطة السعر", cost.price_snapshot_id or "—", icon="camera") }}
-  </div>
-{% endcall %}
+{% call hub.worklayout(aside_html=_help) %}
 
-{% call hub.section("الكروت", icon="ticket", flush=True) %}
-  <div class="hub-table-wrap">
-    <table class="hub-table" data-testid="batch-cards-table">
-      <thead><tr><th>اسم المستخدم</th><th>الحالة</th><th>تاريخ الإنشاء</th></tr></thead>
-      <tbody>
-        {% for card in result.cards %}
-          <tr><td>{{ card.username }}</td><td>{{ "مستخدم" if card.used else "غير مستخدم" }}</td><td>{{ card.created_at|dt_local if card.created_at else '—' }}</td></tr>
-        {% else %}
-          <tr><td colspan="3">لم يتم توليد الكروت في هذا المسار المالي.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+  {% call hub.section("سجل التكلفة", icon="book") %}
+    <div class="hub-tile-grid" data-testid="batch-financial-summary">
+      {{ hub.tile("حركة المحفظة", cost.wallet_transaction_id or "—", icon="wallet") }}
+      {{ hub.tile("قيد المحاسبة", cost.ledger_entry_id or "—", icon="book") }}
+      {{ hub.tile("سجل الإيراد", cost.revenue_record_id or "—", icon="sack-dollar") }}
+      {{ hub.tile("لقطة السعر", cost.price_snapshot_id or "—", icon="camera") }}
+    </div>
+  {% endcall %}
+
+  {% call hub.section("الكروت", icon="ticket", flush=True) %}
+    <div class="uds-table-wrap" data-uds-table>
+      <table class="uds-table" data-testid="batch-cards-table">
+        <thead><tr><th>اسم المستخدم</th><th>الحالة</th><th>تاريخ الإنشاء</th></tr></thead>
+        <tbody>
+          {% for card in result.cards %}
+            <tr><td>{{ card.username }}</td><td>{{ "مستخدم" if card.used else "غير مستخدم" }}</td><td>{{ card.created_at|dt_local if card.created_at else '—' }}</td></tr>
+          {% else %}
+            <tr><td colspan="3">لم يتم توليد الكروت في هذا المسار المالي.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endcall %}
+
 {% endcall %}
 {% endblock %}

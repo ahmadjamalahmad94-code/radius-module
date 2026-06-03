@@ -1,16 +1,9 @@
-{# Cards batch edit — REBUILT N8 (hub-v2). Backend data: batch, plans, form, speed_rules_panel. #}
+{# Cards batch edit — UDS. Backend data: batch, plans, form, speed_rules_panel. #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 {% from "_partials/toggle_switch.html" import toggle_switch %}
 
 {% block title %}تعديل باقة كروت{% endblock %}
-{% block page_icon %}<i class="fa-solid fa-pen-to-square"></i>{% endblock %}
-{% block page_title %}تعديل باقة كروت {{ batch.batch_code }}{% endblock %}
-{% block page_sub %}<span class="sub">لا يتم إعادة توليد أسماء الدخول أو كلمات المرور عند الحفظ.</span>{% endblock %}
-
-{% macro checked(name) -%}
-  {%- if form.get(name) in [true, 1, '1', 'true', 'on', 'yes'] -%}checked{%- endif -%}
-{%- endmacro %}
 
 {% block content %}
 
@@ -25,10 +18,26 @@
     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.cards_batches') + '">
       <i class="fa-solid fa-arrow-right-from-bracket"></i> كل الحزم
     </a>
+    <button class="hub-btn hub-btn--primary" type="submit" form="batch-edit-form">
+      <i class="fa-solid fa-floppy-disk"></i> حفظ التعديلات
+    </button>
   '
 ) }}
 
-<form method="post" action="{{ url_for('radius.cards_batch_edit', batch_id=batch.id) }}" class="hub-form">
+{% call hub.worklayout(aside_html=hub.helppanel(
+    "كيف تُحرّر هذه الباقة",
+    intro="هذه الشاشة تعدّل إعدادات باقة كروت موجودة دون إعادة توليد أسماء الدخول أو كلمات المرور.",
+    icon="circle-question",
+    items=[
+      {"icon": "box", "text": "بيانات الباقة: الربط بالعرض، السعر، الحالة والحصة."},
+      {"icon": "dice", "text": "إعدادات التوليد: تتحكم بالكروت الجديدة فقط، لا تُعاد على الموجود."},
+      {"icon": "clock", "text": "الصلاحية والسلوك: المدة، الأجهزة وخيارات التشغيل."},
+      {"icon": "gauge-high", "text": "قواعد السرعة تُطبّق على كل بطاقات هذه الحزمة."},
+    ],
+    note="لا يتم إعادة توليد أسماء الدخول أو كلمات المرور عند الحفظ."
+)) %}
+
+<form id="batch-edit-form" method="post" action="{{ url_for('radius.cards_batch_edit', batch_id=batch.id) }}" class="hub-form">
 
   {# ───── Plan & pricing ──────────────────────────────────── #}
   {% call hub.section("بيانات الباقة", icon="box") %}
@@ -56,16 +65,16 @@
                  value="{{ form.get('count') or batch.count }}">
           <div class="hub-field-hint">لا يمكن تقليل العدد تحت عدد الكروت المُولَّدة.</div>
         </div>
+      </div>
 
-        <div class="hub-field">
-          <label class="hub-field-label">الحالة</label>
-          {% set st = form.get('status') or batch.status %}
-          <select class="hub-select" name="status">
-            <option value="active"    {% if st == 'active' %}selected{% endif %}>نشطة</option>
-            <option value="exhausted" {% if st == 'exhausted' %}selected{% endif %}>مستهلكة</option>
-            <option value="revoked"   {% if st == 'revoked' %}selected{% endif %}>ملغاة</option>
-          </select>
-        </div>
+      <div class="hub-field">
+        <label class="hub-field-label">الحالة</label>
+        {% set st = form.get('status') or batch.status %}
+        {{ hub.cardselect("status", [
+          {"value": "active",    "title": "نشطة",   "icon": "circle-check"},
+          {"value": "exhausted", "title": "مستهلكة", "icon": "battery-empty"},
+          {"value": "revoked",   "title": "ملغاة",   "icon": "ban"},
+        ], value=st) }}
       </div>
 
       <div class="hub-form-row">
@@ -123,25 +132,27 @@
           <input class="hub-input" type="number" min="4" max="64" name="password_length"
                  value="{{ form.get('password_length') or 6 }}">
         </div>
-        <div class="hub-field">
-          <label class="hub-field-label">نمط كلمة المرور</label>
-          {% set pgt = form.get('password_generation_type') or 'medium' %}
-          <select class="hub-select" name="password_generation_type">
-            <option value="digits" {% if pgt == 'digits' %}selected{% endif %}>أرقام فقط</option>
-            <option value="weak"   {% if pgt == 'weak' %}selected{% endif %}>حروف</option>
-            <option value="medium" {% if pgt == 'medium' %}selected{% endif %}>متوسط</option>
-            <option value="strong" {% if pgt == 'strong' %}selected{% endif %}>قوي</option>
-          </select>
-        </div>
-        <div class="hub-field">
-          <label class="hub-field-label">موضع الإضافة</label>
-          {% set side = form.get('starts_with_or_ends_with') or '' %}
-          <select class="hub-select" name="starts_with_or_ends_with">
-            <option value=""       {% if not side %}selected{% endif %}>بدون</option>
-            <option value="prefix" {% if side == 'prefix' %}selected{% endif %}>قبل الاسم</option>
-            <option value="suffix" {% if side == 'suffix' %}selected{% endif %}>بعد الاسم</option>
-          </select>
-        </div>
+      </div>
+
+      <div class="hub-field">
+        <label class="hub-field-label">نمط كلمة المرور</label>
+        {% set pgt = form.get('password_generation_type') or 'medium' %}
+        {{ hub.cardselect("password_generation_type", [
+          {"value": "digits", "title": "أرقام فقط", "icon": "hashtag"},
+          {"value": "weak",   "title": "حروف",      "icon": "font"},
+          {"value": "medium", "title": "متوسط",     "icon": "shield-halved"},
+          {"value": "strong", "title": "قوي",       "icon": "shield"},
+        ], value=pgt) }}
+      </div>
+
+      <div class="hub-field">
+        <label class="hub-field-label">موضع الإضافة</label>
+        {% set side = form.get('starts_with_or_ends_with') or '' %}
+        {{ hub.cardselect("starts_with_or_ends_with", [
+          {"value": "",       "title": "بدون",      "icon": "minus"},
+          {"value": "prefix", "title": "قبل الاسم", "icon": "arrow-right-to-bracket"},
+          {"value": "suffix", "title": "بعد الاسم", "icon": "arrow-right-from-bracket"},
+        ], value=side) }}
       </div>
 
       <div class="hub-form-row">
@@ -177,27 +188,29 @@
                  value="{{ form.get('time_value') or 0 }}">
         </div>
         <div class="hub-field">
-          <label class="hub-field-label">وحدة الوقت</label>
-          {% set tu = form.get('time_unit') or 'days' %}
-          <select class="hub-select" name="time_unit">
-            <option value="minutes" {% if tu == 'minutes' %}selected{% endif %}>دقائق</option>
-            <option value="hours"   {% if tu == 'hours' %}selected{% endif %}>ساعات</option>
-            <option value="days"    {% if tu == 'days' %}selected{% endif %}>أيام</option>
-          </select>
-        </div>
-        <div class="hub-field">
           <label class="hub-field-label">عدد الأجهزة</label>
           <input class="hub-input" type="number" min="1" max="50" name="device_count"
                  value="{{ form.get('device_count') or 1 }}">
         </div>
-        <div class="hub-field">
-          <label class="hub-field-label">وضع المدة</label>
-          {% set dm = form.get('duration_mode') or 'time_unit' %}
-          <select class="hub-select" name="duration_mode">
-            <option value="time_unit" {% if dm == 'time_unit' %}selected{% endif %}>حسب الوحدة</option>
-            <option value="seconds"   {% if dm == 'seconds' %}selected{% endif %}>بالثواني</option>
-          </select>
-        </div>
+      </div>
+
+      <div class="hub-field">
+        <label class="hub-field-label">وحدة الوقت</label>
+        {% set tu = form.get('time_unit') or 'days' %}
+        {{ hub.cardselect("time_unit", [
+          {"value": "minutes", "title": "دقائق", "icon": "stopwatch"},
+          {"value": "hours",   "title": "ساعات", "icon": "clock"},
+          {"value": "days",    "title": "أيام",  "icon": "calendar-day"},
+        ], value=tu) }}
+      </div>
+
+      <div class="hub-field">
+        <label class="hub-field-label">وضع المدة</label>
+        {% set dm = form.get('duration_mode') or 'time_unit' %}
+        {{ hub.cardselect("duration_mode", [
+          {"value": "time_unit", "title": "حسب الوحدة", "icon": "ruler"},
+          {"value": "seconds",   "title": "بالثواني",   "icon": "stopwatch-20"},
+        ], value=dm) }}
       </div>
 
       <div class="hub-form-row">
@@ -206,15 +219,16 @@
           <input class="hub-input" type="number" min="0" name="validity_after_first_login_days"
                  value="{{ form.get('validity_after_first_login_days') or 0 }}">
         </div>
-        <div class="hub-field">
-          <label class="hub-field-label">عند انتهاء الحصة</label>
-          {% set oqe = form.get('on_quota_exhaust') or 'stop' %}
-          <select class="hub-select" name="on_quota_exhaust">
-            <option value="stop"         {% if oqe == 'stop' %}selected{% endif %}>إيقاف</option>
-            <option value="reduce_speed" {% if oqe == 'reduce_speed' %}selected{% endif %}>تخفيض السرعة</option>
-            <option value="notify"       {% if oqe == 'notify' %}selected{% endif %}>تنبيه فقط</option>
-          </select>
-        </div>
+      </div>
+
+      <div class="hub-field">
+        <label class="hub-field-label">عند انتهاء الحصة</label>
+        {% set oqe = form.get('on_quota_exhaust') or 'stop' %}
+        {{ hub.cardselect("on_quota_exhaust", [
+          {"value": "stop",         "title": "إيقاف",        "icon": "stop"},
+          {"value": "reduce_speed", "title": "تخفيض السرعة", "icon": "gauge-simple-low"},
+          {"value": "notify",       "title": "تنبيه فقط",    "icon": "bell"},
+        ], value=oqe) }}
       </div>
     {% endcall %}
 
@@ -251,5 +265,7 @@
     {{ hub.btn("حفظ التعديلات", icon="floppy-disk", variant="primary", type="submit") }}
   </div>
 </form>
+
+{% endcall %}
 
 {% endblock %}
