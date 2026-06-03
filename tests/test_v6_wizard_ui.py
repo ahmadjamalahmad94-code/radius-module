@@ -48,18 +48,18 @@ def test_add_form_renders_v6_tunnel_strategy(app):
         _auth(client)
         html = client.get("/admin/radius/mt/setup").get_data(as_text=True)
     # SSTP management card (recommended, management-only, no default route)
-    assert "نفق الإدارة عبر SSTP" in html
+    assert "نفق الإدارة الموصى به" in html
     assert "موصى به للإدارة" in html
-    assert "لن يتم ضبط Default Route على نفق SSTP" in html
+    assert "لن يتم ضبط المسار الافتراضي على نفق الإدارة" in html
     assert 'name="sstp_verify_certificate"' in html
     # L2TP/IPsec advanced traffic section
-    assert "نفق تغيير IP (تمرير الترافيك)" in html
+    assert "نفق تغيير العنوان وتمرير الحركة" in html
     assert "متقدم" in html
     assert 'name="traffic_mode"' in html
     assert 'name="full_tunnel_confirmed"' in html
-    assert "أفهم أن تمرير كل الترافيك قد يسبب انقطاعًا" in html
+    assert "أفهم أن تمرير كل الحركة قد يسبب انقطاعًا" in html
     # routing conflict warning
-    assert "لا يمكن جعل SSTP و L2TP/IPsec يملكان Default Route بنفس الوقت" in html
+    assert "لا يمكن جعل نفق الإدارة ونفق الحركة يملكان مسارًا افتراضيًا في الوقت نفسه" in html
     # v6 block is hidden by default (v7 is the default selection)
     assert "data-mt-v6-tunnels" in html
 

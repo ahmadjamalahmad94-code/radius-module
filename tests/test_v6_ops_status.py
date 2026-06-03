@@ -66,9 +66,9 @@ def test_ops_page_shows_configured_tunnels(app):
         html = client.get("/admin/radius/mt/operations").get_data(as_text=True)
     assert "data-mt-tunnels" in html
     assert "إدارة:" in html
-    assert "SSTP" in html
-    assert "ترافيك:" in html
-    assert "L2TP/IPsec" in html
+    assert "نفق إدارة" in html
+    assert "حركة الإنترنت:" in html
+    assert "نفق مشف" in html
     assert "policy_routing" in html
 
 

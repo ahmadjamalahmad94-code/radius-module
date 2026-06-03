@@ -42,11 +42,11 @@ def test_wizard_offers_protocol_choice_with_pptp_warning(app):
         _auth(client)
         html = client.get("/admin/radius/mt/setup").get_data(as_text=True)
     assert 'name="traffic_protocol"' in html
-    assert "L2TP/IPsec — موصى به" in html
-    assert "PPTP — قديم وغير آمن" in html
+    assert "النفق المشف" in html
+    assert "النفق القديم غير الآمن" in html
     # the PPTP insecurity warning block exists (toggled by JS)
     assert "data-mt-pptp-warn" in html
-    assert "تشفيره (MS-CHAPv2) مخترَق" in html
+    assert "النفق القديم غير آمن" in html
     # L2TP/IPsec is the default selected option (PPTP is never default)
     assert 'value="l2tp_ipsec" selected' in html
 
@@ -66,5 +66,5 @@ def test_ops_badge_marks_pptp_as_insecure(app):
     with app.test_client() as client:
         _auth(client)
         html = client.get("/admin/radius/mt/operations").get_data(as_text=True)
-    assert "PPTP" in html
+    assert "نفق قديم" in html
     assert "غير آمن" in html
