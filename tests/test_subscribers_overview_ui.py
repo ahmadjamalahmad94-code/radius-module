@@ -38,6 +38,18 @@ def configured_plan(app):
     with transaction() as conn:
         conn.execute(
             """
+            INSERT OR IGNORE INTO access_plans(
+              id, tenant_id, name, code, plan_type, service_type, typebp,
+              limit_type, price, duration_minutes, validity_days, enabled
+            )
+            VALUES (
+              1, 1, 'Subscribers Overview Plan', 'sov_plan', 'time',
+              'Hotspot', 'Limited', 'Time_Limit', 150, 43200, 30, 1
+            )
+            """
+        )
+        conn.execute(
+            """
             UPDATE access_plans
             SET price = 150, duration_minutes = 43200, validity_days = 30
             WHERE tenant_id = 1 AND id = 1
