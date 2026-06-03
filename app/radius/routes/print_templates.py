@@ -241,6 +241,51 @@ def _uploaded_background(*, allow_data_url: bool = True) -> dict:
     return _background_from_data_url() if allow_data_url else {}
 
 
+def _logo_from_data_url() -> dict:
+    """Optimize the logo from its hidden data-URL field, mapped to logo_* keys.
+
+    Mirrors `_background_from_data_url` but namespaces the output so a logo
+    never collides with the background image. Returns {} when no logo is set.
+    """
+    data_url = (request.form.get("logo_image_data_url") or "").strip()
+    if not data_url.startswith("data:image/") or ";base64," not in data_url:
+        return {}
+    mime_part, encoded = data_url.split(";base64,", 1)
+    mime = mime_part.removeprefix("data:").lower()
+    if mime not in {"image/png", "image/jpeg", "image/jpg", "image/webp"}:
+        return {}
+    try:
+        raw = base64.b64decode(encoded, validate=True)
+    except (binascii.Error, ValueError) as exc:
+        raise RadiusError("تعذّر حفظ الشعار من المعاينة. اختر الصورة مرة أخرى.") from exc
+    if not raw:
+        return {}
+    filename = request.form.get("logo_image_name") or "card-logo"
+    optimized = _optimize_background_image(raw, filename, mime)
+    return {
+        "logo_image_data_url": optimized["background_image_data_url"],
+        "logo_image_name": optimized["background_image_name"],
+        "logo_image_mime": optimized["background_image_mime"],
+    }
+
+
+def _uploaded_logo(*, allow_data_url: bool = True) -> dict:
+    upload = request.files.get("logo_image")
+    if upload and upload.filename:
+        raw = upload.read()
+        if raw:
+            mime = (upload.mimetype or "").lower()
+            if mime not in {"image/png", "image/jpeg", "image/jpg", "image/webp"}:
+                raise RadiusError("نوع الشعار غير مدعوم. استخدم PNG أو JPG أو WEBP.")
+            optimized = _optimize_background_image(raw, upload.filename, mime)
+            return {
+                "logo_image_data_url": optimized["background_image_data_url"],
+                "logo_image_name": optimized["background_image_name"],
+                "logo_image_mime": optimized["background_image_mime"],
+            }
+    return _logo_from_data_url() if allow_data_url else {}
+
+
 def _payload(*, allow_data_url_background: bool = True) -> dict:
     raw_layout = {
         "render_engine": request.form.get("render_engine"),
@@ -330,6 +375,23 @@ def _payload(*, allow_data_url_background: bool = True) -> dict:
         layout.update(uploaded_background)
     elif layout["background_style"] == "image" and not has_form_background_image:
         layout["background_style"] = "preset"
+
+    # Optional logo (fully additive — absent logo leaves the layout and the
+    # rendered card unchanged). The designer drops the chosen bitmap into a
+    # hidden `logo_image_data_url` field (same pattern as the background
+    # picker) plus optional position (mm) and size (% of card width).
+    uploaded_logo = _uploaded_logo(allow_data_url=allow_data_url_background)
+    if uploaded_logo:
+        layout.update(uploaded_logo)
+    logo_x = _float("logo_x")
+    logo_y = _float("logo_y")
+    logo_size = _float("logo_size_pct")
+    if logo_x:
+        layout["logo_x"] = logo_x
+    if logo_y:
+        layout["logo_y"] = logo_y
+    if logo_size:
+        layout["logo_size_pct"] = logo_size
     return {
         "name": request.form.get("name"),
         # Sheet placement is now an export-only setting. Keep legacy DB
@@ -627,6 +689,12 @@ def print_templates_designer_svg():
     bg_data_url = (request.form.get("background_image_data_url") or "").strip()
     if layout.get("background_style") == "image" and bg_data_url.startswith("data:image/"):
         layout = {**layout, "background_image_data_url": bg_data_url, "background_style": "image"}
+    # Same trick for the logo: the live preview posts the chosen bitmap in a
+    # hidden field, so inject it straight into the layout (the optimizer is
+    # skipped on the per-keystroke path) so the logo shows without saving.
+    logo_data_url = (request.form.get("logo_image_data_url") or "").strip()
+    if logo_data_url.startswith("data:image/"):
+        layout = {**layout, "logo_image_data_url": logo_data_url}
     # The renderer's `_resolve_positions` reads top-level
     # `username_x` / `username_y` / `password_x` / `password_y` /
     # `qr_x` / `qr_y` from the template row, not the layout dict —

@@ -656,6 +656,15 @@ def build_card_render_model(
             "direction": render_direction,
         })
 
+    # Optional logo image. Entirely additive: when no logo data URL is
+    # present in the layout nothing is appended, so existing templates are
+    # byte-for-byte unchanged. Position/size come from the layout in the
+    # same mm-based convention as the draggable pills (0,0 → engine default
+    # top-left corner of the card with a sensible default size).
+    logo_el = _logo_element(layout, (canvas_w, canvas_h))
+    if logo_el is not None:
+        elements.append(logo_el)
+
     return {
         "canvas": {"width": canvas_w, "height": canvas_h},
         "orientation": orient,
@@ -726,6 +735,8 @@ def render_card_svg(model: dict, *, mask_password: bool = True) -> str:
             parts.append(_svg_pill(el, mask_password=mask_password, uid=uid))
         elif kind == "qr":
             parts.append(_svg_qr_placeholder(el))
+        elif kind == "image":
+            parts.append(_svg_image(el))
 
     parts.append('</g>')
     parts.append('</svg>')
@@ -776,6 +787,8 @@ def render_card_pdf(pdf, model: dict, *, form_name: str,
                 _pdf_pill(pdf, el, ch, expose_password=expose_password)
             elif kind == "qr":
                 _pdf_qr(pdf, el, ch)
+            elif kind == "image":
+                _pdf_image(pdf, el, ch)
     finally:
         pdf.endForm()
 
@@ -1096,6 +1109,36 @@ def _pdf_rect(pdf, el: dict, ch: float) -> None:
                  stroke=0, fill=1)
 
 
+def _pdf_image(pdf, el: dict, ch: float) -> None:
+    """Draw a logo / decorative bitmap at model coordinates (top-left).
+
+    Best-effort and fully guarded: any decode/draw failure silently skips
+    the image so a bad logo never breaks the whole export. Aspect ratio is
+    preserved inside the box, mirroring the SVG `xMidYMid meet`.
+    """
+    href = str(el.get("href") or "")
+    if not href.startswith("data:image/") or ";base64," not in href:
+        return
+    try:
+        from io import BytesIO
+        from reportlab.lib.utils import ImageReader
+
+        mime_part, encoded = href.split(";base64,", 1)
+        image_bytes = base64.b64decode(encoded)
+        if mime_part == "data:image/webp":
+            image_bytes = _convert_bitmap_for_reportlab(image_bytes)
+        if mime_part not in {"data:image/png", "data:image/jpeg",
+                             "data:image/jpg", "data:image/webp"}:
+            return
+        image = ImageReader(BytesIO(image_bytes))
+        pdf_y = ch - el["y"] - el["height"]
+        pdf.drawImage(image, el["x"], pdf_y,
+                      width=el["width"], height=el["height"],
+                      preserveAspectRatio=True, mask="auto")
+    except Exception:
+        return
+
+
 def _pdf_text(pdf, el: dict, ch: float) -> None:
     """Draw a text run. The model gives top-left of the text box; we
     convert to PDF baseline by dropping the cap-height (~0.78 × size).
@@ -1413,6 +1456,47 @@ def _credential_label(kind: str, language: str) -> str:
     return "USER" if kind == "user" else "PASS"
 
 
+def _logo_element(layout: dict, canvas: tuple[int, int]) -> dict | None:
+    """Build the optional logo image element, or None when absent.
+
+    The logo is opt-in: it is only drawn when the layout carries a
+    `logo_image_data_url` data URL. Position is expressed in mm in the
+    `logo_x` / `logo_y` keys (same convention as the draggable pills);
+    `logo_size_pct` is the logo box width as a percentage of the card
+    width (0 / missing → a sensible 18% default). When position is the
+    (0,0) sentinel the logo falls back to the top-left corner inset.
+    """
+    image_url = str(layout.get("logo_image_data_url") or "")
+    if not image_url.startswith("data:image/"):
+        return None
+    canvas_w, canvas_h = canvas
+    card_w_mm = max(_float(layout.get("card_width_mm"), 85), 1.0)
+    card_h_mm = max(_float(layout.get("card_height_mm"), 54), 1.0)
+
+    size_pct = _optional_positive_float(layout.get("logo_size_pct"))
+    size_frac = max(0.05, min(0.6, (size_pct / 100.0))) if size_pct else 0.18
+    box = size_frac * canvas_w
+
+    raw_x = _float(layout.get("logo_x"), 0)
+    raw_y = _float(layout.get("logo_y"), 0)
+    if raw_x == 0 and raw_y == 0:
+        # Default inset in the top-left corner.
+        x = canvas_w * 0.06
+        y = canvas_h * 0.06
+    else:
+        x = max(0.0, min(1.0, raw_x / card_w_mm)) * canvas_w
+        y = max(0.0, min(1.0, raw_y / card_h_mm)) * canvas_h
+    return {
+        "kind": "image",
+        "id": "logo",
+        "href": image_url,
+        "x": x,
+        "y": y,
+        "width": box,
+        "height": box,
+    }
+
+
 def _background(layout: dict) -> dict:
     image_url = str(layout.get("background_image_data_url") or "")
     has_image = image_url.startswith("data:image/")
@@ -1640,6 +1724,24 @@ def _svg_rect(el: dict) -> str:
         f'width="{el["width"]:.1f}" height="{el["height"]:.1f}" '
         f'rx="{el.get("rx", 0):.1f}" ry="{el.get("rx", 0):.1f}" '
         f'fill="{_xml(el.get("fill", "#fff"))}"/>'
+    )
+
+
+def _svg_image(el: dict) -> str:
+    """Render a logo / decorative image element.
+
+    Wrapped in `<g class="card-logo">` so the live designer can attach a
+    drag handle the same way it does for `.card-pill` / `.card-qr`. The
+    image keeps its aspect ratio inside the box (xMidYMid meet).
+    """
+    opacity = float(el.get("opacity", 1.0))
+    return (
+        f'<g class="card-logo">'
+        f'<image href="{_xml(el["href"])}" '
+        f'x="{el["x"]:.1f}" y="{el["y"]:.1f}" '
+        f'width="{el["width"]:.1f}" height="{el["height"]:.1f}" '
+        f'preserveAspectRatio="xMidYMid meet" opacity="{opacity:.2f}"/>'
+        f'</g>'
     )
 
 
