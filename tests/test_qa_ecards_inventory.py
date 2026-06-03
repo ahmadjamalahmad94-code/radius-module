@@ -184,6 +184,58 @@ def test_recent_purchases_global_panel(app):
         assert r["items"][0]["buyer_name"] == "GBuyer"
 
 
+def _bind(app):
+    from app.radius.db.connection import reset_for_tests
+    os.environ["HOBERADIUS_DB_PATH"] = app.config["_DBF"]
+    reset_for_tests(app.config["_DBF"])
+
+
+def _login(client):
+    with client.session_transaction() as sess:
+        sess.update(admin_id=1, admin_user="a", admin_name="A",
+                    is_super_admin=True, tenant_id=1, _csrf_token="t")
+
+
+def test_purchases_file_and_marketplace_pages_render(app):
+    with app.app_context():
+        s = _svc()(tenant_id=1)
+        pkg = _inventory_package(s)
+        s.add_inventory_stock(package_id=pkg["id"], count=2, actor="qa")
+        u = s.create_card_user(display_name="PgBuyer", mobile="059")
+        s.recharge_wallet(card_user_id=u["id"], amount="10.00", actor="qa")
+        s.purchase_package(card_user_id=u["id"], package_id=pkg["id"], actor="qa")
+        pid = pkg["id"]
+    _bind(app)
+    client = app.test_client()
+    _login(client)
+    r = client.get(f"/admin/radius/card-marketplace/packages/{pid}/file")
+    assert r.status_code == 200, r.status_code
+    html = r.get_data(as_text=True)
+    assert "ملف مشتريات" in html and "PgBuyer" in html
+    _bind(app)
+    _login(client)
+    assert client.get("/admin/radius/card-marketplace").status_code == 200
+
+
+def test_inventory_generate_via_route(app):
+    with app.app_context():
+        s = _svc()(tenant_id=1)
+        pkg = _inventory_package(s)
+        pid = pkg["id"]
+    _bind(app)
+    client = app.test_client()
+    _login(client)
+    r = client.post(
+        f"/admin/radius/card-marketplace/packages/{pid}/inventory",
+        data={"count": "4", "_csrf_token": "t"}, follow_redirects=False,
+    )
+    assert r.status_code in {302, 303}
+    _bind(app)
+    with app.app_context():
+        pkg = _svc()(tenant_id=1).get_package(pid)
+        assert pkg["inventory_total"] == 4
+
+
 def test_section_default_mode_and_per_offer_override(app):
     with app.app_context():
         s = _svc()(tenant_id=1)
