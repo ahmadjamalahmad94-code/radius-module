@@ -627,6 +627,92 @@ class CardUsersMarketplaceService:
         params.append(int(limit))
         return [_row(row) for row in db().execute(sql, tuple(params)).fetchall()]
 
+    # ─────────────────────── purchases file (paginated) ───────────────────────
+    @staticmethod
+    def _page_args(page: int, per_page: int) -> tuple[int, int, int]:
+        per_page = max(1, min(100, int(per_page or 20)))
+        page = max(1, int(page or 1))
+        return page, per_page, (page - 1) * per_page
+
+    _PURCHASES_SELECT = """
+        SELECT cup.id            AS purchase_id,
+               cup.created_at    AS created_at,
+               cup.amount_minor  AS amount_minor,
+               cup.currency      AS currency,
+               cup.status        AS status,
+               cup.package_id    AS package_id,
+               c.id              AS card_id,
+               c.username        AS username,
+               c.password        AS password,
+               c.used            AS used,
+               COALESCE(c.revoked, 0) AS revoked,
+               c.expire_at       AS expire_at,
+               cu.id             AS card_user_id,
+               cu.display_name   AS buyer_name,
+               cu.mobile         AS buyer_mobile,
+               COALESCE(u.down_bytes, 0) AS download_bytes,
+               COALESCE(u.up_bytes, 0)   AS upload_bytes
+        FROM card_user_purchases cup
+        LEFT JOIN cards c       ON c.tenant_id = cup.tenant_id AND c.id = cup.card_id
+        LEFT JOIN card_users cu ON cu.tenant_id = cup.tenant_id AND cu.id = cup.card_user_id
+        LEFT JOIN (
+            SELECT username,
+                   SUM(COALESCE(acctoutputoctets, 0)) AS down_bytes,
+                   SUM(COALESCE(acctinputoctets, 0))  AS up_bytes
+            FROM radacct WHERE tenant_id = ? GROUP BY username
+        ) u ON u.username = c.username
+    """
+
+    def purchases_file(self, package_id: int, *, page: int = 1, per_page: int = 20) -> dict[str, Any]:
+        """Paginated sales file for one offer — the cards sold under it with
+        full per-card detail (user/pass, buyer, price, datetime, status,
+        download/upload from radacct)."""
+        package = self.get_package(package_id)
+        page, per_page, offset = self._page_args(page, per_page)
+        total = int(db().execute(
+            "SELECT COUNT(*) n FROM card_user_purchases WHERE tenant_id=? AND package_id=?",
+            (self.tenant_id, int(package_id)),
+        ).fetchone()["n"])
+        rows = db().execute(
+            self._PURCHASES_SELECT
+            + " WHERE cup.tenant_id = ? AND cup.package_id = ? ORDER BY cup.id DESC LIMIT ? OFFSET ?",
+            (self.tenant_id, self.tenant_id, int(package_id), per_page, offset),
+        ).fetchall()
+        return {
+            "package": package,
+            "items": [row_to_dict(r) for r in rows],
+            "page": page, "per_page": per_page, "total": total,
+            "pages": max(1, (total + per_page - 1) // per_page),
+            "remaining": self._inventory_remaining(package),
+            "sold": int(package.get("inventory_sold") or 0),
+            "stock_total": int(package.get("inventory_total") or 0),
+        }
+
+    def recent_purchases(self, *, page: int = 1, per_page: int = 20) -> dict[str, Any]:
+        """Global paginated recent-purchases panel across all offers."""
+        page, per_page, offset = self._page_args(page, per_page)
+        total = int(db().execute(
+            "SELECT COUNT(*) n FROM card_user_purchases WHERE tenant_id=?",
+            (self.tenant_id,),
+        ).fetchone()["n"])
+        rows = db().execute(
+            self._PURCHASES_SELECT.replace(
+                "cu.mobile         AS buyer_mobile,",
+                "cu.mobile         AS buyer_mobile, p.name AS package_name,",
+            ).replace(
+                "LEFT JOIN card_users cu ON cu.tenant_id = cup.tenant_id AND cu.id = cup.card_user_id",
+                "LEFT JOIN card_users cu ON cu.tenant_id = cup.tenant_id AND cu.id = cup.card_user_id\n"
+                "        LEFT JOIN card_marketplace_packages p ON p.tenant_id = cup.tenant_id AND p.id = cup.package_id",
+            )
+            + " WHERE cup.tenant_id = ? ORDER BY cup.id DESC LIMIT ? OFFSET ?",
+            (self.tenant_id, self.tenant_id, per_page, offset),
+        ).fetchall()
+        return {
+            "items": [row_to_dict(r) for r in rows],
+            "page": page, "per_page": per_page, "total": total,
+            "pages": max(1, (total + per_page - 1) // per_page),
+        }
+
     def card_user_360(self, card_user_id: int) -> dict[str, Any]:
         card_user = self.get_card_user(card_user_id)
         wallet = self._wallet_for_card_user(card_user_id)

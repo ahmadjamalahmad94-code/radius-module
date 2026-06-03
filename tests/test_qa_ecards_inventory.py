@@ -151,6 +151,39 @@ def test_import_rows_as_stock(app):
         assert {"card001", "card002"} <= got
 
 
+def test_purchases_file_paginated_with_detail(app):
+    with app.app_context():
+        s = _svc()(tenant_id=1)
+        pkg = _inventory_package(s)
+        s.add_inventory_stock(package_id=pkg["id"], count=3, actor="qa")
+        for i in range(2):
+            u = s.create_card_user(display_name=f"Buyer{i}", mobile="059")
+            s.recharge_wallet(card_user_id=u["id"], amount="10.00", actor="qa")
+            s.purchase_package(card_user_id=u["id"], package_id=pkg["id"], actor="qa")
+        f = s.purchases_file(pkg["id"], page=1, per_page=1)
+        assert f["total"] == 2 and f["pages"] == 2 and len(f["items"]) == 1
+        assert f["sold"] == 2 and f["remaining"] == 1 and f["stock_total"] == 3
+        item = f["items"][0]
+        for k in ("username", "password", "buyer_name", "amount_minor", "status",
+                  "created_at", "download_bytes", "upload_bytes"):
+            assert k in item
+        assert item["buyer_name"] in {"Buyer0", "Buyer1"}
+
+
+def test_recent_purchases_global_panel(app):
+    with app.app_context():
+        s = _svc()(tenant_id=1)
+        pkg = _inventory_package(s, name="Booth A")
+        s.add_inventory_stock(package_id=pkg["id"], count=1, actor="qa")
+        u = s.create_card_user(display_name="GBuyer", mobile="059")
+        s.recharge_wallet(card_user_id=u["id"], amount="10.00", actor="qa")
+        s.purchase_package(card_user_id=u["id"], package_id=pkg["id"], actor="qa")
+        r = s.recent_purchases(page=1, per_page=10)
+        assert r["total"] == 1 and len(r["items"]) == 1
+        assert r["items"][0]["package_name"] == "Booth A"
+        assert r["items"][0]["buyer_name"] == "GBuyer"
+
+
 def test_section_default_mode_and_per_offer_override(app):
     with app.app_context():
         s = _svc()(tenant_id=1)
