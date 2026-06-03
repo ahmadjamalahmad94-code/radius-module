@@ -1,5 +1,6 @@
 """Card pricing and batch financial costing routes."""
 from __future__ import annotations
+from ..core.system_config import default_currency
 
 from typing import Any
 
@@ -39,8 +40,10 @@ def _float_money(value: Any) -> float:
 
 
 def _priced_batch_rows(tenant_id: int, *, limit: int = 80) -> list[dict[str, Any]]:
+    _cur = default_currency()
+    _cur = _cur if _cur.isalpha() else "ILS"
     rows = db().execute(
-        """
+        f"""
         SELECT
             b.id,
             b.batch_code,
@@ -52,7 +55,7 @@ def _priced_batch_rows(tenant_id: int, *, limit: int = 80) -> list[dict[str, Any
             b.total_price,
             b.created_at,
             p.name AS plan_name,
-            COALESCE(p.currency, 'ILS') AS currency
+            COALESCE(NULLIF(p.currency, ''), '{_cur}') AS currency
         FROM card_batches b
         LEFT JOIN access_plans p
           ON p.tenant_id = b.tenant_id AND p.id = b.plan_id
@@ -111,14 +114,16 @@ def _pricing_overview(
 
 
 def _manager_options(tenant_id: int) -> list[dict[str, Any]]:
+    _cur = default_currency()
+    _cur = _cur if _cur.isalpha() else "ILS"
     rows = db().execute(
-        """
+        f"""
         SELECT
             a.id,
             COALESCE(NULLIF(a.full_name, ''), a.username) AS display_name,
             a.username,
             COALESCE(w.balance_minor, 0) AS balance_minor,
-            COALESCE(w.currency, 'ILS') AS currency
+            COALESCE(NULLIF(w.currency, ''), '{_cur}') AS currency
         FROM admins a
         LEFT JOIN tenant_memberships tm
           ON tm.admin_id = a.id AND tm.tenant_id = ?

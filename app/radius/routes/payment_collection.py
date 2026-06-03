@@ -1,5 +1,6 @@
 """Admin web UI for Payment Collection Center."""
 from __future__ import annotations
+from ..core.system_config import default_currency
 
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 
@@ -83,7 +84,7 @@ def payment_collection_settings():
                 enabled=bool(form.get("enabled")),
                 wallet_number=form.get("wallet_number") or "",
                 wallet_owner_name=form.get("wallet_owner_name") or "",
-                currency=form.get("currency") or (existing.currency if existing else "ILS"),
+                currency=form.get("currency") or (existing.currency if existing else default_currency()),
                 confirmation_mode=form.get("confirmation_mode") or "manual",
                 auto_apply=bool(form.get("auto_apply")),
                 allow_cards=bool(form.get("allow_cards")),

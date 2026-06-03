@@ -5,6 +5,7 @@ repositories persist payment intent, proof, transaction, and webhook contracts;
 they do not apply services or write ledger entries.
 """
 from __future__ import annotations
+from ...core.system_config import default_currency
 
 import secrets
 import string
@@ -88,7 +89,7 @@ class PaymentSettings:
     enabled: bool = False
     wallet_number: str = ""
     wallet_owner_name: str = ""
-    currency: str = "ILS"
+    currency: str = ""
     confirmation_mode: str = "manual"
     auto_apply: bool = False
     allow_cards: bool = True
@@ -136,7 +137,7 @@ class PaymentSettingsRepository:
         confirmation_mode = _require_choice(
             kwargs.get("confirmation_mode", "manual"), CONFIRMATION_MODES, "confirmation_mode"
         )
-        currency = _require_choice(kwargs.get("currency", "ILS"), CURRENCIES, "currency")
+        currency = _require_choice(kwargs.get("currency") or default_currency(), CURRENCIES, "currency")
         min_amount = kwargs.get("min_amount")
         max_amount = kwargs.get("max_amount")
         if min_amount is not None:

@@ -5,6 +5,7 @@ authentication, catalog decisions, wallet debit, ledger entries, card issuance,
 and SMS attempt logging.
 """
 from __future__ import annotations
+from ..core.system_config import default_currency
 
 import hashlib
 import json
@@ -431,7 +432,7 @@ class HotspotCardsPortalService:
             "display_name": identity.display_name,
             "phone": identity.phone,
             "wallet_balance": _money(wallet.get("balance_minor")),
-            "currency": wallet.get("currency") or "ILS",
+            "currency": wallet.get("currency") or default_currency(),
         }
 
     def _ensure_wallet(self, owner_type: str, owner_id: int, conn=None) -> dict[str, Any]:
@@ -458,7 +459,7 @@ class HotspotCardsPortalService:
                 self.tenant_id,
                 owner_type,
                 int(owner_id),
-                "ILS",
+                default_currency(),
                 _json({"source": "hotspot_cards_portal"}),
                 now,
                 now,
@@ -500,7 +501,7 @@ class HotspotCardsPortalService:
             "name": str(package.get("name") or ""),
             "description": str(meta.get("description") or speed or ""),
             "price": _money(package.get("price_minor")),
-            "currency": str(package.get("currency") or "ILS"),
+            "currency": str(package.get("currency") or default_currency()),
             "profile_name": str(package.get("plan_name") or ""),
             "duration_label": _duration_label(duration),
             "quota_label": _quota_label(quota),
@@ -575,7 +576,7 @@ class HotspotCardsPortalService:
                 int(card["id"]),
                 int(wallet["id"]),
                 int(package["price_minor"] or 0),
-                str(package.get("currency") or "ILS"),
+                str(package.get("currency") or default_currency()),
                 client_request_id,
                 "completed",
                 _json({"source": "hotspot_cards_portal"}),
@@ -610,7 +611,7 @@ class HotspotCardsPortalService:
                 int(amount_minor),
                 before,
                 after,
-                str(wallet.get("currency") or package.get("currency") or "ILS"),
+                str(wallet.get("currency") or package.get("currency") or default_currency()),
                 "hotspot_card_purchase",
                 int(reference_id),
                 "hotspot_cards_portal",
@@ -637,7 +638,7 @@ class HotspotCardsPortalService:
                 f"wallet:{wallet_id}",
                 "hotspot_cards_revenue",
                 int(amount_minor),
-                str(package.get("currency") or "ILS"),
+                str(package.get("currency") or default_currency()),
                 "hotspot_cards_portal",
                 identity.owner_id,
                 identity.owner_type,
@@ -758,7 +759,7 @@ class HotspotCardsPortalService:
             "package_name": row.get("package_name") or "",
             "purchased_at": row.get("created_at"),
             "amount": _money(row.get("amount_minor")),
-            "currency": row.get("currency") or "ILS",
+            "currency": row.get("currency") or default_currency(),
             "card": {
                 "username": row.get("card_username") or "",
                 "password": row.get("card_password") or "",

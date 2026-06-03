@@ -2018,8 +2018,10 @@ def _card_remaining_meta(row: dict, now: datetime) -> dict:
 
 
 def _batch_cards_details(tenant_id: int, batch_id: int) -> list[dict]:
+    _cur = default_currency()
+    _cur = _cur if _cur.isalpha() else "ILS"
     rows = db().execute(
-        """
+        f"""
         WITH acct AS (
           SELECT tenant_id,
                  username,
@@ -2083,7 +2085,7 @@ def _batch_cards_details(tenant_id: int, batch_id: int) -> list[dict]:
                c.frozen_remaining_seconds,
                c.deleted_at,
                COALESCE(p.name, '') AS plan_name,
-               COALESCE(p.currency, 'ILS') AS currency,
+               COALESCE(NULLIF(p.currency, ''), '{_cur}') AS currency,
                COALESCE(a.sessions_count, 0) AS sessions_count,
                COALESCE(a.unique_macs, 0) AS unique_macs,
                COALESCE(a.online_sessions, 0) AS online_sessions,
