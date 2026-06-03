@@ -17,34 +17,24 @@
 {% block head_extra %}
 {{ super() }}
 <style>
-  .cdl{ display:grid; gap:16px; }
-  .cdl-explain{ display:flex; gap:12px; align-items:flex-start; background:#eff6ff; border:1px solid #bfdbfe; border-radius:14px; padding:13px 16px; }
-  .cdl-explain .ic{ width:34px;height:34px;border-radius:10px;background:#dbeafe;color:#1d4ed8;display:grid;place-items:center;font-size:15px;flex:none; }
-  .cdl-explain .tx{ font-size:12.5px; line-height:1.85; color:#1e40af; }
-  .cdl-explain .tx a{ color:#1d4ed8; font-weight:800; text-decoration:underline; }
-  /* summary tiles */
-  .cdl-sum{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; }
-  .cdl-tile{ display:flex; align-items:center; gap:12px; background:#fff; border:1px solid #e8edf3; border-radius:14px; padding:13px 15px;
-    box-shadow:0 1px 3px rgba(15,23,42,.05); }
-  .cdl-tile .ic{ width:40px;height:40px;border-radius:11px;display:grid;place-items:center;font-size:16px;flex:none; }
-  .cdl-tile .ic.g{ background:#dcfce7;color:#16a34a; } .cdl-tile .ic.r{ background:#fee2e2;color:#dc2626; }
-  .cdl-tile .ic.a{ background:#fef3c7;color:#b45309; } .cdl-tile .ic.b{ background:#ede9fe;color:#5b21b6; }
-  .cdl-tile .n{ font-size:22px; font-weight:900; color:#0f172a; line-height:1; font-variant-numeric:tabular-nums; }
-  .cdl-tile .t{ font-size:11px; font-weight:700; color:#94a3b8; margin-top:4px; }
-  /* status pill */
+  /* status pill (retained — used in the deliveries table) */
   .cdl-pill{ display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:800; border-radius:999px; padding:3px 10px; white-space:nowrap; }
   .cdl-pill .dot{ width:6px;height:6px;border-radius:50%;flex:none; }
   .cdl-pill.green{ background:#dcfce7; color:#15803d; } .cdl-pill.green .dot{ background:#16a34a; }
   .cdl-pill.amber{ background:#fef3c7; color:#92400e; } .cdl-pill.amber .dot{ background:#f59e0b; }
   .cdl-pill.red{ background:#fee2e2; color:#b91c1c; } .cdl-pill.red .dot{ background:#ef4444; }
   .cdl-pill.grey{ background:#f1f5f9; color:#64748b; } .cdl-pill.grey .dot{ background:#94a3b8; }
-  /* filter chips */
+  /* the hero body here holds filters, not a search box → drop the auto search icon */
+  .uds-hero-search:has(#cdl-filter) .uds-search-ic{ display:none; }
+  .uds-hero-search:has(#cdl-filter){ gap:0; }
+  /* filter chips (retained — integrated into the hero body) */
   .cdl-filter{ display:flex; gap:7px; flex-wrap:wrap; align-items:center; }
   .cdl-filter .lbl{ font-size:11.5px; font-weight:800; color:#64748b; margin-inline-end:3px; }
   .cdl-fchip{ border:1px solid #e2e8f0; background:#fff; color:#475569; border-radius:999px; padding:5px 13px; font:inherit; font-size:11.5px;
     font-weight:800; cursor:pointer; transition:.13s; }
   .cdl-fchip:hover{ border-color:#c4b5fd; color:#5b21b6; }
   .cdl-fchip.is-active{ background:#7c3aed; color:#fff; border-color:#7c3aed; }
+  /* per-cell error text (retained) */
   .cdl-err{ font-size:11.5px; color:#b91c1c; direction:ltr; unicode-bidi:isolate; }
 </style>
 {% endblock %}
@@ -54,55 +44,69 @@
 {% set _failed = deliveries|selectattr('status','in',['failed','error'])|list|length %}
 {% set _queued = deliveries|selectattr('status','in',['queued','pending'])|list|length %}
 
-{{ hub.hero(
+{# ───── ONE unified hero: title + actions + delivery-count KPIs + integrated filters ───── #}
+{% call hub.megahero(
   "سجل الإرسال",
-  subtitle="يتم تتبع نتائج المزوّد هنا. الوضع الافتراضي يضع الرسائل في الطابور فقط.",
+  subtitle="يتم تتبع نتائج المزوّد هنا. الوضع الافتراضي يضع الرسائل في الطابور فقط — تتبّع كل رسالة: حالتها، القناة، المستلم، وسبب الفشل إن وُجد.",
   icon="truck-fast",
-  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.communications_guide') ~ '"><i class="fa-solid fa-book-open"></i> دليل وشروحات</a>'
-) }}
+  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.communications_guide') ~ '"><i class="fa-solid fa-book-open"></i> دليل وشروحات</a>',
+  kpis=[
+    {'label': 'ناجحة',   'value': _sent,             'icon': 'circle-check', 'variant': 'green'},
+    {'label': 'فاشلة',   'value': _failed,           'icon': 'circle-xmark', 'variant': 'red'},
+    {'label': 'بالطابور','value': _queued,           'icon': 'clock',        'variant': 'amber'},
+    {'label': 'الإجمالي','value': deliveries|length, 'icon': 'list',         'variant': 'brand'}
+  ]
+) %}
+  {%- if deliveries %}
+  <div class="cdl-filter" id="cdl-filter">
+    <span class="lbl">تصفية:</span>
+    <button type="button" class="cdl-fchip is-active" data-filter="all">الكل</button>
+    <button type="button" class="cdl-fchip" data-filter="ok">الناجحة</button>
+    <button type="button" class="cdl-fchip" data-filter="failed">الفاشلة</button>
+    <button type="button" class="cdl-fchip" data-filter="queued">بالطابور</button>
+  </div>
+  {%- endif %}
+{% endcall %}
+
 {% include "radius/communications_nav.html" %}
 
-<div class="cdl">
-  <div class="cdl-explain">
-    <span class="ic"><i class="fa-solid fa-circle-info"></i></span>
-    <div class="tx">
-      هنا تتبّع كل رسالة: حالتها، القناة، المستلم، وسبب الفشل إن وُجد. القنوات غير المفعّلة تبقى رسائلها «بالطابور»
-      دون إرسال خارجي — فعّلها من <a href="{{ url_for('radius.communications_channels') }}">قنوات الإرسال</a>.
-    </div>
-  </div>
+{# ───── Full-width work layout: main content + help panel on the LEFT ───── #}
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "كيف تقرأ هذا السجل؟",
+  intro="هنا تتبّع كل رسالة: حالتها، القناة، المستلم، وسبب الفشل إن وُجد.",
+  icon="circle-info",
+  items=[
+    {'icon': 'list', 'text': 'كل صف هو محاولة إرسال واحدة — الحالة تخبرك بنتيجة المزوّد.'},
+    {'icon': 'clock', 'text': 'القنوات غير المفعّلة تبقى رسائلها «بالطابور» دون إرسال خارجي.'},
+    {'icon': 'tower-broadcast', 'text': 'فعّل القنوات من «قنوات الإرسال» ليبدأ الإرسال الخارجي.'},
+    {'icon': 'circle-xmark', 'text': 'عمود الخطأ يعرض سبب الفشل كما ورد من المزوّد عند توفّره.'}
+  ],
+  note="استخدم أزرار التصفية في الأعلى لعرض الناجحة أو الفاشلة أو ما زال بالطابور فقط."
+)) %}
 
-  {% if deliveries %}
-    <div class="cdl-sum">
-      <div class="cdl-tile"><span class="ic g"><i class="fa-solid fa-circle-check"></i></span><div><div class="n">{{ _sent }}</div><div class="t">ناجحة</div></div></div>
-      <div class="cdl-tile"><span class="ic r"><i class="fa-solid fa-circle-xmark"></i></span><div><div class="n">{{ _failed }}</div><div class="t">فاشلة</div></div></div>
-      <div class="cdl-tile"><span class="ic a"><i class="fa-solid fa-clock"></i></span><div><div class="n">{{ _queued }}</div><div class="t">بالطابور</div></div></div>
-      <div class="cdl-tile"><span class="ic b"><i class="fa-solid fa-list"></i></span><div><div class="n">{{ deliveries|length }}</div><div class="t">الإجمالي</div></div></div>
-    </div>
-  {% endif %}
-
-  {% call hub.section("عمليات الإرسال", icon="truck-fast", flush=True) %}
+  {% call hub.section("عمليات الإرسال", icon="truck-fast", meta=deliveries|length|string + " عملية", flush=True) %}
     {% if deliveries %}
-      <div style="padding:13px 16px 0">
-        <div class="cdl-filter" id="cdl-filter">
-          <span class="lbl">تصفية:</span>
-          <button type="button" class="cdl-fchip is-active" data-filter="all">الكل</button>
-          <button type="button" class="cdl-fchip" data-filter="ok">الناجحة</button>
-          <button type="button" class="cdl-fchip" data-filter="failed">الفاشلة</button>
-          <button type="button" class="cdl-fchip" data-filter="queued">بالطابور</button>
-        </div>
-      </div>
-      <div class="hub-table-wrap">
+      <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25" style="border:none;border-radius:0">
         <table class="hub-table" data-testid="delivery-log-table">
-          <thead><tr><th>الرقم</th><th>القناة</th><th>الحالة</th><th>المزوّد</th><th>المستلم</th><th>الخطأ</th></tr></thead>
+          <thead>
+            <tr>
+              <th class="num">الرقم</th>
+              <th>القناة</th>
+              <th>الحالة</th>
+              <th>المزوّد</th>
+              <th>المستلم</th>
+              <th data-uds-nosort>الخطأ</th>
+            </tr>
+          </thead>
           <tbody id="cdl-rows">
             {% for item in deliveries %}
               {%- set _s = item.status|string -%}
               {%- set _grp = 'ok' if _s in ('sent','delivered','read') else ('failed' if _s in ('failed','error') else ('queued' if _s in ('queued','pending') else 'other')) -%}
               <tr data-grp="{{ _grp }}">
-                <td>#{{ item.id }}</td>
+                <td class="num mono">#{{ item.id }}</td>
                 <td>{{ ch_label(item.channel) }}</td>
                 <td>{{ st_pill(item.status) }}</td>
-                <td style="direction:ltr;text-align:start">{{ item.provider_key or '—' }}</td>
+                <td class="mono small" style="direction:ltr;text-align:start;white-space:nowrap">{{ item.provider_key or '—' }}</td>
                 <td>{{ item.recipient_type }} #{{ item.recipient_id }}</td>
                 <td><span class="cdl-err">{{ item.error_message or '' }}</span></td>
               </tr>
@@ -114,7 +118,8 @@
       {{ hub.empty("لا توجد عمليات إرسال بعد.", sub="ستظهر هنا كل رسالة تُرسل من المركز أو الإشعارات الحدثية.", icon="truck-fast") }}
     {% endif %}
   {% endcall %}
-</div>
+
+{% endcall %}
 
 {% if deliveries %}
 <script>
