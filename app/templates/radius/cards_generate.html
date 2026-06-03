@@ -1,6 +1,9 @@
-{# Cards generate — REBUILT on hub-v2 (Night final pass, 2026-05-21)
-   4-section wizard for generating a batch of cards. Same backend
-   route (radius.cards_generate) + same form field names. #}
+{# Cards generate — UDS pass (2026-06-03).
+   Same backend route (radius.cards_generate) + same form field names.
+   ONE hub.hero, hub.worklayout + LEFT hub.helppanel, hub.section-style
+   cards, hub.cardselect for batch type. The live progress UI is
+   JS-injected (css/js cards_generate_progress.*) and reads the form
+   data-* hooks below — those are preserved EXACTLY. #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 {% from "_partials/toggle_switch.html" import toggle_switch %}
@@ -15,120 +18,9 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/cards_generate_progress.css') }}">
 <script defer src="{{ url_for('static', filename='js/cards_generate_progress.js') }}"></script>
 <style>
-  .cg-form{
-    max-width: 1180px;
-    margin: 0 auto;
-    display:grid;
-    grid-template-columns:minmax(0,1fr) 224px;
-    gap:var(--hub-gap-section);
-    align-items:start;
-  }
-  .cg-page-head{ grid-column:1 / -1; }
-  .cg-form > form{ grid-column:1; grid-row:2; min-width:0; }
-  .cg-side{
-    grid-column:2;
-    grid-row:2;
-    position:sticky;
-    top:84px;
-    background:var(--hub-bg-card);
-    border:1px solid var(--hub-border);
-    border-radius:var(--hub-r-card);
-    padding:14px 12px;
-    box-shadow:var(--hub-sh-sm);
-  }
-  .cg-side-title{
-    display:flex;
-    align-items:center;
-    gap:8px;
-    margin-bottom:8px;
-    padding-inline-start:2px;
-    color:var(--hub-text);
-    font-size:12.5px;
-    font-weight:800;
-  }
-  .cg-side-title i{color:var(--hub-brand-ink);font-size:12px}
-  .cg-side-list{display:flex;flex-direction:column;gap:3px}
-  .cg-side-list a{
-    display:flex;
-    align-items:center;
-    gap:8px;
-    padding:7px 10px;
-    border-radius:var(--hub-r-md);
-    color:var(--hub-text-soft);
-    font-size:12.5px;
-    font-weight:700;
-    text-decoration:none;
-    transition:all var(--hub-anim-fast) var(--hub-ease);
-  }
-  .cg-side-list a:hover{background:var(--hub-brand-soft);color:var(--hub-brand-ink)}
-  .cg-side-list i{width:14px;text-align:center;font-size:11px;opacity:.75}
-  .cg-side-note{
-    margin-top:14px;
-    padding:12px;
-    border:1px dashed var(--hub-brand-line);
-    border-radius:var(--hub-r-md);
-    background:var(--hub-brand-soft);
-    color:var(--hub-brand-ink);
-    font-size:11.5px;
-    font-weight:700;
-    line-height:1.7;
-  }
-  @media (max-width:980px){
-    .cg-form{display:block}
-    .cg-side{position:static;margin-bottom:var(--hub-gap-section)}
-  }
-  .cg-page-head{
-    display:flex; align-items:center; justify-content:space-between; gap:16px;
-    margin-bottom:16px; padding:16px 18px;
-    border:1px solid var(--hub-border); border-radius:var(--hub-r-card);
-    background:linear-gradient(135deg,#fff,#f8f6ff 62%,#ecfeff);
-    box-shadow:var(--hub-sh-card);
-  }
-  .cg-page-head h1{margin:0;font-size:25px;font-weight:950;color:var(--hub-text)}
-  .cg-page-head p{margin:5px 0 0;color:var(--hub-text-soft);font-weight:750;font-size:13px}
-  .cg-grid{ display:grid; gap:12px; grid-template-columns: repeat(4, 1fr); }
-  @media (max-width:920px){ .cg-grid{ grid-template-columns: repeat(2, 1fr); } }
-  @media (max-width:560px){ .cg-grid{ grid-template-columns: 1fr; } }
-  .cg-field{ display:flex; flex-direction:column; gap:5px; min-width:0; }
-  .cg-field.full{ grid-column: 1 / -1; }
-  .cg-field label{ font-size:12.5px; font-weight:700; color:var(--hub-text-soft); }
-  .cg-field label .req{ color:var(--hub-red); margin-inline-start:2px; }
-  .cg-field .help{ font-size:11px; color:var(--hub-text-mute); margin-top:2px; }
-  .cg-form .hub-input,
-  .cg-form .hub-select,
-  .cg-form .hub-textarea{
-    border:1px solid var(--hub-border);
-    border-radius:var(--hub-r-md);
-    background:var(--hub-bg-card);
-    color:var(--hub-text);
-    font-size:13.5px;
-    box-shadow:none;
-    transition:border-color var(--hub-anim-fast) var(--hub-ease),
-               box-shadow var(--hub-anim-fast) var(--hub-ease),
-               background var(--hub-anim-fast) var(--hub-ease);
-  }
-  .cg-form .hub-input,
-  .cg-form .hub-select{ min-height:45px; padding:9px 12px; }
-  .cg-form .hub-textarea{ min-height:86px; padding:10px 12px; }
-  .cg-form .hub-input:focus,
-  .cg-form .hub-select:focus,
-  .cg-form .hub-textarea:focus{
-    border-color:var(--hub-brand-line);
-    box-shadow:0 0 0 3px rgba(107,90,237,.13);
-    background:#fff;
-    outline:none;
-  }
-  .cg-chk{
-    display:flex; align-items:center; gap:8px;
-    padding:9px 12px;
-    min-height:45px;
-    background:var(--hub-bg-soft);
-    border:1px solid var(--hub-border-soft);
-    border-radius:var(--hub-r-md);
-    font-size:12.5px; font-weight:700; color:var(--hub-text);
-  }
-  .cg-chk input{ width:16px; height:16px; accent-color: var(--hub-brand); cursor:pointer; }
+  .cg-form{ max-width: 1180px; margin: 0 auto; }
 
+  /* Collapsible section cards (hub-token driven) */
   .cg-section{
     background: var(--hub-bg-card);
     border: 1px solid var(--hub-border);
@@ -136,6 +28,7 @@
     box-shadow: var(--hub-sh-card);
     margin-bottom: var(--hub-gap-section);
     overflow: hidden;
+    scroll-margin-top: 96px;
   }
   .cg-section-head{
     display:flex; align-items:center; gap:10px;
@@ -171,96 +64,69 @@
   .cg-section--speed  .cg-section-icon{ background: #EDE9FE; color: #6D28D9; }
   .cg-section--behave { border-inline-start: 3px solid #8B5CF6; }
   .cg-section--behave .cg-section-icon{ background: #EDE9FE; color: #6D28D9; }
+
+  /* Grid + fields */
+  .cg-grid{ display:grid; gap:12px; grid-template-columns: repeat(4, 1fr); }
+  @media (max-width:920px){ .cg-grid{ grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width:560px){ .cg-grid{ grid-template-columns: 1fr; } }
+  .cg-field{ display:flex; flex-direction:column; gap:5px; min-width:0; }
+  .cg-field.full{ grid-column: 1 / -1; }
+  .cg-field label{ font-size:12.5px; font-weight:700; color:var(--hub-text-soft); }
+  .cg-field label .req{ color:var(--hub-red); margin-inline-start:2px; }
+  .cg-field .help{ font-size:11px; color:var(--hub-text-mute); margin-top:2px; }
+
+  .cg-chk{
+    display:flex; align-items:center; gap:8px;
+    padding:9px 12px;
+    min-height:45px;
+    background:var(--hub-bg-soft);
+    border:1px solid var(--hub-border-soft);
+    border-radius:var(--hub-r-md);
+    font-size:12.5px; font-weight:700; color:var(--hub-text);
+  }
+  .cg-chk input{ width:16px; height:16px; accent-color: var(--hub-brand); cursor:pointer; }
+
   .cg-speed-note{
-    display:flex;
-    align-items:center;
-    gap:8px;
+    display:flex; align-items:center; gap:8px;
     margin-bottom:14px;
     padding:10px 12px;
     border:1px dashed var(--hub-brand-line);
     border-radius:var(--hub-r-md);
     background:var(--hub-brand-soft);
     color:var(--hub-brand-ink);
-    font-size:12px;
-    font-weight:800;
-    line-height:1.6;
+    font-size:12px; font-weight:800; line-height:1.6;
   }
-  .cg-type-choice{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-  .cg-type-choice input{position:absolute;opacity:0;pointer-events:none}
-  .cg-type-choice label > span{
-    min-height:68px;
-    display:grid;
-    grid-template-columns:38px minmax(0,1fr);
-    align-items:center;
-    gap:12px;
-    padding:12px 14px;
-    text-align:start;
-    border:1px solid var(--hub-border);
-    border-radius:var(--hub-r-lg);
-    background:var(--hub-bg-card);
-    font-weight:900;
-    color:var(--hub-text);
-    cursor:pointer;
-    transition:all var(--hub-anim-fast) var(--hub-ease);
-  }
-  .cg-type-choice label > span:hover{ border-color:var(--hub-brand-line); }
-  .cg-type-choice label > span > i{
-    width:38px;height:38px;display:inline-flex;align-items:center;justify-content:center;
-    border-radius:10px;background:var(--hub-brand-soft);color:var(--hub-brand-ink);
-    font-size:16px;
-  }
-  .cg-type-choice .cg-type-body{
-    display:flex;
-    flex-direction:column;
-    gap:2px;
-    min-width:0;
-  }
-  .cg-type-choice strong{
-    font-size:14px;
-    font-weight:900;
-    color:var(--hub-text);
-  }
-  .cg-type-choice small{
-    display:block;
-    font-size:11.5px;
-    color:var(--hub-text-mute);
-    font-weight:700;
-    line-height:1.45;
-  }
-  .cg-type-choice input:checked + span{
-    border-color:var(--hub-brand);
-    background:linear-gradient(135deg,var(--hub-brand-soft),#fff);
-    box-shadow:0 2px 8px rgba(107,90,237,.15);
-  }
-  @media (max-width:560px){ .cg-type-choice{ grid-template-columns:1fr; } }
 </style>
 {% endblock %}
 
 {% block content %}
 
+{{ hub.hero(
+  "إنشاء حزمة بطاقات",
+  subtitle="الأساسيات أولًا، والتفاصيل المتقدمة تبقى مرتبة تحتها بدون زحمة.",
+  icon="wand-magic-sparkles",
+  actions_html='
+    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.cards_batches') + '">
+      <i class="fa-solid fa-arrow-right"></i> العودة للحزم
+    </a>
+  '
+) }}
+
+{% set help_aside = hub.helppanel(
+  "أقسام النموذج",
+  intro="ابدأ ببيانات الحزمة والعرض. افتح الأقسام المتقدمة فقط عند الحاجة لتخصيص الوقت والسرعة وسلوك الكرت.",
+  icon="compass",
+  items=[
+    {'icon': 'box',         'text': 'بيانات الحزمة'},
+    {'icon': 'dice',        'text': 'توليد البطاقات'},
+    {'icon': 'clock',       'text': 'الصلاحية والوقت'},
+    {'icon': 'gauge-high',  'text': 'السرعة المجدولة'},
+    {'icon': 'sliders',     'text': 'سلوك الكوتا وخيارات إضافية'},
+  ]
+) %}
+
 <div class="cg-form">
-<div class="cg-page-head">
-  <div>
-    <h1>إنشاء حزمة بطاقات</h1>
-    <p>الأساسيات أولًا، والتفاصيل المتقدمة تبقى مرتبة تحتها بدون زحمة.</p>
-  </div>
-  <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.cards_batches') }}">
-    <i class="fa-solid fa-arrow-right"></i> العودة للحزم
-  </a>
-</div>
-<aside class="cg-side" aria-label="أقسام النموذج">
-  <div class="cg-side-title"><i class="fa-solid fa-compass"></i> أقسام النموذج</div>
-  <nav class="cg-side-list">
-    <a href="#cg-batch"><i class="fa-solid fa-box"></i> بيانات الحزمة</a>
-    <a href="#cg-generation"><i class="fa-solid fa-dice"></i> التوليد</a>
-    <a href="#cg-time"><i class="fa-solid fa-clock"></i> الصلاحية والوقت</a>
-    <a href="#cg-speed"><i class="fa-solid fa-gauge-high"></i> السرعة المجدولة</a>
-    <a href="#cg-behavior"><i class="fa-solid fa-sliders"></i> خيارات متقدمة</a>
-  </nav>
-  <div class="cg-side-note">
-    ابدأ ببيانات الحزمة والعرض. افتح الأقسام المتقدمة فقط عند الحاجة لتخصيص الوقت والسرعة وسلوك الكرت.
-  </div>
-</aside>
+{% call hub.worklayout(aside_html=help_aside) %}
 <form method="post" action="{{ url_for('radius.cards_generate') }}"
       data-card-generate-form
       data-progress-start-url="{{ url_for('radius.cards_generate_progress_start') }}"
@@ -276,16 +142,10 @@
       <div class="cg-grid">
         <div class="cg-field full"><label>نوع الحزمة <span class="req">*</span></label>
           {% set bt = form.get('batch_type') or 'printed' %}
-          <div class="cg-type-choice">
-            <label>
-              <input type="radio" name="batch_type" value="printed" {% if bt == 'printed' %}checked{% endif %}>
-              <span><i class="fa-solid fa-print"></i><span class="cg-type-body"><strong>مطبوعة</strong><small>حزمة للطباعة ونقاط البيع</small></span></span>
-            </label>
-            <label>
-              <input type="radio" name="batch_type" value="electronic" {% if bt == 'electronic' %}checked{% endif %}>
-              <span><i class="fa-solid fa-wallet"></i><span class="cg-type-body"><strong>إلكترونية</strong><small>حزمة للبيع الإلكتروني</small></span></span>
-            </label>
-          </div>
+          {{ hub.cardselect("batch_type", [
+              {'value': 'printed',    'title': 'مطبوعة',   'sub': 'حزمة للطباعة ونقاط البيع', 'icon': 'print'},
+              {'value': 'electronic', 'title': 'إلكترونية', 'sub': 'حزمة للبيع الإلكتروني',   'icon': 'wallet'},
+            ], value=bt) }}
         </div>
         <div class="cg-field"><label>اسم الحزمة</label>
           <input class="hub-input" type="text" name="package_name" value="{{ form.get('package_name') or '' }}" placeholder="GZA-Card-Sep25"></div>
@@ -418,7 +278,7 @@
     </div>
   </section>
 
-  {# ── 4. Behaviour ──────────────────────────── #}
+  {# ── 4. Scheduled speed ─────────────────────── #}
   <section class="cg-section cg-section--speed is-collapsible is-collapsed" data-sec="speed" id="cg-speed">
     <header class="cg-section-head">
       <span class="cg-section-icon"><i class="fa-solid fa-gauge-high"></i></span>
@@ -434,6 +294,7 @@
     </div>
   </section>
 
+  {# ── 5. Behaviour ──────────────────────────── #}
   <section class="cg-section cg-section--behave is-collapsible" data-sec="behave" id="cg-behavior">
     <header class="cg-section-head">
       <span class="cg-section-icon"><i class="fa-solid fa-sliders"></i></span>
@@ -490,7 +351,8 @@
     </button>
   </div>
 </form>
-</div>
+{% endcall %}{# /.worklayout #}
+</div>{# /.cg-form #}
 
 <script>
 (function(){
