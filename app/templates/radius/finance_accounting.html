@@ -8,189 +8,226 @@
 
 {% block head_extra %}
 <style>
-.fa-hero{position:relative;border-radius:18px;padding:22px 24px;margin-bottom:18px;
-  background:linear-gradient(135deg,#6d28d9,#1d4ed8);color:#fff;box-shadow:0 18px 44px rgba(76,29,149,.22);overflow:hidden}
-.fa-hero h2{margin:0 0 6px;font-size:clamp(20px,2.4vw,28px);font-weight:900}
-.fa-hero p{margin:0;max-width:760px;color:rgba(255,255,255,.85);font-weight:600;line-height:1.7}
-.fa-tabs{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+/* ── Retained: tab switcher pills (kept inside the unified hero) ── */
+.fa-tabs{display:flex;flex-wrap:wrap;gap:8px}
 .fa-tabs a{display:inline-flex;align-items:center;gap:8px;padding:9px 15px;border-radius:999px;
-  background:rgba(255,255,255,.14);color:#fff;font-weight:800;text-decoration:none;border:1px solid rgba(255,255,255,.18);font-size:13px}
-.fa-tabs a:hover{background:rgba(255,255,255,.24)}
-.fa-tabs a.is-active{background:#fff;color:#6d28d9;border-color:#fff}
-.fa-panel-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:4px 0 14px;flex-wrap:wrap}
-.fa-panel-head h3{margin:0;font-size:17px;font-weight:900;color:var(--hub-text);display:flex;align-items:center;gap:9px}
-.fa-note{margin-bottom:14px;padding:11px 16px;font-size:13px;font-weight:600;border-radius:12px;
-  border:1px solid #bfdbfe;background:var(--hub-blue-soft);color:var(--hub-blue-ink)}
+  background:var(--hub-bg-soft);color:var(--hub-text-soft);font-weight:800;text-decoration:none;border:1px solid var(--hub-border-soft);font-size:13px}
+.fa-tabs a:hover{border-color:var(--hub-brand-soft);color:var(--hub-brand-ink)}
+.fa-tabs a.is-active{background:var(--hub-brand);color:#fff;border-color:var(--hub-brand)}
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="fa-hero">
-  <h2><i class="fa-solid fa-scale-balanced"></i> السجل والتقارير المحاسبية</h2>
-  <p>تابع دفتر القيود المالية والتقارير من مكان واحد. واجهة موحّدة — السجل تراكمي (لا حذف) والتقارير تُبنى من نفس القيود.</p>
-  <nav class="fa-tabs">
-    <a href="?tab=ledger" class="{{ 'is-active' if tab == 'ledger' }}"><i class="fa-solid fa-table-list"></i> السجل المالي</a>
-    <a href="?tab=reports" class="{{ 'is-active' if tab == 'reports' }}"><i class="fa-solid fa-chart-line"></i> التقارير المالية</a>
-  </nav>
-</div>
 
-{# ═══════════ TAB: LEDGER ═══════════ #}
-{% if tab == 'ledger' %}
-<div class="fa-note">
-  <i class="fa-solid fa-circle-info"></i>
-  السجل المالي تراكمي. لا يتم حذف القيود؛ التصحيح يتم بقيد عكسي يحافظ على الأصل لأغراض المراجعة والتقارير.
-</div>
-
-<div class="hub-kpi-grid">
-  {{ hub.kpi("عدد القيود", ledger_kpis.count, icon="table-list", variant="brand") }}
-  {{ hub.kpi("دفعات", ledger_kpis.payments, icon="hand-holding-dollar", variant="green") }}
-  {{ hub.kpi("سلف", ledger_kpis.loans, icon="clock-rotate-left", variant="amber") }}
-  {{ hub.kpi("قيود تصحيحية", ledger_kpis.corrections, icon="rotate-left", variant="red") }}
-</div>
-
-<div class="fa-panel-head" style="margin-top:14px">
-  <h3><i class="fa-solid fa-table-list"></i> القيود</h3>
-  <form method="get" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-    <input type="hidden" name="tab" value="ledger">
-    <select class="hub-select" name="entry_type" onchange="this.form.submit()">
-      <option value="">كل أنواع القيود</option>
-      {% for t in entry_types %}
-        <option value="{{ t }}" {% if entry_type == t %}selected{% endif %}>
-          {% if t == 'payment' %}دفعة{% elif t == 'loan' %}سلفة{% elif t == 'settlement' %}تسوية
-          {% elif t == 'void' %}إلغاء{% elif t == 'reversal' %}عكسي{% elif t == 'correction' %}تصحيح
-          {% else %}{{ t }}{% endif %}
-        </option>
-      {% endfor %}
-    </select>
-    <input class="hub-input" type="text" name="subscriber_id" value="{{ subscriber_id }}"
-           placeholder="رقم المستفيد..." inputmode="numeric" style="max-width:170px">
-    <button class="hub-btn hub-btn--primary hub-btn--sm" type="submit"><i class="fa-solid fa-filter"></i> فلترة</button>
-  </form>
-</div>
-
-{% if ledger_items %}
-<div class="hub-table-wrap" style="border-radius:14px">
-  <table class="hub-table">
-    <thead><tr>
-      <th class="num" style="width:56px">#</th><th>النوع</th><th>المستفيد</th><th>الاتجاه</th>
-      <th class="num">المبلغ</th><th>الحالة</th><th>المصدر</th><th>ملاحظات</th><th>التاريخ</th><th style="width:230px">عكس القيد</th>
-    </tr></thead>
-    <tbody>
-      {% for entry in ledger_items %}
-      <tr>
-        <td class="num mono">{{ entry.id }}</td>
-        <td>{{ hub.pill(entry.entry_type, variant="brand", dot=False) }}</td>
-        <td>
-          <div>{{ entry.username or '—' }}</div>
-          {% if entry.subscriber_id %}<div class="hub-text-mute mono small">#{{ entry.subscriber_id }}</div>{% endif %}
-        </td>
-        <td>
-          {% if entry.direction == 'debit' %}{{ hub.pill("مدين", variant="red") }}
-          {% elif entry.direction == 'credit' %}{{ hub.pill("دائن", variant="green") }}
-          {% else %}{{ hub.pill(entry.direction, variant="grey") }}{% endif %}
-        </td>
-        <td class="num mono"><strong>{{ entry.amount|money }}</strong></td>
-        <td>
-          {% if entry.status == 'posted' %}{{ hub.pill("مرحَّل", variant="green") }}
-          {% elif entry.status == 'void' %}{{ hub.pill("ملغى", variant="grey") }}
-          {% else %}{{ hub.pill(entry.status, variant="amber") }}{% endif %}
-        </td>
-        <td class="small">{{ entry.source_type or '—' }}{% if entry.source_id %} <span class="hub-text-mute mono">#{{ entry.source_id }}</span>{% endif %}</td>
-        <td class="small">{{ entry.notes or '—' }}</td>
-        <td class="mono small">{{ entry.created_at|dt_local }}</td>
-        <td>
-          {% if entry.entry_type not in ['void','reversal','correction'] %}
-          <form method="post" action="{{ url_for('radius.finance_ledger_void') }}" class="hub-flex-row" style="gap:4px;flex-wrap:nowrap">
-            <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-            <input type="hidden" name="entry_id" value="{{ entry.id }}">
-            <input class="hub-input" name="reason" placeholder="سبب التصحيح" required style="font-size:12px;padding:5px 8px;min-width:110px">
-            <button type="submit" class="hub-btn hub-btn--icon" title="عكس القيد"
-              style="background:var(--hub-amber-soft);color:var(--hub-amber-ink);border-color:transparent">
-              <i class="fa-solid fa-rotate-left"></i>
-            </button>
-          </form>
-          {% else %}<span class="hub-text-mute small">قيد تصحيحي</span>{% endif %}
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
-{% else %}
-  <div style="text-align:center;padding:24px">{{ hub.empty("لا قيود بهذه الفلترة", sub="جرّب تغيير نوع القيد أو رقم المستفيد، أو امسح الفلتر.", icon="scale-balanced") }}</div>
-{% endif %}
-{% endif %}
-
-{# ═══════════ TAB: REPORTS ═══════════ #}
+{# ═══════════ Unified hero: title + subtitle + icon + per-tab KPIs ═══════════
+   The ledger/reports tab switcher is integrated as the hero's actions, and the
+   per-tab filter (entry-type + subscriber id, or report-type) lives in the
+   hero's integrated search row. No backend/route change — the same `tab`,
+   `entry_type`, `subscriber_id`, `type` query args drive it. #}
 {% if tab == 'reports' %}
-<div class="fa-note">
-  <i class="fa-solid fa-circle-info"></i>
-  هذه التقارير مبنية من السجل المالي. القيود العكسية والتصحيحات لا تحذف الأصل، لذلك تظهر القيم المعدّلة حسب القيد والـ void.
-</div>
+  {% set _kpis = [] %}
+{% else %}
+  {% set _kpis = [
+    {'label': 'عدد القيود',    'value': ledger_kpis.count,       'icon': 'table-list',          'variant': 'brand'},
+    {'label': 'دفعات',         'value': ledger_kpis.payments,    'icon': 'hand-holding-dollar', 'variant': 'green'},
+    {'label': 'سلف',           'value': ledger_kpis.loans,       'icon': 'clock-rotate-left',   'variant': 'amber'},
+    {'label': 'قيود تصحيحية',  'value': ledger_kpis.corrections, 'icon': 'rotate-left',         'variant': 'red'},
+  ] %}
+{% endif %}
 
-<div class="fa-panel-head">
-  <h3><i class="fa-solid fa-chart-line"></i> {{ report_label }}</h3>
-  <form method="get" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-    <input type="hidden" name="tab" value="reports">
-    <select class="hub-select" name="type" onchange="this.form.submit()" style="min-width:200px">
-      {% for key, label in reports.items() %}
-        <option value="{{ key }}" {% if report_type == key %}selected{% endif %}>{{ label }}</option>
-      {% endfor %}
-    </select>
-  </form>
-</div>
+{% set _tabs_html %}
+<nav class="fa-tabs" aria-label="تبويبات المحاسبة">
+  <a href="?tab=ledger" class="{{ 'is-active' if tab == 'ledger' }}"><i class="fa-solid fa-table-list"></i> السجل المالي</a>
+  <a href="?tab=reports" class="{{ 'is-active' if tab == 'reports' }}"><i class="fa-solid fa-chart-line"></i> التقارير المالية</a>
+</nav>
+{% endset %}
 
-{# Exports + snapshot stay on their original standalone endpoints. #}
-<div class="hub-flex-row" style="gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center">
-  <a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ url_for('radius.finance_reports_export_csv', type=report_type) }}"><i class="fa-solid fa-file-csv"></i> CSV</a>
-  <a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ url_for('radius.finance_reports_export_xlsx', type=report_type) }}"><i class="fa-solid fa-file-excel"></i> Excel</a>
-  <a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ url_for('radius.finance_reports_export_pdf', type=report_type) }}"><i class="fa-solid fa-file-pdf"></i> PDF</a>
-  <span class="hub-spacer" style="flex:1"></span>
-  <form method="post" action="{{ url_for('radius.finance_reports_snapshot') }}" style="display:flex;gap:8px;align-items:center">
-    <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-    <input type="hidden" name="report_type" value="{{ report_type }}">
-    <button class="hub-btn hub-btn--primary hub-btn--sm" type="submit"><i class="fa-solid fa-lock"></i> حفظ لقطة ثابتة</button>
-  </form>
-</div>
+{% call hub.megahero(
+  "السجل والتقارير المحاسبية",
+  subtitle="تابع دفتر القيود المالية والتقارير من مكان واحد. واجهة موحّدة — السجل تراكمي (لا حذف) والتقارير تُبنى من نفس القيود.",
+  icon="scale-balanced",
+  actions_html=_tabs_html,
+  kpis=_kpis
+) %}
+  {% if tab == 'reports' %}
+  <input type="hidden" name="tab" value="reports">
+  <select class="hub-input grow" name="type" onchange="this.form.submit()" aria-label="نوع التقرير">
+    {% for key, label in reports.items() %}
+      <option value="{{ key }}" {% if report_type == key %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+  {{ hub.btn("عرض التقرير", icon="chart-line", variant="primary", type="submit", size="sm") }}
+  {% else %}
+  <input type="hidden" name="tab" value="ledger">
+  <select class="hub-input" name="entry_type" onchange="this.form.submit()" aria-label="نوع القيد">
+    <option value="">كل أنواع القيود</option>
+    {% for t in entry_types %}
+      <option value="{{ t }}" {% if entry_type == t %}selected{% endif %}>
+        {% if t == 'payment' %}دفعة{% elif t == 'loan' %}سلفة{% elif t == 'settlement' %}تسوية
+        {% elif t == 'void' %}إلغاء{% elif t == 'reversal' %}عكسي{% elif t == 'correction' %}تصحيح
+        {% else %}{{ t }}{% endif %}
+      </option>
+    {% endfor %}
+  </select>
+  <input class="hub-input grow" type="text" name="subscriber_id" value="{{ subscriber_id }}"
+         placeholder="رقم المستفيد..." inputmode="numeric">
+  {{ hub.btn("فلترة", icon="filter", variant="primary", type="submit", size="sm") }}
+  {% endif %}
+{% endcall %}
 
-{% if snapshots %}
-{% call hub.section("آخر اللقطات الثابتة", icon="box-archive", meta=snapshots|length|string + " لقطة", flush=True) %}
-  <div class="hub-table-wrap" style="border:none;border-radius:0">
-    <table class="hub-table">
-      <thead><tr><th>#</th><th>النوع</th><th>المصدر</th><th>عدد الصفوف</th><th>أنشئت بواسطة</th><th>الوقت</th></tr></thead>
-      <tbody>
-        {% for snap in snapshots %}
-        <tr>
-          <td class="mono small">{{ snap.id }}</td>
-          <td>{{ reports.get(snap.report_type, snap.report_type) }}</td>
-          <td>{{ snap.source }}</td>
-          <td class="mono small">{{ (snap.result or {}).get('count', 0) }}</td>
-          <td class="small">{{ snap.created_by or "—" }}</td>
-          <td class="mono small">{{ snap.created_at|dt_local }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+{# ═══════════════ TAB: LEDGER ═══════════════ #}
+{% if tab == 'ledger' %}
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "كيف تقرأ السجل المالي؟",
+  intro="كل صف قيد مالي تراكمي لا يُحذف. التصحيح يتم بقيد عكسي يحافظ على الأصل لأغراض المراجعة والتقارير.",
+  items=[
+    {'icon': 'right-left',   'text': 'الاتجاه: «مدين» يخصم من الحساب و«دائن» يضيف إليه.'},
+    {'icon': 'circle-check', 'text': '«مرحَّل» قيد فعّال، و«ملغى» قيد أُبطل بقيد عكسي.'},
+    {'icon': 'filter',       'text': 'استخدم فلتر نوع القيد ورقم المستفيد بالأعلى لتضييق العرض.'},
+    {'icon': 'rotate-left',  'text': 'زر «عكس القيد» ينشئ قيدًا عكسيًا — لا يحذف الأصل أبدًا.'},
+  ],
+  note="السجل المالي تراكمي. لا يتم حذف القيود؛ التصحيح يتم بقيد عكسي يحافظ على الأصل."
+)) %}
+  {% call hub.section("القيود", icon="table-list", meta=(ledger_items|length|string + " قيد") if ledger_items else "", flush=True) %}
+    {% if ledger_items %}
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25" style="border:none;border-radius:0">
+      <table class="hub-table">
+        <thead>
+          <tr>
+            <th class="num" style="width:56px">#</th>
+            <th>النوع</th>
+            <th>المستفيد</th>
+            <th>الاتجاه</th>
+            <th class="num">المبلغ</th>
+            <th>الحالة</th>
+            <th>المصدر</th>
+            <th data-uds-nosort>ملاحظات</th>
+            <th>التاريخ</th>
+            <th data-uds-nosort data-uds-nocol style="width:230px">عكس القيد</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for entry in ledger_items %}
+          <tr>
+            <td class="num mono">{{ entry.id }}</td>
+            <td>{{ hub.pill(entry.entry_type, variant="brand", dot=False) }}</td>
+            <td>
+              <div>{{ entry.username or '—' }}</div>
+              {% if entry.subscriber_id %}<div class="hub-text-mute mono small">#{{ entry.subscriber_id }}</div>{% endif %}
+            </td>
+            <td>
+              {% if entry.direction == 'debit' %}{{ hub.pill("مدين", variant="red") }}
+              {% elif entry.direction == 'credit' %}{{ hub.pill("دائن", variant="green") }}
+              {% else %}{{ hub.pill(entry.direction, variant="grey") }}{% endif %}
+            </td>
+            <td class="num mono" style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr"><strong>{{ entry.amount|money }}</strong></td>
+            <td>
+              {% if entry.status == 'posted' %}{{ hub.pill("مرحَّل", variant="green") }}
+              {% elif entry.status == 'void' %}{{ hub.pill("ملغى", variant="grey") }}
+              {% else %}{{ hub.pill(entry.status, variant="amber") }}{% endif %}
+            </td>
+            <td class="small">{{ entry.source_type or '—' }}{% if entry.source_id %} <span class="hub-text-mute mono">#{{ entry.source_id }}</span>{% endif %}</td>
+            <td class="small">{{ entry.notes or '—' }}</td>
+            <td class="num mono small" style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">{{ entry.created_at|dt_local }}</td>
+            <td>
+              {% if entry.entry_type not in ['void','reversal','correction'] %}
+              <form method="post" action="{{ url_for('radius.finance_ledger_void') }}" class="hub-flex-row" style="gap:4px;flex-wrap:nowrap">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+                <input type="hidden" name="entry_id" value="{{ entry.id }}">
+                <input class="hub-input" name="reason" placeholder="سبب التصحيح" required style="font-size:12px;padding:5px 8px;min-width:110px">
+                <button type="submit" class="hub-btn hub-btn--icon" title="عكس القيد"
+                  style="background:var(--hub-amber-soft);color:var(--hub-amber-ink);border-color:transparent">
+                  <i class="fa-solid fa-rotate-left"></i>
+                </button>
+              </form>
+              {% else %}<span class="hub-text-mute small">قيد تصحيحي</span>{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    {{ hub.empty("لا قيود بهذه الفلترة", sub="جرّب تغيير نوع القيد أو رقم المستفيد، أو امسح الفلتر.", icon="scale-balanced") }}
+    {% endif %}
+  {% endcall %}
 {% endcall %}
 {% endif %}
 
-{% if report_items %}
-  {% set columns = report_items[0].keys()|list %}
-  {% call hub.section(report_label, icon="chart-pie", meta=report_items|length|string + " صف", flush=True) %}
-    <div class="hub-table-wrap" style="border:none;border-radius:0">
+{# ═══════════════ TAB: REPORTS ═══════════════ #}
+{% if tab == 'reports' %}
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "كيف تقرأ التقارير المالية؟",
+  intro="هذه التقارير مبنية من السجل المالي. القيود العكسية والتصحيحات لا تحذف الأصل، لذلك تظهر القيم المعدّلة حسب القيد والـ void.",
+  items=[
+    {'icon': 'chart-line',  'text': 'اختر نوع التقرير من القائمة بالأعلى لإعادة بناء البيانات.'},
+    {'icon': 'file-export', 'text': 'صدّر التقرير الحالي بصيغة CSV أو Excel أو PDF.'},
+    {'icon': 'lock',        'text': '«حفظ لقطة ثابتة» يجمّد التقرير الحالي للرجوع إليه لاحقًا.'},
+    {'icon': 'box-archive', 'text': 'آخر اللقطات الثابتة تظهر أسفل التقرير للمراجعة.'},
+  ],
+  note="هذه التقارير مبنية من السجل المالي، لذلك تعكس القيود العكسية والتصحيحات دون حذف الأصل."
+)) %}
+  {% call hub.section(report_label, icon="chart-line", flush=False) %}
+    {# Exports + snapshot stay on their original standalone endpoints. #}
+    <div class="hub-flex-row" style="gap:8px;flex-wrap:wrap;margin-bottom:4px;align-items:center">
+      <a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ url_for('radius.finance_reports_export_csv', type=report_type) }}"><i class="fa-solid fa-file-csv"></i> CSV</a>
+      <a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ url_for('radius.finance_reports_export_xlsx', type=report_type) }}"><i class="fa-solid fa-file-excel"></i> Excel</a>
+      <a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ url_for('radius.finance_reports_export_pdf', type=report_type) }}"><i class="fa-solid fa-file-pdf"></i> PDF</a>
+      <span class="hub-spacer" style="flex:1"></span>
+      <form method="post" action="{{ url_for('radius.finance_reports_snapshot') }}" style="display:flex;gap:8px;align-items:center">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+        <input type="hidden" name="report_type" value="{{ report_type }}">
+        <button class="hub-btn hub-btn--primary hub-btn--sm" type="submit"><i class="fa-solid fa-lock"></i> حفظ لقطة ثابتة</button>
+      </form>
+    </div>
+  {% endcall %}
+
+  {% call hub.section(report_label, icon="chart-pie", meta=(report_items|length|string + " صف") if report_items else "", flush=True) %}
+    {% if report_items %}
+      {% set columns = report_items[0].keys()|list %}
+      <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25" style="border:none;border-radius:0">
+        <table class="hub-table">
+          <thead><tr>{% for column in columns %}<th>{{ column }}</th>{% endfor %}</tr></thead>
+          <tbody>
+            {% for row in report_items %}
+            <tr>{% for column in columns %}<td class="mono small">{{ row.get(column, '—') }}</td>{% endfor %}</tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      {{ hub.empty("لا توجد بيانات لهذا التقرير بعد", sub="جرّب نوع تقرير آخر، أو تأكد من وجود قيود في السجل المالي.", icon="chart-simple") }}
+    {% endif %}
+  {% endcall %}
+
+  {% if snapshots %}
+  {% call hub.section("آخر اللقطات الثابتة", icon="box-archive", meta=snapshots|length|string + " لقطة", flush=True) %}
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25" style="border:none;border-radius:0">
       <table class="hub-table">
-        <thead><tr>{% for column in columns %}<th>{{ column }}</th>{% endfor %}</tr></thead>
+        <thead><tr>
+          <th class="num">#</th>
+          <th>النوع</th>
+          <th>المصدر</th>
+          <th class="num">عدد الصفوف</th>
+          <th>أنشئت بواسطة</th>
+          <th>الوقت</th>
+        </tr></thead>
         <tbody>
-          {% for row in report_items %}
-          <tr>{% for column in columns %}<td class="mono small">{{ row.get(column, '—') }}</td>{% endfor %}</tr>
+          {% for snap in snapshots %}
+          <tr>
+            <td class="num mono small">{{ snap.id }}</td>
+            <td>{{ reports.get(snap.report_type, snap.report_type) }}</td>
+            <td>{{ snap.source }}</td>
+            <td class="num mono small" style="font-variant-numeric:tabular-nums;direction:ltr">{{ (snap.result or {}).get('count', 0) }}</td>
+            <td class="small">{{ snap.created_by or "—" }}</td>
+            <td class="num mono small" style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">{{ snap.created_at|dt_local }}</td>
+          </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
   {% endcall %}
-{% else %}
-  <div style="text-align:center;padding:24px">{{ hub.empty("لا توجد بيانات لهذا التقرير بعد", sub="جرّب نوع تقرير آخر، أو تأكد من وجود قيود في السجل المالي.", icon="chart-simple") }}</div>
-{% endif %}
+  {% endif %}
+{% endcall %}
 {% endif %}
 {% endblock %}

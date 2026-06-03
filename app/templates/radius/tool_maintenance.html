@@ -1,52 +1,38 @@
-{# Maintenance tool — REBUILT on hub-v2. Same backend data + same
-   POST actions: purge_radacct, purge_sync_done, purge_audit,
-   purge_failed_webhooks, vacuum. #}
+{# Maintenance tool — UDS. Same backend data + same POST actions:
+   purge_radacct, purge_sync_done, purge_audit, purge_failed_webhooks, vacuum. #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
 {% block title %}الصيانة{% endblock %}
-{% block page_icon %}<i class="fa-solid fa-screwdriver-wrench"></i>{% endblock %}
-{% block page_title %}الصيانة والتنظيف{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
 <style>
-  .tm-row{
-    display:flex; align-items:center; gap:14px;
-    flex-wrap:wrap;
-    padding: 14px 16px;
-    border: 1px solid var(--hub-border-soft);
-    border-radius: var(--hub-r-md);
-    background: var(--hub-bg-soft);
-    margin-bottom: 10px;
-    transition: border-color var(--hub-anim-fast) var(--hub-ease);
+  .hub-action-row{
+    display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+    padding:14px 16px;
+    border:1px solid var(--hub-border-soft);
+    border-radius:var(--hub-r-md);
+    background:var(--hub-bg-soft);
+    margin-bottom:10px;
+    transition:border-color var(--hub-anim-fast) var(--hub-ease);
   }
-  .tm-row:hover{ border-color: var(--hub-border-strong); }
-  .tm-row .label{
-    flex: 1 1 200px;
-    font-size: 13px; font-weight: 700; color: var(--hub-text);
-    min-width: 0;
+  .hub-action-row:last-child{ margin-bottom:0; }
+  .hub-action-row:hover{ border-color:var(--hub-border-strong); }
+  .hub-action-row--accent{
+    border-color:var(--hub-brand-line);
+    background:var(--hub-brand-soft);
   }
-  .tm-row .hint{
-    font-size: 11.5px; color: var(--hub-text-mute);
-    font-weight: 600;
+  .hub-action-row-label{
+    flex:1 1 200px; min-width:0;
+    font-size:13px; font-weight:700; color:var(--hub-text);
+    display:inline-flex; align-items:center; gap:8px;
   }
-  .tm-row .field{
-    display: inline-flex; align-items: center; gap: 6px;
+  .hub-field--inline{
+    display:inline-flex; align-items:center; gap:8px;
+    flex-direction:row;
   }
-  .tm-row input[type=number]{
-    width: 80px;
-    padding: 7px 10px;
-    border: 1px solid var(--hub-border-strong);
-    border-radius: var(--hub-r-sm);
-    font-size: 12.5px;
-    text-align: center;
-    color: var(--hub-text);
-  }
-  .tm-row input[type=number]:focus{
-    outline: 0; border-color: var(--hub-brand);
-    box-shadow: 0 0 0 3px rgba(107,90,237,.16);
-  }
+  .hub-field--inline .hub-field-hint{ margin:0; }
 </style>
 {% endblock %}
 
@@ -54,7 +40,7 @@
 
 {{ hub.hero(
   "الصيانة والتنظيف",
-  subtitle="حذف السجلات القديمة + VACUUM لقاعدة البيانات. كل العمليات مؤكَّدة قبل التنفيذ",
+  subtitle="حذف السجلات القديمة + VACUUM لقاعدة البيانات. كل العمليات مؤكَّدة قبل التنفيذ.",
   icon="screwdriver-wrench"
 ) }}
 
@@ -65,91 +51,100 @@
   {{ hub.kpi("حجم القاعدة (MB)", "%.1f"|format(db_size_mb), icon="hard-drive", variant="blue") }}
 </div>
 
-{% call hub.section("أدوات التنظيف", icon="broom") %}
+{% set help_aside %}
+  {% call hub.helppanel(
+       "قبل التنظيف",
+       intro="هذه عمليات صيانة لا يمكن التراجع عنها. اقرأ بتأنٍّ قبل التنفيذ.",
+       items=[
+         {'icon':'triangle-exclamation', 'text':'كل حذف نهائي — لا يمكن استرجاع الصفوف المحذوفة.'},
+         {'icon':'database', 'text':'حدّد المدة بالأيام؛ تُحذف السجلات الأقدم منها فقط.'},
+         {'icon':'compress', 'text':'شغّل VACUUM بعد عمليات الحذف الكبيرة لتقليص حجم الملف.'},
+       ],
+       icon="shield-halved",
+       note="جميع الأزرار تطلب تأكيدًا قبل التنفيذ."
+     ) %}{% endcall %}
+{% endset %}
 
-  {# 1. Purge radacct #}
-  <form method="post" class="tm-row">
-    <input type="hidden" name="action" value="purge_radacct">
-    <span class="label">
-      <i class="fa-solid fa-database"></i>
-      حذف الجلسات المنتهية أقدم من
-    </span>
-    <div class="field">
-      <input type="number" name="days" value="90" min="7">
-      <span class="hint">يوم</span>
-    </div>
-    <button class="hub-btn hub-btn--danger hub-btn--sm" type="submit"
-            style="margin-inline-start:auto"
-            onclick="return confirm('تأكيد الحذف؟ لا يمكن التراجع.');">
-      <i class="fa-solid fa-broom"></i> تنظيف
-    </button>
-  </form>
+{% call hub.worklayout(aside_html=help_aside) %}
 
-  {# 2. Purge sync done #}
-  <form method="post" class="tm-row">
-    <input type="hidden" name="action" value="purge_sync_done">
-    <span class="label">
-      <i class="fa-solid fa-arrows-rotate"></i>
-      حذف مهام المزامنة المكتملة الأقدم من
-    </span>
-    <div class="field">
-      <input type="number" name="days" value="30" min="1">
-      <span class="hint">يوم</span>
-    </div>
-    <button class="hub-btn hub-btn--secondary hub-btn--sm" type="submit"
-            style="margin-inline-start:auto;background:var(--hub-amber-soft);color:var(--hub-amber-ink);border-color:#fcd34d"
-            onclick="return confirm('تأكيد؟');">
-      <i class="fa-solid fa-broom"></i> تنظيف
-    </button>
-  </form>
+  {% call hub.section("أدوات التنظيف", icon="broom") %}
 
-  {# 3. Purge audit log #}
-  <form method="post" class="tm-row">
-    <input type="hidden" name="action" value="purge_audit">
-    <span class="label">
-      <i class="fa-solid fa-clock-rotate-left"></i>
-      حذف سجل تدقيق أقدم من
-    </span>
-    <div class="field">
-      <input type="number" name="days" value="180" min="30">
-      <span class="hint">يوم</span>
-    </div>
-    <button class="hub-btn hub-btn--secondary hub-btn--sm" type="submit"
-            style="margin-inline-start:auto;background:var(--hub-amber-soft);color:var(--hub-amber-ink);border-color:#fcd34d"
-            onclick="return confirm('تأكيد؟');">
-      <i class="fa-solid fa-broom"></i> تنظيف
-    </button>
-  </form>
+    {# 1. Purge radacct #}
+    <form method="post" class="hub-action-row">
+      <input type="hidden" name="action" value="purge_radacct">
+      <span class="hub-action-row-label">
+        <i class="fa-solid fa-database"></i>
+        حذف الجلسات المنتهية أقدم من
+      </span>
+      <div class="hub-field hub-field--inline">
+        <input class="hub-input" type="number" name="days" value="90" min="7" style="width:90px;text-align:center">
+        <span class="hub-field-hint">يوم</span>
+      </div>
+      {{ hub.btn("تنظيف", icon="broom", variant="danger", size="sm", type="submit",
+                 attrs='style="margin-inline-start:auto" onclick="return confirm(\'تأكيد الحذف؟ لا يمكن التراجع.\');"') }}
+    </form>
 
-  {# 4. Purge failed webhook attempts #}
-  <form method="post" class="tm-row">
-    <input type="hidden" name="action" value="purge_failed_webhooks">
-    <span class="label">
-      <i class="fa-solid fa-paper-plane"></i>
-      حذف محاولات إشعارات الربط الفاشلة
-    </span>
-    <span class="hint">(فقط المحاولات التي توقفت نهائيًا)</span>
-    <button class="hub-btn hub-btn--secondary hub-btn--sm" type="submit"
-            style="margin-inline-start:auto;background:var(--hub-amber-soft);color:var(--hub-amber-ink);border-color:#fcd34d"
-            onclick="return confirm('تأكيد؟');">
-      <i class="fa-solid fa-broom"></i> تنظيف
-    </button>
-  </form>
+    {# 2. Purge sync done #}
+    <form method="post" class="hub-action-row">
+      <input type="hidden" name="action" value="purge_sync_done">
+      <span class="hub-action-row-label">
+        <i class="fa-solid fa-arrows-rotate"></i>
+        حذف مهام المزامنة المكتملة الأقدم من
+      </span>
+      <div class="hub-field hub-field--inline">
+        <input class="hub-input" type="number" name="days" value="30" min="1" style="width:90px;text-align:center">
+        <span class="hub-field-hint">يوم</span>
+      </div>
+      {{ hub.btn("تنظيف", icon="broom", variant="secondary", size="sm", type="submit",
+                 attrs='style="margin-inline-start:auto" onclick="return confirm(\'تأكيد؟\');"') }}
+    </form>
 
-  {# 5. VACUUM #}
-  <form method="post" class="tm-row" style="margin-bottom:0;border-color:var(--hub-brand-line);background:var(--hub-brand-soft)">
-    <input type="hidden" name="action" value="vacuum">
-    <span class="label">
-      <i class="fa-solid fa-compress"></i>
-      تقليص ملف قاعدة البيانات (VACUUM)
-    </span>
-    <span class="hint">قد يستغرق بضع ثوانٍ. شغّله بعد عمليات حذف كبيرة.</span>
-    <button class="hub-btn hub-btn--primary hub-btn--sm" type="submit"
-            style="margin-inline-start:auto"
-            onclick="return confirm('تنفيذ VACUUM؟');">
-      <i class="fa-solid fa-compress"></i> تشغيل
-    </button>
-  </form>
+    {# 3. Purge audit log #}
+    <form method="post" class="hub-action-row">
+      <input type="hidden" name="action" value="purge_audit">
+      <span class="hub-action-row-label">
+        <i class="fa-solid fa-clock-rotate-left"></i>
+        حذف سجل تدقيق أقدم من
+      </span>
+      <div class="hub-field hub-field--inline">
+        <input class="hub-input" type="number" name="days" value="180" min="30" style="width:90px;text-align:center">
+        <span class="hub-field-hint">يوم</span>
+      </div>
+      {{ hub.btn("تنظيف", icon="broom", variant="secondary", size="sm", type="submit",
+                 attrs='style="margin-inline-start:auto" onclick="return confirm(\'تأكيد؟\');"') }}
+    </form>
+
+    {# 4. Purge failed webhook attempts #}
+    <form method="post" class="hub-action-row">
+      <input type="hidden" name="action" value="purge_failed_webhooks">
+      <span class="hub-action-row-label">
+        <i class="fa-solid fa-paper-plane"></i>
+        حذف محاولات إشعارات الربط الفاشلة
+      </span>
+      <span class="hub-field-hint">(فقط المحاولات التي توقفت نهائيًا)</span>
+      {{ hub.btn("تنظيف", icon="broom", variant="secondary", size="sm", type="submit",
+                 attrs='style="margin-inline-start:auto" onclick="return confirm(\'تأكيد؟\');"') }}
+    </form>
+
+  {% endcall %}
+
+  <div style="height:14px"></div>
+
+  {% call hub.section("قاعدة البيانات", icon="compress") %}
+
+    {# 5. VACUUM #}
+    <form method="post" class="hub-action-row hub-action-row--accent">
+      <input type="hidden" name="action" value="vacuum">
+      <span class="hub-action-row-label">
+        <i class="fa-solid fa-compress"></i>
+        تقليص ملف قاعدة البيانات (VACUUM)
+      </span>
+      <span class="hub-field-hint">قد يستغرق بضع ثوانٍ. شغّله بعد عمليات حذف كبيرة.</span>
+      {{ hub.btn("تشغيل", icon="compress", variant="primary", size="sm", type="submit",
+                 attrs='style="margin-inline-start:auto" onclick="return confirm(\'تنفيذ VACUUM؟\');"') }}
+    </form>
+
+  {% endcall %}
 
 {% endcall %}
 
