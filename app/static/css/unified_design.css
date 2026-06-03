@@ -691,3 +691,29 @@
   .pt-export.is-strip-collapsed{ grid-template-columns: 1fr; }
   .pt-strip{ position: static; max-height: 360px; }
 }
+
+
+/* ═════════════════════════════════════════════════════════════════════
+   16. CONSISTENT VERTICAL RHYTHM — ONE comfortable gap between EVERY
+       top-level block on every page (hero → content, section → section,
+       card → card). Shared: applied through the unified component classes
+       so every converted + future page inherits identical spacing and
+       nothing is ever glued. Loaded last → wins over component defaults.
+   ═════════════════════════════════════════════════════════════════════ */
+:root{ --uds-block-gap: 20px; }
+
+/* top-level blocks get a uniform gap below them */
+.uds-hero{ margin-bottom: var(--uds-block-gap); }
+.uds-worklayout{ margin-bottom: var(--uds-block-gap); gap: var(--uds-block-gap); }
+.uds-cols{ margin-bottom: var(--uds-block-gap); gap: var(--uds-block-gap); }
+.uds-stack{ gap: var(--uds-block-gap); }
+.uds-card{ margin-bottom: var(--uds-block-gap); }
+.hub-section{ margin-bottom: var(--uds-block-gap); }
+.hub-hero, .hub-kpi-grid, .hub-filterbar{ margin-bottom: var(--uds-block-gap); }
+
+/* inside flex/grid containers the GAP owns spacing — kill child margins to
+   avoid double gaps */
+.uds-main{ gap: var(--uds-block-gap); }
+.uds-main > *,
+.uds-cols > *,
+.uds-stack > *{ margin-bottom: 0; }
