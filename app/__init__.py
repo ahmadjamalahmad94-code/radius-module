@@ -331,8 +331,16 @@ def _install_stubs(app: Flask) -> None:
             from app.radius.core.system_config import system_config
             return {"cfg": system_config()}
         except Exception:  # noqa: BLE001 — never break a page on config read
-            return {"cfg": {"currency": "JOD", "currency_symbol": "د.أ", "tz_offset": 3.0,
-                            "system_name": "HobeRadius", "country": "", "logo_url": "", "primary_color": "#2BAACC"}}
+            # اشتقّ عملة الاحتياط من الإعداد الافتراضي الموحّد بدل تثبيت JOD هنا.
+            from app.radius.core.system_config import (
+                CURRENCY_NAMES, CURRENCY_SYMBOLS, _DEFAULTS,
+            )
+            cur = (_DEFAULTS.get("billing.currency") or "ILS").upper()
+            return {"cfg": {"currency": cur,
+                            "currency_symbol": CURRENCY_SYMBOLS.get(cur, cur),
+                            "currency_name": CURRENCY_NAMES.get(cur, cur),
+                            "tz_offset": 3.0, "system_name": "HobeRadius", "country": "",
+                            "logo_url": "", "primary_color": "#2BAACC"}}
 
     from app.radius.core.system_config import (
         format_duration_days as _dur_days,

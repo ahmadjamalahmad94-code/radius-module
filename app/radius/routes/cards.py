@@ -15,6 +15,7 @@ from datetime import date, datetime, timedelta
 from flask import Blueprint, Response, current_app, flash, g, jsonify, redirect, render_template, request, session, url_for
 
 from ..core.errors import RadiusError, RadiusValidationError
+from ..core.system_config import default_currency
 from ..db.connection import db
 from ..db.helpers import json_dump
 from ..db.repos import admins_repo, operations_repo
@@ -477,6 +478,9 @@ def _electronic_sales_total(tenant_id: int, period: str, filters: dict) -> dict:
 def _recent_printed_sales(tenant_id: int, limit: int = 8, period: str | None = None, filters: dict | None = None) -> list[dict]:
     period_sql = ""
     params: list[object] = [tenant_id]
+    # عملة العرض الافتراضية = عملة لوحة التحكم المضبوطة (وليست JOD ثابتة).
+    _cur = default_currency()
+    _cur = _cur if _cur.isalpha() else "ILS"
     if period:
         where, values = _period_condition("c.first_used_at", period, filters or _sales_period_filters())
         period_sql = f"AND {where}"
@@ -498,7 +502,7 @@ def _recent_printed_sales(tenant_id: int, limit: int = 8, period: str | None = N
                      WHEN b.total_price > 0 AND b.generated > 0 THEN b.total_price * 1.0 / b.generated
                      ELSE 0
                    END AS amount,
-                   COALESCE(p.currency, 'JOD') AS currency,
+                   COALESCE(NULLIF(p.currency, ''), '{_cur}') AS currency,
                    '' AS buyer_name
             FROM cards c
             JOIN card_batches b ON b.tenant_id = c.tenant_id AND b.id = c.batch_id
