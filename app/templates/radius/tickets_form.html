@@ -8,10 +8,30 @@
 {{ hub.hero(
   "تذكرة جديدة",
   subtitle="افتح تذكرة دعم جديدة لمشترك.",
-  icon="headset"
+  icon="headset",
+  actions_html='
+    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.tk_list') + '">
+      <i class="fa-solid fa-arrow-right"></i> العودة للقائمة
+    </a>
+    <button class="hub-btn hub-btn--primary" type="submit" form="tk-form">
+      <i class="fa-solid fa-floppy-disk"></i> إنشاء
+    </button>
+  '
 ) }}
 
-<form method="post">
+{% call hub.worklayout(aside_html=hub.helppanel(
+    "عن نموذج التذكرة",
+    intro="تُفتح هنا تذكرة دعم جديدة لمشترك لمتابعة طلبه أو شكواه حتى الإغلاق.",
+    icon="headset",
+    items=[
+      {"icon": "user", "text": "المشترك والموضوع حقلان إلزاميان — يربطان التذكرة بصاحبها ويلخّصان المطلوب."},
+      {"icon": "tags", "text": "اختر الفئة المناسبة لتسهيل الفرز والتوجيه إلى الفريق المختص."},
+      {"icon": "flag", "text": "الأولوية تحدّد ترتيب المعالجة — استخدم «عاجلة» للحالات الحرجة فقط."},
+      {"icon": "align-left", "text": "اكتب التفاصيل بوضوح لتسريع الحل وتقليل الأخذ والرد."}
+    ]
+)) %}
+
+<form method="post" id="tk-form">
 
   {% call hub.section("معلومات التذكرة", icon="circle-info") %}
     <div class="hub-form-row">
@@ -39,14 +59,14 @@
           <option value="service_request">طلب خدمة</option>
         </select>
       </div>
-      <div class="hub-field">
+      <div class="hub-field" style="grid-column:1/-1">
         <label class="hub-field-label">الأولوية</label>
-        <select class="hub-select" name="priority">
-          <option value="low">منخفضة</option>
-          <option value="normal" selected>عادية</option>
-          <option value="high">مرتفعة</option>
-          <option value="urgent">عاجلة</option>
-        </select>
+        {{ hub.cardselect("priority", [
+            {"value": "low",    "title": "منخفضة", "icon": "angle-down"},
+            {"value": "normal", "title": "عادية",  "icon": "minus"},
+            {"value": "high",   "title": "مرتفعة", "icon": "angle-up"},
+            {"value": "urgent", "title": "عاجلة",  "icon": "triangle-exclamation"}
+        ], value="normal") }}
       </div>
       <div class="hub-field" style="grid-column:1/-1">
         <label class="hub-field-label">التفاصيل</label>
@@ -60,4 +80,6 @@
     {{ hub.btn("إلغاء", variant="ghost", href=url_for('radius.tk_list')) }}
   </div>
 </form>
+
+{% endcall %}
 {% endblock %}

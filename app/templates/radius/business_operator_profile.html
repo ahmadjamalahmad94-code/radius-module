@@ -1,5 +1,6 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
+{% from "_partials/toggle_switch.html" import toggle_switch %}
 
 {% set label = profile.entity_type ~ " #" ~ profile.entity_id %}
 
@@ -22,32 +23,38 @@
   .op-form{ display:grid; gap:12px; }
   .op-field{ display:flex; flex-direction:column; gap:5px; }
   .op-field > span:first-child{ font-size:12.5px; font-weight:700; color:var(--hub-text-soft); }
-  .op-checks{ display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:8px; }
-  .op-check{
-    display:flex; align-items:center; gap:8px;
-    padding:9px 12px; background:var(--hub-bg-soft);
-    border:1px solid var(--hub-border-soft); border-radius:var(--hub-r-md);
-    font-size:12.5px; font-weight:700; cursor:pointer;
-  }
-  .op-check input{ width:16px; height:16px; accent-color:var(--hub-brand); cursor:pointer; }
+  .op-checks{ display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:8px; }
   .op-form .hub-btn{ justify-self:start; }
 </style>
 {% endblock %}
 
 {% block content %}
-{{ hub.hero(
+{# ───── Merged hero: title + action + wallet/scope KPI strip ───── #}
+{{ hub.megahero(
   label,
   subtitle="ملف مالي تشغيلي. هذه الصفحة تسجل أحداث نظام الأعمال فقط ولا تغيّر مصادقة أو محاسبة النظام.",
   icon="id-card-clip",
-  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.business_operators') ~ '"><i class="fa-solid fa-arrow-right"></i> المشغلون</a>'
+  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.business_operators') ~ '"><i class="fa-solid fa-arrow-right"></i> المشغلون</a>',
+  kpis=[
+    {'label': 'رصيد المحفظة', 'value': profile.wallet.balance|money,        'icon': 'wallet',          'variant': 'green'},
+    {'label': 'حد الائتمان',  'value': profile.debt_credit.credit_limit|money, 'icon': 'scale-balanced', 'variant': 'blue'},
+    {'label': 'صافي الهامش',  'value': profile.profit.net_margin|money,       'icon': 'chart-line',      'variant': 'amber'},
+    {'label': 'نقاط الثقة',   'value': profile.score.trust_score,             'icon': 'shield-heart'},
+  ]
 ) }}
 
-<div class="hub-kpi-grid" data-testid="operator-profile-kpis">
-  {{ hub.kpi("رصيد المحفظة", profile.wallet.balance|money, icon="wallet", variant="green") }}
-  {{ hub.kpi("حد الائتمان", profile.debt_credit.credit_limit|money, icon="scale-balanced", variant="blue") }}
-  {{ hub.kpi("صافي الهامش", profile.profit.net_margin|money, icon="chart-line", variant="amber") }}
-  {{ hub.kpi("نقاط الثقة", profile.score.trust_score, icon="shield-heart") }}
-</div>
+{# ───── Work layout: main column + help aside on the LEFT ───── #}
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "كيف تقرأ هذا الملف",
+  intro="ملف المشغّل يجمع محفظته وصلاحياته وحدوده ونطاق مشتركيه وبطاقاته وتتبّع أرباحه في مكان واحد.",
+  items=[
+    {'icon': 'wallet',         'text': 'اشحن المحفظة لزيادة الرصيد المتاح للمشغّل.'},
+    {'icon': 'sliders',        'text': 'الصلاحيات والحدود تضبط ما يمكن للمشغّل فعله.'},
+    {'icon': 'chart-simple',   'text': 'تتبّع الأرباح يوضّح حصص المدير والشركة.'},
+    {'icon': 'circle-info',    'text': 'الجداول تعرض المشتركين والحزم والأحداث ضمن النطاق.'},
+  ],
+  note="هذه الصفحة تسجّل أحداث نظام الأعمال فقط ولا تغيّر مصادقة أو محاسبة النظام."
+)) %}
 
 <div class="hub-grid-1-1">
   {% call hub.section("شحن المحفظة", icon="wallet") %}
@@ -75,10 +82,7 @@
       <div class="op-field"><span>الصلاحيات</span>
         <div class="op-checks">
           {% for key, value in profile.permissions.items() %}
-            <label class="op-check">
-              <input type="checkbox" name="{{ key }}" {% if value %}checked{% endif %}>
-              {{ key }}
-            </label>
+            {{ toggle_switch(name=key, checked=value, value="1", on_label=key, off_label=key) }}
           {% endfor %}
         </div>
       </div>
@@ -98,10 +102,9 @@
       <label class="op-field"><span>نسبة مشاركة الربح %</span>
         <input class="hub-input" name="profit_share_percent" type="number" step="0.01" min="0" max="100" value="{{ profile.policy.profit_share_percent }}">
       </label>
-      <label class="op-check">
-        <input type="checkbox" name="loan_wallet_deducted" {% if profile.limits.loan_wallet_deducted %}checked{% endif %}>
-        السلفة تخصم من المحفظة
-      </label>
+      <div class="op-field"><span>السلفة تخصم من المحفظة</span>
+        {{ toggle_switch(name="loan_wallet_deducted", checked=profile.limits.loan_wallet_deducted, value="1") }}
+      </div>
       <button class="hub-btn hub-btn--secondary" type="submit"><i class="fa-solid fa-floppy-disk"></i> حفظ السياسة</button>
     </form>
   {% endcall %}
@@ -120,7 +123,8 @@
   {% call hub.section("المشتركون ضمن النطاق", icon="users", meta=(profile.subscribers|length|string ~ " مشترك") if profile.subscribers else "", flush=True) %}
     {% if profile.subscribers %}
     <div class="hub-table-wrap" style="border:none;border-radius:0">
-      <table class="hub-table" data-testid="operator-subscribers">
+      <table class="hub-table" data-testid="operator-subscribers"
+             data-paginated="1" data-page-size="15" data-page-sizes="10,15,25,50" data-persist-key="op-subscribers">
         <thead><tr><th class="num" style="width:64px">#</th><th>اسم المستخدم</th><th>الحالة</th><th>الباقة</th></tr></thead>
         <tbody>
           {% for subscriber in profile.subscribers %}
@@ -137,7 +141,8 @@
   {% call hub.section("حزم الكروت ضمن النطاق", icon="layer-group", meta=(profile.batches|length|string ~ " حزمة") if profile.batches else "", flush=True) %}
     {% if profile.batches %}
     <div class="hub-table-wrap" style="border:none;border-radius:0">
-      <table class="hub-table" data-testid="operator-batches">
+      <table class="hub-table" data-testid="operator-batches"
+             data-paginated="1" data-page-size="15" data-page-sizes="10,15,25,50" data-persist-key="op-batches">
         <thead><tr><th class="num" style="width:64px">#</th><th>الحزمة</th><th class="num">العدد</th><th>الحالة</th></tr></thead>
         <tbody>
           {% for batch in profile.batches %}
@@ -155,7 +160,8 @@
 {% call hub.section("الأحداث والعمليات", icon="timeline", flush=True) %}
   {% if profile.operations or profile.events %}
   <div class="hub-table-wrap" style="border:none;border-radius:0">
-    <table class="hub-table" data-testid="operator-events">
+    <table class="hub-table" data-testid="operator-events"
+           data-paginated="1" data-page-size="15" data-page-sizes="10,15,25,50" data-persist-key="op-events">
       <thead><tr><th>النوع</th><th>المفتاح</th><th>الحالة</th><th>تاريخ الإنشاء</th></tr></thead>
       <tbody>
         {% for op in profile.operations %}
@@ -171,4 +177,6 @@
     {{ hub.empty("لا توجد أحداث بعد.", icon="timeline") }}
   {% endif %}
 {% endcall %}
+
+{% endcall %}{# worklayout #}
 {% endblock %}
