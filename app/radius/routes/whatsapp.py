@@ -125,12 +125,31 @@ def whatsapp_page():
     # The panel may return the connection facts either at the top level or under
     # ``response`` (the bridge wraps successful payloads in ``response``).
     facts = response or status
+
+    # The panel's status endpoint reports ``account_status`` +
+    # ``display_phone_number`` (+ a coarse ``onboarding_state``). Read those, with
+    # a fallback to the older ``connected``/``phone`` shape for safety.
+    account_status = str(facts.get("account_status") or "").strip()
+    if not account_status and facts.get("connected") is not None:
+        account_status = "connected" if facts.get("connected") else "disconnected"
+    onboarding = str(facts.get("onboarding_state") or "").strip()
+    if onboarding not in ("connected", "not_connected", "needs_setup"):
+        if account_status == "connected":
+            onboarding = "connected"
+        elif account_status in ("disconnected", "error", "suspended"):
+            onboarding = "not_connected"
+        else:
+            onboarding = "needs_setup"
+
     view = {
         "ok": bool(status.get("ok")),
         "status": status.get("status") or "unavailable",
         "enabled": bool(facts.get("enabled")),
-        "connected": bool(facts.get("connected")),
-        "phone": facts.get("phone") or facts.get("phone_number") or "",
+        "connected": (account_status == "connected"),
+        "onboarding": onboarding,  # connected | not_connected | needs_setup
+        "phone": (facts.get("display_phone_number") or facts.get("phone")
+                  or facts.get("phone_number") or ""),
+        "business": facts.get("business_display_name") or "",
         "usage": facts.get("usage") if isinstance(facts.get("usage"), dict) else {},
     }
     return render_template(

@@ -125,21 +125,30 @@
     <span>— كما تردّها لوحة التراخيص</span></div>
 
   {% if status.ok %}
-    {% set cls = 'on' if status.connected else ('off' if status.enabled else 'dead') %}
-    <div class="wa-status {{ cls }}" data-testid="wa-status">
+    {% set cls = 'on' if status.onboarding == 'connected' else ('off' if status.onboarding == 'not_connected' else 'dead') %}
+    <div class="wa-status {{ cls }}" data-testid="wa-status" data-onboarding="{{ status.onboarding }}">
       <div class="wa-status-top">
         <span class="wa-status-ic"><i class="fa-brands fa-whatsapp"></i></span>
         <div class="wa-status-name">واتساب للأعمال
           <small>تُدار عبر لوحة التراخيص</small></div>
-        {% if status.connected %}
+        {% if status.onboarding == 'connected' %}
           <span class="wa-pill on"><span class="dot"></span> متصل</span>
-        {% elif status.enabled %}
-          <span class="wa-pill off"><span class="dot"></span> مفعّل — غير متصل</span>
+        {% elif status.onboarding == 'not_connected' %}
+          <span class="wa-pill off"><span class="dot"></span> غير متصل</span>
         {% else %}
-          <span class="wa-pill dead"><span class="dot"></span> غير مفعّل</span>
+          <span class="wa-pill dead"><span class="dot"></span> بحاجة إلى الإعداد</span>
         {% endif %}
       </div>
       <div class="wa-status-meta">
+        {% if status.onboarding != 'connected' %}
+          <span class="wa-tag">
+            {% if status.onboarding == 'not_connected' %}أعد ربط واتساب من لوحة التراخيص لاستئناف الإرسال.
+            {% else %}لم يتم ربط واتساب الرسمي بعد — اربطه من لوحة التراخيص.{% endif %}
+          </span>
+        {% endif %}
+        {% if status.business %}
+          <span class="wa-tag">النشاط: <b>{{ status.business }}</b></span>
+        {% endif %}
         {% if status.phone %}
           <span class="wa-tag">الرقم: <b class="num">{{ status.phone }}</b></span>
         {% endif %}
@@ -221,8 +230,8 @@
       <span class="ic"><i class="fa-solid fa-plug-circle-bolt"></i></span>
       <div class="t">إدارة ربط واتساب
         <small>الاتصال الرسمي بـ Meta وإعداد القوالب يتمّان في بوابة لوحة التراخيص.</small></div>
-      <a class="wa-btn secondary" href="{{ panel_portal_url }}" target="_blank" rel="noopener">
-        <i class="fa-solid fa-up-right-from-square"></i> فتح بوابة لوحة التراخيص</a>
+      <a class="wa-btn secondary" href="{{ panel_portal_url }}" target="_blank" rel="noopener" data-testid="wa-manage-link">
+        <i class="fa-solid fa-up-right-from-square"></i> إدارة ربط واتساب</a>
     </div>
   {% endif %}
 
