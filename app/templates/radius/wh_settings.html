@@ -1,7 +1,12 @@
-{# Webhook settings — full rebuild on hub-v2.
-   Page goal: explain what a webhook is here, what events get pushed,
-   and let the operator set the URL + HMAC + enable flag.
-   Backend untouched. #}
+{# Webhook settings — UNIFIED DESIGN SYSTEM.
+
+   One hub.hero (title + subtitle + icon + save/deliveries actions) replaces the
+   stacked page-head + bespoke hero. hub.worklayout puts the "how it works"
+   explanation in the LEFT help panel. Settings grouped into hub.section cards
+   with hub-field/hub-input controls; the enable-sending checkbox is the
+   canonical toggle_switch (same field name=enabled → identical POST body).
+   Field names (target_url, secret, enabled) and the submit action are preserved
+   verbatim — backend untouched. #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 {% from "_partials/toggle_switch.html" import toggle_switch %}
@@ -11,151 +16,64 @@
 {% block page_title %}إشعارات الربط الخارجي{% endblock %}
 {% block page_sub %}<span class="sub">إرسال أحداث النظام إلى رابط خارجي بتوقيع أمني</span>{% endblock %}
 
-{% block head_extra %}
-{{ super() }}
-<style>
-  /* ── Unified rhythm: 16px between sections ────────────────────── */
-  .wh-page{ display:grid; gap:16px; }
-  .wh-grid-2{
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    grid-auto-rows:1fr;
-    gap:14px;
-    align-items:stretch;
-  }
-  @media (max-width:880px){
-    .wh-grid-2{ grid-template-columns:1fr; grid-auto-rows:auto; }
-  }
-  .wh-grid-2 > .hub-section{
-    display:flex; flex-direction:column; height:100%; margin:0;
-  }
-  .wh-grid-2 > .hub-section > .hub-section-body{
-    flex:1 1 auto; display:flex; flex-direction:column;
-  }
-
-  /* ── Numbered "how it works" steps ────────────────────────────── */
-  .wh-help{ margin:0; padding:0; counter-reset:wh-step; display:grid; gap:10px; }
-  .wh-help li{
-    list-style:none; position:relative;
-    padding:11px 52px 11px 14px;
-    background:var(--hub-bg-soft, #f8f7fc);
-    border:1px solid var(--hub-border-soft, #e2e8f0);
-    border-radius:12px;
-    line-height:1.7; font-size:13.5px; color:var(--hub-text, #0f172a);
-  }
-  .wh-help li::before{
-    counter-increment:wh-step; content:counter(wh-step);
-    position:absolute; inset-inline-end:14px; top:50%;
-    transform:translateY(-50%);
-    width:28px; height:28px; border-radius:50%;
-    background:linear-gradient(135deg, var(--hub-brand, #7c3aed), var(--hub-brand-deep, #5b21b6));
-    color:#fff; display:grid; place-items:center;
-    font-weight:800; font-size:13px;
-  }
-
-  /* ── Form fields ─────────────────────────────────────────────── */
-  .wh-field{ display:grid; gap:6px; margin-bottom:14px; }
-  .wh-field:last-child{ margin-bottom:0; }
-  .wh-field-label{
-    display:flex; align-items:center; gap:8px;
-    font-size:13px; font-weight:800; color:var(--hub-text);
-  }
-  .wh-field-label .req{ color:var(--hub-red, #dc2626); font-size:14px; }
-  .wh-field-hint{
-    font-size:12.5px; color:var(--hub-text-soft, #475569);
-    line-height:1.7;
-  }
-  .wh-field-hint code{
-    padding:2px 6px; background:#f5f3ff; color:#5b21b6;
-    border-radius:4px; font-size:12px;
-  }
-  .wh-toggle-row{
-    display:flex; align-items:center; gap:12px;
-    padding:12px 14px;
-    background:var(--hub-bg-soft, #f8f7fc);
-    border:1px solid var(--hub-border-soft, #e2e8f0);
-    border-radius:10px;
-  }
-
-  /* ── Event chip list ─────────────────────────────────────────── */
-  .wh-events{
-    display:flex; flex-wrap:wrap; gap:8px;
-  }
-  .wh-event-chip{
-    display:inline-flex; align-items:center; gap:6px;
-    padding:6px 12px; border-radius:999px;
-    background:#fff; color:var(--hub-text);
-    border:1px solid var(--hub-border-soft, #e2e8f0);
-    font-size:12.5px; font-weight:700;
-  }
-  .wh-event-chip i{ color:#5b21b6; font-size:11px; }
-
-  /* ── Retry timeline ──────────────────────────────────────────── */
-  .wh-retry{
-    display:grid;
-    grid-template-columns:repeat(auto-fit, minmax(100px, 1fr));
-    gap:8px;
-    margin-top:10px;
-  }
-  .wh-retry-step{
-    text-align:center;
-    padding:10px 8px;
-    background:#fff;
-    border:1px solid var(--hub-border-soft, #e2e8f0);
-    border-radius:10px;
-    position:relative;
-  }
-  .wh-retry-step .n{
-    font-size:11px; color:var(--hub-text-mute, #94a3b8);
-    font-weight:700; display:block; margin-bottom:2px;
-  }
-  .wh-retry-step .t{
-    font-size:13px; color:#5b21b6; font-weight:800;
-    font-variant-numeric:tabular-nums;
-  }
-
-  /* ── Sample payload ──────────────────────────────────────────── */
-  .wh-sample{
-    margin:0; padding:14px 16px;
-    background:#0f172a; color:#e2e8f0;
-    border-radius:12px; border:1px solid #1e293b;
-    font-family:ui-monospace, Consolas, monospace;
-    font-size:12.5px; line-height:1.7;
-    direction:ltr; unicode-bidi:isolate;
-    overflow-x:auto;
-    text-align:start;
-  }
-  .wh-sample .k{ color:#a78bfa; }
-  .wh-sample .s{ color:#6ee7b7; }
-  .wh-sample .n{ color:#fbbf24; }
-
-  /* ── Save bar (sticky-ish bottom action row) ─────────────────── */
-  .wh-savebar{
-    display:flex; justify-content:flex-end; gap:10px;
-    padding:14px 16px;
-    background:var(--hub-bg-soft, #f8f7fc);
-    border:1px solid var(--hub-border-soft, #e2e8f0);
-    border-radius:14px;
-  }
-</style>
-{% endblock %}
-
 {% block content %}
-<div class="wh-page">
+<div class="hr-page-shell" data-admin-rhythm>
 
-  {# ───── Hero: title + action buttons inside ──────────────── #}
-  {{ hub.hero(
-    "إشعارات الربط الخارجي",
-    subtitle="إرسال أحداث النظام (دفعات، تجديدات، تنبيهات…) إلى رابط خارجي بتوقيع أمني. مناسب لدمج الريدياس مع نظام إدارة عملاء أو منصة محاسبة.",
-    icon="bolt",
-    actions_html='
-      <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.wh_deliveries') + '">
-        <i class="fa-solid fa-list-check"></i> سجل الإرسال
-      </a>
-    '
-  ) }}
+{# ───── Unified hero: title + subtitle + save/deliveries actions ───── #}
+{% set _actions %}
+  <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.wh_deliveries') }}">
+    <i class="fa-solid fa-list-check"></i> سجل الإرسال
+  </a>
+  <button class="hub-btn hub-btn--primary" type="submit" form="wh-settings-form">
+    <i class="fa-solid fa-floppy-disk"></i> حفظ الإعدادات
+  </button>
+{% endset %}
+{{ hub.hero(
+  "إشعارات الربط الخارجي",
+  subtitle="إرسال أحداث النظام (دفعات، تجديدات، تنبيهات…) إلى رابط خارجي بتوقيع "
+           "أمني. مناسب لدمج الريدياس مع نظام إدارة عملاء أو منصة محاسبة.",
+  icon="bolt",
+  actions_html=_actions
+) }}
 
-  {# ───── Status KPI strip ─────────────────────────────────── #}
+{# ───── Help panel (left) — what it is + retry policy ───── #}
+{% set _help %}
+  {% call hub.helppanel(
+    "ما هي إشعارات الربط الخارجي؟",
+    intro="عند كل دفعة جديدة أو تجديد أو تنبيه، يرسل النظام إشعارًا آليًا موقّعًا "
+          "للرابط الذي تحدده.",
+    icon="circle-question"
+  ) %}
+    <ol style="margin:0;padding-inline-start:20px;color:var(--hub-text-soft);font-size:12.5px;line-height:2">
+      <li><strong>تنبيه فوري بأحداث النظام.</strong> عند كل دفعة جديدة، تجديد اشتراك، أو تنبيه أمني، يرسل النظام إشعارًا آليًا للرابط الذي تحدده.</li>
+      <li><strong>توقيع آمن بكل طلب.</strong> كل إشعار يحمل توقيعًا أمنيًا محسوبًا بالمفتاح السري. تحقّق من التوقيع قبل الوثوق بالبيانات.</li>
+      <li><strong>إعادة محاولة ذكية.</strong> الفشل المؤقت (أخطاء شبكة أو 5xx) يُعاد بفترات متصاعدة، والفشل النهائي (4xx) يتوقف فورًا.</li>
+      <li><strong>سجل كامل.</strong> كل عملية إرسال محفوظة في سجل الإرسال — راجعها وأعد المحاولة يدويًا عند الحاجة.</li>
+    </ol>
+
+    <div style="margin-top:16px;font-weight:800;font-size:12.5px;color:var(--hub-text)">
+      <i class="fa-solid fa-rotate" style="color:var(--hub-brand-ink)"></i> سياسة إعادة المحاولة
+    </div>
+    <div style="margin:6px 0 8px;color:var(--hub-text-soft);font-size:12px;line-height:1.7">
+      عند فشل مؤقت، النظام يحاول الإرسال خمس مرات قبل التوقف:
+    </div>
+    <ul class="uds-help-list" style="font-variant-numeric:tabular-nums">
+      <li><i class="fa-solid fa-1"></i><span>المحاولة 1 — بعد 30 ثانية</span></li>
+      <li><i class="fa-solid fa-2"></i><span>المحاولة 2 — بعد دقيقتين</span></li>
+      <li><i class="fa-solid fa-3"></i><span>المحاولة 3 — بعد 8 دقائق</span></li>
+      <li><i class="fa-solid fa-4"></i><span>المحاولة 4 — بعد 30 دقيقة</span></li>
+      <li><i class="fa-solid fa-5"></i><span>المحاولة 5 — بعد ساعتين</span></li>
+    </ul>
+    <div class="uds-help-note">
+      <i class="fa-solid fa-circle-info"></i>
+      <span>أكواد <code>4xx</code> (عدا 408 و 429) تُعتبر فشلًا نهائيًا فورًا — تحقّق من رابطك وكود الاستجابة عنده.</span>
+    </div>
+  {% endcall %}
+{% endset %}
+
+{% call hub.worklayout(aside_html=_help) %}
+
+  {# ───── Status KPI strip ───── #}
   <div class="hub-kpi-grid">
     {{ hub.kpi("حالة الإشعارات",
                "مُفعَّلة" if current and current.enabled else ("معطَّلة" if current else "لم تُضبط بعد"),
@@ -171,125 +89,115 @@
                variant=("violet" if current and current.secret else "grey")) }}
   </div>
 
-  {# ───── Explanation: numbered steps ──────────────────────── #}
-  {% call hub.section("ما هي إشعارات الربط الخارجي؟", icon="circle-question") %}
-    <ol class="wh-help">
-      <li><strong>تنبيه فوري بأحداث النظام.</strong> عند كل دفعة جديدة، تجديد اشتراك، أو تنبيه أمني، يرسل النظام إشعارًا آليًا للرابط الذي تحدده.</li>
-      <li><strong>توقيع آمن بكل طلب.</strong> كل إشعار يحمل توقيعًا أمنيًا محسوبًا بالمفتاح السري أدناه. تحقّق من التوقيع قبل الوثوق بالبيانات.</li>
-      <li><strong>إعادة محاولة ذكية.</strong> الفشل المؤقت (أخطاء شبكة أو 5xx) يُعاد بفترات متصاعدة، والفشل النهائي (4xx) يتوقف فورًا.</li>
-      <li><strong>سجل كامل.</strong> كل عملية إرسال محفوظة في سجل الإرسال — يمكنك مراجعتها وإعادة المحاولة يدويًا عند الحاجة.</li>
-    </ol>
-  {% endcall %}
+  {# ───── Settings form ───── #}
+  <form method="post" id="wh-settings-form" class="hr-form-card">
 
-  {# ───── Form + how-it-works side-by-side ─────────────────── #}
-  <form method="post" class="wh-page" style="gap:16px">
+    {% call hub.section("إعدادات الربط", icon="sliders") %}
 
-    <div class="wh-grid-2">
-
-      {# Left: configuration #}
-      {% call hub.section("إعدادات الربط", icon="sliders") %}
-        <div class="wh-field">
-          <div class="wh-field-label">
-            <i class="fa-solid fa-link"></i>
-            <span>رابط الاستقبال</span>
-            <span class="req">*</span>
-          </div>
-          <input class="hub-input mono" type="text" name="target_url"
-                 value="{{ current.target_url if current else '' }}"
-                 placeholder="https://hobehub.example.com/webhooks/radius"
-                 dir="ltr">
-          <div class="wh-field-hint">
-            رابط <code>HTTPS</code> كامل يستقبل طلبات POST. يجب أن يرجع كود استجابة
-            <code>2xx</code> لاعتبار الإرسال ناجحًا. أي شيء آخر يعتبر فشلًا.
-          </div>
+      <div class="hub-field">
+        <label class="hub-field-label" for="target_url">
+          رابط الاستقبال <span class="req">*</span>
+        </label>
+        <input class="hub-input" type="text" name="target_url" id="target_url"
+               value="{{ current.target_url if current else '' }}"
+               placeholder="https://hobehub.example.com/webhooks/radius"
+               dir="ltr" style="font-family:monospace">
+        <div class="hub-field-hint">
+          رابط <code>HTTPS</code> كامل يستقبل طلبات POST. يجب أن يرجع كود استجابة
+          <code>2xx</code> لاعتبار الإرسال ناجحًا. أي شيء آخر يعتبر فشلًا.
         </div>
-
-        <div class="wh-field">
-          <div class="wh-field-label">
-            <i class="fa-solid fa-shield-halved"></i>
-            <span>المفتاح السري (HMAC)</span>
-            <span class="req">*</span>
-          </div>
-          <input class="hub-input mono" type="text" name="secret"
-                 value="{{ current.secret if current else '' }}"
-                 placeholder="مفتاح سري طويل وعشوائي"
-                 dir="ltr">
-          <div class="wh-field-hint">
-            مفتاح سرّي مشترك بين الريدياس وخادم الاستقبال. يستخدم لتوقيع كل طلب عبر
-            <code>HMAC-SHA256</code>. لا تشاركه ولا تضعه في أي مكان عام.
-          </div>
-        </div>
-
-        <div class="wh-field">
-          <div class="wh-field-label">
-            <i class="fa-solid fa-toggle-on"></i>
-            <span>تفعيل الإرسال</span>
-          </div>
-          <div class="wh-toggle-row">
-            {{ toggle_switch(
-              name="enabled",
-              checked=((current and current.enabled) or not current),
-              value="1", id="wh-en",
-              on_label="مُفعَّل — يرسل الإشعارات للرابط أعلاه",
-              off_label="معطَّل — لا إرسال حتى تشغيله"
-            ) }}
-          </div>
-        </div>
-      {% endcall %}
-
-      {# Right: events that get sent + retry timeline #}
-      {% call hub.section("ماذا يُرسَل ومتى يُعاد؟", icon="paper-plane") %}
-        <div class="wh-field-label" style="margin-bottom:8px">
-          <i class="fa-solid fa-list-check"></i>
-          <span>الأحداث المرسَلة</span>
-        </div>
-        <div class="wh-events">
-          <span class="wh-event-chip"><i class="fa-solid fa-circle"></i> دفعة جديدة</span>
-          <span class="wh-event-chip"><i class="fa-solid fa-circle"></i> تجديد اشتراك</span>
-          <span class="wh-event-chip"><i class="fa-solid fa-circle"></i> إنشاء كرت</span>
-          <span class="wh-event-chip"><i class="fa-solid fa-circle"></i> تعطيل مشترك</span>
-          <span class="wh-event-chip"><i class="fa-solid fa-circle"></i> تنبيه أمني</span>
-        </div>
-
-        <div class="wh-field-label" style="margin:18px 0 8px">
-          <i class="fa-solid fa-rotate"></i>
-          <span>سياسة إعادة المحاولة</span>
-        </div>
-        <div class="wh-field-hint" style="margin:0 0 6px">
-          عند فشل مؤقت، النظام يحاول الإرسال خمس مرات قبل التوقف:
-        </div>
-        <div class="wh-retry">
-          <div class="wh-retry-step"><span class="n">المحاولة 1</span><span class="t">30 ثانية</span></div>
-          <div class="wh-retry-step"><span class="n">المحاولة 2</span><span class="t">دقيقتان</span></div>
-          <div class="wh-retry-step"><span class="n">المحاولة 3</span><span class="t">8 دقائق</span></div>
-          <div class="wh-retry-step"><span class="n">المحاولة 4</span><span class="t">30 دقيقة</span></div>
-          <div class="wh-retry-step"><span class="n">المحاولة 5</span><span class="t">ساعتان</span></div>
-        </div>
-        <div class="wh-field-hint" style="margin-top:8px">
-          أكواد <code>4xx</code> (عدا 408 و 429) تُعتبر فشلًا نهائيًا فورًا — تحقّق من رابطك وكود الاستجابة عنده.
-        </div>
-      {% endcall %}
-
-    </div>
-
-    {# External receiver explanation #}
-    {% call hub.section("ماذا يستقبل الرابط الخارجي؟", icon="circle-info") %}
-      <div class="wh-field-hint" style="margin-bottom:10px">
-        الرابط الخارجي يستقبل اسم الحدث، وقت حدوثه، رقم المنشأة، وتفاصيل مختصرة عن العملية مثل قيمة الدفعة أو اسم المشترك. لا تعرض هذه الصفحة كودًا للمشغّل؛ عند الربط البرمجي استخدم التوثيق الفني الداخلي أو أعطِه للمطور المسؤول عن النظام الخارجي.
       </div>
+
+      <div class="hub-field">
+        <label class="hub-field-label" for="secret">
+          المفتاح السري (HMAC) <span class="req">*</span>
+        </label>
+        <input class="hub-input" type="text" name="secret" id="secret"
+               value="{{ current.secret if current else '' }}"
+               placeholder="مفتاح سري طويل وعشوائي"
+               dir="ltr" style="font-family:monospace">
+        <div class="hub-field-hint">
+          مفتاح سرّي مشترك بين الريدياس وخادم الاستقبال. يستخدم لتوقيع كل طلب عبر
+          <code>HMAC-SHA256</code>. لا تشاركه ولا تضعه في أي مكان عام.
+        </div>
+      </div>
+
+      <div class="uds-toggle-row">
+        <div class="uds-toggle-row-text">
+          <span class="uds-toggle-row-label">
+            <i class="fa-solid fa-toggle-on" style="color:var(--hub-brand-ink)"></i> تفعيل الإرسال
+          </span>
+          <span class="uds-toggle-row-meta">
+            عند الإيقاف، تبقى الإعدادات محفوظة لكن لن يرسل أي إشعار للرابط أعلاه.
+          </span>
+        </div>
+        {{ toggle_switch(
+          name="enabled",
+          checked=((current and current.enabled) or not current),
+          value="1", id="wh-en"
+        ) }}
+      </div>
+
+      <div style="display:flex;gap:10px;margin-top:18px;">
+        <button type="submit" class="hub-btn hub-btn--primary">
+          <i class="fa-solid fa-floppy-disk"></i> حفظ الإعدادات
+        </button>
+        <a class="hub-btn hub-btn--ghost" href="{{ url_for('radius.wh_deliveries') }}">
+          <i class="fa-solid fa-list-check"></i> فتح سجل الإرسال
+        </a>
+      </div>
+
     {% endcall %}
-
-    {# Save bar at the bottom #}
-    <div class="wh-savebar">
-      <a class="hub-btn hub-btn--ghost" href="{{ url_for('radius.wh_deliveries') }}">
-        <i class="fa-solid fa-list-check"></i> فتح سجل الإرسال
-      </a>
-      <button class="hub-btn hub-btn--primary" type="submit">
-        <i class="fa-solid fa-floppy-disk"></i> حفظ الإعدادات
-      </button>
-    </div>
-
   </form>
 
+  {# ───── Events that get sent ───── #}
+  {% call hub.section("ماذا يُرسَل؟", icon="paper-plane") %}
+    <div class="hub-field-hint" style="margin-bottom:10px">
+      تُرسَل الأحداث التالية إلى الرابط الخارجي مع اسم الحدث، وقت حدوثه، رقم المنشأة،
+      وتفاصيل مختصرة عن العملية مثل قيمة الدفعة أو اسم المشترك:
+    </div>
+    <div class="wh-events">
+      <span class="wh-event-chip"><i class="fa-solid fa-circle"></i> دفعة جديدة</span>
+      <span class="wh-event-chip"><i class="fa-solid fa-circle"></i> تجديد اشتراك</span>
+      <span class="wh-event-chip"><i class="fa-solid fa-circle"></i> إنشاء كرت</span>
+      <span class="wh-event-chip"><i class="fa-solid fa-circle"></i> تعطيل مشترك</span>
+      <span class="wh-event-chip"><i class="fa-solid fa-circle"></i> تنبيه أمني</span>
+    </div>
+    <div class="hub-field-hint" style="margin-top:12px">
+      لا تعرض هذه الصفحة كودًا للمشغّل؛ عند الربط البرمجي استخدم التوثيق الفني الداخلي
+      أو أعطِه للمطور المسؤول عن النظام الخارجي.
+    </div>
+  {% endcall %}
+
+{% endcall %}
+
 </div>
+
+<style>
+  /* Toggle row: label/meta on one side, switch on the other — inside a card. */
+  .uds-toggle-row{
+    display:flex; align-items:center; gap:12px; padding:4px 0;
+  }
+  .uds-toggle-row-text{
+    display:flex; flex-direction:column; gap:3px; min-width:0;
+  }
+  .uds-toggle-row-label{
+    font-size:13.5px; font-weight:700; color:var(--hub-text);
+  }
+  .uds-toggle-row-meta{
+    font-size:11.5px; color:var(--hub-text-soft, #6b7280); line-height:1.7;
+  }
+  .uds-toggle-row .tsw{ margin-inline-start:auto; flex-shrink:0; }
+
+  /* Event chip list */
+  .wh-events{ display:flex; flex-wrap:wrap; gap:8px; }
+  .wh-event-chip{
+    display:inline-flex; align-items:center; gap:6px;
+    padding:6px 12px; border-radius:999px;
+    background:#fff; color:var(--hub-text);
+    border:1px solid var(--hub-border-soft, #e2e8f0);
+    font-size:12.5px; font-weight:700;
+  }
+  .wh-event-chip i{ color:var(--hub-brand-ink, #5b21b6); font-size:11px; }
+</style>
 {% endblock %}

@@ -1,4 +1,5 @@
-{# Webhook deliveries log — REBUILT N11 (hub-v2). Backend untouched. #}
+{# Webhook deliveries log — UNIFIED DESIGN SYSTEM (follows plans_list.html).
+   Backend untouched: items list + status. Zero route/behaviour change. #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
@@ -9,18 +10,27 @@
 
 {% block content %}
 
-{{ hub.hero(
+{% set _delivered = items|selectattr('status','equalto','delivered')|list|length %}
+{% set _retrying  = items|selectattr('status','equalto','retrying')|list|length %}
+{% set _failed    = items|selectattr('status','equalto','failed')|list|length %}
+
+{# ───── Merged hero: title + actions + KPI strip + integrated status filter ───── #}
+{% call hub.megahero(
   "سجل إرسال إشعارات الربط",
-  subtitle="آخر محاولات إرسال إشعارات الربط الخارجي — الحالة، عدد المحاولات، آخر استجابة",
+  subtitle="آخر محاولات إرسال إشعارات الربط الخارجي — الحالة، عدد المحاولات، آخر استجابة.",
   icon="bolt",
   actions_html='
     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.wh_settings') + '">
       <i class="fa-solid fa-gear"></i> الإعدادات
-    </a>
-  '
-) }}
-
-<form method="get" class="hub-filterbar">
+    </a>',
+  kpis=[
+    {'label': 'الإجمالي',      'value': items|length, 'icon': 'bolt',         'variant': 'brand'},
+    {'label': 'تم الإرسال',    'value': _delivered,   'icon': 'circle-check', 'variant': 'green'},
+    {'label': 'يعاد المحاولة', 'value': _retrying,    'icon': 'rotate',       'variant': 'amber'},
+    {'label': 'فشل',           'value': _failed,      'icon': 'circle-xmark', 'variant': 'red'},
+  ],
+  search_action=url_for('radius.wh_deliveries')
+) %}
   <select class="hub-select" name="status">
     <option value="">كل الحالات</option>
     {% for s in ['queued','retrying','delivered','failed'] %}
@@ -34,60 +44,63 @@
     {% endfor %}
   </select>
   {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
-</form>
+{% endcall %}
 
 {% if items %}
-{% set _delivered = items|selectattr('status','equalto','delivered')|list|length %}
-{% set _retrying  = items|selectattr('status','equalto','retrying')|list|length %}
-{% set _failed    = items|selectattr('status','equalto','failed')|list|length %}
-<div class="hub-kpi-grid">
-  {{ hub.kpi("الإجمالي",      items|length, icon="bolt",         variant="brand") }}
-  {{ hub.kpi("تم الإرسال",    _delivered,    icon="circle-check", variant="green") }}
-  {{ hub.kpi("يعاد المحاولة", _retrying,     icon="rotate",       variant="amber") }}
-  {{ hub.kpi("فشل",           _failed,       icon="circle-xmark", variant="red") }}
-</div>
-
-{% call hub.section("السجلات", icon="table-list", meta=items|length|string + " سجل", flush=True) %}
-  <div class="hub-table-wrap" style="border:none;border-radius:0">
-    <table class="hub-table" data-paginated="1" data-page-size="20" data-persist-key="wh-deliveries">
-      <thead>
-        <tr>
-          <th class="num" style="width:60px">#</th>
-          <th>الحدث</th>
-          <th>رقم الحدث</th>
-          <th class="num">المحاولات</th>
-          <th>الحالة</th>
-          <th class="num">آخر كود</th>
-          <th>آخر استجابة</th>
-          <th>التالي</th>
-          <th>أُنشئ</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for d in items %}
-        <tr>
-          <td class="num mono">{{ d.id }}</td>
-          <td><strong>{{ d.event }}</strong></td>
-          <td class="mono small">{{ d.event_id }}</td>
-          <td class="num">{{ d.attempts }}</td>
-          <td>
-            {% if d.status == 'delivered' %}{{ hub.pill("تم الإرسال", variant="green") }}
-            {% elif d.status == 'queued'    %}{{ hub.pill("في الانتظار", variant="blue") }}
-            {% elif d.status == 'retrying'  %}{{ hub.pill("يعاد المحاولة", variant="amber") }}
-            {% elif d.status == 'failed'    %}{{ hub.pill("فشل", variant="red") }}
-            {% else %}{{ hub.pill(d.status, variant="grey") }}{% endif %}
-          </td>
-          <td class="num mono">{{ d.last_status_code or '—' }}</td>
-          <td class="mono small" style="max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
-            {{ d.last_response_excerpt or '—' }}
-          </td>
-          <td class="mono small">{{ (d.next_attempt_at|dt_local)[11:16] if d.next_attempt_at else '—' }}</td>
-          <td class="mono small">{{ d.created_at|dt_local if d.created_at else '—' }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+{# ───── Main (carded table) + help panel on the LEFT ───── #}
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "كيف تقرأ هذه الصفحة؟",
+  intro="كل صف هو محاولة إرسال إشعار ربط خارجي. الحالة تخبرك بنتيجة آخر محاولة.",
+  items=[
+    {'icon': 'circle-check', 'text': '«تم الإرسال» يعني أن الطرف الخارجي استلم الإشعار بنجاح.'},
+    {'icon': 'rotate',       'text': '«يعاد المحاولة» يُعاد الإرسال تلقائيًا في الوقت المعروض في عمود «التالي».'},
+    {'icon': 'circle-xmark', 'text': '«فشل» يعني استنفاد كل المحاولات — راجع آخر كود وآخر استجابة.'},
+    {'icon': 'gear',         'text': 'عناوين الربط ومفاتيحها تُدار من صفحة الإعدادات.'},
+  ],
+  note="عدد المحاولات وآخر كود استجابة يساعدانك على تشخيص سبب الفشل."
+)) %}
+  {% call hub.section("السجلات", icon="table-list", meta=items|length|string + " سجل", flush=True) %}
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25" style="border:none;border-radius:0">
+      <table class="hub-table">
+        <thead>
+          <tr>
+            <th class="num" style="width:60px">#</th>
+            <th>الحدث</th>
+            <th>رقم الحدث</th>
+            <th class="num">المحاولات</th>
+            <th>الحالة</th>
+            <th class="num">آخر كود</th>
+            <th data-uds-nosort>آخر استجابة</th>
+            <th>التالي</th>
+            <th>أُنشئ</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for d in items %}
+          <tr>
+            <td class="num mono" dir="ltr" style="white-space:nowrap">{{ d.id }}</td>
+            <td><strong>{{ d.event }}</strong></td>
+            <td class="mono small" dir="ltr" style="white-space:nowrap">{{ d.event_id }}</td>
+            <td class="num">{{ d.attempts }}</td>
+            <td>
+              {% if d.status == 'delivered' %}{{ hub.pill("تم الإرسال", variant="green") }}
+              {% elif d.status == 'queued'    %}{{ hub.pill("في الانتظار", variant="blue") }}
+              {% elif d.status == 'retrying'  %}{{ hub.pill("يعاد المحاولة", variant="amber") }}
+              {% elif d.status == 'failed'    %}{{ hub.pill("فشل", variant="red") }}
+              {% else %}{{ hub.pill(d.status, variant="grey") }}{% endif %}
+            </td>
+            <td class="num mono" dir="ltr" style="white-space:nowrap">{{ d.last_status_code or '—' }}</td>
+            <td class="mono small" style="max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+              {{ d.last_response_excerpt or '—' }}
+            </td>
+            <td class="mono small" dir="ltr" style="white-space:nowrap">{{ (d.next_attempt_at|dt_local)[11:16] if d.next_attempt_at else '—' }}</td>
+            <td class="mono small" dir="ltr" style="white-space:nowrap">{{ d.created_at|dt_local if d.created_at else '—' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endcall %}
 {% endcall %}
 {% else %}
 {{ hub.empty(
