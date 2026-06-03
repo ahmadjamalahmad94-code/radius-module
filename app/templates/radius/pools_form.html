@@ -1,4 +1,5 @@
-{# IP Pool form (new/edit) — REBUILT N9 (hub-v2). Backend data: item (IpPool), nas (list), is_new. #}
+{# IP Pool form (new/edit) — UDS unified (hub-v2). Backend untouched:
+   item (IpPool), nas (list), is_new. Field names preserved exactly. #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
@@ -6,6 +7,19 @@
 {% block title %}{{ ttl }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-network-wired"></i>{% endblock %}
 {% block page_title %}{{ ttl }}{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<style>
+  .pf-grid{ display:grid; gap:12px; grid-template-columns: repeat(2, 1fr); }
+  @media (max-width:720px){ .pf-grid{ grid-template-columns: 1fr; } }
+  .pf-field{ display:flex; flex-direction:column; gap:5px; min-width:0; }
+  .pf-field.full{ grid-column: 1 / -1; }
+  .pf-field label{ font-size:12.5px; font-weight:700; color:var(--hub-text-soft); }
+  .pf-field label .req{ color:var(--hub-red); margin-inline-start:2px; }
+  .pf-field .help{ font-size:11px; color:var(--hub-text-mute); margin-top:2px; line-height:1.6; }
+</style>
+{% endblock %}
 
 {% block content %}
 
@@ -17,56 +31,70 @@
   icon="network-wired",
   actions_html='
     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.pool_list') + '">
-      <i class="fa-solid fa-arrow-right-from-bracket"></i> رجوع للقائمة
+      <i class="fa-solid fa-arrow-right"></i> رجوع للقائمة
     </a>
   '
 ) }}
 
+{% set help_aside %}
+{% call hub.helppanel(
+     "دليل نطاق العناوين",
+     intro="نطاق العناوين يحدد مجموعة عناوين IP التي يوزّعها الراوتر على المشتركين.",
+     items=[
+       {"icon": "id-badge", "text": "الاسم: معرّف فريد للنطاق يظهر في القوائم والربط."},
+       {"icon": "network-wired", "text": "النطاق: مدى العناوين بصيغة start-end أو CIDR."},
+       {"icon": "house", "text": "العنوان المحلي: بوّابة (Gateway) المشتركين داخل هذا النطاق."},
+       {"icon": "server", "text": "الراوتر: اربط النطاق بجهاز محدّد لتقييد توزيعه."}
+     ],
+     icon="circle-question",
+     note="تأكد من توافق العنوان المحلي مع شبكة النطاق والراوتر المختار."
+   ) %}{% endcall %}
+{% endset %}
+
+{% call hub.worklayout(aside_html=help_aside) %}
 <form method="post"
-      action="{{ url_for('radius.pool_update', pid=item.id) if not is_new else url_for('radius.pool_create') }}"
-      class="hub-form">
+      action="{{ url_for('radius.pool_update', pid=item.id) if not is_new else url_for('radius.pool_create') }}">
 
   {% call hub.section("معطيات النطاق", icon="circle-info") %}
-    {% call hub.fieldset("التعريف الأساسي", icon="id-badge") %}
-      <div class="hub-form-row">
-        <div class="hub-field">
-          <label class="hub-field-label">الاسم<span class="req">*</span></label>
-          <input class="hub-input" type="text" name="pool_name" required
-                 value="{{ item.pool_name or '' }}" placeholder="hotspot-pool-1">
-        </div>
-        <div class="hub-field">
-          <label class="hub-field-label">النطاق<span class="req">*</span></label>
-          <input class="hub-input" type="text" name="range_ip" required
-                 value="{{ item.range_ip or '' }}" placeholder="10.0.0.10-10.0.0.250">
-          <div class="hub-field-hint">يمكن إدخال نطاق بصيغة <code>start-end</code> أو CIDR.</div>
-        </div>
+    <div class="pf-grid">
+      <div class="pf-field">
+        <label>الاسم <span class="req">*</span></label>
+        <input class="hub-input" type="text" name="pool_name" required
+               value="{{ item.pool_name or '' }}" placeholder="hotspot-pool-1">
+      </div>
+      <div class="pf-field">
+        <label>النطاق <span class="req">*</span></label>
+        <input class="hub-input mono" type="text" name="range_ip" required
+               value="{{ item.range_ip or '' }}" placeholder="10.0.0.10-10.0.0.250">
+        <div class="help">يمكن إدخال نطاق بصيغة <code>start-end</code> أو CIDR.</div>
       </div>
 
-      <div class="hub-form-row">
-        <div class="hub-field">
-          <label class="hub-field-label">العنوان المحلي</label>
-          <input class="hub-input" type="text" name="local_ip"
-                 value="{{ item.local_ip or '' }}" placeholder="10.0.0.1">
-          <div class="hub-field-hint">عنوان البوّابة (Gateway) المخصص للمشتركين داخل هذا النطاق.</div>
-        </div>
-        <div class="hub-field">
-          <label class="hub-field-label">الراوتر</label>
-          <select class="hub-select" name="router_id">
-            <option value="">— بدون —</option>
-            {% for n in nas %}
-              <option value="{{ n.id }}" {% if item.router_id == n.id %}selected{% endif %}>{{ n.name }}</option>
-            {% endfor %}
-          </select>
-          <div class="hub-field-hint">اربط النطاق بجهاز شبكة محدّد لتقييد توزيعه.</div>
-        </div>
+      <div class="pf-field">
+        <label>العنوان المحلي</label>
+        <input class="hub-input mono" type="text" name="local_ip"
+               value="{{ item.local_ip or '' }}" placeholder="10.0.0.1">
+        <div class="help">عنوان البوّابة (Gateway) المخصص للمشتركين داخل هذا النطاق.</div>
       </div>
-    {% endcall %}
+      <div class="pf-field">
+        <label>الراوتر</label>
+        <select class="hub-select" name="router_id">
+          <option value="">— بدون —</option>
+          {% for n in nas %}
+            <option value="{{ n.id }}" {% if item.router_id == n.id %}selected{% endif %}>{{ n.name }}</option>
+          {% endfor %}
+        </select>
+        <div class="help">اربط النطاق بجهاز شبكة محدّد لتقييد توزيعه.</div>
+      </div>
+    </div>
   {% endcall %}
 
-  <div class="hub-actions" style="justify-content:flex-end;gap:10px;margin-top:14px">
-    {{ hub.btn("إلغاء", icon="xmark", variant="ghost", href=url_for('radius.pool_list')) }}
-    {{ hub.btn("حفظ", icon="floppy-disk", variant="primary", type="submit") }}
+  <div style="display:flex;gap:10px;justify-content:flex-end;padding:6px 4px 0">
+    <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.pool_list') }}">إلغاء</a>
+    <button class="hub-btn hub-btn--primary" type="submit">
+      <i class="fa-solid fa-floppy-disk"></i> {{ "حفظ" if is_new else "حفظ التعديلات" }}
+    </button>
   </div>
 </form>
+{% endcall %}
 
 {% endblock %}
