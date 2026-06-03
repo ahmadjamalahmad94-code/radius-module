@@ -1,4 +1,17 @@
+{# Cards of a batch — UNIFIED DESIGN SYSTEM.
+   Merged hero (title + subtitle + KPI strip + actions) via hub.megahero,
+   help panel on the LEFT via hub.worklayout, and the cards table re-skinned
+   to the unified .hub-table look.
+
+   This table owns its OWN interactive JS (live search, select-all + bulk
+   form, click-to-sort, column show/hide, CSV export, quick-edit <dialog>).
+   Following the mt_dashboard precedent, we deliberately do NOT add
+   data-uds-table here: uds_table.js would snapshot rows and take over row
+   `display` / pagination, fighting the live search + select-all this page
+   must keep. Instead we apply full UDS visual parity and preserve every
+   data-* hook, form name, csrf input, href, id and <script> verbatim. #}
 {% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
 
 {% block title %}كروت الحزمة {{ batch.batch_code if batch else '' }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-id-card"></i>{% endblock %}
@@ -7,198 +20,40 @@
 
 {% block content %}
 <style>
+  /* ─── UDS bridge for the batch-cards table ──────────────────────────
+     The table keeps full JS ownership (search / select / sort / columns /
+     export / quick-edit). These rules only re-skin its bespoke cells to the
+     unified look and host the sticky select/actions columns + column-hide
+     toggling that the page JS already drives — no data-* hook is touched. */
   .batch-cards-page {
-    --bc-ink: #111827;
-    --bc-muted: #66758d;
-    --bc-border: #dce5f2;
-    --bc-soft: #f7faff;
-    --bc-violet: #7657f4;
+    --bc-ink: var(--hub-text, #111827);
+    --bc-muted: var(--hub-text-mute, #66758d);
+    --bc-border: var(--hub-border-soft, #dce5f2);
+    --bc-violet: var(--hub-brand, #7657f4);
     --bc-teal: #12877a;
     --bc-blue: #1d69d8;
-    --bc-rose: #e94b5f;
-    --bc-amber: #f6a609;
+    --bc-rose: var(--hub-red, #e94b5f);
     direction: rtl;
     display: grid;
     gap: 16px;
     min-width: 0;
   }
 
-  .bc-hero,
-  .bc-panel {
-    background: rgba(255, 255, 255, .95);
-    border: 1px solid var(--bc-border);
-    border-radius: 20px;
-    box-shadow: 0 18px 42px rgba(47, 55, 91, .08);
-    max-width: 100%;
-    min-width: 0;
-  }
-
-  .bc-hero {
-    display: grid;
-    grid-template-columns: minmax(260px, 1fr) auto;
-    gap: 18px;
-    align-items: center;
-    padding: 18px;
-    overflow: hidden;
-    position: relative;
-  }
-
-  .bc-hero::before {
-    content: "";
-    position: absolute;
-    inset-inline-end: -120px;
-    top: -180px;
-    width: 430px;
-    height: 430px;
-    background:
-      radial-gradient(circle, rgba(18, 135, 122, .16), transparent 58%),
-      radial-gradient(circle at 25% 60%, rgba(118, 87, 244, .12), transparent 44%);
-    pointer-events: none;
-  }
-
-  .bc-title {
-    position: relative;
-    display: grid;
-    gap: 8px;
-  }
-
-  .bc-title h1 {
-    margin: 0;
-    color: var(--bc-ink);
-    font-size: 28px;
-    font-weight: 900;
-    letter-spacing: 0;
-  }
-
-  .bc-title p {
-    margin: 0;
-    color: var(--bc-muted);
-    font-weight: 800;
-    line-height: 1.7;
-  }
-
-  .bc-actions {
-    position: relative;
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: flex-start;
-    gap: 10px;
-  }
-
-  .bc-btn {
-    min-height: 42px;
-    border: 1px solid #d8e2ef;
-    background: #fff;
-    color: #172238;
-    border-radius: 13px;
-    padding: 0 14px;
-    font-size: 14px;
-    font-weight: 900;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    cursor: pointer;
-    text-decoration: none;
-    transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
-    white-space: nowrap;
-  }
-
-  .bc-btn:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 10px 20px rgba(17, 24, 39, .08);
-  }
-
-  .bc-btn--primary {
-    border-color: transparent;
-    background: linear-gradient(135deg, #14a997, #7657f4);
-    color: #fff;
-  }
-
-  .bc-btn--danger {
-    border-color: #ffc9d0;
-    color: #dc2438;
-    background: #fff7f8;
-  }
-
-  .bc-btn:disabled,
-  .bc-btn.is-disabled {
-    opacity: .48;
-    cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
-  }
-
-  .bc-stats {
-    display: grid;
-    grid-template-columns: repeat(6, minmax(120px, 1fr));
-    gap: 10px;
-  }
-
-  .bc-stat {
-    min-height: 76px;
-    background: rgba(255, 255, 255, .9);
-    border: 1px solid var(--bc-border);
-    border-radius: 18px;
-    display: grid;
-    place-items: center;
-    text-align: center;
-    gap: 4px;
-    padding: 12px;
-  }
-
-  .bc-stat span {
-    color: var(--bc-muted);
-    font-size: 12px;
-    font-weight: 900;
-  }
-
-  .bc-stat strong {
-    color: var(--bc-ink);
-    font-size: 22px;
-    font-weight: 950;
-    font-variant-numeric: tabular-nums;
-  }
-
-  .bc-stat--green { border-color: rgba(18, 135, 122, .25); background: #f1fffb; }
-  .bc-stat--blue { border-color: rgba(29, 105, 216, .22); background: #f4f8ff; }
-  .bc-stat--rose { border-color: rgba(233, 75, 95, .22); background: #fff6f7; }
-  .bc-stat--violet { border-color: rgba(118, 87, 244, .22); background: #f8f6ff; }
-
-  .bc-panel-head {
-    min-height: 68px;
-    padding: 14px 16px;
-    border-bottom: 1px solid var(--bc-border);
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 14px;
-    align-items: center;
-    min-width: 0;
-  }
-
-  .bc-panel-head h2 {
-    margin: 0;
-    color: var(--bc-ink);
-    font-size: 19px;
-    font-weight: 950;
-  }
-
-  .bc-tools,
-  .bc-bulk-tools {
+  /* table panel toolbar (search / columns / export) */
+  .bc-toolbar {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    justify-content: flex-start;
     gap: 9px;
-    max-width: 100%;
+    padding: 0 0 12px;
   }
 
   .bc-search {
     flex: 1 1 280px;
     min-width: min(280px, 100%);
-    height: 42px;
-    border: 1px solid #d8e2ef;
-    border-radius: 13px;
+    height: 40px;
+    border: 1px solid var(--hub-border, #d8e2ef);
+    border-radius: var(--hub-r-md, 13px);
     padding: 0 14px;
     font-weight: 800;
     color: var(--bc-ink);
@@ -207,13 +62,11 @@
   }
 
   .bc-search:focus {
-    border-color: rgba(20, 169, 151, .6);
-    box-shadow: 0 0 0 4px rgba(20, 169, 151, .12);
+    border-color: var(--hub-brand-line, rgba(20, 169, 151, .6));
+    box-shadow: 0 0 0 4px var(--hub-brand-soft, rgba(20, 169, 151, .12));
   }
 
-  .bc-columns {
-    position: relative;
-  }
+  .bc-columns { position: relative; }
 
   .bc-columns-menu {
     position: absolute;
@@ -232,9 +85,7 @@
     box-shadow: 0 20px 45px rgba(17, 24, 39, .16);
   }
 
-  .bc-columns.is-open .bc-columns-menu {
-    display: grid;
-  }
+  .bc-columns.is-open .bc-columns-menu { display: grid; }
 
   .bc-columns-menu label {
     display: flex;
@@ -248,33 +99,28 @@
     border-radius: 10px;
   }
 
-  .bc-columns-menu label:hover {
-    background: #f4f7ff;
-  }
+  .bc-columns-menu label:hover { background: var(--hub-bg-soft, #f4f7ff); }
 
+  /* bulk action bar (revealed when rows are selected) */
   .bc-bulk {
     display: none;
     grid-template-columns: 1fr;
     gap: 12px;
     padding: 14px 16px;
-    border-bottom: 1px solid var(--bc-border);
+    margin-bottom: 12px;
+    border: 1px solid var(--bc-border);
+    border-radius: var(--hub-r-lg, 16px);
     background: linear-gradient(135deg, rgba(20, 169, 151, .08), rgba(118, 87, 244, .08));
   }
 
-  .bc-bulk.is-active {
-    display: grid;
-  }
-
-  .bc-bulk strong {
-    color: var(--bc-ink);
-    font-weight: 950;
-  }
+  .bc-bulk.is-active { display: grid; }
+  .bc-bulk strong { color: var(--bc-ink); font-weight: 950; }
 
   .bc-bulk input,
   .bc-bulk select {
-    height: 42px;
-    border: 1px solid #d8e2ef;
-    border-radius: 12px;
+    height: 40px;
+    border: 1px solid var(--hub-border, #d8e2ef);
+    border-radius: var(--hub-r-md, 12px);
     background: #fff;
     color: var(--bc-ink);
     padding: 0 10px;
@@ -282,14 +128,18 @@
     min-width: 96px;
   }
 
-  .bc-bulk form {
-    display: contents;
+  .bc-bulk form { display: contents; }
+  .bc-selected-inputs { display: none; }
+
+  .bc-bulk-tools,
+  .bc-row-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 9px;
   }
 
-  .bc-selected-inputs {
-    display: none;
-  }
-
+  /* table itself — unified skin layered on the bespoke markup */
   .bc-table-wrap {
     overflow: auto;
     max-height: 70vh;
@@ -304,13 +154,14 @@
     border-spacing: 0;
     color: var(--bc-ink);
     font-variant-numeric: tabular-nums;
+    font-size: 13px;
   }
 
   .bc-table th,
   .bc-table td {
     text-align: center;
     vertical-align: middle;
-    border-bottom: 1px solid #e8edf5;
+    border-bottom: 1px solid var(--hub-border-soft, #e8edf5);
     padding: 7px 5px;
   }
 
@@ -318,12 +169,12 @@
     position: sticky;
     top: 0;
     z-index: 5;
-    background: #f8fbff;
-    color: #172238;
+    background: linear-gradient(180deg, #FAFBFF, #F4F1FE);
+    color: var(--hub-text-soft, #172238);
     font-size: 12px;
     font-weight: 950;
     white-space: nowrap;
-    border-bottom: 2px solid #cfc1ff;
+    border-bottom: 1px solid var(--hub-border-strong, #cfc1ff);
     cursor: pointer;
     user-select: none;
   }
@@ -332,28 +183,17 @@
     content: "↕";
     display: inline-flex;
     margin-inline-start: 6px;
-    color: #8b7cf6;
+    color: var(--bc-violet);
     font-size: 12px;
   }
 
   .bc-table th.is-sorted-asc::after { content: "↑"; }
   .bc-table th.is-sorted-desc::after { content: "↓"; }
 
-  .bc-table tbody tr {
-    transition: background .16s ease, transform .16s ease;
-  }
-
-  .bc-table tbody tr:nth-child(odd) {
-    background: #fff;
-  }
-
-  .bc-table tbody tr:nth-child(even) {
-    background: #fbfdff;
-  }
-
-  .bc-table tbody tr:hover {
-    background: #f4fbff;
-  }
+  .bc-table tbody tr { transition: background .16s ease; }
+  .bc-table tbody tr:nth-child(odd) { background: #fff; }
+  .bc-table tbody tr:nth-child(even) { background: var(--hub-bg-soft, #fbfdff); }
+  .bc-table tbody tr:hover { background: var(--hub-brand-soft, #f4fbff); }
 
   .bc-check {
     width: 18px;
@@ -410,7 +250,7 @@
 
   .bc-mono {
     direction: ltr;
-    font-family: "JetBrains Mono", "Cascadia Mono", Consolas, monospace;
+    font-family: var(--hub-mono, "JetBrains Mono", "Cascadia Mono", Consolas, monospace);
     font-weight: 850;
   }
 
@@ -426,45 +266,11 @@
     justify-items: center;
   }
 
-  .bc-flow strong {
-    direction: ltr;
-    font-size: 12px;
-  }
+  .bc-flow strong { direction: ltr; font-size: 12px; }
 
-  .bc-row-actions {
-    display: inline-flex;
-    justify-content: center;
-    gap: 5px;
-  }
+  .bc-row-actions { display: inline-flex; justify-content: center; gap: 5px; }
 
-  .bc-icon-btn {
-    width: 32px;
-    height: 32px;
-    border: 1px solid #d8e2ef;
-    background: #fff;
-    color: #172238;
-    border-radius: 10px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: transform .16s ease, background .16s ease;
-  }
-
-  .bc-icon-btn:hover {
-    transform: translateY(-1px);
-    background: #f5f8ff;
-  }
-
-  .bc-icon-btn--danger {
-    border-color: #ffc9d0;
-    color: #db273a;
-    background: #fff7f8;
-  }
-
-  .bc-table [data-col].is-hidden {
-    display: none;
-  }
+  .bc-table [data-col].is-hidden { display: none; }
 
   .bc-table th[data-col="select"],
   .bc-table td[data-col="select"] {
@@ -490,6 +296,14 @@
     background: #f8fbff;
   }
 
+  .bc-empty {
+    padding: 34px;
+    text-align: center;
+    color: var(--bc-muted);
+    font-weight: 850;
+  }
+
+  /* quick-edit dialog (unchanged behaviour, unified surface) */
   .bc-edit-dialog {
     width: min(720px, calc(100vw - 26px));
     border: 1px solid var(--bc-border);
@@ -504,11 +318,7 @@
     backdrop-filter: blur(6px);
   }
 
-  .bc-dialog-body {
-    padding: 18px;
-    display: grid;
-    gap: 14px;
-  }
+  .bc-dialog-body { padding: 18px; display: grid; gap: 14px; }
 
   .bc-dialog-head {
     display: flex;
@@ -519,12 +329,7 @@
     padding-bottom: 14px;
   }
 
-  .bc-dialog-head h3 {
-    margin: 0;
-    color: var(--bc-ink);
-    font-size: 20px;
-    font-weight: 950;
-  }
+  .bc-dialog-head h3 { margin: 0; color: var(--bc-ink); font-size: 20px; font-weight: 950; }
 
   .bc-form-grid {
     display: grid;
@@ -532,123 +337,104 @@
     gap: 10px;
   }
 
-  .bc-field {
-    display: grid;
-    gap: 6px;
-  }
-
-  .bc-field label {
-    color: #53627a;
-    font-size: 12px;
-    font-weight: 900;
-  }
+  .bc-field { display: grid; gap: 6px; }
+  .bc-field label { color: #53627a; font-size: 12px; font-weight: 900; }
 
   .bc-field input,
   .bc-field select {
-    height: 42px;
-    border: 1px solid #d8e2ef;
-    border-radius: 12px;
+    height: 40px;
+    border: 1px solid var(--hub-border, #d8e2ef);
+    border-radius: var(--hub-r-md, 12px);
     padding: 0 10px;
     font-weight: 850;
   }
 
-  .bc-empty {
-    padding: 34px;
-    text-align: center;
-    color: var(--bc-muted);
-    font-weight: 850;
-  }
-
   @media (max-width: 1100px) {
-    .bc-hero,
-    .bc-panel-head {
-      grid-template-columns: 1fr;
-    }
-    .bc-stats {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-    .bc-form-grid {
-      grid-template-columns: 1fr;
-    }
+    .bc-form-grid { grid-template-columns: 1fr; }
   }
 </style>
 
 <div class="batch-cards-page" data-batch-cards-page>
   {% if batch %}
-    <section class="bc-hero">
-      <div class="bc-title">
-        <h1>كروت الحزمة {{ batch.batch_code }}</h1>
-        <p>
-          {{ plan.name if plan else (batch.package_name or 'بدون عرض') }}
-          · أنشئت {{ batch.created_at|dt_local if batch.created_at else '—' }}
-          · {{ batch.created_by or 'بدون مدير' }}
-        </p>
-      </div>
-      <div class="bc-actions">
-        <a class="bc-btn bc-btn--primary" href="{{ url_for('radius.cards_batch_edit', batch_id=batch.id) }}">
-          <i class="fa-solid fa-pen"></i> تعديل الحزمة
-        </a>
-        <a class="bc-btn" href="{{ url_for('radius.cards_checker', query=batch.batch_code) }}">
-          <i class="fa-solid fa-magnifying-glass-chart"></i> الفحص
-        </a>
-        <a class="bc-btn" href="{{ url_for('radius.cards_batches') }}">
-          <i class="fa-solid fa-table-cells-large"></i> كل الحزم
-        </a>
-      </div>
-    </section>
+    {% set hero_actions %}
+      <a class="hub-btn hub-btn--primary" href="{{ url_for('radius.cards_batch_edit', batch_id=batch.id) }}">
+        <i class="fa-solid fa-pen"></i> تعديل الحزمة
+      </a>
+      <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.cards_checker', query=batch.batch_code) }}">
+        <i class="fa-solid fa-magnifying-glass-chart"></i> الفحص
+      </a>
+      <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.cards_batches') }}">
+        <i class="fa-solid fa-table-cells-large"></i> كل الحزم
+      </a>
+    {% endset %}
 
-    <section class="bc-stats" aria-label="ملخص كروت الحزمة">
-      <div class="bc-stat bc-stat--violet"><span>إجمالي الكروت</span><strong>{{ summary.total }}</strong></div>
-      <div class="bc-stat bc-stat--green"><span>متصل</span><strong>{{ summary.online }}</strong></div>
-      <div class="bc-stat bc-stat--blue"><span>متاحة</span><strong>{{ summary.ready }}</strong></div>
-      <div class="bc-stat"><span>مستخدمة غير متصلة</span><strong>{{ summary.used_offline }}</strong></div>
-      <div class="bc-stat bc-stat--rose"><span>منتهية / موقوفة</span><strong>{{ summary.expired + summary.revoked }}</strong></div>
-      <div class="bc-stat bc-stat--green"><span>تحميل / رفع</span><strong>{{ summary.download_label }} / {{ summary.upload_label }}</strong></div>
-    </section>
+    {{ hub.megahero(
+      "كروت الحزمة " ~ batch.batch_code,
+      subtitle=(plan.name if plan else (batch.package_name or 'بدون عرض'))
+               ~ " · أنشئت " ~ (batch.created_at|dt_local if batch.created_at else '—')
+               ~ " · " ~ (batch.created_by or 'بدون مدير'),
+      icon="id-card",
+      actions_html=hero_actions,
+      kpis=[
+        {'label': 'إجمالي الكروت', 'value': summary.total,        'icon': 'id-card',          'variant': 'brand'},
+        {'label': 'متصل',          'value': summary.online,       'icon': 'signal',           'variant': 'green'},
+        {'label': 'متاحة',         'value': summary.ready,        'icon': 'circle-check',     'variant': 'blue'},
+        {'label': 'مستخدمة غير متصلة', 'value': summary.used_offline, 'icon': 'circle-user',  'variant': 'blue'},
+        {'label': 'منتهية / موقوفة', 'value': summary.expired + summary.revoked, 'icon': 'ban', 'variant': 'red'},
+        {'label': 'تحميل / رفع',   'value': summary.download_label ~ ' / ' ~ summary.upload_label, 'icon': 'arrows-up-down', 'variant': 'green'},
+      ]
+    ) }}
 
-    <section class="bc-panel">
-      <div class="bc-panel-head">
-        <div>
-          <h2>جدول الكروت</h2>
-          <span class="bc-muted">اضغط على اسم أي عمود للترتيب، وافتح الأعمدة لعرض التفاصيل الإضافية.</span>
-        </div>
-        <div class="bc-tools">
+    {% call hub.worklayout(aside_html=hub.helppanel(
+      "كيف تقرأ جدول الكروت؟",
+      intro="كل صف هو كرت داخل هذه الحزمة، يحمل اليوزر والباسورد وحالته ومؤشرات استهلاكه.",
+      items=[
+        {'icon': 'arrow-up-wide-short', 'text': 'اضغط على اسم أي عمود للترتيب تصاعديًا أو تنازليًا.'},
+        {'icon': 'table-columns',       'text': 'افتح زر «الأعمدة» لإظهار أو إخفاء تفاصيل إضافية (MAC، IP، السرعة…).'},
+        {'icon': 'square-check',         'text': 'حدّد عدة كروت لتظهر شريط الإجراءات الجماعية (قطع، تفعيل، إضافة وقت، حذف…).'},
+        {'icon': 'file-csv',            'text': 'زر CSV يصدّر الأعمدة المرئية والصفوف الظاهرة فقط بعد البحث.'},
+      ],
+      note="مؤشرات الملخص بالأعلى تخص كامل الحزمة؛ البحث يصفّي الصفوف الظاهرة فقط."
+    )) %}
+    {% call hub.section("جدول الكروت", icon="table-list", meta=summary.total|string ~ " كرت", flush=True) %}
+      <div style="padding:14px 16px 0">
+        <div class="bc-toolbar">
           <input class="bc-search" type="search" placeholder="بحث باسم الكرت أو MAC أو IP..." data-card-search>
           <div class="bc-columns" data-columns-menu>
-            <button class="bc-btn" type="button" data-columns-toggle>
+            <button class="hub-btn hub-btn--secondary hub-btn--sm" type="button" data-columns-toggle>
               <i class="fa-solid fa-sliders"></i> الأعمدة
             </button>
             <div class="bc-columns-menu" data-columns-list></div>
           </div>
-          <button class="bc-btn" type="button" data-export-visible>
+          <button class="hub-btn hub-btn--secondary hub-btn--sm" type="button" data-export-visible>
             <i class="fa-solid fa-file-csv"></i> CSV
           </button>
         </div>
-      </div>
 
-      <div class="bc-bulk" data-bulk-bar>
-        <strong><span data-selected-count>0</span> كرت محدد</strong>
-        <form method="post" action="{{ url_for('radius.cards_batch_cards_actions', batch_id=batch.id) }}" data-bulk-form>
-          <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-          <input type="hidden" name="return_to" value="{{ request.full_path }}">
-          <div class="bc-selected-inputs" data-selected-inputs></div>
-          <div class="bc-bulk-tools">
-            <button class="bc-btn" name="bulk_action" value="disconnect" type="submit"><i class="fa-solid fa-plug-circle-xmark"></i> قطع الاتصال</button>
-            <button class="bc-btn" name="bulk_action" value="enable" type="submit"><i class="fa-solid fa-circle-play"></i> تفعيل</button>
-            <button class="bc-btn" name="bulk_action" value="disable" type="submit"><i class="fa-solid fa-circle-pause"></i> إيقاف</button>
-            <button class="bc-btn" name="bulk_action" value="reset_usage" type="submit"><i class="fa-solid fa-rotate-left"></i> تصفير</button>
-            <input name="time_amount" type="number" min="1" placeholder="المدة">
-            <select name="time_unit" aria-label="وحدة الوقت">
-              <option value="minutes">دقائق</option>
-              <option value="hours">ساعات</option>
-              <option value="days">أيام</option>
-            </select>
-            <button class="bc-btn" name="bulk_action" value="add_time" type="submit"><i class="fa-solid fa-clock"></i> إضافة وقت</button>
-            <button class="bc-btn" name="bulk_action" value="subtract_time" type="submit"><i class="fa-solid fa-clock-rotate-left"></i> خصم وقت</button>
-            <input name="reason" type="text" placeholder="سبب الإجراء">
-            <button class="bc-btn bc-btn--danger" name="bulk_action" value="soft_delete" type="submit"><i class="fa-solid fa-trash"></i> حذف</button>
-          </div>
-        </form>
+        <div class="bc-bulk" data-bulk-bar>
+          <strong><span data-selected-count>0</span> كرت محدد</strong>
+          <form method="post" action="{{ url_for('radius.cards_batch_cards_actions', batch_id=batch.id) }}" data-bulk-form>
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+            <input type="hidden" name="return_to" value="{{ request.full_path }}">
+            <div class="bc-selected-inputs" data-selected-inputs></div>
+            <div class="bc-bulk-tools">
+              <button class="hub-btn hub-btn--secondary hub-btn--sm" name="bulk_action" value="disconnect" type="submit"><i class="fa-solid fa-plug-circle-xmark"></i> قطع الاتصال</button>
+              <button class="hub-btn hub-btn--secondary hub-btn--sm" name="bulk_action" value="enable" type="submit"><i class="fa-solid fa-circle-play"></i> تفعيل</button>
+              <button class="hub-btn hub-btn--secondary hub-btn--sm" name="bulk_action" value="disable" type="submit"><i class="fa-solid fa-circle-pause"></i> إيقاف</button>
+              <button class="hub-btn hub-btn--secondary hub-btn--sm" name="bulk_action" value="reset_usage" type="submit"><i class="fa-solid fa-rotate-left"></i> تصفير</button>
+              <input name="time_amount" type="number" min="1" placeholder="المدة">
+              <select name="time_unit" aria-label="وحدة الوقت">
+                <option value="minutes">دقائق</option>
+                <option value="hours">ساعات</option>
+                <option value="days">أيام</option>
+              </select>
+              <button class="hub-btn hub-btn--secondary hub-btn--sm" name="bulk_action" value="add_time" type="submit"><i class="fa-solid fa-clock"></i> إضافة وقت</button>
+              <button class="hub-btn hub-btn--secondary hub-btn--sm" name="bulk_action" value="subtract_time" type="submit"><i class="fa-solid fa-clock-rotate-left"></i> خصم وقت</button>
+              <input name="reason" type="text" placeholder="سبب الإجراء">
+              <button class="hub-btn hub-btn--danger hub-btn--sm" name="bulk_action" value="soft_delete" type="submit"><i class="fa-solid fa-trash"></i> حذف</button>
+            </div>
+          </form>
+        </div>
       </div>
 
       {% if items %}
@@ -703,18 +489,18 @@
               <td data-col="select"><input class="bc-check" type="checkbox" name="card_ids" value="{{ c.id }}" data-row-select aria-label="تحديد {{ c.username }}"></td>
               <td data-col="actions">
                 <div class="bc-row-actions">
-                  <button class="bc-icon-btn" type="button" title="تعديل سريع" data-edit-card><i class="fa-solid fa-pen"></i></button>
+                  <button class="hub-btn hub-btn--secondary hub-btn--icon" type="button" title="تعديل سريع" data-edit-card><i class="fa-solid fa-pen"></i></button>
                   <form method="post" action="{{ url_for('radius.cards_batch_cards_actions', batch_id=batch.id) }}">
                     <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
                     <input type="hidden" name="return_to" value="{{ request.full_path }}">
                     <input type="hidden" name="card_ids" value="{{ c.id }}">
-                    <button class="bc-icon-btn" name="bulk_action" value="disconnect" title="قطع الاتصال" type="submit"><i class="fa-solid fa-plug-circle-xmark"></i></button>
+                    <button class="hub-btn hub-btn--secondary hub-btn--icon" name="bulk_action" value="disconnect" title="قطع الاتصال" type="submit"><i class="fa-solid fa-plug-circle-xmark"></i></button>
                   </form>
                   <form method="post" action="{{ url_for('radius.cards_batch_cards_actions', batch_id=batch.id) }}">
                     <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
                     <input type="hidden" name="return_to" value="{{ request.full_path }}">
                     <input type="hidden" name="card_ids" value="{{ c.id }}">
-                    <button class="bc-icon-btn bc-icon-btn--danger" name="bulk_action" value="soft_delete" title="حذف" type="submit"><i class="fa-solid fa-trash"></i></button>
+                    <button class="hub-btn hub-btn--danger hub-btn--icon" name="bulk_action" value="soft_delete" title="حذف" type="submit"><i class="fa-solid fa-trash"></i></button>
                   </form>
                 </div>
               </td>
@@ -751,11 +537,10 @@
       {% else %}
         <div class="bc-empty">لا توجد كروت داخل هذه الحزمة.</div>
       {% endif %}
-    </section>
+    {% endcall %}
+    {% endcall %}
   {% else %}
-    <section class="bc-panel">
-      <div class="bc-empty">الحزمة المطلوبة غير موجودة.</div>
-    </section>
+    {{ hub.empty("الحزمة المطلوبة غير موجودة.", icon="layer-group") }}
   {% endif %}
 </div>
 
@@ -764,7 +549,7 @@
   <div class="bc-dialog-body">
     <div class="bc-dialog-head">
       <h3>تعديل سريع للكرت <span data-dialog-card-title></span></h3>
-      <button class="bc-icon-btn" type="button" data-dialog-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
+      <button class="hub-btn hub-btn--secondary hub-btn--icon" type="button" data-dialog-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <form method="post" action="{{ url_for('radius.cards_batch_cards_actions', batch_id=batch.id) }}" data-dialog-form>
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
@@ -801,13 +586,13 @@
         </div>
       </div>
       <div class="bc-bulk-tools" style="margin-top:14px">
-        <button class="bc-btn" name="bulk_action" value="add_time" type="submit"><i class="fa-solid fa-clock"></i> إضافة وقت</button>
-        <button class="bc-btn" name="bulk_action" value="subtract_time" type="submit"><i class="fa-solid fa-clock-rotate-left"></i> خصم وقت</button>
-        <button class="bc-btn" name="bulk_action" value="set_speed" type="submit"><i class="fa-solid fa-gauge-high"></i> حفظ السرعة</button>
-        <button class="bc-btn" name="bulk_action" value="lock_mac" type="submit"><i class="fa-solid fa-lock"></i> تثبيت MAC</button>
-        <button class="bc-btn" name="bulk_action" value="unlock_mac" type="submit"><i class="fa-solid fa-lock-open"></i> فك MAC</button>
-        <button class="bc-btn" name="bulk_action" value="enable" type="submit"><i class="fa-solid fa-circle-play"></i> تفعيل</button>
-        <button class="bc-btn" name="bulk_action" value="disable" type="submit"><i class="fa-solid fa-circle-pause"></i> إيقاف</button>
+        <button class="hub-btn hub-btn--secondary hub-btn--sm" name="bulk_action" value="add_time" type="submit"><i class="fa-solid fa-clock"></i> إضافة وقت</button>
+        <button class="hub-btn hub-btn--secondary hub-btn--sm" name="bulk_action" value="subtract_time" type="submit"><i class="fa-solid fa-clock-rotate-left"></i> خصم وقت</button>
+        <button class="hub-btn hub-btn--secondary hub-btn--sm" name="bulk_action" value="set_speed" type="submit"><i class="fa-solid fa-gauge-high"></i> حفظ السرعة</button>
+        <button class="hub-btn hub-btn--secondary hub-btn--sm" name="bulk_action" value="lock_mac" type="submit"><i class="fa-solid fa-lock"></i> تثبيت MAC</button>
+        <button class="hub-btn hub-btn--secondary hub-btn--sm" name="bulk_action" value="unlock_mac" type="submit"><i class="fa-solid fa-lock-open"></i> فك MAC</button>
+        <button class="hub-btn hub-btn--secondary hub-btn--sm" name="bulk_action" value="enable" type="submit"><i class="fa-solid fa-circle-play"></i> تفعيل</button>
+        <button class="hub-btn hub-btn--secondary hub-btn--sm" name="bulk_action" value="disable" type="submit"><i class="fa-solid fa-circle-pause"></i> إيقاف</button>
       </div>
     </form>
   </div>
@@ -946,7 +731,7 @@
         return `"${value}"`;
       }).join(','));
     });
-    const blob = new Blob(["\ufeff" + lines.join('\n')], { type: 'text/csv;charset=utf-8' });
+    const blob = new Blob(["﻿" + lines.join('\n')], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;

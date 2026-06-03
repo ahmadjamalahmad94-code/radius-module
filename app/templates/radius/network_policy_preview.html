@@ -10,6 +10,7 @@
 #}
 
 {% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
 {% import "radius/_network_policy_shell.html" as npc %}
 
 {% block title %}{{ page_title }} — مركز قرار السياسة{% endblock %}
@@ -560,50 +561,78 @@
 {% endblock %}
 
 {% block content %}
+
+{# ════════════════ Merged hero (UDS) ════════════════
+   Folds the former bespoke decision-hero into hub.megahero:
+   title + subtitle, the back/edit/regenerate toolbar as hero
+   actions, and health-score / risk / blast-radius / plan
+   status surfaced as the KPI strip. Every binding preserved. #}
+{% set h = intelligence.health %}
+{% set risk = intelligence.impact.risk_level %}
+{% set b = intelligence.blast %}
+
+{%- set _grade_ar -%}
+  {% if h.grade == 'excellent' %}ممتازة
+  {% elif h.grade == 'good' %}جيدة
+  {% elif h.grade == 'caution' %}تحتاج حذراً
+  {% elif h.grade == 'risky' %}محفوفة بالمخاطر
+  {% else %}تحتاج إعادة تخطيط{% endif %}
+{%- endset -%}
+{%- set _grade_variant = ({'excellent':'green','good':'green','caution':'amber','risky':'red','dangerous':'red'}).get(h.grade, 'brand') -%}
+
+{%- if risk == 'critical' %}{% set _risk_ar = 'حرج' %}{% set _risk_variant = 'red' %}
+{%- elif risk == 'high' %}{% set _risk_ar = 'مرتفع' %}{% set _risk_variant = 'red' %}
+{%- elif risk == 'medium' %}{% set _risk_ar = 'متوسط' %}{% set _risk_variant = 'amber' %}
+{%- else %}{% set _risk_ar = 'منخفض' %}{% set _risk_variant = 'green' %}{% endif -%}
+
+{%- if b.blast_radius == 'small' %}{% set _blast_ar = 'نطاق ضيّق' %}{% set _blast_variant = 'green' %}
+{%- elif b.blast_radius == 'medium' %}{% set _blast_ar = 'متوسّط' %}{% set _blast_variant = 'amber' %}
+{%- elif b.blast_radius == 'large' %}{% set _blast_ar = 'واسع' %}{% set _blast_variant = 'red' %}
+{%- else %}{% set _blast_ar = 'حرج' %}{% set _blast_variant = 'red' %}{% endif -%}
+
+{% set _actions %}
+  <a class="hub-btn hub-btn--secondary"
+     href="{{ url_for('radius.npc_' ~ service.key ~ '_list') }}">
+    <i class="fa-solid fa-arrow-right"></i> رجوع للقائمة
+  </a>
+  <a class="hub-btn hub-btn--secondary"
+     href="{{ url_for('radius.npc_' ~ service.key ~ '_edit', policy_id=policy.id) }}">
+    <i class="fa-regular fa-pen-to-square"></i> تحرير السياسة
+  </a>
+  <form method="POST"
+        action="{{ url_for('radius.npc_' ~ service.key ~ '_preview', policy_id=policy.id) }}"
+        style="display:inline;">
+    {{ csrf_token_input() | safe }}
+    <button class="hub-btn hub-btn--primary" type="submit"
+      {% if not plan.can_apply %}disabled{% endif %}>
+      <i class="fa-solid fa-arrows-rotate"></i> توليد المعاينة وحفظها
+    </button>
+  </form>
+{% endset %}
+
+{{ hub.megahero(
+  policy.name,
+  subtitle=service.label_ar ~ " · " ~ router_name ~ " — معاينة استشاريّة فقط، لم تُطبَّق على الراوتر.",
+  icon=service.icon,
+  actions_html=_actions,
+  kpis=[
+    {'label': 'صحّة الخطّة', 'value': h.score ~ '/100', 'sub': _grade_ar|trim, 'icon': 'heart-pulse', 'variant': _grade_variant},
+    {'label': 'مستوى الخطر', 'value': _risk_ar, 'icon': 'triangle-exclamation', 'variant': _risk_variant},
+    {'label': 'نطاق التأثير', 'value': _blast_ar, 'sub': b.affected_router_count ~ ' راوتر', 'icon': 'users-viewfinder', 'variant': _blast_variant},
+    {'label': 'حالة الخطّة', 'value': ('سليمة' if plan.can_apply else 'محظورة'), 'icon': ('circle-check' if plan.can_apply else 'ban'), 'variant': ('green' if plan.can_apply else 'red')},
+  ]
+) }}
+
 {{ npc.npc_dry_run_banner() }}
 {{ npc.npc_tabs(service.url_slug, services) }}
 
-{# ── Toolbar ───────────────────────────────────────────────── #}
-<div style="display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap;">
-  <a class="npc-btn"
-     href="{{ url_for('radius.npc_' ~ service.key ~ '_list') }}">
-    <i class="fa-solid fa-arrow-right"></i>
-    رجوع للقائمة
-  </a>
-  <a class="npc-btn"
-     href="{{ url_for('radius.npc_' ~ service.key ~ '_edit', policy_id=policy.id) }}">
-    <i class="fa-regular fa-pen-to-square"></i>
-    تحرير السياسة
-  </a>
-  <form class="npc-inline-form"
-        method="POST"
-        action="{{ url_for('radius.npc_' ~ service.key ~ '_preview', policy_id=policy.id) }}">
-    {{ csrf_token_input() | safe }}
-    <button class="npc-btn is-primary" type="submit"
-      {% if not plan.can_apply %}disabled{% endif %}>
-      <i class="fa-solid fa-arrows-rotate"></i>
-      توليد المعاينة وحفظها
-    </button>
-  </form>
-</div>
-
 <div class="npc-int-grid">
 
-  {# ════════════════ SECTION 1 — Decision Hero ════════════════ #}
-  <div class="npc-hero" data-test="npc-hero">
-    <div>
-      <h1 class="npc-hero-title">
-        <i class="fa-solid fa-{{ service.icon }}"
-           style="color:#6B5AED; font-size:18px;"></i>
-        {{ policy.name }}
-      </h1>
-      <div class="npc-hero-sub">
-        {{ service.label_ar }} · slug
-        <code>{{ policy.slug }}</code>
-      </div>
-
+  {# ════════════════ SECTION 1 — Decision summary ════════════════ #}
+  {% call hub.section("خلاصة القرار", icon="gauge-high") %}
+    <div data-test="npc-hero">
       <div style="display:flex; gap:8px; flex-wrap:wrap;
-                  margin-bottom:10px;">
+                  margin-bottom:12px;">
         {% if plan.can_apply %}
           <span class="npc-pill npc-pill-status-prev"
                 data-test="npc-status-prev">
@@ -618,7 +647,6 @@
         {% endif %}
 
         {# Risk pill from impact_analysis #}
-        {% set risk = intelligence.impact.risk_level %}
         {% if risk == 'critical' %}
           <span class="npc-pill npc-pill-risk-high"
                 data-test="npc-risk-pill">
@@ -651,51 +679,34 @@
         </span>
       </div>
 
-      <p class="npc-hero-explain">
+      {{ hub.kv(rows=[
+        {'label': 'الخدمة', 'value': service.label_ar},
+        {'label': 'المُعرّف (slug)', 'value': policy.slug, 'mono': True},
+        {'label': 'الراوتر', 'value': router_name},
+      ]) }}
+
+      <p class="npc-hero-explain" data-test="npc-health-score">
         {{ intelligence.impact.summary_ar }}
       </p>
-    </div>
-
-    {# Score card #}
-    {% set h = intelligence.health %}
-    <div class="npc-score-card" data-test="npc-health-score">
-      <div class="npc-score-n">
-        {{ h.score }}<small>/100</small>
-      </div>
-      <div class="npc-score-grade npc-grade-{{ h.grade }}">
-        {% if h.grade == 'excellent' %}ممتازة
-        {% elif h.grade == 'good' %}جيدة
-        {% elif h.grade == 'caution' %}تحتاج حذراً
-        {% elif h.grade == 'risky' %}محفوفة بالمخاطر
-        {% else %}تحتاج إعادة تخطيط{% endif %}
-      </div>
-      <div class="npc-score-bar">
-        <span style="width: {{ h.score }}%;"></span>
-      </div>
-      <div class="npc-score-note">
+      <p class="npc-score-note" style="margin-top:6px;">
         تقييم استشاري فقط — راجع التفاصيل أدناه قبل التطبيق.
-      </div>
+      </p>
     </div>
-  </div>
+  {% endcall %}
 
   {# ════════════════ SECTION 1b — Execution Readiness ════════ #}
   {% set rdy = intelligence.readiness %}
-  <div class="npc-section" data-test="npc-section-readiness">
-    <div class="npc-section-head">
-      <span class="npc-sec-num">★</span>
-      <h2><i class="fa-solid fa-list-check"
-             style="color:#6B5AED;"></i>
-        جاهزيّة التنفيذ</h2>
+  {% call hub.section("جاهزيّة التنفيذ", icon="list-check") %}
+    <div data-test="npc-section-readiness">
+    <div style="display:flex; margin-bottom:14px;">
       {% if rdy.ready_for_future_apply %}
         <span class="npc-pill npc-pill-status-app"
-              style="margin-inline-start:auto;"
               data-test="npc-readiness-ready">
           <i class="fa-solid fa-shield-check"></i>
           جاهزة (وفق المعايير الحاليّة)
         </span>
       {% else %}
         <span class="npc-pill npc-pill-status-fail"
-              style="margin-inline-start:auto;"
               data-test="npc-readiness-not-ready">
           <i class="fa-solid fa-shield-halved"></i>
           غير جاهزة — راجع الموانع
@@ -907,20 +918,14 @@
          style="color:#9ca3af;"></i>
       {{ rdy.caveat_ar }}
     </p>
-  </div>
+    </div>
+  {% endcall %}
 
   {# ═══════════ SECTION 1c — Access URLs (remote-access) ═══════ #}
   {% if intelligence.access_urls %}
-  <div class="npc-section" data-test="npc-section-access-urls">
-    <div class="npc-section-head">
-      <span class="npc-sec-num" style="background:#ECFDF5;
-                                       color:#047857;">🌐</span>
-      <h2><i class="fa-solid fa-link"
-             style="color:#10b981;"></i>
-        روابط الوصول إلى الراوتر بعد التطبيق</h2>
-    </div>
-
-    <p style="margin:6px 0 14px; color:#6b7280;
+  {% call hub.section("روابط الوصول إلى الراوتر بعد التطبيق", icon="link") %}
+    <div data-test="npc-section-access-urls">
+    <p style="margin:0 0 14px; color:#6b7280;
               font-size:13px;">
       هذه هي العناوين التي ستستخدمها للاتصال بالراوتر بعد
       الضغط على «تطبيق آمن».
@@ -992,22 +997,15 @@
       </div>
     {% endfor %}
     </div>
-  </div>
+    </div>
+  {% endcall %}
   {% endif %}
 
   {# ════════ SECTION 1d — Remote (via-VPS) Access URLs ════════ #}
   {% if intelligence.remote_access_urls %}
-  <div class="npc-section"
-       data-test="npc-section-remote-access-urls">
-    <div class="npc-section-head">
-      <span class="npc-sec-num" style="background:#EEF2FF;
-                                       color:#4F46E5;">🌍</span>
-      <h2><i class="fa-solid fa-globe"
-             style="color:#6366F1;"></i>
-        روابط الوصول من خارج الشبكة عبر خادم الربط</h2>
-    </div>
-
-    <p style="margin:6px 0 14px; color:#6b7280;
+  {% call hub.section("روابط الوصول من خارج الشبكة عبر خادم الربط", icon="globe") %}
+    <div data-test="npc-section-remote-access-urls">
+    <p style="margin:0 0 14px; color:#6b7280;
               font-size:13px;">
       هذه روابط <strong>عامّة</strong> تمرّ عبر خادم الربط الذي يحوّل
       الاتصال إلى الراوتر عبر النفق الآمن. تعمل من أيّ مكان في
@@ -1083,7 +1081,8 @@
         <li>صلاحية apply لا تُمنح إلا لمن يحتاجها فعلاً.</li>
       </ul>
     </div>
-  </div>
+    </div>
+  {% endcall %}
   {% endif %}
 
   {# ═══════════════════ Side strip + Drawer ════════════════════
