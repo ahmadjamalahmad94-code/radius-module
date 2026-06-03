@@ -4,61 +4,104 @@
 {% block title %}أرشيف التقارير — Hobe Hub{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-box-archive"></i>{% endblock %}
 {% block page_title %}أرشيف التقارير{% endblock %}
-{% block page_sub %}<span class="sub">لقطات يومية وشهرية وسنوية ثابتة لا يتم تعديلها بعد إنشائها.</span>{% endblock %}
+{% block page_sub %}{% endblock %}
 
 {% block content %}
 {% include "radius/reports_nav.html" %}
-{{ hub.hero(
+
+{% set _yearly  = archives|selectattr('archive_type', 'equalto', 'yearly')|list|length %}
+{% set _monthly = archives|selectattr('archive_type', 'equalto', 'monthly')|list|length %}
+{% set _daily   = archives|selectattr('archive_type', 'equalto', 'daily')|list|length %}
+
+{# ───── Merged hero: title + action + KPI strip ───── #}
+{{ hub.megahero(
   "أرشيف التقارير",
   subtitle="اللقطة تحفظ نتيجة التقرير كما كانت وقت الإنشاء. اللقطات السابقة لا تُستبدل ولا تُحذف تلقائيًا.",
   icon="box-archive",
-  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.reports_home') ~ '"><i class="fa-solid fa-chart-line"></i> التقارير</a>'
+  actions_html='
+    <a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.reports_home') ~ '">
+      <i class="fa-solid fa-chart-line"></i> التقارير
+    </a>',
+  kpis=[
+    {'label': 'الإجمالي', 'value': archives|length, 'icon': 'box-archive', 'variant': 'brand'},
+    {'label': 'سنوية',    'value': _yearly,         'icon': 'calendar',    'variant': 'green'},
+    {'label': 'شهرية',    'value': _monthly,        'icon': 'calendar-day','variant': 'amber'},
+    {'label': 'يومية',    'value': _daily,          'icon': 'clock',       'variant': 'brand'},
+  ]
 ) }}
 
-{% call hub.section("إنشاء لقطة أرشيف", icon="box-archive") %}
-  <form method="post" action="{{ url_for('radius.reports_archive_create') }}" class="hub-form-grid" data-testid="archive-create-form">
-    <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-    <label>نوع الأرشفة
-      <select name="archive_type">
-        <option value="yearly">سنوية</option>
-        <option value="monthly">شهرية</option>
-        <option value="daily">يومية</option>
-      </select>
-    </label>
-    <label>الفترة <input name="period" placeholder="2026 أو 2026-05 أو 2026-05-25"></label>
-    <label>نوع التقرير
-      <select name="report_type" aria-label="نوع التقرير">
-        <option value="financial">مالي</option>
-      </select>
-    </label>
-    <button class="hub-btn hub-btn--primary" type="submit">إنشاء لقطة ثابتة</button>
-  </form>
+{# ───── Main (create form + snapshots table) + help panel on the LEFT ───── #}
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "كيف تعمل اللقطات؟",
+  intro="كل لقطة تجمّد نتيجة التقرير في لحظة إنشائها، فتبقى مرجعًا ثابتًا لا يتأثر بالتغييرات اللاحقة.",
+  items=[
+    {'icon': 'lock',        'text': 'اللقطة المحفوظة لا تُعدَّل ولا تُستبدل بعد إنشائها.'},
+    {'icon': 'calendar',    'text': 'اختر نوع الأرشفة (سنوية/شهرية/يومية) ثم حدّد الفترة المناسبة لها.'},
+    {'icon': 'hashtag',     'text': 'صيغة الفترة: 2026 للسنة، 2026-05 للشهر، 2026-05-25 لليوم.'},
+    {'icon': 'circle-info', 'text': 'إنشاء لقطة لفترة موجودة لا يستبدلها — تبقى النسخة الأصلية كما هي.'},
+  ],
+  note="لإنشاء التقارير الحية غير المؤرشفة، استخدم زر «التقارير» في الأعلى."
+)) %}
+  {% call hub.section("إنشاء لقطة أرشيف", icon="box-archive") %}
+    <form method="post" action="{{ url_for('radius.reports_archive_create') }}" class="hub-form-grid" data-testid="archive-create-form">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+      <label>نوع الأرشفة
+        <select name="archive_type">
+          <option value="yearly">سنوية</option>
+          <option value="monthly">شهرية</option>
+          <option value="daily">يومية</option>
+        </select>
+      </label>
+      <label>الفترة <input name="period" placeholder="2026 أو 2026-05 أو 2026-05-25"></label>
+      <label>نوع التقرير
+        <select name="report_type" aria-label="نوع التقرير">
+          <option value="financial">مالي</option>
+        </select>
+      </label>
+      <button class="hub-btn hub-btn--primary" type="submit">إنشاء لقطة ثابتة</button>
+    </form>
+  {% endcall %}
+
+  {% call hub.section("اللقطات المحفوظة", icon="lock", meta=archives|length|string + " لقطة", flush=True) %}
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25" style="border:none;border-radius:0">
+      <table class="hub-table rep-table" data-testid="archive-snapshots-table" data-persist-key="rep-archive">
+        <thead>
+          <tr>
+            <th class="num">الرقم</th>
+            <th>النوع</th>
+            <th>الفترة</th>
+            <th>التقرير</th>
+            <th class="num">الإيرادات</th>
+            <th>تاريخ الإنشاء</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for archive in archives %}
+            <tr>
+              <td class="num mono">#{{ archive.id }}</td>
+              <td>
+                {% if archive.archive_type == 'yearly' %}سنوية
+                {% elif archive.archive_type == 'monthly' %}شهرية
+                {% elif archive.archive_type == 'daily' %}يومية
+                {% else %}{{ archive.archive_type }}{% endif %}
+              </td>
+              <td class="mono small">{{ archive.period }}</td>
+              <td>{% if archive.report_type == 'financial' %}مالي{% else %}{{ archive.report_type }}{% endif %}</td>
+              <td class="num">{{ archive.summary.finance.revenue if archive.summary.finance is defined else '' }}</td>
+              <td class="mono small">{{ archive.created_at }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endcall %}
 {% endcall %}
 
-{% call hub.section("اللقطات المحفوظة", icon="lock", flush=True) %}
-  <div class="hub-table-wrap">
-    <table class="hub-table rep-table" data-testid="archive-snapshots-table" data-paginated="1" data-page-size="25" data-page-sizes="10,25,50,100" data-persist-key="rep-archive">
-      <thead><tr><th>الرقم</th><th>النوع</th><th>الفترة</th><th>التقرير</th><th>الإيرادات</th><th>تاريخ الإنشاء</th></tr></thead>
-      <tbody>
-        {% for archive in archives %}
-          <tr>
-            <td>#{{ archive.id }}</td>
-            <td>
-              {% if archive.archive_type == 'yearly' %}سنوية
-              {% elif archive.archive_type == 'monthly' %}شهرية
-              {% elif archive.archive_type == 'daily' %}يومية
-              {% else %}{{ archive.archive_type }}{% endif %}
-            </td>
-            <td>{{ archive.period }}</td>
-            <td>{% if archive.report_type == 'financial' %}مالي{% else %}{{ archive.report_type }}{% endif %}</td>
-            <td>{{ archive.summary.finance.revenue if archive.summary.finance is defined else '' }}</td>
-            <td>{{ archive.created_at }}</td>
-          </tr>
-        {% else %}
-          <tr><td colspan="6">لا توجد لقطات أرشيف حتى الآن.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-{% endcall %}
+{% if not archives %}
+{{ hub.empty(
+  "لا توجد لقطات أرشيف حتى الآن",
+  sub="أنشئ أول لقطة من نموذج «إنشاء لقطة أرشيف» لحفظ نتيجة تقرير كمرجع ثابت.",
+  icon="box-archive"
+) }}
+{% endif %}
 {% endblock %}
