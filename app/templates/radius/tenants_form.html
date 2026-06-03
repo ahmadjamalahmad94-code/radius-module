@@ -1,4 +1,4 @@
-{# Tenants form — REBUILT N11 (hub-v2). Backend untouched. #}
+{# Tenants form — REBUILT on UDS (hub-v2 + unified_design). Backend untouched. #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
@@ -7,191 +7,157 @@
 {% block page_icon %}<i class="fa-solid fa-building"></i>{% endblock %}
 {% block page_title %}{{ title_ar }}{% endblock %}
 
-{% block head_extra %}
-{{ super() }}
-<style>
-  .tn-form{ max-width: 1080px; margin: 0 auto; }
-  .tn-grid{ display:grid; gap:12px; grid-template-columns: repeat(2, 1fr); }
-  @media (max-width:720px){ .tn-grid{ grid-template-columns: 1fr; } }
-  .tn-field{ display:flex; flex-direction:column; gap:5px; min-width:0; }
-  .tn-field.full{ grid-column: 1 / -1; }
-  .tn-field label{ font-size:12.5px; font-weight:700; color:var(--hub-text-soft); }
-  .tn-field label .req{ color:var(--hub-red); margin-inline-start:2px; }
-  .tn-field .help{ font-size:11px; color:var(--hub-text-mute); margin-top:2px; line-height:1.6; }
-  .tn-section{
-    background: var(--hub-bg-card);
-    border: 1px solid var(--hub-border);
-    border-radius: var(--hub-r-card);
-    box-shadow: var(--hub-sh-card);
-    margin-bottom: var(--hub-gap-section);
-    overflow: hidden;
-  }
-  .tn-section-head{
-    display:flex; align-items:center; gap:10px;
-    padding: 13px 18px;
-    border-bottom: 1px solid var(--hub-border-soft);
-    background: linear-gradient(180deg, #fafbff, #fff);
-  }
-  .tn-section.is-collapsible .tn-section-head{ cursor:pointer; user-select:none; }
-  .tn-section.is-collapsed .tn-section-head{ border-bottom: none; }
-  .tn-section-icon{ width:30px; height:30px; border-radius:var(--hub-r-md);
-    display:inline-flex; align-items:center; justify-content:center;
-    font-size:13px; flex-shrink:0; }
-  .tn-section-title{ flex:1; font-size:14px; font-weight:800; }
-  .tn-section-toggle{ color:var(--hub-text-mute); transition: transform var(--hub-anim-fast) var(--hub-ease); }
-  .tn-section.is-collapsed .tn-section-toggle{ transform: rotate(-90deg); }
-  .tn-section-body{ padding: 18px; }
-  .tn-section.is-collapsed .tn-section-body{ display:none; }
-
-  .tn-section--id    { border-inline-start: 3px solid var(--hub-brand); }
-  .tn-section--id    .tn-section-icon{ background: var(--hub-brand-soft); color: var(--hub-brand-ink); }
-  .tn-section--plan  { border-inline-start: 3px solid var(--hub-green); }
-  .tn-section--plan  .tn-section-icon{ background: var(--hub-green-soft); color: var(--hub-green-ink); }
-  .tn-section--brand { border-inline-start: 3px solid #8B5CF6; }
-  .tn-section--brand .tn-section-icon{ background: #EDE9FE; color: #6D28D9; }
-</style>
-{% endblock %}
-
 {% block content %}
 
+{% set _save_label = "إنشاء الجهة" if is_new else "حفظ التعديلات" %}
 {{ hub.hero(
   title_ar,
-  subtitle="إعداد جهة جديدة في النظام — المعرّف والاسم والفئة والإعدادات الإقليمية",
+  subtitle="إعداد جهة في النظام — المعرّف والاسم والفئة والإعدادات الإقليمية",
   icon="building",
   actions_html='
     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.tenants_list') + '">
       <i class="fa-solid fa-arrow-right"></i> العودة للقائمة
     </a>
+    <button class="hub-btn hub-btn--primary" type="submit" form="tn-form">
+      <i class="fa-solid fa-floppy-disk"></i> ' + _save_label + '
+    </button>
   '
 ) }}
 
-<div class="tn-form">
-<form method="post"
+{% set _help %}
+{{ hub.helppanel(
+  "كيف تُعدّ الجهة",
+  intro="كل جهة (Tenant) هي حساب مستقل بمشتركيه وأجهزته وحدوده الخاصة.",
+  icon="circle-question",
+  items=[
+    {"icon": "id-card", "text": "المعرّف المختصر يدخل في الروابط — ثبّته بعد أول استخدام."},
+    {"icon": "layer-group", "text": "فئة الاشتراك تحدّد الحد الافتراضي لعدد المشتركين."},
+    {"icon": "sliders", "text": "اترك الحدود = 0 لاستخدام قيمة الفئة الافتراضية."},
+    {"icon": "palette", "text": "الإقليم والعلامة اختيارية ويمكن ضبطها لاحقًا."}
+  ],
+  note="المعرّف لا يُعدَّل بعد الإنشاء حفاظًا على ثبات الروابط."
+) }}
+{% endset %}
+
+{% call hub.worklayout(aside_html=_help) %}
+<form id="tn-form" method="post"
       action="{{ url_for('radius.tenants_update', tenant_id=tenant.id) if not is_new else url_for('radius.tenants_create') }}">
 
   {# ── 1. Identity ─────────────────────── #}
-  <section class="tn-section tn-section--id">
-    <header class="tn-section-head">
-      <span class="tn-section-icon"><i class="fa-solid fa-id-card"></i></span>
-      <span class="tn-section-title">الهوية والمعرّف</span>
-    </header>
-    <div class="tn-section-body">
-      <div class="tn-grid">
-        <div class="tn-field">
-          <label>المعرّف المختصر <span class="req">*</span></label>
-          <input class="hub-input mono" type="text" name="slug" required
-                 {% if not is_new %}readonly{% endif %}
-                 value="{{ tenant.slug or '' }}" placeholder="acme"
-                 {% if not is_new %}style="background:var(--hub-bg-soft);color:var(--hub-text-soft);cursor:not-allowed"{% endif %}>
-          <div class="help">معرّف مناسب للرابط، ويفضّل تثبيته بعد استخدامه.</div>
-        </div>
-        <div class="tn-field">
-          <label>الاسم <span class="req">*</span></label>
-          <input class="hub-input" type="text" name="name" required value="{{ tenant.name or '' }}">
-        </div>
-        <div class="tn-field">
-          <label>اسم العرض</label>
-          <input class="hub-input" type="text" name="display_name" value="{{ tenant.display_name or '' }}">
-        </div>
-        <div class="tn-field">
-          <label>البريد</label>
-          <input class="hub-input" type="email" name="email" value="{{ tenant.email or '' }}">
-        </div>
-        <div class="tn-field">
-          <label>الجوال</label>
-          <input class="hub-input" type="tel" name="phone" value="{{ tenant.phone or '' }}">
-        </div>
+  {% call hub.section("الهوية والمعرّف", icon="id-card") %}
+    <div class="hub-grid hub-grid--2">
+      <div class="hub-field">
+        <label>المعرّف المختصر <span class="req">*</span></label>
+        <input class="hub-input mono" type="text" name="slug" required
+               {% if not is_new %}readonly{% endif %}
+               value="{{ tenant.slug or '' }}" placeholder="acme"
+               {% if not is_new %}style="background:var(--hub-bg-soft);color:var(--hub-text-soft);cursor:not-allowed"{% endif %}>
+        <div class="hub-field-hint">معرّف مناسب للرابط، ويفضّل تثبيته بعد استخدامه.</div>
+      </div>
+      <div class="hub-field">
+        <label>الاسم <span class="req">*</span></label>
+        <input class="hub-input" type="text" name="name" required value="{{ tenant.name or '' }}">
+      </div>
+      <div class="hub-field">
+        <label>اسم العرض</label>
+        <input class="hub-input" type="text" name="display_name" value="{{ tenant.display_name or '' }}">
+      </div>
+      <div class="hub-field">
+        <label>البريد</label>
+        <input class="hub-input" type="email" name="email" value="{{ tenant.email or '' }}">
+      </div>
+      <div class="hub-field">
+        <label>الجوال</label>
+        <input class="hub-input" type="tel" name="phone" value="{{ tenant.phone or '' }}">
       </div>
     </div>
-  </section>
+  {% endcall %}
 
-  {# ── 2. Plan + Status + Limits ─────────────────────── #}
-  <section class="tn-section tn-section--plan">
-    <header class="tn-section-head">
-      <span class="tn-section-icon"><i class="fa-solid fa-layer-group"></i></span>
-      <span class="tn-section-title">فئة الاشتراك والحدود</span>
-    </header>
-    <div class="tn-section-body">
-      <div class="tn-grid">
-        <div class="tn-field">
-          <label>فئة الاشتراك <span class="req">*</span></label>
-          <select class="hub-select" name="plan_tier">
-            {% for t in tiers %}
-              <option value="{{ t }}" {% if tenant.plan_tier == t %}selected{% endif %}>
-                {{ t }} ({{ tier_limits[t].max_subscribers }} مشترك)
-              </option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="tn-field">
-          <label>الحالة</label>
-          <select class="hub-select" name="status">
-            {% for s in statuses %}
-              <option value="{{ s }}" {% if tenant.status == s %}selected{% endif %}>
-                {% if s == 'active' %}مفعَّلة
-                {% elif s == 'trial' %}تجريبية
-                {% elif s == 'suspended' %}موقوفة
-                {% elif s == 'closed' %}مغلقة
-                {% else %}{{ s }}{% endif %}
-              </option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="tn-field">
-          <label>حد المشتركين</label>
-          <input class="hub-input" type="number" name="max_subscribers" min="0" value="{{ tenant.max_subscribers or 0 }}">
-          <div class="help">0 = استخدم قيمة الفئة الافتراضية.</div>
-        </div>
-        <div class="tn-field">
-          <label>حد أجهزة الشبكة</label>
-          <input class="hub-input" type="number" name="max_nas" min="0" value="{{ tenant.max_nas or 0 }}">
-        </div>
-        <div class="tn-field">
-          <label>حد طلبات واجهة الربط (RPM)</label>
-          <input class="hub-input" type="number" name="api_rpm" min="0" value="{{ tenant.api_rpm or 0 }}">
-        </div>
-      </div>
+  {# ── 2. Plan tier (card picker) ─────────────────────── #}
+  {% call hub.section("فئة الاشتراك", icon="layer-group") %}
+    {% set _tier_opts = [] %}
+    {% for t in tiers %}
+      {% set _ = _tier_opts.append({"value": t, "title": t,
+            "sub": (tier_limits[t].max_subscribers|string) + " مشترك", "icon": "layer-group"}) %}
+    {% endfor %}
+    <div class="hub-field">
+      <label>فئة الاشتراك <span class="req">*</span></label>
+      {{ hub.cardselect("plan_tier", options=_tier_opts, value=tenant.plan_tier, type="radio") }}
     </div>
-  </section>
+  {% endcall %}
 
-  {# ── 3. Locale + Brand (collapsible) ─────────────────────── #}
-  <section class="tn-section tn-section--brand is-collapsible" data-sec="brand">
-    <header class="tn-section-head">
-      <span class="tn-section-icon"><i class="fa-solid fa-palette"></i></span>
-      <span class="tn-section-title">الإقليم والعلامة</span>
-      <i class="fa-solid fa-chevron-down tn-section-toggle"></i>
-    </header>
-    <div class="tn-section-body">
-      <div class="tn-grid">
-        <div class="tn-field">
-          <label>العملة</label>
-          <input class="hub-input" type="text" name="currency" value="{{ tenant.currency or cfg.currency }}">
-        </div>
-        <div class="tn-field">
-          <label>اللغة</label>
-          <select class="hub-select" name="locale">
-            {% for l in ['ar','en'] %}
-              <option value="{{ l }}" {% if tenant.locale == l %}selected{% endif %}>
-                {% if l == 'ar' %}العربية{% elif l == 'en' %}الإنجليزية{% else %}{{ l }}{% endif %}
-              </option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="tn-field">
-          <label>المنطقة الزمنية</label>
-          <input class="hub-input" type="text" name="timezone" value="{{ tenant.timezone or 'Asia/Amman' }}">
-        </div>
-        <div class="tn-field">
-          <label>لون العلامة</label>
-          <input class="hub-input" type="text" name="primary_color" value="{{ tenant.primary_color or '#2BAACC' }}">
-        </div>
-        <div class="tn-field full">
-          <label>رابط الشعار</label>
-          <input class="hub-input" type="text" name="logo_url" value="{{ tenant.logo_url or '' }}">
-        </div>
+  {# ── 3. Status (card picker) ─────────────────────── #}
+  {% call hub.section("الحالة", icon="circle-dot") %}
+    {% set _status_meta = {
+      'active':    {'label': 'مفعَّلة',  'icon': 'circle-check'},
+      'trial':     {'label': 'تجريبية', 'icon': 'flask'},
+      'suspended': {'label': 'موقوفة',  'icon': 'circle-pause'},
+      'closed':    {'label': 'مغلقة',   'icon': 'lock'}
+    } %}
+    {% set _status_opts = [] %}
+    {% for s in statuses %}
+      {% set _ = _status_opts.append({"value": s,
+            "title": (_status_meta[s].label if s in _status_meta else s),
+            "icon": (_status_meta[s].icon if s in _status_meta else 'circle')}) %}
+    {% endfor %}
+    <div class="hub-field">
+      <label>الحالة</label>
+      {{ hub.cardselect("status", options=_status_opts, value=tenant.status, type="radio") }}
+    </div>
+  {% endcall %}
+
+  {# ── 4. Limits ─────────────────────── #}
+  {% call hub.section("الحدود", icon="sliders") %}
+    <div class="hub-grid hub-grid--2">
+      <div class="hub-field">
+        <label>حد المشتركين</label>
+        <input class="hub-input" type="number" name="max_subscribers" min="0" value="{{ tenant.max_subscribers or 0 }}">
+        <div class="hub-field-hint">0 = استخدم قيمة الفئة الافتراضية.</div>
+      </div>
+      <div class="hub-field">
+        <label>حد أجهزة الشبكة</label>
+        <input class="hub-input" type="number" name="max_nas" min="0" value="{{ tenant.max_nas or 0 }}">
+      </div>
+      <div class="hub-field">
+        <label>حد طلبات واجهة الربط (RPM)</label>
+        <input class="hub-input" type="number" name="api_rpm" min="0" value="{{ tenant.api_rpm or 0 }}">
       </div>
     </div>
-  </section>
+  {% endcall %}
+
+  {# ── 5. Locale + Brand ─────────────────────── #}
+  {% call hub.section("الإقليم والعلامة", icon="palette") %}
+    <div class="hub-grid hub-grid--2">
+      <div class="hub-field">
+        <label>العملة</label>
+        <input class="hub-input" type="text" name="currency" value="{{ tenant.currency or cfg.currency }}">
+      </div>
+      <div class="hub-field">
+        <label>اللغة</label>
+        {{ hub.cardselect(
+          "locale",
+          options=[
+            {"value": "ar", "title": "العربية", "icon": "language"},
+            {"value": "en", "title": "الإنجليزية", "icon": "language"}
+          ],
+          value=tenant.locale,
+          type="radio"
+        ) }}
+      </div>
+      <div class="hub-field">
+        <label>المنطقة الزمنية</label>
+        <input class="hub-input" type="text" name="timezone" value="{{ tenant.timezone or 'Asia/Amman' }}">
+      </div>
+      <div class="hub-field">
+        <label>لون العلامة</label>
+        <input class="hub-input" type="text" name="primary_color" value="{{ tenant.primary_color or '#2BAACC' }}">
+      </div>
+      <div class="hub-field full" style="grid-column:1 / -1">
+        <label>رابط الشعار</label>
+        <input class="hub-input" type="text" name="logo_url" value="{{ tenant.logo_url or '' }}">
+      </div>
+    </div>
+  {% endcall %}
 
   <div style="display:flex;gap:10px;justify-content:flex-end;padding:6px 4px 0">
     <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.tenants_list') }}">إلغاء</a>
@@ -200,24 +166,5 @@
     </button>
   </div>
 </form>
-</div>
-
-<script>
-(function(){
-  var LS = 'hr:tn-form:sec:';
-  document.querySelectorAll('.tn-section.is-collapsible').forEach(function(card){
-    var k = card.dataset.sec; if (!k) return;
-    var v = null;
-    try { v = localStorage.getItem(LS + k); } catch(_) {}
-    if (v === 'collapsed') card.classList.add('is-collapsed');
-    else if (v === 'open')  card.classList.remove('is-collapsed');
-    var head = card.querySelector('.tn-section-head');
-    if (head) head.addEventListener('click', function(){
-      card.classList.toggle('is-collapsed');
-      try { localStorage.setItem(LS + k,
-        card.classList.contains('is-collapsed') ? 'collapsed' : 'open'); } catch(_) {}
-    });
-  });
-})();
-</script>
+{% endcall %}{# /worklayout #}
 {% endblock %}
