@@ -1,5 +1,5 @@
 {# ═══════════════════════════════════════════════════════════════════════
-   Recycle bin — REBUILT (Night N4, 2026-05-21)
+   Recycle bin — UNIFIED DESIGN SYSTEM (megahero + worklayout + helppanel)
 
    Backend unchanged (app/radius/routes/recycle_bin.py):
      • items: serialized soft-deleted rows
@@ -21,21 +21,33 @@
 
 {% block content %}
 {% include "radius/data_protection_nav.html" %}
-<div class="hr-page-shell hr-page-shell--recycle" data-admin-rhythm data-recycle-bin-page>
 
-{{ hub.hero(
+{# Build KPI strip: total + per-entity archived counts (mirrors old tiles). #}
+{% set _kpis = [{'label': 'الإجمالي', 'value': counts.values()|sum, 'icon': 'layer-group', 'variant': 'brand'}] %}
+{% for entity, label in entity_labels.items() %}
+  {% set _ = _kpis.append({
+       'label': label,
+       'value': counts.get(entity, 0),
+       'icon': 'box-archive',
+       'variant': ('brand' if counts.get(entity, 0) else 'grey')
+     }) %}
+{% endfor %}
+
+{# ───── Merged hero: title + actions + KPI strip (per-entity counts) + filter chips ───── #}
+{% call hub.megahero(
   "سلة المحذوفات",
   subtitle="الحذف في هذه المجالات أرشفة قابلة للاستعادة، وليس حذفًا نهائيًا — السجلات المالية لا تظهر هنا لأنها تُصحَّح بقيود عكسية.",
   icon="box-archive",
   actions_html='
     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.users_list') + '">
       <i class="fa-solid fa-users"></i> المستفيدون
-    </a>
-  '
-) }}
-
-{# ───── Filter chips (entity_type) ────────────────────── #}
-<form method="get" class="hub-filterbar hr-toolbar" onsubmit="return false">
+    </a>',
+  kpis=_kpis
+) %}
+  <span class="hub-text-mute hub-flex-row" style="gap:6px;align-items:center;white-space:nowrap">
+    <i class="fa-solid fa-filter"></i> تصفية حسب النوع
+  </span>
+  <span class="hub-spacer"></span>
   <a class="hub-btn hub-btn--{{ 'primary' if not selected else 'ghost' }} hub-btn--sm"
      href="{{ url_for('radius.recycle_bin') }}">
     <i class="fa-solid fa-layer-group"></i>
@@ -56,87 +68,90 @@
       </span>
     </a>
   {% endfor %}
-</form>
+{% endcall %}
 
-{# ───── Per-entity tiles ──────────────────────────────── #}
-<div class="hub-tile-grid hr-stat-grid">
-  {% for entity, label in entity_labels.items() %}
-    {{ hub.tile(label + " مؤرشفة", counts.get(entity, 0),
-                icon="box-archive",
-                variant=("brand" if counts.get(entity, 0) else "")) }}
-  {% endfor %}
-</div>
-
-{# ───── Archived items table ──────────────────────────── #}
 {% if items %}
-{% call hub.section("العناصر المؤرشفة", icon="table-list",
-                    meta=items|length|string + " صف", flush=True) %}
-  <div class="hub-table-wrap" style="border:none;border-radius:0">
-    <table class="hub-table">
-      <thead>
-        <tr>
-          <th>النوع</th>
-          <th>العنصر</th>
-          <th>الحالة</th>
-          <th>وقت الأرشفة</th>
-          <th>مصدر الأرشفة</th>
-          <th>الاحتفاظ</th>
-          <th>بواسطة</th>
-          <th>السبب</th>
-          <th style="width:120px">إجراء</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for item in items %}
-        <tr>
-          <td>{{ hub.pill(entity_labels.get(item.entity_type, item.entity_type),
-                          variant="brand", dot=False) }}</td>
-          <td>
-            <strong>{{ item.label }}</strong>
-            <div class="mono small hub-text-mute">#{{ item.id }}</div>
-          </td>
-          <td>
-            {% if item.status == 'enabled' %}{{ hub.pill("مفعَّل", variant="green") }}
-            {% elif item.status == 'disabled' %}{{ hub.pill("معطَّل", variant="red") }}
-            {% elif item.status %}{{ hub.pill(item.status, variant="grey") }}
-            {% else %}<span class="hub-text-mute">—</span>{% endif %}
-          </td>
-          <td class="mono small">{{ item.deleted_at|dt_local if item.deleted_at else '—' }}</td>
-          <td>
-            {% if item.archive_source == 'auto' %}
-              {{ hub.pill("تلقائية", variant="blue") }}
-            {% else %}
-              {{ hub.pill("يدوية", variant="grey") }}
-            {% endif %}
-            {% if item.archive_policy_id %}
-              <div class="mono small hub-text-mute">policy #{{ item.archive_policy_id }}</div>
-            {% endif %}
-          </td>
-          <td class="mono small">
-            {{ item.retention_expires_at|date_local if item.retention_expires_at else 'غير محدد' }}
-            {% if item.retention_expired %}
-              <div class="hub-text-mute">انتهت مدة الاحتفاظ</div>
-            {% endif %}
-          </td>
-          <td>{{ item.deleted_by or '—' }}</td>
-          <td class="hub-text-mute" style="max-width:320px;font-size:12.5px;line-height:1.7">
-            {{ item.delete_reason or 'لم يتم تسجيل سبب.' }}
-          </td>
-          <td>
-            <form method="post"
-                  action="{{ url_for('radius.recycle_bin_restore', entity_type=item.entity_type, entity_id=item.id) }}"
-                  onsubmit="return confirm('استعادة «{{ item.label|e }}»؟');"
-                  style="display:inline">
-              <button type="submit" class="hub-btn hub-btn--primary hub-btn--sm" {% if not item.restore_allowed %}disabled{% endif %}>
-                <i class="fa-solid fa-rotate-left"></i> استعادة
-              </button>
-            </form>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+{# ───── Main (carded table) + help panel on the LEFT ───── #}
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "كيف تعمل سلة المحذوفات؟",
+  intro="كل صف هو سجل تشغيلي مؤرشف (مستفيد، باقة، جهاز شبكة، مدير…) يمكن استعادته إلى حالته السابقة.",
+  items=[
+    {'icon': 'rotate-left', 'text': 'زر «استعادة» يعيد العنصر إلى وضعه قبل الأرشفة — راجعه قبل إعادة استخدامه تشغيليًا.'},
+    {'icon': 'robot',       'text': 'الأرشفة قد تكون يدوية أو تلقائية بموجب سياسة احتفاظ محددة.'},
+    {'icon': 'hourglass-half', 'text': 'عند انتهاء مدة الاحتفاظ قد لا تعود الاستعادة متاحة.'},
+    {'icon': 'coins',       'text': 'السجلات المالية لا تظهر هنا — تُصحَّح بقيود عكسية لا بالحذف.'},
+  ],
+  note="الأرشفة لا تُتلف البيانات؛ إنها حالة قابلة للعكس وليست حذفًا نهائيًا."
+)) %}
+  {% call hub.section("العناصر المؤرشفة", icon="table-list",
+                      meta=items|length|string + " صف", flush=True) %}
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25" style="border:none;border-radius:0">
+      <table class="hub-table">
+        <thead>
+          <tr>
+            <th>النوع</th>
+            <th>العنصر</th>
+            <th>الحالة</th>
+            <th>وقت الأرشفة</th>
+            <th>مصدر الأرشفة</th>
+            <th>الاحتفاظ</th>
+            <th>بواسطة</th>
+            <th data-uds-nosort>السبب</th>
+            <th style="width:120px" data-uds-nosort data-uds-nocol>إجراء</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in items %}
+          <tr>
+            <td>{{ hub.pill(entity_labels.get(item.entity_type, item.entity_type),
+                            variant="brand", dot=False) }}</td>
+            <td>
+              <strong>{{ item.label }}</strong>
+              <div class="mono small hub-text-mute">#{{ item.id }}</div>
+            </td>
+            <td>
+              {% if item.status == 'enabled' %}{{ hub.pill("مفعَّل", variant="green") }}
+              {% elif item.status == 'disabled' %}{{ hub.pill("معطَّل", variant="red") }}
+              {% elif item.status %}{{ hub.pill(item.status, variant="grey") }}
+              {% else %}<span class="hub-text-mute">—</span>{% endif %}
+            </td>
+            <td class="mono small">{{ item.deleted_at|dt_local if item.deleted_at else '—' }}</td>
+            <td>
+              {% if item.archive_source == 'auto' %}
+                {{ hub.pill("تلقائية", variant="blue") }}
+              {% else %}
+                {{ hub.pill("يدوية", variant="grey") }}
+              {% endif %}
+              {% if item.archive_policy_id %}
+                <div class="mono small hub-text-mute">policy #{{ item.archive_policy_id }}</div>
+              {% endif %}
+            </td>
+            <td class="mono small">
+              {{ item.retention_expires_at|date_local if item.retention_expires_at else 'غير محدد' }}
+              {% if item.retention_expired %}
+                <div class="hub-text-mute">انتهت مدة الاحتفاظ</div>
+              {% endif %}
+            </td>
+            <td>{{ item.deleted_by or '—' }}</td>
+            <td class="hub-text-mute" style="max-width:320px;font-size:12.5px;line-height:1.7">
+              {{ item.delete_reason or 'لم يتم تسجيل سبب.' }}
+            </td>
+            <td>
+              <form method="post"
+                    action="{{ url_for('radius.recycle_bin_restore', entity_type=item.entity_type, entity_id=item.id) }}"
+                    onsubmit="return confirm('استعادة «{{ item.label|e }}»؟');"
+                    style="display:inline">
+                <button type="submit" class="hub-btn hub-btn--primary hub-btn--sm" {% if not item.restore_allowed %}disabled{% endif %}>
+                  <i class="fa-solid fa-rotate-left"></i> استعادة
+                </button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endcall %}
 {% endcall %}
 {% else %}
 {{ hub.empty(
@@ -146,5 +161,4 @@
 ) }}
 {% endif %}
 
-</div>
 {% endblock %}

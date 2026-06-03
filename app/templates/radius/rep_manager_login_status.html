@@ -1,12 +1,12 @@
 {# ═══════════════════════════════════════════════════════════════════════
-   Manager login status — REBUILT (Night N4, 2026-05-21)
+   حالة دخول المدراء — UNIFIED DESIGN SYSTEM (megahero + worklayout + help).
 
-   Same backend data: `items` (admins rows with username, full_name, email,
-   role_id, enabled, last_login_at, created_at).
+   نفس بيانات الـ backend: `items` (صفوف admins فيها username, full_name,
+   email, role_id, enabled, last_login_at, created_at) و `filters`.
+   صفر تغيير في المسار/السلوك.
    ═══════════════════════════════════════════════════════════════════════ #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
-{% import "_partials/repfilter.html" as rf %}
 
 {% block title %}حالة دخول المدراء{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-user-clock"></i>{% endblock %}
@@ -16,58 +16,88 @@
 {% block content %}
 {% include "radius/reports_nav.html" %}
 
-{{ hub.hero(
+{# ───── Merged hero: title + subtitle + KPI strip + integrated filters ───── #}
+{% set _active = items|selectattr('enabled')|list|length %}
+{% call hub.megahero(
   "حالة دخول المدراء",
   subtitle="آخر دخول لكل مدير في النظام — مرتّبة تنازليًا.",
-  icon="user-clock"
-) }}
-
-{{ rf.bar('radius.rep_manager_login_status', filters, show_date=False, q_placeholder='بحث (مدير)…') }}
+  icon="user-clock",
+  kpis=[
+    {'label': 'الإجمالي', 'value': items|length,        'icon': 'users-gear',   'variant': 'brand'},
+    {'label': 'مفعَّلون', 'value': _active,             'icon': 'circle-check', 'variant': 'green'},
+    {'label': 'معطَّلون', 'value': items|length - _active, 'icon': 'circle-pause', 'variant': 'red'},
+  ],
+  search_action=url_for('radius.rep_manager_login_status')
+) %}
+  <input class="hub-input grow" type="text" name="q"
+         value="{{ filters.q if filters else '' }}"
+         placeholder="بحث (مدير)…">
+  {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
+  {% if filters and filters.q %}
+    {{ hub.btn("مسح", icon="rotate-left", variant="ghost", size="sm",
+               attrs='onclick="window.location=' + "'" + url_for('radius.rep_manager_login_status') + "'" + '"') }}
+  {% endif %}
+{% endcall %}
 
 {% if items %}
-{% set _active = items|selectattr('enabled')|list|length %}
-<div class="hub-kpi-grid">
-  {{ hub.kpi("الإجمالي", items|length, icon="users-gear",   variant="brand") }}
-  {{ hub.kpi("مفعَّلون", _active,       icon="circle-check", variant="green") }}
-  {{ hub.kpi("معطَّلون", items|length - _active, icon="circle-pause", variant="red") }}
-</div>
-
-{% call hub.section("المدراء", icon="table-list",
-                    meta=items|length|string + " صف", flush=True) %}
-  <div class="hub-table-wrap" style="border:none;border-radius:0">
-    <table class="hub-table rep-table" data-paginated="1" data-page-size="25" data-page-sizes="10,25,50,100" data-persist-key="rep-manager-login">
-      <thead>
-        <tr>
-          <th class="num" style="width:60px">#</th>
-          <th>اليوزر</th>
-          <th>الاسم</th>
-          <th>البريد</th>
-          <th>الحالة</th>
-          <th>آخر دخول</th>
-          <th>أُنشئ في</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for r in items %}
-        <tr>
-          <td class="num mono">{{ r.id }}</td>
-          <td class="mono"><strong>{{ r.username }}</strong></td>
-          <td>{{ r.full_name or '—' }}</td>
-          <td class="mono small">{{ r.email or '—' }}</td>
-          <td>
-            {% if r.enabled %}{{ hub.pill("مفعَّل", variant="green") }}
-            {% else %}{{ hub.pill("معطَّل", variant="red") }}{% endif %}
-          </td>
-          <td class="mono small">{{ r.last_login_at[:16] if r.last_login_at else 'لم يدخل' }}</td>
-          <td class="mono small">{{ r.created_at[:10] if r.created_at else '—' }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+{# ───── Main (carded table) + help panel on the LEFT ───── #}
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "كيف تقرأ هذا التقرير؟",
+  intro="كل صف هو حساب مدير في النظام — مرتّبًا حسب آخر دخول تنازليًا.",
+  items=[
+    {'icon': 'right-to-bracket', 'text': '«آخر دخول» هو آخر مرة سجّل فيها المدير دخوله للنظام.'},
+    {'icon': 'circle-check',     'text': 'الحالة «مفعَّل» تعني أن الحساب نشط ويمكنه الدخول.'},
+    {'icon': 'circle-pause',     'text': 'الحالة «معطَّل» تعني أن الحساب موقوف عن الدخول.'},
+    {'icon': 'calendar-plus',    'text': '«أُنشئ في» هو تاريخ إنشاء حساب المدير.'},
+  ],
+  note="هذا التقرير للقراءة فقط — البيانات تأتي مباشرة من جدول المدراء admins."
+)) %}
+  {% call hub.section("المدراء", icon="table-list",
+                      meta=items|length|string + " صف", flush=True) %}
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25"
+         style="border:none;border-radius:0">
+      <table class="hub-table">
+        <thead>
+          <tr>
+            <th class="num" style="width:60px" data-uds-nosort>#</th>
+            <th>اليوزر</th>
+            <th>الاسم</th>
+            <th>البريد</th>
+            <th data-uds-nosort>الحالة</th>
+            <th>آخر دخول</th>
+            <th>أُنشئ في</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in items %}
+          <tr>
+            <td class="num mono">{{ r.id }}</td>
+            <td class="mono"><strong>{{ r.username }}</strong></td>
+            <td>{{ r.full_name or '—' }}</td>
+            <td class="mono small">{{ r.email or '—' }}</td>
+            <td>
+              {% if r.enabled %}{{ hub.pill("مفعَّل", variant="green") }}
+              {% else %}{{ hub.pill("معطَّل", variant="red") }}{% endif %}
+            </td>
+            {% set _ll = r.last_login_at %}
+            <td class="mono"
+                style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
+              {% if _ll %}<span class="rep-primary">{{ _ll[:10] }}</span><span class="rep-sub">{{ _ll[11:16] }}</span>
+              {% else %}<span class="rep-sub">لم يدخل</span>{% endif %}
+            </td>
+            <td class="mono"
+                style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
+              {{ r.created_at[:10] if r.created_at else '—' }}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endcall %}
 {% endcall %}
 {% else %}
-{{ hub.empty("لا مدراء بعد", icon="user-clock") }}
+{{ hub.empty("لا مدراء بعد",
+   sub="غيّر البحث أو لا يوجد مدراء بعد.", icon="user-clock") }}
 {% endif %}
-
 {% endblock %}
