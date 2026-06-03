@@ -568,6 +568,12 @@
                   <button type="submit" class="hub-btn hub-btn--primary hub-btn--sm" style="width:100%;">
                     <i class="fa-solid fa-bolt"></i> تطبيق فوري
                   </button>
+                  {% if _temp_active %}
+                  <button type="submit" formaction="{{ url_for('radius.online_temp_speed_cancel') }}"
+                          class="hub-btn hub-btn--secondary hub-btn--sm" style="width:100%;margin-top:6px;">
+                    <i class="fa-solid fa-rotate-left"></i> إلغاء السرعة المؤقتة الآن
+                  </button>
+                  {% endif %}
                 </form>
               </details>
             </div>

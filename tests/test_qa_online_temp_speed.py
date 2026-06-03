@@ -187,3 +187,57 @@ def test_tenant_isolation_on_expiry(app, coa_calls):
         n = expire_due_temp_speeds(tenant_id=2, now=t0)
     assert n == 0
     assert _row(app)["temporary_speed"] == 1
+
+
+# ── 7. SINGLE SOURCE: a window set in one place is cancellable from the other ─
+def test_cross_control_apply_one_place_cancel_other(app, coa_calls):
+    """The profile/edit and the online page call the SAME apply/cancel. A window
+    opened by one is fully controllable (and visible) from the other — no
+    divergence, one stored window."""
+    import json
+    _seed(app)
+    with app.app_context():
+        from app.radius.services.temp_speed import apply_temp_speed, cancel_temp_speed
+        # "set from the online page" (apply_temp_speed)
+        apply_temp_speed(tenant_id=1, actor="online", username="tmpuser",
+                         down_kbps=1024, up_kbps=1024, duration_minutes=5)
+    r = _row(app)
+    assert r["temporary_speed"] == 1
+    # the SAME window is visible to the profile (its display reads these fields)
+    meta = json.loads(r["metadata"])
+    assert meta["temporary_speed_to"] and meta["temporary_speed_restore_rate"] == "10000k/5000k"
+
+    coa_calls.clear()
+    with app.app_context():
+        from app.radius.services.temp_speed import cancel_temp_speed
+        # "cancel from the profile/edit" (cancel_temp_speed) — same shared fn
+        res = cancel_temp_speed(tenant_id=1, actor="profile", username="tmpuser")
+    assert res["reverted"] is True
+    assert coa_calls and coa_calls[-1]["rate"] == "10000k/5000k"   # revert CoA fired
+    r2 = _row(app)
+    assert r2["temporary_speed"] == 0
+    assert r2["download_speed_kbps"] == 0
+
+
+# ── 8. profile re-save must NOT restart the countdown (reset_window=False) ────
+def test_reset_window_false_preserves_countdown(app, coa_calls):
+    import json
+    _seed(app)
+    with app.app_context():
+        from app.radius.services.temp_speed import apply_temp_speed
+        t0 = datetime.utcnow()
+        # fresh apply (online) — 10 min window
+        apply_temp_speed(tenant_id=1, actor="online", username="tmpuser",
+                         down_kbps=1024, up_kbps=1024, duration_minutes=10,
+                         now=t0, reset_window=True)
+        to_first = json.loads(_row(app)["metadata"])["temporary_speed_to"]
+        # profile re-save 2 min later with a different duration — must KEEP the
+        # original end time (no countdown restart)
+        apply_temp_speed(tenant_id=1, actor="profile", username="tmpuser",
+                         down_kbps=2048, up_kbps=2048, duration_minutes=5,
+                         now=t0 + timedelta(minutes=2), reset_window=False)
+        to_second = json.loads(_row(app)["metadata"])["temporary_speed_to"]
+    assert to_first == to_second              # window end unchanged
+    # but the throttle value DID update (and re-pushed live)
+    assert _row(app)["download_speed_kbps"] == 2048
+    assert coa_calls[-1]["rate"] == "2048k/2048k"

@@ -313,6 +313,7 @@ _PERM_GUARDED: dict[str, str] = {
     "settings_page": "settings.edit",
     # التحكّم بالسرعة المؤقتة من شاشة المتصلين — صلاحية تعديل المشتركين
     "online_temp_speed": "users.edit",
+    "online_temp_speed_cancel": "users.edit",
 }
 
 

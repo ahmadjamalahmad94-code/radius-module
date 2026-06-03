@@ -21,6 +21,7 @@ def register_sessions_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/online/lock-mac", "online_lock_mac", online_lock_mac, methods=["POST"])
     bp.add_url_rule("/online/lock-ip", "online_lock_ip", online_lock_ip, methods=["POST"])
     bp.add_url_rule("/online/temp-speed", "online_temp_speed", online_temp_speed, methods=["POST"])
+    bp.add_url_rule("/online/temp-speed/cancel", "online_temp_speed_cancel", online_temp_speed_cancel, methods=["POST"])
 
 
 def _actor() -> str:
@@ -474,4 +475,25 @@ def online_temp_speed():
             )
     except RadiusError as e:
         flash(e.message or "تعذّر تطبيق السرعة المؤقتة", "error")
+    return _return_to_online()
+
+
+def online_temp_speed_cancel():
+    """Cancel an active temporary speed on a session — LIVE.
+
+    Reverts via the SAME shared service used by the profile/edit cancel, so a
+    window opened from either place is cancellable here (restore CoA now, no
+    wait for expiry). Gated by ``users.edit``."""
+    try:
+        row = _selected_online_row()
+        username = row["username"]
+        from ..services.temp_speed import cancel_temp_speed
+        res = cancel_temp_speed(tenant_id=_tid(), actor=_actor(), username=username)
+        if res.get("reverted"):
+            flash(f"تم إلغاء السرعة المؤقتة لـ {username} وإرجاعه لسرعته العادية فورًا.",
+                  "success")
+        else:
+            flash(f"لا توجد سرعة مؤقتة فعّالة لـ {username}.", "info")
+    except RadiusError as e:
+        flash(e.message or "تعذّر إلغاء السرعة المؤقتة", "error")
     return _return_to_online()

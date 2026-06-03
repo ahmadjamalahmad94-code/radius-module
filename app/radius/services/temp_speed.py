@@ -160,9 +160,14 @@ def apply_temp_speed(
     down_kbps: int,
     up_kbps: int,
     duration_minutes: int,
+    reset_window: bool = True,
     now: datetime | None = None,
 ) -> dict:
     """Apply a temporary throttle to ``username`` and push it LIVE immediately.
+
+    ``reset_window=False`` preserves an already-running countdown (used by the
+    profile/edit save so re-saving the subscriber never restarts the timer);
+    ``True`` (the online-page default) always opens a fresh window.
 
     Persists the temp window + the prior rate (for an exact revert), writes the
     throttle into the speed columns (so a re-auth inside the window keeps it),
@@ -218,10 +223,16 @@ def apply_temp_speed(
         meta[_K_PREV_CUSTOM] = int(prev_custom)
         meta[_K_RESTORE_RATE] = restore_rate
 
-    ends = now + timedelta(minutes=duration_minutes)
-    meta[_K_FROM] = now.isoformat(timespec="seconds")
-    meta[_K_TO] = ends.isoformat(timespec="seconds")
-    meta[_K_DURATION] = duration_minutes
+    existing_to = _parse_dt(_meta_value(meta, _K_TO))
+    if reset_window or not (existing_to and existing_to > now):
+        ends = now + timedelta(minutes=duration_minutes)
+        meta[_K_FROM] = now.isoformat(timespec="seconds")
+        meta[_K_TO] = ends.isoformat(timespec="seconds")
+        meta[_K_DURATION] = duration_minutes
+    else:
+        # Keep the running countdown intact (profile re-save path).
+        meta.setdefault(_K_FROM, now.isoformat(timespec="seconds"))
+        meta.setdefault(_K_DURATION, duration_minutes)
 
     db().execute(
         """
@@ -365,4 +376,40 @@ def expire_due_temp_speeds(
     return reverted
 
 
-__all__ = ["apply_temp_speed", "expire_due_temp_speeds"]
+def cancel_temp_speed(
+    *, tenant_id: int, actor: str, username: str, now: datetime | None = None,
+) -> dict:
+    """Cancel a temp window NOW (before its natural expiry) — the same revert
+    used at expiry: push a restore CoA to the live session and clear the window.
+
+    Shared by the online-page cancel button AND the profile/edit "Cancel
+    temporary speed" path, so a window opened in either place is cancellable
+    from the other with identical behaviour. No-op (``reverted=False``) when the
+    subscriber has no temp window. Tenant-scoped.
+    """
+    username = (username or "").strip()
+    now = now or _utcnow()
+    row = db().execute(
+        """
+        SELECT id, username, temporary_speed, plan_id, custom_speed,
+               bandwidth_control_enabled, download_speed_kbps, upload_speed_kbps,
+               metadata, updated_at
+          FROM subscribers
+         WHERE tenant_id = ? AND username = ?
+         LIMIT 1
+        """,
+        (int(tenant_id), username),
+    ).fetchone()
+    if not row:
+        return {"reverted": False, "reason": "not_found"}
+    meta = _parse_meta(row["metadata"])
+    has_window = (bool(row["temporary_speed"]) or _meta_value(meta, _K_FROM)
+                  or _meta_value(meta, _K_RESTORE_RATE))
+    if not has_window:
+        return {"reverted": False, "reason": "no_temp_window"}
+    _revert_one(tenant_id, row, now, actor=actor)
+    db().commit()
+    return {"reverted": True}
+
+
+__all__ = ["apply_temp_speed", "cancel_temp_speed", "expire_due_temp_speeds"]

@@ -266,8 +266,14 @@ def _derive_working_days_from_form() -> str:
         return ""
 
 
-def _form_dto(*, sub_id: int | None = None) -> Subscriber:
-    """يجمع كل حقول الـ Subscriber form (الأساسية + RM-H1 الموسَّعة + metadata)."""
+def _form_dto(*, sub_id: int | None = None, existing: Subscriber | None = None) -> Subscriber:
+    """يجمع كل حقول الـ Subscriber form (الأساسية + RM-H1 الموسَّعة + metadata).
+
+    ``existing`` = the pre-save subscriber (None on create). It lets the form
+    PRESERVE the temp-speed window + speed columns when temp speed is in play, so
+    the shared temp-speed service (services/temp_speed.py) — invoked by both this
+    profile form and the online page — stays the single owner of that state.
+    """
     def _i(n, d=0):
         try: return int(request.form.get(n) or d)
         except (TypeError, ValueError): return d
@@ -303,10 +309,48 @@ def _form_dto(*, sub_id: int | None = None) -> Subscriber:
         v = _s(mf)
         if v:
             flat_meta[mf] = v
-    _resolve_temp_speed_window(
-        flat_meta, enabled=_b("temporary_speed"), now=datetime.utcnow()
-    )
-    meta_json = json.dumps(_flat_to_grouped(flat_meta), ensure_ascii=False)
+
+    # Temp speed is owned by the shared service (services/temp_speed.py), called
+    # from BOTH this profile form and the online page. When temp speed is in play
+    # (enabled now, or already active), the form must NOT stamp the window or the
+    # speed columns itself — it preserves the existing state and the route
+    # delegates apply/cancel to the service after the save (one source of truth).
+    temp_enabled = _b("temporary_speed")
+    prev_temp = bool(getattr(existing, "temporary_speed", False)) if existing else False
+    temp_managed = temp_enabled or prev_temp
+    if temp_managed:
+        for k in ("temporary_speed_from", "temporary_speed_to",
+                  "temporary_speed_duration_minutes"):
+            flat_meta.pop(k, None)
+    else:
+        _resolve_temp_speed_window(flat_meta, enabled=False, now=datetime.utcnow())
+
+    # Merge form-managed fields INTO existing metadata so out-of-band keys (the
+    # service's restore snapshot + live window, stored top-level) survive a save.
+    base_meta = (_parse_metadata(getattr(existing, "metadata", None))
+                 if existing else {g: {} for g in _META_GROUPS})
+    form_grouped = _flat_to_grouped(flat_meta)
+    merged_meta = dict(base_meta)
+    for grp, fields in form_grouped.items():
+        merged_meta[grp] = {**(base_meta.get(grp) or {}), **fields}
+    meta_json = json.dumps(merged_meta, ensure_ascii=False)
+
+    # Speed columns: preserve existing when temp-managed (the service overwrites
+    # them with the throttle and snapshots the pre-temp values for an exact revert).
+    if temp_managed and existing is not None:
+        _bwctrl = bool(existing.bandwidth_control_enabled)
+        _down = int(existing.download_speed_kbps or 0)
+        _up = int(existing.upload_speed_kbps or 0)
+        _custom = bool(existing.custom_speed)
+        _temp_col = bool(existing.temporary_speed)
+    elif temp_managed:
+        _bwctrl, _down, _up, _custom, _temp_col = False, 0, 0, False, False
+    else:
+        _bwctrl = _b("bandwidth_control_enabled")
+        _down = _i("download_speed_kbps")
+        _up = _i("upload_speed_kbps")
+        _custom = _b("custom_speed")
+        _temp_col = False
 
     return Subscriber(
         id=sub_id,
@@ -353,12 +397,12 @@ def _form_dto(*, sub_id: int | None = None) -> Subscriber:
         primary_dns_ppp=_s("primary_dns_ppp"),
         secondary_dns_ppp=_s("secondary_dns_ppp"),
         device_connection_file=_s("device_connection_file"),
-        # سرعة (override per-user)
-        bandwidth_control_enabled=_b("bandwidth_control_enabled"),
-        download_speed_kbps=_i("download_speed_kbps"),
-        upload_speed_kbps=_i("upload_speed_kbps"),
-        custom_speed=_b("custom_speed"),
-        temporary_speed=_b("temporary_speed"),
+        # سرعة (override per-user) — temp-managed values preserved (service owns them)
+        bandwidth_control_enabled=_bwctrl,
+        download_speed_kbps=_down,
+        upload_speed_kbps=_up,
+        custom_speed=_custom,
+        temporary_speed=_temp_col,
         # كوتا/وقت (override)
         total_connection_time_min=_i("total_connection_time_min"),
         daily_connection_time_min=_i("daily_connection_time_min"),
@@ -391,6 +435,12 @@ def _sub_with_meta_for_template(sub: Subscriber) -> dict:
     d = asdict(sub)
     grouped = _parse_metadata(sub.metadata)
     flat = _grouped_to_flat(grouped)
+    # The shared temp-speed service (services/temp_speed.py) stores the window
+    # at the TOP level of metadata; surface those scalars too so a temp speed
+    # set from the online page shows its countdown here on the profile.
+    for k, v in grouped.items():
+        if not isinstance(v, dict):
+            flat.setdefault(k, v)
     for f in _META_FIELDS:
         d.setdefault(f, flat.get(f, ""))
     return d
@@ -507,6 +557,42 @@ def users_new():
         **_form_select_options())
 
 
+def _delegate_temp_speed(username: str, before) -> None:
+    """Route the profile form's temp-speed intent through the SHARED service
+    (services/temp_speed.py) — the exact same apply/cancel the «المتصلون الآن»
+    page uses. So a temp speed set here is identical to one set there (same
+    window fields, immediate-live CoA, worker auto-revert) and each is
+    visible/cancellable from the other. Never breaks the base save."""
+    def _b(n):
+        return request.form.get(n, "") in ("1", "on", "true", "yes")
+    def _i(n, d=0):
+        try:
+            return int(float(request.form.get(n) or d))
+        except (TypeError, ValueError):
+            return d
+    temp_enabled = _b("temporary_speed")
+    prev_temp = bool(getattr(before, "temporary_speed", False)) if before else False
+    try:
+        from ..services import temp_speed
+        if temp_enabled:
+            temp_speed.apply_temp_speed(
+                tenant_id=_tid(), actor=_actor(), username=username,
+                down_kbps=_i("temporary_download_speed_kbps"),
+                up_kbps=_i("temporary_upload_speed_kbps"),
+                duration_minutes=_i("temporary_speed_duration_minutes"),
+                reset_window=not prev_temp,   # don't restart a running countdown
+            )
+        elif prev_temp:
+            temp_speed.cancel_temp_speed(
+                tenant_id=_tid(), actor=_actor(), username=username)
+    except ValueError as exc:
+        flash(f"تعذّر تطبيق السرعة المؤقتة: {exc}", "warning")
+    except Exception:  # noqa: BLE001 — temp-speed must never break the save
+        import logging
+        logging.getLogger(__name__).exception(
+            "temp-speed delegation failed for %s", username)
+
+
 def users_create():
     dto = _form_dto()
     try:
@@ -521,6 +607,8 @@ def users_create():
             login_macs=[],
             default_country=_default_country(),
             **_form_select_options()), 400
+
+    _delegate_temp_speed(saved.username, None)
 
     # Inline first speed-rule (optional): if the form has rule fields
     # filled, create it now that the subscriber row exists. We bypass
@@ -1119,7 +1207,12 @@ def users_update(username: str):
             flash(e.message, "error")
         return redirect(url_for("radius.users_edit", username=username))
 
-    dto = _form_dto()
+    before = None
+    try:
+        before = get_users_service().get(username)
+    except Exception:  # noqa: BLE001 — fall back to create-style temp handling
+        before = None
+    dto = _form_dto(existing=before)
     # احرص أن الـ username لا يتغير عن المسار
     from dataclasses import replace
     dto = replace(dto, username=username)
@@ -1133,6 +1226,9 @@ def users_update(username: str):
             user_types=USER_TYPES, is_new=False, login_macs=_subscriber_login_macs(username),
             default_country=_default_country(),
             speed_rules_panel=None), 400
+    # Temp-speed apply/cancel via the shared service (one source of truth with
+    # the online page) — immediate live CoA + scheduled auto-revert.
+    _delegate_temp_speed(username, before)
     # Persist any JS-staged rule edits (bulk فعّل/عطّل, «تم», master
     # toggle, per-row enabled flips) — all in one redirect at the end.
     _sync_subscriber_rules(_tid(), _actor(), request.form, username)
