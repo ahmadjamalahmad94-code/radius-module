@@ -1,4 +1,4 @@
-{# Admins list — REBUILT N7 (hub-v2). Backend: admins, roles dict. #}
+{# Admins list — UNIFIED DESIGN SYSTEM. Backend: admins, roles dict. #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
@@ -10,9 +10,14 @@
 {% block content %}
 {% include "radius/admin_operations_nav.html" %}
 
-{{ hub.hero(
+{% set _active    = admins|selectattr('enabled')|list|length %}
+{% set _with_role = admins|selectattr('role_id')|list|length %}
+{% set _with_login = admins|selectattr('last_login_at')|list|length %}
+
+{# ───── Merged hero: title + actions + KPI strip ───── #}
+{{ hub.megahero(
   "المدراء",
-  subtitle="إدارة حسابات المدراء والصلاحيات — إضافة، تعديل، أرشفة، ربط بدور",
+  subtitle="إدارة حسابات المدراء والصلاحيات — إضافة، تعديل، أرشفة، ربط بدور.",
   icon="user-shield",
   actions_html='
     <a class="hub-btn hub-btn--primary" href="' + url_for('radius.admins_new') + '">
@@ -23,82 +28,89 @@
     </a>
     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.admins_profile_summary') + '">
       <i class="fa-solid fa-id-card"></i> ملخّص الملفات
-    </a>
-  '
+    </a>',
+  kpis=[
+    {'label': 'الإجمالي',    'value': admins|length,  'icon': 'users',           'variant': 'brand'},
+    {'label': 'مفعَّلون',     'value': _active,         'icon': 'circle-check',     'variant': 'green'},
+    {'label': 'بدور',        'value': _with_role,      'icon': 'key',              'variant': 'blue'},
+    {'label': 'سجّلوا دخول',  'value': _with_login,     'icon': 'right-to-bracket', 'variant': 'amber'},
+  ]
 ) }}
 
 {% if admins %}
-{% set _active   = admins|selectattr('enabled')|list|length %}
-{% set _with_role = admins|selectattr('role_id')|list|length %}
-{% set _with_login = admins|selectattr('last_login_at')|list|length %}
-<div class="hub-kpi-grid">
-  {{ hub.kpi("الإجمالي",  admins|length,  icon="users",       variant="brand") }}
-  {{ hub.kpi("مفعَّلون",   _active,         icon="circle-check", variant="green") }}
-  {{ hub.kpi("بدور",      _with_role,      icon="key",          variant="blue") }}
-  {{ hub.kpi("سجّلوا دخول", _with_login,    icon="right-to-bracket", variant="amber") }}
-</div>
-
-{% call hub.section("قائمة المدراء", icon="table-list", meta=admins|length|string + " مدير", flush=True) %}
-  <div class="hub-table-wrap" style="border:none;border-radius:0">
-    <table class="hub-table" data-paginated="1" data-page-size="20" data-page-sizes="10,20,50,100" data-persist-key="admins-list">
-      <thead>
-        <tr>
-          <th class="num" style="width:60px">#</th>
-          <th>اليوزر</th>
-          <th>الاسم</th>
-          <th>الدور</th>
-          <th>البريد</th>
-          <th>الجوال</th>
-          <th>آخر دخول</th>
-          <th>الحالة</th>
-          <th style="width:110px">إجراءات</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for a in admins %}
-        <tr>
-          <td class="num mono">{{ a.id }}</td>
-          <td class="mono">
-            <a href="{{ url_for('radius.admins_edit', admin_id=a.id) }}"
-               style="font-weight:700;color:var(--hub-brand-ink);text-decoration:none">
-              {{ a.username }}
-            </a>
-          </td>
-          <td>{{ a.full_name or '—' }}</td>
-          <td>
-            {% if a.role_id and roles.get(a.role_id) %}
-              {% set _r = roles[a.role_id] %}
-              <span class="hub-pill" style="background:{{ _r.color or '#6B5AED' }}1a;color:{{ _r.color or '#6B5AED' }};border:1px solid {{ _r.color or '#6B5AED' }}40">
-                <i class="fa-solid fa-key" style="font-size:10px"></i> {{ _r.display_name or _r.name }}
-              </span>
-            {% else %}<span class="hub-text-mute">—</span>{% endif %}
-          </td>
-          <td class="mono small">{{ a.email or '—' }}</td>
-          <td class="mono small">{{ a.mobile or '—' }}</td>
-          <td class="mono small">{{ a.last_login_at|dt_local if a.last_login_at else '—' }}</td>
-          <td>
-            {% if a.enabled %}{{ hub.pill("مفعَّل", variant="green") }}
-            {% else %}{{ hub.pill("معطَّل", variant="red") }}{% endif %}
-          </td>
-          <td>
-            <div class="hub-flex-row" style="gap:4px;flex-wrap:nowrap">
-              <a class="hub-btn hub-btn--ghost hub-btn--icon" title="تعديل"
-                 href="{{ url_for('radius.admins_edit', admin_id=a.id) }}">
-                <i class="fa-solid fa-pen"></i>
+{# ───── Main (carded table) + help panel on the LEFT ───── #}
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "كيف تقرأ هذه الصفحة؟",
+  intro="كل صف هو حساب مدير في النظام — يصل للوحة التحكم حسب الدور المرتبط به.",
+  items=[
+    {'icon': 'key',                'text': 'الدور يحدّد صلاحيات المدير؛ المدير «بدور» يرث أذونات ذلك الدور.'},
+    {'icon': 'right-to-bracket',   'text': '«آخر دخول» يوضّح آخر مرة سجّل فيها المدير الدخول للنظام.'},
+    {'icon': 'toggle-on',          'text': 'المدير المعطَّل يبقى محفوظًا لكنه لا يستطيع تسجيل الدخول.'},
+    {'icon': 'box-archive',        'text': 'الأرشفة لا تحذف المدير نهائيًا — يمكن استعادته من سلة المحذوفات.'},
+  ]
+)) %}
+  {% call hub.section("قائمة المدراء", icon="table-list", meta=admins|length|string + " مدير", flush=True) %}
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
+      <table class="hub-table">
+        <thead>
+          <tr>
+            <th class="num" style="width:60px">#</th>
+            <th>اليوزر</th>
+            <th>الاسم</th>
+            <th>الدور</th>
+            <th>البريد</th>
+            <th>الجوال</th>
+            <th>آخر دخول</th>
+            <th>الحالة</th>
+            <th style="width:110px" data-uds-nosort data-uds-nocol>إجراءات</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for a in admins %}
+          <tr>
+            <td class="num mono">{{ a.id }}</td>
+            <td class="mono">
+              <a href="{{ url_for('radius.admins_edit', admin_id=a.id) }}"
+                 style="font-weight:700;color:var(--hub-brand-ink);text-decoration:none">
+                {{ a.username }}
               </a>
-              <form method="post" action="{{ url_for('radius.admins_delete', admin_id=a.id) }}"
-                    onsubmit="return confirm('أرشفة {{ a.username|e }}؟ يمكن استعادته من سلة المحذوفات.');" style="display:inline">
-                <button type="submit" class="hub-btn hub-btn--danger hub-btn--icon" title="أرشفة">
-                  <i class="fa-solid fa-box-archive"></i>
-                </button>
-              </form>
-            </div>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+            </td>
+            <td>{{ a.full_name or '—' }}</td>
+            <td>
+              {% if a.role_id and roles.get(a.role_id) %}
+                {% set _r = roles[a.role_id] %}
+                <span class="hub-pill" style="background:{{ _r.color or '#6B5AED' }}1a;color:{{ _r.color or '#6B5AED' }};border:1px solid {{ _r.color or '#6B5AED' }}40">
+                  <i class="fa-solid fa-key" style="font-size:10px"></i> {{ _r.display_name or _r.name }}
+                </span>
+              {% else %}<span class="hub-text-mute">—</span>{% endif %}
+            </td>
+            <td class="mono small">{{ a.email or '—' }}</td>
+            <td class="mono small">{{ a.mobile or '—' }}</td>
+            <td class="mono small">{{ a.last_login_at|dt_local if a.last_login_at else '—' }}</td>
+            <td>
+              {% if a.enabled %}{{ hub.pill("مفعَّل", variant="green") }}
+              {% else %}{{ hub.pill("معطَّل", variant="red") }}{% endif %}
+            </td>
+            <td>
+              <div class="hub-flex-row" style="gap:4px;flex-wrap:nowrap">
+                <a class="hub-btn hub-btn--ghost hub-btn--icon" title="تعديل"
+                   href="{{ url_for('radius.admins_edit', admin_id=a.id) }}">
+                  <i class="fa-solid fa-pen"></i>
+                </a>
+                <form method="post" action="{{ url_for('radius.admins_delete', admin_id=a.id) }}"
+                      onsubmit="return confirm('أرشفة {{ a.username|e }}؟ يمكن استعادته من سلة المحذوفات.');" style="display:inline">
+                  <button type="submit" class="hub-btn hub-btn--danger hub-btn--icon" title="أرشفة">
+                    <i class="fa-solid fa-box-archive"></i>
+                  </button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endcall %}
 {% endcall %}
 {% else %}
 {{ hub.empty(
