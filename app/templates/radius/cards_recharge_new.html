@@ -1,69 +1,49 @@
-{# Recharge Cards — generate form. Multi-denomination input with
-   add/remove rows. Cyan accent matches the section. #}
+{# Recharge Cards — generate form. UDS pass (2026-06-03).
+   Same backend route (radius.cards_recharge_new) + same field names
+   (package_name, notes, denom_value[], denom_count[]). ONE hub.hero,
+   hub.worklayout + LEFT hub.helppanel, hub.section cards. The dynamic
+   denomination-row UI + live summary JS and its data-* hooks are
+   preserved EXACTLY. #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
 {% block title %}دفعة شحن جديدة{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-bolt"></i>{% endblock %}
 {% block page_title %}دفعة شحن جديدة{% endblock %}
-{% block page_sub %}
-  <span class="sub">
-    <a href="{{ url_for('radius.cards_recharge_list') }}" style="color:#475569;text-decoration:none">
-      <i class="fa-solid fa-arrow-right"></i> العودة لقائمة الحزم
-    </a>
-  </span>
-{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
 <style>
-  .hub-section{
-    border:1px solid #cbd5e1;background:#fff;
-    box-shadow:0 1px 0 rgba(255,255,255,.8) inset,
-               0 1px 3px rgba(15,23,42,.06),
-               0 8px 20px rgba(15,23,42,.06);
-    border-radius:14px;
-  }
-  .hub-section-head{
-    background:linear-gradient(180deg,#ecfeff 0%,#f8fafc 100%);
-    border-bottom:1px solid #cbd5e1;
-  }
-  .hub-section-head-title{color:#0f172a;font-weight:900}
-  .hub-section-head-icon{background:#cffafe;color:#0e7490}
-  .hub-hero{
-    border:1px solid #cbd5e1;
-    box-shadow:0 1px 0 rgba(255,255,255,.8) inset,
-               0 2px 6px rgba(15,23,42,.06),
-               0 14px 32px rgba(15,23,42,.08);
-  }
+  .rc-form{ max-width: 1180px; margin: 0 auto; }
 
   /* Denomination rows */
   .rc-denoms{display:flex;flex-direction:column;gap:10px;margin-top:10px}
   .rc-denom-row{
     display:grid;grid-template-columns:120px 1fr 1fr 44px;gap:10px;
     align-items:center;padding:12px;
-    border:1px solid #e2e8f0;border-radius:10px;background:#f8fafc;
+    border:1px solid var(--hub-border-soft);border-radius:var(--hub-r-md);
+    background:var(--hub-bg-soft);
   }
   @media (max-width:760px){.rc-denom-row{grid-template-columns:1fr 1fr 44px}}
-  .rc-denom-row label{font-size:12px;font-weight:800;color:#475569;margin-bottom:4px;display:block}
+  .rc-denom-row label{font-size:12px;font-weight:800;color:var(--hub-text-soft);margin-bottom:4px;display:block}
   .rc-denom-row input{
     width:100%;padding:9px 12px;
-    border:1px solid #e2e8f0;border-radius:8px;background:#fff;
-    font-size:13.5px;font-variant-numeric:tabular-nums;color:#0f172a;
+    border:1px solid var(--hub-border-soft);border-radius:8px;background:#fff;
+    font-size:13.5px;font-variant-numeric:tabular-nums;color:var(--hub-text);
   }
   .rc-denom-row input:focus{
-    outline:none;border-color:#06b6d4;
-    box-shadow:0 0 0 3px rgba(6,182,212,.18);
+    outline:none;border-color:var(--hub-brand);
+    box-shadow:0 0 0 3px var(--hub-brand-soft);
   }
   .rc-denom-quick{display:flex;gap:4px;flex-wrap:wrap}
   .rc-denom-quick button{
-    background:#fff;border:1px solid #cbd5e1;border-radius:6px;
-    padding:5px 10px;font-size:11.5px;font-weight:800;color:#475569;cursor:pointer;
+    background:#fff;border:1px solid var(--hub-border);border-radius:6px;
+    padding:5px 10px;font-size:11.5px;font-weight:800;color:var(--hub-text-soft);cursor:pointer;
     transition:background .15s ease, border-color .15s ease, color .15s ease;
   }
-  .rc-denom-quick button:hover{background:#ecfeff;border-color:#67e8f9;color:#0e7490}
+  .rc-denom-quick button:hover{background:var(--hub-brand-soft);border-color:var(--hub-brand-line);color:var(--hub-brand-ink)}
   .rc-denom-remove{
-    background:#fff;border:1px solid #fecaca;color:#b91c1c;
+    background:#fff;border:1px solid var(--hub-red-line, #fecaca);color:var(--hub-red, #b91c1c);
     width:36px;height:36px;border-radius:8px;cursor:pointer;
     display:grid;place-items:center;font-size:13px;
     transition:background .15s ease;
@@ -71,13 +51,14 @@
   .rc-denom-remove:hover{background:#fef2f2}
 
   .rc-add-denom{
-    background:#fff;border:1px dashed #cbd5e1;border-radius:10px;
+    background:#fff;border:1px dashed var(--hub-border);border-radius:var(--hub-r-md);
     padding:14px;width:100%;cursor:pointer;
-    font-size:13px;font-weight:800;color:#0e7490;
+    font-size:13px;font-weight:800;color:var(--hub-brand-ink);
     display:flex;align-items:center;justify-content:center;gap:8px;
     transition:background .15s ease, border-color .15s ease;
+    margin-top:10px;
   }
-  .rc-add-denom:hover{background:#ecfeff;border-color:#06b6d4}
+  .rc-add-denom:hover{background:var(--hub-brand-soft);border-color:var(--hub-brand)}
 
   .rc-summary{
     margin-top:18px;padding:14px 18px;border-radius:12px;
@@ -89,29 +70,12 @@
   .rc-summary .item .k{font-size:11px;opacity:.85;letter-spacing:.05em;text-transform:uppercase;font-weight:700}
   .rc-summary .item .v{font-size:22px;font-weight:900;letter-spacing:-.01em;font-variant-numeric:tabular-nums}
 
-  .hub-field input{
-    width:100%;padding:10px 12px;
-    border:1px solid #e2e8f0;border-radius:8px;background:#fff;
-    font-size:13.5px;color:#0f172a;
-  }
-  .hub-field input:focus{
-    outline:none;border-color:#06b6d4;
-    box-shadow:0 0 0 3px rgba(6,182,212,.18);
-  }
+  .rc-tip{margin:0 0 8px;font-size:13px;color:var(--hub-text-soft);line-height:1.7}
 
   .rc-actions{
-    display:flex;gap:10px;flex-wrap:wrap;
-    margin-top:20px;padding-top:18px;border-top:1px solid #f1f5f9;
+    display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;
+    padding:6px 4px 0;
   }
-  .rc-cta{
-    background:linear-gradient(135deg,#06b6d4 0%,#0e7490 100%);
-    color:#fff;border:0;border-radius:10px;
-    padding:11px 22px;font-size:14px;font-weight:800;cursor:pointer;
-    display:inline-flex;align-items:center;gap:8px;
-    box-shadow:0 6px 14px rgba(6,182,212,.28);
-    transition:transform .12s ease, box-shadow .15s ease;
-  }
-  .rc-cta:hover{transform:translateY(-1px);box-shadow:0 10px 22px rgba(6,182,212,.38)}
 </style>
 {% endblock %}
 
@@ -120,16 +84,36 @@
 {{ hub.hero(
   "توليد دفعة شحن",
   subtitle="حدّد فئة (قيمة) وعدد بطاقاتها. يمكنك إضافة فئات متعدّدة في نفس الدفعة. عند الحفظ تُولَّد رموز فريدة جاهزة للبيع.",
-  icon="bolt"
+  icon="bolt",
+  actions_html='
+    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.cards_recharge_list') + '">
+      <i class="fa-solid fa-arrow-right"></i> العودة لقائمة الحزم
+    </a>
+  '
 ) }}
 
+{% set help_aside = hub.helppanel(
+  "كيف تعمل دفعة الشحن",
+  intro="كل صف يمثّل فئة من بطاقات الشحن. أضف فئات متعدّدة لتكوين دفعة واحدة بقيم مختلفة.",
+  icon="compass",
+  items=[
+    {'icon': 'box-archive', 'text': 'اسم الحزمة يظهر في القائمة وتقارير المبيعات'},
+    {'icon': 'layer-group', 'text': 'لكل فئة: القيمة × عدد البطاقات'},
+    {'icon': 'calculator',  'text': 'الإجمالي والقيمة الكلية تُحسب تلقائيًا'},
+    {'icon': 'bolt',        'text': 'عند الحفظ تُولَّد رموز فريدة جاهزة للبيع'},
+  ],
+  note="مثال: 100×5 + 50×10 + 20×20 = 170 بطاقة بإجمالي قيمة 1,100."
+) %}
+
+<div class="rc-form">
+{% call hub.worklayout(aside_html=help_aside) %}
 <form method="post" action="{{ url_for('radius.cards_recharge_new') }}">
   {{ csrf_token_input() | safe }}
 
   {% call hub.section("بيانات الحزمة", icon="box-archive") %}
     <div class="hub-field">
       <label class="hub-field-label" for="package_name">اسم الحزمة <span class="req">*</span></label>
-      <input id="package_name" name="package_name" required maxlength="120"
+      <input class="hub-input" id="package_name" name="package_name" required maxlength="120"
              placeholder="مثل: دفعة شحن شهر ٨"
              value="{{ form.get('package_name') or '' }}">
       <div class="hub-field-hint">يظهر في القائمة وعلى تقارير المبيعات.</div>
@@ -137,14 +121,14 @@
 
     <div class="hub-field" style="margin-top:14px">
       <label class="hub-field-label" for="notes">ملاحظات (اختياري)</label>
-      <input id="notes" name="notes" maxlength="500"
+      <input class="hub-input" id="notes" name="notes" maxlength="500"
              placeholder="مثل: للموزّع أحمد — منطقة الشمال"
              value="{{ form.get('notes') or '' }}">
     </div>
   {% endcall %}
 
   {% call hub.section("الفئات والكميات", icon="layer-group", meta="اختر الفئات وعدد البطاقات") %}
-    <p style="margin:0 0 8px;font-size:13px;color:#475569;line-height:1.7">
+    <p class="rc-tip">
       كل صف يمثّل فئة من بطاقات الشحن. مثلاً: <strong>100 × 5</strong> +
       <strong>50 × 10</strong> + <strong>20 × 20</strong> = 170 بطاقة بإجمالي قيمة <strong>1,100</strong>.
     </p>
@@ -190,16 +174,17 @@
       <div class="item"><span class="k">القيمة الكلية</span><span class="v" id="sum-value">0</span></div>
       <div class="item"><span class="k">عدد الفئات</span><span class="v" id="sum-tiers">1</span></div>
     </div>
-
-    <div class="rc-actions">
-      <button type="submit" class="rc-cta">
-        <i class="fa-solid fa-bolt" aria-hidden="true"></i>
-        ولّد البطاقات
-      </button>
-      {{ hub.btn("إلغاء", icon="xmark", href=url_for('radius.cards_recharge_list'), variant="secondary") }}
-    </div>
   {% endcall %}
+
+  <div class="rc-actions">
+    {{ hub.btn("إلغاء", icon="xmark", href=url_for('radius.cards_recharge_list'), variant="secondary") }}
+    <button type="submit" class="hub-btn hub-btn--primary">
+      <i class="fa-solid fa-bolt" aria-hidden="true"></i> ولّد البطاقات
+    </button>
+  </div>
 </form>
+{% endcall %}{# /.worklayout #}
+</div>{# /.rc-form #}
 
 <script>
 (function(){
