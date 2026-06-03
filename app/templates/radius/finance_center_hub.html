@@ -70,12 +70,67 @@
 {% endblock %}
 
 {% block content %}
-{{ hub.hero(
+
+{# ───── Per-tab KPI sets folded into the single megahero ───── #}
+{% if tab == 'wallets' %}
+  {% set _hero_kpis = [
+    {'label': 'عدد المحافظ',   'value': summary.wallet_count,            'icon': 'wallet',        'variant': 'blue'},
+    {'label': 'أرصدة المحافظ', 'value': summary.wallet_balance|money,    'icon': 'sack-dollar',   'variant': 'green'},
+    {'label': 'قيود الأستاذ',  'value': summary.ledger_entries,          'icon': 'book',          'variant': 'brand'},
+    {'label': 'إجمالي الأستاذ','value': summary.ledger_total|money,       'icon': 'book-open',     'variant': 'amber'},
+  ] %}
+{% elif tab == 'revenue' %}
+  {% set _hero_kpis = [
+    {'label': 'إجمالي الإيرادات', 'value': summary.total_revenue|money,    'icon': 'sack-dollar',   'variant': 'green'},
+    {'label': 'الربح الصافي',     'value': summary.total_profit|money,     'icon': 'chart-line',    'variant': 'amber'},
+    {'label': 'سجلات الإيراد',    'value': summary.revenue_records,        'icon': 'receipt',       'variant': 'blue'},
+    {'label': 'حصص الموزعين',     'value': summary.distributor_shares|money,'icon': 'people-arrows','variant': 'brand'},
+  ] %}
+{% elif tab == 'loans_debts' %}
+  {% set _hero_kpis = [
+    {'label': 'إجمالي الديون', 'value': debts.total|money,        'icon': 'file-invoice-dollar', 'variant': 'amber'},
+    {'label': 'عدد الذمم',     'value': debts['count'] or 0,      'icon': 'list-ol',             'variant': 'blue'},
+    {'label': 'عدد السلف',     'value': summary.loan_count,       'icon': 'list',                'variant': 'brand'},
+    {'label': 'سلف مفتوحة',    'value': summary.open_loan_count,  'icon': 'hourglass-half',      'variant': 'green'},
+  ] %}
+{% else %}
+  {% set _hero_kpis = [
+    {'label': 'إجمالي الإيرادات', 'value': summary.total_revenue|money,    'icon': 'sack-dollar',  'variant': 'green'},
+    {'label': 'التحصيلات',        'value': summary.total_collections|money,'icon': 'cash-register','variant': 'brand'},
+    {'label': 'أرصدة المحافظ',    'value': summary.wallet_balance|money,   'icon': 'wallet',       'variant': 'blue'},
+    {'label': 'الربح الصافي',     'value': summary.total_profit|money,     'icon': 'chart-line',   'variant': 'amber'},
+  ] %}
+{% endif %}
+
+{# ───── Single full-width megahero: title + subtitle + icon + actions + financial KPIs.
+        Loans tab embeds the status filter as the integrated search-row body. ───── #}
+{% if tab == 'loans_debts' %}
+{% call hub.megahero(
   "المركز المالي",
   subtitle="واجهة موحّدة للمتابعة اليومية. الإنشاء والشحن والخصم تستخدم نفس المسارات الأصلية، والسجلات المالية تبقى قابلة للتتبع.",
   icon="coins",
-  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.accounting_hub') ~ '"><i class="fa-solid fa-book"></i> السجل المحاسبي</a>'
+  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.accounting_hub') ~ '"><i class="fa-solid fa-book"></i> السجل المحاسبي</a>',
+  kpis=_hero_kpis,
+  search_action=url_for('radius.finance_center_hub')
+) %}
+  <input type="hidden" name="tab" value="loans_debts">
+  <select class="hub-input" name="status">
+    <option value="" {% if not loan_status %}selected{% endif %}>كل الحالات</option>
+    <option value="open" {% if loan_status == "open" %}selected{% endif %}>مفتوحة</option>
+    <option value="settled" {% if loan_status == "settled" %}selected{% endif %}>مسددة</option>
+    <option value="voided" {% if loan_status == "voided" %}selected{% endif %}>ملغاة</option>
+  </select>
+  {{ hub.btn("تطبيق الفلتر", icon="filter", variant="primary", type="submit", size="sm") }}
+{% endcall %}
+{% else %}
+{{ hub.megahero(
+  "المركز المالي",
+  subtitle="واجهة موحّدة للمتابعة اليومية. الإنشاء والشحن والخصم تستخدم نفس المسارات الأصلية، والسجلات المالية تبقى قابلة للتتبع.",
+  icon="coins",
+  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.accounting_hub') ~ '"><i class="fa-solid fa-book"></i> السجل المحاسبي</a>',
+  kpis=_hero_kpis
 ) }}
+{% endif %}
 
 <nav class="fc-tabs" aria-label="تبويبات المركز المالي">
   <a href="{{ url_for('radius.finance_center_hub', tab='dashboard') }}" class="{{ 'is-active' if tab == 'dashboard' }}"><i class="fa-solid fa-chart-pie"></i> النظرة العامة</a>
@@ -85,13 +140,6 @@
 </nav>
 
 {% if tab == 'dashboard' %}
-<div class="hub-kpi-grid">
-  {{ hub.kpi("إجمالي الإيرادات", summary.total_revenue|money, icon="sack-dollar", variant="green") }}
-  {{ hub.kpi("التحصيلات", summary.total_collections|money, icon="cash-register", variant="brand") }}
-  {{ hub.kpi("أرصدة المحافظ", summary.wallet_balance|money, icon="wallet", variant="blue") }}
-  {{ hub.kpi("الربح الصافي", summary.total_profit|money, icon="chart-line", variant="amber") }}
-</div>
-
 <div class="hub-grid hub-grid--2">
   {% call hub.section("مؤشرات التشغيل المالي", icon="gauge-high") %}
     <div class="hub-tile-grid">
@@ -141,26 +189,26 @@
   </form>
 {% endcall %}
 
-{% call hub.section("قائمة الخزائن والمحافظ", icon="wallet", flush=True) %}
+{% call hub.section("قائمة الخزائن والمحافظ", icon="wallet", meta=(wallets|length|string + " محفظة"), flush=True) %}
   {% if wallets %}
-  <div class="table-responsive">
-    <table class="table hub-table">
+  <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
+    <table class="hub-table">
       <thead>
         <tr>
-          <th>#</th>
+          <th class="num">#</th>
           <th>المالك</th>
-          <th>الرصيد</th>
+          <th class="num">الرصيد</th>
           <th>الحالة</th>
-          <th>آخر الحركات</th>
-          <th>إجراء</th>
+          <th data-uds-nosort>آخر الحركات</th>
+          <th data-uds-nosort data-uds-nocol>إجراء</th>
         </tr>
       </thead>
       <tbody>
       {% for wallet in wallets %}
         <tr>
-          <td>{{ wallet.id }}</td>
+          <td class="num mono">{{ wallet.id }}</td>
           <td>{{ owner_label(wallet.owner_type) }}{% if wallet.owner_id %} #{{ wallet.owner_id }}{% endif %}</td>
-          <td><strong>{{ wallet.balance|money }}</strong></td>
+          <td class="num"><strong>{{ wallet.balance|money }}</strong></td>
           <td>{{ hub.pill("نشطة" if wallet.status == "active" else wallet.status, "green" if wallet.status == "active" else "grey") }}</td>
           <td>
             {% for tx in tx_by_wallet.get(wallet.id, []) %}
@@ -195,38 +243,31 @@
 {% endif %}
 
 {% if tab == 'revenue' %}
-<div class="hub-kpi-grid">
-  {{ hub.kpi("إجمالي الإيرادات", summary.total_revenue|money, icon="sack-dollar", variant="green") }}
-  {{ hub.kpi("الربح الصافي", summary.total_profit|money, icon="chart-line", variant="amber") }}
-  {{ hub.kpi("سجلات الإيراد", summary.revenue_records, icon="receipt", variant="blue") }}
-  {{ hub.kpi("حصص الموزعين", summary.distributor_shares|money, icon="people-arrows", variant="brand") }}
-</div>
-
-{% call hub.section("سجلات الإيرادات", icon="receipt", flush=True) %}
+{% call hub.section("سجلات الإيرادات", icon="receipt", meta=(revenue|length|string + " سجل"), flush=True) %}
   {% if revenue %}
-  <div class="table-responsive">
-    <table class="table hub-table">
+  <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
+    <table class="hub-table">
       <thead>
         <tr>
-          <th>#</th>
+          <th class="num">#</th>
           <th>المصدر</th>
-          <th>السعر الأصلي</th>
-          <th>المحصّل</th>
-          <th>تكلفة الجملة</th>
-          <th>الربح الصافي</th>
+          <th class="num">السعر الأصلي</th>
+          <th class="num">المحصّل</th>
+          <th class="num">تكلفة الجملة</th>
+          <th class="num">الربح الصافي</th>
           <th>التاريخ</th>
         </tr>
       </thead>
       <tbody>
         {% for item in revenue %}
         <tr>
-          <td>{{ item.id }}</td>
+          <td class="num mono">{{ item.id }}</td>
           <td>{{ source_label(item.source_type) }}{% if item.source_id %} #{{ item.source_id }}{% endif %}</td>
-          <td>{{ item.original_price|money }}</td>
-          <td>{{ item.collected|money }}</td>
-          <td>{{ item.wholesale_cost|money }}</td>
-          <td><strong>{{ item.net_profit|money }}</strong></td>
-          <td>{{ item.created_at|dt_local }}</td>
+          <td class="num">{{ item.original_price|money }}</td>
+          <td class="num">{{ item.collected|money }}</td>
+          <td class="num">{{ item.wholesale_cost|money }}</td>
+          <td class="num"><strong>{{ item.net_profit|money }}</strong></td>
+          <td class="mono small">{{ item.created_at|dt_local }}</td>
         </tr>
         {% endfor %}
       </tbody>
@@ -239,33 +280,10 @@
 {% endif %}
 
 {% if tab == 'loans_debts' %}
-<div class="hub-kpi-grid">
-  {{ hub.kpi("إجمالي الديون", debts.total|money, icon="file-invoice-dollar", variant="amber") }}
-  {{ hub.kpi("عدد الذمم", debts['count'] or 0, icon="list-ol", variant="blue") }}
-  {{ hub.kpi("عدد السلف", summary.loan_count, icon="list", variant="brand") }}
-  {{ hub.kpi("سلف مفتوحة", summary.open_loan_count, icon="hourglass-half", variant="green") }}
-</div>
-
-{% call hub.section("فلترة السلف", icon="filter") %}
-  <form method="get" action="{{ url_for('radius.finance_center_hub') }}" class="hub-form-grid">
-    <input type="hidden" name="tab" value="loans_debts">
-    <label class="hub-field">
-      <span class="hub-field-label">حالة السلفة</span>
-      <select class="hub-input" name="status">
-        <option value="" {% if not loan_status %}selected{% endif %}>كل الحالات</option>
-        <option value="open" {% if loan_status == "open" %}selected{% endif %}>مفتوحة</option>
-        <option value="settled" {% if loan_status == "settled" %}selected{% endif %}>مسددة</option>
-        <option value="voided" {% if loan_status == "voided" %}selected{% endif %}>ملغاة</option>
-      </select>
-    </label>
-    {{ hub.btn("تطبيق الفلتر", variant="secondary", icon="filter", type="submit") }}
-  </form>
-{% endcall %}
-
 {% call hub.section("الذمم المفتوحة", icon="file-invoice-dollar", meta=(debts['count']|string + " ذمة"), flush=True) %}
   {% if debts['items'] %}
-  <div class="hub-table-wrap" style="border:none;border-radius:0">
-    <table class="hub-table" data-paginated="1" data-page-size="20" data-page-sizes="10,20,50,100" data-persist-key="finance-center-debts">
+  <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="20" style="border:none;border-radius:0">
+    <table class="hub-table">
       <thead>
         <tr>
           <th class="num">#</th>
@@ -297,16 +315,16 @@
   {% endif %}
 {% endcall %}
 
-{% call hub.section("قائمة السلف", icon="hand-holding-dollar", flush=True) %}
+{% call hub.section("قائمة السلف", icon="hand-holding-dollar", meta=(loans|length|string + " سلفة"), flush=True) %}
   {% if loans %}
-  <div class="table-responsive">
-    <table class="table hub-table">
+  <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
+    <table class="hub-table">
       <thead>
         <tr>
-          <th>#</th>
+          <th class="num">#</th>
           <th>المشترك</th>
-          <th>المدة</th>
-          <th>المبلغ</th>
+          <th class="num">المدة</th>
+          <th class="num">المبلغ</th>
           <th>الحالة</th>
           <th>البداية</th>
           <th>النهاية</th>
@@ -315,13 +333,13 @@
       <tbody>
         {% for loan in loans %}
         <tr>
-          <td>{{ loan.id }}</td>
+          <td class="num mono">{{ loan.id }}</td>
           <td>{{ loan.username or loan.subscriber_id }}</td>
-          <td>{{ loan.duration_minutes }} دقيقة</td>
-          <td>{{ loan.amount|money }}</td>
+          <td class="num">{{ loan.duration_minutes }} دقيقة</td>
+          <td class="num">{{ loan.amount|money }}</td>
           <td>{{ hub.pill(loan_status_label(loan.status), "amber" if loan.status == "open" else "green") }}</td>
-          <td>{{ loan.starts_at|dt_local }}</td>
-          <td>{{ loan.ends_at|dt_local }}</td>
+          <td class="mono small">{{ loan.starts_at|dt_local }}</td>
+          <td class="mono small">{{ loan.ends_at|dt_local }}</td>
         </tr>
         {% endfor %}
       </tbody>

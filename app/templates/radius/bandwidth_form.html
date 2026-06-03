@@ -1,4 +1,4 @@
-{# Bandwidth profile form — REBUILT N11 (hub-v2). Backend untouched. #}
+{# Bandwidth profile form — UDS unified (hub-v2). Backend untouched. #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
@@ -10,7 +10,6 @@
 {% block head_extra %}
 {{ super() }}
 <style>
-  .bf-form{ max-width: 900px; margin: 0 auto; }
   .bf-grid{ display:grid; gap:12px; grid-template-columns: repeat(2, 1fr); }
   @media (max-width:720px){ .bf-grid{ grid-template-columns: 1fr; } }
   .bf-field{ display:flex; flex-direction:column; gap:5px; min-width:0; }
@@ -37,7 +36,21 @@
   '
 ) }}
 
-<div class="bf-form">
+{% set help_aside %}
+{% call hub.helppanel(
+     "دليل ملف السرعة",
+     intro="ملف السرعة يحدد حدود التنزيل والرفع التي تُطبَّق على المشتركين عبر الراوتر.",
+     items=[
+       {"icon": "download", "text": "سرعة التنزيل والرفع: اكتب القيمة ثم اختر الوحدة (Kbps أو Mbps)."},
+       {"icon": "bolt", "text": "السرعة المؤقتة (Burst): سطر MikroTik كامل، اختياري."},
+       {"icon": "layer-group", "text": "الأولوية: تُستخدم عند تداخل أكثر من قاعدة سرعة."}
+     ],
+     icon="circle-question",
+     note="القيم والوحدات تُحفظ كما هي بدون تحويل — تأكد من اختيار الوحدة الصحيحة."
+   ) %}{% endcall %}
+{% endset %}
+
+{% call hub.worklayout(aside_html=help_aside) %}
 <form method="post"
       action="{{ url_for('radius.bw_update', bw_id=item.id) if not is_new else url_for('radius.bw_create') }}">
 
@@ -95,6 +108,6 @@
     </button>
   </div>
 </form>
-</div>
+{% endcall %}
 
 {% endblock %}
