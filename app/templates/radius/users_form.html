@@ -1079,6 +1079,7 @@
                data-temp-speed-updated-at="{{ sub.updated_at or '' }}">
             <span data-temp-speed-status>السرعة المؤقتة غير مفعّلة</span>
             <strong data-temp-speed-remaining>--:--</strong>
+            <button type="button" class="uf-chip-btn" data-temp-speed-cancel hidden>إلغاء السرعة المؤقتة</button>
           </div>
         </div>
 
@@ -1653,6 +1654,11 @@
   var tempCountdownRemaining = document.querySelector('[data-temp-speed-remaining]');
   var tempUpdatedAt = tempCountdown ? String(tempCountdown.getAttribute('data-temp-speed-updated-at') || '') : '';
   var tempCountdownTimer = null;
+  // True only after first paint, so the unit-picker's initial value-sync does
+  // NOT count as a user duration change (which would wipe the stored window
+  // and restart the countdown on every refresh).
+  var tempReady = false;
+  var tempCancelBtn = document.querySelector('[data-temp-speed-cancel]');
   var tempInitialFrom = tempFromHidden ? String(tempFromHidden.value || '') : '';
   var tempInitialTo = tempToHidden ? String(tempToHidden.value || '') : '';
   var tempWindowDirty = false;
@@ -1779,8 +1785,20 @@
   function syncTemporarySpeedControls(){
     var enabled = tempSpeed && tempSpeed.checked;
     tempInputs.forEach(function(input){ input.disabled = !enabled; });
+    if (tempCancelBtn) tempCancelBtn.hidden = !enabled;
     copyTemporarySpeedsToEffectiveFields();
     startTemporaryCountdown();
+  }
+  function cancelTemporarySpeed(){
+    // Cancel an active (or expired) temporary speed: turn it off and clear the
+    // stored window so a fresh one can be set later. The server clears it on save.
+    if (tempSpeed) tempSpeed.checked = false;
+    if (tempFromHidden) tempFromHidden.value = '';
+    if (tempToHidden) tempToHidden.value = '';
+    tempInitialFrom = '';
+    tempInitialTo = '';
+    tempWindowDirty = false;
+    syncTemporarySpeedControls();
   }
   if (tempSpeed) {
     tempSpeed.addEventListener('change', function(){
@@ -1792,10 +1810,12 @@
     });
     if (tempDurationHidden) {
       tempDurationHidden.addEventListener('input', function(){
+        if (!tempReady) return;   // ignore the picker's initial value-sync
         resetTemporaryWindowForNewDuration();
         startTemporaryCountdown();
       });
       tempDurationHidden.addEventListener('change', function(){
+        if (!tempReady) return;
         resetTemporaryWindowForNewDuration();
         startTemporaryCountdown();
       });
@@ -1811,7 +1831,11 @@
         startTemporaryCountdown();
       });
     }
+    if (tempCancelBtn) {
+      tempCancelBtn.addEventListener('click', cancelTemporarySpeed);
+    }
     syncTemporarySpeedControls();
+    tempReady = true;   // from here on, duration edits are real user changes
   }
 
   // ── Four-part name row: persist to existing full_name/father_name fields.

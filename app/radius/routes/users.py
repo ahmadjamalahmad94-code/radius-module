@@ -89,6 +89,52 @@ def _parse_metadata(raw: str | dict | None) -> dict:
     return data
 
 
+def _parse_iso_naive(value):
+    """ISO string -> naive UTC datetime (or None). Tolerant of trailing Z."""
+    if not value:
+        return None
+    try:
+        dt = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except (TypeError, ValueError):
+        return None
+    return dt.replace(tzinfo=None) if dt.tzinfo else dt
+
+
+def _resolve_temp_speed_window(flat_meta: dict, *, enabled: bool, now: datetime) -> None:
+    """Server owns the temporary-speed window so the edit page cannot reset it.
+
+    Mutates ``flat_meta`` in place:
+    - disabled  -> clear the window entirely (this is the Cancel path).
+    - enabled + a still-valid future end -> keep it unchanged (so a save /
+      page refresh never restarts the countdown).
+    - enabled + missing or already-expired end -> recompute a fresh window
+      from ``temporary_speed_duration_minutes`` (so a NEW temp speed can be
+      set after the previous one expired).
+    """
+    if not enabled:
+        flat_meta.pop("temporary_speed_from", None)
+        flat_meta.pop("temporary_speed_to", None)
+        return
+    existing_to = _parse_iso_naive(flat_meta.get("temporary_speed_to"))
+    if existing_to and existing_to > now:
+        # Active window — keep as-is; just make sure a start stamp exists.
+        if not flat_meta.get("temporary_speed_from"):
+            flat_meta["temporary_speed_from"] = now.isoformat(timespec="seconds")
+        return
+    try:
+        duration = int(float(flat_meta.get("temporary_speed_duration_minutes") or 0))
+    except (TypeError, ValueError):
+        duration = 0
+    if duration > 0:
+        flat_meta["temporary_speed_from"] = now.isoformat(timespec="seconds")
+        flat_meta["temporary_speed_to"] = (
+            now + timedelta(minutes=duration)
+        ).isoformat(timespec="seconds")
+    else:
+        flat_meta.pop("temporary_speed_from", None)
+        flat_meta.pop("temporary_speed_to", None)
+
+
 def register_users_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/users", "users_list", users_list, methods=["GET"])
     bp.add_url_rule("/subscribers", "subscribers_list", users_list, methods=["GET"])
@@ -257,24 +303,9 @@ def _form_dto(*, sub_id: int | None = None) -> Subscriber:
         v = _s(mf)
         if v:
             flat_meta[mf] = v
-    if _b("temporary_speed"):
-        started = flat_meta.get("temporary_speed_from") or datetime.utcnow().isoformat(timespec="seconds")
-        flat_meta["temporary_speed_from"] = started
-        if not flat_meta.get("temporary_speed_to"):
-            try:
-                duration = int(float(flat_meta.get("temporary_speed_duration_minutes") or 0))
-            except (TypeError, ValueError):
-                duration = 0
-            if duration > 0:
-                try:
-                    start_dt = datetime.fromisoformat(started.replace("Z", "+00:00"))
-                    if start_dt.tzinfo:
-                        start_dt = start_dt.replace(tzinfo=None)
-                except ValueError:
-                    start_dt = datetime.utcnow()
-                flat_meta["temporary_speed_to"] = (
-                    start_dt + timedelta(minutes=duration)
-                ).isoformat(timespec="seconds")
+    _resolve_temp_speed_window(
+        flat_meta, enabled=_b("temporary_speed"), now=datetime.utcnow()
+    )
     meta_json = json.dumps(_flat_to_grouped(flat_meta), ensure_ascii=False)
 
     return Subscriber(
