@@ -56,12 +56,11 @@ def test_latest_handshake_age_parses_wg_dump():
 
     with patch("shutil.which", return_value="/usr/bin/wg"), \
          patch("subprocess.run", return_value=_Result()), \
-         patch("app.radius.services.vpn_probe._now",
-               return_value=1700000100):
-        clear_caches()
-        age_a = latest_handshake_age("abc123")
-        age_b = latest_handshake_age("def456")
-        missing = latest_handshake_age("ghi789")
+         patch.object(vpn_probe, "_now", return_value=1700000100):
+        vpn_probe.clear_caches()
+        age_a = vpn_probe.latest_handshake_age("abc123")
+        age_b = vpn_probe.latest_handshake_age("def456")
+        missing = vpn_probe.latest_handshake_age("ghi789")
     assert age_a == 100
     assert age_b == 50
     assert missing is None
