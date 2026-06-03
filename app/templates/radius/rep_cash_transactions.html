@@ -1,7 +1,10 @@
-{# معاملات الكاش وتفاصيلها — من payment_transactions #}
+{# ═══════════════════════════════════════════════════════════════════════
+   Cash transactions report — UNIFIED DESIGN SYSTEM (megahero + worklayout
+   + help). Same backend data: `items` (payment_transactions rows), `total`,
+   `total_amount`, `total_discount`, `filters`. Zero route/behaviour change.
+   ═══════════════════════════════════════════════════════════════════════ #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
-{% import "_partials/repfilter.html" as rf %}
 
 {% block title %}معاملات الكاش{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-money-bill-wave"></i>{% endblock %}
@@ -10,9 +13,7 @@
 
 {% block content %}
 {% include "radius/reports_nav.html" %}
-{{ hub.hero("معاملات الكاش وتفاصيلها",
-   subtitle="سجل المدفوعات النقدية مع السعر والخصم والمنفّذ بدون عرض مفاتيح تقنية.",
-   icon="money-bill-wave") }}
+
 {% set method_labels = {
   'cash':'نقدًا',
   'wallet':'محفظة',
@@ -21,37 +22,84 @@
   'card':'بطاقة'
 } %}
 
-<div class="hub-kpi-grid">
-  {{ hub.kpi("عدد المعاملات", total, icon="receipt", variant="brand") }}
-  {{ hub.kpi("إجمالي المبالغ", total_amount|money, icon="coins", variant="green") }}
-  {{ hub.kpi("إجمالي الخصومات", total_discount|money, icon="tag", variant="amber") }}
-</div>
-
-{{ rf.bar('radius.rep_cash_transactions', filters, show_date=True, q_placeholder='بحث (مستخدم / منفّذ / طريقة)…') }}
+{# ───── Merged hero: title + subtitle + KPI strip + integrated filters ───── #}
+{% call hub.megahero(
+  "معاملات الكاش وتفاصيلها",
+  subtitle="سجل المدفوعات النقدية مع السعر والخصم والمنفّذ بدون عرض مفاتيح تقنية.",
+  icon="money-bill-wave",
+  kpis=[
+    {'label': 'عدد المعاملات',  'value': total,                 'icon': 'receipt', 'variant': 'brand'},
+    {'label': 'إجمالي المبالغ', 'value': total_amount|money,     'icon': 'coins',   'variant': 'green'},
+    {'label': 'إجمالي الخصومات','value': total_discount|money,    'icon': 'tag',     'variant': 'amber'},
+  ],
+  search_action=url_for('radius.rep_cash_transactions')
+) %}
+  <input class="hub-input grow" type="text" name="q"
+         value="{{ filters.q if filters else '' }}"
+         placeholder="بحث (مستخدم / منفّذ / طريقة)…">
+  <input class="hub-input" type="date" name="date_from"
+         value="{{ filters.date_from if filters else '' }}" title="من تاريخ">
+  <input class="hub-input" type="date" name="date_to"
+         value="{{ filters.date_to if filters else '' }}" title="إلى تاريخ">
+  {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
+  {% if filters and (filters.q or filters.date_from or filters.date_to) %}
+    {{ hub.btn("مسح", icon="rotate-left", variant="ghost", size="sm",
+               attrs='onclick="window.location=' + "'" + url_for('radius.rep_cash_transactions') + "'" + '"') }}
+  {% endif %}
+{% endcall %}
 
 {% if items %}
-{% call hub.section("المعاملات", icon="table-list", meta=items|length|string + " معاملة", flush=True) %}
-  <div class="hub-table-wrap" style="border:none;border-radius:0">
-    <table class="hub-table rep-table" data-paginated="1" data-page-size="25" data-page-sizes="10,25,50,100" data-persist-key="rep-cash-transactions">
-      <thead><tr><th>الوقت</th><th>المستخدم</th><th>المبلغ</th><th>الطريقة</th><th>الحالة</th><th>السعر الفعّال</th><th>الخصم</th><th>المنفّذ</th><th>ملاحظات</th></tr></thead>
-      <tbody>
-        {% for r in items %}
-        <tr>
-          {% set _dl = r.created_at|dt_local if r.created_at else '' %}
-          <td class="rep-mono"><span class="rep-primary">{{ _dl[:10] }}</span><span class="rep-sub">{{ _dl[11:16] }}</span></td>
-          <td><span class="rep-primary">{{ r.username or '—' }}</span></td>
-          <td class="rep-mono"><span class="rep-primary">{{ r.amount|money }}</span></td>
-          <td>{{ method_labels.get(r.method, r.method or '—') }}</td>
-          <td>{% if r.status == 'posted' %}{{ hub.pill("مُثبتة", variant="green") }}{% elif r.status == 'void' %}{{ hub.pill("ملغاة", variant="red") }}{% else %}{{ hub.pill(r.status or '—', variant="grey") }}{% endif %}</td>
-          <td class="rep-mono">{{ r.effective_price|money }}</td>
-          <td class="rep-mono">{% if r.discount_amount and r.discount_amount > 0 %}{{ r.discount_amount|money }}{% else %}—{% endif %}</td>
-          <td>{{ r.created_by or '—' }}</td>
-          <td class="rep-sub" style="max-width:220px">{{ r.notes or '—' }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+{# ───── Main (carded table) + help panel on the LEFT ───── #}
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "كيف تقرأ هذا التقرير؟",
+  intro="كل صف هو معاملة دفع نقدية لمستخدم — مع المبلغ المحصّل والسعر الفعّال والخصم.",
+  items=[
+    {'icon': 'coins',         'text': 'المبلغ هو القيمة المحصّلة فعليًا في المعاملة.'},
+    {'icon': 'tag',           'text': 'السعر الفعّال هو السعر بعد تطبيق أي خصم.'},
+    {'icon': 'user-gear',     'text': 'المنفّذ هو من سجّل المعاملة في النظام.'},
+    {'icon': 'circle-check',  'text': 'حالة «مُثبتة» تعني أن المعاملة مُعتمدة، و«ملغاة» تعني أنها أُلغيت.'},
+  ],
+  note="هذا التقرير للقراءة فقط — البيانات تأتي مباشرة من جدول payment_transactions."
+)) %}
+  {% call hub.section("المعاملات", icon="table-list",
+                      meta=items|length|string + " معاملة", flush=True) %}
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25" style="border:none;border-radius:0">
+      <table class="hub-table">
+        <thead>
+          <tr>
+            <th>الوقت</th>
+            <th>المستخدم</th>
+            <th class="num" style="white-space:nowrap">المبلغ</th>
+            <th>الطريقة</th>
+            <th class="nosort">الحالة</th>
+            <th class="num" style="white-space:nowrap">السعر الفعّال</th>
+            <th class="num" style="white-space:nowrap">الخصم</th>
+            <th>المنفّذ</th>
+            <th class="nosort">ملاحظات</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in items %}
+          <tr>
+            {% set _dl = r.created_at|dt_local if r.created_at else '' %}
+            <td class="mono"><span class="rep-primary">{{ _dl[:10] }}</span><span class="rep-sub">{{ _dl[11:16] }}</span></td>
+            <td><strong>{{ r.username or '—' }}</strong></td>
+            <td class="num mono"
+                style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">{{ r.amount|money }}</td>
+            <td>{{ method_labels.get(r.method, r.method or '—') }}</td>
+            <td>{% if r.status == 'posted' %}{{ hub.pill("مُثبتة", variant="green") }}{% elif r.status == 'void' %}{{ hub.pill("ملغاة", variant="red") }}{% else %}{{ hub.pill(r.status or '—', variant="grey") }}{% endif %}</td>
+            <td class="num mono"
+                style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">{{ r.effective_price|money }}</td>
+            <td class="num mono"
+                style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">{% if r.discount_amount and r.discount_amount > 0 %}{{ r.discount_amount|money }}{% else %}—{% endif %}</td>
+            <td>{{ r.created_by or '—' }}</td>
+            <td class="rep-sub" style="max-width:220px">{{ r.notes or '—' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endcall %}
 {% endcall %}
 {% else %}
 {{ hub.empty("لا معاملات كاش مطابقة", sub="غيّر الفلاتر أو لا توجد معاملات بعد.", icon="money-bill-wave") }}
