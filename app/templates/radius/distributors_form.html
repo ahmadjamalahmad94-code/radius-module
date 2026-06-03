@@ -1,4 +1,4 @@
-{# Distributors form — REBUILT N11 (hub-v2). Backend untouched. #}
+{# Distributors form — UDS unified (hub-v2). Backend untouched. #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
@@ -10,7 +10,6 @@
 {% block head_extra %}
 {{ super() }}
 <style>
-  .ds-form{ max-width: 1080px; margin: 0 auto; }
   .ds-grid{ display:grid; gap:12px; grid-template-columns: repeat(2, 1fr); }
   @media (max-width:720px){ .ds-grid{ grid-template-columns: 1fr; } }
   .ds-field{ display:flex; flex-direction:column; gap:5px; min-width:0; }
@@ -18,46 +17,12 @@
   .ds-field label{ font-size:12.5px; font-weight:700; color:var(--hub-text-soft); }
   .ds-field label .req{ color:var(--hub-red); margin-inline-start:2px; }
   .ds-field .help{ font-size:11px; color:var(--hub-text-mute); margin-top:2px; line-height:1.7; }
-  .ds-section{
-    background: var(--hub-bg-card);
-    border: 1px solid var(--hub-border);
-    border-radius: var(--hub-r-card);
-    box-shadow: var(--hub-sh-card);
-    margin-bottom: var(--hub-gap-section);
-    overflow: hidden;
-  }
-  .ds-section-head{
-    display:flex; align-items:center; gap:10px;
-    padding: 13px 18px;
-    border-bottom: 1px solid var(--hub-border-soft);
-    background: linear-gradient(180deg, #fafbff, #fff);
-  }
-  .ds-section.is-collapsible .ds-section-head{ cursor:pointer; user-select:none; }
-  .ds-section.is-collapsed .ds-section-head{ border-bottom: none; }
-  .ds-section-icon{
-    width:30px; height:30px; border-radius:var(--hub-r-md);
-    display:inline-flex; align-items:center; justify-content:center;
-    font-size:13px; flex-shrink:0;
-  }
-  .ds-section-title{ flex:1; font-size:14px; font-weight:800; }
-  .ds-section-toggle{ color:var(--hub-text-mute); transition: transform var(--hub-anim-fast) var(--hub-ease); }
-  .ds-section.is-collapsed .ds-section-toggle{ transform: rotate(-90deg); }
-  .ds-section-body{ padding: 18px; }
-  .ds-section.is-collapsed .ds-section-body{ display:none; }
 
-  .ds-section--id    { border-inline-start: 3px solid var(--hub-brand); }
-  .ds-section--id    .ds-section-icon{ background: var(--hub-brand-soft); color: var(--hub-brand-ink); }
-  .ds-section--fin   { border-inline-start: 3px solid var(--hub-green); }
-  .ds-section--fin   .ds-section-icon{ background: var(--hub-green-soft); color: var(--hub-green-ink); }
-  .ds-section--perm  { border-inline-start: 3px solid #8B5CF6; }
-  .ds-section--perm  .ds-section-icon{ background: #EDE9FE; color: #6D28D9; }
-  .ds-section--notes { border-inline-start: 3px solid var(--hub-amber); }
-  .ds-section--notes .ds-section-icon{ background: var(--hub-amber-soft); color: var(--hub-amber-ink); }
   .ds-choice-list{ display:grid; gap:10px; }
   .ds-choice{
     display:flex; align-items:flex-start; gap:10px;
     padding:12px 13px; border:1px solid var(--hub-border);
-    border-radius:var(--hub-r-md); background:#f8fafc;
+    border-radius:var(--hub-r-md); background:var(--hub-bg-soft);
   }
   .ds-choice input{ margin-top:3px; accent-color:var(--hub-brand); }
   .ds-choice strong{ display:block; color:var(--hub-text); font-size:13px; margin-bottom:3px; }
@@ -76,148 +41,140 @@
     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.distributors_list') + '">
       <i class="fa-solid fa-arrow-right"></i> الرجوع للقائمة
     </a>
+    <button class="hub-btn hub-btn--primary" type="submit" form="ds-form">
+      <i class="fa-solid fa-floppy-disk"></i> ' + ("حفظ الموزع" if is_new else "حفظ التعديلات") + '
+    </button>
   '
 ) }}
 
-<div class="ds-form">
-<form method="post" action="{{ url_for('radius.distributors_create') if is_new else url_for('radius.distributors_update', distributor_id=distributor.id) }}">
+{% set help_aside %}
+{% call hub.helppanel(
+     "دليل بيانات الموزع",
+     intro="الموزع حساب تشغيلي يمكن ربط حزم كروت به ومتابعة جانبه المالي وصلاحياته.",
+     items=[
+       {"icon": "id-card", "text": "اسم الدخول حقل إلزامي ويستخدم داخليًا للتتبع والربط."},
+       {"icon": "wallet", "text": "القيم المالية مرجعية للمتابعة وليست نظام فوترة كامل."},
+       {"icon": "shield-halved", "text": "الصلاحيات تُختار من القائمة بدل كتابة رموز تقنية."},
+       {"icon": "user-shield", "text": "نطاق البيانات الحالي: الحزم المعيّنة فقط — وسّعه من صفحة تفاصيل الموزع."}
+     ],
+     icon="circle-question",
+     note="تعديل بيانات الموزع لا يؤثر على الحزم المربوطة به مسبقًا."
+   ) %}{% endcall %}
+{% endset %}
+
+{% call hub.worklayout(aside_html=help_aside) %}
+<form id="ds-form" method="post" action="{{ url_for('radius.distributors_create') if is_new else url_for('radius.distributors_update', distributor_id=distributor.id) }}">
 
   {# ── 1. Identity ─────────────────────── #}
-  <section class="ds-section ds-section--id">
-    <header class="ds-section-head">
-      <span class="ds-section-icon"><i class="fa-solid fa-id-card"></i></span>
-      <span class="ds-section-title">بيانات الموزع</span>
-    </header>
-    <div class="ds-section-body">
-      <div class="ds-grid">
-        <div class="ds-field">
-          <label>اسم الدخول <span class="req">*</span></label>
-          <input class="hub-input" type="text" name="name" required maxlength="80"
-                 value="{{ form.get('name','') }}" placeholder="dealer_north">
-          <div class="help">اسم مختصر داخلي يستخدم للتتبع والربط.</div>
-        </div>
-        <div class="ds-field">
-          <label>الاسم الظاهر</label>
-          <input class="hub-input" type="text" name="display_name" maxlength="120"
-                 value="{{ form.get('display_name','') }}" placeholder="موزع الشمال">
-          <div class="help">الاسم الذي يظهر داخل التقارير والشاشات.</div>
-        </div>
-        <div class="ds-field">
-          <label>رقم الهاتف</label>
-          <input class="hub-input" type="tel" name="phone" maxlength="40"
-                 value="{{ form.get('phone','') }}">
-        </div>
-        <div class="ds-field">
-          <label>البريد الإلكتروني</label>
-          <input class="hub-input" type="email" name="email" maxlength="160"
-                 value="{{ form.get('email','') }}">
-        </div>
-        <div class="ds-field">
-          <label>الحالة</label>
-          {% set st = form.get('status','active') %}
-          <select class="hub-select" name="status">
-            <option value="active"   {% if st == 'active' %}selected{% endif %}>مفعَّل</option>
-            <option value="inactive" {% if st == 'inactive' %}selected{% endif %}>غير مفعَّل</option>
-            <option value="blocked"  {% if st == 'blocked' %}selected{% endif %}>محظور</option>
-          </select>
-        </div>
+  {% call hub.section("بيانات الموزع", icon="id-card") %}
+    <div class="ds-grid">
+      <div class="ds-field">
+        <label>اسم الدخول <span class="req">*</span></label>
+        <input class="hub-input" type="text" name="name" required maxlength="80"
+               value="{{ form.get('name','') }}" placeholder="dealer_north">
+        <div class="help">اسم مختصر داخلي يستخدم للتتبع والربط.</div>
+      </div>
+      <div class="ds-field">
+        <label>الاسم الظاهر</label>
+        <input class="hub-input" type="text" name="display_name" maxlength="120"
+               value="{{ form.get('display_name','') }}" placeholder="موزع الشمال">
+        <div class="help">الاسم الذي يظهر داخل التقارير والشاشات.</div>
+      </div>
+      <div class="ds-field">
+        <label>رقم الهاتف</label>
+        <input class="hub-input" type="tel" name="phone" maxlength="40"
+               value="{{ form.get('phone','') }}">
+      </div>
+      <div class="ds-field">
+        <label>البريد الإلكتروني</label>
+        <input class="hub-input" type="email" name="email" maxlength="160"
+               value="{{ form.get('email','') }}">
+      </div>
+      <div class="ds-field">
+        <label>الحالة</label>
+        {% set st = form.get('status','active') %}
+        <select class="hub-select" name="status">
+          <option value="active"   {% if st == 'active' %}selected{% endif %}>مفعَّل</option>
+          <option value="inactive" {% if st == 'inactive' %}selected{% endif %}>غير مفعَّل</option>
+          <option value="blocked"  {% if st == 'blocked' %}selected{% endif %}>محظور</option>
+        </select>
       </div>
     </div>
-  </section>
+  {% endcall %}
 
   {# ── 2. Finance ─────────────────────── #}
-  <section class="ds-section ds-section--fin">
-    <header class="ds-section-head">
-      <span class="ds-section-icon"><i class="fa-solid fa-wallet"></i></span>
-      <span class="ds-section-title">الجانب المالي</span>
-    </header>
-    <div class="ds-section-body">
-      <div class="ds-grid">
-        <div class="ds-field">
-          <label>حد الائتمان</label>
-          <input class="hub-input" type="number" name="credit_limit" step="0.01" min="0"
-                 value="{{ form.get('credit_limit','0') }}">
-          <div class="help">قيمة مرجعية للمتابعة، وليست نظام فوترة كاملًا.</div>
-        </div>
-        <div class="ds-field">
-          <label>الرصيد الحالي</label>
-          <input class="hub-input" type="number" name="balance" step="0.01"
-                 value="{{ form.get('balance','0') }}">
-        </div>
-        <div class="ds-field">
-          <label>الدين الحالي</label>
-          <input class="hub-input" type="number" name="debt_balance" step="0.01" min="0"
-                 value="{{ form.get('debt_balance','0') }}">
-        </div>
+  {% call hub.section("الجانب المالي", icon="wallet") %}
+    <div class="ds-grid">
+      <div class="ds-field">
+        <label>حد الائتمان</label>
+        <input class="hub-input" type="number" name="credit_limit" step="0.01" min="0"
+               value="{{ form.get('credit_limit','0') }}">
+        <div class="help">قيمة مرجعية للمتابعة، وليست نظام فوترة كاملًا.</div>
+      </div>
+      <div class="ds-field">
+        <label>الرصيد الحالي</label>
+        <input class="hub-input" type="number" name="balance" step="0.01"
+               value="{{ form.get('balance','0') }}">
+      </div>
+      <div class="ds-field">
+        <label>الدين الحالي</label>
+        <input class="hub-input" type="number" name="debt_balance" step="0.01" min="0"
+               value="{{ form.get('debt_balance','0') }}">
       </div>
     </div>
-  </section>
+  {% endcall %}
 
-  {# ── 3. Permissions + scope (collapsible) ───── #}
-  <section class="ds-section ds-section--perm is-collapsible" data-sec="perm">
-    <header class="ds-section-head">
-      <span class="ds-section-icon"><i class="fa-solid fa-shield-halved"></i></span>
-      <span class="ds-section-title">الصلاحيات ونطاق البيانات</span>
-      <i class="fa-solid fa-chevron-down ds-section-toggle"></i>
-    </header>
-    <div class="ds-section-body">
-      <div class="ds-grid">
-        <div class="ds-field full">
-          <label>الصلاحيات</label>
-          {% set perms_raw = (form.get('permissions','cards.read, cards.sell') or '') %}
-          {% set perms_norm = ',' ~ perms_raw|replace('\n', ',')|replace(' ', '') ~ ',' %}
-          <div class="ds-choice-list">
-            <label class="ds-choice">
-              <input type="checkbox" name="permissions" value="cards.read"
-                     {% if ',cards.read,' in perms_norm %}checked{% endif %}>
-              <span>
-                <strong>عرض الكروت والحزم</strong>
-                <span>يسمح للموزع برؤية الحزم المرتبطة به ومتابعة حالتها.</span>
-              </span>
-            </label>
-            <label class="ds-choice">
-              <input type="checkbox" name="permissions" value="cards.sell"
-                     {% if ',cards.sell,' in perms_norm %}checked{% endif %}>
-              <span>
-                <strong>بيع الكروت</strong>
-                <span>يسمح بتنفيذ عمليات البيع ضمن الحزم المسموحة فقط.</span>
-              </span>
-            </label>
-          </div>
-          <div class="help">اختر الصلاحيات من القائمة بدل كتابة رموز تقنية.</div>
-        </div>
-        <div class="ds-field full">
-          <label>نطاق البيانات</label>
-          <input type="hidden" name="scope_json" value='{"card_batches":"assigned"}'>
-          <div class="ds-choice">
-            <i class="fa-solid fa-user-shield" style="margin-top:2px;color:var(--hub-brand)"></i>
+  {# ── 3. Permissions + scope (permission matrix → checkboxes) ───── #}
+  {% call hub.section("الصلاحيات ونطاق البيانات", icon="shield-halved") %}
+    <div class="ds-grid">
+      <div class="ds-field full">
+        <label>الصلاحيات</label>
+        {% set perms_raw = (form.get('permissions','cards.read, cards.sell') or '') %}
+        {% set perms_norm = ',' ~ perms_raw|replace('\n', ',')|replace(' ', '') ~ ',' %}
+        <div class="ds-choice-list">
+          <label class="ds-choice">
+            <input type="checkbox" name="permissions" value="cards.read"
+                   {% if ',cards.read,' in perms_norm %}checked{% endif %}>
             <span>
-              <strong>الحزم المعيّنة فقط</strong>
-              <span>لتوسيع وصول الموزع، اربط حزمًا إضافية من صفحة تفاصيل الموزع.</span>
+              <strong>عرض الكروت والحزم</strong>
+              <span>يسمح للموزع برؤية الحزم المرتبطة به ومتابعة حالتها.</span>
             </span>
-          </div>
-          <div class="help">هذا هو نطاق العزل الفعلي المدعوم حاليًا، لذلك لا يظهر حقل إعدادات يدوية.</div>
+          </label>
+          <label class="ds-choice">
+            <input type="checkbox" name="permissions" value="cards.sell"
+                   {% if ',cards.sell,' in perms_norm %}checked{% endif %}>
+            <span>
+              <strong>بيع الكروت</strong>
+              <span>يسمح بتنفيذ عمليات البيع ضمن الحزم المسموحة فقط.</span>
+            </span>
+          </label>
         </div>
+        <div class="help">اختر الصلاحيات من القائمة بدل كتابة رموز تقنية.</div>
+      </div>
+      <div class="ds-field full">
+        <label>نطاق البيانات</label>
+        <input type="hidden" name="scope_json" value='{"card_batches":"assigned"}'>
+        <div class="ds-choice">
+          <i class="fa-solid fa-user-shield" style="margin-top:2px;color:var(--hub-brand)"></i>
+          <span>
+            <strong>الحزم المعيّنة فقط</strong>
+            <span>لتوسيع وصول الموزع، اربط حزمًا إضافية من صفحة تفاصيل الموزع.</span>
+          </span>
+        </div>
+        <div class="help">هذا هو نطاق العزل الفعلي المدعوم حاليًا، لذلك لا يظهر حقل إعدادات يدوية.</div>
       </div>
     </div>
-  </section>
+  {% endcall %}
 
   {# ── 4. Notes ─────────────────────── #}
-  <section class="ds-section ds-section--notes is-collapsible" data-sec="notes">
-    <header class="ds-section-head">
-      <span class="ds-section-icon"><i class="fa-solid fa-note-sticky"></i></span>
-      <span class="ds-section-title">ملاحظات</span>
-      <i class="fa-solid fa-chevron-down ds-section-toggle"></i>
-    </header>
-    <div class="ds-section-body">
-      <div class="ds-grid">
-        <div class="ds-field full">
-          <label>ملاحظات داخلية</label>
-          <textarea class="hub-textarea" name="notes" rows="3">{{ form.get('notes','') }}</textarea>
-        </div>
+  {% call hub.section("ملاحظات", icon="note-sticky") %}
+    <div class="ds-grid">
+      <div class="ds-field full">
+        <label>ملاحظات داخلية</label>
+        <textarea class="hub-textarea" name="notes" rows="3">{{ form.get('notes','') }}</textarea>
       </div>
     </div>
-  </section>
+  {% endcall %}
 
   <div style="display:flex;gap:10px;justify-content:flex-end;padding:6px 4px 0">
     <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.distributors_list') }}">إلغاء</a>
@@ -226,24 +183,6 @@
     </button>
   </div>
 </form>
-</div>
+{% endcall %}
 
-<script>
-(function(){
-  var LS = 'hr:ds-form:sec:';
-  document.querySelectorAll('.ds-section.is-collapsible').forEach(function(card){
-    var k = card.dataset.sec; if (!k) return;
-    var v = null;
-    try { v = localStorage.getItem(LS + k); } catch(_) {}
-    if (v === 'collapsed') card.classList.add('is-collapsed');
-    else if (v === 'open')  card.classList.remove('is-collapsed');
-    var head = card.querySelector('.ds-section-head');
-    if (head) head.addEventListener('click', function(){
-      card.classList.toggle('is-collapsed');
-      try { localStorage.setItem(LS + k,
-        card.classList.contains('is-collapsed') ? 'collapsed' : 'open'); } catch(_) {}
-    });
-  });
-})();
-</script>
 {% endblock %}

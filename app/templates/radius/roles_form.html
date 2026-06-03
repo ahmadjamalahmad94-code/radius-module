@@ -1,4 +1,4 @@
-{# Role form — REBUILT (Night N10) on hub-v2. Same backend. #}
+{# Role form — UDS pass. Same backend route + field names — zero backend touched. #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
@@ -10,19 +10,9 @@
 {% block head_extra %}
 {{ super() }}
 <style>
-  .rl-form{ max-width: 1100px; margin: 0 auto; }
-  .rl-grid{ display:grid; gap:12px; grid-template-columns: repeat(3, 1fr); }
-  @media (max-width:720px){ .rl-grid{ grid-template-columns: repeat(2,1fr); } }
-  @media (max-width:480px){ .rl-grid{ grid-template-columns: 1fr; } }
-  .rl-field{ display:flex; flex-direction:column; gap:5px; min-width:0; }
-  .rl-field.full{ grid-column: 1 / -1; }
-  .rl-field label{ font-size:12.5px; font-weight:700; color:var(--hub-text-soft); }
-  .rl-field label .req{ color:var(--hub-red); margin-inline-start:2px; }
-  .rl-field .help{ font-size:11px; color:var(--hub-text-mute); margin-top:2px; }
-  .rl-field input[type=color]{ padding: 3px; height: 42px; cursor: pointer; }
-
-  /* Permissions */
+  /* Permissions matrix — styled inside a hub.section card */
   .perm-group{ margin-bottom: var(--hub-gap-lg); }
+  .perm-group:last-child{ margin-bottom: 0; }
   .perm-group-title{
     display:flex; align-items:center; gap:8px;
     font-size: 13px; font-weight: 800; color: var(--hub-text);
@@ -83,6 +73,8 @@
     color: var(--hub-text-mute);
   }
   .perm-item.is-checked code{ color: var(--hub-brand-ink); }
+  /* Color input parity with hub-input sizing */
+  input.hub-input[type=color]{ padding: 3px; height: 42px; cursor: pointer; }
 </style>
 {% endblock %}
 
@@ -97,30 +89,56 @@
     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.roles_list') + '">
       <i class="fa-solid fa-arrow-right"></i> العودة للقائمة
     </a>
+    <button class="hub-btn hub-btn--primary" type="submit" form="role-form">
+      <i class="fa-solid fa-floppy-disk"></i> ' + ("إنشاء الدور" if is_new else "حفظ التعديلات") + '
+    </button>
   '
 ) }}
 
-<div class="rl-form">
-<form method="post"
+{% set help_aside %}
+{% call hub.helppanel(
+  "عن الأدوار والصلاحيات",
+  intro="الدور حزمة صلاحيات تُسند للمدراء، فتحدّد ما يمكنهم الوصول إليه داخل اللوحة.",
+  icon="shield-halved",
+  items=[
+    {"icon": "key", "text": "الاسم الداخلي مفتاح تقني فريد لا يتغيّر بعد الإنشاء — يُفضّل حروف لاتينية صغيرة وشرطة سفلية."},
+    {"icon": "tag", "text": "الاسم الظاهر هو ما يُعرض في الواجهة، واللون يساعد على تمييز الدور بصريًا."},
+    {"icon": "shield-halved", "text": "اختر الصلاحيات من المجموعات؛ كل صلاحية مفتاح تقني يُمنح للمدير."},
+    {"icon": "list-check", "text": "زر «حدّد الكل» يفعّل أو يلغي كل صلاحيات المجموعة دفعة واحدة."}
+  ],
+  note="لا يغيّر هذا النموذج أي سلوك في الخادم؛ يحفظ نفس الحقول تمامًا كما كانت."
+) %}{% endcall %}
+{% endset %}
+
+{% call hub.worklayout(aside_html=help_aside) %}
+<form method="post" id="role-form"
       action="{{ url_for('radius.roles_save', role_id=role.id) if not is_new else url_for('radius.roles_create') }}">
 
   {# ── Identity ───────────────────────────── #}
   {% call hub.section("الهوية", icon="key") %}
-    <div class="rl-grid">
-      <div class="rl-field"><label>اسم الدور الداخلي <span class="req">*</span></label>
+    <div class="hub-form-row">
+      <div class="hub-field">
+        <label class="hub-field-label">اسم الدور الداخلي <span style="color:var(--hub-red)">*</span></label>
         <input class="hub-input" type="text" name="name" {% if not is_new %}readonly style="background:var(--hub-bg-soft);color:var(--hub-text-soft);cursor:not-allowed"{% endif %} required
                value="{{ role.name if role else '' }}" placeholder="اكتب مفتاحًا تقنيًا فريدًا">
-        <div class="help">هذا المفتاح داخلي ويُفضّل أن يكون بحروف لاتينية صغيرة وشرطة سفلية، مثل دور مدير الفرع.</div></div>
-      <div class="rl-field"><label>الاسم الظاهر</label>
-        <input class="hub-input" type="text" name="display_name" value="{{ role.display_name if role else '' }}"></div>
-      <div class="rl-field"><label>اللون</label>
-        <input class="hub-input" type="color" name="color" value="{{ role.color if role else '#6B5AED' }}"></div>
-      <div class="rl-field full"><label>الوصف</label>
-        <textarea class="hub-textarea" name="description">{{ role.description if role else '' }}</textarea></div>
+        <div class="hub-field-hint">هذا المفتاح داخلي ويُفضّل أن يكون بحروف لاتينية صغيرة وشرطة سفلية، مثل دور مدير الفرع.</div>
+      </div>
+      <div class="hub-field">
+        <label class="hub-field-label">الاسم الظاهر</label>
+        <input class="hub-input" type="text" name="display_name" value="{{ role.display_name if role else '' }}">
+      </div>
+      <div class="hub-field">
+        <label class="hub-field-label">اللون</label>
+        <input class="hub-input" type="color" name="color" value="{{ role.color if role else '#6B5AED' }}">
+      </div>
+      <div class="hub-field" style="grid-column:1/-1">
+        <label class="hub-field-label">الوصف</label>
+        <textarea class="hub-textarea" name="description">{{ role.description if role else '' }}</textarea>
+      </div>
     </div>
   {% endcall %}
 
-  {# ── Permissions ────────────────────────── #}
+  {# ── Permissions (matrix — kept as checkboxes, styled in a hub.section card) ── #}
   {% call hub.section("الصلاحيات", icon="shield-halved",
        meta='<span id="perm-count">0</span> / ' + (perms|length)|string + ' مختارة') %}
     {% if groups %}
@@ -153,14 +171,12 @@
     {% endif %}
   {% endcall %}
 
-  <div style="display:flex;gap:10px;justify-content:flex-end;padding:6px 4px 0">
-    <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.roles_list') }}">إلغاء</a>
-    <button class="hub-btn hub-btn--primary" type="submit">
-      <i class="fa-solid fa-floppy-disk"></i> {{ "إنشاء الدور" if is_new else "حفظ التعديلات" }}
-    </button>
+  <div class="hub-flex-row" style="justify-content:flex-end;margin-top:16px">
+    {{ hub.btn("إلغاء", variant="secondary", href=url_for('radius.roles_list')) }}
+    {{ hub.btn(("إنشاء الدور" if is_new else "حفظ التعديلات"), icon="floppy-disk", variant="primary", type="submit") }}
   </div>
 </form>
-</div>
+{% endcall %}
 
 <script>
 (function(){
