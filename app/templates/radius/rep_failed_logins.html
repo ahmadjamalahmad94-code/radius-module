@@ -1,12 +1,11 @@
 {# ═══════════════════════════════════════════════════════════════════════
-   Failed logins report — REBUILT (Night N4, 2026-05-21)
+   محاولات الدخول الفاشلة — UNIFIED DESIGN SYSTEM (megahero + worklayout + help).
 
-   Rebuilt on hub-v2. Same backend data: `items` (radpostauth rows where
-   reply != 'Access-Accept'), `limit`. Zero backend change.
+   نفس بيانات الـ backend: `items` (صفوف radpostauth حيث reply != 'Access-Accept')،
+   `total`، `filters`، `limit`. صفر تغيير في المسار/السلوك.
    ═══════════════════════════════════════════════════════════════════════ #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
-{% import "_partials/repfilter.html" as rf %}
 
 {% block title %}محاولات الدخول الفاشلة{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-triangle-exclamation"></i>{% endblock %}
@@ -16,43 +15,76 @@
 {% block content %}
 {% include "radius/reports_nav.html" %}
 
-{{ hub.hero(
+{# ───── Merged hero: title + subtitle + KPI strip + integrated filters ───── #}
+{% call hub.megahero(
   "محاولات الدخول الفاشلة",
   subtitle="سجل من radpostauth — كل ردّ بخلاف Access-Accept (رفض، خطأ، ضبط).",
-  icon="triangle-exclamation"
-) }}
-
-{{ rf.bar('radius.rep_failed_logins', filters, show_date=True, q_placeholder='بحث (مستخدم / جهاز الشبكة)…') }}
+  icon="triangle-exclamation",
+  kpis=[
+    {'label': 'إجمالي المحاولات الفاشلة', 'value': total, 'icon': 'triangle-exclamation', 'variant': 'brand'},
+  ],
+  search_action=url_for('radius.rep_failed_logins')
+) %}
+  <input class="hub-input grow" type="text" name="q"
+         value="{{ filters.q if filters else '' }}"
+         placeholder="بحث (مستخدم / جهاز الشبكة)…">
+  <input class="hub-input" type="date" name="date_from"
+         value="{{ filters.date_from if filters else '' }}" title="من تاريخ">
+  <input class="hub-input" type="date" name="date_to"
+         value="{{ filters.date_to if filters else '' }}" title="إلى تاريخ">
+  {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
+  {% if filters and (filters.q or filters.date_from or filters.date_to) %}
+    {{ hub.btn("مسح", icon="rotate-left", variant="ghost", size="sm",
+               attrs='onclick="window.location=' + "'" + url_for('radius.rep_failed_logins') + "'" + '"') }}
+  {% endif %}
+{% endcall %}
 
 {% if items %}
-{% call hub.section("الردود السلبية", icon="table-list",
-                    meta=items|length|string + " صف", flush=True) %}
-  <div class="hub-table-wrap" style="border:none;border-radius:0">
-    <table class="hub-table rep-table" data-paginated="1" data-page-size="25" data-page-sizes="10,25,50,100" data-persist-key="rep-failed-logins">
-      <thead>
-        <tr>
-          <th class="num" style="width:70px">#</th>
-          <th>المستخدم</th>
-          <th>الرد</th>
-          <th>جهاز الشبكة</th>
-          <th>الوقت</th>
-          <th>الفئة / السبب</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for r in items %}
-        <tr>
-          <td class="num mono">{{ r.id }}</td>
-          <td><strong>{{ r.username }}</strong></td>
-          <td>{{ hub.pill(r.reply, variant="red") }}</td>
-          <td class="mono small">{{ r.nas or '—' }}</td>
-          <td class="mono small">{{ r.authdate[:16] if r.authdate else '—' }}</td>
-          <td class="mono small">{{ r.class or '—' }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+{# ───── Main (carded table) + help panel on the LEFT ───── #}
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "كيف تقرأ هذا التقرير؟",
+  intro="كل صف هو محاولة دخول رُفضت — مأخوذة من سجل radpostauth ومرتّبة من الأحدث.",
+  items=[
+    {'icon': 'reply',          'text': '«الرد» هو ردّ المصادقة بخلاف Access-Accept (رفض / خطأ / ضبط).'},
+    {'icon': 'network-wired',  'text': '«جهاز الشبكة» هو جهاز الـ NAS الذي وردت منه المحاولة.'},
+    {'icon': 'clock',          'text': '«الوقت» هو توقيت المحاولة كما سُجّل في radpostauth.'},
+    {'icon': 'tag',            'text': '«الفئة / السبب» تحمل سياق الرفض إن توفّر (class).'},
+  ],
+  note="هذا التقرير للقراءة فقط — البيانات تأتي مباشرة من جدول radpostauth."
+)) %}
+  {% call hub.section("الردود السلبية", icon="table-list",
+                      meta=items|length|string + " صف", flush=True) %}
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25"
+         style="border:none;border-radius:0">
+      <table class="hub-table">
+        <thead>
+          <tr>
+            <th class="num" style="width:70px" data-uds-nosort>#</th>
+            <th>المستخدم</th>
+            <th data-uds-nosort>الرد</th>
+            <th>جهاز الشبكة</th>
+            <th>الوقت</th>
+            <th>الفئة / السبب</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in items %}
+          <tr>
+            <td class="num mono">{{ r.id }}</td>
+            <td><strong>{{ r.username }}</strong></td>
+            <td>{{ hub.pill(r.reply, variant="red") }}</td>
+            <td class="mono small">{{ r.nas or '—' }}</td>
+            <td class="mono"
+                style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
+              {{ r.authdate[:16] if r.authdate else '—' }}
+            </td>
+            <td class="mono small">{{ r.class or '—' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endcall %}
 {% endcall %}
 {% else %}
 {{ hub.empty(
@@ -61,5 +93,4 @@
   icon="shield-halved"
 ) }}
 {% endif %}
-
 {% endblock %}
