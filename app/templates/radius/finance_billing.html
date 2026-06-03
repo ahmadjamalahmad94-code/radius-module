@@ -8,20 +8,17 @@
 
 {% block head_extra %}
 <style>
-.fb-hero{position:relative;border-radius:18px;padding:22px 24px;margin-bottom:18px;
-  background:linear-gradient(135deg,#1d4ed8,#0e7490);color:#fff;box-shadow:0 18px 44px rgba(29,78,216,.22);overflow:hidden}
-.fb-hero h2{margin:0 0 6px;font-size:clamp(20px,2.4vw,28px);font-weight:900}
-.fb-hero p{margin:0;max-width:760px;color:rgba(255,255,255,.85);font-weight:600;line-height:1.7}
-.fb-tabs{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+/* ── Retained: tab switcher pills (kept inside the unified hero) ── */
+.fb-tabs{display:flex;flex-wrap:wrap;gap:8px}
 .fb-tabs a{display:inline-flex;align-items:center;gap:8px;padding:9px 15px;border-radius:999px;
-  background:rgba(255,255,255,.14);color:#fff;font-weight:800;text-decoration:none;border:1px solid rgba(255,255,255,.18);font-size:13px}
-.fb-tabs a:hover{background:rgba(255,255,255,.24)}
-.fb-tabs a.is-active{background:#fff;color:#1d4ed8;border-color:#fff}
-.fb-panel-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:4px 0 14px;flex-wrap:wrap}
-.fb-panel-head h3{margin:0;font-size:17px;font-weight:900;color:var(--hub-text);display:flex;align-items:center;gap:9px}
+  background:var(--hub-bg-soft);color:var(--hub-text-soft);font-weight:800;text-decoration:none;border:1px solid var(--hub-border-soft);font-size:13px}
+.fb-tabs a:hover{border-color:var(--hub-brand-soft);color:var(--hub-brand-ink)}
+.fb-tabs a.is-active{background:var(--hub-brand);color:#fff;border-color:var(--hub-brand)}
+/* ── Retained: status filter pills ── */
 .fb-filters{display:flex;flex-wrap:wrap;gap:6px}
 .fb-filters a{padding:6px 12px;border-radius:999px;border:1px solid var(--hub-border-soft);background:#fff;color:var(--hub-text-mute);font-weight:800;text-decoration:none;font-size:12px}
 .fb-filters a.is-active{background:var(--hub-bg-soft);color:var(--hub-brand-ink);border-color:var(--hub-brand-soft)}
+/* ── Retained: bespoke create-dialogs (untouched <dialog> + JS below) ── */
 .fb-modal{border:none;border-radius:18px;padding:0;max-width:680px;width:calc(100% - 32px);box-shadow:0 30px 80px rgba(15,23,42,.35);background:#fff}
 .fb-modal::backdrop{background:rgba(15,23,42,.55);backdrop-filter:blur(2px)}
 .fb-modal-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px;border-bottom:1px solid var(--hub-border-soft)}
@@ -38,114 +35,196 @@
 {% endblock %}
 
 {% block content %}
-<div class="fb-hero">
-  <h2><i class="fa-solid fa-file-invoice-dollar"></i> الفواتير والكوبونات</h2>
-  <p>أصدر الفواتير للمشتركين وولّد كوبونات الشحن من مكان واحد. هذه واجهة موحّدة — لا تغيّر أي منطق فوترة أو محاسبة.</p>
-  <nav class="fb-tabs">
-    <a href="?tab=invoices" class="{{ 'is-active' if tab == 'invoices' }}"><i class="fa-solid fa-file-invoice"></i> الفواتير</a>
-    <a href="?tab=vouchers" class="{{ 'is-active' if tab == 'vouchers' }}"><i class="fa-solid fa-ticket"></i> الكوبونات</a>
-  </nav>
-</div>
+
+{# ═══════════ Unified hero: title + subtitle + icon + per-tab KPIs ═══════════
+   The finance/billing tab switcher is integrated as the hero's actions, and
+   the status filters live in the hero's search/filter row. KPIs change per tab.
+   No backend/route change — the same `tab` / `status` query args drive it.     #}
+{% if tab == 'invoices' %}
+  {% set _kpis = [
+    {'label': 'إجمالي الفواتير', 'value': inv_stats.total|money, 'icon': 'file-invoice-dollar', 'variant': 'brand'},
+    {'label': 'المدفوعة',        'value': inv_stats.paid|money,  'icon': 'circle-check',         'variant': 'green'},
+    {'label': 'المعلّقة',        'value': inv_stats.pending|money,'icon': 'clock',               'variant': 'amber'},
+    {'label': 'عدد الفواتير',    'value': inv_stats.count,        'icon': 'hashtag',             'variant': 'blue'},
+  ] %}
+{% else %}
+  {% set _kpis = [
+    {'label': 'القيمة الإجمالية', 'value': vch_stats.total_amount|money, 'icon': 'sack-dollar',  'variant': 'brand'},
+    {'label': 'نشطة',            'value': vch_stats.active,             'icon': 'ticket',        'variant': 'green'},
+    {'label': 'مستخدمة',         'value': vch_stats.used,               'icon': 'circle-check',  'variant': 'blue'},
+    {'label': 'ملغاة',           'value': vch_stats.revoked,            'icon': 'ban',           'variant': 'amber'},
+  ] %}
+{% endif %}
+
+{% call hub.megahero(
+  "الفواتير والكوبونات",
+  subtitle="أصدر الفواتير للمشتركين وولّد كوبونات الشحن من مكان واحد. واجهة موحّدة — لا تغيّر أي منطق فوترة أو محاسبة.",
+  icon="file-invoice-dollar",
+  actions_html='
+    <nav class="fb-tabs">
+      <a href="?tab=invoices" class="' + ('is-active' if tab == 'invoices' else '') + '"><i class="fa-solid fa-file-invoice"></i> الفواتير</a>
+      <a href="?tab=vouchers" class="' + ('is-active' if tab == 'vouchers' else '') + '"><i class="fa-solid fa-ticket"></i> الكوبونات</a>
+    </nav>',
+  kpis=_kpis
+) %}
+  {% if tab == 'invoices' %}
+  <div class="fb-filters">
+    <a href="?tab=invoices" class="{{ 'is-active' if not status }}">الكل</a>
+    <a href="?tab=invoices&status=paid" class="{{ 'is-active' if status=='paid' }}">مدفوعة</a>
+    <a href="?tab=invoices&status=pending" class="{{ 'is-active' if status=='pending' }}">معلّقة</a>
+    <a href="?tab=invoices&status=failed" class="{{ 'is-active' if status=='failed' }}">فشلت</a>
+  </div>
+  <span class="hub-spacer"></span>
+  <button class="hub-btn hub-btn--primary hub-btn--sm" type="button" data-modal-open="invoice"><i class="fa-solid fa-plus"></i> فاتورة جديدة</button>
+  {% else %}
+  <div class="fb-filters">
+    <a href="?tab=vouchers" class="{{ 'is-active' if not status }}">الكل</a>
+    <a href="?tab=vouchers&status=active" class="{{ 'is-active' if status=='active' }}">نشطة</a>
+    <a href="?tab=vouchers&status=used" class="{{ 'is-active' if status=='used' }}">مستخدمة</a>
+    <a href="?tab=vouchers&status=revoked" class="{{ 'is-active' if status=='revoked' }}">ملغاة</a>
+  </div>
+  <span class="hub-spacer"></span>
+  <button class="hub-btn hub-btn--primary hub-btn--sm" type="button" data-modal-open="voucher"><i class="fa-solid fa-plus"></i> توليد كوبونات</button>
+  {% endif %}
+{% endcall %}
 
 {# ═══════════════ TAB: INVOICES ═══════════════ #}
 {% if tab == 'invoices' %}
-<div class="hub-kpi-grid">
-  {{ hub.kpi("إجمالي الفواتير", inv_stats.total|money, icon="file-invoice-dollar", variant="brand") }}
-  {{ hub.kpi("المدفوعة", inv_stats.paid|money, icon="circle-check", variant="green") }}
-  {{ hub.kpi("المعلّقة", inv_stats.pending|money, icon="clock", variant="amber") }}
-  {{ hub.kpi("عدد الفواتير", inv_stats.count, icon="hashtag", variant="blue") }}
-</div>
-
-<div class="fb-panel-head">
-  <h3><i class="fa-solid fa-file-invoice"></i> الفواتير</h3>
-  <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-    <div class="fb-filters">
-      <a href="?tab=invoices" class="{{ 'is-active' if not status }}">الكل</a>
-      <a href="?tab=invoices&status=paid" class="{{ 'is-active' if status=='paid' }}">مدفوعة</a>
-      <a href="?tab=invoices&status=pending" class="{{ 'is-active' if status=='pending' }}">معلّقة</a>
-      <a href="?tab=invoices&status=failed" class="{{ 'is-active' if status=='failed' }}">فشلت</a>
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "كيف تقرأ الفواتير؟",
+  intro="كل صف فاتورة مرتبطة بمشترك. الاتجاه يحدد طبيعة الحركة المالية، والحالة تخبرك إن كانت محصّلة أم لا.",
+  items=[
+    {'icon': 'right-left',    'text': 'الاتجاه: تحصيل / إرجاع / إيداع / سحب / رصيد — يحدّد أثر الحركة على الحساب.'},
+    {'icon': 'circle-check',  'text': '«مدفوعة» تعني وصول المبلغ، و«معلّقة» بانتظار التحصيل، و«فشلت» لم تكتمل.'},
+    {'icon': 'filter',        'text': 'استخدم مرشّحات الحالة بالأعلى لعرض دفعة محددة من الفواتير.'},
+    {'icon': 'plus',          'text': 'زر «فاتورة جديدة» يصدر فاتورة لمشترك دون مغادرة الصفحة.'},
+  ],
+  note="هذه واجهة عرض موحّدة — كل إصدار فاتورة يمر بمنطق الفوترة الأصلي دون تغيير."
+)) %}
+  {% call hub.section("الفواتير", icon="file-invoice", meta=(invoices|length|string + " فاتورة") if invoices else "", flush=True) %}
+    {% if invoices %}
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
+      <table class="hub-table">
+        <thead>
+          <tr>
+            <th>الرقم</th>
+            <th>المشترك</th>
+            <th>الباقة</th>
+            <th class="num">المبلغ</th>
+            <th>الاتجاه</th>
+            <th>طريقة الدفع</th>
+            <th>الحالة</th>
+            <th>التاريخ</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for i in invoices %}
+          <tr>
+            <td><strong>{{ i.invoice_number or i.id }}</strong></td>
+            <td>{{ i.username }}</td>
+            <td>{{ i.plan_name or "—" }}</td>
+            <td class="num"><strong>{{ i.amount|money }}</strong></td>
+            <td>{{ i.direction or "—" }}</td>
+            <td>{{ i.payment_method or "—" }}</td>
+            <td>{{ hub.pill(i.status, variant="green" if i.status=="paid" else ("amber" if i.status=="pending" else "grey")) }}</td>
+            <td class="small hub-text-mute">{{ i.created_at|dt_local if i.created_at else "—" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
-    <button class="hub-btn hub-btn--primary" type="button" data-modal-open="invoice"><i class="fa-solid fa-plus"></i> فاتورة جديدة</button>
-  </div>
-</div>
-{% if invoices %}
-<div class="hub-table-wrap" style="border-radius:14px">
-  <table class="hub-table">
-    <thead><tr><th>الرقم</th><th>المشترك</th><th>الباقة</th><th>المبلغ</th><th>الاتجاه</th><th>طريقة الدفع</th><th>الحالة</th><th>التاريخ</th></tr></thead>
-    <tbody>
-      {% for i in invoices %}
-      <tr>
-        <td><strong>{{ i.invoice_number or i.id }}</strong></td>
-        <td>{{ i.username }}</td>
-        <td>{{ i.plan_name or "—" }}</td>
-        <td><strong>{{ i.amount|money }}</strong></td>
-        <td>{{ i.direction or "—" }}</td>
-        <td>{{ i.payment_method or "—" }}</td>
-        <td>{{ hub.pill(i.status, variant="green" if i.status=="paid" else ("amber" if i.status=="pending" else "grey")) }}</td>
-        <td class="small hub-text-mute">{{ i.created_at|dt_local if i.created_at else "—" }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
-{% else %}
-  <div style="text-align:center;padding:24px">{{ hub.empty("لا توجد فواتير بعد.", sub="اضغط «فاتورة جديدة» لإصدار أول فاتورة.", icon="file-invoice") }}</div>
-{% endif %}
+    {% else %}
+    {{ hub.empty("لا توجد فواتير بعد.", sub="اضغط «فاتورة جديدة» لإصدار أول فاتورة.", icon="file-invoice") }}
+    {% endif %}
+  {% endcall %}
+{% endcall %}
 {% endif %}
 
 {# ═══════════════ TAB: VOUCHERS ═══════════════ #}
 {% if tab == 'vouchers' %}
-<div class="hub-kpi-grid">
-  {{ hub.kpi("القيمة الإجمالية", vch_stats.total_amount|money, icon="sack-dollar", variant="brand") }}
-  {{ hub.kpi("نشطة", vch_stats.active, icon="ticket", variant="green") }}
-  {{ hub.kpi("مستخدمة", vch_stats.used, icon="circle-check", variant="blue") }}
-  {{ hub.kpi("ملغاة", vch_stats.revoked, icon="ban", variant="amber") }}
-</div>
-
-<div class="fb-panel-head">
-  <h3><i class="fa-solid fa-ticket"></i> الكوبونات</h3>
-  <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-    <div class="fb-filters">
-      <a href="?tab=vouchers" class="{{ 'is-active' if not status }}">الكل</a>
-      <a href="?tab=vouchers&status=active" class="{{ 'is-active' if status=='active' }}">نشطة</a>
-      <a href="?tab=vouchers&status=used" class="{{ 'is-active' if status=='used' }}">مستخدمة</a>
-      <a href="?tab=vouchers&status=revoked" class="{{ 'is-active' if status=='revoked' }}">ملغاة</a>
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "كيف تقرأ الكوبونات؟",
+  intro="كل كوبون هو رمز شحن بقيمة محددة. حالته تتغير من «نشط» إلى «مستخدم» عند الاستهلاك، أو «ملغى» عند الإيقاف.",
+  items=[
+    {'icon': 'ticket',        'text': 'الكود هو الرمز الذي يدخله المشترك أو الموزع لشحن القيمة.'},
+    {'icon': 'sack-dollar',   'text': 'القيمة هي المبلغ الذي يضاف عند تفعيل الكوبون.'},
+    {'icon': 'ban',           'text': 'إلغاء الكوبون يوقفه نهائيًا ويمنع استخدامه — لا يمكن التراجع.'},
+    {'icon': 'plus',          'text': 'زر «توليد كوبونات» ينشئ دفعة كاملة دفعة واحدة.'},
+  ],
+  note="هذه واجهة عرض موحّدة — كل توليد أو إلغاء يمر بمنطق الكوبونات الأصلي دون تغيير."
+)) %}
+  {% call hub.section("الكوبونات", icon="ticket", meta=(vouchers|length|string + " كوبون") if vouchers else "", flush=True) %}
+    {% if vouchers %}
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
+      <table class="hub-table">
+        <thead>
+          <tr>
+            <th>الكود</th>
+            <th class="num">القيمة</th>
+            <th>الباقة</th>
+            <th>الحالة</th>
+            <th>تنتهي في</th>
+            <th data-uds-nosort data-uds-nocol>إجراء</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for v in vouchers %}
+          <tr>
+            <td class="mono"><strong>{{ v.code }}</strong></td>
+            <td class="num">{{ v.amount|money }}</td>
+            <td>{{ plans_map[v.plan_id].name if v.plan_id and v.plan_id in plans_map else "—" }}</td>
+            <td>{{ hub.pill(v.status, variant="green" if v.status=="active" else ("blue" if v.status=="used" else "grey")) }}</td>
+            <td class="small hub-text-mute">{{ v.expire_at or "—" }}</td>
+            <td>
+              {% if v.status == 'active' %}
+              <button type="button" class="hub-btn hub-btn--ghost hub-btn--sm"
+                      data-vch-revoke data-vch-code="{{ v.code|e }}"
+                      data-vch-action="{{ url_for('radius.vch_revoke', vid=v.id) }}">
+                <i class="fa-solid fa-ban"></i> إلغاء
+              </button>
+              {% else %}<span class="hub-text-mute">—</span>{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
-    <button class="hub-btn hub-btn--primary" type="button" data-modal-open="voucher"><i class="fa-solid fa-plus"></i> توليد كوبونات</button>
+    {% else %}
+    {{ hub.empty("لا توجد كوبونات بعد.", sub="اضغط «توليد كوبونات» لإنشاء دفعة.", icon="ticket") }}
+    {% endif %}
+  {% endcall %}
+{% endcall %}
+
+{# Revoke confirmation — unified modal replaces the inline confirm(). The form
+   posts to the unchanged radius.vch_revoke endpoint; action is set per-row. #}
+{% call hub.modal("vchRevokeModal", "تأكيد إلغاء الكوبون", icon="ban", size="sm",
+   footer_html='<button type="button" class="hub-btn hub-btn--ghost" data-uds-modal-close>تراجع</button>'
+     ~ '<form method="post" data-vch-revoke-form style="display:inline;margin:0">'
+     ~ '<input type="hidden" name="_csrf_token" value="' ~ (csrf_token() if csrf_token is defined else '') ~ '">'
+     ~ '<button type="submit" class="hub-btn hub-btn--danger"><i class="fa-solid fa-ban"></i> إلغاء الكوبون</button></form>') %}
+  <div class="uds-modal-warn uds-modal-warn--amber">
+    <i class="fa-solid fa-circle-info"></i>
+    <span>سيتم إلغاء الكوبون «<strong data-vch-revoke-code class="mono"></strong>» نهائيًا ولن يمكن استخدامه بعد ذلك.</span>
   </div>
-</div>
-{% if vouchers %}
-<div class="hub-table-wrap" style="border-radius:14px">
-  <table class="hub-table">
-    <thead><tr><th>الكود</th><th>القيمة</th><th>الباقة</th><th>الحالة</th><th>تنتهي في</th><th>إجراء</th></tr></thead>
-    <tbody>
-      {% for v in vouchers %}
-      <tr>
-        <td class="mono"><strong>{{ v.code }}</strong></td>
-        <td>{{ v.amount|money }}</td>
-        <td>{{ plans_map[v.plan_id].name if v.plan_id and v.plan_id in plans_map else "—" }}</td>
-        <td>{{ hub.pill(v.status, variant="green" if v.status=="active" else ("blue" if v.status=="used" else "grey")) }}</td>
-        <td class="small hub-text-mute">{{ v.expire_at or "—" }}</td>
-        <td>
-          {% if v.status == 'active' %}
-          <form method="post" action="{{ url_for('radius.vch_revoke', vid=v.id) }}"
-                onsubmit="return confirm('إلغاء هذا الكوبون؟');">
-            <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-            <button class="hub-btn hub-btn--ghost hub-btn--sm" type="submit"><i class="fa-solid fa-ban"></i> إلغاء</button>
-          </form>
-          {% else %}<span class="hub-text-mute">—</span>{% endif %}
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
-{% else %}
-  <div style="text-align:center;padding:24px">{{ hub.empty("لا توجد كوبونات بعد.", sub="اضغط «توليد كوبونات» لإنشاء دفعة.", icon="ticket") }}</div>
-{% endif %}
+{% endcall %}
+<script>
+(function(){
+  var modal = document.getElementById("vchRevokeModal");
+  if (!modal) return;
+  var codeEl = modal.querySelector("[data-vch-revoke-code]");
+  var form   = modal.querySelector("[data-vch-revoke-form]");
+  document.addEventListener("click", function(e){
+    var btn = e.target.closest("[data-vch-revoke]");
+    if (!btn) return;
+    if (codeEl) codeEl.textContent = btn.getAttribute("data-vch-code") || "";
+    if (form)   form.action = btn.getAttribute("data-vch-action") || "";
+    modal.hidden = false;
+  });
+})();
+</script>
 {% endif %}
 
-{# ═══════════════ MODALS ═══════════════ #}
+{# ═══════════════ MODALS (create actions — retained bespoke dialogs) ═══════════════ #}
 
 {# Invoice modal — posts to the unchanged inv_create endpoint #}
 <dialog class="fb-modal" data-modal="invoice">

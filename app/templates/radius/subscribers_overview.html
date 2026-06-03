@@ -66,60 +66,48 @@
 {% block content %}
 <div class="hr-page-shell subs-overview">
 
-{# ───── Mega-hero: title + period toggle + KPI strip ───── #}
-<section class="so-hero">
-  <div class="so-hero-row">
-    <div class="so-hero-id">
-      <span class="so-hero-icon"><i class="fa-solid fa-users-viewfinder"></i></span>
-      <div>
-        <h1 class="so-hero-title">نظرة عامة — المشتركون</h1>
-        <div class="so-hero-sub">
-          ملخّص إجمالي لِما اندفع وما صُرف وما ضلّ على المشتركين — شهري وسنوي فقط.
-          <span class="so-hero-chip"><i class="fa-solid fa-calendar"></i> الفترة المعروضة: {{ selected_label }}</span>
-        </div>
-      </div>
-    </div>
+{# ───── Merged hero: title + period toggle (actions) + KPI/flow strip ───── #}
+{% call hub.megahero(
+  "نظرة عامة — المشتركون",
+  subtitle="ملخّص إجمالي لِما اندفع وما صُرف وما ضلّ على المشتركين — شهري وسنوي فقط. الفترة المعروضة: " + (selected_label|string),
+  icon="users-viewfinder",
+  actions_html='
     <div class="so-hero-toggle" role="tablist" aria-label="نوع الفترة">
-      <a class="so-seg{% if period == 'monthly' %} is-active{% endif %}"
-         href="{{ url_for('radius.subscribers_overview', period='monthly') }}"
-         role="tab" aria-selected="{{ 'true' if period == 'monthly' else 'false' }}">
+      <a class="so-seg' + (' is-active' if period == 'monthly' else '') + '"
+         href="' + url_for('radius.subscribers_overview', period='monthly') + '"
+         role="tab" aria-selected="' + ('true' if period == 'monthly' else 'false') + '">
         <i class="fa-solid fa-calendar-days"></i> شهري
       </a>
-      <a class="so-seg{% if period == 'yearly' %} is-active{% endif %}"
-         href="{{ url_for('radius.subscribers_overview', period='yearly') }}"
-         role="tab" aria-selected="{{ 'true' if period == 'yearly' else 'false' }}">
+      <a class="so-seg' + (' is-active' if period == 'yearly' else '') + '"
+         href="' + url_for('radius.subscribers_overview', period='yearly') + '"
+         role="tab" aria-selected="' + ('true' if period == 'yearly' else 'false') + '">
         <i class="fa-solid fa-calendar"></i> سنوي
       </a>
-    </div>
-  </div>
+    </div>',
+  kpis=[
+    {'label': 'المُحصّل (دخل)', 'value': collected_total|money,  'icon': 'arrow-down-long',      'variant': 'green', 'sub': ((sales_sel.count or 0)|string) + ' دفعة'},
+    {'label': 'المصروف — سلف (صرف)', 'value': disbursed_total|money, 'icon': 'arrow-up-long',    'variant': 'amber', 'sub': 'سلف مدفوعة للمشتركين'},
+    {'label': 'السلف', 'value': (loan_sel.total or 0)|money,        'icon': 'hand-holding-dollar', 'variant': 'amber', 'sub': ((loan_sel.count or 0)|string) + ' سلفة · ' + fmt_minutes(loan_sel.minutes)},
+    {'label': 'التفعيل', 'value': (act_sel.count or 0)|string,      'icon': 'bolt',                'variant': 'blue',  'sub': ((act_sel.amount or 0)|money) + ' · ' + fmt_minutes(act_sel.minutes)},
+    {'label': 'الجيجات', 'value': fmt_gb(data_sel.gb),              'icon': 'database',            'variant': 'green', 'sub': ((data_sel.sessions or 0)|string) + ' جلسة'},
+    {'label': 'شو ضل (الديون)', 'value': (outstanding.outstanding_total or 0)|money, 'icon': 'scale-unbalanced', 'variant': 'red', 'sub': 'حتى اللحظة'},
+    {'label': 'المشتركون', 'value': census.total or 0,              'icon': 'users',               'variant': 'brand', 'sub': ((census.online or 0)|string) + ' متصل'},
+  ]
+) %}{% endcall %}
 
-  {# دخل + صرف headline (الاثنين) #}
-  <div class="so-flow">
-    <div class="so-flow-item so-flow-item--in">
-      <span class="so-flow-icon"><i class="fa-solid fa-arrow-down-long"></i></span>
-      <div>
-        <div class="so-flow-label">المُحصّل من المشتركين (دخل)</div>
-        <div class="so-flow-value">{{ collected_total|money }}</div>
-      </div>
-    </div>
-    <div class="so-flow-item so-flow-item--out">
-      <span class="so-flow-icon"><i class="fa-solid fa-arrow-up-long"></i></span>
-      <div>
-        <div class="so-flow-label">المصروف للمشتركين — سلف (صرف)</div>
-        <div class="so-flow-value">{{ disbursed_total|money }}</div>
-      </div>
-    </div>
-  </div>
-
-  <div class="so-hero-kpis">
-    {{ hub.kpi("المُحصّل", (sales_sel.total or 0)|money, icon="coins", variant="brand", sub=((sales_sel.count or 0)|string) ~ " دفعة") }}
-    {{ hub.kpi("السلف", (loan_sel.total or 0)|money, icon="hand-holding-dollar", variant="amber", sub=((loan_sel.count or 0)|string) ~ " سلفة · " ~ fmt_minutes(loan_sel.minutes)) }}
-    {{ hub.kpi("التفعيل", (act_sel.count or 0)|string, icon="bolt", variant="blue", sub=((act_sel.amount or 0)|money) ~ " · " ~ fmt_minutes(act_sel.minutes)) }}
-    {{ hub.kpi("الجيجات", fmt_gb(data_sel.gb), icon="database", variant="green", sub=((data_sel.sessions or 0)|string) ~ " جلسة") }}
-    {{ hub.kpi("شو ضل (الديون)", (outstanding.outstanding_total or 0)|money, icon="scale-unbalanced", variant="red", sub="حتى اللحظة") }}
-    {{ hub.kpi("المشتركون", census.total or 0, icon="users", variant="brand", sub=((census.online or 0)|string) ~ " متصل") }}
-  </div>
-</section>
+{# ───── Main column (board + finance drill-down + census) + help aside on the LEFT ───── #}
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "كيف تقرأ هذه الصفحة؟",
+  intro="هذه نظرة إجمالية: ما اندفع من المشتركين (دخل)، ما صُرف لهم سلفًا (صرف)، وما ضلّ عليهم (ديون) — حسب الفترة المختارة.",
+  icon="compass",
+  items=[
+    {'icon': 'calendar-days', 'text': 'زرّ «شهري / سنوي» في الأعلى يبدّل الفترة لكل الأرقام والمخططات.'},
+    {'icon': 'chart-column',  'text': 'المخططات الصغيرة (sparklines) تُظهر آخر 12 فترة لكل بند للمقارنة السريعة.'},
+    {'icon': 'scale-unbalanced', 'text': 'قسم «شو ضل» نقطة زمنية حتى اللحظة — غير مرتبط بالفترة المختارة.'},
+    {'icon': 'up-right-from-square', 'text': 'الروابط تنقلك لتفاصيل البند في صفحات المالية للتدقيق.'},
+  ],
+  note="«الكوتة المخصّصة» = الحدّ المخصّص لكل باقة، وليس الاستهلاك الفعلي (الاستهلاك في بطاقة «الجيجات»)."
+)) %}
 
 {# ───── Period performance board (4 lanes, monthly/yearly only) ───── #}
 {% call hub.section("الأداء حسب الفترة", icon="chart-column", meta=("شهري" if period == "monthly" else "سنوي") ~ " · آخر 12 فترة") %}
@@ -185,7 +173,7 @@
 {# ───── أكبر المدينين — per-subscriber drill-down to Finance ───── #}
 {% call hub.section("أكبر المدينين", icon="user-clock", meta="مشترك مشترك → المالية") %}
   {% if debtors %}
-  <div class="hub-table-wrap" style="border:none;border-radius:0">
+  <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
     <table class="hub-table">
       <thead>
         <tr>
@@ -193,7 +181,7 @@
           <th class="num">سلف مفتوحة</th>
           <th class="num">عدد السلف</th>
           <th class="num">الرصيد</th>
-          <th>التفصيل</th>
+          <th data-uds-nosort>التفصيل</th>
         </tr>
       </thead>
       <tbody>
@@ -220,7 +208,7 @@
 {# ───── الكوتة المخصّصة حسب الباقة (point-in-time allocation) ───── #}
 {% call hub.section("الكوتة المخصّصة حسب الباقة", icon="layer-group", meta="مخصّص حتى اللحظة") %}
   {% if quota %}
-  <div class="hub-table-wrap" style="border:none;border-radius:0">
+  <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
     <table class="hub-table">
       <thead>
         <tr>
@@ -228,7 +216,7 @@
           <th class="num">المشتركون</th>
           <th class="num">كوتة المشترك</th>
           <th class="num">إجمالي المخصّص</th>
-          <th>الحصّة</th>
+          <th data-uds-nosort>الحصّة</th>
         </tr>
       </thead>
       <tbody>
@@ -268,6 +256,8 @@
     {{ hub.tile("موقوف", census.suspended or 0, icon="circle-pause", variant="grey") }}
   </div>
 {% endcall %}
+
+{% endcall %}{# /worklayout #}
 
 </div>
 {% endblock %}

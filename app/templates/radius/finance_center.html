@@ -7,23 +7,37 @@
 {% block page_sub %}<span class="sub">خزائن، قيود، إيرادات، ديون، وسلف من Business OS</span>{% endblock %}
 
 {% block content %}
-{{ hub.hero(
+
+{# ───── Merged hero: title + subtitle + icon + actions + KPI strip ─────
+   Collapses the old hub.hero + separate hub-kpi-grid band into ONE megahero. #}
+{{ hub.megahero(
   "المركز المالي",
   subtitle="نظرة تشغيلية على المال بدون حذف أو تعديل مباشر على سجلات النظام.",
   icon="coins",
-  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.business_finance_wallets') ~ '"><i class="fa-solid fa-wallet"></i> إدارة المحافظ</a>'
+  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.business_finance_wallets') ~ '"><i class="fa-solid fa-wallet"></i> إدارة المحافظ</a>',
+  kpis=[
+    {'label': 'إجمالي الإيرادات', 'value': summary.total_revenue|money,    'icon': 'sack-dollar',   'variant': 'green'},
+    {'label': 'التحصيلات',        'value': summary.total_collections|money, 'icon': 'cash-register', 'variant': 'brand'},
+    {'label': 'أرصدة المحافظ',     'value': summary.wallet_balance|money,    'icon': 'wallet',        'variant': 'blue'},
+    {'label': 'الربح الصافي',      'value': summary.total_profit|money,      'icon': 'chart-line',    'variant': 'amber'},
+  ]
 ) }}
 
 {% include "radius/_finance_nav.html" %}
 
-<div class="hub-kpi-grid">
-  {{ hub.kpi("إجمالي الإيرادات", summary.total_revenue|money, icon="sack-dollar", variant="green") }}
-  {{ hub.kpi("التحصيلات", summary.total_collections|money, icon="cash-register", variant="brand") }}
-  {{ hub.kpi("أرصدة المحافظ", summary.wallet_balance|money, icon="wallet", variant="blue") }}
-  {{ hub.kpi("الربح الصافي", summary.total_profit|money, icon="chart-line", variant="amber") }}
-</div>
+{# ───── Main (carded sections) + help panel on the LEFT (fills the width) ───── #}
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "قواعد الأمان المالي",
+  intro="هذه اللوحة قراءة فقط — كل تغيّر فعلي يمرّ عبر الخدمة المالية ويُسجَّل كقيد وحدث قابلين للتتبع.",
+  icon="shield-halved",
+  items=[
+    {'icon': 'ban',            'text': 'السجل المالي لا يدعم الحذف المباشر إطلاقًا.'},
+    {'icon': 'right-left',     'text': 'أي خصم أو شحن يمرّ عبر الخدمة المالية وينتج عنه قيد قابل للتتبع.'},
+    {'icon': 'clipboard-list', 'text': 'كل عملية تُنتج حدثًا مرجعيًا يمكن مراجعته لاحقًا.'},
+  ],
+  note="لإدارة المحافظ والشحن والخصم استخدم زر «إدارة المحافظ» في الأعلى."
+)) %}
 
-<div class="hub-grid hub-grid--2">
   {% call hub.section("مؤشرات التشغيل المالي", icon="gauge-high") %}
     <div class="hub-tile-grid">
       {{ hub.tile("عدد المحافظ", summary.wallet_count, icon="wallet") }}
@@ -41,12 +55,6 @@
       {{ hub.tile("إجمالي دفتر الأستاذ", summary.ledger_total|money, icon="book-open") }}
     </div>
   {% endcall %}
-</div>
 
-{% call hub.section("قواعد الأمان", icon="shield-halved") %}
-  <div class="hub-empty" style="text-align:initial">
-    <div class="hub-empty-msg">السجل المالي لا يدعم الحذف المباشر.</div>
-    <div class="hub-empty-sub">أي خصم أو شحن يمر عبر الخدمة المالية، وينتج عنه قيد وحدث قابلان للتتبع.</div>
-  </div>
 {% endcall %}
 {% endblock %}
