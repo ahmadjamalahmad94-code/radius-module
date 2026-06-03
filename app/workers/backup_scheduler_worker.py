@@ -34,7 +34,9 @@ def _loop(poll_interval: int) -> None:
 def start_backup_scheduler_worker() -> None:
     """Start the polling thread (unless workers are globally disabled)."""
     global _started
-    if os.environ.get("HOBERADIUS_NO_WORKER") == "1":
+    # Never run automatic backups when workers are disabled or under pytest, so a
+    # test run can never trigger a scheduled backup.
+    if os.environ.get("HOBERADIUS_NO_WORKER") == "1" or os.environ.get("PYTEST_CURRENT_TEST"):
         return
     with _lock:
         if _started:
