@@ -19,86 +19,7 @@
 {% block head_extra %}
 {{ super() }}
 <style>
-  .oc{ display:grid; gap:18px; }
-
-  /* ── plain-Arabic explainer callout ── */
-  .oc-explain{ display:flex; gap:12px; align-items:flex-start; background:#eff6ff; border:1px solid #bfdbfe; border-radius:14px; padding:13px 16px; }
-  .oc-explain .ic{ width:34px;height:34px;border-radius:10px;background:#dbeafe;color:#1d4ed8;display:grid;place-items:center;font-size:15px;flex:none; }
-  .oc-explain .tx{ font-size:12.5px; line-height:1.85; color:#1e40af; }
-  .oc-explain .tx a{ color:#1d4ed8; font-weight:800; text-decoration:underline; }
-
-  /* ── live status cards ── */
-  .oc-status{ display:grid; grid-template-columns:repeat(auto-fit,minmax(212px,1fr)); gap:13px; }
-  .oc-stat{ position:relative; background:var(--hub-bg-card,#fff); border:1px solid var(--hub-border,#e8edf3);
-    border-radius:15px; padding:14px 15px; box-shadow:0 1px 3px rgba(15,23,42,.05),0 7px 18px rgba(15,23,42,.04);
-    display:grid; gap:9px; overflow:hidden; }
-  .oc-stat::before{ content:""; position:absolute; inset-block:0; inset-inline-start:0; width:4px; background:#cbd5e1; }
-  .oc-stat.on::before{ background:linear-gradient(180deg,#22c55e,#16a34a); }
-  .oc-stat.off::before{ background:linear-gradient(180deg,#f59e0b,#d97706); }
-  .oc-stat.dead::before{ background:linear-gradient(180deg,#ef4444,#dc2626); }
-  .oc-stat-top{ display:flex; align-items:center; gap:10px; }
-  .oc-stat-ic{ width:38px;height:38px;border-radius:11px;display:grid;place-items:center;font-size:16px;flex:none;
-    background:#ede9fe;color:#5b21b6; }
-  .oc-stat-ic.wa{ background:#dcfce7;color:#16a34a; }
-  .oc-stat-ic.tg{ background:#e0f2fe;color:#0284c7; }
-  .oc-stat-ic.bell{ background:#fef3c7;color:#b45309; }
-  .oc-stat-ic.log{ background:#f1f5f9;color:#475569; }
-  .oc-stat-name{ font-size:13px; font-weight:800; color:#0f172a; line-height:1.3; }
-  .oc-stat-name small{ display:block; font-size:10.5px; font-weight:600; color:#94a3b8; margin-top:1px; }
-  .oc-pill{ margin-inline-start:auto; display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:800;
-    border-radius:999px; padding:4px 10px; white-space:nowrap; }
-  .oc-pill .dot{ width:7px;height:7px;border-radius:50%; }
-  .oc-pill.on{ background:#dcfce7; color:#15803d; } .oc-pill.on .dot{ background:#22c55e; }
-  .oc-pill.off{ background:#fef3c7; color:#92400e; } .oc-pill.off .dot{ background:#f59e0b; }
-  .oc-pill.dead{ background:#fee2e2; color:#b91c1c; } .oc-pill.dead .dot{ background:#ef4444; }
-  .oc-stat-meta{ display:flex; flex-wrap:wrap; gap:6px; }
-  .oc-tag{ font-size:10.5px; font-weight:700; color:#475569; background:#f1f5f9; border-radius:999px; padding:3px 9px; }
-  .oc-tag.q{ background:#ede9fe; color:#5b21b6; } .oc-tag.q.zero{ background:#fee2e2; color:#b91c1c; }
-  .oc-stat-line{ display:flex; align-items:baseline; gap:7px; }
-  .oc-stat-big{ font-size:24px; font-weight:900; color:#0f172a; line-height:1; font-variant-numeric:tabular-nums; }
-  .oc-stat-big.green{ color:#16a34a; } .oc-stat-big.red{ color:#dc2626; } .oc-stat-big.grey{ color:#94a3b8; }
-  .oc-stat-unit{ font-size:11.5px; font-weight:700; color:#94a3b8; }
-
-  /* ── deliveries mini-summary inside its card ── */
-  .oc-deliv{ display:flex; gap:14px; }
-  .oc-deliv > div{ text-align:center; }
-  .oc-deliv .n{ font-size:21px; font-weight:900; font-variant-numeric:tabular-nums; line-height:1; }
-  .oc-deliv .n.s{ color:#16a34a; } .oc-deliv .n.f{ color:#dc2626; } .oc-deliv .n.q{ color:#b45309; }
-  .oc-deliv .t{ font-size:10.5px; font-weight:700; color:#94a3b8; margin-top:4px; }
-
-  /* ── status pill used in the recent-deliveries table ── */
-  .oc-stpill{ display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:800; border-radius:999px; padding:3px 10px; white-space:nowrap; }
-  .oc-stpill .dot{ width:6px;height:6px;border-radius:50%;flex:none; }
-  .oc-stpill.green{ background:#dcfce7; color:#15803d; } .oc-stpill.green .dot{ background:#16a34a; }
-  .oc-stpill.amber{ background:#fef3c7; color:#92400e; } .oc-stpill.amber .dot{ background:#f59e0b; }
-  .oc-stpill.red{ background:#fee2e2; color:#b91c1c; } .oc-stpill.red .dot{ background:#ef4444; }
-  .oc-stpill.grey{ background:#f1f5f9; color:#64748b; } .oc-stpill.grey .dot{ background:#94a3b8; }
-
-  /* ── section heading ── */
-  .oc-h{ display:flex; align-items:center; gap:9px; margin:2px 2px -4px; }
-  .oc-h i{ color:#7c3aed; font-size:14px; }
-  .oc-h b{ font-size:14px; font-weight:800; color:#0f172a; }
-  .oc-h span{ font-size:11.5px; color:#94a3b8; }
-
-  /* ── big quick-action tiles ── */
-  .oc-actions{ display:grid; grid-template-columns:repeat(auto-fill,minmax(232px,1fr)); gap:13px; }
-  .oc-act{ display:flex; align-items:flex-start; gap:13px; text-decoration:none; background:var(--hub-bg-card,#fff);
-    border:1px solid var(--hub-border,#e8edf3); border-radius:15px; padding:15px;
-    box-shadow:0 1px 3px rgba(15,23,42,.05); transition:transform .14s ease, box-shadow .14s ease, border-color .14s ease; }
-  .oc-act:hover{ transform:translateY(-3px); box-shadow:0 12px 26px rgba(15,23,42,.10); border-color:#ddd6fe; }
-  .oc-act-ic{ width:46px;height:46px;border-radius:13px;display:grid;place-items:center;font-size:19px;flex:none;
-    background:linear-gradient(135deg,#ede9fe,#f5f3ff); color:#6d28d9; }
-  .oc-act-ic.green{ background:linear-gradient(135deg,#dcfce7,#f0fdf4); color:#15803d; }
-  .oc-act-ic.blue{ background:linear-gradient(135deg,#e0f2fe,#f0f9ff); color:#0369a1; }
-  .oc-act-ic.amber{ background:linear-gradient(135deg,#fef3c7,#fffbeb); color:#b45309; }
-  .oc-act-ic.slate{ background:linear-gradient(135deg,#f1f5f9,#f8fafc); color:#475569; }
-  .oc-act-b{ min-width:0; }
-  .oc-act-b .ttl{ font-size:14px; font-weight:800; color:#0f172a; display:flex; align-items:center; gap:7px; }
-  .oc-act-b .ttl .arr{ color:#cbd5e1; font-size:11px; transition:transform .14s ease, color .14s ease; }
-  .oc-act:hover .ttl .arr{ color:#7c3aed; transform:translateX(-3px); }
-  .oc-act-b .hint{ font-size:11.5px; color:#64748b; margin-top:4px; line-height:1.6; }
-
-  /* ── prominent quick-send ── */
+  /* ── prominent quick-send (retained custom element) ── */
   .oc-send{ background:linear-gradient(135deg,#faf5ff,#f5f3ff); border:1px solid #ddd6fe; border-radius:16px; padding:18px; }
   .oc-send-head{ display:flex; align-items:center; gap:11px; margin-bottom:13px; }
   .oc-send-head .ic{ width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,#7c3aed,#5b21b6);
@@ -118,6 +39,32 @@
     background:linear-gradient(135deg,#7c3aed,#5b21b6); box-shadow:0 8px 18px rgba(124,58,237,.28); transition:.15s; }
   .oc-send-btn:hover{ box-shadow:0 11px 24px rgba(124,58,237,.36); transform:translateY(-1px); }
   .oc-send-note{ font-size:11.5px; color:#7c6aae; }
+
+  /* ── big quick-action tiles (retained custom element) ── */
+  .oc-actions{ display:grid; grid-template-columns:repeat(auto-fill,minmax(232px,1fr)); gap:13px; }
+  .oc-act{ display:flex; align-items:flex-start; gap:13px; text-decoration:none; background:var(--hub-bg-card,#fff);
+    border:1px solid var(--hub-border,#e8edf3); border-radius:15px; padding:15px;
+    box-shadow:0 1px 3px rgba(15,23,42,.05); transition:transform .14s ease, box-shadow .14s ease, border-color .14s ease; }
+  .oc-act:hover{ transform:translateY(-3px); box-shadow:0 12px 26px rgba(15,23,42,.10); border-color:#ddd6fe; }
+  .oc-act-ic{ width:46px;height:46px;border-radius:13px;display:grid;place-items:center;font-size:19px;flex:none;
+    background:linear-gradient(135deg,#ede9fe,#f5f3ff); color:#6d28d9; }
+  .oc-act-ic.green{ background:linear-gradient(135deg,#dcfce7,#f0fdf4); color:#15803d; }
+  .oc-act-ic.blue{ background:linear-gradient(135deg,#e0f2fe,#f0f9ff); color:#0369a1; }
+  .oc-act-ic.amber{ background:linear-gradient(135deg,#fef3c7,#fffbeb); color:#b45309; }
+  .oc-act-ic.slate{ background:linear-gradient(135deg,#f1f5f9,#f8fafc); color:#475569; }
+  .oc-act-b{ min-width:0; }
+  .oc-act-b .ttl{ font-size:14px; font-weight:800; color:#0f172a; display:flex; align-items:center; gap:7px; }
+  .oc-act-b .ttl .arr{ color:#cbd5e1; font-size:11px; transition:transform .14s ease, color .14s ease; }
+  .oc-act:hover .ttl .arr{ color:#7c3aed; transform:translateX(-3px); }
+  .oc-act-b .hint{ font-size:11.5px; color:#64748b; margin-top:4px; line-height:1.6; }
+
+  /* ── status pill used in the recent-deliveries table (retained) ── */
+  .oc-stpill{ display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:800; border-radius:999px; padding:3px 10px; white-space:nowrap; }
+  .oc-stpill .dot{ width:6px;height:6px;border-radius:50%;flex:none; }
+  .oc-stpill.green{ background:#dcfce7; color:#15803d; } .oc-stpill.green .dot{ background:#16a34a; }
+  .oc-stpill.amber{ background:#fef3c7; color:#92400e; } .oc-stpill.amber .dot{ background:#f59e0b; }
+  .oc-stpill.red{ background:#fee2e2; color:#b91c1c; } .oc-stpill.red .dot{ background:#ef4444; }
+  .oc-stpill.grey{ background:#f1f5f9; color:#64748b; } .oc-stpill.grey .dot{ background:#94a3b8; }
 </style>
 {% endblock %}
 
@@ -125,223 +72,134 @@
 {% set ch_sms = status.channels.get('sms') %}
 {% set ch_wa = status.channels.get('whatsapp') %}
 
-{{ hub.hero(
+{# ───── ONE unified hero: title + actions + live-status KPI strip ───── #}
+{% call hub.megahero(
   "غرفة العمليات",
   subtitle="نفّذ بكبسة زر — كل قنوات الإرسال والإشعارات والبوت وسجل الإرسال من شاشة واحدة.",
   icon="satellite-dish",
   actions_html=(
     '<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.communications_guide') ~ '"><i class="fa-solid fa-book-open"></i> دليل وشروحات</a>'
     ~ '<a class="hub-btn hub-btn--primary" href="' ~ url_for('radius.communications_send') ~ '"><i class="fa-solid fa-paper-plane"></i> إرسال رسالة سريعة</a>'
-  )
-) }}
+  ),
+  kpis=[
+    {'label': 'القدرات المفعّلة', 'value': status.ready ~ ' / ' ~ status.ready_total, 'icon': 'wave-square', 'variant': 'brand', 'sub': 'مفعّلة الآن'},
+    {'label': 'قناة الرسائل القصيرة', 'value': 'مفعّلة' if (ch_sms and ch_sms.active) else 'متوقفة', 'icon': 'comment-sms', 'variant': 'green' if (ch_sms and ch_sms.active) else 'amber', 'sub': (mode_label(ch_sms.mode) if ch_sms else '—')},
+    {'label': 'قناة واتساب', 'value': 'مفعّلة' if (ch_wa and ch_wa.active) else 'متوقفة', 'icon': 'whatsapp', 'variant': 'green' if (ch_wa and ch_wa.active) else 'amber', 'sub': (mode_label(ch_wa.mode) if ch_wa else '—')},
+    {'label': 'بوت واتساب', 'value': status.bot.commands, 'icon': 'robot', 'variant': 'green' if status.bot.enabled else 'grey', 'sub': ('أمر مُفعّل' if status.bot.enabled else 'متوقف')},
+    {'label': 'الإشعارات الحدثية', 'value': status.notifications.enabled ~ ' / ' ~ status.notifications.total, 'icon': 'bell', 'variant': 'amber' if status.notifications.enabled else 'grey', 'sub': 'حدث مُفعّل'},
+    {'label': 'تنبيهات الشبكة', 'value': 'متصل' if status.telegram.connected else 'غير متصل', 'icon': 'telegram', 'variant': 'blue' if status.telegram.connected else 'red', 'sub': 'عبر تلجرام'},
+    {'label': 'آخر الإرسالات', 'value': status.deliveries.sent ~ ' ✓', 'icon': 'truck-fast', 'variant': 'green', 'sub': status.deliveries.failed ~ ' فاشلة · ' ~ status.deliveries.queued ~ ' بالطابور'}
+  ]
+) %}
+{% endcall %}
 
 {% include "radius/communications_nav.html" %}
 
-<div class="oc">
-
-  {# ════════ what is this page (plain-Arabic explainer) ════════ #}
-  <div class="oc-explain">
-    <span class="ic"><i class="fa-solid fa-circle-info"></i></span>
-    <div class="tx">
-      هذه هي الصفحة الرئيسية لمركز التواصل: تعرض حالة كل قناة وإشعار وبوت في مكان واحد، وتتيح إرسالًا سريعًا.
-      جديد على الإعداد؟ <a href="{{ url_for('radius.communications_guide') }}">افتح الدليل المصوّر</a> لربط واتساب وتلجرام خطوة بخطوة.
-    </div>
-  </div>
-
-  {# ════════ LIVE STATUS CARDS ════════ #}
-  <div class="oc-h"><i class="fa-solid fa-wave-square"></i><b>الحالة المباشرة</b>
-    <span>— {{ status.ready }} من {{ status.ready_total }} قدرات مفعّلة الآن</span></div>
-
-  <div class="oc-status" data-testid="communications-summary">
-
-    {# ── قناة الرسائل القصيرة ── #}
-    {% set on = ch_sms and ch_sms.active %}
-    <div class="oc-stat {{ 'on' if on else 'off' }}" data-testid="oc-stat-sms">
-      <div class="oc-stat-top">
-        <span class="oc-stat-ic"><i class="fa-solid fa-comment-sms"></i></span>
-        <div class="oc-stat-name">قناة الرسائل القصيرة<small>رسائل نصية للمشتركين</small></div>
-        {% if on %}<span class="oc-pill on"><span class="dot"></span> مفعّلة</span>
-        {% else %}<span class="oc-pill off"><span class="dot"></span> متوقفة</span>{% endif %}
-      </div>
-      <div class="oc-stat-meta">
-        <span class="oc-tag">{{ mode_label(ch_sms.mode) if ch_sms else '—' }}</span>
-        {% if ch_sms and ch_sms.is_quota_mode %}
-          <span class="oc-tag q {{ 'zero' if ch_sms.balance == 0 else '' }}">رصيد: {{ ch_sms.balance }} رسالة</span>
-        {% else %}
-          <span class="oc-tag">غير محدود</span>
-        {% endif %}
-      </div>
-    </div>
-
-    {# ── قناة واتساب ── #}
-    {% set on = ch_wa and ch_wa.active %}
-    <div class="oc-stat {{ 'on' if on else 'off' }}" data-testid="oc-stat-whatsapp">
-      <div class="oc-stat-top">
-        <span class="oc-stat-ic wa"><i class="fa-brands fa-whatsapp"></i></span>
-        <div class="oc-stat-name">قناة واتساب<small>رسائل عبر واتساب</small></div>
-        {% if on %}<span class="oc-pill on"><span class="dot"></span> مفعّلة</span>
-        {% else %}<span class="oc-pill off"><span class="dot"></span> متوقفة</span>{% endif %}
-      </div>
-      <div class="oc-stat-meta">
-        <span class="oc-tag">{{ mode_label(ch_wa.mode) if ch_wa else '—' }}</span>
-        {% if ch_wa and ch_wa.is_quota_mode %}
-          <span class="oc-tag q {{ 'zero' if ch_wa.balance == 0 else '' }}">رصيد: {{ ch_wa.balance }} رسالة</span>
-        {% else %}
-          <span class="oc-tag">غير محدود</span>
-        {% endif %}
-      </div>
-    </div>
-
-    {# ── بوت واتساب ── #}
-    <div class="oc-stat {{ 'on' if status.bot.enabled else 'off' }}" data-testid="oc-stat-bot">
-      <div class="oc-stat-top">
-        <span class="oc-stat-ic wa"><i class="fa-solid fa-robot"></i></span>
-        <div class="oc-stat-name">بوت واتساب<small>الرد الذاتي</small></div>
-        {% if status.bot.enabled %}<span class="oc-pill on"><span class="dot"></span> مفعّل</span>
-        {% else %}<span class="oc-pill off"><span class="dot"></span> متوقف</span>{% endif %}
-      </div>
-      <div class="oc-stat-line">
-        <span class="oc-stat-big {{ '' if status.bot.commands else 'grey' }}">{{ status.bot.commands }}</span>
-        <span class="oc-stat-unit">أمر مُفعّل</span>
-      </div>
-    </div>
-
-    {# ── event notifications ── #}
-    <div class="oc-stat {{ 'on' if status.notifications.enabled else 'off' }}" data-testid="oc-stat-notifications">
-      <div class="oc-stat-top">
-        <span class="oc-stat-ic bell"><i class="fa-solid fa-bell"></i></span>
-        <div class="oc-stat-name">الإشعارات الحدثية<small>تنبيهات تلقائية</small></div>
-        {% if status.notifications.enabled %}<span class="oc-pill on"><span class="dot"></span> نشطة</span>
-        {% else %}<span class="oc-pill off"><span class="dot"></span> لا شيء</span>{% endif %}
-      </div>
-      <div class="oc-stat-line">
-        <span class="oc-stat-big {{ 'green' if status.notifications.enabled else 'grey' }}">{{ status.notifications.enabled }}</span>
-        <span class="oc-stat-unit">من {{ status.notifications.total }} حدثًا مُفعّل</span>
-      </div>
-    </div>
-
-    {# ── network alerts (telegram) ── #}
-    <div class="oc-stat {{ 'on' if status.telegram.connected else 'dead' }}" data-testid="oc-stat-telegram">
-      <div class="oc-stat-top">
-        <span class="oc-stat-ic tg"><i class="fa-brands fa-telegram"></i></span>
-        <div class="oc-stat-name">تنبيهات الشبكة<small>عبر تلجرام</small></div>
-        {% if status.telegram.connected %}<span class="oc-pill on"><span class="dot"></span> متصل</span>
-        {% else %}<span class="oc-pill dead"><span class="dot"></span> غير متصل</span>{% endif %}
-      </div>
-      <div class="oc-stat-meta">
-        {% if status.telegram.connected %}
-          <span class="oc-tag">جاهز لإرسال تنبيهات الراوترات والأجهزة</span>
-        {% else %}
-          <a class="oc-tag" href="{{ url_for('radius.network_telegram_settings') }}">اربط بوت تلجرام لتنبيهات الشبكة</a>
-        {% endif %}
-      </div>
-    </div>
-
-    {# ── recent deliveries summary ── #}
-    <div class="oc-stat" data-testid="oc-stat-deliveries" style="--x:1">
-      <div class="oc-stat-top">
-        <span class="oc-stat-ic log"><i class="fa-solid fa-truck-fast"></i></span>
-        <div class="oc-stat-name">آخر الإرسالات<small>إجمالي السجل</small></div>
-        <a class="oc-pill off" style="background:#f1f5f9;color:#475569" href="{{ url_for('radius.communications_deliveries') }}"><i class="fa-solid fa-arrow-left" style="font-size:9px"></i> السجل</a>
-      </div>
-      <div class="oc-deliv">
-        <div><div class="n s">{{ status.deliveries.sent }}</div><div class="t">ناجحة</div></div>
-        <div><div class="n f">{{ status.deliveries.failed }}</div><div class="t">فاشلة</div></div>
-        <div><div class="n q">{{ status.deliveries.queued }}</div><div class="t">بالطابور</div></div>
-      </div>
-    </div>
-
-  </div>
+{# ───── Full-width work layout: main content + help panel on the LEFT ───── #}
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "ما هذه الصفحة؟",
+  intro="هذه هي الصفحة الرئيسية لمركز التواصل: تعرض حالة كل قناة وإشعار وبوت في مكان واحد، وتتيح إرسالًا سريعًا.",
+  icon="circle-info",
+  items=[
+    {'icon': 'tower-broadcast', 'text': 'القنوات (الرسائل القصيرة وواتساب) هي وسيلة إيصال الرسائل للمشتركين.'},
+    {'icon': 'robot', 'text': 'بوت واتساب يردّ تلقائيًا على المشتركين بمعلومات الحساب والرصيد.'},
+    {'icon': 'bell', 'text': 'الإشعارات الحدثية ترسل تنبيهات تلقائية عند الإنشاء والتجديد وقرب الانتهاء.'},
+    {'icon': 'telegram', 'text': 'تنبيهات الشبكة عبر تلجرام لمراقبة الراوترات والأجهزة.'}
+  ],
+  note="جديد على الإعداد؟ افتح «دليل وشروحات» من الأعلى لربط واتساب وتلجرام خطوة بخطوة."
+)) %}
 
   {# ════════ QUICK-SEND (one-tap) ════════ #}
-  <form class="oc-send" method="post" action="{{ url_for('radius.communications_send') }}" data-testid="oc-quicksend">
-    {{ csrf_token_input() }}
-    <input type="hidden" name="target" value="subscriber">
-    <input type="hidden" name="send_now" value="1">
-    <div class="oc-send-head">
-      <span class="ic"><i class="fa-solid fa-bolt"></i></span>
-      <div>
-        <h2>إرسال رسالة سريعة</h2>
-        <div class="sub">اكتب رسالة وأرسلها لجمهور المشتركين بكبسة زر — عبر القناة التي تختارها.</div>
+  {% call hub.section("إرسال رسالة سريعة", icon="bolt") %}
+    <form class="oc-send" method="post" action="{{ url_for('radius.communications_send') }}" data-testid="oc-quicksend">
+      {{ csrf_token_input() }}
+      <input type="hidden" name="target" value="subscriber">
+      <input type="hidden" name="send_now" value="1">
+      <div class="oc-send-head">
+        <span class="ic"><i class="fa-solid fa-bolt"></i></span>
+        <div>
+          <h2>إرسال رسالة سريعة</h2>
+          <div class="sub">اكتب رسالة وأرسلها لجمهور المشتركين بكبسة زر — عبر القناة التي تختارها.</div>
+        </div>
       </div>
-    </div>
-    <div class="oc-send-grid">
-      <div class="oc-fld">
-        <label for="oc-ch">القناة</label>
-        <select id="oc-ch" name="channel">
-          <option value="whatsapp">واتساب</option>
-          <option value="sms">الرسائل القصيرة</option>
-          <option value="internal">داخلية (الطابور)</option>
-        </select>
+      <div class="oc-send-grid">
+        <div class="oc-fld">
+          <label for="oc-ch">القناة</label>
+          <select id="oc-ch" name="channel">
+            <option value="whatsapp">واتساب</option>
+            <option value="sms">الرسائل القصيرة</option>
+            <option value="internal">داخلية (الطابور)</option>
+          </select>
+        </div>
+        <div class="oc-fld">
+          <label for="oc-msg">نص الرسالة</label>
+          <textarea id="oc-msg" name="message" rows="3" placeholder="اكتب رسالتك هنا…" required></textarea>
+        </div>
       </div>
-      <div class="oc-fld">
-        <label for="oc-msg">نص الرسالة</label>
-        <textarea id="oc-msg" name="message" rows="3" placeholder="اكتب رسالتك هنا…" required></textarea>
+      <div class="oc-send-foot">
+        <button type="submit" class="oc-send-btn"><i class="fa-solid fa-paper-plane"></i> إرسال الآن</button>
+        <span class="oc-send-note">تذهب للمعاينة ثم الإرسال. لإرسال موجّه لشريحة محدّدة استخدم
+          <a href="{{ url_for('radius.communications_send') }}">صفحة الإرسال الكاملة</a>.</span>
       </div>
-    </div>
-    <div class="oc-send-foot">
-      <button type="submit" class="oc-send-btn"><i class="fa-solid fa-paper-plane"></i> إرسال الآن</button>
-      <span class="oc-send-note">تذهب للمعاينة ثم الإرسال. لإرسال موجّه لشريحة محدّدة استخدم
-        <a href="{{ url_for('radius.communications_send') }}">صفحة الإرسال الكاملة</a>.</span>
-    </div>
-  </form>
+    </form>
+  {% endcall %}
 
   {# ════════ BIG QUICK-ACTION TILES ════════ #}
-  <div class="oc-h"><i class="fa-solid fa-bolt"></i><b>إجراءات سريعة</b><span>— كل قسم بكبسة زر</span></div>
-
-  <div class="oc-actions" data-testid="oc-actions">
-    <a class="oc-act" href="{{ url_for('radius.communications_channels') }}">
-      <span class="oc-act-ic"><i class="fa-solid fa-tower-broadcast"></i></span>
-      <div class="oc-act-b"><div class="ttl">قنوات الإرسال <i class="fa-solid fa-arrow-left arr"></i></div>
-        <div class="hint">فعّل الرسائل القصيرة وواتساب واضبط روابط المزوّد ونمط الإرسال.</div></div>
-    </a>
-    <a class="oc-act" href="{{ url_for('radius.communications_bot') }}">
-      <span class="oc-act-ic green"><i class="fa-solid fa-robot"></i></span>
-      <div class="oc-act-b"><div class="ttl">بوت واتساب <i class="fa-solid fa-arrow-left arr"></i></div>
-        <div class="hint">ردود ذاتية على المشتركين: الرصيد، الباقة، معلومات الحساب.</div></div>
-    </a>
-    <a class="oc-act" href="{{ url_for('radius.communications_notifications') }}">
-      <span class="oc-act-ic amber"><i class="fa-solid fa-bell"></i></span>
-      <div class="oc-act-b"><div class="ttl">الإشعارات الحدثية <i class="fa-solid fa-arrow-left arr"></i></div>
-        <div class="hint">تنبيهات تلقائية عند الإنشاء والتجديد وقرب الانتهاء وغيرها.</div></div>
-    </a>
-    <a class="oc-act" href="{{ url_for('radius.communications_quota') }}">
-      <span class="oc-act-ic"><i class="fa-solid fa-wallet"></i></span>
-      <div class="oc-act-b"><div class="ttl">الرصيد والحِزم <i class="fa-solid fa-arrow-left arr"></i></div>
-        <div class="hint">رصيد الرسائل المدفوعة لكل قناة، وطلب حزمة جديدة.</div></div>
-    </a>
-    <a class="oc-act" href="{{ url_for('radius.communications_templates') }}">
-      <span class="oc-act-ic blue"><i class="fa-solid fa-file-lines"></i></span>
-      <div class="oc-act-b"><div class="ttl">القوالب <i class="fa-solid fa-arrow-left arr"></i></div>
-        <div class="hint">قوالب رسائل جاهزة بمتغيّرات تُملأ تلقائيًا عند الإرسال.</div></div>
-    </a>
-    <a class="oc-act" href="{{ url_for('radius.communications_send') }}">
-      <span class="oc-act-ic"><i class="fa-solid fa-paper-plane"></i></span>
-      <div class="oc-act-b"><div class="ttl">إرسال رسالة <i class="fa-solid fa-arrow-left arr"></i></div>
-        <div class="hint">إرسال موجّه لشريحة من المشتركين مع معاينة قبل الإرسال.</div></div>
-    </a>
-    <a class="oc-act" href="{{ url_for('radius.communications_deliveries') }}">
-      <span class="oc-act-ic slate"><i class="fa-solid fa-truck-fast"></i></span>
-      <div class="oc-act-b"><div class="ttl">سجل الإرسال <i class="fa-solid fa-arrow-left arr"></i></div>
-        <div class="hint">تتبّع كل رسالة: الحالة، المستلم، ورد المزوّد.</div></div>
-    </a>
-    <a class="oc-act" href="{{ url_for('radius.communications_guide') }}">
-      <span class="oc-act-ic green"><i class="fa-solid fa-book-open"></i></span>
-      <div class="oc-act-b"><div class="ttl">دليل وشروحات <i class="fa-solid fa-arrow-left arr"></i></div>
-        <div class="hint">شرح مصوّر خطوة بخطوة لربط بوت واتساب وتنبيهات تلجرام.</div></div>
-    </a>
-  </div>
+  {% call hub.section("إجراءات سريعة", icon="bolt", meta="كل قسم بكبسة زر") %}
+    <div class="oc-actions" data-testid="oc-actions">
+      <a class="oc-act" href="{{ url_for('radius.communications_channels') }}">
+        <span class="oc-act-ic"><i class="fa-solid fa-tower-broadcast"></i></span>
+        <div class="oc-act-b"><div class="ttl">قنوات الإرسال <i class="fa-solid fa-arrow-left arr"></i></div>
+          <div class="hint">فعّل الرسائل القصيرة وواتساب واضبط روابط المزوّد ونمط الإرسال.</div></div>
+      </a>
+      <a class="oc-act" href="{{ url_for('radius.communications_bot') }}">
+        <span class="oc-act-ic green"><i class="fa-solid fa-robot"></i></span>
+        <div class="oc-act-b"><div class="ttl">بوت واتساب <i class="fa-solid fa-arrow-left arr"></i></div>
+          <div class="hint">ردود ذاتية على المشتركين: الرصيد، الباقة، معلومات الحساب.</div></div>
+      </a>
+      <a class="oc-act" href="{{ url_for('radius.communications_notifications') }}">
+        <span class="oc-act-ic amber"><i class="fa-solid fa-bell"></i></span>
+        <div class="oc-act-b"><div class="ttl">الإشعارات الحدثية <i class="fa-solid fa-arrow-left arr"></i></div>
+          <div class="hint">تنبيهات تلقائية عند الإنشاء والتجديد وقرب الانتهاء وغيرها.</div></div>
+      </a>
+      <a class="oc-act" href="{{ url_for('radius.communications_quota') }}">
+        <span class="oc-act-ic"><i class="fa-solid fa-wallet"></i></span>
+        <div class="oc-act-b"><div class="ttl">الرصيد والحِزم <i class="fa-solid fa-arrow-left arr"></i></div>
+          <div class="hint">رصيد الرسائل المدفوعة لكل قناة، وطلب حزمة جديدة.</div></div>
+      </a>
+      <a class="oc-act" href="{{ url_for('radius.communications_templates') }}">
+        <span class="oc-act-ic blue"><i class="fa-solid fa-file-lines"></i></span>
+        <div class="oc-act-b"><div class="ttl">القوالب <i class="fa-solid fa-arrow-left arr"></i></div>
+          <div class="hint">قوالب رسائل جاهزة بمتغيّرات تُملأ تلقائيًا عند الإرسال.</div></div>
+      </a>
+      <a class="oc-act" href="{{ url_for('radius.communications_send') }}">
+        <span class="oc-act-ic"><i class="fa-solid fa-paper-plane"></i></span>
+        <div class="oc-act-b"><div class="ttl">إرسال رسالة <i class="fa-solid fa-arrow-left arr"></i></div>
+          <div class="hint">إرسال موجّه لشريحة من المشتركين مع معاينة قبل الإرسال.</div></div>
+      </a>
+      <a class="oc-act" href="{{ url_for('radius.communications_deliveries') }}">
+        <span class="oc-act-ic slate"><i class="fa-solid fa-truck-fast"></i></span>
+        <div class="oc-act-b"><div class="ttl">سجل الإرسال <i class="fa-solid fa-arrow-left arr"></i></div>
+          <div class="hint">تتبّع كل رسالة: الحالة، المستلم، ورد المزوّد.</div></div>
+      </a>
+      <a class="oc-act" href="{{ url_for('radius.communications_guide') }}">
+        <span class="oc-act-ic green"><i class="fa-solid fa-book-open"></i></span>
+        <div class="oc-act-b"><div class="ttl">دليل وشروحات <i class="fa-solid fa-arrow-left arr"></i></div>
+          <div class="hint">شرح مصوّر خطوة بخطوة لربط بوت واتساب وتنبيهات تلجرام.</div></div>
+      </a>
+    </div>
+  {% endcall %}
 
   {# ════════ RECENT DELIVERIES TABLE ════════ #}
   {% call hub.section("أحدث عمليات الإرسال", icon="clock-rotate-left", meta="آخر 8 عمليات", flush=True) %}
     {% if deliveries %}
-      <div class="hub-table-wrap">
+      <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
         <table class="hub-table">
-          <thead><tr><th>الرقم</th><th>القناة</th><th>الحالة</th><th>المستلم</th></tr></thead>
+          <thead><tr><th class="num">الرقم</th><th>القناة</th><th>الحالة</th><th>المستلم</th></tr></thead>
           <tbody>
             {% for item in deliveries %}
               <tr>
-                <td>#{{ item.id }}</td>
+                <td class="num mono">#{{ item.id }}</td>
                 <td>{{ ch_label(item.channel) }}</td>
                 <td>{{ st_pill(item.status) }}</td>
                 <td>{{ item.recipient_type }} #{{ item.recipient_id }}</td>
@@ -355,5 +213,5 @@
     {% endif %}
   {% endcall %}
 
-</div>
+{% endcall %}
 {% endblock %}
