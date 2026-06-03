@@ -1,4 +1,5 @@
-{# Bandwidth profiles list — REBUILT N9 (hub-v2). Backend data: items list. #}
+{# Bandwidth profiles list — UNIFIED DESIGN SYSTEM (merged hero + help panel).
+   Same backend data: items list. Zero route/behaviour change. #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
@@ -9,73 +10,86 @@
 
 {% block content %}
 
-{{ hub.hero(
+{% set _with_burst = items|selectattr('burst')|list|length %}
+
+{# ───── Merged hero: title + actions + KPI strip (no search bar) ───── #}
+{{ hub.megahero(
   "ملفات السرعة",
-  subtitle="إدارة ملفّات Bandwidth — سرعة التنزيل/الرفع، السرعة المؤقتة، والأولوية",
+  subtitle="إدارة ملفّات Bandwidth — سرعة التنزيل/الرفع، السرعة المؤقتة، والأولوية، لتربطها بالباقات.",
   icon="gauge",
   actions_html='
     <a class="hub-btn hub-btn--primary" href="' + url_for('radius.bw_new') + '">
       <i class="fa-solid fa-plus"></i> إضافة ملف
-    </a>
-  '
+    </a>',
+  kpis=[
+    {'label': 'الإجمالي',        'value': items|length,                  'icon': 'gauge',  'variant': 'brand'},
+    {'label': 'بسرعة مؤقتة',     'value': _with_burst,                   'icon': 'rocket', 'variant': 'green'},
+    {'label': 'بدون سرعة مؤقتة', 'value': items|length - _with_burst,    'icon': 'minus',  'variant': 'grey'},
+  ]
 ) }}
 
 {% if items %}
-{% set _with_burst = items|selectattr('burst')|list|length %}
-<div class="hub-kpi-grid">
-  {{ hub.kpi("الإجمالي",        items|length, icon="gauge",         variant="brand") }}
-  {{ hub.kpi("بسرعة مؤقتة",     _with_burst,  icon="rocket",        variant="green") }}
-  {{ hub.kpi("بدون سرعة مؤقتة", items|length - _with_burst, icon="minus", variant="grey") }}
-</div>
-
-{% call hub.section("الملفات", icon="table-list", meta=items|length|string + " ملف", flush=True) %}
-  <div class="hub-table-wrap" style="border:none;border-radius:0">
-    <table class="hub-table">
-      <thead>
-        <tr>
-          <th class="num" style="width:60px">#</th>
-          <th>الاسم</th>
-          <th>تنزيل</th>
-          <th>رفع</th>
-          <th>سرعة مؤقتة</th>
-          <th class="num">الأولوية</th>
-          <th style="width:120px">إجراءات</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for b in items %}
-        <tr>
-          <td class="num mono">{{ b.id }}</td>
-          <td><strong>{{ b.name }}</strong></td>
-          <td class="mono small">
-            <i class="fa-solid fa-arrow-down" style="color:var(--hub-blue);font-size:10px"></i>
-            {{ b.rate_down }} {{ b.rate_down_unit }}
-          </td>
-          <td class="mono small">
-            <i class="fa-solid fa-arrow-up" style="color:var(--hub-green);font-size:10px"></i>
-            {{ b.rate_up }} {{ b.rate_up_unit }}
-          </td>
-          <td class="mono small">{{ b.burst or '—' }}</td>
-          <td class="num mono">{{ hub.pill(b.priority|string, variant="brand", dot=False) }}</td>
-          <td>
-            <div class="hub-flex-row" style="gap:4px;flex-wrap:nowrap">
-              <a class="hub-btn hub-btn--ghost hub-btn--icon" title="تعديل"
-                 href="{{ url_for('radius.bw_edit', bw_id=b.id) }}">
-                <i class="fa-solid fa-pen"></i>
-              </a>
-              <form method="post" action="{{ url_for('radius.bw_delete', bw_id=b.id) }}"
-                    onsubmit="return confirm('حذف؟')" style="display:inline">
-                <button type="submit" class="hub-btn hub-btn--danger hub-btn--icon" title="حذف">
-                  <i class="fa-solid fa-trash"></i>
-                </button>
-              </form>
-            </div>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+{# ───── Main (carded table) + help panel on the LEFT ───── #}
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "كيف تقرأ هذه الصفحة؟",
+  intro="كل صف هو ملف Bandwidth يحدّد سرعات الاتصال؛ تربطه بالباقات للتحكم في تجربة المشترك.",
+  items=[
+    {'icon': 'arrow-down', 'text': 'التنزيل هو السرعة القصوى للاستقبال (تظهر بوحدتها — Kbps/Mbps حسب الإعداد).'},
+    {'icon': 'arrow-up',   'text': 'الرفع هو السرعة القصوى للإرسال بنفس الوحدة المعروضة بجانب القيمة.'},
+    {'icon': 'rocket',     'text': 'السرعة المؤقتة (Burst) تسمح بتجاوز قصير للحد قبل العودة للسرعة الأساسية.'},
+    {'icon': 'sort',       'text': 'الأولوية الأقل رقمًا تُخدَم أوّلًا عند ازدحام الشبكة.'},
+  ],
+  note="القيم هنا سرعات اتصال — تأكّد من مطابقة الوحدة (Kbps أو Mbps) لما يدعمه مزوّدك."
+)) %}
+  {% call hub.section("الملفات", icon="table-list", meta=items|length|string + " ملف", flush=True) %}
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
+      <table class="hub-table">
+        <thead>
+          <tr>
+            <th class="num" style="width:60px">#</th>
+            <th>الاسم</th>
+            <th>تنزيل</th>
+            <th>رفع</th>
+            <th>سرعة مؤقتة</th>
+            <th class="num">الأولوية</th>
+            <th style="width:120px" data-uds-nosort data-uds-nocol>إجراءات</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for b in items %}
+          <tr>
+            <td class="num mono">{{ b.id }}</td>
+            <td><strong>{{ b.name }}</strong></td>
+            <td class="mono small">
+              <i class="fa-solid fa-arrow-down" style="color:var(--hub-blue);font-size:10px"></i>
+              {{ b.rate_down }} {{ b.rate_down_unit }}
+            </td>
+            <td class="mono small">
+              <i class="fa-solid fa-arrow-up" style="color:var(--hub-green);font-size:10px"></i>
+              {{ b.rate_up }} {{ b.rate_up_unit }}
+            </td>
+            <td class="mono small">{{ b.burst or '—' }}</td>
+            <td class="num mono">{{ hub.pill(b.priority|string, variant="brand", dot=False) }}</td>
+            <td>
+              <div class="hub-flex-row" style="gap:4px;flex-wrap:nowrap">
+                <a class="hub-btn hub-btn--ghost hub-btn--icon" title="تعديل"
+                   href="{{ url_for('radius.bw_edit', bw_id=b.id) }}">
+                  <i class="fa-solid fa-pen"></i>
+                </a>
+                <form method="post" action="{{ url_for('radius.bw_delete', bw_id=b.id) }}"
+                      onsubmit="return confirm('حذف؟')" style="display:inline">
+                  <button type="submit" class="hub-btn hub-btn--danger hub-btn--icon" title="حذف">
+                    <i class="fa-solid fa-trash"></i>
+                  </button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endcall %}
 {% endcall %}
 {% else %}
 {{ hub.empty(
