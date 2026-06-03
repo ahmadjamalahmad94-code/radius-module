@@ -1,110 +1,132 @@
+{# Router metrics-push agent setup — UNIFIED DESIGN SYSTEM.
+   Same backend data: base_url, tokens, suggested_token_name, routers.
+   Zero route/behaviour change. Merged hero (header + token/router KPIs),
+   help panel on the LEFT (the concept + reading guide), every step inside a
+   hub.section card. Form field IDs (mx-router / mx-url / mx-token / mx-script-body
+   / mx-test-body) and the data-copy-* JS hooks are preserved verbatim. #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
+
 {% block title %}إعداد دفع مقاييس الراوتر{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-gauge-high"></i>{% endblock %}
 {% block page_title %}إعداد دفع مقاييس الراوتر{% endblock %}
 {% block page_sub %}<span class="sub">الراوتر يرسل مقاييسه للخادم كل دقيقتين حتى تعمل تنبيهات الفصل والاستهلاك</span>{% endblock %}
 
-{% block head_extra %}
-<style>
-  .mx-card{background:#fff;border:1px solid var(--hub-border,#cbd5e1);border-radius:14px;box-shadow:var(--hub-sh-sm,0 1px 3px rgba(15,23,42,.06));margin-bottom:14px;padding:16px 20px}
-  .mx-card h3{margin:0 0 10px;font-size:15px;color:#5b21b6;display:flex;align-items:center;gap:8px}
-  .mx-row{display:grid;grid-template-columns:150px 1fr;gap:10px;align-items:center;margin-bottom:10px}
-  .mx-row label{font-size:13px;font-weight:800;color:#475569}
-  .mx-row input,.mx-row select{width:100%;padding:8px 12px;border:1px solid #d5ccf5;border-radius:8px;font-size:13px;direction:ltr}
-  .mx-script{background:#0f172a;color:#e2e8f0;border-radius:10px;padding:14px 16px;margin-top:10px;position:relative;overflow:auto}
-  .mx-script pre{margin:0;font-family:var(--hub-mono,monospace);font-size:12px;line-height:1.65;color:#bfdbfe;direction:ltr;white-space:pre}
-  .mx-copy{position:absolute;inset-inline-end:10px;top:10px;background:#1e293b;color:#cbd5e1;border:1px solid #334155;padding:5px 12px;border-radius:6px;font-size:11.5px;font-weight:800;cursor:pointer}
-  .mx-copy:hover{color:#fff;background:#334155}
-  .mx-copy.is-copied{background:#16a34a;color:#fff;border-color:#16a34a}
-  .mx-step{font-size:13.5px;line-height:1.9;color:#1f2937}
-  .mx-warn{background:#fffbeb;border:1px solid #fcd34d;color:#92400e;padding:10px 14px;border-radius:8px;font-size:12.5px;margin-bottom:12px}
-  .mx-muted{font-size:12px;color:#64748b;margin:4px 0 0;line-height:1.7}
-  .mx-muted a{font-weight:800;color:#5b21b6}
-  @media (max-width:640px){.mx-row{grid-template-columns:1fr}.mx-card{padding:14px}}
-</style>
-{% endblock %}
-
 {% block content %}
-{{ hub.hero("إعداد دفع مقاييس الراوتر",
-    subtitle="سكربت يُلصق مرة واحدة على الراوتر، وبعدها يرسل حالة الواجهات وعدادات النقل إلى الخادم",
-    icon="gauge-high") }}
+<section data-mt-metrics-setup-page>
 
-<div class="mx-card">
-  <h3><i class="fa-solid fa-circle-info"></i> الفكرة باختصار</h3>
-  <p style="font-size:13.5px;line-height:1.8;color:#475569;margin:0">
-    التنبيهات الذكية تحتاج بيانات حيّة من الراوتر. وبما أن الراوتر غالبًا خلف شبكة داخلية ولا يستطيع الخادم الوصول إليه مباشرة،
-    يعكس النظام الاتجاه: الراوتر هو الذي يرسل المقاييس للخادم كل دقيقتين. إذا توقف الإرسال بعد المدة المحددة،
-    يفتح النظام تنبيهًا واضحًا بأن الراوتر مفصول.
-  </p>
-</div>
+{# ───── Merged hero: title + subtitle + token/router KPIs ───── #}
+{% call hub.megahero(
+  "إعداد دفع مقاييس الراوتر",
+  subtitle="سكربت يُلصق مرة واحدة على الراوتر، وبعدها يرسل حالة الواجهات وعدادات النقل إلى الخادم كل دقيقتين.",
+  icon="gauge-high",
+  kpis=[
+    {'label': 'رموز ربط مفعلة', 'value': tokens|length,   'icon': 'key',    'variant': ('green' if tokens else 'amber')},
+    {'label': 'راوترات مسجلة',  'value': routers|length,   'icon': 'router', 'variant': ('brand' if routers else 'amber')},
+  ]
+) %}{% endcall %}
 
-{% if not tokens %}
-<div class="mx-warn">
-  <i class="fa-solid fa-triangle-exclamation"></i>
-  لا يوجد رمز ربط مفعل بعد. أنشئ رمزًا من
-  <a href="{{ url_for('radius.tok_list') }}" target="_blank" rel="noopener" style="font-weight:800;color:#92400e;text-decoration:underline">إدارة رموز الربط</a>
-  ثم ارجع والصقه في الحقل أدناه.
-</div>
-{% endif %}
+{# ───── Main column + help panel on the LEFT ───── #}
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "الفكرة باختصار",
+  intro="التنبيهات الذكية تحتاج بيانات حيّة من الراوتر. وبما أن الراوتر غالبًا خلف شبكة داخلية ولا يستطيع الخادم الوصول إليه مباشرة، يعكس النظام الاتجاه: الراوتر هو الذي يرسل المقاييس للخادم.",
+  icon="lightbulb",
+  items=[
+    {'icon': 'clock-rotate-left', 'text': 'الراوتر يرسل المقاييس كل دقيقتين تلقائيًا بعد لصق السكربت مرة واحدة.'},
+    {'icon': 'plug-circle-xmark', 'text': 'إذا توقف الإرسال بعد المدة المحددة، يفتح النظام تنبيهًا واضحًا بأن الراوتر مفصول.'},
+    {'icon': 'key',               'text': 'تحتاج رمز ربط مفعل واحد على الأقل ليصادق الراوتر نفسه عند الإرسال.'},
+  ],
+  note="غيّر عنوان الخادم أو الرمز هنا ليتحدّث السكربت الناتج فورًا قبل نسخه."
+)) %}
 
-<div class="mx-card">
-  <h3><i class="fa-solid fa-screwdriver-wrench"></i> بيانات التوليد</h3>
-  <div class="mx-row">
-    <label>الراوتر</label>
-    <select id="mx-router">
-      {% for r in routers %}
-      <option value="{{ r.id }}">{{ r.name }} (#{{ r.id }})</option>
-      {% endfor %}
-      {% if not routers %}<option value="">لا توجد راوترات مسجلة</option>{% endif %}
-    </select>
-  </div>
-  <div class="mx-row">
-    <label>عنوان الخادم</label>
-    <input type="text" id="mx-url" value="{{ base_url }}" dir="ltr">
-  </div>
-  <div class="mx-row">
-    <label>رمز الربط</label>
-    <input type="text" id="mx-token" value="" autocomplete="off" placeholder="الصق رمز الربط من شاشة إدارة الرموز">
-  </div>
-  <p class="mx-muted">
-    لديك <strong>{{ tokens|length }}</strong> رمز مفعل{% if suggested_token_name %}، مثل: <strong>{{ suggested_token_name }}</strong>{% endif %}.
-    <a href="{{ url_for('radius.tok_list') }}">إدارة الرموز</a>
-  </p>
-</div>
+  {% if not tokens %}
+  {% call hub.section("تنبيه: لا يوجد رمز ربط مفعل", icon="triangle-exclamation") %}
+    <div class="hub-text-mute" style="font-size:13.5px;line-height:1.9">
+      لا يوجد رمز ربط مفعل بعد. أنشئ رمزًا من
+      <a href="{{ url_for('radius.tok_list') }}" target="_blank" rel="noopener"
+         style="font-weight:800;color:var(--hub-brand,#5b21b6);text-decoration:underline">إدارة رموز الربط</a>
+      ثم ارجع والصقه في الحقل أدناه.
+    </div>
+  {% endcall %}
+  {% endif %}
 
-<div class="mx-card">
-  <h3><i class="fa-solid fa-list-ol"></i> خطوات التطبيق</h3>
-  <div class="mx-step">
-    1. اختر الراوتر، وتأكد من عنوان الخادم، والصق رمز الربط.
-    <br>2. انسخ السكربت الناتج من الصندوق التالي.
-    <br>3. الصقه مرة واحدة في طرفية الراوتر واضغط إدخال.
-    <br>4. بعد دقيقتين تقريبًا ستبدأ التنبيهات الذكية باستقبال المقاييس لهذا الراوتر.
-  </div>
-</div>
+  {# ── Generation inputs ── #}
+  {% call hub.section("بيانات التوليد", icon="screwdriver-wrench") %}
+    <div class="hub-field">
+      <label class="hub-field-label" for="mx-router">الراوتر</label>
+      <select class="hub-select" id="mx-router">
+        {% for r in routers %}
+        <option value="{{ r.id }}">{{ r.name }} (#{{ r.id }})</option>
+        {% endfor %}
+        {% if not routers %}<option value="">لا توجد راوترات مسجلة</option>{% endif %}
+      </select>
+    </div>
 
-<div class="mx-card">
-  <h3><i class="fa-solid fa-code"></i> سكربت الراوتر</h3>
-  <div class="mx-script">
-    <button class="mx-copy" type="button" data-copy-script><i class="fa-solid fa-copy"></i> نسخ</button>
-<pre id="mx-script-body" dir="ltr">جاري توليد السكربت...</pre>
-  </div>
-</div>
+    <div class="hub-field">
+      <label class="hub-field-label" for="mx-url">عنوان الخادم</label>
+      <input class="hub-input" type="text" id="mx-url" value="{{ base_url }}" dir="ltr">
+    </div>
 
-<div class="mx-card">
-  <h3><i class="fa-solid fa-vial"></i> اختبار سريع قبل الجدولة</h3>
-  <p class="mx-muted">انسخ الأمر التالي إذا أردت تجربة إرسال عينة واحدة قبل تشغيل المجدول الدائم.</p>
-  <div class="mx-script">
-    <button class="mx-copy" type="button" data-copy-test><i class="fa-solid fa-copy"></i> نسخ</button>
-<pre id="mx-test-body" dir="ltr">جاري توليد أمر الاختبار...</pre>
-  </div>
-</div>
+    <div class="hub-field">
+      <label class="hub-field-label" for="mx-token">رمز الربط</label>
+      <input class="hub-input" type="text" id="mx-token" value="" autocomplete="off" dir="ltr"
+             placeholder="الصق رمز الربط من شاشة إدارة الرموز">
+      <div class="hub-field-hint">
+        لديك <strong>{{ tokens|length }}</strong> رمز مفعل{% if suggested_token_name %}، مثل: <strong>{{ suggested_token_name }}</strong>{% endif %}.
+        <a href="{{ url_for('radius.tok_list') }}" style="font-weight:800;color:var(--hub-brand,#5b21b6)">إدارة الرموز</a>
+      </div>
+    </div>
+  {% endcall %}
 
-<div class="mx-card">
-  <h3><i class="fa-solid fa-broom"></i> إيقاف دفع المقاييس من الراوتر</h3>
-  <p class="mx-muted">استخدم هذا الأمر على الراوتر إذا أردت إيقاف إرسال المقاييس لهذا الخادم.</p>
-  <div class="mx-script"><pre dir="ltr">/system scheduler remove [find name=hoberadius-push-metrics]</pre></div>
-</div>
+  {# ── Steps ── #}
+  {% call hub.section("خطوات التطبيق", icon="list-ol") %}
+    <ol style="margin:0;padding-inline-start:20px;font-size:13.5px;line-height:2;color:var(--hub-text,#1f2937)">
+      <li>اختر الراوتر، وتأكد من عنوان الخادم، والصق رمز الربط.</li>
+      <li>انسخ السكربت الناتج من الصندوق التالي.</li>
+      <li>الصقه مرة واحدة في طرفية الراوتر واضغط إدخال.</li>
+      <li>بعد دقيقتين تقريبًا ستبدأ التنبيهات الذكية باستقبال المقاييس لهذا الراوتر.</li>
+    </ol>
+  {% endcall %}
+
+  {# ── Generated router script (clipboard JS hook preserved) ── #}
+  {% call hub.section("سكربت الراوتر", icon="code") %}
+    <div class="hub-fix">
+      <div class="hub-flex-row" style="justify-content:space-between;align-items:center;margin-bottom:8px;gap:10px">
+        <strong>السكربت الكامل (يُلصق مرة واحدة)</strong>
+        <button class="hub-btn hub-btn--secondary hub-btn--sm" type="button" data-copy-script>
+          <i class="fa-solid fa-copy"></i> نسخ
+        </button>
+      </div>
+<pre id="mx-script-body" dir="ltr" style="margin:0;padding:14px 16px;border-radius:12px;background:#0f172a;color:#bfdbfe;font-family:var(--hub-mono,ui-monospace,monospace);font-size:12px;line-height:1.65;overflow:auto;white-space:pre">جاري توليد السكربت...</pre>
+    </div>
+  {% endcall %}
+
+  {# ── Quick test command ── #}
+  {% call hub.section("اختبار سريع قبل الجدولة", icon="vial") %}
+    <p class="hub-text-mute" style="font-size:12.5px;margin:0 0 10px;line-height:1.7">
+      انسخ الأمر التالي إذا أردت تجربة إرسال عينة واحدة قبل تشغيل المجدول الدائم.
+    </p>
+    <div class="hub-fix">
+      <div class="hub-flex-row" style="justify-content:space-between;align-items:center;margin-bottom:8px;gap:10px">
+        <strong>أمر اختبار إرسال عينة واحدة</strong>
+        <button class="hub-btn hub-btn--secondary hub-btn--sm" type="button" data-copy-test>
+          <i class="fa-solid fa-copy"></i> نسخ
+        </button>
+      </div>
+<pre id="mx-test-body" dir="ltr" style="margin:0;padding:14px 16px;border-radius:12px;background:#0f172a;color:#bfdbfe;font-family:var(--hub-mono,ui-monospace,monospace);font-size:12px;line-height:1.65;overflow:auto;white-space:pre">جاري توليد أمر الاختبار...</pre>
+    </div>
+  {% endcall %}
+
+  {# ── Stop pushing metrics ── #}
+  {% call hub.section("إيقاف دفع المقاييس من الراوتر", icon="broom") %}
+    <p class="hub-text-mute" style="font-size:12.5px;margin:0 0 10px;line-height:1.7">
+      استخدم هذا الأمر على الراوتر إذا أردت إيقاف إرسال المقاييس لهذا الخادم.
+    </p>
+<pre dir="ltr" style="margin:0;padding:14px 16px;border-radius:12px;background:#0f172a;color:#e2e8f0;font-family:var(--hub-mono,ui-monospace,monospace);font-size:12.5px;line-height:1.7;overflow:auto;white-space:pre-wrap;word-break:break-word">/system scheduler remove [find name=hoberadius-push-metrics]</pre>
+  {% endcall %}
+
+{% endcall %}
+</section>
 
 <script>
 (function(){

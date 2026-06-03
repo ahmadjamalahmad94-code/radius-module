@@ -1,5 +1,6 @@
-{# S2.2 — Single audit-log entry detail page. #}
+{# S2.2 — Single audit-log entry detail page. UDS (unified design system). Backend untouched. #}
 {% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
 
 {% block title %}عملية #{{ entry.id }} — {{ entry.action }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-shield-halved"></i>{% endblock %}
@@ -45,144 +46,127 @@
 {%- endmacro %}
 
 {% block head_extra %}
+{{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/mt_dashboard.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/audit_log_redesign.css') }}">
 {% endblock %}
 
 {% block content %}
 
-<section class="mt-dashboard audit-shell audit-detail-shell"
-         data-audit-detail-page
-         data-audit-id="{{ entry.id }}">
+<section data-audit-detail-page data-audit-id="{{ entry.id }}">
 
-  <section class="audit-detail-hero audit-event--{{ entry.severity_tone }}">
-    <a class="audit-btn audit-btn--ghost"
-       href="{{ url_for('radius.audit_log_index') }}">
-      <i class="fa-solid fa-arrow-right"></i>
-      الرجوع للسجل
-    </a>
-    <div class="audit-detail-hero__main">
-      <span class="audit-kicker">
-        <i class="fa-solid fa-fingerprint"></i>
-        عملية موثقة
-      </span>
-      <h2>{{ entry.action_label }}</h2>
-      <code dir="ltr">{{ entry.action }}</code>
-    </div>
-    <div class="audit-detail-hero__state">
-      <span class="audit-badge audit-badge--{{ entry.severity_tone }}">
-        {{ entry.severity_label }}
-      </span>
-      <span class="audit-badge audit-badge--{{ entry.result_tone }}">
-        {{ entry.result_label }}
-      </span>
-    </div>
-  </section>
+  {# ───── Merged hero: identity + action code + severity/result + back action ───── #}
+  {{ hub.megahero(
+    entry.action_label,
+    subtitle='<code dir="ltr">' ~ entry.action ~ '</code> · عملية موثقة في سجل التدقيق',
+    icon="shield-halved",
+    actions_html='
+      <span class="hub-pill hub-pill--' ~ (
+        'red' if entry.severity_tone == 'danger'
+        else 'amber' if entry.severity_tone == 'warning'
+        else 'blue'
+      ) ~ '">' ~ entry.severity_label ~ '</span>
+      <span class="hub-pill hub-pill--' ~ (
+        'green' if entry.result_tone == 'success'
+        else 'red' if entry.result_tone == 'danger'
+        else 'amber' if entry.result_tone == 'warning'
+        else 'grey'
+      ) ~ '">' ~ entry.result_label ~ '</span>
+      <a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.audit_log_index') ~ '">
+        <i class="fa-solid fa-arrow-right"></i> الرجوع للسجل
+      </a>
+    ',
+    kpis=[
+      {'label': 'رقم العملية',  'value': '#' ~ entry.id,                  'icon': 'hashtag',     'variant': 'brand'},
+      {'label': 'الخطورة',      'value': entry.severity_label,             'icon': 'triangle-exclamation',
+        'variant': ('red' if entry.severity_tone == 'danger' else 'amber' if entry.severity_tone == 'warning' else 'blue')},
+      {'label': 'النتيجة',      'value': entry.result_label,               'icon': 'circle-check',
+        'variant': ('green' if entry.result_tone == 'success' else 'red' if entry.result_tone == 'danger' else 'amber' if entry.result_tone == 'warning' else 'grey')},
+      {'label': 'الوقت',        'value': entry.created_at|dt_local,        'icon': 'clock',       'variant': 'blue'},
+    ]
+  ) }}
 
-  <section class="audit-detail-grid">
-    <article class="audit-detail-card audit-detail-card--wide">
-      <header class="audit-section-head">
-        <div>
-          <span class="audit-section-eyebrow">ملخص سريع</span>
-          <h3>هوية العملية</h3>
-        </div>
-        <span class="audit-count">#{{ entry.id }}</span>
-      </header>
+  {# ───── Main: identity + data sections · secrets-note help on the LEFT ───── #}
+  {% call hub.worklayout(aside_html=hub.helppanel(
+    "الأسرار مخفية",
+    intro="كلمات المرور والمفاتيح الحساسة تُحجب عند كتابة السجل وتظهر هنا كـ «***»، لذلك يمكن مراجعة العملية بدون كشف بيانات حساسة.",
+    icon="lock",
+    items=[
+      {'icon': 'id-card',          'text': 'بطاقة «هوية العملية» تُظهر الفاعل والهدف والراوتر ووقت التنفيذ.'},
+      {'icon': 'database',         'text': 'أقسام البيانات تعرض المُدخلات وحالة ما قبل/بعد التغيير عند توفّرها.'},
+      {'icon': 'circle-exclamation','text': 'يظهر صندوق الخطأ فقط عندما تسجّل العملية رسالة فشل.'},
+    ],
+    note="هذه واجهة عرض موحّدة — كل القيم تُقرأ من سجل التدقيق الأصلي دون تعديل."
+  )) %}
 
-      <dl class="audit-facts" data-audit-detail-meta>
-        <div>
-          <dt>الفاعل</dt>
-          <dd>{{ entry.actor or "غير محدد" }}</dd>
+    {% call hub.section("هوية العملية", icon="id-card", meta=("#" ~ entry.id)) %}
+      <dl class="uds-kv" data-audit-detail-meta>
+        <div class="uds-kv-row">
+          <span class="uds-kv-label">الفاعل</span>
+          <span class="uds-kv-value">{{ entry.actor or "غير محدد" }}</span>
         </div>
-        <div>
-          <dt>الهدف</dt>
-          <dd><code dir="ltr">{{ entry.target_label }}</code></dd>
+        <div class="uds-kv-row">
+          <span class="uds-kv-label">الهدف</span>
+          <span class="uds-kv-value mono"><code dir="ltr">{{ entry.target_label }}</code></span>
         </div>
-        <div>
-          <dt>الراوتر</dt>
-          <dd>{% if entry.router_id %}<code>{{ entry.router_id }}</code>{% else %}—{% endif %}</dd>
+        <div class="uds-kv-row">
+          <span class="uds-kv-label">الراوتر</span>
+          <span class="uds-kv-value mono">{% if entry.router_id %}<code>{{ entry.router_id }}</code>{% else %}—{% endif %}</span>
         </div>
-        <div>
-          <dt>الوقت</dt>
-          <dd><code dir="ltr">{{ entry.created_at|dt_local }}</code></dd>
+        <div class="uds-kv-row">
+          <span class="uds-kv-label">الوقت</span>
+          <span class="uds-kv-value mono"><code dir="ltr">{{ entry.created_at|dt_local }}</code></span>
         </div>
         {% if entry.ip_address %}
-        <div>
-          <dt>العنوان الشبكي</dt>
-          <dd><code dir="ltr">{{ entry.ip_address }}</code></dd>
+        <div class="uds-kv-row">
+          <span class="uds-kv-label">العنوان الشبكي</span>
+          <span class="uds-kv-value mono"><code dir="ltr">{{ entry.ip_address }}</code></span>
         </div>
         {% endif %}
         {% if entry.user_agent %}
-        <div class="audit-facts__full">
-          <dt>المتصفح</dt>
-          <dd><code dir="ltr">{{ entry.user_agent }}</code></dd>
+        <div class="uds-kv-row">
+          <span class="uds-kv-label">المتصفح</span>
+          <span class="uds-kv-value mono"><code dir="ltr">{{ entry.user_agent }}</code></span>
         </div>
         {% endif %}
       </dl>
-    </article>
+    {% endcall %}
 
-    <aside class="audit-detail-card audit-help-card">
-      <div class="audit-guide__icon">
-        <i class="fa-solid fa-lock"></i>
-      </div>
-      <h3>الأسرار مخفية</h3>
-      <p>
-        كلمات المرور والمفاتيح الحساسة تُحجب عند كتابة السجل وتظهر هنا كـ
-        <code>***</code>، لذلك يمكن مراجعة العملية بدون كشف بيانات حساسة.
-      </p>
-    </aside>
-  </section>
-
-  {% if entry.error_message %}
-  <section class="audit-error-card" data-audit-detail-error>
-    <i class="fa-solid fa-circle-exclamation"></i>
-    <div>
-      <strong>رسالة الخطأ</strong>
-      <p>{{ entry.error_message }}</p>
-    </div>
-  </section>
-  {% endif %}
-
-  {% if entry.payload %}
-  <section class="audit-json-card" data-audit-detail-payload>
-    <header class="audit-section-head">
+    {% if entry.error_message %}
+    <section class="audit-error-card" data-audit-detail-error>
+      <i class="fa-solid fa-circle-exclamation"></i>
       <div>
-        <span class="audit-section-eyebrow">بيانات التنفيذ</span>
-        <h3>تفاصيل البيانات</h3>
+        <strong>رسالة الخطأ</strong>
+        <p>{{ entry.error_message }}</p>
       </div>
-      <i class="fa-solid fa-database"></i>
-    </header>
-    {{ readable_audit_data(entry.payload) }}
-  </section>
-  {% endif %}
+    </section>
+    {% endif %}
 
-  <section class="audit-diff-grid">
+    {% if entry.payload %}
+    {% call hub.section("تفاصيل البيانات", icon="database", meta="بيانات التنفيذ") %}
+      <div data-audit-detail-payload>
+        {{ readable_audit_data(entry.payload) }}
+      </div>
+    {% endcall %}
+    {% endif %}
+
     {% if entry.before %}
-    <article class="audit-json-card" data-audit-detail-before>
-      <header class="audit-section-head">
-        <div>
-          <span class="audit-section-eyebrow">قبل التنفيذ</span>
-          <h3>قبل التغيير</h3>
-        </div>
-        <i class="fa-solid fa-clock-rotate-left"></i>
-      </header>
-      {{ readable_audit_data(entry.before) }}
-    </article>
+    {% call hub.section("قبل التغيير", icon="clock-rotate-left", meta="قبل التنفيذ") %}
+      <div data-audit-detail-before>
+        {{ readable_audit_data(entry.before) }}
+      </div>
+    {% endcall %}
     {% endif %}
 
     {% if entry.after %}
-    <article class="audit-json-card" data-audit-detail-after>
-      <header class="audit-section-head">
-        <div>
-          <span class="audit-section-eyebrow">بعد التنفيذ</span>
-          <h3>بعد التغيير</h3>
-        </div>
-        <i class="fa-solid fa-arrow-right-long"></i>
-      </header>
-      {{ readable_audit_data(entry.after) }}
-    </article>
+    {% call hub.section("بعد التغيير", icon="arrow-right-long", meta="بعد التنفيذ") %}
+      <div data-audit-detail-after>
+        {{ readable_audit_data(entry.after) }}
+      </div>
+    {% endcall %}
     {% endif %}
-  </section>
+
+  {% endcall %}
 
 </section>
 

@@ -1,57 +1,142 @@
+{# Campaigns (الحملات) — UNIFIED DESIGN SYSTEM (merged hero + help panel).
+   Same backend data: templates list + optional campaign dry-run result.
+   Zero route/behaviour change — all field names, the dry-run form, the
+   actions getlist, and the communications_nav include are preserved. #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
+{% from "_partials/toggle_switch.html" import toggle_switch %}
 
 {% block title %}الحملات — Hobe Hub{% endblock %}
-{% block page_icon %}<i class="fa-solid fa-bullseye"></i>{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-bullhorn"></i>{% endblock %}
 {% block page_title %}الحملات{% endblock %}
 {% block page_sub %}<span class="sub">حضّر حملات بمعاينة آمنة مع خطط إجراءات اختيارية. لا يتم تطبيق أي إجراء من هذه الصفحة.</span>{% endblock %}
 
 {% block content %}
-{{ hub.hero("الحملات", subtitle="حضّر تهاني المواسم وتنبيهات الأعطال وتذكيرات الديون والتجديد والعروض مع ربط إجراءات معاينة بدون تنفيذ.", icon="bullseye") }}
-{% include "radius/communications_nav.html" %}
 
-{% call hub.section("تجهيز معاينة حملة بدون إرسال", icon="clipboard-check") %}
-  <form method="post" class="hub-form-grid" data-testid="campaign-dry-run-form">
-    <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-    <label>مفتاح الحملة <input name="campaign_key" required placeholder="renewal-may"></label>
-    <label>العنوان <input name="title" required></label>
-    <label>القالب
-      <select name="template_id" required>
-        {% for template in templates %}
-          <option value="{{ template.id }}">{{ template.title }} — {{ template.channel }}</option>
-        {% endfor %}
-      </select>
-    </label>
-    <label>الهدف
-      <select name="target">
-        <option value="subscriber">المشتركون</option>
-        <option value="card_user">مستخدمو البطاقات</option>
-        <option value="manager">المدراء</option>
-        <option value="company">الشركة</option>
-      </select>
-    </label>
-    <label>رقم المدير <input name="manager_id" type="number" min="1"></label>
-    <label>الحد <input name="limit" type="number" min="1" max="500" value="100"></label>
-    <label class="hub-check"><input type="checkbox" name="actions" value="record_event"> إرسال + تسجيل حدث</label>
-    <label class="hub-check"><input type="checkbox" name="actions" value="add_free_days"> إرسال + معاينة إضافة أيام مجانية بدون تنفيذ</label>
-    <label class="hub-check"><input type="checkbox" name="actions" value="wallet_credit"> إرسال + معاينة إضافة رصيد للمحفظة بدون تنفيذ</label>
-    <button class="hub-btn hub-btn--primary" type="submit">تجهيز المعاينة</button>
-  </form>
+{# ───── ONE unified hero: title + subtitle + KPI strip (no filter here) ───── #}
+{% call hub.megahero(
+  "الحملات",
+  subtitle="حضّر تهاني المواسم وتنبيهات الأعطال وتذكيرات الديون والتجديد والعروض مع ربط إجراءات معاينة بدون تنفيذ — لا يُرسل شيء من هذه الشاشة.",
+  icon="bullhorn",
+  kpis=[
+    {'label': 'القوالب المتاحة', 'value': templates|length, 'icon': 'file-lines', 'variant': 'brand', 'sub': 'قالب جاهز للحملة'},
+    {'label': 'الإجراءات الاختيارية', 'value': 3, 'icon': 'list-check', 'variant': 'amber', 'sub': 'تُعاين بدون تنفيذ'},
+    {'label': 'وضع المعاينة', 'value': 'آمن', 'icon': 'shield-halved', 'variant': 'green', 'sub': 'بدون إرسال خارجي'},
+  ]
+) %}
 {% endcall %}
 
-{% if campaign %}
-  {% call hub.section("نتيجة المعاينة", icon="circle-info") %}
-    <div data-testid="campaign-dry-run-result">
-      <p>المستلمون: {{ campaign.dry_run.recipient_count }}</p>
-      <p>إرسال خارجي: {{ campaign.dry_run.external_send }}</p>
-      <ul>
-        {% for action in campaign.dry_run.actions %}
-          <li>{{ action.type }} — {{ action.status }}</li>
-        {% else %}
-          <li>لم تطلب أي إجراءات مرتبطة.</li>
-        {% endfor %}
-      </ul>
-    </div>
+{% include "radius/communications_nav.html" %}
+
+{# ───── Full-width work layout: main content + help panel on the LEFT ───── #}
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "ما هذه الصفحة؟",
+  intro="جهّز حملة وعاين أثرها قبل أي إرسال. المعاينة لا تُرسل رسائل خارجية ولا تطبّق أي إجراء — تُظهر فقط عدد المستلمين والإجراءات التي ستحدث.",
+  icon="circle-info",
+  items=[
+    {'icon': 'key', 'text': 'مفتاح الحملة معرّف فريد يميّزها (مثل renewal-may) ويظهر في السجلات.'},
+    {'icon': 'file-lines', 'text': 'القالب هو نص الرسالة الجاهز؛ أنشئ قوالب جديدة من صفحة «القوالب».'},
+    {'icon': 'users', 'text': 'الهدف والحد يحدّدان الجمهور وعدد المستلمين الأقصى في المعاينة.'},
+    {'icon': 'shield-halved', 'text': 'الإجراءات الاختيارية (أيام مجانية / رصيد محفظة) تُعاين فقط — لا تُنفّذ.'},
+  ],
+  note="هذه الصفحة للتجهيز والمعاينة فقط؛ الإرسال الفعلي يتم من صفحة «إرسال رسالة»."
+)) %}
+
+  {# ════════ CAMPAIGN DRY-RUN FORM ════════ #}
+  {% call hub.section("تجهيز معاينة حملة بدون إرسال", icon="clipboard-check") %}
+    <form method="post" class="hub-form-grid" data-testid="campaign-dry-run-form">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+      <label>مفتاح الحملة <input name="campaign_key" required placeholder="renewal-may"></label>
+      <label>العنوان <input name="title" required></label>
+      <label>القالب
+        <select name="template_id" required>
+          {% for template in templates %}
+            <option value="{{ template.id }}">{{ template.title }} — {{ template.channel }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>الهدف
+        <select name="target">
+          <option value="subscriber">المشتركون</option>
+          <option value="card_user">مستخدمو البطاقات</option>
+          <option value="manager">المدراء</option>
+          <option value="company">الشركة</option>
+        </select>
+      </label>
+      <label>رقم المدير <input name="manager_id" type="number" min="1"></label>
+      <label>الحد <input name="limit" type="number" min="1" max="500" value="100"></label>
+
+      {# Optional action plans — each posts name="actions" via getlist (unchanged). #}
+      <div class="hub-form-full">
+        <div class="hub-text-mute" style="font-size:12px;font-weight:700;margin-bottom:8px">
+          <i class="fa-solid fa-list-check"></i> إجراءات اختيارية ترافق الإرسال (معاينة فقط)
+        </div>
+        <div class="cc-actions">
+          <label class="cc-action">
+            {{ toggle_switch(name="actions", value="record_event", show_label=False) }}
+            <span class="cc-action-txt">إرسال + تسجيل حدث</span>
+          </label>
+          <label class="cc-action">
+            {{ toggle_switch(name="actions", value="add_free_days", show_label=False) }}
+            <span class="cc-action-txt">إرسال + معاينة إضافة أيام مجانية بدون تنفيذ</span>
+          </label>
+          <label class="cc-action">
+            {{ toggle_switch(name="actions", value="wallet_credit", show_label=False) }}
+            <span class="cc-action-txt">إرسال + معاينة إضافة رصيد للمحفظة بدون تنفيذ</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="hub-form-full">
+        <button class="hub-btn hub-btn--primary" type="submit">
+          <i class="fa-solid fa-clipboard-check"></i> تجهيز المعاينة
+        </button>
+      </div>
+    </form>
   {% endcall %}
-{% endif %}
+
+  {# ════════ DRY-RUN RESULT ════════ #}
+  {% if campaign %}
+    {% call hub.section("نتيجة المعاينة", icon="circle-info") %}
+      <div data-testid="campaign-dry-run-result">
+        {{ hub.kv([
+          {'label': 'عدد المستلمين', 'value': campaign.dry_run.recipient_count, 'mono': True},
+          {'label': 'إرسال خارجي', 'value': campaign.dry_run.external_send},
+        ]) }}
+        <div class="hub-section-head" style="margin-top:14px">
+          <span class="hub-section-head-icon"><i class="fa-solid fa-list-check"></i></span>
+          <span class="hub-section-head-title">الإجراءات المعاينة</span>
+        </div>
+        <ul class="cc-result-list">
+          {% for action in campaign.dry_run.actions %}
+            <li><i class="fa-solid fa-circle-check"></i> {{ action.type }} — <strong>{{ action.status }}</strong></li>
+          {% else %}
+            <li class="hub-text-mute"><i class="fa-solid fa-minus"></i> لم تطلب أي إجراءات مرتبطة.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endcall %}
+  {% endif %}
+
+{% endcall %}
+
+<style>
+  /* Dry-run form: responsive 2-up grid with full-width spanning rows. */
+  .hub-form-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:14px; align-items:start; }
+  .hub-form-grid > label{ display:flex; flex-direction:column; gap:6px; font-size:12.5px; font-weight:700; color:var(--hub-text-soft,#475569); }
+  .hub-form-grid input, .hub-form-grid select{ width:100%; border:1px solid var(--hub-border,#cbd5e1); border-radius:10px;
+    padding:9px 11px; font:inherit; font-size:13px; background:#fff; color:var(--hub-text,#0f172a); box-sizing:border-box; }
+  .hub-form-grid input:focus, .hub-form-grid select:focus{ outline:0; border-color:var(--hub-brand,#6b5aed);
+    box-shadow:0 0 0 3px var(--hub-brand-soft,rgba(107,90,237,.15)); }
+  .hub-form-full{ grid-column:1 / -1; }
+
+  /* Optional-action rows: toggle + descriptive label (retained custom layout). */
+  .cc-actions{ display:grid; gap:10px; }
+  .cc-action{ display:flex; align-items:center; gap:12px; cursor:pointer; }
+  .cc-action-txt{ font-size:13px; font-weight:600; color:var(--hub-text-soft,#475569); line-height:1.5; }
+  .cc-result-list{ list-style:none; margin:10px 0 0; padding:0; display:grid; gap:8px; }
+  .cc-result-list li{ display:flex; align-items:center; gap:9px; font-size:13.5px; color:var(--hub-text,#0f172a); }
+  .cc-result-list li i{ color:var(--hub-brand,#6b5aed); font-size:13px; }
+  .cc-result-list li.hub-text-mute i{ color:var(--hub-text-mute,#94a3b8); }
+</style>
 {% endblock %}

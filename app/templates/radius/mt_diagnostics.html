@@ -1,180 +1,179 @@
+{# MikroTik diagnostics — UNIFIED DESIGN SYSTEM.
+   Same backend data: report (summary + routers), vps_ip, wg_subnet.
+   Zero route/behaviour change. Merged hero (header + stats + re-scan action),
+   help panel on the LEFT, every router rendered inside a hub.section card.
+   All JS hooks / data-* attributes / clipboard handlers preserved. #}
 {% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
 
 {% block title %}تشخيص اتصال الراوترات{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-stethoscope"></i>{% endblock %}
 {% block page_title %}تشخيص اتصال الراوترات{% endblock %}
 {% block page_sub %}<span class="sub">فحص المنفذ، دخول واجهة الربط، هوية الراوتر، وأوامر إصلاح قابلة للنسخ</span>{% endblock %}
 
-{% block head_extra %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/mt_dashboard.css') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/radius_ops_redesign.css') }}?v=20260528a">
-{% endblock %}
-
 {% block content %}
 {% include "radius/network_ops_nav.html" %}
-<section class="opsx" data-mt-diagnostics-page>
-  <header class="opsx-hero">
-    <div>
-      <h2>تشخيص اتصال الراوترات</h2>
-      <p>فحص حي لكل راوتر معرف: هل المنفذ مفتوح؟ هل دخول واجهة الربط ينجح؟ وما الإصلاح المقترح عند الفشل.</p>
+
+<section data-mt-diagnostics-page>
+
+{# ───── Merged hero: title + re-scan action + live KPI summary strip ───── #}
+{% call hub.megahero(
+  "تشخيص اتصال الراوترات",
+  subtitle="فحص حي لكل راوتر معرّف: هل المنفذ مفتوح؟ هل دخول واجهة الربط ينجح؟ وما الإصلاح المقترح عند الفشل.",
+  icon="wave-square",
+  actions_html='
+    <button type="button" class="hub-btn hub-btn--primary" onclick="location.reload()">
+      <i class="fa-solid fa-arrows-rotate"></i> إعادة الفحص الآن
+    </button>',
+  kpis=[
+    {'label': 'يعمل',          'value': report.summary.ok,         'icon': 'circle-check',     'variant': 'green'},
+    {'label': 'المنفذ مغلق',   'value': report.summary.tcp_failed, 'icon': 'plug-circle-xmark','variant': 'red'},
+    {'label': 'فشل واجهة الربط','value': report.summary.api_failed, 'icon': 'key',              'variant': 'amber'},
+    {'label': 'معطل',          'value': report.summary.disabled,   'icon': 'circle-pause',     'variant': 'brand'},
+    {'label': 'المجموع',       'value': report.summary.total,      'icon': 'layer-group',      'variant': 'brand'},
+  ]
+) %}{% endcall %}
+
+{# ───── Main column + help panel on the LEFT ───── #}
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "دليل القراءة",
+  intro="هذه الصفحة تفحص فعلياً الاتصال، لذلك استخدمها بعد أي تغيير في الجدار الناري أو الاتصال المشفّر أو حساب الربط.",
+  icon="clipboard-check",
+  items=[
+    {'icon': 'plug', 'text': 'فشل المنفذ يعني أن الطريق للمنفذ غير مفتوح.'},
+    {'icon': 'key',  'text': 'فشل واجهة الربط يعني أن الطريق مفتوح لكن بيانات الدخول أو الصلاحيات لا تعمل.'},
+    {'icon': 'copy', 'text': 'أوامر الإصلاح تستخدم نفس بيانات الراوتر وطريقة الاتصال.'},
+  ]
+)) %}
+
+  {# ── Current-scan meta card ── #}
+  {% call hub.section("الفحص الحالي", icon="rotate") %}
+    <div class="hub-flex-row" style="gap:8px;flex-wrap:wrap;align-items:center">
+      <span class="hub-text-mute">IP الخادم كما ظهر للطلب</span>
+      <code style="font-family:var(--hub-mono,ui-monospace,monospace);background:var(--hub-bg-soft,#f1f5f9);padding:3px 9px;border-radius:8px;font-size:13px">{{ vps_ip }}</code>
     </div>
-    <span class="opsx-hero-icon"><i class="fa-solid fa-wave-square"></i></span>
-  </header>
+  {% endcall %}
 
-  <div class="opsx-layout">
-    <aside class="opsx-guide" aria-label="شرح التشخيص">
-      <div class="opsx-guide-title"><i class="fa-solid fa-clipboard-check"></i> دليل القراءة</div>
-      <p>هذه الصفحة تفحص فعلياً الاتصال، لذلك استخدمها بعد أي تغيير في الجدار الناري أو الاتصال المشفّر أو حساب الربط.</p>
-      <ul class="opsx-guide-list">
-        <li><i class="fa-solid fa-plug"></i><span>فشل المنفذ يعني أن الطريق للمنفذ غير مفتوح.</span></li>
-        <li><i class="fa-solid fa-key"></i><span>فشل واجهة الربط يعني أن الطريق مفتوح لكن بيانات الدخول أو الصلاحيات لا تعمل.</span></li>
-        <li><i class="fa-solid fa-copy"></i><span>أوامر الإصلاح تستخدم نفس بيانات الراوتر وطريقة الاتصال.</span></li>
-      </ul>
-    </aside>
+  {% if not report.routers %}
+  {{ hub.empty(
+    "لا يوجد أي راوتر معرّف",
+    sub="لا يوجد أي راوتر على هذا الـ tenant. أضف راوتر من إعدادات الراوترات أو من أجهزة الشبكة.",
+    icon="router"
+  ) }}
+  <div class="hub-flex-row" style="gap:8px;justify-content:center;margin-top:-8px">
+    <a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ url_for('radius.mt_list') }}">
+      <i class="fa-solid fa-sliders"></i> إعدادات الراوترات
+    </a>
+    <a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ url_for('radius.devices_list') }}">
+      <i class="fa-solid fa-network-wired"></i> أجهزة الشبكة
+    </a>
+  </div>
+  {% endif %}
 
-    <main class="opsx-main">
-      <section class="opsx-stats">
-        <div class="opsx-stat opsx-stat--ok"><span>يعمل</span><strong>{{ report.summary.ok }}</strong></div>
-        <div class="opsx-stat opsx-stat--bad"><span>المنفذ مغلق</span><strong>{{ report.summary.tcp_failed }}</strong></div>
-        <div class="opsx-stat opsx-stat--warn"><span>فشل واجهة الربط</span><strong>{{ report.summary.api_failed }}</strong></div>
-        <div class="opsx-stat"><span>معطل</span><strong>{{ report.summary.disabled }}</strong></div>
-        <div class="opsx-stat"><span>المجموع</span><strong>{{ report.summary.total }}</strong></div>
-      </section>
+  {% for r in report.routers %}
+  {% set _status_meta =
+       ('يعمل','green')          if r.status == 'ok'         else
+       ('المنفذ مغلق','red')      if r.status == 'tcp_failed' else
+       ('فشل واجهة الربط','amber') if r.status == 'api_failed' else
+       ('معطل','grey')           if r.status == 'disabled'   else
+       (r.status,'grey') %}
+  {% call hub.section(r.name, icon="router", meta=r.host ~ ':' ~ r.port) %}
+    <div data-router-host="{{ r.host }}">
 
-      <section class="opsx-panel">
-        <header class="opsx-panel-head">
-          <div class="opsx-panel-title"><i class="fa-solid fa-rotate"></i> الفحص الحالي</div>
-          <div class="opsx-actions">
-            <button type="button" class="opsx-btn opsx-btn--primary" onclick="location.reload()">
-              <i class="fa-solid fa-arrows-rotate"></i> إعادة الفحص الآن
-            </button>
-          </div>
-        </header>
-        <div class="opsx-panel-body">
-          <div class="opsx-row-meta">
-            <span>IP الخادم كما ظهر للطلب <code>{{ vps_ip }}</code></span>
-          </div>
-        </div>
-      </section>
-
-      {% if not report.routers %}
-      <section class="opsx-panel">
-        <div class="opsx-panel-body">
-          <p class="opsx-empty">
-            لا يوجد أي راوتر معرف على هذا الـ tenant.
-            أضف راوتر من <a href="{{ url_for('radius.mt_list') }}">إعدادات الراوترات</a>
-            أو من <a href="{{ url_for('radius.devices_list') }}">أجهزة الشبكة</a>.
-          </p>
-        </div>
-      </section>
-      {% endif %}
-
-      {% for r in report.routers %}
-      <section class="opsx-panel" data-router-host="{{ r.host }}">
-        <header class="opsx-panel-head">
-          <div class="opsx-panel-title">
-            <i class="fa-solid fa-router"></i>
-            {{ r.name }}
-          </div>
-          {% if r.status == 'ok' %}
-          <span class="opsx-chip opsx-chip--ok">يعمل</span>
-          {% elif r.status == 'tcp_failed' %}
-          <span class="opsx-chip opsx-chip--bad">المنفذ مغلق</span>
-          {% elif r.status == 'api_failed' %}
-          <span class="opsx-chip opsx-chip--warn">فشل واجهة الربط</span>
-          {% elif r.status == 'disabled' %}
-          <span class="opsx-chip">معطل</span>
+      {# Status + connection-mode row #}
+      <div class="hub-flex-row" style="gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px">
+        {{ hub.pill(_status_meta[0], variant=_status_meta[1]) }}
+        <span class="hub-flex-row" style="gap:7px;align-items:center;font-size:12.5px"
+              data-mt-conn-mode="{{ r.connection_mode }}">
+          {% if r.connection_mode == 'vpn' %}
+            <i class="fa-solid fa-shield-halved hub-text-mute"></i>
+            <span class="hub-text-mute">نفق الإدارة</span>
           {% else %}
-          <span class="opsx-chip">{{ r.status }}</span>
+            <i class="fa-solid fa-network-wired hub-text-mute"></i>
+            <span class="hub-text-mute">اتصال مباشر</span>
           {% endif %}
-        </header>
-        <div class="opsx-panel-body">
-          <div class="opsx-router-top" style="margin-bottom:14px">
-            <span class="opsx-router-icon">
-              {% if r.connection_mode == 'vpn' %}<i class="fa-solid fa-shield-halved"></i>{% else %}<i class="fa-solid fa-network-wired"></i>{% endif %}
-            </span>
-            <div>
-              <span class="opsx-router-name">{{ r.host }}:{{ r.port }}</span>
-              <span class="opsx-router-sub" data-mt-conn-mode="{{ r.connection_mode }}">
-                {% if r.connection_mode == 'vpn' %}نفق الإدارة{% else %}اتصال مباشر{% endif %}
-              </span>
-            </div>
-          </div>
+        </span>
+      </div>
 
-          <div class="opsx-stats" style="margin-bottom:14px">
-            {% if r.tcp %}
-            <div class="opsx-stat {% if r.tcp.ok %}opsx-stat--ok{% else %}opsx-stat--bad{% endif %}">
-              <span>فحص المنفذ</span>
-              <strong style="font-size:18px">{% if r.tcp.ok %}متاح{% else %}فشل{% endif %}</strong>
-              {% if r.tcp.latency_ms is not none %}<span>{{ r.tcp.latency_ms }} ms</span>{% endif %}
-            </div>
-            {% endif %}
-            {% if r.api %}
-            <div class="opsx-stat {% if r.api.ok %}opsx-stat--ok{% else %}opsx-stat--warn{% endif %}">
-              <span>دخول واجهة الربط</span>
-              <strong style="font-size:18px">{% if r.api.ok %}ناجح{% else %}فشل{% endif %}</strong>
-              {% if r.api.latency_ms is not none %}<span>{{ r.api.latency_ms }} ms</span>{% endif %}
-            </div>
-            {% endif %}
-            {% if r.api and r.api.ok %}
-            <div class="opsx-stat opsx-stat--ok">
-              <span>هوية الراوتر</span>
-              <strong style="font-size:18px">{{ r.api.identity or '—' }}</strong>
-            </div>
-            {% endif %}
-            <div class="opsx-stat">
-              <span>المنفذ</span>
-              <strong style="font-size:18px">{{ r.port }}</strong>
-              <span>مهلة 20 ثانية</span>
-            </div>
-          </div>
+      {# Probe results as unified tiles #}
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:14px">
+        {% if r.tcp %}
+        {{ hub.tile(
+            "فحص المنفذ",
+            ("متاح" if r.tcp.ok else "فشل"),
+            icon="plug",
+            variant=("ok" if r.tcp.ok else "danger"),
+            sub=((r.tcp.latency_ms ~ " ms") if r.tcp.latency_ms is not none else "")
+        ) }}
+        {% endif %}
+        {% if r.api %}
+        {{ hub.tile(
+            "دخول واجهة الربط",
+            ("ناجح" if r.api.ok else "فشل"),
+            icon="key",
+            variant=("ok" if r.api.ok else "warn"),
+            sub=((r.api.latency_ms ~ " ms") if r.api.latency_ms is not none else "")
+        ) }}
+        {% endif %}
+        {% if r.api and r.api.ok %}
+        {{ hub.tile("هوية الراوتر", r.api.identity or '—', icon="fingerprint", variant="ok") }}
+        {% endif %}
+        {{ hub.tile("المنفذ", r.port, icon="ethernet", sub="مهلة 20 ثانية") }}
+      </div>
 
-          <div class="opsx-row {% if r.status == 'ok' %}opsx-row--ok{% endif %}">
-            <div class="opsx-row-head"><span class="opsx-row-title">{{ r.verdict }}</span></div>
-            {% if r.hint %}<p class="opsx-row-text">{{ r.hint }}</p>{% endif %}
-          </div>
+      {# Verdict + hint #}
+      <div class="hub-empty" style="text-align:initial;padding:14px 16px">
+        <div class="hub-empty-msg">{{ r.verdict }}</div>
+        {% if r.hint %}<div class="hub-empty-sub">{{ r.hint }}</div>{% endif %}
+      </div>
 
-          {% if r.status == 'tcp_failed' %}
-            {% if r.connection_mode == 'vpn' %}
-              {% set repair_address = wg_subnet %}
-              {% set repair_src = wg_subnet %}
-              {% set repair_label = "على الراوتر عبر نفق الإدارة المشفّر" %}
-            {% else %}
-              {% set repair_address = vps_ip ~ '/32' %}
-              {% set repair_src = vps_ip %}
-              {% set repair_label = "على الراوتر عبر العنوان العام" %}
-            {% endif %}
-          <div class="opsx-fix" data-mt-repair-mode="{{ r.connection_mode }}">
-            <button class="opsx-btn" type="button"
-                    onclick="navigator.clipboard.writeText(this.parentElement.querySelector('pre').textContent); this.textContent='منسوخ ✓'">
-              <i class="fa-solid fa-copy"></i> نسخ
-            </button>
-            <strong>{{ repair_label }}</strong>
-<pre>/ip service set api address={{ repair_address }} disabled=no port={{ r.port }}
+      {# Copyable repair scripts — heavy clipboard JS preserved verbatim #}
+      {% if r.status == 'tcp_failed' %}
+        {% if r.connection_mode == 'vpn' %}
+          {% set repair_address = wg_subnet %}
+          {% set repair_src = wg_subnet %}
+          {% set repair_label = "على الراوتر عبر نفق الإدارة المشفّر" %}
+        {% else %}
+          {% set repair_address = vps_ip ~ '/32' %}
+          {% set repair_src = vps_ip %}
+          {% set repair_label = "على الراوتر عبر العنوان العام" %}
+        {% endif %}
+      <div class="hub-fix" data-mt-repair-mode="{{ r.connection_mode }}" style="margin-top:14px">
+        <div class="hub-flex-row" style="justify-content:space-between;align-items:center;margin-bottom:8px;gap:10px">
+          <strong>{{ repair_label }}</strong>
+          <button class="hub-btn hub-btn--secondary hub-btn--sm" type="button"
+                  onclick="navigator.clipboard.writeText(this.closest('.hub-fix').querySelector('pre').textContent); this.textContent='منسوخ ✓'">
+            <i class="fa-solid fa-copy"></i> نسخ
+          </button>
+        </div>
+<pre class="mtd-code" style="margin:0;padding:14px 16px;border-radius:12px;background:#0f172a;color:#e2e8f0;font-family:var(--hub-mono,ui-monospace,monospace);font-size:12.5px;line-height:1.7;overflow:auto;white-space:pre-wrap;word-break:break-word">/ip service set api address={{ repair_address }} disabled=no port={{ r.port }}
 
 /ip firewall filter add chain=input src-address={{ repair_src }} \
     protocol=tcp dst-port={{ r.port }} action=accept \
     place-before=0 comment="HobeRadius API"
 
 /ip firewall filter print where dst-port={{ r.port }}</pre>
-          </div>
-          {% elif r.status == 'api_failed' %}
-          <div class="opsx-fix">
-            <button class="opsx-btn" type="button"
-                    onclick="navigator.clipboard.writeText(this.parentElement.querySelector('pre').textContent); this.textContent='منسوخ ✓'">
-              <i class="fa-solid fa-copy"></i> نسخ
-            </button>
-            <strong>تحقق من حساب الربط على الراوتر</strong>
-<pre>/user print where name=USERNAME_HERE
+      </div>
+      {% elif r.status == 'api_failed' %}
+      <div class="hub-fix" style="margin-top:14px">
+        <div class="hub-flex-row" style="justify-content:space-between;align-items:center;margin-bottom:8px;gap:10px">
+          <strong>تحقق من حساب الربط على الراوتر</strong>
+          <button class="hub-btn hub-btn--secondary hub-btn--sm" type="button"
+                  onclick="navigator.clipboard.writeText(this.closest('.hub-fix').querySelector('pre').textContent); this.textContent='منسوخ ✓'">
+            <i class="fa-solid fa-copy"></i> نسخ
+          </button>
+        </div>
+<pre class="mtd-code" style="margin:0;padding:14px 16px;border-radius:12px;background:#0f172a;color:#e2e8f0;font-family:var(--hub-mono,ui-monospace,monospace);font-size:12.5px;line-height:1.7;overflow:auto;white-space:pre-wrap;word-break:break-word">/user print where name=USERNAME_HERE
 /user group add name=api-only policy=api,read,write,test
 /user set USERNAME_HERE group=full
 /user set USERNAME_HERE password=NEW_STRONG_PASSWORD</pre>
-          </div>
-          {% endif %}
-        </div>
-      </section>
-      {% endfor %}
-    </main>
-  </div>
+      </div>
+      {% endif %}
+
+    </div>
+  {% endcall %}
+  {% endfor %}
+
+{% endcall %}
 </section>
 {% endblock %}

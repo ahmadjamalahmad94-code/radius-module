@@ -1,4 +1,4 @@
-{# نموذج أجهزة الشبكة — الواجهة فقط، من دون تغيير منطق الخلفية. #}
+{# نموذج أجهزة الشبكة — UDS. الواجهة فقط، من دون تغيير منطق الخلفية أو أسماء الحقول. #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 {% from "_partials/toggle_switch.html" import toggle_switch %}
@@ -7,68 +7,6 @@
 {% block title %}{{ title_ar }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-server"></i>{% endblock %}
 {% block page_title %}{{ title_ar }}{% endblock %}
-
-{% block head_extra %}
-{{ super() }}
-<style>
-  .nd-form{ max-width: 1080px; margin: 0 auto; }
-  .nd-grid{ display: grid; gap: 12px; grid-template-columns: repeat(3, 1fr); }
-  @media (max-width:720px){ .nd-grid{ grid-template-columns: repeat(2,1fr); } }
-  @media (max-width:480px){ .nd-grid{ grid-template-columns: 1fr; } }
-  .nd-field{ display:flex; flex-direction:column; gap:5px; min-width:0; }
-  .nd-field.full{ grid-column: 1 / -1; }
-  .nd-field label{ font-size:12.5px; font-weight:700; color:var(--hub-text-soft); }
-  .nd-field label .req{ color:var(--hub-red); margin-inline-start:2px; }
-  .nd-field .help{ font-size:11px; color:var(--hub-text-mute); margin-top:2px; }
-  .nd-chk{
-    display:flex; align-items:center; gap:8px;
-    padding: 9px 12px;
-    background: var(--hub-bg-soft);
-    border: 1px solid var(--hub-border-soft);
-    border-radius: var(--hub-r-md);
-    font-size:12.5px; font-weight:700;
-  }
-  .nd-chk input{ width:16px; height:16px; accent-color: var(--hub-brand); cursor:pointer; }
-
-  .nd-section{
-    background: var(--hub-bg-card);
-    border: 1px solid var(--hub-border);
-    border-radius: var(--hub-r-card);
-    box-shadow: var(--hub-sh-card);
-    margin-bottom: var(--hub-gap-section);
-    overflow: hidden;
-  }
-  .nd-section-head{
-    display:flex; align-items:center; gap:10px;
-    padding: 13px 18px;
-    border-bottom: 1px solid var(--hub-border-soft);
-    background: linear-gradient(180deg, #fafbff, #fff);
-  }
-  .nd-section.is-collapsible .nd-section-head{ cursor:pointer; user-select:none; }
-  .nd-section.is-collapsed .nd-section-head{ border-bottom: none; }
-  .nd-section-icon{
-    width: 30px; height: 30px;
-    border-radius: var(--hub-r-md);
-    display: inline-flex; align-items:center; justify-content:center;
-    font-size: 13px;
-    flex-shrink: 0;
-  }
-  .nd-section-title{ flex:1; font-size:14px; font-weight:800; }
-  .nd-section-toggle{ color:var(--hub-text-mute); transition: transform var(--hub-anim-fast) var(--hub-ease); }
-  .nd-section.is-collapsed .nd-section-toggle{ transform: rotate(-90deg); }
-  .nd-section-body{ padding: 18px; }
-  .nd-section.is-collapsed .nd-section-body{ display: none; }
-
-  .nd-section--id    { border-inline-start: 3px solid var(--hub-brand); }
-  .nd-section--id    .nd-section-icon{ background: var(--hub-brand-soft); color: var(--hub-brand-ink); }
-  .nd-section--ports { border-inline-start: 3px solid var(--hub-green); }
-  .nd-section--ports .nd-section-icon{ background: var(--hub-green-soft); color: var(--hub-green-ink); }
-  .nd-section--api   { border-inline-start: 3px solid #8B5CF6; }
-  .nd-section--api   .nd-section-icon{ background: #EDE9FE; color: #6D28D9; }
-  .nd-section--mon   { border-inline-start: 3px solid var(--hub-amber); }
-  .nd-section--mon   .nd-section-icon{ background: var(--hub-amber-soft); color: var(--hub-amber-ink); }
-</style>
-{% endblock %}
 
 {% block content %}
 
@@ -80,157 +18,175 @@
     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.devices_list') + '">
       <i class="fa-solid fa-arrow-right"></i> العودة للقائمة
     </a>
+    <button class="hub-btn hub-btn--primary" type="submit" form="nd-form">
+      <i class="fa-solid fa-floppy-disk"></i> ' + ("حفظ الجهاز" if is_new else "حفظ التعديلات") + '
+    </button>
   '
 ) }}
 
-<div class="nd-form">
-<form method="post"
+{% set help_aside %}
+{% call hub.helppanel(
+  "عن أجهزة الشبكة",
+  intro="جهاز الشبكة (NAS/راوتر) هو نقطة الوصول التي يصادق عليها الريدياس. عرّف عنوانه ومفتاحه المشترك لتبدأ المصادقة والمحاسبة.",
+  icon="network-wired",
+  items=[
+    {"icon": "key", "text": "المفتاح المشترك يجب أن يطابق تمامًا ما هو مضبوط على جهاز الشبكة نفسه."},
+    {"icon": "plug", "text": "المنافذ القياسية: 1812 للمصادقة، 1813 للمحاسبة، 3799 لقطع الجلسة (CoA)."},
+    {"icon": "heart-pulse", "text": "المراقبة الدورية تفحص اتصال الجهاز وتحدّث حالته في القائمة."},
+    {"icon": "toggle-on", "text": "أوقف الجهاز لتعطيله مؤقتًا دون حذف إعداداته."}
+  ],
+  note="بيانات وصول الراوتر تُستخدم لإدارة الجهاز عبر واجهة الربط، وتُحفظ بأمان."
+) %}{% endcall %}
+{% endset %}
+
+{% call hub.worklayout(aside_html=help_aside) %}
+<form id="nd-form" method="post"
       action="{{ url_for('radius.devices_update', nas_id=device.id) if not is_new else url_for('radius.devices_create') }}">
 
   {# ── 1. الهوية والشبكة ─────────────────────── #}
-  <section class="nd-section nd-section--id">
-    <header class="nd-section-head">
-      <span class="nd-section-icon"><i class="fa-solid fa-network-wired"></i></span>
-      <span class="nd-section-title">الهوية والشبكة</span>
-    </header>
-    <div class="nd-section-body">
-      <div class="nd-grid">
-        <div class="nd-field"><label>الاسم <span class="req">*</span></label>
-          <input class="hub-input" type="text" name="name" required value="{{ device.name or '' }}" placeholder="راوتر الشبكة الرئيسي">
-          <div class="help">يظهر في القائمة والسجلات.</div></div>
-        <div class="nd-field"><label>الاسم المختصر</label>
-          <input class="hub-input" type="text" name="shortname" value="{{ device.shortname or '' }}" placeholder="mt-main"></div>
-        <div class="nd-field"><label>العنوان <span class="req">*</span></label>
-          <input class="hub-input" type="text" name="address" required value="{{ device.address or '' }}" placeholder="10.0.0.1"></div>
-        <div class="nd-field"><label>المفتاح المشترك <span class="req">*</span></label>
-          <input class="hub-input" type="text" name="secret" {% if is_new %}required{% endif %} value="{{ device.secret or '' }}">
-          <div class="help">يطابق المفتاح على جهاز الشبكة نفسه.</div></div>
-        <div class="nd-field"><label>المُصنِّع</label>
-          <select class="hub-select" name="vendor">
-            {% for v in vendors %}<option value="{{ v }}" {% if device.vendor == v %}selected{% endif %}>{{ v }}</option>{% endfor %}
-          </select></div>
-        <div class="nd-field"><label>النوع</label>
-          <select class="hub-select" name="nas_type">
-            {% for t in ["hotspot","pppoe","dhcp","router","ap","switch","firewall","other"] %}
-              <option value="{{ t }}" {% if device.nas_type == t %}selected{% endif %}>{{ t }}</option>
-            {% endfor %}
-          </select></div>
-        <div class="nd-field"><label>الموقع</label>
-          <input class="hub-input" type="text" name="location" value="{{ device.location or '' }}" placeholder="الطابق 1 - الإدارة"></div>
-        <div class="nd-field"><label>إحداثيات GPS</label>
-          <input class="hub-input" type="text" name="coordinates" value="{{ device.coordinates or '' }}" placeholder="31.95, 35.93"></div>
-        <div class="nd-field"><label>وسوم (CSV)</label>
-          <input class="hub-input" type="text" name="tags" value="{{ device.tags or '' }}" placeholder="إنتاج، مبنى أ"></div>
-        <div class="nd-field"><label>الحالة</label>
-          <div class="nd-chk">{{ toggle_switch(name="enabled", checked=(device.enabled or is_new), value="1", id="nd-en") }}</div></div>
-        <div class="nd-field"><label>المراقبة الدورية</label>
-          <div class="nd-chk">{{ toggle_switch(name="monitoring_enabled", checked=(device.monitoring_enabled or is_new), value="1", id="nd-mon", on_label="مفعَّلة", off_label="معطَّلة") }}</div></div>
-        <div class="nd-field"><label>إلزام رسالة التحقق</label>
-          <div class="nd-chk">{{ toggle_switch(name="require_message_authenticator", checked=device.require_message_authenticator, value="1", id="nd-ma", on_label="إلزامي", off_label="اختياري") }}</div></div>
-        <div class="nd-field full"><label>الوصف</label>
-          <textarea class="hub-textarea" name="description">{{ device.description or '' }}</textarea></div>
+  {% call hub.section("الهوية والشبكة", icon="network-wired") %}
+    <div class="hub-form-row">
+      <div class="hub-field">
+        <label class="hub-field-label">الاسم <span class="req">*</span></label>
+        <input class="hub-input" type="text" name="name" required value="{{ device.name or '' }}" placeholder="راوتر الشبكة الرئيسي">
+        <div class="hub-field-hint">يظهر في القائمة والسجلات.</div>
+      </div>
+      <div class="hub-field">
+        <label class="hub-field-label">الاسم المختصر</label>
+        <input class="hub-input" type="text" name="shortname" value="{{ device.shortname or '' }}" placeholder="mt-main">
+      </div>
+      <div class="hub-field">
+        <label class="hub-field-label">العنوان <span class="req">*</span></label>
+        <input class="hub-input" type="text" name="address" required value="{{ device.address or '' }}" placeholder="10.0.0.1">
+      </div>
+      <div class="hub-field">
+        <label class="hub-field-label">المفتاح المشترك <span class="req">*</span></label>
+        <input class="hub-input" type="text" name="secret" {% if is_new %}required{% endif %} value="{{ device.secret or '' }}">
+        <div class="hub-field-hint">يطابق المفتاح على جهاز الشبكة نفسه.</div>
+      </div>
+      <div class="hub-field">
+        <label class="hub-field-label">المُصنِّع</label>
+        <select class="hub-select" name="vendor">
+          {% for v in vendors %}<option value="{{ v }}" {% if device.vendor == v %}selected{% endif %}>{{ v }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="hub-field">
+        <label class="hub-field-label">النوع</label>
+        <select class="hub-select" name="nas_type">
+          {% for t in ["hotspot","pppoe","dhcp","router","ap","switch","firewall","other"] %}
+            <option value="{{ t }}" {% if device.nas_type == t %}selected{% endif %}>{{ t }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="hub-field">
+        <label class="hub-field-label">الموقع</label>
+        <input class="hub-input" type="text" name="location" value="{{ device.location or '' }}" placeholder="الطابق 1 - الإدارة">
+      </div>
+      <div class="hub-field">
+        <label class="hub-field-label">إحداثيات GPS</label>
+        <input class="hub-input" type="text" name="coordinates" value="{{ device.coordinates or '' }}" placeholder="31.95, 35.93">
+      </div>
+      <div class="hub-field">
+        <label class="hub-field-label">وسوم (CSV)</label>
+        <input class="hub-input" type="text" name="tags" value="{{ device.tags or '' }}" placeholder="إنتاج، مبنى أ">
+      </div>
+      <div class="hub-field">
+        <label class="hub-field-label">الحالة</label>
+        {{ toggle_switch(name="enabled", checked=(device.enabled or is_new), value="1", id="nd-en") }}
+      </div>
+      <div class="hub-field">
+        <label class="hub-field-label">المراقبة الدورية</label>
+        {{ toggle_switch(name="monitoring_enabled", checked=(device.monitoring_enabled or is_new), value="1", id="nd-mon", on_label="مفعَّلة", off_label="معطَّلة") }}
+      </div>
+      <div class="hub-field">
+        <label class="hub-field-label">إلزام رسالة التحقق</label>
+        {{ toggle_switch(name="require_message_authenticator", checked=device.require_message_authenticator, value="1", id="nd-ma", on_label="إلزامي", off_label="اختياري") }}
+      </div>
+      <div class="hub-field" style="grid-column:1/-1">
+        <label class="hub-field-label">الوصف</label>
+        <textarea class="hub-textarea" name="description">{{ device.description or '' }}</textarea>
       </div>
     </div>
-  </section>
+  {% endcall %}
 
   {# ── 2. المنافذ ─────────────────────────────────── #}
-  <section class="nd-section nd-section--ports">
-    <header class="nd-section-head">
-      <span class="nd-section-icon"><i class="fa-solid fa-plug"></i></span>
-      <span class="nd-section-title">المنافذ</span>
-    </header>
-    <div class="nd-section-body">
-      <div class="nd-grid">
-        <div class="nd-field"><label>منفذ المصادقة</label>
-          <input class="hub-input" type="number" min="0" max="65535" name="auth_port" value="{{ device.auth_port or 1812 }}">
-          <div class="help">قياسي: 1812.</div></div>
-        <div class="nd-field"><label>منفذ المحاسبة</label>
-          <input class="hub-input" type="number" min="0" max="65535" name="acct_port" value="{{ device.acct_port or 1813 }}">
-          <div class="help">قياسي: 1813.</div></div>
-        <div class="nd-field"><label>منفذ قطع الجلسة (CoA)</label>
-          <input class="hub-input" type="number" min="0" max="65535" name="coa_port" value="{{ device.coa_port or 3799 }}">
-          <div class="help">RFC 5176: 3799.</div></div>
-        <div class="nd-field"><label>منفذ واجهة الربط</label>
-          <input class="hub-input" type="number" min="0" max="65535" name="api_port" value="{{ device.api_port or 8728 }}">
-          <div class="help">8728 عادي، 8729 للاتصال المشفّر.</div></div>
-        <div class="nd-field"><label>منفذ الدخول النصي</label>
-          <input class="hub-input" type="number" min="0" max="65535" name="ssh_port" value="{{ device.ssh_port or 22 }}"></div>
-        <div class="nd-field"><label>عدد المنافذ الفيزيائية</label>
-          <input class="hub-input" type="number" min="0" name="ports" value="{{ device.ports or 0 }}"></div>
+  {% call hub.section("المنافذ", icon="plug") %}
+    <div class="hub-form-row">
+      <div class="hub-field">
+        <label class="hub-field-label">منفذ المصادقة</label>
+        <input class="hub-input" type="number" min="0" max="65535" name="auth_port" value="{{ device.auth_port or 1812 }}">
+        <div class="hub-field-hint">قياسي: 1812.</div>
+      </div>
+      <div class="hub-field">
+        <label class="hub-field-label">منفذ المحاسبة</label>
+        <input class="hub-input" type="number" min="0" max="65535" name="acct_port" value="{{ device.acct_port or 1813 }}">
+        <div class="hub-field-hint">قياسي: 1813.</div>
+      </div>
+      <div class="hub-field">
+        <label class="hub-field-label">منفذ قطع الجلسة (CoA)</label>
+        <input class="hub-input" type="number" min="0" max="65535" name="coa_port" value="{{ device.coa_port or 3799 }}">
+        <div class="hub-field-hint">RFC 5176: 3799.</div>
+      </div>
+      <div class="hub-field">
+        <label class="hub-field-label">منفذ واجهة الربط</label>
+        <input class="hub-input" type="number" min="0" max="65535" name="api_port" value="{{ device.api_port or 8728 }}">
+        <div class="hub-field-hint">8728 عادي، 8729 للاتصال المشفّر.</div>
+      </div>
+      <div class="hub-field">
+        <label class="hub-field-label">منفذ الدخول النصي</label>
+        <input class="hub-input" type="number" min="0" max="65535" name="ssh_port" value="{{ device.ssh_port or 22 }}">
+      </div>
+      <div class="hub-field">
+        <label class="hub-field-label">عدد المنافذ الفيزيائية</label>
+        <input class="hub-input" type="number" min="0" name="ports" value="{{ device.ports or 0 }}">
       </div>
     </div>
-  </section>
+  {% endcall %}
 
   {# ── 3. الوصول والمراقبة ────────────────────────────── #}
-  <section class="nd-section nd-section--api is-collapsible is-collapsed" data-sec="api">
-    <header class="nd-section-head">
-      <span class="nd-section-icon"><i class="fa-solid fa-key"></i></span>
-      <span class="nd-section-title">وصول الراوتر والمراقبة</span>
-      <i class="fa-solid fa-chevron-down nd-section-toggle"></i>
-    </header>
-    <div class="nd-section-body">
-      <div class="nd-grid">
-        <div class="nd-field"><label>اسم مستخدم الراوتر</label>
-          <input class="hub-input" type="text" name="api_user" value="{{ device.api_user or '' }}" placeholder="admin"></div>
-        <div class="nd-field"><label>كلمة مرور الراوتر</label>
-          <input class="hub-input" type="text" name="api_password" value="{{ device.api_password or '' }}"></div>
-        <div class="nd-field"><label>اتصال مشفّر</label>
-          <div class="nd-chk">{{ toggle_switch(name="api_use_tls", checked=device.api_use_tls, value="1", id="api-tls", on_label="8729 (TLS)", off_label="8728") }}</div></div>
-        <div class="nd-field full"><label>مجتمع المراقبة</label>
-          <input class="hub-input" type="text" name="snmp_community" value="{{ device.snmp_community or '' }}" placeholder="public"></div>
+  {% call hub.section("وصول الراوتر والمراقبة", icon="key") %}
+    <div class="hub-form-row">
+      <div class="hub-field">
+        <label class="hub-field-label">اسم مستخدم الراوتر</label>
+        <input class="hub-input" type="text" name="api_user" value="{{ device.api_user or '' }}" placeholder="admin">
+      </div>
+      <div class="hub-field">
+        <label class="hub-field-label">كلمة مرور الراوتر</label>
+        <input class="hub-input" type="text" name="api_password" value="{{ device.api_password or '' }}">
+      </div>
+      <div class="hub-field">
+        <label class="hub-field-label">اتصال مشفّر</label>
+        {{ toggle_switch(name="api_use_tls", checked=device.api_use_tls, value="1", id="api-tls", on_label="8729 (TLS)", off_label="8728") }}
+      </div>
+      <div class="hub-field" style="grid-column:1/-1">
+        <label class="hub-field-label">مجتمع المراقبة</label>
+        <input class="hub-input" type="text" name="snmp_community" value="{{ device.snmp_community or '' }}" placeholder="public">
       </div>
     </div>
-  </section>
+  {% endcall %}
 
   {# ── 4. Last health check ─────────────────────── #}
   {% if not is_new and device.last_check_at %}
-  <section class="nd-section nd-section--mon">
-    <header class="nd-section-head">
-      <span class="nd-section-icon"><i class="fa-solid fa-heart-pulse"></i></span>
-      <span class="nd-section-title">آخر فحص اتصال</span>
-    </header>
-    <div class="nd-section-body">
-      <div class="hub-flex-row" style="gap:14px">
-        <span>
-          الحالة:
-          {% set _ok = device.last_check_status in ('ok', 'success', 'pass') %}
-          {% if _ok %}{{ hub.pill("ناجح", variant="green") }}
-          {% else %}{{ hub.pill(device.last_check_status or 'غير معروف', variant="amber") }}{% endif %}
-        </span>
-        <span>الوقت: <span class="hub-text-mono">{{ device.last_check_at }}</span></span>
-      </div>
-      <div class="help" style="margin-top:8px">
-        يُحدَّث عند الضغط على زر «فحص» في صفحة القائمة.
-      </div>
+  {% call hub.section("آخر فحص اتصال", icon="heart-pulse") %}
+    <div class="hub-flex-row" style="gap:14px">
+      <span>
+        الحالة:
+        {% set _ok = device.last_check_status in ('ok', 'success', 'pass') %}
+        {% if _ok %}{{ hub.pill("ناجح", variant="green") }}
+        {% else %}{{ hub.pill(device.last_check_status or 'غير معروف', variant="amber") }}{% endif %}
+      </span>
+      <span>الوقت: <span class="hub-text-mono">{{ device.last_check_at }}</span></span>
     </div>
-  </section>
+    <div class="hub-field-hint" style="margin-top:8px">
+      يُحدَّث عند الضغط على زر «فحص» في صفحة القائمة.
+    </div>
+  {% endcall %}
   {% endif %}
 
-  <div style="display:flex;gap:10px;justify-content:flex-end;padding:6px 4px 0">
-    <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.devices_list') }}">إلغاء</a>
-    <button class="hub-btn hub-btn--primary" type="submit">
-      <i class="fa-solid fa-floppy-disk"></i> {{ "حفظ الجهاز" if is_new else "حفظ التعديلات" }}
-    </button>
+  <div class="hub-flex-row" style="justify-content:flex-end;margin-top:16px;gap:10px">
+    {{ hub.btn("إلغاء", variant="secondary", href=url_for('radius.devices_list')) }}
+    {{ hub.btn(("حفظ الجهاز" if is_new else "حفظ التعديلات"), icon="floppy-disk", variant="primary", type="submit") }}
   </div>
 </form>
-</div>
-
-<script>
-(function(){
-  var LS = 'hr:nd-form:sec:';
-  document.querySelectorAll('.nd-section.is-collapsible').forEach(function(card){
-    var k = card.dataset.sec; if (!k) return;
-    var v = null;
-    try { v = localStorage.getItem(LS + k); } catch(_) {}
-    if (v === 'collapsed') card.classList.add('is-collapsed');
-    else if (v === 'open')  card.classList.remove('is-collapsed');
-    var head = card.querySelector('.nd-section-head');
-    if (head) head.addEventListener('click', function(){
-      card.classList.toggle('is-collapsed');
-      try { localStorage.setItem(LS + k,
-        card.classList.contains('is-collapsed') ? 'collapsed' : 'open'); } catch(_) {}
-    });
-  });
-})();
-</script>
+{% endcall %}
 {% endblock %}

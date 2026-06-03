@@ -5,10 +5,8 @@
 {% block page_icon %}<i class="fa-solid fa-gauge-high"></i>{% endblock %}
 {% block page_title %}مركز العمليات{% endblock %}
 {% block page_sub %}<span class="sub">المستخدمون المتصلون، صحة أجهزة الشبكة وخدمة المصادقة، إشارات المحاسبة، وإجراءات طوارئ آمنة.</span>{% endblock %}
-{% block head_extra %}{{ super() }}<link rel="stylesheet" href="{{ url_for('static', filename='css/ops_risk_redesign.css') }}">{% endblock %}
 
 {% block content %}
-<div class="opsx-redesign">
 {% set _state_labels = {
   'ok': 'سليم',
   'degraded': 'متأثر',
@@ -19,24 +17,39 @@
   'disconnect_all': 'فصل كل الجلسات',
   'global_speed_cut': 'خفض السرعة العام'
 } %}
-{{ hub.hero(
+
+{# ───── ONE unified hero: title + subtitle + live KPI strip ───── #}
+<div data-testid="operations-summary">
+{{ hub.megahero(
   "مركز العمليات",
   subtitle="تعرض هذه الصفحة حالة التشغيل وتوفر إجراءات معاينة آمنة بدون تنفيذ. إجراءات الطوارئ غير الآمنة تبقى محظورة.",
-  icon="gauge-high"
+  icon="gauge-high",
+  kpis=[
+    {'label': 'المستخدمون المتصلون', 'value': snapshot.online_users, 'icon': 'wifi', 'variant': 'green'},
+    {'label': 'أجهزة الشبكة', 'value': snapshot.nas_health.total, 'icon': 'server', 'variant': 'blue'},
+    {'label': 'الأجهزة المفعلة', 'value': snapshot.nas_health.enabled, 'icon': 'circle-check', 'variant': 'brand'},
+    {'label': 'فشل المصادقة', 'value': snapshot.accounting_failures.recent_radius_event_failures, 'icon': 'triangle-exclamation', 'variant': 'amber'}
+  ]
 ) }}
+</div>
 
 {% include "radius/operations_nav.html" %}
 
-<div class="hub-kpi-grid" data-testid="operations-summary">
-  {{ hub.kpi("المستخدمون المتصلون", snapshot.online_users, icon="wifi", variant="green") }}
-  {{ hub.kpi("أجهزة الشبكة", snapshot.nas_health.total, icon="server", variant="blue") }}
-  {{ hub.kpi("الأجهزة المفعلة", snapshot.nas_health.enabled, icon="circle-check") }}
-  {{ hub.kpi("فشل المصادقة", snapshot.accounting_failures.recent_radius_event_failures, icon="triangle-exclamation", variant="amber") }}
-</div>
+{# ───── Full-width work layout: main content + help panel on the LEFT ───── #}
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "ما هذه الصفحة؟",
+  intro="مركز العمليات يجمع حالة التشغيل في مكان واحد: الجلسات النشطة، صحة الشبكة والمصادقة، ومؤشرات إجراءات الطوارئ.",
+  icon="circle-info",
+  items=[
+    {'icon': 'wifi', 'text': 'الجلسات النشطة تعرض المشتركين المتصلين الآن وأجهزة الشبكة التي يمرّون عبرها.'},
+    {'icon': 'heart-pulse', 'text': 'إشارات الصحة تكشف حالة مسار المصادقة وأجهزة الربط والفحص المباشر.'},
+    {'icon': 'shield-halved', 'text': 'إجراءات الطوارئ تبقى محظورة أو بمعاينة بدون تنفيذ حفاظًا على سلامة الشبكة.'}
+  ],
+  note="هذه الشاشة للعرض الآمن فقط؛ لا تنفّذ أي إجراء مباشر على RADIUS أو CoA."
+)) %}
 
-<div class="hub-grid hub-grid--2">
   {% call hub.section("الجلسات النشطة", icon="wifi", flush=True) %}
-    <div class="hub-table-wrap">
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
       <table class="hub-table" data-testid="active-sessions-table">
         <thead><tr><th>المستخدم</th><th>جهاز الشبكة</th><th>العنوان الشبكي</th><th>العنوان الفيزيائي</th></tr></thead>
         <tbody>
@@ -57,19 +70,19 @@
       <li>فحص مباشر: {{ "مفعل" if snapshot.vpn_api_health.live_probe else "غير مفعل" }}</li>
     </ul>
   {% endcall %}
-</div>
 
-{% call hub.section("مؤشرات إجراءات الطوارئ", icon="shield-halved", flush=True) %}
-  <div class="hub-table-wrap">
-    <table class="hub-table" data-testid="emergency-indicators">
-      <thead><tr><th>الإجراء</th><th>الحالة</th><th>السبب</th></tr></thead>
-      <tbody>
-        {% for action in snapshot.emergency_actions %}
-          <tr><td>{{ _action_labels.get(action.key, 'إجراء طوارئ') }}</td><td>{{ _state_labels.get(action.status, 'حالة غير معروفة') }}</td><td>{{ action.reason }}</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+  {% call hub.section("مؤشرات إجراءات الطوارئ", icon="shield-halved", flush=True) %}
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
+      <table class="hub-table" data-testid="emergency-indicators">
+        <thead><tr><th>الإجراء</th><th>الحالة</th><th>السبب</th></tr></thead>
+        <tbody>
+          {% for action in snapshot.emergency_actions %}
+            <tr><td>{{ _action_labels.get(action.key, 'إجراء طوارئ') }}</td><td>{{ _state_labels.get(action.status, 'حالة غير معروفة') }}</td><td>{{ action.reason }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endcall %}
+
 {% endcall %}
-</div>
 {% endblock %}

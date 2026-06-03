@@ -1,5 +1,6 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
+{% from "_partials/toggle_switch.html" import toggle_switch %}
 
 {% block title %}قنوات الإرسال — مركز التواصل{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-tower-broadcast"></i>{% endblock %}
@@ -14,13 +15,7 @@
 {% block head_extra %}
 {{ super() }}
 <style>
-  .cch{ display:grid; gap:16px; }
-  /* plain-Arabic explainer callout */
-  .cch-explain{ display:flex; gap:12px; align-items:flex-start; background:#eff6ff; border:1px solid #bfdbfe; border-radius:14px; padding:13px 16px; }
-  .cch-explain .ic{ width:34px;height:34px;border-radius:10px;background:#dbeafe;color:#1d4ed8;display:grid;place-items:center;font-size:15px;flex:none; }
-  .cch-explain .tx{ font-size:12.5px; line-height:1.85; color:#1e40af; }
-  .cch-explain .tx a{ color:#1d4ed8; font-weight:800; text-decoration:underline; }
-  /* inline "؟" help popover (hover/focus) */
+  /* ── retained: inline "؟" help popover (hover/focus) ── */
   .cch-help{ position:relative; display:inline-flex; }
   .cch-help > .q{ width:17px;height:17px;border-radius:50%;border:0;background:#ede9fe;color:#5b21b6;font:inherit;font-size:10.5px;font-weight:900;
     cursor:help;display:grid;place-items:center;padding:0;margin-inline-start:6px; }
@@ -29,18 +24,8 @@
     transform:translateY(-4px); transition:.16s; pointer-events:none; }
   .cch-help > .pop code{ background:rgba(255,255,255,.16); border:0; color:#e9d5ff; }
   .cch-help:hover > .pop, .cch-help:focus-within > .pop{ opacity:1; visibility:visible; transform:translateY(0); }
-  .cch-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(420px,1fr)); gap:16px; align-items:start; }
-  @media (max-width:900px){ .cch-grid{ grid-template-columns:1fr; } }
-  /* per-channel card */
-  .cch-card{ background:var(--hub-bg-card,#fff); border:1px solid var(--hub-border,#e8edf3); border-radius:16px;
-    box-shadow:0 1px 3px rgba(15,23,42,.05),0 8px 22px rgba(15,23,42,.05); overflow:hidden; }
-  .cch-head{ display:flex; align-items:center; gap:12px; padding:14px 16px; border-bottom:1px solid var(--hub-border-soft,#eef2f7);
-    background:linear-gradient(135deg,#faf9ff,#fbfdff); }
-  .cch-head .ic{ width:38px;height:38px;border-radius:11px;background:#ede9fe;color:#5b21b6;display:grid;place-items:center;font-size:16px;flex:none; }
-  .cch-head .ic.wa{ background:#dcfce7;color:#16a34a; }
-  .cch-head h2{ margin:0; font-size:15px; font-weight:800; color:#0f172a; }
-  .cch-head .sub{ font-size:11.5px; color:#94a3b8; margin-top:2px; }
-  .cch-status{ margin-inline-start:auto; display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end; }
+  /* ── retained: per-channel status badges + quota link ── */
+  .cch-status{ display:flex; gap:6px; flex-wrap:wrap; }
   .cch-badge{ display:inline-flex; align-items:center; gap:6px; font-size:11.5px; font-weight:800; border-radius:999px; padding:4px 11px; }
   .cch-badge .dot{ width:7px;height:7px;border-radius:50%;flex:none; }
   .cch-badge.on{ background:#dcfce7; color:#15803d; } .cch-badge.on .dot{ background:#16a34a; }
@@ -49,29 +34,9 @@
   .cch-badge.quota{ background:#ede9fe; color:#5b21b6; text-decoration:none; } .cch-badge.quota .dot{ background:#7c3aed; }
   .cch-badge.quota.zero{ background:#fef2f2; color:#b91c1c; } .cch-badge.quota.zero .dot{ background:#dc2626; }
   .cch-badge.quota:hover{ filter:brightness(.97); }
-  .cch-body{ padding:16px; display:grid; gap:13px; }
-  .cch-field{ display:grid; gap:5px; }
-  .cch-field label{ font-size:12.5px; font-weight:700; color:#475569; }
-  .cch-hint{ font-size:11px; color:#94a3b8; line-height:1.7; }
+  /* ── retained: monospace hint code chips ── */
   .cch-hint code{ font-family:ui-monospace,Consolas,monospace; background:#f1f5f9; border:1px solid #e2e8f0; border-radius:5px; padding:1px 6px; color:#5b21b6; direction:ltr; unicode-bidi:isolate; }
-  .cch-row2{ display:grid; grid-template-columns:1fr 1fr; gap:11px; }
-  @media (max-width:520px){ .cch-row2{ grid-template-columns:1fr; } }
-  .cch-input,.cch-select{ width:100%; border:1px solid #cbd5e1; border-radius:10px; padding:9px 11px; font:inherit; font-size:13px; background:#fff; color:#0f172a; }
-  .cch-input:focus,.cch-select:focus{ outline:0; border-color:#7c3aed; box-shadow:0 0 0 3px rgba(124,58,237,.15); }
-  .cch-input.mono{ font-family:ui-monospace,Consolas,monospace; font-size:12px; direction:ltr; unicode-bidi:isolate; }
-  /* enable switch */
-  .cch-switch{ display:flex; align-items:center; gap:11px; padding:11px 13px; border:1px solid #e2e8f0; border-radius:12px; background:#fafafe; cursor:pointer; }
-  .cch-switch input{ width:18px;height:18px;accent-color:#7c3aed;flex:none; }
-  .cch-switch .t{ font-size:13px; font-weight:800; color:#0f172a; }
-  .cch-switch .d{ font-size:11px; color:#64748b; margin-top:1px; }
-  /* footer actions */
-  .cch-foot{ display:flex; gap:9px; align-items:center; flex-wrap:wrap; padding-top:3px; }
-  .cch-btn{ display:inline-flex; align-items:center; gap:8px; border:0; border-radius:11px; padding:9px 15px; font:inherit; font-size:13px; font-weight:800; cursor:pointer; text-decoration:none; transition:.15s; }
-  .cch-btn.primary{ background:linear-gradient(135deg,#7c3aed,#5b21b6); color:#fff; box-shadow:0 8px 18px rgba(124,58,237,.25); }
-  .cch-btn.primary:hover{ box-shadow:0 10px 22px rgba(124,58,237,.34); }
-  .cch-btn.ghost{ background:#fff; color:#475569; border:1px solid #cbd5e1; }
-  .cch-btn.ghost:hover{ background:#f5f3ff; color:#5b21b6; border-color:#c4b5fd; }
-  /* test block */
+  /* ── retained: test block (bespoke "send a test" widget) ── */
   .cch-test{ border:1px dashed #e2e8f0; border-radius:13px; padding:13px; background:#fcfcff; display:grid; gap:10px; }
   .cch-test-title{ font-size:12.5px; font-weight:800; color:#0f172a; display:flex; align-items:center; gap:7px; }
   .cch-test-row{ display:flex; gap:9px; flex-wrap:wrap; align-items:end; }
@@ -86,143 +51,148 @@
 {% endblock %}
 
 {% block content %}
-{{ hub.hero(
+{% set _sms = channels.get('sms') %}
+{% set _wa = channels.get('whatsapp') %}
+
+{# ───── ONE unified hero: title + actions + channel-status KPI strip ───── #}
+{% call hub.megahero(
   "قنوات الإرسال",
   subtitle="اربط رابط مزوّد الرسائل القصيرة أو واتساب لتتحول الرسائل من الطابور إلى إرسال فعلي. القنوات المتوقفة تبقى مجدولة كما هي.",
   icon="tower-broadcast",
-  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.communications_guide') ~ '"><i class="fa-solid fa-book-open"></i> تحتاج مساعدة؟ افتح الدليل</a>'
-) }}
-
-{% set _sms = channels.get('sms') %}
-{% set _wa = channels.get('whatsapp') %}
-<div class="hub-kpi-grid">
-  {{ hub.kpi("حالة الرسائل القصيرة", "مفعّلة" if _sms and _sms.enabled else "متوقفة",
-     icon="comment-sms", variant=("green" if _sms and _sms.enabled else "grey"),
-     sub=("جاهزة للإرسال" if _sms and _sms.active else "غير مكتملة الضبط")) }}
-  {{ hub.kpi("نمط الرسائل القصيرة", mode_label(_sms.mode) if _sms else "—", icon="sliders", variant="blue") }}
-  {{ hub.kpi("حالة واتساب", "مفعّلة" if _wa and _wa.enabled else "متوقفة",
-     icon="whatsapp", variant=("green" if _wa and _wa.enabled else "grey"),
-     sub=("جاهزة للإرسال" if _wa and _wa.active else "غير مكتملة الضبط")) }}
-  {{ hub.kpi("نمط واتساب", mode_label(_wa.mode) if _wa else "—", icon="sliders", variant="blue") }}
-</div>
+  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.communications_guide') ~ '"><i class="fa-solid fa-book-open"></i> تحتاج مساعدة؟ افتح الدليل</a>',
+  kpis=[
+    {'label': 'حالة الرسائل القصيرة', 'value': ('مفعّلة' if _sms and _sms.enabled else 'متوقفة'),
+     'icon': 'comment-sms', 'variant': ('green' if _sms and _sms.enabled else 'grey'),
+     'sub': ('جاهزة للإرسال' if _sms and _sms.active else 'غير مكتملة الضبط')},
+    {'label': 'نمط الرسائل القصيرة', 'value': (mode_label(_sms.mode) if _sms else '—'), 'icon': 'sliders', 'variant': 'blue'},
+    {'label': 'حالة واتساب', 'value': ('مفعّلة' if _wa and _wa.enabled else 'متوقفة'),
+     'icon': 'whatsapp', 'variant': ('green' if _wa and _wa.enabled else 'grey'),
+     'sub': ('جاهزة للإرسال' if _wa and _wa.active else 'غير مكتملة الضبط')},
+    {'label': 'نمط واتساب', 'value': (mode_label(_wa.mode) if _wa else '—'), 'icon': 'sliders', 'variant': 'blue'}
+  ]
+) %}
+{% endcall %}
 
 {% include "radius/communications_nav.html" %}
 
-<div class="cch">
-  <div class="cch-explain">
-    <span class="ic"><i class="fa-solid fa-circle-info"></i></span>
-    <div class="tx">
-      لتفعيل الإرسال الفعلي: انسخ رابط الإرسال من مزوّدك، ألصقه في القناة المناسبة مع
-      <code style="font-family:ui-monospace,monospace">{phone}</code> و<code style="font-family:ui-monospace,monospace">{msg}</code>، فعّل القناة، ثم جرّب «إرسال اختبار».
-      لشرح مصوّر كامل <a href="{{ url_for('radius.communications_guide') }}">افتح الدليل</a>.
-    </div>
-  </div>
-  <div class="cch-grid">
-    {% for ch, st in channels.items() %}
-    {% set cfg = st.config %}
-    <div class="cch-card" data-testid="channel-{{ ch }}">
-      <div class="cch-head">
-        <span class="ic {{ 'wa' if ch == 'whatsapp' else '' }}"><i class="fa-{{ 'brands' if ch == 'whatsapp' else 'solid' }} fa-{{ ch_icon(ch) }}"></i></span>
-        <div>
-          <h2>{{ ch_label(ch) }}</h2>
-          <div class="sub">إرسال عبر رابط ويب عام من مزوّد الخدمة</div>
-        </div>
-        <div class="cch-status">
-          {% if st.enabled %}
-            <span class="cch-badge on"><span class="dot"></span> مفعّلة</span>
-          {% else %}
-            <span class="cch-badge off"><span class="dot"></span> متوقفة</span>
-          {% endif %}
-          <span class="cch-badge mode"><span class="dot"></span> {{ mode_label(st.mode) }}</span>
-          {% set _q = quotas.get(ch) if quotas else None %}
-          {% if _q and _q.is_quota_mode %}
-            <a class="cch-badge quota {{ 'zero' if _q.balance == 0 else '' }}" href="{{ url_for('radius.communications_quota') }}"
-               title="الرصيد المتبقّي لهذه القناة — اضغط لإدارة الرصيد والحِزم">
-              <span class="dot"></span> الرصيد: {{ _q.balance }}
-            </a>
-          {% endif %}
-        </div>
+{# ───── Full-width work layout: channel cards + help panel on the LEFT ───── #}
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "كيف تفعّل الإرسال؟",
+  intro="لتفعيل الإرسال الفعلي: انسخ رابط الإرسال من مزوّدك، ألصقه في القناة المناسبة، فعّل القناة، ثم جرّب «إرسال اختبار».",
+  icon="circle-info",
+  items=[
+    {'icon': 'link', 'text': 'ضع {phone} مكان رقم الهاتف و{msg} مكان نص الرسالة داخل الرابط — يُرمّزان تلقائيًا.'},
+    {'icon': 'toggle-on', 'text': 'فعّل القناة لتتحول رسائلها من الطابور إلى إرسال خارجي فعلي.'},
+    {'icon': 'flask', 'text': 'احفظ الإعدادات أولًا ثم استخدم «إرسال اختبار» للتأكد من عمل الرابط.'},
+    {'icon': 'wallet', 'text': 'في نمط الرصيد المخصص يظهر الرصيد المتبقّي لكل قناة بجانب اسمها.'}
+  ],
+  note="لشرح مصوّر كامل لربط الرسائل القصيرة وواتساب، افتح «دليل وشروحات» من الأعلى."
+)) %}
+
+  {% for ch, st in channels.items() %}
+  {% set cfg = st.config %}
+  {% set _q = quotas.get(ch) if quotas else None %}
+  {% call hub.section(
+    ch_label(ch),
+    icon=ch_icon(ch),
+    meta="إرسال عبر رابط ويب عام من مزوّد الخدمة"
+  ) %}
+    <div data-testid="channel-{{ ch }}">
+      {# status badges row #}
+      <div class="cch-status" style="margin-bottom:14px">
+        {% if st.enabled %}
+          <span class="cch-badge on"><span class="dot"></span> مفعّلة</span>
+        {% else %}
+          <span class="cch-badge off"><span class="dot"></span> متوقفة</span>
+        {% endif %}
+        <span class="cch-badge mode"><span class="dot"></span> {{ mode_label(st.mode) }}</span>
+        {% if _q and _q.is_quota_mode %}
+          <a class="cch-badge quota {{ 'zero' if _q.balance == 0 else '' }}" href="{{ url_for('radius.communications_quota') }}"
+             title="الرصيد المتبقّي لهذه القناة — اضغط لإدارة الرصيد والحِزم">
+            <span class="dot"></span> الرصيد: {{ _q.balance }}
+          </a>
+        {% endif %}
       </div>
 
-      <form method="post" action="{{ url_for('radius.communications_channels') }}" class="cch-body">
+      <form method="post" action="{{ url_for('radius.communications_channels') }}" class="hub-form">
         {{ csrf_token_input() }}
         <input type="hidden" name="channel" value="{{ ch }}">
 
-        <label class="cch-switch">
-          <input type="checkbox" name="enabled" value="1" {{ 'checked' if st.enabled else '' }}>
-          <span>
-            <span class="t">تفعيل الإرسال الفعلي عبر هذه القناة</span>
-            <span class="d">عند الإيقاف تبقى الرسائل في الطابور دون إرسال خارجي.</span>
-          </span>
-        </label>
+        <div class="hub-field">
+          <label>تفعيل الإرسال الفعلي عبر هذه القناة</label>
+          {{ toggle_switch(name="enabled", checked=st.enabled, value="1", id="enabled-" ~ ch,
+                           on_label="مفعّل — إرسال خارجي فعلي", off_label="متوقف — يبقى بالطابور") }}
+          <div class="hub-field-hint">عند الإيقاف تبقى الرسائل في الطابور دون إرسال خارجي.</div>
+        </div>
 
-        <div class="cch-row2">
-          <div class="cch-field">
+        <div class="hub-grid hub-grid--2">
+          <div class="hub-field">
             <label for="mode-{{ ch }}">نمط التشغيل</label>
-            <select class="cch-select" id="mode-{{ ch }}" name="mode">
+            <select class="hub-select" id="mode-{{ ch }}" name="mode">
               {% for m in modes %}
                 <option value="{{ m }}" {{ 'selected' if st.mode == m else '' }}>{{ mode_label(m) }}</option>
               {% endfor %}
             </select>
           </div>
-          <div class="cch-field">
+          <div class="hub-field">
             <label for="method-{{ ch }}">طريقة الطلب</label>
-            <select class="cch-select" id="method-{{ ch }}" name="http_method">
+            <select class="hub-select" id="method-{{ ch }}" name="http_method">
               <option value="GET" {{ 'selected' if cfg.http_method == 'GET' else '' }}>تمرير البيانات داخل الرابط</option>
               <option value="POST" {{ 'selected' if cfg.http_method == 'POST' else '' }}>إرسال البيانات كنموذج</option>
             </select>
           </div>
         </div>
 
-        <div class="cch-field">
+        <div class="hub-field">
           <label for="url-{{ ch }}">قالب رابط الإرسال
             <span class="cch-help"><button type="button" class="q" aria-label="ما هو قالب الرابط؟">؟</button>
               <span class="pop">الصق رابط الإرسال من مزوّدك، وضع <code>{phone}</code> مكان رقم الهاتف و<code>{msg}</code> مكان نص الرسالة. النظام يستبدلهما ويرمّزهما تلقائيًا عند كل إرسال.</span></span>
           </label>
-          <input class="cch-input mono" id="url-{{ ch }}" name="send_url_template" dir="ltr"
+          <input class="hub-input mono" id="url-{{ ch }}" name="send_url_template" dir="ltr"
                  value="{{ cfg.send_url_template }}"
                  placeholder="ضع رابط الإرسال من المزوّد هنا">
-          <div class="cch-hint">
+          <div class="hub-field-hint cch-hint">
             استخدم <code>{phone}</code> لموضع رقم الهاتف و <code>{msg}</code> لموضع نص الرسالة. يتم ترميزهما تلقائيًا.
             يمكن أن يحتوي الرابط على مفتاح المزوّد ضمنه إذا كان المزوّد يطلب ذلك.
           </div>
         </div>
 
-        <div class="cch-field">
+        <div class="hub-field">
           <label for="bal-{{ ch }}">رابط الرصيد (اختياري)</label>
-          <input class="cch-input mono" id="bal-{{ ch }}" name="balance_url" dir="ltr"
+          <input class="hub-input mono" id="bal-{{ ch }}" name="balance_url" dir="ltr"
                  value="{{ cfg.balance_url }}"
                  placeholder="ضع رابط فحص الرصيد من المزوّد هنا">
-          <div class="cch-hint">رابط لاستعلام رصيد المزوّد — يُحفظ مع إعدادات القناة لاستخدامه عند فحص الرصيد.</div>
+          <div class="hub-field-hint">رابط لاستعلام رصيد المزوّد — يُحفظ مع إعدادات القناة لاستخدامه عند فحص الرصيد.</div>
         </div>
 
-        <div class="cch-foot">
-          <button type="submit" class="cch-btn primary"><i class="fa-solid fa-floppy-disk"></i> حفظ إعدادات القناة</button>
+        <div>
+          <button type="submit" class="hub-btn hub-btn--primary"><i class="fa-solid fa-floppy-disk"></i> حفظ إعدادات القناة</button>
         </div>
       </form>
 
-      <div class="cch-body" style="border-top:1px solid #eef2f7;padding-top:14px">
-        <div class="cch-test" data-test-block data-channel="{{ ch }}"
-             data-url="{{ url_for('radius.communications_channels_test') }}"
-             data-csrf="{{ csrf_token() }}">
-          <div class="cch-test-title"><i class="fa-solid fa-flask" style="color:#7c3aed"></i> إرسال اختبار</div>
-          <div class="cch-test-row">
-            <div class="cch-field grow">
-              <label for="testphone-{{ ch }}">رقم الهاتف للاختبار</label>
-              <input class="cch-input mono" id="testphone-{{ ch }}" data-test-phone dir="ltr" placeholder="07XXXXXXXX">
-            </div>
-            <button type="button" class="cch-btn ghost" data-test-btn>
-              <i class="fa-solid fa-paper-plane"></i> إرسال اختبار
-            </button>
+      {# ── retained bespoke test widget (left inside the card unchanged) ── #}
+      <div class="cch-test" data-test-block data-channel="{{ ch }}"
+           data-url="{{ url_for('radius.communications_channels_test') }}"
+           data-csrf="{{ csrf_token() }}"
+           style="margin-top:16px">
+        <div class="cch-test-title"><i class="fa-solid fa-flask" style="color:#7c3aed"></i> إرسال اختبار</div>
+        <div class="cch-test-row">
+          <div class="hub-field grow">
+            <label for="testphone-{{ ch }}">رقم الهاتف للاختبار</label>
+            <input class="hub-input mono" id="testphone-{{ ch }}" data-test-phone dir="ltr" placeholder="07XXXXXXXX">
           </div>
-          <div class="cch-hint">يستخدم الإعدادات المحفوظة لهذه القناة. احفظ التغييرات أولًا قبل الاختبار.</div>
-          <div class="cch-result" data-test-result role="status" aria-live="polite"></div>
+          <button type="button" class="hub-btn hub-btn--secondary" data-test-btn>
+            <i class="fa-solid fa-paper-plane"></i> إرسال اختبار
+          </button>
         </div>
+        <div class="hub-field-hint">يستخدم الإعدادات المحفوظة لهذه القناة. احفظ التغييرات أولًا قبل الاختبار.</div>
+        <div class="cch-result" data-test-result role="status" aria-live="polite"></div>
       </div>
     </div>
-    {% endfor %}
-  </div>
-</div>
+  {% endcall %}
+  {% endfor %}
+
+{% endcall %}
 
 <script>
 (function(){

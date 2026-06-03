@@ -1,5 +1,6 @@
-{# Plans overview — REBUILT on hub-v2. Same backend data
-   (total_plans, enabled_plans, revenue_estimate, by_type, top). #}
+{# Plans overview — UNIFIED DESIGN SYSTEM (merged megahero + left help panel).
+   Same backend data (total_plans, enabled_plans, revenue_estimate, by_type, top).
+   Zero route/behaviour change. #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
@@ -9,9 +10,10 @@
 
 {% block content %}
 
-{{ hub.hero(
+{# ───── Merged hero: title + subtitle + actions + KPI strip ───── #}
+{{ hub.megahero(
   "نظرة عامة — الباقات",
-  subtitle="إحصاءات الباقات، الإيراد التقديري، والأكثر اشتراكًا",
+  subtitle="إحصاءات الباقات، الإيراد التقديري، والأكثر اشتراكًا — كل ما يحتاجه مشغّلك لمتابعة أداء العروض في مكان واحد.",
   icon="chart-pie",
   actions_html='
     <a class="hub-btn hub-btn--primary" href="' + url_for('radius.plans_new') + '">
@@ -20,21 +22,32 @@
     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.plans_list') + '">
       <i class="fa-solid fa-list"></i> القائمة
     </a>
-  '
+  ',
+  kpis=[
+    {'label': 'إجمالي الباقات', 'value': total_plans,            'icon': 'tags',         'variant': 'brand'},
+    {'label': 'مفعَّلة',        'value': enabled_plans,          'icon': 'circle-check', 'variant': 'green'},
+    {'label': 'تقدير الإيراد',  'value': revenue_estimate|money, 'icon': 'coins',        'variant': 'amber'},
+    {'label': 'أنواع',          'value': by_type|length,         'icon': 'layer-group',  'variant': 'blue'},
+  ]
 ) }}
 
-<div class="hub-kpi-grid">
-  {{ hub.kpi("إجمالي الباقات", total_plans,                          icon="tags",        variant="brand") }}
-  {{ hub.kpi("مفعَّلة",          enabled_plans,                        icon="circle-check", variant="green") }}
-  {{ hub.kpi("تقدير الإيراد",    revenue_estimate|money,              icon="coins",       variant="amber") }}
-  {{ hub.kpi("أنواع",            by_type|length,                       icon="layer-group", variant="blue")  }}
-</div>
+{# ───── Main (carded analytics) + help panel on the LEFT ───── #}
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "كيف تقرأ هذه الصفحة؟",
+  intro="هذه نظرة سريعة على أداء باقاتك: كم باقة لديك، كم منها مفعَّلة، والإيراد التقديري من المشتركين النشطين.",
+  items=[
+    {'icon': 'trophy',      'text': 'جدول «أكثر الباقات اشتراكًا» يرتّب الباقات حسب عدد المشتركين فيها.'},
+    {'icon': 'coins',       'text': 'تقدير الإيراد = مجموع أسعار الباقات للمشتركين المفعَّلين فقط.'},
+    {'icon': 'layer-group', 'text': '«توزيع حسب النوع» يبيّن كم باقة من كل نوع (وقت/كوتا/مدمج…).'},
+    {'icon': 'circle-check','text': 'الباقات المفعَّلة فقط هي التي تظهر للبيع للمشتركين.'},
+  ],
+  note="الأرقام تُحتسب لحظيًا من قاعدة البيانات؛ أضِف أو فعِّل باقة جديدة من زرّ «إضافة عرض» في الأعلى."
+)) %}
 
-<div class="hub-grid-2">
-  {# Top plans table #}
-  {% call hub.section("أكثر الباقات اشتراكًا", icon="trophy", meta="أعلى 5", flush=True) %}
+  {# Top plans table — unified data-table #}
+  {% call hub.section("أكثر الباقات اشتراكًا", icon="trophy", meta=top|length|string + " باقة", flush=True) %}
     {% if top %}
-      <div class="hub-table-wrap" style="border:none;border-radius:0">
+      <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
         <table class="hub-table">
           <thead>
             <tr>
@@ -64,7 +77,7 @@
   {% endcall %}
 
   {# Distribution by type #}
-  {% call hub.section("توزيع حسب النوع", icon="layer-group") %}
+  {% call hub.section("توزيع حسب النوع", icon="layer-group", meta=by_type|length|string + " نوع") %}
     {% if by_type %}
       <div class="hub-list">
         {% for t, c in by_type.items() %}
@@ -79,6 +92,7 @@
       {{ hub.empty("لا بيانات بعد", icon="layer-group") }}
     {% endif %}
   {% endcall %}
-</div>
+
+{% endcall %}
 
 {% endblock %}

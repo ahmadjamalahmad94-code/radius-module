@@ -524,6 +524,10 @@ def build_card_render_model(
     credential_label_color = _safe_hex(layout.get("credential_label_color"), "#64748b")
     username_surface = _safe_hex(layout.get("username_surface_color"), surface_color)
     password_surface = _safe_hex(layout.get("password_surface_color"), surface_color)
+    # Data-strip / pill transparency. The designer can dial the strips
+    # back so the gradient shows through; default to the historical 0.95
+    # so existing templates are unchanged.
+    surface_opacity = max(0.0, min(1.0, _float(layout.get("surface_opacity"), 0.95)))
     credentials_surface_default = _boolish(layout.get("credential_background_enabled"), True)
     username_surface_enabled = _boolish(layout.get("username_surface_enabled"), credentials_surface_default)
     password_surface_enabled = _boolish(layout.get("password_surface_enabled"), credentials_surface_default)
@@ -576,6 +580,7 @@ def build_card_render_model(
             pos=positions["user"], canvas=(canvas_w, canvas_h),
             surface_color=username_surface,
             surface_enabled=username_surface_enabled,
+            surface_opacity=surface_opacity,
             ink=credential_ink,
             label_color=credential_label_color,
             value_font_size=username_font_size,
@@ -590,6 +595,7 @@ def build_card_render_model(
             pos=positions["pass"], canvas=(canvas_w, canvas_h),
             surface_color=password_surface,
             surface_enabled=password_surface_enabled,
+            surface_opacity=surface_opacity,
             ink=credential_ink,
             label_color=credential_label_color,
             value_font_size=password_font_size,
@@ -649,6 +655,15 @@ def build_card_render_model(
             "max_width": canvas_w * (0.80 if orient == "vertical" else 0.88),
             "direction": render_direction,
         })
+
+    # Optional logo image. Entirely additive: when no logo data URL is
+    # present in the layout nothing is appended, so existing templates are
+    # byte-for-byte unchanged. Position/size come from the layout in the
+    # same mm-based convention as the draggable pills (0,0 → engine default
+    # top-left corner of the card with a sensible default size).
+    logo_el = _logo_element(layout, (canvas_w, canvas_h))
+    if logo_el is not None:
+        elements.append(logo_el)
 
     return {
         "canvas": {"width": canvas_w, "height": canvas_h},
@@ -720,6 +735,8 @@ def render_card_svg(model: dict, *, mask_password: bool = True) -> str:
             parts.append(_svg_pill(el, mask_password=mask_password, uid=uid))
         elif kind == "qr":
             parts.append(_svg_qr_placeholder(el))
+        elif kind == "image":
+            parts.append(_svg_image(el))
 
     parts.append('</g>')
     parts.append('</svg>')
@@ -770,6 +787,8 @@ def render_card_pdf(pdf, model: dict, *, form_name: str,
                 _pdf_pill(pdf, el, ch, expose_password=expose_password)
             elif kind == "qr":
                 _pdf_qr(pdf, el, ch)
+            elif kind == "image":
+                _pdf_image(pdf, el, ch)
     finally:
         pdf.endForm()
 
@@ -912,17 +931,57 @@ def draw_uploaded_background_uniform(pdf, model: dict, *, slot_x: float, slot_y:
     return True
 
 
-def _pdf_color(value: str):
-    """Return a reportlab Color for a hex string (cached import)."""
+def _split_hex_alpha(value: str, *, default_alpha: float = 1.0) -> tuple[str, float]:
+    """Split a hex colour into an opaque 6-digit hex + an alpha 0..1.
+
+    Accepts ``#RGB``, ``#RGBA``, ``#RRGGBB`` and ``#RRGGBBAA``. The colour
+    pickers in the designer can hand back any of these shapes, and an
+    8-digit value carries the chosen transparency in its last byte. We
+    pull that alpha out here so both adapters can honour it instead of
+    losing it (SVG via ``fill-opacity``, PDF via ``colors.Color(alpha=…)``).
+    """
+    raw = str(value or "").strip()
+    if raw.startswith("#"):
+        raw = raw[1:]
+    alpha = default_alpha
+    if len(raw) == 3:
+        raw = "".join(ch * 2 for ch in raw)
+    elif len(raw) == 4:
+        raw = "".join(ch * 2 for ch in raw)
+        alpha = int(raw[6:8], 16) / 255.0
+        raw = raw[:6]
+    elif len(raw) == 8:
+        try:
+            alpha = int(raw[6:8], 16) / 255.0
+        except ValueError:
+            alpha = default_alpha
+        raw = raw[:6]
+    if len(raw) != 6:
+        return "#1f2937", default_alpha
+    return "#" + raw.lower(), max(0.0, min(1.0, alpha))
+
+
+def _pdf_color(value: str, *, opacity: float | None = None):
+    """Return a reportlab Color for a hex string (cached import).
+
+    ``colors.HexColor`` only understands opaque 6-digit hex; it silently
+    mis-parses ``#RGB`` (3-digit) and ``#RRGGBBAA`` (8-digit) — the very
+    shapes the browser colour pickers emit — which is why chosen colours
+    used to fall back to near-black in the PDF. We normalise the hex and
+    fold in any alpha (from the hex itself and/or an explicit ``opacity``)
+    so the PDF matches the live preview.
+    """
     from reportlab.lib import colors
 
-    raw = (value or "#000000").strip()
-    if not raw.startswith("#"):
-        raw = "#" + raw
+    base_hex, hex_alpha = _split_hex_alpha(value)
+    alpha = hex_alpha if opacity is None else max(0.0, min(1.0, float(opacity))) * hex_alpha
     try:
-        return colors.HexColor(raw)
+        color = colors.HexColor(base_hex)
     except Exception:
-        return colors.HexColor("#1f2937")
+        color = colors.HexColor("#1f2937")
+    if alpha >= 1.0:
+        return color
+    return colors.Color(color.red, color.green, color.blue, alpha=alpha)
 
 
 def _pdf_background(pdf, bg: dict, cw: float, ch: float) -> None:
@@ -977,10 +1036,22 @@ def _pdf_background(pdf, bg: dict, cw: float, ch: float) -> None:
         # sits at (ch - (i+1)*band_h) in PDF space.
         pdf.rect(0, ch - (i + 1) * band_h, cw, band_h + 0.5, stroke=0, fill=1)
 
-    # Decorative pattern overlay.
+    # Decorative pattern overlay. Colour + transparency come from the
+    # saved layout instead of the old hardcoded white so the PDF matches
+    # the live preview. `pattern_opacity` is None for untouched templates,
+    # in which case the legacy per-pattern alpha is used.
     pattern = bg.get("pattern") or "signal"
+    deco_hex = bg.get("pattern_color") or "#ffffff"
+    deco_base, deco_hex_alpha = _split_hex_alpha(deco_hex)
+    base = _pdf_color(deco_base)
+    saved_opacity = bg.get("pattern_opacity")
+
+    def _deco(legacy_alpha: float):
+        eff = (saved_opacity if saved_opacity is not None else legacy_alpha) * deco_hex_alpha
+        return colors.Color(base.red, base.green, base.blue, alpha=max(0.0, min(1.0, eff)))
+
     if pattern == "grid":
-        pdf.setStrokeColor(colors.Color(1, 1, 1, alpha=0.30))
+        pdf.setStrokeColor(_deco(0.30))
         pdf.setLineWidth(0.6)
         step = max(cw * 0.045, 12)
         x = 0.0
@@ -992,7 +1063,7 @@ def _pdf_background(pdf, bg: dict, cw: float, ch: float) -> None:
             pdf.line(0, y, cw, y)
             y += step
     elif pattern == "signal":
-        pdf.setFillColor(colors.Color(1, 1, 1, alpha=0.35))
+        pdf.setFillColor(_deco(0.35))
         bar_w = max(cw * 0.005, 2.0)
         gap = max(cw * 0.020, 6.0)
         x = 0.0
@@ -1002,7 +1073,7 @@ def _pdf_background(pdf, bg: dict, cw: float, ch: float) -> None:
             x += bar_w + gap
     elif pattern == "wave":
         # Single faint highlight in the top-left quadrant.
-        pdf.setFillColor(colors.Color(1, 1, 1, alpha=0.18))
+        pdf.setFillColor(_deco(0.18))
         pdf.circle(cw * 0.25, ch * 0.70, min(cw, ch) * 0.30, stroke=0, fill=1)
 
 
@@ -1036,6 +1107,36 @@ def _pdf_rect(pdf, el: dict, ch: float) -> None:
     else:
         pdf.rect(el["x"], pdf_y, el["width"], el["height"],
                  stroke=0, fill=1)
+
+
+def _pdf_image(pdf, el: dict, ch: float) -> None:
+    """Draw a logo / decorative bitmap at model coordinates (top-left).
+
+    Best-effort and fully guarded: any decode/draw failure silently skips
+    the image so a bad logo never breaks the whole export. Aspect ratio is
+    preserved inside the box, mirroring the SVG `xMidYMid meet`.
+    """
+    href = str(el.get("href") or "")
+    if not href.startswith("data:image/") or ";base64," not in href:
+        return
+    try:
+        from io import BytesIO
+        from reportlab.lib.utils import ImageReader
+
+        mime_part, encoded = href.split(";base64,", 1)
+        image_bytes = base64.b64decode(encoded)
+        if mime_part == "data:image/webp":
+            image_bytes = _convert_bitmap_for_reportlab(image_bytes)
+        if mime_part not in {"data:image/png", "data:image/jpeg",
+                             "data:image/jpg", "data:image/webp"}:
+            return
+        image = ImageReader(BytesIO(image_bytes))
+        pdf_y = ch - el["y"] - el["height"]
+        pdf.drawImage(image, el["x"], pdf_y,
+                      width=el["width"], height=el["height"],
+                      preserveAspectRatio=True, mask="auto")
+    except Exception:
+        return
 
 
 def _pdf_text(pdf, el: dict, ch: float) -> None:
@@ -1097,7 +1198,8 @@ def _pdf_pill(pdf, el: dict, ch: float, *, expose_password: bool) -> None:
     """Draw the surface rect + label + value of a USER/PASS pill."""
     pdf_y = ch - el["y"] - el["height"]
     if el.get("surface_enabled", True):
-        pdf.setFillColor(_pdf_color(el["surface"]))
+        pdf.setFillColor(_pdf_color(el["surface"],
+                                    opacity=float(el.get("surface_opacity", 0.95))))
         pdf.roundRect(el["x"], pdf_y, el["width"], el["height"],
                       el["height"] * 0.20, stroke=0, fill=1)
     label_box_x = el["x"] + el["padding_x"]
@@ -1354,6 +1456,47 @@ def _credential_label(kind: str, language: str) -> str:
     return "USER" if kind == "user" else "PASS"
 
 
+def _logo_element(layout: dict, canvas: tuple[int, int]) -> dict | None:
+    """Build the optional logo image element, or None when absent.
+
+    The logo is opt-in: it is only drawn when the layout carries a
+    `logo_image_data_url` data URL. Position is expressed in mm in the
+    `logo_x` / `logo_y` keys (same convention as the draggable pills);
+    `logo_size_pct` is the logo box width as a percentage of the card
+    width (0 / missing → a sensible 18% default). When position is the
+    (0,0) sentinel the logo falls back to the top-left corner inset.
+    """
+    image_url = str(layout.get("logo_image_data_url") or "")
+    if not image_url.startswith("data:image/"):
+        return None
+    canvas_w, canvas_h = canvas
+    card_w_mm = max(_float(layout.get("card_width_mm"), 85), 1.0)
+    card_h_mm = max(_float(layout.get("card_height_mm"), 54), 1.0)
+
+    size_pct = _optional_positive_float(layout.get("logo_size_pct"))
+    size_frac = max(0.05, min(0.6, (size_pct / 100.0))) if size_pct else 0.18
+    box = size_frac * canvas_w
+
+    raw_x = _float(layout.get("logo_x"), 0)
+    raw_y = _float(layout.get("logo_y"), 0)
+    if raw_x == 0 and raw_y == 0:
+        # Default inset in the top-left corner.
+        x = canvas_w * 0.06
+        y = canvas_h * 0.06
+    else:
+        x = max(0.0, min(1.0, raw_x / card_w_mm)) * canvas_w
+        y = max(0.0, min(1.0, raw_y / card_h_mm)) * canvas_h
+    return {
+        "kind": "image",
+        "id": "logo",
+        "href": image_url,
+        "x": x,
+        "y": y,
+        "width": box,
+        "height": box,
+    }
+
+
 def _background(layout: dict) -> dict:
     image_url = str(layout.get("background_image_data_url") or "")
     has_image = image_url.startswith("data:image/")
@@ -1372,11 +1515,26 @@ def _background(layout: dict) -> dict:
         source = "image" if has_image else "preset"
     if source == "image" and not has_image:
         source = "preset"
+    # Decorative pattern (lines / grid / signal bars / wave circle) colour
+    # and transparency. Historically these were hardcoded to opaque-ish
+    # white; the designer now lets the user pick both, so honour the saved
+    # values and only fall back to the legacy white when nothing is set.
+    pattern_color = _safe_hex(layout.get("pattern_color"), "#ffffff")
+    pattern_opacity = layout.get("pattern_opacity")
+    pattern_opacity = (
+        max(0.0, min(1.0, _float(pattern_opacity, 1.0)))
+        if pattern_opacity is not None and str(pattern_opacity) != ""
+        else None
+    )
     return {
         "source":         source,
         "gradient_start": _safe_hex(layout.get("gradient_start"), "#0f172a"),
         "gradient_end":   _safe_hex(layout.get("gradient_end"),   "#22a7bd"),
         "pattern":        str(layout.get("pattern_style") or "signal") if source == "preset" else "clean",
+        "pattern_color":  pattern_color,
+        # None means "use the per-pattern legacy default" so untouched
+        # templates render exactly as before.
+        "pattern_opacity": pattern_opacity,
         "image_data_url": image_url if source == "image" and has_image else "",
         "image_opacity":  1.0 if source == "image" else max(0.0, min(1.0, _float(layout.get("image_opacity"), 0.82))),
     }
@@ -1449,6 +1607,7 @@ def _text_element(*, id: str, text: str, pos: dict, canvas: tuple[int, int],
 def _pill_element(*, id: str, label: str, value: str, pos: dict,
                    canvas: tuple[int, int], surface_color: str,
                    surface_enabled: bool = True,
+                   surface_opacity: float = 0.95,
                    ink: str = "#0f172a",
                    label_color: str = "#64748b",
                    value_font_size: float | None = None,
@@ -1470,6 +1629,7 @@ def _pill_element(*, id: str, label: str, value: str, pos: dict,
         "height": height,
         "surface": surface_color,
         "surface_enabled": surface_enabled,
+        "surface_opacity": surface_opacity,
         "ink": ink,
         "label_color": label_color,
         "is_password": is_password,
@@ -1493,23 +1653,26 @@ def _svg_defs(bg: dict, w: int, h: int, *, bg_id: str, pattern_id: str) -> Itera
         f'<stop offset="100%" stop-color="{_xml(bg.get("gradient_end", "#22a7bd"))}"/>'
         f'</linearGradient>'
     )
-    # Decorative pattern overlays.
+    # Decorative pattern overlays. Colour + per-stop alpha come from the
+    # saved layout (pattern_color / pattern_opacity); the structural
+    # opacity on the overlay rect is applied in `_svg_background`.
     pattern = bg.get("pattern") or "signal"
+    deco = _xml(bg.get("pattern_color") or "#ffffff")
     if pattern == "grid":
         step = max(int(w * 0.045), 8)
         yield (
             f'<pattern id="{pattern_id}" patternUnits="userSpaceOnUse" '
             f'width="{step}" height="{step}">'
             f'<path d="M{step} 0 L0 0 0 {step}" fill="none" '
-            f'stroke="rgba(255,255,255,.45)" stroke-width="1"/>'
+            f'stroke="{deco}" stroke-width="1"/>'
             f'</pattern>'
         )
     elif pattern == "wave":
         # Two faint radial highlights, drawn as a single SVG pattern.
         yield (
             f'<radialGradient id="{pattern_id}" cx="20%" cy="30%" r="55%">'
-            f'<stop offset="0%"  stop-color="rgba(255,255,255,.30)"/>'
-            f'<stop offset="60%" stop-color="rgba(255,255,255,0)"/>'
+            f'<stop offset="0%"  stop-color="{deco}"/>'
+            f'<stop offset="60%" stop-color="{deco}" stop-opacity="0"/>'
             f'</radialGradient>'
         )
     elif pattern == "signal":
@@ -1518,7 +1681,7 @@ def _svg_defs(bg: dict, w: int, h: int, *, bg_id: str, pattern_id: str) -> Itera
             f'<pattern id="{pattern_id}" patternUnits="userSpaceOnUse" '
             f'width="{max(int(w*0.025),6)}" height="{h}">'
             f'<rect x="0" y="{int(h*0.7)}" width="{max(int(w*0.005),2)}" '
-            f'height="{int(h*0.3)}" fill="rgba(255,255,255,.40)"/>'
+            f'height="{int(h*0.3)}" fill="{deco}"/>'
             f'</pattern>'
         )
     # "clean" emits no overlay.
@@ -1538,15 +1701,20 @@ def _svg_background(bg: dict, w: int, h: int, *, bg_id: str, pattern_id: str) ->
     yield f'<rect x="0" y="0" width="{w}" height="{h}" fill="url(#{bg_id})"/>'
     # Optional background image (kept inside the clip-path).
     pattern = bg.get("pattern") or "signal"
+    # Legacy per-pattern visual alpha (def-stop alpha × overlay alpha) so a
+    # template that never set pattern_opacity looks identical to before.
+    legacy_overlay = {"grid": 0.20, "signal": 0.18, "wave": 0.30}
+    saved_opacity = bg.get("pattern_opacity")
+    overlay = saved_opacity if saved_opacity is not None else legacy_overlay.get(pattern, 0.30)
     if pattern in {"grid", "signal"}:
         yield (
             f'<rect x="0" y="0" width="{w}" height="{h}" '
-            f'fill="url(#{pattern_id})" opacity="0.45"/>'
+            f'fill="url(#{pattern_id})" opacity="{overlay:.3f}"/>'
         )
     elif pattern == "wave":
         yield (
             f'<rect x="0" y="0" width="{w}" height="{h}" '
-            f'fill="url(#{pattern_id})"/>'
+            f'fill="url(#{pattern_id})" opacity="{overlay:.3f}"/>'
         )
 
 
@@ -1556,6 +1724,24 @@ def _svg_rect(el: dict) -> str:
         f'width="{el["width"]:.1f}" height="{el["height"]:.1f}" '
         f'rx="{el.get("rx", 0):.1f}" ry="{el.get("rx", 0):.1f}" '
         f'fill="{_xml(el.get("fill", "#fff"))}"/>'
+    )
+
+
+def _svg_image(el: dict) -> str:
+    """Render a logo / decorative image element.
+
+    Wrapped in `<g class="card-logo">` so the live designer can attach a
+    drag handle the same way it does for `.card-pill` / `.card-qr`. The
+    image keeps its aspect ratio inside the box (xMidYMid meet).
+    """
+    opacity = float(el.get("opacity", 1.0))
+    return (
+        f'<g class="card-logo">'
+        f'<image href="{_xml(el["href"])}" '
+        f'x="{el["x"]:.1f}" y="{el["y"]:.1f}" '
+        f'width="{el["width"]:.1f}" height="{el["height"]:.1f}" '
+        f'preserveAspectRatio="xMidYMid meet" opacity="{opacity:.2f}"/>'
+        f'</g>'
     )
 
 
@@ -1633,10 +1819,13 @@ def _svg_pill(el: dict, *, mask_password: bool, uid: str) -> str:
         f'<rect x="{x+pad:.1f}" y="{y:.1f}" width="{max(w-2*pad, 1):.1f}" height="{h:.1f}"/>'
         f'</clipPath>'
     )
+    surface_fill, surface_opacity = _svg_fill_opacity(
+        el["surface"], opacity=float(el.get("surface_opacity", 0.95))
+    )
     surface = (
         f'<rect x="{x:.1f}" y="{y:.1f}" width="{w:.1f}" height="{h:.1f}" '
         f'rx="{h*0.20:.1f}" ry="{h*0.20:.1f}" '
-        f'fill="{_xml(el["surface"])}" opacity="0.95"/>'
+        f'fill="{_xml(surface_fill)}" opacity="{surface_opacity:.3f}"/>'
         if el.get("surface_enabled", True) else ""
     )
     return (
@@ -1786,6 +1975,19 @@ def _safe_hex(value: Any, fallback: str) -> str:
     if not _HEX_RE.match(raw):
         return fallback
     return raw
+
+
+def _svg_fill_opacity(value: str, *, opacity: float = 1.0) -> tuple[str, float]:
+    """Return an opaque hex fill + the effective SVG fill-opacity.
+
+    Mirrors `_pdf_color`: any alpha carried in an 8-digit `#RRGGBBAA`
+    colour is multiplied with the explicit `opacity` so the SVG preview
+    shows exactly the transparency the PDF will, regardless of which way
+    the designer expressed it (alpha hex or a separate opacity slider).
+    """
+    base_hex, hex_alpha = _split_hex_alpha(value)
+    eff = max(0.0, min(1.0, float(opacity))) * hex_alpha
+    return base_hex, eff
 
 
 _XML_ESCAPES = (

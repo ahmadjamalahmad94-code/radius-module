@@ -175,3 +175,159 @@
   <span style="width: {{ v }}%"></span>
 </div>
 {%- endmacro %}
+
+
+{# ═══════════════════════════════════════════════════════════════════════
+   UNIFIED DESIGN SYSTEM (UDS) macros — companion to css/unified_design.css.
+   These merge the previously-separate hero / stats / search pieces and give
+   every section the same help-panel layout. RTL-safe, no JS.
+   ═══════════════════════════════════════════════════════════════════════ #}
+
+{# ── Merged hero: title + subtitle + actions + KPI strip + search ──────
+   • kpis: list of dicts  {label, value, icon, variant, sub}
+   • actions_html: pre-rendered buttons (safe)
+   • Use as a CALL block to embed the search / filter fields INSIDE the
+     hero (the caller content becomes the integrated search row):
+
+       {% call hub.megahero("العروض", subtitle="…", icon="tags",
+                            actions_html=…, kpis=[…],
+                            search_action=url_for('radius.plans_list')) %}
+         <input class="hub-input grow" name="q" placeholder="بحث…">
+         {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
+       {% endcall %}
+
+   • Called WITHOUT a block (plain {{ hub.megahero(…) }}) it simply omits
+     the search row. #}
+{% macro megahero(title, subtitle="", icon="circle-info", actions_html="",
+                  kpis=[], search_action="", search_method="get") -%}
+<section class="uds-hero">
+  <div class="uds-hero-top">
+    <div class="uds-hero-id">
+      <span class="uds-hero-icon"><i class="fa-solid fa-{{ icon }}"></i></span>
+      <div>
+        <h1 class="uds-hero-title">{{ title }}</h1>
+        {%- if subtitle %}<div class="uds-hero-sub">{{ subtitle }}</div>{% endif -%}
+      </div>
+    </div>
+    {%- if actions_html %}<div class="uds-hero-actions">{{ actions_html|safe }}</div>{% endif -%}
+  </div>
+  {%- if kpis %}
+  <div class="uds-hero-kpis">
+    {%- for k in kpis %}
+      {{ kpi(k.label, k.value, icon=k.get('icon','chart-line'),
+             variant=k.get('variant','brand'), sub=k.get('sub','')) }}
+    {%- endfor %}
+  </div>
+  {%- endif %}
+  {%- if caller %}
+  <form class="uds-hero-search" method="{{ search_method }}"
+        {%- if search_action %} action="{{ search_action }}"{% endif %}>
+    <span class="uds-search-ic"><i class="fa-solid fa-magnifying-glass"></i></span>
+    {{ caller() }}
+  </form>
+  {%- endif %}
+</section>
+{%- endmacro %}
+
+
+{# ── Work layout: main column + help aside (aside renders on the LEFT in
+   RTL). Pass the help panel markup as `aside_html`; main content is the
+   call block:
+
+       {% call hub.worklayout(aside_html=hub.helppanel("كيف تقرأ…", items=[…])) %}
+         … main content (cards / tables) …
+       {% endcall %}                                                        #}
+{% macro worklayout(aside_html="") -%}
+<div class="uds-worklayout">
+  <main class="uds-main">{{ caller() }}</main>
+  {%- if aside_html %}{{ aside_html|safe }}{% endif -%}
+</div>
+{%- endmacro %}
+
+
+{# ── Help / explanation panel (always opposite the sidebar → left) ──────
+   • intro: lead paragraph (optional)
+   • items: list of dicts {icon, text} OR plain strings
+   • note:  optional caveat line shown in a tinted box
+   • extra content can also be passed via a {% call %} block. #}
+{% macro helppanel(title, intro="", items=[], icon="compass", note="") -%}
+<aside class="uds-help" aria-label="{{ title }}">
+  <div class="uds-help-head">
+    <span class="uds-help-ic"><i class="fa-solid fa-{{ icon }}"></i></span>
+    <span class="uds-help-title">{{ title }}</span>
+  </div>
+  <div class="uds-help-body">
+    {%- if intro %}<div class="uds-help-intro">{{ intro }}</div>{% endif -%}
+    {%- if items %}
+    <ul class="uds-help-list">
+      {%- for it in items %}
+      <li>
+        <i class="fa-solid fa-{{ it.icon if (it is mapping and it.icon is defined) else 'circle-dot' }}"></i>
+        <span>{{ it.text if it is mapping else it }}</span>
+      </li>
+      {%- endfor %}
+    </ul>
+    {%- endif %}
+    {%- if note %}<div class="uds-help-note"><i class="fa-solid fa-circle-info"></i><span>{{ note }}</span></div>{% endif -%}
+    {%- if caller %}{{ caller() }}{% endif -%}
+  </div>
+</aside>
+{%- endmacro %}
+
+
+{# ── Card selection: 2–4 options chosen as cards instead of a <select>.
+   • options: list of dicts {value, title, sub, icon, checked}
+   • type: "radio" (one) or "checkbox" (many)
+   • value: the currently-selected value (for radios)
+   Posts exactly like the underlying input — zero backend change. #}
+{% macro cardselect(name, options, value=None, type="radio") -%}
+<div class="uds-cardselect">
+  {%- for opt in options %}
+  <label class="uds-cardselect-opt">
+    <input type="{{ type }}" name="{{ name }}" value="{{ opt.value }}"
+           {% if opt.get('checked') or (value is not none and (opt.value|string) == (value|string)) %}checked{% endif %}>
+    {%- if opt.get('icon') %}<span class="uds-cardselect-ic"><i class="fa-solid fa-{{ opt.icon }}"></i></span>{% endif %}
+    <span class="uds-cardselect-body">
+      <span class="uds-cardselect-title">{{ opt.title }}</span>
+      {%- if opt.get('sub') %}<span class="uds-cardselect-sub">{{ opt.sub }}</span>{% endif %}
+    </span>
+  </label>
+  {%- endfor %}
+</div>
+{%- endmacro %}
+
+
+{# ── Floating popup modal (the ONE confirmation/alert style).
+   Open it from any control with  data-uds-modal-open="<id>".
+   Body is the call block; footer buttons via footer_html.
+   For type-to-confirm, put inside the body:
+     <input class="hub-input" data-uds-confirm-input data-uds-confirm-phrase="…">
+   and give the confirm button  data-uds-confirm-btn  (starts disabled). #}
+{# ── Key/value detail list (definition list) ──────────────────────────
+   rows: list of dicts {label, value, mono}. Label sits on the right,
+   value on the left, with a comfortable aligned gap — never glued. #}
+{% macro kv(rows) -%}
+<dl class="uds-kv">
+  {%- for r in rows %}
+  <div class="uds-kv-row">
+    <span class="uds-kv-label">{{ r.label }}</span>
+    <span class="uds-kv-value{% if r.get('mono') %} mono{% endif %}">{{ r.value }}</span>
+  </div>
+  {%- endfor %}
+</dl>
+{%- endmacro %}
+
+
+{% macro modal(id, title, icon="circle-info", size="", footer_html="") -%}
+<div class="uds-modal{% if size %} uds-modal--{{ size }}{% endif %}" id="{{ id }}" data-uds-modal hidden>
+  <div class="uds-modal-dialog" role="dialog" aria-modal="true" aria-label="{{ title }}">
+    <div class="uds-modal-head">
+      <h3><i class="fa-solid fa-{{ icon }}"></i> {{ title }}</h3>
+      <button type="button" class="hub-btn hub-btn--ghost hub-btn--icon"
+              data-uds-modal-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="uds-modal-body">{{ caller() }}</div>
+    {%- if footer_html %}<div class="uds-modal-foot">{{ footer_html|safe }}</div>{% endif %}
+  </div>
+</div>
+{%- endmacro %}

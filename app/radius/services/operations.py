@@ -264,6 +264,9 @@ def _template_layout(data: dict) -> dict:
         "accent_color": _safe_hex(merged.get("accent_color"), preset["accent_color"]),
         "text_color": _safe_hex(merged.get("text_color") or merged.get("color"), preset["text_color"]),
         "surface_color": _safe_hex(merged.get("surface_color"), preset["surface_color"]),
+        # Data-strip / pill transparency (0..1). Default 0.95 matches the
+        # renderer so existing templates are visually unchanged.
+        "surface_opacity": max(0, min(1, _float_field(merged, "surface_opacity", minimum=0, default=0.95))),
         "credential_text_color": _safe_hex(merged.get("credential_text_color"), "#0f172a"),
         "credential_label_color": _safe_hex(merged.get("credential_label_color"), "#64748b"),
         "username_surface_color": _safe_hex(merged.get("username_surface_color"), _safe_hex(merged.get("surface_color"), preset["surface_color"])),
@@ -275,6 +278,9 @@ def _template_layout(data: dict) -> dict:
         "qr_background_color": _safe_hex(merged.get("qr_background_color"), "#ffffff"),
         "qr_size_pct": _optional_float_field(merged, "qr_size_pct", minimum=0, maximum=48, default=0),
         "pattern_style": _text("pattern_style", "signal", 30),
+        # Decorative line/grid/signal/circle colour. Default white keeps the
+        # legacy look for templates that never set it.
+        "pattern_color": _safe_hex(merged.get("pattern_color"), "#ffffff"),
         "image_opacity": max(0, min(1, _float_field(merged, "image_opacity", minimum=0, default=0.82))),
         "qr_style": _text("qr_style", preset["qr_style"], 30),
         "brand_name": _text("brand_name", preset["brand_name"], 80),
@@ -310,6 +316,15 @@ def _template_layout(data: dict) -> dict:
     }
     for key, default in defaults.items():
         normalized[key] = _boolish(merged.get(key), default)
+    # Decorative pattern transparency (0..1). Only persisted when the
+    # incoming form/layout actually carries it, so templates that predate
+    # the control keep the renderer's legacy per-pattern alpha instead of a
+    # forced opaque overlay. None ⇒ "use legacy" in card_renderer.
+    raw_pattern_opacity = merged.get("pattern_opacity")
+    if raw_pattern_opacity is not None and str(raw_pattern_opacity).strip() != "":
+        normalized["pattern_opacity"] = max(
+            0, min(1, _float_field(merged, "pattern_opacity", minimum=0, default=1.0))
+        )
     if normalized["card_orientation"] == "vertical" and normalized["card_width_mm"] > normalized["card_height_mm"]:
         normalized["card_width_mm"], normalized["card_height_mm"] = (
             normalized["card_height_mm"],

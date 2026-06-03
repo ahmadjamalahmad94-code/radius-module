@@ -1,6 +1,14 @@
-{# Per-tenant Telegram settings — Sprint 2. #}
+{# Per-tenant Telegram settings — Sprint 2.
+
+   UNIFIED DESIGN SYSTEM: one hub.hero (title + subtitle + icon + back action)
+   replaces the stacked page-head + bespoke hero. The 3-step how-to becomes the
+   LEFT help panel inside hub.worklayout. Settings grouped into hub.section cards
+   with hub-field/hub-input controls; the enable-alerts checkbox is the canonical
+   toggle_switch (same field name=enabled → identical POST body). Save + test
+   forms, field names, and the test-message action are all preserved verbatim. #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
+{% from "_partials/toggle_switch.html" import toggle_switch %}
 
 {% block title %}إعدادات تلجرام{% endblock %}
 {% block page_icon %}<i class="fa-brands fa-telegram"></i>{% endblock %}
@@ -17,134 +25,172 @@
 {% block content %}
 <div class="hr-page-shell" data-admin-rhythm>
 
+{# ───── Unified hero: title + subtitle + back action ───── #}
+{% set _actions %}
+  <a class="hub-btn hub-btn--secondary"
+     href="{{ url_for('radius.network_devices_list') }}">
+    <i class="fa-solid fa-arrow-right"></i> تابع أجهزة الشبكة
+  </a>
+{% endset %}
 {{ hub.hero(
   "تنبيهات تلجرام",
   subtitle="ربط بوت تلجرام لاستقبال تنبيهات انقطاع/عودة الأجهزة "
            "وارتفاع البنج. التنبيهات تطلق فقط من الأجهزة المفعّل عليها "
            "«ارسل تنبيه عند الانقطاع» — يمكنك ضبط ذلك من صفحة الجهاز.",
-  icon="bell"
+  icon="bell",
+  actions_html=_actions
 ) }}
 
-{# ── How-to card ── #}
-<section style="background:#F0F9FF;border:1px solid #BAE6FD;border-radius:14px;padding:18px 22px;margin:18px 0">
-  <h3 style="margin:0 0 10px;color:#0C4A6E;font-size:14px;font-weight:800">
-    <i class="fa-solid fa-circle-info"></i> كيف تربط البوت بـ 3 خطوات
-  </h3>
-  <ol style="margin:0;padding-inline-start:24px;color:#075985;font-size:12.5px;line-height:2">
-    <li>
-      افتح <a href="https://t.me/BotFather" target="_blank" rel="noopener"
-              style="color:#0369A1;font-weight:700">@BotFather</a>
-      على تلجرام، أرسل <code>/newbot</code> واتبع التعليمات.
-      انسخ الـ <strong>bot token</strong> اللي يطلع.
-    </li>
-    <li>
-      ابدأ محادثة مع البوت واضغط زر البدء داخل تلجرام، ثم افتح
-      <code>https://api.telegram.org/bot&lt;token&gt;/getUpdates</code>
-      وانسخ <strong>معرّف المحادثة</strong> من النتيجة (رقم سالب لمجموعة، موجب لشخص).
-    </li>
-    <li>
-      ألصق القيمتين أدناه + فعّل «تنبيهات تلجرام» + اضغط «إرسال رسالة اختبار».
-    </li>
-  </ol>
-  <a href="{{ url_for('radius.communications_guide') }}#wt-telegram"
-     style="display:inline-flex;align-items:center;gap:7px;margin-top:12px;color:#0369A1;font-weight:800;font-size:12.5px;text-decoration:none">
-    <i class="fa-solid fa-book-open"></i> تحتاج مساعدة؟ افتح الدليل المصوّر خطوة بخطوة
-  </a>
-</section>
+{# ───── Help panel (left) holds the 3-step how-to ───── #}
+{% set _help %}
+  {% call hub.helppanel(
+    "كيف تربط البوت بـ 3 خطوات",
+    intro="جهّز bot token و chat id ثم فعّل التنبيهات وأرسل رسالة اختبار.",
+    icon="circle-info"
+  ) %}
+    <ol style="margin:0;padding-inline-start:20px;color:var(--hub-text-soft);font-size:12.5px;line-height:2">
+      <li>
+        افتح <a href="https://t.me/BotFather" target="_blank" rel="noopener"
+                style="color:var(--hub-brand-ink);font-weight:700">@BotFather</a>
+        على تلجرام، أرسل <code>/newbot</code> واتبع التعليمات.
+        انسخ الـ <strong>bot token</strong> اللي يطلع.
+      </li>
+      <li>
+        ابدأ محادثة مع البوت واضغط زر البدء داخل تلجرام، ثم افتح
+        <code>https://api.telegram.org/bot&lt;token&gt;/getUpdates</code>
+        وانسخ <strong>معرّف المحادثة</strong> من النتيجة (رقم سالب لمجموعة، موجب لشخص).
+      </li>
+      <li>
+        ألصق القيمتين + فعّل «تنبيهات تلجرام» + اضغط «إرسال رسالة اختبار».
+      </li>
+    </ol>
+    <a href="{{ url_for('radius.communications_guide') }}#wt-telegram"
+       style="display:inline-flex;align-items:center;gap:7px;margin-top:14px;color:var(--hub-brand-ink);font-weight:800;font-size:12.5px;text-decoration:none">
+      <i class="fa-solid fa-book-open"></i> تحتاج مساعدة؟ افتح الدليل المصوّر خطوة بخطوة
+    </a>
+  {% endcall %}
+{% endset %}
 
-{# ── Settings form ── #}
-<form method="post"
-      action="{{ url_for('radius.network_telegram_save') }}"
-      class="hr-form-card"
-      style="background:#fff;border:1px solid #E5E7EB;border-radius:14px;padding:24px;margin-top:18px">
-  {{ csrf_token_input() | safe }}
+{% call hub.worklayout(aside_html=_help) %}
 
-  <div style="display:grid;grid-template-columns:1fr;gap:18px;max-width:760px">
+  {# ── Settings form ── #}
+  <form method="post"
+        action="{{ url_for('radius.network_telegram_save') }}"
+        class="hr-form-card">
+    {{ csrf_token_input() | safe }}
 
-    <div class="hr-field">
-      <label for="bot_token" style="display:block;font-weight:700;font-size:13px;color:#374151;margin-bottom:6px">
-        رمز البوت <span style="color:#DC2626">*</span>
-      </label>
-      <input type="text" name="bot_token" id="bot_token" required
-             value="{{ settings.bot_token }}"
-             placeholder="123456:ABC-DEF-..."
-             dir="ltr"
-             style="width:100%;padding:9px 12px;border:1px solid #D1D5DB;border-radius:8px;font-size:13px;font-family:monospace">
-      <small style="color:#6B7280;font-size:11.5px;display:block;margin-top:4px">
-        رمز الربط الذي يعطيك إياه BotFather. يُخزَّن كما هو — احذره من المشاركة.
-      </small>
-    </div>
+    {% call hub.section("بيانات الربط", icon="link") %}
 
-    <div class="hr-field">
-      <label for="chat_id" style="display:block;font-weight:700;font-size:13px;color:#374151;margin-bottom:6px">
-        معرّف المحادثة <span style="color:#DC2626">*</span>
-      </label>
-      <input type="text" name="chat_id" id="chat_id" required
-             value="{{ settings.chat_id }}"
-             placeholder="-1001234567890  أو  123456789"
-             dir="ltr"
-             style="width:100%;padding:9px 12px;border:1px solid #D1D5DB;border-radius:8px;font-size:13px;font-family:monospace">
-      <small style="color:#6B7280;font-size:11.5px;display:block;margin-top:4px">
-        رقم موجب لشخص، سالب لمجموعة عاديّة، يبدأ بـ <code>-100</code> للقنوات.
-      </small>
-    </div>
-
-    <div class="hr-field">
-      <label for="thread_id" style="display:block;font-weight:700;font-size:13px;color:#374151;margin-bottom:6px">
-        Thread ID (اختياري)
-      </label>
-      <input type="text" name="thread_id" id="thread_id"
-             value="{{ settings.thread_id }}"
-             placeholder="فارغ في الغالب"
-             dir="ltr"
-             style="width:100%;padding:9px 12px;border:1px solid #D1D5DB;border-radius:8px;font-size:13px;font-family:monospace">
-      <small style="color:#6B7280;font-size:11.5px;display:block;margin-top:4px">
-        فقط إذا كنت تستخدم Forum Supergroup وتريد التنبيهات في موضوع محدّد.
-      </small>
-    </div>
-
-    <div class="hr-field">
-      <div style="padding:14px 16px;background:#F9FAFB;border-radius:10px;border:1px solid #E5E7EB">
-        <label style="display:inline-flex;align-items:center;gap:10px;cursor:pointer;font-size:13.5px;font-weight:700;color:#374151">
-          <input type="checkbox" name="enabled" value="1"
-                 {% if settings.enabled %}checked{% endif %}
-                 style="width:18px;height:18px">
-          <span><i class="fa-solid fa-bell" style="color:#2563EB"></i> تفعيل تنبيهات تلجرام</span>
+      <div class="hub-field">
+        <label class="hub-field-label" for="bot_token">
+          رمز البوت <span class="req">*</span>
         </label>
-        <p style="margin:8px 0 0 28px;color:#6B7280;font-size:11.5px;line-height:1.7">
-          عند الإيقاف، تبقى الإعدادات محفوظة لكن لن ترسل أي تنبيهات.
-        </p>
+        <input class="hub-input" type="text" name="bot_token" id="bot_token" required
+               value="{{ settings.bot_token }}"
+               placeholder="123456:ABC-DEF-..."
+               dir="ltr"
+               style="font-family:monospace">
+        <div class="hub-field-hint">
+          رمز الربط الذي يعطيك إياه BotFather. يُخزَّن كما هو — احذره من المشاركة.
+        </div>
       </div>
-    </div>
-  </div>
 
-  <div style="display:flex;gap:10px;margin-top:24px;padding-top:18px;border-top:1px solid #F3F4F6">
-    <button type="submit" class="hub-btn hub-btn--primary">
-      <i class="fa-solid fa-save"></i> حفظ الإعدادات
-    </button>
-  </div>
-</form>
+      <div class="hub-field">
+        <label class="hub-field-label" for="chat_id">
+          معرّف المحادثة <span class="req">*</span>
+        </label>
+        <input class="hub-input" type="text" name="chat_id" id="chat_id" required
+               value="{{ settings.chat_id }}"
+               placeholder="-1001234567890  أو  123456789"
+               dir="ltr"
+               style="font-family:monospace">
+        <div class="hub-field-hint">
+          رقم موجب لشخص، سالب لمجموعة عاديّة، يبدأ بـ <code>-100</code> للقنوات.
+        </div>
+      </div>
 
-{# ── Test button (separate form so the test doesn't save changes) ── #}
-<form method="post"
-      action="{{ url_for('radius.network_telegram_test') }}"
-      style="margin-top:14px">
-  {{ csrf_token_input() | safe }}
-  <button type="submit" class="hub-btn hub-btn--ghost"
-          {% if not settings.enabled or not settings.bot_token or not settings.chat_id %}disabled
-            title="فعّل الإعدادات أولًا وأكمل الحقول"{% endif %}>
-    <i class="fa-solid fa-paper-plane"></i> إرسال رسالة اختبار
-  </button>
-  <small style="margin-inline-start:10px;color:#6B7280;font-size:11.5px">
-    يرسل رسالة جاهزة للتأكّد من وصول التنبيهات قبل أي عطل حقيقي.
-  </small>
-</form>
+      <div class="hub-field">
+        <label class="hub-field-label" for="thread_id">
+          Thread ID (اختياري)
+        </label>
+        <input class="hub-input" type="text" name="thread_id" id="thread_id"
+               value="{{ settings.thread_id }}"
+               placeholder="فارغ في الغالب"
+               dir="ltr"
+               style="font-family:monospace">
+        <div class="hub-field-hint">
+          فقط إذا كنت تستخدم Forum Supergroup وتريد التنبيهات في موضوع محدّد.
+        </div>
+      </div>
 
-{% if settings.updated_at %}
-<p style="margin-top:18px;color:#9CA3AF;font-size:11.5px;direction:ltr;text-align:start">
-  آخر تحديث: <code>{{ settings.updated_at|dt_local if settings.updated_at else '—' }}</code>
-</p>
-{% endif %}
+    {% endcall %}
+
+    {% call hub.section("التفعيل والحفظ", icon="bell") %}
+
+      <div class="uds-toggle-row">
+        <div class="uds-toggle-row-text">
+          <span class="uds-toggle-row-label">
+            <i class="fa-solid fa-bell" style="color:var(--hub-brand-ink)"></i> تفعيل تنبيهات تلجرام
+          </span>
+          <span class="uds-toggle-row-meta">
+            عند الإيقاف، تبقى الإعدادات محفوظة لكن لن ترسل أي تنبيهات.
+          </span>
+        </div>
+        {{ toggle_switch(name="enabled", id="enabled", checked=settings.enabled) }}
+      </div>
+
+      <div style="display:flex;gap:10px;margin-top:18px;">
+        <button type="submit" class="hub-btn hub-btn--primary">
+          <i class="fa-solid fa-save"></i> حفظ الإعدادات
+        </button>
+      </div>
+
+    {% endcall %}
+  </form>
+
+  {# ── Test button (separate form so the test doesn't save changes) ── #}
+  {% call hub.section("اختبار الوصول", icon="paper-plane") %}
+    <form method="post"
+          action="{{ url_for('radius.network_telegram_test') }}">
+      {{ csrf_token_input() | safe }}
+      <button type="submit" class="hub-btn hub-btn--secondary"
+              {% if not settings.enabled or not settings.bot_token or not settings.chat_id %}disabled
+                title="فعّل الإعدادات أولًا وأكمل الحقول"{% endif %}>
+        <i class="fa-solid fa-paper-plane"></i> إرسال رسالة اختبار
+      </button>
+      <div class="hub-field-hint" style="margin-top:8px">
+        يرسل رسالة جاهزة للتأكّد من وصول التنبيهات قبل أي عطل حقيقي.
+      </div>
+    </form>
+
+    {% if settings.updated_at %}
+    <p style="margin-top:14px;color:var(--hub-text-soft);font-size:11.5px;direction:ltr;text-align:start">
+      آخر تحديث: <code>{{ settings.updated_at|dt_local if settings.updated_at else '—' }}</code>
+    </p>
+    {% endif %}
+  {% endcall %}
+
+{% endcall %}
 
 </div>
+
+<style>
+  /* Toggle row: label/meta on one side, switch on the other — inside a card. */
+  .uds-toggle-row{
+    display:flex; align-items:center; gap:12px;
+    padding:4px 0;
+  }
+  .uds-toggle-row-text{
+    display:flex; flex-direction:column; gap:3px; min-width:0;
+  }
+  .uds-toggle-row-label{
+    font-size:13.5px; font-weight:700; color:var(--hub-text);
+  }
+  .uds-toggle-row-meta{
+    font-size:11.5px; color:var(--hub-text-soft, #6b7280); line-height:1.7;
+  }
+  .uds-toggle-row .tsw{ margin-inline-start:auto; flex-shrink:0; }
+</style>
 {% endblock %}
+</content>
+</invoke>

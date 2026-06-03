@@ -1,5 +1,6 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
+{% from "_partials/unit_input.html" import unit_input_picker %}
 {% block title %}تعديل السرعات{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-gauge-high"></i>{% endblock %}
 {% block page_title %}تعديل سرعات الباقات (جماعي){% endblock %}
@@ -8,14 +9,35 @@
 {{ hub.hero(
   "تعديل سرعات الباقات (جماعي)",
   subtitle="تعديل سرعة عدد من الباقات في عملية واحدة عبر مضاعف أو قيمة ثابتة.",
-  icon="gauge-high"
+  icon="gauge-high",
+  actions_html='
+    <button class="hub-btn hub-btn--primary" type="submit" form="set-speeds-form"
+            onclick="return confirm(\'تأكيد تعديل السرعات؟\')">
+      <i class="fa-solid fa-bolt"></i> تطبيق
+    </button>
+  '
 ) }}
 
-<form method="post">
+{% set help_aside %}
+  {% call hub.helppanel(
+       "كيف تعمل الأداة؟",
+       intro="حدّد الباقات المطلوبة ثم اختر طريقة التعديل: مضاعف نسبي أو قيمة ثابتة.",
+       items=[
+         {'icon':'square-check', 'text':'اختر باقة واحدة على الأقل من الجدول.'},
+         {'icon':'xmark', 'text':'المضاعف 0.5 يُنصّف السرعة و2 يُضاعفها.'},
+         {'icon':'gauge-high', 'text':'القيمة الثابتة تتجاوز المضاعف إن وُضعت.'},
+       ],
+       icon="circle-question",
+       note="بعد الحفظ سيُدفع التغيير لكل الراوترات عبر طابور المزامنة تلقائيًا."
+     ) %}{% endcall %}
+{% endset %}
+
+{% call hub.worklayout(aside_html=help_aside) %}
+<form method="post" id="set-speeds-form">
 
   {% call hub.section("اختر الباقات", icon="layer-group", meta=(plans|length ~ ' باقة') if plans else '', flush=True) %}
     <div class="hub-table-wrap" style="border:none">
-      <table class="hub-table">
+      <table class="hub-table" data-table>
         <thead>
           <tr>
             <th style="width:36px">
@@ -59,13 +81,13 @@
         <input class="hub-input" type="number" step="0.1" name="mult_up" value="1.0">
       </div>
       <div class="hub-field">
-        <label class="hub-field-label">أو ضع قيمة تنزيل ثابتة (Kbps)</label>
-        <input class="hub-input" type="number" name="set_down" min="0" value="0">
+        <label class="hub-field-label">أو ضع قيمة تنزيل ثابتة</label>
+        {{ unit_input_picker(name="set_down", value=0, kind="speed") }}
         <div class="hub-field-hint">إن وضعت قيمة هنا، تتجاوز المضاعف.</div>
       </div>
       <div class="hub-field">
-        <label class="hub-field-label">أو قيمة رفع ثابتة (Kbps)</label>
-        <input class="hub-input" type="number" name="set_up" min="0" value="0">
+        <label class="hub-field-label">أو قيمة رفع ثابتة</label>
+        {{ unit_input_picker(name="set_up", value=0, kind="speed") }}
       </div>
     </div>
   {% endcall %}
@@ -76,9 +98,5 @@
     {{ hub.btn("إلغاء", variant="ghost", href=url_for('radius.plans_list')) }}
   </div>
 </form>
-
-<div class="hub-flash hub-flash--warning" style="margin-top:16px">
-  <i class="fa-solid fa-triangle-exclamation"></i>
-  بعد الحفظ سيُدفع التغيير لكل الراوترات عبر طابور المزامنة تلقائيًا.
-</div>
+{% endcall %}
 {% endblock %}

@@ -1,69 +1,96 @@
 {# L3 — Setup wizard step 1: form.
-   Minimal markup here; L4 layers on the polished UX (icons, hints,
-   CSS, validation states). #}
+   Unified Design System (UDS) shell: ONE hub.hero (title + subtitle + icon
+   + back/generate actions) → hub.worklayout with the help panel on the LEFT
+   → fields grouped into hub.section cards.
+
+   ZERO route / behaviour change — every form field name, value, option,
+   placeholder, data-* hook and the submit action are preserved exactly.
+   The on/off checkboxes (sstp_verify_certificate, full_tunnel_confirmed)
+   become the canonical toggle switch with the SAME name/value. The RouterOS
+   version picker (radios) becomes a card-select posting the SAME name/values.
+   The router address / server IP stay plain free-text RouterOS fields. #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
+{% from "_partials/toggle_switch.html" import toggle_switch %}
 
 {% block title %}معالج إضافة راوتر{% endblock %}
-{% block page_icon %}<i class="fa-solid fa-magic-wand-sparkles"></i>{% endblock %}
-{% block page_title %}معالج إضافة راوتر{% endblock %}
-
-{% block head_extra %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/mt_setup.css') }}">
-{% endblock %}
 
 {% block content %}
 
 {{ hub.hero(
   "معالج إضافة راوتر",
   subtitle="اكتب الاسم والعنوان واختر إصدار نظام الراوتر — النظام يولّد المستخدم وكلمات المرور والسكربت تلقائيًّا",
-  icon="magic-wand-sparkles"
+  icon="magic-wand-sparkles",
+  actions_html='
+    <button type="submit" form="mt-setup-form" class="hub-btn hub-btn--primary">
+      <i class="fa-solid fa-wand-magic-sparkles"></i> توليد + إنشاء
+    </button>
+    <a href="' ~ url_for('radius.devices_list') ~ '" class="hub-btn hub-btn--secondary">
+      <i class="fa-solid fa-arrow-right"></i> إلغاء
+    </a>'
 ) }}
 
-<div class="mt-setup-form-wrap" data-mt-setup-form>
-  <form method="POST" action="{{ url_for('radius.mt_setup_create') }}" class="mt-setup-form">
+<div data-mt-setup-form>
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "ما الذي يُولَّد تلقائيًّا؟",
+  intro="بعد الحفظ يولّد النظام كل القيم السرية ويجهّز السكربت جاهزًا للنسخ.",
+  items=[
+    {'icon': 'user-gear',       'text': 'مستخدم واجهة الربط على شكل hr-XXXXXX'},
+    {'icon': 'key',             'text': 'كلمة سر واجهة الربط ٣٢ حرفًا عشوائيًّا'},
+    {'icon': 'shield-halved',   'text': 'سر المصادقة المشترك ٣٢ حرفًا'},
+    {'icon': 'network-wired',   'text': 'نظير ربط + عنوان داخلي داخل النفق للإصدار 7'},
+    {'icon': 'file-code',       'text': 'سكربت كامل بالقيم المُولَّدة، جاهز للنسخ'},
+    {'icon': 'floppy-disk',     'text': 'الخادم يحفظ الجهاز ويضيف نظير الربط للإصدار 7'},
+    {'icon': 'clipboard',       'text': 'تنسخ السكربت وتلصقه في شاشة أوامر الراوتر'},
+    {'icon': 'bolt',            'text': 'الراوتر يتّصل خلال ثوانٍ ويبدأ خدمة المصادقة'},
+    {'icon': 'circle-play',     'text': 'تضغط "اختبار" — تفتح لوحة الراوتر'},
+  ],
+  icon="shield"
+)) %}
+
+  <form id="mt-setup-form" method="POST"
+        action="{{ url_for('radius.mt_setup_create') }}">
     {{ csrf_token_input() | safe }}
-    <label class="mt-setup-field">
-      <span class="mt-setup-field-label">اسم الراوتر</span>
-      <input type="text" name="name" required maxlength="64"
-             placeholder="مثال: MT-Office" autofocus>
-      <span class="mt-setup-field-hint">يظهر في لوحة الإدارة فقط.</span>
-    </label>
 
-    <label class="mt-setup-field" data-mt-address-field>
-      <span class="mt-setup-field-label">عنوان الراوتر أو الدومين</span>
-      <input type="text" name="address" maxlength="128"
-             placeholder="مثال: 192.168.1.1">
-      <span class="mt-setup-field-hint" data-mt-address-hint-v7>
-        <strong>الإصدار 7:</strong> يُولَّد تلقائيًّا عبر نفق الإدارة الحديث — اتركه فارغًا.
-      </span>
-      <span class="mt-setup-field-hint" data-mt-address-hint-v6 hidden>
-        <strong>الإصدار 6:</strong> مطلوب — لا يدعم نفق الإدارة الحديث، نحتاج عنوانًا مباشرًا للوصول.
-      </span>
-    </label>
-
-    <fieldset class="mt-setup-field">
-      <legend class="mt-setup-field-label">إصدار نظام الراوتر</legend>
-      <div class="mt-setup-radios">
-        {% for v in ros_versions %}
-          <label class="mt-setup-radio">
-            <input type="radio" name="ros_version" value="{{ v }}"
-                   {% if v == '7' %}checked{% endif %} required>
-            <span>الإصدار {{ v }}.x</span>
-          </label>
-        {% endfor %}
+    {# ── Basic identity ── #}
+    {% call hub.section("بيانات الراوتر", icon="server") %}
+      <div class="hub-field">
+        <label>اسم الراوتر</label>
+        <input class="hub-input" type="text" name="name" required maxlength="64"
+               placeholder="مثال: MT-Office" autofocus>
+        <div class="hub-field-hint">يظهر في لوحة الإدارة فقط.</div>
       </div>
-      <span class="mt-setup-field-hint">إذا غير متأكّد، اختر 7. السكربت يطلع جاهز للنسخ بعد الحفظ.</span>
-    </fieldset>
+
+      <div class="hub-field" data-mt-address-field>
+        <label>عنوان الراوتر أو الدومين</label>
+        <input class="hub-input" type="text" name="address" maxlength="128"
+               placeholder="مثال: 192.168.1.1">
+        <div class="hub-field-hint" data-mt-address-hint-v7>
+          <strong>الإصدار 7:</strong> يُولَّد تلقائيًّا عبر نفق الإدارة الحديث — اتركه فارغًا.
+        </div>
+        <div class="hub-field-hint" data-mt-address-hint-v6 hidden>
+          <strong>الإصدار 6:</strong> مطلوب — لا يدعم نفق الإدارة الحديث، نحتاج عنوانًا مباشرًا للوصول.
+        </div>
+      </div>
+    {% endcall %}
+
+    {# ── RouterOS version (card-select, same name/values) ── #}
+    {% call hub.section("إصدار نظام الراوتر", icon="microchip") %}
+      {% set ros_opts = [] %}
+      {% for v in ros_versions %}
+        {% set _ = ros_opts.append({'value': v, 'title': 'الإصدار ' ~ v ~ '.x', 'icon': 'microchip', 'checked': (v == '7')}) %}
+      {% endfor %}
+      {{ hub.cardselect("ros_version", ros_opts, type="radio") }}
+      <div class="hub-field-hint" style="margin-top:8px">إذا غير متأكّد، اختر 7. السكربت يطلع جاهز للنسخ بعد الحفظ.</div>
+    {% endcall %}
 
     {# ── استراتيجية ربط الإصدار 6 ──
        هذا الإصدار يحتاج نفق إدارة دائمًا، وحركة الإنترنت الاختيارية تبقى عبر نفق منفصل. #}
-    <div class="mt-v6-tunnels" data-mt-v6-tunnels hidden
-         style="display:flex;flex-direction:column;gap:12px;margin:6px 0 4px">
-      <div style="font-weight:900;color:var(--hub-text)"><i class="fa-solid fa-shield-halved"></i> ربط الإصدار 6</div>
+    <div data-mt-v6-tunnels hidden>
+    {% call hub.section("ربط الإصدار 6", icon="shield-halved") %}
 
       {# بطاقة نفق الإدارة الموصى بها #}
-      <div class="mt-v6-card" style="border:1px solid #bbf7d0;background:#f0fdf4;border-radius:14px;padding:14px">
+      <div class="mt-v6-card" style="border:1px solid #bbf7d0;background:#f0fdf4;border-radius:14px;padding:14px;margin-bottom:12px">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
           <strong style="font-size:14px"><i class="fa-brands fa-windows"></i> نفق الإدارة الموصى به</strong>
           <span style="background:#16a34a;color:#fff;font-size:11px;font-weight:800;padding:2px 9px;border-radius:999px">موصى به للإدارة</span>
@@ -72,10 +99,11 @@
           يستخدم هذا النفق لإدارة الراوتر فقط: واجهة الربط، الدخول الإداري، فحص الاتصال، المراقبة، وإرسال أوامر هوبي راديوس. لا يتم تمرير إنترنت المشتركين من خلاله.
         </p>
         <div style="font-size:12px;font-weight:700;color:#047857"><i class="fa-solid fa-circle-info"></i> لن يتم ضبط المسار الافتراضي على نفق الإدارة.</div>
-        <label style="display:flex;align-items:center;gap:8px;margin-top:8px;font-size:12.5px;font-weight:700;color:var(--hub-text-soft)">
-          <input type="checkbox" name="sstp_verify_certificate" value="1">
-          التحقق من شهادة الخادم — فعّله في الإنتاج عند جاهزية الشهادة.
-        </label>
+        <div style="margin-top:10px">
+          {{ toggle_switch(name="sstp_verify_certificate", checked=False, value="1",
+               on_label="التحقق من شهادة الخادم", off_label="التحقق من شهادة الخادم") }}
+          <div class="hub-field-hint" style="margin-top:4px">فعّله في الإنتاج عند جاهزية الشهادة.</div>
+        </div>
       </div>
 
       {# بطاقة نفق حركة الإنترنت المتقدم #}
@@ -87,69 +115,60 @@
         <p style="margin:10px 0 6px;font-size:12.5px;color:var(--hub-text-soft);line-height:1.7">
           يستخدم هذا النفق عند تفعيل خدمة تغيير عنوان الإنترنت أو تمرير حركة مشتركين محددين عبر الخادم. هذا النفق منفصل عن نفق الإدارة.
         </p>
-        <label style="display:flex;flex-direction:column;gap:4px;font-size:12.5px;font-weight:700;color:var(--hub-text-soft);margin-bottom:8px">
-          بروتوكول النفق
+        <div class="hub-field">
+          <label>بروتوكول النفق</label>
           <select name="traffic_protocol" class="hub-select" data-mt-traffic-protocol>
             <option value="l2tp_ipsec" selected>النفق المشفّر الموصى به</option>
             <option value="pptp">النفق القديم غير الآمن</option>
           </select>
-        </label>
+        </div>
         <div data-mt-pptp-warn hidden style="display:flex;align-items:flex-start;gap:8px;font-size:12px;font-weight:700;color:#b91c1c;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:9px;margin-bottom:8px">
           <i class="fa-solid fa-triangle-exclamation" style="margin-top:2px"></i>
           النفق القديم غير آمن وتشفيره ضعيف. لا تستخدمه إلا اضطرارًا عندما لا يدعم الراوتر النفق المشفّر الموصى به.
         </div>
-        <label style="display:flex;flex-direction:column;gap:4px;font-size:12.5px;font-weight:700;color:var(--hub-text-soft);margin-bottom:8px">
-          وضع حركة الإنترنت
+        <div class="hub-field">
+          <label>وضع حركة الإنترنت</label>
           <select name="traffic_mode" class="hub-select" data-mt-traffic-mode>
             <option value="disabled" selected>معطّل</option>
             <option value="selected_pool">تجمّع عناوين محدد</option>
             <option value="selected_subscribers">مشتركون محددون</option>
             <option value="full_tunnel">تمرير كل الحركة (متقدم)</option>
           </select>
-        </label>
-        <label data-mt-fulltunnel-confirm hidden style="display:flex;align-items:flex-start;gap:8px;font-size:12px;font-weight:700;color:#b91c1c;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:9px">
-          <input type="checkbox" name="full_tunnel_confirmed" value="1" style="margin-top:2px">
-          أفهم أن تمرير كل الحركة قد يسبب انقطاعًا إذا كان الإعداد خاطئًا.
-        </label>
+        </div>
+        <div data-mt-fulltunnel-confirm hidden style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:9px">
+          {{ toggle_switch(name="full_tunnel_confirmed", checked=False, value="1",
+               on_label="أفهم خطورة تمرير كل الحركة", off_label="أفهم خطورة تمرير كل الحركة") }}
+          <div class="hub-field-hint" style="margin-top:4px;color:#b91c1c">
+            أفهم أن تمرير كل الحركة قد يسبب انقطاعًا إذا كان الإعداد خاطئًا.
+          </div>
+        </div>
         <div style="font-size:11.5px;color:var(--hub-text-mute);margin-top:8px;line-height:1.7">
           <i class="fa-solid fa-triangle-exclamation"></i> لا تفعّل تمرير كل الحركة إلا بعد فحص قدرة الراوتر والخادم. السرعة تعتمد على موديل الراوتر والمعالج ودعم التسريع وجودة الخط.<br>
           <i class="fa-solid fa-code-branch"></i> لا يمكن جعل نفق الإدارة ونفق الحركة يملكان مسارًا افتراضيًا في الوقت نفسه.
         </div>
       </details>
+    {% endcall %}
     </div>
 
-    <label class="mt-setup-field">
-      <span class="mt-setup-field-label">عنوان السيرفر (كما يراه الراوتر)</span>
-      <input type="text" name="server_ip" value="{{ default_server_ip }}"
-             placeholder="مثال: 187.77.70.18" maxlength="128">
-      <span class="mt-setup-field-hint">سيُدمج في السكربت كعنوان خادم المصادقة. اكتشفه النظام تلقائيًّا — عدّله لو الراوتر يحتاج عنوانًا مختلفًا مثل عنوان الربط الداخلي.</span>
-    </label>
+    {# ── Server address as seen by the router ── #}
+    {% call hub.section("عنوان السيرفر", icon="cloud") %}
+      <div class="hub-field">
+        <label>عنوان السيرفر (كما يراه الراوتر)</label>
+        <input class="hub-input" type="text" name="server_ip" value="{{ default_server_ip }}"
+               placeholder="مثال: 187.77.70.18" maxlength="128">
+        <div class="hub-field-hint">سيُدمج في السكربت كعنوان خادم المصادقة. اكتشفه النظام تلقائيًّا — عدّله لو الراوتر يحتاج عنوانًا مختلفًا مثل عنوان الربط الداخلي.</div>
+      </div>
 
-    <div class="mt-setup-actions">
-      <button type="submit" class="hub-btn hub-btn--primary">
-        <i class="fa-solid fa-wand-magic-sparkles"></i> توليد + إنشاء
-      </button>
-      <a href="{{ url_for('radius.devices_list') }}" class="hub-btn">إلغاء</a>
-    </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px">
+        <button type="submit" class="hub-btn hub-btn--primary">
+          <i class="fa-solid fa-wand-magic-sparkles"></i> توليد + إنشاء
+        </button>
+        <a href="{{ url_for('radius.devices_list') }}" class="hub-btn hub-btn--secondary">إلغاء</a>
+      </div>
+    {% endcall %}
   </form>
 
-  <aside class="mt-setup-aside">
-    <h4><i class="fa-solid fa-shield"></i> ما الذي يُولَّد تلقائيًّا؟</h4>
-    <ul>
-      <li>مستخدم واجهة الربط على شكل <code>hr-XXXXXX</code></li>
-      <li>كلمة سر واجهة الربط ٣٢ حرفًا عشوائيًّا</li>
-      <li>سر المصادقة المشترك ٣٢ حرفًا</li>
-      <li><strong>نظير ربط + عنوان داخلي داخل النفق</strong> للإصدار 7</li>
-      <li>سكربت كامل بالقيم المُولَّدة، جاهز للنسخ</li>
-    </ul>
-    <h4><i class="fa-solid fa-list-check"></i> الخطوات بعد الحفظ</h4>
-    <ol>
-      <li>الخادم يحفظ الجهاز ويضيف نظير الربط للإصدار 7.</li>
-      <li>تنسخ السكربت وتلصقه في شاشة أوامر الراوتر.</li>
-      <li>الراوتر يتّصل خلال ثوانٍ ويبدأ خدمة المصادقة.</li>
-      <li>تضغط "اختبار" — تفتح لوحة الراوتر.</li>
-    </ol>
-  </aside>
+{% endcall %}{# /worklayout #}
 </div>
 
 <script>
@@ -197,3 +216,5 @@
 </script>
 
 {% endblock %}
+</content>
+</invoke>

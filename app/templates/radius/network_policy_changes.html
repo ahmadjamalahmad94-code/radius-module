@@ -1,7 +1,15 @@
 {# سجل التغييرات لسياسة واحدة. يعرض كل change_set مع
-   نتائج كل راوتر + زر تراجع للسجلّات المؤهَّلة. #}
+   نتائج كل راوتر + زر تراجع للسجلّات المؤهَّلة.
+
+   UNIFIED DESIGN SYSTEM: one full-width hub.megahero (title + subtitle +
+   icon + counts as KPIs + back-nav actions), hub.worklayout with a LEFT
+   help panel, and each change_set rendered inside a hub.section card using
+   hub.pill for status. The shared NPC dry-run banner is preserved as the
+   page navigation. Numeric/date cells use mono + tabular-nums. Zero
+   route/behaviour change — every link/form/variable is unchanged. #}
 
 {% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
 {% import "radius/_network_policy_shell.html" as npc %}
 
 {% block title %}{{ page_title }}{% endblock %}
@@ -14,134 +22,92 @@
 {% block head_extra %}
   {{ super() }}
   {% include "radius/_network_policy_shell.html" %}
-  <style>
-    .npc-cs-card {
-      background:#fff;
-      border:1px solid #EEEDF3;
-      border-radius:12px;
-      padding:14px 16px;
-      box-shadow:0 1px 3px rgba(15,23,42,0.04);
-      margin-bottom:12px;
-    }
-    .npc-cs-head {
-      display:flex; align-items:center; gap:10px;
-      flex-wrap:wrap;
-      padding-bottom:10px;
-      border-bottom:1px solid #EEEDF3;
-    }
-    .npc-cs-num {
-      font-weight:800; color:#4036A6; font-size:14px;
-    }
-    .npc-cs-meta {
-      color:#6b7280; font-size:12px;
-    }
-    .npc-cs-targets {
-      margin-top:10px;
-      display:grid; gap:6px;
-    }
-    .npc-cs-target {
-      display:flex; align-items:center; gap:8px;
-      font-size:12.5px; color:#374151;
-      padding:6px 10px;
-      background:#fafbfd;
-      border:1px solid #EEEDF3;
-      border-radius:8px;
-    }
-    .npc-cs-target.is-success {
-      background:#ecfdf5; border-color:#a7f3d0; color:#047857;
-    }
-    .npc-cs-target.is-failed {
-      background:#fef2f2; border-color:#fecaca; color:#b91c1c;
-    }
-    .npc-cs-target.is-rolledback {
-      background:#eef2ff; border-color:#c7d2fe; color:#4338ca;
-    }
-    .npc-cs-target.is-skipped {
-      background:#f3f4f6; border-color:#e5e7eb; color:#6b7280;
-    }
-  </style>
 {% endblock %}
 
 {% block content %}
+
+{# ───── Counts for the hero KPI strip ───── #}
+{% set _succeeded = change_sets|selectattr('status', 'equalto', 'succeeded')|list|length %}
+{% set _failed = change_sets|selectattr('status', 'equalto', 'failed')|list|length %}
+{% set _rolledback = change_sets|selectattr('status', 'equalto', 'rolled_back')|list|length %}
+
+{# ───── Merged hero: title + subtitle + back-nav actions + KPI counts ───── #}
+{% set _actions %}
+  <a class="hub-btn hub-btn--secondary"
+     href="{{ url_for('radius.npc_' ~ service.key ~ '_preview', policy_id=policy.id) }}">
+    <i class="fa-solid fa-arrow-right"></i> رجوع للمعاينة
+  </a>
+  <a class="hub-btn hub-btn--secondary"
+     href="{{ url_for('radius.npc_' ~ service.key ~ '_list_scoped', nas_id=policy.router_id) }}">
+    <i class="fa-solid fa-router"></i> قائمة سياسات الراوتر
+  </a>
+{% endset %}
+{{ hub.megahero(
+  "سجل التغييرات",
+  subtitle=policy.name ~ " · " ~ router_name ~ " — كل تنفيذ أو تراجع مسجَّل لهذه السياسة، مع نتيجة كل راوتر وزر تراجع للسجلّات المؤهَّلة.",
+  icon="rectangle-list",
+  actions_html=_actions,
+  kpis=[
+    {'label': 'الإجمالي', 'value': change_sets|length, 'icon': 'layer-group',  'variant': 'brand'},
+    {'label': 'نجح',      'value': _succeeded,          'icon': 'circle-check', 'variant': 'green'},
+    {'label': 'فشل',      'value': _failed,             'icon': 'circle-xmark', 'variant': 'red'},
+    {'label': 'تراجع',    'value': _rolledback,         'icon': 'rotate-left',  'variant': 'amber'},
+  ]
+) }}
+
+{# Shared NPC dry-run banner (page navigation) #}
 {{ npc.npc_dry_run_banner() }}
 
-<div style="display:flex; gap:8px; margin-bottom:14px;
-            flex-wrap:wrap;">
-  <a class="npc-btn"
-     href="{{ url_for('radius.npc_' ~ service.key ~ '_preview', policy_id=policy.id) }}">
-    <i class="fa-solid fa-arrow-right"></i>
-    رجوع للمعاينة
-  </a>
-  <a class="npc-btn"
-     href="{{ url_for('radius.npc_' ~ service.key ~ '_list_scoped',
-                       nas_id=policy.router_id) }}">
-    <i class="fa-solid fa-router"></i>
-    قائمة سياسات الراوتر
-  </a>
-</div>
+{# ───── Main column + help panel on the LEFT ───── #}
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "كيف تقرأ هذا السجل؟",
+  intro="كل بطاقة هي عملية تنفيذ أو تراجع واحدة (change_set). تحتها تفصيل نتيجة كل راوتر استُهدف.",
+  icon="compass",
+  items=[
+    {'icon': 'shield-halved', 'text': '«تنفيذ» يطبّق السياسة على الراوتر؛ «تراجع» يلغي تنفيذًا سابقًا.'},
+    {'icon': 'circle-half-stroke', 'text': 'النجاح الجزئي يعني أن بعض الراوترات نجحت وأخرى فشلت.'},
+    {'icon': 'router', 'text': 'صف الراوتر الأخضر نجح، الأحمر فشل، والرمادي تُخطّي.'},
+    {'icon': 'rotate-left', 'text': 'زر التراجع يطابق فقط القواعد التي يحمل تعليقها HOBE_NPC_…'},
+  ],
+  note="التراجع لا يلمس أي قاعدة لم ينشئها النظام — آمن على إعداداتك اليدوية."
+)) %}
 
 {% if not change_sets %}
-  <div class="npc-empty" data-test="npc-changes-empty">
-    <i class="fa-regular fa-folder-open"></i>
-    <div class="npc-empty-title">
-      لا توجد عمليات تنفيذ مسجَّلة لهذه السياسة بعد.
-    </div>
-    <div>
-      يظهر هنا كل تنفيذ أو تراجع بعد أن يحدث، مع
-      تفاصيل كل راوتر.
-    </div>
-  </div>
+  {{ hub.empty(
+    "لا توجد عمليات تنفيذ مسجَّلة لهذه السياسة بعد.",
+    sub="يظهر هنا كل تنفيذ أو تراجع بعد أن يحدث، مع تفاصيل كل راوتر.",
+    icon="folder-open"
+  ) }}
+  <span hidden data-test="npc-changes-empty"></span>
 {% else %}
   {% for cs in change_sets %}
-    <div class="npc-cs-card" data-test="npc-cs-row">
-      <div class="npc-cs-head">
-        <span class="npc-cs-num">#{{ cs.id }}</span>
+    {% call hub.section("") %}
+      <div class="npc-cs-head" data-test="npc-cs-row">
+        <span class="npc-cs-num mono tnum" style="direction:ltr">#{{ cs.id }}</span>
 
         {% if cs.action_type == 'apply' %}
-          <span class="npc-pill npc-pill-status-app">
-            <i class="fa-solid fa-shield-halved"></i>
-            تنفيذ
-          </span>
+          {{ hub.pill("تنفيذ", variant="brand") }}
         {% else %}
-          <span class="npc-pill npc-pill-status-prev">
-            <i class="fa-solid fa-rotate-left"></i>
-            تراجع
-          </span>
+          {{ hub.pill("تراجع", variant="grey") }}
         {% endif %}
 
         {# Status pill #}
         {% if cs.status == 'succeeded' %}
-          <span class="npc-pill npc-pill-status-app">
-            <i class="fa-solid fa-check"></i> نجح
-          </span>
+          {{ hub.pill("نجح", variant="green") }}
         {% elif cs.status == 'partially_succeeded' %}
-          <span class="npc-pill npc-pill-risk-mid">
-            <i class="fa-solid fa-circle-half-stroke"></i>
-            نجاح جزئي
-          </span>
+          {{ hub.pill("نجاح جزئي", variant="amber") }}
         {% elif cs.status == 'failed' %}
-          <span class="npc-pill npc-pill-status-fail">
-            <i class="fa-solid fa-xmark"></i> فشل
-          </span>
+          {{ hub.pill("فشل", variant="red") }}
         {% elif cs.status == 'rolled_back' %}
-          <span class="npc-pill npc-pill-status-draft">
-            <i class="fa-solid fa-rotate-left"></i>
-            تمّ التراجع
-          </span>
+          {{ hub.pill("تمّ التراجع", variant="grey") }}
         {% elif cs.status == 'partially_rolled_back' %}
-          <span class="npc-pill npc-pill-risk-mid">
-            <i class="fa-solid fa-circle-half-stroke"></i>
-            تراجع جزئي
-          </span>
+          {{ hub.pill("تراجع جزئي", variant="amber") }}
         {% else %}
-          <span class="npc-pill npc-pill-status-draft">
-            {{ cs.status }}
-          </span>
+          {{ hub.pill(cs.status, variant="grey") }}
         {% endif %}
 
-        <span class="npc-cs-meta"
-              style="margin-inline-start:auto;">
-          {{ cs.created_at|dt_local }}
+        <span class="npc-cs-meta" style="margin-inline-start:auto;">
+          <span class="mono tnum" style="direction:ltr">{{ cs.created_at|dt_local }}</span>
           · بواسطة <strong>{{ cs.created_by or '—' }}</strong>
           · وضع: <code>{{ cs.execution_mode }}</code>
         </span>
@@ -158,10 +124,10 @@
               {% endif %}"
                  data-test="npc-cs-target">
               <i class="fa-solid fa-router"></i>
-              راوتر #{{ t.router_id }}
+              راوتر <span class="mono tnum" style="direction:ltr">#{{ t.router_id }}</span>
               · حالة: <strong>{{ t.status }}</strong>
               {% if t.error_message %}
-                · <span style="font-family:ui-monospace,monospace;">
+                · <span style="font-family:ui-monospace,monospace; direction:ltr;">
                   {{ t.error_message[:120] }}
                 </span>
               {% endif %}
@@ -173,24 +139,67 @@
       {% if cs.rollback_eligible and can_rollback %}
         <form method="POST"
               action="{{ url_for('radius.npc_' ~ service.key ~ '_rollback', policy_id=policy.id, change_set_id=cs.id) }}"
-              style="margin-top:10px;"
+              style="margin-top:12px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;"
               data-test="npc-cs-rollback-form"
               onsubmit="return confirm('سيتم التراجع فقط عن التغييرات التي أنشأها النظام. متابعة؟');">
           {{ csrf_token_input() | safe }}
           <button type="submit"
-                  class="npc-btn"
+                  class="hub-btn hub-btn--secondary hub-btn--sm"
                   data-test="npc-cs-rollback-btn">
             <i class="fa-solid fa-rotate-left"></i>
             تراجع عن هذا التنفيذ
           </button>
-          <span style="color:#6b7280; font-size:12px;
-                       margin-inline-start:8px;">
-            (يطابق فقط القواعد التي يحمل تعليقها
-            <code>HOBE_NPC_…</code>)
+          <span class="hub-text-mute" style="font-size:12px;">
+            (يطابق فقط القواعد التي يحمل تعليقها <code>HOBE_NPC_…</code>)
           </span>
         </form>
       {% endif %}
-    </div>
+    {% endcall %}
   {% endfor %}
 {% endif %}
+
+{% endcall %}
+
+<style>
+  /* Change-set card internals — retained from the bespoke layout,
+     re-homed inside the unified hub.section cards. */
+  .npc-cs-head {
+    display:flex; align-items:center; gap:10px;
+    flex-wrap:wrap;
+    padding-bottom:10px;
+    border-bottom:1px solid var(--hub-border, #EEEDF3);
+  }
+  .npc-cs-num {
+    font-weight:800; color:var(--hub-brand-ink, #4036A6); font-size:14px;
+  }
+  .npc-cs-meta {
+    color:var(--hub-text-soft, #6b7280); font-size:12px;
+  }
+  .npc-cs-targets {
+    margin-top:10px;
+    display:grid; gap:6px;
+  }
+  .npc-cs-target {
+    display:flex; align-items:center; gap:8px;
+    font-size:12.5px; color:#374151;
+    padding:6px 10px;
+    background:#fafbfd;
+    border:1px solid var(--hub-border, #EEEDF3);
+    border-radius:8px;
+  }
+  .npc-cs-target.is-success {
+    background:#ecfdf5; border-color:#a7f3d0; color:#047857;
+  }
+  .npc-cs-target.is-failed {
+    background:#fef2f2; border-color:#fecaca; color:#b91c1c;
+  }
+  .npc-cs-target.is-rolledback {
+    background:#eef2ff; border-color:#c7d2fe; color:#4338ca;
+  }
+  .npc-cs-target.is-skipped {
+    background:#f3f4f6; border-color:#e5e7eb; color:#6b7280;
+  }
+  .mono, .hub-mono { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; }
+  .tnum { font-variant-numeric: tabular-nums; }
+</style>
 {% endblock %}

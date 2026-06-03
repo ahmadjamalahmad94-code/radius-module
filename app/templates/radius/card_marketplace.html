@@ -363,9 +363,25 @@
     position:absolute;
     inset-inline:0;
     top:0;
-    height:4px;
-    background:var(--card-color,#7c3aed);
+    height:5px;
+    background:linear-gradient(90deg, var(--card-color,#7c3aed), color-mix(in srgb, var(--card-color,#7c3aed) 45%, #fff));
   }
+  /* soft accent glow in the corner so each offer reads as its own colour */
+  .market-package:after,.market-batch:after{
+    content:""; position:absolute; inset-block-start:-46px; inset-inline-end:-46px;
+    width:130px; height:130px; border-radius:50%; pointer-events:none;
+    background:radial-gradient(circle, color-mix(in srgb, var(--card-color,#7c3aed) 20%, transparent), transparent 70%);
+  }
+  .market-package.is-active-accent,.market-batch.is-active-accent{ border-color:color-mix(in srgb, var(--card-color,#7c3aed) 32%, var(--line)); }
+  /* accent icon badge, top inline-start corner */
+  .market-accent-badge{
+    position:absolute; inset-block-start:14px; inset-inline-start:14px; z-index:1;
+    width:34px; height:34px; border-radius:10px; display:grid; place-items:center;
+    background:color-mix(in srgb, var(--card-color,#7c3aed) 15%, #fff);
+    color:var(--card-color,#7c3aed); font-size:15px;
+    border:1px solid color-mix(in srgb, var(--card-color,#7c3aed) 32%, #fff);
+  }
+  .market-package h3,.market-batch h3{ padding-inline-start:30px; }
   .market-package h3,.market-batch h3{
     margin:2px 0 0;
     font-size:16px;
@@ -580,12 +596,15 @@
         <span class="market-pill">{{ num(packages|length) }} عرض</span>
       </div>
     </header>
+    {% set OFFER_ACCENTS = ['#6B5AED','#0EA5E9','#22C55E','#F59E0B','#EF4444','#EC4899','#8B5CF6','#14B8A6'] %}
     <div class="package-grid">
       {% for package in packages %}
         {% set duration = package.display_duration_minutes or package.duration_minutes or 0 %}
         {% set down = package.display_speed_down_kbps or package.speed_down_kbps or 0 %}
         {% set up = package.display_speed_up_kbps or package.speed_up_kbps or 0 %}
-        <article class="market-package" style="--card-color:{{ package.card_color or '#14b8a6' }}">
+        {% set acc = package.card_color if (package.card_color and (package.card_color|lower) != '#14b8a6') else OFFER_ACCENTS[loop.index0 % (OFFER_ACCENTS|length)] %}
+        <article class="market-package is-active-accent" style="--card-color:{{ acc }}">
+          <span class="market-accent-badge"><i class="fa-solid fa-ticket-simple"></i></span>
           <h3>{{ package.name }}</h3>
           <div class="market-code">{{ package.plan_name or "عرض بطاقات إلكترونية" }}</div>
           <div class="market-signature">{{ duration_minutes_label(duration) }} / {{ speed_label(down) }}</div>
@@ -647,7 +666,10 @@
         {% set available = batch.available_count or 0 %}
         {% set progress = (sold / total * 100) if total else 0 %}
         {% set progress_width = 100 if progress > 100 else progress %}
-        <article class="market-batch" style="--card-color:{{ batch.metadata.card_color if batch.metadata and batch.metadata.card_color else '#14b8a6' }}">
+        {% set _bsaved = batch.metadata.card_color if batch.metadata and batch.metadata.card_color else None %}
+        {% set bacc = _bsaved if (_bsaved and (_bsaved|lower) != '#14b8a6') else OFFER_ACCENTS[loop.index0 % (OFFER_ACCENTS|length)] %}
+        <article class="market-batch is-active-accent" style="--card-color:{{ bacc }}">
+          <span class="market-accent-badge"><i class="fa-solid fa-layer-group"></i></span>
           <h3>{{ batch.display_name }}</h3>
           <div class="market-code">{{ batch.batch_code or "بدون كود" }} · #{{ batch.id }}</div>
           <div class="market-signature">{{ batch_duration_label(batch) }}</div>

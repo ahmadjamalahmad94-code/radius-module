@@ -1,5 +1,6 @@
-{# S2.2 — Operation audit log center. #}
+{# S2.2 — Operation audit log center. UNIFIED DESIGN SYSTEM. #}
 {% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
 
 {% block title %}سجل العمليات{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-shield-halved"></i>{% endblock %}
@@ -13,273 +14,134 @@
 
 {% block content %}
 
-<section class="mt-dashboard audit-shell" data-admin-rhythm data-audit-log-page>
+{# Map decorated severity/result tones → unified hub-pill variants. #}
+{% set _tone_pill = {
+  'danger': 'red', 'warning': 'amber', 'success': 'green',
+  'info': 'blue', 'muted': 'grey'
+} %}
 
-  <section class="audit-hero" aria-labelledby="audit-title">
-    <div class="audit-hero__copy">
-      <span class="audit-kicker">
-        <i class="fa-solid fa-fingerprint"></i>
-        مركز التدقيق
-      </span>
-      <h2 id="audit-title">سجل عمليات مفهوم للمراجعة والتتبع</h2>
-      <p>
-        كل عملية حساسة تظهر هنا مع الفاعل، الهدف، الراوتر، النتيجة، والتفاصيل
-        الخام عند الحاجة. استخدم الفلاتر للوصول للحادث أو التغيير المطلوب بسرعة.
-      </p>
-    </div>
-    <div class="audit-hero__meter" aria-label="ملخص السجل الحالي">
-      <div class="audit-hero__orb">
-        <i class="fa-solid fa-clipboard-check"></i>
-      </div>
-      <strong>{{ summary.total }}</strong>
-      <span>عملية ضمن النتيجة الحالية</span>
-    </div>
-  </section>
+<section class="audit-shell" data-admin-rhythm data-audit-log-page>
 
-  <section class="audit-stats" aria-label="ملخص العمليات">
-    <article class="audit-stat audit-stat--brand">
-      <i class="fa-solid fa-list-check"></i>
-      <span>إجمالي السجل</span>
-      <strong>{{ summary.total }}</strong>
-    </article>
-    <article class="audit-stat audit-stat--danger">
-      <i class="fa-solid fa-triangle-exclamation"></i>
-      <span>عمليات حرجة</span>
-      <strong>{{ summary.critical }}</strong>
-    </article>
-    <article class="audit-stat audit-stat--amber">
-      <i class="fa-solid fa-circle-exclamation"></i>
-      <span>تحذيرات</span>
-      <strong>{{ summary.warnings }}</strong>
-    </article>
-    <article class="audit-stat audit-stat--green">
-      <i class="fa-solid fa-circle-check"></i>
-      <span>نجحت</span>
-      <strong>{{ summary.success }}</strong>
-    </article>
-    <article class="audit-stat audit-stat--blue">
-      <i class="fa-solid fa-router"></i>
-      <span>راوترات ظهرت</span>
-      <strong>{{ summary.routers }}</strong>
-    </article>
-  </section>
+{# ───── Merged hero: title + subtitle + KPI strip + integrated filters ───── #}
+{% call hub.megahero(
+  "سجل عمليات مفهوم للمراجعة والتتبع",
+  subtitle="كل عملية حساسة تظهر هنا مع الفاعل، الهدف، الراوتر، والنتيجة. استخدم الفلاتر للوصول للحادث أو التغيير المطلوب بسرعة.",
+  icon="fingerprint",
+  kpis=[
+    {'label': 'إجمالي السجل', 'value': summary.total,    'icon': 'list-check',           'variant': 'brand'},
+    {'label': 'عمليات حرجة',  'value': summary.critical,  'icon': 'triangle-exclamation', 'variant': 'red'},
+    {'label': 'تحذيرات',      'value': summary.warnings,  'icon': 'circle-exclamation',   'variant': 'amber'},
+    {'label': 'نجحت',         'value': summary.success,   'icon': 'circle-check',         'variant': 'green'},
+    {'label': 'راوترات ظهرت', 'value': summary.routers,   'icon': 'router',               'variant': 'blue'},
+  ],
+  search_action=url_for('radius.audit_log_index')
+) %}
+  <input class="hub-input" type="text" name="router_id"
+         value="{{ filters.router_id or '' }}"
+         placeholder="رقم الراوتر" inputmode="numeric"
+         data-audit-filter-router style="max-width:130px">
+  <input class="hub-input grow" type="text" name="action"
+         value="{{ filters.action or '' }}"
+         placeholder="نوع الإجراء (اتركه فارغًا لعرض الكل)"
+         data-audit-filter-action>
+  <select class="hub-input" name="severity" data-audit-filter-severity>
+    <option value="">كل الشدّات</option>
+    {% for s in severities %}
+    <option value="{{ s }}" {% if filters.severity == s %}selected{% endif %}>
+      {{ severity_labels.get(s, s) }}
+    </option>
+    {% endfor %}
+  </select>
+  <select class="hub-input" name="result_status" data-audit-filter-result>
+    <option value="">كل النتائج</option>
+    {% for r in result_statuses %}
+    <option value="{{ r }}" {% if filters.result_status == r %}selected{% endif %}>
+      {{ result_labels.get(r, r) }}
+    </option>
+    {% endfor %}
+  </select>
+  <input class="hub-input grow" type="text" name="q"
+         value="{{ filters.search or '' }}"
+         placeholder="اسم مستخدم، هدف، أو جزء من الإجراء"
+         data-audit-filter-search>
+  {{ hub.btn("تطبيق", icon="magnifying-glass", variant="primary", type="submit", size="sm", attrs='data-audit-filter-submit') }}
+  <a class="hub-btn hub-btn--secondary hub-btn--sm"
+     href="{{ url_for('radius.audit_log_index') }}" data-audit-filter-clear>
+    <i class="fa-solid fa-rotate-left"></i> مسح
+  </a>
+{% endcall %}
 
-  <section class="audit-board">
-    <aside class="audit-guide" aria-label="توضيح قراءة سجل العمليات">
-      <div class="audit-guide__icon">
-        <i class="fa-solid fa-compass"></i>
-      </div>
-      <h3>كيف تقرأ السجل؟</h3>
-      <p>
-        كل سطر = إجراء واحد: مَن نفّذه، على مَن، ونتيجته. ابدأ بالأحمر
-        (فشل / حرج)، واضغط «التفاصيل» لترى ما الذي تغيّر بالضبط.
-      </p>
-      <div class="audit-guide__chips">
-        <span><i class="fa-solid fa-circle"></i> حرجة</span>
-        <span><i class="fa-solid fa-circle"></i> نجحت</span>
-        <span><i class="fa-solid fa-circle"></i> جزئية</span>
-      </div>
-    </aside>
-
-    <section class="audit-filter-card">
-      <header class="audit-section-head">
-        <div>
-          <span class="audit-section-eyebrow">تصفية ذكية</span>
-          <h3>ضيّق السجل حسب العملية أو الراوتر</h3>
-        </div>
-        {% if summary.active_filters %}
-        <span class="audit-filter-count">
-          {{ summary.active_filters }} فلتر نشط
-        </span>
-        {% endif %}
-      </header>
-
-      <form method="get" class="audit-filter-form" data-audit-log-filters>
-        <label class="audit-field audit-field--compact">
-          <span>الراوتر</span>
-          <input type="text" name="router_id"
-                 value="{{ filters.router_id or '' }}"
-                 placeholder="رقم الراوتر"
-                 inputmode="numeric"
-                 data-audit-filter-router>
-        </label>
-        <label class="audit-field audit-field--wide">
-          <span>نوع الإجراء (اختياري)</span>
-          <input type="text" name="action"
-                 value="{{ filters.action or '' }}"
-                 placeholder="اتركه فارغًا لعرض الكل"
-                 data-audit-filter-action>
-        </label>
-        <label class="audit-field">
-          <span>الشدة</span>
-          <select name="severity" data-audit-filter-severity>
-            <option value="">كل الشدّات</option>
-            {% for s in severities %}
-            <option value="{{ s }}"
-              {% if filters.severity == s %}selected{% endif %}>
-              {{ severity_labels.get(s, s) }}
-            </option>
-            {% endfor %}
-          </select>
-        </label>
-        <label class="audit-field">
-          <span>النتيجة</span>
-          <select name="result_status" data-audit-filter-result>
-            <option value="">كل النتائج</option>
-            {% for r in result_statuses %}
-            <option value="{{ r }}"
-              {% if filters.result_status == r %}selected{% endif %}>
-              {{ result_labels.get(r, r) }}
-            </option>
-            {% endfor %}
-          </select>
-        </label>
-        <label class="audit-field audit-field--wide">
-          <span>بحث</span>
-          <input type="text" name="q"
-                 value="{{ filters.search or '' }}"
-                 placeholder="اسم مستخدم، هدف، أو جزء من الإجراء"
-                 data-audit-filter-search>
-        </label>
-        <div class="audit-filter-actions">
-          <button type="submit" class="audit-btn audit-btn--primary"
-                  data-audit-filter-submit>
-            <i class="fa-solid fa-magnifying-glass"></i>
-            تطبيق
-          </button>
-          <a class="audit-btn audit-btn--ghost"
-             href="{{ url_for('radius.audit_log_index') }}"
-             data-audit-filter-clear>
-            <i class="fa-solid fa-rotate-left"></i>
-            مسح
-          </a>
-        </div>
-      </form>
-    </section>
-  </section>
-
-  <section class="audit-results">
-    <header class="audit-section-head">
-      <div>
-        <span class="audit-section-eyebrow">آخر 200 عملية كحد أقصى</span>
-        <h3>العمليات الأخيرة</h3>
-      </div>
-      <span class="audit-count">
-        <span data-audit-count>{{ rows|length }}</span>
-        نتيجة
-      </span>
-    </header>
-
+{# ───── Main (carded table) + help panel on the LEFT ───── #}
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "كيف تقرأ السجل؟",
+  intro="كل سطر = إجراء واحد: مَن نفّذه، على مَن، ونتيجته. ابدأ بالأحمر (فشل / حرج)، واضغط «التفاصيل» لترى ما الذي تغيّر بالضبط.",
+  icon="compass",
+  items=[
+    {'icon': 'circle', 'text': 'الحرجة: عمليات حساسة فشلت أو تحتاج انتباهًا فوريًا.'},
+    {'icon': 'circle', 'text': 'النجاح: العملية تمّت كما هو متوقع دون أخطاء.'},
+    {'icon': 'circle', 'text': 'الجزئية: نفّذت جزئيًا — راجع التفاصيل لمعرفة ما اكتمل.'},
+  ],
+  note="يعرض السجل آخر 200 عملية كحد أقصى ضمن الفلاتر الحالية."
+)) %}
+  {% call hub.section("العمليات الأخيرة", icon="clock-rotate-left",
+       meta=(rows|length|string) + " نتيجة", flush=True) %}
     {% if not rows %}
-    <div class="audit-empty" data-audit-empty>
-      <i class="fa-solid fa-magnifying-glass-chart"></i>
-      <strong>لا توجد عمليات تطابق الفلاتر الحالية</strong>
-      <span>خفف شروط البحث أو امسح الفلاتر لعرض السجل الكامل.</span>
+    <div data-audit-empty>
+      {{ hub.empty(
+        "لا توجد عمليات تطابق الفلاتر الحالية",
+        sub="خفف شروط البحث أو امسح الفلاتر لعرض السجل الكامل.",
+        icon="magnifying-glass-chart"
+      ) }}
     </div>
     {% else %}
-    <div class="audit-timeline" id="audit-log-rows" data-audit-log-rows>
-      {% for r in rows %}
-      <article class="audit-event audit-event--{{ r.severity_tone }}"
-               data-audit-row="{{ r.id }}">
-        <div class="audit-event__rail">
-          <span class="audit-event__dot"></span>
-        </div>
-        <div class="audit-event__body">
-          <div class="audit-event__top">
-            <div class="audit-event__title">
-              <span class="audit-event__icon">
-                <i class="fa-solid fa-bolt"></i>
-              </span>
-              <div>
-                <h4>{{ r.action_label }}</h4>
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25"
+         style="border:none;border-radius:0">
+      <table class="hub-table" id="audit-log-rows" data-audit-log-rows>
+        <thead>
+          <tr>
+            <th>الإجراء</th>
+            <th>الشدة</th>
+            <th>النتيجة</th>
+            <th>الوقت</th>
+            <th>الفاعل</th>
+            <th>الهدف</th>
+            <th class="num">الراوتر</th>
+            <th style="width:120px" data-uds-nosort data-uds-nocol>تفاصيل</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in rows %}
+          <tr data-audit-row="{{ r.id }}">
+            <td>
+              <div class="hub-flex-row" style="gap:8px;flex-wrap:nowrap">
+                <span style="display:inline-grid;place-items:center;width:30px;height:30px;border-radius:9px;flex-shrink:0;color:#fff;background:linear-gradient(135deg,#7457f6,#13b8a6)">
+                  <i class="fa-solid fa-bolt"></i>
+                </span>
+                <strong style="color:var(--hub-text)">{{ r.action_label }}</strong>
               </div>
-            </div>
-            <div class="audit-event__badges">
-              <span class="audit-badge audit-badge--{{ r.severity_tone }}">
-                {{ r.severity_label }}
-              </span>
-              <span class="audit-badge audit-badge--{{ r.result_tone }}">
-                {{ r.result_label }}
-              </span>
-            </div>
-          </div>
-
-          <dl class="audit-event__meta">
-            <div>
-              <dt>الوقت</dt>
-              <dd><code dir="ltr">{{ r.created_at|dt_local }}</code></dd>
-            </div>
-            <div>
-              <dt>الفاعل</dt>
-              <dd>{{ r.actor or "غير محدد" }}</dd>
-            </div>
-            <div>
-              <dt>الهدف</dt>
-              <dd><code dir="ltr">{{ r.target_label }}</code></dd>
-            </div>
-            <div>
-              <dt>الراوتر</dt>
-              <dd>{% if r.router_id %}<code>{{ r.router_id }}</code>{% else %}—{% endif %}</dd>
-            </div>
-          </dl>
-
-        </div>
-        <a class="audit-detail-link"
-           href="{{ url_for('radius.audit_log_detail', audit_id=r.id) }}"
-           data-audit-detail-link="{{ r.id }}">
-          <i class="fa-solid fa-eye"></i>
-          التفاصيل
-        </a>
-      </article>
-      {% endfor %}
+            </td>
+            <td>{{ hub.pill(r.severity_label, variant=_tone_pill.get(r.severity_tone, 'grey'), dot=True) }}</td>
+            <td>{{ hub.pill(r.result_label, variant=_tone_pill.get(r.result_tone, 'grey'), dot=False) }}</td>
+            <td class="mono small"><code dir="ltr">{{ r.created_at|dt_local }}</code></td>
+            <td>{{ r.actor or "غير محدد" }}</td>
+            <td class="mono small"><code dir="ltr">{{ r.target_label }}</code></td>
+            <td class="num mono">{% if r.router_id %}{{ r.router_id }}{% else %}—{% endif %}</td>
+            <td>
+              <a class="hub-btn hub-btn--secondary hub-btn--sm"
+                 href="{{ url_for('radius.audit_log_detail', audit_id=r.id) }}"
+                 data-audit-detail-link="{{ r.id }}">
+                <i class="fa-solid fa-eye"></i> التفاصيل
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
-    <div class="bkx-pager" id="audit-log-rows-pager"></div>
     {% endif %}
-  </section>
+  {% endcall %}
+{% endcall %}
 
 </section>
-
-{# ── Client-side pagination (25 rows/page) — pattern from backups.html ── #}
-<style>
-  .bkx-pager{ display:flex; gap:6px; justify-content:center; align-items:center; margin-top:13px; flex-wrap:wrap; }
-  .bkx-pager:empty{ display:none; }
-  .bkx-pg{ min-width:33px; height:33px; padding:0 9px; border-radius:9px; border:1px solid #e2e8f0; background:#fff;
-    color:#475569; cursor:pointer; font:inherit; font-size:12.5px; font-weight:700; transition:.13s; }
-  .bkx-pg:hover:not([disabled]):not(.is-active){ background:#f5f3ff; color:#5b21b6; border-color:#c4b5fd; }
-  .bkx-pg.is-active{ background:#7c3aed; color:#fff; border-color:#7c3aed; }
-  .bkx-pg[disabled]{ opacity:.4; cursor:default; }
-</style>
-<script>
-(function(){
-  function paginate(listId, pagerId, size){
-    var list = document.getElementById(listId);
-    var pager = document.getElementById(pagerId);
-    if(!list || !pager) return;
-    var items = Array.prototype.slice.call(list.children);
-    var pages = Math.ceil(items.length / size);
-    if(pages <= 1){ items.forEach(function(it){ it.style.display=''; }); pager.innerHTML=''; return; }
-    var current = 1;
-    function render(){
-      items.forEach(function(it,i){
-        it.style.display = (i >= (current-1)*size && i < current*size) ? '' : 'none';
-      });
-      var html = '<button type="button" class="bkx-pg" data-pg="prev"'+(current===1?' disabled':'')+'>‹</button>';
-      for(var p=1; p<=pages; p++){ html += '<button type="button" class="bkx-pg'+(p===current?' is-active':'')+'" data-pg="'+p+'">'+p+'</button>'; }
-      html += '<button type="button" class="bkx-pg" data-pg="next"'+(current===pages?' disabled':'')+'>›</button>';
-      pager.innerHTML = html;
-    }
-    pager.addEventListener('click', function(e){
-      var b = e.target.closest('[data-pg]'); if(!b) return;
-      var v = b.getAttribute('data-pg');
-      if(v==='prev' && current>1) current--;
-      else if(v==='next' && current<pages) current++;
-      else if(v!=='prev' && v!=='next') current = parseInt(v,10);
-      render();
-    });
-    render();
-  }
-  paginate('audit-log-rows','audit-log-rows-pager',25);
-})();
-</script>
 
 {% endblock %}

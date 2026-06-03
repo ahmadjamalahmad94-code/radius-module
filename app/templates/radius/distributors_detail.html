@@ -1,4 +1,4 @@
-{# Distributor detail — REBUILT N11 (hub-v2). Backend untouched. #}
+{# Distributor detail — UDS (unified design system). Backend untouched. #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
@@ -9,180 +9,197 @@
 {% block head_extra %}
 {{ super() }}
 <style>
-  .dd-grid{ display:grid; grid-template-columns: minmax(300px,380px) minmax(0,1fr); gap:14px; align-items:start; }
-  @media (max-width:1000px){ .dd-grid{ grid-template-columns: 1fr; } }
-  .dd-kv{ display:grid; grid-template-columns: 110px 1fr; gap:8px 12px; font-size:12.5px; margin:0; }
-  .dd-kv dt{ color: var(--hub-text-mute); }
-  .dd-kv dd{ margin:0; font-weight:700; color: var(--hub-text); }
-  .dd-form-stack{ display:grid; gap:10px; }
-  .dd-form-stack label{ font-size:12.5px; font-weight:700; color:var(--hub-text-soft); display:block; margin-bottom:5px; }
+  .dd-form{ display:grid; gap:10px; }
+  .dd-form label{ font-size:12.5px; font-weight:700; color:var(--hub-text-soft); display:block; margin-bottom:5px; }
 </style>
 {% endblock %}
 
 {% block content %}
 
-{{ hub.hero(
+{# ───── Merged hero: identity + actions + financial KPI strip ───── #}
+{{ hub.megahero(
   distributor.display_name or distributor.name,
-  subtitle="ملف موزع وتشغيل الحزم — معلومات تشغيلية وإجراءات الربط والتسويات",
+  subtitle="ملف موزع وتشغيل الحزم — معلومات تشغيلية وإجراءات الربط والتسويات.",
   icon="people-arrows",
   actions_html='
-    <a class="hub-btn hub-btn--primary" href="' + url_for('radius.distributors_edit', distributor_id=distributor.id) + '">
+    <a class="hub-btn hub-btn--primary" href="' ~ url_for('radius.distributors_edit', distributor_id=distributor.id) ~ '">
       <i class="fa-solid fa-pen"></i> تعديل
     </a>
-    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.distributors_list') + '">
+    <a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.distributors_list') ~ '">
       <i class="fa-solid fa-arrow-right"></i> كل الموزعين
     </a>
-  '
+  ',
+  kpis=[
+    {'label': 'حزم مربوطة',  'value': summary.assigned_batches,        'icon': 'layer-group',        'variant': 'brand'},
+    {'label': 'الرصيد',      'value': (summary.balance or 0)|money,     'icon': 'wallet',             'variant': 'green'},
+    {'label': 'الدين',       'value': (summary.debt_balance or 0)|money,'icon': 'hand-holding-dollar','variant': 'amber'},
+    {'label': 'حد الائتمان', 'value': (summary.credit_limit or 0)|money,'icon': 'gauge-high',         'variant': 'blue'},
+  ]
 ) }}
 
-<div class="hub-kpi-grid">
-  {{ hub.kpi("حزم مربوطة",     summary.assigned_batches,                  icon="layer-group",          variant="brand") }}
-  {{ hub.kpi("الرصيد",         (summary.balance or 0)|money,       icon="wallet",               variant="green") }}
-  {{ hub.kpi("الدين",          (summary.debt_balance or 0)|money,  icon="hand-holding-dollar", variant="amber") }}
-  {{ hub.kpi("حد الائتمان",    (summary.credit_limit or 0)|money,  icon="gauge-high",           variant="blue") }}
-</div>
+{# ───── Main: assigned-batches table · operational forms on the LEFT ───── #}
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "بيانات ونطاق الموزع",
+  intro="ملف الموزّع يجمع هويته وصلاحياته ونطاقه، ونماذج الربط والتسوية المالية.",
+  items=[
+    {'icon': 'id-card',     'text': 'راجع اسم الدخول والحالة والتواصل والصلاحيات والنطاق أدناه.'},
+    {'icon': 'link',        'text': 'نموذج «ربط حزمة كروت» يضيف الحزمة إلى نطاق هذا الموزّع.'},
+    {'icon': 'receipt',     'text': 'نموذج «التسوية المالية» يسجّل حركة موزّع دون استبدال المحاسبة.'},
+  ],
+  note="هذه واجهة عرض موحّدة — كل ربط أو تسوية يمر بمنطق الموزّعين الأصلي دون تغيير."
+)) %}
 
-<div class="dd-grid">
-  <div>
-    {% call hub.section("بيانات ونطاق الموزع", icon="id-card") %}
-      <dl class="dd-kv">
-        <dt>اسم الدخول</dt><dd class="mono">{{ distributor.name }}</dd>
-        <dt>الحالة</dt>
-        <dd>
+  {% call hub.section("بيانات ونطاق الموزع", icon="id-card") %}
+    <dl class="uds-kv">
+      <div class="uds-kv-row">
+        <span class="uds-kv-label">اسم الدخول</span>
+        <span class="uds-kv-value mono">{{ distributor.name }}</span>
+      </div>
+      <div class="uds-kv-row">
+        <span class="uds-kv-label">الحالة</span>
+        <span class="uds-kv-value">
           {% if distributor.status == 'active' %}{{ hub.pill("مفعَّل", variant="green") }}
           {% elif distributor.status == 'blocked' %}{{ hub.pill("محظور", variant="red") }}
           {% elif distributor.status == 'inactive' %}{{ hub.pill("متوقّف", variant="grey") }}
           {% else %}{{ hub.pill(distributor.status or 'غير معروف', variant="amber") }}{% endif %}
-        </dd>
-        <dt>الهاتف</dt><dd>{{ distributor.phone or '—' }}</dd>
-        <dt>البريد</dt><dd class="mono">{{ distributor.email or '—' }}</dd>
-        <dt>الصلاحيات</dt>
-        <dd>
-          <div class="hub-flex-row" style="gap:4px;flex-wrap:wrap">
-            {% for p in distributor.permissions_json %}
+        </span>
+      </div>
+      <div class="uds-kv-row">
+        <span class="uds-kv-label">الهاتف</span>
+        <span class="uds-kv-value">{{ distributor.phone or '—' }}</span>
+      </div>
+      <div class="uds-kv-row">
+        <span class="uds-kv-label">البريد</span>
+        <span class="uds-kv-value mono">{{ distributor.email or '—' }}</span>
+      </div>
+      <div class="uds-kv-row">
+        <span class="uds-kv-label">الصلاحيات</span>
+        <span class="uds-kv-value">
+          <span class="hub-flex-row" style="gap:4px;flex-wrap:wrap">
+            {% for p in (distributor.permissions_json or []) %}
               {{ hub.pill(p, variant="brand", dot=False) }}
             {% else %}
               <span class="hub-text-mute small">لم تُحدَّد</span>
             {% endfor %}
-          </div>
-        </dd>
-        <dt>النطاق</dt>
-        <dd>
-          {% if distributor.scope_json.card_batches == 'assigned' %}
+          </span>
+        </span>
+      </div>
+      <div class="uds-kv-row">
+        <span class="uds-kv-label">النطاق</span>
+        <span class="uds-kv-value">
+          {% if (distributor.scope_json or {}).card_batches == 'assigned' %}
             {{ hub.pill("الحزم المربوطة فقط", variant="blue", dot=False) }}
           {% else %}
-            {{ hub.pill(distributor.scope_json.card_batches or 'مخصص', variant="grey", dot=False) }}
+            {{ hub.pill((distributor.scope_json or {}).card_batches or 'مخصص', variant="grey", dot=False) }}
           {% endif %}
-        </dd>
-      </dl>
-      {% if distributor.notes %}
-        <div style="margin-top:14px;padding:10px 12px;border-radius:var(--hub-r-md);
-                    background:var(--hub-bg-soft);font-size:12.5px;line-height:1.7;color:var(--hub-text-soft)">
-          <i class="fa-solid fa-note-sticky" style="color:var(--hub-text-mute);margin-inline-end:6px"></i>
-          {{ distributor.notes }}
-        </div>
-      {% endif %}
-    {% endcall %}
-
-    {% call hub.section("ربط حزمة كروت", icon="link") %}
-      <p class="hub-text-mute" style="font-size:12px;margin:0 0 12px">بعد الربط تظهر الحزمة ضمن نطاق هذا الموزع.</p>
-      <form class="dd-form-stack" method="post"
-            action="{{ url_for('radius.distributors_assign_batch', distributor_id=distributor.id) }}">
-        <div>
-          <label>الحزمة</label>
-          <select class="hub-select" name="batch_id" required>
-            <option value="">— اختر حزمة —</option>
-            {% for b in available_batches %}
-              <option value="{{ b.id }}">{{ b.batch_code }} — {{ b.package_name or 'بدون اسم' }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div>
-          <label>ملاحظة الربط</label>
-          <input class="hub-input" type="text" name="notes" maxlength="300"
-                 placeholder="مثال: تسليم يدوي للموزع">
-        </div>
-        <button class="hub-btn hub-btn--primary" type="submit">
-          <i class="fa-solid fa-link"></i> ربط الحزمة
-        </button>
-      </form>
-    {% endcall %}
-
-    {% call hub.section("تسوية مالية يدوية", icon="receipt") %}
-      <p class="hub-text-mute" style="font-size:12px;margin:0 0 12px">تسجل حركة موزع، ولا تستبدل نظام المحاسبة الكامل.</p>
-      <form class="dd-form-stack" method="post"
-            action="{{ url_for('radius.distributors_settle', distributor_id=distributor.id) }}">
-        <div>
-          <label>المبلغ</label>
-          <input class="hub-input" type="number" step="0.01" min="0.01" name="amount" required>
-        </div>
-        <div>
-          <label>الاتجاه</label>
-          <select class="hub-select" name="direction">
-            <option value="credit">تسديد / إنقاص الدين</option>
-            <option value="debit">إضافة دين</option>
-          </select>
-        </div>
-        <div>
-          <label>ملاحظات</label>
-          <input class="hub-input" type="text" name="notes" maxlength="500">
-        </div>
-        <button class="hub-btn hub-btn--secondary" type="submit">
-          <i class="fa-solid fa-receipt"></i> تسجيل الحركة
-        </button>
-      </form>
-    {% endcall %}
-  </div>
-
-  <div>
-    {% if assigned_batches %}
-      {% call hub.section("الحزم المربوطة", icon="layer-group",
-                          meta=assigned_batches|length|string + " حزمة", flush=True) %}
-        <div class="hub-table-wrap" style="border:none;border-radius:0">
-          <table class="hub-table"
-                 data-paginated="1" data-page-size="20"
-                 data-persist-key="distributor-batches-{{ distributor.id }}">
-            <thead>
-              <tr>
-                <th class="num" style="width:60px">#</th>
-                <th>كود الحزمة</th>
-                <th>الباقة</th>
-                <th class="num">العدد</th>
-                <th class="num">المستخدم</th>
-                <th>الحالة</th>
-                <th>تاريخ الربط</th>
-                <th>ملاحظة</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for b in assigned_batches %}
-              <tr>
-                <td class="num mono">{{ b.id }}</td>
-                <td class="mono"><strong>{{ b.batch_code }}</strong></td>
-                <td>{{ b.package_name or '—' }}</td>
-                <td class="num">{{ b.count }}</td>
-                <td class="num">{{ b.used }}</td>
-                <td>
-                  {% if b.status == 'active' %}{{ hub.pill("نشطة", variant="green") }}
-                  {% elif b.status == 'used' %}{{ hub.pill("مستهلكة", variant="grey") }}
-                  {% else %}{{ hub.pill(b.status or 'غير معروف', variant="brand", dot=False) }}{% endif %}
-                </td>
-                <td class="mono small">{{ b.assigned_at|dt_local if b.assigned_at else '—' }}</td>
-                <td class="small">{{ b.assignment_notes or '—' }}</td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      {% endcall %}
-    {% else %}
-      {{ hub.empty(
-        "لا توجد حزم مربوطة بعد",
-        sub="استخدم نموذج «ربط حزمة كروت» على اليسار لربط أول حزمة بهذا الموزع.",
-        icon="layer-group"
-      ) }}
+        </span>
+      </div>
+    </dl>
+    {% if distributor.notes %}
+      <div style="margin-top:14px;padding:10px 12px;border-radius:var(--hub-r-md);
+                  background:var(--hub-bg-soft);font-size:12.5px;line-height:1.7;color:var(--hub-text-soft)">
+        <i class="fa-solid fa-note-sticky" style="color:var(--hub-text-mute);margin-inline-end:6px"></i>
+        {{ distributor.notes }}
+      </div>
     {% endif %}
-  </div>
-</div>
+  {% endcall %}
+
+  {% if assigned_batches %}
+    {% call hub.section("الحزم المربوطة", icon="layer-group",
+                        meta=(assigned_batches|length|string ~ " حزمة"), flush=True) %}
+      <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="15"
+           style="border:none;border-radius:0">
+        <table class="hub-table">
+          <thead>
+            <tr>
+              <th class="num" style="width:60px">#</th>
+              <th>كود الحزمة</th>
+              <th>الباقة</th>
+              <th class="num">العدد</th>
+              <th class="num">المستخدم</th>
+              <th>الحالة</th>
+              <th>تاريخ الربط</th>
+              <th data-uds-nosort>ملاحظة</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for b in assigned_batches %}
+            <tr>
+              <td class="num mono">{{ b.id }}</td>
+              <td class="mono"><strong>{{ b.batch_code }}</strong></td>
+              <td>{{ b.package_name or '—' }}</td>
+              <td class="num">{{ b.count }}</td>
+              <td class="num">{{ b.used }}</td>
+              <td>
+                {% if b.status == 'active' %}{{ hub.pill("نشطة", variant="green") }}
+                {% elif b.status == 'used' %}{{ hub.pill("مستهلكة", variant="grey") }}
+                {% else %}{{ hub.pill(b.status or 'غير معروف', variant="brand", dot=False) }}{% endif %}
+              </td>
+              <td class="num mono small">{{ b.assigned_at|dt_local if b.assigned_at else '—' }}</td>
+              <td class="small">{{ b.assignment_notes or '—' }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endcall %}
+  {% else %}
+    {{ hub.empty(
+      "لا توجد حزم مربوطة بعد",
+      sub="استخدم نموذج «ربط حزمة كروت» على اليسار لربط أول حزمة بهذا الموزع.",
+      icon="layer-group"
+    ) }}
+  {% endif %}
+
+  {% call hub.section("ربط حزمة كروت", icon="link") %}
+    <p class="hub-text-mute" style="font-size:12px;margin:0 0 12px">بعد الربط تظهر الحزمة ضمن نطاق هذا الموزع.</p>
+    <form class="dd-form" method="post"
+          action="{{ url_for('radius.distributors_assign_batch', distributor_id=distributor.id) }}">
+      <div>
+        <label>الحزمة</label>
+        <select class="hub-select" name="batch_id" required>
+          <option value="">— اختر حزمة —</option>
+          {% for b in available_batches %}
+            <option value="{{ b.id }}">{{ b.batch_code }} — {{ b.package_name or 'بدون اسم' }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label>ملاحظة الربط</label>
+        <input class="hub-input" type="text" name="notes" maxlength="300"
+               placeholder="مثال: تسليم يدوي للموزع">
+      </div>
+      <button class="hub-btn hub-btn--primary" type="submit">
+        <i class="fa-solid fa-link"></i> ربط الحزمة
+      </button>
+    </form>
+  {% endcall %}
+
+  {% call hub.section("تسوية مالية يدوية", icon="receipt") %}
+    <p class="hub-text-mute" style="font-size:12px;margin:0 0 12px">تسجل حركة موزع، ولا تستبدل نظام المحاسبة الكامل.</p>
+    <form class="dd-form" method="post"
+          action="{{ url_for('radius.distributors_settle', distributor_id=distributor.id) }}">
+      <div>
+        <label>المبلغ</label>
+        <input class="hub-input" type="number" step="0.01" min="0.01" name="amount" required>
+      </div>
+      <div>
+        <label>الاتجاه</label>
+        <select class="hub-select" name="direction">
+          <option value="credit">تسديد / إنقاص الدين</option>
+          <option value="debit">إضافة دين</option>
+        </select>
+      </div>
+      <div>
+        <label>ملاحظات</label>
+        <input class="hub-input" type="text" name="notes" maxlength="500">
+      </div>
+      <button class="hub-btn hub-btn--secondary" type="submit">
+        <i class="fa-solid fa-receipt"></i> تسجيل الحركة
+      </button>
+    </form>
+  {% endcall %}
+
+{% endcall %}
 
 {% endblock %}

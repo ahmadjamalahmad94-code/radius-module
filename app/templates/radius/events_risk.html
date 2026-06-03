@@ -5,36 +5,77 @@
 {% block page_icon %}<i class="fa-solid fa-shield-halved"></i>{% endblock %}
 {% block page_title %}مركز المخاطر{% endblock %}
 {% block page_sub %}<span class="sub">تنبيهات الاحتيال وقواعد المخاطر مع بقاء الأحداث الأصلية محفوظة للمراجعة.</span>{% endblock %}
-{% block head_extra %}{{ super() }}<link rel="stylesheet" href="{{ url_for('static', filename='css/ops_risk_redesign.css') }}">{% endblock %}
 
 {% block content %}
-<div class="opsx-redesign">
-{{ hub.hero("مركز المخاطر", subtitle="شغّل فحصًا واضحًا للمحفظة والخصومات والقروض والدخول وتطابق القيود المالية قبل اتخاذ أي إجراء.", icon="shield-halved") }}
+
+{# ───── Unified hero: title + subtitle + KPI strip + scan action (no GET filters → plain) ───── #}
+{{ hub.megahero(
+  "مركز المخاطر",
+  subtitle="شغّل فحصًا واضحًا للمحفظة والخصومات والقروض والدخول وتطابق القيود المالية قبل اتخاذ أي إجراء.",
+  icon="shield-halved",
+  kpis=[
+    {'label': 'الأحداث',           'value': summary.events,          'icon': 'list',                 'variant': 'brand'},
+    {'label': 'التنبيهات المفتوحة', 'value': summary.open_flags,      'icon': 'flag',                 'variant': 'amber'},
+    {'label': 'حرجة',              'value': summary.critical_events, 'icon': 'triangle-exclamation', 'variant': 'red'},
+  ],
+  actions_html=(
+    '<form method="post" data-testid="risk-scan-form" style="margin:0">'
+    ~ '<input type="hidden" name="_csrf_token" value="' ~ (csrf_token() if csrf_token is defined else '') ~ '">'
+    ~ '<button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-magnifying-glass-chart"></i> تشغيل قواعد الفحص</button>'
+    ~ '</form>'
+  )
+) }}
+
 {% include "radius/events_nav.html" %}
 
-{% call hub.section("فحص المخاطر", icon="magnifying-glass-chart") %}
-  <form method="post" data-testid="risk-scan-form">
-    <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-    <button class="hub-btn hub-btn--primary" type="submit">تشغيل قواعد الفحص</button>
-  </form>
-  {% if result %}
-    <p data-testid="risk-scan-result">تم إنشاء {{ result.flags_created }} تنبيه.</p>
-  {% endif %}
+{% if result %}
+  {% call hub.section("نتيجة الفحص", icon="circle-check") %}
+    <p data-testid="risk-scan-result" style="margin:0">تم إنشاء {{ result.flags_created }} تنبيه.</p>
+  {% endcall %}
+{% endif %}
+
+{# ───── Main (carded table) + help panel on the LEFT ───── #}
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "كيف تقرأ هذه الصفحة؟",
+  intro="كل صف هو تنبيه احتيال أنشأته قواعد الفحص. شغّل الفحص من الأعلى لتحديث القائمة.",
+  items=[
+    {'icon': 'hashtag',              'text': 'الرقم والمفتاح يحدّدان نوع التنبيه ومصدره داخل النظام.'},
+    {'icon': 'triangle-exclamation', 'text': 'الخطورة والنقاط تساعدانك على ترتيب التنبيهات حسب الأولوية.'},
+    {'icon': 'cube',                 'text': 'الكيان يربط التنبيه بالكيان المعني (محفظة، مشترك، ...).'},
+    {'icon': 'shield-halved',        'text': 'الأحداث الأصلية تبقى محفوظة للمراجعة ولا تُحذف من هنا.'},
+  ],
+  note="هذه الصفحة للعرض فقط — لا توجد إجراءات حذف على الأحداث من هنا."
+)) %}
+  {% call hub.section("تنبيهات الاحتيال", icon="flag", meta=flags|length|string + " تنبيه", flush=True) %}
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="15" style="border:none;border-radius:0">
+      <table class="hub-table" data-testid="fraud-flags-table">
+        <thead>
+          <tr>
+            <th class="num">الرقم</th>
+            <th>المفتاح</th>
+            <th>الخطورة</th>
+            <th class="num">النقاط</th>
+            <th>الكيان</th>
+            <th>الملخص</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for flag in flags %}
+            <tr>
+              <td class="num mono">#{{ flag.id }}</td>
+              <td class="mono small">{{ flag.flag_key }}</td>
+              <td>{{ hub.pill(flag.severity, variant="amber", dot=False) }}</td>
+              <td class="num">{{ flag.risk_score }}</td>
+              <td>{{ flag.entity_type }} #{{ flag.entity_id or '' }}</td>
+              <td>{{ flag.summary }}</td>
+            </tr>
+          {% else %}
+            <tr><td colspan="6">لا توجد تنبيهات احتيال حتى الآن.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endcall %}
 {% endcall %}
 
-{% call hub.section("تنبيهات الاحتيال", icon="flag", flush=True) %}
-  <div class="hub-table-wrap">
-    <table class="hub-table" data-testid="fraud-flags-table">
-      <thead><tr><th>الرقم</th><th>المفتاح</th><th>الخطورة</th><th>النقاط</th><th>الكيان</th><th>الملخص</th></tr></thead>
-      <tbody>
-        {% for flag in flags %}
-          <tr><td>#{{ flag.id }}</td><td>{{ flag.flag_key }}</td><td>{{ flag.severity }}</td><td>{{ flag.risk_score }}</td><td>{{ flag.entity_type }} #{{ flag.entity_id or '' }}</td><td>{{ flag.summary }}</td></tr>
-        {% else %}
-          <tr><td colspan="6">لا توجد تنبيهات احتيال حتى الآن.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-{% endcall %}
-</div>
 {% endblock %}

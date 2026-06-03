@@ -9,33 +9,19 @@
 {% block head_extra %}
 {{ super() }}
 <style>
-  .csnd{ display:grid; gap:16px; }
-  /* explainer */
-  .csnd-explain{ display:flex; gap:12px; align-items:flex-start; background:#eff6ff; border:1px solid #bfdbfe; border-radius:14px; padding:13px 16px; }
-  .csnd-explain .ic{ width:34px;height:34px;border-radius:10px;background:#dbeafe;color:#1d4ed8;display:grid;place-items:center;font-size:15px;flex:none; }
-  .csnd-explain .tx{ font-size:12.5px; line-height:1.85; color:#1e40af; }
-  .csnd-explain .tx a{ color:#1d4ed8; font-weight:800; text-decoration:underline; }
+  /* variable chips (insert at cursor) — retained custom element */
+  .csnd-vars{ display:flex; gap:6px; flex-wrap:wrap; margin-top:6px; }
+  .csnd-var{ font-family:ui-monospace,Consolas,monospace; font-size:11px;
+    background:var(--hub-bg-soft,#f1f5f9); border:1px solid var(--hub-border,#e2e8f0);
+    border-radius:6px; padding:3px 8px; color:var(--hub-brand-ink,#5b21b6);
+    direction:ltr; unicode-bidi:isolate; cursor:pointer;
+    transition:all var(--hub-anim-fast,.12s) var(--hub-ease,ease); }
+  .csnd-var:hover{ background:var(--hub-brand-soft,#ede9fe); border-color:var(--hub-brand-line,#c4b5fd); }
   /* form grid */
-  .csnd-form{ display:grid; gap:14px; }
+  .csnd-form{ display:grid; gap:var(--hub-gap-section,16px); }
   .csnd-row{ display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:13px; }
-  .csnd-fld{ display:grid; gap:6px; }
-  .csnd-fld label{ font-size:12.5px; font-weight:800; color:#0f172a; }
-  .csnd-fld .hint{ font-size:11px; color:#94a3b8; line-height:1.6; }
-  .csnd-input,.csnd-select,.csnd-area{ width:100%; border:1px solid #cbd5e1; border-radius:10px; padding:9px 11px; font:inherit; font-size:13px;
-    background:#fff; color:#0f172a; }
-  .csnd-input:focus,.csnd-select:focus,.csnd-area:focus{ outline:0; border-color:#7c3aed; box-shadow:0 0 0 3px rgba(124,58,237,.15); }
-  .csnd-area{ min-height:120px; resize:vertical; line-height:1.85; }
-  /* variable chips (insert at cursor) */
-  .csnd-vars{ display:flex; gap:6px; flex-wrap:wrap; }
-  .csnd-var{ font-family:ui-monospace,Consolas,monospace; font-size:11px; background:#f1f5f9; border:1px solid #e2e8f0; border-radius:6px;
-    padding:3px 8px; color:#5b21b6; direction:ltr; unicode-bidi:isolate; cursor:pointer; transition:.12s; }
-  .csnd-var:hover{ background:#ede9fe; border-color:#c4b5fd; }
-  /* footer actions */
   .csnd-foot{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; padding-top:4px; }
-  .csnd-note{ font-size:11.5px; color:#64748b; }
-  /* status pill in preview */
-  .csnd-pill{ display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:800; border-radius:999px; padding:3px 10px;
-    background:#ede9fe; color:#5b21b6; }
+  .csnd-note{ font-size:11.5px; color:var(--hub-text-mute,#64748b); }
 </style>
 {% endblock %}
 
@@ -44,28 +30,34 @@
   "إرسال رسالة",
   subtitle="تُحفظ الرسائل في الطابور بشكل افتراضي، ولا يتم الإرسال عبر مزوّد خارجي إلا بعد تفعيل القناة من الإعدادات.",
   icon="paper-plane",
-  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.communications_guide') ~ '"><i class="fa-solid fa-book-open"></i> دليل وشروحات</a>'
+  actions_html=(
+    '<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.communications_channels') ~ '"><i class="fa-solid fa-tower-broadcast"></i> قنوات الإرسال</a>'
+    ~ '<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.communications_guide') ~ '"><i class="fa-solid fa-book-open"></i> دليل وشروحات</a>'
+  )
 ) }}
 {% include "radius/communications_nav.html" %}
 
-<div class="csnd">
-  <div class="csnd-explain">
-    <span class="ic"><i class="fa-solid fa-circle-info"></i></span>
-    <div class="tx">
-      اختر الجمهور والقناة، اكتب الرسالة (يمكنك إدراج متغيّرات تُملأ تلقائيًا)، ثم اضغط «معاينة الجمهور» للتأكد قبل
-      «إضافة الرسالة للطابور». لضبط القنوات افتح <a href="{{ url_for('radius.communications_channels') }}">قنوات الإرسال</a>،
-      وللشرح المصوّر <a href="{{ url_for('radius.communications_guide') }}">الدليل</a>.
-    </div>
-  </div>
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "كيف ترسل رسالة؟",
+  intro="اختر الجمهور والقناة، اكتب الرسالة، ثم عاين الجمهور قبل إضافتها للطابور.",
+  icon="circle-info",
+  items=[
+    {'icon': 'users', 'text': 'اختر فئة المستلمين من «الهدف» — و«مشتركون محددون» يستخدم حقل الأرقام.'},
+    {'icon': 'tower-broadcast', 'text': '«رسالة داخلية» تُحفظ بالطابور دون مزوّد خارجي؛ بقية القنوات تتطلب تفعيلها.'},
+    {'icon': 'code', 'text': 'المتغيّرات مثل {username} تُملأ ببيانات كل مشترك عند الإرسال.'},
+    {'icon': 'eye', 'text': '«معاينة الجمهور» لا ترسل شيئًا — تعرض من سيستلم فقط قبل الإضافة للطابور.'}
+  ],
+  note="لضبط القنوات افتح «قنوات الإرسال» من الأعلى، وللشرح المصوّر افتح «دليل وشروحات»."
+)) %}
 
   {% call hub.section("الجمهور والرسالة", icon="paper-plane") %}
     <form method="post" class="csnd-form" data-testid="manual-message-form">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
 
       <div class="csnd-row">
-        <div class="csnd-fld">
-          <label for="snd-target">الهدف</label>
-          <select id="snd-target" class="csnd-select" name="target">
+        <div class="hub-field">
+          <label class="hub-field-label" for="snd-target">الهدف</label>
+          <select id="snd-target" class="hub-select" name="target">
             <option value="subscriber">المشتركون</option>
             <option value="selected_subscribers">مشتركون محددون</option>
             <option value="card_user">مستخدمو الكروت</option>
@@ -73,11 +65,11 @@
             <option value="distributor">الموزعون</option>
             <option value="company">الشركة</option>
           </select>
-          <div class="hint">اختر فئة المستلمين. «مشتركون محددون» يستخدم حقل الأرقام.</div>
+          <div class="hub-field-hint">اختر فئة المستلمين. «مشتركون محددون» يستخدم حقل الأرقام.</div>
         </div>
-        <div class="csnd-fld">
-          <label for="snd-channel">القناة</label>
-          <select id="snd-channel" class="csnd-select" name="channel">
+        <div class="hub-field">
+          <label class="hub-field-label" for="snd-channel">القناة</label>
+          <select id="snd-channel" class="hub-select" name="channel">
             <option value="internal">رسالة داخلية</option>
             <option value="sms">الرسائل القصيرة</option>
             <option value="whatsapp">واتساب</option>
@@ -85,43 +77,43 @@
             <option value="email">البريد الإلكتروني</option>
             <option value="push">إشعار فوري</option>
           </select>
-          <div class="hint">«رسالة داخلية» تُحفظ بالطابور دون مزوّد خارجي.</div>
+          <div class="hub-field-hint">«رسالة داخلية» تُحفظ بالطابور دون مزوّد خارجي.</div>
         </div>
       </div>
 
       <div class="csnd-row">
-        <div class="csnd-fld">
-          <label for="snd-ids">أرقام المستلمين</label>
-          <input id="snd-ids" class="csnd-input" name="ids" placeholder="1,2,3" dir="ltr">
-          <div class="hint">عند اختيار «مشتركون محددون» — افصل بينها بفاصلة.</div>
+        <div class="hub-field">
+          <label class="hub-field-label" for="snd-ids">أرقام المستلمين</label>
+          <input id="snd-ids" class="hub-input" name="ids" placeholder="1,2,3" dir="ltr">
+          <div class="hub-field-hint">عند اختيار «مشتركون محددون» — افصل بينها بفاصلة.</div>
         </div>
-        <div class="csnd-fld">
-          <label for="snd-manager">رقم المدير</label>
-          <input id="snd-manager" class="csnd-input" name="manager_id" type="number" min="1" dir="ltr">
-          <div class="hint">لاستهداف مدير محدّد عند الحاجة.</div>
+        <div class="hub-field">
+          <label class="hub-field-label" for="snd-manager">رقم المدير</label>
+          <input id="snd-manager" class="hub-input" name="manager_id" type="number" min="1" dir="ltr">
+          <div class="hub-field-hint">لاستهداف مدير محدّد عند الحاجة.</div>
         </div>
-        <div class="csnd-fld">
-          <label for="snd-limit">حد المعاينة</label>
-          <input id="snd-limit" class="csnd-input" name="limit" type="number" min="1" max="500" value="100" dir="ltr">
-          <div class="hint">أقصى عدد مستلمين يظهر في المعاينة.</div>
+        <div class="hub-field">
+          <label class="hub-field-label" for="snd-limit">حد المعاينة</label>
+          <input id="snd-limit" class="hub-input" name="limit" type="number" min="1" max="500" value="100" dir="ltr">
+          <div class="hub-field-hint">أقصى عدد مستلمين يظهر في المعاينة.</div>
         </div>
       </div>
 
-      <div class="csnd-fld">
-        <label for="snd-subject">العنوان <span style="font-weight:600;color:#94a3b8">(اختياري)</span></label>
-        <input id="snd-subject" class="csnd-input" name="subject" placeholder="عنوان مختصر للرسالة">
+      <div class="hub-field">
+        <label class="hub-field-label" for="snd-subject">العنوان <span style="font-weight:600;color:var(--hub-text-mute,#94a3b8)">(اختياري)</span></label>
+        <input id="snd-subject" class="hub-input" name="subject" placeholder="عنوان مختصر للرسالة">
       </div>
 
-      <div class="csnd-fld">
-        <label for="snd-message">نص الرسالة</label>
-        <textarea id="snd-message" class="csnd-area" name="message" rows="5" required
+      <div class="hub-field">
+        <label class="hub-field-label" for="snd-message">نص الرسالة</label>
+        <textarea id="snd-message" class="hub-textarea" name="message" rows="5" required
                   placeholder="اكتب رسالتك هنا… يمكنك إدراج متغيّرات تُستبدل ببيانات المشترك."></textarea>
         <div class="csnd-vars" data-vars-for="snd-message">
           {% for v in ['{username}','{name}','{prof}','{exp}','{balance}','{status}'] %}
             <span class="csnd-var" data-var="{{ v }}" title="انقر لإدراجه في النص">{{ v }}</span>
           {% endfor %}
         </div>
-        <div class="hint">المتغيّرات تُملأ ببيانات كل مستلم عند الإرسال للمشتركين (تبقى كما هي مع الجماهير الأخرى).</div>
+        <div class="hub-field-hint">المتغيّرات تُملأ ببيانات كل مستلم عند الإرسال للمشتركين (تبقى كما هي مع الجماهير الأخرى).</div>
       </div>
 
       <div class="csnd-foot">
@@ -146,7 +138,8 @@
       </div>
     {% endcall %}
   {% endif %}
-</div>
+
+{% endcall %}
 
 <script>
 (function(){

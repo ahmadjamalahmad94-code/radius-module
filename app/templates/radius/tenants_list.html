@@ -1,4 +1,5 @@
-{# Tenants list — REBUILT N11 (hub-v2). Backend untouched. #}
+{# Tenants list — UNIFIED DESIGN SYSTEM (merged hero + help panel).
+   Same backend data: items list. Zero route/behaviour change. #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
@@ -9,82 +10,100 @@
 
 {% block content %}
 
-{{ hub.hero(
+{% set _active    = items|selectattr('status','equalto','active')|list|length %}
+{% set _trial     = items|selectattr('status','equalto','trial')|list|length %}
+{% set _suspended = items|selectattr('status','equalto','suspended')|list|length %}
+
+{# ───── Merged hero: title + actions + KPI strip + integrated search ───── #}
+{% call hub.megahero(
   "الجهات",
-  subtitle="إدارة الـ Tenants — الفئات والحالات والحدود التشغيلية لكل جهة",
+  subtitle="إدارة الـ Tenants — الفئات والحالات والحدود التشغيلية لكل جهة، في مكان واحد.",
   icon="building",
   actions_html='
     <a class="hub-btn hub-btn--primary" href="' + url_for('radius.tenants_new') + '">
       <i class="fa-solid fa-plus"></i> إضافة جهة
-    </a>
-  '
-) }}
+    </a>',
+  kpis=[
+    {'label': 'الإجمالي', 'value': items|length, 'icon': 'building',       'variant': 'brand'},
+    {'label': 'مفعَّلة',   'value': _active,      'icon': 'circle-check',   'variant': 'green'},
+    {'label': 'تجريبية',  'value': _trial,       'icon': 'hourglass-half', 'variant': 'amber'},
+    {'label': 'موقوفة',   'value': _suspended,   'icon': 'ban',            'variant': 'red'},
+  ],
+  search_action=url_for('radius.tenants_list')
+) %}
+  <input class="hub-input grow" type="text" name="q"
+         placeholder="بحث باسم/معرّف الجهة..." value="{{ request.args.get('q', '') }}">
+  {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
+{% endcall %}
 
 {% if items %}
-{% set _active    = items|selectattr('status','equalto','active')|list|length %}
-{% set _trial     = items|selectattr('status','equalto','trial')|list|length %}
-{% set _suspended = items|selectattr('status','equalto','suspended')|list|length %}
-<div class="hub-kpi-grid">
-  {{ hub.kpi("الإجمالي",   items|length, icon="building",        variant="brand") }}
-  {{ hub.kpi("مفعَّلة",     _active,      icon="circle-check",    variant="green") }}
-  {{ hub.kpi("تجريبية",    _trial,       icon="hourglass-half",  variant="amber") }}
-  {{ hub.kpi("موقوفة",     _suspended,   icon="ban",             variant="red") }}
-</div>
-
-{% call hub.section("قائمة الجهات", icon="table-list", meta=items|length|string + " جهة", flush=True) %}
-  <div class="hub-table-wrap" style="border:none;border-radius:0">
-    <table class="hub-table" data-paginated="1" data-page-size="20" data-persist-key="tenants-list">
-      <thead>
-        <tr>
-          <th class="num" style="width:60px">#</th>
-          <th>المعرّف</th>
-          <th>الاسم</th>
-          <th>الفئة</th>
-          <th>الحالة</th>
-          <th>الحدود</th>
-          <th>المنطقة</th>
-          <th>أُنشئ</th>
-          <th style="width:80px">إجراءات</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for t in items %}
-        <tr {% if t.id == tenant_id %}class="is-highlight"{% endif %}>
-          <td class="num mono">{{ t.id }}</td>
-          <td class="mono"><strong>{{ t.slug }}</strong></td>
-          <td>
-            <strong>{{ t.display_name or t.name }}</strong>
-            {% if t.email %}<div class="mono small hub-text-mute">{{ t.email }}</div>{% endif %}
-          </td>
-          <td>
-            {% if t.plan_tier == 'enterprise' %}{{ hub.pill(t.plan_tier, variant="brand", dot=False) }}
-            {% elif t.plan_tier == 'pro' %}{{ hub.pill(t.plan_tier, variant="blue", dot=False) }}
-            {% else %}{{ hub.pill(t.plan_tier, variant="grey", dot=False) }}{% endif %}
-          </td>
-          <td>
-            {% if t.status == 'active' %}{{ hub.pill("مفعَّلة", variant="green") }}
-            {% elif t.status == 'trial' %}{{ hub.pill("تجريبية", variant="amber") }}
-            {% elif t.status == 'suspended' %}{{ hub.pill("موقوفة", variant="red") }}
-            {% elif t.status == 'closed' %}{{ hub.pill("مغلقة", variant="grey") }}
-            {% else %}{{ hub.pill(t.status, variant="grey") }}{% endif %}
-          </td>
-          <td class="mono small">
-            <div>{{ t.max_subscribers }} مشترك</div>
-            <div class="hub-text-mute">{{ t.max_nas }} جهاز · {{ t.api_rpm }} طلب/د</div>
-          </td>
-          <td class="small">{{ t.currency }} · {{ t.locale }}</td>
-          <td class="mono small">{{ t.created_at|date_local if t.created_at else '—' }}</td>
-          <td>
-            <a class="hub-btn hub-btn--ghost hub-btn--icon" title="تعديل"
-               href="{{ url_for('radius.tenants_edit', tenant_id=t.id) }}">
-              <i class="fa-solid fa-pen"></i>
-            </a>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+{# ───── Main (carded table) + help panel on the LEFT ───── #}
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "كيف تقرأ هذه الصفحة؟",
+  intro="كل صف هو جهة (Tenant) داخل النظام: فئتها وحالتها وحدودها التشغيلية.",
+  items=[
+    {'icon': 'layer-group',  'text': 'الفئة تحدد باقة الجهة: Starter / Pro / Enterprise.'},
+    {'icon': 'circle-check', 'text': 'الحالة تبيّن إن كانت الجهة مفعَّلة أو تجريبية أو موقوفة أو مغلقة.'},
+    {'icon': 'gauge-high',   'text': 'الحدود تعرض سقف المشتركين والأجهزة ومعدّل الطلبات للجهة.'},
+    {'icon': 'pen',          'text': 'استخدم زر التعديل لضبط بيانات الجهة وحدودها.'},
+  ],
+  note="تغيير فئة الجهة قد يعدّل حدودها التشغيلية تلقائيًا حسب الباقة."
+)) %}
+  {% call hub.section("قائمة الجهات", icon="table-list", meta=items|length|string + " جهة", flush=True) %}
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
+      <table class="hub-table">
+        <thead>
+          <tr>
+            <th class="num" style="width:60px">#</th>
+            <th>المعرّف</th>
+            <th>الاسم</th>
+            <th>الفئة</th>
+            <th>الحالة</th>
+            <th>الحدود</th>
+            <th>المنطقة</th>
+            <th>أُنشئ</th>
+            <th style="width:80px" data-uds-nosort data-uds-nocol>إجراءات</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for t in items %}
+          <tr {% if t.id == tenant_id %}class="is-highlight"{% endif %}>
+            <td class="num mono">{{ t.id }}</td>
+            <td class="mono"><strong>{{ t.slug }}</strong></td>
+            <td>
+              <strong>{{ t.display_name or t.name }}</strong>
+              {% if t.email %}<div class="mono small hub-text-mute">{{ t.email }}</div>{% endif %}
+            </td>
+            <td>
+              {% if t.plan_tier == 'enterprise' %}{{ hub.pill(t.plan_tier, variant="brand", dot=False) }}
+              {% elif t.plan_tier == 'pro' %}{{ hub.pill(t.plan_tier, variant="blue", dot=False) }}
+              {% else %}{{ hub.pill(t.plan_tier, variant="grey", dot=False) }}{% endif %}
+            </td>
+            <td>
+              {% if t.status == 'active' %}{{ hub.pill("مفعَّلة", variant="green") }}
+              {% elif t.status == 'trial' %}{{ hub.pill("تجريبية", variant="amber") }}
+              {% elif t.status == 'suspended' %}{{ hub.pill("موقوفة", variant="red") }}
+              {% elif t.status == 'closed' %}{{ hub.pill("مغلقة", variant="grey") }}
+              {% else %}{{ hub.pill(t.status, variant="grey") }}{% endif %}
+            </td>
+            <td class="mono small">
+              <div>{{ t.max_subscribers }} مشترك</div>
+              <div class="hub-text-mute">{{ t.max_nas }} جهاز · {{ t.api_rpm }} طلب/د</div>
+            </td>
+            <td class="small">{{ t.currency }} · {{ t.locale }}</td>
+            <td class="mono small">{{ t.created_at|date_local if t.created_at else '—' }}</td>
+            <td>
+              <a class="hub-btn hub-btn--ghost hub-btn--icon" title="تعديل"
+                 href="{{ url_for('radius.tenants_edit', tenant_id=t.id) }}">
+                <i class="fa-solid fa-pen"></i>
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endcall %}
 {% endcall %}
 {% else %}
 {{ hub.empty(

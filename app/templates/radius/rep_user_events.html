@@ -1,11 +1,11 @@
 {# ═══════════════════════════════════════════════════════════════════════
-   User events — REBUILT (Night N4, 2026-05-21)
+   أحداث المستخدمين — UNIFIED DESIGN SYSTEM (megahero + worklayout + help).
 
-   Same backend data: `items` (all audit_log rows where target_type='user').
+   نفس بيانات الـ backend: `items` (صفوف audit_log حيث target_type='user')، `total`، `filters`.
+   صفر تغيير في المسار/السلوك.
    ═══════════════════════════════════════════════════════════════════════ #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
-{% import "_partials/repfilter.html" as rf %}
 
 {% block title %}أحداث المستخدمين{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-users-rectangle"></i>{% endblock %}
@@ -15,49 +15,82 @@
 {% block content %}
 {% include "radius/reports_nav.html" %}
 
-{{ hub.hero(
+{# ───── Merged hero: title + subtitle + KPI strip + integrated filters ───── #}
+{% call hub.megahero(
   "أحداث المستخدمين",
   subtitle="كل حدث يخصّ مشتركًا — إنشاء، تعديل، تعطيل، تمديد، أو حذف — مع ملخص مفهوم.",
-  icon="users-rectangle"
-) }}
-
-{{ rf.bar('radius.rep_user_events', filters, show_date=True, q_placeholder='بحث (مشترك / إجراء)…') }}
+  icon="users-rectangle",
+  kpis=[
+    {'label': 'إجمالي الأحداث', 'value': total, 'icon': 'users-rectangle', 'variant': 'brand'},
+  ],
+  search_action=url_for('radius.rep_user_events')
+) %}
+  <input class="hub-input grow" type="text" name="q"
+         value="{{ filters.q if filters else '' }}"
+         placeholder="بحث (مشترك / إجراء)…">
+  <input class="hub-input" type="date" name="date_from"
+         value="{{ filters.date_from if filters else '' }}" title="من تاريخ">
+  <input class="hub-input" type="date" name="date_to"
+         value="{{ filters.date_to if filters else '' }}" title="إلى تاريخ">
+  {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
+  {% if filters and (filters.q or filters.date_from or filters.date_to) %}
+    {{ hub.btn("مسح", icon="rotate-left", variant="ghost", size="sm",
+               attrs='onclick="window.location=' + "'" + url_for('radius.rep_user_events') + "'" + '"') }}
+  {% endif %}
+{% endcall %}
 
 {% if items %}
-{% call hub.section("سجل الأحداث", icon="table-list",
-                    meta=items|length|string + " صف", flush=True) %}
-  <div class="hub-table-wrap" style="border:none;border-radius:0">
-    <table class="hub-table rep-table" data-paginated="1" data-page-size="25" data-page-sizes="10,25,50,100" data-persist-key="rep-user-events">
-      <thead>
-        <tr>
-          <th class="num" style="width:70px">#</th>
-          <th>المنفّذ</th>
-          <th>الفعل</th>
-          <th>المستخدم</th>
-          <th>التفاصيل</th>
-          <th>الوقت</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for r in items %}
-        <tr>
-          <td class="num mono">{{ r.id }}</td>
-          <td>{{ r.actor_label }}</td>
-          <td>{{ hub.pill(r.action_label, variant="blue", dot=False) }}</td>
-          <td class="mono"><strong>{{ r.target_id or '—' }}</strong></td>
-          <td class="small" title="{{ r.payload_summary or '' }}"
-              style="max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
-            {{ r.payload_summary or '—' }}
-          </td>
-          <td class="mono small">{{ r.created_at[:16] if r.created_at else '—' }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+{# ───── Main (carded table) + help panel on the LEFT ───── #}
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "كيف تقرأ هذا التقرير؟",
+  intro="كل صف هو حدث يخصّ مشتركًا — مرتبًا حسب الأحدث أولًا.",
+  items=[
+    {'icon': 'user-gear',          'text': '«المنفّذ» هو المدير أو النظام الذي قام بالإجراء.'},
+    {'icon': 'bolt',               'text': '«الفعل» هو نوع العملية — إنشاء، تعديل، تعطيل، تمديد، أو حذف.'},
+    {'icon': 'user',               'text': '«المستخدم» هو المشترك الذي طاله الإجراء.'},
+    {'icon': 'circle-info',        'text': '«التفاصيل» ملخص مختصر — مرّر فوقه لرؤية النص الكامل.'},
+  ],
+  note="هذا التقرير للقراءة فقط — البيانات تأتي مباشرة من سجل التدقيق audit_log."
+)) %}
+  {% call hub.section("سجل الأحداث", icon="table-list",
+                      meta=items|length|string + " صف", flush=True) %}
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25"
+         style="border:none;border-radius:0">
+      <table class="hub-table">
+        <thead>
+          <tr>
+            <th class="num" style="width:70px" data-uds-nosort>#</th>
+            <th>المنفّذ</th>
+            <th data-uds-nosort>الفعل</th>
+            <th>المستخدم</th>
+            <th data-uds-nosort>التفاصيل</th>
+            <th>الوقت</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in items %}
+          <tr>
+            <td class="num mono">{{ r.id }}</td>
+            <td>{{ r.actor_label }}</td>
+            <td>{{ hub.pill(r.action_label, variant="blue", dot=False) }}</td>
+            <td class="mono"><strong>{{ r.target_id or '—' }}</strong></td>
+            <td class="small" title="{{ r.payload_summary or '' }}"
+                style="max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+              {{ r.payload_summary or '—' }}
+            </td>
+            <td class="mono small"
+                style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
+              {{ r.created_at[:16] if r.created_at else '—' }}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endcall %}
 {% endcall %}
 {% else %}
-{{ hub.empty("لا أحداث مستخدمين بعد", icon="users-rectangle") }}
+{{ hub.empty("لا أحداث مستخدمين بعد",
+   sub="غيّر الفلاتر أو لا توجد أحداث مستخدمين بعد.", icon="users-rectangle") }}
 {% endif %}
-
 {% endblock %}

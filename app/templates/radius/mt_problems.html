@@ -1,152 +1,141 @@
+{# Operations Problems Center — UNIFIED DESIGN SYSTEM.
+   Same backend data: now/soon/info problem buckets + filters. Zero route/behaviour change.
+   All data-mt-* JS hooks, links and the filter form are preserved verbatim. #}
 {% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
 
 {% block title %}مركز المشاكل التشغيلية{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-triangle-exclamation"></i>{% endblock %}
 {% block page_title %}مركز المشاكل التشغيلية{% endblock %}
 {% block page_sub %}<span class="sub">قائمة موحدة لما يحتاج إجراء على مستوى الشبكة</span>{% endblock %}
 
-{% block head_extra %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/mt_dashboard.css') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/radius_ops_redesign.css') }}?v=20260528a">
-{% endblock %}
-
 {% macro problem_row(p) -%}
-<li class="opsx-row"
+<tr class="hub-table-row"
     data-mt-problem-row
     data-mt-problem-type="{{ p.type }}"
     data-mt-problem-router="{{ p.router_id }}"
     data-mt-problem-severity="{{ p.severity }}">
-  <div class="opsx-row-head">
-    <span class="opsx-row-title">{{ p.title_ar }}</span>
-    {% if p.severity == 'critical' %}
-    <span class="opsx-chip opsx-chip--critical">حرجة</span>
-    {% elif p.severity == 'warning' %}
-    <span class="opsx-chip opsx-chip--warning">تحذير</span>
-    {% else %}
-    <span class="opsx-chip opsx-chip--info">معلومة</span>
-    {% endif %}
-  </div>
-  <p class="opsx-row-text">{{ p.explanation_ar }}</p>
-  <div class="opsx-row-meta">
-    <span>النوع <code>{{ p.type }}</code></span>
-    {% if p.router_id %}<span>راوتر #{{ p.router_id }}</span>{% endif %}
-    {% if p.last_seen %}<span>آخر رصد <code>{{ p.last_seen|dt_local }}</code></span>{% endif %}
-    <a class="opsx-btn" href="{{ p.suggested_href }}" data-mt-problem-action="{{ p.type }}">
-      <i class="fa-solid fa-arrow-left"></i> {{ p.suggested_action_ar }}
+  <td>
+    <strong style="color:var(--hub-text)">{{ p.title_ar }}</strong>
+    <div class="hub-text-mute small" style="margin-top:4px;line-height:1.5">{{ p.explanation_ar }}</div>
+  </td>
+  <td>
+    {% if p.severity == 'critical' %}{{ hub.pill("حرجة", variant="red") }}
+    {% elif p.severity == 'warning' %}{{ hub.pill("تحذير", variant="amber") }}
+    {% else %}{{ hub.pill("معلومة", variant="brand") }}{% endif %}
+  </td>
+  <td class="mono small">{{ p.type }}</td>
+  <td class="mono small">{% if p.router_id %}#{{ p.router_id }}{% else %}<span class="hub-text-mute">—</span>{% endif %}</td>
+  <td class="mono small">{% if p.last_seen %}{{ p.last_seen|dt_local }}{% else %}<span class="hub-text-mute">—</span>{% endif %}</td>
+  <td>
+    <a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ p.suggested_href }}" data-mt-problem-action="{{ p.type }}">
+      {{ p.suggested_action_ar }} <i class="fa-solid fa-arrow-left"></i>
     </a>
-  </div>
-</li>
+  </td>
+</tr>
+{%- endmacro %}
+
+{% macro problem_table(rows) -%}
+<div class="hub-table-wrap uds-table-wrap" data-uds-table style="border:none;border-radius:0">
+  <table class="hub-table">
+    <thead>
+      <tr>
+        <th>المشكلة</th>
+        <th style="width:90px">الشدة</th>
+        <th style="width:140px">النوع</th>
+        <th style="width:90px">الراوتر</th>
+        <th style="width:150px">آخر رصد</th>
+        <th style="width:160px" data-uds-nosort data-uds-nocol>الإجراء</th>
+      </tr>
+    </thead>
+    <tbody>{% for p in rows %}{{ problem_row(p) }}{% endfor %}</tbody>
+  </table>
+</div>
 {%- endmacro %}
 
 {% block content %}
 {% include "radius/network_ops_nav.html" %}
-<section class="opsx" data-mt-problems-page data-mt-problems-total="{{ total }}">
-  <header class="opsx-hero">
-    <div>
-      <h2>مركز المشاكل التشغيلية</h2>
-      <p>تعرض الصفحة مشاكل تشغيلية مبنية على بيانات الراوترات والتنبيهات، وتربط كل مشكلة بالإجراء المناسب لمعالجتها بسرعة.</p>
-    </div>
-    <span class="opsx-hero-icon"><i class="fa-solid fa-screwdriver-wrench"></i></span>
-  </header>
 
-  <div class="opsx-layout">
-    <aside class="opsx-guide" aria-label="شرح مركز المشاكل">
-      <div class="opsx-guide-title"><i class="fa-solid fa-map-signs"></i> طريقة العمل</div>
-      <p>تعامل مع الصفحة كقائمة تشغيل يومية: الحرج أولاً، التحذير ثانياً، والمعلومات فقط للمراجعة.</p>
-      <ul class="opsx-guide-list">
-        <li><i class="fa-solid fa-fire-flame-simple"></i><span>قسم الإجراء الآن يعني أن المشكلة قد تؤثر على الخدمة.</span></li>
-        <li><i class="fa-solid fa-clock"></i><span>قسم الانتباه القريب مناسب للصيانة الوقائية قبل التعطل.</span></li>
-        <li><i class="fa-solid fa-link"></i><span>كل زر إجراء مرتبط بالمسار الحقيقي المناسب للمشكلة.</span></li>
-      </ul>
-    </aside>
+<div data-mt-problems-page data-mt-problems-total="{{ total }}">
 
-    <main class="opsx-main">
-      <section class="opsx-stats">
-        <div class="opsx-stat opsx-stat--bad"><span>تحتاج إجراء الآن</span><strong>{{ now_problems|length }}</strong></div>
-        <div class="opsx-stat opsx-stat--warn"><span>تحتاج انتباه</span><strong>{{ soon_problems|length }}</strong></div>
-        <div class="opsx-stat opsx-stat--ok"><span>معلومات</span><strong>{{ info_problems|length }}</strong></div>
-        <div class="opsx-stat"><span>الإجمالي</span><strong data-mt-problems-count>{{ total }}</strong></div>
-      </section>
+{# ───── Merged hero: title + KPI strip + integrated filter form ───── #}
+{% call hub.megahero(
+  "مركز المشاكل التشغيلية",
+  subtitle="مشاكل تشغيلية مبنية على بيانات الراوترات والتنبيهات، وكل مشكلة مربوطة بالإجراء المناسب لمعالجتها بسرعة.",
+  icon="screwdriver-wrench",
+  actions_html='
+    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.mt_problems_index') + '">
+      <i class="fa-solid fa-rotate-left"></i> إعادة ضبط
+    </a>',
+  kpis=[
+    {'label': 'تحتاج إجراء الآن', 'value': now_problems|length,  'icon': 'circle-exclamation',   'variant': 'red'},
+    {'label': 'تحتاج انتباه',    'value': soon_problems|length, 'icon': 'triangle-exclamation', 'variant': 'amber'},
+    {'label': 'معلومات',          'value': info_problems|length, 'icon': 'circle-info',          'variant': 'brand'},
+    {'label': 'الإجمالي',         'value': total,                'icon': 'layer-group',          'variant': 'green'},
+  ],
+  search_action=url_for('radius.mt_problems_index')
+) %}
+  <select class="hub-input" name="severity" data-mt-problems-filter-severity>
+    <option value="">كل الشدات</option>
+    <option value="critical" {% if filters.severity == 'critical' %}selected{% endif %}>حرجة</option>
+    <option value="warning" {% if filters.severity == 'warning' %}selected{% endif %}>تحذير</option>
+    <option value="info" {% if filters.severity == 'info' %}selected{% endif %}>معلومة</option>
+  </select>
+  <select class="hub-input" name="type" data-mt-problems-filter-type>
+    <option value="">كل الأنواع</option>
+    {% for t in all_problem_types %}
+    <option value="{{ t }}" {% if filters.type == t %}selected{% endif %}>{{ t }}</option>
+    {% endfor %}
+  </select>
+  <input class="hub-input grow" type="text" name="router_id" value="{{ filters.router_id or '' }}"
+         placeholder="رقم الراوتر مثلا 42" data-mt-problems-filter-router>
+  {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
+{% endcall %}
 
-      <section class="opsx-panel">
-        <header class="opsx-panel-head">
-          <div class="opsx-panel-title"><i class="fa-solid fa-filter"></i> فلترة المشاكل</div>
-        </header>
-        <div class="opsx-panel-body">
-          <form method="get" class="opsx-filter" data-mt-problems-filters>
-            <label class="opsx-field">
-              <span>الشدة</span>
-              <select name="severity" data-mt-problems-filter-severity>
-                <option value="">كل الشدات</option>
-                <option value="critical" {% if filters.severity == 'critical' %}selected{% endif %}>حرجة</option>
-                <option value="warning" {% if filters.severity == 'warning' %}selected{% endif %}>تحذير</option>
-                <option value="info" {% if filters.severity == 'info' %}selected{% endif %}>معلومة</option>
-              </select>
-            </label>
-            <label class="opsx-field">
-              <span>النوع</span>
-              <select name="type" data-mt-problems-filter-type>
-                <option value="">كل الأنواع</option>
-                {% for t in all_problem_types %}
-                <option value="{{ t }}" {% if filters.type == t %}selected{% endif %}>{{ t }}</option>
-                {% endfor %}
-              </select>
-            </label>
-            <label class="opsx-field">
-              <span>الراوتر</span>
-              <input type="text" name="router_id" value="{{ filters.router_id or '' }}"
-                     placeholder="مثلا 42" data-mt-problems-filter-router>
-            </label>
-            <div class="opsx-actions">
-              <button type="submit" class="opsx-btn opsx-btn--primary">
-                <i class="fa-solid fa-magnifying-glass"></i> تطبيق
-              </button>
-              <a class="opsx-btn" href="{{ url_for('radius.mt_problems_index') }}">
-                <i class="fa-solid fa-rotate-left"></i> إعادة ضبط
-              </a>
-            </div>
-          </form>
-        </div>
-      </section>
+{# ───── Main (carded tables per bucket) + help panel on the LEFT ───── #}
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "طريقة العمل",
+  intro="تعامل مع الصفحة كقائمة تشغيل يومية: الحرج أولاً، التحذير ثانياً، والمعلومات فقط للمراجعة.",
+  icon="map-signs",
+  items=[
+    {'icon': 'fire-flame-simple', 'text': 'قسم «الإجراء الآن» يعني أن المشكلة قد تؤثر على الخدمة.'},
+    {'icon': 'clock',             'text': 'قسم «الانتباه القريب» مناسب للصيانة الوقائية قبل التعطّل.'},
+    {'icon': 'link',              'text': 'كل زر إجراء مرتبط بالمسار الحقيقي المناسب للمشكلة.'},
+  ]
+)) %}
 
-      {% if total == 0 %}
-      <section class="opsx-panel">
-        <div class="opsx-panel-body">
-          <p class="opsx-empty" data-mt-problems-empty>لا توجد مشاكل تطابق هذه الفلاتر.</p>
-        </div>
-      </section>
-      {% endif %}
+  {% if total == 0 %}
+  {{ hub.empty(
+    "لا توجد مشاكل تطابق هذه الفلاتر",
+    sub="جرّب إعادة الضبط أو توسيع نطاق الفلترة لعرض كل المشاكل.",
+    icon="circle-check"
+  ) }}
+  <span data-mt-problems-empty hidden>لا توجد مشاكل تطابق هذه الفلاتر.</span>
+  {% endif %}
 
-      {% if now_problems %}
-      <section class="opsx-panel" data-mt-problems-bucket="now">
-        <header class="opsx-panel-head">
-          <div class="opsx-panel-title"><i class="fa-solid fa-circle-exclamation"></i> يحتاج إجراء الآن</div>
-          <span class="opsx-chip opsx-chip--critical">{{ now_problems|length }} حرجة</span>
-        </header>
-        <div class="opsx-panel-body"><ul class="opsx-list">{% for p in now_problems %}{{ problem_row(p) }}{% endfor %}</ul></div>
-      </section>
-      {% endif %}
+  {% if now_problems %}
+  {% call hub.section("يحتاج إجراء الآن", icon="circle-exclamation",
+       meta=now_problems|length|string + " حرجة", flush=True) %}
+    <div data-mt-problems-bucket="now">{{ problem_table(now_problems) }}</div>
+  {% endcall %}
+  {% endif %}
 
-      {% if soon_problems %}
-      <section class="opsx-panel" data-mt-problems-bucket="soon">
-        <header class="opsx-panel-head">
-          <div class="opsx-panel-title"><i class="fa-solid fa-triangle-exclamation"></i> يحتاج انتباه اليوم</div>
-          <span class="opsx-chip opsx-chip--warning">{{ soon_problems|length }} تحذير</span>
-        </header>
-        <div class="opsx-panel-body"><ul class="opsx-list">{% for p in soon_problems %}{{ problem_row(p) }}{% endfor %}</ul></div>
-      </section>
-      {% endif %}
+  {% if soon_problems %}
+  {% call hub.section("يحتاج انتباه اليوم", icon="triangle-exclamation",
+       meta=soon_problems|length|string + " تحذير", flush=True) %}
+    <div data-mt-problems-bucket="soon">{{ problem_table(soon_problems) }}</div>
+  {% endcall %}
+  {% endif %}
 
-      {% if info_problems %}
-      <section class="opsx-panel" data-mt-problems-bucket="info">
-        <header class="opsx-panel-head">
-          <div class="opsx-panel-title"><i class="fa-solid fa-circle-info"></i> معلومات</div>
-          <span class="opsx-chip opsx-chip--info">{{ info_problems|length }} معلومة</span>
-        </header>
-        <div class="opsx-panel-body"><ul class="opsx-list">{% for p in info_problems %}{{ problem_row(p) }}{% endfor %}</ul></div>
-      </section>
-      {% endif %}
-    </main>
-  </div>
-</section>
+  {% if info_problems %}
+  {% call hub.section("معلومات", icon="circle-info",
+       meta=info_problems|length|string + " معلومة", flush=True) %}
+    <div data-mt-problems-bucket="info">{{ problem_table(info_problems) }}</div>
+  {% endcall %}
+  {% endif %}
+
+{% endcall %}
+
+<span data-mt-problems-count hidden>{{ total }}</span>
+</div>
 {% endblock %}

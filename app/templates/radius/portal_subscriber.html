@@ -1,4 +1,10 @@
-{# Subscriber portal — advanced tabbed dashboard.
+{# Subscriber portal — UNIFIED DESIGN SYSTEM conversion.
+   This is a CUSTOMER-FACING, STANDALONE page (no admin layout), so the UDS
+   stylesheets + hub macros are pulled in directly below. The portal keeps its
+   own violet identity (topbar, tabs, RTL/Cairo) but all the structural pieces
+   — hero, key/value details, section cards, data tables, the loan-minutes
+   picker — now render through the shared UDS components.
+
    Sections: نظرة عامة · الملف الشخصي · الاستخدام · الفواتير والمحفظة ·
    الطلبات والدعم. Violet/slate hub language, RTL, Cairo.
 
@@ -9,6 +15,8 @@
    The complaint form reuses the renewal-request channel (reason field,
    prefixed "[شكوى]") since there is no dedicated complaint endpoint.
    data-testid hooks preserved for existing tests. #}
+{% import "_partials/hub.html" as hub %}
+{% from "_partials/unit_input.html" import unit_input_picker %}
 <!doctype html>
 <html lang="ar" dir="rtl">
 <head>
@@ -20,6 +28,11 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  {# ── Unified Design System: tokens/components (hub_v2) + UDS layer.
+       This standalone portal layout does NOT extend the admin layout, so the
+       UDS stylesheets are loaded here explicitly to make hub.* macros render. #}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/hub_v2.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
   <style>
     :root{
       --ink-1:#0f172a; --ink-2:#475569; --ink-3:#94a3b8;
@@ -46,7 +59,7 @@
     }
     .wrap{max-width:1180px;margin:0 auto;display:grid;gap:16px}
 
-    /* ── Topbar ── */
+    /* ── Topbar (portal identity preserved) ── */
     .topbar{
       display:flex;align-items:center;justify-content:space-between;gap:14px;
       padding:14px 18px;background:var(--paper);border:1px solid var(--hair-soft);
@@ -68,29 +81,7 @@
     }
     .logout-link:hover{background:#ede9fe}
 
-    /* ── Hero ── */
-    .hero{
-      position:relative;overflow:hidden;padding:22px 24px;border-radius:18px;color:#fff;
-      background:
-        radial-gradient(420px 240px at 100% 0%, rgba(255,255,255,.18) 0%, transparent 60%),
-        linear-gradient(135deg,var(--accent),var(--accent-2));
-      box-shadow:0 10px 30px rgba(124,58,237,.22);
-      display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;
-    }
-    .hero::before{content:"";position:absolute;width:240px;height:240px;border-radius:50%;
-                  background:rgba(255,255,255,.08);top:-80px;inset-inline-end:-70px}
-    .hero-id{position:relative;z-index:1}
-    .hero-id h1{margin:0;font-size:22px;font-weight:900}
-    .hero-id p{margin:6px 0 0;color:rgba(255,255,255,.86);font-size:13px;line-height:1.7;max-width:560px}
-    .hero-status{position:relative;z-index:1;display:flex;gap:8px;flex-wrap:wrap}
-    .hero-chip{
-      display:inline-flex;align-items:center;gap:7px;padding:9px 14px;border-radius:999px;
-      background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.26);
-      font-weight:800;font-size:12.5px;backdrop-filter:blur(6px);
-    }
-    .hero-chip.live{background:rgba(255,255,255,.95);color:var(--accent-2)}
-
-    /* ── Tabs ── */
+    /* ── Tabs (portal navigation preserved) ── */
     .tabs{
       display:flex;gap:6px;flex-wrap:wrap;padding:6px;
       background:var(--paper);border:1px solid var(--hair-soft);border-radius:14px;
@@ -113,67 +104,7 @@
     .pane.is-active{display:grid;gap:16px}
     @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 
-    /* ── KPI grid ── */
-    .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
-    .kpi{
-      display:flex;align-items:center;gap:12px;padding:15px 16px;background:var(--paper);
-      border:1px solid var(--hair-soft);border-radius:14px;
-      box-shadow:0 1px 0 rgba(255,255,255,.85) inset, 0 4px 12px rgba(15,23,42,.04);
-    }
-    .kpi .ico{
-      width:46px;height:46px;border-radius:13px;flex:0 0 auto;display:grid;place-items:center;font-size:18px;
-      background:var(--accent-soft);color:var(--accent-2);
-    }
-    .kpi .ico.green{background:var(--success-soft);color:var(--success)}
-    .kpi .ico.amber{background:var(--warn-soft);color:var(--warn)}
-    .kpi .ico.red{background:var(--err-soft);color:var(--err)}
-    .kpi .ico.blue{background:var(--blue-soft);color:var(--blue)}
-    .kpi .lbl{font-size:12px;color:var(--ink-3);font-weight:700}
-    .kpi .val{font-size:19px;font-weight:900;color:var(--ink-1);margin-top:2px;font-variant-numeric:tabular-nums}
-    .kpi .val small{font-size:12px;font-weight:700;color:var(--ink-3)}
-
-    /* ── Section card ── */
-    .card{
-      background:var(--paper);border:1px solid var(--hair-soft);border-radius:16px;
-      box-shadow:0 1px 0 rgba(255,255,255,.85) inset, 0 4px 12px rgba(15,23,42,.05);overflow:hidden;
-    }
-    .card-head{
-      display:flex;align-items:center;gap:10px;padding:14px 18px;
-      background:linear-gradient(180deg,#fbfaff,#f8f7fc);border-bottom:1px solid var(--hair-soft);
-    }
-    .card-head .icon{width:34px;height:34px;border-radius:10px;background:var(--accent-soft);
-      color:var(--accent-2);display:grid;place-items:center;font-size:14px}
-    .card-head h2{margin:0;font-size:15px;font-weight:900;color:var(--ink-1)}
-    .card-head .meta{margin-inline-start:auto;font-size:12px;color:var(--ink-3);font-weight:800}
-    .card-body{padding:18px}
-    .card-intro{font-size:12.5px;color:var(--ink-2);line-height:1.7;margin:0 0 14px}
-
-    /* ── Detail list (profile) ── */
-    .dl{display:grid;gap:10px}
-    .dl > div{
-      display:grid;grid-template-columns:minmax(120px,34%) 1fr;gap:14px;align-items:center;
-      padding:11px 14px;background:var(--soft);border:1px solid var(--hair-soft);border-radius:10px;
-    }
-    .dl > div > span{color:var(--ink-2);font-size:13px;font-weight:700}
-    .dl > div > strong{color:var(--ink-1);font-weight:800;text-align:start}
-
-    /* ── Subscription progress ── */
-    .sub-bar{height:10px;border-radius:999px;background:#e9eef5;overflow:hidden;margin-top:8px}
-    .sub-bar span{display:block;height:100%;border-radius:inherit;
-      background:linear-gradient(90deg,var(--accent),var(--accent-2))}
-    .sub-bar.is-warn span{background:linear-gradient(90deg,#f59e0b,#d97706)}
-    .sub-bar.is-danger span{background:linear-gradient(90deg,#ef4444,#b91c1c)}
-
-    /* ── Status pill ── */
-    .pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;
-      font-size:11.5px;font-weight:800;border:1px solid}
-    .pill.green{background:var(--success-soft);color:var(--success);border-color:#bbf7d0}
-    .pill.amber{background:var(--warn-soft);color:var(--warn);border-color:#fde68a}
-    .pill.red{background:var(--err-soft);color:var(--err);border-color:#fecaca}
-    .pill.grey{background:var(--soft);color:var(--ink-2);border-color:var(--hair-soft)}
-    .pill.blue{background:var(--blue-soft);color:var(--blue);border-color:#bfdbfe}
-
-    /* ── Notes / alerts ── */
+    /* ── Notes / alerts (kept: UDS has no note component) ── */
     .note{padding:11px 13px;border-radius:11px;border:1px solid;font-size:13px;line-height:1.7;
       font-weight:600;display:flex;gap:9px;align-items:flex-start}
     .note i{margin-top:2px}
@@ -182,7 +113,14 @@
     .note.danger{background:var(--err-soft);color:var(--err);border-color:#fecaca}
     .note.info{background:var(--info-soft);color:var(--info);border-color:#bfdbfe}
 
-    /* ── Forms ── */
+    /* ── Subscription progress (kept: domain-specific) ── */
+    .sub-bar{height:10px;border-radius:999px;background:#e9eef5;overflow:hidden;margin-top:12px}
+    .sub-bar span{display:block;height:100%;border-radius:inherit;
+      background:linear-gradient(90deg,var(--accent),var(--accent-2))}
+    .sub-bar.is-warn span{background:linear-gradient(90deg,#f59e0b,#d97706)}
+    .sub-bar.is-danger span{background:linear-gradient(90deg,#ef4444,#b91c1c)}
+
+    /* ── Forms (kept; tuned to UDS tokens for focus ring) ── */
     .field{display:grid;gap:6px;margin-bottom:12px}
     .field label{font-size:12.5px;color:var(--ink-2);font-weight:800}
     .field input, .field textarea{
@@ -192,32 +130,19 @@
     }
     .field input:focus, .field textarea:focus{outline:0;border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-ring)}
     .field textarea{min-height:84px;resize:vertical}
-    .btn{
-      display:inline-flex;align-items:center;justify-content:center;gap:8px;
-      padding:11px 16px;border-radius:10px;border:0;cursor:pointer;font:inherit;font-size:13.5px;font-weight:800;
-      background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;
-      box-shadow:0 4px 12px rgba(124,58,237,.32);transition:filter .15s, transform .05s;
-    }
-    .btn:hover{filter:brightness(1.05)}
-    .btn:active{transform:translateY(1px)}
-    .btn.secondary{background:var(--soft);color:var(--ink-1);border:1px solid var(--hair);box-shadow:none}
 
-    /* ── Tables ── */
-    .table-wrap{overflow-x:auto}
-    table{width:100%;border-collapse:separate;border-spacing:0;font-size:13px}
-    thead th{background:#f6f5fb;color:var(--ink-2);font-size:11px;font-weight:900;
-      text-transform:uppercase;letter-spacing:.3px;padding:11px 12px;text-align:start;border-bottom:2px solid var(--hair)}
-    tbody td{padding:11px 12px;border-bottom:1px solid var(--hair-soft);color:var(--ink-1)}
-    tbody tr:last-child td{border-bottom:0}
-    tbody tr:hover{background:#fafbfc}
+    /* ── Helpers ── */
     .mono{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;direction:ltr;unicode-bidi:isolate;font-size:.92em}
     .num{font-variant-numeric:tabular-nums}
-    .empty{display:grid;place-items:center;gap:8px;padding:32px 18px;color:var(--ink-3);text-align:center}
-    .empty .ico{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;
-      background:var(--accent-soft);color:var(--accent);font-size:20px}
+    .card-intro{font-size:12.5px;color:var(--ink-2);line-height:1.7;margin:0 0 14px}
 
     .grid-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
     @media (max-width:820px){.grid-2{grid-template-columns:1fr}}
+
+    /* Make the shared hero / sections sit on the portal canvas without the
+       admin-layout chrome around them. */
+    .uds-hero{margin-bottom:0}
+    .hub-section{margin-bottom:0}
   </style>
 </head>
 <body>
@@ -250,6 +175,15 @@
 {% set total_bytes = (usage.download_bytes or 0) + (usage.upload_bytes or 0) %}
 {% set st = sub.status %}
 
+{# ── status → UDS variant + label, computed once ── #}
+{% if st == 'expired' %}
+  {% set status_variant = 'red' %}{% set status_label = 'منتهٍ' %}
+{% elif st in ['disabled','suspended'] %}
+  {% set status_variant = 'amber' %}{% set status_label = 'موقوف' %}
+{% else %}
+  {% set status_variant = 'green' %}{% set status_label = 'نشط' %}
+{% endif %}
+
 <main class="wrap" data-testid="subscriber-portal-home">
 
   {# ── Topbar ── #}
@@ -266,28 +200,34 @@
     </a>
   </header>
 
-  {# ── Hero ── #}
-  <section class="hero">
-    <div class="hero-id">
-      <h1>مرحبًا، {{ dashboard.subscriber.full_name or dashboard.subscriber.username }}</h1>
-      <p>هنا كل ما يخص اشتراكك: استهلاكك، جلساتك، فواتيرك، وطلبات التجديد والسلف — بشكل مبسّط وواضح.</p>
-    </div>
-    <div class="hero-status">
-      <span class="hero-chip live">
-        <i class="fa-solid fa-circle" style="font-size:7px"></i>
-        {% if st == 'expired' %}منتهٍ{% elif st in ['disabled','suspended'] %}موقوف{% else %}نشط{% endif %}
-      </span>
-      {% if rem is not none %}
-        <span class="hero-chip">
-          <i class="fa-solid fa-hourglass-half"></i>
-          {% if rem < 0 %}انتهى منذ {{ -rem }} يوم{% else %}باقي {{ rem }} يوم{% endif %}
-        </span>
-      {% endif %}
-      {% if dashboard.plan and dashboard.plan.name %}
-        <span class="hero-chip"><i class="fa-solid fa-cubes"></i> {{ dashboard.plan.name }}</span>
-      {% endif %}
-    </div>
-  </section>
+  {# ════════════ ONE MERGED HERO ════════════
+     Title + subtitle + status/plan KPIs in a single UDS hero. The remaining
+     days, plan name and status that used to live in separate hero chips are
+     now surfaced as the hero KPI strip. #}
+  {% set _kpis = [
+    {'label': 'المشترك',     'value': (dashboard.subscriber.full_name or dashboard.subscriber.username),
+                              'icon': 'id-card',  'variant': 'brand'},
+    {'label': 'حالة الاشتراك','value': status_label,
+                              'icon': ('circle-xmark' if status_variant=='red' else ('circle-pause' if status_variant=='amber' else 'circle-check')),
+                              'variant': status_variant},
+  ] %}
+  {% if dashboard.plan and dashboard.plan.name %}
+    {% set _kpis = _kpis + [{'label': 'الباقة', 'value': dashboard.plan.name, 'icon': 'cubes', 'variant': 'brand'}] %}
+  {% endif %}
+  {% if rem is not none %}
+    {% set _kpis = _kpis + [{
+        'label': 'المدة المتبقية',
+        'value': (('انتهى منذ ' ~ (-rem) ~ ' يوم') if rem < 0 else (rem ~ ' يوم')),
+        'icon': 'hourglass-half',
+        'variant': ('red' if rem < 0 else ('amber' if rem <= 7 else 'green'))
+      }] %}
+  {% endif %}
+  {{ hub.megahero(
+       "مرحبًا، " ~ (dashboard.subscriber.full_name or dashboard.subscriber.username),
+       subtitle="هنا كل ما يخص اشتراكك: استهلاكك، جلساتك، فواتيرك، وطلبات التجديد والسلف — بشكل مبسّط وواضح.",
+       icon="circle-user",
+       kpis=_kpis
+  ) }}
 
   {# ── Tabs ── #}
   <nav class="tabs" role="tablist" aria-label="أقسام البوابة">
@@ -301,65 +241,39 @@
   {# ════════════ نظرة عامة ════════════ #}
   <section class="pane is-active" data-pane="overview">
 
-    <div class="kpi-grid">
-      <div class="kpi">
-        <div class="ico blue"><i class="fa-solid fa-download"></i></div>
-        <div><div class="lbl">إجمالي التحميل</div><div class="val">{{ fmt_bytes(usage.download_bytes) }}</div></div>
-      </div>
-      <div class="kpi">
-        <div class="ico amber"><i class="fa-solid fa-upload"></i></div>
-        <div><div class="lbl">إجمالي الرفع</div><div class="val">{{ fmt_bytes(usage.upload_bytes) }}</div></div>
-      </div>
-      <div class="kpi">
-        <div class="ico"><i class="fa-solid fa-database"></i></div>
-        <div><div class="lbl">إجمالي الاستخدام</div><div class="val">{{ fmt_bytes(total_bytes) }}</div></div>
-      </div>
-      <div class="kpi">
-        <div class="ico green"><i class="fa-solid fa-wifi"></i></div>
-        <div><div class="lbl">عدد الجلسات</div><div class="val num">{{ dashboard.sessions|length }}</div></div>
-      </div>
+    <div class="hub-kpi-grid">
+      {{ hub.kpi("إجمالي التحميل", fmt_bytes(usage.download_bytes), icon="download", variant="blue") }}
+      {{ hub.kpi("إجمالي الرفع",   fmt_bytes(usage.upload_bytes),   icon="upload",   variant="amber") }}
+      {{ hub.kpi("إجمالي الاستخدام", fmt_bytes(total_bytes),        icon="database", variant="brand") }}
+      {{ hub.kpi("عدد الجلسات",    dashboard.sessions|length,       icon="wifi",     variant="green") }}
     </div>
 
     <div class="grid-2">
       {# Subscription summary #}
-      <section class="card">
-        <header class="card-head"><span class="icon"><i class="fa-solid fa-calendar-check"></i></span>
-          <h2>حالة الاشتراك</h2></header>
-        <div class="card-body">
-          <p class="card-intro">يوضّح هذا القسم المدة المتبقية على اشتراكك وتاريخ انتهائه.</p>
-          <div class="dl">
-            <div><span>الحالة</span><strong>
-              {% if st == 'expired' %}<span class="pill red">منتهٍ</span>
-              {% elif st in ['disabled','suspended'] %}<span class="pill amber">موقوف</span>
-              {% else %}<span class="pill green">نشط</span>{% endif %}
-            </strong></div>
-            <div><span>ينتهي في</span><strong class="mono">{{ (sub.expire_at or '—')[:16] }}</strong></div>
-            <div><span>الأيام المتبقية</span><strong class="num">
-              {% if rem is none %}غير محدد
-              {% elif rem < 0 %}<span style="color:var(--err)">انتهى منذ {{ -rem }} يوم</span>
-              {% else %}{{ rem }} يوم{% endif %}
-            </strong></div>
+      {% call hub.section("حالة الاشتراك", icon="calendar-check") %}
+        <p class="card-intro">يوضّح هذا القسم المدة المتبقية على اشتراكك وتاريخ انتهائه.</p>
+        {{ hub.kv([
+          {'label': 'الحالة', 'value': status_label},
+          {'label': 'ينتهي في', 'value': (sub.expire_at or '—')[:16], 'mono': True},
+          {'label': 'الأيام المتبقية',
+           'value': ('غير محدد' if rem is none else (('انتهى منذ ' ~ (-rem) ~ ' يوم') if rem < 0 else (rem ~ ' يوم')))},
+        ]) }}
+        {% if rem is not none and rem >= 0 %}
+          {% set pct = (rem / 30 * 100) if rem <= 30 else 100 %}
+          <div class="sub-bar {{ 'is-danger' if rem <= 3 else ('is-warn' if rem <= 7 else '') }}">
+            <span style="width:{{ pct }}%"></span>
           </div>
-          {% if rem is not none and rem >= 0 %}
-            {% set pct = (rem / 30 * 100) if rem <= 30 else 100 %}
-            <div class="sub-bar {{ 'is-danger' if rem <= 3 else ('is-warn' if rem <= 7 else '') }}">
-              <span style="width:{{ pct }}%"></span>
-            </div>
-            <p class="card-intro" style="margin:8px 0 0">
-              {% if rem <= 3 %}اشتراكك على وشك الانتهاء — جدّد الآن لتجنّب الانقطاع.
-              {% elif rem <= 7 %}اقترب موعد التجديد. يمكنك التجديد من تبويب «الطلبات والدعم».
-              {% else %}اشتراكك سارٍ. التجديد متاح في أي وقت.{% endif %}
-            </p>
-          {% endif %}
-        </div>
-      </section>
+          <p class="card-intro" style="margin:8px 0 0">
+            {% if rem <= 3 %}اشتراكك على وشك الانتهاء — جدّد الآن لتجنّب الانقطاع.
+            {% elif rem <= 7 %}اقترب موعد التجديد. يمكنك التجديد من تبويب «الطلبات والدعم».
+            {% else %}اشتراكك سارٍ. التجديد متاح في أي وقت.{% endif %}
+          </p>
+        {% endif %}
+      {% endcall %}
 
       {# Alerts preview #}
-      <section class="card">
-        <header class="card-head"><span class="icon"><i class="fa-solid fa-bell"></i></span>
-          <h2>تنبيهات وتحذيرات</h2>
-          <span class="meta">{{ dashboard.notifications|length }}</span></header>
-        <div class="card-body" style="display:grid;gap:10px">
+      {% call hub.section("تنبيهات وتحذيرات", icon="bell", meta=dashboard.notifications|length|string) %}
+        <div style="display:grid;gap:10px">
           {% if rem is not none and rem < 0 %}
             <div class="note danger"><i class="fa-solid fa-circle-exclamation"></i>
               <span>انتهى اشتراكك. بعض الخدمات معطّلة حتى التجديد.</span></div>
@@ -383,80 +297,51 @@
               <span>لا توجد تنبيهات حالياً. كل شيء على ما يرام.</span></div>
           {% endif %}
         </div>
-      </section>
+      {% endcall %}
     </div>
   </section>
 
   {# ════════════ الملف الشخصي ════════════ #}
   <section class="pane" data-pane="profile">
     <div class="grid-2">
-      <section class="card">
-        <header class="card-head"><span class="icon"><i class="fa-solid fa-id-card"></i></span>
-          <h2>بياناتي</h2></header>
-        <div class="card-body">
-          <p class="card-intro">معلومات حسابك الأساسية كما هي مسجّلة لدى مزوّد الخدمة.</p>
-          <div class="dl">
-            <div><span>الاسم</span><strong>{{ dashboard.subscriber.full_name or '—' }}</strong></div>
-            <div><span>اسم المستخدم</span><strong class="mono">{{ dashboard.subscriber.username }}</strong></div>
-            <div><span>الجوال</span><strong class="mono">{{ dashboard.subscriber.mobile or '—' }}</strong></div>
-            <div><span>الحالة</span><strong>
-              {% if st == 'expired' %}<span class="pill red">منتهٍ</span>
-              {% elif st in ['disabled','suspended'] %}<span class="pill amber">موقوف</span>
-              {% else %}<span class="pill green">نشط</span>{% endif %}
-            </strong></div>
-          </div>
-        </div>
-      </section>
+      {% call hub.section("بياناتي", icon="id-card") %}
+        <p class="card-intro">معلومات حسابك الأساسية كما هي مسجّلة لدى مزوّد الخدمة.</p>
+        {{ hub.kv([
+          {'label': 'الاسم', 'value': (dashboard.subscriber.full_name or '—')},
+          {'label': 'اسم المستخدم', 'value': dashboard.subscriber.username, 'mono': True},
+          {'label': 'الجوال', 'value': (dashboard.subscriber.mobile or '—'), 'mono': True},
+          {'label': 'الحالة', 'value': status_label},
+        ]) }}
+      {% endcall %}
 
-      <section class="card">
-        <header class="card-head"><span class="icon"><i class="fa-solid fa-cubes"></i></span>
-          <h2>الباقة</h2></header>
-        <div class="card-body">
-          <p class="card-intro">تفاصيل الباقة المرتبطة باشتراكك الحالي.</p>
-          <div class="dl">
-            <div><span>اسم الباقة</span><strong>{{ dashboard.plan.name if dashboard.plan and dashboard.plan.name else '—' }}</strong></div>
-            <div><span>السعر</span><strong class="num">{{ dashboard.plan.price|money if dashboard.plan and dashboard.plan.price is defined else '—' }}</strong></div>
-            <div><span>ينتهي في</span><strong class="mono">{{ (sub.expire_at or '—')[:16] }}</strong></div>
-            <div><span>المتبقي</span><strong class="num">
-              {% if rem is none %}—{% elif rem < 0 %}منتهٍ{% else %}{{ rem }} يوم{% endif %}
-            </strong></div>
-          </div>
-        </div>
-      </section>
+      {% call hub.section("الباقة", icon="cubes") %}
+        <p class="card-intro">تفاصيل الباقة المرتبطة باشتراكك الحالي.</p>
+        {{ hub.kv([
+          {'label': 'اسم الباقة', 'value': (dashboard.plan.name if dashboard.plan and dashboard.plan.name else '—')},
+          {'label': 'السعر', 'value': (dashboard.plan.price|money if dashboard.plan and dashboard.plan.price is defined else '—')},
+          {'label': 'ينتهي في', 'value': (sub.expire_at or '—')[:16], 'mono': True},
+          {'label': 'المتبقي', 'value': ('—' if rem is none else ('منتهٍ' if rem < 0 else (rem ~ ' يوم')))},
+        ]) }}
+      {% endcall %}
     </div>
   </section>
 
   {# ════════════ الاستخدام ════════════ #}
   <section class="pane" data-pane="usage">
-    <div class="kpi-grid">
-      <div class="kpi">
-        <div class="ico blue"><i class="fa-solid fa-download"></i></div>
-        <div><div class="lbl">إجمالي التحميل</div><div class="val">{{ fmt_bytes(usage.download_bytes) }}</div></div>
-      </div>
-      <div class="kpi">
-        <div class="ico amber"><i class="fa-solid fa-upload"></i></div>
-        <div><div class="lbl">إجمالي الرفع</div><div class="val">{{ fmt_bytes(usage.upload_bytes) }}</div></div>
-      </div>
-      <div class="kpi">
-        <div class="ico"><i class="fa-solid fa-database"></i></div>
-        <div><div class="lbl">إجمالي الاستخدام</div><div class="val">{{ fmt_bytes(total_bytes) }}</div></div>
-      </div>
-      <div class="kpi">
-        <div class="ico green"><i class="fa-solid fa-clock"></i></div>
-        <div><div class="lbl">إجمالي وقت الاتصال</div><div class="val">{{ fmt_secs(usage.session_seconds) }}</div></div>
-      </div>
+    <div class="hub-kpi-grid">
+      {{ hub.kpi("إجمالي التحميل", fmt_bytes(usage.download_bytes), icon="download", variant="blue") }}
+      {{ hub.kpi("إجمالي الرفع",   fmt_bytes(usage.upload_bytes),   icon="upload",   variant="amber") }}
+      {{ hub.kpi("إجمالي الاستخدام", fmt_bytes(total_bytes),        icon="database", variant="brand") }}
+      {{ hub.kpi("إجمالي وقت الاتصال", fmt_secs(usage.session_seconds), icon="clock", variant="green") }}
     </div>
 
-    <section class="card">
-      <header class="card-head"><span class="icon"><i class="fa-solid fa-clock-rotate-left"></i></span>
-        <h2>سجل الجلسات بالتفصيل</h2>
-        <span class="meta">{{ dashboard.sessions|length }} جلسة</span></header>
+    {% call hub.section("سجل الجلسات بالتفصيل", icon="clock-rotate-left", meta=(dashboard.sessions|length|string ~ " جلسة"), flush=True) %}
       {% if dashboard.sessions %}
-      <div class="table-wrap">
-        <table data-testid="subscriber-sessions-table">
+      <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
+        <table class="hub-table uds-table" data-testid="subscriber-sessions-table">
           <thead>
             <tr>
-              <th>#</th><th>معرّف الجلسة</th><th>جهاز الشبكة</th><th>IP</th>
+              <th class="num">#</th><th>معرّف الجلسة</th><th>جهاز الشبكة</th><th>IP</th>
               <th>البداية</th><th>النهاية</th><th>المدة</th><th>تحميل</th><th>رفع</th>
             </tr>
           </thead>
@@ -468,7 +353,7 @@
               <td class="mono">{{ s.nasipaddress or '—' }}</td>
               <td class="mono">{{ s.framedipaddress or '—' }}</td>
               <td class="mono">{{ (s.acctstarttime or '—')[:16] }}</td>
-              <td>{% if s.acctstoptime %}<span class="mono">{{ s.acctstoptime[:16] }}</span>{% else %}<span class="pill green">متصل الآن</span>{% endif %}</td>
+              <td>{% if s.acctstoptime %}<span class="mono">{{ s.acctstoptime[:16] }}</span>{% else %}{{ hub.pill("متصل الآن", variant="green") }}{% endif %}</td>
               <td class="num">{{ fmt_secs(s.acctsessiontime) }}</td>
               <td class="num mono">{{ fmt_bytes(s.acctoutputoctets) }}</td>
               <td class="num mono">{{ fmt_bytes(s.acctinputoctets) }}</td>
@@ -478,43 +363,29 @@
         </table>
       </div>
       {% else %}
-        <div class="card-body"><div class="empty">
-          <div class="ico"><i class="fa-solid fa-clock-rotate-left"></i></div>
-          <div style="font-weight:800;color:var(--ink-2)">لا توجد جلسات بعد</div>
-          <div style="font-size:12.5px">ستظهر جلساتك هنا فور اتصالك بالشبكة.</div>
-        </div></div>
+        {{ hub.empty("لا توجد جلسات بعد", sub="ستظهر جلساتك هنا فور اتصالك بالشبكة.", icon="clock-rotate-left") }}
       {% endif %}
-    </section>
+    {% endcall %}
   </section>
 
   {# ════════════ الفواتير والمحفظة ════════════ #}
   <section class="pane" data-pane="billing">
-    <div class="kpi-grid">
-      <div class="kpi">
-        <div class="ico green"><i class="fa-solid fa-wallet"></i></div>
-        <div><div class="lbl">رصيد المحفظة</div><div class="val num">{{ dashboard.wallet.balance|money if dashboard.wallet and dashboard.wallet.balance is defined else '0.00' }}</div></div>
-      </div>
-      <div class="kpi">
-        <div class="ico {{ 'red' if dashboard.debt and dashboard.debt > 0 else '' }}"><i class="fa-solid fa-money-bill-trend-up"></i></div>
-        <div><div class="lbl">الدين المستحق</div><div class="val num">{{ dashboard.debt or 0 }}</div></div>
-      </div>
-      <div class="kpi">
-        <div class="ico blue"><i class="fa-solid fa-receipt"></i></div>
-        <div><div class="lbl">عدد الفواتير</div><div class="val num">{{ dashboard.payments|length }}</div></div>
-      </div>
-      <div class="kpi">
-        <div class="ico amber"><i class="fa-solid fa-hand-holding-dollar"></i></div>
-        <div><div class="lbl">السلف</div><div class="val num">{{ dashboard.loans|length }}</div></div>
-      </div>
+    <div class="hub-kpi-grid">
+      {{ hub.kpi("رصيد المحفظة",
+                 (dashboard.wallet.balance|money if dashboard.wallet and dashboard.wallet.balance is defined else '0.00'),
+                 icon="wallet", variant="green") }}
+      {{ hub.kpi("الدين المستحق", (dashboard.debt or 0),
+                 icon="money-bill-trend-up",
+                 variant=('red' if dashboard.debt and dashboard.debt > 0 else 'brand')) }}
+      {{ hub.kpi("عدد الفواتير", dashboard.payments|length, icon="receipt", variant="blue") }}
+      {{ hub.kpi("السلف", dashboard.loans|length, icon="hand-holding-dollar", variant="amber") }}
     </div>
 
-    <section class="card">
-      <header class="card-head"><span class="icon"><i class="fa-solid fa-receipt"></i></span>
-        <h2>الفواتير</h2><span class="meta">{{ dashboard.payments|length }}</span></header>
+    {% call hub.section("الفواتير", icon="receipt", meta=dashboard.payments|length|string, flush=True) %}
       {% if dashboard.payments %}
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>#</th><th>المبلغ</th><th>الحالة</th><th>التاريخ</th></tr></thead>
+      <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
+        <table class="hub-table uds-table">
+          <thead><tr><th class="num">#</th><th>المبلغ</th><th>الحالة</th><th>التاريخ</th></tr></thead>
           <tbody>
           {% for p in dashboard.payments %}
             <tr>
@@ -522,9 +393,9 @@
               <td class="num mono">{{ p.amount|money if p.amount is defined else '—' }}</td>
               <td>
                 {% set ps = (p.status or '')|lower %}
-                {% if ps in ['paid','completed'] %}<span class="pill green">مدفوعة</span>
-                {% elif ps in ['unpaid','pending','open'] %}<span class="pill amber">غير مدفوعة</span>
-                {% elif ps %}<span class="pill grey">{{ p.status }}</span>{% else %}—{% endif %}
+                {% if ps in ['paid','completed'] %}{{ hub.pill("مدفوعة", variant="green") }}
+                {% elif ps in ['unpaid','pending','open'] %}{{ hub.pill("غير مدفوعة", variant="amber") }}
+                {% elif ps %}{{ hub.pill(p.status, variant="grey") }}{% else %}—{% endif %}
               </td>
               <td class="mono">{{ p.created_at|dt_local if p.created_at else '—' }}</td>
             </tr>
@@ -533,20 +404,15 @@
         </table>
       </div>
       {% else %}
-        <div class="card-body"><div class="empty">
-          <div class="ico"><i class="fa-solid fa-receipt"></i></div>
-          <div style="font-weight:800;color:var(--ink-2)">لا توجد فواتير بعد</div>
-        </div></div>
+        {{ hub.empty("لا توجد فواتير بعد", icon="receipt") }}
       {% endif %}
-    </section>
+    {% endcall %}
 
-    <section class="card">
-      <header class="card-head"><span class="icon"><i class="fa-solid fa-hand-holding-dollar"></i></span>
-        <h2>السلف</h2><span class="meta">{{ dashboard.loans|length }}</span></header>
+    {% call hub.section("السلف", icon="hand-holding-dollar", meta=dashboard.loans|length|string, flush=True) %}
       {% if dashboard.loans %}
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>#</th><th>المدة</th><th>القيمة</th><th>الحالة</th><th>السبب</th></tr></thead>
+      <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
+        <table class="hub-table uds-table">
+          <thead><tr><th class="num">#</th><th>المدة</th><th>القيمة</th><th>الحالة</th><th>السبب</th></tr></thead>
           <tbody>
           {% for l in dashboard.loans %}
             <tr>
@@ -555,9 +421,9 @@
               <td class="num mono">{{ l.amount|money if l.amount is defined else '—' }}</td>
               <td>
                 {% set ls = (l.status or '')|lower %}
-                {% if ls == 'open' %}<span class="pill blue">مفتوحة</span>
-                {% elif ls in ['settled','closed','paid'] %}<span class="pill green">مسدّدة</span>
-                {% elif ls %}<span class="pill grey">{{ l.status }}</span>{% else %}—{% endif %}
+                {% if ls == 'open' %}{{ hub.pill("مفتوحة", variant="blue") }}
+                {% elif ls in ['settled','closed','paid'] %}{{ hub.pill("مسدّدة", variant="green") }}
+                {% elif ls %}{{ hub.pill(l.status, variant="grey") }}{% else %}—{% endif %}
               </td>
               <td>{{ l.reason or '—' }}</td>
             </tr>
@@ -566,12 +432,9 @@
         </table>
       </div>
       {% else %}
-        <div class="card-body"><div class="empty">
-          <div class="ico"><i class="fa-solid fa-hand-holding-dollar"></i></div>
-          <div style="font-weight:800;color:var(--ink-2)">لا توجد سلف</div>
-        </div></div>
+        {{ hub.empty("لا توجد سلف", icon="hand-holding-dollar") }}
       {% endif %}
-    </section>
+    {% endcall %}
   </section>
 
   {# ════════════ الطلبات والدعم ════════════ #}
@@ -579,84 +442,80 @@
     <div class="grid-2">
 
       {# Renewal #}
-      <section class="card">
-        <header class="card-head"><span class="icon"><i class="fa-solid fa-rotate"></i></span>
-          <h2>تجديد الاشتراك</h2></header>
-        <div class="card-body">
-          <p class="card-intro">أرسل طلب تجديد لاشتراكك. سيراجعه فريق الدعم ويفعّله حسب باقتك.</p>
-          {% if rem is not none and rem <= 7 %}
-            <div class="note warn" style="margin-bottom:12px"><i class="fa-solid fa-triangle-exclamation"></i>
-              <span>{% if rem < 0 %}اشتراكك منتهٍ{% else %}باقي {{ rem }} يوم{% endif %} — التجديد مُوصى به الآن.</span></div>
-          {% endif %}
-          <form method="post" action="{{ url_for('radius.portal_subscriber_renewal_request') }}"
-                data-testid="subscriber-renewal-request-form">
-            <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-            <div class="field">
-              <label>ملاحظة (اختياري)</label>
-              <textarea name="reason" placeholder="أي تفاصيل تساعد الدعم في تجديد اشتراكك"></textarea>
-            </div>
-            <button class="btn" type="submit"><i class="fa-solid fa-paper-plane"></i> إرسال طلب التجديد</button>
-          </form>
-        </div>
-      </section>
+      {% call hub.section("تجديد الاشتراك", icon="rotate") %}
+        <p class="card-intro">أرسل طلب تجديد لاشتراكك. سيراجعه فريق الدعم ويفعّله حسب باقتك.</p>
+        {% if rem is not none and rem <= 7 %}
+          <div class="note warn" style="margin-bottom:12px"><i class="fa-solid fa-triangle-exclamation"></i>
+            <span>{% if rem < 0 %}اشتراكك منتهٍ{% else %}باقي {{ rem }} يوم{% endif %} — التجديد مُوصى به الآن.</span></div>
+        {% endif %}
+        <form method="post" action="{{ url_for('radius.portal_subscriber_renewal_request') }}"
+              data-testid="subscriber-renewal-request-form">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+          <div class="field">
+            <label>ملاحظة (اختياري)</label>
+            <textarea name="reason" placeholder="أي تفاصيل تساعد الدعم في تجديد اشتراكك"></textarea>
+          </div>
+          {{ hub.btn("إرسال طلب التجديد", variant="primary", icon="paper-plane", type="submit") }}
+        </form>
+      {% endcall %}
 
       {# Loan #}
-      <section class="card">
-        <header class="card-head"><span class="icon"><i class="fa-solid fa-hand-holding-dollar"></i></span>
-          <h2>طلب سلفة وقت</h2></header>
-        <div class="card-body">
-          {% if policy.enabled %}
-            <div class="note ok" style="margin-bottom:12px"><i class="fa-solid fa-bolt"></i>
-              <span>السلفة التلقائية مفعّلة. حتى <strong>{{ fmt_mins(policy.allowed_minutes) }}</strong> تُعتمد فوراً دون انتظار.</span></div>
-          {% else %}
-            <div class="note warn" style="margin-bottom:12px"><i class="fa-solid fa-clock"></i>
-              <span>{{ policy.reason or 'السلفة التلقائية غير متاحة لباقتك حالياً — سيُرسَل طلبك للمراجعة اليدوية.' }}</span></div>
-          {% endif %}
-          <form method="post" action="{{ url_for('radius.portal_subscriber_loan_request') }}"
-                data-testid="subscriber-loan-request-form">
-            <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-            <div class="field">
-              <label>الدقائق المطلوبة</label>
-              <input name="requested_minutes" type="number" min="1"
-                     value="{{ policy.allowed_minutes or 1440 }}"
-                     {% if policy.enabled and policy.allowed_minutes %}max="{{ policy.allowed_minutes }}"{% endif %}>
-            </div>
-            <div class="field">
-              <label>السبب (اختياري)</label>
-              <textarea name="reason" placeholder="سبب طلب السلفة"></textarea>
-            </div>
-            <button class="btn" type="submit">
-              <i class="fa-solid fa-{{ 'bolt' if policy.enabled else 'paper-plane' }}"></i>
-              {{ 'طلب سلفة فورية' if policy.enabled else 'إرسال طلب للمراجعة' }}
-            </button>
-          </form>
-        </div>
-      </section>
+      {% call hub.section("طلب سلفة وقت", icon="hand-holding-dollar") %}
+        {% if policy.enabled %}
+          <div class="note ok" style="margin-bottom:12px"><i class="fa-solid fa-bolt"></i>
+            <span>السلفة التلقائية مفعّلة. حتى <strong>{{ fmt_mins(policy.allowed_minutes) }}</strong> تُعتمد فوراً دون انتظار.</span></div>
+        {% else %}
+          <div class="note warn" style="margin-bottom:12px"><i class="fa-solid fa-clock"></i>
+            <span>{{ policy.reason or 'السلفة التلقائية غير متاحة لباقتك حالياً — سيُرسَل طلبك للمراجعة اليدوية.' }}</span></div>
+        {% endif %}
+        <form method="post" action="{{ url_for('radius.portal_subscriber_loan_request') }}"
+              data-testid="subscriber-loan-request-form">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+          <div class="field">
+            <label>الدقائق المطلوبة</label>
+            {# Number+unit → unified unit-input picker (base unit = minutes).
+               The hidden field still posts `requested_minutes` in minutes. #}
+            {{ unit_input_picker(
+                 name="requested_minutes",
+                 value=(policy.allowed_minutes or 1440),
+                 kind="time",
+                 min=1) }}
+          </div>
+          <div class="field">
+            <label>السبب (اختياري)</label>
+            <textarea name="reason" placeholder="سبب طلب السلفة"></textarea>
+          </div>
+          {{ hub.btn(
+               ('طلب سلفة فورية' if policy.enabled else 'إرسال طلب للمراجعة'),
+               variant="primary",
+               icon=('bolt' if policy.enabled else 'paper-plane'),
+               type="submit") }}
+        </form>
+      {% endcall %}
 
     </div>
 
     {# Complaint / support — routed through the renewal-request channel
        (reason field) with a clear [شكوى] prefix; no dedicated backend. #}
-    <section class="card">
-      <header class="card-head"><span class="icon"><i class="fa-solid fa-headset"></i></span>
-        <h2>تقديم شكوى أو طلب دعم</h2></header>
-      <div class="card-body">
-        <p class="card-intro">صف مشكلتك أو استفسارك وسيصل إلى فريق الدعم لمتابعته.</p>
-        <form method="post" action="{{ url_for('radius.portal_subscriber_renewal_request') }}"
-              onsubmit="var r=this.querySelector('[name=reason]'); if(r && r.value.indexOf('[شكوى]')!==0){ r.value='[شكوى] '+r.value; }">
-          <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-          <div class="field">
-            <label>تفاصيل الشكوى أو الطلب <span style="color:var(--err)">*</span></label>
-            <textarea name="reason" required placeholder="اكتب تفاصيل المشكلة: انقطاع، بطء، فاتورة، إلخ"></textarea>
-          </div>
-          <button class="btn secondary" type="submit"><i class="fa-solid fa-paper-plane"></i> إرسال للدعم</button>
-        </form>
-      </div>
-    </section>
+    {% call hub.section("تقديم شكوى أو طلب دعم", icon="headset") %}
+      <p class="card-intro">صف مشكلتك أو استفسارك وسيصل إلى فريق الدعم لمتابعته.</p>
+      <form method="post" action="{{ url_for('radius.portal_subscriber_renewal_request') }}"
+            onsubmit="var r=this.querySelector('[name=reason]'); if(r && r.value.indexOf('[شكوى]')!==0){ r.value='[شكوى] '+r.value; }">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+        <div class="field">
+          <label>تفاصيل الشكوى أو الطلب <span style="color:var(--err)">*</span></label>
+          <textarea name="reason" required placeholder="اكتب تفاصيل المشكلة: انقطاع، بطء، فاتورة، إلخ"></textarea>
+        </div>
+        {{ hub.btn("إرسال للدعم", variant="secondary", icon="paper-plane", type="submit") }}
+      </form>
+    {% endcall %}
   </section>
 
 </main>
 
+{# ── UDS table behaviour (toolbar / sort / pager) for the standalone portal ── #}
+<script src="{{ url_for('static', filename='js/unified_design.js') }}"></script>
+<script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
 <script>
 (function(){
   const tabs = Array.from(document.querySelectorAll('.tab[data-tab]'));

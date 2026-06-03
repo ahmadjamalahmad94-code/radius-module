@@ -26,10 +26,14 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/subscribers_polish.css') }}">
 <style>
   .usq-panel{
+    /* sticky action toolbar: stays in view while scrolling the list, on a
+       solid surface, with its own stacking context so it sits cleanly above
+       the rows (dropdowns float higher still via .uds-menu). */
+    position:sticky; top:78px; z-index:41; isolation:isolate;
     display:flex; align-items:center; justify-content:space-between; gap:14px;
     margin:0 0 var(--hub-gap-section); padding:12px 14px;
-    border:1px solid var(--hub-border-soft); border-radius:var(--hub-r-lg);
-    background:var(--hub-bg-card); box-shadow:var(--hub-sh-sm);
+    border:1px solid var(--hub-border-strong); border-radius:var(--hub-r-lg);
+    background:var(--hub-bg-card); box-shadow:var(--hub-sh-md);
   }
   .usq-panel[hidden]{ display:none; }
   .usq-picked{ display:flex; align-items:center; gap:10px; min-width:220px; }
@@ -392,15 +396,10 @@
     </div>
   </div>
   <style>
-    .usq-menu{ position:relative; display:inline-block; }
-    .usq-menu > summary{ list-style:none; cursor:pointer; user-select:none; display:inline-flex; align-items:center; gap:6px; }
-    .usq-menu > summary::-webkit-details-marker{ display:none; }
-    .usq-menu .usq-caret{ font-size:10px; transition:transform .15s ease; }
-    .usq-menu[open] .usq-caret{ transform:rotate(180deg); }
-    .usq-menu-panel{ position:absolute; z-index:50; inset-inline-start:0; margin-top:6px; min-width:230px; display:flex; flex-direction:column; gap:4px; padding:8px; background:#fff; border:1px solid var(--hub-border,#e7e9f2); border-radius:12px; box-shadow:0 8px 24px rgba(16,24,40,.12); }
-    .usq-menu-panel .hub-btn, .usq-menu-panel form{ width:100%; }
-    .usq-menu-panel .hub-btn{ justify-content:flex-start; }
-    @media (prefers-reduced-motion: reduce){ .usq-menu .usq-caret{ transition:none; } }
+    /* caret indicator for the action dropdown triggers (shared .uds-menu) */
+    .usq-actions [data-uds-menu-trigger] .usq-caret{ font-size:10px; transition:transform .15s ease; }
+    .usq-actions [data-uds-menu-trigger][aria-expanded="true"] .usq-caret{ transform:rotate(180deg); }
+    @media (prefers-reduced-motion: reduce){ .usq-actions .usq-caret{ transition:none; } }
   </style>
   <div class="usq-actions">
     <a class="hub-btn hub-btn--primary hub-btn--sm" data-single-action data-usq-link="profile" href="#">
@@ -412,60 +411,61 @@
     <a class="hub-btn hub-btn--secondary hub-btn--sm" data-single-action data-usq-link="finance" href="#">
       <i class="fa-solid fa-wallet"></i> الدفعات والسلف
     </a>
-    <details class="usq-menu" data-usq-menu>
-      <summary class="hub-btn hub-btn--secondary hub-btn--sm">
-        <i class="fa-solid fa-bolt"></i> التفعيل والرصيد <i class="fa-solid fa-chevron-down usq-caret"></i>
-      </summary>
-      <div class="usq-menu-panel">
-        <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-usq-open="extend">
-          <i class="fa-solid fa-clock"></i> إضافة وقت
+    <button type="button" class="hub-btn hub-btn--secondary hub-btn--sm"
+            data-uds-menu-trigger data-uds-menu-target="usqMenuActivate"
+            aria-haspopup="true" aria-expanded="false">
+      <i class="fa-solid fa-bolt"></i> التفعيل والرصيد <i class="fa-solid fa-chevron-down usq-caret"></i>
+    </button>
+    <div class="uds-menu" id="usqMenuActivate" hidden role="menu" aria-label="التفعيل والرصيد">
+      <button class="uds-menu-item" type="button" data-single-action data-usq-open="extend">
+        <i class="fa-solid fa-clock"></i> إضافة وقت
+      </button>
+      <button class="uds-menu-item" type="button" data-single-action data-usq-open="quota">
+        <i class="fa-solid fa-gauge-high"></i> إضافة كوتة
+      </button>
+      <button class="uds-menu-item" type="button" data-single-action data-usq-open="quota-reset">
+        <i class="fa-solid fa-rotate-left"></i> استعادة الكوتة اليومية
+      </button>
+      <button class="uds-menu-item" type="button" data-single-action data-usq-open="balance">
+        <i class="fa-solid fa-coins"></i> إضافة رصيد نقدي
+      </button>
+      <button class="uds-menu-item" type="button" data-single-action data-usq-open="payment">
+        <i class="fa-solid fa-money-bill-wave"></i> دفعة نقدية
+      </button>
+      <button class="uds-menu-item" type="button" data-single-action data-usq-open="loan">
+        <i class="fa-solid fa-hand-holding-dollar"></i> إضافة سلفة
+      </button>
+    </div>
+    <button type="button" class="hub-btn hub-btn--secondary hub-btn--sm"
+            data-uds-menu-trigger data-uds-menu-target="usqMenuAdmin"
+            aria-haspopup="true" aria-expanded="false">
+      <i class="fa-solid fa-sliders"></i> إجراءات إدارية <i class="fa-solid fa-chevron-down usq-caret"></i>
+    </button>
+    <div class="uds-menu" id="usqMenuAdmin" hidden role="menu" aria-label="إجراءات إدارية">
+      <button class="uds-menu-item" type="button" data-single-action data-usq-open="sms">
+        <i class="fa-solid fa-paper-plane"></i> إرسال رسالة قصيرة
+      </button>
+      <button class="uds-menu-item" type="button" data-single-action data-usq-open="plan">
+        <i class="fa-solid fa-right-left"></i> تغيير العرض
+      </button>
+      <form method="post" data-single-action data-usq-form="disconnect" action="{{ url_for('radius.online_disconnect') }}">
+        <input type="hidden" name="username" data-usq-field="username">
+        <button class="uds-menu-item" type="submit">
+          <i class="fa-solid fa-scissors"></i> فصل الاتصال
         </button>
-        <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-usq-open="quota">
-          <i class="fa-solid fa-gauge-high"></i> إضافة كوتة
+      </form>
+      <form method="post" data-single-action data-usq-form="toggle" data-action-template="{{ url_for('radius.users_toggle', username='__USERNAME__') }}">
+        <button class="uds-menu-item" type="submit" data-usq-toggle-label>
+          <i class="fa-solid fa-pause"></i> تغيير الحالة
         </button>
-        <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-usq-open="quota-reset">
-          <i class="fa-solid fa-rotate-left"></i> استعادة الكوتة اليومية
+      </form>
+      <div class="uds-menu-sep"></div>
+      <form method="post" data-single-action data-usq-form="delete" data-action-template="{{ url_for('radius.users_delete', username='__USERNAME__') }}">
+        <button class="uds-menu-item uds-menu-item--danger" type="submit">
+          <i class="fa-solid fa-box-archive"></i> أرشفة
         </button>
-        <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-usq-open="balance">
-          <i class="fa-solid fa-coins"></i> إضافة رصيد نقدي
-        </button>
-        <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-usq-open="payment">
-          <i class="fa-solid fa-money-bill-wave"></i> دفعة نقدية
-        </button>
-        <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-usq-open="loan">
-          <i class="fa-solid fa-hand-holding-dollar"></i> إضافة سلفة
-        </button>
-      </div>
-    </details>
-    <details class="usq-menu" data-usq-menu>
-      <summary class="hub-btn hub-btn--secondary hub-btn--sm">
-        <i class="fa-solid fa-sliders"></i> إجراءات إدارية <i class="fa-solid fa-chevron-down usq-caret"></i>
-      </summary>
-      <div class="usq-menu-panel">
-        <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-usq-open="sms">
-          <i class="fa-solid fa-paper-plane"></i> إرسال رسالة قصيرة
-        </button>
-        <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-usq-open="plan">
-          <i class="fa-solid fa-right-left"></i> تغيير العرض
-        </button>
-        <form method="post" data-single-action data-usq-form="disconnect" action="{{ url_for('radius.online_disconnect') }}">
-          <input type="hidden" name="username" data-usq-field="username">
-          <button class="hub-btn hub-btn--ghost hub-btn--sm" type="submit">
-            <i class="fa-solid fa-scissors"></i> فصل الاتصال
-          </button>
-        </form>
-        <form method="post" data-single-action data-usq-form="toggle" data-action-template="{{ url_for('radius.users_toggle', username='__USERNAME__') }}">
-          <button class="hub-btn hub-btn--ghost hub-btn--sm" type="submit" data-usq-toggle-label>
-            <i class="fa-solid fa-pause"></i> تغيير الحالة
-          </button>
-        </form>
-        <form method="post" data-single-action data-usq-form="delete" data-action-template="{{ url_for('radius.users_delete', username='__USERNAME__') }}">
-          <button class="hub-btn hub-btn--danger hub-btn--sm" type="submit">
-            <i class="fa-solid fa-box-archive"></i> أرشفة
-          </button>
-        </form>
-      </div>
-    </details>
+      </form>
+    </div>
   </div>
 </div>
 

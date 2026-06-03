@@ -1,4 +1,10 @@
-{# O8 — Recovery plan (read-only, advisory). #}
+{# O8 — Recovery plan (read-only, advisory) — UNIFIED DESIGN SYSTEM.
+   Same backend data: plan (audit_id, operation, actor, router_id, timestamp,
+   result_status, risk_label_ar, what_changed_ar, suggested_steps_ar,
+   nearest_backup, related_job). Zero route/behaviour change.
+   Merged hero (title + subtitle + status KPIs), help panel on the LEFT, every
+   recovery section rendered inside a hub.section card. ALL data-* recovery
+   hooks, links and field references preserved verbatim. #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
@@ -7,128 +13,132 @@
 {% block page_title %}خطة استعادة — عملية #{{ plan.audit_id }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ plan.operation }} · {{ plan.result_status or 'بدون' }}</span>{% endblock %}
 
-{% block head_extra %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/mt_dashboard.css') }}">
-{% endblock %}
-
 {% block content %}
+
+{# Status pill text/variant — same logic as the legacy mt-iface-state badge. #}
+{% set _status_meta =
+     ('فشل','red')                                  if plan.result_status == 'failed'  else
+     ('جزئي','amber')                               if plan.result_status == 'partial' else
+     ((plan.risk_label_ar or 'حسّاسة'),'amber') %}
 
 <section class="mt-dashboard" data-mt-recovery-plan
          data-mt-recovery-audit-id="{{ plan.audit_id }}"
          data-mt-recovery-router-id="{{ plan.router_id or '' }}">
 
-  {{ hub.hero(
-    "خطة استعادة — عملية #" ~ plan.audit_id,
-    subtitle=plan.operation ~ " · " ~ (plan.result_status or '—'),
-    icon="life-ring",
-  ) }}
+{# ───── Merged hero: title + subtitle + status KPI strip ───── #}
+{% call hub.megahero(
+  "خطة استعادة — عملية #" ~ plan.audit_id,
+  subtitle=plan.operation ~ " · " ~ (plan.result_status or '—'),
+  icon="life-ring",
+  kpis=[
+    {'label': 'الحالة',  'value': _status_meta[0],                  'icon': 'triangle-exclamation', 'variant': _status_meta[1]},
+    {'label': 'الإجراء', 'value': plan.operation,                   'icon': 'gear',                 'variant': 'brand'},
+    {'label': 'الفاعل',  'value': plan.actor,                       'icon': 'user',                 'variant': 'brand'},
+    {'label': 'الراوتر', 'value': ('#' ~ plan.router_id) if plan.router_id else '—', 'icon': 'router', 'variant': 'brand'},
+  ]
+) %}{% endcall %}
 
-  <section class="mt-card">
-    <header class="mt-card-head">
-      <h3><i class="fa-solid fa-circle-info"></i> ملخّص العملية</h3>
-      <span class="mt-card-meta">
-        {% if plan.result_status == 'failed' %}
-        <span class="mt-iface-state mt-iface-state--off">فشل</span>
-        {% elif plan.result_status == 'partial' %}
-        <span class="mt-iface-state mt-iface-state--down">جزئي</span>
-        {% else %}
-        <span class="mt-iface-state mt-iface-state--down">{{ plan.risk_label_ar or 'حسّاسة' }}</span>
-        {% endif %}
-      </span>
-    </header>
-    <div class="mt-card-body">
-      <ul class="mt-program-summary" data-mt-recovery-meta>
-        <li>الإجراء: <code>{{ plan.operation }}</code></li>
-        <li>الفاعل: <strong>{{ plan.actor }}</strong></li>
-        {% if plan.router_id %}
-        <li>الراوتر: <code>#{{ plan.router_id }}</code></li>
-        {% endif %}
-        <li>الوقت: <code>{{ plan.timestamp|dt_local }}</code></li>
-      </ul>
-      {% if plan.what_changed_ar %}
-      <div class="mt-program-banner mt-program-banner--warn"
-           data-mt-recovery-what-changed
-           style="background:#FFFBEB;border-color:#FDE68A;color:#92400E">
-        <li><i class="fa-solid fa-clock-rotate-left"></i>
-          {{ plan.what_changed_ar }}</li>
-      </div>
-      {% endif %}
+{# ───── Main column + help panel on the LEFT ───── #}
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "كيف تقرأ هذه الخطة",
+  intro="هذه خطة استشاريّة لاستعادة الوضع بعد عملية حسّاسة. التراجع التلقائي غير مفعّل — الخطوات تُنفّذ يدوياً.",
+  icon="clipboard-check",
+  items=[
+    {'icon': 'list-check',         'text': 'اتبع الخطوات الموصى بها بالترتيب المعروض.'},
+    {'icon': 'floppy-disk',        'text': 'أقرب نسخة احتياطية قبل العملية تساعدك على الرجوع لحالة سليمة.'},
+    {'icon': 'clipboard-list',     'text': 'سجل العملية التفصيلي يوضّح ما الذي تغيّر بالضبط.'},
+  ],
+  note="هذه خطة استشاريّة فقط — التراجع التلقائي غير مفعّل في هذه المرحلة."
+)) %}
+
+  {# ── Operation summary ── #}
+  {% call hub.section("ملخّص العملية", icon="circle-info", meta=_status_meta[0]) %}
+    <div data-mt-recovery-meta>
+      {{ hub.kv([
+        {'label': 'الإجراء', 'value': plan.operation,            'mono': True},
+        {'label': 'الفاعل',  'value': plan.actor},
+      ]
+      + ([{'label': 'الراوتر', 'value': '#' ~ plan.router_id, 'mono': True}] if plan.router_id else [])
+      + [{'label': 'الوقت', 'value': plan.timestamp|dt_local, 'mono': True}]) }}
     </div>
-  </section>
+    {% if plan.what_changed_ar %}
+    <div class="hub-empty" data-mt-recovery-what-changed
+         style="text-align:initial;padding:14px 16px;margin-top:14px;background:#FFFBEB;border-color:#FDE68A">
+      <div class="hub-empty-msg" style="color:#92400E">
+        <i class="fa-solid fa-clock-rotate-left"></i> {{ plan.what_changed_ar }}
+      </div>
+    </div>
+    {% endif %}
+  {% endcall %}
 
+  {# ── Recommended recovery steps ── #}
   {% if plan.suggested_steps_ar %}
-  <section class="mt-card" data-mt-recovery-steps>
-    <header class="mt-card-head">
-      <h3><i class="fa-solid fa-list-check"></i> خطوات الاستعادة الموصى بها</h3>
-    </header>
-    <div class="mt-card-body">
-      <ol class="mt-program-summary" style="list-style:decimal;padding-inline-start:24px">
+  {% call hub.section("خطوات الاستعادة الموصى بها", icon="list-check") %}
+    <div data-mt-recovery-steps>
+      <ol class="uds-kv" style="display:block;list-style:decimal;padding-inline-start:24px;margin:0">
         {% for s in plan.suggested_steps_ar %}
-        <li>{{ s }}</li>
+        <li style="padding:8px 0;border-bottom:1px solid var(--hub-border,#e2e8f0)">{{ s }}</li>
         {% endfor %}
       </ol>
-      <p class="mt-tab-hint">
-        هذه خطة استشاريّة فقط — التراجع التلقائي غير مفعّل في
-        هذه المرحلة.
+      <p class="hub-text-mute" style="margin:14px 0 0;font-size:13px">
+        هذه خطة استشاريّة فقط — التراجع التلقائي غير مفعّل في هذه المرحلة.
       </p>
     </div>
-  </section>
+  {% endcall %}
   {% endif %}
 
+  {# ── Nearest backup before the operation ── #}
   {% if plan.nearest_backup %}
-  <section class="mt-card" data-mt-recovery-nearest-backup>
-    <header class="mt-card-head">
-      <h3><i class="fa-solid fa-floppy-disk"></i> أقرب نسخة احتياطية قبل العملية</h3>
-    </header>
-    <div class="mt-card-body">
-      <ul class="mt-program-summary">
-        <li>الملف: <code>{{ plan.nearest_backup.filename }}</code></li>
-        <li>تاريخ الإنشاء: <code>{{ plan.nearest_backup.created_at|dt_local }}</code></li>
-        <li>السبب: <code>{{ plan.nearest_backup.reason }}</code></li>
-        <li>
-          <a class="mt-mini-btn"
-             href="{{ url_for('radius.mt_backups_list', nas_id=plan.router_id) }}"
-             data-mt-recovery-backup-link>
-            <i class="fa-solid fa-arrow-right"></i> صفحة النسخ
-          </a>
-        </li>
-      </ul>
-    </div>
-  </section>
-  {% endif %}
-
-  {% if plan.related_job %}
-  <section class="mt-card" data-mt-recovery-related-job>
-    <header class="mt-card-head">
-      <h3><i class="fa-solid fa-list-check"></i> مهمة مرتبطة</h3>
-    </header>
-    <div class="mt-card-body">
-      <p>
-        المهمة #{{ plan.related_job.id }} —
-        <a href="{{ url_for('radius.jobs_show', job_id=plan.related_job.id) }}"
-           class="mt-mini-btn"
-           data-mt-recovery-job-link>
-          <i class="fa-solid fa-magnifying-glass"></i> تفاصيل
+  {% call hub.section("أقرب نسخة احتياطية قبل العملية", icon="floppy-disk") %}
+    <div data-mt-recovery-nearest-backup>
+      {{ hub.kv([
+        {'label': 'الملف',        'value': plan.nearest_backup.filename,            'mono': True},
+        {'label': 'تاريخ الإنشاء','value': plan.nearest_backup.created_at|dt_local, 'mono': True},
+        {'label': 'السبب',        'value': plan.nearest_backup.reason,             'mono': True},
+      ]) }}
+      <div class="hub-flex-row" style="margin-top:14px">
+        <a class="hub-btn hub-btn--secondary hub-btn--sm"
+           href="{{ url_for('radius.mt_backups_list', nas_id=plan.router_id) }}"
+           data-mt-recovery-backup-link>
+          <i class="fa-solid fa-arrow-right"></i> صفحة النسخ
         </a>
-      </p>
+      </div>
     </div>
-  </section>
+  {% endcall %}
   {% endif %}
 
-  <div class="mt-program-actions">
-    <a class="mt-mini-btn"
-       href="{{ url_for('radius.audit_log_detail', audit_id=plan.audit_id) }}">
-      <i class="fa-solid fa-clipboard-list"></i>
-      عرض سجل العملية التفصيلي
-    </a>
-    {% if plan.router_id %}
-    <a class="mt-mini-btn"
-       href="{{ url_for('radius.mt_router_overview', nas_id=plan.router_id) }}">
-      <i class="fa-solid fa-clipboard-check"></i>
-      نظرة عامة على الراوتر
-    </a>
-    {% endif %}
-  </div>
+  {# ── Related job ── #}
+  {% if plan.related_job %}
+  {% call hub.section("مهمة مرتبطة", icon="list-check") %}
+    <div class="hub-flex-row" style="gap:10px;align-items:center;flex-wrap:wrap"
+         data-mt-recovery-related-job>
+      <span class="hub-text-mute">المهمة #{{ plan.related_job.id }}</span>
+      <a class="hub-btn hub-btn--secondary hub-btn--sm"
+         href="{{ url_for('radius.jobs_show', job_id=plan.related_job.id) }}"
+         data-mt-recovery-job-link>
+        <i class="fa-solid fa-magnifying-glass"></i> تفاصيل
+      </a>
+    </div>
+  {% endcall %}
+  {% endif %}
+
+  {# ── Footer actions ── #}
+  {% call hub.section("روابط ذات صلة", icon="link") %}
+    <div class="hub-flex-row" style="gap:10px;flex-wrap:wrap">
+      <a class="hub-btn hub-btn--secondary hub-btn--sm"
+         href="{{ url_for('radius.audit_log_detail', audit_id=plan.audit_id) }}">
+        <i class="fa-solid fa-clipboard-list"></i> عرض سجل العملية التفصيلي
+      </a>
+      {% if plan.router_id %}
+      <a class="hub-btn hub-btn--secondary hub-btn--sm"
+         href="{{ url_for('radius.mt_router_overview', nas_id=plan.router_id) }}">
+        <i class="fa-solid fa-clipboard-check"></i> نظرة عامة على الراوتر
+      </a>
+      {% endif %}
+    </div>
+  {% endcall %}
+
+{% endcall %}
 </section>
 
 {% endblock %}

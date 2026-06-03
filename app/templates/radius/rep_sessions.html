@@ -1,8 +1,8 @@
 {# ═══════════════════════════════════════════════════════════════════════
-   Sessions report — REBUILT (Night N4, 2026-05-21)
+   Sessions report — UNIFIED DESIGN SYSTEM (megahero + worklayout + help).
 
-   Rebuilt on hub-v2. Same backend data: `items` (radacct rows),
-   `username` (filter value), `limit`. Zero backend change.
+   Same backend data: `items` (radacct rows), `username` (filter value),
+   `limit`, `filters`. Zero route/behaviour change.
 
    Columns mirror radacct fields used by route in reports.py.
    ═══════════════════════════════════════════════════════════════════════ #}
@@ -14,17 +14,45 @@
 {% block page_title %}تقرير الجلسات والمحاسبة{% endblock %}
 {% block page_sub %}<span class="sub">{{ items|length }} صف</span>{% endblock %}
 
+{# ── local formatting helpers (mirror users_profile.html, no backend deps) ── #}
+{% macro fmt_dur(secs) -%}
+  {%- set s = secs|int -%}
+  {%- if s >= 86400 -%}{{ (s // 86400) }} يوم {{ ((s % 86400) // 3600) }}س
+  {%- elif s >= 3600 -%}{{ (s // 3600) }}س {{ ((s % 3600) // 60) }}د
+  {%- elif s >= 60 -%}{{ (s // 60) }}د {{ (s % 60) }}ث
+  {%- else -%}{{ s }}ث{%- endif -%}
+{%- endmacro %}
+
+{% macro fmt_bytes_raw(bytes) -%}
+  {%- set b = bytes|int -%}
+  {%- if b >= 1099511627776 -%}{{ "%.2f TB"|format(b / 1099511627776) }}
+  {%- elif b >= 1073741824 -%}{{ "%.2f GB"|format(b / 1073741824) }}
+  {%- elif b >= 1048576 -%}{{ "%.2f MB"|format(b / 1048576) }}
+  {%- elif b >= 1024 -%}{{ "%.1f KB"|format(b / 1024) }}
+  {%- else -%}{{ b }} B{%- endif -%}
+{%- endmacro %}
+
 {% block content %}
 {% include "radius/reports_nav.html" %}
 
-{{ hub.hero(
-  "تقرير الجلسات",
-  subtitle="سجل جلسات المصادقة من جدول radacct — مع الاستهلاك والمدة وسبب الإنهاء",
-  icon="chart-line"
-) }}
+{# ───── KPIs derived from the same `items` (no backend change) ───── #}
+{% set _active = items|rejectattr('acctstoptime')|list|length %}
+{% set _total_down = items|sum(attribute='acctinputoctets') %}
+{% set _total_up = items|sum(attribute='acctoutputoctets') %}
 
-{# ───── Filter Bar ───────────────────────────────────────── #}
-<form method="get" class="hub-filterbar">
+{# ───── Merged hero: title + subtitle + KPI strip + integrated filters ───── #}
+{% call hub.megahero(
+  "تقرير الجلسات",
+  subtitle="سجل جلسات المصادقة من جدول radacct — مع الاستهلاك والمدة وسبب الإنهاء.",
+  icon="chart-line",
+  kpis=[
+    {'label': 'الصفوف',   'value': items|length, 'icon': 'table-list',  'variant': 'brand'},
+    {'label': 'نشطة',     'value': _active,      'icon': 'circle-play', 'variant': 'green'},
+    {'label': 'تنزيل',    'value': fmt_bytes_raw(_total_down), 'icon': 'download', 'variant': 'amber'},
+    {'label': 'رفع',      'value': fmt_bytes_raw(_total_up),   'icon': 'upload',   'variant': 'blue'},
+  ],
+  search_action=url_for('radius.rep_sessions')
+) %}
   <input class="hub-input grow" type="text" name="username"
          placeholder="بحث باسم المستخدم..." value="{{ username or '' }}">
   <input class="hub-input" type="date" name="date_from"
@@ -41,54 +69,76 @@
     {{ hub.btn("إعادة ضبط", icon="rotate-left", variant="ghost", size="sm",
                attrs='onclick="window.location=' + "'" + url_for('radius.rep_sessions') + "'" + '"') }}
   {% endif %}
-</form>
+{% endcall %}
 
 {% if items %}
-{% call hub.section("سجل الجلسات", icon="table-list",
-                    meta=items|length|string + " صف", flush=True) %}
-  <div class="hub-table-wrap" style="border:none;border-radius:0">
-    <table class="hub-table rep-table" data-paginated="1" data-page-size="25" data-page-sizes="10,25,50,100" data-persist-key="rep-sessions">
-      <thead>
-        <tr>
-          <th class="num" style="width:70px">#</th>
-          <th>المستخدم</th>
-          <th>رقم الجلسة</th>
-          <th>جهاز الشبكة</th>
-          <th>IP العميل</th>
-          <th>MAC</th>
-          <th class="num">المدة (ث)</th>
-          <th class="num">تنزيل</th>
-          <th class="num">رفع</th>
-          <th>بدأت</th>
-          <th>انتهت</th>
-          <th>سبب الإنهاء</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for r in items %}
-        <tr>
-          <td class="num mono">{{ r.radacctid }}</td>
-          <td><strong>{{ r.username }}</strong></td>
-          <td class="mono small" title="{{ r.acctsessionid or '' }}">
-            {{ (r.acctsessionid or '')[:18] }}{% if (r.acctsessionid or '')|length > 18 %}…{% endif %}
-          </td>
-          <td class="mono small">{{ r.nasipaddress or '—' }}</td>
-          <td class="mono small">{{ r.framedipaddress or '—' }}</td>
-          <td class="mono small">{{ r.callingstationid or '—' }}</td>
-          <td class="num mono">{{ r.acctsessiontime or 0 }}</td>
-          <td class="num mono">{{ "%.1f"|format((r.acctinputoctets or 0)/1048576) }} MB</td>
-          <td class="num mono">{{ "%.1f"|format((r.acctoutputoctets or 0)/1048576) }} MB</td>
-          <td class="mono small">{{ r.acctstarttime[:16] if r.acctstarttime else '—' }}</td>
-          <td class="mono small">
-            {% if r.acctstoptime %}{{ r.acctstoptime[:16] }}
-            {% else %}{{ hub.pill("نشطة", variant="green") }}{% endif %}
-          </td>
-          <td class="mono small">{{ r.acctterminatecause or '—' }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+{# ───── Main (carded table) + help panel on the LEFT ───── #}
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "كيف تقرأ هذا التقرير؟",
+  intro="كل صف هو جلسة محاسبة (radacct) لمستخدم — من لحظة الدخول حتى الإنهاء.",
+  items=[
+    {'icon': 'clock',        'text': 'المدة هي زمن الجلسة الفعلي معروضًا بصيغة أيام/ساعات/دقائق.'},
+    {'icon': 'arrows-up-down','text': 'تنزيل/رفع هما حجم البيانات المنقولة خلال الجلسة.'},
+    {'icon': 'circle-play',  'text': 'الجلسة بلا «انتهت» تعني أنها لا تزال نشطة الآن.'},
+    {'icon': 'right-from-bracket', 'text': 'سبب الإنهاء يوضّح لماذا أُغلقت الجلسة (انقطاع، مهلة، تسجيل خروج…).'},
+  ],
+  note="هذا التقرير للقراءة فقط — البيانات تأتي مباشرة من جدول المحاسبة radacct."
+)) %}
+  {% call hub.section("سجل الجلسات", icon="table-list",
+                      meta=items|length|string + " صف", flush=True) %}
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="15" style="border:none;border-radius:0">
+      <table class="hub-table">
+        <thead>
+          <tr>
+            <th class="num" style="width:70px">#</th>
+            <th>المستخدم</th>
+            <th>رقم الجلسة</th>
+            <th>جهاز الشبكة</th>
+            <th>IP العميل</th>
+            <th>MAC</th>
+            <th class="num" style="white-space:nowrap">المدة</th>
+            <th class="num" style="white-space:nowrap">تنزيل</th>
+            <th class="num" style="white-space:nowrap">رفع</th>
+            <th>بدأت</th>
+            <th>انتهت</th>
+            <th>سبب الإنهاء</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in items %}
+          <tr>
+            <td class="num mono">{{ r.radacctid }}</td>
+            <td><strong>{{ r.username }}</strong></td>
+            <td class="mono small" title="{{ r.acctsessionid or '' }}">
+              {{ (r.acctsessionid or '')[:18] }}{% if (r.acctsessionid or '')|length > 18 %}…{% endif %}
+            </td>
+            <td class="mono small">{{ r.nasipaddress or '—' }}</td>
+            <td class="mono small">{{ r.framedipaddress or '—' }}</td>
+            <td class="mono small">{{ r.callingstationid or '—' }}</td>
+            <td class="num mono"
+                style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
+              {{ fmt_dur(r.acctsessiontime or 0) }}
+            </td>
+            <td class="num mono"
+                style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
+              {{ fmt_bytes_raw(r.acctinputoctets or 0) }}
+            </td>
+            <td class="num mono"
+                style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
+              {{ fmt_bytes_raw(r.acctoutputoctets or 0) }}
+            </td>
+            <td class="mono small">{{ r.acctstarttime[:16] if r.acctstarttime else '—' }}</td>
+            <td class="mono small">
+              {% if r.acctstoptime %}{{ r.acctstoptime[:16] }}
+              {% else %}{{ hub.pill("نشطة", variant="green") }}{% endif %}
+            </td>
+            <td class="mono small">{{ r.acctterminatecause or '—' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endcall %}
 {% endcall %}
 {% else %}
 {{ hub.empty(

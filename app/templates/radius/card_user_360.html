@@ -1,7 +1,8 @@
 {# Card user 360 — full profile (wallet, recharge, password reset,
    marketplace purchase, owned cards, purchases history, usage).
-   Rebuilt from scratch using hub.* macros + slate elevation +
-   cyan accent. No email shown anywhere.
+   Unified Design System: one megahero + worklayout + help panel,
+   hub.section cards, hub.kv detail rows, unified data-tables.
+   No email shown anywhere. No route/backend change.
 #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
@@ -10,687 +11,408 @@
 {% set wallet  = card360.wallet %}
 {% set balance = (wallet.balance_minor or 0) / 100 %}
 {% set currency= wallet.currency or cfg.currency %}
+{% set st = (user.status or 'active')|lower %}
+{% set status_ar = ('حساب نشط' if st == 'active' else ('موقوف' if st == 'suspended' else st)) %}
 
 {% block title %}{{ user.display_name or 'مستخدم البطاقة' }} · ملف الكروت 360{% endblock %}
-{% block page_icon %}<i class="fa-solid fa-user-tag"></i>{% endblock %}
-{% block page_title %}{{ user.display_name or 'مستخدم البطاقة' }}{% endblock %}
-{% block page_sub %}
-  <span class="sub">
-    <a href="{{ url_for('radius.card_users_list') }}" style="color:#475569;text-decoration:none">
-      <i class="fa-solid fa-arrow-right"></i> العودة لقائمة المستخدمين
-    </a>
-    &nbsp;·&nbsp; ملف العميل #{{ user.id }}
-  </span>
-{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
 <style>
   [hidden]{ display:none !important }
 
-  /* ── Elevation tokens — match the rest of the section. ── */
-  .hub-section{
-    border:1px solid #cbd5e1;background:#fff;
-    box-shadow:0 1px 0 rgba(255,255,255,.8) inset,
-               0 1px 3px rgba(15,23,42,.06),
-               0 8px 20px rgba(15,23,42,.06);
-    border-radius:14px;
-  }
-  .hub-section-head{
-    background:linear-gradient(180deg,#f5f3ff 0%,#f8fafc 100%);
-    border-bottom:1px solid #cbd5e1;
-  }
-  .hub-section-head-title{color:#0f172a;font-weight:900}
-  .hub-section-head-meta{color:#475569;font-weight:700;font-size:12px;font-variant-numeric:tabular-nums}
-  .hub-section-head-icon{background:#ede9fe;color:#5b21b6}
-  .hub-kpi{
-    border:1px solid #cbd5e1;background:#fff;
-    box-shadow:0 1px 0 rgba(255,255,255,.8) inset,
-               0 1px 3px rgba(15,23,42,.06),
-               0 6px 14px rgba(15,23,42,.05);
-    border-radius:12px;
-  }
-  .hub-hero{
-    border:1px solid #cbd5e1;
-    box-shadow:0 1px 0 rgba(255,255,255,.8) inset,
-               0 2px 6px rgba(15,23,42,.06),
-               0 14px 32px rgba(15,23,42,.08);
-  }
-  .hub-table thead th{background:#f1f5f9;color:#334155;border-bottom:1px solid #cbd5e1;font-weight:800}
-  .hub-table tbody tr{border-top:1px solid #e2e8f0}
-  .hub-table tbody tr:hover{background:#fafbfc}
-
-  /* ── Identity hero ─────────────────────────────── */
-  .u360-id{
-    display:flex;align-items:center;gap:18px;flex-wrap:wrap;
-    padding:24px 28px;
-    border:1px solid #cbd5e1;border-radius:14px;
-    background:linear-gradient(135deg,#7c3aed 0%,#5b21b6 100%);
-    color:#fff;
-    box-shadow:
-      0 1px 0 rgba(255,255,255,.2) inset,
-      0 4px 12px rgba(91,33,182,.18),
-      0 24px 48px rgba(91,33,182,.18);
-    position:relative;overflow:hidden;
-  }
-  .u360-id::after{
-    content:"";position:absolute;width:280px;height:280px;border-radius:50%;
-    background:rgba(255,255,255,.06);
-    inset-inline-end:-80px;top:-80px;pointer-events:none;
-  }
-  .u360-avatar{
-    width:72px;height:72px;border-radius:50%;
-    background:rgba(255,255,255,.18);
-    border:2px solid rgba(255,255,255,.32);
-    display:grid;place-items:center;
-    font-size:30px;font-weight:900;color:#fff;
-    flex-shrink:0;position:relative;z-index:1;
-  }
-  .u360-id-body{flex:1;min-width:0;position:relative;z-index:1}
-  .u360-id-name{
-    margin:0;font-size:24px;font-weight:900;letter-spacing:-.01em;line-height:1.2;
-  }
-  .u360-id-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
-  .u360-chip{
-    display:inline-flex;align-items:center;gap:6px;
-    padding:5px 11px;border-radius:999px;
-    background:rgba(255,255,255,.15);
-    border:1px solid rgba(255,255,255,.22);
-    font-size:12px;font-weight:700;color:#fff;
-  }
-  .u360-chip i{font-size:10px;opacity:.85}
-  .u360-chip.is-id{font-family:ui-monospace,Consolas,monospace;font-weight:800}
-  .u360-balance-pill{
-    margin-inline-start:auto;padding:16px 22px;border-radius:14px;
-    background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.22);
-    text-align:start;position:relative;z-index:1;backdrop-filter:blur(4px);
-  }
-  .u360-balance-pill .lbl{
-    font-size:11px;font-weight:800;letter-spacing:.14em;
-    text-transform:uppercase;opacity:.85;margin-bottom:4px;
-  }
-  .u360-balance-pill .val{
-    font-size:32px;font-weight:900;letter-spacing:-.02em;line-height:1;
-    font-variant-numeric:tabular-nums;direction:ltr;
-    display:inline-flex;align-items:baseline;gap:8px;
-  }
-  .u360-balance-pill .val .ccy{font-size:14px;opacity:.85}
-
-  /* ── 2-col action grid ─────────────────────────── */
-  .u360-actions{
-    display:grid;grid-template-columns:1fr 1fr;gap:14px;
-  }
-  @media (max-width:900px){.u360-actions{grid-template-columns:1fr}}
-  .u360-action-card{
-    border:1px solid #cbd5e1;border-radius:12px;background:#fff;
-    padding:18px 20px;
-    box-shadow:0 1px 0 rgba(255,255,255,.8) inset,
-               0 1px 3px rgba(15,23,42,.06),
-               0 6px 14px rgba(15,23,42,.05);
-  }
-  .u360-action-card h3{
-    margin:0 0 4px;font-size:14.5px;font-weight:900;color:#0f172a;
-    display:flex;align-items:center;gap:10px;
-  }
-  .u360-action-card h3 .icon{
-    width:30px;height:30px;border-radius:9px;
-    background:#f5f3ff;color:#5b21b6;
-    display:grid;place-items:center;font-size:14px;
-  }
-  .u360-action-card .hint{margin:0 0 14px;font-size:12.5px;color:#64748b;line-height:1.6}
-  .u360-action-row{display:flex;gap:8px;align-items:stretch}
-  .u360-action-row input{
-    flex:1;min-width:0;padding:10px 14px;
-    border:1px solid #e2e8f0;border-radius:8px;background:#fff;
-    font-size:14px;color:#0f172a;
-    transition:border-color .15s ease, box-shadow .15s ease;
-  }
-  .u360-action-row input:focus{
-    outline:none;border-color:#7c3aed;
-    box-shadow:0 0 0 3px rgba(124,58,237,.18);
-  }
-  .u360-action-btn{
-    background:linear-gradient(135deg,#7c3aed 0%,#5b21b6 100%);
-    color:#fff;border:0;border-radius:8px;
-    padding:10px 18px;font-size:13px;font-weight:800;cursor:pointer;
-    display:inline-flex;align-items:center;gap:7px;
-    box-shadow:0 4px 10px rgba(124,58,237,.22);
-    transition:transform .12s ease, box-shadow .15s ease;
-    font-family:inherit;white-space:nowrap;
-  }
-  .u360-action-btn:hover{transform:translateY(-1px);box-shadow:0 8px 18px rgba(124,58,237,.32)}
-  .u360-action-btn--soft{
-    background:#f1f5f9;color:#0f172a;border:1px solid #e2e8f0;box-shadow:none;
-  }
-  .u360-action-btn--soft:hover{background:#e2e8f0;box-shadow:none}
-
-  /* ── Package picker ────────────────────────────── */
+  /* ── Retained: marketplace package picker (no UDS equivalent) ── */
   .u360-pack-grid{
     display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;
   }
   .u360-pack{
     position:relative;
-    border:1px solid #e2e8f0;border-radius:12px;background:#fff;
+    border:1px solid var(--hub-border-soft);border-radius:12px;background:#fff;
     padding:16px 18px;cursor:pointer;
     display:flex;flex-direction:column;gap:8px;
     transition:border-color .15s ease, transform .12s ease, box-shadow .18s ease;
   }
   .u360-pack:hover{
-    border-color:#c4b5fd;transform:translateY(-2px);
-    box-shadow:0 6px 14px rgba(124,58,237,.12);
+    border-color:var(--hub-brand-soft);transform:translateY(-2px);
+    box-shadow:0 6px 14px rgba(107,90,237,.12);
   }
   .u360-pack.is-selected{
-    border-color:#7c3aed;background:#f5f3ff;
-    box-shadow:0 0 0 3px rgba(124,58,237,.15);
+    border-color:var(--hub-brand);background:var(--hub-bg-soft);
+    box-shadow:0 0 0 3px var(--hub-brand-soft);
   }
-  .u360-pack-name{font-size:14px;font-weight:900;color:#0f172a}
-  .u360-pack-meta{display:flex;gap:10px;flex-wrap:wrap;font-size:11.5px;color:#64748b;font-weight:700}
+  .u360-pack-name{font-size:14px;font-weight:900;color:var(--hub-text)}
+  .u360-pack-meta{display:flex;gap:10px;flex-wrap:wrap;font-size:11.5px;color:var(--hub-text-mute);font-weight:700}
   .u360-pack-meta .item{display:inline-flex;align-items:center;gap:4px}
   .u360-pack-price{
     margin-top:auto;display:flex;align-items:baseline;gap:6px;
-    padding-top:8px;border-top:1px dashed #e2e8f0;
+    padding-top:8px;border-top:1px dashed var(--hub-border-soft);
   }
   .u360-pack-price .val{
-    font-size:18px;font-weight:900;color:#5b21b6;
+    font-size:18px;font-weight:900;color:var(--hub-brand-ink);
     font-variant-numeric:tabular-nums;
   }
-  .u360-pack-price .ccy{font-size:11px;color:#64748b;font-weight:700}
-  .u360-pack-empty{
-    padding:24px;text-align:center;color:#64748b;font-size:13px;
-    background:#f8fafc;border:1px dashed #cbd5e1;border-radius:10px;
-  }
+  .u360-pack-price .ccy{font-size:11px;color:var(--hub-text-mute);font-weight:700}
   .u360-pack-actions{
-    margin-top:14px;padding-top:14px;border-top:1px solid #f1f5f9;
+    margin-top:14px;padding-top:14px;border-top:1px solid var(--hub-border-soft);
     display:flex;align-items:center;gap:12px;flex-wrap:wrap;
   }
   .u360-pack-actions .info{
-    margin-inline-end:auto;font-size:12.5px;color:#475569;
+    margin-inline-end:auto;font-size:12.5px;color:var(--hub-text-soft);
   }
-  .u360-pack-actions .info strong{color:#0f172a}
+  .u360-pack-actions .info strong{color:var(--hub-text)}
 
-  /* ── Mono columns in tables ─────────────────────── */
-  .u360-mono{font-family:ui-monospace,Consolas,monospace;font-variant-numeric:tabular-nums;direction:ltr;text-align:start}
+  /* ── Quick-action input rows (recharge / password) ── */
+  .u360-action-row{display:flex;gap:8px;align-items:stretch}
+  .u360-action-row .hub-input{flex:1;min-width:0}
 
-  /* ── Status pills ──────────────────────────────── */
+  /* ── Status pills inside the cards table ── */
   .u360-status{
     display:inline-flex;align-items:center;gap:5px;
     padding:3px 9px;border-radius:999px;
     font-size:10.5px;font-weight:800;letter-spacing:.04em;
   }
-  .u360-status--fresh   {background:#ede9fe;color:#5b21b6;border:1px solid #c4b5fd}
+  .u360-status--fresh   {background:var(--hub-bg-soft);color:var(--hub-brand-ink);border:1px solid var(--hub-brand-soft)}
   .u360-status--used    {background:#dcfce7;color:#15803d;border:1px solid #bbf7d0}
   .u360-status--revoked {background:#fee2e2;color:#b91c1c;border:1px solid #fecaca}
-  .u360-status--neutral {background:#f1f5f9;color:#475569;border:1px solid #cbd5e1}
 
-  /* ── Timeline table ─────────────────────────────── */
-  .u360-tl-table{
-    width:100%;border-collapse:separate;border-spacing:0;
-  }
-  .u360-tl-table thead th{
-    background:#f1f5f9;color:#334155;
-    border-bottom:1px solid #cbd5e1;
-    font-weight:800;font-size:11.5px;
-    padding:11px 12px;text-align:center;
-    letter-spacing:.04em;
-  }
-  .u360-tl-table tbody td{
-    border-bottom:1px solid #e2e8f0;
-    padding:11px 12px;font-size:13px;color:#334155;
-    text-align:center;vertical-align:middle;
-  }
-  .u360-tl-table tbody tr:last-child td{border-bottom:0}
-  .u360-tl-table tbody tr:hover{background:#fafbfc}
-
-  /* Column-specific alignment */
-  .u360-tl-table td.tl-idx{
-    color:#94a3b8;font-weight:700;font-size:12px;
-    font-variant-numeric:tabular-nums;
-    width:50px;
-  }
-  .u360-tl-table td.tl-type{width:120px}
-  .u360-tl-table td.tl-desc{text-align:start;color:#334155;line-height:1.5}
-  .u360-tl-table td.tl-amt{
-    width:130px;font-family:ui-monospace,Consolas,monospace;
-    font-variant-numeric:tabular-nums;font-weight:800;
-    direction:ltr;
-  }
-  .u360-tl-table td.tl-date{
-    width:170px;font-size:11.5px;color:#64748b;
-    font-variant-numeric:tabular-nums;direction:ltr;
-  }
-
-  /* Type pill — icon + label, fits inside the table cell. */
+  /* ── Timeline type pills ── */
   .u360-tl-type{
     display:inline-flex;align-items:center;gap:6px;
     padding:4px 10px;border-radius:999px;
-    font-size:11.5px;font-weight:800;letter-spacing:.02em;
+    font-size:11.5px;font-weight:800;letter-spacing:.02em;white-space:nowrap;
   }
   .u360-tl-type i{font-size:10px}
   .u360-tl-type--purchase{background:#dcfce7;color:#15803d;border:1px solid #bbf7d0}
   .u360-tl-type--credit  {background:#dbeafe;color:#1d4ed8;border:1px solid #93c5fd}
   .u360-tl-type--debit   {background:#fef3c7;color:#92400e;border:1px solid #fcd34d}
-  .u360-tl-type--event   {background:#f5f3ff;color:#5b21b6;border:1px solid #c4b5fd}
+  .u360-tl-type--event   {background:var(--hub-bg-soft);color:var(--hub-brand-ink);border:1px solid var(--hub-brand-soft)}
   .u360-tl-type--system  {background:#f1f5f9;color:#475569;border:1px solid #cbd5e1}
   .u360-tl-type--warning {background:#fff7ed;color:#c2410c;border:1px solid #fdba74}
   .u360-tl-type--error   {background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5}
-
   .u360-tl-amt--credit{color:#15803d}
   .u360-tl-amt--debit {color:#b91c1c}
-  .u360-tl-amt--purchase{color:#5b21b6}
-
-  /* Pager */
-  .u360-pager{
-    display:flex;align-items:center;justify-content:center;gap:8px;
-    margin-top:14px;padding-top:14px;border-top:1px solid #f1f5f9;
-  }
-  .u360-pager button{
-    min-width:34px;height:34px;padding:0 12px;
-    background:#fff;border:1px solid #e2e8f0;border-radius:8px;
-    color:#475569;font-size:12.5px;font-weight:700;cursor:pointer;
-    display:inline-flex;align-items:center;justify-content:center;gap:5px;
-    font-family:inherit;
-    transition:background .15s ease, border-color .15s ease, color .15s ease;
-  }
-  .u360-pager button:hover:not([disabled]){
-    background:#f5f3ff;border-color:#c4b5fd;color:#5b21b6;
-  }
-  .u360-pager button[disabled]{background:#f8fafc;color:#cbd5e1;cursor:not-allowed}
-  .u360-pager .info{
-    font-size:12px;color:#64748b;margin:0 12px;
-    font-variant-numeric:tabular-nums;
-  }
-  .u360-pager .info strong{color:#0f172a}
-  .u360-empty{
-    padding:24px;text-align:center;color:#94a3b8;font-size:13px;
-  }
-  .u360-empty i{font-size:22px;display:block;margin-bottom:6px;color:#cbd5e1}
+  .u360-tl-amt--purchase{color:var(--hub-brand-ink)}
 </style>
 {% endblock %}
 
 {% block content %}
 
-{# ── Identity hero ────────────────────────────────── #}
-<section class="u360-id">
-  <span class="u360-avatar">{{ (user.display_name or '?')[:1]|upper }}</span>
-  <div class="u360-id-body">
-    <h1 class="u360-id-name">{{ user.display_name or 'مستخدم بدون اسم' }}</h1>
-    <div class="u360-id-chips">
-      <span class="u360-chip is-id"><i class="fa-solid fa-hashtag"></i> {{ user.id }}</span>
-      {% set st = (user.status or 'active')|lower %}
-      <span class="u360-chip">
-        <i class="fa-solid fa-circle" style="font-size:6px"></i>
-        {% if st == 'active' %}حساب نشط{% elif st == 'suspended' %}موقوف{% else %}{{ st }}{% endif %}
-      </span>
-      {% if user.mobile %}
-      <span class="u360-chip">
-        <i class="fa-solid fa-mobile-screen"></i>
-        <span dir="ltr">{{ user.mobile }}</span>
-      </span>
-      {% endif %}
-      <span class="u360-chip">
-        <i class="fa-regular fa-calendar"></i>
-        أُنشئ {{ user.created_at|date_local if user.created_at else '—' }}
-      </span>
-    </div>
-  </div>
-  <div class="u360-balance-pill">
-    <div class="lbl">رصيد المحفظة</div>
-    <div class="val">
-      <span>{{ balance|money }}</span>
-    </div>
-  </div>
-</section>
+{# ═══════════ Unified hero: subscriber identity + KPI strip ═══════════
+   Title = subscriber name; subtitle carries status + id + created date.
+   The old stacked identity hero + KPI section collapse into one megahero.
+   Back-to-list link sits in the hero actions. No backend change.        #}
+{% call hub.megahero(
+  user.display_name or 'مستخدم بدون اسم',
+  subtitle="ملف العميل #" ~ user.id ~ " · " ~ status_ar
+           ~ ((" · " ~ user.mobile) if user.mobile else "")
+           ~ (" · أُنشئ " ~ (user.created_at|date_local) if user.created_at else ""),
+  icon="user-tag",
+  actions_html='
+    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.card_users_list') + '">
+      <i class="fa-solid fa-arrow-right"></i> العودة لقائمة المستخدمين
+    </a>',
+  kpis=[
+    {'label': 'رصيد المحفظة', 'value': balance|money,                    'icon': 'wallet',        'variant': 'green'},
+    {'label': 'بطاقاتي',      'value': card360.cards|length,             'icon': 'id-card',       'variant': 'brand', 'sub': 'بطاقة مملوكة'},
+    {'label': 'المشتريات',    'value': card360.purchases|length,         'icon': 'cart-shopping', 'variant': 'blue',  'sub': 'عملية شراء'},
+    {'label': 'ثواني الاستخدام','value': card360.usage.total_seconds or 0,'icon': 'clock',         'variant': 'amber', 'sub': 'من جلسات النت'},
+  ]
+) %}{% endcall %}
 
-{# ── KPI strip ────────────────────────────────────── #}
-<div style="margin-top:18px">
-{% call hub.section("نظرة سريعة", icon="chart-column") %}
-  <div class="hub-kpi-grid">
-    {{ hub.kpi("الرصيد",
-               balance|money,
-               icon="wallet", variant="green") }}
-    {{ hub.kpi("بطاقاتي",
-               card360.cards|length,
-               icon="id-card", variant="brand", sub="بطاقة مملوكة") }}
-    {{ hub.kpi("المشتريات",
-               card360.purchases|length,
-               icon="cart-shopping", variant="blue", sub="عملية شراء") }}
-    {{ hub.kpi("ثواني الاستخدام",
-               card360.usage.total_seconds or 0,
-               icon="clock", variant="amber", sub="من جلسات النت") }}
-  </div>
-{% endcall %}
-</div>
+{# ───── Main column + help panel on the LEFT ───── #}
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "كيف تقرأ هذا الملف؟",
+  intro="هذه صفحة 360° لمستخدم الكروت: محفظته، بطاقاته، مشترياته وسجل أحداثه في مكان واحد.",
+  items=[
+    {'icon': 'wallet',        'text': 'رصيد المحفظة يُشحن يدويًا (إداريًا) أو يستهلكه المستخدم عند شراء بطاقة من السوق.'},
+    {'icon': 'key',           'text': 'كلمة مرور البوابة تتيح للعميل الدخول إلى /portal/card وشحن محفظته بنفسه.'},
+    {'icon': 'id-card',       'text': 'كل بطاقة مملوكة تقابل عملية شراء؛ الحالة تبيّن إن كانت جاهزة أو مستخدمة أو ملغاة.'},
+    {'icon': 'timeline',      'text': 'سجل الأحداث يجمع المشتريات وحركات المحفظة وأحداث النظام مرتبة زمنيًا.'},
+  ],
+  note="هذه واجهة عرض موحّدة — كل شحن أو شراء أو تعيين كلمة مرور يمر بالمنطق الأصلي دون تغيير."
+)) %}
 
-{# ── Quick actions: recharge + reset password ───── #}
-<div style="margin-top:18px">
-{% call hub.section("إجراءات سريعة", icon="bolt") %}
-  <div class="u360-actions">
-    <div class="u360-action-card">
-      <h3><span class="icon"><i class="fa-solid fa-circle-plus"></i></span>شحن المحفظة يدوياً</h3>
-      <p class="hint">يُضاف المبلغ مباشرة لرصيد المحفظة (شحن إداري — ليس من بطاقة).</p>
-      <form method="post" action="{{ url_for('radius.card_user_recharge', card_user_id=user.id) }}">
-        {{ csrf_token_input() | safe }}
-        <div class="u360-action-row">
-          <input name="amount" type="number" step="0.01" min="0.01" required
-                 placeholder="0.00" inputmode="decimal">
-          <button type="submit" class="u360-action-btn">
-            <i class="fa-solid fa-plus" aria-hidden="true"></i> شحن
-          </button>
-        </div>
-      </form>
-    </div>
+  {# ── Identity details ── #}
+  {% call hub.section("بيانات العميل", icon="id-card") %}
+    {{ hub.kv([
+      {'label': 'معرّف العميل', 'value': user.id, 'mono': True},
+      {'label': 'الاسم', 'value': user.display_name or '—'},
+      {'label': 'الحالة', 'value': status_ar},
+      {'label': 'الجوال', 'value': user.mobile or '—', 'mono': True},
+      {'label': 'رصيد المحفظة', 'value': balance|money, 'mono': True},
+      {'label': 'تاريخ الإنشاء', 'value': (user.created_at|date_local) if user.created_at else '—'},
+    ]) }}
+  {% endcall %}
 
-    <div class="u360-action-card">
-      <h3><span class="icon"><i class="fa-solid fa-key"></i></span>تعيين كلمة مرور البوابة</h3>
-      <p class="hint">يستعملها العميل للدخول إلى <code style="background:#f8fafc;padding:1px 5px;border-radius:4px;border:1px solid #e2e8f0;font-size:11px">/portal/card</code> وشحن محفظته.</p>
-      <form method="post" action="{{ url_for('radius.card_user_password', card_user_id=user.id) }}">
-        {{ csrf_token_input() | safe }}
-        <div class="u360-action-row">
-          <input name="password" type="text" minlength="4" maxlength="64" required
-                 placeholder="كلمة مرور جديدة (4 أحرف على الأقل)" autocomplete="off">
-          <button type="submit" class="u360-action-btn u360-action-btn--soft">
-            <i class="fa-solid fa-rotate" aria-hidden="true"></i> حفظ
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
-{% endcall %}
-</div>
-
-{# ── Buy a card from the marketplace ─────────────── #}
-<div style="margin-top:18px">
-{% call hub.section("شراء بطاقة من السوق", icon="store",
-                   meta=packages|length ~ " عرض متاح") %}
-  {% if packages %}
-  <form method="post" action="{{ url_for('radius.card_user_purchase', card_user_id=user.id) }}"
-        id="u360-purchase-form" data-testid="card-user-purchase-form">
-    {{ csrf_token_input() | safe }}
-    <input type="hidden" name="package_id" id="u360-pack-id" value="">
-
-    <div class="u360-pack-grid">
-      {% for pack in packages[:12] %}
-      {% set _pp = (pack.suggested_price or pack.price or 0)|float %}
-      <button type="button" class="u360-pack" data-pack="{{ pack.id }}" data-price="{{ _pp }}">
-        <div class="u360-pack-name">{{ pack.display_name or pack.name or 'عرض' }}</div>
-        <div class="u360-pack-meta">
-          {% if pack.duration_minutes %}
-          <span class="item"><i class="fa-regular fa-clock"></i>
-            {% set d = (pack.duration_minutes or 0)|int %}
-            {% if d >= 1440 and d % 1440 == 0 %}{{ d // 1440 }} يوم
-            {% elif d >= 60 %}{{ (d / 60)|round(1) }} ساعة
-            {% else %}{{ d }} دقيقة{% endif %}
-          </span>
-          {% endif %}
-          {% if pack.speed_down_kbps %}
-          <span class="item"><i class="fa-solid fa-gauge-high"></i>
-            {% set s = (pack.speed_down_kbps or 0)|int %}
-            {% if s >= 1024 %}{{ (s / 1024)|round(1) }} ميجا{% else %}{{ s }} كيلو{% endif %}
-          </span>
-          {% endif %}
-          {% if pack.quota_total_mb %}
-          <span class="item"><i class="fa-solid fa-database"></i> {{ pack.quota_total_mb }} ميجا</span>
-          {% endif %}
-        </div>
-        <div class="u360-pack-price">
-          <span class="val">{{ _pp|money }}</span>
-        </div>
-      </button>
-      {% endfor %}
-    </div>
-
-    <div class="u360-pack-actions">
-      <div class="info">
-        <i class="fa-solid fa-wallet" style="color:#5b21b6" aria-hidden="true"></i>
-        رصيد المحفظة: <strong>{{ balance|money }}</strong>
-        <span id="u360-purchase-summary" style="margin-inline-start:12px"></span>
+  {# ── Quick actions: recharge + reset password (forms kept exactly) ── #}
+  {% call hub.section("إجراءات سريعة", icon="bolt") %}
+    <div class="hub-grid hub-grid--2">
+      <div class="hub-field">
+        <label>شحن المحفظة يدوياً</label>
+        <div class="hub-field-hint">يُضاف المبلغ مباشرة لرصيد المحفظة (شحن إداري — ليس من بطاقة).</div>
+        <form method="post" action="{{ url_for('radius.card_user_recharge', card_user_id=user.id) }}">
+          {{ csrf_token_input() | safe }}
+          <div class="u360-action-row" style="margin-top:8px">
+            <input class="hub-input" name="amount" type="number" step="0.01" min="0.01" required
+                   placeholder="0.00" inputmode="decimal">
+            <button type="submit" class="hub-btn hub-btn--primary">
+              <i class="fa-solid fa-plus" aria-hidden="true"></i> شحن
+            </button>
+          </div>
+        </form>
       </div>
-      <button type="submit" class="u360-action-btn" id="u360-purchase-submit" disabled>
-        <i class="fa-solid fa-cart-shopping" aria-hidden="true"></i>
-        شراء البطاقة
-      </button>
+
+      <div class="hub-field">
+        <label>تعيين كلمة مرور البوابة</label>
+        <div class="hub-field-hint">يستعملها العميل للدخول إلى <code>/portal/card</code> وشحن محفظته.</div>
+        <form method="post" action="{{ url_for('radius.card_user_password', card_user_id=user.id) }}">
+          {{ csrf_token_input() | safe }}
+          <div class="u360-action-row" style="margin-top:8px">
+            <input class="hub-input" name="password" type="text" minlength="4" maxlength="64" required
+                   placeholder="كلمة مرور جديدة (4 أحرف على الأقل)" autocomplete="off">
+            <button type="submit" class="hub-btn hub-btn--secondary">
+              <i class="fa-solid fa-rotate" aria-hidden="true"></i> حفظ
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
-  </form>
-  {% else %}
-    {{ hub.empty("لا توجد عروض متاحة",
-                 sub="أنشئ عرضاً من سوق البطاقات أو من قسم الباقات حتى يستطيع المستخدم الشراء.",
-                 icon="store") }}
-  {% endif %}
-{% endcall %}
-</div>
+  {% endcall %}
 
-{# ── Unified cards + purchases table (each card = one purchase) ── #}
-{# Build a quick lookup so each card row can pull its purchase amount. #}
-{% set purchase_by_card = {} %}
-{% for p in card360.purchases %}
-  {% if p.card_id %}
-    {%- set _ = purchase_by_card.update({p.card_id|int: p}) -%}
-  {% endif %}
-{% endfor %}
+  {# ── Buy a card from the marketplace (form + JS kept exactly) ── #}
+  {% call hub.section("شراء بطاقة من السوق", icon="store",
+                     meta=(packages|length|string ~ " عرض متاح") if packages else "") %}
+    {% if packages %}
+    <form method="post" action="{{ url_for('radius.card_user_purchase', card_user_id=user.id) }}"
+          id="u360-purchase-form" data-testid="card-user-purchase-form">
+      {{ csrf_token_input() | safe }}
+      <input type="hidden" name="package_id" id="u360-pack-id" value="">
 
-<div style="margin-top:18px">
-{% call hub.section("بطاقات العميل والمشتريات", icon="id-card",
-                   meta=card360.cards|length ~ " بطاقة") %}
-  {% if card360.cards %}
-  <div style="overflow-x:auto">
-    <table class="hub-table">
-      <thead>
-        <tr>
-          <th style="width:50px">#</th>
-          <th>الرمز</th>
-          <th>الباقة</th>
-          <th style="width:120px">المبلغ</th>
-          <th style="width:100px">الحالة</th>
-          <th style="width:140px">تاريخ الشراء</th>
-          <th style="width:140px">أول استخدام</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for c in card360.cards %}
-        {% set pur = purchase_by_card.get(c.id|int) %}
-        <tr>
-          <td><span style="color:#94a3b8;font-weight:700;font-size:12px">{{ loop.index }}</span></td>
-          <td class="u360-mono" style="font-size:13.5px;font-weight:800;color:#0f172a">{{ c.username }}</td>
-          <td style="font-size:13px;color:#475569">{{ c.package_name or '—' }}</td>
-          <td>
-            {% if pur %}
-              <span class="u360-mono" style="font-size:13px;font-weight:800;color:#5b21b6">
-                {{ ((pur.amount_minor or 0) / 100)|money }}
-              </span>
-            {% else %}
-              <span style="color:#cbd5e1">—</span>
+      <div class="u360-pack-grid">
+        {% for pack in packages[:12] %}
+        {% set _pp = (pack.suggested_price or pack.price or 0)|float %}
+        <button type="button" class="u360-pack" data-pack="{{ pack.id }}" data-price="{{ _pp }}">
+          <div class="u360-pack-name">{{ pack.display_name or pack.name or 'عرض' }}</div>
+          <div class="u360-pack-meta">
+            {% if pack.duration_minutes %}
+            <span class="item"><i class="fa-regular fa-clock"></i>
+              {% set d = (pack.duration_minutes or 0)|int %}
+              {% if d >= 1440 and d % 1440 == 0 %}{{ d // 1440 }} يوم
+              {% elif d >= 60 %}{{ (d / 60)|round(1) }} ساعة
+              {% else %}{{ d }} دقيقة{% endif %}
+            </span>
             {% endif %}
-          </td>
-          <td>
-            {% if c.revoked %}
-              <span class="u360-status u360-status--revoked">ملغاة</span>
-            {% elif c.used %}
-              <span class="u360-status u360-status--used">مستخدمة</span>
-            {% else %}
-              <span class="u360-status u360-status--fresh">جاهزة</span>
+            {% if pack.speed_down_kbps %}
+            <span class="item"><i class="fa-solid fa-gauge-high"></i>
+              {% set s = (pack.speed_down_kbps or 0)|int %}
+              {% if s >= 1024 %}{{ (s / 1024)|round(1) }} ميجا{% else %}{{ s }} كيلو{% endif %}
+            </span>
             {% endif %}
-          </td>
-          <td style="font-size:11.5px;color:#64748b;direction:ltr;text-align:start">
-            {{ c.created_at|date_local if c.created_at else '—' }}
-          </td>
-          <td style="font-size:11.5px;color:#64748b;direction:ltr;text-align:start">
-            {{ c.first_used_at|date_local if c.first_used_at else '—' }}
-          </td>
-        </tr>
+            {% if pack.quota_total_mb %}
+            <span class="item"><i class="fa-solid fa-database"></i> {{ pack.quota_total_mb }} ميجا</span>
+            {% endif %}
+          </div>
+          <div class="u360-pack-price">
+            <span class="val">{{ _pp|money }}</span>
+          </div>
+        </button>
         {% endfor %}
-      </tbody>
-    </table>
-  </div>
-  {% else %}
-    <div class="u360-empty">
-      <i class="fa-regular fa-credit-card"></i>
-      لا توجد بطاقات مملوكة بعد — استعمل قسم «شراء بطاقة من السوق» بالأعلى.
+      </div>
+
+      <div class="u360-pack-actions">
+        <div class="info">
+          <i class="fa-solid fa-wallet" style="color:var(--hub-brand-ink)" aria-hidden="true"></i>
+          رصيد المحفظة: <strong>{{ balance|money }}</strong>
+          <span id="u360-purchase-summary" style="margin-inline-start:12px"></span>
+        </div>
+        <button type="submit" class="hub-btn hub-btn--primary" id="u360-purchase-submit" disabled>
+          <i class="fa-solid fa-cart-shopping" aria-hidden="true"></i>
+          شراء البطاقة
+        </button>
+      </div>
+    </form>
+    {% else %}
+      {{ hub.empty("لا توجد عروض متاحة",
+                   sub="أنشئ عرضاً من سوق البطاقات أو من قسم الباقات حتى يستطيع المستخدم الشراء.",
+                   icon="store") }}
+    {% endif %}
+  {% endcall %}
+
+  {# ── Unified cards + purchases table (each card = one purchase) ── #}
+  {% set purchase_by_card = {} %}
+  {% for p in card360.purchases %}
+    {% if p.card_id %}
+      {%- set _ = purchase_by_card.update({p.card_id|int: p}) -%}
+    {% endif %}
+  {% endfor %}
+
+  {% call hub.section("بطاقات العميل والمشتريات", icon="id-card",
+                     meta=(card360.cards|length|string ~ " بطاقة") if card360.cards else "", flush=True) %}
+    {% if card360.cards %}
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="15" style="border:none;border-radius:0">
+      <table class="hub-table">
+        <thead>
+          <tr>
+            <th class="num" style="width:50px">#</th>
+            <th>الرمز</th>
+            <th>الباقة</th>
+            <th class="num">المبلغ</th>
+            <th>الحالة</th>
+            <th>تاريخ الشراء</th>
+            <th>أول استخدام</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in card360.cards %}
+          {% set pur = purchase_by_card.get(c.id|int) %}
+          <tr>
+            <td class="num mono">{{ loop.index }}</td>
+            <td class="mono"><strong>{{ c.username }}</strong></td>
+            <td>{{ c.package_name or '—' }}</td>
+            <td class="num">
+              {% if pur %}
+                <strong style="color:var(--hub-brand-ink)">{{ ((pur.amount_minor or 0) / 100)|money }}</strong>
+              {% else %}
+                <span class="hub-text-mute">—</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if c.revoked %}
+                <span class="u360-status u360-status--revoked">ملغاة</span>
+              {% elif c.used %}
+                <span class="u360-status u360-status--used">مستخدمة</span>
+              {% else %}
+                <span class="u360-status u360-status--fresh">جاهزة</span>
+              {% endif %}
+            </td>
+            <td class="small mono hub-text-mute">{{ c.created_at|date_local if c.created_at else '—' }}</td>
+            <td class="small mono hub-text-mute">{{ c.first_used_at|date_local if c.first_used_at else '—' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
-  {% endif %}
-{% endcall %}
-</div>
+    {% else %}
+      {{ hub.empty("لا توجد بطاقات مملوكة بعد",
+                   sub="استعمل قسم «شراء بطاقة من السوق» بالأعلى لشراء أول بطاقة.",
+                   icon="credit-card") }}
+    {% endif %}
+  {% endcall %}
 
-{# ── Activity timeline (paginated, 10/page) ───────── #}
-{% if card360.timeline %}
-<div style="margin-top:18px">
-{% call hub.section("سجل الأحداث", icon="timeline",
-                   meta=card360.timeline|length ~ " حدث") %}
-
-  {# Each entry is wrapped as {"created_at":..., "item":<original>}.
-     Render as a proper table with classified rows. #}
-  {# Arabic labels for common business_events categories. #}
+  {# ── Activity timeline (unified data-table, 15/page) ── #}
+  {% if card360.timeline %}
   {% set CAT_LABEL = {
     'manager':'إدارة','subscriber':'مشترك','card':'بطاقة',
     'financial':'مالية','system':'نظام','security':'أمان',
     'radius':'خدمة المصادقة','notification':'إشعار'
   } %}
+  {% call hub.section("سجل الأحداث", icon="timeline",
+                     meta=(card360.timeline|length|string ~ " حدث"), flush=True) %}
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="15" style="border:none;border-radius:0">
+      <table class="hub-table">
+        <thead>
+          <tr>
+            <th class="num" style="width:50px">#</th>
+            <th>النوع</th>
+            <th>الوصف</th>
+            <th class="num">المبلغ</th>
+            <th>التاريخ</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for t in card360.timeline %}
+          {% set row = t.item or t %}
+          {% set when = (t.created_at or row.created_at)|dt_local if (t.created_at or row.created_at) else '—' %}
 
-  <div style="overflow-x:auto">
-  <table class="u360-tl-table" id="u360-timeline">
-    <thead>
-      <tr>
-        <th style="width:50px">#</th>
-        <th style="width:130px">النوع</th>
-        <th>الوصف</th>
-        <th style="width:130px">المبلغ</th>
-        <th style="width:170px">التاريخ</th>
-      </tr>
-    </thead>
-    <tbody>
-    {% for t in card360.timeline %}
-      {% set row = t.item or t %}
-      {% set when = (t.created_at or row.created_at)|dt_local if (t.created_at or row.created_at) else '—' %}
+          {# ── Purchase ── #}
+          {% if row.package_name and row.amount_minor is defined %}
+            {% set amount = (row.amount_minor or 0) / 100 %}
+            {% set ps = (row.status or '')|lower %}
+            {% set status_ar2 =
+                ('مكتملة' if ps == 'completed'
+                 else ('قيد المعالجة' if ps == 'pending'
+                       else ('فشلت' if ps == 'failed' else (row.status or '—')))) %}
+            <tr>
+              <td class="num mono">{{ loop.index }}</td>
+              <td>
+                <span class="u360-tl-type u360-tl-type--purchase">
+                  <i class="fa-solid fa-cart-shopping"></i> شراء
+                </span>
+              </td>
+              <td>شراء «{{ row.package_name }}» — <small class="hub-text-mute">{{ status_ar2 }}</small></td>
+              <td class="num mono"><span class="u360-tl-amt--purchase">−{{ amount|money }}</span></td>
+              <td class="small mono hub-text-mute">{{ when }}</td>
+            </tr>
 
-      {# ── Purchase: has package_name + amount_minor + status ── #}
-      {% if row.package_name and row.amount_minor is defined %}
-        {% set amount = (row.amount_minor or 0) / 100 %}
-        {% set ccy = row.currency or cfg.currency %}
-        {% set ps = (row.status or '')|lower %}
-        {% set status_ar =
-            ('مكتملة' if ps == 'completed'
-             else ('قيد المعالجة' if ps == 'pending'
-                   else ('فشلت' if ps == 'failed' else (row.status or '—')))) %}
-        <tr data-tl>
-          <td class="tl-idx">{{ loop.index }}</td>
-          <td class="tl-type">
-            <span class="u360-tl-type u360-tl-type--purchase">
-              <i class="fa-solid fa-cart-shopping"></i> شراء
-            </span>
-          </td>
-          <td class="tl-desc">
-            شراء «{{ row.package_name }}» —
-            <small style="color:#64748b">{{ status_ar }}</small>
-          </td>
-          <td class="tl-amt"><span class="u360-tl-amt--purchase">−{{ amount|money }}</span></td>
-          <td class="tl-date">{{ when }}</td>
-        </tr>
+          {# ── Ledger ── #}
+          {% elif row.amount_minor is defined and (row.direction or row.entry_type) %}
+            {% set amount = (row.amount_minor or 0) / 100 %}
+            {% set dir = (row.direction or row.entry_type or '')|lower %}
+            {% set is_credit = dir in ('credit','in','deposit','top-up','topup') %}
+            <tr>
+              <td class="num mono">{{ loop.index }}</td>
+              <td>
+                <span class="u360-tl-type u360-tl-type--{{ 'credit' if is_credit else 'debit' }}">
+                  <i class="fa-solid fa-{{ 'plus' if is_credit else 'minus' }}"></i>
+                  {{ 'إيداع' if is_credit else 'خصم' }}
+                </span>
+              </td>
+              <td>
+                {{ 'إيداع للمحفظة' if is_credit else 'خصم من المحفظة' }}
+                {% if row.description or row.notes or row.memo %}
+                  — <small class="hub-text-mute">{{ row.description or row.notes or row.memo }}</small>
+                {% endif %}
+              </td>
+              <td class="num mono">
+                <span class="u360-tl-amt--{{ 'credit' if is_credit else 'debit' }}">
+                  {{ '+' if is_credit else '−' }}{{ amount|money }}
+                </span>
+              </td>
+              <td class="small mono hub-text-mute">{{ when }}</td>
+            </tr>
 
-      {# ── Ledger: has amount_minor + direction/entry_type ── #}
-      {% elif row.amount_minor is defined and (row.direction or row.entry_type) %}
-        {% set amount = (row.amount_minor or 0) / 100 %}
-        {% set dir = (row.direction or row.entry_type or '')|lower %}
-        {% set is_credit = dir in ('credit','in','deposit','top-up','topup') %}
-        <tr data-tl>
-          <td class="tl-idx">{{ loop.index }}</td>
-          <td class="tl-type">
-            <span class="u360-tl-type u360-tl-type--{{ 'credit' if is_credit else 'debit' }}">
-              <i class="fa-solid fa-{{ 'plus' if is_credit else 'minus' }}"></i>
-              {{ 'إيداع' if is_credit else 'خصم' }}
-            </span>
-          </td>
-          <td class="tl-desc">
-            {{ 'إيداع للمحفظة' if is_credit else 'خصم من المحفظة' }}
-            {% if row.description or row.notes or row.memo %}
-              — <small style="color:#64748b">{{ row.description or row.notes or row.memo }}</small>
-            {% endif %}
-          </td>
-          <td class="tl-amt">
-            <span class="u360-tl-amt--{{ 'credit' if is_credit else 'debit' }}">
-              {{ '+' if is_credit else '−' }}{{ amount|money }}
-            </span>
-          </td>
-          <td class="tl-date">{{ when }}</td>
-        </tr>
-
-      {# ── Business event (event_key + message + category) ── #}
-      {% else %}
-        {% set ekey = row.event_key or row.event_type or row.kind or row.action or '' %}
-        {% set msg = row.message or row.description or row.summary or '' %}
-        {% set sev = (row.severity or 'info')|lower %}
-        {% set cat = (row.category or '')|lower %}
-        {% set cat_ar = CAT_LABEL.get(cat, cat or 'حدث') %}
-        {% set type_cls = ('error' if sev in ('error','critical') else
-                          ('warning' if sev == 'warning' else
-                          ('system' if cat in ('system','radius','security') else 'event'))) %}
-        {% set ico = ('triangle-exclamation' if sev in ('error','critical') else
-                     ('circle-exclamation' if sev == 'warning' else
-                     ('gear' if cat == 'system' else
-                     ('coins' if cat == 'financial' else
-                     ('id-card' if cat == 'card' else
-                     ('shield-halved' if cat == 'security' else 'bell')))))) %}
-        <tr data-tl>
-          <td class="tl-idx">{{ loop.index }}</td>
-          <td class="tl-type">
-            <span class="u360-tl-type u360-tl-type--{{ type_cls }}">
-              <i class="fa-solid fa-{{ ico }}"></i> {{ cat_ar }}
-            </span>
-          </td>
-          <td class="tl-desc">
-            {% if ekey %}
-              <strong style="color:#0f172a">{{ ekey|replace('_', ' ')|replace('.', ' ') }}</strong>
-            {% endif %}
-            {% if msg %}
-              {% if ekey %} — {% endif %}<small style="color:#64748b">{{ msg }}</small>
-            {% elif not ekey %}
-              <small style="color:#94a3b8">حدث بلا تفاصيل</small>
-            {% endif %}
-          </td>
-          <td class="tl-amt"><small style="color:#cbd5e1">—</small></td>
-          <td class="tl-date">{{ when }}</td>
-        </tr>
-      {% endif %}
-
-    {% endfor %}
-    </tbody>
-  </table>
-  </div>
-
-  <div class="u360-pager" id="u360-tl-pager">
-    <button type="button" id="tl-prev"><i class="fa-solid fa-chevron-right"></i> السابق</button>
-    <span class="info">صفحة <strong id="tl-page">1</strong> من <strong id="tl-total">1</strong></span>
-    <button type="button" id="tl-next">التالي <i class="fa-solid fa-chevron-left"></i></button>
-  </div>
+          {# ── Business event ── #}
+          {% else %}
+            {% set ekey = row.event_key or row.event_type or row.kind or row.action or '' %}
+            {% set msg = row.message or row.description or row.summary or '' %}
+            {% set sev = (row.severity or 'info')|lower %}
+            {% set cat = (row.category or '')|lower %}
+            {% set cat_ar = CAT_LABEL.get(cat, cat or 'حدث') %}
+            {% set type_cls = ('error' if sev in ('error','critical') else
+                              ('warning' if sev == 'warning' else
+                              ('system' if cat in ('system','radius','security') else 'event'))) %}
+            {% set ico = ('triangle-exclamation' if sev in ('error','critical') else
+                         ('circle-exclamation' if sev == 'warning' else
+                         ('gear' if cat == 'system' else
+                         ('coins' if cat == 'financial' else
+                         ('id-card' if cat == 'card' else
+                         ('shield-halved' if cat == 'security' else 'bell')))))) %}
+            <tr>
+              <td class="num mono">{{ loop.index }}</td>
+              <td>
+                <span class="u360-tl-type u360-tl-type--{{ type_cls }}">
+                  <i class="fa-solid fa-{{ ico }}"></i> {{ cat_ar }}
+                </span>
+              </td>
+              <td>
+                {% if ekey %}<strong>{{ ekey|replace('_', ' ')|replace('.', ' ') }}</strong>{% endif %}
+                {% if msg %}{% if ekey %} — {% endif %}<small class="hub-text-mute">{{ msg }}</small>
+                {% elif not ekey %}<small class="hub-text-mute">حدث بلا تفاصيل</small>{% endif %}
+              </td>
+              <td class="num"><span class="hub-text-mute">—</span></td>
+              <td class="small mono hub-text-mute">{{ when }}</td>
+            </tr>
+          {% endif %}
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endcall %}
+  {% endif %}
 
 {% endcall %}
-</div>
 
-<script>
-(function(){
-  const table = document.getElementById('u360-timeline');
-  if (!table) return;
-  const rows = Array.from(table.querySelectorAll('tbody tr[data-tl]'));
-  const PER = 10;
-  let page = 1;
-  const total = Math.max(1, Math.ceil(rows.length / PER));
-  const pageEl  = document.getElementById('tl-page');
-  const totalEl = document.getElementById('tl-total');
-  const prevBtn = document.getElementById('tl-prev');
-  const nextBtn = document.getElementById('tl-next');
-  totalEl.textContent = total;
-  function render(){
-    const lo = (page - 1) * PER, hi = lo + PER;
-    rows.forEach((tr, i) => { tr.style.display = (i >= lo && i < hi) ? '' : 'none'; });
-    pageEl.textContent = page;
-    prevBtn.disabled = (page <= 1);
-    nextBtn.disabled = (page >= total);
-  }
-  prevBtn.addEventListener('click', () => { if (page > 1)     { page--; render(); } });
-  nextBtn.addEventListener('click', () => { if (page < total) { page++; render(); } });
-  render();
-})();
-</script>
-{% endif %}
-
+{# ── Retained JS: marketplace package picker selection + affordability ── #}
 <script>
 (function(){
   const grid = document.querySelector('.u360-pack-grid');

@@ -1,11 +1,17 @@
-{# NPC global landing — pick a router.
+{# NPC global landing — pick a router. UNIFIED DESIGN SYSTEM.
 
    The sidebar entry "سياسات الشبكة" lands here. The page is a
-   simple cards grid of routers, each with per-service policy
-   counts. Clicking a card takes the operator to the per-
-   router NPC tabs inside the router's dashboard. #}
+   unified data table of routers, each with per-service policy
+   counts. Clicking a row takes the operator to the per-router
+   NPC tabs inside the router's dashboard.
+
+   Backend data (unchanged):
+     routers  — [{id, name, address, counts:{<service_key>: int}}, …]
+     services — [ServiceDef(key, icon, label_ar), …]
+   Zero route/behaviour change. #}
 
 {% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
 {% import "radius/_network_policy_shell.html" as npc %}
 
 {% block title %}{{ page_title }}{% endblock %}
@@ -19,61 +25,16 @@
   {{ super() }}
   {% include "radius/_network_policy_shell.html" %}
   <style>
-    .npc-rp-grid {
-      display: grid; gap: 12px;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    }
-    .npc-rp-card {
-      display: block;
-      text-decoration: none; color: inherit;
-      background: #fff;
-      border: 1px solid #EEEDF3;
-      border-radius: 12px;
-      padding: 16px 18px;
-      box-shadow: 0 1px 3px rgba(15,23,42,0.04);
-      transition: border-color .15s ease, transform .15s ease;
-    }
-    .npc-rp-card:hover {
-      border-color: #6B5AED;
-      transform: translateY(-1px);
-    }
-    .npc-rp-head {
-      display: flex; align-items: center; gap: 10px;
-      margin-bottom: 8px;
-    }
-    .npc-rp-name {
-      font-weight: 800; color: #1F2937; font-size: 15px;
-    }
-    .npc-rp-addr {
-      color: #6b7280; font-size: 12px;
-      font-family: ui-monospace, monospace;
-      margin-inline-start: auto;
-    }
-    .npc-rp-counts {
-      display: flex; gap: 8px; flex-wrap: wrap;
-      font-size: 12px;
-    }
     .npc-rp-count {
       display: inline-flex; align-items: center; gap: 4px;
-      padding: 4px 10px;
+      padding: 3px 9px;
       background: #F4F1FE; color: #4036A6;
       border-radius: 999px;
-      font-weight: 700;
+      font-weight: 700; font-size: 12px;
     }
     .npc-rp-count[data-zero="1"] {
       background: #f3f4f6; color: #6b7280;
       font-weight: 500;
-    }
-    .npc-rp-empty {
-      text-align: center; padding: 48px 24px;
-      color: #6b7280;
-      border: 2px dashed #E3E1EC;
-      border-radius: 12px;
-      background: #fafbfd;
-    }
-    .npc-rp-empty i {
-      font-size: 28px; color: #c7c4d8;
-      margin-bottom: 10px; display: block;
     }
   </style>
 {% endblock %}
@@ -81,46 +42,84 @@
 {% block content %}
 {{ npc.npc_dry_run_banner() }}
 
-<div style="margin-bottom:12px; color:#4b5563;
-            font-size:13.5px; line-height:1.7;">
-  السياسات تعمل على الراوتر مباشرة — لذلك اختر الراوتر أوّلاً
-  ثم ادخل لتبويبات السياسات داخل لوحته. كل تبويب يعرض السياسات
-  الخاصّة بذلك الراوتر فقط.
-</div>
+{# ───── Aggregate per-service totals for the hero KPI strip ───── #}
+{% set _kpis = [{'label': 'الراوترات', 'value': routers|length,
+                 'icon': 'router', 'variant': 'brand'}] %}
+{% for s in services %}
+  {%- set _ns = namespace(total=0) -%}
+  {%- for r in routers %}{% set _ns.total = _ns.total + (r.counts[s.key] or 0) %}{% endfor -%}
+  {%- set _ = _kpis.append({'label': s.label_ar, 'value': _ns.total,
+                            'icon': s.icon, 'variant': 'blue'}) -%}
+{% endfor %}
+
+{# ───── Merged hero: title + subtitle + KPI strip ───── #}
+{{ hub.megahero(
+  page_title,
+  subtitle="اختر راوتراً لإدارة سياساته.",
+  icon="shield-halved",
+  kpis=_kpis
+) }}
 
 {% if not routers %}
-  <div class="npc-rp-empty">
-    <i class="fa-regular fa-folder-open"></i>
-    <div style="font-weight:700; margin-bottom:6px;">
-      لا توجد راوترات في هذا المستأجر بعد.
-    </div>
-    <div style="font-size:13px;">
-      أضف راوتراً من «أجهزة الشبكة» ثم ارجع إلى هذه الصفحة.
-    </div>
-  </div>
+  {{ hub.empty(
+    "لا توجد راوترات في هذا المستأجر بعد.",
+    sub="أضف راوتراً من «أجهزة الشبكة» ثم ارجع إلى هذه الصفحة.",
+    icon="folder-open"
+  ) }}
 {% else %}
-  <div class="npc-rp-grid">
-    {% for r in routers %}
-      <a class="npc-rp-card"
-         href="{{ url_for('radius.npc_router_landing',
-                          nas_id=r.id) }}">
-        <div class="npc-rp-head">
-          <i class="fa-solid fa-router"
-             style="color:#6B5AED;"></i>
-          <span class="npc-rp-name">{{ r.name }}</span>
-          <span class="npc-rp-addr">{{ r.address }}</span>
-        </div>
-        <div class="npc-rp-counts">
-          {% for s in services %}
-            <span class="npc-rp-count"
-                  data-zero="{{ '1' if not r.counts[s.key] else '0' }}">
-              <i class="fa-solid fa-{{ s.icon }}"></i>
-              {{ s.label_ar }} · {{ r.counts[s.key] }}
-            </span>
+{# ───── Main (carded table) + help panel on the LEFT ───── #}
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "كيف تقرأ هذه الصفحة؟",
+  intro="السياسات تعمل على الراوتر مباشرة — لذلك اختر الراوتر أوّلاً ثم ادخل لتبويبات السياسات داخل لوحته.",
+  items=[
+    {'icon': 'router',       'text': 'كل صف هو راوتر مستقل، مع عدد سياسات كل خدمة عليه.'},
+    {'icon': 'layer-group',  'text': 'كل تبويب يعرض السياسات الخاصّة بذلك الراوتر فقط.'},
+    {'icon': 'arrow-pointer','text': 'اضغط «إدارة السياسات» للدخول إلى تبويبات سياسات الراوتر.'},
+  ],
+  note="اختر الراوتر أوّلاً ثم ادخل لتبويبات السياسات داخل لوحته."
+)) %}
+  {% call hub.section("الراوترات", icon="table-list", meta=routers|length|string + " راوتر", flush=True) %}
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
+      <table class="hub-table">
+        <thead>
+          <tr>
+            <th>الراوتر</th>
+            <th>العنوان</th>
+            {% for s in services %}
+              <th class="num">{{ s.label_ar }}</th>
+            {% endfor %}
+            <th style="width:180px" data-uds-nosort data-uds-nocol>إجراءات</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in routers %}
+          <tr>
+            <td>
+              <i class="fa-solid fa-router" style="color:#6B5AED;margin-inline-end:6px"></i>
+              <strong>{{ r.name }}</strong>
+            </td>
+            <td style="font-family:ui-monospace,monospace;color:#6b7280;font-size:12px">{{ r.address }}</td>
+            {% for s in services %}
+              <td class="num">
+                <span class="npc-rp-count"
+                      data-zero="{{ '1' if not r.counts[s.key] else '0' }}">
+                  <i class="fa-solid fa-{{ s.icon }}"></i>
+                  {{ r.counts[s.key] }}
+                </span>
+              </td>
+            {% endfor %}
+            <td>
+              <a class="hub-btn hub-btn--primary hub-btn--sm"
+                 href="{{ url_for('radius.npc_router_landing', nas_id=r.id) }}">
+                <i class="fa-solid fa-shield-halved"></i> إدارة السياسات
+              </a>
+            </td>
+          </tr>
           {% endfor %}
-        </div>
-      </a>
-    {% endfor %}
-  </div>
+        </tbody>
+      </table>
+    </div>
+  {% endcall %}
+{% endcall %}
 {% endif %}
 {% endblock %}

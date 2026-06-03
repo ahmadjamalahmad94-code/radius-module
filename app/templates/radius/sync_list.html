@@ -1,45 +1,58 @@
+{# Sync queue list — UNIFIED DESIGN SYSTEM (merged hero + help panel).
+   Same backend data: jobs list, stats, status filter. Zero route/behaviour change. #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 {% block title %}طابور المزامنة{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-arrows-rotate"></i>{% endblock %}
 {% block page_title %}طابور مزامنة الراوترات{% endblock %}
+{% block page_sub %}<span class="sub">{{ jobs|length }} مهمة في النتائج</span>{% endblock %}
 
 {% block content %}
-{{ hub.hero(
+
+{# ───── Merged hero: title + KPI strip + integrated status filter ───── #}
+{% call hub.megahero(
   "طابور مزامنة الراوترات",
   subtitle="مراقبة طابور المزامنة إلى الراوترات والمحاولات الفاشلة.",
-  icon="arrows-rotate"
-) }}
-
-<div class="hub-kpi-grid">
-  {{ hub.kpi("في الانتظار", stats.queued, icon="hourglass-half", variant="brand") }}
-  {{ hub.kpi("يعاد المحاولة", stats.retrying, icon="rotate-right", variant="amber") }}
-  {{ hub.kpi("مكتمل", stats.done, icon="check", variant="green") }}
-  {{ hub.kpi("فشل", stats.failed, icon="xmark", variant="red") }}
-</div>
-
-{% call hub.section("تصفية حسب الحالة", icon="filter") %}
-  <form method="get" class="hub-filter-form">
-    <select class="hub-select" name="status">
-      <option value="">كل الحالات</option>
-      {% for s in ['queued','retrying','done','failed','syncing'] %}
-        <option value="{{ s }}" {% if status==s %}selected{% endif %}>
-          {% if s == 'queued' %}في الانتظار
-          {% elif s == 'retrying' %}يعاد المحاولة
-          {% elif s == 'done' %}مكتمل
-          {% elif s == 'failed' %}فشل
-          {% elif s == 'syncing' %}جاري المزامنة
-          {% else %}{{ s }}{% endif %}
-        </option>
-      {% endfor %}
-    </select>
-    {{ hub.btn("تطبيق", icon="filter", variant="primary", size="sm", type="submit") }}
-  </form>
+  icon="arrows-rotate",
+  kpis=[
+    {'label': 'في الانتظار', 'value': stats.queued,   'icon': 'hourglass-half', 'variant': 'brand'},
+    {'label': 'يعاد المحاولة','value': stats.retrying, 'icon': 'rotate-right',   'variant': 'amber'},
+    {'label': 'مكتمل',        'value': stats.done,     'icon': 'check',          'variant': 'green'},
+    {'label': 'فشل',          'value': stats.failed,   'icon': 'xmark',          'variant': 'red'},
+  ],
+  search_action=url_for('radius.sync_list'),
+  search_method="get"
+) %}
+  <select class="hub-select" name="status">
+    <option value="">كل الحالات</option>
+    {% for s in ['queued','retrying','done','failed','syncing'] %}
+      <option value="{{ s }}" {% if status==s %}selected{% endif %}>
+        {% if s == 'queued' %}في الانتظار
+        {% elif s == 'retrying' %}يعاد المحاولة
+        {% elif s == 'done' %}مكتمل
+        {% elif s == 'failed' %}فشل
+        {% elif s == 'syncing' %}جاري المزامنة
+        {% else %}{{ s }}{% endif %}
+      </option>
+    {% endfor %}
+  </select>
+  {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
 {% endcall %}
 
-{% call hub.section("مهام المزامنة", icon="list-check", meta=(jobs|length ~ ' مهمة') if jobs else '', flush=True) %}
-  {% if jobs %}
-    <div class="hub-table-wrap" style="border:none">
+{% if jobs %}
+{# ───── Main (carded table) + help panel on the LEFT ───── #}
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "كيف تقرأ هذا الطابور؟",
+  intro="كل صف هو مهمة مزامنة تُدفع إلى الراوتر. الحالة تخبرك أين وصلت المهمة.",
+  items=[
+    {'icon': 'hourglass-half', 'text': '«في الانتظار» مهمة جاهزة لم تُنفَّذ بعد؛ «جاري المزامنة» قيد التنفيذ الآن.'},
+    {'icon': 'rotate-right',   'text': 'المهام الفاشلة يعاد محاولتها تلقائيًا حتى الموعد التالي — أو أعدها فورًا بزر الإعادة.'},
+    {'icon': 'triangle-exclamation', 'text': 'عمود الخطأ يعرض آخر سبب فشل؛ مرّر فوقه لقراءة النص كاملًا.'},
+  ],
+  note="إلغاء مهمة قيد الانتظار يوقفها نهائيًا ولا يدفع التغيير إلى الراوتر."
+)) %}
+  {% call hub.section("مهام المزامنة", icon="list-check", meta=(jobs|length ~ ' مهمة') if jobs else '', flush=True) %}
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
       <table class="hub-table">
         <thead>
           <tr>
@@ -50,7 +63,7 @@
             <th class="num">المحاولات</th>
             <th>الموعد التالي</th>
             <th>الخطأ</th>
-            <th style="width:140px"></th>
+            <th style="width:140px" data-uds-nosort data-uds-nocol></th>
           </tr>
         </thead>
         <tbody>
@@ -100,8 +113,14 @@
         </tbody>
       </table>
     </div>
-  {% else %}
-    {{ hub.empty("لا توجد مهام بهذا الفلتر.", icon="arrows-rotate") }}
-  {% endif %}
+  {% endcall %}
 {% endcall %}
+{% else %}
+{{ hub.empty(
+  "لا توجد مهام بهذا الفلتر.",
+  sub="عندما تُدفع تغييرات إلى الراوترات ستظهر مهام المزامنة هنا.",
+  icon="arrows-rotate"
+) }}
+{% endif %}
+
 {% endblock %}

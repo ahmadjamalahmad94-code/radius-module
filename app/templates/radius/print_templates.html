@@ -67,7 +67,10 @@
   .pr-design-source-head small{font-size:11px;color:var(--hub-text-mute);font-weight:800;line-height:1.6;text-align:left}
   .pr-design-source-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
   @media(max-width:520px){.pr-design-source-options{grid-template-columns:1fr}}
-  .pr-design-source-option{border:1px solid var(--hub-border-soft);background:var(--hub-bg-soft);border-radius:14px;padding:12px;display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:10px;cursor:pointer;text-align:right;font-family:inherit;color:var(--hub-text);transition:border-color .15s ease,box-shadow .15s ease,transform .15s ease}
+  .pr-design-source-option{border:1px solid var(--hub-border-soft);background:var(--hub-bg-soft);border-radius:14px;padding:12px;display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-rows:auto auto;column-gap:10px;row-gap:2px;align-items:center;cursor:pointer;text-align:right;font-family:inherit;color:var(--hub-text);transition:border-color .15s ease,box-shadow .15s ease,transform .15s ease}
+  .pr-design-source-option i{grid-row:1 / span 2;align-self:center}
+  .pr-design-source-option span{grid-column:2;grid-row:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pr-design-source-option em{grid-column:2;grid-row:2}
   .pr-design-source-option:hover,.pr-design-source-option.is-selected{border-color:rgba(34,167,189,.76);box-shadow:0 12px 24px rgba(15,23,42,.08);transform:translateY(-1px)}
   .pr-design-source-option.is-selected{outline:2px solid rgba(34,167,189,.18);background:#fff}
   .pr-design-source-option i{width:38px;height:38px;border-radius:12px;background:rgba(34,167,189,.12);color:var(--pr-cyan);display:grid;place-items:center;font-size:18px}
@@ -81,6 +84,17 @@
   .pr-layer-card h4 i{color:var(--pr-cyan)}
   .pr-layer-note{margin:0;color:var(--hub-text-mute);font-size:11px;font-weight:800;line-height:1.7}
   .pr-control-stack{display:grid;gap:12px;margin-top:12px}
+  /* Segmented sub-tab bar for the layout sections. */
+  .pr-seg{display:flex;flex-wrap:wrap;gap:6px;padding:5px;background:var(--hub-bg-soft);border:1px solid var(--hub-border-soft);border-radius:14px;margin-bottom:4px}
+  .pr-seg-btn{flex:1 1 auto;min-width:max-content;display:inline-flex;align-items:center;justify-content:center;gap:7px;border:1px solid transparent;background:transparent;border-radius:10px;padding:9px 12px;font-family:inherit;font-weight:900;font-size:12.5px;color:var(--hub-text-soft);cursor:pointer;transition:background .15s ease,color .15s ease,box-shadow .15s ease}
+  .pr-seg-btn i{font-size:12px;color:var(--pr-cyan)}
+  .pr-seg-btn:hover{color:var(--hub-text)}
+  .pr-seg-btn.is-active{background:#fff;color:var(--hub-text);box-shadow:0 6px 16px rgba(15,23,42,.10);border-color:var(--hub-border-soft)}
+  .pr-seg-btn.is-active i{color:var(--pr-navy)}
+  /* Only the active layout section is shown; the rest stay in the DOM
+     (display:none) so the save form still posts every field. */
+  .pr-control-section[data-layer-section]{display:none}
+  .pr-control-section[data-layer-section].is-active{display:grid}
   .pr-control-section{border:1px solid rgba(148,163,184,.24);border-radius:16px;background:#fff;padding:13px;box-shadow:0 12px 28px rgba(15,23,42,.05);display:grid;gap:12px}
   .pr-control-section-head{display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid rgba(148,163,184,.18);padding-bottom:9px}
   .pr-control-section-head h4{margin:0;color:var(--hub-text);font-size:14px;font-weight:950;display:flex;align-items:center;gap:8px}
@@ -106,7 +120,12 @@
   .pr-preset.is-selected{outline:2px solid rgba(34,167,189,.18)}
   .pr-preset .sw{height:34px;border-radius:10px;margin-bottom:8px;border:1px solid rgba(255,255,255,.4)}
   .pr-preset strong{display:block;font-size:12px;color:var(--hub-text)}
-  .pr-stage{position:sticky;top:92px}
+  /* Live preview pane stays pinned in view while the (often long) edit
+     controls scroll beside it. `align-self:start` lets the grid item shrink
+     to content so sticky has somewhere to stick; `max-height`+`overflow:auto`
+     keep a very tall card scrollable instead of overflowing the viewport. */
+  .pr-stage{position:sticky;top:16px;align-self:start;max-height:calc(100vh - 32px);overflow:auto;z-index:2}
+  @media(max-width:1100px){.pr-stage{position:static;max-height:none;overflow:visible}}
   /* Designer canvas size policy — "fit to viewport"
      ─────────────────────────────────────────────────
      Earlier attempts at this had one of two failure modes:
@@ -203,9 +222,11 @@
   /* Draggable SVG groups — pointer-events stay enabled on USER/PASS/QR
      so the JS can attach pointerdown listeners after each fetch. */
   .pr-svg-mount svg .card-pill,
-  .pr-svg-mount svg .card-qr{cursor:grab;touch-action:none;user-select:none}
+  .pr-svg-mount svg .card-qr,
+  .pr-svg-mount svg .card-logo{cursor:grab;touch-action:none;user-select:none}
   .pr-svg-mount svg .card-pill:active,
-  .pr-svg-mount svg .card-qr:active{cursor:grabbing}
+  .pr-svg-mount svg .card-qr:active,
+  .pr-svg-mount svg .card-logo:active{cursor:grabbing}
   /* ──────────────────────────────────────────────────────────────────
      CARD CANVAS — single source of truth, aligned with card_renderer.py
      ──────────────────────────────────────────────────────────────────
@@ -354,8 +375,13 @@
   .pr-chip-meta small{display:block;font-size:11px;color:var(--hub-text-mute);font-weight:800}
   .pr-chip-actions{display:flex;gap:4px}
   /* Designer drawer (J3-commit3) */
-  .pr-designer-drawer{border:1px solid var(--hub-border-soft);background:var(--hub-bg-card);border-radius:16px;overflow:hidden;box-shadow:0 10px 28px rgba(15,23,42,.06)}
-  .pr-designer-summary{cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px;background:var(--hub-bg-soft);font-weight:950;color:var(--hub-text);font-size:15px;list-style:none}
+  /* NOTE: no `overflow:hidden` here. An overflow-clipped ancestor cancels
+     `position:sticky` on descendants, which is exactly what was pinning the
+     preview pane and letting it scroll away. We keep the rounded corners via
+     border-radius on the drawer + its summary instead of clipping. */
+  .pr-designer-drawer{border:1px solid var(--hub-border-soft);background:var(--hub-bg-card);border-radius:16px;box-shadow:0 10px 28px rgba(15,23,42,.06)}
+  .pr-designer-summary{cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px;background:var(--hub-bg-soft);font-weight:950;color:var(--hub-text);font-size:15px;list-style:none;border-radius:16px}
+  .pr-designer-drawer[open] > .pr-designer-summary{border-radius:16px 16px 0 0}
   .pr-designer-summary::-webkit-details-marker{display:none}
   .pr-designer-summary small{font-weight:800;color:var(--hub-text-mute);font-size:12px}
   .pr-designer-drawer[open] > .pr-designer-summary{border-bottom:1px solid var(--hub-border-soft)}
@@ -446,7 +472,50 @@
      picker so the export flow stays focused: choose batch, choose saved
      design, review preview, then export. #}
   <section id="export" data-export-room>
-    <div class="pr-export-room-shell">
+    <div class="pt-export">
+      <aside class="pt-strip">
+        <div class="pt-strip-head">
+          <button type="button" class="pt-strip-toggle" data-pt-strip-toggle
+                  aria-label="طيّ أو فتح قائمة القوالب" title="طيّ / فتح القائمة">
+            <i class="fa-solid fa-angles-right"></i>
+          </button>
+          <span class="pt-strip-head-label"><i class="fa-solid fa-images"></i> القوالب المحفوظة</span>
+          <span class="pt-strip-count">{{ templates|length }}</span>
+        </div>
+        <div class="pt-strip-search">
+          <input class="hub-input" type="search" placeholder="بحث في القوالب..." data-pt-strip-search aria-label="بحث في القوالب">
+        </div>
+        <div class="pt-strip-list" data-pt-strip-list>
+          {% for item in templates %}
+            {% set layout = item.layout_json or {} %}
+            {% set is_default = layout.is_default or (default_template_id == item.id) %}
+            {% set orientation = layout.card_orientation or 'horizontal' %}
+            <button type="button" class="pt-strip-item{% if is_default %} is-active{% endif %}"
+                    data-export-template-card
+                    data-template-id="{{ item.id }}"
+                    data-template-name="{{ item.name|e }}"
+                    data-template-meta="{{ layout.design_preset or 'custom' }} · {{ orientation }}"
+                    data-template-gradient-start="{{ layout.gradient_start or '#0f172a' }}"
+                    data-template-gradient-end="{{ layout.gradient_end or '#22a7bd' }}"
+                    data-template-accent="{{ layout.accent_color or '#f59e0b' }}"
+                    data-pt-search="{{ (item.name or '')|e }}"
+                    {% if is_default %}data-is-default="1"{% endif %}>
+              <span class="pt-thumb{% if orientation == 'vertical' %} is-vertical{% endif %}">
+                <img class="pt-thumb-img" loading="lazy" decoding="async"
+                     src="{{ url_for('radius.print_templates_thumbnail', template_id=item.id) }}"
+                     alt="{{ item.name|e }}">
+              </span>
+              <span class="pt-strip-item-body">
+                <span class="pt-strip-item-name">{{ item.name or 'قالب بدون اسم' }}{% if is_default %} <i class="fa-solid fa-star pt-default-star" title="القالب الافتراضي"></i>{% endif %}</span>
+                <span class="pt-strip-item-meta">{{ layout.design_preset or 'custom' }} · {{ 'عمودي' if orientation == 'vertical' else 'أفقي' }}</span>
+              </span>
+            </button>
+          {% else %}
+            <div class="pt-strip-empty">لا توجد قوالب محفوظة بعد.<br>أنشئ قالبًا من مركز التصميم بالأسفل ليظهر هنا بمعاينته الحقيقية.</div>
+          {% endfor %}
+        </div>
+      </aside>
+      <div class="pt-main pr-export-room-shell">
       <section class="export-panel">
         <div class="pr-panel-head">
           <h3><i class="fa-solid fa-list-check"></i> إعداد التصدير</h3>
@@ -485,46 +554,42 @@
               <strong><i class="fa-solid fa-table-cells-large"></i> إعدادات الورقة والرص</strong>
               <small>هذه الإعدادات خاصة بالتصدير فقط، ولا تغيّر شكل القالب المحفوظ.</small>
             </div>
-            <div class="pr-grid2">
-              <label class="pr-field">حجم الورقة
+            <div class="pt-settings-grid">
+              <label class="pt-field">حجم الورقة
                 <select class="hub-select" name="print_page_size" data-export-print-setting>
                   <option value="A4" selected>A4</option>
                   <option value="Letter">ليتر</option>
                 </select>
               </label>
-              <label class="pr-field">اتجاه الورقة
+              <label class="pt-field">اتجاه الورقة
                 <select class="hub-select" name="print_orientation" data-export-print-setting>
                   <option value="portrait" selected>عمودي</option>
                   <option value="landscape">أفقي</option>
                 </select>
               </label>
-              <label class="pr-field">عدد الأعمدة
+              <label class="pt-field">عدد الأعمدة
                 <input class="hub-input" type="number" name="print_columns" min="1" max="12" value="2" data-export-print-setting>
               </label>
-              <label class="pr-field">عدد الصفوف
+              <label class="pt-field">عدد الصفوف
                 <input class="hub-input" type="number" name="print_rows" min="1" max="20" value="5" data-export-print-setting>
               </label>
-            </div>
-            <div class="pr-grid2">
-              <label class="pr-field">المسافة بين الأعمدة mm
-                <input class="hub-input" type="number" name="print_column_gap_mm" min="0" max="60" step="0.5" value="4" data-export-print-setting>
+              <label class="pt-field">المسافة بين الأعمدة
+                <span class="pt-unit"><input type="number" name="print_column_gap_mm" min="0" max="60" step="0.5" value="4" data-export-print-setting><span class="pt-unit-suffix">mm</span></span>
               </label>
-              <label class="pr-field">المسافة بين الصفوف mm
-                <input class="hub-input" type="number" name="print_row_gap_mm" min="0" max="60" step="0.5" value="4" data-export-print-setting>
+              <label class="pt-field">المسافة بين الصفوف
+                <span class="pt-unit"><input type="number" name="print_row_gap_mm" min="0" max="60" step="0.5" value="4" data-export-print-setting><span class="pt-unit-suffix">mm</span></span>
               </label>
-            </div>
-            <div class="pr-grid4">
-              <label class="pr-field">هامش علوي mm
-                <input class="hub-input" type="number" name="print_margin_top_mm" min="0" max="80" step="0.5" value="10" data-export-print-setting>
+              <label class="pt-field">هامش علوي
+                <span class="pt-unit"><input type="number" name="print_margin_top_mm" min="0" max="80" step="0.5" value="10" data-export-print-setting><span class="pt-unit-suffix">mm</span></span>
               </label>
-              <label class="pr-field">هامش أيمن mm
-                <input class="hub-input" type="number" name="print_margin_right_mm" min="0" max="80" step="0.5" value="10" data-export-print-setting>
+              <label class="pt-field">هامش أيمن
+                <span class="pt-unit"><input type="number" name="print_margin_right_mm" min="0" max="80" step="0.5" value="10" data-export-print-setting><span class="pt-unit-suffix">mm</span></span>
               </label>
-              <label class="pr-field">هامش سفلي mm
-                <input class="hub-input" type="number" name="print_margin_bottom_mm" min="0" max="80" step="0.5" value="10" data-export-print-setting>
+              <label class="pt-field">هامش سفلي
+                <span class="pt-unit"><input type="number" name="print_margin_bottom_mm" min="0" max="80" step="0.5" value="10" data-export-print-setting><span class="pt-unit-suffix">mm</span></span>
               </label>
-              <label class="pr-field">هامش أيسر mm
-                <input class="hub-input" type="number" name="print_margin_left_mm" min="0" max="80" step="0.5" value="10" data-export-print-setting>
+              <label class="pt-field">هامش أيسر
+                <span class="pt-unit"><input type="number" name="print_margin_left_mm" min="0" max="80" step="0.5" value="10" data-export-print-setting><span class="pt-unit-suffix">mm</span></span>
               </label>
             </div>
           </div>
@@ -586,11 +651,12 @@
           </div>
         </div>
         <div class="pr-export-body">
-          <div data-preview-mount>
-            <div class="hub-empty">لم تُختَر بطاقة بعد. اضغط على قالب من اليسار ثم اختر حزمة.</div>
+          <div data-preview-mount data-preview-thumb-url="{{ url_for('radius.print_templates_thumbnail', template_id=0) }}">
+            <div class="pt-preview-stage"><span class="pt-preview-loading"><i class="fa-solid fa-image"></i> اختر قالبًا من القائمة لعرض تصميمه هنا</span></div>
           </div>
         </div>
       </section>
+      </div>
     </div>
     <div class="pr-template-modal" data-template-modal hidden aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="template-picker-title">
       <div class="pr-template-modal-backdrop" data-close-template-picker></div>
@@ -647,6 +713,42 @@
       </section>
     </div>
   </section>
+
+  <script>
+  (function(){
+    var exportRoot = document.querySelector('[data-export-room]');
+    if (!exportRoot) return;
+    var grid = exportRoot.querySelector('.pt-export');
+
+    /* ── collapsible template strip (remembered) ── */
+    var toggle = exportRoot.querySelector('[data-pt-strip-toggle]');
+    var KEY = 'uds-pt-strip-collapsed';
+    try { if (grid && localStorage.getItem(KEY) === '1') grid.classList.add('is-strip-collapsed'); } catch(e){}
+    if (toggle && grid){
+      toggle.addEventListener('click', function(){
+        var collapsed = grid.classList.toggle('is-strip-collapsed');
+        try { localStorage.setItem(KEY, collapsed ? '1' : '0'); } catch(e){}
+      });
+    }
+    /* keep the active strip item highlighted on selection */
+    exportRoot.querySelectorAll('.pt-strip-item').forEach(function(card){
+      card.addEventListener('click', function(){
+        exportRoot.querySelectorAll('.pt-strip-item.is-active').forEach(function(el){ el.classList.remove('is-active'); });
+        card.classList.add('is-active');
+      });
+    });
+
+    /* auto-select the default/first template on load so the live preview is
+       never empty — fires the existing selection logic (which now renders the
+       real design via refreshLivePreview). */
+    window.addEventListener('load', function(){
+      if (window.__ptSelected) return;
+      var initial = exportRoot.querySelector('.pt-strip-item.is-active, [data-export-template-card][data-is-default]')
+                 || exportRoot.querySelector('.pt-strip-item, [data-export-template-card]');
+      if (initial){ window.__ptSelected = true; initial.click(); }
+    });
+  })();
+  </script>
 
   {# Designer drawer: closed by default — the export workflow above is the
      primary surface; the full designer opens on-demand. #}
@@ -857,6 +959,43 @@
                 <small class="pr-file-hint">PNG / JPG / WEBP — حتى 8MB. يضغطها النظام تلقائيًا ويحفظ نسخة مناسبة للتصدير.</small>
               </div>
             </div>
+            {# Logo picker — independent of the background mode. Optional:
+               when no logo is chosen the card renders exactly as before.
+               Mirrors the background picker (hidden file input + data-URL
+               hidden field) so the live SVG preview and the saved template
+               both pick up the logo. #}
+            <div class="pr-field" style="margin-top:12px">
+              شعار البطاقة (اختياري)
+              <div class="pr-file-picker" data-logo-picker>
+                <input type="file" name="logo_image"
+                       accept="image/png,image/jpeg,image/webp"
+                       data-logo-image hidden>
+                <input type="hidden" name="logo_image_data_url"
+                       data-logo-image-data-url value="{{ fl.logo_image_data_url or '' }}">
+                <input type="hidden" name="logo_image_name"
+                       data-logo-image-name value="{{ fl.logo_image_name or '' }}">
+                <button type="button" class="pr-file-trigger" data-logo-trigger>
+                  <i class="fa-solid fa-id-badge"></i> اختر شعارًا
+                </button>
+                <div class="pr-file-info" {% if not fl.logo_image_data_url %}hidden{% endif %} data-logo-info>
+                  <img class="pr-file-thumb" data-logo-thumb alt="" {% if fl.logo_image_data_url %}src="{{ fl.logo_image_data_url }}"{% endif %}>
+                  <div class="pr-file-meta">
+                    <strong data-logo-name>{{ fl.logo_image_name or '' }}</strong>
+                    <small data-logo-size></small>
+                  </div>
+                  <button type="button" class="pr-file-clear" data-logo-clear title="إزالة الشعار">
+                    <i class="fa-solid fa-xmark"></i> إزالة
+                  </button>
+                </div>
+                <p class="pr-file-error" hidden data-logo-error role="alert"></p>
+                <small class="pr-file-hint">PNG / JPG / WEBP — حتى 8MB. اسحبه على البطاقة لتغيير مكانه، أو اضبط المكان والحجم أدناه.</small>
+              </div>
+            </div>
+            <div class="pr-grid3" style="margin-top:8px">
+              {{ slider_field('مكان الشعار أفقيًا', 'logo_x', fl.logo_x or 0, 0, 110, 0.1, 'mm', '0 يعني الزاوية العلوية الافتراضية.') }}
+              {{ slider_field('مكان الشعار عموديًا', 'logo_y', fl.logo_y or 0, 0, 110, 0.1, 'mm', '0 يعني الزاوية العلوية الافتراضية.') }}
+              {{ slider_field('حجم الشعار', 'logo_size_pct', fl.logo_size_pct or 0, 0, 60, 0.5, '%', '0 يعني الحجم الافتراضي (18% من عرض البطاقة).') }}
+            </div>
           </div>
 
           <div class="pr-pane" data-pr-pane="content">
@@ -906,8 +1045,17 @@
 
           <div class="pr-pane" data-pr-pane="layout">
             <input type="hidden" name="color" value="{{ fs.color or fl.text_color or '#ffffff' }}">
+            {# Segmented sub-tabs for the layout controls. Only the active
+               section's controls are shown; the rest are hidden (display:none)
+               but stay in the DOM so the save form still posts every field. #}
+            <div class="pr-seg" role="tablist" aria-label="أقسام التخطيط" data-layer-seg>
+              <button class="pr-seg-btn is-active" type="button" data-layer-tab="size"><i class="fa-solid fa-ruler-combined"></i> المقاس</button>
+              <button class="pr-seg-btn" type="button" data-layer-tab="username"><i class="fa-solid fa-user"></i> اسم المستخدم</button>
+              <button class="pr-seg-btn" type="button" data-layer-tab="password"><i class="fa-solid fa-key"></i> كلمة المرور</button>
+              <button class="pr-seg-btn" type="button" data-layer-tab="barcode"><i class="fa-solid fa-qrcode"></i> الباركود</button>
+            </div>
             <div class="pr-control-stack">
-              <section class="pr-control-section">
+              <section class="pr-control-section is-active" data-layer-section="size">
                 <div class="pr-control-section-head">
                   <h4><i class="fa-solid fa-ruler-combined"></i> مقاس البطاقة العام</h4>
                   <small>هذه القيم تخص شكل البطاقة فقط، أما توزيع الورقة والهوامش فهو في مركز التصدير.</small>
@@ -1343,68 +1491,119 @@
 
   // ── Drag inside the rendered SVG ────────────────────────────────
   // The SVG renderer emits .card-pill / .card-qr groups in CANVAS
-  // coordinates (1000x600 landscape / 600x1000 portrait). On
-  // pointermove we map pointer position back to the canvas, then
-  // back to mm, then write into the form's username_x/y etc. The
-  // resulting form change triggers the regular SVG re-fetch.
+  // coordinates (1000x600 landscape / 600x1000 portrait) with NO
+  // group transform — children sit at absolute canvas coords.
+  //
+  // To keep dragging SMOOTH we never re-render the card per mousemove.
+  // Instead we move ONLY the preview node, live, via a CSS transform
+  // (translate in viewBox user units, which is how CSS transforms map
+  // on SVG elements). The X/Y number inputs + range outputs update in
+  // real time so the panel stays in two-way sync with the canvas.
+  // Only on pointerup do we COMMIT (clear the transform, keep the
+  // input values, and schedule exactly ONE authoritative re-render).
+  //
+  // The committed value is the element's TRUE canvas anchor mapped to
+  // mm — derived from its getBBox() top-left, not from an assumed 0 —
+  // so the displayed number equals the real coordinate even when the
+  // field was still showing the engine-default sentinel (0).
+  function svgViewBox(svg){
+    const vb = (svg.getAttribute('viewBox') || '0 0 1000 600')
+      .split(/\s+/).map(parseFloat);
+    return {x: vb[0] || 0, y: vb[1] || 0, w: vb[2] || 1000, h: vb[3] || 600};
+  }
+  function svgScale(svg){
+    // preserveAspectRatio=xMidYMid meet → uniform scale = min fit.
+    const rect = svg.getBoundingClientRect();
+    const vb = svgViewBox(svg);
+    return Math.max(1e-6, Math.min(rect.width / vb.w, rect.height / vb.h));
+  }
   function attachSvgDrag(){
     if(!svgMount) return;
     const svg = svgMount.querySelector('svg');
     if(!svg) return;
-    function bind(selector, prefix){
-      const el = svg.querySelector(selector);
+    function bind(el, prefix){
       if(!el) return;
+      const xInput = form && form.querySelector(`[name="${prefix}_x"]`);
+      const yInput = form && form.querySelector(`[name="${prefix}_y"]`);
+      if(!xInput || !yInput) return;
       let dragging = false;
-      function ptToCanvas(event){
-        const rect = svg.getBoundingClientRect();
-        const viewBox = (svg.getAttribute('viewBox') || '0 0 1000 600')
-          .split(/\s+/).map(parseFloat);
-        const vbW = viewBox[2] || 1000;
-        const vbH = viewBox[3] || 600;
-        // Scale = min(rect.w/vbW, rect.h/vbH) — preserveAspectRatio=meet
-        const scale = Math.min(rect.width / vbW, rect.height / vbH);
-        const drawW = vbW * scale;
-        const drawH = vbH * scale;
-        const dx = rect.left + (rect.width - drawW) / 2;
-        const dy = rect.top + (rect.height - drawH) / 2;
-        const cx = (event.clientX - dx) / scale;
-        const cy = (event.clientY - dy) / scale;
-        return {x: Math.max(0, Math.min(vbW, cx)), y: Math.max(0, Math.min(vbH, cy)), vbW, vbH};
-      }
-      function move(event){
-        if(!dragging) return;
-        const c = ptToCanvas(event);
+      let startPointerX = 0, startPointerY = 0; // screen px
+      let startAnchorX = 0, startAnchorY = 0;   // viewBox user units
+      let curMmX = 0, curMmY = 0;
+      function commitInputs(){
+        // Live two-way sync: drag → number inputs. Clamp to slider range.
         const mm = cardSizeMm();
-        const xMm = (c.x / c.vbW) * mm.w;
-        const yMm = (c.y / c.vbH) * mm.h;
-        const xInput = form && form.querySelector(`[name="${prefix}_x"]`);
-        const yInput = form && form.querySelector(`[name="${prefix}_y"]`);
-        if(xInput){ xInput.value = xMm.toFixed(1); syncRangeOutput(xInput); }
-        if(yInput){ yInput.value = yMm.toFixed(1); syncRangeOutput(yInput); }
+        const clampedX = Math.max(0, Math.min(mm.w, curMmX));
+        const clampedY = Math.max(0, Math.min(mm.h, curMmY));
+        xInput.value = clampedX.toFixed(1);
+        yInput.value = clampedY.toFixed(1);
+        syncRangeOutput(xInput);
+        syncRangeOutput(yInput);
+      }
+      function onMove(event){
+        if(!dragging) return;
+        const scale = svgScale(svg);
+        const vb = svgViewBox(svg);
+        // Pointer delta in screen px → viewBox user units.
+        const dxUnits = (event.clientX - startPointerX) / scale;
+        const dyUnits = (event.clientY - startPointerY) / scale;
+        let anchorX = startAnchorX + dxUnits;
+        let anchorY = startAnchorY + dyUnits;
+        // Keep the element's anchor inside the canvas.
+        anchorX = Math.max(0, Math.min(vb.w, anchorX));
+        anchorY = Math.max(0, Math.min(vb.h, anchorY));
+        // Move ONLY the preview node — no server round-trip.
+        const tx = anchorX - startAnchorX;
+        const ty = anchorY - startAnchorY;
+        el.style.transform = `translate(${tx}px, ${ty}px)`;
+        // True canvas anchor → mm (linear: fraction × card mm).
+        const mm = cardSizeMm();
+        curMmX = (anchorX / vb.w) * mm.w;
+        curMmY = (anchorY / vb.h) * mm.h;
+        commitInputs();
+      }
+      function endDrag(){
+        if(!dragging) return;
+        dragging = false;
+        // Persist the dragged value and re-render ONCE authoritatively.
+        // Clearing the transform avoids a double offset once the server
+        // SVG comes back with the element already at the new position.
+        el.style.transform = '';
+        commitInputs();
         scheduleFetch();
       }
       el.addEventListener('pointerdown', (event) => {
+        if(event.button != null && event.button !== 0) return;
         dragging = true;
         el.setPointerCapture && el.setPointerCapture(event.pointerId);
         event.preventDefault();
-        move(event);
+        startPointerX = event.clientX;
+        startPointerY = event.clientY;
+        // Reset any leftover transform, then read the TRUE anchor.
+        el.style.transform = '';
+        let box;
+        try { box = el.getBBox(); } catch(_e) { box = {x:0, y:0}; }
+        startAnchorX = box.x;
+        startAnchorY = box.y;
+        const vb = svgViewBox(svg);
+        const mm = cardSizeMm();
+        curMmX = (startAnchorX / vb.w) * mm.w;
+        curMmY = (startAnchorY / vb.h) * mm.h;
+        commitInputs();
       });
-      el.addEventListener('pointermove', move);
-      el.addEventListener('pointerup', () => { dragging = false; });
-      el.addEventListener('pointercancel', () => { dragging = false; });
+      el.addEventListener('pointermove', onMove);
+      el.addEventListener('pointerup', endDrag);
+      el.addEventListener('pointercancel', endDrag);
+      el.addEventListener('lostpointercapture', endDrag);
     }
-    // Element ids match the renderer (`id="user"` lives on the pill's
-    // <g class="card-pill">; we use class+order since the renderer
-    // doesn't put an id on the group itself).
-    const pills = svg.querySelectorAll('.card-pill');
-    if(pills.length >= 1) bind(`.card-pill:nth-of-type(${pillIndex(svg, 'user') + 1})`, 'username');
-    if(pills.length >= 2) bind(`.card-pill:nth-of-type(${pillIndex(svg, 'pass') + 1})`, 'password');
-    bind('.card-qr', 'qr');
-  }
-  function pillIndex(svg, _id){
     // The renderer emits USER pill before PASS pill in source order,
-    // so index 0 is USER and 1 is PASS.
-    return _id === 'user' ? 0 : 1;
+    // so card-pill[0] is USER and [1] is PASS. Index into the live
+    // NodeList (robust — nth-of-type can mis-count among sibling <g>).
+    const pills = Array.from(svg.querySelectorAll('.card-pill'));
+    if(pills[0]) bind(pills[0], 'username');
+    if(pills[1]) bind(pills[1], 'password');
+    bind(svg.querySelector('.card-qr'), 'qr');
+    bind(svg.querySelector('.card-logo'), 'logo');
   }
   $$('[data-pr-tab]').forEach(btn => btn.addEventListener('click', () => {
     $$('[data-pr-tab]').forEach(x => x.classList.remove('is-active'));
@@ -1412,6 +1611,16 @@
     btn.classList.add('is-active');
     const pane = root.querySelector(`[data-pr-pane="${btn.dataset.prTab}"]`);
     if(pane) pane.classList.add('is-active');
+  }));
+  // Segmented sub-tabs inside the layout pane (size / username / password /
+  // barcode). Shows only the active section; all inputs stay in the DOM so
+  // the save form still posts every field.
+  $$('[data-layer-tab]').forEach(btn => btn.addEventListener('click', () => {
+    const key = btn.dataset.layerTab;
+    $$('[data-layer-tab]').forEach(x => x.classList.toggle('is-active', x === btn));
+    $$('.pr-control-section[data-layer-section]').forEach(sec => {
+      sec.classList.toggle('is-active', sec.dataset.layerSection === key);
+    });
   }));
   $$('[data-preset]').forEach(btn => btn.addEventListener('click', () => {
     const presetKey = btn.dataset.preset || 'modern';
@@ -1567,36 +1776,84 @@
       accept(file);
     });
   })();
-  function bindDrag(el){
-    const prefix = el && el.dataset.drag;
-    if(!el || !prefix || !form) return;
-    const card = root.querySelector('.pr-card-preview');
-    if(!card) return;
-    const xInput = form.querySelector(`[name="${prefix}_x"]`);
-    const yInput = form.querySelector(`[name="${prefix}_y"]`);
-    if(!xInput || !yInput) return;
-    let dragging = false;
-    function move(event){
-      if(!dragging) return;
-      const rect = card.getBoundingClientRect();
-      const size = cardSizeMm();
-      const x = Math.max(0, Math.min(rect.width, event.clientX - rect.left));
-      const y = Math.max(0, Math.min(rect.height, event.clientY - rect.top));
-      xInput.value = ((x / rect.width) * size.w).toFixed(1);
-      yInput.value = ((y / rect.height) * size.h).toFixed(1);
+  // Logo picker — same plumbing as the background picker, but writes the
+  // `logo_image_data_url` hidden field. Optional: clearing it removes the
+  // logo from the preview and the saved template. The chosen bitmap is
+  // posted on every keystroke so the live SVG preview shows the logo.
+  (function logoPicker(){
+    const picker = root.querySelector('[data-logo-picker]');
+    if(!picker) return;
+    const input   = picker.querySelector('[data-logo-image]');
+    const trigger = picker.querySelector('[data-logo-trigger]');
+    const info    = picker.querySelector('[data-logo-info]');
+    const thumb   = picker.querySelector('[data-logo-thumb]');
+    const nameEl  = picker.querySelector('[data-logo-name]');
+    const sizeEl  = picker.querySelector('[data-logo-size]');
+    const clearBtn= picker.querySelector('[data-logo-clear]');
+    const errorEl = picker.querySelector('[data-logo-error]');
+    const dataUrlField = picker.querySelector('[data-logo-image-data-url]');
+    const nameField = picker.querySelector('[data-logo-image-name]');
+    if(!input || !trigger) return;
+    const MAX_BYTES = 8_000_000;
+    const ALLOWED = new Set(['image/png','image/jpeg','image/jpg','image/webp']);
+    function setError(msg){
+      if(!errorEl) return;
+      if(msg){ errorEl.textContent = msg; errorEl.hidden = false; }
+      else   { errorEl.textContent = '';  errorEl.hidden = true;  }
+    }
+    function formatSize(b){
+      if(b < 1024) return b + ' B';
+      if(b < 1048576) return (Math.round(b/102.4)/10).toFixed(1) + ' KB';
+      return (Math.round(b/10485.76)/100).toFixed(2) + ' MB';
+    }
+    function clearAll(){
+      input.value = '';
+      if(info) info.hidden = true;
+      if(thumb) thumb.removeAttribute('src');
+      if(nameEl) nameEl.textContent = '';
+      if(sizeEl) sizeEl.textContent = '';
+      setError('');
+      if(dataUrlField) dataUrlField.value = '';
+      if(nameField) nameField.value = '';
       scheduleFetch();
     }
-    el.addEventListener('pointerdown', (event) => {
-      dragging = true;
-      el.setPointerCapture && el.setPointerCapture(event.pointerId);
-      event.preventDefault();
-      move(event);
+    function accept(file){
+      const mime = (file.type || '').toLowerCase();
+      if(!ALLOWED.has(mime)){ clearAll(); setError('نوع الملف غير مدعوم. اختر صورة PNG أو JPG أو WEBP.'); return; }
+      if(file.size > MAX_BYTES){ clearAll(); setError('حجم الشعار ' + formatSize(file.size) + ' تجاوز الحد المسموح 8MB.'); return; }
+      setError('');
+      if(nameField) nameField.value = file.name || 'card-logo';
+      if(nameEl) nameEl.textContent = file.name || '';
+      if(sizeEl) sizeEl.textContent = formatSize(file.size) + ' · ' + (mime.split('/')[1] || '').toUpperCase();
+      if(info) info.hidden = false;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const url = reader.result;
+        if(thumb) thumb.src = url;
+        if(dataUrlField) dataUrlField.value = url;
+        scheduleFetch();
+      };
+      reader.onerror = () => setError('تعذّر قراءة الملف. حاول مرة أخرى.');
+      reader.readAsDataURL(file);
+    }
+    trigger.addEventListener('click', () => input.click());
+    input.addEventListener('change', () => {
+      const file = input.files && input.files[0];
+      if(file) accept(file); else clearAll();
     });
-    el.addEventListener('pointermove', move);
-    el.addEventListener('pointerup', () => { dragging = false; });
-    el.addEventListener('pointercancel', () => { dragging = false; });
-  }
-  $$('[data-drag]').forEach(bindDrag);
+    if(clearBtn) clearBtn.addEventListener('click', clearAll);
+    ['dragenter','dragover'].forEach(evt => trigger.addEventListener(evt, e => { e.preventDefault(); e.stopPropagation(); trigger.classList.add('is-drag'); }));
+    ['dragleave','drop'].forEach(evt => trigger.addEventListener(evt, e => { e.preventDefault(); e.stopPropagation(); trigger.classList.remove('is-drag'); }));
+    trigger.addEventListener('drop', e => {
+      const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+      if(!file) return;
+      const dt = new DataTransfer(); dt.items.add(file); input.files = dt.files;
+      accept(file);
+    });
+  })();
+  // (The legacy `bindDrag` over `.pr-card-preview` / `[data-drag]` was
+  // removed: that HTML preview no longer exists. SVG dragging is now
+  // handled entirely by `attachSvgDrag`, re-attached after each fetch.)
   const batchSelects = $$('[data-export-batch-select]');
   const exportOverrides = $$('[data-export-override]');
   const exportPrintSettings = $$('[data-export-print-setting]');
@@ -1718,13 +1975,16 @@
     const qs = exportQueryString();
     const batchId = selectedBatchId();
     if(exportPdfLink){
+      // The PDF-export button is driven SOLELY by its JS click handler
+      // (job pipeline \u2192 poll \u2192 blob download). We must never give it a
+      // live PDF href: if the browser also navigated to it, a second,
+      // raw (corrupt/duplicate) file would download alongside the valid
+      // one. Keep the href inert ('#') so exactly ONE request fires.
+      exportPdfLink.href = '#';
       if(selectedExportTemplateId){
-        const base = urlForTemplate(EXPORT_PDF_URL_TEMPLATE, selectedExportTemplateId);
-        exportPdfLink.href = qs ? base + '?' + qs : base;
         exportPdfLink.classList.toggle('is-disabled', !batchId);
         exportPdfLink.title = batchId ? '\u062a\u0635\u062f\u064a\u0631 PDF \u0644\u0644\u062d\u0632\u0645\u0629 \u0627\u0644\u0645\u062e\u062a\u0627\u0631\u0629' : '\u0627\u062e\u062a\u0631 \u062d\u0632\u0645\u0629 \u0644\u062a\u0641\u0639\u064a\u0644 \u0627\u0644\u062a\u0635\u062f\u064a\u0631';
       } else {
-        exportPdfLink.href = '#';
         exportPdfLink.classList.add('is-disabled');
         exportPdfLink.title = '\u0627\u062e\u062a\u0631 \u0642\u0627\u0644\u0628\u064b\u0627 \u0645\u0646 \u0627\u0644\u0642\u0627\u0626\u0645\u0629 \u0623\u0648\u0644\u064b\u0627';
       }
@@ -1750,9 +2010,29 @@
     }
     const seq = ++previewSeq;
     previewMount.classList.add('pt-fragment-loading');
-    if(previewHint) previewHint.textContent = selectedBatchId()
-      ? 'جاري جلب أول ٤ بطاقات من الحزمة...'
-      : 'اختر حزمة لمعاينة بيانات حقيقية.';
+    // No batch chosen yet → show the template's REAL design (thumbnail SVG,
+    // same renderer as the PDF). Reliable and fast; the big preview is never
+    // empty once a template is selected. Real card data appears once a batch
+    // is picked (fragment path below).
+    if(!selectedBatchId()){
+      const turl = (previewMount.getAttribute('data-preview-thumb-url')||'')
+        .replace(/\/0\/thumbnail\.svg$/, '/' + selectedExportTemplateId + '/thumbnail.svg');
+      if(previewHint) previewHint.textContent = 'معاينة تصميم القالب — اختر حزمة لعرض بطاقات فعلية.';
+      fetch(turl, {credentials:'same-origin'})
+        .then(r => r.ok ? r.text() : Promise.reject(new Error('HTTP '+r.status)))
+        .then(svg => {
+          if(seq !== previewSeq) return;
+          previewMount.innerHTML = '<div class="pt-preview-stage">' + svg + '</div>';
+          previewMount.classList.remove('pt-fragment-loading');
+        })
+        .catch(err => {
+          if(seq !== previewSeq) return;
+          previewMount.classList.remove('pt-fragment-loading');
+          previewMount.innerHTML = '<div class="hub-empty">تعذّر جلب المعاينة ('+ (err && err.message || err) +').</div>';
+        });
+      return;
+    }
+    if(previewHint) previewHint.textContent = 'جاري جلب أول ٤ بطاقات من الحزمة...';
     const params = new URLSearchParams();
     if(selectedBatchId()) params.set('batch_id', selectedBatchId());
     exportOverrides.forEach(field => {

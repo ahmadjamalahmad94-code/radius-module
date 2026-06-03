@@ -15,6 +15,7 @@
    ║  can hide individual fields in either mode without template surgery.║
    ╚══════════════════════════════════════════════════════════════════╝ #}
 {% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
 {% block title %}مركز عمليات البطاقة{% endblock %}
 {# Title/sub blocks intentionally empty — the layout's `.page-head` is
    hidden via cc-hero CSS (`body:has(.cc-hero) .page-head { display:none }`)
@@ -362,46 +363,59 @@
 <div class="cc-page cc-page-hero-host" data-cc-current-mode="advanced">
 
   {# ════════════════════════════════════════════════════════════════════
-     UNIFIED COMPACT HERO — replaces the previous 4-stack (header-row,
-     header, mode-bar, search-form) AND hides the layout's `page-head`
-     (via CSS in cards_checker_v2.css). One short card, two rows, no
-     duplicated text.
+     UNIFIED DESIGN SYSTEM HEADER (UDS) — the page title / header block is
+     now the shared `hub.megahero(...)`. It owns the title row + the
+     back/refresh/print/copy-link actions, and folds the live card counts
+     into the KPI strip when a card is found.
 
-     Row 1: [← رجوع]  [🛰  مركز عمليات البطاقة]  [↻ ⎙ 🔗]
-     Row 2: [📊 متقدّم | ⚡ بسيط]                [🔍 …                  بحث]
-
-     JS hooks preserved: #cc-search-form, #cc-search-input,
-     .cc-mode-toggle button[data-mode]  →  drives cards_checker_v2.js
-     without any JS changes.
+     The JS-driven INTERACTIVE bar (mode-toggle + lookup form) stays in
+     `.cc-hero` BELOW — every JS hook (#cc-search-form, #cc-search-input,
+     .cc-mode-toggle button[data-mode]) is preserved verbatim so
+     cards_checker_v2.js keeps working without any change. The `.cc-hero`
+     element is also what the page CSS keys off to hide the layout's
+     duplicate `.page-head`.
      ════════════════════════════════════════════════════════════════════ #}
-  <div class="cc-hero">
+  {# KPIs only make sense once a card is found. Compute them here so the
+     megahero shows the at-a-glance counts (sessions / active devices /
+     remaining time / total usage). Empty list ⇒ megahero renders the bare
+     title + actions, no KPI strip. #}
+  {% set _hero_kpis = [] %}
+  {% if result and result.exists %}
+    {% set _hs = result.accounting_summary or {} %}
+    {% set _ = _hero_kpis.extend([
+      {'label': 'الجلسات',          'value': _hs.sessions_count or 0,
+       'icon': 'wave-square',       'variant': 'brand'},
+      {'label': 'أجهزة متّصلة الآن', 'value': _hs.online_sessions or 0,
+       'icon': 'laptop',            'variant': 'blue'},
+      {'label': 'الوقت المتبقّي',    'value': duration(result.remaining_seconds or 0),
+       'icon': 'clock',             'variant': 'amber'},
+      {'label': 'إجمالي الاستهلاك',  'value': bytes_size((_hs.total_upload_bytes or 0) + (_hs.total_download_bytes or 0)),
+       'icon': 'gauge-high',        'variant': 'green'},
+    ]) %}
+  {% endif %}
+  {{ hub.megahero(
+       "مركز عمليات البطاقة",
+       subtitle="فحص بطاقة العميل وإدارة جلساتها وأجهزتها لحظيًّا.",
+       icon="satellite-dish",
+       kpis=_hero_kpis,
+       actions_html='
+         <a class="hub-btn hub-btn--ghost" href="' + url_for('radius.cards_list') + '">
+           <i class="fa-solid fa-chevron-right"></i> رجوع
+         </a>
+         <a class="hub-btn hub-btn--ghost hub-btn--icon" title="تحديث"
+            href="' + url_for('radius.cards_checker', query=query) + '">
+           <i class="fa-solid fa-arrows-rotate"></i>
+         </a>
+         <button type="button" class="hub-btn hub-btn--ghost hub-btn--icon" title="طباعة"
+                 onclick="window.print()"><i class="fa-solid fa-print"></i></button>
+         <button type="button" class="hub-btn hub-btn--ghost hub-btn--icon" title="نسخ الرابط"
+                 onclick="navigator.clipboard && navigator.clipboard.writeText(location.href)">
+           <i class="fa-solid fa-link"></i>
+         </button>'
+     ) }}
 
-    <div class="cc-hero-row">
-      <a class="cc-hero-back" href="{{ url_for('radius.cards_list') }}">
-        <i class="fa-solid fa-chevron-right"></i>
-        <span>رجوع</span>
-      </a>
-
-      <div class="cc-hero-title">
-        <span class="cc-hero-title-icon"><i class="fa-solid fa-satellite-dish"></i></span>
-        <span>مركز عمليات البطاقة</span>
-      </div>
-
-      <div class="cc-hero-actions">
-        <a class="cc-hero-action" href="{{ url_for('radius.cards_checker', query=query) }}"
-           title="تحديث">
-          <i class="fa-solid fa-arrows-rotate"></i>
-        </a>
-        <button type="button" class="cc-hero-action" onclick="window.print()" title="طباعة">
-          <i class="fa-solid fa-print"></i>
-        </button>
-        <button type="button" class="cc-hero-action"
-                onclick="navigator.clipboard && navigator.clipboard.writeText(location.href)"
-                title="نسخ الرابط">
-          <i class="fa-solid fa-link"></i>
-        </button>
-      </div>
-    </div>
+  {# ── Interactive lookup bar (JS-bound — DO NOT restructure) ────────── #}
+  <div class="cc-hero cc-hero--interactive">
 
     <div class="cc-hero-row">
       {# Class .cc-mode-toggle + button[data-mode] kept verbatim

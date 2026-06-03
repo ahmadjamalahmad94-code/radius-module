@@ -1,4 +1,12 @@
-{# IP Scan — Sprint 4. Read-only LAN discovery + add-to-watch. #}
+{# IP Scan — Sprint 4. Read-only LAN discovery + add-to-watch.
+
+   UNIFIED DESIGN SYSTEM: one full-width hub.megahero (title + subtitle +
+   icon + scan stats as KPIs + the router-picker scan form integrated as
+   the {% call %} search/filter body). hub.worklayout wraps the results in
+   a carded data-table with the help panel on the LEFT. The scan-results
+   table is the canonical unified data-table (data-uds-table, hub-table,
+   IP/MAC cells mono+nowrap+ltr). Zero route/behaviour change: every form
+   action, field name, hidden input and url_for is preserved verbatim. #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
@@ -15,141 +23,140 @@
 {% endblock %}
 
 {% block content %}
-<div class="hr-page-shell" data-admin-rhythm>
 
-{{ hub.hero(
+{% set _total = scan_rows|length %}
+{% set _known = scan_rows|selectattr('ip', 'in', known_ips)|list|length %}
+
+{# ───── Merged hero: title + actions + KPI strip + integrated router picker ───── #}
+{% call hub.megahero(
   "مسح الشبكة",
-  subtitle="اكتشف الأجهزة داخل شبكة الراوتر المختار. لا نرسل أي حزم استكشاف "
-           "نشطة — فقط نقرأ من جداول الراوتر الموجودة (ARP / DHCP / Neighbors).",
-  icon="radar"
-) }}
-
-{# ── Router picker ── #}
-<form method="post" action="{{ url_for('radius.network_ip_scan_page') }}"
-      style="background:#fff;border:1px solid #E5E7EB;border-radius:14px;padding:18px 22px;margin:18px 0">
+  subtitle="اكتشف الأجهزة داخل شبكة الراوتر المختار. لا نرسل أي حزم استكشاف نشطة — فقط نقرأ من جداول الراوتر الموجودة (ARP / DHCP / Neighbors).",
+  icon="radar",
+  actions_html='
+    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.network_devices_list') + '">
+      <i class="fa-solid fa-eye"></i> سجلّ الأجهزة
+    </a>',
+  kpis=[
+    {'label': 'أجهزة مكتشَفة', 'value': _total,          'icon': 'network-wired', 'variant': 'brand'},
+    {'label': 'مُسجَّلة',       'value': _known,          'icon': 'circle-check',  'variant': 'green'},
+    {'label': 'جديدة',         'value': _total - _known, 'icon': 'circle-plus',   'variant': 'amber'},
+  ],
+  search_action=url_for('radius.network_ip_scan_page'),
+  search_method="post"
+) %}
   {{ csrf_token_input() | safe }}
-  <div style="display:flex;align-items:end;gap:14px;flex-wrap:wrap">
-    <div style="flex:1;min-width:280px">
-      <label for="router_id" style="display:block;font-weight:700;font-size:13px;color:#374151;margin-bottom:6px">
-        اختر الراوتر
-      </label>
-      <select name="router_id" id="router_id" required
-              style="width:100%;padding:9px 12px;border:1px solid #D1D5DB;border-radius:8px;font-size:13px">
-        <option value="">-- اختر -- </option>
-        {% for r in routers %}
-          <option value="{{ r.id }}"
-                  {% if selected_router_id == r.id %}selected{% endif %}>
-            {{ r.name }} ({{ r.address }})
-          </option>
-        {% endfor %}
-      </select>
-    </div>
-    <button type="submit" class="hub-btn hub-btn--primary">
-      <i class="fa-solid fa-radar"></i> ابدأ المسح
-    </button>
-  </div>
-</form>
+  <select class="hub-input grow" name="router_id" id="router_id" required>
+    <option value="">-- اختر الراوتر --</option>
+    {% for r in routers %}
+      <option value="{{ r.id }}"
+              {% if selected_router_id == r.id %}selected{% endif %}>
+        {{ r.name }} ({{ r.address }})
+      </option>
+    {% endfor %}
+  </select>
+  {{ hub.btn("ابدأ المسح", icon="radar", variant="primary", type="submit", size="sm") }}
+{% endcall %}
 
 {% if scan_error %}
-<div style="padding:12px 18px;background:#FEE2E2;border:1px solid #FCA5A5;border-radius:10px;color:#991B1B;font-size:13px;margin-bottom:18px">
-  <i class="fa-solid fa-circle-xmark"></i> تعذّر إجراء المسح:
-  <code dir="ltr">{{ scan_error }}</code>
+<div class="uds-modal-warn" style="margin-bottom:18px">
+  <i class="fa-solid fa-circle-xmark"></i>
+  <span>تعذّر إجراء المسح: <code dir="ltr">{{ scan_error }}</code></span>
 </div>
 {% endif %}
 
 {% if selected_router_id and not scan_error %}
 
-{# ── Results ── #}
-<section style="background:#fff;border:1px solid #E5E7EB;border-radius:14px;padding:0;overflow:hidden">
-  <header style="padding:14px 22px;border-bottom:1px solid #F3F4F6;display:flex;align-items:center;justify-content:space-between">
-    <h3 style="margin:0;color:#0F172A;font-size:14.5px;font-weight:800">
-      <i class="fa-solid fa-table-list"></i>
-      نتائج المسح — {{ scan_rows|length }} جهاز على «{{ selected_router_name }}»
-    </h3>
-    <a href="{{ url_for('radius.network_devices_list') }}"
-       class="hub-btn hub-btn--ghost" style="font-size:11.5px;padding:5px 12px">
-      <i class="fa-solid fa-eye"></i> سجلّ الأجهزة
-    </a>
-  </header>
-
-  {% if not scan_rows %}
-  <div style="padding:42px 24px;text-align:center;color:#64748B;font-size:13px">
-    <i class="fa-solid fa-circle-info" style="font-size:28px;color:#CBD5E1;display:block;margin-bottom:10px"></i>
-    لا توجد أجهزة مرئيّة على الراوتر حالياً.
-  </div>
-  {% else %}
-  <table class="hub-table hr-data-table">
-    <thead>
-      <tr>
-        <th>IP</th>
-        <th>MAC</th>
-        <th>الاسم</th>
-        <th>الواجهة</th>
-        <th>المصدر</th>
-        <th>الحالة</th>
-        <th style="width:140px">إجراء</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for row in scan_rows %}
-      <tr>
-        <td><code dir="ltr" style="font-size:13px">{{ row.ip }}</code></td>
-        <td><code dir="ltr" style="font-size:12px;color:#475569">{{ row.mac or '—' }}</code></td>
-        <td>
-          {{ row.hostname or '—' }}
-          {% if row.vendor %}
-            <span style="display:block;color:#94A3B8;font-size:11px">{{ row.vendor }}</span>
-          {% endif %}
-        </td>
-        <td><code style="font-size:12px;color:#475569">{{ row.interface or '—' }}</code></td>
-        <td>
-          {% for s in row.sources %}
-            <span class="hr-chip"
-                  style="display:inline-block;padding:1px 8px;border-radius:999px;font-size:10.5px;font-weight:700;background:#EEF2FF;color:#4338CA;margin-inline-end:2px">
-              {{ s }}
-            </span>
+{# ───── Main (carded table) + help panel on the LEFT ───── #}
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "كيف تقرأ هذه الصفحة؟",
+  intro="نقرأ الأجهزة الظاهرة على الراوتر المختار من جداوله الحاليّة فقط — قراءة سلبيّة بلا أي مسح نشط للشبكة.",
+  icon="radar",
+  items=[
+    {'icon': 'network-wired', 'text': 'كل صف هو جهاز رآه الراوتر عبر ARP أو DHCP أو الجيران (Neighbors).'},
+    {'icon': 'circle-check',  'text': '«مُسجَّل» يعني أن عنوان IP موجود مسبقاً في سجلّ أجهزة الشبكة.'},
+    {'icon': 'circle-plus',   'text': '«أضف للمتابعة» يُنشئ الجهاز في السجلّ مع تفعيل المراقبة مباشرةً.'},
+    {'icon': 'tag',           'text': 'يُستخدم اسم المضيف (إن وُجد) كاسم مبدئي — يمكنك تعديله لاحقاً.'},
+  ],
+  note="هذه الصفحة لا تُعدِّل الراوتر — لا تُرسل حزم استكشاف ولا تُغيِّر أي إعداد."
+)) %}
+  {% call hub.section("نتائج المسح على «" + selected_router_name + "»", icon="table-list", meta=scan_rows|length|string + " جهاز", flush=True) %}
+    {% if not scan_rows %}
+      {{ hub.empty(
+        "لا أجهزة مرئيّة",
+        sub="لا توجد أجهزة ظاهرة على هذا الراوتر حالياً.",
+        icon="network-wired"
+      ) }}
+    {% else %}
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25" style="border:none;border-radius:0">
+      <table class="hub-table">
+        <thead>
+          <tr>
+            <th>IP</th>
+            <th>MAC</th>
+            <th>الاسم</th>
+            <th>الواجهة</th>
+            <th data-uds-nosort>المصدر</th>
+            <th>الحالة</th>
+            <th style="width:140px" data-uds-nosort data-uds-nocol>إجراء</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in scan_rows %}
+          <tr>
+            <td class="mono" dir="ltr" style="white-space:nowrap">{{ row.ip }}</td>
+            <td class="mono small" dir="ltr" style="white-space:nowrap;color:#475569">{{ row.mac or '—' }}</td>
+            <td>
+              {{ row.hostname or '—' }}
+              {% if row.vendor %}
+                <span style="display:block;color:#94A3B8;font-size:11px">{{ row.vendor }}</span>
+              {% endif %}
+            </td>
+            <td class="mono small" style="color:#475569">{{ row.interface or '—' }}</td>
+            <td>
+              {% for s in row.sources %}
+                {{ hub.pill(s, variant="brand", dot=False) }}
+              {% endfor %}
+            </td>
+            <td>
+              {% if row.ip in known_ips %}
+                {{ hub.pill("مُسجَّل", variant="green") }}
+              {% else %}
+                <span class="hub-text-mute" style="font-size:12px">جديد</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if row.ip not in known_ips %}
+              <form method="post" action="{{ url_for('radius.network_ip_scan_add') }}"
+                    style="margin:0">
+                {{ csrf_token_input() | safe }}
+                <input type="hidden" name="router_id" value="{{ selected_router_id }}">
+                <input type="hidden" name="ip"        value="{{ row.ip }}">
+                <input type="hidden" name="mac"       value="{{ row.mac }}">
+                <input type="hidden" name="hostname"  value="{{ row.hostname }}">
+                <button type="submit" class="hub-btn hub-btn--ghost hub-btn--sm"
+                        title="أضف هذا الجهاز إلى السجلّ مع تفعيل المراقبة">
+                  <i class="fa-solid fa-plus"></i> أضف للمتابعة
+                </button>
+              </form>
+              {% else %}
+              <span class="hub-text-mute">—</span>
+              {% endif %}
+            </td>
+          </tr>
           {% endfor %}
-        </td>
-        <td>
-          {% if row.ip in known_ips %}
-            <span class="hr-chip" style="background:#DCFCE7;color:#166534;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700">
-              <i class="fa-solid fa-circle-check"></i> مُسجَّل
-            </span>
-          {% else %}
-            <span style="color:#94A3B8;font-size:12px">جديد</span>
-          {% endif %}
-        </td>
-        <td>
-          {% if row.ip not in known_ips %}
-          <form method="post" action="{{ url_for('radius.network_ip_scan_add') }}"
-                style="margin:0">
-            {{ csrf_token_input() | safe }}
-            <input type="hidden" name="router_id" value="{{ selected_router_id }}">
-            <input type="hidden" name="ip"        value="{{ row.ip }}">
-            <input type="hidden" name="mac"       value="{{ row.mac }}">
-            <input type="hidden" name="hostname"  value="{{ row.hostname }}">
-            <button type="submit" class="hub-btn hub-btn--ghost"
-                    style="font-size:11.5px;padding:4px 12px"
-                    title="أضف هذا الجهاز إلى السجلّ مع تفعيل المراقبة">
-              <i class="fa-solid fa-plus"></i> أضف للمتابعة
-            </button>
-          </form>
-          {% else %}
-          <span style="color:#94A3B8;font-size:11.5px">—</span>
-          {% endif %}
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-  {% endif %}
-</section>
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  {% endcall %}
+{% endcall %}
 
-{% else %}
-<div style="padding:42px 24px;text-align:center;color:#64748B;font-size:13px;background:#F8FAFC;border:1px dashed #CBD5E1;border-radius:14px">
-  اختر راوترًا واضغط «ابدأ المسح» لرؤية الأجهزة في شبكته.
-</div>
+{% elif not scan_error %}
+{{ hub.empty(
+  "اختر راوترًا لبدء المسح",
+  sub="اختر راوترًا من الأعلى واضغط «ابدأ المسح» لرؤية الأجهزة في شبكته.",
+  icon="radar"
+) }}
 {% endif %}
 
-</div>
 {% endblock %}

@@ -1,4 +1,13 @@
+{# Network topology map — UNIFIED DESIGN SYSTEM.
+   Same backend data: server, routers, total_count, filtered_count, show, q,
+   health, health_states. Zero route/behaviour change.
+   Merged hero (header + KPI strip + integrated filter form), help panel on
+   the LEFT, server node + router grid inside hub.section cards.
+   ALL data-mt-topology-* hooks, links and field names preserved verbatim.
+   The router-card grid (opsx-router*) is the topology visualization and is
+   kept unchanged — it depends on radius_ops_redesign.css (retained). #}
 {% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
 
 {% block title %}خريطة الشبكة{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-diagram-project"></i>{% endblock %}
@@ -6,152 +15,143 @@
 {% block page_sub %}<span class="sub">خادم الربط، الراوترات، وحالة الاتصال والصحة من قاعدة البيانات</span>{% endblock %}
 
 {% block head_extra %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/mt_dashboard.css') }}">
+{# Retained: router-card grid + health-bar visualization depend on these. #}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/radius_ops_redesign.css') }}?v=20260528a">
 {% endblock %}
 
 {% block content %}
 {% include "radius/network_ops_nav.html" %}
-<section class="opsx" data-mt-topology-page>
-  <header class="opsx-hero">
-    <div>
-      <h2>خريطة الشبكة</h2>
-      <p>عرض تشغيلي لخادم الربط والراوترات المرتبطة به، مع فلترة حسب الاتصال والصحة وطريقة الربط. كل بطاقة تفتح لوحة الراوتر مباشرة.</p>
-    </div>
-    <span class="opsx-hero-icon"><i class="fa-solid fa-network-wired"></i></span>
-  </header>
 
-  <div class="opsx-layout">
-    <aside class="opsx-guide" aria-label="شرح خريطة الشبكة">
-      <div class="opsx-guide-title"><i class="fa-solid fa-route"></i> قراءة الخريطة</div>
-      <p>الخريطة لا تتصل بالراوترات مباشرة؛ هي تقرأ آخر snapshot وصحة الراوتر حتى تبقى سريعة وآمنة.</p>
-      <ul class="opsx-guide-list">
-        <li><i class="fa-solid fa-server"></i><span>خادم الربط هو مركز الشبكة ومرجع كل علاقة.</span></li>
-        <li><i class="fa-solid fa-shield-halved"></i><span>نفق الإدارة يعني أن الراوتر يدار عبر اتصال مشفّر.</span></li>
-        <li><i class="fa-solid fa-gauge-high"></i><span>خط الصحة داخل البطاقة يمثل تقييم سلامة الراوتر.</span></li>
-      </ul>
-    </aside>
+<section data-mt-topology-page>
 
-    <main class="opsx-main">
-      <section class="opsx-stats">
-        <div class="opsx-stat"><span>كل الراوترات</span><strong data-mt-topology-total-count>{{ total_count }}</strong></div>
-        <div class="opsx-stat opsx-stat--ok"><span>المعروض</span><strong data-mt-topology-filtered-count>{{ filtered_count }}</strong></div>
-        <div class="opsx-stat"><span>طريقة العرض</span><strong style="font-size:18px">{{ show }}</strong></div>
-        <div class="opsx-stat"><span>الصحة</span><strong style="font-size:18px">{{ health }}</strong></div>
-      </section>
+{# ───── Merged hero: title + KPI strip + integrated filter form ───── #}
+{% call hub.megahero(
+  "خريطة الشبكة",
+  subtitle="عرض تشغيلي لخادم الربط والراوترات المرتبطة به، مع فلترة حسب الاتصال والصحة وطريقة الربط. كل بطاقة تفتح لوحة الراوتر مباشرة.",
+  icon="network-wired",
+  search_action=url_for('radius.mt_topology'),
+  search_method="get",
+  kpis=[
+    {'label': 'كل الراوترات', 'value': total_count,    'icon': 'server',      'variant': 'brand'},
+    {'label': 'المعروض',      'value': filtered_count,  'icon': 'eye',         'variant': 'green'},
+    {'label': 'طريقة العرض',  'value': show,            'icon': 'sliders',     'variant': 'brand'},
+    {'label': 'الصحة',        'value': health,          'icon': 'gauge-high',  'variant': 'brand'},
+  ]
+) %}
+  <span class="hub-field" style="display:flex;flex-direction:column;gap:4px">
+    <span class="hub-field-label" style="font-size:11px">عرض</span>
+    <select class="hub-input" name="show" data-mt-topology-show>
+      <option value="all" {% if show == 'all' %}selected{% endif %}>الكل</option>
+      <option value="offline" {% if show == 'offline' %}selected{% endif %}>غير المتصلين فقط</option>
+      <option value="warnings" {% if show == 'warnings' %}selected{% endif %}>تحتاج انتباه</option>
+      <option value="vpn" {% if show == 'vpn' %}selected{% endif %}>نفق الإدارة فقط</option>
+    </select>
+  </span>
+  <span class="hub-field" style="display:flex;flex-direction:column;gap:4px">
+    <span class="hub-field-label" style="font-size:11px">الصحة</span>
+    <select class="hub-input" name="health" data-mt-topology-health>
+      <option value="all" {% if health == 'all' %}selected{% endif %}>الكل</option>
+      <option value="healthy" {% if health == 'healthy' %}selected{% endif %}>سليم</option>
+      <option value="attention" {% if health == 'attention' %}selected{% endif %}>يحتاج انتباه</option>
+      <option value="risky" {% if health == 'risky' %}selected{% endif %}>خطر</option>
+      <option value="offline" {% if health == 'offline' %}selected{% endif %}>غير متصل</option>
+      <option value="unknown" {% if health == 'unknown' %}selected{% endif %}>غير معروف</option>
+    </select>
+  </span>
+  <input class="hub-input grow" type="text" name="q" value="{{ q }}"
+         placeholder="اسم الراوتر أو العنوان" data-mt-topology-search>
+  {{ hub.btn("تطبيق", icon="magnifying-glass", variant="primary", type="submit", size="sm",
+             attrs='data-mt-topology-submit') }}
+  {{ hub.btn("إعادة ضبط", href=url_for('radius.mt_topology'), icon="rotate-left",
+             variant="secondary", size="sm", attrs='data-mt-topology-clear') }}
+{% endcall %}
 
-      <section class="opsx-panel">
-        <header class="opsx-panel-head">
-          <div class="opsx-panel-title"><i class="fa-solid fa-sliders"></i> فلاتر الخريطة</div>
-        </header>
-        <div class="opsx-panel-body">
-          <form method="get" class="opsx-filter" data-mt-topology-filters>
-            <label class="opsx-field">
-              <span>عرض</span>
-              <select name="show" data-mt-topology-show>
-                <option value="all" {% if show == 'all' %}selected{% endif %}>الكل</option>
-                <option value="offline" {% if show == 'offline' %}selected{% endif %}>غير المتصلين فقط</option>
-                <option value="warnings" {% if show == 'warnings' %}selected{% endif %}>تحتاج انتباه</option>
-                <option value="vpn" {% if show == 'vpn' %}selected{% endif %}>نفق الإدارة فقط</option>
-              </select>
-            </label>
-            <label class="opsx-field">
-              <span>الصحة</span>
-              <select name="health" data-mt-topology-health>
-                <option value="all" {% if health == 'all' %}selected{% endif %}>الكل</option>
-                <option value="healthy" {% if health == 'healthy' %}selected{% endif %}>سليم</option>
-                <option value="attention" {% if health == 'attention' %}selected{% endif %}>يحتاج انتباه</option>
-                <option value="risky" {% if health == 'risky' %}selected{% endif %}>خطر</option>
-                <option value="offline" {% if health == 'offline' %}selected{% endif %}>غير متصل</option>
-                <option value="unknown" {% if health == 'unknown' %}selected{% endif %}>غير معروف</option>
-              </select>
-            </label>
-            <label class="opsx-field">
-              <span>بحث</span>
-              <input type="text" name="q" value="{{ q }}" placeholder="اسم الراوتر أو العنوان" data-mt-topology-search>
-            </label>
-            <div class="opsx-actions">
-              <button type="submit" class="opsx-btn opsx-btn--primary" data-mt-topology-submit>
-                <i class="fa-solid fa-magnifying-glass"></i> تطبيق
-              </button>
-              <a class="opsx-btn" href="{{ url_for('radius.mt_topology') }}" data-mt-topology-clear>
-                <i class="fa-solid fa-rotate-left"></i> إعادة ضبط
-              </a>
-            </div>
-          </form>
+{# ───── Main column + help panel on the LEFT ───── #}
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "قراءة الخريطة",
+  intro="الخريطة لا تتصل بالراوترات مباشرة؛ هي تقرأ آخر snapshot وصحة الراوتر حتى تبقى سريعة وآمنة.",
+  icon="route",
+  items=[
+    {'icon': 'server',          'text': 'خادم الربط هو مركز الشبكة ومرجع كل علاقة.'},
+    {'icon': 'shield-halved',   'text': 'نفق الإدارة يعني أن الراوتر يدار عبر اتصال مشفّر.'},
+    {'icon': 'gauge-high',      'text': 'خط الصحة داخل البطاقة يمثل تقييم سلامة الراوتر.'},
+  ]
+)) %}
+
+  {# ── Server node: the heart of the network ── #}
+  {% call hub.section("خادم الربط", icon="server") %}
+    <div class="opsx-router opsx-router--server" data-mt-topology-server>
+      <div class="opsx-router-top">
+        <span class="opsx-router-icon"><i class="fa-solid fa-server"></i></span>
+        <div>
+          <span class="opsx-router-name">{{ server.label }}</span>
+          <span class="opsx-router-sub">قلب الشبكة - خادم الربط</span>
         </div>
-      </section>
+      </div>
+      <div class="opsx-router-line"><span style="--score:100%"></span></div>
+    </div>
+  {% endcall %}
 
-      <section class="opsx-panel">
-        <header class="opsx-panel-head">
-          <div class="opsx-panel-title"><i class="fa-solid fa-server"></i> العقد النشطة</div>
-          <span class="opsx-chip opsx-chip--blue">{{ filtered_count }} / {{ total_count }}</span>
-        </header>
-        <div class="opsx-panel-body">
-          <div class="opsx-router opsx-router--server" data-mt-topology-server style="margin-bottom:13px">
-            <div class="opsx-router-top">
-              <span class="opsx-router-icon"><i class="fa-solid fa-server"></i></span>
-              <div>
-                <span class="opsx-router-name">{{ server.label }}</span>
-                <span class="opsx-router-sub">قلب الشبكة - خادم الربط</span>
-              </div>
-            </div>
-            <div class="opsx-router-line"><span style="--score:100%"></span></div>
+  {# ── Active nodes: the router-card grid (topology visualization, unchanged) ── #}
+  {% call hub.section("العقد النشطة", icon="diagram-project",
+                      meta=filtered_count ~ ' / ' ~ total_count) %}
+    {% if not routers %}
+    {{ hub.empty(
+      "لا يوجد راوتر يطابق هذه الفلاتر.",
+      sub="جرّب تغيير الفلاتر أو إعادة الضبط.",
+      icon="router"
+    ) }}
+    <span hidden data-mt-topology-empty></span>
+    {% else %}
+    <div class="opsx-router-grid" data-mt-topology-routers>
+      {% for r in routers %}
+      <a class="opsx-router"
+         href="{{ url_for('radius.mt_dashboard', nas_id=r.id) }}"
+         data-mt-topology-node="{{ r.id }}"
+         data-mt-topology-status="{{ r.status }}"
+         data-mt-topology-mode="{{ r.connection_mode }}"
+         data-mt-topology-health="{{ r.health_state or 'unknown' }}"
+         data-mt-topology-health-score="{{ r.health_score }}">
+        <div class="opsx-router-top">
+          <span class="opsx-router-icon">
+            {% if r.connection_mode == 'vpn' %}
+            <i class="fa-solid fa-shield-halved"></i>
+            {% else %}
+            <i class="fa-solid fa-router"></i>
+            {% endif %}
+          </span>
+          <div>
+            <span class="opsx-router-name">{{ r.label }}</span>
+            <span class="opsx-router-sub" style="font-family:var(--hub-mono,ui-monospace,monospace);white-space:nowrap;direction:ltr;unicode-bidi:plaintext">{% if r.address %}{{ r.address }}{% else %}بدون عنوان{% endif %}</span>
           </div>
-
-          {% if not routers %}
-          <p class="opsx-empty" data-mt-topology-empty>لا يوجد راوتر يطابق هذه الفلاتر.</p>
+        </div>
+        <div class="opsx-row-meta">
+          {% if r.status == 'online' %}
+          <span class="opsx-chip opsx-chip--ok">متصل</span>
+          {% elif r.status == 'offline' %}
+          <span class="opsx-chip opsx-chip--bad">غير متصل</span>
+          {% elif r.status == 'disabled' %}
+          <span class="opsx-chip">معطل</span>
           {% else %}
-          <div class="opsx-router-grid" data-mt-topology-routers>
-            {% for r in routers %}
-            <a class="opsx-router"
-               href="{{ url_for('radius.mt_dashboard', nas_id=r.id) }}"
-               data-mt-topology-node="{{ r.id }}"
-               data-mt-topology-status="{{ r.status }}"
-               data-mt-topology-mode="{{ r.connection_mode }}"
-               data-mt-topology-health="{{ r.health_state or 'unknown' }}"
-               data-mt-topology-health-score="{{ r.health_score }}">
-              <div class="opsx-router-top">
-                <span class="opsx-router-icon">
-                  {% if r.connection_mode == 'vpn' %}
-                  <i class="fa-solid fa-shield-halved"></i>
-                  {% else %}
-                  <i class="fa-solid fa-router"></i>
-                  {% endif %}
-                </span>
-                <div>
-                  <span class="opsx-router-name">{{ r.label }}</span>
-                  <span class="opsx-router-sub">{% if r.address %}{{ r.address }}{% else %}بدون عنوان{% endif %}</span>
-                </div>
-              </div>
-              <div class="opsx-row-meta">
-                {% if r.status == 'online' %}
-                <span class="opsx-chip opsx-chip--ok">متصل</span>
-                {% elif r.status == 'offline' %}
-                <span class="opsx-chip opsx-chip--bad">غير متصل</span>
-                {% elif r.status == 'disabled' %}
-                <span class="opsx-chip">معطل</span>
-                {% else %}
-                <span class="opsx-chip opsx-chip--warn">غير معروف</span>
-                {% endif %}
-                {% if r.connection_mode == 'vpn' %}
-                <span class="opsx-chip opsx-chip--blue">نفق الإدارة</span>
-                {% elif r.connection_mode == 'direct' %}
-                <span class="opsx-chip">مباشر</span>
-                {% endif %}
-                {% if r.health_state %}
-                <span class="opsx-chip {% if r.health_state == 'healthy' %}opsx-chip--ok{% elif r.health_state in ['risky','offline'] %}opsx-chip--bad{% else %}opsx-chip--warn{% endif %}"
-                      data-mt-topology-health-chip>{{ r.health_state }}</span>
-                {% endif %}
-              </div>
-              <div class="opsx-router-line"><span style="--score:{{ r.health_score or 0 }}%"></span></div>
-            </a>
-            {% endfor %}
-          </div>
+          <span class="opsx-chip opsx-chip--warn">غير معروف</span>
+          {% endif %}
+          {% if r.connection_mode == 'vpn' %}
+          <span class="opsx-chip opsx-chip--blue">نفق الإدارة</span>
+          {% elif r.connection_mode == 'direct' %}
+          <span class="opsx-chip">مباشر</span>
+          {% endif %}
+          {% if r.health_state %}
+          <span class="opsx-chip {% if r.health_state == 'healthy' %}opsx-chip--ok{% elif r.health_state in ['risky','offline'] %}opsx-chip--bad{% else %}opsx-chip--warn{% endif %}"
+                data-mt-topology-health-chip>{{ r.health_state }}</span>
           {% endif %}
         </div>
-      </section>
-    </main>
-  </div>
+        <div class="opsx-router-line"><span style="--score:{{ r.health_score or 0 }}%"></span></div>
+      </a>
+      {% endfor %}
+    </div>
+    {% endif %}
+  {% endcall %}
+
+{% endcall %}
 </section>
 {% endblock %}

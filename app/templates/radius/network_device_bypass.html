@@ -1,159 +1,215 @@
-{# Device Bypass form — Sprint 3. #}
+{# Device Bypass form — Sprint 3.
+   UNIFIED DESIGN SYSTEM: one full-width hub.megahero (title + subtitle +
+   icon + device-state KPIs + back/edit actions) replaces the stacked
+   page-head + bespoke summary hero. hub.worklayout puts a hub.helppanel
+   on the LEFT; the apply + cleanup forms live in hub.section cards. The
+   two on/off checkboxes render as the canonical toggle_switch (same field
+   `name=` → identical POST body). Both forms + confirm() are unchanged.
+   Zero route/behaviour change. #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
+{% from "_partials/toggle_switch.html" import toggle_switch %}
 
 {% block title %}تجهيز جهاز للإدارة{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-link"></i>{% endblock %}
 {% block page_title %}تجهيز «{{ device.name }}» للإدارة{% endblock %}
 {% block page_sub %}
-  <span class="sub">
-    <a href="{{ url_for('radius.network_devices_list') }}"
-       style="color:#6D28D9;text-decoration:none">
-      <i class="fa-solid fa-arrow-right"></i> العودة للقائمة
-    </a>
-  </span>
+  <span class="sub">{{ device.device_type }}</span>
 {% endblock %}
 
 {% block content %}
-<div class="hr-page-shell" data-admin-rhythm>
 
-{{ hub.hero(
-  "تجهيز جهاز للإدارة",
+{% set _ready = device.mac_address and device.ip_address %}
+
+{# ───── Merged hero: title + subtitle + icon + device-state KPIs + actions ───── #}
+{% set _actions %}
+  <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.network_devices_list') }}">
+    <i class="fa-solid fa-arrow-right"></i> العودة للقائمة
+  </a>
+  <a class="hub-btn hub-btn--ghost" href="{{ url_for('radius.network_devices_edit', device_id=device.id) }}">
+    <i class="fa-solid fa-pen"></i> تعديل الجهاز
+  </a>
+{% endset %}
+{{ hub.megahero(
+  "تجهيز «" ~ device.name ~ "» للإدارة",
   subtitle="يضيف الجهاز إلى الراوتر بـ DHCP lease ثابت + IP binding "
            "(يتخطّى الـ hotspot) + يدرجه في قائمة عناوين موحّدة. "
            "كل سطر يحمل علامة HOBE_DEVICE_BYPASS:" ~ device.id ~ ": ليُحذف بأمان عند الحاجة.",
-  icon="link"
+  icon="link",
+  actions_html=_actions,
+  kpis=[
+    {'label': 'النوع',   'value': device.device_type,                      'icon': 'wifi',         'variant': 'brand'},
+    {'label': 'MAC',     'value': device.mac_address or '—',               'icon': 'ethernet',     'variant': ('green' if device.mac_address else 'amber')},
+    {'label': 'IP',      'value': device.ip_address or '—',                'icon': 'network-wired', 'variant': ('green' if device.ip_address else 'amber')},
+    {'label': 'الراوتر', 'value': nas.name,                                'icon': 'server',       'variant': 'brand'},
+    {'label': 'الجاهزية','value': ('جاهز' if _ready else 'ناقص'),          'icon': ('circle-check' if _ready else 'triangle-exclamation'), 'variant': ('green' if _ready else 'amber')},
+  ]
 ) }}
 
-{# ── Device summary ── #}
-<section style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:14px;padding:16px 22px;margin:18px 0">
-  <h3 style="margin:0 0 8px;color:#0F172A;font-size:14px;font-weight:800">
-    <i class="fa-solid fa-wifi" style="color:#6D28D9"></i> بيانات الجهاز
-  </h3>
-  <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;font-size:12.5px">
-    <div><strong>الاسم:</strong> {{ device.name }}</div>
-    <div><strong>النوع:</strong> {{ device.device_type }}</div>
-    <div><strong>IP:</strong> <code dir="ltr">{{ device.ip_address or '— غير محدّد' }}</code></div>
-    <div><strong>MAC:</strong> <code dir="ltr">{{ device.mac_address or '— غير محدّد' }}</code></div>
-    <div><strong>الراوتر:</strong> {{ nas.name }} (<code dir="ltr">{{ nas.address }}</code>)</div>
-  </div>
-  {% if not device.mac_address or not device.ip_address %}
-  <div style="margin-top:12px;padding:10px 14px;background:#FEF3C7;border:1px solid #FCD34D;border-radius:8px;color:#92400E;font-size:12px">
-    <i class="fa-solid fa-triangle-exclamation"></i>
-    لا يمكن المتابعة — الجهاز يحتاج MAC + IP محفوظَين.
-    <a href="{{ url_for('radius.network_devices_edit', device_id=device.id) }}"
-       style="color:#92400E;text-decoration:underline;font-weight:700">
-      أضفها الآن →
-    </a>
-  </div>
-  {% endif %}
-</section>
+{# ───── Main (form cards) + help panel on the LEFT ───── #}
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "كيف يعمل التجهيز؟",
+  intro="يجهّز الجهاز للإدارة المباشرة عبر الراوتر، ويترك أثرًا قابلًا للحذف بأمان.",
+  icon="link",
+  items=[
+    {'icon': 'ethernet',   'text': 'DHCP lease ثابت يربط الـ MAC بالـ IP فلا يتغيّر العنوان.'},
+    {'icon': 'door-open',  'text': 'تخطّي بوابة الدخول يجعل الجهاز متاحًا بلا شاشة تسجيل دخول.'},
+    {'icon': 'list',       'text': 'قائمة العناوين الموحّدة تتيح تطبيق سياسات على كل أجهزة الإدارة دفعة واحدة.'},
+    {'icon': 'eraser',     'text': 'الإزالة تحذف فقط السطور المعلّمة — لا تلمس أي إعداد يدوي.'},
+  ],
+  note="كل سطر يُضاف يحمل علامة HOBE_DEVICE_BYPASS:" ~ device.id ~ ": ليُحذف بأمان عند الحاجة."
+)) %}
 
-{% if device.mac_address and device.ip_address %}
-
-{# ── Apply form ── #}
-<form method="post"
-      action="{{ url_for('radius.network_device_bypass_apply', device_id=device.id) }}"
-      class="hr-form-card"
-      style="background:#fff;border:1px solid #E5E7EB;border-radius:14px;padding:24px">
-  {{ csrf_token_input() | safe }}
-
-  <h3 style="margin:0 0 16px;color:#0F172A;font-size:15px;font-weight:800">
-    <i class="fa-solid fa-cog"></i> خيارات التجهيز
-  </h3>
-
-  {% if dhcp_error %}
-  <div style="padding:10px 14px;background:#FEE2E2;border:1px solid #FCA5A5;border-radius:8px;color:#991B1B;font-size:12.5px;margin-bottom:14px">
-    <i class="fa-solid fa-circle-xmark"></i> تعذّر قراءة قائمة DHCP servers من الراوتر:
-    <code dir="ltr">{{ dhcp_error }}</code>
-  </div>
-  {% endif %}
-
-  <div style="display:grid;grid-template-columns:1fr;gap:16px;max-width:560px">
-
-    {# DHCP server selector #}
-    <div class="hr-field">
-      <label for="dhcp_server_name" style="display:block;font-weight:700;font-size:13px;color:#374151;margin-bottom:6px">
-        DHCP Server <span style="color:#DC2626">*</span>
-      </label>
-      <select name="dhcp_server_name" id="dhcp_server_name" required
-              style="width:100%;padding:9px 12px;border:1px solid #D1D5DB;border-radius:8px;font-size:13px;font-family:monospace">
-        <option value="">-- اختر -- </option>
-        {% for s in dhcp_servers %}
-          <option value="{{ s.name }}" {% if s.disabled %}disabled{% endif %}>
-            {{ s.name }}
-            {% if s.interface %} (interface: {{ s.interface }}){% endif %}
-            {% if s.disabled %} — معطّل{% endif %}
-          </option>
-        {% endfor %}
-      </select>
-      <small style="color:#6B7280;font-size:11.5px;display:block;margin-top:4px">
-        الـ static lease يُضاف على هذا الـ DHCP server. اختر اللي يخدم شبكة الجهاز.
-      </small>
+  {# ── Device summary ── #}
+  {% call hub.section("بيانات الجهاز", icon="wifi") %}
+    <div class="ndb-summary-grid">
+      <div><strong>الاسم:</strong> {{ device.name }}</div>
+      <div><strong>النوع:</strong> {{ device.device_type }}</div>
+      <div><strong>IP:</strong> <code class="ndb-mono" dir="ltr">{{ device.ip_address or '— غير محدّد' }}</code></div>
+      <div><strong>MAC:</strong> <code class="ndb-mono" dir="ltr">{{ device.mac_address or '— غير محدّد' }}</code></div>
+      <div><strong>الراوتر:</strong> {{ nas.name }} (<code class="ndb-mono" dir="ltr">{{ nas.address }}</code>)</div>
     </div>
+    {% if not _ready %}
+    <div class="ndb-warn ndb-warn--amber" style="margin-top:12px">
+      <i class="fa-solid fa-triangle-exclamation"></i>
+      <span>
+        لا يمكن المتابعة — الجهاز يحتاج MAC + IP محفوظَين.
+        <a href="{{ url_for('radius.network_devices_edit', device_id=device.id) }}"
+           class="ndb-warn-link">أضفها الآن →</a>
+      </span>
+    </div>
+    {% endif %}
+  {% endcall %}
 
-    {# Toggles #}
-    <div class="hr-field">
-      <div style="padding:14px 16px;background:#F9FAFB;border-radius:10px;border:1px solid #E5E7EB;display:flex;flex-direction:column;gap:12px">
-        <label style="display:inline-flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;font-weight:700;color:#374151">
-          <input type="checkbox" name="bypass_hotspot" value="1" checked
-                 style="width:18px;height:18px">
-          <span>
+  {% if _ready %}
+
+  {# ── Apply form ── #}
+  <form method="post"
+        action="{{ url_for('radius.network_device_bypass_apply', device_id=device.id) }}"
+        class="hr-form-card">
+    {{ csrf_token_input() | safe }}
+
+    {% call hub.section("خيارات التجهيز", icon="gear") %}
+
+      {% if dhcp_error %}
+      <div class="ndb-warn ndb-warn--red" style="margin-bottom:14px">
+        <i class="fa-solid fa-circle-xmark"></i>
+        <span>تعذّر قراءة قائمة DHCP servers من الراوتر:
+          <code class="ndb-mono" dir="ltr">{{ dhcp_error }}</code></span>
+      </div>
+      {% endif %}
+
+      {# DHCP server selector #}
+      <div class="hub-field" style="max-width:560px">
+        <label class="hub-field-label" for="dhcp_server_name">
+          DHCP Server <span style="color:var(--hub-danger, #DC2626)">*</span>
+        </label>
+        <select class="hub-input ndb-mono" name="dhcp_server_name" id="dhcp_server_name" required>
+          <option value="">-- اختر -- </option>
+          {% for s in dhcp_servers %}
+            <option value="{{ s.name }}" {% if s.disabled %}disabled{% endif %}>
+              {{ s.name }}
+              {% if s.interface %} (interface: {{ s.interface }}){% endif %}
+              {% if s.disabled %} — معطّل{% endif %}
+            </option>
+          {% endfor %}
+        </select>
+        <span class="hub-field-hint">
+          الـ static lease يُضاف على هذا الـ DHCP server. اختر اللي يخدم شبكة الجهاز.
+        </span>
+      </div>
+
+      {# Toggles #}
+      <div class="uds-toggle-row">
+        <div class="uds-toggle-row-text">
+          <span class="uds-toggle-row-label">
             <i class="fa-solid fa-circle-check" style="color:#10B981"></i>
             تخطّي صفحة بوابة الدخول (ربط العنوان)
           </span>
-        </label>
-        <p style="margin:-6px 0 0 28px;color:#6B7280;font-size:11.5px;line-height:1.7">
-          الجهاز يصبح متاحًا مباشرة بدون شاشة تسجيل دخول.
-        </p>
-
-        <label style="display:inline-flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;font-weight:700;color:#374151">
-          <input type="checkbox" name="add_to_address_list" value="1" checked
-                 style="width:18px;height:18px">
-          <span>
-            <i class="fa-solid fa-list" style="color:#2563EB"></i>
-            أضف العنوان لقائمة <code>HOBE_NETWORK_DEVICES</code>
-          </span>
-        </label>
-        <p style="margin:-6px 0 0 28px;color:#6B7280;font-size:11.5px;line-height:1.7">
-          قائمة موحّدة يمكنك استخدامها في firewall rules لتطبيق سياسات على كل أجهزة الإدارة دفعة واحدة.
-        </p>
+          <span class="uds-toggle-row-meta">الجهاز يصبح متاحًا مباشرة بدون شاشة تسجيل دخول.</span>
+        </div>
+        {{ toggle_switch(name="bypass_hotspot", id="bypass_hotspot", checked=True) }}
       </div>
-    </div>
-  </div>
 
-  <div style="display:flex;gap:10px;margin-top:24px;padding-top:18px;border-top:1px solid #F3F4F6">
-    <button type="submit" class="hub-btn hub-btn--primary">
-      <i class="fa-solid fa-play"></i> طبّق على الراوتر
-    </button>
-    <a href="{{ url_for('radius.network_devices_list') }}"
-       class="hub-btn hub-btn--ghost">
-      إلغاء
-    </a>
-  </div>
-</form>
+      <div class="uds-toggle-row">
+        <div class="uds-toggle-row-text">
+          <span class="uds-toggle-row-label">
+            <i class="fa-solid fa-list" style="color:#2563EB"></i>
+            أضف العنوان لقائمة <code class="ndb-mono">HOBE_NETWORK_DEVICES</code>
+          </span>
+          <span class="uds-toggle-row-meta">قائمة موحّدة يمكنك استخدامها في firewall rules لتطبيق سياسات على كل أجهزة الإدارة دفعة واحدة.</span>
+        </div>
+        {{ toggle_switch(name="add_to_address_list", id="add_to_address_list", checked=True) }}
+      </div>
 
-{# ── Cleanup section ── #}
-<section style="margin-top:24px;background:#FEF2F2;border:1px solid #FECACA;border-radius:14px;padding:18px 22px">
-  <h3 style="margin:0 0 8px;color:#991B1B;font-size:14px;font-weight:800">
-    <i class="fa-solid fa-eraser"></i> إزالة التجهيز
-  </h3>
-  <p style="margin:0 0 12px;color:#7F1D1D;font-size:12.5px;line-height:1.7">
-    يحذف كل السطور على الراوتر اللي تحمل علامة
-    <code dir="ltr">HOBE_DEVICE_BYPASS:{{ device.id }}:</code> —
-    آمن، لا يلمس أي إعدادات وضعتها يدويًا.
-  </p>
-  <form method="post"
-        action="{{ url_for('radius.network_device_bypass_remove', device_id=device.id) }}"
-        onsubmit="return confirm('تأكيد إزالة التجهيز من الراوتر؟');">
-    {{ csrf_token_input() | safe }}
-    <button type="submit" class="hub-btn hub-btn--danger">
-      <i class="fa-solid fa-trash"></i> إزالة من الراوتر
-    </button>
+      <div style="display:flex;gap:10px;margin-top:20px;padding-top:18px;border-top:1px solid var(--hub-border)">
+        <button type="submit" class="hub-btn hub-btn--primary">
+          <i class="fa-solid fa-play"></i> طبّق على الراوتر
+        </button>
+        <a href="{{ url_for('radius.network_devices_list') }}"
+           class="hub-btn hub-btn--ghost">
+          إلغاء
+        </a>
+      </div>
+    {% endcall %}
   </form>
-</section>
 
-{% endif %}
+  {# ── Cleanup section ── #}
+  {% call hub.section("إزالة التجهيز", icon="eraser") %}
+    <p class="hub-text-mute" style="margin:0 0 12px;font-size:12.5px;line-height:1.7">
+      يحذف كل السطور على الراوتر اللي تحمل علامة
+      <code class="ndb-mono" dir="ltr">HOBE_DEVICE_BYPASS:{{ device.id }}:</code> —
+      آمن، لا يلمس أي إعدادات وضعتها يدويًا.
+    </p>
+    <form method="post"
+          action="{{ url_for('radius.network_device_bypass_remove', device_id=device.id) }}"
+          onsubmit="return confirm('تأكيد إزالة التجهيز من الراوتر؟');">
+      {{ csrf_token_input() | safe }}
+      <button type="submit" class="hub-btn hub-btn--danger">
+        <i class="fa-solid fa-trash"></i> إزالة من الراوتر
+      </button>
+    </form>
+  {% endcall %}
 
-</div>
+  {% endif %}
+
+{% endcall %}
+
+<style>
+  /* Device summary key/value grid. */
+  .ndb-summary-grid{
+    display:grid; grid-template-columns:repeat(2,1fr);
+    gap:10px; font-size:12.5px; color:var(--hub-text);
+  }
+  @media (max-width:560px){ .ndb-summary-grid{ grid-template-columns:1fr; } }
+  .ndb-mono{ font-family:var(--hub-mono, monospace); white-space:nowrap; }
+
+  /* Inline warning boxes (amber = needs data, red = router error). */
+  .ndb-warn{
+    display:flex; align-items:flex-start; gap:8px;
+    padding:10px 14px; border-radius:8px;
+    font-size:12.5px; line-height:1.7;
+  }
+  .ndb-warn--amber{ background:#FEF3C7; border:1px solid #FCD34D; color:#92400E; }
+  .ndb-warn--red{ background:#FEE2E2; border:1px solid #FCA5A5; color:#991B1B; }
+  .ndb-warn-link{ color:inherit; text-decoration:underline; font-weight:700; }
+
+  /* Toggle row: label/meta on one side, switch on the other — inside a card. */
+  .uds-toggle-row{
+    display:flex; align-items:center; gap:12px;
+    padding:12px 0;
+    border-bottom:1px dashed var(--hub-border);
+  }
+  .uds-toggle-row:last-child{ border-bottom:0; }
+  .uds-toggle-row-text{
+    display:flex; flex-direction:column; gap:2px; min-width:0;
+  }
+  .uds-toggle-row-label{
+    font-size:13px; font-weight:700; color:var(--hub-text);
+  }
+  .uds-toggle-row-meta{
+    font-size:11.5px; color:var(--hub-text-soft, #6b7280); line-height:1.6;
+  }
+  .uds-toggle-row .tsw{ margin-inline-start:auto; flex-shrink:0; }
+</style>
 {% endblock %}

@@ -1,87 +1,14 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
+{% from "_partials/toggle_switch.html" import toggle_switch %}
 
 {% block title %}ملف التراخيص — Hobe Hub{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-file-shield"></i>{% endblock %}
 {% block page_title %}ملف التراخيص{% endblock %}
-{% block page_sub %}<span class="sub">اتصال الريدياس بلوحة التراخيص والعقود المستلمة</span>{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
 <style>
-  /* ── Page rhythm: every direct child of .lf-page sits on the same vertical grid ── */
-  .lf-page{ display:grid; gap:16px; }
-  .lf-grid-2{
-    display:grid;
-    grid-template-columns:repeat(auto-fit, minmax(320px, 1fr));
-    gap:14px;
-  }
-
-  /* ── Numbered "what does this page do" list ─────────────────────── */
-  .lf-help{ margin:0; padding:0; counter-reset:lf-step; display:grid; gap:10px; }
-  .lf-help li{
-    list-style:none; position:relative;
-    padding:11px 52px 11px 14px;
-    background:var(--hub-bg-soft, #f8f7fc);
-    border:1px solid var(--hub-border-soft, #e2e8f0);
-    border-radius:12px;
-    line-height:1.7; font-size:13.5px; color:var(--hub-text, #0f172a);
-  }
-  .lf-help li::before{
-    counter-increment:lf-step; content:counter(lf-step);
-    position:absolute; inset-inline-end:14px; top:50%;
-    transform:translateY(-50%);
-    width:28px; height:28px; border-radius:50%;
-    background:linear-gradient(135deg, var(--hub-brand, #7c3aed), var(--hub-brand-deep, #5b21b6));
-    color:#fff; display:grid; place-items:center;
-    font-weight:800; font-size:13px;
-  }
-
-  /* ── Mega-hero: title + sync actions + KPI strip in ONE panel ── */
-  .lf-hero{
-    position:relative;
-    display:grid; gap:16px;
-    padding:20px 22px;
-    border-radius:18px;
-    background:
-      radial-gradient(680px 340px at 100% 0%, rgba(124,58,237,.08) 0%, transparent 60%),
-      linear-gradient(180deg, #faf8ff 0%, #fff 100%);
-    border:1px solid var(--hub-border-soft, #e2e8f0);
-    box-shadow:
-      0 1px 0 rgba(255,255,255,.85) inset,
-      0 4px 14px rgba(15,23,42,.05);
-    overflow:hidden;
-  }
-  /* top row: identity (start) + sync buttons (end) */
-  .lf-hero-row{
-    display:flex; align-items:center; justify-content:space-between;
-    gap:16px; flex-wrap:wrap;
-  }
-  .lf-hero-id{ display:flex; align-items:center; gap:13px; min-width:0; }
-  .lf-hero-icon{
-    width:46px; height:46px; flex:0 0 auto;
-    border-radius:13px;
-    background:linear-gradient(135deg, var(--hub-brand, #7c3aed), var(--hub-brand-deep, #5b21b6));
-    color:#fff; display:grid; place-items:center; font-size:19px;
-    box-shadow:0 6px 16px rgba(124,58,237,.32);
-  }
-  .lf-hero-title{ margin:0; font-size:20px; font-weight:800; color:var(--hub-text); }
-  .lf-hero-sub{ margin-top:3px; font-size:13px; color:var(--hub-text-soft, #475569); line-height:1.6; }
-  .lf-hero-actions{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
-  .lf-hero-actions form{ margin:0; display:flex; flex-wrap:wrap; gap:8px; }
-  /* divider before the KPI row */
-  .lf-hero-kpis{
-    display:grid;
-    grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));
-    gap:10px;
-    padding-top:16px;
-    border-top:1px solid var(--hub-border-soft, #e2e8f0);
-  }
-  @media (max-width: 760px){
-    .lf-hero-actions{ flex:1 1 100%; }
-    .lf-hero-actions form{ flex:1 1 100%; }
-  }
-
   /* ── Missing-env chips ──────────────────────────────────────────── */
   .lf-missing-list{ display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
   .lf-missing-item{
@@ -120,112 +47,16 @@
   .lf-snap-title{ font-weight:800; color:var(--hub-text); font-size:13.5px; }
   .lf-snap-meta{ font-size:12px; color:var(--hub-text-mute, #94a3b8); line-height:1.6; }
 
-  /* ── Sub-section heads in the contract table ───────────────────── */
-  .lf-subhead{
-    margin:0 0 12px;
-    font-size:13.5px; font-weight:800;
-    color:var(--hub-text);
-    display:flex; align-items:center; justify-content:center; gap:8px;
-    padding-bottom:8px; border-bottom:1px dashed var(--hub-border-soft, #e2e8f0);
-    width:100%;
+  /* ── Toggle grid (config form on/off switches) ─────────────────── */
+  .lf-toggle-grid{
+    display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:12px;
   }
-  .lf-subhead i{ color:#5b21b6; font-size:13px; }
-
-  /* ── Services / Limits columns: equal height + centred empty-state ── */
-  .lf-grid-2 > div{
-    display:flex; flex-direction:column;
-    min-height:220px;
+  .lf-toggle-cell{
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    padding:14px; border-radius:12px; border:1px solid var(--hub-border-soft, #e2e8f0);
+    background:var(--hub-bg-card, #fff);
   }
-  .lf-grid-2 > div > .hub-empty{
-    flex:1;
-    display:flex; flex-direction:column;
-    justify-content:center; align-items:center;
-  }
-
-  /* ── Roomier detail-list rows (scoped to this page only) ───────── */
-  .lf-page .hub-detail-list{
-    display:grid; gap:14px;
-  }
-  .lf-page .hub-detail-list > div{
-    display:grid;
-    grid-template-columns:minmax(140px, 35%) 1fr;
-    column-gap:18px; row-gap:6px;
-    align-items:center;
-    padding:12px 14px;
-    background:var(--hub-bg-soft, #f8f7fc);
-    border:1px solid var(--hub-border-soft, #e2e8f0);
-    border-radius:10px;
-    transition:border-color .15s, background .15s;
-  }
-  .lf-page .hub-detail-list > div:hover{
-    background:#fff;
-    border-color:#ede9fe;
-  }
-  .lf-page .hub-detail-list > div > span{
-    color:var(--hub-text-soft, #475569);
-    font-size:13px;
-    font-weight:700;
-  }
-  .lf-page .hub-detail-list > div > strong{
-    color:var(--hub-text, #0f172a);
-    font-weight:700;
-    text-align:start;
-    word-break:break-word;
-  }
-  .lf-page .hub-detail-list > div > strong .mono,
-  .lf-page .hub-detail-list > div > strong.mono{
-    font-size:13px;
-    background:#fff;
-    padding:4px 10px;
-    border-radius:8px;
-    border:1px solid var(--hub-border-soft, #e2e8f0);
-    display:inline-block;
-  }
-  .lf-page .checkline{
-    display:flex; align-items:center; gap:10px;
-    padding:12px 14px;
-    border:1px solid var(--hub-border-soft, #e2e8f0);
-    border-radius:10px;
-    background:var(--hub-bg-soft, #f8f7fc);
-    font-weight:800;
-  }
-  .lf-page .checkline input{ width:18px; height:18px; accent-color:var(--hub-brand, #7c3aed); }
-  .lf-service-name{
-    display:block;
-    font-weight:900;
-    color:var(--hub-text, #0f172a);
-  }
-  .lf-service-desc{
-    display:block;
-    margin-top:4px;
-    color:var(--hub-text-soft, #475569);
-    font-size:12.5px;
-    line-height:1.7;
-  }
-  .lf-service-meta{
-    display:flex;
-    flex-wrap:wrap;
-    gap:6px;
-    margin-top:8px;
-  }
-  .lf-service-chip{
-    display:inline-flex;
-    align-items:center;
-    gap:5px;
-    padding:4px 8px;
-    border-radius:999px;
-    background:#fff;
-    border:1px solid var(--hub-border-soft, #e2e8f0);
-    color:var(--hub-text-soft, #475569);
-    font-size:12px;
-    font-weight:800;
-  }
-  @media (max-width: 640px){
-    .lf-page .hub-detail-list > div{
-      grid-template-columns:1fr;
-      row-gap:8px;
-    }
-  }
+  .lf-toggle-cell .lf-toggle-title{ font-weight:800; color:var(--hub-text, #0f172a); font-size:13.5px; }
 
   /* ── Services as clean cards (no tall narrow column) ───────────── */
   .lf-svc-grid{
@@ -274,46 +105,6 @@
   .lf-lim-tile .lbl{ font-size:11.5px; color:var(--hub-text-mute, #94a3b8); font-weight:800 }
   .lf-lim-tile .val{ font-size:19px; font-weight:900; color:var(--hub-text, #0f172a); font-variant-numeric:tabular-nums }
 
-  /* ── Current settings as one-row cards ─────────────────────────── */
-  .lf-set-grid{
-    display:grid; grid-template-columns:repeat(auto-fit, minmax(190px, 1fr)); gap:10px;
-  }
-  .lf-set-tile{
-    display:grid; gap:8px; padding:14px;
-    border:1px solid var(--hub-border-soft, #e2e8f0); border-radius:12px;
-    background:var(--hub-bg-card, #fff);
-  }
-  .lf-set-tile .lbl{ font-size:12px; color:var(--hub-text-mute, #94a3b8); font-weight:800 }
-  .lf-set-tile .val{ font-weight:900; color:var(--hub-text, #0f172a); font-size:14px; }
-
-  /* ── Toggle cards (one row, green on / red off) ────────────────── */
-  .lf-toggle-grid{
-    display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:10px;
-  }
-  .lf-toggle{
-    display:flex; align-items:flex-start; gap:11px; cursor:pointer;
-    padding:14px; border-radius:12px; border:1px solid var(--hub-border-soft, #e2e8f0);
-    background:var(--hub-bg-card, #fff); transition:border-color .15s, background .15s;
-  }
-  .lf-toggle:hover{ border-color:#cbd5e1; }
-  .lf-toggle input{ position:absolute; opacity:0; pointer-events:none; }
-  .lf-toggle-dot{
-    width:38px; height:22px; flex:0 0 auto; border-radius:999px; position:relative;
-    background:#fecaca; border:1px solid #fca5a5; transition:background .18s, border-color .18s;
-  }
-  .lf-toggle-dot::after{
-    content:""; position:absolute; top:2px; inset-inline-start:2px; width:16px; height:16px;
-    border-radius:50%; background:#fff; box-shadow:0 1px 2px rgba(0,0,0,.2);
-    transition:inset-inline-start .18s;
-  }
-  .lf-toggle input:checked + .lf-toggle-dot{ background:#86efac; border-color:#22c55e; }
-  .lf-toggle input:checked + .lf-toggle-dot::after{ inset-inline-start:18px; }
-  .lf-toggle-body{ display:grid; gap:3px; min-width:0; }
-  .lf-toggle-title{ font-weight:900; color:var(--hub-text, #0f172a); font-size:13.5px; }
-  .lf-toggle-state{ font-size:11.5px; font-weight:800; }
-  .lf-toggle input:checked ~ .lf-toggle-body .lf-toggle-state{ color:#15803d; }
-  .lf-toggle input:not(:checked) ~ .lf-toggle-body .lf-toggle-state{ color:#b91c1c; }
-
   /* ── Service card footer buttons ───────────────────────────────── */
   .lf-svc-foot{ display:flex; gap:8px; flex-wrap:wrap; margin-top:2px; }
   .lf-svc-btn{
@@ -325,6 +116,22 @@
   .lf-svc-btn.is-req{ background:linear-gradient(135deg,#7c3aed,#5b21b6); color:#fff; border-color:transparent; box-shadow:0 4px 10px rgba(124,58,237,.28); }
   .lf-svc-btn.is-req:hover{ filter:brightness(1.05); color:#fff; }
   .lf-svc-foot form{ margin:0; }
+
+  /* ── Sub-category group head (within services section) ─────────── */
+  .lf-cat-head{
+    display:flex; align-items:center; gap:8px;
+    padding:8px 10px; margin-bottom:10px;
+    background:var(--hub-bg-soft, #f8f7fc);
+    border:1px solid var(--hub-border-soft, #e2e8f0); border-radius:10px;
+  }
+  .lf-cat-ico{
+    width:28px; height:28px; flex:0 0 auto; border-radius:8px;
+    background:linear-gradient(135deg,#7c3aed,#5b21b6); color:#fff;
+    display:grid; place-items:center; font-size:11px;
+  }
+  .lf-cat-title{ font-weight:800; font-size:13px; color:var(--hub-text, #0f172a); }
+  .lf-cat-count{ margin-inline-start:auto; font-size:11.5px; font-weight:700; }
+  .lf-cat-block{ margin-bottom:18px; }
 
   /* ── Floating service-details modal ────────────────────────────── */
   .lf-modal{ position:fixed; inset:0; z-index:1300; display:none; place-items:center; padding:22px;
@@ -504,56 +311,44 @@
   ('integration_group', 'التكامل', 'plug',
     ['integration_bridge','integration_tokens','webhooks']),
 ] %}
-<div class="lf-page">
 
-  {# ───── Unified mega-hero: title + sync actions + KPI strip ── #}
-  <section class="lf-hero">
-    <div class="lf-hero-row">
-      <div class="lf-hero-id">
-        <span class="lf-hero-icon"><i class="fa-solid fa-file-shield"></i></span>
-        <div>
-          <h1 class="lf-hero-title">ملف التراخيص</h1>
-          <div class="lf-hero-sub">اتصال الريدياس بلوحة التراخيص، آخر عقد تشغيل ومزامنة هوية، والحدود التي يطبّقها محليًا.</div>
-        </div>
-      </div>
-      <div class="lf-hero-actions">
-        <form method="post" action="{{ url_for('radius.license_file_sync') }}">
-          {{ csrf_token_input() }}
-          <button class="hub-btn hub-btn--primary" name="action" value="both" type="submit">
-            <i class="fa-solid fa-arrows-rotate"></i> مزامنة الكل
-          </button>
-          <button class="hub-btn hub-btn--secondary" name="action" value="runtime" type="submit">
-            <i class="fa-solid fa-file-contract"></i> عقد التشغيل
-          </button>
-          <button class="hub-btn hub-btn--ghost" name="action" value="identity" type="submit">
-            <i class="fa-solid fa-users-gear"></i> الهوية
-          </button>
-        </form>
-        <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.license_file_portal_sso') }}" target="_blank" rel="noopener">
-          <i class="fa-solid fa-arrow-up-right-from-square"></i> افتح بوابة العميل
-        </a>
-      </div>
-    </div>
+{# ───── Unified mega-hero: title + subtitle + sync actions + KPI strip ── #}
+{% set hero_actions %}
+  <form method="post" action="{{ url_for('radius.license_file_sync') }}" style="margin:0;display:flex;flex-wrap:wrap;gap:8px">
+    {{ csrf_token_input() }}
+    <button class="hub-btn hub-btn--primary" name="action" value="both" type="submit"><i class="fa-solid fa-arrows-rotate"></i> مزامنة الكل</button>
+    <button class="hub-btn hub-btn--secondary" name="action" value="runtime" type="submit"><i class="fa-solid fa-file-contract"></i> عقد التشغيل</button>
+    <button class="hub-btn hub-btn--ghost" name="action" value="identity" type="submit"><i class="fa-solid fa-users-gear"></i> الهوية</button>
+  </form>
+  <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.license_file_portal_sso') }}" target="_blank" rel="noopener"><i class="fa-solid fa-arrow-up-right-from-square"></i> افتح بوابة العميل</a>
+{% endset %}
+{{ hub.megahero(
+  "ملف التراخيص",
+  subtitle="اتصال الريدياس بلوحة التراخيص، آخر عقد تشغيل ومزامنة هوية، والحدود التي يطبّقها محليًا.",
+  icon="file-shield",
+  actions_html=hero_actions,
+  kpis=[
+    {'label':'حالة الجسر',   'value':('مفعَّل' if config_view.enabled else 'غير مفعَّل'),                                  'icon':'plug-circle-bolt', 'variant':'blue'},
+    {'label':'عقد التشغيل',  'value':('مفعَّل' if config_view.runtime_contract_sync else 'غير مفعَّل'),                    'icon':'file-contract',    'variant':'green'},
+    {'label':'مزامنة الهوية','value':('مفعَّلة' if config_view.identity_sync_enabled else 'غير مفعَّلة'),                  'icon':'users-gear',       'variant':'amber'},
+    {'label':'حالة الحدود',  'value':(status_labels.get(capacity.status, 'غير معروفة') if capacity.status else 'غير معروفة'),'icon':'gauge-high',       'variant':'brand'},
+  ]
+) }}
 
-    <div class="lf-hero-kpis">
-      {{ hub.kpi("حالة الجسر",
-                 "مفعَّل" if config_view.enabled else "غير مفعَّل",
-                 icon="plug-circle-bolt",
-                 variant="blue") }}
-      {{ hub.kpi("عقد التشغيل",
-                 "مفعَّل" if config_view.runtime_contract_sync else "غير مفعَّل",
-                 icon="file-contract",
-                 variant="green") }}
-      {{ hub.kpi("مزامنة الهوية",
-                 "مفعَّلة" if config_view.identity_sync_enabled else "غير مفعَّلة",
-                 icon="users-gear",
-                 variant="amber") }}
-      {{ hub.kpi("حالة الحدود",
-                 status_labels.get(capacity.status, "غير معروفة") if capacity.status else "غير معروفة",
-                 icon="gauge-high",
-                 variant="brand") }}
-    </div>
-  </section>
+{% set help_aside = hub.helppanel(
+     "كيف يعمل ملف التراخيص",
+     intro="الريدياس يأخذ الترخيص والصلاحيات من لوحة التراخيص. هذه الصفحة تربط الجسر، تعرض آخر اللقطات المستلمة، والخدمات والحدود التي يطبّقها عقدك.",
+     items=[
+       {'icon': 'link',          'text': 'انسخ مفتاح الترخيص وسر الربط من صفحة العميل في لوحة التراخيص والصقهما في نموذج الربط.'},
+       {'icon': 'arrows-rotate', 'text': 'بعد الحفظ اضغط «مزامنة الكل» بالأعلى ليقرأ الريدياس عقد التشغيل عبر واجهة ربط موقّعة.'},
+       {'icon': 'clock-rotate-left', 'text': 'آخر اللقطات تُظهر حالة فحص الترخيص وعقد التشغيل ومزامنة الهوية وتاريخ آخر تحديث.'},
+       {'icon': 'shapes',        'text': 'الخدمات والحدود تصل من العقد — تُعرض هنا مقسّمة حسب الفئة بدون JSON خام.'},
+     ],
+     icon="compass",
+     note="كل عمليات المزامنة تتم عبر اتصال آمن وموقّع — لا يمكن استخدام اتصال غير آمن في الإنتاج."
+   ) %}
+
+{% call hub.worklayout(aside_html=help_aside) %}
 
   {# ───── Missing env vars warning ──────────────────────────── #}
   {% if missing %}
@@ -595,46 +390,26 @@
       </div>
       <div class="full">
         <div class="lf-toggle-grid">
-          <label class="lf-toggle">
-            <input type="checkbox" name="enabled" value="1" {{ 'checked' if config_view.enabled else '' }}>
-            <span class="lf-toggle-dot"></span>
-            <span class="lf-toggle-body">
-              <span class="lf-toggle-title">تفعيل الجسر مع لوحة التراخيص</span>
-              <span class="lf-toggle-state">{{ 'مفعّل' if config_view.enabled else 'معطّل' }}</span>
-            </span>
-          </label>
-          <label class="lf-toggle">
-            <input type="checkbox" name="runtime_contract_sync" value="1" {{ 'checked' if config_view.runtime_contract_sync else '' }}>
-            <span class="lf-toggle-dot"></span>
-            <span class="lf-toggle-body">
-              <span class="lf-toggle-title">استخدام عقد التشغيل الجديد</span>
-              <span class="lf-toggle-state">{{ 'مفعّل' if config_view.runtime_contract_sync else 'معطّل' }}</span>
-            </span>
-          </label>
-          <label class="lf-toggle">
-            <input type="checkbox" name="identity_sync_enabled" value="1" {{ 'checked' if config_view.identity_sync_enabled else '' }}>
-            <span class="lf-toggle-dot"></span>
-            <span class="lf-toggle-body">
-              <span class="lf-toggle-title">مزامنة الهوية عبر اتصال آمن</span>
-              <span class="lf-toggle-state">{{ 'مفعّل' if config_view.identity_sync_enabled else 'معطّل' }}</span>
-            </span>
-          </label>
-          <label class="lf-toggle">
-            <input type="checkbox" name="identity_sync_on_login" value="1" {{ 'checked' if config_view.identity_sync_on_login else '' }}>
-            <span class="lf-toggle-dot"></span>
-            <span class="lf-toggle-body">
-              <span class="lf-toggle-title">مزامنة سريعة قبل تسجيل الدخول</span>
-              <span class="lf-toggle-state">{{ 'مفعّل' if config_view.identity_sync_on_login else 'معطّل' }}</span>
-            </span>
-          </label>
-          <label class="lf-toggle">
-            <input type="checkbox" name="worker_enabled" value="1" {{ 'checked' if config_view.worker_enabled else '' }}>
-            <span class="lf-toggle-dot"></span>
-            <span class="lf-toggle-body">
-              <span class="lf-toggle-title">تشغيل عامل المزامنة الخلفي</span>
-              <span class="lf-toggle-state">{{ 'مفعّل' if config_view.worker_enabled else 'معطّل' }}</span>
-            </span>
-          </label>
+          <div class="lf-toggle-cell">
+            <span class="lf-toggle-title">تفعيل الجسر مع لوحة التراخيص</span>
+            {{ toggle_switch(name="enabled", checked=config_view.enabled, value="1", id="lf-enabled") }}
+          </div>
+          <div class="lf-toggle-cell">
+            <span class="lf-toggle-title">استخدام عقد التشغيل الجديد</span>
+            {{ toggle_switch(name="runtime_contract_sync", checked=config_view.runtime_contract_sync, value="1", id="lf-runtime") }}
+          </div>
+          <div class="lf-toggle-cell">
+            <span class="lf-toggle-title">مزامنة الهوية عبر اتصال آمن</span>
+            {{ toggle_switch(name="identity_sync_enabled", checked=config_view.identity_sync_enabled, value="1", id="lf-identity") }}
+          </div>
+          <div class="lf-toggle-cell">
+            <span class="lf-toggle-title">مزامنة سريعة قبل تسجيل الدخول</span>
+            {{ toggle_switch(name="identity_sync_on_login", checked=config_view.identity_sync_on_login, value="1", id="lf-onlogin") }}
+          </div>
+          <div class="lf-toggle-cell">
+            <span class="lf-toggle-title">تشغيل عامل المزامنة الخلفي</span>
+            {{ toggle_switch(name="worker_enabled", checked=config_view.worker_enabled, value="1", id="lf-worker") }}
+          </div>
         </div>
       </div>
       <div class="hub-field">
@@ -669,56 +444,19 @@
     </form>
   {% endcall %}
 
-  {# ───── Connection settings (single full-width panel) ─────── #}
+  {# ───── Connection settings (key/value detail list) ─────── #}
   {% call hub.section("إعدادات الاتصال الحالية", icon="sliders") %}
-    <div class="lf-set-grid">
-      <div class="lf-set-tile">
-        <span class="lbl">رابط لوحة التراخيص</span>
-        <span class="val mono ltr">{{ config_form.base_url or "—" }}</span>
-      </div>
-      <div class="lf-set-tile" style="{{ 'background:#ecfdf5;border-color:#bbf7d0' if config_view.fingerprint_is_stable else 'background:#fffbeb;border-color:#fde68a' }}">
-        <span class="lbl">بصمة السيرفر
-          {% if config_view.fingerprint_is_stable %}
-            <span class="hub-pill hub-pill--green" style="font-size:10px;padding:2px 7px"><i class="fa-solid fa-lock"></i> ثابتة</span>
-          {% else %}
-            <span class="hub-pill hub-pill--amber" style="font-size:10px;padding:2px 7px"><i class="fa-solid fa-triangle-exclamation"></i> غير ثابتة</span>
-          {% endif %}
-        </span>
-        <span class="val mono" style="font-size:11.5px">{{ config_view.server_fingerprint_active[:20] ~ '…' if config_view.server_fingerprint_active and config_view.server_fingerprint_active|length > 20 else config_view.server_fingerprint_active or '—' }}</span>
-      </div>
-      <div class="lf-set-tile">
-        <span class="lbl">مفتاح الترخيص</span>
-        <span class="val mono">{{ config_view.license_key or "—" }}</span>
-      </div>
-      <div class="lf-set-tile">
-        <span class="lbl">سر التوقيع</span>
-        <span class="val mono">{{ config_view.shared_secret or "—" }}</span>
-      </div>
-      <div class="lf-set-tile">
-        <span class="lbl">المزامنة عند تسجيل الدخول</span>
-        <span class="val">
-          {% if config_view.identity_sync_on_login %}
-            <span class="hub-pill hub-pill--green"><span class="dot"></span>مفعَّلة</span>
-          {% else %}
-            <span class="hub-pill hub-pill--grey"><span class="dot"></span>غير مفعَّلة</span>
-          {% endif %}
-        </span>
-      </div>
-      <div class="lf-set-tile">
-        <span class="lbl">عامل المزامنة الخلفي</span>
-        <span class="val">
-          {% if config_view.worker_enabled %}
-            <span class="hub-pill hub-pill--green"><span class="dot"></span>يعمل</span>
-          {% else %}
-            <span class="hub-pill hub-pill--grey"><span class="dot"></span>متوقف</span>
-          {% endif %}
-        </span>
-      </div>
-      <div class="lf-set-tile">
-        <span class="lbl">فاصل المزامنة التلقائية</span>
-        <span class="val mono">{{ config_view.sync_interval_seconds or 300 }} ثانية</span>
-      </div>
-    </div>
+    {{ hub.kv([
+      {'label': 'رابط لوحة التراخيص', 'value': config_form.base_url or '—', 'mono': True},
+      {'label': 'بصمة السيرفر' ~ (' (ثابتة)' if config_view.fingerprint_is_stable else ' (غير ثابتة)'),
+       'value': (config_view.server_fingerprint_active[:20] ~ '…' if config_view.server_fingerprint_active and config_view.server_fingerprint_active|length > 20 else (config_view.server_fingerprint_active or '—')),
+       'mono': True},
+      {'label': 'مفتاح الترخيص', 'value': config_view.license_key or '—', 'mono': True},
+      {'label': 'سر التوقيع', 'value': config_view.shared_secret or '—', 'mono': True},
+      {'label': 'المزامنة عند تسجيل الدخول', 'value': ('مفعَّلة' if config_view.identity_sync_on_login else 'غير مفعَّلة')},
+      {'label': 'عامل المزامنة الخلفي', 'value': ('يعمل' if config_view.worker_enabled else 'متوقف')},
+      {'label': 'فاصل المزامنة التلقائية', 'value': (config_view.sync_interval_seconds or 300) ~ ' ثانية', 'mono': True},
+    ]) }}
     <p class="hub-field-hint" style="margin-top:12px">
       السر يظهر مختصرًا فقط. كل عمليات المزامنة تتم عبر اتصال آمن — لا يمكن استخدام اتصال غير آمن.
     </p>
@@ -787,14 +525,14 @@
         {% set ns_cat = namespace(has_any=false) %}
         {% for _ck in _cat_keys %}{% if _ck in _svc %}{% set ns_cat.has_any = true %}{% endif %}{% endfor %}
         {% if ns_cat.has_any %}
-          <div style="margin-bottom:18px">
-            <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--hub-bg-soft,#f8f7fc);border:1px solid var(--hub-border-soft,#e2e8f0);border-radius:10px;margin-bottom:10px">
-              <span style="width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;display:grid;place-items:center;font-size:11px;flex:0 0 auto"><i class="fa-solid fa-{{ _cat_icon }}"></i></span>
-              <span style="font-weight:800;font-size:13px;color:var(--hub-text,#0f172a)">{{ _cat_label }}</span>
+          <div class="lf-cat-block">
+            <div class="lf-cat-head">
+              <span class="lf-cat-ico"><i class="fa-solid fa-{{ _cat_icon }}"></i></span>
+              <span class="lf-cat-title">{{ _cat_label }}</span>
               {# count active in this group #}
               {% set ns_cnt = namespace(on=0, total=0) %}
               {% for _ck in _cat_keys %}{% if _ck in _svc %}{% set ns_cnt.total = ns_cnt.total + 1 %}{% if _svc[_ck].status|default('') == 'active' %}{% set ns_cnt.on = ns_cnt.on + 1 %}{% endif %}{% endif %}{% endfor %}
-              <span style="margin-inline-start:auto;font-size:11.5px;font-weight:700;color:{% if ns_cnt.on > 0 %}#16a34a{% else %}#94a3b8{% endif %}">{{ ns_cnt.on }} / {{ ns_cnt.total }} مفعّلة</span>
+              <span class="lf-cat-count" style="color:{% if ns_cnt.on > 0 %}#16a34a{% else %}#94a3b8{% endif %}">{{ ns_cnt.on }} / {{ ns_cnt.total }} مفعّلة</span>
             </div>
             <div class="lf-svc-grid">
               {% for key in _cat_keys %}{% if key in _svc %}
@@ -889,10 +627,10 @@
         {% if not ns_in_cat.found %}{% set ns_extra.keys = ns_extra.keys + [key] %}{% endif %}
       {% endfor %}
       {% if ns_extra.keys %}
-        <div style="margin-bottom:18px">
-          <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--hub-bg-soft,#f8f7fc);border:1px solid var(--hub-border-soft,#e2e8f0);border-radius:10px;margin-bottom:10px">
-            <span style="width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;display:grid;place-items:center;font-size:11px;flex:0 0 auto"><i class="fa-solid fa-cube"></i></span>
-            <span style="font-weight:800;font-size:13px;color:var(--hub-text,#0f172a)">خدمات أخرى</span>
+        <div class="lf-cat-block">
+          <div class="lf-cat-head">
+            <span class="lf-cat-ico"><i class="fa-solid fa-cube"></i></span>
+            <span class="lf-cat-title">خدمات أخرى</span>
           </div>
           <div class="lf-svc-grid">
             {% for key in ns_extra.keys %}{% set val = _svc[key] %}
@@ -962,7 +700,7 @@
     {% endif %}
   {% endcall %}
 
-</div>
+{% endcall %}{# /worklayout #}
 
 {# ── Floating service-details modal ── #}
 <div class="lf-modal" id="lf-svc-modal" role="dialog" aria-modal="true" aria-labelledby="lf-svc-modal-title">
@@ -982,13 +720,6 @@
 
 <script>
 (function(){
-  /* ── live state text for toggle cards (color flips via CSS) ── */
-  document.querySelectorAll('.lf-toggle input[type=checkbox]').forEach(function(cb){
-    var st = cb.parentElement.querySelector('.lf-toggle-state');
-    if (!st) return;
-    cb.addEventListener('change', function(){ st.textContent = cb.checked ? 'مفعّل' : 'معطّل'; });
-  });
-
   /* ── service-details modal ── */
   var modal = document.getElementById('lf-svc-modal');
   if (!modal) return;

@@ -1,12 +1,12 @@
 {# ═══════════════════════════════════════════════════════════════════════
-   MAC history per user — REBUILT (Night N4, 2026-05-21)
+   MAC history per user — UNIFIED DESIGN SYSTEM (megahero + worklayout + help).
 
    Same backend data: `items` (rows of {username, mac, nasipaddress,
-   sessions, last_seen} aggregated from radacct).
+   sessions, last_seen} aggregated from radacct), `filters` (only `q`).
+   Zero route/behaviour change.
    ═══════════════════════════════════════════════════════════════════════ #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
-{% import "_partials/repfilter.html" as rf %}
 
 {% block title %}سجل عناوين الأجهزة{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-fingerprint"></i>{% endblock %}
@@ -16,41 +16,75 @@
 {% block content %}
 {% include "radius/reports_nav.html" %}
 
-{{ hub.hero(
+{# ───── KPIs derived from the same `items` (no backend change) ───── #}
+{% set _total_sessions = items|sum(attribute='sessions') %}
+{% set _distinct_users = items|map(attribute='username')|unique|list|length %}
+
+{# ───── Merged hero: title + subtitle + KPI strip + integrated filter ───── #}
+{% call hub.megahero(
   "سجل عناوين الأجهزة (MAC)",
   subtitle="كل MAC ميّز جلسة لكل مستخدم — مع عدد الجلسات وآخر ظهور.",
-  icon="fingerprint"
-) }}
-
-{{ rf.bar('radius.rep_mac_history', filters, show_date=False, q_placeholder='بحث (مستخدم / عنوان الجهاز)…') }}
+  icon="fingerprint",
+  kpis=[
+    {'label': 'الصفوف',     'value': items|length,    'icon': 'table-list',   'variant': 'brand'},
+    {'label': 'المستخدمون', 'value': _distinct_users, 'icon': 'users',        'variant': 'blue'},
+    {'label': 'الجلسات',    'value': _total_sessions, 'icon': 'circle-play',  'variant': 'green'},
+  ],
+  search_action=url_for('radius.rep_mac_history')
+) %}
+  <input class="hub-input grow" type="text" name="q"
+         value="{{ filters.q if filters else '' }}"
+         placeholder="بحث (مستخدم / عنوان الجهاز)…">
+  {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
+  {% if filters and filters.q %}
+    {{ hub.btn("مسح", icon="rotate-left", variant="ghost", size="sm",
+               attrs='onclick="window.location=' + "'" + url_for('radius.rep_mac_history') + "'" + '"') }}
+  {% endif %}
+{% endcall %}
 
 {% if items %}
-{% call hub.section("MAC × مستخدم", icon="table-list",
-                    meta=items|length|string + " صف", flush=True) %}
-  <div class="hub-table-wrap" style="border:none;border-radius:0">
-    <table class="hub-table rep-table" data-paginated="1" data-page-size="25" data-page-sizes="10,25,50,100" data-persist-key="rep-mac-history">
-      <thead>
-        <tr>
-          <th>المستخدم</th>
-          <th>عنوان الجهاز (MAC)</th>
-          <th>جهاز الشبكة</th>
-          <th class="num">عدد الجلسات</th>
-          <th>آخر ظهور</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for r in items %}
-        <tr>
-          <td><strong>{{ r.username }}</strong></td>
-          <td class="mono">{{ r.mac }}</td>
-          <td class="mono small">{{ r.nasipaddress or '—' }}</td>
-          <td class="num mono">{{ r.sessions }}</td>
-          <td class="mono small">{{ r.last_seen[:16] if r.last_seen else '—' }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+{# ───── Main (carded table) + help panel on the LEFT ───── #}
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "كيف تقرأ هذا التقرير؟",
+  intro="كل صف هو زوج (مستخدم × عنوان جهاز) فريد، مُجمَّع من جلسات المحاسبة radacct.",
+  items=[
+    {'icon': 'fingerprint',  'text': 'عنوان الجهاز (MAC) هو المعرّف الفيزيائي للجهاز الذي اتصل به المستخدم.'},
+    {'icon': 'hashtag',      'text': 'عدد الجلسات هو كم مرة ظهر هذا الجهاز لهذا المستخدم.'},
+    {'icon': 'clock',        'text': 'آخر ظهور هو أحدث وقت بدأ فيه هذا الجهاز جلسة.'},
+    {'icon': 'server',       'text': 'جهاز الشبكة (NAS IP) هو عنوان الجهاز الذي وجّه الاتصال.'},
+  ],
+  note="هذا التقرير للقراءة فقط — البيانات تأتي مباشرة من جدول المحاسبة radacct."
+)) %}
+  {% call hub.section("MAC × مستخدم", icon="table-list",
+                      meta=items|length|string + " صف", flush=True) %}
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25" style="border:none;border-radius:0">
+      <table class="hub-table">
+        <thead>
+          <tr>
+            <th>المستخدم</th>
+            <th>عنوان الجهاز (MAC)</th>
+            <th>جهاز الشبكة</th>
+            <th class="num" style="white-space:nowrap">عدد الجلسات</th>
+            <th>آخر ظهور</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in items %}
+          <tr>
+            <td><strong>{{ r.username }}</strong></td>
+            <td class="mono small" style="white-space:nowrap;direction:ltr">{{ r.mac }}</td>
+            <td class="mono small" style="white-space:nowrap;direction:ltr">{{ r.nasipaddress or '—' }}</td>
+            <td class="num mono"
+                style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
+              {{ r.sessions }}
+            </td>
+            <td class="mono small" style="white-space:nowrap;direction:ltr">{{ r.last_seen[:16] if r.last_seen else '—' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endcall %}
 {% endcall %}
 {% else %}
 {{ hub.empty(

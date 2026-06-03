@@ -6,60 +6,150 @@
 {% block page_title %}بناء الجمهور{% endblock %}
 {% block page_sub %}<span class="sub">أنشئ شرائح جمهور قابلة لإعادة الاستخدام بدون كشف SQL خام أو بيانات المزوّد.</span>{% endblock %}
 
-{% block content %}
-{{ hub.hero("بناء الجمهور", subtitle="أنشئ جمهورًا آمن النطاق للمشتركين أو مستخدمي البطاقات أو المدراء أو الموزعين أو تنبيهات الشركة.", icon="users-viewfinder") }}
-{% include "radius/communications_nav.html" %}
+{% block head_extra %}{{ super() }}
+<style>
+  /* segment form layout — bespoke, mirrors the converted send page */
+  .caud-form{ display:grid; gap:var(--hub-gap-section,16px); }
+  .caud-row{ display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:13px; }
+  .caud-foot{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; padding-top:4px; }
+  .caud-note{ font-size:11.5px; color:var(--hub-text-mute,#64748b); }
+</style>
+{% endblock %}
 
-{% call hub.section("إنشاء شريحة", icon="users-viewfinder") %}
-  <form method="post" class="hub-form-grid" data-testid="audience-segment-form">
-    <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-    <label>مفتاح الشريحة <input name="segment_key" required placeholder="manager-1-subscribers"></label>
-    <label>العنوان <input name="title" required></label>
-    <label>الهدف
-      <select name="target">
-        <option value="subscriber">المشتركون</option>
-        <option value="card_user">مستخدمو البطاقات</option>
-        <option value="manager">المدراء</option>
-        <option value="distributor">الموزعون</option>
-        <option value="company">الشركة</option>
-      </select>
-    </label>
-    <label>رقم المدير <input name="manager_id" type="number" min="1"></label>
-    <label>أرقام المستلمين <input name="ids" placeholder="1,2,3"></label>
-    <label>الحد <input name="limit" type="number" min="1" max="500" value="100"></label>
-    <button class="hub-btn hub-btn--primary" type="submit">حفظ ومعاينة</button>
-  </form>
+{% block content %}
+
+{# ───── ONE unified hero: title + actions + KPI strip ───── #}
+{% call hub.megahero(
+  "بناء الجمهور",
+  subtitle="أنشئ جمهورًا آمن النطاق للمشتركين أو مستخدمي البطاقات أو المدراء أو الموزعين أو تنبيهات الشركة.",
+  icon="users-viewfinder",
+  actions_html=(
+    '<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.communications_send') ~ '"><i class="fa-solid fa-paper-plane"></i> إرسال رسالة</a>'
+    ~ '<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.communications_guide') ~ '"><i class="fa-solid fa-book-open"></i> دليل وشروحات</a>'
+  ),
+  kpis=[
+    {'label': 'الشرائح المحفوظة', 'value': segments|length, 'icon': 'layer-group', 'variant': 'brand', 'sub': 'شريحة قابلة لإعادة الاستخدام'},
+    {'label': 'في المعاينة الحالية', 'value': preview|length, 'icon': 'eye', 'variant': 'green' if preview else 'grey', 'sub': 'مستلم بعد آخر حفظ'}
+  ]
+) %}
 {% endcall %}
 
-<div class="hub-grid hub-grid--2">
-  {% call hub.section("الشرائح", icon="list", flush=True) %}
-    <div class="hub-table-wrap">
-      <table class="hub-table" data-testid="audience-segments-table">
-        <thead><tr><th>المفتاح</th><th>العنوان</th><th>الحالة</th></tr></thead>
-        <tbody>
-          {% for item in segments %}
-            <tr><td>{{ item.segment_key }}</td><td>{{ item.title }}</td><td>{{ item.status }}</td></tr>
-          {% else %}
-            <tr><td colspan="3">لا توجد شرائح بعد.</td></tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
+{% include "radius/communications_nav.html" %}
+
+{# ───── Full-width work layout: main content + help panel on the LEFT ───── #}
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "ما هذه الصفحة؟",
+  intro="الشريحة هي تعريف محفوظ لجمهور (مَن يستلم) — تحفظه مرة وتعيد استخدامه في الإرسال والحملات دون كشف بيانات المزوّد.",
+  icon="circle-info",
+  items=[
+    {'icon': 'bullseye', 'text': '«الهدف» يحدّد فئة المستلمين: المشتركون، مستخدمو البطاقات، المدراء، الموزعون، أو الشركة.'},
+    {'icon': 'hashtag', 'text': '«أرقام المستلمين» تقصُر الشريحة على أرقام محدّدة (افصل بفاصلة)، و«رقم المدير» يستهدف مديرًا بعينه.'},
+    {'icon': 'eye', 'text': '«حفظ ومعاينة» يحفظ الشريحة ثم يعرض من سيستلمها — المعاينة لا ترسل شيئًا.'},
+    {'icon': 'rotate', 'text': 'الشرائح المحفوظة قابلة لإعادة الاستخدام من شاشة الإرسال والحملات.'}
+  ],
+  note="لإرسال موجّه لشريحة محدّدة افتح «إرسال رسالة» من الأعلى، وللشرح المصوّر افتح «دليل وشروحات»."
+)) %}
+
+  {# ════════ CREATE SEGMENT ════════ #}
+  {% call hub.section("إنشاء شريحة", icon="users-viewfinder") %}
+    <form method="post" class="caud-form" data-testid="audience-segment-form">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+
+      <div class="caud-row">
+        <div class="hub-field">
+          <label class="hub-field-label" for="caud-key">مفتاح الشريحة</label>
+          <input id="caud-key" class="hub-input" name="segment_key" required placeholder="manager-1-subscribers" dir="ltr">
+          <div class="hub-field-hint">معرّف فريد للشريحة — يُستخدم لاحقًا للإشارة إليها.</div>
+        </div>
+        <div class="hub-field">
+          <label class="hub-field-label" for="caud-title">العنوان</label>
+          <input id="caud-title" class="hub-input" name="title" required placeholder="اسم وصفي للشريحة">
+        </div>
+      </div>
+
+      <div class="caud-row">
+        <div class="hub-field">
+          <label class="hub-field-label" for="caud-target">الهدف</label>
+          <select id="caud-target" class="hub-select" name="target">
+            <option value="subscriber">المشتركون</option>
+            <option value="card_user">مستخدمو البطاقات</option>
+            <option value="manager">المدراء</option>
+            <option value="distributor">الموزعون</option>
+            <option value="company">الشركة</option>
+          </select>
+          <div class="hub-field-hint">فئة المستلمين التي تشملها الشريحة.</div>
+        </div>
+        <div class="hub-field">
+          <label class="hub-field-label" for="caud-manager">رقم المدير</label>
+          <input id="caud-manager" class="hub-input" name="manager_id" type="number" min="1" dir="ltr">
+          <div class="hub-field-hint">لاستهداف مدير محدّد عند الحاجة.</div>
+        </div>
+      </div>
+
+      <div class="caud-row">
+        <div class="hub-field">
+          <label class="hub-field-label" for="caud-ids">أرقام المستلمين</label>
+          <input id="caud-ids" class="hub-input" name="ids" placeholder="1,2,3" dir="ltr">
+          <div class="hub-field-hint">قصْر الشريحة على أرقام محدّدة — افصل بينها بفاصلة.</div>
+        </div>
+        <div class="hub-field">
+          <label class="hub-field-label" for="caud-limit">الحد</label>
+          <input id="caud-limit" class="hub-input" name="limit" type="number" min="1" max="500" value="100" dir="ltr">
+          <div class="hub-field-hint">أقصى عدد مستلمين يظهر في المعاينة.</div>
+        </div>
+      </div>
+
+      <div class="caud-foot">
+        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> حفظ ومعاينة</button>
+        <span class="caud-note">يحفظ الشريحة ثم يعرض جمهورها — لا يتم إرسال أي رسالة.</span>
+      </div>
+    </form>
   {% endcall %}
 
-  {% call hub.section("المعاينة", icon="eye", flush=True) %}
-    <div class="hub-table-wrap">
-      <table class="hub-table">
-        <thead><tr><th>النوع</th><th>الرقم</th><th>الاسم</th></tr></thead>
-        <tbody>
-          {% for item in preview %}
-            <tr><td>{{ item.recipient_type }}</td><td>#{{ item.recipient_id }}</td><td>{{ item.display_name }}</td></tr>
-          {% else %}
-            <tr><td colspan="3">احفظ شريحة لمعاينة جمهورها.</td></tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
+  {# ════════ SEGMENTS + PREVIEW ════════ #}
+  {% call hub.section("الشرائح المحفوظة", icon="list", meta=segments|length|string ~ " شريحة", flush=True) %}
+    {% if segments %}
+      <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
+        <table class="hub-table" data-testid="audience-segments-table">
+          <thead><tr><th>المفتاح</th><th>العنوان</th><th>الحالة</th></tr></thead>
+          <tbody>
+            {% for item in segments %}
+              <tr>
+                <td class="mono small">{{ item.segment_key }}</td>
+                <td>{{ item.title }}</td>
+                <td>{{ item.status }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      {{ hub.empty("لا توجد شرائح بعد.", sub="أنشئ أول شريحة من النموذج بالأعلى لإعادة استخدامها في الإرسال والحملات.", icon="layer-group") }}
+    {% endif %}
   {% endcall %}
-</div>
+
+  {% call hub.section("المعاينة", icon="eye", meta=preview|length|string ~ " مستلم", flush=True) %}
+    {% if preview %}
+      <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
+        <table class="hub-table">
+          <thead><tr><th>النوع</th><th class="num">الرقم</th><th>الاسم</th></tr></thead>
+          <tbody>
+            {% for item in preview %}
+              <tr>
+                <td>{{ item.recipient_type }}</td>
+                <td class="num mono">#{{ item.recipient_id }}</td>
+                <td>{{ item.display_name }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      {{ hub.empty("احفظ شريحة لمعاينة جمهورها.", sub="بعد «حفظ ومعاينة» ستظهر هنا قائمة من سيستلم الرسائل.", icon="eye") }}
+    {% endif %}
+  {% endcall %}
+
+{% endcall %}
 {% endblock %}
+</content>
+</invoke>

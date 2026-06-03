@@ -1,449 +1,266 @@
-{# Print-Only Cards — single batch view.
-   Uses hub.hero + hub.kpi + hub.section + .hub-table + hub.btn so
-   the chrome matches every other admin page. Only the print modal
-   has bespoke CSS.
-#}
+{# Print-Only Cards — single batch view (UNIFIED DESIGN SYSTEM).
+   Merged hero (title + subtitle + icon + KPIs + actions) + worklayout
+   with a LEFT help panel. The cards table is a unified data-table; the
+   print action opens the shared embedded batch-print modal (template
+   picker + mm settings) driven by cards_batches_view.js — same export
+   endpoint + data-* hooks as cards_print_list.html.
+
+   Backend data: batch, cards, total_cards, page, per_page, pages_count,
+   print_templates, default_print_template_id. Zero route/behaviour change. #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
 {% block title %}{{ batch.package_name or batch.batch_code or 'حزمة' }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-layer-group"></i>{% endblock %}
 {% block page_title %}{{ batch.package_name or batch.batch_code or 'حزمة' }}{% endblock %}
-{% block page_sub %}
-  <span class="sub">
-    <a href="{{ url_for('radius.cards_print_list') }}" style="color:#475569;text-decoration:none">
-      <i class="fa-solid fa-arrow-right"></i> العودة لقائمة الحزم
-    </a>
-    &nbsp;·&nbsp; {{ total_cards }} بطاقة طباعة
-  </span>
-{% endblock %}
+{% block page_sub %}<span class="sub">{{ total_cards }} بطاقة طباعة</span>{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
-<style>
-  [hidden]{ display:none !important }
-
-  /* ── Strong elevation — the admin layout's purple page wash
-     means cards need real borders + real shadows to lift off. ── */
-  .hub-section{
-    border:1px solid #cbd5e1;
-    background:#fff;
-    box-shadow:
-      0 1px 0 rgba(255,255,255,.8) inset,
-      0 1px 3px rgba(15,23,42,.06),
-      0 8px 20px rgba(15,23,42,.06);
-    border-radius:14px;
-  }
-  .hub-section-head{
-    background:linear-gradient(180deg, #f1f5f9 0%, #f8fafc 100%);
-    border-bottom:1px solid #cbd5e1;
-  }
-  .hub-section-head-title{ color:#0f172a; font-weight:900 }
-  .hub-section-head-meta{
-    color:#475569; font-weight:700; font-size:12px;
-    font-variant-numeric:tabular-nums;
-  }
-  .hub-section-head-icon{ background:#eef2ff; color:#4f46e5 }
-  .hub-kpi{
-    border:1px solid #cbd5e1;
-    background:#fff;
-    box-shadow:
-      0 1px 0 rgba(255,255,255,.8) inset,
-      0 1px 3px rgba(15,23,42,.06),
-      0 6px 14px rgba(15,23,42,.05);
-    border-radius:12px;
-    transition:transform .15s ease, box-shadow .18s ease, border-color .15s ease;
-  }
-  .hub-kpi:hover{
-    transform:translateY(-2px);
-    border-color:#94a3b8;
-    box-shadow:
-      0 1px 0 rgba(255,255,255,.8) inset,
-      0 6px 14px rgba(15,23,42,.08),
-      0 14px 32px rgba(15,23,42,.08);
-  }
-  .hub-hero{
-    border:1px solid #cbd5e1;
-    box-shadow:
-      0 1px 0 rgba(255,255,255,.8) inset,
-      0 2px 6px rgba(15,23,42,.06),
-      0 14px 32px rgba(15,23,42,.08);
-  }
-  .hub-table thead th{
-    background:#f1f5f9;
-    color:#334155;
-    border-bottom:1px solid #cbd5e1;
-    font-weight:800;
-  }
-  .hub-table tbody tr{ border-top:1px solid #e2e8f0 }
-  .hub-table tbody tr:hover{ background:#fafbfc }
-
-  /* ── Cards table — print-credentials need monospace + LTR ── */
-  .pc-cards-table td,
-  .pc-cards-table th{ direction:ltr; text-align:start }
-  .pc-cards-table .mono{
-    font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    font-variant-numeric:tabular-nums;
-  }
-  .pc-cards-table .row-num{
-    color:#94a3b8; font-weight:700; font-size:12px;
-  }
-  .pc-cards-table .user{ color:#0f172a; font-weight:800 }
-
-  /* ── Pagination toolbar + page links ── */
-  .pc-pager-toolbar{
-    display:flex; align-items:center; gap:14px; flex-wrap:wrap;
-    margin-bottom:14px;
-  }
-  .pc-pager-toolbar .info{
-    font-size:12.5px; color:#64748b;
-    font-variant-numeric:tabular-nums;
-  }
-  .pc-pager-toolbar .info strong{ color:#0f172a; font-weight:800 }
-  .pc-pager-toolbar .per-page{
-    margin-inline-start:auto;
-    display:inline-flex; align-items:center; gap:8px;
-    font-size:12.5px; color:#475569;
-  }
-  .pc-pager-toolbar .per-page select{
-    padding:7px 10px;
-    border:1px solid #e2e8f0; border-radius:8px;
-    background:#fff; font-size:12.5px;
-    color:#0f172a; font-weight:700; cursor:pointer;
-  }
-  .pc-pager-toolbar .per-page select:focus{
-    outline:none; border-color:#6366f1;
-    box-shadow:0 0 0 3px rgba(99,102,241,.18);
-  }
-
-  .pc-pager{
-    display:flex; align-items:center; justify-content:center;
-    gap:6px; flex-wrap:wrap;
-    margin-top:18px; padding-top:16px;
-    border-top:1px solid #f1f5f9;
-  }
-  .pc-pager a, .pc-pager span{
-    min-width:34px; height:34px; padding:0 12px;
-    display:inline-flex; align-items:center; justify-content:center;
-    border:1px solid #e2e8f0; border-radius:8px;
-    background:#fff; color:#475569;
-    font-size:12.5px; font-weight:700;
-    text-decoration:none;
-    transition:background .15s ease, border-color .15s ease,
-               color .15s ease, transform .12s ease;
-    font-variant-numeric:tabular-nums;
-  }
-  .pc-pager a:hover{
-    background:#eef2ff; border-color:#a5b4fc; color:#3730a3;
-    transform:translateY(-1px);
-  }
-  .pc-pager .is-active{
-    background:#4f46e5; border-color:#4f46e5; color:#fff;
-    box-shadow:0 4px 10px rgba(79,70,229,.22);
-  }
-  .pc-pager .is-disabled{
-    background:#f8fafc; color:#cbd5e1; cursor:not-allowed;
-  }
-
-  /* ── Print modal — slate chrome to match the rest of the admin ── */
-  .pc-modal{
-    position:fixed; inset:0;
-    display:grid; place-items:center;
-    background:rgba(15,23,42,.55);
-    backdrop-filter:blur(3px);
-    z-index:1000;
-    padding:24px;
-    animation:pc-fade .18s ease;
-  }
-  @keyframes pc-fade{ from{opacity:0} to{opacity:1} }
-  .pc-modal-panel{
-    background:#fff;
-    border:1px solid #e2e8f0; border-radius:14px;
-    padding:24px;
-    width:100%; max-width:620px;
-    max-height:90vh; overflow:auto;
-    animation:pc-pop .22s cubic-bezier(.4,0,.2,1);
-    box-shadow:0 24px 60px rgba(15,23,42,.18);
-  }
-  @keyframes pc-pop{
-    from{ transform:scale(.97); opacity:0 }
-    to  { transform:scale(1);   opacity:1 }
-  }
-  .pc-modal-head{
-    display:flex; align-items:center; gap:12px;
-    margin-bottom:14px;
-    padding-bottom:12px;
-    border-bottom:1px solid #f1f5f9;
-  }
-  .pc-modal-head .icon-block{
-    width:38px; height:38px; border-radius:9px;
-    background:#fef3c7; color:#92400e;
-    display:grid; place-items:center;
-    font-size:15px;
-  }
-  .pc-modal-head h3{
-    margin:0;
-    font-size:15px; font-weight:900; color:#0f172a;
-  }
-  .pc-modal-head .x{
-    margin-inline-start:auto;
-    background:transparent; border:0;
-    width:32px; height:32px; border-radius:8px;
-    color:#64748b; cursor:pointer;
-    display:grid; place-items:center; font-size:13px;
-    transition:background .15s ease, color .15s ease;
-  }
-  .pc-modal-head .x:hover{ background:#f1f5f9; color:#0f172a }
-
-  .pc-modal-section-title{
-    font-size:11px; font-weight:800;
-    color:#64748b; letter-spacing:.08em; text-transform:uppercase;
-    margin:0 0 10px;
-  }
-  .pc-template-card{
-    display:flex; align-items:center; gap:12px;
-    padding:12px 14px;
-    border:1px solid #e2e8f0; border-radius:10px;
-    text-decoration:none; color:#0f172a;
-    margin-bottom:8px;
-    transition:border-color .15s ease, background .15s ease, transform .12s ease;
-  }
-  .pc-template-card:hover{
-    border-color:#f59e0b;
-    background:#fffbeb;
-    color:#0f172a;
-    transform:translateY(-1px);
-  }
-  .pc-template-card:last-child{ margin-bottom:0 }
-  .pc-template-card .picon{
-    width:36px; height:36px; border-radius:9px;
-    background:#f8fafc; color:#0f172a;
-    border:1px solid #e2e8f0;
-    display:grid; place-items:center;
-    font-size:14px; flex-shrink:0;
-  }
-  .pc-template-card.is-default{
-    border-color:#fde68a; background:#fffbeb;
-  }
-  .pc-template-card.is-default .picon{
-    background:#0f172a; color:#fff; border-color:#0f172a;
-  }
-  .pc-template-card strong{
-    display:block;
-    font-size:13px; font-weight:800; color:#0f172a;
-  }
-  .pc-template-card small{
-    display:block;
-    font-size:11px; color:#64748b; margin-top:2px;
-  }
-  .pc-template-card .ribbon{
-    margin-inline-start:auto;
-    font-size:10px; font-weight:800;
-    color:#15803d; background:#dcfce7;
-    padding:2px 7px; border-radius:5px;
-    letter-spacing:.05em;
-  }
-  .pc-template-card .arrow{
-    margin-inline-start:auto; color:#94a3b8; font-size:11px;
-  }
-
-  .pc-no-templates{
-    padding:20px; text-align:center;
-    background:#f8fafc; border:1px dashed #cbd5e1;
-    border-radius:10px;
-    color:#475569; font-size:13px;
-  }
-
-  .pc-modal-hint{
-    margin-top:16px;
-    padding:10px 12px; border-radius:8px;
-    background:#f8fafc; border:1px solid #e2e8f0;
-    font-size:12px; color:#64748b; line-height:1.7;
-    display:flex; gap:8px;
-  }
-  .pc-modal-hint i{ color:#d97706; margin-top:2px }
-</style>
+{# Reuse the floating print modal markup + behaviour from the regular
+   cards/batches page — same export endpoint, same JS wiring
+   (data-print-batch, data-batch-id, data-template-id, mm settings…). #}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/cards_batches_view.css') }}">
+<script defer src="{{ url_for('static', filename='js/cards_batches_view.js') }}"></script>
 {% endblock %}
 
 {% block content %}
+{# data-cards-batches-page activates cards_batches_view.js (the IIFE bails
+   out early without this attribute). Required for the embedded print
+   modal to wire up the data-print-batch trigger + template picker. #}
+<div data-cards-batches-page>
 
-{{ hub.hero(
+{# ───── Merged hero: title + subtitle + KPI strip + actions ───── #}
+{% call hub.megahero(
   batch.package_name or batch.batch_code or 'حزمة بلا اسم',
   subtitle="حزمة بطاقات للطباعة فقط — لا تُرحَّل إلى خدمة المصادقة ولا تسمح بتسجيل الدخول.",
   icon="layer-group",
   actions_html=(
-    hub.btn("اطبع هذه الحزمة", icon="print", variant="primary", attrs='id="pb-print-open"')
-    ~ hub.btn("الرجوع", icon="arrow-right", href=url_for('radius.cards_print_list'), variant="secondary")
-  )
-) }}
+    '<button type="button" class="hub-btn hub-btn--primary"'
+    ~ ' data-print-batch'
+    ~ ' data-batch-id="' ~ batch.id ~ '"'
+    ~ ' data-batch-code="' ~ (batch.batch_code or '') ~ '"'
+    ~ ' data-batch-name="' ~ ((batch.package_name or batch.batch_code or ('حزمة #' ~ batch.id))|e) ~ '"'
+    ~ ' data-batch-total="' ~ (batch.card_count or total_cards) ~ '">'
+    ~ '<i class="fa-solid fa-print"></i> اطبع هذه الحزمة</button>'
+    ~ '<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.cards_print_list') ~ '">'
+    ~ '<i class="fa-solid fa-arrow-right"></i> الرجوع لقائمة الحزم</a>'
+  ),
+  kpis=[
+    {'label': 'عدد البطاقات', 'value': batch.card_count or total_cards,
+     'icon': 'id-card', 'variant': 'brand', 'sub': 'بطاقة محفوظة'},
+    {'label': 'سعر البطاقة', 'value': batch.price_per_card|money,
+     'icon': 'tag', 'variant': 'amber', 'sub': 'سعر البيع للقطعة'},
+    {'label': 'سعر الجملة', 'value': batch.price_bulk|money,
+     'icon': 'coins', 'variant': 'purple', 'sub': 'إجمالي الدفعة'},
+    {'label': 'أُنشئت في', 'value': batch.created_at|date_local if batch.created_at else '—',
+     'icon': 'calendar', 'variant': 'green', 'sub': 'تاريخ الاستيراد'},
+  ]
+) %}{% endcall %}
 
-{# ── Summary KPIs ── #}
-{% call hub.section("ملخّص الحزمة", icon="chart-column") %}
-  <div class="hub-kpi-grid">
-    {{ hub.kpi("عدد البطاقات",  batch.card_count or total_cards,
-               icon="id-card", variant="brand", sub="بطاقة محفوظة") }}
-    {{ hub.kpi("سعر البطاقة",   batch.price_per_card|money,
-               icon="tag", variant="amber", sub="سعر البيع للقطعة") }}
-    {{ hub.kpi("سعر الجملة",    batch.price_bulk|money,
-               icon="coins", variant="purple", sub="إجمالي الدفعة") }}
-    {{ hub.kpi("أُنشئت في",    batch.created_at|date_local if batch.created_at else '—',
-               icon="calendar", variant="green", sub="تاريخ الاستيراد") }}
-  </div>
-{% endcall %}
+{# ───── Main (cards table) + help panel on the LEFT ───── #}
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "ما هذه الحزمة؟",
+  intro="حزمة طباعة فقط: بطاقات جاهزة للطباعة على ورق، دون أن تُرحَّل إلى المحرّك أو تسمح بتسجيل الدخول.",
+  icon="layer-group",
+  items=[
+    {'icon': 'print', 'text': 'اضغط «اطبع هذه الحزمة» لاختيار قالب وتجهيز ملف PDF لكل البطاقات.'},
+    {'icon': 'id-card', 'text': 'كل صف يعرض اسم الدخول وكلمة المرور كما ستُطبع على البطاقة.'},
+    {'icon': 'table-list', 'text': 'استخدم «عدد الصفوف» للتنقل بين صفحات البطاقات الكبيرة.'},
+    {'icon': 'tag', 'text': 'الأسعار للعرض فقط داخل لوحة الإدارة ولا تظهر على البطاقة المطبوعة.'},
+  ],
+  note="هذه البطاقات لا تظهر في تقارير الجلسات ولا يمكن استخدامها لتسجيل الدخول."
+)) %}
 
-{# ── Cards table ── #}
-{% call hub.section("بطاقات الحزمة", icon="id-card", meta=total_cards ~ " بطاقة") %}
-
-  {# Toolbar — row range + per-page selector #}
+  {# ── Cards table ── #}
   {% set range_lo = (page - 1) * per_page + 1 %}
   {% set range_hi = [page * per_page, total_cards] | min %}
 
-  <div class="pc-pager-toolbar">
-    <div class="info">
-      عرض <strong>{{ range_lo }}–{{ range_hi }}</strong>
-      من <strong>{{ total_cards }}</strong>
-      ·  صفحة <strong>{{ page }}</strong> من <strong>{{ pages_count }}</strong>
-    </div>
-    <form method="get" class="per-page">
-      <label for="pp">عدد الصفوف:</label>
-      <select id="pp" name="per_page" onchange="this.form.submit()">
-        {% for n in [10, 20, 50, 100] %}
-          <option value="{{ n }}" {% if per_page == n %}selected{% endif %}>{{ n }}</option>
-        {% endfor %}
-      </select>
-      <input type="hidden" name="page" value="1">
-    </form>
-  </div>
+  {% call hub.section("بطاقات الحزمة", icon="id-card", meta=total_cards ~ " بطاقة", flush=True) %}
 
-  <div style="overflow-x:auto">
-    <table class="hub-table pc-cards-table">
-      <thead>
-        <tr>
-          <th style="width:60px">#</th>
-          <th>اسم الدخول</th>
-          <th>كلمة المرور</th>
-          <th style="width:170px">أُنشئت</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for c in cards %}
-        <tr>
-          <td><span class="row-num">{{ range_lo + loop.index0 }}</span></td>
-          <td class="mono user">{{ c.username }}</td>
-          <td class="mono">{{ c.password or '—' }}</td>
-          <td style="font-size:11.5px;color:#64748b">{{ c.created_at|dt_local if c.created_at else '—' }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-
-  {% if pages_count > 1 %}
-    {% macro pglink(p, label, disabled=false, active=false) -%}
-      {%- if disabled -%}
-        <span class="is-disabled" aria-hidden="true">{{ label }}</span>
-      {%- elif active -%}
-        <span class="is-active" aria-current="page">{{ label }}</span>
-      {%- else -%}
-        <a href="{{ url_for('radius.cards_print_batch', batch_id=batch.id, page=p, per_page=per_page) }}">{{ label }}</a>
-      {%- endif -%}
-    {%- endmacro %}
-
-    <nav class="pc-pager" aria-label="تنقل الصفحات">
-      {{ pglink(1, '«', disabled=(page == 1)) }}
-      {{ pglink(page - 1, '‹', disabled=(page == 1)) }}
-      {% set lo = [page - 2, 1] | max %}
-      {% set hi = [page + 2, pages_count] | min %}
-      {% if lo > 1 %}{{ pglink(1, 1) }}{% if lo > 2 %}<span class="is-disabled">…</span>{% endif %}{% endif %}
-      {% for p in range(lo, hi + 1) %}
-        {{ pglink(p, p, active=(p == page)) }}
-      {% endfor %}
-      {% if hi < pages_count %}{% if hi < pages_count - 1 %}<span class="is-disabled">…</span>{% endif %}{{ pglink(pages_count, pages_count) }}{% endif %}
-      {{ pglink(page + 1, '›', disabled=(page == pages_count)) }}
-      {{ pglink(pages_count, '»', disabled=(page == pages_count)) }}
-    </nav>
-  {% endif %}
-
-{% endcall %}
-
-{# ── Print modal ── #}
-<div class="pc-modal" id="pb-print-modal" hidden role="dialog" aria-modal="true" aria-labelledby="pb-modal-title">
-  <div class="pc-modal-panel">
-    <div class="pc-modal-head">
-      <span class="icon-block" aria-hidden="true"><i class="fa-solid fa-print"></i></span>
-      <h3 id="pb-modal-title">جهّز ملف الطباعة</h3>
-      <button type="button" class="x" id="pb-print-close" aria-label="إغلاق">
-        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
-      </button>
-    </div>
-
-    <p class="pc-modal-section-title">اختر قالباً محفوظاً</p>
-
-    {% if print_templates %}
-      {% for t in print_templates %}
-      <a href="{{ url_for('radius.print_templates_export_job_start', template_id=t.id) }}?batch_id={{ batch.id }}"
-         class="pc-template-card {% if t.id == default_print_template_id %}is-default{% endif %}"
-         target="_blank" rel="noopener">
-        <span class="picon" aria-hidden="true"><i class="fa-solid fa-file-pdf"></i></span>
-        <div style="flex:1;min-width:0">
-          <strong>{{ t.name or 'قالب غير مُسمّى' }}</strong>
-          <small>{{ t.preset or 'قالب محفوظ' }}</small>
-        </div>
-        {% if t.id == default_print_template_id %}
-          <span class="ribbon">الافتراضي</span>
-        {% else %}
-          <span class="arrow"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i></span>
-        {% endif %}
-      </a>
-      {% endfor %}
-    {% else %}
-      <div class="pc-no-templates">
-        <i class="fa-solid fa-triangle-exclamation" style="color:#d97706" aria-hidden="true"></i>
-        لا توجد قوالب طباعة محفوظة بعد —
-        أنشئ قالباً من قسم <strong>قوالب الطباعة</strong> ثم عُد إلى هنا.
+    {# Toolbar — row range + per-page selector #}
+    <div class="hub-flex-row" style="gap:14px;flex-wrap:wrap;align-items:center;padding:12px 16px;border-bottom:1px solid var(--hub-border)">
+      <div class="hub-text-mute" style="font-size:12.5px;font-variant-numeric:tabular-nums">
+        عرض <strong style="color:var(--hub-text)">{{ range_lo }}–{{ range_hi }}</strong>
+        من <strong style="color:var(--hub-text)">{{ total_cards }}</strong>
+        ·  صفحة <strong style="color:var(--hub-text)">{{ page }}</strong> من <strong style="color:var(--hub-text)">{{ pages_count }}</strong>
       </div>
+      <form method="get" class="hub-flex-row" style="gap:8px;align-items:center;margin-inline-start:auto">
+        <label for="pp" class="hub-text-mute" style="font-size:12.5px">عدد الصفوف:</label>
+        <select id="pp" class="hub-select" name="per_page" onchange="this.form.submit()" style="width:auto">
+          {% for n in [10, 20, 50, 100] %}
+            <option value="{{ n }}" {% if per_page == n %}selected{% endif %}>{{ n }}</option>
+          {% endfor %}
+        </select>
+        <input type="hidden" name="page" value="1">
+      </form>
+    </div>
+
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="{{ per_page }}" style="border:none;border-radius:0">
+      <table class="hub-table">
+        <thead>
+          <tr>
+            <th class="num" style="width:60px">#</th>
+            <th>اسم الدخول</th>
+            <th>كلمة المرور</th>
+            <th style="width:170px">أُنشئت</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in cards %}
+          <tr>
+            <td class="num mono">{{ range_lo + loop.index0 }}</td>
+            <td class="mono"><strong style="color:var(--hub-text)">{{ c.username }}</strong></td>
+            <td class="mono">{{ c.password or '—' }}</td>
+            <td class="small hub-text-mute" style="direction:ltr;text-align:start">{{ c.created_at|dt_local if c.created_at else '—' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {# Pagination — server-side, preserves per_page #}
+    {% if pages_count > 1 %}
+    <nav style="display:flex;gap:4px;align-items:center;justify-content:center;padding:14px 0" aria-label="تنقل الصفحات">
+      {% set prev = page - 1 %}
+      {% set next = page + 1 %}
+      {% macro page_link(p, label, disabled=false) -%}
+        {% if disabled %}
+          <span class="hub-btn hub-btn--ghost hub-btn--icon" style="opacity:.4;cursor:default">{{ label }}</span>
+        {% else %}
+          <a class="hub-btn hub-btn--secondary hub-btn--sm"
+             href="{{ url_for('radius.cards_print_batch', batch_id=batch.id, page=p, per_page=per_page) }}">{{ label }}</a>
+        {% endif %}
+      {%- endmacro %}
+      {{ page_link(1,           '«', disabled=(page == 1)) }}
+      {{ page_link(prev,        '‹', disabled=(page == 1)) }}
+      {% set window_lo = [page - 2, 1] | max %}
+      {% set window_hi = [page + 2, pages_count] | min %}
+      {% if window_lo > 1 %}<span class="hub-text-mute">…</span>{% endif %}
+      {% for p in range(window_lo, window_hi + 1) %}
+        {% if p == page %}
+          <span class="hub-btn hub-btn--primary hub-btn--sm">{{ p }}</span>
+        {% else %}
+          {{ page_link(p, p) }}
+        {% endif %}
+      {% endfor %}
+      {% if window_hi < pages_count %}<span class="hub-text-mute">…</span>{% endif %}
+      {{ page_link(next,        '›', disabled=(page == pages_count)) }}
+      {{ page_link(pages_count, '»', disabled=(page == pages_count)) }}
+    </nav>
     {% endif %}
 
-    <div class="pc-modal-hint">
-      <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+  {% endcall %}
+{% endcall %}
+
+{# ── Embedded batch-print modal — same markup + behaviour as
+   cards_print_list.html / cards_batches.html (driven by
+   cards_batches_view.js: data-batch-print-modal, data-print-template-picker,
+   data-batch-print-form, mm settings, export job endpoint). ── #}
+<div class="batch-print-modal" data-batch-print-modal hidden>
+  <div class="batch-print-modal__backdrop" data-print-modal-close></div>
+  <section class="batch-print-modal__panel" role="dialog" aria-modal="true" aria-labelledby="batchPrintTitle">
+    <header class="batch-print-modal__header">
       <div>
-        اضغط القالب لتفتح نافذة جديدة تبدأ تجهيز ملف PDF لكل البطاقات في
-        هذه الحزمة. سيكون الملف جاهزاً للحفظ أو الطباعة المباشرة.
+        <p>طباعة مباشرة للحزمة</p>
+        <h2 id="batchPrintTitle">تجهيز ملف البطاقات</h2>
+        <span data-print-batch-summary>اختر قالبًا ثم ابدأ التصدير.</span>
+      </div>
+      <button type="button" class="batch-print-modal__close" data-print-modal-close aria-label="إغلاق">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </header>
+
+    <div class="batch-print-modal__body">
+      <div class="batch-print-modal__templates">
+        <h3>اختيار قالب محفوظ</h3>
+        {% if print_templates %}
+          <div class="batch-template-picker" data-print-template-picker>
+            {% for t in print_templates %}
+              <button type="button" class="batch-template-option"
+                      data-template-id="{{ t.id }}"
+                      data-template-name="{{ (t.name or 'قالب')|e }}"
+                      data-job-url="{{ url_for('radius.print_templates_export_job_start', template_id=t.id) }}"
+                      {% if t.id == default_print_template_id %}data-default-template="1"{% endif %}>
+                <span class="batch-template-option__thumb"><img class="pt-thumb-img" loading="lazy" decoding="async" src="{{ url_for('radius.print_templates_thumbnail', template_id=t.id) }}" alt=""></span>
+                <strong>{{ t.name or 'قالب بدون اسم' }}</strong>
+                <small>{{ t.preset or 'قالب محفوظ' }}</small>
+              </button>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="batch-print-warning">
+            لا توجد قوالب محفوظة بعد. أنشئ قالبًا من مركز تصميم البطاقات أولًا.
+          </div>
+        {% endif %}
+      </div>
+
+      <form class="batch-print-form" data-batch-print-form>
+        <input type="hidden" name="batch_id" data-print-batch-id>
+        <h3>إعدادات الطباعة</h3>
+        <div class="batch-print-grid">
+          <label>مقاس الورقة
+            <select name="print_page_size">
+              <option value="A4">A4</option>
+              <option value="Letter">Letter</option>
+            </select>
+          </label>
+          <label>اتجاه الورقة
+            <select name="print_orientation">
+              <option value="portrait">طولي</option>
+              <option value="landscape">أفقي</option>
+            </select>
+          </label>
+          <label>عدد الأعمدة
+            <input type="number" name="print_columns" min="1" max="8" value="3">
+          </label>
+          <label>عدد الصفوف
+            <input type="number" name="print_rows" min="1" max="12" value="5">
+          </label>
+          <label>المسافة بين الأعمدة <span dir="ltr">(mm)</span>
+            <input type="number" name="print_column_gap_mm" min="0" max="30" step="0.5" value="3">
+          </label>
+          <label>المسافة بين الصفوف <span dir="ltr">(mm)</span>
+            <input type="number" name="print_row_gap_mm" min="0" max="30" step="0.5" value="3">
+          </label>
+          <label>الهامش العلوي <span dir="ltr">(mm)</span>
+            <input type="number" name="print_margin_top_mm" min="0" max="40" step="0.5" value="8">
+          </label>
+          <label>الهامش الأيمن <span dir="ltr">(mm)</span>
+            <input type="number" name="print_margin_right_mm" min="0" max="40" step="0.5" value="8">
+          </label>
+          <label>الهامش السفلي <span dir="ltr">(mm)</span>
+            <input type="number" name="print_margin_bottom_mm" min="0" max="40" step="0.5" value="8">
+          </label>
+          <label>الهامش الأيسر <span dir="ltr">(mm)</span>
+            <input type="number" name="print_margin_left_mm" min="0" max="40" step="0.5" value="8">
+          </label>
+        </div>
+        <button class="batch-btn batch-btn--primary batch-print-submit" type="submit" {% if not print_templates %}disabled{% endif %}>
+          <i class="fa-solid fa-file-pdf"></i> إنشاء ملف PDF
+        </button>
+      </form>
+
+      <div class="batch-print-progress" data-print-progress hidden>
+        <div class="batch-print-progress__top">
+          <strong data-print-progress-title>بدء تجهيز ملف PDF...</strong>
+          <span data-print-progress-percent>0%</span>
+        </div>
+        <div class="batch-print-progress__bar"><span data-print-progress-bar></span></div>
+        <ol>
+          <li data-print-stage="queued"><i class="fa-regular fa-circle"></i> إنشاء مهمة التصدير</li>
+          <li data-print-stage="rendering"><i class="fa-regular fa-circle"></i> رسم البطاقات بالقالب المختار</li>
+          <li data-print-stage="pdf"><i class="fa-regular fa-circle"></i> ترتيب الصفحات والهوامش</li>
+          <li data-print-stage="done"><i class="fa-regular fa-circle"></i> تجهيز رابط التحميل</li>
+        </ol>
+        <a class="batch-btn batch-btn--soft" data-print-download hidden href="#">
+          <i class="fa-solid fa-download"></i> تحميل الملف
+        </a>
+        <p data-print-error class="batch-print-error" hidden></p>
       </div>
     </div>
-  </div>
+  </section>
 </div>
 
-<script>
-(function(){
-  const open  = document.getElementById('pb-print-open');
-  const modal = document.getElementById('pb-print-modal');
-  const close = document.getElementById('pb-print-close');
-  if (!open || !modal) return;
-
-  let lastFocus = null;
-
-  function show(){
-    lastFocus = document.activeElement;
-    modal.hidden = false;
-    document.body.style.overflow = 'hidden';
-    setTimeout(() => {
-      const focusable = modal.querySelector('a, button, [tabindex]:not([tabindex="-1"])');
-      if (focusable) focusable.focus();
-    }, 50);
-  }
-  function hide(){
-    modal.hidden = true;
-    document.body.style.overflow = '';
-    if (lastFocus && lastFocus.focus) lastFocus.focus();
-  }
-
-  open.addEventListener('click', show);
-  if (close) close.addEventListener('click', hide);
-  modal.addEventListener('click', e => { if (e.target === modal) hide(); });
-  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !modal.hidden) hide(); });
-
-  if (location.hash === '#print') show();
-})();
-</script>
+</div>{# /data-cards-batches-page #}
 {% endblock %}

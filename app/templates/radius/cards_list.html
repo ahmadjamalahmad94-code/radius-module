@@ -1,4 +1,5 @@
-{# Cards list — REBUILT N5 (hub-v2). Backend data: items, total, page, pages_count, batches, plans, preserve, per_page, q, used, revoked, batch_id. #}
+{# Cards list — UNIFIED DESIGN SYSTEM (merged hero + help panel).
+   Backend data: items, total, page, pages_count, batches, plans, preserve, per_page, q, used, revoked, batch_id. Zero route/behaviour change. #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
@@ -8,11 +9,15 @@
 {% block page_sub %}<span class="sub">{{ total }} بطاقة — صفحة {{ page }} من {{ pages_count }}</span>{% endblock %}
 
 {% block content %}
-<div class="hr-page-shell" data-admin-rhythm data-cards-list-page>
 
-{{ hub.hero(
+{% set _ready   = items|rejectattr('used')|rejectattr('revoked')|list|length %}
+{% set _used    = items|selectattr('used')|rejectattr('revoked')|list|length %}
+{% set _revoked = items|selectattr('revoked')|list|length %}
+
+{# ───── Merged hero: title + actions + KPI strip + integrated search/filters ───── #}
+{% call hub.megahero(
   "كل الكروت",
-  subtitle="عرض كل الكروت المولّدة عبر الدفعات — مع تصفية حسب الدفعة والحالة",
+  subtitle="عرض كل الكروت المولّدة عبر الدفعات — مع تصفية حسب الدفعة والحالة، وبحث مباشر باليوزر.",
   icon="id-card",
   actions_html='
     <a class="hub-btn hub-btn--primary" href="' + url_for('radius.cards_generate') + '">
@@ -23,12 +28,17 @@
     </a>
     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.cards_checker') + '">
       <i class="fa-solid fa-magnifying-glass"></i> فحص بطاقة
-    </a>
-  '
-) }}
-
-<form method="get" class="hub-filterbar hr-toolbar">
-  <input class="hub-input grow" type="search" name="q" value="{{ q or '' }}" placeholder="بحث في اليوزر..." autocomplete="off">
+    </a>',
+  kpis=[
+    {'label': 'إجمالي النتائج', 'value': total,    'icon': 'id-card',     'variant': 'brand'},
+    {'label': 'جاهزة (الصفحة)', 'value': _ready,   'icon': 'circle-check','variant': 'green'},
+    {'label': 'مستخدمة (الصفحة)','value': _used,    'icon': 'circle-user', 'variant': 'blue'},
+    {'label': 'ملغاة (الصفحة)', 'value': _revoked, 'icon': 'ban',         'variant': 'red'},
+  ],
+  search_action=url_for('radius.cards_list')
+) %}
+  <input class="hub-input grow" type="search" name="q" value="{{ q or '' }}"
+         placeholder="بحث في اليوزر..." autocomplete="off">
   <select class="hub-select" name="batch_id">
     <option value="">كل الدفعات</option>
     {% for bid, b in batches.items() %}
@@ -55,89 +65,102 @@
     {{ hub.btn("إعادة ضبط", icon="rotate-left", variant="ghost", size="sm",
                 attrs='onclick="window.location=' + "'" + url_for('radius.cards_list') + "'" + '"') }}
   {% endif %}
-</form>
+{% endcall %}
 
 {% if items %}
-{% call hub.section("الكروت", icon="table-list", meta=total|string + " بطاقة", flush=True) %}
-  <div class="hub-table-wrap hr-table-scroll" style="border:none;border-radius:0">
-    <table class="hub-table hr-data-table">
-      <thead>
-        <tr>
-          <th class="num" style="width:60px">#</th>
-          <th>اليوزر</th>
-          <th>الباسورد</th>
-          <th>الباقة</th>
-          <th>الدفعة</th>
-          <th>الحالة</th>
-          <th>تنتهي</th>
-          <th style="width:80px">إجراء</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for c in items %}
-        <tr>
-          <td class="num mono">{{ c.id }}</td>
-          <td class="mono"><strong>{{ c.username }}</strong></td>
-          <td class="mono small">{{ c.password }}</td>
-          <td>{{ plans[c.plan_id].name if plans.get(c.plan_id) else '—' }}</td>
-          <td class="mono small">
-            <a href="{{ url_for('radius.cards_of_batch', batch_id=c.batch_id) }}"
-               style="color:var(--hub-brand-ink);text-decoration:none;font-weight:700">
-              {{ batches[c.batch_id].batch_code if batches.get(c.batch_id) else c.batch_id }}
-            </a>
-          </td>
-          <td>
-            {% if c.revoked %}{{ hub.pill("ملغاة", variant="red") }}
-            {% elif c.used %}{{ hub.pill("مستخدمة", variant="blue") }}
-            {% else %}{{ hub.pill("جاهزة", variant="green") }}{% endif %}
-          </td>
-          <td class="mono small">{{ c.expire_at|date_local if c.expire_at else '—' }}</td>
-          <td>
-            {% if not c.revoked %}
-            <form method="post" action="{{ url_for('radius.cards_revoke', card_id=c.id) }}"
-                  onsubmit="return confirm('إلغاء البطاقة {{ c.username }}؟');" style="display:inline">
-              <button type="submit" class="hub-btn hub-btn--danger hub-btn--icon" title="إلغاء">
-                <i class="fa-solid fa-ban"></i>
-              </button>
-            </form>
-            {% endif %}
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+{# ───── Main (carded table) + help panel on the LEFT ───── #}
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "كيف تقرأ هذه الصفحة؟",
+  intro="كل صف هو بطاقة (كرت) ضمن دفعة، تحمل يوزر وباسورد وباقة محددة.",
+  items=[
+    {'icon': 'circle-check', 'text': 'البطاقة «جاهزة» لم تُستخدم بعد ويمكن بيعها؛ «مستخدمة» جرى تفعيلها.'},
+    {'icon': 'ban',          'text': 'البطاقة «ملغاة» أُبطلت يدويًا ولن تعمل — هذا الإجراء نهائي للبطاقة.'},
+    {'icon': 'layer-group',  'text': 'اضغط كود الدفعة لعرض كل كروت تلك الدفعة فقط.'},
+    {'icon': 'filter',       'text': 'استخدم البحث والفلاتر بالأعلى لتضييق النتائج؛ التنقّل يحفظ الفلاتر.'},
+  ],
+  note="عدد النتائج بالأعلى للإجمالي عبر كل الصفحات، أما مؤشرات الحالة فتخص الصفحة الحالية."
+)) %}
+  {% call hub.section("الكروت", icon="table-list", meta=total|string + " بطاقة", flush=True) %}
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
+      <table class="hub-table">
+        <thead>
+          <tr>
+            <th class="num" style="width:60px">#</th>
+            <th>اليوزر</th>
+            <th>الباسورد</th>
+            <th>الباقة</th>
+            <th>الدفعة</th>
+            <th>الحالة</th>
+            <th>تنتهي</th>
+            <th style="width:80px" data-uds-nosort>إجراء</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in items %}
+          <tr>
+            <td class="num mono">{{ c.id }}</td>
+            <td class="mono"><strong>{{ c.username }}</strong></td>
+            <td class="mono small">{{ c.password }}</td>
+            <td>{{ plans[c.plan_id].name if plans.get(c.plan_id) else '—' }}</td>
+            <td class="mono small">
+              <a href="{{ url_for('radius.cards_of_batch', batch_id=c.batch_id) }}"
+                 style="color:var(--hub-brand-ink);text-decoration:none;font-weight:700">
+                {{ batches[c.batch_id].batch_code if batches.get(c.batch_id) else c.batch_id }}
+              </a>
+            </td>
+            <td>
+              {% if c.revoked %}{{ hub.pill("ملغاة", variant="red") }}
+              {% elif c.used %}{{ hub.pill("مستخدمة", variant="blue") }}
+              {% else %}{{ hub.pill("جاهزة", variant="green") }}{% endif %}
+            </td>
+            <td class="mono small">{{ c.expire_at|date_local if c.expire_at else '—' }}</td>
+            <td>
+              {% if not c.revoked %}
+              <form method="post" action="{{ url_for('radius.cards_revoke', card_id=c.id) }}"
+                    onsubmit="return confirm('إلغاء البطاقة {{ c.username }}؟');" style="display:inline">
+                <button type="submit" class="hub-btn hub-btn--danger hub-btn--icon" title="إلغاء">
+                  <i class="fa-solid fa-ban"></i>
+                </button>
+              </form>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
 
-  {# Pagination — server-side, preserves filters #}
-  {% if pages_count > 1 %}
-  <nav style="display:flex;gap:4px;align-items:center;justify-content:center;padding:14px 0">
-    {% set prev = page - 1 %}
-    {% set next = page + 1 %}
-    {% macro page_link(p, label, disabled=false) -%}
-      {% if disabled %}
-        <span class="hub-btn hub-btn--ghost hub-btn--icon" style="opacity:.4;cursor:default">{{ label }}</span>
-      {% else %}
-        {% set qs = preserve.copy() %}{% set _ = qs.update({'page': p}) %}
-        <a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ url_for('radius.cards_list', **qs) }}">{{ label }}</a>
-      {% endif %}
-    {%- endmacro %}
-    {{ page_link(1,           '«', disabled=(page == 1)) }}
-    {{ page_link(prev,        '‹', disabled=(page == 1)) }}
-    {% set window_lo = [page - 2, 1] | max %}
-    {% set window_hi = [page + 2, pages_count] | min %}
-    {% if window_lo > 1 %}<span class="hub-text-mute">…</span>{% endif %}
-    {% for p in range(window_lo, window_hi + 1) %}
-      {% if p == page %}
-        <span class="hub-btn hub-btn--primary hub-btn--sm">{{ p }}</span>
-      {% else %}
-        {{ page_link(p, p) }}
-      {% endif %}
-    {% endfor %}
-    {% if window_hi < pages_count %}<span class="hub-text-mute">…</span>{% endif %}
-    {{ page_link(next,        '›', disabled=(page == pages_count)) }}
-    {{ page_link(pages_count, '»', disabled=(page == pages_count)) }}
-  </nav>
-  {% endif %}
+    {# Pagination — server-side, preserves filters #}
+    {% if pages_count > 1 %}
+    <nav style="display:flex;gap:4px;align-items:center;justify-content:center;padding:14px 0">
+      {% set prev = page - 1 %}
+      {% set next = page + 1 %}
+      {% macro page_link(p, label, disabled=false) -%}
+        {% if disabled %}
+          <span class="hub-btn hub-btn--ghost hub-btn--icon" style="opacity:.4;cursor:default">{{ label }}</span>
+        {% else %}
+          {% set qs = preserve.copy() %}{% set _ = qs.update({'page': p}) %}
+          <a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ url_for('radius.cards_list', **qs) }}">{{ label }}</a>
+        {% endif %}
+      {%- endmacro %}
+      {{ page_link(1,           '«', disabled=(page == 1)) }}
+      {{ page_link(prev,        '‹', disabled=(page == 1)) }}
+      {% set window_lo = [page - 2, 1] | max %}
+      {% set window_hi = [page + 2, pages_count] | min %}
+      {% if window_lo > 1 %}<span class="hub-text-mute">…</span>{% endif %}
+      {% for p in range(window_lo, window_hi + 1) %}
+        {% if p == page %}
+          <span class="hub-btn hub-btn--primary hub-btn--sm">{{ p }}</span>
+        {% else %}
+          {{ page_link(p, p) }}
+        {% endif %}
+      {% endfor %}
+      {% if window_hi < pages_count %}<span class="hub-text-mute">…</span>{% endif %}
+      {{ page_link(next,        '›', disabled=(page == pages_count)) }}
+      {{ page_link(pages_count, '»', disabled=(page == pages_count)) }}
+    </nav>
+    {% endif %}
+  {% endcall %}
 {% endcall %}
 {% else %}
 {{ hub.empty(
@@ -147,5 +170,6 @@
 ) }}
 {% endif %}
 
-</div>
 {% endblock %}
+</content>
+</invoke>

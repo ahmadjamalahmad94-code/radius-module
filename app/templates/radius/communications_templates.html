@@ -11,18 +11,13 @@
 {% block head_extra %}
 {{ super() }}
 <style>
-  .ctpl{ display:grid; gap:16px; }
-  .ctpl-explain{ display:flex; gap:12px; align-items:flex-start; background:#eff6ff; border:1px solid #bfdbfe; border-radius:14px; padding:13px 16px; }
-  .ctpl-explain .ic{ width:34px;height:34px;border-radius:10px;background:#dbeafe;color:#1d4ed8;display:grid;place-items:center;font-size:15px;flex:none; }
-  .ctpl-explain .tx{ font-size:12.5px; line-height:1.85; color:#1e40af; }
-  .ctpl-explain .tx a{ color:#1d4ed8; font-weight:800; text-decoration:underline; }
-  /* ready-made suggestion chips */
+  /* ready-made suggestion chips (retained custom element) */
   .ctpl-seed{ display:flex; gap:8px; flex-wrap:wrap; }
   .ctpl-seed-chip{ display:inline-flex; align-items:center; gap:8px; border:1px solid #c4b5fd; background:#f5f3ff; color:#5b21b6;
     border-radius:11px; padding:8px 13px; font:inherit; font-size:12px; font-weight:800; cursor:pointer; transition:.14s; }
   .ctpl-seed-chip:hover{ background:#ede9fe; border-color:#a78bfa; transform:translateY(-1px); }
   .ctpl-seed-chip i{ color:#7c3aed; }
-  /* form */
+  /* form (retained custom element) */
   .ctpl-form{ display:grid; gap:14px; }
   .ctpl-row{ display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:13px; }
   .ctpl-fld{ display:grid; gap:6px; }
@@ -36,7 +31,7 @@
   .ctpl-var{ font-family:ui-monospace,Consolas,monospace; font-size:11px; background:#f1f5f9; border:1px solid #e2e8f0; border-radius:6px;
     padding:3px 8px; color:#5b21b6; direction:ltr; unicode-bidi:isolate; cursor:pointer; transition:.12s; }
   .ctpl-var:hover{ background:#ede9fe; border-color:#c4b5fd; }
-  /* channel pill in the table */
+  /* channel + status pills in the table (retained custom element) */
   .ctpl-chpill{ display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:800; border-radius:999px; padding:3px 10px; background:#eef2ff; color:#4338ca; }
   .ctpl-stpill{ display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:800; border-radius:999px; padding:3px 10px; }
   .ctpl-stpill.on{ background:#dcfce7; color:#15803d; } .ctpl-stpill.off{ background:#f1f5f9; color:#64748b; }
@@ -44,22 +39,39 @@
 {% endblock %}
 
 {% block content %}
-{{ hub.hero(
+{% set _total = templates|length %}
+{% set _active = templates|selectattr('status','in',['active','enabled'])|list|length %}
+{% set _channels = templates|map(attribute='channel')|map('string')|select|list|unique|list|length %}
+
+{# ───── ONE unified hero: title + subtitle + icon + actions + KPI strip ───── #}
+{% call hub.megahero(
   "قوالب الرسائل",
   subtitle="يمكن استخدام متغيرات داخل القالب مثل اسم العميل أو تاريخ الانتهاء، ويتم تجهيز النص محليًا قبل إضافته للطابور.",
   icon="file-lines",
-  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.communications_guide') ~ '"><i class="fa-solid fa-book-open"></i> دليل وشروحات</a>'
-) }}
+  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.communications_guide') ~ '"><i class="fa-solid fa-book-open"></i> دليل وشروحات</a>',
+  kpis=[
+    {'label': 'إجمالي القوالب', 'value': _total,    'icon': 'file-lines', 'variant': 'brand'},
+    {'label': 'مفعَّلة',        'value': _active,   'icon': 'circle-check', 'variant': 'green'},
+    {'label': 'القنوات',        'value': _channels, 'icon': 'tower-broadcast', 'variant': 'blue'},
+  ]
+) %}
+{% endcall %}
+
 {% include "radius/communications_nav.html" %}
 
-<div class="ctpl">
-  <div class="ctpl-explain">
-    <span class="ic"><i class="fa-solid fa-circle-info"></i></span>
-    <div class="tx">
-      أنشئ قوالب جاهزة لإعادة استخدامها في الإرسال اليدوي. استعن بالنماذج الجاهزة أدناه كنقطة بداية —
-      اضغط أي نموذج ليملأ الحقول، ثم عدّله واحفظه. المتغيّرات مثل <code style="font-family:ui-monospace,monospace">{name}</code> تُملأ تلقائيًا.
-    </div>
-  </div>
+{# ───── Full-width work layout: main content + help panel on the LEFT ───── #}
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "كيف تعمل القوالب؟",
+  intro="أنشئ قوالب جاهزة لإعادة استخدامها في الإرسال اليدوي. استعن بالنماذج الجاهزة كنقطة بداية — اضغط أي نموذج ليملأ الحقول، ثم عدّله واحفظه.",
+  icon="circle-info",
+  items=[
+    {'icon': 'wand-magic-sparkles', 'text': 'النماذج الجاهزة تملأ النموذج بضغطة واحدة لتبدأ بسرعة.'},
+    {'icon': 'code',  'text': 'المتغيّرات مثل {name} تُملأ تلقائيًا عند الإرسال — أدرجها بالضغط على أزرار المتغيّرات.'},
+    {'icon': 'tower-broadcast', 'text': 'لكل قالب قناة (واتساب، رسائل قصيرة، داخلية…) تحدّد وسيلة الإيصال.'},
+    {'icon': 'circle-check', 'text': 'القالب المفعَّل جاهز للاستخدام في صفحة الإرسال.'}
+  ],
+  note="معرّف القالب فريد بالإنجليزية بدون مسافات، ويُستخدم لاستدعاء القالب لاحقًا."
+)) %}
 
   {% call hub.section("نماذج جاهزة للبدء السريع", icon="wand-magic-sparkles", meta="اضغط لملء النموذج") %}
     <div class="ctpl-seed" id="ctpl-seed">
@@ -151,9 +163,9 @@
 
   {% call hub.section("القوالب", icon="file-lines", meta=(templates|length ~ " قالب"), flush=True) %}
     {% if templates %}
-      <div class="hub-table-wrap">
+      <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
         <table class="hub-table" data-testid="notification-templates-table">
-          <thead><tr><th>المفتاح</th><th>القناة</th><th>العنوان</th><th>الحالة</th></tr></thead>
+          <thead><tr><th>المفتاح</th><th>القناة</th><th>العنوان</th><th data-uds-nosort>الحالة</th></tr></thead>
           <tbody>
             {% for item in templates %}
               <tr>
@@ -175,7 +187,8 @@
       {{ hub.empty("لا توجد قوالب بعد.", sub="اضغط أحد «النماذج الجاهزة» بالأعلى لإنشاء أول قالب بسرعة.", icon="file-lines") }}
     {% endif %}
   {% endcall %}
-</div>
+
+{% endcall %}
 
 <script>
 (function(){

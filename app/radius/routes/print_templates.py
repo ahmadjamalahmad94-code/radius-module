@@ -37,6 +37,12 @@ def register_print_template_routes(bp: Blueprint) -> None:
         methods=["GET"],
     )
     bp.add_url_rule(
+        "/print-templates/<int:template_id>/thumbnail.svg",
+        "print_templates_thumbnail",
+        print_templates_thumbnail,
+        methods=["GET"],
+    )
+    bp.add_url_rule(
         "/print-templates/designer-svg",
         "print_templates_designer_svg",
         print_templates_designer_svg,
@@ -235,6 +241,51 @@ def _uploaded_background(*, allow_data_url: bool = True) -> dict:
     return _background_from_data_url() if allow_data_url else {}
 
 
+def _logo_from_data_url() -> dict:
+    """Optimize the logo from its hidden data-URL field, mapped to logo_* keys.
+
+    Mirrors `_background_from_data_url` but namespaces the output so a logo
+    never collides with the background image. Returns {} when no logo is set.
+    """
+    data_url = (request.form.get("logo_image_data_url") or "").strip()
+    if not data_url.startswith("data:image/") or ";base64," not in data_url:
+        return {}
+    mime_part, encoded = data_url.split(";base64,", 1)
+    mime = mime_part.removeprefix("data:").lower()
+    if mime not in {"image/png", "image/jpeg", "image/jpg", "image/webp"}:
+        return {}
+    try:
+        raw = base64.b64decode(encoded, validate=True)
+    except (binascii.Error, ValueError) as exc:
+        raise RadiusError("تعذّر حفظ الشعار من المعاينة. اختر الصورة مرة أخرى.") from exc
+    if not raw:
+        return {}
+    filename = request.form.get("logo_image_name") or "card-logo"
+    optimized = _optimize_background_image(raw, filename, mime)
+    return {
+        "logo_image_data_url": optimized["background_image_data_url"],
+        "logo_image_name": optimized["background_image_name"],
+        "logo_image_mime": optimized["background_image_mime"],
+    }
+
+
+def _uploaded_logo(*, allow_data_url: bool = True) -> dict:
+    upload = request.files.get("logo_image")
+    if upload and upload.filename:
+        raw = upload.read()
+        if raw:
+            mime = (upload.mimetype or "").lower()
+            if mime not in {"image/png", "image/jpeg", "image/jpg", "image/webp"}:
+                raise RadiusError("نوع الشعار غير مدعوم. استخدم PNG أو JPG أو WEBP.")
+            optimized = _optimize_background_image(raw, upload.filename, mime)
+            return {
+                "logo_image_data_url": optimized["background_image_data_url"],
+                "logo_image_name": optimized["background_image_name"],
+                "logo_image_mime": optimized["background_image_mime"],
+            }
+    return _logo_from_data_url() if allow_data_url else {}
+
+
 def _payload(*, allow_data_url_background: bool = True) -> dict:
     raw_layout = {
         "render_engine": request.form.get("render_engine"),
@@ -269,6 +320,9 @@ def _payload(*, allow_data_url_background: bool = True) -> dict:
         "accent_color": request.form.get("accent_color") or "#f59e0b",
         "text_color": request.form.get("text_color") or request.form.get("color") or "#ffffff",
         "surface_color": request.form.get("surface_color") or "#e8f7fb",
+        # Data-strip / pill transparency (0..1). Matches the renderer's
+        # surface_opacity default so untouched templates are unchanged.
+        "surface_opacity": _float("surface_opacity", 0.95),
         "credential_text_color": request.form.get("credential_text_color") or "#0f172a",
         "credential_label_color": request.form.get("credential_label_color") or "#64748b",
         "username_surface_color": request.form.get("username_surface_color") or request.form.get("surface_color") or "#e8f7fb",
@@ -280,6 +334,9 @@ def _payload(*, allow_data_url_background: bool = True) -> dict:
         "qr_background_color": request.form.get("qr_background_color") or "#ffffff",
         "qr_size_pct": _float("qr_size_pct"),
         "pattern_style": request.form.get("pattern_style") or "signal",
+        # Decorative line/grid/signal/circle colour. Default white keeps the
+        # legacy look for templates that never set it.
+        "pattern_color": request.form.get("pattern_color") or "#ffffff",
         "image_opacity": _float("image_opacity", 0.82),
         "qr_style": request.form.get("qr_style") or "boxed",
         "text_direction": text_direction,
@@ -307,12 +364,34 @@ def _payload(*, allow_data_url_background: bool = True) -> dict:
         "username_surface_enabled": _checked("username_surface_enabled", True),
         "password_surface_enabled": _checked("password_surface_enabled", True),
     }
+    # Decorative pattern transparency (0..1) is only forwarded when the
+    # designer actually exposes the control, so templates without it keep
+    # the renderer's legacy per-pattern alpha instead of a forced overlay.
+    if (request.form.get("pattern_opacity") or "").strip() != "":
+        layout["pattern_opacity"] = _float("pattern_opacity", 1.0)
     uploaded_background = _uploaded_background(allow_data_url=allow_data_url_background)
     if uploaded_background:
         layout["background_style"] = "image"
         layout.update(uploaded_background)
     elif layout["background_style"] == "image" and not has_form_background_image:
         layout["background_style"] = "preset"
+
+    # Optional logo (fully additive — absent logo leaves the layout and the
+    # rendered card unchanged). The designer drops the chosen bitmap into a
+    # hidden `logo_image_data_url` field (same pattern as the background
+    # picker) plus optional position (mm) and size (% of card width).
+    uploaded_logo = _uploaded_logo(allow_data_url=allow_data_url_background)
+    if uploaded_logo:
+        layout.update(uploaded_logo)
+    logo_x = _float("logo_x")
+    logo_y = _float("logo_y")
+    logo_size = _float("logo_size_pct")
+    if logo_x:
+        layout["logo_x"] = logo_x
+    if logo_y:
+        layout["logo_y"] = logo_y
+    if logo_size:
+        layout["logo_size_pct"] = logo_size
     return {
         "name": request.form.get("name"),
         # Sheet placement is now an export-only setting. Keep legacy DB
@@ -456,6 +535,13 @@ def _page_context(
         )
         if edit_template:
             form_state = {**edit_template, "layout": edit_template.get("layout_json") or {}}
+
+    # Real per-template preview thumbnails are served lazily, one small SVG
+    # per template via `print_templates_thumbnail` (rendered with the SAME
+    # unified renderer the PDF export uses). The picker loads them on scroll
+    # (loading="lazy"), so a tenant with 100s of templates stays light.
+    templates = [dict(t) for t in templates]
+
     return {
         "templates": templates,
         "batches": get_cards_service().list_batch_operations(limit=200, offset=0),
@@ -471,6 +557,35 @@ def _page_context(
         # the matching row.
         "default_template_id": ops.get_default_print_template_id(tenant_id=tenant_id),
     }
+
+
+def print_templates_thumbnail(template_id: int):
+    """Lazy per-template preview thumbnail: the saved template's REAL card
+    rendered as SVG by the same engine the PDF export uses. Served one-by-one
+    so a tenant with hundreds of templates loads them only as they scroll
+    into view (loading="lazy")."""
+    from flask import Response, abort
+    ops = get_operations_service()
+    tenant_id = _tid()
+    templates = ops.list_print_templates(tenant_id=tenant_id, limit=1000)
+    tpl = next(
+        (dict(row) for row in templates if int(row.get("id") or 0) == int(template_id)),
+        None,
+    )
+    if not tpl:
+        abort(404)
+    try:
+        from ..services.card_renderer import build_card_render_model, render_card_svg
+        sample = {"id": "", "username": "CARD1234", "password": "********", "qr_payload": "CARD1234"}
+        layout = tpl.get("layout_json") or {}
+        model = build_card_render_model({**tpl, "layout_json": layout}, sample)
+        svg = render_card_svg(model, mask_password=True)
+    except Exception:
+        abort(404)
+    resp = Response(svg, mimetype="image/svg+xml")
+    resp.headers["Cache-Control"] = "private, max-age=600"
+    resp.headers["X-Content-Type-Options"] = "nosniff"
+    return resp
 
 
 def print_templates():
@@ -574,6 +689,12 @@ def print_templates_designer_svg():
     bg_data_url = (request.form.get("background_image_data_url") or "").strip()
     if layout.get("background_style") == "image" and bg_data_url.startswith("data:image/"):
         layout = {**layout, "background_image_data_url": bg_data_url, "background_style": "image"}
+    # Same trick for the logo: the live preview posts the chosen bitmap in a
+    # hidden field, so inject it straight into the layout (the optimizer is
+    # skipped on the per-keystroke path) so the logo shows without saving.
+    logo_data_url = (request.form.get("logo_image_data_url") or "").strip()
+    if logo_data_url.startswith("data:image/"):
+        layout = {**layout, "logo_image_data_url": logo_data_url}
     # The renderer's `_resolve_positions` reads top-level
     # `username_x` / `username_y` / `password_x` / `password_y` /
     # `qr_x` / `qr_y` from the template row, not the layout dict —

@@ -1,5 +1,5 @@
 {# ═══════════════════════════════════════════════════════════════════════
-   Online sessions — REBUILT (Night N4, 2026-05-21)
+   Online sessions — UNIFIED DESIGN SYSTEM (megahero + worklayout + help).
 
    Backend data unchanged (app/radius/routes/sessions.py online_list):
      • items: list of OnlineSession objects (username, framed_ip,
@@ -8,8 +8,11 @@
      • settings: radius adapter settings (mode)
      • error: optional message if list() raised
      • filter_type: '' (subscribers) or 'card' (cards only)
+     • nas_options / plan_options / group_options / selected_* : filters
+     • temp_speed_state_by_username / device_by_mac / now
 
    POST → radius.online_disconnect with username + session_id.
+   Zero route/behaviour change.
    ═══════════════════════════════════════════════════════════════════════ #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
@@ -23,146 +26,46 @@
 {% block page_title %}المتصلون الآن{% endblock %}
 {% block page_sub %}<span class="sub">{{ items|length }} جلسة · الوضع {{ mode_label }}</span>{% endblock %}
 
+{# ── local formatting helpers (mirror rep_sessions.html, no backend deps) ── #}
+{% macro fmt_speed(kbps) -%}
+  {%- set k = kbps|int -%}
+  {%- if k >= 1000 -%}{{ "%.1f"|format(k / 1000) }} Mbps
+  {%- elif k > 0 -%}{{ k }} Kbps
+  {%- else -%}—
+  {%- endif -%}
+{%- endmacro %}
+
+{% macro fmt_duration(started_at, now) -%}
+  {%- if started_at -%}
+    {%- set sec = ((now - started_at).total_seconds() if now and started_at else 0)|int -%}
+    {%- if sec >= 86400 -%}{{ sec // 86400 }} يوم {{ (sec % 86400) // 3600 }}س
+    {%- elif sec >= 3600 -%}{{ sec // 3600 }}س {{ (sec % 3600) // 60 }}د
+    {%- else -%}{{ (sec // 60) or 1 }}د
+    {%- endif -%}
+  {%- else -%}—
+  {%- endif -%}
+{%- endmacro %}
+
+{% macro fmt_bytes(bytes) -%}
+  {%- set b = (bytes or 0)|int -%}
+  {%- if b >= 1099511627776 -%}{{ "%.2f TB"|format(b / 1099511627776) }}
+  {%- elif b >= 1073741824 -%}{{ "%.2f GB"|format(b / 1073741824) }}
+  {%- elif b >= 1048576 -%}{{ "%.2f MB"|format(b / 1048576) }}
+  {%- elif b >= 1024 -%}{{ "%.1f KB"|format(b / 1024) }}
+  {%- else -%}{{ b }} B{%- endif -%}
+{%- endmacro %}
+
 {% block head_extra %}
 {{ super() }}
 <style>
-  /* ── Mega-hero: title + view toggle + filters + KPI in ONE panel ── */
-  .ol-hero{
-    position:relative;
-    display:grid; gap:14px;
-    padding:18px 20px;
-    margin-bottom:14px;
-    border-radius:18px;
-    background:
-      radial-gradient(640px 320px at 100% 0%, rgba(124,58,237,.08) 0%, transparent 60%),
-      linear-gradient(180deg, #faf8ff 0%, #fff 100%);
-    border:1px solid var(--hub-border-soft, #e2e8f0);
-    box-shadow:0 1px 0 rgba(255,255,255,.85) inset, 0 4px 14px rgba(15,23,42,.05);
-    overflow:hidden;
-  }
-  .ol-hero-row{
-    display:flex; align-items:center; justify-content:space-between;
-    gap:16px; flex-wrap:wrap;
-  }
-  .ol-hero-id{ display:flex; align-items:center; gap:13px; min-width:0; }
-  .ol-hero-icon{
-    width:46px; height:46px; flex:0 0 auto;
-    border-radius:13px;
-    background:linear-gradient(135deg, var(--hub-brand, #7c3aed), var(--hub-brand-deep, #5b21b6));
-    color:#fff; display:grid; place-items:center; font-size:19px;
-    box-shadow:0 6px 16px rgba(124,58,237,.32);
-  }
-  .ol-hero-title{ margin:0; font-size:20px; font-weight:800; color:var(--hub-text); }
-  .ol-hero-sub{ margin-top:3px; font-size:13px; color:var(--hub-text-soft, #475569); line-height:1.6; }
-  .ol-hero-actions{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
-  .ol-hero-kpis{
-    display:grid;
-    grid-template-columns:repeat(auto-fit, minmax(170px, 1fr));
-    gap:10px;
-    padding-top:14px;
-    border-top:1px solid var(--hub-border-soft, #e2e8f0);
+  /* numeric cells: readable, aligned, LTR with tabular figures */
+  [data-online-sessions-page] .num-cell{
+    white-space:nowrap;
+    font-variant-numeric:tabular-nums;
+    direction:ltr;
   }
 
-  /* ── Filters: soft "chip" dropdowns under the stats (not a bar) ── */
-  .ol-hero-filters{
-    display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap;
-    padding-top:14px;
-    border-top:1px solid var(--hub-border-soft, #e2e8f0);
-    margin:0;
-  }
-  .ol-hero-filters .online-filter-fields{
-    flex:1; display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;
-  }
-  /* each select becomes a labelled pill field */
-  .ol-filter{
-    display:grid; gap:5px; min-width:160px;
-  }
-  .ol-filter > label{
-    font-size:11.5px; font-weight:800; color:#64748b;
-    display:inline-flex; align-items:center; gap:6px;
-  }
-  .ol-filter > label i{ color:var(--hub-brand, #7c3aed); font-size:11px; }
-  .ol-hero-filters select{
-    width:100%; min-width:160px; height:42px;
-    border:1px solid var(--hub-border-soft, #e2e8f0);
-    border-radius:999px;
-    padding:0 16px;
-    background:#fff;
-    color:var(--hub-text, #0f172a);
-    font-weight:700; font-size:13px;
-    cursor:pointer;
-    transition:border-color .15s, box-shadow .15s, background .15s;
-  }
-  .ol-hero-filters select:hover{ background:#faf8ff; border-color:#ede9fe; }
-  .ol-hero-filters select:focus{
-    outline:0; border-color:var(--hub-brand, #7c3aed);
-    box-shadow:0 0 0 3px rgba(124,58,237,.18);
-  }
-  .ol-hero-filters .ol-filter-go{
-    height:42px; border-radius:999px; padding:0 22px;
-  }
-  @media (max-width: 760px){
-    .ol-hero-actions{ flex:1 1 100%; }
-    .ol-filter{ flex:1 1 100%; min-width:0; }
-  }
-
-  .online-toolbar,
-  .online-filters{
-    display:flex;
-    align-items:center;
-    gap:8px;
-    flex-wrap:wrap;
-    margin-bottom:12px;
-  }
-  .online-toolbar{justify-content:flex-start}
-  .online-filters{justify-content:space-between}
-  .online-filter-fields{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-  .online-filter-fields select,
-  .online-filter-fields input{
-    min-width:190px;
-    height:36px;
-    border:1px solid var(--hub-border);
-    border-radius:6px;
-    padding:0 10px;
-    background:#fff;
-    color:var(--hub-text);
-  }
-  .online-action[aria-disabled="true"]{
-    pointer-events:none;
-    opacity:.48;
-    filter:grayscale(.2);
-  }
-  .online-col-menu{
-    position:relative;
-  }
-  .online-col-panel{
-    position:absolute;
-    z-index:20;
-    top:42px;
-    inset-inline-end:0;
-    width:220px;
-    max-height:420px;
-    overflow:auto;
-    padding:8px;
-    border:1px solid var(--hub-border);
-    border-radius:8px;
-    background:#fff;
-    box-shadow:0 16px 40px rgba(15,23,42,.12);
-    display:none;
-  }
-  .online-col-panel.is-open{display:block}
-  .online-col-option{
-    display:flex;
-    align-items:center;
-    gap:8px;
-    padding:7px 6px;
-    border-radius:6px;
-    font-size:12.5px;
-    color:var(--hub-text);
-  }
-  .online-col-option:hover{background:var(--hub-surface-muted)}
-  .online-select-cell{width:46px;text-align:center}
-  .online-row.is-selected{background:#eef8ff}
+  /* speed-state pills (unchanged visual language) */
   .online-speed-pill{
     display:inline-flex;
     align-items:center;
@@ -184,15 +87,25 @@
     padding-inline-start:2px;
   }
   .online-row.has-special-speed td:first-child{box-shadow:inset 3px 0 #f4b63f}
-  .online-mini-actions{display:flex;gap:5px;justify-content:flex-end;flex-wrap:wrap}
-  [data-online-sessions-page] .hub-table th,
-  [data-online-sessions-page] .hub-table td{
-    text-align:center;
-    vertical-align:middle;
+  .online-row.is-selected{background:#eef8ff}
+  .online-select-cell{width:46px;text-align:center}
+
+  /* row-selection action toolbar */
+  .online-toolbar{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    flex-wrap:wrap;
+    margin-bottom:12px;
   }
-  [data-online-sessions-page] .hub-table .online-mini-actions{
-    justify-content:center;
+  .online-action[aria-disabled="true"]{
+    pointer-events:none;
+    opacity:.48;
+    filter:grayscale(.2);
   }
+  .online-mini-actions{display:flex;gap:5px;justify-content:center;flex-wrap:wrap}
+
+  /* device label chip */
   .online-device-label{
     display:inline-flex;
     align-items:center;
@@ -222,110 +135,63 @@
     max-width:260px;
   }
   @media (max-width: 760px){
-    .online-filter-fields select,
-    .online-filter-fields input{min-width:100%;width:100%}
-    .online-toolbar .hub-btn,
-    .online-filters .hub-btn{flex:1 1 auto;justify-content:center}
+    .online-toolbar .hub-btn{flex:1 1 auto;justify-content:center}
   }
 </style>
 {% endblock %}
 
-{% macro fmt_speed(kbps) -%}
-  {%- set k = kbps|int -%}
-  {%- if k >= 1000 -%}{{ "%.1f"|format(k / 1000) }} Mbps
-  {%- elif k > 0 -%}{{ k }} Kbps
-  {%- else -%}—
-  {%- endif -%}
-{%- endmacro %}
-
-{% macro fmt_duration(started_at, now) -%}
-  {%- if started_at -%}
-    {%- set sec = ((now - started_at).total_seconds() if now and started_at else 0)|int -%}
-    {%- if sec >= 86400 -%}{{ sec // 86400 }} يوم {{ (sec % 86400) // 3600 }}س
-    {%- elif sec >= 3600 -%}{{ sec // 3600 }}س {{ (sec % 3600) // 60 }}د
-    {%- else -%}{{ (sec // 60) or 1 }}د
-    {%- endif -%}
-  {%- else -%}—
-  {%- endif -%}
-{%- endmacro %}
-
 {% block content %}
-<div class="hr-page-shell" data-admin-rhythm data-online-sessions-page>
+<div data-online-sessions-page>
 
 {% set _total_in  = (items|sum(attribute='bytes_in') or 0) if items else 0 %}
 {% set _total_out = (items|sum(attribute='bytes_out') or 0) if items else 0 %}
 
-{# ───── Unified mega-hero: title + view toggle + filters + KPIs ── #}
-<section class="ol-hero">
-  <div class="ol-hero-row">
-    <div class="ol-hero-id">
-      <span class="ol-hero-icon"><i class="fa-solid fa-wifi"></i></span>
-      <div>
-        <h1 class="ol-hero-title">المتصلون الآن</h1>
-        <div class="ol-hero-sub">الجلسات الحيّة على الشبكة — {{ "كروت" if filter_type == "card" else "مشتركون" }} — وضع التشغيل: {{ mode_label }}</div>
-      </div>
-    </div>
-    <div class="ol-hero-actions">
-      <a class="hub-btn hub-btn--{{ 'primary' if filter_type != 'card' else 'secondary' }}" href="{{ url_for('radius.online_list') }}">
-        <i class="fa-solid fa-users"></i> المشتركون
-      </a>
-      <a class="hub-btn hub-btn--{{ 'primary' if filter_type == 'card' else 'secondary' }}" href="{{ url_for('radius.online_list', type='card') }}">
-        <i class="fa-solid fa-id-card"></i> الكروت
-      </a>
-    </div>
-  </div>
-
-  {# KPI strip — comes right after the title #}
-  <div class="ol-hero-kpis">
-    {{ hub.kpi("جلسات نشطة", items|length, icon="wifi",        variant="green") }}
-    {{ hub.kpi("تنزيل (MB)", "%.1f"|format(_total_in/1048576),  icon="arrow-down", variant="blue") }}
-    {{ hub.kpi("رفع (MB)",   "%.1f"|format(_total_out/1048576), icon="arrow-up",   variant="amber") }}
-  </div>
-
-  {# Filters — labelled pill dropdowns, below the stats (not a bar) #}
-  <form class="ol-hero-filters" method="get" action="{{ url_for('radius.online_list') }}">
-    {% if filter_type %}<input type="hidden" name="type" value="{{ filter_type }}">{% endif %}
-    <div class="online-filter-fields">
-      <div class="ol-filter">
-        <label for="ol-f-nas"><i class="fa-solid fa-server"></i> السيرفر</label>
-        <select id="ol-f-nas" name="nas">
-          <option value="">كل السيرفرات</option>
-          {% for nas in nas_options %}
-            <option value="{{ nas }}" {% if selected_nas == nas %}selected{% endif %}>{{ nas }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="ol-filter">
-        <label for="ol-f-plan"><i class="fa-solid fa-cubes"></i> العرض</label>
-        <select id="ol-f-plan" name="plan">
-          <option value="">كل العروض</option>
-          {% for plan in plan_options %}
-            <option value="{{ plan }}" {% if selected_plan == plan %}selected{% endif %}>{{ plan }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="ol-filter">
-        <label for="ol-f-group"><i class="fa-solid fa-people-group"></i> المجموعة</label>
-        <select id="ol-f-group" name="group_id">
-          <option value="">كل المجموعات</option>
-          {% for g in group_options or [] %}
-            <option value="{{ g.id }}" {% if selected_group_id == g.id %}selected{% endif %}>{{ g.name }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="ol-filter">
-        <label for="ol-f-speed"><i class="fa-solid fa-gauge-high"></i> نوع السرعة</label>
-        <select id="ol-f-speed" name="speed">
-          <option value="" {% if not selected_speed %}selected{% endif %}>كل السرعات</option>
-          <option value="special" {% if selected_speed == "special" %}selected{% endif %}>سرعة خاصة أو مؤقتة</option>
-          <option value="temporary" {% if selected_speed == "temporary" %}selected{% endif %}>سرعة مؤقتة فقط</option>
-          <option value="normal" {% if selected_speed == "normal" %}selected{% endif %}>بدون سرعة خاصة</option>
-        </select>
-      </div>
-    </div>
-    <button class="hub-btn hub-btn--primary ol-filter-go" type="submit"><i class="fa-solid fa-filter"></i> عرض</button>
-  </form>
-</section>
+{# ───── Merged hero: title + view toggle + KPI strip + integrated filters ───── #}
+{% call hub.megahero(
+  "المتصلون الآن",
+  subtitle="الجلسات الحيّة على الشبكة — " + ("كروت" if filter_type == "card" else "مشتركون") + " — وضع التشغيل: " + mode_label + ".",
+  icon="wifi",
+  actions_html='
+    <a class="hub-btn hub-btn--' + ('primary' if filter_type != 'card' else 'secondary') + '" href="' + url_for('radius.online_list') + '">
+      <i class="fa-solid fa-users"></i> المشتركون
+    </a>
+    <a class="hub-btn hub-btn--' + ('primary' if filter_type == 'card' else 'secondary') + '" href="' + url_for('radius.online_list', type='card') + '">
+      <i class="fa-solid fa-id-card"></i> الكروت
+    </a>',
+  kpis=[
+    {'label': 'جلسات نشطة', 'value': items|length,            'icon': 'wifi',       'variant': 'green'},
+    {'label': 'تنزيل',      'value': fmt_bytes(_total_in),     'icon': 'arrow-down', 'variant': 'blue'},
+    {'label': 'رفع',        'value': fmt_bytes(_total_out),    'icon': 'arrow-up',   'variant': 'amber'},
+  ],
+  search_action=url_for('radius.online_list')
+) %}
+  {% if filter_type %}<input type="hidden" name="type" value="{{ filter_type }}">{% endif %}
+  <select class="hub-select" name="nas" title="السيرفر">
+    <option value="">كل السيرفرات</option>
+    {% for nas in nas_options %}
+      <option value="{{ nas }}" {% if selected_nas == nas %}selected{% endif %}>{{ nas }}</option>
+    {% endfor %}
+  </select>
+  <select class="hub-select" name="plan" title="العرض">
+    <option value="">كل العروض</option>
+    {% for plan in plan_options %}
+      <option value="{{ plan }}" {% if selected_plan == plan %}selected{% endif %}>{{ plan }}</option>
+    {% endfor %}
+  </select>
+  <select class="hub-select" name="group_id" title="المجموعة">
+    <option value="">كل المجموعات</option>
+    {% for g in group_options or [] %}
+      <option value="{{ g.id }}" {% if selected_group_id == g.id %}selected{% endif %}>{{ g.name }}</option>
+    {% endfor %}
+  </select>
+  <select class="hub-select" name="speed" title="نوع السرعة">
+    <option value="" {% if not selected_speed %}selected{% endif %}>كل السرعات</option>
+    <option value="special" {% if selected_speed == "special" %}selected{% endif %}>سرعة خاصة أو مؤقتة</option>
+    <option value="temporary" {% if selected_speed == "temporary" %}selected{% endif %}>سرعة مؤقتة فقط</option>
+    <option value="normal" {% if selected_speed == "normal" %}selected{% endif %}>بدون سرعة خاصة</option>
+  </select>
+  {{ hub.btn("عرض", icon="filter", variant="primary", type="submit", size="sm") }}
+{% endcall %}
 
 {% if settings.mode == "manual" %}
 <div class="hub-section" style="margin-bottom:14px;border-color:var(--hub-amber-soft)">
@@ -346,243 +212,224 @@
 {% endif %}
 
 {% if items %}
+{# ───── Main (carded table) + help panel on the LEFT ───── #}
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "كيف تقرأ هذه الصفحة؟",
+  intro="كل صف هو جلسة حيّة لمستخدم متصل الآن بالشبكة. اختر صفًا لتفعيل أزرار الإجراءات في الأعلى.",
+  items=[
+    {'icon': 'scissors',     'text': 'فصل الاتصال يقطع الجلسة المحدّدة فورًا — اختر صفًا أولًا.'},
+    {'icon': 'clock',        'text': 'وقت الجلسة هو مدّة الاتصال الحالية معروضة بأيام/ساعات/دقائق.'},
+    {'icon': 'arrows-up-down','text': 'تنزيل/رفع هما حجم البيانات المنقولة منذ بدء الجلسة.'},
+    {'icon': 'bolt',         'text': 'تمييز السرعة يوضّح إن كانت الجلسة على سرعة خاصة أو مؤقتة بعدّاد تنازلي.'},
+  ],
+  note="هذه الصفحة حيّة — البيانات تأتي مباشرة من مزوّد المصادقة في وضع الربط الفعلي."
+)) %}
 
-<div class="online-toolbar" data-online-actions>
-  <form method="post" action="{{ url_for('radius.online_disconnect') }}" data-online-disconnect-form style="display:inline">
-    <input type="hidden" name="next" value="{{ request.full_path }}">
-    <input type="hidden" name="username" value="">
-    <input type="hidden" name="session_id" value="">
-    <button type="submit" class="hub-btn hub-btn--danger online-action" aria-disabled="true" disabled>
-      <i class="fa-solid fa-scissors"></i> فصل الاتصال
-    </button>
-  </form>
-  <a class="hub-btn hub-btn--secondary online-action" aria-disabled="true" data-action="profile" href="#">
-    <i class="fa-solid fa-gauge-high"></i> عرض 360°
-  </a>
-  <form method="post" action="{{ url_for('radius.online_lock_mac') }}" data-online-lock-mac-form style="display:inline">
-    <input type="hidden" name="next" value="{{ request.full_path }}">
-    <input type="hidden" name="username" value="">
-    <input type="hidden" name="session_id" value="">
-    <button type="submit" class="hub-btn hub-btn--secondary online-action" aria-disabled="true" disabled>
-      <i class="fa-solid fa-lock"></i> إغلاق بالماك
-    </button>
-  </form>
-  <form method="post" action="{{ url_for('radius.online_lock_ip') }}" data-online-lock-ip-form style="display:inline">
-    <input type="hidden" name="next" value="{{ request.full_path }}">
-    <input type="hidden" name="username" value="">
-    <input type="hidden" name="session_id" value="">
-    <button type="submit" class="hub-btn hub-btn--secondary online-action" aria-disabled="true" disabled>
-      <i class="fa-solid fa-lock"></i> تثبيت IP
-    </button>
-  </form>
-  <a class="hub-btn hub-btn--secondary online-action" aria-disabled="true" data-action="edit" href="#">
-    <i class="fa-solid fa-pen-to-square"></i> تعديل
-  </a>
-  <form method="post" action="{{ url_for('radius.users_send_sms', username='__username__') }}" data-online-sms-form data-action-template="{{ url_for('radius.users_send_sms', username='__username__') }}" style="display:inline">
-    <input type="hidden" name="message" value="">
-    <button type="submit" class="hub-btn hub-btn--secondary online-action" aria-disabled="true" disabled>
-      <i class="fa-solid fa-paper-plane"></i> إرسال رسالة
-    </button>
-  </form>
-  <div class="online-col-menu" data-column-menu>
-    <button class="hub-btn hub-btn--secondary" type="button" data-column-toggle>
-      <i class="fa-solid fa-table-columns"></i> عرض/إخفاء الأعمدة
-    </button>
-    <div class="online-col-panel" data-column-panel>
-      {% for key, label in [
-        ("select", "تحديد"),
-        ("rownum", "#"),
-        ("name", "الإسم"),
-        ("plan", "العرض"),
-        ("ip", "IP"),
-        ("nas", "جهاز الشبكة"),
-        ("device", "نوع الجهاز"),
-        ("down_speed", "سرعة التحميل"),
-        ("up_speed", "سرعة الرفع"),
-        ("speed_state", "تمييز السرعة"),
-        ("duration", "وقت الجلسة"),
-        ("download", "تحميل"),
-        ("upload", "رفع"),
-        ("mac", "ماك ادرس"),
-        ("manager", "المدير"),
-        ("service", "معرف الخدمة"),
-        ("port", "منفذ الاتصال للجهاز"),
-        ("actions", "إجراءات")
-      ] %}
-        <label class="online-col-option">
-          <input type="checkbox" data-col-choice="{{ key }}" checked>
-          <span>{{ label }}</span>
-        </label>
-      {% endfor %}
-    </div>
+  <div class="online-toolbar" data-online-actions>
+    <form method="post" action="{{ url_for('radius.online_disconnect') }}" data-online-disconnect-form style="display:inline">
+      <input type="hidden" name="next" value="{{ request.full_path }}">
+      <input type="hidden" name="username" value="">
+      <input type="hidden" name="session_id" value="">
+      <button type="submit" class="hub-btn hub-btn--danger online-action" aria-disabled="true" disabled>
+        <i class="fa-solid fa-scissors"></i> فصل الاتصال
+      </button>
+    </form>
+    <a class="hub-btn hub-btn--secondary online-action" aria-disabled="true" data-action="profile" href="#">
+      <i class="fa-solid fa-gauge-high"></i> عرض 360°
+    </a>
+    <form method="post" action="{{ url_for('radius.online_lock_mac') }}" data-online-lock-mac-form style="display:inline">
+      <input type="hidden" name="next" value="{{ request.full_path }}">
+      <input type="hidden" name="username" value="">
+      <input type="hidden" name="session_id" value="">
+      <button type="submit" class="hub-btn hub-btn--secondary online-action" aria-disabled="true" disabled>
+        <i class="fa-solid fa-lock"></i> إغلاق بالماك
+      </button>
+    </form>
+    <form method="post" action="{{ url_for('radius.online_lock_ip') }}" data-online-lock-ip-form style="display:inline">
+      <input type="hidden" name="next" value="{{ request.full_path }}">
+      <input type="hidden" name="username" value="">
+      <input type="hidden" name="session_id" value="">
+      <button type="submit" class="hub-btn hub-btn--secondary online-action" aria-disabled="true" disabled>
+        <i class="fa-solid fa-lock"></i> تثبيت IP
+      </button>
+    </form>
+    <a class="hub-btn hub-btn--secondary online-action" aria-disabled="true" data-action="edit" href="#">
+      <i class="fa-solid fa-pen-to-square"></i> تعديل
+    </a>
+    <form method="post" action="{{ url_for('radius.users_send_sms', username='__username__') }}" data-online-sms-form data-action-template="{{ url_for('radius.users_send_sms', username='__username__') }}" style="display:inline">
+      <input type="hidden" name="message" value="">
+      <button type="submit" class="hub-btn hub-btn--secondary online-action" aria-disabled="true" disabled>
+        <i class="fa-solid fa-paper-plane"></i> إرسال رسالة
+      </button>
+    </form>
   </div>
-</div>
 
-{% call hub.section("الجلسات", icon="table-list",
-                    meta=items|length|string + " صف", flush=True) %}
-  <div class="hub-table-wrap hr-table-scroll" style="border:none;border-radius:0">
-    <table class="hub-table hr-data-table" data-paginated="1" data-page-size="20" data-persist-key="online-sessions">
-      <thead>
-        <tr>
-          <th class="online-select-cell" data-col="select">تحديد</th>
-          <th class="num" style="width:52px" data-col="rownum">#</th>
-          <th data-col="name">المستخدم</th>
-          <th data-col="plan">العرض</th>
-          <th data-col="ip">IP</th>
-          <th data-col="nas">جهاز الشبكة</th>
-          <th data-col="device">نوع الجهاز</th>
-          <th data-col="down_speed" class="num">سرعة التحميل</th>
-          <th data-col="up_speed" class="num">سرعة الرفع</th>
-          <th data-col="speed_state">السرعة</th>
-          <th data-col="duration">وقت الجلسة</th>
-          <th data-col="download" class="num">تحميل</th>
-          <th data-col="upload" class="num">رفع</th>
-          <th data-col="mac">ماك ادرس</th>
-          <th data-col="manager">المدير</th>
-          <th data-col="service">معرف الخدمة</th>
-          <th data-col="port">منفذ الاتصال</th>
-          <th data-col="actions" style="width:150px">إجراءات</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for s in items %}
-        {% set _temp_state = (temp_speed_state_by_username or {}).get(s.username) %}
-        {% set _temp_active = (_temp_state and _temp_state.active) or ((not _temp_state) and s.has_temporary_speed) %}
-        {% set _temp_unknown = _temp_state and _temp_state.unknown %}
-        {% set _special = s.has_custom_speed or _temp_active %}
-        {% set _is_card = s.user_type == 'card' %}
-        {% set _profile_url = url_for('radius.cards_checker', query=s.username) if _is_card else url_for('radius.users_profile', username=s.username) %}
-        {% set _edit_url = url_for('radius.cards_checker', query=s.username) if _is_card else url_for('radius.users_edit', username=s.username) %}
-        {% set _device = (device_by_mac or {}).get((s.mac_address or '')|lower) %}
-        <tr class="online-row {% if _special %}has-special-speed{% endif %}"
-            data-username="{{ s.username }}"
-            data-user-type="{{ s.user_type }}"
-            data-session-id="{{ s.session_id }}"
-            data-profile-url="{{ _profile_url }}"
-            data-edit-url="{{ _edit_url }}"
-            data-has-custom-speed="{{ 1 if s.has_custom_speed else 0 }}">
-          <td class="online-select-cell" data-col="select">
-            <input type="radio" name="online_session_select" aria-label="تحديد {{ s.username }}">
-          </td>
-          <td class="num mono" data-col="rownum">{{ loop.index }}</td>
-          <td data-col="name">
-            <strong>{{ s.full_name or s.username }}</strong>
-            {% if s.full_name %}<div class="hub-text-mute mono">{{ s.username }}</div>{% endif %}
-          </td>
-          <td data-col="plan">{{ s.plan_name or '—' }}</td>
-          <td data-col="ip" class="mono">{{ s.framed_ip or '—' }}</td>
-          <td data-col="nas" class="mono small">{{ s.nas_address or '—' }}</td>
-          <td data-col="device">
-            {% if _device and _device.label %}
-              <span class="online-device-label" title="{{ _device.class_id or '' }}">
-                {% if _device.os_family %}
-                  {% set _os_icon = 'apple' if _device.os_family in ['ios', 'macos', 'apple'] else (_device.os_family if _device.os_family in ['android','windows','linux'] else 'android') %}
-                  <i class="fa-brands fa-{{ _os_icon }}"></i>
-                {% else %}
-                  <i class="fa-solid fa-network-wired"></i>
-                {% endif %}
-                <span>{{ _device.label }}</span>
-              </span>
-              <div class="online-device-meta">
-                {% if _device.brand or _device.model %}
-                  {{ _device.brand }}{% if _device.model %} · {{ _device.model }}{% endif %}
-                {% elif _device.class_id %}
-                  {{ _device.class_id }}
-                {% else %}
-                  DHCP
-                {% endif %}
-              </div>
-            {% else %}
-              <span class="hub-text-mute">—</span>
-            {% endif %}
-          </td>
-          <td data-col="down_speed" class="num mono">{{ fmt_speed(s.rate_down_kbps) }}</td>
-          <td data-col="up_speed" class="num mono">{{ fmt_speed(s.rate_up_kbps) }}</td>
-          <td data-col="speed_state">
-            {% if _temp_active %}
-              <span class="online-speed-pill is-temp"
-                    title="{% if _temp_state and _temp_state.ends_at %}ينتهي: {{ _temp_state.ends_at }}{% else %}مؤقتة بدون وقت نهاية مسجّل{% endif %}">
-                <i class="fa-solid fa-clock"></i>
-                <span>مؤقتة</span>
-                {% if _temp_state and _temp_state.remaining_seconds is not none %}
-                  <span class="online-speed-countdown" data-temp-countdown="{{ _temp_state.remaining_seconds|int }}">--:--</span>
-                {% elif _temp_unknown %}
-                  <span class="online-speed-countdown">مفتوح</span>
-                {% endif %}
-              </span>
-            {% elif s.has_custom_speed %}
-              <span class="online-speed-pill is-custom"><i class="fa-solid fa-bolt"></i> خاصة</span>
-            {% else %}
-              <span class="online-speed-pill is-normal">العرض</span>
-            {% endif %}
-          </td>
-          <td data-col="duration" class="mono small">{{ fmt_duration(s.started_at, now) }}</td>
-          <td data-col="download" class="num mono">{{ "%.1f"|format((s.bytes_in or 0)/1048576) }} MB</td>
-          <td data-col="upload" class="num mono">{{ "%.1f"|format((s.bytes_out or 0)/1048576) }} MB</td>
-          <td data-col="mac" class="mono">{{ s.mac_address or '—' }}</td>
-          <td data-col="manager">{{ s.manager_name or '—' }}</td>
-          <td data-col="service">{{ s.service_type or s.user_type or '—' }}</td>
-          <td data-col="port" class="mono small">{{ s.nas_port_id or s.nas_port_type or '—' }}</td>
-          <td data-col="actions">
-            <div class="online-mini-actions">
-              <a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ _profile_url }}" title="عرض 360°">
-                <i class="fa-solid fa-gauge-high"></i>
-              </a>
-              <a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ _edit_url }}" title="تعديل">
-                <i class="fa-solid fa-pen-to-square"></i>
-              </a>
-              <form method="post" action="{{ url_for('radius.online_disconnect') }}"
-                    onsubmit="return confirm('قطع جلسة «{{ s.username|e }}»؟');"
-                    style="display:inline">
-                <input type="hidden" name="next" value="{{ request.full_path }}">
-                <input type="hidden" name="username" value="{{ s.username }}">
-                <input type="hidden" name="session_id" value="{{ s.session_id }}">
-                <button type="submit" class="hub-btn hub-btn--danger hub-btn--sm" title="قطع">
-                  <i class="fa-solid fa-plug-circle-xmark"></i>
-                </button>
-              </form>
-              <details class="online-temp-speed" style="display:inline-block;position:relative;">
-                <summary class="hub-btn hub-btn--secondary hub-btn--sm" title="سرعة مؤقتة (تطبيق فوري + رجوع تلقائي)"
-                         style="list-style:none;cursor:pointer;">
-                  <i class="fa-solid fa-gauge-simple-high"></i>
-                </summary>
-                <form method="post" action="{{ url_for('radius.online_temp_speed') }}"
-                      style="position:absolute;z-index:30;inset-inline-end:0;margin-top:6px;min-width:240px;
-                             background:#fff;border:1px solid var(--hub-border,#e2e8f0);border-radius:12px;
-                             box-shadow:0 12px 32px rgba(15,23,42,.18);padding:12px;text-align:start;">
+  {% call hub.section("الجلسات", icon="table-list",
+                      meta=items|length|string + " صف", flush=True) %}
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="15" style="border:none;border-radius:0">
+      <table class="hub-table">
+        <thead>
+          <tr>
+            <th class="online-select-cell" data-col="select" data-uds-nosort data-uds-nocol>تحديد</th>
+            <th class="num" style="width:52px" data-col="rownum">#</th>
+            <th data-col="name">المستخدم</th>
+            <th data-col="plan">العرض</th>
+            <th data-col="ip">IP</th>
+            <th data-col="nas">جهاز الشبكة</th>
+            <th data-col="device">نوع الجهاز</th>
+            <th data-col="down_speed" class="num">سرعة التحميل</th>
+            <th data-col="up_speed" class="num">سرعة الرفع</th>
+            <th data-col="speed_state">السرعة</th>
+            <th data-col="duration" class="num">وقت الجلسة</th>
+            <th data-col="download" class="num">تحميل</th>
+            <th data-col="upload" class="num">رفع</th>
+            <th data-col="mac">ماك ادرس</th>
+            <th data-col="manager">المدير</th>
+            <th data-col="service">معرف الخدمة</th>
+            <th data-col="port">منفذ الاتصال</th>
+            <th data-col="actions" style="width:150px" data-uds-nosort>إجراءات</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in items %}
+          {% set _temp_state = (temp_speed_state_by_username or {}).get(s.username) %}
+          {% set _temp_active = (_temp_state and _temp_state.active) or ((not _temp_state) and s.has_temporary_speed) %}
+          {% set _temp_unknown = _temp_state and _temp_state.unknown %}
+          {% set _special = s.has_custom_speed or _temp_active %}
+          {% set _is_card = s.user_type == 'card' %}
+          {% set _profile_url = url_for('radius.cards_checker', query=s.username) if _is_card else url_for('radius.users_profile', username=s.username) %}
+          {% set _edit_url = url_for('radius.cards_checker', query=s.username) if _is_card else url_for('radius.users_edit', username=s.username) %}
+          {% set _device = (device_by_mac or {}).get((s.mac_address or '')|lower) %}
+          <tr class="online-row {% if _special %}has-special-speed{% endif %}"
+              data-username="{{ s.username }}"
+              data-user-type="{{ s.user_type }}"
+              data-session-id="{{ s.session_id }}"
+              data-profile-url="{{ _profile_url }}"
+              data-edit-url="{{ _edit_url }}"
+              data-has-custom-speed="{{ 1 if s.has_custom_speed else 0 }}">
+            <td class="online-select-cell" data-col="select">
+              <input type="radio" name="online_session_select" aria-label="تحديد {{ s.username }}">
+            </td>
+            <td class="num mono num-cell" data-col="rownum">{{ loop.index }}</td>
+            <td data-col="name">
+              <strong>{{ s.full_name or s.username }}</strong>
+              {% if s.full_name %}<div class="hub-text-mute mono">{{ s.username }}</div>{% endif %}
+            </td>
+            <td data-col="plan">{{ s.plan_name or '—' }}</td>
+            <td data-col="ip" class="mono num-cell">{{ s.framed_ip or '—' }}</td>
+            <td data-col="nas" class="mono small num-cell">{{ s.nas_address or '—' }}</td>
+            <td data-col="device">
+              {% if _device and _device.label %}
+                <span class="online-device-label" title="{{ _device.class_id or '' }}">
+                  {% if _device.os_family %}
+                    {% set _os_icon = 'apple' if _device.os_family in ['ios', 'macos', 'apple'] else (_device.os_family if _device.os_family in ['android','windows','linux'] else 'android') %}
+                    <i class="fa-brands fa-{{ _os_icon }}"></i>
+                  {% else %}
+                    <i class="fa-solid fa-network-wired"></i>
+                  {% endif %}
+                  <span>{{ _device.label }}</span>
+                </span>
+                <div class="online-device-meta">
+                  {% if _device.brand or _device.model %}
+                    {{ _device.brand }}{% if _device.model %} · {{ _device.model }}{% endif %}
+                  {% elif _device.class_id %}
+                    {{ _device.class_id }}
+                  {% else %}
+                    DHCP
+                  {% endif %}
+                </div>
+              {% else %}
+                <span class="hub-text-mute">—</span>
+              {% endif %}
+            </td>
+            <td data-col="down_speed" class="num mono num-cell">{{ fmt_speed(s.rate_down_kbps) }}</td>
+            <td data-col="up_speed" class="num mono num-cell">{{ fmt_speed(s.rate_up_kbps) }}</td>
+            <td data-col="speed_state">
+              {% if _temp_active %}
+                <span class="online-speed-pill is-temp"
+                      title="{% if _temp_state and _temp_state.ends_at %}ينتهي: {{ _temp_state.ends_at }}{% else %}مؤقتة بدون وقت نهاية مسجّل{% endif %}">
+                  <i class="fa-solid fa-clock"></i>
+                  <span>مؤقتة</span>
+                  {% if _temp_state and _temp_state.remaining_seconds is not none %}
+                    <span class="online-speed-countdown" data-temp-countdown="{{ _temp_state.remaining_seconds|int }}">--:--</span>
+                  {% elif _temp_unknown %}
+                    <span class="online-speed-countdown">مفتوح</span>
+                  {% endif %}
+                </span>
+              {% elif s.has_custom_speed %}
+                <span class="online-speed-pill is-custom"><i class="fa-solid fa-bolt"></i> خاصة</span>
+              {% else %}
+                <span class="online-speed-pill is-normal">العرض</span>
+              {% endif %}
+            </td>
+            <td data-col="duration" class="num mono small num-cell">{{ fmt_duration(s.started_at, now) }}</td>
+            <td data-col="download" class="num mono num-cell">{{ fmt_bytes(s.bytes_in) }}</td>
+            <td data-col="upload" class="num mono num-cell">{{ fmt_bytes(s.bytes_out) }}</td>
+            <td data-col="mac" class="mono num-cell">{{ s.mac_address or '—' }}</td>
+            <td data-col="manager">{{ s.manager_name or '—' }}</td>
+            <td data-col="service">{{ s.service_type or s.user_type or '—' }}</td>
+            <td data-col="port" class="mono small num-cell">{{ s.nas_port_id or s.nas_port_type or '—' }}</td>
+            <td data-col="actions">
+              <div class="online-mini-actions">
+                <a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ _profile_url }}" title="عرض 360°">
+                  <i class="fa-solid fa-gauge-high"></i>
+                </a>
+                <a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ _edit_url }}" title="تعديل">
+                  <i class="fa-solid fa-pen-to-square"></i>
+                </a>
+                <form method="post" action="{{ url_for('radius.online_disconnect') }}"
+                      onsubmit="return confirm('قطع جلسة «{{ s.username|e }}»؟');"
+                      style="display:inline">
                   <input type="hidden" name="next" value="{{ request.full_path }}">
                   <input type="hidden" name="username" value="{{ s.username }}">
                   <input type="hidden" name="session_id" value="{{ s.session_id }}">
-                  <div style="font-weight:800;font-size:12.5px;margin-bottom:8px;color:var(--hub-text,#0f172a);">
-                    سرعة مؤقتة لـ «{{ s.username }}»
-                  </div>
-                  <label style="display:block;font-size:11px;font-weight:700;color:#64748b;margin:0 0 2px;">التنزيل (كيلوبت/ث)</label>
-                  <input type="number" name="down_kbps" min="64" max="1000000" step="64" value="1024" required
-                         class="hub-input" style="width:100%;height:34px;margin-bottom:8px;">
-                  <label style="display:block;font-size:11px;font-weight:700;color:#64748b;margin:0 0 2px;">الرفع (كيلوبت/ث)</label>
-                  <input type="number" name="up_kbps" min="64" max="1000000" step="64" value="1024" required
-                         class="hub-input" style="width:100%;height:34px;margin-bottom:8px;">
-                  <label style="display:block;font-size:11px;font-weight:700;color:#64748b;margin:0 0 2px;">المدة (دقائق)</label>
-                  <input type="number" name="duration_minutes" min="1" max="1440" value="5" required
-                         class="hub-input" style="width:100%;height:34px;margin-bottom:10px;">
-                  <button type="submit" class="hub-btn hub-btn--primary hub-btn--sm" style="width:100%;">
-                    <i class="fa-solid fa-bolt"></i> تطبيق فوري
+                  <button type="submit" class="hub-btn hub-btn--danger hub-btn--sm" title="قطع">
+                    <i class="fa-solid fa-plug-circle-xmark"></i>
                   </button>
-                  {% if _temp_active %}
-                  <button type="submit" formaction="{{ url_for('radius.online_temp_speed_cancel') }}"
-                          class="hub-btn hub-btn--secondary hub-btn--sm" style="width:100%;margin-top:6px;">
-                    <i class="fa-solid fa-rotate-left"></i> إلغاء السرعة المؤقتة الآن
-                  </button>
-                  {% endif %}
                 </form>
-              </details>
-            </div>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+                <details class="online-temp-speed" style="display:inline-block;position:relative;">
+                  <summary class="hub-btn hub-btn--secondary hub-btn--sm" title="سرعة مؤقتة (تطبيق فوري + رجوع تلقائي)"
+                           style="list-style:none;cursor:pointer;">
+                    <i class="fa-solid fa-gauge-simple-high"></i>
+                  </summary>
+                  <form method="post" action="{{ url_for('radius.online_temp_speed') }}"
+                        style="position:absolute;z-index:30;inset-inline-end:0;margin-top:6px;min-width:240px;
+                               background:#fff;border:1px solid var(--hub-border,#e2e8f0);border-radius:12px;
+                               box-shadow:0 12px 32px rgba(15,23,42,.18);padding:12px;text-align:start;">
+                    <input type="hidden" name="next" value="{{ request.full_path }}">
+                    <input type="hidden" name="username" value="{{ s.username }}">
+                    <input type="hidden" name="session_id" value="{{ s.session_id }}">
+                    <div style="font-weight:800;font-size:12.5px;margin-bottom:8px;color:var(--hub-text,#0f172a);">
+                      سرعة مؤقتة لـ «{{ s.username }}»
+                    </div>
+                    <label style="display:block;font-size:11px;font-weight:700;color:#64748b;margin:0 0 2px;">التنزيل (كيلوبت/ث)</label>
+                    <input type="number" name="down_kbps" min="64" max="1000000" step="64" value="1024" required
+                           class="hub-input" style="width:100%;height:34px;margin-bottom:8px;">
+                    <label style="display:block;font-size:11px;font-weight:700;color:#64748b;margin:0 0 2px;">الرفع (كيلوبت/ث)</label>
+                    <input type="number" name="up_kbps" min="64" max="1000000" step="64" value="1024" required
+                           class="hub-input" style="width:100%;height:34px;margin-bottom:8px;">
+                    <label style="display:block;font-size:11px;font-weight:700;color:#64748b;margin:0 0 2px;">المدة (دقائق)</label>
+                    <input type="number" name="duration_minutes" min="1" max="1440" value="5" required
+                           class="hub-input" style="width:100%;height:34px;margin-bottom:10px;">
+                    <button type="submit" class="hub-btn hub-btn--primary hub-btn--sm" style="width:100%;">
+                      <i class="fa-solid fa-bolt"></i> تطبيق فوري
+                    </button>
+                    {% if _temp_active %}
+                    <button type="submit" formaction="{{ url_for('radius.online_temp_speed_cancel') }}"
+                            class="hub-btn hub-btn--secondary hub-btn--sm" style="width:100%;margin-top:6px;">
+                      <i class="fa-solid fa-rotate-left"></i> إلغاء السرعة المؤقتة الآن
+                    </button>
+                    {% endif %}
+                  </form>
+                </details>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endcall %}
 {% endcall %}
 {% else %}
 {{ hub.empty(
@@ -733,44 +580,8 @@
   }
   refreshTemporaryCountdowns();
   window.setInterval(refreshTemporaryCountdowns, 1000);
-
-  var menu = page.querySelector('[data-column-menu]');
-  var panel = page.querySelector('[data-column-panel]');
-  var toggle = page.querySelector('[data-column-toggle]');
-  var storageKey = 'hoberadius.online.columns';
-  var hidden = {};
-  try { hidden = JSON.parse(localStorage.getItem(storageKey) || '{}') || {}; }
-  catch (e) { hidden = {}; }
-
-  function applyColumns(){
-    page.querySelectorAll('[data-col]').forEach(function(cell){
-      var key = cell.getAttribute('data-col');
-      cell.style.display = hidden[key] ? 'none' : '';
-    });
-    page.querySelectorAll('[data-col-choice]').forEach(function(input){
-      var key = input.getAttribute('data-col-choice');
-      input.checked = !hidden[key];
-    });
-    try { localStorage.setItem(storageKey, JSON.stringify(hidden)); } catch (e) {}
-  }
-
-  if (toggle && panel) {
-    toggle.addEventListener('click', function(){
-      panel.classList.toggle('is-open');
-    });
-    document.addEventListener('click', function(event){
-      if (menu && !menu.contains(event.target)) panel.classList.remove('is-open');
-    });
-  }
-
-  page.querySelectorAll('[data-col-choice]').forEach(function(input){
-    input.addEventListener('change', function(){
-      var key = input.getAttribute('data-col-choice');
-      hidden[key] = !input.checked;
-      applyColumns();
-    });
-  });
-  applyColumns();
 })();
 </script>
 {% endblock %}
+</content>
+</invoke>

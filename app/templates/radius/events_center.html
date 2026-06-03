@@ -8,49 +8,75 @@
 {% block head_extra %}{{ super() }}<link rel="stylesheet" href="{{ url_for('static', filename='css/ops_risk_redesign.css') }}">{% endblock %}
 
 {% block content %}
-<div class="opsx-redesign">
-{{ hub.hero("مركز الأحداث", subtitle="تعرض هنا أحداث التشغيل للمراجعة والتحقيق. لا توجد إجراءات حذف من هذه الصفحة.", icon="timeline") }}
-<div class="hub-kpi-grid" data-testid="events-summary">
-  {{ hub.kpi("الأحداث", summary.events, icon="list") }}
-  {{ hub.kpi("التنبيهات المفتوحة", summary.open_flags, icon="flag", variant="amber") }}
-  {{ hub.kpi("حرجة", summary.critical_events, icon="triangle-exclamation", variant="red") }}
-</div>
+
+{# ───── Unified hero: title + subtitle + KPI strip + integrated filters ───── #}
+{% call hub.megahero(
+  "مركز الأحداث",
+  subtitle="تعرض هنا أحداث التشغيل للمراجعة والتحقيق. لا توجد إجراءات حذف من هذه الصفحة.",
+  icon="timeline",
+  kpis=[
+    {'label': 'الأحداث',           'value': summary.events,          'icon': 'list',                 'variant': 'brand'},
+    {'label': 'التنبيهات المفتوحة', 'value': summary.open_flags,      'icon': 'flag',                 'variant': 'amber'},
+    {'label': 'حرجة',              'value': summary.critical_events, 'icon': 'triangle-exclamation', 'variant': 'red'},
+  ],
+  search_action=url_for('radius.events_center')
+) %}
+  <input class="hub-input" name="category"       placeholder="الفئة"        value="{{ request.args.get('category', '') }}">
+  <input class="hub-input" name="severity"       placeholder="الخطورة"      value="{{ request.args.get('severity', '') }}">
+  <input class="hub-input" name="actor_type"     placeholder="نوع الفاعل"   value="{{ request.args.get('actor_type', '') }}">
+  <input class="hub-input" name="actor_id"  type="number" placeholder="رقم الفاعل" value="{{ request.args.get('actor_id', '') }}">
+  <input class="hub-input" name="target_type"    placeholder="نوع الهدف"    value="{{ request.args.get('target_type', '') }}">
+  <input class="hub-input" name="target_id" type="number" placeholder="رقم الهدف"  value="{{ request.args.get('target_id', '') }}">
+  <input class="hub-input grow" name="correlation_id" placeholder="معرّف الترابط" value="{{ request.args.get('correlation_id', '') }}">
+  {{ hub.btn("فلترة", icon="filter", variant="primary", type="submit", size="sm") }}
+{% endcall %}
+
 {% include "radius/events_nav.html" %}
 
-{% call hub.section("الفلاتر", icon="filter") %}
-  <form method="get" class="hub-form-grid" data-testid="events-filters">
-    <label>الفئة <input name="category" value="{{ request.args.get('category', '') }}"></label>
-    <label>الخطورة <input name="severity" value="{{ request.args.get('severity', '') }}"></label>
-    <label>نوع الفاعل <input name="actor_type" value="{{ request.args.get('actor_type', '') }}"></label>
-    <label>رقم الفاعل <input name="actor_id" type="number" value="{{ request.args.get('actor_id', '') }}"></label>
-    <label>نوع الهدف <input name="target_type" value="{{ request.args.get('target_type', '') }}"></label>
-    <label>رقم الهدف <input name="target_id" type="number" value="{{ request.args.get('target_id', '') }}"></label>
-    <label>معرّف الترابط <input name="correlation_id" value="{{ request.args.get('correlation_id', '') }}"></label>
-    <button class="hub-btn hub-btn--primary" type="submit">فلترة</button>
-  </form>
+{# ───── Main (carded table) + help panel on the LEFT ───── #}
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "كيف تقرأ هذه الصفحة؟",
+  intro="كل صف هو حدث تشغيل محفوظ كسجل للمراجعة. استخدم الفلاتر في الأعلى لتضييق النتائج.",
+  items=[
+    {'icon': 'hashtag',     'text': 'الرقم رابط إلى تفاصيل الحدث وخطه الزمني للكيان المرتبط.'},
+    {'icon': 'layer-group', 'text': 'الفئة والمفتاح يحدّدان نوع الحدث ومصدره داخل النظام.'},
+    {'icon': 'triangle-exclamation', 'text': 'الخطورة تساعدك على تمييز الأحداث الحرجة عن العادية.'},
+    {'icon': 'link',        'text': 'معرّف الترابط يجمع الأحداث المرتبطة بنفس العملية معًا.'},
+  ],
+  note="هذه الصفحة للعرض فقط — لا توجد إجراءات حذف أو تعديل على الأحداث من هنا."
+)) %}
+  {% call hub.section("قائمة الأحداث", icon="list", meta=events|length|string + " حدث", flush=True) %}
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="15" style="border:none;border-radius:0">
+      <table class="hub-table" data-testid="events-table">
+        <thead>
+          <tr>
+            <th class="num">الرقم</th>
+            <th>الفئة</th>
+            <th>الخطورة</th>
+            <th>المفتاح</th>
+            <th>الفاعل</th>
+            <th>الهدف</th>
+            <th>الترابط</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for event in events %}
+            <tr>
+              <td class="num"><a href="{{ url_for('radius.events_detail', event_id=event.id) }}">#{{ event.id }}</a></td>
+              <td>{{ event.category }}</td>
+              <td>{{ event.severity }}</td>
+              <td class="mono small">{{ event.event_key }}</td>
+              <td>{{ event.actor_type }} #{{ event.actor_id or '' }}</td>
+              <td>{{ event.target_type }} #{{ event.target_id or '' }}</td>
+              <td class="mono small">{{ event.correlation_id }}</td>
+            </tr>
+          {% else %}
+            <tr><td colspan="7">لا توجد أحداث مطابقة لهذا الفلتر.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endcall %}
 {% endcall %}
 
-{% call hub.section("قائمة الأحداث", icon="list", flush=True) %}
-  <div class="hub-table-wrap">
-    <table class="hub-table" data-testid="events-table">
-      <thead><tr><th>الرقم</th><th>الفئة</th><th>الخطورة</th><th>المفتاح</th><th>الفاعل</th><th>الهدف</th><th>الترابط</th></tr></thead>
-      <tbody>
-        {% for event in events %}
-          <tr>
-            <td><a href="{{ url_for('radius.events_detail', event_id=event.id) }}">#{{ event.id }}</a></td>
-            <td>{{ event.category }}</td>
-            <td>{{ event.severity }}</td>
-            <td>{{ event.event_key }}</td>
-            <td>{{ event.actor_type }} #{{ event.actor_id or '' }}</td>
-            <td>{{ event.target_type }} #{{ event.target_id or '' }}</td>
-            <td>{{ event.correlation_id }}</td>
-          </tr>
-        {% else %}
-          <tr><td colspan="7">لا توجد أحداث مطابقة لهذا الفلتر.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-{% endcall %}
-</div>
 {% endblock %}

@@ -1,4 +1,6 @@
-{# Roles list — REBUILT N7 (hub-v2). Backend: roles, perms. Card grid layout. #}
+{# Roles list — UNIFIED DESIGN SYSTEM (merged hero + help panel).
+   Same backend data: roles, perms. Zero route/behaviour change.
+   Card grid kept (role data is card-shaped, not row-shaped). #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
@@ -81,9 +83,12 @@
 {% block content %}
 {% include "radius/roles_permissions_nav.html" %}
 
-{{ hub.hero(
+{% set _sys = roles|selectattr('is_system')|list|length %}
+
+{# ───── Merged hero: title + actions + KPI strip (no filter bar) ───── #}
+{{ hub.megahero(
   "الأدوار والصلاحيات",
-  subtitle="تعريف أدوار المدراء بألوان وصلاحيات مخصّصة — كل دور يجمع مجموعة صلاحيات",
+  subtitle="تعريف أدوار المدراء بألوان وصلاحيات مخصّصة — كل دور يجمع مجموعة صلاحيات تُمنح للمشرفين.",
   icon="key",
   actions_html='
     <a class="hub-btn hub-btn--primary" href="' + url_for('radius.roles_new') + '">
@@ -91,60 +96,77 @@
     </a>
     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.admins_list') + '">
       <i class="fa-solid fa-user-shield"></i> المدراء
-    </a>
-  '
+    </a>',
+  kpis=[
+    {'label': 'إجمالي الأدوار',    'value': roles|length,        'icon': 'key',        'variant': 'brand'},
+    {'label': 'أدوار النظام',      'value': _sys,                'icon': 'lock',       'variant': 'amber'},
+    {'label': 'أدوار مخصصة',       'value': roles|length - _sys, 'icon': 'user-pen',   'variant': 'green'},
+    {'label': 'الصلاحيات المتاحة', 'value': perms|length,        'icon': 'list-check', 'variant': 'blue'},
+  ]
 ) }}
 
 {% if roles %}
-{% set _sys = roles|selectattr('is_system')|list|length %}
-<div class="hub-kpi-grid">
-  {{ hub.kpi("إجمالي الأدوار",   roles|length, icon="key",        variant="brand") }}
-  {{ hub.kpi("أدوار النظام",     _sys,         icon="lock",       variant="amber") }}
-  {{ hub.kpi("أدوار مخصصة",      roles|length - _sys, icon="user-pen", variant="green") }}
-  {{ hub.kpi("الصلاحيات المتاحة", perms|length, icon="list-check", variant="blue") }}
-</div>
-
-{% call hub.section("الأدوار المعرَّفة", icon="grip", meta=roles|length|string + " دور") %}
-  <div class="rl-grid">
-    {% for r in roles %}
-    <div class="rl-card" style="--c: {{ r.color or '#6B5AED' }}">
-      <div class="rl-head">
-        <i class="fa-solid fa-key" style="color: {{ r.color or '#6B5AED' }};font-size:18px"></i>
-        <div>
-          <div class="rl-name">{{ r.display_name or r.name }}</div>
-          <div class="rl-tech">{{ r.name }}</div>
+{# ───── Main (card grid) + help panel on the LEFT ───── #}
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "كيف تقرأ هذه الصفحة؟",
+  intro="كل بطاقة هي دور إداري يجمع مجموعة من الصلاحيات. اللون يميّز الدور بصريًا، ويُمنح للمشرفين من شاشة المدراء.",
+  items=[
+    {'icon': 'key',         'text': 'العدّاد بجوار اسم الدور يوضّح كم صلاحية يضمّها هذا الدور.'},
+    {'icon': 'lock',        'text': 'أدوار النظام «SYS» محميّة — يمكن تعديلها لكن لا يمكن حذفها.'},
+    {'icon': 'user-shield', 'text': 'الأدوار المخصّصة تُنشأ وتُحذف بحرّية حسب احتياج فريقك.'},
+    {'icon': 'box-archive', 'text': 'أرشفة دور لا تحذفه نهائيًا — يمكن استعادته من سلة المحذوفات.'},
+  ],
+  note="امنح كل مشرف أقل صلاحيات تكفي لعمله — هذا أأمن لمنظومتك."
+)) %}
+  {% call hub.section("الأدوار المعرَّفة", icon="grip", meta=roles|length|string + " دور") %}
+    <div class="rl-grid">
+      {% for r in roles %}
+      <div class="rl-card" style="--c: {{ r.color or '#6B5AED' }}">
+        <div class="rl-head">
+          <i class="fa-solid fa-key" style="color: {{ r.color or '#6B5AED' }};font-size:18px"></i>
+          <div>
+            <div class="rl-name">{{ r.display_name or r.name }}</div>
+            <div class="rl-tech">{{ r.name }}</div>
+          </div>
+          {% if r.is_system %}
+            <span class="rl-sys" title="دور نظام — لا يمكن حذفه">SYS</span>
+          {% endif %}
+          <span class="rl-perms-count">{{ r.permissions|length }} صلاحية</span>
         </div>
-        {% if r.is_system %}
-          <span class="rl-sys" title="دور نظام — لا يمكن حذفه">SYS</span>
-        {% endif %}
-        <span class="rl-perms-count">{{ r.permissions|length }} صلاحية</span>
+        <div class="rl-desc">{{ r.description or 'بدون وصف' }}</div>
+        <div class="rl-chips">
+          {% set shown = r.permissions[:6] %}
+          {% for p in shown %}<span class="rl-chip">{{ p }}</span>{% endfor %}
+          {% if r.permissions|length > 6 %}
+            <span class="rl-chip-more">+{{ r.permissions|length - 6 }}</span>
+          {% elif not r.permissions %}
+            <span class="rl-chip" style="color:var(--hub-text-mute)">بدون صلاحيات</span>
+          {% endif %}
+        </div>
+        <div class="rl-actions">
+          <a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ url_for('radius.roles_edit', role_id=r.id) }}">
+            <i class="fa-solid fa-pen"></i> تعديل
+          </a>
+          {% if r.is_system %}
+          <form method="post" action="{{ url_for('radius.roles_delete', role_id=r.id) }}">
+            <button type="submit" class="hub-btn hub-btn--danger hub-btn--sm" disabled title="دور نظام محمي">
+              <i class="fa-solid fa-box-archive"></i> محمي
+            </button>
+          </form>
+          {% else %}
+          <form method="post" action="{{ url_for('radius.roles_delete', role_id=r.id) }}" style="display:contents;margin:0">
+            <button type="submit" class="hub-btn hub-btn--danger hub-btn--sm"
+                    data-role-archive data-role-name="{{ (r.display_name or r.name)|e }}"
+                    data-role-action="{{ url_for('radius.roles_delete', role_id=r.id) }}">
+              <i class="fa-solid fa-box-archive"></i> أرشفة
+            </button>
+          </form>
+          {% endif %}
+        </div>
       </div>
-      <div class="rl-desc">{{ r.description or 'بدون وصف' }}</div>
-      <div class="rl-chips">
-        {% set shown = r.permissions[:6] %}
-        {% for p in shown %}<span class="rl-chip">{{ p }}</span>{% endfor %}
-        {% if r.permissions|length > 6 %}
-          <span class="rl-chip-more">+{{ r.permissions|length - 6 }}</span>
-        {% elif not r.permissions %}
-          <span class="rl-chip" style="color:var(--hub-text-mute)">بدون صلاحيات</span>
-        {% endif %}
-      </div>
-      <div class="rl-actions">
-        <a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ url_for('radius.roles_edit', role_id=r.id) }}">
-          <i class="fa-solid fa-pen"></i> تعديل
-        </a>
-        <form method="post" action="{{ url_for('radius.roles_delete', role_id=r.id) }}"
-              {% if not r.is_system %}onsubmit="return confirm('أرشفة الدور «{{ r.display_name or r.name }}»؟ يمكن استعادته من سلة المحذوفات.');"{% endif %}>
-          <button type="submit" class="hub-btn hub-btn--danger hub-btn--sm"
-                  {% if r.is_system %}disabled title="دور نظام محمي"{% endif %}>
-            <i class="fa-solid fa-box-archive"></i>
-            {% if r.is_system %}محمي{% else %}أرشفة{% endif %}
-          </button>
-        </form>
-      </div>
+      {% endfor %}
     </div>
-    {% endfor %}
-  </div>
+  {% endcall %}
 {% endcall %}
 {% else %}
 {{ hub.empty(
@@ -153,5 +175,32 @@
   icon="key"
 ) }}
 {% endif %}
+
+{# ───── Shared floating modal for archive confirmation (replaces inline confirm()) ───── #}
+{% call hub.modal("roleArchiveModal", "تأكيد أرشفة الدور", icon="box-archive", size="sm",
+   footer_html='<button type="button" class="hub-btn hub-btn--ghost" data-uds-modal-close>إلغاء</button>'
+     ~ '<form method="post" data-role-archive-form style="display:inline;margin:0">'
+     ~ '<button type="submit" class="hub-btn hub-btn--danger"><i class="fa-solid fa-box-archive"></i> أرشفة</button></form>') %}
+  <div class="uds-modal-warn uds-modal-warn--amber">
+    <i class="fa-solid fa-circle-info"></i>
+    <span>سيتم أرشفة الدور «<strong data-role-archive-name></strong>». يمكن استعادته لاحقًا من سلة المحذوفات.</span>
+  </div>
+{% endcall %}
+<script>
+(function(){
+  var modal = document.getElementById("roleArchiveModal");
+  if (!modal) return;
+  var nameEl = modal.querySelector("[data-role-archive-name]");
+  var form   = modal.querySelector("[data-role-archive-form]");
+  document.addEventListener("click", function(e){
+    var btn = e.target.closest("[data-role-archive]");
+    if (!btn) return;
+    e.preventDefault();
+    if (nameEl) nameEl.textContent = btn.getAttribute("data-role-name") || "";
+    if (form)   form.action = btn.getAttribute("data-role-action") || "";
+    modal.hidden = false;
+  });
+})();
+</script>
 
 {% endblock %}

@@ -1,4 +1,4 @@
-{# Bandwidth schedules — REBUILT N11 (hub-v2). Backend untouched. #}
+{# Bandwidth schedules — UNIFIED DESIGN SYSTEM (hub-v2). Backend untouched. #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 {% from "_partials/time_picker_circular.html" import time_picker_circular %}
@@ -12,8 +12,6 @@
 {% block head_extra %}
 {{ super() }}
 <style>
-  .bs-grid{ display:grid; grid-template-columns: minmax(300px,420px) minmax(0,1fr); gap:14px; align-items:start; }
-  @media (max-width: 1000px){ .bs-grid{ grid-template-columns: 1fr; } }
   .bs-form{ display:grid; gap:11px; }
   .bs-row{ display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
   @media (max-width: 540px){ .bs-row{ grid-template-columns: 1fr; } }
@@ -25,26 +23,42 @@
     border:1px solid var(--hub-border-soft); border-radius:var(--hub-r-md);
     font-size:12.5px; font-weight:700;
   }
-  .bs-check input{ width:16px; height:16px; accent-color: var(--hub-brand); cursor:pointer; }
 </style>
 {% endblock %}
 
 {% block content %}
 
-{{ hub.hero(
+{% set _enabled = schedules|selectattr('enabled')|list|length if schedules else 0 %}
+
+{# ───── Merged hero: title + subtitle + KPI strip ───── #}
+{{ hub.megahero(
   "جدولة السرعات",
-  subtitle="خطط تغيير سرعة حسب الوقت مع معاينة واضحة قبل أي تطبيق فعلي على خدمة المصادقة",
-  icon="clock"
+  subtitle="خطط تغيير سرعة حسب الوقت مع معاينة واضحة قبل أي تطبيق فعلي على خدمة المصادقة.",
+  icon="clock",
+  kpis=[
+    {'label': 'إجمالي الجداول', 'value': schedules|length if schedules else 0, 'icon': 'clock',      'variant': 'brand'},
+    {'label': 'مفعَّلة',        'value': _enabled,                              'icon': 'toggle-on',  'variant': 'green'},
+    {'label': 'معطَّلة',        'value': (schedules|length if schedules else 0) - _enabled, 'icon': 'toggle-off', 'variant': 'amber'},
+  ]
 ) }}
 
-<div style="margin-bottom:var(--hub-gap-section);padding:11px 16px;font-size:12.5px;
-            border-radius:var(--hub-r-lg);border:1px solid var(--hub-amber);
-            background:var(--hub-amber-soft);color:var(--hub-amber-ink);line-height:1.8">
-  <i class="fa-solid fa-circle-info"></i>
-  هذه الصفحة تحفظ جداول السرعة وتفحص جاهزيتها قبل التنفيذ. زر الفحص لا يغيّر السرعة فعليًا على خدمة المصادقة، بل يعرض نتيجة مراجعة آمنة للمشغل.
-</div>
+{# ───── Main (form + table cards) + help panel on the LEFT ───── #}
+{% set help_aside %}
+{% call hub.helppanel(
+     "كيف تعمل هذه الصفحة؟",
+     intro="تحفظ هذه الصفحة جداول السرعة وتفحص جاهزيتها قبل التنفيذ. زر الفحص لا يغيّر السرعة فعليًا على خدمة المصادقة، بل يعرض نتيجة مراجعة آمنة للمشغل.",
+     items=[
+       {"icon": "layer-group", "text": "نطاق القاعدة: قاعدة المشترك أو باقة الكروت تتقدم على قاعدة العرض."},
+       {"icon": "clock",       "text": "الوقت: تُطبّق القاعدة بين «من الساعة» و«إلى الساعة»."},
+       {"icon": "gauge-high",  "text": "السرعة و CIR: اكتب القيمة ثم اختر الوحدة (kbps أو Mbps)."},
+       {"icon": "arrow-rotate-left", "text": "طريقة الرجوع: تحدد ماذا يحدث بعد انتهاء وقت الجدول."}
+     ],
+     icon="circle-question",
+     note="زر «فحص الجاهزية» لا يطبّق على خدمة المصادقة — يعرض مراجعة آمنة فقط."
+   ) %}{% endcall %}
+{% endset %}
 
-<div class="bs-grid">
+{% call hub.worklayout(aside_html=help_aside) %}
 
   {% call hub.section("إضافة جدول سرعة", icon="plus") %}
     <form class="bs-form" method="post" action="{{ url_for('radius.bandwidth_schedules_create') }}">
@@ -160,85 +174,84 @@
     </form>
   {% endcall %}
 
-  <div>
-    {% if schedules %}
-      {% call hub.section("الجداول الحالية", icon="table-list",
-                          meta=schedules|length|string + " جدول", flush=True) %}
-        <div class="hub-table-wrap" style="border:none;border-radius:0">
-          <table class="hub-table">
-            <thead>
-              <tr>
-                <th>الاسم</th>
-                <th>النطاق</th>
-                <th>الباقة</th>
-                <th>الوقت</th>
-                <th>السرعة</th>
-                <th>الحالة</th>
-                <th style="width:180px">تطبيق</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for item in schedules %}
-              <tr>
-                <td>
-                  <strong>{{ item.get('name') }}</strong>
-                  {% if item.get('notes') %}<div class="small hub-text-mute">{{ item.get('notes') }}</div>{% endif %}
-                </td>
-                <td class="small">
-                  {% if item.get('target_type') == 'subscriber' %}
-                    {{ hub.pill("مشترك", variant="blue", dot=False) }}
-                    <div class="mono small hub-text-mute">{{ item.get('subscriber_username') }}</div>
-                  {% elif item.get('target_type') == 'card_batch' %}
-                    {{ hub.pill("كروت", variant="amber", dot=False) }}
-                    <div class="mono small hub-text-mute">{{ batch_names.get(item.get('card_batch_id'), item.get('card_batch_id')) }}</div>
-                  {% else %}
-                    {{ hub.pill("عرض", variant="brand", dot=False) }}
-                  {% endif %}
-                  <div class="hub-text-mute small">أولوية {{ item.get('priority') or 100 }}</div>
-                </td>
-                <td class="small">{{ plan_names.get(item.get('plan_id'), '—') }}</td>
-                <td class="mono small">{{ item.get('starts_at_time') }} → {{ item.get('ends_at_time') }}</td>
-                <td class="mono small">
-                  <i class="fa-solid fa-arrow-down" style="color:var(--hub-blue);font-size:10px"></i>
-                  {{ item.get('speed_down_kbps') or 0 }} /
-                  <i class="fa-solid fa-arrow-up" style="color:var(--hub-green);font-size:10px"></i>
-                  {{ item.get('speed_up_kbps') or 0 }}
-                  {% if item.get('cir_down_kbps') or item.get('cir_up_kbps') %}
-                    <div class="hub-text-mute small">CIR {{ item.get('cir_down_kbps') or 0 }} / {{ item.get('cir_up_kbps') or 0 }}</div>
-                  {% endif %}
-                </td>
-                <td>
-                  {% if item.get('enabled') %}
-                    {{ hub.pill("مفعَّل", variant="green") }}
-                  {% else %}
-                    {{ hub.pill("معطَّل", variant="grey") }}
-                  {% endif %}
-                </td>
-                <td>
-                  <form method="post" action="{{ url_for('radius.bandwidth_schedules_apply', schedule_id=item.get('id')) }}">
-                    <button class="hub-btn hub-btn--secondary hub-btn--sm" type="submit">
-                      <i class="fa-solid fa-shield-halved"></i> فحص الجاهزية
-                    </button>
-                    <div class="small" style="margin-top:4px">
-                      {{ hub.pill("لا يطبق على خدمة المصادقة", variant="amber", dot=False) }}
-                    </div>
-                  </form>
-                </td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      {% endcall %}
-    {% else %}
-      {{ hub.empty(
-        "لا توجد جداول سرعة بعد",
-        sub="أضف أول جدول من النموذج بجانبك لبدء جدولة قواعد السرعة الزمنية.",
-        icon="clock"
-      ) }}
-    {% endif %}
-  </div>
-</div>
+  {% if schedules %}
+    {% call hub.section("الجداول الحالية", icon="table-list",
+                        meta=schedules|length|string + " جدول", flush=True) %}
+      <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="15" style="border:none;border-radius:0">
+        <table class="hub-table">
+          <thead>
+            <tr>
+              <th>الاسم</th>
+              <th>النطاق</th>
+              <th>الباقة</th>
+              <th data-uds-nosort>الوقت</th>
+              <th data-uds-nosort>السرعة</th>
+              <th>الحالة</th>
+              <th style="width:180px" data-uds-nosort data-uds-nocol>تطبيق</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in schedules %}
+            <tr>
+              <td>
+                <strong>{{ item.get('name') }}</strong>
+                {% if item.get('notes') %}<div class="small hub-text-mute">{{ item.get('notes') }}</div>{% endif %}
+              </td>
+              <td class="small">
+                {% if item.get('target_type') == 'subscriber' %}
+                  {{ hub.pill("مشترك", variant="blue", dot=False) }}
+                  <div class="mono small hub-text-mute" style="white-space:nowrap" dir="ltr">{{ item.get('subscriber_username') }}</div>
+                {% elif item.get('target_type') == 'card_batch' %}
+                  {{ hub.pill("كروت", variant="amber", dot=False) }}
+                  <div class="mono small hub-text-mute" style="white-space:nowrap" dir="ltr">{{ batch_names.get(item.get('card_batch_id'), item.get('card_batch_id')) }}</div>
+                {% else %}
+                  {{ hub.pill("عرض", variant="brand", dot=False) }}
+                {% endif %}
+                <div class="hub-text-mute small">أولوية {{ item.get('priority') or 100 }}</div>
+              </td>
+              <td class="small">{{ plan_names.get(item.get('plan_id'), '—') }}</td>
+              <td class="mono small" style="white-space:nowrap" dir="ltr">{{ item.get('starts_at_time') }} → {{ item.get('ends_at_time') }}</td>
+              <td class="mono small" style="white-space:nowrap" dir="ltr">
+                <i class="fa-solid fa-arrow-down" style="color:var(--hub-blue);font-size:10px"></i>
+                {{ item.get('speed_down_kbps') or 0 }} /
+                <i class="fa-solid fa-arrow-up" style="color:var(--hub-green);font-size:10px"></i>
+                {{ item.get('speed_up_kbps') or 0 }}
+                {% if item.get('cir_down_kbps') or item.get('cir_up_kbps') %}
+                  <div class="hub-text-mute small">CIR {{ item.get('cir_down_kbps') or 0 }} / {{ item.get('cir_up_kbps') or 0 }}</div>
+                {% endif %}
+              </td>
+              <td>
+                {% if item.get('enabled') %}
+                  {{ hub.pill("مفعَّل", variant="green") }}
+                {% else %}
+                  {{ hub.pill("معطَّل", variant="grey") }}
+                {% endif %}
+              </td>
+              <td>
+                <form method="post" action="{{ url_for('radius.bandwidth_schedules_apply', schedule_id=item.get('id')) }}">
+                  <button class="hub-btn hub-btn--secondary hub-btn--sm" type="submit">
+                    <i class="fa-solid fa-shield-halved"></i> فحص الجاهزية
+                  </button>
+                  <div class="small" style="margin-top:4px">
+                    {{ hub.pill("لا يطبق على خدمة المصادقة", variant="amber", dot=False) }}
+                  </div>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endcall %}
+  {% else %}
+    {{ hub.empty(
+      "لا توجد جداول سرعة بعد",
+      sub="أضف أول جدول من النموذج بالأعلى لبدء جدولة قواعد السرعة الزمنية.",
+      icon="clock"
+    ) }}
+  {% endif %}
+
+{% endcall %}
 
 <script>
 (function(){

@@ -1,5 +1,6 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
+{% from "_partials/toggle_switch.html" import toggle_switch %}
 
 {% block title %}الإشعارات الحدثية — مركز التواصل{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-bell"></i>{% endblock %}
@@ -16,17 +17,9 @@
   /* event card */
   .cnf-card{ border:1px solid #e8edf3; border-radius:14px; background:#fcfcff; overflow:hidden; transition:.15s; }
   .cnf-card.on{ border-color:#c4b5fd; box-shadow:0 4px 14px rgba(91,33,182,.06); }
-  .cnf-head{ display:flex; align-items:center; gap:12px; padding:13px 15px; cursor:pointer; }
+  .cnf-head{ display:flex; align-items:center; gap:12px; padding:13px 15px; }
   .cnf-head .ttl{ font-size:14px; font-weight:800; color:#0f172a; flex:1; }
   .cnf-head .ttl .ek{ font-family:ui-monospace,Consolas,monospace; font-size:10.5px; color:#94a3b8; font-weight:600; margin-inline-start:7px; direction:ltr; unicode-bidi:isolate; }
-  /* toggle switch */
-  .cnf-sw{ position:relative; width:46px; height:26px; flex:none; }
-  .cnf-sw input{ position:absolute; opacity:0; width:100%; height:100%; margin:0; cursor:pointer; z-index:2; }
-  .cnf-sw .track{ position:absolute; inset:0; background:#cbd5e1; border-radius:99px; transition:.18s; }
-  .cnf-sw .knob{ position:absolute; top:3px; inset-inline-start:3px; width:20px; height:20px; background:#fff; border-radius:50%;
-    box-shadow:0 1px 3px rgba(0,0,0,.25); transition:.18s; }
-  .cnf-sw input:checked ~ .track{ background:linear-gradient(135deg,#7c3aed,#6d28d9); }
-  .cnf-sw input:checked ~ .knob{ inset-inline-start:23px; }
   /* card body (revealed when enabled) */
   .cnf-body{ padding:0 15px 15px; display:grid; gap:13px; border-top:1px solid #f1f5f9; }
   .cnf-card:not(.on) .cnf-body{ display:none; }
@@ -61,26 +54,46 @@
   /* sticky save bar */
   .cnf-save{ position:sticky; bottom:0; display:flex; gap:10px; align-items:center; flex-wrap:wrap; padding:13px 0 2px;
     background:linear-gradient(0deg,var(--bg,#f6f7fb) 65%,transparent); }
-  .cnf-btn{ display:inline-flex; align-items:center; gap:8px; border:0; border-radius:11px; padding:11px 20px; font:inherit; font-size:14px;
-    font-weight:800; cursor:pointer; transition:.15s; }
-  .cnf-btn.primary{ background:linear-gradient(135deg,#7c3aed,#6d28d9); color:#fff; box-shadow:0 8px 18px rgba(124,58,237,.26); }
-  .cnf-btn.primary:hover{ box-shadow:0 10px 22px rgba(124,58,237,.34); }
   .cnf-save .hint{ font-size:12px; color:#64748b; }
 </style>
 {% endblock %}
 
 {% block content %}
-{{ hub.hero(
+
+{%- set _enabled = rules|selectattr('enabled')|list|length -%}
+
+{# ───── ONE unified hero: title + action + live-status KPI strip ───── #}
+{{ hub.megahero(
   "الإشعارات الحدثية",
   subtitle="حوّل أحداث عملك (إنشاء مشترك، قرب الانتهاء، شحن رصيد، انقطاع راوتر…) إلى رسائل تلقائية على الرسائل القصيرة / واتساب / تلجرام. كل حدث جاهز برسالة افتراضية — فعّله فقط.",
   icon="bolt",
-  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.communications_guide') ~ '"><i class="fa-solid fa-book-open"></i> دليل وشروحات</a>'
+  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.communications_guide') ~ '"><i class="fa-solid fa-book-open"></i> دليل وشروحات</a>',
+  kpis=[
+    {'label': 'إجمالي الأحداث', 'value': rules|length,                'icon': 'bell',       'variant': 'brand'},
+    {'label': 'مفعَّلة',        'value': _enabled,                    'icon': 'toggle-on',  'variant': 'green', 'sub': 'حدث مُفعّل'},
+    {'label': 'معطَّلة',        'value': rules|length - _enabled,     'icon': 'toggle-off', 'variant': 'amber'},
+    {'label': 'قنوات الإرسال',  'value': all_channels|length,         'icon': 'tower-broadcast', 'variant': 'blue', 'sub': 'متاحة للاختيار'}
+  ]
 ) }}
 
 {% include "radius/communications_nav.html" %}
 
 {# helper: base variables available to subscriber-type events #}
 {%- set base_vars = ['{username}','{name}','{prof}','{exp}','{balance}','{status}','{down_speed}','{up_speed}','{remain_quota}'] -%}
+
+{# ───── Full-width work layout: main content + help panel on the LEFT ───── #}
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "كيف تعمل هذه الصفحة؟",
+  intro="كل بطاقة هي حدث في عملك — فعّله بالمفتاح ليبدأ إرسال رسالة تلقائية عند وقوعه.",
+  icon="circle-info",
+  items=[
+    {'icon': 'toggle-on',     'text': 'فعّل الحدث بالمفتاح ليُفتح ويبدأ الإرسال التلقائي عند وقوعه.'},
+    {'icon': 'tower-broadcast','text': 'اختر القنوات (الرسائل القصيرة / واتساب / تلجرام) التي يُرسل عبرها الحدث.'},
+    {'icon': 'pen',           'text': 'عدّل نص الرسالة، وانقر أي متغيّر لإدراجه في موضع المؤشّر.'},
+    {'icon': 'floppy-disk',   'text': 'كل البطاقات تُحفظ دفعة واحدة بزر «حفظ كل الإعدادات».'}
+  ],
+  note="القنوات تُضبط من «قنوات الإرسال»، وتلجرام من «إعدادات تلجرام». للشرح المصوّر افتح «دليل وشروحات»."
+)) %}
 
 <form method="post" action="{{ url_for('radius.communications_notifications') }}" class="cnf">
   {{ csrf_token_input() }}
@@ -100,6 +113,7 @@
     </div>
   {% endcall %}
 
+  {% call hub.section("الأحداث", icon="bell") %}
   {# group the events by their group key, in registry order #}
   {%- set ns = namespace(current='') -%}
   {% for rule in rules %}
@@ -110,13 +124,11 @@
 
     {%- set ek = rule.event.key -%}
     <div class="cnf-card{{ ' on' if rule.enabled else '' }}" data-card>
-      <label class="cnf-head">
-        <span class="cnf-sw">
-          <input type="checkbox" name="{{ ek }}__enabled" value="1" data-toggle {{ 'checked' if rule.enabled else '' }}>
-          <span class="track"></span><span class="knob"></span>
-        </span>
+      <div class="cnf-head">
+        {{ toggle_switch(name=ek ~ "__enabled", checked=rule.enabled, value="1",
+                         id=ek ~ "-enabled", show_label=False, bare=True) }}
         <span class="ttl">{{ rule.event.label }}<span class="ek">{{ ek }}</span></span>
-      </label>
+      </div>
 
       <div class="cnf-body">
         {# channels #}
@@ -160,16 +172,19 @@
   {% endfor %}
 
   <div class="cnf-save">
-    <button type="submit" class="cnf-btn primary"><i class="fa-solid fa-floppy-disk"></i> حفظ كل الإعدادات</button>
+    {{ hub.btn("حفظ كل الإعدادات", icon="floppy-disk", variant="primary", type="submit") }}
     <span class="hint">يتم حفظ كل البطاقات دفعة واحدة. الإعدادات الافتراضية جاهزة — يمكنك الحفظ مباشرة.</span>
   </div>
+  {% endcall %}
 </form>
+
+{% endcall %}
 
 <script>
 (function(){
   // reveal/hide the card body when its toggle flips + keep the .on class
   document.querySelectorAll('[data-card]').forEach(function(card){
-    var tog = card.querySelector('[data-toggle]');
+    var tog = card.querySelector('input[type=checkbox][name$="__enabled"]');
     if(tog){
       tog.addEventListener('change', function(){ card.classList.toggle('on', tog.checked); });
     }

@@ -9,41 +9,9 @@
 {% block title %}دفعة طباعة جديدة{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-file-import"></i>{% endblock %}
 {% block page_title %}دفعة طباعة جديدة{% endblock %}
-{% block page_sub %}
-  <span class="sub">
-    <a href="{{ url_for('radius.cards_print_list') }}" style="color:#475569;text-decoration:none">
-      <i class="fa-solid fa-arrow-right"></i> العودة لقائمة الحزم
-    </a>
-  </span>
-{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
-<style>
-  /* ── Strong elevation — matches the rest of the print section. ── */
-  .hub-section{
-    border:1px solid #cbd5e1;
-    background:#fff;
-    box-shadow:
-      0 1px 0 rgba(255,255,255,.8) inset,
-      0 1px 3px rgba(15,23,42,.06),
-      0 8px 20px rgba(15,23,42,.06);
-    border-radius:14px;
-  }
-  .hub-section-head{
-    background:linear-gradient(180deg, #f1f5f9 0%, #f8fafc 100%);
-    border-bottom:1px solid #cbd5e1;
-  }
-  .hub-section-head-title{ color:#0f172a; font-weight:900 }
-  .hub-section-head-icon{ background:#eef2ff; color:#4f46e5 }
-  .hub-hero{
-    border:1px solid #cbd5e1;
-    box-shadow:
-      0 1px 0 rgba(255,255,255,.8) inset,
-      0 2px 6px rgba(15,23,42,.06),
-      0 14px 32px rgba(15,23,42,.08);
-  }
-</style>
 <style>
   /* ── Form row — 3 fields side-by-side on desktop ── */
   .pc-row{
@@ -371,8 +339,25 @@
 {{ hub.hero(
   "استيراد دفعة طباعة",
   subtitle="ارفع ملف الكروت — Excel، CSV، أو PDF بأي ترتيب أعمدة. المحرّك يكتشف اليوزرات والباسوردات تلقائياً.",
-  icon="file-import"
+  icon="file-import",
+  actions_html='
+    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.cards_print_list') + '">
+      <i class="fa-solid fa-arrow-right"></i> العودة لقائمة الحزم
+    </a>
+  '
 ) }}
+
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "كيف تعمل هذه الصفحة",
+  intro="ثلاث خطوات سريعة لتحويل ملف كروت جاهز إلى حزمة طباعة احترافية.",
+  icon="circle-question",
+  items=[
+    {"icon": "box-archive", "text": "اكتب اسم الحزمة وسعرها (السعر اختياري)."},
+    {"icon": "wand-magic-sparkles", "text": "ارفع الملف ثم اضغط «حلّل» — المحرّك يكتشف الأعمدة تلقائياً."},
+    {"icon": "list-check", "text": "راجع النص المستخرج، عدّله إن لزم، ثم احفظ الحزمة."},
+  ],
+  note="بطاقات الطباعة لا تُرحَّل إلى خدمة المصادقة ولا تسمح بتسجيل الدخول — هي للطباعة فقط."
+)) %}
 
 <form method="post" action="{{ url_for('radius.cards_print_new') }}">
   {{ csrf_token_input() | safe }}
@@ -505,6 +490,8 @@
   {% endcall %}
 
 </form>
+
+{% endcall %}{# /worklayout #}
 
 <script>
 (function () {

@@ -1,13 +1,13 @@
 {# ═══════════════════════════════════════════════════════════════════════
-   CoA failures (disconnect / reset_password) — REBUILT (Night N4, 2026-05-21)
+   CoA failures (disconnect / reset_password) — UNIFIED DESIGN SYSTEM
+   (megahero + worklayout + help).
 
    Same backend data: `items` (sync_queue rows where kind in
-   (disconnect, reset_password) AND status in (failed, retrying)).
-   Retry POST → radius.sync_retry(job_id=…).
+   (disconnect, reset_password) AND status in (failed, retrying)), `filters`.
+   Retry POST → radius.sync_retry(job_id=…). صفر تغيير في المسار/السلوك.
    ═══════════════════════════════════════════════════════════════════════ #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
-{% import "_partials/repfilter.html" as rf %}
 
 {% block title %}أخطاء قطع الجلسة{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-plug-circle-xmark"></i>{% endblock %}
@@ -17,70 +17,97 @@
 {% block content %}
 {% include "radius/reports_nav.html" %}
 
-{{ hub.hero(
-  "أخطاء التحكم الفوري",
-  subtitle="فشل أو إعادة محاولة لأوامر قطع الجلسة أو تغيير كلمة المرور.",
-  icon="plug-circle-xmark"
-) }}
-
-{{ rf.bar('radius.rep_coa_failures', filters, show_date=True, q_placeholder='بحث (نوع / حالة)…') }}
-
-{% if items %}
 {% set _failed   = items|selectattr('status','equalto','failed')|list|length %}
 {% set _retrying = items|selectattr('status','equalto','retrying')|list|length %}
-<div class="hub-kpi-grid">
-  {{ hub.kpi("الإجمالي",      items|length, icon="layer-group", variant="brand") }}
-  {{ hub.kpi("فشل نهائي",    _failed,       icon="circle-xmark", variant="red") }}
-  {{ hub.kpi("إعادة محاولة", _retrying,    icon="rotate",       variant="amber") }}
-</div>
 
-{% call hub.section("المهام الفاشلة", icon="table-list",
-                    meta=items|length|string + " صف", flush=True) %}
-  <div class="hub-table-wrap" style="border:none;border-radius:0">
-    <table class="hub-table rep-table" data-paginated="1" data-page-size="25" data-page-sizes="10,25,50,100" data-persist-key="rep-coa-failures">
-      <thead>
-        <tr>
-          <th class="num" style="width:70px">#</th>
-          <th>النوع</th>
-          <th>المستخدم</th>
-          <th>الحالة</th>
-          <th class="num">المحاولات</th>
-          <th>الخطأ</th>
-          <th style="width:80px">إجراء</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for r in items %}
-        <tr>
-          <td class="num mono">{{ r.id }}</td>
-          <td>
-            {% if r.kind == 'disconnect' %}{{ hub.pill("قطع", variant="amber", dot=False) }}
-            {% elif r.kind == 'reset_password' %}{{ hub.pill("تغيير كلمة", variant="blue", dot=False) }}
-            {% else %}{{ hub.pill(r.kind, variant="grey", dot=False) }}{% endif %}
-          </td>
-          <td class="mono">{{ r.entity_key or '—' }}</td>
-          <td>
-            {% if r.status == 'failed' %}{{ hub.pill("فشل", variant="red") }}
-            {% elif r.status == 'retrying' %}{{ hub.pill("إعادة", variant="amber") }}
-            {% else %}{{ hub.pill(r.status, variant="grey") }}{% endif %}
-          </td>
-          <td class="num mono">{{ r.attempts or 0 }}</td>
-          <td class="mono small" title="{{ r.last_error or '' }}"
-              style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
-            {{ r.last_error or '—' }}
-          </td>
-          <td>
-            <form method="post" action="{{ url_for('radius.sync_retry', job_id=r.id) }}" style="display:inline">
-              <button type="submit" class="hub-btn hub-btn--primary hub-btn--icon" title="إعادة محاولة">
-                <i class="fa-solid fa-rotate"></i>
-              </button>
-            </form>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+{# ───── Merged hero: title + subtitle + KPI strip + integrated filters ───── #}
+{% call hub.megahero(
+  "أخطاء التحكم الفوري",
+  subtitle="فشل أو إعادة محاولة لأوامر قطع الجلسة أو تغيير كلمة المرور.",
+  icon="plug-circle-xmark",
+  kpis=[
+    {'label': 'الإجمالي',      'value': items|length, 'icon': 'layer-group', 'variant': 'brand'},
+    {'label': 'فشل نهائي',     'value': _failed,      'icon': 'circle-xmark', 'variant': 'red'},
+    {'label': 'إعادة محاولة',  'value': _retrying,    'icon': 'rotate',       'variant': 'amber'},
+  ],
+  search_action=url_for('radius.rep_coa_failures')
+) %}
+  <input class="hub-input grow" type="text" name="q"
+         value="{{ filters.q if filters else '' }}"
+         placeholder="بحث (نوع / حالة)…">
+  <input class="hub-input" type="date" name="date_from"
+         value="{{ filters.date_from if filters else '' }}" title="من تاريخ">
+  <input class="hub-input" type="date" name="date_to"
+         value="{{ filters.date_to if filters else '' }}" title="إلى تاريخ">
+  {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
+  {% if filters and (filters.q or filters.date_from or filters.date_to) %}
+    {{ hub.btn("مسح", icon="rotate-left", variant="ghost", size="sm",
+               attrs='onclick="window.location=' + "'" + url_for('radius.rep_coa_failures') + "'" + '"') }}
+  {% endif %}
+{% endcall %}
+
+{% if items %}
+{# ───── Main (carded table) + help panel on the LEFT ───── #}
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "كيف تقرأ هذا التقرير؟",
+  intro="كل صف هو أمر تحكم فوري لم ينجح — مرتبًا حسب الأحدث.",
+  items=[
+    {'icon': 'plug-circle-xmark', 'text': '«قطع» هو أمر فصل جلسة المستخدم عن الشبكة فورًا.'},
+    {'icon': 'key',               'text': '«تغيير كلمة» هو أمر إعادة تعيين كلمة مرور المستخدم.'},
+    {'icon': 'circle-xmark',      'text': 'الحالة «فشل» تعني أن الأمر استنفد محاولاته دون نجاح.'},
+    {'icon': 'rotate',            'text': 'زر الإعادة يُعيد إدراج الأمر في طابور المزامنة لمحاولة جديدة.'},
+  ],
+  note="هذا التقرير للقراءة فقط — البيانات تأتي مباشرة من طابور المزامنة sync_queue."
+)) %}
+  {% call hub.section("المهام الفاشلة", icon="table-list",
+                      meta=items|length|string + " صف", flush=True) %}
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25"
+         style="border:none;border-radius:0">
+      <table class="hub-table">
+        <thead>
+          <tr>
+            <th class="num" style="width:70px" data-uds-nosort>#</th>
+            <th>النوع</th>
+            <th>المستخدم</th>
+            <th data-uds-nosort>الحالة</th>
+            <th class="num">المحاولات</th>
+            <th>الخطأ</th>
+            <th style="width:80px" data-uds-nosort>إجراء</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in items %}
+          <tr>
+            <td class="num mono">{{ r.id }}</td>
+            <td>
+              {% if r.kind == 'disconnect' %}{{ hub.pill("قطع", variant="amber", dot=False) }}
+              {% elif r.kind == 'reset_password' %}{{ hub.pill("تغيير كلمة", variant="blue", dot=False) }}
+              {% else %}{{ hub.pill(r.kind, variant="grey", dot=False) }}{% endif %}
+            </td>
+            <td class="mono">{{ r.entity_key or '—' }}</td>
+            <td>
+              {% if r.status == 'failed' %}{{ hub.pill("فشل", variant="red") }}
+              {% elif r.status == 'retrying' %}{{ hub.pill("إعادة", variant="amber") }}
+              {% else %}{{ hub.pill(r.status, variant="grey") }}{% endif %}
+            </td>
+            <td class="num mono">{{ r.attempts or 0 }}</td>
+            <td class="mono small" title="{{ r.last_error or '' }}"
+                style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+              {{ r.last_error or '—' }}
+            </td>
+            <td>
+              <form method="post" action="{{ url_for('radius.sync_retry', job_id=r.id) }}" style="display:inline">
+                <button type="submit" class="hub-btn hub-btn--primary hub-btn--icon" title="إعادة محاولة">
+                  <i class="fa-solid fa-rotate"></i>
+                </button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endcall %}
 {% endcall %}
 {% else %}
 {{ hub.empty(

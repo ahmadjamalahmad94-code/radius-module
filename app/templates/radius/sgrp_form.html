@@ -1,6 +1,7 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 {% from "_partials/toggle_switch.html" import toggle_switch %}
+{% from "_partials/unit_input.html" import unit_input_picker %}
 {% set ttl = "إضافة مجموعة" if is_new else "تعديل مجموعة" %}
 {% block title %}{{ ttl }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-people-arrows"></i>{% endblock %}
@@ -10,9 +11,30 @@
 {{ hub.hero(
   ttl,
   subtitle="تعريف مجموعة مشاركة بين الموزّعين.",
-  icon="people-arrows"
+  icon="people-arrows",
+  actions_html='
+    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.sgrp_list') + '">
+      <i class="fa-solid fa-arrow-right"></i> العودة للقائمة
+    </a>
+  '
 ) }}
 
+{% set help_aside %}
+{% call hub.helppanel(
+  "عن مجموعات المشاركة",
+  intro="مجموعة المشاركة تجمع عدّة مشتركين ليتقاسموا كوتا وسرعة موحّدة بدلاً من حدود فردية.",
+  icon="people-arrows",
+  items=[
+    {"icon": "database", "text": "الكوتا المشتركة تُحسب لكل المجموعة معًا، و0 يعني غير محدود."},
+    {"icon": "gauge-high", "text": "السرعة المشتركة هي السقف الإجمالي للتنزيل والرفع على المجموعة."},
+    {"icon": "users", "text": "حد الأعضاء يضبط أقصى عدد مشتركين، و0 يعني بلا حد."},
+    {"icon": "toggle-on", "text": "أوقف المجموعة لتعطيل المشاركة دون حذف الإعدادات."}
+  ],
+  note="الإعدادات محفوظة في الواجهة وتُفعَّل بالكامل عند ربطها بمحرك خدمة المصادقة."
+) %}{% endcall %}
+{% endset %}
+
+{% call hub.worklayout(aside_html=help_aside) %}
 <form method="post"
       action="{{ url_for('radius.sgrp_update', gid=item.id) if not is_new else url_for('radius.sgrp_create') }}">
 
@@ -26,10 +48,14 @@
         <label class="hub-field-label">الوصف</label>
         <textarea class="hub-textarea" name="description">{{ item.description if item else '' }}</textarea>
       </div>
+    </div>
+  {% endcall %}
+
+  {% call hub.section("الكوتا والسرعة المشتركة", icon="gauge-high") %}
+    <div class="hub-form-row">
       <div class="hub-field">
-        <label class="hub-field-label">الكوتا المشتركة (MB، 0=غير محدود)</label>
-        <input class="hub-input" type="number" name="shared_quota_mb" min="0"
-               value="{{ item.shared_quota_mb if item else 0 }}">
+        <label class="hub-field-label">الكوتا المشتركة (0=غير محدود)</label>
+        {{ unit_input_picker(name="shared_quota_mb", value=(item.shared_quota_mb if item else 0), kind="quota") }}
       </div>
       <div class="hub-field">
         <label class="hub-field-label">حد الأعضاء (0=غير محدود)</label>
@@ -37,14 +63,12 @@
                value="{{ item.max_members if item else 0 }}">
       </div>
       <div class="hub-field">
-        <label class="hub-field-label">سرعة تنزيل مشتركة (Kbps)</label>
-        <input class="hub-input" type="number" name="shared_speed_down_kbps" min="0"
-               value="{{ item.shared_speed_down_kbps if item else 0 }}">
+        <label class="hub-field-label">سرعة تنزيل مشتركة</label>
+        {{ unit_input_picker(name="shared_speed_down_kbps", value=(item.shared_speed_down_kbps if item else 0), kind="speed") }}
       </div>
       <div class="hub-field">
-        <label class="hub-field-label">سرعة رفع مشتركة (Kbps)</label>
-        <input class="hub-input" type="number" name="shared_speed_up_kbps" min="0"
-               value="{{ item.shared_speed_up_kbps if item else 0 }}">
+        <label class="hub-field-label">سرعة رفع مشتركة</label>
+        {{ unit_input_picker(name="shared_speed_up_kbps", value=(item.shared_speed_up_kbps if item else 0), kind="speed") }}
       </div>
       <div class="hub-field" style="grid-column:1/-1">
         <label class="hub-field-label">الحالة</label>
@@ -58,9 +82,5 @@
     {{ hub.btn("إلغاء", variant="ghost", href=url_for('radius.sgrp_list')) }}
   </div>
 </form>
-
-<div class="hub-flash hub-flash--info" style="margin-top:12px">
-  <i class="fa-solid fa-circle-info"></i>
-  مجموعات المشاركة محفوظة الآن في الواجهة، وسيتم تفعيلها بالكامل عند ربطها بمحرك خدمة المصادقة.
-</div>
+{% endcall %}
 {% endblock %}

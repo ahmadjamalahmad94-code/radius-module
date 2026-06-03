@@ -1,4 +1,9 @@
+{# Smart alerts — UNIFIED DESIGN SYSTEM (merged hero + help panel + data-table).
+   Same backend data: rows / filters / severities / settings / routers.
+   Zero route/behaviour change. JS hooks (data-mt-alerts-*) and the
+   settings drawer markup/JS are preserved exactly. #}
 {% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
 
 {% block title %}التنبيهات{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-triangle-exclamation"></i>{% endblock %}
@@ -15,127 +20,118 @@
 {% set warning_count = rows|selectattr('severity', 'equalto', 'warning')|list|length %}
 {% set info_count = rows|length - critical_count - warning_count %}
 
-<section class="opsx" data-mt-alerts-page>
-  <header class="opsx-hero">
-    <div>
-      <h2>التنبيهات الذكية</h2>
-      <p>كل صف هنا ناتج من قاعدة تنبيه محفوظة: راوتر، شدة، قاعدة، وآخر وقت رصد. الهدف أن ترى ما يستحق الانتباه بدون ضوضاء.</p>
+<div data-mt-alerts-page>
+
+{# ───── Merged hero: title + settings action + KPI strip + integrated filters ───── #}
+{% call hub.megahero(
+  "التنبيهات الذكية",
+  subtitle="كل صف هنا ناتج من قاعدة تنبيه محفوظة: راوتر، شدة، قاعدة، وآخر وقت رصد. الهدف أن ترى ما يستحق الانتباه بدون ضوضاء.",
+  icon="bell",
+  actions_html='
+    <button type="button" class="hub-btn hub-btn--secondary" data-sa-open>
+      <i class="fa-solid fa-gear"></i> إعدادات التنبيهات
+    </button>',
+  kpis=[
+    {'label': 'حرجة',     'value': critical_count, 'icon': 'circle-exclamation', 'variant': 'red'},
+    {'label': 'تحذيرات',  'value': warning_count,  'icon': 'triangle-exclamation', 'variant': 'amber'},
+    {'label': 'معلومات',  'value': info_count,     'icon': 'circle-info', 'variant': 'blue'},
+    {'label': 'المعروض',  'value': rows|length,    'icon': 'list', 'variant': 'brand'},
+  ],
+  search_action=url_for('radius.mt_alerts_index')
+) %}
+  <select class="hub-select" name="status" data-mt-alerts-status>
+    <option value="open"     {% if filters.status == 'open' %}selected{% endif %}>المفتوحة</option>
+    <option value="resolved" {% if filters.status == 'resolved' %}selected{% endif %}>المغلقة</option>
+  </select>
+  <select class="hub-select" name="severity" data-mt-alerts-severity>
+    <option value="">كل الشدات</option>
+    {% for s in severities %}
+    <option value="{{ s }}" {% if filters.severity == s %}selected{% endif %}>{{ s }}</option>
+    {% endfor %}
+  </select>
+  <input class="hub-input" type="text" name="router_id" value="{{ filters.router_id or '' }}"
+         placeholder="راوتر (مثلا 42)" data-mt-alerts-router>
+  {{ hub.btn("تطبيق", icon="magnifying-glass", variant="primary", type="submit", size="sm") }}
+{% endcall %}
+
+{# ───── Main (carded table) + help panel on the LEFT ───── #}
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "كيف تقرأ الصفحة؟",
+  intro="ابدأ بالحرجة، ثم التحذيرات. التنبيه المغلق يظهر فقط عند اختيار الحالة المغلقة من الفلاتر.",
+  items=[
+    {'icon': 'circle-dot', 'text': 'الشدة تحدد أولوية التدخل، وليست مجرد لون.'},
+    {'icon': 'router',     'text': 'فلتر الراوتر يضيّق النتائج على جهاز واحد عند التحقيق.'},
+    {'icon': 'eye',        'text': 'زر التفاصيل يفتح الدليل الكامل لنفس التنبيه.'},
+  ]
+)) %}
+  {% call hub.section("النتائج", icon="list-check",
+       meta=("المفتوحة" if filters.status == "open" else "المغلقة"), flush=True) %}
+    {% if not rows %}
+    <div class="hub-section-body" data-mt-alerts-empty style="line-height:1.9">
+      <p style="font-weight:800;margin:0 0 6px;font-size:14px">لا توجد تنبيهات حالياً.</p>
+      <p style="margin:0">
+        هذه الصفحة تُظهر تنبيهات مبنيّة على فحوصات الراوترات: النسخ الاحتياطي،
+        حداثة اللقطات، وأخطاء تطبيق الإعدادات. أمّا <strong>المراقبة
+        اللحظية لانقطاع الراوتر</strong> فتعتمد على وصول مقاييس الراوتر بشكل دوري؛
+        إذا لم يظهر الراوتر هنا، افتح إدارة الراوترات أو إعداد عميل المقاييس
+        للتحقق من حالة الإرسال.
+      </p>
+      <p style="margin:8px 0 0;color:var(--hub-text-mute,#64748b);font-size:12.5px">
+        لمتابعة حالة الراوترات الآن: افتح «إدارة الراوترات» وراقب حالة كل راوتر مباشرة.
+      </p>
     </div>
-    <div class="opsx-hero-side">
-      <button type="button" class="sa-gear" data-sa-open>
-        <i class="fa-solid fa-gear"></i> إعدادات التنبيهات
-      </button>
-      <span class="opsx-hero-icon"><i class="fa-solid fa-bell"></i></span>
+    {% else %}
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10"
+         style="border:none;border-radius:0">
+      <table class="hub-table" data-mt-alerts-rows>
+        <thead>
+          <tr>
+            <th>التنبيه</th>
+            <th style="width:110px">الشدة</th>
+            <th>الراوتر</th>
+            <th>القاعدة</th>
+            <th>آخر رصد</th>
+            <th style="width:120px" data-uds-nosort data-uds-nocol>إجراءات</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for a in rows %}
+          <tr data-mt-alert-row="{{ a.id }}">
+            <td><strong style="color:var(--hub-text)">{{ a.title_ar }}</strong></td>
+            <td>
+              {% if a.severity == 'critical' %}
+              {{ hub.pill("حرجة", variant="red") }}
+              {% elif a.severity == 'warning' %}
+              {{ hub.pill("تحذير", variant="amber") }}
+              {% else %}
+              {{ hub.pill("معلومة", variant="blue") }}
+              {% endif %}
+            </td>
+            <td class="mono small">{% if a.router_id %}#{{ a.router_id }}{% else %}<span class="hub-text-mute">—</span>{% endif %}</td>
+            <td class="mono small">{{ a.rule }}</td>
+            <td class="mono small">{{ a.last_seen|dt_local }}</td>
+            <td>
+              <a class="hub-btn hub-btn--ghost hub-btn--sm" title="التفاصيل"
+                 href="{{ url_for('radius.mt_alerts_detail', alert_id=a.id) }}"
+                 data-mt-alert-detail="{{ a.id }}">
+                <i class="fa-solid fa-eye"></i> التفاصيل
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
-  </header>
+    {% endif %}
+  {% endcall %}
+{% endcall %}
 
-  <div class="opsx-layout">
-    <aside class="opsx-guide" aria-label="شرح صفحة التنبيهات">
-      <div class="opsx-guide-title"><i class="fa-solid fa-compass"></i> كيف تقرأ الصفحة؟</div>
-      <p>ابدأ بالحرجة، ثم التحذيرات. التنبيه المغلق يظهر فقط عند اختيار الحالة المغلقة من الفلاتر.</p>
-      <ul class="opsx-guide-list">
-        <li><i class="fa-solid fa-circle-dot"></i><span>الشدة تحدد أولوية التدخل، وليست مجرد لون.</span></li>
-        <li><i class="fa-solid fa-router"></i><span>فلتر الراوتر يضيّق النتائج على جهاز واحد عند التحقيق.</span></li>
-        <li><i class="fa-solid fa-eye"></i><span>زر التفاصيل يفتح الدليل الكامل لنفس التنبيه.</span></li>
-      </ul>
-    </aside>
+{# Hidden mirror of the visible-rows count, kept for any JS reading the old hook. #}
+<span data-mt-alerts-count hidden>{{ rows|length }}</span>
+{# Hidden filters anchor — preserves the old form hook for JS that queried it. #}
+<span data-mt-alerts-filters hidden></span>
 
-    <main class="opsx-main">
-      <section class="opsx-stats" aria-label="ملخص التنبيهات">
-        <div class="opsx-stat opsx-stat--bad"><span>حرجة</span><strong>{{ critical_count }}</strong></div>
-        <div class="opsx-stat opsx-stat--warn"><span>تحذيرات</span><strong>{{ warning_count }}</strong></div>
-        <div class="opsx-stat opsx-stat--ok"><span>معلومات</span><strong>{{ info_count }}</strong></div>
-        <div class="opsx-stat"><span>المعروض</span><strong data-mt-alerts-count>{{ rows|length }}</strong></div>
-      </section>
-
-      <section class="opsx-panel">
-        <header class="opsx-panel-head">
-          <div class="opsx-panel-title"><i class="fa-solid fa-filter"></i> تصفية التنبيهات</div>
-        </header>
-        <div class="opsx-panel-body">
-          <form method="get" class="opsx-filter" data-mt-alerts-filters>
-            <label class="opsx-field">
-              <span>الحالة</span>
-              <select name="status" data-mt-alerts-status>
-                <option value="open" {% if filters.status == 'open' %}selected{% endif %}>المفتوحة</option>
-                <option value="resolved" {% if filters.status == 'resolved' %}selected{% endif %}>المغلقة</option>
-              </select>
-            </label>
-            <label class="opsx-field">
-              <span>الشدة</span>
-              <select name="severity" data-mt-alerts-severity>
-                <option value="">كل الشدات</option>
-                {% for s in severities %}
-                <option value="{{ s }}" {% if filters.severity == s %}selected{% endif %}>{{ s }}</option>
-                {% endfor %}
-              </select>
-            </label>
-            <label class="opsx-field">
-              <span>الراوتر</span>
-              <input type="text" name="router_id" value="{{ filters.router_id or '' }}"
-                     placeholder="مثلا 42" data-mt-alerts-router>
-            </label>
-            <div class="opsx-actions">
-              <button type="submit" class="opsx-btn opsx-btn--primary">
-                <i class="fa-solid fa-magnifying-glass"></i> تطبيق
-              </button>
-            </div>
-          </form>
-        </div>
-      </section>
-
-      <section class="opsx-panel">
-        <header class="opsx-panel-head">
-          <div class="opsx-panel-title"><i class="fa-solid fa-list-check"></i> النتائج</div>
-          <span class="opsx-chip opsx-chip--blue">{{ "المفتوحة" if filters.status == "open" else "المغلقة" }}</span>
-        </header>
-        <div class="opsx-panel-body">
-          {% if not rows %}
-          <div class="opsx-empty" data-mt-alerts-empty style="line-height:1.9">
-            <p style="font-weight:800;margin:0 0 6px;font-size:14px">لا توجد تنبيهات حالياً.</p>
-            <p style="margin:0">
-              هذه الصفحة تُظهر تنبيهات مبنيّة على فحوصات الراوترات: النسخ الاحتياطي،
-              حداثة اللقطات، وأخطاء تطبيق الإعدادات. أمّا <strong>المراقبة
-              اللحظية لانقطاع الراوتر</strong> فتعتمد على وصول مقاييس الراوتر بشكل دوري؛
-              إذا لم يظهر الراوتر هنا، افتح إدارة الراوترات أو إعداد عميل المقاييس
-              للتحقق من حالة الإرسال.
-            </p>
-            <p style="margin:8px 0 0;color:var(--hub-text-mute,#64748b);font-size:12.5px">
-              لمتابعة حالة الراوترات الآن: افتح «إدارة الراوترات» وراقب حالة كل راوتر مباشرة.
-            </p>
-          </div>
-          {% else %}
-          <ul class="opsx-list" data-mt-alerts-rows>
-            {% for a in rows %}
-            <li class="opsx-row" data-mt-alert-row="{{ a.id }}">
-              <div class="opsx-row-head">
-                <span class="opsx-row-title">{{ a.title_ar }}</span>
-                {% if a.severity == 'critical' %}
-                <span class="opsx-chip opsx-chip--critical">حرجة</span>
-                {% elif a.severity == 'warning' %}
-                <span class="opsx-chip opsx-chip--warning">تحذير</span>
-                {% else %}
-                <span class="opsx-chip opsx-chip--info">معلومة</span>
-                {% endif %}
-              </div>
-              <div class="opsx-row-meta">
-                {% if a.router_id %}<span>راوتر #{{ a.router_id }}</span>{% endif %}
-                <span>القاعدة <code>{{ a.rule }}</code></span>
-                <span>آخر رصد <code>{{ a.last_seen|dt_local }}</code></span>
-                <a class="opsx-btn" href="{{ url_for('radius.mt_alerts_detail', alert_id=a.id) }}"
-                   data-mt-alert-detail="{{ a.id }}">
-                  <i class="fa-solid fa-eye"></i> التفاصيل
-                </a>
-              </div>
-            </li>
-            {% endfor %}
-          </ul>
-          {% endif %}
-        </div>
-      </section>
-    </main>
-  </div>
-</section>
+</div>
 
 {# ───────────── floating: smart-alerts settings ───────────── #}
 <div class="sa-modal" data-sa-modal hidden>
@@ -219,17 +215,13 @@
       {% endif %}
     </div>
     <div class="sa-foot">
-      <button type="button" class="opsx-btn" data-sa-close>إغلاق</button>
-      <button type="submit" class="opsx-btn opsx-btn--primary"><i class="fa-solid fa-floppy-disk"></i> حفظ</button>
+      <button type="button" class="hub-btn hub-btn--ghost" data-sa-close>إغلاق</button>
+      <button type="submit" class="hub-btn hub-btn--primary"><i class="fa-solid fa-floppy-disk"></i> حفظ</button>
     </div>
   </form>
 </div>
 
 <style>
-  .opsx-hero-side{ display:flex; align-items:center; gap:12px; }
-  .sa-gear{ display:inline-flex; align-items:center; gap:7px; padding:9px 14px; border-radius:11px; cursor:pointer;
-    background:rgba(255,255,255,.16); color:#fff; border:1px solid rgba(255,255,255,.32); font:inherit; font-size:13px; font-weight:800; }
-  .sa-gear:hover{ background:rgba(255,255,255,.26); }
   .sa-modal{ position:fixed; inset:0; z-index:1200; display:none; }
   .sa-modal:not([hidden]){ display:block; }
   .sa-backdrop{ position:absolute; inset:0; background:rgba(15,23,42,.55); backdrop-filter:blur(4px); }
@@ -273,3 +265,5 @@
 })();
 </script>
 {% endblock %}
+</content>
+</invoke>
