@@ -101,6 +101,71 @@ def _norm_mac(s: str) -> str:
     return ":".join(cleaned[i:i+2] for i in range(0, 12, 2)).upper()
 
 
+def _safe_int(v) -> int:
+    try:
+        return int(float(str(v).strip()))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _parse_ros_uptime(s: str) -> int:
+    """RouterOS uptime → seconds. Handles the API unit form ('1w2d3h4m5s',
+    '22m54s', '3h') AND the colon form ('00:22:54', '1:02:03'). 0 on junk."""
+    import re
+
+    s = (s or "").strip().lower()
+    if not s:
+        return 0
+    units = {"w": 604800, "d": 86400, "h": 3600, "m": 60, "s": 1}
+    matches = re.findall(r"(\d+)\s*([wdhms])", s)
+    if matches:
+        return sum(int(n) * units[u] for n, u in matches)
+    if ":" in s:  # H:M:S or M:S (left-to-right, smallest on the right)
+        try:
+            parts = [int(p) for p in s.split(":")]
+        except ValueError:
+            return 0
+        total = 0
+        for p in parts:
+            total = total * 60 + p
+        return total
+    return _safe_int(s)
+
+
+def _map_active_rows(hotspot_rows, ppp_rows) -> list[dict]:
+    """Pure mapper: RouterOS active-session attr dicts → normalized session
+    dicts. Hotspot uses user/mac-address; PPP uses name/caller-id. PPP
+    caller-id is a real MAC only for PPPoE, so it is best-effort."""
+    out: list[dict] = []
+    for r in (hotspot_rows or []):
+        user = (r.get("user") or "").strip()
+        if not user:
+            continue
+        out.append({
+            "username":   user,
+            "mac":        _norm_mac(r.get("mac-address") or ""),
+            "framed_ip":  (r.get("address") or "").strip(),
+            "uptime_sec": _parse_ros_uptime(r.get("uptime") or ""),
+            "bytes_in":   _safe_int(r.get("bytes-in")),
+            "bytes_out":  _safe_int(r.get("bytes-out")),
+            "source":     "hotspot",
+        })
+    for r in (ppp_rows or []):
+        user = (r.get("name") or "").strip()
+        if not user:
+            continue
+        out.append({
+            "username":   user,
+            "mac":        _norm_mac(r.get("caller-id") or ""),
+            "framed_ip":  (r.get("address") or "").strip(),
+            "uptime_sec": _parse_ros_uptime(r.get("uptime") or ""),
+            "bytes_in":   _safe_int(r.get("bytes-in")),
+            "bytes_out":  _safe_int(r.get("bytes-out")),
+            "source":     "ppp",
+        })
+    return out
+
+
 def _collect_router_configs(tenant_id: int) -> list[dict]:
     """Same dual-source pattern as device_fingerprint_sync — pull MT
     creds from BOTH mikrotik_configs (preferred) and nas_devices (any
@@ -154,34 +219,22 @@ def _collect_router_configs(tenant_id: int) -> list[dict]:
     return list(out.values())
 
 
-def _fetch_active_sessions(cfg: dict) -> set[tuple[str, str]] | None:
-    """Returns a set of (username_lower, mac_upper) for every active
-    session on this router across hotspot AND ppp. Returns None on
-    failure — caller treats None as 'router unreachable, skip close
-    for its NAS this cycle'.
-    """
+def _fetch_active_rows(cfg: dict) -> list[dict] | None:
+    """Returns normalized active-session rows (username, mac, framed_ip,
+    uptime_sec, bytes_in/out, source) across hotspot AND ppp. Returns None
+    on failure — caller treats None as 'router unreachable, skip this NAS'."""
     from app.radius.integration.mikrotik.errors import MikrotikError
     from app.radius.integration.mikrotik.pool import acquire as acquire_mt
 
-    keys: set[tuple[str, str]] = set()
+    hotspot: list[dict] = []
+    ppp: list[dict] = []
     try:
         with acquire_mt(cfg) as client:
-            # Hotspot active sessions
-            for r in client.print_("/ip/hotspot/active/print"):
-                user = (r.get("user") or "").strip().lower()
-                mac  = _norm_mac(r.get("mac-address") or "")
-                if user:
-                    keys.add((user, mac))
-            # PPPoE / PPTP / L2TP / SSTP active sessions
+            hotspot = list(client.print_("/ip/hotspot/active/print"))
             try:
-                for r in client.print_("/ppp/active/print"):
-                    user = (r.get("name") or "").strip().lower()
-                    mac  = _norm_mac(r.get("caller-id") or "")
-                    if user:
-                        keys.add((user, mac))
+                ppp = list(client.print_("/ppp/active/print"))
             except MikrotikError:
-                # /ppp/active may not exist (hotspot-only router); fine.
-                pass
+                ppp = []  # /ppp/active may not exist (hotspot-only router)
     except MikrotikError as e:
         _LOG.warning("mt_reconciler: router=%s unreachable: %s",
                      cfg.get("host"), e)
@@ -190,7 +243,19 @@ def _fetch_active_sessions(cfg: dict) -> set[tuple[str, str]] | None:
         _LOG.exception("mt_reconciler: unexpected error router=%s",
                        cfg.get("host"))
         return None
-    return keys
+    return _map_active_rows(hotspot, ppp)
+
+
+def _keys_from_rows(rows: list[dict]) -> set[tuple[str, str]]:
+    """(username_lower, mac_upper) set used by the close-orphans pass."""
+    return {((r["username"] or "").strip().lower(), r.get("mac") or "")
+            for r in rows if (r.get("username") or "").strip()}
+
+
+def _fetch_active_sessions(cfg: dict) -> set[tuple[str, str]] | None:
+    """Back-compat wrapper: the (username, mac) set (close-orphans view)."""
+    rows = _fetch_active_rows(cfg)
+    return None if rows is None else _keys_from_rows(rows)
 
 
 def _reconcile_nas(tenant_id: int, nas_addr: str,
