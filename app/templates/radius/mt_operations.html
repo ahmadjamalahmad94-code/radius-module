@@ -7,10 +7,6 @@
 {% block page_title %}غرفة عمليات الراوترات{% endblock %}
 {% block page_sub %}<span class="sub">{{ items|length }} راوتر</span>{% endblock %}
 
-{% block head_extra %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/mt_setup.css') }}">
-{% endblock %}
-
 {% block content %}
 {% include "radius/network_ops_nav.html" %}
 
@@ -20,7 +16,7 @@
    input[name=csrf_token]. #}
 {{ csrf_token_input() | safe }}
 
-{{ hub.hero(
+{{ hub.megahero(
   "إدارة الراوترات",
   subtitle="كل الراوترات المُدارة عبر هوبي راديوس في مكان واحد — التجهيز، الصحة الحية، وخدمات كل راوتر. افتح خدمات الراوتر للوصول لبوابة الدخول والبرودباند وحجب أو فتح المواقع.",
   icon="network-wired",
@@ -86,6 +82,7 @@
 {% set _enabled  = items|selectattr('enabled')|list|length %}
 {% set _disabled = items|length - _enabled %}
 {# ملخص صحة الأسطول: الأرقام الأساسية من قاعدة البيانات، والحالة الحية تُحدّثها الجافاسكربت. #}
+{% call hub.section("صحة الأسطول", icon="heart-pulse", meta=items|length|string + " راوتر") %}
 <div class="hub-kpi-grid" data-mt-fleet-summary>
   {{ hub.kpi("الإجمالي",  items|length, icon="server", variant="brand") }}
   <div class="hub-kpi hub-kpi--green" data-mt-fleet="connected">
@@ -129,6 +126,20 @@
     </div>
   </div>
 </div>
+{% endcall %}
+
+{# ───── Main (carded table + bulk bar) + help panel on the LEFT ───── #}
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "غرفة عمليات الراوترات",
+  intro="كل صف راوتر مُدار: حالته الحية، عدد المتصلين، وحركة الإنترنت تتحدّث تلقائيًا. الأزرار في كل صف تفتح خدمات الراوتر وأدواته.",
+  items=[
+    {'icon': 'screwdriver-wrench', 'text': 'زر «خدمات» يفتح بوابة الدخول والبرودباند وحجب/فتح المواقع لكل راوتر.'},
+    {'icon': 'circle-check',       'text': 'حالة «متصل/غير متصل» تأتي من فحص حيّ لواجهة الربط — تُحدَّث دوريًا.'},
+    {'icon': 'screwdriver-wrench', 'text': 'صفوف «قيد التجهيز» لم تكمل الإعداد بعد؛ تابع المعالج لإكمالها.'},
+    {'icon': 'square-check',       'text': 'اختر صفوفًا بمربعات الاختيار ثم فعّل/عطّل دفعة واحدة من شريط الإجراءات.'},
+  ],
+  note="أزرار الصيانة في الأعلى (إعادة تخصيص العناوين، تفريغ الطوارئ) تخص الأسطول كاملًا — استعملها بحذر."
+)) %}
 
 {# O3: bulk action bar — only renders when there are routers
    to act on. Form posts to /admin/radius/devices/bulk-toggle
@@ -139,7 +150,7 @@
    sit OUTSIDE the form (inside the table) still submit with it.
    Buttons start disabled; the JS enables them once 1+ row is
    selected. #}
-{% if items %}
+{% call hub.section("إجراءات جماعية", icon="layer-group") %}
 <form id="mt-bulk-form"
       method="POST" action="{{ url_for('radius.devices_bulk_toggle') }}"
       class="mt-bulk-bar" data-mt-bulk-form>
@@ -159,7 +170,7 @@
     اختر صفًّا أو أكثر بمربع الاختيار لتفعيل الأزرار.
   </span>
 </form>
-{% endif %}
+{% endcall %}
 
 {% call hub.section("الراوترات", icon="server",
                     meta=items|length|string + " راوتر", flush=True) %}
@@ -363,6 +374,7 @@
   </table>
 </div>
 {% endcall %}
+{% endcall %}{# /worklayout #}
 
 <script src="{{ url_for('static', filename='js/mt_operations.js') }}" defer></script>
 <style>
@@ -373,11 +385,11 @@
   [data-mt-row-status][data-mt-state="error"] .dot { background: #DC2626; }
   [data-mt-row-status][data-mt-state="partial"] { background: #FEF3C7; color: #92400E; }
   [data-mt-row-status][data-mt-state="partial"] .dot { background: #D97706; }
-  /* O3: bulk action bar */
+  /* O3: bulk action bar — sits inside a hub.section card, so no own
+     box chrome; just the flex row layout. */
   .mt-bulk-bar {
     display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-    background: #FAFAFC; border: 1px solid #EEEDF3; border-radius: 10px;
-    padding: 10px 14px; margin-bottom: 12px; font-size: 13px;
+    font-size: 13px;
   }
   .mt-bulk-label  { color: #1F2937; font-weight: 700; }
   .mt-bulk-hint   { color: #6B7280; font-size: 12px; margin-inline-start: auto; }
