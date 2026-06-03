@@ -60,10 +60,12 @@ HOBERADIUS_RECONCILER_ENABLED      (default 1 → on)
 """
 from __future__ import annotations
 
+import hashlib
 import logging
 import os
 import threading
 import time
+from datetime import datetime, timedelta
 
 from .heartbeat import beat
 
@@ -325,6 +327,88 @@ def _reconcile_nas(tenant_id: int, nas_addr: str,
     return closed
 
 
+_MTSYNC_PREFIX = "mtsync:"
+
+
+def _utcnow() -> str:
+    return datetime.utcnow().isoformat() + "Z"
+
+
+def _materialize_enabled() -> bool:
+    raw = (os.environ.get("HOBERADIUS_SESSION_SYNC_MATERIALIZE") or "1").strip().lower()
+    return raw not in ("0", "false", "no", "off")
+
+
+def _materialize_nas(tenant_id: int, nas_addr: str, rows: list[dict]) -> dict:
+    """Bring radacct UP to match the router: for each live router session
+    with no open radacct row, INSERT a synthetic open row tagged
+    `mtsync:` (so cookie/auto-login sessions — which never hit RADIUS —
+    show in /online and are CoA-targetable). Refresh octets/uptime on our
+    own synthetic rows; NEVER touch a real RADIUS row. Closing is handled
+    by the existing orphan pass (a vanished session drops from the live
+    set → gets closed)."""
+    if not _materialize_enabled() or not rows:
+        return {"inserted": 0, "updated": 0}
+    from app.radius.db.connection import db, transaction
+
+    open_rows = db().execute(
+        "SELECT radacctid, username, callingstationid, acctuniqueid "
+        "FROM radacct WHERE tenant_id = ? AND nasipaddress = ? AND acctstoptime IS NULL",
+        (tenant_id, nas_addr),
+    ).fetchall()
+    existing: dict[tuple[str, str], dict] = {}
+    for r in open_rows:
+        key = ((r["username"] or "").strip().lower(), _norm_mac(r["callingstationid"] or ""))
+        existing[key] = r
+
+    now = _utcnow()
+    inserted = updated = 0
+    for row in rows:
+        user = (row.get("username") or "").strip()
+        if not user:
+            continue
+        mac = row.get("mac") or ""
+        key = (user.lower(), mac)
+        match = existing.get(key)
+        if match is not None:
+            # Refresh ONLY our own synthetic rows; a real RADIUS row wins untouched.
+            if str(match["acctuniqueid"] or "").startswith(_MTSYNC_PREFIX):
+                db().execute(
+                    "UPDATE radacct SET acctupdatetime = ?, acctinputoctets = ?, "
+                    "acctoutputoctets = ?, acctsessiontime = ?, "
+                    "framedipaddress = COALESCE(NULLIF(?, ''), framedipaddress) "
+                    "WHERE radacctid = ?",
+                    (now, int(row.get("bytes_in") or 0), int(row.get("bytes_out") or 0),
+                     int(row.get("uptime_sec") or 0), row.get("framed_ip") or "",
+                     match["radacctid"]),
+                )
+                updated += 1
+            continue
+        # No open row for this (user, mac) — materialize a synthetic session.
+        uniq = f"{_MTSYNC_PREFIX}{nas_addr}:{user.lower()}:{mac}"
+        sid = "mtsync-" + hashlib.md5(uniq.encode("utf-8")).hexdigest()[:16]
+        start = (datetime.utcnow()
+                 - timedelta(seconds=int(row.get("uptime_sec") or 0))).isoformat() + "Z"
+        try:
+            with transaction() as conn:
+                conn.execute(
+                    "INSERT INTO radacct(tenant_id, acctsessionid, acctuniqueid, username, "
+                    "nasipaddress, acctstarttime, acctupdatetime, callingstationid, "
+                    "framedipaddress, acctinputoctets, acctoutputoctets, acctsessiontime) "
+                    "VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
+                    (tenant_id, sid, uniq, user, nas_addr, start, now, mac,
+                     row.get("framed_ip") or "", int(row.get("bytes_in") or 0),
+                     int(row.get("bytes_out") or 0), int(row.get("uptime_sec") or 0)),
+                )
+            inserted += 1
+        except Exception:  # noqa: BLE001 — a racing real Acct-Start can win; skip
+            existing[key] = {"radacctid": None, "acctuniqueid": ""}
+    if inserted or updated:
+        _LOG.info("mt_reconciler: materialized %d new + refreshed %d session(s) "
+                  "tenant=%d nas=%s", inserted, updated, tenant_id, nas_addr)
+    return {"inserted": inserted, "updated": updated}
+
+
 def _all_tenants() -> list[int]:
     from app.radius.db.connection import db
     return [r["id"] for r in db().execute(
@@ -336,18 +420,22 @@ def reconcile_once() -> dict:
     """One full pass. Returns {tenants, routers_ok, routers_skipped,
     closed_total} for the heartbeat + manual debugging."""
     stats = {"tenants": 0, "routers_ok": 0, "routers_skipped": 0,
-             "closed_total": 0}
+             "closed_total": 0, "materialized_total": 0}
     for tenant_id in _all_tenants():
         stats["tenants"] += 1
         routers = _collect_router_configs(tenant_id)
         for cfg in routers:
-            active = _fetch_active_sessions(cfg)
-            if active is None:
+            rows = _fetch_active_rows(cfg)
+            if rows is None:
                 stats["routers_skipped"] += 1
                 continue
             stats["routers_ok"] += 1
-            closed = _reconcile_nas(tenant_id, cfg["host"], active)
+            # Close ghosts (radacct rows no longer on the router)…
+            closed = _reconcile_nas(tenant_id, cfg["host"], _keys_from_rows(rows))
             stats["closed_total"] += closed
+            # …and open missed/cookie sessions (on the router, absent from radacct).
+            mat = _materialize_nas(tenant_id, cfg["host"], rows)
+            stats["materialized_total"] += mat["inserted"]
     return stats
 
 

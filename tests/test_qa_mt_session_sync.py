@@ -59,3 +59,96 @@ def test_keys_from_rows_lowercases_user_uppercases_mac():
     rows = _map_active_rows(
         [{"user": "Ahmad", "mac-address": "9e:49:36:50:27:a4", "uptime": "1m"}], [])
     assert _keys_from_rows(rows) == {("ahmad", "9E:49:36:50:27:A4")}
+
+
+# ── Piece 2: materialize router-observed sessions into radacct ──────────────
+import pytest  # noqa: E402
+
+
+@pytest.fixture
+def app(monkeypatch, tmp_path):
+    dbf = os.path.join(tmp_path, "sync.db")
+    monkeypatch.setenv("HOBERADIUS_DB_PATH", dbf)
+    monkeypatch.setenv("HOBERADIUS_NO_WORKER", "1")
+    monkeypatch.setenv("HOBERADIUS_NO_SEED", "1")
+    from app.radius.db.connection import reset_for_tests
+    reset_for_tests(dbf)
+    from app import create_app
+    a = create_app()
+    with a.app_context():
+        from app.radius.db.migrations_runner import run_pending_migrations
+        from app.radius.db.repos import tenants_repo
+        run_pending_migrations()
+        tenants_repo.ensure_default_tenant()
+    return a
+
+
+def _db():
+    from app.radius.db.connection import db
+    return db()
+
+
+def _hotspot(user="ahmad", mac="9e:49:36:50:27:a4", ip="10.19.6.254",
+             uptime="5m", bin_="100", bout="200"):
+    return _map_active_rows([{"user": user, "mac-address": mac, "address": ip,
+                              "uptime": uptime, "bytes-in": bin_, "bytes-out": bout}], [])
+
+
+def test_materialize_inserts_synthetic_for_cookie_session(app):
+    from app.workers.mt_reconciler import _materialize_nas
+    with app.app_context():
+        res = _materialize_nas(1, "10.10.0.2", _hotspot())
+        assert res["inserted"] == 1
+        r = _db().execute(
+            "SELECT * FROM radacct WHERE username='ahmad' AND acctstoptime IS NULL"
+        ).fetchone()
+        assert r is not None
+        assert str(r["acctuniqueid"]).startswith("mtsync:")
+        assert r["framedipaddress"] == "10.19.6.254"
+        assert r["callingstationid"] == "9E:49:36:50:27:A4"
+        assert r["nasipaddress"] == "10.10.0.2"
+
+
+def test_materialize_does_not_dup_a_real_radacct_row(app):
+    from app.workers.mt_reconciler import _materialize_nas
+    with app.app_context():
+        _db().execute(
+            "INSERT INTO radacct(tenant_id, acctsessionid, acctuniqueid, username, "
+            "nasipaddress, acctstarttime, acctupdatetime, callingstationid, "
+            "framedipaddress, acctinputoctets, acctoutputoctets, acctsessiontime) "
+            "VALUES(1,'REAL-1','REAL-UNIQ','ahmad','10.10.0.2',datetime('now'),"
+            "datetime('now'),'9E:49:36:50:27:A4','10.19.6.254',0,0,0)")
+        res = _materialize_nas(1, "10.10.0.2", _hotspot())
+        assert res["inserted"] == 0                # real row already covers it
+        n = _db().execute("SELECT COUNT(*) c FROM radacct WHERE username='ahmad' "
+                          "AND acctstoptime IS NULL").fetchone()["c"]
+        assert n == 1                              # untouched, no duplicate
+
+
+def test_materialize_refreshes_its_own_synthetic_row(app):
+    from app.workers.mt_reconciler import _materialize_nas
+    with app.app_context():
+        _materialize_nas(1, "10.10.0.2", _hotspot(bin_="100", bout="200"))
+        res = _materialize_nas(1, "10.10.0.2", _hotspot(uptime="6m", bin_="999", bout="888"))
+        assert res["inserted"] == 0 and res["updated"] == 1
+        rows = _db().execute("SELECT * FROM radacct WHERE username='ahmad' "
+                             "AND acctstoptime IS NULL").fetchall()
+        assert len(rows) == 1 and rows[0]["acctinputoctets"] == 999
+
+
+def test_materialize_disabled_by_env(app, monkeypatch):
+    monkeypatch.setenv("HOBERADIUS_SESSION_SYNC_MATERIALIZE", "0")
+    from app.workers.mt_reconciler import _materialize_nas
+    with app.app_context():
+        assert _materialize_nas(1, "10.10.0.2", _hotspot())["inserted"] == 0
+        assert _db().execute("SELECT COUNT(*) c FROM radacct").fetchone()["c"] == 0
+
+
+def test_vanished_synthetic_is_closed_by_orphan_pass(app):
+    from app.workers.mt_reconciler import _materialize_nas, _reconcile_nas
+    with app.app_context():
+        _materialize_nas(1, "10.10.0.2", _hotspot())
+        closed = _reconcile_nas(1, "10.10.0.2", set())   # router now shows nothing
+        assert closed == 1
+        r = _db().execute("SELECT acctstoptime FROM radacct WHERE username='ahmad'").fetchone()
+        assert r["acctstoptime"] is not None
