@@ -2,39 +2,11 @@
 {% import "_partials/hub.html" as hub %}
 
 {% block title %}دليل وشروحات — مركز التواصل{% endblock %}
-{% block page_icon %}<i class="fa-solid fa-book-open"></i>{% endblock %}
-{% block page_title %}دليل وشروحات{% endblock %}
-{% block page_sub %}<span class="sub">شروحات مصوّرة خطوة بخطوة لربط بوت واتساب للمشتركين وبوت تلجرام لتنبيهات الإدارة.</span>{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
 <style>
-  .gd{ display:grid; gap:18px; }
-
-  /* ── intro / table of contents ── */
-  .gd-intro{ background:linear-gradient(135deg,#faf5ff,#f5f3ff); border:1px solid #ddd6fe; border-radius:16px; padding:18px 20px; }
-  .gd-intro p{ margin:0 0 13px; font-size:13px; line-height:1.9; color:#475569; }
-  .gd-toc{ display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:12px; }
-  .gd-toc a{ display:flex; align-items:center; gap:13px; text-decoration:none; background:#fff; border:1px solid #e8edf3; border-radius:14px;
-    padding:14px 15px; transition:transform .14s, box-shadow .14s, border-color .14s; }
-  .gd-toc a:hover{ transform:translateY(-3px); box-shadow:0 12px 26px rgba(15,23,42,.10); border-color:#ddd6fe; }
-  .gd-toc .ic{ width:46px;height:46px;border-radius:13px;display:grid;place-items:center;font-size:20px;flex:none; }
-  .gd-toc .ic.wa{ background:linear-gradient(135deg,#dcfce7,#f0fdf4); color:#15803d; }
-  .gd-toc .ic.tg{ background:linear-gradient(135deg,#e0f2fe,#f0f9ff); color:#0369a1; }
-  .gd-toc .ttl{ font-size:14px; font-weight:800; color:#0f172a; }
-  .gd-toc .sub{ font-size:11.5px; color:#64748b; margin-top:3px; line-height:1.6; }
-
-  /* ── walkthrough section shell ── */
-  .gd-wt{ background:var(--hub-bg-card,#fff); border:1px solid var(--hub-border,#e8edf3); border-radius:18px; overflow:hidden;
-    box-shadow:0 1px 3px rgba(15,23,42,.05),0 8px 22px rgba(15,23,42,.05); scroll-margin-top:90px; }
-  .gd-wt-head{ display:flex; align-items:center; gap:14px; padding:18px 20px; color:#fff; }
-  .gd-wt-head.wa{ background:linear-gradient(135deg,#16a34a,#15803d); }
-  .gd-wt-head.tg{ background:linear-gradient(135deg,#0ea5e9,#0369a1); }
-  .gd-wt-head .ic{ width:48px;height:48px;border-radius:14px;display:grid;place-items:center;font-size:23px;flex:none;
-    background:rgba(255,255,255,.18); border:1px solid rgba(255,255,255,.25); }
-  .gd-wt-head h2{ margin:0; font-size:18px; font-weight:800; }
-  .gd-wt-head .sub{ font-size:12px; opacity:.92; margin-top:3px; }
-  .gd-wt-body{ padding:20px; display:grid; gap:18px; }
+  /* ── walkthrough section content (retained illustrative bits) ── */
 
   /* ── "what is it" + requirements callouts ── */
   .gd-what{ display:flex; gap:12px; align-items:flex-start; background:#f8fafc; border:1px solid #eef2f7; border-radius:14px; padding:15px 17px; }
@@ -174,426 +146,388 @@
 
 {% include "radius/communications_nav.html" %}
 
-<div class="gd">
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "كيف تستفيد من الدليل؟",
+  intro="هنا شرحان كاملان خطوة بخطوة: الأول لبوت واتساب الذي يرد تلقائيًا على مشتركيك، والثاني لبوت تلجرام الذي يصلك عليه تنبيهات الشبكة كإدارة.",
+  icon="compass",
+  items=[
+    {'icon': 'whatsapp', 'text': 'بوت واتساب: المشترك يرسل كلمة فيرد البوت ببياناته (الرصيد، الباقة، الانتهاء…).'},
+    {'icon': 'telegram', 'text': 'بوت تلجرام: عند انقطاع راوتر أو حدث مهم تصلك رسالة فورية على تلجرام.'},
+    {'icon': 'circle-check', 'text': 'كل خطوة مرفقة بصورة توضيحية ومخطّط للتدفّق — ابدأ من البطاقة المناسبة لك.'},
+    {'icon': 'circle-question', 'text': 'في الأسفل أسئلة شائعة وحلول للمشكلات الأكثر تكرارًا.'}
+  ],
+  note="ابدأ من القسم الذي يناسبك؛ لا حاجة لإكمال القسمين معًا."
+)) %}
 
-  {# ════════ INTRO + TOC ════════ #}
-  <div class="gd-intro">
-    <p>
-      هنا تجد شرحَين كاملَين خطوة بخطوة. الأول لتشغيل <strong>بوت واتساب</strong> الذي يرد تلقائيًا على مشتركيك
-      (الرصيد، الباقة، تاريخ الانتهاء…)، والثاني لربط <strong>بوت تلجرام</strong> الذي يصلك عليه تنبيهات الشبكة
-      والأجهزة كإدارة. كل خطوة مرفقة بصورة توضيحية ومخطّط للتدفّق. ابدأ من البطاقة المناسبة:
-    </p>
-    <div class="gd-toc">
-      <a href="#wt-whatsapp">
-        <span class="ic wa"><i class="fa-brands fa-whatsapp"></i></span>
-        <span>
-          <span class="ttl">بوت واتساب لرسائل المشتركين</span>
-          <span class="sub">المشترك يرسل كلمة → البوت يرد ببياناته تلقائيًا.</span>
-        </span>
-      </a>
-      <a href="#wt-telegram">
-        <span class="ic tg"><i class="fa-brands fa-telegram"></i></span>
-        <span>
-          <span class="ttl">بوت تلجرام لتنبيهات الإدارة</span>
-          <span class="sub">عند انقطاع راوتر أو حدث مهم → تصلك رسالة فورية.</span>
-        </span>
-      </a>
-    </div>
-  </div>
+  {# ════════ WALKTHROUGH A — WHATSAPP SUBSCRIBER BOT ════════ #}
+  {% call hub.section("بوت واتساب لرسائل المشتركين", icon="whatsapp", meta="يرد على مشتركيك تلقائيًا") %}
 
-  {# ════════════════════════════════════════════════════════════ #}
-  {# ════════ WALKTHROUGH A — WHATSAPP SUBSCRIBER BOT ════════════ #}
-  {# ════════════════════════════════════════════════════════════ #}
-  <section class="gd-wt" id="wt-whatsapp">
-    <div class="gd-wt-head wa">
-      <span class="ic"><i class="fa-brands fa-whatsapp"></i></span>
+    {# ── what is it ── #}
+    <div class="gd-what">
+      <span class="ic"><i class="fa-solid fa-lightbulb"></i></span>
       <div>
-        <h2>بوت واتساب لرسائل المشتركين</h2>
-        <div class="sub">اجعل واتساب يرد على مشتركيك تلقائيًا، على مدار الساعة، دون تدخّل منك.</div>
+        <h3>ما هو؟</h3>
+        <p>
+          بوت واتساب هو ردّ آلي: عندما يرسل أحد مشتركيك رسالة واتساب إلى رقمك (مثل كلمة «الرصيد»)،
+          يستقبلها النظام عبر مزوّد واتساب، ويبحث عن المشترك برقم هاتفه، ثم يرد عليه فورًا برسالة جاهزة
+          استبدلنا فيها بياناته الحقيقية (الرصيد، الباقة، تاريخ الانتهاء…). كل ذلك يعمل تلقائيًا بعد ضبطٍ لمرة واحدة.
+        </p>
       </div>
     </div>
-    <div class="gd-wt-body">
 
-      {# ── what is it ── #}
-      <div class="gd-what">
-        <span class="ic"><i class="fa-solid fa-lightbulb"></i></span>
-        <div>
-          <h3>ما هو؟</h3>
-          <p>
-            بوت واتساب هو ردّ آلي: عندما يرسل أحد مشتركيك رسالة واتساب إلى رقمك (مثل كلمة «الرصيد»)،
-            يستقبلها النظام عبر مزوّد واتساب، ويبحث عن المشترك برقم هاتفه، ثم يرد عليه فورًا برسالة جاهزة
-            استبدلنا فيها بياناته الحقيقية (الرصيد، الباقة، تاريخ الانتهاء…). كل ذلك يعمل تلقائيًا بعد ضبطٍ لمرة واحدة.
-          </p>
+    {# ── requirements ── #}
+    <div style="margin-top:16px">
+      <div class="gd-sub" style="margin-bottom:11px"><i class="fa-solid fa-clipboard-check"></i> المتطلبات <span class="ln"></span></div>
+      <div class="gd-req">
+        <div class="gd-req-item">
+          <span class="ic"><i class="fa-solid fa-plug"></i></span>
+          <div><div class="t">حساب لدى مزوّد واتساب للإرسال</div>
+            <div class="d">خدمة تمنحك رابط إرسال مباشر مثل مزوّدي الرسائل المعروفين.</div></div>
+        </div>
+        <div class="gd-req-item">
+          <span class="ic"><i class="fa-solid fa-link"></i></span>
+          <div><div class="t">رابط الإرسال</div>
+            <div class="d">رابط الويب الذي يرسل الرسائل، تحصل عليه من لوحة المزوّد.</div></div>
+        </div>
+        <div class="gd-req-item">
+          <span class="ic"><i class="fa-solid fa-mobile-screen"></i></span>
+          <div><div class="t">رقم واتساب مربوط بالمزوّد</div>
+            <div class="d">الرقم الذي سيرسل منه البوت ويستقبل رسائل المشتركين.</div></div>
+        </div>
+      </div>
+    </div>
+
+    {# ── current status hint ── #}
+    <div style="margin-top:16px">
+      {% if whatsapp_ready %}
+        <span class="gd-statushint on"><span class="dot"></span> قناة واتساب مهيأة لديك بالفعل — يمكنك القفز مباشرةً للخطوة 4 (تفعيل البوت).</span>
+      {% else %}
+        <span class="gd-statushint off"><span class="dot"></span> قناة واتساب غير مهيأة بعد — اتبع الخطوات من البداية.</span>
+      {% endif %}
+    </div>
+
+    {# ── STEPS ── #}
+    <div class="gd-steps" style="margin-top:16px">
+
+      <div class="gd-step wa">
+        <div class="gd-step-badge"></div>
+        <div class="gd-step-main">
+          <h4><i class="fa-solid fa-key" style="color:#16a34a"></i> احصل على رابط الإرسال من مزوّد واتساب</h4>
+          <p>سجّل الدخول إلى لوحة مزوّدك، وابحث عن قسم «إرسال رسالة» أو «رسالة جديدة».
+            ستجد رابطًا جاهزًا — انسخه كاملًا. غالبًا يكون بهذا الشكل:</p>
+          <div class="gd-code" style="display:block;padding:9px 11px;line-height:1.7;white-space:pre-wrap;word-break:break-all">https://api.provider.com/instanceXXXX/messages/chat?token=YOUR_TOKEN&to={phone}&body={msg}</div>
+          <p style="margin-top:7px">المهم أن يحتوي الرابط على موضعَين: واحد لرقم الهاتف وآخر لنص الرسالة — سنستبدلهما بـ
+            <span class="gd-code">{phone}</span> و <span class="gd-code">{msg}</span> في الخطوة التالية.</p>
         </div>
       </div>
 
-      {# ── requirements ── #}
-      <div>
-        <div class="gd-sub" style="margin-bottom:11px"><i class="fa-solid fa-clipboard-check"></i> المتطلبات <span class="ln"></span></div>
-        <div class="gd-req">
-          <div class="gd-req-item">
-            <span class="ic"><i class="fa-solid fa-plug"></i></span>
-            <div><div class="t">حساب لدى مزوّد واتساب للإرسال</div>
-              <div class="d">خدمة تمنحك رابط إرسال مباشر مثل مزوّدي الرسائل المعروفين.</div></div>
-          </div>
-          <div class="gd-req-item">
-            <span class="ic"><i class="fa-solid fa-link"></i></span>
-            <div><div class="t">رابط الإرسال</div>
-              <div class="d">رابط الويب الذي يرسل الرسائل، تحصل عليه من لوحة المزوّد.</div></div>
-          </div>
-          <div class="gd-req-item">
-            <span class="ic"><i class="fa-solid fa-mobile-screen"></i></span>
-            <div><div class="t">رقم واتساب مربوط بالمزوّد</div>
-              <div class="d">الرقم الذي سيرسل منه البوت ويستقبل رسائل المشتركين.</div></div>
-          </div>
-        </div>
-      </div>
+      <div class="gd-step wa">
+        <div class="gd-step-badge"></div>
+        <div class="gd-step-main">
+          <h4><i class="fa-solid fa-tower-broadcast" style="color:#16a34a"></i> ألصق الرابط في «قنوات الإرسال» (واتساب)</h4>
+          <p>افتح صفحة <strong>قنوات الإرسال</strong>، وفي بطاقة «واتساب» ألصق الرابط في حقل
+            «قالب رابط الإرسال». استبدل رقم الهاتف بـ <span class="gd-code">{phone}</span> ونص الرسالة بـ <span class="gd-code">{msg}</span>،
+            ثم فعّل القناة واحفظ.</p>
 
-      {# ── current status hint ── #}
-      <div>
-        {% if whatsapp_ready %}
-          <span class="gd-statushint on"><span class="dot"></span> قناة واتساب مهيأة لديك بالفعل — يمكنك القفز مباشرةً للخطوة 4 (تفعيل البوت).</span>
-        {% else %}
-          <span class="gd-statushint off"><span class="dot"></span> قناة واتساب غير مهيأة بعد — اتبع الخطوات من البداية.</span>
-        {% endif %}
-      </div>
-
-      {# ── STEPS ── #}
-      <div class="gd-steps">
-
-        <div class="gd-step wa">
-          <div class="gd-step-badge"></div>
-          <div class="gd-step-main">
-            <h4><i class="fa-solid fa-key" style="color:#16a34a"></i> احصل على رابط الإرسال من مزوّد واتساب</h4>
-            <p>سجّل الدخول إلى لوحة مزوّدك، وابحث عن قسم «إرسال رسالة» أو «رسالة جديدة».
-              ستجد رابطًا جاهزًا — انسخه كاملًا. غالبًا يكون بهذا الشكل:</p>
-            <div class="gd-code" style="display:block;padding:9px 11px;line-height:1.7;white-space:pre-wrap;word-break:break-all">https://api.provider.com/instanceXXXX/messages/chat?token=YOUR_TOKEN&to={phone}&body={msg}</div>
-            <p style="margin-top:7px">المهم أن يحتوي الرابط على موضعَين: واحد لرقم الهاتف وآخر لنص الرسالة — سنستبدلهما بـ
-              <span class="gd-code">{phone}</span> و <span class="gd-code">{msg}</span> في الخطوة التالية.</p>
-          </div>
-        </div>
-
-        <div class="gd-step wa">
-          <div class="gd-step-badge"></div>
-          <div class="gd-step-main">
-            <h4><i class="fa-solid fa-tower-broadcast" style="color:#16a34a"></i> ألصق الرابط في «قنوات الإرسال» (واتساب)</h4>
-            <p>افتح صفحة <strong>قنوات الإرسال</strong>، وفي بطاقة «واتساب» ألصق الرابط في حقل
-              «قالب رابط الإرسال». استبدل رقم الهاتف بـ <span class="gd-code">{phone}</span> ونص الرسالة بـ <span class="gd-code">{msg}</span>،
-              ثم فعّل القناة واحفظ.</p>
-
-            <div class="gd-mock" style="max-width:440px;margin-top:11px">
-              <div class="gd-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="urlbar">قنوات الإرسال › واتساب</span></div>
-              <div class="gd-mock-body">
-                <div class="gd-mock-field">
-                  <label>قالب رابط الإرسال</label>
-                  <div class="gd-mock-input filled">https://api.provider.com/.../chat?token=…&to={phone}&body={msg}</div>
-                </div>
-                <div style="display:flex;align-items:center;gap:9px">
-                  <span style="position:relative;width:38px;height:22px;background:#25d366;border-radius:99px;flex:none">
-                    <span style="position:absolute;top:3px;inset-inline-end:3px;width:16px;height:16px;background:#fff;border-radius:50%"></span></span>
-                  <span style="font-size:11px;font-weight:800;color:#0f172a">تفعيل الإرسال الفعلي عبر هذه القناة</span>
-                </div>
-                <button class="gd-mock-btn"><i class="fa-solid fa-floppy-disk"></i> حفظ إعدادات القناة</button>
+          <div class="gd-mock" style="max-width:440px;margin-top:11px">
+            <div class="gd-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="urlbar">قنوات الإرسال › واتساب</span></div>
+            <div class="gd-mock-body">
+              <div class="gd-mock-field">
+                <label>قالب رابط الإرسال</label>
+                <div class="gd-mock-input filled">https://api.provider.com/.../chat?token=…&to={phone}&body={msg}</div>
               </div>
+              <div style="display:flex;align-items:center;gap:9px">
+                <span style="position:relative;width:38px;height:22px;background:#25d366;border-radius:99px;flex:none">
+                  <span style="position:absolute;top:3px;inset-inline-end:3px;width:16px;height:16px;background:#fff;border-radius:50%"></span></span>
+                <span style="font-size:11px;font-weight:800;color:#0f172a">تفعيل الإرسال الفعلي عبر هذه القناة</span>
+              </div>
+              <button class="gd-mock-btn"><i class="fa-solid fa-floppy-disk"></i> حفظ إعدادات القناة</button>
             </div>
-            <a class="gd-go" href="{{ url_for('radius.communications_channels') }}"><i class="fa-solid fa-arrow-left"></i> افتح صفحة قنوات الإرسال</a>
           </div>
+          <a class="gd-go" href="{{ url_for('radius.communications_channels') }}"><i class="fa-solid fa-arrow-left"></i> افتح صفحة قنوات الإرسال</a>
         </div>
-
-        <div class="gd-step wa">
-          <div class="gd-step-badge"></div>
-          <div class="gd-step-main">
-            <h4><i class="fa-solid fa-copy" style="color:#16a34a"></i> انسخ رابط استقبال الرسائل والصقه عند مزوّد واتساب</h4>
-            <p>هذا هو الرابط الذي يستقبل الرسائل الواردة من مشتركيك. انسخه من هنا (وستجده أيضًا داخل صفحة «بوت واتساب»)
-              ثم ضعه في خانة <span class="gd-code">رابط استقبال الرسائل</span> داخل لوحة مزوّد واتساب لديك، وفعّل خيار استقبال الرسائل الواردة.</p>
-            <div class="gd-copy-wrap">
-              <input type="text" id="gd-webhook" value="{{ webhook_url }}" readonly onfocus="this.select()">
-              <button type="button" class="gd-copy-btn" id="gd-copy" data-url="{{ webhook_url }}"><i class="fa-solid fa-copy"></i> نسخ الرابط</button>
-            </div>
-            <p style="margin-top:8px"><i class="fa-solid fa-circle-info" style="color:#16a34a"></i> الرابط عام ولا يحتاج تسجيل دخول — مهمته فقط استقبال الرسائل وتسليمها للبوت.</p>
-          </div>
-        </div>
-
-        <div class="gd-step wa">
-          <div class="gd-step-badge"></div>
-          <div class="gd-step-main">
-            <h4><i class="fa-solid fa-robot" style="color:#16a34a"></i> فعّل البوت من صفحة «بوت واتساب»</h4>
-            <p>افتح صفحة <strong>بوت واتساب</strong> وحرّك مفتاح «تفعيل الرد التلقائي» إلى وضع التشغيل. الإعدادات الافتراضية جاهزة،
-              لذا يبدأ البوت بالعمل فور التفعيل.</p>
-            <a class="gd-go" href="{{ url_for('radius.communications_bot') }}"><i class="fa-solid fa-arrow-left"></i> افتح صفحة بوت واتساب</a>
-          </div>
-        </div>
-
-        <div class="gd-step wa">
-          <div class="gd-step-badge"></div>
-          <div class="gd-step-main">
-            <h4><i class="fa-solid fa-sliders" style="color:#16a34a"></i> خصّص الأوامر والردود <span class="gd-tag opt">اختياري</span></h4>
-            <p>في نفس صفحة البوت يمكنك تعديل رسالة الترحيب، والرد عند عدم الفهم، وقائمة الأوامر (كلمة ← رد).
-              استخدم المتغيّرات لإدراج بيانات المشترك تلقائيًا، مثل:</p>
-            <ul>
-              <li><span class="gd-code">{balance}</span> الرصيد &nbsp;·&nbsp; <span class="gd-code">{prof}</span> الباقة &nbsp;·&nbsp; <span class="gd-code">{exp}</span> تاريخ الانتهاء</li>
-              <li>مثال على رد لأمر «الرصيد»: «رصيدك الحالي: <span class="gd-code">{balance}</span>».</li>
-            </ul>
-          </div>
-        </div>
-
-        <div class="gd-step wa">
-          <div class="gd-step-badge"></div>
-          <div class="gd-step-main">
-            <h4><i class="fa-solid fa-flask" style="color:#16a34a"></i> أرسل رسالة «اختبار» للتأكد</h4>
-            <p>في صفحة «قنوات الإرسال»، استخدم زر «إرسال اختبار» داخل بطاقة واتساب: أدخل رقمك واضغط الزر.
-              إن وصلتك الرسالة فالقناة تعمل، ويصبح البوت جاهزًا لاستقبال رسائل مشتركيك والرد عليها.</p>
-          </div>
-        </div>
-
       </div>
 
-      {# ── how the subscriber uses it: phone chat + flow ── #}
-      <div>
-        <div class="gd-sub" style="margin-bottom:13px"><i class="fa-solid fa-comments"></i> كيف يستخدمه المشترك؟ <span class="ln"></span></div>
-        <div class="gd-illus">
+      <div class="gd-step wa">
+        <div class="gd-step-badge"></div>
+        <div class="gd-step-main">
+          <h4><i class="fa-solid fa-copy" style="color:#16a34a"></i> انسخ رابط استقبال الرسائل والصقه عند مزوّد واتساب</h4>
+          <p>هذا هو الرابط الذي يستقبل الرسائل الواردة من مشتركيك. انسخه من هنا (وستجده أيضًا داخل صفحة «بوت واتساب»)
+            ثم ضعه في خانة <span class="gd-code">رابط استقبال الرسائل</span> داخل لوحة مزوّد واتساب لديك، وفعّل خيار استقبال الرسائل الواردة.</p>
+          <div class="gd-copy-wrap">
+            <input type="text" id="gd-webhook" value="{{ webhook_url }}" readonly onfocus="this.select()">
+            <button type="button" class="gd-copy-btn" id="gd-copy" data-url="{{ webhook_url }}"><i class="fa-solid fa-copy"></i> نسخ الرابط</button>
+          </div>
+          <p style="margin-top:8px"><i class="fa-solid fa-circle-info" style="color:#16a34a"></i> الرابط عام ولا يحتاج تسجيل دخول — مهمته فقط استقبال الرسائل وتسليمها للبوت.</p>
+        </div>
+      </div>
 
-          {# phone mock #}
-          <div>
-            <div class="gd-phone">
-              <div class="gd-phone-screen">
-                <div class="gd-phone-bar wa">
-                  <span class="av"><i class="fa-solid fa-headset"></i></span>
-                  <div><div class="nm">خدمة الاشتراك</div><div class="st">متصل الآن</div></div>
-                </div>
-                <div class="gd-chat">
-                  <div class="gd-bub out"><span class="who">المشترك</span>الرصيد<span class="tm">10:32 ✓✓</span></div>
-                  <div class="gd-bub in"><span class="who">البوت</span>💰 رصيدك الحالي: 12,500 د.ع<span class="tm">10:32</span></div>
-                  <div class="gd-bub out"><span class="who">المشترك</span>الباقة<span class="tm">10:33 ✓✓</span></div>
-                  <div class="gd-bub in"><span class="who">البوت</span>📦 باقتك: 20 ميجا
+      <div class="gd-step wa">
+        <div class="gd-step-badge"></div>
+        <div class="gd-step-main">
+          <h4><i class="fa-solid fa-robot" style="color:#16a34a"></i> فعّل البوت من صفحة «بوت واتساب»</h4>
+          <p>افتح صفحة <strong>بوت واتساب</strong> وحرّك مفتاح «تفعيل الرد التلقائي» إلى وضع التشغيل. الإعدادات الافتراضية جاهزة،
+            لذا يبدأ البوت بالعمل فور التفعيل.</p>
+          <a class="gd-go" href="{{ url_for('radius.communications_bot') }}"><i class="fa-solid fa-arrow-left"></i> افتح صفحة بوت واتساب</a>
+        </div>
+      </div>
+
+      <div class="gd-step wa">
+        <div class="gd-step-badge"></div>
+        <div class="gd-step-main">
+          <h4><i class="fa-solid fa-sliders" style="color:#16a34a"></i> خصّص الأوامر والردود <span class="gd-tag opt">اختياري</span></h4>
+          <p>في نفس صفحة البوت يمكنك تعديل رسالة الترحيب، والرد عند عدم الفهم، وقائمة الأوامر (كلمة ← رد).
+            استخدم المتغيّرات لإدراج بيانات المشترك تلقائيًا، مثل:</p>
+          <ul>
+            <li><span class="gd-code">{balance}</span> الرصيد &nbsp;·&nbsp; <span class="gd-code">{prof}</span> الباقة &nbsp;·&nbsp; <span class="gd-code">{exp}</span> تاريخ الانتهاء</li>
+            <li>مثال على رد لأمر «الرصيد»: «رصيدك الحالي: <span class="gd-code">{balance}</span>».</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="gd-step wa">
+        <div class="gd-step-badge"></div>
+        <div class="gd-step-main">
+          <h4><i class="fa-solid fa-flask" style="color:#16a34a"></i> أرسل رسالة «اختبار» للتأكد</h4>
+          <p>في صفحة «قنوات الإرسال»، استخدم زر «إرسال اختبار» داخل بطاقة واتساب: أدخل رقمك واضغط الزر.
+            إن وصلتك الرسالة فالقناة تعمل، ويصبح البوت جاهزًا لاستقبال رسائل مشتركيك والرد عليها.</p>
+        </div>
+      </div>
+
+    </div>
+
+    {# ── how the subscriber uses it: phone chat + flow ── #}
+    <div style="margin-top:18px">
+      <div class="gd-sub" style="margin-bottom:13px"><i class="fa-solid fa-comments"></i> كيف يستخدمه المشترك؟ <span class="ln"></span></div>
+      <div class="gd-illus">
+
+        {# phone mock #}
+        <div>
+          <div class="gd-phone">
+            <div class="gd-phone-screen">
+              <div class="gd-phone-bar wa">
+                <span class="av"><i class="fa-solid fa-headset"></i></span>
+                <div><div class="nm">خدمة الاشتراك</div><div class="st">متصل الآن</div></div>
+              </div>
+              <div class="gd-chat">
+                <div class="gd-bub out"><span class="who">المشترك</span>الرصيد<span class="tm">10:32 ✓✓</span></div>
+                <div class="gd-bub in"><span class="who">البوت</span>💰 رصيدك الحالي: 12,500 د.ع<span class="tm">10:32</span></div>
+                <div class="gd-bub out"><span class="who">المشترك</span>الباقة<span class="tm">10:33 ✓✓</span></div>
+                <div class="gd-bub in"><span class="who">البوت</span>📦 باقتك: 20 ميجا
 السرعة: ↓ 20 Mbps / ↑ 10 Mbps
 تنتهي في: 2026-06-28<span class="tm">10:33</span></div>
-                </div>
               </div>
             </div>
-            <div class="gd-cap">يرسل المشترك كلمة بسيطة، فيرد البوت فورًا ببياناته الحقيقية.</div>
           </div>
-
-          {# flow diagram #}
-          <div>
-            <div class="gd-flow">
-              <div class="gd-flow-title"><i class="fa-solid fa-diagram-project" style="color:#16a34a"></i> مخطّط التدفّق</div>
-              <div class="gd-flow-row">
-                <div class="gd-node"><span class="box sub"><i class="fa-solid fa-user"></i></span><span class="lbl">المشترك<br>يرسل كلمة</span></div>
-                <i class="fa-solid fa-arrow-left gd-arrow"></i>
-                <div class="gd-node"><span class="box wa"><i class="fa-brands fa-whatsapp"></i></span><span class="lbl">واتساب<br>(المزوّد)</span></div>
-                <i class="fa-solid fa-arrow-left gd-arrow"></i>
-                <div class="gd-node"><span class="box sys"><i class="fa-solid fa-server"></i></span><span class="lbl">نظامنا<br>يطابق ويجهّز الرد</span></div>
-              </div>
-              <div class="gd-flow-row" style="margin-top:12px">
-                <div class="gd-node"><span class="box sub"><i class="fa-solid fa-user"></i></span><span class="lbl">المشترك<br>يصله الرد</span></div>
-                <i class="fa-solid fa-arrow-right gd-arrow back"></i>
-                <div class="gd-node"><span class="box wa"><i class="fa-brands fa-whatsapp"></i></span><span class="lbl">واتساب<br>(المزوّد)</span></div>
-                <i class="fa-solid fa-arrow-right gd-arrow back"></i>
-                <div class="gd-node"><span class="box sys"><i class="fa-solid fa-server"></i></span><span class="lbl">نظامنا<br>يرسل الرد</span></div>
-              </div>
-              <div class="gd-flow-note">الرسالة الواردة تصل عبر رابط الاستقبال، والرد يخرج عبر رابط الإرسال البرمجي — كلاهما ضبطته في الخطوات أعلاه.</div>
-            </div>
-          </div>
-
+          <div class="gd-cap">يرسل المشترك كلمة بسيطة، فيرد البوت فورًا ببياناته الحقيقية.</div>
         </div>
-      </div>
 
-    </div>
-  </section>
-
-  {# ════════════════════════════════════════════════════════════ #}
-  {# ════════ WALKTHROUGH B — TELEGRAM ADMIN BOT ═════════════════ #}
-  {# ════════════════════════════════════════════════════════════ #}
-  <section class="gd-wt" id="wt-telegram">
-    <div class="gd-wt-head tg">
-      <span class="ic"><i class="fa-brands fa-telegram"></i></span>
-      <div>
-        <h2>بوت تلجرام لتنبيهات الإدارة</h2>
-        <div class="sub">استقبل تنبيهات الشبكة والأجهزة فورًا على تلجرام — أنت كإدارة، لا المشتركون.</div>
-      </div>
-    </div>
-    <div class="gd-wt-body">
-
-      {# ── what is it ── #}
-      <div class="gd-what">
-        <span class="ic"><i class="fa-solid fa-lightbulb"></i></span>
+        {# flow diagram #}
         <div>
-          <h3>ما هو؟</h3>
-          <p>
-            بوت تلجرام يرسل لك أنت (الإدارة) رسائل تنبيه فورية عند وقوع أحداث مهمة: انقطاع راوتر، عودته، ارتفاع البنج،
-            أو أي حدث تفعّله في «الإشعارات الحدثية». تنشئ بوتًا خاصًا بك على تلجرام، تأخذ منه رمز البوت ومعرّف المحادثة،
-            وتضعهما في النظام مرة واحدة، فتبدأ التنبيهات بالوصول.
-          </p>
-        </div>
-      </div>
-
-      {# ── requirements ── #}
-      <div>
-        <div class="gd-sub" style="margin-bottom:11px"><i class="fa-solid fa-clipboard-check"></i> المتطلبات <span class="ln"></span></div>
-        <div class="gd-req">
-          <div class="gd-req-item tg">
-            <span class="ic"><i class="fa-brands fa-telegram"></i></span>
-            <div><div class="t">حساب تلجرام</div><div class="d">على هاتفك أو حاسوبك — مجاني تمامًا.</div></div>
-          </div>
-          <div class="gd-req-item tg">
-            <span class="ic"><i class="fa-solid fa-robot"></i></span>
-            <div><div class="t">بوت من @BotFather</div><div class="d">ننشئه في الخطوة 1 — لا يحتاج أي تكلفة.</div></div>
-          </div>
-          <div class="gd-req-item tg">
-            <span class="ic"><i class="fa-solid fa-hashtag"></i></span>
-            <div><div class="t">رمز البوت ومعرّف المحادثة</div><div class="d">قيمتان نحصل عليهما من تلجرام ونضعهما في النظام.</div></div>
+          <div class="gd-flow">
+            <div class="gd-flow-title"><i class="fa-solid fa-diagram-project" style="color:#16a34a"></i> مخطّط التدفّق</div>
+            <div class="gd-flow-row">
+              <div class="gd-node"><span class="box sub"><i class="fa-solid fa-user"></i></span><span class="lbl">المشترك<br>يرسل كلمة</span></div>
+              <i class="fa-solid fa-arrow-left gd-arrow"></i>
+              <div class="gd-node"><span class="box wa"><i class="fa-brands fa-whatsapp"></i></span><span class="lbl">واتساب<br>(المزوّد)</span></div>
+              <i class="fa-solid fa-arrow-left gd-arrow"></i>
+              <div class="gd-node"><span class="box sys"><i class="fa-solid fa-server"></i></span><span class="lbl">نظامنا<br>يطابق ويجهّز الرد</span></div>
+            </div>
+            <div class="gd-flow-row" style="margin-top:12px">
+              <div class="gd-node"><span class="box sub"><i class="fa-solid fa-user"></i></span><span class="lbl">المشترك<br>يصله الرد</span></div>
+              <i class="fa-solid fa-arrow-right gd-arrow back"></i>
+              <div class="gd-node"><span class="box wa"><i class="fa-brands fa-whatsapp"></i></span><span class="lbl">واتساب<br>(المزوّد)</span></div>
+              <i class="fa-solid fa-arrow-right gd-arrow back"></i>
+              <div class="gd-node"><span class="box sys"><i class="fa-solid fa-server"></i></span><span class="lbl">نظامنا<br>يرسل الرد</span></div>
+            </div>
+            <div class="gd-flow-note">الرسالة الواردة تصل عبر رابط الاستقبال، والرد يخرج عبر رابط الإرسال البرمجي — كلاهما ضبطته في الخطوات أعلاه.</div>
           </div>
         </div>
-      </div>
 
-      {# ── current status hint ── #}
+      </div>
+    </div>
+
+  {% endcall %}
+
+  {# ════════ WALKTHROUGH B — TELEGRAM ADMIN BOT ════════ #}
+  {% call hub.section("بوت تلجرام لتنبيهات الإدارة", icon="telegram", meta="تنبيهات الشبكة للإدارة") %}
+
+    {# ── what is it ── #}
+    <div class="gd-what">
+      <span class="ic"><i class="fa-solid fa-lightbulb"></i></span>
       <div>
-        {% if telegram_ready %}
-          <span class="gd-statushint on"><span class="dot"></span> تلجرام مهيأ لديك بالفعل — التنبيهات جاهزة للعمل.</span>
-        {% else %}
-          <span class="gd-statushint off"><span class="dot"></span> تلجرام غير مهيأ بعد — اتبع الخطوات التالية.</span>
-        {% endif %}
+        <h3>ما هو؟</h3>
+        <p>
+          بوت تلجرام يرسل لك أنت (الإدارة) رسائل تنبيه فورية عند وقوع أحداث مهمة: انقطاع راوتر، عودته، ارتفاع البنج،
+          أو أي حدث تفعّله في «الإشعارات الحدثية». تنشئ بوتًا خاصًا بك على تلجرام، تأخذ منه رمز البوت ومعرّف المحادثة،
+          وتضعهما في النظام مرة واحدة، فتبدأ التنبيهات بالوصول.
+        </p>
       </div>
+    </div>
 
-      {# ── STEPS ── #}
-      <div class="gd-steps">
+    {# ── requirements ── #}
+    <div style="margin-top:16px">
+      <div class="gd-sub" style="margin-bottom:11px"><i class="fa-solid fa-clipboard-check"></i> المتطلبات <span class="ln"></span></div>
+      <div class="gd-req">
+        <div class="gd-req-item tg">
+          <span class="ic"><i class="fa-brands fa-telegram"></i></span>
+          <div><div class="t">حساب تلجرام</div><div class="d">على هاتفك أو حاسوبك — مجاني تمامًا.</div></div>
+        </div>
+        <div class="gd-req-item tg">
+          <span class="ic"><i class="fa-solid fa-robot"></i></span>
+          <div><div class="t">بوت من @BotFather</div><div class="d">ننشئه في الخطوة 1 — لا يحتاج أي تكلفة.</div></div>
+        </div>
+        <div class="gd-req-item tg">
+          <span class="ic"><i class="fa-solid fa-hashtag"></i></span>
+          <div><div class="t">رمز البوت ومعرّف المحادثة</div><div class="d">قيمتان نحصل عليهما من تلجرام ونضعهما في النظام.</div></div>
+        </div>
+      </div>
+    </div>
 
-        <div class="gd-step tg">
-          <div class="gd-step-badge"></div>
-          <div class="gd-step-main">
-            <h4><i class="fa-brands fa-telegram" style="color:#0ea5e9"></i> أنشئ بوتًا عبر <span class="gd-code">@BotFather</span></h4>
-            <p>افتح تلجرام وابحث عن <span class="gd-code">@BotFather</span> (الحساب الرسمي بعلامة التوثيق الزرقاء)، ثم:</p>
-            <ul>
-              <li>أرسل الأمر <span class="gd-code">/newbot</span>.</li>
-              <li>اكتب اسمًا للبوت (مثل: تنبيهات شبكتي).</li>
-              <li>اكتب اسم مستخدم ينتهي بـ <span class="gd-code">bot</span> (مثل: <span class="gd-code">my_net_alerts_bot</span>).</li>
-              <li>سيعطيك BotFather رمزًا طويلًا للربط — انسخه واحتفظ به.</li>
-            </ul>
+    {# ── current status hint ── #}
+    <div style="margin-top:16px">
+      {% if telegram_ready %}
+        <span class="gd-statushint on"><span class="dot"></span> تلجرام مهيأ لديك بالفعل — التنبيهات جاهزة للعمل.</span>
+      {% else %}
+        <span class="gd-statushint off"><span class="dot"></span> تلجرام غير مهيأ بعد — اتبع الخطوات التالية.</span>
+      {% endif %}
+    </div>
 
-            <div class="gd-phone" style="max-width:300px;margin:13px 0 0">
-              <div class="gd-phone-screen">
-                <div class="gd-phone-bar tg"><span class="av"><i class="fa-solid fa-robot"></i></span>
-                  <div><div class="nm">BotFather</div><div class="st">bot</div></div></div>
-                <div class="gd-chat tg">
-                  <div class="gd-bub tg-out">/newbot<span class="tm">✓✓</span></div>
-                  <div class="gd-bub tg-in">أرسل اسم البوت الذي تريد إنشاءه.</div>
-                  <div class="gd-bub tg-out">تنبيهات شبكتي<span class="tm">✓✓</span></div>
-                  <div class="gd-bub tg-in">جيد. اختر اسم مستخدم ينتهي بكلمة <b>bot</b>.</div>
-                  <div class="gd-bub tg-out">my_net_alerts_bot<span class="tm">✓✓</span></div>
-                  <div class="gd-bub tg-in">تم إنشاء البوت. استخدم هذا الرمز للربط:
+    {# ── STEPS ── #}
+    <div class="gd-steps" style="margin-top:16px">
+
+      <div class="gd-step tg">
+        <div class="gd-step-badge"></div>
+        <div class="gd-step-main">
+          <h4><i class="fa-brands fa-telegram" style="color:#0ea5e9"></i> أنشئ بوتًا عبر <span class="gd-code">@BotFather</span></h4>
+          <p>افتح تلجرام وابحث عن <span class="gd-code">@BotFather</span> (الحساب الرسمي بعلامة التوثيق الزرقاء)، ثم:</p>
+          <ul>
+            <li>أرسل الأمر <span class="gd-code">/newbot</span>.</li>
+            <li>اكتب اسمًا للبوت (مثل: تنبيهات شبكتي).</li>
+            <li>اكتب اسم مستخدم ينتهي بـ <span class="gd-code">bot</span> (مثل: <span class="gd-code">my_net_alerts_bot</span>).</li>
+            <li>سيعطيك BotFather رمزًا طويلًا للربط — انسخه واحتفظ به.</li>
+          </ul>
+
+          <div class="gd-phone" style="max-width:300px;margin:13px 0 0">
+            <div class="gd-phone-screen">
+              <div class="gd-phone-bar tg"><span class="av"><i class="fa-solid fa-robot"></i></span>
+                <div><div class="nm">BotFather</div><div class="st">bot</div></div></div>
+              <div class="gd-chat tg">
+                <div class="gd-bub tg-out">/newbot<span class="tm">✓✓</span></div>
+                <div class="gd-bub tg-in">أرسل اسم البوت الذي تريد إنشاءه.</div>
+                <div class="gd-bub tg-out">تنبيهات شبكتي<span class="tm">✓✓</span></div>
+                <div class="gd-bub tg-in">جيد. اختر اسم مستخدم ينتهي بكلمة <b>bot</b>.</div>
+                <div class="gd-bub tg-out">my_net_alerts_bot<span class="tm">✓✓</span></div>
+                <div class="gd-bub tg-in">تم إنشاء البوت. استخدم هذا الرمز للربط:
 <b>123456789:ABCdefGhIJ…</b></div>
-                </div>
               </div>
             </div>
-            <div class="gd-cap">محادثة تقريبية مع BotFather — انسخ رمز الربط الذي يظهر في آخر رسالة.</div>
           </div>
+          <div class="gd-cap">محادثة تقريبية مع BotFather — انسخ رمز الربط الذي يظهر في آخر رسالة.</div>
         </div>
-
-        <div class="gd-step tg">
-          <div class="gd-step-badge"></div>
-          <div class="gd-step-main">
-            <h4><i class="fa-solid fa-hashtag" style="color:#0ea5e9"></i> احصل على معرّف المحادثة</h4>
-            <p>معرّف المحادثة يحدّد لمن تُرسل التنبيهات. أبسط طريقة:</p>
-            <ul>
-              <li>افتح محادثة مع بوتك الجديد واضغط زر البدء داخل تلجرام (أو أرسل أي رسالة).</li>
-              <li>افتح في المتصفح الرابط التالي بعد استبدال <span class="gd-code">&lt;token&gt;</span> برمزك:</li>
-            </ul>
-            <div class="gd-code" style="display:block;padding:9px 11px;margin-top:7px;word-break:break-all">https://api.telegram.org/bot&lt;token&gt;/getUpdates</div>
-            <p style="margin-top:7px">ستجد في النتيجة حقلًا باسم <span class="gd-code">"chat":{"id": …}</span> — هذا الرقم هو معرّف المحادثة.
-              (رقم موجب لشخص، سالب لمجموعة عادية، ويبدأ بـ <span class="gd-code">-100</span> للقنوات).</p>
-            <p style="margin-top:6px"><i class="fa-solid fa-users" style="color:#0ea5e9"></i>
-              للتنبيهات الجماعية: أضف البوت إلى مجموعة تلجرام، أرسل رسالة في المجموعة، ثم خذ معرّف المحادثة السالب بنفس الطريقة.</p>
-          </div>
-        </div>
-
-        <div class="gd-step tg">
-          <div class="gd-step-badge"></div>
-          <div class="gd-step-main">
-            <h4><i class="fa-solid fa-keyboard" style="color:#0ea5e9"></i> أدخل رمز البوت ومعرّف المحادثة في «تنبيهات الشبكة/تلجرام»</h4>
-            <p>افتح صفحة <strong>تنبيهات تلجرام</strong>، والصق القيمتين في حقليهما، ثم احفظ.</p>
-
-            <div class="gd-mock" style="max-width:440px;margin-top:11px">
-              <div class="gd-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="urlbar">تنبيهات الشبكة › تلجرام</span></div>
-              <div class="gd-mock-body">
-                <div class="gd-mock-field"><label>رمز البوت</label><div class="gd-mock-input filled">123456789:ABCdefGhIJ…</div></div>
-                <div class="gd-mock-field"><label>معرّف المحادثة</label><div class="gd-mock-input filled">-1001234567890</div></div>
-                <button class="gd-mock-btn tg"><i class="fa-solid fa-floppy-disk"></i> حفظ الإعدادات</button>
-              </div>
-            </div>
-            <a class="gd-go" href="{{ url_for('radius.network_telegram_settings') if endpoint_exists('radius.network_telegram_settings') else url_for('radius.communications_channels') }}">
-              <i class="fa-solid fa-arrow-left"></i> افتح صفحة تنبيهات تلجرام</a>
-          </div>
-        </div>
-
-        <div class="gd-step tg">
-          <div class="gd-step-badge"></div>
-          <div class="gd-step-main">
-            <h4><i class="fa-solid fa-toggle-on" style="color:#0ea5e9"></i> فعّل التنبيهات</h4>
-            <p>في نفس الصفحة، فعّل خيار «تفعيل تنبيهات تلجرام» ثم احفظ. عند الإيقاف تبقى الإعدادات محفوظة لكن لا تُرسل تنبيهات.</p>
-          </div>
-        </div>
-
-        <div class="gd-step tg">
-          <div class="gd-step-badge"></div>
-          <div class="gd-step-main">
-            <h4><i class="fa-solid fa-paper-plane" style="color:#0ea5e9"></i> اضغط «إرسال رسالة اختبار»</h4>
-            <p>استخدم زر «إرسال رسالة اختبار» في صفحة تلجرام. إن وصلتك رسالة على تلجرام فكل شيء يعمل،
-              وستصلك تنبيهات الأجهزة تلقائيًا عند وقوعها.</p>
-          </div>
-        </div>
-
       </div>
 
-      {# ── what the admin receives + flow ── #}
-      <div>
-        <div class="gd-sub" style="margin-bottom:13px"><i class="fa-solid fa-bell"></i> ماذا يصل الإدارة؟ <span class="ln"></span></div>
-        <div class="gd-illus">
+      <div class="gd-step tg">
+        <div class="gd-step-badge"></div>
+        <div class="gd-step-main">
+          <h4><i class="fa-solid fa-hashtag" style="color:#0ea5e9"></i> احصل على معرّف المحادثة</h4>
+          <p>معرّف المحادثة يحدّد لمن تُرسل التنبيهات. أبسط طريقة:</p>
+          <ul>
+            <li>افتح محادثة مع بوتك الجديد واضغط زر البدء داخل تلجرام (أو أرسل أي رسالة).</li>
+            <li>افتح في المتصفح الرابط التالي بعد استبدال <span class="gd-code">&lt;token&gt;</span> برمزك:</li>
+          </ul>
+          <div class="gd-code" style="display:block;padding:9px 11px;margin-top:7px;word-break:break-all">https://api.telegram.org/bot&lt;token&gt;/getUpdates</div>
+          <p style="margin-top:7px">ستجد في النتيجة حقلًا باسم <span class="gd-code">"chat":{"id": …}</span> — هذا الرقم هو معرّف المحادثة.
+            (رقم موجب لشخص، سالب لمجموعة عادية, ويبدأ بـ <span class="gd-code">-100</span> للقنوات).</p>
+          <p style="margin-top:6px"><i class="fa-solid fa-users" style="color:#0ea5e9"></i>
+            للتنبيهات الجماعية: أضف البوت إلى مجموعة تلجرام، أرسل رسالة في المجموعة، ثم خذ معرّف المحادثة السالب بنفس الطريقة.</p>
+        </div>
+      </div>
 
-          {# phone mock — telegram alerts #}
-          <div>
-            <div class="gd-phone">
-              <div class="gd-phone-screen">
-                <div class="gd-phone-bar tg"><span class="av"><i class="fa-solid fa-robot"></i></span>
-                  <div><div class="nm">تنبيهات شبكتي</div><div class="st">bot</div></div></div>
-                <div class="gd-chat tg">
-                  <div class="gd-bub tg-in">🚨 انقطع الاتصال مع «راوتر الفرع»
+      <div class="gd-step tg">
+        <div class="gd-step-badge"></div>
+        <div class="gd-step-main">
+          <h4><i class="fa-solid fa-keyboard" style="color:#0ea5e9"></i> أدخل رمز البوت ومعرّف المحادثة في «تنبيهات الشبكة/تلجرام»</h4>
+          <p>افتح صفحة <strong>تنبيهات تلجرام</strong>، والصق القيمتين في حقليهما، ثم احفظ.</p>
+
+          <div class="gd-mock" style="max-width:440px;margin-top:11px">
+            <div class="gd-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="urlbar">تنبيهات الشبكة › تلجرام</span></div>
+            <div class="gd-mock-body">
+              <div class="gd-mock-field"><label>رمز البوت</label><div class="gd-mock-input filled">123456789:ABCdefGhIJ…</div></div>
+              <div class="gd-mock-field"><label>معرّف المحادثة</label><div class="gd-mock-input filled">-1001234567890</div></div>
+              <button class="gd-mock-btn tg"><i class="fa-solid fa-floppy-disk"></i> حفظ الإعدادات</button>
+            </div>
+          </div>
+          <a class="gd-go" href="{{ url_for('radius.network_telegram_settings') if endpoint_exists('radius.network_telegram_settings') else url_for('radius.communications_channels') }}">
+            <i class="fa-solid fa-arrow-left"></i> افتح صفحة تنبيهات تلجرام</a>
+        </div>
+      </div>
+
+      <div class="gd-step tg">
+        <div class="gd-step-badge"></div>
+        <div class="gd-step-main">
+          <h4><i class="fa-solid fa-toggle-on" style="color:#0ea5e9"></i> فعّل التنبيهات</h4>
+          <p>في نفس الصفحة، فعّل خيار «تفعيل تنبيهات تلجرام» ثم احفظ. عند الإيقاف تبقى الإعدادات محفوظة لكن لا تُرسل تنبيهات.</p>
+        </div>
+      </div>
+
+      <div class="gd-step tg">
+        <div class="gd-step-badge"></div>
+        <div class="gd-step-main">
+          <h4><i class="fa-solid fa-paper-plane" style="color:#0ea5e9"></i> اضغط «إرسال رسالة اختبار»</h4>
+          <p>استخدم زر «إرسال رسالة اختبار» في صفحة تلجرام. إن وصلتك رسالة على تلجرام فكل شيء يعمل،
+            وستصلك تنبيهات الأجهزة تلقائيًا عند وقوعها.</p>
+        </div>
+      </div>
+
+    </div>
+
+    {# ── what the admin receives + flow ── #}
+    <div style="margin-top:18px">
+      <div class="gd-sub" style="margin-bottom:13px"><i class="fa-solid fa-bell"></i> ماذا يصل الإدارة؟ <span class="ln"></span></div>
+      <div class="gd-illus">
+
+        {# phone mock — telegram alerts #}
+        <div>
+          <div class="gd-phone">
+            <div class="gd-phone-screen">
+              <div class="gd-phone-bar tg"><span class="av"><i class="fa-solid fa-robot"></i></span>
+                <div><div class="nm">تنبيهات شبكتي</div><div class="st">bot</div></div></div>
+              <div class="gd-chat tg">
+                <div class="gd-bub tg-in">🚨 انقطع الاتصال مع «راوتر الفرع»
 العنوان: 10.0.0.1
 الوقت: 14:05<span class="tm">14:05</span></div>
-                  <div class="gd-bub tg-in">✅ عاد الاتصال مع «راوتر الفرع»
+                <div class="gd-bub tg-in">✅ عاد الاتصال مع «راوتر الفرع»
 العنوان: 10.0.0.1
 البنج: 8ms<span class="tm">14:09</span></div>
-                </div>
               </div>
             </div>
-            <div class="gd-cap">تصلك التنبيهات فور وقوع الحدث على الراوترات المفعّل عليها التنبيه.</div>
           </div>
-
-          {# flow diagram #}
-          <div>
-            <div class="gd-flow">
-              <div class="gd-flow-title"><i class="fa-solid fa-diagram-project" style="color:#0ea5e9"></i> مخطّط التدفّق</div>
-              <div class="gd-flow-row">
-                <div class="gd-node"><span class="box ev"><i class="fa-solid fa-triangle-exclamation"></i></span><span class="lbl">حدث / راوتر<br>(انقطاع، بنج…)</span></div>
-                <i class="fa-solid fa-arrow-left gd-arrow"></i>
-                <div class="gd-node"><span class="box sys"><i class="fa-solid fa-server"></i></span><span class="lbl">نظامنا<br>يكتشف ويجهّز التنبيه</span></div>
-                <i class="fa-solid fa-arrow-left gd-arrow"></i>
-                <div class="gd-node"><span class="box tg"><i class="fa-brands fa-telegram"></i></span><span class="lbl">تلجرام<br>الإدارة</span></div>
-              </div>
-              <div class="gd-flow-note">يعتمد ذلك على بوت أنشأته أنت، وتنبيهات تفعّلها من «الإشعارات الحدثية» أو من صفحة كل جهاز.</div>
-            </div>
-            <a class="gd-go" href="{{ url_for('radius.communications_notifications') }}" style="margin-top:13px"><i class="fa-solid fa-arrow-left"></i> اضبط الأحداث من «الإشعارات الحدثية»</a>
-          </div>
-
+          <div class="gd-cap">تصلك التنبيهات فور وقوع الحدث على الراوترات المفعّل عليها التنبيه.</div>
         </div>
+
+        {# flow diagram #}
+        <div>
+          <div class="gd-flow">
+            <div class="gd-flow-title"><i class="fa-solid fa-diagram-project" style="color:#0ea5e9"></i> مخطّط التدفّق</div>
+            <div class="gd-flow-row">
+              <div class="gd-node"><span class="box ev"><i class="fa-solid fa-triangle-exclamation"></i></span><span class="lbl">حدث / راوتر<br>(انقطاع، بنج…)</span></div>
+              <i class="fa-solid fa-arrow-left gd-arrow"></i>
+              <div class="gd-node"><span class="box sys"><i class="fa-solid fa-server"></i></span><span class="lbl">نظامنا<br>يكتشف ويجهّز التنبيه</span></div>
+              <i class="fa-solid fa-arrow-left gd-arrow"></i>
+              <div class="gd-node"><span class="box tg"><i class="fa-brands fa-telegram"></i></span><span class="lbl">تلجرام<br>الإدارة</span></div>
+            </div>
+            <div class="gd-flow-note">يعتمد ذلك على بوت أنشأته أنت، وتنبيهات تفعّلها من «الإشعارات الحدثية» أو من صفحة كل جهاز.</div>
+          </div>
+          <a class="gd-go" href="{{ url_for('radius.communications_notifications') }}" style="margin-top:13px"><i class="fa-solid fa-arrow-left"></i> اضبط الأحداث من «الإشعارات الحدثية»</a>
+        </div>
+
       </div>
-
     </div>
-  </section>
 
-  {# ════════════════════════════════════════════════════════════ #}
-  {# ════════ FAQ + TROUBLESHOOTING ═════════════════════════════ #}
-  {# ════════════════════════════════════════════════════════════ #}
+  {% endcall %}
+
+  {# ════════ FAQ + TROUBLESHOOTING ════════ #}
   {% call hub.section("أسئلة شائعة وحلّ المشكلات", icon="circle-question") %}
     <div class="gd-faq">
 
@@ -656,7 +590,7 @@
     </div>
   {% endcall %}
 
-</div>
+{% endcall %}
 
 <script>
 (function(){
