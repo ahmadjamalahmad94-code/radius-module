@@ -106,10 +106,23 @@
       { Authorization: "Bearer " + CFG.apiToken },
       init.headers || {},
     );
-    const res = await fetch(CFG.apiBase + path, init);
-    let body = null;
-    try { body = await res.json(); } catch (_) { /* non-JSON */ }
-    return { res, body };
+    // Time-box every call. A slow/unreachable RouterOS API must NOT leave a
+    // live panel stuck on its «جارٍ التحميل…» placeholder forever — abort
+    // after 15s and surface a not-ok result so callers fall through cleanly.
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 15000);
+    init.signal = ctrl.signal;
+    try {
+      const res = await fetch(CFG.apiBase + path, init);
+      let body = null;
+      try { body = await res.json(); } catch (_) { /* non-JSON */ }
+      return { res, body };
+    } catch (e) {
+      // Timeout or network error — never reject; synthesise a not-ok response.
+      return { res: { ok: false, status: 0 }, body: null, error: String(e) };
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
   // ── KPI strip refresh ───────────────────────────────────────────
@@ -414,9 +427,12 @@
   const usersTable     = root.querySelector("[data-mt-active-users-table]");
   const usersRows      = root.querySelector("[data-mt-active-users-rows]");
 
-  function renderUsers(hotspotRows, pppRows) {
+  function renderUsers(hotspotRows, pppRows, reachable) {
+    if (!usersEmpty || !usersTable || !usersRows) return;
     const all = [];
-    for (const r of (hotspotRows || []).slice(0, 10)) {
+    // Coerce to arrays defensively — a non-array payload must never throw and
+    // leave the panel frozen on its loading placeholder.
+    for (const r of (Array.isArray(hotspotRows) ? hotspotRows : []).slice(0, 10)) {
       all.push({
         type: "hotspot",
         name: r.user || "?",
@@ -424,7 +440,7 @@
         uptime: r.uptime || "",
       });
     }
-    for (const r of (pppRows || []).slice(0, 10)) {
+    for (const r of (Array.isArray(pppRows) ? pppRows : []).slice(0, 10)) {
       all.push({
         type: "ppp",
         name: r.name || r.user || "?",
@@ -435,7 +451,11 @@
     if (!all.length) {
       usersTable.hidden = true;
       usersEmpty.hidden = false;
-      usersEmpty.textContent = "لا يوجد مستخدمون متصلون الآن.";
+      // Distinguish "router unreachable" from "genuinely no sessions" so the
+      // operator never stares at an eternal «جارٍ التحميل…».
+      usersEmpty.textContent = (reachable === false)
+        ? "تعذّر الوصول إلى الراوتر — ستُعاد المحاولة تلقائيًا."
+        : "لا يوجد مستخدمون متصلون الآن.";
       return;
     }
     usersEmpty.hidden = true;
@@ -456,19 +476,22 @@
   }
 
   async function refreshActiveUsers() {
-    const [a, b] = await Promise.all([
-      api("/mikrotik/" + CFG.routerId + "/hotspot/active"),
-      api("/mikrotik/" + CFG.routerId + "/ppp/active"),
-    ]);
+    let a = { res: { ok: false } }, b = { res: { ok: false } };
+    try {
+      [a, b] = await Promise.all([
+        api("/mikrotik/" + CFG.routerId + "/hotspot/active"),
+        api("/mikrotik/" + CFG.routerId + "/ppp/active"),
+      ]);
+    } catch (_) { /* api() never rejects, but stay defensive */ }
     let hot = [], ppp = [];
     let hotCount = "—", pppCount = "—";
-    if (a.res.ok && a.body && a.body.ok && a.body.data) {
+    if (a && a.res && a.res.ok && a.body && a.body.ok && a.body.data) {
       const env = a.body.data;
-      if (env.ok) { hot = env.data || []; hotCount = hot.length; }
+      if (env.ok) { hot = Array.isArray(env.data) ? env.data : []; hotCount = hot.length; }
     }
-    if (b.res.ok && b.body && b.body.ok && b.body.data) {
+    if (b && b.res && b.res.ok && b.body && b.body.ok && b.body.data) {
       const env = b.body.data;
-      if (env.ok) { ppp = env.data || []; pppCount = ppp.length; }
+      if (env.ok) { ppp = Array.isArray(env.data) ? env.data : []; pppCount = ppp.length; }
     }
     if (activeTotalEl) {
       activeTotalEl.textContent = (Number.isFinite(hotCount) ? hotCount : 0)
@@ -476,7 +499,9 @@
     }
     if (hotspotCountEl) hotspotCountEl.textContent = hotCount;
     if (pppCountEl)     pppCountEl.textContent = pppCount;
-    renderUsers(hot, ppp);
+    // reachable = at least one of the two live queries answered (HTTP-ok).
+    const reachable = !!((a && a.res && a.res.ok) || (b && b.res && b.res.ok));
+    renderUsers(hot, ppp, reachable);
   }
 
   if (hotspotCountEl) {
