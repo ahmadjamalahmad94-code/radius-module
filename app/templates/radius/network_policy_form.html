@@ -1,9 +1,17 @@
 {# NPC create/edit form. Renders per-service field blocks
    based on `service.key`. Children list (web-block targets,
-   walled-garden entries) lives in the right column on edit. #}
+   walled-garden entries) lives in the right column on edit.
+
+   UNIFIED DESIGN SYSTEM: single hub.hero at top, every control group
+   wrapped in a hub.section card, on/off checkboxes rendered as the
+   canonical toggle_switch (same field `name=` → identical POST body).
+   The shared NPC dry-run banner + sub-service tabs are preserved as the
+   page's navigation. Zero route/behaviour change. #}
 
 {% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
 {% import "radius/_network_policy_shell.html" as npc %}
+{% from "_partials/toggle_switch.html" import toggle_switch %}
 
 {% block title %}{{ page_title }} — مركز سياسات الشبكة{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-{{ service.icon }}"></i>{% endblock %}
@@ -21,23 +29,30 @@
 {% endblock %}
 
 {% block content %}
-{{ npc.npc_dry_run_banner() }}
-{{ npc.npc_tabs(service.url_slug, services) }}
 
-<div style="margin-bottom:12px;">
-  <a class="npc-btn"
+{# ───── Unified hero: title + actions (replaces the invisible page-head) ───── #}
+{% set _actions %}
+  <a class="hub-btn hub-btn--secondary"
      href="{{ url_for('radius.npc_' ~ service.key ~ '_list') }}">
-    <i class="fa-solid fa-arrow-right"></i>
-    رجوع إلى القائمة
+    <i class="fa-solid fa-arrow-right"></i> رجوع إلى القائمة
   </a>
   {% if policy %}
-    <a class="npc-btn is-primary"
+    <a class="hub-btn hub-btn--primary"
        href="{{ url_for('radius.npc_' ~ service.key ~ '_preview', policy_id=policy.id) }}">
-      <i class="fa-solid fa-eye"></i>
-      توليد المعاينة
+      <i class="fa-solid fa-eye"></i> توليد المعاينة
     </a>
   {% endif %}
-</div>
+{% endset %}
+{{ hub.hero(
+  ("تحرير سياسة — " ~ service.label_ar) if policy else ("سياسة جديدة — " ~ service.label_ar),
+  subtitle="معاينة فقط — لا يُطبَّق على الراوتر. عرّف السياسة هنا، ثم ولّد المعاينة لرؤية ما سيُنفَّذ بالضبط.",
+  icon=service.icon,
+  actions_html=_actions
+) }}
+
+{# Shared NPC dry-run banner + sub-service tabs (page navigation) #}
+{{ npc.npc_dry_run_banner() }}
+{{ npc.npc_tabs(service.url_slug, services) }}
 
 <form method="POST"
       action="{{ url_for(
@@ -53,31 +68,26 @@
 
     {# ════════════ Left: policy fields ════════════ #}
     <div>
-      <div class="npc-card" style="padding:18px 20px;">
-        <h3 style="margin:0 0 10px; font-size:15px;">
-          <i class="fa-solid fa-pen-to-square"
-             style="color:#6B5AED;"></i>
-          بيانات السياسة
-        </h3>
+      {% call hub.section("بيانات السياسة", icon="pen-to-square") %}
 
-        <div class="npc-field">
-          <label for="name">الاسم</label>
-          <input type="text" name="name" id="name" required
+        <div class="hub-field">
+          <label class="hub-field-label" for="name">الاسم</label>
+          <input class="hub-input" type="text" name="name" id="name" required
                  value="{{ policy.name if policy else '' }}"
                  placeholder="مثلاً: حظر تيك توك — مقهى مركزي">
         </div>
 
-        <div class="npc-field">
-          <label for="router_id">الراوتر المستهدف</label>
+        <div class="hub-field">
+          <label class="hub-field-label" for="router_id">الراوتر المستهدف</label>
           {% if policy %}
-            <input type="text" disabled
+            <input class="hub-input" type="text" disabled
                    value="{{ policy.router_id }}">
-            <span class="npc-field-hint">
+            <span class="hub-field-hint">
               الراوتر لا يُغيَّر بعد الإنشاء — أنشئ سياسة جديدة
               لاستهداف راوتر آخر.
             </span>
           {% else %}
-            <select name="router_id" id="router_id" required>
+            <select class="hub-input" name="router_id" id="router_id" required>
               <option value="">— اختر —</option>
               {% for r in routers %}
                 <option value="{{ r.id }}"
@@ -87,22 +97,19 @@
               {% endfor %}
             </select>
             {% if preset_router_id %}
-              <span class="npc-field-hint">
+              <span class="hub-field-hint">
                 الراوتر مُحدَّد مسبقاً لأنك دخلت من لوحة هذا الراوتر.
               </span>
             {% endif %}
           {% endif %}
         </div>
 
-        {# ─── Service-specific fields ─── #}
+      {% endcall %}
 
-        {% if service.key == 'remote_access' %}
-          <h4 style="margin:18px 0 8px; font-size:13.5px;
-                     color:#374151;">
-            <i class="fa-solid fa-toggle-on"
-               style="color:#6B5AED;"></i>
-            الخدمات التي ستُفتح على input chain
-          </h4>
+      {# ─── Service-specific fields ─── #}
+
+      {% if service.key == 'remote_access' %}
+        {% call hub.section("الخدمات التي ستُفتح على input chain", icon="toggle-on") %}
           {% set toggles = [
               ('allow_winbox',       'برنامج الإدارة (TCP 8291)', 'مرتفع'),
               ('allow_ssh',          'الوصول الآمن (TCP 22)',      'متوسط'),
@@ -112,195 +119,177 @@
               ('allow_webfig_https', 'واجهة الويب الآمنة (443)', 'منخفض'),
           ] %}
           {% for key, label, risk in toggles %}
-            <label class="npc-check-row" for="{{ key }}">
-              <input type="checkbox" name="{{ key }}" id="{{ key }}"
-                {% if policy and policy[key] %}checked{% endif %}
-                {% if not policy and key in ('allow_winbox','allow_webfig_https') %}checked{% endif %}
-              >
-              <span>{{ label }}</span>
-              <span class="npc-check-meta">خطر: {{ risk }}</span>
-            </label>
+            {% set _checked = (policy and policy[key]) or (not policy and key in ('allow_winbox','allow_webfig_https')) %}
+            <div class="uds-toggle-row">
+              <div class="uds-toggle-row-text">
+                <span class="uds-toggle-row-label">{{ label }}</span>
+                <span class="uds-toggle-row-meta">خطر: {{ risk }}</span>
+              </div>
+              {{ toggle_switch(name=key, id=key, checked=_checked) }}
+            </div>
           {% endfor %}
 
-          <div class="npc-field" style="margin-top:14px;">
-            <label for="source_address_list">
+          <div class="hub-field" style="margin-top:14px;">
+            <label class="hub-field-label" for="source_address_list">
               قائمة عناوين IP المصدر (اختياري)
             </label>
-            <input type="text" name="source_address_list"
+            <input class="hub-input" type="text" name="source_address_list"
                    id="source_address_list"
                    placeholder="مثلاً: ops-bastion"
                    value="{{ policy.source_address_list if policy else '' }}">
-            <span class="npc-field-hint">
+            <span class="hub-field-hint">
               اسم address-list داخل الراوتر يحوي IP المسؤولين فقط.
               تركها فارغة يعني السماح من أي مصدر — يُلزِم وقت انتهاء.
             </span>
           </div>
 
-          <div class="npc-field">
-            <label for="expires_at">
+          <div class="hub-field">
+            <label class="hub-field-label" for="expires_at">
               ينتهي تلقائياً في (ISO-8601 / UTC)
             </label>
-            <input type="text" name="expires_at" id="expires_at"
+            <input class="hub-input" type="text" name="expires_at" id="expires_at"
                    placeholder="2026-06-01T12:00:00Z"
                    value="{{ policy.expires_at if policy else '' }}">
-            <span class="npc-field-hint">
+            <span class="hub-field-hint">
               اختياري — لكن إن لم تحدّد قائمة مصدر، فالانتهاء
               مطلوب. الحد الأقصى: 30 يوماً.
             </span>
           </div>
 
-          <div class="npc-field">
-            <label for="reason">سبب فتح الوصول</label>
-            <textarea name="reason" id="reason" rows="2"
+          <div class="hub-field">
+            <label class="hub-field-label" for="reason">سبب فتح الوصول</label>
+            <textarea class="hub-input" name="reason" id="reason" rows="2"
                       placeholder="مثلاً: تحقيق في انقطاع الراوتر"
             >{{ policy.reason if policy else '' }}</textarea>
           </div>
+        {% endcall %}
 
-        {% elif service.key == 'web_block' %}
-          <div class="npc-field">
-            <label for="scope">نطاق التطبيق</label>
-            <select name="scope" id="scope">
+      {% elif service.key == 'web_block' %}
+        {% call hub.section("إعدادات الحظر", icon="ban") %}
+          <div class="hub-field">
+            <label class="hub-field-label" for="scope">نطاق التطبيق</label>
+            <select class="hub-input" name="scope" id="scope">
               <option value="all_users"
                 {% if not policy or policy.scope == 'all_users' %}selected{% endif %}
               >كل المستخدمين (all_users)</option>
             </select>
-            <span class="npc-field-hint">
+            <span class="hub-field-hint">
               النطاقات الأخرى تتطلب صلاحية تطبيق منفصلة.
             </span>
           </div>
-          <div class="npc-field">
-            <label for="schedule_id">جدولة الوقت (اختياري)</label>
-            <input type="text" name="schedule_id" id="schedule_id"
+          <div class="hub-field">
+            <label class="hub-field-label" for="schedule_id">جدولة الوقت (اختياري)</label>
+            <input class="hub-input" type="text" name="schedule_id" id="schedule_id"
                    placeholder="مثلاً: schedule-evenings"
                    value="{{ policy.schedule_id if policy else '' }}">
-            <span class="npc-field-hint">
+            <span class="hub-field-hint">
               ID جدول من قسم «جدولة السرعات»؛ تركها فارغة = دائم.
             </span>
           </div>
-          <label class="npc-check-row" for="fail_open">
-            <input type="checkbox" name="fail_open" id="fail_open"
-              {% if policy %}{% if policy.fail_open %}checked{% endif %}
-              {% else %}checked{% endif %}
-            >
-            <span>fail-open — إن كانت قائمة الوجهات فارغة، لا تُولِّد قاعدة drop</span>
-            <span class="npc-check-meta">موصى به</span>
-          </label>
+          {% set _fail_open_checked = (policy.fail_open if policy else True) %}
+          <div class="uds-toggle-row">
+            <div class="uds-toggle-row-text">
+              <span class="uds-toggle-row-label">fail-open — إن كانت قائمة الوجهات فارغة، لا تُولِّد قاعدة drop</span>
+              <span class="uds-toggle-row-meta">موصى به</span>
+            </div>
+            {{ toggle_switch(name="fail_open", id="fail_open", checked=_fail_open_checked) }}
+          </div>
+        {% endcall %}
 
-        {% elif service.key == 'walled_garden' %}
-          <div class="npc-field">
-            <label for="hotspot_profile">
+      {% elif service.key == 'walled_garden' %}
+        {% call hub.section("إعدادات الاستثناء", icon="shield-halved") %}
+          <div class="hub-field">
+            <label class="hub-field-label" for="hotspot_profile">
               نطاق ملف بوابة الدخول (اختياري)
             </label>
-            <input type="text" name="hotspot_profile"
+            <input class="hub-input" type="text" name="hotspot_profile"
                    id="hotspot_profile"
                    placeholder="مثلاً: hsprof1"
                    value="{{ policy.hotspot_profile if policy else '' }}">
-            <span class="npc-field-hint">
+            <span class="hub-field-hint">
               اسم ملف بوابة الدخول في الراوتر لتقييد التطبيق؛
               تركها فارغة = كل الـ profiles.
             </span>
           </div>
-        {% endif %}
+        {% endcall %}
+      {% endif %}
 
-        <label class="npc-check-row" for="enabled" style="margin-top:14px;">
-          <input type="checkbox" name="enabled" id="enabled"
-            {% if policy %}{% if policy.enabled %}checked{% endif %}
-            {% else %}checked{% endif %}
-          >
-          <span>السياسة مُفعَّلة</span>
-        </label>
+      {% call hub.section("الحالة والحفظ", icon="floppy-disk") %}
+        {% set _enabled_checked = (policy.enabled if policy else True) %}
+        <div class="uds-toggle-row">
+          <div class="uds-toggle-row-text">
+            <span class="uds-toggle-row-label">السياسة مُفعَّلة</span>
+          </div>
+          {{ toggle_switch(name="enabled", id="enabled", checked=_enabled_checked) }}
+        </div>
 
-        <div style="margin-top:18px; display:flex; gap:8px;">
-          <button class="npc-btn is-primary" type="submit">
+        <div style="margin-top:16px; display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="hub-btn hub-btn--primary" type="submit">
             <i class="fa-regular fa-floppy-disk"></i>
             حفظ {% if not policy %}والمتابعة للمعاينة{% endif %}
           </button>
-          <a class="npc-btn"
+          <a class="hub-btn hub-btn--secondary"
              href="{{ url_for('radius.npc_' ~ service.key ~ '_list') }}">
             <i class="fa-solid fa-xmark"></i>
             إلغاء
           </a>
         </div>
-      </div>
+      {% endcall %}
     </div>
 
     {# ════════════ Right: preview hint + children ════════════ #}
     <div>
-      <div class="npc-card" style="padding:18px 20px;">
-        <h3 style="margin:0 0 8px; font-size:14.5px;">
-          <i class="fa-solid fa-eye" style="color:#6B5AED;"></i>
-          المعاينة بدون تنفيذ
-        </h3>
-        <p style="font-size:13px; color:#4b5563; line-height:1.7;">
-          بعد الحفظ، اضغط <strong>توليد المعاينة</strong> لرؤية:
-        </p>
-        <ul style="font-size:13px; color:#4b5563; line-height:1.8;
-                   padding-inline-start:18px;">
-          <li>ما الذي سيُنفَّذ على الراوتر بالضبط (بلغة عربية).</li>
-          <li>السكربت الكامل بصيغة الراوتر (.rsc).</li>
-          <li>سكربت التراجع (rollback) المُولَّد تلقائياً.</li>
-          <li>تقييم الخطر (منخفض / متوسط / مرتفع).</li>
-          <li>التحذيرات والقواعد التي ستظل سليمة بلا تعديل.</li>
-        </ul>
-        <p style="font-size:12.5px; color:#6b7280;">
-          <i class="fa-solid fa-shield-halved"></i>
-          هذه الصفحة لا تتّصل بالراوتر — لا تُنشأ
-          قواعد حقيقية، لا تُعدَّل خدمات، لا يُرسل CoA.
-        </p>
-      </div>
+      {{ hub.helppanel(
+        "المعاينة بدون تنفيذ",
+        intro="بعد الحفظ، اضغط «توليد المعاينة» لرؤية ما سيحدث — دون أي اتصال بالراوتر.",
+        icon="eye",
+        items=[
+          {'icon': 'terminal',         'text': 'ما الذي سيُنفَّذ على الراوتر بالضبط (بلغة عربية).'},
+          {'icon': 'file-code',        'text': 'السكربت الكامل بصيغة الراوتر (.rsc).'},
+          {'icon': 'rotate-left',      'text': 'سكربت التراجع (rollback) المُولَّد تلقائياً.'},
+          {'icon': 'gauge-high',       'text': 'تقييم الخطر (منخفض / متوسط / مرتفع).'},
+          {'icon': 'triangle-exclamation', 'text': 'التحذيرات والقواعد التي ستظل سليمة بلا تعديل.'},
+        ],
+        note="هذه الصفحة لا تتّصل بالراوتر — لا تُنشأ قواعد حقيقية، لا تُعدَّل خدمات، لا يُرسل CoA."
+      ) }}
 
       {# ─── Children panel (web_block + walled_garden) ─── #}
       {% if policy
             and service.key in ('web_block','walled_garden') %}
-        <div class="npc-card" style="padding:18px 20px;
-                                     margin-top:12px;">
-          <h3 style="margin:0 0 8px; font-size:14.5px;">
-            <i class="fa-regular fa-rectangle-list"
-               style="color:#6B5AED;"></i>
-            {% if service.key == 'web_block' %}
-              وجهات الحظر
-            {% else %}
-              إدخالات الإستثناء
-            {% endif %}
-            <span style="font-weight:500; color:#6b7280;
-                         font-size:12.5px;">
-              ({{ children|length }})
-            </span>
-          </h3>
+        {% set _children_title %}
+          {% if service.key == 'web_block' %}وجهات الحظر{% else %}إدخالات الإستثناء{% endif %}
+        {% endset %}
+        <div style="margin-top:16px;">
+        {% call hub.section(_children_title|trim, icon="rectangle-list", meta=("(" ~ children|length ~ ")")) %}
 
           {# ── Add form (inline) ── #}
           <form method="POST"
                 action="{{ url_for('radius.npc_' ~ service.key ~ '_child_add', policy_id=policy.id) }}"
                 style="display:flex; gap:6px; flex-wrap:wrap;
-                       align-items:flex-end; margin-bottom:10px;">
+                       align-items:flex-end; margin-bottom:12px;">
             {{ csrf_token_input() | safe }}
 
             {% if service.key == 'web_block' %}
-              <div class="npc-field" style="flex:2 1 220px;
-                                            margin:0;">
-                <label>دومين / IP / CIDR</label>
-                <input type="text" name="value" required
+              <div class="hub-field" style="flex:2 1 220px; margin:0;">
+                <label class="hub-field-label">دومين / IP / CIDR</label>
+                <input class="hub-input" type="text" name="value" required
                        placeholder="tiktok.com">
               </div>
-              <div class="npc-field" style="flex:1 1 120px;
-                                            margin:0;">
-                <label>الفئة</label>
-                <input type="text" name="category"
+              <div class="hub-field" style="flex:1 1 120px; margin:0;">
+                <label class="hub-field-label">الفئة</label>
+                <input class="hub-input" type="text" name="category"
                        value="custom"
                        placeholder="custom / tiktok / gambling …">
               </div>
             {% else %}
-              <div class="npc-field" style="flex:2 1 220px;
-                                            margin:0;">
-                <label>القيمة</label>
-                <input type="text" name="value" required
-                       placeholder="api.payments.test
-                                    أو 8.8.8.8">
+              <div class="hub-field" style="flex:2 1 220px; margin:0;">
+                <label class="hub-field-label">القيمة</label>
+                <input class="hub-input" type="text" name="value" required
+                       placeholder="api.payments.test أو 8.8.8.8">
               </div>
-              <div class="npc-field" style="flex:1 1 140px;
-                                            margin:0;">
-                <label>النوع</label>
-                <select name="entry_type" required>
+              <div class="hub-field" style="flex:1 1 140px; margin:0;">
+                <label class="hub-field-label">النوع</label>
+                <select class="hub-input" name="entry_type" required>
                   <option value="dst_host">dst_host</option>
                   <option value="dst_address">dst_address</option>
                   <option value="dst_address_list">
@@ -308,21 +297,19 @@
                   </option>
                 </select>
               </div>
-              <div class="npc-field" style="flex:1 1 70px;
-                                            margin:0;">
-                <label>المنفذ</label>
-                <input type="text" name="dst_port"
+              <div class="hub-field" style="flex:1 1 70px; margin:0;">
+                <label class="hub-field-label">المنفذ</label>
+                <input class="hub-input" type="text" name="dst_port"
                        placeholder="443">
               </div>
-              <div class="npc-field" style="flex:1 1 70px;
-                                            margin:0;">
-                <label>البروتوكول</label>
-                <input type="text" name="protocol"
+              <div class="hub-field" style="flex:1 1 70px; margin:0;">
+                <label class="hub-field-label">البروتوكول</label>
+                <input class="hub-input" type="text" name="protocol"
                        placeholder="tcp">
               </div>
             {% endif %}
 
-            <button class="npc-btn is-primary" type="submit">
+            <button class="hub-btn hub-btn--primary" type="submit">
               <i class="fa-solid fa-plus"></i>
               إضافة
             </button>
@@ -331,24 +318,24 @@
           {% if children %}
             <ul style="margin:0; padding:0; list-style:none;
                        max-height:280px; overflow-y:auto;
-                       border:1px solid #EEEDF3; border-radius:8px;">
+                       border:1px solid var(--hub-border); border-radius:8px;">
               {% for child in children %}
                 <li style="display:flex; align-items:center;
                            gap:8px;
                            padding:8px 10px;
-                           border-bottom:1px solid #EEEDF3;
+                           border-bottom:1px solid var(--hub-border);
                            font-size:12.5px;">
-                  <code style="background:#F4F1FE;
+                  <code style="background:var(--hub-brand-soft, #F4F1FE);
                                padding:1px 6px; border-radius:4px;
-                               color:#4036A6;">
+                               color:var(--hub-brand-ink, #4036A6);">
                     {{ child.normalized_value or child.value }}
                   </code>
                   {% if service.key == 'web_block' %}
-                    <span style="color:#6b7280;">
+                    <span class="hub-text-mute">
                       [{{ child.target_type }} / {{ child.category }}]
                     </span>
                   {% else %}
-                    <span style="color:#6b7280;">
+                    <span class="hub-text-mute">
                       [{{ child.entry_type }}{% if child.dst_port %} :{{ child.dst_port }}{% endif %}]
                     </span>
                   {% endif %}
@@ -357,8 +344,8 @@
                         action="{{ url_for('radius.npc_' ~ service.key ~ '_child_delete', policy_id=policy.id, child_id=child.id) }}"
                         style="margin-inline-start:auto;">
                     {{ csrf_token_input() | safe }}
-                    <button class="npc-btn is-danger" type="submit"
-                            style="padding:3px 8px; font-size:11.5px;">
+                    <button class="hub-btn hub-btn--danger hub-btn--icon" type="submit"
+                            title="حذف">
                       <i class="fa-regular fa-trash-can"></i>
                     </button>
                   </form>
@@ -366,14 +353,34 @@
               {% endfor %}
             </ul>
           {% else %}
-            <div style="color:#6b7280; font-size:12.5px;
-                        padding:8px 0;">
+            <div class="hub-text-mute" style="font-size:12.5px; padding:8px 0;">
               لا توجد إدخالات بعد — أضف أوّل واحد من النموذج أعلاه.
             </div>
           {% endif %}
+        {% endcall %}
         </div>
       {% endif %}
     </div>
   </div>
 </form>
+
+<style>
+  /* Toggle row: label/meta on one side, switch on the other — inside a card. */
+  .uds-toggle-row{
+    display:flex; align-items:center; gap:12px;
+    padding:8px 0;
+    border-bottom:1px dashed var(--hub-border);
+  }
+  .uds-toggle-row:last-child{ border-bottom:0; }
+  .uds-toggle-row-text{
+    display:flex; flex-direction:column; gap:2px; min-width:0;
+  }
+  .uds-toggle-row-label{
+    font-size:13px; font-weight:600; color:var(--hub-text);
+  }
+  .uds-toggle-row-meta{
+    font-size:11.5px; color:var(--hub-text-soft, #6b7280);
+  }
+  .uds-toggle-row .tsw{ margin-inline-start:auto; flex-shrink:0; }
+</style>
 {% endblock %}

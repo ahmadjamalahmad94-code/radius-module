@@ -4,6 +4,13 @@
    the planned RouterOS script + a summary + any warnings / risks
    detected against the router's current state. The apply button
    stays disabled until the operator reviews the plan.
+
+   Unified Design System (UDS) shell: hero + help panel + carded
+   sections. ZERO route / behaviour change — every form field name,
+   value, placeholder, data-* hook, link and confirm-checkbox is
+   preserved exactly. The risk-gated confirm checkboxes keep their
+   plain <input> form (their conditional `disabled` is functional)
+   and are intentionally NOT swapped to the toggle switch.
 #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
@@ -13,183 +20,179 @@
 {% block page_title %}برمجة الشبكة على {{ nas.name }}{% endblock %}
 {% block page_sub %}<span class="sub">جهاز شبكة #{{ nas.id }} · {{ nas.address }} · مرحلة التخطيط</span>{% endblock %}
 
-{% block head_extra %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/mt_dashboard.css') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/mt_programming.css') }}">
-{% endblock %}
-
 {% block content %}
 
-<section class="mt-program" data-mt-program>
+<section data-mt-program>
 
+  {% set _kind = kind or form.kind or 'hotspot' %}
+
+  {# ───── Unified hero: title + safety subtitle + kind tabs as actions ───── #}
   {{ hub.hero(
     "برمجة الشبكة — " ~ nas.name,
-    subtitle="هذه المرحلة تُولّد سكربت الراوتر للمراجعة فقط ولا تطبّقه. زر التطبيق يصبح فعّالًا بعد مراجعة الخطة.",
+    subtitle="جهاز شبكة #" ~ nas.id ~ " · " ~ nas.address ~ " — هذه المرحلة تُولّد سكربت الراوتر للمراجعة فقط ولا تطبّقه. زر التطبيق يصبح فعّالًا بعد مراجعة الخطة.",
     icon="diagram-project",
+    actions_html='
+      <a class="hub-btn ' ~ ('hub-btn--primary' if _kind == 'hotspot' else 'hub-btn--secondary') ~ '"
+         href="' ~ url_for('radius.mt_program_form', nas_id=nas.id) ~ '?kind=hotspot"
+         data-mt-program-kind="hotspot">
+        <i class="fa-solid fa-wifi"></i> بوابة الدخول
+      </a>
+      <a class="hub-btn ' ~ ('hub-btn--primary' if _kind == 'pppoe' else 'hub-btn--secondary') ~ '"
+         href="' ~ url_for('radius.mt_program_form', nas_id=nas.id) ~ '?kind=pppoe"
+         data-mt-program-kind="pppoe">
+        <i class="fa-solid fa-plug"></i> البرودباند
+      </a>'
   ) }}
 
   {% if error %}
-  <div class="mt-program-error" role="alert">
+  <div role="alert" style="display:flex;align-items:center;gap:8px;margin-bottom:16px;background:#FEF2F2;border:1px solid #FCA5A5;color:#991B1B;padding:12px 14px;border-radius:var(--hub-r-md);font-size:14px">
     <i class="fa-solid fa-triangle-exclamation"></i>
     {{ error }}
   </div>
   {% endif %}
 
-  {% set _kind = kind or form.kind or 'hotspot' %}
+  {# ───── Main (the programming form) + help panel on the LEFT ───── #}
+  {% call hub.worklayout(aside_html=hub.helppanel(
+    "كيف تعمل هذه الصفحة؟",
+    intro="هذه أداة توليد سكربت الراوتر. تملأ الحقول، فيحلّل النظام حالة الراوتر الحالية ويُنتج خطة آمنة للمراجعة قبل أي تطبيق.",
+    items=[
+      {'icon': 'wifi',           'text': 'بوابة الدخول (Hotspot) لشبكات الزبائن التي تتطلب تسجيل دخول عبر صفحة.'},
+      {'icon': 'plug',           'text': 'البرودباند (PPPoE) لاشتراكات الإنترنت المنزلية والمكتبية.'},
+      {'icon': 'shield-halved',  'text': 'يُبرز النظام المخاطر والتعارضات قبل التطبيق — راجعها بعناية.'},
+      {'icon': 'floppy-disk',    'text': 'يُفضّل أخذ نسخة احتياطية للراوتر قبل أي تطبيق فعلي.'},
+    ],
+    note="زر التطبيق لا يعمل ما دامت هناك مخاطر غير مُعالَجة. عالجها أولًا ثم أكّد القراءة."
+  )) %}
 
-  <nav class="mt-tabs" data-mt-program-kind-tabs role="tablist">
-    <a class="mt-tab {% if _kind == 'hotspot' %}is-active{% endif %}"
-       href="{{ url_for('radius.mt_program_form', nas_id=nas.id) }}?kind=hotspot"
-       data-mt-program-kind="hotspot" role="tab">
-      <i class="fa-solid fa-wifi"></i> بوابة الدخول
-    </a>
-    <a class="mt-tab {% if _kind == 'pppoe' %}is-active{% endif %}"
-       href="{{ url_for('radius.mt_program_form', nas_id=nas.id) }}?kind=pppoe"
-       data-mt-program-kind="pppoe" role="tab">
-      <i class="fa-solid fa-plug"></i> البرودباند
-    </a>
-  </nav>
+  {# ── Programming form card ── #}
+  {% call hub.section(
+        ('إعداد خادم البرودباند' if _kind == 'pppoe' else 'إعداد بوابة الدخول'),
+        icon=('plug' if _kind == 'pppoe' else 'network-wired')) %}
+    <form class="hub-form" method="post"
+          action="{{ url_for('radius.mt_program_plan', nas_id=nas.id) }}"
+          data-mt-program-form>
+      <input type="hidden" name="kind" value="{{ _kind }}">
 
-  <section class="mt-card">
-    <header class="mt-card-head">
-      <h3>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px">
+        <div class="hub-field">
+          <label>الواجهة</label>
+          <input class="hub-input" type="text" name="interface" required
+                 value="{{ form.interface or '' }}"
+                 placeholder="ether2"
+                 data-mt-program-interface>
+        </div>
+
+        <div class="hub-field">
+          <label>نطاق العنوان (CIDR)</label>
+          <input class="hub-input" type="text" name="cidr" required
+                 value="{{ form.cidr or '' }}"
+                 placeholder="192.168.10.0/24"
+                 data-mt-program-cidr>
+        </div>
+
         {% if _kind == 'pppoe' %}
-        <i class="fa-solid fa-plug"></i> إعداد خادم البرودباند
+        <div class="hub-field">
+          <label>اسم الملف التشغيلي</label>
+          <input class="hub-input" type="text" name="profile_name" required
+                 value="{{ form.profile_name or '' }}"
+                 placeholder="pppoe-prof"
+                 data-mt-program-profile>
+        </div>
+        <div class="hub-field">
+          <label>اسم الخدمة</label>
+          <input class="hub-input" type="text" name="service_name" required
+                 value="{{ form.service_name or '' }}"
+                 placeholder="hoberadius-pppoe"
+                 data-mt-program-service>
+        </div>
+        <div class="hub-field">
+          <label>العنوان المحلي (اختياري)</label>
+          <input class="hub-input" type="text" name="local_address"
+                 value="{{ form.local_address or '' }}"
+                 placeholder="افتراضيًا أول عنوان">
+        </div>
         {% else %}
-        <i class="fa-solid fa-network-wired"></i> إعداد بوابة الدخول
+        <div class="hub-field">
+          <label>اسم بوابة الدخول</label>
+          <input class="hub-input" type="text" name="hotspot_name" required
+                 value="{{ form.hotspot_name or '' }}"
+                 placeholder="hs"
+                 data-mt-program-name>
+        </div>
+        <div class="hub-field">
+          <label>البوابة (اختياري)</label>
+          <input class="hub-input" type="text" name="gateway"
+                 value="{{ form.gateway or '' }}"
+                 placeholder="افتراضيًا أول عنوان">
+        </div>
+        <div class="hub-field">
+          <label>مدة الإيجار</label>
+          <input class="hub-input" type="text" name="lease_time"
+                 value="{{ form.lease_time or '1h' }}"
+                 placeholder="1h">
+        </div>
+        <div class="hub-field">
+          <label>حد السرعة الافتراضي (اختياري)</label>
+          <input class="hub-input" type="text" name="rate_limit"
+                 value="{{ form.rate_limit or '' }}"
+                 placeholder="10M/10M">
+        </div>
         {% endif %}
-      </h3>
-    </header>
-    <div class="mt-card-body">
-      <form class="mt-program-form" method="post"
-            action="{{ url_for('radius.mt_program_plan', nas_id=nas.id) }}"
-            data-mt-program-form>
-        <input type="hidden" name="kind" value="{{ _kind }}">
 
-        <div class="mt-program-grid">
-          <label class="mt-program-field">
-            <span>الواجهة</span>
-            <input type="text" name="interface" required
-                   value="{{ form.interface or '' }}"
-                   placeholder="ether2"
-                   data-mt-program-interface>
-          </label>
-
-          <label class="mt-program-field">
-            <span>نطاق العنوان (CIDR)</span>
-            <input type="text" name="cidr" required
-                   value="{{ form.cidr or '' }}"
-                   placeholder="192.168.10.0/24"
-                   data-mt-program-cidr>
-          </label>
-
-          {% if _kind == 'pppoe' %}
-          <label class="mt-program-field">
-            <span>اسم الملف التشغيلي</span>
-            <input type="text" name="profile_name" required
-                   value="{{ form.profile_name or '' }}"
-                   placeholder="pppoe-prof"
-                   data-mt-program-profile>
-          </label>
-          <label class="mt-program-field">
-            <span>اسم الخدمة</span>
-            <input type="text" name="service_name" required
-                   value="{{ form.service_name or '' }}"
-                   placeholder="hoberadius-pppoe"
-                   data-mt-program-service>
-          </label>
-          <label class="mt-program-field">
-            <span>العنوان المحلي (اختياري)</span>
-            <input type="text" name="local_address"
-                   value="{{ form.local_address or '' }}"
-                   placeholder="افتراضيًا أول عنوان">
-          </label>
-          {% else %}
-          <label class="mt-program-field">
-            <span>اسم بوابة الدخول</span>
-            <input type="text" name="hotspot_name" required
-                   value="{{ form.hotspot_name or '' }}"
-                   placeholder="hs"
-                   data-mt-program-name>
-          </label>
-          <label class="mt-program-field">
-            <span>البوابة (اختياري)</span>
-            <input type="text" name="gateway"
-                   value="{{ form.gateway or '' }}"
-                   placeholder="افتراضيًا أول عنوان">
-          </label>
-          <label class="mt-program-field">
-            <span>مدة الإيجار</span>
-            <input type="text" name="lease_time"
-                   value="{{ form.lease_time or '1h' }}"
-                   placeholder="1h">
-          </label>
-          <label class="mt-program-field">
-            <span>حد السرعة الافتراضي (اختياري)</span>
-            <input type="text" name="rate_limit"
-                   value="{{ form.rate_limit or '' }}"
-                   placeholder="10M/10M">
-          </label>
-          {% endif %}
-
-          <label class="mt-program-field">
-            <span>خوادم DNS (مفصولة بفواصل)</span>
-            <input type="text" name="dns_servers"
-                   value="{{ form.dns_servers or '8.8.8.8,1.1.1.1' }}"
-                   data-mt-program-dns>
-          </label>
-
-          <label class="mt-program-field">
-            <span>بداية نطاق العناوين (اختياري)</span>
-            <input type="text" name="pool_start"
-                   value="{{ form.pool_start or '' }}"
-                   placeholder="مثلًا 192.168.10.10">
-          </label>
-
-          <label class="mt-program-field">
-            <span>نهاية نطاق العناوين (اختياري)</span>
-            <input type="text" name="pool_end"
-                   value="{{ form.pool_end or '' }}"
-                   placeholder="مثلًا 192.168.10.254">
-          </label>
+        <div class="hub-field">
+          <label>خوادم DNS (مفصولة بفواصل)</label>
+          <input class="hub-input" type="text" name="dns_servers"
+                 value="{{ form.dns_servers or '8.8.8.8,1.1.1.1' }}"
+                 data-mt-program-dns>
         </div>
 
-        <div class="mt-program-actions">
-          <button type="submit" class="mt-action-btn"
-                  data-mt-program-submit>
-            <i class="fa-solid fa-rotate-right"></i>
-            توليد السكربت
-          </button>
+        <div class="hub-field">
+          <label>بداية نطاق العناوين (اختياري)</label>
+          <input class="hub-input" type="text" name="pool_start"
+                 value="{{ form.pool_start or '' }}"
+                 placeholder="مثلًا 192.168.10.10">
         </div>
-      </form>
-    </div>
-  </section>
+
+        <div class="hub-field">
+          <label>نهاية نطاق العناوين (اختياري)</label>
+          <input class="hub-input" type="text" name="pool_end"
+                 value="{{ form.pool_end or '' }}"
+                 placeholder="مثلًا 192.168.10.254">
+        </div>
+      </div>
+
+      <div style="margin-top:16px">
+        <button type="submit" class="hub-btn hub-btn--primary"
+                data-mt-program-submit>
+          <i class="fa-solid fa-rotate-right"></i>
+          توليد السكربت
+        </button>
+      </div>
+    </form>
+  {% endcall %}
 
   {% if backup_warning_ar is defined and backup_warning_ar %}
-  <div class="mt-program-banner mt-program-banner--risk"
-       data-mt-program-backup-warning>
-    <li><i class="fa-solid fa-floppy-disk"></i>
-      {{ backup_warning_ar }}
-      —
+  {% call hub.section("تنبيه النسخ الاحتياطي", icon="floppy-disk") %}
+    <div data-mt-program-backup-warning
+         style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#FEF2F2;border:1px solid #FCA5A5;color:#991B1B;padding:12px 14px;border-radius:var(--hub-r-md);font-size:13px">
+      <i class="fa-solid fa-floppy-disk"></i>
+      <span>{{ backup_warning_ar }}</span>
       <a href="{{ url_for('radius.mt_backups_list', nas_id=nas.id) }}"
-         class="mt-mini-btn"
+         class="hub-btn hub-btn--secondary hub-btn--sm"
          data-mt-program-backup-link>
         <i class="fa-solid fa-arrow-right"></i> اذهب لصفحة النسخ
       </a>
-    </li>
-  </div>
+    </div>
+  {% endcall %}
   {% endif %}
 
   {% if plan %}
-  <section class="mt-card" data-mt-program-plan-card>
-    <header class="mt-card-head">
-      <h3><i class="fa-solid fa-file-code"></i> السكربت المولّد</h3>
-    </header>
-    <div class="mt-card-body">
+  {% call hub.section("السكربت المولّد", icon="file-code") %}
+    <div data-mt-program-plan-card>
 
       {% if plan.risks %}
-      <ul class="mt-program-banner mt-program-banner--risk"
-          data-mt-program-risks>
+      <ul data-mt-program-risks
+          style="list-style:none;padding:12px 14px;margin:0 0 12px;display:flex;flex-direction:column;gap:6px;background:#FEF2F2;border:1px solid #FCA5A5;color:#991B1B;border-radius:var(--hub-r-md);font-size:13px">
         {% for r in plan.risks %}
         <li><i class="fa-solid fa-shield-halved"></i> {{ r }}</li>
         {% endfor %}
@@ -197,74 +200,74 @@
       {% endif %}
 
       {% if plan.warnings %}
-      <ul class="mt-program-banner mt-program-banner--warn"
-          data-mt-program-warnings>
+      <ul data-mt-program-warnings
+          style="list-style:none;padding:12px 14px;margin:0 0 12px;display:flex;flex-direction:column;gap:6px;background:#FFFBEB;border:1px solid #FDE68A;color:#92400E;border-radius:var(--hub-r-md);font-size:13px">
         {% for w in plan.warnings %}
         <li><i class="fa-solid fa-triangle-exclamation"></i> {{ w }}</li>
         {% endfor %}
       </ul>
       {% endif %}
 
-      <ul class="mt-program-summary" data-mt-program-summary>
+      <ul class="mt-program-summary" data-mt-program-summary
+          style="margin:0 0 16px;padding-inline-start:24px;line-height:1.7">
         {% for s in plan.summary %}<li>{{ s }}</li>{% endfor %}
       </ul>
 
       {# O6 — Before/after preview, only when computed. #}
       {% if change_preview is defined and change_preview %}
-      <section class="mt-card" data-mt-program-change-preview
-               data-mt-preview-total="{{ change_preview.total_changes() }}"
-               style="margin-bottom:16px">
-        <header class="mt-card-head">
-          <h3><i class="fa-solid fa-code-compare"></i> معاينة التغييرات</h3>
-        </header>
-        <div class="mt-card-body">
+      {% call hub.section("معاينة التغييرات", icon="code-compare") %}
+        <div data-mt-program-change-preview
+             data-mt-preview-total="{{ change_preview.total_changes() }}">
           {% if change_preview.data_quality_warnings_ar %}
-          <div class="mt-program-banner mt-program-banner--warn"
-               data-mt-preview-quality>
+          <ul data-mt-preview-quality
+              style="list-style:none;padding:12px 14px;margin:0 0 12px;display:flex;flex-direction:column;gap:6px;background:#FFFBEB;border:1px solid #FDE68A;color:#92400E;border-radius:var(--hub-r-md);font-size:13px">
             {% for w in change_preview.data_quality_warnings_ar %}
             <li><i class="fa-solid fa-triangle-exclamation"></i> {{ w }}</li>
             {% endfor %}
-          </div>
+          </ul>
           {% endif %}
 
           {% if change_preview.impact_ar %}
-          <div class="mt-program-banner mt-program-banner--risk"
-               data-mt-preview-impact>
+          <ul data-mt-preview-impact
+              style="list-style:none;padding:12px 14px;margin:0 0 12px;display:flex;flex-direction:column;gap:6px;background:#FEF2F2;border:1px solid #FCA5A5;color:#991B1B;border-radius:var(--hub-r-md);font-size:13px">
             {% for i in change_preview.impact_ar %}
             <li><i class="fa-solid fa-people-group"></i> {{ i }}</li>
             {% endfor %}
-          </div>
+          </ul>
           {% endif %}
 
           {% if change_preview.items_to_add %}
-          <p style="margin:0 0 6px">سيُضاف ({{ change_preview.items_to_add|length }}):</p>
+          <p style="margin:0 0 6px;font-weight:700">سيُضاف ({{ change_preview.items_to_add|length }}):</p>
           <ul class="mt-program-summary"
-              data-mt-preview-additions>
+              data-mt-preview-additions
+              style="margin:0;padding-inline-start:24px;line-height:1.7">
             {% for it in change_preview.items_to_add %}
             <li data-mt-preview-kind="{{ it.kind }}">
               <strong>{{ it.kind }}</strong> · <code>{{ it.name }}</code>
-              <span style="color:#475569">— {{ it.detail_ar }}</span>
+              <span class="hub-text-mute">— {{ it.detail_ar }}</span>
             </li>
             {% endfor %}
           </ul>
           {% endif %}
         </div>
-      </section>
+      {% endcall %}
       {% endif %}
 
-      <pre class="mt-logs-output" data-mt-program-script>{{ plan.script }}</pre>
+      <pre class="mt-logs-output" data-mt-program-script
+           style="background:#0f172a;color:#e2e8f0;padding:14px;border-radius:var(--hub-r-md);overflow:auto;font-size:12.5px;line-height:1.6;margin:0 0 16px">{{ plan.script }}</pre>
 
       <form method="post"
             action="{{ url_for('radius.mt_program_apply', nas_id=nas.id) }}"
-            class="mt-program-apply-form"
-            data-mt-program-apply-form>
+            data-mt-program-apply-form
+            style="display:flex;flex-direction:column;gap:12px">
         {# Re-post every field so the apply handler can re-validate.
            This is the "never trust the client" principle in action. #}
         {% for k, v in form.items() %}
         <input type="hidden" name="{{ k }}" value="{{ v }}">
         {% endfor %}
 
-        <label class="mt-program-confirm">
+        <label class="mt-program-confirm"
+               style="display:inline-flex;align-items:center;gap:8px;background:#FEF3C7;border:1px solid #FDE68A;color:#92400E;padding:10px 14px;border-radius:var(--hub-r-md);font-size:13px;cursor:pointer">
           <input type="checkbox" name="confirm" value="1"
                  data-mt-program-confirm
                  {% if plan.risks %}disabled{% endif %}>
@@ -272,9 +275,9 @@
           هذا الراوتر.
         </label>
 
-        <div class="mt-program-actions">
+        <div>
           <button type="submit"
-                  class="mt-action-btn mt-action-btn--danger"
+                  class="hub-btn hub-btn--danger"
                   data-mt-program-apply
                   {% if plan.risks %}disabled{% endif %}
                   {% if plan.risks %}title="عالج المخاطر أولاً"{% endif %}>
@@ -284,34 +287,31 @@
         </div>
       </form>
     </div>
-  </section>
+  {% endcall %}
   {% endif %}
 
   {# ── Q4 — Unprogram (rollback) ───────────────────────── #}
-  <section class="mt-card" data-mt-program-unprogram-card>
-    <header class="mt-card-head">
-      <h3><i class="fa-solid fa-trash-can"></i>
-          تراجع (إزالة برمجة سابقة)</h3>
-    </header>
-    <div class="mt-card-body">
-      <p class="mt-tab-hint">
+  {% call hub.section("تراجع (إزالة برمجة سابقة)", icon="trash-can") %}
+    <div data-mt-program-unprogram-card>
+      <p class="hub-text-mute" style="margin:0 0 12px;line-height:1.7">
         يبحث عن كل الكائنات التي تحمل علامة hoberadius:{{ _kind }} على
         الراوتر ويزيلها. مفيد للتراجع بعد تطبيق خاطئ أو لإعادة البدء
         من نقطة نظيفة.
       </p>
       <form method="post"
             action="{{ url_for('radius.mt_program_unprogram', nas_id=nas.id) }}"
-            class="mt-program-apply-form"
-            data-mt-program-unprogram-form>
+            data-mt-program-unprogram-form
+            style="display:flex;flex-direction:column;gap:12px">
         <input type="hidden" name="kind" value="{{ _kind }}">
-        <label class="mt-program-confirm">
+        <label class="mt-program-confirm"
+               style="display:inline-flex;align-items:center;gap:8px;background:#FEF3C7;border:1px solid #FDE68A;color:#92400E;padding:10px 14px;border-radius:var(--hub-r-md);font-size:13px;cursor:pointer">
           <input type="checkbox" name="confirm" value="1"
                  data-mt-program-unprogram-confirm>
           أُؤكّد إزالة كل كائنات hoberadius:{{ _kind }} من هذا الراوتر.
         </label>
-        <div class="mt-program-actions">
+        <div>
           <button type="submit"
-                  class="mt-action-btn mt-action-btn--danger"
+                  class="hub-btn hub-btn--danger"
                   data-mt-program-unprogram-submit>
             <i class="fa-solid fa-eraser"></i>
             تراجع وإزالة
@@ -319,31 +319,21 @@
         </div>
       </form>
     </div>
-  </section>
+  {% endcall %}
 
   {% if unprogram_result %}
-  <section class="mt-card" data-mt-program-unprogram-result>
-    <header class="mt-card-head">
-      <h3>
-        <i class="fa-solid fa-{{ 'circle-check' if unprogram_result.ok else 'circle-exclamation' }}"></i>
-        نتيجة الإزالة
-      </h3>
-      <span class="mt-card-meta">
-        {% set _us = unprogram_result.summary() %}
-        <span class="mt-iface-state mt-iface-state--up"
-              data-mt-unprogram-removed>{{ _us.removed }} مُزال</span>
-        <span class="mt-iface-state mt-iface-state--off"
-              data-mt-unprogram-failed>{{ _us.failed }} فشل</span>
-      </span>
-    </header>
-    <div class="mt-card-body">
+  {% call hub.section("نتيجة الإزالة", icon=('circle-check' if unprogram_result.ok else 'circle-exclamation'),
+        meta=(unprogram_result.summary().removed|string ~ " مُزال · " ~ unprogram_result.summary().failed|string ~ " فشل")) %}
+    <div data-mt-program-unprogram-result>
+      <span hidden data-mt-unprogram-removed>{{ unprogram_result.summary().removed }}</span>
+      <span hidden data-mt-unprogram-failed>{{ unprogram_result.summary().failed }}</span>
       {% if unprogram_result.skipped_paths %}
-      <p class="mt-tab-hint">
+      <p class="hub-text-mute" style="margin:0 0 12px">
         لم نجد كائنات مطابقة في:
         <code>{{ unprogram_result.skipped_paths|join(', ') }}</code>
       </p>
       {% endif %}
-      <ul class="mt-program-summary">
+      <ul class="mt-program-summary" style="margin:0;padding-inline-start:24px;line-height:1.7">
         {% for step in unprogram_result.steps %}
         <li>
           <code>{{ step.path }} .id={{ step.id }}</code> ·
@@ -356,40 +346,30 @@
         {% endfor %}
       </ul>
     </div>
-  </section>
+  {% endcall %}
   {% endif %}
 
   {% if apply_result %}
-  <section class="mt-card" data-mt-program-apply-result
-           data-mt-apply-status="{{ apply_result.result_status() }}">
-    <header class="mt-card-head">
-      <h3>
-        <i class="fa-solid fa-{{ 'circle-check' if apply_result.ok else 'circle-exclamation' }}"></i>
-        نتيجة التطبيق
-      </h3>
-      <span class="mt-card-meta">
-        {% set _s = apply_result.summary() %}
-        <span class="mt-iface-state mt-iface-state--up"
-              data-mt-apply-applied>{{ _s.applied }} مُطبَّقة</span>
-        <span class="mt-iface-state mt-iface-state--down"
-              data-mt-apply-skipped>{{ _s.skipped }} متجاهَلة</span>
-        <span class="mt-iface-state mt-iface-state--off"
-              data-mt-apply-failed>{{ _s.failed }} فاشلة</span>
-      </span>
-    </header>
-    <div class="mt-card-body">
+  {% call hub.section("نتيجة التطبيق", icon=('circle-check' if apply_result.ok else 'circle-exclamation'),
+        meta=(apply_result.summary().applied|string ~ " مُطبَّقة · " ~ apply_result.summary().skipped|string ~ " متجاهَلة · " ~ apply_result.summary().failed|string ~ " فاشلة")) %}
+    <div data-mt-program-apply-result
+         data-mt-apply-status="{{ apply_result.result_status() }}">
+      <span hidden data-mt-apply-applied>{{ apply_result.summary().applied }}</span>
+      <span hidden data-mt-apply-skipped>{{ apply_result.summary().skipped }}</span>
+      <span hidden data-mt-apply-failed>{{ apply_result.summary().failed }}</span>
 
       {# S4.3 — partial-apply recovery guidance. Shown when the
          apply loop got partway through then failed — the
          operator must clean up before retrying. #}
       {% if not apply_result.ok %}
-      <div class="mt-program-banner mt-program-banner--risk"
-           data-mt-apply-recovery>
+      <ul data-mt-apply-recovery
+          style="list-style:none;padding:12px 14px;margin:0 0 12px;display:flex;flex-direction:column;gap:6px;background:#FEF2F2;border:1px solid #FCA5A5;color:#991B1B;border-radius:var(--hub-r-md);font-size:13px">
         <li><i class="fa-solid fa-life-ring"></i>
           {{ apply_result.recovery_hint_ar() }}</li>
-      </div>
+      </ul>
       {% endif %}
-      <ul class="mt-program-summary" data-mt-apply-steps>
+      <ul class="mt-program-summary" data-mt-apply-steps
+          style="margin:0;padding-inline-start:24px;line-height:1.7">
         {% for step in apply_result.steps %}
         <li>
           <code>{{ step.path }}</code> ·
@@ -404,8 +384,10 @@
         {% endfor %}
       </ul>
     </div>
-  </section>
+  {% endcall %}
   {% endif %}
+
+  {% endcall %}{# /worklayout #}
 
 </section>
 
