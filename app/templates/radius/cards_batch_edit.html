@@ -190,14 +190,14 @@
           <input class="hub-input" type="number" min="1" max="50" name="device_count"
                  value="{{ form.get('device_count') or 1 }}">
         </div>
-        <div class="hub-field">
-          <label class="hub-field-label">وضع المدة</label>
-          {% set dm = form.get('duration_mode') or 'time_unit' %}
-          <select class="hub-select" name="duration_mode">
-            <option value="time_unit" {% if dm == 'time_unit' %}selected{% endif %}>حسب الوحدة</option>
-            <option value="seconds"   {% if dm == 'seconds' %}selected{% endif %}>بالثواني</option>
-          </select>
-        </div>
+        {# #20: «وضع المدة» dropdown removed — the duration mode is now driven
+           purely by «العد من أول اتصال» below:
+             • ON  → Mode B: wall-clock countdown from first login.
+             • OFF → Mode A: usage-seconds budget (burns only while online).
+           duration_mode is carried as a hidden field kept in sync by JS so any
+           legacy backend reads still receive a consistent value. #}
+        <input type="hidden" name="duration_mode"
+               value="{{ form.get('duration_mode') or 'time_unit' }}" data-duration-mode>
       </div>
 
       <div class="hub-form-row">
@@ -220,13 +220,14 @@
 
     {% call hub.fieldset("خيارات تشغيل", icon="sliders") %}
       <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(240px,1fr));gap:10px;padding:6px 0">
+        {# #21: «دخول برقم الجوال فقط» (phone_only_login) removed from the UI.
+           Backend reads it via _form_bool → defaults to off when absent. #}
         {% set opts = [
           ('count_from_first_connect',    'العد من أول اتصال'),
           ('count_by_seconds',            'العد بالثواني'),
           ('auto_renew_after_first_use',  'تجديد تلقائي بعد أول استخدام'),
           ('switch_to_mac_on_connect',    'ربط MAC عند الاتصال'),
           ('lock_to_mac_on_close',        'قفل MAC عند الإغلاق'),
-          ('phone_only_login',            'دخول برقم الجوال فقط'),
         ] %}
         {% for nm, lbl in opts %}
           <div style="display:flex;align-items:center;gap:10px;padding:4px 0">
@@ -251,5 +252,19 @@
     {{ hub.btn("حفظ التعديلات", icon="floppy-disk", variant="primary", type="submit") }}
   </div>
 </form>
+
+<script>
+// #20: keep the hidden duration_mode in sync with the «العد من أول اتصال»
+// toggle. ON → Mode B (wall-clock from first login) maps to 'time_unit';
+// OFF → Mode A (usage-seconds budget) maps to 'seconds'.
+(function(){
+  var modeHidden = document.querySelector('[data-duration-mode]');
+  var cfc = document.querySelector('[name="count_from_first_connect"]');
+  if (!modeHidden || !cfc) return;
+  function sync(){ modeHidden.value = cfc.checked ? 'time_unit' : 'seconds'; }
+  cfc.addEventListener('change', sync);
+  sync();
+})();
+</script>
 
 {% endblock %}

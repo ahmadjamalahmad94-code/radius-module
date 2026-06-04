@@ -220,7 +220,17 @@
     gap: 10px;
     justify-content: flex-end;
     flex-wrap: wrap;
-    padding: 12px 4px 0;
+    /* #4: float the save/cancel bar to the bottom so it stays visible while
+       editing fields near the top — no need to scroll all the way down. */
+    position: sticky;
+    bottom: 0;
+    z-index: 30;
+    padding: 12px 12px;
+    margin-top: 12px;
+    background: var(--hub-bg-card, #fff);
+    border-top: 1px solid var(--hub-border, #e2e8f0);
+    border-radius: 0 0 var(--hub-r-lg, 14px) var(--hub-r-lg, 14px);
+    box-shadow: 0 -6px 18px rgba(15, 23, 42, .07);
   }
 
   /* ── Account-section additions (B2 redesign) ─────────────────── */
@@ -435,6 +445,25 @@
     gap: 8px;
     align-items: center;
   }
+  /* #5: labeled variant adds an optional device-name input between the
+     MAC field and the add button. */
+  .uf-mac-add--labeled{
+    grid-template-columns: minmax(160px, 300px) minmax(120px, 220px) 42px;
+  }
+  @media (max-width: 640px){
+    .uf-mac-add--labeled{ grid-template-columns: 1fr 1fr 42px; }
+  }
+  @media (max-width: 480px){
+    .uf-mac-add--labeled{ grid-template-columns: 1fr 42px; }
+    .uf-mac-add--labeled [data-mac-label-input]{ grid-column: 1 / -1; }
+  }
+  /* Optional device-name tag shown inside each MAC pill. */
+  .uf-mac-pill .uf-mac-pill-label{
+    font-weight: 700;
+    color: var(--hub-brand-ink);
+    font-variant-numeric: normal;
+  }
+  .uf-mac-pill .uf-mac-pill-label::before{ content: "· "; color: var(--hub-text-mute); }
   .uf-icon-btn{
     width: 42px;
     height: 42px;
@@ -768,6 +797,36 @@
     35%  { transform: scale(1.06); box-shadow: 0 0 0 6px rgba(107, 90, 237, .12); }
     100% { transform: scale(1); box-shadow: 0 1px 3px rgba(20, 18, 50, .04); }
   }
+
+  /* ── «خيارات متقدمة» nested collapsible block (declutter, #36) ──
+     A clickable header toggles an inner div. Moved fields keep their
+     inputs in the DOM (just hidden when collapsed) so the POST body is
+     unchanged and the backend route never KeyErrors. */
+  .uf-adv-block{
+    grid-column: 1 / -1;
+    border: 1px dashed var(--hub-border-strong, #cbd5e1);
+    border-radius: var(--hub-r-md, 10px);
+    background: var(--hub-bg-soft, #f8fafc);
+    overflow: hidden;
+    margin-top: 4px;
+  }
+  .uf-adv-head{
+    display:flex; align-items:center; gap:10px;
+    padding: 11px 14px;
+    cursor:pointer; user-select:none;
+    font-size: 12.5px; font-weight: 800; color: var(--hub-text-soft);
+  }
+  .uf-adv-head i.uf-adv-caret{
+    color: var(--hub-text-mute);
+    transition: transform var(--hub-anim-fast) var(--hub-ease);
+    margin-inline-start:auto;
+  }
+  .uf-adv-block.is-open .uf-adv-head i.uf-adv-caret{ transform: rotate(180deg); }
+  .uf-adv-body{ display:none; padding: 4px 14px 14px; }
+  .uf-adv-block.is-open .uf-adv-body{ display:block; }
+  .uf-adv-grid{ display:grid; gap:12px; grid-template-columns: repeat(4, 1fr); }
+  @media (max-width:920px){ .uf-adv-grid{ grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width:560px){ .uf-adv-grid{ grid-template-columns: 1fr; } }
 </style>
 {% endblock %}
 
@@ -1061,7 +1120,8 @@
             <label>مدة السرعة المؤقتة</label>
             <div class="uf-inline-control">
               {{ unit_input_picker(name="temporary_speed_duration_minutes", value=sub.temporary_speed_duration_minutes or 30, kind="time", units=["min","hr"]) }}
-              <button type="button" class="uf-chip-btn" data-temp-duration-preset="30">30 دقيقة</button>
+              {# «30 دقيقة» quick-preset button removed per request #3.
+                 The JS binding (tempPreset30) is null-guarded, so this is safe. #}
             </div>
           </div>
           <div class="uf-field">
@@ -1423,34 +1483,51 @@
         <i class="fa-solid fa-chevron-down uf-section-toggle"></i>
       </header>
       <div class="uf-section-body">
+        {# #36: keep the core quota/time fields visible with a short helper
+           line under each. The less-common controls (وقت الاتصال اليومي +
+           التوزيع المتساوي) move into «خيارات متقدمة» (collapsed). All
+           inputs stay in the DOM so the POST body is unchanged. #}
         <div class="uf-grid">
-          <div class="uf-field"><label>إجمالي وقت الاتصال</label>
-            {{ unit_input_picker(name="total_connection_time_min", value=sub.total_connection_time_min or 0, kind="time", units=["min","hr","day"]) }}
-            <div class="help">0 = بلا حد خاص.</div></div>
-          <div class="uf-field"><label>وقت الاتصال اليومي</label>
-            {{ unit_input_picker(name="daily_connection_time_min", value=sub.daily_connection_time_min or 0, kind="time", units=["min","hr"]) }}
-          </div>
+          <div class="uf-field full"><label>كوتا إجمالية (مدمجة)</label>
+            {{ unit_input_picker(name="combined_quota_mb", value=sub.combined_quota_mb or 0, kind="quota", units=["MB","GB"]) }}
+            <div class="help">إجمالي البيانات المسموحة للحساب؛ إن حُدِّدت تحلّ محل كوتا التنزيل/الرفع المنفصلة. 0 = غير محدودة.</div></div>
           <div class="uf-field"><label>كوتا التنزيل</label>
             {{ unit_input_picker(name="download_quota_mb", value=sub.download_quota_mb or 0, kind="quota", units=["MB","GB"]) }}
-            <div class="help">0 = غير محدودة.</div></div>
+            <div class="help">حدّ التنزيل المنفصل للحساب. 0 = غير محدودة.</div></div>
           <div class="uf-field"><label>كوتا الرفع</label>
             {{ unit_input_picker(name="upload_quota_mb", value=sub.upload_quota_mb or 0, kind="quota", units=["MB","GB"]) }}
-          </div>
-          <div class="uf-field full"><label>كوتا مدمجة</label>
-            {{ unit_input_picker(name="combined_quota_mb", value=sub.combined_quota_mb or 0, kind="quota", units=["MB","GB"]) }}
-            <div class="help">إن حُدِّدت، تحلّ محل الكوتا المنفصلة.</div></div>
-          <div class="uf-field"><label>تطبيق حد وقت الاتصال</label>
-            {{ toggle_switch(name="connection_time_limit_enabled", checked=sub.connection_time_limit_enabled, id="ctl") }}
-            <div class="help">عند التفعيل، يُطبَّق إجمالي وقت الاتصال والوقت اليومي أعلاه. لو معطَّل، يُتجاهَل الحدّ حتى لو وُضعت أرقام.</div></div>
+            <div class="help">حدّ الرفع المنفصل للحساب. 0 = غير محدودة.</div></div>
+          <div class="uf-field"><label>إجمالي وقت الاتصال</label>
+            {{ unit_input_picker(name="total_connection_time_min", value=sub.total_connection_time_min or 0, kind="time", units=["min","hr","day"]) }}
+            <div class="help">أقصى وقت اتصال إجمالي للحساب. 0 = بلا حد خاص.</div></div>
           <div class="uf-field"><label>تطبيق حد الكوتا</label>
             {{ toggle_switch(name="quota_limit_enabled", checked=sub.quota_limit_enabled, id="ql") }}
-            <div class="help">عند التفعيل، تُطبَّق كوتا التنزيل/الرفع/المدمجة. لو معطَّل، يُسمح باستخدام غير محدود.</div></div>
-          <div class="uf-field"><label>توزيع متساوٍ للتنزيل</label>
-            {{ toggle_switch(name="equal_share_download", checked=sub.equal_share_download, id="esd") }}
-            <div class="help">يتقاسم المشترك سرعة التنزيل بالتساوي بين كل جلساته المتصلة.</div></div>
-          <div class="uf-field"><label>توزيع متساوٍ للرفع</label>
-            {{ toggle_switch(name="equal_share_upload", checked=sub.equal_share_upload, id="esu") }}
-            <div class="help">يتقاسم المشترك سرعة الرفع بالتساوي بين كل جلساته المتصلة.</div></div>
+            <div class="help">عند التفعيل تُطبَّق كوتا التنزيل/الرفع/المدمجة؛ لو معطَّل يُسمح باستخدام غير محدود.</div></div>
+          <div class="uf-field"><label>تطبيق حد وقت الاتصال</label>
+            {{ toggle_switch(name="connection_time_limit_enabled", checked=sub.connection_time_limit_enabled, id="ctl") }}
+            <div class="help">عند التفعيل يُطبَّق وقت الاتصال أعلاه؛ لو معطَّل يُتجاهَل الحدّ حتى لو وُضعت أرقام.</div></div>
+
+          {# ── خيارات متقدمة (الحصة والوقت) — مطوية، الحقول تبقى في DOM ── #}
+          <div class="uf-adv-block" data-adv>
+            <div class="uf-adv-head" data-adv-toggle>
+              <i class="fa-solid fa-sliders"></i>
+              <span>خيارات متقدمة</span>
+              <i class="fa-solid fa-chevron-down uf-adv-caret"></i>
+            </div>
+            <div class="uf-adv-body">
+              <div class="uf-adv-grid">
+                <div class="uf-field"><label>وقت الاتصال اليومي</label>
+                  {{ unit_input_picker(name="daily_connection_time_min", value=sub.daily_connection_time_min or 0, kind="time", units=["min","hr"]) }}
+                  <div class="help">أقصى وقت اتصال مسموح في اليوم الواحد. 0 = بلا حد.</div></div>
+                <div class="uf-field"><label>توزيع متساوٍ للتنزيل</label>
+                  {{ toggle_switch(name="equal_share_download", checked=sub.equal_share_download, id="esd") }}
+                  <div class="help">يتقاسم المشترك سرعة التنزيل بالتساوي بين كل جلساته المتصلة.</div></div>
+                <div class="uf-field"><label>توزيع متساوٍ للرفع</label>
+                  {{ toggle_switch(name="equal_share_upload", checked=sub.equal_share_upload, id="esu") }}
+                  <div class="help">يتقاسم المشترك سرعة الرفع بالتساوي بين كل جلساته المتصلة.</div></div>
+              </div>
+            </div>
+          </div>
           <div class="uf-field full">
             {# Replaces the legacy day-chips with the reusable access-schedule
                picker (SERVICES_COOKBOOK §17). Submits a JSON via
@@ -1478,13 +1555,21 @@
           <div class="uf-mac-manager" data-mac-manager>
             <input type="hidden" name="mac_lock" value="{{ sub.mac_lock or '' }}" data-mac-hidden>
             <input type="hidden" name="allowed_macs" value="{{ sub.allowed_macs or '' }}" data-mac-legacy-hidden>
+            {# #5: OPTIONAL per-MAC label (e.g. «جوال»، «لابتوب»). Stored as a
+               JSON map {MAC: label} in a parallel optional field
+               `mac_lock_labels`. The mac_lock value stays a plain comma-list so
+               the backend is unaffected. If the backend has no column for the
+               labels field it simply ignores the extra POST key — the UI still
+               degrades gracefully (labels just won't persist). #}
+            <input type="hidden" name="mac_lock_labels" value="{{ sub.mac_lock_labels or '' }}" data-mac-labels-hidden>
             <div class="uf-field">
-              <label>ماك ادرس</label>
-              <div class="uf-mac-add">
+              <label>ماك ادرس <span class="hub-text-mute" style="font-weight:600">(مع اسم اختياري للجهاز)</span></label>
+              <div class="uf-mac-add uf-mac-add--labeled">
                 <span class="uf-net-input"><input class="hub-input" type="text" data-mac-input placeholder="AA:BB:CC:DD:EE:FF"><i class="fa-solid fa-laptop"></i></span>
+                <input class="hub-input" type="text" data-mac-label-input placeholder="اسم الجهاز (جوال، لابتوب…)" maxlength="40">
                 <button type="button" class="uf-icon-btn" data-mac-add title="إضافة MAC"><i class="fa-solid fa-plus"></i></button>
               </div>
-              <div class="help">الماكات الموجودة هنا هي المسموحة بالدخول لهذا الحساب.</div>
+              <div class="help">الماكات الموجودة هنا هي المسموحة بالدخول لهذا الحساب. اسم الجهاز اختياري ويساعدك على التمييز بين الأجهزة.</div>
             </div>
             <div class="uf-mac-alert" data-mac-alert role="alert" aria-live="polite"></div>
             <div class="uf-mac-list" data-mac-list></div>
@@ -1624,6 +1709,14 @@
         card.classList.contains('is-collapsed') ? 'collapsed' : 'open'); } catch(_) {}
     });
   });
+  // «خيارات متقدمة» nested toggles — collapsed by default. Inputs stay in
+  // the DOM whether open or closed, so the POST body never changes (#36).
+  document.querySelectorAll('.uf-adv-block').forEach(function(block){
+    var head = block.querySelector('[data-adv-toggle]');
+    if (head) head.addEventListener('click', function(){
+      block.classList.toggle('is-open');
+    });
+  });
   // Day chips were replaced by the access_schedule_picker partial,
   // which owns its own state + hidden input. Nothing to wire here.
   // Smooth-scroll nav with auto-open of collapsed targets
@@ -1718,14 +1811,15 @@
     return h > 0 ? (h + ':' + pad(m) + ':' + pad(s)) : (pad(m) + ':' + pad(s));
   }
   function getTemporaryEndDate(){
+    // #50a/#50b: authoritative end comes from the SERVER-rendered window
+    // (temporary_speed_to, or temporary_speed_from + duration). NEVER fall back
+    // to updated_at — that made the countdown jump when the row was touched.
     var savedEnd = tempToHidden ? parseLocalDate(tempToHidden.value) : null;
     if (savedEnd) return savedEnd;
     var duration = parseInt((tempDurationHidden && tempDurationHidden.value) || '0', 10) || 0;
     if (duration <= 0) return null;
     var savedStart = tempFromHidden ? parseLocalDate(tempFromHidden.value) : null;
     if (savedStart) return new Date(savedStart.getTime() + duration * 60 * 1000);
-    var updatedAt = parseLocalDate(tempUpdatedAt);
-    if (updatedAt) return new Date(updatedAt.getTime() + duration * 60 * 1000);
     return null;
   }
   function ensureTemporarySpeedWindow(forceNew){
@@ -1802,33 +1896,34 @@
   }
   if (tempSpeed) {
     tempSpeed.addEventListener('change', function(){
-      if (tempSpeed.checked && !tempInitialFrom && !tempInitialTo) {
-        tempWindowDirty = true;
-        ensureTemporarySpeedWindow(true);
+      // #50b: enabling temp speed does NOT stamp a client-side window. The
+      // server computes the authoritative from/to on save; until then the
+      // countdown shows the "save to start" state. Disabling clears the window
+      // (the save delegates a cancel to the shared service).
+      if (!tempSpeed.checked) {
+        if (tempFromHidden) tempFromHidden.value = '';
+        if (tempToHidden) tempToHidden.value = '';
+        tempInitialFrom = '';
+        tempInitialTo = '';
       }
       syncTemporarySpeedControls();
     });
-    if (tempDurationHidden) {
-      tempDurationHidden.addEventListener('input', function(){
-        if (!tempReady) return;   // ignore the picker's initial value-sync
-        resetTemporaryWindowForNewDuration();
-        startTemporaryCountdown();
-      });
-      tempDurationHidden.addEventListener('change', function(){
-        if (!tempReady) return;
-        resetTemporaryWindowForNewDuration();
-        startTemporaryCountdown();
-      });
-    }
+    // #50b: do NOT recompute/clear the window or restart the countdown when the
+    // operator merely edits the duration. The window is owned by the SERVER
+    // (services/temp_speed.apply_temp_speed runs on SAVE and returns the
+    // authoritative from/to). Editing the duration only changes what will be
+    // submitted; the live countdown keeps running off the server value until
+    // the save re-applies it. This also lets the operator edit an ACTIVE temp
+    // speed and re-save without first cancelling + re-enabling.
     document.querySelectorAll('[name="temporary_download_speed_kbps"], [name="temporary_upload_speed_kbps"]').forEach(function(input){
       input.addEventListener('input', copyTemporarySpeedsToEffectiveFields);
       input.addEventListener('change', copyTemporarySpeedsToEffectiveFields);
     });
     if (tempPreset30) {
       tempPreset30.addEventListener('click', function(){
+        // #50b: only set the duration that will be submitted — the server
+        // recomputes the authoritative window on save.
         setUnitPickerValue('temporary_speed_duration_minutes', 30, 'min', 30);
-        resetTemporaryWindowForNewDuration();
-        startTemporaryCountdown();
       });
     }
     if (tempCancelBtn) {
@@ -1852,7 +1947,11 @@
   nameParts.forEach(function(input){ input.addEventListener('input', syncNameFields); });
   if (form) form.addEventListener('submit', syncNameFields);
   if (form) form.addEventListener('submit', function(){
-    ensureTemporarySpeedWindow(true);
+    // #50b: the SERVER owns the temp-speed window (apply_temp_speed runs on
+    // save and returns the authoritative from/to). The client must NOT stamp a
+    // window from its own clock — it only ensures the effective speed columns
+    // mirror the temp values for a consistent POST. The hidden from/to are left
+    // exactly as the server last rendered them (or empty for a brand-new one).
     copyTemporarySpeedsToEffectiveFields();
   });
 
@@ -1860,13 +1959,24 @@
   document.querySelectorAll('[data-mac-manager]').forEach(function(root){
     var hidden = root.querySelector('[data-mac-hidden]');
     var legacyHidden = root.querySelector('[data-mac-legacy-hidden]');
+    var labelsHidden = root.querySelector('[data-mac-labels-hidden]');
     var input = root.querySelector('[data-mac-input]');
+    var labelInput = root.querySelector('[data-mac-label-input]');
     var addBtn = root.querySelector('[data-mac-add]');
     var list = root.querySelector('[data-mac-list]');
     var alertBox = root.querySelector('[data-mac-alert]');
     var inputWrap = input ? input.closest('.uf-net-input') : null;
     if (!hidden || !input || !addBtn || !list) return;
     var macs = [];
+    // #5: MAC → optional device-name label map (parallel to `macs`).
+    var labels = {};
+    (function(){
+      if (!labelsHidden || !labelsHidden.value) return;
+      try {
+        var parsed = JSON.parse(labelsHidden.value);
+        if (parsed && typeof parsed === 'object') labels = parsed;
+      } catch(_){ /* tolerate malformed/legacy values */ }
+    })();
     function showMacAlert(message){
       if (!alertBox) return;
       alertBox.textContent = message;
@@ -1891,10 +2001,21 @@
         if (mac && macs.indexOf(mac) === -1) macs.push(mac);
       });
     }
+    function syncLabels(){
+      // Only keep labels for MACs that still exist; drop the rest.
+      var clean = {};
+      macs.forEach(function(m){ if (labels[m]) clean[m] = labels[m]; });
+      labels = clean;
+      if (labelsHidden){
+        var hasAny = Object.keys(labels).length > 0;
+        labelsHidden.value = hasAny ? JSON.stringify(labels) : '';
+      }
+    }
     function sync(){
       var joined = macs.join(',');
       hidden.value = joined;
       if (legacyHidden) legacyHidden.value = joined;
+      syncLabels();
       list.innerHTML = '';
       if (!macs.length) {
         var empty = document.createElement('span');
@@ -1908,15 +2029,22 @@
         pill.className = 'uf-mac-pill';
         var text = document.createElement('span');
         text.textContent = mac;
+        pill.appendChild(text);
+        if (labels[mac]) {
+          var lbl = document.createElement('span');
+          lbl.className = 'uf-mac-pill-label';
+          lbl.textContent = labels[mac];
+          pill.appendChild(lbl);
+        }
         var remove = document.createElement('button');
         remove.type = 'button';
         remove.title = 'حذف MAC';
         remove.innerHTML = '<i class="fa-solid fa-minus"></i>';
         remove.addEventListener('click', function(){
           macs = macs.filter(function(item){ return item !== mac; });
+          delete labels[mac];
           sync();
         });
-        pill.appendChild(text);
         pill.appendChild(remove);
         list.appendChild(pill);
       });
@@ -1935,13 +2063,23 @@
       }
       clearMacAlert();
       macs.push(mac);
+      // Capture the optional device-name label for this MAC.
+      var labelVal = labelInput ? (labelInput.value || '').trim() : '';
+      if (labelVal) labels[mac] = labelVal;
       input.value = '';
+      if (labelInput) labelInput.value = '';
       sync();
     }
     ingest(hidden.value);
     if (legacyHidden) ingest(legacyHidden.value);
     addBtn.addEventListener('click', addCurrent);
     input.addEventListener('keydown', function(e){
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        addCurrent();
+      }
+    });
+    if (labelInput) labelInput.addEventListener('keydown', function(e){
       if (e.key === 'Enter') {
         e.preventDefault();
         addCurrent();

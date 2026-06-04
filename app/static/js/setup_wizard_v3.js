@@ -25,6 +25,10 @@
     runId: 0,
     currentStep: 1,
     scripts: {},   // step => script text
+    // #45: RouterOS version + derived binding (wizard-side selection only).
+    // v7 → WireGuard management; v6 → SSTP management. Defaults to v7.
+    routerosVersion: "7",
+    bindingType: "wireguard",
   };
 
   // ─── Helpers ─────────────────────────────────────────
@@ -191,6 +195,22 @@
     const vlanMode = getValue("[data-swz-vlan-mode]");
     const staticBox = root.querySelector(".swz-vlan-static");
     if (staticBox) staticBox.hidden = vlanMode !== "static";
+  }
+
+  // #45: read the chosen RouterOS version, derive the binding type, and update
+  // the hint. v7 → WireGuard; v6 → SSTP. The actual option set lives in the VPN
+  // backend; the wizard only carries this selection into the generate-script
+  // call so the backend picks the matching binding.
+  function syncRosVersion() {
+    const version = getChecked("ros_version") || "7";
+    state.routerosVersion = version;
+    state.bindingType = version === "6" ? "sstp" : "wireguard";
+    const hint = root.querySelector("[data-swz-binding-hint]");
+    if (hint) {
+      hint.textContent = version === "6"
+        ? "سيُولّد سكربت SSTP المناسب لإصدار 6."
+        : "سيُولّد سكربت WireGuard المناسب لإصدار 7.";
+    }
   }
 
   function syncServiceCards() {
@@ -361,10 +381,16 @@
     setBusy(btn, true);
     try {
       await ensureRun();
+      // #45: carry the operator-chosen RouterOS version + derived binding to
+      // the binding step. The VPN backend decides the actual option set; we
+      // only tell it which one the operator picked (v7→WireGuard, v6→SSTP).
       const data = await api(
         "POST",
         `/runs/${state.runId}/generate-script`,
-        {},
+        {
+          routeros_version: state.routerosVersion,
+          binding_type: state.bindingType,
+        },
       );
       // The service returns the .rsc text under `script`. Some
       // older callers used `script_body` — accept both.
@@ -956,6 +982,8 @@
       syncSourceFields();
     } else if (e.target.matches("[data-swz-service-toggle]")) {
       syncServiceCards();
+    } else if (e.target.matches("[data-swz-ros-version]")) {
+      syncRosVersion();
     }
   });
 
@@ -1033,5 +1061,6 @@
 
   syncSourceFields();
   syncServiceCards();
+  syncRosVersion();   // #45: prime binding type from the default (v7).
   showStep(1);
 })();

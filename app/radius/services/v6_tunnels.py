@@ -533,6 +533,212 @@ def render_v6_pptp_traffic_script(plan: dict) -> str:
     return "\n".join(lines)
 
 
+# ─────────────────────────────────────────────────────────────────────────
+# IPsec traffic tunnel (OPTIONAL) — the RECOMMENDED v6 encrypted exit.
+#
+# Tunnel-role architecture: on RouterOS 6 the exit / IP-change role is served
+# by **pure IPsec** (encrypted, recommended) or PPTP (legacy alternative) —
+# NOT L2TP. This is a policy-based IPsec tunnel: a phase-1 peer to the VPS plus
+# phase-2 policies that encrypt selected source traffic toward the VPS, which
+# performs the SNAT/exit. Being policy-based it never installs a routing-table
+# default route, so it cannot clash with the SSTP management tunnel; the
+# ``full_tunnel`` (0.0.0.0/0) policy is still gated behind explicit confirmation
+# because it captures all traffic.
+# ─────────────────────────────────────────────────────────────────────────
+
+IPSEC_TRAFFIC_COMMENT = "HobeRadius managed: IPsec traffic tunnel"
+IPSEC_PROPOSAL_NAME = "hoberadius-ipsec-exit"
+
+
+def build_v6_ipsec_traffic_plan(router: dict, settings: dict) -> dict:
+    """Build the OPTIONAL pure-IPsec traffic/exit-tunnel plan for a v6 router.
+
+    ``settings`` : {ipsec_server_host (or l2tp_server_host fallback),
+                    ipsec_secret, traffic_mode, selected_pool?,
+                    full_tunnel_confirmed?bool, source_clients?[]}
+
+    Only ``full_tunnel`` captures all traffic (and requires explicit
+    confirmation). Scoped modes encrypt only the selected source clients.
+    Raises TunnelPlanError on an invalid/unsafe plan.
+    """
+    ros_version = _clean(router.get("ros_version"))
+    if not routeros_caps.supports_l2tp_ipsec_traffic(ros_version):
+        raise TunnelPlanError(
+            f"IPsec traffic tunnel needs RouterOS 6+, got {ros_version!r}"
+        )
+
+    mode = _clean(settings.get("traffic_mode")) or "disabled"
+    server_host = _clean(
+        settings.get("ipsec_server_host") or settings.get("l2tp_server_host")
+    )
+    ipsec_secret = settings.get("ipsec_secret")
+    selected_pool = _clean(settings.get("selected_pool"))
+    full_confirmed = bool(settings.get("full_tunnel_confirmed", False))
+    source_clients = [_clean(c) for c in (settings.get("source_clients") or []) if _clean(c)]
+
+    owns_default_route = mode == "full_tunnel"
+
+    verdict = routeros_caps.validate_connection_plan(
+        ros_version, "sstp_mgmt", "ipsec_traffic",
+        traffic_mode=mode,
+        traffic_owns_default_route=owns_default_route,
+        full_tunnel_confirmed=full_confirmed,
+        selected_pool=selected_pool or None,
+    )
+    if not verdict["valid"]:
+        raise TunnelPlanError(
+            "invalid IPsec plan: " + "; ".join(e["code"] for e in verdict["errors"])
+        )
+
+    if mode != "disabled":
+        if not server_host:
+            raise TunnelPlanError("IPsec plan needs ipsec_server_host")
+        if not ipsec_secret:
+            raise TunnelPlanError("missing_ipsec_secret")
+
+    warnings = [w["message_ar"] for w in verdict["warnings"]]
+    if mode == "full_tunnel":
+        warnings.append(
+            "تمرير كل الترافيك (full tunnel) قد يقطع إنترنت المشتركين إذا كان الإعداد خاطئًا."
+        )
+    warnings.append(
+        "نفق IPsec يحتاج إعدادًا مقابلًا على الخادم (VPS) مع NAT/Masquerade لتغيير الـ IP — "
+        "السرعة تعتمد على المعالج ودعم IPsec Hardware Acceleration وجودة الخط."
+    )
+
+    return {
+        "role": "traffic",
+        "tunnel_type": "ipsec_traffic",
+        "protocol": "ipsec",
+        "ros_version": routeros_caps.parse_routeros_major(ros_version),
+        # IPsec is policy-based: no PPP interface name. The address-list is
+        # reused for the scoped source set; routing_mark is unused (kept empty).
+        "interface_name": "",
+        "traffic_mode": mode,
+        "enabled": mode != "disabled",
+        "server_host": server_host,
+        "ipsec_secret": ipsec_secret,
+        "use_ipsec": True,
+        "add_default_route": owns_default_route,
+        "owns_default_route": owns_default_route,
+        "selected_pool": selected_pool,
+        "source_clients": source_clients,
+        "address_list": TRAFFIC_ADDRESS_LIST,
+        "routing_mark": "",
+        "proposal_name": IPSEC_PROPOSAL_NAME,
+        "comment": IPSEC_TRAFFIC_COMMENT,
+        "warnings": warnings,
+    }
+
+
+def render_v6_ipsec_traffic_script(plan: dict) -> str:
+    """Render the idempotent RouterOS v6 pure-IPsec traffic-tunnel script.
+
+    Emits a phase-1 peer + phase-2 proposal + encrypt policies (scoped to the
+    selected source clients, or 0.0.0.0/0 for the confirmed full tunnel). The
+    VPS side performs the SNAT/exit. Idempotent: keyed off the HobeRadius
+    comment / proposal name so re-running only ever touches our own items.
+    """
+    if plan.get("tunnel_type") != "ipsec_traffic":
+        raise TunnelPlanError("not an IPsec traffic plan")
+    mode = plan.get("traffic_mode", "disabled")
+    comment = plan.get("comment", IPSEC_TRAFFIC_COMMENT)
+    proposal = plan.get("proposal_name", IPSEC_PROPOSAL_NAME)
+
+    lines: list[str] = []
+    lines.append("# ===========================================================")
+    lines.append(f"# {comment}")
+    lines.append("# IPsec exit tunnel — IP change / bandwidth exit (encrypted).")
+    lines.append("# Policy-based: never owns a routing default route; separate")
+    lines.append("# from the SSTP management tunnel. Idempotent.")
+    lines.append("# ===========================================================")
+    lines.append("")
+
+    if mode == "disabled":
+        lines.append("# IPsec traffic disabled — disable any HobeRadius IPsec policy.")
+        lines.append(
+            f':if ([/ip ipsec policy find comment="{comment}"] != "") do={{'
+        )
+        lines.append(f'  /ip ipsec policy set [find comment="{comment}"] disabled=yes')
+        lines.append("}")
+        lines.append("# End IPsec traffic tunnel (disabled)")
+        return "\n".join(lines)
+
+    host = plan["server_host"]
+    ipsec_secret = plan["ipsec_secret"]
+
+    # Phase-2 proposal (idempotent by name).
+    lines.append("# Phase-2 proposal")
+    lines.append(f':if ([/ip ipsec proposal find name="{proposal}"] = "") do={{')
+    lines.append(
+        f"  /ip ipsec proposal add name={proposal} "
+        "auth-algorithms=sha256 enc-algorithms=aes-256-cbc pfs-group=modp2048 "
+        f'comment="{comment}"'
+    )
+    lines.append("} else={")
+    lines.append(
+        f"  /ip ipsec proposal set [find name={proposal}] "
+        "auth-algorithms=sha256 enc-algorithms=aes-256-cbc pfs-group=modp2048"
+    )
+    lines.append("}")
+    lines.append("")
+
+    # Phase-1 peer to the VPS (idempotent by comment). RouterOS 6 carries the
+    # pre-shared secret on the peer itself.
+    lines.append("# Phase-1 peer (to the VPS)")
+    lines.append(f':if ([/ip ipsec peer find comment="{comment}"] = "") do={{')
+    lines.append(
+        f'  /ip ipsec peer add address={host} secret="{ipsec_secret}" '
+        f'exchange-mode=ike2 send-initial-contact=yes comment="{comment}"'
+    )
+    lines.append("} else={")
+    lines.append(
+        f'  /ip ipsec peer set [find comment="{comment}"] address={host} '
+        f'secret="{ipsec_secret}" exchange-mode=ike2'
+    )
+    lines.append("}")
+    lines.append("")
+
+    # Phase-2 encrypt policies. full_tunnel captures everything (confirmed);
+    # scoped modes encrypt only the selected source clients.
+    lines.append("# Encrypt policy — selected source traffic exits via the VPS")
+    srcs: list[str]
+    if mode == "full_tunnel":
+        srcs = ["0.0.0.0/0"]
+    else:
+        srcs = [s for s in (plan.get("source_clients") or []) if _clean(s)]
+
+    if not srcs:
+        lines.append(
+            "# No source clients selected yet — add them later, e.g.:"
+        )
+        lines.append(
+            f'#   /ip ipsec policy add src-address=<CLIENT> dst-address=0.0.0.0/0 '
+            f'tunnel=yes sa-dst-address={host} proposal={proposal} '
+            f'action=encrypt comment="{comment}"'
+        )
+    else:
+        for idx, src in enumerate(srcs):
+            tag = f"{comment} [{src}]"
+            lines.append(f':if ([/ip ipsec policy find comment="{tag}"] = "") do={{')
+            lines.append(
+                f"  /ip ipsec policy add src-address={src} dst-address=0.0.0.0/0 "
+                f"tunnel=yes sa-src-address=0.0.0.0 sa-dst-address={host} "
+                f'proposal={proposal} action=encrypt comment="{tag}"'
+            )
+            lines.append("} else={")
+            lines.append(
+                f"  /ip ipsec policy set [find comment=\"{tag}\"] "
+                f"src-address={src} dst-address=0.0.0.0/0 tunnel=yes "
+                f"sa-dst-address={host} proposal={proposal} disabled=no"
+            )
+            lines.append("}")
+
+    lines.append("")
+    lines.append("# End IPsec traffic tunnel")
+    return "\n".join(lines)
+
+
 def analyze_tunnel_conflicts(
     router_id: object,
     version: object,
@@ -615,6 +821,8 @@ __all__ = [
     "L2TP_TRAFFIC_COMMENT",
     "PPTP_TRAFFIC_IFACE",
     "PPTP_TRAFFIC_COMMENT",
+    "IPSEC_TRAFFIC_COMMENT",
+    "IPSEC_PROPOSAL_NAME",
     "TRAFFIC_ADDRESS_LIST",
     "TRAFFIC_ROUTING_MARK",
     "TunnelPlanError",
@@ -624,5 +832,7 @@ __all__ = [
     "render_v6_l2tp_ipsec_traffic_script",
     "build_v6_pptp_traffic_plan",
     "render_v6_pptp_traffic_script",
+    "build_v6_ipsec_traffic_plan",
+    "render_v6_ipsec_traffic_script",
     "analyze_tunnel_conflicts",
 ]

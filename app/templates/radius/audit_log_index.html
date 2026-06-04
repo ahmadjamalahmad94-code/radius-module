@@ -13,6 +13,30 @@
 
 {% block content %}
 
+<style>
+  /* QA fix — the .audit-* blocks stacked with no vertical gap, so the
+     hero/stats/board/results touched each other. Give the shell a
+     consistent inter-block rhythm (~var(--hub-gap-section)). */
+  [data-audit-log-page]{
+    display:flex;
+    flex-direction:column;
+    gap:var(--hub-gap-section, 18px);
+  }
+  [data-audit-log-page] > .audit-hero,
+  [data-audit-log-page] > .audit-stats,
+  [data-audit-log-page] > .audit-board,
+  [data-audit-log-page] > .audit-results{ margin:0; }
+  /* QA fix — the pager was an orphan with no wrapper. Give it a proper
+     styled footer area with balanced padding on all sides. */
+  .audit-results__footer{
+    margin-top:var(--hub-gap-section, 18px);
+    padding:14px 16px;
+    border-top:1px solid var(--hub-border, #e2e8f0);
+  }
+  .audit-results__footer .bkx-pager{ margin-top:0; }
+  .audit-results__footer:has(.bkx-pager:empty){ display:none; }
+</style>
+
 <section class="mt-dashboard audit-shell" data-admin-rhythm data-audit-log-page>
 
   <section class="audit-hero" aria-labelledby="audit-title">
@@ -233,7 +257,9 @@
       </article>
       {% endfor %}
     </div>
-    <div class="bkx-pager" id="audit-log-rows-pager"></div>
+    <div class="audit-results__footer">
+      <div class="bkx-pager" id="audit-log-rows-pager"></div>
+    </div>
     {% endif %}
   </section>
 

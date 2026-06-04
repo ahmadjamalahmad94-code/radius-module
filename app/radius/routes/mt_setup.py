@@ -23,6 +23,7 @@ Three endpoints back the Phase-L wizard flow:
 from __future__ import annotations
 
 import os
+import secrets as _secrets
 from datetime import datetime, timezone
 
 from flask import (
@@ -33,11 +34,13 @@ from flask import (
 from ..core.tenant import DEFAULT_TENANT_ID
 from ..core.types import NasDevice
 from ..db.connection import db, transaction
+from ..db.repos import router_tunnels_repo
 from ..services.devices import get_nas_devices_service
 from ..services.mt_provisioner import (
     SUPPORTED_ROS_VERSIONS, generate_credentials, render_routeros_script,
     render_wg_block,
 )
+from ..services import v6_tunnels
 from ..services import wg_peer_manager as wpm
 
 
@@ -67,6 +70,136 @@ def _default_server_ip() -> str:
         return (request.host or "").split(":", 1)[0]
     except RuntimeError:
         return ""
+
+
+# Session keys for the one-time tunnel-secret reveal (same lifecycle as the
+# WireGuard private key: written by the create handler, popped+rendered exactly
+# once on the script page). Secrets never touch the DB — only masked *_ref
+# pointers are persisted (see router_tunnels_repo / migration 092).
+_TUNNEL_BLOCKS_SK = "_v6_tunnel_blocks_{nas_id}"
+_TUNNEL_WARN_SK = "_v6_tunnel_warnings_{nas_id}"
+
+def _gen_tunnel_secret(length: int = 24) -> str:
+    """URL-safe random secret for a PPP/IPsec credential (never logged)."""
+    return _secrets.token_urlsafe(length)
+
+
+def _configure_v6_tunnels(nas_id: int, name: str, server_ip: str, form) -> None:
+    """Build + persist + stage the v6 SSTP management (and optional traffic)
+    tunnels for a freshly-created RouterOS 6 router.
+
+    Reads the wizard's tunnel fields, builds plans through ``v6_tunnels``
+    (which validate against ``routeros_caps``), persists the per-router
+    profile via ``router_tunnels_repo`` (masked secret refs only), renders the
+    idempotent RouterOS scripts, and stashes them on the session for a
+    one-time reveal on the script page.
+
+    Best-effort: on a plan/validation error the router itself is still created
+    (the operator can re-run the wizard); we just flash a warning and skip the
+    tunnel profile rather than failing the whole onboarding.
+    """
+    tid = _tid()
+    verify_cert = bool(form.get("sstp_verify_certificate"))
+    # Tunnel-role architecture: on v6 the optional exit / IP-change tunnel is
+    # IPsec (encrypted, recommended) or PPTP (legacy alternative) — never L2TP.
+    protocol = (form.get("traffic_protocol") or "ipsec").strip()
+    traffic_mode = (form.get("traffic_mode") or "disabled").strip()
+    full_confirmed = bool(form.get("full_tunnel_confirmed"))
+    selected_pool = (form.get("selected_pool") or "").strip()
+    source_clients = [
+        c.strip() for c in (form.get("source_clients") or "").replace("\n", ",").split(",")
+        if c.strip()
+    ]
+
+    router = {"name": name, "ros_version": "6"}
+    warnings: list[str] = []
+
+    # ── SSTP management tunnel (always-on for v6) ──
+    sstp_user = name or f"router-{nas_id}"
+    sstp_password = _gen_tunnel_secret()
+    try:
+        sstp_plan = v6_tunnels.build_v6_sstp_management_plan(
+            router,
+            {
+                "sstp_server_host": server_ip,
+                "username": sstp_user,
+                "password": sstp_password,
+                "verify_certificate": verify_cert,
+            },
+        )
+    except v6_tunnels.TunnelPlanError as exc:
+        flash(f"تعذّر إعداد نفق الإدارة SSTP: {exc}", "error")
+        return
+
+    blocks = [v6_tunnels.render_v6_sstp_management_script(sstp_plan)]
+    warnings.extend(sstp_plan.get("warnings") or [])
+
+    profile = {
+        "management_tunnel_type": "sstp_mgmt",
+        "management_tunnel_status": "configured",
+        "management_tunnel_interface_name": v6_tunnels.SSTP_MGMT_IFACE,
+        "management_remote_address": server_ip,
+        "management_secret_ref": f"sstp-{nas_id}-{int(datetime.now(timezone.utc).timestamp())}",
+        "sstp_verify_certificate": 1 if verify_cert else 0,
+    }
+
+    # ── Optional exit / IP-change tunnel (IPsec recommended, PPTP legacy) ──
+    # L2TP is intentionally NOT offered for v6 exit per the tunnel-role
+    # architecture; the legacy "l2tp_ipsec" protocol value folds onto IPsec.
+    traffic_type = routeros_caps.traffic_protocol_to_type(protocol)
+    if traffic_mode and traffic_mode != "disabled":
+        traffic_user = sstp_user
+        traffic_password = _gen_tunnel_secret()
+        ipsec_secret = _gen_tunnel_secret()
+        settings = {
+            "username": traffic_user,
+            "password": traffic_password,
+            "traffic_mode": traffic_mode,
+            "selected_pool": selected_pool,
+            "full_tunnel_confirmed": full_confirmed,
+            "source_clients": source_clients,
+        }
+        try:
+            if traffic_type == "pptp_traffic":
+                settings["pptp_server_host"] = server_ip
+                t_plan = v6_tunnels.build_v6_pptp_traffic_plan(router, settings)
+                t_script = v6_tunnels.render_v6_pptp_traffic_script(t_plan)
+            else:  # ipsec_traffic — the recommended encrypted exit
+                settings["ipsec_server_host"] = server_ip
+                settings["ipsec_secret"] = ipsec_secret
+                t_plan = v6_tunnels.build_v6_ipsec_traffic_plan(router, settings)
+                t_script = v6_tunnels.render_v6_ipsec_traffic_script(t_plan)
+        except v6_tunnels.TunnelPlanError as exc:
+            flash(f"تعذّر إعداد نفق الترافيك: {exc}", "error")
+            # Keep the SSTP management tunnel; just skip traffic.
+        else:
+            blocks.append(t_script)
+            warnings.extend(t_plan.get("warnings") or [])
+            profile.update({
+                "traffic_tunnel_type": traffic_type,
+                "traffic_tunnel_status": "configured",
+                "traffic_tunnel_interface_name": t_plan.get("interface_name", ""),
+                "traffic_remote_address": server_ip,
+                "traffic_mode": traffic_mode,
+                "traffic_routing_mark": t_plan.get("routing_mark", ""),
+                "traffic_source_pool": selected_pool,
+                "traffic_enabled": 1,
+                "traffic_ipsec_secret_ref": (
+                    f"ipsec-{nas_id}-{int(datetime.now(timezone.utc).timestamp())}"
+                    if traffic_type == "ipsec_traffic" else ""
+                ),
+            })
+
+    try:
+        router_tunnels_repo.update_tunnel_profile(tid, nas_id, **profile)
+    except Exception as exc:  # noqa: BLE001
+        flash(f"تعذّر حفظ ملف الأنفاق: {exc}", "error")
+        return
+
+    # One-time reveal on the script page (secrets stay out of the DB).
+    session[_TUNNEL_BLOCKS_SK.format(nas_id=nas_id)] = "\n\n".join(blocks)
+    if warnings:
+        session[_TUNNEL_WARN_SK.format(nas_id=nas_id)] = warnings
 
 
 def register_mt_setup_routes(bp: Blueprint) -> None:
@@ -334,6 +467,12 @@ def mt_setup_create():
     if wg_provision is not None:
         session[f"_wg_router_priv_{saved.id}"] = wg_provision.router_private_key
 
+    # RouterOS 6 has no WireGuard — instead we provision the SSTP management
+    # tunnel (always-on) plus an optional L2TP/IPsec or PPTP traffic tunnel.
+    # Best-effort: never blocks router creation.
+    if ros_version == "6":
+        _configure_v6_tunnels(saved.id, saved.name, server_ip, request.form)
+
     return redirect(url_for(
         "radius.mt_setup_script",
         nas_id=saved.id,
@@ -413,6 +552,19 @@ def mt_setup_script(nas_id: int):
             api_allowed_address = str(wpm.load_config().subnet)
         except ValueError:
             api_allowed_address = None
+    # RouterOS 6 VPN tunnel scripts (SSTP management + optional traffic).
+    # Rendered once at create time and stashed on the session; popped here so
+    # the secrets they carry are shown exactly once (same lifecycle as the WG
+    # private key above). A refresh after issuing shows the management-tunnel
+    # placeholder notice instead of re-printing the secrets.
+    tunnel_blocks = None
+    tunnel_warnings: list[str] = []
+    tunnel_revealed = False
+    if ros_version == "6":
+        tunnel_blocks = session.pop(_TUNNEL_BLOCKS_SK.format(nas_id=nas_id), None)
+        tunnel_warnings = session.pop(_TUNNEL_WARN_SK.format(nas_id=nas_id), []) or []
+        tunnel_revealed = bool(tunnel_blocks)
+
     try:
         script = render_routeros_script(
             nas_name=nas["name"],
@@ -424,6 +576,7 @@ def mt_setup_script(nas_id: int):
             api_port=int(nas.get("api_port") or 8728),
             coa_port=int(nas.get("coa_port") or 3799),
             wg_block=wg_block,
+            tunnel_blocks=tunnel_blocks,
             api_allowed_address=api_allowed_address,
         )
     except ValueError as exc:
@@ -438,5 +591,7 @@ def mt_setup_script(nas_id: int):
         ros_version=ros_version,
         is_vpn_row=is_vpn_row,
         wg_priv_revealed=wg_priv_revealed,
+        tunnel_revealed=tunnel_revealed,
+        tunnel_warnings=tunnel_warnings,
         dashboard_url=url_for("radius.mt_dashboard", nas_id=nas["id"]),
     )

@@ -65,13 +65,13 @@
       {# بطاقة نفق الإدارة الموصى بها #}
       <div class="mt-v6-card" style="border:1px solid #bbf7d0;background:#f0fdf4;border-radius:14px;padding:14px">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-          <strong style="font-size:14px"><i class="fa-brands fa-windows"></i> نفق الإدارة الموصى به</strong>
+          <strong style="font-size:14px"><i class="fa-brands fa-windows"></i> نفق الإدارة عبر SSTP</strong>
           <span style="background:#16a34a;color:#fff;font-size:11px;font-weight:800;padding:2px 9px;border-radius:999px">موصى به للإدارة</span>
         </div>
         <p style="margin:8px 0 6px;font-size:12.5px;color:var(--hub-text-soft);line-height:1.7">
           يستخدم هذا النفق لإدارة الراوتر فقط: واجهة الربط، الدخول الإداري، فحص الاتصال، المراقبة، وإرسال أوامر هوبي راديوس. لا يتم تمرير إنترنت المشتركين من خلاله.
         </p>
-        <div style="font-size:12px;font-weight:700;color:#047857"><i class="fa-solid fa-circle-info"></i> لن يتم ضبط المسار الافتراضي على نفق الإدارة.</div>
+        <div style="font-size:12px;font-weight:700;color:#047857"><i class="fa-solid fa-circle-info"></i> لن يتم ضبط Default Route على نفق SSTP.</div>
         <label style="display:flex;align-items:center;gap:8px;margin-top:8px;font-size:12.5px;font-weight:700;color:var(--hub-text-soft)">
           <input type="checkbox" name="sstp_verify_certificate" value="1">
           التحقق من شهادة الخادم — فعّله في الإنتاج عند جاهزية الشهادة.
@@ -81,7 +81,7 @@
       {# بطاقة نفق حركة الإنترنت المتقدم #}
       <details class="mt-v6-card" style="border:1px solid var(--hub-border-soft);border-radius:14px;padding:14px">
         <summary style="cursor:pointer;display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-weight:800">
-          <i class="fa-solid fa-route"></i> نفق تغيير العنوان وتمرير الحركة
+          <i class="fa-solid fa-route"></i> نفق تغيير IP (تمرير الترافيك)
           <span style="background:#7c3aed;color:#fff;font-size:11px;font-weight:800;padding:2px 9px;border-radius:999px">متقدم</span>
         </summary>
         <p style="margin:10px 0 6px;font-size:12.5px;color:var(--hub-text-soft);line-height:1.7">
@@ -90,13 +90,13 @@
         <label style="display:flex;flex-direction:column;gap:4px;font-size:12.5px;font-weight:700;color:var(--hub-text-soft);margin-bottom:8px">
           بروتوكول النفق
           <select name="traffic_protocol" class="hub-select" data-mt-traffic-protocol>
-            <option value="l2tp_ipsec" selected>النفق المشفّر الموصى به</option>
-            <option value="pptp">النفق القديم غير الآمن</option>
+            <option value="ipsec" selected>L2TP/IPsec — موصى به</option>
+            <option value="pptp">PPTP — قديم وغير آمن</option>
           </select>
         </label>
         <div data-mt-pptp-warn hidden style="display:flex;align-items:flex-start;gap:8px;font-size:12px;font-weight:700;color:#b91c1c;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:9px;margin-bottom:8px">
           <i class="fa-solid fa-triangle-exclamation" style="margin-top:2px"></i>
-          النفق القديم غير آمن وتشفيره ضعيف. لا تستخدمه إلا اضطرارًا عندما لا يدعم الراوتر النفق المشفّر الموصى به.
+          PPTP قديم وغير آمن وتشفيره (MS-CHAPv2) مخترَق. لا تستخدمه إلا اضطرارًا عندما لا يدعم الراوتر L2TP/IPsec.
         </div>
         <label style="display:flex;flex-direction:column;gap:4px;font-size:12.5px;font-weight:700;color:var(--hub-text-soft);margin-bottom:8px">
           وضع حركة الإنترنت
@@ -109,11 +109,11 @@
         </label>
         <label data-mt-fulltunnel-confirm hidden style="display:flex;align-items:flex-start;gap:8px;font-size:12px;font-weight:700;color:#b91c1c;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:9px">
           <input type="checkbox" name="full_tunnel_confirmed" value="1" style="margin-top:2px">
-          أفهم أن تمرير كل الحركة قد يسبب انقطاعًا إذا كان الإعداد خاطئًا.
+          أفهم أن تمرير كل الترافيك قد يسبب انقطاعًا إذا كان الإعداد خاطئًا.
         </label>
         <div style="font-size:11.5px;color:var(--hub-text-mute);margin-top:8px;line-height:1.7">
           <i class="fa-solid fa-triangle-exclamation"></i> لا تفعّل تمرير كل الحركة إلا بعد فحص قدرة الراوتر والخادم. السرعة تعتمد على موديل الراوتر والمعالج ودعم التسريع وجودة الخط.<br>
-          <i class="fa-solid fa-code-branch"></i> لا يمكن جعل نفق الإدارة ونفق الحركة يملكان مسارًا افتراضيًا في الوقت نفسه.
+          <i class="fa-solid fa-code-branch"></i> لا يمكن جعل SSTP و L2TP/IPsec يملكان Default Route بنفس الوقت.
         </div>
       </details>
     </div>

@@ -277,6 +277,18 @@
   padding: 30px;
 }
 
+/* ── Inter-card spacing ──────────────────────────────────────────
+   When section cards (بيانات الراوتر / إصدار نظام الراوتر / عنوان
+   السيرفر …) are rendered consecutively they used to touch with no
+   gap between the blocks. Add a consistent vertical rhythm between
+   adjacent section cards — both at the step level and for any
+   stacked section cards inside a single step — matching the hub
+   section gap (~18px). Internal layout/padding is untouched. */
+.swv2-shell > .swv2-step + .swv2-step,
+.swv2-step-card + .swv2-step-card {
+  margin-top: var(--hub-gap-section, 18px);
+}
+
 .swv2-welcome-card {
   min-height: 430px;
   padding-top: 44px;

@@ -85,6 +85,7 @@ def render_routeros_script(
     api_port: int = 8728,
     coa_port: int = 3799,
     wg_block: Optional[str] = None,
+    tunnel_blocks: Optional[str] = None,
     api_allowed_address: Optional[str] = None,
 ) -> str:
     """Build the copy-paste RouterOS script for one router.
@@ -146,6 +147,13 @@ def render_routeros_script(
         # to reach the RADIUS server through it (the rest of the
         # script uses server_ip which is the WG-side IP).
         rendered = wg_block.rstrip() + "\n\n" + rendered
+    if tunnel_blocks:
+        # v6 SSTP management / L2TP-IPsec / PPTP traffic tunnel scripts
+        # (rendered by services.v6_tunnels). Prepended for the same reason
+        # as wg_block: the management tunnel should come up before the rest
+        # of the provisioning runs over it. Pure passthrough — this function
+        # never builds tunnel scripts itself, keeping secrets out of here.
+        rendered = tunnel_blocks.rstrip() + "\n\n" + rendered
     return rendered
 
 

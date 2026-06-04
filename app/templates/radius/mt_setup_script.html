@@ -45,6 +45,16 @@
   </div>
   {% endif %}
 
+  {% if tunnel_warnings %}
+  <div class="hub-pill hub-pill--amber" data-mt-tunnel-warnings
+       style="display:block;padding:10px 14px">
+    <strong><i class="fa-solid fa-shield-halved"></i> ملاحظات أنفاق الإدارة والحركة:</strong>
+    <ul style="margin:6px 0 0;padding-inline-start:18px">
+      {% for w in tunnel_warnings %}<li>{{ w }}</li>{% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
   <pre class="mt-setup-script-block"
        data-mt-setup-script-text>{{ script }}</pre>
 

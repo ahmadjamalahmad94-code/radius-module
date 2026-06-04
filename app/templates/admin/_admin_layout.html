@@ -178,13 +178,23 @@
     <i class="fa-solid fa-bars"></i>
   </button>
   <div class="actions">
-    <span class="ic" title="إعدادات"><i class="fa-solid fa-gear"></i></span>
-    <span class="ic" title="تنبيهات"><i class="fa-solid fa-bell"></i>
+    {# #16: top-bar icons wired to real routes (endpoint_exists guard → never 500s).
+       gear → RADIUS settings · bell → alerts/notifications center · envelope →
+       license-panel messages (welcome / renewal / near-expiry deliveries). #}
+    <a class="ic" title="إعدادات الراديوس"
+       href="{{ url_for('radius.settings_page') if endpoint_exists('radius.settings_page') else '#' }}">
+      <i class="fa-solid fa-gear"></i>
+    </a>
+    <a class="ic" title="مركز التنبيهات"
+       href="{{ url_for('radius.mt_alerts_index') if endpoint_exists('radius.mt_alerts_index') else '#' }}">
+      <i class="fa-solid fa-bell"></i>
       <span class="dot">2</span>
-    </span>
-    <span class="ic" title="رسائل"><i class="fa-solid fa-envelope"></i>
+    </a>
+    <a class="ic" title="رسائل لوحة التراخيص"
+       href="{{ url_for('radius.communications_deliveries') if endpoint_exists('radius.communications_deliveries') else '#' }}">
+      <i class="fa-solid fa-envelope"></i>
       <span class="dot">3</span>
-    </span>
+    </a>
 
     {# Tenant switcher #}
     {% set _admin_tenants = admin_tenants() %}
@@ -338,6 +348,7 @@
 
 <script src="{{ url_for('static', filename='js/dashboard_table.js') }}"></script>
 <script src="{{ url_for('static', filename='js/sidebar_v2.js') }}"></script>
+<script src="{{ url_for('static', filename='js/page_guide_collapse.js') }}"></script>
 <script>
   // dropdowns (tenant + user)
   (function(){

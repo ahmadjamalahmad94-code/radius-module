@@ -27,18 +27,52 @@
 {% endblock %}
 
 {% block content %}
+
+<style>
+  /* QA fix — page-scoped spacing + card normalization. */
+  /* The .npc-card grid had no gap between cards. */
+  .npc-grid{ gap:var(--hub-gap-section, 18px); }
+  /* Router-context strip — was an inline-styled div with ad-hoc
+     margins; normalize into a styled section with equal padding. */
+  .npc-context-strip{
+    display:flex; gap:8px; align-items:center; flex-wrap:wrap;
+    padding:12px 16px;
+    background:var(--hub-surface-2, #fafbfd);
+    border:1px solid var(--hub-border, #EEEDF3);
+    border-radius:12px;
+    margin:0 0 var(--hub-gap-section, 18px);
+  }
+  /* Toolbar (heading + count + new button). */
+  .npc-toolbar{
+    display:flex; align-items:center; gap:12px;
+    margin:0 0 var(--hub-gap-section, 18px);
+  }
+  .npc-toolbar h2{ margin:0; font-size:18px; }
+  .npc-toolbar .npc-toolbar-count{ color:var(--hub-text-muted, #6b7280); font-size:13px; }
+  /* Empty state — .npc-empty already carries the dashed card look from
+     the shell; just neutralize stray margin so it sits flush in the
+     page flow with the toolbar/footer spacing above and below. */
+  .npc-empty-card{ margin:0; }
+  /* Footer note — normalize the inline-styled info line into a
+     styled section so it doesn't float as an unstyled orphan. */
+  .npc-footer-note{
+    margin:var(--hub-gap-section, 18px) 0 0;
+    padding:12px 16px;
+    background:var(--hub-surface-2, #fafbfd);
+    border:1px solid var(--hub-border, #EEEDF3);
+    border-radius:12px;
+    color:var(--hub-text-muted, #6b7280);
+    font-size:12.5px;
+  }
+</style>
+
 {{ npc.npc_dry_run_banner() }}
 
 {% if scoped_to_nas %}
   {# Router-context strip — same visual language as the
      dashboard's quicknav so the operator knows they're
      still "inside" the router. #}
-  <div style="display:flex; gap:8px; align-items:center;
-              flex-wrap:wrap; margin-bottom:12px;
-              padding:10px 14px;
-              background:#fafbfd;
-              border:1px solid #EEEDF3;
-              border-radius:10px;">
+  <div class="npc-context-strip">
     <a class="npc-btn"
        href="{{ url_for('radius.mt_dashboard',
                         nas_id=scoped_to_nas.id) }}">
@@ -76,15 +110,15 @@
   {{ npc.npc_tabs(service.url_slug, services) }}
 {% endif %}
 
-<div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
-  <h2 style="margin:0; font-size:18px;">
+<div class="npc-toolbar">
+  <h2>
     {% if scoped_to_nas %}
       سياسات {{ service.label_ar }} لهذا الراوتر
     {% else %}
       قائمة سياسات {{ service.label_ar }}
     {% endif %}
   </h2>
-  <span style="color:#6b7280; font-size:13px;">
+  <span class="npc-toolbar-count">
     ({{ cards|length }} عنصر)
   </span>
   <a class="npc-btn is-primary"
@@ -98,7 +132,7 @@
 </div>
 
 {% if not cards %}
-  <div class="npc-empty">
+  <div class="npc-empty npc-empty-card">
     <i class="fa-regular fa-folder-open"></i>
     <div class="npc-empty-title">
       لا توجد سياسات بعد لـ {{ service.label_ar }}.
@@ -199,7 +233,7 @@
   </div>
 {% endif %}
 
-<div style="margin-top:24px; color:#6b7280; font-size:12.5px;">
+<div class="npc-footer-note">
   <i class="fa-solid fa-circle-info" style="color:#6B5AED;"></i>
   هذه الصفحة لا تصدر أي أوامر إلى الراوتر — فقط تنشئ سكربتات
   للمعاينة. التطبيق المباشر يتطلب صلاحية تطبيق منفصلة.

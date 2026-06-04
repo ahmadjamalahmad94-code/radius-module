@@ -895,6 +895,176 @@
   from{opacity:0;transform:translateY(8px);}
   to  {opacity:1;transform:translateY(0);}
 }
+
+/* ──────────────────────────────────────────────────────────────
+   #46c — Unified router hero
+   Groups the page title, tab nav, quick-action chips and the live
+   status pill into ONE card so the dashboard opens with a single
+   coherent header instead of four loose bars.
+   ────────────────────────────────────────────────────────────── */
+.mt-router-hero{
+  background:linear-gradient(145deg,#FFFFFF,#F7F9FF);
+  border:1px solid #E2E8F0;
+  border-radius:18px;
+  padding:18px 20px 14px;
+  margin:0 0 18px;
+  box-shadow:0 10px 30px rgba(38,51,90,.06);
+}
+.mt-router-hero-top{
+  display:flex;align-items:flex-start;justify-content:space-between;
+  gap:16px;flex-wrap:wrap;margin-bottom:14px;
+}
+.mt-router-hero-titles{min-width:0}
+.mt-router-hero-kicker{
+  display:inline-flex;align-items:center;gap:7px;
+  padding:4px 12px;border-radius:999px;
+  background:rgba(43,170,204,.12);
+  color:#1B7C97;
+  font-size:12px;font-weight:800;
+  border:1px solid rgba(43,170,204,.22);
+}
+.mt-router-hero-kicker i{font-size:12px}
+.mt-router-hero-name{
+  margin:10px 0 4px;font-size:22px;font-weight:900;color:#0F172A;line-height:1.2;
+}
+.mt-router-hero-sub{
+  margin:0;font-size:13px;color:#64748B;font-weight:600;line-height:1.5;
+}
+/* Status pill inside the hero — drop the floating/bottom-border
+   spacing it had as a standalone bar. */
+.mt-router-hero .mt-tabs-status--hero{
+  padding-bottom:0;flex-shrink:0;
+}
+/* The tab strip + quicknav sit flush inside the hero card. */
+.mt-router-hero .mt-tabs-row{
+  margin:0 0 14px;
+}
+.mt-router-hero .mt-router-quicknav{
+  margin:0;
+}
+
+/* ──────────────────────────────────────────────────────────────
+   #46b — Quick-action links as proper chips/buttons
+   These <a.mt-mini-btn> links live in the .mt-router-quicknav grid
+   but previously rendered as faint table-style mini buttons. Style
+   them as full design-system chips with a coloured FontAwesome icon
+   tablet, consistent with .hub-btn / chip conventions. Scoped to the
+   quicknav so the small .mt-mini-btn used on table toolbars is
+   untouched. Hrefs / data hooks unchanged.
+   ────────────────────────────────────────────────────────────── */
+.mt-router-hero .mt-router-quicknav,
+.mt-router-quicknav{
+  display:flex;flex-wrap:wrap;gap:10px;
+}
+.mt-router-quicknav .mt-mini-btn{
+  display:inline-flex;align-items:center;gap:9px;
+  background:#fff;
+  border:1px solid #E2E8F0;
+  border-radius:12px;
+  padding:9px 14px 9px 11px;
+  font-size:13px;font-weight:700;
+  color:#0F172A;
+  text-decoration:none;
+  transition:border-color .15s,box-shadow .15s,transform .15s,background .15s;
+}
+.mt-router-quicknav .mt-mini-btn i{
+  width:30px;height:30px;border-radius:9px;
+  display:inline-flex;align-items:center;justify-content:center;
+  font-size:14px;color:#fff;
+  background:linear-gradient(135deg,#2BAACC,#1B7C97);
+  box-shadow:0 4px 10px rgba(43,170,204,.30);
+}
+.mt-router-quicknav .mt-mini-btn:hover{
+  border-color:#2BAACC;
+  background:#F4FBFD;
+  transform:translateY(-2px);
+  box-shadow:0 10px 22px rgba(43,170,204,.16);
+}
+/* Per-action accent tints so destructive / sensitive links read
+   differently from neutral navigation. */
+.mt-router-quicknav .mt-mini-btn[data-mt-router-link="npc-web-block"] i{
+  background:linear-gradient(135deg,#F87171,#DC2626);
+  box-shadow:0 4px 10px rgba(220,38,38,.30);
+}
+.mt-router-quicknav .mt-mini-btn[data-mt-router-link="npc-remote-access"] i,
+.mt-router-quicknav .mt-mini-btn[data-mt-router-link="network-policies"] i{
+  background:linear-gradient(135deg,#A78BFA,#7C3AED);
+  box-shadow:0 4px 10px rgba(124,58,237,.30);
+}
+.mt-router-quicknav .mt-mini-btn[data-mt-router-link="npc-walled-garden"] i{
+  background:linear-gradient(135deg,#34D399,#10B981);
+  box-shadow:0 4px 10px rgba(16,185,129,.30);
+}
+
+/* ──────────────────────────────────────────────────────────────
+   #47 — Compact action grid + popup modal
+   (a) Denser responsive grid for the per-group action tiles.
+   (b) The per-action form opens in a centred modal overlay instead
+       of expanding at the bottom of the page. The form element
+       (data-mt-action-form) is physically MOVED into the modal body
+       by JS, so all existing field/submit logic keeps working.
+   ────────────────────────────────────────────────────────────── */
+.rh-overview .np-cmd-actions{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(190px,1fr));
+  gap:10px;
+}
+.rh-overview .mt-card--actions .mt-action-btn{
+  min-height:auto;
+  padding:11px 13px;
+  gap:10px;
+}
+.rh-overview .mt-card--actions .mt-action-btn > i{
+  width:36px;height:36px;font-size:14px;border-radius:10px;
+}
+.rh-overview .mt-card--actions .mt-action-label{font-size:13px}
+.rh-overview .mt-card--actions .mt-action-sub{font-size:11px}
+
+/* Modal shell */
+.mt-action-modal{
+  position:fixed;inset:0;z-index:1200;
+  display:flex;align-items:center;justify-content:center;
+  padding:20px;
+}
+.mt-action-modal[hidden]{display:none}
+body.mt-modal-open{overflow:hidden}
+.mt-action-modal-backdrop{
+  position:absolute;inset:0;
+  background:rgba(15,23,42,.55);
+  backdrop-filter:blur(3px);
+}
+.mt-action-modal-dialog{
+  position:relative;z-index:1;
+  width:min(560px,100%);
+  max-height:88vh;overflow:auto;
+  background:#fff;border-radius:18px;
+  border:1px solid #E2E8F0;
+  box-shadow:0 30px 80px rgba(15,23,42,.30);
+  animation:mt-action-pop .22s ease-out;
+}
+.mt-action-modal-head{
+  display:flex;align-items:center;gap:10px;
+  padding:16px 20px;border-bottom:1px solid #F1F5F9;
+  position:sticky;top:0;background:#fff;z-index:1;
+}
+.mt-action-modal-title{
+  flex:1;margin:0;font-size:16px;font-weight:900;color:#0F172A;
+  display:inline-flex;align-items:center;gap:9px;
+}
+.mt-action-modal-title i{color:#2BAACC}
+.mt-action-modal-close{
+  width:34px;height:34px;border-radius:10px;flex-shrink:0;
+  display:inline-flex;align-items:center;justify-content:center;
+  border:1px solid #E2E8F0;background:#F8FAFC;color:#475569;
+  cursor:pointer;font-size:15px;transition:all .15s;
+}
+.mt-action-modal-close:hover{background:#FEE2E2;color:#DC2626;border-color:#FCA5A5}
+.mt-action-modal-body{padding:18px 20px}
+/* When the form/result live in the modal, drop the old inline
+   top-margins so they sit flush in the dialog body. */
+.mt-action-modal-body .mt-action-form,
+.mt-action-modal-body .mt-action-result{margin-top:0}
+.mt-action-modal-body .mt-action-result{margin-top:14px}
 </style>
 {% endblock %}
 
@@ -984,6 +1154,32 @@
      operator flagged as wasted vertical space). Now they share
      the same line — flex space-between keeps the status on the
      opposite edge from the tabs in RTL. #}
+  {# ─── #46c — Unified router hero ─────────────────────────────
+     The hero title/subtitle, the tab nav, the quick-action chips
+     and the live status pill used to be four separate top-of-page
+     blocks. They are now grouped inside ONE card (.mt-router-hero)
+     so the page opens with a single coherent header instead of a
+     stack of loose bars. All [data-mt-*] hooks + hrefs unchanged. #}
+  <section class="mt-router-hero" data-mt-router-hero>
+    <header class="mt-router-hero-top">
+      <div class="mt-router-hero-titles">
+        <span class="mt-router-hero-kicker">
+          <i class="fa-solid fa-router"></i> لوحة الراوتر
+        </span>
+        <h2 class="mt-router-hero-name">{{ nas.name }}</h2>
+        <p class="mt-router-hero-sub">إدارة ومراقبة الراوتر مباشرةً — كل الأقسام والإجراءات في مكان واحد.</p>
+      </div>
+      {# Status pill — moved into the hero top-right (RTL: top-left).
+         Kept as a single DOM element so every JS hook stays valid. #}
+      <div class="mt-tabs-status mt-tabs-status--hero" data-mt-status>
+        <span class="mt-tabs-status-pill" data-mt-status-pill>
+          <span class="dot"></span>
+          <span data-mt-status-label>جارٍ الاتصال…</span>
+        </span>
+        <span class="mt-tabs-status-meta" data-mt-status-meta>{{ nas.address or "—" }}</span>
+      </div>
+    </header>
+
   <div class="mt-tabs-row">
   <nav class="mt-tabs" data-mt-tabs role="tablist" aria-label="أقسام الراوتر">
     <button type="button" class="mt-tab is-active"
@@ -1069,18 +1265,7 @@
       <i class="fa-solid fa-door-open"></i> المواقع المسموحة
     </a>
   </nav>
-
-  {# Status pill — kept as a single DOM element (all JS hooks
-     unchanged) but positioned absolutely so it visually floats over
-     the active tab's hero. Operator: «انقلهم بالهيرو تبع الاقسام،
-     لانه حاشر شريط القوائم». #}
-  <div class="mt-tabs-status mt-tabs-status--float" data-mt-status>
-    <span class="mt-tabs-status-pill" data-mt-status-pill>
-      <span class="dot"></span>
-      <span data-mt-status-label>جارٍ الاتصال…</span>
-    </span>
-    <span class="mt-tabs-status-meta" data-mt-status-meta>—</span>
-  </div>
+  </section>{# /.mt-router-hero — unified header (#46c) #}
 
   {# ─── Overview panel (live K9 dashboard) ─────────────────────
      Wrapped in .rh-overview so the scoped CSS in the head block
@@ -1403,14 +1588,38 @@
         </div>
       </div>
 
-      {# Inline form area — populated per-action by JS. Stays empty
-         until an action is picked, so the page starts compact. #}
-      <div class="mt-action-form" data-mt-action-form hidden></div>
-
-      {# Pretty output panel: JS renders operator-friendly summaries. #}
-      <div class="mt-action-result" data-mt-action-result hidden></div>
+      {# #47 — Per-action form + result now live inside a popup modal
+         (below) instead of expanding at the bottom of the page. The
+         elements keep their data hooks so all existing fill/submit
+         logic in mt_dashboard.js works unchanged; only their DOM
+         location moved. #}
     </div>
   </section>
+
+  {# ─── #47 — Action popup modal ────────────────────────────────
+     openForm()/closeForm() in mt_dashboard.js toggle [hidden] on
+     this overlay. The form + result panels are queried by
+     data-mt-action-form / data-mt-action-result exactly as before. #}
+  <div class="mt-action-modal" data-mt-action-modal hidden>
+    <div class="mt-action-modal-backdrop" data-mt-action-modal-dismiss></div>
+    <div class="mt-action-modal-dialog" role="dialog" aria-modal="true"
+         aria-labelledby="mt-action-modal-title">
+      <header class="mt-action-modal-head">
+        <h3 class="mt-action-modal-title" id="mt-action-modal-title"
+            data-mt-action-modal-title>
+          <i class="fa-solid fa-bolt"></i> <span>الإجراء</span>
+        </h3>
+        <button type="button" class="mt-action-modal-close"
+                data-mt-action-modal-dismiss aria-label="إغلاق">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </header>
+      <div class="mt-action-modal-body">
+        <div class="mt-action-form" data-mt-action-form hidden></div>
+        <div class="mt-action-result" data-mt-action-result hidden></div>
+      </div>
+    </div>
+  </div>
 
     </div>{# /.rh-overview #}
   </section>{# /overview panel #}

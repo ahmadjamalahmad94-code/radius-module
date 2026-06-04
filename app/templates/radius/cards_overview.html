@@ -43,11 +43,15 @@
   .co-hero-actions{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
   .co-hero-kpis{
     display:grid;
-    grid-template-columns:repeat(auto-fit, minmax(170px, 1fr));
+    /* Balanced 4-per-row (consistent with subscribers overview) instead of
+       auto-fit, which packed ~6 then stretched a lone orphan (the 6+2 look). */
+    grid-template-columns:repeat(4, minmax(0, 1fr));
     gap:10px;
     padding-top:16px;
     border-top:1px solid var(--hub-border-soft, #e2e8f0);
   }
+  @media (max-width: 1080px){ .co-hero-kpis{ grid-template-columns:repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 560px){ .co-hero-kpis{ grid-template-columns:1fr; } }
   @media (max-width: 760px){ .co-hero-actions{ flex:1 1 100%; } }
   .cards-overview-grid{
     display:grid;
@@ -815,7 +819,7 @@
               <td class="mono"><strong>{{ sale.username or "—" }}</strong></td>
               <td>{{ sale.plan_name or sale.batch_code or "—" }}</td>
               <td class="num mono">{{ sale.amount|money }}</td>
-              <td class="co-table-note">{{ sale.sold_at or "—" }}</td>
+              <td class="co-table-note">{{ sale.sold_at|dt_local if sale.sold_at else "—" }}</td>
             </tr>
             {% endfor %}
           </tbody>

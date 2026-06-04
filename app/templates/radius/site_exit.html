@@ -137,11 +137,26 @@
   }
   .vx2-warning { background: rgba(255,180,0,0.10);
                   border-left: 3px solid #b87f00;
-                  padding: 8px 12px; margin: 6px 0; }
+                  border-radius: 8px;
+                  padding: 10px 14px; margin: 6px 0; }
   .vx2-blocking { background: rgba(208,46,46,0.10);
                    border-left: 3px solid #cc1f1f;
-                   padding: 8px 12px; margin: 6px 0; }
+                   border-radius: 8px;
+                   padding: 10px 14px; margin: 6px 0; }
   .vx2-empty { color: var(--hub-text-muted, #717b8a); }
+  /* QA fix — styled wrapper for the top-of-page notice/error alerts so
+     they read as a card and keep a consistent gap below before the
+     2-column layout. */
+  .vx2-alerts {
+    display: flex; flex-direction: column; gap: 8px;
+    padding: 12px 14px;
+    background: var(--hub-surface, #fff);
+    border: 1px solid var(--hub-border, #d8dee5);
+    border-radius: 10px;
+    margin: 0 0 var(--hub-gap-section, 18px);
+  }
+  .vx2-alerts > .vx2-warning,
+  .vx2-alerts > .vx2-blocking { margin: 0; }
 </style>
 {% endblock %}
 
@@ -158,17 +173,24 @@
     icon="route",
   ) }}
 
-  {% if notice %}
-    <div class="vx2-warning"
-         style="border-left-color:#208ba6;background:rgba(43,170,204,0.10);"
-         data-mt-site-exit-notice>
-      <i class="fa-solid fa-circle-info"></i> {{ notice }}
-    </div>
-  {% endif %}
-  {% if error %}
-    <div class="vx2-blocking" data-mt-site-exit-error>
-      <i class="fa-solid fa-circle-exclamation"></i> {{ error }}
-    </div>
+  {% if notice or error %}
+  {# QA fix — notice/error were raw alert divs with no card wrapper and
+     no inter-block gap; wrap them in a styled section so they sit in a
+     proper card with balanced padding + spacing below. #}
+  <section class="vx2-alerts">
+    {% if notice %}
+      <div class="vx2-warning"
+           style="border-left-color:#208ba6;background:rgba(43,170,204,0.10);"
+           data-mt-site-exit-notice>
+        <i class="fa-solid fa-circle-info"></i> {{ notice }}
+      </div>
+    {% endif %}
+    {% if error %}
+      <div class="vx2-blocking" data-mt-site-exit-error>
+        <i class="fa-solid fa-circle-exclamation"></i> {{ error }}
+      </div>
+    {% endif %}
+  </section>
   {% endif %}
 
   <div class="vx2-layout">

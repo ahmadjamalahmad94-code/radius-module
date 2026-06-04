@@ -323,6 +323,32 @@ Steps:
          آمن ويُهيّئ المصادقة. لا تحتاج لكتابة أي شيء.</p>
     </header>
 
+    {# #45: RouterOS version selector — drives the BINDING type only on the
+       wizard side. v7 → WireGuard-based management; v6 → SSTP-based
+       management. The chosen version + derived binding are carried in client
+       state and passed to the generate-script call; the VPN backend owns the
+       actual option sets (we never change them here). #}
+    <div class="swz-field" data-swz-ros-version-field>
+      <label>إصدار نظام الراوتر (RouterOS)</label>
+      <div class="swz-radio-grid" role="radiogroup" aria-label="إصدار RouterOS">
+        <label class="swz-radio">
+          <input type="radio" name="ros_version" value="7" checked data-swz-ros-version>
+          <span class="swz-radio-card">
+            <strong>الإصدار 7 (v7)</strong>
+            <small>الربط عبر WireGuard (موصى به)</small>
+          </span>
+        </label>
+        <label class="swz-radio">
+          <input type="radio" name="ros_version" value="6" data-swz-ros-version>
+          <span class="swz-radio-card">
+            <strong>الإصدار 6 (v6)</strong>
+            <small>الربط عبر SSTP</small>
+          </span>
+        </label>
+      </div>
+      <small data-swz-binding-hint>سيُولّد سكربت WireGuard المناسب لإصدار 7.</small>
+    </div>
+
     <div class="swz-script-card" data-swz-step3-script hidden>
       <header>
         <strong>✅ سكربت الربط جاهز</strong>

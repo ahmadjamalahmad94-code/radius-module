@@ -18,6 +18,7 @@
 
   const CFG = {
     routerId: root.dataset.mtRouterId,
+    routerAddress: root.dataset.mtRouterAddress || "",
     apiBase: root.dataset.mtApiBase || "/api/v1",
     apiToken: root.dataset.mtApiToken || "",
     overviewIntervalMs: 10_000,
@@ -268,15 +269,18 @@
       }
       const data = body.data || {};
       renderOverview(data);
+      // Router IP shown in the status meta-pill. Prefer the live
+      // address the API reports; fall back to the server-rendered
+      // nas.address (data-mt-router-address) so the pill is never
+      // blank when the overview payload omits connection.address.
+      const apiAddr = (data.connection && data.connection.address) || "";
+      const metaAddr = apiAddr || CFG.routerAddress || "—";
       if (data.any_ok === false) {
-        setStatus("error", "الراوتر غير قابل للوصول",
-                  data.connection ? data.connection.address : "");
+        setStatus("error", "الراوتر غير قابل للوصول", metaAddr);
       } else if (data.all_ok === false) {
-        setStatus("pending", "بعض الأقسام غير متاحة",
-                  data.connection ? data.connection.address : "");
+        setStatus("pending", "بعض الأقسام غير متاحة", metaAddr);
       } else {
-        setStatus("ok", "الراوتر متصل",
-                  data.connection ? data.connection.address : "");
+        setStatus("ok", "الراوتر متصل", metaAddr);
       }
     } catch (e) {
       setStatus("error", "خطأ في الشبكة", String(e));
@@ -517,6 +521,33 @@
 
   const actionFormEl  = root.querySelector("[data-mt-action-form]");
   const actionResEl   = root.querySelector("[data-mt-action-result]");
+  // #47 — action popup modal. The form + result panels live inside
+  // this overlay now; openForm()/closeForm() toggle its visibility.
+  const actionModalEl   = root.querySelector("[data-mt-action-modal]");
+  const actionModalTtl  = root.querySelector("[data-mt-action-modal-title] span");
+  // Friendly titles for the modal header per action kind.
+  const ACTION_TITLES = {
+    backup:       "حفظ نسخة احتياطية",
+    reboot:       "إعادة تشغيل الراوتر",
+    ping:         "اختبار الوصول",
+    identity:     "تعديل اسم الراوتر",
+    traceroute:   "تتبّع المسار",
+    "dns-flush":  "مسح كاش DNS",
+    "clock-sync": "مزامنة الوقت",
+  };
+  function showActionModal(on) {
+    if (!actionModalEl) return;
+    actionModalEl.hidden = !on;
+    document.body.classList.toggle("mt-modal-open", !!on);
+  }
+  if (actionModalEl) {
+    actionModalEl.querySelectorAll("[data-mt-action-modal-dismiss]").forEach((el) => {
+      el.addEventListener("click", () => closeForm());
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && !actionModalEl.hidden) closeForm();
+    });
+  }
   const actionButtons = {
     backup:      root.querySelector("[data-mt-action-backup]"),
     reboot:      root.querySelector("[data-mt-action-reboot]"),
@@ -838,6 +869,7 @@
     if (actionResEl)   { actionResEl.hidden = true; actionResEl.innerHTML = ""; }
     currentActionKind = "";
     clearActiveButtons();
+    showActionModal(false);  // #47 — hide the popup
   }
 
   function openForm(key, html) {
@@ -848,6 +880,10 @@
     currentActionKind = key;
     clearActiveButtons();
     if (actionButtons[key]) actionButtons[key].classList.add("is-active");
+    // #47 — set the modal title + open the popup so the form is no
+    // longer rendered at the bottom of the page.
+    if (actionModalTtl) actionModalTtl.textContent = ACTION_TITLES[key] || "الإجراء";
+    showActionModal(true);
     const cancel = actionFormEl.querySelector(".mt-cancel");
     if (cancel) cancel.addEventListener("click", closeForm);
   }

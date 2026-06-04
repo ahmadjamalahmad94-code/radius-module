@@ -183,6 +183,45 @@
     font-weight:900;
     padding-inline-start:2px;
   }
+  /* ── #50e: distinct colours for an applied limit on «السرعة الحالية» ── */
+  .online-cur-speed{ font-weight:800; }
+  .online-cur-speed.is-temp{ color:#b45309; }   /* amber = temporary */
+  .online-cur-speed.is-sched{ color:#1d4ed8; }  /* blue  = scheduled */
+  .online-cur-speed.is-custom{ color:#875500; } /* permanent override */
+  .online-plan-speed{ color:var(--hub-text-mute,#94a3b8); }
+
+  /* ── #50c: floating temp-speed modal ── */
+  .online-temp-modal{
+    position:fixed; inset:0; z-index:1000;
+    display:flex; align-items:center; justify-content:center; padding:18px;
+  }
+  .online-temp-modal[hidden]{ display:none; }
+  .online-temp-modal-backdrop{
+    position:absolute; inset:0; background:rgba(15,23,42,.45);
+    backdrop-filter:blur(1.5px);
+  }
+  .online-temp-modal-card{
+    position:relative; z-index:1; width:340px; max-width:100%;
+    background:#fff; border:1px solid var(--hub-border,#e2e8f0);
+    border-radius:16px; box-shadow:0 24px 64px rgba(15,23,42,.30);
+    padding:18px; text-align:start;
+  }
+  .online-temp-modal-head{
+    display:flex; align-items:center; justify-content:space-between;
+    font-weight:800; font-size:15px; color:var(--hub-text,#0f172a);
+    margin-bottom:4px;
+  }
+  .online-temp-modal-x{
+    border:0; background:transparent; cursor:pointer; font-size:16px;
+    color:#94a3b8; line-height:1; padding:4px;
+  }
+  .online-temp-modal-x:hover{ color:#475569; }
+  .online-temp-modal-sub{ font-size:12.5px; color:#64748b; margin-bottom:12px; }
+  .online-temp-lbl{
+    display:block; font-size:11px; font-weight:700; color:#64748b; margin:8px 0 3px;
+  }
+  .online-temp-modal-card .hub-input{ width:100%; height:36px; }
+
   .online-row.has-special-speed td:first-child{box-shadow:inset 3px 0 #f4b63f}
   .online-mini-actions{display:flex;gap:5px;justify-content:flex-end;flex-wrap:wrap}
   [data-online-sessions-page] .hub-table th,
@@ -397,9 +436,9 @@
         ("ip", "IP"),
         ("nas", "جهاز الشبكة"),
         ("device", "نوع الجهاز"),
-        ("down_speed", "سرعة التحميل"),
-        ("up_speed", "سرعة الرفع"),
-        ("speed_state", "تمييز السرعة"),
+        ("down_speed", "سرعة العرض"),
+        ("up_speed", "السرعة الحالية"),
+        ("speed_state", "حالة السرعة"),
         ("duration", "وقت الجلسة"),
         ("download", "تحميل"),
         ("upload", "رفع"),
@@ -431,9 +470,9 @@
           <th data-col="ip">IP</th>
           <th data-col="nas">جهاز الشبكة</th>
           <th data-col="device">نوع الجهاز</th>
-          <th data-col="down_speed" class="num">سرعة التحميل</th>
-          <th data-col="up_speed" class="num">سرعة الرفع</th>
-          <th data-col="speed_state">السرعة</th>
+          <th data-col="down_speed" class="num">سرعة العرض</th>
+          <th data-col="up_speed" class="num">السرعة الحالية</th>
+          <th data-col="speed_state">حالة السرعة</th>
           <th data-col="duration">وقت الجلسة</th>
           <th data-col="download" class="num">تحميل</th>
           <th data-col="upload" class="num">رفع</th>
@@ -473,7 +512,12 @@
           <td data-col="ip" class="mono">{{ s.framed_ip or '—' }}</td>
           <td data-col="nas" class="mono small">{{ s.nas_address or '—' }}</td>
           <td data-col="device">
-            {% if _device and _device.label %}
+            {# #12: show the device NAME from the MikroTik DHCP lease host-name
+               once (primary line), with the OS/type as a single meta line.
+               Previously the model was repeated (label included the hostname,
+               and the meta repeated brand · model). #}
+            {% set _dev_name = _device.hostname if (_device and _device.hostname) else (_device.label if _device else '') %}
+            {% if _device and _dev_name %}
               <span class="online-device-label" title="{{ _device.class_id or '' }}">
                 {% if _device.os_family %}
                   {% set _os_icon = 'apple' if _device.os_family in ['ios', 'macos', 'apple'] else (_device.os_family if _device.os_family in ['android','windows','linux'] else 'android') %}
@@ -481,11 +525,13 @@
                 {% else %}
                   <i class="fa-solid fa-network-wired"></i>
                 {% endif %}
-                <span>{{ _device.label }}</span>
+                <span>{{ _dev_name }}</span>
               </span>
               <div class="online-device-meta">
-                {% if _device.brand or _device.model %}
-                  {{ _device.brand }}{% if _device.model %} · {{ _device.model }}{% endif %}
+                {% if _device.os_family %}
+                  {{ _device.os_family|capitalize }}{% if _device.os_version %} {{ _device.os_version }}{% endif %}
+                {% elif _device.brand %}
+                  {{ _device.brand }}
                 {% elif _device.class_id %}
                   {{ _device.class_id }}
                 {% else %}
@@ -496,8 +542,17 @@
               <span class="hub-text-mute">—</span>
             {% endif %}
           </td>
-          <td data-col="down_speed" class="num mono">{{ fmt_speed(s.rate_down_kbps) }}</td>
-          <td data-col="up_speed" class="num mono">{{ fmt_speed(s.rate_up_kbps) }}</td>
+          {# #50e: «سرعة العرض» = the plan rate; «السرعة الحالية» = what's
+             actually applied right now, coloured amber when a temporary limit
+             is active and highlighted for a permanent override. #}
+          <td data-col="down_speed" class="num mono online-plan-speed">
+            {{ fmt_speed(s.plan_down_kbps) }} / {{ fmt_speed(s.plan_up_kbps) }}
+          </td>
+          <td data-col="up_speed" class="num mono">
+            <span class="online-cur-speed {% if _temp_active %}is-temp{% elif s.has_custom_speed %}is-custom{% endif %}">
+              {{ fmt_speed(s.rate_down_kbps) }} / {{ fmt_speed(s.rate_up_kbps) }}
+            </span>
+          </td>
           <td data-col="speed_state">
             {% if _temp_active %}
               <span class="online-speed-pill is-temp"
@@ -505,6 +560,7 @@
                 <i class="fa-solid fa-clock"></i>
                 <span>مؤقتة</span>
                 {% if _temp_state and _temp_state.remaining_seconds is not none %}
+                  <span>باقٍ</span>
                   <span class="online-speed-countdown" data-temp-countdown="{{ _temp_state.remaining_seconds|int }}">--:--</span>
                 {% elif _temp_unknown %}
                   <span class="online-speed-countdown">مفتوح</span>
@@ -522,7 +578,10 @@
           <td data-col="mac" class="mono">{{ s.mac_address or '—' }}</td>
           <td data-col="manager">{{ s.manager_name or '—' }}</td>
           <td data-col="service">{{ s.service_type or s.user_type or '—' }}</td>
-          <td data-col="port" class="mono small">{{ s.nas_port_id or s.nas_port_type or '—' }}</td>
+          {# #2: prefer the Called-Station-Id (hotspot-server / interface name)
+             over the numeric nas_port_id; fall back to the port if empty. #}
+          {% set _called = (called_station_by_session or {}).get(s.session_id) %}
+          <td data-col="port" class="mono small">{{ _called or s.nas_port_id or s.nas_port_type or '—' }}</td>
           <td data-col="actions">
             <div class="online-mini-actions">
               <a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ _profile_url }}" title="عرض 360°">
@@ -541,41 +600,16 @@
                   <i class="fa-solid fa-plug-circle-xmark"></i>
                 </button>
               </form>
-              <details class="online-temp-speed" style="display:inline-block;position:relative;">
-                <summary class="hub-btn hub-btn--secondary hub-btn--sm" title="سرعة مؤقتة (تطبيق فوري + رجوع تلقائي)"
-                         style="list-style:none;cursor:pointer;">
-                  <i class="fa-solid fa-gauge-simple-high"></i>
-                </summary>
-                <form method="post" action="{{ url_for('radius.online_temp_speed') }}"
-                      style="position:absolute;z-index:30;inset-inline-end:0;margin-top:6px;min-width:240px;
-                             background:#fff;border:1px solid var(--hub-border,#e2e8f0);border-radius:12px;
-                             box-shadow:0 12px 32px rgba(15,23,42,.18);padding:12px;text-align:start;">
-                  <input type="hidden" name="next" value="{{ request.full_path }}">
-                  <input type="hidden" name="username" value="{{ s.username }}">
-                  <input type="hidden" name="session_id" value="{{ s.session_id }}">
-                  <div style="font-weight:800;font-size:12.5px;margin-bottom:8px;color:var(--hub-text,#0f172a);">
-                    سرعة مؤقتة لـ «{{ s.username }}»
-                  </div>
-                  <label style="display:block;font-size:11px;font-weight:700;color:#64748b;margin:0 0 2px;">التنزيل (كيلوبت/ث)</label>
-                  <input type="number" name="down_kbps" min="64" max="1000000" step="64" value="1024" required
-                         class="hub-input" style="width:100%;height:34px;margin-bottom:8px;">
-                  <label style="display:block;font-size:11px;font-weight:700;color:#64748b;margin:0 0 2px;">الرفع (كيلوبت/ث)</label>
-                  <input type="number" name="up_kbps" min="64" max="1000000" step="64" value="1024" required
-                         class="hub-input" style="width:100%;height:34px;margin-bottom:8px;">
-                  <label style="display:block;font-size:11px;font-weight:700;color:#64748b;margin:0 0 2px;">المدة (دقائق)</label>
-                  <input type="number" name="duration_minutes" min="1" max="1440" value="5" required
-                         class="hub-input" style="width:100%;height:34px;margin-bottom:10px;">
-                  <button type="submit" class="hub-btn hub-btn--primary hub-btn--sm" style="width:100%;">
-                    <i class="fa-solid fa-bolt"></i> تطبيق فوري
-                  </button>
-                  {% if _temp_active %}
-                  <button type="submit" formaction="{{ url_for('radius.online_temp_speed_cancel') }}"
-                          class="hub-btn hub-btn--secondary hub-btn--sm" style="width:100%;margin-top:6px;">
-                    <i class="fa-solid fa-rotate-left"></i> إلغاء السرعة المؤقتة الآن
-                  </button>
-                  {% endif %}
-                </form>
-              </details>
+              {# #50c: a real floating modal (was a <details> popover that clipped
+                 inside the scrolling table). The trigger flags the row data; the
+                 single shared modal below is populated + centered on open. #}
+              <button type="button" class="hub-btn hub-btn--secondary hub-btn--sm online-temp-open"
+                      title="سرعة مؤقتة (تطبيق فوري + رجوع تلقائي)"
+                      data-username="{{ s.username }}"
+                      data-session-id="{{ s.session_id }}"
+                      data-temp-active="{{ 1 if _temp_active else 0 }}">
+                <i class="fa-solid fa-gauge-simple-high"></i>
+              </button>
             </div>
           </td>
         </tr>
@@ -592,6 +626,39 @@
   icon="wifi"
 ) }}
 {% endif %}
+
+{# ── #50c: shared floating temp-speed modal ── #}
+<div class="online-temp-modal" data-temp-modal hidden>
+  <div class="online-temp-modal-backdrop" data-temp-close></div>
+  <form class="online-temp-modal-card" method="post"
+        action="{{ url_for('radius.online_temp_speed') }}" data-temp-form>
+    {{ csrf_token_input() | safe }}
+    <input type="hidden" name="next" value="{{ request.full_path }}">
+    <input type="hidden" name="username" value="" data-temp-username>
+    <input type="hidden" name="session_id" value="" data-temp-session>
+    <div class="online-temp-modal-head">
+      <span><i class="fa-solid fa-gauge-simple-high"></i> سرعة مؤقتة</span>
+      <button type="button" class="online-temp-modal-x" data-temp-close aria-label="إغلاق">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    <div class="online-temp-modal-sub" data-temp-title>—</div>
+    <label class="online-temp-lbl">التنزيل (كيلوبت/ث)</label>
+    <input type="number" name="down_kbps" min="64" max="1000000" step="64" value="1024" required class="hub-input">
+    <label class="online-temp-lbl">الرفع (كيلوبت/ث)</label>
+    <input type="number" name="up_kbps" min="64" max="1000000" step="64" value="1024" required class="hub-input">
+    <label class="online-temp-lbl">المدة (دقائق)</label>
+    <input type="number" name="duration_minutes" min="1" max="1440" value="5" required class="hub-input">
+    <button type="submit" class="hub-btn hub-btn--primary" style="width:100%;margin-top:10px;">
+      <i class="fa-solid fa-bolt"></i> تطبيق فوري
+    </button>
+    <button type="submit" formaction="{{ url_for('radius.online_temp_speed_cancel') }}"
+            class="hub-btn hub-btn--secondary" data-temp-cancel
+            style="width:100%;margin-top:8px;display:none;">
+      <i class="fa-solid fa-rotate-left"></i> إلغاء السرعة المؤقتة الآن
+    </button>
+  </form>
+</div>
 
 </div>
 <script>
@@ -733,6 +800,41 @@
   }
   refreshTemporaryCountdowns();
   window.setInterval(refreshTemporaryCountdowns, 1000);
+
+  // ── #50c: floating temp-speed modal ──
+  var tempModal = page.querySelector('[data-temp-modal]');
+  if (tempModal) {
+    var tForm     = tempModal.querySelector('[data-temp-form]');
+    var tUsername = tempModal.querySelector('[data-temp-username]');
+    var tSession  = tempModal.querySelector('[data-temp-session]');
+    var tTitle    = tempModal.querySelector('[data-temp-title]');
+    var tCancel   = tempModal.querySelector('[data-temp-cancel]');
+
+    function openTempModal(btn){
+      var username = btn.getAttribute('data-username') || '';
+      var sessionId = btn.getAttribute('data-session-id') || '';
+      var active = btn.getAttribute('data-temp-active') === '1';
+      if (tUsername) tUsername.value = username;
+      if (tSession)  tSession.value = sessionId;
+      if (tTitle)    tTitle.textContent = 'لـ «' + username + '»';
+      if (tCancel)   tCancel.style.display = active ? '' : 'none';
+      tempModal.hidden = false;
+    }
+    function closeTempModal(){ tempModal.hidden = true; }
+
+    page.querySelectorAll('.online-temp-open').forEach(function(btn){
+      btn.addEventListener('click', function(e){
+        e.stopPropagation();
+        openTempModal(btn);
+      });
+    });
+    tempModal.querySelectorAll('[data-temp-close]').forEach(function(el){
+      el.addEventListener('click', closeTempModal);
+    });
+    document.addEventListener('keydown', function(e){
+      if (e.key === 'Escape' && !tempModal.hidden) closeTempModal();
+    });
+  }
 
   var menu = page.querySelector('[data-column-menu]');
   var panel = page.querySelector('[data-column-panel]');

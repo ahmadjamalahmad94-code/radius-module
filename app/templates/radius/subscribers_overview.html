@@ -185,8 +185,21 @@
 {# ───── أكبر المدينين — per-subscriber drill-down to Finance ───── #}
 {% call hub.section("أكبر المدينين", icon="user-clock", meta="مشترك مشترك → المالية") %}
   {% if debtors %}
+  {# #6: the magnifier on this overview previously had no field/handler. It now
+     toggles a real visible search box that filters the debtors list (the only
+     per-subscriber list on this page) client-side by username / full name.
+     The page-wide subscriber search still lives on قائمة المشتركين. #}
+  <div class="so-search" data-so-search style="display:flex;align-items:center;gap:8px;padding:0 0 12px">
+    <button type="button" class="hub-btn hub-btn--secondary hub-btn--sm" data-so-search-toggle
+            aria-expanded="false" aria-label="بحث في المدينين" title="بحث">
+      <i class="fa-solid fa-magnifying-glass"></i>
+    </button>
+    <input type="search" class="hub-input so-search-input" data-so-search-input
+           placeholder="ابحث باسم المستخدم أو الاسم الكامل…" autocomplete="off" hidden
+           style="flex:1;max-width:320px">
+  </div>
   <div class="hub-table-wrap" style="border:none;border-radius:0">
-    <table class="hub-table">
+    <table class="hub-table" data-so-debtors>
       <thead>
         <tr>
           <th>المشترك</th>
@@ -196,9 +209,9 @@
           <th>التفصيل</th>
         </tr>
       </thead>
-      <tbody>
+      <tbody data-so-debtor-rows>
         {% for d in debtors %}
-        <tr>
+        <tr data-so-name="{{ ((d.username or '') ~ ' ' ~ (d.full_name or ''))|lower }}">
           <td>
             <strong class="mono">{{ d.username }}</strong>
             {% if d.full_name %}<div class="so-muted">{{ d.full_name }}</div>{% endif %}
@@ -270,4 +283,41 @@
 {% endcall %}
 
 </div>
+
+<style>
+  .so-search-input{
+    width:0; opacity:0; padding:0; border-width:0;
+    transition:width .2s ease, opacity .2s ease, padding .2s ease;
+  }
+  .so-search.is-open .so-search-input{
+    width:auto; opacity:1; padding:9px 12px; border-width:1px;
+  }
+</style>
+<script>
+(function(){
+  'use strict';
+  // #6: magnifier reveals a search box filtering the debtors list.
+  var root   = document.querySelector('[data-so-search]');
+  var toggle = root && root.querySelector('[data-so-search-toggle]');
+  var input  = root && root.querySelector('[data-so-search-input]');
+  var rows   = document.querySelector('[data-so-debtor-rows]');
+  if (!root || !toggle || !input) return;
+  function filter(q){
+    if (!rows) return;
+    q = (q || '').trim().toLowerCase();
+    Array.prototype.forEach.call(rows.querySelectorAll('tr'), function(tr){
+      var hay = tr.getAttribute('data-so-name') || '';
+      tr.style.display = (!q || hay.indexOf(q) !== -1) ? '' : 'none';
+    });
+  }
+  toggle.addEventListener('click', function(){
+    var open = root.classList.toggle('is-open');
+    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (open){ input.hidden = false; input.focus(); }
+    else { input.value = ''; filter(''); setTimeout(function(){ if(!root.classList.contains('is-open')) input.hidden = true; }, 210); }
+  });
+  input.addEventListener('input', function(){ filter(input.value); });
+  input.addEventListener('keydown', function(e){ if (e.key === 'Escape'){ toggle.click(); } });
+})();
+</script>
 {% endblock %}

@@ -148,12 +148,44 @@
 }
 
 .hub-hero + .hub-filterbar,
+/* Hero followed directly by any content block must keep the section gap —
+   previously only `.hub-hero + .hub-filterbar` was covered, so heroes sitting
+   directly above a grid/section/card rendered with no gap (the site-wide
+   "hero stuck to the section below it" bug). */
+.hub-hero + .hub-kpi-grid,
+.hub-hero + .hub-tile-grid,
+.hub-hero + .hub-section,
+.hub-hero + .hub-empty,
+.hub-hero + .mt-card,
 .hub-filterbar + .hub-kpi-grid,
 .hub-filterbar + .hub-tile-grid,
+.hub-filterbar + .hub-section,
 .hub-kpi-grid + .hub-section,
 .hub-tile-grid + .hub-section,
 .hub-section + .hub-section,
 .mt-card + .mt-card {
+  margin-top: var(--hr-section-gap);
+}
+
+/* ── Universal block spacing (site-wide QA) ──────────────────────────
+   Safety net so heroes/sections/cards of EVERY page system keep an equal
+   gap from their neighbour, even families not in the hub-* list above
+   (pl-section, uf-section, swz/swv2 wizard cards, generic <section>/.card,
+   and cross-family adjacencies). Adjacent-sibling top-margins are additive
+   and never collapse a block's own internal layout, so this is safe to
+   apply broadly. Inner padding stays owned by each family's *-body rule. */
+.pl-section + .pl-section,
+.uf-section + .uf-section,
+.swz-step + .swz-step,
+.swv2-step + .swv2-step,
+.swv2-step-card + .swv2-step-card,
+.hub-section + .mt-card,
+.mt-card + .hub-section,
+.hub-kpi-grid + .hub-kpi-grid,
+.hub-kpi-grid + .mt-card,
+.hub-section + .hub-filterbar,
+.hub-empty + .hub-section,
+.card + .card {
   margin-top: var(--hr-section-gap);
 }
 
@@ -171,6 +203,13 @@
   align-items: center;
   border-radius: var(--hr-panel-radius);
 }
+
+/* #19b: the form/offer side-nav entries ("أقسام النموذج" / "أقسام العرض")
+   are anchor links to section ids. Smooth-scroll on tap, and leave room for
+   the sticky topbar so the targeted section heading isn't hidden under it. */
+html { scroll-behavior: smooth; }
+:target { scroll-margin-top: 84px; }
+.uf-section[id], .pl-section[id], section[id] { scroll-margin-top: 84px; }
 
 .hub-kpi-grid,
 .hub-tile-grid {

@@ -51,6 +51,18 @@
 
 {% block content %}
 
+<style>
+  /* QA fix — the .audit-detail-* blocks stacked with no vertical gap,
+     leaving hero/grid/error/json/diff touching each other. Apply a
+     consistent inter-block rhythm (~var(--hub-gap-section)). */
+  [data-audit-detail-page]{
+    display:flex;
+    flex-direction:column;
+    gap:var(--hub-gap-section, 18px);
+  }
+  [data-audit-detail-page] > section{ margin:0; }
+</style>
+
 <section class="mt-dashboard audit-shell audit-detail-shell"
          data-audit-detail-page
          data-audit-id="{{ entry.id }}">
@@ -125,7 +137,7 @@
       <div class="audit-guide__icon">
         <i class="fa-solid fa-lock"></i>
       </div>
-      <h3>الأسرار مخفية</h3>
+      <h3>ماذا تعني هذه الصفحة؟ — الأسرار مخفية</h3>
       <p>
         كلمات المرور والمفاتيح الحساسة تُحجب عند كتابة السجل وتظهر هنا كـ
         <code>***</code>، لذلك يمكن مراجعة العملية بدون كشف بيانات حساسة.

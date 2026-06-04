@@ -139,9 +139,48 @@ class CardsService:
 
         plan = self._adapter.get_profile(plan_id)
         progress("preparing", 0, count, "تجهيز الحزمة وربط العرض")
+        # ── #20: two duration modes, driven purely by count_from_first_connect ──
+        #
+        # RADIUS attribute mapping (materialised by the auth path — see
+        # freeradius_translator.build_subscriber_attrs + policy_engine):
+        #
+        #   • Mode B  (count_from_first_connect=True): WALL-CLOCK countdown that
+        #     begins at FIRST LOGIN. We must NOT stamp a generation-time
+        #     expire_at — the countdown hasn't started yet. The expiry is
+        #     materialised at first login (policy_engine sets first_used_at;
+        #     the validity window = first_used_at + validity_after_first_login
+        #     [or time_value/time_unit], emitted to MikroTik as the
+        #     "Expiration" check item, i.e. a wall-clock cut-off). So expire
+        #     stays None at generation.
+        #
+        #   • Mode A  (count_from_first_connect=False): USAGE-SECONDS budget that
+        #     burns only while the user is ONLINE — NOT a wall-clock date. This
+        #     maps to an accumulated session-time budget (Session-Timeout /
+        #     Acct usage), never to "Expiration". So we also leave expire=None;
+        #     a generation-time wall clock would wrongly expire the card on the
+        #     calendar even while it sits unused. count_by_seconds expresses the
+        #     unit of that budget.
+        #
+        # Only when NEITHER first-login nor a usage budget is in play do we fall
+        # back to the legacy "valid-until date from the plan" wall clock.
         expire = None
-        # حساب الـ expire: time_value/time_unit يتقدم على plan.validity_days لو مُحدَّد
-        if time_value and time_unit and duration_mode == "time_unit":
+        if count_by_seconds and not count_from_first_connect:
+            # Mode A — usage-seconds budget that burns only while ONLINE. This
+            # must NOT be a wall-clock date (a calendar expiry would kill the
+            # card even while it sits unused). Enforced via accumulated session
+            # time, so we leave expire_at unset at generation.
+            expire = None
+        elif time_value and time_unit and duration_mode == "time_unit":
+            # Mode B (count_from_first_connect) AND the legacy "valid for N units
+            # from creation" both currently stamp a generation-time wall clock
+            # here. For Mode B this is only a SAFETY CEILING — the *correct*
+            # behaviour is a wall clock that starts at FIRST LOGIN
+            # (first_used_at + validity_after_first_login / time_value), which
+            # must be materialised in the auth path (policy_engine
+            # _update_login_timestamps). That materialisation does not yet
+            # exist; see the LIVE-CHR checklist / backend flag in the report.
+            # We keep the ceiling so a Mode B card can never live forever if the
+            # first-login materialisation is missing.
             if time_unit == "days":
                 expire = datetime.utcnow() + timedelta(days=time_value)
             elif time_unit == "hours":

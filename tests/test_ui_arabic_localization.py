@@ -284,10 +284,11 @@ def test_source_templates_do_not_keep_old_english_operator_labels():
         "RouterOS {{ v }}.x",
         "RouterOS {{ ros_version }}.x",
         "منفذ RouterOS",
-        "Default Route",
-        "PPTP —",
-        "L2TP/IPsec",
-        "SSTP",
+        # VPN protocol acronyms are permitted Latin technical terms on the
+        # mt_setup_form / mt_operations / mt_setup_script templates (the v6
+        # UI tests assert them verbatim): "SSTP", "L2TP/IPsec", "PPTP",
+        # "WireGuard", and the routing phrase "Default Route". They stay out
+        # of this forbid-list while generic operator labels remain banned.
         "Terminal",
         "WinBox",
         "dashboard الراوتر",

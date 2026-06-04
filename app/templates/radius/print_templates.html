@@ -40,6 +40,35 @@
   @media(max-width:720px){.pr-grid2,.pr-grid3,.pr-grid4{grid-template-columns:1fr}}
   .pr-field{display:flex;flex-direction:column;gap:5px;font-size:12px;font-weight:900;color:var(--hub-text-soft)}
   .pr-field small{font-weight:700;color:var(--hub-text-mute);line-height:1.6}
+  /* ── Shared color-field widget ──────────────────────────────────
+     Native <input type="color"> inherits .hub-input's text-input
+     sizing (full width + horizontal padding + fixed control height),
+     which on several engines collapses the colour well into a thin
+     line instead of a visible swatch. We reset that here so every
+     colour field in the editor renders as a real filled swatch box.
+     A JS enhancement (see script) wraps each one with a hex readout. */
+  .pr-color-field{flex-direction:column;gap:6px}
+  .pr-color-row{display:flex;align-items:center;gap:9px}
+  input.hub-input[type="color"]{
+    -webkit-appearance:none;-moz-appearance:none;appearance:none;
+    width:46px;height:34px;min-width:46px;flex:0 0 auto;
+    padding:0;border:1px solid var(--hub-border);border-radius:10px;
+    background:transparent;cursor:pointer;overflow:hidden;
+    box-shadow:0 1px 2px rgba(15,23,42,.12);
+  }
+  input.hub-input[type="color"]::-webkit-color-swatch-wrapper{padding:0}
+  input.hub-input[type="color"]::-webkit-color-swatch{border:none;border-radius:8px}
+  input.hub-input[type="color"]::-moz-color-swatch{border:none;border-radius:8px}
+  input.hub-input[type="color"]:focus{
+    border-color:var(--hub-brand,#6b5aed);
+    box-shadow:0 0 0 3px rgba(107,90,237,.18);outline:none;
+  }
+  .pr-color-hex{
+    font-family:'Menlo','Consolas',monospace;font-size:12px;font-weight:900;
+    color:var(--hub-text);text-transform:uppercase;letter-spacing:.04em;
+    background:var(--hub-bg-soft);border:1px solid var(--hub-border-soft);
+    border-radius:8px;padding:5px 9px;line-height:1;
+  }
   .pr-checks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
   .pr-check{display:flex;align-items:center;gap:8px;border:1px solid var(--hub-border-soft);border-radius:12px;background:var(--hub-bg-soft);padding:9px;font-size:12px;font-weight:900}
   .pr-check input{width:16px;height:16px;accent-color:var(--pr-cyan)}
@@ -410,6 +439,19 @@
   .pr-template-choice .pr-template-thumb{height:118px}.pr-template-choice .pr-template-thumb.is-vertical{height:136px;width:96px}
   .pr-template-choice h4{margin:0;color:var(--hub-text);font-size:14px;font-weight:950;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.pr-template-choice p{margin:0;color:var(--hub-text-mute);font-size:12px;font-weight:800;line-height:1.5}
   .pr-template-choice-actions{display:flex;gap:7px;flex-wrap:wrap;align-items:center}.pr-template-choice-actions .hub-btn{padding:6px 10px;font-size:12px}
+  /* ── Room tabs (#23): split into «غرفة الطباعة» + «غرفة التصميم» ──
+     Tab strip toggles two independent panels. No existing IDs/selectors
+     change — the export/designer/templates/jobs sections keep their IDs
+     and just get grouped under a tab panel each. */
+  .pr-roomtabs{display:flex;flex-wrap:wrap;gap:8px;border:1px solid #cbd5e1;background:linear-gradient(180deg,#faf8ff 0%,#fff 100%);border-radius:16px;padding:8px;box-shadow:0 4px 14px rgba(15,23,42,.05)}
+  .pr-roomtab{flex:1 1 220px;display:flex;align-items:center;justify-content:center;gap:9px;border:1px solid transparent;background:transparent;border-radius:12px;padding:12px 14px;cursor:pointer;font-family:inherit;font-weight:900;font-size:14px;color:var(--hub-text-soft);transition:background .15s ease,color .15s ease,box-shadow .15s ease}
+  .pr-roomtab i{font-size:16px}
+  .pr-roomtab small{display:block;font-weight:700;font-size:11px;color:var(--hub-text-mute);line-height:1.5;margin-top:2px}
+  .pr-roomtab:hover{background:#fff;box-shadow:0 6px 16px rgba(15,23,42,.06)}
+  .pr-roomtab.is-active{background:var(--pr-navy);color:#fff;border-color:var(--pr-navy);box-shadow:0 10px 24px rgba(15,23,42,.18)}
+  .pr-roomtab.is-active small{color:rgba(255,255,255,.78)}
+  .pr-roompanel{display:none}
+  .pr-roompanel.is-active{display:grid;gap:16px}
 </style>
 {% endblock %}
 
@@ -441,6 +483,27 @@
       <div class="pr-kpi"><small>وضع PDF</small><strong>فعّال</strong></div>
     </div>
   </section>
+
+  {# ── Room tabs (#23): «غرفة الطباعة» (export/print) vs «غرفة التصميم»
+     (designer + saved templates). Two independent panels toggled by JS.
+     Default active = print room; switches to design when the designer
+     is opened (edit_template / preview / form_state). #}
+  {%- set design_active = (preview or form_state) -%}
+  <div class="pr-roomtabs" role="tablist" data-room-tabs>
+    <button type="button" class="pr-roomtab{% if not design_active %} is-active{% endif %}"
+            role="tab" data-room-tab="print" aria-selected="{{ 'false' if design_active else 'true' }}">
+      <i class="fa-solid fa-print"></i>
+      <span>غرفة الطباعة <small>اختيار حزمة وقالب ثم تصدير PDF + سجل التصدير</small></span>
+    </button>
+    <button type="button" class="pr-roomtab{% if design_active %} is-active{% endif %}"
+            role="tab" data-room-tab="design" aria-selected="{{ 'true' if design_active else 'false' }}">
+      <i class="fa-solid fa-wand-magic-sparkles"></i>
+      <span>غرفة التصميم <small>محرر القوالب والتصاميم المحفوظة</small></span>
+    </button>
+  </div>
+
+  {# ───── غرفة الطباعة (print room) ───── #}
+  <div class="pr-roompanel{% if not design_active %} is-active{% endif %}" data-room-panel="print">
 
   {# Export room — primary surface. The template list opens in a modal
      picker so the export flow stays focused: choose batch, choose saved
@@ -647,6 +710,43 @@
       </section>
     </div>
   </section>
+
+  {# Export history lives in the print room (relocated from the page
+     tail as part of #23 — IDs/selectors unchanged). #}
+  <section class="pr-panel" id="jobs">
+    <div class="pr-panel-head"><h3><i class="fa-solid fa-clock-rotate-left"></i> سجل التصدير</h3></div>
+    <div class="hub-table-wrap" style="border:none;border-radius:0" data-paginated-table data-page-size="10">
+      <table class="hub-table">
+        <thead><tr><th>#</th><th>القالب</th><th>الحزمة</th><th>النوع</th><th>الحالة</th><th>البطاقات</th><th>الوقت</th></tr></thead>
+        <tbody>
+        {% for job in jobs %}
+          <tr data-page-row>
+            <td>{{ job.id }}</td>
+            <td>{{ job.template_name or job.template_id or '-' }}</td>
+            <td>{{ job.batch_code or job.batch_id or 'عينة' }}</td>
+            <td>{{ job.export_type }}</td>
+            <td>{{ hub.pill(job.status, variant='green' if job.status == 'success' else 'amber', dot=False) }}</td>
+            <td>{{ job.card_count }}</td>
+            <td class="small hub-text-mute">{{ job.created_at|dt_local if job.created_at else '—' }}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="7" class="hub-empty">لا توجد عمليات تصدير بعد.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      <div class="pr-pager" data-pager hidden>
+        <span data-pager-status>صفحة 1</span>
+        <div class="pr-pager-buttons">
+          <button class="hub-btn hub-btn--sm" type="button" data-pager-prev><i class="fa-solid fa-chevron-right"></i> السابق</button>
+          <button class="hub-btn hub-btn--sm hub-btn--primary" type="button" data-pager-next>التالي <i class="fa-solid fa-chevron-left"></i></button>
+        </div>
+      </div>
+    </div>
+  </section>
+  </div>{# /.pr-roompanel[print] #}
+
+  {# ───── غرفة التصميم (design room): designer editor + saved templates ───── #}
+  <div class="pr-roompanel{% if design_active %} is-active{% endif %}" data-room-panel="design">
 
   {# Designer drawer: closed by default — the export workflow above is the
      primary surface; the full designer opens on-demand. #}
@@ -1081,38 +1181,55 @@
       </div>
     </div>
   </section>
-
-  <section class="pr-panel" id="jobs">
-    <div class="pr-panel-head"><h3><i class="fa-solid fa-clock-rotate-left"></i> سجل التصدير</h3></div>
-    <div class="hub-table-wrap" style="border:none;border-radius:0" data-paginated-table data-page-size="10">
-      <table class="hub-table">
-        <thead><tr><th>#</th><th>القالب</th><th>الحزمة</th><th>النوع</th><th>الحالة</th><th>البطاقات</th><th>الوقت</th></tr></thead>
-        <tbody>
-        {% for job in jobs %}
-          <tr data-page-row>
-            <td>{{ job.id }}</td>
-            <td>{{ job.template_name or job.template_id or '-' }}</td>
-            <td>{{ job.batch_code or job.batch_id or 'عينة' }}</td>
-            <td>{{ job.export_type }}</td>
-            <td>{{ hub.pill(job.status, variant='green' if job.status == 'success' else 'amber', dot=False) }}</td>
-            <td>{{ job.card_count }}</td>
-            <td class="small hub-text-mute">{{ job.created_at|dt_local if job.created_at else '—' }}</td>
-          </tr>
-        {% else %}
-          <tr><td colspan="7" class="hub-empty">لا توجد عمليات تصدير بعد.</td></tr>
-        {% endfor %}
-        </tbody>
-      </table>
-      <div class="pr-pager" data-pager hidden>
-        <span data-pager-status>صفحة 1</span>
-        <div class="pr-pager-buttons">
-          <button class="hub-btn hub-btn--sm" type="button" data-pager-prev><i class="fa-solid fa-chevron-right"></i> السابق</button>
-          <button class="hub-btn hub-btn--sm hub-btn--primary" type="button" data-pager-next>التالي <i class="fa-solid fa-chevron-left"></i></button>
-        </div>
-      </div>
-    </div>
-  </section>
+  </div>{# /.pr-roompanel[design] #}
 </div>
+
+{# ── Room tabs toggle (#23). Switches between «غرفة الطباعة» and
+   «غرفة التصميم» without touching any existing IDs / selectors. The
+   designer + templates live in the design panel, export + jobs in the
+   print panel. Hero quick-links and the «تعديل قالب» flow activate the
+   matching tab. #}
+<script>
+(function(){
+  var room = document.querySelector('[data-print-room]');
+  if(!room) return;
+  var tabs   = Array.from(room.querySelectorAll('[data-room-tab]'));
+  var panels = Array.from(room.querySelectorAll('[data-room-panel]'));
+  if(!tabs.length || !panels.length) return;
+
+  function activate(name){
+    tabs.forEach(function(t){
+      var on = t.getAttribute('data-room-tab') === name;
+      t.classList.toggle('is-active', on);
+      t.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    panels.forEach(function(p){
+      p.classList.toggle('is-active', p.getAttribute('data-room-panel') === name);
+    });
+  }
+
+  tabs.forEach(function(t){
+    t.addEventListener('click', function(){
+      activate(t.getAttribute('data-room-tab'));
+    });
+  });
+
+  // Map the existing hash anchors to the right tab so the hero
+  // quick-links keep working.
+  var hashToTab = { '#export': 'print', '#jobs': 'print',
+                    '#designer': 'design', '#templates': 'design' };
+  room.querySelectorAll('a[href^="#"]').forEach(function(a){
+    var tab = hashToTab[a.getAttribute('href')];
+    if(!tab) return;
+    a.addEventListener('click', function(){ activate(tab); });
+  });
+
+  // If the URL already targets a design anchor (e.g. ?edit_template=…#designer),
+  // make sure the design tab is shown on load.
+  var h = window.location.hash;
+  if(hashToTab[h]) activate(hashToTab[h]);
+})();
+</script>
 
 <script>
 (function(){
@@ -1347,51 +1464,145 @@
   // pointermove we map pointer position back to the canvas, then
   // back to mm, then write into the form's username_x/y etc. The
   // resulting form change triggers the regular SVG re-fetch.
+  // viewBox dimensions of the current SVG canvas (1000x600 / 600x1000).
+  function svgViewBox(svg){
+    const vb = (svg.getAttribute('viewBox') || '0 0 1000 600')
+      .split(/\s+/).map(parseFloat);
+    return {vbW: vb[2] || 1000, vbH: vb[3] || 600};
+  }
+  // Map a client pointer into canvas (user-unit) coordinates, honouring
+  // preserveAspectRatio="xMidYMid meet" letter-boxing.
+  function pointerToCanvas(svg, event){
+    const rect = svg.getBoundingClientRect();
+    const {vbW, vbH} = svgViewBox(svg);
+    const scale = Math.min(rect.width / vbW, rect.height / vbH);
+    const drawW = vbW * scale, drawH = vbH * scale;
+    const dx = rect.left + (rect.width - drawW) / 2;
+    const dy = rect.top + (rect.height - drawH) / 2;
+    return {
+      x: Math.max(0, Math.min(vbW, (event.clientX - dx) / scale)),
+      y: Math.max(0, Math.min(vbH, (event.clientY - dy) / scale)),
+      scale, vbW, vbH,
+    };
+  }
+  // Read an element group's current TOP-LEFT in canvas units. getBBox
+  // returns the geometry box in the element's own user space, which —
+  // since the renderer emits absolute coords with no group transform —
+  // is exactly the canvas position we want.
+  function groupTopLeft(el){
+    try {
+      const b = el.getBBox();
+      return {x: b.x, y: b.y};
+    } catch (_e) {
+      return null;
+    }
+  }
+  // Populate the numeric position inputs from the element's ACTUAL
+  // rendered coordinates so "المكان أفقيًا/عموديًا" reflect where the
+  // element really sits — not the stored override (which is 0 when the
+  // engine default is in effect). Runs after every SVG (re)render and
+  // is the single source of truth for the displayed coordinates.
+  function syncPositionInputsFromSvg(){
+    if(!svgMount || !form) return;
+    const svg = svgMount.querySelector('svg');
+    if(!svg) return;
+    const {vbW, vbH} = svgViewBox(svg);
+    const mm = cardSizeMm();
+    const map = [
+      [`.card-pill:nth-of-type(${pillIndex(svg, 'user') + 1})`, 'username'],
+      [`.card-pill:nth-of-type(${pillIndex(svg, 'pass') + 1})`, 'password'],
+      ['.card-qr', 'qr'],
+    ];
+    map.forEach(([selector, prefix]) => {
+      const el = svg.querySelector(selector);
+      if(!el) return;
+      const tl = groupTopLeft(el);
+      if(!tl) return;
+      const xInput = form.querySelector(`[name="${prefix}_x"]`);
+      const yInput = form.querySelector(`[name="${prefix}_y"]`);
+      const xMm = (tl.x / vbW) * mm.w;
+      const yMm = (tl.y / vbH) * mm.h;
+      // Fill the field with the element's REAL top-left coordinate when
+      // it's still at the 0 sentinel (= "use engine default"). The
+      // renderer (card_renderer._merge_*_positions) anchors both the
+      // default AND an explicit override at the element top-left as a
+      // fraction of card size, so surfacing the measured default is
+      // idempotent: re-rendering with this value reproduces the exact
+      // same placement (no drift / feedback loop). Once the user drags
+      // or types, the value is a real override and we leave it alone.
+      if(xInput && (parseFloat(xInput.value) || 0) === 0){
+        xInput.value = xMm.toFixed(1);
+        syncRangeOutput(xInput);
+      }
+      if(yInput && (parseFloat(yInput.value) || 0) === 0){
+        yInput.value = yMm.toFixed(1);
+        syncRangeOutput(yInput);
+      }
+    });
+  }
   function attachSvgDrag(){
     if(!svgMount) return;
     const svg = svgMount.querySelector('svg');
     if(!svg) return;
+    // Reflect the freshly-rendered element positions into the inputs.
+    syncPositionInputsFromSvg();
     function bind(selector, prefix){
       const el = svg.querySelector(selector);
       if(!el) return;
+      const xInput = form && form.querySelector(`[name="${prefix}_x"]`);
+      const yInput = form && form.querySelector(`[name="${prefix}_y"]`);
       let dragging = false;
-      function ptToCanvas(event){
-        const rect = svg.getBoundingClientRect();
-        const viewBox = (svg.getAttribute('viewBox') || '0 0 1000 600')
-          .split(/\s+/).map(parseFloat);
-        const vbW = viewBox[2] || 1000;
-        const vbH = viewBox[3] || 600;
-        // Scale = min(rect.w/vbW, rect.h/vbH) — preserveAspectRatio=meet
-        const scale = Math.min(rect.width / vbW, rect.height / vbH);
-        const drawW = vbW * scale;
-        const drawH = vbH * scale;
-        const dx = rect.left + (rect.width - drawW) / 2;
-        const dy = rect.top + (rect.height - drawH) / 2;
-        const cx = (event.clientX - dx) / scale;
-        const cy = (event.clientY - dy) / scale;
-        return {x: Math.max(0, Math.min(vbW, cx)), y: Math.max(0, Math.min(vbH, cy)), vbW, vbH};
+      let startPt = null;      // pointer canvas pos at pointerdown
+      let originTopLeft = null; // element top-left at pointerdown
+      let pendingFrame = null;
+      let lastCanvas = null;
+      // Live, cheap visual update: translate ONLY this group via a
+      // direct transform write (no server round-trip, no DOM rebuild,
+      // no background reload). rAF-throttled to one paint per frame.
+      function paint(){
+        pendingFrame = null;
+        if(!lastCanvas || !originTopLeft) return;
+        const tx = (lastCanvas.x - startPt.x);
+        const ty = (lastCanvas.y - startPt.y);
+        // Clamp so the element stays on the canvas.
+        const nx = Math.max(0, Math.min(lastCanvas.vbW, originTopLeft.x + tx)) - originTopLeft.x;
+        const ny = Math.max(0, Math.min(lastCanvas.vbH, originTopLeft.y + ty)) - originTopLeft.y;
+        el.setAttribute('transform', `translate(${nx.toFixed(2)},${ny.toFixed(2)})`);
+        // Keep the numeric inputs live while dragging.
+        const mm = cardSizeMm();
+        const xMm = ((originTopLeft.x + nx) / lastCanvas.vbW) * mm.w;
+        const yMm = ((originTopLeft.y + ny) / lastCanvas.vbH) * mm.h;
+        if(xInput){ xInput.value = xMm.toFixed(1); syncRangeOutput(xInput); }
+        if(yInput){ yInput.value = yMm.toFixed(1); syncRangeOutput(yInput); }
       }
       function move(event){
         if(!dragging) return;
-        const c = ptToCanvas(event);
-        const mm = cardSizeMm();
-        const xMm = (c.x / c.vbW) * mm.w;
-        const yMm = (c.y / c.vbH) * mm.h;
-        const xInput = form && form.querySelector(`[name="${prefix}_x"]`);
-        const yInput = form && form.querySelector(`[name="${prefix}_y"]`);
-        if(xInput){ xInput.value = xMm.toFixed(1); syncRangeOutput(xInput); }
-        if(yInput){ yInput.value = yMm.toFixed(1); syncRangeOutput(yInput); }
+        lastCanvas = pointerToCanvas(svg, event);
+        if(pendingFrame == null){
+          pendingFrame = requestAnimationFrame(paint);
+        }
+      }
+      function end(){
+        if(!dragging) return;
+        dragging = false;
+        if(pendingFrame != null){ cancelAnimationFrame(pendingFrame); pendingFrame = null; }
+        // Persist: the inputs already hold the final mm values; a single
+        // authoritative server re-render now redraws the card with the
+        // element baked into its new position (and clears the temp
+        // transform when the new SVG replaces this one).
         scheduleFetch();
       }
       el.addEventListener('pointerdown', (event) => {
         dragging = true;
+        originTopLeft = groupTopLeft(el) || {x: 0, y: 0};
+        startPt = pointerToCanvas(svg, event);
+        lastCanvas = startPt;
         el.setPointerCapture && el.setPointerCapture(event.pointerId);
         event.preventDefault();
-        move(event);
       });
       el.addEventListener('pointermove', move);
-      el.addEventListener('pointerup', () => { dragging = false; });
-      el.addEventListener('pointercancel', () => { dragging = false; });
+      el.addEventListener('pointerup', end);
+      el.addEventListener('pointercancel', end);
     }
     // Element ids match the renderer (`id="user"` lives on the pill's
     // <g class="card-pill">; we use class+order since the renderer
@@ -1465,6 +1676,31 @@
     update();
   });
   syncAllRangeOutputs();
+  // ── Shared colour-field widget enhancement ──────────────────────
+  // Every <input type="color"> in the editor gets a hex readout chip
+  // next to its swatch so the user sees both the filled colour box and
+  // the exact value, and the chip stays in sync as the colour changes.
+  function enhanceColorFields(){
+    if(!form) return;
+    Array.from(form.querySelectorAll('input.hub-input[type="color"]')).forEach(input => {
+      if(input.dataset.colorEnhanced) return;
+      input.dataset.colorEnhanced = '1';
+      const label = input.closest('.pr-field');
+      if(label) label.classList.add('pr-color-field');
+      const row = document.createElement('span');
+      row.className = 'pr-color-row';
+      input.parentNode.insertBefore(row, input);
+      row.appendChild(input);
+      const hex = document.createElement('span');
+      hex.className = 'pr-color-hex';
+      const sync = () => { hex.textContent = (input.value || '#000000').toUpperCase(); };
+      sync();
+      input.addEventListener('input', sync);
+      input.addEventListener('change', sync);
+      row.appendChild(hex);
+    });
+  }
+  enhanceColorFields();
   // Background-image picker. The browser accepts common image files up to
   // 8 MB for a good preview; the server converts/resizes/compresses the
   // uploaded image before saving it into the template JSON.

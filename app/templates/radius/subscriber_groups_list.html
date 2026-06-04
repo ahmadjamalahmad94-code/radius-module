@@ -42,6 +42,22 @@
   .sg-hero-title{ margin:0; font-size:20px; font-weight:800; color:var(--hub-text); }
   .sg-hero-sub{ margin-top:3px; font-size:13px; color:var(--hub-text-soft, #475569); line-height:1.6; }
   .sg-hero-actions{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+  /* #11: reveal-on-click search box. The input expands from 0 width so the
+     magnifier feels like it «opens» a field. */
+  .sg-search{ display:inline-flex; align-items:center; gap:6px; }
+  .sg-search-input{
+    width:0; min-width:0; padding:0; border-width:0; opacity:0;
+    transition:width var(--hub-anim, .2s) var(--hub-ease, ease),
+               opacity var(--hub-anim, .2s) var(--hub-ease, ease),
+               padding var(--hub-anim, .2s) var(--hub-ease, ease);
+  }
+  .sg-search.is-open .sg-search-input{
+    width:240px; min-width:200px; opacity:1;
+    padding:9px 12px; border-width:1px;
+  }
+  @media (max-width: 760px){
+    .sg-search.is-open .sg-search-input{ width:100%; }
+  }
   .sg-hero-kpis{
     display:grid;
     grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));
@@ -156,6 +172,17 @@
       </div>
     </div>
     <div class="sg-hero-actions">
+      {# #11: the lone magnifier here previously did nothing (no field, no
+         handler). It now toggles a real visible search box that filters the
+         groups table client-side by name/description. #}
+      <div class="sg-search" data-sg-search>
+        <button type="button" class="hub-btn hub-btn--secondary" data-sg-search-toggle
+                aria-expanded="false" aria-label="بحث في المجموعات" title="بحث">
+          <i class="fa-solid fa-magnifying-glass"></i>
+        </button>
+        <input type="search" class="hub-input sg-search-input" data-sg-search-input
+               placeholder="ابحث باسم أو وصف المجموعة…" autocomplete="off" hidden>
+      </div>
       <a class="hub-btn hub-btn--primary" href="{{ url_for('radius.subscriber_groups_new') }}">
         <i class="fa-solid fa-plus"></i> إضافة مجموعة
       </a>
@@ -194,9 +221,9 @@
             <th>إجراءات المجموعة</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody data-sg-rows>
           {% for g in items %}
-          <tr>
+          <tr data-sg-name="{{ ((g.name or '') ~ ' ' ~ (g.description or ''))|lower }}">
             <td class="sg-name">
               <a href="{{ url_for('radius.subscriber_groups_edit', gid=g.id) }}">{{ g.name }}</a>
               <small>{{ g.description or 'بدون وصف' }}</small>
@@ -303,5 +330,45 @@
     </div>
   {% endcall %}
 {% endif %}
+
+<script>
+(function(){
+  'use strict';
+  // #11: magnifier reveals a search box that filters the groups table.
+  var root   = document.querySelector('[data-sg-search]');
+  var toggle = root && root.querySelector('[data-sg-search-toggle]');
+  var input  = root && root.querySelector('[data-sg-search-input]');
+  var rows   = document.querySelector('[data-sg-rows]');
+  if (!root || !toggle || !input) return;
+
+  function open(){
+    root.classList.add('is-open');
+    input.hidden = false;
+    toggle.setAttribute('aria-expanded', 'true');
+    input.focus();
+  }
+  function close(){
+    root.classList.remove('is-open');
+    toggle.setAttribute('aria-expanded', 'false');
+    // clear filter + hide after the width transition
+    input.value = '';
+    filter('');
+    setTimeout(function(){ if (!root.classList.contains('is-open')) input.hidden = true; }, 220);
+  }
+  toggle.addEventListener('click', function(){
+    if (root.classList.contains('is-open')) close(); else open();
+  });
+  function filter(q){
+    if (!rows) return;
+    q = (q || '').trim().toLowerCase();
+    Array.prototype.forEach.call(rows.querySelectorAll('tr'), function(tr){
+      var hay = tr.getAttribute('data-sg-name') || '';
+      tr.style.display = (!q || hay.indexOf(q) !== -1) ? '' : 'none';
+    });
+  }
+  input.addEventListener('input', function(){ filter(input.value); });
+  input.addEventListener('keydown', function(e){ if (e.key === 'Escape') close(); });
+})();
+</script>
 
 {% endblock %}

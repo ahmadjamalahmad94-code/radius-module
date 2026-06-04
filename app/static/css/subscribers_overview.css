@@ -78,10 +78,18 @@
 /* ── KPI strip ── */
 .so-hero-kpis{
   display:grid;
-  grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));
+  /* Balanced rows (4 per row per design system) instead of auto-fit, which
+     packed ~6 cards then stretched a lone orphan full-width (the 6+1 look). */
+  grid-template-columns:repeat(4, minmax(0, 1fr));
   gap:10px;
   padding-top:16px;
   border-top:1px solid var(--hub-border-soft, #e2e8f0);
+}
+@media (max-width: 1080px){
+  .so-hero-kpis{ grid-template-columns:repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 560px){
+  .so-hero-kpis{ grid-template-columns:1fr; }
 }
 
 /* ── Period board: 4 lanes with CSS-bar sparklines ── */

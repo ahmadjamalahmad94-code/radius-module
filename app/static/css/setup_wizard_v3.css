@@ -452,6 +452,11 @@
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 }
 
+/* #44: let each card fill its grid cell so all choice cards in a row share
+   the tallest height (the cells already stretch; the card must fill them). */
+.swz-radio {
+  display: flex;
+}
 .swz-radio input[type="radio"] {
   display: none;
 }
@@ -461,7 +466,9 @@
   border: 1px solid rgba(203,213,225,.86);
   border-radius: 18px;
   cursor: pointer;
-  display: block;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
   padding: 15px 16px;
   box-shadow: inset 0 1px 0 rgba(255,255,255,.9);
   transition: border-color 0.15s, background 0.15s, transform .15s, box-shadow .15s;
