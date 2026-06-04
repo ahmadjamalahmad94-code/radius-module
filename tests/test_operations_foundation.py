@@ -598,6 +598,79 @@ def test_print_template_management_api_matches_web_actions(client):
     }
 
 
+def test_recharge_cards_api_generates_lists_and_validates_values(client):
+    invalid = client.post(
+        "/api/v1/cards/recharge",
+        json={
+            "package_name": "حزمة شحن غير صالحة",
+            "denominations": [{"value": 0, "count": 10}],
+        },
+        headers=_auth(client),
+    )
+    assert invalid.status_code == 422, invalid.get_json()
+
+    created = client.post(
+        "/api/v1/cards/recharge",
+        json={
+            "package_name": "حزمة شحن API",
+            "notes": "اختبار عقد تطبيق الجوال وسطح المكتب",
+            "denominations": [
+                {"value": 5, "count": 2},
+                {"value": 10, "count": 1},
+            ],
+        },
+        headers=_auth(client),
+    )
+    assert created.status_code == 201, created.get_json()
+    payload = created.get_json()["data"]
+    assert payload["inserted_count"] == 3
+    assert payload["total_value"] == 20
+    batch = payload["batch"]
+    assert batch["package_name"] == "حزمة شحن API"
+    assert batch["count"] == 3
+    assert batch["remaining_count"] == 3
+    assert batch["denominations"] == [
+        {"value": 5.0, "count": 2},
+        {"value": 10.0, "count": 1},
+    ]
+
+    listed = client.get("/api/v1/cards/recharge", headers=_auth(client))
+    assert listed.status_code == 200, listed.get_json()
+    assert batch["id"] in {
+        item["id"] for item in listed.get_json()["data"]["items"]
+    }
+
+    detail = client.get(
+        f"/api/v1/cards/recharge/{batch['id']}",
+        headers=_auth(client),
+    )
+    assert detail.status_code == 200, detail.get_json()
+    detail_data = detail.get_json()["data"]
+    assert detail_data["batch"]["total_value"] == 20
+    assert detail_data["total_cards"] == 3
+    assert len(detail_data["cards"]) == 3
+    assert {card["wallet_value"] for card in detail_data["cards"]} == {5.0, 10.0}
+
+    cards = client.get(
+        f"/api/v1/cards/recharge/{batch['id']}/cards",
+        headers=_auth(client),
+    )
+    assert cards.status_code == 200, cards.get_json()
+    assert cards.get_json()["data"]["total"] == 3
+
+    deleted = client.delete(
+        f"/api/v1/cards/recharge/{batch['id']}",
+        headers=_auth(client),
+    )
+    assert deleted.status_code == 200, deleted.get_json()
+
+    missing = client.get(
+        f"/api/v1/cards/recharge/{batch['id']}",
+        headers=_auth(client),
+    )
+    assert missing.status_code == 404, missing.get_json()
+
+
 def test_print_sheet_geometry_respects_visible_margins_and_gaps():
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.units import mm
