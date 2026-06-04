@@ -119,11 +119,13 @@ def test_disconnect_user_reaches_send_disconnect(app, monkeypatch):
         # R10.6-era Acct-Start). The mock must accept them or fail with
         # TypeError.
         def _fake_send_disconnect(*, nas_ip, nas_secret, username, session_id,
-                                    framed_ip="", calling_station_id=""):
+                                    framed_ip="", calling_station_id="",
+                                    port=3799):
             calls.update(dict(nas_ip=nas_ip, nas_secret=nas_secret,
                               username=username, session_id=session_id,
                               framed_ip=framed_ip,
-                              calling_station_id=calling_station_id))
+                              calling_station_id=calling_station_id,
+                              port=port))
             return radius_coa.CoaResult(
                 ok=True, code=41, code_name="Disconnect-ACK",
                 reply_message="acked")
@@ -141,4 +143,5 @@ def test_disconnect_user_reaches_send_disconnect(app, monkeypatch):
             # so both come back as empty strings (see find_nas_for_session).
             "framed_ip": "",
             "calling_station_id": "",
+            "port": 3799,
         }

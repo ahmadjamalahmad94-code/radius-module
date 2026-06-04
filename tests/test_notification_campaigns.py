@@ -177,11 +177,13 @@ def test_communications_routes_render_and_queue(app):
             },
             follow_redirects=True,
         )
+        deliveries = client.get("/admin/radius/communications/deliveries")
 
     assert index.status_code == 200
-    assert "communications-summary" in index.get_data(as_text=True)
+    assert 'data-testid="oc-actions"' in index.get_data(as_text=True)
     assert templates.status_code == 200
     assert create_template.status_code == 200
     assert "route-test" in create_template.get_data(as_text=True)
     assert send.status_code == 200
-    assert "delivery-log-table" in send.get_data(as_text=True)
+    assert deliveries.status_code == 200
+    assert 'data-testid="delivery-log-table"' in deliveries.get_data(as_text=True)

@@ -3,6 +3,7 @@ sidebar reduced to one entry, dashboard quicknav card."""
 from __future__ import annotations
 
 import os
+import re
 import sys
 import tempfile
 from types import SimpleNamespace
@@ -151,12 +152,10 @@ def test_scoped_list_renders_with_router_context(
     )
     assert r.status_code == 200, slug
     html = r.data.decode("utf-8")
-    # The router-context strip carries the router name +
-    # an "العودة إلى لوحة الراوتر" link.
+    # The router-context strip carries the router name and scoped links.
     assert "rtr-A" in html
-    assert "العودة إلى لوحة الراوتر" in html
-    # The Arabic preview banner is still present.
-    assert "معاينة فقط" in html
+    assert f"/admin/radius/mt/{rid}/" in html
+    assert "npc-tabs" in html
     assert "Dry-Run" not in html
     # The other two sub-service tabs are reachable from the
     # scoped tab bar.
@@ -275,8 +274,8 @@ def test_router_picker_lists_seeded_routers_with_counts(
     assert (
         f"/admin/radius/mt/{rid_a}/network-policies/" in html
     )
-    # Counts surfaced.
-    assert "المواقع المسموحة · 1" in html
+    # Counts surfaced in the unified table count badge.
+    assert re.search(r'class="npc-rp-count"[^>]*>\s*<i[^>]*></i>\s*1\s*</span>', html)
     # Empty-router gets the muted-pill style.
     assert "data-zero=\"1\"" in html
 

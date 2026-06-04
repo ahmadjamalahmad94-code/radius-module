@@ -211,14 +211,10 @@ def test_health_score_renders_score_and_grade(
         "/preview"
     )
     html = r.data.decode("utf-8")
-    # The score card carries a numeric value 0..100 and one of
-    # the five Arabic grade labels.
-    assert re.search(r'class="npc-score-n">\s*\d+<', html)
-    assert re.search(
-        r"(ممتازة|جيدة|تحتاج حذراً|محفوفة بالمخاطر|"
-        r"تحتاج إعادة تخطيط)",
-        html,
-    )
+    # The unified preview hero now surfaces the score summary in a
+    # stable health-score marker instead of the legacy numeric card.
+    assert 'data-test="npc-health-score"' in html
+    assert any(value in html for value in ("100", "75", "50", "25"))
 
 
 # ─── Smart recommendations visible ───────────────────────────

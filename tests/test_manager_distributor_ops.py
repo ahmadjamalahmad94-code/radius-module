@@ -190,6 +190,6 @@ def test_business_operator_routes_render(app):
         profile = client.get("/admin/radius/business-operators/manager/1")
 
     assert index.status_code == 200
-    assert "business-operators-summary" in index.get_data(as_text=True)
+    assert 'data-testid="manager-operators-table"' in index.get_data(as_text=True)
     assert profile.status_code == 200
-    assert "operator-profile-kpis" in profile.get_data(as_text=True)
+    assert 'data-testid="operator-profit-summary"' in profile.get_data(as_text=True)

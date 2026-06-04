@@ -210,7 +210,9 @@ def test_problems_route_renders_shell(app, client):
     _login(client)
     html = client.get("/admin/radius/problems").get_data(as_text=True)
     assert "data-mt-problems-page" in html
-    assert "data-mt-problems-filters" in html
+    assert "data-mt-problems-filter-severity" in html
+    assert "data-mt-problems-filter-type" in html
+    assert "data-mt-problems-filter-router" in html
     assert "data-mt-problems-empty" in html
 
 

@@ -80,7 +80,11 @@ def test_audit_index_renders_shell(app, client):
     assert res.status_code == 200
     html = res.get_data(as_text=True)
     assert "data-audit-log-page" in html
-    assert "data-audit-log-filters" in html
+    assert "data-audit-filter-router" in html
+    assert "data-audit-filter-action" in html
+    assert "data-audit-filter-severity" in html
+    assert "data-audit-filter-result" in html
+    assert "data-audit-filter-search" in html
 
 
 def test_audit_index_lists_rows(app, client):

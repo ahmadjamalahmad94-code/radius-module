@@ -66,9 +66,19 @@ def _csrf(client, url: str) -> str:
 
 
 def _auth_headers(client) -> dict:
+    from app.radius.db.repos import admins_repo
+
+    username = f"recycle_api_{uuid4().hex[:10]}"
+    password = "recycle-api-pass"
+    admins_repo.create_admin(
+        username=username,
+        password=password,
+        full_name="Recycle API Tester",
+        is_super_admin=True,
+    )
     res = client.post(
         "/api/admin/login",
-        json={"username": "admin", "password": "admin"},
+        json={"username": username, "password": password},
     )
     assert res.status_code == 200, res.get_json()
     return {"Authorization": f"Bearer {res.get_json()['data']['token']}"}

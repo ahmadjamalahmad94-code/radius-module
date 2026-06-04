@@ -7,6 +7,7 @@ create/edit return HTTP 500.
 from __future__ import annotations
 
 import secrets
+from uuid import uuid4
 
 import pytest
 
@@ -23,9 +24,19 @@ def client(app):
 
 
 def _web_login(client) -> None:
+    from app.radius.db.repos import admins_repo
+
+    username = f"cards_web_{uuid4().hex[:10]}"
+    password = "cards-web-pass"
+    admins_repo.create_admin(
+        username=username,
+        password=password,
+        full_name="Cards Web Tester",
+        is_super_admin=True,
+    )
     res = client.post(
         "/admin/radius/login",
-        data={"username": "admin", "password": "admin"},
+        data={"username": username, "password": password},
         follow_redirects=False,
     )
     assert res.status_code in {302, 303}
