@@ -319,9 +319,24 @@ def _form_dto(*, sub_id: int | None = None, existing: Subscriber | None = None) 
     prev_temp = bool(getattr(existing, "temporary_speed", False)) if existing else False
     temp_managed = temp_enabled or prev_temp
     if temp_managed:
+        # #50a/#50b: do NOT strip temporary_speed_from/to/duration on save — the
+        # real apply time must persist. The shared service owns these keys
+        # (stored TOP-LEVEL on metadata); carry the existing service-written
+        # window forward EXPLICITLY so a routine profile save can't drop or
+        # restart it. The form's nested `advanced.*` copies (which may be stale
+        # or absent) are ignored in favour of the authoritative top-level ones.
+        _existing_grouped = (_parse_metadata(getattr(existing, "metadata", None))
+                             if existing else {})
+        # from/to/duration are in the "advanced" meta group, so carrying them
+        # through flat_meta re-groups + persists them. The active flag +
+        # restore snapshot live as TOP-LEVEL keys and survive automatically via
+        # the base_meta merge below (they aren't in any META group).
         for k in ("temporary_speed_from", "temporary_speed_to",
                   "temporary_speed_duration_minutes"):
             flat_meta.pop(k, None)
+            _v = _existing_grouped.get(k)
+            if _v not in (None, ""):
+                flat_meta[k] = _v
     else:
         _resolve_temp_speed_window(flat_meta, enabled=False, now=datetime.utcnow())
 

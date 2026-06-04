@@ -12,53 +12,6 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/mt_dashboard.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard_premium.css') }}">
 <style>
-/* ─── UDS bridge for the MikroTik dashboard ──────────────────────
-   The page now lives inside the unified megahero + worklayout. These
-   rules (a) host the live status pill cleanly inside the hero, and
-   (b) re-skin the JS-driven tables to the unified .hub-table look
-   WITHOUT touching their data-* hooks or the polling that fills them.
-   We intentionally do NOT add data-uds-table to the live tables:
-   uds_table.js snapshots tbody rows once at init, but these tbodies
-   are empty until the poller fills them — so it would mis-paginate.
-   Static visual parity is enough; the JS keeps full ownership. */
-.mt-tabs-status--inhero{
-  display:inline-flex;align-items:center;gap:10px;flex-wrap:wrap;
-}
-.mt-tabs-status--inhero .mt-tabs-status-pill{
-  display:inline-flex;align-items:center;gap:7px;
-  padding:5px 13px;border-radius:999px;
-  background:rgba(255,255,255,.16);color:#fff;
-  font-size:12.5px;font-weight:800;
-  border:1px solid rgba(255,255,255,.28);
-}
-.mt-tabs-status--inhero .mt-tabs-status-pill .dot{
-  width:8px;height:8px;border-radius:50%;background:currentColor;
-  display:inline-block;animation:rh-hub-pulse 1.6s ease-in-out infinite;
-}
-.mt-tabs-status--inhero .mt-tabs-status-meta{
-  color:rgba(255,255,255,.82);font-size:12px;font-family:ui-monospace,monospace;
-}
-@keyframes rh-hub-pulse{0%,100%{opacity:.5}50%{opacity:1}}
-
-/* Unified table skin layered over the bespoke .mt-iface-table tables.
-   Numeric / duration / bytes cells stay tabular, no-wrap and LTR so
-   "643.1 MB" and "1d 2h" never get chunk-reordered by the RTL parent. */
-.mt-iface-table,.mt-users-table{
-  width:100%;border-collapse:separate;border-spacing:0;
-}
-.mt-iface-table td.uds-num,
-.mt-iface-table th.uds-num,
-.mt-users-table td.uds-num,
-.mt-users-table th.uds-num,
-.mt-iface-table [data-mt-cell-bytes],
-.mt-iface-table [data-mt-cell-dur]{
-  font-variant-numeric:tabular-nums;
-  white-space:nowrap;
-  direction:ltr;
-  unicode-bidi:isolate;
-  text-align:center;
-}
-
 /* ──────────────────────────────────────────────────────────────
    Overview panel — scoped restyle (May 2026)
    Keeps every [data-mt-*] hook intact so mt_dashboard.js fills
@@ -942,6 +895,176 @@
   from{opacity:0;transform:translateY(8px);}
   to  {opacity:1;transform:translateY(0);}
 }
+
+/* ──────────────────────────────────────────────────────────────
+   #46c — Unified router hero
+   Groups the page title, tab nav, quick-action chips and the live
+   status pill into ONE card so the dashboard opens with a single
+   coherent header instead of four loose bars.
+   ────────────────────────────────────────────────────────────── */
+.mt-router-hero{
+  background:linear-gradient(145deg,#FFFFFF,#F7F9FF);
+  border:1px solid #E2E8F0;
+  border-radius:18px;
+  padding:18px 20px 14px;
+  margin:0 0 18px;
+  box-shadow:0 10px 30px rgba(38,51,90,.06);
+}
+.mt-router-hero-top{
+  display:flex;align-items:flex-start;justify-content:space-between;
+  gap:16px;flex-wrap:wrap;margin-bottom:14px;
+}
+.mt-router-hero-titles{min-width:0}
+.mt-router-hero-kicker{
+  display:inline-flex;align-items:center;gap:7px;
+  padding:4px 12px;border-radius:999px;
+  background:rgba(43,170,204,.12);
+  color:#1B7C97;
+  font-size:12px;font-weight:800;
+  border:1px solid rgba(43,170,204,.22);
+}
+.mt-router-hero-kicker i{font-size:12px}
+.mt-router-hero-name{
+  margin:10px 0 4px;font-size:22px;font-weight:900;color:#0F172A;line-height:1.2;
+}
+.mt-router-hero-sub{
+  margin:0;font-size:13px;color:#64748B;font-weight:600;line-height:1.5;
+}
+/* Status pill inside the hero — drop the floating/bottom-border
+   spacing it had as a standalone bar. */
+.mt-router-hero .mt-tabs-status--hero{
+  padding-bottom:0;flex-shrink:0;
+}
+/* The tab strip + quicknav sit flush inside the hero card. */
+.mt-router-hero .mt-tabs-row{
+  margin:0 0 14px;
+}
+.mt-router-hero .mt-router-quicknav{
+  margin:0;
+}
+
+/* ──────────────────────────────────────────────────────────────
+   #46b — Quick-action links as proper chips/buttons
+   These <a.mt-mini-btn> links live in the .mt-router-quicknav grid
+   but previously rendered as faint table-style mini buttons. Style
+   them as full design-system chips with a coloured FontAwesome icon
+   tablet, consistent with .hub-btn / chip conventions. Scoped to the
+   quicknav so the small .mt-mini-btn used on table toolbars is
+   untouched. Hrefs / data hooks unchanged.
+   ────────────────────────────────────────────────────────────── */
+.mt-router-hero .mt-router-quicknav,
+.mt-router-quicknav{
+  display:flex;flex-wrap:wrap;gap:10px;
+}
+.mt-router-quicknav .mt-mini-btn{
+  display:inline-flex;align-items:center;gap:9px;
+  background:#fff;
+  border:1px solid #E2E8F0;
+  border-radius:12px;
+  padding:9px 14px 9px 11px;
+  font-size:13px;font-weight:700;
+  color:#0F172A;
+  text-decoration:none;
+  transition:border-color .15s,box-shadow .15s,transform .15s,background .15s;
+}
+.mt-router-quicknav .mt-mini-btn i{
+  width:30px;height:30px;border-radius:9px;
+  display:inline-flex;align-items:center;justify-content:center;
+  font-size:14px;color:#fff;
+  background:linear-gradient(135deg,#2BAACC,#1B7C97);
+  box-shadow:0 4px 10px rgba(43,170,204,.30);
+}
+.mt-router-quicknav .mt-mini-btn:hover{
+  border-color:#2BAACC;
+  background:#F4FBFD;
+  transform:translateY(-2px);
+  box-shadow:0 10px 22px rgba(43,170,204,.16);
+}
+/* Per-action accent tints so destructive / sensitive links read
+   differently from neutral navigation. */
+.mt-router-quicknav .mt-mini-btn[data-mt-router-link="npc-web-block"] i{
+  background:linear-gradient(135deg,#F87171,#DC2626);
+  box-shadow:0 4px 10px rgba(220,38,38,.30);
+}
+.mt-router-quicknav .mt-mini-btn[data-mt-router-link="npc-remote-access"] i,
+.mt-router-quicknav .mt-mini-btn[data-mt-router-link="network-policies"] i{
+  background:linear-gradient(135deg,#A78BFA,#7C3AED);
+  box-shadow:0 4px 10px rgba(124,58,237,.30);
+}
+.mt-router-quicknav .mt-mini-btn[data-mt-router-link="npc-walled-garden"] i{
+  background:linear-gradient(135deg,#34D399,#10B981);
+  box-shadow:0 4px 10px rgba(16,185,129,.30);
+}
+
+/* ──────────────────────────────────────────────────────────────
+   #47 — Compact action grid + popup modal
+   (a) Denser responsive grid for the per-group action tiles.
+   (b) The per-action form opens in a centred modal overlay instead
+       of expanding at the bottom of the page. The form element
+       (data-mt-action-form) is physically MOVED into the modal body
+       by JS, so all existing field/submit logic keeps working.
+   ────────────────────────────────────────────────────────────── */
+.rh-overview .np-cmd-actions{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(190px,1fr));
+  gap:10px;
+}
+.rh-overview .mt-card--actions .mt-action-btn{
+  min-height:auto;
+  padding:11px 13px;
+  gap:10px;
+}
+.rh-overview .mt-card--actions .mt-action-btn > i{
+  width:36px;height:36px;font-size:14px;border-radius:10px;
+}
+.rh-overview .mt-card--actions .mt-action-label{font-size:13px}
+.rh-overview .mt-card--actions .mt-action-sub{font-size:11px}
+
+/* Modal shell */
+.mt-action-modal{
+  position:fixed;inset:0;z-index:1200;
+  display:flex;align-items:center;justify-content:center;
+  padding:20px;
+}
+.mt-action-modal[hidden]{display:none}
+body.mt-modal-open{overflow:hidden}
+.mt-action-modal-backdrop{
+  position:absolute;inset:0;
+  background:rgba(15,23,42,.55);
+  backdrop-filter:blur(3px);
+}
+.mt-action-modal-dialog{
+  position:relative;z-index:1;
+  width:min(560px,100%);
+  max-height:88vh;overflow:auto;
+  background:#fff;border-radius:18px;
+  border:1px solid #E2E8F0;
+  box-shadow:0 30px 80px rgba(15,23,42,.30);
+  animation:mt-action-pop .22s ease-out;
+}
+.mt-action-modal-head{
+  display:flex;align-items:center;gap:10px;
+  padding:16px 20px;border-bottom:1px solid #F1F5F9;
+  position:sticky;top:0;background:#fff;z-index:1;
+}
+.mt-action-modal-title{
+  flex:1;margin:0;font-size:16px;font-weight:900;color:#0F172A;
+  display:inline-flex;align-items:center;gap:9px;
+}
+.mt-action-modal-title i{color:#2BAACC}
+.mt-action-modal-close{
+  width:34px;height:34px;border-radius:10px;flex-shrink:0;
+  display:inline-flex;align-items:center;justify-content:center;
+  border:1px solid #E2E8F0;background:#F8FAFC;color:#475569;
+  cursor:pointer;font-size:15px;transition:all .15s;
+}
+.mt-action-modal-close:hover{background:#FEE2E2;color:#DC2626;border-color:#FCA5A5}
+.mt-action-modal-body{padding:18px 20px}
+/* When the form/result live in the modal, drop the old inline
+   top-margins so they sit flush in the dialog body. */
+.mt-action-modal-body .mt-action-form,
+.mt-action-modal-body .mt-action-result{margin-top:0}
+.mt-action-modal-body .mt-action-result{margin-top:14px}
 </style>
 {% endblock %}
 
@@ -1022,25 +1145,6 @@
     })();
   </script>
 
-  {# ───── Unified full-width page header (megahero) ─────────────
-     ONE header for the whole router page — replaces the legacy
-     admin page-head bar AND the per-tab overview hero (which was
-     a stacked duplicate). The live router-status pill rides on the
-     end as actions_html so its data-mt-status hooks are preserved
-     exactly. The mt tabs + quicknav stay below as the page's nav. #}
-  {{ hub.megahero(
-       "لوحة الراوتر " ~ nas.name,
-       subtitle="جهاز شبكة #" ~ nas.id ~ " · " ~ nas.address ~ " — صحّة لحظيّة، حركة الواجهات، المتصلون الآن، وإجراءات سريعة.",
-       icon="router",
-       actions_html='
-         <div class="mt-tabs-status mt-tabs-status--inhero" data-mt-status>
-           <span class="mt-tabs-status-pill" data-mt-status-pill>
-             <span class="dot"></span>
-             <span data-mt-status-label>جارٍ الاتصال…</span>
-           </span>
-           <span class="mt-tabs-status-meta" data-mt-status-meta>—</span>
-         </div>') }}
-
   {# P1 — Tabs strip. The current K9 dashboard goes under
      'Overview'; the other tabs ship as honest empty states
      until P2..P7 fill them in. Hash-based active state so
@@ -1050,6 +1154,32 @@
      operator flagged as wasted vertical space). Now they share
      the same line — flex space-between keeps the status on the
      opposite edge from the tabs in RTL. #}
+  {# ─── #46c — Unified router hero ─────────────────────────────
+     The hero title/subtitle, the tab nav, the quick-action chips
+     and the live status pill used to be four separate top-of-page
+     blocks. They are now grouped inside ONE card (.mt-router-hero)
+     so the page opens with a single coherent header instead of a
+     stack of loose bars. All [data-mt-*] hooks + hrefs unchanged. #}
+  <section class="mt-router-hero" data-mt-router-hero>
+    <header class="mt-router-hero-top">
+      <div class="mt-router-hero-titles">
+        <span class="mt-router-hero-kicker">
+          <i class="fa-solid fa-router"></i> لوحة الراوتر
+        </span>
+        <h2 class="mt-router-hero-name">{{ nas.name }}</h2>
+        <p class="mt-router-hero-sub">إدارة ومراقبة الراوتر مباشرةً — كل الأقسام والإجراءات في مكان واحد.</p>
+      </div>
+      {# Status pill — moved into the hero top-right (RTL: top-left).
+         Kept as a single DOM element so every JS hook stays valid. #}
+      <div class="mt-tabs-status mt-tabs-status--hero" data-mt-status>
+        <span class="mt-tabs-status-pill" data-mt-status-pill>
+          <span class="dot"></span>
+          <span data-mt-status-label>جارٍ الاتصال…</span>
+        </span>
+        <span class="mt-tabs-status-meta" data-mt-status-meta>{{ nas.address or "—" }}</span>
+      </div>
+    </header>
+
   <div class="mt-tabs-row">
   <nav class="mt-tabs" data-mt-tabs role="tablist" aria-label="أقسام الراوتر">
     <button type="button" class="mt-tab is-active"
@@ -1135,10 +1265,7 @@
       <i class="fa-solid fa-door-open"></i> المواقع المسموحة
     </a>
   </nav>
-
-  {# Status pill relocated into the unified megahero above (single
-     data-mt-status element — JS querySelector hits it first). The old
-     floating duplicate was removed to avoid a stale second pill. #}
+  </section>{# /.mt-router-hero — unified header (#46c) #}
 
   {# ─── Overview panel (live K9 dashboard) ─────────────────────
      Wrapped in .rh-overview so the scoped CSS in the head block
@@ -1153,22 +1280,21 @@
      The old in-panel pill was duplicated work + ate vertical space.
      Hero for the overview tab comes next. #}
 
-  {# Per-tab overview hero removed — the unified megahero above is the
-     single page header now (no stacked duplicate). The overview body
-     opens directly into the UDS worklayout: live cards in the main
-     column, a help panel pinned on the LEFT. #}
-  {% call hub.worklayout(aside_html=hub.helppanel(
-       "كيف تقرأ هذه اللوحة؟",
-       intro="كل الأرقام هنا لحظيّة وتُقرأ مباشرة من الراوتر عبر نفق الإدارة.",
-       icon="gauge-high",
-       items=[
-         {'icon': 'heart-pulse', 'text': 'بطاقات الحالة تعرض المعالج والذاكرة والقرص والحرارة لحظيًّا.'},
-         {'icon': 'chart-line',  'text': 'حركة الواجهات تعرض سرعة الرفع/التنزيل الحيّة للواجهة المختارة.'},
-         {'icon': 'users',       'text': 'المتصلون الآن: جلسات بوابة الدخول والبرودباند الفعّالة، تُحدَّث كل 10 ثوانٍ.'},
-         {'icon': 'bolt',        'text': 'الإجراءات السريعة تُنفَّذ مباشرة على الراوتر — بعضها يحتاج تأكيدًا.'},
-       ],
-       note="إذا ظهرت شرطات «—» بدل الأرقام، فالراوتر لم يردّ بعد أو نفق الإدارة غير متصل."
-  )) %}
+  {# Overview hero — same shell as «خدماتي» / «النسخ الاحتياطية»
+     for visual consistency across tabs. Operator: «الهيرو الي
+     عملته لخدماتي عجبني — طبعه ع باقي الصفحات». #}
+  <div class="mt-page-hero mt-page-hero--blue">
+          <span class="mt-page-hero-kicker">
+        <i class="fa-solid fa-gauge-high"></i>
+        لوحة الراوتر — مباشرة
+      </span>
+      <h3>نظرة عامّة وقصص النشاط</h3>
+      <p>
+        صحّة الراوتر اللحظيّة، حركة الواجهات، المتصلون الآن،
+        وإجراءات سريعة للتنفيذ على الراوتر.
+      </p>
+    
+  </div>
 
   {# KPI strip. Initial values are em-dashes (NOT zeros) so the page
      never reads as 'CPU=0%' when in fact we haven't fetched yet. #}
@@ -1337,9 +1463,9 @@
         </div>
         <div class="mt-users-list">
           <p class="mt-empty" data-mt-active-users-empty>جارٍ التحميل…</p>
-          <table class="mt-users-table hub-table" data-mt-active-users-table hidden>
+          <table class="mt-users-table" data-mt-active-users-table hidden>
             <thead>
-              <tr><th>النوع</th><th>المستخدم</th><th>العنوان</th><th class="uds-num">المدة</th></tr>
+              <tr><th>النوع</th><th>المستخدم</th><th>العنوان</th><th>المدة</th></tr>
             </thead>
             <tbody data-mt-active-users-rows></tbody>
           </table>
@@ -1462,16 +1588,39 @@
         </div>
       </div>
 
-      {# Inline form area — populated per-action by JS. Stays empty
-         until an action is picked, so the page starts compact. #}
-      <div class="mt-action-form" data-mt-action-form hidden></div>
-
-      {# Pretty output panel: JS renders operator-friendly summaries. #}
-      <div class="mt-action-result" data-mt-action-result hidden></div>
+      {# #47 — Per-action form + result now live inside a popup modal
+         (below) instead of expanding at the bottom of the page. The
+         elements keep their data hooks so all existing fill/submit
+         logic in mt_dashboard.js works unchanged; only their DOM
+         location moved. #}
     </div>
   </section>
 
-  {% endcall %}{# /hub.worklayout #}
+  {# ─── #47 — Action popup modal ────────────────────────────────
+     openForm()/closeForm() in mt_dashboard.js toggle [hidden] on
+     this overlay. The form + result panels are queried by
+     data-mt-action-form / data-mt-action-result exactly as before. #}
+  <div class="mt-action-modal" data-mt-action-modal hidden>
+    <div class="mt-action-modal-backdrop" data-mt-action-modal-dismiss></div>
+    <div class="mt-action-modal-dialog" role="dialog" aria-modal="true"
+         aria-labelledby="mt-action-modal-title">
+      <header class="mt-action-modal-head">
+        <h3 class="mt-action-modal-title" id="mt-action-modal-title"
+            data-mt-action-modal-title>
+          <i class="fa-solid fa-bolt"></i> <span>الإجراء</span>
+        </h3>
+        <button type="button" class="mt-action-modal-close"
+                data-mt-action-modal-dismiss aria-label="إغلاق">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </header>
+      <div class="mt-action-modal-body">
+        <div class="mt-action-form" data-mt-action-form hidden></div>
+        <div class="mt-action-result" data-mt-action-result hidden></div>
+      </div>
+    </div>
+  </div>
+
     </div>{# /.rh-overview #}
   </section>{# /overview panel #}
 
@@ -1541,19 +1690,19 @@
       <div class="mt-card-body">
         <p class="mt-empty" data-mt-interfaces-msg>جارٍ التحميل…</p>
         <div class="mt-table-wrap" data-mt-interfaces-wrap hidden>
-          <table class="mt-iface-table hub-table" data-mt-interfaces-table>
+          <table class="mt-iface-table" data-mt-interfaces-table>
             <thead>
               <tr>
                 <th>الاسم</th>
                 <th>النوع</th>
                 <th>الاتصال</th>
                 <th>MAC</th>
-                <th class="uds-num">MTU</th>
+                <th>MTU</th>
                 <th>الحالة</th>
-                <th class="uds-num" title="سرعة التنزيل اللحظيّة"><i class="fa-solid fa-arrow-down"></i> تنزيل</th>
-                <th class="uds-num" title="سرعة الرفع اللحظيّة"><i class="fa-solid fa-arrow-up"></i> رفع</th>
-                <th class="uds-num">الإجمالي (RX / TX)</th>
-                <th class="uds-num">أخطاء</th>
+                <th title="سرعة التنزيل اللحظيّة"><i class="fa-solid fa-arrow-down"></i> تنزيل</th>
+                <th title="سرعة الرفع اللحظيّة"><i class="fa-solid fa-arrow-up"></i> رفع</th>
+                <th>الإجمالي (RX / TX)</th>
+                <th>أخطاء</th>
               </tr>
             </thead>
             <tbody data-mt-interfaces-rows></tbody>
@@ -1612,7 +1761,7 @@
       <div class="mt-card-body">
         <p class="mt-empty" data-mt-ips-msg>جارٍ التحميل…</p>
         <div class="mt-table-wrap" data-mt-ips-wrap hidden>
-          <table class="mt-iface-table hub-table" data-mt-ips-table>
+          <table class="mt-iface-table" data-mt-ips-table>
             <thead>
               <tr>
                 <th>العنوان</th>
@@ -1678,7 +1827,7 @@
       <div class="mt-card-body">
         <p class="mt-empty" data-mt-routes-msg>جارٍ التحميل…</p>
         <div class="mt-table-wrap" data-mt-routes-wrap hidden>
-          <table class="mt-iface-table hub-table" data-mt-routes-table>
+          <table class="mt-iface-table" data-mt-routes-table>
             <thead>
               <tr>
                 <th>الوجهة</th>
@@ -1757,7 +1906,7 @@
       <div class="mt-card-body">
         <p class="mt-empty" data-mt-neighbors-msg>جارٍ التحميل…</p>
         <div class="mt-table-wrap" data-mt-neighbors-wrap hidden>
-          <table class="mt-iface-table hub-table" data-mt-neighbors-table>
+          <table class="mt-iface-table" data-mt-neighbors-table>
             <thead>
               <tr>
                 <th>الاسم</th>
@@ -1956,15 +2105,15 @@
       <div class="mt-card-body">
         <p class="mt-empty" data-mt-hotspot-cards-msg>جارٍ التحميل…</p>
         <div class="mt-table-wrap" data-mt-hotspot-cards-wrap hidden>
-          <table class="mt-iface-table hub-table" data-mt-hotspot-cards-table data-mt-hotspot-sessions-table>
+          <table class="mt-iface-table" data-mt-hotspot-cards-table data-mt-hotspot-sessions-table>
             <thead>
               <tr>
                 <th>المستخدم</th>
                 <th>العنوان</th>
                 <th>MAC</th>
-                <th class="uds-num">المدة</th>
-                <th class="uds-num">تنزيل (RX)</th>
-                <th class="uds-num">رفع (TX)</th>
+                <th>المدة</th>
+                <th>RX</th>
+                <th>TX</th>
                 <th>تعليق</th>
                 <th>إجراء</th>
               </tr>
@@ -1990,15 +2139,15 @@
       <div class="mt-card-body">
         <p class="mt-empty" data-mt-hotspot-users-msg>جارٍ التحميل…</p>
         <div class="mt-table-wrap" data-mt-hotspot-users-wrap hidden>
-          <table class="mt-iface-table hub-table" data-mt-hotspot-users-table>
+          <table class="mt-iface-table" data-mt-hotspot-users-table>
             <thead>
               <tr>
                 <th>المستخدم</th>
                 <th>العنوان</th>
                 <th>MAC</th>
-                <th class="uds-num">المدة</th>
-                <th class="uds-num">تنزيل (RX)</th>
-                <th class="uds-num">رفع (TX)</th>
+                <th>المدة</th>
+                <th>RX</th>
+                <th>TX</th>
                 <th>تعليق</th>
                 <th>إجراء</th>
               </tr>
@@ -2024,14 +2173,14 @@
       <div class="mt-card-body">
         <p class="mt-empty" data-mt-ppp-sessions-msg>جارٍ التحميل…</p>
         <div class="mt-table-wrap" data-mt-ppp-sessions-wrap hidden>
-          <table class="mt-iface-table hub-table" data-mt-ppp-sessions-table>
+          <table class="mt-iface-table" data-mt-ppp-sessions-table>
             <thead>
               <tr>
                 <th>المستخدم</th>
                 <th>الخدمة</th>
                 <th>العنوان</th>
                 <th>المتصل</th>
-                <th class="uds-num">المدة</th>
+                <th>المدة</th>
                 <th>إجراء</th>
               </tr>
             </thead>
@@ -3606,99 +3755,6 @@
     });
   }
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init);
-  } else {
-    init();
-  }
-})();
-</script>
-
-{# ── Human-readable RX/TX/bytes + aligned duration ───────────────
-   The live session tables are filled by mt_dashboard.js (a shared
-   file we must NOT touch). RouterOS returns `bytes-in`/`bytes-out`
-   as RAW integers (e.g. 643547821) and `uptime` as a compact code
-   (e.g. "1w2d3h4m5s") — both unreadable in an RTL Arabic table.
-   This observer re-formats those cells in place after every poll
-   re-render, mirroring rep_sessions.html fmt_bytes (TB/GB/MB/KB/B)
-   and spacing the duration so it reads cleanly LTR. Idempotent:
-   a data-mt-fmt flag stops double-formatting on the next tick. #}
-<script>
-(function () {
-  "use strict";
-
-  // Mirror of rep_sessions.html fmt_bytes_raw (TB/GB/MB/KB/B).
-  function fmtBytes(raw) {
-    var n = parseInt(String(raw).replace(/[^\d]/g, ""), 10);
-    if (!isFinite(n)) return null;
-    if (n >= 1099511627776) return (n / 1099511627776).toFixed(2) + " TB";
-    if (n >= 1073741824)    return (n / 1073741824).toFixed(2) + " GB";
-    if (n >= 1048576)       return (n / 1048576).toFixed(2) + " MB";
-    if (n >= 1024)          return (n / 1024).toFixed(1) + " KB";
-    return n + " B";
-  }
-  // RouterOS uptime "1w2d3h4m5s" → spaced "1w 2d 3h 4m 5s" (readable,
-  // stays LTR via the .uds-num CSS). Non-matching strings pass through.
-  function fmtDur(raw) {
-    var s = String(raw).trim();
-    if (!s || s === "—") return s;
-    var m = s.match(/(\d+[wdhms])/gi);
-    if (!m) return s;
-    return m.join(" ");
-  }
-
-  // Per-table column maps (0-indexed) for the cells that need work.
-  // bytes: columns holding raw RX/TX integers. dur: the duration col.
-  var TABLES = [
-    { sel: "[data-mt-hotspot-cards-table]", dur: 3, bytes: [4, 5] },
-    { sel: "[data-mt-hotspot-users-table]", dur: 3, bytes: [4, 5] },
-    { sel: "[data-mt-ppp-sessions-table]",  dur: 4, bytes: [] },
-    { sel: "[data-mt-active-users-table]",  dur: 3, bytes: [] },
-  ];
-
-  function formatTable(table, cfg) {
-    var body = table.tBodies && table.tBodies[0];
-    if (!body) return;
-    [].forEach.call(body.rows, function (tr) {
-      cfg.bytes.forEach(function (i) {
-        var td = tr.cells[i];
-        if (!td || td.getAttribute("data-mt-fmt") === "b") return;
-        var human = fmtBytes(td.textContent);
-        if (human !== null) {
-          td.textContent = human;
-          td.setAttribute("data-mt-cell-bytes", "");
-        }
-        td.setAttribute("data-mt-fmt", "b");
-      });
-      if (cfg.dur != null) {
-        var dtd = tr.cells[cfg.dur];
-        if (dtd && dtd.getAttribute("data-mt-fmt") !== "d") {
-          dtd.textContent = fmtDur(dtd.textContent);
-          dtd.setAttribute("data-mt-cell-dur", "");
-          dtd.setAttribute("data-mt-fmt", "d");
-        }
-      }
-    });
-  }
-
-  function wire(cfg) {
-    var table = document.querySelector(cfg.sel);
-    if (!table) return;
-    var body = table.tBodies && table.tBodies[0];
-    if (!body) return;
-    formatTable(table, cfg);
-    // Re-format whenever the poller swaps the tbody contents. The
-    // data-mt-fmt flag is wiped with the old rows, so new rows get
-    // formatted exactly once each.
-    // Observe row swaps only (childList on the tbody). NOT subtree /
-    // characterData — formatTable edits cell text itself, and a deeper
-    // observer would re-fire on our own writes. Row-level childList is
-    // exactly what the poller triggers when it rebuilds the table.
-    var obs = new MutationObserver(function () { formatTable(table, cfg); });
-    obs.observe(body, { childList: true });
-  }
-
-  function init() { TABLES.forEach(wire); }
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", init);
   } else {

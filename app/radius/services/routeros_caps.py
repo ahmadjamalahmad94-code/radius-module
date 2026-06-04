@@ -32,13 +32,43 @@ L2TP_IPSEC_MIN_MAJOR = 6
 PPTP_MIN_MAJOR = 6
 
 # Tunnel-type vocabularies (stored per router; see migration 092).
+#
+# Tunnel-role architecture (authoritative):
+#   * RouterOS 7 → WireGuard carries BOTH data and the IP-change/bandwidth-exit
+#     role (``wireguard`` management + ``wireguard_traffic``).
+#   * RouterOS 6 → SSTP is the data + updates (management/control) tunnel;
+#     the OPTIONAL exit/IP-change tunnel is IPsec (encrypted, recommended) or
+#     PPTP (legacy/insecure alternative). L2TP is NOT offered for v6 exit.
 MANAGEMENT_TUNNEL_TYPES = ("wireguard", "sstp_mgmt", "direct", "none")
 TRAFFIC_TUNNEL_TYPES = (
-    "wireguard_traffic", "l2tp_ipsec_traffic", "pptp_traffic", "none",
+    "wireguard_traffic", "ipsec_traffic", "pptp_traffic",
+    # ``l2tp_ipsec_traffic`` is retained for backward compatibility with rows
+    # written before the IPsec/PPTP exit reconciliation; it is no longer
+    # offered in the v6 wizard option set.
+    "l2tp_ipsec_traffic", "none",
 )
-# Traffic protocols the operator can pick for a v6 router's traffic tunnel.
-# L2TP/IPsec is recommended; PPTP is Legacy/insecure (opt-in only).
-TRAFFIC_PROTOCOLS = ("l2tp_ipsec", "pptp")
+# Traffic protocols the operator can pick for a v6 router's exit tunnel.
+# IPsec is the recommended encrypted exit; PPTP is Legacy/insecure (opt-in).
+TRAFFIC_PROTOCOLS = ("ipsec", "pptp")
+
+# Operator-facing protocol value → stored traffic_tunnel_type. Single source
+# of truth so the wizard route and any future caller agree. ``l2tp_ipsec`` is
+# accepted as a legacy alias and folded onto the IPsec encrypted exit.
+_TRAFFIC_TYPE_BY_PROTOCOL = {
+    "ipsec": "ipsec_traffic",
+    "l2tp_ipsec": "ipsec_traffic",  # legacy alias → IPsec exit
+    "pptp": "pptp_traffic",
+}
+
+
+def traffic_protocol_to_type(protocol: object) -> str:
+    """Map a wizard traffic protocol to its stored ``traffic_tunnel_type``.
+
+    Unknown/empty protocols fall back to the recommended IPsec exit.
+    """
+    return _TRAFFIC_TYPE_BY_PROTOCOL.get(
+        (str(protocol or "").strip() or "ipsec"), "ipsec_traffic"
+    )
 TRAFFIC_MODES = (
     "disabled", "full_tunnel", "policy_routing",
     "selected_pool", "selected_subscribers",
@@ -260,6 +290,9 @@ def _allowed_traffic(version: object) -> set[str]:
     if supports_wireguard(version):
         allowed.add("wireguard_traffic")
     if supports_l2tp_ipsec_traffic(version):
+        # IPsec is the recommended v6 encrypted exit; the L2TP/IPsec type is
+        # kept allowed for backward compatibility (same version floor).
+        allowed.add("ipsec_traffic")
         allowed.add("l2tp_ipsec_traffic")
     if supports_pptp_traffic(version):
         allowed.add("pptp_traffic")  # Legacy/insecure — allowed but warned
@@ -392,6 +425,7 @@ __all__ = [
     "TRAFFIC_TUNNEL_TYPES",
     "TRAFFIC_PROTOCOLS",
     "TRAFFIC_MODES",
+    "traffic_protocol_to_type",
     "parse_major",
     "parse_routeros_major",
     "supports_wireguard",

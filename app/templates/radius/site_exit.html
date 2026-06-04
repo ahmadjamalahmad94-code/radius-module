@@ -4,20 +4,12 @@
    apply button is disabled until VX2.5/VX2.6 land — the
    placeholder text explains that to the operator.
 
-   Unified Design System (UDS) shell: ONE hero + LEFT help panel
-   (the old sticky side-guide) + carded sections. ZERO route /
-   behaviour change — every form field name, value, placeholder,
-   data-* hook, link and confirm-checkbox is preserved exactly.
-
-   The two policy boolean settings (include_subdomains /
-   include_router_output) use the canonical toggle switch. The
-   risk-gated group selectors and the 5 apply confirmations keep
-   their plain <input> form (their conditional `disabled`/`required`
-   is functional) and are intentionally NOT swapped to a toggle.
+   No flashy styling — same `mt-card` / `hub-kpi` tokens the
+   rest of the operator surfaces use, so this page feels like
+   part of the existing operations center.
 #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
-{% from "_partials/toggle_switch.html" import toggle_switch %}
 
 {% block title %}توجيه مواقع عبر خادم الربط{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-route"></i>{% endblock %}
@@ -25,20 +17,15 @@
 {% block page_sub %}<span class="sub">{{ nas.name }} · {{ nas.address }}</span>{% endblock %}
 
 {% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/mt_dashboard.css') }}">
 <style>
-  /* Retained: script/targets scroll caps + copy button — these wrap
-     free-text script output, not a UDS-replaceable component. */
-  .vx2-script-pre {
-    background:#0f172a; color:#e8eef7; font-family: ui-monospace, monospace;
-    padding: 12px; border-radius: 8px;
-    overflow-x: auto;
-    max-height: 360px;
-    overflow-y: auto;
-    font-size: 12.5px; line-height: 1.55;
-  }
-  .vx2-import-invalid-list {
-    max-height: 200px; overflow-y: auto;
-    margin-top: 4px;
+  .vx2-policy-form-grid { display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 12px 16px; }
+  .vx2-policy-form-grid label { display: flex; flex-direction: column; font-size: 13px; }
+  .vx2-policy-form-grid input,
+  .vx2-policy-form-grid select,
+  .vx2-policy-form-grid textarea {
+    padding: 6px 8px; border:1px solid var(--hub-border, #d8dee5);
+    border-radius:6px; font-family: inherit; font-size: 13px;
   }
   .vx2-group-row {
     display:flex; gap:10px; align-items:flex-start;
@@ -49,6 +36,82 @@
   .vx2-group-row .vx2-risk-low      { color:#2c9a52; }
   .vx2-group-row .vx2-risk-mid      { color:#b87f00; }
   .vx2-group-row .vx2-risk-high     { color:#cc1f1f; }
+  .vx2-script-pre {
+    background:#0f172a; color:#e8eef7; font-family: ui-monospace, monospace;
+    padding: 12px; border-radius: 8px;
+    overflow-x: auto;
+    /* VX2.6e — large preset (karamspeed = ~300 lines) would
+       extend the page forever. Cap height + add vertical
+       scroll so the operator can still see the apply card
+       without endless scrolling. */
+    max-height: 360px;
+    overflow-y: auto;
+    font-size: 12.5px; line-height: 1.55;
+  }
+  /* Targets table — same treatment when the policy has lots
+     of stored targets. */
+  .vx2-targets-list {
+    max-height: 320px; overflow-y: auto;
+    border: 1px solid var(--hub-border, #e6e9ee);
+    border-radius: 6px; padding: 8px;
+    background: var(--hub-surface, #fff);
+    font-size: 12.5px;
+  }
+  .vx2-import-invalid-list {
+    max-height: 200px; overflow-y: auto;
+    margin-top: 4px;
+  }
+  /* VX2.6g — 2-column layout with sticky sidebar guide. */
+  .vx2-layout {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 16px;
+    align-items: start;
+  }
+  @media (max-width: 1100px) {
+    .vx2-layout { grid-template-columns: 1fr; }
+    .vx2-side-guide { position: static !important; }
+  }
+  .vx2-side-guide {
+    position: sticky;
+    top: 16px;
+    background: #fff;
+    border: 1px solid var(--hub-border, #d8dee5);
+    border-radius: 8px;
+    padding: 14px 14px 6px;
+    font-size: 13px;
+    line-height: 1.55;
+    box-shadow: 0 1px 3px rgba(15,23,42,0.05);
+  }
+  .vx2-side-guide h4 {
+    margin: 0 0 8px; font-size: 14px;
+    color: var(--hub-text, #1a2230);
+    border-bottom: 1px solid var(--hub-border, #e6e9ee);
+    padding-bottom: 6px;
+  }
+  .vx2-side-guide ol {
+    padding-inline-start: 22px; margin: 0 0 10px;
+  }
+  .vx2-side-guide ol > li { margin-bottom: 8px; }
+  .vx2-side-guide ol > li code {
+    background: var(--hub-surface-2, #f7f8fa);
+    padding: 1px 4px; border-radius: 3px;
+    font-size: 11.5px;
+  }
+  .vx2-side-guide .vx2-step-num {
+    display: inline-block;
+    width: 18px; height: 18px;
+    background: #208ba6; color: #fff;
+    border-radius: 50%; text-align: center;
+    line-height: 18px; font-size: 11px;
+    margin-inline-end: 6px;
+  }
+  .vx2-side-guide .vx2-tip {
+    background: rgba(43,170,204,0.08);
+    border-inline-start: 3px solid #208ba6;
+    padding: 6px 8px; margin: 8px 0 0;
+    font-size: 12px;
+  }
   /* Copy button on script pre blocks. */
   .vx2-pre-wrap { position: relative; }
   .vx2-pre-wrap > .vx2-copy-btn {
@@ -72,135 +135,166 @@
   .vx2-pre-wrap > .vx2-copy-btn.is-copied {
     background: #2c9a52; color: #fff; border-color: #2c9a52;
   }
+  .vx2-warning { background: rgba(255,180,0,0.10);
+                  border-left: 3px solid #b87f00;
+                  border-radius: 8px;
+                  padding: 10px 14px; margin: 6px 0; }
+  .vx2-blocking { background: rgba(208,46,46,0.10);
+                   border-left: 3px solid #cc1f1f;
+                   border-radius: 8px;
+                   padding: 10px 14px; margin: 6px 0; }
   .vx2-empty { color: var(--hub-text-muted, #717b8a); }
+  /* QA fix — styled wrapper for the top-of-page notice/error alerts so
+     they read as a card and keep a consistent gap below before the
+     2-column layout. */
+  .vx2-alerts {
+    display: flex; flex-direction: column; gap: 8px;
+    padding: 12px 14px;
+    background: var(--hub-surface, #fff);
+    border: 1px solid var(--hub-border, #d8dee5);
+    border-radius: 10px;
+    margin: 0 0 var(--hub-gap-section, 18px);
+  }
+  .vx2-alerts > .vx2-warning,
+  .vx2-alerts > .vx2-blocking { margin: 0; }
 </style>
 {% endblock %}
 
 {% block content %}
 
-<section data-mt-site-exit
+<section class="mt-dashboard"
+         data-mt-site-exit
          data-mt-site-exit-nas="{{ nas.id }}"
          data-mt-site-exit-policy="{{ policy.id if policy else '' }}">
 
-  {# ───── Unified hero (replaces the bespoke header) ───── #}
   {{ hub.hero(
     "توجيه مواقع عبر خادم الربط",
-    subtitle="إخراج وجهات مختارة فقط عبر نفق الإدارة على خادم الربط، وليس كل الحركة — " ~ nas.name ~ " · " ~ nas.address,
+    subtitle="إخراج وجهات مختارة فقط عبر نفق الإدارة على خادم الربط، وليس كل الحركة.",
     icon="route",
   ) }}
 
-  {% if notice %}
-  <div role="status"
-       style="display:flex;align-items:center;gap:8px;margin-bottom:16px;background:rgba(43,170,204,0.10);border:1px solid #208ba6;color:#0c5a6e;padding:12px 14px;border-radius:var(--hub-r-md);font-size:14px"
-       data-mt-site-exit-notice>
-    <i class="fa-solid fa-circle-info"></i> {{ notice }}
-  </div>
-  {% endif %}
-  {% if error %}
-  <div role="alert"
-       style="display:flex;align-items:center;gap:8px;margin-bottom:16px;background:#FEF2F2;border:1px solid #FCA5A5;color:#991B1B;padding:12px 14px;border-radius:var(--hub-r-md);font-size:14px"
-       data-mt-site-exit-error>
-    <i class="fa-solid fa-circle-exclamation"></i> {{ error }}
-  </div>
+  {% if notice or error %}
+  {# QA fix — notice/error were raw alert divs with no card wrapper and
+     no inter-block gap; wrap them in a styled section so they sit in a
+     proper card with balanced padding + spacing below. #}
+  <section class="vx2-alerts">
+    {% if notice %}
+      <div class="vx2-warning"
+           style="border-left-color:#208ba6;background:rgba(43,170,204,0.10);"
+           data-mt-site-exit-notice>
+        <i class="fa-solid fa-circle-info"></i> {{ notice }}
+      </div>
+    {% endif %}
+    {% if error %}
+      <div class="vx2-blocking" data-mt-site-exit-error>
+        <i class="fa-solid fa-circle-exclamation"></i> {{ error }}
+      </div>
+    {% endif %}
+  </section>
   {% endif %}
 
-  {# ───── Main column + help panel on the LEFT ───── #}
-  {% call hub.worklayout(aside_html=hub.helppanel(
-    "الخطوات بالترتيب",
-    intro="إخراج وجهات مختارة فقط عبر نفق الإدارة على خادم الربط. اتبع الخطوات بالترتيب.",
-    items=[
-      {'icon': 'shield-halved', 'text': 'تحقّق من عقدة الخروج — لازم تكون مفعّلة + عنوان عام + اسم واجهة النفق مطابق للراوتر.'},
-      {'icon': 'pen-to-square', 'text': 'أنشئ سياسة — اختر عقدة الخروج + وضع الفشل block_when_vps_down الموصى به.'},
-      {'icon': 'file-import',   'text': 'حمّل قائمة جاهزة (مثل karamspeed) أو الصق قائمتك في صندوق الاستيراد ثم اضغط تحليل.'},
-      {'icon': 'list-check',    'text': 'اختر المجموعات — اترك الافتراضي الآمن (speedtest + public-ip-checkers + raw-ips) ثم احفظ.'},
-      {'icon': 'ethernet',      'text': 'اكتب اسم WAN interface-list (افتراضياً WAN؛ تحقّق بـ /interface list print).'},
-      {'icon': 'eye',           'text': 'ولّد المعاينة — اقرأ السكربت + تحذير FastTrack بعناية.'},
-      {'icon': 'square-check',  'text': 'علّم 5 خانات التأكيد (إلزامية — تمنع تطبيق غير مقصود).'},
-      {'icon': 'circle-play',   'text': 'اضغط الزر الأحمر — التطبيق ينفّذ السكربت عبر واجهة ربط الراوتر مباشرة.'},
-    ],
-    note="أزرار «نسخ» على السكربتات تنسخ الكل بنقرة. خذ نسخة احتياطية من الراوتر قبل التطبيق؛ ولو فشل، افتح «سجل العمليات» لمعرفة السبب."
-  )) %}
+  <div class="vx2-layout">
+    <div data-vx2-main>
+
 
   {# ── 1) Header / router identity ───────────────────────── #}
-  {% call hub.section("الراوتر", icon="server",
-        meta='<a href="' ~ url_for('radius.mt_router_overview', nas_id=nas.id) ~ '"><i class="fa-solid fa-clipboard-check"></i> نظرة عامة</a>') %}
-    <div class="hub-kpi-row">
-      <div class="hub-kpi">
-        <div class="hub-kpi-label">الاسم</div>
-        <div class="hub-kpi-value">{{ nas.name }}</div>
-      </div>
-      <div class="hub-kpi">
-        <div class="hub-kpi-label">العنوان</div>
-        <div class="hub-kpi-value"><code>{{ nas.address }}</code></div>
-      </div>
-      <div class="hub-kpi">
-        <div class="hub-kpi-label">الحالة</div>
-        <div class="hub-kpi-value">
-          {% if nas.enabled %}{{ hub.pill("مفعَّل", variant="green") }}
-          {% else %}{{ hub.pill("معطَّل", variant="grey") }}{% endif %}
+  <section class="mt-card">
+    <header class="mt-card-head">
+      <h3><i class="fa-solid fa-server"></i> الراوتر</h3>
+      <span class="mt-card-meta">
+        <a href="{{ url_for('radius.mt_router_overview', nas_id=nas.id) }}">
+          <i class="fa-solid fa-clipboard-check"></i> نظرة عامة
+        </a>
+      </span>
+    </header>
+    <div class="mt-card-body">
+      <div class="hub-kpi-row">
+        <div class="hub-kpi">
+          <div class="hub-kpi-label">الاسم</div>
+          <div class="hub-kpi-value">{{ nas.name }}</div>
         </div>
-      </div>
-      {% if deployment %}
-      <div class="hub-kpi">
-        <div class="hub-kpi-label">حالة النشر</div>
-        <div class="hub-kpi-value"
-             data-mt-site-exit-deployment-status="{{ deployment.status }}">
-          {{ deployment.status }}
+        <div class="hub-kpi">
+          <div class="hub-kpi-label">العنوان</div>
+          <div class="hub-kpi-value"><code>{{ nas.address }}</code></div>
         </div>
+        <div class="hub-kpi">
+          <div class="hub-kpi-label">الحالة</div>
+          <div class="hub-kpi-value">
+            {% if nas.enabled %}<span class="mt-iface-state mt-iface-state--up">مفعَّل</span>
+            {% else %}<span class="mt-iface-state mt-iface-state--off">معطَّل</span>{% endif %}
+          </div>
+        </div>
+        {% if deployment %}
+        <div class="hub-kpi">
+          <div class="hub-kpi-label">حالة النشر</div>
+          <div class="hub-kpi-value"
+               data-mt-site-exit-deployment-status="{{ deployment.status }}">
+            {{ deployment.status }}
+          </div>
+        </div>
+        {% endif %}
       </div>
-      {% endif %}
     </div>
-  {% endcall %}
+  </section>
 
   {# ── 2) VPS exit node ──────────────────────────────────── #}
-  {% call hub.section("عقدة الخروج", icon="shield-halved",
-        flush=(vps_nodes|length > 0)) %}
-    <div data-mt-site-exit-node-card>
-    {% if vps_nodes %}
-    <div class="hub-table-wrap uds-table-wrap" data-uds-table
-         style="border:none;border-radius:0">
-      <table class="hub-table">
+  <section class="mt-card" data-mt-site-exit-node-card>
+    <header class="mt-card-head">
+      <h3><i class="fa-solid fa-shield-halved"></i> عقدة الخروج</h3>
+    </header>
+    <div class="mt-card-body">
+      {% if vps_nodes %}
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
         <thead>
-          <tr>
-            <th>الاسم</th>
-            <th>العنوان العام</th>
-            <th>واجهة النفق</th>
-            <th>البوابة</th>
-            <th>الصحة</th>
-            <th>الحالة</th>
+          <tr style="text-align:start;background:var(--hub-surface-2,#f7f8fa)">
+            <th style="padding:6px 8px">الاسم</th>
+            <th style="padding:6px 8px">العنوان العام</th>
+            <th style="padding:6px 8px">واجهة النفق</th>
+            <th style="padding:6px 8px">البوابة</th>
+            <th style="padding:6px 8px">الصحة</th>
+            <th style="padding:6px 8px">الحالة</th>
           </tr>
         </thead>
         <tbody>
           {% for n in vps_nodes %}
           <tr data-mt-site-exit-node="{{ n.id }}">
-            <td><strong>{{ n.name }}</strong></td>
-            <td class="mono small"><code>{{ n.public_ip or '—' }}</code></td>
-            <td class="mono small"><code>{{ n.wireguard_interface_name or '—' }}</code></td>
-            <td class="mono small"><code>{{ n.wireguard_gateway_ip or '—' }}</code></td>
-            <td>{{ n.last_health_status or '—' }}</td>
-            <td>
-              {% if n.enabled %}{{ hub.pill("مفعَّل", variant="green") }}
-              {% else %}{{ hub.pill("معطَّل", variant="grey") }}{% endif %}
+            <td style="padding:6px 8px"><strong>{{ n.name }}</strong></td>
+            <td style="padding:6px 8px"><code>{{ n.public_ip or '—' }}</code></td>
+            <td style="padding:6px 8px"><code>{{ n.wireguard_interface_name or '—' }}</code></td>
+            <td style="padding:6px 8px"><code>{{ n.wireguard_gateway_ip or '—' }}</code></td>
+            <td style="padding:6px 8px">{{ n.last_health_status or '—' }}</td>
+            <td style="padding:6px 8px">
+              {% if n.enabled %}
+              <span class="mt-iface-state mt-iface-state--up">مفعَّل</span>
+              {% else %}
+              <span class="mt-iface-state mt-iface-state--off">معطَّل</span>
+              {% endif %}
             </td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
+      {% else %}
+      <p class="vx2-empty" data-mt-site-exit-no-nodes>
+        لا توجد عقد خروج بعد. أنشئ عقدة قبل توليد السياسة.
+      </p>
+      {% endif %}
     </div>
-    {% else %}
-    <div data-mt-site-exit-no-nodes>
-      {{ hub.empty("لا توجد عقد خروج بعد", sub="أنشئ عقدة قبل توليد السياسة.", icon="server") }}
-    </div>
-    {% endif %}
-    </div>
-  {% endcall %}
+  </section>
 
   {# ── 3) Policy form ────────────────────────────────────── #}
-  {% call hub.section(
-        ("السياسة الحالية" if policy else "سياسة جديدة"),
-        icon="pen-to-square",
-        meta=((policies|length|string ~ " سياسة على هذا الراوتر") if policies else "")) %}
-    <div data-mt-site-exit-policy-card>
+  <section class="mt-card" data-mt-site-exit-policy-card>
+    <header class="mt-card-head">
+      <h3><i class="fa-solid fa-pen-to-square"></i>
+        {% if policy %}السياسة الحالية{% else %}سياسة جديدة{% endif %}
+      </h3>
+      {% if policies %}
+      <span class="mt-card-meta" data-mt-site-exit-policies-count>
+        {{ policies | length }} سياسة على هذا الراوتر
+      </span>
+      {% endif %}
+    </header>
+    <div class="mt-card-body">
       {% if policy %}
       <p>
         <strong>{{ policy.name }}</strong>
@@ -209,72 +303,72 @@
       </p>
       <form method="get" style="display:inline">
         <input type="hidden" name="policy_id" value="">
-        <button type="submit" class="hub-btn hub-btn--secondary hub-btn--sm">
+        <button type="submit" class="mt-mini-btn">
           <i class="fa-solid fa-plus"></i> سياسة جديدة
         </button>
       </form>
       {% else %}
-      <form method="post" class="hub-form"
+      <form method="post"
             action="{{ url_for('radius.site_exit_policy_create', nas_id=nas.id) }}"
             data-mt-site-exit-policy-form>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px">
-          <div class="hub-field">
-            <label>اسم السياسة</label>
-            <input class="hub-input" type="text" name="name" required>
-          </div>
-          <div class="hub-field">
-            <label>عقدة الخروج</label>
-            <select class="hub-input" name="exit_node_id" required>
+        <div class="vx2-policy-form-grid">
+          <label>اسم السياسة
+            <input type="text" name="name" required>
+          </label>
+          <label>عقدة الخروج
+            <select name="exit_node_id" required>
               <option value="">— اختر —</option>
               {% for n in vps_nodes %}
               <option value="{{ n.id }}">{{ n.name }} · {{ n.public_ip or '?' }}</option>
               {% endfor %}
             </select>
-          </div>
-          <div class="hub-field">
-            <label>وضع الفشل</label>
-            <select class="hub-input" name="fail_mode">
+          </label>
+          <label>وضع الفشل
+            <select name="fail_mode">
               <option value="block_when_vps_down">block_when_vps_down — حظر الخروج عبر WAN عند سقوط النفق</option>
               <option value="fallback_to_wan">fallback_to_wan — السماح بـ WAN كبديل (يكشف IP الأصلي)</option>
             </select>
-          </div>
+          </label>
+          <label style="grid-column: 1 / -1; flex-direction: row; gap:6px; align-items:center">
+            <input type="checkbox" name="include_subdomains" checked>
+            تضمين النطاقات الفرعية (يتطلب DNS عبر الراوتر)
+          </label>
+          <label style="grid-column: 1 / -1; flex-direction: row; gap:6px; align-items:center">
+            <input type="checkbox" name="include_router_output">
+            تضمين الترافيك الصادر من الراوتر نفسه (للاختبارات)
+          </label>
         </div>
-        <div class="hub-field" style="margin-top:14px">
-          <label>تضمين النطاقات الفرعية (يتطلب DNS عبر الراوتر)</label>
-          {{ toggle_switch(name="include_subdomains", checked=True) }}
-        </div>
-        <div class="hub-field" style="margin-top:10px">
-          <label>تضمين الترافيك الصادر من الراوتر نفسه (للاختبارات)</label>
-          {{ toggle_switch(name="include_router_output", checked=False) }}
-        </div>
-        <div style="margin-top:16px">
-          <button type="submit" class="hub-btn hub-btn--primary">
+        <div class="mt-program-actions" style="margin-top:10px">
+          <button type="submit" class="mt-action-btn">
             <i class="fa-solid fa-plus"></i> إنشاء السياسة
           </button>
         </div>
       </form>
       {% endif %}
     </div>
-  {% endcall %}
+  </section>
 
   {% if policy %}
 
   {# ── 4) Seed import ────────────────────────────────────── #}
-  {% call hub.section("استيراد قائمة عناوين الراوتر", icon="file-import") %}
-    <div data-mt-site-exit-import-card>
+  <section class="mt-card" data-mt-site-exit-import-card>
+    <header class="mt-card-head">
+      <h3><i class="fa-solid fa-file-import"></i> استيراد قائمة عناوين الراوتر</h3>
+    </header>
+    <div class="mt-card-body">
       {# VX2.6f — preset quick-load row above the manual paste box. #}
       {% if presets %}
       <div data-mt-site-exit-presets
            style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;
-                  padding:8px 12px;background:rgba(43,170,204,0.06);
-                  border-radius:var(--hub-r-md);margin-bottom:12px;font-size:13px">
+                  padding:8px;background:rgba(43,170,204,0.06);
+                  border-radius:6px;margin-bottom:10px;font-size:13px">
         <strong style="margin-inline-end:6px">قوائم جاهزة:</strong>
         {% for preset in presets %}
         <form method="post" style="display:inline"
               action="{{ url_for('radius.site_exit_load_preset',
                                  nas_id=nas.id, policy_id=policy.id) }}">
           <input type="hidden" name="preset_key" value="{{ preset.key }}">
-          <button type="submit" class="hub-btn hub-btn--secondary hub-btn--sm"
+          <button type="submit" class="mt-mini-btn"
                   data-mt-site-exit-preset="{{ preset.key }}"
                   title="{{ preset.description_ar }}">
             <i class="fa-solid fa-list"></i>
@@ -288,18 +382,17 @@
       <form method="post" data-mt-site-exit-import-form
             action="{{ url_for('radius.site_exit_import',
                                nas_id=nas.id, policy_id=policy.id) }}">
-        <p class="hub-text-mute" style="font-size:12.5px;margin:0 0 8px">
+        <p class="vx2-empty" style="font-size:12.5px">
           الصق محتوى ملف بصيغة <code>/ip firewall address-list</code> —
           سنقوم بالتحقق والتصنيف بدون أي كتابة على الراوتر.
           أو اختر قائمة جاهزة من الأزرار أعلاه.
         </p>
         <textarea name="seed_text" rows="8"
-                  class="hub-input"
                   style="width:100%;font-family:ui-monospace,monospace;font-size:12.5px"
                   data-mt-site-exit-seed-textarea
                   placeholder="add address=speedtest.net list=speedtest"></textarea>
-        <div style="margin-top:10px">
-          <button type="submit" class="hub-btn hub-btn--primary"
+        <div class="mt-program-actions" style="margin-top:8px">
+          <button type="submit" class="mt-action-btn"
                   data-mt-site-exit-import-button>
             <i class="fa-solid fa-magnifying-glass"></i> تحليل
           </button>
@@ -308,7 +401,7 @@
 
       {% if import_result %}
       <div data-mt-site-exit-import-summary
-           style="margin-top:16px;font-size:13px">
+           style="margin-top:12px;font-size:13px">
         <div class="hub-kpi-row">
           <div class="hub-kpi">
             <div class="hub-kpi-label">إجمالي الأسطر</div>
@@ -333,7 +426,7 @@
         </div>
 
         {% if import_result.invalid %}
-        <details style="margin-top:12px">
+        <details style="margin-top:10px">
           <summary><strong>الأسطر المرفوضة ({{ import_result.invalid | length }}) — اضغط للعرض</strong></summary>
           <ul class="vx2-import-invalid-list">
             {% for inv in import_result.invalid %}
@@ -348,10 +441,9 @@
               action="{{ url_for('radius.site_exit_targets_save',
                                  nas_id=nas.id, policy_id=policy.id) }}"
               data-mt-site-exit-groups-form
-              style="margin-top:14px">
+              style="margin-top:12px">
           <input type="hidden" name="seed_text" value="{{ request.form.get('seed_text', '') }}">
-          <div data-mt-site-exit-groups
-               style="border:1px solid var(--hub-border);border-radius:var(--hub-r-md);overflow:hidden">
+          <div data-mt-site-exit-groups>
             {% for group_name, meta in group_meta.items() %}
             {% set count = import_result.group_counts.get(group_name, 0) %}
             <div class="vx2-group-row"
@@ -384,8 +476,8 @@
             </div>
             {% endfor %}
           </div>
-          <div style="margin-top:10px">
-            <button type="submit" class="hub-btn hub-btn--primary"
+          <div class="mt-program-actions" style="margin-top:8px">
+            <button type="submit" class="mt-action-btn"
                     data-mt-site-exit-save-targets>
               <i class="fa-solid fa-floppy-disk"></i> حفظ الأهداف المختارة
             </button>
@@ -394,24 +486,32 @@
       </div>
       {% endif %}
     </div>
-  {% endcall %}
+  </section>
 
   {# ── 6) Preview ───────────────────────────────────────── #}
-  {% call hub.section("المعاينة", icon="eye",
-        meta=(("الإجمالي المُخزَّن: " ~ group_counts.get('total', 0)|string ~ " هدف") if group_counts else "")) %}
-    <div data-mt-site-exit-preview-card>
-      <form method="post" class="hub-form"
+  <section class="mt-card" data-mt-site-exit-preview-card>
+    <header class="mt-card-head">
+      <h3><i class="fa-solid fa-eye"></i> المعاينة</h3>
+      {% if group_counts %}
+      <span class="mt-card-meta">
+        الإجمالي المُخزَّن: <strong>{{ group_counts.get('total', 0) }}</strong> هدف
+      </span>
+      {% endif %}
+    </header>
+    <div class="mt-card-body">
+      <form method="post"
             action="{{ url_for('radius.site_exit_preview',
                                nas_id=nas.id, policy_id=policy.id) }}"
             data-mt-site-exit-preview-form
-            style="margin-bottom:12px">
-        <div class="hub-field" style="max-width:360px">
-          <label>WAN interface-list (للحماية في وضع block)</label>
-          <input class="hub-input" type="text" name="wan_interface_list"
-                 placeholder="WAN" data-mt-site-exit-wan-input>
+            style="margin-bottom:10px">
+        <div class="vx2-policy-form-grid">
+          <label>WAN interface-list (للحماية في وضع block)
+            <input type="text" name="wan_interface_list"
+                   placeholder="WAN" data-mt-site-exit-wan-input>
+          </label>
         </div>
-        <div style="margin-top:10px">
-          <button type="submit" class="hub-btn hub-btn--primary"
+        <div class="mt-program-actions" style="margin-top:8px">
+          <button type="submit" class="mt-action-btn"
                   data-mt-site-exit-preview-button>
             <i class="fa-solid fa-bolt"></i> توليد معاينة
           </button>
@@ -421,17 +521,14 @@
       {% if preview_plan %}
         {% if preview_plan.blocking_errors %}
           {% for b in preview_plan.blocking_errors %}
-          <div role="alert"
-               style="display:flex;align-items:center;gap:8px;margin:6px 0;background:#FEF2F2;border:1px solid #FCA5A5;color:#991B1B;padding:10px 14px;border-radius:var(--hub-r-md);font-size:13px"
-               data-mt-site-exit-blocking>
+          <div class="vx2-blocking" data-mt-site-exit-blocking>
             <i class="fa-solid fa-ban"></i> {{ b }}
           </div>
           {% endfor %}
         {% endif %}
         {% if preview_plan.warnings %}
           {% for w in preview_plan.warnings %}
-          <div style="display:flex;align-items:center;gap:8px;margin:6px 0;background:#FFFBEB;border:1px solid #FDE68A;color:#92400E;padding:10px 14px;border-radius:var(--hub-r-md);font-size:13px"
-               data-mt-site-exit-warning>
+          <div class="vx2-warning" data-mt-site-exit-warning>
             <i class="fa-solid fa-triangle-exclamation"></i> {{ w }}
           </div>
           {% endfor %}
@@ -470,21 +567,26 @@
         {% endif %}
       {% endif %}
     </div>
-  {% endcall %}
+  </section>
 
   {# ── 7) Apply (VX2.6a — guarded form with 5 confirmations) #}
-  {% call hub.section("التطبيق", icon="circle-play",
-        meta='<i class="fa-solid fa-shield-halved"></i> تطبيق آمن خلف فحص السلامة + 5 تأكيدات صريحة') %}
-    <div data-mt-site-exit-apply-card>
+  <section class="mt-card" data-mt-site-exit-apply-card>
+    <header class="mt-card-head">
+      <h3><i class="fa-solid fa-circle-play"></i> التطبيق</h3>
+      <span class="mt-card-meta">
+        <i class="fa-solid fa-shield-halved"></i>
+        تطبيق آمن خلف فحص السلامة + 5 تأكيدات صريحة
+      </span>
+    </header>
+    <div class="mt-card-body">
 
       {% if not preview_plan or not preview_plan.can_apply %}
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;background:#FFFBEB;border:1px solid #FDE68A;color:#92400E;padding:10px 14px;border-radius:var(--hub-r-md);font-size:13px"
-           data-mt-site-exit-apply-disabled>
+      <div class="vx2-warning" data-mt-site-exit-apply-disabled>
         <i class="fa-solid fa-lock"></i>
         ولّد معاينة ناجحة أولًا (بدون أخطاء مُعطِّلة) قبل
         أن يصبح التطبيق ممكناً.
       </div>
-      <button class="hub-btn hub-btn--primary" disabled
+      <button class="mt-action-btn" disabled
               data-mt-site-exit-apply-button
               title="ولّد معاينة ناجحة أولاً">
         <i class="fa-solid fa-circle-play"></i> تطبيق على الراوتر
@@ -504,8 +606,8 @@
 
         <div data-mt-site-exit-confirmations
              style="display:grid;gap:8px;font-size:13px;
-                    background:var(--hub-bg-soft,#f7f8fa);
-                    padding:12px;border-radius:var(--hub-r-md);margin:8px 0">
+                    background:var(--hub-surface-2,#f7f8fa);
+                    padding:12px;border-radius:6px;margin:8px 0">
 
           <label style="display:flex;gap:8px;align-items:flex-start">
             <input type="checkbox" name="confirm_preview_seen"
@@ -557,34 +659,103 @@
                 القديمة (يتطلّب صلاحية
                 <code>site_exit.override_backup_warning</code>).</span>
             </label>
-            <div class="hub-field" style="margin-top:8px;max-width:360px">
-              <label>WAN interface-list</label>
-              <input class="hub-input" type="text" name="wan_interface_list"
+            <label class="mt-program-field" style="margin-top:8px">
+              <span>WAN interface-list</span>
+              <input type="text" name="wan_interface_list"
                      value="{{ request.form.get('wan_interface_list', 'WAN') }}"
-                     placeholder="WAN">
-            </div>
+                     placeholder="WAN"
+                     style="padding:6px 8px;border:1px solid var(--hub-border,#d8dee5);border-radius:6px">
+            </label>
           </div>
         </details>
 
-        <div style="margin-top:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <div class="mt-program-actions" style="margin-top:8px">
           <button type="submit"
-                  class="hub-btn hub-btn--danger"
-                  data-mt-site-exit-apply-button>
+                  class="mt-action-btn"
+                  data-mt-site-exit-apply-button
+                  style="background:#cc1f1f;color:#fff">
             <i class="fa-solid fa-circle-play"></i>
             تطبيق على الراوتر الآن
           </button>
-          <span class="hub-text-mute">
+          <span class="vx2-empty" style="margin-inline-start:8px">
             سيُسجَّل في سجل العمليات + سجل النشر.
           </span>
         </div>
       </form>
       {% endif %}
     </div>
-  {% endcall %}
+  </section>
 
   {% endif %}{# policy block #}
 
-  {% endcall %}{# /worklayout #}
+    </div>{# /vx2-main #}
+
+    {# ─── Side guide (sticky) ─────────────────────────── #}
+    <aside class="vx2-side-guide" data-vx2-side-guide>
+      <h4><i class="fa-solid fa-list-check"></i> الخطوات بالترتيب</h4>
+      <ol>
+        <li>
+          <span class="vx2-step-num">1</span>
+          <strong>تحقّق من عقدة الخروج</strong>
+          — لازم تكون مفعّلة + عنوان عام + اسم واجهة النفق
+          interface مطابق للراوتر.
+        </li>
+        <li>
+          <span class="vx2-step-num">2</span>
+          <strong>أنشئ سياسة</strong>
+          — اختر عقدة الخروج + وضع الفشل
+          <code>block_when_vps_down</code> الموصى به.
+        </li>
+        <li>
+          <span class="vx2-step-num">3</span>
+          <strong>حمّل قائمة جاهزة</strong> (مثل karamspeed)
+          أو الصق قائمتك في textarea الاستيراد، اضغط
+          <code>تحليل</code>.
+        </li>
+        <li>
+          <span class="vx2-step-num">4</span>
+          <strong>اختر المجموعات</strong> — اترك الافتراضي
+          الآمن (speedtest + public-ip-checkers + raw-ips)،
+          ثم اضغط <code>حفظ الأهداف المختارة</code>.
+        </li>
+        <li>
+          <span class="vx2-step-num">5</span>
+          <strong>اكتب اسم WAN interface-list</strong>
+          (افتراضياً <code>WAN</code>؛ تحقّق على الراوتر بـ
+          <code>/interface list print</code>).
+        </li>
+        <li>
+          <span class="vx2-step-num">6</span>
+          <strong>ولّد المعاينة</strong>
+          — اقرأ السكربت + تحذير FastTrack بعناية.
+        </li>
+        <li>
+          <span class="vx2-step-num">7</span>
+          <strong>علّم 5 خانات التأكيد</strong>
+          (إلزامية — تمنع تطبيق غير مقصود).
+        </li>
+        <li>
+          <span class="vx2-step-num">8</span>
+          <strong>اضغط الزر الأحمر</strong>
+          — التطبيق ينفّذ السكربت عبر واجهة ربط الراوتر
+          (لا تحتاج وصولاً آمناً منفصلاً).
+        </li>
+      </ol>
+
+      <div class="vx2-tip">
+        <strong>💡 نصيحة:</strong> أزرار <em>نسخ</em> على
+        السكربتات تنسخ الكل بنقرة. الصق في
+        <code>/file/edit</code> أو في terminal الراوتر.
+      </div>
+
+      <div class="vx2-tip" style="background:rgba(204,31,31,0.08);border-color:#cc1f1f">
+        <strong>⚠️ هام:</strong> خذ نسخة احتياطية من الراوتر
+        قبل التطبيق. ولو فشل التطبيق، افتح <code>سجل
+        العمليات</code> لمعرفة السبب.
+      </div>
+    </aside>
+
+  </div>{# /vx2-layout #}
 
 </section>
 

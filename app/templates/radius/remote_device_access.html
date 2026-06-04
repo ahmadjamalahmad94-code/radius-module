@@ -15,7 +15,43 @@
 {% endblock %}
 
 {% block content %}
-<div class="hr-page-shell" data-admin-rhythm>
+
+<style>
+  /* QA fix — the security-note and device-summary were raw inline-styled
+     divs (not proper sections). Give the page a consistent inter-section
+     rhythm and normalize those two blocks into styled cards with balanced
+     padding on all sides. */
+  [data-rda-shell]{
+    display:flex;
+    flex-direction:column;
+    gap:var(--hub-gap-section, 18px);
+  }
+  [data-rda-shell] > *{ margin:0; }
+  .rda-note{
+    border-radius:14px;
+    padding:14px 18px;
+    font-size:12.5px;
+    line-height:1.7;
+  }
+  .rda-note--security{
+    background:#FEF3C7; border:1px solid #FCD34D; color:#92400E;
+  }
+  .rda-note--config{
+    background:#FEE2E2; border:1px solid #FCA5A5; color:#991B1B;
+  }
+  .rda-summary{
+    background:var(--hub-surface-2, #F8FAFC);
+    border:1px solid var(--hub-border, #E2E8F0);
+    border-radius:14px;
+    padding:18px 22px;
+  }
+  .rda-summary-grid{
+    display:grid; grid-template-columns:repeat(2,1fr);
+    gap:10px; font-size:12.5px;
+  }
+</style>
+
+<div class="hr-page-shell" data-admin-rhythm data-rda-shell>
 
 {{ hub.hero(
   "فتح جهاز عن بُعد",
@@ -26,28 +62,28 @@
 ) }}
 
 {# ── Security note ── #}
-<div style="background:#FEF3C7;border:1px solid #FCD34D;border-radius:10px;padding:12px 16px;margin:18px 0;font-size:12.5px;color:#92400E;line-height:1.7">
+<section class="rda-note rda-note--security">
   <i class="fa-solid fa-shield-halved"></i>
   <strong>تنويه أمني:</strong>
   الجلسة تفتح منفذ وصول مؤقّت على خادم الربط فقط أثناء المدّة المختارة، ويُغلَق
   بالكامل (LISTENER + NAT على الراوتر) عند انتهاء المدّة أو الضغط
   على «إغلاق الآن». مسار الاتصال:
   <code dir="ltr">المتصفّح → خادم الربط:المنفذ → نفق الإدارة → الراوتر → الجهاز</code>.
-</div>
+</section>
 
 {% if not vps_public_host %}
-<div style="background:#FEE2E2;border:1px solid #FCA5A5;border-radius:10px;padding:12px 16px;margin:18px 0;font-size:12.5px;color:#991B1B;line-height:1.7">
+<section class="rda-note rda-note--config">
   <i class="fa-solid fa-triangle-exclamation"></i>
   <strong>تحذير إعداد:</strong>
   المتغيّر <code>HOBERADIUS_VPS_PUBLIC_IP</code> غير محدّد على الخادم —
   الجلسات ستفتح لكن لن تعرض رابط الوصول بشكل صحيح. اضبط المتغيّر في
   <code>deploy/.env</code> وأعد تشغيل خدمة التشغيل.
-</div>
+</section>
 {% endif %}
 
 {# ── Device summary ── #}
-<section style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:14px;padding:16px 22px;margin-bottom:18px">
-  <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;font-size:12.5px">
+<section class="rda-summary">
+  <div class="rda-summary-grid">
     <div><strong>الجهاز:</strong> {{ device.name }}</div>
     <div><strong>IP الداخلي:</strong> <code dir="ltr">{{ device.ip_address or '— غير محدّد' }}</code></div>
     <div><strong>المنفذ الافتراضي:</strong> <code dir="ltr">{{ device.management_port }}</code></div>
@@ -61,7 +97,7 @@
 <form method="post"
       action="{{ url_for('radius.remote_device_access_open', device_id=device.id) }}"
       class="hr-form-card"
-      style="background:#fff;border:1px solid #E5E7EB;border-radius:14px;padding:24px;margin-bottom:18px">
+      style="background:#fff;border:1px solid #E5E7EB;border-radius:14px;padding:24px">
   {{ csrf_token_input() | safe }}
 
   <h3 style="margin:0 0 16px;color:#0F172A;font-size:15px;font-weight:800">

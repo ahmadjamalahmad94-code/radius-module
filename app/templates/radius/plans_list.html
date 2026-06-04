@@ -1,5 +1,4 @@
-{# Plans list — UNIFIED DESIGN SYSTEM reference (merged hero + help panel).
-   Same backend data: items list. Zero route/behaviour change. #}
+{# Plans list — REBUILT N6 (hub-v2). Same backend data: items list. #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
@@ -8,14 +7,83 @@
 {% block page_title %}العروض والخطط{% endblock %}
 {% block page_sub %}<span class="sub">{{ items|length }} عرض في النتائج</span>{% endblock %}
 
+{% block head_extra %}
+{{ super() }}
+<style>
+  /* #31: cards / table view toggle — same look as the card-packages
+     (cards_batches) hero toggle. Self-contained page-scoped styles. */
+  .pl-view-toggle{
+    display:inline-flex; gap:4px;
+    padding:4px;
+    background:var(--hub-bg-soft, #f5f4fb);
+    border:1px solid var(--hub-border, #e2e8f0);
+    border-radius:999px;
+  }
+  .pl-view-toggle button{
+    display:inline-flex; align-items:center; gap:7px;
+    border:0; background:transparent; cursor:pointer;
+    font:inherit; font-size:12.5px; font-weight:800;
+    color:var(--hub-text-soft, #475569);
+    padding:7px 14px; border-radius:999px;
+    transition:all var(--hub-anim-fast, .15s) var(--hub-ease, ease);
+  }
+  .pl-view-toggle button[aria-pressed="true"]{
+    background:var(--hub-brand, #2BAACC);
+    color:#fff;
+    box-shadow:0 2px 8px rgba(43,170,204,.28);
+  }
+  .pl-view-toggle button:not([aria-pressed="true"]):hover{
+    color:var(--hub-brand-ink, #1d7a93);
+  }
+
+  /* Cards view */
+  .pl-cards-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(260px, 1fr));
+    gap:14px;
+  }
+  .pl-card{
+    position:relative;
+    display:flex; flex-direction:column; gap:12px;
+    padding:16px;
+    background:var(--hub-bg-card, #fff);
+    border:1px solid var(--hub-border, #e2e8f0);
+    border-radius:var(--hub-r-card, 14px);
+    box-shadow:var(--hub-sh-card, 0 1px 3px rgba(15,23,42,.06));
+    border-inline-start:4px solid var(--pl-accent, #2BAACC);
+    transition:box-shadow var(--hub-anim-fast, .15s) var(--hub-ease, ease),
+               transform var(--hub-anim-fast, .15s) var(--hub-ease, ease);
+  }
+  .pl-card:hover{ box-shadow:0 6px 18px rgba(15,23,42,.10); transform:translateY(-2px); }
+  .pl-card__head{ display:flex; align-items:flex-start; gap:10px; }
+  .pl-card__name{ flex:1; min-width:0; }
+  .pl-card__name strong{ display:block; font-size:15px; font-weight:800; color:var(--hub-text); }
+  .pl-card__name .pl-card__code{ font-size:11.5px; color:var(--hub-text-mute); font-family:ui-monospace, monospace; }
+  .pl-card__price{ font-size:16px; font-weight:900; color:var(--hub-brand-ink, #1d7a93); white-space:nowrap; }
+  .pl-card__chips{ display:flex; flex-wrap:wrap; gap:6px; }
+  .pl-card__specs{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .pl-card__spec{
+    display:flex; flex-direction:column; gap:1px;
+    padding:8px 10px; border-radius:10px;
+    background:var(--hub-bg-soft, #f8fafc);
+  }
+  .pl-card__spec span{ font-size:10.5px; color:var(--hub-text-mute); font-weight:700; }
+  .pl-card__spec strong{ font-size:12.5px; color:var(--hub-text); font-family:ui-monospace, monospace; }
+  .pl-card__actions{ display:flex; gap:6px; margin-top:auto; padding-top:4px; }
+  .pl-card__actions .hub-btn{ flex:1; justify-content:center; }
+  .pl-card__actions form{ display:inline-flex; flex:0 0 auto; margin:0; }
+
+  /* View state — JS flips data-view on the wrapper. */
+  [data-plans-view="cards"] .pl-table-view{ display:none; }
+  [data-plans-view="table"] .pl-cards-view{ display:none; }
+</style>
+{% endblock %}
+
 {% block content %}
 
-{% set _enabled = items|selectattr('enabled')|list|length %}
-
-{# ───── Merged hero: title + actions + KPI strip + integrated search ───── #}
-{% call hub.megahero(
+{{ hub.hero(
   "العروض والخطط",
-  subtitle="إدارة الباقات: السعر، السرعة، الكوتا، المدة، الأولوية — كل ما يبيعه مشغّلك للمشتركين في مكان واحد.",
+  subtitle="إدارة الباقات: السعر، السرعة، الكوتا، المدة، الأولوية",
   icon="tags",
   actions_html='
     <a class="hub-btn hub-btn--primary" href="' + url_for('radius.plans_new') + '">
@@ -23,97 +91,159 @@
     </a>
     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.plans_overview') + '">
       <i class="fa-solid fa-chart-pie"></i> النظرة العامة
-    </a>',
-  kpis=[
-    {'label': 'الإجمالي', 'value': items|length,            'icon': 'layer-group', 'variant': 'brand'},
-    {'label': 'مفعَّلة',  'value': _enabled,                'icon': 'toggle-on',   'variant': 'green'},
-    {'label': 'معطَّلة',  'value': items|length - _enabled, 'icon': 'toggle-off',  'variant': 'amber'},
-  ],
-  search_action=url_for('radius.plans_list')
-) %}
-  <input class="hub-input grow" type="text" name="q"
-         placeholder="بحث باسم/كود العرض..." value="{{ request.args.get('q', '') }}">
+    </a>
+  '
+) }}
+
+<form method="get" class="hub-filterbar">
+  <input class="hub-input grow" type="text" name="q" placeholder="بحث باسم/كود العرض...">
   {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
   <span class="hub-spacer"></span>
+  {# #31: cards / table view toggle (reuses the card-packages toggle pattern) #}
+  <div class="pl-view-toggle" role="group" aria-label="طريقة العرض" data-plans-view-toggle>
+    <button type="button" data-plans-view-btn="table" aria-pressed="true">
+      <i class="fa-solid fa-table"></i> جدول
+    </button>
+    <button type="button" data-plans-view-btn="cards" aria-pressed="false">
+      <i class="fa-solid fa-grip"></i> بطاقات
+    </button>
+  </div>
   {{ hub.btn("CSV", icon="file-csv", variant="secondary", size="sm") }}
-{% endcall %}
+</form>
 
 {% if items %}
-{# ───── Main (carded table) + help panel on the LEFT ───── #}
-{% call hub.worklayout(aside_html=hub.helppanel(
-  "كيف تقرأ هذه الصفحة؟",
-  intro="كل صف هو عرض/باقة يبيعها مشغّلك للمشتركين. اللون يميّز الباقة بصريًا في بقية النظام.",
-  items=[
-    {'icon': 'gauge-high', 'text': 'السرعة تُعرض تنزيلًا ↓ / رفعًا ↑ بالـ Kbps — عدّلها من زر التعديل.'},
-    {'icon': 'database',   'text': 'الكوتا هي حجم البيانات المسموح؛ «غير محدود» يعني بلا سقف.'},
-    {'icon': 'clock',      'text': 'المدة والصلاحية تحكمان متى تنتهي الباقة بعد التفعيل.'},
-    {'icon': 'toggle-on',  'text': 'الباقة المعطَّلة تبقى محفوظة لكنها لا تظهر للبيع.'},
-  ],
-  note="الأرشفة لا تحذف الباقة نهائيًا — يمكنك استعادتها من سلة المحذوفات."
-)) %}
-  {% call hub.section("الباقات", icon="table-list", meta=items|length|string + " عرض", flush=True) %}
-    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
-      <table class="hub-table">
-        <thead>
-          <tr>
-            <th style="width:36px" data-uds-nosort data-uds-nocol><input type="checkbox"></th>
-            <th class="num" style="width:60px">#</th>
-            <th>الاسم</th>
-            <th>الكود</th>
-            <th>النوع</th>
-            <th>المدة</th>
-            <th>الكوتا</th>
-            <th>السرعة</th>
-            <th class="num">السعر</th>
-            <th style="width:120px" data-uds-nosort>إجراءات</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for p in items %}
-          <tr>
-            <td><input type="checkbox"></td>
-            <td class="num mono">{{ p.id }}</td>
-            <td>
-              <div class="hub-flex-row" style="gap:8px;flex-wrap:nowrap">
-                <span style="display:inline-block;width:6px;height:22px;border-radius:3px;background:{{ p.color or '#6B5AED' }};flex-shrink:0"></span>
-                <strong style="color:var(--hub-text)">{{ p.name }}</strong>
-              </div>
-            </td>
-            <td class="mono small">{{ p.code or '—' }}</td>
-            <td>{{ hub.pill(p.plan_type or '—', variant="brand", dot=False) }}</td>
-            <td class="mono small">
-              {% if p.duration_minutes %}{{ p.duration_minutes }} د{% endif %}
-              {% if p.validity_days %}{% if p.duration_minutes %} · {% endif %}{{ p.validity_days }} يوم{% endif %}
-              {% if not p.duration_minutes and not p.validity_days %}<span class="hub-text-mute">غير محدود</span>{% endif %}
-            </td>
-            <td class="mono small">
-              {% if p.quota_total_mb %}{{ "%.1f"|format(p.quota_total_mb/1024) }} GB
-              {% else %}<span class="hub-text-mute">غير محدود</span>{% endif %}
-            </td>
-            <td class="mono small">{{ p.speed_down_kbps or 0 }} ↓ / {{ p.speed_up_kbps or 0 }} ↑ Kbps</td>
-            <td class="num">
-              <strong>{{ p.price|money }}</strong>
-            </td>
-            <td>
-              <div class="hub-flex-row" style="gap:4px;flex-wrap:nowrap">
-                <a class="hub-btn hub-btn--ghost hub-btn--icon" title="تعديل"
-                   href="{{ url_for('radius.plans_edit', plan_id=p.id) }}">
-                  <i class="fa-solid fa-pen"></i>
-                </a>
-                <button type="button" class="hub-btn hub-btn--danger hub-btn--icon" title="أرشفة"
-                        data-plan-archive data-plan-name="{{ p.name|e }}"
-                        data-plan-action="{{ url_for('radius.plans_delete', plan_id=p.id) }}">
+<div data-plans-view="table">
+{% set _enabled = items|selectattr('enabled')|list|length %}
+<div class="hub-kpi-grid">
+  {{ hub.kpi("الإجمالي", items|length, icon="layer-group", variant="brand") }}
+  {{ hub.kpi("مفعَّلة",  _enabled,      icon="toggle-on",  variant="green") }}
+  {{ hub.kpi("معطَّلة",  items|length - _enabled, icon="toggle-off", variant="amber") }}
+</div>
+
+<div class="pl-table-view">
+{% call hub.section("الباقات", icon="table-list", meta=items|length|string + " عرض", flush=True) %}
+  <div class="hub-table-wrap" style="border:none;border-radius:0">
+    <table class="hub-table" data-paginated="1" data-page-size="20" data-page-sizes="10,20,50,100" data-persist-key="plans-list">
+      <thead>
+        <tr>
+          <th style="width:36px"><input type="checkbox"></th>
+          <th class="num" style="width:60px">#</th>
+          <th>الاسم</th>
+          <th>الكود</th>
+          <th>النوع</th>
+          <th>المدة</th>
+          <th>الكوتا</th>
+          <th>السرعة</th>
+          <th class="num">السعر</th>
+          <th style="width:120px">إجراءات</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in items %}
+        <tr>
+          <td><input type="checkbox"></td>
+          <td class="num mono">{{ p.id }}</td>
+          <td>
+            <div class="hub-flex-row" style="gap:8px;flex-wrap:nowrap">
+              <span style="display:inline-block;width:6px;height:22px;border-radius:3px;background:{{ p.color or '#6B5AED' }};flex-shrink:0"></span>
+              <strong style="color:var(--hub-text)">{{ p.name }}</strong>
+            </div>
+          </td>
+          <td class="mono small">{{ p.code or '—' }}</td>
+          <td>{{ hub.pill(p.plan_type or '—', variant="brand", dot=False) }}</td>
+          <td class="mono small">
+            {% if p.duration_minutes %}{{ p.duration_minutes }} د{% endif %}
+            {% if p.validity_days %}{% if p.duration_minutes %} · {% endif %}{{ p.validity_days }} يوم{% endif %}
+            {% if not p.duration_minutes and not p.validity_days %}<span class="hub-text-mute">غير محدود</span>{% endif %}
+          </td>
+          <td class="mono small">
+            {% if p.quota_total_mb %}{{ "%.1f"|format(p.quota_total_mb/1024) }} GB
+            {% else %}<span class="hub-text-mute">غير محدود</span>{% endif %}
+          </td>
+          <td class="mono small">{{ p.speed_down_kbps or 0 }} ↓ / {{ p.speed_up_kbps or 0 }} ↑ Kbps</td>
+          <td class="num">
+            <strong>{{ p.price|money }}</strong>
+          </td>
+          <td>
+            <div class="hub-flex-row" style="gap:4px;flex-wrap:nowrap">
+              <a class="hub-btn hub-btn--ghost hub-btn--icon" title="تعديل"
+                 href="{{ url_for('radius.plans_edit', plan_id=p.id) }}">
+                <i class="fa-solid fa-pen"></i>
+              </a>
+              <form method="post" action="{{ url_for('radius.plans_delete', plan_id=p.id) }}"
+                    onsubmit="return confirm('أرشفة «{{ p.name|e }}»؟ يمكن استعادتها من سلة المحذوفات.');" style="display:inline">
+                <button type="submit" class="hub-btn hub-btn--danger hub-btn--icon" title="أرشفة">
                   <i class="fa-solid fa-box-archive"></i>
                 </button>
-              </div>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endcall %}
+</div>{# /.pl-table-view #}
+
+{# ── Cards view (#31) — same data, premium card layout ── #}
+<div class="pl-cards-view">
+  {% call hub.section("الباقات", icon="grip", meta=items|length|string + " عرض") %}
+    <div class="pl-cards-grid">
+      {% for p in items %}
+      <article class="pl-card" style="--pl-accent: {{ p.color or '#2BAACC' }}">
+        <div class="pl-card__head">
+          <div class="pl-card__name">
+            <strong>{{ p.name }}</strong>
+            <span class="pl-card__code">{{ p.code or '—' }}</span>
+          </div>
+          <span class="pl-card__price">{{ p.price|money }}</span>
+        </div>
+        <div class="pl-card__chips">
+          {{ hub.pill(p.plan_type or '—', variant="brand", dot=False) }}
+          {% if p.enabled %}{{ hub.pill("مفعَّل", variant="green", dot=False) }}
+          {% else %}{{ hub.pill("معطَّل", variant="amber", dot=False) }}{% endif %}
+        </div>
+        <div class="pl-card__specs">
+          <div class="pl-card__spec">
+            <span>المدة</span>
+            <strong>
+              {% if p.duration_minutes %}{{ p.duration_minutes }} د{% endif %}
+              {% if p.validity_days %}{% if p.duration_minutes %} · {% endif %}{{ p.validity_days }} يوم{% endif %}
+              {% if not p.duration_minutes and not p.validity_days %}غير محدود{% endif %}
+            </strong>
+          </div>
+          <div class="pl-card__spec">
+            <span>الكوتا</span>
+            <strong>{% if p.quota_total_mb %}{{ "%.1f"|format(p.quota_total_mb/1024) }} GB{% else %}غير محدود{% endif %}</strong>
+          </div>
+          <div class="pl-card__spec">
+            <span>السرعة</span>
+            <strong>{{ p.speed_down_kbps or 0 }}↓ / {{ p.speed_up_kbps or 0 }}↑</strong>
+          </div>
+          <div class="pl-card__spec">
+            <span>الأولوية</span>
+            <strong>{{ p.priority or '—' }}</strong>
+          </div>
+        </div>
+        <div class="pl-card__actions">
+          <a class="hub-btn hub-btn--secondary hub-btn--sm" title="تعديل"
+             href="{{ url_for('radius.plans_edit', plan_id=p.id) }}">
+            <i class="fa-solid fa-pen"></i> تعديل
+          </a>
+          <form method="post" action="{{ url_for('radius.plans_delete', plan_id=p.id) }}"
+                onsubmit="return confirm('أرشفة «{{ p.name|e }}»؟ يمكن استعادتها من سلة المحذوفات.');">
+            <button type="submit" class="hub-btn hub-btn--danger hub-btn--icon hub-btn--sm" title="أرشفة">
+              <i class="fa-solid fa-box-archive"></i>
+            </button>
+          </form>
+        </div>
+      </article>
+      {% endfor %}
     </div>
   {% endcall %}
-{% endcall %}
+</div>{# /.pl-cards-view #}
+</div>{# /[data-plans-view] #}
 {% else %}
 {{ hub.empty(
   "لا عروض بعد",
@@ -122,28 +252,26 @@
 ) }}
 {% endif %}
 
-{# ───── Shared floating modal for archive confirmation (replaces inline confirm()) ───── #}
-{% call hub.modal("planArchiveModal", "تأكيد أرشفة العرض", icon="box-archive", size="sm",
-   footer_html='<button type="button" class="hub-btn hub-btn--ghost" data-uds-modal-close>إلغاء</button>'
-     ~ '<form method="post" data-plan-archive-form style="display:inline;margin:0">'
-     ~ '<button type="submit" class="hub-btn hub-btn--danger"><i class="fa-solid fa-box-archive"></i> أرشفة</button></form>') %}
-  <div class="uds-modal-warn uds-modal-warn--amber">
-    <i class="fa-solid fa-circle-info"></i>
-    <span>سيتم أرشفة العرض «<strong data-plan-archive-name></strong>». يمكن استعادته لاحقًا من سلة المحذوفات.</span>
-  </div>
-{% endcall %}
 <script>
 (function(){
-  var modal = document.getElementById("planArchiveModal");
-  if (!modal) return;
-  var nameEl = modal.querySelector("[data-plan-archive-name]");
-  var form   = modal.querySelector("[data-plan-archive-form]");
-  document.addEventListener("click", function(e){
-    var btn = e.target.closest("[data-plan-archive]");
-    if (!btn) return;
-    if (nameEl) nameEl.textContent = btn.getAttribute("data-plan-name") || "";
-    if (form)   form.action = btn.getAttribute("data-plan-action") || "";
-    modal.hidden = false;
+  'use strict';
+  var LS = 'hr:plans-list:view';
+  var wrap = document.querySelector('[data-plans-view]');
+  var toggle = document.querySelector('[data-plans-view-toggle]');
+  if (!wrap || !toggle) return;
+  var btns = Array.prototype.slice.call(toggle.querySelectorAll('[data-plans-view-btn]'));
+  function apply(mode){
+    wrap.setAttribute('data-plans-view', mode);
+    btns.forEach(function(b){
+      b.setAttribute('aria-pressed', b.getAttribute('data-plans-view-btn') === mode ? 'true' : 'false');
+    });
+    try { localStorage.setItem(LS, mode); } catch(_){}
+  }
+  var saved = null;
+  try { saved = localStorage.getItem(LS); } catch(_){}
+  apply(saved === 'cards' ? 'cards' : 'table');
+  btns.forEach(function(b){
+    b.addEventListener('click', function(){ apply(b.getAttribute('data-plans-view-btn')); });
   });
 })();
 </script>

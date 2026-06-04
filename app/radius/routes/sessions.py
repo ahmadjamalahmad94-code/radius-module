@@ -158,8 +158,10 @@ def _temporary_speed_states(usernames: set[str], now: datetime) -> dict[str, dic
         started_at = _parse_datetime(_meta_value(meta, "temporary_speed_from"))
         ends_at = _parse_datetime(_meta_value(meta, "temporary_speed_to"))
         duration_min = _int_or_zero(_meta_value(meta, "temporary_speed_duration_minutes"))
-        if not started_at:
-            started_at = _parse_datetime(row["updated_at"])
+        # #50a: compute the window end STRICTLY from temporary_speed_from +
+        # duration (or explicit _to). NEVER fall back to updated_at — an
+        # unrelated row update would otherwise slide the apparent end and make
+        # a just-applied window look expired within seconds.
         if not ends_at and started_at and duration_min > 0:
             ends_at = started_at + timedelta(minutes=duration_min)
 
@@ -178,12 +180,12 @@ def _temporary_speed_states(usernames: set[str], now: datetime) -> dict[str, dic
 
 
 def _temporary_speed_end(row) -> datetime | None:
+    # #50a: strict window end — temporary_speed_from + duration (or explicit
+    # _to). No updated_at fallback (see _temporary_speed_states).
     meta = _parse_meta(row["metadata"])
     started_at = _parse_datetime(_meta_value(meta, "temporary_speed_from"))
     ends_at = _parse_datetime(_meta_value(meta, "temporary_speed_to"))
     duration_min = _int_or_zero(_meta_value(meta, "temporary_speed_duration_minutes"))
-    if not started_at:
-        started_at = _parse_datetime(row["updated_at"])
     if not ends_at and started_at and duration_min > 0:
         ends_at = started_at + timedelta(minutes=duration_min)
     return ends_at
@@ -335,6 +337,33 @@ def online_list():
     elif selected_speed == "normal":
         items = [it for it in items if not _has_special_speed(it)]
 
+    # #2: surface Called-Station-Id (hotspot-server / interface name) per
+    # session. radacct stores it as `calledstationid` (read by card_checker but
+    # not by the live list). We key by acctsessionid so the template can show
+    # the interface name in «منفذ الاتصال» instead of the numeric nas_port_id.
+    called_station_by_session: dict[str, str] = {}
+    try:
+        from ..db.connection import db as _db
+        session_ids = [it.session_id for it in items if it.session_id]
+        if session_ids:
+            chunk = ",".join("?" for _ in session_ids)
+            rows = _db().execute(
+                f"""
+                SELECT acctsessionid, calledstationid
+                  FROM radacct
+                 WHERE tenant_id = ?
+                   AND acctstoptime IS NULL
+                   AND acctsessionid IN ({chunk})
+                """,
+                (_tid(), *session_ids),
+            ).fetchall()
+            for r in rows:
+                cs = (r["calledstationid"] or "").strip()
+                if cs:
+                    called_station_by_session[r["acctsessionid"]] = cs
+    except Exception:
+        called_station_by_session = {}
+
     device_by_mac = {}
     try:
         from ..db.repos import device_fingerprints_repo
@@ -364,6 +393,7 @@ def online_list():
         selected_group_id=selected_group_id,
         group_options=group_options,
         device_by_mac=device_by_mac,
+        called_station_by_session=called_station_by_session,
         temp_speed_state_by_username=temp_speed_state_by_username,
         now=now,
     )

@@ -47,3 +47,8 @@ docs/*
 
 # Sibling-automation working dirs (not part of this repo)
 .codex-recovery/
+
+# Safe-push additions (2026-06-04)
+*.sqlite3
+node_modules/
+.DS_Store

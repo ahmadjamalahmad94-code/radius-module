@@ -346,6 +346,100 @@
   .sr2-toast.is-shown{ opacity: 1; transform: translateX(0); }
   .sr2-toast.ok i{ color: #16a34a; }
   .sr2-toast.error i{ color: #dc2626; }
+
+  /* ── Add-rule: header button + floating modal (#42) ─────────────
+     The page now shows ONLY the rules list. The full «add» form lives
+     inside a floating modal, which still sits inside .sr2-panel so the
+     existing staging JS (field(panel,name) / closest('.sr2-panel'))
+     keeps working unchanged. */
+  .sr2-add-trigger-row{
+    display: flex; justify-content: flex-end; margin-top: 14px;
+  }
+  html.is-modal-open{ overflow: hidden; }
+  .sr2-modal[hidden]{ display: none !important; }
+  .sr2-modal{
+    position: fixed; inset: 0; z-index: 1200;
+    display: grid; place-items: center; padding: 22px;
+  }
+  .sr2-modal-backdrop{
+    position: absolute; inset: 0;
+    background: rgba(15, 18, 40, .52);
+    backdrop-filter: blur(5px);
+  }
+  .sr2-modal-panel{
+    position: relative;
+    width: min(720px, 96vw);
+    max-height: min(88vh, 760px);
+    display: grid; grid-template-rows: auto minmax(0,1fr) auto;
+    background: var(--hub-bg-card, #fff);
+    border: 1px solid var(--hub-border);
+    border-radius: 20px;
+    box-shadow: 0 28px 80px rgba(15, 18, 40, .32);
+    overflow: hidden;
+  }
+  .sr2-modal-head{
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 15px 18px;
+    border-bottom: 1px solid var(--hub-border);
+    background: linear-gradient(135deg, var(--hub-brand-soft), #fff);
+  }
+  .sr2-modal-head h3{
+    margin: 0; font-size: 16px; font-weight: 900; color: var(--hub-text);
+    display: inline-flex; align-items: center; gap: 9px;
+  }
+  .sr2-modal-head h3 i{ color: var(--hub-brand-ink); }
+  .sr2-modal-x{
+    border: 0; background: transparent; cursor: pointer;
+    color: var(--hub-text-mute); font-size: 18px; padding: 4px 8px; border-radius: 8px;
+  }
+  .sr2-modal-x:hover{ background: rgba(0,0,0,.05); color: var(--hub-text); }
+  .sr2-modal-body{ padding: 16px 18px; overflow: auto; display: flex; flex-direction: column; gap: 12px; }
+  .sr2-modal-foot{
+    padding: 12px 18px;
+    border-top: 1px solid var(--hub-border);
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    background: var(--hub-bg-soft, #fafbff);
+  }
+
+  /* Scope selector — «نطاق العرض» (display scope). Pure UI control:
+     it has NO submitted name, it only toggles which field groups show.
+     This keeps the backend field set identical. */
+  .sr2-scope{
+    display: grid; gap: 6px;
+    padding: 10px 12px;
+    border: 1px solid var(--hub-brand-line);
+    background: var(--hub-brand-soft);
+    border-radius: var(--hub-r-md);
+  }
+  .sr2-scope-label{
+    font-size: 11.5px; font-weight: 800; color: var(--hub-brand-ink);
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .sr2-scope-opts{ display: flex; gap: 8px; flex-wrap: wrap; }
+  .sr2-scope-opt{
+    flex: 1 1 0; min-width: 130px;
+    display: flex; align-items: center; gap: 8px;
+    padding: 9px 11px;
+    border: 1.5px solid var(--hub-border);
+    border-radius: var(--hub-r-md);
+    background: #fff;
+    cursor: pointer; font-size: 12.5px; font-weight: 800; color: var(--hub-text-soft);
+    transition: all var(--hub-anim-fast) var(--hub-ease);
+  }
+  .sr2-scope-opt:hover{ border-color: var(--hub-brand-line); }
+  .sr2-scope-opt:has(input:checked){
+    border-color: var(--hub-brand);
+    background: var(--hub-brand-soft);
+    color: var(--hub-brand-ink);
+    box-shadow: 0 0 0 2px var(--hub-brand-soft);
+  }
+  .sr2-scope-opt input{ accent-color: var(--hub-brand); }
+  .sr2-scope-opt .so-sub{ display:block; font-weight:700; font-size:10.5px; color:var(--hub-text-mute); }
+
+  /* Progressive disclosure: groups hidden unless their scope is active.
+     [data-scope="all"] always shows. */
+  .sr2-add[data-scope="package"] [data-scope-only="subscriber"]{ display: none !important; }
+  .sr2-add[data-scope="subscriber"] [data-scope-only="package"]{ display: none !important; }
 </style>
 
 <section class="sr2-panel" data-sr-pending="{{ 1 if sr_pending else 0 }}" data-sr-target-label="{{ sr_pending_target_label }}">
@@ -543,122 +637,259 @@
     {% endif %}
   </div>
 
-  {# ───── Add-new card ───── #}
-  <div class="sr2-add" style="margin-top: 14px;">
-    <span class="sr2-add-title"><i class="fa-solid fa-plus"></i> إضافة قاعدة سرعة جديدة</span>
+  {# ───── Add-new trigger (the page shows ONLY the list above; the
+     full add form lives in the floating modal below) ───── #}
+  {%- set sr_default_scope = 'subscriber' if speed_rules_panel.target_type not in ['plan','card_batch'] else 'package' -%}
+  <div class="sr2-add-trigger-row">
+    <button type="button" class="hub-btn hub-btn--primary" data-sr-open-add>
+      <i class="fa-solid fa-plus"></i> إضافة جدولة/قاعدة سرعة جديدة
+    </button>
+  </div>
 
-    <div class="sr2-row">
-      <div class="sr2-field">
-        <label>اسم القاعدة</label>
-        <input name="sr_name" placeholder="مثال: سرعة المساء">
+  {# ───── Add-new FLOATING MODAL ─────
+     Kept INSIDE .sr2-panel so the staging JS (field(panel,name) and
+     closest('.sr2-panel')) still resolves all inputs unchanged. All
+     field names are identical to the previous inline form. #}
+  <div class="sr2-modal" data-sr-add-modal hidden aria-hidden="true"
+       role="dialog" aria-modal="true" aria-labelledby="sr2-add-title">
+    <div class="sr2-modal-backdrop" data-sr-close-add></div>
+    <div class="sr2-modal-panel">
+      <div class="sr2-modal-head">
+        <h3 id="sr2-add-title"><i class="fa-solid fa-plus"></i> إضافة جدولة/قاعدة سرعة جديدة</h3>
+        <button type="button" class="sr2-modal-x" data-sr-close-add aria-label="إغلاق">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
       </div>
-      <div class="sr2-field">
-        <label>الأيام (فاضي = كل الأيام)</label>
-        <div class="sr2-days">
-          {% for code, lbl in ALL_DAYS %}
-          <label class="sr2-day">
-            <input type="checkbox" name="sr_days" value="{{ code }}">
-            <span>{{ lbl }}</span>
-          </label>
-          {% endfor %}
+
+      <div class="sr2-modal-body">
+        {# The .sr2-add wrapper carries data-scope so the scope-only
+           CSS rules apply. Default scope derives from the host target. #}
+        <div class="sr2-add" data-scope="{{ sr_default_scope }}" style="padding:0;border:0;background:none;">
+
+          {# Scope selector — «نطاق العرض». UI-only (no submitted name);
+             toggles which field groups are visible (progressive
+             disclosure). Backend field set stays identical. #}
+          <div class="sr2-scope">
+            <span class="sr2-scope-label"><i class="fa-solid fa-eye"></i> نطاق العرض</span>
+            <div class="sr2-scope-opts">
+              <label class="sr2-scope-opt">
+                <input type="radio" name="sr_scope_view" value="package"
+                       {% if sr_default_scope == 'package' %}checked{% endif %} data-sr-scope>
+                <span>عرض / باقة
+                  <span class="so-sub">قاعدة تنطبق على كامل العرض أو الباقة</span>
+                </span>
+              </label>
+              <label class="sr2-scope-opt">
+                <input type="radio" name="sr_scope_view" value="subscriber"
+                       {% if sr_default_scope == 'subscriber' %}checked{% endif %} data-sr-scope>
+                <span>مشترك
+                  <span class="so-sub">قاعدة خاصة بهذا المشترك فقط</span>
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <div class="sr2-row" style="margin-top:12px">
+            <div class="sr2-field">
+              <label>اسم القاعدة</label>
+              <input name="sr_name" placeholder="مثال: سرعة المساء">
+            </div>
+            <div class="sr2-field">
+              <label>الأيام (فاضي = كل الأيام)</label>
+              <div class="sr2-days">
+                {% for code, lbl in ALL_DAYS %}
+                <label class="sr2-day">
+                  <input type="checkbox" name="sr_days" value="{{ code }}">
+                  <span>{{ lbl }}</span>
+                </label>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+
+          {# Row 2 (4 cols): from + to + speed-down + speed-up. #}
+          <div class="sr2-row sr2-row--4" style="margin-top:12px">
+            <div class="sr2-field">
+              <label>من الساعة</label>
+              {{ time_picker_circular(name="sr_starts_at_time", value="") }}
+            </div>
+            <div class="sr2-field">
+              <label>إلى الساعة</label>
+              {{ time_picker_circular(name="sr_ends_at_time", value="") }}
+            </div>
+            <div class="sr2-field">
+              <label>سرعة التنزيل</label>
+              {{ unit_input_picker(name="sr_speed_down_kbps", value=0, kind="speed", units=["kbps","Mbps"]) }}
+            </div>
+            <div class="sr2-field">
+              <label>سرعة الرفع</label>
+              {{ unit_input_picker(name="sr_speed_up_kbps", value=0, kind="speed", units=["kbps","Mbps"]) }}
+            </div>
+          </div>
+
+          {# Row 3 (3 cols): restore-mode + priority + saved-schedule.
+             Progressive disclosure:
+               • «بعد الانتهاء» (restore_mode) → subscriber scope only
+                 (per-session restore behaviour).
+               • «جدول محفوظ» (source preset) → package scope only
+                 (reuse a saved template across the whole package).
+               • «الأولوية» → always shown.
+             All three stay in the DOM regardless (just hidden via CSS)
+             so readAddCard() keeps reading them and saves stay valid. #}
+          <div class="sr2-row sr2-row--3" style="margin-top:12px">
+            <div class="sr2-field" data-scope-only="subscriber">
+              <label>بعد الانتهاء</label>
+              <select name="sr_restore_mode">
+                <option value="profile_default">الرجوع للسرعة الأساسية</option>
+                <option value="keep_current">إبقاء آخر سرعة</option>
+                <option value="disconnect">فصل الجلسة</option>
+              </select>
+            </div>
+            <div class="sr2-field">
+              <label>الأولوية (1-10)</label>
+              <input type="number" min="1" max="10" step="1" name="sr_priority" value="5">
+            </div>
+            <div class="sr2-field" data-scope-only="package">
+              <label>جدول محفوظ</label>
+              <select name="sr_source_schedule_id">
+                <option value="">اختيار من الجداول المحفوظة</option>
+                {% for preset in speed_rules_panel.presets or [] %}
+                  <option value="{{ preset.id }}">
+                    {{ preset.name or ('#' ~ preset.id) }} —
+                    {{ preset.target_type }} · {{ preset.starts_at_time }} → {{ preset.ends_at_time }}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+
+          {# Presets data for the JS «نسخ» handler. #}
+          <script type="application/json" data-sr-presets>
+            {{ (speed_rules_panel.presets or []) | tojson }}
+          </script>
         </div>
       </div>
-    </div>
 
-    {# Row 2 (4 cols): from + to + speed-down + speed-up. #}
-    <div class="sr2-row sr2-row--4">
-      <div class="sr2-field">
-        <label>من الساعة</label>
-        {{ time_picker_circular(name="sr_starts_at_time", value="") }}
-      </div>
-      <div class="sr2-field">
-        <label>إلى الساعة</label>
-        {{ time_picker_circular(name="sr_ends_at_time", value="") }}
-      </div>
-      <div class="sr2-field">
-        <label>سرعة التنزيل</label>
-        {{ unit_input_picker(name="sr_speed_down_kbps", value=0, kind="speed", units=["kbps","Mbps"]) }}
-      </div>
-      <div class="sr2-field">
-        <label>سرعة الرفع</label>
-        {{ unit_input_picker(name="sr_speed_up_kbps", value=0, kind="speed", units=["kbps","Mbps"]) }}
-      </div>
-    </div>
-
-    {# Row 3 (3 cols): restore-mode + priority + saved-schedule.
-       sr_copy_name dropped — backend defaults to «نسخة من <name>» when
-       missing (speed_rules_ui.py). #}
-    <div class="sr2-row sr2-row--3">
-      <div class="sr2-field">
-        <label>بعد الانتهاء</label>
-        <select name="sr_restore_mode">
-          <option value="profile_default">الرجوع للسرعة الأساسية</option>
-          <option value="keep_current">إبقاء آخر سرعة</option>
-          <option value="disconnect">فصل الجلسة</option>
-        </select>
-      </div>
-      <div class="sr2-field">
-        <label>الأولوية (1-10)</label>
-        <input type="number" min="1" max="10" step="1" name="sr_priority" value="5">
-      </div>
-      <div class="sr2-field">
-        <label>جدول محفوظ</label>
-        <select name="sr_source_schedule_id">
-          <option value="">اختيار من الجداول المحفوظة</option>
-          {% for preset in speed_rules_panel.presets or [] %}
-            <option value="{{ preset.id }}">
-              {{ preset.name or ('#' ~ preset.id) }} —
-              {{ preset.target_type }} · {{ preset.starts_at_time }} → {{ preset.ends_at_time }}
-            </option>
-          {% endfor %}
-        </select>
+      <div class="sr2-modal-foot">
+        {% if sr_pending %}
+          <span class="sr2-help" style="flex:1; color: var(--hub-brand-ink); font-weight:700">
+            <i class="fa-solid fa-circle-info"></i>
+            ستُحفظ القاعدة مع {{ sr_pending_target_label }} تلقائيًا عند الضغط على «{{ sr_pending_save_label }}» أسفل الصفحة.
+          </span>
+          <button class="hub-btn hub-btn--secondary hub-btn--sm" type="button"
+                  data-add-action="copy">
+            <i class="fa-solid fa-copy"></i> نسخ من جدول محفوظ
+          </button>
+          <button class="hub-btn hub-btn--primary hub-btn--sm" type="button"
+                  data-add-action="manual">
+            <i class="fa-solid fa-plus"></i> إضافة القاعدة
+          </button>
+        {% else %}
+          <span class="sr2-help" style="flex:1">
+            لو تركتِ الفترة عابرة لمنتصف الليل (مثلاً 22:00 → 06:00) تُفهَم تلقائيًا.
+          </span>
+          {# Buttons stay type=submit by default (other forms keep the old
+             reload semantics). When the panel is wrapped in a host that
+             sets data-defer-add="true" (currently users_form), the JS
+             below intercepts the click, validates locally, and stages a
+             new rule into the form — the actual create happens at the
+             main «حفظ». #}
+          <button class="hub-btn hub-btn--secondary hub-btn--sm" type="submit"
+                  name="_speed_rule_action" value="copy" formnovalidate
+                  data-add-action="copy">
+            <i class="fa-solid fa-copy"></i> نسخ من جدول محفوظ
+          </button>
+          <button class="hub-btn hub-btn--primary hub-btn--sm" type="submit"
+                  name="_speed_rule_action" value="manual" formnovalidate
+                  data-add-action="manual">
+            <i class="fa-solid fa-check"></i> اعتماد القاعدة
+          </button>
+        {% endif %}
       </div>
     </div>
-
-    <div class="sr2-foot">
-      {% if sr_pending %}
-        <span class="sr2-help" style="flex:1; color: var(--hub-brand-ink); font-weight:700">
-          <i class="fa-solid fa-circle-info"></i>
-          املأ الحقول هنا وستُحفظ القاعدة مع {{ sr_pending_target_label }} تلقائيًا عند الضغط على «{{ sr_pending_save_label }}» أسفل الصفحة.
-        </span>
-        <button class="hub-btn hub-btn--secondary hub-btn--sm" type="button"
-                data-add-action="copy">
-          <i class="fa-solid fa-copy"></i> نسخ من جدول محفوظ
-        </button>
-        <button class="hub-btn hub-btn--primary hub-btn--sm" type="button"
-                data-add-action="manual">
-          <i class="fa-solid fa-plus"></i> إضافة القاعدة
-        </button>
-      {% else %}
-        <span class="sr2-help" style="flex:1">
-          لو تركتي الفترة عابرة لمنتصف الليل (مثلاً 22:00 → 06:00) تُفهَم تلقائيًا.
-        </span>
-        {# Buttons stay type=submit by default (other forms keep the old
-           reload semantics). When the panel is wrapped in a host that
-           sets data-defer-add="true" (currently users_form), the JS
-           below intercepts the click, validates locally, and stages a
-           new rule into the form — the actual create happens at the
-           main «حفظ». #}
-        <button class="hub-btn hub-btn--secondary hub-btn--sm" type="submit"
-                name="_speed_rule_action" value="copy" formnovalidate
-                data-add-action="copy">
-          <i class="fa-solid fa-copy"></i> نسخ من جدول محفوظ
-        </button>
-        <button class="hub-btn hub-btn--primary hub-btn--sm" type="submit"
-                name="_speed_rule_action" value="manual" formnovalidate
-                data-add-action="manual">
-          <i class="fa-solid fa-check"></i> اعتماد القاعدة
-        </button>
-      {% endif %}
-    </div>
-
-    {# Presets data for the JS «نسخ» handler — only emitted in non-
-       pending mode (we have actual presets to copy from). #}
-    <script type="application/json" data-sr-presets>
-      {{ (speed_rules_panel.presets or []) | tojson }}
-    </script>
   </div>
 </section>
+
+{# ───── Add-rule modal: open/close + scope progressive disclosure (#42).
+   The actual rule staging / submit handling stays in the scripts below;
+   this only controls the floating modal shell + the «نطاق العرض» toggle.
+   ───── #}
+<script>
+(function(){
+  if (window.__sr2AddModalInit) return;
+  window.__sr2AddModalInit = true;
+
+  function panelOf(el){ return el && el.closest('.sr2-panel'); }
+
+  function openModal(panel){
+    var modal = panel.querySelector('[data-sr-add-modal]');
+    if (!modal) return;
+    modal.hidden = false;
+    modal.setAttribute('aria-hidden', 'false');
+    document.documentElement.classList.add('is-modal-open');
+    var first = modal.querySelector('input[name="sr_name"]');
+    if (first) { try { first.focus(); } catch(_){} }
+  }
+  function closeModal(panel){
+    var modal = panel.querySelector('[data-sr-add-modal]');
+    if (!modal) return;
+    modal.hidden = true;
+    modal.setAttribute('aria-hidden', 'true');
+    document.documentElement.classList.remove('is-modal-open');
+  }
+
+  document.addEventListener('click', function(e){
+    var openBtn  = e.target.closest('[data-sr-open-add]');
+    var closeBtn = e.target.closest('[data-sr-close-add]');
+    if (openBtn){
+      var p = panelOf(openBtn); if (p) openModal(p);
+      return;
+    }
+    if (closeBtn){
+      var pc = panelOf(closeBtn); if (pc) closeModal(pc);
+      return;
+    }
+  });
+
+  // Esc closes any open add-modal.
+  document.addEventListener('keydown', function(e){
+    if (e.key !== 'Escape') return;
+    document.querySelectorAll('.sr2-panel [data-sr-add-modal]:not([hidden])').forEach(function(m){
+      var p = m.closest('.sr2-panel'); if (p) closeModal(p);
+    });
+  });
+
+  // Scope selector → toggle data-scope on the .sr2-add wrapper, which
+  // drives the scope-only CSS show/hide. Pure UI; no backend field.
+  document.addEventListener('change', function(e){
+    var radio = e.target.closest('[data-sr-scope]');
+    if (!radio) return;
+    var add = radio.closest('.sr2-add');
+    if (add) add.setAttribute('data-scope', radio.value);
+  });
+
+  // In PENDING mode the staging handler appends a pending rule (no
+  // reload). Watch the rules list and auto-close the modal once a new
+  // pending rule lands, so the operator sees the list update. In
+  // non-pending mode the buttons submit → full reload → modal gone.
+  document.querySelectorAll('.sr2-panel[data-sr-pending="1"]').forEach(function(panel){
+    var list = panel.querySelector('.sr2-rules');
+    if (!list) return;
+    var obs = new MutationObserver(function(muts){
+      for (var i=0; i<muts.length; i++){
+        for (var j=0; j<muts[i].addedNodes.length; j++){
+          var n = muts[i].addedNodes[j];
+          if (n.nodeType === 1 && n.classList && n.classList.contains('sr2-rule--pending')){
+            closeModal(panel);
+            return;
+          }
+        }
+      }
+    });
+    obs.observe(list, { childList: true });
+  });
+})();
+</script>
 
 <script>
 (function(){

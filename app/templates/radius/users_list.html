@@ -26,14 +26,10 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/subscribers_polish.css') }}">
 <style>
   .usq-panel{
-    /* sticky action toolbar: stays in view while scrolling the list, on a
-       solid surface, with its own stacking context so it sits cleanly above
-       the rows (dropdowns float higher still via .uds-menu). */
-    position:sticky; top:78px; z-index:41; isolation:isolate;
     display:flex; align-items:center; justify-content:space-between; gap:14px;
     margin:0 0 var(--hub-gap-section); padding:12px 14px;
-    border:1px solid var(--hub-border-strong); border-radius:var(--hub-r-lg);
-    background:var(--hub-bg-card); box-shadow:var(--hub-sh-md);
+    border:1px solid var(--hub-border-soft); border-radius:var(--hub-r-lg);
+    background:var(--hub-bg-card); box-shadow:var(--hub-sh-sm);
   }
   .usq-panel[hidden]{ display:none; }
   .usq-picked{ display:flex; align-items:center; gap:10px; min-width:220px; }
@@ -214,7 +210,9 @@
   .col-picker-btn{ position:relative; }
   .col-picker-panel{
     position:absolute; inset-inline-end:0; top:calc(100% + 6px);
-    z-index:30; min-width:240px;
+    /* Above the sticky selection bar (.ubulk-bar z-index:55) so open menus
+       are never covered by it. */
+    z-index:70; min-width:240px;
     background:var(--hub-bg-card, #fff);
     border:1px solid var(--hub-border-soft, #e2e8f0);
     border-radius:var(--hub-r-lg, 14px);
@@ -316,8 +314,51 @@
     grid-template-columns:repeat(auto-fit, minmax(190px, 1fr));
     gap:10px;
   }
+
+  /* ── Unified hero shell ──────────────────────────────────────
+     One card that visually groups the hero band, the filter bar
+     and the selected-subscriber action bar. The nested blocks
+     drop their own card chrome (border/shadow/radius/margins) and
+     are separated by soft inset dividers, so they read as one
+     cohesive header instead of separate floating strips. */
+  .users-hero-shell{
+    display:flex; flex-direction:column;
+    margin-bottom:var(--hub-gap-section, 14px);
+    border-radius:var(--hub-r-xl, 18px);
+    border:1px solid var(--hub-border-soft, #e2e8f0);
+    background:
+      radial-gradient(640px 320px at 100% 0%, rgba(124,58,237,.08) 0%, transparent 60%),
+      linear-gradient(180deg, #faf8ff 0%, #ffffff 100%);
+    box-shadow:
+      0 1px 0 rgba(255,255,255,.85) inset,
+      0 4px 14px rgba(15,23,42,.05);
+    overflow:hidden;
+  }
+  /* Hero band — now seamless inside the shell. */
+  .users-hero-shell > .users-mega-hero{
+    margin:0; border:0; border-radius:0;
+    background:transparent; box-shadow:none; overflow:visible;
+  }
+  /* Filter bar — flush into the shell, divider above. */
+  .users-hero-shell > .hub-filterbar{
+    margin:0; padding:14px 20px;
+    border:0; border-top:1px solid var(--hub-border-soft, #e2e8f0);
+    border-radius:0; background:rgba(255,255,255,.55); box-shadow:none;
+  }
+  /* Selected-subscriber action bar — flush, divider above. */
+  .users-hero-shell > .usq-panel{
+    margin:0; padding:12px 20px;
+    border:0; border-top:1px solid var(--hub-border-soft, #e2e8f0);
+    border-radius:0; background:rgba(124,58,237,.04); box-shadow:none;
+  }
+  /* Pull the subscribers list section up tight under the hero so the
+     header and the list read as a continuous block. */
+  .users-hero-shell + .ubulk-bar{ margin-top:0; }
+
   @media (max-width: 780px){
     .users-mega-hero{ padding:14px; }
+    .users-hero-shell > .hub-filterbar,
+    .users-hero-shell > .usq-panel{ padding-inline:14px; }
     .users-mega-hero-text{ flex:1 1 100%; }
     .users-mega-hero-actions{ flex:1 1 100%; justify-content:flex-start; }
   }
@@ -332,8 +373,18 @@
 {% set _disab   = items|selectattr('status','equalto','disabled')|list|length %}
 {% set _expird  = items|selectattr('status','equalto','expired')|list|length %}
 
-{# ───── Unified Hero (title + actions + KPI strip) ─────────── #}
-<section class="users-mega-hero">
+{# ───── Unified Hero shell ─────────────────────────────────────
+   Wraps the title+actions, the KPI strip and the filter/toolbar
+   bar into ONE cohesive header card so the page reads as a single
+   hero block instead of separate floating strips. The selected-
+   subscriber action bar (.usq-panel) nests inside the same shell;
+   only the sticky bulk bar (.ubulk-bar) lives outside since it
+   appears on selection at the bottom of the viewport. No ids /
+   names / data-attrs are renamed — JS hooks are untouched. #}
+<section class="users-hero-shell">
+
+{# ───── Hero band (title + actions + KPI strip) ────────────── #}
+<div class="users-mega-hero">
   <header class="users-mega-hero-row">
     <div class="users-mega-hero-text">
       <span class="hub-hero-icon"><i class="fa-solid fa-users"></i></span>
@@ -358,9 +409,9 @@
     {{ hub.kpi("منتهون",      _expird, icon="hourglass-end", variant="amber") }}
     {{ hub.kpi("معطَّلون",     _disab,  icon="pause",        variant="red")   }}
   </div>
-</section>
+</div>
 
-{# ───── Filter Bar (under the mega-hero) ──────────────────── #}
+{# ───── Filter Bar (inside the hero shell) ────────────────── #}
 <form method="get" class="hub-filterbar hr-toolbar">
   <input class="hub-input grow" type="text" name="q" placeholder="بحث بالاسم أو اسم الدخول أو الجوال..." value="{{ q or '' }}">
   <select class="hub-select" name="status">
@@ -396,10 +447,15 @@
     </div>
   </div>
   <style>
-    /* caret indicator for the action dropdown triggers (shared .uds-menu) */
-    .usq-actions [data-uds-menu-trigger] .usq-caret{ font-size:10px; transition:transform .15s ease; }
-    .usq-actions [data-uds-menu-trigger][aria-expanded="true"] .usq-caret{ transform:rotate(180deg); }
-    @media (prefers-reduced-motion: reduce){ .usq-actions .usq-caret{ transition:none; } }
+    .usq-menu{ position:relative; display:inline-block; }
+    .usq-menu > summary{ list-style:none; cursor:pointer; user-select:none; display:inline-flex; align-items:center; gap:6px; }
+    .usq-menu > summary::-webkit-details-marker{ display:none; }
+    .usq-menu .usq-caret{ font-size:10px; transition:transform .15s ease; }
+    .usq-menu[open] .usq-caret{ transform:rotate(180deg); }
+    .usq-menu-panel{ position:absolute; z-index:70; inset-inline-start:0; margin-top:6px; min-width:230px; display:flex; flex-direction:column; gap:4px; padding:8px; background:#fff; border:1px solid var(--hub-border,#e7e9f2); border-radius:12px; box-shadow:0 8px 24px rgba(16,24,40,.12); }
+    .usq-menu-panel .hub-btn, .usq-menu-panel form{ width:100%; }
+    .usq-menu-panel .hub-btn{ justify-content:flex-start; }
+    @media (prefers-reduced-motion: reduce){ .usq-menu .usq-caret{ transition:none; } }
   </style>
   <div class="usq-actions">
     <a class="hub-btn hub-btn--primary hub-btn--sm" data-single-action data-usq-link="profile" href="#">
@@ -411,63 +467,65 @@
     <a class="hub-btn hub-btn--secondary hub-btn--sm" data-single-action data-usq-link="finance" href="#">
       <i class="fa-solid fa-wallet"></i> الدفعات والسلف
     </a>
-    <button type="button" class="hub-btn hub-btn--secondary hub-btn--sm"
-            data-uds-menu-trigger data-uds-menu-target="usqMenuActivate"
-            aria-haspopup="true" aria-expanded="false">
-      <i class="fa-solid fa-bolt"></i> التفعيل والرصيد <i class="fa-solid fa-chevron-down usq-caret"></i>
-    </button>
-    <div class="uds-menu" id="usqMenuActivate" hidden role="menu" aria-label="التفعيل والرصيد">
-      <button class="uds-menu-item" type="button" data-single-action data-usq-open="extend">
-        <i class="fa-solid fa-clock"></i> إضافة وقت
-      </button>
-      <button class="uds-menu-item" type="button" data-single-action data-usq-open="quota">
-        <i class="fa-solid fa-gauge-high"></i> إضافة كوتة
-      </button>
-      <button class="uds-menu-item" type="button" data-single-action data-usq-open="quota-reset">
-        <i class="fa-solid fa-rotate-left"></i> استعادة الكوتة اليومية
-      </button>
-      <button class="uds-menu-item" type="button" data-single-action data-usq-open="balance">
-        <i class="fa-solid fa-coins"></i> إضافة رصيد نقدي
-      </button>
-      <button class="uds-menu-item" type="button" data-single-action data-usq-open="payment">
-        <i class="fa-solid fa-money-bill-wave"></i> دفعة نقدية
-      </button>
-      <button class="uds-menu-item" type="button" data-single-action data-usq-open="loan">
-        <i class="fa-solid fa-hand-holding-dollar"></i> إضافة سلفة
-      </button>
-    </div>
-    <button type="button" class="hub-btn hub-btn--secondary hub-btn--sm"
-            data-uds-menu-trigger data-uds-menu-target="usqMenuAdmin"
-            aria-haspopup="true" aria-expanded="false">
-      <i class="fa-solid fa-sliders"></i> إجراءات إدارية <i class="fa-solid fa-chevron-down usq-caret"></i>
-    </button>
-    <div class="uds-menu" id="usqMenuAdmin" hidden role="menu" aria-label="إجراءات إدارية">
-      <button class="uds-menu-item" type="button" data-single-action data-usq-open="sms">
-        <i class="fa-solid fa-paper-plane"></i> إرسال رسالة قصيرة
-      </button>
-      <button class="uds-menu-item" type="button" data-single-action data-usq-open="plan">
-        <i class="fa-solid fa-right-left"></i> تغيير العرض
-      </button>
-      <form method="post" data-single-action data-usq-form="disconnect" action="{{ url_for('radius.online_disconnect') }}">
-        <input type="hidden" name="username" data-usq-field="username">
-        <button class="uds-menu-item" type="submit">
-          <i class="fa-solid fa-scissors"></i> فصل الاتصال
+    <details class="usq-menu" data-usq-menu>
+      <summary class="hub-btn hub-btn--secondary hub-btn--sm">
+        <i class="fa-solid fa-bolt"></i> التفعيل والرصيد <i class="fa-solid fa-chevron-down usq-caret"></i>
+      </summary>
+      <div class="usq-menu-panel">
+        <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-usq-open="extend">
+          <i class="fa-solid fa-clock"></i> إضافة وقت
         </button>
-      </form>
-      <form method="post" data-single-action data-usq-form="toggle" data-action-template="{{ url_for('radius.users_toggle', username='__USERNAME__') }}">
-        <button class="uds-menu-item" type="submit" data-usq-toggle-label>
-          <i class="fa-solid fa-pause"></i> تغيير الحالة
+        <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-usq-open="quota">
+          <i class="fa-solid fa-gauge-high"></i> إضافة كوتة
         </button>
-      </form>
-      <div class="uds-menu-sep"></div>
-      <form method="post" data-single-action data-usq-form="delete" data-action-template="{{ url_for('radius.users_delete', username='__USERNAME__') }}">
-        <button class="uds-menu-item uds-menu-item--danger" type="submit">
-          <i class="fa-solid fa-box-archive"></i> أرشفة
+        <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-usq-open="quota-reset">
+          <i class="fa-solid fa-rotate-left"></i> استعادة الكوتة اليومية
         </button>
-      </form>
-    </div>
+        <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-usq-open="balance">
+          <i class="fa-solid fa-coins"></i> إضافة رصيد نقدي
+        </button>
+        <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-usq-open="payment">
+          <i class="fa-solid fa-money-bill-wave"></i> دفعة نقدية
+        </button>
+        <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-usq-open="loan">
+          <i class="fa-solid fa-hand-holding-dollar"></i> إضافة سلفة
+        </button>
+      </div>
+    </details>
+    <details class="usq-menu" data-usq-menu>
+      <summary class="hub-btn hub-btn--secondary hub-btn--sm">
+        <i class="fa-solid fa-sliders"></i> إجراءات إدارية <i class="fa-solid fa-chevron-down usq-caret"></i>
+      </summary>
+      <div class="usq-menu-panel">
+        <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-usq-open="sms">
+          <i class="fa-solid fa-paper-plane"></i> إرسال رسالة قصيرة
+        </button>
+        <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-usq-open="plan">
+          <i class="fa-solid fa-right-left"></i> تغيير العرض
+        </button>
+        <form method="post" data-single-action data-usq-form="disconnect" action="{{ url_for('radius.online_disconnect') }}">
+          <input type="hidden" name="username" data-usq-field="username">
+          <button class="hub-btn hub-btn--ghost hub-btn--sm" type="submit">
+            <i class="fa-solid fa-scissors"></i> فصل الاتصال
+          </button>
+        </form>
+        <form method="post" data-single-action data-usq-form="toggle" data-action-template="{{ url_for('radius.users_toggle', username='__USERNAME__') }}">
+          <button class="hub-btn hub-btn--ghost hub-btn--sm" type="submit" data-usq-toggle-label>
+            <i class="fa-solid fa-pause"></i> تغيير الحالة
+          </button>
+        </form>
+        <form method="post" data-single-action data-usq-form="delete" data-action-template="{{ url_for('radius.users_delete', username='__USERNAME__') }}">
+          <button class="hub-btn hub-btn--danger hub-btn--sm" type="submit">
+            <i class="fa-solid fa-box-archive"></i> أرشفة
+          </button>
+        </form>
+      </div>
+    </details>
   </div>
 </div>
+
+</section>
+{# ───── /Unified Hero shell ─────────────────────────────────── #}
 
 {# ───── Sticky BULK action bar (shown when ≥1 row checked) ──── #}
 <div class="ubulk-bar" data-users-bulk-bar hidden>

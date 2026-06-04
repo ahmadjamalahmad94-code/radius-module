@@ -1,18 +1,74 @@
-{# Subscriber groups list — UNIFIED DESIGN SYSTEM (merged hero + help panel).
-   Backend: app/radius/routes/subscriber_groups.py::sg_list — same data.
-   Zero route/behaviour change. #}
+{# Subscriber groups list — premium hub-v2.
+   Backend: app/radius/routes/subscriber_groups.py::sg_list #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
 {% block title %}مجموعات المشتركين{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-people-group"></i>{% endblock %}
 {% block page_title %}مجموعات المشتركين{% endblock %}
-{% block page_sub %}<span class="sub">{{ count }} مجموعة في النتائج</span>{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/subscribers_polish.css') }}">
 <style>
+  /* ── Mega-hero: title + action + KPI strip in ONE panel ── */
+  .sg-hero{
+    position:relative;
+    display:grid; gap:14px;
+    padding:18px 20px;
+    margin-bottom:16px;
+    border-radius:18px;
+    background:
+      radial-gradient(640px 320px at 100% 0%, rgba(124,58,237,.08) 0%, transparent 60%),
+      linear-gradient(180deg, #faf8ff 0%, #fff 100%);
+    border:1px solid var(--hub-border-soft, #e2e8f0);
+    box-shadow:
+      0 1px 0 rgba(255,255,255,.85) inset,
+      0 4px 14px rgba(15,23,42,.05);
+    overflow:hidden;
+  }
+  .sg-hero-row{
+    display:flex; align-items:center; justify-content:space-between;
+    gap:16px; flex-wrap:wrap;
+  }
+  .sg-hero-id{ display:flex; align-items:center; gap:13px; min-width:0; }
+  .sg-hero-icon{
+    width:46px; height:46px; flex:0 0 auto;
+    border-radius:13px;
+    background:linear-gradient(135deg, var(--hub-brand, #7c3aed), var(--hub-brand-deep, #5b21b6));
+    color:#fff; display:grid; place-items:center; font-size:19px;
+    box-shadow:0 6px 16px rgba(124,58,237,.32);
+  }
+  .sg-hero-title{ margin:0; font-size:20px; font-weight:800; color:var(--hub-text); }
+  .sg-hero-sub{ margin-top:3px; font-size:13px; color:var(--hub-text-soft, #475569); line-height:1.6; }
+  .sg-hero-actions{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+  /* #11: reveal-on-click search box. The input expands from 0 width so the
+     magnifier feels like it «opens» a field. */
+  .sg-search{ display:inline-flex; align-items:center; gap:6px; }
+  .sg-search-input{
+    width:0; min-width:0; padding:0; border-width:0; opacity:0;
+    transition:width var(--hub-anim, .2s) var(--hub-ease, ease),
+               opacity var(--hub-anim, .2s) var(--hub-ease, ease),
+               padding var(--hub-anim, .2s) var(--hub-ease, ease);
+  }
+  .sg-search.is-open .sg-search-input{
+    width:240px; min-width:200px; opacity:1;
+    padding:9px 12px; border-width:1px;
+  }
+  @media (max-width: 760px){
+    .sg-search.is-open .sg-search-input{ width:100%; }
+  }
+  .sg-hero-kpis{
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));
+    gap:10px;
+    padding-top:16px;
+    border-top:1px solid var(--hub-border-soft, #e2e8f0);
+  }
+  @media (max-width: 760px){
+    .sg-hero-actions{ flex:1 1 100%; }
+  }
+
   .sg-table th,
   .sg-table td{
     text-align:center;
@@ -105,22 +161,41 @@
 {%- set total_down = items|sum(attribute='total_download_bytes') -%}
 {%- set total_up = items|sum(attribute='total_upload_bytes') -%}
 
-{# ───── Merged hero: title + action + KPI strip ───── #}
-{% call hub.megahero(
-  "مجموعات المشتركين",
-  subtitle="إدارة مجموعة كاملة من مكان واحد: الأعضاء، المتصلون، السرعة، الكوتة، والاستهلاك.",
-  icon="people-group",
-  actions_html='
-    <a class="hub-btn hub-btn--primary" href="' + url_for('radius.subscriber_groups_new') + '">
-      <i class="fa-solid fa-plus"></i> إضافة مجموعة
-    </a>',
-  kpis=[
-    {'label': 'عدد المجموعات',    'value': count,         'icon': 'people-group',  'variant': 'brand'},
-    {'label': 'إجمالي الأعضاء',   'value': total_members, 'icon': 'users',         'variant': 'blue'},
-    {'label': 'متصلون الآن',      'value': total_online,  'icon': 'wifi',          'variant': 'green'},
-    {'label': 'إجمالي الاستهلاك', 'value': fmt_bytes(total_down + total_up), 'icon': 'chart-simple', 'variant': 'amber'},
-  ]
-) %}{% endcall %}
+{# ───── Unified mega-hero: title + action + KPI strip ── #}
+<section class="sg-hero">
+  <div class="sg-hero-row">
+    <div class="sg-hero-id">
+      <span class="sg-hero-icon"><i class="fa-solid fa-people-group"></i></span>
+      <div>
+        <h1 class="sg-hero-title">مجموعات المشتركين</h1>
+        <div class="sg-hero-sub">إدارة مجموعة كاملة من مكان واحد: الأعضاء، المتصلون، السرعة، الكوتة، والاستهلاك.</div>
+      </div>
+    </div>
+    <div class="sg-hero-actions">
+      {# #11: the lone magnifier here previously did nothing (no field, no
+         handler). It now toggles a real visible search box that filters the
+         groups table client-side by name/description. #}
+      <div class="sg-search" data-sg-search>
+        <button type="button" class="hub-btn hub-btn--secondary" data-sg-search-toggle
+                aria-expanded="false" aria-label="بحث في المجموعات" title="بحث">
+          <i class="fa-solid fa-magnifying-glass"></i>
+        </button>
+        <input type="search" class="hub-input sg-search-input" data-sg-search-input
+               placeholder="ابحث باسم أو وصف المجموعة…" autocomplete="off" hidden>
+      </div>
+      <a class="hub-btn hub-btn--primary" href="{{ url_for('radius.subscriber_groups_new') }}">
+        <i class="fa-solid fa-plus"></i> إضافة مجموعة
+      </a>
+    </div>
+  </div>
+
+  <div class="sg-hero-kpis">
+    {{ hub.kpi("عدد المجموعات", count, icon="people-group", variant="brand") }}
+    {{ hub.kpi("إجمالي الأعضاء", total_members, icon="users", variant="blue") }}
+    {{ hub.kpi("متصلون الآن", total_online, icon="wifi", variant="green") }}
+    {{ hub.kpi("إجمالي الاستهلاك", fmt_bytes(total_down + total_up), icon="chart-simple", variant="amber") }}
+  </div>
+</section>
 
 {% if not items %}
   {{ hub.empty(
@@ -129,21 +204,9 @@
     icon="people-group"
   ) }}
 {% else %}
-{# ───── Main (carded table) + help panel on the LEFT ───── #}
-{% call hub.worklayout(aside_html=hub.helppanel(
-  "كيف تقرأ هذه الصفحة؟",
-  intro="كل صف هو مجموعة مشتركين تُدار كوحدة واحدة: السرعة، الكوتة، والخدمات تُطبَّق على كل أعضائها.",
-  items=[
-    {'icon': 'users',       'text': 'الأعضاء يعرض إجمالي المشتركين، والمتصلون يعرض الجلسات النشطة الآن.'},
-    {'icon': 'gauge-high',  'text': 'إجراءات المجموعة تطبّق على الجميع: استعادة الكوتة، فصل المتصلين، أو تعديل السرعة.'},
-    {'icon': 'tags',        'text': 'الشارات تحت «الخدمات» تُظهر جدولة السرعة والباقة الافتراضية والتجديد التلقائي.'},
-    {'icon': 'trash',       'text': 'حذف المجموعة يفصل الأعضاء عنها فقط — لا يحذف المشتركين أنفسهم.'},
-  ],
-  note="استعادة الكوتة وفصل المتصلين عمليّتان فوريّتان تؤثّران على كل أعضاء المجموعة دفعة واحدة."
-)) %}
   {% call hub.section("المجموعات", icon="table-list",
                       meta=(items|length)|string + " مجموعة", flush=True) %}
-    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
+    <div class="hub-table-wrap" style="border:none;border-radius:0">
       <table class="hub-table sg-table">
         <thead>
           <tr>
@@ -155,12 +218,12 @@
             <th>الخدمات</th>
             <th>السرعة</th>
             <th>آخر نشاط</th>
-            <th data-uds-nosort>إجراءات المجموعة</th>
+            <th>إجراءات المجموعة</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody data-sg-rows>
           {% for g in items %}
-          <tr>
+          <tr data-sg-name="{{ ((g.name or '') ~ ' ' ~ (g.description or ''))|lower }}">
             <td class="sg-name">
               <a href="{{ url_for('radius.subscriber_groups_edit', gid=g.id) }}">{{ g.name }}</a>
               <small>{{ g.description or 'بدون وصف' }}</small>
@@ -266,7 +329,46 @@
       </table>
     </div>
   {% endcall %}
-{% endcall %}
 {% endif %}
+
+<script>
+(function(){
+  'use strict';
+  // #11: magnifier reveals a search box that filters the groups table.
+  var root   = document.querySelector('[data-sg-search]');
+  var toggle = root && root.querySelector('[data-sg-search-toggle]');
+  var input  = root && root.querySelector('[data-sg-search-input]');
+  var rows   = document.querySelector('[data-sg-rows]');
+  if (!root || !toggle || !input) return;
+
+  function open(){
+    root.classList.add('is-open');
+    input.hidden = false;
+    toggle.setAttribute('aria-expanded', 'true');
+    input.focus();
+  }
+  function close(){
+    root.classList.remove('is-open');
+    toggle.setAttribute('aria-expanded', 'false');
+    // clear filter + hide after the width transition
+    input.value = '';
+    filter('');
+    setTimeout(function(){ if (!root.classList.contains('is-open')) input.hidden = true; }, 220);
+  }
+  toggle.addEventListener('click', function(){
+    if (root.classList.contains('is-open')) close(); else open();
+  });
+  function filter(q){
+    if (!rows) return;
+    q = (q || '').trim().toLowerCase();
+    Array.prototype.forEach.call(rows.querySelectorAll('tr'), function(tr){
+      var hay = tr.getAttribute('data-sg-name') || '';
+      tr.style.display = (!q || hay.indexOf(q) !== -1) ? '' : 'none';
+    });
+  }
+  input.addEventListener('input', function(){ filter(input.value); });
+  input.addEventListener('keydown', function(e){ if (e.key === 'Escape') close(); });
+})();
+</script>
 
 {% endblock %}

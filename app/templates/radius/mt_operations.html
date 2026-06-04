@@ -263,7 +263,7 @@
           {% endif %}
           {# ── أنفاق الإدارة وحركة الإنترنت ── #}
           {% set _mtype = item.management_tunnel_type %}
-          {% set _mlabel = {'wireguard':'نفق حديث','sstp_mgmt':'نفق إدارة','direct':'مباشر'}.get(_mtype, _mtype) %}
+          {% set _mlabel = {'wireguard':'WireGuard','sstp_mgmt':'SSTP','direct':'مباشر'}.get(_mtype, _mtype) %}
           {% set _scolor = {'connected':'green','pending':'amber','failed':'red','disabled':'grey'}.get(item.management_tunnel_status, 'grey') %}
           <div data-mt-tunnels style="display:flex;flex-direction:column;gap:3px;margin-top:6px;font-size:11px">
             {% if _mtype and _mtype != 'none' %}
@@ -279,12 +279,12 @@
               {% set _is_pptp = item.traffic_tunnel_type == 'pptp_traffic' %}
               <span title="نفق حركة الإنترنت وتغيير العنوان">
                 <i class="fa-solid fa-route" style="color:#7c3aed"></i>
-                حركة الإنترنت:
+                ترافيك:
                 {% if _is_pptp %}
-                  <strong style="color:#b91c1c">نفق قديم</strong>
+                  <strong style="color:#b91c1c">PPTP</strong>
                   <span class="hub-pill hub-pill--red" style="font-size:10px"><span class="dot"></span>غير آمن</span>
                 {% else %}
-                  <strong>نفق مشفّر</strong>
+                  <strong>L2TP/IPsec</strong>
                 {% endif %}
                 <span class="hub-pill hub-pill--grey" style="font-size:10px"><span class="dot"></span>{{ item.traffic_mode }}</span>
               </span>

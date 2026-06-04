@@ -1,4 +1,8 @@
-{# Bandwidth profile form — UDS unified (hub-v2). Backend untouched. #}
+{# Bandwidth profile form — REBUILT N11 (hub-v2). Backend untouched.
+   #41/#29 — simple basic view + «متقدم» toggle that reveals the raw
+   MikroTik rate-limit string. The raw string is AUTO-GENERATED from the
+   simple inputs (down/up + optional burst) and still submits via the
+   same «burst» field, so saves stay valid. #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
@@ -10,6 +14,7 @@
 {% block head_extra %}
 {{ super() }}
 <style>
+  .bf-form{ max-width: 900px; margin: 0 auto; }
   .bf-grid{ display:grid; gap:12px; grid-template-columns: repeat(2, 1fr); }
   @media (max-width:720px){ .bf-grid{ grid-template-columns: 1fr; } }
   .bf-field{ display:flex; flex-direction:column; gap:5px; min-width:0; }
@@ -20,6 +25,35 @@
   .bf-rate-row{ display:flex; gap:6px; }
   .bf-rate-row > input{ flex:1; min-width:0; }
   .bf-rate-row > select{ width:100px; flex-shrink:0; }
+
+  /* ── «متقدم» disclosure ─────────────────────────────────────── */
+  .bf-adv-toggle{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    margin-top:4px; padding:10px 12px;
+    border:1px dashed var(--hub-border); border-radius:var(--hub-r-md);
+    background:var(--hub-bg-soft);
+    cursor:pointer; user-select:none;
+  }
+  .bf-adv-toggle:hover{ border-color:var(--hub-brand-line); }
+  .bf-adv-toggle .lbl{
+    display:inline-flex; align-items:center; gap:8px;
+    font-size:12.5px; font-weight:800; color:var(--hub-text-soft);
+  }
+  .bf-adv-toggle .lbl i.lead{ color:var(--hub-brand-ink); }
+  .bf-adv-toggle .chev{ transition: transform .18s ease; color:var(--hub-text-mute); }
+  .bf-adv-toggle.is-open .chev{ transform: rotate(180deg); }
+  .bf-adv-panel{ margin-top:2px; }
+  .bf-adv-panel[hidden]{ display:none !important; }
+  .bf-adv-note{
+    font-size:11px; color:var(--hub-text-mute); line-height:1.7;
+    background:var(--hub-brand-soft); border:1px solid var(--hub-brand-line);
+    border-radius:var(--hub-r-md); padding:8px 11px; margin-bottom:10px;
+  }
+  .bf-adv-note code{ font-family:'Menlo','Consolas',monospace; font-weight:800; }
+  .bf-burst-on{ display:flex; align-items:center; gap:8px; font-size:12.5px; font-weight:700; color:var(--hub-text-soft); }
+  .bf-burst-grid{ display:grid; gap:10px; grid-template-columns: repeat(2,1fr); margin-top:10px; }
+  @media (max-width:720px){ .bf-burst-grid{ grid-template-columns:1fr; } }
+  .bf-burst-grid[hidden]{ display:none !important; }
 </style>
 {% endblock %}
 
@@ -27,7 +61,7 @@
 
 {{ hub.hero(
   ttl,
-  subtitle="ملف سرعة Bandwidth — قيم التنزيل والرفع والسرعة المؤقتة والأولوية",
+  subtitle="ملف سرعة Bandwidth — اكتب الاسم وسرعة التنزيل والرفع، وسنبني سطر السرعة للراوتر تلقائيًا",
   icon="gauge",
   actions_html='
     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.bw_list') + '">
@@ -36,22 +70,8 @@
   '
 ) }}
 
-{% set help_aside %}
-{% call hub.helppanel(
-     "دليل ملف السرعة",
-     intro="ملف السرعة يحدد حدود التنزيل والرفع التي تُطبَّق على المشتركين عبر الراوتر.",
-     items=[
-       {"icon": "download", "text": "سرعة التنزيل والرفع: اكتب القيمة ثم اختر الوحدة (Kbps أو Mbps)."},
-       {"icon": "bolt", "text": "السرعة المؤقتة (Burst): سطر MikroTik كامل، اختياري."},
-       {"icon": "layer-group", "text": "الأولوية: تُستخدم عند تداخل أكثر من قاعدة سرعة."}
-     ],
-     icon="circle-question",
-     note="القيم والوحدات تُحفظ كما هي بدون تحويل — تأكد من اختيار الوحدة الصحيحة."
-   ) %}{% endcall %}
-{% endset %}
-
-{% call hub.worklayout(aside_html=help_aside) %}
-<form method="post"
+<div class="bf-form">
+<form method="post" id="bfForm"
       action="{{ url_for('radius.bw_update', bw_id=item.id) if not is_new else url_for('radius.bw_create') }}">
 
   {% call hub.section("معطيات الملف", icon="sliders") %}
@@ -60,43 +80,110 @@
         <label>الاسم <span class="req">*</span></label>
         <input class="hub-input" type="text" name="name" required value="{{ item.name }}"
                placeholder="مثال: 10M/5M عادي">
+        <div class="help">اسم وصفي يميّز ملف السرعة في القوائم.</div>
       </div>
 
       <div class="bf-field">
         <label>سرعة التنزيل <span class="req">*</span></label>
         <div class="bf-rate-row">
-          <input class="hub-input" type="number" name="rate_down" min="0" value="{{ item.rate_down }}">
+          <input class="hub-input" type="number" name="rate_down" min="0" value="{{ item.rate_down }}"
+                 placeholder="10">
           <select class="hub-select" name="rate_down_unit">
             {% for u in ['Kbps','Mbps'] %}
               <option value="{{ u }}" {% if item.rate_down_unit==u %}selected{% endif %}>{{ u }}</option>
             {% endfor %}
           </select>
         </div>
+        <div class="help">أقصى سرعة تحميل للمشترك.</div>
       </div>
 
       <div class="bf-field">
         <label>سرعة الرفع <span class="req">*</span></label>
         <div class="bf-rate-row">
-          <input class="hub-input" type="number" name="rate_up" min="0" value="{{ item.rate_up }}">
+          <input class="hub-input" type="number" name="rate_up" min="0" value="{{ item.rate_up }}"
+                 placeholder="5">
           <select class="hub-select" name="rate_up_unit">
             {% for u in ['Kbps','Mbps'] %}
               <option value="{{ u }}" {% if item.rate_up_unit==u %}selected{% endif %}>{{ u }}</option>
             {% endfor %}
           </select>
         </div>
-      </div>
-
-      <div class="bf-field full">
-        <label>سطر السرعة المؤقتة على الراوتر</label>
-        <input class="hub-input mono" type="text" name="burst" value="{{ item.burst }}"
-               placeholder="10M/5M 8M/4M 4M/2M 30/30 8 4">
-        <div class="help">سطر تحديد السرعة الكامل على الراوتر. اختياري.</div>
+        <div class="help">أقصى سرعة رفع للمشترك.</div>
       </div>
 
       <div class="bf-field">
         <label>الأولوية</label>
-        <input class="hub-input" type="number" name="priority" value="{{ item.priority }}">
-        <div class="help">يستخدم عند تداخل قواعد السرعة.</div>
+        <input class="hub-input" type="number" name="priority" value="{{ item.priority }}"
+               placeholder="8">
+        <div class="help">يُستخدم عند تداخل قواعد السرعة (1 = الأعلى أولوية).</div>
+      </div>
+
+      {# ── «متقدم» disclosure: holds the raw MikroTik rate-limit line +
+         the optional burst builder. Hidden by default. The raw «burst»
+         field is the ONE backend field — name/id unchanged — and is
+         auto-filled from the simple inputs unless the operator edits it
+         by hand. #}
+      <div class="bf-field full">
+        <div class="bf-adv-toggle" id="bfAdvToggle" role="button" tabindex="0"
+             aria-expanded="false" aria-controls="bfAdvPanel">
+          <span class="lbl"><i class="fa-solid fa-gears lead"></i> إعدادات متقدمة (Burst وسطر السرعة اليدوي)</span>
+          <i class="fa-solid fa-chevron-down chev"></i>
+        </div>
+
+        <div class="bf-adv-panel" id="bfAdvPanel" hidden>
+          <div class="bf-adv-note">
+            سطر السرعة يُبنى تلقائيًا من سرعتي التنزيل والرفع أعلاه على الصيغة
+            <code>&lt;تنزيل&gt;/&lt;رفع&gt;</code>. فعِّل Burst لإضافة سرعة مؤقتة، أو عدّل السطر يدويًا.
+          </div>
+
+          <label class="bf-burst-on">
+            <input type="checkbox" id="bfBurstEnable"> تفعيل السرعة المؤقتة (Burst)
+          </label>
+
+          <div class="bf-burst-grid" id="bfBurstGrid" hidden>
+            <div class="bf-field">
+              <label>سرعة Burst تنزيل</label>
+              <div class="bf-rate-row">
+                <input class="hub-input" type="number" id="bfBurstDown" min="0" placeholder="20">
+                <select class="hub-select" id="bfBurstDownUnit">
+                  <option value="Mbps">Mbps</option>
+                  <option value="Kbps">Kbps</option>
+                </select>
+              </div>
+              <div class="help">السرعة القصوى المؤقتة للتنزيل.</div>
+            </div>
+            <div class="bf-field">
+              <label>سرعة Burst رفع</label>
+              <div class="bf-rate-row">
+                <input class="hub-input" type="number" id="bfBurstUp" min="0" placeholder="10">
+                <select class="hub-select" id="bfBurstUpUnit">
+                  <option value="Mbps">Mbps</option>
+                  <option value="Kbps">Kbps</option>
+                </select>
+              </div>
+              <div class="help">السرعة القصوى المؤقتة للرفع.</div>
+            </div>
+            <div class="bf-field">
+              <label>مدة Burst (ث)</label>
+              <input class="hub-input" type="number" id="bfBurstTime" min="0" value="8" placeholder="8">
+              <div class="help">عدد الثواني المسموح بها للسرعة المؤقتة.</div>
+            </div>
+            <div class="bf-field">
+              <label>حد Burst (٪ من السرعة)</label>
+              <input class="hub-input" type="number" id="bfBurstThresh" min="0" max="100" value="75" placeholder="75">
+              <div class="help">نسبة العتبة التي يبدأ بعدها احتساب Burst.</div>
+            </div>
+          </div>
+
+          <div class="bf-field full" style="margin-top:10px">
+            <label>سطر السرعة المؤقتة على الراوتر</label>
+            <input class="hub-input mono" type="text" name="burst" id="bfBurst" value="{{ item.burst }}"
+                   placeholder="10M/5M">
+            <div class="help">
+              سطر تحديد السرعة الكامل على الراوتر (rate-limit). يُملأ تلقائيًا — عدّله فقط إذا كنت تعرف صيغة MikroTik.
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   {% endcall %}
@@ -108,6 +195,118 @@
     </button>
   </div>
 </form>
-{% endcall %}
+</div>
+
+<script>
+(function(){
+  var form     = document.getElementById('bfForm');
+  if(!form) return;
+  var advToggle = document.getElementById('bfAdvToggle');
+  var advPanel  = document.getElementById('bfAdvPanel');
+  var burstEnable = document.getElementById('bfBurstEnable');
+  var burstGrid   = document.getElementById('bfBurstGrid');
+  var burstStr    = document.getElementById('bfBurst');
+
+  var rateDown = form.querySelector('[name="rate_down"]');
+  var rateDownU= form.querySelector('[name="rate_down_unit"]');
+  var rateUp   = form.querySelector('[name="rate_up"]');
+  var rateUpU  = form.querySelector('[name="rate_up_unit"]');
+
+  var bDown = document.getElementById('bfBurstDown');
+  var bDownU= document.getElementById('bfBurstDownUnit');
+  var bUp   = document.getElementById('bfBurstUp');
+  var bUpU  = document.getElementById('bfBurstUpUnit');
+  var bTime = document.getElementById('bfBurstTime');
+  var bThr  = document.getElementById('bfBurstThresh');
+
+  // If the operator manually edits the raw string, stop auto-building.
+  var manual = false;
+  var initialBurst = (burstStr.value || '').trim();
+  // Treat a pre-existing non-trivial saved line as manual so we don't
+  // clobber an operator's custom rate-limit on first edit.
+  if(initialBurst && initialBurst.indexOf(' ') >= 0){ manual = true; }
+
+  // MikroTik rate-limit unit suffix: «10M» / «512k». We keep it simple —
+  // Mbps → «M», Kbps → «k». Value 0/empty → empty (drop the side).
+  function unitTok(val, unit){
+    var n = parseFloat(val);
+    if(!isFinite(n) || n <= 0) return '';
+    var suffix = (unit === 'Kbps') ? 'k' : 'M';
+    // Strip trailing «.0» for clean lines (10 not 10.0).
+    var num = (n % 1 === 0) ? String(n) : String(n);
+    return num + suffix;
+  }
+
+  // Build «<down>/<up>» — and when burst is on, append the burst form:
+  //   <maxDown>/<maxUp> <burstDown>/<burstUp> <threshDown>/<threshUp> <time>/<time>
+  // This matches the MikroTik rate-limit grammar:
+  //   rx/tx max-burst burst-threshold burst-time
+  function build(){
+    if(manual) return;
+    var d = unitTok(rateDown && rateDown.value, rateDownU && rateDownU.value);
+    var u = unitTok(rateUp && rateUp.value, rateUpU && rateUpU.value);
+    if(!d && !u){ burstStr.value = ''; return; }
+    var base = (d || '0') + '/' + (u || '0');
+
+    if(burstEnable && burstEnable.checked){
+      var bd = unitTok(bDown && bDown.value, bDownU && bDownU.value) || base.split('/')[0];
+      var bu = unitTok(bUp && bUp.value, bUpU && bUpU.value) || base.split('/')[1];
+      // threshold = pct of max rate (numeric kbit), derived from max line.
+      var pct = parseFloat(bThr && bThr.value); if(!isFinite(pct) || pct<=0) pct = 75;
+      function thr(valStr, unit){
+        var n = parseFloat(valStr); if(!isFinite(n)||n<=0) return '0';
+        var kbit = (unit === 'Kbps') ? n : n*1000;
+        var t = Math.round(kbit * pct/100);
+        return t + 'k';
+      }
+      var td = thr(rateDown && rateDown.value, rateDownU && rateDownU.value);
+      var tu = thr(rateUp && rateUp.value, rateUpU && rateUpU.value);
+      var time = parseInt(bTime && bTime.value, 10); if(!isFinite(time)||time<0) time = 8;
+      burstStr.value = base + ' ' + bd + '/' + bu + ' ' + td + '/' + tu + ' ' + time + '/' + time;
+    } else {
+      burstStr.value = base;
+    }
+  }
+
+  // Wire basic inputs → rebuild.
+  [rateDown, rateDownU, rateUp, rateUpU,
+   bDown, bDownU, bUp, bUpU, bTime, bThr].forEach(function(el){
+    if(!el) return;
+    el.addEventListener('input', build);
+    el.addEventListener('change', build);
+  });
+
+  if(burstEnable){
+    burstEnable.addEventListener('change', function(){
+      burstGrid.hidden = !burstEnable.checked;
+      build();
+    });
+  }
+
+  // Mark manual once the operator types directly in the raw line.
+  if(burstStr){
+    burstStr.addEventListener('input', function(){ manual = true; });
+  }
+
+  // «متقدم» open/close.
+  function toggleAdv(){
+    var open = advPanel.hasAttribute('hidden');
+    if(open){ advPanel.removeAttribute('hidden'); }
+    else    { advPanel.setAttribute('hidden',''); }
+    advToggle.classList.toggle('is-open', open);
+    advToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+  if(advToggle){
+    advToggle.addEventListener('click', toggleAdv);
+    advToggle.addEventListener('keydown', function(e){
+      if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); toggleAdv(); }
+    });
+  }
+
+  // Initial build so the hidden field is valid even if the panel is
+  // never opened (only when not a pre-existing manual line).
+  build();
+})();
+</script>
 
 {% endblock %}

@@ -258,18 +258,20 @@
         <div class="cg-field"><label>عدد الأجهزة</label>
           <input class="hub-input" type="number" min="1" max="50" name="device_count" value="{{ form.get('device_count') or 1 }}">
           <div class="help">عدد الجلسات المتزامنة المسموحة.</div></div>
-        <div class="cg-field"><label>وضع المدة</label>
-          {% set dm = form.get('duration_mode') or 'time_unit' %}
-          <select class="hub-select" name="duration_mode">
-            <option value="time_unit" {% if dm == 'time_unit' %}selected{% endif %}>بالوحدة المحدَّدة</option>
-            <option value="seconds"   {% if dm == 'seconds' %}selected{% endif %}>بالثانية</option>
-          </select></div>
+        {# #20: «وضع المدة» dropdown removed. The mode is driven purely by
+           «العدّ من أول اتصال»:
+             • ON  → Mode B: wall-clock countdown from first login.
+             • OFF → Mode A: usage-seconds budget (burns only while online).
+           duration_mode is a hidden field kept in sync by JS for legacy reads. #}
+        <input type="hidden" name="duration_mode"
+               value="{{ form.get('duration_mode') or 'time_unit' }}" data-duration-mode>
         <div class="cg-field"><label>صلاحية بعد أول دخول (أيام)</label>
           <input class="hub-input" type="number" min="0" name="validity_after_first_login_days" value="{{ form.get('validity_after_first_login_days') or 0 }}"></div>
         <div class="cg-field"><label>العدّ من أول اتصال</label>
           <div class="cg-chk">
-            {{ toggle_switch(name="count_from_first_connect", checked=(form.get('count_from_first_connect') or not form), value="1", id="cfc", on_label="مفعَّل (وإلا من تاريخ الإنشاء)", off_label="من تاريخ الإنشاء") }}
-          </div></div>
+            {{ toggle_switch(name="count_from_first_connect", checked=(form.get('count_from_first_connect') or not form), value="1", id="cfc", on_label="مفعَّل: المدة تبدأ من أول دخول (نمط B)", off_label="معطّل: رصيد وقت استخدام يُستهلك أثناء الاتصال فقط (نمط A)") }}
+          </div>
+          <div class="help">يحدّد نمط المدة: عند التفعيل تُحسب المدة كعدّ تنازلي من أول دخول؛ وعند التعطيل تكون رصيد ثوانٍ استخدام يُستهلك فقط أثناء الاتصال.</div></div>
         <div class="cg-field"><label>العدّ بالثواني</label>
           <div class="cg-chk">
             {{ toggle_switch(name="count_by_seconds", checked=form.get('count_by_seconds'), value="1", id="cbs") }}
@@ -330,14 +332,11 @@
           <div class="cg-chk">
             {{ toggle_switch(name="lock_to_mac_on_close", checked=form.get('lock_to_mac_on_close'), value="1", id="lmc") }}
           </div></div>
-        <div class="cg-field"><label>دخول برقم الجوال فقط</label>
-          <div class="cg-chk">
-            {{ toggle_switch(name="phone_only_login", checked=form.get('phone_only_login'), value="1", id="pol") }}
-          </div></div>
-        <div class="cg-field full"><label>السماح بالدخول ببطاقة سابقة (فلسطين فقط)</label>
-          <div class="cg-chk">
-            {{ toggle_switch(name="allow_entry_by_previous_card_palestine", checked=form.get('allow_entry_by_previous_card_palestine'), value="1", id="aep") }}
-          </div></div>
+        {# #21: «دخول برقم الجوال فقط» (phone_only_login) and «السماح بالدخول
+           ببطاقة سابقة (فلسطين فقط)» (allow_entry_by_previous_card_palestine)
+           toggles removed per request. These are checkbox toggles that only
+           submit when checked, so the backend (which reads them via form.get)
+           safely defaults them to off when absent. #}
         <div class="cg-field full"><label>ملاحظات</label>
           <textarea class="hub-textarea" name="notes">{{ form.get('notes') or '' }}</textarea></div>
       </div>
@@ -371,6 +370,19 @@
         card.classList.contains('is-collapsed') ? 'collapsed' : 'open'); } catch(_) {}
     });
   });
+
+  // #20: keep the hidden duration_mode in sync with «العدّ من أول اتصال».
+  // ON → Mode B (wall-clock from first login) = 'time_unit';
+  // OFF → Mode A (usage-seconds budget) = 'seconds'.
+  var modeHidden = document.querySelector('[data-duration-mode]');
+  var cfc = document.querySelector('[name="count_from_first_connect"]');
+  if (modeHidden && cfc) {
+    var syncDurationMode = function(){
+      modeHidden.value = cfc.checked ? 'time_unit' : 'seconds';
+    };
+    cfc.addEventListener('change', syncDurationMode);
+    syncDurationMode();
+  }
 })();
 </script>
 {% endblock %}

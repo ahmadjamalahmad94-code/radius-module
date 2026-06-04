@@ -44,10 +44,14 @@ _K_PREV_BWCTRL = "temporary_speed_prev_bwctrl"
 _K_PREV_DOWN = "temporary_speed_prev_down_kbps"
 _K_PREV_UP = "temporary_speed_prev_up_kbps"
 _K_PREV_CUSTOM = "temporary_speed_prev_custom"
+# #50a: explicit "temp active" flag, written alongside the DB temporary_speed
+# column. The readers no longer INFER active-ness from timestamp arithmetic;
+# a window is active iff the column/flag is set AND its strict end is future.
+_K_ACTIVE = "temporary_speed_active"
 
 _TEMP_META_KEYS = (
     _K_FROM, _K_TO, _K_DURATION, _K_RESTORE_RATE,
-    _K_PREV_BWCTRL, _K_PREV_DOWN, _K_PREV_UP, _K_PREV_CUSTOM,
+    _K_PREV_BWCTRL, _K_PREV_DOWN, _K_PREV_UP, _K_PREV_CUSTOM, _K_ACTIVE,
 )
 
 # Guardrails on operator input.
@@ -100,11 +104,19 @@ def _parse_dt(raw: Any) -> datetime | None:
     return None
 
 
-def _ends_at(meta: dict, updated_at: Any) -> datetime | None:
-    """Window end: explicit `_to`, else `_from + duration`, else `updated_at +
-    duration`. Mirrors ``sessions._temporary_speed_end`` so the worker and the
-    page agree on when a window has expired."""
-    started = _parse_dt(_meta_value(meta, _K_FROM)) or _parse_dt(updated_at)
+def _ends_at(meta: dict, updated_at: Any = None) -> datetime | None:
+    """Window end computed STRICTLY from the temp-speed window fields.
+
+    #50a: NEVER fall back to ``updated_at``. The old fallback meant that any
+    later ``UPDATE subscribers ... SET updated_at = now`` (e.g. a routine
+    profile re-save, a quota top-up, a balance change) silently slid the
+    apparent window-end forward/backward and could make a window look expired
+    seconds after it was applied. The window is now derived only from the
+    explicit ``temporary_speed_from`` + ``temporary_speed_duration_minutes``
+    (or an explicit ``temporary_speed_to``). ``updated_at`` is accepted but
+    ignored for signature compatibility with callers.
+    """
+    started = _parse_dt(_meta_value(meta, _K_FROM))
     ends = _parse_dt(_meta_value(meta, _K_TO))
     duration = _int_or_zero(_meta_value(meta, _K_DURATION))
     if not ends and started and duration > 0:
@@ -233,6 +245,16 @@ def apply_temp_speed(
         # Keep the running countdown intact (profile re-save path).
         meta.setdefault(_K_FROM, now.isoformat(timespec="seconds"))
         meta.setdefault(_K_DURATION, duration_minutes)
+    # #50a: explicit active flag — the single source of truth the readers use,
+    # so a window is never "active by timestamp inference" alone.
+    meta[_K_ACTIVE] = 1
+
+    rate = _rate_str(up_kbps, down_kbps)
+    # #50a: push the rate-limit to MikroTik BEFORE committing the DB so the
+    # live session is actually throttled the moment we record the window. If
+    # the CoA fails we still commit (the throttle is applied on next auth and
+    # the worker keeps the window), but the live push is attempted first.
+    coa = _push_rate(tenant_id, username, rate)
 
     db().execute(
         """
@@ -249,9 +271,6 @@ def apply_temp_speed(
          now.isoformat(timespec="seconds"), int(tenant_id), int(row["id"])),
     )
     db().commit()
-
-    rate = _rate_str(up_kbps, down_kbps)
-    coa = _push_rate(tenant_id, username, rate)
 
     try:
         from .audit import get_audit_service
