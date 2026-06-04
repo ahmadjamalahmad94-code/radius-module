@@ -470,116 +470,7 @@
     text-align:center;
     font-weight:900;
   }
-  /* ── #30: Stock vs Direct tabs + wallet exposure + scaffold UI ── */
-  .market-tabs{
-    display:flex;
-    flex-wrap:wrap;
-    gap:8px;
-    padding:6px;
-    border:1px solid var(--line);
-    border-radius:14px;
-    background:#fff;
-    box-shadow:0 1px 0 rgba(255,255,255,.85) inset, 0 1px 3px rgba(15,23,42,.06);
-  }
-  .market-tab{
-    flex:1 1 200px;
-    min-height:52px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    gap:9px;
-    padding:0 16px;
-    border:1px solid transparent;
-    border-radius:11px;
-    background:transparent;
-    color:var(--muted);
-    font-weight:900;
-    font-size:14px;
-    cursor:pointer;
-    transition:background .15s ease, color .15s ease, border-color .15s ease;
-  }
-  .market-tab i{font-size:16px}
-  .market-tab small{display:block;font-size:11px;font-weight:700;color:var(--muted);margin-top:2px}
-  .market-tab:hover{background:var(--violet-soft);color:var(--violet-deep)}
-  .market-tab.is-active{
-    background:linear-gradient(135deg,var(--violet),var(--violet-deep));
-    border-color:transparent;
-    color:#fff;
-    box-shadow:0 6px 14px rgba(124,58,237,.28);
-  }
-  .market-tab.is-active small{color:rgba(255,255,255,.85)}
-  .market-tabpanel{display:none}
-  .market-tabpanel.is-active{display:grid;gap:16px}
-
-  /* segmented control (access-mode / wallet exposure) */
-  .market-seg{
-    display:inline-flex;
-    padding:4px;
-    border:1px solid var(--line);
-    border-radius:11px;
-    background:var(--soft);
-    gap:4px;
-  }
-  .market-seg label{
-    position:relative;
-    display:inline-flex;
-    align-items:center;
-    gap:7px;
-    min-height:36px;
-    padding:0 14px;
-    border-radius:8px;
-    color:#475569;
-    font-size:12.5px;
-    font-weight:800;
-    cursor:pointer;
-    white-space:nowrap;
-  }
-  .market-seg input{position:absolute;opacity:0;inset:0;cursor:pointer}
-  .market-seg label:has(input:checked){
-    background:#fff;
-    color:var(--violet-deep);
-    box-shadow:0 1px 3px rgba(15,23,42,.12);
-  }
-  .market-seg label:has(input:checked) i{color:var(--violet)}
-
-  /* "قيد التطوير" badge for not-yet-wired actions */
-  .market-wip{
-    display:inline-flex;
-    align-items:center;
-    gap:6px;
-    padding:3px 10px;
-    border-radius:999px;
-    background:#fff7ed;
-    border:1px solid #fed7aa;
-    color:#c2410c;
-    font-size:11px;
-    font-weight:900;
-    white-space:nowrap;
-  }
-  .market-btn[disabled],.market-btn.is-wip{opacity:.7;cursor:not-allowed}
-
-  /* stock category rows */
-  .market-cat-list{display:grid;gap:10px;padding:16px}
-  .market-cat-row{
-    display:flex;
-    align-items:center;
-    flex-wrap:wrap;
-    gap:12px;
-    padding:14px 16px;
-    border:1px solid var(--line);
-    border-radius:13px;
-    background:#fff;
-  }
-  .market-cat-row .cat-name{font-weight:900;font-size:14px;color:var(--ink);flex:1 1 180px;min-width:0}
-  .market-cat-row .cat-meta{color:var(--muted);font-size:12px;font-weight:700}
-  .market-cat-add{
-    display:grid;
-    grid-template-columns:1.4fr auto auto;
-    gap:12px;
-    align-items:end;
-    padding:16px;
-    border-top:1px solid var(--line-soft);
-  }
+  /* concept action cards (how-it-works) */
   .market-actions-grid{
     display:grid;
     grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
@@ -597,9 +488,6 @@
   }
   .market-action-card h4{margin:0;font-size:14px;font-weight:900;color:var(--ink)}
   .market-action-card p{margin:0;color:var(--muted);font-size:12px;font-weight:600;line-height:1.6;flex:1}
-  @media(max-width:720px){
-    .market-cat-add{grid-template-columns:1fr}
-  }
   @media(max-width:1250px){
     .market-form{grid-template-columns:repeat(3,1fr)}
   }
@@ -610,6 +498,11 @@
     .market-create-panel{width:min(100vw - 18px, 980px);max-height:calc(100vh - 22px)}
     .market-form,.market-stats,.market-card-foot{grid-template-columns:1fr}
   }
+  details.market-collapsible > summary{cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:14px}
+  details.market-collapsible > summary::-webkit-details-marker{display:none}
+  details.market-collapsible > summary .market-chevron{transition:transform .2s ease;opacity:.55;font-size:13px}
+  details.market-collapsible[open] > summary .market-chevron{transform:rotate(180deg)}
+  details.market-collapsible[open] > .batch-grid{margin-top:16px}
 </style>
 <link rel="stylesheet" href="{{ url_for('static', filename='css/card_marketplace_polish.css') }}">
 
@@ -708,159 +601,44 @@
   </section>
   </div>
 
-  <!-- ── #30: Wallet exposure toggle (scaffold — backend pending) ── -->
-  <section class="market-panel" data-market-wallet-exposure>
-    <header class="market-panel-head">
-      <div>
-        <h2><i class="fa-solid fa-wallet"></i> ما الذي يظهر في محفظة الزبون؟</h2>
-        <p>اختر القسم الذي تعرضه لمستخدمي البطاقة داخل بوابة/محفظة الزبون.</p>
-      </div>
-      <span class="market-wip"><i class="fa-solid fa-screwdriver-wrench"></i> قيد التطوير</span>
-    </header>
-    <form method="post" action="#" class="market-cat-add" style="grid-template-columns:1fr auto;border-top:none"
-          data-market-wallet-form onsubmit="return false">
-      <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-      <div class="market-field" style="margin:0">
-        <span>القسم المعروض في المحفظة</span>
-        <div class="market-seg" role="radiogroup" aria-label="القسم المعروض في المحفظة">
-          <label>
-            <input type="radio" name="wallet_exposed_section" value="direct" checked>
-            <i class="fa-solid fa-bolt"></i> توليد / مباشر
-          </label>
-          <label>
-            <input type="radio" name="wallet_exposed_section" value="stock">
-            <i class="fa-solid fa-boxes-stacked"></i> الجاهز / المخزون
-          </label>
-        </div>
-      </div>
-      <div style="align-self:end">
-        <button class="market-btn is-wip" type="button" disabled title="الواجهة جاهزة — يتطلب ربطًا في الخادم">
-          <i class="fa-solid fa-floppy-disk"></i> حفظ الإعداد
-        </button>
-      </div>
-    </form>
-  </section>
-
-  <!-- ── #30: Stock vs Direct tabs ── -->
-  <div class="market-tabs" role="tablist" data-market-tabs>
-    <button class="market-tab is-active" type="button" role="tab" data-tab-target="stock" aria-selected="true">
-      <i class="fa-solid fa-boxes-stacked"></i>
-      <span>المخزون<small>كروت جاهزة: توليد / رفع / فئات</small></span>
-    </button>
-    <button class="market-tab" type="button" role="tab" data-tab-target="direct" aria-selected="false">
-      <i class="fa-solid fa-bolt"></i>
-      <span>مباشر<small>توليد عند الطلب من العروض</small></span>
-    </button>
-  </div>
-
-  <!-- ===================== (A) قسم المخزون ===================== -->
-  <div class="market-tabpanel is-active" data-tabpanel="stock">
-
+  <!-- ── كيف يعمل البيع + النمط الافتراضي ── -->
   <section class="market-panel">
     <header class="market-panel-head">
       <div>
-        <h2><i class="fa-solid fa-layer-group"></i> مصادر المخزون</h2>
-        <p>أضف كروتًا جاهزة إلى المخزون عبر التوليد أو الرفع من الملفات.</p>
+        <h2><i class="fa-solid fa-circle-info"></i> كيف يعمل البيع؟</h2>
+        <p>لكل عرض «نمط بيع» يحدّد من أين يأتي الكرت لحظة الشراء. اختر النمط الافتراضي الذي ترثه العروض الجديدة.</p>
       </div>
+      <form method="post" action="{{ url_for('radius.card_marketplace_default_mode') }}"
+            style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+        <span class="market-pill" style="background:#eef2ff;color:#4338ca">النمط الافتراضي</span>
+        <select name="sale_mode" onchange="this.form.submit()"
+                style="min-height:38px;padding:0 12px;border-radius:10px;border:1px solid var(--line);font-weight:800">
+          <option value="instant" {{ 'selected' if (default_sale_mode or 'instant') != 'inventory' else '' }}>توليد فوري</option>
+          <option value="inventory" {{ 'selected' if (default_sale_mode or 'instant') == 'inventory' else '' }}>مخزون</option>
+        </select>
+      </form>
     </header>
     <div class="market-actions-grid">
-      <article class="market-action-card">
-        <h4><i class="fa-solid fa-wand-magic-sparkles"></i> توليد كروت</h4>
-        <p>توليد دفعة كروت جديدة آليًا بالكميات والإعدادات التي تحددها.</p>
-        <a class="market-btn market-btn--primary" href="{{ url_for('radius.cards_generate') }}">
-          <i class="fa-solid fa-arrow-up-right-from-square"></i> فتح صفحة التوليد
-        </a>
+      <article class="market-action-card" style="border-inline-start:4px solid #7c3aed">
+        <h4><i class="fa-solid fa-bolt" style="color:#7c3aed"></i> توليد فوري</h4>
+        <p>يُنشئ النظام كرتًا جديدًا تلقائيًا في لحظة كل عملية شراء ويُسلّمه للزبون فورًا. مناسب للبيع الرقمي اللحظي — بلا مخزون مُسبق.</p>
       </article>
-      <article class="market-action-card">
-        <h4><i class="fa-solid fa-file-import"></i> رفع من الملفات</h4>
-        <p>استيراد كروت من ملف CSV/XLSX/PDF وإضافتها إلى المخزون.</p>
-        <a class="market-btn" href="{{ url_for('radius.cards_batches_import') }}">
-          <i class="fa-solid fa-arrow-up-right-from-square"></i> فتح صفحة الاستيراد
-        </a>
+      <article class="market-action-card" style="border-inline-start:4px solid #2563eb">
+        <h4><i class="fa-solid fa-boxes-stacked" style="color:#2563eb"></i> من المخزون</h4>
+        <p>تُحمّل كروتًا جاهزة مسبقًا (توليد عدد أو رفع ملف Excel/CSV/PDF)، ويُباع منها كرت واحد لكل عملية. مناسب للكروت المطبوعة والمعارض — ويعرض «المباع / المتبقّي».</p>
       </article>
     </div>
   </section>
 
-  <section class="market-panel" data-market-categories>
-    <header class="market-panel-head">
-      <div>
-        <h2><i class="fa-solid fa-folder-tree"></i> فئات المخزون</h2>
-        <p>أنشئ فئات تُرفع داخلها الكروت، واختر طريقة الوصول لكل فئة: تسجيل دخول RADIUS أو عرض فقط.</p>
-      </div>
-      <span class="market-wip"><i class="fa-solid fa-screwdriver-wrench"></i> قيد التطوير</span>
-    </header>
-
-    <div class="market-cat-list">
-      <!-- Backend pending: rows below are illustrative scaffolding only -->
-      <div class="market-cat-row">
-        <span class="cat-name">فئة افتراضية — RADIUS</span>
-        <span class="cat-meta">طريقة الوصول: تسجيل دخول (RADIUS)</span>
-        <div class="market-seg" role="radiogroup" aria-label="طريقة الوصول">
-          <label>
-            <input type="radio" name="category_access_mode__example1" value="radius" checked>
-            <i class="fa-solid fa-right-to-bracket"></i> RADIUS
-          </label>
-          <label>
-            <input type="radio" name="category_access_mode__example1" value="display_only">
-            <i class="fa-solid fa-eye"></i> عرض فقط
-          </label>
-        </div>
-        <button class="market-btn is-wip" type="button" disabled><i class="fa-solid fa-upload"></i> رفع كروت</button>
-      </div>
-      <div class="market-empty" style="min-height:90px">
-        لا توجد فئات حقيقية بعد. استخدم النموذج بالأسفل لإضافة فئة (الواجهة جاهزة — تتطلب ربطًا في الخادم).
-      </div>
-    </div>
-
-    <form method="post" action="#" class="market-cat-add" data-market-category-form onsubmit="return false">
-      <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-      <label class="market-field" style="margin:0">
-        <span>اسم الفئة</span>
-        <input name="category_name" placeholder="مثال: كروت 5 جيجا">
-      </label>
-      <div class="market-field" style="margin:0">
-        <span>طريقة الوصول</span>
-        <div class="market-seg" role="radiogroup" aria-label="طريقة الوصول للفئة الجديدة">
-          <label>
-            <input type="radio" name="category_access_mode" value="radius" checked>
-            <i class="fa-solid fa-right-to-bracket"></i> RADIUS
-          </label>
-          <label>
-            <input type="radio" name="category_access_mode" value="display_only">
-            <i class="fa-solid fa-eye"></i> عرض فقط
-          </label>
-        </div>
-      </div>
-      <div style="align-self:end">
-        <button class="market-btn market-btn--primary is-wip" type="button" disabled
-                title="الواجهة جاهزة — يتطلب ربطًا في الخادم">
-          <i class="fa-solid fa-plus"></i> إضافة فئة
-        </button>
-      </div>
-    </form>
-    <p class="market-help" style="color:#9a3412;background:#fff7ed;border-color:#fed7aa">
-      ملاحظة: حقول الفئات وطريقة الوصول (category_name، category_access_mode=radius|display_only) جاهزة في الواجهة لكنها غير مفعّلة بعد —
-      تحتاج جدول فئات وحقل access_mode في الخادم. الكروت بوضع "عرض فقط" يجب ألا تُصادق ضد RADIUS.
-    </p>
-  </section>
-
+  <!-- ===================== العروض (القلب) ===================== -->
   <section class="market-panel">
     <header class="market-panel-head">
       <div>
-        <h2>عروض الشراء الظاهرة للزبائن</h2>
-        <p>هذه هي الباقات التي تظهر في بوابة مستخدم البطاقة.</p>
+        <h2><i class="fa-solid fa-store"></i> عروض الشراء</h2>
+        <p>هذه الباقات تظهر للزبون في بوابته للشراء. لكل عرض نمط بيع وملف مشتريات.</p>
       </div>
-      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-        <form method="post" action="{{ url_for('radius.card_marketplace_default_mode') }}"
-              style="display:flex;gap:6px;align-items:center">
-          <span class="market-pill" style="background:#eef2ff;color:#4338ca">النمط الافتراضي للعروض الجديدة</span>
-          <select name="sale_mode" onchange="this.form.submit()" style="padding:6px 10px;border-radius:10px;border:1px solid #dfe7f3">
-            <option value="instant" {{ 'selected' if (default_sale_mode or 'instant') != 'inventory' else '' }}>توليد فوري</option>
-            <option value="inventory" {{ 'selected' if (default_sale_mode or 'instant') == 'inventory' else '' }}>مخزون</option>
-          </select>
-        </form>
-        <span class="market-pill">{{ num(packages|length) }} عرض</span>
-      </div>
+      <span class="market-pill">{{ num(packages|length) }} عرض</span>
     </header>
     {% set OFFER_ACCENTS = ['#6B5AED','#0EA5E9','#22C55E','#F59E0B','#EF4444','#EC4899','#8B5CF6','#14B8A6'] %}
     <div class="package-grid">
@@ -874,12 +652,19 @@
           <h3>{{ package.name }}</h3>
           <div class="market-code">{{ package.plan_name or "عرض بطاقات إلكترونية" }}</div>
           <div class="market-signature">{{ duration_minutes_label(duration) }} / {{ speed_label(down) }}</div>
+          {% set _mode = package.sale_mode or 'instant' %}
+          <div style="display:flex;justify-content:center;margin-top:2px">
+            {% if _mode == 'inventory' %}
+              <span class="market-pill" style="background:#eff6ff;color:#1d4ed8;border-color:#bfdbfe"><i class="fa-solid fa-boxes-stacked"></i> بيع من المخزون</span>
+            {% else %}
+              <span class="market-pill" style="background:#f5f3ff;color:#6d28d9;border-color:#ddd6fe"><i class="fa-solid fa-bolt"></i> توليد فوري</span>
+            {% endif %}
+          </div>
           <div class="market-stats">
             <div class="market-stat"><small>السعر</small><strong>{{ money(package.price, package.currency) }}</strong></div>
             <div class="market-stat"><small>رفع</small><strong>{{ speed_label(up) }}</strong></div>
             <div class="market-stat"><small>الحالة</small><strong>{{ "فعال" if package.active else "متوقف" }}</strong></div>
           </div>
-          {% set _mode = package.sale_mode or 'instant' %}
           {% if _mode == 'inventory' %}
             {% set _rem = (package.inventory_total or 0) - (package.inventory_sold or 0) %}
             <div class="market-stats" style="margin-top:6px">
@@ -917,14 +702,14 @@
     </div>
   </section>
 
-  <section class="market-panel">
-    <header class="market-panel-head">
+  <details class="market-panel market-collapsible">
+    <summary class="market-panel-head">
       <div>
-        <h2>الحزم الإلكترونية المتولدة</h2>
-        <p>كل شراء يولد كرتا ويحفظه داخل حزمة إلكترونية قابلة للمراجعة.</p>
+        <h2><i class="fa-solid fa-chevron-down market-chevron"></i> الحزم الإلكترونية المتولدة <span style="font-weight:700;color:var(--muted);font-size:12px">(سجل فني)</span></h2>
+        <p>كل عملية شراء تولّد كرتاً وتحفظه داخل حزمة قابلة للمراجعة. افتح هذا القسم لمراجعة الكروت المتولدة.</p>
       </div>
       <span class="market-pill">{{ num(electronic_batches|length) }} حزمة</span>
-    </header>
+    </summary>
     <div class="batch-grid">
       {% for batch in electronic_batches %}
         {% set total = batch.total_cards or 0 %}
@@ -957,51 +742,7 @@
         <div class="market-empty">لا توجد حزم متولدة من الشراء بعد.</div>
       {% endfor %}
     </div>
-  </section>
-
-  </div><!-- /tabpanel stock -->
-
-  <!-- ===================== (B) قسم مباشر ===================== -->
-  <div class="market-tabpanel" data-tabpanel="direct">
-  <section class="market-panel" data-market-direct>
-    <header class="market-panel-head">
-      <div>
-        <h2><i class="fa-solid fa-bolt"></i> توليد مباشر من العروض</h2>
-        <p>اختر عرضًا ثم وَلّد الكروت عند الطلب ضمن ذلك العرض، دون مخزون مُسبق.</p>
-      </div>
-      <span class="market-wip"><i class="fa-solid fa-screwdriver-wrench"></i> قيد التطوير</span>
-    </header>
-    <form method="post" action="#" class="market-cat-add" data-market-direct-form
-          style="grid-template-columns:1.4fr .8fr auto" onsubmit="return false">
-      <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-      <label class="market-field" style="margin:0">
-        <span>العرض</span>
-        <select name="direct_offer_id">
-          <option value="">اختر عرضًا</option>
-          {% for package in packages %}
-            <option value="{{ package.id }}">{{ package.name }} — {{ money(package.price, package.currency) }}</option>
-          {% else %}
-            <option value="" disabled>لا توجد عروض بعد</option>
-          {% endfor %}
-        </select>
-      </label>
-      <label class="market-field" style="margin:0">
-        <span>عدد الكروت</span>
-        <input name="direct_quantity" type="number" min="1" step="1" value="1" placeholder="1">
-      </label>
-      <div style="align-self:end">
-        <button class="market-btn market-btn--primary is-wip" type="button" disabled
-                title="الواجهة جاهزة — يتطلب ربطًا في الخادم">
-          <i class="fa-solid fa-bolt"></i> توليد عند الطلب
-        </button>
-      </div>
-    </form>
-    <p class="market-help" style="color:#9a3412;background:#fff7ed;border-color:#fed7aa">
-      ملاحظة: التوليد عند الطلب (direct_offer_id، direct_quantity) جاهز في الواجهة لكنه غير مفعّل بعد —
-      يحتاج نقطة نهاية في الخادم تولّد كروتًا ضمن العرض المحدد لحظة الطلب.
-    </p>
-  </section>
-  </div><!-- /tabpanel direct -->
+  </details>
 
   <section class="market-panel">
     <header class="market-panel-head">
@@ -1081,21 +822,6 @@
     document.addEventListener('keydown', function(event){
       if (event.key === 'Escape' && modal.classList.contains('is-open')) closeModal();
     });
-  }
-  // #30: Stock vs Direct tab switching
-  const tabBar = document.querySelector('[data-market-tabs]');
-  if (tabBar) {
-    const tabs = Array.from(tabBar.querySelectorAll('.market-tab'));
-    const panels = Array.from(document.querySelectorAll('[data-tabpanel]'));
-    tabs.forEach(tab => tab.addEventListener('click', function(){
-      const target = tab.getAttribute('data-tab-target');
-      tabs.forEach(t => {
-        const on = t === tab;
-        t.classList.toggle('is-active', on);
-        t.setAttribute('aria-selected', on ? 'true' : 'false');
-      });
-      panels.forEach(p => p.classList.toggle('is-active', p.getAttribute('data-tabpanel') === target));
-    }));
   }
 
   const form = document.querySelector('[data-market-package-form]');
