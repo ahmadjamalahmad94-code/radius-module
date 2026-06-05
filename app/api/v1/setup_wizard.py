@@ -7,6 +7,7 @@ Actual router apply operations stay behind their explicit guarded routes.
 """
 from __future__ import annotations
 
+import os
 from typing import Any
 
 from flask import Blueprint, g, request
@@ -29,6 +30,7 @@ from ...radius.services.setup_wizard_server_wg_readiness import (
 )
 from ...radius.services.setup_wizard_v3 import (
     V3Error,
+    V3InvalidState,
     V3NotFound,
     WizardV3Service,
 )
@@ -77,6 +79,42 @@ def register(bp: Blueprint) -> None:
         "setup_wizard_runs_state",
         require_api_token(setup_wizard_runs_state),
         methods=["GET"],
+    )
+    bp.add_url_rule(
+        "/setup-wizard/runs/<int:run_id>/router-info",
+        "setup_wizard_router_info",
+        require_api_token(setup_wizard_router_info),
+        methods=["POST"],
+    )
+    bp.add_url_rule(
+        "/setup-wizard/runs/<int:run_id>/generate-script",
+        "setup_wizard_generate_script",
+        require_api_token(setup_wizard_generate_script),
+        methods=["POST"],
+    )
+    bp.add_url_rule(
+        "/setup-wizard/runs/<int:run_id>/submit-key",
+        "setup_wizard_submit_key",
+        require_api_token(setup_wizard_submit_key),
+        methods=["POST"],
+    )
+    bp.add_url_rule(
+        "/setup-wizard/runs/<int:run_id>/apply-server-peer",
+        "setup_wizard_apply_server_peer",
+        require_api_token(setup_wizard_apply_server_peer),
+        methods=["POST"],
+    )
+    bp.add_url_rule(
+        "/setup-wizard/runs/<int:run_id>/mark-handshake",
+        "setup_wizard_mark_handshake",
+        require_api_token(setup_wizard_mark_handshake),
+        methods=["POST"],
+    )
+    bp.add_url_rule(
+        "/setup-wizard/runs/<int:run_id>/register",
+        "setup_wizard_register_router",
+        require_api_token(setup_wizard_register_router),
+        methods=["POST"],
     )
     bp.add_url_rule(
         "/setup-wizard/phase-planners",
@@ -208,6 +246,45 @@ def _diagnostics_for_codes(codes: list[str] | tuple[str, ...]) -> list[dict[str,
     return result
 
 
+def _visible_v3_error(exc: Exception) -> str:
+    text = str(exc).strip()
+    lowered = text.lower()
+    if "router_name is required" in lowered:
+        return "اسم الراوتر مطلوب."
+    if "router_name must be 64 chars or fewer" in lowered:
+        return "اسم الراوتر يجب أن يكون 64 حرفًا أو أقل."
+    if "router_type must be" in lowered:
+        return "نوع الراوتر يجب أن يكون بوابة دخول أو اشتراكات أو مختلط."
+    if "cannot" in lowered and "from state" in lowered:
+        return "حالة تشغيل المعالج لا تسمح بهذه الخطوة الآن."
+    return text if any("\u0600" <= ch <= "\u06ff" for ch in text) else "تعذر تنفيذ خطوة معالج الإعداد."
+
+
+def _fail_v3(exc: Exception, *, status: int = 409, code: str = "setup_wizard_step_failed"):
+    return fail(code, _visible_v3_error(exc), status=status)
+
+
+def _int_body(name: str, default: int) -> int:
+    raw = _body().get(name)
+    try:
+        return int(raw)
+    except (TypeError, ValueError):
+        return int(default)
+
+
+def _public_script_result(result: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "run": result.get("run") or {},
+        "script": result.get("script") or "",
+        "short_code": result.get("short_code") or "",
+        "sha256": result.get("sha256") or "",
+        "expires_at": result.get("expires_at") or "",
+        "server_radius_provisioning": result.get("server_radius_provisioning") or {},
+        "script_contains_sensitive_values": True,
+        "warning_ar": "هذا السكربت يحتوي أسرار تشغيلية داخلية. انسخه للراوتر فقط ولا ترسله لأي جهة غير موثوقة.",
+    }
+
+
 def _recent_runs(*, tenant_id: int, limit: int = 8) -> list[dict[str, Any]]:
     rows = (
         db()
@@ -274,9 +351,10 @@ def setup_wizard_overview():
             "safe_operations": {
                 "can_create_run": True,
                 "can_apply_router_changes": False,
-                "can_apply_server_peer": False,
+                "can_apply_server_peer": True,
                 "can_plan_phases": True,
-                "reason_ar": "التطبيق يستطيع قراءة الحالة، بدء تشغيل جديد، وتوليد خطط المراحل والسكربتات. تطبيق الأوامر على الراوتر يبقى من مسارات التطبيق المحمية لاحقًا.",
+                "can_run_lifecycle": True,
+                "reason_ar": "التطبيق يستطيع قراءة الحالة، بدء تشغيل جديد، توليد خطط المراحل، وإكمال خطوات تشغيل الخادم والتسجيل. إرسال أوامر مباشرة للراوتر يبقى محميًا بخطوات معاينة واضحة.",
             },
         }
     )
@@ -333,6 +411,159 @@ def setup_wizard_runs_state(run_id: int):
         return fail(
             "setup_wizard_state_failed",
             f"تعذر قراءة حالة تشغيل المعالج: {exc}",
+            status=500,
+        )
+    return ok({"run": run.to_dict()})
+
+
+def setup_wizard_router_info(run_id: int):
+    body = _body()
+    try:
+        run = _svc().submit_router_info(
+            tenant_id=_tid(),
+            run_id=run_id,
+            router_name=str(body.get("router_name") or ""),
+            router_type=str(body.get("router_type") or "hotspot"),
+        )
+    except V3NotFound:
+        return fail("not_found", "تشغيل معالج الإعداد غير موجود.", status=404)
+    except V3InvalidState as exc:
+        return _fail_v3(exc, code="invalid_state")
+    except V3Error as exc:
+        return _fail_v3(exc)
+    except Exception as exc:  # noqa: BLE001
+        return fail(
+            "setup_wizard_router_info_failed",
+            f"تعذر حفظ بيانات الراوتر: {exc}",
+            status=500,
+        )
+    return ok({"run": run.to_dict()})
+
+
+def setup_wizard_generate_script(run_id: int):
+    body = _body()
+    endpoint = (
+        body.get("vps_public_endpoint")
+        or os.environ.get("HOBERADIUS_PUBLIC_HOST")
+        or os.environ.get("HOBERADIUS_WG_SERVER_ENDPOINT", "").split(":")[0]
+        or request.host.split(":")[0]
+    )
+    pubkey = body.get("vps_wg_pubkey") or os.environ.get("HOBERADIUS_WG_SERVER_PUBKEY") or ""
+    if not str(endpoint).strip():
+        return fail(
+            "missing_endpoint",
+            "عنوان الخادم العام غير مضبوط.",
+            status=400,
+        )
+    if not str(pubkey).strip():
+        return fail(
+            "missing_server_pubkey",
+            "مفتاح WireGuard العام للخادم غير مضبوط.",
+            status=400,
+        )
+    try:
+        result = _svc().generate_unified_script(
+            tenant_id=_tid(),
+            run_id=run_id,
+            vps_public_endpoint=str(endpoint).strip(),
+            vps_wg_pubkey=str(pubkey).strip(),
+            wg_listen_port=_int_body("wg_listen_port", 13231),
+            vps_endpoint_port=_int_body("vps_endpoint_port", 51820),
+        )
+    except V3NotFound:
+        return fail("not_found", "تشغيل معالج الإعداد غير موجود.", status=404)
+    except V3InvalidState as exc:
+        return _fail_v3(exc, code="invalid_state")
+    except V3Error as exc:
+        return _fail_v3(exc)
+    except Exception as exc:  # noqa: BLE001
+        return fail(
+            "setup_wizard_generate_script_failed",
+            f"تعذر توليد سكربت الربط: {exc}",
+            status=500,
+        )
+    return ok(_public_script_result(result))
+
+
+def setup_wizard_submit_key(run_id: int):
+    body = _body()
+    pasted = str(body.get("pasted_output") or body.get("public_key") or "")
+    try:
+        run = _svc().submit_router_public_key(
+            tenant_id=_tid(),
+            run_id=run_id,
+            pasted_or_key=pasted,
+        )
+    except V3NotFound:
+        return fail("not_found", "تشغيل معالج الإعداد غير موجود.", status=404)
+    except V3InvalidState as exc:
+        return _fail_v3(exc, code="invalid_state")
+    except V3Error as exc:
+        return _fail_v3(exc)
+    except Exception as exc:  # noqa: BLE001
+        return fail(
+            "setup_wizard_submit_key_failed",
+            f"تعذر حفظ مفتاح الراوتر العام: {exc}",
+            status=500,
+        )
+    return ok({"run": run.to_dict()})
+
+
+def setup_wizard_apply_server_peer(run_id: int):
+    try:
+        run = _svc().apply_server_peer(tenant_id=_tid(), run_id=run_id)
+    except V3NotFound:
+        return fail("not_found", "تشغيل معالج الإعداد غير موجود.", status=404)
+    except V3InvalidState as exc:
+        return _fail_v3(exc, code="invalid_state")
+    except V3Error as exc:
+        return _fail_v3(exc)
+    except Exception as exc:  # noqa: BLE001
+        return fail(
+            "setup_wizard_apply_peer_failed",
+            f"تعذر تطبيق peer على الخادم: {exc}",
+            status=500,
+        )
+    return ok({"run": run.to_dict()})
+
+
+def setup_wizard_mark_handshake(run_id: int):
+    try:
+        run = _svc().mark_handshake_observed(tenant_id=_tid(), run_id=run_id)
+    except V3NotFound:
+        return fail("not_found", "تشغيل معالج الإعداد غير موجود.", status=404)
+    except V3InvalidState as exc:
+        return _fail_v3(exc, code="invalid_state")
+    except V3Error as exc:
+        return _fail_v3(exc)
+    except Exception as exc:  # noqa: BLE001
+        return fail(
+            "setup_wizard_mark_handshake_failed",
+            f"تعذر تأكيد اتصال الراوتر: {exc}",
+            status=500,
+        )
+    return ok({"run": run.to_dict()})
+
+
+def setup_wizard_register_router(run_id: int):
+    body = _body()
+    try:
+        run = _svc().register_router_in_inventory(
+            tenant_id=_tid(),
+            run_id=run_id,
+            api_user=str(body.get("api_user") or "admin"),
+            api_password=str(body.get("api_password") or ""),
+        )
+    except V3NotFound:
+        return fail("not_found", "تشغيل معالج الإعداد غير موجود.", status=404)
+    except V3InvalidState as exc:
+        return _fail_v3(exc, code="invalid_state")
+    except V3Error as exc:
+        return _fail_v3(exc)
+    except Exception as exc:  # noqa: BLE001
+        return fail(
+            "setup_wizard_register_failed",
+            f"تعذر تسجيل الراوتر في النظام: {exc}",
             status=500,
         )
     return ok({"run": run.to_dict()})

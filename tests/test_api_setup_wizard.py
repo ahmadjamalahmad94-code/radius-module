@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import sys
 import tempfile
+from types import SimpleNamespace
 
 import pytest
 
@@ -46,6 +47,12 @@ def test_setup_wizard_api_routes_are_registered(client):
     assert "/api/v1/setup-wizard/server-readiness" in routes
     assert "/api/v1/setup-wizard/runs" in routes
     assert "/api/v1/setup-wizard/runs/<int:run_id>/state" in routes
+    assert "/api/v1/setup-wizard/runs/<int:run_id>/router-info" in routes
+    assert "/api/v1/setup-wizard/runs/<int:run_id>/generate-script" in routes
+    assert "/api/v1/setup-wizard/runs/<int:run_id>/submit-key" in routes
+    assert "/api/v1/setup-wizard/runs/<int:run_id>/apply-server-peer" in routes
+    assert "/api/v1/setup-wizard/runs/<int:run_id>/mark-handshake" in routes
+    assert "/api/v1/setup-wizard/runs/<int:run_id>/register" in routes
     assert "/api/v1/setup-wizard/phase-planners" in routes
     assert "/api/v1/setup-wizard/runs/<int:run_id>/phase-plan/<phase>" in routes
     assert "/api/v1/setup-wizard/diagnostics-catalogue" in routes
@@ -72,8 +79,9 @@ def test_setup_wizard_overview_is_read_only_and_arabic(monkeypatch, client):
     assert data["server_readiness"]["status"] == "disabled"
     assert data["safe_operations"]["can_create_run"] is True
     assert data["safe_operations"]["can_apply_router_changes"] is False
-    assert data["safe_operations"]["can_apply_server_peer"] is False
+    assert data["safe_operations"]["can_apply_server_peer"] is True
     assert data["safe_operations"]["can_plan_phases"] is True
+    assert data["safe_operations"]["can_run_lifecycle"] is True
     assert "توليد خطط المراحل" in data["safe_operations"]["reason_ar"]
 
 
@@ -99,6 +107,111 @@ def test_setup_wizard_run_state_not_found_is_arabic(client):
     res = client.get("/api/v1/setup-wizard/runs/999/state", headers=AUTH)
     assert res.status_code == 404
     assert res.get_json()["error"]["message"] == "تشغيل معالج الإعداد غير موجود."
+
+
+def test_setup_wizard_lifecycle_api_calls_v3_service(monkeypatch, client):
+    from app.api.v1 import setup_wizard
+
+    calls = []
+
+    def run(run_id, state):
+        return SimpleNamespace(id=run_id, to_dict=lambda: {"id": run_id, "state": state})
+
+    class FakeService:
+        def submit_router_info(self, **kwargs):
+            calls.append(("router_info", kwargs))
+            return run(kwargs["run_id"], "PLANNING")
+
+        def generate_unified_script(self, **kwargs):
+            calls.append(("generate", kwargs))
+            return {
+                "run": {"id": kwargs["run_id"], "state": "AWAITING_HANDSHAKE"},
+                "script": "/interface wireguard add",
+                "short_code": "abc123",
+                "sha256": "deadbeef",
+                "expires_at": "2026-06-06T00:00:00Z",
+                "radius_secret": "must-not-leak",
+                "api_password": "must-not-leak",
+                "server_radius_provisioning": {"ok": True},
+            }
+
+        def submit_router_public_key(self, **kwargs):
+            calls.append(("submit_key", kwargs))
+            return run(kwargs["run_id"], "APPLYING_SERVER_PEER")
+
+        def apply_server_peer(self, **kwargs):
+            calls.append(("apply_peer", kwargs))
+            return run(kwargs["run_id"], "VERIFYING")
+
+        def mark_handshake_observed(self, **kwargs):
+            calls.append(("mark_handshake", kwargs))
+            return run(kwargs["run_id"], "REGISTERING")
+
+        def register_router_in_inventory(self, **kwargs):
+            calls.append(("register", kwargs))
+            return run(kwargs["run_id"], "COMPLETE")
+
+    fake = FakeService()
+    monkeypatch.setattr(setup_wizard, "_svc", lambda: fake)
+
+    router_info = client.post(
+        "/api/v1/setup-wizard/runs/77/router-info",
+        headers=AUTH,
+        json={"router_name": "main-router", "router_type": "mixed"},
+    )
+    assert router_info.status_code == 200, router_info.get_json()
+
+    generated = client.post(
+        "/api/v1/setup-wizard/runs/77/generate-script",
+        headers=AUTH,
+        json={
+            "vps_public_endpoint": "hoberadius.com",
+            "vps_wg_pubkey": "A" * 43 + "=",
+            "wg_listen_port": 13231,
+            "vps_endpoint_port": 51820,
+        },
+    )
+    assert generated.status_code == 200, generated.get_json()
+    generated_data = generated.get_json()["data"]
+    assert generated_data["script"] == "/interface wireguard add"
+    assert generated_data["script_contains_sensitive_values"] is True
+    assert "radius_secret" not in generated_data
+    assert "api_password" not in generated_data
+
+    submit_key = client.post(
+        "/api/v1/setup-wizard/runs/77/submit-key",
+        headers=AUTH,
+        json={"public_key": "A" * 43 + "="},
+    )
+    apply_peer = client.post(
+        "/api/v1/setup-wizard/runs/77/apply-server-peer",
+        headers=AUTH,
+        json={},
+    )
+    handshake = client.post(
+        "/api/v1/setup-wizard/runs/77/mark-handshake",
+        headers=AUTH,
+        json={},
+    )
+    registered = client.post(
+        "/api/v1/setup-wizard/runs/77/register",
+        headers=AUTH,
+        json={"api_user": "hr-api", "api_password": "secret"},
+    )
+    assert submit_key.status_code == 200
+    assert apply_peer.status_code == 200
+    assert handshake.status_code == 200
+    assert registered.status_code == 200
+    assert [name for name, _ in calls] == [
+        "router_info",
+        "generate",
+        "submit_key",
+        "apply_peer",
+        "mark_handshake",
+        "register",
+    ]
+    assert calls[0][1]["router_name"] == "main-router"
+    assert calls[-1][1]["api_user"] == "hr-api"
 
 
 def test_setup_wizard_phase_planners_are_available(client):
