@@ -319,7 +319,16 @@ def payment_collection_requests_get(request_id: int):
     row = PaymentRequestRepository().get(_tid(), request_id)
     if not row:
         return fail("not_found", "طلب الدفع غير موجود.", status=404)
-    return ok({"request": _request_payload(row)})
+    proofs = PaymentProofRepository().list_for_request(request_id)
+    apply_attempts = PaymentServiceApplyRepository().list_for_request(
+        tenant_id=_tid(),
+        request_id=request_id,
+    )
+    return ok({
+        "request": _request_payload(row),
+        "proofs": [_proof_payload(proof) for proof in proofs],
+        "apply_attempts": [_apply_attempt_payload(attempt) for attempt in apply_attempts],
+    })
 
 
 def payment_collection_request_instructions(request_id: int):
