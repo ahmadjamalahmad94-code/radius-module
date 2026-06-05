@@ -56,6 +56,8 @@ def test_setup_wizard_api_routes_are_registered(client):
     assert "/api/v1/setup-wizard/phase-planners" in routes
     assert "/api/v1/setup-wizard/runs/<int:run_id>/phase-plan/<phase>" in routes
     assert "/api/v1/setup-wizard/diagnostics-catalogue" in routes
+    assert "/api/v1/setup-wizard/router-services/catalogue" in routes
+    assert "/api/v1/setup-wizard/routers/<int:router_id>/services/status" in routes
 
 
 def test_setup_wizard_overview_is_read_only_and_arabic(monkeypatch, client):
@@ -291,6 +293,89 @@ def test_setup_wizard_diagnostics_catalogue_is_arabic(client):
     codes = {item["code"] for item in catalogue}
     assert "vpn_not_handshaking" in codes
     assert any(item["ar_explanation"] for item in catalogue)
+
+
+def test_setup_wizard_router_services_catalogue_is_arabic(client):
+    res = client.get("/api/v1/setup-wizard/router-services/catalogue", headers=AUTH)
+    assert res.status_code == 200, res.get_json()
+    services = res.get_json()["data"]["services"]
+    keys = {item["key"] for item in services}
+    assert keys == {
+        "hotspot",
+        "broadband",
+        "block-sites",
+        "open-sites",
+        "public-ip",
+        "remote-access",
+    }
+    assert {item["title_ar"] for item in services} >= {
+        "بوابة الدخول",
+        "اشتراكات PPPoE",
+        "حجب المواقع",
+        "المواقع المفتوحة",
+        "تغيير عنوان الخروج",
+        "الدخول الفني الآمن",
+    }
+    assert all(item["subtitle_ar"] for item in services)
+
+
+def test_setup_wizard_router_services_status_wraps_web_probe(monkeypatch, client):
+    from flask import jsonify
+
+    from app.radius.routes import setup_wizard_v3
+
+    def fake_status(router_id):
+        assert router_id == 7
+        return jsonify(
+            {
+                "ok": True,
+                "services": {
+                    "hotspot": True,
+                    "broadband": False,
+                    "block-sites": None,
+                },
+            }
+        )
+
+    monkeypatch.setattr(
+        setup_wizard_v3,
+        "setup_wizard_v3_router_services_status",
+        fake_status,
+    )
+
+    res = client.get("/api/v1/setup-wizard/routers/7/services/status", headers=AUTH)
+    assert res.status_code == 200, res.get_json()
+    data = res.get_json()["data"]
+    assert data["router_id"] == 7
+    by_key = {item["key"]: item for item in data["services"]}
+    assert by_key["hotspot"]["enabled"] is True
+    assert by_key["hotspot"]["status_ar"] == "مفعّلة"
+    assert by_key["broadband"]["enabled"] is False
+    assert by_key["broadband"]["status_ar"] == "غير مفعّلة"
+    assert by_key["block-sites"]["enabled"] is None
+    assert by_key["block-sites"]["status_ar"] == "غير معروف"
+
+
+def test_setup_wizard_router_services_status_failure_is_arabic(monkeypatch, client):
+    from flask import jsonify
+
+    from app.radius.routes import setup_wizard_v3
+
+    def fake_status(_router_id):
+        return jsonify({"ok": False, "code": "probe_failed", "error": "boom"}), 502
+
+    monkeypatch.setattr(
+        setup_wizard_v3,
+        "setup_wizard_v3_router_services_status",
+        fake_status,
+    )
+
+    res = client.get("/api/v1/setup-wizard/routers/9/services/status", headers=AUTH)
+    assert res.status_code == 502, res.get_json()
+    error = res.get_json()["error"]
+    assert error["code"] == "probe_failed"
+    assert error["message"] == "تعذّرت قراءة حالة خدمات الراوتر."
+    assert error["details"]["router_id"] == 9
 
 
 def test_setup_wizard_api_requires_token(client):

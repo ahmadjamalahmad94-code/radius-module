@@ -134,6 +134,18 @@ def register(bp: Blueprint) -> None:
         require_api_token(setup_wizard_diagnostics_catalogue),
         methods=["GET"],
     )
+    bp.add_url_rule(
+        "/setup-wizard/router-services/catalogue",
+        "setup_wizard_router_services_catalogue",
+        require_api_token(setup_wizard_router_services_catalogue),
+        methods=["GET"],
+    )
+    bp.add_url_rule(
+        "/setup-wizard/routers/<int:router_id>/services/status",
+        "setup_wizard_router_services_status",
+        require_api_token(setup_wizard_router_services_status),
+        methods=["GET"],
+    )
 
 
 def _tid() -> int:
@@ -214,6 +226,96 @@ def _phase_catalogue() -> list[dict[str, Any]]:
             "required_inputs": ["service_key"],
         },
     ]
+
+
+_ROUTER_SERVICE_TITLE_OVERRIDES = {
+    "hotspot": "بوابة الدخول",
+    "broadband": "اشتراكات PPPoE",
+    "block-sites": "حجب المواقع",
+    "open-sites": "المواقع المفتوحة",
+    "public-ip": "تغيير عنوان الخروج",
+    "remote-access": "الدخول الفني الآمن",
+}
+
+_ROUTER_SERVICE_STATUS_AR = {
+    "active": "مفعّلة",
+    "inactive": "غير مفعّلة",
+    "unknown": "غير معروف",
+}
+
+
+def _router_service_cards() -> list[dict[str, Any]]:
+    from ...radius.routes.setup_wizard_v3 import ROUTER_SERVICE_CARDS
+
+    cards: list[dict[str, Any]] = []
+    for item in ROUTER_SERVICE_CARDS:
+        key = str(item.get("key") or "")
+        cards.append(
+            {
+                "key": key,
+                "title_ar": _ROUTER_SERVICE_TITLE_OVERRIDES.get(
+                    key, str(item.get("title_ar") or key)
+                ),
+                "subtitle_ar": str(item.get("subtitle_ar") or ""),
+                "icon": str(item.get("icon") or ""),
+                "color": str(item.get("color") or ""),
+                "phases_count": int(item.get("phases_count") or 0),
+            }
+        )
+    return cards
+
+
+def _service_status(value: Any) -> str:
+    if value is True:
+        return "active"
+    if value is False:
+        return "inactive"
+    return "unknown"
+
+
+def _router_services_status_items(raw: Any) -> list[dict[str, Any]]:
+    values = raw if isinstance(raw, dict) else {}
+    cards = _router_service_cards()
+    ordered = [card["key"] for card in cards]
+    for key in values:
+        text_key = str(key)
+        if text_key not in ordered:
+            ordered.append(text_key)
+
+    items: list[dict[str, Any]] = []
+    title_by_key = {card["key"]: card["title_ar"] for card in cards}
+    for key in ordered:
+        value = values.get(key)
+        status = _service_status(value)
+        items.append(
+            {
+                "key": key,
+                "title_ar": title_by_key.get(key, key),
+                "enabled": value if value in (True, False) else None,
+                "status": status,
+                "status_ar": _ROUTER_SERVICE_STATUS_AR[status],
+            }
+        )
+    return items
+
+
+def _json_response_payload(response: Any) -> tuple[dict[str, Any], int]:
+    status = 200
+    payload_source = response
+    if isinstance(response, tuple):
+        payload_source = response[0]
+        if len(response) > 1:
+            try:
+                status = int(response[1])
+            except (TypeError, ValueError):
+                status = 200
+    if hasattr(payload_source, "status_code"):
+        status = int(getattr(payload_source, "status_code", status) or status)
+    if hasattr(payload_source, "get_json"):
+        data = payload_source.get_json(silent=True) or {}
+    else:
+        data = payload_source if isinstance(payload_source, dict) else {}
+    return (data if isinstance(data, dict) else {}, status)
 
 
 def _diagnostics_for_codes(codes: list[str] | tuple[str, ...]) -> list[dict[str, Any]]:
@@ -637,3 +739,35 @@ def setup_wizard_diagnostics_catalogue():
             }
         )
     return ok({"catalogue": catalogue})
+
+
+def setup_wizard_router_services_catalogue():
+    return ok({"services": _router_service_cards()})
+
+
+def setup_wizard_router_services_status(router_id: int):
+    try:
+        from ...radius.routes import setup_wizard_v3 as web_wizard
+
+        web_response = web_wizard.setup_wizard_v3_router_services_status(router_id)
+        payload, status_code = _json_response_payload(web_response)
+    except Exception as exc:  # noqa: BLE001
+        return fail(
+            "router_services_status_failed",
+            f"تعذّرت قراءة حالة خدمات الراوتر: {exc}",
+            status=500,
+        )
+
+    services = _router_services_status_items(payload.get("services"))
+    if payload.get("ok") is True:
+        return ok({"router_id": int(router_id), "services": services})
+
+    message = str(payload.get("error") or "تعذّرت قراءة حالة خدمات الراوتر.")
+    if not any("\u0600" <= ch <= "\u06ff" for ch in message):
+        message = "تعذّرت قراءة حالة خدمات الراوتر."
+    return fail(
+        str(payload.get("code") or "router_services_status_failed"),
+        message,
+        status=status_code if status_code >= 400 else 502,
+        details={"router_id": int(router_id), "services": services},
+    )
