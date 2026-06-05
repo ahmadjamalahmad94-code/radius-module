@@ -18,13 +18,14 @@ def register_v1(parent: Blueprint) -> None:
         operational_reports,
         payments, pools, print_templates, profiles, recycle_bin, reports, router_alerts, router_loops, router_metrics, service_requests, services, sessions,
         settings, share_groups, system, tenants, tickets, tokens, tools, vouchers, webhooks,
-        setup_wizard,
+        setup_wizard, subscriber_portal,
     )
     health.register(v1)
     accounts.register(v1)
     cards.register(v1)
     card_users.register(v1)
     hotspot_cards.register(v1)
+    subscriber_portal.register(v1)
     card_checker.register(v1)
     communications.register(v1)
     customer_portals.register(v1)
