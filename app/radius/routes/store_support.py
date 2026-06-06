@@ -98,6 +98,32 @@ def _chat() -> StoreChatService:
     return StoreChatService(tenant_id=_tid())
 
 
+def _whatsapp_configured(tenant_id: int) -> bool:
+    """هل ضُبط «رقم واتساب الدعم» (SUPPORT_WHATSAPP) في أي تصميم صفحة
+    دخول محفوظ؟ يُحقن الرقم في store.html عند النشر فيظهر زر واتساب
+    للزبائن — إن كان فارغًا في كل التصاميم يختفي الزر، فنُظهر تلميحًا
+    للمدير ليضبطه من المصمّم. أفضل-جهد: أي خطأ ⇒ True (لا نزعج بتلميح
+    خاطئ)."""
+    try:
+        import json
+        import re as _re
+        from ..db.connection import db
+        rows = db().execute(
+            "SELECT variables_json FROM hotspot_designs WHERE tenant_id=?",
+            (int(tenant_id),),
+        ).fetchall()
+        for r in rows:
+            try:
+                v = json.loads(r["variables_json"] or "{}")
+            except (TypeError, ValueError):
+                v = {}
+            if _re.sub(r"\D", "", str(v.get("SUPPORT_WHATSAPP") or "")):
+                return True
+        return False
+    except Exception:  # noqa: BLE001 — التلميح لا يكسر الصفحة
+        return True
+
+
 def _ordered(requests: list[dict]) -> list[dict]:
     """المعلّقات أولًا (الأقدم أولًا لتُعالج بالترتيب) ثم المحسوم (الأحدث أولًا)."""
     pending = [r for r in requests if (r.get("status") or "") == "pending"]
@@ -154,6 +180,7 @@ def store_support():
         payment_methods=deposits_svc.list_payment_methods(),
         deposit_pending_count=deposits_svc.pending_count(),
         withdrawal_pending_count=withdrawals_svc.pending_count(),
+        whatsapp_configured=_whatsapp_configured(_tid()),
     )
 
 

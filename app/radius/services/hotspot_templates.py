@@ -1316,8 +1316,15 @@ def _inject_addons(html: str, safe: dict[str, str]) -> str:
     تملك نسخة أصلية منهما (تُكشف بصنف التفعيل hr-store-on /
     hr-saved-on في القالب) فلا يتكرّر الحقن."""
     blocks = ""
-    if (safe.get("STORE_ENABLED") == "yes"
-            and "hr-store-on" not in html):
+    if safe.get("STORE_ENABLED") == "yes":
+        # ⚠️ إصلاح «زر المتجر يختفي على الراوتر»: نحقن زرًّا ثابتًا
+        # (HTML خالص بلا اعتماد على JS القالب) دائمًا عند تفعيل المتجر —
+        # حتى للقوالب ذات الزر الأصلي (hr-store-on). سبب الاختفاء أن
+        # الزر الأصلي مرتبط بـJS القالب، فإن تعطّل سكربت القالب على
+        # الراوتر (لأي سبب) اختفى الزر؛ الزر الثابت المحقون لا يعتمد على
+        # أي سكربت فيظهر دائمًا. في القوالب السليمة قد يظهر مدخلان
+        # للمتجر (أعلى + عائم سفلي) وكلاهما يعمل — وجودٌ مضمون أهمّ من
+        # تكرار نادر.
         blocks += _store_button_html(safe.get("STORE_URL", "#"))
     hide_pw = safe.get("PASSWORD_FIELD") == "no"
     trial = safe.get("TRIAL_ENABLED") == "yes"
