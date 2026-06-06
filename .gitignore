@@ -44,6 +44,13 @@ docs/*
 !docs/ecards/*.md
 !app/radius/core/
 !app/radius/core/customer_roadmap.py
+# Same 4-char-folder trap hit app/radius/auth/ — `auth` matches `????/`, so
+# new modules created there (e.g. ui_permissions.py, the RBAC-UI layer that
+# powers the sidebar's can()/perm_for_endpoint()) were silently never
+# committed and went MISSING from production builds, freezing the whole
+# sidebar even for the super admin. Keep the auth package fully trackable.
+!app/radius/auth/
+!app/radius/auth/*.py
 
 # Sibling-automation working dirs (not part of this repo)
 .codex-recovery/
