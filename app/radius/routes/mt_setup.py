@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import os
 from datetime import datetime, timezone
+from pathlib import Path
 
 from flask import (
     Blueprint, abort, flash, g, redirect, render_template, request,
@@ -95,6 +96,135 @@ def register_mt_setup_routes(bp: Blueprint) -> None:
         "/mt/<int:nas_id>/script",
         "mt_setup_script", mt_setup_script, methods=["GET"],
     )
+
+
+# ─── Management-tunnel status (محسوبة، صادقة) ────────────────────
+#
+# عمود nas_devices.management_tunnel_status (migration 092) عمود ساكن
+# لا يكتبه أي شيء في كامل قاعدة الكود — يبقى على قيمته الافتراضية
+# 'not_configured' أبداً، فكانت الشارة القديمة تُظهر دائماً دِرعاً
+# رمادياً بتلميح مبهم («لا نفق إدارة مُعدّ»). لا نقرأ هنا handshake
+# الـWireGuard الحيّ عمداً: لوحة العميل المباعة تُبقي مُشغّل أوامر
+# الـshell معطّلاً افتراضياً (DisabledCommandRunner) ولا نُخزّن أي
+# أسرار CHR/نفق فيها. بدلاً من ذلك نشتقّ حالة صادقة وقابلة للتنفيذ من
+# الإشارات التي تملكها اللوحة أصلاً:
+#
+#   1) last_check_status — فحص وصول TCP فعلي يُرسَل إلى عنوان الراوتر
+#      داخل النفق على منفذ الـAPI (devices_test). إثبات شامل أن نفق
+#      الإدارة يحمل حركة فعلاً.
+#   2) ملف الـpeer تحت wg-peers.d — يُثبت أن peer أُنشئ لهذا الراوتر
+#      (AllowedIPs = ‎/32 لعنوان الراوتر في النفق). مفاتيح عامة فقط؛
+#      لا يغادر أي سرّ المضيف.
+#   3) دورة حياة التجهيز (router_provisioning_registry).
+
+
+def _provisioned_peer_ips() -> "set[str] | None":
+    """عناوين النفق ‎/32 التي لها ملف peer لـWireGuard.
+
+    تُعيد None حين يتعذّر قراءة مجلد الـpeers (مثلاً جهاز تطوير بلا
+    wg-peers.d) كي لا يدّعي المُستدعي زوراً «لا يوجد peer».
+    """
+    try:
+        peers_dir = Path(os.environ.get(wpm.PEERS_DIR_ENV) or wpm.PEERS_DIR_DEFAULT)
+        if not peers_dir.is_dir():
+            return None
+        ips: "set[str]" = set()
+        for child in sorted(peers_dir.iterdir()):
+            if not (child.is_file() and child.suffix == ".conf"
+                    and not child.name.startswith(".")):
+                continue
+            try:
+                parsed = wpm.parse_peer_file(child)
+            except OSError:
+                continue
+            for piece in str(parsed.get("AllowedIPs") or "").split(","):
+                piece = piece.strip()
+                if piece:
+                    ips.add(piece.split("/")[0])
+        return ips
+    except Exception:
+        return None
+
+
+_CHECK_STATUS_AR = {
+    "reachable":   "ناجح",
+    "timeout":     "انتهت المهلة",
+    "unreachable": "تعذّر الاتصال",
+    "unknown":     "غير معروف",
+}
+
+
+def _derive_mgmt_status(item: dict, provisioned_ips: "set[str] | None") -> dict:
+    """نموذج عرض صادق لشارة نفق الإدارة لصفّ راوتر واحد.
+
+    لا يُعيد أبداً «غير محدّد» المبهمة؛ كل حالة تحمل سبباً عربياً
+    واضحاً يستطيع المشغّل التصرّف بناءً عليه.
+    """
+    ros = str(item.get("ros_version") or "")
+    # نوع النفق المتوقّع حسب إصدار RouterOS (مرآة recommended_management_tunnel).
+    tunnel_label = ("WireGuard" if ros.startswith("7")
+                    else ("SSTP" if ros.startswith("6") else "الإدارة"))
+
+    check = str(item.get("last_check_status") or "").strip().lower()
+    at = str(item.get("last_check_at") or "").strip()
+    lifecycle = str(item.get("lifecycle_state") or "")
+    addr = str(item.get("address") or "").strip()
+    has_peer = ((addr in provisioned_ips)
+                if (provisioned_ips is not None and addr) else None)
+
+    # 1) أقوى إشارة: فحص الوصول الفعلي عبر النفق.
+    if check == "reachable":
+        return {
+            "state": "active", "color": "green", "label": "نفق فعّال",
+            "reason": ("نفق إدارة %s فعّال — الراوتر يُجاب عبر النفق%s."
+                       % (tunnel_label, (" (آخر فحص ناجح — " + at + ")") if at else " (آخر فحص ناجح)")),
+        }
+    if check in ("timeout", "unreachable"):
+        return {
+            "state": "down", "color": "red", "label": "النفق متوقف",
+            "reason": ("تعذّر الوصول إلى الراوتر عبر نفق %s (%s%s). تأكّد أن الراوتر يعمل وأن النفق متصل."
+                       % (tunnel_label, _CHECK_STATUS_AR.get(check, check), (" في " + at) if at else "")),
+        }
+
+    # 2) فشل التجهيز.
+    if lifecycle == "failed":
+        return {
+            "state": "down", "color": "red", "label": "فشل التجهيز",
+            "reason": (item.get("failure_reason")
+                       or "فشل تجهيز نفق الإدارة. أعد تشغيل معالج التجهيز."),
+        }
+
+    # 3) التجهيز ما زال جارياً.
+    if lifecycle in ("reserved", "waiting_router_key", "peer_ready",
+                     "vpn_verified", "radius_pending", "api_pending"):
+        return {
+            "state": "pending", "color": "amber", "label": "قيد الإعداد",
+            "reason": ("نفق %s قيد الإعداد (%s)."
+                       % (tunnel_label, item.get("lifecycle_label_ar") or lifecycle)),
+        }
+
+    # 4) أُنشئ peer لكن لم يُختبر الوصول بعد.
+    if has_peer:
+        return {
+            "state": "pending", "color": "amber", "label": "بانتظار أول فحص",
+            "reason": ("أُنشئ peer نفق %s لهذا الراوتر، لكن لم يُختبر الوصول بعد — "
+                       "اضغط «اختبار الاتصال» في قائمة الأجهزة." % tunnel_label),
+        }
+
+    # 5) لم يُنشأ peer إطلاقاً (والقراءة متاحة).
+    if has_peer is False:
+        return {
+            "state": "not_setup", "color": "grey", "label": "لم يُنشأ نفق",
+            "reason": ("لم يُنشأ peer نفق %s لهذا الراوتر بعد. شغّل معالج التجهيز لإنشاء النفق."
+                       % tunnel_label),
+        }
+
+    # 6) تعذّر تحديد وجود peer (لا يمكن قراءة wg-peers.d) ولا يوجد فحص.
+    return {
+        "state": "unknown", "color": "grey", "label": "لم يُختبر بعد",
+        "reason": ("لم يُختبر نفق %s بعد — اضغط «اختبار الاتصال» في قائمة الأجهزة "
+                   "لقياس الوصول عبر النفق." % tunnel_label),
+    }
 
 
 def mt_operations():
@@ -197,6 +327,11 @@ def mt_operations():
             "traffic_mode": row["traffic_mode"] or "disabled",
             "traffic_enabled": bool(row["traffic_enabled"]),
         })
+    # شارة نفق الإدارة المحسوبة — تُقرأ ملفات الـpeers مرّة واحدة لكل
+    # صفحة (مسح مجلد واحد، بلا shell)، ثم تُشتقّ الحالة لكل صفّ.
+    provisioned_ips = _provisioned_peer_ips()
+    for it in items:
+        it["mgmt"] = _derive_mgmt_status(it, provisioned_ips)
     provisioning_count = sum(1 for it in items if it["is_provisioning"])
     # O2 — pass an api_token so the per-row counter poll JS can
     # authenticate against /api/v1/mikrotik/<id>/counters without
