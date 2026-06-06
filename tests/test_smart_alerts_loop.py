@@ -150,7 +150,12 @@ def test_loop_setup_page_renders(app, client):
 
 
 def test_my_services_tab_has_loop_tracking_tile(app, client):
-    """The «خدماتي» tab shows a «تتبّع اللوب» tile that opens the loop page."""
+    """The «خدماتي» tab shows a «تتبّع اللوب» tile that opens the loop page.
+
+    تصميم «صفحة خدمة واحدة لكل خدمة» (يونيو 2026): بطاقة «تتبّع اللوب» صارت
+    تفتح صفحتها الواحدة المخصّصة عبر port-services?slug=loop_detect (نفس
+    سجلّ/مسارات port_script_services) بدل صفحة alerts/loop-setup المشتركة —
+    زرّ واحد = صفحة خدمة واحدة، مطابقة لبقية الخدمات."""
     with app.app_context():
         _seed_router(77, name="راوتر الفرع")
     _login(client)
@@ -158,6 +163,7 @@ def test_my_services_tab_has_loop_tracking_tile(app, client):
     assert "data-rh-loop-tile" in html                              # the tile
     assert "تتبّع اللوب" in html                                     # title
     assert "كشف اللوب عبر مجس DHCP على منافذ الزبائن" in html        # description
-    assert "/admin/radius/alerts/loop-setup" in html                # links to loop page
+    # links to its own dedicated single-service page (loop_detect), per-router
+    assert "/admin/radius/mt/77/port-services?slug=loop_detect" in html
     # no probes for this router yet → غير مفعّل badge
     assert "غير مفعّل" in html
