@@ -55,3 +55,7 @@ docs/*
 *.sqlite3
 node_modules/
 .DS_Store
+
+# Runtime user uploads (receipts, QR, chat images, branding logos) — never
+# in git; written at runtime by store/settings under static/uploads.
+app/static/uploads/
