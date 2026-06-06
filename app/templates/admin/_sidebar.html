@@ -26,8 +26,22 @@
        to this endpoint? (unmapped endpoints = open to everyone)
      • mode "hide"   — non-permitted items vanish entirely.
      • mode "freeze" — non-permitted items render as locked, dimmed,
-       non-clickable rows with a hub-hint «ليست ضمن صلاحياتك». #}
-{%- set _rbac_ui = (can is defined and perm_for_endpoint is defined) -%}
+       non-clickable rows with a hub-hint «ليست ضمن صلاحياتك».
+
+   FAIL-OPEN FOR SUPER ADMIN (fix/super-admin-sidebar-unlock):
+   The super admin must ALWAYS see every section — freezing the whole
+   sidebar for a super admin is never correct. We read the super flag
+   straight from the session here (injected `is_super_admin`, with a
+   `session.get(...)` fallback) instead of trusting can() to resolve it:
+   if the RBAC layer ever fails silently (e.g. the _ui_can wrapper
+   swallows an import error and returns False for every key) the super
+   would otherwise be frozen out of everything. By forcing _rbac_ui off
+   for the super, section_can()/nav_can() return "open" for all items and
+   no frozen rows can render. Non-super admins keep the exact gating
+   behaviour below. When the whole RBAC layer is absent, _rbac_ui is also
+   false → everything visible (historical fail-open), unchanged. #}
+{%- set _is_super = (is_super_admin|default(false)) or (session is defined and session.get('is_super_admin')) -%}
+{%- set _rbac_ui = (can is defined and perm_for_endpoint is defined) and not _is_super -%}
 {%- set _ui_mode = ui_unauth_mode() if (_rbac_ui and ui_unauth_mode is defined) else 'freeze' -%}
 
 {%- macro nav_can(endpoint, perm=None) -%}
