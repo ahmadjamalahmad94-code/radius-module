@@ -140,23 +140,28 @@
 {# ═══════════ Unified hero: customer identity + action bar + KPI strip ═══
    Title = customer name; subtitle carries id + status + mobile + created.
    Quick actions (recharge / portal password) live as hero buttons that open
-   floating fcw modals; the marketplace purchase keeps its own rich section. #}
+   floating fcw modals; the marketplace purchase keeps its own rich section.
+   NOTE: the action bar is built with a {% set %} block (captured as safe
+   Markup) rather than '+'-concatenating  _('…')  into an HTML string — the
+   latter escapes the surrounding <button> tags because _() returns Markup. #}
+{% set hero_actions %}
+  <button type="button" class="hub-btn hub-btn--primary" data-fcw-open="u360-recharge">
+    <i class="fa-solid fa-wallet"></i> {{ _('شحن الرصيد') }}
+  </button>
+  <button type="button" class="hub-btn hub-btn--secondary" data-fcw-open="u360-password">
+    <i class="fa-solid fa-key"></i> {{ _('كلمة مرور البوابة') }}
+  </button>
+  <a class="hub-btn hub-btn--ghost" href="{{ url_for('radius.card_users_list') }}">
+    <i class="fa-solid fa-arrow-right"></i> {{ _('القائمة') }}
+  </a>
+{% endset %}
 {% call hub.megahero(
   user.display_name or _('مستخدم بدون اسم'),
   subtitle=_("ملف العميل #") ~ user.id ~ " · " ~ status_ar
            ~ ((" · " ~ user.mobile) if user.mobile else "")
            ~ ((" · " ~ _("أُنشئ") ~ " " ~ (user.created_at|date_local)) if user.created_at else ""),
   icon="user-tag",
-  actions_html='
-    <button type="button" class="hub-btn hub-btn--primary" data-fcw-open="u360-recharge">
-      <i class="fa-solid fa-wallet"></i> ' + _('شحن الرصيد') + '
-    </button>
-    <button type="button" class="hub-btn hub-btn--secondary" data-fcw-open="u360-password">
-      <i class="fa-solid fa-key"></i> ' + _('كلمة مرور البوابة') + '
-    </button>
-    <a class="hub-btn hub-btn--ghost" href="' + url_for('radius.card_users_list') + '">
-      <i class="fa-solid fa-arrow-right"></i> ' + _('القائمة') + '
-    </a>',
+  actions_html=hero_actions,
   kpis=[
     {'label': _('رصيد المحفظة'), 'value': balance|money,                'icon': 'wallet',        'variant': 'green'},
     {'label': _('إجمالي المشتريات'),'value': card360.purchases|length,   'icon': 'cart-shopping', 'variant': 'blue',  'sub': _('عملية شراء')},
