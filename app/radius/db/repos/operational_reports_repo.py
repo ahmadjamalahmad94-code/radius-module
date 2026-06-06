@@ -6,11 +6,13 @@ from typing import Any
 
 from ..connection import db
 from ..helpers import row_to_dict
+from ...services.login_events import fetch_login_events
 
 
 REPORT_SLUGS = {
     "sessions",
     "failed-logins",
+    "login-states",
     "login-status",
     "mac-history",
     "profile-changes",
@@ -19,6 +21,10 @@ REPORT_SLUGS = {
     "manager-events",
     "manager-login-status",
     "user-events",
+    "speed-failures",
+    "used-cards",
+    "balance-movements",
+    "cash-transactions",
 }
 
 _SENSITIVE_KEYS = {"password", "pass", "secret", "token", "token_hash", "api_key"}
@@ -44,6 +50,13 @@ def _row(row) -> dict:
 
 def _rows(sql: str, values: list[Any]) -> list[dict]:
     return [_row(r) for r in db().execute(sql, values).fetchall()]
+
+
+def _optional_rows(sql: str, values: list[Any]) -> list[dict]:
+    try:
+        return _rows(sql, values)
+    except Exception:
+        return []
 
 
 def _redact_value(value: Any) -> Any:
@@ -124,6 +137,9 @@ def list_report(tenant_id: int, slug: str, *, query: str = "",
         sql += " ORDER BY id DESC LIMIT ? OFFSET ?"
         vals.extend([limit, offset])
         items = _rows(sql, vals)
+    elif slug == "login-states":
+        data = fetch_login_events(tenant_id, q=query, limit=limit + offset)
+        items = list(data.get("rows") or [])[offset:offset + limit]
     elif slug == "login-status":
         sql = """
             SELECT username, last_login_at, last_seen_at, status, expire_at, online_count
@@ -212,7 +228,7 @@ def list_report(tenant_id: int, slug: str, *, query: str = "",
         sql += " ORDER BY COALESCE(a.last_login_at, '') DESC LIMIT ? OFFSET ?"
         vals.extend([limit, offset])
         items = _rows(sql, vals)
-    else:  # user-events
+    elif slug == "user-events":
         items = _sanitize_audit(_audit_rows(
             tenant_id,
             "target_type = 'user'",
@@ -220,6 +236,48 @@ def list_report(tenant_id: int, slug: str, *, query: str = "",
             limit=limit,
             offset=offset,
         ))
+    if slug == "speed-failures":
+        items = _sanitize_audit(_audit_rows(
+            tenant_id,
+            "result_status = 'failed' "
+            "AND (action LIKE '%speed%' OR action LIKE '%profile%' OR action = 'bulk_set_speeds')",
+            query=query,
+            limit=limit,
+            offset=offset,
+            q_cols=("actor", "action", "target_id", "error_message"),
+        ))
+    elif slug == "used-cards":
+        sql = """
+            SELECT c.id, c.username, c.used_by_mac, c.first_used_at,
+                   c.expire_at, c.revoked, c.plan_id, COALESCE(p.name, '') AS plan_name
+            FROM cards c
+            LEFT JOIN access_plans p ON p.tenant_id = c.tenant_id AND p.id = c.plan_id
+            WHERE c.tenant_id = ? AND c.used = 1
+        """
+        vals = [tenant_id]
+        if query:
+            sql += " AND (c.username LIKE ? OR c.used_by_mac LIKE ? OR p.name LIKE ?)"
+            vals.extend([f"%{query}%", f"%{query}%", f"%{query}%"])
+        sql += " ORDER BY COALESCE(c.first_used_at, '') DESC LIMIT ? OFFSET ?"
+        vals.extend([limit, offset])
+        items = _rows(sql, vals)
+    elif slug == "balance-movements":
+        items = _balance_movements(tenant_id, query=query, limit=limit, offset=offset)
+    elif slug == "cash-transactions":
+        sql = """
+            SELECT id, created_at, username, amount, currency, method, status,
+                   plan_price, effective_price, discount_amount, discount_reason,
+                   earned_minutes, created_by, notes
+            FROM payment_transactions
+            WHERE tenant_id = ?
+        """
+        vals = [tenant_id]
+        if query:
+            sql += " AND (username LIKE ? OR created_by LIKE ? OR method LIKE ? OR status LIKE ?)"
+            vals.extend([f"%{query}%", f"%{query}%", f"%{query}%", f"%{query}%"])
+        sql += " ORDER BY id DESC LIMIT ? OFFSET ?"
+        vals.extend([limit, offset])
+        items = _rows(sql, vals)
 
     return {
         "slug": slug,
@@ -232,17 +290,59 @@ def list_report(tenant_id: int, slug: str, *, query: str = "",
 
 
 def _audit_rows(tenant_id: int, predicate: str, *, query: str,
-                limit: int, offset: int) -> list[dict]:
+                limit: int, offset: int,
+                q_cols: tuple[str, ...] = ("actor", "action", "target_id")) -> list[dict]:
     sql = f"""
         SELECT id, actor, action, target_type, target_id, payload_json,
-               ip_address, user_agent, created_at
+               ip_address, user_agent, result_status, error_message, created_at
         FROM audit_log
         WHERE tenant_id = ? AND {predicate}
     """
     vals: list[Any] = [tenant_id]
     if query:
-        sql += " AND (actor LIKE ? OR action LIKE ? OR target_id LIKE ?)"
-        vals.extend([f"%{query}%", f"%{query}%", f"%{query}%"])
+        sql += " AND (" + " OR ".join(f"{col} LIKE ?" for col in q_cols) + ")"
+        vals.extend([f"%{query}%"] * len(q_cols))
     sql += " ORDER BY id DESC LIMIT ? OFFSET ?"
     vals.extend([limit, offset])
     return _rows(sql, vals)
+
+
+def _balance_movements(tenant_id: int, *, query: str, limit: int, offset: int) -> list[dict]:
+    items: list[dict] = []
+    general_sql = """
+        SELECT created_at, entry_type, direction, amount, currency, username,
+               operator, admin_id, source_type, status, notes,
+               'general' AS scope
+        FROM accounting_ledger_entries
+        WHERE tenant_id = ?
+    """
+    general_vals: list[Any] = [tenant_id]
+    if query:
+        general_sql += (
+            " AND (username LIKE ? OR operator LIKE ? OR entry_type LIKE ? "
+            "OR source_type LIKE ? OR status LIKE ?)"
+        )
+        general_vals.extend([f"%{query}%"] * 5)
+    general_sql += " ORDER BY id DESC LIMIT ? OFFSET ?"
+    general_vals.extend([limit, offset])
+    items.extend(_optional_rows(general_sql, general_vals))
+
+    distributor_sql = """
+        SELECT dl.created_at, dl.entry_type, dl.direction, dl.amount, dl.currency,
+               COALESCE(d.name, '') AS username, dl.created_by AS operator,
+               dl.distributor_id AS admin_id, 'distributor' AS source_type,
+               '' AS status, dl.notes, 'distributor' AS scope
+        FROM distributor_ledger_entries dl
+        LEFT JOIN distributors d ON d.tenant_id = dl.tenant_id AND d.id = dl.distributor_id
+        WHERE dl.tenant_id = ?
+    """
+    distributor_vals: list[Any] = [tenant_id]
+    if query:
+        distributor_sql += " AND (d.name LIKE ? OR dl.entry_type LIKE ?)"
+        distributor_vals.extend([f"%{query}%"] * 2)
+    distributor_sql += " ORDER BY dl.id DESC LIMIT ? OFFSET ?"
+    distributor_vals.extend([limit, offset])
+    items.extend(_optional_rows(distributor_sql, distributor_vals))
+
+    items.sort(key=lambda row: str(row.get("created_at") or ""), reverse=True)
+    return items[:limit]

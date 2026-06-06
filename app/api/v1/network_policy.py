@@ -7,10 +7,9 @@ Three sub-services share one URL tree:
   /v1/network-policy/web-block/policies                …
   /v1/network-policy/walled-garden/policies            …
 
-Each supports CRUD + a `/preview` endpoint that returns the
-rendered RouterOS script bodies (forward + rollback) plus a
-plan summary. Apply is intentionally **not** wired here —
-that's Phase 5; this layer is dry-run only.
+Each supports CRUD + preview, and mirrors the operational web
+surface with guarded apply, rollback, change history, script
+download, and duplicate actions.
 
 Authorisation flows through `require_api_token`, the same
 guard the rest of the v1 API uses. Tenant scoping comes from
@@ -27,6 +26,7 @@ from typing import Any, Callable, Optional
 from flask import Blueprint, g, request
 
 from ...radius.db.repos import (
+    npc_change_sets_repo as cs_repo,
     npc_common as nc,
     npc_deployments_repo as dep_repo,
     npc_remote_access_repo as ra_repo,
@@ -44,8 +44,11 @@ from ...radius.services import (
     npc_impact_analyzer as impact_svc,
     npc_policy_health as health_svc,
     npc_recommendations as rec_svc,
+    npc_apply_service as apply_svc,
     npc_remote_access_planner as ra_planner,
+    npc_rollback_service as rollback_svc,
     npc_script_renderer as renderer,
+    npc_snapshot_capture_service as snapshot_capture_svc,
     npc_walled_garden_planner as wg_planner,
     npc_web_block_planner as wb_planner,
 )
@@ -112,19 +115,29 @@ def _emit_audit(
 def _serialize_remote(row: dict) -> dict:
     """Drop nothing — the remote_access table carries no
     secrets per the Phase-1 schema invariant."""
-    return dict(row)
+    return _with_deployment(nc.SERVICE_REMOTE_ACCESS, row)
 
 
 def _serialize_block(row: dict) -> dict:
-    return dict(row)
+    return _with_deployment(nc.SERVICE_WEB_BLOCK, row)
 
 
 def _serialize_garden(row: dict) -> dict:
-    return dict(row)
+    return _with_deployment(nc.SERVICE_WALLED_GARDEN, row)
 
 
 def _serialize_target(row: dict) -> dict:
     return dict(row)
+
+
+def _with_deployment(service: str, row: dict) -> dict:
+    out = dict(row)
+    dep = dep_repo.get_for_policy(
+        tenant_id=_tid(), service=service, policy_id=int(out["id"]),
+    )
+    out["deployment"] = dep or {}
+    out["deployment_status"] = (dep or {}).get("status") or "draft"
+    return out
 
 
 # ─── Service routing helper ──────────────────────────────────
@@ -142,6 +155,223 @@ _URL_TO_SERVICE = {
 
 def _service_or_404(url_part: str) -> Optional[str]:
     return _URL_TO_SERVICE.get(url_part)
+
+
+def _slug_for_service(service: str) -> str:
+    for slug, key in _URL_TO_SERVICE.items():
+        if key == service:
+            return slug
+    return service.replace("_", "-")
+
+
+def _policy_row(service: str, policy_id: int) -> Optional[dict]:
+    if service == nc.SERVICE_REMOTE_ACCESS:
+        return ra_repo.get_by_id(_tid(), policy_id)
+    if service == nc.SERVICE_WEB_BLOCK:
+        return wb_repo.get_policy(_tid(), policy_id)
+    if service == nc.SERVICE_WALLED_GARDEN:
+        return wg_repo.get_policy(_tid(), policy_id)
+    return None
+
+
+def _policy_children(service: str, policy_id: int) -> tuple[dict, ...]:
+    if service == nc.SERVICE_WEB_BLOCK:
+        return tuple(wb_repo.list_targets(policy_id))
+    if service == nc.SERVICE_WALLED_GARDEN:
+        return tuple(wg_repo.list_entries(policy_id))
+    return ()
+
+
+def _policy_plan(service: str, policy: dict, children: tuple[dict, ...]):
+    if service == nc.SERVICE_REMOTE_ACCESS:
+        return ra_planner.plan(policy)
+    if service == nc.SERVICE_WEB_BLOCK:
+        return wb_planner.plan(policy, children)
+    if service == nc.SERVICE_WALLED_GARDEN:
+        return wg_planner.plan(policy, children)
+    raise ValueError(f"unknown network policy service: {service}")
+
+
+def _serialize_policy(service: str, row: dict) -> dict:
+    if service == nc.SERVICE_REMOTE_ACCESS:
+        return _serialize_remote(row)
+    if service == nc.SERVICE_WEB_BLOCK:
+        return _serialize_block(row)
+    return _serialize_garden(row)
+
+
+def _create_audit_action(service: str) -> str:
+    if service == nc.SERVICE_REMOTE_ACCESS:
+        return ev.EVT_RA_POLICY_CREATED
+    if service == nc.SERVICE_WEB_BLOCK:
+        return ev.EVT_WB_POLICY_CREATED
+    return ev.EVT_WG_POLICY_CREATED
+
+
+def _render_policy(service: str, policy_id: int):
+    policy = _policy_row(service, policy_id)
+    if not policy:
+        return None
+    children = _policy_children(service, policy_id)
+    plan = _policy_plan(service, policy, children)
+    try:
+        forward = renderer.render_forward_script(plan)
+        rollback = renderer.render_rollback_script(plan)
+        render_error = ""
+    except renderer.RenderSafetyError as e:
+        forward = ""
+        rollback = ""
+        render_error = str(e)
+    return policy, children, plan, forward, rollback, render_error
+
+
+def _policy_intelligence(
+    *, service: str, policy: dict, children, plan,
+    forward: str, rollback: str, render_error: str,
+) -> dict[str, Any]:
+    policy_id = int(policy["id"])
+    peers = [
+        p for p in _peer_policies_for(
+            current_service=service,
+            current_router_id=int(policy["router_id"]),
+        )
+        if p.id != policy_id or p.service != service
+    ]
+    conflicts = conflict_svc.analyze(
+        current_service=service,
+        current_policy=policy,
+        current_children=children or (),
+        peers=peers,
+    )
+    dependencies = dependency_svc.analyze(
+        targets=children or (), policy_type=service,
+    )
+    blast = blast_svc.analyze(
+        policy_type=service, plan=plan, affected_router_count=1,
+    )
+    beginner = beginner_svc.explain(
+        policy_type=service, plan=plan, policy=policy,
+    )
+    canary = canary_svc.plan(blast=blast)
+    impact = impact_svc.analyze(
+        policy_type=service,
+        policy=policy,
+        plan=plan,
+        targets=children or (),
+        rendered_forward=forward,
+        rendered_rollback=rollback,
+        render_error=render_error or None,
+    )
+    health = health_svc.compute(
+        impact=impact,
+        conflicts=conflicts,
+        dependencies=dependencies,
+        blast=blast,
+        rollback_available=impact.rollback_available,
+        canary_recommended=(
+            canary.recommended_strategy
+            in (canary_svc.STRATEGY_CANARY, canary_svc.STRATEGY_STAGED)
+        ),
+    )
+    return {
+        "impact": impact,
+        "conflicts": conflicts,
+        "dependencies": dependencies,
+        "blast": blast,
+        "beginner": beginner,
+        "canary": canary,
+        "health": health,
+        "recommendations": rec_svc.build(
+            impact=impact,
+            conflicts=conflicts,
+            dependencies=dependencies,
+            blast=blast,
+            canary=canary,
+            policy_type=service,
+            policy=policy,
+        ),
+    }
+
+
+def _change_set_payload(row: dict) -> dict:
+    out = dict(row)
+    out["targets"] = [dict(t) for t in cs_repo.list_targets(int(row["id"]))]
+    out["rollback_eligible"] = (
+        row.get("action_type") == cs_repo.ACTION_APPLY
+        and row.get("status") in (
+            cs_repo.STATUS_SUCCEEDED,
+            cs_repo.STATUS_PARTIALLY_SUCCEEDED,
+        )
+    )
+    return out
+
+
+def _slug_exists(service: str, slug: str) -> bool:
+    if service == nc.SERVICE_REMOTE_ACCESS:
+        return ra_repo.get_by_slug(_tid(), slug) is not None
+    if service == nc.SERVICE_WEB_BLOCK:
+        return wb_repo.get_policy_by_slug(_tid(), slug) is not None
+    return wg_repo.get_policy_by_slug(_tid(), slug) is not None
+
+
+def _unique_copy_slug(service: str, original_slug: str) -> str:
+    base = f"{original_slug}-copy"
+    candidate = base
+    index = 2
+    while _slug_exists(service, candidate):
+        candidate = f"{base}-{index}"
+        index += 1
+    return candidate
+
+
+def _duplicate_policy(service: str, policy: dict) -> dict:
+    copy_slug = _unique_copy_slug(service, str(policy["slug"]))
+    if service == nc.SERVICE_REMOTE_ACCESS:
+        new_id = ra_repo.create(
+            tenant_id=_tid(),
+            router_id=int(policy["router_id"]),
+            name=f"{policy['name']} (نسخة)",
+            slug=copy_slug,
+            allow_winbox=bool(policy.get("allow_winbox")),
+            allow_ssh=bool(policy.get("allow_ssh")),
+            allow_api=bool(policy.get("allow_api")),
+            allow_api_ssl=bool(policy.get("allow_api_ssl")),
+            allow_webfig_http=bool(policy.get("allow_webfig_http")),
+            allow_webfig_https=bool(policy.get("allow_webfig_https")),
+            source_address_list=str(policy.get("source_address_list") or ""),
+            expires_at=str(policy.get("expires_at") or ""),
+            reason=str(policy.get("reason") or ""),
+            enabled=bool(policy.get("enabled")),
+        )
+    elif service == nc.SERVICE_WEB_BLOCK:
+        new_id = wb_repo.create_policy(
+            tenant_id=_tid(),
+            router_id=int(policy["router_id"]),
+            name=f"{policy['name']} (نسخة)",
+            slug=copy_slug,
+            scope=str(policy.get("scope") or wb_repo.SCOPE_ALL_USERS),
+            schedule_id=str(policy.get("schedule_id") or ""),
+            fail_open=bool(policy.get("fail_open")),
+            enabled=bool(policy.get("enabled")),
+        )
+    else:
+        new_id = wg_repo.create_policy(
+            tenant_id=_tid(),
+            router_id=int(policy["router_id"]),
+            name=f"{policy['name']} (نسخة)",
+            slug=copy_slug,
+            hotspot_profile=str(policy.get("hotspot_profile") or ""),
+            enabled=bool(policy.get("enabled")),
+        )
+    created = _policy_row(service, new_id) or {}
+    _emit_audit(
+        service=service,
+        action=_create_audit_action(service),
+        policy_id=int(new_id),
+        router_id=int(policy["router_id"]),
+        duplicated_from=int(policy["id"]),
+    )
+    return created
 
 
 # ─── Registration ────────────────────────────────────────────
@@ -173,6 +403,26 @@ def register(bp: Blueprint) -> None:
         "/network-policy/remote-access/policies/<int:policy_id>/preview",
         "npc_ra_preview",
         require_api_token(ra_preview), methods=["POST"])
+    bp.add_url_rule(
+        "/network-policy/remote-access/policies/<int:policy_id>/preview.rsc",
+        "npc_ra_script",
+        require_api_token(ra_script), methods=["GET"])
+    bp.add_url_rule(
+        "/network-policy/remote-access/policies/<int:policy_id>/apply",
+        "npc_ra_apply",
+        require_api_token(ra_apply), methods=["POST"])
+    bp.add_url_rule(
+        "/network-policy/remote-access/policies/<int:policy_id>/changes",
+        "npc_ra_changes",
+        require_api_token(ra_changes), methods=["GET"])
+    bp.add_url_rule(
+        "/network-policy/remote-access/policies/<int:policy_id>/changes/<int:change_set_id>/rollback",
+        "npc_ra_rollback",
+        require_api_token(ra_rollback), methods=["POST"])
+    bp.add_url_rule(
+        "/network-policy/remote-access/policies/<int:policy_id>/duplicate",
+        "npc_ra_duplicate",
+        require_api_token(ra_duplicate), methods=["POST"])
 
     # Web Block
     bp.add_url_rule(
@@ -211,6 +461,26 @@ def register(bp: Blueprint) -> None:
         "/network-policy/web-block/policies/<int:policy_id>/preview",
         "npc_wb_preview",
         require_api_token(wb_preview), methods=["POST"])
+    bp.add_url_rule(
+        "/network-policy/web-block/policies/<int:policy_id>/preview.rsc",
+        "npc_wb_script",
+        require_api_token(wb_script), methods=["GET"])
+    bp.add_url_rule(
+        "/network-policy/web-block/policies/<int:policy_id>/apply",
+        "npc_wb_apply",
+        require_api_token(wb_apply), methods=["POST"])
+    bp.add_url_rule(
+        "/network-policy/web-block/policies/<int:policy_id>/changes",
+        "npc_wb_changes",
+        require_api_token(wb_changes), methods=["GET"])
+    bp.add_url_rule(
+        "/network-policy/web-block/policies/<int:policy_id>/changes/<int:change_set_id>/rollback",
+        "npc_wb_rollback",
+        require_api_token(wb_rollback), methods=["POST"])
+    bp.add_url_rule(
+        "/network-policy/web-block/policies/<int:policy_id>/duplicate",
+        "npc_wb_duplicate",
+        require_api_token(wb_duplicate), methods=["POST"])
 
     # Walled Garden
     bp.add_url_rule(
@@ -249,6 +519,26 @@ def register(bp: Blueprint) -> None:
         "/network-policy/walled-garden/policies/<int:policy_id>/preview",
         "npc_wg_preview",
         require_api_token(wg_preview), methods=["POST"])
+    bp.add_url_rule(
+        "/network-policy/walled-garden/policies/<int:policy_id>/preview.rsc",
+        "npc_wg_script",
+        require_api_token(wg_script), methods=["GET"])
+    bp.add_url_rule(
+        "/network-policy/walled-garden/policies/<int:policy_id>/apply",
+        "npc_wg_apply",
+        require_api_token(wg_apply), methods=["POST"])
+    bp.add_url_rule(
+        "/network-policy/walled-garden/policies/<int:policy_id>/changes",
+        "npc_wg_changes",
+        require_api_token(wg_changes), methods=["GET"])
+    bp.add_url_rule(
+        "/network-policy/walled-garden/policies/<int:policy_id>/changes/<int:change_set_id>/rollback",
+        "npc_wg_rollback",
+        require_api_token(wg_rollback), methods=["POST"])
+    bp.add_url_rule(
+        "/network-policy/walled-garden/policies/<int:policy_id>/duplicate",
+        "npc_wg_duplicate",
+        require_api_token(wg_duplicate), methods=["POST"])
 
 
 # ─── Remote Access views ─────────────────────────────────────
@@ -715,6 +1005,227 @@ def wg_preview(policy_id: int):
         targets=entries,
         audit_action=ev.EVT_WG_PREVIEW_GENERATED,
     )
+
+
+def ra_script(policy_id: int):
+    return _api_script(nc.SERVICE_REMOTE_ACCESS, policy_id)
+
+
+def wb_script(policy_id: int):
+    return _api_script(nc.SERVICE_WEB_BLOCK, policy_id)
+
+
+def wg_script(policy_id: int):
+    return _api_script(nc.SERVICE_WALLED_GARDEN, policy_id)
+
+
+def ra_apply(policy_id: int):
+    return _api_apply(nc.SERVICE_REMOTE_ACCESS, policy_id)
+
+
+def wb_apply(policy_id: int):
+    return _api_apply(nc.SERVICE_WEB_BLOCK, policy_id)
+
+
+def wg_apply(policy_id: int):
+    return _api_apply(nc.SERVICE_WALLED_GARDEN, policy_id)
+
+
+def ra_changes(policy_id: int):
+    return _api_changes(nc.SERVICE_REMOTE_ACCESS, policy_id)
+
+
+def wb_changes(policy_id: int):
+    return _api_changes(nc.SERVICE_WEB_BLOCK, policy_id)
+
+
+def wg_changes(policy_id: int):
+    return _api_changes(nc.SERVICE_WALLED_GARDEN, policy_id)
+
+
+def ra_rollback(policy_id: int, change_set_id: int):
+    return _api_rollback(nc.SERVICE_REMOTE_ACCESS, policy_id, change_set_id)
+
+
+def wb_rollback(policy_id: int, change_set_id: int):
+    return _api_rollback(nc.SERVICE_WEB_BLOCK, policy_id, change_set_id)
+
+
+def wg_rollback(policy_id: int, change_set_id: int):
+    return _api_rollback(nc.SERVICE_WALLED_GARDEN, policy_id, change_set_id)
+
+
+def ra_duplicate(policy_id: int):
+    return _api_duplicate(nc.SERVICE_REMOTE_ACCESS, policy_id)
+
+
+def wb_duplicate(policy_id: int):
+    return _api_duplicate(nc.SERVICE_WEB_BLOCK, policy_id)
+
+
+def wg_duplicate(policy_id: int):
+    return _api_duplicate(nc.SERVICE_WALLED_GARDEN, policy_id)
+
+
+def _api_script(service: str, policy_id: int):
+    rendered = _render_policy(service, policy_id)
+    if not rendered:
+        return fail("not_found",
+                    f"policy {policy_id} غير موجود", status=404)
+    policy, _children, _plan, forward, _rollback, render_error = rendered
+    if render_error:
+        return fail("render_unsafe", render_error, status=422)
+    if not forward:
+        return fail(
+            "empty_script",
+            "لا يوجد سكربت قابل للتنزيل. راجع المعاينة أولًا.",
+            status=422,
+        )
+    slug = _slug_for_service(service)
+    filename = f"npc-{slug}-{policy['slug']}-preview.rsc"
+    return ok({
+        "filename": filename,
+        "script": forward,
+        "script_hash": renderer.script_hash(forward),
+        "service": service,
+        "policy_id": int(policy_id),
+        "router_id": int(policy["router_id"]),
+    })
+
+
+def _api_changes(service: str, policy_id: int):
+    policy = _policy_row(service, policy_id)
+    if not policy:
+        return fail("not_found",
+                    f"policy {policy_id} غير موجود", status=404)
+    rows = cs_repo.list_for_policy(
+        _tid(), service=service, policy_id=int(policy_id),
+    )
+    return ok({
+        "items": [_change_set_payload(r) for r in rows],
+        "count": len(rows),
+        "service": service,
+        "policy_id": int(policy_id),
+    })
+
+
+def _api_apply(service: str, policy_id: int):
+    rendered = _render_policy(service, policy_id)
+    if not rendered:
+        return fail("not_found",
+                    f"policy {policy_id} غير موجود", status=404)
+    policy, children, plan, forward, rollback, render_error = rendered
+    intelligence = _policy_intelligence(
+        service=service,
+        policy=policy,
+        children=children,
+        plan=plan,
+        forward=forward,
+        rollback=rollback,
+        render_error=render_error,
+    )
+    script_hash = renderer.script_hash(forward) if forward else ""
+    snapshot_id: Optional[int] = None
+    try:
+        cap = snapshot_capture_svc.capture_pre_apply_snapshot(
+            tenant_id=_tid(),
+            router_id=int(policy["router_id"]),
+            policy_id=int(policy_id),
+            policy_type=service,
+            created_by=_actor(),
+        )
+        snapshot_id = int(cap.snapshot_id)
+    except Exception:  # noqa: BLE001
+        snapshot_id = None
+
+    body = _body()
+    confirmations_raw = body.get("confirmations") or ()
+    if isinstance(confirmations_raw, str):
+        confirmations = (confirmations_raw,)
+    else:
+        confirmations = tuple(str(x) for x in confirmations_raw)
+    execution_mode = str(body.get("execution_mode") or cs_repo.MODE_FULL)
+    if execution_mode not in cs_repo.ALLOWED_MODES:
+        return fail(
+            "validation_error",
+            "وضع التنفيذ غير صالح.",
+            status=422,
+        )
+    result = apply_svc.request_apply(
+        tenant_id=_tid(),
+        service=service,
+        policy=policy,
+        policy_children=children,
+        forward_script=forward,
+        rollback_script=rollback,
+        render_error=render_error,
+        preview_hash=script_hash,
+        snapshot_id=snapshot_id,
+        target_router_ids=(int(policy["router_id"]),),
+        actor=_actor(),
+        actor_has_apply_perm=True,
+        confirmations=confirmations,
+        execution_mode=execution_mode,
+        canary_opt_in=_bool(body.get("canary_opt_in")),
+        all_routers_targeted=False,
+        offline_router_ids=(),
+        impact=intelligence["impact"],
+        conflicts=intelligence["conflicts"],
+        dependencies=intelligence["dependencies"],
+        blast=intelligence["blast"],
+        health=intelligence["health"],
+        canary=intelligence["canary"],
+    )
+    if result.ok and service == nc.SERVICE_REMOTE_ACCESS:
+        try:
+            from ...radius.services import npc_remote_tunnel as tunnel_svc
+            tunnel_svc.ensure_tunnels_for_policy(
+                tenant_id=_tid(), policy=policy,
+            )
+            tunnel_svc.regenerate_and_reload()
+        except Exception:  # noqa: BLE001
+            pass
+    return ok({
+        **result.as_dict(),
+        "service": service,
+        "policy_id": int(policy_id),
+        "router_id": int(policy["router_id"]),
+        "snapshot_id": snapshot_id,
+        "script_hash": script_hash,
+    })
+
+
+def _api_rollback(service: str, policy_id: int, change_set_id: int):
+    policy = _policy_row(service, policy_id)
+    if not policy:
+        return fail("not_found",
+                    f"policy {policy_id} غير موجود", status=404)
+    result = rollback_svc.request_rollback(
+        tenant_id=_tid(),
+        service=service,
+        policy_id=int(policy_id),
+        change_set_id=int(change_set_id),
+        actor=_actor(),
+        actor_has_apply_perm=True,
+    )
+    return ok({
+        **result.as_dict(),
+        "service": service,
+        "policy_id": int(policy_id),
+        "original_change_set_id": int(change_set_id),
+    })
+
+
+def _api_duplicate(service: str, policy_id: int):
+    policy = _policy_row(service, policy_id)
+    if not policy:
+        return fail("not_found",
+                    f"policy {policy_id} غير موجود", status=404)
+    try:
+        created = _duplicate_policy(service, policy)
+    except ValueError as e:
+        return fail("validation_error", str(e), status=422)
+    return ok(_serialize_policy(service, created), status=201)
 
 
 # ─── Preview core ────────────────────────────────────────────

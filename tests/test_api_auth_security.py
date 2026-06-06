@@ -374,3 +374,110 @@ def test_login_returns_expires_at(client, monkeypatch):
     exp = datetime.fromisoformat(str(data["expires_at"]).replace("Z", ""))
     delta = exp - datetime.utcnow()
     assert timedelta(hours=23, minutes=55) < delta < timedelta(hours=24, minutes=5)
+
+
+def test_admin_password_change_requires_login_token(client):
+    res = client.post(
+        "/api/admin/password",
+        headers={"Authorization": "Bearer dev-token-please-change"},
+        json={
+            "current_password": "admin",
+            "new_password": "new_admin_password_1",
+            "confirm_password": "new_admin_password_1",
+        },
+    )
+    assert res.status_code == 401
+    assert res.get_json()["error"]["code"] == "unauthorized"
+
+
+def test_admin_password_change_rejects_invalid_values(client):
+    token = _admin_token(client)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    wrong_current = client.post(
+        "/api/admin/password",
+        headers=headers,
+        json={
+            "current_password": "wrong",
+            "new_password": "new_admin_password_1",
+            "confirm_password": "new_admin_password_1",
+        },
+    )
+    assert wrong_current.status_code == 422
+    assert wrong_current.get_json()["error"]["code"] == "invalid_current_password"
+
+    short_password = client.post(
+        "/api/admin/password",
+        headers=headers,
+        json={
+            "current_password": "admin",
+            "new_password": "short",
+            "confirm_password": "short",
+        },
+    )
+    assert short_password.status_code == 422
+    assert short_password.get_json()["error"]["code"] == "validation_error"
+
+    mismatch = client.post(
+        "/api/admin/password",
+        headers=headers,
+        json={
+            "current_password": "admin",
+            "new_password": "new_admin_password_1",
+            "confirm_password": "new_admin_password_2",
+        },
+    )
+    assert mismatch.status_code == 422
+    assert mismatch.get_json()["error"]["code"] == "validation_error"
+
+
+def test_admin_password_change_allows_flutter_account_flow(app, client):
+    from app.radius.db.repos import admins_repo
+
+    username = f"qa_pwd_{int(time.time() * 1000)}"
+    old_password = "old_admin_password_1"
+    new_password = "new_admin_password_1"
+    with app.app_context():
+        admin = admins_repo.create_admin(
+            username=username,
+            password=old_password,
+            full_name="QA Password Admin",
+            email=f"{username}@example.test",
+        )
+
+    try:
+        login = client.post(
+            "/api/admin/login",
+            json={"username": username, "password": old_password},
+        )
+        assert login.status_code == 200, login.get_json()
+        token = login.get_json()["data"]["token"]
+
+        changed = client.post(
+            "/api/admin/password",
+            headers={"Authorization": f"Bearer {token}"},
+            json={
+                "current_password": old_password,
+                "new_password": new_password,
+                "confirm_password": new_password,
+            },
+        )
+        assert changed.status_code == 200, changed.get_json()
+        data = changed.get_json()["data"]
+        assert data["updated"] is True
+        assert data["source"] == "local"
+
+        old_login = client.post(
+            "/api/admin/login",
+            json={"username": username, "password": old_password},
+        )
+        assert old_login.status_code == 401
+
+        new_login = client.post(
+            "/api/admin/login",
+            json={"username": username, "password": new_password},
+        )
+        assert new_login.status_code == 200, new_login.get_json()
+    finally:
+        with app.app_context():
+            admins_repo.archive_admin(int(admin.id or 0), actor="test")

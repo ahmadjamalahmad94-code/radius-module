@@ -5,6 +5,7 @@ import json
 from datetime import datetime, timezone
 from typing import Any
 
+import secrets
 from werkzeug.security import check_password_hash
 
 from ..core.types_saas import Ticket
@@ -29,11 +30,12 @@ class CustomerPortalService:
         row = db().execute(
             """
             SELECT * FROM subscribers
-            WHERE tenant_id=? AND username=? AND password=? AND deleted_at IS NULL
+            WHERE tenant_id=? AND username=? AND deleted_at IS NULL
+            ORDER BY id DESC LIMIT 1
             """,
-            (self.tenant_id, str(username or "").strip(), str(password or "")),
+            (self.tenant_id, str(username or "").strip()),
         ).fetchone()
-        if not row:
+        if not row or not self._password_matches(row_to_dict(row).get("password"), str(password or "")):
             raise PortalAuthError("invalid subscriber credentials")
         return self._subscriber_row(row_to_dict(row))
 
@@ -289,6 +291,31 @@ class CustomerPortalService:
         ).fetchone()
         return self._request_row(row_to_dict(row)) if row else {}
 
+    def list_subscriber_requests(self, subscriber_id: int, *, limit: int = 50) -> list[dict[str, Any]]:
+        rows = db().execute(
+            """
+            SELECT *
+            FROM customer_portal_requests
+            WHERE tenant_id=? AND requester_type='subscriber' AND requester_id=?
+            ORDER BY id DESC
+            LIMIT ?
+            """,
+            (self.tenant_id, int(subscriber_id), max(1, min(int(limit or 50), 100))),
+        ).fetchall()
+        return [self._request_row(row_to_dict(row)) for row in rows]
+
+    def get_subscriber_request(self, subscriber_id: int, request_id: int) -> dict[str, Any]:
+        row = db().execute(
+            """
+            SELECT *
+            FROM customer_portal_requests
+            WHERE tenant_id=? AND requester_type='subscriber' AND requester_id=? AND id=?
+            LIMIT 1
+            """,
+            (self.tenant_id, int(subscriber_id), int(request_id)),
+        ).fetchone()
+        return self._request_row(row_to_dict(row)) if row else {}
+
     def _create_request(
         self,
         *,
@@ -514,6 +541,12 @@ class CustomerPortalService:
         row.pop("password", None)
         row.pop("pppoe_password", None)
         return row
+
+    def _password_matches(self, stored: Any, password: str) -> bool:
+        value = str(stored or "")
+        if value.startswith(("scrypt:", "pbkdf2:", "argon2:")):
+            return check_password_hash(value, password)
+        return bool(value) and secrets.compare_digest(value, str(password or ""))
 
     def _request_row(self, row: dict[str, Any]) -> dict[str, Any]:
         if not row:

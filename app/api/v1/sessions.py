@@ -1,14 +1,16 @@
-"""Sessions endpoints: online users list, search, state enrichment, disconnect."""
+"""Sessions endpoints: online users list and live session controls."""
 from __future__ import annotations
 
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from datetime import datetime
+from ipaddress import ip_address
 
 from flask import Blueprint, g, request
 
 from ..access_control import deny_out_of_scope, subscriber_in_scope
 from ..auth import require_api_token
 from ..responses import fail, ok
+from ...radius.core.errors import RadiusError
 
 
 def register(bp: Blueprint) -> None:
@@ -16,6 +18,14 @@ def register(bp: Blueprint) -> None:
                     require_api_token(sessions_online), methods=["GET"])
     bp.add_url_rule("/sessions/disconnect", "sessions_disconnect",
                     require_api_token(sessions_disconnect), methods=["POST"])
+    bp.add_url_rule("/sessions/lock-mac", "sessions_lock_mac",
+                    require_api_token(sessions_lock_mac), methods=["POST"])
+    bp.add_url_rule("/sessions/lock-ip", "sessions_lock_ip",
+                    require_api_token(sessions_lock_ip), methods=["POST"])
+    bp.add_url_rule("/sessions/temp-speed", "sessions_temp_speed",
+                    require_api_token(sessions_temp_speed), methods=["POST"])
+    bp.add_url_rule("/sessions/temp-speed/cancel", "sessions_temp_speed_cancel",
+                    require_api_token(sessions_temp_speed_cancel), methods=["POST"])
 
 
 def _tid() -> int:
@@ -29,6 +39,64 @@ def _actor() -> str:
 def _svc():
     from ...radius.services.sessions import get_online_sessions_service
     return get_online_sessions_service()
+
+
+def _body() -> dict:
+    return request.get_json(silent=True) or {}
+
+
+def _int_or_zero(raw) -> int:
+    try:
+        return int(float(str(raw or "").strip()))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _normalise_mac(raw: str) -> str:
+    cleaned = (raw or "").strip().upper().replace("-", ":")
+    hex_only = cleaned.replace(":", "")
+    if len(hex_only) != 12 or any(c not in "0123456789ABCDEF" for c in hex_only):
+        raise RadiusError("عنوان MAC في الجلسة غير صالح.")
+    return ":".join(hex_only[i:i + 2] for i in range(0, 12, 2))
+
+
+def _selected_online_row(body: dict):
+    username = (body.get("username") or "").strip()
+    session_id = (body.get("session_id") or "").strip()
+    if not username:
+        raise RadiusError("اسم المستخدم مطلوب.")
+    if not session_id:
+        raise RadiusError("معرف الجلسة مطلوب.")
+    if not subscriber_in_scope(username=username):
+        return None
+
+    from ...radius.db.connection import db
+
+    return db().execute(
+        """
+        SELECT r.username, r.acctsessionid, r.framedipaddress, r.callingstationid,
+               CASE WHEN c.id IS NOT NULL THEN c.id ELSE NULL END AS card_id
+        FROM radacct r
+        LEFT JOIN cards c
+          ON c.tenant_id = r.tenant_id AND c.username = r.username
+        WHERE r.tenant_id = ?
+          AND r.username = ?
+          AND r.acctsessionid = ?
+          AND r.acctstoptime IS NULL
+        LIMIT 1
+        """,
+        (_tid(), username, session_id),
+    ).fetchone()
+
+
+def _require_online_row(body: dict):
+    row = _selected_online_row(body)
+    if row is None:
+        username = (body.get("username") or "").strip()
+        if username and not subscriber_in_scope(username=username):
+            raise PermissionError
+        raise RadiusError("الجلسة المحددة غير متصلة الآن أو انتهت.")
+    return row
 
 
 def _matches_query(item: dict, query: str) -> bool:
@@ -140,7 +208,7 @@ def sessions_online():
 
 
 def sessions_disconnect():
-    body = request.get_json(silent=True) or {}
+    body = _body()
     username = (body.get("username") or "").strip()
     if not username:
         return fail("validation_error", "اسم المستخدم مطلوب.", status=422)
@@ -152,3 +220,129 @@ def sessions_disconnect():
     except Exception as e:  # noqa: BLE001
         return fail("internal_error", str(e), status=500)
     return ok({"username": username, "session_id": session_id, "disconnect_requested": True})
+
+
+def sessions_lock_mac():
+    body = _body()
+    try:
+        row = _require_online_row(body)
+        mac = _normalise_mac(row["callingstationid"] or "")
+        username = row["username"]
+        if row["card_id"]:
+            from ...radius.db.repos import cards_repo
+
+            changed = cards_repo.set_card_locked_mac(
+                _tid(), int(row["card_id"]), mac, actor=_actor()
+            )
+            if not changed:
+                raise RadiusError("تعذر تثبيت MAC للبطاقة.")
+            target_type = "card"
+        else:
+            from ...radius.services.users import get_users_service
+
+            svc = get_users_service()
+            sub = svc.get(username)
+            svc.update(actor=_actor(), sub=replace(sub, mac_lock=mac, allowed_macs=mac))
+            target_type = "subscriber"
+    except PermissionError:
+        return deny_out_of_scope()
+    except RadiusError as e:
+        return fail("validation_error", e.message, status=422)
+    except Exception as e:  # noqa: BLE001
+        return fail("internal_error", str(e), status=500)
+    return ok({
+        "username": username,
+        "session_id": row["acctsessionid"],
+        "mac_address": mac,
+        "target_type": target_type,
+        "locked": True,
+    })
+
+
+def sessions_lock_ip():
+    body = _body()
+    try:
+        row = _require_online_row(body)
+        username = row["username"]
+        if row["card_id"]:
+            raise RadiusError("تثبيت IP متاح للمشتركين فقط.")
+        ip = (row["framedipaddress"] or "").strip()
+        if not ip:
+            raise RadiusError("لا يوجد IP على الجلسة المحددة.")
+        try:
+            ip_address(ip)
+        except ValueError as exc:
+            raise RadiusError("عنوان IP في الجلسة غير صالح.") from exc
+
+        from ...radius.services.users import get_users_service
+
+        svc = get_users_service()
+        sub = svc.get(username)
+        svc.update(actor=_actor(), sub=replace(sub, static_ip=ip))
+    except PermissionError:
+        return deny_out_of_scope()
+    except RadiusError as e:
+        return fail("validation_error", e.message, status=422)
+    except Exception as e:  # noqa: BLE001
+        return fail("internal_error", str(e), status=500)
+    return ok({
+        "username": username,
+        "session_id": row["acctsessionid"],
+        "ip_address": ip,
+        "locked": True,
+    })
+
+
+def sessions_temp_speed():
+    body = _body()
+    try:
+        row = _require_online_row(body)
+        username = row["username"]
+        if row["card_id"]:
+            raise RadiusError("السرعة المؤقتة متاحة للمشتركين فقط.")
+        from ...radius.services.temp_speed import apply_temp_speed
+
+        result = apply_temp_speed(
+            tenant_id=_tid(),
+            actor=_actor(),
+            username=username,
+            down_kbps=_int_or_zero(body.get("down_kbps")),
+            up_kbps=_int_or_zero(body.get("up_kbps")),
+            duration_minutes=_int_or_zero(body.get("duration_minutes")),
+        )
+    except PermissionError:
+        return deny_out_of_scope()
+    except ValueError as e:
+        return fail("validation_error", str(e), status=422)
+    except RadiusError as e:
+        return fail("validation_error", e.message, status=422)
+    except Exception as e:  # noqa: BLE001
+        return fail("internal_error", str(e), status=500)
+    return ok({
+        "username": username,
+        "session_id": row["acctsessionid"],
+        "temporary_speed": result,
+    })
+
+
+def sessions_temp_speed_cancel():
+    body = _body()
+    try:
+        row = _require_online_row(body)
+        username = row["username"]
+        from ...radius.services.temp_speed import cancel_temp_speed
+
+        result = cancel_temp_speed(tenant_id=_tid(), actor=_actor(), username=username)
+    except PermissionError:
+        return deny_out_of_scope()
+    except ValueError as e:
+        return fail("validation_error", str(e), status=422)
+    except RadiusError as e:
+        return fail("validation_error", e.message, status=422)
+    except Exception as e:  # noqa: BLE001
+        return fail("internal_error", str(e), status=500)
+    return ok({
+        "username": username,
+        "session_id": row["acctsessionid"],
+        "temporary_speed": result,
+    })

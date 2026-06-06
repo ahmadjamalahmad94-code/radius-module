@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import csv
 import io
+import json
 
 from flask import Blueprint, Response, g, request
 
@@ -44,6 +45,16 @@ def register(bp: Blueprint) -> None:
                     require_api_token(cards_batches_export_xlsx), methods=["GET"])
     bp.add_url_rule("/cards/batches/export.pdf", "cards_batches_export_pdf",
                     require_api_token(cards_batches_export_pdf), methods=["GET"])
+    bp.add_url_rule("/cards/recharge", "cards_recharge_list",
+                    require_api_token(cards_recharge_list), methods=["GET"])
+    bp.add_url_rule("/cards/recharge", "cards_recharge_generate",
+                    require_api_token(cards_recharge_generate), methods=["POST"])
+    bp.add_url_rule("/cards/recharge/<int:batch_id>", "cards_recharge_get",
+                    require_api_token(cards_recharge_get), methods=["GET"])
+    bp.add_url_rule("/cards/recharge/<int:batch_id>", "cards_recharge_delete",
+                    require_api_token(cards_recharge_delete), methods=["DELETE"])
+    bp.add_url_rule("/cards/recharge/<int:batch_id>/cards", "cards_recharge_cards",
+                    require_api_token(cards_recharge_cards), methods=["GET"])
     bp.add_url_rule("/cards/batches/<int:batch_id>", "cards_batch_get",
                     require_api_token(cards_batch_get), methods=["GET"])
     bp.add_url_rule("/cards/batches/<int:batch_id>", "cards_batch_update",
@@ -165,6 +176,72 @@ def _serialize_import_card(c) -> dict:
         "expire_at": c.expire_at.isoformat() + "Z" if c.expire_at else None,
         "first_used_at": c.first_used_at.isoformat() + "Z" if c.first_used_at else None,
         "created_at": c.created_at.isoformat() + "Z" if c.created_at else None,
+    }
+
+
+def _obj_value(item, key: str, default=None):
+    if isinstance(item, dict):
+        return item.get(key, default)
+    return getattr(item, key, default)
+
+
+def _parse_metadata(raw) -> dict:
+    if isinstance(raw, dict):
+        return raw
+    if raw in (None, ""):
+        return {}
+    try:
+        parsed = json.loads(str(raw))
+        return parsed if isinstance(parsed, dict) else {}
+    except (TypeError, ValueError):
+        return {}
+
+
+def _iso_or_raw(value):
+    if hasattr(value, "isoformat"):
+        return value.isoformat() + "Z"
+    return value
+
+
+def _serialize_recharge_batch(batch) -> dict:
+    metadata = _parse_metadata(_obj_value(batch, "metadata", ""))
+    denominations = metadata.get("denominations")
+    if not isinstance(denominations, list):
+        denominations = []
+    count = _obj_value(batch, "card_count", None)
+    if count is None:
+        count = _obj_value(batch, "count", _obj_value(batch, "generated", 0))
+    used = _obj_value(batch, "used_count", _obj_value(batch, "used", 0))
+    total_value = _obj_value(batch, "total_value", None)
+    if total_value in (None, ""):
+        total_value = _obj_value(batch, "price_bulk", _obj_value(batch, "total_price", 0))
+    return {
+        "id": _obj_value(batch, "id"),
+        "batch_code": _obj_value(batch, "batch_code", ""),
+        "package_name": _obj_value(batch, "package_name", ""),
+        "notes": _obj_value(batch, "notes", ""),
+        "status": _obj_value(batch, "status", "active"),
+        "count": int(count or 0),
+        "used_count": int(used or 0),
+        "remaining_count": max(int(count or 0) - int(used or 0), 0),
+        "total_value": float(total_value or 0),
+        "denominations": denominations,
+        "created_by": _obj_value(batch, "created_by", ""),
+        "created_at": _iso_or_raw(_obj_value(batch, "created_at", None)),
+        "deleted_at": _iso_or_raw(_obj_value(batch, "deleted_at", None)),
+    }
+
+
+def _serialize_recharge_card(card: dict) -> dict:
+    return {
+        "id": card.get("id"),
+        "batch_id": card.get("batch_id"),
+        "username": card.get("username") or "",
+        "password": card.get("password") or "",
+        "wallet_value": float(card.get("wallet_value") or 0),
+        "used": bool(card.get("used")),
+        "first_used_at": card.get("first_used_at"),
+        "created_at": card.get("created_at"),
     }
 
 
@@ -352,6 +429,34 @@ def _parse_import_cards(body: dict) -> list[dict[str, str]]:
 
 # ─────────────── views ───────────────
 
+def _parse_recharge_denominations(body: dict) -> list[dict]:
+    raw_items = body.get("denominations")
+    if not isinstance(raw_items, list):
+        raw_items = []
+    denominations: list[dict] = []
+    for item in raw_items:
+        if not isinstance(item, dict):
+            continue
+        try:
+            value = float(item.get("value") or item.get("wallet_value") or 0)
+            count = int(item.get("count") or 0)
+        except (TypeError, ValueError):
+            continue
+        if value > 0 and count > 0:
+            denominations.append({"value": value, "count": count})
+    if denominations:
+        return denominations
+
+    try:
+        value = float(body.get("value") or body.get("wallet_value") or 0)
+        count = int(body.get("count") or 0)
+    except (TypeError, ValueError):
+        return []
+    if value > 0 and count > 0:
+        return [{"value": value, "count": count}]
+    return []
+
+
 def cards_generate():
     body = request.get_json(silent=True) or {}
     plan_id = body.get("plan_id")
@@ -524,6 +629,107 @@ def cards_batches_bulk():
         "changed": changed,
         "batch_ids": batch_ids,
     })
+
+
+def cards_recharge_list():
+    from ...radius.services.cards import get_cards_service
+
+    limit, offset, page, per_page = _pagination()
+    svc = get_cards_service()
+    items = svc.list_recharge_batches(limit=limit, offset=offset)
+    total = svc.count_recharge_batches()
+    return ok({
+        "items": [_serialize_recharge_batch(item) for item in items],
+        "count": len(items),
+        "total": total,
+        "page": page,
+        "per_page": per_page,
+        "pages": max(1, (total + per_page - 1) // per_page),
+        "default_denominations": [5, 10, 20, 50, 100],
+    })
+
+
+def cards_recharge_generate():
+    body = _body()
+    package_name = str(body.get("package_name") or "").strip()
+    denominations = _parse_recharge_denominations(body)
+    if not package_name:
+        return fail("validation_error", "اسم حزمة الشحن مطلوب.", status=422)
+    if not denominations:
+        return fail(
+            "validation_error",
+            "أدخل فئة شحن واحدة على الأقل بقيمة وعدد أكبر من صفر.",
+            status=422,
+        )
+    from ...radius.services.cards import get_cards_service
+    try:
+        result = get_cards_service().generate_recharge_batch(
+            actor=_actor(),
+            package_name=package_name,
+            denominations=denominations,
+            notes=str(body.get("notes") or "")[:300],
+        )
+    except RadiusValidationError as e:
+        return fail("validation_error", e.message, status=422)
+    except RadiusError as e:
+        return fail("internal_error", e.message, status=500)
+    return ok({
+        "batch": _serialize_recharge_batch(result["batch"]),
+        "inserted_count": int(result.get("inserted_count") or 0),
+        "total_value": float(result.get("total_value") or 0),
+    }, status=201)
+
+
+def cards_recharge_get(batch_id: int):
+    from ...radius.services.cards import get_cards_service
+
+    limit, offset, page, per_page = _pagination()
+    svc = get_cards_service()
+    batch = svc.get_recharge_batch(batch_id)
+    if not batch or _obj_value(batch, "deleted_at", None):
+        return fail("not_found", "حزمة الشحن غير موجودة.", status=404)
+    total_cards = svc.count_recharge_cards(batch_id)
+    cards = svc.list_recharge_cards(batch_id, limit=limit, offset=offset)
+    return ok({
+        "batch": _serialize_recharge_batch(batch),
+        "cards": [_serialize_recharge_card(card) for card in cards],
+        "total_cards": total_cards,
+        "page": page,
+        "per_page": per_page,
+        "pages": max(1, (total_cards + per_page - 1) // per_page),
+    })
+
+
+def cards_recharge_cards(batch_id: int):
+    from ...radius.services.cards import get_cards_service
+
+    limit, offset, page, per_page = _pagination()
+    svc = get_cards_service()
+    batch = svc.get_recharge_batch(batch_id)
+    if not batch or _obj_value(batch, "deleted_at", None):
+        return fail("not_found", "حزمة الشحن غير موجودة.", status=404)
+    total_cards = svc.count_recharge_cards(batch_id)
+    cards = svc.list_recharge_cards(batch_id, limit=limit, offset=offset)
+    return ok({
+        "items": [_serialize_recharge_card(card) for card in cards],
+        "count": len(cards),
+        "total": total_cards,
+        "page": page,
+        "per_page": per_page,
+        "pages": max(1, (total_cards + per_page - 1) // per_page),
+    })
+
+
+def cards_recharge_delete(batch_id: int):
+    from ...radius.services.cards import get_cards_service
+
+    deleted = get_cards_service().delete_recharge_batch(
+        actor=_actor(),
+        batch_id=batch_id,
+    )
+    if not deleted:
+        return fail("not_found", "حزمة الشحن غير موجودة أو محذوفة.", status=404)
+    return ok({"deleted": True, "batch_id": batch_id})
 
 
 def cards_batches_export_csv():

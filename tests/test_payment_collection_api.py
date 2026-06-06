@@ -160,6 +160,53 @@ def test_instructions_endpoint_exposes_safe_fields_only(client):
     assert "أرسل المبلغ نفسه" in instructions["instructions"]
 
 
+def test_request_detail_includes_proofs_and_service_apply_attempts(client):
+    assert _enable_settings(client).status_code == 200
+    created = client.post(
+        "/api/v1/payments/requests",
+        json={"payer_type": "subscriber", "purpose": "card_purchase", "amount": 20},
+        headers=_auth(),
+    ).get_json()["data"]["request"]
+
+    proof = client.post(
+        f"/api/v1/payments/requests/{created['id']}/proofs",
+        json={
+            "proof_type": "manual_reference",
+            "reference_number": "JP-4455",
+            "note": "تم التحويل من محفظة العميل",
+        },
+        headers=_auth(),
+    )
+    assert proof.status_code == 201
+
+    approve = client.post(
+        f"/api/v1/admin/payments/requests/{created['id']}/approve",
+        json={"review_note": "تمت المطابقة يدويًا"},
+        headers=_auth(),
+    )
+    assert approve.status_code == 200
+
+    apply = client.post(
+        f"/api/v1/admin/payments/requests/{created['id']}/apply-service",
+        headers=_auth(),
+    )
+    assert apply.status_code == 200
+
+    detail = client.get(
+        f"/api/v1/payments/requests/{created['id']}",
+        headers=_auth(),
+    )
+    assert detail.status_code == 200
+    data = detail.get_json()["data"]
+    assert data["request"]["id"] == created["id"]
+    assert data["request"]["status"] == "paid"
+    assert data["proofs"][0]["reference_number"] == "JP-4455"
+    assert data["proofs"][0]["review_status"] == "approved"
+    assert data["apply_attempts"][0]["payment_request_id"] == created["id"]
+    assert data["apply_attempts"][0]["status"] == "applied"
+    assert data["apply_attempts"][0]["result"]["mode"] == "record_only"
+
+
 def test_request_list_filters(client):
     assert _enable_settings(client).status_code == 200
     client.post(
