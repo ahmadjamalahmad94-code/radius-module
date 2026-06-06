@@ -617,6 +617,8 @@ body{min-height:100vh;background:
 .reqs .rq-txt{flex:1;min-width:0}
 .reqs .rq-txt b{display:block;font-size:12px}
 .reqs .rq-txt span{font-size:10px;color:var(--mut)}
+.reqs .rq-reason{display:block;font-size:10px;color:var(--bad);
+  font-weight:700;margin-top:2px;white-space:normal;line-height:1.6}
 .reqs .rq-amt{font-size:12.5px;font-weight:800;direction:ltr;text-align:left}
 
 /* ───── ورقة منزلقة (modal طويلة قابلة للتمرير) ───── */
@@ -1233,7 +1235,12 @@ body{min-height:100vh;background:
     $('btnLogout').style.display = screen === 'home' ? 'inline-block' : 'none';
     // زر الشات العائم يظهر داخل الرئيسية فقط؛ مغادرتها توقف الاستطلاع.
     $('fabChat').style.display = screen === 'home' ? 'block' : 'none';
-    if (screen !== 'home' && typeof closeChat === 'function') closeChat();
+    if (screen === 'home') {
+      if (typeof startChatUnreadPoll === 'function') startChatUnreadPoll();
+    } else {
+      if (typeof closeChat === 'function') closeChat();
+      if (typeof stopChatUnreadPoll === 'function') stopChatUnreadPoll();
+    }
   }
 
   /* ───── شريط التبويبات السفلي ─────
@@ -1726,11 +1733,15 @@ body{min-height:100vh;background:
     box.innerHTML = items.map(function (r) {
       var dep = r._k === 'dep';
       var amt = dep ? (r.confirmed_amount || r.amount_claimed) : r.amount;
+      // سبب الرفض (admin_note) يظهر للزبون تحت الطلب المرفوض.
+      var reason = (r.status === 'rejected' && r.admin_note)
+        ? '<span class="rq-reason">السبب: ' + esc(r.admin_note) + '</span>'
+        : '';
       return '<div class="rq"><span class="rq-ico ' + (dep ? 'dep' : '') +
         '">' + (dep ? '💰' : '💸') + '</span>' +
         '<span class="rq-txt"><b>' + (dep ? 'شحن بتحويل' : 'سحب رصيد') +
           ' · ' + esc(r.status_ar || '') + '</b>' +
-          '<span>' + fmtWhen(r.created_at) + '</span></span>' +
+          '<span>' + fmtWhen(r.created_at) + '</span>' + reason + '</span>' +
         '<span class="rq-amt">' + esc(amt || '') +
           ' <small>' + esc(r.currency || '') + '</small></span></div>';
     }).join('');
@@ -1897,10 +1908,34 @@ body{min-height:100vh;background:
       });
   }
 
+  /* ── شارة غير المقروء على زر الشات العائم ──
+     استطلاع خفيف (لا يعلّم الرسائل مقروءة) أثناء وجود الزبون في
+     الرئيسية؛ تُصفَّر عند فتح الشات (الفتح يعلّمها مقروءة في السيرفر). */
+  var chatUnreadTimer = null;
+  function setChatBadge(n) {
+    var b = $('chatBadge'); if (!b) return;
+    n = parseInt(n || 0, 10);
+    b.textContent = n > 99 ? '99+' : n;
+    b.classList.toggle('show', n > 0);
+  }
+  function pollChatUnread() {
+    api('/chat/unread').then(function (d) { setChatBadge(d.unread || 0); })
+      .catch(function () {});
+  }
+  function startChatUnreadPoll() {
+    pollChatUnread();
+    if (chatUnreadTimer) clearInterval(chatUnreadTimer);
+    chatUnreadTimer = setInterval(pollChatUnread, 12000);
+  }
+  function stopChatUnreadPoll() {
+    if (chatUnreadTimer) { clearInterval(chatUnreadTimer); chatUnreadTimer = null; }
+  }
+
   /* ── شات الدعم (استطلاع خفيف) ── */
   var chatLastId = 0, chatPollTimer = null;
   function openChat() {
     openSheet('chatSheet'); setupWhatsapp();
+    setChatBadge(0);  // الفتح يقرأ الرسائل (السيرفر يعلّمها مقروءة)
     chatLastId = 0; $('chatBody').innerHTML = '';
     loadChat(true);
     if (chatPollTimer) clearInterval(chatPollTimer);

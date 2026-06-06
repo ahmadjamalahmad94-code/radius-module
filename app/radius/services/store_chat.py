@@ -110,6 +110,20 @@ class StoreChatService:
                 )
             except Exception:  # noqa: BLE001 — تسجيل الحدث لا يكسر إرسال الرسالة
                 pass
+            # تنبيه المالك برسالة دعم جديدة — مجمَّع لكل زبون (تنبيه واحد
+            # للخيط يتجدّد بالرسائل اللاحقة) فلا إغراق.
+            try:
+                from .store_alerts import notify_chat
+                notify_chat(self.tenant_id, int(card_user_id))
+            except Exception:  # noqa: BLE001
+                pass
+        else:
+            # ردّ المدير على الخيط ⇒ حُلّ تنبيه الشات لهذا الزبون.
+            try:
+                from .store_alerts import resolve_chat
+                resolve_chat(self.tenant_id, int(card_user_id))
+            except Exception:  # noqa: BLE001
+                pass
         return self._get(message_id)
 
     def list_thread(
@@ -155,7 +169,15 @@ class StoreChatService:
             )
         with transaction() as conn:
             cur = conn.execute(sql, (self.tenant_id, int(card_user_id)))
-            return int(cur.rowcount or 0)
+            affected = int(cur.rowcount or 0)
+        # قراءة المدير لخيط الزبون ⇒ حُلّ تنبيه الشات (عولج الخيط).
+        if rdr == "admin":
+            try:
+                from .store_alerts import resolve_chat
+                resolve_chat(self.tenant_id, int(card_user_id))
+            except Exception:  # noqa: BLE001
+                pass
+        return affected
 
     def unread_for_customer(self, *, card_user_id: int) -> int:
         """عدد رسائل المدير غير المقروءة لدى هذا الزبون (شارة الإشعار)."""

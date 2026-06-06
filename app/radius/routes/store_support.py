@@ -136,13 +136,19 @@ def store_support():
             except StoreChatError:
                 open_thread = None
 
+    chat_threads = chat_svc.list_threads(limit=200)
+    # مجموع رسائل الزبائن غير المقروءة (للمدير) — شارة تبويب الشات.
+    chat_unread_count = sum(
+        int(t.get("unread_admin_count") or 0) for t in chat_threads)
+
     return render_template(
         "radius/store_support.html",
         deposit_pending=deposit_pending,
         deposit_resolved=deposit_resolved,
         withdrawal_pending=withdrawal_pending,
         withdrawal_resolved=withdrawal_resolved,
-        chat_threads=chat_svc.list_threads(limit=200),
+        chat_threads=chat_threads,
+        chat_unread_count=chat_unread_count,
         open_thread=open_thread,
         open_chat_id=open_chat_id,
         payment_methods=deposits_svc.list_payment_methods(),

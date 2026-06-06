@@ -44,6 +44,7 @@ from typing import Any
 from flask import Blueprint, g, request
 
 from ...radius.core.errors import RadiusValidationError
+from ...radius.core.system_config import default_currency
 from ...radius.services.business_os_finance import minor_to_money
 from ...radius.services.card_users_marketplace import (
     CardMarketplaceError,
@@ -151,6 +152,8 @@ def register(bp: Blueprint) -> None:
          _require_store_token(store_chat_poll), ["GET"]),
         ("/store/chat", "store_chat_post",
          _require_store_token(store_chat_post), ["POST"]),
+        ("/store/chat/unread", "store_chat_unread",
+         _require_store_token(store_chat_unread), ["GET"]),
     ]
     for rule, endpoint, view, methods in routes:
         bp.add_url_rule(rule, endpoint, view, methods=methods)
@@ -296,12 +299,24 @@ def _money(minor: Any) -> str:
     return minor_to_money(minor)
 
 
+def _cfg_currency() -> str:
+    """العملة المُهيّأة الواحدة للمتجر — **مصدر العرض الوحيد** لكل مبلغ
+    في المتجر/المحفظة (رصيد، شحن، إيداع، سحب، طلبات، سجل).
+
+    الجذر السابق لاختلاط «JOD/ILS» على شاشة واحدة: كل صف يخزّن عملته
+    لحظة الإنشاء (محفظة قديمة = الافتراضي JOD، طلب جديد = ILS بعد ضبط
+    العملة)، فتظهر مختلطة. الحل: نعرض العملة المضبوطة حاليًا
+    (default_currency = billing.currency) دائمًا، بصرف النظر عن القيمة
+    المخزّنة وقت الإنشاء — فتتّسق كل المبالغ على عملة المالك الواحدة."""
+    return default_currency()
+
+
 def _public_wallet(wallet: dict[str, Any]) -> dict[str, Any]:
     """شكل المحفظة الذي تعرضه صفحة المتجر — أرقام جاهزة للعرض."""
     return {
         "balance": _money(wallet.get("balance_minor")),
         "balance_minor": int(wallet.get("balance_minor") or 0),
-        "currency": str(wallet.get("currency") or ""),
+        "currency": _cfg_currency(),
         "status": str(wallet.get("status") or "active"),
     }
 
@@ -344,7 +359,7 @@ def _public_package(pkg: dict[str, Any]) -> dict[str, Any]:
         "name": str(pkg.get("name") or ""),
         "price": _money(pkg.get("price_minor")),
         "price_minor": int(pkg.get("price_minor") or 0),
-        "currency": str(pkg.get("currency") or ""),
+        "currency": _cfg_currency(),
         "duration_minutes": int(pkg.get("display_duration_minutes")
                                 or pkg.get("duration_minutes") or 0),
         "speed_down_kbps": int(pkg.get("display_speed_down_kbps")
@@ -394,6 +409,7 @@ def _purchase_history(card_user_id: int, *, limit: int = 25) -> list[dict[str, A
     for row in rows:
         item = row_to_dict(row)
         item["amount"] = _money(item.pop("amount_minor", 0))
+        item["currency"] = _cfg_currency()
         out.append(item)
     return out
 
@@ -659,7 +675,7 @@ def store_purchase():
     return ok({
         "purchase_id": int(purchase.get("id") or 0),
         "amount": purchase.get("amount"),
-        "currency": purchase.get("currency"),
+        "currency": _cfg_currency(),
         "card": card,
         "wallet": _public_wallet(wallet),
     }, status=201)
@@ -760,7 +776,7 @@ def store_my_cards():
             "username": str(card.get("username") or ""),
             "password": str(card.get("password") or ""),
             "price": _money(card.get("amount_minor")),
-            "currency": str(card.get("currency") or ""),
+            "currency": _cfg_currency(),
             "purchased_at": str(card.get("purchased_at") or ""),
             "first_used_at": str(card.get("first_used_at") or ""),
             "expire_at": str(card.get("expire_at") or ""),
@@ -829,7 +845,7 @@ def store_purchases():
             "purchase_id": int(item.get("purchase_id") or 0),
             "created_at": str(item.get("created_at") or ""),
             "amount": _money(item.get("amount_minor")),
-            "currency": str(item.get("currency") or ""),
+            "currency": _cfg_currency(),
             "status": st,
             "status_ar": status_ar.get(st, st),
             "package_name": str(item.get("package_name") or "باقة"),
@@ -857,7 +873,7 @@ def _public_deposit(req: dict[str, Any]) -> dict[str, Any]:
         "id": int(req.get("id") or 0),
         "amount_claimed": req.get("amount_claimed"),
         "confirmed_amount": req.get("confirmed_amount"),
-        "currency": str(req.get("currency") or ""),
+        "currency": _cfg_currency(),
         "method": str(req.get("method") or ""),
         "method_ar": req.get("method_ar"),
         "reference": str(req.get("reference") or ""),
@@ -876,7 +892,7 @@ def _public_withdrawal(req: dict[str, Any]) -> dict[str, Any]:
     return {
         "id": int(req.get("id") or 0),
         "amount": req.get("amount"),
-        "currency": str(req.get("currency") or ""),
+        "currency": _cfg_currency(),
         "payee_name": str(req.get("payee_name") or ""),
         "payee_account": str(req.get("payee_account") or ""),
         "status": str(req.get("status") or ""),
@@ -984,6 +1000,14 @@ def store_chat_poll():
         except Exception:  # noqa: BLE001
             pass
     return ok(thread)
+
+
+def store_chat_unread():
+    """عدّ رسائل الدعم غير المقروءة للزبون — خفيف (لا يعلّمها مقروءة)
+    ليُحدّث شارة زر الشات العائم أثناء الاستطلاع."""
+    n = StoreChatService(tenant_id=_tid()).unread_for_customer(
+        card_user_id=_cuid())
+    return ok({"unread": int(n)})
 
 
 def store_chat_post():

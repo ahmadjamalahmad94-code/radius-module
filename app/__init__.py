@@ -396,6 +396,26 @@ def _install_stubs(app: Flask) -> None:
         except Exception:  # noqa: BLE001 — الشارة لا تكسر أي صفحة أبدًا
             return 0
 
+    def _store_pending_count() -> int:
+        """عدد عناصر المتجر المفتوحة بانتظار المدير (شارة sidebar لبند
+        «دعم وطلبات المتجر»): تنبيهات المتجر القابلة للمعالجة المفتوحة
+        (إيداع + سحب + شات) — يُستثنى التسجيل غير القابل للمعالجة.
+        استعلام عدّ واحد خفيف على جدول التنبيهات، ولا يكسر أي صفحة."""
+        try:
+            from flask import g as _g
+            from app.radius.core.tenant import DEFAULT_TENANT_ID
+            from app.radius.db.connection import db as _db
+            tid = int(getattr(_g, "tenant_id", DEFAULT_TENANT_ID))
+            row = _db().execute(
+                "SELECT COUNT(*) AS c FROM alerts "
+                "WHERE tenant_id = ? AND status = 'open' "
+                "AND rule IN ('store.deposit','store.withdrawal','store.chat')",
+                (tid,),
+            ).fetchone()
+            return int(row["c"] if row else 0)
+        except Exception:  # noqa: BLE001 — الشارة لا تكسر أي صفحة أبدًا
+            return 0
+
     def _collection_is_frozen() -> bool:
         """هل قسم التحصيل مجمّد؟ (شارة الـ sidebar فقط).
 
@@ -467,6 +487,10 @@ def _install_stubs(app: Flask) -> None:
             # المهام المنتظرة بجانب رابط «طابور المزامنة». استعلام عدّ واحد،
             # ولا تكسر أي صفحة عند الخطأ (تُرجع صفرًا).
             "sync_pending_count": _sync_pending_count,
+            # شارة «دعم وطلبات المتجر»: دالة كسولة تستدعيها الـ sidebar
+            # لعرض عدد طلبات/رسائل المتجر المفتوحة (إيداع/سحب/شات). استعلام
+            # عدّ واحد على التنبيهات، ولا تكسر أي صفحة عند الخطأ (صفر).
+            "store_pending_count": _store_pending_count,
             # ── صلاحيات الواجهة (RBAC UI) ──
             # can(perm): هل يملك المسؤول الحالي الصلاحية؟ (super_admin دائمًا نعم)
             # ui_unauth_mode(): "freeze" تجميد بقفل أو "hide" إخفاء كلي —

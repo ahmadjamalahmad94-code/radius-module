@@ -50,6 +50,9 @@ class WithdrawalRequestService:
         out["amount"] = minor_to_money(out.get("amount_minor"))
         out["status_ar"] = _STATUS_AR.get(str(out.get("status") or ""),
                                           out.get("status"))
+        # العملة المعروضة = المضبوطة حاليًا (مصدر واحد) لا المخزّنة وقت
+        # الطلب — فلا تختلط JOD/ILS عبر اللوحة وصفحة الزبون.
+        out["currency"] = default_currency()
         return out
 
     def _wallet(self, card_user_id: int) -> dict[str, Any]:
@@ -101,6 +104,14 @@ class WithdrawalRequestService:
             metadata={"withdrawal_request_id": request_id,
                       "amount_minor": amount_minor},
         )
+        # تنبيه المالك بطلب سحب جديد بانتظار التنفيذ (أفضل-جهد).
+        try:
+            from .store_alerts import notify_withdrawal
+            notify_withdrawal(self.tenant_id, request_id,
+                              minor_to_money(amount_minor), default_currency(),
+                              name=str(payee_name or ""))
+        except Exception:  # noqa: BLE001
+            pass
         return self.get(request_id)
 
     def get(self, request_id: int) -> dict[str, Any]:
@@ -212,8 +223,13 @@ class WithdrawalRequestService:
         _notify_customer(
             self.tenant_id, int(req["card_user_id"]),
             f"تم تنفيذ طلب سحبك ({minor_to_money(amount_minor)} "
-            f"{req.get('currency') or ''}) وخصمه من رصيدك.",
+            f"{default_currency()}) وخصمه من رصيدك.",
         )
+        try:
+            from .store_alerts import resolve_withdrawal
+            resolve_withdrawal(self.tenant_id, int(request_id))
+        except Exception:  # noqa: BLE001
+            pass
         return self.get(request_id)
 
     def reject(self, request_id: int, *, actor: str = "admin",
@@ -246,6 +262,11 @@ class WithdrawalRequestService:
             "نعتذر، لم نتمكّن من تنفيذ طلب سحبك"
             + (f" — {note}" if note else "") + ". تواصل معنا للمساعدة.",
         )
+        try:
+            from .store_alerts import resolve_withdrawal
+            resolve_withdrawal(self.tenant_id, int(request_id))
+        except Exception:  # noqa: BLE001
+            pass
         return req
 
 

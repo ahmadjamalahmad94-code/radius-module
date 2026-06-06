@@ -207,6 +207,14 @@ class CardUsersMarketplaceService:
             target_id=int(user["id"]),
             metadata={"mobile": phone, "source": source},
         )
+        # تنبيه المالك بمشترك بطاقات جديد سجّل ذاتيًا من المتجر (لا
+        # ينشئه موظف من اللوحة). أفضل-جهد — لا يكسر التسجيل إن فشل.
+        if self_registered:
+            try:
+                from .store_alerts import notify_registration
+                notify_registration(self.tenant_id, int(user["id"]), name)
+            except Exception:  # noqa: BLE001
+                pass
         return user
 
     def set_card_user_password(

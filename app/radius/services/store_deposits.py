@@ -181,6 +181,9 @@ class DepositRequestService:
         out["method_ar"] = _METHOD_AR.get(str(out.get("method") or "other"),
                                           out.get("method"))
         out["receipt_image_url"] = store_image_url(out.get("receipt_image_path") or "")
+        # العملة المعروضة = المضبوطة حاليًا (مصدر واحد) لا المخزّنة وقت
+        # الطلب — فلا تختلط JOD/ILS عبر اللوحة وصفحة الزبون.
+        out["currency"] = default_currency()
         return out
 
     def _wallet(self, card_user_id: int) -> dict[str, Any]:
@@ -231,6 +234,14 @@ class DepositRequestService:
             metadata={"deposit_request_id": request_id,
                       "amount_minor": amount_minor, "method": m},
         )
+        # تنبيه المالك بطلب شحن جديد بانتظار المراجعة (أفضل-جهد).
+        try:
+            from .store_alerts import notify_deposit
+            notify_deposit(self.tenant_id, request_id,
+                           minor_to_money(amount_minor), default_currency(),
+                           name=str(payer_name or ""))
+        except Exception:  # noqa: BLE001
+            pass
         return self.get(request_id)
 
     def get(self, request_id: int) -> dict[str, Any]:
@@ -344,8 +355,14 @@ class DepositRequestService:
         _notify_customer(
             self.tenant_id, int(req["card_user_id"]),
             f"تم تأكيد إيداعك وإضافة {minor_to_money(amount_minor)} "
-            f"{req.get('currency') or ''} إلى رصيدك. شكرًا لك.",
+            f"{default_currency()} إلى رصيدك. شكرًا لك.",
         )
+        # حُلّ تنبيه المالك — عُولج الطلب.
+        try:
+            from .store_alerts import resolve_deposit
+            resolve_deposit(self.tenant_id, int(request_id))
+        except Exception:  # noqa: BLE001
+            pass
         return self.get(request_id)
 
     def reject(self, request_id: int, *, actor: str = "admin",
@@ -378,6 +395,11 @@ class DepositRequestService:
             "نعتذر، لم نتمكّن من تأكيد إيداعك"
             + (f" — {note}" if note else "") + ". تواصل معنا للمساعدة.",
         )
+        try:
+            from .store_alerts import resolve_deposit
+            resolve_deposit(self.tenant_id, int(request_id))
+        except Exception:  # noqa: BLE001
+            pass
         return req
 
 
