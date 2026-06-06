@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-06-06 15:34+0300\n"
+"POT-Creation-Date: 2026-06-06 15:38+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: en\n"
@@ -327,7 +327,7 @@ msgid "(فقط المحاولات التي توقفت نهائيًا)"
 msgstr "(only attempts that stopped permanently)"
 
 msgid "(فيصغر"
-msgstr ""
+msgstr "(it shrinks"
 
 msgid "(قوالب جاهزة بتحكم كامل بالألوان والزخارف)."
 msgstr "(ready-made templates with full control over colors and decorations)."
@@ -716,7 +716,7 @@ msgid "3س 05د"
 msgstr "3h 05m"
 
 msgid "4 أحرف على الأقل"
-msgstr ""
+msgstr "At least 4 characters"
 
 msgid "4 ساعات"
 msgstr "4 hours"
@@ -982,7 +982,7 @@ msgstr ""
 "payment confirmation...)."
 
 msgid "SSTP (نفق إدارة)"
-msgstr ""
+msgstr "SSTP (management tunnel)"
 
 msgid "Thread ID (اختياري)"
 msgstr "Thread ID (optional)"
@@ -1774,7 +1774,7 @@ msgid "«فحص كرت»:"
 msgstr "“Voucher check”:"
 
 msgid "«فشل الرفع: Connection reset» المتكرر؟ (ملف كبير على API)"
-msgstr ""
+msgstr "Recurring \"Upload failed: Connection reset\"? (large file over the API)"
 
 msgid "«فصل الاتصال»"
 msgstr "\"Disconnect\""
@@ -2203,7 +2203,7 @@ msgid "آخر نشاط:"
 msgstr "Last activity:"
 
 msgid "آمن"
-msgstr ""
+msgstr "Secure"
 
 msgid "آمنة"
 msgstr "Secure"
@@ -2456,7 +2456,7 @@ msgid "أرقام فقط"
 msgstr "Digits Only"
 
 msgid "أرقام فقط (7–15 رقمًا)، يجوز أن يبدأ بـ +."
-msgstr ""
+msgstr "Digits only (7–15 digits), may start with +."
 
 msgid "أزرار"
 msgstr "Buttons"
@@ -2783,7 +2783,7 @@ msgid "أما"
 msgstr "As for"
 
 msgid "أمان"
-msgstr ""
+msgstr "Security"
 
 msgid "أمثلة"
 msgstr "Examples"
@@ -2824,6 +2824,8 @@ msgstr ""
 
 msgid "أنشئ عرضاً من سوق البطاقات أو من قسم الباقات حتى يستطيع المستخدم الشراء."
 msgstr ""
+"Create an offer from the card marketplace or the plans section so the "
+"user can buy."
 
 msgid ""
 "أنشئ عروض بيع تظهر في بوابة الزبون. عند الشراء يتم توليد بطاقة حقيقية، "
@@ -3259,7 +3261,7 @@ msgid "إجمالي المسارات"
 msgstr "Total routes"
 
 msgid "إجمالي المشتريات"
-msgstr ""
+msgstr "Total purchases"
 
 msgid "إجمالي النقاط"
 msgstr "Total points"
@@ -3519,7 +3521,7 @@ msgid "إرشادات التحقق"
 msgstr "Verification guidelines"
 
 msgid "إرفاق صورة"
-msgstr ""
+msgstr "Attach image"
 
 msgid "إزالة"
 msgstr "Remove"
@@ -3549,7 +3551,7 @@ msgid "إشارة وشبكات / موجات ضوئية / شبكة تقنية / �
 msgstr "Signal and networks / light waves / technical network / clean"
 
 msgid "إشعار"
-msgstr ""
+msgstr "Notification"
 
 msgid "إشعار صيانة"
 msgstr "Maintenance Notice"
@@ -3621,7 +3623,7 @@ msgid "إضافة القاعدة"
 msgstr "Add rule"
 
 msgid "إضافة القناة"
-msgstr ""
+msgstr "Add channel"
 
 msgid "إضافة المسار الافتراضي"
 msgstr "Add the default route"
@@ -3699,7 +3701,7 @@ msgid "إضافة قبل أو بعد الاسم"
 msgstr "Add before or after the name"
 
 msgid "إضافة قناة استلام"
-msgstr ""
+msgstr "Add receiving channel"
 
 msgid "إضافة كوتة"
 msgstr "Add Quota"
@@ -3726,7 +3728,7 @@ msgid "إضافة مدير"
 msgstr "Add Admin"
 
 msgid "إضافة مستفيد جديد"
-msgstr ""
+msgstr "Add new beneficiary"
 
 msgid "إضافة مشترك"
 msgstr "Add subscriber"
@@ -4013,7 +4015,7 @@ msgid "إن تجاوز الحد."
 msgstr "If it exceeds the limit."
 
 msgid "إن كان شعار التصميم صورة كبيرة مضمّنة، يصير"
-msgstr ""
+msgstr "If the template logo is a large embedded image, it becomes"
 
 msgid "إن كان لديك شعار سابق يظهر عنوان «"
 msgstr "If you have a previous logo, the heading « appears"
@@ -4054,7 +4056,7 @@ msgid "إنشاء التذكرة"
 msgstr "Create ticket"
 
 msgid "إنشاء الحساب + المحفظة"
-msgstr ""
+msgstr "Create account + wallet"
 
 msgid "إنشاء السياسة"
 msgstr "Create policy"
@@ -4119,7 +4121,7 @@ msgid "إيداع"
 msgstr "Deposit"
 
 msgid "إيداع للمحفظة"
-msgstr ""
+msgstr "Deposit to wallet"
 
 msgid "إيراد الشهر"
 msgstr "Monthly Revenue"
@@ -4272,7 +4274,7 @@ msgid "اتركه فارغًا لاستخدام سعر العرض"
 msgstr "Leave empty to use the offer price"
 
 msgid "اتركه فارغًا لاعتماد المبلغ المدّعى"
-msgstr ""
+msgstr "Leave blank to approve the claimed amount"
 
 msgid "اتركه فارغًا لبداية مفتوحة."
 msgstr "Leave empty for an open start."
@@ -4521,6 +4523,8 @@ msgstr "Select a router to manage its policies"
 
 msgid "اختر زبونًا من القائمة لعرض المحادثة والرد عليه نصًا أو بصورة."
 msgstr ""
+"Select a customer from the list to view the conversation and reply with "
+"text or an image."
 
 msgid "اختر شكل القالب"
 msgstr "Choose Template Style"
@@ -4582,7 +4586,7 @@ msgid "اختر ما تريد برمجته"
 msgstr "Choose what you want to configure"
 
 msgid "اختر محادثة من القائمة لعرضها."
-msgstr ""
+msgstr "Select a conversation from the list to view it."
 
 msgid "اختر مشتركًا واحدًا"
 msgstr "Select a single subscriber"
@@ -4901,6 +4905,8 @@ msgstr "Use Filter"
 
 msgid "استعمل قسم «شراء بطاقة من السوق» بالأعلى لشراء أول بطاقة."
 msgstr ""
+"Use the \"Buy a card from the marketplace\" section above to buy the "
+"first card."
 
 msgid "استقبال"
 msgstr "Receive"
@@ -5020,7 +5026,7 @@ msgid "اسم الحزمة:"
 msgstr "Plan Name:"
 
 msgid "اسم الحساب"
-msgstr ""
+msgstr "Account name"
 
 msgid "اسم الخدمة"
 msgstr "Service Name"
@@ -5096,7 +5102,7 @@ msgid "اسم القالب المحفوظ — مثل: تصميم رمضان"
 msgstr "The saved template name — e.g.: Ramadan design"
 
 msgid "اسم القناة (يظهر للزبون)"
-msgstr ""
+msgstr "Channel name (shown to the customer)"
 
 msgid "اسم الكرت"
 msgstr "Voucher name"
@@ -5135,7 +5141,7 @@ msgid "اسم النظام"
 msgstr "System Name"
 
 msgid "اسم النفق"
-msgstr ""
+msgstr "Tunnel name"
 
 msgid "اسم بوابة الدخول"
 msgstr "Hotspot gateway name"
@@ -5153,7 +5159,7 @@ msgid "اسم سلسلة الفلترة (Filter Chain) المستخدمة."
 msgstr "The name of the filter chain (Filter Chain) used."
 
 msgid "اسم صاحب الحساب"
-msgstr ""
+msgstr "Account holder name"
 
 msgid "اسم صاحب المحفظة"
 msgstr "Wallet owner name"
@@ -5365,7 +5371,7 @@ msgid "اعتماد القاعدة"
 msgstr "Approve Rule"
 
 msgid "اعتماد مبلغ مختلف"
-msgstr ""
+msgstr "Approve a different amount"
 
 msgid "اعتمادًا"
 msgstr "Based on"
@@ -5651,6 +5657,8 @@ msgstr "Enter one domain per line, e.g."
 
 msgid "اكتب اسمًا ثلاثيًا (كلمتان على الأقل): اسمك واسم أبيك وجدّك."
 msgstr ""
+"Enter a full name (at least two words): your name, your father's name, "
+"and your grandfather's name."
 
 msgid "اكتب اسمًا للبوت (مثل: تنبيهات شبكتي)."
 msgstr "Enter a name for the bot (e.g., My Network Alerts)."
@@ -5683,7 +5691,7 @@ msgid "اكتب تفاصيل المشكلة: انقطاع، بطء، فاتور�
 msgstr "Write the details of the problem: outage, slowness, invoice, etc."
 
 msgid "اكتب ردًّا..."
-msgstr ""
+msgstr "Write a reply..."
 
 msgid "اكتب ردّك على المشترك..."
 msgstr "Write your reply to the subscriber..."
@@ -5889,7 +5897,7 @@ msgid "الأمان."
 msgstr "Security."
 
 msgid "الأنفاق"
-msgstr ""
+msgstr "Tunnels"
 
 msgid "الأولوية"
 msgstr "Priority"
@@ -6094,7 +6102,7 @@ msgid "الاسم الثاني"
 msgstr "Second Name"
 
 msgid "الاسم الثلاثي"
-msgstr ""
+msgstr "Full name"
 
 msgid "الاسم الحقيقي أو الوصفي لصاحب الحساب."
 msgstr "The real or descriptive name of the account holder."
@@ -6151,7 +6159,7 @@ msgstr ""
 "identification easier."
 
 msgid "الاسم كما هو في الحساب"
-msgstr ""
+msgstr "Name as it appears on the account"
 
 msgid "الاسم والشعار واللون تظهر في كل صفحات النظام"
 msgstr "The name, logo, and color appear on every page of the system"
@@ -6388,7 +6396,7 @@ msgid "البوّابة عند اختيار Static"
 msgstr "The gateway when Static is selected"
 
 msgid "البيانات"
-msgstr ""
+msgstr "Data"
 
 msgid "البيانات الإضافية"
 msgstr "Additional data"
@@ -6412,7 +6420,7 @@ msgid "التأخير"
 msgstr "Delay"
 
 msgid "التأكيد"
-msgstr ""
+msgstr "Confirmation"
 
 msgid "التاريخ"
 msgstr "Date"
@@ -6759,6 +6767,8 @@ msgid ""
 "الجسر مع لوحة التراخيص غير جاهز. فعّل الجسر وأدخل رابط HTTPS ومفتاح "
 "الترخيص وسر الربط من"
 msgstr ""
+"The bridge with the licensing panel is not ready. Enable the bridge and "
+"enter the HTTPS link, license key, and link secret from"
 
 msgid "الجلسات"
 msgstr "Sessions"
@@ -6776,7 +6786,7 @@ msgid "الجلسات الحيّة فقط"
 msgstr "Live sessions only"
 
 msgid "الجلسات والاتصالات"
-msgstr ""
+msgstr "Sessions and connections"
 
 msgid "الجلسات:"
 msgstr "Sessions:"
@@ -7332,7 +7342,7 @@ msgid "الرصيد الحالي للمحفظة."
 msgstr "Current wallet balance."
 
 msgid "الرصيد المتاح"
-msgstr ""
+msgstr "Available balance"
 
 msgid "الرصيد المتبقّي لهذه القناة — اضغط لإدارة الرصيد والحِزم"
 msgstr ""
@@ -7340,10 +7350,10 @@ msgstr ""
 "bundles"
 
 msgid "الرصيد غير كافٍ (تحتاج"
-msgstr ""
+msgstr "Insufficient balance (you need"
 
 msgid "الرصيد كافٍ — سيُخصم"
-msgstr ""
+msgstr "Sufficient balance — will be deducted"
 
 msgid "الرصيد والحِزم"
 msgstr "Balance & plans"
@@ -7413,7 +7423,7 @@ msgid "الروابط القديمة"
 msgstr "Legacy links"
 
 msgid "الزبون"
-msgstr ""
+msgstr "Customer"
 
 msgid "الزبون يقول إنه متصل لكن كرته مش بالقائمة؟ افحص بهذا الترتيب:"
 msgstr ""
@@ -7718,6 +7728,9 @@ msgid ""
 "الشحن إداري (يُضاف مباشرة للرصيد)؛ كما يستطيع العميل شحن محفظته بنفسه من "
 "بوابته بعد تعيين كلمة مرور البوابة."
 msgstr ""
+"Top-up is administrative (added directly to the balance); the customer "
+"can also top up their own wallet from their portal after setting a portal"
+" password."
 
 msgid "الشحن والخصم"
 msgstr "Top-up and deduction"
@@ -8218,7 +8231,7 @@ msgid "الفواتير:"
 msgstr "Invoices:"
 
 msgid "القائمة"
-msgstr ""
+msgstr "List"
 
 msgid "القائمة الرئيسية"
 msgstr "Main menu"
@@ -8270,7 +8283,7 @@ msgid "القناة"
 msgstr "Channel"
 
 msgid "القناة / المرجع"
-msgstr ""
+msgstr "Channel / reference"
 
 msgid "القناة غير مهيأة بعد"
 msgstr "Channel not configured yet"
@@ -8538,7 +8551,7 @@ msgid "المبلغ المدفوع"
 msgstr "Amount paid"
 
 msgid "المبلغ المعتمد"
-msgstr ""
+msgstr "Approved amount"
 
 msgid "المبلغ يُضاف كاملًا إلى محفظة كل مشترك على حدة، لا يُقسَّم بينهم."
 msgstr ""
@@ -8869,7 +8882,7 @@ msgid "المستلمون ("
 msgstr "Recipients ("
 
 msgid "المسموح في باقتك"
-msgstr ""
+msgstr "Allowed in your plan"
 
 msgid "المشاركة والتسويات:"
 msgstr "Sharing and settlements:"
@@ -9056,7 +9069,7 @@ msgid "المعرّف المختصر"
 msgstr "Short ID"
 
 msgid "المعلومات الأساسية"
-msgstr ""
+msgstr "Basic information"
 
 msgid "المعلومات الشخصية"
 msgstr "Personal information"
@@ -9251,7 +9264,7 @@ msgid "المُحصّل، السلف، التفعيل، الجيجات، الد�
 msgstr "The collector, advances, activation, gigabytes, debts, and subscribers."
 
 msgid "المُحوِّل"
-msgstr ""
+msgstr "Sender"
 
 msgid "المُرسَل:"
 msgstr "Sent:"
@@ -9323,7 +9336,7 @@ msgid "النشاط والأحداث"
 msgstr "Activity & events"
 
 msgid "النشاط والأحداث:"
-msgstr ""
+msgstr "Activity and events:"
 
 msgid "النشاط:"
 msgstr "Activity:"
@@ -9511,7 +9524,7 @@ msgid "الوصف:"
 msgstr "Description:"
 
 msgid "الوصل"
-msgstr ""
+msgstr "Receipt"
 
 msgid "الوصول البعيد"
 msgstr "Remote access"
@@ -9696,6 +9709,8 @@ msgid ""
 "انسخ هذه البيانات الآن واحقنها في إعداد النفق على الراوتر. لن تُعرض "
 "مجددًا ولا تُخزَّن في اللوحة."
 msgstr ""
+"Copy these details now and enter them in the tunnel configuration on the "
+"router. They will not be shown again and are not stored in the panel."
 
 msgid "انفعّلت لكن صاحبها مو متصل هاللحظة."
 msgstr "Activated, but its owner is not connected right now."
@@ -9728,7 +9743,7 @@ msgid "باسم أو رقم الراوتر الذي فشل."
 msgstr "By the name or number of the router that failed."
 
 msgid "باسمه وكلمة مروره."
-msgstr ""
+msgstr "with their username and password."
 
 msgid "باقات الإنترنت، السرعات، الحصص، وشروط الاستخدام للمشتركين والكروت."
 msgstr "Internet plans, speeds, quotas, and usage terms for subscribers and cards."
@@ -10035,7 +10050,7 @@ msgid "بدون باقة"
 msgstr "No Plan"
 
 msgid "بدون تاريخ"
-msgstr ""
+msgstr "No date"
 
 msgid "بدون دور"
 msgstr "No role"
@@ -10147,10 +10162,10 @@ msgid "بطاقات الطباعة › دفعة طباعة جديدة"
 msgstr "Print vouchers › New print batch"
 
 msgid "بطاقات العميل"
-msgstr ""
+msgstr "Customer cards"
 
 msgid "بطاقات العميل والمشتريات"
-msgstr ""
+msgstr "Customer cards and purchases"
 
 msgid "بطاقات حزمة الشحن"
 msgstr "Top-up bundle vouchers"
@@ -10194,7 +10209,7 @@ msgid "بطاقة مشتركة — جلسة واحدة فعّالة"
 msgstr "Shared voucher — one active session"
 
 msgid "بطاقة مملوكة"
-msgstr ""
+msgstr "Owned card"
 
 msgid "بطاقة واحدة نشطة"
 msgstr "One active voucher"
@@ -10509,7 +10524,7 @@ msgid "تأكد من اتصال الراوتر بالخادم"
 msgstr "Make sure the router is connected to the server"
 
 msgid "تأكيد"
-msgstr ""
+msgstr "Confirm"
 
 msgid "تأكيد استعادة النسخة"
 msgstr "Confirm backup restore"
@@ -10551,7 +10566,7 @@ msgid "تأكيد مطلوب قبل التنفيذ"
 msgstr "Confirmation required before execution"
 
 msgid "تأكيد وخصم"
-msgstr ""
+msgstr "Confirm and deduct"
 
 msgid "تأكيد وضع المختبر الداخلي"
 msgstr "Confirm internal lab mode"
@@ -10615,7 +10630,7 @@ msgid "تاريخ البدء"
 msgstr "Start Date"
 
 msgid "تاريخ التسجيل"
-msgstr ""
+msgstr "Registration date"
 
 msgid "تاريخ التسليم"
 msgstr "Delivery date"
@@ -11213,7 +11228,7 @@ msgid "ترتيب الصفحات والهوامش"
 msgstr "Page Order & Margins"
 
 msgid "ترتيب العرض"
-msgstr ""
+msgstr "Display order"
 
 msgid "ترتيب ظهور العرض؛ الرقم الأصغر يظهر أولًا."
 msgstr "The offer's display order; the smaller number appears first."
@@ -11539,6 +11554,8 @@ msgstr "Appears directly in the customer portal"
 
 msgid "تظهر هنا جلسات الإنترنت لبطاقات العميل بمجرد استخدامها على الشبكة."
 msgstr ""
+"The internet sessions for the customer's cards appear here as soon as "
+"they are used on the network."
 
 msgid "تعبئة المخزون"
 msgstr "Restock inventory"
@@ -11685,7 +11702,7 @@ msgid "تعليمات الاستخدام"
 msgstr "Usage instructions"
 
 msgid "تعليمات للزبون (اختياري)"
-msgstr ""
+msgstr "Instructions for the customer (optional)"
 
 msgid "تعمل"
 msgstr "Running"
@@ -12534,7 +12551,7 @@ msgid "ثابتة ومحفوظة"
 msgstr "Fixed and saved"
 
 msgid "ثانية"
-msgstr ""
+msgstr "second"
 
 msgid "ثانيًا — «إعدادات الطباعة»:"
 msgstr "Second — \"Print settings\":"
@@ -12779,6 +12796,8 @@ msgid ""
 "جلسات الاتصال تأتي من سجلّ المحاسبة (RADIUS) لبطاقات العميل — وقتًا "
 "وبيانات."
 msgstr ""
+"Connection sessions come from the RADIUS accounting log for the "
+"customer's cards — time and data."
 
 msgid "جلسات البرودباند"
 msgstr "Broadband sessions"
@@ -12794,7 +12813,7 @@ msgid "جلسات الدفع التجريبية"
 msgstr "Test payment sessions"
 
 msgid "جلسات العميل"
-msgstr ""
+msgstr "Customer sessions"
 
 msgid "جلسات الكروت"
 msgstr "Voucher Sessions"
@@ -12827,7 +12846,7 @@ msgid "جلسات نشطة:"
 msgstr "Active sessions:"
 
 msgid "جلسة"
-msgstr ""
+msgstr "Session"
 
 msgid "جلسة الإدارة الرسومية (8291)"
 msgstr "Graphical management session (8291)"
@@ -12891,7 +12910,7 @@ msgid "جهز سكربت ربط الراوتر"
 msgstr "Prepare the router binding script"
 
 msgid "جوالي باي"
-msgstr ""
+msgstr "Jawali Pay"
 
 msgid "جوجل درايف"
 msgstr "Google Drive"
@@ -13273,7 +13292,7 @@ msgid "حذف نهائيًا"
 msgstr "Delete permanently"
 
 msgid "حذف هذه القناة؟"
-msgstr ""
+msgstr "Delete this channel?"
 
 msgid "حذف:"
 msgstr "Delete:"
@@ -13385,7 +13404,7 @@ msgid "حساب معطّل"
 msgstr "Disabled Account"
 
 msgid "حساب نشط"
-msgstr ""
+msgstr "Active account"
 
 msgid "حسابات شغّالة — صاحبها يقدر يدخل على الإنترنت متى شاء."
 msgstr "Active accounts — the owner can get online whenever they want."
@@ -13639,7 +13658,7 @@ msgid "خدمة الاشتراك"
 msgstr "Subscription service"
 
 msgid "خدمة المصادقة"
-msgstr ""
+msgstr "Authentication service"
 
 msgid "خدمة تمنحك رابط إرسال مباشر مثل مزوّدي الرسائل المعروفين."
 msgstr ""
@@ -13677,7 +13696,7 @@ msgid "خصم"
 msgstr "Discount"
 
 msgid "خصم من المحفظة"
-msgstr ""
+msgstr "Deduct from wallet"
 
 msgid "خصم وقت"
 msgstr "Time deduction"
@@ -13857,10 +13876,10 @@ msgid "دخول عبر صفحة تسجيل الدخول للهوت سبوت"
 msgstr "Login via the hotspot sign-in page"
 
 msgid "دعم المتجر المتقدّم"
-msgstr ""
+msgstr "Advanced store support"
 
 msgid "دعم وطلبات الشحن/السحب"
-msgstr ""
+msgstr "Support and top-up/withdrawal requests"
 
 msgid "دعم، تحصيل"
 msgstr "Support, Collection"
@@ -14052,9 +14071,13 @@ msgid ""
 "راجع الوصل وحساب الاستلام، ثم أكّد لإضافة الرصيد للزبون — أو اعتمد مبلغًا"
 " مختلفًا، أو ارفض."
 msgstr ""
+"Review the receipt and the receiving account, then confirm to add the "
+"balance to the customer — or approve a different amount, or reject."
 
 msgid "راجع طلبات الشحن والسحب، حادث الزبائن، واضبط محافظ الاستلام."
 msgstr ""
+"Review top-up and withdrawal requests, chat with customers, and configure"
+" the receiving wallets."
 
 msgid "راجع ناتج"
 msgstr "Review the output of"
@@ -14203,7 +14226,7 @@ msgid "رصيد"
 msgstr "Balance"
 
 msgid "رصيد ابتدائي"
-msgstr ""
+msgstr "Initial balance"
 
 msgid "رصيد الدين والرصيد لكل موزّع."
 msgstr "Debt balance and balance per distributor."
@@ -14228,6 +14251,9 @@ msgid ""
 "رصيد المحفظة يُشحن يدويًا (إداريًا) بزر «شحن الرصيد» أو يشحنه العميل "
 "بنفسه من بوابته، ويُستهلك عند شراء بطاقة."
 msgstr ""
+"The wallet balance is topped up manually (administratively) with the "
+"\"Top up balance\" button or by the customer from their portal, and is "
+"consumed when buying a card."
 
 msgid "رصيد المحفظة:"
 msgstr "Wallet balance:"
@@ -14242,7 +14268,7 @@ msgid "رصيدي"
 msgstr "My balance"
 
 msgid "رفض"
-msgstr ""
+msgstr "Reject"
 
 msgid "رفض الإثبات"
 msgstr "Reject proof"
@@ -14346,10 +14372,10 @@ msgid "رقم الحدث"
 msgstr "Event number"
 
 msgid "رقم الحساب"
-msgstr ""
+msgstr "Account number"
 
 msgid "رقم الحساب / الجوال"
-msgstr ""
+msgstr "Account number / mobile"
 
 msgid "رقم الراوتر"
 msgstr "Router Number"
@@ -14588,7 +14614,7 @@ msgid "ساعة"
 msgstr "Hour"
 
 msgid "ساعة استخدام"
-msgstr ""
+msgstr "usage hour"
 
 msgid "ساعة واحدة"
 msgstr "One Hour"
@@ -14624,7 +14650,7 @@ msgid "سبب الجدول أو ملاحظات التشغيل"
 msgstr "Schedule reason or operating notes"
 
 msgid "سبب الرفض"
-msgstr ""
+msgstr "Reason for rejection"
 
 msgid "سبب السلفة"
 msgstr "Advance Reason"
@@ -14675,13 +14701,15 @@ msgid "سجل أحداث الراوتر (log)."
 msgstr "Router event log (log)."
 
 msgid "سجل أحداث العميل"
-msgstr ""
+msgstr "Customer event log"
 
 msgid "سجل الأحداث"
-msgstr ""
+msgstr "Event log"
 
 msgid "سجل الأحداث يجمع المشتريات وحركات المحفظة وأحداث النظام مرتبة زمنيًا."
 msgstr ""
+"The event log gathers purchases, wallet movements, and system events in "
+"chronological order."
 
 msgid "سجل الإرسال"
 msgstr "Send log"
@@ -14741,7 +14769,7 @@ msgid "سحب"
 msgstr "Withdraw"
 
 msgid "سحب بانتظار التنفيذ"
-msgstr ""
+msgstr "Withdrawal pending execution"
 
 msgid "سداد يقفل سلفة مفتوحة ويصفّر دينها — السلفة الأصلية تبقى ظاهرة بالسجل."
 msgstr ""
@@ -15240,7 +15268,7 @@ msgstr ""
 "safe."
 
 msgid "سيناريو شائع:"
-msgstr ""
+msgstr "Common scenario:"
 
 msgid "سيُحذف سجل المعدّة"
 msgstr "The equipment record will be deleted"
@@ -15282,7 +15310,7 @@ msgid "شارة الحالة"
 msgstr "Status Badge"
 
 msgid "شبكات / معدات"
-msgstr ""
+msgstr "Networks / equipment"
 
 msgid "شبكة إضافية توجَّه خلف اتصال المشترك."
 msgstr "An additional network routed behind the subscriber's connection."
@@ -15315,7 +15343,7 @@ msgid "شحن المحفظة يدوياً"
 msgstr "Top up wallet manually"
 
 msgid "شحن بانتظار المراجعة"
-msgstr ""
+msgstr "Top-up pending review"
 
 msgid "شحن فوري بقيمة البطاقة"
 msgstr "Instant top-up with the voucher value"
@@ -15337,7 +15365,7 @@ msgid "شراء البطاقة"
 msgstr "Buy Voucher"
 
 msgid "شراء بطاقة من السوق"
-msgstr ""
+msgstr "Buy a card from the marketplace"
 
 msgid "شرح المصطلحات"
 msgstr "Glossary"
@@ -15498,7 +15526,7 @@ msgstr ""
 "follow-ups."
 
 msgid "صاحب الحساب"
-msgstr ""
+msgstr "Account holder"
 
 msgid "صاحب الفاتورة — تُسجَّل في كشف حسابه وتؤثر في رصيده."
 msgstr ""
@@ -15598,7 +15626,7 @@ msgstr ""
 "before spending your printer paper."
 
 msgid "صفحة ترخيص النظام"
-msgstr ""
+msgstr "System licensing page"
 
 msgid "صفحة دخول للمستخدمين عبر WiFi/كابل"
 msgstr "Login page for users over Wi-Fi/cable"
@@ -15687,7 +15715,7 @@ msgid "صورة"
 msgstr "Image"
 
 msgid "صورة QR (اختياري)"
-msgstr ""
+msgstr "QR image (optional)"
 
 msgid "صورة خلفية من الجهاز"
 msgstr "Background image from device"
@@ -15831,22 +15859,22 @@ msgid "طلبات الدفع والمراجعة والمطابقة في صفحة
 msgstr "Payment requests, review, and reconciliation on a single page"
 
 msgid "طلبات السحب"
-msgstr ""
+msgstr "Withdrawal requests"
 
 msgid "طلبات السحب المحسومة"
-msgstr ""
+msgstr "Settled withdrawal requests"
 
 msgid "طلبات السحب بانتظار التنفيذ"
-msgstr ""
+msgstr "Withdrawal requests pending execution"
 
 msgid "طلبات الشحن"
-msgstr ""
+msgstr "Top-up requests"
 
 msgid "طلبات الشحن المحسومة"
-msgstr ""
+msgstr "Settled top-up requests"
 
 msgid "طلبات الشحن بانتظار المراجعة"
-msgstr ""
+msgstr "Top-up requests pending review"
 
 msgid "طلبها"
 msgstr "Request it"
@@ -16265,7 +16293,7 @@ msgid "عرض كل التنبيهات"
 msgstr "View all alerts"
 
 msgid "عرض متاح"
-msgstr ""
+msgstr "Available offer"
 
 msgid "عرض وارتفاع البطاقة بالمليمتر (الافتراضي 85×54 — مقاس بطاقة الفيزا)."
 msgstr "Card width and height in millimeters (default 85×54 — Visa card size)."
@@ -16402,7 +16430,7 @@ msgid "عملية HobeRadius"
 msgstr "HobeRadius process"
 
 msgid "عملية شراء"
-msgstr ""
+msgstr "Purchase"
 
 msgid "عملية موثقة"
 msgstr "Logged operation"
@@ -16854,7 +16882,7 @@ msgid "غير مفعّلة"
 msgstr "Disabled"
 
 msgid "غيغا"
-msgstr ""
+msgstr "GB"
 
 msgid "فئة الاشتراك"
 msgstr "Subscription category"
@@ -17120,7 +17148,7 @@ msgid "فعِّل على الراوتر"
 msgstr "Enable on the router"
 
 msgid "فعّالة"
-msgstr ""
+msgstr "Active"
 
 msgid "فعّل أي حدث، اختر القنوات، وعدّل نص الرسالة — جاهز مسبقًا ويعمل بكبسة زر."
 msgstr ""
@@ -17784,10 +17812,10 @@ msgid "قنوات الإرسال › واتساب"
 msgstr "Sending channels › WhatsApp"
 
 msgid "قنوات الاستلام"
-msgstr ""
+msgstr "Receiving channels"
 
 msgid "قنوات الاستلام الحالية"
-msgstr ""
+msgstr "Current receiving channels"
 
 msgid "قنوات التنبيه"
 msgstr "Alert channels"
@@ -17840,7 +17868,7 @@ msgid "قيد التجهيز:"
 msgstr "Processing:"
 
 msgid "قيد التعليق:"
-msgstr ""
+msgstr "On hold:"
 
 msgid "قيد المعالجة"
 msgstr "Processing"
@@ -18172,6 +18200,8 @@ msgid ""
 "كل بطاقة مملوكة تقابل عملية شراء؛ الحالة تبيّن إن كانت جاهزة أو مستخدمة "
 "أو ملغاة."
 msgstr ""
+"Each owned card corresponds to a purchase; the status shows whether it is"
+" ready, used, or canceled."
 
 msgid "كل تبويب يجمع إعدادات متجانسة، وبجانب اسمه عدّاد بعدد حقوله:"
 msgstr ""
@@ -18340,10 +18370,12 @@ msgid "كلمة مرور البرودباند"
 msgstr "Broadband password"
 
 msgid "كلمة مرور البوابة"
-msgstr ""
+msgstr "Portal password"
 
 msgid "كلمة مرور البوابة تتيح للعميل الدخول إلى /portal/card وشحن محفظته بنفسه."
 msgstr ""
+"The portal password lets the customer log in to /portal/card and top up "
+"their own wallet."
 
 msgid "كلمة مرور الراوتر"
 msgstr "Router Password"
@@ -18516,7 +18548,7 @@ msgid "كيف تعمل هذه الصفحة؟"
 msgstr "How does this page work?"
 
 msgid "كيف تقرأ هذا الملف؟"
-msgstr ""
+msgstr "How to read this file?"
 
 msgid "كيف يتصل الراوتر بالإنترنت؟"
 msgstr "How does the router connect to the Internet?"
@@ -18533,7 +18565,7 @@ msgstr ""
 "manually."
 
 msgid "كيلو"
-msgstr ""
+msgstr "KB"
 
 msgid "لأحدث فترة"
 msgstr "For Latest Period"
@@ -18566,7 +18598,7 @@ msgid "لا «المشتركون»."
 msgstr "Not “Subscribers”."
 
 msgid "لا اتصالات"
-msgstr ""
+msgstr "No connections"
 
 msgid "لا استخدام للمدفوعات الإلكترونية حتى ربط بوابة دفع (مثل Jawwal Pay)."
 msgstr ""
@@ -18622,7 +18654,7 @@ msgid "لا توجد باقات نشطة بعد. أنشئ باقة سرعة أو
 msgstr "No active plans yet. Create a speed plan first so it appears here."
 
 msgid "لا توجد بطاقات مملوكة بعد"
-msgstr ""
+msgstr "No owned cards yet"
 
 msgid ""
 "لا توجد بطاقة مطابقة لهذا البحث. تأكد من الرقم أو اسم الدخول ثم حاول مرة "
@@ -18661,7 +18693,7 @@ msgid "لا توجد توصيات إضافيّة حالياً — السياسة
 msgstr "No additional recommendations right now — the policy looks sound."
 
 msgid "لا توجد جلسات اتصال بعد"
-msgstr ""
+msgstr "No connection sessions yet"
 
 msgid "لا توجد جلسات لهذا الجهاز بعد."
 msgstr "No sessions for this device yet."
@@ -18706,10 +18738,10 @@ msgid "لا توجد راوترات مسجلة"
 msgstr "No routers registered"
 
 msgid "لا توجد طلبات سحب معلّقة."
-msgstr ""
+msgstr "No pending withdrawal requests."
 
 msgid "لا توجد طلبات شحن معلّقة."
-msgstr ""
+msgstr "No pending top-up requests."
 
 msgid "لا توجد عروض بيع حتى الآن. أضف أول باقة من النموذج بالأعلى."
 msgstr "No sales offers yet. Add your first plan from the form above."
@@ -18718,7 +18750,7 @@ msgid "لا توجد عروض ضمن هذا النظام بعد."
 msgstr "There are no offers in this system yet."
 
 msgid "لا توجد عروض متاحة"
-msgstr ""
+msgstr "No available offers"
 
 msgid "لا توجد عقد خروج بعد. أنشئ عقدة قبل توليد السياسة."
 msgstr "No exit nodes yet. Create a node before generating the policy."
@@ -18787,22 +18819,22 @@ msgid "لا خصائص رد."
 msgstr "No reply attributes."
 
 msgid "لا رسائل في هذه المحادثة بعد."
-msgstr ""
+msgstr "No messages in this conversation yet."
 
 msgid "لا شيء يُحذف أبدًا"
 msgstr "Nothing is ever deleted"
 
 msgid "لا قنوات استلام بعد — أضف أول قناة من النموذج بالأسفل."
-msgstr ""
+msgstr "No receiving channels yet — add the first channel from the form below."
 
 msgid "لا محادثات بعد."
-msgstr ""
+msgstr "No conversations yet."
 
 msgid "لا نشاط بعد"
 msgstr "No activity yet"
 
 msgid "لا وصل"
-msgstr ""
+msgstr "No receipt"
 
 msgid "لا يتغيّر بعد الإنشاء"
 msgstr "Cannot be changed after creation"
@@ -18865,7 +18897,7 @@ msgid "لا يوجد رمز ربط مفعل بعد. أنشئ رمزًا من"
 msgstr "No active linking code yet. Create one from"
 
 msgid "لا يوجد سجل بعد."
-msgstr ""
+msgstr "No log yet."
 
 msgid "لا يوجد عاملون نشطون"
 msgstr "No active staff"
@@ -19460,7 +19492,7 @@ msgid "مالي"
 msgstr "Financial"
 
 msgid "مالية"
-msgstr ""
+msgstr "Financial"
 
 msgid "مباشر"
 msgstr "Direct"
@@ -19728,7 +19760,7 @@ msgid "مثال: حزمة مدفوعة #123"
 msgstr "Example: paid batch #123"
 
 msgid "مثال: حوّل ثم ارفع صورة الوصل."
-msgstr ""
+msgstr "Example: transfer first, then upload the receipt image."
 
 msgid "مثال: خفض الذروة المسائية"
 msgstr "Example: reducing the evening peak"
@@ -19761,7 +19793,7 @@ msgid "مثال: محاولات دخول متكررة لمشترك واحد"
 msgstr "Example: repeated login attempts for a single subscriber"
 
 msgid "مثال: محفظة جوالي باي"
-msgstr ""
+msgstr "Example: Jawali Pay wallet"
 
 msgid "مثال: مقهى الزهراء — فرع 1"
 msgstr "Example: Al-Zahra Café — Branch 1"
@@ -19785,7 +19817,7 @@ msgid "مثل: 1234567890"
 msgstr "e.g. 1234567890"
 
 msgid "مثل: أحمد محمد علي"
-msgstr ""
+msgstr "e.g., Ahmad Mohammed Ali"
 
 msgid "مثل: تصميم شركتي"
 msgstr "Such as: my company design"
@@ -19797,7 +19829,7 @@ msgid "مثل: دفعة شحن شهر ٨"
 msgstr "Such as: top-up batch for month 8"
 
 msgid "مثل: راوتر الفرع الرئيسي"
-msgstr ""
+msgstr "e.g., Main branch router"
 
 msgid "مثل: للموزّع أحمد — منطقة الشمال"
 msgstr "Such as: For distributor Ahmad — northern region"
@@ -19894,13 +19926,13 @@ msgid "مجمّد"
 msgstr "Frozen"
 
 msgid "محادثات"
-msgstr ""
+msgstr "Conversations"
 
 msgid "محادثات الدعم"
-msgstr ""
+msgstr "Support conversations"
 
 msgid "محادثة الزبون"
-msgstr ""
+msgstr "Customer conversation"
 
 msgid "محادثة تقريبية مع BotFather — انسخ رمز الربط الذي يظهر في آخر رسالة."
 msgstr ""
@@ -19908,7 +19940,7 @@ msgstr ""
 "appears in the last message."
 
 msgid "محافظ الاستلام"
-msgstr ""
+msgstr "Receiving wallets"
 
 msgid "محاولات الدخول"
 msgstr "Login attempts"
@@ -20234,7 +20266,7 @@ msgid "مرجع الجلسة — مثال: CHK-1A2B3C4D5E"
 msgstr "Session reference — e.g. CHK-1A2B3C4D5E"
 
 msgid "مرجع السر"
-msgstr ""
+msgstr "Secret reference"
 
 msgid "مرجع العملية"
 msgstr "Transaction reference"
@@ -20265,7 +20297,7 @@ msgid "مرحَّل"
 msgstr "Forwarded"
 
 msgid "مرفق"
-msgstr ""
+msgstr "Attachment"
 
 msgid "مركز ألعاب"
 msgstr "Game Center"
@@ -20378,13 +20410,13 @@ msgid "مستخدم الإدارة"
 msgstr "Admin user"
 
 msgid "مستخدم البطاقة"
-msgstr ""
+msgstr "Card user"
 
 msgid "مستخدم الربط للراوتر"
 msgstr "Router connection user"
 
 msgid "مستخدم بدون اسم"
-msgstr ""
+msgstr "Unnamed user"
 
 msgid "مستخدم بطاقات"
 msgstr "Voucher user"
@@ -20715,7 +20747,7 @@ msgstr ""
 " choose it carefully."
 
 msgid "معرّف الراوتر (اختياري)"
-msgstr ""
+msgstr "Router identifier (optional)"
 
 msgid ""
 "معرّف الراوتر الذي تختاره الشاشات تلقائيًا عند وجود أكثر من راوتر. اتركه "
@@ -20728,7 +20760,7 @@ msgid "معرّف الشبكة الافتراضية VLAN. 0 = بلا VLAN."
 msgstr "The VLAN virtual network ID. 0 = no VLAN."
 
 msgid "معرّف العميل"
-msgstr ""
+msgstr "Customer ID"
 
 msgid "معرّف القاعدة:"
 msgstr "Rule ID:"
@@ -20828,7 +20860,7 @@ msgid "معلَّقة"
 msgstr "Pending"
 
 msgid "معلّق"
-msgstr ""
+msgstr "Pending"
 
 msgid "معلّقة"
 msgstr "Pending"
@@ -21120,10 +21152,10 @@ msgid "ملف البطاقات"
 msgstr "Vouchers File"
 
 msgid "ملف العميل #"
-msgstr ""
+msgstr "Customer profile #"
 
 msgid "ملف الكروت 360"
-msgstr ""
+msgstr "Cards 360 profile"
 
 msgid "ملف المالية"
 msgstr "Finance file"
@@ -21257,6 +21289,8 @@ msgid ""
 "من هنا تراجع طلبات الشحن والسحب، تحادث الزبائن، وتضبط محافظ الاستلام التي"
 " تظهر للزبون عند الدفع."
 msgstr ""
+"From here you review top-up and withdrawal requests, chat with customers,"
+" and configure the receiving wallets shown to the customer at checkout."
 
 msgid ""
 "من هناك تربط الحساب الرسمي وتعتمد القوالب، وتعود حالتها لتظهر بالأعلى "
@@ -21839,7 +21873,7 @@ msgid "نطاقات العناوين"
 msgstr "IP pools"
 
 msgid "نظام"
-msgstr ""
+msgstr "System"
 
 msgid "نظام البيع"
 msgstr "Sales System"
@@ -22002,6 +22036,8 @@ msgid ""
 "نفّذ التحويل البنكي يدويًا أولًا، ثم أكّد هنا ليُخصم الرصيد آليًا من "
 "محفظة الزبون."
 msgstr ""
+"Perform the bank transfer manually first, then confirm here so the "
+"balance is automatically deducted from the customer's wallet."
 
 msgid "نقاط عامة (بلا توكن)"
 msgstr "Public endpoints (no token)"
@@ -22159,7 +22195,7 @@ msgid "نوع الفترة"
 msgstr "Period Type"
 
 msgid "نوع القناة"
-msgstr ""
+msgstr "Channel type"
 
 msgid "نوع القيد"
 msgstr "Entry Type"
@@ -22201,7 +22237,7 @@ msgid "نوع المهمة"
 msgstr "Task Type"
 
 msgid "نوع النفق"
-msgstr ""
+msgstr "Tunnel type"
 
 msgid "نوع الهدف"
 msgstr "Target type"
@@ -22304,7 +22340,7 @@ msgstr ""
 "authentication service, disconnect sessions, or touch the router."
 
 msgid "هذه آخر مرة تظهر فيها كلمة المرور."
-msgstr ""
+msgstr "This is the last time the password will be shown."
 
 msgid "هذه الأرقام مشتقة من المعاملات المسجّلة فقط"
 msgstr "These figures are derived from recorded transactions only"
@@ -22391,6 +22427,8 @@ msgstr ""
 
 msgid "هذه القنوات يعرضها المتجر للزبون لينسخ الرقم أو يمسح الـQR قبل التحويل."
 msgstr ""
+"The store shows these channels to the customer so they can copy the "
+"number or scan the QR before transferring."
 
 msgid ""
 "هذه القيم تخص شكل البطاقة فقط، أما توزيع الورقة والهوامش فهو في مركز "
@@ -22429,6 +22467,8 @@ msgid ""
 "هذه صفحة 360° لمستخدم الكروت: محفظته، بطاقاته، مشترياته، جلساته وسجل "
 "أحداثه في مكان واحد."
 msgstr ""
+"This is a 360° page for the card user: their wallet, cards, purchases, "
+"sessions, and event log in one place."
 
 msgid "هذه صفحة بيع البطاقات"
 msgstr "This is the voucher sales page"
@@ -22450,6 +22490,8 @@ msgid ""
 "هذه واجهة عرض موحّدة — كل شحن أو شراء أو تعيين كلمة مرور يمر بالمنطق "
 "الأصلي دون تغيير."
 msgstr ""
+"This is a unified view — every top-up, purchase, or password setting goes"
+" through the original logic without change."
 
 msgid "هكذا تبدو العائلات في السايدبار — اضغط رأس العائلة ليفتح تقاريرها."
 msgstr ""
@@ -22786,10 +22828,10 @@ msgid "وسيلة الدفع"
 msgstr "Payment method"
 
 msgid "وشحن محفظته بنفسه."
-msgstr ""
+msgstr "and top up their own wallet."
 
 msgid "وصف (اختياري)"
-msgstr ""
+msgstr "Description (optional)"
 
 msgid "وصف حر لما لاحظته وما ينبغي على المراجع التالي فعله."
 msgstr ""
@@ -22806,7 +22848,7 @@ msgid "وصف مختصر لنطاق هذا الدور ومسؤولياته…"
 msgstr "A brief description of this role's scope and responsibilities…"
 
 msgid "وصل"
-msgstr ""
+msgstr "Receipt"
 
 msgid "وصل المبلغ،"
 msgstr "The amount arrived,"
