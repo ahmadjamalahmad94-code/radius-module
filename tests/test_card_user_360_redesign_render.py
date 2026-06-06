@@ -75,6 +75,18 @@ def test_redesigned_detail_renders_new_sections(app):
     assert "غيغا" in body                   # GB byte formatting branch
     assert "data-fcw-modal=\"u360-recharge\"" in body
     assert "data-fcw-modal=\"u360-password\"" in body
+
+    # ── Hero action bar must render as REAL elements, never escaped text.
+    #    Guards the regression where  '+'-concatenating _('…') into actions_html
+    #    escaped the surrounding <button> tags (showed raw HTML on the page).
+    assert '<div class="uds-hero-actions">' in body
+    assert '<button type="button" class="hub-btn hub-btn--primary" data-fcw-open="u360-recharge">' in body
+    assert '<button type="button" class="hub-btn hub-btn--secondary" data-fcw-open="u360-password">' in body
+    assert '<a class="hub-btn hub-btn--ghost"' in body
+    # no escaped tag source leaked anywhere in the document
+    assert "&lt;button" not in body
+    assert "&lt;a " not in body
+    assert "hub-btn--&" not in body and "hub-btn--/" not in body  # no empty modifier
     # field/endpoint preservation
     assert f"/admin/radius/card-users/{user['id']}/recharge" in body
     assert f"/admin/radius/card-users/{user['id']}/password" in body
