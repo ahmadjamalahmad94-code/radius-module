@@ -23,6 +23,7 @@
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -91,6 +92,31 @@ def _seed_en_from_po() -> None:
     print(f"  بُذِر en.json: +{added} (الإجمالي {len(existing)})")
 
 
+_NAMED_PH = re.compile(r"%\((\w+)\)[sd]")
+
+
+def _safe_msgstr(mid: str, s: str) -> str:
+    """يُعقّم الترجمة كي لا تكسر رندر gettext (الذي يطبّق ``rv % vars`` دائمًا).
+
+    • msgid بلا '%': الاستدعاء بلا kwargs → أيّ '%' في الترجمة يجب أن يُهرَّب
+      (``%`` → ``%%``) كي يُعرَض حرفيًا.
+    • msgid فيه عناصر نائبة: نتحقّق أن الترجمة تُرندَر بمتغيّرات وهمية مطابقة؛
+      إن فشلت (وكيل أفسد العنصر النائب) نُسقِطها للعربية (msgstr فارغة).
+    """
+    if not s:
+        return s
+    if "%" not in mid:
+        return s.replace("%", "%%")
+    # msgid فيه '%' — اختبر الرندر بمتغيّرات وهمية من أسماء عناصر msgid.
+    names = set(_NAMED_PH.findall(mid))
+    dummy = {n: 0 for n in names}
+    try:
+        s % dummy
+        return s
+    except Exception:  # noqa: BLE001
+        return ""  # ترجمة غير آمنة → سقوط للعربية.
+
+
 def _build_locale(locale: str, ids: list[str]) -> tuple[int, int]:
     """يبني .po + .mo للغة. يُرجع (مترجَم, إجمالي)."""
     cat = Catalog(locale=locale)
@@ -98,7 +124,7 @@ def _build_locale(locale: str, ids: list[str]) -> tuple[int, int]:
     trans = {} if locale == "ar" else _load_json(locale)
     translated = 0
     for mid in ids:
-        s = trans.get(mid, "")
+        s = _safe_msgstr(mid, trans.get(mid, ""))
         if s:
             translated += 1
         cat.add(mid, string=s)
