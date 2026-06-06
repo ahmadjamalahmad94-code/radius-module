@@ -1103,7 +1103,12 @@ _JSON_HTML_BUILDERS = {
 
 
 def _store_button_html(store_url: str) -> str:
-    """زر متجر عائم سفلي — تصميم محايد يعمل فوق أي قالب."""
+    """زر متجر عائم سفلي — تصميم محايد يعمل فوق أي قالب.
+
+    مدخل البوابة (login.html) إلى المتجر/المحفظة: المتجر (store.html)
+    يحوي التدفّق الكامل — تسجيل ذاتي فوري (اسم ثلاثي + جوال + كلمة
+    مرور)، دخول، شحن المحفظة، الإيداع بتحويل، السحب، طلباتي والشات.
+    لذا نوضّح في الزر أنه طريق «التسجيل والشحن» لا مجرد متجر."""
     return (
         "\n<!-- HR add-on: زر المتجر الإلكتروني (يُحقن من render) -->\n"
         "<style>\n"
@@ -1111,17 +1116,22 @@ def _store_button_html(store_url: str) -> str:
         "transform:translateX(-50%);z-index:9000;display:flex;"
         "align-items:center;gap:10px;background:#ffffff;color:#0f172a;"
         "border:1.5px solid {{ACCENT_COLOR}};border-radius:999px;"
-        "padding:10px 22px;font-family:'Almarai',Tahoma,Arial,sans-serif;"
-        "font-size:13px;font-weight:700;text-decoration:none;"
-        "box-shadow:0 10px 28px rgba(15,23,42,.25)}\n"
-        ".hr-addon-store .hr-as-ico{width:28px;height:28px;"
+        "padding:9px 20px;font-family:'Almarai',Tahoma,Arial,sans-serif;"
+        "text-decoration:none;box-shadow:0 10px 28px rgba(15,23,42,.25)}\n"
+        ".hr-addon-store .hr-as-ico{width:30px;height:30px;flex-shrink:0;"
         "border-radius:50%;background:{{ACCENT_COLOR}};color:#fff;"
         "display:flex;align-items:center;justify-content:center;"
-        "font-size:14px}\n"
+        "font-size:15px}\n"
+        ".hr-addon-store .hr-as-txt{display:flex;flex-direction:column;"
+        "line-height:1.3;text-align:start}\n"
+        ".hr-addon-store .hr-as-txt b{font-size:13px;font-weight:800}\n"
+        ".hr-addon-store .hr-as-txt small{font-size:10px;color:#64748b;"
+        "font-weight:700}\n"
         "</style>\n"
         '<a class="hr-addon-store" href="' + store_url + '">'
         '<span class="hr-as-ico">🛒</span>'
-        "<span>متجر البطاقات الإلكتروني</span></a>\n"
+        '<span class="hr-as-txt"><b>متجر البطاقات</b>'
+        "<small>سجّل · اشحن رصيدك · طلباتي</small></span></a>\n"
     )
 
 

@@ -198,7 +198,7 @@
   <div class="ssp-tabs" role="tablist">
     <button type="button" class="ssp-tab is-active" data-ssp-tab="deposits"><i class="fa-solid fa-arrow-down-to-line"></i> {{ _('طلبات الشحن') }}{% if deposit_pending_count %}<span class="ssp-badge">{{ deposit_pending_count }}</span>{% endif %}</button>
     <button type="button" class="ssp-tab" data-ssp-tab="withdrawals"><i class="fa-solid fa-arrow-up-from-line"></i> {{ _('طلبات السحب') }}{% if withdrawal_pending_count %}<span class="ssp-badge">{{ withdrawal_pending_count }}</span>{% endif %}</button>
-    <button type="button" class="ssp-tab" data-ssp-tab="chat"><i class="fa-solid fa-comments"></i> {{ _('محادثات الدعم') }}</button>
+    <button type="button" class="ssp-tab" data-ssp-tab="chat"><i class="fa-solid fa-comments"></i> {{ _('محادثات الدعم') }}{% if chat_unread_count %}<span class="ssp-badge">{{ chat_unread_count }}</span>{% endif %}</button>
     <button type="button" class="ssp-tab" data-ssp-tab="wallets"><i class="fa-solid fa-wallet"></i> {{ _('محافظ الاستلام') }}</button>
   </div>
 
@@ -275,7 +275,7 @@
               <td>{{ d.payer_name or '—' }}</td>
               <td>{{ d.method_ar }}</td>
               <td style="direction:ltr">{{ money(d.confirmed_amount if d.confirmed_amount is not none else d.amount_claimed) }} {{ d.currency or '' }}</td>
-              <td><span class="market-pill {{ 'market-pill--ok' if d.status in ['confirmed','adjusted'] else 'market-pill--bad' }}">{{ d.status_ar }}</span></td>
+              <td><span class="market-pill {{ 'market-pill--ok' if d.status in ['confirmed','adjusted'] else 'market-pill--bad' }}">{{ d.status_ar }}</span>{% if d.status == 'rejected' and d.admin_note %}<br><small style="color:#dc2626">{{ _('السبب') }}: {{ d.admin_note }}</small>{% endif %}</td>
               <td><small>{{ date_label(d.resolved_at or d.created_at) }}</small></td>
             </tr>
             {% else %}
@@ -348,7 +348,7 @@
               <td>{{ w.payee_name or '—' }}</td>
               <td style="direction:ltr">{{ w.payee_account or '—' }}</td>
               <td style="direction:ltr">{{ money(w.amount) }} {{ w.currency or '' }}</td>
-              <td><span class="market-pill {{ 'market-pill--ok' if w.status == 'confirmed' else 'market-pill--bad' }}">{{ w.status_ar }}</span></td>
+              <td><span class="market-pill {{ 'market-pill--ok' if w.status == 'confirmed' else 'market-pill--bad' }}">{{ w.status_ar }}</span>{% if w.status == 'rejected' and w.admin_note %}<br><small style="color:#dc2626">{{ _('السبب') }}: {{ w.admin_note }}</small>{% endif %}</td>
               <td><small>{{ date_label(w.resolved_at or w.created_at) }}</small></td>
             </tr>
             {% else %}

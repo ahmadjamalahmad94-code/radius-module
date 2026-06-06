@@ -308,7 +308,8 @@
 {%- set sec_subs_active     = m_users_list or m_users_new or m_online_users or m_subscriber_groups or m_subscribers_360 or m_subscribers_overview -%}
 {%- set sec_cards_active    = m_cards_overview or m_cards_checker or m_cards_batches or m_cards_generate or m_cards_online or m_print_templates or m_cards_print -%}
 {%- set m_cards_recharge    = '/cards/recharge' in path -%}
-{%- set sec_e_cards_active  = m_card_users or m_card_marketplace or m_cards_recharge -%}
+{%- set m_store_support     = ('/store-support' in path) -%}
+{%- set sec_e_cards_active  = m_card_users or m_card_marketplace or m_cards_recharge or m_store_support -%}
 {%- set sec_offers_active   = m_plans_overview or m_plans_list or m_plans_new or m_bw_list or m_bw_sched -%}
 {# صفحات التحكم بالسرعة (مجدول/يدوي) صارت عائلة داخل قسم «الشبكة» —
    تدخل في علم القسم حتى يُفتح تلقائيًا عند زيارتها. #}
@@ -427,7 +428,7 @@
     {% elif _ui_mode == 'freeze' %}{{ frozen_section(_('البطاقات'), 'id-card') }}{% endif %}
 
     {# ───────── البطاقات الإلكترونية ───────── #}
-    {%- set _eps_ecards = ['card_marketplace','card_users_list','cards_recharge_list'] -%}
+    {%- set _eps_ecards = ['card_marketplace','card_users_list','cards_recharge_list','store_support'] -%}
     {% if section_can(_eps_ecards)|trim %}
     <div class="hb-side-section{% if sec_e_cards_active %} is-open has-active{% endif %}"
          data-hb-section="electronic-cards" data-hb-tone="cyan">
@@ -441,6 +442,20 @@
         {{ sub_item('radius.card_marketplace', _('سوق البطاقات'), m_card_marketplace) }}
         {{ sub_item('radius.card_users_list', _('مستخدمو البطاقات'), m_card_users) }}
         {{ sub_item('radius.cards_recharge_list', _('⚡ بطاقات الشحن المسبق'), m_cards_recharge) }}
+        {# دعم وطلبات المتجر — محروس بصلاحية store.review (السوبر دائمًا يراه)
+           مع شارة بعدد الطلبات/الرسائل المفتوحة (إيداع/سحب/شات). #}
+        {% if endpoint_exists is defined and endpoint_exists('radius.store_support') %}
+          {% if nav_can('store_support', 'store.review')|trim %}
+        {% set _store_pending = store_pending_count() if store_pending_count is defined else 0 %}
+        <a class="hb-side-subitem{% if m_store_support %} is-active{% endif %}"
+           href="{{ url_for('radius.store_support') }}">
+          <span class="hb-side-text">{{ _('دعم وطلبات المتجر') }}</span>
+          {% if _store_pending %}
+          <span style="margin-inline-start:auto;display:inline-flex;align-items:center;gap:4px;padding:1px 8px;border-radius:999px;background:#FEE2E2;color:#B91C1C;font-size:10px;font-weight:900;border:1px solid #FECACA;line-height:1.7"><i class="fa-solid fa-bell" style="font-size:9px"></i> {{ _store_pending }}</span>
+          {% endif %}
+        </a>
+          {% elif _ui_mode == 'freeze' %}{{ frozen_row(_('دعم وطلبات المتجر'), sub=True) }}{% endif %}
+        {% endif %}
       </div></div>
     </div>
     {% elif _ui_mode == 'freeze' %}{{ frozen_section(_('البطاقات الإلكترونية'), 'wallet') }}{% endif %}
