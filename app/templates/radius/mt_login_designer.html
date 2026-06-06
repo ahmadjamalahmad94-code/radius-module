@@ -373,6 +373,7 @@
           'TRIAL_TEXT': 'login', 'SUPPORT_PHONE': 'login',
           'SAVED_SESSIONS_ENABLED': 'login',
           'STORE_ENABLED': 'store', 'STORE_URL': 'store',
+          'SUPPORT_WHATSAPP': 'store',
           'DISTRIBUTORS_JSON': 'distributors',
           'OFFERS_JSON': 'offers'
         } %}
@@ -580,7 +581,7 @@
                    id="mtld-var-{{ v.slug }}"
                    name="{{ v.slug }}"
                    value="{{ _val }}"
-                   {% if v.slug in ('TENANT_LOGO_URL', 'SUPPORT_PHONE', 'STORE_URL') %}dir="ltr"{% endif %}
+                   {% if v.slug in ('TENANT_LOGO_URL', 'SUPPORT_PHONE', 'SUPPORT_WHATSAPP', 'STORE_URL') %}dir="ltr"{% endif %}
                    data-mt-designer-var="{{ v.slug }}">
             {% endif %}
             <div class="mtld-field-help">
@@ -597,6 +598,10 @@
                 لون خلفية الصفحة — صيغة hex مثل ‎#F8FAFC.
               {%- elif v.slug == 'SUPPORT_PHONE' -%}
                 رقم الدعم الفني — تستخدمه التصاميم الاحترافية في زر الاتصال.
+              {%- elif v.slug == 'SUPPORT_WHATSAPP' -%}
+                رقم واتساب الدعم — يُحقن في صفحة المتجر عند <strong>النشر</strong>،
+                فيظهر زر واتساب «دعم وطلبات الشحن/السحب» للزبون. اتركه فارغًا
+                ليبقى الزر مخفيًا. اكتب الرقم بصيغة دولية (مثل ‎+9665…).
               {%- elif v.slug == 'STORE_ENABLED' -%}
                 عند التفعيل يظهر زر «متجر البطاقات الإلكتروني» في صفحة
                 الدخول، وعند <strong>النشر</strong> تُرفع صفحة متجر كاملة
