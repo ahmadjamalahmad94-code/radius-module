@@ -87,6 +87,25 @@ def test_redesigned_detail_renders_new_sections(app):
     assert "&lt;button" not in body
     assert "&lt;a " not in body
     assert "hub-btn--&" not in body and "hub-btn--/" not in body  # no empty modifier
+
+    # ── The redesigned layout must actually be PRESENT (not just unbroken):
+    #    design-system stylesheet, hero, KPI row, worklayout, and every
+    #    separated section heading. Guards "page doesn't look redesigned".
+    assert "unified_design.css" in body                       # design-system CSS linked
+    assert '<section class="uds-hero">' in body               # one megahero
+    assert '<h1 class="uds-hero-title">Walk-in Buyer</h1>' in body
+    assert '<div class="uds-hero-kpis">' in body              # KPI row
+    assert body.count("hub-kpi hub-kpi--") == 4               # exactly 4 KPI cards
+    assert '<div class="uds-worklayout">' in body and '<main class="uds-main">' in body
+    assert '<section class="hub-section">' in body            # carded sections
+    assert 'class="u360-wallet"' in body                      # wallet spotlight panel
+    assert 'class="uds-help"' in body                         # help panel
+    # every separated section heading is rendered as a real section title
+    for heading in [
+        "المعلومات الأساسية", "المحفظة", "شراء بطاقة من السوق",
+        "بطاقات العميل والمشتريات", "الجلسات والاتصالات", "سجل الأحداث",
+    ]:
+        assert ('<span class="hub-section-head-title">' + heading + "</span>") in body, heading
     # field/endpoint preservation
     assert f"/admin/radius/card-users/{user['id']}/recharge" in body
     assert f"/admin/radius/card-users/{user['id']}/password" in body
