@@ -118,6 +118,14 @@ def register_port_script_services_routes(bp: Blueprint) -> None:
         requires_perm(PERM_PROGRAM)(mt_port_services_remove),
         methods=["POST"],
     )
+    # فحص اللوب الحيّ — يقرأ /ip dhcp-client للإدخالات الموسومة
+    # HR-LoopDetect ويعرض حالة كل منفذ (لخدمة loop_detect).
+    bp.add_url_rule(
+        "/mt/<int:nas_id>/port-services/<slug>/loop-check",
+        "mt_port_services_loop_check",
+        requires_perm(PERM_PROGRAM)(mt_port_services_loop_check),
+        methods=["POST"],
+    )
 
 
 def _discover(nas: dict) -> list[dict]:
@@ -158,10 +166,11 @@ def _states_for(nas_id: int) -> dict:
 
 def _render(nas: dict, *, service=None, plan=None, selected_ports=None,
             error=None, apply_result=None, interfaces=None,
-            plan_mode: str = "apply"):
+            plan_mode: str = "apply", loop_probes=None, loop_error=None):
     """نقطة عرض موحّدة — تضمن تمرير حالة الخدمات وصفوف المنافذ في كل
-    مسار (form/plan/apply/remove) بلا تكرار. plan_mode يحدّد وجهة زر
-    الدفع في المعاينة: 'apply' (تفعيل) أو 'remove' (إزالة)."""
+    مسار (form/plan/apply/remove/loop-check) بلا تكرار. plan_mode يحدّد
+    وجهة زر الدفع في المعاينة: 'apply' (تفعيل) أو 'remove' (إزالة).
+    loop_probes غير None فقط بعد «فحص اللوب» (قائمة حالات المنافذ)."""
     if interfaces is None:
         interfaces = _discover(nas)
     return render_template(
@@ -179,6 +188,8 @@ def _render(nas: dict, *, service=None, plan=None, selected_ports=None,
         apply_result=apply_result,
         states=_states_for(nas["id"]),
         state=(_get_state(nas["id"], service.slug) if service else None),
+        loop_probes=loop_probes,
+        loop_error=loop_error,
     )
 
 
@@ -370,3 +381,31 @@ def mt_port_services_remove(nas_id: int, slug: str):
     return _render(nas, service=service, plan=plan,
                    selected_ports=selected_ports, error=error,
                    apply_result=apply_result, plan_mode="remove")
+
+
+def mt_port_services_loop_check(nas_id: int, slug: str):
+    """فحص اللوب الحيّ — يقرأ /ip dhcp-client للإدخالات الموسومة
+    HR-LoopDetect ويعرض حالة كل منفذ: bound (رجع IP) = لوب مكتشف،
+    searching = لا لوب.
+
+    يُعيد استخدام عميل RouterOS API الموجود (mikrotik_admin_client.
+    dhcp_client_list) — نمرّره لـpss.read_loop_status بلا اختراع مسار
+    قراءة جديد. المنافذ تُضيَّق على المختارة (أو المحفوظة في الحالة) إن
+    وُجدت، وإلا تُعرض كل الإدخالات الموسومة."""
+    nas = _load_nas(nas_id)
+    if not nas:
+        abort(404)
+    service = pss.get_service(slug)
+    if service is None:
+        abort(404)
+    # المنافذ: من النموذج أو من الحالة المحفوظة — لتضييق العرض عند توفّرها.
+    selected_ports = _ports_from_form() or _get_state(nas_id, slug)["ports"]
+    only = selected_ports or None
+    # نمرّر صفّ الراوتر الخام (api_*) لأن mac.dhcp_client_list يبني
+    # router_cfg من أعمدة api_port/api_user/...، لا من مخطّط _nas_for_mac.
+    loop_probes, loop_error = pss.read_loop_status(
+        nas, mac.dhcp_client_list, only_ports=only)
+    _audit_push(nas_id, slug, action="loop_check",
+                ports=selected_ports, ok=not loop_error)
+    return _render(nas, service=service, selected_ports=selected_ports,
+                   loop_probes=loop_probes, loop_error=loop_error)

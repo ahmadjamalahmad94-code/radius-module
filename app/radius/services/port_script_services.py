@@ -14,14 +14,11 @@
 استبدال السكربت الحقيقي لاحقًا = تعديل في مكان واحد فقط (حقل
 `script_template` للخدمة) — لا تغييرات في المسارات أو القالب.
 
-خدمتان مُسجَّلتان الآن بقوالب **مبدئية (PLACEHOLDER)** — بانتظار سكربت
-المستخدم:
-  • bt_wifi_block — منع بث البلوتوث والواي فاي.
-  • loop_detect   — تتبّع اللوب (Loop Detection).
-
-ملاحظة مهمة: القوالب الحالية تحوي تعليقًا عربيًا «‹ضع السكربت هنا —
-بانتظار سكربت المستخدم›» في موضع الأوامر الفعلية. لا نخترع أوامر
-MikroTik لمنع البث أو كشف اللوب — تُضاف يدويًا عند توفّرها.
+خدمتان مُسجَّلتان ومُفعَّلتان الآن بسكربتات حقيقية (is_placeholder=False):
+  • bt_wifi_block — منع المشاركة بتثبيت TTL=1 (قاعدة mangle لكل منفذ،
+    موسومة HR-AntiShare).
+  • loop_detect   — كشف اللوب بإضافة عميل DHCP لكل منفذ (موسوم
+    HR-LoopDetect)؛ الحالة تُقرأ حيًّا عبر read_loop_status (bound=لوب).
 """
 from __future__ import annotations
 
@@ -37,6 +34,12 @@ PSS_COMMENT_PREFIX = "hoberadius:pss:"
 
 # نائب اسم الواجهة الواحدة داخل سطر {{IFACES}} المتكرّر.
 IFACE_PLACEHOLDER = "{{IFACE}}"
+
+# وسوم ثابتة تحملها الكائنات التي يُنشئها كل سكربت على الراوتر — تُسهّل
+# الكشف والإزالة لاحقًا (بحث RouterOS بـ comment~"<TAG>"). الوسم يحمل
+# اسم الواجهة بعده ليصبح فريدًا لكل منفذ (إزالة دقيقة بـ comment="<TAG> ifc").
+BT_WIFI_TAG = "HR-AntiShare"      # قاعدة mangle لتثبيت TTL=1 (منع المشاركة)
+LOOP_DETECT_TAG = "HR-LoopDetect"  # عميل DHCP على المنفذ لكشف اللوب
 
 _INTERFACE_NAME_RE = re.compile(r"^[A-Za-z0-9\-_\.]{1,32}$")
 
@@ -108,91 +111,101 @@ class PortScriptPlan:
 # لإلصاق السكربت الحقيقي لخدمة قائمة: استبدل نص `script_template`
 # (وعدّل is_placeholder=False) — لا شيء آخر يتغيّر.
 
-_PLACEHOLDER_MARKER = "‹ضع سكربت المستخدم هنا — بانتظار سكربت التفعيل›"
-_REMOVE_MARKER = "‹ضع سكربت الإزالة هنا — بانتظار سكربت المستخدم›"
-
+# ─── الخدمة 1: منع بث البلوتوث/الواي فاي — منع المشاركة بـTTL=1 ───
+#
+# الفكرة (سكربت المستخدم المرجعي): قاعدة mangle في سلسلة postrouting
+# تثبّت TTL=1 على الترافيك الخارج من المنفذ، فيموت بعد قفزة واحدة ولا
+# يستطيع أي جهاز خلف هوتسبوت/راوتر زبون مشاركته. المرجع كان out-interface=
+# bridge ثابتًا؛ هنا نعمّمه ليُطبَّق سطرًا **لكل منفذ مختار** (out-interface=
+# <iface>) ويحمل وسمًا ثابتًا HR-AntiShare <iface> لتسهيل الحذف/الكشف.
 
 _BT_WIFI_BLOCK = PortScriptService(
     slug="bt_wifi_block",
     title="منع بث البلوتوث والواي فاي",
     description=(
-        "يطبّق سكربتًا يمنع بث البلوتوث والواي فاي على المنافذ المختارة. "
-        "السكربت المبدئي بانتظار سكربت المستخدم النهائي."
+        "يثبّت TTL=1 على الترافيك الخارج من المنافذ المختارة (قاعدة mangle "
+        "في postrouting)، فيمنع مشاركة الإنترنت عبر البلوتوث/الواي فاي خلف "
+        "جهاز الزبون. كل قاعدة تحمل وسم HR-AntiShare لتسهيل الإزالة."
     ),
     icon="tower-broadcast",
+    # سطر التفعيل لكل منفذ: قاعدة mangle تثبّت TTL=1 على الخارج منه.
     iface_line_template=(
-        "# " + _PLACEHOLDER_MARKER + " — على الواجهة " + IFACE_PLACEHOLDER
+        "/ip firewall mangle add chain=postrouting "
+        "out-interface=" + IFACE_PLACEHOLDER + " "
+        "action=change-ttl new-ttl=set:1 passthrough=yes "
+        'comment="' + BT_WIFI_TAG + " " + IFACE_PLACEHOLDER + '"'
     ),
     script_template="\n".join([
         "# === Hoberadius — منع بث البلوتوث والواي فاي (تفعيل) ===",
-        "# الخدمة: bt_wifi_block",
+        "# الخدمة: bt_wifi_block — تثبيت TTL=1 لمنع المشاركة.",
         "# المنافذ المختارة: {{PORTS}}",
-        "# كل أمر يجب أن يحمل comment=" + PSS_COMMENT_PREFIX + "bt_wifi_block",
-        "# لتسهيل التراجع لاحقًا.",
-        "#",
-        "# " + _PLACEHOLDER_MARKER,
-        "# (أضِف أوامر RouterOS الفعلية هنا — لكل منفذ سطر إن لزم:)",
+        "# كل قاعدة mangle تحمل comment=\"" + BT_WIFI_TAG + " <iface>\".",
         "{{IFACES}}",
         "",
     ]),
+    # الإزالة لكل منفذ: نحذف القاعدة الموسومة لذلك المنفذ تحديدًا.
     remove_iface_line_template=(
-        "# " + _REMOVE_MARKER + " — على الواجهة " + IFACE_PLACEHOLDER
+        "/ip firewall mangle remove "
+        '[find comment="' + BT_WIFI_TAG + " " + IFACE_PLACEHOLDER + '"]'
     ),
     remove_template="\n".join([
-        "# === Hoberadius — منع بث البلوتوث والواي فاي (إزالة/تعطيل) ===",
-        "# الخدمة: bt_wifi_block — إزالة",
+        "# === Hoberadius — منع بث البلوتوث والواي فاي (إزالة) ===",
+        "# الخدمة: bt_wifi_block — إزالة قواعد TTL=1 الموسومة "
+        + BT_WIFI_TAG + ".",
         "# المنافذ المختارة: {{PORTS}}",
-        "# المفترض أن يُزيل كل كائن يحمل comment="
-        + PSS_COMMENT_PREFIX + "bt_wifi_block",
-        "#",
-        "# " + _REMOVE_MARKER,
-        "# (ضع هنا أوامر إزالة/تعطيل RouterOS — لكل منفذ سطر إن لزم:)",
         "{{IFACES}}",
         "",
     ]),
-    is_placeholder=True,
+    is_placeholder=False,
 )
 
+
+# ─── الخدمة 2: كشف اللوب — عميل DHCP على المنفذ + تتبّع الحالة ────
+#
+# الفكرة (شرح المستخدم): نضيف dhcp-client على المنفذ بـadd-default-route=
+# no (حتى لا يعبث بجدول التوجيه). إن وُجد لوب فالطلب يدور ويعود فيستلم
+# العميل عنوانًا (status=bound مع address/gateway/dhcp-server) = لوب. إن
+# لم يوجد لوب يبقى searching. الحالة تُقرأ حيًّا عبر read_loop_status أدناه.
 
 _LOOP_DETECT = PortScriptService(
     slug="loop_detect",
     title="تتبّع اللوب",
     description=(
-        "يطبّق سكربت كشف اللوب (Loop Detection) على المنافذ المختارة. "
-        "السكربت المبدئي بانتظار سكربت المستخدم النهائي."
+        "يضيف عميل DHCP على المنافذ المختارة لكشف اللوب: إن استلم المنفذ "
+        "عنوانًا (bound) فهناك لوب، وإن بقي searching فلا لوب. زر «فحص "
+        "اللوب» يقرأ الحالة الحيّة من الراوتر ويعرضها لكل منفذ."
     ),
     icon="arrows-spin",
+    # سطر التفعيل لكل منفذ: عميل DHCP بلا مسار افتراضي ولا DNS/NTP،
+    # موسوم HR-LoopDetect <iface> لقراءة حالته لاحقًا.
     iface_line_template=(
-        "# " + _PLACEHOLDER_MARKER + " — على الواجهة " + IFACE_PLACEHOLDER
+        "/ip dhcp-client add interface=" + IFACE_PLACEHOLDER + " "
+        "add-default-route=no use-peer-dns=no use-peer-ntp=no disabled=no "
+        'comment="' + LOOP_DETECT_TAG + " " + IFACE_PLACEHOLDER + '"'
     ),
     script_template="\n".join([
         "# === Hoberadius — تتبّع اللوب (Loop Detection) (تفعيل) ===",
-        "# الخدمة: loop_detect",
+        "# الخدمة: loop_detect — عميل DHCP لكل منفذ لكشف اللوب.",
         "# المنافذ المختارة: {{PORTS}}",
-        "# كل أمر يجب أن يحمل comment=" + PSS_COMMENT_PREFIX + "loop_detect",
-        "# لتسهيل التراجع لاحقًا.",
-        "#",
-        "# " + _PLACEHOLDER_MARKER,
-        "# (أضِف أوامر RouterOS الفعلية هنا — لكل منفذ سطر إن لزم:)",
+        "# كل عميل يحمل comment=\"" + LOOP_DETECT_TAG + " <iface>\".",
+        "# بعد التفعيل استخدم «فحص اللوب» لقراءة الحالة (bound=لوب).",
         "{{IFACES}}",
         "",
     ]),
+    # الإزالة لكل منفذ: نحذف عميل DHCP الموسوم لذلك المنفذ تحديدًا.
     remove_iface_line_template=(
-        "# " + _REMOVE_MARKER + " — على الواجهة " + IFACE_PLACEHOLDER
+        "/ip dhcp-client remove "
+        '[find comment="' + LOOP_DETECT_TAG + " " + IFACE_PLACEHOLDER + '"]'
     ),
     remove_template="\n".join([
-        "# === Hoberadius — تتبّع اللوب (Loop Detection) (إزالة/تعطيل) ===",
-        "# الخدمة: loop_detect — إزالة",
+        "# === Hoberadius — تتبّع اللوب (إزالة) ===",
+        "# الخدمة: loop_detect — إزالة عملاء DHCP الموسومين "
+        + LOOP_DETECT_TAG + ".",
         "# المنافذ المختارة: {{PORTS}}",
-        "# المفترض أن يُزيل كل كائن يحمل comment="
-        + PSS_COMMENT_PREFIX + "loop_detect",
-        "#",
-        "# " + _REMOVE_MARKER,
-        "# (ضع هنا أوامر إزالة/تعطيل RouterOS — لكل منفذ سطر إن لزم:)",
         "{{IFACES}}",
         "",
     ]),
-    is_placeholder=True,
+    is_placeholder=False,
 )
 
 
@@ -353,11 +366,104 @@ def discover_interfaces(nas_call: Mapping[str, Any],
     return list(getattr(res, "data", []) or [])
 
 
+# ─── تتبّع حالة اللوب — قراءة /ip dhcp-client الحيّة ──────────────
+#
+# خدمة loop_detect تنشئ عميل DHCP موسومًا HR-LoopDetect على كل منفذ.
+# هنا نقرأ تلك الإدخالات حيًّا ونحوّلها لحالة مفهومة لكل منفذ:
+#   status=bound (أو عاد عنوان غير 0.0.0.0) → لوب مكتشف.
+#   status=searching/أي شيء آخر بلا عنوان    → لا لوب.
+
+
+@dataclass(frozen=True)
+class LoopProbe:
+    """نتيجة فحص اللوب لمنفذ واحد (مشتقّة من إدخال dhcp-client موسوم)."""
+    iface: str
+    status: str
+    address: str
+    gateway: str
+    dhcp_server: str
+    is_loop: bool
+    message: str
+
+
+def _clean(value: Any) -> str:
+    return str(value or "").strip()
+
+
+def parse_loop_status(rows: Sequence[Mapping[str, Any]], *,
+                      only_ports: Sequence[str] | None = None,
+                      tag: str = LOOP_DETECT_TAG) -> list[LoopProbe]:
+    """يحوّل صفوف /ip dhcp-client (كما يعيدها العميل) إلى قائمة LoopProbe.
+
+    يأخذ فقط الإدخالات الموسومة بـ`tag` (HR-LoopDetect افتراضيًا). إن
+    مُرِّر only_ports يقصر النتيجة على تلك الواجهات. منطق اللوب:
+      status يبدأ بـ"bound"  → لوب (الطلب دار وعاد فاستُلِم عنوان).
+      أو عاد عنوان غير 0.0.0.0 → لوب أيضًا (احتياط لاختلاف صيغ RouterOS).
+      غير ذلك (searching/…)    → لا لوب.
+    """
+    wanted = {p for p in only_ports} if only_ports else None
+    out: list[LoopProbe] = []
+    for row in rows or []:
+        comment = _clean(row.get("comment"))
+        if tag not in comment:
+            continue
+        iface = _clean(row.get("interface"))
+        if wanted is not None and iface not in wanted:
+            continue
+        status = _clean(row.get("status")).lower()
+        address = _clean(row.get("address"))
+        gateway = _clean(row.get("gateway"))
+        dhcp_server = _clean(row.get("dhcp-server") or row.get("dhcp_server"))
+        has_addr = bool(address) and not address.startswith("0.0.0.0")
+        is_loop = status.startswith("bound") or has_addr
+        if is_loop:
+            msg = f"لوب مكتشف على {iface} — رجع IP {address or '—'}"
+            if dhcp_server:
+                msg += f" من DHCP server {dhcp_server}"
+        else:
+            msg = f"لا لوب على {iface} (الحالة: {status or 'searching'})"
+        out.append(LoopProbe(
+            iface=iface,
+            status=status,
+            address=address,
+            gateway=gateway,
+            dhcp_server=dhcp_server,
+            is_loop=is_loop,
+            message=msg,
+        ))
+    return out
+
+
+def read_loop_status(nas_call: Mapping[str, Any],
+                     dhcp_client_fn: Callable[[Mapping[str, Any]], Any],
+                     *, only_ports: Sequence[str] | None = None
+                     ) -> tuple[list[LoopProbe], str]:
+    """يقرأ حالة اللوب الحيّة عبر دالة قراءة /ip dhcp-client المُمرَّرة
+    (عادةً mikrotik_admin_client.dhcp_client_list — نمرّرها بدل استيرادها
+    حتى تبقى الوحدة قابلة للاختبار بلا راوتر، نفس نمط discover_interfaces).
+
+    يُرجع (probes, error): عند نجاح القراءة error='' وprobes هي حالة كل
+    منفذ موسوم؛ عند الفشل probes=[] وerror رسالة عربية."""
+    try:
+        res = dhcp_client_fn(nas_call)
+    except Exception as e:  # noqa: BLE001
+        return [], f"تعذّر قراءة حالة اللوب من الراوتر: {e}"
+    if not getattr(res, "ok", False):
+        return [], (_clean(getattr(res, "error", ""))
+                    or "تعذّر الاتصال بالراوتر لقراءة حالة اللوب.")
+    probes = parse_loop_status(
+        getattr(res, "data", []) or [], only_ports=only_ports)
+    return probes, ""
+
+
 __all__ = [
     "PSS_COMMENT_PREFIX",
     "IFACE_PLACEHOLDER",
+    "BT_WIFI_TAG",
+    "LOOP_DETECT_TAG",
     "PortScriptService",
     "PortScriptPlan",
+    "LoopProbe",
     "REGISTRY",
     "list_services",
     "get_service",
@@ -366,4 +472,6 @@ __all__ = [
     "build_plan",
     "build_push_commands",
     "discover_interfaces",
+    "parse_loop_status",
+    "read_loop_status",
 ]

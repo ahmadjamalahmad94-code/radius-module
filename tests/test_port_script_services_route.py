@@ -120,11 +120,13 @@ def _install_real_script(monkeypatch, slug="bt_wifi_block"):
     return real
 
 
-# ─── العرض الأساسي + حالة القالب المبدئي ─────────────────────────
+# ─── العرض الأساسي + الخدمتان المفعّلتان + حارس القالب المبدئي ────
 
 
-def test_form_renders_services_and_await_badge(app, client):
+def test_form_renders_activated_services_and_state(app, client, monkeypatch):
     _seed(app)
+    from app.radius.routes import port_script_services as route
+    monkeypatch.setattr(route, "_discover", lambda nas: [])
     _login(client)
     # الصفحة العامة: بطاقات الخدمتين
     res = client.get("/admin/radius/mt/1/port-services")
@@ -132,15 +134,38 @@ def test_form_renders_services_and_await_badge(app, client):
     assert res.status_code == 200
     assert "منع بث البلوتوث والواي فاي" in body
     assert "تتبّع اللوب" in body
-    # اختيار خدمة مبدئية → شارة «بانتظار السكربت» + بانر الحالة «غير مفعّلة»
+    # الخدمتان مفعّلتان (is_placeholder=False) → لا شارة «بانتظار السكربت»
+    assert "بانتظار السكربت" not in body
+    # اختيار الخدمة → بانر الحالة «غير مفعّلة» + زر معاينة التفعيل ظاهر
     res2 = client.get("/admin/radius/mt/1/port-services?slug=bt_wifi_block")
     body2 = res2.get_data(as_text=True)
-    assert "بانتظار السكربت" in body2
     assert "غير مفعّلة" in body2
+    assert "معاينة سكربت التفعيل" in body2
 
 
-def test_apply_blocked_while_placeholder(app, client):
+def test_loop_detect_form_shows_loop_check_button(app, client, monkeypatch):
     _seed(app)
+    from app.radius.routes import port_script_services as route
+    monkeypatch.setattr(route, "_discover", lambda nas: [])
+    _login(client)
+    body = client.get(
+        "/admin/radius/mt/1/port-services?slug=loop_detect"
+    ).get_data(as_text=True)
+    # زر «فحص اللوب» يظهر لخدمة كشف اللوب فقط
+    assert "فحص اللوب" in body
+
+
+def test_apply_blocked_while_placeholder(app, client, monkeypatch):
+    """حارس القالب المبدئي ما زال يمنع الدفع — نُثبّت خدمة مبدئية مؤقتة
+    لإثباته (الخدمتان الحقيقيتان مفعّلتان الآن)."""
+    import dataclasses
+    _seed(app)
+    from app.radius.routes import port_script_services as route
+    from app.radius.services import port_script_services as fresh
+    monkeypatch.setattr(route, "_discover", lambda nas: [])
+    base = fresh.get_service("bt_wifi_block")
+    monkeypatch.setitem(fresh.REGISTRY, "bt_wifi_block",
+                        dataclasses.replace(base, is_placeholder=True))
     _login(client)
     token = _csrf(client)
     res = client.post(
@@ -213,3 +238,55 @@ def test_apply_pushes_script_and_saves_state(app, client, monkeypatch):
         "/admin/radius/mt/1/port-services?slug=bt_wifi_block"
     ).get_data(as_text=True)
     assert "غير مفعّلة" in page2
+
+
+# ─── فحص اللوب الحيّ عبر /ip dhcp-client (عميل API ستب) ──────────
+
+
+def test_loop_check_reports_live_status(app, client, monkeypatch):
+    """زر «فحص اللوب» يقرأ /ip dhcp-client الموسوم HR-LoopDetect عبر
+    mac.dhcp_client_list ويعرض: ether2 bound = لوب مكتشف، ether3
+    searching = لا لوب."""
+    _seed(app)
+    from app.radius.routes import port_script_services as route
+    monkeypatch.setattr(route, "_discover", lambda nas: [])
+
+    class _Res:
+        ok = True
+        error = ""
+
+        def __init__(self, data):
+            self.data = data
+
+    captured = {}
+
+    def fake_dhcp(nas):
+        # نتأكّد أن المسار مرّر صفّ الراوتر الخام (فيه api_user) لا مخطّط
+        # _nas_for_mac — لأن mac يبني router_cfg من أعمدة api_*.
+        captured["nas"] = nas
+        return _Res([
+            {"interface": "ether2", "status": "bound",
+             "address": "192.168.88.7/24", "gateway": "192.168.88.1",
+             "dhcp-server": "192.168.88.1",
+             "comment": "HR-LoopDetect ether2"},
+            {"interface": "ether3", "status": "searching...",
+             "comment": "HR-LoopDetect ether3"},
+        ])
+
+    monkeypatch.setattr(route.mac, "dhcp_client_list", fake_dhcp)
+
+    _login(client)
+    token = _csrf(client)
+    res = client.post(
+        "/admin/radius/mt/1/port-services/loop_detect/loop-check",
+        data={"_csrf_token": token},  # بلا ports → يعرض كل الموسومين
+    )
+    body = res.get_data(as_text=True)
+    assert res.status_code == 200
+    # لوب على ether2 (رجع IP من DHCP server)
+    assert "لوب مكتشف على ether2" in body
+    assert "192.168.88.7/24" in body
+    # لا لوب على ether3
+    assert "لا لوب على ether3" in body
+    # مُرِّر صفّ الراوتر الخام (يحمل بيانات اعتماد api_user)
+    assert captured["nas"].get("api_user") == "hr-test"

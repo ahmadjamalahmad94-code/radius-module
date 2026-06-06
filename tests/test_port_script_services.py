@@ -27,13 +27,37 @@ def test_render_script_substitutes_ports_and_ifaces():
     script = pss.render_script(svc, ["ether2", "ether3"])
     # {{PORTS}} → قائمة مفصولة بفواصل
     assert "ether2,ether3" in script
-    # {{IFACES}} → سطر لكل واجهة من قالب السطر
-    assert script.count("على الواجهة ether2") == 1
-    assert script.count("على الواجهة ether3") == 1
+    # {{IFACES}} → سطر mangle حقيقي (TTL=1) لكل واجهة موسوم HR-AntiShare
+    assert script.count("out-interface=ether2") == 1
+    assert script.count("out-interface=ether3") == 1
+    assert 'comment="HR-AntiShare ether2"' in script
+    assert 'comment="HR-AntiShare ether3"' in script
+    assert "new-ttl=set:1" in script
     # لم تبقَ أي عناصر نائبة
     assert "{{PORTS}}" not in script
     assert "{{IFACES}}" not in script
     assert "{{IFACE}}" not in script
+
+
+def test_loop_detect_script_adds_dhcp_client_per_port():
+    """سكربت كشف اللوب المفعّل يضيف عميل DHCP موسومًا لكل منفذ، وسكربت
+    الإزالة يحذف الموسوم لذلك المنفذ."""
+    svc = pss.get_service("loop_detect")
+    enable = pss.render_script(svc, ["ether4", "ether5"])
+    assert enable.count("/ip dhcp-client add interface=ether4") == 1
+    assert enable.count("/ip dhcp-client add interface=ether5") == 1
+    assert "add-default-route=no" in enable
+    assert 'comment="HR-LoopDetect ether4"' in enable
+    remove = pss.render_script(svc, ["ether4"], remove=True)
+    assert "/ip dhcp-client remove" in remove
+    assert 'comment="HR-LoopDetect ether4"' in remove
+
+
+def test_both_services_are_activated_not_placeholder():
+    """الخدمتان مُفعّلتان (is_placeholder=False) — يفعّل زر التطبيق
+    ويزيل شارة «بانتظار السكربت»."""
+    assert pss.get_service("bt_wifi_block").is_placeholder is False
+    assert pss.get_service("loop_detect").is_placeholder is False
 
 
 def test_render_script_remove_uses_remove_template():
@@ -57,13 +81,13 @@ def test_render_iface_block_one_line_per_port():
 # ─── بناء الخطة + التحقّق من المنافذ ─────────────────────────────
 
 
-def test_build_plan_apply_summary_and_placeholder_warning():
+def test_build_plan_apply_summary_no_placeholder_warning():
     plan = pss.build_plan("bt_wifi_block", ["ether2"])
     assert plan.slug == "bt_wifi_block"
     assert plan.selected_ports == ["ether2"]
-    assert plan.is_placeholder is True
-    # تحذير القالب المبدئي موجود (الدفع معطّل)
-    assert any("قالب مبدئي" in w for w in plan.warnings)
+    # الخدمة مُفعّلة الآن → لا تحذير «قالب مبدئي» والدفع مسموح
+    assert plan.is_placeholder is False
+    assert not any("قالب مبدئي" in w for w in plan.warnings)
     assert any("التفعيل" in s for s in plan.summary)
 
 
@@ -91,6 +115,83 @@ def test_build_plan_rejects_bad_interface_name():
 def test_build_plan_unknown_slug():
     with pytest.raises(ValueError):
         pss.build_plan("does_not_exist", ["ether2"])
+
+
+# ─── تتبّع حالة اللوب: parse_loop_status + read_loop_status ──────
+
+
+def test_parse_loop_status_bound_is_loop_searching_is_not():
+    rows = [
+        # ether2: استلم عنوانًا (bound) → لوب
+        {"interface": "ether2", "status": "bound",
+         "address": "192.168.88.50/24", "gateway": "192.168.88.1",
+         "dhcp-server": "192.168.88.1", "comment": "HR-LoopDetect ether2"},
+        # ether3: يبحث (searching) → لا لوب
+        {"interface": "ether3", "status": "searching...",
+         "address": "", "gateway": "", "dhcp-server": "",
+         "comment": "HR-LoopDetect ether3"},
+        # إدخال غير موسوم → يُتجاهَل تمامًا
+        {"interface": "ether9", "status": "bound",
+         "address": "10.0.0.2/24", "comment": "client آخر"},
+    ]
+    probes = pss.parse_loop_status(rows)
+    assert [p.iface for p in probes] == ["ether2", "ether3"]
+    loop, clear = probes[0], probes[1]
+    assert loop.is_loop is True
+    assert "لوب مكتشف على ether2" in loop.message
+    assert "192.168.88.50/24" in loop.message
+    assert "192.168.88.1" in loop.message
+    assert clear.is_loop is False
+    assert "لا لوب" in clear.message
+
+
+def test_parse_loop_status_filters_by_only_ports():
+    rows = [
+        {"interface": "ether2", "status": "bound", "address": "1.2.3.4/24",
+         "comment": "HR-LoopDetect ether2"},
+        {"interface": "ether3", "status": "searching",
+         "comment": "HR-LoopDetect ether3"},
+    ]
+    probes = pss.parse_loop_status(rows, only_ports=["ether3"])
+    assert [p.iface for p in probes] == ["ether3"]
+
+
+class _StubRes:
+    """نتيجة API ستب على شكل MtResult (ok/data/error) بلا راوتر."""
+    def __init__(self, *, ok, data=None, error=""):
+        self.ok = ok
+        self.data = data or []
+        self.error = error
+
+
+def test_read_loop_status_via_stub_client_bound_then_searching():
+    """يثبت إعادة استخدام عميل API المُمرَّر: bound→لوب، searching→لا."""
+    captured = {}
+
+    def stub_dhcp_client_list(nas_call):
+        captured["nas"] = nas_call
+        return _StubRes(ok=True, data=[
+            {"interface": "ether2", "status": "bound",
+             "address": "172.16.0.9/24", "dhcp-server": "172.16.0.1",
+             "comment": "HR-LoopDetect ether2"},
+            {"interface": "ether3", "status": "searching...",
+             "comment": "HR-LoopDetect ether3"},
+        ])
+
+    probes, error = pss.read_loop_status(
+        {"id": 7}, stub_dhcp_client_list)
+    assert error == ""
+    assert captured["nas"] == {"id": 7}  # مُرِّر صفّ الراوتر كما هو
+    assert probes[0].is_loop is True
+    assert probes[1].is_loop is False
+
+
+def test_read_loop_status_surfaces_api_error():
+    def failing(nas_call):
+        return _StubRes(ok=False, error="تعذر الاتصال")
+    probes, error = pss.read_loop_status({"id": 1}, failing)
+    assert probes == []
+    assert "تعذر الاتصال" in error
 
 
 # ─── بناء أوامر الدفع + إعادة استخدام منفّذ mt_programming ────────

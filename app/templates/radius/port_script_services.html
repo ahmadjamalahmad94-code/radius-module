@@ -148,8 +148,66 @@
           <i class="fa-solid fa-eraser"></i>
           معاينة سكربت الإزالة
         </button>
+        {# فحص اللوب الحيّ (لخدمة كشف اللوب فقط) — يرسل نفس النموذج
+           بمنافذه المختارة إلى مسار loop-check عبر formaction. #}
+        {% if service.slug == 'loop_detect' %}
+        <button type="submit" class="hub-btn hub-btn--ghost"
+                formaction="{{ url_for('radius.mt_port_services_loop_check', nas_id=nas.id, slug=service.slug) }}"
+                formmethod="post" data-pss-loop-check>
+          <i class="fa-solid fa-magnifying-glass"></i>
+          فحص اللوب
+        </button>
+        {% endif %}
       </div>
     </form>
+  {% endcall %}
+  {% endif %}
+
+  {% if loop_probes is not none %}
+  {# ── نتيجة فحص اللوب الحيّة (قراءة /ip dhcp-client الموسومة) ── #}
+  {% call hub.section("نتيجة فحص اللوب", icon="magnifying-glass") %}
+    <div data-pss-loop-result>
+      {% if loop_error %}
+      <div role="alert" style="display:flex;align-items:center;gap:8px;background:#FEF2F2;border:1px solid #FCA5A5;color:#991B1B;padding:12px 14px;border-radius:var(--hub-r-md);font-size:14px"
+           data-pss-loop-error>
+        <i class="fa-solid fa-triangle-exclamation"></i> {{ loop_error }}
+      </div>
+      {% elif not loop_probes %}
+      <div style="display:flex;align-items:center;gap:8px;background:#F8FAFC;border:1px solid #E2E8F0;color:#475569;padding:12px 14px;border-radius:var(--hub-r-md);font-size:14px"
+           data-pss-loop-empty>
+        <i class="fa-solid fa-circle-info"></i>
+        لا توجد منافذ موسومة بكشف اللوب على هذا الراوتر — فعّل الخدمة على المنافذ المطلوبة أولًا ثم أعد الفحص.
+      </div>
+      {% else %}
+      <div style="display:flex;flex-direction:column;gap:8px" data-pss-loop-list>
+        {% for p in loop_probes %}
+        {% if p.is_loop %}
+        <div data-pss-loop-probe="loop" data-pss-loop-iface="{{ p.iface }}"
+             style="display:flex;align-items:flex-start;gap:10px;background:#FEF2F2;border:1px solid #FCA5A5;color:#991B1B;padding:12px 14px;border-radius:var(--hub-r-md);font-size:14px">
+          <i class="fa-solid fa-circle-exclamation" style="margin-top:2px"></i>
+          <div>
+            <div style="font-weight:700">{{ p.message }}</div>
+            <div class="hub-text-mute" style="font-size:12.5px;margin-top:4px">
+              <code>{{ p.iface }}</code> · الحالة: <code>{{ p.status or '—' }}</code>{% if p.gateway %} · البوابة: <code>{{ p.gateway }}</code>{% endif %}
+            </div>
+          </div>
+        </div>
+        {% else %}
+        <div data-pss-loop-probe="clear" data-pss-loop-iface="{{ p.iface }}"
+             style="display:flex;align-items:flex-start;gap:10px;background:#ECFDF5;border:1px solid #A7F3D0;color:#166534;padding:12px 14px;border-radius:var(--hub-r-md);font-size:14px">
+          <i class="fa-solid fa-circle-check" style="margin-top:2px"></i>
+          <div>
+            <div style="font-weight:700">{{ p.message }}</div>
+            <div class="hub-text-mute" style="font-size:12.5px;margin-top:4px">
+              <code>{{ p.iface }}</code> · الحالة: <code>{{ p.status or 'searching' }}</code>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
   {% endcall %}
   {% endif %}
 
