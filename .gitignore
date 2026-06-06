@@ -55,3 +55,9 @@ docs/*
 *.sqlite3
 node_modules/
 .DS_Store
+
+# i18n transient translation working files
+tools/i18n_translations/shards/
+tools/i18n_translations/_msgids*.json
+tools/i18n_translations/_slice*.json
+tools/i18n_translations/_tmp*.json
