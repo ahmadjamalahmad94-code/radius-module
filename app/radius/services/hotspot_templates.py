@@ -1795,13 +1795,14 @@ def _put_file_smart(client, target_path: str, contents: str, *,
             error=(f"الملف كبير على API ({n} بايت) وFTP غير متاح — فعّل "
                    f"خدمة FTP على الراوتر أو صغّر شعار التصميم. "
                    f"({api.error})"))
-    # صغير: API أولًا. نحوّل لـFTP فقط إن كان الفشل انقطاعًا/مهلة —
-    # أخطاء الصلاحية/القرص/القالب لا يحلّها FTP (وتجنّبنا اتصال FTP عبثيًا).
+    # صغير: API أولًا، وعند فشله نحوّل لـFTP إن كان متاحًا — لأيّ سبب فشل،
+    # لا للانقطاع/المهلة فقط. السبب: FTP قناة مستقلّة أثبتت نجاحها على هذا
+    # الراوتر (login.html/store.html الكبيران رُفعا عبر FTP) بينما يرفض API
+    # أحيانًا الملفات الصغيرة (مثلًا الصفحات المرافقة: 401/رفض على نداء
+    # /file/add). إن نجح FTP فالملف رُفع فعلًا (لا «إخفاء خطأ»)؛ وإن فشل
+    # الاثنان نُعيد خطأً مجمّعًا. لا نتجاوز FTP إلا إذا كان غير متاح أصلًا.
     api = _put_file(client, target_path, contents, on_retry=on_retry)
     if api.ok or not ftp:
-        return api
-    _kind, _ = classify_deploy_error(api.error)
-    if _kind not in ("reset", "timeout"):
         return api
     try:
         return _via_ftp()
