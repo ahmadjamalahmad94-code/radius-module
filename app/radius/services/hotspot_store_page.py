@@ -630,7 +630,33 @@ body{min-height:100vh;background:
         <input id="inPass" type="password" autocomplete="current-password"
                placeholder="••••••••"></div>
       <button class="btn-main" id="btnLogin" type="button">تسجيل الدخول</button>
+      <span class="back-login">
+        <a href="#" id="goRegister">✨ ليس لديك حساب؟ أنشئ حسابًا جديدًا</a>
+      </span>
       <span class="back-login"><a href="login.html">↪ العودة لصفحة الدخول للشبكة</a></span>
+    </div>
+  </section>
+
+  <!-- ═══ شاشة التسجيل الذاتي ═══
+       تنشئ حسابًا فعّالًا فورًا عبر /api/v1/store/register ثم تدخل
+       تلقائيًا (نفس توكن الدخول). الاسم الثلاثي + الجوال + كلمة المرور. -->
+  <section id="scrRegister" class="hide">
+    <div class="hero">
+      <div class="shape s1"></div><div class="shape s2"></div>
+      <h1>إنشاء حساب 🎉</h1>
+      <p>أنشئ حسابك الآن لتشحن رصيدك وتشتري بطاقات الإنترنت مباشرة — التفعيل فوري بلا انتظار.</p>
+      <div class="inline-err" id="regErr"></div>
+      <div class="f"><label>الاسم الثلاثي</label>
+        <input id="rgName" type="text" autocomplete="name"
+               placeholder="مثال: محمد أحمد علي"></div>
+      <div class="f"><label>رقم الجوال</label>
+        <input id="rgMobile" type="tel" inputmode="tel" autocomplete="tel"
+               placeholder="05xxxxxxxx"></div>
+      <div class="f"><label>كلمة المرور</label>
+        <input id="rgPass" type="password" autocomplete="new-password"
+               placeholder="٤ أحرف على الأقل"></div>
+      <button class="btn-main" id="btnRegister" type="button">إنشاء الحساب</button>
+      <span class="back-login"><a href="#" id="goLogin">↪ لديك حساب؟ سجّل الدخول</a></span>
     </div>
   </section>
 
@@ -929,6 +955,7 @@ body{min-height:100vh;background:
   /* ───── تبديل الشاشات ───── */
   function show(screen) {
     $('scrLogin').classList.toggle('hide', screen !== 'login');
+    $('scrRegister').classList.toggle('hide', screen !== 'register');
     $('scrHome').classList.toggle('hide', screen !== 'home');
     $('tabBar').classList.toggle('hide', screen !== 'home');
     $('btnLogout').style.display = screen === 'home' ? 'inline-block' : 'none';
@@ -1302,6 +1329,42 @@ body{min-height:100vh;background:
       });
   }
 
+  /* ───── التسجيل الذاتي ─────
+     ينشئ حسابًا فعّالًا فورًا عبر /register ثم يدخل تلقائيًا بالتوكن
+     المُعاد (نفس مسار doLogin بعد الحصول على التوكن). */
+  function doRegister() {
+    var name = $('rgName').value.trim();
+    var mobile = $('rgMobile').value.trim();
+    var pass = $('rgPass').value;
+    var errBox = $('regErr');
+    errBox.style.display = 'none';
+    if (!name || !mobile || !pass) {
+      errBox.textContent = 'أدخل الاسم الثلاثي ورقم الجوال وكلمة المرور.';
+      errBox.style.display = 'block';
+      return;
+    }
+    var btn = $('btnRegister');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spin"></span> جارٍ إنشاء الحساب…';
+    api('/register', { method: 'POST',
+                       body: { display_name: name, mobile: mobile,
+                               password: pass } })
+      .then(function (data) {
+        sessionStorage.setItem(TKEY, data.token || '');
+        $('rgPass').value = '';
+        toast('تم إنشاء حسابك بنجاح — أهلًا بك 🎉', 'ok');
+        return loadHome();
+      })
+      .catch(function (e) {
+        errBox.textContent = e.message;
+        errBox.style.display = 'block';
+      })
+      .then(function () {
+        btn.disabled = false;
+        btn.textContent = 'إنشاء الحساب';
+      });
+  }
+
   function doLogout(silent) {
     sessionStorage.removeItem(TKEY);
     loadedTabs = {};
@@ -1362,6 +1425,17 @@ body{min-height:100vh;background:
   $('btnLogin').addEventListener('click', doLogin);
   $('inPass').addEventListener('keydown', function (e) {
     if (e.key === 'Enter') doLogin();
+  });
+  /* تبديل شاشتي الدخول/التسجيل */
+  $('goRegister').addEventListener('click', function (e) {
+    e.preventDefault(); $('regErr').style.display = 'none'; show('register');
+  });
+  $('goLogin').addEventListener('click', function (e) {
+    e.preventDefault(); $('loginErr').style.display = 'none'; show('login');
+  });
+  $('btnRegister').addEventListener('click', doRegister);
+  $('rgPass').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') doRegister();
   });
   $('btnLogout').addEventListener('click', function () { doLogout(false); });
   $('btnRefresh').addEventListener('click', function () {

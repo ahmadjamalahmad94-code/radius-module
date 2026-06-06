@@ -87,6 +87,30 @@ def _record_login_failure(key: str) -> None:
         _login_failures[key].append(time.monotonic())
 
 
+# ───────────────────────── كبح التسجيل الذاتي ─────────────────────────
+# التسجيل ينشئ حسابًا فعّالًا بلا تأكيد إداري، فنكبحه بحزم لكل IP:
+# 5 محاولات لكل 10 دقائق ثم 429 — يصد إنشاء حسابات آلي مسيء من شبكة
+# الهوت سبوت دون إزعاج الزبون العادي (يسجّل مرة واحدة).
+_REGISTER_WINDOW_SECONDS = 600.0
+_REGISTER_MAX = 5
+_register_lock = Lock()
+_register_attempts: dict[str, deque] = defaultdict(deque)
+
+
+def _register_throttled(key: str) -> bool:
+    now = time.monotonic()
+    with _register_lock:
+        log = _register_attempts[key]
+        while log and (now - log[0]) > _REGISTER_WINDOW_SECONDS:
+            log.popleft()
+        return len(log) >= _REGISTER_MAX
+
+
+def _record_register_attempt(key: str) -> None:
+    with _register_lock:
+        _register_attempts[key].append(time.monotonic())
+
+
 # ───────────────────────── تسجيل النقاط + CORS ─────────────────────────
 
 
@@ -96,6 +120,7 @@ def register(bp: Blueprint) -> None:
         # وزر «اختبار الاتصال» في المصمّم للتأكد أن العنوان المحقون
         # قابل للوصول فعلاً قبل أي محاولة دخول.
         ("/store/ping", "store_ping", store_ping, ["GET"]),
+        ("/store/register", "store_register", store_register, ["POST"]),
         ("/store/login", "store_login", store_login, ["POST"]),
         ("/store/me", "store_me", _require_store_token(store_me), ["GET"]),
         ("/store/packages", "store_packages",
@@ -423,6 +448,61 @@ def store_ping():
         "time": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "version": 1,
     })
+
+
+def store_register():
+    """تسجيل ذاتي لزبون جديد من المتجر — اسم ثلاثي + جوال + كلمة مرور.
+
+    ينشئ حساب مستخدم بطاقة **فعّالًا فورًا** (بمحفظة) بلا أي تأكيد
+    إداري، ثم يسجّل دخوله تلقائيًا (يعيد توكنًا) فيشحن ويشتري مباشرة.
+    كلمة المرور تُهشَّم بنفس آلية مستخدمي البطاقات.
+
+    الحماية: كبح معدّل لكل IP (5/10د)، تطبيع وفحص صيغة الجوال، ومنع
+    تكرار رقم جوال نشط — كلها في الخدمة/النقطة لا في الواجهة فقط.
+
+    tenant_id=1 مطابقةً لنقطة الدخول (store_login) وبقية نقاط المتجر
+    التي تعمل على المستأجر الافتراضي."""
+    body = _payload()
+    name = str(body.get("display_name") or "").strip()
+    mobile = str(body.get("mobile") or "").strip()
+    password = str(body.get("password") or "")
+    if not name or not mobile or not password:
+        return fail(
+            "validation_error",
+            "أدخل الاسم الثلاثي ورقم الجوال وكلمة المرور.",
+            status=422,
+        )
+    if _register_throttled(_client_ip()):
+        return fail(
+            "rate_limited",
+            "محاولات تسجيل كثيرة — انتظر قليلًا ثم حاول مجددًا.",
+            status=429,
+            details={"retry_after_seconds": int(_REGISTER_WINDOW_SECONDS)},
+        )
+    _record_register_attempt(_client_ip())
+    try:
+        user = CardUsersMarketplaceService(tenant_id=1).register_card_user(
+            display_name=name, mobile=mobile, password=password,
+        )
+    except CardMarketplaceError as exc:
+        return fail("register_failed", str(exc) or "تعذّر إنشاء الحساب.",
+                    status=422)
+    # سجّل حدث دخول (نجاح) — نفس ما يفعله store_login، لا يكسر التسجيل.
+    try:
+        from ...radius.services.login_events import record_login_event
+        record_login_event(actor_type="card",
+                           username=str(user.get("mobile") or mobile),
+                           success=True, actor_id=user.get("id"),
+                           tenant_id=1)
+    except Exception:  # noqa: BLE001
+        pass
+    # دخول تلقائي فور التسجيل — نفس توكن store_login.
+    token = issue_store_token(card_user_id=int(user["id"]), tenant_id=1)
+    return ok({
+        "token": token,
+        "token_ttl_seconds": token_ttl_seconds(),
+        "card_user": _public_card_user(user),
+    }, status=201)
 
 
 def store_login():

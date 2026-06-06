@@ -6,6 +6,7 @@ It does not call live RADIUS, MikroTik, or provisioning adapters.
 from __future__ import annotations
 
 import json
+import re
 from typing import Any
 
 from werkzeug.security import generate_password_hash
@@ -25,6 +26,10 @@ from .business_os_finance import (
 
 VALID_SALE_MODES = ("instant", "inventory")  # توليد فوري / مخزون
 _DEFAULT_SALE_MODE_KEY = "cards.default_sale_mode"
+
+# رقم جوال صالح للتسجيل الذاتي: أرقام فقط (7–15 خانة) مع + اختياري
+# للبادئة الدولية. تطبيع بسيط يزيل الفراغات والشرطات قبل الفحص.
+_MOBILE_RE = re.compile(r"^\+?\d{7,15}$")
 
 
 class CardMarketplaceError(ValueError):
@@ -112,6 +117,77 @@ class CardUsersMarketplaceService:
             target_id=card_user_id,
         )
         return self.get_card_user(card_user_id)
+
+    @staticmethod
+    def normalize_mobile(mobile: str) -> str:
+        """يطبّع رقم الجوال (يزيل الفراغات/الشرطات/الأقواس، 00→+) ثم
+        يتحقق من صيغته. يعيد الرقم المطبّع أو "" إن كان غير صالح.
+        مشترك بين التسجيل الذاتي والتحقق من التكرار."""
+        raw = re.sub(r"[\s\-()]+", "", str(mobile or ""))
+        if raw.startswith("00"):
+            raw = "+" + raw[2:]
+        return raw if _MOBILE_RE.match(raw) else ""
+
+    def mobile_exists(self, mobile: str) -> bool:
+        """هل يوجد حساب نشط بنفس رقم الجوال؟ (منع تكرار التسجيل)."""
+        phone = self.normalize_mobile(mobile)
+        if not phone:
+            return False
+        row = db().execute(
+            "SELECT id FROM card_users WHERE tenant_id=? AND mobile=? AND status='active' LIMIT 1",
+            (self.tenant_id, phone),
+        ).fetchone()
+        return bool(row)
+
+    def register_card_user(
+        self,
+        *,
+        display_name: str,
+        mobile: str,
+        password: str,
+    ) -> dict[str, Any]:
+        """تسجيل ذاتي لزبون من المتجر — ينشئ حساب مستخدم بطاقة **فعّالًا
+        فورًا** (بمحفظة) بلا أي تأكيد إداري، فيقدر يدخل ويشحن ويشتري
+        مباشرة. كلمة المرور تُخزَّن مهشّمة (نفس آلية مستخدمي البطاقات
+        عبر create_card_user). يفرض:
+          • اسمًا ثلاثيًا (كلمتان على الأقل).
+          • رقم جوال صالح الصيغة.
+          • كلمة مرور 4 أحرف على الأقل (نفس حد set_card_user_password).
+          • منع تكرار رقم جوال نشط.
+
+        ملاحظة تزامن: فحص التكرار ثم الإدراج ليسا ذرّيين (لا قيد فرادة
+        على mobile في المخطط) — احتمال سباق ضعيف (نفس الزبون يرسل مرتين)
+        ويصدّه كبح المعدّل في نقطة الـAPI؛ مقبول لهذا النطاق."""
+        name = str(display_name or "").strip()
+        if len(name.split()) < 2:
+            raise CardMarketplaceError(
+                "الاسم الثلاثي مطلوب — اكتب اسمك واسم أبيك وجدّك."
+            )
+        phone = self.normalize_mobile(mobile)
+        if not phone:
+            raise CardMarketplaceError("رقم الجوال غير صالح — أدخل أرقامًا فقط.")
+        if len(str(password or "").strip()) < 4:
+            raise CardMarketplaceError("كلمة المرور يجب أن تكون 4 أحرف على الأقل.")
+        if self.mobile_exists(phone):
+            raise CardMarketplaceError(
+                "رقم الجوال مسجّل مسبقًا — سجّل الدخول أو استخدم رقمًا آخر."
+            )
+        user = self.create_card_user(
+            display_name=name,
+            mobile=phone,
+            password=str(password),
+            metadata={"self_registered": True, "source": "store"},
+        )
+        self.events.record_event(
+            tenant_id=self.tenant_id,
+            category="card",
+            event_key="card_user.self_registered",
+            message="سجّل زبون حسابًا جديدًا من المتجر.",
+            target_type="card_user",
+            target_id=int(user["id"]),
+            metadata={"mobile": phone, "source": "store"},
+        )
+        return user
 
     def set_card_user_password(
         self,
