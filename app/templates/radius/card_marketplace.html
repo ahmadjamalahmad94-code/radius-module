@@ -398,24 +398,6 @@
     text-align:center;
     font-weight:900;
   }
-  /* concept action cards (how-it-works) */
-  .market-actions-grid{
-    display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
-    gap:12px;
-    padding:16px;
-  }
-  .market-action-card{
-    display:flex;
-    flex-direction:column;
-    gap:8px;
-    padding:16px;
-    border:1px solid var(--line);
-    border-radius:13px;
-    background:#fff;
-  }
-  .market-action-card h4{margin:0;font-size:14px;font-weight:900;color:var(--ink)}
-  .market-action-card p{margin:0;color:var(--muted);font-size:12px;font-weight:600;line-height:1.6;flex:1}
   @media(max-width:760px){
     .market-hero-actions{flex:1 1 100%}
   }
@@ -585,6 +567,65 @@
   details.market-collapsible > summary .market-chevron{transition:transform .2s ease;opacity:.55;font-size:13px}
   details.market-collapsible[open] > summary .market-chevron{transform:rotate(180deg)}
   details.market-collapsible[open] > .batch-grid{margin-top:16px}
+  details.market-collapsible[open] > .market-collapsible-body{margin-top:0}
+
+  /* ── شريط النظام: محدّد توليد/مخزون كمفتاح مقسّم بارز فوق المعرض ── */
+  .market-systembar{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:12px;
+    flex-wrap:wrap;
+    padding:16px 16px 0;
+  }
+  .market-seg--lg{
+    gap:5px;
+    padding:5px;
+    border-radius:14px;
+    box-shadow:0 1px 3px rgba(15,23,42,.06);
+  }
+  .market-seg--lg button{
+    min-height:42px;
+    padding:0 20px;
+    font-size:13.5px;
+    border-radius:11px;
+  }
+  .market-seg--lg button.is-active{
+    background:linear-gradient(135deg,var(--violet),var(--violet-deep));
+    color:#fff;
+    box-shadow:0 6px 14px rgba(124,58,237,.26);
+  }
+  .market-systembar .market-pill{min-height:42px}
+  /* أدوات رأس المعرض (النمط الافتراضي) — مدمجة وهادئة */
+  .market-headtools{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .market-headtools select{
+    min-height:38px;padding:0 12px;border-radius:10px;
+    border:1px solid var(--line);font-weight:800;background:#fff;color:var(--ink);cursor:pointer;
+  }
+  /* ── خيارات العرض داخل بطاقة العرض (تفاصيل عند الفتح) ── */
+  .market-card-opts{margin-top:auto}
+  .market-card-opts > summary{
+    cursor:pointer;list-style:none;
+    display:flex;align-items:center;justify-content:center;gap:8px;
+    min-height:34px;padding:0 12px;border-radius:9px;
+    border:1px dashed var(--line);background:var(--soft);
+    color:var(--muted);font-size:12px;font-weight:800;
+  }
+  .market-card-opts > summary::-webkit-details-marker{display:none}
+  .market-card-opts > summary:hover{border-color:#ddd6fe;color:var(--violet-deep);background:var(--violet-soft)}
+  .market-card-opts > summary .market-chevron{transition:transform .2s ease;opacity:.6;font-size:11px}
+  .market-card-opts[open] > summary .market-chevron{transform:rotate(180deg)}
+  .market-card-opts-body{display:grid;gap:8px;margin-top:10px}
+  .market-card-opts-body .market-opt-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .market-card-opts-body select{
+    flex:1;min-height:36px;padding:0 10px;border-radius:9px;
+    border:1px solid var(--line);font-weight:800;background:#fff;color:var(--ink);cursor:pointer;
+  }
+  .market-card-opts-body .market-btn{flex:1;min-height:36px;font-size:12px}
+  @media(max-width:760px){
+    .market-systembar{justify-content:stretch}
+    .market-seg--lg{width:100%;justify-content:center}
+  }
   /* احترام تفضيل تقليل الحركة — توقف كل الانتقالات/التحويلات غير الجوهرية
      (الكلاسات الفعلية هنا market-package/market-batch، لا package-card) */
   @media (prefers-reduced-motion: reduce){
@@ -757,53 +798,36 @@
   </div>
   </div>
 
-  <!-- ── كيف يعمل البيع + النمط الافتراضي ── -->
-  <section class="market-panel">
-    <header class="market-panel-head">
-      <div>
-        <h2><i class="fa-solid fa-circle-info"></i> كيف يعمل البيع؟</h2>
-        <p>لكل عرض «نمط بيع» يحدّد من أين يأتي الكرت لحظة الشراء. اختر النمط الافتراضي الذي ترثه العروض الجديدة.</p>
-      </div>
-      <form method="post" action="{{ url_for('radius.card_marketplace_default_mode') }}"
-            style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-        <span class="market-pill" style="background:#eef2ff;color:#4338ca">النمط الافتراضي</span>
-        <select name="sale_mode" onchange="this.form.submit()"
-                style="min-height:38px;padding:0 12px;border-radius:10px;border:1px solid var(--line);font-weight:800">
-          <option value="instant" {{ 'selected' if (default_sale_mode or 'instant') != 'inventory' else '' }}>توليد فوري</option>
-          <option value="inventory" {{ 'selected' if (default_sale_mode or 'instant') == 'inventory' else '' }}>مخزون</option>
-        </select>
-      </form>
-    </header>
-    <div class="market-actions-grid">
-      <article class="market-action-card" style="border-inline-start:4px solid #7c3aed">
-        <h4><i class="fa-solid fa-bolt" style="color:#7c3aed"></i> توليد فوري</h4>
-        <p>يُنشئ النظام كرتًا جديدًا تلقائيًا في لحظة كل عملية شراء ويُسلّمه للزبون فورًا. مناسب للبيع الرقمي اللحظي — بلا مخزون مُسبق.</p>
-      </article>
-      <article class="market-action-card" style="border-inline-start:4px solid #2563eb">
-        <h4><i class="fa-solid fa-boxes-stacked" style="color:#2563eb"></i> من المخزون</h4>
-        <p>تُحمّل كروتًا جاهزة مسبقًا (توليد عدد أو رفع ملف Excel/CSV/PDF)، ويُباع منها كرت واحد لكل عملية. مناسب للكروت المطبوعة والمعارض — ويعرض «المباع / المتبقّي».</p>
-      </article>
-    </div>
-  </section>
+  {# ── أُزيل قسم «كيف يعمل البيع؟» المكدّس (بطاقتا الشرح الكبيرتان):
+        الشرح صار مدمجًا في تنبيه نموذج الإضافة، ومحدّد النمط الافتراضي
+        نُقل مدمجًا إلى أدوات رأس معرض العروض أدناه. لا تغيير في نقاط النهاية. ── #}
 
   <!-- ===================== العروض (القلب) ===================== -->
   <section class="market-panel">
     <header class="market-panel-head">
       <div>
         <h2><i class="fa-solid fa-store"></i> معرض العروض</h2>
-        <p>هذه الباقات تظهر للزبون في بوابته للشراء. اختر النظام بالأعلى لتصفية العروض حسب نمط البيع.</p>
+        <p>هذه الباقات تظهر للزبون في بوابته للشراء. اختر النظام لعرض عروضه فقط.</p>
       </div>
-      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-        {# ── محدد النظام: الكل / توليد / مخزون — يحكم العرض أسفله ── #}
-        <div class="market-seg" role="tablist" aria-label="نظام البيع" data-market-mode-seg>
-          <button type="button" class="is-active" data-mode-filter="all"><i class="fa-solid fa-layer-group"></i> الكل</button>
-          <button type="button" data-mode-filter="instant"><i class="fa-solid fa-bolt"></i> نظام التوليد</button>
-          <button type="button" data-mode-filter="inventory"><i class="fa-solid fa-boxes-stacked"></i> نظام المخزون</button>
-        </div>
-        <span class="market-pill" data-market-offer-count>{{ num(packages|length) }} عرض</span>
-      </div>
+      {# ── محدّد النمط الافتراضي للعروض الجديدة — نُقل هنا مدمجًا من القسم المحذوف ── #}
+      <form method="post" action="{{ url_for('radius.card_marketplace_default_mode') }}" class="market-headtools">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+        <span class="market-pill" style="background:#eef2ff;color:#4338ca;border-color:#e0e7ff">النمط الافتراضي للعروض الجديدة</span>
+        <select name="sale_mode" onchange="this.form.submit()" aria-label="النمط الافتراضي للعروض الجديدة">
+          <option value="instant" {{ 'selected' if (default_sale_mode or 'instant') != 'inventory' else '' }}>توليد فوري</option>
+          <option value="inventory" {{ 'selected' if (default_sale_mode or 'instant') == 'inventory' else '' }}>مخزون</option>
+        </select>
+      </form>
     </header>
+    {# ── شريط النظام: مفتاح مقسّم بارز يقسم العروض إلى نظام واحد ظاهر في كل مرة ── #}
+    <div class="market-systembar">
+      <div class="market-seg market-seg--lg" role="tablist" aria-label="نظام البيع" data-market-mode-seg>
+        <button type="button" class="is-active" data-mode-filter="all"><i class="fa-solid fa-layer-group"></i> الكل</button>
+        <button type="button" data-mode-filter="instant"><i class="fa-solid fa-bolt"></i> نظام التوليد</button>
+        <button type="button" data-mode-filter="inventory"><i class="fa-solid fa-boxes-stacked"></i> نظام المخزون</button>
+      </div>
+      <span class="market-pill" data-market-offer-count>{{ num(packages|length) }} عرض</span>
+    </div>
     {% set OFFER_ACCENTS = ['#6B5AED','#0EA5E9','#22C55E','#F59E0B','#EF4444','#EC4899','#8B5CF6','#14B8A6'] %}
     <div class="package-grid">
       {% for package in packages %}
@@ -846,29 +870,34 @@
               <div class="market-stat"><small>المتبقي</small><strong>{{ num(_rem) }}</strong></div>
             </div>
           {% endif %}
-          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px">
-            <a class="market-btn market-btn--ghost" href="{{ url_for('radius.card_marketplace_package_file', package_id=package.id) }}">
-              <i class="fa-solid fa-folder-open"></i> فتح العرض
-            </a>
-            <form method="post" action="{{ url_for('radius.card_marketplace_package_mode', package_id=package.id) }}" style="margin:0">
-              <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-              <select name="sale_mode" onchange="this.form.submit()" style="padding:6px 10px;border-radius:10px;border:1px solid #dfe7f3">
-                <option value="instant" {{ 'selected' if _mode != 'inventory' else '' }}>توليد فوري</option>
-                <option value="inventory" {{ 'selected' if _mode == 'inventory' else '' }}>مخزون</option>
-              </select>
-            </form>
-          </div>
-          {% if _mode == 'inventory' %}
-          {# ── إجراءا تعبئة المخزون: رفع ملف / توليد حزمة — صناديق fcw عائمة ── #}
-          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;border-top:1px dashed #e6ebf5;padding-top:10px">
-            <button type="button" class="market-btn" data-fcw-open="stock-upload-{{ package.id }}">
-              <i class="fa-solid fa-file-arrow-up"></i> رفع ملف بطاقات
-            </button>
-            <button type="button" class="market-btn market-btn--primary" data-fcw-open="stock-generate-{{ package.id }}">
-              <i class="fa-solid fa-wand-magic-sparkles"></i> توليد حزمة
-            </button>
-          </div>
-          {% endif %}
+          {# ── الإجراء الأساسي الواحد للبطاقة: فتح صفحة العرض ── #}
+          <a class="market-btn market-btn--primary" style="margin-top:10px" href="{{ url_for('radius.card_marketplace_package_file', package_id=package.id) }}">
+            <i class="fa-solid fa-folder-open"></i> فتح العرض
+          </a>
+          {# ── بقية الإجراءات (تغيير النمط + تعبئة المخزون) في تفاصيل تُفتح عند الطلب ── #}
+          <details class="market-card-opts">
+            <summary><i class="fa-solid fa-sliders"></i> خيارات العرض <i class="fa-solid fa-chevron-down market-chevron"></i></summary>
+            <div class="market-card-opts-body">
+              <form method="post" action="{{ url_for('radius.card_marketplace_package_mode', package_id=package.id) }}" class="market-opt-row" style="margin:0">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+                <select name="sale_mode" onchange="this.form.submit()" aria-label="نمط بيع العرض">
+                  <option value="instant" {{ 'selected' if _mode != 'inventory' else '' }}>توليد فوري</option>
+                  <option value="inventory" {{ 'selected' if _mode == 'inventory' else '' }}>مخزون</option>
+                </select>
+              </form>
+              {% if _mode == 'inventory' %}
+              {# ── إجراءا تعبئة المخزون: رفع ملف / توليد حزمة — صناديق fcw عائمة ── #}
+              <div class="market-opt-row">
+                <button type="button" class="market-btn" data-fcw-open="stock-upload-{{ package.id }}">
+                  <i class="fa-solid fa-file-arrow-up"></i> رفع ملف
+                </button>
+                <button type="button" class="market-btn market-btn--primary" data-fcw-open="stock-generate-{{ package.id }}">
+                  <i class="fa-solid fa-wand-magic-sparkles"></i> توليد حزمة
+                </button>
+              </div>
+              {% endif %}
+            </div>
+          </details>
         </article>
       {% else %}
         <div class="market-empty">لا توجد عروض بيع حتى الآن. أضف أول باقة من النموذج بالأعلى.</div>
@@ -978,14 +1007,16 @@
     </div>
   </details>
 
-  <section class="market-panel">
-    <header class="market-panel-head">
+  {# ── سجل العمليات: قابل للطي أسفل المعرض حتى لا يطوّل الصفحة ويزاحم العروض ── #}
+  <details class="market-panel market-collapsible">
+    <summary class="market-panel-head">
       <div>
-        <h2>آخر عمليات الشراء</h2>
+        <h2><i class="fa-solid fa-chevron-down market-chevron"></i> آخر عمليات الشراء</h2>
         <p>نظرة سريعة على المبيعات عبر كل العروض. لكل عرض ملف مشتريات مفصّل.</p>
       </div>
       <span class="market-pill">{{ num(recent_purchases.total if recent_purchases else 0) }} عملية</span>
-    </header>
+    </summary>
+    <div class="market-collapsible-body" style="padding:16px">
     <div class="market-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10">
       <table class="market-table">
         <thead>
@@ -1025,7 +1056,8 @@
       {% endif %}
     </nav>
     {% endif %}
-  </section>
+    </div>
+  </details>
 </div>
 
 <script>
