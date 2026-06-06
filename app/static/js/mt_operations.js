@@ -125,6 +125,38 @@
     if (text) text.textContent = label;
   }
 
+  // ── شارة نفق الإدارة (الدرع + الشارة النصّية) ─────────────────
+  // تُحدَّث من نفس استطلاع /counters الذي يضبط عمود «الحالة»، فلا
+  // يحدث أبدًا تناقض «متصل + النفق متوقف». «حيّ متصل» (أو جزئي =
+  // وصلنا الراوتر فالنفق يحمل الحركة) ⇒ «نفق فعّال»؛ لا استجابة ⇒
+  // «النفق متوقف».
+  const _HINT_TONES = ["green", "red", "amber", "grey"];
+  const _PILL_TONES = ["green", "red", "amber", "grey", "brand"];
+  function setMgmt(row, live, reason) {
+    const shield = row.querySelector("[data-mt-mgmt-state]");
+    const pill   = row.querySelector("[data-mt-mgmt-label]");
+    const isUp   = live === "connected";
+    const tone   = isUp ? "green" : "red";
+    const label  = isUp ? "نفق فعّال" : "النفق متوقف";
+    if (shield) {
+      _HINT_TONES.forEach(t => shield.classList.remove("mt-sys-hint--" + t));
+      shield.classList.add("mt-sys-hint--" + tone);
+      shield.setAttribute("data-mt-mgmt-state", isUp ? "active" : "down");
+      if (reason) shield.setAttribute("data-hint", reason);
+    }
+    if (pill) {
+      _PILL_TONES.forEach(t => pill.classList.remove("hub-pill--" + t));
+      pill.classList.add("hub-pill--" + tone);
+      pill.textContent = "";
+      if (isUp) {
+        const dot = document.createElement("span");
+        dot.className = "dot";
+        pill.appendChild(dot);
+      }
+      pill.appendChild(document.createTextNode(label));
+    }
+  }
+
   async function refreshRow(row) {
     const id = row.dataset.mtRouterId;
     let res, body;
@@ -146,6 +178,9 @@
       setStatus(row, "error", timedOut ? "غير متصل" : "خطأ شبكة");
       const pill = row.querySelector("[data-mt-row-status]");
       if (pill) pill.title = timedOut ? "انتهت مهلة الفحص (12 ثانية)" : String(e);
+      setMgmt(row, "down", timedOut
+        ? "لا استجابة حيّة من الراوتر عبر نفق الإدارة (انتهت مهلة الفحص)."
+        : "تعذّر الوصول إلى الراوتر عبر نفق الإدارة (خطأ شبكة).");
       return;
     } finally {
       if (timer) window.clearTimeout(timer);
@@ -158,6 +193,8 @@
       setStatus(row, "error", "غير متصل");
       const pill = row.querySelector("[data-mt-row-status]");
       if (pill) pill.title = msg;
+      setMgmt(row, "down",
+        "لا استجابة حيّة من الراوتر عبر نفق الإدارة الآن (" + msg + ").");
       return;
     }
 
@@ -180,10 +217,16 @@
 
     if (env.ok) {
       setStatus(row, "ok", "متصل");
+      setMgmt(row, "connected",
+        "نفق الإدارة فعّال — اللوحة تتواصل مع الراوتر الآن (حركة حيّة عبر النفق).");
     } else {
       setStatus(row, "partial", "جزئي");
       const pill = row.querySelector("[data-mt-row-status]");
       if (pill) pill.title = env.error || "";
+      // استجابة جزئية = وصلنا الراوتر فعلًا عبر النفق ⇒ النفق فعّال
+      // (نقص في بعض القيم فقط)، فلا نعرض «متوقف» ونتناقض مع العمود.
+      setMgmt(row, "connected",
+        "نفق الإدارة فعّال — وصلت اللوحة إلى الراوتر عبر النفق (استجابة جزئية للعدّادات).");
     }
   }
 
