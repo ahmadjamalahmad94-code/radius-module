@@ -201,17 +201,16 @@ def mt_metrics_setup():
 
 
 def mt_loop_setup():
-    """Loop-tracking «خدمة تتبع اللوب»: pick a router + interfaces → generate a
-    passive DHCP-client probe script (the loop-detection trick) + show each
-    router's current probe status."""
-    from ..db.repos import api_tokens_repo, router_loop_probes_repo
+    """Loop-tracking «تتبّع اللوب» — صفحة حالة + إرشاد.
+
+    التركيب صار عبر «خدمات المنافذ» (loop_detect: عميل DHCP موسوم
+    HR-LoopDetect لكل منفذ مختار)، والكشف صار باستطلاع هادئ من جهة اللوحة
+    كل ٥ دقائق (worker: loop_probe_poller) يقرأ /ip dhcp-client عبر النفق
+    الإداري — لا scheduler/fetch على الراوتر. هذه الصفحة تعرض آخر حالة لكل
+    منفذ + روابط التركيب/الإزالة + أوامر تنظيف بقايا الآلية القديمة."""
+    from ..db.repos import router_loop_probes_repo
 
     tid = _tid()
-    tokens = [t for t in api_tokens_repo.list_tokens(tid) if not t.get("revoked")]
-    forwarded_proto = request.headers.get("X-Forwarded-Proto", "")
-    forwarded_host = request.headers.get("X-Forwarded-Host", "")
-    proto = forwarded_proto or ("https" if request.is_secure else "http")
-    host = forwarded_host or request.host
 
     # Group probe readings by router for the status panel.
     by_router: dict[int, list[dict]] = {}
@@ -224,9 +223,6 @@ def mt_loop_setup():
 
     return render_template(
         "radius/mt_loop_setup.html",
-        base_url=f"{proto}://{host}",
-        tokens=tokens,
-        suggested_token_name=(tokens[0]["name"] if tokens else ""),
         routers=routers,
     )
 
