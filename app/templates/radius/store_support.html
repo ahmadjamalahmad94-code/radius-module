@@ -1,0 +1,521 @@
+{% extends "admin/_admin_layout.html" %}
+
+{% block title %}{{ _('دعم المتجر المتقدّم') }} - Hobe Hub{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-headset"></i>{% endblock %}
+{% block page_title %}{{ _('دعم المتجر المتقدّم') }}{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('راجع طلبات الشحن والسحب، حادث الزبائن، واضبط محافظ الاستلام.') }}</span>{% endblock %}
+
+{% macro money(value) -%}
+  {{ value|money }}
+{%- endmacro %}
+
+{% macro date_label(value) -%}
+  {{ value|dt_local if value else _('بدون تاريخ') }}
+{%- endmacro %}
+
+{% set CSRF = csrf_token() if csrf_token is defined else '' %}
+
+{% block head_extra %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
+{% endblock %}
+
+{% block content %}
+<style>
+  .market-page{
+    --ink:#0f172a; --muted:#64748b; --line:#cbd5e1; --line-soft:#e2e8f0;
+    --soft:#f8fafc; --violet:#7c3aed; --violet-deep:#5b21b6; --violet-soft:#f5f3ff;
+    --blue:#2563eb; --amber:#d97706; --green:#16a34a; --red:#dc2626;
+    direction:rtl; color:var(--ink); display:grid; gap:16px;
+  }
+  .market-page *{box-sizing:border-box}
+  .market-page button,.market-page input,.market-page select,.market-page textarea{font:inherit}
+  .market-card,.market-panel{
+    border:1px solid var(--line); background:#fff;
+    box-shadow:0 1px 0 rgba(255,255,255,.85) inset, 0 1px 3px rgba(15,23,42,.06), 0 8px 20px rgba(15,23,42,.06);
+  }
+  .market-hero{
+    position:relative; display:grid; gap:14px; padding:18px 20px; border-radius:18px;
+    border:1px solid var(--line);
+    background:
+      radial-gradient(640px 320px at 100% 0%, rgba(124,58,237,.08) 0%, transparent 60%),
+      linear-gradient(180deg, #faf8ff 0%, #fff 100%);
+    box-shadow:0 1px 0 rgba(255,255,255,.85) inset, 0 4px 14px rgba(15,23,42,.05);
+    overflow:hidden;
+  }
+  .market-title{display:flex;align-items:center;gap:13px;flex-wrap:wrap}
+  .market-icon{
+    width:46px;height:46px;display:grid;place-items:center;flex:0 0 auto;border-radius:13px;
+    color:#fff;background:linear-gradient(135deg,var(--violet),var(--violet-deep));
+    box-shadow:0 6px 16px rgba(124,58,237,.32);
+  }
+  .market-title h1{margin:0;font-size:20px;line-height:1.2;font-weight:800}
+  .market-title p{margin:3px 0 0;color:var(--muted);font-weight:600;font-size:13px;line-height:1.65;max-width:680px}
+  .market-metrics{
+    display:grid;grid-template-columns:repeat(auto-fit, minmax(170px, 1fr));gap:10px;
+    padding-top:16px;border-top:1px solid var(--line-soft);
+  }
+  .market-metric{
+    display:flex;align-items:center;gap:12px;text-align:start;padding:14px;
+    border:1px solid var(--line);border-radius:12px;background:#fff;
+  }
+  .market-metric i{
+    width:42px;height:42px;flex:0 0 auto;display:grid;place-items:center;border-radius:11px;
+    color:var(--metric,#7c3aed);background:color-mix(in srgb, var(--metric,#7c3aed) 12%, white);font-size:17px;
+  }
+  .market-metric .metric-body{display:grid;gap:2px;min-width:0}
+  .market-metric span{color:var(--muted);font-size:12px;font-weight:700}
+  .market-metric strong{font-size:22px;line-height:1.05;font-weight:800;direction:ltr;color:var(--ink)}
+  .market-panel{overflow:hidden;border-radius:16px}
+  .market-panel-head{
+    display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 18px;
+    border-bottom:1px solid var(--line);background:linear-gradient(180deg,#f5f3ff 0%,#f8fafc 100%);
+  }
+  .market-panel-head h2{margin:0;font-size:16px;font-weight:900;color:var(--ink)}
+  .market-panel-head p{margin:3px 0 0;color:var(--muted);font-size:12px;font-weight:600}
+  .market-pill{
+    display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:30px;padding:0 12px;
+    border-radius:999px;color:var(--violet-deep);background:var(--violet-soft);border:1px solid #ede9fe;
+    font-size:12px;font-weight:800;white-space:nowrap;
+  }
+  .market-pill--warn{color:#b45309;background:#fffbeb;border-color:#fde68a}
+  .market-pill--ok{color:#15803d;background:#f0fdf4;border-color:#bbf7d0}
+  .market-pill--bad{color:#b91c1c;background:#fef2f2;border-color:#fecaca}
+  .market-btn{
+    min-height:42px;border:1px solid var(--line);border-radius:10px;padding:0 15px;
+    display:inline-flex;align-items:center;justify-content:center;gap:8px;background:#fff;color:var(--ink);
+    text-decoration:none;font-weight:800;cursor:pointer;white-space:nowrap;
+    transition:transform .05s ease, box-shadow .16s ease, border-color .16s ease, background .16s ease, color .16s ease;
+  }
+  .market-btn:hover{border-color:#ede9fe;background:var(--violet-soft);color:var(--violet-deep)}
+  .market-btn:active{transform:translateY(1px)}
+  .market-btn--primary{background:linear-gradient(135deg,var(--violet),var(--violet-deep));border-color:transparent;color:#fff;box-shadow:0 6px 14px rgba(124,58,237,.28)}
+  .market-btn--primary:hover{color:#fff;box-shadow:0 8px 18px rgba(124,58,237,.36)}
+  .market-btn--ok{background:linear-gradient(135deg,#16a34a,#15803d);border-color:transparent;color:#fff;box-shadow:0 6px 14px rgba(22,163,74,.26)}
+  .market-btn--ok:hover{color:#fff;box-shadow:0 8px 18px rgba(22,163,74,.34)}
+  .market-btn--bad{background:#fff;border-color:#fecaca;color:#b91c1c}
+  .market-btn--bad:hover{background:#fef2f2;border-color:#fca5a5;color:#991b1b}
+  .market-btn--sm{min-height:34px;padding:0 11px;font-size:12px}
+  .market-field span{display:block;margin-bottom:7px;color:#475569;font-size:12px;font-weight:700}
+  .market-field input,.market-field select,.market-field textarea{
+    width:100%;min-height:42px;border:1px solid var(--line);border-radius:10px;background:#fff;
+    padding:8px 12px;color:var(--ink);font-weight:700;outline:0;
+  }
+  .market-field textarea{min-height:64px;resize:vertical}
+  .market-field input:focus,.market-field select:focus,.market-field textarea:focus{border-color:var(--violet);box-shadow:0 0 0 3px rgba(124,58,237,.18)}
+  .market-field input[type=number]{direction:ltr;text-align:center}
+  .market-table-wrap{overflow:auto}
+  .market-table{width:100%;min-width:720px;border-collapse:separate;border-spacing:0}
+  .market-table th,.market-table td{padding:13px 12px;border-bottom:1px solid #e8eef7;text-align:center;vertical-align:middle;font-weight:800}
+  .market-table th{background:#f8f7ff;color:#526078;font-size:12px;font-weight:950}
+  .market-empty{
+    display:grid;place-items:center;min-height:140px;padding:24px;color:var(--muted);text-align:center;font-weight:900;
+  }
+  /* ── التبويبات ── */
+  .ssp-tabs{display:flex;gap:6px;flex-wrap:wrap;padding:6px;border:1px solid var(--line);border-radius:14px;background:var(--soft)}
+  .ssp-tab{
+    min-height:40px;padding:0 16px;border:0;border-radius:10px;background:transparent;color:var(--muted);
+    font-weight:800;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;
+    transition:background .15s ease,color .15s ease,box-shadow .15s ease;
+  }
+  .ssp-tab.is-active{background:#fff;color:var(--violet-deep);box-shadow:0 1px 3px rgba(15,23,42,.12)}
+  .ssp-tab .ssp-badge{
+    min-width:20px;height:20px;padding:0 6px;border-radius:999px;display:inline-grid;place-items:center;
+    background:#fee2e2;color:#b91c1c;font-size:11px;font-weight:900;direction:ltr;
+  }
+  .ssp-pane{display:none}
+  .ssp-pane.is-active{display:grid;gap:16px}
+  /* ── thumbnail الوصل / QR ── */
+  .ssp-thumb{display:inline-block;width:54px;height:54px;border-radius:9px;overflow:hidden;border:1px solid var(--line);background:var(--soft)}
+  .ssp-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+  .ssp-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;align-items:center}
+  .ssp-actions form{margin:0;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+  .ssp-actions input[type=text],.ssp-actions input[type=number]{min-height:34px;padding:0 9px;border:1px solid var(--line);border-radius:8px;font-weight:700;max-width:150px}
+  /* ── الشات ── */
+  .ssp-chat{display:grid;grid-template-columns:300px 1fr;gap:0;min-height:480px}
+  .ssp-threads{border-inline-end:1px solid var(--line);overflow:auto;max-height:620px}
+  .ssp-thread{
+    display:flex;gap:10px;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line-soft);
+    text-decoration:none;color:var(--ink);
+  }
+  .ssp-thread:hover{background:var(--violet-soft)}
+  .ssp-thread.is-open{background:var(--violet-soft);border-inline-start:3px solid var(--violet)}
+  .ssp-thread .t-body{flex:1;min-width:0;display:grid;gap:2px}
+  .ssp-thread .t-name{font-weight:900;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ssp-thread .t-last{color:var(--muted);font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ssp-unread{min-width:20px;height:20px;padding:0 6px;border-radius:999px;display:grid;place-items:center;background:#7c3aed;color:#fff;font-size:11px;font-weight:900;direction:ltr}
+  .ssp-conv{display:flex;flex-direction:column;min-height:480px;max-height:620px}
+  .ssp-conv-head{padding:12px 16px;border-bottom:1px solid var(--line-soft);font-weight:900;background:#fbfaff}
+  .ssp-msgs{flex:1;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:10px;background:#f8fafc}
+  .ssp-msg{max-width:74%;padding:10px 12px;border-radius:13px;font-weight:700;font-size:13px;line-height:1.7}
+  .ssp-msg .m-meta{display:block;margin-top:5px;font-size:10.5px;font-weight:700;opacity:.7}
+  .ssp-msg img{max-width:180px;border-radius:9px;margin-top:6px;display:block}
+  .ssp-msg.from-customer{align-self:flex-start;background:#fff;border:1px solid var(--line)}
+  .ssp-msg.from-admin{align-self:flex-end;background:linear-gradient(135deg,var(--violet),var(--violet-deep));color:#fff}
+  .ssp-msg.from-admin .m-meta{opacity:.85}
+  .ssp-reply{display:flex;gap:8px;align-items:flex-end;padding:12px;border-top:1px solid var(--line-soft);background:#fff;flex-wrap:wrap}
+  .ssp-reply textarea{flex:1;min-width:160px;min-height:44px;max-height:120px;border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-weight:700;resize:vertical}
+  .ssp-conv-empty{display:grid;place-items:center;flex:1;color:var(--muted);font-weight:800;text-align:center;padding:24px}
+  .pm-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;padding:16px}
+  .pm-card{border:1px solid var(--line);border-radius:13px;padding:14px;display:grid;gap:10px;background:#fff}
+  .pm-card h4{margin:0;font-size:14px;font-weight:900;display:flex;gap:8px;align-items:center}
+  .pm-meta{display:grid;gap:4px;font-size:12.5px;color:#475569;font-weight:700}
+  .pm-meta b{color:var(--ink)}
+  .pm-create-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:16px}
+  .pm-create-grid .full{grid-column:1/-1}
+  @media(max-width:760px){
+    .ssp-chat{grid-template-columns:1fr}
+    .ssp-threads{border-inline-end:0;border-bottom:1px solid var(--line);max-height:260px}
+    .pm-create-grid{grid-template-columns:1fr}
+  }
+  .fcw-note{margin:0;color:var(--muted);font-size:12.5px;font-weight:600;line-height:1.8}
+</style>
+
+<div class="market-page" data-store-support>
+  <section class="market-hero">
+    <div class="market-title">
+      <span class="market-icon"><i class="fa-solid fa-headset"></i></span>
+      <div style="flex:1;min-width:0">
+        <h1>{{ _('دعم المتجر المتقدّم') }}</h1>
+        <p>{{ _('من هنا تراجع طلبات الشحن والسحب، تحادث الزبائن، وتضبط محافظ الاستلام التي تظهر للزبون عند الدفع.') }}</p>
+      </div>
+    </div>
+    <div class="market-metrics">
+      <article class="market-metric" style="--metric:#2563eb"><i class="fa-solid fa-arrow-down-to-line"></i><div class="metric-body"><span>{{ _('شحن بانتظار المراجعة') }}</span><strong>{{ deposit_pending_count }}</strong></div></article>
+      <article class="market-metric" style="--metric:#d97706"><i class="fa-solid fa-arrow-up-from-line"></i><div class="metric-body"><span>{{ _('سحب بانتظار التنفيذ') }}</span><strong>{{ withdrawal_pending_count }}</strong></div></article>
+      <article class="market-metric" style="--metric:#7c3aed"><i class="fa-solid fa-comments"></i><div class="metric-body"><span>{{ _('محادثات') }}</span><strong>{{ chat_threads|length }}</strong></div></article>
+      <article class="market-metric" style="--metric:#16a34a"><i class="fa-solid fa-wallet"></i><div class="metric-body"><span>{{ _('قنوات الاستلام') }}</span><strong>{{ payment_methods|length }}</strong></div></article>
+    </div>
+  </section>
+
+  <div class="ssp-tabs" role="tablist">
+    <button type="button" class="ssp-tab is-active" data-ssp-tab="deposits"><i class="fa-solid fa-arrow-down-to-line"></i> {{ _('طلبات الشحن') }}{% if deposit_pending_count %}<span class="ssp-badge">{{ deposit_pending_count }}</span>{% endif %}</button>
+    <button type="button" class="ssp-tab" data-ssp-tab="withdrawals"><i class="fa-solid fa-arrow-up-from-line"></i> {{ _('طلبات السحب') }}{% if withdrawal_pending_count %}<span class="ssp-badge">{{ withdrawal_pending_count }}</span>{% endif %}</button>
+    <button type="button" class="ssp-tab" data-ssp-tab="chat"><i class="fa-solid fa-comments"></i> {{ _('محادثات الدعم') }}</button>
+    <button type="button" class="ssp-tab" data-ssp-tab="wallets"><i class="fa-solid fa-wallet"></i> {{ _('محافظ الاستلام') }}</button>
+  </div>
+
+  {# ═══════════════════ 1) طلبات الشحن ═══════════════════ #}
+  <div class="ssp-pane is-active" data-ssp-pane="deposits">
+    <section class="market-panel">
+      <header class="market-panel-head">
+        <div>
+          <h2><i class="fa-solid fa-arrow-down-to-line"></i> {{ _('طلبات الشحن بانتظار المراجعة') }}</h2>
+          <p>{{ _('راجع الوصل وحساب الاستلام، ثم أكّد لإضافة الرصيد للزبون — أو اعتمد مبلغًا مختلفًا، أو ارفض.') }}</p>
+        </div>
+        <span class="market-pill market-pill--warn">{{ deposit_pending|length }} {{ _('معلّق') }}</span>
+      </header>
+      <div class="market-table-wrap">
+        <table class="market-table">
+          <thead>
+            <tr>
+              <th>{{ _('المُحوِّل') }}</th>
+              <th>{{ _('القناة / المرجع') }}</th>
+              <th>{{ _('المبلغ') }}</th>
+              <th>{{ _('الوصل') }}</th>
+              <th>{{ _('التاريخ') }}</th>
+              <th>{{ _('الإجراء') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for d in deposit_pending %}
+            <tr>
+              <td>{{ d.payer_name or '—' }}<br><small style="color:var(--muted);direction:ltr">{{ d.payer_phone or '' }}</small></td>
+              <td>{{ d.method_ar }}<br><small style="color:var(--muted);direction:ltr">{{ d.reference or '' }}</small></td>
+              <td style="direction:ltr">{{ money(d.amount_claimed) }} {{ d.currency or '' }}</td>
+              <td>
+                {% if d.receipt_image_url %}
+                  <a class="ssp-thumb" href="{{ d.receipt_image_url }}" target="_blank" rel="noopener"><img src="{{ d.receipt_image_url }}" alt="{{ _('وصل') }}"></a>
+                {% else %}<small style="color:var(--muted)">{{ _('لا وصل') }}</small>{% endif %}
+              </td>
+              <td><small>{{ date_label(d.created_at) }}</small></td>
+              <td>
+                <div class="ssp-actions">
+                  <form method="post" action="{{ url_for('radius.store_support_deposit_confirm', req_id=d.id) }}">
+                    <input type="hidden" name="_csrf_token" value="{{ CSRF }}">
+                    <input type="number" step="0.01" min="0" name="confirmed_amount" placeholder="{{ _('اعتماد مبلغ مختلف') }}" title="{{ _('اتركه فارغًا لاعتماد المبلغ المدّعى') }}">
+                    <button class="market-btn market-btn--ok market-btn--sm" type="submit"><i class="fa-solid fa-check"></i> {{ _('تأكيد') }}</button>
+                  </form>
+                  <form method="post" action="{{ url_for('radius.store_support_deposit_reject', req_id=d.id) }}">
+                    <input type="hidden" name="_csrf_token" value="{{ CSRF }}">
+                    <input type="text" name="note" placeholder="{{ _('سبب الرفض') }}">
+                    <button class="market-btn market-btn--bad market-btn--sm" type="submit"><i class="fa-solid fa-xmark"></i> {{ _('رفض') }}</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="6" class="market-empty">{{ _('لا توجد طلبات شحن معلّقة.') }}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="market-panel">
+      <header class="market-panel-head">
+        <div><h2><i class="fa-solid fa-clock-rotate-left"></i> {{ _('طلبات الشحن المحسومة') }}</h2></div>
+        <span class="market-pill">{{ deposit_resolved|length }}</span>
+      </header>
+      <div class="market-table-wrap">
+        <table class="market-table">
+          <thead>
+            <tr><th>{{ _('المُحوِّل') }}</th><th>{{ _('القناة') }}</th><th>{{ _('المبلغ المعتمد') }}</th><th>{{ _('الحالة') }}</th><th>{{ _('التاريخ') }}</th></tr>
+          </thead>
+          <tbody>
+            {% for d in deposit_resolved %}
+            <tr>
+              <td>{{ d.payer_name or '—' }}</td>
+              <td>{{ d.method_ar }}</td>
+              <td style="direction:ltr">{{ money(d.confirmed_amount if d.confirmed_amount is not none else d.amount_claimed) }} {{ d.currency or '' }}</td>
+              <td><span class="market-pill {{ 'market-pill--ok' if d.status in ['confirmed','adjusted'] else 'market-pill--bad' }}">{{ d.status_ar }}</span></td>
+              <td><small>{{ date_label(d.resolved_at or d.created_at) }}</small></td>
+            </tr>
+            {% else %}
+            <tr><td colspan="5" class="market-empty">{{ _('لا يوجد سجل بعد.') }}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  {# ═══════════════════ 2) طلبات السحب ═══════════════════ #}
+  <div class="ssp-pane" data-ssp-pane="withdrawals">
+    <section class="market-panel">
+      <header class="market-panel-head">
+        <div>
+          <h2><i class="fa-solid fa-arrow-up-from-line"></i> {{ _('طلبات السحب بانتظار التنفيذ') }}</h2>
+          <p>{{ _('نفّذ التحويل البنكي يدويًا أولًا، ثم أكّد هنا ليُخصم الرصيد آليًا من محفظة الزبون.') }}</p>
+        </div>
+        <span class="market-pill market-pill--warn">{{ withdrawal_pending|length }} {{ _('معلّق') }}</span>
+      </header>
+      <div class="market-table-wrap">
+        <table class="market-table">
+          <thead>
+            <tr><th>{{ _('صاحب الحساب') }}</th><th>{{ _('رقم الحساب') }}</th><th>{{ _('المبلغ') }}</th><th>{{ _('التاريخ') }}</th><th>{{ _('الإجراء') }}</th></tr>
+          </thead>
+          <tbody>
+            {% for w in withdrawal_pending %}
+            <tr>
+              <td>{{ w.payee_name or '—' }}</td>
+              <td style="direction:ltr">{{ w.payee_account or '—' }}</td>
+              <td style="direction:ltr">{{ money(w.amount) }} {{ w.currency or '' }}</td>
+              <td><small>{{ date_label(w.created_at) }}</small></td>
+              <td>
+                <div class="ssp-actions">
+                  <form method="post" action="{{ url_for('radius.store_support_withdrawal_confirm', req_id=w.id) }}">
+                    <input type="hidden" name="_csrf_token" value="{{ CSRF }}">
+                    <input type="text" name="note" placeholder="{{ _('ملاحظة (اختياري)') }}">
+                    <button class="market-btn market-btn--ok market-btn--sm" type="submit"><i class="fa-solid fa-check"></i> {{ _('تأكيد وخصم') }}</button>
+                  </form>
+                  <form method="post" action="{{ url_for('radius.store_support_withdrawal_reject', req_id=w.id) }}">
+                    <input type="hidden" name="_csrf_token" value="{{ CSRF }}">
+                    <input type="text" name="note" placeholder="{{ _('سبب الرفض') }}">
+                    <button class="market-btn market-btn--bad market-btn--sm" type="submit"><i class="fa-solid fa-xmark"></i> {{ _('رفض') }}</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="5" class="market-empty">{{ _('لا توجد طلبات سحب معلّقة.') }}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="market-panel">
+      <header class="market-panel-head">
+        <div><h2><i class="fa-solid fa-clock-rotate-left"></i> {{ _('طلبات السحب المحسومة') }}</h2></div>
+        <span class="market-pill">{{ withdrawal_resolved|length }}</span>
+      </header>
+      <div class="market-table-wrap">
+        <table class="market-table">
+          <thead>
+            <tr><th>{{ _('صاحب الحساب') }}</th><th>{{ _('رقم الحساب') }}</th><th>{{ _('المبلغ') }}</th><th>{{ _('الحالة') }}</th><th>{{ _('التاريخ') }}</th></tr>
+          </thead>
+          <tbody>
+            {% for w in withdrawal_resolved %}
+            <tr>
+              <td>{{ w.payee_name or '—' }}</td>
+              <td style="direction:ltr">{{ w.payee_account or '—' }}</td>
+              <td style="direction:ltr">{{ money(w.amount) }} {{ w.currency or '' }}</td>
+              <td><span class="market-pill {{ 'market-pill--ok' if w.status == 'confirmed' else 'market-pill--bad' }}">{{ w.status_ar }}</span></td>
+              <td><small>{{ date_label(w.resolved_at or w.created_at) }}</small></td>
+            </tr>
+            {% else %}
+            <tr><td colspan="5" class="market-empty">{{ _('لا يوجد سجل بعد.') }}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  {# ═══════════════════ 3) محادثات الدعم ═══════════════════ #}
+  <div class="ssp-pane" data-ssp-pane="chat">
+    <section class="market-panel">
+      <header class="market-panel-head">
+        <div>
+          <h2><i class="fa-solid fa-comments"></i> {{ _('محادثات الدعم') }}</h2>
+          <p>{{ _('اختر زبونًا من القائمة لعرض المحادثة والرد عليه نصًا أو بصورة.') }}</p>
+        </div>
+      </header>
+      <div class="ssp-chat">
+        <div class="ssp-threads">
+          {% for t in chat_threads %}
+          <a class="ssp-thread {{ 'is-open' if open_chat_id == t.card_user_id else '' }}" href="{{ url_for('radius.store_support', chat=t.card_user_id) }}#chat">
+            <div class="t-body">
+              <span class="t-name">{{ t.display_name or t.mobile or ('#' ~ t.card_user_id) }}</span>
+              <span class="t-last">{{ t.last_body or '' }}</span>
+            </div>
+            {% if t.unread_admin_count %}<span class="ssp-unread">{{ t.unread_admin_count }}</span>{% endif %}
+          </a>
+          {% else %}
+          <div class="market-empty">{{ _('لا محادثات بعد.') }}</div>
+          {% endfor %}
+        </div>
+        <div class="ssp-conv">
+          {% if open_chat_id and open_thread %}
+            <div class="ssp-conv-head"><i class="fa-solid fa-user"></i> {{ _('محادثة الزبون') }} #{{ open_chat_id }}</div>
+            <div class="ssp-msgs">
+              {% for m in open_thread['items'] %}
+              <div class="ssp-msg {{ 'from-admin' if m.sender == 'admin' else 'from-customer' }}">
+                {% if m.body %}{{ m.body }}{% endif %}
+                {% if m.image_url %}<a href="{{ m.image_url }}" target="_blank" rel="noopener"><img src="{{ m.image_url }}" alt="{{ _('مرفق') }}"></a>{% endif %}
+                <span class="m-meta">{{ (m.admin_actor if m.sender == 'admin' else _('الزبون')) }} · {{ date_label(m.created_at) }}</span>
+              </div>
+              {% else %}
+              <div class="ssp-conv-empty">{{ _('لا رسائل في هذه المحادثة بعد.') }}</div>
+              {% endfor %}
+            </div>
+            <form class="ssp-reply" method="post" enctype="multipart/form-data" action="{{ url_for('radius.store_support_chat_post', card_user_id=open_chat_id) }}">
+              <input type="hidden" name="_csrf_token" value="{{ CSRF }}">
+              <textarea name="body" placeholder="{{ _('اكتب ردًّا...') }}"></textarea>
+              <label class="market-btn market-btn--sm" title="{{ _('إرفاق صورة') }}" style="cursor:pointer">
+                <i class="fa-solid fa-paperclip"></i>
+                <input type="file" name="image" accept="image/*" style="display:none">
+              </label>
+              <button class="market-btn market-btn--primary market-btn--sm" type="submit"><i class="fa-solid fa-paper-plane"></i> {{ _('إرسال') }}</button>
+            </form>
+          {% else %}
+            <div class="ssp-conv-empty"><div><i class="fa-solid fa-comments" style="font-size:30px;opacity:.4"></i><br>{{ _('اختر محادثة من القائمة لعرضها.') }}</div></div>
+          {% endif %}
+        </div>
+      </div>
+    </section>
+  </div>
+
+  {# ═══════════════════ 4) محافظ الاستلام ═══════════════════ #}
+  <div class="ssp-pane" data-ssp-pane="wallets">
+    <section class="market-panel">
+      <header class="market-panel-head">
+        <div>
+          <h2><i class="fa-solid fa-wallet"></i> {{ _('قنوات الاستلام الحالية') }}</h2>
+          <p>{{ _('هذه القنوات يعرضها المتجر للزبون لينسخ الرقم أو يمسح الـQR قبل التحويل.') }}</p>
+        </div>
+        <span class="market-pill">{{ payment_methods|length }}</span>
+      </header>
+      <div class="pm-grid">
+        {% for m in payment_methods %}
+        <article class="pm-card">
+          <h4>
+            <i class="fa-solid fa-wallet" style="color:var(--violet)"></i> {{ m.label }}
+            <span class="market-pill {{ 'market-pill--ok' if m.active else 'market-pill--bad' }}" style="margin-inline-start:auto">{{ _('فعّالة') if m.active else _('متوقفة') }}</span>
+          </h4>
+          <div class="pm-meta">
+            <span>{{ _('القناة') }}: <b>{{ m.method_ar }}</b></span>
+            {% if m.account_name %}<span>{{ _('اسم الحساب') }}: <b>{{ m.account_name }}</b></span>{% endif %}
+            {% if m.account_number %}<span>{{ _('رقم الحساب') }}: <b dir="ltr">{{ m.account_number }}</b></span>{% endif %}
+            {% if m.instructions %}<span style="color:var(--muted)">{{ m.instructions }}</span>{% endif %}
+          </div>
+          {% if m.qr_image_url %}<a class="ssp-thumb" href="{{ m.qr_image_url }}" target="_blank" rel="noopener"><img src="{{ m.qr_image_url }}" alt="QR"></a>{% endif %}
+          <div class="ssp-actions" style="justify-content:flex-start">
+            <form method="post" action="{{ url_for('radius.store_support_payment_method_update', method_id=m.id) }}">
+              <input type="hidden" name="_csrf_token" value="{{ CSRF }}">
+              <input type="hidden" name="active" value="{{ 0 if m.active else 1 }}">
+              <button class="market-btn market-btn--sm" type="submit"><i class="fa-solid fa-power-off"></i> {{ _('تعطيل') if m.active else _('تفعيل') }}</button>
+            </form>
+            <form method="post" action="{{ url_for('radius.store_support_payment_method_update', method_id=m.id) }}" onsubmit="return confirm('{{ _('حذف هذه القناة؟') }}')">
+              <input type="hidden" name="_csrf_token" value="{{ CSRF }}">
+              <input type="hidden" name="action" value="delete">
+              <button class="market-btn market-btn--bad market-btn--sm" type="submit"><i class="fa-solid fa-trash"></i> {{ _('حذف') }}</button>
+            </form>
+          </div>
+        </article>
+        {% else %}
+        <div class="market-empty">{{ _('لا قنوات استلام بعد — أضف أول قناة من النموذج بالأسفل.') }}</div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="market-panel">
+      <header class="market-panel-head">
+        <div><h2><i class="fa-solid fa-plus"></i> {{ _('إضافة قناة استلام') }}</h2></div>
+      </header>
+      <form method="post" enctype="multipart/form-data" action="{{ url_for('radius.store_support_payment_method_create') }}">
+        <input type="hidden" name="_csrf_token" value="{{ CSRF }}">
+        <div class="pm-create-grid">
+          <label class="market-field">
+            <span>{{ _('نوع القناة') }}</span>
+            <select name="method">
+              <option value="jawaly_pay">{{ _('جوالي باي') }}</option>
+              <option value="bank">{{ _('تحويل بنكي') }}</option>
+              <option value="palpay">PalPay</option>
+              <option value="other">{{ _('أخرى') }}</option>
+            </select>
+          </label>
+          <label class="market-field">
+            <span>{{ _('اسم القناة (يظهر للزبون)') }}</span>
+            <input type="text" name="label" placeholder="{{ _('مثال: محفظة جوالي باي') }}" required>
+          </label>
+          <label class="market-field">
+            <span>{{ _('اسم صاحب الحساب') }}</span>
+            <input type="text" name="account_name" placeholder="{{ _('الاسم كما هو في الحساب') }}">
+          </label>
+          <label class="market-field">
+            <span>{{ _('رقم الحساب / الجوال') }}</span>
+            <input type="text" name="account_number" dir="ltr">
+          </label>
+          <label class="market-field full">
+            <span>{{ _('تعليمات للزبون (اختياري)') }}</span>
+            <textarea name="instructions" placeholder="{{ _('مثال: حوّل ثم ارفع صورة الوصل.') }}"></textarea>
+          </label>
+          <label class="market-field">
+            <span>{{ _('ترتيب العرض') }}</span>
+            <input type="number" name="sort_order" min="0" value="0">
+          </label>
+          <label class="market-field">
+            <span>{{ _('صورة QR (اختياري)') }}</span>
+            <input type="file" name="qr_image" accept="image/*">
+          </label>
+          <div class="full" style="display:flex;justify-content:flex-end">
+            <button class="market-btn market-btn--primary" type="submit"><i class="fa-solid fa-plus"></i> {{ _('إضافة القناة') }}</button>
+          </div>
+        </div>
+      </form>
+    </section>
+  </div>
+</div>
+
+<script>
+(function(){
+  var root = document.querySelector('[data-store-support]');
+  if(!root) return;
+  var tabs = root.querySelectorAll('[data-ssp-tab]');
+  var panes = root.querySelectorAll('[data-ssp-pane]');
+  function show(name){
+    tabs.forEach(function(t){ t.classList.toggle('is-active', t.getAttribute('data-ssp-tab') === name); });
+    panes.forEach(function(p){ p.classList.toggle('is-active', p.getAttribute('data-ssp-pane') === name); });
+  }
+  tabs.forEach(function(t){
+    t.addEventListener('click', function(){ show(t.getAttribute('data-ssp-tab')); });
+  });
+  // إن فُتح الشات عبر ?chat= أو وسم #chat، اعرض تبويب المحادثات تلقائيًا.
+  if(location.hash === '#chat' || /[?&]chat=/.test(location.search)){
+    show('chat');
+  }
+})();
+</script>
+{% endblock %}

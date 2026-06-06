@@ -134,6 +134,7 @@ def _register_all(bp: Blueprint) -> None:
     from .finance_collection import register_finance_collection_routes
     from .company_inventory import register_company_inventory_routes
     from .card_users_marketplace import register_card_users_marketplace_routes
+    from .store_support import register_store_support_routes
     from .manager_distributor_ops import register_manager_distributor_ops_routes
     # لوحة الشحن — تفعيل/تجديد سريع للمدراء والموزعين (قراءات فقط؛
     # كل عمليات المال تمرّ عبر مسارات users/accounting القائمة).
@@ -144,6 +145,7 @@ def _register_all(bp: Blueprint) -> None:
     from .operations_center import register_operations_center_routes
     from .customer_portals import register_customer_portal_routes
     from .admin_bridge import register_admin_bridge_routes
+    from .tunnels import register_tunnels_routes
     from .recycle_bin import register_recycle_bin_routes
     from .backups import register_backup_routes
     from .lifecycle import register_lifecycle_routes
@@ -184,6 +186,7 @@ def _register_all(bp: Blueprint) -> None:
     register_finance_collection_routes(bp)
     register_company_inventory_routes(bp)
     register_card_users_marketplace_routes(bp)
+    register_store_support_routes(bp)
     register_manager_distributor_ops_routes(bp)
     register_recharge_panel_routes(bp)
     register_communications_routes(bp)
@@ -192,6 +195,7 @@ def _register_all(bp: Blueprint) -> None:
     register_operations_center_routes(bp)
     register_customer_portal_routes(bp)
     register_admin_bridge_routes(bp)
+    register_tunnels_routes(bp)
     register_recycle_bin_routes(bp)
     register_backup_routes(bp)
     register_lifecycle_routes(bp)
@@ -348,6 +352,9 @@ _PERM_GUARDED: dict[str, str] = {
     "setup_wizard_page": _PERM_SUPER,
     # حفظ إعدادات النظام — تتطلّب صلاحية settings.edit (تُفحص على الكتابة فقط)
     "settings_page": "settings.edit",
+    # الأنفاق — طلب/مزامنة نفق عبر الجسر (كتابة) تتطلّب api.use
+    "tunnels_request": "api.use",
+    "tunnels_sync": "api.use",
 
     # ═══ أسعار العروض للمدراء — مفاتيح دقيقة بدل super_admin (توسعة 2026-06) ═══
     "admin_pricing_page": "admin_pricing.view",
@@ -446,6 +453,19 @@ _PERM_GUARDED: dict[str, str] = {
     "finance_reports_export_csv": "reports.finance",
     "finance_reports_export_xlsx": "reports.finance",
     "finance_reports_export_pdf": "reports.finance",
+
+    # ═══ لوحة دعم المتجر المتقدّم (routes/store_support.py) ═══
+    # «المدير يشيك»: تأكيد الإيداع يضيف الرصيد وتأكيد السحب يخصمه —
+    # حركة مال حقيقية. تُقصر كل اللوحة (العرض + التأكيد/الرفض + القنوات
+    # + الشات) على من يملك store.review؛ super_admin يتجاوز دائمًا.
+    "store_support": "store.review",
+    "store_support_deposit_confirm": "store.review",
+    "store_support_deposit_reject": "store.review",
+    "store_support_withdrawal_confirm": "store.review",
+    "store_support_withdrawal_reject": "store.review",
+    "store_support_payment_method_create": "store.review",
+    "store_support_payment_method_update": "store.review",
+    "store_support_chat_post": "store.review",
 }
 
 # مسارات GET+POST معًا: نحرس الكتابة (POST) فقط ونترك العرض —

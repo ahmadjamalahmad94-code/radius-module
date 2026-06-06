@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-06-06 15:31+0300\n"
+"POT-Creation-Date: 2026-06-06 15:34+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: tr\n"
@@ -323,6 +323,9 @@ msgstr "(boş = varsayılanı kullanır)"
 
 msgid "(فقط المحاولات التي توقفت نهائيًا)"
 msgstr "(yalnızca kalıcı olarak durmuş denemeler)"
+
+msgid "(فيصغر"
+msgstr ""
 
 msgid "(قوالب جاهزة بتحكم كامل بالألوان والزخارف)."
 msgstr "(renkler ve süslemeler üzerinde tam denetime sahip hazır şablonlar)."
@@ -714,6 +717,9 @@ msgstr "38 süresi dolmuş kupon incelenmeli."
 msgid "3س 05د"
 msgstr "3s 05dk"
 
+msgid "4 أحرف على الأقل"
+msgstr ""
+
 msgid "4 ساعات"
 msgstr "4 saat"
 
@@ -972,6 +978,9 @@ msgid "SMS أو واتساب مع قوالب جاهزة (ترحيب، تذكير
 msgstr ""
 "Hazır şablonlarla SMS veya WhatsApp (karşılama, süre dolma hatırlatması, "
 "ödeme onayı...)."
+
+msgid "SSTP (نفق إدارة)"
+msgstr ""
 
 msgid "Thread ID (اختياري)"
 msgstr "Thread ID (isteğe bağlı)"
@@ -1763,6 +1772,9 @@ msgstr "“Kupon kontrolü”"
 msgid "«فحص كرت»:"
 msgstr "“Kupon kontrolü”:"
 
+msgid "«فشل الرفع: Connection reset» المتكرر؟ (ملف كبير على API)"
+msgstr ""
+
 msgid "«فصل الاتصال»"
 msgstr "«Bağlantıyı kes»"
 
@@ -2441,6 +2453,9 @@ msgstr "İki satırlı numaralar"
 msgid "أرقام فقط"
 msgstr "Yalnızca Rakam"
 
+msgid "أرقام فقط (7–15 رقمًا)، يجوز أن يبدأ بـ +."
+msgstr ""
+
 msgid "أزرار"
 msgstr "Düğmeler"
 
@@ -2773,6 +2788,9 @@ msgstr "Yönlendiriciden kaldır"
 msgid "أما"
 msgstr "Gelince"
 
+msgid "أمان"
+msgstr ""
+
 msgid "أمثلة"
 msgstr "Örnekler"
 
@@ -2809,6 +2827,9 @@ msgid ""
 msgstr ""
 "Ham SQL veya sağlayıcı verilerini açığa çıkarmadan yeniden kullanılabilir"
 " kitle segmentleri oluşturun."
+
+msgid "أنشئ عرضاً من سوق البطاقات أو من قسم الباقات حتى يستطيع المستخدم الشراء."
+msgstr ""
 
 msgid ""
 "أنشئ عروض بيع تظهر في بوابة الزبون. عند الشراء يتم توليد بطاقة حقيقية، "
@@ -3249,6 +3270,9 @@ msgstr "Toplam tahsis edilen:"
 msgid "إجمالي المسارات"
 msgstr "Toplam rota"
 
+msgid "إجمالي المشتريات"
+msgstr ""
+
 msgid "إجمالي النقاط"
 msgstr "Toplam puan"
 
@@ -3505,6 +3529,9 @@ msgstr "Gönderim öncesi önizleme ile bir abone segmentine hedefli gönderim."
 msgid "إرشادات التحقق"
 msgstr "Doğrulama talimatları"
 
+msgid "إرفاق صورة"
+msgstr ""
+
 msgid "إزالة"
 msgstr "Kaldır"
 
@@ -3531,6 +3558,9 @@ msgstr "Sinyal ve ağlar"
 
 msgid "إشارة وشبكات / موجات ضوئية / شبكة تقنية / نظيف"
 msgstr "Sinyal ve ağlar / ışık dalgaları / teknik ağ / temiz"
+
+msgid "إشعار"
+msgstr ""
 
 msgid "إشعار صيانة"
 msgstr "Bakım Bildirimi"
@@ -3600,6 +3630,9 @@ msgstr "Bakiyeyi şimdi ekle"
 
 msgid "إضافة القاعدة"
 msgstr "Kural ekle"
+
+msgid "إضافة القناة"
+msgstr ""
 
 msgid "إضافة المسار الافتراضي"
 msgstr "Varsayılan rotayı ekle"
@@ -3676,6 +3709,9 @@ msgstr "Teklif ekle"
 msgid "إضافة قبل أو بعد الاسم"
 msgstr "Adın önüne veya arkasına ekle"
 
+msgid "إضافة قناة استلام"
+msgstr ""
+
 msgid "إضافة كوتة"
 msgstr "Kota Ekle"
 
@@ -3699,6 +3735,9 @@ msgstr "Abone grubu ekle › Kimlik"
 
 msgid "إضافة مدير"
 msgstr "Yönetici Ekle"
+
+msgid "إضافة مستفيد جديد"
+msgstr ""
 
 msgid "إضافة مشترك"
 msgstr "Abone ekle"
@@ -3986,6 +4025,9 @@ msgstr "Geri alma imkânı"
 msgid "إن تجاوز الحد."
 msgstr "Sınırı aşarsa."
 
+msgid "إن كان شعار التصميم صورة كبيرة مضمّنة، يصير"
+msgstr ""
+
 msgid "إن كان لديك شعار سابق يظهر عنوان «"
 msgstr "Daha önce bir logonuz varsa « başlığı görünür"
 
@@ -4023,6 +4065,9 @@ msgstr "Şimdi Oluştur"
 
 msgid "إنشاء التذكرة"
 msgstr "Bilet oluştur"
+
+msgid "إنشاء الحساب + المحفظة"
+msgstr ""
 
 msgid "إنشاء السياسة"
 msgstr "Politika oluştur"
@@ -4085,6 +4130,9 @@ msgstr "Gün azalt"
 
 msgid "إيداع"
 msgstr "Para yatırma"
+
+msgid "إيداع للمحفظة"
+msgstr ""
 
 msgid "إيراد الشهر"
 msgstr "Aylık Gelir"
@@ -4235,6 +4283,9 @@ msgstr "Şablonu kullanmak için boş bırakın"
 
 msgid "اتركه فارغًا لاستخدام سعر العرض"
 msgstr "Teklif fiyatını kullanmak için boş bırakın"
+
+msgid "اتركه فارغًا لاعتماد المبلغ المدّعى"
+msgstr ""
 
 msgid "اتركه فارغًا لبداية مفتوحة."
 msgstr "Açık bir başlangıç için boş bırakın."
@@ -4479,6 +4530,9 @@ msgstr "Bir hizmet veya hazır şablon seçin."
 msgid "اختر راوتراً لإدارة سياساته"
 msgstr "Politikalarını yönetmek için bir yönlendirici seçin"
 
+msgid "اختر زبونًا من القائمة لعرض المحادثة والرد عليه نصًا أو بصورة."
+msgstr ""
+
 msgid "اختر شكل القالب"
 msgstr "Şablon stilini seçin"
 
@@ -4535,6 +4589,9 @@ msgstr ""
 
 msgid "اختر ما تريد برمجته"
 msgstr "Yapılandırmak istediğinizi seçin"
+
+msgid "اختر محادثة من القائمة لعرضها."
+msgstr ""
 
 msgid "اختر مشتركًا واحدًا"
 msgstr "Tek bir abone seçin"
@@ -4861,6 +4918,9 @@ msgstr ""
 msgid "استعمل فلتر"
 msgstr "Filtre Kullan"
 
+msgid "استعمل قسم «شراء بطاقة من السوق» بالأعلى لشراء أول بطاقة."
+msgstr ""
+
 msgid "استقبال"
 msgstr "Alma"
 
@@ -4976,6 +5036,9 @@ msgstr "Paket adı ve altında batch code."
 msgid "اسم الحزمة:"
 msgstr "Paket Adı:"
 
+msgid "اسم الحساب"
+msgstr ""
+
 msgid "اسم الخدمة"
 msgstr "Hizmet Adı"
 
@@ -5049,6 +5112,9 @@ msgstr "Kayıtlı şablon adı"
 msgid "اسم القالب المحفوظ — مثل: تصميم رمضان"
 msgstr "Kaydedilen şablon adı — örn.: Ramazan tasarımı"
 
+msgid "اسم القناة (يظهر للزبون)"
+msgstr ""
+
 msgid "اسم الكرت"
 msgstr "Kupon adı"
 
@@ -5085,6 +5151,9 @@ msgstr "Operasyonel dosya adı"
 msgid "اسم النظام"
 msgstr "Sistem adı"
 
+msgid "اسم النفق"
+msgstr ""
+
 msgid "اسم بوابة الدخول"
 msgstr "Hotspot ağ geçidi adı"
 
@@ -5101,6 +5170,9 @@ msgstr ""
 
 msgid "اسم سلسلة الفلترة (Filter Chain) المستخدمة."
 msgstr "Kullanılan filtre zincirinin (Filter Chain) adı."
+
+msgid "اسم صاحب الحساب"
+msgstr ""
 
 msgid "اسم صاحب المحفظة"
 msgstr "Cüzdan sahibinin adı"
@@ -5320,6 +5392,9 @@ msgstr "Bakiyeyi onayla:"
 
 msgid "اعتماد القاعدة"
 msgstr "Kuralı onayla"
+
+msgid "اعتماد مبلغ مختلف"
+msgstr ""
 
 msgid "اعتمادًا"
 msgstr "Bağlı olarak"
@@ -5601,6 +5676,9 @@ msgstr "İle biten bir kullanıcı adı girin"
 msgid "اكتب اسم نطاق في كل سطر، مثل"
 msgstr "Her satıra bir alan adı yazın, örn."
 
+msgid "اكتب اسمًا ثلاثيًا (كلمتان على الأقل): اسمك واسم أبيك وجدّك."
+msgstr ""
+
 msgid "اكتب اسمًا للبوت (مثل: تنبيهات شبكتي)."
 msgstr "Bot için bir ad girin (örn. Ağım Uyarıları)."
 
@@ -5630,6 +5708,9 @@ msgstr ""
 
 msgid "اكتب تفاصيل المشكلة: انقطاع، بطء، فاتورة، إلخ"
 msgstr "Sorunun ayrıntılarını yazın: kesinti, yavaşlık, fatura vb."
+
+msgid "اكتب ردًّا..."
+msgstr ""
 
 msgid "اكتب ردّك على المشترك..."
 msgstr "Aboneye yanıtınızı yazın..."
@@ -5833,6 +5914,9 @@ msgstr "Güvenlik"
 
 msgid "الأمان."
 msgstr "Güvenlik."
+
+msgid "الأنفاق"
+msgstr ""
 
 msgid "الأولوية"
 msgstr "Öncelik"
@@ -6040,6 +6124,9 @@ msgstr "Üçüncü Ad"
 msgid "الاسم الثاني"
 msgstr "İkinci Ad"
 
+msgid "الاسم الثلاثي"
+msgstr ""
+
 msgid "الاسم الحقيقي أو الوصفي لصاحب الحساب."
 msgstr "Hesap sahibinin gerçek veya açıklayıcı adı."
 
@@ -6093,6 +6180,9 @@ msgid "الاسم الودّي الذي يظهر في القوائم والسج�
 msgstr ""
 "Listelerde ve günlüklerde görünen kolay ad — isteğe bağlıdır ancak ayırt "
 "etmeyi kolaylaştırır."
+
+msgid "الاسم كما هو في الحساب"
+msgstr ""
 
 msgid "الاسم والشعار واللون تظهر في كل صفحات النظام"
 msgstr "Ad, logo ve renk sistemin her sayfasında görünür"
@@ -6326,6 +6416,9 @@ msgstr "Ağ geçidi"
 msgid "البوّابة عند اختيار Static"
 msgstr "Static seçildiğinde ağ geçidi"
 
+msgid "البيانات"
+msgstr ""
+
 msgid "البيانات الإضافية"
 msgstr "Ek veriler"
 
@@ -6346,6 +6439,9 @@ msgstr "Beklenen etki: yükleme şununla sınırlanacak:"
 
 msgid "التأخير"
 msgstr "Gecikme"
+
+msgid "التأكيد"
+msgstr ""
 
 msgid "التاريخ"
 msgstr "Tarih"
@@ -6688,6 +6784,11 @@ msgstr "Otomatik zamanlama"
 msgid "الجرد: بانتظار التنفيذ"
 msgstr "Envanter: uygulanmayı bekliyor"
 
+msgid ""
+"الجسر مع لوحة التراخيص غير جاهز. فعّل الجسر وأدخل رابط HTTPS ومفتاح "
+"الترخيص وسر الربط من"
+msgstr ""
+
 msgid "الجلسات"
 msgstr "Oturumlar"
 
@@ -6702,6 +6803,9 @@ msgstr "Ağdaki canlı oturumlar — kartlar"
 
 msgid "الجلسات الحيّة فقط"
 msgstr "Yalnızca canlı oturumlar"
+
+msgid "الجلسات والاتصالات"
+msgstr ""
 
 msgid "الجلسات:"
 msgstr "Oturumlar:"
@@ -7258,8 +7362,17 @@ msgstr "Mevcut bakiye"
 msgid "الرصيد الحالي للمحفظة."
 msgstr "Cüzdanın güncel bakiyesi."
 
+msgid "الرصيد المتاح"
+msgstr ""
+
 msgid "الرصيد المتبقّي لهذه القناة — اضغط لإدارة الرصيد والحِزم"
 msgstr "Bu kanal için kalan bakiye — bakiyeyi ve paketleri yönetmek için tıklayın"
+
+msgid "الرصيد غير كافٍ (تحتاج"
+msgstr ""
+
+msgid "الرصيد كافٍ — سيُخصم"
+msgstr ""
 
 msgid "الرصيد والحِزم"
 msgstr "Bakiye ve paketler"
@@ -7325,6 +7438,9 @@ msgstr "Kod, şu biçimde tam bir giriş bağlantısına dönüşür"
 
 msgid "الروابط القديمة"
 msgstr "Eski bağlantılar"
+
+msgid "الزبون"
+msgstr ""
 
 msgid "الزبون يقول إنه متصل لكن كرته مش بالقائمة؟ افحص بهذا الترتيب:"
 msgstr ""
@@ -7625,6 +7741,11 @@ msgstr "Ağ:"
 
 msgid "الشحن (credit):"
 msgstr "Bakiye yükleme (credit):"
+
+msgid ""
+"الشحن إداري (يُضاف مباشرة للرصيد)؛ كما يستطيع العميل شحن محفظته بنفسه من "
+"بوابته بعد تعيين كلمة مرور البوابة."
+msgstr ""
 
 msgid "الشحن والخصم"
 msgstr "Yükleme ve kesinti"
@@ -8119,6 +8240,9 @@ msgstr "Faturalar › Göstergeler"
 msgid "الفواتير:"
 msgstr "Faturalar:"
 
+msgid "القائمة"
+msgstr ""
+
 msgid "القائمة الرئيسية"
 msgstr "Ana menü"
 
@@ -8167,6 +8291,9 @@ msgstr "Çekirdeği tablodur. Sütunları sırasıyla:"
 
 msgid "القناة"
 msgstr "Kanal"
+
+msgid "القناة / المرجع"
+msgstr ""
 
 msgid "القناة غير مهيأة بعد"
 msgstr "Kanal henüz yapılandırılmadı"
@@ -8438,6 +8565,9 @@ msgstr "Talep edilen veya kaydedilen mali tutar."
 
 msgid "المبلغ المدفوع"
 msgstr "Ödenen tutar"
+
+msgid "المبلغ المعتمد"
+msgstr ""
 
 msgid "المبلغ يُضاف كاملًا إلى محفظة كل مشترك على حدة، لا يُقسَّم بينهم."
 msgstr ""
@@ -8958,6 +9088,9 @@ msgstr "Kimlik"
 msgid "المعرّف المختصر"
 msgstr "Kısa Kimlik"
 
+msgid "المعلومات الأساسية"
+msgstr ""
+
 msgid "المعلومات الشخصية"
 msgstr "Kişisel bilgiler"
 
@@ -9149,6 +9282,9 @@ msgstr "Tahsil edilen, avanslar, etkinleştirmeler, gigabaytlar"
 
 msgid "المُحصّل، السلف، التفعيل، الجيجات، الديون، المشتركون."
 msgstr "Tahsildar, avanslar, etkinleştirme, gigabaytlar, borçlar ve aboneler."
+
+msgid "المُحوِّل"
+msgstr ""
 
 msgid "المُرسَل:"
 msgstr "Gönderilen:"
@@ -9405,6 +9541,9 @@ msgstr "Açıklama"
 msgid "الوصف:"
 msgstr "Açıklama:"
 
+msgid "الوصل"
+msgstr ""
+
 msgid "الوصول البعيد"
 msgstr "Uzaktan erişim"
 
@@ -9581,6 +9720,11 @@ msgstr "Mesaj alma bağlantısını kopyalayıp WhatsApp sağlayıcısına yapı
 msgid "انسخ مخرجات التحقق للخطوة التالية."
 msgstr "Doğrulama çıktısını bir sonraki adım için kopyalayın."
 
+msgid ""
+"انسخ هذه البيانات الآن واحقنها في إعداد النفق على الراوتر. لن تُعرض "
+"مجددًا ولا تُخزَّن في اللوحة."
+msgstr ""
+
 msgid "انفعّلت لكن صاحبها مو متصل هاللحظة."
 msgstr "Etkinleştirildi, ancak sahibi şu anda bağlı değil."
 
@@ -9610,6 +9754,9 @@ msgstr "Rota parametreleri:"
 
 msgid "باسم أو رقم الراوتر الذي فشل."
 msgstr "Arızalanan yönlendiricinin adı veya numarasıyla."
+
+msgid "باسمه وكلمة مروره."
+msgstr ""
 
 msgid "باقات الإنترنت، السرعات، الحصص، وشروط الاستخدام للمشتركين والكروت."
 msgstr ""
@@ -9917,6 +10064,9 @@ msgstr "Eklemeden"
 msgid "بدون باقة"
 msgstr "Paketsiz"
 
+msgid "بدون تاريخ"
+msgstr ""
+
 msgid "بدون دور"
 msgstr "Rolsüz"
 
@@ -10026,6 +10176,12 @@ msgstr "Yazdırma kuponları"
 msgid "بطاقات الطباعة › دفعة طباعة جديدة"
 msgstr "Yazdırma kuponları › Yeni yazdırma partisi"
 
+msgid "بطاقات العميل"
+msgstr ""
+
+msgid "بطاقات العميل والمشتريات"
+msgstr ""
+
 msgid "بطاقات حزمة الشحن"
 msgstr "Yükleme paketi kuponları"
 
@@ -10066,6 +10222,9 @@ msgstr "Kupon görünmüyor mu? — Tanılama"
 
 msgid "بطاقة مشتركة — جلسة واحدة فعّالة"
 msgstr "Paylaşılan kupon — tek aktif oturum"
+
+msgid "بطاقة مملوكة"
+msgstr ""
 
 msgid "بطاقة واحدة نشطة"
 msgstr "Bir etkin kupon"
@@ -10379,6 +10538,9 @@ msgstr "Doğru sekmede olduğunuzdan emin olun:"
 msgid "تأكد من اتصال الراوتر بالخادم"
 msgstr "Yönlendiricinin sunucuya bağlı olduğundan emin olun"
 
+msgid "تأكيد"
+msgstr ""
+
 msgid "تأكيد استعادة النسخة"
 msgstr "Yedek geri yüklemeyi onayla"
 
@@ -10417,6 +10579,9 @@ msgstr "Yeni parolayı onayla"
 
 msgid "تأكيد مطلوب قبل التنفيذ"
 msgstr "Yürütmeden önce onay gerekir"
+
+msgid "تأكيد وخصم"
+msgstr ""
 
 msgid "تأكيد وضع المختبر الداخلي"
 msgstr "Dahili laboratuvar modunu onayla"
@@ -10478,6 +10643,9 @@ msgstr "Bitiş Tarihi"
 
 msgid "تاريخ البدء"
 msgstr "Başlangıç Tarihi"
+
+msgid "تاريخ التسجيل"
+msgstr ""
 
 msgid "تاريخ التسليم"
 msgstr "Teslim tarihi"
@@ -11066,6 +11234,9 @@ msgstr "Geri Al ve Kaldır"
 msgid "ترتيب الصفحات والهوامش"
 msgstr "Sayfa Sırası ve Kenar Boşlukları"
 
+msgid "ترتيب العرض"
+msgstr ""
+
 msgid "ترتيب ظهور العرض؛ الرقم الأصغر يظهر أولًا."
 msgstr "Teklifin görünüm sırası; küçük sayı önce görünür."
 
@@ -11386,6 +11557,9 @@ msgstr "Yalnızca yönetim görür — dağıtıcı göremez. Sınır 500 karakt
 msgid "تظهر مباشرة في بوابة الزبون"
 msgstr "Doğrudan müşteri portalında görünür"
 
+msgid "تظهر هنا جلسات الإنترنت لبطاقات العميل بمجرد استخدامها على الشبكة."
+msgstr ""
+
 msgid "تعبئة المخزون"
 msgstr "Stok doldurma"
 
@@ -11531,6 +11705,9 @@ msgstr "Yorum"
 
 msgid "تعليمات الاستخدام"
 msgstr "Kullanım talimatları"
+
+msgid "تعليمات للزبون (اختياري)"
+msgstr ""
 
 msgid "تعمل"
 msgstr "Çalışıyor"
@@ -12374,16 +12551,14 @@ msgstr "Paket, hesaplarda ve raporlarda onlara atfedilir."
 msgid "تُنشئ التوكنات وتُدار من مجموعة"
 msgstr "Belirteçler bir gruptan oluşturulur ve yönetilir"
 
-msgid "تُنشَأ محفظة إلكترونية تلقائياً مع الحساب. الدخول للزبون عبر /portal/card."
-msgstr ""
-"Hesapla birlikte otomatik olarak elektronik bir cüzdan oluşturulur. "
-"Müşteri /portal/card üzerinden giriş yapar."
-
 msgid "ثابت"
 msgstr "Statik"
 
 msgid "ثابتة ومحفوظة"
 msgstr "Sabit ve kaydedildi"
+
+msgid "ثانية"
+msgstr ""
 
 msgid "ثانيًا — «إعدادات الطباعة»:"
 msgstr "İkinci — \"Yazdırma ayarları\":"
@@ -12624,6 +12799,11 @@ msgstr "PPP oturumları"
 msgid "جلسات أعضاء مجموعة مشتركين واحدة."
 msgstr "Tek bir abone grubunun üyelerinin oturumları."
 
+msgid ""
+"جلسات الاتصال تأتي من سجلّ المحاسبة (RADIUS) لبطاقات العميل — وقتًا "
+"وبيانات."
+msgstr ""
+
 msgid "جلسات البرودباند"
 msgstr "Geniş bant oturumları"
 
@@ -12636,6 +12816,9 @@ msgstr ""
 
 msgid "جلسات الدفع التجريبية"
 msgstr "Deneme ödeme oturumları"
+
+msgid "جلسات العميل"
+msgstr ""
 
 msgid "جلسات الكروت"
 msgstr "Kupon Oturumları"
@@ -12668,6 +12851,9 @@ msgstr "Etkin oturumlar"
 
 msgid "جلسات نشطة:"
 msgstr "Aktif oturumlar:"
+
+msgid "جلسة"
+msgstr ""
 
 msgid "جلسة الإدارة الرسومية (8291)"
 msgstr "Grafik yönetim oturumu (8291)"
@@ -12731,6 +12917,9 @@ msgstr "Kayıtlı kuruluş"
 
 msgid "جهز سكربت ربط الراوتر"
 msgstr "Yönlendirici bağlama betiğini hazırla"
+
+msgid "جوالي باي"
+msgstr ""
 
 msgid "جوجل درايف"
 msgstr "Google Drive"
@@ -13113,6 +13302,9 @@ msgstr "Seçimi kalıcı olarak sil"
 msgid "حذف نهائيًا"
 msgstr "Kalıcı olarak sil"
 
+msgid "حذف هذه القناة؟"
+msgstr ""
+
 msgid "حذف:"
 msgstr "Sil:"
 
@@ -13219,6 +13411,9 @@ msgstr "Gönderim için bir WhatsApp sağlayıcısında hesap"
 
 msgid "حساب معطّل"
 msgstr "Devre Dışı Hesap"
+
+msgid "حساب نشط"
+msgstr ""
 
 msgid "حسابات شغّالة — صاحبها يقدر يدخل على الإنترنت متى شاء."
 msgstr "Etkin hesaplar — sahibi istediği zaman internete bağlanabilir."
@@ -13469,6 +13664,9 @@ msgstr "\"Adres değiştirme tüneli ve trafik aktarımı\" hizmeti"
 msgid "خدمة الاشتراك"
 msgstr "Abonelik hizmeti"
 
+msgid "خدمة المصادقة"
+msgstr ""
+
 msgid "خدمة تمنحك رابط إرسال مباشر مثل مزوّدي الرسائل المعروفين."
 msgstr ""
 "Bilinen mesajlaşma sağlayıcıları gibi size doğrudan bir gönderim "
@@ -13507,6 +13705,9 @@ msgstr "Yanıt öznitelikleri:"
 
 msgid "خصم"
 msgstr "İndirim"
+
+msgid "خصم من المحفظة"
+msgstr ""
 
 msgid "خصم وقت"
 msgstr "Süre kesintisi"
@@ -13684,6 +13885,12 @@ msgstr ""
 
 msgid "دخول عبر صفحة تسجيل الدخول للهوت سبوت"
 msgstr "Hotspot oturum açma sayfası üzerinden giriş"
+
+msgid "دعم المتجر المتقدّم"
+msgstr ""
+
+msgid "دعم وطلبات الشحن/السحب"
+msgstr ""
 
 msgid "دعم، تحصيل"
 msgstr "Destek, Tahsilat"
@@ -13869,6 +14076,14 @@ msgstr ""
 msgid "راجع القوائم قبل التنفيذ."
 msgstr "Yürütmeden önce listeleri gözden geçirin."
 
+msgid ""
+"راجع الوصل وحساب الاستلام، ثم أكّد لإضافة الرصيد للزبون — أو اعتمد مبلغًا"
+" مختلفًا، أو ارفض."
+msgstr ""
+
+msgid "راجع طلبات الشحن والسحب، حادث الزبائن، واضبط محافظ الاستلام."
+msgstr ""
+
 msgid "راجع ناتج"
 msgstr "Çıktısını gözden geçirin"
 
@@ -14017,6 +14232,9 @@ msgstr "Sistemden hazır ücretler"
 msgid "رصيد"
 msgstr "Bakiye"
 
+msgid "رصيد ابتدائي"
+msgstr ""
+
 msgid "رصيد الدين والرصيد لكل موزّع."
 msgstr "Her dağıtıcı için borç bakiyesi ve bakiye."
 
@@ -14036,6 +14254,11 @@ msgstr "Mesaj bakiyesi ve ücretli paketler"
 msgid "رصيد المحفظة"
 msgstr "Cüzdan Bakiyesi"
 
+msgid ""
+"رصيد المحفظة يُشحن يدويًا (إداريًا) بزر «شحن الرصيد» أو يشحنه العميل "
+"بنفسه من بوابته، ويُستهلك عند شراء بطاقة."
+msgstr ""
+
 msgid "رصيد المحفظة:"
 msgstr "Cüzdan bakiyesi:"
 
@@ -14047,6 +14270,9 @@ msgstr "Bakiyeniz: 12.00"
 
 msgid "رصيدي"
 msgstr "Bakiyem"
+
+msgid "رفض"
+msgstr ""
 
 msgid "رفض الإثبات"
 msgstr "Kanıtı reddet"
@@ -14146,6 +14372,12 @@ msgstr "Rezervasyon numarası"
 
 msgid "رقم الحدث"
 msgstr "Olay numarası"
+
+msgid "رقم الحساب"
+msgstr ""
+
+msgid "رقم الحساب / الجوال"
+msgstr ""
 
 msgid "رقم الراوتر"
 msgstr "Yönlendirici Numarası"
@@ -14379,6 +14611,9 @@ msgstr "Görüntüleme saatleri — başlangıç"
 msgid "ساعة"
 msgstr "Saat"
 
+msgid "ساعة استخدام"
+msgstr ""
+
 msgid "ساعة واحدة"
 msgstr "Bir saat"
 
@@ -14411,6 +14646,9 @@ msgstr "Devre Dışı Bırakma Nedeni"
 
 msgid "سبب الجدول أو ملاحظات التشغيل"
 msgstr "Zamanlama nedeni veya çalıştırma notları"
+
+msgid "سبب الرفض"
+msgstr ""
 
 msgid "سبب السلفة"
 msgstr "Avans Sebebi"
@@ -14459,6 +14697,15 @@ msgstr "Son işlemler kaydı"
 
 msgid "سجل أحداث الراوتر (log)."
 msgstr "Router olay günlüğü (log)."
+
+msgid "سجل أحداث العميل"
+msgstr ""
+
+msgid "سجل الأحداث"
+msgstr ""
+
+msgid "سجل الأحداث يجمع المشتريات وحركات المحفظة وأحداث النظام مرتبة زمنيًا."
+msgstr ""
 
 msgid "سجل الإرسال"
 msgstr "Gönderim kaydı"
@@ -14516,6 +14763,9 @@ msgstr "Aboneden aldığınız bir tutarı kaydedin."
 
 msgid "سحب"
 msgstr "Çekme"
+
+msgid "سحب بانتظار التنفيذ"
+msgstr ""
 
 msgid "سداد يقفل سلفة مفتوحة ويصفّر دينها — السلفة الأصلية تبقى ظاهرة بالسجل."
 msgstr ""
@@ -15081,6 +15331,9 @@ msgstr "Bakiye yükle"
 msgid "شحن المحفظة يدوياً"
 msgstr "Cüzdanı manuel yükle"
 
+msgid "شحن بانتظار المراجعة"
+msgstr ""
+
 msgid "شحن فوري بقيمة البطاقة"
 msgstr "Kupon değeriyle anında yükleme"
 
@@ -15090,11 +15343,18 @@ msgstr "Yükleme — 500.00"
 msgid "شراء"
 msgstr "Satın al"
 
+#, python-format
+msgid "شراء «%(name)s»"
+msgstr ""
+
 msgid "شراء الآن"
 msgstr "Şimdi satın al"
 
 msgid "شراء البطاقة"
 msgstr "Kupon Satın Al"
+
+msgid "شراء بطاقة من السوق"
+msgstr ""
 
 msgid "شرح المصطلحات"
 msgstr "Terimler Sözlüğü"
@@ -15250,6 +15510,9 @@ msgstr "Ağ kısıtlamalarını dosyasında kontrol edin:"
 msgid "صاحب التذكرة — تظهر في سجلّه وتُحتسب ضمن متابعاته."
 msgstr "Talep sahibi — kaydında görünür ve takiplerine dahil edilir."
 
+msgid "صاحب الحساب"
+msgstr ""
+
 msgid "صاحب الفاتورة — تُسجَّل في كشف حسابه وتؤثر في رصيده."
 msgstr "Faturanın sahibi — hesap özetine kaydedilir ve bakiyesini etkiler."
 
@@ -15345,6 +15608,9 @@ msgstr ""
 "Sahte verilerle bir demo sayfası — baskı kağıdını harcamadan önce "
 "renkleri ve boyutları yazdırıp kontrol etmek için idealdir."
 
+msgid "صفحة ترخيص النظام"
+msgstr ""
+
 msgid "صفحة دخول للمستخدمين عبر WiFi/كابل"
 msgstr "Wi-Fi/kablo üzerinden kullanıcılar için giriş sayfası"
 
@@ -15430,6 +15696,9 @@ msgstr "Mevcut ürün"
 
 msgid "صورة"
 msgstr "Resim"
+
+msgid "صورة QR (اختياري)"
+msgstr ""
 
 msgid "صورة خلفية من الجهاز"
 msgstr "Cihazdan arka plan görseli"
@@ -15571,6 +15840,24 @@ msgstr "Ödeme talepleri"
 
 msgid "طلبات الدفع والمراجعة والمطابقة في صفحة واحدة"
 msgstr "Ödeme talepleri, inceleme ve mutabakat tek bir sayfada"
+
+msgid "طلبات السحب"
+msgstr ""
+
+msgid "طلبات السحب المحسومة"
+msgstr ""
+
+msgid "طلبات السحب بانتظار التنفيذ"
+msgstr ""
+
+msgid "طلبات الشحن"
+msgstr ""
+
+msgid "طلبات الشحن المحسومة"
+msgstr ""
+
+msgid "طلبات الشحن بانتظار المراجعة"
+msgstr ""
 
 msgid "طلبها"
 msgstr "Talep et"
@@ -15988,6 +16275,9 @@ msgstr "RouterOS betiğini göster (sürüm bilindiğinde görünür)."
 msgid "عرض كل التنبيهات"
 msgstr "Tüm uyarıları göster"
 
+msgid "عرض متاح"
+msgstr ""
+
 msgid "عرض وارتفاع البطاقة بالمليمتر (الافتراضي 85×54 — مقاس بطاقة الفيزا)."
 msgstr ""
 "Kart genişliği ve yüksekliği milimetre cinsinden (varsayılan 85×54 — Visa"
@@ -16123,6 +16413,9 @@ msgstr "Korumalı işlemler"
 
 msgid "عملية HobeRadius"
 msgstr "HobeRadius işlemi"
+
+msgid "عملية شراء"
+msgstr ""
 
 msgid "عملية موثقة"
 msgstr "Kayıtlı işlem"
@@ -16572,6 +16865,9 @@ msgstr "Etkin değil — geçici olarak askıya alındı"
 msgid "غير مفعّلة"
 msgstr "Devre Dışı"
 
+msgid "غيغا"
+msgstr ""
+
 msgid "فئة الاشتراك"
 msgstr "Abonelik kategorisi"
 
@@ -16832,6 +17128,9 @@ msgstr "Düzenli izlemeyi etkinleştir"
 
 msgid "فعِّل على الراوتر"
 msgstr "Yönlendiricide etkinleştir"
+
+msgid "فعّالة"
+msgstr ""
 
 msgid "فعّل أي حدث، اختر القنوات، وعدّل نص الرسالة — جاهز مسبقًا ويعمل بكبسة زر."
 msgstr ""
@@ -17495,6 +17794,12 @@ msgstr "Gönderim Kanalları"
 msgid "قنوات الإرسال › واتساب"
 msgstr "Gönderim kanalları › WhatsApp"
 
+msgid "قنوات الاستلام"
+msgstr ""
+
+msgid "قنوات الاستلام الحالية"
+msgstr ""
+
 msgid "قنوات التنبيه"
 msgstr "Uyarı kanalları"
 
@@ -17544,6 +17849,9 @@ msgstr "Hazırlanıyor"
 
 msgid "قيد التجهيز:"
 msgstr "Hazırlanıyor:"
+
+msgid "قيد التعليق:"
+msgstr ""
 
 msgid "قيد المعالجة"
 msgstr "İşleniyor"
@@ -17869,6 +18177,11 @@ msgstr ""
 "Her kupon seçili şablonla oluşturulur: tablodaki gibi oturum adı ve "
 "parola, ayrıca şablonda etkinse QR."
 
+msgid ""
+"كل بطاقة مملوكة تقابل عملية شراء؛ الحالة تبيّن إن كانت جاهزة أو مستخدمة "
+"أو ملغاة."
+msgstr ""
+
 msgid "كل تبويب يجمع إعدادات متجانسة، وبجانب اسمه عدّاد بعدد حقوله:"
 msgstr ""
 "Her sekme ilgili ayarları gruplar ve adının yanında alan sayısını "
@@ -18033,6 +18346,12 @@ msgstr "Bağlama arayüzü parolası + paylaşılan kimlik doğrulama sırrı"
 msgid "كلمة مرور البرودباند"
 msgstr "Geniş bant parolası"
 
+msgid "كلمة مرور البوابة"
+msgstr ""
+
+msgid "كلمة مرور البوابة تتيح للعميل الدخول إلى /portal/card وشحن محفظته بنفسه."
+msgstr ""
+
 msgid "كلمة مرور الراوتر"
 msgstr "Yönlendirici Parolası"
 
@@ -18044,9 +18363,6 @@ msgstr "Yönlendirici parolası, dikkatle saklayın."
 
 msgid "كلمة مرور الربط"
 msgstr "Bağlantı parolası"
-
-msgid "كلمة مرور جديدة (4 أحرف على الأقل)"
-msgstr "Yeni parola (en az 4 karakter)"
 
 msgid "كلمة مرور جديدة..."
 msgstr "Yeni parola..."
@@ -18204,6 +18520,9 @@ msgstr "Bu Sayfa Nasıl Çalışır"
 msgid "كيف تعمل هذه الصفحة؟"
 msgstr "Bu sayfa nasıl çalışır?"
 
+msgid "كيف تقرأ هذا الملف؟"
+msgstr ""
+
 msgid "كيف يتصل الراوتر بالإنترنت؟"
 msgstr "Yönlendirici İnternet'e nasıl bağlanır?"
 
@@ -18217,6 +18536,9 @@ msgid "كيف يُجدَّد الاشتراك عند انتهائه: تلقائ�
 msgstr ""
 "Aboneliğin süresi dolduğunda nasıl yenileneceği: otomatik veya manuel "
 "olarak."
+
+msgid "كيلو"
+msgstr ""
 
 msgid "لأحدث فترة"
 msgstr "En son dönem için"
@@ -18247,6 +18569,9 @@ msgstr "Hayır"
 
 msgid "لا «المشتركون»."
 msgstr "“Aboneler” değil."
+
+msgid "لا اتصالات"
+msgstr ""
 
 msgid "لا استخدام للمدفوعات الإلكترونية حتى ربط بوابة دفع (مثل Jawwal Pay)."
 msgstr ""
@@ -18303,6 +18628,9 @@ msgstr ""
 "Henüz etkin paket yok. Burada görünmesi için önce bir hız paketi "
 "oluşturun."
 
+msgid "لا توجد بطاقات مملوكة بعد"
+msgstr ""
+
 msgid ""
 "لا توجد بطاقة مطابقة لهذا البحث. تأكد من الرقم أو اسم الدخول ثم حاول مرة "
 "أخرى."
@@ -18336,6 +18664,9 @@ msgstr "Şu anda açık uyarı yok."
 
 msgid "لا توجد توصيات إضافيّة حالياً — السياسة تبدو سليمة."
 msgstr "Şu anda ek bir öneri yok — politika sağlam görünüyor."
+
+msgid "لا توجد جلسات اتصال بعد"
+msgstr ""
 
 msgid "لا توجد جلسات لهذا الجهاز بعد."
 msgstr "Bu cihaz için henüz oturum yok."
@@ -18379,11 +18710,20 @@ msgstr "Bu yönlendiriciye henüz hizmet eklenmedi."
 msgid "لا توجد راوترات مسجلة"
 msgstr "Kayıtlı yönlendirici yok"
 
+msgid "لا توجد طلبات سحب معلّقة."
+msgstr ""
+
+msgid "لا توجد طلبات شحن معلّقة."
+msgstr ""
+
 msgid "لا توجد عروض بيع حتى الآن. أضف أول باقة من النموذج بالأعلى."
 msgstr "Henüz satış teklifi yok. İlk paketinizi yukarıdaki formdan ekleyin."
 
 msgid "لا توجد عروض ضمن هذا النظام بعد."
 msgstr "Bu sistemde henüz teklif yok."
+
+msgid "لا توجد عروض متاحة"
+msgstr ""
 
 msgid "لا توجد عقد خروج بعد. أنشئ عقدة قبل توليد السياسة."
 msgstr "Henüz çıkış düğümü yok. Politikayı oluşturmadan önce bir düğüm oluşturun."
@@ -18452,11 +18792,23 @@ msgstr "Asla doğrudan silme yok"
 msgid "لا خصائص رد."
 msgstr "Yanıt özniteliği yok."
 
+msgid "لا رسائل في هذه المحادثة بعد."
+msgstr ""
+
 msgid "لا شيء يُحذف أبدًا"
 msgstr "Hiçbir şey asla silinmez"
 
+msgid "لا قنوات استلام بعد — أضف أول قناة من النموذج بالأسفل."
+msgstr ""
+
+msgid "لا محادثات بعد."
+msgstr ""
+
 msgid "لا نشاط بعد"
 msgstr "Henüz etkinlik yok"
+
+msgid "لا وصل"
+msgstr ""
 
 msgid "لا يتغيّر بعد الإنشاء"
 msgstr "Oluşturulduktan sonra değiştirilemez"
@@ -18517,6 +18869,9 @@ msgstr "Bu varlıkla ilişkili bir zaman çizelgesi yok."
 
 msgid "لا يوجد رمز ربط مفعل بعد. أنشئ رمزًا من"
 msgstr "Henüz etkin bir bağlama kodu yok. Şuradan bir tane oluşturun:"
+
+msgid "لا يوجد سجل بعد."
+msgstr ""
 
 msgid "لا يوجد عاملون نشطون"
 msgstr "Etkin personel yok"
@@ -19111,6 +19466,9 @@ msgstr "Cüzdan sahibi"
 msgid "مالي"
 msgstr "Mali"
 
+msgid "مالية"
+msgstr ""
+
 msgid "مباشر"
 msgstr "Doğrudan"
 
@@ -19376,6 +19734,9 @@ msgstr "Örnek: 1 saatlik paket"
 msgid "مثال: حزمة مدفوعة #123"
 msgstr "Örnek: ödenmiş parti #123"
 
+msgid "مثال: حوّل ثم ارفع صورة الوصل."
+msgstr ""
+
 msgid "مثال: خفض الذروة المسائية"
 msgstr "Örnek: akşam zirvesini düşürme"
 
@@ -19406,6 +19767,9 @@ msgstr "Örnek: CAT6 kablo"
 msgid "مثال: محاولات دخول متكررة لمشترك واحد"
 msgstr "Örnek: tek bir abone için tekrarlanan giriş denemeleri"
 
+msgid "مثال: محفظة جوالي باي"
+msgstr ""
+
 msgid "مثال: مقهى الزهراء — فرع 1"
 msgstr "Örnek: Al-Zahra Kafe — Şube 1"
 
@@ -19427,8 +19791,8 @@ msgstr "örn.: 12345"
 msgid "مثل: 1234567890"
 msgstr "örn. 1234567890"
 
-msgid "مثل: أحمد محمد"
-msgstr "örn.: Ahmet Yılmaz"
+msgid "مثل: أحمد محمد علي"
+msgstr ""
 
 msgid "مثل: تصميم شركتي"
 msgstr "Örneğin: şirketimin tasarımı"
@@ -19438,6 +19802,9 @@ msgstr "ör.: Bilet #4231 — AP bakımı, kat 2"
 
 msgid "مثل: دفعة شحن شهر ٨"
 msgstr "Örneğin: 8. ay yükleme partisi"
+
+msgid "مثل: راوتر الفرع الرئيسي"
+msgstr ""
 
 msgid "مثل: للموزّع أحمد — منطقة الشمال"
 msgstr "Örneğin: Dağıtıcı Ahmad için — kuzey bölgesi"
@@ -19533,10 +19900,22 @@ msgstr "Yönlendirici kullanıcı grubu"
 msgid "مجمّد"
 msgstr "Donduruldu"
 
+msgid "محادثات"
+msgstr ""
+
+msgid "محادثات الدعم"
+msgstr ""
+
+msgid "محادثة الزبون"
+msgstr ""
+
 msgid "محادثة تقريبية مع BotFather — انسخ رمز الربط الذي يظهر في آخر رسالة."
 msgstr ""
 "BotFather ile yaklaşık bir konuşma — son mesajda görünen bağlantı "
 "anahtarını kopyalayın."
+
+msgid "محافظ الاستلام"
+msgstr ""
 
 msgid "محاولات الدخول"
 msgstr "Oturum açma denemeleri"
@@ -19861,6 +20240,9 @@ msgstr "Hesabı başka bir dahili kayda bağlayan isteğe bağlı bir referans."
 msgid "مرجع الجلسة — مثال: CHK-1A2B3C4D5E"
 msgstr "Oturum referansı — örn. CHK-1A2B3C4D5E"
 
+msgid "مرجع السر"
+msgstr ""
+
 msgid "مرجع العملية"
 msgstr "İşlem referansı"
 
@@ -19890,6 +20272,9 @@ msgstr "İki aşamalı (staged)"
 
 msgid "مرحَّل"
 msgstr "Aktarıldı"
+
+msgid "مرفق"
+msgstr ""
 
 msgid "مركز ألعاب"
 msgstr "Oyun Merkezi"
@@ -19999,8 +20384,14 @@ msgstr "Kullanılan / toplam"
 msgid "مستخدم الإدارة"
 msgstr "Yönetim kullanıcısı"
 
+msgid "مستخدم البطاقة"
+msgstr ""
+
 msgid "مستخدم الربط للراوتر"
 msgstr "Yönlendirici bağlantı kullanıcısı"
+
+msgid "مستخدم بدون اسم"
+msgstr ""
 
 msgid "مستخدم بطاقات"
 msgstr "Kupon kullanıcısı"
@@ -20328,6 +20719,9 @@ msgstr ""
 "Panel giriş kimliği; oluşturma sırasında sabitlenir ve sonradan "
 "değiştirilemez, bu yüzden dikkatle seçin."
 
+msgid "معرّف الراوتر (اختياري)"
+msgstr ""
+
 msgid ""
 "معرّف الراوتر الذي تختاره الشاشات تلقائيًا عند وجود أكثر من راوتر. اتركه "
 "فارغًا للاختيار اليدوي في كل مرة."
@@ -20337,6 +20731,9 @@ msgstr ""
 
 msgid "معرّف الشبكة الافتراضية VLAN. 0 = بلا VLAN."
 msgstr "VLAN sanal ağ kimliği. 0 = VLAN yok."
+
+msgid "معرّف العميل"
+msgstr ""
 
 msgid "معرّف القاعدة:"
 msgstr "Kural kimliği:"
@@ -20439,6 +20836,9 @@ msgstr "Bilgi"
 
 msgid "معلَّقة"
 msgstr "Beklemede"
+
+msgid "معلّق"
+msgstr ""
 
 msgid "معلّقة"
 msgstr "Beklemede"
@@ -20729,6 +21129,12 @@ msgstr "Paylaşmaya veya arşivlemeye uygun şık bir PDF dosyası."
 msgid "ملف البطاقات"
 msgstr "Kuponlar Dosyası"
 
+msgid "ملف العميل #"
+msgstr ""
+
+msgid "ملف الكروت 360"
+msgstr ""
+
 msgid "ملف المالية"
 msgstr "Finans dosyası"
 
@@ -20856,6 +21262,11 @@ msgstr "giriş sayfası tasarımcısından, aksi takdirde yayımlanan mağaza du
 
 msgid "من نقطة محمية بجلسة أدمن (و"
 msgstr "Bir yönetici oturumuyla korunan bir uç noktadan (ve"
+
+msgid ""
+"من هنا تراجع طلبات الشحن والسحب، تحادث الزبائن، وتضبط محافظ الاستلام التي"
+" تظهر للزبون عند الدفع."
+msgstr ""
 
 msgid ""
 "من هناك تربط الحساب الرسمي وتعتمد القوالب، وتعود حالتها لتظهر بالأعلى "
@@ -21447,6 +21858,9 @@ msgstr "Giriş portalı dosya kapsamı (isteğe bağlı)"
 msgid "نطاقات العناوين"
 msgstr "Adres aralıkları"
 
+msgid "نظام"
+msgstr ""
+
 msgid "نظام البيع"
 msgstr "Satış Sistemi"
 
@@ -21604,6 +22018,11 @@ msgstr "Adres çevirme ve trafik yönlendirme tüneli"
 msgid "نفق ربط"
 msgstr "Bağlantı tüneli"
 
+msgid ""
+"نفّذ التحويل البنكي يدويًا أولًا، ثم أكّد هنا ليُخصم الرصيد آليًا من "
+"محفظة الزبون."
+msgstr ""
+
 msgid "نقاط عامة (بلا توكن)"
 msgstr "Genel uç noktalar (belirteçsiz)"
 
@@ -21759,6 +22178,9 @@ msgstr "İşlem Yapan Türü"
 msgid "نوع الفترة"
 msgstr "Dönem Türü"
 
+msgid "نوع القناة"
+msgstr ""
+
 msgid "نوع القيد"
 msgstr "Kayıt Türü"
 
@@ -21796,6 +22218,9 @@ msgstr "Bağlantı noktası/cihaz türü"
 
 msgid "نوع المهمة"
 msgstr "Görev Türü"
+
+msgid "نوع النفق"
+msgstr ""
 
 msgid "نوع الهدف"
 msgstr "Hedef türü"
@@ -21896,6 +22321,9 @@ msgstr ""
 "Bu yalnızca hak kazanımın uygulanmasını kaydeder. Kimlik doğrulama "
 "hizmetini çağırmaz, oturumları kesmez veya yönlendiriciye dokunmaz."
 
+msgid "هذه آخر مرة تظهر فيها كلمة المرور."
+msgstr ""
+
 msgid "هذه الأرقام مشتقة من المعاملات المسجّلة فقط"
 msgstr "Bu sayılar yalnızca kaydedilen işlemlerden türetilir"
 
@@ -21976,6 +22404,9 @@ msgstr ""
 "için gönderim kanalları sayfasından kanal modunu «Yönetim tarafından "
 "tahsis edilen bakiye» olarak değiştirin."
 
+msgid "هذه القنوات يعرضها المتجر للزبون لينسخ الرقم أو يمسح الـQR قبل التحويل."
+msgstr ""
+
 msgid ""
 "هذه القيم تخص شكل البطاقة فقط، أما توزيع الورقة والهوامش فهو في مركز "
 "التصدير."
@@ -22009,6 +22440,11 @@ msgstr ""
 msgid "هذه روابط"
 msgstr "Bunlar bağlantılardır"
 
+msgid ""
+"هذه صفحة 360° لمستخدم الكروت: محفظته، بطاقاته، مشترياته، جلساته وسجل "
+"أحداثه في مكان واحد."
+msgstr ""
+
 msgid "هذه صفحة بيع البطاقات"
 msgstr "Bu, kupon satış sayfasıdır"
 
@@ -22024,6 +22460,11 @@ msgid "هذه معاينة فقط. لا يتم تطبيق أي وقت على ن�
 msgstr ""
 "Bu yalnızca bir önizlemedir. Bu sayfadan kimlik doğrulama sistemine "
 "herhangi bir süre uygulanmaz."
+
+msgid ""
+"هذه واجهة عرض موحّدة — كل شحن أو شراء أو تعيين كلمة مرور يمر بالمنطق "
+"الأصلي دون تغيير."
+msgstr ""
 
 msgid "هكذا تبدو العائلات في السايدبار — اضغط رأس العائلة ليفتح تقاريرها."
 msgstr ""
@@ -22358,8 +22799,11 @@ msgstr "Düzenleme için kısa etiketler; gerektiğinde virgülle ayırın."
 msgid "وسيلة الدفع"
 msgstr "Ödeme yöntemi"
 
-msgid "وشحن محفظته."
-msgstr "ve cüzdanını yükledi."
+msgid "وشحن محفظته بنفسه."
+msgstr ""
+
+msgid "وصف (اختياري)"
+msgstr ""
 
 msgid "وصف حر لما لاحظته وما ينبغي على المراجع التالي فعله."
 msgstr ""
@@ -22374,6 +22818,9 @@ msgstr "Aboneye veya operatöre gösterilen teklifin kısa açıklaması."
 
 msgid "وصف مختصر لنطاق هذا الدور ومسؤولياته…"
 msgstr "Bu rolün kapsamının ve sorumluluklarının kısa açıklaması…"
+
+msgid "وصل"
+msgstr ""
 
 msgid "وصل المبلغ،"
 msgstr "Tutar ulaştı,"

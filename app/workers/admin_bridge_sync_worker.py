@@ -38,7 +38,11 @@ def _loop() -> None:
         info = {"interval_sec": interval, "status": "unknown"}
         try:
             result = LicenseAdminRuntimeSyncService().sync_once(tenant_id=1)
+            # Report the admin roster BEFORE identity sync so the panel can
+            # return fresh super-admin overrides in the same identity response.
+            report_result = _maybe_report_admins()
             identity_result = _maybe_sync_identity()
+            tunnel_result = _maybe_sync_tunnels()
             info = {
                 "interval_sec": interval,
                 "ok": bool(result.get("ok")),
@@ -47,6 +51,9 @@ def _loop() -> None:
                 "capacity_snapshot_id": result.get("capacity_snapshot_id"),
                 "identity_ok": identity_result.get("ok") if identity_result else None,
                 "identity_synced_count": identity_result.get("synced_count") if identity_result else None,
+                "admins_reported": report_result.get("reported_count") if report_result else None,
+                "super_overrides": identity_result.get("super_overrides") if identity_result else None,
+                "tunnels_ok": tunnel_result.get("ok") if tunnel_result else None,
             }
         except Exception as exc:  # noqa: BLE001
             _LOG.exception("admin bridge sync worker tick failed")
@@ -61,6 +68,24 @@ def _maybe_sync_identity() -> dict | None:
     from app.radius.services.license_admin_identity_sync import LicenseAdminIdentitySyncService
 
     return LicenseAdminIdentitySyncService().sync_once(tenant_id=1)
+
+
+def _maybe_report_admins() -> dict | None:
+    # Ships alongside identity sync (same gate) — the panel needs the roster to
+    # compute the super-admin overrides it returns in the identity response.
+    if not bridge_flag("HOBERADIUS_ADMIN_IDENTITY_SYNC_ENABLED", "license_admin_bridge.identity_sync_enabled"):
+        return None
+    from app.radius.services.license_admin_inventory_report import LicenseAdminInventoryReportService
+
+    return LicenseAdminInventoryReportService().report_once(tenant_id=1)
+
+
+def _maybe_sync_tunnels() -> dict | None:
+    if not bridge_flag("HOBERADIUS_ADMIN_TUNNEL_SYNC_ENABLED", "license_admin_bridge.tunnel_sync_enabled"):
+        return None
+    from app.radius.services.license_tunnel_bridge import LicenseTunnelBridgeService
+
+    return LicenseTunnelBridgeService().sync_tunnels(tenant_id=1)
 
 
 def start_admin_bridge_sync_worker() -> None:

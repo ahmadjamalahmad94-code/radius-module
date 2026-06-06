@@ -50,7 +50,8 @@ def _login(client) -> None:
     assert res.status_code in {302, 303}
 
 
-def _seed_nas(app, *, nas_id: int, name: str, check: str = "") -> None:
+def _seed_nas(app, *, nas_id: int, name: str, check: str = "",
+              enabled: bool = True) -> None:
     with app.app_context():
         from app.radius.db.connection import transaction
         now = datetime.utcnow().isoformat() + "Z"
@@ -62,13 +63,15 @@ def _seed_nas(app, *, nas_id: int, name: str, check: str = "") -> None:
                      ros_version, last_check_status, last_check_at,
                      created_at)
                    VALUES (?, 1, ?, ?, 'sek', 'mikrotik', 'hotspot',
-                           1, 'hr-test', 'pw', '7.14', ?, ?, ?)""",
-                (nas_id, name, f"10.10.0.{nas_id}", check, now, now),
+                           ?, 'hr-test', 'pw', '7.14', ?, ?, ?)""",
+                (nas_id, name, f"10.10.0.{nas_id}", int(enabled),
+                 check, now, now),
             )
 
 
 def test_badge_renders_reachable(app, client):
-    _seed_nas(app, nas_id=21, name="rt-up", check="reachable")
+    # صفّ معطّل (لا يُستطلَع حيًّا) ⇒ تُشتقّ الشارة من فحص الوصول.
+    _seed_nas(app, nas_id=21, name="rt-up", check="reachable", enabled=False)
     _login(client)
     res = client.get("/admin/radius/mt/operations")
     assert res.status_code == 200
@@ -80,10 +83,26 @@ def test_badge_renders_reachable(app, client):
 
 
 def test_badge_renders_down(app, client):
-    _seed_nas(app, nas_id=22, name="rt-down", check="timeout")
+    # صفّ معطّل + فحص منتهي المهلة ⇒ «النفق متوقف» (لا استطلاع حيّ).
+    _seed_nas(app, nas_id=22, name="rt-down", check="timeout", enabled=False)
     _login(client)
     res = client.get("/admin/radius/mt/operations")
     assert res.status_code == 200
     html = res.get_data(as_text=True)
     assert "data-mt-mgmt-state=\"down\"" in html
     assert "النفق متوقف" in html
+
+
+def test_enabled_row_defers_to_live_poll(app, client):
+    """حارس الانحدار للتناقض: راوتر مفعّل بفحص TCP قديم منتهٍ يجب ألا
+    يُرسَم «النفق متوقف» خادميًّا — يؤجَّل للاستطلاع الحيّ («جارٍ الفحص…»)
+    كي لا يتناقض مع عمود «الحالة» الحيّ."""
+    _seed_nas(app, nas_id=23, name="rt-live", check="timeout", enabled=True)
+    _login(client)
+    res = client.get("/admin/radius/mt/operations")
+    assert res.status_code == 200
+    html = res.get_data(as_text=True)
+    assert "data-mt-mgmt-state=\"checking\"" in html
+    assert "جارٍ الفحص…" in html
+    # لا تأكيد «متوقف» خادميًّا للصف الحيّ.
+    assert "data-mt-mgmt-state=\"down\"" not in html

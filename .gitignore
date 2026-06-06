@@ -61,3 +61,7 @@ tools/i18n_translations/shards/
 tools/i18n_translations/_msgids*.json
 tools/i18n_translations/_slice*.json
 tools/i18n_translations/_tmp*.json
+
+# Runtime user uploads (receipts, QR, chat images, branding logos) — never
+# in git; written at runtime by store/settings under static/uploads.
+app/static/uploads/

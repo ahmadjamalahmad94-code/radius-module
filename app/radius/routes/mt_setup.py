@@ -154,11 +154,28 @@ _CHECK_STATUS_AR = {
 }
 
 
-def _derive_mgmt_status(item: dict, provisioned_ips: "set[str] | None") -> dict:
+def _derive_mgmt_status(
+    item: dict,
+    provisioned_ips: "set[str] | None",
+    *,
+    live: "str | None" = None,
+    live_pollable: bool = False,
+) -> dict:
     """نموذج عرض صادق لشارة نفق الإدارة لصفّ راوتر واحد.
 
     لا يُعيد أبداً «غير محدّد» المبهمة؛ كل حالة تحمل سبباً عربياً
     واضحاً يستطيع المشغّل التصرّف بناءً عليه.
+
+    **مصدر واحد متّسق مع عمود «الحالة»:** عمود «متصل/غير متصل» يأتي من
+    استطلاع حيّ لـ/counters (JS). إذا كانت اللوحة تتواصل مع الراوتر الآن
+    فالنفق يحمل الحركة فعلاً = فعّال حتماً، مهما قال فحص TCP اليدوي القديم
+    (last_check). لذا:
+      * ``live='connected'`` (أو ``'down'``) — الإشارة الحيّة لها الأولوية
+        المطلقة على كل شيء (تُمرَّر من نفس الاستطلاع، عبر JS وقت التشغيل).
+      * ``live_pollable=True`` — الصف سيُستطلَع حيًّا (مفعّل وغير قيد
+        التجهيز): لا نؤكّد أي حالة من last_check القديم لأنه قد يتناقض مع
+        العمود الحيّ؛ نعرض «جارٍ الفحص…» ونترك الاستطلاع يحسمها. هذا يمنع
+        تناقض «متصل + النفق متوقف» نهائيًّا.
     """
     ros = str(item.get("ros_version") or "")
     # نوع النفق المتوقّع حسب إصدار RouterOS (مرآة recommended_management_tunnel).
@@ -172,7 +189,31 @@ def _derive_mgmt_status(item: dict, provisioned_ips: "set[str] | None") -> dict:
     has_peer = ((addr in provisioned_ips)
                 if (provisioned_ips is not None and addr) else None)
 
-    # 1) أقوى إشارة: فحص الوصول الفعلي عبر النفق.
+    # 0) الإشارة الحيّة لها الأولوية المطلقة (نفس مصدر عمود «متصل»).
+    if live == "connected":
+        return {
+            "state": "active", "color": "green", "label": "نفق فعّال",
+            "reason": ("نفق إدارة %s فعّال — اللوحة تتواصل مع الراوتر الآن "
+                       "(حركة حيّة عبر النفق)." % tunnel_label),
+        }
+    if live == "down":
+        return {
+            "state": "down", "color": "red", "label": "النفق متوقف",
+            "reason": ("لا استجابة حيّة من الراوتر عبر نفق %s الآن. تأكّد أن "
+                       "الراوتر يعمل وأن النفق متصل." % tunnel_label),
+        }
+
+    # 1) صفوف يُستطلَع اتصالها حيًّا: لا نؤكّد حالة من فحص TCP اليدوي القديم
+    #    (قد يكون منتهي المهلة منذ ساعات بينما النفق يحمل الحركة الآن) —
+    #    نؤجّل القرار للاستطلاع الحيّ كي لا نتناقض مع عمود «الحالة».
+    if live_pollable:
+        return {
+            "state": "checking", "color": "grey", "label": "جارٍ الفحص…",
+            "reason": ("يُقاس اتصال نفق %s حيًّا الآن عبر استطلاع الراوتر…"
+                       % tunnel_label),
+        }
+
+    # 2) أقوى إشارة ساكنة (للصفوف غير المُستطلَعة): فحص الوصول عبر النفق.
     if check == "reachable":
         return {
             "state": "active", "color": "green", "label": "نفق فعّال",
@@ -186,7 +227,7 @@ def _derive_mgmt_status(item: dict, provisioned_ips: "set[str] | None") -> dict:
                        % (tunnel_label, _CHECK_STATUS_AR.get(check, check), (" في " + at) if at else "")),
         }
 
-    # 2) فشل التجهيز.
+    # 3) فشل التجهيز.
     if lifecycle == "failed":
         return {
             "state": "down", "color": "red", "label": "فشل التجهيز",
@@ -194,7 +235,7 @@ def _derive_mgmt_status(item: dict, provisioned_ips: "set[str] | None") -> dict:
                        or "فشل تجهيز نفق الإدارة. أعد تشغيل معالج التجهيز."),
         }
 
-    # 3) التجهيز ما زال جارياً.
+    # 4) التجهيز ما زال جارياً.
     if lifecycle in ("reserved", "waiting_router_key", "peer_ready",
                      "vpn_verified", "radius_pending", "api_pending"):
         return {
@@ -203,7 +244,7 @@ def _derive_mgmt_status(item: dict, provisioned_ips: "set[str] | None") -> dict:
                        % (tunnel_label, item.get("lifecycle_label_ar") or lifecycle)),
         }
 
-    # 4) أُنشئ peer لكن لم يُختبر الوصول بعد.
+    # 5) أُنشئ peer لكن لم يُختبر الوصول بعد.
     if has_peer:
         return {
             "state": "pending", "color": "amber", "label": "بانتظار أول فحص",
@@ -211,7 +252,7 @@ def _derive_mgmt_status(item: dict, provisioned_ips: "set[str] | None") -> dict:
                        "اضغط «اختبار الاتصال» في قائمة الأجهزة." % tunnel_label),
         }
 
-    # 5) لم يُنشأ peer إطلاقاً (والقراءة متاحة).
+    # 6) لم يُنشأ peer إطلاقاً (والقراءة متاحة).
     if has_peer is False:
         return {
             "state": "not_setup", "color": "grey", "label": "لم يُنشأ نفق",
@@ -219,7 +260,7 @@ def _derive_mgmt_status(item: dict, provisioned_ips: "set[str] | None") -> dict:
                        % tunnel_label),
         }
 
-    # 6) تعذّر تحديد وجود peer (لا يمكن قراءة wg-peers.d) ولا يوجد فحص.
+    # 7) تعذّر تحديد وجود peer (لا يمكن قراءة wg-peers.d) ولا يوجد فحص.
     return {
         "state": "unknown", "color": "grey", "label": "لم يُختبر بعد",
         "reason": ("لم يُختبر نفق %s بعد — اضغط «اختبار الاتصال» في قائمة الأجهزة "
@@ -329,9 +370,14 @@ def mt_operations():
         })
     # شارة نفق الإدارة المحسوبة — تُقرأ ملفات الـpeers مرّة واحدة لكل
     # صفحة (مسح مجلد واحد، بلا shell)، ثم تُشتقّ الحالة لكل صفّ.
+    # الصفوف المفعّلة غير قيد التجهيز تُستطلَع حيًّا (نفس عمود «الحالة»)،
+    # فنترك الاستطلاع الحيّ (JS) يحسم شارتها كي لا تتناقض مع العمود.
     provisioned_ips = _provisioned_peer_ips()
     for it in items:
-        it["mgmt"] = _derive_mgmt_status(it, provisioned_ips)
+        it["mgmt"] = _derive_mgmt_status(
+            it, provisioned_ips,
+            live_pollable=(it["enabled"] and not it["is_provisioning"]),
+        )
     provisioning_count = sum(1 for it in items if it["is_provisioning"])
     # O2 — pass an api_token so the per-row counter poll JS can
     # authenticate against /api/v1/mikrotik/<id>/counters without

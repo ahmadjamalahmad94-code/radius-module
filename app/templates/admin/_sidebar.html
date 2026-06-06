@@ -299,6 +299,7 @@
 {# Admin Bridge #}
 {%- set m_admin_bridge = (path == url_for('radius.admin_bridge')) -%}
 {%- set m_license_file = (path == url_for('radius.license_file')) -%}
+{%- set m_tunnels = ('/tunnels' in path) -%}
 {%- set m_settings = (path == url_for('radius.settings_page')) -%}
 {%- set m_sync = (path == url_for('radius.sync_list')) -%}
 {%- set m_tenants = (path == url_for('radius.tenants_list')) -%}
@@ -337,7 +338,7 @@
 {%- set sec_admin_active    = m_admins or m_admin_profile or m_admin_pricing or m_distributors or m_roles or m_recycle or m_backups
                                 or m_settings or m_sync or m_tenants
                                 or m_lifecycle or m_business_operators or m_perms -%}
-{%- set sec_integration_active = m_webhooks or m_tokens or m_admin_bridge or m_license_file -%}
+{%- set sec_integration_active = m_webhooks or m_tokens or m_admin_bridge or m_license_file or m_tunnels -%}
 {%- set sec_setup_ops_active = m_setup_wizard_v3 or m_setup_wizard_v2 or m_setup_wizard_engineering or m_setup_wizard_fleet -%}
 
 {# Standalone Dashboard #}
@@ -851,7 +852,7 @@
     {% elif _ui_mode == 'freeze' %}{{ frozen_section(_('الإدارة'), 'user-shield') }}{% endif %}
 
     {# ───────── التكامل ───────── #}
-    {%- set _eps_integration = ['admin_bridge','license_file','wh_settings','tok_list'] -%}
+    {%- set _eps_integration = ['admin_bridge','license_file','tunnels_list','wh_settings','tok_list'] -%}
     {% if section_can(_eps_integration)|trim %}
     <div class="hb-side-section{% if sec_integration_active %} is-open has-active{% endif %}"
          data-hb-section="integration" data-hb-tone="blue">
@@ -865,6 +866,8 @@
         {{ sub_item('radius.admin_bridge', _('جسر الإدارة'), m_admin_bridge) }}
         {# ترخيص النظام — اتصال الريدياس بلوحة التراخيص السحابية وعقد التشغيل (ليس تراخيص أنفاق الراوترات) #}
         {{ sub_item('radius.license_file', _('ترخيص النظام'), m_license_file) }}
+        {# الأنفاق — استهلاك جسر أنفاق CHR الموقّع (عرض + طلب فقط، لا أسرار خام) #}
+        {{ sub_item('radius.tunnels_list', _('الأنفاق'), m_tunnels) }}
         {{ sub_item('radius.wh_settings', _('إشعارات الربط'),    m_webhooks) }}
         {{ sub_item('radius.tok_list',    _('مفاتيح الواجهة'),   m_tokens) }}
         {# توثيق الواجهة يتبع نفس مفتاح القسم (api.use) #}

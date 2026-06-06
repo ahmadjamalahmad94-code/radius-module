@@ -79,6 +79,9 @@ _URL_RE = re.compile(
 _WELCOME_RE = re.compile(r"^[^<>{}]{0,160}$")
 # رقم هاتف الدعم — أرقام مع + و مسافات وشرطات فقط (آمن داخل tel:).
 _PHONE_RE = re.compile(r"^[+]?[0-9][0-9\s\-]{2,19}$")
+# رقم واتساب الدعم — **اختياري**: نفس صيغة الهاتف لكن الفراغ مقبول
+# (افتراضيه فارغ، فيختفي زر واتساب في المتجر حتى يضبطه المدير).
+_PHONE_OPT_RE = re.compile(r"^([+]?[0-9][0-9\s\-]{2,19})?$")
 # مفتاح تفعيل المتجر — قيمتان فقط (yes/no) فلا حقن ممكن.
 _YESNO_RE = re.compile(r"^(yes|no)$")
 # نص زر التجربة المجانية — نفس قيود نص الترحيب (لا وسوم ولا أقواس).
@@ -317,6 +320,12 @@ TEMPLATE_VARIABLES: list[TemplateVariable] = [
     # القوالب القديمة لا تحتويه فلا يتأثر استبدالها.
     TemplateVariable("SUPPORT_PHONE",   "رقم الدعم الفني",
                      "0599000000", _PHONE_RE),
+    # رقم واتساب الدعم — يُحقن في صفحة المتجر (store.html) عند النشر
+    # كقيمة {{SUPPORT_WHATSAPP}}؛ عنده يظهر زر واتساب «دعم وطلبات
+    # الشحن/السحب». افتراضيه فارغ عمدًا: بلا رقم يبقى الزر مخفيًا،
+    # فلا يظهر زر معطوب — يضبطه المدير من قسم «المتجر» في المصمّم.
+    TemplateVariable("SUPPORT_WHATSAPP", "رقم واتساب الدعم",
+                     "", _PHONE_OPT_RE),
     # متجرك الإلكتروني — بوابة مستخدمي البطاقات (/portal/card):
     # دخول بالجوال وكلمة المرور، محفظة، شحن، وشراء بطاقات. عند
     # التفعيل تُظهر القوالب الداعمة زر «متجر البطاقات الإلكتروني»
@@ -1534,6 +1543,13 @@ class DeployResult:
     path: str
     bytes: int
     error: str = ""
+    # قناة الرفع الفعلية: "api" (نداء واحد) أو "ftp" (متدفّق مجزّأ
+    # للملفات الكبيرة) — يعرضها شريط التقدّم.
+    via: str = "api"
+    # عدد دفعات FTP (0 على مسار API) — للعرض «٪ حسب الأجزاء».
+    chunks: int = 0
+    # عدد الأصول (صور) التي نُزعت من login.html ورُفعت منفصلة.
+    assets: int = 0
 
 
 # ─── رفع الملفات: إعادة محاولة + مهلة + تصنيف الأخطاء ───────────
@@ -1706,23 +1722,128 @@ def _put_file(client, target_path: str, contents: str, *,
         error=f"رفع الملف فشل بعد {max_attempts} محاولات: {reason}")
 
 
+# ─── الرفع الذكي: توجيه بين API وFTP حسب الحجم/النتيجة ──────────
+
+
+def _dir_of(path: str) -> str:
+    """مجلد المسار مع شرطة ختامية ('hotspot/login.html' → 'hotspot/')."""
+    return path.rsplit("/", 1)[0] + "/" if "/" in path else ""
+
+
+def _put_file_smart(client, target_path: str, contents: str, *,
+                    on_retry=None, ftp: dict | None = None,
+                    on_progress=None) -> DeployResult:
+    """يوجّه رفع الملف بين API وFTP حسب الحجم/النتيجة، فيتجاوز جذر
+    «Connection reset على نداء API الضخم»:
+
+      • صغير (≤ API_SAFE_BYTES): API مع إعادة المحاولة. إن فشل انقطاعًا
+        وتوفّر FTP → نحوّل لـFTP بدل الفشل.
+      • كبير (> API_SAFE_BYTES): FTP مباشرة (تدفّق مجزّأ يتجاوز حدّ
+        جملة API الواحدة)؛ إن تعذّر FTP نجرّب API كحلّ أخير برسالة
+        صريحة «الملف كبير على API…».
+
+    `ftp` إعداد {host,user,password,port,timeout} أو None. `on_progress
+    (sent,total)` لتقدّم دفعات FTP."""
+    from . import hotspot_file_transfer as _hft
+    blob = contents.encode("utf-8")
+    n = len(blob)
+    big = n > _hft.API_SAFE_BYTES
+
+    def _via_ftp() -> DeployResult:
+        sent = _hft.ftp_upload(
+            ftp["host"], ftp["user"], ftp["password"], target_path, blob,
+            port=ftp.get("port", 21), timeout=ftp.get("timeout", 30.0),
+            on_progress=on_progress)
+        return DeployResult(ok=True, path=target_path, bytes=sent,
+                            via="ftp", chunks=_hft.count_chunks(n))
+
+    if big and ftp:
+        try:
+            return _via_ftp()
+        except _hft.FtpUploadError as fe:
+            # FTP غير متاح/فشل — جرّب API كحلّ أخير (راوتر متسامح قد يقبله).
+            api = _put_file(client, target_path, contents, on_retry=on_retry)
+            if api.ok:
+                return api
+            return DeployResult(
+                ok=False, path=target_path, bytes=n,
+                error=(f"الملف كبير على API ({n} بايت) وتعذّر الرفع عبر "
+                       f"FTP: {fe}"))
+    if big and not ftp:
+        api = _put_file(client, target_path, contents, on_retry=on_retry)
+        if api.ok:
+            return api
+        return DeployResult(
+            ok=False, path=target_path, bytes=n,
+            error=(f"الملف كبير على API ({n} بايت) وFTP غير متاح — فعّل "
+                   f"خدمة FTP على الراوتر أو صغّر شعار التصميم. "
+                   f"({api.error})"))
+    # صغير: API أولًا. نحوّل لـFTP فقط إن كان الفشل انقطاعًا/مهلة —
+    # أخطاء الصلاحية/القرص/القالب لا يحلّها FTP (وتجنّبنا اتصال FTP عبثيًا).
+    api = _put_file(client, target_path, contents, on_retry=on_retry)
+    if api.ok or not ftp:
+        return api
+    _kind, _ = classify_deploy_error(api.error)
+    if _kind not in ("reset", "timeout"):
+        return api
+    try:
+        return _via_ftp()
+    except _hft.FtpUploadError as fe:
+        return DeployResult(
+            ok=False, path=target_path, bytes=n,
+            error=f"{api.error} | وتعذّر التحويل لـFTP: {fe}")
+
+
+def _upload_inline_assets(html: str, target_path: str, ftp: dict, *,
+                          on_asset=None) -> tuple[str, int]:
+    """ينزع الصور المضمّنة الكبيرة (شعار base64) من login.html ويرفعها
+    ملفات binary منفصلة عبر FTP بجانبه، فيصغر الـHTML كثيرًا ويمرّ عبر
+    API بأمان. يعيد (html, عدد الأصول المرفوعة).
+
+    إن فشل رفع أيّ أصل نُبقي الصور مضمّنة (نعيد الأصل) فلا تنكسر الصفحة
+    بمرجع نسبي ميّت. `on_asset(name, ok, nbytes)` للإبلاغ في شريط التقدّم."""
+    from . import hotspot_file_transfer as _hft
+    small, assets = _hft.extract_inline_images(html)
+    if not assets:
+        return html, 0
+    folder = _dir_of(target_path)
+    all_ok = True
+    n_ok = 0
+    for a in assets:
+        try:
+            _hft.ftp_upload(ftp["host"], ftp["user"], ftp["password"],
+                            folder + a.filename, a.data,
+                            port=ftp.get("port", 21),
+                            timeout=ftp.get("timeout", 30.0))
+            n_ok += 1
+            if on_asset:
+                on_asset(a.filename, True, len(a.data))
+        except _hft.FtpUploadError:
+            all_ok = False
+            if on_asset:
+                on_asset(a.filename, False, len(a.data))
+    # الـHTML المصغّر يُستعمل فقط إن رُفعت كل الأصول (وإلا src نسبي ميّت).
+    return (small, n_ok) if all_ok else (html, 0)
+
+
 def deploy_login(
     client: object, slug: str, values: dict[str, str],
     *, target_path: str = DEFAULT_LOGIN_PATH, tenant_id: int = 1,
-    on_retry=None,
+    on_retry=None, ftp: dict | None = None, on_progress=None,
+    on_asset=None,
 ) -> DeployResult:
     """Render the chosen template + upload it to the router.
 
-    Two-step on the wire because `/file/add` doesn't accept big
-    `contents=` arguments on every RouterOS build:
+    معالجة الملفات الكبيرة (شعار base64 مضمّن يجعل login.html ضخمًا
+    فيقطع الراوتر الاتصال على نداء API الواحد):
+      • عند توفّر FTP: تُنزع الصور المضمّنة الكبيرة وتُرفع ملفات منفصلة
+        عبر FTP (binary)، فيصغر login.html ويمرّ عبر API بأمان.
+      • الرفع نفسه عبر `_put_file_smart`: API للصغير (مع إعادة محاولة
+        عند الانقطاع العابر) وFTP للكبير أو كحلّ بديل عند الانقطاع.
 
-      1. /file/print to check whether the file already exists.
-      2a. If yes — /file/set [.id=X] contents=<html>.
-      2b. If no  — /file/add name=<path> contents=<html>.
-
-    الرفع يمرّ عبر `_put_file` فيُعيد المحاولة آليًا عند الانقطاع
-    العابر (Connection reset / timeout) بإعادة اتصال + backoff؛
-    `on_retry(attempt, reason)` يُبلّغ شريط التقدّم بكل إعادة محاولة.
+    `on_retry(attempt, reason)` لإعادات المحاولة، `on_asset(name, ok,
+    bytes)` لرفع الأصول، `on_progress(sent, total)` لدفعات FTP — كلها
+    تغذّي شريط التقدّم. `ftp` إعداد {host,user,password,...} أو None.
 
     `client` is anything with a `.run(path, attrs=...)` method.
     Returns a structured DeployResult so the route + audit log can
@@ -1756,7 +1877,17 @@ def deploy_login(
             error=str(e),
         )
 
-    return _put_file(client, target_path, html, on_retry=on_retry)
+    # تصغير login.html بنزع الصور المضمّنة الكبيرة (شعار base64) ورفعها
+    # ملفات منفصلة عبر FTP — يحلّ جذر «reset على الحمولة الضخمة».
+    n_assets = 0
+    if ftp:
+        html, n_assets = _upload_inline_assets(
+            html, target_path, ftp, on_asset=on_asset)
+
+    res = _put_file_smart(client, target_path, html,
+                          on_retry=on_retry, ftp=ftp, on_progress=on_progress)
+    res.assets = n_assets
+    return res
 
 
 # ─── errors.txt — رسائل أخطاء الهوت سبوت ───────────────────────
@@ -1771,16 +1902,18 @@ def deploy_login(
 def deploy_errors_txt(
     client: object, errors_txt: str,
     *, target_path: str | None = None, on_retry=None,
+    ftp: dict | None = None,
 ) -> DeployResult:
     """يرفع نص errors.txt إلى الراوتر (نفس آلية deploy_login، بما فيها
-    إعادة المحاولة عند الانقطاع العابر).
+    إعادة المحاولة عند الانقطاع العابر + تحويل FTP عند الحجم/الانقطاع).
 
     `errors_txt` نصّ مبني عبر
     services.hotspot_error_messages.build_errors_txt. `client` أي
     كائن له ‎.run(path, attrs=...)‎. يعيد DeployResult موحّدًا."""
     from .hotspot_error_messages import DEFAULT_ERRORS_PATH
     path = target_path or DEFAULT_ERRORS_PATH
-    return _put_file(client, path, errors_txt, on_retry=on_retry)
+    return _put_file_smart(client, path, errors_txt,
+                           on_retry=on_retry, ftp=ftp)
 
 
 # ─── رفع ملف عام بنفس آلية login.html (print → set أو add) ──────
@@ -1793,17 +1926,18 @@ def deploy_errors_txt(
 
 def deploy_hotspot_file(
     client: object, filename: str, contents: str,
-    *, directory: str = "hotspot", on_retry=None,
+    *, directory: str = "hotspot", on_retry=None, ftp: dict | None = None,
 ) -> DeployResult:
     """يرفع ملفًا واحدًا إلى مجلد الهوت سبوت على الراوتر.
 
     `filename` اسم الملف فقط (مثل 'status.html')؛ المسار النهائي
     <directory>/<filename>. `contents` HTML/نص نهائي. نفس آلية
-    `_put_file` (print → set/add) مع إعادة المحاولة عند الانقطاع
-    العابر. يعيد DeployResult موحّدًا فيستطيع المستدعي تجميع ملخص
+    `_put_file_smart` (API مع إعادة محاولة + تحويل FTP عند الحجم/
+    الانقطاع). يعيد DeployResult موحّدًا فيستطيع المستدعي تجميع ملخص
     نجاح/فشل لكل ملف على حدة."""
     target_path = directory.rstrip("/") + "/" + filename
-    return _put_file(client, target_path, contents, on_retry=on_retry)
+    return _put_file_smart(client, target_path, contents,
+                           on_retry=on_retry, ftp=ftp)
 
 
 # ─── R4 — QR auto-login URL ────────────────────────────────────
