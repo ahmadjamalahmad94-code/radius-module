@@ -38,7 +38,8 @@
       linear-gradient(180deg, #faf8ff 0%, #fff 100%);
     border:1px solid var(--hub-border-soft, #e2e8f0);
     box-shadow:0 1px 0 rgba(255,255,255,.85) inset, 0 4px 14px rgba(15,23,42,.05);
-    overflow:hidden;
+    /* visible حتى لا تُقص لوحات القوائم المنسدلة المخصّصة (hbsel-panel) */
+    overflow:visible;
   }
   .ol-hero-row{
     display:flex; align-items:center; justify-content:space-between;
@@ -220,10 +221,97 @@
   .online-temp-lbl{
     display:block; font-size:11px; font-weight:700; color:#64748b; margin:8px 0 3px;
   }
-  .online-temp-modal-card .hub-input{ width:100%; height:36px; }
+  .online-temp-modal-card{ width:380px; }
+  .online-temp-modal-card .hub-input{ width:100%; min-height:42px; height:42px; }
+
+  /* صفّ السرعتين — حقلان أخضران جنبًا إلى جنب + تحويل حي تحته */
+  .ts-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:4px; }
+  .ts-col{ min-width:0; }
+  .ts-num{ font-weight:700; }
+  .ts-grid .ts-num{
+    background:#f0fdf4; border-color:#bbf7d0; color:#166534;
+  }
+  .ts-grid .ts-num:focus{ background:#fff; border-color:#22c55e;
+    box-shadow:0 0 0 3px rgba(34,197,94,.18); }
+  .ts-conv{
+    margin-top:4px; font-size:11.5px; font-weight:700; color:#16a34a;
+    min-height:15px; text-align:start;
+  }
+  .ts-conv.is-unlimited{ color:#2563eb; }
+
+  /* الوقت — قيمة + وحدة (hbsel-style مدمج) */
+  .ts-time-row{ display:flex; align-items:stretch; gap:0; }
+  .ts-time-row .ts-num{
+    flex:1; min-width:0;
+    border-start-end-radius:0; border-end-end-radius:0;
+  }
+  .ts-time-row .ts-unit{
+    flex:0 0 96px; width:96px; min-height:42px; height:42px;
+    margin-inline-start:-1px;
+    border-start-start-radius:0; border-end-start-radius:0;
+    background:#f1edff; color:var(--hub-brand-ink,#5b4bd6); font-weight:800;
+  }
+  .ts-err{
+    margin-top:6px; font-size:12px; font-weight:700; color:#dc2626;
+    background:#fef2f2; border:1px solid #fecaca; border-radius:8px; padding:6px 10px;
+  }
+  .ts-num.is-invalid{ border-color:#dc2626 !important;
+    box-shadow:0 0 0 3px rgba(220,38,38,.15) !important; }
+
+  /* مفتاح ON/OFF منزلق (أزرق عند التفعيل) — بنمط البيت (.tsw) */
+  .ts-switch{
+    display:flex; align-items:center; gap:10px; cursor:pointer; user-select:none;
+    margin:12px 0 4px; padding:9px 12px;
+    background:var(--hub-bg-soft,#f8f9fe); border:1px solid var(--hub-border,#e8e7f0);
+    border-radius:10px; min-height:42px; box-sizing:border-box;
+  }
+  .ts-switch--sm{ min-height:38px; padding:7px 12px; }
+  .ts-switch input{ position:absolute; opacity:0; width:0; height:0; }
+  .ts-switch-track{
+    position:relative; flex-shrink:0; width:40px; height:22px;
+    background:#d4d4d8; border-radius:999px; transition:background .14s,box-shadow .14s;
+  }
+  .ts-switch-thumb{
+    position:absolute; top:2px; inset-inline-start:2px; width:18px; height:18px;
+    background:#fff; border-radius:50%; box-shadow:0 1px 3px rgba(0,0,0,.25);
+    transition:inset-inline-start .14s;
+  }
+  .ts-switch input:checked + .ts-switch-track{
+    background:linear-gradient(135deg,var(--hub-brand,#6b5aed),var(--hub-brand-ink,#5b4bd6));
+    box-shadow:0 2px 8px rgba(107,90,237,.35);
+  }
+  .ts-switch input:checked + .ts-switch-track .ts-switch-thumb{ inset-inline-start:20px; }
+  .ts-switch-lbl{ font-size:13px; font-weight:800; color:var(--hub-text,#1f2937); }
+
+  /* الحقول معطّلة عند إيقاف المفتاح الرئيسي */
+  .ts-fields-off{ opacity:.45; pointer-events:none; }
+
+  /* شريط «باقٍ» — عدّاد حي + زر X أحمر للإلغاء الفوري */
+  .ts-remain{
+    display:flex; align-items:center; gap:10px;
+    margin:6px 0 10px; padding:8px 12px;
+    background:#fff7ed; border:1px solid #fed7aa; border-radius:10px;
+  }
+  .ts-remain-lbl{ font-size:12px; font-weight:800; color:#9a3412; display:inline-flex; gap:6px; align-items:center; }
+  .ts-remain-val{ font-weight:800; font-variant-numeric:tabular-nums; color:#9a3412; font-size:14px; }
+  .ts-remain-x{
+    margin-inline-start:auto; border:0; cursor:pointer;
+    width:30px; height:30px; border-radius:8px; line-height:1;
+    background:#fee2e2; color:#dc2626; font-size:15px;
+    display:inline-flex; align-items:center; justify-content:center;
+    transition:background .14s,color .14s;
+  }
+  .ts-remain-x:hover{ background:#dc2626; color:#fff; }
+  /* زر الصف يتلوّن بنفسجيًا عندما تكون السرعة المؤقتة فعّالة */
+  .online-temp-open.is-temp-on{ border-color:#6b5aed; color:#6b5aed; }
 
   .online-row.has-special-speed td:first-child{box-shadow:inset 3px 0 #f4b63f}
-  .online-mini-actions{display:flex;gap:5px;justify-content:flex-end;flex-wrap:wrap}
+  /* أزرار إجراءات الصف: صف واحد أنيق دائمًا — لا تكديس عمودي.
+     nowrap + منع الانكماش، وعمود «إجراءات» لا يلتف أبدًا. */
+  .online-mini-actions{display:inline-flex;gap:5px;justify-content:flex-end;flex-wrap:nowrap;align-items:center;white-space:nowrap}
+  .online-mini-actions > *{flex:0 0 auto}
+  .online-mini-actions form{display:inline-flex;margin:0}
+  [data-online-sessions-page] .hub-table td[data-col="actions"]{white-space:nowrap}
   [data-online-sessions-page] .hub-table th,
   [data-online-sessions-page] .hub-table td{
     text-align:center;
@@ -387,10 +475,14 @@
 {% if items %}
 
 <div class="online-toolbar" data-online-actions>
+  {# عدّاد التحديد المتعدد — يظهر عدد الجلسات المحددة حاليًا #}
+  <span class="hub-btn hub-btn--secondary" data-online-selected-count
+        style="pointer-events:none;background:#eef2ff;border-color:#c7d2fe;color:#3730a3;font-weight:800">
+    <i class="fa-solid fa-check-double"></i> المحدد: <span data-count>0</span>
+  </span>
   <form method="post" action="{{ url_for('radius.online_disconnect') }}" data-online-disconnect-form style="display:inline">
     <input type="hidden" name="next" value="{{ request.full_path }}">
-    <input type="hidden" name="username" value="">
-    <input type="hidden" name="session_id" value="">
+    {# تُحقن حقول username/session_id لكل جلسة محددة عبر الجافاسكربت (تحديد متعدد) #}
     <button type="submit" class="hub-btn hub-btn--danger online-action" aria-disabled="true" disabled>
       <i class="fa-solid fa-scissors"></i> فصل الاتصال
     </button>
@@ -400,16 +492,14 @@
   </a>
   <form method="post" action="{{ url_for('radius.online_lock_mac') }}" data-online-lock-mac-form style="display:inline">
     <input type="hidden" name="next" value="{{ request.full_path }}">
-    <input type="hidden" name="username" value="">
-    <input type="hidden" name="session_id" value="">
+    {# تُحقن حقول username/session_id لكل جلسة محددة عبر الجافاسكربت (تحديد متعدد) #}
     <button type="submit" class="hub-btn hub-btn--secondary online-action" aria-disabled="true" disabled>
       <i class="fa-solid fa-lock"></i> إغلاق بالماك
     </button>
   </form>
   <form method="post" action="{{ url_for('radius.online_lock_ip') }}" data-online-lock-ip-form style="display:inline">
     <input type="hidden" name="next" value="{{ request.full_path }}">
-    <input type="hidden" name="username" value="">
-    <input type="hidden" name="session_id" value="">
+    {# تُحقن حقول username/session_id لكل جلسة محددة عبر الجافاسكربت (تحديد متعدد) #}
     <button type="submit" class="hub-btn hub-btn--secondary online-action" aria-disabled="true" disabled>
       <i class="fa-solid fa-lock"></i> تثبيت IP
     </button>
@@ -428,24 +518,26 @@
       <i class="fa-solid fa-table-columns"></i> عرض/إخفاء الأعمدة
     </button>
     <div class="online-col-panel" data-column-panel>
+      {# أسماء الأعمدة هنا يجب أن تطابق رؤوس الجدول حرفيًا حتى لا يربك المشغّل
+         (التبديل يخفي العمود حسب data-col المطابق). #}
       {% for key, label in [
         ("select", "تحديد"),
         ("rownum", "#"),
-        ("name", "الإسم"),
+        ("name", "المستخدم"),
         ("plan", "العرض"),
-        ("ip", "IP"),
+        ("ip", "عنوان IP"),
         ("nas", "جهاز الشبكة"),
         ("device", "نوع الجهاز"),
         ("down_speed", "سرعة العرض"),
         ("up_speed", "السرعة الحالية"),
         ("speed_state", "حالة السرعة"),
         ("duration", "وقت الجلسة"),
-        ("download", "تحميل"),
+        ("download", "تنزيل"),
         ("upload", "رفع"),
-        ("mac", "ماك ادرس"),
+        ("mac", "عنوان MAC"),
         ("manager", "المدير"),
         ("service", "معرف الخدمة"),
-        ("port", "منفذ الاتصال للجهاز"),
+        ("port", "منفذ الاتصال"),
         ("actions", "إجراءات")
       ] %}
         <label class="online-col-option">
@@ -463,24 +555,27 @@
     <table class="hub-table hr-data-table" data-paginated="1" data-page-size="20" data-persist-key="online-sessions">
       <thead>
         <tr>
-          <th class="online-select-cell" data-col="select">تحديد</th>
+          <th class="online-select-cell" data-col="select">
+            {# تحديد/إلغاء تحديد الكل دفعة واحدة #}
+            <input type="checkbox" data-online-select-all aria-label="تحديد الكل" title="تحديد الكل">
+          </th>
           <th class="num" style="width:52px" data-col="rownum">#</th>
           <th data-col="name">المستخدم</th>
           <th data-col="plan">العرض</th>
-          <th data-col="ip">IP</th>
+          <th data-col="ip">عنوان IP</th>
           <th data-col="nas">جهاز الشبكة</th>
           <th data-col="device">نوع الجهاز</th>
           <th data-col="down_speed" class="num">سرعة العرض</th>
           <th data-col="up_speed" class="num">السرعة الحالية</th>
           <th data-col="speed_state">حالة السرعة</th>
           <th data-col="duration">وقت الجلسة</th>
-          <th data-col="download" class="num">تحميل</th>
+          <th data-col="download" class="num">تنزيل</th>
           <th data-col="upload" class="num">رفع</th>
-          <th data-col="mac">ماك ادرس</th>
+          <th data-col="mac">عنوان MAC</th>
           <th data-col="manager">المدير</th>
           <th data-col="service">معرف الخدمة</th>
           <th data-col="port">منفذ الاتصال</th>
-          <th data-col="actions" style="width:150px">إجراءات</th>
+          <th data-col="actions" style="width:168px;min-width:168px">إجراءات</th>
         </tr>
       </thead>
       <tbody>
@@ -501,7 +596,8 @@
             data-edit-url="{{ _edit_url }}"
             data-has-custom-speed="{{ 1 if s.has_custom_speed else 0 }}">
           <td class="online-select-cell" data-col="select">
-            <input type="radio" name="online_session_select" aria-label="تحديد {{ s.username }}">
+            {# تحديد متعدد: checkbox بدل radio حتى يمكن اختيار أكثر من جلسة معًا #}
+            <input type="checkbox" name="online_session_select" aria-label="تحديد {{ s.username }}">
           </td>
           <td class="num mono" data-col="rownum">{{ loop.index }}</td>
           <td data-col="name">
@@ -561,7 +657,13 @@
                 <span>مؤقتة</span>
                 {% if _temp_state and _temp_state.remaining_seconds is not none %}
                   <span>باقٍ</span>
-                  <span class="online-speed-countdown" data-temp-countdown="{{ _temp_state.remaining_seconds|int }}">--:--</span>
+                  {# العدّاد يحمل epoch وقت النهاية (data-temp-expires-at) إضافة
+                     إلى اللقطة القديمة — JS يفضّل الـ epoch فيحسب المتبقي من
+                     ساعة الحائط كل ثانية (لا انحراف عند نوم التبويب، ويستمر
+                     من وقت النهاية المخزَّن). اللقطة تبقى fallback متوافقاً. #}
+                  <span class="online-speed-countdown"
+                        data-temp-countdown="{{ _temp_state.remaining_seconds|int }}"
+                        data-temp-expires-at="{{ _temp_state.ends_at_epoch|int if _temp_state.ends_at_epoch is defined else 0 }}">--:--</span>
                 {% elif _temp_unknown %}
                   <span class="online-speed-countdown">مفتوح</span>
                 {% endif %}
@@ -603,11 +705,13 @@
               {# #50c: a real floating modal (was a <details> popover that clipped
                  inside the scrolling table). The trigger flags the row data; the
                  single shared modal below is populated + centered on open. #}
-              <button type="button" class="hub-btn hub-btn--secondary hub-btn--sm online-temp-open"
+              <button type="button" class="hub-btn hub-btn--secondary hub-btn--sm online-temp-open{% if _temp_active %} is-temp-on{% endif %}"
                       title="سرعة مؤقتة (تطبيق فوري + رجوع تلقائي)"
                       data-username="{{ s.username }}"
                       data-session-id="{{ s.session_id }}"
-                      data-temp-active="{{ 1 if _temp_active else 0 }}">
+                      data-temp-active="{{ 1 if _temp_active else 0 }}"
+                      data-temp-remaining="{{ _temp_state.remaining_seconds|int if (_temp_state and _temp_state.remaining_seconds is not none) else 0 }}"
+                      data-temp-expires-at="{{ _temp_state.ends_at_epoch|int if (_temp_state and _temp_state.ends_at_epoch is defined) else 0 }}">
                 <i class="fa-solid fa-gauge-simple-high"></i>
               </button>
             </div>
@@ -627,15 +731,19 @@
 ) }}
 {% endif %}
 
-{# ── #50c: shared floating temp-speed modal ── #}
+{# ── #50c: shared floating temp-speed modal (أُعيد بناؤه ليطابق المرجع:
+   مفتاح ON/OFF، حقلا سرعة أخضران بتحويل حي Kbit/s→MB و«0=غير محدود»،
+   مفتاح التحكم بالباندويث، الوقت + وحدة (دقائق/ساعات) بتحقق «>0»، وشريط
+   «باقٍ» بعدّاد حي + زر X أحمر للإلغاء الفوري — كله بستايل البيت). ── #}
 <div class="online-temp-modal" data-temp-modal hidden>
   <div class="online-temp-modal-backdrop" data-temp-close></div>
+  {# رمز CSRF يُحقن تلقائيًا في كل نموذج POST عبر after_request — لا حاجة لإدراجه يدويًا #}
   <form class="online-temp-modal-card" method="post"
         action="{{ url_for('radius.online_temp_speed') }}" data-temp-form>
-    {{ csrf_token_input() | safe }}
     <input type="hidden" name="next" value="{{ request.full_path }}">
     <input type="hidden" name="username" value="" data-temp-username>
     <input type="hidden" name="session_id" value="" data-temp-session>
+
     <div class="online-temp-modal-head">
       <span><i class="fa-solid fa-gauge-simple-high"></i> سرعة مؤقتة</span>
       <button type="button" class="online-temp-modal-x" data-temp-close aria-label="إغلاق">
@@ -643,19 +751,64 @@
       </button>
     </div>
     <div class="online-temp-modal-sub" data-temp-title>—</div>
-    <label class="online-temp-lbl">التنزيل (كيلوبت/ث)</label>
-    <input type="number" name="down_kbps" min="64" max="1000000" step="64" value="1024" required class="hub-input">
-    <label class="online-temp-lbl">الرفع (كيلوبت/ث)</label>
-    <input type="number" name="up_kbps" min="64" max="1000000" step="64" value="1024" required class="hub-input">
-    <label class="online-temp-lbl">المدة (دقائق)</label>
-    <input type="number" name="duration_minutes" min="1" max="1440" value="5" required class="hub-input">
-    <button type="submit" class="hub-btn hub-btn--primary" style="width:100%;margin-top:10px;">
+
+    {# شريط «باقٍ» — عدّاد حي تنازلي + زر X أحمر للإلغاء الفوري؛ يظهر فقط
+       عند وجود سرعة مؤقتة فعّالة. زر X يُرسل لمسار الإلغاء الموجود. #}
+    <div class="ts-remain" data-temp-remain hidden>
+      <span class="ts-remain-lbl"><i class="fa-solid fa-clock"></i> باقٍ</span>
+      <span class="ts-remain-val"
+            data-temp-remain-val data-temp-expires-at="0" data-temp-remaining="0">--:--</span>
+      <button type="submit" formaction="{{ url_for('radius.online_temp_speed_cancel') }}"
+              class="ts-remain-x" data-temp-cancel title="إلغاء السرعة المؤقتة الآن">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    {# المفتاح الرئيسي ON/OFF (أزرق عند التفعيل) — يفعّل/يعطّل الحقول #}
+    <label class="ts-switch">
+      <input type="checkbox" name="temp_enabled" value="1" checked data-temp-master>
+      <span class="ts-switch-track"><span class="ts-switch-thumb"></span></span>
+      <span class="ts-switch-lbl">سرعة مؤقتة</span>
+    </label>
+
+    {# صفّ السرعتين — حقلان رقميان أخضران + تحويل حي تحت كل واحد #}
+    <div class="ts-grid" data-temp-fields>
+      <div class="ts-col">
+        <label class="online-temp-lbl">سرعة التحميل (Kbit/s)</label>
+        <input type="number" name="down_kbps" min="0" max="1000000" step="64" value="2500"
+               class="hub-input ts-num" data-temp-conv-input>
+        <div class="ts-conv" data-temp-conv>—</div>
+      </div>
+      <div class="ts-col">
+        <label class="online-temp-lbl">سرعة الرفع (Kbit/s)</label>
+        <input type="number" name="up_kbps" min="0" max="1000000" step="64" value="2500"
+               class="hub-input ts-num" data-temp-conv-input>
+        <div class="ts-conv" data-temp-conv>—</div>
+      </div>
+    </div>
+
+    {# مفتاح التحكم بالباندويث #}
+    <label class="ts-switch ts-switch--sm">
+      <input type="checkbox" name="bw_control" value="1" checked>
+      <span class="ts-switch-track"><span class="ts-switch-thumb"></span></span>
+      <span class="ts-switch-lbl">تفعيل التحكم بالباندويث</span>
+    </label>
+
+    {# الوقت — قيمة رقمية + وحدة (دقائق/ساعات) مع تحقق «أكبر من 0» #}
+    <label class="online-temp-lbl">الوقت</label>
+    <div class="ts-time-row">
+      <input type="number" name="duration" min="1" max="1440" value="30"
+             class="hub-input ts-num" data-temp-duration>
+      <select name="duration_unit" class="hub-select ts-unit" data-temp-unit>
+        <option value="minutes" selected>دقائق</option>
+        <option value="hours">ساعات</option>
+      </select>
+    </div>
+    <div class="ts-err" data-temp-err hidden>هذه القيمة يجب ان تكون اكبر من 0</div>
+
+    <button type="submit" class="hub-btn hub-btn--primary" data-temp-apply
+            style="width:100%;margin-top:12px;">
       <i class="fa-solid fa-bolt"></i> تطبيق فوري
-    </button>
-    <button type="submit" formaction="{{ url_for('radius.online_temp_speed_cancel') }}"
-            class="hub-btn hub-btn--secondary" data-temp-cancel
-            style="width:100%;margin-top:8px;display:none;">
-      <i class="fa-solid fa-rotate-left"></i> إلغاء السرعة المؤقتة الآن
     </button>
   </form>
 </div>
@@ -696,75 +849,132 @@
     }
   }
 
-  function selectRow(row){
-    rows.forEach(function(item){ item.classList.remove('is-selected'); });
-    row.classList.add('is-selected');
-    var radio = row.querySelector('input[type="radio"]');
-    if (radio) radio.checked = true;
-    setDisabled(false);
+  // ── تحديد متعدد: نحتفظ بقائمة الصفوف المحددة (بدل صف واحد فقط) ──
+  var countEl = page.querySelector('[data-online-selected-count] [data-count]');
+  var selectAll = page.querySelector('[data-online-select-all]');
 
-    var username = row.getAttribute('data-username') || '';
-    var userType = row.getAttribute('data-user-type') || 'subscriber';
-    var sessionId = row.getAttribute('data-session-id') || '';
+  function selectedRows(){
+    return rows.filter(function(r){ return r.classList.contains('is-selected'); });
+  }
+
+  // حقن حقول username/session_id لكل جلسة محددة داخل نموذج إجراء جماعي
+  function fillForm(form, sel){
+    if (!form) return;
+    form.querySelectorAll('[data-bulk-field]').forEach(function(el){ el.remove(); });
+    sel.forEach(function(row){
+      var u = document.createElement('input');
+      u.type = 'hidden'; u.name = 'username';
+      u.value = row.getAttribute('data-username') || '';
+      u.setAttribute('data-bulk-field', '1');
+      var s = document.createElement('input');
+      s.type = 'hidden'; s.name = 'session_id';
+      s.value = row.getAttribute('data-session-id') || '';
+      s.setAttribute('data-bulk-field', '1');
+      form.appendChild(u);
+      form.appendChild(s);
+    });
+  }
+
+  // تحديث شريط الإجراءات بعد كل تغيير في التحديد
+  function refreshSelection(){
+    var sel = selectedRows();
+    var n = sel.length;
+    if (countEl) countEl.textContent = String(n);
+    if (selectAll) {
+      selectAll.checked = n > 0 && n === rows.length;
+      selectAll.indeterminate = n > 0 && n < rows.length;
+    }
+    setDisabled(n === 0);
+    if (n === 0) return;
+
+    // آخر صف محدد يُستخدم للإجراءات الفردية (عرض 360° / تعديل / رسالة)
+    var last = sel[sel.length - 1];
+    var names = sel.map(function(r){ return r.getAttribute('data-username') || ''; });
+    var label = n === 1 ? ('«' + names[0] + '»') : (n + ' جلسات (' + names.join('، ') + ')');
+    var hasCard = sel.some(function(r){ return (r.getAttribute('data-user-type') || '') === 'card'; });
+
     if (disconnectForm) {
-      disconnectForm.querySelector('[name="username"]').value = username;
-      disconnectForm.querySelector('[name="session_id"]').value = sessionId;
+      fillForm(disconnectForm, sel);
       disconnectForm.onsubmit = function(){
-        return confirm('قطع جلسة «' + username + '»؟');
+        return confirm('قطع ' + (n === 1 ? 'جلسة ' : '') + label + '؟');
       };
     }
     if (lockMacForm) {
-      lockMacForm.querySelector('[name="username"]').value = username;
-      lockMacForm.querySelector('[name="session_id"]').value = sessionId;
+      fillForm(lockMacForm, sel);
       lockMacForm.onsubmit = function(){
-        return confirm('تثبيت MAC هذه الجلسة على «' + username + '»؟');
+        return confirm('تثبيت MAC على ' + label + '؟');
       };
     }
     if (lockIpForm) {
       var ipBtn = lockIpForm.querySelector('button');
-      lockIpForm.querySelector('[name="username"]').value = username;
-      lockIpForm.querySelector('[name="session_id"]').value = sessionId;
+      fillForm(lockIpForm, sel);
       lockIpForm.onsubmit = function(){
-        if (userType === 'card') {
-          alert('تثبيت IP متاح للمشتركين فقط.');
+        if (hasCard) {
+          alert('تثبيت IP متاح للمشتركين فقط — أزل الكروت من التحديد.');
           return false;
         }
-        return confirm('تثبيت IP هذه الجلسة على «' + username + '»؟');
+        return confirm('تثبيت IP على ' + label + '؟');
       };
-      if (ipBtn) ipBtn.disabled = userType === 'card';
-      ipBtn && ipBtn.setAttribute('aria-disabled', userType === 'card' ? 'true' : 'false');
+      if (ipBtn) ipBtn.disabled = hasCard;
+      ipBtn && ipBtn.setAttribute('aria-disabled', hasCard ? 'true' : 'false');
     }
     if (smsForm) {
+      // إرسال الرسالة يبقى فرديًا — يعمل على آخر جلسة محددة
       var smsBtn = smsForm.querySelector('button');
+      var lastType = last.getAttribute('data-user-type') || 'subscriber';
+      var lastName = last.getAttribute('data-username') || '';
       var smsTemplate = smsForm.getAttribute('data-action-template') || '/admin/radius/users/__username__/sms';
-      smsForm.action = smsTemplate.replace('__username__', encodeURIComponent(username));
+      smsForm.action = smsTemplate.replace('__username__', encodeURIComponent(lastName));
       smsForm.onsubmit = function(){
-        if (userType === 'card') {
+        if (lastType === 'card') {
           alert('إرسال الرسائل متاح للمشتركين فقط من هذه الصفحة.');
           return false;
         }
-        var message = prompt('نص الرسالة إلى ' + username + ':');
+        var message = prompt('نص الرسالة إلى ' + lastName + ':');
         if (!message || !message.trim()) return false;
         smsForm.querySelector('[name="message"]').value = message.trim();
         return true;
       };
-      if (smsBtn) smsBtn.disabled = userType === 'card';
-      smsBtn && smsBtn.setAttribute('aria-disabled', userType === 'card' ? 'true' : 'false');
+      if (smsBtn) smsBtn.disabled = lastType === 'card';
+      smsBtn && smsBtn.setAttribute('aria-disabled', lastType === 'card' ? 'true' : 'false');
     }
-    var profile = row.getAttribute('data-profile-url') || '#';
-    var edit = row.getAttribute('data-edit-url') || '#';
+    var profile = last.getAttribute('data-profile-url') || '#';
+    var edit = last.getAttribute('data-edit-url') || '#';
     page.querySelectorAll('[data-action="profile"]').forEach(function(a){ a.href = profile; });
     page.querySelectorAll('[data-action="edit"]').forEach(function(a){ a.href = edit; });
   }
 
+  // النقر على الصف يبدّل حالته (تحديد/إلغاء) دون مسح بقية التحديدات
+  function toggleRow(row, forced){
+    var on = typeof forced === 'boolean' ? forced : !row.classList.contains('is-selected');
+    row.classList.toggle('is-selected', on);
+    var box = row.querySelector('input[type="checkbox"]');
+    if (box) box.checked = on;
+    refreshSelection();
+  }
+
   rows.forEach(function(row){
     row.addEventListener('click', function(event){
-      if (event.target.closest('a,button,form')) return;
-      selectRow(row);
+      // نتجاهل النقر على الروابط/الأزرار/مربع التحديد نفسه (له معالج خاص)
+      if (event.target.closest('a,button,form,input')) return;
+      toggleRow(row);
     });
-    var radio = row.querySelector('input[type="radio"]');
-    if (radio) radio.addEventListener('change', function(){ selectRow(row); });
+    var box = row.querySelector('input[type="checkbox"]');
+    if (box) box.addEventListener('change', function(){ toggleRow(row, box.checked); });
   });
+
+  // تحديد الكل / إلغاء تحديد الكل من رأس الجدول
+  if (selectAll) {
+    selectAll.addEventListener('change', function(){
+      var on = selectAll.checked;
+      rows.forEach(function(row){
+        row.classList.toggle('is-selected', on);
+        var box = row.querySelector('input[type="checkbox"]');
+        if (box) box.checked = on;
+      });
+      refreshSelection();
+    });
+  }
   setDisabled(true);
 
   function formatRemaining(totalSeconds){
@@ -778,7 +988,16 @@
 
   function refreshTemporaryCountdowns(){
     page.querySelectorAll('[data-temp-countdown]').forEach(function(el){
-      var remaining = parseInt(el.getAttribute('data-temp-countdown') || '0', 10);
+      // #50f: المتبقي يُحسب أولاً من epoch وقت النهاية (data-temp-expires-at)
+      // مقابل ساعة الحائط — لا إنقاص لقطة — فالعدّاد يستمر من وقت النهاية
+      // المخزَّن ولا ينحرف إذا نام التبويب. اللقطة القديمة تبقى fallback.
+      var endEpoch = parseInt(el.getAttribute('data-temp-expires-at') || '0', 10) || 0;
+      var remaining;
+      if (endEpoch > 0) {
+        remaining = Math.floor(endEpoch - (Date.now() / 1000));
+      } else {
+        remaining = parseInt(el.getAttribute('data-temp-countdown') || '0', 10);
+      }
       el.textContent = formatRemaining(remaining);
       if (remaining <= 0) {
         var pill = el.closest('.online-speed-pill');
@@ -801,14 +1020,63 @@
   refreshTemporaryCountdowns();
   window.setInterval(refreshTemporaryCountdowns, 1000);
 
-  // ── #50c: floating temp-speed modal ──
+  // ── #50c: floating temp-speed modal (تطابق المرجع) ──
   var tempModal = page.querySelector('[data-temp-modal]');
   if (tempModal) {
     var tForm     = tempModal.querySelector('[data-temp-form]');
     var tUsername = tempModal.querySelector('[data-temp-username]');
     var tSession  = tempModal.querySelector('[data-temp-session]');
     var tTitle    = tempModal.querySelector('[data-temp-title]');
-    var tCancel   = tempModal.querySelector('[data-temp-cancel]');
+    var tRemain   = tempModal.querySelector('[data-temp-remain]');
+    var tRemainVal= tempModal.querySelector('[data-temp-remain-val]');
+    var tMaster   = tempModal.querySelector('[data-temp-master]');
+    var tFields   = tempModal.querySelector('[data-temp-fields]');
+    var tDuration = tempModal.querySelector('[data-temp-duration]');
+    var tUnit     = tempModal.querySelector('[data-temp-unit]');
+    var tErr      = tempModal.querySelector('[data-temp-err]');
+    var tApply    = tempModal.querySelector('[data-temp-apply]');
+    var tConvIns  = Array.prototype.slice.call(
+                      tempModal.querySelectorAll('[data-temp-conv-input]'));
+
+    // تحويل حي Kbit/s → MB (÷1024) و«0 = غير محدود» — يطابق المرجع.
+    function refreshConversion(input){
+      var conv = input.parentNode.querySelector('[data-temp-conv]');
+      if (!conv) return;
+      var v = parseInt(input.value, 10);
+      if (!v || v <= 0){ conv.textContent = '0 = غير محدود'; conv.classList.add('is-unlimited'); }
+      else { conv.textContent = (v / 1024).toFixed(2) + ' MB'; conv.classList.remove('is-unlimited'); }
+    }
+    function refreshAllConversions(){ tConvIns.forEach(refreshConversion); }
+
+    // تحقق «الوقت يجب أن يكون أكبر من 0»
+    function validateDuration(){
+      var v = tDuration ? parseInt(tDuration.value, 10) : 0;
+      var bad = !v || v <= 0;
+      if (tErr)      tErr.hidden = !bad;
+      if (tDuration) tDuration.classList.toggle('is-invalid', bad);
+      if (tApply)    tApply.disabled = bad || (tMaster && !tMaster.checked);
+      return !bad;
+    }
+
+    // المفتاح الرئيسي يفعّل/يعطّل الحقول
+    function syncMaster(){
+      var on = tMaster ? tMaster.checked : true;
+      if (tFields) tFields.classList.toggle('ts-fields-off', !on);
+      validateDuration();
+    }
+
+    // عدّاد شريط «باقٍ» داخل المودال — يحسب من epoch وقت النهاية مقابل
+    // ساعة الحائط (fallback: اللقطة المخزّنة)، كل ثانية.
+    function tickRemain(){
+      if (!tRemain || tRemain.hidden || !tRemainVal) return;
+      var endEpoch = parseInt(tRemainVal.getAttribute('data-temp-expires-at') || '0', 10) || 0;
+      var rem;
+      if (endEpoch > 0) rem = Math.floor(endEpoch - (Date.now() / 1000));
+      else rem = parseInt(tRemainVal.getAttribute('data-temp-remaining') || '0', 10);
+      if (rem <= 0){ tRemainVal.textContent = '00:00'; return; }
+      tRemainVal.textContent = formatRemaining(rem);
+      if (endEpoch <= 0) tRemainVal.setAttribute('data-temp-remaining', String(rem - 1));
+    }
 
     function openTempModal(btn){
       var username = btn.getAttribute('data-username') || '';
@@ -817,10 +1085,35 @@
       if (tUsername) tUsername.value = username;
       if (tSession)  tSession.value = sessionId;
       if (tTitle)    tTitle.textContent = 'لـ «' + username + '»';
-      if (tCancel)   tCancel.style.display = active ? '' : 'none';
+      // شريط «باقٍ» يظهر فقط عند وجود سرعة مؤقتة فعّالة على هذه الجلسة
+      if (tRemain){
+        tRemain.hidden = !active;
+        if (active && tRemainVal){
+          tRemainVal.setAttribute('data-temp-expires-at',
+            btn.getAttribute('data-temp-expires-at') || '0');
+          tRemainVal.setAttribute('data-temp-remaining',
+            btn.getAttribute('data-temp-remaining') || '0');
+          tickRemain();
+        }
+      }
+      if (tMaster) tMaster.checked = true;
+      syncMaster();
+      refreshAllConversions();
       tempModal.hidden = false;
     }
     function closeTempModal(){ tempModal.hidden = true; }
+
+    tConvIns.forEach(function(inp){ inp.addEventListener('input', function(){ refreshConversion(inp); }); });
+    if (tDuration) tDuration.addEventListener('input', validateDuration);
+    if (tMaster)   tMaster.addEventListener('change', syncMaster);
+    // منع الإرسال لو الوقت غير صالح
+    if (tForm) tForm.addEventListener('submit', function(e){
+      var submitter = e.submitter;
+      // الإلغاء (X) لا يتأثّر بتحقق الوقت
+      if (submitter && submitter.hasAttribute('data-temp-cancel')) return;
+      if (!validateDuration()){ e.preventDefault(); if (tDuration) tDuration.focus(); }
+    });
+    window.setInterval(tickRemain, 1000);
 
     page.querySelectorAll('.online-temp-open').forEach(function(btn){
       btn.addEventListener('click', function(e){

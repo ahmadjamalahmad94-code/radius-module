@@ -5,6 +5,7 @@ import json
 import os
 import sys
 import tempfile
+from types import SimpleNamespace
 
 import pytest
 
@@ -343,6 +344,140 @@ def test_blocked_preview_returns_can_apply_false(client):
     assert body["summary"]["blocking_errors"]
     # No script_version_id recorded for an unapplyable plan.
     assert "script_version_id" not in body
+
+
+def test_runtime_api_script_duplicate_changes_apply_and_rollback(client, monkeypatch):
+    r = client.post(
+        "/api/v1/network-policy/remote-access/policies",
+        json=_ra_create_body(name="Ops access"),
+        headers=_HEADERS,
+    )
+    assert r.status_code == 201
+    pid = _json(r)["data"]["id"]
+
+    preview = client.post(
+        f"/api/v1/network-policy/remote-access/policies/{pid}/preview",
+        headers=_HEADERS,
+    )
+    assert preview.status_code == 200
+
+    script = client.get(
+        f"/api/v1/network-policy/remote-access/policies/{pid}/preview.rsc",
+        headers=_HEADERS,
+    )
+    assert script.status_code == 200
+    script_body = _json(script)["data"]
+    assert script_body["filename"].endswith("-preview.rsc")
+    assert "HOBE_NPC_REMOTE:" in script_body["script"]
+
+    duplicated = client.post(
+        f"/api/v1/network-policy/remote-access/policies/{pid}/duplicate",
+        headers=_HEADERS,
+    )
+    assert duplicated.status_code == 201
+    assert _json(duplicated)["data"]["name"].endswith("(نسخة)")
+    duplicated_again = client.post(
+        f"/api/v1/network-policy/remote-access/policies/{pid}/duplicate",
+        headers=_HEADERS,
+    )
+    assert duplicated_again.status_code == 201
+    assert _json(duplicated_again)["data"]["slug"].endswith("-copy-2")
+
+    with client.application.app_context():
+        from app.radius.db.repos import npc_change_sets_repo as cs
+        change_set_id = cs.create(
+            tenant_id=1,
+            service="remote_access",
+            policy_id=pid,
+            action_type=cs.ACTION_APPLY,
+            preview_hash="abc",
+            requested_router_ids=(9,),
+            created_by="test",
+        )
+        cs.update_status(
+            1, change_set_id,
+            status=cs.STATUS_SUCCEEDED,
+            finished_at_now=True,
+        )
+        cs.add_target(
+            change_set_id=change_set_id,
+            tenant_id=1,
+            router_id=9,
+            rendered_script="/ip firewall filter add comment=HOBE_NPC_REMOTE:1",
+            rollback_script="/ip firewall filter remove [find comment~\"^HOBE_NPC_\"]",
+            status=cs.TARGET_STATUS_SUCCEEDED,
+        )
+
+    changes = client.get(
+        f"/api/v1/network-policy/remote-access/policies/{pid}/changes",
+        headers=_HEADERS,
+    )
+    assert changes.status_code == 200
+    changes_body = _json(changes)["data"]
+    assert changes_body["count"] == 1
+    assert changes_body["items"][0]["rollback_eligible"] is True
+    assert changes_body["items"][0]["targets"]
+
+    import app.api.v1.network_policy as npc_api
+
+    captured = {}
+
+    class _ApplyResult:
+        ok = True
+
+        def as_dict(self):
+            return {
+                "ok": True,
+                "change_set_id": 44,
+                "status": "succeeded",
+                "targets": [],
+                "blockers": [],
+                "warnings": [],
+                "reason_ar": "تم التنفيذ بنجاح.",
+            }
+
+    def _fake_apply(**kwargs):
+        captured["apply"] = kwargs
+        return _ApplyResult()
+
+    monkeypatch.setattr(
+        npc_api.snapshot_capture_svc,
+        "capture_pre_apply_snapshot",
+        lambda **_: SimpleNamespace(snapshot_id=33),
+    )
+    monkeypatch.setattr(npc_api.apply_svc, "request_apply", _fake_apply)
+    apply_res = client.post(
+        f"/api/v1/network-policy/remote-access/policies/{pid}/apply",
+        json={"execution_mode": "full", "confirmations": ["backup_ready"]},
+        headers=_HEADERS,
+    )
+    assert apply_res.status_code == 200
+    assert _json(apply_res)["data"]["change_set_id"] == 44
+    assert captured["apply"]["snapshot_id"] == 33
+    assert captured["apply"]["confirmations"] == ("backup_ready",)
+
+    class _RollbackResult:
+        def as_dict(self):
+            return {
+                "ok": True,
+                "change_set_id": 45,
+                "status": "rolled_back",
+                "targets": [],
+                "reason_ar": "تم التراجع بنجاح.",
+            }
+
+    monkeypatch.setattr(
+        npc_api.rollback_svc,
+        "request_rollback",
+        lambda **_: _RollbackResult(),
+    )
+    rollback = client.post(
+        f"/api/v1/network-policy/remote-access/policies/{pid}"
+        f"/changes/{change_set_id}/rollback",
+        headers=_HEADERS,
+    )
+    assert rollback.status_code == 200
+    assert _json(rollback)["data"]["original_change_set_id"] == change_set_id
 
 
 # ─── Audit trail ─────────────────────────────────────────────

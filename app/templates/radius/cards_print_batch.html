@@ -21,6 +21,7 @@
    cards/batches page — same export endpoint, same JS wiring
    (data-print-batch, data-batch-id, data-template-id, mm settings…). #}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/cards_batches_view.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
 <script defer src="{{ url_for('static', filename='js/cards_batches_view.js') }}"></script>
 {% endblock %}
 
@@ -200,13 +201,13 @@
         <h3>إعدادات الطباعة</h3>
         <div class="batch-print-grid">
           <label>مقاس الورقة
-            <select name="print_page_size">
+            <select class="hub-select" name="print_page_size">
               <option value="A4">A4</option>
               <option value="Letter">Letter</option>
             </select>
           </label>
           <label>اتجاه الورقة
-            <select name="print_orientation">
+            <select class="hub-select" name="print_orientation">
               <option value="portrait">طولي</option>
               <option value="landscape">أفقي</option>
             </select>
@@ -263,4 +264,5 @@
 </div>
 
 </div>{# /data-cards-batches-page #}
+<script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
 {% endblock %}

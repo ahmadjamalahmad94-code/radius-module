@@ -19,6 +19,12 @@ def get_api_blueprint() -> Blueprint:
     from . import admin_auth, openapi
     admin_auth.register(bp)
     openapi.register(bp)
+
+    # فرض مصادقة مركزي على كامل مساحة /api (قابل للتفعيل التدريجي عبر
+    # HOBERADIUS_API_AUTH_REQUIRED أو إعداد security.api_auth_required).
+    # يشمل أي نقطة جديدة تلقائيًا بلا تعديل توقيعها — انظر app/api/auth.py.
+    from .auth import install_global_api_auth_guard
+    install_global_api_auth_guard(bp)
     return bp
 
 

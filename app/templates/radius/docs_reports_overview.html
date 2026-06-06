@@ -1,0 +1,450 @@
+{# ══════════════════════════════════════════════════════════════════════
+   دليل «نظرة عامة على مركز التقارير» — قسم التقارير.
+
+   يشرح مركز التقارير الحقيقي (reports_center.html + reports_nav.html،
+   الراوت routes/reports.py، والعائلات الخمس في admin/_sidebar.html،
+   والتصدير عبر static/js/uds_table.js + routes/table_export.py).
+   نسخنا بنية الدليل الذهبي docs_add_subscriber.html:
+     • hero + شريط أدوات (حفظ كـ PDF / كل الأدلة → قسم التقارير).
+     • فهرس جانبي لاصق (order:2) + scrollspy خفيف.
+     • خطوات مرقّمة ببطاقات وشارات بنفسجية متدرّجة.
+     • محاكاة HTML/CSS للسايدبار والانتقال السريع وأزرار التصدير والفلاتر.
+     • تلميحات 💡/⚠️ وحفظ PDF عبر window.print().
+
+   المحتوى مطابق للصفحة الفعلية: أسماء العائلات والتقارير منسوخة حرفيًا من
+   السايدبار، وأزرار التصدير (CSV/Excel/PDF) من uds_table، وفلاتر «من/إلى
+   تاريخ» — حدّث الدليل عند تغيير الصفحة.
+   ══════════════════════════════════════════════════════════════════════ #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}دليل: نظرة عامة على التقارير — كيف تستخدمني{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<style>
+  /* ── التخطيط: فهرس جانبي لاصق + عمود المحتوى (مطابق للدليل الذهبي) ── */
+  .dg-layout{ display:grid; grid-template-columns:minmax(0,1fr) 230px; gap:20px; align-items:start; }
+  .dg-toc{ order:2; }
+  .dg-main{ order:1; }
+  @media (max-width:980px){ .dg-layout{ grid-template-columns:1fr; } .dg-toc{ order:1; } .dg-main{ order:2; } }
+
+  .dg-toc{
+    position:sticky; top:84px;
+    background:#fff; border:1px solid #e8edf3; border-radius:14px;
+    padding:14px 13px; display:grid; gap:3px;
+  }
+  @media (max-width:980px){ .dg-toc{ position:static; } }
+  .dg-toc-title{
+    display:flex; align-items:center; gap:8px; font-size:12px; font-weight:900;
+    color:#7c7a99; margin-bottom:7px; padding-inline:6px;
+  }
+  .dg-toc a{
+    display:flex; align-items:center; gap:9px;
+    padding:8px 10px; border-radius:9px; text-decoration:none;
+    font-size:12.5px; font-weight:700; color:#475569;
+    transition:background .14s, color .14s;
+  }
+  .dg-toc a .n{
+    width:21px; height:21px; border-radius:50%; flex:none;
+    display:grid; place-items:center; font-size:10.5px; font-weight:900;
+    background:#f1f5f9; color:#94a3b8;
+  }
+  .dg-toc a:hover{ background:#f5f3ff; color:#5b21b6; }
+  .dg-toc a.is-active{ background:#ede9fe; color:#5b21b6; }
+  .dg-toc a.is-active .n{ background:linear-gradient(135deg,#7c3aed,#5b21b6); color:#fff; }
+
+  /* ── عمود الخطوات ── */
+  .dg-main{ min-width:0; display:grid; gap:18px; }
+  .dg-lead{
+    display:flex; gap:13px; align-items:flex-start;
+    background:linear-gradient(135deg,#f5f3ff,#fdfcff);
+    border:1px solid #e9e5fc; border-radius:14px; padding:15px 17px;
+  }
+  .dg-lead .ic{ width:40px;height:40px;border-radius:12px;flex:none;display:grid;place-items:center;
+    font-size:17px;background:#ede9fe;color:#6d28d9; }
+  .dg-lead h3{ margin:0 0 4px; font-size:13.5px; font-weight:800; color:#241e4e; }
+  .dg-lead p{ margin:0; font-size:12.5px; line-height:1.9; color:#5b5a78; }
+
+  .dg-step{ display:grid; grid-template-columns:auto 1fr; gap:15px; align-items:start; scroll-margin-top:90px; }
+  @media (max-width:560px){ .dg-step{ grid-template-columns:1fr; } }
+  .dg-badge{
+    width:42px; height:42px; border-radius:50%; flex:none;
+    display:grid; place-items:center; font-size:17px; font-weight:900; color:#fff;
+    background:linear-gradient(135deg,#7c3aed,#5b21b6);
+    box-shadow:0 8px 18px rgba(124,58,237,.3);
+  }
+  .dg-card{
+    min-width:0; background:#fff; border:1px solid #e8edf3; border-radius:15px;
+    padding:16px 18px;
+  }
+  .dg-card h2{
+    margin:0 0 8px; font-size:15.5px; font-weight:800; color:#0f172a;
+    display:flex; align-items:center; gap:9px; flex-wrap:wrap;
+  }
+  .dg-card h2 i{ color:#7c3aed; }
+  .dg-card p{ margin:0 0 7px; font-size:13px; line-height:1.95; color:#475569; }
+  .dg-card p:last-child{ margin-bottom:0; }
+  .dg-card ul{ margin:4px 0 8px; padding-inline-start:22px; font-size:13px; line-height:2; color:#475569; }
+  .dg-card strong{ color:#241e4e; }
+  .dg-kbd{
+    font-family:ui-monospace,Consolas,monospace; font-size:11.5px;
+    background:#f1f5f9; border:1px solid #e2e8f0; border-radius:5px;
+    padding:1px 7px; color:#5b21b6;
+  }
+
+  .dg-tip, .dg-warn{
+    display:flex; gap:11px; align-items:flex-start;
+    border-radius:12px; padding:11px 14px; margin-top:11px;
+    font-size:12.5px; line-height:1.9;
+  }
+  .dg-tip{ background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; }
+  .dg-warn{ background:#fffbeb; border:1px solid #fde68a; color:#92400e; }
+  .dg-tip .ic, .dg-warn .ic{ flex:none; font-size:15px; line-height:1.6; }
+  .dg-tip b, .dg-warn b{ font-weight:900; }
+
+  /* ════ الرسوم العامة ════ */
+  .dg-mock{
+    border:1px solid #e2e8f0; border-radius:14px; overflow:hidden;
+    background:#fff; box-shadow:0 8px 20px rgba(15,23,42,.07); margin-top:13px; max-width:540px;
+  }
+  .dg-mock-bar{
+    display:flex; align-items:center; gap:7px; padding:8px 12px;
+    background:#f1f5f9; border-bottom:1px solid #e2e8f0;
+  }
+  .dg-mock-bar .dots{ display:flex; gap:5px; }
+  .dg-mock-bar .dots i{ width:9px; height:9px; border-radius:50%; }
+  .dg-mock-bar .dots i:nth-child(1){ background:#f87171; }
+  .dg-mock-bar .dots i:nth-child(2){ background:#fbbf24; }
+  .dg-mock-bar .dots i:nth-child(3){ background:#34d399; }
+  .dg-mock-bar .crumb{
+    flex:1; background:#fff; border:1px solid #e2e8f0; border-radius:7px;
+    padding:4px 10px; font-size:10.5px; font-weight:700; color:#64748b;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .dg-mock-body{ padding:14px; display:grid; gap:11px; }
+  .dg-mf{ display:grid; gap:5px; min-width:0; }
+  .dg-mf label{ font-size:10.5px; font-weight:800; color:#475569; }
+  .dg-mf-input{
+    border:1.5px solid #e2e8f0; border-radius:8px; padding:8px 10px;
+    font-size:11.5px; color:#0f172a; background:#fff;
+  }
+  .dg-mf-input.hl{ border-color:#c4b5fd; background:#faf5ff; }
+  .dg-cap{ font-size:11px; color:#94a3b8; margin-top:8px; line-height:1.7; }
+  .dg-cap i{ color:#c4b5fd; }
+
+  /* ════ محاكاة خاصة بالتقارير ════ */
+  /* بطاقات المؤشرات الأربعة بالهيرو */
+  .dg-kpis{ display:grid; grid-template-columns:repeat(4,1fr); gap:9px; margin-top:13px; }
+  @media (max-width:560px){ .dg-kpis{ grid-template-columns:repeat(2,1fr); } }
+  .dg-kpi{
+    border:1px solid #eef2f7; border-radius:12px; padding:11px; background:#fff;
+    display:grid; gap:5px; justify-items:start;
+  }
+  .dg-kpi .ic{ width:28px;height:28px;border-radius:8px;display:grid;place-items:center;font-size:12px;background:#ede9fe;color:#6d28d9; }
+  .dg-kpi small{ font-size:9.5px; font-weight:800; color:#94a3b8; }
+  .dg-kpi strong{ font-size:15px; font-weight:900; color:#241e4e; }
+
+  /* محاكاة العائلات (سايدبار) */
+  .dg-fams{ display:grid; gap:9px; margin-top:13px; }
+  .dg-fam{ border:1px solid #e8edf3; border-radius:12px; overflow:hidden; background:#fff; }
+  .dg-fam-head{
+    display:flex; align-items:center; gap:9px; padding:10px 13px;
+    font-size:12px; font-weight:900; color:#241e4e; background:#f8fafc;
+  }
+  .dg-fam-head .fi{ width:24px;height:24px;border-radius:7px;display:grid;place-items:center;font-size:11px;color:#fff;flex:none; }
+  .dg-fam-head .cv{ margin-inline-start:auto; font-size:9px; color:#94a3b8; transform:rotate(180deg); }
+  .dg-fam-body{ padding:6px 13px 11px; display:flex; flex-wrap:wrap; gap:6px; }
+  .dg-fam-body span{
+    font-size:10.5px; font-weight:700; color:#475569; background:#f1f5f9;
+    border-radius:7px; padding:4px 9px;
+  }
+
+  /* محاكاة الانتقال السريع */
+  .dg-jump{
+    display:inline-flex; align-items:center; gap:7px; margin-top:13px; flex-wrap:wrap;
+    background:#fff; border:1px solid #e2e8f0; border-radius:11px; padding:7px 9px;
+  }
+  .dg-jump .lbl{ font-size:10.5px; font-weight:900; color:#5b21b6; padding-inline:4px; }
+  .dg-jump a{ font-size:10.5px; font-weight:800; color:#475569; background:#f5f3ff; border-radius:7px; padding:5px 10px; }
+  .dg-jump a.on{ background:#ede9fe; color:#5b21b6; }
+
+  /* أزرار التصدير */
+  .dg-exports{ display:flex; gap:9px; margin-top:13px; flex-wrap:wrap; }
+  .dg-export{
+    display:inline-flex; align-items:center; gap:7px; border-radius:9px;
+    padding:8px 14px; font-size:11.5px; font-weight:800; border:1px solid #e2e8f0; background:#fff;
+  }
+  .dg-export.csv{ color:#15803d; } .dg-export.csv i{ color:#22c55e; }
+  .dg-export.xls{ color:#166534; } .dg-export.xls i{ color:#16a34a; }
+  .dg-export.pdf{ color:#b91c1c; } .dg-export.pdf i{ color:#ef4444; }
+
+  /* ════ الطباعة ════ */
+  @media print{
+    .hb-side, .hb-side-overlay, .hb-topbar, header.hb-top,
+    .dg-toc, .dg-noprint, .hub-hero-actions{ display:none !important; }
+    .dg-layout{ grid-template-columns:1fr; }
+    .dg-card, .dg-mock, .dg-fam, .dg-kpi{ box-shadow:none !important; break-inside:avoid; }
+    .dg-step{ break-inside:avoid; }
+    body{ background:#fff !important; }
+    .dg-badge, .dg-tip, .dg-warn, .dg-kpi .ic, .dg-fam-head .fi,
+    .dg-jump a.on, .dg-export{
+      -webkit-print-color-adjust:exact; print-color-adjust:exact;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{{ hub.hero(
+  "دليل: نظرة عامة على التقارير",
+  subtitle="مركز التقارير وعائلاته الخمس: وين تلاقي كل تقرير، الانتقال السريع، والتصدير (CSV/Excel/PDF) والفلترة الزمنية — في 6 خطوات.",
+  icon="chart-pie",
+  actions_html='
+    <button type="button" class="hub-btn hub-btn--secondary" onclick="window.print()">
+      <i class="fa-solid fa-file-pdf"></i> حفظ كـ PDF
+    </button>
+    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.docs_section', cat_slug='reports') + '">
+      <i class="fa-solid fa-arrow-right"></i> كل الأدلة
+    </a>
+  '
+) }}
+
+<div class="dg-layout">
+
+  {# ───── الفهرس الجانبي اللاصق ───── #}
+  <nav class="dg-toc dg-noprint" aria-label="فهرس الدليل">
+    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> فهرس الخطوات</div>
+    <a href="#dg-s1" data-dg-toc><span class="n">1</span> ما هو مركز التقارير</a>
+    <a href="#dg-s2" data-dg-toc><span class="n">2</span> العائلات الخمس</a>
+    <a href="#dg-s3" data-dg-toc><span class="n">3</span> الانتقال السريع</a>
+    <a href="#dg-s4" data-dg-toc><span class="n">4</span> التصدير الثلاثي</a>
+    <a href="#dg-s5" data-dg-toc><span class="n">5</span> فلاتر التاريخ</a>
+    <a href="#dg-s6" data-dg-toc><span class="n">6</span> الأرشيف واللقطات</a>
+  </nav>
+
+  {# ───── عمود المحتوى ───── #}
+  <div class="dg-main">
+
+    <div class="dg-lead">
+      <span class="ic"><i class="fa-solid fa-chart-pie"></i></span>
+      <div>
+        <h3>قبل ما نبدأ — شو يعني «مركز التقارير»؟</h3>
+        <p>
+          هو بوابة واحدة لكل قراءات الأعمال: مؤشرات تنفيذية فورية، مكتبة تقارير تفصيلية
+          منظّمة في خمس عائلات، وأرشيف لقطات ثابتة. كل تقرير صفحة فيها جدول موحّد تقدر تفرزه
+          وتفلتره بالتاريخ وتصدّره بصيغ متعددة. في هذا الدليل رح نتعرف على البنية العامة:
+          وين تلاقي كل تقرير، وكيف تتنقّل وتفلتر وتصدّر.
+        </p>
+      </div>
+    </div>
+
+    {# ════ الخطوة 1 ════ #}
+    <section class="dg-step" id="dg-s1">
+      <div class="dg-badge">1</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-gauge"></i> الصفحة الرئيسية — أربعة مؤشرات فورية</h2>
+        <p>
+          تفتح مركز التقارير من القائمة الجانبية تحت <strong>التقارير ← نظرة عامة</strong>.
+          أعلى الصفحة هيرو فيه <strong>أربعة مؤشرات</strong> تعطيك صورة لحظية قبل ما تغوص في
+          التفاصيل:
+        </p>
+
+        <div class="dg-kpis" aria-hidden="true">
+          <div class="dg-kpi"><span class="ic"><i class="fa-solid fa-users"></i></span><small>المشتركون</small><strong>360</strong></div>
+          <div class="dg-kpi"><span class="ic"><i class="fa-solid fa-wifi"></i></span><small>المتصلون الآن</small><strong>48</strong></div>
+          <div class="dg-kpi"><span class="ic"><i class="fa-solid fa-coins"></i></span><small>الإيرادات</small><strong>12,400</strong></div>
+          <div class="dg-kpi"><span class="ic"><i class="fa-solid fa-id-card"></i></span><small>البطاقات</small><strong>1,250</strong></div>
+        </div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> المؤشرات: المشتركون، المتصلون الآن، الإيرادات، البطاقات.</div>
+
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة:</b> أسفل المؤشرات «مكتبة التقارير» — بطاقات تأخذك مباشرة لأهم
+          التقارير التنفيذية. استخدمها كنقطة بداية، والسايدبار للوصول الكامل لكل تقرير.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 2 ════ #}
+    <section class="dg-step" id="dg-s2">
+      <div class="dg-badge">2</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-sitemap"></i> العائلات الخمس في السايدبار</h2>
+        <p>
+          كل التقارير منظّمة في <strong>خمس عائلات قابلة للطي</strong> ضمن قسم «التقارير» في
+          القائمة الجانبية — تفتح العائلة فتظهر تقاريرها:
+        </p>
+        <ul>
+          <li><strong>التقارير التنفيذية:</strong> نظرة عامة، التقرير المالي، تقارير البطاقات، تقارير الموزعين، الأرشيف.</li>
+          <li><strong>الدخول والأمان:</strong> حالات تسجيل الدخول، فشل دخول الشبكة، حالة دخول المشتركين، حالة دخول المدراء.</li>
+          <li><strong>الشبكة والجلسات:</strong> تقارير الجلسات، سجل تغييرات الماك، فشل الفصل/التحديث، فشل تحديث السرعة.</li>
+          <li><strong>النشاط والأحداث:</strong> أحداث المدراء، أحداث المشتركين، تغيير العروض، سجل رسائل الربط.</li>
+          <li><strong>المالية والموازنات:</strong> كروت الشحن المستخدمة، معاملات الكاش، تحويلات الرصيد، تقارير المحاسبة.</li>
+        </ul>
+
+        <div class="dg-fams" aria-hidden="true" style="max-width:460px">
+          <div class="dg-fam">
+            <div class="dg-fam-head"><span class="fi" style="background:#7c3aed"><i class="fa-solid fa-briefcase"></i></span> التقارير التنفيذية <i class="fa-solid fa-chevron-down cv"></i></div>
+            <div class="dg-fam-body"><span>نظرة عامة</span><span>التقرير المالي</span><span>تقارير البطاقات</span><span>تقارير الموزعين</span><span>الأرشيف</span></div>
+          </div>
+          <div class="dg-fam">
+            <div class="dg-fam-head"><span class="fi" style="background:#ec4899"><i class="fa-solid fa-right-to-bracket"></i></span> الدخول والأمان <i class="fa-solid fa-chevron-down cv"></i></div>
+            <div class="dg-fam-body"><span>حالات تسجيل الدخول</span><span>فشل دخول الشبكة</span><span>دخول المشتركين</span><span>دخول المدراء</span></div>
+          </div>
+        </div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> هكذا تبدو العائلات في السايدبار — اضغط رأس العائلة ليفتح تقاريرها.</div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 3 ════ #}
+    <section class="dg-step" id="dg-s3">
+      <div class="dg-badge">3</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-diagram-project"></i> الانتقال السريع من الهيرو</h2>
+        <p>
+          داخل أي صفحة تقرير يوجد في الهيرو <strong>منتقٍ سريع</strong> يعرف العائلة التي أنت
+          فيها ويظهر لك <strong>تقاريرها الشقيقة</strong> فقط — فتنتقل بينها بنقرة بلا رجوع
+          للسايدبار. التقرير الحالي مميّز.
+        </p>
+
+        <div class="dg-jump" aria-hidden="true">
+          <span class="lbl"><i class="fa-solid fa-bolt"></i> انتقال سريع</span>
+          <a class="on">تقارير الجلسات</a>
+          <a>سجل تغييرات الماك</a>
+          <a>فشل الفصل/التحديث</a>
+          <a>فشل تحديث السرعة</a>
+        </div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> يعرض تقارير عائلة «الشبكة والجلسات» لأنك داخل أحدها.</div>
+
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة:</b> المنتقي السريع أسرع طريق للتنقّل <b>داخل نفس العائلة</b>. للقفز
+          إلى عائلة أخرى استخدم السايدبار.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 4 ════ #}
+    <section class="dg-step" id="dg-s4">
+      <div class="dg-badge">4</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-file-export"></i> التصدير — CSV / Excel / PDF</h2>
+        <p>
+          كل جدول تقرير فيه ثلاثة أزرار تصدير في رأسه. تصدّر <strong>الأعمدة الظاهرة وكل
+          الصفوف</strong> (لا الصفحة الحالية فقط):
+        </p>
+        <ul>
+          <li><strong>CSV:</strong> تنزيل مباشر من المتصفح (UTF-8 مع BOM) — يفتح في أي برنامج جداول.</li>
+          <li><strong>Excel:</strong> ملف <span class="dg-kbd">.xlsx</span> منسّق بهوية النظام (RTL، صف رأس بنفسجي، صفوف متناوبة).</li>
+          <li><strong>PDF:</strong> ملف بهوية HobeRadius وخط Cairo مع تشكيل عربي — جاهز للطباعة أو المشاركة.</li>
+        </ul>
+
+        <div class="dg-exports" aria-hidden="true">
+          <span class="dg-export csv"><i class="fa-solid fa-file-csv"></i> CSV</span>
+          <span class="dg-export xls"><i class="fa-solid fa-file-excel"></i> Excel</span>
+          <span class="dg-export pdf"><i class="fa-solid fa-file-pdf"></i> PDF</span>
+        </div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> هذه الأزرار ثابتة في رأس كل جدول تقرير عبر النظام.</div>
+
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة:</b> فلتر أولًا (بالتاريخ أو البحث) ثم صدّر — التصدير يأخذ ما هو ظاهر
+          بعد الفلترة، فتحصل على ملف نظيف بما يهمّك فقط.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 5 ════ #}
+    <section class="dg-step" id="dg-s5">
+      <div class="dg-badge">5</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-calendar-days"></i> فلاتر التاريخ — من / إلى</h2>
+        <p>
+          أغلب التقارير فيها حزام فلترة في الهيرو، وأهم أداة فيه <strong>نطاق التاريخ</strong>:
+          منتقيا <strong>«من تاريخ»</strong> و<strong>«إلى تاريخ»</strong>. تختار النطاق ثم تضغط
+          <strong>«تطبيق»</strong>، فيُحسب «من» من بداية اليوم و«إلى» حتى نهايته — يدخل اليومان
+          الطرفيان كاملين.
+        </p>
+
+        <div class="dg-mock" aria-hidden="true" style="max-width:430px">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">تقرير الجلسات › الفلاتر</span></div>
+          <div class="dg-mock-body">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px">
+              <div class="dg-mf"><label>من تاريخ</label><div class="dg-mf-input hl">2026-06-01</div></div>
+              <div class="dg-mf"><label>إلى تاريخ</label><div class="dg-mf-input hl">2026-06-05</div></div>
+            </div>
+            <div style="display:flex;gap:8px;justify-content:flex-end">
+              <span style="font-size:11px;font-weight:800;color:#475569;background:#f1f5f9;border-radius:8px;padding:7px 13px"><i class="fa-solid fa-rotate-left"></i> إعادة ضبط</span>
+              <span style="font-size:11px;font-weight:900;color:#fff;background:linear-gradient(135deg,#7c3aed,#5b21b6);border-radius:8px;padding:7px 14px"><i class="fa-solid fa-filter"></i> تطبيق</span>
+            </div>
+          </div>
+        </div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> بجانب التاريخ غالبًا حقل بحث وقوائم حالة/مصدر حسب التقرير.</div>
+
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة:</b> زر <b>«إعادة ضبط»</b> يمسح كل الفلاتر ويرجعك للعرض الكامل —
+          استخدمه إذا اختفت النتائج بسبب نطاق تاريخ ضيّق.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 6 ════ #}
+    <section class="dg-step" id="dg-s6">
+      <div class="dg-badge">6</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-box-archive"></i> الأرشيف — لقطات ثابتة لا تُعاد كتابتها</h2>
+        <p>
+          آخر عائلة فيها <strong>الأرشيف</strong>: بينما التقارير الحيّة تُحسب من البيانات
+          الحالية كل مرة تفتحها، الأرشيف يحفظ <strong>لقطة ثابتة</strong> لتقرير في لحظة معيّنة
+          فتبقى كما هي مهما تغيّرت البيانات لاحقًا.
+        </p>
+        <ul>
+          <li>مفيد لإغلاق الشهر/الفترة: تحفظ النتيجة النهائية فلا تتأثر بأي تعديل لاحق.</li>
+          <li>مرجع للمراجعة والتدقيق — لقطة موثّقة بتاريخها.</li>
+        </ul>
+
+        <div class="dg-warn">
+          <span class="ic">⚠️</span>
+          <span><b>انتبه:</b> فرّق بين <b>التصدير</b> (ملف ينزل على جهازك من بيانات اللحظة)
+          و<b>الأرشفة</b> (لقطة محفوظة داخل النظام). للإقفالات المالية اعتمد الأرشيف، وللمشاركة
+          السريعة يكفي التصدير.</span>
+        </div>
+
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>وبعدين؟</b> لكل عائلة دليلها المفصّل في هذا القسم — ابدأ من «حالات تسجيل
+          الدخول» لتشخيص مشاكل اتصال المشتركين، أو من تقارير الجلسات لقراءة الاستهلاك.</span>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+{# ── scrollspy خفيف: يبرز بند الفهرس المقابل للخطوة الظاهرة ── #}
+<script>
+(function(){
+  'use strict';
+  var links = Array.prototype.slice.call(document.querySelectorAll('[data-dg-toc]'));
+  if (!links.length || !('IntersectionObserver' in window)) return;
+  var map = {};
+  links.forEach(function(a){ map[a.getAttribute('href').slice(1)] = a; });
+  var obs = new IntersectionObserver(function(entries){
+    entries.forEach(function(en){
+      if (!en.isIntersecting) return;
+      links.forEach(function(a){ a.classList.remove('is-active'); });
+      var a = map[en.target.id];
+      if (a) a.classList.add('is-active');
+    });
+  }, { rootMargin: '-35% 0px -55% 0px' });
+  Object.keys(map).forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) obs.observe(el);
+  });
+})();
+</script>
+
+{% endblock %}

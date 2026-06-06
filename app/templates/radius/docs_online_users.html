@@ -1,0 +1,566 @@
+{# ══════════════════════════════════════════════════════════════════════
+   دليل «المتصلون الآن» — من سلسلة «كيف تستخدمني».
+
+   مستنسخ حرفيًا من بنية docs_add_subscriber.html (النموذج الذهبي):
+     • hero + شريط أدوات (كل الأدلة / حفظ كـ PDF).
+     • فهرس جانبي لاصق على يسار الصفحة (order:2) + scrollspy خفيف.
+     • خطوات مرقّمة بشارات بنفسجية متدرّجة ورسوم محاكاة HTML/CSS.
+     • تلميحات 💡 نصيحة / ⚠️ انتبه.
+
+   المحتوى مطابق للصفحة الفعلية app/templates/radius/sessions_list.html
+   (مسار radius.online_list = /admin/radius/online):
+     • تبويبا «المشتركون / الكروت»، فلاتر «السيرفر / العرض / المجموعة /
+       نوع السرعة» وزر «عرض».
+     • أعمدة الجدول الـ 18 وقائمة «عرض/إخفاء الأعمدة» منسوخة حرفيًا.
+     • شريط الإجراءات الجماعي: المحدد، فصل الاتصال، عرض 360°، إغلاق
+       بالماك، تثبيت IP، تعديل، إرسال رسالة.
+     • نافذة «سرعة مؤقتة» العائمة وعدّاد «باقٍ».
+   عند تغيير الصفحة حدّث الدليل معها.
+   ══════════════════════════════════════════════════════════════════════ #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}دليل: المتصلون الآن — كيف تستخدمني{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<style>
+  /* ── التخطيط: فهرس جانبي لاصق + عمود المحتوى ── */
+  .dg-layout{ display:grid; grid-template-columns:minmax(0,1fr) 230px; gap:20px; align-items:start; }
+  .dg-toc{ order:2; }
+  .dg-main{ order:1; }
+  @media (max-width:980px){ .dg-layout{ grid-template-columns:1fr; } .dg-toc{ order:1; } .dg-main{ order:2; } }
+
+  .dg-toc{
+    position:sticky; top:84px;
+    background:#fff; border:1px solid #e8edf3; border-radius:14px;
+    padding:14px 13px; display:grid; gap:3px;
+  }
+  @media (max-width:980px){ .dg-toc{ position:static; } }
+  .dg-toc-title{
+    display:flex; align-items:center; gap:8px; font-size:12px; font-weight:900;
+    color:#7c7a99; margin-bottom:7px; padding-inline:6px;
+  }
+  .dg-toc a{
+    display:flex; align-items:center; gap:9px;
+    padding:8px 10px; border-radius:9px; text-decoration:none;
+    font-size:12.5px; font-weight:700; color:#475569;
+    transition:background .14s, color .14s;
+  }
+  .dg-toc a .n{
+    width:21px; height:21px; border-radius:50%; flex:none;
+    display:grid; place-items:center; font-size:10.5px; font-weight:900;
+    background:#f1f5f9; color:#94a3b8;
+  }
+  .dg-toc a:hover{ background:#f5f3ff; color:#5b21b6; }
+  .dg-toc a.is-active{ background:#ede9fe; color:#5b21b6; }
+  .dg-toc a.is-active .n{ background:linear-gradient(135deg,#7c3aed,#5b21b6); color:#fff; }
+
+  /* ── عمود الخطوات ── */
+  .dg-main{ min-width:0; display:grid; gap:18px; }
+
+  .dg-lead{
+    display:flex; gap:13px; align-items:flex-start;
+    background:linear-gradient(135deg,#f5f3ff,#fdfcff);
+    border:1px solid #e9e5fc; border-radius:14px; padding:15px 17px;
+  }
+  .dg-lead .ic{ width:40px;height:40px;border-radius:12px;flex:none;display:grid;place-items:center;
+    font-size:17px;background:#ede9fe;color:#6d28d9; }
+  .dg-lead h3{ margin:0 0 4px; font-size:13.5px; font-weight:800; color:#241e4e; }
+  .dg-lead p{ margin:0; font-size:12.5px; line-height:1.9; color:#5b5a78; }
+
+  .dg-step{ display:grid; grid-template-columns:auto 1fr; gap:15px; align-items:start; scroll-margin-top:90px; }
+  @media (max-width:560px){ .dg-step{ grid-template-columns:1fr; } }
+  .dg-badge{
+    width:42px; height:42px; border-radius:50%; flex:none;
+    display:grid; place-items:center; font-size:17px; font-weight:900; color:#fff;
+    background:linear-gradient(135deg,#7c3aed,#5b21b6);
+    box-shadow:0 8px 18px rgba(124,58,237,.3);
+  }
+  .dg-card{
+    min-width:0; background:#fff; border:1px solid #e8edf3; border-radius:15px;
+    padding:16px 18px;
+  }
+  .dg-card h2{
+    margin:0 0 8px; font-size:15.5px; font-weight:800; color:#0f172a;
+    display:flex; align-items:center; gap:9px; flex-wrap:wrap;
+  }
+  .dg-card h2 i{ color:#7c3aed; }
+  .dg-card p{ margin:0 0 7px; font-size:13px; line-height:1.95; color:#475569; }
+  .dg-card p:last-child{ margin-bottom:0; }
+  .dg-card ul{ margin:4px 0 8px; padding-inline-start:22px; font-size:13px; line-height:2; color:#475569; }
+  .dg-card strong{ color:#241e4e; }
+  .dg-kbd{
+    font-family:ui-monospace,Consolas,monospace; font-size:11.5px;
+    background:#f1f5f9; border:1px solid #e2e8f0; border-radius:5px;
+    padding:1px 7px; color:#5b21b6;
+  }
+
+  .dg-tip, .dg-warn{
+    display:flex; gap:11px; align-items:flex-start;
+    border-radius:12px; padding:11px 14px; margin-top:11px;
+    font-size:12.5px; line-height:1.9;
+  }
+  .dg-tip{ background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; }
+  .dg-warn{ background:#fffbeb; border:1px solid #fde68a; color:#92400e; }
+  .dg-tip .ic, .dg-warn .ic{ flex:none; font-size:15px; line-height:1.6; }
+  .dg-tip b, .dg-warn b{ font-weight:900; }
+
+  /* ════ الرسوم: محاكاة مصغّرة للصفحة الحقيقية ════ */
+  .dg-mock{
+    border:1px solid #e2e8f0; border-radius:14px; overflow:hidden;
+    background:#fff; box-shadow:0 8px 20px rgba(15,23,42,.07);
+    margin-top:13px; max-width:560px;
+  }
+  .dg-mock-bar{
+    display:flex; align-items:center; gap:7px; padding:8px 12px;
+    background:#f1f5f9; border-bottom:1px solid #e2e8f0;
+  }
+  .dg-mock-bar .dots{ display:flex; gap:5px; }
+  .dg-mock-bar .dots i{ width:9px; height:9px; border-radius:50%; }
+  .dg-mock-bar .dots i:nth-child(1){ background:#f87171; }
+  .dg-mock-bar .dots i:nth-child(2){ background:#fbbf24; }
+  .dg-mock-bar .dots i:nth-child(3){ background:#34d399; }
+  .dg-mock-bar .crumb{
+    flex:1; background:#fff; border:1px solid #e2e8f0; border-radius:7px;
+    padding:4px 10px; font-size:10.5px; font-weight:700; color:#64748b;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .dg-mock-body{ padding:14px; display:grid; gap:11px; }
+
+  /* فلاتر «حبوب» المحاكاة */
+  .dg-fbar{ display:flex; gap:7px; flex-wrap:wrap; align-items:center; }
+  .dg-fpill{
+    position:relative; border:1.5px solid #e2e8f0; border-radius:999px;
+    padding:7px 26px 7px 13px; font-size:11px; font-weight:800; color:#334155;
+    background:#fff; white-space:nowrap;
+  }
+  .dg-fpill::after{
+    content:"\f078"; font-family:"Font Awesome 6 Free"; font-weight:900;
+    position:absolute; inset-inline-end:11px; top:50%; transform:translateY(-50%);
+    font-size:8px; color:#94a3b8;
+  }
+  .dg-fbtn{
+    display:inline-flex; align-items:center; gap:6px; border-radius:8px;
+    padding:7px 12px; font-size:11px; font-weight:800; white-space:nowrap;
+  }
+  .dg-fbtn.pillr{ border-radius:999px; }
+  .dg-fbtn.primary{ background:linear-gradient(135deg,#7c3aed,#5b21b6); color:#fff;
+    box-shadow:0 5px 12px rgba(124,58,237,.25); }
+  .dg-fbtn.ghost{ background:#fff; border:1.5px solid #e2e8f0; color:#475569; }
+  .dg-fbtn.danger{ background:#fee2e2; color:#b91c1c; }
+  .dg-fbtn.muted{ background:#f1f5f9; color:#94a3b8; }
+  .dg-fbtn.count{ background:#eef2ff; border:1.5px solid #c7d2fe; color:#3730a3; }
+
+  /* محاكاة جدول الجلسات */
+  .dg-tbl{ border:1px solid #e2e8f0; border-radius:11px; overflow:hidden; }
+  .dg-tbl .hd, .dg-tbl .rw{
+    display:grid; grid-template-columns:24px 1.1fr .9fr .9fr .8fr .8fr; gap:7px;
+    padding:8px 10px; font-size:10px; align-items:center; text-align:center;
+  }
+  .dg-tbl .hd{ background:#f5f3ff; color:#5b21b6; font-weight:900; }
+  .dg-tbl .rw{ background:#fff; color:#334155; font-weight:700; border-top:1px solid #f1f5f9; }
+  .dg-tbl .rw.sel{ background:#eef8ff; }
+  .dg-ck{
+    width:13px; height:13px; border-radius:4px; border:1.5px solid #cbd5e1;
+    display:inline-grid; place-items:center; font-size:8px; color:#fff;
+  }
+  .dg-ck.on{ background:#7c3aed; border-color:#7c3aed; }
+  .dg-pill{
+    display:inline-flex; align-items:center; gap:4px; border-radius:999px;
+    padding:2px 8px; font-size:9px; font-weight:900; white-space:nowrap;
+  }
+  .dg-pill.n{ background:#f4f6f8; color:#52606d; border:1px solid #dce3ea; }
+  .dg-pill.t{ background:#eaf6ff; color:#075985; border:1px solid #addcff; }
+  .dg-pill.c{ background:#fff6d8; color:#875500; border:1px solid #f2d071; }
+
+  /* محاكاة نافذة السرعة المؤقتة */
+  .dg-modal{
+    max-width:300px; background:#fff; border:1px solid #e2e8f0; border-radius:15px;
+    padding:14px; box-shadow:0 16px 40px rgba(15,23,42,.18); margin-top:13px;
+    display:grid; gap:7px;
+  }
+  .dg-modal .hd{ display:flex; align-items:center; justify-content:space-between;
+    font-size:12px; font-weight:900; color:#0f172a; }
+  .dg-modal .hd i.x{ color:#94a3b8; font-size:11px; }
+  .dg-modal label{ font-size:9.5px; font-weight:800; color:#64748b; }
+  .dg-modal .inp{ border:1.5px solid #e2e8f0; border-radius:8px; padding:7px 10px;
+    font-size:11px; color:#0f172a; font-family:ui-monospace,Consolas,monospace; }
+
+  .dg-cap{ font-size:11px; color:#94a3b8; margin-top:8px; line-height:1.7; }
+  .dg-cap i{ color:#c4b5fd; }
+
+  /* ════ الطباعة: «حفظ كـ PDF» = window.print() ════ */
+  @media print{
+    .hb-side, .hb-side-overlay, .hb-topbar, header.hb-top,
+    .dg-toc, .dg-noprint, .hub-hero-actions{ display:none !important; }
+    .dg-layout{ grid-template-columns:1fr; }
+    .dg-card, .dg-mock, .dg-modal{ box-shadow:none !important; break-inside:avoid; }
+    .dg-step{ break-inside:avoid; }
+    body{ background:#fff !important; }
+    .dg-badge, .dg-fbtn.primary, .dg-tip, .dg-warn, .dg-pill, .dg-tbl .hd{
+      -webkit-print-color-adjust:exact; print-color-adjust:exact;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{{ hub.hero(
+  "دليل: المتصلون الآن",
+  subtitle="راقب الجلسات الحيّة لحظة بلحظة — مين متصل، من أي جهاز، بأي سرعة — واقطع أو قيّد أو راسل بضغطة. 7 أقسام.",
+  icon="wifi",
+  actions_html='
+    <button type="button" class="hub-btn hub-btn--secondary" onclick="window.print()">
+      <i class="fa-solid fa-file-pdf"></i> حفظ كـ PDF
+    </button>
+    <a class="hub-btn hub-btn--secondary" href="/admin/radius/docs/section/subscribers">
+      <i class="fa-solid fa-arrow-right"></i> كل الأدلة
+    </a>
+  '
+) }}
+
+<div class="dg-layout">
+
+  {# ───── الفهرس الجانبي اللاصق ───── #}
+  <nav class="dg-toc dg-noprint" aria-label="فهرس الدليل">
+    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> فهرس الأقسام</div>
+    <a href="#dg-s1" data-dg-toc><span class="n">1</span> افتح الصفحة واقرأ رأسها</a>
+    <a href="#dg-s2" data-dg-toc><span class="n">2</span> الفلاتر الأربعة</a>
+    <a href="#dg-s3" data-dg-toc><span class="n">3</span> أعمدة الجلسة بالتفصيل</a>
+    <a href="#dg-s4" data-dg-toc><span class="n">4</span> حالة السرعة والعدّاد الحي</a>
+    <a href="#dg-s5" data-dg-toc><span class="n">5</span> إجراءات الصف + السرعة المؤقتة</a>
+    <a href="#dg-s6" data-dg-toc><span class="n">6</span> التحديد المتعدد والفصل الجماعي</a>
+    <a href="#dg-s7" data-dg-toc><span class="n">7</span> مشترك مش ظاهر هون؟</a>
+  </nav>
+
+  {# ───── عمود المحتوى ───── #}
+  <div class="dg-main">
+
+    <div class="dg-lead">
+      <span class="ic"><i class="fa-solid fa-lightbulb"></i></span>
+      <div>
+        <h3>قبل ما نبدأ — شو يعني «جلسة»؟</h3>
+        <p>
+          كل ما يدخل مشترك على الإنترنت تنفتح له «جلسة» على الشبكة: عنوان IP، جهاز، سرعة،
+          واستهلاك يتراكم. هذه الصفحة تعرض <strong>الجلسات الحيّة فقط</strong> — مين متصل
+          في هذه اللحظة — وتعطيك أدوات تحكم فورية: قطع، تثبيت، تحديد سرعة مؤقتة، ورسائل.
+        </p>
+      </div>
+    </div>
+
+    {# ════ القسم 1 ════ #}
+    <section class="dg-step" id="dg-s1">
+      <div class="dg-badge">1</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-door-open"></i> افتح الصفحة واقرأ رأسها</h2>
+        <p>
+          من القائمة الجانبية افتح <strong>«المشتركون»</strong> ثم
+          <strong>«المشتركون المتصلون»</strong>. في رأس الصفحة:
+        </p>
+        <ul>
+          <li>زرّا تبديل العرض: <strong>«المشتركون»</strong> و<strong>«الكروت»</strong> —
+              الصفحة تفصل بينهما: الافتراضي يعرض جلسات المشتركين فقط، واضغط «الكروت»
+              لجلسات كروت الواي فاي فقط.</li>
+          <li>ثلاث بطاقات أرقام: <strong>جلسات نشطة</strong> (العدد الكلي)،
+              <strong>تنزيل (MB)</strong> و<strong>رفع (MB)</strong> — مجموع استهلاك
+              كل الجلسات الظاهرة.</li>
+          <li>سطر فرعي يبيّن <strong>وضع التشغيل</strong> (مايكروتك / يدوي...). لو كان
+              «يدوي» يظهر تنبيه أصفر: لا جلسات حية حتى تفعّل وضع الربط الفعلي.</li>
+        </ul>
+        <p>
+          الأرقام والقائمة <strong>لقطة لحظة فتح الصفحة</strong> — اضغط تحديث المتصفح
+          (<span class="dg-kbd">F5</span>) لأحدث صورة، أما عدّادات «السرعة المؤقتة»
+          (القسم 4) فهي تنبض حيّة كل ثانية بدون تحديث.
+        </p>
+
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">المتصلون الآن › رأس الصفحة</span></div>
+          <div class="dg-mock-body">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+              <div style="display:flex;align-items:center;gap:9px">
+                <span style="width:32px;height:32px;border-radius:9px;display:grid;place-items:center;background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;font-size:13px"><i class="fa-solid fa-wifi"></i></span>
+                <span style="font-size:13px;font-weight:900;color:#0f172a">المتصلون الآن</span>
+              </div>
+              <div style="display:flex;gap:6px">
+                <span class="dg-fbtn primary"><i class="fa-solid fa-users"></i> المشتركون</span>
+                <span class="dg-fbtn ghost"><i class="fa-solid fa-id-card"></i> الكروت</span>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+              <div style="border:1px solid #bbf7d0;border-radius:10px;padding:8px;background:#f0fdf4"><div style="font-size:9px;font-weight:800;color:#15803d">جلسات نشطة</div><div style="font-size:15px;font-weight:900;color:#166534">42</div></div>
+              <div style="border:1px solid #bfdbfe;border-radius:10px;padding:8px;background:#eff6ff"><div style="font-size:9px;font-weight:800;color:#1d4ed8">تنزيل (MB)</div><div style="font-size:15px;font-weight:900;color:#1e40af">3,540.2</div></div>
+              <div style="border:1px solid #fde68a;border-radius:10px;padding:8px;background:#fffbeb"><div style="font-size:9px;font-weight:800;color:#b45309">رفع (MB)</div><div style="font-size:15px;font-weight:900;color:#92400e">612.8</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    {# ════ القسم 2 ════ #}
+    <section class="dg-step" id="dg-s2">
+      <div class="dg-badge">2</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-filter"></i> ضيّق الرؤية بالفلاتر الأربعة</h2>
+        <p>
+          تحت الأرقام أربع قوائم على شكل حبوب وبجانبها زر <strong>«عرض»</strong>
+          البنفسجي الذي يطبّقها:
+        </p>
+        <ul>
+          <li><strong>السيرفر:</strong> اعرض جلسات راوتر/سيرفر شبكة واحد فقط — مفيد لما
+              تشك بمشكلة على جهاز معيّن.</li>
+          <li><strong>العرض:</strong> جلسات باقة واحدة (مثلًا: كل متصلي «باقة 10 ميجا»).</li>
+          <li><strong>المجموعة:</strong> جلسات أعضاء مجموعة مشتركين واحدة.</li>
+          <li><strong>نوع السرعة:</strong> كل السرعات / <strong>سرعة خاصة أو مؤقتة</strong> /
+              <strong>سرعة مؤقتة فقط</strong> / <strong>بدون سرعة خاصة</strong> — لتصطاد
+              بسرعة من عليه قيود سرعة غير سرعة العرض.</li>
+        </ul>
+
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">المتصلون الآن › الفلاتر</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-fbar">
+              <span class="dg-fpill"><i class="fa-solid fa-server" style="color:#7c3aed;font-size:9px"></i> كل السيرفرات</span>
+              <span class="dg-fpill"><i class="fa-solid fa-cubes" style="color:#7c3aed;font-size:9px"></i> كل العروض</span>
+              <span class="dg-fpill"><i class="fa-solid fa-people-group" style="color:#7c3aed;font-size:9px"></i> كل المجموعات</span>
+              <span class="dg-fpill"><i class="fa-solid fa-gauge-high" style="color:#7c3aed;font-size:9px"></i> كل السرعات</span>
+              <span class="dg-fbtn primary pillr"><i class="fa-solid fa-filter"></i> عرض</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة:</b> تبحث عن مشترك واحد بالاسم؟ هذه صفحة جلسات حيّة — الأسرع
+          تفتح «المشتركين 360»، تكتب اسمه في البحث الفوري، وتشوف عمود «الجلسات»: حبّة
+          خضراء = متصل الآن.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ القسم 3 ════ #}
+    <section class="dg-step" id="dg-s3">
+      <div class="dg-badge">3</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-table-columns"></i> اقرأ أعمدة الجلسة — كل عمود شو يعني</h2>
+        <p>جدول الجلسات 18 عمودًا، أهمها:</p>
+        <ul>
+          <li><strong>المستخدم:</strong> اسم المشترك (والاسم الكامل إن وُجد).</li>
+          <li><strong>العرض:</strong> الباقة التي يتصل عليها.</li>
+          <li><strong>IP:</strong> العنوان الذي أخذه جهازه في هذه الجلسة.</li>
+          <li><strong>جهاز الشبكة:</strong> عنوان الراوتر/السيرفر الذي مرّت منه الجلسة.</li>
+          <li><strong>نوع الجهاز:</strong> اسم جهاز المشترك ونظامه (أندرويد، آيفون، ويندوز...)
+              كما تعرّف عليه الراوتر من DHCP.</li>
+          <li><strong>سرعة العرض / السرعة الحالية:</strong> الأولى سرعة الباقة الرسمية،
+              والثانية المطبَّقة فعلًا الآن — تتلوّن إن كان عليه قيد (القسم التالي).</li>
+          <li><strong>وقت الجلسة:</strong> منذ متى متصل (مثل <span class="dg-kbd">2س 14د</span>).</li>
+          <li><strong>تحميل / رفع:</strong> استهلاك هذه الجلسة بالميجابايت.</li>
+          <li><strong>ماك ادرس:</strong> العنوان الفيزيائي لجهاز المشترك.</li>
+          <li><strong>المدير</strong>، <strong>معرف الخدمة</strong>،
+              و<strong>منفذ الاتصال</strong> (اسم الواجهة/الهوت سبوت على الراوتر).</li>
+          <li><strong>إجراءات:</strong> أربعة أزرار لكل صف — القسم 5.</li>
+        </ul>
+        <p>
+          زر <strong>«عرض/إخفاء الأعمدة»</strong> فوق الجدول يفتح قائمة صناديق اختيار —
+          أخفِ ما لا يهمك واختيارك <strong>يُحفظ تلقائيًا</strong> للزيارات القادمة.
+          وأسفل الجدول مرقّم صفحات (10/20/50/100 صف بالصفحة).
+        </p>
+
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">المتصلون الآن › الجدول</span></div>
+          <div class="dg-mock-body" style="padding:0">
+            <div class="dg-tbl" style="border:0;border-radius:0">
+              <div class="hd"><span></span><span>المستخدم</span><span>IP</span><span>وقت الجلسة</span><span>تحميل</span><span>رفع</span></div>
+              <div class="rw"><span class="dg-ck"></span><span style="font-weight:900;color:#241e4e">ahmad2026</span><span style="font-family:monospace">10.5.0.14</span><span>2س 14د</span><span>840.5 MB</span><span>96.1 MB</span></div>
+              <div class="rw"><span class="dg-ck"></span><span style="font-weight:900;color:#241e4e">sara_net</span><span style="font-family:monospace">10.5.0.27</span><span>41د</span><span>122.0 MB</span><span>18.4 MB</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    {# ════ القسم 4 ════ #}
+    <section class="dg-step" id="dg-s4">
+      <div class="dg-badge">4</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-gauge-high"></i> افهم «حالة السرعة» وعدّادها الحي</h2>
+        <p>عمود «حالة السرعة» يلخّص وضع كل جلسة بحبّة ملوّنة:</p>
+        <ul>
+          <li><span class="dg-pill n">العرض</span> — طبيعي: المشترك على سرعة باقته بلا أي قيد.</li>
+          <li><span class="dg-pill c"><i class="fa-solid fa-bolt"></i> خاصة</span> — عليه سرعة
+              مخصّصة دائمة تتجاوز سرعة الباقة (من ملفه).</li>
+          <li><span class="dg-pill t"><i class="fa-solid fa-clock"></i> مؤقتة · باقٍ 04:32</span> —
+              عليه سرعة مؤقتة <strong>والعدّاد ينقص أمامك كل ثانية</strong>؛ عند الصفر
+              ترجع سرعته الأصلية تلقائيًا وتتحول الحبّة لـ«العرض».</li>
+        </ul>
+        <p>
+          ولاحظ التفصيلة الذكية: الصف الذي عليه سرعة خاصة أو مؤقتة يُعلَّم بخط
+          <strong>برتقالي رفيع</strong> على حافته — تلتقطه بعينك من بعيد. وعمود
+          <strong>«السرعة الحالية»</strong> يتلوّن بالكهرماني عند القيد المؤقت ليؤكد لك
+          أن المعروض هو المطبَّق فعلًا الآن، لا سرعة الباقة.
+        </p>
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة:</b> فلتر «نوع السرعة ← سرعة مؤقتة فقط» + هذا العمود = لوحة
+          مراقبة جاهزة لكل القيود المؤقتة الجارية ومتى ينتهي كل واحد منها.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ القسم 5 ════ #}
+    <section class="dg-step" id="dg-s5">
+      <div class="dg-badge">5</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-bolt"></i> إجراءات الصف — ومنها «السرعة المؤقتة»</h2>
+        <p>آخر عمود في كل جلسة أربعة أزرار صغيرة:</p>
+        <ul>
+          <li><strong>عرض 360° 🎛:</strong> يفتح ملف المشترك الكامل (أو فاحص الكرت إن
+              كانت الجلسة كرتًا).</li>
+          <li><strong>تعديل ✏:</strong> يفتح نموذج تعديل المشترك مباشرة.</li>
+          <li><strong>قطع 🔌 (أحمر):</strong> يقطع هذه الجلسة من الشبكة فورًا — مع
+              رسالة تأكيد «قطع جلسة …؟» قبل التنفيذ.</li>
+          <li><strong>سرعة مؤقتة ⏱:</strong> يفتح نافذة عائمة تكتب فيها
+              <strong>التنزيل والرفع (كيلوبت/ث)</strong> و<strong>المدة (دقائق)</strong>
+              ثم <strong>«تطبيق فوري»</strong> — السرعة تتغيّر في نفس اللحظة وترجع
+              تلقائيًا بعد انتهاء المدة. وإن كان عليه قيد جارٍ يظهر زر إضافي:
+              <strong>«إلغاء السرعة المؤقتة الآن»</strong>.</li>
+        </ul>
+
+        <div class="dg-modal" aria-hidden="true">
+          <div class="hd"><span><i class="fa-solid fa-gauge-simple-high" style="color:#7c3aed"></i> سرعة مؤقتة</span><i class="fa-solid fa-xmark x"></i></div>
+          <div style="font-size:10px;color:#64748b;font-weight:700">لـ «ahmad2026»</div>
+          <label>التنزيل (كيلوبت/ث)</label>
+          <div class="inp">1024</div>
+          <label>الرفع (كيلوبت/ث)</label>
+          <div class="inp">1024</div>
+          <label>المدة (دقائق)</label>
+          <div class="inp">5</div>
+          <span class="dg-fbtn primary" style="justify-content:center"><i class="fa-solid fa-bolt"></i> تطبيق فوري</span>
+        </div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> نافذة السرعة المؤقتة — قيّد مشتركًا يستنزف الشبكة 5 دقائق وترجع سرعته وحدها.</div>
+
+        <div class="dg-warn">
+          <span class="ic">⚠️</span>
+          <span><b>انتبه:</b> «قطع» يفصل <b>الجلسة الحالية فقط</b> — المشترك يقدر يتصل من
+          جديد فورًا لأن حسابه ما زال مفعَّلًا. إذا تريد منعه نهائيًا عطّل حسابه من
+          صفحة المشتركين 360 (إدارية ← تعطيل المشترك) ثم اقطع جلسته.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ القسم 6 ════ #}
+    <section class="dg-step" id="dg-s6">
+      <div class="dg-badge">6</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-check-double"></i> حدّد عدة جلسات ونفّذ دفعة واحدة</h2>
+        <p>
+          علّم مربعات أول عمود — أو <strong>اضغط على أي صف نفسه</strong> فيتحدد
+          (ومربع رأس الجدول يحدد الكل). فوق الجدول شريط أزرار يتفعّل مع التحديد:
+        </p>
+        <ul>
+          <li><strong>«المحدد: N»:</strong> عدّاد يعرض كم جلسة محددة الآن.</li>
+          <li><strong>«فصل الاتصال» (أحمر):</strong> يقطع <strong>كل الجلسات المحددة</strong>
+              دفعة واحدة — التأكيد يعرض أسماءها قبل التنفيذ.</li>
+          <li><strong>«عرض 360°» و«تعديل»:</strong> يفتحان ملف/تعديل <strong>آخر جلسة
+              حدّدتها</strong> (إجراءان فرديان).</li>
+          <li><strong>«إغلاق بالماك»:</strong> يقفل حسابات المحدَّدين على ماك أجهزتهم
+              الحالية — ما عاد يدخل أحد بحسابهم من جهاز آخر.</li>
+          <li><strong>«تثبيت IP»:</strong> يثبّت للمحدَّدين عناوينهم الحالية كعناوين
+              ثابتة (متاح للمشتركين فقط — لا للكروت).</li>
+          <li><strong>«إرسال رسالة»:</strong> يرسل رسالة نصية لآخر جلسة محددة — يفتح
+              مربعًا تكتب فيه النص.</li>
+        </ul>
+
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">المتصلون الآن › شريط الإجراءات</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-fbar">
+              <span class="dg-fbtn count"><i class="fa-solid fa-check-double"></i> المحدد: 2</span>
+              <span class="dg-fbtn danger"><i class="fa-solid fa-scissors"></i> فصل الاتصال</span>
+              <span class="dg-fbtn ghost"><i class="fa-solid fa-gauge-high"></i> عرض 360°</span>
+              <span class="dg-fbtn ghost"><i class="fa-solid fa-lock"></i> إغلاق بالماك</span>
+              <span class="dg-fbtn ghost"><i class="fa-solid fa-lock"></i> تثبيت IP</span>
+              <span class="dg-fbtn muted"><i class="fa-solid fa-paper-plane"></i> إرسال رسالة</span>
+            </div>
+            <div class="dg-tbl">
+              <div class="hd"><span></span><span>المستخدم</span><span>IP</span><span>وقت الجلسة</span><span>تحميل</span><span>رفع</span></div>
+              <div class="rw sel"><span class="dg-ck on"><i class="fa-solid fa-check"></i></span><span style="font-weight:900;color:#241e4e">ahmad2026</span><span style="font-family:monospace">10.5.0.14</span><span>2س 14د</span><span>840.5 MB</span><span>96.1 MB</span></div>
+              <div class="rw sel"><span class="dg-ck on"><i class="fa-solid fa-check"></i></span><span style="font-weight:900;color:#241e4e">sara_net</span><span style="font-family:monospace">10.5.0.27</span><span>41د</span><span>122.0 MB</span><span>18.4 MB</span></div>
+              <div class="rw"><span class="dg-ck"></span><span style="font-weight:900;color:#241e4e">omar99</span><span style="font-family:monospace">10.5.0.31</span><span>12د</span><span>33.7 MB</span><span>4.2 MB</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> الصفوف المحددة تتظلل بالأزرق الفاتح والأزرار فوقها تتفعّل.</div>
+
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة عملية:</b> قبل صيانة راوتر معيّن: فلتر «السيرفر» عليه، حدّد الكل،
+          «إرسال رسالة» بإشعار الصيانة لآخر المحددين أو رسالة جماعية من صفحة 360،
+          ثم «فصل الاتصال» — صيانة نظيفة بلا اتصالات معلّقة.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ القسم 7 ════ #}
+    <section class="dg-step" id="dg-s7">
+      <div class="dg-badge">7</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-user-slash"></i> مشترك مش ظاهر هون؟ يعني شو؟</h2>
+        <p>
+          أكثر سؤال يوصلك من الزبائن: «النت مقطوع!» — وأول تشخيص لك هو هذه الصفحة.
+          إذا ما لقيته فيها، امشِ على هذا التسلسل:
+        </p>
+        <ul>
+          <li><strong>ببساطة غير متصل:</strong> الصفحة تعرض الجلسات الحيّة فقط — جهازه مطفأ
+              أو خارج التغطية أو ناسٍ كلمة المرور. اطلب منه إعادة الاتصال.</li>
+          <li><strong>تأكد إنك بالتبويب الصح:</strong> لو يدخل بكرت واي فاي فجلسته تحت
+              تبويب <strong>«الكروت»</strong> لا «المشتركون».</li>
+          <li><strong>شيّك فلاترك:</strong> فلتر سيرفر أو عرض أو مجموعة منسي ممكن يخفيه —
+              رجّع الكل على «كل ...» واضغط «عرض».</li>
+          <li><strong>افحص حالة حسابه:</strong> افتح «المشتركين 360» وابحث عنه — إذا حالته
+              <strong>«منتهٍ»</strong> جدّد له (تفعيل ← تجديد / إضافة وقت)، وإذا
+              <strong>«معطَّل»</strong> فعّله (إدارية ← تفعيل المشترك).</li>
+          <li><strong>شيّك قيود الشبكة في ملفه:</strong> قفل ماك على جهاز قديم، أو جدول
+              أوقات دخول (له أو لمجموعته) يمنع الاتصال في هذا الوقت.</li>
+          <li><strong>القائمة كلها فاضية؟</strong> المشكلة أكبر من مشترك: تنبيه «الوضع
+              اليدوي» يعني الربط الفعلي غير مفعَّل، أو شريط أحمر «تعذّر تحميل الجلسات»
+              يعني انقطاع الاتصال بالراوتر — افحص أجهزة الشبكة أولًا.</li>
+        </ul>
+
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>وبعدين؟</b> صرت تقرأ نبض شبكتك. كمّل مع دليل
+          <b>«صفحة المشتركين 360»</b> لإدارة الحسابات نفسها، ودليل
+          <b>«مجموعات المشتركين»</b> لتنفيذ العمليات على كتل كاملة.</span>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+{# ── scrollspy خفيف: يبرز بند الفهرس المقابل للقسم الظاهر ── #}
+<script>
+(function(){
+  'use strict';
+  var links = Array.prototype.slice.call(document.querySelectorAll('[data-dg-toc]'));
+  if (!links.length || !('IntersectionObserver' in window)) return;
+  var map = {};
+  links.forEach(function(a){ map[a.getAttribute('href').slice(1)] = a; });
+  var obs = new IntersectionObserver(function(entries){
+    entries.forEach(function(en){
+      if (!en.isIntersecting) return;
+      links.forEach(function(a){ a.classList.remove('is-active'); });
+      var a = map[en.target.id];
+      if (a) a.classList.add('is-active');
+    });
+  }, { rootMargin: '-35% 0px -55% 0px' });
+  Object.keys(map).forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) obs.observe(el);
+  });
+})();
+</script>
+
+{% endblock %}

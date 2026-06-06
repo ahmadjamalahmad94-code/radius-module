@@ -4,6 +4,49 @@
 {% set sub = s360.subscriber %}
 {% set financial = s360.financial %}
 
+{# ───── معاجم تعريب القيم الخام (enum) + مُنسّقات وحدات ─────
+   القيمة الخام تبقى في title/data-* للبحث، والعربية تُعرض للمشغّل. #}
+{% set _STATUS_AR = {
+  "active": "نشط", "enabled": "مفعَّل", "disabled": "معطَّل",
+  "expired": "منتهٍ", "suspended": "موقوف", "archived": "مؤرشف",
+  "online": "متّصل", "offline": "غير متّصل", "pending": "قيد الانتظار",
+} %}
+{% set _SERVICE_AR = {
+  "hotspot": "هوت سبوت", "pppoe": "PPPoE", "both": "هوت سبوت و PPPoE",
+} %}
+{% set _METHOD_AR = {
+  "cash": "نقدًا", "card": "بطاقة", "wallet": "محفظة",
+  "bank": "تحويل بنكي", "transfer": "تحويل", "online": "دفع إلكتروني",
+} %}
+{% set _REPLY_AR = {
+  "Access-Accept": "قبول الدخول", "Access-Reject": "رفض الدخول",
+  "Access-Challenge": "تحدٍّ", "Accounting-Response": "استجابة محاسبة",
+} %}
+{% set _ENTRY_AR = {
+  "payment": "دفعة", "renewal": "تجديد", "loan": "سلفة",
+  "discount": "خصم", "adjustment": "تسوية", "refund": "استرداد",
+} %}
+
+{% macro ar_status(v) -%}
+  {%- if v -%}<bdi title="{{ v }}">{{ _STATUS_AR.get(v|string|lower, v) }}</bdi>{%- else -%}—{%- endif -%}
+{%- endmacro %}
+
+{% macro fmt_bytes(n) -%}
+  {%- set n = (n|int) -%}
+  {%- if n >= 1073741824 -%}{{ "%.2f"|format(n / 1073741824) }} غيغابايت
+  {%- elif n >= 1048576 -%}{{ "%.2f"|format(n / 1048576) }} ميغابايت
+  {%- elif n >= 1024 -%}{{ "%.1f"|format(n / 1024) }} كيلوبايت
+  {%- else -%}{{ "{:,}".format(n) }} بايت{%- endif -%}
+{%- endmacro %}
+
+{% macro fmt_secs(s) -%}
+  {%- set s = (s|int) -%}
+  {%- set h = (s // 3600) -%}{%- set m = ((s % 3600) // 60) -%}
+  {%- if h > 0 -%}{{ h }} ساعة و{{ m }} دقيقة
+  {%- elif m > 0 -%}{{ m }} دقيقة
+  {%- else -%}{{ s }} ثانية{%- endif -%}
+{%- endmacro %}
+
 {% block title %}ملف المشترك 360 — Hobe Hub{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-user-shield"></i>{% endblock %}
 {% block page_title %}ملف المشترك 360{% endblock %}
@@ -11,19 +54,21 @@
 {% block head_extra %}{{ super() }}<link rel="stylesheet" href="{{ url_for('static', filename='css/subscribers_polish.css') }}">{% endblock %}
 
 {% block content %}
+{# ───── الصدفة الموحّدة: هيرو + شريط KPI بفاصل ناعم ───── #}
+<section class="hub-hero-shell">
 {{ hub.hero(
   "ملف المشترك 360",
   subtitle="نظرة واحدة على الاشتراك، المدفوعات، السلف، المحفظة، الاستخدام، الأجهزة، والأحداث.",
   icon="user-shield",
   actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.users_list') ~ '"><i class="fa-solid fa-arrow-right"></i> الرجوع للمشتركين</a>'
 ) }}
-
 <div class="hub-kpi-grid" data-testid="subscriber-360-kpis">
   {{ hub.kpi("المشترك", sub.username, icon="user") }}
-  {{ hub.kpi("رصيد المحفظة", financial.wallet_balance, icon="wallet", variant="blue") }}
-  {{ hub.kpi("إجمالي المدفوع", financial.total_paid, icon="cash-register", variant="green") }}
-  {{ hub.kpi("سلف مفتوحة", financial.open_loan_amount, icon="hand-holding-dollar", variant="amber") }}
+  {{ hub.kpi("رصيد المحفظة", financial.wallet_balance|money, icon="wallet", variant="blue") }}
+  {{ hub.kpi("إجمالي المدفوع", financial.total_paid|money, icon="cash-register", variant="green") }}
+  {{ hub.kpi("سلف مفتوحة", financial.open_loan_amount|money, icon="hand-holding-dollar", variant="amber") }}
 </div>
+</section>{# /hub-hero-shell #}
 
 <div class="hub-tabs" data-testid="subscriber-360-tabs">
   <a href="#overview">نظرة عامة</a>
@@ -41,9 +86,9 @@
   <div id="overview"></div>
   {% call hub.section("نظرة عامة", icon="circle-info") %}
     <div class="hub-tile-grid">
-      {{ hub.tile("الحالة", s360.overview.status or "—", icon="signal") }}
-      {{ hub.tile("نوع الخدمة", s360.overview.service_type or "—", icon="network-wired") }}
-      {{ hub.tile("عدد الجلسات", s360.overview.session_count, icon="clock") }}
+      {{ hub.tile("الحالة", ar_status(s360.overview.status), icon="signal") }}
+      {{ hub.tile("نوع الخدمة", (_SERVICE_AR.get((s360.overview.service_type|string|lower), s360.overview.service_type) if s360.overview.service_type else "—"), icon="network-wired") }}
+      {{ hub.tile("عدد الجلسات", "{:,}".format(s360.overview.session_count|int), icon="clock") }}
       {{ hub.tile("الخطة", s360.plan.name if s360.plan else "بدون خطة", icon="layer-group") }}
     </div>
   {% endcall %}
@@ -82,9 +127,14 @@
       <thead><tr><th>التاريخ</th><th>المبلغ</th><th>الطريقة</th><th>الموظف</th></tr></thead>
       <tbody>
         {% for p in financial.payments %}
-          <tr><td>{{ p.created_at|dt_local }}</td><td>{{ p.amount|money }}</td><td>{{ p.method }}</td><td>{{ p.created_by }}</td></tr>
+          <tr>
+            <td>{{ p.created_at|dt_local }}</td>
+            <td>{{ p.amount|money }}</td>
+            <td><bdi title="{{ p.method }}">{{ _METHOD_AR.get((p.method|string|lower), p.method) or "—" }}</bdi></td>
+            <td>{{ p.created_by or "—" }}</td>
+          </tr>
         {% else %}
-          <tr><td colspan="4">لا توجد مدفوعات بعد.</td></tr>
+          <tr><td colspan="4" class="hub-table-empty">لا توجد مدفوعات بعد.</td></tr>
         {% endfor %}
       </tbody>
     </table>
@@ -95,9 +145,9 @@
   <div id="usage"></div>
   {% call hub.section("الاستخدام والجلسات", icon="chart-simple") %}
     <div class="hub-tile-grid">
-      {{ hub.tile("إجمالي الثواني", s360.usage.total_seconds, icon="stopwatch") }}
-      {{ hub.tile("تحميل", s360.usage.download_bytes, icon="download") }}
-      {{ hub.tile("رفع", s360.usage.upload_bytes, icon="upload") }}
+      {{ hub.tile("إجمالي زمن الاستخدام", fmt_secs(s360.usage.total_seconds), icon="stopwatch") }}
+      {{ hub.tile("إجمالي التحميل", fmt_bytes(s360.usage.download_bytes), icon="download") }}
+      {{ hub.tile("إجمالي الرفع", fmt_bytes(s360.usage.upload_bytes), icon="upload") }}
     </div>
   {% endcall %}
 
@@ -115,9 +165,12 @@
   {% call hub.section("الأجهزة والعناوين", icon="laptop-code") %}
     <div class="hub-list">
       {% for device in s360.devices %}
-        <div class="hub-list-row"><strong>{{ device.mac }}</strong><span>{{ device.source }}</span></div>
+        <div class="hub-list-row">
+          <strong><bdi class="mono">{{ device.mac }}</bdi></strong>
+          <span>{{ "من بيانات المشترك" if device.source == "subscriber" else "من جلسة اتصال" }}</span>
+        </div>
       {% else %}
-        <div class="hub-empty">لا توجد أجهزة معروفة بعد.</div>
+        {{ hub.empty("لا توجد أجهزة معروفة بعد", sub="ستظهر هنا عناوين MAC المربوطة بالمشترك أو المرصودة في جلساته.", icon="laptop") }}
       {% endfor %}
     </div>
   {% endcall %}
@@ -126,9 +179,12 @@
   {% call hub.section("محاولات الدخول", icon="right-to-bracket") %}
     <div class="hub-list">
       {% for event in s360.login_events %}
-        <div class="hub-list-row"><strong>{{ event.reply }}</strong><span>{{ event.authdate }} · {{ event.nas }}</span></div>
+        <div class="hub-list-row">
+          <strong><bdi title="{{ event.reply }}">{{ _REPLY_AR.get(event.reply, event.reply) }}</bdi></strong>
+          <span>{{ event.authdate }} · <bdi class="mono">{{ event.nas }}</bdi></span>
+        </div>
       {% else %}
-        <div class="hub-empty">لا توجد محاولات دخول مسجلة.</div>
+        {{ hub.empty("لا توجد محاولات دخول مسجلة", sub="تظهر هنا محاولات المصادقة (قبول/رفض) فور تسجيلها.", icon="right-to-bracket") }}
       {% endfor %}
     </div>
   {% endcall %}
@@ -138,9 +194,14 @@
 {% call hub.section("الخط الزمني", icon="timeline") %}
   <div class="hub-list" data-testid="subscriber-timeline">
     {% for item in s360.timeline %}
-      <div class="hub-list-row"><strong>{{ item.created_at|dt_local if item.created_at else "—" }}</strong><span>{{ item.item.entry_type or item.item.event_key or item.item.reply or item.item.status }}</span></div>
+      {%- set _raw = item.item.entry_type or item.item.event_key or item.item.reply or item.item.status -%}
+      {%- set _label = _ENTRY_AR.get(_raw, _STATUS_AR.get(_raw, _REPLY_AR.get(_raw, _raw))) -%}
+      <div class="hub-list-row">
+        <strong>{{ item.created_at|dt_local if item.created_at else "—" }}</strong>
+        <span><bdi title="{{ _raw }}">{{ _label or "—" }}</bdi></span>
+      </div>
     {% else %}
-      <div class="hub-empty">لا توجد أحداث كافية لبناء خط زمني بعد.</div>
+      {{ hub.empty("اللوحة فارغة", sub="لا توجد أحداث كافية لبناء خط زمني بعد.", icon="timeline") }}
     {% endfor %}
   </div>
 {% endcall %}
@@ -148,12 +209,16 @@
 <div class="hub-grid hub-grid--2">
   <div id="messages"></div>
   {% call hub.section("الرسائل", icon="message") %}
-    <div class="hub-empty">لا توجد رسائل مرتبطة بهذا المشترك بعد.</div>
+    {{ hub.empty("لا توجد رسائل", sub="لم تُرسَل أو تُستلَم رسائل مرتبطة بهذا المشترك بعد.", icon="message") }}
   {% endcall %}
 
   <div id="notes"></div>
   {% call hub.section("الملاحظات", icon="note-sticky") %}
-    <div class="hub-empty">{{ s360.notes or "لا توجد ملاحظات." }}</div>
+    {% if s360.notes %}
+      <p class="hub-note-text">{{ s360.notes }}</p>
+    {% else %}
+      {{ hub.empty("لا توجد ملاحظات", sub="أضف ملاحظات هذا المشترك من صفحة التعديل.", icon="note-sticky") }}
+    {% endif %}
   {% endcall %}
 </div>
 {% endblock %}

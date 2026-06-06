@@ -1,98 +1,275 @@
-{# Plans overview — UNIFIED DESIGN SYSTEM (merged megahero + left help panel).
-   Same backend data (total_plans, enabled_plans, revenue_estimate, by_type, top).
-   Zero route/behaviour change. #}
+{# ═══════════════════════════════════════════════════════════════════════
+   نظرة عامة — الباقات: إعادة بناء كاملة على نظام hub-hero-shell الموحّد.
+
+   بيانات الراوت (radius.plans_overview):
+     total_plans / enabled_plans / revenue_estimate
+     avg_price / min_price / max_price
+     assigned_subs / unused_plans
+     by_type (نوع → عدد) / by_type_rows (نوع + باقات + مشتركون)
+     top (أكثر 20 باقة اشتراكًا + مواصفات) / recent (آخر 8 باقات)
+
+   البنية:
+     1. صدفة هيرو موحّدة: عنوان + أزرار + شريط KPI صف واحد.
+     2. «توزيع الباقات حسب النوع» — مسارات (lanes) بنمط subscribers_overview
+        مع شريط حصّة لكل نوع (باقات + مشتركون).
+     3. «أكثر الباقات اشتراكًا» — جدول uds موحّد (فرز/أعمدة/ترقيم).
+     4. «آخر الباقات المُنشأة» + ملخّص التسعير — شبكة hub-grid متساوية.
+   لا تغيير في أي نقطة نهاية أو نموذج.
+   ═══════════════════════════════════════════════════════════════════════ #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
 {% block title %}نظرة عامة — الباقات{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-chart-pie"></i>{% endblock %}
 {% block page_title %}نظرة عامة — الباقات{% endblock %}
+{% block page_sub %}<span class="sub"><bdi dir="ltr">{{ total_plans or 0 }}</bdi> باقة · <bdi dir="ltr">{{ enabled_plans or 0 }}</bdi> مفعَّلة</span>{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+{# نظام الجداول الموحد (فرز + اختيار أعمدة + ترقيم) #}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
+<style>
+  /* ── مسارات توزيع الأنواع — بنمط so-lane من نظرة المشتركين ── */
+  .po-board{
+    display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));
+    gap:14px;
+  }
+  .po-lane{
+    display:flex; flex-direction:column; gap:8px;
+    padding:14px 16px;
+    border:1px solid var(--hub-border, #e2e8f0);
+    border-radius:var(--hub-r-card, 14px);
+    background:var(--hub-bg-card, #fff);
+    border-inline-start:4px solid var(--po-tone, var(--hub-brand, #6B5AED));
+  }
+  .po-lane-head{ display:flex; align-items:center; gap:9px; }
+  .po-lane-icon{
+    display:grid; place-items:center; width:30px; height:30px;
+    border-radius:9px; font-size:13px;
+    color:var(--po-tone, var(--hub-brand-ink)); background:var(--hub-bg-soft, #f5f4fb);
+  }
+  .po-lane-title{ font-size:13px; font-weight:900; color:var(--hub-text); }
+  .po-lane-value{ font-size:21px; font-weight:900; color:var(--hub-text); }
+  .po-lane-sub{ font-size:11.5px; color:var(--hub-text-mute); }
+  .po-share-track{
+    height:8px; border-radius:999px; overflow:hidden;
+    background:var(--hub-bg-soft, #eef0f6);
+  }
+  .po-share-track > span{
+    display:block; height:100%; border-radius:999px;
+    background:var(--po-tone, var(--hub-brand, #6B5AED));
+    transition:width .4s ease;
+  }
+  .po-share-pct{ font-size:11px; font-weight:800; color:var(--hub-text-soft); }
+
+  /* تدوير نغمات الألوان على المسارات */
+  .po-lane:nth-child(5n+1){ --po-tone:#6B5AED; }
+  .po-lane:nth-child(5n+2){ --po-tone:#16A34A; }
+  .po-lane:nth-child(5n+3){ --po-tone:#D97706; }
+  .po-lane:nth-child(5n+4){ --po-tone:#2563EB; }
+  .po-lane:nth-child(5n+5){ --po-tone:#DC2626; }
+
+  /* ── آخر الباقات المُنشأة — قائمة مدمجة ── */
+  .po-recent{ display:flex; flex-direction:column; }
+  .po-recent-row{
+    display:flex; align-items:center; gap:10px;
+    padding:9px 4px;
+    border-bottom:1px dashed var(--hub-border-soft, #eef0f6);
+  }
+  .po-recent-row:last-child{ border-bottom:0; }
+  .po-recent-dot{ width:6px; height:20px; border-radius:3px; flex:0 0 auto; }
+  .po-recent-name{ flex:1; min-width:0; font-weight:800; color:var(--hub-text);
+                   overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .po-recent-name a{ color:inherit; text-decoration:none; }
+  .po-recent-name a:hover{ color:var(--hub-brand-ink); }
+
+  /* شبكة الجزء السفلي — أعمدة متساوية الارتفاع (قاعدة hub-grid) */
+  .po-bottom{
+    display:grid; grid-template-columns:1fr 1fr; gap:var(--hub-gap-section, 18px);
+    align-items:stretch;
+  }
+  .po-bottom > .hub-section{ height:100%; display:flex; flex-direction:column; margin:0; }
+  .po-bottom > .hub-section .hub-section-body{ flex:1; }
+  @media (max-width: 920px){ .po-bottom{ grid-template-columns:1fr; } }
+</style>
+{% endblock %}
 
 {% block content %}
 
-{# ───── Merged hero: title + subtitle + actions + KPI strip ───── #}
+{% set TYPE_AR = {'time':'وقت','quota':'كوتا','hybrid':'مدمج','unlimited':'غير محدود','recurring':'متكرر'} %}
+{% set TYPE_IC = {'time':'clock','quota':'database','hybrid':'layer-group','unlimited':'infinity','recurring':'rotate'} %}
+
+{# ───── الصدفة الموحّدة: هيرو + KPI صف واحد ───── #}
+<section class="hub-hero-shell">
 {{ hub.megahero(
   "نظرة عامة — الباقات",
-  subtitle="إحصاءات الباقات، الإيراد التقديري، والأكثر اشتراكًا — كل ما يحتاجه مشغّلك لمتابعة أداء العروض في مكان واحد.",
+  subtitle="لوحة أداء العروض: عدد الباقات وتوزيعها حسب النوع، المشتركون الموزَّعون عليها، التسعير، والإيراد التقديري — كل الأرقام حيّة من قاعدة البيانات.",
   icon="chart-pie",
   actions_html='
     <a class="hub-btn hub-btn--primary" href="' + url_for('radius.plans_new') + '">
       <i class="fa-solid fa-circle-plus"></i> إضافة عرض
     </a>
     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.plans_list') + '">
-      <i class="fa-solid fa-list"></i> القائمة
-    </a>
-  ',
+      <i class="fa-solid fa-list"></i> قائمة العروض
+    </a>',
   kpis=[
-    {'label': 'إجمالي الباقات', 'value': total_plans,            'icon': 'tags',         'variant': 'brand'},
-    {'label': 'مفعَّلة',        'value': enabled_plans,          'icon': 'circle-check', 'variant': 'green'},
-    {'label': 'تقدير الإيراد',  'value': revenue_estimate|money, 'icon': 'coins',        'variant': 'amber'},
-    {'label': 'أنواع',          'value': by_type|length,         'icon': 'layer-group',  'variant': 'blue'},
+    {'label': 'إجمالي الباقات',        'value': total_plans or 0,        'icon': 'tags',         'variant': 'brand',
+     'sub': (unused_plans or 0)|string + ' بلا مشتركين'},
+    {'label': 'المفعَّلة',              'value': enabled_plans or 0,      'icon': 'circle-check', 'variant': 'green',
+     'sub': ((total_plans or 0) - (enabled_plans or 0))|string + ' معطَّلة'},
+    {'label': 'متوسط السعر',           'value': (avg_price or 0)|money,  'icon': 'coins',        'variant': 'amber',
+     'sub': (min_price or 0)|money + ' → ' + (max_price or 0)|money},
+    {'label': 'المشتركون الموزَّعون',  'value': assigned_subs or 0,      'icon': 'users',        'variant': 'blue'},
+    {'label': 'تقدير الإيراد',         'value': (revenue_estimate or 0)|money, 'icon': 'sack-dollar', 'variant': 'green',
+     'sub': 'مشتركون مفعَّلون × سعر باقتهم'},
   ]
 ) }}
+</section>{# /hub-hero-shell #}
 
-{# ───── Main (carded analytics) + help panel on the LEFT ───── #}
-{% call hub.worklayout(aside_html=hub.helppanel(
-  "كيف تقرأ هذه الصفحة؟",
-  intro="هذه نظرة سريعة على أداء باقاتك: كم باقة لديك، كم منها مفعَّلة، والإيراد التقديري من المشتركين النشطين.",
-  items=[
-    {'icon': 'trophy',      'text': 'جدول «أكثر الباقات اشتراكًا» يرتّب الباقات حسب عدد المشتركين فيها.'},
-    {'icon': 'coins',       'text': 'تقدير الإيراد = مجموع أسعار الباقات للمشتركين المفعَّلين فقط.'},
-    {'icon': 'layer-group', 'text': '«توزيع حسب النوع» يبيّن كم باقة من كل نوع (وقت/كوتا/مدمج…).'},
-    {'icon': 'circle-check','text': 'الباقات المفعَّلة فقط هي التي تظهر للبيع للمشتركين.'},
-  ],
-  note="الأرقام تُحتسب لحظيًا من قاعدة البيانات؛ أضِف أو فعِّل باقة جديدة من زرّ «إضافة عرض» في الأعلى."
-)) %}
-
-  {# Top plans table — unified data-table #}
-  {% call hub.section("أكثر الباقات اشتراكًا", icon="trophy", meta=top|length|string + " باقة", flush=True) %}
-    {% if top %}
-      <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
-        <table class="hub-table">
-          <thead>
-            <tr>
-              <th class="num" style="width:60px">#</th>
-              <th>الباقة</th>
-              <th>النوع</th>
-              <th class="num">السعر</th>
-              <th class="num">المشتركون</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for r in top %}
-            <tr>
-              <td class="num mono">{{ r.id }}</td>
-              <td><strong>{{ r.name }}</strong></td>
-              <td>{{ hub.pill(r.plan_type, variant="brand", dot=False) }}</td>
-              <td class="num"><strong>{{ r.price|money }}</strong></td>
-              <td class="num">{{ r.subscribers_count }}</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+{# ───── توزيع الباقات حسب النوع — مسارات بنمط نظرة المشتركين ───── #}
+{% call hub.section("توزيع الباقات حسب النوع", icon="layer-group", meta=(by_type_rows|length|string) + " نوع") %}
+  {% if by_type_rows %}
+  <div class="po-board">
+    {% for r in by_type_rows %}
+    {% set _pct = (100.0 * r.plans_count / total_plans) if total_plans else 0 %}
+    <div class="po-lane">
+      <div class="po-lane-head">
+        <span class="po-lane-icon"><i class="fa-solid fa-{{ TYPE_IC.get(r.plan_type, 'tag') }}"></i></span>
+        <span class="po-lane-title">{{ TYPE_AR.get(r.plan_type, r.plan_type or '—') }}</span>
       </div>
-    {% else %}
-      <div style="padding:18px">{{ hub.empty("لا باقات بعد", icon="tags") }}</div>
-    {% endif %}
-  {% endcall %}
-
-  {# Distribution by type #}
-  {% call hub.section("توزيع حسب النوع", icon="layer-group", meta=by_type|length|string + " نوع") %}
-    {% if by_type %}
-      <div class="hub-list">
-        {% for t, c in by_type.items() %}
-        <div class="hub-list-row">
-          {{ hub.pill(t, variant="brand", dot=False) }}
-          <span class="grow"></span>
-          <strong>{{ c }}</strong>
-        </div>
-        {% endfor %}
+      <div class="po-lane-value">{{ r.plans_count }} <span style="font-size:12px;font-weight:700;color:var(--hub-text-mute)">باقة</span></div>
+      <div class="po-lane-sub"><bdi dir="ltr">{{ r.subscribers_count }}</bdi> مشترك على هذا النوع</div>
+      <div class="po-share-track" role="img" aria-label="حصة النوع من الباقات">
+        <span style="width:{{ '%.1f'|format(_pct) }}%"></span>
       </div>
-    {% else %}
-      {{ hub.empty("لا بيانات بعد", icon="layer-group") }}
-    {% endif %}
-  {% endcall %}
-
+      <span class="po-share-pct mono"><bdi dir="ltr">{{ "%.0f"|format(_pct) }}%</bdi> من الباقات</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+    {{ hub.empty("لا بيانات بعد", sub="أنشئ باقات لتظهر توزيعاتها هنا.", icon="layer-group") }}
+  {% endif %}
 {% endcall %}
 
+{# ───── أكثر الباقات اشتراكًا — جدول uds موحّد بمواصفات كاملة ───── #}
+{% call hub.section("أكثر الباقات اشتراكًا", icon="trophy", meta=(top|length|string) + " باقة", flush=True) %}
+  {% if top %}
+  {% set _max_subs = top|map(attribute='subscribers_count')|max %}
+  <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
+    <table class="hub-table">
+      <thead>
+        <tr>
+          <th class="num" style="width:54px">#</th>
+          <th>الباقة</th>
+          <th>النوع</th>
+          <th>الحالة</th>
+          <th>السرعة</th>
+          <th>الكوتا</th>
+          <th>الصلاحية</th>
+          <th class="num">السعر</th>
+          <th class="num">المشتركون</th>
+          <th data-uds-nosort>الحصّة</th>
+          <th style="width:60px" data-uds-nosort data-uds-nocol></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in top %}
+        {% set _pct = (100.0 * r.subscribers_count / _max_subs) if _max_subs else 0 %}
+        <tr>
+          <td class="num mono">{{ r.id }}</td>
+          <td>
+            <div class="hub-flex-row" style="gap:8px;flex-wrap:nowrap">
+              <span style="display:inline-block;width:6px;height:20px;border-radius:3px;background:{{ r.color or '#6B5AED' }};flex-shrink:0"></span>
+              <strong>{{ r.name }}</strong>
+            </div>
+          </td>
+          <td>{{ hub.pill(TYPE_AR.get(r.plan_type, r.plan_type or '—'), variant="brand", dot=False) }}</td>
+          <td>
+            {% if r.enabled %}{{ hub.pill("مفعَّلة", variant="green") }}
+            {% else %}{{ hub.pill("معطَّلة", variant="amber") }}{% endif %}
+          </td>
+          <td class="mono small">
+            {% if r.speed_down_kbps or r.speed_up_kbps %}
+              <bdi dir="ltr">{{ r.speed_down_kbps or 0 }}↓ / {{ r.speed_up_kbps or 0 }}↑ K</bdi>
+            {% else %}<span class="hub-text-mute">—</span>{% endif %}
+          </td>
+          <td class="mono small">
+            {% if r.quota_total_mb %}<bdi dir="ltr">{{ "%.1f"|format(r.quota_total_mb/1024) }} GB</bdi>
+            {% else %}<span class="hub-text-mute">غير محدودة</span>{% endif %}
+          </td>
+          <td class="mono small">
+            {% if r.validity_days %}<bdi dir="ltr">{{ r.validity_days }}</bdi> يوم
+            {% else %}<span class="hub-text-mute">—</span>{% endif %}
+          </td>
+          <td class="num"><strong><bdi dir="ltr">{{ r.price|money }}</bdi></strong></td>
+          <td class="num mono">{{ r.subscribers_count }}</td>
+          <td style="min-width:120px">
+            <div class="po-share-track" title="نسبة إلى الباقة الأكثر اشتراكًا">
+              <span style="width:{{ '%.1f'|format(_pct) }}%"></span>
+            </div>
+          </td>
+          <td>
+            <a class="hub-btn hub-btn--ghost hub-btn--icon" title="تعديل الباقة"
+               href="{{ url_for('radius.plans_edit', plan_id=r.id) }}">
+              <i class="fa-solid fa-pen"></i>
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    <div style="padding:18px">{{ hub.empty("لا باقات بعد", sub="أنشئ أول باقة من زرّ «إضافة عرض» أعلى الصفحة.", icon="tags") }}</div>
+  {% endif %}
+{% endcall %}
+
+{# ───── الأسفل: آخر الباقات + ملخّص التسعير والصحّة (شبكة متساوية) ───── #}
+<div class="po-bottom">
+
+  {% call hub.section("آخر الباقات المُنشأة", icon="clock-rotate-left", meta=(recent|length|string) + " باقة") %}
+    {% if recent %}
+    <div class="po-recent">
+      {% for r in recent %}
+      <div class="po-recent-row">
+        <span class="po-recent-dot" style="background:{{ r.color or '#6B5AED' }}"></span>
+        <span class="po-recent-name">
+          <a href="{{ url_for('radius.plans_edit', plan_id=r.id) }}">{{ r.name }}</a>
+        </span>
+        {{ hub.pill(TYPE_AR.get(r.plan_type, r.plan_type or '—'), variant="brand", dot=False) }}
+        {% if r.enabled %}{{ hub.pill("مفعَّلة", variant="green", dot=False) }}
+        {% else %}{{ hub.pill("معطَّلة", variant="amber", dot=False) }}{% endif %}
+        <strong class="mono"><bdi dir="ltr">{{ r.price|money }}</bdi></strong>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+      {{ hub.empty("لا باقات بعد", icon="clock-rotate-left") }}
+    {% endif %}
+  {% endcall %}
+
+  {% call hub.section("ملخّص التسعير وصحّة الباقات", icon="scale-balanced") %}
+    {{ hub.kv([
+      {'label':'متوسط سعر الباقة',          'value': (avg_price or 0)|money, 'mono': True},
+      {'label':'أرخص باقة',                  'value': (min_price or 0)|money, 'mono': True},
+      {'label':'أغلى باقة',                  'value': (max_price or 0)|money, 'mono': True},
+      {'label':'تقدير الإيراد الشهري',       'value': (revenue_estimate or 0)|money, 'mono': True},
+      {'label':'مشتركون موزَّعون على باقات', 'value': assigned_subs or 0, 'mono': True},
+      {'label':'باقات بلا مشتركين',          'value': unused_plans or 0, 'mono': True},
+      {'label':'باقات معطَّلة',              'value': (total_plans or 0) - (enabled_plans or 0), 'mono': True},
+    ]) }}
+    {% if unused_plans %}
+    <div class="uds-help-note" style="margin-top:12px">
+      <i class="fa-solid fa-circle-info"></i>
+      <span>لديك <bdi dir="ltr">{{ unused_plans }}</bdi> باقة بلا أي مشترك — راجعها من
+        <a href="{{ url_for('radius.plans_list') }}" style="font-weight:800">قائمة العروض</a>
+        وفكّر بأرشفة غير المستخدَم منها.</span>
+    </div>
+    {% endif %}
+  {% endcall %}
+
+</div>{# /.po-bottom #}
+
+{# نظام الجداول الموحد (فرز + اختيار أعمدة + ترقيم) #}
+<script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
 {% endblock %}

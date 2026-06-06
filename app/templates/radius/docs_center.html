@@ -1,0 +1,146 @@
+{# ══════════════════════════════════════════════════════════════════════
+   «كيف تستخدمني» — فهرس الأقسام الرئيسية لمركز الأدلة.
+
+   بعد إعادة الهيكلة صارت صفحة الهبوط شبكة بطاقات «أقسام» (المشتركون،
+   البطاقات، المحاسبة...) لا أدلة مفردة: كل بطاقة قسم تعرض أيقونته
+   بلونه المميِّز وعدد الأدلة الجاهزة تحته، وتنقل إلى صفحة القسم
+   /docs/section/<slug> التي تسرد أدلة صفحاته. الأقسام الفارغة بطاقات
+   معتمة بشارة «قريبًا» حتى يرى المشغّل خارطة المحتوى من اليوم الأول.
+
+   القائمة `categories` تأتي من routes/docs_center.py (سجل CATEGORIES
+   الثابت في الكود — هو مصدر الحقيقة الوحيد).
+   ══════════════════════════════════════════════════════════════════════ #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}كيف تستخدمني — فهرس الأدلة{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<style>
+  /* ── شبكة بطاقات الأقسام ── */
+  .dc-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:16px; }
+
+  .dc-card{
+    position:relative; display:flex; flex-direction:column; gap:12px;
+    background:#fff; border:1px solid #e8edf3; border-radius:16px;
+    padding:18px 18px 16px; text-decoration:none; color:inherit;
+    transition:transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+    overflow:hidden;
+  }
+  /* خيط علوي بلون القسم يميّز البطاقات الحيّة — اللون من السجل عبر
+     متغيّر --dc-accent على البطاقة نفسها */
+  .dc-card.is-ready::before{
+    content:""; position:absolute; inset-inline:0; top:0; height:4px;
+    background:linear-gradient(90deg, var(--dc-accent,#7c3aed), color-mix(in srgb, var(--dc-accent,#7c3aed) 45%, #fff));
+  }
+  .dc-card.is-ready:hover{
+    transform:translateY(-3px);
+    box-shadow:0 14px 30px rgba(107,90,237,.16);
+    border-color:color-mix(in srgb, var(--dc-accent,#7c3aed) 40%, #fff);
+  }
+  .dc-card-top{ display:flex; align-items:center; gap:13px; }
+  .dc-card-ic{
+    width:46px; height:46px; border-radius:13px; flex:none;
+    display:grid; place-items:center; font-size:19px; color:#fff;
+    background:linear-gradient(135deg, var(--dc-accent,#7c3aed), color-mix(in srgb, var(--dc-accent,#7c3aed) 70%, #000));
+    box-shadow:0 8px 18px color-mix(in srgb, var(--dc-accent,#7c3aed) 30%, transparent);
+  }
+  .dc-card-title{ font-size:15px; font-weight:800; color:#0f172a; line-height:1.4; }
+  .dc-card-sub{ font-size:12.5px; line-height:1.85; color:#64748b; flex:1; }
+  .dc-card-meta{
+    display:flex; align-items:center; gap:14px; padding-top:11px;
+    border-top:1px dashed #eef2f7; font-size:11.5px; font-weight:700; color:#7c7a99;
+  }
+  .dc-card-meta i{ color:#a78bfa; margin-inline-end:4px; }
+  .dc-ready-count{
+    display:inline-flex; align-items:center; gap:6px;
+    background:#f5f3ff; color:#5b21b6; border-radius:999px; padding:3px 11px;
+    font-size:11px; font-weight:900;
+  }
+  .dc-ready-count i{ color:#7c3aed; margin:0; }
+  .dc-card-go{
+    margin-inline-start:auto; display:inline-flex; align-items:center; gap:6px;
+    color:#6b5aed; font-size:12px; font-weight:800;
+  }
+  .dc-card.is-ready:hover .dc-card-go{ text-decoration:underline; }
+
+  /* ── بطاقات «قريبًا» المعتمة ── */
+  .dc-card.is-soon{ cursor:default; background:#fbfcfe; }
+  .dc-card.is-soon .dc-card-ic{
+    background:#eef0f5; color:#a3aec2; box-shadow:none;
+  }
+  .dc-card.is-soon .dc-card-title{ color:#94a3b8; }
+  .dc-card.is-soon .dc-card-sub{ color:#a8b3c5; }
+  .dc-soon-badge{
+    margin-inline-start:auto; font-size:10.5px; font-weight:900;
+    background:#f1f5f9; color:#94a3b8; border:1px dashed #cbd5e1;
+    border-radius:999px; padding:3px 11px; white-space:nowrap;
+  }
+
+  /* ── شريط تمهيدي تحت الـ hero ── */
+  .dc-intro{
+    display:flex; gap:13px; align-items:flex-start;
+    background:linear-gradient(135deg,#f5f3ff,#fdfcff);
+    border:1px solid #e9e5fc; border-radius:14px; padding:15px 17px;
+    margin-bottom:18px;
+  }
+  .dc-intro .ic{
+    width:40px; height:40px; border-radius:12px; flex:none;
+    display:grid; place-items:center; font-size:17px;
+    background:#ede9fe; color:#6d28d9;
+  }
+  .dc-intro h3{ margin:0 0 4px; font-size:13.5px; font-weight:800; color:#241e4e; }
+  .dc-intro p{ margin:0; font-size:12.5px; line-height:1.9; color:#5b5a78; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{{ hub.hero(
+  "كيف تستخدمني",
+  subtitle="أدلة مصوّرة خطوة بخطوة لكل صفحة في النظام — بلغة بسيطة وبدون أي خبرة تقنية مسبقة.",
+  icon="graduation-cap"
+) }}
+
+<div class="dc-intro">
+  <span class="ic"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
+  <div>
+    <h3>كل قسم = مجموعة أدلة لصفحاته</h3>
+    <p>
+      اختر القسم الذي تشتغل فيه (المشتركون، البطاقات، المحاسبة...) وستجد داخله دليلًا
+      مفصّلًا لكل صفحة: شو وظيفتها، شو يعني كل رقم وكل زر، وكيف تنفّذ مهامك اليومية
+      عليها خطوة بخطوة. الأقسام المعتمة قادمة قريبًا.
+    </p>
+  </div>
+</div>
+
+<div class="dc-grid">
+  {% for c in categories %}
+    {% if c.ready_count > 0 %}
+    <a class="dc-card is-ready" style="--dc-accent: {{ c.color }};"
+       href="{{ url_for('radius.docs_section', cat_slug=c.slug) }}">
+      <div class="dc-card-top">
+        <span class="dc-card-ic"><i class="fa-solid fa-{{ c.icon }}"></i></span>
+        <span class="dc-card-title">{{ c.title }}</span>
+      </div>
+      <div class="dc-card-sub">{{ c.desc }}</div>
+      <div class="dc-card-meta">
+        <span class="dc-ready-count"><i class="fa-solid fa-book-open"></i> {{ c.ready_count }} أدلة جاهزة</span>
+        <span class="dc-card-go">افتح القسم <i class="fa-solid fa-arrow-left"></i></span>
+      </div>
+    </a>
+    {% else %}
+    <div class="dc-card is-soon" aria-disabled="true">
+      <div class="dc-card-top">
+        <span class="dc-card-ic"><i class="fa-solid fa-{{ c.icon }}"></i></span>
+        <span class="dc-card-title">{{ c.title }}</span>
+        <span class="dc-soon-badge"><i class="fa-regular fa-hourglass-half"></i> قريبًا</span>
+      </div>
+      <div class="dc-card-sub">{{ c.desc }}</div>
+    </div>
+    {% endif %}
+  {% endfor %}
+</div>
+
+{% endblock %}

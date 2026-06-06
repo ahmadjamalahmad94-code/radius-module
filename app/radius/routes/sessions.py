@@ -50,9 +50,23 @@ def _return_to_online():
     return redirect(url_for("radius.online_list"))
 
 
-def _selected_online_row():
-    username = (request.form.get("username") or "").strip()
-    session_id = (request.form.get("session_id") or "").strip()
+def _selected_online_pairs() -> list[tuple[str, str]]:
+    """يقرأ أزواج (username, session_id) من النموذج — يدعم التحديد المتعدد.
+
+    الواجهة تحقن حقل username + session_id لكل جلسة محددة، لذا نقرأها
+    بـ getlist ونطابقها بالترتيب. تبقى متوافقة مع إرسال زوج واحد فقط.
+    """
+    usernames = [u.strip() for u in request.form.getlist("username")]
+    session_ids = [s.strip() for s in request.form.getlist("session_id")]
+    pairs = [(u, s) for u, s in zip(usernames, session_ids) if u and s]
+    if not pairs:
+        raise RadiusError("حدد جلسة أولًا.")
+    return pairs
+
+
+def _selected_online_row(username: str | None = None, session_id: str | None = None):
+    if username is None or session_id is None:
+        username, session_id = _selected_online_pairs()[0]
     if not username or not session_id:
         raise RadiusError("حدد جلسة أولًا.")
 
@@ -174,6 +188,11 @@ def _temporary_speed_states(usernames: set[str], now: datetime) -> dict[str, dic
             "expired": bool(has_flag and ends_at and not active),
             "remaining_seconds": max(0, remaining) if remaining is not None else None,
             "ends_at": ends_at.isoformat(timespec="seconds") if ends_at else "",
+            # epoch ثوانٍ UTC لوقت النهاية — العدّاد في الواجهة يحسب المتبقي
+            # كل ثانية من ساعة الحائط (Date.now) بدل إنقاص لقطة، فلا ينحرف
+            # إذا نام التبويب ويستمر من وقت النهاية المخزَّن دائماً.
+            "ends_at_epoch": (int(ends_at.replace(tzinfo=timezone.utc).timestamp())
+                              if ends_at else 0),
             "custom_speed": bool(row["custom_speed"]),
         }
     return states
@@ -400,68 +419,120 @@ def online_list():
 
 
 def online_disconnect():
-    username = (request.form.get("username") or "").strip()
-    session_id = (request.form.get("session_id") or "").strip() or None
-    if not username:
+    # تحديد متعدد: قد يصل أكثر من زوج username/session_id من شريط الإجراءات.
+    usernames = [u.strip() for u in request.form.getlist("username")]
+    session_ids = [s.strip() for s in request.form.getlist("session_id")]
+    pairs = [
+        (u, (s or None))
+        for u, s in zip(usernames, session_ids or [""] * len(usernames))
+        if u
+    ]
+    if not pairs and usernames:
+        pairs = [(u, None) for u in usernames if u]
+    if not pairs:
         flash("اسم المستخدم مطلوب", "error")
         return redirect(url_for("radius.online_list"))
-    try:
-        get_online_sessions_service().disconnect(
-            actor=_actor(), username=username, session_id=session_id
+
+    svc = get_online_sessions_service()
+    ok, failed = [], []
+    for username, session_id in pairs:
+        try:
+            svc.disconnect(actor=_actor(), username=username, session_id=session_id)
+            ok.append(username)
+        except RadiusError as e:
+            failed.append(f"{username}: {e.message or 'تعذّر قطع الجلسة'}")
+    if ok:
+        ok_names = "، ".join(ok)
+        flash(
+            f"تم إرسال أمر قطع الجلسة لـ {ok[0]}." if len(ok) == 1
+            else f"تم إرسال أمر قطع الجلسة لـ {len(ok)} جلسات: {ok_names}.",
+            "success",
         )
-        flash(f"تم إرسال أمر قطع الجلسة لـ {username}.", "success")
-    except RadiusError as e:
-        flash(e.message or "تعذّر قطع الجلسة", "error")
+    if failed:
+        flash("تعذّر قطع بعض الجلسات — " + " | ".join(failed), "error")
     return _return_to_online()
 
 
 def online_lock_mac():
+    # تحديد متعدد: نثبّت MAC لكل جلسة محددة على حدة ونجمع النتائج.
     try:
-        row = _selected_online_row()
-        mac = _normalise_mac(row["callingstationid"] or "")
-        username = row["username"]
-        if row["card_id"]:
-            from ..db.repos import cards_repo
-
-            if not cards_repo.set_card_locked_mac(
-                _tid(), int(row["card_id"]), mac, actor=_actor()
-            ):
-                raise RadiusError("تعذّر تثبيت MAC للبطاقة.")
-            flash(f"تم تثبيت MAC {mac} على البطاقة {username}.", "success")
-        else:
-            from ..services.users import get_users_service
-
-            svc = get_users_service()
-            sub = svc.get(username)
-            svc.update(actor=_actor(), sub=replace(sub, mac_lock=mac, allowed_macs=mac))
-            flash(f"تم تثبيت MAC {mac} على المشترك {username}.", "success")
+        pairs = _selected_online_pairs()
     except RadiusError as e:
-        flash(e.message or "تعذّر تثبيت MAC", "error")
+        flash(e.message or "حدد جلسة أولًا.", "error")
+        return _return_to_online()
+
+    ok, failed = [], []
+    for username, session_id in pairs:
+        try:
+            row = _selected_online_row(username, session_id)
+            mac = _normalise_mac(row["callingstationid"] or "")
+            if row["card_id"]:
+                from ..db.repos import cards_repo
+
+                if not cards_repo.set_card_locked_mac(
+                    _tid(), int(row["card_id"]), mac, actor=_actor()
+                ):
+                    raise RadiusError("تعذّر تثبيت MAC للبطاقة.")
+            else:
+                from ..services.users import get_users_service
+
+                svc = get_users_service()
+                sub = svc.get(username)
+                svc.update(actor=_actor(), sub=replace(sub, mac_lock=mac, allowed_macs=mac))
+            ok.append(f"{username} ({mac})")
+        except RadiusError as e:
+            failed.append(f"{username}: {e.message or 'تعذّر تثبيت MAC'}")
+    if ok:
+        ok_names = "، ".join(ok)
+        flash(
+            f"تم تثبيت MAC على {ok[0]}." if len(ok) == 1
+            else f"تم تثبيت MAC على {len(ok)}: {ok_names}.",
+            "success",
+        )
+    if failed:
+        flash("تعذّر تثبيت MAC للبعض — " + " | ".join(failed), "error")
     return _return_to_online()
 
 
 def online_lock_ip():
+    # تحديد متعدد: نثبّت IP لكل جلسة محددة (مشتركون فقط) ونجمع النتائج.
     try:
-        row = _selected_online_row()
-        username = row["username"]
-        if row["card_id"]:
-            raise RadiusError("تثبيت IP متاح للمشتركين فقط.")
-        ip = (row["framedipaddress"] or "").strip()
-        if not ip:
-            raise RadiusError("لا يوجد IP على الجلسة المحددة.")
-        try:
-            ip_address(ip)
-        except ValueError as exc:
-            raise RadiusError("عنوان IP في الجلسة غير صالح.") from exc
-
-        from ..services.users import get_users_service
-
-        svc = get_users_service()
-        sub = svc.get(username)
-        svc.update(actor=_actor(), sub=replace(sub, static_ip=ip))
-        flash(f"تم تثبيت IP {ip} على المشترك {username}.", "success")
+        pairs = _selected_online_pairs()
     except RadiusError as e:
-        flash(e.message or "تعذّر تثبيت IP", "error")
+        flash(e.message or "حدد جلسة أولًا.", "error")
+        return _return_to_online()
+
+    ok, failed = [], []
+    for username, session_id in pairs:
+        try:
+            row = _selected_online_row(username, session_id)
+            if row["card_id"]:
+                raise RadiusError("تثبيت IP متاح للمشتركين فقط.")
+            ip = (row["framedipaddress"] or "").strip()
+            if not ip:
+                raise RadiusError("لا يوجد IP على الجلسة المحددة.")
+            try:
+                ip_address(ip)
+            except ValueError as exc:
+                raise RadiusError("عنوان IP في الجلسة غير صالح.") from exc
+
+            from ..services.users import get_users_service
+
+            svc = get_users_service()
+            sub = svc.get(username)
+            svc.update(actor=_actor(), sub=replace(sub, static_ip=ip))
+            ok.append(f"{username} ({ip})")
+        except RadiusError as e:
+            failed.append(f"{username}: {e.message or 'تعذّر تثبيت IP'}")
+    if ok:
+        ok_names = "، ".join(ok)
+        flash(
+            f"تم تثبيت IP على {ok[0]}." if len(ok) == 1
+            else f"تم تثبيت IP على {len(ok)}: {ok_names}.",
+            "success",
+        )
+    if failed:
+        flash("تعذّر تثبيت IP للبعض — " + " | ".join(failed), "error")
     return _return_to_online()
 
 
@@ -478,6 +549,13 @@ def online_temp_speed():
         username = row["username"]
         if row["card_id"]:
             raise RadiusError("السرعة المؤقتة متاحة للمشتركين فقط.")
+        # المدة: تُقرأ كقيمة + وحدة (دقائق/ساعات) من الواجهة الجديدة، مع
+        # توافق رجعي مع الحقل القديم duration_minutes إن أُرسل وحده.
+        _dur = _int_or_zero(request.form.get("duration")
+                            or request.form.get("duration_minutes"))
+        _unit = (request.form.get("duration_unit") or "").strip().lower()
+        if _unit in ("hours", "hour", "ساعات", "ساعة", "h"):
+            _dur *= 60
         from ..services.temp_speed import apply_temp_speed
         try:
             result = apply_temp_speed(
@@ -486,7 +564,7 @@ def online_temp_speed():
                 username=username,
                 down_kbps=_int_or_zero(request.form.get("down_kbps")),
                 up_kbps=_int_or_zero(request.form.get("up_kbps")),
-                duration_minutes=_int_or_zero(request.form.get("duration_minutes")),
+                duration_minutes=_dur,
             )
         except ValueError as exc:
             raise RadiusError(str(exc)) from exc
@@ -497,10 +575,20 @@ def online_temp_speed():
                 "success",
             )
         else:
+            # رسالة صريحة بحسب سبب فشل CoA بدل «no_coa» المبهم — حتى يعرف
+            # المشغّل هل المشكلة «لا جلسة نشطة» أم «الراوتر لا يستجيب/إعداد CoA».
+            code = result["coa"].get("code") or "no_coa"
+            if code == "no_active_session":
+                reason = ("لا توجد جلسة نشطة الآن لهذا المستخدم — السرعة "
+                          "ستُطبَّق تلقائيًا فور إعادة اتصاله.")
+            elif code == "empty_rate":
+                reason = "لم تُحدَّد سرعة صالحة للإرسال."
+            else:
+                reason = (f"الراوتر لم يؤكّد التطبيق ({code}) — تحقّق من اتصال "
+                          "الراوتر وإعداد CoA (المنفذ 3799 والـ secret في إعدادات السيرفر).")
             flash(
                 f"حُفظت السرعة المؤقتة ({result['rate']}) لـ {username} حتى "
-                f"{result['ends_at']}، لكن لم تُؤكَّد على الجلسة الحيّة "
-                f"({result['coa'].get('code') or 'no_coa'}) — ستُطبَّق عند إعادة الاتصال.",
+                f"{result['ends_at']}، لكن {reason}",
                 "warning",
             )
     except RadiusError as e:
@@ -509,6 +597,7 @@ def online_temp_speed():
 
 
 def online_temp_speed_cancel():
+    # ملاحظة: يعمل على أول جلسة محددة فقط (إجراء فردي).
     """Cancel an active temporary speed on a session — LIVE.
 
     Reverts via the SAME shared service used by the profile/edit cancel, so a

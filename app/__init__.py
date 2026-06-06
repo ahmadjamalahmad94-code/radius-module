@@ -31,7 +31,10 @@ def create_app() -> Flask:
     app.config["TEMPLATES_AUTO_RELOAD"] = True
 
     _install_stubs(app)
+    _install_i18n(app)
     _install_api_cors(app)
+    _install_store_cors(app)
+    _install_store_key_guard(app)
     _init_db(app)
     _install_tenant(app)
     _install_npc_live_adapters(app)
@@ -68,6 +71,18 @@ def _install_mt_health_context(app: Flask) -> None:
         except Exception:  # noqa: BLE001
             return {"mt_health": {"unreachable": False, "skipped": 0,
                                    "ok": 0, "any_routers": False}}
+
+
+def _install_i18n(app: Flask) -> None:
+    """يهيّئ أساس التدويل (Flask-Babel) — منتقي اللغة + متغيّرات الاتجاه/الخط.
+
+    طبقة فوقية بحتة: عند العربية (الافتراضي) لا يتغيّر أي سلوك حالي. أي فشل
+    في التهيئة لا يكسر التطبيق — الموقع يبقى عربيًا كما هو."""
+    try:
+        from app.radius.i18n import init_i18n
+        init_i18n(app)
+    except Exception:  # noqa: BLE001 — الترجمة طبقة فوقية لا تكسر الإقلاع
+        app.logger.exception("i18n init failed — site stays Arabic (safe default)")
 
 
 def _install_api_cors(app: Flask) -> None:
@@ -132,6 +147,12 @@ def _install_api_cors(app: Flask) -> None:
     def _cors_headers(resp):
         if not _req.path.startswith("/api/"):
             return resp
+        # نقاط متجر المايكروتيك /api/v1/store/* لها سياسة CORS مفتوحة
+        # خاصة بها (install_store_cors تضع ACAO:*). لا نلمسها هنا حتى لا
+        # تطغى سياسة الـAPI العامة (التي تُردّد الأصل أو تفشل مغلقة في
+        # الإنتاج) فوق الـ* المطلوب لصفحة المتجر مجهولة الأصل.
+        if _req.path.startswith("/api/v1/store/"):
+            return resp
         origin = _req.headers.get("Origin", "")
         echoed = _origin_allowed(origin)
         if echoed:
@@ -150,6 +171,26 @@ def _install_api_cors(app: Flask) -> None:
     def _cors_preflight(_any):  # noqa: ARG001
         from flask import make_response
         return make_response("", 204)
+
+
+def _install_store_cors(app: Flask) -> None:
+    """CORS مفتوح لنقاط متجر المايكروتيك /api/v1/store/* فقط.
+
+    صفحة المتجر store.html تعمل من أصل الراوتر (IP غير معروف
+    مسبقًا)، والمصادقة بتوكن موقّع في الترويسة لا بكوكيز — فالسماح
+    لأي أصل هنا آمن ولا يلمس سياسة CORS العامة لبقية الـ API.
+    التفاصيل في app/api/v1/store.py::install_store_cors.
+    """
+    from app.api.v1.store import install_store_cors
+    install_store_cors(app)
+
+
+def _install_store_key_guard(app: Flask) -> None:
+    """بوّابة مفتاح التطبيق لنقاط المتجر — ترفض أي طلب لا يحمل مفتاح
+    المتجر الصحيح (X-Store-Key) قبل تحقق التوكن وبعد preflight.
+    التفاصيل في app/api/v1/store.py::install_store_key_guard."""
+    from app.api.v1.store import install_store_key_guard
+    install_store_key_guard(app)
 
 
 def _start_workers(app: Flask) -> None:
@@ -308,6 +349,95 @@ def _install_stubs(app: Flask) -> None:
             f'<input type="hidden" name="_csrf_token" value="{escape(csrf_token())}">'
         )
 
+    def _topbar_alerts(limit: int = 6) -> dict:
+        """أحدث التنبيهات الذكية المفتوحة لعرضها في قائمة الجرس المنسدلة.
+
+        تُرجع {count, items} حيث كل عنصر: {id, title, severity, last_seen}.
+        كسولة وآمنة: تُستدعى من الـ layout فقط، وأي فشل (قاعدة بيانات غير
+        جاهزة، جداول ناقصة…) يُرجِع قائمة فارغة بدل كسر الصفحة.
+        """
+        try:
+            from flask import g as _g
+            from app.radius.core.tenant import DEFAULT_TENANT_ID
+            from app.radius.db.repos import alerts_repo
+            tid = int(getattr(_g, "tenant_id", DEFAULT_TENANT_ID))
+            rows = alerts_repo.list_open(tid, limit=50)
+            items = [{
+                "id": int(r["id"]),
+                "title": r.get("title_ar") or "",
+                "severity": r.get("severity") or "info",
+                "last_seen": r.get("last_seen") or "",
+            } for r in rows[: max(1, int(limit))]]
+            return {"count": len(rows), "items": items}
+        except Exception:  # noqa: BLE001 — الجرس لا يكسر أي صفحة أبدًا
+            return {"count": 0, "items": []}
+
+    def _sync_pending_count() -> int:
+        """عدد مهام المزامنة المنتظرة/المعاد محاولتها (شارة الـ sidebar فقط).
+
+        طابور المزامنة هو عصب التحكم بالراوترات — الشارة بجانب رابط
+        «طابور المزامنة» تكشف فورًا وجود مهام لم تصل للراوترات بعد.
+        كسولة وآمنة: استعلام عدّ واحد خفيف على فهرس status، وأي خطأ
+        يُرجِع صفرًا بدل كسر أي صفحة.
+        """
+        try:
+            from flask import g as _g
+            from app.radius.core.tenant import DEFAULT_TENANT_ID
+            from app.radius.db.connection import db as _db
+            tid = int(getattr(_g, "tenant_id", DEFAULT_TENANT_ID))
+            row = _db().execute(
+                "SELECT COUNT(*) AS c FROM sync_queue "
+                "WHERE tenant_id = ? AND status IN ('queued','retrying','syncing')",
+                (tid,),
+            ).fetchone()
+            return int(row["c"] if row else 0)
+        except Exception:  # noqa: BLE001 — الشارة لا تكسر أي صفحة أبدًا
+            return 0
+
+    def _collection_is_frozen() -> bool:
+        """هل قسم التحصيل مجمّد؟ (شارة الـ sidebar فقط).
+
+        كسولة وآمنة: تُستدعى من الـ sidebar عند رسم رابط «التحصيل
+        والمدفوعات». استعلام إعدادات واحد خفيف. عند أي خطأ تعتبر القسم
+        مجمّدًا (الوضع الآمن) — انظر سياسة collection_frozen.
+        """
+        try:
+            from flask import g as _g, session as _s
+            from app.radius.core.tenant import DEFAULT_TENANT_ID
+            from app.radius.routes.finance_collection import collection_frozen_now
+            tid = int(
+                getattr(_g, "tenant_id", None)
+                or _s.get("tenant_id")
+                or DEFAULT_TENANT_ID
+            )
+            return collection_frozen_now(tid)
+        except Exception:  # noqa: BLE001 — الشارة لا تكسر أي صفحة أبدًا
+            return True
+
+    # ── صلاحيات الواجهة (RBAC UI) — أغلفة آمنة حول auth/ui_permissions ──
+    # المنطق الكامل (التخزين لكل طلب + خريطة endpoint→صلاحية) يعيش في
+    # app/radius/auth/ui_permissions.py؛ هنا فقط أغلفة لا تكسر أي صفحة.
+    def _ui_can(perm_key: str) -> bool:
+        try:
+            from app.radius.auth.ui_permissions import can as _can
+            return _can(perm_key)
+        except Exception:  # noqa: BLE001 — فشل الفحص = لا صلاحية (الوضع الآمن)
+            return False
+
+    def _ui_unauth_mode() -> str:
+        try:
+            from app.radius.auth.ui_permissions import ui_unauth_mode as _m
+            return _m()
+        except Exception:  # noqa: BLE001 — الافتراضي: تجميد بقفل
+            return "freeze"
+
+    def _ui_perm_for_endpoint(endpoint: str):
+        try:
+            from app.radius.auth.ui_permissions import perm_for_endpoint as _p
+            return _p(endpoint)
+        except Exception:  # noqa: BLE001 — endpoint مجهول = بند مفتوح
+            return None
+
     @app.context_processor
     def _inject():
         from flask import session as flask_session
@@ -323,6 +453,27 @@ def _install_stubs(app: Flask) -> None:
             # or when a route is retired but the entry is still
             # listed. O(1) lookup; never touches the URL builder.
             "endpoint_exists": lambda name: name in app.view_functions,
+            # تنبيهات شريط الأعلى (الجرس): دالة كسولة تُستدعى من الـ layout فقط،
+            # تُرجع أحدث التنبيهات المفتوحة للمستأجر الحالي — كل عنصر يحمل id
+            # للانتقال لصفحة تفاصيله. لا تكسر الصفحة أبدًا عند أي خطأ.
+            "topbar_alerts": _topbar_alerts,
+            # تجميد قسم التحصيل: دالة كسولة تستدعيها الـ sidebar فقط لعرض
+            # شارة «مجمّد» بجانب رابط التحصيل. استعلام واحد خفيف، ولا تكسر
+            # أي صفحة عند الخطأ (تعتبر القسم مجمّدًا افتراضيًا — الوضع الآمن).
+            "collection_is_frozen": _collection_is_frozen,
+            # شارة طابور المزامنة: دالة كسولة تستدعيها الـ sidebar لعرض عدد
+            # المهام المنتظرة بجانب رابط «طابور المزامنة». استعلام عدّ واحد،
+            # ولا تكسر أي صفحة عند الخطأ (تُرجع صفرًا).
+            "sync_pending_count": _sync_pending_count,
+            # ── صلاحيات الواجهة (RBAC UI) ──
+            # can(perm): هل يملك المسؤول الحالي الصلاحية؟ (super_admin دائمًا نعم)
+            # ui_unauth_mode(): "freeze" تجميد بقفل أو "hide" إخفاء كلي —
+            #   يضبطه مالك الريدياس من إعدادات النظام (security.unauthorized_ui).
+            # perm_for_endpoint(ep): مفتاح الصلاحية لبند sidebar حسب endpoint.
+            # كلها مخزّنة لكل طلب ولا تكسر أي صفحة عند الخطأ.
+            "can": _ui_can,
+            "ui_unauth_mode": _ui_unauth_mode,
+            "perm_for_endpoint": _ui_perm_for_endpoint,
         }
 
     # Unified system config (currency / timezone / branding) + money & local-time

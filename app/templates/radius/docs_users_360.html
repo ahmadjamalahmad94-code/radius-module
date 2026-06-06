@@ -1,0 +1,592 @@
+{# ══════════════════════════════════════════════════════════════════════
+   دليل «صفحة المشتركين 360» — من سلسلة «كيف تستخدمني».
+
+   مستنسخ حرفيًا من بنية docs_add_subscriber.html (النموذج الذهبي):
+     • hero + شريط أدوات (كل الأدلة / حفظ كـ PDF).
+     • فهرس جانبي لاصق على يسار الصفحة (order:2) + scrollspy خفيف.
+     • خطوات مرقّمة بشارات بنفسجية متدرّجة ورسوم محاكاة HTML/CSS.
+     • تلميحات 💡 نصيحة / ⚠️ انتبه.
+
+   المحتوى مطابق للصفحة الفعلية users_list.html (مسار radius.users_list):
+   أسماء الفلاتر والأعمدة والأزرار والقوائم منسوخة حرفيًا — «البحث
+   بواسطة»، «تطبيق»، أيقونات CSV/Excel/PDF، «أعمدة»، قائمتا «تفعيل»
+   و«إدارية» في كل صف، شريط «التفعيل والرصيد / إجراءات إدارية» عند
+   التحديد. عند تغيير الصفحة حدّث الدليل معها.
+   ══════════════════════════════════════════════════════════════════════ #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}دليل: صفحة المشتركين 360 — كيف تستخدمني{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<style>
+  /* ── التخطيط: فهرس جانبي لاصق + عمود المحتوى ── */
+  .dg-layout{ display:grid; grid-template-columns:minmax(0,1fr) 230px; gap:20px; align-items:start; }
+  .dg-toc{ order:2; }
+  .dg-main{ order:1; }
+  @media (max-width:980px){ .dg-layout{ grid-template-columns:1fr; } .dg-toc{ order:1; } .dg-main{ order:2; } }
+
+  .dg-toc{
+    position:sticky; top:84px;
+    background:#fff; border:1px solid #e8edf3; border-radius:14px;
+    padding:14px 13px; display:grid; gap:3px;
+  }
+  @media (max-width:980px){ .dg-toc{ position:static; } }
+  .dg-toc-title{
+    display:flex; align-items:center; gap:8px; font-size:12px; font-weight:900;
+    color:#7c7a99; margin-bottom:7px; padding-inline:6px;
+  }
+  .dg-toc a{
+    display:flex; align-items:center; gap:9px;
+    padding:8px 10px; border-radius:9px; text-decoration:none;
+    font-size:12.5px; font-weight:700; color:#475569;
+    transition:background .14s, color .14s;
+  }
+  .dg-toc a .n{
+    width:21px; height:21px; border-radius:50%; flex:none;
+    display:grid; place-items:center; font-size:10.5px; font-weight:900;
+    background:#f1f5f9; color:#94a3b8;
+  }
+  .dg-toc a:hover{ background:#f5f3ff; color:#5b21b6; }
+  .dg-toc a.is-active{ background:#ede9fe; color:#5b21b6; }
+  .dg-toc a.is-active .n{ background:linear-gradient(135deg,#7c3aed,#5b21b6); color:#fff; }
+
+  /* ── عمود الخطوات ── */
+  .dg-main{ min-width:0; display:grid; gap:18px; }
+
+  .dg-lead{
+    display:flex; gap:13px; align-items:flex-start;
+    background:linear-gradient(135deg,#f5f3ff,#fdfcff);
+    border:1px solid #e9e5fc; border-radius:14px; padding:15px 17px;
+  }
+  .dg-lead .ic{ width:40px;height:40px;border-radius:12px;flex:none;display:grid;place-items:center;
+    font-size:17px;background:#ede9fe;color:#6d28d9; }
+  .dg-lead h3{ margin:0 0 4px; font-size:13.5px; font-weight:800; color:#241e4e; }
+  .dg-lead p{ margin:0; font-size:12.5px; line-height:1.9; color:#5b5a78; }
+
+  .dg-step{ display:grid; grid-template-columns:auto 1fr; gap:15px; align-items:start; scroll-margin-top:90px; }
+  @media (max-width:560px){ .dg-step{ grid-template-columns:1fr; } }
+  .dg-badge{
+    width:42px; height:42px; border-radius:50%; flex:none;
+    display:grid; place-items:center; font-size:17px; font-weight:900; color:#fff;
+    background:linear-gradient(135deg,#7c3aed,#5b21b6);
+    box-shadow:0 8px 18px rgba(124,58,237,.3);
+  }
+  .dg-card{
+    min-width:0; background:#fff; border:1px solid #e8edf3; border-radius:15px;
+    padding:16px 18px;
+  }
+  .dg-card h2{
+    margin:0 0 8px; font-size:15.5px; font-weight:800; color:#0f172a;
+    display:flex; align-items:center; gap:9px; flex-wrap:wrap;
+  }
+  .dg-card h2 i{ color:#7c3aed; }
+  .dg-card p{ margin:0 0 7px; font-size:13px; line-height:1.95; color:#475569; }
+  .dg-card p:last-child{ margin-bottom:0; }
+  .dg-card ul{ margin:4px 0 8px; padding-inline-start:22px; font-size:13px; line-height:2; color:#475569; }
+  .dg-card strong{ color:#241e4e; }
+  .dg-kbd{
+    font-family:ui-monospace,Consolas,monospace; font-size:11.5px;
+    background:#f1f5f9; border:1px solid #e2e8f0; border-radius:5px;
+    padding:1px 7px; color:#5b21b6;
+  }
+
+  .dg-tip, .dg-warn{
+    display:flex; gap:11px; align-items:flex-start;
+    border-radius:12px; padding:11px 14px; margin-top:11px;
+    font-size:12.5px; line-height:1.9;
+  }
+  .dg-tip{ background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; }
+  .dg-warn{ background:#fffbeb; border:1px solid #fde68a; color:#92400e; }
+  .dg-tip .ic, .dg-warn .ic{ flex:none; font-size:15px; line-height:1.6; }
+  .dg-tip b, .dg-warn b{ font-weight:900; }
+
+  /* ════ الرسوم: محاكاة مصغّرة للصفحة الحقيقية ════ */
+  .dg-mock{
+    border:1px solid #e2e8f0; border-radius:14px; overflow:hidden;
+    background:#fff; box-shadow:0 8px 20px rgba(15,23,42,.07);
+    margin-top:13px; max-width:560px;
+  }
+  .dg-mock-bar{
+    display:flex; align-items:center; gap:7px; padding:8px 12px;
+    background:#f1f5f9; border-bottom:1px solid #e2e8f0;
+  }
+  .dg-mock-bar .dots{ display:flex; gap:5px; }
+  .dg-mock-bar .dots i{ width:9px; height:9px; border-radius:50%; }
+  .dg-mock-bar .dots i:nth-child(1){ background:#f87171; }
+  .dg-mock-bar .dots i:nth-child(2){ background:#fbbf24; }
+  .dg-mock-bar .dots i:nth-child(3){ background:#34d399; }
+  .dg-mock-bar .crumb{
+    flex:1; background:#fff; border:1px solid #e2e8f0; border-radius:7px;
+    padding:4px 10px; font-size:10.5px; font-weight:700; color:#64748b;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .dg-mock-body{ padding:14px; display:grid; gap:11px; }
+
+  /* محاكاة شريط الفلاتر */
+  .dg-fbar{ display:flex; gap:7px; flex-wrap:wrap; align-items:center; }
+  .dg-fsel{
+    position:relative; border:1.5px solid #e2e8f0; border-radius:8px;
+    padding:7px 26px 7px 10px; font-size:11px; font-weight:800; color:#334155;
+    background:#fff; white-space:nowrap;
+  }
+  .dg-fsel::after{
+    content:"\f078"; font-family:"Font Awesome 6 Free"; font-weight:900;
+    position:absolute; inset-inline-end:9px; top:50%; transform:translateY(-50%);
+    font-size:8px; color:#94a3b8;
+  }
+  .dg-fsearch{
+    flex:1; min-width:170px; display:flex; align-items:center; gap:8px;
+    border:1.5px solid #c4b5fd; background:#faf5ff; border-radius:8px;
+    padding:7px 10px; font-size:11px; color:#0f172a; font-weight:700;
+  }
+  .dg-fsearch i{ color:#a78bfa; font-size:11px; }
+  .dg-fbtn{
+    display:inline-flex; align-items:center; gap:6px; border-radius:8px;
+    padding:7px 12px; font-size:11px; font-weight:800; white-space:nowrap;
+  }
+  .dg-fbtn.primary{ background:linear-gradient(135deg,#7c3aed,#5b21b6); color:#fff;
+    box-shadow:0 5px 12px rgba(124,58,237,.25); }
+  .dg-fbtn.icon{ background:#f1f5f9; color:#475569; padding:7px 10px; }
+  .dg-fbtn.ghost{ background:#fff; border:1.5px solid #e2e8f0; color:#475569; }
+
+  /* محاكاة جدول المشتركين */
+  .dg-tbl{ border:1px solid #e2e8f0; border-radius:11px; overflow:hidden; }
+  .dg-tbl .hd, .dg-tbl .rw{
+    display:grid; grid-template-columns:26px 1.1fr 1fr .9fr .8fr .8fr; gap:7px;
+    padding:8px 11px; font-size:10px; align-items:center;
+  }
+  .dg-tbl .hd{ background:#f5f3ff; color:#5b21b6; font-weight:900; }
+  .dg-tbl .rw{ background:#fff; color:#334155; font-weight:700; border-top:1px solid #f1f5f9; }
+  .dg-tbl .rw.sel{ background:#faf5ff; }
+  .dg-ck{
+    width:13px; height:13px; border-radius:4px; border:1.5px solid #cbd5e1;
+    display:inline-grid; place-items:center; font-size:8px; color:#fff;
+  }
+  .dg-ck.on{ background:#7c3aed; border-color:#7c3aed; }
+  .dg-pill{
+    display:inline-flex; align-items:center; gap:4px; border-radius:999px;
+    padding:2px 8px; font-size:9px; font-weight:900;
+  }
+  .dg-pill.g{ background:#dcfce7; color:#15803d; }
+  .dg-pill.a{ background:#fef3c7; color:#b45309; }
+  .dg-pill.r{ background:#fee2e2; color:#b91c1c; }
+  .dg-pill .dot{ width:5px; height:5px; border-radius:50%; background:currentColor; }
+
+  /* محاكاة قائمة منسدلة (إجراءات الصف / الأعمدة) */
+  .dg-menu{
+    max-width:250px; background:#fff; border:1px solid #e2e8f0; border-radius:13px;
+    padding:8px; box-shadow:0 10px 26px rgba(15,23,42,.12); margin-top:12px;
+    display:grid; gap:2px;
+  }
+  .dg-menu .it{
+    display:flex; align-items:center; gap:9px; padding:7px 10px; border-radius:8px;
+    font-size:11px; font-weight:700; color:#334155;
+  }
+  .dg-menu .it i{ width:15px; text-align:center; color:#94a3b8; font-size:10px; }
+  .dg-menu .it.on{ background:#f5f3ff; color:#5b21b6; }
+  .dg-menu .it.on i{ color:#7c3aed; }
+  .dg-menu .it.danger{ color:#b91c1c; }
+  .dg-menu .it.danger i{ color:#b91c1c; }
+  .dg-menu .sep{ height:1px; background:#eef2f7; margin:4px 2px; }
+
+  /* محاكاة شريط التحديد السفلي */
+  .dg-bulkbar{
+    max-width:560px; margin-top:12px; display:flex; align-items:center;
+    justify-content:space-between; gap:10px; flex-wrap:wrap;
+    border:1px solid #c7b9f7; border-radius:13px; padding:10px 13px;
+    background:linear-gradient(180deg,#ffffff,#faf8ff);
+    box-shadow:0 8px 20px rgba(15,23,42,.10);
+  }
+  .dg-bulkbar .cnt{
+    display:inline-grid; place-items:center; min-width:24px; height:24px; padding:0 7px;
+    border-radius:999px; background:#7c3aed; color:#fff; font-size:11px; font-weight:900;
+  }
+  .dg-bulkbar .lbl{ font-size:11px; font-weight:800; color:#0f172a; display:flex; align-items:center; gap:8px; }
+  .dg-bulkbar .acts{ display:flex; gap:6px; flex-wrap:wrap; }
+
+  .dg-cap{ font-size:11px; color:#94a3b8; margin-top:8px; line-height:1.7; }
+  .dg-cap i{ color:#c4b5fd; }
+
+  /* ════ الطباعة: «حفظ كـ PDF» = window.print() ════ */
+  @media print{
+    .hb-side, .hb-side-overlay, .hb-topbar, header.hb-top,
+    .dg-toc, .dg-noprint, .hub-hero-actions{ display:none !important; }
+    .dg-layout{ grid-template-columns:1fr; }
+    .dg-card, .dg-mock, .dg-menu, .dg-bulkbar{
+      box-shadow:none !important; break-inside:avoid;
+    }
+    .dg-step{ break-inside:avoid; }
+    body{ background:#fff !important; }
+    .dg-badge, .dg-fbtn.primary, .dg-fsearch, .dg-tip, .dg-warn,
+    .dg-pill, .dg-tbl .hd, .dg-bulkbar .cnt{
+      -webkit-print-color-adjust:exact; print-color-adjust:exact;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{{ hub.hero(
+  "دليل: صفحة المشتركين 360",
+  subtitle="مركز التحكم اليومي — بحث فوري، فلاتر، إجراءات فردية وجماعية، تصدير وطباعة. 7 أقسام وتصير خبيرًا فيها.",
+  icon="users",
+  actions_html='
+    <button type="button" class="hub-btn hub-btn--secondary" onclick="window.print()">
+      <i class="fa-solid fa-file-pdf"></i> حفظ كـ PDF
+    </button>
+    <a class="hub-btn hub-btn--secondary" href="/admin/radius/docs/section/subscribers">
+      <i class="fa-solid fa-arrow-right"></i> كل الأدلة
+    </a>
+  '
+) }}
+
+<div class="dg-layout">
+
+  {# ───── الفهرس الجانبي اللاصق ───── #}
+  <nav class="dg-toc dg-noprint" aria-label="فهرس الدليل">
+    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> فهرس الأقسام</div>
+    <a href="#dg-s1" data-dg-toc><span class="n">1</span> افتح الصفحة واقرأها</a>
+    <a href="#dg-s2" data-dg-toc><span class="n">2</span> البحث الفوري والفلاتر</a>
+    <a href="#dg-s3" data-dg-toc><span class="n">3</span> الجدول والأعمدة والفرز</a>
+    <a href="#dg-s4" data-dg-toc><span class="n">4</span> حالات المشترك (الألوان)</a>
+    <a href="#dg-s5" data-dg-toc><span class="n">5</span> إجراءات الصف الواحد</a>
+    <a href="#dg-s6" data-dg-toc><span class="n">6</span> التحديد والإجراءات الجماعية</a>
+    <a href="#dg-s7" data-dg-toc><span class="n">7</span> التصدير والطباعة</a>
+  </nav>
+
+  {# ───── عمود المحتوى ───── #}
+  <div class="dg-main">
+
+    <div class="dg-lead">
+      <span class="ic"><i class="fa-solid fa-lightbulb"></i></span>
+      <div>
+        <h3>قبل ما نبدأ — ليش اسمها «360»؟</h3>
+        <p>
+          لأنها تعرض كل شيء عن مشتركيك بنظرة واحدة: مين مفعَّل ومين منتهٍ، مين متصل الآن،
+          كم استهلك، متى ينتهي، وعلى أي باقة — ومن نفس الصفحة تجدّد وترسل رسائل وتفصل
+          اتصالات وتؤرشف، فردًا فردًا أو دفعة واحدة. هذا الدليل يشرح لك كل زر فيها شو بيعمل.
+        </p>
+      </div>
+    </div>
+
+    {# ════ القسم 1 ════ #}
+    <section class="dg-step" id="dg-s1">
+      <div class="dg-badge">1</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-door-open"></i> افتح الصفحة واقرأ رأسها</h2>
+        <p>
+          من القائمة الجانبية افتح <strong>«المشتركون»</strong> ثم <strong>«المشتركين 360»</strong>.
+          أعلى الصفحة رح تلاقي رأسًا موحّدًا فيه:
+        </p>
+        <ul>
+          <li>زر <strong>«إضافة مشترك»</strong> البنفسجي — ينقلك مباشرة لنموذج الإضافة.</li>
+          <li>زر <strong>«المتصلون الآن»</strong> — اختصار لصفحة الجلسات الحيّة.</li>
+          <li>أربع بطاقات أرقام سريعة: <strong>في النتائج</strong> (عدد الصفوف الظاهرة بعد الفلترة)،
+              <strong>نشطون</strong>، <strong>منتهون</strong>، <strong>معطَّلون</strong>.</li>
+        </ul>
+
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">المشتركون › رأس الصفحة</span></div>
+          <div class="dg-mock-body">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+              <div style="display:flex;align-items:center;gap:9px">
+                <span style="width:32px;height:32px;border-radius:9px;display:grid;place-items:center;background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;font-size:13px"><i class="fa-solid fa-users"></i></span>
+                <span style="font-size:13px;font-weight:900;color:#0f172a">المشتركون</span>
+              </div>
+              <div style="display:flex;gap:6px">
+                <span class="dg-fbtn primary"><i class="fa-solid fa-user-plus"></i> إضافة مشترك</span>
+                <span class="dg-fbtn ghost"><i class="fa-solid fa-wifi"></i> المتصلون الآن</span>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+              <div style="border:1px solid #e9e5fc;border-radius:10px;padding:8px;background:#faf8ff"><div style="font-size:9px;font-weight:800;color:#7c7a99">في النتائج</div><div style="font-size:15px;font-weight:900;color:#5b21b6">128</div></div>
+              <div style="border:1px solid #bbf7d0;border-radius:10px;padding:8px;background:#f0fdf4"><div style="font-size:9px;font-weight:800;color:#15803d">نشطون</div><div style="font-size:15px;font-weight:900;color:#166534">96</div></div>
+              <div style="border:1px solid #fde68a;border-radius:10px;padding:8px;background:#fffbeb"><div style="font-size:9px;font-weight:800;color:#b45309">منتهون</div><div style="font-size:15px;font-weight:900;color:#92400e">22</div></div>
+              <div style="border:1px solid #fecaca;border-radius:10px;padding:8px;background:#fef2f2"><div style="font-size:9px;font-weight:800;color:#b91c1c">معطَّلون</div><div style="font-size:15px;font-weight:900;color:#991b1b">10</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة:</b> الأرقام الأربعة تتغيّر مع الفلترة — يعني إذا فلترت على باقة معيّنة
+          تشوف فورًا كم نشط وكم منتهٍ <b>داخل هذه الباقة بالذات</b>.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ القسم 2 ════ #}
+    <section class="dg-step" id="dg-s2">
+      <div class="dg-badge">2</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-magnifying-glass"></i> البحث الفوري والفلاتر</h2>
+        <p>
+          تحت الرأس مباشرة شريط الفلترة. أهم ما فيه حقل البحث: <strong>اكتب وشوف النتائج
+          تتفلتر لحظيًا</strong> وأنت تكتب — بدون ضغط أي زر. وبجانبه:
+        </p>
+        <ul>
+          <li><strong>«البحث بواسطة»:</strong> يحدد نطاق البحث الفوري — كل الأعمدة، اليوزر،
+              الاسم، الجوال، أو <strong>تاريخ الإنشاء</strong> (عند اختياره يظهر حقلا
+              «من / إلى» وتُفلتر النتائج على مدى التاريخ).</li>
+          <li><strong>زر ✕ داخل الحقل:</strong> يمسح البحث ويرجّع كل الصفوف فورًا.</li>
+          <li><strong>قائمة الحالات:</strong> كل الحالات / enabled / expired / disabled...</li>
+          <li><strong>قائمة الباقات:</strong> اعرض مشتركي باقة واحدة فقط.</li>
+          <li><strong>قائمة المجموعات:</strong> اعرض أعضاء مجموعة مشتركين واحدة.</li>
+          <li><strong>زر «تطبيق»:</strong> يرسل الفلاتر للخادم ويعيد تحميل القائمة بها
+              (البحث الفوري وحده ما يحتاجه — هو للحالة والباقة والمجموعة).</li>
+        </ul>
+
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">المشتركون › شريط الفلترة</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-fbar">
+              <span class="dg-fsel">البحث بواسطة: كل الأعمدة</span>
+              <span class="dg-fsearch"><i class="fa-solid fa-magnifying-glass"></i> ahmad <i class="fa-solid fa-xmark" style="margin-inline-start:auto;color:#94a3b8"></i></span>
+            </div>
+            <div class="dg-fbar">
+              <span class="dg-fsel">كل الحالات</span>
+              <span class="dg-fsel">كل الباقات</span>
+              <span class="dg-fsel">كل المجموعات</span>
+              <span class="dg-fbtn primary"><i class="fa-solid fa-filter"></i> تطبيق</span>
+            </div>
+          </div>
+        </div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> اكتب في الحقل البنفسجي — الجدول يتفلتر مع كل حرف.</div>
+
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة:</b> تبحث عن مشترك من رقم جواله؟ اختر «الجوال» من «البحث بواسطة»
+          والصق الرقم — أسرع طريقة لما يتصل عليك زبون ما تعرف اسم دخوله.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ القسم 3 ════ #}
+    <section class="dg-step" id="dg-s3">
+      <div class="dg-badge">3</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-table-columns"></i> الجدول: الأعمدة والفرز والترقيم</h2>
+        <p>
+          الجدول غني جدًا — أكثر من 20 عمودًا: <strong>#</strong>، <strong>اليوزر</strong>
+          (اضغط عليه لفتح ملف المشترك)، <strong>كلمة المرور</strong> (مخفية بنقاط — زر العين
+          يظهرها وزر النسخ ينسخها)، <strong>الاسم</strong>، <strong>الجوال</strong>،
+          <strong>الباقة</strong>، <strong>الكرت</strong>، <strong>الجهاز / النظام</strong>،
+          <strong>الحالة</strong>، <strong>المتبقي</strong>، <strong>آخر اتصال</strong>،
+          <strong>آخر فصل</strong>، <strong>تحميل</strong>، <strong>رفع</strong>،
+          <strong>الجلسات</strong>، <strong>MAC</strong>، <strong>العنوان / الجهاز</strong>،
+          <strong>السرعة</strong>، <strong>أول استخدام</strong>، <strong>ينتهي</strong>،
+          <strong>الإنشاء</strong>، و<strong>إجراءات</strong>.
+        </p>
+        <ul>
+          <li><strong>الفرز:</strong> اضغط على عنوان أي عمود لترتيب الجدول به تصاعديًا،
+              واضغط مرة ثانية للعكس — السهم الصغير بجانب العنوان يبيّن الاتجاه.</li>
+          <li><strong>زر «أعمدة»:</strong> فوق الجدول — يفتح قائمة صناديق اختيار تُظهر/تُخفي
+              أي عمود. اختيارك <strong>يُحفظ تلقائيًا</strong> ويبقى بعد إغلاق الصفحة.</li>
+          <li><strong>الترقيم أسفل الجدول:</strong> «صفوف بالصفحة» (10/20/50/100) + أزرار
+              التنقل بين الصفحات + عدّاد «X – Y من N».</li>
+        </ul>
+
+        <div class="dg-menu" aria-hidden="true">
+          <div class="it on"><i class="fa-solid fa-square-check"></i> اليوزر</div>
+          <div class="it on"><i class="fa-solid fa-square-check"></i> الاسم</div>
+          <div class="it on"><i class="fa-solid fa-square-check"></i> الحالة</div>
+          <div class="it"><i class="fa-regular fa-square"></i> MAC</div>
+          <div class="it"><i class="fa-regular fa-square"></i> أول استخدام</div>
+        </div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> قائمة «أعمدة» — علّم ما تريد رؤيته وأخفِ الباقي.</div>
+
+        <div class="dg-warn">
+          <span class="ic">⚠️</span>
+          <span><b>انتبه:</b> كلمة المرور تظهر بنص صريح عند ضغط العين — لا تكشفها وشاشتك
+          مرئية لغير الموظفين المخوّلين. زر النسخ يعطيك إياها بدون إظهارها على الشاشة.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ القسم 4 ════ #}
+    <section class="dg-step" id="dg-s4">
+      <div class="dg-badge">4</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-circle-half-stroke"></i> افهم ألوان حالة المشترك</h2>
+        <p>عمود «الحالة» يستخدم حبوبًا ملوّنة — كل لون له معنى ثابت في كل النظام:</p>
+        <ul>
+          <li><span class="dg-pill g"><span class="dot"></span> مفعَّل</span> — الحساب شغّال ويستطيع الدخول على الإنترنت.</li>
+          <li><span class="dg-pill a"><span class="dot"></span> منتهٍ</span> — خلصت مدة اشتراكه؛ جدّد له من قائمة «تفعيل» (القسم التالي).</li>
+          <li><span class="dg-pill r"><span class="dot"></span> معطَّل</span> — موقوف يدويًا من الإدارة؛ لن يدخل حتى تعيد تفعيله.</li>
+        </ul>
+        <p>
+          وعمود <strong>«الجلسات»</strong> يكمّل الصورة: حبّة خضراء برقم تعني أن المشترك
+          <strong>متصل الآن</strong> بهذا العدد من الجلسات، و<span class="dg-kbd">0</span> يعني غير متصل حاليًا.
+          أما عمود <strong>«المتبقي»</strong> فيعرض عدّادًا حيًّا للوقت الباقي حتى انتهاء الاشتراك.
+        </p>
+
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">المشتركون › عمودا الحالة والجلسات</span></div>
+          <div class="dg-mock-body" style="padding:0">
+            <div class="dg-tbl" style="border:0;border-radius:0">
+              <div class="hd"><span></span><span>اليوزر</span><span>الباقة</span><span>الحالة</span><span>الجلسات</span><span>ينتهي</span></div>
+              <div class="rw"><span class="dg-ck"></span><span style="font-weight:900;color:#5b21b6">ahmad2026</span><span>10 ميجا</span><span><span class="dg-pill g"><span class="dot"></span> مفعَّل</span></span><span><span class="dg-pill g">1</span></span><span>2026-07-01</span></div>
+              <div class="rw"><span class="dg-ck"></span><span style="font-weight:900;color:#5b21b6">sara_net</span><span>20 ميجا</span><span><span class="dg-pill a"><span class="dot"></span> منتهٍ</span></span><span>0</span><span>2026-05-28</span></div>
+              <div class="rw"><span class="dg-ck"></span><span style="font-weight:900;color:#5b21b6">omar99</span><span>10 ميجا</span><span><span class="dg-pill r"><span class="dot"></span> معطَّل</span></span><span>0</span><span>—</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    {# ════ القسم 5 ════ #}
+    <section class="dg-step" id="dg-s5">
+      <div class="dg-badge">5</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-bolt"></i> إجراءات الصف الواحد — قائمتا «تفعيل» و«إدارية»</h2>
+        <p>
+          آخر عمود في كل صف ثلاثة أزرار: أيقونة <strong>«ملف 360°»</strong> البنفسجية
+          (تفتح الملف الكامل للمشترك)، وقائمتان منسدلتان:
+        </p>
+        <p><strong>قائمة «تفعيل» ⚡ — كل ما يخص التجديد والرصيد:</strong></p>
+        <ul>
+          <li><strong>تجديد / إضافة وقت:</strong> أضف أيامًا للاشتراك — مجانًا، أو نقدًا، أو دينًا على المشترك، والسعر يُحتسب تلقائيًا من سعر باقته.</li>
+          <li><strong>إضافة رصيد نقدي:</strong> اشحن رصيد محفظة المشترك.</li>
+          <li><strong>إضافة كوتة / جيجا:</strong> زِد حصة التنزيل/الرفع (مشتركة أو تنزيل فقط أو رفع فقط).</li>
+          <li><strong>تسجيل دفعة نقدية:</strong> سجّل مبلغًا استلمته من المشترك.</li>
+          <li><strong>منح سلفة:</strong> فعّل له الآن وسجّل المبلغ دينًا.</li>
+          <li><strong>استعادة الكوتة اليومية:</strong> صفّر عدّاد اليوم ليرجع له كامل كوتته فورًا.</li>
+        </ul>
+        <p><strong>قائمة «إدارية» 🎛 — التحكم بالحساب نفسه:</strong></p>
+        <ul>
+          <li><strong>تعديل المشترك</strong> و<strong>الدفعات والسلف</strong> (سجلّه المالي).</li>
+          <li><strong>إرسال رسالة تفعيل:</strong> SMS أو واتساب مع قوالب جاهزة (ترحيب، تذكير انتهاء، تأكيد دفعة...).</li>
+          <li><strong>تغيير العرض / السرعة:</strong> بدّل الباقة مع خيارات ذكية لفرق السعر (تعويض أيام، تسجيل دين، أو تغيير مباشر).</li>
+          <li><strong>فصل الاتصال:</strong> اقطع جلسته الحالية من الشبكة فورًا.</li>
+          <li><strong>تعطيل / تفعيل المشترك:</strong> الزر يتبدّل حسب حالته الحالية.</li>
+          <li><strong>أرشفة المشترك:</strong> (بالأحمر) ينقله لسلة المحذوفات — مع رسالة تأكيد قبل التنفيذ.</li>
+        </ul>
+
+        <div class="dg-menu" aria-hidden="true">
+          <div class="it on"><i class="fa-solid fa-clock"></i> تجديد / إضافة وقت</div>
+          <div class="it"><i class="fa-solid fa-coins"></i> إضافة رصيد نقدي</div>
+          <div class="it"><i class="fa-solid fa-gauge-high"></i> إضافة كوتة / جيجا</div>
+          <div class="it"><i class="fa-solid fa-money-bill-wave"></i> تسجيل دفعة نقدية</div>
+          <div class="it"><i class="fa-solid fa-hand-holding-dollar"></i> منح سلفة</div>
+          <div class="sep"></div>
+          <div class="it"><i class="fa-solid fa-rotate-left"></i> استعادة الكوتة اليومية</div>
+        </div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> قائمة «تفعيل» كما تنفتح من صف المشترك.</div>
+
+        <div class="dg-warn">
+          <span class="ic">⚠️</span>
+          <span><b>انتبه:</b> «الأرشفة» ليست حذفًا نهائيًا — المشترك ينتقل لسلة المحذوفات ويمكن
+          استعادته. لكن «فصل الاتصال» فوري: المشترك ينقطع في نفس اللحظة، فاستخدمه بوعي.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ القسم 6 ════ #}
+    <section class="dg-step" id="dg-s6">
+      <div class="dg-badge">6</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-check-double"></i> حدّد عدة مشتركين ونفّذ دفعة واحدة</h2>
+        <p>
+          أول عمود في الجدول مربعات تحديد — علّم مشتركًا أو أكثر (ومربع رأس الجدول يحدد
+          الكل). بمجرد التحديد يصير شيئان:
+        </p>
+        <ul>
+          <li>يظهر <strong>شريط الإجراءات السريع</strong> أعلى الجدول وفيه: «الملف»، «تعديل»،
+              «الدفعات والسلف»، وقائمتا <strong>«التفعيل والرصيد»</strong>
+              و<strong>«إجراءات إدارية»</strong> — نفس إجراءات الصف لكن على المحدَّدين كلهم:
+              إضافة وقت/كوتة/رصيد، إرسال رسالة قصيرة جماعية، فصل الاتصال،
+              تغيير الحالة (تفعيل/تعطيل)، والأرشفة الجماعية.</li>
+          <li>يظهر أسفل الشاشة <strong>شريط لاصق</strong> يعرض عدد المحدَّدين، مع زر
+              «إلغاء التحديد» وزر «حذف المحدد» الأحمر (أرشفة جماعية بتأكيد قوي يعرض
+              أسماء كل المحدَّدين قبل التنفيذ).</li>
+        </ul>
+        <p>
+          في النوافذ الجماعية (مثل «إضافة وقت») تشوف قائمة المحدَّدين بأسمائهم، والقيمة
+          <strong>تُطبَّق لكل مشترك على حدة</strong> — يعني «يوم واحد» = يوم لكل واحد منهم،
+          لا يُقسَّم بينهم.
+        </p>
+
+        <div class="dg-bulkbar" aria-hidden="true">
+          <span class="lbl"><span class="cnt">3</span> مشترك محدَّد</span>
+          <span class="acts">
+            <span class="dg-fbtn ghost"><i class="fa-solid fa-xmark"></i> إلغاء التحديد</span>
+            <span class="dg-fbtn" style="background:#fee2e2;color:#b91c1c"><i class="fa-solid fa-trash-can"></i> حذف المحدد (3)</span>
+          </span>
+        </div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> الشريط اللاصق يبقى ظاهرًا أسفل الشاشة ما دام في تحديد.</div>
+
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة عملية:</b> فلتر على الحالة «منتهٍ»، حدّد الكل، ثم «التفعيل والرصيد ←
+          إضافة وقت» — جدّدت كل المنتهين بضغطتين. أو أرسل لهم رسالة «تذكير انتهاء» جماعية.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ القسم 7 ════ #}
+    <section class="dg-step" id="dg-s7">
+      <div class="dg-badge">7</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-file-export"></i> صدّر القائمة أو اطبعها</h2>
+        <p>
+          في نهاية شريط الفلترة أربعة أزرار تصدير — وكلها تحترم فلترتك الحالية
+          والأعمدة الظاهرة فقط:
+        </p>
+        <ul>
+          <li><strong>أيقونة CSV:</strong> ملف نصي يفتح في أي برنامج جداول — الأخف والأسرع.</li>
+          <li><strong>أيقونة Excel:</strong> ملف <span class="dg-kbd">.xlsx</span> منسّق جاهز لإكسل.</li>
+          <li><strong>أيقونة PDF:</strong> ملف PDF أنيق مناسب للمشاركة أو الأرشفة.</li>
+          <li><strong>زر «طباعة»:</strong> يفتح نافذة الطباعة بنسخة نظيفة من الجدول.</li>
+        </ul>
+
+        <div class="dg-mock" aria-hidden="true" style="max-width:430px">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">المشتركون › أزرار التصدير</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-fbar" style="justify-content:flex-end">
+              <span class="dg-fbtn icon" title="CSV"><i class="fa-solid fa-file-csv" style="color:#16a34a"></i></span>
+              <span class="dg-fbtn icon" title="Excel"><i class="fa-solid fa-file-excel" style="color:#15803d"></i></span>
+              <span class="dg-fbtn icon" title="PDF"><i class="fa-solid fa-file-pdf" style="color:#dc2626"></i></span>
+              <span class="dg-fbtn ghost"><i class="fa-solid fa-print"></i> طباعة</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>وبعدين؟</b> صرت تعرف الصفحة كلها. جرّب الآن دليل
+          <b>«مجموعات المشتركين»</b> لتنظّم مشتركيك أحياءً وأبراجًا، ودليل
+          <b>«المتصلون الآن»</b> لمراقبة الجلسات الحيّة لحظة بلحظة.</span>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+{# ── scrollspy خفيف: يبرز بند الفهرس المقابل للقسم الظاهر ── #}
+<script>
+(function(){
+  'use strict';
+  var links = Array.prototype.slice.call(document.querySelectorAll('[data-dg-toc]'));
+  if (!links.length || !('IntersectionObserver' in window)) return;
+  var map = {};
+  links.forEach(function(a){ map[a.getAttribute('href').slice(1)] = a; });
+  var obs = new IntersectionObserver(function(entries){
+    entries.forEach(function(en){
+      if (!en.isIntersecting) return;
+      links.forEach(function(a){ a.classList.remove('is-active'); });
+      var a = map[en.target.id];
+      if (a) a.classList.add('is-active');
+    });
+  }, { rootMargin: '-35% 0px -55% 0px' });
+  Object.keys(map).forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) obs.observe(el);
+  });
+})();
+</script>
+
+{% endblock %}

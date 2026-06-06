@@ -6,16 +6,63 @@
 {% block page_title %}طلبات الدفع{% endblock %}
 {% block page_sub %}<span class="sub">{{ items|length }} طلب</span>{% endblock %}
 
+{# نظام الجداول/النوافذ الموحّد — يلزم لرسم .uds-hero و.uds-table بشكل صحيح #}
+{% block head_extra %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
+{% endblock %}
+
+{# ───── قواميس الترجمة العربية لقيم الحالات/الأغراض/أنواع الدافعين ─────
+   تُستعمل في حزام الفلترة وفي الجدول لمنع ظهور القيم الإنجليزية الخام. #}
+{% set STATUS_AR = {
+  'pending': 'معلقة',
+  'proof_submitted': 'إثبات مُرسل',
+  'under_review': 'تحت المراجعة',
+  'paid': 'مدفوعة',
+  'rejected': 'مرفوضة',
+  'expired': 'منتهية',
+  'cancelled': 'ملغاة',
+  'failed': 'فشلت'
+} %}
+{% set PURPOSE_AR = {
+  'card_purchase': 'شراء بطاقة',
+  'monthly_subscription': 'اشتراك شهري',
+  'subscriber_renewal': 'تجديد مشترك',
+  'quota_topup': 'إعادة تعبئة الحصة',
+  'time_extension': 'تمديد المدة',
+  'distributor_payment': 'دفع الموزع',
+  'loan_settlement': 'تسوية قرض'
+} %}
+{% set PAYER_AR = {
+  'subscriber': 'مشترك',
+  'card_user': 'مستخدم بطاقة',
+  'distributor': 'موزع',
+  'manager': 'مدير',
+  'guest': 'زائر'
+} %}
+
+{# شارة الحالة — تترجم كل القيم للعربية بدل تمرير الإنجليزية الخام #}
 {% macro st_pill(s) -%}
-  {%- if s == 'paid' -%}{{ hub.pill("مدفوع", variant="green") }}
-  {%- elif s in ['under_review','proof_submitted'] -%}{{ hub.pill(s, variant="amber") }}
-  {%- elif s in ['rejected','failed'] -%}{{ hub.pill(s, variant="red") }}
-  {%- elif s in ['expired','cancelled'] -%}{{ hub.pill(s, variant="grey") }}
-  {%- else -%}{{ hub.pill(s, variant="brand", dot=False) }}{%- endif -%}
+  {%- if s == 'paid' -%}{{ hub.pill("مدفوعة", variant="green") }}
+  {%- elif s == 'under_review' -%}{{ hub.pill("تحت المراجعة", variant="amber") }}
+  {%- elif s == 'proof_submitted' -%}{{ hub.pill("إثبات مُرسل", variant="amber") }}
+  {%- elif s == 'rejected' -%}{{ hub.pill("مرفوضة", variant="red") }}
+  {%- elif s == 'failed' -%}{{ hub.pill("فشلت", variant="red") }}
+  {%- elif s == 'expired' -%}{{ hub.pill("منتهية", variant="grey") }}
+  {%- elif s == 'cancelled' -%}{{ hub.pill("ملغاة", variant="grey") }}
+  {%- else -%}{{ hub.pill("معلقة", variant="brand", dot=False) }}{%- endif -%}
 {%- endmacro %}
 
 {% block content %}
-{{ hub.hero(
+
+{# ───── حسابات KPI من بيانات الراوت (رخيصة — items محمَّلة أصلًا) ───── #}
+{% set _paid = items|selectattr('status','equalto','paid')|list|length %}
+{% set _review = (items|selectattr('status','equalto','under_review')|list|length) + (items|selectattr('status','equalto','proof_submitted')|list|length) %}
+{% set _pending = items|selectattr('status','equalto','pending')|list|length %}
+
+{# ───── الهيرو الموحّد المدموج: عنوان + أزرار + KPI صف واحد + حزام فلترة مدمج ───── #}
+<section class="hub-hero-shell">
+{% call hub.megahero(
   "طلبات الدفع",
   subtitle="طلبات تحصيل الدفعات عبر المحفظة اليدوية — رقم المحفظة لتوجيه الدفع فقط ولا يعني أن الدفع تم تلقائيًا.",
   icon="receipt",
@@ -23,40 +70,41 @@
     <a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.payment_collection_review_queue_web') ~ '"><i class="fa-solid fa-clipboard-check"></i> طابور المراجعة</a>
     <a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.payment_collection_reconciliation_web') ~ '"><i class="fa-solid fa-scale-balanced"></i> المطابقة</a>
     <a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.payment_collection_settings') ~ '"><i class="fa-solid fa-gear"></i> الإعدادات</a>
-  '
-) }}
-
-{% set _paid = items|selectattr('status','equalto','paid')|list|length %}
-{% set _review = (items|selectattr('status','equalto','under_review')|list|length) + (items|selectattr('status','equalto','proof_submitted')|list|length) %}
-{% set _pending = items|selectattr('status','equalto','pending')|list|length %}
-<div class="hub-kpi-grid">
-  {{ hub.kpi("إجمالي الطلبات", items|length, icon="receipt", variant="brand") }}
-  {{ hub.kpi("بانتظار المراجعة", _review, icon="clipboard-check", variant="amber") }}
-  {{ hub.kpi("معلّقة", _pending, icon="hourglass-half", variant="blue") }}
-  {{ hub.kpi("مدفوعة", _paid, icon="circle-check", variant="green") }}
-</div>
-
-<form method="get" class="hub-filterbar">
-  <select class="hub-select" name="status">
+  ',
+  kpis=[
+    {'label': 'إجمالي الطلبات',  'value': items|length, 'icon': 'receipt',         'variant': 'brand'},
+    {'label': 'بانتظار المراجعة', 'value': _review,      'icon': 'clipboard-check', 'variant': 'amber'},
+    {'label': 'معلّقة',           'value': _pending,     'icon': 'hourglass-half',  'variant': 'blue'},
+    {'label': 'مدفوعة',           'value': _paid,        'icon': 'circle-check',    'variant': 'green'},
+  ],
+  search_action=url_for('radius.payment_collection_requests'),
+  search_method="get"
+) %}
+  {# حزام الفلترة الخادمي — أسماء الحقول status/purpose/payer_type كما يتوقّعها الراوت.
+     القيم مترجمة للعربية للعرض مع الحفاظ على القيمة الإنجليزية في value. #}
+  <select class="hub-select" name="status" aria-label="فلترة حسب الحالة">
     <option value="">كل الحالات</option>
     {% for s in ['pending','proof_submitted','under_review','paid','rejected','expired','cancelled','failed'] %}
-    <option value="{{ s }}" {% if status == s %}selected{% endif %}>{{ s }}</option>
+    <option value="{{ s }}" {% if status == s %}selected{% endif %}>{{ STATUS_AR.get(s, s) }}</option>
     {% endfor %}
   </select>
-  <select class="hub-select" name="purpose">
+  <select class="hub-select" name="purpose" aria-label="فلترة حسب الغرض">
     <option value="">كل الأغراض</option>
     {% for p in ['card_purchase','monthly_subscription','subscriber_renewal','quota_topup','time_extension','distributor_payment','loan_settlement'] %}
-    <option value="{{ p }}" {% if purpose == p %}selected{% endif %}>{{ p }}</option>
+    <option value="{{ p }}" {% if purpose == p %}selected{% endif %}>{{ PURPOSE_AR.get(p, p) }}</option>
     {% endfor %}
   </select>
   <input class="hub-input" name="payer_type" placeholder="نوع الدافع" value="{{ payer_type }}">
+  <span class="hub-spacer" style="flex:1"></span>
   {{ hub.btn("فلترة", icon="filter", variant="primary", type="submit", size="sm") }}
-</form>
+{% endcall %}
+</section>{# /hub-hero-shell #}
 
 {% if items %}
 {% call hub.section("الطلبات", icon="table-list", meta=items|length|string + " طلب", flush=True) %}
-  <div class="hub-table-wrap" style="border:none;border-radius:0">
-    <table class="hub-table" data-paginated="1" data-page-size="25" data-page-sizes="10,25,50,100" data-persist-key="pay-requests">
+  {# جدول uds موحّد: شريط أعمدة + فرز + ترقيم + تصدير CSV/XLSX/PDF تلقائيًا #}
+  <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25" data-page-sizes="10,25,50,100" data-persist-key="pay-requests" style="border:none;border-radius:0">
+    <table class="hub-table">
       <thead>
         <tr>
           <th class="num" style="width:56px">#</th>
@@ -74,8 +122,9 @@
         <tr>
           <td class="num mono">{{ item.id }}</td>
           <td class="mono">{{ item.reference_code }}</td>
-          <td>{{ item.purpose }}</td>
-          <td>{{ item.payer_type }}{% if item.payer_id %} <span class="hub-text-mute mono">#{{ item.payer_id }}</span>{% endif %}</td>
+          {# ترجمة الغرض/نوع الدافع للعربية مع fallback للقيمة الخام إن لم تُعرَّف #}
+          <td>{{ PURPOSE_AR.get(item.purpose, item.purpose) }}</td>
+          <td>{{ PAYER_AR.get(item.payer_type, item.payer_type) }}{% if item.payer_id %} <span class="hub-text-mute mono">#{{ item.payer_id }}</span>{% endif %}</td>
           <td class="num mono"><strong>{{ item.amount|money }}</strong></td>
           <td>{{ st_pill(item.status) }}</td>
           <td class="mono small">{{ item.created_at|dt_local }}</td>
@@ -97,4 +146,8 @@
   icon="receipt"
 ) }}
 {% endif %}
+
+{# نظام الجداول الموحّد (فرز + اختيار أعمدة + ترقيم + تصدير) + سلوك UDS العام #}
+<script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
+<script src="{{ url_for('static', filename='js/unified_design.js') }}"></script>
 {% endblock %}

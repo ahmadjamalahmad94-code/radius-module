@@ -21,6 +21,7 @@ from ...radius.db.repos.payments_repo import (
     PaymentSettings,
     PaymentSettingsRepository,
 )
+from ...radius.routes.finance_collection import collection_frozen
 from ...radius.db.repos.service_entitlements_repo import (
     LocalServiceEntitlementRepository,
     ServiceRequestLinkRepository,
@@ -163,6 +164,14 @@ def _validated_payment(payment: dict[str, Any] | None):
         return None, fail("validation_error", "المبلغ يجب أن يكون أكبر من صفر.", status=422)
 
     settings = PaymentSettingsRepository().get(_tid())
+    # تجميد قسم التحصيل: لا فتح طلبات دفع من جهة العميل/المشترك حتى ربط
+    # بوابة دفع حقيقية (انظر collection_frozen في finance_collection).
+    if collection_frozen(settings):
+        return None, fail(
+            "collection_frozen",
+            "قسم التحصيل مجمّد — اربط بوابة دفع أولًا.",
+            status=423,
+        )
     if not settings or not settings.enabled:
         return None, fail("payments_disabled", "تحصيل المدفوعات غير مفعل.", status=422)
     if settings.provider == "jawwal_pay":

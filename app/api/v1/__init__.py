@@ -17,17 +17,21 @@ def register_v1(parent: Blueprint) -> None:
         hotspot_cards, invoices, ledger, lifecycle, loans, mikrotik, mikrotik_control, nas, network_devices, network_policy,
         operational_reports,
         payments, pools, print_templates, profiles, recycle_bin, reports, router_alerts, router_loops, router_metrics, service_requests, services, sessions,
-        settings, share_groups, system, tenants, tickets, tokens, tools, vouchers, webhooks,
-        setup_wizard,
+        settings, share_groups, store, system, tenants, tickets, tokens, tools, vouchers, webhooks,
+        setup_wizard, subscriber_portal,
     )
     health.register(v1)
     accounts.register(v1)
     cards.register(v1)
     card_users.register(v1)
     hotspot_cards.register(v1)
+    subscriber_portal.register(v1)
     card_checker.register(v1)
     communications.register(v1)
     customer_portals.register(v1)
+    # متجر المايكروتيك — نقاط عامة لمستخدمي البطاقات (توكن موقّع
+    # خاص بها، ليست خلف require_api_token الإداري).
+    store.register(v1)
     loans.register(v1)
     recycle_bin.register(v1)
     ledger.register(v1)

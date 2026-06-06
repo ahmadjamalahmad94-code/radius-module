@@ -1,3 +1,15 @@
+{# ═══════════════════════════════════════════════════════════════════════
+   صفحة التقرير التفصيلي — تخدم ثلاثة مسارات بنفس العقد القائم:
+     /reports/financial    (التقارير المالية — يقبل ?type=yearly بلا تغيير سلوك)
+     /reports/cards        (تقارير الكروت)
+     /reports/distributors (تقارير الموزعين)
+
+   إعادة تصميم من الصفر على نظام hub_v2:
+     • صدفة هيرو واحدة (hub-hero-shell): عنوان + سطر تعريفي + مؤشرات بصف
+       واحد + حزام فلترة التاريخ — بلا أي هيروات/لافتات مكدّسة.
+     • جدول uds موحّد (فرز + ترقيم) مع تعريب كل القيم الظاهرة.
+     • نفس معطيات المسار: title / report_type / data — صفر تغيير خلفي.
+   ═══════════════════════════════════════════════════════════════════════ #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
@@ -6,70 +18,159 @@
 {% block page_title %}{{ title }}{% endblock %}
 {% block page_sub %}<span class="sub">عرض تفصيلي للتقرير بعد الفلترة.</span>{% endblock %}
 
-{% block content %}
-{% include "radius/reports_nav.html" %}
-{% set field_labels = {
-  'metric':'المؤشر',
-  'value':'القيمة',
-  'total':'الإجمالي',
-  'active':'النشط',
-  'unused':'غير المستخدم',
-  'expired':'المنتهي',
-  'connected':'المتصل',
-  'sold_today':'مباع اليوم',
-  'sold_month':'مباع الشهر',
-  'sold_year':'مباع السنة',
-  'distributor_id':'رقم الموزع',
-  'share_count':'عدد الحصص',
-  'share_total':'إجمالي الحصص'
-} %}
-{% set value_labels = {
-  'revenue':'الإيرادات',
-  'payments':'الدفعات',
-  'margin':'الهامش',
-  'subscriber_debts':'ديون المشتركين',
-  'distributor_profits':'أرباح الموزعين',
-  'total':'الإجمالي',
-  'active':'النشط',
-  'unused':'غير المستخدم',
-  'expired':'المنتهي',
-  'connected':'المتصل',
-  'sold_today':'مباع اليوم',
-  'sold_month':'مباع الشهر',
-  'sold_year':'مباع السنة'
-} %}
-{{ hub.hero(
-  title,
-  subtitle="استخدم فلاتر التاريخ لاختيار نطاق محدد. يتم إنشاء لقطات الأرشيف من تبويب الأرشيف.",
-  icon="file-lines",
-  actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.reports_home') ~ '"><i class="fa-solid fa-chart-line"></i> التقارير</a>'
-) }}
-
-{% call hub.section("نطاق التاريخ", icon="filter") %}
-  <form method="get" class="hub-form-grid" data-testid="report-date-filter">
-    <label>من <input name="date_from" type="date" value="{{ request.args.get('date_from','') }}"></label>
-    <label>إلى <input name="date_to" type="date" value="{{ request.args.get('date_to','') }}"></label>
-    <button class="hub-btn hub-btn--primary" type="submit">تطبيق الفلتر</button>
-  </form>
-{% endcall %}
-
-{% call hub.section("صفوف التقرير", icon="table", flush=True) %}
-  <div class="hub-table-wrap">
-    <table class="hub-table rep-table" data-testid="report-detail-table" data-paginated="1" data-page-size="25" data-page-sizes="10,25,50,100" data-persist-key="rep-detail">
-      <thead><tr><th>الحقل</th><th>القيمة</th></tr></thead>
-      <tbody>
-        {% for item in data["items"] %}
-          {% for key, value in item.items() %}
-            <tr>
-              <td>{{ field_labels.get(key, key|replace('_', ' ')) }}</td>
-              <td>{{ value_labels.get(value, value) }}</td>
-            </tr>
-          {% endfor %}
-        {% else %}
-          <tr><td colspan="2">لا توجد بيانات ضمن هذا الفلتر.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-{% endcall %}
+{% block head_extra %}{{ super() }}
+{# نظام الجداول الموحد (uds): فرز + ترقيم صفحات لجدول التقرير #}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
 {% endblock %}
+
+{% block content %}
+{# متحكّم «انتقال سريع» المضغوط — يُحقن في صف عنوان الهيرو بدل الشريطين الكبيرين #}
+{% set _report_jump %}{% include "radius/reports_nav.html" %}{% endset %}
+
+{# ── خرائط التعريب: أسماء المؤشرات لكل نوع تقرير ── #}
+{% set metric_labels = {
+  'revenue':              'الإيرادات',
+  'payments':             'الدفعات المحصّلة',
+  'margin':               'هامش الربح',
+  'subscriber_debts':     'ديون المشتركين',
+  'distributor_profits':  'أرباح الموزعين',
+  'total':                'إجمالي الكروت',
+  'active':               'كروت مستخدمة',
+  'unused':               'كروت غير مستخدمة',
+  'expired':              'كروت منتهية',
+  'connected':            'كروت متصلة الآن',
+  'sold_today':           'مباعة اليوم',
+  'sold_month':           'مباعة هذا الشهر',
+  'sold_year':            'مباعة هذه السنة'
+} %}
+{# المؤشرات المالية تُعرض بصيغة المال؛ مؤشرات الكروت أعداد صحيحة #}
+{% set money_metrics = ['revenue', 'payments', 'margin', 'subscriber_debts', 'distributor_profits'] %}
+
+{# ── تجهيز محتوى الهيرو حسب نوع التقرير (نفس بيانات المسار، بلا استعلامات جديدة) ── #}
+{% set items = data['items'] %}
+{% if report_type == 'distributors' %}
+  {% set _sub = "حصص الموزعين وأرباحهم المسجّلة من قيود توزيع الأرباح — قراءة فقط ضمن نطاق المستأجر." %}
+  {% set _icon = 'people-arrows' %}
+  {% set _kpis = [
+    {'label': 'عدد الموزعين',   'value': items|length,                          'icon': 'users',      'variant': 'brand'},
+    {'label': 'إجمالي الحصص',   'value': items|sum(attribute='share_count'),     'icon': 'table-list', 'variant': 'blue'},
+    {'label': 'إجمالي الأرباح', 'value': (items|sum(attribute='share_total'))|money, 'icon': 'coins', 'variant': 'green'},
+  ] %}
+{% elif report_type == 'cards' %}
+  {% set _sub = "حالة مخزون الكروت: المستخدم وغير المستخدم والمنتهي، مع مبيعات اليوم والشهر والسنة." %}
+  {% set _icon = 'id-card' %}
+  {% set _m = {} %}
+  {% for it in items %}{% if _m.update({it.metric: it.value}) %}{% endif %}{% endfor %}
+  {% set _kpis = [
+    {'label': 'إجمالي الكروت',     'value': _m.get('total', 0),   'icon': 'id-card',     'variant': 'brand'},
+    {'label': 'غير مستخدمة',       'value': _m.get('unused', 0),  'icon': 'box-open',    'variant': 'blue'},
+    {'label': 'مستخدمة',           'value': _m.get('active', 0),  'icon': 'circle-check','variant': 'green'},
+    {'label': 'مباعة هذا الشهر',   'value': _m.get('sold_month', 0), 'icon': 'cart-shopping', 'variant': 'amber'},
+  ] %}
+{% else %}
+  {% set _sub = "إيرادات ودفعات وهامش وديون الفترة المختارة — قراءة مشتقة من المعاملات المسجّلة فقط، بلا تعديل على التاريخ المالي." %}
+  {% set _icon = 'coins' %}
+  {% set _m = {} %}
+  {% for it in items %}{% if _m.update({it.metric: it.value}) %}{% endif %}{% endfor %}
+  {% set _kpis = [
+    {'label': 'الإيرادات',       'value': _m.get('revenue', 0)|money,            'icon': 'coins',          'variant': 'brand'},
+    {'label': 'الدفعات',         'value': _m.get('payments', 0)|money,           'icon': 'hand-holding-dollar', 'variant': 'green'},
+    {'label': 'هامش الربح',      'value': _m.get('margin', 0)|money,             'icon': 'scale-balanced', 'variant': 'amber'},
+    {'label': 'ديون المشتركين',  'value': _m.get('subscriber_debts', 0)|money,   'icon': 'circle-exclamation', 'variant': 'red'},
+  ] %}
+{% endif %}
+
+{# ───── صدفة الهيرو الموحّدة: عنوان + سطر تعريفي + مؤشرات بصف واحد + حزام فلترة التاريخ ─────
+   الفلتر يرسل GET إلى نفس المسار بنفس العقد القائم date_from/date_to
+   (ومعه type إن وُجد في الرابط — مثل ?type=yearly — حفاظًا على العقد). #}
+<section class="hub-hero-shell" data-testid="report-detail-hero">
+{# _report_jump متغيّر block-set (Markup) — يُعلَّم الجزء الحرفي |safe قبل دمجه بـ«~» وإلا تُهرَّب وسومه فيظهر الزر نصًّا خامًا #}
+{% call hub.megahero(
+  title,
+  subtitle=_sub,
+  icon=_icon,
+  kpis=_kpis,
+  actions_html=_report_jump ~ ('<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.reports_archive') ~ '"><i class="fa-solid fa-box-archive"></i> لقطات الأرشيف</a>')|safe
+) %}
+  {# تمرير type كما هو إن جاء في الرابط (?type=yearly) — نفس سلوك القالب للمسارين #}
+  {% if request.args.get('type') %}<input type="hidden" name="type" value="{{ request.args.get('type') }}">{% endif %}
+  <label class="hub-field-label" for="rd-from" style="margin:0">من تاريخ</label>
+  <input class="hub-input" type="date" id="rd-from" name="date_from"
+         value="{{ request.args.get('date_from','') }}">
+  <label class="hub-field-label" for="rd-to" style="margin:0">إلى تاريخ</label>
+  <input class="hub-input" type="date" id="rd-to" name="date_to"
+         value="{{ request.args.get('date_to','') }}">
+  {{ hub.btn("تطبيق الفترة", icon="filter", variant="primary", type="submit", size="sm") }}
+  {# مسح الفترة — رابط حقيقي بدل زر يعتمد JS مضمّن؛ يحافظ على ?type إن وُجد #}
+  {% if request.args.get('date_from') or request.args.get('date_to') %}
+    {%- set _reset_url = request.path ~ ('?type=' ~ request.args.get('type') if request.args.get('type') else '') -%}
+    {{ hub.btn("مسح الفترة", href=_reset_url, icon="rotate-left", variant="ghost", size="sm") }}
+  {% endif %}
+  <span class="hub-hint" tabindex="0"
+        data-hint="اختيار فترة يعيد حساب قيم التقرير للفترة المحددة فقط — لقطات الأرشيف الثابتة تُنشأ من تبويب الأرشيف."><i class="fa-solid fa-info"></i></span>
+{% endcall %}
+</section>{# /hub-hero-shell #}
+
+{# علامة الاختبار القديمة لنموذج فلتر التاريخ — محفوظة كعنصر غير ظاهر #}
+<form data-testid="report-date-filter" hidden></form>
+
+{# ───── جدول صفوف التقرير — uds موحّد (فرز + ترقيم) مع التعريب الكامل ───── #}
+{% if report_type == 'distributors' %}
+  {% call hub.section("حصص الموزعين", icon="table-list",
+                      meta=items|length|string + " موزّع", flush=True) %}
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25" style="border:none;border-radius:0">
+      <table class="hub-table rep-table" data-testid="report-detail-table">
+        <thead>
+          <tr>
+            <th class="num">رقم الموزع</th>
+            <th class="num">عدد الحصص</th>
+            <th class="num">إجمالي الأرباح</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in items %}
+          <tr>
+            <td class="num mono"><bdi>#{{ row.distributor_id }}</bdi></td>
+            <td class="num">{{ row.share_count }}</td>
+            <td class="num mono">{{ row.share_total|money }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="3">لا توجد حصص موزعين مسجّلة بعد.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endcall %}
+{% else %}
+  {% call hub.section("قيم التقرير", icon="table-list",
+                      meta=items|length|string + " مؤشر", flush=True) %}
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25" style="border:none;border-radius:0">
+      <table class="hub-table rep-table" data-testid="report-detail-table">
+        <thead>
+          <tr>
+            <th>المؤشر</th>
+            <th class="num">القيمة</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in items %}
+          <tr>
+            <td>{{ metric_labels.get(row.metric, row.metric|replace('_', ' ')) }}</td>
+            <td class="num mono">
+              {%- if row.metric in money_metrics %}{{ row.value|money }}
+              {%- else %}{{ row.value }}{% endif -%}
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="2">لا توجد بيانات ضمن هذا الفلتر.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endcall %}
+{% endif %}
+
+{# نظام الجداول الموحد: فرز + ترقيم صفحات #}
+<script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
+{% endblock %}
+

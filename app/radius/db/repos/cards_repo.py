@@ -1266,9 +1266,13 @@ def delete_card_permanently(tenant_id: int, card_id: int) -> bool:
 
 def _build_cards_filter(*, batch_id: Optional[int], used: Optional[bool],
                          revoked: Optional[bool],
-                         search: Optional[str]) -> tuple[str, list]:
+                         search: Optional[str],
+                         status: Optional[str] = None) -> tuple[str, list]:
     """يبني WHERE + values المشتركة بين list_cards و count_cards.
-    R10.4: استُخرج إلى دالة مستقلة لمنع الفرع بين عداد و قائمة."""
+    R10.4: استُخرج إلى دالة مستقلة لمنع الفرع بين عداد و قائمة.
+    إعادة تصميم صفحة الكروت: أُضيف `status` كفلتر حالة موحّد
+    (available / used / expired / revoked) بنفس تعريفات لوحة الكروت
+    (cards_overview) حتى تتطابق الأرقام والروابط بين الشاشتين."""
     where = ["tenant_id = ?"]
     vals: list = []
     if batch_id is not None:
@@ -1277,6 +1281,18 @@ def _build_cards_filter(*, batch_id: Optional[int], used: Optional[bool],
         where.append("used = ?"); vals.append(1 if used else 0)
     if revoked is not None:
         where.append("revoked = ?"); vals.append(1 if revoked else 0)
+    if status == "available":
+        # متاح = غير ملغى، غير مستخدم، ولم تنقضِ صلاحيته بعد
+        where.append("revoked = 0 AND used = 0 "
+                     "AND (expire_at IS NULL OR expire_at >= datetime('now'))")
+    elif status == "used":
+        where.append("used = 1")
+    elif status == "expired":
+        # منتهي = غير ملغى وانقضى تاريخ صلاحيته
+        where.append("revoked = 0 AND expire_at IS NOT NULL "
+                     "AND expire_at < datetime('now')")
+    elif status == "revoked":
+        where.append("revoked = 1")
     if search:
         s = search.strip()
         if s:
@@ -1288,11 +1304,12 @@ def _build_cards_filter(*, batch_id: Optional[int], used: Optional[bool],
 
 def list_cards(tenant_id: int, *, batch_id: Optional[int] = None,
                 used: Optional[bool] = None, revoked: Optional[bool] = None,
-                search: Optional[str] = None,
+                search: Optional[str] = None, status: Optional[str] = None,
                 limit: int = 200, offset: int = 0) -> list[Card]:
     """R10.4: أضفنا search (LIKE على username) + limit/offset للـ pagination."""
     where, vals = _build_cards_filter(
-        batch_id=batch_id, used=used, revoked=revoked, search=search)
+        batch_id=batch_id, used=used, revoked=revoked, search=search,
+        status=status)
     sql = f"SELECT * FROM cards WHERE {where} ORDER BY id DESC LIMIT ? OFFSET ?"
     cur = db().execute(sql, [tenant_id, *vals, limit, offset])
     return [_card_row(r) for r in cur.fetchall()]
@@ -1300,14 +1317,40 @@ def list_cards(tenant_id: int, *, batch_id: Optional[int] = None,
 
 def count_cards(tenant_id: int, *, batch_id: Optional[int] = None,
                  used: Optional[bool] = None, revoked: Optional[bool] = None,
-                 search: Optional[str] = None) -> int:
+                 search: Optional[str] = None, status: Optional[str] = None) -> int:
     """R10.4: عدّ الكروت بنفس فلاتر list_cards (للـ pagination في الـ UI)."""
     where, vals = _build_cards_filter(
-        batch_id=batch_id, used=used, revoked=revoked, search=search)
+        batch_id=batch_id, used=used, revoked=revoked, search=search,
+        status=status)
     row = db().execute(
         f"SELECT COUNT(*) AS c FROM cards WHERE {where}",
         [tenant_id, *vals]).fetchone()
     return int(row["c"] or 0) if row else 0
+
+
+def cards_status_counts(tenant_id: int, *, batch_id: Optional[int] = None,
+                         search: Optional[str] = None) -> dict:
+    """عدّادات شريط الـ KPI في صفحة «كل الكروت» — استعلام تجميعي واحد
+    ضمن نطاق البحث/الدفعة الحالي (بدون فلاتر الحالة نفسها حتى يرى
+    المشغّل توزيع الحالات كاملًا مهما كان الفلتر المختار).
+    التعريفات مطابقة لشروط `status` في `_build_cards_filter`."""
+    where, vals = _build_cards_filter(
+        batch_id=batch_id, used=None, revoked=None, search=search)
+    row = db().execute(
+        f"""
+        SELECT
+          COUNT(*) AS total,
+          COALESCE(SUM(CASE WHEN revoked = 0 AND used = 0
+             AND (expire_at IS NULL OR expire_at >= datetime('now')) THEN 1 ELSE 0 END), 0) AS available,
+          COALESCE(SUM(CASE WHEN used = 1 THEN 1 ELSE 0 END), 0) AS used,
+          COALESCE(SUM(CASE WHEN revoked = 0 AND expire_at IS NOT NULL
+             AND expire_at < datetime('now') THEN 1 ELSE 0 END), 0) AS expired,
+          COALESCE(SUM(CASE WHEN revoked = 1 THEN 1 ELSE 0 END), 0) AS revoked
+        FROM cards WHERE {where}
+        """,
+        [tenant_id, *vals]).fetchone()
+    keys = ("total", "available", "used", "expired", "revoked")
+    return {k: int(row[k] or 0) for k in keys} if row else {k: 0 for k in keys}
 
 
 def stats(tenant_id: int) -> dict:

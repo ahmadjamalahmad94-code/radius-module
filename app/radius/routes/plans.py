@@ -144,6 +144,20 @@ def _s(name: str) -> str:
     return (request.form.get(name) or "").strip()
 
 
+def _service_type_from_form() -> str:
+    """نوع الخدمة — بطاقات متعددة الاختيار (هوت سبوت + برودباند) مثل
+    نموذج المشترك. تُجمع الاختيارات إلى قيمة واحدة في نفس العمود:
+    Hotspot / PPPoE / Both. مع التوافق الخلفي لو وصلت قيمة مفردة قديمة."""
+    raw = [v.strip().lower() for v in request.form.getlist("service_type") if v.strip()]
+    has_hs = any(v in ("hotspot",) for v in raw)
+    has_ppp = any(v in ("pppoe", "broadband") for v in raw)
+    if any(v == "both" for v in raw) or (has_hs and has_ppp):
+        return "Both"
+    if has_ppp:
+        return "PPPoE"
+    return "Hotspot"
+
+
 def _form_to_dto(*, plan_id: int | None = None) -> AccessPlan:
     days_raw = request.form.getlist("allowed_days") or ["mon","tue","wed","thu","fri","sat","sun"]
 
@@ -160,7 +174,7 @@ def _form_to_dto(*, plan_id: int | None = None) -> AccessPlan:
         name=_s("name"),
         code=_s("code"),
         plan_type=_s("plan_type").lower() or "time",
-        service_type=_s("service_type") or "Hotspot",
+        service_type=_service_type_from_form(),
         duration_minutes=_i("duration_minutes"),
         validity_days=_i("validity_days"),
         max_daily_minutes=_i("max_daily_minutes"),
@@ -216,6 +230,7 @@ def _form_to_dto(*, plan_id: int | None = None) -> AccessPlan:
         loan_enabled=_b("loan_enabled"),
         max_loan_minutes=_i("max_loan_minutes"),
         speed_override_allowed=_b("speed_override_allowed"),
+        shared_single_session=_b("shared_single_session"),
         offer_hours_from=_s("offer_hours_from"),
         offer_hours_to=_s("offer_hours_to"),
         connection_schedule=_normalize_connection_schedule(_s("connection_schedule")),
@@ -238,7 +253,24 @@ def _normalize_connection_schedule(raw: str) -> str:
 
 def plans_list():
     items = get_plans_service().list(limit=500)
-    return render_template("radius/plans_list.html", items=items)
+
+    # عدّاد المشتركين لكل باقة (استعلام واحد رخيص) — لعمود «المشتركون»
+    # و KPI «المشتركون الموزَّعون». يُحاط بـ try حتى لا يكسر المحوّلات
+    # غير المعتمدة على SQLite (MikroTik/manual).
+    sub_counts: dict[int, int] = {}
+    try:
+        from flask import g
+        from ..db.connection import db
+        tid = int(getattr(g, "tenant_id", None) or _tid())
+        cur = db().execute(
+            "SELECT plan_id, COUNT(*) AS c FROM subscribers "
+            "WHERE tenant_id = ? AND plan_id IS NOT NULL GROUP BY plan_id",
+            (tid,))
+        sub_counts = {int(r["plan_id"]): int(r["c"]) for r in cur.fetchall()}
+    except Exception:  # noqa: BLE001
+        sub_counts = {}
+
+    return render_template("radius/plans_list.html", items=items, sub_counts=sub_counts)
 
 
 def plans_new():

@@ -262,6 +262,23 @@ def _is_random_mac(mac: str) -> bool:
     return bool(first & 0x02)
 
 
+def is_random_mac(mac: Optional[str]) -> bool:
+    """عام/قابل لإعادة الاستخدام: هل هذا العنوان عشوائي (locally-administered)؟
+
+    أجهزة iOS 14+ و Android 10+ تولّد عنوان MAC عشوائيًا لكل شبكة حفاظًا على
+    الخصوصية. علامة ذلك هي «بت الإدارة المحلية» (U/L bit) = البت الثاني في
+    أول ثُماني (octet) من العنوان. عمليًا: إذا كانت الخانة السداسية الثانية
+    من أول بايت ضمن {2, 6, A, E} فالعنوان عشوائي/خاص.
+
+    تُطبّع المدخلات أولًا (تقبل AA:BB:.. أو AA-BB-.. أو AABBCC..). تُرجع False
+    عند أي مدخل غير صالح — محصّنة، لا ترمي استثناءات.
+    """
+    norm = _normalize_mac(mac or "")
+    if not norm:
+        return False
+    return _is_random_mac(norm)
+
+
 def _decode_connection(nas_port_type: Optional[str]) -> str:
     """Turn `NAS-Port-Type` into a friendly Arabic label."""
     if not nas_port_type:

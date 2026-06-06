@@ -10,6 +10,11 @@
 {% block page_title %}تسعير البطاقات{% endblock %}
 {% block page_sub %}<span class="sub">سياسات سعر البيع والجملة وتكلفة الحزم قبل البيع أو التحميل على المدراء</span>{% endblock %}
 
+{% block head_extra %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
+{% endblock %}
+
 {% macro num(value) -%}
   {{ "{:,}".format((value or 0)|int) }}
 {%- endmacro %}
@@ -65,6 +70,7 @@
   {% call hub.section("سياسات تسعير الباقات", icon="scale-balanced",
        meta=num(packages|length + priced_batches|length) + " عنصر تسعير", flush=True) %}
     <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="15"
+         data-uds-export-title="سياسات تسعير الباقات"
          data-testid="card-pricing-packages" style="border:none;border-radius:0">
       <table class="hub-table">
         <thead>
@@ -267,4 +273,5 @@
   });
 })();
 </script>
+<script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
 {% endblock %}

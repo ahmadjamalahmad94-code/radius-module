@@ -393,6 +393,14 @@
        'icon': 'gauge-high',        'variant': 'green'},
     ]) %}
   {% endif %}
+  {# ── غلاف الهيرو الموحّد (hub-hero-shell) — نفس وصفة users_profile /
+     finance_center_hub: الغلاف وحده يملك الكروم (حد + خلفية + ظل + زوايا)،
+     والأبناء (الميجاهيرو بشريط KPI الخاص به + شريط البحث التفاعلي cc-hero)
+     يصبحون مسطّحين بفواصل داخلية ناعمة. شريط الـ KPI يُجبَر على صفّ واحد
+     عبر قاعدة .hub-hero-shell > .uds-hero .uds-hero-kpis في hub_v2.css
+     (grid-auto-flow:column)، والـ overflow ظاهر حتى لا تُقص أي قوائم.
+     لا تغيير على أي خطاف JS (#cc-search-form / .cc-mode-toggle …). #}
+  <section class="hub-hero-shell cc-hero-shell">
   {{ hub.megahero(
        "مركز عمليات البطاقة",
        subtitle="فحص بطاقة العميل وإدارة جلساتها وأجهزتها لحظيًّا.",
@@ -447,6 +455,8 @@
     </div>
 
   </div>
+  </section>
+  {# ── /غلاف الهيرو الموحّد ──────────────────────────────────────────── #}
 
   {# ───────────────── RESULT WRAPPER (swappable via AJAX) ───────────────── #}
   <div id="cc-result">
@@ -872,7 +882,10 @@
               <div class="cc-sessions-foot-left">
                 <label class="cc-sessions-foot-label">
                   صفوف:
-                  <select data-cc-page-size class="cc-sessions-foot-select">
+                  {# hub-select: يلفّه hub_select.js كقائمة hbsel منسّقة موحّدة.
+                     الـ JS المخصّص للترقيم يقرأ .value ويستمع لحدث change اللذَين
+                     يبقيهما الـ hbsel متزامنَيْن، فلا يتأثّر السلوك. #}
+                  <select data-cc-page-size class="cc-sessions-foot-select hub-select">
                     <option value="10" selected>10</option>
                     <option value="25">25</option>
                     <option value="50">50</option>
@@ -903,7 +916,8 @@
             </div>
           </div>
           {% else %}
-          <div class="cc-state-hint" style="text-align:center;padding:24px 0">لا جلسات بعد.</div>
+          {# حالة فارغة موحّدة (hub.empty) بدل سطر النص العاري #}
+          {{ hub.empty('لا جلسات بعد', sub='لم تُسجَّل أي جلسة لهذه البطاقة حتى الآن.', icon='clock-rotate-left') }}
           {% endif %}
         </div>
       </section>

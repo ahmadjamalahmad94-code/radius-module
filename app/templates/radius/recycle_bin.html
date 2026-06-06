@@ -1,164 +1,220 @@
 {# ═══════════════════════════════════════════════════════════════════════
-   Recycle bin — UNIFIED DESIGN SYSTEM (megahero + worklayout + helppanel)
+   سلة المحذوفات — إعادة تصميم على نظام hub-hero-shell الموحّد (2026-06-05)
 
-   Backend unchanged (app/radius/routes/recycle_bin.py):
-     • items: serialized soft-deleted rows
-              ({entity_type, table, id, label, status,
-                deleted_at, deleted_by, delete_reason})
-     • selected: currently active entity_type filter
-     • entity_labels: dict[entity_type → arabic label]
-     • counts: dict[entity_type → archived count]
+   بيانات المسار (radius.recycle_bin — بدون أي تغيير في السلوك):
+     items          سجلات مؤرشفة مسلسلة {entity_type, table, id, label,
+                    status, deleted_at, deleted_by, delete_reason,
+                    archive_source, archive_policy_id, retention_expires_at,
+                    restore_allowed, retention_expired}
+     selected       فلتر النوع الحالي ('' = الكل)
+     entity_labels  dict[entity_type → تسمية عربية]
+     counts         dict[entity_type → عدد المؤرشف]
 
-   POST → radius.recycle_bin_restore(entity_type, entity_id) restores row.
+   البنية المبسّطة:
+     1. شريط تنقّل قسم «البيانات والحفظ والأرشفة» (عقد اختبار قائم:
+        data-testid="data-protection-nav").
+     2. صدفة هيرو واحدة: عنوان + سطر تعريفي + مؤشرات بصف واحد + حزام
+        فلترة النوع (شارات بعدّادات) — بلا هيروات مكدّسة.
+     3. جدول uds موحّد (فرز + ترقيم + تصدير) مع حبوب ملوّنة للحالات.
+     4. تأكيد الاستعادة بمودال عائم موحّد (uds-modal) بدل confirm().
+   عقود ثابتة (تحرسها الاختبارات):
+     • GET ?entity_type=… إلى نفس المسار.
+     • POST radius.recycle_bin_restore(entity_type, entity_id) كما هو.
+     • نص زر «استعادة» واسم العنصر يظهران في الصفحة.
    ═══════════════════════════════════════════════════════════════════════ #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}سلة المحذوفات{% endblock %}
+{% block title %}سلة المحذوفات — هوب ريديوس{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-box-archive"></i>{% endblock %}
 {% block page_title %}سلة المحذوفات{% endblock %}
-{% block page_sub %}<span class="sub">الأرشفة بديل آمن عن الحذف النهائي</span>{% endblock %}
+{% block page_sub %}<span class="sub"><bdi dir="ltr">{{ items|length }}</bdi> عنصرًا مؤرشفًا في النتائج</span>{% endblock %}
+
+{% block head_extra %}{{ super() }}
+{# نظام الجداول الموحّد (uds): فرز + ترقيم + تصدير + المودال العائم #}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
+<style>
+/* شارات فلترة النوع داخل حزام الهيرو: شارة + عدّاد صغير */
+.rb-chip-count{
+  margin-inline-start:6px; padding:1px 7px; border-radius:999px;
+  font-size:11px; font-family:var(--hub-mono);
+}
+</style>
+{% endblock %}
 
 {% block content %}
+{# شريط التنقّل المشترك لقسم البيانات والحفظ والأرشفة (عقد اختبار قائم) #}
 {% include "radius/data_protection_nav.html" %}
 
-{# Build KPI strip: total + per-entity archived counts (mirrors old tiles). #}
-{% set _kpis = [{'label': 'الإجمالي', 'value': counts.values()|sum, 'icon': 'layer-group', 'variant': 'brand'}] %}
-{% for entity, label in entity_labels.items() %}
-  {% set _ = _kpis.append({
-       'label': label,
-       'value': counts.get(entity, 0),
-       'icon': 'box-archive',
-       'variant': ('brand' if counts.get(entity, 0) else 'grey')
-     }) %}
-{% endfor %}
+{# عدّادات من النتائج الحالية (بلا استعلامات إضافية) #}
+{% set _total      = counts.values()|sum %}
+{% set _restorable = items|selectattr('restore_allowed')|list|length %}
+{% set _expired    = items|selectattr('retention_expired')|list|length %}
 
-{# ───── Merged hero: title + actions + KPI strip (per-entity counts) + filter chips ───── #}
+{# ───── صدفة الهيرو الموحّدة: عنوان + مؤشرات بصف واحد + حزام فلترة النوع ───── #}
+<section class="hub-hero-shell" data-testid="recycle-bin-hero">
 {% call hub.megahero(
   "سلة المحذوفات",
-  subtitle="الحذف في هذه المجالات أرشفة قابلة للاستعادة، وليس حذفًا نهائيًا — السجلات المالية لا تظهر هنا لأنها تُصحَّح بقيود عكسية.",
+  subtitle="الحذف هنا أرشفة قابلة للاستعادة لا حذف نهائي — السجلات المالية لا تظهر لأنها تُصحَّح بقيود عكسية.",
   icon="box-archive",
-  actions_html='
-    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.users_list') + '">
-      <i class="fa-solid fa-users"></i> المستفيدون
-    </a>',
-  kpis=_kpis
+  kpis=[
+    {'label': 'إجمالي المؤرشف',   'value': _total,       'icon': 'layer-group',    'variant': 'brand'},
+    {'label': 'في النتائج',       'value': items|length, 'icon': 'list',           'variant': 'blue'},
+    {'label': 'قابلة للاستعادة',  'value': _restorable,  'icon': 'rotate-left',    'variant': 'green'},
+    {'label': 'انتهى احتفاظها',   'value': _expired,     'icon': 'hourglass-end',  'variant': 'amber'},
+  ]
 ) %}
-  <span class="hub-text-mute hub-flex-row" style="gap:6px;align-items:center;white-space:nowrap">
+  {# حزام فلترة النوع — نفس العقد: GET ?entity_type=… إلى نفس المسار #}
+  <span class="hub-text-mute" style="font-size:12.5px;font-weight:700;white-space:nowrap">
     <i class="fa-solid fa-filter"></i> تصفية حسب النوع
   </span>
-  <span class="hub-spacer"></span>
-  <a class="hub-btn hub-btn--{{ 'primary' if not selected else 'ghost' }} hub-btn--sm"
+  <a class="hub-btn hub-btn--{{ 'primary' if not selected else 'secondary' }} hub-btn--sm"
      href="{{ url_for('radius.recycle_bin') }}">
-    <i class="fa-solid fa-layer-group"></i>
-    الكل
-    <span style="margin-inline-start:6px;padding:1px 7px;border-radius:999px;
-                 background:rgba(255,255,255,.18);font-size:11px">
-      {{ counts.values()|sum }}
+    <i class="fa-solid fa-layer-group"></i> الكل
+    <span class="rb-chip-count"
+          style="background:{{ 'rgba(255,255,255,.18)' if not selected else 'var(--hub-bg-soft)' }}">
+      <bdi dir="ltr">{{ _total }}</bdi>
     </span>
   </a>
   {% for entity, label in entity_labels.items() %}
     <a class="hub-btn hub-btn--{{ 'primary' if selected == entity else 'secondary' }} hub-btn--sm"
        href="{{ url_for('radius.recycle_bin', entity_type=entity) }}">
       {{ label }}
-      <span style="margin-inline-start:6px;padding:1px 7px;border-radius:999px;
-                   background:{{ 'rgba(255,255,255,.18)' if selected == entity else 'var(--hub-bg-soft)' }};
-                   font-size:11px">
-        {{ counts.get(entity, 0) }}
+      <span class="rb-chip-count"
+            style="background:{{ 'rgba(255,255,255,.18)' if selected == entity else 'var(--hub-bg-soft)' }}">
+        <bdi dir="ltr">{{ counts.get(entity, 0) }}</bdi>
       </span>
     </a>
   {% endfor %}
+  <span class="hub-spacer"></span>
+  <span class="hub-hint" tabindex="0"
+        data-hint="الأرشفة قد تكون يدوية أو تلقائية بموجب سياسة احتفاظ. عند انتهاء مدة الاحتفاظ يُعطَّل زر الاستعادة. راجع أي عنصر مستعاد قبل إعادة استخدامه تشغيليًا."><i class="fa-solid fa-info"></i></span>
 {% endcall %}
+</section>{# /hub-hero-shell #}
 
 {% if items %}
-{# ───── Main (carded table) + help panel on the LEFT ───── #}
-{% call hub.worklayout(aside_html=hub.helppanel(
-  "كيف تعمل سلة المحذوفات؟",
-  intro="كل صف هو سجل تشغيلي مؤرشف (مستفيد، باقة، جهاز شبكة، مدير…) يمكن استعادته إلى حالته السابقة.",
-  items=[
-    {'icon': 'rotate-left', 'text': 'زر «استعادة» يعيد العنصر إلى وضعه قبل الأرشفة — راجعه قبل إعادة استخدامه تشغيليًا.'},
-    {'icon': 'robot',       'text': 'الأرشفة قد تكون يدوية أو تلقائية بموجب سياسة احتفاظ محددة.'},
-    {'icon': 'hourglass-half', 'text': 'عند انتهاء مدة الاحتفاظ قد لا تعود الاستعادة متاحة.'},
-    {'icon': 'coins',       'text': 'السجلات المالية لا تظهر هنا — تُصحَّح بقيود عكسية لا بالحذف.'},
-  ],
-  note="الأرشفة لا تُتلف البيانات؛ إنها حالة قابلة للعكس وليست حذفًا نهائيًا."
-)) %}
-  {% call hub.section("العناصر المؤرشفة", icon="table-list",
-                      meta=items|length|string + " صف", flush=True) %}
-    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25" style="border:none;border-radius:0">
-      <table class="hub-table">
-        <thead>
-          <tr>
-            <th>النوع</th>
-            <th>العنصر</th>
-            <th>الحالة</th>
-            <th>وقت الأرشفة</th>
-            <th>مصدر الأرشفة</th>
-            <th>الاحتفاظ</th>
-            <th>بواسطة</th>
-            <th data-uds-nosort>السبب</th>
-            <th style="width:120px" data-uds-nosort data-uds-nocol>إجراء</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for item in items %}
-          <tr>
-            <td>{{ hub.pill(entity_labels.get(item.entity_type, item.entity_type),
-                            variant="brand", dot=False) }}</td>
-            <td>
-              <strong>{{ item.label }}</strong>
-              <div class="mono small hub-text-mute">#{{ item.id }}</div>
-            </td>
-            <td>
-              {% if item.status == 'enabled' %}{{ hub.pill("مفعَّل", variant="green") }}
-              {% elif item.status == 'disabled' %}{{ hub.pill("معطَّل", variant="red") }}
-              {% elif item.status %}{{ hub.pill(item.status, variant="grey") }}
-              {% else %}<span class="hub-text-mute">—</span>{% endif %}
-            </td>
-            <td class="mono small">{{ item.deleted_at|dt_local if item.deleted_at else '—' }}</td>
-            <td>
-              {% if item.archive_source == 'auto' %}
-                {{ hub.pill("تلقائية", variant="blue") }}
-              {% else %}
-                {{ hub.pill("يدوية", variant="grey") }}
-              {% endif %}
-              {% if item.archive_policy_id %}
-                <div class="mono small hub-text-mute">سياسة #{{ item.archive_policy_id }}</div>
-              {% endif %}
-            </td>
-            <td class="mono small">
-              {{ item.retention_expires_at|date_local if item.retention_expires_at else 'غير محدد' }}
-              {% if item.retention_expired %}
-                <div class="hub-text-mute">انتهت مدة الاحتفاظ</div>
-              {% endif %}
-            </td>
-            <td>{{ item.deleted_by or '—' }}</td>
-            <td class="hub-text-mute" style="max-width:320px;font-size:12.5px;line-height:1.7">
-              {{ item.delete_reason or 'لم يتم تسجيل سبب.' }}
-            </td>
-            <td>
-              <form method="post"
-                    action="{{ url_for('radius.recycle_bin_restore', entity_type=item.entity_type, entity_id=item.id) }}"
-                    onsubmit="return confirm('استعادة «{{ item.label|e }}»؟');"
-                    style="display:inline">
-                <button type="submit" class="hub-btn hub-btn--primary hub-btn--sm" {% if not item.restore_allowed %}disabled{% endif %}>
-                  <i class="fa-solid fa-rotate-left"></i> استعادة
-                </button>
-              </form>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  {% endcall %}
+{# ───── جدول العناصر المؤرشفة — uds موحّد (فرز + ترقيم + تصدير) ───── #}
+{% call hub.section("العناصر المؤرشفة", icon="table-list",
+                    meta=items|length|string ~ " عنصر", flush=True) %}
+  <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25"
+       data-uds-export-title="سلة المحذوفات" style="border:none;border-radius:0">
+    <table class="hub-table">
+      <thead>
+        <tr>
+          <th>النوع</th>
+          <th>العنصر</th>
+          <th>الحالة</th>
+          <th>وقت الأرشفة</th>
+          <th>مصدر الأرشفة</th>
+          <th>الاحتفاظ حتى</th>
+          <th>بواسطة</th>
+          <th data-uds-nosort>السبب</th>
+          <th style="width:120px" data-uds-nosort data-uds-nocol data-uds-noexport>إجراء</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in items %}
+        <tr>
+          {# نوع العنصر — التسمية العربية مع احتواء أي نوع مجهول #}
+          <td>{{ hub.pill(entity_labels.get(item.entity_type, item.entity_type), variant="brand", dot=False) }}</td>
+          <td>
+            <strong>{{ item.label }}</strong>
+            <div class="mono small hub-text-mute"><bdi dir="ltr">#{{ item.id }}</bdi></div>
+          </td>
+          {# الحالة قبل الأرشفة — حبوب ملوّنة مع احتواء أي قيمة مجهولة #}
+          <td>
+            {% set _st = (item.status or '')|string|lower %}
+            {% if _st in ['enabled', 'active'] %}{{ hub.pill("مفعَّل", variant="green") }}
+            {% elif _st in ['disabled', 'inactive'] %}{{ hub.pill("معطَّل", variant="red") }}
+            {% elif _st %}{{ hub.pill(_st, variant="grey") }}
+            {% else %}<span class="hub-text-mute">—</span>{% endif %}
+          </td>
+          <td class="mono small"><bdi dir="ltr">{{ item.deleted_at|dt_local if item.deleted_at else '—' }}</bdi></td>
+          {# مصدر الأرشفة: تلقائية بموجب سياسة، أو يدوية من مشغّل #}
+          <td>
+            {% if item.archive_source == 'auto' %}
+              {{ hub.pill("تلقائية", variant="blue") }}
+            {% else %}
+              {{ hub.pill("يدوية", variant="grey") }}
+            {% endif %}
+            {% if item.archive_policy_id %}
+              <div class="mono small hub-text-mute">سياسة <bdi dir="ltr">#{{ item.archive_policy_id }}</bdi></div>
+            {% endif %}
+          </td>
+          <td class="mono small">
+            {% if item.retention_expires_at %}<bdi dir="ltr">{{ item.retention_expires_at|date_local }}</bdi>
+            {% else %}<span class="hub-text-mute">غير محدد</span>{% endif %}
+            {% if item.retention_expired %}
+              <div>{{ hub.pill("انتهى الاحتفاظ", variant="amber", dot=False) }}</div>
+            {% endif %}
+          </td>
+          <td>{{ item.deleted_by or '—' }}</td>
+          <td class="hub-text-mute" style="max-width:300px;font-size:12.5px;line-height:1.7">
+            {{ item.delete_reason or 'لم يُسجَّل سبب.' }}
+          </td>
+          <td>
+            {# الاستعادة عبر مودال تأكيد عائم — نفس مسار POST تمامًا #}
+            {% if item.restore_allowed %}
+            <button type="button" class="hub-btn hub-btn--primary hub-btn--sm"
+                    data-rb-restore
+                    data-rb-label="{{ item.label|e }}"
+                    data-rb-type="{{ entity_labels.get(item.entity_type, item.entity_type)|e }}"
+                    data-rb-action="{{ url_for('radius.recycle_bin_restore', entity_type=item.entity_type, entity_id=item.id) }}">
+              <i class="fa-solid fa-rotate-left"></i> استعادة
+            </button>
+            {% else %}
+            <button type="button" class="hub-btn hub-btn--ghost hub-btn--sm" disabled
+                    title="انتهت مدة الاحتفاظ — الاستعادة غير متاحة">
+              <i class="fa-solid fa-ban"></i> غير متاحة
+            </button>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 {% endcall %}
 {% else %}
 {{ hub.empty(
-  "لا عناصر مؤرشفة",
-  sub="عند أرشفة مستفيد أو باقة أو جهاز شبكة يظهر هنا للاستعادة.",
+  "لا عناصر مؤرشفة" ~ (" من نوع «" ~ entity_labels.get(selected, selected) ~ "»" if selected else ""),
+  sub="عند أرشفة مستفيد أو باقة أو جهاز شبكة أو مدير يظهر هنا جاهزًا للاستعادة.",
   icon="box-open"
 ) }}
 {% endif %}
 
+{# ───── مودال تأكيد الاستعادة العائم الموحّد (بدل confirm) ───── #}
+{% call hub.modal("rbRestoreModal", "تأكيد الاستعادة", icon="rotate-left", size="sm",
+   footer_html='<button type="button" class="hub-btn hub-btn--ghost" data-uds-modal-close>إلغاء</button>'
+     ~ '<form method="post" data-rb-restore-form style="display:inline;margin:0">'
+     ~ '<button type="submit" class="hub-btn hub-btn--primary"><i class="fa-solid fa-rotate-left"></i> استعادة العنصر</button></form>') %}
+  <div class="uds-modal-warn uds-modal-warn--amber">
+    <i class="fa-solid fa-circle-info"></i>
+    <span>سيُستعاد <span data-rb-restore-type></span> «<strong data-rb-restore-name></strong>» إلى وضعه قبل الأرشفة. راجعه قبل إعادة استخدامه تشغيليًا.</span>
+  </div>
+{% endcall %}
+
+{# نظام الجداول الموحّد + سلوك المودال (فتح/إغلاق/ESC) #}
+<script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
+<script src="{{ url_for('static', filename='js/unified_design.js') }}"></script>
+<script>
+(function(){
+  "use strict";
+  // ربط أزرار «استعادة» بالمودال: تعبئة الاسم/النوع وتوجيه النموذج لمساره
+  var modal = document.getElementById("rbRestoreModal");
+  if (!modal) return;
+  var nameEl = modal.querySelector("[data-rb-restore-name]");
+  var typeEl = modal.querySelector("[data-rb-restore-type]");
+  var form   = modal.querySelector("[data-rb-restore-form]");
+  document.addEventListener("click", function(e){
+    var btn = e.target.closest("[data-rb-restore]");
+    if (!btn) return;
+    e.preventDefault();
+    if (nameEl) nameEl.textContent = btn.getAttribute("data-rb-label") || "";
+    if (typeEl) typeEl.textContent = btn.getAttribute("data-rb-type") || "العنصر";
+    if (form)   form.action = btn.getAttribute("data-rb-action") || "";
+    modal.hidden = false;
+  });
+})();
+</script>
 {% endblock %}

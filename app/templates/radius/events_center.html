@@ -5,15 +5,24 @@
 {% block page_icon %}<i class="fa-solid fa-timeline"></i>{% endblock %}
 {% block page_title %}مركز الأحداث{% endblock %}
 {% block page_sub %}<span class="sub">أحداث أعمال محفوظة كسجل إضافي مع فلاتر ومعرفات ترابط وخطوط زمنية للكيانات.</span>{% endblock %}
-{% block head_extra %}{{ super() }}<link rel="stylesheet" href="{{ url_for('static', filename='css/ops_risk_redesign.css') }}">{% endblock %}
+{% block head_extra %}{{ super() }}<link rel="stylesheet" href="{{ url_for('static', filename='css/ops_risk_redesign.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">{% endblock %}
 
 {% block content %}
 
-{# ───── Unified hero: title + subtitle + KPI strip + integrated filters ───── #}
+{# متحكّم «انتقال سريع» المضغوط (data-testid="events-nav") — يُحقن في صف
+   عنوان الهيرو بدل شريط التبويبات الكبير. عقد الاختبارات ثابت. #}
+{% set _events_jump %}{% include "radius/events_nav.html" %}{% endset %}
+
+{# ───── الصدفة الموحّدة (hub-hero-shell): هيرو واحد فقط — عنوان + KPI
+   صف واحد + حزام الفلترة المدمج. لا كتل هيرو مكدّسة. نفس عقد الراوت
+   (events_center: category/severity/actor/target/correlation/from/to). #}
+<section class="hub-hero-shell" data-testid="events-hero">
 {% call hub.megahero(
   "مركز الأحداث",
-  subtitle="تعرض هنا أحداث التشغيل للمراجعة والتحقيق. لا توجد إجراءات حذف من هذه الصفحة.",
+  subtitle="بوابة واحدة لأحداث التشغيل: سجل المراجعة، تقييم المخاطر، الأمان، والتحقيقات — للعرض والتحقيق فقط، لا إجراءات حذف من هنا.",
   icon="timeline",
+  actions_html=_events_jump,
   kpis=[
     {'label': 'الأحداث',           'value': summary.events,          'icon': 'list',                 'variant': 'brand'},
     {'label': 'التنبيهات المفتوحة', 'value': summary.open_flags,      'icon': 'flag',                 'variant': 'amber'},
@@ -30,10 +39,22 @@
   <input class="hub-input grow" name="correlation_id" placeholder="معرّف الترابط" value="{{ request.args.get('correlation_id', '') }}">
   {{ hub.btn("فلترة", icon="filter", variant="primary", type="submit", size="sm") }}
 {% endcall %}
+</section>{# /hub-hero-shell #}
 
-{% include "radius/events_nav.html" %}
+{# ───── أقسام المركز: بطاقات تعريفية أنيقة تفتح الصفحات الفرعية
+   مع وصف موجز لكل قسم — مكمّلة لشريط التبويبات أعلاه. ───── #}
+{% call hub.section("أقسام المركز", icon="compass", meta="المخاطر · الأمان · التحقيقات") %}
+  <div class="hub-actions" data-testid="events-sections">
+    {{ hub.action_card("تقييم المخاطر", sub="تشغيل قواعد كشف الاحتيال ومراجعة الإشارات المفتوحة",
+                       icon="shield-halved", href=url_for('radius.events_risk'), variant="amber") }}
+    {{ hub.action_card("الأمان", sub="أحداث فئة الأمان + إشارات الاحتيال المفتوحة",
+                       icon="lock", href=url_for('radius.events_security'), variant="red") }}
+    {{ hub.action_card("التحقيقات", sub="فتح ومتابعة تحقيقات على الكيانات المشبوهة",
+                       icon="magnifying-glass-chart", href=url_for('radius.events_investigations'), variant="brand") }}
+  </div>
+{% endcall %}
 
-{# ───── Main (carded table) + help panel on the LEFT ───── #}
+{# ───── الجدول الرئيسي + لوحة المساعدة على اليسار ───── #}
 {% call hub.worklayout(aside_html=hub.helppanel(
   "كيف تقرأ هذه الصفحة؟",
   intro="كل صف هو حدث تشغيل محفوظ كسجل للمراجعة. استخدم الفلاتر في الأعلى لتضييق النتائج.",
@@ -64,7 +85,12 @@
             <tr>
               <td class="num"><a href="{{ url_for('radius.events_detail', event_id=event.id) }}">#{{ event.id }}</a></td>
               <td>{{ event.category }}</td>
-              <td>{{ event.severity }}</td>
+              <td>
+                {%- if event.severity == 'critical' -%}{{ hub.pill("حرج", variant="red") }}
+                {%- elif event.severity == 'warning' -%}{{ hub.pill("تحذير", variant="amber") }}
+                {%- elif event.severity == 'info' -%}{{ hub.pill("معلومة", variant="blue") }}
+                {%- else -%}{{ hub.pill(event.severity or '—', variant="grey") }}{%- endif -%}
+              </td>
               <td class="mono small">{{ event.event_key }}</td>
               <td>{{ event.actor_type }} #{{ event.actor_id or '' }}</td>
               <td>{{ event.target_type }} #{{ event.target_id or '' }}</td>
@@ -79,4 +105,5 @@
   {% endcall %}
 {% endcall %}
 
+<script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
 {% endblock %}

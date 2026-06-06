@@ -1,0 +1,498 @@
+{# ══════════════════════════════════════════════════════════════════════
+   دليل «البطاقات المتصلة» — من سلسلة «كيف تستخدمني».
+
+   مستنسخ حرفيًا من بنية docs_add_subscriber.html (النموذج الذهبي):
+     • hero + شريط أدوات (كل الأدلة / حفظ كـ PDF).
+     • فهرس جانبي لاصق على يسار الصفحة (order:2) + scrollspy خفيف.
+     • خطوات مرقّمة بشارات بنفسجية متدرّجة ورسوم محاكاة HTML/CSS.
+     • تلميحات 💡 نصيحة / ⚠️ انتبه.
+
+   المحتوى مطابق للصفحة الفعلية app/templates/radius/sessions_list.html
+   (مسار radius.online_list مع ?type=card = /admin/radius/online?type=card
+    — بند «البطاقات المتصلة» في القائمة الجانبية):
+     • تبويبا «المشتركون / الكروت» في الهيرو.
+     • فلاتر «السيرفر / العرض / المجموعة / نوع السرعة» وزر «عرض».
+     • أعمدة الجدول وقائمة «عرض/إخفاء الأعمدة» منسوخة حرفيًا.
+     • التحديد المتعدد وشريط الإجراءات: المحدد، فصل الاتصال، عرض 360°،
+       إغلاق بالماك، تثبيت IP، تعديل، إرسال رسالة (الإجراءات الخاصة
+       بالمشتركين فقط معطّلة على الكروت كما في الصفحة).
+   عند تغيير الصفحة حدّث الدليل معها.
+   ══════════════════════════════════════════════════════════════════════ #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}دليل: البطاقات المتصلة — كيف تستخدمني{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<style>
+  /* ── التخطيط: فهرس جانبي لاصق + عمود المحتوى ── */
+  .dg-layout{ display:grid; grid-template-columns:minmax(0,1fr) 230px; gap:20px; align-items:start; }
+  .dg-toc{ order:2; }
+  .dg-main{ order:1; }
+  @media (max-width:980px){ .dg-layout{ grid-template-columns:1fr; } .dg-toc{ order:1; } .dg-main{ order:2; } }
+
+  .dg-toc{
+    position:sticky; top:84px;
+    background:#fff; border:1px solid #e8edf3; border-radius:14px;
+    padding:14px 13px; display:grid; gap:3px;
+  }
+  @media (max-width:980px){ .dg-toc{ position:static; } }
+  .dg-toc-title{
+    display:flex; align-items:center; gap:8px; font-size:12px; font-weight:900;
+    color:#7c7a99; margin-bottom:7px; padding-inline:6px;
+  }
+  .dg-toc a{
+    display:flex; align-items:center; gap:9px;
+    padding:8px 10px; border-radius:9px; text-decoration:none;
+    font-size:12.5px; font-weight:700; color:#475569;
+    transition:background .14s, color .14s;
+  }
+  .dg-toc a .n{
+    width:21px; height:21px; border-radius:50%; flex:none;
+    display:grid; place-items:center; font-size:10.5px; font-weight:900;
+    background:#f1f5f9; color:#94a3b8;
+  }
+  .dg-toc a:hover{ background:#f5f3ff; color:#5b21b6; }
+  .dg-toc a.is-active{ background:#ede9fe; color:#5b21b6; }
+  .dg-toc a.is-active .n{ background:linear-gradient(135deg,#7c3aed,#5b21b6); color:#fff; }
+
+  /* ── عمود الخطوات ── */
+  .dg-main{ min-width:0; display:grid; gap:18px; }
+
+  /* تمهيد «ماذا ستتعلم» */
+  .dg-lead{
+    display:flex; gap:13px; align-items:flex-start;
+    background:linear-gradient(135deg,#f5f3ff,#fdfcff);
+    border:1px solid #e9e5fc; border-radius:14px; padding:15px 17px;
+  }
+  .dg-lead .ic{ width:40px;height:40px;border-radius:12px;flex:none;display:grid;place-items:center;
+    font-size:17px;background:#ede9fe;color:#6d28d9; }
+  .dg-lead h3{ margin:0 0 4px; font-size:13.5px; font-weight:800; color:#241e4e; }
+  .dg-lead p{ margin:0; font-size:12.5px; line-height:1.9; color:#5b5a78; }
+
+  /* بطاقة الخطوة */
+  .dg-step{ display:grid; grid-template-columns:auto 1fr; gap:15px; align-items:start; scroll-margin-top:90px; }
+  @media (max-width:560px){ .dg-step{ grid-template-columns:1fr; } }
+  .dg-badge{
+    width:42px; height:42px; border-radius:50%; flex:none;
+    display:grid; place-items:center; font-size:17px; font-weight:900; color:#fff;
+    background:linear-gradient(135deg,#7c3aed,#5b21b6);
+    box-shadow:0 8px 18px rgba(124,58,237,.3);
+  }
+  .dg-card{
+    min-width:0; background:#fff; border:1px solid #e8edf3; border-radius:15px;
+    padding:16px 18px;
+  }
+  .dg-card h2{
+    margin:0 0 8px; font-size:15.5px; font-weight:800; color:#0f172a;
+    display:flex; align-items:center; gap:9px; flex-wrap:wrap;
+  }
+  .dg-card h2 i{ color:#7c3aed; }
+  .dg-card p{ margin:0 0 7px; font-size:13px; line-height:1.95; color:#475569; }
+  .dg-card p:last-child{ margin-bottom:0; }
+  .dg-card ul{ margin:4px 0 8px; padding-inline-start:22px; font-size:13px; line-height:2; color:#475569; }
+  .dg-card strong{ color:#241e4e; }
+  .dg-kbd{
+    font-family:ui-monospace,Consolas,monospace; font-size:11.5px;
+    background:#f1f5f9; border:1px solid #e2e8f0; border-radius:5px;
+    padding:1px 7px; color:#5b21b6;
+  }
+
+  /* صناديق التلميح */
+  .dg-tip, .dg-warn{
+    display:flex; gap:11px; align-items:flex-start;
+    border-radius:12px; padding:11px 14px; margin-top:11px;
+    font-size:12.5px; line-height:1.9;
+  }
+  .dg-tip{ background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; }
+  .dg-warn{ background:#fffbeb; border:1px solid #fde68a; color:#92400e; }
+  .dg-tip .ic, .dg-warn .ic{ flex:none; font-size:15px; line-height:1.6; }
+  .dg-tip b, .dg-warn b{ font-weight:900; }
+
+  /* ════ الرسوم: محاكاة مصغّرة للصفحة الحقيقية ════ */
+  .dg-mock{
+    border:1px solid #e2e8f0; border-radius:14px; overflow:hidden;
+    background:#fff; box-shadow:0 8px 20px rgba(15,23,42,.07);
+    margin-top:13px; max-width:520px;
+  }
+  .dg-mock-bar{
+    display:flex; align-items:center; gap:7px; padding:8px 12px;
+    background:#f1f5f9; border-bottom:1px solid #e2e8f0;
+  }
+  .dg-mock-bar .dots{ display:flex; gap:5px; }
+  .dg-mock-bar .dots i{ width:9px; height:9px; border-radius:50%; }
+  .dg-mock-bar .dots i:nth-child(1){ background:#f87171; }
+  .dg-mock-bar .dots i:nth-child(2){ background:#fbbf24; }
+  .dg-mock-bar .dots i:nth-child(3){ background:#34d399; }
+  .dg-mock-bar .crumb{
+    flex:1; background:#fff; border:1px solid #e2e8f0; border-radius:7px;
+    padding:4px 10px; font-size:10.5px; font-weight:700; color:#64748b;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .dg-mock-body{ padding:14px; display:grid; gap:11px; }
+
+  /* أزرار محاكاة */
+  .dg-mock-btn{
+    display:inline-flex; align-items:center; gap:6px; border:0; border-radius:9px;
+    padding:7px 13px; font:inherit; font-size:10.5px; font-weight:800; cursor:default;
+  }
+  .dg-mock-btn.primary{
+    background:linear-gradient(135deg,#7c3aed,#5b21b6); color:#fff;
+    box-shadow:0 6px 14px rgba(124,58,237,.28);
+  }
+  .dg-mock-btn.ghost{ background:#f1f5f9; color:#475569; }
+  .dg-mock-btn.danger{ background:#fee2e2; color:#b91c1c; border:1px solid #fecaca; }
+  .dg-mock-btn.dim{ opacity:.45; }
+
+  /* فلاتر pill محاكاة */
+  .dg-filters{ display:flex; gap:7px; flex-wrap:wrap; }
+  .dg-pillsel{
+    display:grid; gap:4px; min-width:105px;
+  }
+  .dg-pillsel .l{ font-size:9px; font-weight:800; color:#64748b; display:flex; align-items:center; gap:4px; }
+  .dg-pillsel .l i{ color:#7c3aed; font-size:8.5px; }
+  .dg-pillsel .v{
+    border:1px solid #e2e8f0; border-radius:99px; padding:6px 11px;
+    font-size:10px; font-weight:700; color:#0f172a; background:#fff;
+    display:flex; align-items:center; justify-content:space-between; gap:6px;
+  }
+  .dg-pillsel .v i{ font-size:7.5px; color:#94a3b8; }
+
+  /* جدول الجلسات محاكاة */
+  .dg-tbl{
+    max-width:520px; margin-top:13px; border:1px solid #e2e8f0; border-radius:12px;
+    overflow:hidden; box-shadow:0 6px 16px rgba(15,23,42,.06);
+  }
+  .dg-tbl .hd, .dg-tbl .rw{
+    display:grid; grid-template-columns:.45fr 1.1fr 1fr .9fr .9fr .8fr; gap:7px;
+    padding:9px 11px; font-size:9.8px; align-items:center;
+  }
+  .dg-tbl .hd{ background:#f5f3ff; color:#5b21b6; font-weight:900; }
+  .dg-tbl .rw{ background:#fff; color:#334155; font-weight:700; border-top:1px solid #f1f5f9; }
+  .dg-tbl .rw.sel{ background:#eef8ff; }
+  .dg-tbl .mono{ font-family:ui-monospace,Consolas,monospace; }
+  .dg-ck{
+    width:13px; height:13px; border-radius:4px; border:1.5px solid #cbd5e1;
+    display:inline-grid; place-items:center; font-size:7.5px; color:#fff;
+  }
+  .dg-ck.on{ background:#7c3aed; border-color:#7c3aed; }
+
+  /* شريط الإجراءات الجماعي */
+  .dg-actbar{ display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+  .dg-actbar .cnt{
+    display:inline-flex; align-items:center; gap:5px; border-radius:9px; padding:7px 11px;
+    background:#eef2ff; border:1px solid #c7d2fe; color:#3730a3; font-size:10px; font-weight:800;
+  }
+
+  /* أزرار إجراءات الصف المصغّرة */
+  .dg-miniacts{ display:inline-flex; gap:4px; }
+  .dg-miniact{
+    width:24px; height:24px; border-radius:7px; background:#f8fafc; border:1px solid #e2e8f0;
+    color:#475569; display:grid; place-items:center; font-size:9px;
+  }
+  .dg-miniact.danger{ background:#fee2e2; border-color:#fecaca; color:#b91c1c; }
+
+  .dg-cap{ font-size:11px; color:#94a3b8; margin-top:8px; line-height:1.7; }
+  .dg-cap i{ color:#c4b5fd; }
+
+  /* محاكاة شريط النجاح */
+  .dg-flash{
+    display:flex; align-items:center; gap:10px; max-width:520px; margin-top:13px;
+    background:#f0fdf4; border:1px solid #86efac; border-radius:11px;
+    padding:10px 14px; font-size:12px; font-weight:800; color:#15803d;
+  }
+  .dg-flash i{ font-size:14px; }
+
+  /* ════ الطباعة: «حفظ كـ PDF» = window.print() ════ */
+  @media print{
+    .hb-side, .hb-side-overlay, .hb-topbar, header.hb-top,
+    .dg-toc, .dg-noprint, .hub-hero-actions{ display:none !important; }
+    .dg-layout{ grid-template-columns:1fr; }
+    .dg-card, .dg-mock, .dg-tbl{ box-shadow:none !important; break-inside:avoid; }
+    .dg-step{ break-inside:avoid; }
+    body{ background:#fff !important; }
+    .dg-badge, .dg-mock-btn.primary, .dg-mock-btn.danger, .dg-tip, .dg-warn,
+    .dg-flash, .dg-tbl .hd, .dg-actbar .cnt, .dg-ck.on{
+      -webkit-print-color-adjust:exact; print-color-adjust:exact;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{{ hub.hero(
+  "دليل: البطاقات المتصلة",
+  subtitle="شوف مين من الكروت متصل الآن لحظة بلحظة — الجهاز، الاستهلاك، السرعة — واقطع أو قيّد بضغطة. 6 خطوات.",
+  icon="wifi",
+  actions_html='
+    <button type="button" class="hub-btn hub-btn--secondary" onclick="window.print()">
+      <i class="fa-solid fa-file-pdf"></i> حفظ كـ PDF
+    </button>
+    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.docs_section', cat_slug='cards') + '">
+      <i class="fa-solid fa-arrow-right"></i> كل الأدلة
+    </a>
+  '
+) }}
+
+<div class="dg-layout">
+
+  {# ───── الفهرس الجانبي اللاصق ───── #}
+  <nav class="dg-toc dg-noprint" aria-label="فهرس الدليل">
+    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> فهرس الخطوات</div>
+    <a href="#dg-s1" data-dg-toc><span class="n">1</span> افتح صفحة البطاقات المتصلة</a>
+    <a href="#dg-s2" data-dg-toc><span class="n">2</span> اقرأ المؤشرات والفلاتر</a>
+    <a href="#dg-s3" data-dg-toc><span class="n">3</span> افهم أعمدة الجدول</a>
+    <a href="#dg-s4" data-dg-toc><span class="n">4</span> إجراءات الصف السريعة</a>
+    <a href="#dg-s5" data-dg-toc><span class="n">5</span> التحديد المتعدد والإجراءات الجماعية</a>
+    <a href="#dg-s6" data-dg-toc><span class="n">6</span> بطاقة مش ظاهرة؟ — التشخيص</a>
+  </nav>
+
+  {# ───── عمود المحتوى ───── #}
+  <div class="dg-main">
+
+    <div class="dg-lead">
+      <span class="ic"><i class="fa-solid fa-lightbulb"></i></span>
+      <div>
+        <h3>قبل ما نبدأ — شو يعني «بطاقة متصلة»؟</h3>
+        <p>
+          كل كرت واي فاي يسجّل دخوله الآن يفتح <strong>جلسة حية</strong> على الشبكة. هذه الصفحة هي
+          نفس صفحة «المتصلون الآن» لكن مفلترة على <strong>الكروت فقط</strong> — مفصولة عن المشتركين
+          حتى ما يختلط الجمهوران. منها تراقب مين متصل، من أي جهاز، كم استهلك، وتقطع الجلسة أو تقفلها
+          بالماك بضغطة واحدة.
+        </p>
+      </div>
+    </div>
+
+    {# ════ الخطوة 1 ════ #}
+    <section class="dg-step" id="dg-s1">
+      <div class="dg-badge">1</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-door-open"></i> افتح صفحة «البطاقات المتصلة»</h2>
+        <p>
+          من القائمة الجانبية افتح قسم <strong>«البطاقات»</strong> ثم اضغط
+          <strong>«البطاقات المتصلة»</strong>. تفتح لك صفحة «المتصلون الآن» وفي أعلاها زران
+          للتبديل بين الجمهورين:
+        </p>
+        <ul>
+          <li><strong>«المشتركون»:</strong> جلسات المشتركين (الهوت سبوت والبرودباند بأسماء دائمة).</li>
+          <li><strong>«الكروت»:</strong> جلسات البطاقات فقط — هذا الزر يكون مضاءً بالبنفسجي لما تدخل من بند «البطاقات المتصلة».</li>
+        </ul>
+        <div class="dg-mock" aria-hidden="true" style="max-width:440px">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">/admin/radius/online?type=card</span></div>
+          <div class="dg-mock-body">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+              <div>
+                <div style="font-size:13px;font-weight:900;color:#0f172a">المتصلون الآن</div>
+                <div style="font-size:9.5px;color:#64748b;margin-top:2px">الجلسات الحيّة على الشبكة — كروت</div>
+              </div>
+              <div style="display:flex;gap:6px">
+                <span class="dg-mock-btn ghost"><i class="fa-solid fa-users"></i> المشتركون</span>
+                <span class="dg-mock-btn primary"><i class="fa-solid fa-id-card"></i> الكروت</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> الزر المضاء بالبنفسجي هو العرض الحالي — «الكروت» يعني بطاقات فقط، بلا مشتركين.</div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 2 ════ #}
+    <section class="dg-step" id="dg-s2">
+      <div class="dg-badge">2</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-filter"></i> اقرأ المؤشرات الثلاثة واستخدم الفلاتر</h2>
+        <p>تحت العنوان ثلاثة مؤشرات حيّة تلخّص الوضع فورًا:</p>
+        <ul>
+          <li><strong>جلسات نشطة:</strong> عدد الكروت المتصلة الآن.</li>
+          <li><strong>تنزيل (MB)</strong> و<strong>رفع (MB):</strong> إجمالي الاستهلاك لكل الجلسات الظاهرة.</li>
+        </ul>
+        <p>
+          وتحتها صف فلاتر بشكل حبّات منسدلة، اختر ما يلزمك ثم اضغط زر <strong>«عرض»</strong>:
+        </p>
+        <ul>
+          <li><strong>السيرفر:</strong> فلترة بجهاز الشبكة (NAS) — مفيد إذا عندك أكثر من راوتر/برج.</li>
+          <li><strong>العرض:</strong> فلترة بباقة الكرت (مثل: كرت 4 ساعات).</li>
+          <li><strong>المجموعة:</strong> فلترة بمجموعة مشتركين معرّفة عندك.</li>
+          <li><strong>نوع السرعة:</strong> «كل السرعات» / «سرعة خاصة أو مؤقتة» / «سرعة مؤقتة فقط» / «بدون سرعة خاصة».</li>
+        </ul>
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">المتصلون الآن › الفلاتر</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-filters">
+              <div class="dg-pillsel"><span class="l"><i class="fa-solid fa-server"></i> السيرفر</span><span class="v">كل السيرفرات <i class="fa-solid fa-chevron-down"></i></span></div>
+              <div class="dg-pillsel"><span class="l"><i class="fa-solid fa-cubes"></i> العرض</span><span class="v">كرت 4 ساعات <i class="fa-solid fa-chevron-down"></i></span></div>
+              <div class="dg-pillsel"><span class="l"><i class="fa-solid fa-gauge-high"></i> نوع السرعة</span><span class="v">كل السرعات <i class="fa-solid fa-chevron-down"></i></span></div>
+              <span class="dg-mock-btn primary" style="align-self:end"><i class="fa-solid fa-filter"></i> عرض</span>
+            </div>
+          </div>
+        </div>
+        <div class="dg-warn">
+          <span class="ic">⚠️</span>
+          <span><b>انتبه:</b> إذا ظهر شريط أصفر «الوضع اليدوي — لا توجد جلسات حية» فالنظام مش مربوط
+          فعليًا بالراوتر بعد — فعّل وضع الربط الفعلي من إعدادات التشغيل أولًا.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 3 ════ #}
+    <section class="dg-step" id="dg-s3">
+      <div class="dg-badge">3</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-table-columns"></i> افهم أعمدة الجدول — وأظهر/أخفِ ما تريد</h2>
+        <p>
+          جدول الجلسات يعرض لكل كرت متصل صفًا كاملًا. الأعمدة كما هي بالترتيب:
+          <strong>تحديد</strong>، <strong>#</strong>، <strong>المستخدم</strong> (كود الكرت)،
+          <strong>العرض</strong>، <strong>IP</strong>، <strong>جهاز الشبكة</strong>،
+          <strong>نوع الجهاز</strong> (اسم جهاز الزبون من DHCP مع أيقونة نظام التشغيل)،
+          <strong>سرعة العرض</strong> (سرعة الباقة)، <strong>السرعة الحالية</strong> (المطبَّقة فعلًا الآن)،
+          <strong>حالة السرعة</strong> («العرض» / «خاصة» / «مؤقتة» مع عدّاد «باقٍ»)،
+          <strong>وقت الجلسة</strong>، <strong>تحميل</strong> و<strong>رفع</strong> بالميجابايت،
+          <strong>ماك ادرس</strong>، <strong>المدير</strong>، <strong>معرف الخدمة</strong>،
+          <strong>منفذ الاتصال</strong> (اسم واجهة الهوت سبوت على الراوتر)، و<strong>إجراءات</strong>.
+        </p>
+        <p>
+          الأعمدة كثيرة؟ زر <strong>«عرض/إخفاء الأعمدة»</strong> في شريط الأدوات يفتح قائمة
+          بمربعات اختيار لكل عمود — أزل ما لا يهمك واختيارك يُحفظ تلقائيًا في متصفحك للزيارات القادمة.
+        </p>
+        <div class="dg-tbl" aria-hidden="true">
+          <div class="hd"><span></span><span>المستخدم</span><span>العرض</span><span>وقت الجلسة</span><span>تحميل</span><span>ماك ادرس</span></div>
+          <div class="rw"><span><span class="dg-ck"></span></span><span class="mono" style="font-weight:900;color:#241e4e">2044</span><span>كرت 4 ساعات</span><span class="mono">1س 22د</span><span class="mono">218.4 MB</span><span class="mono">A4:5E:…</span></div>
+          <div class="rw sel"><span><span class="dg-ck on"><i class="fa-solid fa-check"></i></span></span><span class="mono" style="font-weight:900;color:#241e4e">7731</span><span>كرت يوم كامل</span><span class="mono">3س 05د</span><span class="mono">1,204 MB</span><span class="mono">F0:9B:…</span></div>
+        </div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> الصف المظلّل بالأزرق الفاتح = جلسة محددة. عمود «المستخدم» للكروت هو كود الكرت نفسه.</div>
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة:</b> قارن <b>«سرعة العرض»</b> بـ<b>«السرعة الحالية»</b> — إذا اختلفتا
+          فهناك تقييد فعّال: الكهرماني = سرعة مؤقتة، والمميّز = سرعة خاصة دائمة.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 4 ════ #}
+    <section class="dg-step" id="dg-s4">
+      <div class="dg-badge">4</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-bolt"></i> إجراءات الصف السريعة — أربعة أزرار لكل جلسة</h2>
+        <p>في عمود «إجراءات» آخر كل صف أربعة أزرار مصغّرة:</p>
+        <ul>
+          <li><i class="fa-solid fa-gauge-high" style="color:#475569"></i> <strong>عرض 360°:</strong> للكروت يفتح <strong>«فحص بطاقة»</strong> على هذا الكود — تشوف حالته وجلساته واستهلاكه كاملًا.</li>
+          <li><i class="fa-solid fa-pen-to-square" style="color:#475569"></i> <strong>تعديل:</strong> للكروت يوديك أيضًا لمركز فحص البطاقة (التعديل اليومي للكرت كله من هناك).</li>
+          <li><i class="fa-solid fa-plug-circle-xmark" style="color:#b91c1c"></i> <strong>قطع:</strong> يرسل أمر فصل فوري للجلسة بعد نافذة تأكيد «قطع جلسة …؟» — الكرت ينفصل لكنه يقدر يسجّل دخولًا من جديد ما دامت صلاحيته سارية.</li>
+          <li><i class="fa-solid fa-gauge-simple-high" style="color:#475569"></i> <strong>سرعة مؤقتة:</strong> يفتح نافذة عائمة — لكنها <strong>للمشتركين فقط</strong>؛ على الكروت رح ترجع لك رسالة «السرعة المؤقتة متاحة للمشتركين فقط».</li>
+        </ul>
+        <div class="dg-mock" aria-hidden="true" style="max-width:380px">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">صف الجلسة › إجراءات</span></div>
+          <div class="dg-mock-body">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+              <span style="font-size:11px;font-weight:900;color:#241e4e;font-family:ui-monospace,Consolas,monospace">7731</span>
+              <span class="dg-miniacts">
+                <span class="dg-miniact"><i class="fa-solid fa-gauge-high"></i></span>
+                <span class="dg-miniact"><i class="fa-solid fa-pen-to-square"></i></span>
+                <span class="dg-miniact danger"><i class="fa-solid fa-plug-circle-xmark"></i></span>
+                <span class="dg-miniact"><i class="fa-solid fa-gauge-simple-high"></i></span>
+              </span>
+            </div>
+          </div>
+        </div>
+        <div class="dg-flash" aria-hidden="true">
+          <i class="fa-solid fa-circle-check"></i> تم إرسال أمر قطع الجلسة لـ 7731.
+        </div>
+        <div class="dg-warn">
+          <span class="ic">⚠️</span>
+          <span><b>انتبه:</b> «قطع» يفصل <b>الجلسة الحالية فقط</b> — ما يلغي الكرت. إذا بدّك توقف
+          الكرت نهائيًا، الإجراء الصحيح هو إلغاؤه من مركز «فحص بطاقة».</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 5 ════ #}
+    <section class="dg-step" id="dg-s5">
+      <div class="dg-badge">5</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-check-double"></i> التحديد المتعدد وشريط الإجراءات الجماعي</h2>
+        <p>
+          فوق الجدول شريط أدوات يبدأ بعدّاد <strong>«المحدد: 0»</strong>. حدّد جلسة بالضغط على صفّها
+          (أو مربع الاختيار)، وحدّد الكل دفعة واحدة من مربع رأس الجدول. أول ما تحدد شيئًا تتفعّل الأزرار:
+        </p>
+        <ul>
+          <li><strong>«فصل الاتصال»</strong> (الأحمر): يقطع <strong>كل الجلسات المحددة</strong> دفعة واحدة بعد تأكيد — أقوى استخدام للتحديد المتعدد.</li>
+          <li><strong>«عرض 360°»</strong> و<strong>«تعديل»:</strong> يعملان على آخر جلسة حددتها (إجراء فردي).</li>
+          <li><strong>«إغلاق بالماك»:</strong> يثبّت ماك أدرس الجهاز الحالي على كل كرت محدد — بعدها الكرت يشتغل من <strong>هذا الجهاز فقط</strong>. سلاحك ضد مشاركة الكروت.</li>
+          <li><strong>«تثبيت IP»</strong> و<strong>«إرسال رسالة»:</strong> للمشتركين فقط — على الكروت يظهران معطّلين أو يرفضان برسالة واضحة.</li>
+        </ul>
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">المتصلون الآن › شريط الإجراءات</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-actbar">
+              <span class="cnt"><i class="fa-solid fa-check-double"></i> المحدد: 2</span>
+              <span class="dg-mock-btn danger"><i class="fa-solid fa-scissors"></i> فصل الاتصال</span>
+              <span class="dg-mock-btn ghost"><i class="fa-solid fa-gauge-high"></i> عرض 360°</span>
+              <span class="dg-mock-btn ghost"><i class="fa-solid fa-lock"></i> إغلاق بالماك</span>
+              <span class="dg-mock-btn ghost dim"><i class="fa-solid fa-lock"></i> تثبيت IP</span>
+              <span class="dg-mock-btn ghost"><i class="fa-solid fa-table-columns"></i> عرض/إخفاء الأعمدة</span>
+            </div>
+          </div>
+        </div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> الأزرار الباهتة معطّلة — إما ما في تحديد، أو الإجراء غير متاح للكروت.</div>
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة:</b> زبون اشتكى أن كرته «مسروق»؟ حدّد جلسته واضغط <b>«إغلاق بالماك»</b> وهو
+          متصل من جهازه — من اللحظة هذه ما يشتغل الكرت إلا من جهازه، وأي متطفّل ينقطع تلقائيًا.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 6 ════ #}
+    <section class="dg-step" id="dg-s6">
+      <div class="dg-badge">6</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-stethoscope"></i> «بطاقة مش ظاهرة؟» — تشخيص سريع</h2>
+        <p>الزبون يقول إنه متصل لكن كرته مش بالقائمة؟ افحص بهذا الترتيب:</p>
+        <ul>
+          <li><strong>أنت في التبويب الصح؟</strong> تأكد أن زر <strong>«الكروت»</strong> هو المضاء — الكروت لا تظهر أبدًا في تبويب «المشتركون» (الفصل صارم بين الشاشتين).</li>
+          <li><strong>في فلتر شغّال نسيته؟</strong> رجّع «السيرفر» و«العرض» و«المجموعة» و«نوع السرعة» لقيمها الافتراضية واضغط «عرض» من جديد.</li>
+          <li><strong>الجلسة فعلًا قائمة؟</strong> ربما الزبون موصول بالواي فاي لكنه ما سجّل دخوله بعد على صفحة الهوت سبوت — بلا تسجيل دخول لا توجد جلسة.</li>
+          <li><strong>وضع الربط:</strong> إذا الصفحة كلها فاضية مع شريط «الوضع اليدوي»، فالنظام غير مربوط بالراوتر — لن تظهر أي جلسات حية حتى تفعّل الربط الفعلي.</li>
+          <li><strong>افحص الكرت نفسه:</strong> افتح <strong>«فحص بطاقة»</strong> وابحث بكود الكرت — تشوف فورًا إذا كان منتهي الصلاحية، ملغى، مقفولًا على ماك جهاز آخر، أو استنفد رصيده.</li>
+        </ul>
+        <p>
+          وإذا ظهر شريط أحمر <strong>«تعذّر تحميل الجلسات»</strong> فالمشكلة في الاتصال بجهاز الشبكة
+          نفسه — راجع إعدادات الراوتر في النظام وحدّث الصفحة.
+        </p>
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>وبعدين؟</b> هذه الصفحة لقطة لحظية — حدّثها (F5) كل ما احتجت أحدث صورة. وللتاريخ
+          الكامل لجلسات كرت معيّن (متى دخل وكم استهلك بكل جلسة) استخدم «فحص بطاقة» — له دليل خاص.</span>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+{# ── scrollspy خفيف: يبرز بند الفهرس المقابل للخطوة الظاهرة ── #}
+<script>
+(function(){
+  'use strict';
+  var links = Array.prototype.slice.call(document.querySelectorAll('[data-dg-toc]'));
+  if (!links.length || !('IntersectionObserver' in window)) return;
+  var map = {};
+  links.forEach(function(a){ map[a.getAttribute('href').slice(1)] = a; });
+  var obs = new IntersectionObserver(function(entries){
+    entries.forEach(function(en){
+      if (!en.isIntersecting) return;
+      links.forEach(function(a){ a.classList.remove('is-active'); });
+      var a = map[en.target.id];
+      if (a) a.classList.add('is-active');
+    });
+  }, { rootMargin: '-35% 0px -55% 0px' });
+  Object.keys(map).forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) obs.observe(el);
+  });
+})();
+</script>
+
+{% endblock %}

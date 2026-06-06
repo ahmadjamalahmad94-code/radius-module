@@ -1,0 +1,485 @@
+{# ══════════════════════════════════════════════════════════════════════
+   دليل «لوحة الراوتر المنفرد» — ضمن قسم «الراوترات والشبكة».
+
+   نفس بنية النمط الذهبي docs_add_subscriber.html: hero + شريط أدوات،
+   فهرس لاصق order:2 + scrollspy، شارات خطوات بنفسجية، رسوم HTML/CSS،
+   تلميحات 💡/⚠️، حفظ PDF بـwindow.print.
+
+   المحتوى مطابق للصفحة الفعلية mt_dashboard.html (المسار
+   /admin/radius/mt/<id>/dashboard): التبويبات التسعة، المؤشرات الحية،
+   الإجراءات السريعة بمجموعاتها الثلاث، تبويب «خدماتي»، وخدمة «نفق تغيير
+   العنوان وتمرير الحركة». أسماء التبويبات والأزرار منسوخة حرفيًا.
+   ══════════════════════════════════════════════════════════════════════ #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}دليل: لوحة الراوتر المنفرد — كيف تستخدمني{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<style>
+  /* ── التخطيط: فهرس جانبي لاصق + عمود المحتوى ── */
+  .dg-layout{ display:grid; grid-template-columns:minmax(0,1fr) 230px; gap:20px; align-items:start; }
+  .dg-toc{ order:2; }
+  .dg-main{ order:1; }
+  @media (max-width:980px){ .dg-layout{ grid-template-columns:1fr; } .dg-toc{ order:1; } .dg-main{ order:2; } }
+
+  .dg-toc{
+    position:sticky; top:84px;
+    background:#fff; border:1px solid #e8edf3; border-radius:14px;
+    padding:14px 13px; display:grid; gap:3px;
+  }
+  @media (max-width:980px){ .dg-toc{ position:static; } }
+  .dg-toc-title{
+    display:flex; align-items:center; gap:8px; font-size:12px; font-weight:900;
+    color:#7c7a99; margin-bottom:7px; padding-inline:6px;
+  }
+  .dg-toc a{
+    display:flex; align-items:center; gap:9px;
+    padding:8px 10px; border-radius:9px; text-decoration:none;
+    font-size:12.5px; font-weight:700; color:#475569;
+    transition:background .14s, color .14s;
+  }
+  .dg-toc a .n{
+    width:21px; height:21px; border-radius:50%; flex:none;
+    display:grid; place-items:center; font-size:10.5px; font-weight:900;
+    background:#f1f5f9; color:#94a3b8;
+  }
+  .dg-toc a:hover{ background:#f5f3ff; color:#5b21b6; }
+  .dg-toc a.is-active{ background:#ede9fe; color:#5b21b6; }
+  .dg-toc a.is-active .n{ background:linear-gradient(135deg,#7c3aed,#5b21b6); color:#fff; }
+
+  /* ── عمود الخطوات ── */
+  .dg-main{ min-width:0; display:grid; gap:18px; }
+
+  /* تمهيد «ماذا ستتعلم» */
+  .dg-lead{
+    display:flex; gap:13px; align-items:flex-start;
+    background:linear-gradient(135deg,#f5f3ff,#fdfcff);
+    border:1px solid #e9e5fc; border-radius:14px; padding:15px 17px;
+  }
+  .dg-lead .ic{ width:40px;height:40px;border-radius:12px;flex:none;display:grid;place-items:center;
+    font-size:17px;background:#ede9fe;color:#6d28d9; }
+  .dg-lead h3{ margin:0 0 4px; font-size:13.5px; font-weight:800; color:#241e4e; }
+  .dg-lead p{ margin:0; font-size:12.5px; line-height:1.9; color:#5b5a78; }
+
+  /* بطاقة الخطوة */
+  .dg-step{ display:grid; grid-template-columns:auto 1fr; gap:15px; align-items:start; scroll-margin-top:90px; }
+  @media (max-width:560px){ .dg-step{ grid-template-columns:1fr; } }
+  .dg-badge{
+    width:42px; height:42px; border-radius:50%; flex:none;
+    display:grid; place-items:center; font-size:17px; font-weight:900; color:#fff;
+    background:linear-gradient(135deg,#7c3aed,#5b21b6);
+    box-shadow:0 8px 18px rgba(124,58,237,.3);
+  }
+  .dg-card{
+    min-width:0; background:#fff; border:1px solid #e8edf3; border-radius:15px;
+    padding:16px 18px;
+  }
+  .dg-card h2{
+    margin:0 0 8px; font-size:15.5px; font-weight:800; color:#0f172a;
+    display:flex; align-items:center; gap:9px; flex-wrap:wrap;
+  }
+  .dg-card h2 i{ color:#7c3aed; }
+  .dg-card p{ margin:0 0 7px; font-size:13px; line-height:1.95; color:#475569; }
+  .dg-card p:last-child{ margin-bottom:0; }
+  .dg-card ul{ margin:4px 0 8px; padding-inline-start:22px; font-size:13px; line-height:2; color:#475569; }
+  .dg-card strong{ color:#241e4e; }
+  .dg-kbd{
+    font-family:ui-monospace,Consolas,monospace; font-size:11.5px;
+    background:#f1f5f9; border:1px solid #e2e8f0; border-radius:5px;
+    padding:1px 7px; color:#5b21b6;
+  }
+
+  /* صناديق التلميح */
+  .dg-tip, .dg-warn{
+    display:flex; gap:11px; align-items:flex-start;
+    border-radius:12px; padding:11px 14px; margin-top:11px;
+    font-size:12.5px; line-height:1.9;
+  }
+  .dg-tip{ background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; }
+  .dg-warn{ background:#fffbeb; border:1px solid #fde68a; color:#92400e; }
+  .dg-tip .ic, .dg-warn .ic{ flex:none; font-size:15px; line-height:1.6; }
+  .dg-tip b, .dg-warn b{ font-weight:900; }
+
+  /* ════ الرسوم: محاكاة مصغّرة للصفحة الحقيقية ════ */
+  .dg-mock{
+    border:1px solid #e2e8f0; border-radius:14px; overflow:hidden;
+    background:#fff; box-shadow:0 8px 20px rgba(15,23,42,.07);
+    margin-top:13px; max-width:560px;
+  }
+  .dg-mock-bar{
+    display:flex; align-items:center; gap:7px; padding:8px 12px;
+    background:#f1f5f9; border-bottom:1px solid #e2e8f0;
+  }
+  .dg-mock-bar .dots{ display:flex; gap:5px; }
+  .dg-mock-bar .dots i{ width:9px; height:9px; border-radius:50%; }
+  .dg-mock-bar .dots i:nth-child(1){ background:#f87171; }
+  .dg-mock-bar .dots i:nth-child(2){ background:#fbbf24; }
+  .dg-mock-bar .dots i:nth-child(3){ background:#34d399; }
+  .dg-mock-bar .crumb{
+    flex:1; background:#fff; border:1px solid #e2e8f0; border-radius:7px;
+    padding:4px 10px; font-size:10.5px; font-weight:700; color:#64748b;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .dg-mock-body{ padding:14px; display:grid; gap:11px; }
+
+  .dg-cap{ font-size:11px; color:#94a3b8; margin-top:8px; line-height:1.7; }
+  .dg-cap i{ color:#c4b5fd; }
+
+  /* ════ محاكاة خاصة بهذا الدليل ════ */
+  /* شريط التبويبات */
+  .dg-tabs{ display:flex; flex-wrap:wrap; gap:5px; }
+  .dg-tabs .tb{ display:inline-flex; align-items:center; gap:6px; border-radius:9px; padding:7px 11px; font-size:11px; font-weight:800; color:#64748b; background:#f8fafc; border:1px solid #eef2f7; }
+  .dg-tabs .tb.on{ background:#ede9fe; color:#5b21b6; border-color:#ddd6fe; }
+
+  /* مؤشرات حية */
+  .dg-kpis{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+  @media (max-width:520px){ .dg-kpis{ grid-template-columns:repeat(2,1fr); } }
+  .dg-kpi{ border:1px solid #e2e8f0; border-radius:11px; padding:9px 10px; background:#fff; }
+  .dg-kpi .ic{ width:26px; height:26px; border-radius:8px; display:grid; place-items:center; font-size:11px; }
+  .dg-kpi .v{ font-size:14px; font-weight:900; color:#0f172a; margin-top:6px; line-height:1; }
+  .dg-kpi .l{ font-size:9px; font-weight:800; color:#94a3b8; margin-top:3px; }
+
+  /* مجموعات الإجراءات السريعة */
+  .dg-qa{ display:grid; gap:10px; }
+  .dg-qa-grp{ border:1px solid #e2e8f0; border-radius:12px; overflow:hidden; }
+  .dg-qa-grp .h{ display:flex; align-items:center; gap:8px; padding:8px 11px; font-size:11.5px; font-weight:900; }
+  .dg-qa-grp.teal .h{ background:#ecfeff; color:#0e7490; }
+  .dg-qa-grp.amber .h{ background:#fffbeb; color:#b45309; }
+  .dg-qa-grp.danger .h{ background:#fef2f2; color:#b91c1c; }
+  .dg-qa-grp .b{ display:flex; flex-wrap:wrap; gap:6px; padding:9px 11px; background:#fff; }
+  .dg-qbtn{ display:inline-flex; align-items:center; gap:6px; border-radius:8px; padding:6px 11px; font-size:10.5px; font-weight:800; border:1px solid #e2e8f0; background:#f8fafc; color:#475569; }
+
+  /* بطاقات الخدمات */
+  .dg-svcgrid{ display:grid; grid-template-columns:1fr 1fr; gap:9px; }
+  @media (max-width:480px){ .dg-svcgrid{ grid-template-columns:1fr; } }
+  .dg-svc2{ display:flex; gap:9px; align-items:flex-start; border:1px solid #e2e8f0; border-radius:11px; padding:10px 11px; background:#fff; }
+  .dg-svc2 .ic{ width:30px; height:30px; border-radius:9px; display:grid; place-items:center; font-size:12px; flex:none; }
+  .dg-svc2 .t{ font-size:11px; font-weight:900; color:#0f172a; }
+  .dg-svc2 .d{ font-size:9px; color:#94a3b8; margin-top:2px; line-height:1.5; }
+
+  /* بطاقة خدمة النفق */
+  .dg-tunnel{ max-width:560px; margin-top:13px; border:1px solid #ede9fe; border-radius:14px; overflow:hidden; box-shadow:0 8px 20px rgba(124,58,237,.10); }
+  .dg-tunnel .h{ display:flex; align-items:center; gap:10px; padding:12px 14px; background:linear-gradient(135deg,#f5f3ff,#fdfcff); border-bottom:1px solid #ede9fe; }
+  .dg-tunnel .h .ic{ width:34px; height:34px; border-radius:10px; background:#ede9fe; color:#6d28d9; display:grid; place-items:center; font-size:14px; flex:none; }
+  .dg-tunnel .h .t{ font-size:13px; font-weight:900; color:#241e4e; }
+  .dg-tunnel .h .s{ font-size:10px; color:#7c7a99; margin-top:2px; }
+  .dg-tunnel .b{ padding:12px 14px; background:#fff; }
+  .dg-paybadge{ display:inline-flex; align-items:center; gap:6px; border-radius:999px; padding:3px 10px; font-size:9.5px; font-weight:900; background:#fef3c7; color:#92400e; }
+
+  /* شارات الحالة */
+  .dg-pill{ display:inline-flex; align-items:center; gap:5px; border-radius:999px; padding:2px 9px; font-size:9.5px; font-weight:900; }
+  .dg-pill.green{ background:#dcfce7; color:#15803d; }
+  .dg-pill.grey{ background:#f1f5f9; color:#64748b; }
+
+  /* ════ الطباعة ════ */
+  @media print{
+    .hb-side, .hb-side-overlay, .hb-topbar, header.hb-top,
+    .dg-toc, .dg-noprint, .hub-hero-actions{ display:none !important; }
+    .dg-layout{ grid-template-columns:1fr; }
+    .dg-card, .dg-mock, .dg-tunnel{ box-shadow:none !important; break-inside:avoid; }
+    .dg-step{ break-inside:avoid; }
+    body{ background:#fff !important; }
+    .dg-badge, .dg-tip, .dg-warn, .dg-tabs .tb.on, .dg-kpi .ic, .dg-qa-grp .h,
+    .dg-svc2 .ic, .dg-tunnel .h, .dg-paybadge, .dg-pill{
+      -webkit-print-color-adjust:exact; print-color-adjust:exact;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{{ hub.hero(
+  "دليل: لوحة الراوتر المنفرد",
+  subtitle="كل ما يخص راوترًا واحدًا في صفحة واحدة: تبويباته، مؤشراته الحية، أوامره السريعة، وخدماته — بما فيها نفق تغيير العنوان.",
+  icon="gauge-high",
+  actions_html='
+    <button type="button" class="hub-btn hub-btn--secondary" onclick="window.print()">
+      <i class="fa-solid fa-file-pdf"></i> حفظ كـ PDF
+    </button>
+    <a class="hub-btn hub-btn--secondary" href="/admin/radius/docs/section/network">
+      <i class="fa-solid fa-arrow-right"></i> كل الأدلة
+    </a>
+  '
+) }}
+
+<div class="dg-layout">
+
+  {# ───── الفهرس الجانبي اللاصق ───── #}
+  <nav class="dg-toc dg-noprint" aria-label="فهرس الدليل">
+    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> فهرس الخطوات</div>
+    <a href="#dg-s1" data-dg-toc><span class="n">1</span> افتح لوحة الراوتر</a>
+    <a href="#dg-s2" data-dg-toc><span class="n">2</span> تنقّل بين التبويبات</a>
+    <a href="#dg-s3" data-dg-toc><span class="n">3</span> المؤشرات الحية</a>
+    <a href="#dg-s4" data-dg-toc><span class="n">4</span> الإجراءات السريعة</a>
+    <a href="#dg-s5" data-dg-toc><span class="n">5</span> تبويب «خدماتي»</a>
+    <a href="#dg-s6" data-dg-toc><span class="n">6</span> نفق تغيير العنوان</a>
+  </nav>
+
+  {# ───── عمود المحتوى ───── #}
+  <div class="dg-main">
+
+    <div class="dg-lead">
+      <span class="ic"><i class="fa-solid fa-lightbulb"></i></span>
+      <div>
+        <h3>قبل ما نبدأ — شو هي «لوحة الراوتر»؟</h3>
+        <p>
+          لمّا تضغط زر <strong>«خدمات»</strong> لأي راوتر في غرفة العمليات (أو تضغط اسمه)، تفتح
+          <strong>لوحة الراوتر المنفرد</strong>: بيت هذا الراوتر بالكامل. فوقها مؤشرات حيّة من
+          داخله، تحتها تبويبات للقراءة والتشخيص، وأوامر سريعة تنفّذ مباشرةً عليه، وتبويب
+          «خدماتي» يجمع كل خدماته في مكان واحد. هي صفحة قراءة وتشغيل — لا تعديل بيانات مشتركين.
+        </p>
+      </div>
+    </div>
+
+    {# ════ الخطوة 1 ════ #}
+    <section class="dg-step" id="dg-s1">
+      <div class="dg-badge">1</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-door-open"></i> افتح لوحة الراوتر</h2>
+        <p>
+          من <strong>«إدارة الراوترات»</strong> اضغط زر <strong>«خدمات»</strong> لأي راوتر، أو
+          اضغط اسمه في الجدول. تفتح اللوحة برأس فيه اسم الراوتر، وتحته مباشرةً حزام المؤشرات
+          الحية، ثم شريط التبويبات.
+        </p>
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة:</b> اللوحة تقرأ حالة الراوتر حيًّا عند فتحها — كل مؤشر له نقطة حالة
+          تُفحص مباشرةً من الراوتر، فما تراه هو وضعه الآن لا قبل دقائق.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 2 ════ #}
+    <section class="dg-step" id="dg-s2">
+      <div class="dg-badge">2</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-folder-tree"></i> تنقّل بين التبويبات التسعة</h2>
+        <p>
+          شريط التبويبات يقسّم كل شيء حسب الغرض. اضغط أي تبويب لتفتح محتواه دون مغادرة الصفحة:
+        </p>
+        <ul>
+          <li><strong>نظرة عامة:</strong> الحالة والصحة والإجراءات السريعة.</li>
+          <li><strong>الواجهات:</strong> منافذ الراوتر وحالتها.</li>
+          <li><strong>العناوين:</strong> عناوين IP المضبوطة.</li>
+          <li><strong>المسارات:</strong> جدول التوجيه (routes).</li>
+          <li><strong>الجيران:</strong> الأجهزة المجاورة المكتشَفة.</li>
+          <li><strong>الجلسات:</strong> المشتركون المتصلون الآن عبر هذا الراوتر.</li>
+          <li><strong>السجلات:</strong> سجل أحداث الراوتر (log).</li>
+          <li><strong>التشخيص:</strong> فحوص وأدوات استكشاف الأعطال.</li>
+          <li><strong>خدماتي:</strong> بيت كل خدمات الراوتر وأدواته (نشرحه في خطوته).</li>
+        </ul>
+
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">لوحة الراوتر › التبويبات</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-tabs">
+              <span class="tb on"><i class="fa-solid fa-gauge-high"></i> نظرة عامة</span>
+              <span class="tb"><i class="fa-solid fa-ethernet"></i> الواجهات</span>
+              <span class="tb"><i class="fa-solid fa-network-wired"></i> العناوين</span>
+              <span class="tb"><i class="fa-solid fa-route"></i> المسارات</span>
+              <span class="tb"><i class="fa-solid fa-people-arrows"></i> الجيران</span>
+              <span class="tb"><i class="fa-solid fa-users"></i> الجلسات</span>
+              <span class="tb"><i class="fa-solid fa-list"></i> السجلات</span>
+              <span class="tb"><i class="fa-solid fa-stethoscope"></i> التشخيص</span>
+              <span class="tb"><i class="fa-solid fa-screwdriver-wrench"></i> خدماتي</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 3 ════ #}
+    <section class="dg-step" id="dg-s3">
+      <div class="dg-badge">3</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-wave-square"></i> اقرأ المؤشرات الحية</h2>
+        <p>
+          فوق التبويبات حزام من ثماني بطاقات تقرأ حالة الراوتر لحظيًا:
+          <strong>مدة تشغيل النظام</strong> و<strong>استخدام المعالج</strong> و
+          <strong>استهلاك الذاكرة</strong> و<strong>استخدام القرص</strong> و
+          <strong>حرارة المعالج</strong> و<strong>الوقت داخل النظام</strong> و
+          <strong>إصدار النظام</strong> و<strong>العنوان المتصل به</strong>.
+        </p>
+
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">لوحة الراوتر › المؤشرات الحية</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-kpis">
+              <div class="dg-kpi"><span class="ic" style="background:#ede9fe;color:#6d28d9"><i class="fa-solid fa-clock-rotate-left"></i></span><div class="v">12 يوم</div><div class="l">مدة تشغيل النظام</div></div>
+              <div class="dg-kpi"><span class="ic" style="background:#dbeafe;color:#2563eb"><i class="fa-solid fa-microchip"></i></span><div class="v">7%</div><div class="l">استخدام المعالج</div></div>
+              <div class="dg-kpi"><span class="ic" style="background:#dcfce7;color:#16a34a"><i class="fa-solid fa-memory"></i></span><div class="v">41%</div><div class="l">استهلاك الذاكرة</div></div>
+              <div class="dg-kpi"><span class="ic" style="background:#ccfbf1;color:#0d9488"><i class="fa-solid fa-hard-drive"></i></span><div class="v">18%</div><div class="l">استخدام القرص</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> «حرارة المعالج» تأتي من صحة النظام (system/health) إن دعمها الجهاز.</div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 4 ════ #}
+    <section class="dg-step" id="dg-s4">
+      <div class="dg-badge">4</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-bolt"></i> الإجراءات السريعة — ثلاث مجموعات</h2>
+        <p>
+          في «نظرة عامة» قسم <strong>«إجراءات سريعة»</strong> (أوامر مباشرة على الراوتر) مرتّب
+          في ثلاث مجموعات بحسب الخطورة، فتعرف من اللون ماذا تتوقّع:
+        </p>
+        <ul>
+          <li><strong>تشخيص وقراءة</strong> (أوامر آمنة لجمع المعلومات): <strong>اختبار الوصول</strong>،
+          <strong>تتبّع المسار</strong>، <strong>حفظ نسخة احتياطية</strong>.</li>
+          <li><strong>صيانة سريعة</strong> (مهام دوريّة تُنفَّذ فورًا): <strong>مسح كاش DNS</strong>،
+          <strong>مزامنة الوقت</strong>.</li>
+          <li><strong>عمليات حسّاسة</strong> (تأكيد مطلوب قبل التنفيذ): <strong>تعديل اسم الراوتر</strong>،
+          <strong>إعادة تشغيل</strong>.</li>
+        </ul>
+
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">نظرة عامة › إجراءات سريعة</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-qa">
+              <div class="dg-qa-grp teal">
+                <div class="h"><i class="fa-solid fa-magnifying-glass"></i> تشخيص وقراءة</div>
+                <div class="b">
+                  <span class="dg-qbtn"><i class="fa-solid fa-bullseye"></i> اختبار الوصول</span>
+                  <span class="dg-qbtn"><i class="fa-solid fa-route"></i> تتبّع المسار</span>
+                  <span class="dg-qbtn"><i class="fa-solid fa-floppy-disk"></i> حفظ نسخة احتياطية</span>
+                </div>
+              </div>
+              <div class="dg-qa-grp amber">
+                <div class="h"><i class="fa-solid fa-wrench"></i> صيانة سريعة</div>
+                <div class="b">
+                  <span class="dg-qbtn"><i class="fa-solid fa-broom"></i> مسح كاش DNS</span>
+                  <span class="dg-qbtn"><i class="fa-solid fa-clock-rotate-left"></i> مزامنة الوقت</span>
+                </div>
+              </div>
+              <div class="dg-qa-grp danger">
+                <div class="h"><i class="fa-solid fa-triangle-exclamation"></i> عمليات حسّاسة</div>
+                <div class="b">
+                  <span class="dg-qbtn"><i class="fa-solid fa-pen-to-square"></i> تعديل اسم الراوتر</span>
+                  <span class="dg-qbtn"><i class="fa-solid fa-power-off"></i> إعادة تشغيل</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="dg-warn">
+          <span class="ic">⚠️</span>
+          <span><b>انتبه:</b> أزرار المجموعة الحمراء تطلب تأكيدًا قبل التنفيذ. <b>«إعادة تشغيل»</b>
+          يقطع اتصال الراوتر لدقيقة تقريبًا — لا تستخدمه وقت الذروة إلا لضرورة.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 5 ════ #}
+    <section class="dg-step" id="dg-s5">
+      <div class="dg-badge">5</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-screwdriver-wrench"></i> تبويب «خدماتي» — بيت خدمات الراوتر</h2>
+        <p>
+          تبويب <strong>«خدماتي»</strong> يجمع كل خدمات الراوتر في بطاقات تُضيفها وتُديرها. أبرزها:
+        </p>
+        <ul>
+          <li><strong>تغيير IP الخروج:</strong> توجيه المشتركين عبر IP عام جديد.</li>
+          <li><strong>اتصال عن بُعد:</strong> نفق إدارة آمن للراوتر.</li>
+          <li><strong>برمجة بوابة الدخول:</strong> بوابة دخول عامّة مع صفحة تسجيل.</li>
+          <li><strong>برمجة البرودباند:</strong> اشتراك ثابت لكل مستخدم.</li>
+          <li><strong>حجب المواقع</strong> و<strong>فتح المواقع</strong> و<strong>تتبّع اللوب</strong>.</li>
+        </ul>
+
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">لوحة الراوتر › خدماتي</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-svcgrid">
+              <div class="dg-svc2"><span class="ic" style="background:#fef3c7;color:#b45309"><i class="fa-solid fa-globe"></i></span><div><div class="t">تغيير IP الخروج</div><div class="d">توجيه المشتركين عبر IP عام جديد</div></div></div>
+              <div class="dg-svc2"><span class="ic" style="background:#ede9fe;color:#6d28d9"><i class="fa-solid fa-key"></i></span><div><div class="t">اتصال عن بُعد</div><div class="d">نفذ نفق إدارة آمن للراوتر</div></div></div>
+              <div class="dg-svc2"><span class="ic" style="background:#dbeafe;color:#2563eb"><i class="fa-solid fa-wifi"></i></span><div><div class="t">برمجة بوابة الدخول</div><div class="d">بوابة دخول عامّة مع صفحة تسجيل</div></div></div>
+              <div class="dg-svc2"><span class="ic" style="background:#dcfce7;color:#16a34a"><i class="fa-solid fa-ethernet"></i></span><div><div class="t">برمجة البرودباند</div><div class="d">اشتراك ثابت لكل مستخدم</div></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> أسفل البطاقات قسم «حالة الخدمات» يفلتر بين: الكل · تلقائيّة · يدويّة — مع زر حذف آمن لكل خدمة.</div>
+
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة:</b> تبويب «خدماتي» يضم أيضًا شريط «الأدوات وصفحات الراوتر» (برمجة الشبكة،
+          نظرة عامة، مصمّم صفحة الدخول، النسخ الاحتياطية، سياسات الشبكة…) — مدخل سريع لكل أداة دون
+          العودة لغرفة العمليات.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 6 ════ #}
+    <section class="dg-step" id="dg-s6">
+      <div class="dg-badge">6</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-route"></i> خدمة «نفق تغيير العنوان وتمرير الحركة»</h2>
+        <p>
+          ضمن «خدماتي» بطاقة مميّزة بوسم <strong>«متقدم»</strong> اسمها
+          <strong>«نفق تغيير العنوان وتمرير الحركة»</strong>. وظيفتها: تمرّر حركة المشتركين عبر
+          الخادم لتغيير <strong>العنوان العام</strong> لهذا الراوتر. وهي <strong>خدمة مدفوعة محدودة
+          السرعة — ليست مجانية ولا بيد المشترك</strong>، وتعمل لإصدارَي RouterOS 6 و7.
+        </p>
+        <p>
+          التفعيل لا يتم من هنا مباشرةً، بل من <strong>«تراخيص أنفاق الراوترات»</strong>: تختار السرعة
+          المستهدفة فيظهر سعرها، ثم تضغط <strong>«طلب الخدمة»</strong> فتفتح نافذة
+          <strong>«طلب خدمة نفق تغيير IP»</strong> — تختار شريحة السرعة وتكتب ملاحظة (سبب الطلب)
+          ثم <strong>«إرسال الطلب»</strong>. يُسجَّل الطلب فقط، والتفعيل يتم لاحقًا من «تراخيص أنفاق الراوترات»
+          بعد المراجعة.
+        </p>
+
+        <div class="dg-tunnel" aria-hidden="true">
+          <div class="h">
+            <span class="ic"><i class="fa-solid fa-route"></i></span>
+            <div>
+              <div class="t">نفق تغيير العنوان وتمرير الحركة</div>
+              <div class="s">نفق تغيير IP (تمرير الترافيك)</div>
+            </div>
+            <span style="margin-inline-start:auto"><span class="dg-pill grey">غير مفعّلة</span></span>
+          </div>
+          <div class="b">
+            <span class="dg-paybadge"><i class="fa-solid fa-id-card"></i> خدمة مدفوعة محدودة السرعة — ليست مجانية ولا بيد المشترك</span>
+            <p style="margin:9px 0 0;font-size:11px;color:#64748b;line-height:1.8">لا يوجد ترخيص لهذا الراوتر بعد. اطلب الخدمة باختيار سرعة مستهدفة — يظهر سعرها ثم يُرسَل الطلب إلى «تراخيص أنفاق الراوترات».</p>
+            <div style="margin-top:10px"><span style="display:inline-flex;align-items:center;gap:6px;border-radius:9px;padding:8px 14px;font-size:11px;font-weight:800;background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff"><i class="fa-solid fa-paper-plane"></i> طلب الخدمة</span></div>
+          </div>
+        </div>
+
+        <div class="dg-warn">
+          <span class="ic">⚠️</span>
+          <span><b>انتبه:</b> الإرسال يسجّل <b>طلبًا فقط</b> ولا يفعّل الخدمة. كل إدارة وتعديل
+          وإعادة تفعيل لاحقًا تتم من <b>«تراخيص أنفاق الراوترات»</b>، والسعر يُثبَّت وقت الطلب حسب السرعة المختارة.</span>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+{# ── scrollspy خفيف: يبرز بند الفهرس المقابل للخطوة الظاهرة ── #}
+<script>
+(function(){
+  'use strict';
+  var links = Array.prototype.slice.call(document.querySelectorAll('[data-dg-toc]'));
+  if (!links.length || !('IntersectionObserver' in window)) return;
+  var map = {};
+  links.forEach(function(a){ map[a.getAttribute('href').slice(1)] = a; });
+  var obs = new IntersectionObserver(function(entries){
+    entries.forEach(function(en){
+      if (!en.isIntersecting) return;
+      links.forEach(function(a){ a.classList.remove('is-active'); });
+      var a = map[en.target.id];
+      if (a) a.classList.add('is-active');
+    });
+  }, { rootMargin: '-35% 0px -55% 0px' });
+  Object.keys(map).forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) obs.observe(el);
+  });
+})();
+</script>
+
+{% endblock %}

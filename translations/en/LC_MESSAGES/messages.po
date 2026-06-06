@@ -1,0 +1,1010 @@
+# English translations for PROJECT.
+# Copyright (C) 2026 ORGANIZATION
+# This file is distributed under the same license as the PROJECT project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2026-06-06 00:29+0300\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: en\n"
+"Language-Team: en <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#, python-format
+msgid "%(amount)s متاح"
+msgstr "%(amount)s available"
+
+#, python-format
+msgid ""
+"%(count)s راوتر مايكروتيك غير متاح حالياً — لن تعمل عمليات DHCP / "
+"reconciliation / CoA حتى يعود."
+msgstr ""
+"%(count)s MikroTik router(s) currently unreachable — DHCP / "
+"reconciliation / CoA operations will not run until it returns."
+
+#, python-format
+msgid "%(n)s مشترك انتهى اشتراكه — جدّد أو احذف."
+msgstr "%(n)s subscriber(s) expired — renew or delete."
+
+#, python-format
+msgid "%(n)s مشترك ينتهي اشتراكه خلال 3 أيام."
+msgstr "%(n)s subscriber(s) expiring within 3 days."
+
+#, python-format
+msgid "%(n)s نواة"
+msgstr "%(n)s cores"
+
+msgid "RADIUS adapter غير جاهز — افحص الإعدادات."
+msgstr "RADIUS adapter not ready — check the settings."
+
+msgid "آخر الحزم"
+msgstr "Latest Batches"
+
+msgid "أجهزة الشبكة"
+msgstr "Network devices"
+
+msgid "أجهزة الشبكة والراوترات التي يعتمد عليها تسجيل الدخول والمحاسبة."
+msgstr "Network devices and routers that login and accounting depend on."
+
+msgid "أحداث المدراء"
+msgstr "Manager events"
+
+msgid "أحداث المشتركين"
+msgstr "Subscriber events"
+
+msgid "أدخل بيانات حساب الإدارة للوصول إلى لوحة التحكم."
+msgstr "Enter your admin account credentials to access the dashboard."
+
+msgid "أسعار العروض للمدراء"
+msgstr "Manager plan pricing"
+
+msgid "أقسام الصفحة"
+msgstr "Page sections"
+
+msgid "أقصى عدد أجهزة شبكة مسموح لهذه الجهة."
+msgstr "Maximum number of network devices allowed for this tenant."
+
+msgid "أقصى عدد أجهزة يمكنها استخدام نفس الحساب في نفس الوقت."
+msgstr ""
+"The maximum number of devices that can use the same account "
+"simultaneously."
+
+msgid "أقصى عدد مستفيدين مسموح، و0 يعني استخدام حد الفئة."
+msgstr "Maximum allowed subscribers; 0 means use the tier limit."
+
+msgid "أهلًا بعودتك إلى Hobe Hub"
+msgstr "Welcome back to Hobe Hub"
+
+msgid "إجمالي الحصة بالميجابايت، و0 يعني بلا حد خاص."
+msgstr "Total quota in megabytes; 0 means no specific limit."
+
+msgid "إدارة الجهات"
+msgstr "Manage tenants"
+
+msgid "إدارة الراوترات"
+msgstr "Router management"
+
+msgid "إدارة العروض"
+msgstr "Manage Plans"
+
+msgid "إدارة المشتركين"
+msgstr "Manage Subscribers"
+
+msgid "إدارة المشتركين والكروت"
+msgstr "Subscriber and card management"
+
+msgid ""
+"إدارة كاملة لخدمات المصادقة والمشتركين والكروت والشبكة من مكان واحد. كل "
+"عملية تُسجَّل في سجل التدقيق وتتم بأمان."
+msgstr ""
+"Full management of authentication, subscribers, cards, and network from "
+"one place. Every action is recorded in the audit log and carried out "
+"securely."
+
+msgid "إشعارات الربط"
+msgstr "Webhooks"
+
+msgid "إضافة حزمة"
+msgstr "Add batch"
+
+msgid "إضافة راوتر (سريع)"
+msgstr "Add router (quick)"
+
+msgid "إضافة عرض"
+msgstr "Add plan"
+
+msgid "إضافة مشترك"
+msgstr "Add subscriber"
+
+msgid "إضافة وإعداد"
+msgstr "Add & configure"
+
+msgid "إظهار كلمة المرور"
+msgstr "Show password"
+
+msgid "إعداد اختياري للسرعة المؤقتة على الراوتر."
+msgstr "An optional burst speed setting on the router."
+
+msgid "إعداد راوتر متقدم"
+msgstr "Advanced router setup"
+
+msgid "إعدادات الراديوس"
+msgstr "RADIUS settings"
+
+msgid "إعدادات النظام"
+msgstr "System settings"
+
+msgid "إغلاق"
+msgstr "Close"
+
+msgid "إنشاء حزمة"
+msgstr "Generate Batch"
+
+msgid "إيرادات الشبكة، الديون، والتقارير التي تساعدك تراجع الأداء."
+msgstr "Network revenue, debts, and reports that help you review performance."
+
+msgid "ابدأ من القسم الأقرب لعملك. عند الانتقال لقسم مغلق سأفتحه لك تلقائيًا."
+msgstr ""
+"Start from the section closest to your task. When you jump to a collapsed"
+" section I'll open it for you automatically."
+
+msgid "اختر الحالة الحالية لهذا العنصر."
+msgstr "Choose the current status for this item."
+
+msgid "اختر الصلاحيات المناسبة فقط لهذا الدور."
+msgstr "Select only the permissions appropriate for this role."
+
+msgid "اختر العملية التي تريد تنفيذها."
+msgstr "Choose the operation you want to perform."
+
+msgid "اختر باقة الخدمة التي تحدد السرعة والحصة ومدة الاستخدام."
+msgstr "Choose the service plan that sets the speed, quota, and usage period."
+
+msgid "اختر جهاز الشبكة المسؤول عن هذا النطاق."
+msgstr "Choose the network device responsible for this pool."
+
+msgid "اختر نمط كلمة المرور حسب مستوى الأمان المطلوب."
+msgstr "Choose the password style based on the required security level."
+
+msgid "اختر نوع الحساب حسب طريقة استخدامه."
+msgstr "Choose the account type based on how it is used."
+
+msgid "اختر نوع الخدمة التي سيستخدمها الحساب على الشبكة."
+msgstr "Choose the service type the account will use on the network."
+
+#, python-format
+msgid "استخدام %(label)s مرتفع (%(v)s%%)."
+msgstr "%(label)s usage is high (%(v)s%%)."
+
+#, python-format
+msgid "استخدام %(label)s مرتفع جدًا (%(v)s%%)."
+msgstr "%(label)s usage is very high (%(v)s%%)."
+
+msgid "استخدام القرص"
+msgstr "Disk usage"
+
+msgid "استخدام المعالج"
+msgstr "CPU usage"
+
+msgid "استخدم 0 عندما تريد الاعتماد على قيمة الباقة الأساسية."
+msgstr "Use 0 when you want to rely on the plan's base value."
+
+msgid "استخدم بيانات المدير التي أنشأتها عند التثبيت."
+msgstr "Use the administrator credentials you created during setup."
+
+msgid "استهلاك الذاكرة"
+msgstr "Memory usage"
+
+msgid "اسم الدخول الذي يستخدمه الشخص عند الاتصال أو تسجيل الدخول."
+msgstr "The login name the person uses when connecting or signing in."
+
+msgid "اسم المستخدم"
+msgstr "Username"
+
+msgid "اسم مجموعة اختياري لتنظيم الحسابات المتشابهة."
+msgstr "An optional group name to organize similar accounts."
+
+msgid "اسم مختصر يظهر في السجلات والقوائم."
+msgstr "A short name shown in logs and lists."
+
+msgid "اسم مستخدم الراوتر المسموح له بإدارة الإعدادات."
+msgstr "The router username allowed to manage the configuration."
+
+msgid "اسم نطاق العناوين كما سيظهر في القوائم."
+msgstr "The IP pool name as it will appear in lists."
+
+msgid "اسم واضح لهذه الدفعة حتى تميّزها عند المراجعة."
+msgstr "A clear name for this batch so you can identify it during review."
+
+msgid "اكتب اسمًا واضحًا يظهر في القوائم ويسهّل البحث."
+msgstr "Enter a clear name that appears in lists and makes searching easier."
+
+msgid "اكتب التفاصيل المطلوبة بوضوح."
+msgstr "Write the required details clearly."
+
+msgid "اكتب كل اسم دخول في سطر مستقل."
+msgstr "Enter each login name on its own line."
+
+msgid "اكتب كلمة مرور آمنة، واتركها فارغة إذا لم تكن تريد تغييرها."
+msgstr "Enter a secure password, or leave it blank if you don't want to change it."
+
+msgid "الأجهزة"
+msgstr "Devices"
+
+msgid "الأحداث والمخاطر"
+msgstr "Events & risk"
+
+msgid "الأدوار والصلاحيات"
+msgstr "Roles & permissions"
+
+msgid "الأرشيف"
+msgstr "Archive"
+
+msgid "الأولوية تحدد ترتيب المعالجة."
+msgstr "The priority determines the processing order."
+
+msgid "الإدارة"
+msgstr "Administration"
+
+#, python-format
+msgid "الإصدار %(v)s"
+msgstr "Version %(v)s"
+
+msgid "الاسم الحقيقي أو الوصفي لصاحب الحساب."
+msgstr "The real or descriptive name of the account holder."
+
+msgid "الاسم الظاهر للمستخدم داخل الواجهة."
+msgstr "The display name shown to the user in the interface."
+
+msgid "البطاقات"
+msgstr "Cards"
+
+msgid "البطاقات الإلكترونية"
+msgstr "Electronic Cards"
+
+msgid "البطاقات المتصلة"
+msgstr "Online cards"
+
+msgid "البطاقات والحزم"
+msgstr "Cards & Batches"
+
+msgid "البيانات والحفظ والأرشفة"
+msgstr "Data, backups & archiving"
+
+msgid "التحصيل والمدفوعات"
+msgstr "Collection & payments"
+
+msgid "التحكم بالسرعة"
+msgstr "Speed control"
+
+msgid "التذاكر"
+msgstr "Tickets"
+
+msgid "التشغيل والمخاطر"
+msgstr "Operations & risk"
+
+msgid "التطبيق"
+msgstr "Application"
+
+msgid "التقارير"
+msgstr "Reports"
+
+msgid "التقارير التنفيذية"
+msgstr "Executive reports"
+
+msgid "التقرير المالي"
+msgstr "Financial report"
+
+msgid "التكامل والجسر"
+msgstr "Integration & bridge"
+
+msgid "التنبيهات الذكيّة"
+msgstr "Smart alerts"
+
+msgid "التنبيهات المفتوحة"
+msgstr "Open alerts"
+
+msgid "التواصل والحملات"
+msgstr "Communications & campaigns"
+
+msgid "الحزم"
+msgstr "Batches"
+
+msgid "الخادم"
+msgstr "Server"
+
+msgid "الخدمات / المعدّات"
+msgstr "Services / Equipment"
+
+msgid "الدخول والأمان"
+msgstr "Login & security"
+
+msgid "الدعم"
+msgstr "Support"
+
+msgid "الدور يحدد الصلاحيات التي يحصل عليها هذا المدير."
+msgstr "The role defines the permissions this manager receives."
+
+msgid "الذاكرة"
+msgstr "Memory"
+
+msgid "الرابط الذي ستُرسل له إشعارات الربط."
+msgstr "The URL where webhook notifications will be sent."
+
+msgid "الرقم التسلسلي للجهاز أو المعدة إن وجد."
+msgstr "The serial number of the device or equipment, if any."
+
+msgid "السجل والتقارير المحاسبية"
+msgstr "Ledger & accounting reports"
+
+msgid "السرعات"
+msgstr "Bandwidth profiles"
+
+msgid "السعر المرجعي أو التجاري لهذا العنصر."
+msgstr "The reference or commercial price for this item."
+
+msgid "السنة"
+msgstr "This year"
+
+msgid "الشبكة"
+msgstr "Network"
+
+msgid "الشبكة والجلسات"
+msgstr "Network & sessions"
+
+msgid "العروض"
+msgstr "Plans"
+
+msgid "العروض والسرعات"
+msgstr "Plans & speeds"
+
+msgid "الفئة تساعد فريق الدعم على فرز الطلب."
+msgstr "The category helps the support team triage the request."
+
+msgid "الفحص ناجح"
+msgstr "Check passed"
+
+msgid "الفواتير والكوبونات"
+msgstr "Invoices & vouchers"
+
+msgid "القائمة الرئيسية"
+msgstr "Main menu"
+
+msgid "القرص"
+msgstr "Disk"
+
+msgid "القسم"
+msgstr "Section"
+
+#, python-format
+msgid "الكروت المتاحة منخفضة (%(n)s) — جدّد المخزون."
+msgstr "Available cards are low (%(n)s) — replenish stock."
+
+msgid "اللغة"
+msgstr "Language"
+
+msgid "المال والتحصيل"
+msgstr "Finance & collection"
+
+msgid "المالية"
+msgstr "Finance"
+
+msgid "المالية والموازنات"
+msgstr "Finance & balances"
+
+msgid "المبلغ المالي المطلوب أو المسجل."
+msgstr "The amount requested or recorded."
+
+msgid "المدراء والموزعون"
+msgstr "Managers & distributors"
+
+msgid "المراقبة والسجلات"
+msgstr "Monitoring & logs"
+
+msgid "المركز المالي"
+msgstr "Finance center"
+
+msgid "المستأجرون"
+msgstr "Tenants"
+
+msgid "المستخدمون"
+msgstr "Users"
+
+msgid "المشتركون"
+msgstr "Subscribers"
+
+msgid "المشتركون المتصلون"
+msgstr "Online subscribers"
+
+msgid "المشتركين 360"
+msgstr "Subscribers 360"
+
+msgid "المعالج"
+msgstr "CPU"
+
+msgid "المفتاح المشترك يجب أن يطابق إعداد جهاز الشبكة."
+msgstr "The shared secret must match the network device's configuration."
+
+msgid "الملف الشخصي"
+msgstr "Profile"
+
+msgid "المنطقة الزمنية المستخدمة في التواريخ والتقارير."
+msgstr "The time zone used in dates and reports."
+
+msgid "النشاط والأحداث"
+msgstr "Activity & events"
+
+msgid "الوحدة التي سيتم احتساب مدة البطاقة أو الحساب بها."
+msgstr "The unit used to calculate the card or account duration."
+
+msgid "اليوم"
+msgstr "Today"
+
+msgid "باقات الإنترنت، السرعات، الحصص، وشروط الاستخدام للمشتركين والكروت."
+msgstr "Internet plans, speeds, quotas, and usage terms for subscribers and cards."
+
+msgid "بانتظار الفحص"
+msgstr "Awaiting check"
+
+msgid "بدون كود"
+msgstr "No code"
+
+msgid "بريد للتواصل أو استلام التنبيهات عند الحاجة."
+msgstr "An email for contact or receiving alerts when needed."
+
+msgid "بوابات العملاء"
+msgstr "Customer portals"
+
+msgid "تاريخ الإرجاع إن وجد."
+msgstr "The return date, if any."
+
+msgid "تاريخ انتهاء صلاحية هذا السجل."
+msgstr "The expiration date of this record."
+
+msgid "تاريخ تسليم المعدة أو بدء الخدمة."
+msgstr "The date the equipment was handed over or service started."
+
+msgid "تبديل الجهة"
+msgstr "Switch tenant"
+
+msgid "تجريبي"
+msgstr "Demo"
+
+msgid "تجهيز راوتر"
+msgstr "Set Up Router"
+
+msgid "تحكّم الراوترات والشبكة"
+msgstr "Router and network control"
+
+msgid "تحويلات الرصيد"
+msgstr "Balance movements"
+
+msgid "تسجيل الخروج"
+msgstr "Sign out"
+
+msgid "تسجيل الدخول"
+msgstr "Sign In"
+
+msgid "تسجيل الدخول — لوحة Hobe Hub"
+msgstr "Sign In — Hobe Hub Console"
+
+msgid "تشخيص الآن"
+msgstr "Diagnose now"
+
+msgid "تشغيل الخادم"
+msgstr "Server running"
+
+msgid "تعذّر الاتصال بقاعدة البيانات."
+msgstr "Could not connect to the database."
+
+msgid "تغيير العروض"
+msgstr "Plan changes"
+
+msgid "تغيير اللغة"
+msgstr "Change language"
+
+msgid "تقارير البطاقات"
+msgstr "Card reports"
+
+msgid "تقارير الجلسات"
+msgstr "Session reports"
+
+msgid "تقارير المحاسبة"
+msgstr "Accounting reports"
+
+msgid "تقارير الموزعين"
+msgstr "Distributor reports"
+
+msgid "تقارير ومتابعة لحظية"
+msgstr "Real-time reports and monitoring"
+
+msgid "توثيق الواجهة"
+msgstr "API documentation"
+
+msgid "جدولة السرعات"
+msgstr "Bandwidth schedules"
+
+msgid "جسر الإدارة"
+msgstr "Admin bridge"
+
+msgid "جهاز"
+msgstr "devices"
+
+msgid "حالات تسجيل الدخول"
+msgstr "Login states"
+
+msgid "حالة دخول المدراء"
+msgstr "Manager login status"
+
+msgid "حالة دخول المشتركين"
+msgstr "Subscriber login status"
+
+msgid "حزم البطاقات"
+msgstr "Card Batches"
+
+msgid "حزم البيع"
+msgstr "Sales Batches"
+
+msgid "حزم البيع الإلكتروني ومستخدمي الكروت الذين يشترون من المحفظة."
+msgstr "Electronic sales batches and card users who buy from their wallet."
+
+msgid "حزمة بدون اسم"
+msgstr "Unnamed batch"
+
+msgid "حقوق النشر"
+msgstr "Copyright"
+
+msgid "خادم الربط"
+msgstr "Host server"
+
+msgid "دخول"
+msgstr "Sign in"
+
+msgid "دفع بيانات التوزيع"
+msgstr "Distribution data push"
+
+msgid "رابط الشعار إن كنت تريد إظهاره للجهة."
+msgstr "The logo URL if you want to display it for the tenant."
+
+msgid "رسائل أخطاء الهوتسبوت"
+msgstr "Hotspot error messages"
+
+msgid "رسائل لوحة التراخيص"
+msgstr "Licensing panel messages"
+
+msgid "رسائل واتساب للمشتركين"
+msgstr "WhatsApp to subscribers"
+
+msgid "رقم المدير المسؤول إن كنت تستخدم توزيعًا إداريًا."
+msgstr "The responsible manager's ID if you use administrative distribution."
+
+msgid "رقم المستفيد المرتبط بهذا السجل."
+msgstr "The subscriber ID linked to this record."
+
+msgid "رقم بديل إن وجد."
+msgstr "An alternate number, if any."
+
+msgid "رقم جوال واضح للتواصل السريع."
+msgstr "A clear mobile number for quick contact."
+
+msgid "رمز العملة المستخدم في العرض والتقارير."
+msgstr "The currency code used in display and reports."
+
+msgid "رمز داخلي قصير يساعدك في الترتيب والبحث."
+msgstr "A short internal code that helps with sorting and searching."
+
+msgid "ستظهر أحدث الحزم هنا"
+msgstr "The latest batches will appear here"
+
+msgid "سجل العمليات"
+msgstr "Audit log"
+
+msgid "سجل تغييرات الماك"
+msgstr "MAC change history"
+
+msgid "سجل رسائل الربط"
+msgstr "API message log"
+
+msgid "سرعة التنزيل بالكيلوبت، 1024 تعني تقريبًا 1 ميجابت."
+msgstr "Download speed in kbps; 1024 is roughly 1 Mbps."
+
+msgid "سرعة التنزيل لهذا الملف."
+msgstr "The download speed for this profile."
+
+msgid "سرعة الرفع بالكيلوبت، 1024 تعني تقريبًا 1 ميجابت."
+msgstr "Upload speed in kbps; 1024 is roughly 1 Mbps."
+
+msgid "سرعة الرفع لهذا الملف."
+msgstr "The upload speed for this profile."
+
+msgid "سليم"
+msgstr "Healthy"
+
+msgid "سوق البطاقات"
+msgstr "Card marketplace"
+
+msgid "ضوابط أمان وسجلّات تدقيق"
+msgstr "Security controls and audit logs"
+
+msgid "طابور المزامنة"
+msgstr "Sync queue"
+
+msgid "طريقة الدخول التي سيستخدمها المستفيد على الشبكة."
+msgstr "The authentication method the subscriber will use on the network."
+
+msgid "طريقة الدفع المستخدمة أو المرجعية."
+msgstr "The payment method used or referenced."
+
+msgid "طيّ القائمة"
+msgstr "Collapse menu"
+
+msgid "عدد الدقائق التي ستضاف أو تعدل."
+msgstr "The number of minutes to add or adjust."
+
+msgid "عدد العناصر التي سيتم إنشاؤها في هذه العملية."
+msgstr "The number of items to be created in this operation."
+
+msgid "عدد خانات اسم الدخول الذي سيتم توليده."
+msgstr "The number of characters in the generated login name."
+
+msgid "عدد خانات كلمة المرور التي سيتم توليدها."
+msgstr "The number of characters in the generated password."
+
+msgid "عدد طلبات واجهة الربط المسموح بها في الدقيقة."
+msgstr "The number of API requests allowed per minute."
+
+msgid "عرض"
+msgstr "plans"
+
+msgid "عرض جديد"
+msgstr "New Plan"
+
+msgid "عرض كل التنبيهات"
+msgstr "View all alerts"
+
+msgid "عملية HobeRadius"
+msgstr "HobeRadius process"
+
+msgid "عند التعطيل يبقى العنصر محفوظًا لكنه لا يعمل في الاستخدام الجديد."
+msgstr "When disabled, the item stays saved but is not used for new activity."
+
+msgid "عنوان البوابة المحلية المرتبطة بهذا النطاق."
+msgstr "The local gateway address associated with this pool."
+
+msgid "عنوان الجهاز أو الخادم داخل الشبكة."
+msgstr "The device or server address within the network."
+
+msgid "عنوان الجهاز الفيزيائي عند الحاجة للربط."
+msgstr "The device's physical (MAC) address when binding is needed."
+
+msgid "عنوان الراوتر أو اسم المضيف."
+msgstr "The router address or hostname."
+
+msgid "عنوان جهاز الشبكة الذي سترسل منه تجربة المصادقة."
+msgstr "The network device address the authentication test is sent from."
+
+msgid "عنوان جهاز المستفيد المستخدم في الاختبار."
+msgstr "The subscriber device address used in the test."
+
+msgid "عنوان مختصر يوضح سبب التذكرة."
+msgstr "A brief title explaining the reason for the ticket."
+
+msgid "فئة الاشتراك تحدد الحدود الافتراضية لهذه الجهة."
+msgstr "The subscription tier sets the default limits for this tenant."
+
+msgid "فتح القائمة"
+msgstr "Open menu"
+
+msgid "فحص"
+msgstr "Checking"
+
+msgid "فحص الشبكة"
+msgstr "Network check"
+
+msgid "فحص بطاقة"
+msgstr "Check card"
+
+msgid "فشل الفصل/التحديث"
+msgstr "CoA/disconnect failures"
+
+msgid "فشل تحديث السرعة"
+msgstr "Speed update failures"
+
+msgid "فشل دخول الشبكة"
+msgstr "Network login failures"
+
+msgid "قائمة العروض"
+msgstr "Plans list"
+
+msgid "قوالب الطباعة"
+msgstr "Print templates"
+
+msgid "قيمة الإيجار الشهري إن كانت الخدمة مؤجرة."
+msgstr "The monthly rent amount if the service is rented."
+
+msgid "قيمة تنزيل ثابتة تتجاوز المضاعف عند تعبئتها."
+msgstr "A fixed download value that overrides the multiplier when filled in."
+
+msgid "قيمة رفع ثابتة تتجاوز المضاعف عند تعبئتها."
+msgstr "A fixed upload value that overrides the multiplier when filled in."
+
+msgid "كرت إلكتروني"
+msgstr "electronic cards"
+
+msgid "كرت مطبوع"
+msgstr "printed cards"
+
+msgid "كروت الشحن المستخدمة"
+msgstr "Used recharge cards"
+
+msgid "كلمة المرور"
+msgstr "Password"
+
+msgid "كلمة المرور الجديدة للحسابات المحددة."
+msgstr "The new password for the selected accounts."
+
+msgid "كلمة مرور الراوتر، احفظها بعناية."
+msgstr "The router password; keep it safe."
+
+msgid "كمية التنزيل المتاحة خلال الشهر."
+msgstr "Download quota available during the month."
+
+msgid "كمية التنزيل المتاحة يوميًا لهذا الحساب أو الباقة."
+msgstr "Daily download quota available for this account or plan."
+
+msgid "كمية الرفع المتاحة خلال الشهر."
+msgstr "Upload quota available during the month."
+
+msgid "كمية الرفع المتاحة يوميًا لهذا الحساب أو الباقة."
+msgstr "Daily upload quota available for this account or plan."
+
+msgid "كيف تستخدمني"
+msgstr "How to use me"
+
+msgid "لا توجد أجهزة NAS مُسجَّلة — أضِف router/AP."
+msgstr "No NAS devices registered — add a router/AP."
+
+msgid "لا توجد باقات بعد — أنشئ أول باقة."
+msgstr "No plans yet — create your first plan."
+
+msgid "لا توجد تنبيهات مفتوحة الآن."
+msgstr "No open alerts right now."
+
+msgid "لا توجد حزم بعد"
+msgstr "No batches yet"
+
+msgid "لا توجد كروت متاحة — وَلِّد دفعة جديدة."
+msgstr "No cards available — generate a new batch."
+
+msgid "لا توجد ملاحظات تشغيلية مهمة الآن."
+msgstr "No important operational notes right now."
+
+msgid "لغة الواجهة الافتراضية لهذه الجهة."
+msgstr "The default interface language for this tenant."
+
+msgid "لوحة التحكم"
+msgstr "Dashboard"
+
+msgid "لوحة التراخيص"
+msgstr "Licensing panel"
+
+msgid "لون العلامة المستخدم في أجزاء من الواجهة."
+msgstr "The brand color used in parts of the interface."
+
+msgid "ليست ضمن صلاحياتك"
+msgstr "Not within your permissions"
+
+msgid "ما يحتاج انتباه"
+msgstr "Needs Attention"
+
+msgid "مباع اليوم"
+msgstr "Sold today"
+
+msgid "متاح"
+msgstr "Available"
+
+msgid "متصل"
+msgstr "Connected"
+
+msgid "متصلون"
+msgstr "Online"
+
+msgid "متصلون الآن"
+msgstr "Online now"
+
+msgid "مثال: admin"
+msgstr "e.g. admin"
+
+msgid "مجدول"
+msgstr "Scheduled"
+
+msgid "مجموعات المشتركين"
+msgstr "Subscriber groups"
+
+msgid "مجمّد"
+msgstr "Frozen"
+
+msgid "مختبر الدفع الإلكتروني"
+msgstr "Payments lab"
+
+msgid "مخزون الكروت المطبوعة والحزم الجاهزة للتفعيل أو البيع المباشر."
+msgstr ""
+"Inventory of printed cards and batches ready for activation or direct "
+"sale."
+
+msgid "مخزون ومصروفات الشركة"
+msgstr "Company inventory & expenses"
+
+msgid "مدة الانتظار قبل اعتبار الاتصال غير ناجح."
+msgstr "The wait time before the connection is considered failed."
+
+msgid "مدة التشغيل"
+msgstr "Uptime"
+
+msgid "مدة تشغيل التطبيق"
+msgstr "Application uptime"
+
+msgid "مدة تشغيل خادم الربط"
+msgstr "Server uptime"
+
+msgid "مدى العناوين الذي سيوزّع منه جهاز الشبكة."
+msgstr "The address range the network device will assign from."
+
+msgid "مدير النظام"
+msgstr "System administrator"
+
+msgid "مرجع اختياري يربط الحساب بسجل داخلي آخر."
+msgstr "An optional reference linking the account to another internal record."
+
+msgid "مركز إدارة الشبكة"
+msgstr "Network Operations Center"
+
+msgid "مركز إدارة الشبكة - Hobe Hub"
+msgstr "Network Operations Center - Hobe Hub"
+
+msgid "مركز الإدارة"
+msgstr "Admin Center"
+
+msgid "مركز التنبيهات"
+msgstr "Alerts center"
+
+msgid "مركز العمليات"
+msgstr "Operations center"
+
+msgid "مستخدمو البطاقات"
+msgstr "Card users"
+
+msgid "مشترك"
+msgstr "subscribers"
+
+msgid "مشترك جديد"
+msgstr "New Subscriber"
+
+msgid "مضاعف سرعة التنزيل، مثل 0.5 للتنصيف."
+msgstr "Download speed multiplier, e.g. 0.5 to halve it."
+
+msgid "مضاعف سرعة الرفع، مثل 2 للمضاعفة."
+msgstr "Upload speed multiplier, e.g. 2 to double it."
+
+msgid "معاملات الكاش"
+msgstr "Cash transactions"
+
+msgid "معرّف قصير مناسب للرابط، ويفضّل تثبيته بعد استخدامه."
+msgstr "A short URL-friendly identifier; best kept fixed once in use."
+
+msgid "معرّف نقطة الاتصال أو الجهاز المستقبل."
+msgstr "The identifier of the access point or receiving device."
+
+msgid "معطلة"
+msgstr "Disabled"
+
+msgid "مفاتيح الواجهة"
+msgstr "API keys"
+
+msgid "مفعلة"
+msgstr "Enabled"
+
+msgid "ملاحظات داخلية تساعدك عند المراجعة ولا تظهر عادة للمستفيد."
+msgstr ""
+"Internal notes that help during review and are usually not shown to the "
+"subscriber."
+
+msgid "ملخص أقسام الراديوس"
+msgstr "RADIUS modules overview"
+
+msgid "ملخص تشغيلي"
+msgstr "Operations Overview"
+
+msgid "ملخص خادم الربط"
+msgstr "Server overview"
+
+msgid "ملف التراخيص"
+msgstr "License file"
+
+msgid "من يدفع الخدمة ومن هو متصل ومن يحتاج متابعة قبل انتهاء الاشتراك."
+msgstr ""
+"Who is paying for the service, who is online, and who needs follow-up "
+"before their subscription expires."
+
+msgid "منتهي اشتراكهم"
+msgstr "Expired"
+
+msgid "منفذ الاتصال مع الجهاز."
+msgstr "The connection port to the device."
+
+msgid "منفذ المحاسبة القياسي غالبًا 1813."
+msgstr "The standard accounting port, usually 1813."
+
+msgid "منفذ المصادقة القياسي غالبًا 1812."
+msgstr "The standard authentication port, usually 1812."
+
+msgid "منفذ قطع الجلسة أو تحديثها غالبًا 3799."
+msgstr "The session disconnect or update (CoA) port, usually 3799."
+
+msgid "منفذ واجهة الربط، غالبًا 8728 أو 8729 للاتصال الآمن."
+msgstr "The API port, usually 8728, or 8729 for a secure connection."
+
+msgid "نشطون"
+msgstr "Active"
+
+msgid "نص اختياري يُضاف قبل أو بعد الاسم المولّد."
+msgstr "Optional text added before or after the generated name."
+
+msgid "نص يستخدمه النظام لقراءة بيانات المراقبة من الجهاز."
+msgstr "A string the system uses to read monitoring data from the device."
+
+msgid "نطاقات العناوين"
+msgstr "IP pools"
+
+msgid "نظام التشغيل"
+msgstr "Operating system"
+
+msgid "نظرة عامة"
+msgstr "Overview"
+
+msgid "نوع منفذ الاتصال المستخدم في الاختبار."
+msgstr "The connection port type used in the test."
+
+msgid "هذا الشهر"
+msgstr "This month"
+
+msgid ""
+"واجهة هادئة لمتابعة الشبكة: من المتصل الآن، ما المتاح للبيع، وما الذي "
+"يحتاج انتباهك اليوم."
+msgstr ""
+"A calm view of your network: who is online now, what is available to "
+"sell, and what needs your attention today."
+
+msgid "وسوم قصيرة للتنظيم، افصل بينها بفاصلة عند الحاجة."
+msgstr "Short tags for organization; separate them with a comma when needed."
+
+msgid "وصف قصير يوضّح الهدف من هذا العنصر."
+msgstr "A short description explaining the purpose of this item."
+
+msgid "يدوي"
+msgstr "Manual"
+
+msgid "ينتهي خلال 3 أيام"
+msgstr "Expiring within 3 days"
+
+msgid "⚡ بطاقات الشحن المسبق"
+msgstr "⚡ Prepaid recharge cards"
+
+msgid "⚡ لوحة الشحن"
+msgstr "⚡ Recharge panel"
+
+msgid "🖨️ بطاقات الطباعة"
+msgstr "🖨️ Printable cards"
+
+msgid "🛜 غرفة عمليات الراوترات"
+msgstr "🛜 Router operations room"
+

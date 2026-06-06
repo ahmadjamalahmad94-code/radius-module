@@ -168,7 +168,43 @@ class DashboardReportsService:
             """,
             (self.tenant_id, int(limit)),
         ).fetchall()
-        return [self._archive_row(row_to_dict(row)) for row in rows]
+        archives = [self._archive_row(row_to_dict(row)) for row in rows]
+        # نُلحق بكل أرشيف بيانات اللقطة المصدر (financial_report_snapshots):
+        # الفترة من/إلى + عدد الصفوف + الإجمالي — نفس أعمدة جدول لقطات
+        # المحاسبة. الأرشيفات القديمة بلا لقطة مصدر تعرض «—» في الواجهة.
+        self._attach_source_snapshots(archives)
+        return archives
+
+    def _attach_source_snapshots(self, archives: list[dict[str, Any]]) -> None:
+        """قراءة لقطات المصدر دفعة واحدة وإلحاق (الفترة/الصفوف/الإجمالي) بكل أرشيف."""
+        ids = sorted({
+            int(a["source_snapshot_id"]) for a in archives
+            if a.get("source_snapshot_id")
+        })
+        snapshots: dict[int, dict[str, Any]] = {}
+        if ids:
+            marks = ",".join("?" for _ in ids)
+            try:
+                for row in db().execute(
+                    f"""
+                    SELECT id, date_from, date_to, result_json
+                    FROM financial_report_snapshots
+                    WHERE tenant_id=? AND id IN ({marks})
+                    """,
+                    (self.tenant_id, *ids),
+                ).fetchall():
+                    data = row_to_dict(row)
+                    data["result"] = _load(data.pop("result_json", "{}"))
+                    snapshots[int(data["id"])] = data
+            except Exception:  # noqa: BLE001 — الإلحاق تحسيني، لا يُسقط الصفحة
+                snapshots = {}
+        for archive in archives:
+            snap = snapshots.get(int(archive.get("source_snapshot_id") or 0)) or {}
+            result = snap.get("result") or {}
+            archive["snapshot_date_from"] = snap.get("date_from") or result.get("date_from") or ""
+            archive["snapshot_date_to"] = snap.get("date_to") or result.get("date_to") or ""
+            archive["snapshot_rows"] = result.get("count") if snap else None
+            archive["snapshot_total"] = result.get("total") if snap else None
 
     def get_archive(self, archive_id: int) -> dict[str, Any]:
         row = db().execute(

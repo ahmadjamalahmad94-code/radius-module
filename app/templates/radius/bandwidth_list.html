@@ -8,6 +8,11 @@
 {% block page_title %}ملفات السرعة{% endblock %}
 {% block page_sub %}<span class="sub">{{ items|length }} ملف</span>{% endblock %}
 
+{% block head_extra %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
+{% endblock %}
+
 {% block content %}
 
 {% set _with_burst = items|selectattr('burst')|list|length %}
@@ -99,4 +104,5 @@
 ) }}
 {% endif %}
 
+<script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
 {% endblock %}

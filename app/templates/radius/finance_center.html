@@ -23,6 +23,9 @@
   ]
 ) }}
 
+{# تمرير active='dashboard' صراحةً لشريط الملاحة حتى يُبرَز التبويب الصحيح
+   حتى لو صُيّر هذا القالب من مسار لا يمرّر المتغير active في السياق. #}
+{% set active = active|default('dashboard') %}
 {% include "radius/_finance_nav.html" %}
 
 {# ───── Main (carded sections) + help panel on the LEFT (fills the width) ───── #}

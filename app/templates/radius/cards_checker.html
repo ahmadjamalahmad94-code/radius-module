@@ -1,3 +1,12 @@
+{# ══════════════════════════════════════════════════════════════════════
+   ⚠️ قالب غير مستخدَم (DEAD / ORPHANED) — قرار منتج، لا يُحذف.
+
+   مُعالِج radius.cards_checker() في app/radius/routes/cards.py (سطر ~1556)
+   يرندر دائمًا "radius/cards_checker_v2.html" لكلا المسارين
+   /cards/checker و /cards/checker/v2. هذا القالب (v1) لا يُستدعى من أي
+   مسار. أُبقي كمرجع تاريخي فقط. أي صيانة فعلية تتم على cards_checker_v2.html.
+   إن تقرّر إزالته نهائيًا فهذا قرار منتج مستقل.
+   ══════════════════════════════════════════════════════════════════════ #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 {% block title %}مركز عمليات البطاقة{% endblock %}
@@ -37,6 +46,8 @@
 {%- endmacro %}
 
 {% block head_extra %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
 <style>
   .ops-shell{display:grid;gap:16px}
   .ops-hero{position:relative;overflow:hidden;border:1px solid rgba(40,166,198,.35);border-radius:10px;background:linear-gradient(135deg,#102033 0%,#1d344d 54%,#0f7186 100%);color:#fff;box-shadow:0 16px 36px rgba(15,32,51,.18)}
@@ -104,11 +115,14 @@
 {% set summary = card.accounting_summary if card else {} %}
 {% set sessions = summary.latest_sessions if summary else [] %}
 {% set macs = summary.macs if summary else [] %}
+{# enums معرّبة — موائمة لاصطلاح cards_checker_v2.html (revoked→ملغاة) #}
 {% set status_labels = {
   'available':'متاحة',
   'active':'مستخدمة',
   'expired':'منتهية',
-  'revoked':'معطلة',
+  'revoked':'ملغاة',
+  'deleted':'مؤرشفة',
+  'pending':'معلّقة',
   'not_found':'غير موجودة',
   'unknown':'غير معروف'
 } %}
@@ -158,7 +172,8 @@
             <div class="ops-muted">اسم الدخول</div>
             <h3 style="margin:2px 0 0;font-size:30px" class="mono">{{ card.username }}</h3>
             <div class="ops-badges" style="margin-top:10px">
-              <span class="ops-badge {{ status_class.get(card.status, '') }}">
+              <span class="ops-badge {{ status_class.get(card.status, '') }}"
+                    title="{{ card.status or 'unknown' }}">
                 <i class="fa-solid fa-circle"></i> {{ status_labels.get(card.status, card.status or 'غير معروف') }}
               </span>
               {% if card.locked_mac %}
@@ -345,7 +360,7 @@
           <span class="ops-muted">آخر {{ sessions|length }} جلسة</span>
         </h3>
         {% if sessions %}
-          <div class="ops-table-wrap">
+          <div class="ops-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10">
             <table class="ops-table">
               <thead>
                 <tr>
@@ -426,4 +441,5 @@
     </section>
   {% endif %}
 </div>
+<script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
 {% endblock %}

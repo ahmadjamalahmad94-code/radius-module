@@ -1,4 +1,13 @@
 Copyright 2019 The Almarai Project Authors (https://github.com/JuergenWillrodt/Almarai)
+Copyright 2021 The Cairo Project Authors (https://github.com/Gue3bara/Cairo)
+
+Bundled Almarai files (SIL OFL 1.1):
+  Almarai-Regular.ttf, Almarai-Bold.ttf — unmodified Google Fonts builds.
+  Almarai-ExtraBold.ttf — Modified Version: rebuilt by merging the
+  official Fontsource (@fontsource/almarai 5.2.8) arabic + latin
+  weight-800 subsets into one complete TTF (no glyph edits). Almarai's
+  OFL declares no Reserved Font Name, so the family name is retained.
+  Distributed under the same SIL Open Font License 1.1 below.
 
 This Font Software is licensed under the SIL Open Font License, Version 1.1.
 This license is copied below, and is also available with a FAQ at:

@@ -1,6 +1,22 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
+{# ── خرائط تعريب الحالات الخام القادمة من الخدمات (الخام يبقى في title) ──
+   حالة العقد/الصحة، حالة الحدث، وشدّة الحدث — أي قيمة غير معروفة تُعرض
+   كما هي مع الإبقاء على الخام في title لتسهيل التشخيص. #}
+{% set STATUS_AR = {
+  'active':'فعّال', 'valid':'سارٍ', 'enabled':'مفعّل', 'ok':'سليم',
+  'grace':'فترة سماح', 'warning':'تحذير', 'pending':'قيد الانتظار',
+  'degraded':'متدهور', 'stale':'قديم', 'blocked':'محظور',
+  'expired':'منتهٍ', 'denied':'مرفوض', 'failed':'فشل',
+  'success':'ناجح', 'completed':'مكتمل', 'recorded':'مسجّل',
+  'error':'خطأ', 'not_configured':'غير مهيّأ',
+  'unknown':'غير معروف', 'unavailable':'غير متاح'
+} %}
+{% set SEVERITY_AR = {
+  'info':'معلومة', 'warning':'تحذير', 'error':'خطأ', 'critical':'حرج'
+} %}
+
 {% block title %}جسر الإدارة — Hobe Hub{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-bridge"></i>{% endblock %}
 {% block page_title %}جسر الإدارة{% endblock %}
@@ -192,11 +208,14 @@
     </div>
 
     <div class="ab-hero-kpis">
-      {{ hub.kpi("حالة عقد السعة", capacity.status or "غير معروف",
+      {# الحالة الخام تُعرّب عبر STATUS_AR مع الإبقاء على القيمة الأصلية للتشخيص #}
+      {% set _cap_kpi = capacity.status or 'unknown' %}
+      {{ hub.kpi("حالة عقد السعة", STATUS_AR.get(_cap_kpi, _cap_kpi),
                  icon="gauge-high", variant="brand") }}
       {{ hub.kpi("أحداث الجسر", events.total or 0,
                  icon="list-check", variant="blue") }}
-      {{ hub.kpi("الصحة المحلية", heartbeat.status or "غير معروف",
+      {% set _hb_kpi = heartbeat.status or 'unknown' %}
+      {{ hub.kpi("الصحة المحلية", STATUS_AR.get(_hb_kpi, _hb_kpi),
                  icon="heart-pulse", variant="green") }}
       {{ hub.kpi("وضع التنفيذ", "قراءة فقط",
                  icon="shield-halved", variant="amber") }}
@@ -250,14 +269,16 @@
                           else capacity.status %}
       <div class="ab-state-line">
         <span class="ab-state-label">الحالة الحالية</span>
-        {% if _cap_status in ['active','ok','enabled'] %}
-          <span class="hub-pill hub-pill--green"><span class="dot"></span>{{ _cap_status }}</span>
-        {% elif _cap_status in ['expired','denied','failed'] %}
-          <span class="hub-pill hub-pill--red"><span class="dot"></span>{{ _cap_status }}</span>
-        {% elif _cap_status in ['grace','warning','pending'] %}
-          <span class="hub-pill hub-pill--amber"><span class="dot"></span>{{ _cap_status }}</span>
+        {# تُعرض بالعربي عبر STATUS_AR والقيمة الخام تبقى في title للتشخيص #}
+        {% set _cap_ar = STATUS_AR.get(_cap_status, _cap_status) or 'غير معروف' %}
+        {% if _cap_status in ['active','ok','enabled','valid'] %}
+          <span class="hub-pill hub-pill--green" title="{{ _cap_status }}"><span class="dot"></span>{{ _cap_ar }}</span>
+        {% elif _cap_status in ['expired','denied','failed','blocked'] %}
+          <span class="hub-pill hub-pill--red" title="{{ _cap_status }}"><span class="dot"></span>{{ _cap_ar }}</span>
+        {% elif _cap_status in ['grace','warning','pending','degraded','stale'] %}
+          <span class="hub-pill hub-pill--amber" title="{{ _cap_status }}"><span class="dot"></span>{{ _cap_ar }}</span>
         {% else %}
-          <span class="hub-pill hub-pill--grey"><span class="dot"></span>{{ _cap_status or 'غير معروف' }}</span>
+          <span class="hub-pill hub-pill--grey" title="{{ _cap_status }}"><span class="dot"></span>{{ _cap_ar }}</span>
         {% endif %}
       </div>
       <p class="hub-field-hint" style="margin:0">
@@ -284,18 +305,20 @@
             <div class="ab-event">
               <div class="ab-event-title">{{ event.label_ar or event.event_type }}</div>
               <div class="ab-event-meta">
-                {% set _es = event.status or '—' %}
-                {% if _es in ['ok','success','completed'] %}
-                  <span class="hub-pill hub-pill--green"><span class="dot"></span>{{ _es }}</span>
-                {% elif _es in ['failed','error','denied'] %}
-                  <span class="hub-pill hub-pill--red"><span class="dot"></span>{{ _es }}</span>
+                {# حالة الحدث وشدّته تُعرّبان والقيمة الخام تبقى في title #}
+                {% set _es = event.status or '' %}
+                {% set _es_ar = STATUS_AR.get(_es, _es) or '—' %}
+                {% if _es in ['ok','success','completed','recorded'] %}
+                  <span class="hub-pill hub-pill--green" title="{{ _es }}"><span class="dot"></span>{{ _es_ar }}</span>
+                {% elif _es in ['failed','error','denied','blocked'] %}
+                  <span class="hub-pill hub-pill--red" title="{{ _es }}"><span class="dot"></span>{{ _es_ar }}</span>
                 {% elif _es in ['warning','pending'] %}
-                  <span class="hub-pill hub-pill--amber"><span class="dot"></span>{{ _es }}</span>
+                  <span class="hub-pill hub-pill--amber" title="{{ _es }}"><span class="dot"></span>{{ _es_ar }}</span>
                 {% else %}
-                  <span class="hub-pill hub-pill--grey"><span class="dot"></span>{{ _es }}</span>
+                  <span class="hub-pill hub-pill--grey" title="{{ _es }}"><span class="dot"></span>{{ _es_ar }}</span>
                 {% endif %}
                 {% if event.severity %}
-                  <span class="ab-event-sev">{{ event.severity }}</span>
+                  <span class="ab-event-sev" title="{{ event.severity }}">{{ SEVERITY_AR.get(event.severity, event.severity) }}</span>
                 {% endif %}
               </div>
             </div>

@@ -1,0 +1,181 @@
+{# ═══════════════════════════════════════════════════════════════════════
+   حالات تسجيل الدخول — الصفحة الفرعية (مدراء / مشتركون / كروت):
+     • صدفة هيرو واحدة (hub-hero-shell): عنوان + سطر تعريفي + مؤشرات
+       بصف واحد (محاولات اليوم/ناجحة/فاشلة/جهات فريدة) + حزام الفلترة
+       (بحث + الحالة نجاح/فشل + فترة) — بلا أي هيروات مكدّسة.
+     • جدول uds موحّد (فرز + ترقيم + تصدير): الوقت، الجهة، النتيجة،
+       السبب معرّب (والخام في title)، الشبكة والجهاز بخط أحادي <bdi>.
+     • الفرز دقيق على مستوى الاستعلام (actor مدفوع إلى SQL في الخدمة).
+     • معطيات المسار: kind/meta/kinds + rows/stats/shown/matched + filters.
+   ═══════════════════════════════════════════════════════════════════════ #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}{{ meta.title }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-{{ meta.icon }}"></i>{% endblock %}
+{% block page_title %}{{ meta.title }}{% endblock %}
+{% block page_sub %}<span class="sub">{{ matched }} محاولة</span>{% endblock %}
+
+{% block head_extra %}{{ super() }}
+{# نظام الجداول الموحد (uds): فرز + ترقيم صفحات + تصدير لجدول المحاولات #}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
+{% endblock %}
+
+{% block content %}
+{# متحكّم «انتقال سريع» المضغوط — يُحقن في صف عنوان الهيرو بدل الشريطين الكبيرين #}
+{% set _report_jump %}{% include "radius/reports_nav.html" %}{% endset %}
+
+{# ── شريط تبويب محلي بسيط: العودة للرئيسية + التنقّل بين الأقسام الثلاثة ── #}
+<style>
+/* ── توسيط موحّد لجدول المحاولات: الرؤوس والخلايا تحت أسمائها تمامًا ──
+   reports.css يحاذي rep-table للبداية، وخلية «الجهاز» صندوق flex يلتصق
+   باليمين رغم توسيط العنوان — هنا نوحّد الكل على المنتصف. */
+.hub-table.rep-table thead th,
+.hub-table.rep-table tbody td{ text-align:center !important; }
+/* الصناديق المرنة داخل الخلايا (الجهاز/المتصفح) تتوسّط هي الأخرى */
+.hub-table.rep-table .rep-cell-dev{ justify-content:center; text-align:start; display:inline-flex; }
+.ls-tabs{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:14px}
+.ls-tabs a{display:inline-flex;align-items:center;gap:7px;padding:7px 13px;border-radius:999px;
+  font-size:12.5px;font-weight:800;text-decoration:none;color:var(--hub-text-soft,#475569);
+  background:var(--hub-bg-soft,#f1f5f9);border:1px solid var(--hub-border-soft,#e2e8f0);
+  transition:background .12s,color .12s}
+.ls-tabs a:hover{background:#fff;color:var(--hub-text,#0f172a)}
+.ls-tabs a.is-active{background:linear-gradient(135deg,#475569,#1e293b);color:#fff;border-color:transparent}
+.ls-tabs a i{font-size:11.5px}
+</style>
+<nav class="ls-tabs" data-testid="login-states-tabs">
+  <a href="{{ url_for('radius.rep_login_states') }}">
+    <i class="fa-solid fa-arrow-right"></i> كل الأقسام
+  </a>
+  {% for k, m in kinds.items() %}
+  <a class="{{ 'is-active' if k == kind else '' }}" href="{{ url_for('radius.rep_login_states', actor=k) }}">
+    <i class="fa-solid fa-{{ m.icon }}"></i> {{ m.title }}
+  </a>
+  {% endfor %}
+</nav>
+
+{# ───── صدفة الهيرو الواحدة: عنوان + سطر تعريفي + مؤشرات بصف واحد + حزام الفلترة ───── #}
+<section class="hub-hero-shell" data-testid="login-states-{{ kind }}-hero">
+{% call hub.megahero(
+  meta.title,
+  subtitle=meta.subtitle,
+  icon=meta.icon,
+  actions_html=_report_jump,
+  kpis=[
+    {'label': 'محاولات اليوم', 'value': stats.today,      'icon': 'calendar-day', 'variant': 'brand',
+     'sub': 'من إجمالي ' ~ matched ~ ' محاولة مطابقة'},
+    {'label': 'ناجحة',         'value': stats.ok,         'icon': 'circle-check', 'variant': 'green'},
+    {'label': 'فاشلة',         'value': stats.fail,       'icon': 'circle-xmark', 'variant': 'red'},
+    {'label': 'جهات فريدة',    'value': stats.uniq_users, 'icon': 'fingerprint',  'variant': 'blue'},
+  ],
+  search_action=url_for('radius.rep_login_states')
+) %}
+  {# الفاعل ثابت لهذه الصفحة — يُمرَّر مخفيًا ليبقى الفرز دقيقًا عبر الفلاتر #}
+  <input type="hidden" name="actor" value="{{ kind }}">
+  <input class="hub-input grow" type="text" name="q"
+         value="{{ filters.q }}" placeholder="{{ meta.search_ph }}">
+  <select class="hub-input" name="result" title="الحالة">
+    <option value="">كل الحالات</option>
+    <option value="success" {% if filters.result=='success' %}selected{% endif %}>نجاح</option>
+    <option value="fail"    {% if filters.result=='fail' %}selected{% endif %}>فشل</option>
+  </select>
+  {% if kind != 'admin' %}
+  {# المدراء يدخلون من لوحة الإدارة فقط — فلتر المصدر يظهر للمشتركين والكروت #}
+  <select class="hub-input" name="source" title="المصدر">
+    <option value="">كل المصادر</option>
+    <option value="portal"  {% if filters.source=='portal' %}selected{% endif %}>البوابة</option>
+    <option value="network" {% if filters.source=='network' %}selected{% endif %}>شبكة المصادقة</option>
+  </select>
+  {% endif %}
+  <input class="hub-input" type="date" name="date_from"
+         value="{{ filters.date_from }}" title="من تاريخ">
+  <input class="hub-input" type="date" name="date_to"
+         value="{{ filters.date_to }}" title="إلى تاريخ">
+  {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
+  {% if filters.result or filters.source or filters.q or filters.date_from or filters.date_to %}
+    {{ hub.btn("إعادة ضبط", icon="rotate-left", variant="ghost", size="sm",
+               attrs='onclick="window.location=' + "'" + url_for('radius.rep_login_states', actor=kind) + "'" + '"') }}
+  {% endif %}
+  <span class="hub-hint" tabindex="0"
+        data-hint="هذه الصفحة مفروزة بدقة على {{ meta.title }} فقط — الفرز يتم في قاعدة البيانات نفسها. البحث يطابق الاسم أو عنوان الشبكة أو عنوان الجهاز أو جهاز الشبكة، ونطاق التاريخ يعمل على وقت المحاولة. تُعرض حتى 600 محاولة من الأحدث للأقدم، والبيانات للقراءة فقط."><i class="fa-solid fa-info"></i></span>
+{% endcall %}
+</section>{# /hub-hero-shell #}
+
+{% if rows %}
+{# ───── جدول المحاولات — uds موحّد (فرز + ترقيم + تصدير) ───── #}
+{% call hub.section("سجل المحاولات", icon="table-list",
+                    meta=(shown|string) ~ (" من " ~ matched|string if matched > shown else " محاولة"), flush=True) %}
+  <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25"
+       style="border:none;border-radius:0">
+    <table class="hub-table rep-table">
+      <thead>
+        <tr>
+          <th>الوقت</th>
+          <th>الجهة</th>
+          <th data-uds-nosort>النتيجة</th>
+          {% if kind != 'admin' %}<th>المصدر</th>{% endif %}
+          <th data-uds-nosort>الشبكة (عنوان الشبكة / جهاز الشبكة)</th>
+          <th data-uds-nosort>الجهاز (المتصفح / عنوان الجهاز)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+        <tr class="{{ 'is-fail' if not r.success else '' }}">
+          {% set _dl = r.when|dt_local if r.when else '' %}
+          <td class="rep-mono"
+              style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
+            <span class="rep-primary">{{ _dl[:10] or '—' }}</span>
+            <span class="rep-sub">{{ _dl[11:16] }}</span>
+          </td>
+          <td><strong><bdi>{{ r.username }}</bdi></strong></td>
+          <td>
+            {% if r.success %}{{ hub.pill("نجاح", variant="green") }}
+            {% else %}{{ hub.pill("فشل", variant="red") }}
+              {# السبب معرّب — والقيمة الخام تبقى في title للمراجعة الفنية #}
+              {% if r.reason %}<span class="rep-reason" title="{{ r.reason_code or r.reason }}">{{ r.reason }}</span>{% endif %}
+            {% endif %}
+          </td>
+          {% if kind != 'admin' %}
+          <td>
+            <span class="rep-src src-{{ r.source }}">
+              {% if r.source=='network' %}<i class="fa-solid fa-network-wired"></i>
+              {% elif r.source=='panel' %}<i class="fa-solid fa-shield-halved"></i>
+              {% else %}<i class="fa-solid fa-globe"></i>{% endif %}
+              {{ source_labels.get(r.source, r.source) }}
+            </span>
+          </td>
+          {% endif %}
+          <td class="rep-mono">
+            {% if r.ip or r.nas %}
+              <span class="rep-primary"><bdi>{{ r.ip or '—' }}</bdi></span>
+              {% if r.nas %}<span class="rep-sub">جهاز الشبكة: <bdi>{{ r.nas }}</bdi></span>{% endif %}
+            {% else %}<span class="rep-muted">—</span>{% endif %}
+          </td>
+          <td>
+            {% if r.os or r.browser or r.mac %}
+            <div class="rep-cell-dev">
+              {% if r.device=='موبايل' %}<i class="fa-solid fa-mobile-screen"></i>
+              {% elif r.device=='جهاز لوحي' %}<i class="fa-solid fa-tablet-screen-button"></i>
+              {% elif r.os or r.browser %}<i class="fa-solid fa-desktop"></i>
+              {% else %}<i class="fa-solid fa-wifi"></i>{% endif %}
+              <div>
+                <span class="rep-primary">{{ r.os or 'جهاز شبكة' }}{% if r.browser %} · {{ r.browser }}{% endif %}</span>
+                {% if r.mac %}<span class="rep-sub rep-mono">عنوان الجهاز: <bdi>{{ r.mac }}</bdi></span>{% endif %}
+              </div>
+            </div>
+            {% else %}<span class="rep-muted">—</span>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endcall %}
+{% else %}
+{{ hub.empty("لا توجد محاولات مطابقة في " + meta.title,
+   sub="غيّر الفلاتر أو انتظر أول محاولة دخول لتظهر هنا.", icon=meta.icon) }}
+{% endif %}
+
+{# نظام الجداول الموحد: فرز + ترقيم صفحات + تصدير #}
+<script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
+{% endblock %}

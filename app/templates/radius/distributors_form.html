@@ -1,4 +1,8 @@
-{# Distributors form — UDS unified (hub-v2). Backend untouched. #}
+{# Distributors form — UDS unified (hub-v2). Backend untouched.
+   ملاحظة (2026-06-05): الإنشاء انتقل إلى صندوق عائم منبثق داخل صفحة
+   القائمة (distributors_list)، و/distributors/new يعيد التوجيه إليها
+   بـ ?new=1. تبقى هذه الصفحة لمسار التعديل، ولإعادة العرض مع القيم
+   المُدخلة عند فشل التحقق في الإنشاء (is_new=True في مسار الخطأ). #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 

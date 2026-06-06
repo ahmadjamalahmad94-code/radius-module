@@ -1,0 +1,525 @@
+{# ══════════════════════════════════════════════════════════════════════
+   دليل «متجر المايكروتيك» — قسم البطاقات الإلكترونية.
+
+   يشرح متجر الهوت سبوت الذي يعمل على الراوتر نفسه (store.html المبنية في
+   services/hotspot_store_page.py، تُنشر من مصمم صفحة الدخول
+   routes/mt_login_designer.py). نسخنا بنية الدليل الذهبي docs_add_subscriber.html:
+     • hero + شريط أدوات (حفظ كـ PDF / كل الأدلة → قسم البطاقات الإلكترونية).
+     • فهرس جانبي لاصق (order:2) + scrollspy خفيف.
+     • خطوات مرقّمة ببطاقات وشارات بنفسجية متدرّجة.
+     • محاكاة هاتف للمتجر (التبويبات الأربعة، الدخول بالجوال، الشحن، الشراء).
+     • تلميحات 💡/⚠️ وحفظ PDF عبر window.print().
+
+   المحتوى مطابق للصفحة الفعلية: أسماء التبويبات والأزرار والإعدادات منسوخة
+   حرفيًا (network.radius_server_ip، walled-garden، نشر، رصيدي/المعرض/بطاقاتي/
+   السجل، ⚡ شحن الرصيد، 🔓 دخول بهذه البطاقة...) — حدّث الدليل عند تغيير الصفحة.
+   ══════════════════════════════════════════════════════════════════════ #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}دليل: متجر المايكروتيك — كيف تستخدمني{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<style>
+  /* ── التخطيط: فهرس جانبي لاصق + عمود المحتوى (مطابق للدليل الذهبي) ── */
+  .dg-layout{ display:grid; grid-template-columns:minmax(0,1fr) 230px; gap:20px; align-items:start; }
+  .dg-toc{ order:2; }
+  .dg-main{ order:1; }
+  @media (max-width:980px){ .dg-layout{ grid-template-columns:1fr; } .dg-toc{ order:1; } .dg-main{ order:2; } }
+
+  .dg-toc{
+    position:sticky; top:84px;
+    background:#fff; border:1px solid #e8edf3; border-radius:14px;
+    padding:14px 13px; display:grid; gap:3px;
+  }
+  @media (max-width:980px){ .dg-toc{ position:static; } }
+  .dg-toc-title{
+    display:flex; align-items:center; gap:8px; font-size:12px; font-weight:900;
+    color:#7c7a99; margin-bottom:7px; padding-inline:6px;
+  }
+  .dg-toc a{
+    display:flex; align-items:center; gap:9px;
+    padding:8px 10px; border-radius:9px; text-decoration:none;
+    font-size:12.5px; font-weight:700; color:#475569;
+    transition:background .14s, color .14s;
+  }
+  .dg-toc a .n{
+    width:21px; height:21px; border-radius:50%; flex:none;
+    display:grid; place-items:center; font-size:10.5px; font-weight:900;
+    background:#f1f5f9; color:#94a3b8;
+  }
+  .dg-toc a:hover{ background:#f5f3ff; color:#5b21b6; }
+  .dg-toc a.is-active{ background:#ede9fe; color:#5b21b6; }
+  .dg-toc a.is-active .n{ background:linear-gradient(135deg,#7c3aed,#5b21b6); color:#fff; }
+
+  /* ── عمود الخطوات ── */
+  .dg-main{ min-width:0; display:grid; gap:18px; }
+  .dg-lead{
+    display:flex; gap:13px; align-items:flex-start;
+    background:linear-gradient(135deg,#f5f3ff,#fdfcff);
+    border:1px solid #e9e5fc; border-radius:14px; padding:15px 17px;
+  }
+  .dg-lead .ic{ width:40px;height:40px;border-radius:12px;flex:none;display:grid;place-items:center;
+    font-size:17px;background:#ede9fe;color:#6d28d9; }
+  .dg-lead h3{ margin:0 0 4px; font-size:13.5px; font-weight:800; color:#241e4e; }
+  .dg-lead p{ margin:0; font-size:12.5px; line-height:1.9; color:#5b5a78; }
+
+  .dg-step{ display:grid; grid-template-columns:auto 1fr; gap:15px; align-items:start; scroll-margin-top:90px; }
+  @media (max-width:560px){ .dg-step{ grid-template-columns:1fr; } }
+  .dg-badge{
+    width:42px; height:42px; border-radius:50%; flex:none;
+    display:grid; place-items:center; font-size:17px; font-weight:900; color:#fff;
+    background:linear-gradient(135deg,#7c3aed,#5b21b6);
+    box-shadow:0 8px 18px rgba(124,58,237,.3);
+  }
+  .dg-card{
+    min-width:0; background:#fff; border:1px solid #e8edf3; border-radius:15px;
+    padding:16px 18px;
+  }
+  .dg-card h2{
+    margin:0 0 8px; font-size:15.5px; font-weight:800; color:#0f172a;
+    display:flex; align-items:center; gap:9px; flex-wrap:wrap;
+  }
+  .dg-card h2 i{ color:#7c3aed; }
+  .dg-card p{ margin:0 0 7px; font-size:13px; line-height:1.95; color:#475569; }
+  .dg-card p:last-child{ margin-bottom:0; }
+  .dg-card ul{ margin:4px 0 8px; padding-inline-start:22px; font-size:13px; line-height:2; color:#475569; }
+  .dg-card ol{ margin:4px 0 8px; padding-inline-start:22px; font-size:13px; line-height:2; color:#475569; }
+  .dg-card strong{ color:#241e4e; }
+  .dg-kbd{
+    font-family:ui-monospace,Consolas,monospace; font-size:11.5px;
+    background:#f1f5f9; border:1px solid #e2e8f0; border-radius:5px;
+    padding:1px 7px; color:#5b21b6;
+  }
+
+  .dg-tip, .dg-warn{
+    display:flex; gap:11px; align-items:flex-start;
+    border-radius:12px; padding:11px 14px; margin-top:11px;
+    font-size:12.5px; line-height:1.9;
+  }
+  .dg-tip{ background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; }
+  .dg-warn{ background:#fffbeb; border:1px solid #fde68a; color:#92400e; }
+  .dg-tip .ic, .dg-warn .ic{ flex:none; font-size:15px; line-height:1.6; }
+  .dg-tip b, .dg-warn b{ font-weight:900; }
+
+  .dg-kbd-line{
+    font-family:ui-monospace,Consolas,monospace; font-size:11px; line-height:1.9;
+    background:#0f172a; color:#e2e8f0; border-radius:10px; padding:11px 14px;
+    margin-top:11px; overflow-x:auto; white-space:pre; direction:ltr; text-align:left;
+  }
+  .dg-kbd-line .c{ color:#64748b; }
+
+  /* ════ الرسوم العامة ════ */
+  .dg-mock{
+    border:1px solid #e2e8f0; border-radius:14px; overflow:hidden;
+    background:#fff; box-shadow:0 8px 20px rgba(15,23,42,.07); margin-top:13px; max-width:520px;
+  }
+  .dg-mock-bar{
+    display:flex; align-items:center; gap:7px; padding:8px 12px;
+    background:#f1f5f9; border-bottom:1px solid #e2e8f0;
+  }
+  .dg-mock-bar .dots{ display:flex; gap:5px; }
+  .dg-mock-bar .dots i{ width:9px; height:9px; border-radius:50%; }
+  .dg-mock-bar .dots i:nth-child(1){ background:#f87171; }
+  .dg-mock-bar .dots i:nth-child(2){ background:#fbbf24; }
+  .dg-mock-bar .dots i:nth-child(3){ background:#34d399; }
+  .dg-mock-bar .crumb{
+    flex:1; background:#fff; border:1px solid #e2e8f0; border-radius:7px;
+    padding:4px 10px; font-size:10.5px; font-weight:700; color:#64748b;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .dg-mock-body{ padding:14px; display:grid; gap:11px; }
+  .dg-mf{ display:grid; gap:5px; min-width:0; }
+  .dg-mf label{ font-size:10.5px; font-weight:800; color:#475569; }
+  .dg-mf-input{
+    border:1.5px solid #e2e8f0; border-radius:8px; padding:8px 10px;
+    font-size:11.5px; color:#0f172a; background:#fff;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .dg-mf-input.hl{ border-color:#c4b5fd; background:#faf5ff; }
+  .dg-mf-input.ph{ color:#a3aec2; }
+  .dg-mf-help{ font-size:9.5px; color:#94a3b8; line-height:1.6; }
+
+  .dg-cap{ font-size:11px; color:#94a3b8; margin-top:8px; line-height:1.7; }
+  .dg-cap i{ color:#c4b5fd; }
+
+  /* ════ محاكاة هاتف للمتجر ════ */
+  .dg-phone{
+    max-width:280px; margin-top:13px; background:#fff; border:1px solid #e2e8f0;
+    border-radius:22px; overflow:hidden; box-shadow:0 12px 30px rgba(15,23,42,.12);
+  }
+  .dg-phone-top{
+    background:linear-gradient(135deg,#14b8a6,#0d9488); color:#fff;
+    padding:14px 16px 12px; text-align:center;
+  }
+  .dg-phone-top .nm{ font-size:13px; font-weight:900; }
+  .dg-phone-top .bal{ font-size:11px; opacity:.92; margin-top:3px; }
+  .dg-phone-body{ padding:13px; display:grid; gap:9px; }
+  .dg-phone-card{
+    border:1px solid #eef2f7; border-radius:11px; padding:9px 11px;
+    display:flex; align-items:center; justify-content:space-between; gap:8px;
+    font-size:11px; font-weight:800; color:#334155;
+  }
+  .dg-phone-card .buy{
+    background:#14b8a6; color:#fff; border-radius:7px; padding:5px 11px;
+    font-size:10px; font-weight:900;
+  }
+  .dg-phone-btn{
+    background:#0f172a; color:#fff; border-radius:9px; padding:9px;
+    text-align:center; font-size:11px; font-weight:900;
+  }
+  .dg-phone-btn.teal{ background:#14b8a6; }
+  /* شريط التبويبات السفلي */
+  .dg-tabs{
+    display:grid; grid-template-columns:repeat(4,1fr); gap:2px;
+    border-top:1px solid #eef2f7; background:#f8fafc;
+  }
+  .dg-tabs span{
+    text-align:center; padding:8px 2px; font-size:9px; font-weight:800; color:#94a3b8;
+    display:grid; gap:3px; justify-items:center;
+  }
+  .dg-tabs span .em{ font-size:14px; }
+  .dg-tabs span.on{ color:#0d9488; background:#fff; }
+
+  /* قائمة شروط مرقّمة بشارات */
+  .dg-reqs{ display:grid; gap:10px; margin-top:13px; }
+  .dg-req{
+    display:flex; gap:11px; align-items:flex-start;
+    border:1px solid #e8edf3; border-radius:12px; padding:11px 13px; background:#fff;
+  }
+  .dg-req .rn{
+    width:26px; height:26px; border-radius:8px; flex:none; display:grid; place-items:center;
+    font-size:12px; font-weight:900; color:#fff; background:linear-gradient(135deg,#14b8a6,#0d9488);
+  }
+  .dg-req h4{ margin:0 0 3px; font-size:12.5px; font-weight:900; color:#0f172a; }
+  .dg-req p{ margin:0; font-size:11.5px; line-height:1.85; color:#64748b; }
+  .dg-req .dg-kbd{ font-size:10.5px; }
+
+  /* ════ الطباعة ════ */
+  @media print{
+    .hb-side, .hb-side-overlay, .hb-topbar, header.hb-top,
+    .dg-toc, .dg-noprint, .hub-hero-actions{ display:none !important; }
+    .dg-layout{ grid-template-columns:1fr; }
+    .dg-card, .dg-mock, .dg-phone, .dg-req{ box-shadow:none !important; break-inside:avoid; }
+    .dg-step{ break-inside:avoid; }
+    body{ background:#fff !important; }
+    .dg-badge, .dg-tip, .dg-warn, .dg-phone-top, .dg-tabs span.on,
+    .dg-phone-card .buy, .dg-phone-btn, .dg-req .rn{
+      -webkit-print-color-adjust:exact; print-color-adjust:exact;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{{ hub.hero(
+  "دليل: متجر المايكروتيك",
+  subtitle="متجر يعمل على الراوتر نفسه ويبيع باقات الهوت سبوت مباشرة — من شروط التشغيل حتى دخول الزبون وشرائه في 6 خطوات.",
+  icon="shop",
+  actions_html='
+    <button type="button" class="hub-btn hub-btn--secondary" onclick="window.print()">
+      <i class="fa-solid fa-file-pdf"></i> حفظ كـ PDF
+    </button>
+    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.docs_section', cat_slug='e-cards') + '">
+      <i class="fa-solid fa-arrow-right"></i> كل الأدلة
+    </a>
+  '
+) }}
+
+<div class="dg-layout">
+
+  {# ───── الفهرس الجانبي اللاصق ───── #}
+  <nav class="dg-toc dg-noprint" aria-label="فهرس الدليل">
+    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> فهرس الخطوات</div>
+    <a href="#dg-s1" data-dg-toc><span class="n">1</span> شو هو المتجر؟</a>
+    <a href="#dg-s2" data-dg-toc><span class="n">2</span> شروط التشغيل</a>
+    <a href="#dg-s3" data-dg-toc><span class="n">3</span> تبويبات المتجر الأربعة</a>
+    <a href="#dg-s4" data-dg-toc><span class="n">4</span> دخول الزبون والشحن</a>
+    <a href="#dg-s5" data-dg-toc><span class="n">5</span> الشراء والدخول التلقائي</a>
+    <a href="#dg-s6" data-dg-toc><span class="n">6</span> استكشاف أخطاء الاتصال</a>
+  </nav>
+
+  {# ───── عمود المحتوى ───── #}
+  <div class="dg-main">
+
+    <div class="dg-lead">
+      <span class="ic"><i class="fa-solid fa-shop"></i></span>
+      <div>
+        <h3>قبل ما نبدأ — شو يعني «متجر المايكروتيك»؟</h3>
+        <p>
+          هو صفحة متجر <strong>تُرفع إلى الراوتر نفسه</strong> بجانب صفحة الدخول (الهوت سبوت)،
+          فيقدر الزبون — وهو لسّا غير متصل بالإنترنت — يفتحها من شبكة الواي فاي، يشحن رصيده،
+          يشتري باقة، ويدخل بها مباشرة. المتجر يتخاطب مع سيرفر الراديوس عندك فقط، بلا أي
+          إنترنت خارجي. في هذا الدليل رح نضبط شروط تشغيله وننشره، ثم نمشي مع الزبون من الدخول
+          حتى الشراء.
+        </p>
+      </div>
+    </div>
+
+    {# ════ الخطوة 1 ════ #}
+    <section class="dg-step" id="dg-s1">
+      <div class="dg-badge">1</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-router"></i> شو هو المتجر — ووين يعيش؟</h2>
+        <p>
+          المتجر صفحة <strong>مكتفية ذاتيًا</strong> (HTML واحدة بلا أي ملفات خارجية) تُنشر في
+          مجلد الهوت سبوت على الراوتر بجانب <span class="dg-kbd">login.html</span>. لأنه يعيش على
+          الراوتر:
+        </p>
+        <ul>
+          <li>يفتحه الزبون <strong>قبل تسجيل الدخول</strong> للشبكة — لا يحتاج إنترنت للوصول إليه.</li>
+          <li>يتصل فقط بسيرفر الراديوس عندك عبر نقاط <span class="dg-kbd">/api/v1/store/*</span>.</li>
+          <li>يعرض محفظة الزبون وباقاته في واجهة عربية بسيطة بأربعة تبويبات.</li>
+        </ul>
+
+        <div class="dg-phone" aria-hidden="true">
+          <div class="dg-phone-top">
+            <div class="nm">متجر الإنترنت</div>
+            <div class="bal">رصيدك: 12.00</div>
+          </div>
+          <div class="dg-phone-body">
+            <div class="dg-phone-card">8 ساعات / 2 ميجا <span class="buy">شراء الآن</span></div>
+            <div class="dg-phone-card">يوم كامل <span class="buy">شراء الآن</span></div>
+          </div>
+          <div class="dg-tabs">
+            <span class="on"><span class="em">💳</span> رصيدي</span>
+            <span><span class="em">🛒</span> المعرض</span>
+            <span><span class="em">🎫</span> بطاقاتي</span>
+            <span><span class="em">🧾</span> السجل</span>
+          </div>
+        </div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> هكذا يراه الزبون على جواله داخل شبكة الواي فاي.</div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 2 ════ #}
+    <section class="dg-step" id="dg-s2">
+      <div class="dg-badge">2</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-list-check"></i> شروط التشغيل الثلاثة</h2>
+        <p>
+          حتى يعمل المتجر فعليًا من أجهزة الزبائن، لازم تتحقق ثلاثة شروط بالترتيب:
+        </p>
+
+        <div class="dg-reqs">
+          <div class="dg-req">
+            <span class="rn">1</span>
+            <div>
+              <h4>عنوان سيرفر الراديوس في الإعدادات</h4>
+              <p>
+                اضبط حقل <span class="dg-kbd">network.radius_server_ip</span> في
+                <strong>الإعدادات</strong> على عنوان IP الذي تصله أجهزة الزبائن. هذا هو المصدر
+                الذي يبني منه النظام رابط المتجر تلقائيًا — تضبطه مرة واحدة ولا تكتب أي رابط يدويًا.
+              </p>
+            </div>
+          </div>
+          <div class="dg-req">
+            <span class="rn">2</span>
+            <div>
+              <h4>قواعد walled-garden على الراوتر</h4>
+              <p>
+                بدونها يحجب الراوتر كل اتصال قبل الدخول فيفشل تحميل المتجر. النظام يضيف قواعد
+                السماح تلقائيًا عند النشر (للعنوان والمنافذ 80/443 ومنفذ الـ API) تحت تعليق
+                مميّز <span class="dg-kbd">HobeRadius-Store</span>، ولا يكرّرها إن وُجدت.
+              </p>
+            </div>
+          </div>
+          <div class="dg-req">
+            <span class="rn">3</span>
+            <div>
+              <h4>النشر من مصمم صفحة الدخول</h4>
+              <p>
+                فعّل المتجر في تصميمك ثم اضغط زر <strong>«نشر»</strong> في
+                <strong>مصمم صفحة الدخول</strong>. النشر يرفع صفحة المتجر للراوتر ويجهّز قواعد
+                walled-garden في خطوة واحدة.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="dg-kbd-line"><span class="c"># قاعدة walled-garden التي يضيفها النظام تلقائيًا:</span>
+/ip hotspot walled-garden ip add action=accept \
+  dst-address=&lt;عنوان الراديوس&gt; dst-port=&lt;المنفذ&gt; \
+  protocol=tcp comment="HobeRadius-Store"</div>
+
+        <div class="dg-warn">
+          <span class="ic">⚠️</span>
+          <span><b>انتبه:</b> النشر يرفض العنوان المحلي (127.x أو localhost) — «عنوان محلي لن
+          يعمل من أجهزة الزبائن». اضبط <b>network.radius_server_ip</b> على عنوان حقيقي تصله
+          أجهزة الزبائن قبل النشر، وإلا ظهر شريط تحذير ولن يفتح المتجر عندهم.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 3 ════ #}
+    <section class="dg-step" id="dg-s3">
+      <div class="dg-badge">3</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-table-columns"></i> تبويبات المتجر الأربعة</h2>
+        <p>
+          يتنقّل الزبون بين أربعة تبويبات في أسفل الشاشة:
+        </p>
+        <ul>
+          <li><strong>💳 رصيدي:</strong> محفظته الحالية + شحن بطاقة (إدخال كود ورقم سري).</li>
+          <li><strong>🛒 المعرض:</strong> باقات السوق المتاحة مع شراء فوري بضغطة.</li>
+          <li><strong>🎫 بطاقاتي:</strong> بطاقاته المشتراة وحالتها من الراديوس + زر الدخول بها.</li>
+          <li><strong>🧾 السجل:</strong> سجل عمليات الشراء مصفّحًا.</li>
+        </ul>
+
+        <div class="dg-phone" aria-hidden="true">
+          <div class="dg-phone-top">
+            <div class="nm">🎫 بطاقاتي</div>
+            <div class="bal">بطاقة واحدة نشطة</div>
+          </div>
+          <div class="dg-phone-body">
+            <div class="dg-phone-card">a8f3k2 · 7g9q1m <span class="buy" style="background:#22c55e">نشطة</span></div>
+            <div class="dg-phone-btn teal">🔓 دخول بهذه البطاقة</div>
+          </div>
+          <div class="dg-tabs">
+            <span><span class="em">💳</span> رصيدي</span>
+            <span><span class="em">🛒</span> المعرض</span>
+            <span class="on"><span class="em">🎫</span> بطاقاتي</span>
+            <span><span class="em">🧾</span> السجل</span>
+          </div>
+        </div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> حالات البطاقة: نشطة / غير مستخدمة / منتهية / مستهلكة / ملغاة — كلٌّ بلونها.</div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 4 ════ #}
+    <section class="dg-step" id="dg-s4">
+      <div class="dg-badge">4</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-mobile-screen-button"></i> دخول الزبون بالجوال — والشحن بكود</h2>
+        <p>
+          أول ما يفتح المتجر تظهر شاشة دخول: يكتب الزبون <strong>رقم الجوال</strong>
+          (مثل <span class="dg-kbd">05xxxxxxxx</span>) و<strong>كلمة المرور</strong>، ثم
+          <strong>«تسجيل الدخول»</strong>. ينحفظ توكن الجلسة على جهازه فلا يعيد الدخول كل مرة.
+        </p>
+        <p>
+          بعدها من تبويب <strong>«رصيدي»</strong> يشحن محفظته: يُدخل <strong>رقم/كود البطاقة</strong>،
+          و<strong>الرقم السري</strong> (إن وُجد)، ويضغط <strong>«⚡ شحن الرصيد»</strong> فتُضاف
+          القيمة لمحفظته فورًا.
+        </p>
+
+        <div class="dg-mock" aria-hidden="true" style="max-width:300px">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">💳 رصيدي › شحن بطاقة</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-mf">
+              <label>رقم / كود البطاقة</label>
+              <div class="dg-mf-input hl">3041 7782 9920</div>
+            </div>
+            <div class="dg-mf">
+              <label>الرقم السري (إن وُجد)</label>
+              <div class="dg-mf-input ph">••••</div>
+            </div>
+            <div class="dg-phone-btn teal" style="border-radius:9px">⚡ شحن الرصيد</div>
+          </div>
+        </div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> عند النجاح: «تم شحن المبلغ لمحفظتك بنجاح 🎉».</div>
+
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة:</b> رقم الجوال هو هوية الزبون داخل المتجر — تأكد أن كل زبون مسجّل
+          برقمه الصحيح ليجد محفظته وبطاقاته في أي جهاز يدخل منه.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 5 ════ #}
+    <section class="dg-step" id="dg-s5">
+      <div class="dg-badge">5</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-cart-shopping"></i> الشراء — والدخول التلقائي بالبطاقة</h2>
+        <p>
+          من تبويب <strong>«المعرض»</strong> يختار الزبون باقة ويضغط <strong>«شراء الآن»</strong>
+          (أو يجد <strong>«نفدت الكمية»</strong> إن كانت غير متاحة). يُخصم السعر من محفظته،
+          وتظهر نافذة <strong>«تم الشراء بنجاح!»</strong> فيها اسم المستخدم وكلمة المرور.
+        </p>
+        <p>
+          في تلك النافذة — وفي تبويب «بطاقاتي» — يوجد زر <strong>«🔓 دخول بهذه البطاقة»</strong>:
+          يعبّئ بيانات الكرت في نموذج الهوت سبوت ويُسجّل الزبون <strong>على الشبكة تلقائيًا</strong>
+          بلا أن ينسخ شيئًا. وتظهر رسالة «جارٍ تسجيل دخولك للشبكة…».
+        </p>
+
+        <div class="dg-mock" aria-hidden="true" style="max-width:300px">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">✓ تم الشراء بنجاح!</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-mf"><label>اسم المستخدم</label><div class="dg-mf-input hl" style="font-family:monospace">a8f3k2</div></div>
+            <div class="dg-mf"><label>كلمة المرور</label><div class="dg-mf-input hl" style="font-family:monospace">7g9q1m</div></div>
+            <div class="dg-phone-btn teal" style="border-radius:9px">🔓 دخول بهذه البطاقة الآن</div>
+          </div>
+        </div>
+
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة:</b> بجانب اسم المستخدم وكلمة المرور زرّ نسخ 📋 (يظهر «تم النسخ ✓») —
+          مفيد لو أراد الزبون حفظ بياناته أو الدخول من جهاز آخر لاحقًا.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 6 ════ #}
+    <section class="dg-step" id="dg-s6">
+      <div class="dg-badge">6</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-triangle-exclamation"></i> استكشاف أخطاء الاتصال</h2>
+        <p>
+          أغلب مشاكل المتجر سببها أحد شرطي التشغيل الأولين. هذه أشهر الرسائل وحلّها:
+        </p>
+        <ul>
+          <li><strong>«لم يتم ضبط عنوان سيرفر الراديوس…»</strong> أو <strong>«عنوان محلي لن يعمل…»</strong>:
+              اضبط <span class="dg-kbd">network.radius_server_ip</span> على عنوان حقيقي ثم أعد النشر.</li>
+          <li><strong>«تعذر الاتصال بالخادم — تأكد من الشبكة… تأكد أن مزود الخدمة سمح بالوصول
+              لخادم التعبئة (walled garden)»</strong>: قواعد walled-garden ناقصة — أعد النشر من
+              المصمم ليضيفها، أو تحقق من قاعدة <span class="dg-kbd">HobeRadius-Store</span> على الراوتر.</li>
+          <li><strong>«انتهت الجلسة — سجّل الدخول من جديد»</strong>: توكن الزبون انتهى؛ يكفي أن
+              يعيد تسجيل الدخول برقم جواله.</li>
+          <li><strong>«أدخل رقم الجوال وكلمة المرور أولًا» / «أدخل رقم البطاقة أولًا»</strong>:
+              حقول مطلوبة فارغة — رسائل إرشادية للزبون لا أعطال.</li>
+        </ul>
+
+        <div class="dg-warn">
+          <span class="ic">⚠️</span>
+          <span><b>انتبه:</b> لو فتح المتجر عندك على جهاز الإدارة لكنه فشل على جوال زبون،
+          فالسبب غالبًا <b>walled-garden</b> أو عنوان راديوس محلي — جرّب دائمًا من جهاز زبون
+          حقيقي متصل بالواي فاي، لا من شبكتك الداخلية.</span>
+        </div>
+
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>قائمة فحص سريعة:</b> ① عنوان راديوس حقيقي في الإعدادات؟ ② نشرتَ من المصمم
+          بعد آخر تعديل؟ ③ ظهرت قاعدة walled-garden على الراوتر؟ إذا الثلاثة «نعم» — المتجر يعمل.</span>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+{# ── scrollspy خفيف: يبرز بند الفهرس المقابل للخطوة الظاهرة ── #}
+<script>
+(function(){
+  'use strict';
+  var links = Array.prototype.slice.call(document.querySelectorAll('[data-dg-toc]'));
+  if (!links.length || !('IntersectionObserver' in window)) return;
+  var map = {};
+  links.forEach(function(a){ map[a.getAttribute('href').slice(1)] = a; });
+  var obs = new IntersectionObserver(function(entries){
+    entries.forEach(function(en){
+      if (!en.isIntersecting) return;
+      links.forEach(function(a){ a.classList.remove('is-active'); });
+      var a = map[en.target.id];
+      if (a) a.classList.add('is-active');
+    });
+  }, { rootMargin: '-35% 0px -55% 0px' });
+  Object.keys(map).forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) obs.observe(el);
+  });
+})();
+</script>
+
+{% endblock %}

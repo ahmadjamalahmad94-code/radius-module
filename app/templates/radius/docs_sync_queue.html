@@ -1,0 +1,403 @@
+{# ══════════════════════════════════════════════════════════════════════
+   دليل «طابور المزامنة» — ضمن قسم «الراوترات والشبكة».
+
+   نفس بنية النمط الذهبي docs_add_subscriber.html: hero + شريط أدوات،
+   فهرس لاصق order:2 + scrollspy، شارات خطوات بنفسجية، رسوم HTML/CSS،
+   تلميحات 💡/⚠️، حفظ PDF بـwindow.print.
+
+   المحتوى مطابق للصفحة الفعلية sync_list.html (المسار /admin/radius/sync):
+   ما هو الطابور، الحالات الخمس وألوانها، أزرار «إعادة الآن» و«إلغاء»،
+   أعمدة الجدول وعمود «الراوتر المستهدف» البثّي. النصوص منسوخة حرفيًا.
+   ══════════════════════════════════════════════════════════════════════ #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}دليل: طابور المزامنة — كيف تستخدمني{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<style>
+  /* ── التخطيط: فهرس جانبي لاصق + عمود المحتوى ── */
+  .dg-layout{ display:grid; grid-template-columns:minmax(0,1fr) 230px; gap:20px; align-items:start; }
+  .dg-toc{ order:2; }
+  .dg-main{ order:1; }
+  @media (max-width:980px){ .dg-layout{ grid-template-columns:1fr; } .dg-toc{ order:1; } .dg-main{ order:2; } }
+
+  .dg-toc{
+    position:sticky; top:84px;
+    background:#fff; border:1px solid #e8edf3; border-radius:14px;
+    padding:14px 13px; display:grid; gap:3px;
+  }
+  @media (max-width:980px){ .dg-toc{ position:static; } }
+  .dg-toc-title{
+    display:flex; align-items:center; gap:8px; font-size:12px; font-weight:900;
+    color:#7c7a99; margin-bottom:7px; padding-inline:6px;
+  }
+  .dg-toc a{
+    display:flex; align-items:center; gap:9px;
+    padding:8px 10px; border-radius:9px; text-decoration:none;
+    font-size:12.5px; font-weight:700; color:#475569;
+    transition:background .14s, color .14s;
+  }
+  .dg-toc a .n{
+    width:21px; height:21px; border-radius:50%; flex:none;
+    display:grid; place-items:center; font-size:10.5px; font-weight:900;
+    background:#f1f5f9; color:#94a3b8;
+  }
+  .dg-toc a:hover{ background:#f5f3ff; color:#5b21b6; }
+  .dg-toc a.is-active{ background:#ede9fe; color:#5b21b6; }
+  .dg-toc a.is-active .n{ background:linear-gradient(135deg,#7c3aed,#5b21b6); color:#fff; }
+
+  /* ── عمود الخطوات ── */
+  .dg-main{ min-width:0; display:grid; gap:18px; }
+
+  /* تمهيد «ماذا ستتعلم» */
+  .dg-lead{
+    display:flex; gap:13px; align-items:flex-start;
+    background:linear-gradient(135deg,#f5f3ff,#fdfcff);
+    border:1px solid #e9e5fc; border-radius:14px; padding:15px 17px;
+  }
+  .dg-lead .ic{ width:40px;height:40px;border-radius:12px;flex:none;display:grid;place-items:center;
+    font-size:17px;background:#ede9fe;color:#6d28d9; }
+  .dg-lead h3{ margin:0 0 4px; font-size:13.5px; font-weight:800; color:#241e4e; }
+  .dg-lead p{ margin:0; font-size:12.5px; line-height:1.9; color:#5b5a78; }
+
+  /* بطاقة الخطوة */
+  .dg-step{ display:grid; grid-template-columns:auto 1fr; gap:15px; align-items:start; scroll-margin-top:90px; }
+  @media (max-width:560px){ .dg-step{ grid-template-columns:1fr; } }
+  .dg-badge{
+    width:42px; height:42px; border-radius:50%; flex:none;
+    display:grid; place-items:center; font-size:17px; font-weight:900; color:#fff;
+    background:linear-gradient(135deg,#7c3aed,#5b21b6);
+    box-shadow:0 8px 18px rgba(124,58,237,.3);
+  }
+  .dg-card{
+    min-width:0; background:#fff; border:1px solid #e8edf3; border-radius:15px;
+    padding:16px 18px;
+  }
+  .dg-card h2{
+    margin:0 0 8px; font-size:15.5px; font-weight:800; color:#0f172a;
+    display:flex; align-items:center; gap:9px; flex-wrap:wrap;
+  }
+  .dg-card h2 i{ color:#7c3aed; }
+  .dg-card p{ margin:0 0 7px; font-size:13px; line-height:1.95; color:#475569; }
+  .dg-card p:last-child{ margin-bottom:0; }
+  .dg-card ul{ margin:4px 0 8px; padding-inline-start:22px; font-size:13px; line-height:2; color:#475569; }
+  .dg-card strong{ color:#241e4e; }
+  .dg-kbd{
+    font-family:ui-monospace,Consolas,monospace; font-size:11.5px;
+    background:#f1f5f9; border:1px solid #e2e8f0; border-radius:5px;
+    padding:1px 7px; color:#5b21b6;
+  }
+
+  /* صناديق التلميح */
+  .dg-tip, .dg-warn{
+    display:flex; gap:11px; align-items:flex-start;
+    border-radius:12px; padding:11px 14px; margin-top:11px;
+    font-size:12.5px; line-height:1.9;
+  }
+  .dg-tip{ background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; }
+  .dg-warn{ background:#fffbeb; border:1px solid #fde68a; color:#92400e; }
+  .dg-tip .ic, .dg-warn .ic{ flex:none; font-size:15px; line-height:1.6; }
+  .dg-tip b, .dg-warn b{ font-weight:900; }
+
+  /* ════ الرسوم: محاكاة مصغّرة للصفحة الحقيقية ════ */
+  .dg-mock{
+    border:1px solid #e2e8f0; border-radius:14px; overflow:hidden;
+    background:#fff; box-shadow:0 8px 20px rgba(15,23,42,.07);
+    margin-top:13px; max-width:600px;
+  }
+  .dg-mock-bar{
+    display:flex; align-items:center; gap:7px; padding:8px 12px;
+    background:#f1f5f9; border-bottom:1px solid #e2e8f0;
+  }
+  .dg-mock-bar .dots{ display:flex; gap:5px; }
+  .dg-mock-bar .dots i{ width:9px; height:9px; border-radius:50%; }
+  .dg-mock-bar .dots i:nth-child(1){ background:#f87171; }
+  .dg-mock-bar .dots i:nth-child(2){ background:#fbbf24; }
+  .dg-mock-bar .dots i:nth-child(3){ background:#34d399; }
+  .dg-mock-bar .crumb{
+    flex:1; background:#fff; border:1px solid #e2e8f0; border-radius:7px;
+    padding:4px 10px; font-size:10.5px; font-weight:700; color:#64748b;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .dg-mock-body{ padding:14px; display:grid; gap:11px; }
+
+  .dg-cap{ font-size:11px; color:#94a3b8; margin-top:8px; line-height:1.7; }
+  .dg-cap i{ color:#c4b5fd; }
+
+  /* ════ محاكاة خاصة بهذا الدليل ════ */
+  /* جدول المزامنة */
+  .dg-tbl{ margin-top:0; border:0; border-radius:0; }
+  .dg-tbl .hd, .dg-tbl .rw{ display:grid; grid-template-columns:1fr 1.1fr 1fr .8fr; gap:8px; padding:9px 12px; font-size:10.5px; align-items:center; }
+  .dg-tbl .hd{ background:#eef2ff; color:#4338ca; font-weight:900; }
+  .dg-tbl .rw{ background:#fff; color:#334155; font-weight:700; border-top:1px solid #f1f5f9; }
+  .dg-mono{ font-family:ui-monospace,Consolas,monospace; }
+
+  /* شارات الحالة */
+  .dg-pill{ display:inline-flex; align-items:center; gap:5px; border-radius:999px; padding:2px 9px; font-size:9.5px; font-weight:900; }
+  .dg-pill .ic{ font-size:8.5px; }
+  .dg-pill.blue{ background:#dbeafe; color:#1d4ed8; }
+  .dg-pill.amber{ background:#fef3c7; color:#92400e; }
+  .dg-pill.green{ background:#dcfce7; color:#15803d; }
+  .dg-pill.red{ background:#fee2e2; color:#b91c1c; }
+
+  /* قائمة الحالات الشارحة */
+  .dg-states{ display:grid; gap:8px; margin:4px 0 0; }
+  .dg-states .r{ display:flex; gap:11px; align-items:center; font-size:12.5px; color:#475569; line-height:1.6; }
+  .dg-states .r b{ color:#241e4e; }
+
+  /* أزرار الإجراء */
+  .dg-acts{ display:flex; gap:6px; flex-wrap:wrap; margin-top:6px; }
+  .dg-abtn{ display:inline-flex; align-items:center; gap:6px; border-radius:8px; padding:7px 12px; font-size:11px; font-weight:800; }
+  .dg-abtn.brand{ background:#ede9fe; color:#5b21b6; }
+  .dg-abtn.danger{ background:#fee2e2; color:#b91c1c; }
+
+  /* مؤشرات KPI */
+  .dg-kpis{ display:grid; grid-template-columns:repeat(4,1fr); gap:9px; }
+  @media (max-width:480px){ .dg-kpis{ grid-template-columns:repeat(2,1fr); } }
+  .dg-kpi{ border:1px solid #e2e8f0; border-radius:11px; padding:9px 11px; display:flex; gap:9px; align-items:center; background:#fff; }
+  .dg-kpi .ic{ width:30px; height:30px; border-radius:9px; display:grid; place-items:center; font-size:12px; flex:none; }
+  .dg-kpi .v{ font-size:15px; font-weight:900; color:#0f172a; line-height:1; }
+  .dg-kpi .l{ font-size:9.5px; font-weight:800; color:#64748b; margin-top:3px; }
+
+  /* صندوق التدفّق */
+  .dg-flow{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; max-width:600px; margin-top:13px;
+    background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:12px 14px; }
+  .dg-flow .node{ display:inline-flex; align-items:center; gap:7px; border-radius:9px; padding:7px 11px; font-size:11px; font-weight:800; background:#fff; border:1px solid #e2e8f0; color:#475569; }
+  .dg-flow .ar{ color:#c4b5fd; font-size:11px; }
+
+  /* ════ الطباعة ════ */
+  @media print{
+    .hb-side, .hb-side-overlay, .hb-topbar, header.hb-top,
+    .dg-toc, .dg-noprint, .hub-hero-actions{ display:none !important; }
+    .dg-layout{ grid-template-columns:1fr; }
+    .dg-card, .dg-mock, .dg-flow{ box-shadow:none !important; break-inside:avoid; }
+    .dg-step{ break-inside:avoid; }
+    body{ background:#fff !important; }
+    .dg-badge, .dg-tip, .dg-warn, .dg-pill, .dg-kpi .ic, .dg-abtn, .dg-tbl .hd{
+      -webkit-print-color-adjust:exact; print-color-adjust:exact;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{{ hub.hero(
+  "دليل: طابور المزامنة",
+  subtitle="كيف يصل كل تعديل على المشتركين والباقات إلى راوتراتك تلقائيًا — وكيف تتابع ما اكتمل وما تعثّر وتعيد المحاولة.",
+  icon="arrows-rotate",
+  actions_html='
+    <button type="button" class="hub-btn hub-btn--secondary" onclick="window.print()">
+      <i class="fa-solid fa-file-pdf"></i> حفظ كـ PDF
+    </button>
+    <a class="hub-btn hub-btn--secondary" href="/admin/radius/docs/section/network">
+      <i class="fa-solid fa-arrow-right"></i> كل الأدلة
+    </a>
+  '
+) }}
+
+<div class="dg-layout">
+
+  {# ───── الفهرس الجانبي اللاصق ───── #}
+  <nav class="dg-toc dg-noprint" aria-label="فهرس الدليل">
+    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> فهرس الخطوات</div>
+    <a href="#dg-s1" data-dg-toc><span class="n">1</span> ما هو الطابور؟</a>
+    <a href="#dg-s2" data-dg-toc><span class="n">2</span> حالات المهمة</a>
+    <a href="#dg-s3" data-dg-toc><span class="n">3</span> اقرأ الجدول</a>
+    <a href="#dg-s4" data-dg-toc><span class="n">4</span> لأي راوتر؟</a>
+    <a href="#dg-s5" data-dg-toc><span class="n">5</span> إعادة وإلغاء</a>
+  </nav>
+
+  {# ───── عمود المحتوى ───── #}
+  <div class="dg-main">
+
+    <div class="dg-lead">
+      <span class="ic"><i class="fa-solid fa-lightbulb"></i></span>
+      <div>
+        <h3>قبل ما نبدأ — ليش يوجد «طابور مزامنة»؟</h3>
+        <p>
+          لمّا تعدّل مشتركًا أو باقة في النظام، لا يكفي حفظ التغيير في قاعدة البيانات — لازم
+          يوصل أيضًا إلى راوتراتك حتى يطبّقه الزبون فعلًا على الإنترنت. <strong>طابور المزامنة</strong>
+          هو الوسيط: كل تغيير يتحوّل إلى <strong>مهمة</strong> تُدفع للراوترات تلقائيًا، وهذه الصفحة
+          تريك ما اكتمل وما تعثّر. ما تحتاج تعمل شيئًا في العادة — تابعها فقط عند الشك.
+        </p>
+      </div>
+    </div>
+
+    {# ════ الخطوة 1 ════ #}
+    <section class="dg-step" id="dg-s1">
+      <div class="dg-badge">1</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-arrows-rotate"></i> ما هو طابور المزامنة؟</h2>
+        <p>
+          من القائمة الجانبية افتح <strong>«طابور المزامنة»</strong>. شعار الصفحة يلخّص الفكرة:
+          «كل تغيير على المشتركين والباقات يتحوّل إلى مهمة تُدفع للراوترات تلقائيًا — تابع هنا
+          ما اكتمل وما تعثّر».
+        </p>
+        <p>أنواع المهام التي تدخل الطابور:</p>
+        <ul>
+          <li><strong>تحديث مشترك</strong> و<strong>حذف مشترك</strong>.</li>
+          <li><strong>تحديث باقة</strong> و<strong>حذف باقة</strong>.</li>
+          <li><strong>تحديث حوض عناوين</strong>.</li>
+          <li><strong>قطع جلسة</strong> و<strong>إعادة تعيين كلمة المرور</strong>.</li>
+        </ul>
+
+        <div class="dg-flow" aria-hidden="true">
+          <span class="node"><i class="fa-solid fa-pen"></i> عدّلت مشتركًا</span>
+          <span class="ar"><i class="fa-solid fa-arrow-left"></i></span>
+          <span class="node"><i class="fa-solid fa-list-check"></i> مهمة في الطابور</span>
+          <span class="ar"><i class="fa-solid fa-arrow-left"></i></span>
+          <span class="node"><i class="fa-solid fa-server"></i> تُدفع للراوترات</span>
+        </div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> عامل خلفيّ يلتقط المهام المستحقّة وينفّذها على الراوترات تلقائيًا — لا تشغيل يدوي.</div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 2 ════ #}
+    <section class="dg-step" id="dg-s2">
+      <div class="dg-badge">2</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-traffic-light"></i> حالات المهمة الخمس</h2>
+        <p>
+          لكل مهمة حالة ملوّنة تعرف منها أين وصلت. الحزام العلوي يلخّص أعدادها
+          (في الانتظار · تُعاد المحاولة · مكتملة · فاشلة):
+        </p>
+
+        <div class="dg-states">
+          <div class="r"><span class="dg-pill blue"><span class="ic"><i class="fa-solid fa-hourglass-half"></i></span> في الانتظار</span> <span><b>queued</b> — مُسجَّلة وتنتظر دورها.</span></div>
+          <div class="r"><span class="dg-pill blue">جاري المزامنة</span> <span><b>syncing</b> — العامل يدفعها للراوترات الآن.</span></div>
+          <div class="r"><span class="dg-pill amber"><span class="ic"><i class="fa-solid fa-rotate-right"></i></span> تُعاد المحاولة</span> <span><b>retrying</b> — فشلت مؤقتًا وستُعاد بفاصل متصاعد.</span></div>
+          <div class="r"><span class="dg-pill green"><span class="ic"><i class="fa-solid fa-circle-check"></i></span> مكتملة</span> <span><b>done</b> — وصلت للراوترات بنجاح.</span></div>
+          <div class="r"><span class="dg-pill red"><span class="ic"><i class="fa-solid fa-circle-xmark"></i></span> فاشلة</span> <span><b>failed</b> — تجاوزت المحاولات أو أُلغيت يدويًا.</span></div>
+        </div>
+
+        <div class="dg-mock" aria-hidden="true" style="max-width:520px;margin-top:14px">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">طابور المزامنة › الملخّص</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-kpis">
+              <div class="dg-kpi"><span class="ic" style="background:#dbeafe;color:#1d4ed8"><i class="fa-solid fa-hourglass-half"></i></span><div><div class="v">4</div><div class="l">في الانتظار</div></div></div>
+              <div class="dg-kpi"><span class="ic" style="background:#fef3c7;color:#d97706"><i class="fa-solid fa-rotate-right"></i></span><div><div class="v">1</div><div class="l">تُعاد المحاولة</div></div></div>
+              <div class="dg-kpi"><span class="ic" style="background:#dcfce7;color:#16a34a"><i class="fa-solid fa-circle-check"></i></span><div><div class="v">218</div><div class="l">مكتملة</div></div></div>
+              <div class="dg-kpi"><span class="ic" style="background:#fee2e2;color:#dc2626"><i class="fa-solid fa-circle-xmark"></i></span><div><div class="v">0</div><div class="l">فاشلة</div></div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة:</b> المهمة الفاشلة تُعاد تلقائيًا بفواصل متصاعدة (١٥ ثانية، ثم دقيقة،
+          ثم ٥ دقائق… حتى ٦ محاولات) قبل أن تصبح <b>«فاشلة»</b> نهائيًا. فلا داعي للقلق من تعثّر
+          لحظي.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 3 ════ #}
+    <section class="dg-step" id="dg-s3">
+      <div class="dg-badge">3</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-table-list"></i> اقرأ جدول المهام</h2>
+        <p>
+          الجدول يعرض المهام (الأحدث أولًا). أعمدته: <strong>#</strong> ثم <strong>نوع المهمة</strong>
+          (شارة) ثم <strong>العنصر</strong> (اسم المشترك أو الباقة) ثم <strong>الراوتر المستهدف</strong>
+          ثم <strong>الحالة</strong> ثم <strong>المحاولات</strong> ثم <strong>المحاولة التالية</strong>
+          ثم <strong>آخر خطأ</strong> ثم <strong>إجراء</strong>.
+        </p>
+
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">طابور المزامنة › الجدول</span></div>
+          <div class="dg-mock-body" style="padding:0">
+            <div class="dg-tbl">
+              <div class="hd"><span>نوع المهمة</span><span>العنصر</span><span>الراوتر المستهدف</span><span>الحالة</span></div>
+              <div class="rw"><span><span class="dg-pill blue">تحديث مشترك</span></span><span class="dg-mono">ahmad2026</span><span>كل الراوترات المفعّلة (12)</span><span><span class="dg-pill green"><span class="ic"><i class="fa-solid fa-circle-check"></i></span> مكتملة</span></span></div>
+              <div class="rw"><span><span class="dg-pill blue">تحديث باقة</span></span><span class="dg-mono">10M-شهري</span><span>كل الراوترات المفعّلة (12)</span><span><span class="dg-pill amber"><span class="ic"><i class="fa-solid fa-rotate-right"></i></span> تُعاد المحاولة</span></span></div>
+              <div class="rw"><span><span class="dg-pill blue">قطع جلسة</span></span><span class="dg-mono">sara_net</span><span>كل الراوترات المفعّلة (12)</span><span><span class="dg-pill blue"><span class="ic"><i class="fa-solid fa-hourglass-half"></i></span> في الانتظار</span></span></div>
+            </div>
+          </div>
+        </div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> «آخر خطأ» يُقتطع في الجدول — مرّر فوقه لقراءة النص الكامل. وعمودا «المحاولة التالية» يظهران للحالات المنتظِرة فقط.</div>
+
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة:</b> استعمل فلتر <b>«الحالة»</b> أعلى الجدول ثم <b>«تطبيق»</b> لعرض الفاشلة
+          فقط مثلًا. لو الطابور فارغ تمامًا تظهر رسالة <b>«الطابور فارغ — كل شيء متزامن»</b>.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 4 ════ #}
+    <section class="dg-step" id="dg-s4">
+      <div class="dg-badge">4</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-tower-broadcast"></i> لأي راوتر تذهب كل مهمة؟</h2>
+        <p>
+          التصميم <strong>بثّي</strong>: المهمة الواحدة تُدفع لكل راوتراتك المفعّلة دفعة واحدة، فلا
+          تكرّر العملية لكل راوتر. لذلك يعرض عمود <strong>«الراوتر المستهدف»</strong> افتراضيًا
+          «<strong>كل الراوترات المفعّلة (N)</strong>» حيث N عددها.
+        </p>
+        <ul>
+          <li>في الحالات النادرة التي تخصّ راوترًا بعينه، يظهر <strong>اسم الراوتر</strong> بدل العبارة العامة.</li>
+          <li>عند فشل المهمة على راوتر معيّن، يظهر بنص أحمر <strong>«آخر فشل على: …»</strong> باسم أو رقم الراوتر الذي فشل.</li>
+        </ul>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> أيقونة المعلومات بجوار العنوان تشرح: «كل مهمة تُدفع لكل الراوترات المفعّلة دفعة واحدة».</div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 5 ════ #}
+    <section class="dg-step" id="dg-s5">
+      <div class="dg-badge">5</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-rotate"></i> «إعادة الآن» و«إلغاء»</h2>
+        <p>
+          في عمود <strong>«إجراء»</strong> زرّان حسب حالة المهمة:
+        </p>
+        <ul>
+          <li><strong>إعادة الآن:</strong> (للحالات في الانتظار / تُعاد المحاولة / فاشلة) — يعيد
+          المهمة فورًا بدل انتظار الفاصل التالي، فترجع لحالة «في الانتظار» وتُدفع من جديد.</li>
+          <li><strong>إلغاء:</strong> (للمنتظِرة فقط: في الانتظار / تُعاد المحاولة) — يوقف المهمة
+          نهائيًا فتصير «فاشلة» <strong>ولا يصل التغيير إلى الراوتر</strong>. يطلب تأكيدًا في نافذة
+          قبل التنفيذ.</li>
+        </ul>
+
+        <div class="dg-acts" aria-hidden="true">
+          <span class="dg-abtn brand"><i class="fa-solid fa-rotate"></i> إعادة الآن</span>
+          <span class="dg-abtn danger"><i class="fa-solid fa-ban"></i> إلغاء</span>
+        </div>
+
+        <div class="dg-warn">
+          <span class="ic">⚠️</span>
+          <span><b>انتبه:</b> الإلغاء قرار نهائي — نافذة التأكيد تنبّهك: «ستُلغى المهمة نهائيًا —
+          لن يُدفع هذا التغيير إلى الراوتر». استعمله فقط لمهمة عالقة تعرف أنها لم تعد لازمة.</span>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+{# ── scrollspy خفيف: يبرز بند الفهرس المقابل للخطوة الظاهرة ── #}
+<script>
+(function(){
+  'use strict';
+  var links = Array.prototype.slice.call(document.querySelectorAll('[data-dg-toc]'));
+  if (!links.length || !('IntersectionObserver' in window)) return;
+  var map = {};
+  links.forEach(function(a){ map[a.getAttribute('href').slice(1)] = a; });
+  var obs = new IntersectionObserver(function(entries){
+    entries.forEach(function(en){
+      if (!en.isIntersecting) return;
+      links.forEach(function(a){ a.classList.remove('is-active'); });
+      var a = map[en.target.id];
+      if (a) a.classList.add('is-active');
+    });
+  }, { rootMargin: '-35% 0px -55% 0px' });
+  Object.keys(map).forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) obs.observe(el);
+  });
+})();
+</script>
+
+{% endblock %}

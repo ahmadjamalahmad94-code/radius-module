@@ -344,7 +344,10 @@ def communications_channels_test():
     outcome = comms_providers.http_send(
         template=config["send_url_template"],
         method=config["http_method"],
-        phone=phone,
+        # تطبيع الرقم بمفتاح الدولة (0599... → +970599...) قبل المزوّد
+        phone=comms_providers.normalize_msisdn(
+            phone, comms_providers.tenant_dial_code(tid)
+        ),
         message=message,
     )
     return jsonify({

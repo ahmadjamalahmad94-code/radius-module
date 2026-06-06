@@ -22,6 +22,15 @@
 {% block content %}
 {% include "radius/network_ops_nav.html" %}
 
+{# ── تسميات عربية لقيم العرض والصحة الخام (تُستخدم في KPIs والشرائح) ── #}
+{% set _show_labels = {
+  'all': 'الكل', 'offline': 'غير المتصلين', 'warnings': 'تحتاج انتباه', 'vpn': 'نفق الإدارة'
+} %}
+{% set _health_labels = {
+  'all': 'الكل', 'healthy': 'سليم', 'attention': 'يحتاج انتباه',
+  'risky': 'خطر', 'offline': 'غير متصل', 'unknown': 'غير معروف'
+} %}
+
 <section data-mt-topology-page>
 
 {# ───── Merged hero: title + KPI strip + integrated filter form ───── #}
@@ -34,8 +43,8 @@
   kpis=[
     {'label': 'كل الراوترات', 'value': total_count,    'icon': 'server',      'variant': 'brand'},
     {'label': 'المعروض',      'value': filtered_count,  'icon': 'eye',         'variant': 'green'},
-    {'label': 'طريقة العرض',  'value': show,            'icon': 'sliders',     'variant': 'brand'},
-    {'label': 'الصحة',        'value': health,          'icon': 'gauge-high',  'variant': 'brand'},
+    {'label': 'طريقة العرض',  'value': _show_labels.get(show, show),     'icon': 'sliders',     'variant': 'brand'},
+    {'label': 'الصحة',        'value': _health_labels.get(health, health), 'icon': 'gauge-high',  'variant': 'brand'},
   ]
 ) %}
   <span class="hub-field" style="display:flex;flex-direction:column;gap:4px">
@@ -142,7 +151,7 @@
           {% endif %}
           {% if r.health_state %}
           <span class="opsx-chip {% if r.health_state == 'healthy' %}opsx-chip--ok{% elif r.health_state in ['risky','offline'] %}opsx-chip--bad{% else %}opsx-chip--warn{% endif %}"
-                data-mt-topology-health-chip>{{ r.health_state }}</span>
+                data-mt-topology-health-chip>{{ _health_labels.get(r.health_state, r.health_state) }}</span>
           {% endif %}
         </div>
         <div class="opsx-router-line"><span style="--score:{{ r.health_score or 0 }}%"></span></div>

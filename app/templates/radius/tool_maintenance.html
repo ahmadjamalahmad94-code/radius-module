@@ -38,18 +38,20 @@
 
 {% block content %}
 
+{# ───── الصدفة الموحّدة: هيرو + شريط KPI بفاصل ناعم ───── #}
+<section class="hub-hero-shell">
 {{ hub.hero(
   "الصيانة والتنظيف",
   subtitle="حذف السجلات القديمة + VACUUM لقاعدة البيانات. كل العمليات مؤكَّدة قبل التنفيذ.",
   icon="screwdriver-wrench"
 ) }}
-
 <div class="hub-kpi-grid">
   {{ hub.kpi("سجلات الجلسات",    stats.radacct,    icon="database",          variant="brand") }}
   {{ hub.kpi("سجل التدقيق",      stats.audit_log,  icon="clock-rotate-left", variant="amber") }}
   {{ hub.kpi("مهام المزامنة",    stats.sync_queue, icon="arrows-rotate",     variant="green") }}
   {{ hub.kpi("حجم القاعدة (MB)", "%.1f"|format(db_size_mb), icon="hard-drive", variant="blue") }}
 </div>
+</section>{# /hub-hero-shell #}
 
 {% set help_aside %}
   {% call hub.helppanel(

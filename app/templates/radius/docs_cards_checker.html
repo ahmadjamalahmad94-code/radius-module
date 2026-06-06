@@ -1,0 +1,598 @@
+{# ══════════════════════════════════════════════════════════════════════
+   دليل «فحص بطاقة» — قسم البطاقات في مركز «كيف تستخدمني».
+
+   نفس بنية الدليل الذهبي docs_add_subscriber.html:
+     • hero + شريط أدوات (حفظ كـ PDF / كل الأدلة).
+     • فهرس جانبي لاصق يسار الصفحة (order:2) + scrollspy.
+     • خطوات مرقّمة + رسوم HTML/CSS تحاكي cards_checker_v2.html.
+
+   المحتوى مطابق للصفحة الفعلية: أسماء الإجراءات الذكية (قطع الجلسة،
+   إعادة الاستخدام، قفل MAC، تغيير الوقت/السرعة، تعطيل، نقل للمحذوفات)
+   وأعمدة جدول الجلسات منسوخة حرفيًا من cards_checker_v2.html ومعالجات
+   routes/cards.py — عند تغيير الصفحة حدّث الدليل معها.
+   ══════════════════════════════════════════════════════════════════════ #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}دليل: فحص بطاقة — كيف تستخدمني{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<style>
+  /* ── التخطيط: فهرس جانبي لاصق + عمود المحتوى (الفهرس يسار الصفحة) ── */
+  .dg-layout{ display:grid; grid-template-columns:minmax(0,1fr) 230px; gap:20px; align-items:start; }
+  .dg-toc{ order:2; }
+  .dg-main{ order:1; }
+  @media (max-width:980px){ .dg-layout{ grid-template-columns:1fr; } .dg-toc{ order:1; } .dg-main{ order:2; } }
+
+  .dg-toc{
+    position:sticky; top:84px;
+    background:#fff; border:1px solid #e8edf3; border-radius:14px;
+    padding:14px 13px; display:grid; gap:3px;
+  }
+  @media (max-width:980px){ .dg-toc{ position:static; } }
+  .dg-toc-title{
+    display:flex; align-items:center; gap:8px; font-size:12px; font-weight:900;
+    color:#7c7a99; margin-bottom:7px; padding-inline:6px;
+  }
+  .dg-toc a{
+    display:flex; align-items:center; gap:9px;
+    padding:8px 10px; border-radius:9px; text-decoration:none;
+    font-size:12.5px; font-weight:700; color:#475569;
+    transition:background .14s, color .14s;
+  }
+  .dg-toc a .n{
+    width:21px; height:21px; border-radius:50%; flex:none;
+    display:grid; place-items:center; font-size:10.5px; font-weight:900;
+    background:#f1f5f9; color:#94a3b8;
+  }
+  .dg-toc a:hover{ background:#f5f3ff; color:#5b21b6; }
+  .dg-toc a.is-active{ background:#ede9fe; color:#5b21b6; }
+  .dg-toc a.is-active .n{ background:linear-gradient(135deg,#7c3aed,#5b21b6); color:#fff; }
+
+  .dg-main{ min-width:0; display:grid; gap:18px; }
+
+  .dg-lead{
+    display:flex; gap:13px; align-items:flex-start;
+    background:linear-gradient(135deg,#f5f3ff,#fdfcff);
+    border:1px solid #e9e5fc; border-radius:14px; padding:15px 17px;
+  }
+  .dg-lead .ic{ width:40px;height:40px;border-radius:12px;flex:none;display:grid;place-items:center;
+    font-size:17px;background:#ede9fe;color:#6d28d9; }
+  .dg-lead h3{ margin:0 0 4px; font-size:13.5px; font-weight:800; color:#241e4e; }
+  .dg-lead p{ margin:0; font-size:12.5px; line-height:1.9; color:#5b5a78; }
+
+  .dg-step{ display:grid; grid-template-columns:auto 1fr; gap:15px; align-items:start; scroll-margin-top:90px; }
+  @media (max-width:560px){ .dg-step{ grid-template-columns:1fr; } }
+  .dg-badge{
+    width:42px; height:42px; border-radius:50%; flex:none;
+    display:grid; place-items:center; font-size:17px; font-weight:900; color:#fff;
+    background:linear-gradient(135deg,#7c3aed,#5b21b6);
+    box-shadow:0 8px 18px rgba(124,58,237,.3);
+  }
+  .dg-card{
+    min-width:0; background:#fff; border:1px solid #e8edf3; border-radius:15px;
+    padding:16px 18px;
+  }
+  .dg-card h2{
+    margin:0 0 8px; font-size:15.5px; font-weight:800; color:#0f172a;
+    display:flex; align-items:center; gap:9px; flex-wrap:wrap;
+  }
+  .dg-card h2 i{ color:#7c3aed; }
+  .dg-card p{ margin:0 0 7px; font-size:13px; line-height:1.95; color:#475569; }
+  .dg-card p:last-child{ margin-bottom:0; }
+  .dg-card ul{ margin:4px 0 8px; padding-inline-start:22px; font-size:13px; line-height:2; color:#475569; }
+  .dg-card strong{ color:#241e4e; }
+  .dg-kbd{
+    font-family:ui-monospace,Consolas,monospace; font-size:11.5px;
+    background:#f1f5f9; border:1px solid #e2e8f0; border-radius:5px;
+    padding:1px 7px; color:#5b21b6;
+  }
+
+  .dg-tip, .dg-warn{
+    display:flex; gap:11px; align-items:flex-start;
+    border-radius:12px; padding:11px 14px; margin-top:11px;
+    font-size:12.5px; line-height:1.9;
+  }
+  .dg-tip{ background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; }
+  .dg-warn{ background:#fffbeb; border:1px solid #fde68a; color:#92400e; }
+  .dg-tip .ic, .dg-warn .ic{ flex:none; font-size:15px; line-height:1.6; }
+  .dg-tip b, .dg-warn b{ font-weight:900; }
+
+  /* ════ الرسوم ════ */
+  .dg-mock{
+    border:1px solid #e2e8f0; border-radius:14px; overflow:hidden;
+    background:#fff; box-shadow:0 8px 20px rgba(15,23,42,.07);
+    margin-top:13px; max-width:560px;
+  }
+  .dg-mock-bar{
+    display:flex; align-items:center; gap:7px; padding:8px 12px;
+    background:#f1f5f9; border-bottom:1px solid #e2e8f0;
+  }
+  .dg-mock-bar .dots{ display:flex; gap:5px; }
+  .dg-mock-bar .dots i{ width:9px; height:9px; border-radius:50%; }
+  .dg-mock-bar .dots i:nth-child(1){ background:#f87171; }
+  .dg-mock-bar .dots i:nth-child(2){ background:#fbbf24; }
+  .dg-mock-bar .dots i:nth-child(3){ background:#34d399; }
+  .dg-mock-bar .crumb{
+    flex:1; background:#fff; border:1px solid #e2e8f0; border-radius:7px;
+    padding:4px 10px; font-size:10.5px; font-weight:700; color:#64748b;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .dg-mock-body{ padding:14px; display:grid; gap:11px; }
+
+  /* محاكاة شريط البحث + مفتاح الوضع */
+  .dg-search{ display:flex; gap:8px; align-items:center; }
+  .dg-modes{ display:flex; border:1px solid #e2e8f0; border-radius:9px; overflow:hidden; flex:none; }
+  .dg-modes span{ padding:6px 11px; font-size:9.5px; font-weight:800; color:#64748b; }
+  .dg-modes span.on{ background:#ede9fe; color:#5b21b6; }
+  .dg-searchbox{
+    flex:1; display:flex; align-items:center; gap:8px;
+    border:1.5px solid #c4b5fd; background:#faf5ff; border-radius:9px; padding:7px 11px;
+    font-size:10.5px; color:#475569; min-width:0;
+  }
+  .dg-searchbox i{ color:#a78bfa; font-size:10px; }
+  .dg-searchbtn{
+    background:linear-gradient(135deg,#7c3aed,#5b21b6); color:#fff; border-radius:9px;
+    padding:7px 14px; font-size:10.5px; font-weight:900; flex:none;
+  }
+
+  /* محاكاة بطاقة الهيرو (الكرت البنفسجي) */
+  .dg-herocard{
+    margin-top:13px; max-width:560px; border-radius:16px; padding:14px 16px;
+    background:linear-gradient(135deg,#6d28d9,#4c1d95); color:#fff;
+    box-shadow:0 14px 28px rgba(91,33,182,.35); display:grid; gap:10px;
+  }
+  .dg-herocard .top{ display:flex; align-items:center; justify-content:space-between; }
+  .dg-herocard .chip{ width:30px; height:22px; border-radius:5px; background:linear-gradient(135deg,#fbbf24,#d97706); }
+  .dg-herocard .st{
+    display:inline-flex; align-items:center; gap:5px; background:rgba(255,255,255,.18);
+    border-radius:999px; padding:3px 10px; font-size:9px; font-weight:900;
+  }
+  .dg-herocard .st .dot{ width:6px;height:6px;border-radius:50%;background:#4ade80; }
+  .dg-herocard .num{ font-family:ui-monospace,Consolas,monospace; font-size:17px; font-weight:900; letter-spacing:1px; display:flex; align-items:center; gap:8px; }
+  .dg-herocard .num i{ color:#fbbf24; font-size:12px; }
+  .dg-herocard .pwd{
+    display:inline-flex; align-items:center; gap:8px; background:rgba(255,255,255,.14);
+    border-radius:9px; padding:4px 10px; font-size:10px; font-family:ui-monospace,Consolas,monospace;
+    width:fit-content;
+  }
+  .dg-herocard .pwd i{ font-size:9px; opacity:.85; }
+  .dg-herocard .rows{ display:flex; gap:7px; flex-wrap:wrap; }
+  .dg-herocard .rw{
+    background:rgba(255,255,255,.12); border-radius:8px; padding:4px 9px;
+    font-size:8.5px; font-weight:800; display:flex; gap:6px; align-items:center;
+  }
+  .dg-herocard .rw b{ font-weight:900; }
+  .dg-herocard .bt{ border-top:1px dashed rgba(255,255,255,.25); padding-top:7px; font-size:8.5px; opacity:.85; }
+
+  /* محاكاة لوحة المعلومات + بلاطات الأرقام */
+  .dg-info{ margin-top:11px; max-width:560px; border:1px solid #e2e8f0; border-radius:12px; overflow:hidden; }
+  .dg-info .r{ display:flex; justify-content:space-between; padding:7px 12px; font-size:10px; border-top:1px solid #f1f5f9; }
+  .dg-info .r:first-child{ border-top:0; }
+  .dg-info .l{ color:#94a3b8; font-weight:800; }
+  .dg-info .v{ color:#0f172a; font-weight:800; font-family:ui-monospace,Consolas,monospace; }
+  .dg-metrics{ display:grid; grid-template-columns:repeat(5,1fr); gap:7px; }
+  @media (max-width:560px){ .dg-metrics{ grid-template-columns:repeat(2,1fr); } }
+  .dg-metric{ border:1px solid #e8edf3; border-radius:10px; padding:8px 9px; display:grid; gap:2px; }
+  .dg-metric .lb{ font-size:8.5px; font-weight:800; color:#94a3b8; }
+  .dg-metric .vl{ font-size:12px; font-weight:900; color:#0f172a; }
+  .dg-metric .sb{ font-size:7.5px; color:#a3aec2; }
+
+  /* محاكاة جدول الجلسات */
+  .dg-sess{ margin-top:11px; max-width:560px; border:1px solid #e2e8f0; border-radius:12px; overflow:hidden; box-shadow:0 6px 16px rgba(15,23,42,.06); }
+  .dg-sess .hd, .dg-sess .rw{
+    display:grid; grid-template-columns:.8fr 1fr 1.1fr .7fr .7fr .8fr; gap:7px;
+    padding:8px 11px; font-size:9px; align-items:center;
+  }
+  .dg-sess .hd{ background:#f5f3ff; color:#5b21b6; font-weight:900; }
+  .dg-sess .rw{ background:#fff; color:#334155; font-weight:700; border-top:1px solid #f1f5f9; }
+  .dg-sess .rw.live{ background:#f0fdf4; }
+  .dg-sess .mono{ font-family:ui-monospace,Consolas,monospace; font-size:8.5px; }
+  .dg-pill{
+    display:inline-flex; align-items:center; gap:4px; border-radius:999px;
+    padding:2px 8px; font-size:8.5px; font-weight:900; background:#dcfce7; color:#15803d;
+  }
+  .dg-pill .dot{ width:5px; height:5px; border-radius:50%; background:#16a34a; }
+  .dg-pill.grey{ background:#f1f5f9; color:#64748b; } .dg-pill.grey .dot{ background:#94a3b8; }
+
+  /* محاكاة شبكة الإجراءات الذكية */
+  .dg-actions{ display:grid; grid-template-columns:repeat(2,1fr); gap:8px; }
+  @media (min-width:480px){ .dg-actions{ grid-template-columns:repeat(3,1fr); } }
+  .dg-action{
+    display:flex; gap:8px; align-items:center; border:1px solid #e8edf3;
+    border-radius:11px; padding:8px 10px; background:#fff;
+  }
+  .dg-action .ic{
+    width:26px; height:26px; border-radius:8px; flex:none; display:grid; place-items:center; font-size:10px;
+  }
+  .dg-action .ic.amber{ background:#fffbeb; color:#d97706; }
+  .dg-action .ic.cyan{ background:#ecfeff; color:#0891b2; }
+  .dg-action .ic.purple{ background:#f5f3ff; color:#7c3aed; }
+  .dg-action .ic.teal{ background:#f0fdfa; color:#0d9488; }
+  .dg-action .ic.blue{ background:#eff6ff; color:#2563eb; }
+  .dg-action .ic.red{ background:#fef2f2; color:#dc2626; }
+  .dg-action .t{ font-size:10px; font-weight:900; color:#0f172a; }
+  .dg-action .s{ font-size:8px; color:#94a3b8; margin-top:1px; }
+  .dg-action.danger{ border-color:#fecaca; }
+
+  .dg-cap{ font-size:11px; color:#94a3b8; margin-top:8px; line-height:1.7; }
+  .dg-cap i{ color:#c4b5fd; }
+
+  /* ════ الطباعة ════ */
+  @media print{
+    .hb-side, .hb-side-overlay, .hb-topbar, header.hb-top,
+    .dg-toc, .dg-noprint, .hub-hero-actions{ display:none !important; }
+    .dg-layout{ grid-template-columns:1fr; }
+    .dg-card, .dg-mock, .dg-sess, .dg-info{ box-shadow:none !important; break-inside:avoid; }
+    .dg-step{ break-inside:avoid; }
+    body{ background:#fff !important; }
+    .dg-badge, .dg-tip, .dg-warn, .dg-pill, .dg-herocard, .dg-action .ic,
+    .dg-sess .hd, .dg-searchbtn, .dg-modes span.on{
+      -webkit-print-color-adjust:exact; print-color-adjust:exact;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{{ hub.hero(
+  "دليل: فحص بطاقة",
+  subtitle="مركز عمليات البطاقة: ابحث بكود الكرت وشوف كل شيء عنه — وكل إجراء ذكي شو بيعمل بالضبط.",
+  icon="magnifying-glass",
+  actions_html='
+    <button type="button" class="hub-btn hub-btn--secondary" onclick="window.print()">
+      <i class="fa-solid fa-file-pdf"></i> حفظ كـ PDF
+    </button>
+    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.docs_center') + '">
+      <i class="fa-solid fa-arrow-right"></i> كل الأدلة
+    </a>
+  '
+) }}
+
+<div class="dg-layout">
+
+  {# ───── الفهرس الجانبي اللاصق ───── #}
+  <nav class="dg-toc dg-noprint" aria-label="فهرس الدليل">
+    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> فهرس الخطوات</div>
+    <a href="#dg-s1" data-dg-toc><span class="n">1</span> افتح الصفحة وابحث</a>
+    <a href="#dg-s2" data-dg-toc><span class="n">2</span> اقرأ بطاقة النتيجة</a>
+    <a href="#dg-s3" data-dg-toc><span class="n">3</span> لوحة المعلومات والأرقام</a>
+    <a href="#dg-s4" data-dg-toc><span class="n">4</span> الجهاز والنشاط الأخير</a>
+    <a href="#dg-s5" data-dg-toc><span class="n">5</span> جدول آخر الجلسات</a>
+    <a href="#dg-s6" data-dg-toc><span class="n">6</span> الإجراءات الذكية</a>
+    <a href="#dg-s7" data-dg-toc><span class="n">7</span> الوضع البسيط</a>
+  </nav>
+
+  {# ───── عمود المحتوى ───── #}
+  <div class="dg-main">
+
+    <div class="dg-lead">
+      <span class="ic"><i class="fa-solid fa-lightbulb"></i></span>
+      <div>
+        <h3>قبل ما نبدأ — متى تفتح «فحص بطاقة»؟</h3>
+        <p>
+          لما يتصل زبون يقول «الكرت ما يشتغل» أو «وين راح وقتي؟» — هذه صفحتك.
+          تكتب كود الكرت ويطلع لك كل شيء: حالته، باقته، وقته المتبقي، استهلاكه،
+          أجهزته، وكل جلساته — ومن نفس المكان تنفّذ أي إجراء: قطع جلسة، إضافة وقت،
+          قفل MAC، تعطيل، أو حذف. مركز عمليات كامل لكرت واحد.
+        </p>
+      </div>
+    </div>
+
+    {# ════ الخطوة 1 ════ #}
+    <section class="dg-step" id="dg-s1">
+      <div class="dg-badge">1</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-door-open"></i> افتح الصفحة واكتب كود البطاقة</h2>
+        <p>
+          من القائمة الجانبية: <strong>«البطاقات» ← «فحص بطاقة»</strong>. رح تستقبلك
+          صفحة عنوانها <strong>«مركز عمليات البطاقة»</strong> وفي وسطها شريط بحث كبير
+          مكتوب فيه: <span class="dg-kbd">ابحث برقم البطاقة أو MAC أو اسم العميل…</span>
+        </p>
+        <ul>
+          <li>اكتب <strong>رقم البطاقة</strong> (اسم الدخول المطبوع على الكرت) — أدق طريقة.</li>
+          <li>أو الصق <strong>عنوان MAC</strong> لجهاز الزبون — يلاقي الكرت اللي اتصل منه.</li>
+          <li>اضغط زر <strong>«بحث»</strong> أو Enter.</li>
+        </ul>
+        <p>
+          فوق شريط البحث مفتاحان: <strong>«متقدّم»</strong> (الافتراضي — كل التفاصيل والإجراءات)
+          و<strong>«بسيط»</strong> (عرض مختصر للفحص السريع — نشرحه في الخطوة الأخيرة).
+        </p>
+
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">البطاقات › فحص بطاقة</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-search">
+              <div class="dg-modes"><span class="on"><i class="fa-solid fa-layer-group"></i> متقدّم</span><span><i class="fa-solid fa-bolt"></i> بسيط</span></div>
+              <div class="dg-searchbox"><i class="fa-solid fa-magnifying-glass"></i> 48201375</div>
+              <span class="dg-searchbtn">بحث</span>
+            </div>
+          </div>
+        </div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> قبل أي بحث تظهر رسالة «مركز فحص البطاقات جاهز» — وإذا الكود غلط: «لم نَجد بطاقة باسم …».</div>
+
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة:</b> أزرار رأس الصفحة جاهزة للخدمة: <b>رجوع</b> (لقائمة الكروت)،
+          <b>تحديث</b> (يعيد الفحص بنفس الكود)، <b>طباعة</b>، و<b>نسخ الرابط</b> — انسخ الرابط
+          وأرسله لزميلك فيفتح نفس نتيجة الفحص مباشرة.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 2 ════ #}
+    <section class="dg-step" id="dg-s2">
+      <div class="dg-badge">2</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-credit-card"></i> اقرأ بطاقة النتيجة — الكرت البنفسجي الكبير</h2>
+        <p>
+          أول ما يطلع كرت بنفسجي فاخر بشكل بطاقة ائتمان — هذا ملخص هوية البطاقة:
+        </p>
+        <ul>
+          <li><strong>شارة الحالة</strong> (أعلى الكرت): <strong>نشطة الآن</strong> (خضراء — في جلسة حية)، <strong>غير متّصلة</strong> (رمادية)، أو <strong>ملغاة / معطّلة</strong> (تحذيرية).</li>
+          <li><strong>رقم البطاقة الكبير</strong> مع نجمة — هذا اسم الدخول.</li>
+          <li><strong>كلمة المرور</strong> مخفية بنقاط <span class="dg-kbd">••••••••</span> — زر <strong>العين</strong> يكشفها (تنخفي تلقائيًا بعد 8 ثوانٍ وكل كشف يُسجَّل في سجل التدقيق)، وزر <strong>النسخ</strong> ينسخها للزبون.</li>
+          <li>حبيبات معلومات على الجانبين: <strong>الحزمة</strong>، <strong>الاشتراك</strong> (الباقة)، <strong>سعر البيع</strong>، <strong>سعر الجملة</strong>، <strong>المُنشئ</strong>، <strong>المالك</strong>، و<strong>الموزّع</strong>.</li>
+          <li>أسفل الكرت: <strong>«تم إصدارها: …»</strong> — تاريخ توليد البطاقة.</li>
+        </ul>
+
+        <div class="dg-herocard" aria-hidden="true">
+          <div class="top"><span class="st"><span class="dot"></span> نشطة الآن</span><span class="chip"></span></div>
+          <div class="num"><i class="fa-solid fa-star"></i> 48201375</div>
+          <div class="pwd"><i class="fa-solid fa-key"></i> •••••••• <i class="fa-solid fa-eye"></i> <i class="fa-solid fa-copy"></i></div>
+          <div class="rows">
+            <span class="rw">الحزمة <b>حزمة ساعة</b></span>
+            <span class="rw">الاشتراك 👑 <b>باقة ساعة سريعة</b></span>
+            <span class="rw">سعر البيع <b>5.00</b></span>
+            <span class="rw">الموزّع <b>بقالة المدينة</b></span>
+          </div>
+          <div class="bt"><i class="fa-regular fa-calendar"></i> تم إصدارها: 2026-06-01 10:24</div>
+        </div>
+
+        <div class="dg-warn">
+          <span class="ic">⚠️</span>
+          <span><b>انتبه:</b> كشف كلمة المرور <b>مسجَّل ومراقَب</b> — كل ضغطة عين تُحفظ
+          باسمك في سجل التدقيق. اكشفها فقط عند حاجة فعلية (زبون ضيّع كلمة مروره مثلًا).</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 3 ════ #}
+    <section class="dg-step" id="dg-s3">
+      <div class="dg-badge">3</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-table-list"></i> لوحة المعلومات وبلاطات الأرقام العشر</h2>
+        <p>
+          بجانب الكرت البنفسجي لوحة معلومات بستة صفوف:
+          <strong>حالة البطاقة</strong> (جاهزة / استُعملت / نشطة الآن / معطّلة / ملغاة)،
+          <strong>أوّل اتصال</strong>، <strong>آخر اتصال</strong>، <strong>IP</strong>،
+          <strong>جهاز الشبكة</strong> (الراوتر/NAS)، و<strong>MAC الحالي</strong>.
+        </p>
+        <p>وتحتها صفّان من بلاطات الأرقام — الصف الأول يحكي قصة الاتصال:</p>
+        <ul>
+          <li><strong>الجلسات:</strong> كم مرة اتصل الكرت إجمالًا (وكم جلسة نشطة الآن).</li>
+          <li><strong>ماكات فريدة:</strong> كم جهازًا مختلفًا استخدم البطاقة — رقم كبير هنا = الكرت يتشارك بين أكثر من شخص!</li>
+          <li><strong>الأجهزة المتّصلة:</strong> كم جهازًا متصلًا في هذه اللحظة.</li>
+          <li><strong>الوقت المتبقّي:</strong> كم ضل من عمر الكرت.</li>
+          <li><strong>طريقة الاحتساب:</strong> «بالثانية» (الكرت مفعَّل والوقت يجري) أو «من أول اتصال» (لسا ما انفعّل — العداد ينطلق مع أول جلسة).</li>
+        </ul>
+        <p>والصف الثاني قصة البيانات: <strong>إجمالي التنزيل</strong>، <strong>إجمالي الرفع</strong>،
+          <strong>إجمالي الاستهلاك</strong> (رفع + تحميل)، <strong>الكوتة المتبقّية</strong>،
+          و<strong>الكوتة الكلّية</strong> («بلا حد» إذا الباقة بدون كوتا).</p>
+
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">فحص بطاقة › الأرقام</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-metrics">
+              <div class="dg-metric"><span class="lb">الجلسات</span><span class="vl">12</span><span class="sb">نشطة الآن: 1</span></div>
+              <div class="dg-metric"><span class="lb">ماكات فريدة</span><span class="vl">2</span><span class="sb">استخدمت البطاقة</span></div>
+              <div class="dg-metric"><span class="lb">الأجهزة المتّصلة</span><span class="vl">1</span><span class="sb">الآن</span></div>
+              <div class="dg-metric"><span class="lb">الوقت المتبقّي</span><span class="vl">3 ساعة 20 دقيقة</span></div>
+              <div class="dg-metric"><span class="lb">طريقة الاحتساب</span><span class="vl">بالثانية</span><span class="sb">الوقت يجري الآن</span></div>
+            </div>
+            <div class="dg-metrics">
+              <div class="dg-metric"><span class="lb">إجمالي التنزيل</span><span class="vl">3.2 GB</span></div>
+              <div class="dg-metric"><span class="lb">إجمالي الرفع</span><span class="vl">410 MB</span></div>
+              <div class="dg-metric"><span class="lb">إجمالي الاستهلاك</span><span class="vl">3.6 GB</span><span class="sb">رفع + تحميل</span></div>
+              <div class="dg-metric"><span class="lb">الكوتة المتبقّية</span><span class="vl">1424 MB</span><span class="sb">من 5120 MB</span></div>
+              <div class="dg-metric"><span class="lb">الكوتة الكلّية</span><span class="vl">5120 MB</span><span class="sb">حسب الباقة</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>سيناريو شائع:</b> زبون يقول «الكرت خلص بسرعة!» — بصّ على «ماكات فريدة»:
+          إذا فيها 4 أجهزة، الكرت موزَّع على غيره. الحل في الخطوة 6: <b>قفل MAC</b>.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 4 ════ #}
+    <section class="dg-step" id="dg-s4">
+      <div class="dg-badge">4</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-microchip"></i> «الجهاز المستخدم حاليًا» و«النشاط الأخير»</h2>
+        <p>صفّان جنب بعض يكملان الصورة:</p>
+        <ul>
+          <li><strong>الجهاز المستخدم حاليًا:</strong> اسم الجهاز كما تعرّفه المايكروتيك من DHCP
+            (مثل <span class="dg-kbd">Redmi-Note-12</span>) مع شارات: <strong>نشط الآن / غير متّصل</strong>،
+            الشركة المصنّعة، ونوع الاتصال — وتحتها MAC وIP وجهاز الشبكة، مع رسمة توضيحية للجهاز (جوال/لابتوب/راوتر).</li>
+          <li><strong>النشاط الأخير للبطاقة:</strong> خط زمني بثلاث محطات:
+            <strong>إنشاء</strong> (إصدارها ضمن الحزمة) ← <strong>اتصال</strong> (بداية الجلسة الأولى)
+            ← <strong>نشط</strong> (جلسة حية الآن إن وُجدت).</li>
+        </ul>
+
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">فحص بطاقة › الجهاز الحالي</span></div>
+          <div class="dg-mock-body">
+            <div style="display:flex;gap:10px;align-items:center">
+              <div style="flex:1">
+                <div style="font-size:11px;font-weight:900;color:#0f172a">Redmi-Note-12-Pro</div>
+                <div style="display:flex;gap:5px;margin-top:5px">
+                  <span class="dg-pill"><span class="dot"></span> نشط الآن</span>
+                  <span class="dg-pill grey">Xiaomi</span>
+                </div>
+                <div style="font-size:8.5px;color:#94a3b8;margin-top:7px;font-family:ui-monospace,Consolas,monospace">
+                  MAC AA:31:..:E2 &nbsp;·&nbsp; IP 10.5.50.117
+                </div>
+              </div>
+              <span style="font-size:30px;color:#7c3aed"><i class="fa-solid fa-mobile-screen"></i></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة:</b> عمود اسم الجهاز يعتمد على بيانات DHCP من المايكروتيك —
+          إذا طالع «—»، اضغط زر <b>«تحديث DHCP»</b> فوق جدول الجلسات (الخطوة التالية)
+          ليسحب الأسماء فورًا بدل انتظار التحديث الدوري.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 5 ════ #}
+    <section class="dg-step" id="dg-s5">
+      <div class="dg-badge">5</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-clock-rotate-left"></i> جدول «آخر الجلسات» — السجل الكامل</h2>
+        <p>
+          جدول عريض بكل جلسات البطاقة، الحيّة والمنتهية. أعمدته بالترتيب:
+          <strong>الحالة</strong> (حيّة بشارة خضراء / منتهية رمادية)، <strong>IP</strong>،
+          <strong>MAC</strong>, <strong>الجهاز / النظام</strong>، <strong>تحميل</strong>،
+          <strong>رفع</strong>، <strong>تحميل مجاني</strong>، <strong>رفع مجاني</strong>،
+          <strong>المحصّلة</strong> (مجموع الاستهلاك)، <strong>تاريخ البدء</strong>،
+          <strong>تاريخ الإنتهاء</strong>، <strong>الوقت</strong> (مدة الجلسة)،
+          <strong>معرّف الخدمة</strong>، و<strong>منفذ الاتصال</strong>.
+        </p>
+        <ul>
+          <li>زر <strong>«تحديث DHCP»</strong> في رأس القسم: يسحب أسماء الأجهزة من المايكروتيك الآن.</li>
+          <li>أسفل الجدول منتقي عدد الصفوف (10 / 25 / 50 / 100 / الكل) وأزرار تنقل.</li>
+        </ul>
+
+        <div class="dg-sess" aria-hidden="true">
+          <div class="hd"><span>الحالة</span><span>IP</span><span>الجهاز</span><span>تحميل</span><span>رفع</span><span>الوقت</span></div>
+          <div class="rw live"><span><span class="dg-pill"><span class="dot"></span> حيّة</span></span><span class="mono">10.5.50.117</span><span>Redmi-Note-12</span><span class="mono">820 MB</span><span class="mono">96 MB</span><span class="mono">1 ساعة 12 د</span></div>
+          <div class="rw"><span><span class="dg-pill grey"><span class="dot"></span> منتهية</span></span><span class="mono">10.5.50.103</span><span>iPhone-13</span><span class="mono">1.4 GB</span><span class="mono">210 MB</span><span class="mono">2 ساعة 40 د</span></div>
+        </div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> الجدول الحقيقي أعرض (14 عمودًا) — مرّر أفقيًا على الشاشات الضيقة.</div>
+
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة تحقيق:</b> عمودا MAC والجهاز هما دليلك في الخلافات — تشوف بالضبط
+          أي جهاز اتصل بأي وقت وكم استهلك. سجل لا يقبل الجدل أمام الزبون.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 6 ════ #}
+    <section class="dg-step" id="dg-s6">
+      <div class="dg-badge">6</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-bolt"></i> «إجراءات ذكية» — كل زر شو بيعمل بالضبط</h2>
+        <p>
+          آخر قسم وأقواه: شبكة أزرار <strong>«تحكّم كامل في بطاقة العميل»</strong>.
+          كل زر يفتح نافذة تأكيد أنيقة قبل التنفيذ — ما في شيء يصير بضغطة عفوية:
+        </p>
+        <ul>
+          <li><strong>قطع الجلسة:</strong> يعرض لك قائمة الأجهزة المتصلة الآن — تختار جهازًا
+            واحدًا أو الكل (أزرار «تحديد الكل / إلغاء التحديد») ويرسل أمر قطع للمايكروتيك.
+            الأجهزة غير المختارة تبقى متصلة.</li>
+          <li><strong>إعادة الاستخدام:</strong> يصفّر الوقت المستهلَك — عدّاد البطاقة يبدأ
+            من جديد عند أول اتصال. مفيد كتعويض لزبون أو لإعادة بيع كرت تجريبي.</li>
+          <li><strong>قفل MAC:</strong> يثبّت البطاقة على جهاز محدد. النافذة تعرض الماكات
+            اللي استخدمت الكرت سابقًا (مع اسم كل جهاز) — اختر منها أو الصق MAC يدويًا
+            (يقبل أكثر من عنوان مفصولًا بفواصل). بعد القفل: أي جهاز غريب ينرفض، والجلسات
+            غير المطابقة تُقطع فورًا. إذا الكرت مقفول أصلًا يصير الزر
+            <strong>«إدارة قفل MAC»</strong>: تعديل القائمة أو فك القفل تمامًا.</li>
+          <li><strong>تغيير الوقت:</strong> إضافة أو خصم وقت <strong>لهذه البطاقة فقط</strong> —
+            تختار العملية (إضافة/خصم)، الوحدة (دقائق/ساعات/أيام)، والمقدار. التحديث يوصل
+            للمايكروتيك فورًا إن كانت الجلسة نشطة (CoA)، وإلا يُطبَّق بالجلسة التالية.</li>
+          <li><strong>تغيير السرعة:</strong> سرعة تنزيل/رفع مخصصة بالـ kbps لهذه البطاقة
+            تتجاوز سرعة الحزمة — والقيمة 0 و0 ترجّعها لسرعة الحزمة. تُطبَّق حيًّا بدون قطع الجلسة.</li>
+          <li><strong>تعطيل البطاقة:</strong> إيقاف مؤقت <strong>يجمّد الوقت المتبقي</strong> —
+            لا ينقص أثناء التعطيل ويرجع كاملًا عند الضغط على <strong>«إعادة التفعيل»</strong>.
+            التعطيل يقطع كل الجلسات النشطة فورًا. (تقدر تكتب سبب التعطيل — اختياري.)</li>
+          <li><strong>نقل للمحذوفات:</strong> الحذف الافتراضي <strong>آمن</strong> — البطاقة
+            تروح لسلة المحذوفات وتقدر تستعيدها من شاشة سلة المحذوفات متى شئت.</li>
+        </ul>
+
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">فحص بطاقة › إجراءات ذكية</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-actions">
+              <div class="dg-action"><span class="ic amber"><i class="fa-solid fa-plug-circle-xmark"></i></span><span><span class="t">قطع الجلسة</span><div class="s">1 جهاز متّصل الآن</div></span></div>
+              <div class="dg-action"><span class="ic cyan"><i class="fa-solid fa-rotate-right"></i></span><span><span class="t">إعادة الاستخدام</span><div class="s">احتساب الوقت من الصفر</div></span></div>
+              <div class="dg-action"><span class="ic purple"><i class="fa-solid fa-lock"></i></span><span><span class="t">قفل MAC</span><div class="s">تثبيت على عنوان واحد</div></span></div>
+              <div class="dg-action"><span class="ic amber"><i class="fa-solid fa-clock-rotate-left"></i></span><span><span class="t">تغيير الوقت</span><div class="s">للبطاقة فقط</div></span></div>
+              <div class="dg-action"><span class="ic teal"><i class="fa-solid fa-gauge-high"></i></span><span><span class="t">تغيير السرعة</span><div class="s">للبطاقة فقط</div></span></div>
+              <div class="dg-action"><span class="ic blue"><i class="fa-solid fa-pause"></i></span><span><span class="t">تعطيل البطاقة</span><div class="s">يجمّد الوقت المتبقي</div></span></div>
+              <div class="dg-action danger"><span class="ic red"><i class="fa-solid fa-trash"></i></span><span><span class="t">نقل للمحذوفات</span><div class="s">يمكن الاستعادة</div></span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="dg-warn">
+          <span class="ic">⚠️</span>
+          <span><b>انتبه:</b> بعد «تغيير الوقت» أو «تغيير السرعة» اقرأ الرسالة الخضراء:
+          إذا فيها «وصل التحديث للـ MikroTik (CoA-ACK)» فالتغيير طُبّق على الجلسة الحية
+          فورًا — وإذا «لا جلسة نشطة الآن» فالتغيير محفوظ ويُطبَّق مع الاتصال التالي.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 7 ════ #}
+    <section class="dg-step" id="dg-s7">
+      <div class="dg-badge">7</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-bolt"></i> الوضع «بسيط» — للفحص السريع على الكاشير</h2>
+        <p>
+          اضغط <strong>«بسيط»</strong> في مفتاح أعلى الصفحة وتتحول الشاشة لعرض مختصر:
+          الكرت البنفسجي + أربع بلاطات فقط (<strong>الجلسات، الأجهزة المتّصلة، الوقت المتبقّي،
+          الاستهلاك</strong>) + قسما «آخر نشاط» و«الجهاز الحالي» + أربعة أزرار
+          <strong>«إجراءات سريعة»</strong>:
+        </p>
+        <ul>
+          <li><strong>تحديث:</strong> يعيد فحص البطاقة بأحدث البيانات.</li>
+          <li><strong>إعادة ضبط:</strong> نفس «إعادة الاستخدام» — تصفير الوقت المستهلَك.</li>
+          <li><strong>فصل الجلسة:</strong> نفس منتقي الأجهزة في الوضع المتقدّم — تختار مين تقطع.</li>
+          <li><strong>نقل للمحذوفات:</strong> الحذف الآمن نفسه.</li>
+        </ul>
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>متى أيهما؟</b> الوضع البسيط ممتاز لنقطة البيع: «الكرت شغال؟ كم باقي؟» —
+          جواب بثانيتين. أما التحقيق في مشكلة (مين سرق الكرت؟ ليش خلص؟) فافتح
+          <b>المتقدّم</b> وانزل لجدول الجلسات والإجراءات الذكية.</span>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+{# ── scrollspy خفيف: يبرز بند الفهرس المقابل للخطوة الظاهرة ── #}
+<script>
+(function(){
+  'use strict';
+  var links = Array.prototype.slice.call(document.querySelectorAll('[data-dg-toc]'));
+  if (!links.length || !('IntersectionObserver' in window)) return;
+  var map = {};
+  links.forEach(function(a){ map[a.getAttribute('href').slice(1)] = a; });
+  var obs = new IntersectionObserver(function(entries){
+    entries.forEach(function(en){
+      if (!en.isIntersecting) return;
+      links.forEach(function(a){ a.classList.remove('is-active'); });
+      var a = map[en.target.id];
+      if (a) a.classList.add('is-active');
+    });
+  }, { rootMargin: '-35% 0px -55% 0px' });
+  Object.keys(map).forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) obs.observe(el);
+  });
+})();
+</script>
+
+{% endblock %}

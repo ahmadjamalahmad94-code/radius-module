@@ -206,7 +206,10 @@
 {% else %}
   {% call hub.section("المجموعات", icon="table-list",
                       meta=(items|length)|string + " مجموعة", flush=True) %}
-    <div class="hub-table-wrap" style="border:none;border-radius:0">
+    {# جدول uds: فرز/تحكّم بالأعمدة/ترقيم/تصدير. حجم صفحة كبير حتى لا
+       يتعارض ترقيم uds مع فلتر البحث (الذي يخفي الصفوف بـ display:none). #}
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="50"
+         data-uds-export-title="مجموعات المشتركين" style="border:none;border-radius:0">
       <table class="hub-table sg-table">
         <thead>
           <tr>
@@ -215,10 +218,10 @@
             <th>المتصلون</th>
             <th>التحميل / الرفع</th>
             <th>الحالة</th>
-            <th>الخدمات</th>
-            <th>السرعة</th>
+            <th data-uds-nosort>الخدمات</th>
+            <th data-uds-nosort>السرعة</th>
             <th>آخر نشاط</th>
-            <th>إجراءات المجموعة</th>
+            <th data-uds-nosort data-uds-nocol>إجراءات المجموعة</th>
           </tr>
         </thead>
         <tbody data-sg-rows>
@@ -341,6 +344,13 @@
   var rows   = document.querySelector('[data-sg-rows]');
   if (!root || !toggle || !input) return;
 
+  // جدول uds يدير الترقيم/الفرز عبر __udsApi.setFilter. نمرّر البحث
+  // من خلاله ليتعايش مع الترقيم بدل التصارع على display.
+  function udsApi(){
+    var w = rows && rows.closest('[data-uds-table]');
+    return (w && w.__udsApi) || null;
+  }
+
   function open(){
     root.classList.add('is-open');
     input.hidden = false;
@@ -361,6 +371,14 @@
   function filter(q){
     if (!rows) return;
     q = (q || '').trim().toLowerCase();
+    var api = udsApi();
+    if (api && api.setFilter){
+      // اترك الترقيم/الفرز لجدول uds وامرّر شرط البحث فقط.
+      api.setFilter(q ? function(tr){
+        return (tr.getAttribute('data-sg-name') || '').indexOf(q) !== -1;
+      } : null);
+      return;
+    }
     Array.prototype.forEach.call(rows.querySelectorAll('tr'), function(tr){
       var hay = tr.getAttribute('data-sg-name') || '';
       tr.style.display = (!q || hay.indexOf(q) !== -1) ? '' : 'none';

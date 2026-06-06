@@ -946,7 +946,7 @@
                 <span class="uf-svc-icon"><i class="fa-solid fa-wifi"></i></span>
                 <span class="uf-svc-body">
                   <span class="uf-svc-title">هوت سبوت</span>
-                  <span class="uf-svc-sub">دخول عبر صفحة Captive Portal</span>
+                  <span class="uf-svc-sub">دخول عبر صفحة تسجيل الدخول للهوت سبوت</span>
                 </span>
               </label>
               <label class="uf-svc-card {% if svc_pppoe %}is-checked{% endif %}">
@@ -1047,17 +1047,23 @@
           <div class="uf-field"><label>الاسم الرابع</label>
             <input class="hub-input" type="text" value="{{ _fourth_name }}" data-name-part="fourth"></div>
           <div class="uf-field"><label>الجوال</label>
-            <input class="hub-input" type="tel" name="mobile" value="{{ sub.mobile or '' }}"></div>
+            <input class="hub-input" type="tel" name="mobile" value="{{ sub.mobile or '' }}">
+            <div class="help">رقم التواصل مع المشترك للتذكير والتحصيل.</div></div>
           <div class="uf-field"><label>البريد الإلكتروني</label>
-            <input class="hub-input" type="email" name="email" value="{{ sub.email or '' }}"></div>
+            <input class="hub-input" type="email" name="email" value="{{ sub.email or '' }}">
+            <div class="help">اختياري — يُستخدم للمراسلات والإشعارات.</div></div>
           <div class="uf-field"><label>الرقم الوطني</label>
-            <input class="hub-input" type="text" name="national_id" value="{{ sub.national_id or '' }}"></div>
+            <input class="hub-input" type="text" name="national_id" value="{{ sub.national_id or '' }}">
+            <div class="help">لتوثيق هوية المشترك في السجلات.</div></div>
           <div class="uf-field"><label>طريقة الدفع المفضلة</label>
-            <input class="hub-input" type="text" name="payment_method" value="{{ sub.payment_method or '' }}" placeholder="نقدًا / محفظة / تحويل"></div>
+            <input class="hub-input" type="text" name="payment_method" value="{{ sub.payment_method or '' }}" placeholder="نقدًا / محفظة / تحويل">
+            <div class="help">للتذكير كيف يفضّل المشترك أن يدفع.</div></div>
           <div class="uf-field"><label>المدينة</label>
-            <input class="hub-input" type="text" name="city" value="{{ sub.city or '' }}"></div>
+            <input class="hub-input" type="text" name="city" value="{{ sub.city or '' }}">
+            <div class="help">مدينة سكن المشترك.</div></div>
           <div class="uf-field"><label>المنطقة / الحي</label>
-            <input class="hub-input" type="text" name="district" value="{{ sub.district or '' }}"></div>
+            <input class="hub-input" type="text" name="district" value="{{ sub.district or '' }}">
+            <div class="help">يساعد فرق الصيانة على الوصول للموقع.</div></div>
           <div class="uf-field full"><label>ملاحظات</label>
             <textarea class="hub-textarea" name="remark" rows="2" placeholder="أي ملاحظات تخص المشترك (اختياري)">{{ sub.remark or '' }}</textarea></div>
         </div>
@@ -1085,7 +1091,7 @@
         <span class="uf-section-tag" data-bw-status>سرعة أساسية</span>
         <input type="hidden" name="bandwidth_control_enabled" id="bw-en-hidden"
                value="{{ 1 if sub.bandwidth_control_enabled else 0 }}">
-        <span class="uf-section-help">قيم ثابتة تتجاوز سرعة الباقة. اتركيها 0 لاستخدام قيمة الباقة.</span>
+        <span class="uf-section-help">قيم ثابتة تتجاوز سرعة الباقة. اتركها 0 لاستخدام قيمة الباقة.</span>
         <i class="fa-solid fa-chevron-down uf-section-toggle"></i>
       </header>
       <div class="uf-section-body">
@@ -1096,6 +1102,7 @@
           <div class="uf-field">
             <label>سرعة مخصصة</label>
             {{ toggle_switch(name="custom_speed", checked=sub.custom_speed, id="cs") }}
+            <div class="help">فعّلها لتطبيق سرعة خاصة بدل سرعة الباقة.</div>
           </div>
           <div class="uf-field">
             <label>سرعة التنزيل</label>
@@ -1123,14 +1130,17 @@
               {# «30 دقيقة» quick-preset button removed per request #3.
                  The JS binding (tempPreset30) is null-guarded, so this is safe. #}
             </div>
+            <div class="help">بعد انتهاء المدة يرجع المشترك لسرعته العادية.</div>
           </div>
           <div class="uf-field">
             <label>سرعة تنزيل مؤقتة</label>
             {{ unit_input_picker(name="temporary_download_speed_kbps", value=sub.temporary_download_speed_kbps or sub.download_speed_kbps or 0, kind="speed", units=["kbps","Mbps"]) }}
+            <div class="help">سرعة التنزيل خلال فترة الرفع المؤقت.</div>
           </div>
           <div class="uf-field">
             <label>سرعة رفع مؤقتة</label>
             {{ unit_input_picker(name="temporary_upload_speed_kbps", value=sub.temporary_upload_speed_kbps or sub.upload_speed_kbps or 0, kind="speed", units=["kbps","Mbps"]) }}
+            <div class="help">سرعة الرفع خلال فترة الرفع المؤقت.</div>
           </div>
           <input type="hidden" name="temporary_speed_from" value="{{ sub.temporary_speed_from or '' }}">
           <input type="hidden" name="temporary_speed_to" value="{{ sub.temporary_speed_to or '' }}">
@@ -1400,7 +1410,7 @@
                 var data = readAddCard();
                 if (btn.dataset.addAction === 'copy'){
                   if (!data.source_schedule_id){
-                    toast('اختاري جدول سرعة محفوظ أولًا', 'error');
+                    toast('اختر جدول سرعة محفوظ أولًا', 'error');
                     return;
                   }
                   var src = presets.find(function(p){
@@ -1422,18 +1432,18 @@
                   hostSection.querySelectorAll('.sr2-add input[type="hidden"]').forEach(function(h){
                     h.dispatchEvent(new Event('change', { bubbles: true }));
                   });
-                  toast('تم نسخ القيم — راجعيها ثم اعتمدي القاعدة', 'ok');
+                  toast('تم نسخ القيم — راجعها ثم اعتمد القاعدة', 'ok');
                   return;
                 }
                 // manual
                 if (!data.starts_at_time || !data.ends_at_time){
-                  toast('أدخلي وقت البداية والنهاية', 'error');
+                  toast('أدخل وقت البداية والنهاية', 'error');
                   return;
                 }
                 var dKb = parseInt(data.speed_down_kbps, 10) || 0;
                 var uKb = parseInt(data.speed_up_kbps,   10) || 0;
                 if (dKb === 0 && uKb === 0 && data.restore_mode !== 'disconnect'){
-                  toast('أدخلي سرعة التنزيل أو الرفع (واحدة على الأقل)', 'error');
+                  toast('أدخل سرعة التنزيل أو الرفع (واحدة على الأقل)', 'error');
                   return;
                 }
                 appendPending(data);
@@ -1563,7 +1573,7 @@
                degrades gracefully (labels just won't persist). #}
             <input type="hidden" name="mac_lock_labels" value="{{ sub.mac_lock_labels or '' }}" data-mac-labels-hidden>
             <div class="uf-field">
-              <label>ماك ادرس <span class="hub-text-mute" style="font-weight:600">(مع اسم اختياري للجهاز)</span></label>
+              <label>عنوان <bdi>MAC</bdi> <span class="hub-text-mute" style="font-weight:600">(مع اسم اختياري للجهاز)</span></label>
               <div class="uf-mac-add uf-mac-add--labeled">
                 <span class="uf-net-input"><input class="hub-input" type="text" data-mac-input placeholder="AA:BB:CC:DD:EE:FF"><i class="fa-solid fa-laptop"></i></span>
                 <input class="hub-input" type="text" data-mac-label-input placeholder="اسم الجهاز (جوال، لابتوب…)" maxlength="40">
@@ -1587,10 +1597,10 @@
             </div>
             {% endif %}
           </div>
-          <div class="uf-field"><label>إيبي ادرس</label>
+          <div class="uf-field"><label>عنوان <bdi>IP</bdi> ثابت</label>
             <span class="uf-net-input"><input class="hub-input" type="text" name="static_ip" value="{{ sub.static_ip or '' }}" placeholder="10.0.0.5"><i class="fa-solid fa-laptop"></i></span>
             <div class="help">عنوان ثابت للمشترك عند الحاجة.</div></div>
-          <div class="uf-field"><label>إيبي الجهاز المرسل</label>
+          <div class="uf-field"><label>عنوان <bdi>IP</bdi> لجهاز الشبكة</label>
             <span class="uf-net-input"><input class="hub-input" type="text" name="nas_ip_address" value="{{ sub.nas_ip_address or '' }}" placeholder="10.0.0.1"><i class="fa-solid fa-laptop"></i></span>
             <div class="help">عنوان جهاز الشبكة الذي يرسل طلبات المصادقة.</div></div>
           <div class="uf-field"><label>اسم الخدمة</label>
@@ -1602,11 +1612,14 @@
 
           <div class="uf-subrow-3">
             <div class="uf-field"><label>خادم DNS الأساسي (PPP)</label>
-              <span class="uf-net-input"><input class="hub-input" type="text" name="primary_dns_ppp" value="{{ sub.primary_dns_ppp or '' }}" placeholder="1.1.1.1"><i class="fa-solid fa-laptop"></i></span></div>
+              <span class="uf-net-input"><input class="hub-input" type="text" name="primary_dns_ppp" value="{{ sub.primary_dns_ppp or '' }}" placeholder="1.1.1.1"><i class="fa-solid fa-laptop"></i></span>
+              <div class="help">خادم DNS يُرسل للمشترك عند الاتصال. فارغ = إعداد الجهاز.</div></div>
             <div class="uf-field"><label>خادم DNS الثانوي (PPP)</label>
-              <span class="uf-net-input"><input class="hub-input" type="text" name="secondary_dns_ppp" value="{{ sub.secondary_dns_ppp or '' }}" placeholder="8.8.8.8"><i class="fa-solid fa-laptop"></i></span></div>
+              <span class="uf-net-input"><input class="hub-input" type="text" name="secondary_dns_ppp" value="{{ sub.secondary_dns_ppp or '' }}" placeholder="8.8.8.8"><i class="fa-solid fa-laptop"></i></span>
+              <div class="help">خادم احتياطي يُستخدم إذا تعطّل الأساسي.</div></div>
             <div class="uf-field"><label>منفذ الاتصال للجهاز</label>
-              <span class="uf-net-input"><input class="hub-input" type="text" name="nas_port_id" value="{{ sub.nas_port_id or '' }}" placeholder="ether1 / wlan1"><i class="fa-solid fa-laptop"></i></span></div>
+              <span class="uf-net-input"><input class="hub-input" type="text" name="nas_port_id" value="{{ sub.nas_port_id or '' }}" placeholder="ether1 / wlan1"><i class="fa-solid fa-laptop"></i></span>
+              <div class="help">يقيّد دخول المشترك على منفذ معيّن في الراوتر.</div></div>
           </div>
 
           <input type="hidden" name="override_concurrent" value="{{ sub.override_concurrent or 0 }}">
@@ -1635,6 +1648,7 @@
           <div class="uf-field">
             <label>كلمة مرور البرودباند</label>
             <input class="hub-input" type="text" name="pppoe_password" value="{{ sub.pppoe_password or '' }}">
+            <div class="help">اتركها فارغة لاستخدام كلمة المرور الأساسية.</div>
           </div>
           <div class="uf-field">
             <label>عنوان البرودباند</label>
@@ -1659,21 +1673,29 @@
         </div>
         <div class="uf-grid">
           <div class="uf-field"><label>سلسلة فلترة الراوتر</label>
-            <input class="hub-input" type="text" name="mikrotik_filter_chain" value="{{ sub.mikrotik_filter_chain or '' }}" placeholder="forward / input"></div>
+            <input class="hub-input" type="text" name="mikrotik_filter_chain" value="{{ sub.mikrotik_filter_chain or '' }}" placeholder="forward / input">
+            <div class="help">تمرّر ترافيك المشترك عبر سلسلة Firewall محددة.</div></div>
           <div class="uf-field"><label>قائمة عناوين الراوتر</label>
-            <input class="hub-input" type="text" name="mikrotik_address_list" value="{{ sub.mikrotik_address_list or '' }}"></div>
+            <input class="hub-input" type="text" name="mikrotik_address_list" value="{{ sub.mikrotik_address_list or '' }}">
+            <div class="help">يضيف عنوان المشترك لقائمة Address-List في الراوتر.</div></div>
           <div class="uf-field"><label>مسار الراوتر الموجَّه</label>
-            <input class="hub-input" type="text" name="mikrotik_framed_route" value="{{ sub.mikrotik_framed_route or '' }}" placeholder="10.10.0.0/24 10.10.0.1"></div>
+            <input class="hub-input" type="text" name="mikrotik_framed_route" value="{{ sub.mikrotik_framed_route or '' }}" placeholder="10.10.0.0/24 10.10.0.1">
+            <div class="help">شبكة إضافية توجَّه خلف اتصال المشترك.</div></div>
           <div class="uf-field"><label>مجموعة مستخدم الراوتر</label>
-            <input class="hub-input" type="text" name="mikrotik_user_group" value="{{ sub.mikrotik_user_group or '' }}"></div>
+            <input class="hub-input" type="text" name="mikrotik_user_group" value="{{ sub.mikrotik_user_group or '' }}">
+            <div class="help">مجموعة صلاحيات Hotspot في الراوتر.</div></div>
           <div class="uf-field"><label>مجموعة إدارة الراوتر</label>
-            <input class="hub-input" type="text" name="mikrotik_winbox_group" value="{{ sub.mikrotik_winbox_group or '' }}"></div>
+            <input class="hub-input" type="text" name="mikrotik_winbox_group" value="{{ sub.mikrotik_winbox_group or '' }}">
+            <div class="help">صلاحيات دخول إدارية (Winbox) إن وجدت.</div></div>
           <div class="uf-field"><label>أولوية طابور السرعة</label>
-            <input class="hub-input" type="text" name="mikrotik_queue_priority" value="{{ sub.mikrotik_queue_priority or '' }}" placeholder="1..8"></div>
+            <input class="hub-input" type="text" name="mikrotik_queue_priority" value="{{ sub.mikrotik_queue_priority or '' }}" placeholder="1..8">
+            <div class="help">1 = أعلى أولوية عند ازدحام الشبكة.</div></div>
           <div class="uf-field"><label>نطاق عناوين الجلسات</label>
-            <input class="hub-input" type="text" name="framed_pool" value="{{ sub.framed_pool or '' }}"></div>
+            <input class="hub-input" type="text" name="framed_pool" value="{{ sub.framed_pool or '' }}">
+            <div class="help">اسم Pool يأخذ منه المشترك عنوانه.</div></div>
           <div class="uf-field"><label>فترة تحديث الاستهلاك (ث)</label>
-            <input class="hub-input" type="number" min="0" name="acct_interim_interval_sec" value="{{ sub.acct_interim_interval_sec or '' }}" placeholder="60"></div>
+            <input class="hub-input" type="number" min="0" name="acct_interim_interval_sec" value="{{ sub.acct_interim_interval_sec or '' }}" placeholder="60">
+            <div class="help">كل كم ثانية يبلّغ الراوتر عن استهلاك الجلسة.</div></div>
           <div class="uf-field full"><label>خصائص PPP إضافية</label>
             <textarea class="hub-textarea" name="ppp_attributes_extra" placeholder="خاصية=قيمة (سطر لكل واحدة)">{{ sub.ppp_attributes_extra or '' }}</textarea>
             <div class="help">سطر لكل خاصية.</div></div>

@@ -375,8 +375,9 @@ def card_marketplace():
         "radius/card_marketplace.html",
         packages=service.list_packages(limit=200),
         marketplace_plans=marketplace_plans,
-        purchases=_recent_electronic_purchases(_tid()),
         electronic_batches=electronic_batches,
+        # العدد الكلّي للحزم (لا المعروض فقط) حتى لا يضلّل عدّاد القسم حين تتجاوز 4
+        electronic_batches_total=len(all_electronic_batches),
         market_summary=_market_summary(all_electronic_batches),
         recent_purchases=recent,
         default_sale_mode=service._default_sale_mode(),
@@ -455,11 +456,14 @@ def card_marketplace_inventory_upload(package_id: int):
             flash(f"تم توليد {res['added']} بطاقة في مخزون الباقة.", "success")
     except (CardMarketplaceError, ValueError) as exc:
         flash(str(exc), "error")
+    # عند تنفيذ الإجراء من صفحة ملف العرض نعود إليها، وإلا نعود للسوق.
+    if (request.form.get("return_to") or "") == "file":
+        return redirect(url_for("radius.card_marketplace_package_file", package_id=package_id))
     return redirect(url_for("radius.card_marketplace"))
 
 
 def card_marketplace_package_file(package_id: int):
-    """Per-offer paginated purchases file."""
+    """ملف العرض: المبيعات مصفّحة + جدول بطاقات العرض الكامل (مخزون ومباع)."""
     try:
         page = int(request.args.get("page") or 1)
     except (TypeError, ValueError):
@@ -470,7 +474,14 @@ def card_marketplace_package_file(package_id: int):
     except (TypeError, ValueError):
         per_page = 20
     try:
+        cards_page = int(request.args.get("cards_page") or 1)
+    except (TypeError, ValueError):
+        cards_page = 1
+    try:
         data = _service().purchases_file(package_id, page=page, per_page=per_page)
+        # جدول بطاقات العرض الكامل — كل بطاقة مولّدة/مرفوعة داخل العرض
+        # بحالتها الدقيقة والمشتري إن بيعت (رؤية المستخدم المعتمدة).
+        data["offer_cards"] = _service().offer_cards(package_id, page=cards_page, per_page=20)
     except CardMarketplaceError as exc:
         flash(str(exc), "error")
         return redirect(url_for("radius.card_marketplace"))

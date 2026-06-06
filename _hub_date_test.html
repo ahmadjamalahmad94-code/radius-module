@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>اختبار hub_date — منتقي التاريخ العربي</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<!-- يحمّل قسم 21 (hbdate) مباشرة من ملف الموقع الحقيقي حتى يطابق الاختبار الإنتاج -->
+<link rel="stylesheet" href="app/static/css/hub_v2.css">
+<style>
+:root{
+  --hub-brand:#6B5AED; --hub-brand-ink:#2E1F8C;
+  --hub-border:#EEEDF3; --hub-border-soft:#F1F0F7;
+  --hub-text:#1F2937; --hub-text-soft:#475569; --hub-text-mute:#94A3B8;
+  --hub-bg-card:#fff; --hub-r-md:10px;
+}
+body{font-family:'Cairo',sans-serif;background:#F7F6FB;padding:32px;color:#1F2937}
+h1{font-size:18px} h2{font-size:14px;margin:28px 0 10px;color:#2E1F8C}
+.case{background:#fff;border:1px solid #EEEDF3;border-radius:14px;padding:18px;margin-bottom:14px;
+      box-shadow:0 2px 8px rgba(15,23,42,.04)}
+label{display:block;font-size:12px;font-weight:800;margin-bottom:6px;color:#475569}
+.row{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end}
+.out{margin-top:10px;font-size:12px;background:#F8F7FD;border-radius:8px;padding:8px 12px;
+     direction:ltr;text-align:left;font-family:monospace;color:#5B4BD8;min-height:18px}
+button.demo{font-family:inherit;font-size:12.5px;font-weight:800;border:0;border-radius:9px;
+       background:#6B5AED;color:#fff;padding:9px 16px;cursor:pointer}
+dialog{border:0;border-radius:16px;padding:24px;box-shadow:0 20px 60px rgba(15,23,42,.25);min-width:380px}
+dialog::backdrop{background:rgba(15,23,42,.45)}
+/* صندوق تمرير لاختبار الإغلاق عند التمرير + أن اللوحة portal لا تُقص */
+.scrollbox{height:140px;overflow:auto;border:1px dashed #C9CBD6;border-radius:10px;padding:14px}
+.scrollbox .filler{height:240px}
+</style>
+</head>
+<body>
+<h1><i class="fa-regular fa-calendar" style="color:#6B5AED"></i> اختبار hub_date.js — منتقي التاريخ العربي</h1>
+<p style="font-size:12.5px;color:#94A3B8">
+  كل حالة تطبع قيمة الحقل الأصلية (ISO) عند كل change — تأكد أنها yyyy-mm-dd دائمًا.
+  افتح هذا الملف من جذر المشروع حتى يجد <code dir="ltr">app/static/css/hub_v2.css</code>
+  و<code dir="ltr">app/static/js/hub_date.js</code>.
+</p>
+
+<div class="case">
+  <h2>1) حقل تاريخ عادي (داخل فورم GET — يظهر بالـ query عند الإرسال)</h2>
+  <form method="get">
+    <div class="row">
+      <div><label>من تاريخ</label><input type="date" name="from" value="2026-06-05"></div>
+      <div><label>إلى تاريخ (فارغ)</label><input type="date" name="to"></div>
+      <button class="demo" type="submit">إرسال الفورم</button>
+    </div>
+  </form>
+  <div class="out" data-watch="from,to"></div>
+</div>
+
+<div class="case">
+  <h2>2) min / max — الأيام خارج 2026-06-03 → 2026-06-20 معطّلة</h2>
+  <div class="row">
+    <div><label>تاريخ مقيّد</label>
+      <input type="date" id="minmax" min="2026-06-03" max="2026-06-20" required></div>
+  </div>
+  <div class="out" data-watch="minmax"></div>
+</div>
+
+<div class="case">
+  <h2>3) datetime-local — صف الوقت داخل اللوحة + زر «تم»</h2>
+  <div class="row">
+    <div><label>تاريخ ووقت</label><input type="datetime-local" id="dtl" value="2026-06-05T14:30"></div>
+  </div>
+  <div class="out" data-watch="dtl"></div>
+</div>
+
+<div class="case">
+  <h2>4) داخل &lt;dialog&gt; أصلي (top-layer) — اللوحة يجب أن تظهر فوق المودال</h2>
+  <button class="demo" onclick="document.getElementById('dlg').showModal()">فتح المودال</button>
+  <dialog id="dlg">
+    <h2 style="margin-top:0">مودال لقطة (محاكاة السنابشوت)</h2>
+    <div class="row">
+      <div><label>تاريخ داخل المودال</label><input type="date" id="indlg"></div>
+      <div><label>وقت داخل المودال</label><input type="datetime-local" id="indlg2"></div>
+    </div>
+    <div class="out" data-watch="indlg,indlg2"></div>
+    <p style="text-align:left;margin-bottom:0">
+      <button class="demo" onclick="document.getElementById('dlg').close()">إغلاق</button>
+    </p>
+  </dialog>
+</div>
+
+<div class="case">
+  <h2>5) حقل مُضاف ديناميكيًا بعد ثانيتين (MutationObserver)</h2>
+  <div class="row" id="dyn-host"><span style="font-size:12px;color:#94A3B8">…ينتظر الإضافة</span></div>
+  <div class="out" data-watch="dyn"></div>
+</div>
+
+<div class="case">
+  <h2>6) data-native-date — يبقى على تقويم المتصفح الأصلي (مخرج الاستثناء)</h2>
+  <div class="row"><div><label>أصلي مقصودًا</label><input type="date" data-native-date></div></div>
+</div>
+
+<div class="case">
+  <h2>7) داخل صندوق تمرير — التمرير خارج اللوحة يغلقها، وقصّ overflow لا يقص اللوحة (portal)</h2>
+  <div class="scrollbox">
+    <div><label>تاريخ داخل scroll</label><input type="date" id="inscroll"></div>
+    <div class="filler"></div>
+  </div>
+</div>
+
+<!-- نفس ملف الموقع الحقيقي — لا نسخة منفصلة -->
+<script src="app/static/js/hub_date.js"></script>
+<script>
+// مراقبة القيم: كل out يطبع قيم الحقول التي يراقبها عند أي change/input
+(function(){
+  function refresh(){
+    document.querySelectorAll('.out[data-watch]').forEach(function(o){
+      o.textContent = o.getAttribute('data-watch').split(',').map(function(id){
+        var el = document.getElementById(id) || document.querySelector('[name="'+id+'"]');
+        return id + ' = "' + (el ? el.value : '?') + '"';
+      }).join('   |   ');
+    });
+  }
+  document.addEventListener('change', refresh, true);
+  document.addEventListener('input', refresh, true);
+  refresh();
+  // الحقل الديناميكي
+  setTimeout(function(){
+    var host = document.getElementById('dyn-host');
+    host.innerHTML = '<div><label>أُضيف الآن</label><input type="date" id="dyn" min="2026-01-01"></div>';
+    setTimeout(refresh, 100);
+  }, 2000);
+})();
+</script>
+</body>
+</html>

@@ -1,9 +1,9 @@
-"""C6 — RouterOS v6 tunnel strategy UI in the add-router wizard.
+"""C6 — RouterOS v6 wizard UI.
 
-The add form surfaces, for v6 routers, the SSTP management card (recommended,
-management-only, no default route) and the advanced L2TP/IPsec traffic
-section (off by default, full-tunnel needs explicit confirmation). WireGuard
-is the v7 path. UI-only — the create handler is unchanged.
+أُزيل من لوحة العميل — يُعاد مركزياً عبر لوحة التراخيص (قرار معماري):
+كانت بطاقة نفق الإدارة SSTP + قسم نفق تغيير العنوان المدفوع تظهران لراوتر
+v6 في معالج الإضافة. حُذفت؛ يبقى هنا حارس انحدار يؤكد غيابها + اختبار
+إنشاء v7 العادي (مسار WireGuard لم يُمَسّ).
 """
 from __future__ import annotations
 
@@ -43,25 +43,19 @@ def _auth(client):
         sess["_csrf_token"] = "v6-csrf"
 
 
-def test_add_form_renders_v6_tunnel_strategy(app):
+def test_add_form_no_longer_renders_v6_tunnel_strategy(app):
+    """حارس انحدار: لا أثر لقسم أنفاق v6 (SSTP/الترافيك) في معالج الإضافة."""
     with app.test_client() as client:
         _auth(client)
         html = client.get("/admin/radius/mt/setup").get_data(as_text=True)
-    # SSTP management card (recommended, management-only, no default route)
-    assert "نفق الإدارة الموصى به" in html
-    assert "موصى به للإدارة" in html
-    assert "لن يتم ضبط المسار الافتراضي على نفق الإدارة" in html
-    assert 'name="sstp_verify_certificate"' in html
-    # L2TP/IPsec advanced traffic section
-    assert "نفق تغيير العنوان وتمرير الحركة" in html
-    assert "متقدم" in html
-    assert 'name="traffic_mode"' in html
-    assert 'name="full_tunnel_confirmed"' in html
-    assert "أفهم أن تمرير كل الحركة قد يسبب انقطاعًا" in html
-    # routing conflict warning
-    assert "لا يمكن جعل نفق الإدارة ونفق الحركة يملكان مسارًا افتراضيًا في الوقت نفسه" in html
-    # v6 block is hidden by default (v7 is the default selection)
-    assert "data-mt-v6-tunnels" in html
+    assert "نفق الإدارة الموصى به" not in html
+    assert "نفق تغيير العنوان وتمرير الحركة" not in html
+    assert 'name="sstp_verify_certificate"' not in html
+    assert 'name="traffic_mode"' not in html
+    assert 'name="full_tunnel_confirmed"' not in html
+    assert "data-mt-v6-tunnels" not in html
+    # المعالج الأساسي يبقى يعمل (حقول الهوية + اختيار الإصدار).
+    assert 'name="ros_version"' in html
 
 
 def test_create_handler_still_accepts_v7_without_tunnel_fields(app):

@@ -1,0 +1,35 @@
+{# ══════════════════════════════════════════════════════════════════════
+   «انتقال سريع» — متحكّم واحد مضغوط (42px) يحلّ محل شريطي التبويب
+   الكبيرين اللذين كانا يلتهمان رأس كل صفحة تقارير.
+
+   عنصر <select> عادي يحوّله hub_select.js تلقائيًا إلى hbsel (زر + لوحة
+   عائمة بنمط الموقع) — التغيير يقفز مباشرة للصفحة المختارة، والصفحة
+   الحالية مُحدَّدة مسبقًا فيظهر اسمها على الزر.
+
+   المدخلات (تُضبط قبل include — عبر reports_nav.html / events_nav.html):
+     • jump_items : قائمة قواميس {label, url, current}
+     • jump_testid: معرّف الاختبار للغلاف (reports-nav / events-nav …)
+     • jump_label : نص الملصق الصغير (افتراضيًا «انتقال سريع»)
+   ══════════════════════════════════════════════════════════════════════ #}
+<style>
+.report-jump{display:inline-flex;align-items:center;gap:8px;min-height:42px}
+.report-jump-tag{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;
+  font-weight:800;color:var(--hub-text-soft,#64748b);white-space:nowrap}
+.report-jump-tag i{font-size:11px;color:var(--hub-brand,#6B5AED)}
+/* قبل ترقية hub_select.js: select أصلي أنيق بنفس الارتفاع — لا وميض تخطيط */
+.report-jump select.report-jump-select{min-height:42px;min-width:210px;
+  border:1px solid var(--hub-border,#e2e8f0);border-radius:12px;
+  background:#fff;color:var(--hub-text,#0f172a);font-weight:800;
+  font-size:12.5px;padding:0 12px}
+/* بعد الترقية: غلاف hbsel يرث الحد الأدنى للعرض حتى لا ينكمش الزر */
+.report-jump .hbsel{min-width:210px}
+</style>
+<div class="report-jump" data-testid="{{ jump_testid or 'report-jump' }}">
+  <span class="report-jump-tag"><i class="fa-solid fa-shuffle"></i> {{ jump_label or 'انتقال سريع' }}</span>
+  <select class="report-jump-select" aria-label="{{ jump_label or 'انتقال سريع' }} بين صفحات القسم"
+          onchange="if(this.value && this.value !== window.location.pathname + window.location.search){window.location = this.value}">
+    {%- for it in jump_items %}
+    <option value="{{ it.url }}"{% if it.current %} selected{% endif %}>{{ it.label }}</option>
+    {%- endfor %}
+  </select>
+</div>

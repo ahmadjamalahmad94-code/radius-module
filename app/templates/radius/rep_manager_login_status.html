@@ -1,9 +1,12 @@
 {# ═══════════════════════════════════════════════════════════════════════
-   حالة دخول المدراء — UNIFIED DESIGN SYSTEM (megahero + worklayout + help).
-
-   نفس بيانات الـ backend: `items` (صفوف admins فيها username, full_name,
-   email, role_id, enabled, last_login_at, created_at) و `filters`.
-   صفر تغيير في المسار/السلوك.
+   حالة دخول المدراء — إعادة تصميم قوية من الصفر على نظام hub_v2:
+     • صدفة هيرو واحدة (hub-hero-shell): عنوان + سطر تعريفي إنساني +
+       4 مؤشرات بصف واحد + حزام الفلترة 42px — بلا أي هيروات مكدّسة.
+     • جدول uds موحّد (فرز + ترقيم + تصدير) بأعمدة موسّطة تحت رؤوسها،
+       الدور معرّب (roles.display_name) واليوزر/البريد بخط أحادي <bdi>.
+     • معطيات المسار: `items` (مدراء مع username/full_name/email/role_id/
+       role_name/is_super_admin/enabled/last_login_at/created_at)
+       و `filters` (q) — عقد الفلاتر GET كما هو بلا أي تغيير.
    ═══════════════════════════════════════════════════════════════════════ #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
@@ -13,91 +16,121 @@
 {% block page_title %}حالة دخول المدراء{% endblock %}
 {% block page_sub %}<span class="sub">{{ items|length }} مدير</span>{% endblock %}
 
-{% block content %}
-{% include "radius/reports_nav.html" %}
+{% block head_extra %}{{ super() }}
+{# نظام الجداول الموحد (uds): فرز + ترقيم صفحات + تصدير لجدول المدراء #}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
+{% endblock %}
 
-{# ───── Merged hero: title + subtitle + KPI strip + integrated filters ───── #}
-{% set _active = items|selectattr('enabled')|list|length %}
+{% block content %}
+{# متحكّم «انتقال سريع» المضغوط — يُحقن في صف عنوان الهيرو بدل الشريطين الكبيرين #}
+{% set _report_jump %}{% include "radius/reports_nav.html" %}{% endset %}
+
+{# ── مؤشرات مشتقة من نفس `items` (بلا أي استعلام إضافي) ── #}
+{% set _active   = items|selectattr('enabled')|list|length %}
+{% set _disabled = items|length - _active %}
+{% set _never    = items|rejectattr('last_login_at')|list|length %}
+
+{# ── توسيط موحّد لجدول المدراء: الرؤوس والخلايا تحت أسمائها تمامًا ── #}
+<style>
+.hub-table.rep-table thead th,
+.hub-table.rep-table tbody td{ text-align:center !important; }
+</style>
+
+{# ───── صدفة الهيرو الواحدة: عنوان + سطر تعريفي + مؤشرات بصف واحد + حزام الفلترة ───── #}
+<section class="hub-hero-shell" data-testid="manager-login-status-hero">
 {% call hub.megahero(
   "حالة دخول المدراء",
-  subtitle="آخر دخول لكل مدير في النظام — مرتّبة تنازليًا.",
+  subtitle="من يدير النظام فعليًا؟ كل حساب مدير مع دوره وحالته وآخر مرة دخل فيها — مرتّبة من الأحدث دخولًا.",
   icon="user-clock",
+  actions_html=_report_jump,
   kpis=[
-    {'label': 'الإجمالي', 'value': items|length,        'icon': 'users-gear',   'variant': 'brand'},
-    {'label': 'مفعَّلون', 'value': _active,             'icon': 'circle-check', 'variant': 'green'},
-    {'label': 'معطَّلون', 'value': items|length - _active, 'icon': 'circle-pause', 'variant': 'red'},
+    {'label': 'إجمالي المدراء',  'value': items|length, 'icon': 'users-gear',     'variant': 'brand'},
+    {'label': 'مفعَّلون',         'value': _active,       'icon': 'circle-check',   'variant': 'green'},
+    {'label': 'معطَّلون',         'value': _disabled,     'icon': 'circle-pause',   'variant': 'red'},
+    {'label': 'لم يدخلوا قط',    'value': _never,        'icon': 'user-clock',     'variant': 'amber'},
   ],
   search_action=url_for('radius.rep_manager_login_status')
 ) %}
   <input class="hub-input grow" type="text" name="q"
          value="{{ filters.q if filters else '' }}"
-         placeholder="بحث (مدير)…">
+         placeholder="بحث (اسم المدير / اليوزر / البريد)…">
   {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
   {% if filters and filters.q %}
-    {{ hub.btn("مسح", icon="rotate-left", variant="ghost", size="sm",
+    {{ hub.btn("إعادة ضبط", icon="rotate-left", variant="ghost", size="sm",
                attrs='onclick="window.location=' + "'" + url_for('radius.rep_manager_login_status') + "'" + '"') }}
   {% endif %}
+  <span class="hub-hint" tabindex="0"
+        data-hint="البحث يطابق اليوزر أو الاسم الكامل أو البريد الإلكتروني. الترتيب من الأحدث دخولًا للأقدم، ومن لم يدخل قط يظهر في النهاية. البيانات للقراءة فقط من جدول المدراء."><i class="fa-solid fa-info"></i></span>
 {% endcall %}
+</section>{# /hub-hero-shell #}
 
 {% if items %}
-{# ───── Main (carded table) + help panel on the LEFT ───── #}
-{% call hub.worklayout(aside_html=hub.helppanel(
-  "كيف تقرأ هذا التقرير؟",
-  intro="كل صف هو حساب مدير في النظام — مرتّبًا حسب آخر دخول تنازليًا.",
-  items=[
-    {'icon': 'right-to-bracket', 'text': '«آخر دخول» هو آخر مرة سجّل فيها المدير دخوله للنظام.'},
-    {'icon': 'circle-check',     'text': 'الحالة «مفعَّل» تعني أن الحساب نشط ويمكنه الدخول.'},
-    {'icon': 'circle-pause',     'text': 'الحالة «معطَّل» تعني أن الحساب موقوف عن الدخول.'},
-    {'icon': 'calendar-plus',    'text': '«أُنشئ في» هو تاريخ إنشاء حساب المدير.'},
-  ],
-  note="هذا التقرير للقراءة فقط — البيانات تأتي مباشرة من جدول المدراء admins."
-)) %}
-  {% call hub.section("المدراء", icon="table-list",
-                      meta=items|length|string + " صف", flush=True) %}
-    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25"
-         style="border:none;border-radius:0">
-      <table class="hub-table">
-        <thead>
-          <tr>
-            <th class="num" style="width:60px" data-uds-nosort>#</th>
-            <th>اليوزر</th>
-            <th>الاسم</th>
-            <th>البريد</th>
-            <th data-uds-nosort>الحالة</th>
-            <th>آخر دخول</th>
-            <th>أُنشئ في</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for r in items %}
-          <tr>
-            <td class="num mono">{{ r.id }}</td>
-            <td class="mono"><strong>{{ r.username }}</strong></td>
-            <td>{{ r.full_name or '—' }}</td>
-            <td class="mono small">{{ r.email or '—' }}</td>
-            <td>
-              {% if r.enabled %}{{ hub.pill("مفعَّل", variant="green") }}
-              {% else %}{{ hub.pill("معطَّل", variant="red") }}{% endif %}
-            </td>
-            {% set _ll = r.last_login_at %}
-            <td class="mono"
-                style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
-              {% if _ll %}<span class="rep-primary">{{ _ll[:10] }}</span><span class="rep-sub">{{ _ll[11:16] }}</span>
-              {% else %}<span class="rep-sub">لم يدخل</span>{% endif %}
-            </td>
-            <td class="mono"
-                style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
-              {{ r.created_at[:10] if r.created_at else '—' }}
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  {% endcall %}
+{# ───── جدول المدراء — uds موحّد (فرز + ترقيم + تصدير) ───── #}
+{% call hub.section("حسابات المدراء", icon="table-list",
+                    meta=items|length|string + " حساب", flush=True) %}
+  <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25"
+       style="border:none;border-radius:0">
+    <table class="hub-table rep-table">
+      <thead>
+        <tr>
+          <th class="num" style="width:60px" data-uds-nosort>الرقم</th>
+          <th>المدير</th>
+          <th>الدور</th>
+          <th>البريد الإلكتروني</th>
+          <th data-uds-nosort>الحالة</th>
+          <th>آخر دخول</th>
+          <th>أُنشئ في</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in items %}
+        <tr class="{{ '' if r.enabled else 'is-fail' }}">
+          <td class="num mono"><bdi>#{{ r.id }}</bdi></td>
+          {# الاسم الكامل أساسيًا واليوزر سطرًا فرعيًا بخط أحادي #}
+          <td>
+            <span class="rep-primary">{{ r.full_name or r.username }}</span>
+            <span class="rep-sub rep-mono"><bdi>{{ r.username }}</bdi></span>
+          </td>
+          {# الدور: «مدير عام» للسوبر، وإلا اسم الدور من جدول الأدوار — والمعرّف الخام في title #}
+          <td>
+            {% if r.is_super_admin %}
+              <span title="super_admin">{{ hub.pill("مدير عام", variant="brand") }}</span>
+            {% elif r.role_name %}
+              <span title="role_id: {{ r.role_id }}">{{ hub.pill(r.role_name, variant="blue") }}</span>
+            {% else %}<span class="rep-muted">بدون دور</span>{% endif %}
+          </td>
+          <td class="rep-mono small">
+            {% if r.email %}<bdi>{{ r.email }}</bdi>
+            {% else %}<span class="rep-muted">—</span>{% endif %}
+          </td>
+          <td>
+            {% if r.enabled %}{{ hub.pill("مفعَّل", variant="green") }}
+            {% else %}{{ hub.pill("معطَّل", variant="red") }}{% endif %}
+          </td>
+          {% set _ll = r.last_login_at|dt_local if r.last_login_at else '' %}
+          <td class="rep-mono"
+              style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
+            {% if _ll %}<span class="rep-primary">{{ _ll[:10] }}</span><span class="rep-sub">{{ _ll[11:16] }}</span>
+            {% else %}<span class="rep-sub">لم يدخل قط</span>{% endif %}
+          </td>
+          <td class="rep-mono"
+              style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
+            {{ r.created_at|date_local if r.created_at else '—' }}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 {% endcall %}
 {% else %}
-{{ hub.empty("لا مدراء بعد",
-   sub="غيّر البحث أو لا يوجد مدراء بعد.", icon="user-clock") }}
+{{ hub.empty(
+  "لا مدراء مطابقين",
+  sub="غيّر كلمة البحث — أو لم تُنشأ حسابات مدراء بعد لتظهر هنا.",
+  icon="user-clock"
+) }}
 {% endif %}
+
+{# نظام الجداول الموحد: فرز + ترقيم صفحات + تصدير #}
+<script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
 {% endblock %}

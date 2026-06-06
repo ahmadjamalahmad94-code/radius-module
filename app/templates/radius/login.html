@@ -3,15 +3,17 @@
    white card, icon-prefixed fields, password reveal toggle). Same
    Cairo + violet tokens used app-wide. #}
 <!doctype html>
-<html lang="ar" dir="rtl">
+<html lang="{{ get_locale() }}" dir="{{ text_dir }}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#5b21b6">
-  <title>تسجيل الدخول — لوحة Hobe Hub</title>
+  <title>{{ _('تسجيل الدخول — لوحة Hobe Hub') }}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap">
+  {# خط Inter اللاتيني للإنجليزية بجانب Cairo العربي #}
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <style>
     :root{
@@ -48,6 +50,10 @@
       display:grid;place-items:center;
       padding:24px;
       font-feature-settings:"ss01","tnum";
+    }
+    /* عند الإنجليزية (ltr) نستبدل الخط بـ Inter اللاتيني */
+    html[dir="ltr"] body{
+      font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
     }
 
     /* ── Card shell — 2-column split ────────────────── */
@@ -215,22 +221,22 @@
       <div class="brand-mark">HR</div>
 
       <div class="brand-head">
-        <h1>أهلًا بعودتك إلى Hobe Hub</h1>
-        <p>إدارة كاملة لخدمات المصادقة والمشتركين والكروت والشبكة من مكان واحد. كل عملية تُسجَّل في سجل التدقيق وتتم بأمان.</p>
+        <h1>{{ _('أهلًا بعودتك إلى Hobe Hub') }}</h1>
+        <p>{{ _('إدارة كاملة لخدمات المصادقة والمشتركين والكروت والشبكة من مكان واحد. كل عملية تُسجَّل في سجل التدقيق وتتم بأمان.') }}</p>
       </div>
 
       <ul class="brand-list">
-        <li><i class="fa-solid fa-users"></i> إدارة المشتركين والكروت</li>
-        <li><i class="fa-solid fa-network-wired"></i> تحكّم الراوترات والشبكة</li>
-        <li><i class="fa-solid fa-shield-halved"></i> ضوابط أمان وسجلّات تدقيق</li>
-        <li><i class="fa-solid fa-chart-line"></i> تقارير ومتابعة لحظية</li>
+        <li><i class="fa-solid fa-users"></i> {{ _('إدارة المشتركين والكروت') }}</li>
+        <li><i class="fa-solid fa-network-wired"></i> {{ _('تحكّم الراوترات والشبكة') }}</li>
+        <li><i class="fa-solid fa-shield-halved"></i> {{ _('ضوابط أمان وسجلّات تدقيق') }}</li>
+        <li><i class="fa-solid fa-chart-line"></i> {{ _('تقارير ومتابعة لحظية') }}</li>
       </ul>
     </aside>
 
     <section class="form-side">
       <div class="form-head">
-        <h2>تسجيل الدخول</h2>
-        <p>أدخل بيانات حساب الإدارة للوصول إلى لوحة التحكم.</p>
+        <h2>{{ _('تسجيل الدخول') }}</h2>
+        <p>{{ _('أدخل بيانات حساب الإدارة للوصول إلى لوحة التحكم.') }}</p>
       </div>
 
       {% with messages = get_flashed_messages(with_categories=true) %}
@@ -252,24 +258,24 @@
       <form method="post" action="{{ url_for('radius.auth_login') }}" style="display:grid;gap:14px">
 
         <div class="field">
-          <label for="lg-user">اسم المستخدم</label>
+          <label for="lg-user">{{ _('اسم المستخدم') }}</label>
           <div class="field-wrap">
             <i class="fa-solid fa-user"></i>
             <input id="lg-user" type="text" name="username"
                    value="{{ username or '' }}" required autofocus
                    autocomplete="username"
-                   placeholder="مثال: admin">
+                   placeholder="{{ _('مثال: admin') }}">
           </div>
         </div>
 
         <div class="field">
-          <label for="lg-pwd">كلمة المرور</label>
+          <label for="lg-pwd">{{ _('كلمة المرور') }}</label>
           <div class="field-wrap">
             <i class="fa-solid fa-lock"></i>
             <input id="lg-pwd" type="password" name="password" required
                    autocomplete="current-password"
                    placeholder="••••••••">
-            <button type="button" class="pwd-toggle" aria-label="إظهار كلمة المرور"
+            <button type="button" class="pwd-toggle" aria-label="{{ _('إظهار كلمة المرور') }}"
                     onclick="(function(b){var i=document.getElementById('lg-pwd');var on=i.type==='password';i.type=on?'text':'password';var ico=b.querySelector('i');if(ico){ico.classList.toggle('fa-eye',on);ico.classList.toggle('fa-eye-slash',!on);}})(this)">
               <i class="fa-solid fa-eye"></i>
             </button>
@@ -278,11 +284,11 @@
 
         <button class="submit-btn" type="submit">
           <i class="fa-solid fa-right-to-bracket"></i>
-          <span>دخول</span>
+          <span>{{ _('دخول') }}</span>
         </button>
 
         <div class="form-foot">
-          استخدم بيانات المدير التي أنشأتها عند التثبيت.
+          {{ _('استخدم بيانات المدير التي أنشأتها عند التثبيت.') }}
         </div>
       </form>
     </section>

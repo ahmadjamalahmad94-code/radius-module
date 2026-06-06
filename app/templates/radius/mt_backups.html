@@ -23,7 +23,13 @@
 <section class="mt-dashboard" data-mt-backups-page
          data-mt-backups-router-id="{{ nas.id }}">
 
-{# ───── Merged hero: title + subtitle + save-backup action + KPI strip ───── #}
+{# ───── Merged hero: title + subtitle + save-backup action + KPI strip ─────
+   ملاحظة على actions_html أدناه: يُبنى النموذج كسلسلة نصية ويُمرَّر إلى
+   megahero الذي يطبّق عليها |safe. مهم: لا نخلط كائن Markup (مثل
+   csrf_token_input()) داخل سلسلة الدمج «~»، لأن دمج Markup مع نصوص عادية
+   يُهرّب النصوص العادية فيظهر وسم <form> كنص خام مكشوف. لذا نُدرج رمز CSRF
+   كنص عادي عبر القيمة csrf_token() داخل <input> مكتوب يدويًا — فتبقى كل
+   الأجزاء نصًّا عاديًا ويُرندَر النموذج سليمًا. #}
 {% call hub.megahero(
   "النسخ الاحتياطية — " ~ nas.name,
   subtitle="حفظ نسخة من إعدادات الراوتر وفحص ملفات الاستعادة بأمان دون تنفيذ تغيير مباشر.",
@@ -31,7 +37,7 @@
   actions_html=(
     '<form method="post" action="' ~ url_for('radius.mt_backups_save', nas_id=nas.id) ~ '"'
       ~ ' class="mt-program-apply-form" data-mt-backups-save-form data-mt-backups-save-card style="display:inline;margin:0">'
-    ~ (csrf_token_input() | string if csrf_token_input is defined else '')
+    ~ '<input type="hidden" name="_csrf_token" value="' ~ (csrf_token() if csrf_token is defined else '') ~ '">'
     ~ '<button type="submit" class="hub-btn hub-btn--primary" data-mt-backups-save-submit>'
       ~ '<i class="fa-solid fa-floppy-disk"></i> حفظ نسخة جديدة</button></form>'
   ),

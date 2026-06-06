@@ -1,4 +1,5 @@
-{# غرفة عمليات الراوترات: قائمة موحّدة للأجهزة المدارة. #}
+{# غرفة عمليات الراوترات: قائمة موحّدة للأجهزة المدارة — صدفة هيرو واحدة
+   (عنوان + إجراءات + حزام صحة الأسطول) ثم جدول الأسطول النظيف. #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
@@ -16,9 +17,15 @@
    input[name=csrf_token]. #}
 {{ csrf_token_input() | safe }}
 
+{% set _enabled  = items|selectattr('enabled')|list|length %}
+{% set _disabled = items|length - _enabled %}
+
+{# ───── صدفة الهيرو الواحدة: العنوان + إجراءات الأسطول + حزام الصحة ─────
+   لا أقسام مكدّسة بعد اليوم — الهيرو وKPI الأسطول كتلة واحدة. #}
+<div class="hub-hero-shell">
 {{ hub.megahero(
   "إدارة الراوترات",
-  subtitle="كل الراوترات المُدارة عبر هوبي راديوس في مكان واحد — التجهيز، الصحة الحية، وخدمات كل راوتر. افتح خدمات الراوتر للوصول لبوابة الدخول والبرودباند وحجب أو فتح المواقع.",
+  subtitle="غرفة عمليات الأسطول: التجهيز، الصحة الحية، وخدمات كل راوتر في مكان واحد. افتح «خدمات» لأي راوتر للوصول لبوابة الدخول والبرودباند وحجب أو فتح المواقع.",
   icon="network-wired",
   actions_html='
     <a class="hub-btn hub-btn--primary" href="' + url_for('radius.mt_setup_form') + '">
@@ -28,12 +35,60 @@
             title="إعادة تخصيص عناوين خدمة الربط لمحاولات التجهيز المنتهية الصلاحية">
       <i class="fa-solid fa-recycle"></i> إعادة تخصيص العناوين
     </button>
-    <button type="button" class="hub-btn hub-btn--danger" data-mt-emergency-reset
+    <button type="button" class="hub-btn hub-btn--danger hub-btn--sm" data-mt-emergency-reset
             title="تفريغ كل سجلات تجهيز الراوترات والبدء من الصفر. للحالات الحرجة فقط.">
       <i class="fa-solid fa-triangle-exclamation"></i> تفريغ طوارئ
     </button>
   '
 ) }}
+{% if items %}
+{# حزام صحة الأسطول مدمج داخل الصدفة: الأرقام الأساسية من قاعدة البيانات،
+   والحالة الحية تُحدّثها الجافاسكربت. #}
+<div class="hub-kpi-grid" data-mt-fleet-summary>
+  {{ hub.kpi("الإجمالي",  items|length, icon="server", variant="brand") }}
+  <div class="hub-kpi hub-kpi--green" data-mt-fleet="connected">
+    <span class="hub-kpi-icon"><i class="fa-solid fa-circle-check"></i></span>
+    <div class="hub-kpi-body">
+      <div class="hub-kpi-label">متصل</div>
+      <div class="hub-kpi-value" data-mt-fleet-value>—</div>
+      <div class="hub-kpi-sub">تجاوب تام من واجهة الربط</div>
+    </div>
+  </div>
+  <div class="hub-kpi hub-kpi--red" data-mt-fleet="unreachable">
+    <span class="hub-kpi-icon"><i class="fa-solid fa-circle-xmark"></i></span>
+    <div class="hub-kpi-body">
+      <div class="hub-kpi-label">غير متصل</div>
+      <div class="hub-kpi-value" data-mt-fleet-value>—</div>
+      <div class="hub-kpi-sub">انتهت المهلة أو لا يرد</div>
+    </div>
+  </div>
+  <div class="hub-kpi hub-kpi--amber" data-mt-fleet="partial">
+    <span class="hub-kpi-icon"><i class="fa-solid fa-circle-half-stroke"></i></span>
+    <div class="hub-kpi-body">
+      <div class="hub-kpi-label">جزئي</div>
+      <div class="hub-kpi-value" data-mt-fleet-value>—</div>
+      <div class="hub-kpi-sub">بعض المؤشرات فقط</div>
+    </div>
+  </div>
+  <div class="hub-kpi hub-kpi--amber" data-mt-fleet="provisioning">
+    <span class="hub-kpi-icon"><i class="fa-solid fa-screwdriver-wrench"></i></span>
+    <div class="hub-kpi-body">
+      <div class="hub-kpi-label">قيد التجهيز</div>
+      <div class="hub-kpi-value">{{ provisioning_count }}</div>
+      <div class="hub-kpi-sub">لم يكتمل الإعداد بعد</div>
+    </div>
+  </div>
+  <div class="hub-kpi hub-kpi--grey" data-mt-fleet="disabled">
+    <span class="hub-kpi-icon"><i class="fa-solid fa-power-off"></i></span>
+    <div class="hub-kpi-body">
+      <div class="hub-kpi-label">معطَّل</div>
+      <div class="hub-kpi-value">{{ _disabled }}</div>
+      <div class="hub-kpi-sub">إداريًا مغلق</div>
+    </div>
+  </div>
+</div>
+{% endif %}
+</div>{# /hub-hero-shell #}
 
 {# ─── Emergency reset modal (migrated from setup-wizard/fleet) ───
    The backend endpoints still live under /admin/radius/setup-wizard/
@@ -79,98 +134,19 @@
 </div>
 
 {% if items %}
-{% set _enabled  = items|selectattr('enabled')|list|length %}
-{% set _disabled = items|length - _enabled %}
-{# ملخص صحة الأسطول: الأرقام الأساسية من قاعدة البيانات، والحالة الحية تُحدّثها الجافاسكربت. #}
-{% call hub.section("صحة الأسطول", icon="heart-pulse", meta=items|length|string + " راوتر") %}
-<div class="hub-kpi-grid" data-mt-fleet-summary>
-  {{ hub.kpi("الإجمالي",  items|length, icon="server", variant="brand") }}
-  <div class="hub-kpi hub-kpi--green" data-mt-fleet="connected">
-    <span class="hub-kpi-icon"><i class="fa-solid fa-circle-check"></i></span>
-    <div class="hub-kpi-body">
-      <div class="hub-kpi-label">متصل</div>
-      <div class="hub-kpi-value" data-mt-fleet-value>—</div>
-      <div class="hub-kpi-sub">تجاوب تام من واجهة الربط</div>
-    </div>
-  </div>
-  <div class="hub-kpi hub-kpi--red" data-mt-fleet="unreachable">
-    <span class="hub-kpi-icon"><i class="fa-solid fa-circle-xmark"></i></span>
-    <div class="hub-kpi-body">
-      <div class="hub-kpi-label">غير متصل</div>
-      <div class="hub-kpi-value" data-mt-fleet-value>—</div>
-      <div class="hub-kpi-sub">انتهت المهلة أو لا يرد</div>
-    </div>
-  </div>
-  <div class="hub-kpi hub-kpi--amber" data-mt-fleet="partial">
-    <span class="hub-kpi-icon"><i class="fa-solid fa-circle-half-stroke"></i></span>
-    <div class="hub-kpi-body">
-      <div class="hub-kpi-label">جزئي</div>
-      <div class="hub-kpi-value" data-mt-fleet-value>—</div>
-      <div class="hub-kpi-sub">بعض المؤشرات فقط</div>
-    </div>
-  </div>
-  <div class="hub-kpi hub-kpi--amber" data-mt-fleet="provisioning">
-    <span class="hub-kpi-icon"><i class="fa-solid fa-screwdriver-wrench"></i></span>
-    <div class="hub-kpi-body">
-      <div class="hub-kpi-label">قيد التجهيز</div>
-      <div class="hub-kpi-value">{{ provisioning_count }}</div>
-      <div class="hub-kpi-sub">لم يكتمل الإعداد بعد</div>
-    </div>
-  </div>
-  <div class="hub-kpi hub-kpi--grey" data-mt-fleet="disabled">
-    <span class="hub-kpi-icon"><i class="fa-solid fa-power-off"></i></span>
-    <div class="hub-kpi-body">
-      <div class="hub-kpi-label">معطَّل</div>
-      <div class="hub-kpi-value">{{ _disabled }}</div>
-      <div class="hub-kpi-sub">إداريًا مغلق</div>
-    </div>
-  </div>
-</div>
-{% endcall %}
 
-{# ───── Main (carded table + bulk bar) + help panel on the LEFT ───── #}
+{# ───── العمود الرئيسي (الجدول) + لوحة المساعدة المطوية على اليسار ───── #}
 {% call hub.worklayout(aside_html=hub.helppanel(
   "غرفة عمليات الراوترات",
-  intro="كل صف راوتر مُدار: حالته الحية، عدد المتصلين، وحركة الإنترنت تتحدّث تلقائيًا. الأزرار في كل صف تفتح خدمات الراوتر وأدواته.",
+  intro="كل صف راوتر مُدار: حالته الحية، عدد المتصلين، وحركة الإنترنت تتحدّث تلقائيًا. زر «خدمات» هو المدخل الرئيسي لكل راوتر، وأيقونات الصف تختصر أدواته.",
   items=[
     {'icon': 'screwdriver-wrench', 'text': 'زر «خدمات» يفتح بوابة الدخول والبرودباند وحجب/فتح المواقع لكل راوتر.'},
     {'icon': 'circle-check',       'text': 'حالة «متصل/غير متصل» تأتي من فحص حيّ لواجهة الربط — تُحدَّث دوريًا.'},
-    {'icon': 'screwdriver-wrench', 'text': 'صفوف «قيد التجهيز» لم تكمل الإعداد بعد؛ تابع المعالج لإكمالها.'},
-    {'icon': 'square-check',       'text': 'اختر صفوفًا بمربعات الاختيار ثم فعّل/عطّل دفعة واحدة من شريط الإجراءات.'},
+    {'icon': 'shield-halved',      'text': 'أيقونة الدرع بجوار إصدار النظام تشرح نفق الإدارة، وأيقونة المسار تشرح نفق حركة الإنترنت.'},
+    {'icon': 'square-check',       'text': 'اختر صفوفًا بمربعات الاختيار — يظهر شريط الإجراءات الجماعية تلقائيًا أسفل الشاشة.'},
   ],
   note="أزرار الصيانة في الأعلى (إعادة تخصيص العناوين، تفريغ الطوارئ) تخص الأسطول كاملًا — استعملها بحذر."
 )) %}
-
-{# O3: bulk action bar — only renders when there are routers
-   to act on. Form posts to /admin/radius/devices/bulk-toggle
-   with the selected ids[] + action. Disabled buttons until the
-   user picks at least one checkbox (JS toggles `disabled`). #}
-{# O3: bulk action bar. The `id="mt-bulk-form"` is referenced by
-   every checkbox's `form=` attribute below so checkboxes that
-   sit OUTSIDE the form (inside the table) still submit with it.
-   Buttons start disabled; the JS enables them once 1+ row is
-   selected. #}
-{% call hub.section("إجراءات جماعية", icon="layer-group") %}
-<form id="mt-bulk-form"
-      method="POST" action="{{ url_for('radius.devices_bulk_toggle') }}"
-      class="mt-bulk-bar" data-mt-bulk-form>
-  {{ csrf_token_input() | safe }}
-  <span class="mt-bulk-label">
-    <span data-mt-bulk-count>0</span> راوتر مختار
-  </span>
-  <button type="submit" name="action" value="enable"
-          class="hub-btn hub-btn--sm" disabled data-mt-bulk-action>
-    <i class="fa-solid fa-circle-check"></i> تفعيل المحدّد
-  </button>
-  <button type="submit" name="action" value="disable"
-          class="hub-btn hub-btn--sm" disabled data-mt-bulk-action>
-    <i class="fa-solid fa-power-off"></i> تعطيل المحدّد
-  </button>
-  <span class="mt-bulk-hint">
-    اختر صفًّا أو أكثر بمربع الاختيار لتفعيل الأزرار.
-  </span>
-</form>
-{% endcall %}
 
 {% call hub.section("الراوترات", icon="server",
                     meta=items|length|string + " راوتر", flush=True) %}
@@ -185,7 +161,7 @@
           <input type="checkbox" data-mt-bulk-toggle-all
                  title="اختيار/إلغاء الكل">
         </th>
-        <th class="num" style="width:50px">#</th>
+        <th class="num" style="width:46px">#</th>
         <th>الاسم</th>
         <th>العنوان</th>
         <th>الحالة</th>
@@ -219,7 +195,8 @@
             <strong>{{ item.name }}</strong>
           </a>
           {% if item.provisioned_at %}
-            <br><span class="hub-pill hub-pill--purple" style="font-size:10px">
+            <span class="hub-pill hub-pill--brand mt-mini-pill"
+                  title="أُضيف وجُهّز عبر المعالج آليًّا">
               <span class="dot"></span> معالَج آليًّا
             </span>
           {% endif %}
@@ -256,117 +233,107 @@
           </span>
         </td>
         <td>
-          {% if item.ros_version %}
-            إصدار {{ item.ros_version }}.x
-          {% else %}
-            <span class="hub-pill hub-pill--grey"><span class="dot"></span> غير محدد</span>
-          {% endif %}
-          {# ── أنفاق الإدارة وحركة الإنترنت ── #}
-          {% set _mtype = item.management_tunnel_type %}
+          {# ── خلية نظام مدمجة في سطر واحد: الإصدار + أيقونات الأنفاق ──
+             أيقونة الدرع = نفق الإدارة، أيقونة المسار = نفق حركة
+             الإنترنت؛ التفاصيل كلها في بطاقة الشرح (hub-hint). #}
+          {% set _mtype  = item.management_tunnel_type %}
           {% set _mlabel = {'wireguard':'WireGuard','sstp_mgmt':'SSTP','direct':'مباشر'}.get(_mtype, _mtype) %}
           {% set _scolor = {'connected':'green','pending':'amber','failed':'red','disabled':'grey'}.get(item.management_tunnel_status, 'grey') %}
-          <div data-mt-tunnels style="display:flex;flex-direction:column;gap:3px;margin-top:6px;font-size:11px">
+          {% set _slabel = {'connected':'متصل','pending':'قيد الإعداد','failed':'فشل','disabled':'معطّل'}.get(item.management_tunnel_status, item.management_tunnel_status) %}
+          {% set _tmlabel = {'full_tunnel':'توجيه كامل','selected_pool':'مجموعة محددة','disabled':'معطّل'}.get(item.traffic_mode, item.traffic_mode) %}
+          <span class="mt-sys-cell" data-mt-tunnels>
+            {% if item.ros_version %}
+              <span class="hub-pill hub-pill--brand mt-mini-pill">إصدار {{ item.ros_version }}.x</span>
+            {% else %}
+              <span class="hub-pill hub-pill--grey mt-mini-pill">غير محدد</span>
+            {% endif %}
             {% if _mtype and _mtype != 'none' %}
-              <span title="نفق الإدارة">
-                <i class="fa-solid fa-shield-halved" style="color:#64748b"></i>
-                إدارة: <strong>{{ _mlabel }}</strong>
-                <span class="hub-pill hub-pill--{{ _scolor }}" style="font-size:10px"><span class="dot"></span>{{ item.management_tunnel_status }}</span>
+              <span class="hub-hint mt-sys-hint mt-sys-hint--{{ _scolor }}" tabindex="0"
+                    data-hint="نفق إدارة — إدارة: {{ _mlabel }} ({{ _slabel }})">
+                <i class="fa-solid fa-shield-halved"></i>
               </span>
             {% else %}
-              <span style="color:#94a3b8"><i class="fa-solid fa-shield-halved"></i> لا نفق إدارة مُعدّ</span>
+              <span class="hub-hint mt-sys-hint mt-sys-hint--grey" tabindex="0"
+                    data-hint="لا نفق إدارة مُعدّ">
+                <i class="fa-solid fa-shield-halved"></i>
+              </span>
             {% endif %}
             {% if item.traffic_enabled and item.traffic_tunnel_type != 'none' %}
               {% set _is_pptp = item.traffic_tunnel_type == 'pptp_traffic' %}
-              <span title="نفق حركة الإنترنت وتغيير العنوان">
-                <i class="fa-solid fa-route" style="color:#7c3aed"></i>
-                ترافيك:
-                {% if _is_pptp %}
-                  <strong style="color:#b91c1c">PPTP</strong>
-                  <span class="hub-pill hub-pill--red" style="font-size:10px"><span class="dot"></span>غير آمن</span>
-                {% else %}
-                  <strong>L2TP/IPsec</strong>
-                {% endif %}
-                <span class="hub-pill hub-pill--grey" style="font-size:10px"><span class="dot"></span>{{ item.traffic_mode }}</span>
-              </span>
+              {% if _is_pptp %}
+                <span class="hub-hint mt-sys-hint mt-sys-hint--red" tabindex="0"
+                      data-hint="حركة الإنترنت: نفق قديم PPTP ({{ _tmlabel }}) — غير آمن، يُنصح بالترقية إلى L2TP/IPsec">
+                  <i class="fa-solid fa-route"></i>
+                </span>
+                <span class="hub-pill hub-pill--red mt-mini-pill"><span class="dot"></span>غير آمن</span>
+              {% else %}
+                <span class="hub-hint mt-sys-hint mt-sys-hint--green" tabindex="0"
+                      data-hint="حركة الإنترنت: نفق مشفّر L2TP/IPsec ({{ _tmlabel }})">
+                  <i class="fa-solid fa-route"></i>
+                </span>
+              {% endif %}
             {% endif %}
-          </div>
+          </span>
         </td>
-        <td>
-          {# Primary action — opens the unified Router Hub at
-             المدخل الواحد لكل خدمات الراوتر ومراقبته. #}
+        <td class="mt-actions-cell">
+          {# الإجراء الأساسي — يفتح مركز خدمات الراوتر الموحّد. #}
           <a class="hub-btn hub-btn--sm hub-btn--primary"
              href="{{ url_for('radius.mt_dashboard', nas_id=item.id) }}"
              title="فتح صفحة الراوتر — خدمات + مراقبة + أدوات">
             <i class="fa-solid fa-screwdriver-wrench"></i> خدمات
           </a>
           {% if item.is_provisioning and item.wizard_run_id %}
-          {# Show only while the wizard run is still mid-progress —
-             يعيد المشغّل للمعالج لإكمال ما تبقى. #}
+          {# يظهر فقط أثناء تجهيز غير مكتمل — يعيد المشغّل للمعالج. #}
           <a class="hub-btn hub-btn--sm hub-btn--amber"
              href="{{ url_for('radius.setup_wizard_v3_page') }}?run={{ item.wizard_run_id }}"
              title="متابعة معالج التجهيز من حيث توقّف">
-            <i class="fa-solid fa-forward"></i> متابعة المعالج
+            <i class="fa-solid fa-forward"></i> متابعة
           </a>
           {% endif %}
-          <a class="hub-btn hub-btn--sm" href="{{ url_for('radius.mt_dashboard', nas_id=item.id) }}">
-            <i class="fa-solid fa-chart-line"></i> لوحة
-          </a>
-          {# S1 — direct links to the Q programming + R designer
-             pages so an operator can reach them in one click. #}
-          <a class="hub-btn hub-btn--sm"
-             href="{{ url_for('radius.mt_program_form', nas_id=item.id) }}"
-             title="برمجة الشبكة: بوابة الدخول والبرودباند"
-             data-mt-row-link="program">
-            <i class="fa-solid fa-diagram-project"></i> برمجة
-          </a>
-          <a class="hub-btn hub-btn--sm"
-             href="{{ url_for('radius.mt_login_designer', nas_id=item.id) }}"
-             title="مصمّم صفحة الدخول"
-             data-mt-row-link="login-designer">
-            <i class="fa-solid fa-palette"></i> تصميم
-          </a>
-          <a class="hub-btn hub-btn--sm"
-             href="{{ url_for('radius.mt_backups_list', nas_id=item.id) }}"
-             title="النسخ الاحتياطية"
-             data-mt-row-link="backups">
-            <i class="fa-solid fa-floppy-disk"></i> نسخ
-          </a>
-          {% if item.ros_version %}
-          <a class="hub-btn hub-btn--sm" href="{{ url_for('radius.mt_setup_script', nas_id=item.id) }}">
-            <i class="fa-solid fa-code"></i> سكربت
-          </a>
-          {% endif %}
-          {# O3: single-row enable/disable. Tiny inline form so
-             we don't need a global JS handler; CSRF token is
-             rendered inline. #}
-          <form method="POST"
-                action="{{ url_for('radius.devices_toggle', nas_id=item.id) }}"
-                style="display:inline">
-            {{ csrf_token_input() | safe }}
-            <input type="hidden" name="next" value="/admin/radius/mt/operations">
-            <input type="hidden" name="action"
-                   value="{{ 'disable' if item.enabled else 'enable' }}">
-            <button type="submit" class="hub-btn hub-btn--sm"
-                    title="{{ 'تعطيل الراوتر' if item.enabled else 'تفعيل الراوتر' }}">
+          {# صف أيقونات مضغوط في سطر واحد — أُبقيت فقط الإجراءات الأساسية:
+             مصمّم صفحة الدخول + تعديل + الطاقة (تفعيل/تعطيل). أُزيلت بقية
+             أدوات الخدمات (اللوحة/برمجة/خدمات المنافذ/النسخ/السكربت) لأنها
+             صارت داخل تبويب «خدماتي» بلوحة الراوتر، فلا داعي لتكرارها هنا. #}
+          <span class="mt-iconrow">
+            <a class="hub-btn hub-btn--ghost hub-btn--icon" title="مصمّم صفحة الدخول"
+               href="{{ url_for('radius.mt_login_designer', nas_id=item.id) }}"
+               data-mt-row-link="login-designer">
+              <i class="fa-solid fa-palette"></i>
+            </a>
+            <a class="hub-btn hub-btn--ghost hub-btn--icon" title="تعديل بيانات الراوتر"
+               href="{{ url_for('radius.devices_edit', nas_id=item.id) }}">
+              <i class="fa-solid fa-pen-to-square"></i>
+            </a>
+            {# O3: تفعيل/تعطيل صف واحد — نموذج مضمّن صغير مع CSRF. #}
+            <form method="POST"
+                  action="{{ url_for('radius.devices_toggle', nas_id=item.id) }}"
+                  style="display:inline">
+              {{ csrf_token_input() | safe }}
+              <input type="hidden" name="next" value="/admin/radius/mt/operations">
+              <input type="hidden" name="action"
+                     value="{{ 'disable' if item.enabled else 'enable' }}">
               {% if item.enabled %}
-                <i class="fa-solid fa-power-off"></i> تعطيل
+              <button type="submit" class="hub-btn hub-btn--ghost hub-btn--icon mt-icon-danger"
+                      title="تعطيل الراوتر">
+                <i class="fa-solid fa-power-off"></i>
+              </button>
               {% else %}
-                <i class="fa-solid fa-circle-check"></i> تفعيل
+              <button type="submit" class="hub-btn hub-btn--ghost hub-btn--icon mt-icon-ok"
+                      title="تفعيل الراوتر">
+                <i class="fa-solid fa-circle-check"></i>
+              </button>
               {% endif %}
+            </form>
+            {% if item.registry_id and item.lifecycle_state == 'failed' %}
+            {# محاولات التجهيز الفاشلة يمكن أرشفتها لتحرير العنوان. #}
+            <button type="button" class="hub-btn hub-btn--danger hub-btn--icon"
+                    data-mt-retire="{{ item.registry_id }}"
+                    data-mt-retire-name="{{ item.name|e }}"
+                    title="تقاعد محاولة تجهيز فاشلة وتحرير عنوان الربط">
+              <i class="fa-solid fa-box-archive"></i>
             </button>
-          </form>
-          <a class="hub-btn hub-btn--sm" href="{{ url_for('radius.devices_edit', nas_id=item.id) }}">
-            <i class="fa-solid fa-pen-to-square"></i> تعديل
-          </a>
-          {% if item.registry_id and item.lifecycle_state == 'failed' %}
-          {# محاولات التجهيز الفاشلة يمكن أرشفتها لتحرير العنوان. #}
-          <button type="button" class="hub-btn hub-btn--sm hub-btn--danger"
-                  data-mt-retire="{{ item.registry_id }}"
-                  data-mt-retire-name="{{ item.name|e }}"
-                  title="تقاعد محاولة تجهيز فاشلة وتحرير عنوان الربط">
-            <i class="fa-solid fa-box-archive"></i> تقاعد
-          </button>
-          {% endif %}
+            {% endif %}
+          </span>
         </td>
       </tr>
     {% endfor %}
@@ -376,25 +343,89 @@
 {% endcall %}
 {% endcall %}{# /worklayout #}
 
+{# O3: شريط الإجراءات الجماعية — عائم لاصق أسفل الشاشة، يظهر فقط
+   عندما يُختار صف واحد على الأقل (الجافاسكربت تضيف is-active).
+   `id="mt-bulk-form"` تُشير إليه مربعات الاختيار عبر `form=` لأن
+   المربعات تجلس خارج النموذج (داخل الجدول). الأزرار تبدأ معطّلة
+   وتُفعّل عند أول اختيار. #}
+<form id="mt-bulk-form"
+      method="POST" action="{{ url_for('radius.devices_bulk_toggle') }}"
+      class="mt-bulk-bar" data-mt-bulk-form>
+  {{ csrf_token_input() | safe }}
+  <span class="mt-bulk-label">
+    <i class="fa-solid fa-square-check"></i>
+    <span data-mt-bulk-count>0</span> راوتر مختار
+  </span>
+  <button type="submit" name="action" value="enable"
+          class="hub-btn hub-btn--sm" disabled data-mt-bulk-action>
+    <i class="fa-solid fa-circle-check"></i> تفعيل المحدّد
+  </button>
+  <button type="submit" name="action" value="disable"
+          class="hub-btn hub-btn--sm" disabled data-mt-bulk-action>
+    <i class="fa-solid fa-power-off"></i> تعطيل المحدّد
+  </button>
+  <button type="button" class="hub-btn hub-btn--ghost hub-btn--sm" data-mt-bulk-clear
+          title="إلغاء اختيار كل الصفوف">
+    <i class="fa-solid fa-xmark"></i> إلغاء الاختيار
+  </button>
+</form>
+
 <script src="{{ url_for('static', filename='js/mt_operations.js') }}" defer></script>
 <style>
-  .mt-row-users, .mt-row-traffic { font-size: 12px; color: #475569; white-space: nowrap; }
-  [data-mt-row-status][data-mt-state="ok"]    { background: #DCFCE7; color: #166534; }
+  .mt-row-users, .mt-row-traffic { font-size: 12px; color: #64748B; white-space: nowrap; }
+  [data-mt-row-status][data-mt-state="ok"]    { background: #DCFCE7; color: #166534; border-color:#86efac; }
   [data-mt-row-status][data-mt-state="ok"] .dot    { background: #16A34A; }
-  [data-mt-row-status][data-mt-state="error"] { background: #FEE2E2; color: #991B1B; }
+  [data-mt-row-status][data-mt-state="error"] { background: #FEE2E2; color: #991B1B; border-color:#fca5a5; }
   [data-mt-row-status][data-mt-state="error"] .dot { background: #DC2626; }
-  [data-mt-row-status][data-mt-state="partial"] { background: #FEF3C7; color: #92400E; }
+  [data-mt-row-status][data-mt-state="partial"] { background: #FEF3C7; color: #92400E; border-color:#fcd34d; }
   [data-mt-row-status][data-mt-state="partial"] .dot { background: #D97706; }
-  /* O3: bulk action bar — sits inside a hub.section card, so no own
-     box chrome; just the flex row layout. */
+  /* بادجات مصغّرة (معالَج آليًّا / الإصدار / غير آمن) */
+  .mt-mini-pill { font-size: 10px; padding: 2px 8px; vertical-align: middle; }
+  td > a + .mt-mini-pill { margin-inline-start: 6px; }
+  /* خلية النظام المدمجة: الإصدار + أيقونات الأنفاق في سطر واحد */
+  .mt-sys-cell { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+  .mt-sys-hint { width: 22px; height: 22px; font-size: 11px; }
+  .mt-sys-hint--green { background: #DCFCE7; color: #166534; }
+  .mt-sys-hint--amber { background: #FEF3C7; color: #92400E; }
+  .mt-sys-hint--red   { background: #FEE2E2; color: #991B1B; }
+  .mt-sys-hint--grey  { background: #F1F5F9; color: #94A3B8; }
+  /* خلية الإجراءات: زر «خدمات» أساسي + صف أيقونات في سطر واحد */
+  .mt-actions-cell { white-space: nowrap; }
+  .mt-iconrow { display: inline-flex; align-items: center; gap: 2px; vertical-align: middle; }
+  .mt-iconrow .hub-btn--icon { padding: 5px 8px; font-size: 13px; }
+  .mt-icon-danger:hover { color: #B91C1C; background: #FEE2E2; }
+  .mt-icon-ok:hover     { color: #166534; background: #DCFCE7; }
+  /* O3: شريط الإجراءات الجماعية — لاصق أسفل الشاشة، مخفي حتى أول اختيار.
+     يبقى في DOM دائمًا (النموذج مطلوب لمربعات form=) لكن بلا مساحة ميتة. */
   .mt-bulk-bar {
+    position: fixed;
+    inset-inline-start: 50%;
+    transform: translate(50%, 16px);
+    bottom: 18px;
+    z-index: 900;
     display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
     font-size: 13px;
+    background: #fff;
+    border: 1px solid var(--hub-border, #E8E7F0);
+    border-inline-start: 3px solid var(--hub-brand, #6B5AED);
+    border-radius: 14px;
+    padding: 10px 16px;
+    box-shadow: 0 14px 40px rgba(15,23,42,.18), 0 2px 10px rgba(15,23,42,.08);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity .18s ease, transform .18s ease, visibility .18s;
   }
-  .mt-bulk-label  { color: #1F2937; font-weight: 700; }
-  .mt-bulk-hint   { color: #6B7280; font-size: 12px; margin-inline-start: auto; }
+  .mt-bulk-bar.is-active {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translate(50%, 0);
+  }
+  .mt-bulk-label  { color: #1F2937; font-weight: 800; display: inline-flex; align-items: center; gap: 6px; }
+  .mt-bulk-label i { color: var(--hub-brand, #6B5AED); }
   .hub-btn[disabled] { opacity: .55; cursor: not-allowed; }
-  /* O3: disabled-row visual cue + checkbox spacing */
+  /* O3: تمييز الصفوف المعطّلة بصريًا مع إبقاء مربع الاختيار واضحًا */
   tr[data-mt-enabled="false"] td { opacity: .6; }
   tr[data-mt-enabled="false"] td:first-child { opacity: 1; }
   input[type="checkbox"][data-mt-row-select],

@@ -23,7 +23,7 @@ from .business_os_finance import (
 )
 
 
-VALID_SALE_MODES = ("instant", "inventory")
+VALID_SALE_MODES = ("instant", "inventory")  # توليد فوري / مخزون
 _DEFAULT_SALE_MODE_KEY = "cards.default_sale_mode"
 
 
@@ -281,14 +281,29 @@ class CardUsersMarketplaceService:
         the number actually added.
         """
         package = self.get_package(package_id)
-        rows = self._normalise_stock_rows(cards, count, password_length)
-        if not rows:
-            raise CardMarketplaceError("لا توجد بطاقات صالحة للإضافة إلى المخزون.")
-        if len(rows) > 5000:
-            raise CardMarketplaceError("الحد الأقصى 5000 بطاقة في الدفعة الواحدة.")
+        # تطبيع مدخل الرفع (ملف) — التوليد يمرّ عبر محرك التوليد المشترك أدناه.
+        upload_rows: list[dict[str, str]] = []
+        if cards:
+            for c in cards:
+                u = str((c or {}).get("username") or "").strip()
+                if not u:
+                    continue
+                upload_rows.append({"username": u, "password": str((c or {}).get("password") or "").strip()})
+            if not upload_rows:
+                raise CardMarketplaceError("لا توجد بطاقات صالحة للإضافة إلى المخزون.")
+            if len(upload_rows) > 5000:
+                raise CardMarketplaceError("الحد الأقصى 5000 بطاقة في الدفعة الواحدة.")
+            requested = len(upload_rows)
+        else:
+            requested = int(count or 0)
+            if requested <= 0:
+                raise CardMarketplaceError("لا توجد بطاقات صالحة للإضافة إلى المخزون.")
+            if requested > 5000:
+                raise CardMarketplaceError("الحد الأقصى 5000 بطاقة في الدفعة الواحدة.")
         now = now_iso()
         plan_id = int(package["plan_id"])
         code = f"INV-{int(package_id)}-{now.replace(':', '').replace('.', '')[-8:]}"
+        source = "upload" if upload_rows else "generated"
         added = 0
         with transaction() as conn:
             batch_cur = conn.execute(
@@ -300,62 +315,59 @@ class CardUsersMarketplaceService:
                 ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                 """,
                 (
-                    self.tenant_id, code, package["name"], plan_id, len(rows), len(rows),
+                    self.tenant_id, code, package["name"], plan_id, requested, 0,
                     float(package.get("price") or 0), float(package.get("price") or 0),
                     "inv", int(password_length or 8), "digits", str(actor or "system"),
                     "active", int(package_id),
                     _json({"source": "card_marketplace_inventory", "electronic": True,
-                           "package_id": int(package_id)}),
+                           "stock_source": source, "package_id": int(package_id)}),
                     now,
                 ),
             )
             batch_id = int(batch_cur.lastrowid)
-            for r in rows:
-                u = str(r.get("username") or "").strip()
-                p = str(r.get("password") or "").strip()
-                if not u:
-                    continue
-                try:
-                    conn.execute(
-                        """
-                        INSERT INTO cards(tenant_id, batch_id, username, password,
-                                          plan_id, used, created_at)
-                        VALUES(?,?,?,?,?,?,?)
-                        """,
-                        (self.tenant_id, batch_id, u, p, plan_id, 0, now),
-                    )
-                    added += 1
-                except Exception:  # noqa: BLE001 — duplicate username, skip it
-                    continue
-            conn.execute(
-                "UPDATE card_marketplace_packages SET inventory_total = inventory_total + ?, "
-                "updated_at=? WHERE tenant_id=? AND id=?",
-                (added, now, self.tenant_id, int(package_id)),
+            if upload_rows:
+                # رفع ملف: إدراج البطاقات الجاهزة مع تخطّي المكرر (نفس سلوك
+                # محرك الاستيراد cards_repo.import_cards لكن داخل معاملتنا).
+                for r in upload_rows:
+                    try:
+                        conn.execute(
+                            """
+                            INSERT INTO cards(tenant_id, batch_id, username, password,
+                                              plan_id, used, created_at)
+                            VALUES(?,?,?,?,?,?,?)
+                            """,
+                            (self.tenant_id, batch_id, r["username"], r["password"], plan_id, 0, now),
+                        )
+                        added += 1
+                    except Exception:  # noqa: BLE001 — اسم مستخدم مكرر، نتخطاه
+                        continue
+                conn.execute(
+                    "UPDATE card_batches SET generated = generated + ? WHERE tenant_id=? AND id=?",
+                    (added, self.tenant_id, batch_id),
+                )
+        if not upload_rows:
+            # توليد حزمة: إعادة استخدام محرك توليد الدفعات المشترك
+            # (cards_repo.generate_cards) — يضمن فرادة أسماء المستخدمين عبر
+            # كل البطاقات، إدراجًا مجزّأ سريعًا، ويحدّث عدّاد الحزمة بنفسه.
+            from ..db.repos import cards_repo
+            generated = cards_repo.generate_cards(
+                tenant_id=self.tenant_id,
+                batch_id=batch_id,
+                plan_id=plan_id,
+                count=requested,
+                username_prefix="inv",
+                username_length=10,
+                password_length=max(4, min(16, int(password_length or 8))),
+                password_charset="digits",
             )
-        return {"batch_id": batch_id, "added": added, "requested": len(rows)}
-
-    def _normalise_stock_rows(self, cards, count, password_length) -> list[dict[str, str]]:
-        if cards:
-            out = []
-            for c in cards:
-                u = str((c or {}).get("username") or "").strip()
-                if not u:
-                    continue
-                out.append({"username": u, "password": str((c or {}).get("password") or "").strip()})
-            return out
-        n = int(count or 0)
-        if n <= 0:
-            return []
-        import secrets
-        plen = max(4, min(16, int(password_length or 8)))
-        rows = []
-        for _ in range(n):
-            uid = secrets.token_hex(5)
-            rows.append({
-                "username": f"inv{uid}",
-                "password": "".join(secrets.choice("0123456789") for _ in range(plen)),
-            })
-        return rows
+            added = len(generated)
+        # تحديث عدّاد مخزون العرض بالعدد المُضاف فعليًا فقط.
+        db().execute(
+            "UPDATE card_marketplace_packages SET inventory_total = inventory_total + ?, "
+            "updated_at=? WHERE tenant_id=? AND id=?",
+            (added, now_iso(), self.tenant_id, int(package_id)),
+        )
+        return {"batch_id": batch_id, "added": added, "requested": requested}
 
     def _claim_inventory_card(self, package: dict[str, Any]) -> dict[str, Any]:
         """Atomically claim the next free stock card for this offer.
@@ -686,6 +698,75 @@ class CardUsersMarketplaceService:
             "remaining": self._inventory_remaining(package),
             "sold": int(package.get("inventory_sold") or 0),
             "stock_total": int(package.get("inventory_total") or 0),
+        }
+
+    def offer_cards(self, package_id: int, *, page: int = 1, per_page: int = 20) -> dict[str, Any]:
+        """جدول بطاقات العرض الكامل — كل بطاقة سُجّلت داخل العرض (مخزونًا
+        كانت أم مُولّدة لحظة الشراء) مع حالتها الدقيقة وتاريخ التوليد/الرفع
+        والمشتري إن بيعت. الربط عبر card_batches.package_id (كل حزم العرض)."""
+        package = self.get_package(package_id)
+        page, per_page, offset = self._page_args(page, per_page)
+        total = int(db().execute(
+            """
+            SELECT COUNT(*) n FROM cards c
+            JOIN card_batches b ON b.tenant_id = c.tenant_id AND b.id = c.batch_id
+            WHERE c.tenant_id=? AND b.package_id=? AND c.deleted_at IS NULL
+            """,
+            (self.tenant_id, int(package_id)),
+        ).fetchone()["n"])
+        rows = db().execute(
+            """
+            SELECT c.id            AS card_id,
+                   c.username      AS username,
+                   c.password      AS password,
+                   c.used          AS used,
+                   COALESCE(c.revoked, 0) AS revoked,
+                   c.expire_at     AS expire_at,
+                   c.created_at    AS created_at,
+                   c.purchase_id   AS purchase_id,
+                   b.batch_code    AS batch_code,
+                   COALESCE(json_extract(b.metadata, '$.stock_source'), '') AS stock_source,
+                   cup.created_at  AS sold_at,
+                   cup.amount_minor AS amount_minor,
+                   cup.currency    AS currency,
+                   cu.display_name AS buyer_name,
+                   cu.mobile       AS buyer_mobile
+            FROM cards c
+            JOIN card_batches b
+              ON b.tenant_id = c.tenant_id AND b.id = c.batch_id
+            LEFT JOIN card_user_purchases cup
+              ON cup.tenant_id = c.tenant_id
+             AND (cup.id = c.purchase_id OR cup.card_id = c.id)
+            LEFT JOIN card_users cu
+              ON cu.tenant_id = c.tenant_id AND cu.id = cup.card_user_id
+            WHERE c.tenant_id = ? AND b.package_id = ? AND c.deleted_at IS NULL
+            ORDER BY c.id DESC
+            LIMIT ? OFFSET ?
+            """,
+            (self.tenant_id, int(package_id), per_page, offset),
+        ).fetchall()
+        items = []
+        now = now_iso()
+        for r in rows:
+            item = row_to_dict(r)
+            # حالة دقيقة بالعربية: ملغاة → منتهية → مستخدمة → مباعة → بالمخزون.
+            expire_at = str(item.get("expire_at") or "").replace(" ", "T")
+            if int(item.get("revoked") or 0):
+                item["status_ar"] = "ملغاة"
+            elif expire_at and expire_at[:19] < now[:19]:
+                item["status_ar"] = "منتهية"
+            elif int(item.get("used") or 0):
+                item["status_ar"] = "مستخدمة"
+            elif item.get("sold_at") or int(item.get("purchase_id") or 0) > 0:
+                item["status_ar"] = "مباعة"
+            else:
+                item["status_ar"] = "بالمخزون"
+            items.append(item)
+        return {
+            "package": package,
+            "items": items,
+            "page": page, "per_page": per_page, "total": total,
+            "pages": max(1, (total + per_page - 1) // per_page),
         }
 
     def recent_purchases(self, *, page: int = 1, per_page: int = 20) -> dict[str, Any]:

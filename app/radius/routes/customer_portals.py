@@ -4,6 +4,7 @@ from __future__ import annotations
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 
 from ..core.errors import RadiusValidationError
+from ..db.repos import tenants_repo
 from ..services.customer_portals import CustomerPortalService, PortalAuthError
 
 
@@ -52,6 +53,45 @@ def _svc() -> CustomerPortalService:
     return CustomerPortalService(tenant_id=_tenant_id())
 
 
+# ── مفاتيح «صفحة المشترك» (portal.*) ──────────────────────────────
+# تُحفظ من تبويب «صفحة المشترك» في صفحة الإعدادات، وتتحكّم بما يظهر
+# للمشترك في بوابته وما يُسمح له به. تُقرأ هنا بنفس صيغة الإعدادات
+# المنطقية ('1'/'true'/'on'…) المستخدمة في settings_page.html.
+_PORTAL_TRUE = ("1", "true", "t", "on", "yes")
+
+
+def _portal_flag(key: str, default: str = "1") -> bool:
+    """يقرأ مفتاح portal.* كقيمة منطقية من إعدادات المستأجر."""
+    raw = tenants_repo.get_setting(_tenant_id(), key, default)
+    return str(raw or "").strip().lower() in _PORTAL_TRUE
+
+
+def _portal_flags() -> dict:
+    """كل أعلام البوابة لتمريرها للقالب.
+
+    الستة الأولى مربوطة فعليًا (عرض/منع في البوابة). الثلاثة الأخيرة
+    (تغيير كلمة المرور، الشراء الذاتي، تغيير الباقة) ميزات غير موجودة
+    في البوابة بعد — تبقى «قيد الربط»: تُقرأ وتُمرَّر لكنها بلا أثر."""
+    return {
+        "show_usage":            _portal_flag("portal.show_usage"),
+        "show_sessions":         _portal_flag("portal.show_sessions"),
+        "show_invoices":         _portal_flag("portal.show_invoices"),
+        "allow_renewal_request": _portal_flag("portal.allow_renewal_request"),
+        "allow_loan_request":    _portal_flag("portal.allow_loan_request"),
+        "show_support":          _portal_flag("portal.show_support"),
+        # قيد الربط — مخزّنة وجاهزة، لا أثر لها في البوابة بعد:
+        "allow_password_change": _portal_flag("portal.allow_password_change"),
+        "allow_self_purchase":   _portal_flag("portal.allow_self_purchase", "0"),
+        "allow_plan_change":     _portal_flag("portal.allow_plan_change", "0"),
+    }
+
+
+def _portal_denied(message: str):
+    """رفض طلب POST لميزة مُعطّلة في الإعدادات — 403 برسالة عربية.
+    يمنع تجاوز إخفاء النموذج عبر استدعاء المسار مباشرة بالـURL."""
+    return message, 403
+
+
 def customer_portals_admin():
     return render_template("radius/customer_portals_admin.html")
 
@@ -91,13 +131,22 @@ def subscriber_home():
     if not subscriber_id:
         return redirect(url_for("portal.subscriber_login"))
     dashboard = _svc().subscriber_dashboard(int(subscriber_id))
-    return render_template("radius/portal_subscriber.html", dashboard=dashboard)
+    return render_template(
+        "radius/portal_subscriber.html",
+        dashboard=dashboard,
+        portal_flags=_portal_flags(),
+    )
 
 
 def subscriber_loan_request():
     subscriber_id = session.get("portal_subscriber_id")
     if not subscriber_id:
         return redirect(url_for("portal.subscriber_login"))
+    # حارس الإعداد: إن كان «طلب السلفة» مُعطّلًا في صفحة المشترك نرفض
+    # الطلب بـ403 حتى لو استُدعي المسار مباشرة بالـURL (النموذج مخفي
+    # أصلًا في البوابة).
+    if not _portal_flag("portal.allow_loan_request"):
+        return _portal_denied("طلب سلفة الوقت غير مُفعَّل في بوابة المشترك حاليًا.")
     try:
         result = _svc().submit_loan_request(
             subscriber_id=int(subscriber_id),
@@ -114,9 +163,19 @@ def subscriber_renewal_request():
     subscriber_id = session.get("portal_subscriber_id")
     if not subscriber_id:
         return redirect(url_for("portal.subscriber_login"))
+    reason = request.form.get("reason") or ""
+    # هذا المسار يخدم نموذجين: «تجديد الاشتراك» و«الدعم/الشكاوى» (الأخير
+    # يُرسَل عبر نفس القناة ببادئة [شكوى]). نحرس كلًّا بمفتاحه المناسب،
+    # ونرفض بـ403 إن كان مُعطّلًا (يمنع التجاوز المباشر بالـURL).
+    is_support = reason.lstrip().startswith("[شكوى]")
+    if is_support:
+        if not _portal_flag("portal.show_support"):
+            return _portal_denied("قسم الدعم/الشكاوى غير مُفعَّل في بوابة المشترك حاليًا.")
+    elif not _portal_flag("portal.allow_renewal_request"):
+        return _portal_denied("طلب التجديد غير مُفعَّل في بوابة المشترك حاليًا.")
     result = _svc().submit_renewal_request(
         subscriber_id=int(subscriber_id),
-        reason=request.form.get("reason") or "",
+        reason=reason,
     )
     flash(f"تم تسجيل الطلب. الحالة: {_portal_status_label(result['status'])}", "success")
     return redirect(url_for("portal.subscriber_home"))

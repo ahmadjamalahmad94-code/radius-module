@@ -123,9 +123,16 @@
               {% elif t.status == 'skipped' %}is-skipped
               {% endif %}"
                  data-test="npc-cs-target">
+              {% set _t_status_ar = {
+                'succeeded': 'نجح',
+                'failed': 'فشل',
+                'rolled_back': 'تمّ التراجع',
+                'skipped': 'تُخطّي',
+                'partially_succeeded': 'نجاح جزئي'
+              } %}
               <i class="fa-solid fa-router"></i>
               راوتر <span class="mono tnum" style="direction:ltr">#{{ t.router_id }}</span>
-              · حالة: <strong>{{ t.status }}</strong>
+              · حالة: <strong>{{ _t_status_ar.get(t.status, t.status) }}</strong>
               {% if t.error_message %}
                 · <span style="font-family:ui-monospace,monospace; direction:ltr;">
                   {{ t.error_message[:120] }}

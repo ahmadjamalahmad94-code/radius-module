@@ -1,6 +1,8 @@
-{# L3 — Setup wizard step 1: form.
-   Minimal markup here; L4 layers on the polished UX (icons, hints,
-   CSS, validation states). #}
+{# L3 — معالج إضافة راوتر (إعداد متقدم) — UDS موحّد (hub-v2).
+   إعادة تصميم قوية: هيرو واحد مدمج + لوحة مساعدة جانبية + أقسام
+   مرتّبة بارتفاعات وفجوات موحّدة. كل التلميحات أيقونات (!)، القوائم
+   تتحوّل تلقائيًّا إلى hbsel. العقد الخلفي (أسماء الحقول، action، قيم
+   ros_version، حقول أنفاق الإصدار 6) محفوظة بالكامل دون أي تغيير. #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
@@ -9,190 +11,229 @@
 {% block page_title %}معالج إضافة راوتر{% endblock %}
 
 {% block head_extra %}
+{{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/mt_setup.css') }}">
+<style>
+  /* ── شبكة الحقول: ارتفاعات وفجوات موحّدة ── */
+  .mtw-grid{ display:grid; gap:14px; grid-template-columns:repeat(2,minmax(0,1fr)); }
+  @media (max-width:720px){ .mtw-grid{ grid-template-columns:1fr; } }
+  .mtw-field{ display:flex; flex-direction:column; gap:6px; min-width:0; }
+  .mtw-field.full{ grid-column:1 / -1; }
+  .mtw-label{
+    display:flex; align-items:center; gap:7px;
+    font-size:12.5px; font-weight:800; color:var(--hub-text-soft);
+  }
+  .mtw-label .req{ color:var(--hub-red); margin-inline-start:1px; }
+  .mtw-field .hub-input{ height:42px; }
+  .mtw-help{ font-size:11px; color:var(--hub-text-mute); line-height:1.65; }
+
+  /* ── اختيار الإصدار كبطاقات نصف-عرض متساوية ── */
+  .mtw-vers{ display:grid; grid-template-columns:repeat(2,1fr); gap:12px; }
+  @media (max-width:520px){ .mtw-vers{ grid-template-columns:1fr; } }
+  .mtw-ver{
+    position:relative; display:flex; align-items:center; gap:12px;
+    border:1.5px solid var(--hub-border); border-radius:14px;
+    padding:13px 15px; cursor:pointer; background:#fff;
+    transition:border-color .14s, background .14s, box-shadow .14s;
+  }
+  .mtw-ver:hover{ border-color:#C7BFF2; }
+  .mtw-ver input{ position:absolute; opacity:0; pointer-events:none; }
+  .mtw-ver-ic{
+    width:40px; height:40px; flex:0 0 40px; border-radius:11px;
+    display:flex; align-items:center; justify-content:center;
+    background:#F4F1FE; color:var(--hub-brand); font-size:16px;
+  }
+  .mtw-ver-tt{ font-weight:900; font-size:14px; color:var(--hub-text); }
+  .mtw-ver-sb{ font-size:11.5px; color:var(--hub-text-mute); margin-top:1px; }
+  .mtw-ver:has(input:checked){
+    border-color:var(--hub-brand); background:#F8F6FF;
+    box-shadow:0 0 0 3px rgba(107,90,237,.12);
+  }
+  .mtw-ver:has(input:checked) .mtw-ver-ic{ background:var(--hub-brand); color:#fff; }
+
+  /* ── بطاقات أنفاق الإصدار 6 ── */
+  .mtw-tun-head{
+    display:flex; align-items:center; gap:9px;
+    font-weight:900; font-size:13.5px; color:var(--hub-text); margin-bottom:4px;
+  }
+  .mtw-card{
+    border:1px solid var(--hub-border); border-radius:16px;
+    padding:15px 16px; background:#fff;
+  }
+  .mtw-card + .mtw-card{ margin-top:12px; }
+  .mtw-card--rec{ border-color:#bbf7d0; background:#f3fdf6; }
+  .mtw-card-top{ display:flex; align-items:center; gap:9px; flex-wrap:wrap; }
+  .mtw-card-ttl{ font-weight:900; font-size:13.5px; color:var(--hub-text); display:flex; align-items:center; gap:7px; }
+  .mtw-badge{
+    font-size:10.5px; font-weight:900; padding:2px 10px; border-radius:999px; color:#fff;
+  }
+  .mtw-badge--rec{ background:#16a34a; }
+  .mtw-badge--adv{ background:var(--hub-brand); }
+  .mtw-card-p{ margin:9px 0 0; font-size:12.5px; color:var(--hub-text-soft); line-height:1.75; }
+  .mtw-note-ok{
+    margin-top:9px; display:flex; align-items:flex-start; gap:8px;
+    font-size:12px; font-weight:800; color:#047857;
+  }
+  .mtw-check{
+    display:flex; align-items:flex-start; gap:9px; margin-top:11px;
+    font-size:12.5px; font-weight:700; color:var(--hub-text-soft); cursor:pointer;
+  }
+  .mtw-check input{ margin-top:2px; accent-color:var(--hub-brand); }
+  .mtw-warn{
+    display:flex; align-items:flex-start; gap:9px; margin-top:10px;
+    font-size:12px; font-weight:800; color:#b91c1c;
+    background:#fef2f2; border:1px solid #fecaca; border-radius:11px; padding:10px 12px;
+  }
+  .mtw-warn--confirm{ cursor:pointer; }
+  .mtw-warn input{ margin-top:2px; accent-color:#b91c1c; }
+  .mtw-mini{ margin-top:11px; font-size:11.5px; color:var(--hub-text-mute); line-height:1.8; }
+  .mtw-mini i{ color:var(--hub-brand); margin-inline-end:3px; }
+
+  /* أُزيل من لوحة العميل — يُعاد مركزياً عبر لوحة التراخيص (قرار معماري):
+     أنماط .mtw-tun-grid و .mt-v6-tunnels (غلاف قسم أنفاق الإصدار 6). */
+  /* شريط الإجراءات أسفل النموذج لا يلتصق بآخر قسم. */
+  .mt-setup-form-v2 .mt-setup-actions{ margin-top: var(--hr-section-gap, 22px); }
+</style>
 {% endblock %}
 
 {% block content %}
 
-{{ hub.hero(
+{# ── هيرو واحد مدمج: عنوان + شرح + إجراءات + شريط KPI ── #}
+{{ hub.megahero(
   "معالج إضافة راوتر",
-  subtitle="اكتب الاسم والعنوان واختر إصدار نظام الراوتر — النظام يولّد المستخدم وكلمات المرور والسكربت تلقائيًّا",
-  icon="magic-wand-sparkles"
+  subtitle="اكتب الاسم واختر إصدار النظام — هوبي راديوس يولّد المستخدم وكلمات المرور وسكربت RouterOS الكامل تلقائيًّا، جاهزًا للّصق.",
+  icon="magic-wand-sparkles",
+  actions_html='
+    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.mt_operations') + '">
+      <i class="fa-solid fa-server"></i> غرفة العمليات
+    </a>',
+  kpis=[
+    {"label": "تُولَّد آليًّا", "value": "كل البيانات", "icon": "shield-halved", "variant": "brand",
+     "sub": "مستخدم + كلمات مرور + سر مشترك"},
+    {"label": "السكربت", "value": "جاهز للنسخ", "icon": "code", "variant": "green",
+     "sub": "بقيم مُولَّدة فعليًّا"},
+    {"label": "الإصدار 7", "value": "نفق تلقائي", "icon": "shield-virus", "variant": "violet",
+     "sub": "بلا حاجة لعنوان عام"}
+  ]
 ) }}
 
-<div class="mt-setup-form-wrap" data-mt-setup-form>
-  <form method="POST" action="{{ url_for('radius.mt_setup_create') }}" class="mt-setup-form">
-    {{ csrf_token_input() | safe }}
-    <label class="mt-setup-field">
-      <span class="mt-setup-field-label">اسم الراوتر</span>
-      <input type="text" name="name" required maxlength="64"
-             placeholder="مثال: MT-Office" autofocus>
-      <span class="mt-setup-field-hint">يظهر في لوحة الإدارة فقط.</span>
-    </label>
+{# ── لوحة المساعدة الجانبية (تنفتح عند الحاجة) ── #}
+{# أُزيل من لوحة العميل — يُعاد مركزياً عبر لوحة التراخيص (قرار معماري):
+   من بنود الدليل أدناه «نفق تغيير العنوان: خدمة متقدمة مدفوعة» وذِكر
+   إعداد نفق إدارة SSTP لراوتر الإصدار 6. #}
+{% set help_aside %}
+{% call hub.helppanel(
+     "دليل المعالج",
+     intro="هذا المعالج ينشئ راوتر MikroTik جديدًا داخل النظام ويولّد له سكربت إعداد كامل.",
+     items=[
+       {"icon": "id-badge", "text": "اسم الراوتر: معرّف يظهر في لوحة الإدارة فقط."},
+       {"icon": "code-branch", "text": "الإصدار 7: نفق إدارة حديث (WireGuard) يُولَّد تلقائيًّا — اترك العنوان فارغًا."},
+       {"icon": "network-wired", "text": "الإصدار 6: لا يدعم WireGuard — اكتب عنوان الراوتر للاتصال المباشر."},
+       {"icon": "server", "text": "عنوان السيرفر: ما يراه الراوتر كخادم مصادقة — يُكتشف تلقائيًّا وقابل للتعديل."}
+     ],
+     icon="circle-question",
+     note="بعد الحفظ تنسخ السكربت وتلصقه في شاشة أوامر الراوتر — يتّصل خلال ثوانٍ."
+   ) %}{% endcall %}
+{% endset %}
 
-    <label class="mt-setup-field" data-mt-address-field>
-      <span class="mt-setup-field-label">عنوان الراوتر أو الدومين</span>
-      <input type="text" name="address" maxlength="128"
-             placeholder="مثال: 192.168.1.1">
-      <span class="mt-setup-field-hint" data-mt-address-hint-v7>
-        <strong>الإصدار 7:</strong> يُولَّد تلقائيًّا عبر نفق الإدارة الحديث — اتركه فارغًا.
-      </span>
-      <span class="mt-setup-field-hint" data-mt-address-hint-v6 hidden>
-        <strong>الإصدار 6:</strong> مطلوب — لا يدعم نفق الإدارة الحديث، نحتاج عنوانًا مباشرًا للوصول.
-      </span>
-    </label>
+{% call hub.worklayout(aside_html=help_aside) %}
+<form method="POST" action="{{ url_for('radius.mt_setup_create') }}"
+      class="mt-setup-form-v2" data-mt-setup-form>
+  {{ csrf_token_input() | safe }}
 
-    <fieldset class="mt-setup-field">
-      <legend class="mt-setup-field-label">إصدار نظام الراوتر</legend>
-      <div class="mt-setup-radios">
-        {% for v in ros_versions %}
-          <label class="mt-setup-radio">
-            <input type="radio" name="ros_version" value="{{ v }}"
-                   {% if v == '7' %}checked{% endif %} required>
-            <span>الإصدار {{ v }}.x</span>
-          </label>
-        {% endfor %}
-      </div>
-      <span class="mt-setup-field-hint">إذا غير متأكّد، اختر 7. السكربت يطلع جاهز للنسخ بعد الحفظ.</span>
-    </fieldset>
-
-    {# ── استراتيجية ربط الإصدار 6 ──
-       هذا الإصدار يحتاج نفق إدارة دائمًا، وحركة الإنترنت الاختيارية تبقى عبر نفق منفصل. #}
-    <div class="mt-v6-tunnels" data-mt-v6-tunnels hidden
-         style="display:flex;flex-direction:column;gap:12px;margin:6px 0 4px">
-      <div style="font-weight:900;color:var(--hub-text)"><i class="fa-solid fa-shield-halved"></i> ربط الإصدار 6</div>
-
-      {# بطاقة نفق الإدارة الموصى بها #}
-      <div class="mt-v6-card" style="border:1px solid #bbf7d0;background:#f0fdf4;border-radius:14px;padding:14px">
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-          <strong style="font-size:14px"><i class="fa-brands fa-windows"></i> نفق الإدارة عبر SSTP</strong>
-          <span style="background:#16a34a;color:#fff;font-size:11px;font-weight:800;padding:2px 9px;border-radius:999px">موصى به للإدارة</span>
-        </div>
-        <p style="margin:8px 0 6px;font-size:12.5px;color:var(--hub-text-soft);line-height:1.7">
-          يستخدم هذا النفق لإدارة الراوتر فقط: واجهة الربط، الدخول الإداري، فحص الاتصال، المراقبة، وإرسال أوامر هوبي راديوس. لا يتم تمرير إنترنت المشتركين من خلاله.
-        </p>
-        <div style="font-size:12px;font-weight:700;color:#047857"><i class="fa-solid fa-circle-info"></i> لن يتم ضبط Default Route على نفق SSTP.</div>
-        <label style="display:flex;align-items:center;gap:8px;margin-top:8px;font-size:12.5px;font-weight:700;color:var(--hub-text-soft)">
-          <input type="checkbox" name="sstp_verify_certificate" value="1">
-          التحقق من شهادة الخادم — فعّله في الإنتاج عند جاهزية الشهادة.
-        </label>
+  {# ── القسم 1: هوية الراوتر ── #}
+  {% call hub.section("هوية الراوتر", icon="server") %}
+    <div class="mtw-grid">
+      <div class="mtw-field">
+        <span class="mtw-label">
+          اسم الراوتر <span class="req">*</span>
+          <span class="hub-hint" tabindex="0" data-hint="معرّف يظهر في لوحة الإدارة فقط — لا يُرسَل للراوتر."><i class="fa-solid fa-info"></i></span>
+        </span>
+        <input class="hub-input" type="text" name="name" required maxlength="64"
+               placeholder="مثال: MT-Office" autofocus>
       </div>
 
-      {# بطاقة نفق حركة الإنترنت المتقدم #}
-      <details class="mt-v6-card" style="border:1px solid var(--hub-border-soft);border-radius:14px;padding:14px">
-        <summary style="cursor:pointer;display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-weight:800">
-          <i class="fa-solid fa-route"></i> نفق تغيير IP (تمرير الترافيك)
-          <span style="background:#7c3aed;color:#fff;font-size:11px;font-weight:800;padding:2px 9px;border-radius:999px">متقدم</span>
-        </summary>
-        <p style="margin:10px 0 6px;font-size:12.5px;color:var(--hub-text-soft);line-height:1.7">
-          يستخدم هذا النفق عند تفعيل خدمة تغيير عنوان الإنترنت أو تمرير حركة مشتركين محددين عبر الخادم. هذا النفق منفصل عن نفق الإدارة.
-        </p>
-        <label style="display:flex;flex-direction:column;gap:4px;font-size:12.5px;font-weight:700;color:var(--hub-text-soft);margin-bottom:8px">
-          بروتوكول النفق
-          <select name="traffic_protocol" class="hub-select" data-mt-traffic-protocol>
-            <option value="ipsec" selected>L2TP/IPsec — موصى به</option>
-            <option value="pptp">PPTP — قديم وغير آمن</option>
-          </select>
-        </label>
-        <div data-mt-pptp-warn hidden style="display:flex;align-items:flex-start;gap:8px;font-size:12px;font-weight:700;color:#b91c1c;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:9px;margin-bottom:8px">
-          <i class="fa-solid fa-triangle-exclamation" style="margin-top:2px"></i>
-          PPTP قديم وغير آمن وتشفيره (MS-CHAPv2) مخترَق. لا تستخدمه إلا اضطرارًا عندما لا يدعم الراوتر L2TP/IPsec.
+      <div class="mtw-field" data-mt-address-field>
+        <span class="mtw-label">
+          عنوان الراوتر أو الدومين
+          <span class="hub-hint" tabindex="0" data-hint="الإصدار 7: يُولَّد تلقائيًّا عبر نفق الإدارة — اتركه فارغًا. الإصدار 6: مطلوب للاتصال المباشر."><i class="fa-solid fa-info"></i></span>
+        </span>
+        <input class="hub-input mono" type="text" name="address" maxlength="128"
+               placeholder="مثال: 192.168.1.1">
+        <span class="mtw-help" data-mt-address-hint-v7>
+          <strong>الإصدار 7:</strong> يُولَّد تلقائيًّا عبر نفق الإدارة الحديث — اتركه فارغًا.
+        </span>
+        <span class="mtw-help" data-mt-address-hint-v6 hidden>
+          <strong>الإصدار 6:</strong> مطلوب — لا يدعم نفق الإدارة الحديث، نحتاج عنوانًا مباشرًا للوصول.
+        </span>
+      </div>
+
+      <div class="mtw-field full">
+        <span class="mtw-label">
+          إصدار نظام الراوتر <span class="req">*</span>
+          <span class="hub-hint" tabindex="0" data-hint="إذا غير متأكّد اختر 7. السكربت يطلع جاهزًا للنسخ بعد الحفظ."><i class="fa-solid fa-info"></i></span>
+        </span>
+        <div class="mtw-vers">
+          {% for v in ros_versions %}
+            <label class="mtw-ver">
+              <input type="radio" name="ros_version" value="{{ v }}"
+                     {% if v == '7' %}checked{% endif %} required>
+              <span class="mtw-ver-ic"><i class="fa-solid fa-{{ 'shield-virus' if v == '7' else 'network-wired' }}"></i></span>
+              <span>
+                <span class="mtw-ver-tt">الإصدار {{ v }}.x</span>
+                <span class="mtw-ver-sb">{{ 'نفق إدارة حديث (WireGuard) — موصى به' if v == '7' else 'اتصال مباشر' }}</span>
+              </span>
+            </label>
+          {% endfor %}
         </div>
-        <label style="display:flex;flex-direction:column;gap:4px;font-size:12.5px;font-weight:700;color:var(--hub-text-soft);margin-bottom:8px">
-          وضع حركة الإنترنت
-          <select name="traffic_mode" class="hub-select" data-mt-traffic-mode>
-            <option value="disabled" selected>معطّل</option>
-            <option value="selected_pool">تجمّع عناوين محدد</option>
-            <option value="selected_subscribers">مشتركون محددون</option>
-            <option value="full_tunnel">تمرير كل الحركة (متقدم)</option>
-          </select>
-        </label>
-        <label data-mt-fulltunnel-confirm hidden style="display:flex;align-items:flex-start;gap:8px;font-size:12px;font-weight:700;color:#b91c1c;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:9px">
-          <input type="checkbox" name="full_tunnel_confirmed" value="1" style="margin-top:2px">
-          أفهم أن تمرير كل الترافيك قد يسبب انقطاعًا إذا كان الإعداد خاطئًا.
-        </label>
-        <div style="font-size:11.5px;color:var(--hub-text-mute);margin-top:8px;line-height:1.7">
-          <i class="fa-solid fa-triangle-exclamation"></i> لا تفعّل تمرير كل الحركة إلا بعد فحص قدرة الراوتر والخادم. السرعة تعتمد على موديل الراوتر والمعالج ودعم التسريع وجودة الخط.<br>
-          <i class="fa-solid fa-code-branch"></i> لا يمكن جعل SSTP و L2TP/IPsec يملكان Default Route بنفس الوقت.
-        </div>
-      </details>
+      </div>
+
+      <div class="mtw-field full">
+        <span class="mtw-label">
+          عنوان السيرفر (كما يراه الراوتر)
+          <span class="hub-hint" tabindex="0" data-hint="يُدمج في السكربت كعنوان خادم المصادقة. اكتشفه النظام تلقائيًّا — عدّله لو الراوتر يحتاج عنوانًا مختلفًا (مثل عنوان الربط الداخلي)."><i class="fa-solid fa-info"></i></span>
+        </span>
+        <input class="hub-input mono" type="text" name="server_ip" value="{{ default_server_ip }}"
+               placeholder="مثال: 187.77.70.18" maxlength="128">
+      </div>
     </div>
+  {% endcall %}
 
-    <label class="mt-setup-field">
-      <span class="mt-setup-field-label">عنوان السيرفر (كما يراه الراوتر)</span>
-      <input type="text" name="server_ip" value="{{ default_server_ip }}"
-             placeholder="مثال: 187.77.70.18" maxlength="128">
-      <span class="mt-setup-field-hint">سيُدمج في السكربت كعنوان خادم المصادقة. اكتشفه النظام تلقائيًّا — عدّله لو الراوتر يحتاج عنوانًا مختلفًا مثل عنوان الربط الداخلي.</span>
-    </label>
+  {# أُزيل من لوحة العميل — يُعاد مركزياً عبر لوحة التراخيص (قرار معماري):
+     «القسم 2: استراتيجية ربط الإصدار 6» — بطاقة نفق الإدارة SSTP
+     (sstp_verify_certificate) + بطاقة نفق تغيير العنوان المدفوع
+     (traffic_protocol / traffic_mode / full_tunnel_confirmed). توليد
+     الأنفاق وبيانات اعتماد الـCHR ممنوع في لوحة العميل — حوكمة مركزية.
+     راوتر v6 يُنشأ الآن باتصال مباشر فقط (العنوان اليدوي أعلاه). #}
 
-    <div class="mt-setup-actions">
-      <button type="submit" class="hub-btn hub-btn--primary">
-        <i class="fa-solid fa-wand-magic-sparkles"></i> توليد + إنشاء
-      </button>
-      <a href="{{ url_for('radius.devices_list') }}" class="hub-btn">إلغاء</a>
-    </div>
-  </form>
-
-  <aside class="mt-setup-aside">
-    <h4><i class="fa-solid fa-shield"></i> ما الذي يُولَّد تلقائيًّا؟</h4>
-    <ul>
-      <li>مستخدم واجهة الربط على شكل <code>hr-XXXXXX</code></li>
-      <li>كلمة سر واجهة الربط ٣٢ حرفًا عشوائيًّا</li>
-      <li>سر المصادقة المشترك ٣٢ حرفًا</li>
-      <li><strong>نظير ربط + عنوان داخلي داخل النفق</strong> للإصدار 7</li>
-      <li>سكربت كامل بالقيم المُولَّدة، جاهز للنسخ</li>
-    </ul>
-    <h4><i class="fa-solid fa-list-check"></i> الخطوات بعد الحفظ</h4>
-    <ol>
-      <li>الخادم يحفظ الجهاز ويضيف نظير الربط للإصدار 7.</li>
-      <li>تنسخ السكربت وتلصقه في شاشة أوامر الراوتر.</li>
-      <li>الراوتر يتّصل خلال ثوانٍ ويبدأ خدمة المصادقة.</li>
-      <li>تضغط "اختبار" — تفتح لوحة الراوتر.</li>
-    </ol>
-  </aside>
-</div>
+  {# ── شريط الإجراءات ── #}
+  <div class="mt-setup-actions" style="justify-content:flex-end;padding:4px 2px 0">
+    <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.mt_operations') }}">إلغاء</a>
+    <button class="hub-btn hub-btn--primary" type="submit">
+      <i class="fa-solid fa-wand-magic-sparkles"></i> توليد + إنشاء
+    </button>
+  </div>
+</form>
+{% endcall %}
 
 <script>
-// Toggle the address field's hint + required attribute based on
-// اختيار إصدار نظام الراوتر: الإصدار 7 يمكن توليد عنوانه تلقائيًا،
-// والإصدار 6 يحتاج عنوانًا مباشرًا.
+// تبديل حقل العنوان حسب اختيار الإصدار (الإصدار 6 يتطلّب عنوانًا مباشرًا).
+// أُزيل من لوحة العميل — يُعاد مركزياً عبر لوحة التراخيص (قرار معماري):
+// منطق إظهار/إخفاء قسم أنفاق الإصدار 6 + تأكيد التمرير الكامل + تحذير PPTP.
 (function () {
   const radios = document.querySelectorAll('input[name="ros_version"]');
   const addrInput = document.querySelector('[data-mt-address-field] input[name="address"]');
   const hintV7 = document.querySelector('[data-mt-address-hint-v7]');
   const hintV6 = document.querySelector('[data-mt-address-hint-v6]');
-  const v6Tunnels = document.querySelector('[data-mt-v6-tunnels]');
   function apply() {
     const v = (document.querySelector('input[name="ros_version"]:checked') || {}).value;
     const isV7 = v === "7";
     if (addrInput) addrInput.required = !isV7;
     if (hintV7) hintV7.hidden = !isV7;
     if (hintV6) hintV6.hidden = isV7;
-    // استراتيجية ربط الإصدار 6 فقط.
-    if (v6Tunnels) v6Tunnels.hidden = isV7;
   }
   radios.forEach(r => r.addEventListener("change", apply));
   apply();
-
-  // Full-tunnel mode requires an explicit confirmation checkbox.
-  const modeSel = document.querySelector('[data-mt-traffic-mode]');
-  const confirmBox = document.querySelector('[data-mt-fulltunnel-confirm]');
-  function applyMode() {
-    if (!modeSel || !confirmBox) return;
-    confirmBox.hidden = modeSel.value !== "full_tunnel";
-  }
-  if (modeSel) modeSel.addEventListener("change", applyMode);
-  applyMode();
-
-  // عند اختيار النفق القديم، أظهر تحذير الأمان.
-  const protoSel = document.querySelector('[data-mt-traffic-protocol]');
-  const pptpWarn = document.querySelector('[data-mt-pptp-warn]');
-  function applyProto() {
-    if (!protoSel || !pptpWarn) return;
-    pptpWarn.hidden = protoSel.value !== "pptp";
-  }
-  if (protoSel) protoSel.addEventListener("change", applyProto);
-  applyProto();
 })();
 </script>
 

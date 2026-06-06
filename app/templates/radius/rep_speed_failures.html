@@ -1,8 +1,12 @@
 {# ═══════════════════════════════════════════════════════════════════════
-   فشل تحديث السرعة — UNIFIED DESIGN SYSTEM (megahero + worklayout + help).
-
-   نفس بيانات الـ backend: `items` (صفوف audit_log الفاشلة)، `total`، `filters`.
-   صفر تغيير في المسار/السلوك.
+   فشل تحديث السرعة — إعادة تصميم من الصفر على نظام hub_v2:
+     • صدفة هيرو واحدة (hub-hero-shell): عنوان + سطر تعريفي + مؤشرات بصف
+       واحد + حزام الفلترة — بلا أي هيروات/لافتات مكدّسة.
+     • جدول uds موحّد (فرز + ترقيم + تصدير) — الفعل والهدف معرَّبان في
+       المسار (action_label / target_display) والقيمة الخام في title.
+     • نفس معطيات المسار: `items` (صفوف audit_log حيث result_status =
+       failed لعمليات السرعة/الباقة)، `total`، `filters` — صفر تغيير على
+       المسار أو السلوك أو عقد الفلاتر (q/date_from/date_to).
    ═══════════════════════════════════════════════════════════════════════ #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
@@ -12,82 +16,97 @@
 {% block page_title %}فشل تحديث السرعة{% endblock %}
 {% block page_sub %}<span class="sub">{{ total }} عملية</span>{% endblock %}
 
-{% block content %}
-{% include "radius/reports_nav.html" %}
+{% block head_extra %}{{ super() }}
+{# نظام الجداول الموحد (uds): فرز + ترقيم صفحات + تصدير لجدول العمليات #}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
+{% endblock %}
 
-{# ───── Merged hero: title + subtitle + KPI strip + integrated filters ───── #}
+{% block content %}
+{# متحكّم «انتقال سريع» المضغوط — يُحقن في صف عنوان الهيرو بدل الشريطين الكبيرين #}
+{% set _report_jump %}{% include "radius/reports_nav.html" %}{% endset %}
+
+{# ── مؤشرات مشتقة من نفس `items` (بلا أي استعلام إضافي) ── #}
+{% set _actors  = items|map(attribute='actor')|unique|list|length %}
+{% set _bulk    = items|selectattr('action', 'equalto', 'bulk_set_speeds')|list|length %}
+{% set _targets = items|map(attribute='target_id')|reject('none')|unique|list|length %}
+
+{# ───── صدفة الهيرو الواحدة: عنوان + سطر تعريفي + مؤشرات بصف واحد + حزام الفلترة ───── #}
+<section class="hub-hero-shell" data-testid="speed-failures-hero">
 {% call hub.megahero(
   "فشل تحديث السرعة",
-  subtitle="عمليات تغيير السرعة أو الباقة التي فشلت، مع توضيح المنفّذ والسبب بلغة مفهومة.",
+  subtitle="محاولات تغيير السرعة أو الباقة التي فشلت — من نفّذها وعلى مَن وما سبب الفشل.",
   icon="gauge-high",
+  actions_html=_report_jump,
   kpis=[
-    {'label': 'إجمالي العمليات الفاشلة', 'value': total, 'icon': 'gauge-high', 'variant': 'brand'},
+    {'label': 'إجمالي المطابق',  'value': total,        'icon': 'list-check',           'variant': 'brand'},
+    {'label': 'المعروض',         'value': items|length, 'icon': 'table-list',           'variant': 'blue'},
+    {'label': 'تحديثات جماعية',  'value': _bulk,        'icon': 'layer-group',          'variant': 'amber'},
+    {'label': 'أهداف متأثرة',    'value': _targets,     'icon': 'triangle-exclamation', 'variant': 'red'},
   ],
   search_action=url_for('radius.rep_speed_failures')
 ) %}
   <input class="hub-input grow" type="text" name="q"
          value="{{ filters.q if filters else '' }}"
-         placeholder="بحث (منفّذ / إجراء / هدف / خطأ)…">
+         placeholder="بحث (منفّذ / إجراء / هدف / نص الخطأ)…">
   <input class="hub-input" type="date" name="date_from"
          value="{{ filters.date_from if filters else '' }}" title="من تاريخ">
   <input class="hub-input" type="date" name="date_to"
          value="{{ filters.date_to if filters else '' }}" title="إلى تاريخ">
   {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
   {% if filters and (filters.q or filters.date_from or filters.date_to) %}
-    {{ hub.btn("مسح", icon="rotate-left", variant="ghost", size="sm",
+    {{ hub.btn("إعادة ضبط", icon="rotate-left", variant="ghost", size="sm",
                attrs='onclick="window.location=' + "'" + url_for('radius.rep_speed_failures') + "'" + '"') }}
   {% endif %}
+  <span class="hub-hint" tabindex="0"
+        data-hint="البحث يطابق المنفّذ أو الإجراء أو معرّف الهدف أو نص الخطأ، ونطاق التاريخ يعمل على وقت العملية. تُعرض عمليات السرعة/الباقة الفاشلة فقط (حتى 300 عملية) من سجل التدقيق audit_log للقراءة فقط."><i class="fa-solid fa-info"></i></span>
 {% endcall %}
+</section>{# /hub-hero-shell #}
 
 {% if items %}
-{# ───── Main (carded table) + help panel on the LEFT ───── #}
-{% call hub.worklayout(aside_html=hub.helppanel(
-  "كيف تقرأ هذا التقرير؟",
-  intro="كل صف هو محاولة تغيير سرعة أو باقة فشلت — مرتبة حسب الأحدث.",
-  items=[
-    {'icon': 'user-gear',    'text': '«المنفّذ» هو المستخدم أو النظام الذي حاول إجراء العملية.'},
-    {'icon': 'gauge-high',   'text': '«الإجراء» يصف نوع التغيير (سرعة / باقة / تعيين جماعي).'},
-    {'icon': 'crosshairs',   'text': '«الهدف» هو المشترك أو العنصر الذي طُبّق عليه التغيير.'},
-    {'icon': 'triangle-exclamation', 'text': '«الخطأ» يوضّح سبب فشل العملية بلغة مفهومة.'},
-  ],
-  note="هذا التقرير للقراءة فقط — البيانات تأتي مباشرة من سجل التدقيق audit_log."
-)) %}
-  {% call hub.section("العمليات الفاشلة", icon="table-list",
-                      meta=items|length|string + " صف", flush=True) %}
-    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25"
-         style="border:none;border-radius:0">
-      <table class="hub-table">
-        <thead>
-          <tr>
-            <th>الوقت</th>
-            <th>المنفّذ</th>
-            <th>الإجراء</th>
-            <th>الهدف</th>
-            <th data-uds-nosort>الخطأ</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for r in items %}
-          <tr class="is-fail">
-            {% set _dl = r.created_at|dt_local if r.created_at else '' %}
-            <td class="mono"
-                style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
-              <span class="rep-primary">{{ _dl[:10] }}</span>
-              <span class="rep-sub">{{ _dl[11:16] }}</span>
-            </td>
-            <td><span class="rep-primary">{{ r.actor or '—' }}</span></td>
-            <td>{{ r.action_label or '—' }}</td>
-            <td>{{ r.target_display or '—' }}</td>
-            <td><span class="rep-reason">{{ r.error_message or '—' }}</span></td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  {% endcall %}
+{# ───── جدول العمليات الفاشلة — uds موحّد (فرز + ترقيم + تصدير) ───── #}
+{% call hub.section("العمليات الفاشلة", icon="table-list",
+                    meta=items|length|string + " عملية", flush=True) %}
+  <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25"
+       style="border:none;border-radius:0">
+    <table class="hub-table rep-table">
+      <thead>
+        <tr>
+          <th>الوقت</th>
+          <th>المنفّذ</th>
+          <th data-uds-nosort>الإجراء</th>
+          <th>الهدف</th>
+          <th data-uds-nosort data-uds-nocol>سبب الفشل</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in items %}
+        <tr class="is-fail">
+          {% set _dl = r.created_at|dt_local if r.created_at else '' %}
+          <td class="mono"
+              style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
+            <span class="rep-primary">{{ _dl[:10] or '—' }}</span>
+            <span class="rep-sub">{{ _dl[11:16] }}</span>
+          </td>
+          <td><strong><bdi>{{ r.actor_label or r.actor or '—' }}</bdi></strong></td>
+          {# الإجراء معرَّب في المسار — والقيمة الخام تبقى في title #}
+          <td title="{{ r.action or '' }}">{{ hub.pill(r.action_label or 'غير محدد', variant="amber", dot=False) }}</td>
+          <td>{{ r.target_display or '—' }}</td>
+          <td class="small" title="{{ r.error_message or '' }}"
+              style="max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+            <bdi>{{ r.error_message or '—' }}</bdi>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 {% endcall %}
 {% else %}
 {{ hub.empty("لا عمليات سرعة فاشلة",
-   sub="كل عمليات تحديث السرعة نجحت — لا شيء هنا.", icon="circle-check") }}
+   sub="كل عمليات تحديث السرعة والباقات نجحت — لا شيء يستدعي الانتباه.",
+   icon="circle-check") }}
 {% endif %}
+
+{# نظام الجداول الموحد: فرز + ترقيم صفحات + تصدير #}
+<script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
 {% endblock %}

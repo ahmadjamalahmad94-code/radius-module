@@ -70,6 +70,10 @@ class CardsStore:
         """R10.4: عدّ الكروت لاستخدام الـ UI في pagination."""
         return cards_repo.count_cards(_tid(), **kw)
 
+    def cards_status_counts(self, **kw) -> dict:
+        """عدّادات حالات الكروت (متاح/مستخدم/منتهي/محظور) لشريط KPI."""
+        return cards_repo.cards_status_counts(_tid(), **kw)
+
     def mark_used(self, *, username: str, mac: str = "") -> None:
         # سيُستدعى من webhook لاحقًا — نمرّر الآن بدون فعل
         pass

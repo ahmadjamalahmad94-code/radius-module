@@ -1,15 +1,20 @@
-{# Cards of a batch — UNIFIED DESIGN SYSTEM.
-   Merged hero (title + subtitle + KPI strip + actions) via hub.megahero,
-   help panel on the LEFT via hub.worklayout, and the cards table re-skinned
-   to the unified .hub-table look.
+{# كروت الحزمة — UNIFIED DESIGN SYSTEM (إعادة تصميم 2026-06-04).
+   ▸ صدفة هيرو موحّدة (hub-hero-shell): عنوان الحزمة + الوصف + الأزرار +
+     شريط الـ KPI في صف واحد إجباري بفواصل ناعمة — كتلة واحدة بدل بلاطات
+     متراكمة عموديًا (كان السبب: unified_design.css غير مُحمَّل أصلًا هنا).
+   ▸ لوحة الشرح على اليسار عبر hub.worklayout.
+   ▸ الجدول مُعاد تجليده بالمظهر الموحّد (.hub-table-look) لكنه يحتفظ
+     بجافاسكربته الخاصة بالكامل.
 
-   This table owns its OWN interactive JS (live search, select-all + bulk
-   form, click-to-sort, column show/hide, CSV export, quick-edit <dialog>).
-   Following the mt_dashboard precedent, we deliberately do NOT add
-   data-uds-table here: uds_table.js would snapshot rows and take over row
-   `display` / pagination, fighting the live search + select-all this page
-   must keep. Instead we apply full UDS visual parity and preserve every
-   data-* hook, form name, csrf input, href, id and <script> verbatim. #}
+   ⚠ هذا الجدول يملك جافاسكربت خاصًا به (بحث حي، تحديد الكل + نموذج
+   إجراءات جماعية، فرز بالنقر، إظهار/إخفاء أعمدة، تصدير CSV، تعديل سريع
+   عبر <dialog>). على سابقة mt_dashboard نحن عمدًا لا نضيف data-uds-table:
+   uds_table.js سيلتقط الصفوف ويستولي على display/الترقيم فيتصارع مع
+   البحث الحي وتحديد الكل اللذين يجب أن يبقيا. بدلًا من ذلك:
+     • نستورد unified_design.css للمظهر فقط (هيرو + أزرار + مُرقِّم).
+     • نبني مُرقِّم صفحات + منتقي «صفوف بالصفحة» داخل جافاسكربت الصفحة
+       نفسها (نفس كلاسات uds-pager-* شكلًا، بلا أي صراع سلوكيًا).
+   كل data-* hook وأسماء الحقول وcsrf والروابط محفوظة حرفيًا. #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
@@ -17,6 +22,13 @@
 {% block page_icon %}<i class="fa-solid fa-id-card"></i>{% endblock %}
 {% block page_title %}كروت الحزمة{% endblock %}
 {% block page_sub %}<span class="sub">{{ summary.total if summary else 0 }} كرت</span>{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+{# نظام التصميم الموحد: أنماط الهيرو المدمج (uds-hero) داخل hub-hero-shell
+   + كروم المُرقِّم uds-pager-* الذي يعيد استخدامه جافاسكربت الصفحة. #}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
+{% endblock %}
 
 {% block content %}
 <style>
@@ -38,6 +50,15 @@
     gap: 16px;
     min-width: 0;
   }
+
+  /* الصدفة داخل شبكة الصفحة: فجوة الشبكة (16px) تكفي — نلغي الهامش
+     السفلي الخاص بالصدفة حتى لا تتضاعف المسافات. */
+  .batch-cards-page > .hub-hero-shell { margin-bottom: 0; }
+
+  /* مُرقِّم صفحات الجدول — نفس كروم uds-pager-* (من unified_design.css)
+     لكن مملوك لجافاسكربت هذه الصفحة؛ يختفي فقط عندما لا يطابق البحث
+     أي صف (is-hidden) — وإلا يبقى ظاهرًا دائمًا مثل جداول uds. */
+  .bc-pager.is-hidden { display: none; }
 
   /* table panel toolbar (search / columns / export) */
   .bc-toolbar {
@@ -137,6 +158,61 @@
     flex-wrap: wrap;
     align-items: center;
     gap: 9px;
+  }
+  /* ── خانة الوقت المعتمدة: رقم قصير (خانتان) + وحدة مدموجة ──
+     الرقم والوحدة جسم واحد، والوحدة بلون بارد خفيف للتباين البصري */
+  .bc-time-group{
+    display: inline-flex;
+    align-items: stretch;
+  }
+  .bc-time-group input[name="time_amount"]{
+    width: 72px;
+    text-align: center;
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+  }
+  .bc-time-group .hbsel{ margin-right: -1px; }
+  .bc-time-group .hbsel-trigger,
+  .bc-time-group select[name="time_unit"]{
+    height: 100%;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    background: #EFF6FF;            /* أزرق بارد خفيف */
+    border-color: #BFDBFE;
+    color: #1E5C9F;
+    font-weight: 800;
+  }
+  .bc-time-group .hbsel-trigger:hover{
+    background: #DBEAFE;
+    border-color: #93C5FD;
+  }
+  /* ── ارتفاع موحّد لكل أزرار وخانات شريط الإجراءات الجماعية ── */
+  .bc-bulk-tools .hub-btn,
+  .bc-bulk-tools input,
+  .bc-bulk-tools .hbsel-trigger{
+    height: 36px;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+  }
+  /* إضافة وقت أخضر فاتح / خصم وقت أحمر فاتح */
+  .bc-bulk-tools button[value="add_time"]{
+    background: #F0FDF4;
+    border-color: #BBF7D0;
+    color: #15803D;
+  }
+  .bc-bulk-tools button[value="add_time"]:hover{
+    background: #DCFCE7;
+    border-color: #86EFAC;
+  }
+  .bc-bulk-tools button[value="subtract_time"]{
+    background: #FEF2F2;
+    border-color: #FECACA;
+    color: #B91C1C;
+  }
+  .bc-bulk-tools button[value="subtract_time"]:hover{
+    background: #FEE2E2;
+    border-color: #FCA5A5;
   }
 
   /* table itself — unified skin layered on the bespoke markup */
@@ -266,7 +342,9 @@
     justify-items: center;
   }
 
-  .bc-flow strong { direction: ltr; font-size: 12px; }
+  /* plaintext: النصوص العربية (17 يوم 20 ساعة) تبقى رقم-ثم-وحدة،
+     والتواريخ الرقمية تبقى LTR — بدل direction:ltr التي كانت تعكس العربية */
+  .bc-flow strong { unicode-bidi: plaintext; font-size: 12px; }
 
   .bc-row-actions { display: inline-flex; justify-content: center; gap: 5px; }
 
@@ -368,11 +446,18 @@
       </a>
     {% endset %}
 
+    {# ───── الصدفة الموحّدة: هيرو الحزمة + شريط KPI في صف واحد إجباري ─────
+       hub-hero-shell (من hub_v2.css) يدمج الهيرو والمؤشرات في كتلة واحدة
+       بفواصل ناعمة، والـ KPI تُجبَر على صف واحد عبر grid-auto-flow:column.
+       مؤشر «تحميل / رفع» انتقل إلى سطر الوصف حتى تبقى الخمسة الرئيسية
+       مرتاحة في الصف الواحد. #}
+    <section class="hub-hero-shell">
     {{ hub.megahero(
       "كروت الحزمة " ~ batch.batch_code,
       subtitle=(plan.name if plan else (batch.package_name or 'بدون عرض'))
                ~ " · أنشئت " ~ (batch.created_at|dt_local if batch.created_at else '—')
-               ~ " · " ~ (batch.created_by or 'بدون مدير'),
+               ~ " · " ~ (batch.created_by or 'بدون مدير')
+               ~ " · تحميل " ~ summary.download_label ~ " / رفع " ~ summary.upload_label,
       icon="id-card",
       actions_html=hero_actions,
       kpis=[
@@ -381,9 +466,9 @@
         {'label': 'متاحة',         'value': summary.ready,        'icon': 'circle-check',     'variant': 'blue'},
         {'label': 'مستخدمة غير متصلة', 'value': summary.used_offline, 'icon': 'circle-user',  'variant': 'blue'},
         {'label': 'منتهية / موقوفة', 'value': summary.expired + summary.revoked, 'icon': 'ban', 'variant': 'red'},
-        {'label': 'تحميل / رفع',   'value': summary.download_label ~ ' / ' ~ summary.upload_label, 'icon': 'arrows-up-down', 'variant': 'green'},
       ]
     ) }}
+    </section>{# /hub-hero-shell #}
 
     {% call hub.worklayout(aside_html=hub.helppanel(
       "كيف تقرأ جدول الكروت؟",
@@ -391,10 +476,11 @@
       items=[
         {'icon': 'arrow-up-wide-short', 'text': 'اضغط على اسم أي عمود للترتيب تصاعديًا أو تنازليًا.'},
         {'icon': 'table-columns',       'text': 'افتح زر «الأعمدة» لإظهار أو إخفاء تفاصيل إضافية (MAC، IP، السرعة…).'},
-        {'icon': 'square-check',         'text': 'حدّد عدة كروت لتظهر شريط الإجراءات الجماعية (قطع، تفعيل، إضافة وقت، حذف…).'},
-        {'icon': 'file-csv',            'text': 'زر CSV يصدّر الأعمدة المرئية والصفوف الظاهرة فقط بعد البحث.'},
+        {'icon': 'square-check',         'text': 'حدّد عدة كروت لتظهر شريط الإجراءات الجماعية (قطع، تفعيل، إضافة وقت، حذف…)؛ التحديد يبقى محفوظًا عند التنقل بين الصفحات.'},
+        {'icon': 'file-csv',            'text': 'زر CSV يصدّر الأعمدة المرئية وكل الصفوف المطابقة للبحث عبر جميع الصفحات.'},
+        {'icon': 'ellipsis',            'text': 'أسفل الجدول مُرقِّم صفحات مع اختيار عدد الصفوف بالصفحة (10–100).'},
       ],
-      note="مؤشرات الملخص بالأعلى تخص كامل الحزمة؛ البحث يصفّي الصفوف الظاهرة فقط."
+      note="مؤشرات الملخص بالأعلى تخص كامل الحزمة؛ البحث يصفّي كل الكروت ثم يعرضها المُرقِّم صفحةً صفحة."
     )) %}
     {% call hub.section("جدول الكروت", icon="table-list", meta=summary.total|string ~ " كرت", flush=True) %}
       <div style="padding:14px 16px 0">
@@ -422,12 +508,16 @@
               <button class="hub-btn hub-btn--secondary hub-btn--sm" name="bulk_action" value="enable" type="submit"><i class="fa-solid fa-circle-play"></i> تفعيل</button>
               <button class="hub-btn hub-btn--secondary hub-btn--sm" name="bulk_action" value="disable" type="submit"><i class="fa-solid fa-circle-pause"></i> إيقاف</button>
               <button class="hub-btn hub-btn--secondary hub-btn--sm" name="bulk_action" value="reset_usage" type="submit"><i class="fa-solid fa-rotate-left"></i> تصفير</button>
-              <input name="time_amount" type="number" min="1" placeholder="المدة">
-              <select name="time_unit" aria-label="وحدة الوقت">
-                <option value="minutes">دقائق</option>
-                <option value="hours">ساعات</option>
-                <option value="days">أيام</option>
-              </select>
+              {# خانة الوقت المعتمدة: رقم قصير + وحدة مدموجة بلون بارد خفيف #}
+              <span class="bc-time-group">
+                <input name="time_amount" type="number" min="1" placeholder="0" inputmode="numeric">
+                {# hub-select: يلفّه hub_select.js كقائمة hbsel منسّقة (CSS .bc-time-group .hbsel-trigger جاهز) #}
+                <select class="hub-select" name="time_unit" aria-label="وحدة الوقت">
+                  <option value="minutes">دقائق</option>
+                  <option value="hours">ساعات</option>
+                  <option value="days">أيام</option>
+                </select>
+              </span>
               <button class="hub-btn hub-btn--secondary hub-btn--sm" name="bulk_action" value="add_time" type="submit"><i class="fa-solid fa-clock"></i> إضافة وقت</button>
               <button class="hub-btn hub-btn--secondary hub-btn--sm" name="bulk_action" value="subtract_time" type="submit"><i class="fa-solid fa-clock-rotate-left"></i> خصم وقت</button>
               <input name="reason" type="text" placeholder="سبب الإجراء">
@@ -515,7 +605,7 @@
               <td data-col="remaining">
                 <div class="bc-flow">
                   <strong>{{ c.remaining_label }}</strong>
-                  <span class="bc-muted">{{ c.total_time_label }} استخدام</span>
+                  <span class="bc-muted" style="unicode-bidi:plaintext">تم استخدام {{ c.total_time_label }}</span>
                 </div>
               </td>
               <td data-col="connect"><div class="bc-flow"><strong>{{ c.last_connect_label }}</strong><span class="bc-muted">آخر مشاهدة {{ c.last_seen_label }}</span></div></td>
@@ -533,6 +623,24 @@
           {% endfor %}
           </tbody>
         </table>
+      </div>
+
+      {# ───── مُرقِّم الصفحات (جافاسكربت الصفحة، كروم uds موحّد) ─────
+         يعمل فوق نتائج البحث الحي: البحث يحدد الصفوف المطابقة، والمُرقِّم
+         يعرض شريحة منها. «تحديد الكل» يخص الصفوف الظاهرة في الصفحة
+         الحالية فقط — التصدير CSV يشمل كل المطابقات لا الصفحة فقط. #}
+      <div class="uds-table-pager bc-pager" data-cards-pager>
+        <div class="uds-pager-size">
+          صفوف بالصفحة
+          <select data-page-size aria-label="عدد الصفوف بالصفحة">
+            <option value="10">10</option>
+            <option value="25" selected>25</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+          </select>
+        </div>
+        <div class="uds-pager-info" data-pager-info></div>
+        <div class="uds-pager-nav" data-pager-nav></div>
       </div>
       {% else %}
         <div class="bc-empty">لا توجد كروت داخل هذه الحزمة.</div>
@@ -616,6 +724,13 @@
   const exportBtn = page.querySelector('[data-export-visible]');
   const storageKey = table ? table.dataset.storageKey : 'batch-cards-columns-v2';
 
+  /* عناصر المُرقِّم (كروم uds-pager موحّد، سلوك مملوك لهذه الصفحة) */
+  const pagerBox = page.querySelector('[data-cards-pager]');
+  const pageSizeSel = page.querySelector('[data-page-size]');
+  const pagerInfo = page.querySelector('[data-pager-info]');
+  const pagerNav = page.querySelector('[data-pager-nav]');
+  const view = { page: 1, size: pageSizeSel ? parseInt(pageSizeSel.value, 10) || 25 : 25 };
+
   function rows() {
     return table ? Array.from(table.querySelectorAll('tbody tr[data-row]')) : [];
   }
@@ -641,13 +756,72 @@
     }
   }
 
+  /* ─── البحث الحي + الترقيم في عرض واحد متناسق ───────────────────────
+     البحث يعلِّم الصفوف المطابقة (bcMatch)، ثم يعرض المُرقِّم شريحة
+     الصفحة الحالية منها فقط. الفرز يعيد ترتيب DOM ثم يعيد بناء العرض. */
+  function matchedRows() {
+    return rows().filter(row => row.dataset.bcMatch !== '0');
+  }
+
+  function pagerBtn(label, target, opts) {
+    opts = opts || {};
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'uds-pager-btn' + (opts.active ? ' is-active' : '');
+    b.innerHTML = label;
+    if (opts.disabled) b.disabled = true;
+    else b.addEventListener('click', () => { view.page = target; applyView(); });
+    pagerNav.appendChild(b);
+  }
+
+  function pagerDots() {
+    const d = document.createElement('span');
+    d.className = 'uds-pager-dots';
+    d.textContent = '…';
+    pagerNav.appendChild(d);
+  }
+
+  function renderPager(total, start, end, pages) {
+    if (!pagerBox) return;
+    if (pagerInfo) pagerInfo.textContent = total ? (start + 1) + '–' + end + ' من ' + total : '0';
+    if (!pagerNav) return;
+    pagerNav.innerHTML = '';
+    /* RTL: «السابق» سهم لليمين، و«التالي» سهم لليسار — نفس مُرقِّم uds */
+    pagerBtn('<i class="fa-solid fa-chevron-right"></i>', view.page - 1, { disabled: view.page <= 1 });
+    const s = Math.max(1, view.page - 2);
+    const e = Math.min(pages, view.page + 2);
+    if (s > 1) { pagerBtn('1', 1, { active: view.page === 1 }); if (s > 2) pagerDots(); }
+    for (let p = s; p <= e; p++) pagerBtn(String(p), p, { active: p === view.page });
+    if (e < pages) { if (e < pages - 1) pagerDots(); pagerBtn(String(pages), pages, { active: view.page === pages }); }
+    pagerBtn('<i class="fa-solid fa-chevron-left"></i>', view.page + 1, { disabled: view.page >= pages });
+  }
+
+  function applyView() {
+    const matched = matchedRows();
+    const total = matched.length;
+    const pages = Math.max(1, Math.ceil(total / view.size));
+    if (view.page > pages) view.page = pages;
+    const start = (view.page - 1) * view.size;
+    const end = Math.min(start + view.size, total);
+    let idx = 0;
+    rows().forEach(row => {
+      if (row.dataset.bcMatch === '0') { row.style.display = 'none'; return; }
+      row.style.display = (idx >= start && idx < end) ? '' : 'none';
+      idx++;
+    });
+    if (pagerBox) pagerBox.classList.toggle('is-hidden', total === 0);
+    renderPager(total, start, end, pages);
+    refreshBulk();
+  }
+
   function applySearch() {
     const q = (search?.value || '').trim().toLowerCase();
     rows().forEach(row => {
       const haystack = (row.dataset.search || '').toLowerCase();
-      row.style.display = !q || haystack.includes(q) ? '' : 'none';
+      row.dataset.bcMatch = (!q || haystack.includes(q)) ? '1' : '0';
     });
-    refreshBulk();
+    view.page = 1;          /* أي بحث جديد يعيدنا لأول صفحة */
+    applyView();
   }
 
   function sortValue(row, key, type) {
@@ -673,6 +847,8 @@
       if (av > bv) return 1 * direction;
       return 0;
     }).forEach(row => tbody.appendChild(row));
+    view.page = 1;          /* بعد الفرز نعود لأول صفحة ونعيد بناء الشريحة */
+    applyView();
   }
 
   function setColumnHidden(key, hidden) {
@@ -722,7 +898,9 @@
     if (!table) return;
     const visibleHeads = Array.from(table.querySelectorAll('thead th[data-col]'))
       .filter(th => !th.classList.contains('is-hidden') && th.dataset.col !== 'select' && th.dataset.col !== 'actions');
-    const visibleRows = rows().filter(row => row.style.display !== 'none');
+    /* التصدير يشمل كل الصفوف المطابقة للبحث (عبر كل الصفحات)، لا الصفحة
+       الظاهرة فقط — حتى لا يقتطع الترقيم البيانات من الملف. */
+    const visibleRows = matchedRows();
     const lines = [visibleHeads.map(th => `"${(th.dataset.label || th.textContent.trim()).replaceAll('"', '""')}"`).join(',')];
     visibleRows.forEach(row => {
       lines.push(visibleHeads.map(th => {
@@ -761,6 +939,13 @@
   });
 
   search?.addEventListener('input', applySearch);
+
+  /* تغيير «صفوف بالصفحة» يعيد العرض من أول صفحة */
+  pageSizeSel?.addEventListener('change', () => {
+    view.size = parseInt(pageSizeSel.value, 10) || 25;
+    view.page = 1;
+    applyView();
+  });
 
   columnsToggle?.addEventListener('click', () => {
     columnsBox?.classList.toggle('is-open');

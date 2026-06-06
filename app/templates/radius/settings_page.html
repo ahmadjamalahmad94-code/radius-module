@@ -1,130 +1,902 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 {% from "_partials/toggle_switch.html" import toggle_switch %}
-{% block title %}الإعدادات{% endblock %}
+{% block title %}إعدادات النظام{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-gear"></i>{% endblock %}
 {% block page_title %}إعدادات النظام{% endblock %}
+{% block page_sub %}<span class="sub">عصب الموقع — هوية النظام والمالية والوقت والكروت والتكاملات في صفحة واحدة منظمة</span>{% endblock %}
+
+{% block head_extra %}
+<style>
+/* ═══════════════ تبويبات الإعدادات — حزام سفلي داخل hub-hero-shell
+   (نفس نمط fc-tabs في المركز المالي) لكنها هنا أزرار JS لأن الصفحة
+   نموذج واحد: التنقل بين التبويبات لا يفقد التعديلات غير المحفوظة. ═══ */
+.hub-hero-shell > .st-tabs{
+  display:flex;flex-wrap:wrap;gap:8px;
+  padding:12px 22px;
+  border-top:1px solid var(--hub-border-soft);
+  background:rgba(255,255,255,.55);
+  border-end-start-radius:var(--hub-r-xl);
+  border-end-end-radius:var(--hub-r-xl);
+}
+.st-tabs button{
+  display:inline-flex;align-items:center;gap:8px;padding:9px 14px;
+  border:1px solid var(--hub-border-soft);border-radius:10px;background:#fff;
+  color:var(--hub-text-mute);font-weight:900;font-family:inherit;font-size:13px;
+  cursor:pointer;transition:all .15s ease;
+}
+.st-tabs button:hover,.st-tabs button.is-active{
+  background:var(--hub-bg-soft);color:var(--hub-brand-ink);border-color:var(--hub-brand-soft);
+}
+/* شارة صغيرة بعدد الحقول داخل كل تبويب */
+.st-tabs .st-count{
+  font-size:10.5px;font-weight:800;line-height:1;
+  padding:3px 7px;border-radius:999px;
+  background:var(--hub-bg-soft);color:var(--hub-text-mute);
+}
+.st-tabs button.is-active .st-count{ background:var(--hub-brand-soft);color:var(--hub-brand-ink); }
+/* نقطة برتقالية على التبويب الذي فيه تعديلات غير محفوظة */
+.st-tabs button .st-dirty-dot{
+  width:7px;height:7px;border-radius:50%;background:var(--hub-amber,#F59E0B);
+  display:none;
+}
+.st-tabs button.has-dirty .st-dirty-dot{ display:inline-block; }
+@media(max-width:640px){ .st-tabs button{ width:100%;justify-content:center } }
+
+/* لوحات التبويبات: تبقى داخل DOM دائمًا (إخفاء بصري فقط) حتى تُرسَل
+   كل الحقول مع الحفظ مهما كان التبويب الظاهر. */
+.st-panel{ display:none; }
+.st-panel.is-active{ display:block; }
+
+/* ═══════════════ بطاقات الأقسام الملوّنة (نمط cg-section في توليد الكروت) ═══ */
+.st-section{
+  background:var(--hub-bg-card,#fff);
+  border:1px solid var(--hub-border);
+  border-radius:var(--hub-r-lg,14px);
+  box-shadow:0 1px 4px rgba(15,23,42,.05);
+  margin-bottom:var(--hub-gap-section,18px);
+  overflow:hidden;
+}
+.st-section-head{
+  display:flex;align-items:center;gap:10px;
+  padding:13px 18px;border-bottom:1px solid var(--hub-border-soft);
+}
+.st-section-icon{
+  width:32px;height:32px;border-radius:9px;flex:0 0 auto;
+  display:grid;place-items:center;font-size:14px;
+}
+.st-section-title{ flex:1;font-size:14px;font-weight:800;color:var(--hub-text); }
+.st-section-meta{ font-size:11.5px;color:var(--hub-text-mute);font-weight:700; }
+.st-section-body{ padding:18px; }
+/* تلوين حسب المجموعة — شريط جانبي + خلفية أيقونة */
+.st-section--identity{ border-inline-start:3px solid var(--hub-brand); }
+.st-section--identity .st-section-icon{ background:var(--hub-brand-soft);color:var(--hub-brand-ink); }
+.st-section--finance{ border-inline-start:3px solid var(--hub-green,#10B981); }
+.st-section--finance .st-section-icon{ background:var(--hub-green-soft,#D1FAE5);color:var(--hub-green-ink,#047857); }
+.st-section--time{ border-inline-start:3px solid var(--hub-amber,#F59E0B); }
+.st-section--time .st-section-icon{ background:var(--hub-amber-soft,#FEF3C7);color:var(--hub-amber-ink,#B45309); }
+.st-section--subs{ border-inline-start:3px solid #3B82F6; }
+.st-section--subs .st-section-icon{ background:#DBEAFE;color:#1D4ED8; }
+.st-section--cards{ border-inline-start:3px solid #8B5CF6; }
+.st-section--cards .st-section-icon{ background:#EDE9FE;color:#6D28D9; }
+.st-section--notify{ border-inline-start:3px solid #EC4899; }
+.st-section--notify .st-section-icon{ background:#FCE7F3;color:#BE185D; }
+.st-section--advanced{ border-inline-start:3px solid #64748B; }
+.st-section--advanced .st-section-icon{ background:#E2E8F0;color:#334155; }
+
+/* ═══════════════ شبكة الحقول + سطر الشرح + المفتاح التقني ═══ */
+.st-grid{ display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px; }
+.st-grid .span2{ grid-column:1/-1; }
+@media(max-width:760px){ .st-grid{ grid-template-columns:1fr } }
+.st-field{ display:flex;flex-direction:column;gap:6px;min-width:0; }
+.st-field-label{
+  display:flex;align-items:center;gap:7px;
+  font-size:13px;font-weight:800;color:var(--hub-text);
+}
+/* سطر الشرح: ماذا يفعل هذا الإعداد وما أثره */
+.st-field .help{ font-size:11.5px;color:var(--hub-text-mute);line-height:1.7; }
+/* المفتاح التقني بحروف لاتينية أحادية المسافة داخل bdi (لا ينكسر مع RTL) */
+.st-key{
+  align-self:flex-start;
+  font-family:var(--hub-mono,monospace);font-size:10.5px;font-weight:600;
+  color:var(--hub-text-mute);
+  background:var(--hub-bg-soft);border:1px solid var(--hub-border-soft);
+  border-radius:6px;padding:2px 7px;direction:ltr;
+}
+/* حقل رقمي مع لاحقة وحدة (دقيقة / % / صف...) */
+.st-suffix{ display:flex;align-items:stretch;border:1px solid var(--hub-border);border-radius:var(--hub-r-md,10px);overflow:hidden;background:var(--hub-bg-card,#fff); }
+.st-suffix:focus-within{ border-color:var(--hub-brand);box-shadow:0 0 0 3px var(--hub-brand-soft); }
+.st-suffix .hub-input{ border:0;border-radius:0;flex:1;min-width:0;box-shadow:none!important; }
+.st-suffix .st-suffix-tag{
+  display:grid;place-items:center;padding:0 12px;flex:0 0 auto;
+  font-size:11.5px;font-weight:800;color:var(--hub-brand-ink);
+  background:var(--hub-brand-soft);border-inline-start:1px solid var(--hub-border-soft);
+}
+/* صف اللون: عيّنة + كود */
+.st-color-row{ display:flex;gap:10px;align-items:center; }
+.st-color-row input[type=color]{ height:42px;width:64px;padding:4px;flex:0 0 auto; }
+
+/* ═══════════════ ارتفاع موحّد لكل عناصر التحكم في شبكة الإعدادات ═══
+   حتى تتساوى الحقول النصية والقوائم المنسدلة (hbsel) وحقول اللاحقة
+   (نسبة الضريبة %) بصريًا في نفس الصف — إصلاح اختلاف الارتفاعات. */
+.st-grid .hub-input,
+.st-grid .hub-select,
+.st-grid .hbsel-trigger{
+  min-height:42px;
+  box-sizing:border-box;
+}
+/* غلاف اللاحقة نفسه يحدّد الارتفاع — الحقل بداخله يملأه */
+.st-grid .st-suffix{ min-height:42px; }
+.st-grid .st-suffix .hub-input{ min-height:40px; }
+/* زر hbsel يأخذ كامل عرض الحقل مثل باقي المدخلات */
+.st-grid .hbsel{ display:block;width:100%; }
+.st-grid .hbsel-trigger{ width:100%; }
+/* صف المفتاح (toggle .tsw) بنفس ارتفاع المدخلات حتى تتحاذى الصفوف */
+.st-grid .st-field .tsw{ min-height:42px; }
+
+/* ═══════════════ منطقة رفع الشعار: اسحب أو انقر + معاينة حية ═══ */
+.st-logo-drop{
+  display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  padding:14px 16px;
+  border:2px dashed var(--hub-border);
+  border-radius:var(--hub-r-lg,14px);
+  background:var(--hub-bg-soft);
+  cursor:pointer;
+  transition:all .18s ease;
+}
+.st-logo-drop:hover,.st-logo-drop:focus-visible{
+  border-color:var(--hub-brand);
+  background:var(--hub-brand-soft);
+}
+/* أثناء سحب ملف فوق المنطقة */
+.st-logo-drop.is-dragover{
+  border-color:var(--hub-brand);border-style:solid;
+  background:var(--hub-brand-soft);
+  box-shadow:0 0 0 4px var(--hub-brand-soft);
+}
+.st-logo-preview{
+  width:88px;height:64px;flex:0 0 auto;
+  display:grid;place-items:center;
+  background:#fff;border:1px solid var(--hub-border);border-radius:10px;
+  overflow:hidden;position:relative;
+}
+.st-logo-preview img{ max-width:100%;max-height:100%;object-fit:contain;padding:4px; }
+.st-logo-preview .st-logo-placeholder{ display:none;font-size:22px;color:var(--hub-text-mute); }
+.st-logo-preview.is-empty .st-logo-placeholder{ display:block; }
+.st-logo-preview.is-empty img{ display:none; }
+.st-logo-drop-text{ flex:1;min-width:180px;display:flex;flex-direction:column;gap:3px; }
+.st-logo-drop-text strong{ font-size:13px;font-weight:800;color:var(--hub-text); }
+.st-logo-drop-text span{ font-size:11px;color:var(--hub-text-mute);font-weight:700; }
+/* اسم الملف المختار قبل الحفظ — شارة خضراء صغيرة */
+.st-logo-filename{
+  align-self:flex-start;
+  color:var(--hub-green-ink,#047857)!important;
+  background:var(--hub-green-soft,#D1FAE5);
+  border-radius:999px;padding:2px 9px;direction:ltr;
+}
+.st-logo-btn{ flex:0 0 auto;pointer-events:none; } /* الزر شكلي — النقرة على كامل المنطقة */
+/* رسالة خطأ التحقّق مضمّنة (بدل alert) — تتحوّل الشارة لحمراء عند رفض الملف */
+.st-logo-filename.is-error{
+  color:var(--hub-red-ink,#9B1C1C)!important;
+  background:var(--hub-red-soft,#FDE5E5);
+}
+/* صف الرابط الخارجي البديل */
+.st-logo-url-row{ display:flex;align-items:center;gap:9px;margin-top:2px; }
+.st-logo-url-row .st-logo-url-label{ font-size:11.5px;font-weight:800;color:var(--hub-text-mute);flex:0 0 auto; }
+.st-logo-url-row .hub-input{ flex:1;min-width:0; }
+
+/* ═══════════════ شريط الحفظ اللاصق أسفل الشاشة ═══ */
+.st-savebar{
+  position:sticky;bottom:14px;z-index:60;
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  margin-top:var(--hub-gap-section,18px);
+  padding:12px 18px;
+  background:rgba(255,255,255,.92);backdrop-filter:blur(10px);
+  border:1px solid var(--hub-border);border-radius:var(--hub-r-lg,14px);
+  box-shadow:0 10px 30px rgba(15,23,42,.14);
+}
+.st-savebar .st-save-state{ flex:1;font-size:12.5px;font-weight:800;color:var(--hub-text-mute);display:flex;align-items:center;gap:8px; }
+.st-savebar .st-save-state i{ color:var(--hub-green-ink,#047857); }
+/* عند وجود تعديلات غير محفوظة يتحوّل الشريط لتنبيه كهرماني ناعم */
+.st-savebar.is-dirty{ border-color:var(--hub-amber,#F59E0B);background:rgba(255,251,235,.95); }
+.st-savebar.is-dirty .st-save-state i{ color:var(--hub-amber-ink,#B45309); }
+.st-savebar.is-dirty .st-save-state{ color:var(--hub-amber-ink,#B45309); }
+/* نبضة خفيفة على زر الحفظ عندما توجد تعديلات */
+.st-savebar.is-dirty .hub-btn--primary{ animation:st-pulse 1.6s ease infinite; }
+@keyframes st-pulse{ 0%,100%{ box-shadow:0 0 0 0 rgba(107,90,237,.35) } 50%{ box-shadow:0 0 0 7px rgba(107,90,237,0) } }
+</style>
+{% endblock %}
 
 {% block content %}
-{# lookup: key → current value #}
-{% set vals = {} %}{% for it in items %}{% if vals.update({it.key: it.value}) %}{% endif %}{% endfor %}
-{% set identity_keys = ['system.name','branding.logo_url','branding.primary_color','radius.default_country','billing.currency','billing.timezone_offset'] %}
-{# boolean on/off settings rendered as toggle switches (excluded from the generic loop) #}
-{% set bool_keys = ['auth.allow_password_reset'] %}
-{% set numeric_keys = [
-     'billing.tax_pct',
-     'api.rate_limit_per_minute',
-     'session.timeout_minutes',
-     'display.records_per_page',
-     'cards.default_username_length',
-     'cards.default_password_length',
-   ] %}
-{% set currencies = [('JOD','دينار أردني'),('ILS','شيكل ₪'),('USD','دولار $'),('IQD','دينار عراقي'),('SAR','ريال سعودي'),('EGP','جنيه مصري'),('AED','درهم إماراتي'),('EUR','يورو €'),('TRY','ليرة تركية')] %}
-{% set offsets = [('2','+2 (مصر)'),('3','+3 (الأردن/فلسطين/العراق/السعودية)'),('3.5','+3:30 (إيران)'),('4','+4 (الإمارات)'),('0','UTC (0)')] %}
+{# ── قاموسا بحث: المفتاح → القيمة الحالية / القيمة الافتراضية ── #}
+{% set vals = {} %}{% set defs = {} %}
+{% for it in items %}
+  {% if vals.update({it.key: it.value}) %}{% endif %}
+  {% if defs.update({it.key: it.get('default','')}) %}{% endif %}
+{% endfor %}
 
-{{ hub.hero(
+{# عدد الإعدادات المخصّصة = قيم تختلف عن الافتراضي (يُحسب من default الممرَّر من المسار) #}
+{% set ns = namespace(custom=0) %}
+{% for it in items %}{% if (it.value or '') != (it.get('default','') or '') %}{% set ns.custom = ns.custom + 1 %}{% endif %}{% endfor %}
+
+{# ── كل دول العالم بالعربية (القيمة المخزّنة = الاسم العربي نفسه — متوافق
+   مع القيم النصية القديمة في radius.default_country) ── #}
+{% set countries = [
+  'فلسطين','الأردن','العراق','سوريا','لبنان','مصر','السعودية','الإمارات','الكويت','قطر','البحرين','عُمان','اليمن',
+  'ليبيا','تونس','الجزائر','المغرب','السودان','موريتانيا','الصومال','جيبوتي','جزر القمر','تركيا','إيران',
+  'أفغانستان','ألبانيا','ألمانيا','أندورا','أنغولا','أنتيغوا وباربودا','الأرجنتين','أرمينيا','أستراليا','النمسا',
+  'أذربيجان','جزر البهاما','بنغلاديش','باربادوس','بيلاروسيا','بلجيكا','بليز','بنين','بوتان','بوليفيا',
+  'البوسنة والهرسك','بوتسوانا','البرازيل','بروناي','بلغاريا','بوركينا فاسو','بوروندي','كابو فيردي','كمبوديا',
+  'الكاميرون','كندا','جمهورية أفريقيا الوسطى','تشاد','تشيلي','الصين','كولومبيا','جمهورية الكونغو',
+  'جمهورية الكونغو الديمقراطية','كوستاريكا','ساحل العاج','كرواتيا','كوبا','قبرص','التشيك','الدنمارك','دومينيكا',
+  'جمهورية الدومينيكان','الإكوادور','السلفادور','غينيا الاستوائية','إريتريا','إستونيا','إسواتيني','إثيوبيا',
+  'فيجي','فنلندا','فرنسا','الغابون','غامبيا','جورجيا','غانا','اليونان','غرينادا','غواتيمالا','غينيا',
+  'غينيا بيساو','غيانا','هايتي','هندوراس','المجر','آيسلندا','الهند','إندونيسيا','أيرلندا','إيطاليا','جامايكا',
+  'اليابان','كازاخستان','كينيا','كيريباتي','كوريا الشمالية','كوريا الجنوبية','كوسوفو','قيرغيزستان','لاوس',
+  'لاتفيا','ليسوتو','ليبيريا','ليختنشتاين','ليتوانيا','لوكسمبورغ','مدغشقر','مالاوي','ماليزيا','جزر المالديف',
+  'مالي','مالطا','جزر مارشال','المكسيك','ولايات ميكرونيسيا','مولدوفا','موناكو','منغوليا','الجبل الأسود',
+  'موزمبيق','ميانمار','ناميبيا','ناورو','نيبال','هولندا','نيوزيلندا','نيكاراغوا','النيجر','نيجيريا',
+  'مقدونيا الشمالية','النرويج','باكستان','بالاو','بنما','بابوا غينيا الجديدة','باراغواي','بيرو','الفلبين',
+  'بولندا','البرتغال','رومانيا','روسيا','رواندا','سانت كيتس ونيفيس','سانت لوسيا','سانت فينسنت والغرينادين',
+  'ساموا','سان مارينو','ساو تومي وبرينسيبي','السنغال','صربيا','سيشل','سيراليون','سنغافورة','سلوفاكيا',
+  'سلوفينيا','جزر سليمان','جنوب أفريقيا','جنوب السودان','إسبانيا','سريلانكا','سورينام','السويد','سويسرا',
+  'طاجيكستان','تنزانيا','تايلاند','تيمور الشرقية','توغو','تونغا','ترينيداد وتوباغو','تركمانستان','توفالو',
+  'أوغندا','أوكرانيا','المملكة المتحدة','الولايات المتحدة','أوروغواي','أوزبكستان','فانواتو','الفاتيكان',
+  'فنزويلا','فيتنام','زامبيا','زيمبابوي'
+] %}
+{# ── مفاتيح الاتصال الدولية الشائعة في المنطقة + العالم ── #}
+{% set dial_codes = [
+  ('+970','فلسطين ‎+970'),('+972','‎+972'),('+962','الأردن ‎+962'),('+964','العراق ‎+964'),('+963','سوريا ‎+963'),
+  ('+961','لبنان ‎+961'),('+20','مصر ‎+20'),('+966','السعودية ‎+966'),('+971','الإمارات ‎+971'),
+  ('+965','الكويت ‎+965'),('+974','قطر ‎+974'),('+973','البحرين ‎+973'),('+968','عُمان ‎+968'),
+  ('+967','اليمن ‎+967'),('+218','ليبيا ‎+218'),('+216','تونس ‎+216'),('+213','الجزائر ‎+213'),
+  ('+212','المغرب ‎+212'),('+249','السودان ‎+249'),('+222','موريتانيا ‎+222'),('+252','الصومال ‎+252'),
+  ('+253','جيبوتي ‎+253'),('+269','جزر القمر ‎+269'),('+90','تركيا ‎+90'),('+98','إيران ‎+98'),
+  ('+1','أمريكا/كندا ‎+1'),('+44','بريطانيا ‎+44'),('+49','ألمانيا ‎+49'),('+33','فرنسا ‎+33'),
+  ('+34','إسبانيا ‎+34'),('+39','إيطاليا ‎+39'),('+7','روسيا ‎+7'),('+86','الصين ‎+86'),('+91','الهند ‎+91'),
+  ('+92','باكستان ‎+92'),('+60','ماليزيا ‎+60'),('+62','إندونيسيا ‎+62'),('+63','الفلبين ‎+63'),
+  ('+880','بنغلاديش ‎+880'),('+27','جنوب أفريقيا ‎+27'),('+234','نيجيريا ‎+234'),('+254','كينيا ‎+254'),
+  ('+251','إثيوبيا ‎+251'),('+55','البرازيل ‎+55'),('+52','المكسيك ‎+52'),('+61','أستراليا ‎+61')
+] %}
+{% set cur_country = vals.get('radius.default_country','') %}
+{% set cur_dial = vals.get('comms.country_dial_code','+970') %}
+{% set currencies = [('JOD','دينار أردني'),('ILS','شيكل ₪'),('USD','دولار $'),('IQD','دينار عراقي'),('SAR','ريال سعودي'),('EGP','جنيه مصري'),('AED','درهم إماراتي'),('EUR','يورو €'),('TRY','ليرة تركية')] %}
+{% set offsets = [('2','+2 (مصر)'),('3','+3 (الأردن / فلسطين / العراق / السعودية)'),('3.5','+3:30 (إيران)'),('4','+4 (الإمارات)'),('0','UTC (0)')] %}
+{% set cur_currency = vals.get('billing.currency','JOD') %}
+{% set cur_off = vals.get('billing.timezone_offset','3') %}
+{# تسمية التوقيت المعروضة في مؤشر KPI #}
+{% set tz_label = 'UTC' if cur_off in ['0',''] else ('UTC+' ~ cur_off) %}
+
+{# ═══════════════ الصدفة الموحّدة: هيرو + KPI صف واحد + تبويبات ═══════════════ #}
+<section class="hub-hero-shell">
+{{ hub.megahero(
   "إعدادات النظام",
-  subtitle="حدّد هوية نظامك: الاسم، الشعار، الدولة، العملة، والتوقيت — تنعكس فورًا على كل الصفحات.",
+  subtitle="عصب الموقع: هوية نظامك وعملته وتوقيته وسلوكه العام — أي تعديل هنا ينعكس فورًا على كل الصفحات بعد الحفظ.",
   icon="gear",
   actions_html='
     <button class="hub-btn hub-btn--primary" type="submit" form="settings-form">
-      <i class="fa-solid fa-floppy-disk"></i> حفظ
+      <i class="fa-solid fa-floppy-disk"></i> حفظ التغييرات
     </button>
-  '
+  ',
+  kpis=[
+    {'label': 'العملة الحالية',     'value': cur_currency,                                   'icon': 'coins',           'variant': 'green'},
+    {'label': 'توقيت النظام',       'value': tz_label,                                       'icon': 'clock',           'variant': 'amber'},
+    {'label': 'إعدادات مخصّصة',     'value': ns.custom,                                      'icon': 'sliders',         'variant': 'brand', 'sub': 'قيم تختلف عن الافتراضي'},
+    {'label': 'إجمالي الإعدادات',   'value': items|length,                                   'icon': 'list-check',      'variant': 'blue'},
+  ]
 ) }}
 
-{% set help_aside = hub.helppanel(
-     "كيف تُقرأ الإعدادات",
-     intro="هذه القيم تشكّل هوية نظامك وسلوكه العام. أي تعديل ينعكس فورًا على كل الصفحات بعد الحفظ.",
-     items=[
-       {'icon': 'id-badge', 'text': 'هوية النظام: الاسم، الشعار، اللون، الدولة، العملة والتوقيت — تظهر في كل مكان.'},
-       {'icon': 'sliders',  'text': 'القيم العامة: حدود الـ API، المهل، طول البطاقات، وصفوف الصفحة.'},
-       {'icon': 'toggle-on','text': 'مفاتيح التشغيل/الإيقاف تُحفظ كما هي — التفعيل يحفظ «1» والإيقاف يحفظ «0».'},
-     ],
-     icon="compass",
-     note="العملة والتوقيت يؤثران على الفواتير وحسابات الوقت في كل الباقات."
-   ) %}
+{# تبويبات JS — لا تغادر الصفحة فلا تُفقد التعديلات غير المحفوظة #}
+<nav class="st-tabs" aria-label="مجموعات الإعدادات">
+  <button type="button" data-st-tab="identity" class="is-active"><i class="fa-solid fa-id-badge"></i> هوية النظام <span class="st-count">5</span><span class="st-dirty-dot"></span></button>
+  <button type="button" data-st-tab="finance"><i class="fa-solid fa-coins"></i> المالية <span class="st-count">2</span><span class="st-dirty-dot"></span></button>
+  <button type="button" data-st-tab="time"><i class="fa-solid fa-clock"></i> الوقت والمنطقة <span class="st-count">2</span><span class="st-dirty-dot"></span></button>
+  <button type="button" data-st-tab="subs"><i class="fa-solid fa-users"></i> المشتركون والوصول <span class="st-count">6</span><span class="st-dirty-dot"></span></button>
+  <button type="button" data-st-tab="portal"><i class="fa-solid fa-id-card-clip"></i> صفحة المشترك <span class="st-count">9</span><span class="st-dirty-dot"></span></button>
+  <button type="button" data-st-tab="cards"><i class="fa-solid fa-credit-card"></i> الكروت <span class="st-count">3</span><span class="st-dirty-dot"></span></button>
+  <button type="button" data-st-tab="notify"><i class="fa-solid fa-bell"></i> الرسائل والتنبيهات <span class="st-count">2</span><span class="st-dirty-dot"></span></button>
+  <button type="button" data-st-tab="advanced"><i class="fa-solid fa-screwdriver-wrench"></i> متقدم <span class="st-count">4</span><span class="st-dirty-dot"></span></button>
+  {# أُزيل من لوحة العميل — يُعاد مركزياً عبر لوحة التراخيص (قرار معماري):
+     تبويب «خادم الأنفاق CHR». بيانات اعتماد الـCHR مركزية للمالك. #}
+</nav>
+</section>{# /hub-hero-shell #}
 
-<form method="post" id="settings-form">
-{% call hub.worklayout(aside_html=help_aside) %}
+{# ═══════════════ نموذج واحد يضم كل التبويبات (الإخفاء بصري فقط — كل
+   الحقول تُرسَل مع الحفظ، والمسار يحفظ المتغيّر منها فقط) ═══════════════ #}
+{# enctype ضروري لرفع ملف الشعار مع بقية الحقول في نفس الحفظ #}
+<form method="post" id="settings-form" enctype="multipart/form-data">
 
-  {# ── System identity ── #}
-  {% call hub.section("هوية النظام", icon="id-badge", meta='تنعكس على كل الصفحات والعملة والوقت') %}
-    <div class="hub-form-row">
-      <div class="hub-field">
-        <label class="hub-field-label">اسم النظام</label>
-        <input class="hub-input" type="text" name="system.name" value="{{ vals.get('system.name','') }}" placeholder="HobeRadius">
-      </div>
-      <div class="hub-field">
-        <label class="hub-field-label">الدولة (الموقع)</label>
-        <input class="hub-input" type="text" name="radius.default_country" value="{{ vals.get('radius.default_country','') }}" placeholder="مثال: الأردن / فلسطين / العراق">
-      </div>
-      <div class="hub-field">
-        <label class="hub-field-label">العملة</label>
-        <select class="hub-select" name="billing.currency">
-          {% for code, label in currencies %}
-            <option value="{{ code }}" {{ 'selected' if vals.get('billing.currency','JOD') == code else '' }}>{{ label }} — {{ code }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="hub-field">
-        <label class="hub-field-label">توقيت النظام</label>
-        <select class="hub-select" name="billing.timezone_offset">
-          {% set cur_off = vals.get('billing.timezone_offset','3') %}
-          {% for off, label in offsets %}
-            <option value="{{ off }}" {{ 'selected' if cur_off == off else '' }}>{{ label }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="hub-field">
-        <label class="hub-field-label">اللون الأساسي</label>
-        <input class="hub-input" type="color" name="branding.primary_color" value="{{ vals.get('branding.primary_color','#2BAACC') }}" style="height:42px;padding:4px">
-      </div>
-      <div class="hub-field" style="grid-column:1/-1">
-        <label class="hub-field-label">رابط الشعار (URL)</label>
-        <input class="hub-input" type="text" name="branding.logo_url" value="{{ vals.get('branding.logo_url','') }}" placeholder="https://…/logo.png">
-        {% if vals.get('branding.logo_url') %}
-          <div style="margin-top:10px"><img src="{{ vals.get('branding.logo_url') }}" alt="شعار" style="max-height:54px;border:1px solid var(--hub-border);border-radius:10px;padding:6px;background:#fff"></div>
-        {% else %}
-          <div class="hub-field-hint">أدخل رابط صورة شعارك ليظهر في النظام.</div>
-        {% endif %}
-      </div>
-    </div>
-  {% endcall %}
-
-  {# ── Access / behaviour toggles ── #}
-  {% call hub.section("الوصول والسلوك", icon="toggle-on", meta='مفاتيح التشغيل/الإيقاف') %}
-    <div class="hub-form-row">
-      <div class="hub-field">
-        <label class="hub-field-label">السماح بإعادة تعيين كلمة المرور</label>
-        {# hidden "0" first so an unchecked toggle still posts the field → route persists OFF #}
-        <input type="hidden" name="auth.allow_password_reset" value="0">
-        {{ toggle_switch(name="auth.allow_password_reset",
-             checked=(vals.get('auth.allow_password_reset','1') in ['1','true','t','on','True']),
-             value="1", id="set-apr") }}
-        <div class="hub-field-hint mono">auth.allow_password_reset</div>
-      </div>
-    </div>
-  {% endcall %}
-
-  {# ── Everything else ── #}
-  {% call hub.section("القيم العامة", icon="sliders") %}
-    <div class="hub-form-row">
-      {% for it in items if it.key not in identity_keys and it.key not in bool_keys %}
-        <div class="hub-field">
-          <label class="hub-field-label">{{ it.label }}</label>
-          <input class="hub-input" type="{{ 'number' if it.key in numeric_keys else 'text' }}" name="{{ it.key }}" value="{{ it.value }}">
-          <div class="hub-field-hint mono">{{ it.key }}</div>
+{# ─────────────────── تبويب: هوية النظام ─────────────────── #}
+<div class="st-panel is-active" data-st-panel="identity">
+  <section class="st-section st-section--identity">
+    <header class="st-section-head">
+      <span class="st-section-icon"><i class="fa-solid fa-id-badge"></i></span>
+      <span class="st-section-title">هوية النظام والعلامة</span>
+      <span class="st-section-meta">الاسم والشعار واللون تظهر في كل صفحات النظام</span>
+    </header>
+    <div class="st-section-body">
+      <div class="st-grid">
+        <div class="st-field">
+          <label class="st-field-label">اسم النظام</label>
+          <input class="hub-input" type="text" name="system.name" value="{{ vals.get('system.name','') }}" placeholder="HobeRadius">
+          <div class="help">يظهر في ترويسة الموقع وصفحات الطباعة والفواتير — هذا اسم شركتك أمام موظفيك وعملائك.</div>
+          <bdi class="st-key">system.name</bdi>
         </div>
-      {% endfor %}
+        <div class="st-field">
+          <label class="st-field-label">الدولة (موقع النظام)</label>
+          {# select بكل دول العالم بالعربية — يترقّى تلقائيًا لقائمة hbsel مع
+             بحث فوري. القيمة المخزّنة = الاسم العربي (متوافق مع القيم القديمة). #}
+          <select class="hub-select" name="radius.default_country" data-search-placeholder="ابحث عن الدولة...">
+            <option value="" {{ 'selected' if not cur_country else '' }}>— اختر الدولة —</option>
+            {# قيمة قديمة مخزّنة خارج القائمة؟ نعرضها كخيار حتى لا تضيع #}
+            {% if cur_country and cur_country not in countries %}
+              <option value="{{ cur_country }}" selected>{{ cur_country }} (قيمة محفوظة)</option>
+            {% endif %}
+            {% for c in countries %}
+              <option value="{{ c }}" {{ 'selected' if cur_country == c else '' }}>{{ c }}</option>
+            {% endfor %}
+          </select>
+          <div class="help">دولة تشغيل النظام — تُستخدم كمرجع للموقع الافتراضي في الواجهات والتقارير وبيانات المشتركين الجدد.</div>
+          <bdi class="st-key">radius.default_country</bdi>
+        </div>
+        <div class="st-field">
+          <label class="st-field-label">مفتاح الدولة
+            <span class="hub-hint" tabindex="0" data-hint="مفتاح الاتصال الدولي لدولتك (مثل ‎+970 أو ‎+962). عند إرسال رسالة لرقم محلي يبدأ بصفر (0599...) يستبدل النظام الصفر بهذا المفتاح تلقائيًا (‎+970599...)."><i class="fa-solid fa-info"></i></span>
+          </label>
+          <select class="hub-select" name="comms.country_dial_code" data-search-placeholder="ابحث عن المفتاح...">
+            {# مفتاح محفوظ غير موجود بالقائمة؟ نعرضه حتى لا يضيع #}
+            {% if cur_dial and cur_dial not in dial_codes|map(attribute=0)|list %}
+              <option value="{{ cur_dial }}" selected>{{ cur_dial }} (قيمة محفوظة)</option>
+            {% endif %}
+            {% for code, label in dial_codes %}
+              <option value="{{ code }}" {{ 'selected' if cur_dial == code else '' }}>{{ label }}</option>
+            {% endfor %}
+          </select>
+          <div class="help">يُستخدم لتطبيع أرقام الجوال عند إرسال رسائل SMS/واتساب.</div>
+          <bdi class="st-key">comms.country_dial_code</bdi>
+        </div>
+        <div class="st-field">
+          <label class="st-field-label">اللون الأساسي
+            <span class="hub-hint" tabindex="0" data-hint="لون العلامة المعتمد للنظام. اختر اللون من العيّنة وسيُحفظ كقيمة سداسية (hex)."><i class="fa-solid fa-info"></i></span>
+          </label>
+          <div class="st-color-row">
+            <input class="hub-input" type="color" name="branding.primary_color" value="{{ vals.get('branding.primary_color','#2BAACC') }}">
+            <bdi class="st-key" data-st-color-code>{{ vals.get('branding.primary_color','#2BAACC') }}</bdi>
+          </div>
+          <div class="help">لون هوية شركتك — يُعتمد في عناصر العلامة حيثما تستخدمه القوالب.</div>
+          <bdi class="st-key">branding.primary_color</bdi>
+        </div>
+        <div class="st-field span2">
+          <label class="st-field-label">شعار النظام
+            <span class="hub-hint" tabindex="0" data-hint="ارفع صورة شعارك مباشرة (PNG / JPG / SVG / WEBP — حتى 2MB) وسيُحفظ على الخادم ويُستخدم في كل الواجهات وصفحات الطباعة. أو الصق رابطًا خارجيًا في الحقل الصغير أدناه."><i class="fa-solid fa-info"></i></span>
+          </label>
+          {# منطقة الرفع: اسحب الملف أو انقر للاختيار — مع معاينة حية #}
+          <div class="st-logo-drop" id="st-logo-drop" tabindex="0" role="button"
+               aria-label="ارفع شعار النظام — اسحب الصورة هنا أو انقر للاختيار">
+            <input type="file" name="branding.logo_file" id="st-logo-file"
+                   accept="image/png,image/jpeg,image/svg+xml,image/webp,.png,.jpg,.jpeg,.svg,.webp" hidden>
+            <div class="st-logo-preview {{ '' if vals.get('branding.logo_url') else 'is-empty' }}" id="st-logo-preview">
+              {% if vals.get('branding.logo_url') %}
+                <img src="{{ vals.get('branding.logo_url') }}" alt="الشعار الحالي" id="st-logo-img">
+              {% else %}
+                <img src="" alt="" id="st-logo-img" hidden>
+              {% endif %}
+              <i class="fa-regular fa-image st-logo-placeholder" aria-hidden="true"></i>
+            </div>
+            <div class="st-logo-drop-text">
+              <strong id="st-logo-drop-title">{{ 'الشعار الحالي — اسحب صورة جديدة أو انقر للاستبدال' if vals.get('branding.logo_url') else 'اسحب صورة الشعار هنا أو انقر للاختيار' }}</strong>
+              <span>PNG · JPG · SVG · WEBP — بحد أقصى 2MB</span>
+              <span class="st-logo-filename" id="st-logo-filename" hidden></span>
+            </div>
+            <span class="hub-btn hub-btn--secondary hub-btn--sm st-logo-btn"><i class="fa-solid fa-upload"></i> اختيار ملف</span>
+          </div>
+          <div class="help">يُرفع الملف ويُحفظ على خادمك تحت <bdi dir="ltr">uploads/branding</bdi> — ويُحدَّث الرابط أدناه تلقائيًا عند الحفظ.</div>
+          {# الرابط الخارجي كبديل اختياري — نفس المفتاح المخزَّن تمامًا.
+             ملف مرفوع + رابط معًا؟ الملف المرفوع يتقدّم عند الحفظ. #}
+          <div class="st-logo-url-row">
+            <span class="st-logo-url-label">أو رابط خارجي:</span>
+            <input class="hub-input" type="text" name="branding.logo_url" value="{{ vals.get('branding.logo_url','') }}" placeholder="https://…/logo.png" dir="ltr">
+          </div>
+          <bdi class="st-key">branding.logo_url</bdi>
+        </div>
+      </div>
     </div>
-  {% endcall %}
+  </section>
+</div>
 
-  <div class="hub-flex-row" style="margin-top:16px">
-    {{ hub.btn("حفظ", icon="floppy-disk", variant="primary", type="submit") }}
-    {{ hub.btn("إلغاء", variant="ghost", href=url_for('radius.dashboard')) }}
-  </div>
+{# ─────────────────── تبويب: المالية ─────────────────── #}
+<div class="st-panel" data-st-panel="finance">
+  <section class="st-section st-section--finance">
+    <header class="st-section-head">
+      <span class="st-section-icon"><i class="fa-solid fa-coins"></i></span>
+      <span class="st-section-title">العملة والضريبة</span>
+      <span class="st-section-meta">تؤثر على كل الفواتير والأسعار والتحصيلات</span>
+    </header>
+    <div class="st-section-body">
+      <div class="st-grid">
+        <div class="st-field">
+          <label class="st-field-label">عملة النظام</label>
+          <select class="hub-select" name="billing.currency">
+            {% for code, label in currencies %}
+              <option value="{{ code }}" {{ 'selected' if cur_currency == code else '' }}>{{ label }} — {{ code }}</option>
+            {% endfor %}
+          </select>
+          <div class="help">العملة المعتمدة في كل النظام: أسعار الباقات، الفواتير، المحافظ، والتقارير المالية. غيّرها بحذر بعد بدء التشغيل.</div>
+          <bdi class="st-key">billing.currency</bdi>
+        </div>
+        <div class="st-field">
+          <label class="st-field-label">نسبة الضريبة %</label>
+          <div class="st-suffix">
+            <input class="hub-input" type="number" step="any" min="0" name="billing.tax_pct" value="{{ vals.get('billing.tax_pct','0') }}">
+            <span class="st-suffix-tag">%</span>
+          </div>
+          <div class="help">نسبة الضريبة المضافة على الفواتير. اتركها 0 إذا كانت أسعارك شاملة الضريبة أو لا تطبّق ضريبة.</div>
+          <bdi class="st-key">billing.tax_pct</bdi>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
 
-{% endcall %}{# /worklayout #}
+{# ─────────────────── تبويب: الوقت والمنطقة ─────────────────── #}
+<div class="st-panel" data-st-panel="time">
+  <section class="st-section st-section--time">
+    <header class="st-section-head">
+      <span class="st-section-icon"><i class="fa-solid fa-clock"></i></span>
+      <span class="st-section-title">التوقيت والجلسات</span>
+      <span class="st-section-meta">تحدد عرض الأوقات ومهلة جلسة الإدارة</span>
+    </header>
+    <div class="st-section-body">
+      <div class="st-grid">
+        <div class="st-field">
+          <label class="st-field-label">توقيت النظام (فارق عن UTC)
+            <span class="hub-hint" tabindex="0" data-hint="مثال: +3 تعني أن الساعة المحلية تسبق التوقيت العالمي بثلاث ساعات. كل أوقات الفواتير والباقات والجلسات تُعرض بهذا الفارق."><i class="fa-solid fa-info"></i></span>
+          </label>
+          <select class="hub-select" name="billing.timezone_offset">
+            {% for off, label in offsets %}
+              <option value="{{ off }}" {{ 'selected' if cur_off == off else '' }}>{{ label }}</option>
+            {% endfor %}
+          </select>
+          <div class="help">فارق التوقيت بالساعات — تُحسب عليه أوقات انتهاء الباقات وتواريخ الفواتير وسجلات الجلسات في كل الصفحات.</div>
+          <bdi class="st-key">billing.timezone_offset</bdi>
+        </div>
+        <div class="st-field">
+          <label class="st-field-label">مهلة جلسة الإدارة</label>
+          <div class="st-suffix">
+            <input class="hub-input" type="number" min="1" name="session.timeout_minutes" value="{{ vals.get('session.timeout_minutes','60') }}">
+            <span class="st-suffix-tag">دقيقة</span>
+          </div>
+          <div class="help">المدة قبل خروج المدير تلقائيًا عند عدم النشاط. قيمة أقصر = أمان أعلى، قيمة أطول = راحة أكثر.</div>
+          <bdi class="st-key">session.timeout_minutes</bdi>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+{# ─────────────────── تبويب: المشتركون والوصول ─────────────────── #}
+<div class="st-panel" data-st-panel="subs">
+  <section class="st-section st-section--subs">
+    <header class="st-section-head">
+      <span class="st-section-icon"><i class="fa-solid fa-users"></i></span>
+      <span class="st-section-title">المشتركون والوصول والعرض</span>
+      <span class="st-section-meta">سلوك الحسابات وتنبيهات الاستهلاك وعرض الجداول</span>
+    </header>
+    <div class="st-section-body">
+      <div class="st-grid">
+        <div class="st-field">
+          <label class="st-field-label">السماح بإعادة تعيين كلمة المرور</label>
+          {# المفتاح الحديث (toggle_switch) قبل الحقل المخفي «0»: المسار يقرأ
+             أول قيمة للمفتاح — مفعّل يرسل ["1","0"] فتُحفظ «1»، ومعطّل لا يرسل
+             إلا الحقل المخفي فتُحفظ «0». #}
+          {{ toggle_switch(name="auth.allow_password_reset",
+               checked=(vals.get('auth.allow_password_reset','1') in ['1','true','t','on','True']),
+               value="1", id="set-apr") }}
+          <input type="hidden" name="auth.allow_password_reset" value="0">
+          <div class="help">عند التفعيل يستطيع المستخدمون طلب إعادة تعيين كلمة المرور. عطّله إذا أردت أن يمرّ كل تغيير عبر الإدارة فقط.</div>
+          <bdi class="st-key">auth.allow_password_reset</bdi>
+        </div>
+        <div class="st-field">
+          {% set cur_unauth_ui = vals.get('security.unauthorized_ui','freeze') %}
+          <label class="st-field-label">عرض الأقسام غير المصرّح بها
+            <span class="hub-hint" tabindex="0" data-hint="كيف ترى الأدوار المحدودة الأقسام الخارجة عن صلاحياتها في القائمة الجانبية وأزرار العمليات؟ «تجميد بقفل»: يبقى البند ظاهرًا معطّلًا بأيقونة قفل (يعرف الموظف أن القسم موجود لكنه ليس ضمن صلاحياته). «إخفاء كلي»: يختفي البند تمامًا فلا يرى الموظف إلا أقسامه فقط. مدير النظام (super_admin) يرى كل شيء دائمًا."><i class="fa-solid fa-info"></i></span>
+          </label>
+          {# select يترقّى تلقائيًا إلى hbsel — نفس نمط بقية قوائم الصفحة #}
+          <select class="hub-select" name="security.unauthorized_ui">
+            <option value="freeze" {{ 'selected' if cur_unauth_ui != 'hide' else '' }}>تجميد بقفل — يظهر البند معطّلًا</option>
+            <option value="hide" {{ 'selected' if cur_unauth_ui == 'hide' else '' }}>إخفاء كلي — لا يظهر البند إطلاقًا</option>
+          </select>
+          <div class="help">قرار مالك الريدياس: الموظف ذو الدور المحدود إمّا يرى الأقسام الممنوعة مجمّدة بقفل، أو لا يراها أبدًا. لا يؤثر على مدير النظام.</div>
+          <bdi class="st-key">security.unauthorized_ui</bdi>
+        </div>
+        <div class="st-field">
+          <label class="st-field-label">نِسَب تنبيه الكوتا
+            <span class="hub-hint" tabindex="0" data-hint="قائمة نسب مئوية مفصولة بفواصل لاتينية. عند بلوغ استهلاك المشترك إحدى هذه النسب يُسجَّل تنبيه. مثال: 80,95,100"><i class="fa-solid fa-info"></i></span>
+          </label>
+          <input class="hub-input" type="text" name="quota.threshold_alerts" value="{{ vals.get('quota.threshold_alerts','80,95,100') }}" placeholder="80,95,100" dir="ltr">
+          <div class="help">عتبات الاستهلاك التي تطلق تنبيهات الكوتا للمشتركين (CSV). مثال: 80,95,100 = تنبيه عند 80% ثم 95% ثم 100%.</div>
+          <bdi class="st-key">quota.threshold_alerts</bdi>
+        </div>
+        <div class="st-field">
+          <label class="st-field-label">صفوف الصفحة الافتراضية</label>
+          <div class="st-suffix">
+            <input class="hub-input" type="number" min="5" name="display.records_per_page" value="{{ vals.get('display.records_per_page','20') }}">
+            <span class="st-suffix-tag">صف</span>
+          </div>
+          <div class="help">عدد السجلات المعروضة في كل صفحة من جداول النظام افتراضيًا. عدد أكبر = تمرير أقل لكن تحميل أبطأ.</div>
+          <bdi class="st-key">display.records_per_page</bdi>
+        </div>
+        {# ── منع MAC العشوائي للمشتركين — مفتاح مستقل عن البطاقات ── #}
+        <div class="st-field">
+          <label class="st-field-label">منع MAC العشوائي في المشتركين
+            <span class="hub-hint" tabindex="0" data-hint="أجهزة iOS 14+ و Android 10+ تولّد عنوان MAC عشوائيًا (خاصًا) لكل شبكة حفاظًا على الخصوصية. علامته «بت الإدارة المحلية» — الخانة السداسية الثانية من أول بايت تكون 2 أو 6 أو A أو E (مثل 02:.. أو 6A:..). عند التفعيل يُرفض دخول المشترك من جهاز بعنوان عشوائي حتى يوقف «العنوان الخاص» في إعدادات الواي فاي — يثبّت العنوان فيعمل قفل الجهاز (MAC lock) بشكل صحيح."><i class="fa-solid fa-info"></i></span>
+          </label>
+          {{ toggle_switch(name="security.block_random_mac_subscribers",
+               checked=(vals.get('security.block_random_mac_subscribers','0') in ['1','true','t','on','True']),
+               value="1", id="set-rmac-subs") }}
+          <input type="hidden" name="security.block_random_mac_subscribers" value="0">
+          <div class="help">مفتاح مستقل تمامًا عن البطاقات. عند التفعيل تُرفض مصادقة المشترك إذا كان جهازه يستخدم عنوان MAC عشوائي/خاص.</div>
+          <bdi class="st-key">security.block_random_mac_subscribers</bdi>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+{# ─────────────────── تبويب: صفحة المشترك (بوابة العميل) ─────────────────── #}
+<div class="st-panel" data-st-panel="portal">
+  <section class="st-section st-section--subs">
+    <header class="st-section-head">
+      <span class="st-section-icon"><i class="fa-solid fa-id-card-clip"></i></span>
+      <span class="st-section-title">صفحة المشترك — ما يراه العميل ويفعله</span>
+      <span class="st-section-meta">تحكّم بأقسام وأزرار بوابة المشترك (portal)</span>
+    </header>
+    <div class="st-section-body">
+      {# مولّد صفّ مفتاح بوابة: نفس نمط toggle_switch + حقل مخفي «0» #}
+      {% macro portal_toggle(key, label, hint, default='1') %}
+        <div class="st-field">
+          <label class="st-field-label">{{ label }}
+            <span class="hub-hint" tabindex="0" data-hint="{{ hint }}"><i class="fa-solid fa-info"></i></span>
+          </label>
+          {{ toggle_switch(name=key,
+               checked=(vals.get(key, default) in ['1','true','t','on','True']),
+               value="1", id="set-" ~ key|replace('.','-')) }}
+          <input type="hidden" name="{{ key }}" value="0">
+          <bdi class="st-key">{{ key }}</bdi>
+        </div>
+      {% endmacro %}
+      <div class="st-grid">
+        {{ portal_toggle('portal.show_usage', 'عرض الاستهلاك',
+            'يُظهر للمشترك تبويب «الاستخدام»: إجمالي التحميل والرفع ووقت الاتصال. أطفئه لإخفاء أرقام الاستهلاك عن العميل.') }}
+        {{ portal_toggle('portal.show_sessions', 'عرض سجل الجلسات',
+            'يُظهر جدول جلسات المشترك (وقت البداية/النهاية والمدة وجهاز الشبكة والـ IP). أطفئه لإخفاء سجل الجلسات.') }}
+        {{ portal_toggle('portal.show_invoices', 'عرض الفواتير والمحفظة',
+            'يُظهر تبويب «الفواتير والمحفظة»: رصيد المحفظة والدين والفواتير والسلف. أطفئه لإخفاء الجانب المالي عن العميل.') }}
+        {{ portal_toggle('portal.allow_password_change', 'السماح بتغيير كلمة المرور ذاتيًا',
+            'يسمح للمشترك بتغيير كلمة مروره من بوابته. أطفئه ليمرّ كل تغيير عبر الإدارة فقط. (ميزة قيد الربط — راجع ملاحظة الإعداد.)') }}
+        {{ portal_toggle('portal.allow_renewal_request', 'السماح بطلب التجديد الذاتي',
+            'يُظهر نموذج «تجديد الاشتراك» في تبويب الطلبات والدعم — يرسل طلبًا لفريق الدعم لمراجعته وتفعيله.') }}
+        {{ portal_toggle('portal.allow_loan_request', 'السماح بطلب سلفة وقت',
+            'يُظهر نموذج «طلب سلفة وقت» — حسب سياسة السلف يُعتمد فورًا أو يُرسَل للمراجعة اليدوية.') }}
+        {{ portal_toggle('portal.show_support', 'إظهار الدعم/الشكاوى',
+            'يُظهر نموذج «تقديم شكوى أو طلب دعم» — يصل إلى فريق الدعم عبر قناة الطلبات.') }}
+        {{ portal_toggle('portal.allow_self_purchase', 'السماح بالشراء/التجديد الذاتي (دفع)',
+            'يسمح للمشترك بشراء/تجديد باقته ودفع ثمنها ذاتيًا من البوابة. (ميزة غير مُنفَّذة بعد — راجع ملاحظة الإعداد.)', default='0') }}
+        {{ portal_toggle('portal.allow_plan_change', 'السماح بتغيير الباقة ذاتيًا',
+            'يسمح للمشترك بتغيير باقته بنفسه من البوابة دون تدخّل الإدارة. (ميزة غير مُنفَّذة بعد — راجع ملاحظة الإعداد.)', default='0') }}
+      </div>
+      <div class="help" style="margin-top:14px">
+        ملاحظة: المفاتيح المعلَّمة «قيد الربط» أو «غير مُنفَّذة بعد» تُحفظ الآن في الإعدادات
+        وتظهر في البوابة لاحقًا عند ربطها بالقالب — أمّا الباقي فهو يطابق أقسامًا موجودة فعلًا
+        في صفحة المشترك.
+      </div>
+    </div>
+  </section>
+</div>
+
+{# ─────────────────── تبويب: الكروت ─────────────────── #}
+<div class="st-panel" data-st-panel="cards">
+  <section class="st-section st-section--cards">
+    <header class="st-section-head">
+      <span class="st-section-icon"><i class="fa-solid fa-credit-card"></i></span>
+      <span class="st-section-title">إعدادات توليد الكروت</span>
+      <span class="st-section-meta">القيم الافتراضية عند توليد دفعات الكروت</span>
+    </header>
+    <div class="st-section-body">
+      <div class="st-grid">
+        <div class="st-field">
+          <label class="st-field-label">طول اسم البطاقة الافتراضي</label>
+          <div class="st-suffix">
+            <input class="hub-input" type="number" min="4" max="32" name="cards.default_username_length" value="{{ vals.get('cards.default_username_length','8') }}">
+            <span class="st-suffix-tag">خانة</span>
+          </div>
+          <div class="help">عدد الخانات الافتراضي لاسم المستخدم عند توليد كروت جديدة. طول أكبر = أمان أعلى وكتابة أصعب على العميل.</div>
+          <bdi class="st-key">cards.default_username_length</bdi>
+        </div>
+        <div class="st-field">
+          <label class="st-field-label">طول كلمة مرور البطاقة الافتراضي</label>
+          <div class="st-suffix">
+            <input class="hub-input" type="number" min="4" max="32" name="cards.default_password_length" value="{{ vals.get('cards.default_password_length','6') }}">
+            <span class="st-suffix-tag">خانة</span>
+          </div>
+          <div class="help">عدد خانات كلمة المرور الافتراضي للكروت المولّدة. يمكن تجاوزه يدويًا في صفحة توليد الكروت.</div>
+          <bdi class="st-key">cards.default_password_length</bdi>
+        </div>
+        {# ── منع MAC العشوائي للبطاقات — مفتاح مستقل عن المشتركين ── #}
+        <div class="st-field">
+          <label class="st-field-label">منع MAC العشوائي في البطاقات
+            <span class="hub-hint" tabindex="0" data-hint="أجهزة iOS 14+ و Android 10+ تولّد عنوان MAC عشوائيًا (خاصًا) لكل شبكة حفاظًا على الخصوصية. علامته «بت الإدارة المحلية» — الخانة السداسية الثانية من أول بايت تكون 2 أو 6 أو A أو E (مثل 02:.. أو 6A:..). عند التفعيل يُرفض دخول البطاقة من جهاز بعنوان عشوائي — مهمّ لأن البطاقة تُقفل على أول MAC يستخدمها، والعنوان العشوائي يكسر هذا القفل."><i class="fa-solid fa-info"></i></span>
+          </label>
+          {{ toggle_switch(name="security.block_random_mac_cards",
+               checked=(vals.get('security.block_random_mac_cards','0') in ['1','true','t','on','True']),
+               value="1", id="set-rmac-cards") }}
+          <input type="hidden" name="security.block_random_mac_cards" value="0">
+          <div class="help">مفتاح مستقل تمامًا عن المشتركين. عند التفعيل تُرفض مصادقة البطاقة إذا كان جهازها يستخدم عنوان MAC عشوائي/خاص.</div>
+          <bdi class="st-key">security.block_random_mac_cards</bdi>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+{# ─────────────────── تبويب: الرسائل والتنبيهات ─────────────────── #}
+<div class="st-panel" data-st-panel="notify">
+  <section class="st-section st-section--notify">
+    <header class="st-section-head">
+      <span class="st-section-icon"><i class="fa-solid fa-bell"></i></span>
+      <span class="st-section-title">إشعارات Webhook الخارجية</span>
+      <span class="st-section-meta">إرسال أحداث النظام إلى خدمة خارجية</span>
+    </header>
+    <div class="st-section-body">
+      <div class="st-grid">
+        <div class="st-field">
+          <label class="st-field-label">رابط الـ Webhook (اختياري)
+            <span class="hub-hint" tabindex="0" data-hint="عنوان HTTPS تستقبل عليه خدمتك أحداث النظام (مثل تنبيهات الكوتا). اتركه فارغًا لتعطيل الإرسال الخارجي."><i class="fa-solid fa-info"></i></span>
+          </label>
+          <input class="hub-input" type="text" name="webhook.target_url" value="{{ vals.get('webhook.target_url','') }}" placeholder="https://example.com/hooks/hoberadius" dir="ltr">
+          <div class="help">يرسل النظام إشعارات الأحداث إلى هذا الرابط. اتركه فارغًا إذا لا تستخدم تكاملًا خارجيًا.</div>
+          <bdi class="st-key">webhook.target_url</bdi>
+        </div>
+        <div class="st-field">
+          <label class="st-field-label">السر الموقِّع للـ Webhook</label>
+          <input class="hub-input" type="password" name="webhook.secret" value="{{ vals.get('webhook.secret','') }}" autocomplete="new-password" dir="ltr">
+          <div class="help">مفتاح سري يوقّع به النظام كل إشعار حتى تتحقق خدمتك أن الرسالة صادرة فعلًا من نظامك وليست مزوّرة.</div>
+          <bdi class="st-key">webhook.secret</bdi>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+{# ─────────────────── تبويب: متقدم ─────────────────── #}
+<div class="st-panel" data-st-panel="advanced">
+  <section class="st-section st-section--advanced">
+    <header class="st-section-head">
+      <span class="st-section-icon"><i class="fa-solid fa-screwdriver-wrench"></i></span>
+      <span class="st-section-title">إعدادات متقدمة — API والبنية التحتية</span>
+      <span class="st-section-meta">لا تغيّرها إلا إذا كنت تعرف أثرها</span>
+    </header>
+    <div class="st-section-body">
+      <div class="st-grid">
+        <div class="st-field">
+          <label class="st-field-label">حد طلبات الـ API في الدقيقة</label>
+          <div class="st-suffix">
+            <input class="hub-input" type="number" min="1" name="api.rate_limit_per_minute" value="{{ vals.get('api.rate_limit_per_minute','60') }}">
+            <span class="st-suffix-tag">طلب/دقيقة</span>
+          </div>
+          <div class="help">الحد الأقصى لطلبات الـ API المسموحة في الدقيقة الواحدة — يحمي الخادم من الإغراق. القيمة المعتادة 60.</div>
+          <bdi class="st-key">api.rate_limit_per_minute</bdi>
+        </div>
+        <div class="st-field">
+          <label class="st-field-label">رقم راوتر MikroTik الافتراضي</label>
+          <input class="hub-input" type="number" name="mikrotik.default_router_id" value="{{ vals.get('mikrotik.default_router_id','') }}" placeholder="مثال: 1">
+          <div class="help">معرّف الراوتر الذي تختاره الشاشات تلقائيًا عند وجود أكثر من راوتر. اتركه فارغًا للاختيار اليدوي في كل مرة.</div>
+          <bdi class="st-key">mikrotik.default_router_id</bdi>
+        </div>
+        {# ── عنوان IP سيرفر الراديوس — يشغّل روابط متجر البطاقات ──
+           يُضبط مرة واحدة هنا؛ مصمّم صفحات الهوت سبوت يبني منه
+           تلقائيًا رابط بوابة مستخدمي البطاقات /portal/card
+           (محفظة + شحن + شراء) فلا يُكتب أي رابط يدويًا. #}
+        <div class="st-field span2">
+          <label class="st-field-label">عنوان IP سيرفر الراديوس
+            <span class="hub-hint" tabindex="0" data-hint="العنوان الذي تصل إليه أجهزة المشتركين عبر الراوتر (عادةً عنوان WireGuard/VPN مثل 10.10.0.1). يبني منه النظام تلقائيًا رابط متجر البطاقات الإلكترونية http://<العنوان>/portal/card في كل تصاميم صفحات الهوت سبوت — لا تنسَ إضافته إلى walled-garden."><i class="fa-solid fa-info"></i></span>
+          </label>
+          <input class="hub-input" type="text" name="network.radius_server_ip" value="{{ vals.get('network.radius_server_ip','') }}" placeholder="مثال: 10.10.0.1" dir="ltr">
+          <div class="help">يشغّل روابط متجر البطاقات الإلكترونية في صفحات الهوت سبوت — يُضبط مرة واحدة ويُستخدم في كل التصاميم تلقائيًا.</div>
+          <bdi class="st-key">network.radius_server_ip</bdi>
+        </div>
+        {# ── مفتاح متجر البطاقات (App Key) ──
+           مفتاح سرّي يُحقن في store.html المنشور وترسله الصفحة في
+           ترويسة X-Store-Key مع كل نداء؛ يرفض الـ API أي طلب لا يحمله
+           فلا يستدعي نقاطَ المتجر إلا متجرك المنشور. حقل للعرض فقط
+           (readonly) — يُولَّد تلقائيًا عند أول نشر، ويُدوَّر بالزر.
+           تدويره يتطلب إعادة نشر store.html. ليس حقل إعداد عادي فلا
+           يحمل name= (لا يُحفظ مع النموذج). #}
+        <div class="st-field span2">
+          <label class="st-field-label">مفتاح متجر البطاقات (App Key)
+            <span class="hub-hint" tabindex="0" data-hint="مفتاح سرّي يحمله متجرك المنشور (store.html) في ترويسة X-Store-Key مع كل نداء. يرفض الخادم أي طلب لا يحمل المفتاح الصحيح — فيمنع أي طرف خارجي من استدعاء واجهة المتجر. يُولَّد تلقائيًا عند أول نشر للمتجر. ملاحظة: المفتاح مرئي في مصدر الصفحة على الراوتر فهو يصدّ الاستدعاء العشوائي لا متطفّلًا يقرأ مصدر الصفحة؛ الحماية الكاملة للعمليات تبقى عبر تسجيل الدخول + walled-garden."><i class="fa-solid fa-info"></i></span>
+          </label>
+          <div class="st-suffix">
+            <input class="hub-input" type="text" value="{{ store_key or '— لم يُولَّد بعد (يُنشأ تلقائيًا عند أول نشر للمتجر) —' }}" dir="ltr" readonly onclick="this.select()">
+            <button type="submit" class="st-suffix-tag" style="cursor:pointer;border:0;font-weight:800"
+                    formaction="{{ url_for('radius.settings_rotate_store_key') }}" formmethod="post" formnovalidate
+                    onclick="return confirm('توليد مفتاح جديد سيُبطل المفتاح الحالي فورًا، ولن يعمل متجرك المنشور حتى تُعيد نشر store.html بالمفتاح الجديد من مصمّم صفحة الدخول. هل تريد المتابعة؟');">
+              <i class="fa-solid fa-rotate"></i> توليد مفتاح جديد
+            </button>
+          </div>
+          <div class="help">يحمي واجهة المتجر من الاستدعاء الخارجي. <b>تدوير المفتاح يتطلب إعادة نشر store.html</b> من مصمّم صفحة الدخول، وإلا توقّف المتجر المنشور.</div>
+          <bdi class="st-key">network.store_api_key</bdi>
+        </div>
+        <div class="st-field span2">
+          <label class="st-field-label">عنوان VPS العام (لروابط الاتصال عن بُعد)
+            <span class="hub-hint" tabindex="0" data-hint="يُستخدم في معالج «اتصال عن بُعد» لبناء روابط Winbox / SSH / WebFig / API من خارج الشبكة عبر المنافذ 51000-51199. اتركه فارغًا للرجوع إلى متغيّر البيئة HOBERADIUS_PUBLIC_HOST."><i class="fa-solid fa-info"></i></span>
+          </label>
+          <input class="hub-input" type="text" name="infra.public_host" value="{{ vals.get('infra.public_host','') }}" placeholder="مثال: vps.example.com أو 203.0.113.10" dir="ltr">
+          <div class="help">العنوان العام لخادمك — تُبنى عليه روابط الوصول للراوترات من خارج الشبكة. فارغ = الرجوع إلى إعداد البيئة الافتراضي.</div>
+          <bdi class="st-key">infra.public_host</bdi>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+{# أُزيل من لوحة العميل — يُعاد مركزياً عبر لوحة التراخيص (قرار معماري):
+   تبويب «خادم الأنفاق CHR» بكامل حقوله (chr_host / chr_api_port /
+   chr_api_user / chr_api_password / chr_api_use_tls / chr_mgmt_profile /
+   chr_traffic_profile). بيانات اعتماد الـCHR ومنطق توليد النفق ممنوعان
+   في لوحة العميل المباعة — حوكمة مركزية للمالك. #}
+
+{# ═══════════════ شريط الحفظ اللاصق — يبقى ظاهرًا أسفل الشاشة دائمًا ═══════════════ #}
+<div class="st-savebar" id="st-savebar">
+  <span class="st-save-state" id="st-save-state">
+    <i class="fa-solid fa-circle-check"></i>
+    <span data-st-state-text>لا تعديلات غير محفوظة — كل القيم مطابقة لآخر حفظ.</span>
+  </span>
+  {{ hub.btn("حفظ التغييرات", icon="floppy-disk", variant="primary", type="submit") }}
+  {{ hub.btn("إلغاء والعودة", variant="ghost", href=url_for('radius.dashboard')) }}
+</div>
+
 </form>
+
+<script>
+(() => {
+  "use strict";
+  /* ═══ تبديل التبويبات (JS فقط — كل الحقول تبقى في DOM وتُرسَل مع الحفظ) ═══ */
+  const tabs   = document.querySelectorAll("[data-st-tab]");
+  const panels = document.querySelectorAll("[data-st-panel]");
+  function activate(key){
+    tabs.forEach(b => b.classList.toggle("is-active", b.dataset.stTab === key));
+    panels.forEach(p => p.classList.toggle("is-active", p.dataset.stPanel === key));
+    // تذكُّر التبويب الأخير عبر الـ hash حتى يعود المستخدم لنفس المكان بعد الحفظ
+    try { history.replaceState(null, "", "#tab=" + key); } catch(e){}
+  }
+  tabs.forEach(b => b.addEventListener("click", () => activate(b.dataset.stTab)));
+  // استعادة التبويب من الـ hash (بعد إعادة التوجيه عقب الحفظ مثلًا)
+  const m = (location.hash || "").match(/tab=([a-z]+)/);
+  if (m && document.querySelector(`[data-st-panel='${m[1]}']`)) activate(m[1]);
+
+  /* ═══ مؤشر «تعديلات غير محفوظة» — يقارن كل حقل بقيمته الأصلية ═══ */
+  const form    = document.getElementById("settings-form");
+  const savebar = document.getElementById("st-savebar");
+  const stateTx = savebar.querySelector("[data-st-state-text]");
+  const stateIc = savebar.querySelector(".st-save-state i");
+
+  // لقطة أولية لقيم كل الحقول المسماة
+  const initial = new Map();
+  form.querySelectorAll("input[name], select[name], textarea[name]").forEach(el => {
+    initial.set(el, el.type === "checkbox" ? el.checked : el.value);
+  });
+
+  function isDirty(el){
+    const orig = initial.get(el);
+    return el.type === "checkbox" ? el.checked !== orig : el.value !== orig;
+  }
+  function refresh(){
+    let total = 0;
+    const dirtyPanels = new Set();
+    form.querySelectorAll("input[name], select[name], textarea[name]").forEach(el => {
+      if (el.type === "hidden") return;           // الحقل المخفي «0» ليس تعديل مستخدم
+      if (isDirty(el)){
+        total++;
+        const panel = el.closest("[data-st-panel]");
+        if (panel) dirtyPanels.add(panel.dataset.stPanel);
+      }
+    });
+    savebar.classList.toggle("is-dirty", total > 0);
+    if (total > 0){
+      stateIc.className = "fa-solid fa-triangle-exclamation";
+      stateTx.textContent = "لديك " + total + " تعديل غير محفوظ — اضغط «حفظ التغييرات» لتثبيته.";
+    } else {
+      stateIc.className = "fa-solid fa-circle-check";
+      stateTx.textContent = "لا تعديلات غير محفوظة — كل القيم مطابقة لآخر حفظ.";
+    }
+    // نقطة كهرمانية على التبويبات التي فيها تعديلات
+    tabs.forEach(b => b.classList.toggle("has-dirty", dirtyPanels.has(b.dataset.stTab)));
+  }
+  form.addEventListener("input",  refresh);
+  form.addEventListener("change", refresh);
+
+  // تحذير المتصفح عند مغادرة الصفحة وفيها تعديلات غير محفوظة
+  let submitting = false;
+  form.addEventListener("submit", () => { submitting = true; });
+  window.addEventListener("beforeunload", (e) => {
+    if (!submitting && savebar.classList.contains("is-dirty")){
+      e.preventDefault(); e.returnValue = "";
+    }
+  });
+
+  /* ═══ كود اللون يتحدّث مباشرة بجانب عيّنة اللون ═══ */
+  const colorInp  = form.querySelector("input[name='branding.primary_color']");
+  const colorCode = form.querySelector("[data-st-color-code]");
+  if (colorInp && colorCode){
+    colorInp.addEventListener("input", () => { colorCode.textContent = colorInp.value; });
+  }
+
+  /* ═══ رفع الشعار: نقر/سحب-إفلات + معاينة فورية قبل الحفظ ═══ */
+  const drop     = document.getElementById("st-logo-drop");
+  const fileInp  = document.getElementById("st-logo-file");
+  if (drop && fileInp){
+    const img      = document.getElementById("st-logo-img");
+    const preview  = document.getElementById("st-logo-preview");
+    const fnameEl  = document.getElementById("st-logo-filename");
+    const titleEl  = document.getElementById("st-logo-drop-title");
+    const ALLOWED  = ["image/png","image/jpeg","image/svg+xml","image/webp"];
+    const MAX      = 2 * 1024 * 1024; // 2MB — نفس حد الخادم
+
+    // رسالة خطأ مضمّنة في الشارة (بدل alert المحظور بقاعدة §12.4)
+    function logoError(msg){
+      fileInp.value = "";
+      img.hidden = true; preview.classList.add("is-empty");
+      fnameEl.textContent = msg;
+      fnameEl.classList.add("is-error");
+      fnameEl.hidden = false;
+    }
+
+    function showFile(f){
+      if (!f) return;
+      if (ALLOWED.indexOf((f.type||"").toLowerCase()) === -1){
+        logoError("نوع ملف الشعار غير مدعوم — المسموح: PNG أو JPG أو SVG أو WEBP."); return;
+      }
+      if (f.size > MAX){
+        logoError("حجم ملف الشعار يتجاوز 2MB — صغّر الصورة وأعد المحاولة."); return;
+      }
+      fnameEl.classList.remove("is-error"); // ملف صالح — أعد الشارة لحالتها الخضراء
+      // معاينة فورية محلية (لا يُرفع شيء قبل ضغط «حفظ التغييرات»)
+      const url = URL.createObjectURL(f);
+      img.src = url; img.hidden = false;
+      preview.classList.remove("is-empty");
+      fnameEl.textContent = f.name + " (" + Math.round(f.size/1024) + " KB)";
+      fnameEl.hidden = false;
+      titleEl.textContent = "سيُرفع هذا الشعار عند حفظ التغييرات";
+      refresh(); // المنطقة جزء من النموذج — فعّل مؤشر «تعديلات غير محفوظة»
+    }
+
+    // النقر أو Enter/Space على المنطقة يفتح منتقي الملفات
+    drop.addEventListener("click", () => fileInp.click());
+    drop.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " "){ e.preventDefault(); fileInp.click(); }
+    });
+    fileInp.addEventListener("change", () => showFile(fileInp.files && fileInp.files[0]));
+
+    // سحب وإفلات: تمييز بصري أثناء السحب + إسناد الملف للحقل
+    ["dragenter","dragover"].forEach(ev => drop.addEventListener(ev, (e) => {
+      e.preventDefault(); drop.classList.add("is-dragover");
+    }));
+    ["dragleave","drop"].forEach(ev => drop.addEventListener(ev, (e) => {
+      e.preventDefault(); drop.classList.remove("is-dragover");
+    }));
+    drop.addEventListener("drop", (e) => {
+      const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+      if (!f) return;
+      try {
+        const dt = new DataTransfer();
+        dt.items.add(f);
+        fileInp.files = dt.files;   // إسناد الملف لحقل النموذج حتى يُرسل مع الحفظ
+      } catch(_) { /* متصفح قديم — يبقى النقر للاختيار */ }
+      showFile(f);
+    });
+  }
+})();
+</script>
 {% endblock %}
+

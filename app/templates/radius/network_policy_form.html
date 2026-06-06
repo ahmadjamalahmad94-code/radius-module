@@ -109,7 +109,7 @@
       {# ─── Service-specific fields ─── #}
 
       {% if service.key == 'remote_access' %}
-        {% call hub.section("الخدمات التي ستُفتح على input chain", icon="toggle-on") %}
+        {% call hub.section("الخدمات التي ستُفتح للوصول إلى الراوتر", icon="toggle-on") %}
           {% set toggles = [
               ('allow_winbox',       'برنامج الإدارة (TCP 8291)', 'مرتفع'),
               ('allow_ssh',          'الوصول الآمن (TCP 22)',      'متوسط'),
@@ -171,7 +171,7 @@
             <select class="hub-input" name="scope" id="scope">
               <option value="all_users"
                 {% if not policy or policy.scope == 'all_users' %}selected{% endif %}
-              >كل المستخدمين (all_users)</option>
+              >كل المستخدمين</option>
             </select>
             <span class="hub-field-hint">
               النطاقات الأخرى تتطلب صلاحية تطبيق منفصلة.
@@ -189,7 +189,7 @@
           {% set _fail_open_checked = (policy.fail_open if policy else True) %}
           <div class="uds-toggle-row">
             <div class="uds-toggle-row-text">
-              <span class="uds-toggle-row-label">fail-open — إن كانت قائمة الوجهات فارغة، لا تُولِّد قاعدة drop</span>
+              <span class="uds-toggle-row-label">الوضع الآمن — إن كانت قائمة الوجهات فارغة، لا تُولَّد قاعدة حظر</span>
               <span class="uds-toggle-row-meta">موصى به</span>
             </div>
             {{ toggle_switch(name="fail_open", id="fail_open", checked=_fail_open_checked) }}
@@ -290,10 +290,10 @@
               <div class="hub-field" style="flex:1 1 140px; margin:0;">
                 <label class="hub-field-label">النوع</label>
                 <select class="hub-input" name="entry_type" required>
-                  <option value="dst_host">dst_host</option>
-                  <option value="dst_address">dst_address</option>
+                  <option value="dst_host">اسم نطاق (dst_host)</option>
+                  <option value="dst_address">عنوان IP (dst_address)</option>
                   <option value="dst_address_list">
-                    dst_address_list
+                    قائمة عناوين (dst_address_list)
                   </option>
                 </select>
               </div>

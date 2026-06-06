@@ -1,0 +1,169 @@
+{# ═══════════════════════════════════════════════════════════════════════
+   تعريب مفاتيح الصلاحيات — ماكروهات مشتركة بين صفحات الأدوار
+
+   مفاتيح الصلاحيات في الخادم إنجليزية ثابتة (مثل users.view) من
+   ALL_PERMISSIONS في app/radius/core/constants.py — هذه الماكروهات
+   تعرضها بالعربية مع إبقاء المفتاح التقني ظاهرًا بخط mono داخل <bdi>
+   حتى لا تتأثر اتجاهية النص العربي. أي مفتاح مجهول يُعرض كما هو
+   (احتواء آمن — لا كسر عند إضافة صلاحيات جديدة في الخادم).
+
+   الاستخدام:
+       {% import "radius/_perm_labels.html" as pl %}
+       {{ pl.perm_label('users.view') }}   → «عرض المستفيدين»
+       {{ pl.group_label('users') }}       → «المستفيدون»
+       {{ pl.perm_chip('users.view') }}    → حبّة: التسمية العربية + المفتاح
+   ═══════════════════════════════════════════════════════════════════════ #}
+
+{# تسميات مجموعات الصلاحيات (الجزء قبل النقطة في المفتاح) #}
+{% set GROUP_LABELS = {
+  'dashboard':     'لوحة التحكم',
+  'users':         'المستفيدون',
+  'online':        'المتصلون الآن',
+  'cards':         'البطاقات',
+  'plans':         'الباقات',
+  'admin_pricing': 'أسعار العروض',
+  'nas':           'أجهزة الشبكة',
+  'sessions':      'الجلسات',
+  'admins':        'المدراء',
+  'reports':       'التقارير',
+  'scope':         'النطاق والإشراف',
+  'settings':      'الإعدادات',
+  'audit':         'سجل التدقيق',
+  'api':           'الواجهة البرمجية',
+  'general':       'عام'
+} %}
+
+{# ═══ هوية بصرية لكل مجموعة: أيقونة FontAwesome + ثلاثية ألوان ═══
+   accent = اللون المشبع (حدود/أيقونات)، soft = خلفية فاتحة، ink = نص داكن.
+   تُستخدم في مصفوفة الصلاحيات (roles_form) وحبوب الصلاحيات (roles_list)
+   حتى يلتقط المشغّل المجموعة بلمحة لونية واحدة. أي مجموعة جديدة في
+   الخادم تسقط تلقائيًا على هوية «general» الرمادية — احتواء آمن. #}
+{% set GROUP_META = {
+  'dashboard':     {'icon': 'gauge-high',        'accent': '#0EA5E9', 'soft': '#E0F2FE', 'ink': '#0369A1'},
+  'users':         {'icon': 'users',             'accent': '#3B82F6', 'soft': '#DBEAFE', 'ink': '#1D4ED8'},
+  'online':        {'icon': 'wifi',              'accent': '#22C55E', 'soft': '#DCFCE7', 'ink': '#15803D'},
+  'cards':         {'icon': 'credit-card',       'accent': '#8B5CF6', 'soft': '#EDE9FE', 'ink': '#6D28D9'},
+  'plans':         {'icon': 'box-open',          'accent': '#14B8A6', 'soft': '#CCFBF1', 'ink': '#0F766E'},
+  'admin_pricing': {'icon': 'tags',              'accent': '#D946EF', 'soft': '#FAE8FF', 'ink': '#A21CAF'},
+  'nas':           {'icon': 'server',            'accent': '#F97316', 'soft': '#FFEDD5', 'ink': '#C2410C'},
+  'sessions':      {'icon': 'tower-broadcast',   'accent': '#06B6D4', 'soft': '#CFFAFE', 'ink': '#0E7490'},
+  'admins':        {'icon': 'user-shield',       'accent': '#EF4444', 'soft': '#FEE2E2', 'ink': '#B91C1C'},
+  'reports':       {'icon': 'chart-column',      'accent': '#84CC16', 'soft': '#ECFCCB', 'ink': '#4D7C0F'},
+  'scope':         {'icon': 'eye',               'accent': '#EC4899', 'soft': '#FCE7F3', 'ink': '#BE185D'},
+  'settings':      {'icon': 'gear',              'accent': '#6B5AED', 'soft': '#EDEAFF', 'ink': '#4F46B8'},
+  'audit':         {'icon': 'clipboard-list',    'accent': '#F59E0B', 'soft': '#FEF3C7', 'ink': '#B45309'},
+  'api':           {'icon': 'plug',              'accent': '#10B981', 'soft': '#D1FAE5', 'ink': '#047857'},
+  'general':       {'icon': 'circle-dot',        'accent': '#64748B', 'soft': '#E2E8F0', 'ink': '#334155'}
+} %}
+
+{# هوية المجموعة (أيقونة/ألوان) لـ prefix — مجهول؟ هوية «general» #}
+{% macro group_icon(prefix) -%}
+{{- GROUP_META.get(prefix, GROUP_META['general'])['icon'] -}}
+{%- endmacro %}
+{% macro group_accent(prefix) -%}
+{{- GROUP_META.get(prefix, GROUP_META['general'])['accent'] -}}
+{%- endmacro %}
+{% macro group_soft(prefix) -%}
+{{- GROUP_META.get(prefix, GROUP_META['general'])['soft'] -}}
+{%- endmacro %}
+{% macro group_ink(prefix) -%}
+{{- GROUP_META.get(prefix, GROUP_META['general'])['ink'] -}}
+{%- endmacro %}
+
+{# تسميات الصلاحيات الكاملة (مفتاح → عربية) — تغطي ALL_PERMISSIONS #}
+{% set PERM_LABELS = {
+  'dashboard.view':      'عرض لوحة التحكم',
+
+  'users.view':          'عرض المستفيدين',
+  'users.create':        'إنشاء مستفيد',
+  'users.edit':          'تعديل مستفيد',
+  'users.delete':        'حذف مستفيد',
+  'users.disconnect':    'قطع اتصال مستفيد',
+  'users.change_status': 'تفعيل/تعطيل مستفيد',
+  'users.extend':        'تجديد وتمديد الاشتراك',
+  'users.change_plan':   'تغيير باقة المستفيد',
+  'users.quota':         'إضافة كوتا وتصفير يومي',
+  'users.balance_add':   'إضافة رصيد للمستفيد',
+  'users.payments':      'الشحن النقدي والدفعات',
+  'users.loans':         'السلفة وتسوية الديون',
+  'users.send_message':  'إرسال رسالة للمستفيد',
+  'users.temp_speed':    'التحكم بالسرعة المؤقتة',
+  'users.export':        'تصدير جداول البيانات',
+
+  'online.view':         'عرض شاشة المتصلين',
+  'online.disconnect':   'قطع اتصال متصل',
+  'online.lock_mac':     'إغلاق على عنوان MAC',
+  'online.lock_ip':      'تثبيت عنوان IP',
+
+  'cards.view':          'عرض البطاقات',
+  'cards.generate':      'توليد بطاقات',
+  'cards.revoke':        'إبطال بطاقات',
+  'cards.edit_batch':    'تعديل حزمة بطاقات',
+  'cards.batch_ops':     'عمليات الحزم الجماعية',
+  'cards.import':        'استيراد بطاقات',
+  'cards.verify':        'فحص البطاقات وعملياتها',
+  'cards.restore':       'استعادة من سلة المحذوفات',
+  'cards.recharge':      'بطاقات الشحن',
+  'cards.print':         'حزم طباعة البطاقات',
+
+  'plans.view':          'عرض الباقات',
+  'plans.create':        'إنشاء باقة',
+  'plans.edit':          'تعديل باقة',
+  'plans.delete':        'حذف باقة',
+
+  'admin_pricing.view':  'عرض أسعار المدراء',
+  'admin_pricing.edit':  'تعديل سعر مدير خاص',
+  'admin_pricing.reset': 'إعادة السعر الرسمي',
+
+  'nas.view':            'عرض أجهزة الشبكة',
+  'nas.create':          'إضافة جهاز شبكة',
+  'nas.edit':            'تعديل جهاز شبكة',
+  'nas.delete':          'حذف جهاز شبكة',
+
+  'sessions.view':       'عرض الجلسات',
+  'sessions.disconnect': 'قطع جلسة نشطة',
+
+  'admins.view':            'عرض المدراء',
+  'admins.create':          'إنشاء مدير',
+  'admins.edit':            'تعديل مدير',
+  'admins.delete':          'حذف مدير',
+  'admins.deposit_balance': 'شحن محفظة مشغّل',
+  'admins.policy':          'ضبط صلاحيات المشغّلين',
+
+  'reports.view':        'عرض التقارير',
+  'reports.finance':     'التقارير المالية ودفتر القيود',
+
+  'scope.act_non_owned':        'التصرف بمشترك غير تابع له',
+  'scope.view_all_subscribers': 'رؤية كل المشتركين',
+  'scope.view_all_managers':    'رؤية كل المدراء',
+  'scope.view_all_cards':       'رؤية كل البطاقات',
+  'scope.view_all_reports':     'رؤية تقارير الجميع',
+  'scope.view_passwords':       'كشف كلمات السر',
+
+  'settings.view':       'عرض الإعدادات',
+  'settings.edit':       'تعديل الإعدادات',
+  'audit.view':          'عرض سجل التدقيق',
+  'api.use':             'استخدام الواجهة البرمجية'
+} %}
+
+{# التسمية العربية لمفتاح صلاحية — احتواء: مفتاح مجهول يعود كما هو #}
+{% macro perm_label(key) -%}
+{{- PERM_LABELS.get(key, key) -}}
+{%- endmacro %}
+
+{# التسمية العربية لمجموعة صلاحيات (prefix) #}
+{% macro group_label(prefix) -%}
+{{- GROUP_LABELS.get(prefix, prefix) -}}
+{%- endmacro %}
+
+{# حبّة صلاحية ملوّنة بهوية مجموعتها: أيقونة + التسمية العربية،
+   والمفتاح التقني داخل title (يظهر عند التحويم) — تمييز لوني بلمحة. #}
+{% macro perm_chip(key) -%}
+{%- set _g = key.split('.', 1)[0] if '.' in key else 'general' -%}
+<span class="perm-pill" title="{{ key }}"
+      style="--pp-accent:{{ group_accent(_g) }};--pp-soft:{{ group_soft(_g) }};--pp-ink:{{ group_ink(_g) }}">
+  <i class="fa-solid fa-{{ group_icon(_g) }} perm-pill-ico" aria-hidden="true"></i>
+  <span class="perm-pill-ar">{{ perm_label(key) }}</span>
+  <bdi dir="ltr" class="perm-pill-key">{{ key }}</bdi>
+</span>
+{%- endmacro %}

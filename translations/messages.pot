@@ -1,0 +1,991 @@
+# Translations template for PROJECT.
+# Copyright (C) 2026 ORGANIZATION
+# This file is distributed under the same license as the PROJECT project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2026-06-06 00:28+0300\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#, python-format
+msgid "%(amount)s متاح"
+msgstr ""
+
+#, python-format
+msgid ""
+"%(count)s راوتر مايكروتيك غير متاح حالياً — لن تعمل عمليات DHCP / "
+"reconciliation / CoA حتى يعود."
+msgstr ""
+
+#, python-format
+msgid "%(n)s مشترك انتهى اشتراكه — جدّد أو احذف."
+msgstr ""
+
+#, python-format
+msgid "%(n)s مشترك ينتهي اشتراكه خلال 3 أيام."
+msgstr ""
+
+#, python-format
+msgid "%(n)s نواة"
+msgstr ""
+
+msgid "RADIUS adapter غير جاهز — افحص الإعدادات."
+msgstr ""
+
+msgid "آخر الحزم"
+msgstr ""
+
+msgid "أجهزة الشبكة"
+msgstr ""
+
+msgid "أجهزة الشبكة والراوترات التي يعتمد عليها تسجيل الدخول والمحاسبة."
+msgstr ""
+
+msgid "أحداث المدراء"
+msgstr ""
+
+msgid "أحداث المشتركين"
+msgstr ""
+
+msgid "أدخل بيانات حساب الإدارة للوصول إلى لوحة التحكم."
+msgstr ""
+
+msgid "أسعار العروض للمدراء"
+msgstr ""
+
+msgid "أقسام الصفحة"
+msgstr ""
+
+msgid "أقصى عدد أجهزة شبكة مسموح لهذه الجهة."
+msgstr ""
+
+msgid "أقصى عدد أجهزة يمكنها استخدام نفس الحساب في نفس الوقت."
+msgstr ""
+
+msgid "أقصى عدد مستفيدين مسموح، و0 يعني استخدام حد الفئة."
+msgstr ""
+
+msgid "أهلًا بعودتك إلى Hobe Hub"
+msgstr ""
+
+msgid "إجمالي الحصة بالميجابايت، و0 يعني بلا حد خاص."
+msgstr ""
+
+msgid "إدارة الجهات"
+msgstr ""
+
+msgid "إدارة الراوترات"
+msgstr ""
+
+msgid "إدارة العروض"
+msgstr ""
+
+msgid "إدارة المشتركين"
+msgstr ""
+
+msgid "إدارة المشتركين والكروت"
+msgstr ""
+
+msgid ""
+"إدارة كاملة لخدمات المصادقة والمشتركين والكروت والشبكة من مكان واحد. كل "
+"عملية تُسجَّل في سجل التدقيق وتتم بأمان."
+msgstr ""
+
+msgid "إشعارات الربط"
+msgstr ""
+
+msgid "إضافة حزمة"
+msgstr ""
+
+msgid "إضافة راوتر (سريع)"
+msgstr ""
+
+msgid "إضافة عرض"
+msgstr ""
+
+msgid "إضافة مشترك"
+msgstr ""
+
+msgid "إضافة وإعداد"
+msgstr ""
+
+msgid "إظهار كلمة المرور"
+msgstr ""
+
+msgid "إعداد اختياري للسرعة المؤقتة على الراوتر."
+msgstr ""
+
+msgid "إعداد راوتر متقدم"
+msgstr ""
+
+msgid "إعدادات الراديوس"
+msgstr ""
+
+msgid "إعدادات النظام"
+msgstr ""
+
+msgid "إغلاق"
+msgstr ""
+
+msgid "إنشاء حزمة"
+msgstr ""
+
+msgid "إيرادات الشبكة، الديون، والتقارير التي تساعدك تراجع الأداء."
+msgstr ""
+
+msgid "ابدأ من القسم الأقرب لعملك. عند الانتقال لقسم مغلق سأفتحه لك تلقائيًا."
+msgstr ""
+
+msgid "اختر الحالة الحالية لهذا العنصر."
+msgstr ""
+
+msgid "اختر الصلاحيات المناسبة فقط لهذا الدور."
+msgstr ""
+
+msgid "اختر العملية التي تريد تنفيذها."
+msgstr ""
+
+msgid "اختر باقة الخدمة التي تحدد السرعة والحصة ومدة الاستخدام."
+msgstr ""
+
+msgid "اختر جهاز الشبكة المسؤول عن هذا النطاق."
+msgstr ""
+
+msgid "اختر نمط كلمة المرور حسب مستوى الأمان المطلوب."
+msgstr ""
+
+msgid "اختر نوع الحساب حسب طريقة استخدامه."
+msgstr ""
+
+msgid "اختر نوع الخدمة التي سيستخدمها الحساب على الشبكة."
+msgstr ""
+
+#, python-format
+msgid "استخدام %(label)s مرتفع (%(v)s%%)."
+msgstr ""
+
+#, python-format
+msgid "استخدام %(label)s مرتفع جدًا (%(v)s%%)."
+msgstr ""
+
+msgid "استخدام القرص"
+msgstr ""
+
+msgid "استخدام المعالج"
+msgstr ""
+
+msgid "استخدم 0 عندما تريد الاعتماد على قيمة الباقة الأساسية."
+msgstr ""
+
+msgid "استخدم بيانات المدير التي أنشأتها عند التثبيت."
+msgstr ""
+
+msgid "استهلاك الذاكرة"
+msgstr ""
+
+msgid "اسم الدخول الذي يستخدمه الشخص عند الاتصال أو تسجيل الدخول."
+msgstr ""
+
+msgid "اسم المستخدم"
+msgstr ""
+
+msgid "اسم مجموعة اختياري لتنظيم الحسابات المتشابهة."
+msgstr ""
+
+msgid "اسم مختصر يظهر في السجلات والقوائم."
+msgstr ""
+
+msgid "اسم مستخدم الراوتر المسموح له بإدارة الإعدادات."
+msgstr ""
+
+msgid "اسم نطاق العناوين كما سيظهر في القوائم."
+msgstr ""
+
+msgid "اسم واضح لهذه الدفعة حتى تميّزها عند المراجعة."
+msgstr ""
+
+msgid "اكتب اسمًا واضحًا يظهر في القوائم ويسهّل البحث."
+msgstr ""
+
+msgid "اكتب التفاصيل المطلوبة بوضوح."
+msgstr ""
+
+msgid "اكتب كل اسم دخول في سطر مستقل."
+msgstr ""
+
+msgid "اكتب كلمة مرور آمنة، واتركها فارغة إذا لم تكن تريد تغييرها."
+msgstr ""
+
+msgid "الأجهزة"
+msgstr ""
+
+msgid "الأحداث والمخاطر"
+msgstr ""
+
+msgid "الأدوار والصلاحيات"
+msgstr ""
+
+msgid "الأرشيف"
+msgstr ""
+
+msgid "الأولوية تحدد ترتيب المعالجة."
+msgstr ""
+
+msgid "الإدارة"
+msgstr ""
+
+#, python-format
+msgid "الإصدار %(v)s"
+msgstr ""
+
+msgid "الاسم الحقيقي أو الوصفي لصاحب الحساب."
+msgstr ""
+
+msgid "الاسم الظاهر للمستخدم داخل الواجهة."
+msgstr ""
+
+msgid "البطاقات"
+msgstr ""
+
+msgid "البطاقات الإلكترونية"
+msgstr ""
+
+msgid "البطاقات المتصلة"
+msgstr ""
+
+msgid "البطاقات والحزم"
+msgstr ""
+
+msgid "البيانات والحفظ والأرشفة"
+msgstr ""
+
+msgid "التحصيل والمدفوعات"
+msgstr ""
+
+msgid "التحكم بالسرعة"
+msgstr ""
+
+msgid "التذاكر"
+msgstr ""
+
+msgid "التشغيل والمخاطر"
+msgstr ""
+
+msgid "التطبيق"
+msgstr ""
+
+msgid "التقارير"
+msgstr ""
+
+msgid "التقارير التنفيذية"
+msgstr ""
+
+msgid "التقرير المالي"
+msgstr ""
+
+msgid "التكامل والجسر"
+msgstr ""
+
+msgid "التنبيهات الذكيّة"
+msgstr ""
+
+msgid "التنبيهات المفتوحة"
+msgstr ""
+
+msgid "التواصل والحملات"
+msgstr ""
+
+msgid "الحزم"
+msgstr ""
+
+msgid "الخادم"
+msgstr ""
+
+msgid "الخدمات / المعدّات"
+msgstr ""
+
+msgid "الدخول والأمان"
+msgstr ""
+
+msgid "الدعم"
+msgstr ""
+
+msgid "الدور يحدد الصلاحيات التي يحصل عليها هذا المدير."
+msgstr ""
+
+msgid "الذاكرة"
+msgstr ""
+
+msgid "الرابط الذي ستُرسل له إشعارات الربط."
+msgstr ""
+
+msgid "الرقم التسلسلي للجهاز أو المعدة إن وجد."
+msgstr ""
+
+msgid "السجل والتقارير المحاسبية"
+msgstr ""
+
+msgid "السرعات"
+msgstr ""
+
+msgid "السعر المرجعي أو التجاري لهذا العنصر."
+msgstr ""
+
+msgid "السنة"
+msgstr ""
+
+msgid "الشبكة"
+msgstr ""
+
+msgid "الشبكة والجلسات"
+msgstr ""
+
+msgid "العروض"
+msgstr ""
+
+msgid "العروض والسرعات"
+msgstr ""
+
+msgid "الفئة تساعد فريق الدعم على فرز الطلب."
+msgstr ""
+
+msgid "الفحص ناجح"
+msgstr ""
+
+msgid "الفواتير والكوبونات"
+msgstr ""
+
+msgid "القائمة الرئيسية"
+msgstr ""
+
+msgid "القرص"
+msgstr ""
+
+msgid "القسم"
+msgstr ""
+
+#, python-format
+msgid "الكروت المتاحة منخفضة (%(n)s) — جدّد المخزون."
+msgstr ""
+
+msgid "اللغة"
+msgstr ""
+
+msgid "المال والتحصيل"
+msgstr ""
+
+msgid "المالية"
+msgstr ""
+
+msgid "المالية والموازنات"
+msgstr ""
+
+msgid "المبلغ المالي المطلوب أو المسجل."
+msgstr ""
+
+msgid "المدراء والموزعون"
+msgstr ""
+
+msgid "المراقبة والسجلات"
+msgstr ""
+
+msgid "المركز المالي"
+msgstr ""
+
+msgid "المستأجرون"
+msgstr ""
+
+msgid "المستخدمون"
+msgstr ""
+
+msgid "المشتركون"
+msgstr ""
+
+msgid "المشتركون المتصلون"
+msgstr ""
+
+msgid "المشتركين 360"
+msgstr ""
+
+msgid "المعالج"
+msgstr ""
+
+msgid "المفتاح المشترك يجب أن يطابق إعداد جهاز الشبكة."
+msgstr ""
+
+msgid "الملف الشخصي"
+msgstr ""
+
+msgid "المنطقة الزمنية المستخدمة في التواريخ والتقارير."
+msgstr ""
+
+msgid "النشاط والأحداث"
+msgstr ""
+
+msgid "الوحدة التي سيتم احتساب مدة البطاقة أو الحساب بها."
+msgstr ""
+
+msgid "اليوم"
+msgstr ""
+
+msgid "باقات الإنترنت، السرعات، الحصص، وشروط الاستخدام للمشتركين والكروت."
+msgstr ""
+
+msgid "بانتظار الفحص"
+msgstr ""
+
+msgid "بدون كود"
+msgstr ""
+
+msgid "بريد للتواصل أو استلام التنبيهات عند الحاجة."
+msgstr ""
+
+msgid "بوابات العملاء"
+msgstr ""
+
+msgid "تاريخ الإرجاع إن وجد."
+msgstr ""
+
+msgid "تاريخ انتهاء صلاحية هذا السجل."
+msgstr ""
+
+msgid "تاريخ تسليم المعدة أو بدء الخدمة."
+msgstr ""
+
+msgid "تبديل الجهة"
+msgstr ""
+
+msgid "تجريبي"
+msgstr ""
+
+msgid "تجهيز راوتر"
+msgstr ""
+
+msgid "تحكّم الراوترات والشبكة"
+msgstr ""
+
+msgid "تحويلات الرصيد"
+msgstr ""
+
+msgid "تسجيل الخروج"
+msgstr ""
+
+msgid "تسجيل الدخول"
+msgstr ""
+
+msgid "تسجيل الدخول — لوحة Hobe Hub"
+msgstr ""
+
+msgid "تشخيص الآن"
+msgstr ""
+
+msgid "تشغيل الخادم"
+msgstr ""
+
+msgid "تعذّر الاتصال بقاعدة البيانات."
+msgstr ""
+
+msgid "تغيير العروض"
+msgstr ""
+
+msgid "تغيير اللغة"
+msgstr ""
+
+msgid "تقارير البطاقات"
+msgstr ""
+
+msgid "تقارير الجلسات"
+msgstr ""
+
+msgid "تقارير المحاسبة"
+msgstr ""
+
+msgid "تقارير الموزعين"
+msgstr ""
+
+msgid "تقارير ومتابعة لحظية"
+msgstr ""
+
+msgid "توثيق الواجهة"
+msgstr ""
+
+msgid "جدولة السرعات"
+msgstr ""
+
+msgid "جسر الإدارة"
+msgstr ""
+
+msgid "جهاز"
+msgstr ""
+
+msgid "حالات تسجيل الدخول"
+msgstr ""
+
+msgid "حالة دخول المدراء"
+msgstr ""
+
+msgid "حالة دخول المشتركين"
+msgstr ""
+
+msgid "حزم البطاقات"
+msgstr ""
+
+msgid "حزم البيع"
+msgstr ""
+
+msgid "حزم البيع الإلكتروني ومستخدمي الكروت الذين يشترون من المحفظة."
+msgstr ""
+
+msgid "حزمة بدون اسم"
+msgstr ""
+
+msgid "حقوق النشر"
+msgstr ""
+
+msgid "خادم الربط"
+msgstr ""
+
+msgid "دخول"
+msgstr ""
+
+msgid "دفع بيانات التوزيع"
+msgstr ""
+
+msgid "رابط الشعار إن كنت تريد إظهاره للجهة."
+msgstr ""
+
+msgid "رسائل أخطاء الهوتسبوت"
+msgstr ""
+
+msgid "رسائل لوحة التراخيص"
+msgstr ""
+
+msgid "رسائل واتساب للمشتركين"
+msgstr ""
+
+msgid "رقم المدير المسؤول إن كنت تستخدم توزيعًا إداريًا."
+msgstr ""
+
+msgid "رقم المستفيد المرتبط بهذا السجل."
+msgstr ""
+
+msgid "رقم بديل إن وجد."
+msgstr ""
+
+msgid "رقم جوال واضح للتواصل السريع."
+msgstr ""
+
+msgid "رمز العملة المستخدم في العرض والتقارير."
+msgstr ""
+
+msgid "رمز داخلي قصير يساعدك في الترتيب والبحث."
+msgstr ""
+
+msgid "ستظهر أحدث الحزم هنا"
+msgstr ""
+
+msgid "سجل العمليات"
+msgstr ""
+
+msgid "سجل تغييرات الماك"
+msgstr ""
+
+msgid "سجل رسائل الربط"
+msgstr ""
+
+msgid "سرعة التنزيل بالكيلوبت، 1024 تعني تقريبًا 1 ميجابت."
+msgstr ""
+
+msgid "سرعة التنزيل لهذا الملف."
+msgstr ""
+
+msgid "سرعة الرفع بالكيلوبت، 1024 تعني تقريبًا 1 ميجابت."
+msgstr ""
+
+msgid "سرعة الرفع لهذا الملف."
+msgstr ""
+
+msgid "سليم"
+msgstr ""
+
+msgid "سوق البطاقات"
+msgstr ""
+
+msgid "ضوابط أمان وسجلّات تدقيق"
+msgstr ""
+
+msgid "طابور المزامنة"
+msgstr ""
+
+msgid "طريقة الدخول التي سيستخدمها المستفيد على الشبكة."
+msgstr ""
+
+msgid "طريقة الدفع المستخدمة أو المرجعية."
+msgstr ""
+
+msgid "طيّ القائمة"
+msgstr ""
+
+msgid "عدد الدقائق التي ستضاف أو تعدل."
+msgstr ""
+
+msgid "عدد العناصر التي سيتم إنشاؤها في هذه العملية."
+msgstr ""
+
+msgid "عدد خانات اسم الدخول الذي سيتم توليده."
+msgstr ""
+
+msgid "عدد خانات كلمة المرور التي سيتم توليدها."
+msgstr ""
+
+msgid "عدد طلبات واجهة الربط المسموح بها في الدقيقة."
+msgstr ""
+
+msgid "عرض"
+msgstr ""
+
+msgid "عرض جديد"
+msgstr ""
+
+msgid "عرض كل التنبيهات"
+msgstr ""
+
+msgid "عملية HobeRadius"
+msgstr ""
+
+msgid "عند التعطيل يبقى العنصر محفوظًا لكنه لا يعمل في الاستخدام الجديد."
+msgstr ""
+
+msgid "عنوان البوابة المحلية المرتبطة بهذا النطاق."
+msgstr ""
+
+msgid "عنوان الجهاز أو الخادم داخل الشبكة."
+msgstr ""
+
+msgid "عنوان الجهاز الفيزيائي عند الحاجة للربط."
+msgstr ""
+
+msgid "عنوان الراوتر أو اسم المضيف."
+msgstr ""
+
+msgid "عنوان جهاز الشبكة الذي سترسل منه تجربة المصادقة."
+msgstr ""
+
+msgid "عنوان جهاز المستفيد المستخدم في الاختبار."
+msgstr ""
+
+msgid "عنوان مختصر يوضح سبب التذكرة."
+msgstr ""
+
+msgid "فئة الاشتراك تحدد الحدود الافتراضية لهذه الجهة."
+msgstr ""
+
+msgid "فتح القائمة"
+msgstr ""
+
+msgid "فحص"
+msgstr ""
+
+msgid "فحص الشبكة"
+msgstr ""
+
+msgid "فحص بطاقة"
+msgstr ""
+
+msgid "فشل الفصل/التحديث"
+msgstr ""
+
+msgid "فشل تحديث السرعة"
+msgstr ""
+
+msgid "فشل دخول الشبكة"
+msgstr ""
+
+msgid "قائمة العروض"
+msgstr ""
+
+msgid "قوالب الطباعة"
+msgstr ""
+
+msgid "قيمة الإيجار الشهري إن كانت الخدمة مؤجرة."
+msgstr ""
+
+msgid "قيمة تنزيل ثابتة تتجاوز المضاعف عند تعبئتها."
+msgstr ""
+
+msgid "قيمة رفع ثابتة تتجاوز المضاعف عند تعبئتها."
+msgstr ""
+
+msgid "كرت إلكتروني"
+msgstr ""
+
+msgid "كرت مطبوع"
+msgstr ""
+
+msgid "كروت الشحن المستخدمة"
+msgstr ""
+
+msgid "كلمة المرور"
+msgstr ""
+
+msgid "كلمة المرور الجديدة للحسابات المحددة."
+msgstr ""
+
+msgid "كلمة مرور الراوتر، احفظها بعناية."
+msgstr ""
+
+msgid "كمية التنزيل المتاحة خلال الشهر."
+msgstr ""
+
+msgid "كمية التنزيل المتاحة يوميًا لهذا الحساب أو الباقة."
+msgstr ""
+
+msgid "كمية الرفع المتاحة خلال الشهر."
+msgstr ""
+
+msgid "كمية الرفع المتاحة يوميًا لهذا الحساب أو الباقة."
+msgstr ""
+
+msgid "كيف تستخدمني"
+msgstr ""
+
+msgid "لا توجد أجهزة NAS مُسجَّلة — أضِف router/AP."
+msgstr ""
+
+msgid "لا توجد باقات بعد — أنشئ أول باقة."
+msgstr ""
+
+msgid "لا توجد تنبيهات مفتوحة الآن."
+msgstr ""
+
+msgid "لا توجد حزم بعد"
+msgstr ""
+
+msgid "لا توجد كروت متاحة — وَلِّد دفعة جديدة."
+msgstr ""
+
+msgid "لا توجد ملاحظات تشغيلية مهمة الآن."
+msgstr ""
+
+msgid "لغة الواجهة الافتراضية لهذه الجهة."
+msgstr ""
+
+msgid "لوحة التحكم"
+msgstr ""
+
+msgid "لوحة التراخيص"
+msgstr ""
+
+msgid "لون العلامة المستخدم في أجزاء من الواجهة."
+msgstr ""
+
+msgid "ليست ضمن صلاحياتك"
+msgstr ""
+
+msgid "ما يحتاج انتباه"
+msgstr ""
+
+msgid "مباع اليوم"
+msgstr ""
+
+msgid "متاح"
+msgstr ""
+
+msgid "متصل"
+msgstr ""
+
+msgid "متصلون"
+msgstr ""
+
+msgid "متصلون الآن"
+msgstr ""
+
+msgid "مثال: admin"
+msgstr ""
+
+msgid "مجدول"
+msgstr ""
+
+msgid "مجموعات المشتركين"
+msgstr ""
+
+msgid "مجمّد"
+msgstr ""
+
+msgid "مختبر الدفع الإلكتروني"
+msgstr ""
+
+msgid "مخزون الكروت المطبوعة والحزم الجاهزة للتفعيل أو البيع المباشر."
+msgstr ""
+
+msgid "مخزون ومصروفات الشركة"
+msgstr ""
+
+msgid "مدة الانتظار قبل اعتبار الاتصال غير ناجح."
+msgstr ""
+
+msgid "مدة التشغيل"
+msgstr ""
+
+msgid "مدة تشغيل التطبيق"
+msgstr ""
+
+msgid "مدة تشغيل خادم الربط"
+msgstr ""
+
+msgid "مدى العناوين الذي سيوزّع منه جهاز الشبكة."
+msgstr ""
+
+msgid "مدير النظام"
+msgstr ""
+
+msgid "مرجع اختياري يربط الحساب بسجل داخلي آخر."
+msgstr ""
+
+msgid "مركز إدارة الشبكة"
+msgstr ""
+
+msgid "مركز إدارة الشبكة - Hobe Hub"
+msgstr ""
+
+msgid "مركز الإدارة"
+msgstr ""
+
+msgid "مركز التنبيهات"
+msgstr ""
+
+msgid "مركز العمليات"
+msgstr ""
+
+msgid "مستخدمو البطاقات"
+msgstr ""
+
+msgid "مشترك"
+msgstr ""
+
+msgid "مشترك جديد"
+msgstr ""
+
+msgid "مضاعف سرعة التنزيل، مثل 0.5 للتنصيف."
+msgstr ""
+
+msgid "مضاعف سرعة الرفع، مثل 2 للمضاعفة."
+msgstr ""
+
+msgid "معاملات الكاش"
+msgstr ""
+
+msgid "معرّف قصير مناسب للرابط، ويفضّل تثبيته بعد استخدامه."
+msgstr ""
+
+msgid "معرّف نقطة الاتصال أو الجهاز المستقبل."
+msgstr ""
+
+msgid "معطلة"
+msgstr ""
+
+msgid "مفاتيح الواجهة"
+msgstr ""
+
+msgid "مفعلة"
+msgstr ""
+
+msgid "ملاحظات داخلية تساعدك عند المراجعة ولا تظهر عادة للمستفيد."
+msgstr ""
+
+msgid "ملخص أقسام الراديوس"
+msgstr ""
+
+msgid "ملخص تشغيلي"
+msgstr ""
+
+msgid "ملخص خادم الربط"
+msgstr ""
+
+msgid "ملف التراخيص"
+msgstr ""
+
+msgid "من يدفع الخدمة ومن هو متصل ومن يحتاج متابعة قبل انتهاء الاشتراك."
+msgstr ""
+
+msgid "منتهي اشتراكهم"
+msgstr ""
+
+msgid "منفذ الاتصال مع الجهاز."
+msgstr ""
+
+msgid "منفذ المحاسبة القياسي غالبًا 1813."
+msgstr ""
+
+msgid "منفذ المصادقة القياسي غالبًا 1812."
+msgstr ""
+
+msgid "منفذ قطع الجلسة أو تحديثها غالبًا 3799."
+msgstr ""
+
+msgid "منفذ واجهة الربط، غالبًا 8728 أو 8729 للاتصال الآمن."
+msgstr ""
+
+msgid "نشطون"
+msgstr ""
+
+msgid "نص اختياري يُضاف قبل أو بعد الاسم المولّد."
+msgstr ""
+
+msgid "نص يستخدمه النظام لقراءة بيانات المراقبة من الجهاز."
+msgstr ""
+
+msgid "نطاقات العناوين"
+msgstr ""
+
+msgid "نظام التشغيل"
+msgstr ""
+
+msgid "نظرة عامة"
+msgstr ""
+
+msgid "نوع منفذ الاتصال المستخدم في الاختبار."
+msgstr ""
+
+msgid "هذا الشهر"
+msgstr ""
+
+msgid ""
+"واجهة هادئة لمتابعة الشبكة: من المتصل الآن، ما المتاح للبيع، وما الذي "
+"يحتاج انتباهك اليوم."
+msgstr ""
+
+msgid "وسوم قصيرة للتنظيم، افصل بينها بفاصلة عند الحاجة."
+msgstr ""
+
+msgid "وصف قصير يوضّح الهدف من هذا العنصر."
+msgstr ""
+
+msgid "يدوي"
+msgstr ""
+
+msgid "ينتهي خلال 3 أيام"
+msgstr ""
+
+msgid "⚡ بطاقات الشحن المسبق"
+msgstr ""
+
+msgid "⚡ لوحة الشحن"
+msgstr ""
+
+msgid "🖨️ بطاقات الطباعة"
+msgstr ""
+
+msgid "🛜 غرفة عمليات الراوترات"
+msgstr ""
+

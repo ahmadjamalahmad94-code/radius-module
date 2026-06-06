@@ -1,119 +1,335 @@
-{# Services list — UNIFIED DESIGN SYSTEM (merged hero + help panel).
-   Same backend data: items list (services / equipment). Zero route/behaviour change. #}
+{# ═══════════════════════════════════════════════════════════════════════
+   الخدمات والمعدّات — إعادة تصميم على نظام hub-hero-shell الموحّد (2026-06-05)
+
+   بيانات المسار (radius.svc_list — بدون أي تغيير في السلوك):
+     items (قائمة Service: معدّات مُسلَّمة للمشتركين)
+
+   البنية المبسّطة:
+     1. صدفة هيرو واحدة: عنوان + سطر تعريفي + مؤشرات بصف واحد + حزام بحث
+        فوري — كتلة واحدة بلا لوحات مكدّسة.
+     2. جدول uds موحّد (فرز + ترقيم + تصدير) مع تعريب النوع والحالة كحبوب
+        ملوّنة، والسيريال/MAC بخط أحادي المسافة داخل <bdi>.
+   البحث: فلترة فورية في المتصفح عبر uds.setFilter (المسار لا يقرأ ?q،
+   فلا نرسل نموذجًا لا أثر له — صفر تغيير خلفي).
+   ═══════════════════════════════════════════════════════════════════════ #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
 {% block title %}الخدمات والمعدّات{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-toolbox"></i>{% endblock %}
 {% block page_title %}الخدمات والمعدّات{% endblock %}
-{% block page_sub %}<span class="sub">{{ items|length }} عنصر في النتائج</span>{% endblock %}
+{% block page_sub %}<span class="sub"><bdi dir="ltr">{{ items|length }}</bdi> معدّة مسجَّلة</span>{% endblock %}
+
+{% block head_extra %}{{ super() }}
+{# نظام الجداول الموحّد (uds): فرز + ترقيم + أزرار التصدير #}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
+<style>
+/* ── الصندوق العائم المنبثق «إضافة معدّة» (نفس نمط fcw في finance_center_hub) ── */
+.fcw-modal{ position:fixed; inset:0; z-index:1200; display:none; place-items:center; padding:24px; background:rgba(15,23,42,.52); }
+.fcw-modal.is-open{ display:grid; }
+.fcw-dialog{ width:min(680px,100%); max-height:min(90vh,820px); overflow:auto; border-radius:16px; background:#fff;
+  box-shadow:0 28px 80px rgba(15,23,42,.32); }
+.fcw-head{ position:sticky; top:0; z-index:2; display:flex; align-items:center; justify-content:space-between; gap:12px;
+  padding:15px 18px; border-bottom:1px solid var(--hub-border-soft,#e2e8f0); background:#fff; }
+.fcw-head h3{ margin:0; font-size:17px; font-weight:900; color:var(--hub-text,#0f172a); }
+.fcw-x{ border:0; background:transparent; color:#94a3b8; font-size:18px; cursor:pointer; }
+.fcw-body{ padding:16px 18px; display:grid; gap:12px; }
+.fcw-foot{ display:flex; justify-content:flex-end; gap:8px; padding:13px 18px; border-top:1px solid var(--hub-border-soft,#e2e8f0); background:#fbfdff; }
+/* شبكة حقول النافذة: عمودان يلتفّان لعمود واحد على الضيق */
+.fcw-grid{ display:grid; gap:12px; grid-template-columns:repeat(2,minmax(0,1fr)); }
+.fcw-grid .full{ grid-column:1/-1; }
+@media (max-width:640px){ .fcw-grid{ grid-template-columns:1fr; } }
+/* عنوان مجموعة حقول داخل النافذة */
+.fcw-group{ display:flex; align-items:center; gap:8px; font-size:12.5px; font-weight:900;
+  color:var(--hub-brand-ink,#4338ca); padding-top:4px; border-top:1px dashed var(--hub-border-soft,#e2e8f0); margin-top:2px; }
+.fcw-group:first-child{ border-top:0; margin-top:0; padding-top:0; }
+</style>
+{% endblock %}
 
 {% block content %}
+{# ── خرائط التعريب الثابتة لقيم النوع والحالة القادمة من قاعدة البيانات ── #}
+{% set type_labels = {
+  'router':  'راوتر',
+  'onu':     'ONU',
+  'modem':   'مودم',
+  'cable':   'كبل',
+  'antenna': 'هوائي',
+  'other':   'أخرى'
+} %}
+{% set status_map = {
+  'given':    ('مسلَّمة', 'green'),
+  'returned': ('مرتجعة',  'blue'),
+  'lost':     ('مفقودة',  'red'),
+  'damaged':  ('متضرّرة', 'amber')
+} %}
 
-{% set _given     = items|selectattr('status','equalto','given')|list|length %}
-{% set _returned  = items|selectattr('status','equalto','returned')|list|length %}
-{% set _lost      = items|selectattr('status','equalto','lost')|list|length %}
-{% set _damaged   = items|selectattr('status','equalto','damaged')|list|length %}
+{# عدّادات الحالة من النتائج الحالية (بلا استعلامات إضافية) #}
+{% set _given    = items|selectattr('status','equalto','given')|list|length %}
+{% set _returned = items|selectattr('status','equalto','returned')|list|length %}
+{% set _lost     = items|selectattr('status','equalto','lost')|list|length %}
+{% set _damaged  = items|selectattr('status','equalto','damaged')|list|length %}
 
-{# ───── Merged hero: title + actions + KPI strip + integrated search ───── #}
+{# ───── صدفة الهيرو الموحّدة: عنوان + مؤشرات بصف واحد + حزام بحث فوري ───── #}
+<section class="hub-hero-shell">
 {% call hub.megahero(
   "الخدمات والمعدّات",
-  subtitle="إدارة المعدّات المُسلَّمة للمشتركين — راوترات، بطاقات، ملحقات — وإيجاراتها الشهرية في مكان واحد.",
+  subtitle="سجلّ المعدّات المُسلَّمة للمشتركين — راوترات وأجهزة وملحقات — مع حالتها وإيجارها الشهري.",
   icon="toolbox",
   actions_html='
-    <a class="hub-btn hub-btn--primary" href="' + url_for('radius.svc_new') + '">
+    <button type="button" class="hub-btn hub-btn--primary" data-fcw-open="service-create">
       <i class="fa-solid fa-plus"></i> إضافة معدّة
-    </a>',
+    </button>',
   kpis=[
-    {'label': 'الإجمالي',      'value': items|length,      'icon': 'layer-group',          'variant': 'brand'},
-    {'label': 'مسلَّمة',       'value': _given,            'icon': 'handshake',            'variant': 'green'},
-    {'label': 'مرتجعة',        'value': _returned,         'icon': 'rotate-left',          'variant': 'blue'},
-    {'label': 'مفقودة/تالفة',  'value': _lost + _damaged,  'icon': 'triangle-exclamation', 'variant': 'red'},
-  ],
-  search_action=url_for('radius.svc_list')
+    {'label': 'الإجمالي',      'value': items|length,     'icon': 'layer-group',          'variant': 'brand'},
+    {'label': 'مسلَّمة',       'value': _given,           'icon': 'handshake',            'variant': 'green'},
+    {'label': 'مرتجعة',        'value': _returned,        'icon': 'rotate-left',          'variant': 'blue'},
+    {'label': 'مفقودة/تالفة',  'value': _lost + _damaged, 'icon': 'triangle-exclamation', 'variant': 'red'},
+  ]
 ) %}
-  <input class="hub-input grow" type="text" name="q"
-         placeholder="بحث باسم/سيريال المعدّة..." value="{{ request.args.get('q', '') }}">
-  {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
+  {# بحث فوري في المتصفح (الاسم/السيريال/MAC/المشترك) — لا يرسل للخادم #}
+  <input class="hub-input grow" type="search" id="svc-q" autocomplete="off"
+         placeholder="بحث فوري بالاسم أو السيريال أو MAC...">
+  <span class="hub-hint" tabindex="0"
+        data-hint="البحث يفلتر الجدول فورًا دون إعادة تحميل. «مسلَّمة» = بحوزة المشترك الآن، و«مرتجعة» = عادت إليك — المفقودة والتالفة تبقى مسجَّلة للمحاسبة."><i class="fa-solid fa-info"></i></span>
 {% endcall %}
+</section>{# /hub-hero-shell #}
 
 {% if items %}
-{# ───── Main (carded table) + help panel on the LEFT ───── #}
-{% call hub.worklayout(aside_html=hub.helppanel(
-  "كيف تقرأ هذه الصفحة؟",
-  intro="كل صف هو معدّة سُلِّمت لمشترك — راوتر أو بطاقة أو ملحق — مع حالتها وإيجارها الشهري.",
-  items=[
-    {'icon': 'handshake',            'text': '«مسلَّمة» تعني أن المعدّة بحوزة المشترك حاليًا، و«مرتجعة» أنها عادت إليك.'},
-    {'icon': 'triangle-exclamation', 'text': 'المفقودة أو التالفة تبقى مسجَّلة للمتابعة والمحاسبة.'},
-    {'icon': 'money-bill',           'text': 'الإيجار/الشهر هو المبلغ المُحتسب دوريًا على المشترك مقابل المعدّة.'},
-    {'icon': 'barcode',              'text': 'السيريال والـ MAC يميّزان كل قطعة لربطها بالمشترك بدقة.'},
-  ],
-  note="الحذف يزيل المعدّة من السجل نهائيًا — تأكّد قبل التنفيذ."
-)) %}
-  {% call hub.section("قائمة المعدّات", icon="table-list", meta=items|length|string + " معدّة", flush=True) %}
-    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
-      <table class="hub-table">
-        <thead>
-          <tr>
-            <th style="width:36px" data-uds-nosort data-uds-nocol><input type="checkbox"></th>
-            <th class="num" style="width:60px">#</th>
-            <th>الاسم</th>
-            <th>النوع</th>
-            <th>السيريال</th>
-            <th>MAC</th>
-            <th>المشترك</th>
-            <th class="num">إيجار/شهر</th>
-            <th>الحالة</th>
-            <th>تاريخ التسليم</th>
-            <th style="width:110px" data-uds-nosort>إجراءات</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for s in items %}
-          <tr>
-            <td><input type="checkbox"></td>
-            <td class="num mono">{{ s.id }}</td>
-            <td><strong>{{ s.name }}</strong></td>
-            <td>{{ hub.pill(s.type, variant="blue", dot=False) }}</td>
-            <td class="mono small">{{ s.serial or '—' }}</td>
-            <td class="mono small">{{ s.mac or '—' }}</td>
-            <td class="mono small">#{{ s.subscriber_id }}</td>
-            <td class="num"><strong>{{ "%.2f"|format(s.rent_per_month) }}</strong></td>
-            <td>
-              {% if s.status == 'given' %}{{ hub.pill("مسلَّمة", variant="green") }}
-              {% elif s.status == 'returned' %}{{ hub.pill("مرتجعة", variant="blue") }}
-              {% elif s.status == 'lost' %}{{ hub.pill("مفقودة", variant="red") }}
-              {% elif s.status == 'damaged' %}{{ hub.pill("متضرّرة", variant="amber") }}
-              {% else %}{{ hub.pill(s.status, variant="grey") }}{% endif %}
-            </td>
-            <td class="mono small">{{ s.given_at|date_local if s.given_at else '—' }}</td>
-            <td>
-              <div class="hub-flex-row" style="gap:4px;flex-wrap:nowrap">
-                <a class="hub-btn hub-btn--ghost hub-btn--icon" title="تعديل"
-                   href="{{ url_for('radius.svc_edit', sid=s.id) }}">
-                  <i class="fa-solid fa-pen"></i>
-                </a>
-                <form method="post" action="{{ url_for('radius.svc_delete', sid=s.id) }}"
-                      onsubmit="return confirm('حذف «{{ s.name|e }}»؟');" style="display:inline">
-                  <button type="submit" class="hub-btn hub-btn--danger hub-btn--icon" title="حذف">
-                    <i class="fa-solid fa-trash"></i>
-                  </button>
-                </form>
-              </div>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  {% endcall %}
+{# ───── جدول المعدّات — uds موحّد (فرز + ترقيم + تصدير) ───── #}
+{% call hub.section("قائمة المعدّات", icon="table-list", meta=items|length|string + " معدّة", flush=True) %}
+  <div class="hub-table-wrap uds-table-wrap" id="svc-table" data-uds-table data-uds-page-size="25"
+       data-uds-export-title="المعدات" style="border:none;border-radius:0">
+    <table class="hub-table">
+      <thead>
+        <tr>
+          <th class="num" style="width:60px">#</th>
+          <th>الاسم</th>
+          <th>النوع</th>
+          <th>السيريال</th>
+          <th>MAC</th>
+          <th>المشترك</th>
+          <th class="num">الإيجار/شهر</th>
+          <th>الحالة</th>
+          <th>تاريخ التسليم</th>
+          <th style="width:100px" data-uds-nosort data-uds-nocol data-uds-noexport>إجراءات</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in items %}
+        {% set _st = status_map.get(s.status, (s.status, 'grey')) %}
+        <tr>
+          <td class="num mono"><bdi dir="ltr">{{ s.id }}</bdi></td>
+          <td><strong>{{ s.name }}</strong></td>
+          <td>{{ hub.pill(type_labels.get(s.type, s.type or '—'), variant="blue", dot=False) }}</td>
+          <td class="mono small">{% if s.serial %}<bdi dir="ltr">{{ s.serial }}</bdi>{% else %}<span class="hub-text-mute">—</span>{% endif %}</td>
+          <td class="mono small">{% if s.mac %}<bdi dir="ltr">{{ s.mac|upper }}</bdi>{% else %}<span class="hub-text-mute">—</span>{% endif %}</td>
+          <td class="mono small"><bdi dir="ltr">#{{ s.subscriber_id }}</bdi></td>
+          <td class="num mono"><strong>{{ "%.2f"|format(s.rent_per_month) }}</strong></td>
+          <td>{{ hub.pill(_st[0], variant=_st[1]) }}</td>
+          <td class="mono small"><bdi dir="ltr">{{ s.given_at|date_local if s.given_at else '—' }}</bdi></td>
+          <td>
+            <div class="hub-flex-row" style="gap:4px;flex-wrap:nowrap">
+              <a class="hub-btn hub-btn--ghost hub-btn--icon" title="تعديل"
+                 href="{{ url_for('radius.svc_edit', sid=s.id) }}">
+                <i class="fa-solid fa-pen"></i>
+              </a>
+              {# الحذف نهائي — التأكيد عبر صندوق عائم منبثق (لا confirm متصفح)،
+                 نفس عقد POST القائم: الزر يفتح النافذة والإرسال يتم من نموذجها. #}
+              <form method="post" action="{{ url_for('radius.svc_delete', sid=s.id) }}"
+                    data-svc-delete-form data-svc-name="{{ s.name|e }}" style="display:inline">
+                <button type="button" class="hub-btn hub-btn--danger hub-btn--icon" title="حذف"
+                        data-svc-delete-open>
+                  <i class="fa-solid fa-trash"></i>
+                </button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 {% endcall %}
 {% else %}
 {{ hub.empty(
   "لا معدّات مسجَّلة بعد",
-  sub="سجِّل أول معدّة من زرّ «إضافة معدّة» في الأعلى.",
+  sub="سجِّل أول معدّة من زرّ «إضافة معدّة» أعلى الصفحة.",
   icon="toolbox"
 ) }}
 {% endif %}
 
+{# ───────────── صندوق عائم منبثق: إضافة معدّة ─────────────
+   نفس عقد الإنشاء القائم حرفيًا: POST → radius.svc_create بأسماء الحقول:
+   subscriber_id / name / type / serial / mac / rent_per_month / status /
+   given_at / returned_at / notes — صفر تغيير خلفي.
+   الرابط القديم /services/new يعيد التوجيه إلى هنا بـ ?new=1 فيفتح
+   النافذة تلقائيًا (deep-link محفوظ). التعديل يبقى صفحة مستقلة لأنه
+   يحتاج تحميل بيانات المعدّة (svc_edit). #}
+<div class="fcw-modal" data-fcw-modal="service-create" hidden>
+  <div class="fcw-dialog" role="dialog" aria-modal="true" aria-labelledby="fcw-service-create-title">
+    {# method="post" ضروري: حاقن الـ CSRF التلقائي يستهدف فقط <form method="post">. #}
+    <form method="post" action="{{ url_for('radius.svc_create') }}">
+      <div class="fcw-head">
+        <h3 id="fcw-service-create-title"><i class="fa-solid fa-toolbox"></i> إضافة معدّة</h3>
+        <button type="button" class="fcw-x" data-fcw-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="fcw-body">
+
+        {# ── 1) هوية المعدّة ── #}
+        <div class="fcw-group"><i class="fa-solid fa-microchip"></i> هوية المعدّة</div>
+        <div class="fcw-grid">
+          <label class="hub-field full">
+            <span class="hub-field-label">المشترك <span style="color:#dc2626">*</span></span>
+            <select class="hub-select" name="subscriber_id" required>
+              <option value="">— اختر مشتركًا —</option>
+              {% for s in subs %}
+                <option value="{{ s.id }}">{{ s.username }} — {{ s.full_name or '—' }}</option>
+              {% endfor %}
+            </select>
+            <span class="hub-field-hint">المشترك الذي تسلَّم المعدّة — يُحتسب عليه إيجارها وتظهر في سجلّه.</span>
+          </label>
+          <label class="hub-field">
+            <span class="hub-field-label">الاسم <span style="color:#dc2626">*</span></span>
+            <input class="hub-input" type="text" name="name" required placeholder="مثال: راوتر منزلي TP-Link">
+            <span class="hub-field-hint">اسم وصفي يميّز المعدّة في القوائم والتقارير.</span>
+          </label>
+          <label class="hub-field">
+            <span class="hub-field-label">النوع</span>
+            <select class="hub-select" name="type">
+              {% for t in ['router', 'onu', 'modem', 'cable', 'antenna', 'other'] %}
+                <option value="{{ t }}" {% if t == 'router' %}selected{% endif %}>{{ type_labels.get(t, t) }}</option>
+              {% endfor %}
+            </select>
+            <span class="hub-field-hint">تصنيف الجهاز — يسهّل الجرد والفلترة.</span>
+          </label>
+          <label class="hub-field">
+            <span class="hub-field-label">الرقم التسلسلي</span>
+            <input class="hub-input mono" type="text" name="serial" dir="ltr" placeholder="SN-XXXXXXXX">
+            <span class="hub-field-hint">يميّز القطعة بدقة عند الدعم أو الاسترجاع — اختياري.</span>
+          </label>
+          <label class="hub-field">
+            <span class="hub-field-label">عنوان MAC</span>
+            <input class="hub-input mono" type="text" name="mac" dir="ltr" placeholder="AA:BB:CC:DD:EE:FF">
+            <span class="hub-field-hint">العنوان الفيزيائي للجهاز إن وُجد — اختياري.</span>
+          </label>
+        </div>
+
+        {# ── 2) الإسناد والحالة ── #}
+        <div class="fcw-group"><i class="fa-solid fa-clipboard-check"></i> الإسناد والحالة</div>
+        <div class="fcw-grid">
+          <label class="hub-field">
+            <span class="hub-field-label">الإيجار / شهر</span>
+            <input class="hub-input" type="number" step="0.01" min="0" name="rent_per_month" value="0" dir="ltr">
+            <span class="hub-field-hint">مبلغ مرجعي للفوترة الدورية بعملة النظام — اترك 0 إن كانت بلا إيجار.</span>
+          </label>
+          <label class="hub-field">
+            <span class="hub-field-label">الحالة</span>
+            <select class="hub-select" name="status">
+              {% for st in ['given', 'returned', 'lost', 'damaged'] %}
+                <option value="{{ st }}" {% if st == 'given' %}selected{% endif %}>{{ status_map.get(st, (st,))[0] }}</option>
+              {% endfor %}
+            </select>
+            <span class="hub-field-hint">«مسلَّمة» = بحوزة المشترك الآن — تغيير الحالة لاحقًا لا يحذف السجل.</span>
+          </label>
+          <label class="hub-field">
+            <span class="hub-field-label">تاريخ التسليم</span>
+            <input class="hub-input" type="date" name="given_at" dir="ltr">
+            <span class="hub-field-hint">يوم تسليم الجهاز للمشترك.</span>
+          </label>
+          <label class="hub-field">
+            <span class="hub-field-label">تاريخ الإرجاع</span>
+            <input class="hub-input" type="date" name="returned_at" dir="ltr">
+            <span class="hub-field-hint">يُملأ عند استعادة الجهاز — اتركه فارغًا للمعدّة الجديدة.</span>
+          </label>
+          <label class="hub-field full">
+            <span class="hub-field-label">ملاحظات</span>
+            <textarea class="hub-textarea" name="notes" rows="2"
+                      placeholder="حالة الجهاز، ملحقاته، أي اتفاق خاص..."></textarea>
+            <span class="hub-field-hint">أي تفاصيل تفيد عند الاسترجاع أو المحاسبة.</span>
+          </label>
+        </div>
+
+      </div>
+      <div class="fcw-foot">
+        <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>إغلاق</button>
+        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> حفظ المعدّة</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# ───────────── صندوق عائم: تأكيد حذف معدّة (بديل confirm المتصفح) ───────────── #}
+<div class="fcw-modal" data-fcw-modal="service-delete" hidden>
+  <div class="fcw-dialog" role="dialog" aria-modal="true" aria-labelledby="fcw-service-delete-title" style="width:min(440px,100%)">
+    <div class="fcw-head">
+      <h3 id="fcw-service-delete-title" style="color:#b91c1c"><i class="fa-solid fa-trash"></i> حذف معدّة</h3>
+      <button type="button" class="fcw-x" data-fcw-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="fcw-body">
+      <div style="font-size:13.5px;line-height:1.9;color:var(--hub-text,#0f172a)">
+        سيُحذف سجل المعدّة <strong id="svc-del-name" style="color:#b91c1c">—</strong> نهائيًا
+        ولا يمكن استرجاعه. هل أنت متأكد؟
+      </div>
+    </div>
+    <div class="fcw-foot">
+      <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>إلغاء</button>
+      <button class="hub-btn hub-btn--danger" type="button" id="svc-del-confirm">
+        <i class="fa-solid fa-trash"></i> حذف نهائيًا
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  "use strict";
+  // فتح وإغلاق الصناديق العائمة (نفس نمط fcw في finance_center_hub).
+  const root = document;
+  function open(key){ const m = root.querySelector(`[data-fcw-modal='${key}']`); if(m){ m.hidden=false; m.classList.add("is-open"); m.querySelector("input,select,textarea,button")?.focus(); } }
+  function closeAll(){ root.querySelectorAll("[data-fcw-modal]").forEach(m=>{ m.classList.remove("is-open"); m.hidden=true; }); }
+  root.querySelectorAll("[data-fcw-open]").forEach(b=> b.addEventListener("click", ()=> open(b.dataset.fcwOpen)));
+  root.querySelectorAll("[data-fcw-close]").forEach(b=> b.addEventListener("click", closeAll));
+  root.querySelectorAll("[data-fcw-modal]").forEach(m=> m.addEventListener("click", e=>{ if(e.target===m) closeAll(); }));
+  root.addEventListener("keydown", e=>{ if(e.key==="Escape") closeAll(); });
+
+  // تأكيد الحذف عبر النافذة العائمة: الزر في الصف يحفظ نموذجه ثم يفتح النافذة،
+  // وزر «حذف نهائيًا» يرسل النموذج المحفوظ (نفس POST القائم، بالـ CSRF المحقون فيه).
+  let pendingForm = null;
+  root.querySelectorAll("[data-svc-delete-open]").forEach(btn => btn.addEventListener("click", () => {
+    pendingForm = btn.closest("form[data-svc-delete-form]");
+    const nameEl = root.getElementById("svc-del-name");
+    if (nameEl) nameEl.textContent = "«" + (pendingForm?.dataset.svcName || "") + "»";
+    open("service-delete");
+  }));
+  root.getElementById("svc-del-confirm")?.addEventListener("click", () => {
+    if (pendingForm) pendingForm.submit();
+  });
+
+  {% if open_new_modal %}
+  // الرابط العميق /services/new أعاد التوجيه بـ ?new=1 — افتح نافذة الإضافة تلقائيًا.
+  open("service-create");
+  {% endif %}
+})();
+</script>
+
+{# نظام الجداول الموحّد: فرز + ترقيم + تصدير #}
+<script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
+<script>
+/* البحث الفوري: يربط حقل البحث بمرشّح جدول uds (نصّ الصف كاملًا) */
+(function () {
+  var q = document.getElementById("svc-q");
+  var wrap = document.getElementById("svc-table");
+  if (!q || !wrap) return;
+  /* الحقل يعيش داخل نموذج الهيرو — نمنع الإرسال بالضغط على Enter */
+  q.addEventListener("keydown", function (e) { if (e.key === "Enter") e.preventDefault(); });
+  q.addEventListener("input", function () {
+    var api = wrap.__udsApi;
+    if (!api || !api.setFilter) return;
+    var needle = q.value.trim().toLowerCase();
+    api.setFilter(needle ? function (tr) {
+      return (tr.textContent || "").toLowerCase().indexOf(needle) !== -1;
+    } : null);
+  });
+})();
+</script>
 {% endblock %}

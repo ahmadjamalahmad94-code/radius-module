@@ -5,25 +5,37 @@
 {% block page_icon %}<i class="fa-solid fa-lock"></i>{% endblock %}
 {% block page_title %}أحداث الأمان{% endblock %}
 {% block page_sub %}<span class="sub">أحداث الأمان ومحاولات الدخول والتنبيهات المفتوحة التي تحتاج مراجعة.</span>{% endblock %}
-{% block head_extra %}{{ super() }}<link rel="stylesheet" href="{{ url_for('static', filename='css/ops_risk_redesign.css') }}">{% endblock %}
+{% block head_extra %}{{ super() }}<link rel="stylesheet" href="{{ url_for('static', filename='css/ops_risk_redesign.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">{% endblock %}
 
-{# ── Severity → pill variant ─────────────────────────────────── #}
+{# ── الخطورة → نص عربي + لون الشارة، وأنواع الكيانات → عربي ─────── #}
 {% set _sev_variant = {'info': 'blue', 'warning': 'amber', 'error': 'red', 'critical': 'red'} %}
+{% set _sev_labels = {'info': 'معلومة', 'warning': 'تحذير', 'error': 'خطأ', 'critical': 'حرج'} %}
+{% set _entity_labels = {
+  'subscriber': 'مشترك', 'user': 'مشترك', 'card': 'بطاقة', 'card_batch': 'دفعة كروت',
+  'wallet': 'محفظة', 'admin': 'مدير', 'manager': 'مدير', 'distributor': 'موزّع',
+  'device': 'جهاز شبكة', 'router': 'راوتر', 'session': 'جلسة', 'event': 'حدث',
+  'invoice': 'فاتورة', 'payment': 'دفعة', 'plan': 'باقة', 'tenant': 'مستأجر'
+} %}
 
 {% block content %}
 
-{# ───── Unified hero: title + subtitle + KPI strip (no filters on this page) ───── #}
+{# متحكّم «انتقال سريع» المضغوط (data-testid="events-nav") — يُحقن في صف عنوان الهيرو #}
+{% set _events_jump %}{% include "radius/events_nav.html" %}{% endset %}
+
+{# ───── الصدفة الموحّدة: هيرو واحد (عنوان + KPI) — لا فلاتر في هذه الصفحة ───── #}
+<section class="hub-hero-shell">
 {{ hub.megahero(
   "أحداث الأمان",
   subtitle="يتم تجميع محاولات الدخول الفاشلة وأحداث الصلاحيات والتنبيهات المفتوحة هنا للمراجعة. هذه الصفحة للعرض فقط.",
   icon="lock",
+  actions_html=_events_jump,
   kpis=[
     {'label': 'أحداث الأمان',       'value': events|length, 'icon': 'lock',  'variant': 'brand'},
     {'label': 'التنبيهات المفتوحة', 'value': flags|length,  'icon': 'flag',  'variant': 'amber'},
   ]
 ) }}
-
-{% include "radius/events_nav.html" %}
+</section>{# /hub-hero-shell #}
 
 {# ───── Main (carded tables) + help panel on the LEFT ───── #}
 {% call hub.worklayout(aside_html=hub.helppanel(
@@ -39,8 +51,8 @@
 )) %}
 
   {% call hub.section("أحداث الأمان", icon="lock", meta=events|length|string + " حدث", flush=True) %}
-    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="15" style="border:none;border-radius:0">
-      <table class="hub-table" data-uds-table data-testid="security-events-table">
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="15" data-uds-export-title="أحداث الأمان" style="border:none;border-radius:0">
+      <table class="hub-table" data-testid="security-events-table">
         <thead>
           <tr>
             <th class="num">الرقم</th>
@@ -53,10 +65,13 @@
         <tbody>
           {% for event in events %}
             <tr>
-              <td class="num">#{{ event.id }}</td>
-              <td>{{ hub.pill(event.severity, variant=_sev_variant.get(event.severity, 'grey')) }}</td>
+              <td class="num mono"><bdi dir="ltr">#{{ event.id }}</bdi></td>
+              <td title="{{ event.severity }}">{{ hub.pill(_sev_labels.get(event.severity, event.severity or '—'), variant=_sev_variant.get(event.severity, 'grey')) }}</td>
               <td class="mono small">{{ event.event_key }}</td>
-              <td>{{ event.target_type }} #{{ event.target_id or '' }}</td>
+              <td>
+                {{ _entity_labels.get(event.target_type, event.target_type) if event.target_type else '—' }}
+                {%- if event.target_id %} <bdi dir="ltr" class="mono small">#{{ event.target_id }}</bdi>{% endif -%}
+              </td>
               <td>{{ event.message }}</td>
             </tr>
           {% else %}
@@ -100,4 +115,5 @@
 
 {% endcall %}
 
+<script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
 {% endblock %}

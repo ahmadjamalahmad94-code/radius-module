@@ -1,0 +1,396 @@
+# PRE_MERGE_SNAPSHOT — 2026-06-06
+# branch: main
+# HEAD: 25f782d9970ca26e114709e26fa2ef09670f3e32
+# origin/main, origin/qa/phase-b-fixes fetched
+# note: ALL work below is uncommitted/untracked
+# 095 collision: ours=095_ecards_modes_and_purchase_files.sql ; qa=095_subscriber_portal_tokens.sql -> rename qa to 106
+#
+ M app/__init__.py
+ M app/api/auth.py
+ M app/api/blueprint.py
+ M app/api/openapi.py
+ M app/api/v1/__init__.py
+ M app/api/v1/cards.py
+ M app/api/v1/payments.py
+ M app/api/v1/service_requests.py
+ M app/api/v1/vouchers.py
+ M app/radius/auth/session_helpers.py
+ M app/radius/core/constants.py
+ M app/radius/core/types.py
+ M app/radius/db/repos/admins_repo.py
+ M app/radius/db/repos/cards_repo.py
+ M app/radius/db/repos/hotspot_designs_repo.py
+ M app/radius/db/repos/plans_repo.py
+ D app/radius/db/repos/router_tunnels_repo.py
+ M app/radius/db/repos/vouchers_repo.py
+ M app/radius/routes/accounting.py
+ M app/radius/routes/admin_bridge.py
+ M app/radius/routes/admins.py
+ M app/radius/routes/backups.py
+ M app/radius/routes/blueprint.py
+ M app/radius/routes/card_users_marketplace.py
+ M app/radius/routes/cards.py
+ M app/radius/routes/communications.py
+ M app/radius/routes/customer_portals.py
+ M app/radius/routes/distributors.py
+ M app/radius/routes/finance_billing.py
+ M app/radius/routes/finance_collection.py
+ M app/radius/routes/mt_alerts.py
+ M app/radius/routes/mt_dashboard.py
+ M app/radius/routes/mt_guided_op.py
+ M app/radius/routes/mt_login_designer.py
+ M app/radius/routes/mt_permission_matrix.py
+ M app/radius/routes/mt_setup.py
+ M app/radius/routes/operations_center.py
+ M app/radius/routes/overviews.py
+ M app/radius/routes/payment_collection.py
+ M app/radius/routes/plans.py
+ M app/radius/routes/print_templates.py
+ M app/radius/routes/reports.py
+ M app/radius/routes/saas_modules.py
+ M app/radius/routes/sessions.py
+ M app/radius/routes/settings.py
+ M app/radius/routes/status.py
+ M app/radius/routes/subscribers_overview.py
+ M app/radius/routes/tokens.py
+ M app/radius/routes/users.py
+ M app/radius/routes/whatsapp.py
+ M app/radius/services/accounting.py
+ M app/radius/services/accounting_events.py
+ M app/radius/services/card_renderer.py
+ M app/radius/services/card_users_marketplace.py
+ M app/radius/services/cards.py
+ M app/radius/services/comms_bot.py
+ M app/radius/services/comms_providers.py
+ M app/radius/services/dashboard_metrics.py
+ M app/radius/services/dashboard_reports.py
+ M app/radius/services/device_fingerprint.py
+ M app/radius/services/events_risk_center.py
+ M app/radius/services/hotspot_cards_portal.py
+ M app/radius/services/hotspot_templates.py
+ M app/radius/services/login_events.py
+ M app/radius/services/mt_permissions.py
+ M app/radius/services/mt_provisioner.py
+ M app/radius/services/notifications_engine.py
+ M app/radius/services/operations.py
+ M app/radius/services/policy_engine.py
+ M app/radius/services/temp_speed.py
+ M app/radius/services/users.py
+ D app/radius/services/v6_tunnels.py
+ M app/radius/services/whatsapp_notify.py
+ M app/radius/stores/cards_store.py
+ M app/static/css/admin_design_system.css
+ M app/static/css/card_marketplace_polish.css
+ M app/static/css/cards_checker_v2.css
+ M app/static/css/dashboard_premium.css
+ M app/static/css/hub_v2.css
+ M app/static/css/mt_dashboard.css
+ M app/static/css/mt_login_designer.css
+ M app/static/css/sidebar_v2.css
+ M app/static/css/subscribers_overview.css
+ M app/static/css/subscribers_polish.css
+ M app/static/css/unified_design.css
+ M app/static/fonts/OFL.txt
+ M app/static/js/mt_dashboard.js
+ M app/static/js/mt_operations.js
+ M app/static/js/sidebar_v2.js
+ M app/static/js/uds_table.js
+ M app/templates/_partials/hub.html
+ M app/templates/admin/_admin_layout.html
+ M app/templates/admin/_sidebar.html
+ M app/templates/radius/accounting_ledger.html
+ M app/templates/radius/accounting_reports.html
+ M app/templates/radius/admin_bridge.html
+ M app/templates/radius/admin_operations_nav.html
+ M app/templates/radius/admins_list.html
+ M app/templates/radius/admins_profile_summary.html
+ M app/templates/radius/audit_list.html
+ M app/templates/radius/audit_log_index.html
+ M app/templates/radius/backups.html
+ M app/templates/radius/bandwidth_form.html
+ M app/templates/radius/bandwidth_list.html
+ M app/templates/radius/bandwidth_schedules.html
+ M app/templates/radius/business_operators.html
+ M app/templates/radius/card_marketplace.html
+ M app/templates/radius/card_marketplace_package_file.html
+ M app/templates/radius/card_pricing.html
+ M app/templates/radius/card_pricing_batch.html
+ M app/templates/radius/card_user_360.html
+ M app/templates/radius/card_users.html
+ M app/templates/radius/cards_batch_edit.html
+ M app/templates/radius/cards_batches.html
+ M app/templates/radius/cards_checker.html
+ M app/templates/radius/cards_checker_v2.html
+ M app/templates/radius/cards_generate.html
+ M app/templates/radius/cards_import.html
+ M app/templates/radius/cards_list.html
+ M app/templates/radius/cards_of_batch.html
+ M app/templates/radius/cards_overview.html
+ M app/templates/radius/cards_print_batch.html
+ M app/templates/radius/cards_print_list.html
+ M app/templates/radius/cards_print_new.html
+ M app/templates/radius/cards_recharge_batch.html
+ M app/templates/radius/cards_recharge_list.html
+ M app/templates/radius/communications.html
+ M app/templates/radius/communications_audience.html
+ M app/templates/radius/communications_channels.html
+ M app/templates/radius/communications_send.html
+ M app/templates/radius/communications_templates.html
+ M app/templates/radius/company_inventory_expenses.html
+ M app/templates/radius/customer_portals_admin.html
+ M app/templates/radius/dashboard.html
+ M app/templates/radius/data_protection_nav.html
+ M app/templates/radius/devices_list.html
+ M app/templates/radius/distributors_detail.html
+ M app/templates/radius/distributors_form.html
+ M app/templates/radius/distributors_list.html
+ M app/templates/radius/events_center.html
+ M app/templates/radius/events_detail.html
+ M app/templates/radius/events_investigations.html
+ M app/templates/radius/events_nav.html
+ M app/templates/radius/events_risk.html
+ M app/templates/radius/events_security.html
+ M app/templates/radius/finance_accounting.html
+ M app/templates/radius/finance_billing.html
+ M app/templates/radius/finance_center.html
+ M app/templates/radius/finance_center_hub.html
+ M app/templates/radius/finance_collection.html
+ M app/templates/radius/finance_debts.html
+ M app/templates/radius/finance_loans.html
+ M app/templates/radius/finance_revenue.html
+ M app/templates/radius/finance_wallets.html
+ M app/templates/radius/invoices_form.html
+ M app/templates/radius/invoices_list.html
+ M app/templates/radius/license_file.html
+ M app/templates/radius/lifecycle.html
+ M app/templates/radius/login.html
+ M app/templates/radius/mt_alerts_detail.html
+ M app/templates/radius/mt_alerts_index.html
+ M app/templates/radius/mt_backups.html
+ M app/templates/radius/mt_dashboard.html
+ M app/templates/radius/mt_guided_op.html
+ M app/templates/radius/mt_list.html
+ M app/templates/radius/mt_login_designer.html
+ M app/templates/radius/mt_operations.html
+ M app/templates/radius/mt_problems.html
+ M app/templates/radius/mt_router_overview.html
+ M app/templates/radius/mt_setup_form.html
+ M app/templates/radius/mt_setup_script.html
+ M app/templates/radius/mt_topology.html
+ M app/templates/radius/network_devices_form.html
+ M app/templates/radius/network_ops_nav.html
+ M app/templates/radius/network_policy_changes.html
+ M app/templates/radius/network_policy_form.html
+ M app/templates/radius/network_policy_list.html
+ M app/templates/radius/network_telegram_settings.html
+ M app/templates/radius/operations_center.html
+ M app/templates/radius/operations_nav.html
+ M app/templates/radius/operations_speed_control.html
+ M app/templates/radius/payment_collection_reconciliation.html
+ M app/templates/radius/payment_collection_request_detail.html
+ M app/templates/radius/payment_collection_requests.html
+ M app/templates/radius/payment_collection_review_queue.html
+ M app/templates/radius/payment_collection_settings.html
+ M app/templates/radius/plans_form.html
+ M app/templates/radius/plans_list.html
+ M app/templates/radius/plans_overview.html
+ M app/templates/radius/portal_card.html
+ M app/templates/radius/portal_card_login.html
+ M app/templates/radius/portal_subscriber.html
+ M app/templates/radius/portal_subscriber_login.html
+ M app/templates/radius/print_templates.html
+ M app/templates/radius/recycle_bin.html
+ M app/templates/radius/rep_api_messages.html
+ M app/templates/radius/rep_balance_movements.html
+ M app/templates/radius/rep_cash_transactions.html
+ M app/templates/radius/rep_coa_failures.html
+ M app/templates/radius/rep_failed_logins.html
+ M app/templates/radius/rep_login_states.html
+ M app/templates/radius/rep_login_status.html
+ M app/templates/radius/rep_mac_history.html
+ M app/templates/radius/rep_manager_events.html
+ M app/templates/radius/rep_manager_login_status.html
+ M app/templates/radius/rep_profile_changes.html
+ M app/templates/radius/rep_sessions.html
+ M app/templates/radius/rep_speed_failures.html
+ M app/templates/radius/rep_used_cards.html
+ M app/templates/radius/rep_user_events.html
+ M app/templates/radius/reports_archive.html
+ M app/templates/radius/reports_center.html
+ M app/templates/radius/reports_detail.html
+ M app/templates/radius/reports_nav.html
+ M app/templates/radius/roles_form.html
+ M app/templates/radius/roles_list.html
+ M app/templates/radius/services_form.html
+ M app/templates/radius/services_list.html
+ M app/templates/radius/sessions_list.html
+ M app/templates/radius/settings_page.html
+ M app/templates/radius/sgrp_view.html
+ M app/templates/radius/subscriber_360.html
+ M app/templates/radius/subscriber_groups_form.html
+ M app/templates/radius/subscriber_groups_list.html
+ M app/templates/radius/subscribers_overview.html
+ M app/templates/radius/sync_list.html
+ M app/templates/radius/tenants_form.html
+ M app/templates/radius/tenants_list.html
+ M app/templates/radius/ticket_view.html
+ M app/templates/radius/tickets_form.html
+ M app/templates/radius/tickets_list.html
+ M app/templates/radius/tokens_list.html
+ M app/templates/radius/tool_maintenance.html
+ M app/templates/radius/tool_set_speeds.html
+ M app/templates/radius/users_finance.html
+ M app/templates/radius/users_form.html
+ M app/templates/radius/users_list.html
+ M app/templates/radius/users_overview.html
+ M app/templates/radius/users_profile.html
+ M app/templates/radius/vouchers_generate.html
+ M app/templates/radius/vouchers_list.html
+ M app/templates/radius/whatsapp.html
+ M requirements.txt
+ M tests/test_api_auth_security.py
+ M tests/test_business_os_sidebar_navigation.py
+ M tests/test_customer_portals.py
+ M tests/test_hotspot_templates_r1.py
+ M tests/test_mt_navigation_s1.py
+ M tests/test_network_section_web.py
+ M tests/test_operations_hub_web.py
+ M tests/test_reports_hub_web.py
+ D tests/test_router_tunnels_repo.py
+ M tests/test_setup_wizard_lab_mode.py
+ M tests/test_setup_wizard_operational_waves.py
+ M tests/test_setup_wizard_pilot_drill.py
+ M tests/test_setup_wizard_routes.py
+ M tests/test_setup_wizard_sidebar_links.py
+ M tests/test_setup_wizard_v2.py
+ M tests/test_setup_wizard_v2_hotspot_broadband.py
+ M tests/test_setup_wizard_v2_productization.py
+ M tests/test_setup_wizard_verification_engine.py
+ M tests/test_sidebar_phase_s_nav.py
+ D tests/test_v6_ipsec_tunnel.py
+ D tests/test_v6_l2tp_conflicts.py
+ D tests/test_v6_ops_status.py
+ D tests/test_v6_pptp_tunnel.py
+ D tests/test_v6_pptp_ui.py
+ D tests/test_v6_sstp_tunnel.py
+ D tests/test_v6_tunnel_wiring.py
+ M tests/test_v6_wizard_ui.py
+?? .hr_sync_probe.tmp
+?? .redesign_css.tmp
+?? .redesign_panel.tmp
+?? .tmp_card_crop.png
+?? .tmp_hsdesign/
+?? I18N.md
+?? "Text Document \330\254\330\257\331\212\330\257.txt"
+?? _design_review/FINANCE_SECTOR_REPORT.md
+?? _design_review/PRE_MERGE_SNAPSHOT.txt
+?? _design_review/SECTOR_BRIEF.md
+?? _design_review/SECTOR_REPORT.md
+?? _design_review/_verify_finance.py
+?? _design_review/_verify_sector.py
+?? _hub_date_test.html
+?? _jv/
+?? _jv_probe.txt
+?? _sample.txt
+?? _store_sample.html
+?? _tmp_verify_logo_block.py
+?? _tmp_verify_render.py
+?? _verify/
+?? app/api/v1/store.py
+?? app/radius/db/migrations/096_hotspot_design_presets.sql
+?? app/radius/db/migrations/097_hotspot_custom_templates.sql
+?? app/radius/db/migrations/098_admin_plan_prices.sql
+?? app/radius/db/migrations/099_granular_permissions_backfill.sql
+?? app/radius/db/migrations/100_router_ip_tunnel_licenses.sql
+?? app/radius/db/migrations/101_payment_checkouts.sql
+?? app/radius/db/migrations/102_hotspot_error_messages.sql
+?? app/radius/db/migrations/103_plan_shared_single_session.sql
+?? app/radius/db/migrations/104_admin_locale.sql
+?? app/radius/db/migrations/105_tunnel_chr_provisioning.sql
+?? app/radius/db/repos/hotspot_error_messages_repo.py
+?? app/radius/db/repos/payment_checkouts_repo.py
+?? app/radius/i18n.py
+?? app/radius/routes/admin_pricing.py
+?? app/radius/routes/docs_center.py
+?? app/radius/routes/hotspot_errors.py
+?? app/radius/routes/i18n_routes.py
+?? app/radius/routes/payments_lab.py
+?? app/radius/routes/port_script_services.py
+?? app/radius/routes/recharge_panel.py
+?? app/radius/routes/table_export.py
+?? app/radius/services/admin_pricing.py
+?? app/radius/services/hotspot_companion_pages.py
+?? app/radius/services/hotspot_error_messages.py
+?? app/radius/services/hotspot_store_page.py
+?? app/radius/services/hotspot_templates_pro.py
+?? app/radius/services/payment_providers/
+?? app/radius/services/pdf_theme.py
+?? app/radius/services/port_script_services.py
+?? app/radius/services/store_key.py
+?? app/radius/services/store_token.py
+?? app/static/fonts/Almarai-ExtraBold.ttf
+?? app/static/fonts/Cairo-Black.ttf
+?? app/static/fonts/Cairo-Bold.ttf
+?? app/static/fonts/Cairo-Regular.ttf
+?? app/static/fonts/_sync_test.txt
+?? app/static/hotspot/
+?? app/static/js/hub_date.js
+?? app/static/js/hub_hint.js
+?? app/static/js/hub_select.js
+?? app/static/js/ops_speed_center.js
+?? app/templates/_partials/report_jump.html
+?? app/templates/api/
+?? app/templates/radius/.uds_sync_probe.txt
+?? app/templates/radius/_perm_labels.html
+?? app/templates/radius/admin_pricing.html
+?? app/templates/radius/docs_accounting.html
+?? app/templates/radius/docs_add_subscriber.html
+?? app/templates/radius/docs_billing_vouchers.html
+?? app/templates/radius/docs_card_marketplace.html
+?? app/templates/radius/docs_cards_batches.html
+?? app/templates/radius/docs_cards_checker.html
+?? app/templates/radius/docs_cards_connected.html
+?? app/templates/radius/docs_cards_overview.html
+?? app/templates/radius/docs_cards_print.html
+?? app/templates/radius/docs_center.html
+?? app/templates/radius/docs_finance_center.html
+?? app/templates/radius/docs_login_states.html
+?? app/templates/radius/docs_mikrotik_store.html
+?? app/templates/radius/docs_online_users.html
+?? app/templates/radius/docs_print_templates.html
+?? app/templates/radius/docs_reports_overview.html
+?? app/templates/radius/docs_roles_permissions.html
+?? app/templates/radius/docs_router_dashboard.html
+?? app/templates/radius/docs_routers_operations.html
+?? app/templates/radius/docs_section.html
+?? app/templates/radius/docs_sync_queue.html
+?? app/templates/radius/docs_system_settings.html
+?? app/templates/radius/docs_user_groups.html
+?? app/templates/radius/docs_users_360.html
+?? app/templates/radius/docs_users_overview.html
+?? app/templates/radius/hotspot_errors.html
+?? app/templates/radius/operations_speed_control_manual.html
+?? app/templates/radius/pay_demo.html
+?? app/templates/radius/payments_lab.html
+?? app/templates/radius/port_script_services.html
+?? app/templates/radius/print_templates_stats.html
+?? app/templates/radius/recharge_panel.html
+?? app/templates/radius/rep_login_states_detail.html
+?? babel.cfg
+?? pytest-cache-files-r3h4k6jo/
+?? setup_dev.bat
+?? start_dev.bat
+?? tests/test_api_docs_localization.py
+?? tests/test_jinja_markup_concat_leak.py
+?? tests/test_mikrotik_store.py
+?? tests/test_online_temp_speed_route_ui.py
+?? tests/test_port_script_services.py
+?? tests/test_port_script_services_route.py
+?? tools/_i18n_verify_render.py
+?? tools/check_font_pipeline.py
+?? tools/i18n_assemble.py
+?? tools/i18n_extract.py
+?? tools/i18n_fragments/
+?? tools/reset_admin_password.py
+?? tools/seed_demo_2025_05.py
+?? translations/

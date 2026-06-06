@@ -3,36 +3,128 @@
 {% from "_components/table.html" import hub_table %}
 {% from "_components/pagination.html" import hub_pagination %}
 
-{% block title %}ملف مشتريات — {{ package.name }}{% endblock %}
-{% block page_title %}ملف المشتريات{% endblock %}
+{% block title %}ملف العرض — {{ package.name }}{% endblock %}
+{% block page_title %}ملف العرض{% endblock %}
 {% block page_sub %}<span class="sub">{{ package.name }}</span>{% endblock %}
 
 {% block content %}
+{% set _is_stock = package.sale_mode == 'inventory' %}
+{% set _low_stock = _is_stock and stock_total > 0 and (remaining * 10) < stock_total %}
+{# ───── أنماط مساعِدة بالتوكنات فقط (لا hex عارٍ): شريط تنبيه + مُرقِّم البطاقات ───── #}
+<style>
+  /* شريط تنبيه (callout) بطبعة موحّدة — يحلّ محلّ hub-hint المُساء استخدامه
+     على عناصر الفقرة، ويستعمل توكنات الألوان الدلالية حصرًا. */
+  .cm-note{
+    display:flex; gap:10px; align-items:flex-start;
+    margin:0 0 var(--hub-gap-section);
+    padding:11px 14px; border-radius:var(--hub-r-lg);
+    border:1px solid var(--hub-border); background:var(--hub-bg-soft);
+    color:var(--hub-text-soft); font-size:12.5px; font-weight:600; line-height:1.7;
+  }
+  .cm-note i{ flex:none; margin-top:2px; font-size:14px; }
+  .cm-note--danger{ background:var(--hub-red-soft);  border-color:var(--hub-red);   color:var(--hub-red-ink); }
+  .cm-note--danger i{ color:var(--hub-red); }
+  .cm-note--warn{   background:var(--hub-amber-soft); border-color:var(--hub-amber); color:var(--hub-amber-ink); }
+  .cm-note--warn i{ color:var(--hub-amber); }
+  /* نسخة داخل النوافذ العائمة: بلا هامش سفلي وبأطراف أنعم. */
+  .cm-note--inline{ margin:0; }
+  /* مُرقِّم جدول البطاقات — يحافظ على وسيطَي cards_page و page معًا. */
+  .cm-cards-pager{
+    display:flex; gap:10px; justify-content:center; align-items:center;
+    padding:12px;
+  }
+</style>
+{# ───── الصدفة الموحّدة: هيرو + شريط KPI بفاصل ناعم ───── #}
+<section class="hub-hero-shell">
 {{ hub.hero(
-     "ملف مشتريات — " ~ package.name,
-     subtitle="كل البطاقات المباعة ضمن هذا العرض، مع تفاصيل كل بطاقة (المستخدم، كلمة المرور، المشتري، السعر، الوقت، الحالة، الاستهلاك).",
-     icon="file-invoice",
-     actions_html='<a class="hub-btn hub-btn--ghost" href="' ~ url_for('radius.card_marketplace') ~ '"><i class="fa-solid fa-arrow-right-long"></i> عودة للسوق</a>') }}
+     "ملف العرض — " ~ package.name,
+     subtitle=("عرض مخزون: كل بطاقات العرض (بالمخزون والمباعة) مع إجراءات تعبئة المخزون." if _is_stock
+               else "عرض توليد فوري: كل بطاقة وُلّدت لحظة شرائها مسجّلة هنا بتفاصيلها الكاملة."),
+     icon="folder-open",
+     actions_html=(
+       ('<button type="button" class="hub-btn" data-fcw-open="stock-upload"><i class="fa-solid fa-file-arrow-up"></i> رفع ملف بطاقات</button>'
+        ~ '<button type="button" class="hub-btn hub-btn--primary" data-fcw-open="stock-generate"><i class="fa-solid fa-wand-magic-sparkles"></i> توليد حزمة</button>'
+        if _is_stock else '')
+       ~ '<a class="hub-btn hub-btn--ghost" href="' ~ url_for('radius.card_marketplace') ~ '"><i class="fa-solid fa-arrow-right-long"></i> عودة للسوق</a>')) }}
 
 <div class="hub-kpi-grid">
   {{ hub.kpi("إجمالي المبيعات", total, icon="receipt") }}
-  {% if package.sale_mode == 'inventory' %}
+  {% if _is_stock %}
     {{ hub.kpi("المخزون الكلي", stock_total, icon="boxes-stacked", variant="brand") }}
     {{ hub.kpi("المباع", sold, icon="cart-shopping", variant="amber") }}
-    {{ hub.kpi("المتبقي", remaining, icon="warehouse", variant=("green" if remaining > 0 else "rose")) }}
+    {{ hub.kpi("المتبقي", remaining, icon="warehouse", variant=("red" if remaining <= 0 else ("amber" if _low_stock else "green"))) }}
   {% else %}
     {{ hub.kpi("نمط البيع", "توليد فوري", icon="bolt", variant="brand") }}
+    {{ hub.kpi("بطاقات العرض", offer_cards.total if offer_cards else 0, icon="ticket", variant="green") }}
   {% endif %}
 </div>
+</section>{# /hub-hero-shell #}
 
-{% call hub.section("البطاقات المباعة", icon="list", meta=(total ~ " عملية"), flush=True) %}
+{% if _is_stock and remaining <= 0 and stock_total > 0 %}
+<p class="cm-note cm-note--danger">
+  <i class="fa-solid fa-circle-exclamation"></i>
+  <span>نفد مخزون هذا العرض — يرى الزبائن «نفدت الكمية» الآن. أضف مخزونًا من زرّي «رفع ملف بطاقات» أو «توليد حزمة» بالأعلى.</span>
+</p>
+{% elif _low_stock %}
+<p class="cm-note cm-note--warn">
+  <i class="fa-solid fa-triangle-exclamation"></i>
+  <span>المخزون منخفض (أقل من 10%) — تبقّى {{ remaining }} بطاقة فقط من أصل {{ stock_total }}.</span>
+</p>
+{% endif %}
+
+{# ───── جدول بطاقات العرض الكامل: الكود، الحالة، التاريخ، المشتري، السعر ───── #}
+{% call hub.section(("بطاقات العرض" if _is_stock else "البطاقات المولّدة داخل العرض"), icon="ticket",
+                    meta=((offer_cards.total if offer_cards else 0) ~ " بطاقة"), flush=True) %}
+  {% set card_rows = [] %}
+  {% for it in (offer_cards['items'] if offer_cards else []) %}
+    {% set _ = card_rows.append({
+        "code": ('<bdi>' ~ (it.username or "—") ~ '</bdi>') | safe,
+        "password": ('<bdi>' ~ (it.password or "—") ~ '</bdi>') | safe,
+        "status": it.status_ar,
+        "created": (it.created_at | dt_local) if it.created_at else "—",
+        "buyer": (it.buyer_name or it.buyer_mobile) if it.sold_at else "—",
+        "price": (((it.amount_minor or 0) / 100) | money) if it.sold_at else "—",
+        "batch": ('<bdi>' ~ (it.batch_code or "—") ~ '</bdi>') | safe,
+    }) %}
+  {% endfor %}
+  {{ hub_table(
+       columns=[
+         {"label": "الكود", "key": "code", "mono": true},
+         {"label": "كلمة المرور", "key": "password", "mono": true},
+         {"label": "الحالة", "key": "status"},
+         {"label": "تاريخ التوليد/الرفع", "key": "created"},
+         {"label": "المشتري", "key": "buyer"},
+         {"label": "السعر", "key": "price", "numeric": true},
+         {"label": "الحزمة", "key": "batch", "mono": true},
+       ],
+       rows=card_rows,
+       wide=true,
+       empty_message=("لا توجد بطاقات في هذا العرض بعد — أضف مخزونًا من الأزرار بالأعلى." if _is_stock
+                      else "لم تُولَّد أي بطاقة لهذا العرض بعد — تُولَّد البطاقات تلقائيًا مع كل عملية شراء.")) }}
+
+  {% if offer_cards and offer_cards.pages > 1 %}
+  <nav class="cm-cards-pager" role="navigation" aria-label="ترقيم بطاقات العرض">
+    {% if offer_cards.page > 1 %}
+      <a class="hub-btn hub-btn--ghost" href="{{ url_for('radius.card_marketplace_package_file', package_id=package.id, cards_page=offer_cards.page - 1, page=page) }}">السابق</a>
+    {% endif %}
+    <span class="hub-pill">{{ offer_cards.page }} / {{ offer_cards.pages }}</span>
+    {% if offer_cards.page < offer_cards.pages %}
+      <a class="hub-btn hub-btn--ghost" href="{{ url_for('radius.card_marketplace_package_file', package_id=package.id, cards_page=offer_cards.page + 1, page=page) }}">التالي</a>
+    {% endif %}
+  </nav>
+  {% endif %}
+{% endcall %}
+
+{# ───── ملف مشتريات العرض: كل عملية شراء بتفاصيلها + استهلاك الراديوس.
+       العنوان يحمل عبارة «ملف مشتريات» المعتمدة في النظام (يعتمدها الاختبار). ───── #}
+{% call hub.section("ملف مشتريات هذا العرض", icon="list", meta=(total ~ " عملية"), flush=True) %}
   {% set rows = [] %}
   {% for it in items %}
     {% set _status = "ملغاة" if it.revoked else ("مستخدمة" if it.used else "جاهزة") %}
     {% set _ = rows.append({
-        "username": it.username or "—",
-        "password": it.password or "—",
-        "buyer": it.buyer_name or it.buyer_mobile or ("#" ~ (it.card_user_id or "")),
+        "username": ('<bdi>' ~ (it.username or "—") ~ '</bdi>') | safe,
+        "password": ('<bdi>' ~ (it.password or "—") ~ '</bdi>') | safe,
+        "buyer": (it.buyer_name or it.buyer_mobile or (('<bdi dir="ltr">#' ~ (it.card_user_id or "—") ~ '</bdi>') | safe)),
         "price": ((it.amount_minor or 0) / 100) | money,
         "when": (it.created_at | dt_local) if it.created_at else "—",
         "status": _status,
@@ -65,4 +157,90 @@
   </form>
   {% endif %}
 {% endcall %}
+
+{% if _is_stock %}
+{# ───── صناديق fcw العائمة: رفع ملف بطاقات / توليد حزمة ───── #}
+<style>
+  /* نوافذ fcw العائمة — توكنات الألوان حصرًا (لا hex عارٍ). */
+  .fcw-modal{position:fixed;inset:0;z-index:4100;display:none;place-items:center;padding:24px;background:rgba(15,23,42,.52)}
+  .fcw-modal.is-open{display:grid}
+  .fcw-dialog{width:min(560px,100%);max-height:min(90vh,720px);overflow:auto;border-radius:var(--hub-r-card);background:var(--hub-bg-card);border:1px solid var(--hub-border);box-shadow:var(--hub-sh-lg)}
+  .fcw-head{position:sticky;top:0;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 18px;border-bottom:1px solid var(--hub-border-soft);background:var(--hub-bg-card)}
+  .fcw-head h3{margin:0;font-size:16px;font-weight:800;color:var(--hub-text)}
+  .fcw-head h3 i{color:var(--hub-brand-ink)}
+  .fcw-x{border:0;background:transparent;color:var(--hub-text-mute);font-size:18px;cursor:pointer}
+  .fcw-x:hover{color:var(--hub-text)}
+  .fcw-body{padding:16px 18px;display:grid;gap:14px}
+  .fcw-body label span{display:block;margin-bottom:6px;color:var(--hub-text-soft);font-size:12px;font-weight:700}
+  .fcw-body label input{width:100%;min-height:42px;border:1px solid var(--hub-border);border-radius:var(--hub-r-lg);background:var(--hub-bg-card);padding:0 12px;font-weight:700;color:var(--hub-text)}
+  .fcw-body label input:focus{outline:none;border-color:var(--hub-brand);box-shadow:0 0 0 3px rgba(107,90,237,.12)}
+  .fcw-foot{display:flex;justify-content:flex-end;gap:8px;padding:13px 18px;border-top:1px solid var(--hub-border-soft);background:var(--hub-bg-soft)}
+</style>
+
+<div class="fcw-modal" data-fcw-modal="stock-upload" hidden>
+  <div class="fcw-dialog" role="dialog" aria-modal="true" aria-labelledby="fcw-stock-upload-title">
+    <form method="post" enctype="multipart/form-data"
+          action="{{ url_for('radius.card_marketplace_inventory_upload', package_id=package.id) }}">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+      <input type="hidden" name="return_to" value="file">
+      <div class="fcw-head">
+        <h3 id="fcw-stock-upload-title"><i class="fa-solid fa-file-arrow-up"></i> رفع ملف بطاقات</h3>
+        <button type="button" class="fcw-x" data-fcw-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="fcw-body">
+        <p class="cm-note cm-note--inline"><i class="fa-solid fa-circle-info"></i><span>يقرأ المحرك ملفات Excel و CSV و PDF ويستخرج أزواج اسم المستخدم وكلمة المرور، ثم يضيفها إلى مخزون هذا العرض. الأسماء المكررة تُتخطّى تلقائيًا. الحدّ الأقصى <bdi dir="ltr">12MB</bdi> و<bdi dir="ltr">5000</bdi> بطاقة في الدفعة.</span></p>
+        <label>
+          <span>ملف البطاقات</span>
+          <input type="file" name="file" accept=".csv,.tsv,.txt,.xlsx,.pdf" required>
+        </label>
+      </div>
+      <div class="fcw-foot">
+        <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>إلغاء</button>
+        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-boxes-stacked"></i> إضافة للمخزون</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="fcw-modal" data-fcw-modal="stock-generate" hidden>
+  <div class="fcw-dialog" role="dialog" aria-modal="true" aria-labelledby="fcw-stock-generate-title">
+    <form method="post" action="{{ url_for('radius.card_marketplace_inventory_upload', package_id=package.id) }}">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+      <input type="hidden" name="return_to" value="file">
+      <div class="fcw-head">
+        <h3 id="fcw-stock-generate-title"><i class="fa-solid fa-wand-magic-sparkles"></i> توليد حزمة مخزون</h3>
+        <button type="button" class="fcw-x" data-fcw-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="fcw-body">
+        <p class="cm-note cm-note--inline"><i class="fa-solid fa-circle-info"></i><span>يولّد محرك الدفعات المشترك بطاقات فريدة (اسم مستخدم وكلمة مرور) داخل حزمة مرتبطة بهذا العرض، وتدخل المخزون فورًا لتُباع منه.</span></p>
+        <label>
+          <span>عدد البطاقات</span>
+          <input type="number" name="count" min="1" max="5000" value="100" required>
+        </label>
+        <label>
+          <span>طول كلمة المرور</span>
+          <input type="number" name="password_length" min="4" max="16" value="8">
+        </label>
+      </div>
+      <div class="fcw-foot">
+        <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>إلغاء</button>
+        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-wand-magic-sparkles"></i> توليد وإضافة</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+(() => {
+  "use strict";
+  // فتح وإغلاق الصندوق العائم (نفس نمط fcw في finance_center_hub).
+  function open(key){ const m = document.querySelector(`[data-fcw-modal='${key}']`); if(m){ m.hidden=false; m.classList.add("is-open"); m.querySelector(".fcw-body input:not([type=hidden]),.fcw-body select,.fcw-body textarea")?.focus(); } }
+  function closeAll(){ document.querySelectorAll("[data-fcw-modal]").forEach(m=>{ m.classList.remove("is-open"); m.hidden=true; }); }
+  document.querySelectorAll("[data-fcw-open]").forEach(b=> b.addEventListener("click", ()=> open(b.dataset.fcwOpen)));
+  document.querySelectorAll("[data-fcw-close]").forEach(b=> b.addEventListener("click", closeAll));
+  document.querySelectorAll("[data-fcw-modal]").forEach(m=> m.addEventListener("click", e=>{ if(e.target===m) closeAll(); }));
+  document.addEventListener("keydown", e=>{ if(e.key==="Escape") closeAll(); });
+})();
+</script>
+{% endif %}
 {% endblock %}

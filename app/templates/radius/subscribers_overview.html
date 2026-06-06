@@ -9,6 +9,7 @@
 {% block head_extra %}
 {{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/subscribers_overview.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
 {% endblock %}
 
 {# ── local formatting helpers (no global filter dependency) ── #}
@@ -27,7 +28,7 @@
   {%- endif -%}
 {%- endmacro %}
 
-{% macro fmt_gb(g) -%}{{ "%.1f"|format((g or 0)|float) }} GB{%- endmacro %}
+{% macro fmt_gb(g) -%}<bdi dir="ltr">{{ "%.1f"|format((g or 0)|float) }} GB</bdi>{%- endmacro %}
 
 {% macro finance_link(endpoint, label, icon="arrow-left-long", username=None) -%}
   {%- if endpoint_exists is defined and endpoint_exists(endpoint) -%}
@@ -75,7 +76,17 @@
         <h1 class="so-hero-title">نظرة عامة — المشتركون</h1>
         <div class="so-hero-sub">
           ملخّص إجمالي لِما اندفع وما صُرف وما ضلّ على المشتركين — شهري وسنوي فقط.
-          <span class="so-hero-chip"><i class="fa-solid fa-calendar"></i> الفترة المعروضة: {{ selected_label }}</span>
+          <span class="so-hero-chip"><i class="fa-solid fa-calendar"></i> الفترة المعروضة:
+            {% if period_options and period_options|length > 1 %}
+            <select class="so-period-pick" aria-label="اختيار الفترة"
+                    onchange="if(this.value) location.href = this.value">
+              {%- for p in period_options %}
+              <option value="{{ url_for('radius.subscribers_overview', period=period, month=(p if period == 'monthly' else None), year=(p if period == 'yearly' else None)) }}"
+                      {% if p|string == selected_label|string %}selected{% endif %}>{{ p }}</option>
+              {%- endfor %}
+            </select>
+            {% else %}{{ selected_label }}{% endif %}
+          </span>
         </div>
       </div>
     </div>
@@ -116,8 +127,21 @@
     {{ hub.kpi("السلف", (loan_sel.total or 0)|money, icon="hand-holding-dollar", variant="amber", sub=((loan_sel.count or 0)|string) ~ " سلفة · " ~ fmt_minutes(loan_sel.minutes)) }}
     {{ hub.kpi("التفعيل", (act_sel.count or 0)|string, icon="bolt", variant="blue", sub=((act_sel.amount or 0)|money) ~ " · " ~ fmt_minutes(act_sel.minutes)) }}
     {{ hub.kpi("الجيجات", fmt_gb(data_sel.gb), icon="database", variant="green", sub=((data_sel.sessions or 0)|string) ~ " جلسة") }}
-    {{ hub.kpi("شو ضل (الديون)", (outstanding.outstanding_total or 0)|money, icon="scale-unbalanced", variant="red", sub="حتى اللحظة") }}
+    {{ hub.kpi("الديون", (outstanding.outstanding_total or 0)|money, icon="scale-unbalanced", variant="red", sub="حتى اللحظة") }}
     {{ hub.kpi("المشتركون", census.total or 0, icon="users", variant="brand", sub=((census.online or 0)|string) ~ " متصل") }}
+  </div>
+
+  {# ── حالة المشتركين — مدموجة في الهيرو ── #}
+  {# ملاحظة: ماكرو hub.tile يعرّف ألوانه بأسماء ok/warn/danger/brand فقط
+     (راجع hub_v2.css). الأسماء green/blue/amber/red/grey لا تُلوّن شيئًا،
+     لذا استُبدلت بالأسماء المعتمدة كي يظهر الترميز اللوني لحالات المشتركين. #}
+  <div class="so-census so-census--hero">
+    {{ hub.tile("الإجمالي", census.total or 0, icon="users", variant="brand") }}
+    {{ hub.tile("مفعّل", census.enabled or 0, icon="circle-check", variant="ok") }}
+    {{ hub.tile("متصل الآن", census.online or 0, icon="wifi", variant="brand") }}
+    {{ hub.tile("منتهي", census.expired or 0, icon="hourglass-end", variant="warn") }}
+    {{ hub.tile("معطّل", census.disabled or 0, icon="ban", variant="danger") }}
+    {{ hub.tile("موقوف", census.suspended or 0, icon="circle-pause") }}
   </div>
 </section>
 
@@ -185,20 +209,8 @@
 {# ───── أكبر المدينين — per-subscriber drill-down to Finance ───── #}
 {% call hub.section("أكبر المدينين", icon="user-clock", meta="مشترك مشترك → المالية") %}
   {% if debtors %}
-  {# #6: the magnifier on this overview previously had no field/handler. It now
-     toggles a real visible search box that filters the debtors list (the only
-     per-subscriber list on this page) client-side by username / full name.
-     The page-wide subscriber search still lives on قائمة المشتركين. #}
-  <div class="so-search" data-so-search style="display:flex;align-items:center;gap:8px;padding:0 0 12px">
-    <button type="button" class="hub-btn hub-btn--secondary hub-btn--sm" data-so-search-toggle
-            aria-expanded="false" aria-label="بحث في المدينين" title="بحث">
-      <i class="fa-solid fa-magnifying-glass"></i>
-    </button>
-    <input type="search" class="hub-input so-search-input" data-so-search-input
-           placeholder="ابحث باسم المستخدم أو الاسم الكامل…" autocomplete="off" hidden
-           style="flex:1;max-width:320px">
-  </div>
-  <div class="hub-table-wrap" style="border:none;border-radius:0">
+  {# استُبدل بحث المكبّرة المخصص بنظام الجداول الموحد (فرز + اختيار أعمدة + ترقيم صفحات) #}
+  <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
     <table class="hub-table" data-so-debtors>
       <thead>
         <tr>
@@ -206,14 +218,15 @@
           <th class="num">سلف مفتوحة</th>
           <th class="num">عدد السلف</th>
           <th class="num">الرصيد</th>
-          <th>التفصيل</th>
+          {# عمود إجراء (رابط ملف المالية) — يُستثنى من التصدير لأن نصّه غير ذي معنى في CSV/Excel #}
+          <th data-uds-noexport>التفصيل</th>
         </tr>
       </thead>
-      <tbody data-so-debtor-rows>
+      <tbody>
         {% for d in debtors %}
-        <tr data-so-name="{{ ((d.username or '') ~ ' ' ~ (d.full_name or ''))|lower }}">
+        <tr>
           <td>
-            <strong class="mono">{{ d.username }}</strong>
+            <strong class="mono"><bdi dir="ltr">{{ d.username }}</bdi></strong>
             {% if d.full_name %}<div class="so-muted">{{ d.full_name }}</div>{% endif %}
           </td>
           <td class="num mono">{{ (d.open_loans_total or 0)|money }}</td>
@@ -233,7 +246,8 @@
 {# ───── الكوتة المخصّصة حسب الباقة (point-in-time allocation) ───── #}
 {% call hub.section("الكوتة المخصّصة حسب الباقة", icon="layer-group", meta="مخصّص حتى اللحظة") %}
   {% if quota %}
-  <div class="hub-table-wrap" style="border:none;border-radius:0">
+  {# نظام الجداول الموحد: فرز + اختيار أعمدة + ترقيم صفحات #}
+  <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
     <table class="hub-table">
       <thead>
         <tr>
@@ -270,54 +284,9 @@
   {% endif %}
 {% endcall %}
 
-{# ───── حالة المشتركين (census) ───── #}
-{% call hub.section("حالة المشتركين", icon="users-gear") %}
-  <div class="so-census">
-    {{ hub.tile("الإجمالي", census.total or 0, icon="users", variant="brand") }}
-    {{ hub.tile("مفعّل", census.enabled or 0, icon="circle-check", variant="green") }}
-    {{ hub.tile("متصل الآن", census.online or 0, icon="wifi", variant="blue") }}
-    {{ hub.tile("منتهي", census.expired or 0, icon="hourglass-end", variant="amber") }}
-    {{ hub.tile("معطّل", census.disabled or 0, icon="ban", variant="red") }}
-    {{ hub.tile("موقوف", census.suspended or 0, icon="circle-pause", variant="grey") }}
-  </div>
-{% endcall %}
-
 </div>
 
-<style>
-  .so-search-input{
-    width:0; opacity:0; padding:0; border-width:0;
-    transition:width .2s ease, opacity .2s ease, padding .2s ease;
-  }
-  .so-search.is-open .so-search-input{
-    width:auto; opacity:1; padding:9px 12px; border-width:1px;
-  }
-</style>
-<script>
-(function(){
-  'use strict';
-  // #6: magnifier reveals a search box filtering the debtors list.
-  var root   = document.querySelector('[data-so-search]');
-  var toggle = root && root.querySelector('[data-so-search-toggle]');
-  var input  = root && root.querySelector('[data-so-search-input]');
-  var rows   = document.querySelector('[data-so-debtor-rows]');
-  if (!root || !toggle || !input) return;
-  function filter(q){
-    if (!rows) return;
-    q = (q || '').trim().toLowerCase();
-    Array.prototype.forEach.call(rows.querySelectorAll('tr'), function(tr){
-      var hay = tr.getAttribute('data-so-name') || '';
-      tr.style.display = (!q || hay.indexOf(q) !== -1) ? '' : 'none';
-    });
-  }
-  toggle.addEventListener('click', function(){
-    var open = root.classList.toggle('is-open');
-    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-    if (open){ input.hidden = false; input.focus(); }
-    else { input.value = ''; filter(''); setTimeout(function(){ if(!root.classList.contains('is-open')) input.hidden = true; }, 210); }
-  });
-  input.addEventListener('input', function(){ filter(input.value); });
-  input.addEventListener('keydown', function(e){ if (e.key === 'Escape'){ toggle.click(); } });
-})();
-</script>
+{# بحث المكبّرة القديم أُزيل: نظام الجداول الموحد يوفّر الفرز واختيار الأعمدة وترقيم الصفحات لجدول المدينين #}
+{# نظام الجداول الموحد (فرز + أعمدة + ترقيم صفحات) لجدولي المدينين والكوتة #}
+<script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
 {% endblock %}

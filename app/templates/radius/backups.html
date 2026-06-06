@@ -244,7 +244,8 @@
             <div class="bkx-kv">
               <div class="row"><span class="k">الحساب</span><span class="v ltr">{{ gdrive.email or '—' }}</span></div>
               <div class="row"><span class="k">المجلد</span><span class="v">{{ gdrive.folder_name or 'HobeRadius Backups' }}</span></div>
-              <div class="row"><span class="k">آخر رفع</span><span class="v ltr">{{ gdrive.last_upload_at or '—' }}</span></div>
+              {# توحيد تنسيق وقت آخر رفع مع بقية الطوابع الزمنية في الصفحة #}
+              <div class="row"><span class="k">آخر رفع</span><span class="v ltr">{{ fmt_dt(gdrive.last_upload_at) if gdrive.last_upload_at else '—' }}</span></div>
             </div>
             <a class="bkx-link" href="{{ url_for('radius.license_file_portal_sso') }}" target="_blank" rel="noopener">إدارة الربط من بوابة العميل ↗</a>
           {% else %}

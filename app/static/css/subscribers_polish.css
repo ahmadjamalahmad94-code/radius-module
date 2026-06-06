@@ -87,3 +87,90 @@
   outline: 2px solid var(--sub-indigo);
   outline-offset: 2px;
 }
+
+/* ── لوحة المشترك 360 — تنسيق عناصر لم يكن لها قواعد على هذه الصفحة ──
+   الأصناف hub-tabs / hub-form-grid / hub-muted غير معرَّفة في hub_v2.css
+   (تظهر بلا تنسيق هنا)، فنُعرّفها مقصورةً على هذه المنطقة. مسافات الكتل
+   موحّدة عبر --uds-block-gap كي تتساوى أقسام الشبكة المتجاورة. */
+
+/* (أ) شريط التبويبات: رقاقات قابلة للنقر بدل روابط نصّية عارية */
+.hub-tabs{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-block: var(--uds-block-gap, 20px);
+}
+.hub-tabs a{
+  display: inline-flex;
+  align-items: center;
+  height: 36px;
+  padding-inline: 14px;
+  border-radius: 999px;
+  background: var(--sub-surface);
+  border: 1px solid var(--sub-border);
+  color: var(--sub-muted);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background .15s, color .15s, border-color .15s;
+}
+.hub-tabs a:hover,
+.hub-tabs a:focus-visible{
+  color: var(--sub-ink);
+  border-color: var(--sub-border-strong);
+  background: var(--sub-tile);
+}
+
+/* (ب) شبكة نموذج معاينة التجديد: عمودان مرتّبان بدل تكدّس عمودي */
+.hub-form-grid{
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+  align-items: end;
+}
+.hub-form-grid label{
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--sub-muted);
+}
+.hub-form-grid input{
+  height: 42px;                /* ارتفاع موحّد لعناصر التحكّم */
+  padding-inline: 12px;
+  border: 1px solid var(--sub-border-strong);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--sub-ink);
+  font: inherit;
+}
+.hub-form-grid input:focus-visible{
+  outline: 2px solid var(--sub-indigo);
+  outline-offset: 1px;
+}
+.hub-form-grid .hub-btn{ height: 42px; }
+/* الزر والملاحظة يمتدّان على عرض الشبكة كاملاً */
+.hub-form-grid > .hub-btn,
+.hub-form-grid > .hub-muted{ grid-column: 1 / -1; }
+
+/* (ج) نصوص ثانوية + خلية جدول فارغة + نص الملاحظات */
+.hub-muted{
+  color: var(--sub-muted);
+  font-size: 12.5px;
+  margin: 0;
+}
+.hub-table-empty{
+  text-align: center;
+  color: var(--sub-muted);
+  padding-block: 18px;
+}
+.hub-note-text{
+  margin: 0;
+  color: var(--sub-ink);
+  line-height: 1.7;
+  white-space: pre-line;
+}
+
+/* تساوي ارتفاع الأقسام المتجاورة داخل شبكة العمودين */
+.hub-grid--2 > .hub-section{ height: 100%; }

@@ -1,4 +1,14 @@
-{# Invoice form — REBUILT N7 (hub-v2). Backend: subs, plans. POST to inv_create. #}
+{# ═══════════════════════════════════════════════════════════════════════
+   فاتورة جديدة — أُعيد بناؤها على نظام التصميم الموحّد (hub-hero-shell).
+
+   بيانات المسار (radius.inv_new): subs (المشتركون)، plans (الباقات).
+   ملاحظة: الإنشاء الفعلي انتقل إلى نافذة عائمة داخل صفحة المركز (billing_hub)،
+   و/invoices/new يعيد التوجيه إليها. يُحتفظ بهذا القالب احتياطًا فقط.
+
+   النموذج يرسل POST إلى radius.inv_create بنفس أسماء الحقول القائمة:
+     subscriber_id / plan_id / amount / direction / service_type /
+     payment_method / status / expiration_at / note
+   ═══════════════════════════════════════════════════════════════════════ #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
@@ -8,28 +18,43 @@
 
 {% block content %}
 
-{{ hub.hero(
+{# ───── صدفة الهيرو الموحّدة: استبدال hub.hero القديم بـ megahero داخل
+        hub-hero-shell (عنوان + أزرار الإجراء). تجميع actions_html بـ ~
+        الآمن بدل + لتفادي مشاكل ربط السلاسل في Jinja2 ───── #}
+<section class="hub-hero-shell">
+{{ hub.megahero(
   "فاتورة جديدة",
-  subtitle="إنشاء فاتورة جديدة للمشترك مع تحديد الباقة وطريقة الدفع",
+  subtitle="أنشئ فاتورة للمشترك: اختر الباقة، حدّد المبلغ وطريقة الدفع، واعتمد حالتها.",
   icon="file-invoice-dollar",
   actions_html='
-    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.inv_list') + '">
+    <a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.inv_list') ~ '">
       <i class="fa-solid fa-arrow-right-long"></i> العودة للقائمة
     </a>
-  '
+    <button class="hub-btn hub-btn--primary" type="submit" form="inv-form">
+      <i class="fa-solid fa-floppy-disk"></i> إنشاء الفاتورة
+    </button>'
 ) }}
+</section>{# /hub-hero-shell #}
 
-<form method="post">
+{# ───── نموذج الإنشاء — POST صريح إلى radius.inv_create مع توكن CSRF ───── #}
+<form method="post" id="inv-form" action="{{ url_for('radius.inv_create') }}">
+  {# توكن CSRF مطلوب: التطبيق يرفض أي POST بدونه (_csrf_check) #}
+  <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+
   {% call hub.section("معلومات الفاتورة", icon="file-pen") %}
-    <div class="hub-form">
-      <div class="hub-field">
+    {# hub-form-row يفرض التخطيط الشبكي وتوزيع الحقول بشكل صحيح ───── #}
+    <div class="hub-form-row">
+
+      <div class="hub-field" style="grid-column:1/-1">
         <label class="hub-field-label" for="hub-f-subscriber_id">المشترك <span class="req">*</span></label>
-        <select class="hub-select" id="hub-f-subscriber_id" name="subscriber_id" required>
+        <select class="hub-select" id="hub-f-subscriber_id" name="subscriber_id" required
+                data-search-placeholder="ابحث بالاسم أو اليوزر...">
           <option value="">— اختر —</option>
           {% for s in subs %}
             <option value="{{ s.id }}">{{ s.username }} — {{ s.full_name or '—' }}</option>
           {% endfor %}
         </select>
+        <div class="hub-field-hint">صاحب الفاتورة — تُسجَّل في كشف حسابه وتؤثر في رصيده.</div>
       </div>
 
       <div class="hub-field">
@@ -40,11 +65,13 @@
             <option value="{{ p.id }}">{{ p.name }} ({{ p.price|money }})</option>
           {% endfor %}
         </select>
+        <div class="hub-field-hint">اختياري — لربط الفاتورة بباقة محدّدة لأغراض التقارير.</div>
       </div>
 
       <div class="hub-field">
         <label class="hub-field-label" for="hub-f-amount">المبلغ <span class="req">*</span></label>
         <input class="hub-input" type="number" id="hub-f-amount" name="amount" step="0.01" min="0" required value="0">
+        <div class="hub-field-hint">قيمة الفاتورة بالشيكل ₪ — يُحتسب على رصيد المشترك.</div>
       </div>
 
       <div class="hub-field">
@@ -56,6 +83,7 @@
           <option value="withdraw">سحب</option>
           <option value="credit">رصيد</option>
         </select>
+        <div class="hub-field-hint">يحدّد أثر الحركة: تحصيل/سحب يخصم، إيداع/رصيد يضيف.</div>
       </div>
 
       <div class="hub-field">
@@ -65,6 +93,7 @@
           <option value="PPPoE">برودباند</option>
           <option value="Balance">الرصيد</option>
         </select>
+        <div class="hub-field-hint">نوع الخدمة المرتبطة بالفاتورة لتصنيفها في التقارير.</div>
       </div>
 
       <div class="hub-field">
@@ -76,6 +105,7 @@
           <option value="online">دفع إلكتروني</option>
           <option value="manual">يدوي</option>
         </select>
+        <div class="hub-field-hint">الوسيلة التي حُصِّل بها المبلغ — توثّق في سجلّ الدفع.</div>
       </div>
 
       <div class="hub-field">
@@ -85,23 +115,27 @@
           <option value="pending">معلَّقة</option>
           <option value="failed">فشلت</option>
         </select>
+        <div class="hub-field-hint">«مدفوعة» تعتمد الحركة فورًا؛ «معلَّقة» تنتظر التحصيل.</div>
       </div>
 
       <div class="hub-field">
         <label class="hub-field-label" for="hub-f-expiration_at">تنتهي في</label>
         <input class="hub-input" type="date" id="hub-f-expiration_at" name="expiration_at">
+        <div class="hub-field-hint">اختياري — تاريخ انتهاء صلاحية الخدمة المرتبطة بالفاتورة.</div>
       </div>
 
-      <div class="hub-field">
+      <div class="hub-field" style="grid-column:1/-1">
         <label class="hub-field-label" for="hub-f-note">ملاحظات</label>
         <textarea class="hub-textarea" id="hub-f-note" name="note" rows="3" placeholder="ملاحظات إضافية..."></textarea>
+        <div class="hub-field-hint">تفاصيل داخلية تظهر مع الفاتورة — لا تُرسل للمشترك.</div>
       </div>
+
     </div>
   {% endcall %}
 
   <div class="hub-flex-row" style="margin-top:var(--hub-gap-section);gap:8px">
     {{ hub.btn("إنشاء الفاتورة", icon="floppy-disk", variant="primary", type="submit") }}
-    {{ hub.btn("إلغاء", href=url_for('radius.inv_list'), variant="secondary") }}
+    {{ hub.btn("إلغاء", href=url_for('radius.inv_list'), variant="ghost") }}
   </div>
 </form>
 

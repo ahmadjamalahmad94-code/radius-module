@@ -3,7 +3,9 @@ routes للحالة التشغيلية: /admin/radius/_status + sync queue inspe
 
 /admin/radius/_status   ← HTML + JSON (Accept: application/json) — يعرض workers, queues, MT health
 /admin/radius/sync      ← قائمة sync_queue + إعادة محاولة / إلغاء
-/admin/radius/audit     ← آخر 200 audit action
+
+ملاحظة: سجل العمليات (/admin/radius/audit) يخدمه audit_log.py — لا تُسجَّل
+نسخة ثانية هنا حتى لا يتصادم مساران على نفس العنوان.
 """
 from __future__ import annotations
 
@@ -27,7 +29,6 @@ def register_status_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/sync", "sync_list", sync_list, methods=["GET"])
     bp.add_url_rule("/sync/<int:job_id>/retry", "sync_retry", sync_retry, methods=["POST"])
     bp.add_url_rule("/sync/<int:job_id>/cancel", "sync_cancel", sync_cancel, methods=["POST"])
-    bp.add_url_rule("/audit", "audit_list", audit_list, methods=["GET"])
     bp.add_url_rule("/_reconcile_now", "reconcile_now",
                     reconcile_now, methods=["POST", "GET"])
     bp.add_url_rule("/diagnostics", "diagnostics",
@@ -262,8 +263,30 @@ def system_status():
 def sync_list():
     status = request.args.get("status") or None
     jobs = sync_queue_repo.list_jobs(_tid(), status=status, limit=300)
+
+    # ── سياق الراوترات لعمود «الراوتر المستهدف» ──
+    # تصميم الطابور بثّي (broadcast): المهمة تُنفَّذ على كل راوترات المستأجر
+    # المفعّلة دفعة واحدة (router_sync.execute_job)، وعمود router_id مجرد
+    # تلميح توجيه نادر الاستخدام، وlast_router_id يسجّل آخر راوتر فشل عليه
+    # التنفيذ. نمرّر خريطة {id: اسم} من جدول nas_devices (المصدر القانوني
+    # لأسماء الراوترات في الواجهة) لعرض الاسم بدل الرقم الخام عند توفّره،
+    # وعدد الراوترات المفعّلة لعرض «كل الراوترات المفعّلة (N)».
+    # قراءة دفاعية: أي فشل هنا لا يمنع عرض الطابور نفسه.
+    router_names: dict = {}
+    routers_enabled = 0
+    try:
+        from ..db.repos import nas_repo
+        for nas in nas_repo.list_nas(_tid(), limit=500):
+            router_names[nas.id] = nas.name or nas.address or f"#{nas.id}"
+            if nas.enabled:
+                routers_enabled += 1
+    except Exception:  # noqa: BLE001 — العمود يتدهور بأمان إلى الأرقام الخام
+        pass
+
     return render_template("radius/sync_list.html", jobs=jobs, status=status,
-                            stats=sync_queue_repo.stats(_tid()))
+                            stats=sync_queue_repo.stats(_tid()),
+                            router_names=router_names,
+                            routers_enabled=routers_enabled)
 
 
 def sync_retry(job_id: int):
@@ -295,25 +318,3 @@ def sync_cancel(job_id: int):
             abort(404)
     flash("تم إلغاء المهمة.", "warning")
     return redirect(request.referrer or url_for("radius.sync_list"))
-
-
-# ─────────────── audit ───────────────
-
-def audit_list():
-    from .audit_log import _action_label, _target_label
-
-    cur = db().execute("""
-        SELECT * FROM audit_log
-        WHERE tenant_id = ?
-        ORDER BY id DESC LIMIT 300
-    """, (_tid(),))
-    items = []
-    for row in cur.fetchall():
-        item = dict(row)
-        item["action_label"] = _action_label(item.get("action"))
-        item["target_label"] = _target_label(
-            item.get("target_type"), item.get("target_id")
-        )
-        item["payload_summary"] = _payload_summary(item.get("payload_json"))
-        items.append(item)
-    return render_template("radius/audit_list.html", items=items)

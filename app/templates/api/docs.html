@@ -1,0 +1,409 @@
+{#-
+  صفحة توثيق REST API المُعاد تصميمها — /api/docs
+
+  صفحة مستقلّة (ليست ضمن layout الموقع لأنها على blueprint الـ api العام
+  وقد تُفتح بلا تسجيل دخول)، لكنها تجلب نفس ملفات CSS الخاصة بنظام تصميم
+  الموقع عبر مسارات static المطلقة، فتطابق مظهر صفحات الـ hub.
+
+  المتغيّرات من app/api/openapi.py::openapi_docs:
+    groups       : قائمة المجموعات (مشتقّة من url_map الحقيقي — لا اختراع)
+    total        : إجمالي النقاط
+    public_total : عدد النقاط العامة (بلا توكن)
+    group_count  : عدد المجموعات
+    base_url     : أساس عناوين الـ API (مثل https://host/api)
+-#}
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>توثيق HobeRadius API</title>
+
+  {# خط Cairo محلّي كحلّ احتياطي (يطابق رأس layout الموقع)، ثم CDN #}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <style>
+    @font-face{font-family:'Cairo';font-style:normal;font-weight:400;font-display:swap;
+      src:url("{{ url_for('static', filename='fonts/Cairo-Regular.ttf') }}") format('truetype')}
+    @font-face{font-family:'Cairo';font-style:normal;font-weight:500 700;font-display:swap;
+      src:url("{{ url_for('static', filename='fonts/Cairo-Bold.ttf') }}") format('truetype')}
+    @font-face{font-family:'Cairo';font-style:normal;font-weight:800 900;font-display:swap;
+      src:url("{{ url_for('static', filename='fonts/Cairo-Black.ttf') }}") format('truetype')}
+  </style>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  {# نظام تصميم الموقع #}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/hub_v2.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_design_system.css') }}">
+
+  <style>
+    /* ── تنسيقات خاصّة بصفحة التوثيق فقط (تبني على توكنات hub_v2) ── */
+    body{
+      margin:0;
+      background:var(--hub-bg-page,#FAFBFF);
+      color:var(--hub-text,#1F2937);
+      font-family:var(--hub-font,"Cairo",system-ui,sans-serif);
+      -webkit-font-smoothing:antialiased;
+    }
+    .apidoc-wrap{max-width:1040px;margin:0 auto;padding:24px 20px 80px}
+
+    /* النصوص التقنية اللاتينية أحادية المسافة + ضبط الاتجاه */
+    code,.mono{font-family:var(--hub-mono,"JetBrains Mono","Consolas",monospace)}
+    .mono-path{
+      font-family:var(--hub-mono,"JetBrains Mono",monospace);
+      direction:ltr;text-align:left;unicode-bidi:isolate;
+      font-size:13.5px;font-weight:600;color:var(--hub-text,#1F2937);
+    }
+
+    /* الهيرو — مبني على hub-hero-shell لكنه مستقلّ عن الـ macro */
+    .apidoc-hero{
+      background:var(--hub-bg-card,#fff);
+      border:1px solid var(--hub-border,#E8E7F0);
+      border-radius:var(--hub-r-card,18px);
+      box-shadow:var(--hub-sh-hero,0 8px 40px rgba(91,75,214,.12));
+      padding:28px 28px 24px;margin-bottom:18px;
+      background-image:var(--hub-bg-tinted,linear-gradient(180deg,#FAFBFF,#F4F1FE));
+    }
+    .apidoc-hero-row{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+    .apidoc-hero-icon{
+      width:56px;height:56px;border-radius:16px;display:grid;place-items:center;
+      background:var(--hub-brand,#6B5AED);color:#fff;font-size:24px;flex:none;
+      box-shadow:0 8px 20px rgba(107,90,237,.35);
+    }
+    .apidoc-hero-title{margin:0;font-size:26px;font-weight:800;color:var(--hub-text,#1F2937)}
+    .apidoc-hero-sub{margin:4px 0 0;color:var(--hub-text-soft,#475569);font-size:15px;line-height:1.7}
+    .apidoc-hero-actions{margin-inline-start:auto;display:flex;gap:8px;flex-wrap:wrap}
+
+    /* صندوق "شو هو الـ API" */
+    .apidoc-intro{
+      margin-top:18px;padding:16px 18px;border-radius:14px;
+      background:var(--hub-bg-soft,#F8F9FE);border:1px solid var(--hub-border-soft,#EFEEF6);
+      color:var(--hub-text-soft,#475569);font-size:14.5px;line-height:1.9;
+    }
+    .apidoc-intro b{color:var(--hub-text,#1F2937)}
+
+    /* شريط KPI */
+    .apidoc-kpis{display:flex;gap:12px;flex-wrap:wrap;margin-top:16px}
+    .apidoc-kpi{
+      flex:1 1 150px;background:#fff;border:1px solid var(--hub-border,#E8E7F0);
+      border-radius:14px;padding:12px 16px;box-shadow:var(--hub-sh-sm,0 1px 2px rgba(15,23,42,.04));
+    }
+    .apidoc-kpi-label{font-size:12.5px;color:var(--hub-text-mute,#94A3B8);font-weight:600}
+    .apidoc-kpi-value{font-size:24px;font-weight:800;color:var(--hub-brand-ink,#5B4BD6);margin-top:2px}
+
+    /* صندوق المصادقة البارز */
+    .apidoc-auth{
+      margin:18px 0;border:1px solid var(--hub-brand-line,#E5E0F5);
+      border-radius:16px;overflow:hidden;background:#fff;box-shadow:var(--hub-sh-card,0 1px 2px rgba(15,23,42,.04),0 8px 24px rgba(91,75,214,.05));
+    }
+    .apidoc-auth-head{
+      display:flex;align-items:center;gap:10px;padding:14px 18px;
+      background:var(--hub-brand-soft,#F4F1FE);border-bottom:1px solid var(--hub-brand-line,#E5E0F5);
+      color:var(--hub-brand-deep,#4836B8);font-weight:800;font-size:15.5px;
+    }
+    .apidoc-auth-body{padding:16px 18px;color:var(--hub-text-soft,#475569);font-size:14px;line-height:1.9}
+    .apidoc-auth-body p{margin:0 0 10px}
+    .apidoc-codeblock{
+      position:relative;margin:8px 0;border-radius:10px;border:1px solid var(--hub-border,#E8E7F0);
+      background:#0F1525;color:#E6EAF2;padding:12px 14px;
+      direction:ltr;text-align:left;overflow:auto;
+    }
+    .apidoc-codeblock pre{margin:0;font-family:var(--hub-mono,monospace);font-size:13px;line-height:1.6;white-space:pre}
+    .apidoc-copy{
+      position:absolute;inset-inline-end:8px;inset-block-start:8px;
+      border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:#E6EAF2;
+      border-radius:8px;padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer;
+      font-family:var(--hub-font,"Cairo",sans-serif);transition:background var(--hub-anim-fast,140ms);
+    }
+    .apidoc-copy:hover{background:rgba(255,255,255,.18)}
+    .apidoc-copy.copied{background:var(--hub-green,#22C55E);border-color:var(--hub-green,#22C55E);color:#fff}
+
+    /* شريط البحث */
+    .apidoc-search{position:relative;margin:18px 0 14px}
+    .apidoc-search input{
+      width:100%;box-sizing:border-box;padding:13px 44px 13px 16px;
+      border:1px solid var(--hub-border,#E8E7F0);border-radius:12px;font-size:15px;
+      font-family:var(--hub-font,"Cairo",sans-serif);background:#fff;color:var(--hub-text,#1F2937);
+      box-shadow:var(--hub-sh-sm,0 1px 2px rgba(15,23,42,.04));
+    }
+    .apidoc-search input:focus{outline:none;border-color:var(--hub-brand,#6B5AED);box-shadow:0 0 0 3px rgba(107,90,237,.12)}
+    .apidoc-search i{position:absolute;inset-inline-start:16px;inset-block-start:50%;transform:translateY(-50%);color:var(--hub-text-mute,#94A3B8)}
+    .apidoc-noresults{display:none;text-align:center;padding:32px;color:var(--hub-text-mute,#94A3B8);font-size:15px}
+
+    /* المجموعات القابلة للطي */
+    .apidoc-group{
+      background:#fff;border:1px solid var(--hub-border,#E8E7F0);border-radius:16px;
+      margin-bottom:12px;overflow:hidden;box-shadow:var(--hub-sh-sm,0 1px 2px rgba(15,23,42,.04));
+    }
+    .apidoc-group > summary{
+      list-style:none;cursor:pointer;padding:16px 18px;display:flex;align-items:center;gap:12px;
+      user-select:none;
+    }
+    .apidoc-group > summary::-webkit-details-marker{display:none}
+    .apidoc-group-icon{
+      width:40px;height:40px;border-radius:11px;display:grid;place-items:center;flex:none;
+      background:var(--hub-brand-soft,#F4F1FE);color:var(--hub-brand,#6B5AED);font-size:17px;
+    }
+    .apidoc-group-title{font-weight:800;font-size:16px;color:var(--hub-text,#1F2937)}
+    .apidoc-group-desc{font-size:13px;color:var(--hub-text-soft,#475569);margin-top:2px;line-height:1.6}
+    .apidoc-group-meta{margin-inline-start:auto;display:flex;align-items:center;gap:8px;flex:none}
+    .apidoc-count{
+      background:var(--hub-bg-soft,#F8F9FE);border:1px solid var(--hub-border,#E8E7F0);
+      color:var(--hub-text-soft,#475569);border-radius:999px;padding:2px 11px;font-size:12.5px;font-weight:700;
+    }
+    .apidoc-chevron{color:var(--hub-text-mute,#94A3B8);transition:transform var(--hub-anim-fast,140ms)}
+    .apidoc-group[open] .apidoc-chevron{transform:rotate(180deg)}
+    .apidoc-authnote{
+      display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;
+      color:var(--hub-amber-ink,#92400E);background:var(--hub-amber-soft,#FEF3C7);
+      border-radius:999px;padding:2px 9px;
+    }
+    .apidoc-group-body{padding:0 14px 14px;border-top:1px solid var(--hub-border-soft,#EFEEF6)}
+
+    /* بطاقة نقطة API */
+    .apidoc-ep{
+      border:1px solid var(--hub-border-soft,#EFEEF6);border-radius:12px;
+      padding:12px 14px;margin-top:12px;background:var(--hub-bg-soft,#F8F9FE);
+    }
+    .apidoc-ep-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    .apidoc-method{
+      flex:none;font-family:var(--hub-mono,monospace);font-weight:800;font-size:11.5px;letter-spacing:.04em;
+      border-radius:7px;padding:4px 9px;color:#fff;min-width:54px;text-align:center;direction:ltr;
+    }
+    .apidoc-method.get{background:var(--hub-blue,#3B82F6)}
+    .apidoc-method.post{background:var(--hub-green,#22C55E)}
+    .apidoc-method.put{background:var(--hub-amber,#F59E0B)}
+    .apidoc-method.patch{background:var(--hub-amber,#F59E0B)}
+    .apidoc-method.delete{background:var(--hub-red,#EF4444)}
+    .apidoc-ep-path{
+      flex:1 1 auto;min-width:0;display:flex;align-items:center;gap:8px;
+      background:#fff;border:1px solid var(--hub-border,#E8E7F0);border-radius:8px;padding:7px 10px;
+    }
+    .apidoc-ep-path .mono-path{overflow:auto;white-space:nowrap;flex:1 1 auto}
+    .apidoc-copy-inline{
+      flex:none;border:1px solid var(--hub-border,#E8E7F0);background:#fff;color:var(--hub-text-soft,#475569);
+      border-radius:7px;padding:3px 9px;font-size:12px;font-weight:600;cursor:pointer;
+      font-family:var(--hub-font,"Cairo",sans-serif);transition:all var(--hub-anim-fast,140ms);
+    }
+    .apidoc-copy-inline:hover{border-color:var(--hub-brand,#6B5AED);color:var(--hub-brand,#6B5AED)}
+    .apidoc-copy-inline.copied{background:var(--hub-green,#22C55E);border-color:var(--hub-green,#22C55E);color:#fff}
+    .apidoc-pill-public{
+      flex:none;font-size:11px;font-weight:700;border-radius:999px;padding:2px 9px;
+      background:var(--hub-green-soft,#DCFCE7);color:var(--hub-green-ink,#15803D);
+    }
+    .apidoc-ep-desc{margin-top:8px;color:var(--hub-text-soft,#475569);font-size:13.5px;line-height:1.7}
+    .apidoc-ep-params{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+    .apidoc-ep-params .lbl{font-size:12px;color:var(--hub-text-mute,#94A3B8);font-weight:700}
+    .apidoc-param{
+      font-family:var(--hub-mono,monospace);direction:ltr;font-size:12px;font-weight:600;
+      background:var(--hub-brand-soft,#F4F1FE);color:var(--hub-brand-deep,#4836B8);
+      border:1px solid var(--hub-brand-line,#E5E0F5);border-radius:6px;padding:2px 8px;
+    }
+    /* مثال curl قابل للطيّ داخل البطاقة */
+    .apidoc-ep details{margin-top:10px}
+    .apidoc-ep details > summary{
+      list-style:none;cursor:pointer;font-size:12.5px;font-weight:700;color:var(--hub-brand,#6B5AED);
+      display:inline-flex;align-items:center;gap:6px;
+    }
+    .apidoc-ep details > summary::-webkit-details-marker{display:none}
+
+    .apidoc-foot{margin-top:28px;text-align:center;color:var(--hub-text-mute,#94A3B8);font-size:13px;line-height:1.9}
+    .apidoc-foot a{color:var(--hub-brand,#6B5AED);text-decoration:none;font-weight:700}
+    .apidoc-foot a:hover{text-decoration:underline}
+
+    @media (max-width:560px){
+      .apidoc-hero{padding:20px 18px}
+      .apidoc-hero-actions{margin-inline-start:0;width:100%}
+      .apidoc-ep-head{align-items:stretch}
+    }
+  </style>
+</head>
+<body>
+  <div class="apidoc-wrap">
+
+    {# ── الهيرو المدموج ── #}
+    <section class="apidoc-hero">
+      <div class="apidoc-hero-row">
+        <span class="apidoc-hero-icon"><i class="fa-solid fa-plug-circle-bolt"></i></span>
+        <div>
+          <h1 class="apidoc-hero-title">توثيق واجهة HobeRadius البرمجية</h1>
+          <p class="apidoc-hero-sub">كل نقاط الـ REST API لإدارة المشتركين والباقات والبطاقات والجلسات — في صفحة واحدة منظّمة.</p>
+        </div>
+        <div class="apidoc-hero-actions">
+          <a class="hub-btn hub-btn--secondary" href="{{ base_url }}/openapi.json" target="_blank" rel="noopener">
+            <i class="fa-solid fa-code"></i> مواصفة OpenAPI
+          </a>
+        </div>
+      </div>
+
+      <div class="apidoc-intro">
+        <b>شو هو الـ API؟</b> هو الباب البرمجي الذي تتصل عبره التطبيقات (تطبيق الأندرويد، سطح المكتب،
+        أو أي نظام خارجي) مع HobeRadius مباشرةً بدل واجهة الموقع — لتقرأ البيانات أو تنفّذ العمليات
+        آليًّا. كل طلب يُرسَل بصيغة <code class="mono">JSON</code> ويُرجع ردًّا موحّدًا
+        <code class="mono">{ ok, data, meta }</code> (أو <code class="mono">{ ok:false, error, meta }</code> عند الخطأ).
+      </div>
+
+      <div class="apidoc-kpis">
+        <div class="apidoc-kpi">
+          <div class="apidoc-kpi-label">إجمالي النقاط</div>
+          <div class="apidoc-kpi-value">{{ total }}</div>
+        </div>
+        <div class="apidoc-kpi">
+          <div class="apidoc-kpi-label">المجموعات</div>
+          <div class="apidoc-kpi-value">{{ group_count }}</div>
+        </div>
+        <div class="apidoc-kpi">
+          <div class="apidoc-kpi-label">نقاط عامة (بلا توكن)</div>
+          <div class="apidoc-kpi-value">{{ public_total }}</div>
+        </div>
+      </div>
+    </section>
+
+    {# ── صندوق المصادقة البارز ── #}
+    <section class="apidoc-auth">
+      <div class="apidoc-auth-head">
+        <i class="fa-solid fa-key"></i> المصادقة (التوكن)
+      </div>
+      <div class="apidoc-auth-body">
+        <p>معظم النقاط محميّة. أرسِل توكن الـ API في ترويسة <code class="mono">Authorization</code> بصيغة
+        <b>Bearer</b> مع كل طلب:</p>
+        <div class="apidoc-codeblock">
+          <button class="apidoc-copy" data-copy="Authorization: Bearer &lt;your-token&gt;">نسخ</button>
+          <pre>Authorization: Bearer &lt;your-token&gt;</pre>
+        </div>
+        <p>تُنشئ التوكنات وتُدار من مجموعة <b>توكنات الـ API</b> أدناه (‎<code class="mono">/api/v1/tokens</code>‎).
+        لطلبات البثّ المباشر <code class="mono">EventSource (SSE)</code> فقط، يمكن تمرير التوكن عبر
+        <code class="mono">?api_token=…</code> في الرابط (طلبات GET حصرًا).</p>
+        <p style="margin-bottom:0">عند انتهاء صلاحية التوكن يُرجع الخادم <code class="mono">401</code> برمز
+        <code class="mono">token_expired</code>. وقد يُفعّل المشغّل حدًّا للطلبات فيُرجع
+        <code class="mono">429</code> برمز <code class="mono">rate_limited</code>.</p>
+      </div>
+    </section>
+
+    {# ── شريط البحث الفوري ── #}
+    <div class="apidoc-search">
+      <i class="fa-solid fa-magnifying-glass"></i>
+      <input type="text" id="apidoc-q" placeholder="ابحث عن نقطة… (المسار، الطريقة، أو الوصف)" autocomplete="off">
+    </div>
+    <div class="apidoc-noresults" id="apidoc-noresults">لا توجد نتائج مطابقة لبحثك.</div>
+
+    {# ── المجموعات ── #}
+    {% for g in groups %}
+    <details class="apidoc-group" data-group>
+      <summary>
+        <span class="apidoc-group-icon"><i class="fa-solid {{ g.icon }}"></i></span>
+        <div>
+          <div class="apidoc-group-title">{{ g.title }}</div>
+          {% if g.desc %}<div class="apidoc-group-desc">{{ g.desc }}</div>{% endif %}
+        </div>
+        <div class="apidoc-group-meta">
+          {% if g.auth_note %}<span class="apidoc-authnote"><i class="fa-solid fa-lock"></i> {{ g.auth_note }}</span>{% endif %}
+          <span class="apidoc-count">{{ g.count }}</span>
+          <i class="fa-solid fa-chevron-down apidoc-chevron"></i>
+        </div>
+      </summary>
+      <div class="apidoc-group-body">
+        {% for e in g.endpoints %}
+        <div class="apidoc-ep" data-ep
+             data-search="{{ (e.method ~ ' ' ~ e.path ~ ' ' ~ e.desc)|lower }}">
+          <div class="apidoc-ep-head">
+            <span class="apidoc-method {{ e.method_class }}">{{ e.method }}</span>
+            <span class="apidoc-ep-path">
+              <bdi class="mono-path">{{ e.path }}</bdi>
+              <button class="apidoc-copy-inline" data-copy="{{ e.path }}" title="نسخ المسار">
+                <i class="fa-regular fa-copy"></i> نسخ
+              </button>
+            </span>
+            {% if e.public %}<span class="apidoc-pill-public">عام</span>{% endif %}
+          </div>
+
+          <div class="apidoc-ep-desc">{{ e.desc }}</div>
+
+          {% if e.path_params %}
+          <div class="apidoc-ep-params">
+            <span class="lbl">بارامترات المسار:</span>
+            {% for p in e.path_params %}<span class="apidoc-param">{{ p }}</span>{% endfor %}
+          </div>
+          {% endif %}
+
+          <details>
+            <summary><i class="fa-solid fa-terminal"></i> مثال curl</summary>
+            <div class="apidoc-codeblock">
+              <button class="apidoc-copy" data-copy="{{ e.curl }}">نسخ</button>
+              <pre>{{ e.curl }}</pre>
+            </div>
+          </details>
+        </div>
+        {% endfor %}
+      </div>
+    </details>
+    {% endfor %}
+
+    <div class="apidoc-foot">
+      المواصفة الكاملة القابلة للقراءة آليًّا:
+      <a href="{{ base_url }}/openapi.json" target="_blank" rel="noopener">openapi.json</a><br>
+      جميع النقاط أعلاه مُولَّدة مباشرةً من راوتات الخادم الفعلية.
+    </div>
+  </div>
+
+  <script>
+    // ── نسخ إلى الحافظة (للمسارات وأمثلة curl والترويسة) ──
+    document.addEventListener('click', function (ev) {
+      var btn = ev.target.closest('[data-copy]');
+      if (!btn) return;
+      var text = btn.getAttribute('data-copy');
+      var done = function () {
+        var original = btn.innerHTML;
+        btn.classList.add('copied');
+        btn.innerHTML = '<i class="fa-solid fa-check"></i> تم';
+        setTimeout(function () { btn.classList.remove('copied'); btn.innerHTML = original; }, 1400);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done).catch(fallback);
+      } else { fallback(); }
+      function fallback() {
+        var ta = document.createElement('textarea');
+        ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+        document.body.appendChild(ta); ta.select();
+        try { document.execCommand('copy'); done(); } catch (e) {}
+        document.body.removeChild(ta);
+      }
+    });
+
+    // ── البحث/الفلترة الفورية ──
+    (function () {
+      var input = document.getElementById('apidoc-q');
+      var groups = Array.prototype.slice.call(document.querySelectorAll('[data-group]'));
+      var noResults = document.getElementById('apidoc-noresults');
+      if (!input) return;
+
+      // نحفظ الحالة الافتراضية لإعادتها عند مسح البحث
+      var openState = groups.map(function (g) { return g.open; });
+
+      input.addEventListener('input', function () {
+        var q = input.value.trim().toLowerCase();
+        var anyVisible = false;
+
+        groups.forEach(function (g, gi) {
+          var eps = Array.prototype.slice.call(g.querySelectorAll('[data-ep]'));
+          var matches = 0;
+          eps.forEach(function (ep) {
+            var hay = ep.getAttribute('data-search') || '';
+            var hit = !q || hay.indexOf(q) !== -1;
+            ep.style.display = hit ? '' : 'none';
+            if (hit) matches++;
+          });
+          if (matches > 0) { g.style.display = ''; anyVisible = true; }
+          else { g.style.display = 'none'; }
+          // عند وجود بحث: افتح المجموعات المطابقة؛ بدون بحث: أعِد الحالة الأصلية
+          g.open = q ? (matches > 0) : openState[gi];
+        });
+
+        noResults.style.display = anyVisible ? 'none' : 'block';
+      });
+    })();
+  </script>
+</body>
+</html>

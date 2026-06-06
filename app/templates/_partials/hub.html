@@ -222,7 +222,14 @@
   {%- if caller %}
   <form class="uds-hero-search" method="{{ search_method }}"
         {%- if search_action %} action="{{ search_action }}"{% endif %}>
-    <span class="uds-search-ic"><i class="fa-solid fa-magnifying-glass"></i></span>
+    {# أيقونة المكبّر — زر حقيقي لا زخرفة: نقرة تنقل التركيز لأول حقل
+       بحث نصي في الحزام. وحيث لا حقل نصي إطلاقًا (حزام فلاتر فقط)
+       تُخفى الأيقونة تلقائيًا عبر قاعدة :has() في hub_v2.css بدل أن
+       تبقى أيقونة ميتة توحي ببحث غير موجود. #}
+    <button type="button" class="uds-search-ic" aria-label="الانتقال إلى حقل البحث"
+            onclick="var f=this.closest('form'),i=f&&f.querySelector('input[type=text],input[type=search],input:not([type]),input[type=number],input[type=tel]');if(i){i.focus();if(i.select)i.select();}">
+      <i class="fa-solid fa-magnifying-glass"></i>
+    </button>
     {{ caller() }}
   </form>
   {%- endif %}
@@ -251,11 +258,13 @@
    • note:  optional caveat line shown in a tinted box
    • extra content can also be passed via a {% call %} block. #}
 {% macro helppanel(title, intro="", items=[], icon="compass", note="") -%}
-<aside class="uds-help" aria-label="{{ title }}">
-  <div class="uds-help-head">
+{# لوحة المساعدة مطوية افتراضيًا — تنفتح وقت الحاجة فقط #}
+<details class="uds-help" aria-label="{{ title }}">
+  <summary class="uds-help-head" style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:10px">
     <span class="uds-help-ic"><i class="fa-solid fa-{{ icon }}"></i></span>
-    <span class="uds-help-title">{{ title }}</span>
-  </div>
+    <span class="uds-help-title" style="flex:1">{{ title }}</span>
+    <i class="fa-solid fa-chevron-down" style="font-size:10px;color:var(--hub-text-mute, #94A3B8)"></i>
+  </summary>
   <div class="uds-help-body">
     {%- if intro %}<div class="uds-help-intro">{{ intro }}</div>{% endif -%}
     {%- if items %}
@@ -271,7 +280,7 @@
     {%- if note %}<div class="uds-help-note"><i class="fa-solid fa-circle-info"></i><span>{{ note }}</span></div>{% endif -%}
     {%- if caller %}{{ caller() }}{% endif -%}
   </div>
-</aside>
+</details>
 {%- endmacro %}
 
 

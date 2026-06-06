@@ -1,0 +1,233 @@
+{# خدمات السكربت المبنيّة على المنافذ — إطار عام مطابق لنمط
+   «برمجة الهوتسبوت/البرودباند».
+
+   التدفّق: اختر خدمة (من البطاقات أعلى) → اكتشاف المنافذ → حدّد
+   المنافذ → ولّد السكربت للمراجعة → (تطبيق، معطّل ما دام القالب
+   مبدئيًا). نفس قشرة UDS: hero + لوحة مساعدة + أقسام مُبطّنة. #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}خدمات المنافذ — {{ nas.name }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-diagram-project"></i>{% endblock %}
+{% block page_title %}خدمات المنافذ على {{ nas.name }}{% endblock %}
+{% block page_sub %}<span class="sub">جهاز شبكة #{{ nas.id }} · {{ nas.address }} · توليد سكربت حسب المنافذ</span>{% endblock %}
+
+{% block content %}
+
+<section data-mt-port-services>
+
+  {# ───── Hero + بطاقات الخدمات كإجراءات ───── #}
+  {{ hub.hero(
+    "خدمات المنافذ — " ~ nas.name,
+    subtitle="جهاز شبكة #" ~ nas.id ~ " · " ~ nas.address ~ " — اختر خدمة، حدّد المنافذ، فيولّد النظام سكربت الراوتر للمراجعة. التطبيق يبقى معطّلًا للقوالب المبدئية.",
+    icon="diagram-project"
+  ) }}
+
+  {% if error %}
+  <div role="alert" style="display:flex;align-items:center;gap:8px;margin-bottom:16px;background:#FEF2F2;border:1px solid #FCA5A5;color:#991B1B;padding:12px 14px;border-radius:var(--hub-r-md);font-size:14px">
+    <i class="fa-solid fa-triangle-exclamation"></i>
+    {{ error }}
+  </div>
+  {% endif %}
+
+  {% call hub.worklayout(aside_html=hub.helppanel(
+    "كيف تعمل هذه الصفحة؟",
+    intro="هذه أداة عامة لتطبيق خدمات الراوتر المبنيّة على المنافذ. تختار الخدمة، يكتشف النظام منافذ الراوتر، تحدّد المنافذ المعنيّة، فيُولَّد سكربت RouterOS جاهز للمراجعة.",
+    items=[
+      {'icon': 'tower-broadcast', 'text': 'منع بث البلوتوث والواي فاي على المنافذ المختارة.'},
+      {'icon': 'arrows-spin',     'text': 'تتبّع اللوب (Loop Detection) على المنافذ المختارة.'},
+      {'icon': 'plug',            'text': 'يكتشف النظام واجهات الراوتر تلقائيًا لاختيارها بنقرة.'},
+      {'icon': 'shield-halved',   'text': 'القوالب المبدئية تُعرض كتنبيه — التطبيق معطّل حتى يضاف السكربت الفعلي.'},
+    ],
+    note="الخدمتان الحاليتان بقالب مبدئي — السكربت الفعلي يُضاف لاحقًا في مكان واحد."
+  )) %}
+
+  {# ── بطاقات اختيار الخدمة ── #}
+  {% call hub.section("اختر الخدمة", icon="layer-group") %}
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px"
+         data-pss-service-cards>
+      {% for svc in services %}
+      <a class="hub-card {{ 'hub-card--active' if service and service.slug == svc.slug else '' }}"
+         href="{{ url_for('radius.mt_port_services_form', nas_id=nas.id) }}?slug={{ svc.slug }}"
+         data-pss-service="{{ svc.slug }}"
+         style="display:flex;flex-direction:column;gap:6px;padding:14px;border:1px solid {{ '#7C3AED' if service and service.slug == svc.slug else 'var(--hub-border,#E5E7EB)' }};border-radius:var(--hub-r-md);text-decoration:none;color:inherit">
+        <div style="display:flex;align-items:center;gap:8px;font-weight:700;flex-wrap:wrap">
+          <i class="fa-solid fa-{{ svc.icon }}"></i> {{ svc.title }}
+          {% if svc.is_placeholder %}
+          <span class="hub-badge" style="background:#FEF3C7;color:#92400E;font-size:11px;padding:2px 8px;border-radius:999px">بانتظار السكربت</span>
+          {% endif %}
+          {# حالة الخدمة المحفوظة على هذا الراوتر #}
+          {% set _st = states.get(svc.slug) if states else None %}
+          {% if _st and _st.enabled %}
+          <span class="hub-badge" style="background:#DCFCE7;color:#166534;font-size:11px;padding:2px 8px;border-radius:999px"
+                data-pss-state="enabled" data-pss-state-slug="{{ svc.slug }}">
+            <i class="fa-solid fa-circle-check"></i> مفعّلة{% if _st.ports %} · {{ _st.ports|join(', ') }}{% endif %}
+          </span>
+          {% else %}
+          <span class="hub-badge" style="background:#F1F5F9;color:#475569;font-size:11px;padding:2px 8px;border-radius:999px"
+                data-pss-state="disabled" data-pss-state-slug="{{ svc.slug }}">غير مفعّلة</span>
+          {% endif %}
+        </div>
+        <div class="hub-text-mute" style="font-size:13px;line-height:1.6">{{ svc.description }}</div>
+      </a>
+      {% endfor %}
+    </div>
+  {% endcall %}
+
+  {% if service %}
+  {# ── نموذج اختيار المنافذ للخدمة المحددة ── #}
+  {% call hub.section("منافذ الخدمة — " ~ service.title, icon=service.icon) %}
+
+    {% if service.is_placeholder %}
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;background:#FFFBEB;border:1px solid #FDE68A;color:#92400E;padding:10px 14px;border-radius:var(--hub-r-md);font-size:13px"
+         data-pss-placeholder-banner>
+      <i class="fa-solid fa-triangle-exclamation"></i>
+      هذه الخدمة بقالب مبدئي — السكربت الفعلي <strong>بانتظار السكربت</strong>. يمكنك توليد المعاينة، لكن الدفع للراوتر معطّل حتى يُلصق سكربت المستخدم.
+    </div>
+    {% endif %}
+
+    {# حالة الخدمة المحفوظة على هذا الراوتر #}
+    {% if state and state.enabled %}
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;background:#ECFDF5;border:1px solid #A7F3D0;color:#166534;padding:10px 14px;border-radius:var(--hub-r-md);font-size:13px"
+         data-pss-state-banner="enabled">
+      <i class="fa-solid fa-circle-check"></i>
+      الخدمة <strong>مفعّلة</strong> حاليًا على المنافذ: <bdi class="mono">{{ state.ports|join(', ') or '—' }}</bdi>
+    </div>
+    {% else %}
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;background:#F8FAFC;border:1px solid #E2E8F0;color:#475569;padding:10px 14px;border-radius:var(--hub-r-md);font-size:13px"
+         data-pss-state-banner="disabled">
+      <i class="fa-solid fa-circle-minus"></i>
+      الخدمة <strong>غير مفعّلة</strong> على هذا الراوتر.
+    </div>
+    {% endif %}
+
+    <form class="hub-form" method="post"
+          action="{{ url_for('radius.mt_port_services_plan', nas_id=nas.id, slug=service.slug) }}"
+          data-pss-form>
+
+      <div class="hub-field">
+        <label>المنافذ / الواجهات</label>
+        {% if port_rows %}
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px"
+             data-pss-port-grid>
+          {% for row in port_rows %}
+          <label style="display:flex;align-items:center;gap:8px;border:1px solid var(--hub-border,#E5E7EB);padding:8px 10px;border-radius:var(--hub-r-md);cursor:pointer;font-size:13px">
+            <input type="checkbox" name="ports" value="{{ row.name }}"
+                   data-pss-port
+                   {% if row.name in selected_ports %}checked{% endif %}>
+            <code>{{ row.name }}</code>
+            {# حالة الواجهة الحقيقية: نقطة خضراء (تعمل) / رمادية (متوقّفة) #}
+            {% if row.disabled %}
+            <span title="معطّلة" style="margin-inline-start:auto;color:#9CA3AF;font-size:11px"><i class="fa-solid fa-ban"></i> معطّلة</span>
+            {% elif row.running %}
+            <span title="تعمل" style="margin-inline-start:auto;color:#16A34A;font-size:11px"><i class="fa-solid fa-circle" style="font-size:8px"></i> تعمل</span>
+            {% else %}
+            <span title="متوقّفة" style="margin-inline-start:auto;color:#9CA3AF;font-size:11px"><i class="fa-solid fa-circle" style="font-size:8px"></i> متوقّفة</span>
+            {% endif %}
+          </label>
+          {% endfor %}
+        </div>
+        <div class="help hub-hint" style="margin-top:6px">اكتشفنا قائمة الواجهات من الراوتر تلقائيًا مع حالتها. حدّد المنافذ التي تنطبق عليها الخدمة.</div>
+        {% else %}
+        <input class="hub-input" type="text" name="ports"
+               placeholder="اكتب أسماء المنافذ مفصولة بفواصل، مثل ether2,ether3"
+               data-pss-port-manual
+               value="{{ selected_ports|join(',') }}">
+        <div class="help hub-hint" style="margin-top:6px">تعذّر اكتشاف منافذ الراوتر — أدخلها يدويًا مفصولة بفواصل.</div>
+        {% endif %}
+      </div>
+
+      <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
+        {# توليد معاينة سكربت التفعيل (mode=apply الافتراضي) #}
+        <button type="submit" name="mode" value="apply" class="hub-btn hub-btn--primary" data-pss-submit>
+          <i class="fa-solid fa-rotate-right"></i>
+          معاينة سكربت التفعيل
+        </button>
+        {# توليد معاينة سكربت الإزالة/التعطيل (mode=remove) #}
+        <button type="submit" name="mode" value="remove" class="hub-btn hub-btn--ghost" data-pss-submit-remove>
+          <i class="fa-solid fa-eraser"></i>
+          معاينة سكربت الإزالة
+        </button>
+      </div>
+    </form>
+  {% endcall %}
+  {% endif %}
+
+  {% if plan %}
+  {% call hub.section("السكربت المولّد — " ~ plan.title, icon="file-code") %}
+    <div data-pss-plan-card>
+
+      {% if plan.warnings %}
+      <ul data-pss-warnings
+          style="list-style:none;padding:12px 14px;margin:0 0 12px;display:flex;flex-direction:column;gap:6px;background:#FFFBEB;border:1px solid #FDE68A;color:#92400E;border-radius:var(--hub-r-md);font-size:13px">
+        {% for w in plan.warnings %}
+        <li><i class="fa-solid fa-triangle-exclamation"></i> {{ w }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+
+      <ul class="mt-program-summary" data-pss-summary
+          style="margin:0 0 16px;padding-inline-start:24px;line-height:1.7">
+        {% for s in plan.summary %}<li>{{ s }}</li>{% endfor %}
+      </ul>
+
+      <pre class="mt-logs-output" data-pss-script
+           style="background:#0f172a;color:#e2e8f0;padding:14px;border-radius:var(--hub-r-md);overflow:auto;font-size:12.5px;line-height:1.6;margin:0 0 16px">{{ plan.script }}</pre>
+
+      {# وجهة النموذج حسب وضع الخطة: تفعيل → apply ، إزالة → remove. #}
+      {% set _is_remove = (plan_mode == 'remove') %}
+      <form method="post"
+            action="{{ url_for('radius.mt_port_services_remove' if _is_remove else 'radius.mt_port_services_apply', nas_id=nas.id, slug=plan.slug) }}"
+            data-pss-apply-form data-pss-mode="{{ plan_mode }}"
+            style="display:flex;flex-direction:column;gap:12px">
+        {% for p in plan.selected_ports %}
+        <input type="hidden" name="ports" value="{{ p }}">
+        {% endfor %}
+
+        <label class="mt-program-confirm"
+               style="display:inline-flex;align-items:center;gap:8px;background:#FEF3C7;border:1px solid #FDE68A;color:#92400E;padding:10px 14px;border-radius:var(--hub-r-md);font-size:13px;cursor:pointer">
+          <input type="checkbox" name="confirm" value="1"
+                 data-pss-confirm
+                 {% if plan.is_placeholder %}disabled{% endif %}>
+          {% if _is_remove %}أُؤكّد قراءة سكربت الإزالة وأرغب بتنفيذه على هذا الراوتر.
+          {% else %}أُؤكّد قراءة السكربت وأرغب بتطبيقه على هذا الراوتر.{% endif %}
+        </label>
+
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <button type="submit"
+                  class="hub-btn {{ 'hub-btn--ghost' if _is_remove else 'hub-btn--danger' }}"
+                  data-pss-apply
+                  {% if plan.is_placeholder %}disabled title="القالب مبدئي — أضِف السكربت الفعلي أولًا"{% endif %}>
+            <i class="fa-solid fa-{{ 'eraser' if _is_remove else 'bolt' }}"></i>
+            {% if _is_remove %}تنفيذ الإزالة على الراوتر{% else %}تطبيق على الراوتر{% endif %}
+          </button>
+          {% if plan.is_placeholder %}
+          {# الشارة المطلوبة: زر الدفع معطّل ما دام القالب placeholder #}
+          <span class="hub-badge" data-pss-await
+                style="background:#FEF3C7;color:#92400E;font-size:12px;padding:4px 10px;border-radius:999px">
+            <i class="fa-solid fa-hourglass-half"></i> بانتظار السكربت
+          </span>
+          {% endif %}
+        </div>
+      </form>
+    </div>
+  {% endcall %}
+  {% endif %}
+
+  {% if apply_result %}
+  {% call hub.section("نتيجة التنفيذ على الراوتر", icon="circle-check") %}
+    <div data-pss-apply-result>
+      <ul class="mt-program-summary" style="margin:0;padding-inline-start:24px;line-height:1.7">
+        {% for step in apply_result.steps %}
+        <li><code>{{ step.path }}</code> · {% if step.ok %}<span style="color:#166534">تم</span>{% else %}<span style="color:#991B1B">فشل — {{ step.error }}</span>{% endif %}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% endcall %}
+  {% endif %}
+
+  {% endcall %}{# /worklayout #}
+
+</section>
+
+{% endblock %}

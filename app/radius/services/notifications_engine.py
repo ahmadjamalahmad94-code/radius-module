@@ -571,7 +571,10 @@ def _send_http_channel(
         sent = comms_providers.http_send(
             template=cfg["send_url_template"],
             method=cfg.get("http_method") or comms_providers.DEFAULT_METHOD,
-            phone=phone,
+            # تطبيع الرقم بمفتاح الدولة (0599... → +970599...) قبل المزوّد
+            phone=comms_providers.normalize_msisdn(
+                phone, comms_providers.tenant_dial_code(int(tenant_id or 1))
+            ),
             message=message,
         )
         if sent.ok and mode == "admin_quota":

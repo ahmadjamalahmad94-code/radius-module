@@ -1,0 +1,307 @@
+{# أسعار العروض للمدراء — UNIFIED DESIGN SYSTEM.
+   Backend: admins (list[Admin]) / plans (list[AccessPlan]) /
+   by_admin {admin_id: {plan_id: override row}} / plan_names {plan_id: name} /
+   overrides_count / last_update.
+   عقود الحفظ: POST admin_pricing_save(admin_id) بحقول price_<plan_id>
+   (فارغ = افتراضي)، POST admin_pricing_reset(admin_id)،
+   POST admin_pricing_reset_all. #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}أسعار العروض للمدراء{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-tags"></i>{% endblock %}
+{% block page_title %}أسعار العروض للمدراء{% endblock %}
+{% block page_sub %}<span class="sub">{{ admins|length }} مدير × {{ plans|length }} عرض</span>{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
+<style>
+/* ── الصندوق العائم (نفس نمط fcw في admins_list / distributors_list) ── */
+.fcw-modal{ position:fixed; inset:0; z-index:1200; display:none; place-items:center; padding:24px; background:rgba(15,23,42,.52); }
+.fcw-modal.is-open{ display:grid; }
+.fcw-dialog{ width:min(860px,100%); max-height:min(90vh,860px); overflow:auto; border-radius:16px; background:#fff;
+  box-shadow:0 28px 80px rgba(15,23,42,.32); }
+.fcw-head{ position:sticky; top:0; z-index:2; display:flex; align-items:center; justify-content:space-between; gap:12px;
+  padding:15px 18px; border-bottom:1px solid var(--hub-border-soft,#e2e8f0); background:#fff; }
+.fcw-head h3{ margin:0; font-size:17px; font-weight:900; color:var(--hub-text,#0f172a); }
+.fcw-x{ border:0; background:transparent; color:#94a3b8; font-size:18px; cursor:pointer; }
+.fcw-body{ padding:16px 18px; display:grid; gap:14px; }
+.fcw-foot{ display:flex; justify-content:space-between; gap:8px; padding:13px 18px; border-top:1px solid var(--hub-border-soft,#e2e8f0); background:#fbfdff; }
+/* جدول العروض داخل النافذة */
+.apx-table{ width:100%; border-collapse:collapse; }
+.apx-table th{ font-size:12px; font-weight:900; color:var(--hub-text-soft,#475569); text-align:right;
+  padding:8px 10px; border-bottom:2px solid var(--hub-border-soft,#e2e8f0); background:#f8fafc; position:sticky; top:0; }
+.apx-table td{ padding:7px 10px; border-bottom:1px solid var(--hub-border-soft,#eef2f7); vertical-align:middle; }
+.apx-table tr:hover td{ background:#fafbff; }
+/* حقل السعر الخاص — 42px مثل بقية حقول النظام */
+.apx-price{ min-height:42px; height:42px; width:140px; direction:ltr; text-align:center; font-weight:800; }
+.apx-price:not(:placeholder-shown){ border-color:var(--hub-brand,#6B5AED); background:#f6f4ff; color:var(--hub-brand-ink,#4338ca); }
+.apx-base{ font-weight:800; color:var(--hub-text-soft,#475569); white-space:nowrap; }
+/* شارة عدد الأسعار الخاصة في جدول الملخص */
+.apx-count{ display:inline-flex; align-items:center; gap:5px; padding:2px 10px; border-radius:999px;
+  background:#EDE9FE; color:#5B4BD8; border:1px solid #DDD6FE; font-size:12px; font-weight:900; }
+.apx-count.is-zero{ background:#f1f5f9; color:#94a3b8; border-color:#e2e8f0; }
+/* أمثلة الأسعار الخاصة (اسم العرض ← السعر) */
+.apx-sample{ display:inline-flex; align-items:center; gap:4px; padding:2px 8px; border-radius:8px;
+  background:#f6f4ff; color:#4338ca; border:1px solid #e3ddfd; font-size:11.5px; font-weight:800; white-space:nowrap; }
+.apx-sample b{ direction:ltr; }
+</style>
+{% endblock %}
+
+{% block content %}
+{% include "radius/admin_operations_nav.html" %}
+
+{# عدد المدراء الذين لديهم سعر خاص واحد على الأقل #}
+{% set _admins_with = by_admin|length %}
+
+{# ───── Hero موحّد: العنوان + الإجراءات + شريط KPI ───── #}
+{{ hub.megahero(
+  "أسعار العروض للمدراء",
+  subtitle="سعر خاص لكل (مدير × عرض) حسب الاتفاق — يتجاوز سعر العرض الرسمي عند تفعيل/تجديد مشتركي ذلك المدير. الحقل الفارغ يعني السعر الافتراضي.",
+  icon="tags",
+  actions_html='
+    <button type="button" class="hub-btn hub-btn--danger" data-fcw-open="reset-all"'
+      + (' disabled' if not overrides_count else '') + '>
+      <i class="fa-solid fa-rotate-left"></i> استعادة الكل
+    </button>
+    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.admins_list') + '">
+      <i class="fa-solid fa-user-shield"></i> المدراء
+    </a>',
+  kpis=[
+    {'label': 'عدد المدراء',        'value': admins|length,   'icon': 'users',       'variant': 'brand'},
+    {'label': 'عروض بأسعار خاصة',  'value': overrides_count,  'icon': 'tags',        'variant': 'green'},
+    {'label': 'مدراء باتفاق خاص',  'value': _admins_with,     'icon': 'handshake',   'variant': 'blue'},
+    {'label': 'آخر تعديل',          'value': (last_update|dt_local if last_update else '—'), 'icon': 'clock', 'variant': 'amber'},
+  ]
+) }}
+
+{% if admins and plans %}
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "كيف تعمل أسعار المدراء؟",
+  intro="كل صف هو مدير — افتح «تعديل» لتحديد سعر خاص لكل عرض حسب اتفاقك معه.",
+  items=[
+    {'icon': 'tags',        'text': 'السعر الخاص يحلّ مكان سعر العرض الرسمي عند تسعير تفعيل/تجديد مشتركي هذا المدير.'},
+    {'icon': 'user-pen',    'text': 'السعر المخصّص للمشترك نفسه (custom_price) يبقى الأقوى — فهو الأخصّ.'},
+    {'icon': 'eraser',      'text': 'الحقل الفارغ في نافذة التعديل = «استخدم السعر الافتراضي» — الحفظ يمسح التجاوز.'},
+    {'icon': 'rotate-left', 'text': '«استعادة» تعيد مديرًا واحدًا لكل الأسعار الرسمية؛ «استعادة الكل» تمسح كل الاتفاقات.'},
+  ],
+  note="التغيير يسري على العمليات الجديدة فقط — المدفوعات والقيود السابقة لا تُعاد تسعيرتها."
+)) %}
+  {% call hub.section("المدراء وأسعارهم الخاصة", icon="table-list", meta=admins|length|string + " مدير", flush=True) %}
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
+      <table class="hub-table">
+        <thead>
+          <tr>
+            <th class="num" style="width:60px">#</th>
+            <th>المدير
+              <span class="hub-hint" tabindex="0" data-hint="حساب المدير كما هو في صفحة «المدراء» — التسعير يطبَّق على المشتركين التابعين له (manager_id)."><i class="fa-solid fa-info"></i></span>
+            </th>
+            <th>عدد الأسعار الخاصة
+              <span class="hub-hint" tabindex="0" data-hint="كم عرضًا له سعر متفق عليه يخالف السعر الرسمي — صفر يعني أن المدير يدفع الأسعار الافتراضية."><i class="fa-solid fa-info"></i></span>
+            </th>
+            <th data-uds-nosort>أمثلة
+              <span class="hub-hint" tabindex="0" data-hint="حتى ثلاثة من أسعاره الخاصة (اسم العرض ← السعر) — افتح «تعديل» لرؤية القائمة الكاملة."><i class="fa-solid fa-info"></i></span>
+            </th>
+            <th>آخر تحديث</th>
+            <th style="width:170px" data-uds-nosort data-uds-nocol>إجراءات</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for a in admins %}
+          {% set ov = by_admin.get(a.id, {}) %}
+          {% set _last = ov.values()|map(attribute='updated_at')|sort|last if ov else None %}
+          <tr>
+            <td class="num mono">{{ a.id }}</td>
+            <td>
+              <span style="font-weight:800;color:var(--hub-brand-ink)">{{ a.full_name or a.username }}</span>
+              {% if a.full_name %}<span class="hub-text-mute mono small" style="margin-inline-start:6px">{{ a.username }}</span>{% endif %}
+              {% if not a.enabled %}{{ hub.pill("معطَّل", variant="red") }}{% endif %}
+            </td>
+            <td>
+              <span class="apx-count{{ ' is-zero' if not ov }}">
+                <i class="fa-solid fa-tags" style="font-size:10px"></i> {{ ov|length }}
+              </span>
+            </td>
+            <td>
+              {% if ov %}
+                {% for pid, row in (ov.items()|list)[:3] %}
+                  <span class="apx-sample">{{ plan_names.get(pid, '#' ~ pid) }} ← <b>{{ '%.2f'|format(row.price) }}</b></span>
+                {% endfor %}
+                {% if ov|length > 3 %}<span class="hub-text-mute small">+{{ ov|length - 3 }}</span>{% endif %}
+              {% else %}
+                <span class="hub-text-mute">الأسعار الافتراضية</span>
+              {% endif %}
+            </td>
+            <td class="mono small">{{ _last|dt_local if _last else '—' }}</td>
+            <td>
+              <div class="hub-flex-row" style="gap:4px;flex-wrap:nowrap">
+                <button type="button" class="hub-btn hub-btn--primary hub-btn--sm" data-fcw-open="apx-{{ a.id }}">
+                  <i class="fa-solid fa-pen"></i> تعديل
+                </button>
+                {# الاستعادة الخطيرة تمرّ عبر نافذة تأكيد fcw (apxr-<id>) بدل confirm() الخام #}
+                <button type="button" class="hub-btn hub-btn--ghost hub-btn--sm" title="استعادة الافتراضي"
+                        data-fcw-open="apxr-{{ a.id }}" {% if not ov %}disabled{% endif %}>
+                  <i class="fa-solid fa-rotate-left"></i> استعادة
+                </button>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endcall %}
+{% endcall %}
+{% else %}
+{{ hub.empty(
+  "لا مدراء أو لا عروض بعد",
+  sub="أضف المدراء من صفحة «المدراء» والعروض من صفحة «العروض» أولًا، ثم عُد هنا لضبط الأسعار الخاصة.",
+  icon="tags"
+) }}
+{% endif %}
+
+{# ───────────── صناديق عائمة: تعديل أسعار كل مدير ─────────────
+   نافذة لكل مدير تعرض كل العروض: العرض / السعر الأساسي / السعر الخاص.
+   الحقل الفارغ = السعر الافتراضي (الـ placeholder يعرضه)، والحفظ يرسل
+   كل الصفوف — الفارغ يمسح التجاوز والموجب يثبّته. #}
+{% for a in admins %}
+{% set ov = by_admin.get(a.id, {}) %}
+<div class="fcw-modal" data-fcw-modal="apx-{{ a.id }}" hidden>
+  <div class="fcw-dialog" role="dialog" aria-modal="true" aria-labelledby="fcw-apx-{{ a.id }}-title">
+    {# method="post" ضروري: حاقن الـ CSRF التلقائي يستهدف فقط <form method="post">. #}
+    <form method="post" action="{{ url_for('radius.admin_pricing_save', admin_id=a.id) }}">
+      <div class="fcw-head">
+        <h3 id="fcw-apx-{{ a.id }}-title">
+          <i class="fa-solid fa-tags"></i>
+          أسعار العروض — {{ a.full_name or a.username }}
+        </h3>
+        <button type="button" class="fcw-x" data-fcw-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="fcw-body">
+        <div class="hub-field-hint" style="display:flex;align-items:center;gap:6px">
+          <i class="fa-solid fa-circle-info" style="color:var(--hub-brand,#6B5AED)"></i>
+          اترك الحقل فارغًا ليدفع المدير السعر الأساسي — اكتب رقمًا ليُعتمد سعره الخاص لهذا العرض.
+        </div>
+        <table class="apx-table">
+          <thead>
+            <tr>
+              <th>العرض</th>
+              <th>السعر الأساسي
+                <span class="hub-hint" tabindex="0" data-hint="السعر الرسمي للعرض كما في صفحة «العروض» — يُستخدم لكل من لا اتفاق خاصًّا له."><i class="fa-solid fa-info"></i></span>
+              </th>
+              <th>السعر الخاص
+                <span class="hub-hint" tabindex="0" data-hint="السعر المتفق عليه مع هذا المدير — يحلّ مكان السعر الأساسي عند تفعيل/تجديد مشتركيه بهذا العرض."><i class="fa-solid fa-info"></i></span>
+              </th>
+              <th>أنشئ بواسطة
+                <span class="hub-hint" tabindex="0" data-hint="آخر مشغّل عدّل هذا السعر الخاص ومتى — فارغ إن لم يكن للعرض سعر خاص."><i class="fa-solid fa-info"></i></span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in plans %}
+            {% set row = ov.get(p.id) %}
+            <tr>
+              <td>
+                <span style="font-weight:800">{{ p.name }}</span>
+                {% if not p.enabled %}{{ hub.pill("معطَّل", variant="red") }}{% endif %}
+              </td>
+              <td class="apx-base mono">{{ '%.2f'|format(p.price or 0) }} {{ p.currency or '' }}</td>
+              <td>
+                <input class="hub-input apx-price" type="number" step="0.01" min="0"
+                       name="price_{{ p.id }}"
+                       value="{{ '%.2f'|format(row.price) if row else '' }}"
+                       placeholder="{{ '%.2f'|format(p.price or 0) }}"
+                       inputmode="decimal" autocomplete="off">
+              </td>
+              <td class="mono small">
+                {% if row %}{{ row.updated_by or '—' }}<span class="hub-text-mute"> · {{ row.updated_at|dt_local }}</span>
+                {% else %}<span class="hub-text-mute">—</span>{% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="fcw-foot">
+        {# «استعادة الافتراضي» داخل النافذة: زر يفتح نافذة تأكيد fcw (apxr-<id>) — لا confirm() خام #}
+        <button type="button" class="hub-btn hub-btn--ghost"
+                data-fcw-open="apxr-{{ a.id }}" {% if not ov %}disabled{% endif %}>
+          <i class="fa-solid fa-rotate-left"></i> استعادة الافتراضي
+        </button>
+        <div style="display:flex;gap:8px">
+          <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>إغلاق</button>
+          <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> حفظ الأسعار</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# نافذة تأكيد استعادة مدير واحد — تستبدل confirm() الخام (الصف + داخل التعديل).
+   تحوي نموذج POST فعليًّا (method=post لحقن CSRF). #}
+<div class="fcw-modal" data-fcw-modal="apxr-{{ a.id }}" hidden>
+  <div class="fcw-dialog" style="width:min(520px,100%)" role="dialog" aria-modal="true" aria-labelledby="fcw-apxr-{{ a.id }}-title">
+    <form method="post" action="{{ url_for('radius.admin_pricing_reset', admin_id=a.id) }}">
+      <div class="fcw-head">
+        <h3 id="fcw-apxr-{{ a.id }}-title"><i class="fa-solid fa-rotate-left" style="color:var(--hub-red,#dc2626)"></i> استعادة الأسعار الافتراضية</h3>
+        <button type="button" class="fcw-x" data-fcw-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="fcw-body">
+        <p style="margin:0;font-weight:700;color:var(--hub-text,#0f172a)">
+          سيُمسح <b>{{ ov|length }}</b> سعرًا خاصًا للمدير «{{ a.full_name or a.username }}»، ويعود لكل الأسعار الرسمية للعروض.
+        </p>
+        <p class="hub-field-hint" style="margin:0">
+          لا يمكن التراجع عن هذه الخطوة — المدفوعات والقيود السابقة لا تتأثر؛ التسعير الجديد يسري على العمليات القادمة فقط.
+        </p>
+      </div>
+      <div class="fcw-foot" style="justify-content:flex-end">
+        <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>إلغاء</button>
+        <button class="hub-btn hub-btn--danger" type="submit"><i class="fa-solid fa-rotate-left"></i> تأكيد الاستعادة</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endfor %}
+
+{# ───────────── صندوق عائم: تأكيد «استعادة الكل» ───────────── #}
+<div class="fcw-modal" data-fcw-modal="reset-all" hidden>
+  <div class="fcw-dialog" style="width:min(520px,100%)" role="dialog" aria-modal="true" aria-labelledby="fcw-reset-all-title">
+    <form method="post" action="{{ url_for('radius.admin_pricing_reset_all') }}">
+      <div class="fcw-head">
+        <h3 id="fcw-reset-all-title"><i class="fa-solid fa-rotate-left" style="color:var(--hub-red,#dc2626)"></i> استعادة الكل</h3>
+        <button type="button" class="fcw-x" data-fcw-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="fcw-body">
+        <p style="margin:0;font-weight:700;color:var(--hub-text,#0f172a)">
+          سيُمسح <b>{{ overrides_count }}</b> سعرًا خاصًا لجميع المدراء، ويعود الجميع للأسعار الرسمية للعروض.
+        </p>
+        <p class="hub-field-hint" style="margin:0">
+          لا يمكن التراجع عن هذه الخطوة — المدفوعات والقيود السابقة لا تتأثر؛ التسعير الجديد يسري على العمليات القادمة فقط.
+        </p>
+      </div>
+      <div class="fcw-foot" style="justify-content:flex-end">
+        <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>إلغاء</button>
+        <button class="hub-btn hub-btn--danger" type="submit"><i class="fa-solid fa-rotate-left"></i> نعم، استعد الكل</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+(() => {
+  "use strict";
+  // فتح وإغلاق الصناديق العائمة (نفس نمط fcw في admins_list).
+  const root = document;
+  function open(key){ const m = root.querySelector(`[data-fcw-modal='${key}']`); if(m){ closeAll(); m.hidden=false; m.classList.add("is-open"); m.querySelector("input,select,textarea,button")?.focus(); } }
+  function closeAll(){ root.querySelectorAll("[data-fcw-modal]").forEach(m=>{ m.classList.remove("is-open"); m.hidden=true; }); }
+  root.querySelectorAll("[data-fcw-open]").forEach(b=> b.addEventListener("click", ()=> open(b.dataset.fcwOpen)));
+  root.querySelectorAll("[data-fcw-close]").forEach(b=> b.addEventListener("click", closeAll));
+  // النقر على الخلفية المعتمة يغلق النافذة.
+  root.querySelectorAll("[data-fcw-modal]").forEach(m=> m.addEventListener("click", e=>{ if(e.target===m) closeAll(); }));
+  root.addEventListener("keydown", e=>{ if(e.key==="Escape") closeAll(); });
+})();
+</script>
+
+<script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
+{% endblock %}

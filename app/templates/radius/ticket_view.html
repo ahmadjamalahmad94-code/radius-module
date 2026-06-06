@@ -1,148 +1,236 @@
-{# Ticket view — UDS. Backend: ticket, replies. Forms/field names UNCHANGED. #}
+{# ═══════════════════════════════════════════════════════════════════════
+   عرض التذكرة — إعادة تصميم قوية (2026-06-05): توضيح وإبراز للعناصر.
+
+   بيانات المسار (radius.tk_view — بدون أي تغيير في السلوك):
+     ticket (Ticket) / replies (قائمة TicketReply)
+
+   النماذج تحافظ على عقودها القائمة حرفيًا:
+     • تغيير الحالة: POST → radius.tk_status (حقل status بنفس القيم الخمس)
+     • إضافة ردّ:    POST → radius.tk_reply  (حقل body)
+
+   البنية الجديدة:
+     1. صدفة هيرو واحدة: الموضوع + المؤشرات + حزام تغيير حالة بارز.
+     2. تخطيط عمودين: المحادثة (الرئيسي) + لوحة تفاصيل جانبية قابلة للطي.
+     3. فقاعات محادثة كبيرة بهوية مرسل واضحة (أفاتار + اسم + اتجاه):
+        ردود الإداري تميل لليسار بلون العلامة، ورسائل المشترك لليمين.
+     4. صندوق الردّ لاصق أسفل عمود المحادثة — حاضر دائمًا بلا تمرير طويل.
+   ═══════════════════════════════════════════════════════════════════════ #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
 {% block title %}تذكرة #{{ ticket.id }} — {{ ticket.subject }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-headset"></i>{% endblock %}
 {% block page_title %}تذكرة #{{ ticket.id }}{% endblock %}
+{% block page_sub %}<span class="sub">متابعة المحادثة وتحديث حالة التذكرة.</span>{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
 <style>
-/* ── Retained: message thread bubbles (no UDS equivalent) ── */
-.tk-msg{
-  padding:12px 14px;
-  border-radius:var(--hub-r-lg);
-  margin-bottom:10px;
-  border:1px solid var(--hub-border-soft);
-}
-.tk-msg--sub{ background:var(--hub-bg-soft); }
-.tk-msg--admin{ background:var(--hub-blue-soft); border-color:#bfdbfe; }
-.tk-msg-head{
-  display:flex; align-items:center; gap:8px;
-  font-size:11.5px; color:var(--hub-text-mute);
-  margin-bottom:6px;
-}
-.tk-msg-head strong{ color:var(--hub-text); font-weight:800; font-size:12px; }
-.tk-msg-body{
-  white-space:pre-wrap;
-  font-size:13.5px; line-height:1.6;
-  color:var(--hub-text);
-}
+/* ── تخطيط عمودين: المحادثة + لوحة التفاصيل الجانبية (تظهر يسارًا في RTL) ── */
+.tkv-layout{ display:grid; grid-template-columns:minmax(0,1fr) 300px; gap:var(--hub-gap-section,16px); align-items:start; }
+@media (max-width:980px){ .tkv-layout{ grid-template-columns:1fr; } }
+
+/* ── خيط المحادثة ── */
+.tkv-thread{ display:flex; flex-direction:column; gap:14px; padding:4px 2px; }
+
+/* فقاعة رسالة: أفاتار + جسم — هوية مرسل واضحة واتجاه مميِّز */
+.tkv-msg{ display:flex; gap:10px; max-width:88%; }
+.tkv-msg--sub{ align-self:flex-start; }              /* المشترك: بداية السطر (يمين في RTL) */
+.tkv-msg--admin{ align-self:flex-end; flex-direction:row-reverse; } /* الإداري: نهاية السطر */
+
+/* الأفاتار الدائري — لون يفرّق المرسلين من بعيد */
+.tkv-ava{ flex:0 0 38px; width:38px; height:38px; border-radius:50%;
+  display:grid; place-items:center; font-size:15px; color:#fff;
+  box-shadow:0 2px 8px rgba(15,23,42,.18); }
+.tkv-msg--sub  .tkv-ava{ background:linear-gradient(135deg,#64748b,#475569); }
+.tkv-msg--admin .tkv-ava{ background:linear-gradient(135deg,var(--hub-brand,#6366f1),#4f46e5); }
+
+/* جسم الفقاعة — أكبر وأوضح من السابق، بذيل اتجاهي ناعم */
+.tkv-bubble{ min-width:0; border-radius:16px; padding:12px 15px;
+  border:1px solid var(--hub-border-soft,#e2e8f0); }
+.tkv-msg--sub  .tkv-bubble{ background:var(--hub-bg-soft,#f8fafc); border-start-start-radius:5px; }
+.tkv-msg--admin .tkv-bubble{ background:#eef2ff; border-color:#c7d2fe; border-start-end-radius:5px; }
+
+.tkv-meta{ display:flex; align-items:baseline; gap:8px; margin-bottom:6px; flex-wrap:wrap; }
+.tkv-who{ font-size:13px; font-weight:900; color:var(--hub-text,#0f172a); }
+.tkv-msg--admin .tkv-who{ color:var(--hub-brand-ink,#4338ca); }
+.tkv-when{ font-size:11px; color:var(--hub-text-mute,#94a3b8); }
+.tkv-tag{ font-size:10px; font-weight:800; padding:2px 8px; border-radius:999px; }
+.tkv-msg--sub  .tkv-tag{ background:#e2e8f0; color:#475569; }
+.tkv-msg--admin .tkv-tag{ background:var(--hub-brand,#6366f1); color:#fff; }
+
+.tkv-text{ white-space:pre-wrap; font-size:14px; line-height:1.85; color:var(--hub-text,#0f172a); overflow-wrap:anywhere; }
+
+/* الرسالة الأولى (نص التذكرة الأصلي) — إطار مميَّز يبرز أنها أصل الطلب */
+.tkv-msg--origin .tkv-bubble{ border-width:1.5px; border-color:#cbd5e1; }
+.tkv-origin-flag{ font-size:10px; font-weight:800; color:#92400e; background:#fef3c7;
+  padding:2px 8px; border-radius:999px; }
+
+/* ── صندوق الردّ اللاصق: يبقى ظاهرًا أسفل عمود المحادثة دائمًا ── */
+.tkv-composer{ position:sticky; bottom:12px; z-index:5; margin-top:16px;
+  background:#fff; border:1.5px solid var(--hub-brand-soft,#c7d2fe); border-radius:16px;
+  box-shadow:0 14px 40px rgba(79,70,229,.14); padding:12px 14px; }
+.tkv-composer .hub-textarea{ resize:vertical; min-height:74px; }
+.tkv-composer-foot{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:9px; flex-wrap:wrap; }
+.tkv-composer-hint{ font-size:11.5px; color:var(--hub-text-mute,#94a3b8); }
+
+/* ── لوحة التفاصيل الجانبية القابلة للطي ── */
+.tkv-aside{ position:sticky; top:14px; }
+.tkv-aside details{ background:#fff; border:1px solid var(--hub-border-soft,#e2e8f0);
+  border-radius:var(--hub-r-lg,14px); overflow:hidden; }
+.tkv-aside summary{ list-style:none; cursor:pointer; display:flex; align-items:center; gap:9px;
+  padding:13px 15px; font-size:13px; font-weight:900; color:var(--hub-text,#0f172a);
+  border-bottom:1px solid transparent; }
+.tkv-aside summary::-webkit-details-marker{ display:none; }
+.tkv-aside details[open] summary{ border-bottom-color:var(--hub-border-soft,#e2e8f0); }
+.tkv-aside summary .chev{ margin-inline-start:auto; font-size:10px; color:var(--hub-text-mute,#94a3b8);
+  transition:transform .15s; }
+.tkv-aside details[open] summary .chev{ transform:rotate(180deg); }
+.tkv-aside-body{ padding:6px 15px 13px; }
+@media (max-width:980px){ .tkv-aside{ position:static; } }
 </style>
 {% endblock %}
 
 {% block content %}
+{# ── خرائط التعريب الثابتة للقيم القادمة من قاعدة البيانات ── #}
 {% set category_labels = {
-  'general': 'عام',
-  'billing': 'الفواتير والدفع',
-  'connection': 'الاتصال والخدمة',
-  'hardware': 'الأجهزة والمعدات',
-  'complaint': 'شكوى',
+  'general':         'عام',
+  'billing':         'الفواتير والدفع',
+  'connection':      'الاتصال والخدمة',
+  'hardware':        'الأجهزة والمعدّات',
+  'complaint':       'شكوى',
   'service_request': 'طلب خدمة'
 } %}
-
-{# Status / priority → pill labels + KPI variants (display-only mapping) #}
 {% set _status_map = {
   'open':        ('مفتوحة',      'amber'),
-  'in_progress': ('قيد المعالجة', 'blue'),
   'pending':     ('معلَّقة',      'amber'),
+  'in_progress': ('قيد المعالجة', 'blue'),
   'resolved':    ('محلولة',      'green'),
   'closed':      ('مغلقة',       'grey')
 } %}
 {% set _status = _status_map.get(ticket.status, (ticket.status, 'grey')) %}
 {% set _prio_map = {
-  'urgent': ('عاجل',   'red'),
-  'high':   ('مرتفع',  'amber'),
-  'low':    ('منخفض',  'grey'),
-  'normal': ('عادي',   'blue')
+  'urgent': ('عاجلة',  'red'),
+  'high':   ('مرتفعة', 'amber'),
+  'normal': ('عادية',  'blue'),
+  'low':    ('منخفضة', 'grey')
 } %}
-{% set _prio = _prio_map.get(ticket.priority, ('عادي', 'blue')) %}
+{% set _prio = _prio_map.get(ticket.priority, (ticket.priority, 'grey')) %}
 
-{{ hub.megahero(
+{# ───── صدفة الهيرو الموحّدة: العنوان + المؤشرات + حزام تغيير حالة بارز ─────
+   نموذج تغيير الحالة يعيش داخل الشل كحزام سفلي (search_method=post إلى
+   radius.tk_status بنفس حقل status) — عقد قائم بلا تغيير. #}
+<section class="hub-hero-shell">
+{% call hub.megahero(
   ticket.subject,
-  subtitle="تذكرة #" + ticket.id|string + " — متابعة المحادثة وتحديث الحالة",
+  subtitle="تذكرة #" ~ ticket.id|string ~ " — راجع المحادثة بالأسفل واكتب ردّك من الصندوق اللاصق، وغيّر الحالة من الحزام أدناه مباشرة.",
   icon="headset",
   actions_html='
-    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.tk_list') + '">
-      <i class="fa-solid fa-arrow-right-long"></i> العودة للقائمة
-    </a>
-  ',
+    <a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.tk_list') ~ '">
+      <i class="fa-solid fa-arrow-right"></i> العودة للقائمة
+    </a>',
   kpis=[
-    {'label': 'الحالة',   'value': _status[0], 'icon': 'circle-dot',       'variant': _status[1]},
-    {'label': 'الأولوية', 'value': _prio[0],   'icon': 'flag',            'variant': _prio[1]},
+    {'label': 'الحالة',   'value': _status[0], 'icon': 'circle-dot', 'variant': _status[1]},
+    {'label': 'الأولوية', 'value': _prio[0],   'icon': 'flag',       'variant': _prio[1]},
     {'label': 'الفئة',    'value': category_labels.get(ticket.category, ticket.category or '—'), 'icon': 'tag', 'variant': 'brand'},
-    {'label': 'المشترك',  'value': '#' + ticket.subscriber_id|string, 'icon': 'user', 'variant': 'blue'}
-  ]
-) }}
-
-{% call hub.worklayout(aside_html=hub.helppanel(
-  "معلومات التذكرة",
-  intro="ملخص بيانات التذكرة وحالتها الحالية. غيّر الحالة من النموذج بالأسفل دون مغادرة الصفحة.",
-  icon="circle-info"
-)) %}
-
-  {% call hub.section("المحادثة", icon="comments") %}
-    {# Original ticket body #}
-    <div class="tk-msg tk-msg--sub">
-      <div class="tk-msg-head">
-        <i class="fa-solid fa-user"></i>
-        <strong>المشترك</strong>
-        <span>·</span>
-        <span class="mono">{{ ticket.created_at|dt_local if ticket.created_at else '' }}</span>
-      </div>
-      <div class="tk-msg-body">{{ ticket.body or '—' }}</div>
-    </div>
-
-    {# Replies #}
-    {% for r in replies %}
-    <div class="tk-msg {% if r.author_type == 'admin' %}tk-msg--admin{% else %}tk-msg--sub{% endif %}">
-      <div class="tk-msg-head">
-        <i class="fa-solid fa-{{ 'user-shield' if r.author_type == 'admin' else 'user' }}"></i>
-        <strong>{{ 'مدير' if r.author_type == 'admin' else 'مشترك' }}</strong>
-        <span>·</span>
-        <span class="mono">{{ r.created_at|dt_local if r.created_at else '' }}</span>
-      </div>
-      <div class="tk-msg-body">{{ r.body }}</div>
-    </div>
-    {% endfor %}
-
-    {# Reply form — field name `body` UNCHANGED #}
-    <form method="post" action="{{ url_for('radius.tk_reply', tid=ticket.id) }}" style="margin-top:14px">
-      <div class="hub-field">
-        <label class="hub-field-label" for="hub-f-body">إضافة رد</label>
-        <textarea class="hub-textarea" id="hub-f-body" name="body" rows="4" required placeholder="اكتب ردك..."></textarea>
-      </div>
-      <div style="margin-top:10px">
-        {{ hub.btn("إرسال الرد", icon="paper-plane", variant="primary", type="submit") }}
-      </div>
-    </form>
-  {% endcall %}
-
-  {% call hub.section("تفاصيل التذكرة", icon="circle-info") %}
-    {{ hub.kv([
-      {'label': 'الفئة',    'value': category_labels.get(ticket.category, ticket.category or '—')},
-      {'label': 'الأولوية', 'value': _prio[0]},
-      {'label': 'الحالة',   'value': _status[0]},
-      {'label': 'المشترك',  'value': '#' + ticket.subscriber_id|string, 'mono': True},
-      {'label': 'المسؤول',  'value': ticket.assignee_admin_id or '—', 'mono': True}
-    ] + ([{'label': 'أُغلقت', 'value': ticket.closed_at|date_local, 'mono': True}] if ticket.closed_at else [])) }}
-  {% endcall %}
-
-  {% call hub.section("تغيير الحالة", icon="arrow-right-arrow-left") %}
-    {# Status form — field name `status` + option values UNCHANGED #}
-    <form method="post" action="{{ url_for('radius.tk_status', tid=ticket.id) }}" class="hub-flex-row" style="gap:6px">
-      <select class="hub-select grow" name="status" style="flex:1">
-        <option value="open"        {% if ticket.status=='open' %}selected{% endif %}>مفتوحة</option>
-        <option value="pending"     {% if ticket.status=='pending' %}selected{% endif %}>معلَّقة</option>
-        <option value="in_progress" {% if ticket.status=='in_progress' %}selected{% endif %}>قيد المعالجة</option>
-        <option value="resolved"    {% if ticket.status=='resolved' %}selected{% endif %}>محلولة</option>
-        <option value="closed"      {% if ticket.status=='closed' %}selected{% endif %}>مغلقة</option>
-      </select>
-      {{ hub.btn("تحديث", icon="check", variant="primary", type="submit", size="sm") }}
-    </form>
-  {% endcall %}
-
+    {'label': 'المشترك',  'value': '#' ~ ticket.subscriber_id|string, 'icon': 'user', 'variant': 'blue'}
+  ],
+  search_action=url_for('radius.tk_status', tid=ticket.id),
+  search_method="post"
+) %}
+  {# عقد تغيير الحالة كما هو: حقل status بنفس القيم الخمس #}
+  <label class="hub-field-label" for="tk-status" style="margin:0;font-weight:900">
+    <i class="fa-solid fa-arrows-rotate"></i> تغيير الحالة
+  </label>
+  <select class="hub-select" id="tk-status" name="status">
+    <option value="open"        {% if ticket.status == 'open' %}selected{% endif %}>مفتوحة</option>
+    <option value="pending"     {% if ticket.status == 'pending' %}selected{% endif %}>معلَّقة</option>
+    <option value="in_progress" {% if ticket.status == 'in_progress' %}selected{% endif %}>قيد المعالجة</option>
+    <option value="resolved"    {% if ticket.status == 'resolved' %}selected{% endif %}>محلولة</option>
+    <option value="closed"      {% if ticket.status == 'closed' %}selected{% endif %}>مغلقة</option>
+  </select>
+  {{ hub.btn("تحديث الحالة", icon="check", variant="primary", type="submit", size="sm") }}
+  <span class="hub-hint" tabindex="0"
+        data-hint="المسار المعتاد: مفتوحة ← قيد المعالجة ← محلولة ← مغلقة. اختيار «مغلقة» يسجّل تاريخ الإغلاق تلقائيًا."><i class="fa-solid fa-info"></i></span>
 {% endcall %}
+</section>{# /hub-hero-shell #}
+
+{# ───── عمودان: المحادثة (الرئيسي) + لوحة التفاصيل الجانبية القابلة للطي ───── #}
+<div class="tkv-layout">
+
+  <div>{# ── العمود الرئيسي: المحادثة + صندوق الردّ اللاصق ── #}
+    {% call hub.section("المحادثة", icon="comments", meta=(replies|length + 1)|string + " رسالة") %}
+      <div class="tkv-thread">
+
+        {# الرسالة الأولى = نص التذكرة الأصلي من المشترك — مُعلَّمة كأصل الطلب #}
+        <div class="tkv-msg tkv-msg--sub tkv-msg--origin">
+          <span class="tkv-ava" aria-hidden="true"><i class="fa-solid fa-user"></i></span>
+          <div class="tkv-bubble">
+            <div class="tkv-meta">
+              <span class="tkv-who">المشترك #{{ ticket.subscriber_id }}</span>
+              <span class="tkv-tag">مشترك</span>
+              <span class="tkv-origin-flag"><i class="fa-solid fa-star"></i> نص التذكرة الأصلي</span>
+              <span class="tkv-when mono"><bdi dir="ltr">{{ ticket.created_at|dt_local if ticket.created_at else '' }}</bdi></span>
+            </div>
+            <div class="tkv-text">{{ ticket.body or '—' }}</div>
+          </div>
+        </div>
+
+        {# الردود بالترتيب الزمني — ردود الإداري بهوية ولون مميّزين #}
+        {% for r in replies %}
+        <div class="tkv-msg {% if r.author_type == 'admin' %}tkv-msg--admin{% else %}tkv-msg--sub{% endif %}">
+          <span class="tkv-ava" aria-hidden="true">
+            <i class="fa-solid fa-{{ 'user-shield' if r.author_type == 'admin' else 'user' }}"></i>
+          </span>
+          <div class="tkv-bubble">
+            <div class="tkv-meta">
+              <span class="tkv-who">{{ 'فريق الدعم' if r.author_type == 'admin' else 'المشترك' }}</span>
+              <span class="tkv-tag">{{ 'إداري' if r.author_type == 'admin' else 'مشترك' }}</span>
+              <span class="tkv-when mono"><bdi dir="ltr">{{ r.created_at|dt_local if r.created_at else '' }}</bdi></span>
+            </div>
+            <div class="tkv-text">{{ r.body }}</div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      {# ── صندوق الردّ اللاصق — عقد قائم: POST إلى radius.tk_reply بحقل body ── #}
+      <form method="post" action="{{ url_for('radius.tk_reply', tid=ticket.id) }}" class="tkv-composer">
+        <label class="hub-field-label" for="tk-reply-body" style="display:flex;align-items:center;gap:7px;margin-bottom:7px">
+          <i class="fa-solid fa-reply" style="color:var(--hub-brand-ink,#4338ca)"></i> إضافة ردّ
+        </label>
+        <textarea class="hub-textarea" id="tk-reply-body" name="body" rows="3" required
+                  placeholder="اكتب ردّك على المشترك..."></textarea>
+        <div class="tkv-composer-foot">
+          <span class="tkv-composer-hint">يظهر الردّ في سجلّ المحادثة باسم الإداري الحالي.</span>
+          {{ hub.btn("إرسال الردّ", icon="paper-plane", variant="primary", type="submit") }}
+        </div>
+      </form>
+    {% endcall %}
+  </div>
+
+  {# ── اللوحة الجانبية: تفاصيل التذكرة — قابلة للطي ومثبَّتة أثناء التمرير ── #}
+  <aside class="tkv-aside">
+    <details open>
+      <summary>
+        <i class="fa-solid fa-circle-info" style="color:var(--hub-brand-ink,#4338ca)"></i>
+        تفاصيل التذكرة
+        <i class="fa-solid fa-chevron-down chev"></i>
+      </summary>
+      <div class="tkv-aside-body">
+        {{ hub.kv([
+          {'label': 'رقم التذكرة', 'value': '#' ~ ticket.id|string, 'mono': True},
+          {'label': 'الفئة',    'value': category_labels.get(ticket.category, ticket.category or '—')},
+          {'label': 'الأولوية', 'value': _prio[0]},
+          {'label': 'الحالة',   'value': _status[0]},
+          {'label': 'المشترك',  'value': '#' ~ ticket.subscriber_id|string, 'mono': True},
+          {'label': 'المسؤول',  'value': ('#' ~ ticket.assignee_admin_id|string) if ticket.assignee_admin_id else '—', 'mono': True},
+          {'label': 'أُنشئت',   'value': ticket.created_at|dt_local if ticket.created_at else '—', 'mono': True}
+        ] + ([{'label': 'أُغلقت', 'value': ticket.closed_at|date_local, 'mono': True}] if ticket.closed_at else [])) }}
+      </div>
+    </details>
+  </aside>
+
+</div>{# /tkv-layout #}
 
 {% endblock %}

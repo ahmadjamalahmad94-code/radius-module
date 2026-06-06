@@ -14,13 +14,15 @@
 {% block page_sub %}<span class="sub">{{ items|length }} تغيير</span>{% endblock %}
 
 {% block content %}
-{% include "radius/reports_nav.html" %}
+{# متحكّم «انتقال سريع» المضغوط — يُحقن في صف عنوان الهيرو بدل الشريطين الكبيرين #}
+{% set _report_jump %}{% include "radius/reports_nav.html" %}{% endset %}
 
 {# ───── Merged hero: title + subtitle + KPI strip + integrated filters ───── #}
 {% call hub.megahero(
   "تغييرات الباقات والملفات",
   subtitle="كل تعديل أو تمديد على مشترك مع ملخص واضح بدل عرض مفاتيح تقنية.",
   icon="arrows-rotate",
+  actions_html=_report_jump,
   kpis=[
     {'label': 'إجمالي التغييرات', 'value': total, 'icon': 'arrows-rotate', 'variant': 'brand'},
   ],

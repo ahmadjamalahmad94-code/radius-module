@@ -5,7 +5,8 @@
 {% block page_icon %}<i class="fa-solid fa-circle-info"></i>{% endblock %}
 {% block page_title %}حدث #{{ event.id }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ event.category }} / {{ event.severity }} / {{ event.event_key }}</span>{% endblock %}
-{% block head_extra %}{{ super() }}<link rel="stylesheet" href="{{ url_for('static', filename='css/ops_risk_redesign.css') }}">{% endblock %}
+{% block head_extra %}{{ super() }}<link rel="stylesheet" href="{{ url_for('static', filename='css/ops_risk_redesign.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">{% endblock %}
 
 {% macro readable_value(value) -%}
   {%- if value is mapping -%}
@@ -23,18 +24,21 @@
 
 {% block content %}
 <div class="opsx-redesign">
-{{ hub.hero("حدث #" ~ event.id, subtitle=event.message or event.event_key, icon="circle-info") }}
-{% include "radius/events_nav.html" %}
-
+{# ───── الصدفة الموحّدة: هيرو + شريط KPI بفاصل ناعم بدل كتلتين ───── #}
+{# متحكّم «انتقال سريع» المضغوط (data-testid="events-nav") — يُحقن في صف عنوان الهيرو #}
+{% set _events_jump %}{% include "radius/events_nav.html" %}{% endset %}
+<section class="hub-hero-shell">
+{{ hub.hero("حدث #" ~ event.id, subtitle=event.message or event.event_key, icon="circle-info", actions_html=_events_jump) }}
 <div class="hub-kpi-grid" data-testid="event-detail-summary">
   {{ hub.kpi("الفئة", event.category, icon="folder") }}
   {{ hub.kpi("الخطورة", event.severity, icon="signal") }}
   {{ hub.kpi("الفاعل", event.actor_type ~ " #" ~ (event.actor_id or ""), icon="user") }}
   {{ hub.kpi("الهدف", event.target_type ~ " #" ~ (event.target_id or ""), icon="bullseye") }}
 </div>
+</section>{# /hub-hero-shell #}
 
 {% call hub.section("البيانات الوصفية", icon="brackets-curly") %}
-  <div class="hub-table-wrap" data-testid="event-metadata">
+  <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" data-testid="event-metadata">
     <table class="hub-table">
       <thead><tr><th>البند</th><th>القيمة</th></tr></thead>
       <tbody>
@@ -53,7 +57,7 @@
 {% endcall %}
 
 {% call hub.section("الخط الزمني للكيان", icon="timeline", flush=True) %}
-  <div class="hub-table-wrap">
+  <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10">
     <table class="hub-table" data-testid="entity-timeline-table">
       <thead><tr><th>الرقم</th><th>الخطورة</th><th>المفتاح</th><th>الرسالة</th></tr></thead>
       <tbody>
@@ -67,4 +71,5 @@
   </div>
 {% endcall %}
 </div>
+<script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
 {% endblock %}

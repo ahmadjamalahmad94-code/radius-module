@@ -46,6 +46,7 @@ def get_radius_blueprint() -> Blueprint:
     )
     _register_health(bp)
     _register_auth(bp)
+    _register_i18n(bp)
     _register_tenants(bp)
     _register_all(bp)
     _install_global_login_guard(bp)
@@ -95,6 +96,11 @@ def _register_auth(bp: Blueprint) -> None:
     register_auth_routes(bp)
 
 
+def _register_i18n(bp: Blueprint) -> None:
+    from .i18n_routes import register_i18n_routes
+    register_i18n_routes(bp)
+
+
 def _register_tenants(bp: Blueprint) -> None:
     from .tenants import register_tenants_routes
     register_tenants_routes(bp)
@@ -118,6 +124,7 @@ def _register_all(bp: Blueprint) -> None:
     from .cards_print import register_cards_print_routes
     from .cards_recharge import register_cards_recharge_routes
     from .admins import register_admins_routes
+    from .admin_pricing import register_admin_pricing_routes
     from .distributors import register_distributors_routes
     from .accounting import register_accounting_routes
     from .finance_center import register_finance_center_routes
@@ -128,6 +135,9 @@ def _register_all(bp: Blueprint) -> None:
     from .company_inventory import register_company_inventory_routes
     from .card_users_marketplace import register_card_users_marketplace_routes
     from .manager_distributor_ops import register_manager_distributor_ops_routes
+    # لوحة الشحن — تفعيل/تجديد سريع للمدراء والموزعين (قراءات فقط؛
+    # كل عمليات المال تمرّ عبر مسارات users/accounting القائمة).
+    from .recharge_panel import register_recharge_panel_routes
     from .communications import register_communications_routes
     from .whatsapp import register_whatsapp_routes
     from .events_risk import register_events_risk_routes
@@ -140,6 +150,8 @@ def _register_all(bp: Blueprint) -> None:
     from .bandwidth_schedules import register_bandwidth_schedule_routes
     from .print_templates import register_print_template_routes
     from .payment_collection import register_payment_collection_routes
+    # مختبر الدفع الإلكتروني — وضع تجريبي (محاكاة كاملة لتدفق الدفع)
+    from .payments_lab import register_payments_lab_routes
     from .setup_wizard import register_setup_wizard_routes
     from .setup_wizard_v3 import (
         register_setup_wizard_v3_routes,
@@ -162,6 +174,7 @@ def _register_all(bp: Blueprint) -> None:
     register_cards_print_routes(bp)
     register_cards_recharge_routes(bp)
     register_admins_routes(bp)
+    register_admin_pricing_routes(bp)
     register_distributors_routes(bp)
     register_accounting_routes(bp)
     register_finance_center_routes(bp)
@@ -172,6 +185,7 @@ def _register_all(bp: Blueprint) -> None:
     register_company_inventory_routes(bp)
     register_card_users_marketplace_routes(bp)
     register_manager_distributor_ops_routes(bp)
+    register_recharge_panel_routes(bp)
     register_communications_routes(bp)
     register_whatsapp_routes(bp)
     register_events_risk_routes(bp)
@@ -184,6 +198,7 @@ def _register_all(bp: Blueprint) -> None:
     register_bandwidth_schedule_routes(bp)
     register_print_template_routes(bp)
     register_payment_collection_routes(bp)
+    register_payments_lab_routes(bp)
     register_setup_wizard_routes(bp)
     register_setup_wizard_v3_routes(bp)
 
@@ -199,8 +214,14 @@ def _register_all(bp: Blueprint) -> None:
     from .mt_programming import register_mt_programming_routes
     register_mt_programming_routes(bp)
 
+    from .port_script_services import register_port_script_services_routes
+    register_port_script_services_routes(bp)
+
     from .mt_login_designer import register_mt_login_designer_routes
     register_mt_login_designer_routes(bp)
+
+    from .hotspot_errors import register_hotspot_errors_routes
+    register_hotspot_errors_routes(bp)
 
     from .jobs import register_jobs_routes
     register_jobs_routes(bp)
@@ -270,6 +291,18 @@ def _register_all(bp: Blueprint) -> None:
     from .share_groups import register_share_groups_routes
     register_share_groups_routes(bp)
 
+    # تصدير الجداول الموحّد (PDF/XLSX/CSV لأي جدول في الواجهة)
+    from .table_export import register_table_export_routes
+    register_table_export_routes(bp)
+
+    # مركز الأدلة «كيف تستخدمني» — شروحات مصوّرة داخل الموقع
+    from .docs_center import register_docs_center_routes
+    register_docs_center_routes(bp)
+
+    # أُزيل من لوحة العميل — يُعاد مركزياً عبر لوحة التراخيص (قرار معماري):
+    # كانت هنا «لوحة التراخيص — خدمة نفق تغيير IP المدفوعة» (licensing.py).
+    # حوكمة مركزية للمالك، لا تخص لوحة العميل المباعة.
+
 
 def _install_global_login_guard(bp: Blueprint) -> None:
     """يحرس كل الـ endpoints الإدارية بـ login، عدا public."""
@@ -309,11 +342,120 @@ _PERM_GUARDED: dict[str, str] = {
     "backups_gdrive_disconnect": _PERM_SUPER,
     # عكس قيد محاسبي (مدمّر) — super_admin فقط
     "finance_ledger_void": _PERM_SUPER,
+    # «الإعداد الهندسي» (setup_wizard_page) — مخفي مؤقتاً بطلب المالك:
+    # أزيل رابطه من شريط إدارة الراوترات (network_ops_nav.html)، والمسار
+    # /admin/radius/setup-wizard يبقى مسجّلًا لكنه super_admin فقط.
+    "setup_wizard_page": _PERM_SUPER,
     # حفظ إعدادات النظام — تتطلّب صلاحية settings.edit (تُفحص على الكتابة فقط)
     "settings_page": "settings.edit",
-    # التحكّم بالسرعة المؤقتة من شاشة المتصلين — صلاحية تعديل المشتركين
-    "online_temp_speed": "users.edit",
-    "online_temp_speed_cancel": "users.edit",
+
+    # ═══ أسعار العروض للمدراء — مفاتيح دقيقة بدل super_admin (توسعة 2026-06) ═══
+    "admin_pricing_page": "admin_pricing.view",
+    "admin_pricing_save": "admin_pricing.edit",
+    "admin_pricing_reset": "admin_pricing.reset",
+    "admin_pricing_reset_all": "admin_pricing.reset",
+
+    # ═══ المستفيدون — عمليات تشغيلية دقيقة (routes/users.py) ═══
+    "users_toggle": "users.change_status", "users_toggle_bulk": "users.change_status",
+    "users_extend": "users.extend", "users_extend_bulk": "users.extend",
+    "users_change_plan": "users.change_plan",
+    "users_quota_topup": "users.quota", "users_quota_topup_bulk": "users.quota",
+    "users_quota_reset_daily": "users.quota", "users_quota_reset_daily_bulk": "users.quota",
+    "users_balance_add": "users.balance_add", "users_balance_add_bulk": "users.balance_add",
+    "users_send_sms": "users.send_message", "users_send_sms_bulk": "users.send_message",
+    # السرعة المؤقتة — مفتاحها الخاص (كانت users.edit قبل التوسعة؛
+    # الترحيل 099 يمنح users.temp_speed لكل دور يملك users.edit)
+    "online_temp_speed": "users.temp_speed",
+    "online_temp_speed_cancel": "users.temp_speed",
+    "users_temp_speed_cancel": "users.temp_speed",
+    # دفعات/سلف المشتركين (routes/accounting.py)
+    "users_payment_create": "users.payments", "users_payment_create_bulk": "users.payments",
+    "users_loan_create": "users.loans", "users_loan_create_bulk": "users.loans",
+    "users_loan_settle": "users.loans",
+    # التصدير الموحّد لكل الجداول — endpoint واحد يخدم كل الشاشات،
+    # نحرسه بأقرب مفتاح (users.export) لأن أغلب الجداول بيانات مشتركين.
+    "export_table": "users.export",
+    # حذف المشتركين الجماعي — نفس مفتاح الحذف الفردي
+    "users_bulk_delete": "users.delete",
+
+    # ═══ المتصلون الآن (routes/sessions.py) ═══
+    "online_list": "online.view",
+    "online_disconnect": "online.disconnect",
+    "online_lock_mac": "online.lock_mac",
+    "online_lock_ip": "online.lock_ip",
+
+    # ═══ البطاقات — عمليات دقيقة (cards.py + recharge + print + recycle) ═══
+    "cards_batch_edit": "cards.edit_batch",
+    "cards_batches_bulk": "cards.batch_ops",
+    "cards_batch_cards_actions": "cards.batch_ops",
+    "cards_batches_import": "cards.import",
+    "cards_batches_import_preview": "cards.import",
+    # فاحص البطاقات: POST واحد (cards_checker) يتفرّع داخليًا إلى عدة
+    # عمليات (تفعيل/تعطيل/تثبيت MAC/تعديل وقت/سرعة/حذف ناعم) — نحرسه
+    # عند مستوى المسار بأقرب مفتاح cards.verify (الـ GET للعرض لا يُحجب،
+    # انظر استثناء _perm_guard أدناه).
+    "cards_checker": "cards.verify",
+    # البحث في الفاحص قراءة فقط (GET JSON) — يكفي مفتاح عرض البطاقات
+    "cards_checker_api_lookup": "cards.view",
+    # كشف كلمة سر البطاقة — مفتاح إشرافي مستقل (scope.view_passwords)
+    "cards_checker_api_reveal_password": "scope.view_passwords",
+    "cards_generate": "cards.generate",
+    "cards_generate_progress_start": "cards.generate",
+    "cards_revoke": "cards.revoke",
+    # سلة المحذوفات: الاستعادة تخص البطاقات المحذوفة
+    "recycle_bin_restore": "cards.restore",
+    # بطاقات الشحن وحزم الطباعة
+    "cards_recharge_new": "cards.recharge",
+    "cards_recharge_batch_delete": "cards.recharge",
+    "cards_print_new": "cards.print",
+    "cards_print_batch_delete": "cards.print",
+
+    # ═══ الباقات (routes/plans.py) ═══
+    "plans_create": "plans.create",
+    "plans_update": "plans.edit",
+    "plans_delete": "plans.delete",
+
+    # ═══ أجهزة الشبكة — NAS/MikroTik (devices.py + network_devices.py) ═══
+    "devices_create": "nas.create",
+    "devices_update": "nas.edit", "devices_toggle": "nas.edit", "devices_bulk_toggle": "nas.edit",
+    "devices_delete": "nas.delete",
+    "network_devices_create": "nas.create",
+    "network_devices_update": "nas.edit",
+    "network_devices_delete": "nas.delete",
+
+    # ═══ محافظ المشغّلين — شحن رصيد مدير/موزع وضبط سياساته ═══
+    "business_operator_recharge": "admins.deposit_balance",
+    "business_operator_policy": "admins.policy",
+
+    # ═══ التقارير (routes/reports.py + accounting.py) ═══
+    "reports_home": "reports.view", "reports_financial": "reports.view",
+    "reports_cards": "reports.view", "reports_distributors": "reports.view",
+    "reports_archive": "reports.view", "reports_archive_create": "reports.view",
+    "rep_sessions": "reports.view", "rep_failed_logins": "reports.view",
+    "rep_login_status": "reports.view", "rep_login_states": "reports.view",
+    "rep_mac_history": "reports.view", "rep_profile_changes": "reports.view",
+    "rep_api_messages": "reports.view", "rep_coa_failures": "reports.view",
+    "rep_manager_events": "reports.view", "rep_manager_login_status": "reports.view",
+    "rep_user_events": "reports.view", "rep_speed_failures": "reports.view",
+    "rep_used_cards": "reports.view", "rep_balance_movements": "reports.view",
+    "rep_cash_transactions": "reports.view",
+    # دفتر القيود والتقارير المالية — مفتاح مالي مستقل
+    "finance_ledger": "reports.finance",
+    "finance_reports": "reports.finance",
+    "finance_reports_snapshot": "reports.finance",
+    "finance_reports_export_csv": "reports.finance",
+    "finance_reports_export_xlsx": "reports.finance",
+    "finance_reports_export_pdf": "reports.finance",
+}
+
+# مسارات GET+POST معًا: نحرس الكتابة (POST) فقط ونترك العرض —
+# settings_page تعرض صفحة الإعدادات، و cards_checker يعرض الفاحص
+# و cards_generate يعرض نموذج التوليد و cards_batches_import يعرض
+# نموذج الاستيراد و cards_recharge_new/cards_print_new نماذج الإنشاء.
+_PERM_WRITE_ONLY = {
+    "settings_page", "cards_checker", "cards_generate",
+    "cards_batches_import", "cards_recharge_new", "cards_print_new",
+    "cards_batch_edit",
 }
 
 
@@ -331,7 +473,7 @@ def _install_permission_guard(bp: Blueprint) -> None:
         if required is None:
             return None
         # المسارات التي تخدم GET للعرض و POST للحفظ: نحرس الكتابة فقط
-        if name == "settings_page" and request.method in ("GET", "HEAD", "OPTIONS"):
+        if name in _PERM_WRITE_ONLY and request.method in ("GET", "HEAD", "OPTIONS"):
             return None
         # super_admin يمرّ دائمًا
         if session.get("is_super_admin"):

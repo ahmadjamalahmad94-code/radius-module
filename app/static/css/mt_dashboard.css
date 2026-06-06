@@ -333,57 +333,9 @@
 .mt-action-output.is-ok { border-inline-start: 3px solid #16A34A; }
 .mt-action-output.is-fail { border-inline-start: 3px solid #DC2626; }
 
-/* ───────────────────────────────────────────────────────────────
-   S1 — Cross-page quick-nav strip (Programming / Login Designer /
-   Diagnostics). Sits between the hero and the tab strip so the
-   operator can jump to the Q / R workflows without typing the URL.
-   ─────────────────────────────────────────────────────────────── */
-.mt-router-quicknav {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 10px;
-  margin: 4px 0 12px;
-}
-.mt-router-quicknav-link {
-  display: grid;
-  grid-template-columns: 36px 1fr;
-  grid-template-rows: auto auto;
-  column-gap: 12px;
-  align-items: center;
-  text-decoration: none;
-  background: #fff;
-  border: 1px solid #E2E8F0;
-  border-radius: 12px;
-  padding: 12px 14px;
-  color: #0F172A;
-  transition: border-color .12s, box-shadow .12s, background .12s;
-}
-.mt-router-quicknav-link:hover {
-  border-color: #2563EB;
-  box-shadow: 0 4px 12px rgba(37, 99, 235, .08);
-}
-.mt-router-quicknav-link i {
-  grid-row: 1 / 3;
-  grid-column: 1;
-  width: 36px; height: 36px;
-  border-radius: 8px;
-  background: #EFF6FF;
-  color: #2563EB;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
-}
-.mt-router-quicknav-label {
-  font-weight: 600;
-  font-size: 14px;
-  grid-row: 1; grid-column: 2;
-}
-.mt-router-quicknav-sub {
-  font-size: 12px;
-  color: #64748B;
-  grid-row: 2; grid-column: 2;
-}
+/* قواعد شبكة الروابط السريعة (S1) أُزيلت — الشبكة نُقلت من هيرو
+   لوحة الراوتر إلى تبويب «خدماتي» وتستخدم رقاقات np-svc-card
+   المضغوطة هناك (يونيو 2026). */
 
 /* ───────────────────────────────────────────────────────────────
    P1 — Per-router tabs.

@@ -1,9 +1,11 @@
 """Card print template API foundation."""
 from __future__ import annotations
 
-from flask import Blueprint, Response, g, request
+from flask import Blueprint, Response, g, render_template, request
 
 from ...radius.core.errors import RadiusError, RadiusNotFound, RadiusValidationError
+from ...radius.services.card_renderer import build_card_render_model, render_card_svg
+from ...radius.services.cards import get_cards_service
 from ...radius.services.license_admin_capacity import (
     CapacityEnforcementService,
     capacity_error_response,
@@ -35,15 +37,27 @@ def register(bp: Blueprint) -> None:
     bp.add_url_rule("/print-templates/presets",
                     "print_templates_presets",
                     require_api_token(print_templates_presets), methods=["GET"])
+    bp.add_url_rule("/print-templates/cleanup-fixtures",
+                    "print_templates_cleanup_fixtures",
+                    require_api_token(print_templates_cleanup_fixtures), methods=["POST"])
     bp.add_url_rule("/print-jobs",
                     "print_jobs_list",
                     require_api_token(print_jobs_list), methods=["GET"])
     bp.add_url_rule("/print-templates/<int:template_id>",
                     "print_templates_update",
                     require_api_token(print_templates_update), methods=["PATCH"])
+    bp.add_url_rule("/print-templates/<int:template_id>",
+                    "print_templates_delete",
+                    require_api_token(print_templates_delete), methods=["DELETE"])
+    bp.add_url_rule("/print-templates/<int:template_id>/set-default",
+                    "print_templates_set_default",
+                    require_api_token(print_templates_set_default), methods=["POST"])
     bp.add_url_rule("/print-templates/<int:template_id>/render",
                     "print_templates_render",
                     require_api_token(print_templates_render), methods=["POST"])
+    bp.add_url_rule("/print-templates/<int:template_id>/preview-fragment",
+                    "print_templates_preview_fragment",
+                    require_api_token(print_templates_preview_fragment), methods=["GET"])
     bp.add_url_rule("/print-templates/<int:template_id>/export",
                     "print_templates_export",
                     require_api_token(print_templates_export), methods=["POST"])
@@ -111,6 +125,47 @@ def print_templates_presets():
     return ok({"items": _svc().list_print_template_presets()})
 
 
+def print_templates_delete(template_id: int):
+    try:
+        deleted = _svc().delete_print_template(
+            tenant_id=_tid(),
+            actor=_actor(),
+            template_id=template_id,
+        )
+    except RadiusNotFound as e:
+        return fail("not_found", e.message, status=404)
+    except RadiusError as e:
+        return fail("internal_error", e.message, status=500)
+    return ok({"deleted": bool(deleted), "template_id": template_id})
+
+
+def print_templates_set_default(template_id: int):
+    try:
+        template = _svc().set_default_print_template(
+            tenant_id=_tid(),
+            actor=_actor(),
+            template_id=template_id,
+        )
+    except RadiusNotFound as e:
+        return fail("not_found", e.message, status=404)
+    except RadiusValidationError as e:
+        return fail("validation_error", e.message, status=422)
+    except RadiusError as e:
+        return fail("internal_error", e.message, status=500)
+    return ok({"template": template})
+
+
+def print_templates_cleanup_fixtures():
+    try:
+        purged = _svc().purge_test_fixture_print_templates(
+            tenant_id=_tid(),
+            actor=_actor(),
+        )
+    except RadiusError as e:
+        return fail("internal_error", e.message, status=500)
+    return ok({"purged": len(purged), "items": purged})
+
+
 def print_jobs_list():
     try:
         limit = min(int(request.args.get("limit") or 50), 200)
@@ -154,6 +209,96 @@ def print_templates_render(template_id: int):
     except RadiusNotFound as e:
         return fail("not_found", e.message, status=404)
     return ok(result)
+
+
+_PREVIEW_FRAGMENT_OVERRIDE_KEYS = (
+    "brand_name",
+    "card_title",
+    "footer_text",
+    "hotspot_address",
+    "price_text",
+    "validity_text",
+)
+
+
+def print_templates_preview_fragment(template_id: int):
+    template = None
+    try:
+        templates = _svc().list_print_templates(tenant_id=_tid(), limit=10_000)
+        for row in templates:
+            if int(row.get("id") or 0) == int(template_id):
+                template = row
+                break
+    except Exception:  # pragma: no cover - defensive parity with web route
+        template = None
+
+    batch = None
+    cards: list = []
+    error: str | None = None
+
+    batch_id_raw = request.args.get("batch_id") or ""
+    try:
+        batch_id = int(batch_id_raw) if batch_id_raw else None
+    except ValueError:
+        batch_id = None
+        error = "معرّف الحزمة غير صحيح."
+
+    if template is None:
+        error = error or "القالب غير موجود."
+    elif batch_id is not None:
+        try:
+            cards_service = get_cards_service()
+            batch_obj = cards_service._store.get_batch(batch_id)
+            if batch_obj is None:
+                error = "الحزمة غير موجودة."
+            else:
+                batch = {
+                    "id": getattr(batch_obj, "id", batch_id),
+                    "batch_name": getattr(batch_obj, "batch_name", "") or "",
+                    "count_to_make": getattr(batch_obj, "count_to_make", 0) or 0,
+                    "created_count": getattr(batch_obj, "created_count", 0) or 0,
+                }
+                cards = cards_service.list_cards(batch_id=batch_id, limit=4, offset=0)
+        except RadiusError as exc:
+            error = exc.message
+        except Exception as exc:  # pragma: no cover - defensive
+            error = str(exc) or "تعذّر جلب بطاقات الحزمة."
+
+    overrides = {
+        key: (request.args.get(key) or "").strip()
+        for key in _PREVIEW_FRAGMENT_OVERRIDE_KEYS
+    }
+    overrides = {key: value for key, value in overrides.items() if value}
+
+    card_svgs: list[dict] = []
+    if template is not None and error is None:
+        if cards:
+            for card in cards:
+                model = build_card_render_model(template, card, overrides=overrides)
+                card_svgs.append({
+                    "card": card,
+                    "svg": render_card_svg(model, mask_password=True),
+                })
+        else:
+            model = build_card_render_model(template, None, overrides=overrides)
+            card_svgs.append({
+                "card": None,
+                "svg": render_card_svg(model, mask_password=True),
+            })
+
+    html = render_template(
+        "radius/_print_template_preview_fragment.html",
+        template=template,
+        batch=batch,
+        cards=cards,
+        card_svgs=card_svgs,
+        overrides=overrides,
+        error=error,
+    )
+    response = Response(html, mimetype="text/html")
+    response.headers["Cache-Control"] = "no-store, max-age=0"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    return response
 
 
 def print_templates_export(template_id: int):

@@ -23,13 +23,17 @@ def app(monkeypatch, tmp_path):
     return create_app()
 
 
-def _auth_session(client):
+def _auth_session(client, super_admin: bool = True):
     with client.session_transaction() as sess:
         sess["admin_id"] = 1
         sess["admin_user"] = "sidebar_admin"
         sess["admin_name"] = "Sidebar Admin"
         sess["tenant_id"] = 1
         sess["_csrf_token"] = "sidebar-csrf"
+        # «الإعداد الهندسي» صار super_admin فقط (مخفي مؤقتاً بطلب المالك) —
+        # الجلسة الافتراضية في هذه الاختبارات super حتى تبقى المسارات القديمة
+        # قابلة للزيارة المباشرة (bookmarks).
+        sess["is_super_admin"] = super_admin
 
 
 def _sidebar(html: str) -> str:
@@ -85,6 +89,23 @@ def test_legacy_wizard_pages_still_render_for_bookmarks(app):
             response = client.get(route, follow_redirects=True)
             assert response.status_code == 200, route
             assert "text/html" in response.content_type
+
+
+def test_engineering_wizard_gated_super_only(app):
+    # «الإعداد الهندسي» مخفي مؤقتاً بطلب المالك: المسار يبقى مسجَّلًا
+    # (super_admin يفتحه مباشرة)، وغير الـ super يُمنع 403.
+    with app.test_client() as client:
+        _auth_session(client, super_admin=False)
+        response = client.get("/admin/radius/setup-wizard")
+        assert response.status_code == 403
+
+
+def test_engineering_wizard_link_hidden_from_network_nav(app):
+    # رابط «الإعداد الهندسي» أزيل من شريط إدارة الراوترات (network_ops_nav).
+    with app.test_client() as client:
+        _auth_session(client)
+        html = client.get("/admin/radius/mt/operations").get_data(as_text=True)
+    assert "الإعداد الهندسي" not in html
 
 
 def test_consolidated_paths_active_state_is_exact(app):

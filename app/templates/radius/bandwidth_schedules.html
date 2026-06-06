@@ -11,11 +11,16 @@
 
 {% block head_extra %}
 {{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
 <style>
   .bs-form{ display:grid; gap:11px; }
   .bs-row{ display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
   @media (max-width: 540px){ .bs-row{ grid-template-columns: 1fr; } }
   .bs-form label.fld{ display:flex; flex-direction:column; gap:5px; font-size:12.5px; font-weight:700; color:var(--hub-text-soft); }
+  /* إصلاح: قاعدة display:flex أعلاه كانت تتغلب على سمة hidden التي يضعها
+     سكربت «نطاق القاعدة»، فكانت حقول الباقة والمشترك ودفعة الكروت تظهر
+     كلها معًا. إخفاء عرضي فقط — الأسماء والقيم تبقى في النموذج كما هي. */
+  .bs-form label.fld[hidden]{ display:none !important; }
   .bs-help{ font-size:11px; color:var(--hub-text-mute); line-height:1.7; margin-top:2px; }
   .bs-check{
     display:flex; align-items:center; gap:8px;
@@ -23,6 +28,19 @@
     border:1px solid var(--hub-border-soft); border-radius:var(--hub-r-md);
     font-size:12.5px; font-weight:700;
   }
+  /* ── نافذة منبثقة عائمة لإضافة جدول سرعة (نفس نمط fcw-modal في المركز المالي) ── */
+  .bsm-modal{ position:fixed; inset:0; z-index:1200; display:none; place-items:center; padding:24px; background:rgba(15,23,42,.52); }
+  .bsm-modal.is-open{ display:grid; }
+  .bsm-dialog{ width:min(620px,100%); max-height:min(88vh,800px); overflow:auto; border-radius:16px; background:#fff;
+    box-shadow:0 28px 80px rgba(15,23,42,.32); }
+  .bsm-head{ position:sticky; top:0; z-index:2; display:flex; align-items:center; justify-content:space-between; gap:12px;
+    padding:15px 18px; border-bottom:1px solid var(--hub-border-soft,#e2e8f0); background:#fff; }
+  .bsm-head h3{ margin:0; font-size:17px; font-weight:900; color:var(--hub-text,#0f172a); }
+  .bsm-x{ border:0; background:transparent; color:#94a3b8; font-size:18px; cursor:pointer; }
+  .bsm-body{ padding:16px 18px; }
+  .bsm-foot{ display:flex; justify-content:flex-end; gap:8px; padding:13px 18px; border-top:1px solid var(--hub-border-soft,#e2e8f0); background:#fbfdff; }
+  /* شريط الإجراءات فوق قائمة الجداول (يحتضن زر فتح النافذة) */
+  .bsm-actions{ display:flex; justify-content:flex-end; margin-bottom:12px; }
 </style>
 {% endblock %}
 
@@ -60,8 +78,23 @@
 
 {% call hub.worklayout(aside_html=help_aside) %}
 
-  {% call hub.section("إضافة جدول سرعة", icon="plus") %}
-    <form class="bs-form" method="post" action="{{ url_for('radius.bandwidth_schedules_create') }}">
+  {# زر فتح النافذة المنبثقة لإضافة جدول سرعة #}
+  <div class="bsm-actions">
+    <button type="button" class="hub-btn hub-btn--primary" data-bsm-open="schedule-create">
+      <i class="fa-solid fa-plus"></i> إضافة جدول سرعة
+    </button>
+  </div>
+
+  {# ───────────── نافذة عائمة: إضافة جدول سرعة (نمط fcw-modal) ───────────── #}
+  <div class="bsm-modal" data-bsm-modal="schedule-create" hidden>
+   <div class="bsm-dialog" role="dialog" aria-modal="true" aria-labelledby="bsm-schedule-create-title">
+    {# method="post" ضروري: حاقن الـ CSRF التلقائي يستهدف فقط <form method="post">. #}
+    <form method="post" action="{{ url_for('radius.bandwidth_schedules_create') }}">
+      <div class="bsm-head">
+        <h3 id="bsm-schedule-create-title"><i class="fa-solid fa-plus"></i> إضافة جدول سرعة</h3>
+        <button type="button" class="bsm-x" data-bsm-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="bsm-body bs-form">
       <label class="fld">
         اسم الجدول
         <input class="hub-input" name="name" required placeholder="مثال: سرعة الليل">
@@ -153,9 +186,9 @@
       <label class="fld">
         طريقة الرجوع بعد الوقت
         <select class="hub-select" name="restore_mode">
-          <option value="profile_default">رجوع لإعداد الباقة الأساسي</option>
-          <option value="previous_value">رجوع للقيمة السابقة</option>
-          <option value="manual">يدويًا عند الحاجة</option>
+          <option value="profile_default">الرجوع للسرعة الأساسية</option>
+          <option value="keep_current">إبقاء آخر سرعة</option>
+          <option value="disconnect">فصل الجلسة</option>
         </select>
       </label>
 
@@ -167,12 +200,17 @@
       <div class="bs-check">
         {{ toggle_switch(name="enabled", checked=True, value="1", id="bs-en") }}
       </div>
+      </div>{# /bsm-body #}
 
-      <button class="hub-btn hub-btn--primary" type="submit">
-        <i class="fa-solid fa-floppy-disk"></i> حفظ الجدول
-      </button>
+      <div class="bsm-foot">
+        <button class="hub-btn hub-btn--ghost" type="button" data-bsm-close>إغلاق</button>
+        <button class="hub-btn hub-btn--primary" type="submit">
+          <i class="fa-solid fa-floppy-disk"></i> حفظ الجدول
+        </button>
+      </div>
     </form>
-  {% endcall %}
+   </div>
+  </div>{# /bsm-modal #}
 
   {% if schedules %}
     {% call hub.section("الجداول الحالية", icon="table-list",
@@ -215,9 +253,9 @@
                 <i class="fa-solid fa-arrow-down" style="color:var(--hub-blue);font-size:10px"></i>
                 {{ item.get('speed_down_kbps') or 0 }} /
                 <i class="fa-solid fa-arrow-up" style="color:var(--hub-green);font-size:10px"></i>
-                {{ item.get('speed_up_kbps') or 0 }}
+                {{ item.get('speed_up_kbps') or 0 }} Kbps
                 {% if item.get('cir_down_kbps') or item.get('cir_up_kbps') %}
-                  <div class="hub-text-mute small">CIR {{ item.get('cir_down_kbps') or 0 }} / {{ item.get('cir_up_kbps') or 0 }}</div>
+                  <div class="hub-text-mute small">CIR {{ item.get('cir_down_kbps') or 0 }} / {{ item.get('cir_up_kbps') or 0 }} Kbps</div>
                 {% endif %}
               </td>
               <td>
@@ -246,7 +284,7 @@
   {% else %}
     {{ hub.empty(
       "لا توجد جداول سرعة بعد",
-      sub="أضف أول جدول من النموذج بالأعلى لبدء جدولة قواعد السرعة الزمنية.",
+      sub="اضغط زر «إضافة جدول سرعة» بالأعلى لفتح النافذة وبدء جدولة قواعد السرعة الزمنية.",
       icon="clock"
     ) }}
   {% endif %}
@@ -276,6 +314,21 @@
     type.addEventListener('change', syncTargetFields);
     syncTargetFields();
   }
+
+  // ── فتح/إغلاق النافذة العائمة لإضافة جدول سرعة (نفس نمط fcw-modal) ──
+  function open(key){
+    const m = document.querySelector(`[data-bsm-modal='${key}']`);
+    if(m){ m.hidden = false; m.classList.add('is-open'); m.querySelector('input,select,textarea,button')?.focus(); }
+  }
+  function closeAll(){
+    document.querySelectorAll('[data-bsm-modal]').forEach((m) => { m.classList.remove('is-open'); m.hidden = true; });
+  }
+  document.querySelectorAll('[data-bsm-open]').forEach((b) => b.addEventListener('click', () => open(b.dataset.bsmOpen)));
+  document.querySelectorAll('[data-bsm-close]').forEach((b) => b.addEventListener('click', closeAll));
+  // النقر على الخلفية المعتمة يغلق النافذة.
+  document.querySelectorAll('[data-bsm-modal]').forEach((m) => m.addEventListener('click', (e) => { if(e.target === m) closeAll(); }));
+  document.addEventListener('keydown', (e) => { if(e.key === 'Escape') closeAll(); });
 })();
 </script>
+<script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
 {% endblock %}

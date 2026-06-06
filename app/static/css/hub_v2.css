@@ -1,3 +1,8 @@
+/* استيراد الخط اللاتيني Inter للإنجليزية (i18n) — يجب أن يبقى @import
+   في أعلى الملف قبل أي قاعدة CSS أخرى وإلا تجاهله المتصفح. الخط العربي
+   Cairo/Tajawal يبقى الافتراضي ولا يتأثر بهذا الاستيراد. */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
 /* ╔════════════════════════════════════════════════════════════════════╗
    ║  HOB v2 — UNIFIED DESIGN SYSTEM                                      ║
    ║                                                                      ║
@@ -104,6 +109,14 @@
   --hub-ease:         cubic-bezier(.4,0,.2,1);
 }
 
+/* الخط اللاتيني للإنجليزية — Cairo يبقى للعربية افتراضيًا (i18n).
+   نتجاوز متغير --hub-font فقط عندما يكون اتجاه الصفحة LTR، فيرث الـ body
+   وكل ما يستخدم var(--hub-font) خط Inter دون أي تغيير في الوضع RTL.
+   لا نمسّ --hub-mono ولا خطوط البطاقات (Almarai). */
+html[dir="ltr"]{
+  --hub-font: "Inter", "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
 
 /* ═════════════════════════════════════════════════════════════════════
    2. PAGE HERO  — sits at the top of any content page
@@ -113,7 +126,8 @@
   background: linear-gradient(135deg, #fff 0%, var(--hub-brand-soft) 100%);
   border: 1px solid var(--hub-border-strong);
   border-radius: var(--hub-r-card);
-  padding: 18px 22px;
+  /* تنحيف موحّد للهيرو البسيط — كتلة رأس أخف في كل الصفحات */
+  padding: 15px 20px;
   margin-bottom: var(--hub-gap-section);
   box-shadow: var(--hub-sh-card);
   overflow: hidden;
@@ -237,6 +251,10 @@
   color: var(--hub-text);
   line-height: 1.1;
   font-family: var(--hub-font);
+  /* القيم الرقمية مع وحداتها (0 MB / 9.8 Mbps) كانت تنعكس في سياق RTL —
+     plaintext يخلي اتجاه كل قيمة حسب محتواها فتظهر "9.8 Mbps" صح،
+     والقيم العربية تبقى كما هي. */
+  unicode-bidi: plaintext;
 }
 .hub-kpi-sub{ font-size: 11px; color: var(--hub-text-mute); margin-top: 2px; }
 
@@ -398,6 +416,122 @@
 .hub-input::placeholder,
 .hub-textarea::placeholder{ color: var(--hub-text-faint); }
 .hub-textarea{ resize: vertical; min-height: 80px; }
+
+/* ── قوائم منسدلة حديثة: سهم بنفسجي مخصص + حواف أنعم + hover واضح ── */
+.hub-select,
+select.hub-input{
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  padding-inline-end: 34px;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5' fill='none' stroke='%236B5AED' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: left 12px center;
+  background-size: 12px 8px;
+  transition: border-color var(--hub-anim-fast, .15s) ease,
+              box-shadow var(--hub-anim-fast, .15s) ease,
+              background-color var(--hub-anim-fast, .15s) ease;
+}
+[dir="ltr"] .hub-select,
+[dir="ltr"] select.hub-input{ background-position: right 12px center; }
+.hub-select:hover,
+select.hub-input:hover{
+  border-color: var(--hub-brand);
+  background-color: #faf8ff;
+}
+.hub-select option{
+  font-family: inherit;
+  padding: 8px 10px;
+}
+
+/* ═════════════════════════════════════════════════════════════════════
+   HUB SELECT (hub_select.js) — القائمة المنسدلة المخصّصة الحديثة
+   ═════════════════════════════════════════════════════════════════════ */
+.hbsel{ position: relative; display: inline-block; min-width: 0; }
+.hbsel .hbsel-native{
+  position: absolute !important;
+  width: 1px; height: 1px;
+  opacity: 0; pointer-events: none;
+  margin: 0; padding: 0; border: 0;
+}
+.hbsel-trigger{
+  display: inline-flex; align-items: center; justify-content: space-between;
+  gap: 10px; width: 100%;
+  font-family: inherit; font-size: 13px; font-weight: 700;
+  color: #5B4BD8; /* الستايل المعتمد: نص وسهم بنفسجي */
+  background: #F4F1FE; /* غسلة بنفسجية خفيفة ملفتة بدل الأبيض */
+  border: 1px solid #E5E0F5;
+  border-radius: var(--hub-r-md);
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
+}
+.hbsel-trigger:hover{ border-color: var(--hub-brand); background: #EDE9FE; }
+.hbsel.is-open .hbsel-trigger,
+.hbsel-trigger:focus-visible{
+  outline: none;
+  border-color: var(--hub-brand);
+  box-shadow: 0 0 0 3px rgba(107,90,237,.15);
+}
+.hbsel-label{ overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hbsel-label.is-placeholder{ color: var(--hub-text-mute); }
+.hbsel-caret{
+  font-size: 10px; color: #5B4BD8; /* سهم بنفس لون نص الزر المعتمد */
+  transition: transform .18s ease;
+  flex-shrink: 0;
+}
+.hbsel.is-open .hbsel-caret{ transform: rotate(180deg); }
+.hbsel-panel{
+  position: absolute; top: calc(100% + 6px); inset-inline-start: 0;
+  width: max-content; min-width: 100%; max-width: 320px;
+  background: #fff;
+  border: 1px solid var(--hub-border);
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(15,23,42,.10), 0 2px 8px rgba(15,23,42,.06);
+  padding: 6px;
+  z-index: 90;
+  animation: hbsel-pop .16s ease;
+}
+@keyframes hbsel-pop{
+  from{ opacity: 0; transform: translateY(-4px) scale(.98); }
+  to{ opacity: 1; transform: none; }
+}
+.hbsel-search{
+  width: 100%; box-sizing: border-box;
+  font-family: inherit; font-size: 12.5px;
+  border: 1px solid var(--hub-border);
+  border-radius: 9px;
+  padding: 7px 10px; margin-bottom: 6px;
+  background: #fafafa;
+}
+.hbsel-search:focus{ outline: none; border-color: var(--hub-brand); background: #fff; }
+.hbsel-list{ max-height: 260px; overflow: auto; display: flex; flex-direction: column; gap: 2px; }
+.hbsel-item{
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  width: 100%; text-align: start;
+  font-family: inherit; font-size: 13px; font-weight: 600;
+  color: var(--hub-text-soft);
+  background: transparent; border: 0; border-radius: 9px;
+  padding: 8px 10px; cursor: pointer;
+  transition: background .12s ease, color .12s ease;
+}
+.hbsel-item:hover,
+.hbsel-item:focus-visible{
+  outline: none;
+  background: #F4F1FE;
+  color: var(--hub-brand-ink, #2E1F8C);
+}
+.hbsel-item .hbsel-check{ font-size: 11px; color: var(--hub-brand); opacity: 0; }
+.hbsel-item.is-selected{
+  background: #EDE9FE; color: var(--hub-brand-ink, #2E1F8C); font-weight: 800;
+}
+.hbsel-item.is-selected .hbsel-check{ opacity: 1; }
+.hbsel-empty{
+  padding: 14px 10px; text-align: center;
+  font-size: 12.5px; color: var(--hub-text-mute);
+}
+/* داخل الفلتربار: الزر بنفس قياس الحقول الصغيرة (مع نفس الغسلة البنفسجية) */
+.hub-filterbar .hbsel-trigger{ font-size: 12.5px; padding: 6px 11px; }
 
 .hub-form-sections{ display: flex; flex-direction: column; gap: var(--hub-gap-section); }
 .hub-fieldset{
@@ -593,10 +727,267 @@
 /* ═════════════════════════════════════════════════════════════════════
    15. UTILITIES  — minimal helpers
    ═════════════════════════════════════════════════════════════════════ */
-.hub-grid-2{ display:grid; grid-template-columns: 2fr 1fr; gap: var(--hub-gap-section); }
-.hub-grid-1-1{ display:grid; grid-template-columns: 1fr 1fr; gap: var(--hub-gap-section); }
+.hub-grid-2{ display:grid; grid-template-columns: 2fr 1fr; gap: var(--hub-gap-section); margin-bottom: var(--hub-gap-section); }
+.hub-grid-1-1{ display:grid; grid-template-columns: 1fr 1fr; gap: var(--hub-gap-section); margin-bottom: var(--hub-gap-section); }
 @media (max-width: 900px){
   .hub-grid-2, .hub-grid-1-1{ grid-template-columns: 1fr; }
+}
+/* توافق بصري: الأقسام المتجاورة داخل الشبكات تتمدد لنفس الارتفاع —
+   الهوامش تلغى بالكامل (الـ gap يتكفل بالمسافة) والجسم يملأ الفراغ.
+   margin-top:0 يبطل قاعدة `.hub-section + .hub-section` العامة التي كانت
+   تدفع القسم الثاني للأسفل داخل الشبكة (واحد طالع وواحد نازل). */
+.hub-grid-2 > .hub-section,
+.hub-grid-1-1 > .hub-section,
+.hub-grid > .hub-section,
+.hub-grid--2 > .hub-section{
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.hub-grid-2 > .hub-section > .hub-section-body,
+.hub-grid-1-1 > .hub-section > .hub-section-body,
+.hub-grid > .hub-section > .hub-section-body,
+.hub-grid--2 > .hub-section > .hub-section-body{
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+}
+.hub-grid-2 > .hub-section > .hub-section-body > .hub-empty,
+.hub-grid-1-1 > .hub-section > .hub-section-body > .hub-empty,
+.hub-grid > .hub-section > .hub-section-body > .hub-empty,
+.hub-grid--2 > .hub-section > .hub-section-body > .hub-empty{
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+/* الجداول داخل أقسام الشبكات تتمدد لتملأ القسم فيتساوى أسفل الجدولين */
+.hub-grid > .hub-section > .hub-section-body > .hub-table-wrap,
+.hub-grid--2 > .hub-section > .hub-section-body > .hub-table-wrap,
+.hub-grid-2 > .hub-section > .hub-section-body > .hub-table-wrap,
+.hub-grid-1-1 > .hub-section > .hub-section-body > .hub-table-wrap{
+  flex: 1 1 auto;
+}
+
+/* ═════════════════════════════════════════════════════════════════════
+   15.5 HUB HINT — أيقونة شرح أنيقة موحّدة لكل الموقع.
+   الاستخدام: <span class="hub-hint" tabindex="0" data-hint="نص الشرح">
+                <i class="fa-solid fa-info"></i></span>
+   عند المرور أو التركيز تظهر بطاقة شرح فاخرة بدل tooltip المتصفح الخام.
+   ═════════════════════════════════════════════════════════════════════ */
+.hub-hint{
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: #EDE9FE;
+  color: #5B4BD8;
+  font-size: 10px;
+  cursor: help;
+  outline: none;
+  transition: background .15s ease, transform .15s ease;
+}
+.hub-hint:hover{ background: #DDD6FE; transform: scale(1.08); }
+/* بطاقة الشرح صارت عنصرًا عائمًا حقيقيًا (portal على body عبر hub_hint.js)
+   بدل pseudo-element — فلا يقصّها أي overflow أو حافة صفحة بعد اليوم.
+   نعطّل النسخة القديمة نهائيًا: */
+.hub-hint::after, .hub-hint::before{ content: none !important; }
+/* البطاقة العائمة التي يبنيها hub_hint.js */
+.hub-hint-pop{
+  position: fixed;
+  width: max-content;
+  max-width: min(300px, calc(100vw - 24px));
+  background: #fff;
+  color: var(--hub-text-soft, #475569);
+  text-align: start;
+  font-family: var(--hub-font, "Cairo", sans-serif);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.8;
+  padding: 10px 12px;
+  border: 1px solid var(--hub-border, #E8E7F0);
+  border-inline-start: 3px solid var(--hub-brand, #6B5AED);
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(15,23,42,.14), 0 2px 8px rgba(15,23,42,.06);
+  z-index: 100000;
+  pointer-events: none;
+  white-space: normal;
+  animation: hbsel-pop .16s ease;
+}
+
+/* ═════════════════════════════════════════════════════════════════════
+   16. HERO SHELL — يدمج الهيرو + شريط الـ KPI + التبويبات في كتلة واحدة
+   أنيقة بنفس نمط users-hero-shell (فواصل داخلية ناعمة بدل كروت متفرقة).
+   ═════════════════════════════════════════════════════════════════════ */
+.hub-hero-shell{
+  display: flex;
+  flex-direction: column;
+  margin-bottom: var(--hub-gap-section);
+  border-radius: var(--hub-r-xl);
+  border: 1px solid var(--hub-border);
+  background:
+    radial-gradient(640px 320px at 100% 0%, rgba(107,90,237,.08) 0%, transparent 60%),
+    linear-gradient(180deg, #faf8ff 0%, #ffffff 100%);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.85) inset,
+    0 4px 14px rgba(15,23,42,.05);
+  /* visible حتى لا تُقص أي قوائم منسدلة داخل الهيدر */
+  overflow: visible;
+}
+/* أي كتلة داخل الشل تفقد كرومها الخاص (حد/ظل/زوايا/هوامش) */
+.hub-hero-shell > *{
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+.hub-hero-shell > .hub-hero,
+.hub-hero-shell > .p360-hero{
+  border: 0; border-radius: 0;
+  background: transparent; box-shadow: none;
+}
+/* الزوايا العلوية للعنصر الأول تتبع زوايا الشل (لأجل ::before الملوّن) */
+.hub-hero-shell > :first-child{
+  border-start-start-radius: var(--hub-r-xl);
+  border-start-end-radius: var(--hub-r-xl);
+}
+.hub-hero-shell > :last-child{
+  border-end-start-radius: var(--hub-r-xl);
+  border-end-end-radius: var(--hub-r-xl);
+}
+/* شريط KPI داخل الشل: فاصل علوي ناعم + بطاقات بلا ظل خارجي،
+   وكل البطاقات في صف واحد مهما كان عددها. */
+.hub-hero-shell > .hub-kpi-grid,
+.hub-hero-shell > .ff-kpis{
+  padding: 12px 18px;
+  border-top: 1px solid var(--hub-border-soft);
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+}
+.hub-hero-shell > .hub-kpi-grid .hub-kpi,
+.hub-hero-shell > .ff-kpis .hub-kpi{
+  min-width: 0;
+  padding: 12px 14px;
+}
+@media (max-width: 900px){
+  .hub-hero-shell > .hub-kpi-grid,
+  .hub-hero-shell > .ff-kpis{
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.hub-hero-shell > .hub-kpi-grid .hub-kpi,
+.hub-hero-shell > .ff-kpis .hub-kpi{
+  box-shadow: none;
+  background: rgba(255,255,255,.72);
+}
+/* الميجاهيرو (uds-hero) داخل الشل: يفقد كرومه الخاص ويعتمد على الشل،
+   مع overflow ظاهر حتى لا تُقص القوائم المنسدلة وعناصر الفلترة. */
+.hub-hero-shell > .uds-hero{
+  display: flex;
+  flex-direction: column;
+  /* تنحيف موحّد: إيقاع 13px وحشوة أخف — رأس أرشق في كل الصفحات */
+  gap: 13px;
+  padding: 16px 20px;
+  border: 0; border-radius: 0;
+  background: transparent; box-shadow: none;
+  overflow: visible;
+}
+.hub-hero-shell > .uds-hero .uds-hero-top{
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; flex-wrap: wrap;
+}
+.hub-hero-shell > .uds-hero .uds-hero-id{
+  display: flex; align-items: center; gap: 14px; min-width: 0;
+}
+.hub-hero-shell > .uds-hero .uds-hero-icon{
+  width: 48px; height: 48px; flex: 0 0 auto;
+  border-radius: var(--hub-r-xl);
+  display: grid; place-items: center;
+  font-size: 20px; color: #fff;
+  background: linear-gradient(135deg, var(--hub-brand), var(--hub-brand-deep));
+  box-shadow: 0 8px 18px rgba(107,90,237,.32);
+}
+.hub-hero-shell > .uds-hero .uds-hero-title{
+  margin: 0; font-size: 21px; font-weight: 900;
+  color: var(--hub-text); line-height: 1.15;
+}
+.hub-hero-shell > .uds-hero .uds-hero-sub{
+  margin-top: 4px; font-size: 13px; color: var(--hub-text-soft);
+  line-height: 1.6; max-width: 74ch;
+}
+.hub-hero-shell > .uds-hero .uds-hero-actions{
+  display: inline-flex; gap: var(--hub-gap-sm);
+  align-items: center; flex-wrap: wrap;
+}
+/* شريط KPI داخل الميجاهيرو: فاصل علوي ناعم + صف واحد إجباري مهما كان
+   العدد (grid-auto-flow:column) مع min-width:0 لمنع تمدد البطاقات. */
+.hub-hero-shell > .uds-hero .uds-hero-kpis{
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 10px;
+  padding-top: 13px;
+  border-top: 1px solid var(--hub-border-soft);
+}
+.hub-hero-shell > .uds-hero .uds-hero-kpis .hub-kpi{
+  min-width: 0;
+  padding: 12px 14px;
+  box-shadow: none;
+  background: rgba(255,255,255,.72);
+}
+.hub-hero-shell > .uds-hero .uds-hero-kpis .hub-kpi:hover{ transform: none; }
+@media (max-width: 900px){
+  /* على الشاشات الضيقة نعود لصفّين (عمودان) بدل صف واحد مزدحم */
+  .hub-hero-shell > .uds-hero .uds-hero-kpis{
+    grid-auto-flow: row;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+/* صف البحث/الفلترة المدمج داخل الميجاهيرو */
+.hub-hero-shell > .uds-hero .uds-hero-search{
+  display: flex; align-items: center; flex-wrap: wrap;
+  gap: var(--hub-gap-sm);
+  padding-top: 13px;
+  border-top: 1px solid var(--hub-border-soft);
+}
+.hub-hero-shell > .uds-hero .uds-hero-search .uds-search-ic{
+  display: inline-grid; place-items: center; flex: 0 0 auto;
+  /* 42px — نفس الارتفاع الموحّد لعناصر حزام الفلترة (القسم 18 أدناه) */
+  width: 42px; height: 42px;
+  border-radius: var(--hub-r-md);
+  color: var(--hub-brand-ink); background: var(--hub-brand-soft);
+}
+.hub-hero-shell > .uds-hero .uds-hero-search .hub-input,
+.hub-hero-shell > .uds-hero .uds-hero-search .hub-select{
+  background: var(--hub-bg-card);
+  font-size: 12.5px; padding: 7px 11px;
+  width: auto; flex: 0 1 auto;
+}
+/* شريط فلترة (hub-filterbar) داخل الشل: يفقد كرومه المستقل ويصبح
+   حزامًا مدمجًا بفاصل علوي ناعم — نفس منطق uds-hero-search.
+   يسمح بتحويل الصفحات القديمة (هيرو + KPI + فلتربار مكدّسة) إلى
+   صدفة واحدة دون إعادة كتابة نموذج الفلترة. */
+.hub-hero-shell > .hub-filterbar,
+.hub-hero-shell > form.hub-filterbar{
+  border: 0; border-radius: 0;
+  background: transparent; box-shadow: none;
+  border-top: 1px solid var(--hub-border-soft);
+  padding: 13px 20px 16px;
+}
+.hub-hero-shell > .hub-filterbar .hub-input,
+.hub-hero-shell > .hub-filterbar .hub-select{
+  background: var(--hub-bg-card);
+}
+/* شريط تبويبات داخل الشل */
+.hub-hero-shell > .p360-tabs{
+  border: 0;
+  border-top: 1px solid var(--hub-border-soft);
+  border-radius: 0;
+  border-end-start-radius: var(--hub-r-xl);
+  border-end-end-radius: var(--hub-r-xl);
+  background: rgba(255,255,255,.55);
+  box-shadow: none;
 }
 .hub-mt-section{ margin-top: var(--hub-gap-section); }
 .hub-text-mute{ color: var(--hub-text-mute); }
@@ -604,3 +995,546 @@
 .hub-text-mono{ font-family: var(--hub-mono); }
 .hub-flex-row{ display:flex; align-items:center; gap: var(--hub-gap-sm); flex-wrap:wrap; }
 .hub-spacer{ flex:1; }
+
+/* ═════════════════════════════════════════════════════════════════════
+   17. القوائم المنسدلة الفخمة الموحدة — تعميم مظهر لوحة hbsel-panel
+   (أبيض، حدود ناعمة، زوايا 14px، حشوة 6px، ظل ناعم، أنيميشن pop،
+   عناصر بزوايا 9px وتحويم #F4F1FE) على كل عائلات القوائم المنسدلة:
+
+     • .usq-menu-panel           — قوائم «التفعيل والرصيد» / «إجراءات إدارية»
+                                    في شريط المشترك المحدد (users_list)
+     • .urow-pop                 — قوائم الإجراءات لكل صف في جدول المشتركين
+     • .col-picker-panel         — منتقي الأعمدة في قائمة المشتركين
+     • .uds-menu                 — قوائم نظام UDS (منتقي أعمدة الجداول الموحّدة
+                                    وقوائم الإجراءات المثبتة) في unified_design
+     • .bops-column-menu__panel  — منتقي أعمدة جدول حِزَم البطاقات
+     • #tenant-menu / #user-menu — قوائم الهيدر (تبديل الجهة + حساب الأدمن)
+
+   ملاحظة: التكرار المتعمّد للكلاس (.x.x) يرفع الـ specificity فوق أنماط
+   الصفحات التي تُحمَّل بعد هذا الملف، بلا حاجة لـ !important — باستثناء
+   قوائم الهيدر المكتوبة بأنماط inline فلا بديل فيها عن !important.
+   السلوك/الجافاسكربت لم يُمسّ — تجميل CSS فقط.
+   ═════════════════════════════════════════════════════════════════════ */
+@keyframes hub-menu-pop{
+  from{ opacity: 0; transform: translateY(-4px) scale(.98); }
+  to{ opacity: 1; transform: none; }
+}
+
+/* ── كروم اللوحة الموحّد ───────────────────────────────────────────── */
+.usq-menu .usq-menu-panel,
+.urow-pop.urow-pop,
+.col-picker-panel.col-picker-panel,
+.uds-menu.uds-menu,
+.bops-column-menu .bops-column-menu__panel{
+  background: #fff;
+  border: 1px solid var(--hub-border);
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(15,23,42,.10), 0 2px 8px rgba(15,23,42,.06);
+  padding: 6px;
+  animation: hub-menu-pop .16s ease;
+}
+@media (prefers-reduced-motion: reduce){
+  .usq-menu .usq-menu-panel,
+  .urow-pop.urow-pop,
+  .col-picker-panel.col-picker-panel,
+  .uds-menu.uds-menu,
+  .bops-column-menu .bops-column-menu__panel{ animation: none; }
+}
+
+/* ── عناصر القوائم: زوايا 9px + تحويم بنفسجي فاتح بلون حبر العلامة ── */
+.urow-pop.urow-pop .urow-item,
+.col-picker-panel.col-picker-panel .col-picker-item,
+.uds-menu.uds-menu .uds-menu-item,
+.bops-column-menu .bops-column-menu__panel .bops-column-option{
+  border-radius: 9px;
+}
+.urow-pop.urow-pop .urow-item:hover,
+.col-picker-panel.col-picker-panel .col-picker-item:hover,
+.uds-menu.uds-menu .uds-menu-item:hover{
+  background: #F4F1FE;
+  color: var(--hub-brand-ink, #2E1F8C);
+}
+.urow-pop.urow-pop .urow-item:hover i,
+.uds-menu.uds-menu .uds-menu-item:hover i{ color: var(--hub-brand-ink, #2E1F8C); }
+/* العناصر الخطيرة تحتفظ بتحويمها الأحمر المميِّز */
+.urow-pop.urow-pop .urow-item--danger:hover,
+.uds-menu.uds-menu .uds-menu-item--danger:hover{
+  background: var(--hub-red-soft, #fef2f2);
+  color: var(--hub-red-ink, #b91c1c);
+}
+.urow-pop.urow-pop .urow-item--danger:hover i,
+.uds-menu.uds-menu .uds-menu-item--danger:hover i{ color: var(--hub-red-ink, #b91c1c); }
+/* خيارات منتقي أعمدة الحِزَم: تحويم موحّد بدل البنفسجي الباهت القديم */
+.bops-column-menu .bops-column-menu__panel .bops-column-option:hover{
+  background: #F4F1FE;
+  border-color: transparent;
+  color: var(--hub-brand-ink, #2E1F8C);
+}
+
+/* أزرار hub-btn داخل قوائم usq تُعامَل كعناصر قائمة (زوايا 9px + تحويم) */
+.usq-menu .usq-menu-panel .hub-btn{
+  border-radius: 9px;
+  box-shadow: none;
+}
+.usq-menu .usq-menu-panel .hub-btn:hover{
+  background: #F4F1FE;
+  color: var(--hub-brand-ink, #2E1F8C);
+  border-color: transparent;
+}
+/* زر الأرشفة الأحمر داخل القائمة يحتفظ بتحويمه الأحمر */
+.usq-menu .usq-menu-panel .hub-btn--danger:hover{
+  background: var(--hub-red-soft, #fef2f2);
+  color: var(--hub-red-ink, #b91c1c);
+}
+
+/* ── قوائم الهيدر (inline styles) — لا بديل عن !important هنا ─────── */
+#tenant-menu, #user-menu{
+  border: 1px solid var(--hub-border, #EEEDF3) !important;
+  border-radius: 14px !important;
+  box-shadow: 0 10px 30px rgba(15,23,42,.10), 0 2px 8px rgba(15,23,42,.06) !important;
+  padding: 6px !important;
+  overflow: hidden !important;
+  z-index: 90 !important;
+  animation: hub-menu-pop .16s ease;
+}
+#tenant-menu a, #tenant-menu button,
+#user-menu a, #user-menu button{
+  border-radius: 9px;
+}
+#tenant-menu a:hover, #tenant-menu button:hover,
+#user-menu a:hover{
+  background: #F4F1FE !important;
+  color: var(--hub-brand-ink, #2E1F8C) !important;
+}
+/* رابط تسجيل الخروج يحتفظ بهوية التحذير الحمراء عند التحويم */
+#user-menu a[href*="logout"]:hover{
+  background: var(--hub-red-soft, #fef2f2) !important;
+  color: var(--hub-red-ink, #b91c1c) !important;
+}
+
+/* ═════════════════════════════════════════════════════════════════════
+   18. ارتفاع موحّد لعناصر التحكم في أحزمة الفلترة — تعميم على كل الموقع
+   (طلب المستخدم: «توحيد ارتفاع العناصر وهذا أمر عممه على كل الموقع»)
+
+   المشكلة: داخل حزام البحث/الفلترة (uds-hero-search داخل الميجاهيرو،
+   وشريط hub-filterbar فوق الجداول) تتجاور حقول نصية وقوائم منسدلة
+   (hub-select / hbsel) وأزرار (hub-btn) بارتفاعات متفاوتة — قائمة قصيرة
+   بجانب زر أطول كما في طابور المزامنة.
+
+   الحل: نفس نمط 42px المعتمد محليًا في settings_page وplans يُعمَّم هنا
+   لكل سياقات الفلترة، بحصر دقيق:
+     • .uds-hero-search  — صف الفلترة المدمج في الميجاهيرو (كل الصفحات)
+     • .hub-filterbar    — شريط الفلترة المستقل فوق القوائم
+   ولا يطال عمدًا أشرطة أدوات الجداول المضغوطة (uds-table-pager،
+   أزرار التصدير المصغّرة داخل uds-table-wrap) حتى تبقى كثافتها كما هي. */
+.uds-hero-search .hub-input,
+.uds-hero-search .hub-select,
+.uds-hero-search .hbsel-trigger,
+.uds-hero-search .hub-btn,
+.hub-filterbar .hub-input,
+.hub-filterbar .hub-select,
+.hub-filterbar .hbsel-trigger,
+.hub-filterbar .hub-btn{
+  min-height: 42px;
+  box-sizing: border-box;
+}
+/* المحاذاة العمودية: الأزرار flex أصلًا؛ القوائم الأصلية (select) تحتاج
+   محاذاة محتوى وسطية صريحة حتى لا يلتصق النص بالأعلى مع الارتفاع الجديد. */
+.uds-hero-search select.hub-input,
+.uds-hero-search select.hub-select,
+.hub-filterbar select.hub-input,
+.hub-filterbar select.hub-select{
+  padding-top: 0; padding-bottom: 0;
+}
+/* غلاف hbsel يتمدد بارتفاع زرّه حتى يصطف مع جيرانه في نفس الصف */
+.uds-hero-search .hbsel,
+.hub-filterbar .hbsel{ display: inline-flex; align-items: stretch; }
+
+/* ═════════════════════════════════════════════════════════════════════
+   19. أيقونة المكبّر في حزام البحث (uds-search-ic)
+   • حيث يوجد حقل بحث نصي: الأيقونة زر حقيقي ينقل التركيز للحقل (انظر
+     ماكرو megahero في _partials/hub.html).
+   • حيث الحزام فلاتر/إيضاح بلا أي حقل نصي: تُخفى تلقائيًا عبر :has()
+     بدل أن تبقى أيقونة ميتة توحي ببحث غير موجود (صفحتا طابور المزامنة
+     وبوابات العملاء في لقطات المستخدم). */
+.uds-hero-search button.uds-search-ic{
+  border: 0; cursor: pointer; font-family: inherit;
+  /* مربعة بنفس ارتفاع عناصر الحزام الموحّد (42px) */
+  width: 42px; height: 42px;
+  transition: background .15s ease, color .15s ease;
+}
+.uds-hero-search button.uds-search-ic:hover{ background: #EDE9FE; }
+.uds-hero-search button.uds-search-ic:focus-visible{
+  outline: none; box-shadow: 0 0 0 3px rgba(107,90,237,.2);
+}
+.uds-hero-search:not(:has(
+  input[type="text"], input[type="search"],
+  input:not([type]), input[type="number"], input[type="tel"]
+)) .uds-search-ic{
+  /* !important مقصود: قاعدة hub-hero-shell الأعلى تخصيصًا (القسم 16)
+     تفرض display:inline-grid — الإخفاء هنا نهائي حيث لا حقل بحث أصلًا. */
+  display: none !important;
+}
+
+/* ═════════════════════════════════════════════════════════════════════
+   20. حقول التاريخ والوقت الموحّدة — تعميم على كل الموقع
+   (طلب المستخدم: «أشكال جدول التاريخ والوقت بدي كل الموقع حسب الستايل
+    الموحد مش التقليدي»)
+
+   المشكلة: حقول <input type=date / datetime-local / time / month>
+   تظهر بالمظهر الافتراضي للمتصفح — خط نظام، أيقونة تقويم رمادية،
+   ولوحة تقويم زرقاء تقليدية — فتكسر اللغة البصرية البنفسجية الموحّدة.
+
+   الحل (بدون أي JS pickers — تأنيق العناصر الأصلية):
+     • نفس كروم hub-input (حد، زوايا، خط Cairo بالوراثة، حلقة تركيز
+       بنفسجية) يُفرض حتى لو نُسي صنف hub-input على الحقل.
+     • accent-color بنفسجي → لوحة التقويم الأصلية (اليوم المحدّد،
+       التمييز) تتلوّن بلون الهوية بدل الأزرق الافتراضي.
+     • أيقونة فتح التقويم (::-webkit-calendar-picker-indicator) تُصبغ
+       بنفسجيًا عبر filter (الأيقونة الأصلية سوداء → نقلبها ثم نلوّنها)
+       مع غسلة بنفسجية عند المرور — نفس إحساس hbsel.
+     • RTL-آمن: الحقل نفسه يبقى LTR منطقيًا (الأرقام والتقويم) لكن
+       المحاذاة والحشوات منطقية فلا تنكسر في الواجهة العربية. */
+input[type="date"],
+input[type="datetime-local"],
+input[type="time"],
+input[type="month"],
+input[type="week"]{
+  font-family: inherit;
+  /* نفس مقاسات hub-input حرفيًا حتى يصطف حقل التاريخ مع الحقول النصية
+     المجاورة في شبكات النماذج بلا فرق ارتفاع */
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--hub-text);
+  background-color: var(--hub-bg-card);
+  border: 1px solid var(--hub-border);
+  border-radius: var(--hub-r-md);
+  padding: 9px 12px;
+  cursor: pointer;
+  /* اللوحة الأصلية (التقويم/الساعة) تتلوّن بلون الهوية بدل الأزرق */
+  accent-color: var(--hub-brand);
+  color-scheme: light;
+  transition: border-color var(--hub-anim-fast, .15s) var(--hub-ease, ease),
+              box-shadow var(--hub-anim-fast, .15s) var(--hub-ease, ease),
+              background-color var(--hub-anim-fast, .15s) var(--hub-ease, ease);
+}
+/* غسلة hover بنفسجية خفيفة — نفس سلوك hbsel والقوائم المنسدلة */
+input[type="date"]:hover,
+input[type="datetime-local"]:hover,
+input[type="time"]:hover,
+input[type="month"]:hover,
+input[type="week"]:hover{
+  border-color: var(--hub-brand);
+  background-color: #faf8ff;
+}
+/* حلقة التركيز البنفسجية المعتمدة */
+input[type="date"]:focus,
+input[type="datetime-local"]:focus,
+input[type="time"]:focus,
+input[type="month"]:focus,
+input[type="week"]:focus{
+  outline: none;
+  border-color: var(--hub-brand);
+  box-shadow: 0 0 0 3px rgba(107,90,237,.15);
+}
+/* أيقونة فتح التقويم: تُصبغ بنفسجيًا (الأصل أسود → invert ثم تدوير
+   الصبغة نحو البنفسجي) + مساحة نقر مريحة وغسلة عند المرور */
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator,
+input[type="month"]::-webkit-calendar-picker-indicator,
+input[type="week"]::-webkit-calendar-picker-indicator{
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  /* أسود → بنفسجي #6B5AED تقريبًا */
+  filter: invert(38%) sepia(74%) saturate(2962%) hue-rotate(233deg)
+          brightness(95%) contrast(94%);
+  transition: background-color .15s ease, opacity .15s ease;
+  opacity: .85;
+}
+input[type="date"]:hover::-webkit-calendar-picker-indicator,
+input[type="datetime-local"]:hover::-webkit-calendar-picker-indicator,
+input[type="time"]:hover::-webkit-calendar-picker-indicator,
+input[type="month"]:hover::-webkit-calendar-picker-indicator,
+input[type="week"]:hover::-webkit-calendar-picker-indicator{
+  opacity: 1;
+  background-color: rgba(107,90,237,.10);
+}
+/* الأجزاء الداخلية (يوم/شهر/سنة): تمييز التحرير بنفسجي فاتح بدل الأزرق */
+input[type="date"]::-webkit-datetime-edit-fields-wrapper,
+input[type="datetime-local"]::-webkit-datetime-edit-fields-wrapper,
+input[type="time"]::-webkit-datetime-edit-fields-wrapper{
+  padding: 0;
+}
+input[type="date"]::-webkit-datetime-edit-day-field:focus,
+input[type="date"]::-webkit-datetime-edit-month-field:focus,
+input[type="date"]::-webkit-datetime-edit-year-field:focus,
+input[type="datetime-local"]::-webkit-datetime-edit-day-field:focus,
+input[type="datetime-local"]::-webkit-datetime-edit-month-field:focus,
+input[type="datetime-local"]::-webkit-datetime-edit-year-field:focus,
+input[type="datetime-local"]::-webkit-datetime-edit-hour-field:focus,
+input[type="datetime-local"]::-webkit-datetime-edit-minute-field:focus,
+input[type="time"]::-webkit-datetime-edit-hour-field:focus,
+input[type="time"]::-webkit-datetime-edit-minute-field:focus{
+  background: #EDE9FE;
+  color: var(--hub-brand-ink, #5B4BD6);
+  border-radius: 4px;
+  outline: none;
+}
+/* داخل أحزمة الفلترة: نفس الارتفاع الموحّد 42px (امتداد للقسم 18) —
+   حقول التاريخ تصطف مع القوائم والأزرار في نفس الصف بلا نتوء */
+.uds-hero-search input[type="date"],
+.uds-hero-search input[type="datetime-local"],
+.uds-hero-search input[type="time"],
+.uds-hero-search input[type="month"],
+.hub-filterbar input[type="date"],
+.hub-filterbar input[type="datetime-local"],
+.hub-filterbar input[type="time"],
+.hub-filterbar input[type="month"]{
+  min-height: 42px;
+  box-sizing: border-box;
+  padding-top: 0; padding-bottom: 0;
+  width: auto; flex: 0 1 auto;
+}
+/* داخل النوافذ المنبثقة (uds-modal — لقطة السنابشوت وغيرها): نكتفي
+   بالكروم الموحّد بالحجم العادي بدون فرض 42px حتى لا تتضخم النماذج
+   المضغوطة. لا تغيير هنا — القاعدة العامة أعلاه كافية ولا تكسر شيئًا
+   لأنها لا تمس width أو الحشوات العمودية خارج أحزمة الفلترة. */
+/* فايرفوكس: لا يدعم أجزاء -webkit؛ accent-color وحده يلوّن اللوحة،
+   والكروم العام أعلاه يضبط شكل الحقل — تدهور رشيق بلا كسر. */
+
+/* ═════════════════════════════════════════════════════════════════════
+   21. HUB DATE (hub_date.js) — منتقي التاريخ العربي المخصّص
+   (طلب المستخدم: رفض تقويم المتصفح الأصلي «June 2026 / Su Mo Tu» —
+    تقويم عربي كامل بأشهر شامية بهوية الموقع، بنفس عمارة hbsel)
+
+   الحقل الأصلي يبقى مخفيًا داخل .hbdate (حامل القيمة للفورم)،
+   والزر .hbdate-trigger يعرض التاريخ بصيغة «05 حزيران 2026».
+   ملاحظة: قسم 20 أعلاه يبقى كما هو — تأنيق احتياطي للحقول التي
+   تحمل data-native-date أو قبل تحميل الـ JS (بلا وميض بشع).
+   ═════════════════════════════════════════════════════════════════════ */
+.hbdate{ position: relative; display: inline-block; min-width: 0; }
+/* الحقل الأصلي: مخفي بصريًا فقط — يبقى في الـ DOM فيُرسل مع الفورم */
+.hbdate .hbdate-native{
+  position: absolute !important;
+  width: 1px !important; height: 1px !important;
+  min-height: 0 !important;
+  opacity: 0; pointer-events: none;
+  margin: 0; padding: 0 !important; border: 0 !important;
+}
+/* الزر — نفس كروم hbsel-trigger (غسلة بنفسجية، نص بنفسجي، خط Cairo) */
+.hbdate-trigger{
+  display: inline-flex; align-items: center;
+  gap: 8px; width: 100%;
+  font-family: inherit; font-size: 13px; font-weight: 700;
+  color: #5B4BD8;
+  background: #F4F1FE;
+  border: 1px solid #E5E0F5;
+  border-radius: var(--hub-r-md);
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
+}
+.hbdate-trigger:hover{ border-color: var(--hub-brand); background: #EDE9FE; }
+.hbdate.is-open .hbdate-trigger,
+.hbdate-trigger:focus-visible{
+  outline: none;
+  border-color: var(--hub-brand);
+  box-shadow: 0 0 0 3px rgba(107,90,237,.15);
+}
+/* فشل تحقق الفورم (required فارغ) — وميض أحمر قصير على الزر */
+.hbdate.is-invalid .hbdate-trigger{
+  border-color: #EF4444;
+  box-shadow: 0 0 0 3px rgba(239,68,68,.15);
+}
+.hbdate-ic{ font-size: 12px; color: var(--hub-brand); flex-shrink: 0; }
+.hbdate-label{
+  flex: 1; text-align: start;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  /* الأرقام الغربية داخل النص العربي تبقى مرتبة */
+  unicode-bidi: plaintext;
+}
+.hbdate-label.is-placeholder{ color: var(--hub-text-mute); font-weight: 600; }
+.hbdate-caret{
+  font-size: 10px; color: #5B4BD8; flex-shrink: 0;
+  transition: transform .18s ease;
+}
+.hbdate.is-open .hbdate-caret{ transform: rotate(180deg); }
+
+/* اللوحة — بطاقة بيضاء 14px بظل ناعم، نفس لغة hbsel-panel */
+.hbdate-panel{
+  position: absolute; top: calc(100% + 6px); inset-inline-start: 0;
+  width: 274px; box-sizing: border-box;
+  direction: rtl;
+  background: #fff;
+  border: 1px solid var(--hub-border);
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(15,23,42,.10), 0 2px 8px rgba(15,23,42,.06);
+  padding: 10px;
+  z-index: 90;
+  animation: hbsel-pop .16s ease; /* نفس حركة لوحات hbsel */
+  font-family: inherit;
+}
+
+/* الرأس: تنقّل الأشهر + اسم الشهر (مع رقمه الميلادي) + منتقي السنة */
+.hbdate-head{
+  display: flex; align-items: center; gap: 6px;
+  padding: 2px 2px 8px;
+  border-bottom: 1px solid var(--hub-border-soft, #F1F0F7);
+  margin-bottom: 8px;
+}
+.hbdate-nav{
+  width: 28px; height: 28px; flex-shrink: 0;
+  display: inline-grid; place-items: center;
+  border: 0; border-radius: 8px;
+  background: transparent; color: var(--hub-brand);
+  font-size: 12px; cursor: pointer;
+  transition: background .12s ease;
+}
+.hbdate-nav:hover{ background: #F4F1FE; }
+.hbdate-title{
+  flex: 1; display: flex; align-items: baseline; gap: 4px;
+  justify-content: center; min-width: 0;
+}
+.hbdate-month{
+  font-size: 13.5px; font-weight: 800;
+  color: var(--hub-brand-ink, #2E1F8C);
+  white-space: nowrap;
+}
+/* رقم الشهر الميلادي صغيرًا — «حزيران (6)» */
+.hbdate-mnum{ font-size: 10.5px; font-weight: 700; color: var(--hub-text-mute); }
+.hbdate-year{
+  display: inline-flex; align-items: center; gap: 2px;
+  background: #F8F7FD; border: 1px solid var(--hub-border-soft, #F1F0F7);
+  border-radius: 8px; padding: 1px 3px; flex-shrink: 0;
+}
+.hbdate-ybtn{
+  width: 20px; height: 20px;
+  display: inline-grid; place-items: center;
+  border: 0; border-radius: 6px;
+  background: transparent; color: var(--hub-brand);
+  font-size: 9px; cursor: pointer;
+}
+.hbdate-ybtn:hover{ background: #EDE9FE; }
+.hbdate-year-num{
+  font-size: 12.5px; font-weight: 800; color: var(--hub-text);
+  min-width: 36px; text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* صف أسماء الأيام — الأحد أول عمود (أقصى اليمين في RTL) */
+.hbdate-week{
+  display: grid; grid-template-columns: repeat(7, 1fr);
+  gap: 2px; margin-bottom: 4px;
+}
+.hbdate-week span{
+  text-align: center;
+  font-size: 10px; font-weight: 800;
+  color: var(--hub-text-mute);
+  padding: 3px 0;
+}
+
+/* شبكة الأيام */
+.hbdate-grid{
+  display: grid; grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+.hbdate-blank{ height: 32px; }
+.hbdate-day{
+  height: 32px;
+  display: grid; place-items: center;
+  border: 0; border-radius: 50%;
+  background: transparent;
+  font-family: inherit; font-size: 12.5px; font-weight: 700;
+  color: var(--hub-text-soft);
+  cursor: pointer;
+  transition: background .12s ease, color .12s ease, box-shadow .12s ease;
+  font-variant-numeric: tabular-nums;
+}
+.hbdate-day:hover{ background: #F4F1FE; color: var(--hub-brand-ink, #2E1F8C); }
+/* اليوم الحالي — إطار بنفسجي بدون تعبئة */
+.hbdate-day.is-today{
+  box-shadow: inset 0 0 0 1.5px var(--hub-brand);
+  color: var(--hub-brand);
+}
+/* اليوم المحدّد — دائرة بنفسجية متدرجة (هوية الموقع) */
+.hbdate-day.is-selected,
+.hbdate-day.is-selected:hover{
+  background: linear-gradient(135deg, #6B5AED, #5B4BD8);
+  color: #fff;
+  font-weight: 800;
+  box-shadow: 0 3px 8px rgba(107,90,237,.30);
+}
+/* خارج مدى min/max — معطّل وباهت */
+.hbdate-day.is-disabled{
+  color: #C9CBD6; cursor: not-allowed;
+  background: transparent; text-decoration: line-through;
+}
+
+/* صف الوقت (datetime-local): ساعة:دقيقة داخل اللوحة */
+.hbdate-time{
+  display: flex; align-items: center; gap: 8px;
+  margin-top: 8px; padding: 8px 6px;
+  border-top: 1px solid var(--hub-border-soft, #F1F0F7);
+  font-size: 12px; font-weight: 700; color: var(--hub-text-soft);
+}
+.hbdate-time > i{ color: var(--hub-brand); font-size: 12px; }
+.hbdate-time-label{ flex: 1; }
+.hbdate-time-fields{
+  display: inline-flex; align-items: center; gap: 3px;
+  direction: ltr; /* ‏HH:MM يُعرض بترتيبه الطبيعي */
+}
+.hbdate-time-in{
+  width: 44px; box-sizing: border-box;
+  font-family: inherit; font-size: 12.5px; font-weight: 700;
+  text-align: center;
+  color: var(--hub-text);
+  background: #F8F7FD;
+  border: 1px solid var(--hub-border);
+  border-radius: 8px;
+  padding: 5px 4px;
+  -moz-appearance: textfield;
+  font-variant-numeric: tabular-nums;
+}
+.hbdate-time-in::-webkit-outer-spin-button,
+.hbdate-time-in::-webkit-inner-spin-button{ -webkit-appearance: none; margin: 0; }
+.hbdate-time-in:focus{
+  outline: none; border-color: var(--hub-brand);
+  box-shadow: 0 0 0 3px rgba(107,90,237,.12);
+  background: #fff;
+}
+.hbdate-time-sep{ font-weight: 800; color: var(--hub-text-mute); }
+
+/* التذييل: «اليوم» / «مسح» (+ «تم» مع الوقت) */
+.hbdate-foot{
+  display: flex; align-items: center; justify-content: flex-end; gap: 6px;
+  margin-top: 8px; padding-top: 8px;
+  border-top: 1px solid var(--hub-border-soft, #F1F0F7);
+}
+.hbdate-foot-btn{
+  display: inline-flex; align-items: center; gap: 5px;
+  font-family: inherit; font-size: 11.5px; font-weight: 800;
+  border: 0; border-radius: 8px;
+  padding: 6px 11px; cursor: pointer;
+  transition: background .12s ease, color .12s ease;
+}
+.hbdate-foot-btn i{ font-size: 10px; }
+.hbdate-today-btn{ background: #F4F1FE; color: var(--hub-brand); }
+.hbdate-today-btn:hover{ background: #EDE9FE; }
+.hbdate-clear-btn{ background: transparent; color: var(--hub-text-mute); }
+.hbdate-clear-btn:hover{ background: #FCEEF1; color: #EF4444; }
+.hbdate-ok-btn{
+  background: linear-gradient(135deg, #6B5AED, #5B4BD8);
+  color: #fff; margin-inline-end: auto;
+  box-shadow: 0 2px 6px rgba(107,90,237,.25);
+}
+.hbdate-ok-btn:hover{ filter: brightness(1.05); }
+
+/* داخل أحزمة الفلترة: نفس الارتفاع الموحّد 42px (امتداد للقسم 18) */
+.uds-hero-search .hbdate-trigger,
+.hub-filterbar .hbdate-trigger{
+  min-height: 42px; box-sizing: border-box;
+  padding-top: 0; padding-bottom: 0;
+  font-size: 12.5px;
+}

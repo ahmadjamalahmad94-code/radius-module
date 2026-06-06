@@ -1,0 +1,655 @@
+{# ══════════════════════════════════════════════════════════════════════
+   دليل «حزم البطاقات وإضافة حزمة» — قسم البطاقات في «كيف تستخدمني».
+
+   دليل مزدوج بطلب المستخدم: يغطي صفحة «حزم البطاقات» (cards_batches.html)
+   وتدفّق «إضافة حزمة» معًا (المودال السريع + النموذج المتقدم
+   cards_generate.html) — لأن العمليتين رحلة واحدة عمليًا.
+
+   نفس بنية الدليل الذهبي docs_add_subscriber.html:
+     • hero + شريط أدوات (حفظ كـ PDF / كل الأدلة).
+     • فهرس جانبي لاصق يسار الصفحة (order:2) + scrollspy.
+     • خطوات مرقّمة + رسوم HTML/CSS تحاكي الصفحات الحقيقية.
+
+   أسماء الأزرار والحقول منسوخة حرفيًا من القوالب الفعلية — عند تغيير
+   الصفحات حدّث الدليل معها.
+   ══════════════════════════════════════════════════════════════════════ #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}دليل: حزم البطاقات وإضافة حزمة — كيف تستخدمني{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<style>
+  /* ── التخطيط: فهرس جانبي لاصق + عمود المحتوى (الفهرس يسار الصفحة) ── */
+  .dg-layout{ display:grid; grid-template-columns:minmax(0,1fr) 230px; gap:20px; align-items:start; }
+  .dg-toc{ order:2; }
+  .dg-main{ order:1; }
+  @media (max-width:980px){ .dg-layout{ grid-template-columns:1fr; } .dg-toc{ order:1; } .dg-main{ order:2; } }
+
+  .dg-toc{
+    position:sticky; top:84px;
+    background:#fff; border:1px solid #e8edf3; border-radius:14px;
+    padding:14px 13px; display:grid; gap:3px;
+  }
+  @media (max-width:980px){ .dg-toc{ position:static; } }
+  .dg-toc-title{
+    display:flex; align-items:center; gap:8px; font-size:12px; font-weight:900;
+    color:#7c7a99; margin-bottom:7px; padding-inline:6px;
+  }
+  .dg-toc a{
+    display:flex; align-items:center; gap:9px;
+    padding:8px 10px; border-radius:9px; text-decoration:none;
+    font-size:12.5px; font-weight:700; color:#475569;
+    transition:background .14s, color .14s;
+  }
+  .dg-toc a .n{
+    width:21px; height:21px; border-radius:50%; flex:none;
+    display:grid; place-items:center; font-size:10.5px; font-weight:900;
+    background:#f1f5f9; color:#94a3b8;
+  }
+  .dg-toc a:hover{ background:#f5f3ff; color:#5b21b6; }
+  .dg-toc a.is-active{ background:#ede9fe; color:#5b21b6; }
+  .dg-toc a.is-active .n{ background:linear-gradient(135deg,#7c3aed,#5b21b6); color:#fff; }
+
+  .dg-main{ min-width:0; display:grid; gap:18px; }
+
+  .dg-lead{
+    display:flex; gap:13px; align-items:flex-start;
+    background:linear-gradient(135deg,#f5f3ff,#fdfcff);
+    border:1px solid #e9e5fc; border-radius:14px; padding:15px 17px;
+  }
+  .dg-lead .ic{ width:40px;height:40px;border-radius:12px;flex:none;display:grid;place-items:center;
+    font-size:17px;background:#ede9fe;color:#6d28d9; }
+  .dg-lead h3{ margin:0 0 4px; font-size:13.5px; font-weight:800; color:#241e4e; }
+  .dg-lead p{ margin:0; font-size:12.5px; line-height:1.9; color:#5b5a78; }
+
+  .dg-step{ display:grid; grid-template-columns:auto 1fr; gap:15px; align-items:start; scroll-margin-top:90px; }
+  @media (max-width:560px){ .dg-step{ grid-template-columns:1fr; } }
+  .dg-badge{
+    width:42px; height:42px; border-radius:50%; flex:none;
+    display:grid; place-items:center; font-size:17px; font-weight:900; color:#fff;
+    background:linear-gradient(135deg,#7c3aed,#5b21b6);
+    box-shadow:0 8px 18px rgba(124,58,237,.3);
+  }
+  .dg-card{
+    min-width:0; background:#fff; border:1px solid #e8edf3; border-radius:15px;
+    padding:16px 18px;
+  }
+  .dg-card h2{
+    margin:0 0 8px; font-size:15.5px; font-weight:800; color:#0f172a;
+    display:flex; align-items:center; gap:9px; flex-wrap:wrap;
+  }
+  .dg-card h2 i{ color:#7c3aed; }
+  .dg-card p{ margin:0 0 7px; font-size:13px; line-height:1.95; color:#475569; }
+  .dg-card p:last-child{ margin-bottom:0; }
+  .dg-card ul{ margin:4px 0 8px; padding-inline-start:22px; font-size:13px; line-height:2; color:#475569; }
+  .dg-card strong{ color:#241e4e; }
+  .dg-kbd{
+    font-family:ui-monospace,Consolas,monospace; font-size:11.5px;
+    background:#f1f5f9; border:1px solid #e2e8f0; border-radius:5px;
+    padding:1px 7px; color:#5b21b6;
+  }
+
+  .dg-tip, .dg-warn{
+    display:flex; gap:11px; align-items:flex-start;
+    border-radius:12px; padding:11px 14px; margin-top:11px;
+    font-size:12.5px; line-height:1.9;
+  }
+  .dg-tip{ background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; }
+  .dg-warn{ background:#fffbeb; border:1px solid #fde68a; color:#92400e; }
+  .dg-tip .ic, .dg-warn .ic{ flex:none; font-size:15px; line-height:1.6; }
+  .dg-tip b, .dg-warn b{ font-weight:900; }
+
+  /* ════ الرسوم ════ */
+  .dg-mock{
+    border:1px solid #e2e8f0; border-radius:14px; overflow:hidden;
+    background:#fff; box-shadow:0 8px 20px rgba(15,23,42,.07);
+    margin-top:13px; max-width:560px;
+  }
+  .dg-mock-bar{
+    display:flex; align-items:center; gap:7px; padding:8px 12px;
+    background:#f1f5f9; border-bottom:1px solid #e2e8f0;
+  }
+  .dg-mock-bar .dots{ display:flex; gap:5px; }
+  .dg-mock-bar .dots i{ width:9px; height:9px; border-radius:50%; }
+  .dg-mock-bar .dots i:nth-child(1){ background:#f87171; }
+  .dg-mock-bar .dots i:nth-child(2){ background:#fbbf24; }
+  .dg-mock-bar .dots i:nth-child(3){ background:#34d399; }
+  .dg-mock-bar .crumb{
+    flex:1; background:#fff; border:1px solid #e2e8f0; border-radius:7px;
+    padding:4px 10px; font-size:10.5px; font-weight:700; color:#64748b;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .dg-mock-body{ padding:14px; display:grid; gap:11px; }
+  .dg-mock-sechead{
+    display:flex; align-items:center; gap:9px; font-size:12px; font-weight:800; color:#241e4e;
+    padding-bottom:9px; border-bottom:1px dashed #eef2f7;
+  }
+  .dg-mock-sechead .ic{
+    width:26px; height:26px; border-radius:8px; display:grid; place-items:center;
+    font-size:11px; background:#ede9fe; color:#6d28d9; flex:none;
+  }
+  .dg-mock-grid2{ display:grid; grid-template-columns:1fr 1fr; gap:11px; }
+  .dg-mock-grid3{ display:grid; grid-template-columns:repeat(3,1fr); gap:9px; }
+  @media (max-width:480px){ .dg-mock-grid2,.dg-mock-grid3{ grid-template-columns:1fr; } }
+  .dg-mf{ display:grid; gap:5px; min-width:0; }
+  .dg-mf label{ font-size:10.5px; font-weight:800; color:#475569; }
+  .dg-mf label .req{ color:#dc2626; }
+  .dg-mf-input{
+    border:1.5px solid #e2e8f0; border-radius:8px; padding:8px 10px;
+    font-size:11.5px; color:#0f172a; background:#fff;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .dg-mf-input.hl{ border-color:#c4b5fd; background:#faf5ff; }
+  .dg-mf-input.ph{ color:#a3aec2; }
+  .dg-mf-select{ position:relative; }
+  .dg-mf-select::after{
+    content:"\f078"; font-family:"Font Awesome 6 Free"; font-weight:900;
+    position:absolute; inset-inline-end:10px; top:50%; transform:translateY(-50%);
+    font-size:9px; color:#94a3b8; pointer-events:none;
+  }
+  .dg-mf-help{ font-size:9.5px; color:#94a3b8; line-height:1.6; }
+
+  /* شريط KPI خماسي */
+  .dg-kpis{ display:grid; grid-template-columns:repeat(5,1fr); gap:8px; }
+  @media (max-width:560px){ .dg-kpis{ grid-template-columns:repeat(2,1fr); } }
+  .dg-kpi{ border:1px solid #e8edf3; border-radius:11px; padding:9px 10px; display:grid; gap:3px; }
+  .dg-kpi .lb{ font-size:9px; font-weight:800; color:#94a3b8; }
+  .dg-kpi .vl{ font-size:14px; font-weight:900; color:#0f172a; font-family:ui-monospace,Consolas,monospace; }
+  .dg-kpi.blue{ border-color:#bfdbfe; background:#eff6ff; } .dg-kpi.blue .vl{ color:#1d4ed8; }
+  .dg-kpi.red{ border-color:#fecaca; background:#fef2f2; } .dg-kpi.red .vl{ color:#b91c1c; }
+  .dg-kpi.purple{ border-color:#ddd6fe; background:#faf5ff; } .dg-kpi.purple .vl{ color:#5b21b6; }
+  .dg-kpi.amber{ border-color:#fde68a; background:#fffbeb; } .dg-kpi.amber .vl{ color:#b45309; }
+  .dg-kpi.green{ border-color:#bbf7d0; background:#f0fdf4; } .dg-kpi.green .vl{ color:#15803d; }
+
+  /* شريط فلاتر */
+  .dg-filterbar{ display:flex; gap:7px; flex-wrap:wrap; align-items:center; }
+  .dg-fl{
+    border:1.5px solid #e2e8f0; border-radius:8px; padding:6px 10px;
+    font-size:9.5px; font-weight:800; color:#475569; background:#fff; position:relative;
+    display:flex; align-items:center; gap:6px;
+  }
+  .dg-fl i{ color:#94a3b8; font-size:9px; }
+  .dg-flbtn{
+    background:linear-gradient(135deg,#7c3aed,#5b21b6); color:#fff; border-radius:8px;
+    padding:6px 12px; font-size:9.5px; font-weight:900;
+  }
+  .dg-flsoft{ background:#f1f5f9; color:#475569; border-radius:8px; padding:6px 10px; font-size:9.5px; font-weight:800; }
+
+  /* بطاقة حزمة (محاكاة) */
+  .dg-batchcard{
+    border:1px solid #e8edf3; border-radius:13px; padding:11px 13px; display:grid; gap:8px;
+    max-width:380px;
+  }
+  .dg-batchcard .hd{ display:flex; align-items:flex-start; justify-content:space-between; gap:8px; }
+  .dg-batchcard h4{ margin:0; font-size:12px; font-weight:900; color:#0f172a; }
+  .dg-batchcard .code{ font-size:8.5px; color:#94a3b8; font-family:ui-monospace,Consolas,monospace; }
+  .dg-status{ display:inline-flex; align-items:center; gap:5px; border-radius:999px; padding:2px 9px; font-size:8.5px; font-weight:900; }
+  .dg-status.active{ background:#dcfce7; color:#15803d; }
+  .dg-status .d{ width:5px; height:5px; border-radius:50%; background:currentColor; }
+  .dg-batchcard .chips{ display:flex; gap:6px; flex-wrap:wrap; font-size:8.5px; color:#64748b; font-weight:700; }
+  .dg-batchcard .stats{ display:grid; grid-template-columns:repeat(4,1fr); gap:6px; }
+  .dg-batchcard .stat{ border:1px solid #f1f5f9; border-radius:8px; padding:5px 6px; text-align:center; }
+  .dg-batchcard .stat span{ display:block; font-size:7.5px; color:#94a3b8; font-weight:800; }
+  .dg-batchcard .stat b{ font-size:11px; color:#0f172a; font-family:ui-monospace,Consolas,monospace; }
+  .dg-progress{ height:6px; border-radius:99px; background:#f1f5f9; overflow:hidden; }
+  .dg-progress span{ display:block; height:100%; background:linear-gradient(90deg,#7c3aed,#a78bfa); }
+  .dg-batchcard .acts{ display:flex; gap:6px; flex-wrap:wrap; padding-top:3px; border-top:1px dashed #eef2f7; }
+  .dg-act{ border:1px solid #e2e8f0; border-radius:7px; padding:4px 9px; font-size:8.5px; font-weight:800; color:#475569; }
+  .dg-act.primary{ background:#ede9fe; border-color:#ddd6fe; color:#5b21b6; }
+  .dg-act.danger{ color:#dc2626; border-color:#fecaca; }
+
+  /* شريط الإجراء الجماعي */
+  .dg-bulk{ display:flex; gap:7px; align-items:center; flex-wrap:wrap; font-size:9.5px; font-weight:800; color:#475569; }
+
+  /* زر التبديل مطبوعة/إلكترونية */
+  .dg-radio2{ display:flex; gap:8px; }
+  .dg-radio2 span{
+    flex:1; border:1.5px solid #e2e8f0; border-radius:9px; padding:7px 10px;
+    font-size:10px; font-weight:800; color:#64748b; text-align:center;
+  }
+  .dg-radio2 span.on{ border-color:#7c3aed; background:#faf5ff; color:#5b21b6; }
+
+  .dg-mock-actions{ display:flex; justify-content:flex-end; gap:9px; padding-top:4px; }
+  .dg-mock-btn{
+    display:inline-flex; align-items:center; gap:7px; border:0; border-radius:9px;
+    padding:8px 16px; font:inherit; font-size:11.5px; font-weight:800; cursor:default;
+  }
+  .dg-mock-btn.primary{
+    background:linear-gradient(135deg,#7c3aed,#5b21b6); color:#fff;
+    box-shadow:0 6px 14px rgba(124,58,237,.28);
+  }
+  .dg-mock-btn.ghost{ background:#f1f5f9; color:#475569; }
+
+  /* شريط النجاح */
+  .dg-flash{
+    display:flex; align-items:center; gap:10px; max-width:560px; margin-top:13px;
+    background:#f0fdf4; border:1px solid #86efac; border-radius:11px;
+    padding:10px 14px; font-size:12px; font-weight:800; color:#15803d;
+  }
+  .dg-flash i{ font-size:14px; }
+
+  .dg-cap{ font-size:11px; color:#94a3b8; margin-top:8px; line-height:1.7; }
+  .dg-cap i{ color:#c4b5fd; }
+
+  /* ════ الطباعة ════ */
+  @media print{
+    .hb-side, .hb-side-overlay, .hb-topbar, header.hb-top,
+    .dg-toc, .dg-noprint, .hub-hero-actions{ display:none !important; }
+    .dg-layout{ grid-template-columns:1fr; }
+    .dg-card, .dg-mock, .dg-batchcard{ box-shadow:none !important; break-inside:avoid; }
+    .dg-step{ break-inside:avoid; }
+    body{ background:#fff !important; }
+    .dg-badge, .dg-tip, .dg-warn, .dg-kpi, .dg-status, .dg-flash,
+    .dg-flbtn, .dg-mock-btn.primary, .dg-progress span, .dg-radio2 span.on{
+      -webkit-print-color-adjust:exact; print-color-adjust:exact;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{{ hub.hero(
+  "دليل: حزم البطاقات وإضافة حزمة",
+  subtitle="إدارة كل الحزم من شاشة واحدة + توليد حزمة جديدة خطوة بخطوة: البادئة، الأطوال، العدد، الباقة، والتسعير.",
+  icon="layer-group",
+  actions_html='
+    <button type="button" class="hub-btn hub-btn--secondary" onclick="window.print()">
+      <i class="fa-solid fa-file-pdf"></i> حفظ كـ PDF
+    </button>
+    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.docs_center') + '">
+      <i class="fa-solid fa-arrow-right"></i> كل الأدلة
+    </a>
+  '
+) }}
+
+<div class="dg-layout">
+
+  {# ───── الفهرس الجانبي اللاصق ───── #}
+  <nav class="dg-toc dg-noprint" aria-label="فهرس الدليل">
+    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> فهرس الخطوات</div>
+    <a href="#dg-s1" data-dg-toc><span class="n">1</span> افتح الصفحة واقرأ أرقامها</a>
+    <a href="#dg-s2" data-dg-toc><span class="n">2</span> الفلاتر والبحث والتصدير</a>
+    <a href="#dg-s3" data-dg-toc><span class="n">3</span> بطاقة الحزمة وأزرارها</a>
+    <a href="#dg-s4" data-dg-toc><span class="n">4</span> الإجراءات الجماعية</a>
+    <a href="#dg-s5" data-dg-toc><span class="n">5</span> «حزمة جديدة» — التوليد السريع</a>
+    <a href="#dg-s6" data-dg-toc><span class="n">6</span> الوضع المتقدّم للتوليد</a>
+    <a href="#dg-s7" data-dg-toc><span class="n">7</span> بعد التوليد — وش تتوقع</a>
+  </nav>
+
+  {# ───── عمود المحتوى ───── #}
+  <div class="dg-main">
+
+    <div class="dg-lead">
+      <span class="ic"><i class="fa-solid fa-lightbulb"></i></span>
+      <div>
+        <h3>قبل ما نبدأ — شو يعني «حزمة بطاقات»؟</h3>
+        <p>
+          الحزمة هي دفعة كروت تولّدها مرة وحدة بنفس المواصفات: نفس الباقة، نفس المدة،
+          نفس السعر — مثلًا «200 كرت ساعة بـ 5 شيكل». من صفحة <strong>حزم البطاقات</strong>
+          تدير كل الحزم (عرض، تعديل، طباعة، أرشفة)، ومنها أيضًا تولّد حزمة جديدة —
+          سريعًا من نافذة منبثقة أو بالتفصيل من صفحة <strong>إضافة حزمة</strong>.
+          هذا الدليل يغطي الرحلتين معًا.
+        </p>
+      </div>
+    </div>
+
+    {# ════ الخطوة 1 ════ #}
+    <section class="dg-step" id="dg-s1">
+      <div class="dg-badge">1</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-door-open"></i> افتح «حزم البطاقات» واقرأ شريط الأرقام</h2>
+        <p>
+          من القائمة الجانبية: <strong>«البطاقات» ← «حزم البطاقات»</strong>. الصفحة عنوانها
+          <strong>«إدارة البطاقات والحزم»</strong> وفي رأسها ثلاثة عناصر:
+        </p>
+        <ul>
+          <li>زر <strong>«حزمة جديدة»</strong> البنفسجي: يفتح نافذة التوليد السريع (الخطوة 5).</li>
+          <li>زر <strong>«استيراد من ملف»</strong>: لإدخال كروت جاهزة من ملف CSV/Excel/PDF بدل توليدها.</li>
+          <li>مفتاح <strong>«جدول / بطاقات»</strong>: يبدّل طريقة العرض — بطاقات مرئية جميلة، أو جدول كثيف بـ 18 عمودًا (مع زر «أعمدة» لإظهار/إخفاء ما تشاء).</li>
+        </ul>
+        <p>وتحت الرأس خمس بطاقات أرقام تلخّص الوضع:</p>
+        <ul>
+          <li><strong>إجمالي الحزم</strong> — كل الحزم ضمن الفلتر الحالي.</li>
+          <li><strong>حزم منتهية</strong> — حزم ما بقي فيها أي كرت قابل للتفعيل.</li>
+          <li><strong>إجمالي الكروت</strong> — مجموع كروت كل الحزم المعروضة.</li>
+          <li><strong>كروت منتهية</strong> — كروت انتهت صلاحيتها.</li>
+          <li><strong>كروت فعالة</strong> — كروت لها جلسات حية الآن.</li>
+        </ul>
+
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">البطاقات › حزم البطاقات</span></div>
+          <div class="dg-mock-body">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+              <div style="font-size:12.5px;font-weight:900;color:#0f172a">إدارة البطاقات والحزم</div>
+              <div style="display:flex;gap:6px">
+                <span class="dg-flbtn"><i class="fa-solid fa-plus"></i> حزمة جديدة</span>
+                <span class="dg-flsoft"><i class="fa-solid fa-file-import"></i> استيراد من ملف</span>
+                <span class="dg-flsoft"><i class="fa-solid fa-table"></i> جدول | <i class="fa-solid fa-grip"></i> بطاقات</span>
+              </div>
+            </div>
+            <div class="dg-kpis">
+              <div class="dg-kpi blue"><span class="lb">إجمالي الحزم</span><span class="vl">14</span></div>
+              <div class="dg-kpi red"><span class="lb">حزم منتهية</span><span class="vl">3</span></div>
+              <div class="dg-kpi purple"><span class="lb">إجمالي الكروت</span><span class="vl">1,240</span></div>
+              <div class="dg-kpi amber"><span class="lb">كروت منتهية</span><span class="vl">38</span></div>
+              <div class="dg-kpi green"><span class="lb">كروت فعالة</span><span class="vl">26</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة:</b> عرض «البطاقات» أنسب للجولة اليومية، وعرض «الجدول» أنسب لما
+          بدك تقارن أرقام كثير من الحزم (الكوتة، المحاسبة، الأسعار، الصلاحية...) في شاشة وحدة.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 2 ════ #}
+    <section class="dg-step" id="dg-s2">
+      <div class="dg-badge">2</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-filter"></i> فلتر وابحث وصدّر — شريط الأدوات</h2>
+        <p>تحت الأرقام شريط فلاتر متكامل:</p>
+        <ul>
+          <li><strong>حقل البحث</strong> <span class="dg-kbd">بحث عن حزمة أو كود...</span>: يلاقي الحزمة باسمها أو بكود الدفعة.</li>
+          <li><strong>فلتر الحالة:</strong> «النشطة فقط» (الافتراضي)، «كل الحزم»، «بها بطاقات جاهزة»، «بها استخدام»، «بها بطاقات منتهية»، «بها بطاقات ملغاة»، «مستهلكة»، أو «مؤرشفة» — المؤرشفة لا تظهر إلا من هنا.</li>
+          <li><strong>فلتر الباقة:</strong> حزم باقة معينة فقط.</li>
+          <li><strong>فلتر الموزع:</strong> حزم موزّع معيّن — مفيد للمحاسبة معه.</li>
+          <li>زر <strong>«تطبيق»</strong>: ينفّذ الفلاتر المختارة.</li>
+          <li>أزرار التصدير <strong>Excel / CSV / PDF</strong>: تنزّل قائمة الحزم (بنفس الفلتر الحالي) بكل أعمدتها — الـ PDF يطلع بتنسيق عربي فاخر جاهز للأرشيف.</li>
+        </ul>
+
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">حزم البطاقات › شريط الفلاتر</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-filterbar">
+              <span class="dg-fl" style="flex:1;min-width:130px"><i class="fa-solid fa-magnifying-glass"></i> بحث عن حزمة أو كود...</span>
+              <span class="dg-fl">النشطة فقط <i class="fa-solid fa-chevron-down"></i></span>
+              <span class="dg-fl">كل الباقات <i class="fa-solid fa-chevron-down"></i></span>
+              <span class="dg-fl">كل الموزعين <i class="fa-solid fa-chevron-down"></i></span>
+              <span class="dg-flbtn"><i class="fa-solid fa-filter"></i> تطبيق</span>
+              <span class="dg-flsoft"><i class="fa-solid fa-file-excel"></i> Excel</span>
+              <span class="dg-flsoft"><i class="fa-solid fa-file-csv"></i> CSV</span>
+              <span class="dg-flsoft"><i class="fa-solid fa-file-pdf"></i> PDF</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة محاسبية:</b> فلتر «الموزع» + زر Excel = كشف جاهز بكل حزم الموزع
+          وقيمها — ترسله له آخر الشهر بدل ما تجمعها يدويًا.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 3 ════ #}
+    <section class="dg-step" id="dg-s3">
+      <div class="dg-badge">3</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-id-card"></i> اقرأ بطاقة الحزمة — وكل زر فيها</h2>
+        <p>كل حزمة تظهر كبطاقة غنية فيها كل القصة:</p>
+        <ul>
+          <li><strong>الرأس:</strong> مربع تحديد (للإجراءات الجماعية) + اسم الحزمة + كود الدفعة + شارة الحالة: <strong>نشطة</strong> (خضراء)، <strong>منتهية</strong>، <strong>مؤرشفة</strong>، أو <strong>معلقة</strong>.</li>
+          <li><strong>شارات سريعة:</strong> مدة البطاقة (مثلًا «1 ساعة»)، عدد الأجهزة المسموح، والكوتة بالميجا إن وجدت.</li>
+          <li><strong>أربعة أرقام:</strong> <strong>العدد</strong> (إجمالي الكروت)، <strong>نشطة الآن</strong> (متصلة)، <strong>منتهية</strong>، <strong>مستخدمة</strong>.</li>
+          <li><strong>شريط التقدم:</strong> «N% مستخدم» + «متبقي للتفعيل N» — يخبرك بنظرة كم استُهلكت الحزمة.</li>
+          <li><strong>بيانات إدارية:</strong> المدير، الموزع، الأسعار (بيع / جملة)، وتاريخ الإنشاء.</li>
+        </ul>
+        <p>وفي أسفل البطاقة أربعة أزرار — هذا اللي يعمله كل واحد:</p>
+        <ul>
+          <li><strong>«عرض»:</strong> يفتح جدول <strong>كروت الحزمة</strong> كرتًا كرتًا: اسم الدخول، كلمة المرور، الحالة، المتبقي، الجلسات — مع إجراءات جماعية على الكروت (تفعيل، إيقاف، إضافة/خصم وقت، تعديل سرعة، قفل MAC، قطع اتصال...).</li>
+          <li><strong>«تعديل»:</strong> يفتح نموذج تعديل إعدادات الحزمة (الأسعار، المدة، السلوك، قواعد السرعة) — يؤثر على كروتها.</li>
+          <li><strong>«طباعة»:</strong> يفتح نافذة <strong>«تجهيز ملف البطاقات»</strong>: تختار قالب طباعة محفوظًا، تضبط حجم الورق (A4/ليتر)، الاتجاه، عدد الأعمدة والصفوف والهوامش، وتضغط <strong>«إنشاء ملف PDF»</strong> — شريط تقدم ثم زر <strong>«تحميل الملف»</strong>. (تفاصيل أكثر في دليلَي «بطاقات الطباعة» و«قوالب الطباعة».)</li>
+          <li><strong>«حذف»:</strong> أرشفة <strong>آمنة</strong> — الحزمة تختفي من العرض الافتراضي لكن كروتها لا تُحذف، وتقدر ترجّعها بزر <strong>«تفعيل»</strong> الذي يظهر مكانه على الحزم المؤرشفة.</li>
+        </ul>
+
+        <div class="dg-batchcard" aria-hidden="true">
+          <div class="hd">
+            <div>
+              <h4>حزمة ساعة</h4>
+              <div class="code">BCH-2026-014 &nbsp;#14</div>
+            </div>
+            <span class="dg-status active"><span class="d"></span> نشطة</span>
+          </div>
+          <div class="chips"><span><i class="fa-regular fa-clock"></i> مدة البطاقة: 1 ساعة</span><span><i class="fa-solid fa-mobile-screen"></i> جهاز 1</span><span><i class="fa-solid fa-database"></i> 1,024 MB</span></div>
+          <div class="stats">
+            <div class="stat"><span>العدد</span><b>200</b></div>
+            <div class="stat"><span>نشطة الآن</span><b>17</b></div>
+            <div class="stat"><span>منتهية</span><b>6</b></div>
+            <div class="stat"><span>مستخدمة</span><b>88</b></div>
+          </div>
+          <div>
+            <div style="display:flex;justify-content:space-between;font-size:8.5px;color:#64748b;font-weight:800;margin-bottom:4px"><span>44% مستخدم</span><span>متبقي للتفعيل 112</span></div>
+            <div class="dg-progress"><span style="width:44%"></span></div>
+          </div>
+          <div class="acts">
+            <span class="dg-act primary"><i class="fa-solid fa-eye"></i> عرض</span>
+            <span class="dg-act"><i class="fa-solid fa-pen"></i> تعديل</span>
+            <span class="dg-act"><i class="fa-solid fa-print"></i> طباعة</span>
+            <span class="dg-act danger"><i class="fa-solid fa-trash-can"></i> حذف</span>
+          </div>
+        </div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> هكذا تبدو بطاقة الحزمة — أول حزمة نشطة تحمل شارة «مميزة».</div>
+
+        <div class="dg-warn">
+          <span class="ic">⚠️</span>
+          <span><b>انتبه:</b> «حذف» هنا = <b>أرشفة بدون حذف البطاقات</b> — الكروت المباعة
+          تظل تشتغل عند الزبائن. لاسترجاع حزمة مؤرشفة: فلتر الحالة ← «مؤرشفة» ← زر «تفعيل».</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 4 ════ #}
+    <section class="dg-step" id="dg-s4">
+      <div class="dg-badge">4</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-list-check"></i> الإجراءات الجماعية — عدة حزم بضغطة</h2>
+        <p>
+          علّم مربعات التحديد على أكثر من حزمة فيظهر شريط <strong>«N محددة»</strong> مع قائمة إجراءات:
+        </p>
+        <ul>
+          <li><strong>«تحديث الإحصاءات»:</strong> يعيد حساب أرقام الحزم من البيانات الحالية.</li>
+          <li><strong>«حذف / أرشفة آمنة»:</strong> يؤرشف كل المحدد دفعة وحدة (مع حقل «ملاحظة اختيارية» يُسجَّل كسبب).</li>
+          <li><strong>«استعادة المؤرشف»:</strong> يرجّع الحزم المؤرشفة المحددة للعمل.</li>
+        </ul>
+        <p>اختر الإجراء واضغط <strong>«تنفيذ»</strong> — رسالة تأكيد تخبرك كم حزمة تأثرت.</p>
+
+        <div class="dg-mock" aria-hidden="true" style="max-width:520px">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">حزم البطاقات › شريط الإجراء الجماعي</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-bulk">
+              <strong style="color:#5b21b6">3 محددة</strong>
+              <span class="dg-fl">حذف / أرشفة آمنة <i class="fa-solid fa-chevron-down"></i></span>
+              <span class="dg-fl ph" style="flex:1;min-width:110px;color:#a3aec2">ملاحظة اختيارية</span>
+              <span class="dg-flbtn"><i class="fa-solid fa-check"></i> تنفيذ</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 5 ════ #}
+    <section class="dg-step" id="dg-s5">
+      <div class="dg-badge">5</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-wand-magic-sparkles"></i> «حزمة جديدة» — التوليد السريع حقلًا حقلًا</h2>
+        <p>
+          اضغط زر <strong>«حزمة جديدة»</strong> فتفتح نافذة <strong>«إضافة حزمة سريعة»</strong> —
+          «الأساسيات فقط» كما يقول وصفها. هذي حقولها بالترتيب وماذا يفعل كل واحد:
+        </p>
+        <ul>
+          <li><strong>نوع الحزمة — «مطبوعة / إلكترونية»:</strong> مطبوعة = كروت تطبعها وتوزعها على نقاط البيع؛ إلكترونية = للبيع عبر سوق البطاقات.</li>
+          <li><strong>اسم الحزمة:</strong> اسم وصفي يظهر بكل القوائم — مثل <span class="dg-kbd">حزمة ساعة</span>.</li>
+          <li><strong>العرض</strong> <span style="color:#dc2626;font-weight:900">*</span>: الباقة المرتبطة — تحدد السرعة والكوتا اللي تتفعّل عند الاستخدام. إجباري.</li>
+          <li><strong>مدة الاستخدام + وحدة الاستخدام:</strong> عمر الكرت (مثلًا 1 + «ساعة»). 0 = اعتماد مدة الباقة.</li>
+          <li><strong>نوع المحاسبة:</strong> <strong>«من أول اتصال»</strong> (الافتراضي — العمر يبدأ بأول دخول ويجري بالساعة الحائطية) أو <strong>«بالثانية»</strong> (رصيد وقت يُستهلك أثناء الاتصال فقط — وعندها يظهر حقل إجباري: <strong>«صلاحية البطاقة بعد أول اتصال»</strong> حتى لا يعيش الكرت للأبد).</li>
+          <li><strong>الكمية:</strong> عدد الكروت — من 1 حتى 2000 في الدفعة.</li>
+          <li><strong>سعر البيع / سعر الجملة:</strong> مرجعيان للمحاسبة والتقارير — سعر البيع هو اللي يُحسب منه «إيراد الشهر» في نظرة عامة.</li>
+          <li><strong>الكوتة (ميجا/جيجا):</strong> سقف بيانات لكل كرت — 0 = بلا كوتا خاصة.</li>
+          <li><strong>عدد الأجهزة:</strong> كم جهازًا يتصل بالكرت معًا (عادة 1).</li>
+          <li><strong>طول اسم المستخدم (4–16) / طول كلمة المرور (4–20):</strong> أطوال الأكواد المولّدة عشوائيًا.</li>
+          <li><strong>إضافة بداية أو نهاية + النص المضاف:</strong> بادئة أو لاحقة تميّز كروتك — مثل <span class="dg-kbd">VIP-</span> قبل كل اسم.</li>
+          <li><strong>المدير / الموزع:</strong> تُنسب الحزمة لهما في الحسابات والتقارير.</li>
+        </ul>
+        <p>
+          ثم اضغط <strong>«إنشاء الآن»</strong> — شريط تقدم حي يعدّ الكروت وأنت تتفرج.
+          وإذا احتجت خيارات أعمق اضغط زر <strong>«متقدم»</strong> في نفس النافذة (الخطوة التالية).
+        </p>
+
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">حزم البطاقات › إضافة حزمة سريعة</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-mock-sechead"><span class="ic"><i class="fa-solid fa-wand-magic-sparkles"></i></span> إضافة حزمة سريعة — الأساسيات فقط</div>
+            <div class="dg-radio2"><span class="on"><i class="fa-solid fa-print"></i> مطبوعة</span><span><i class="fa-solid fa-wallet"></i> إلكترونية</span></div>
+            <div class="dg-mock-grid2">
+              <div class="dg-mf"><label>اسم الحزمة</label><div class="dg-mf-input hl">حزمة ساعة</div></div>
+              <div class="dg-mf"><label>العرض <span class="req">*</span></label><div class="dg-mf-select"><div class="dg-mf-input hl">باقة ساعة سريعة · 5.00</div></div></div>
+            </div>
+            <div class="dg-mock-grid3">
+              <div class="dg-mf"><label>مدة الاستخدام</label><div class="dg-mf-input">1</div></div>
+              <div class="dg-mf"><label>وحدة الاستخدام</label><div class="dg-mf-select"><div class="dg-mf-input">ساعة</div></div></div>
+              <div class="dg-mf"><label>نوع المحاسبة</label><div class="dg-mf-select"><div class="dg-mf-input">من أول اتصال</div></div></div>
+            </div>
+            <div class="dg-mock-grid3">
+              <div class="dg-mf"><label>الكمية</label><div class="dg-mf-input hl">200</div></div>
+              <div class="dg-mf"><label>سعر البيع</label><div class="dg-mf-input">5.00</div></div>
+              <div class="dg-mf"><label>سعر الجملة</label><div class="dg-mf-input">4.00</div></div>
+            </div>
+            <div class="dg-mock-grid3">
+              <div class="dg-mf"><label>طول اسم المستخدم</label><div class="dg-mf-input">8</div></div>
+              <div class="dg-mf"><label>طول كلمة المرور</label><div class="dg-mf-input">6</div></div>
+              <div class="dg-mf"><label>النص المضاف</label><div class="dg-mf-input ph">مثال: VIP-</div></div>
+            </div>
+            <div class="dg-mock-actions">
+              <span class="dg-mock-btn ghost"><i class="fa-solid fa-sliders"></i> متقدم</span>
+              <span class="dg-mock-btn primary"><i class="fa-solid fa-wand-magic-sparkles"></i> إنشاء الآن</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="dg-warn">
+          <span class="ic">⚠️</span>
+          <span><b>انتبه:</b> اخترت «بالثانية»؟ لازم تعبّي «صلاحية البطاقة بعد أول اتصال» —
+          النظام يرفض التوليد بدونها برسالة: «عند اختيار المحاسبة بالثانية يجب تحديد
+          صلاحية البطاقة بعد أول اتصال.» هذا صمّام أمان حتى ما يظل كرت مفتوحًا للأبد.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 6 ════ #}
+    <section class="dg-step" id="dg-s6">
+      <div class="dg-badge">6</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-sliders"></i> الوضع المتقدّم — صفحة «إنشاء حزمة بطاقات»</h2>
+        <p>
+          من القائمة الجانبية <strong>«البطاقات» ← «إضافة حزمة»</strong> (أو زر «متقدم» في
+          النافذة السريعة). صفحة كاملة بخمسة أقسام قابلة للطي — افتح ما تحتاجه فقط:
+        </p>
+        <ul>
+          <li><strong>بيانات الحزمة:</strong> كل حقول النافذة السريعة + <strong>«السعر الإجمالي (مرجعي)»</strong>، <strong>«الكوتا الكلية»</strong>، و<strong>«اسم الخدمة»</strong> (للمطابقة مع اسم الخدمة في جهاز الشبكة).</li>
+          <li><strong>توليد البطاقات:</strong> الأطوال + <strong>«نمط توليد كلمة المرور»</strong> (أرقام فقط / متوسط / قوي بحروف وأرقام ورموز)، <strong>«تضمين رقم الحزمة»</strong> (يضع B{id}- قبل الاسم)، و<strong>«توليد عشوائي»</strong>.</li>
+          <li><strong>الصلاحية والوقت:</strong> <strong>«مدة البطاقة»</strong> (دقيقة/ساعة/يوم)، <strong>«عدد الأجهزة»</strong>، <strong>«صلاحية بعد أول دخول (أيام)»</strong>، ومفتاحا المحاسبة: <strong>«العدّ من أول اتصال»</strong> و<strong>«العدّ بالثواني»</strong>.</li>
+          <li><strong>السرعة المجدولة:</strong> قاعدة سرعة تنحفظ على الحزمة فور إنشائها — مثلًا تخفيض السرعة ليلًا لكل كروت الحزمة.</li>
+          <li><strong>سلوك الكوتا وخيارات إضافية:</strong> <strong>«عند انتهاء الكوتا»</strong> (إيقاف الكرت / تخفيض السرعة / إبقاء مع تنبيه)، <strong>«تجديد تلقائي بعد أول استخدام»</strong>، <strong>«ربط MAC عند الاتصال»</strong> و<strong>«قفل MAC عند الإغلاق»</strong> (يثبّتان الكرت تلقائيًا على أول جهاز)، وحقل <strong>«ملاحظات»</strong> داخلية لا تُطبع على البطاقات.</li>
+        </ul>
+        <p>وفي الأسفل زرّا <strong>«إلغاء»</strong> و<strong>«توليد الآن»</strong>.</p>
+
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">البطاقات › إضافة حزمة (متقدم)</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-mock-sechead"><span class="ic"><i class="fa-solid fa-dice"></i></span> توليد البطاقات</div>
+            <div class="dg-mock-grid2">
+              <div class="dg-mf"><label>نمط توليد كلمة المرور</label><div class="dg-mf-select"><div class="dg-mf-input hl">أرقام فقط</div></div></div>
+              <div class="dg-mf"><label>إضافة قبل أو بعد الاسم</label><div class="dg-mf-select"><div class="dg-mf-input">قبل الاسم</div></div></div>
+            </div>
+            <div class="dg-mock-sechead" style="margin-top:4px"><span class="ic"><i class="fa-solid fa-sliders"></i></span> سلوك الكوتا وخيارات إضافية</div>
+            <div class="dg-mock-grid2">
+              <div class="dg-mf"><label>عند انتهاء الكوتا</label><div class="dg-mf-select"><div class="dg-mf-input hl">تخفيض السرعة</div></div></div>
+              <div class="dg-mf"><label>ربط MAC عند الاتصال</label>
+                <div style="display:flex;align-items:center;gap:8px;padding-top:3px">
+                  <span style="position:relative;width:36px;height:20px;background:#7c3aed;border-radius:99px;flex:none">
+                    <span style="position:absolute;top:2.5px;inset-inline-end:3px;width:15px;height:15px;background:#fff;border-radius:50%;box-shadow:0 1px 2px rgba(0,0,0,.2)"></span></span>
+                  <span style="font-size:10px;font-weight:800;color:#5b21b6">مفعَّل</span>
+                </div>
+              </div>
+            </div>
+            <div class="dg-mock-actions">
+              <span class="dg-mock-btn ghost">إلغاء</span>
+              <span class="dg-mock-btn primary"><i class="fa-solid fa-wand-magic-sparkles"></i> توليد الآن</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>أهم خيارين تفهمهما:</b> «العدّ من أول اتصال» <b>مفعَّل</b> = كرت ساعة يموت
+          بعد ساعة من أول دخول حتى لو الزبون فصل (نمط الهوت سبوت الكلاسيكي). <b>معطَّل</b> =
+          الساعة رصيد يُستهلك أثناء الاتصال فقط — يفصل ويرجع والرصيد محفوظ.
+          و«ربط MAC عند الاتصال» يمنع تشارك الكرت تلقائيًا من أول استخدام.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 7 ════ #}
+    <section class="dg-step" id="dg-s7">
+      <div class="dg-badge">7</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-flag-checkered"></i> بعد «توليد الآن» — وش تتوقع وش بعدين</h2>
+        <p>اضغط التوليد ويصير التالي:</p>
+        <ul>
+          <li>شريط تقدم حي يعدّ الكروت أثناء توليدها (الدفعات الكبيرة تاخذ ثوانٍ).</li>
+          <li>رسالة نجاح خضراء: <strong>«تم إنشاء دفعة "BCH-…" — N بطاقة.»</strong></li>
+          <li>ينقلك النظام مباشرة إلى <strong>صفحة كروت الحزمة</strong> — كل كرت بسطره: اسم الدخول، كلمة المرور، الحالة <strong>«متاح»</strong>، والمتبقي «لم تبدأ».</li>
+        </ul>
+
+        <div class="dg-flash" aria-hidden="true">
+          <i class="fa-solid fa-circle-check"></i> تم إنشاء دفعة «BCH-2026-015» — 200 بطاقة.
+        </div>
+
+        <p style="margin-top:13px">ومن هناك طريقك واضح:</p>
+        <ul>
+          <li><strong>اطبعها:</strong> ارجع لحزم البطاقات ← زر «طباعة» على الحزمة ← اختر القالب ← «إنشاء ملف PDF» (دليل «بطاقات الطباعة»).</li>
+          <li><strong>سلّمها للموزع:</strong> وكلما باع الزبائن واتصلوا، ترتفع «مستخدمة» وتظهر المبيعات في نظرة عامة.</li>
+          <li><strong>تابع كرتًا معينًا:</strong> من «فحص بطاقة» بكوده (دليل «فحص بطاقة»).</li>
+        </ul>
+
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>خلاصة الرحلة:</b> ولّد ← اطبع ← وزّع ← تابع — أربع محطات، وكلها تبدأ
+          وتنتهي في صفحة «حزم البطاقات» هذه.</span>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+{# ── scrollspy خفيف: يبرز بند الفهرس المقابل للخطوة الظاهرة ── #}
+<script>
+(function(){
+  'use strict';
+  var links = Array.prototype.slice.call(document.querySelectorAll('[data-dg-toc]'));
+  if (!links.length || !('IntersectionObserver' in window)) return;
+  var map = {};
+  links.forEach(function(a){ map[a.getAttribute('href').slice(1)] = a; });
+  var obs = new IntersectionObserver(function(entries){
+    entries.forEach(function(en){
+      if (!en.isIntersecting) return;
+      links.forEach(function(a){ a.classList.remove('is-active'); });
+      var a = map[en.target.id];
+      if (a) a.classList.add('is-active');
+    });
+  }, { rootMargin: '-35% 0px -55% 0px' });
+  Object.keys(map).forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) obs.observe(el);
+  });
+})();
+</script>
+
+{% endblock %}

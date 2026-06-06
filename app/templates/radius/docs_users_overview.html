@@ -1,0 +1,874 @@
+{# ══════════════════════════════════════════════════════════════════════
+   دليل «نظرة عامة — المشتركون» — أدلة قسم المشتركين.
+
+   البنية (مستنسخة من docs_add_subscriber.html — النمط المعتمد):
+     • hero + شريط أدوات (عودة لقسم المشتركين / حفظ كـ PDF).
+     • فهرس جانبي لاصق (anchor links + scrollspy خفيف بلا مكتبات)
+       على يسار الصفحة (order:2 في اتجاه RTL).
+     • أقسام مرقّمة: كل قسم بطاقة فيها شارة رقم بنفسجية متدرّجة،
+       عنوان، شرح بلغة بسيطة بصيغة المخاطَب، ورسم توضيحي.
+     • الرسوم محاكاة HTML/CSS مصغّرة للصفحة الحقيقية
+       (subscribers_overview.html) بألوان منظومة التصميم.
+     • تلميحات 💡 نصيحة / ⚠️ انتبه كصناديق ملوّنة.
+
+   المحتوى مطابق للصفحة الفعلية: أسماء البطاقات والأزرار والجداول
+   منسوخة حرفيًا من subscribers_overview.html + uds_table.js
+   (المُحصّل، السلف، التفعيل، الجيجات، شو ضل، أكبر المدينين،
+   الكوتة المخصّصة...) — عند تغيير الصفحة حدّث الدليل معها.
+
+   تصدير PDF = window.print() مع @media print أدناه (انظر تعليل
+   القرار في routes/docs_center.py).
+   ══════════════════════════════════════════════════════════════════════ #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}دليل: نظرة عامة — المشتركون — كيف تستخدمني{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<style>
+  /* ── التخطيط: فهرس جانبي لاصق + عمود المحتوى ── */
+  /* الفهرس على الجهة الثانية من الصفحة (النمط المعتمد): عمود المحتوى أولاً
+     ثم الفهرس اللاصق في نهاية السطر — أي يسار الصفحة في اتجاه RTL */
+  .dg-layout{ display:grid; grid-template-columns:minmax(0,1fr) 230px; gap:20px; align-items:start; }
+  .dg-toc{ order:2; }
+  .dg-main{ order:1; }
+  /* على الشاشات الضيقة يرجع الفهرس فوق المحتوى كما كان */
+  @media (max-width:980px){ .dg-layout{ grid-template-columns:1fr; } .dg-toc{ order:1; } .dg-main{ order:2; } }
+
+  .dg-toc{
+    position:sticky; top:84px;
+    background:#fff; border:1px solid #e8edf3; border-radius:14px;
+    padding:14px 13px; display:grid; gap:3px;
+  }
+  @media (max-width:980px){ .dg-toc{ position:static; } }
+  .dg-toc-title{
+    display:flex; align-items:center; gap:8px; font-size:12px; font-weight:900;
+    color:#7c7a99; margin-bottom:7px; padding-inline:6px;
+  }
+  .dg-toc a{
+    display:flex; align-items:center; gap:9px;
+    padding:8px 10px; border-radius:9px; text-decoration:none;
+    font-size:12.5px; font-weight:700; color:#475569;
+    transition:background .14s, color .14s;
+  }
+  .dg-toc a .n{
+    width:21px; height:21px; border-radius:50%; flex:none;
+    display:grid; place-items:center; font-size:10.5px; font-weight:900;
+    background:#f1f5f9; color:#94a3b8;
+  }
+  .dg-toc a:hover{ background:#f5f3ff; color:#5b21b6; }
+  .dg-toc a.is-active{ background:#ede9fe; color:#5b21b6; }
+  .dg-toc a.is-active .n{ background:linear-gradient(135deg,#7c3aed,#5b21b6); color:#fff; }
+
+  /* ── عمود الأقسام ── */
+  .dg-main{ min-width:0; display:grid; gap:18px; }
+
+  /* تمهيد «ماذا ستتعلم» */
+  .dg-lead{
+    display:flex; gap:13px; align-items:flex-start;
+    background:linear-gradient(135deg,#f5f3ff,#fdfcff);
+    border:1px solid #e9e5fc; border-radius:14px; padding:15px 17px;
+  }
+  .dg-lead .ic{ width:40px;height:40px;border-radius:12px;flex:none;display:grid;place-items:center;
+    font-size:17px;background:#ede9fe;color:#6d28d9; }
+  .dg-lead h3{ margin:0 0 4px; font-size:13.5px; font-weight:800; color:#241e4e; }
+  .dg-lead p{ margin:0; font-size:12.5px; line-height:1.9; color:#5b5a78; }
+
+  /* بطاقة القسم */
+  .dg-step{ display:grid; grid-template-columns:auto 1fr; gap:15px; align-items:start; scroll-margin-top:90px; }
+  @media (max-width:560px){ .dg-step{ grid-template-columns:1fr; } }
+  .dg-badge{
+    width:42px; height:42px; border-radius:50%; flex:none;
+    display:grid; place-items:center; font-size:17px; font-weight:900; color:#fff;
+    background:linear-gradient(135deg,#7c3aed,#5b21b6);
+    box-shadow:0 8px 18px rgba(124,58,237,.3);
+  }
+  .dg-card{
+    min-width:0; background:#fff; border:1px solid #e8edf3; border-radius:15px;
+    padding:16px 18px;
+  }
+  .dg-card h2{
+    margin:0 0 8px; font-size:15.5px; font-weight:800; color:#0f172a;
+    display:flex; align-items:center; gap:9px; flex-wrap:wrap;
+  }
+  .dg-card h2 i{ color:#7c3aed; }
+  .dg-card h3{ margin:13px 0 6px; font-size:13px; font-weight:800; color:#241e4e; }
+  .dg-card p{ margin:0 0 7px; font-size:13px; line-height:1.95; color:#475569; }
+  .dg-card p:last-child{ margin-bottom:0; }
+  .dg-card ul{ margin:4px 0 8px; padding-inline-start:22px; font-size:13px; line-height:2; color:#475569; }
+  .dg-card ol{ margin:4px 0 8px; padding-inline-start:22px; font-size:13px; line-height:2; color:#475569; }
+  .dg-card strong{ color:#241e4e; }
+  .dg-kbd{
+    font-family:ui-monospace,Consolas,monospace; font-size:11.5px;
+    background:#f1f5f9; border:1px solid #e2e8f0; border-radius:5px;
+    padding:1px 7px; color:#5b21b6;
+  }
+
+  /* صناديق التلميح */
+  .dg-tip, .dg-warn{
+    display:flex; gap:11px; align-items:flex-start;
+    border-radius:12px; padding:11px 14px; margin-top:11px;
+    font-size:12.5px; line-height:1.9;
+  }
+  .dg-tip{ background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; }
+  .dg-warn{ background:#fffbeb; border:1px solid #fde68a; color:#92400e; }
+  .dg-tip .ic, .dg-warn .ic{ flex:none; font-size:15px; line-height:1.6; }
+  .dg-tip b, .dg-warn b{ font-weight:900; }
+
+  /* ════ الرسوم: محاكاة مصغّرة للصفحة الحقيقية ════ */
+  .dg-mock{
+    border:1px solid #e2e8f0; border-radius:14px; overflow:hidden;
+    background:#fff; box-shadow:0 8px 20px rgba(15,23,42,.07);
+    margin-top:13px; max-width:560px;
+  }
+  .dg-mock-bar{
+    display:flex; align-items:center; gap:7px; padding:8px 12px;
+    background:#f1f5f9; border-bottom:1px solid #e2e8f0;
+  }
+  .dg-mock-bar .dots{ display:flex; gap:5px; }
+  .dg-mock-bar .dots i{ width:9px; height:9px; border-radius:50%; }
+  .dg-mock-bar .dots i:nth-child(1){ background:#f87171; }
+  .dg-mock-bar .dots i:nth-child(2){ background:#fbbf24; }
+  .dg-mock-bar .dots i:nth-child(3){ background:#34d399; }
+  .dg-mock-bar .crumb{
+    flex:1; background:#fff; border:1px solid #e2e8f0; border-radius:7px;
+    padding:4px 10px; font-size:10.5px; font-weight:700; color:#64748b;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .dg-mock-body{ padding:14px; display:grid; gap:11px; }
+
+  /* محاكاة القائمة الجانبية (القسم 1) */
+  .dg-sidemock{
+    max-width:240px; background:#fff; border:1px solid #e2e8f0; border-radius:13px;
+    padding:11px 10px; box-shadow:0 8px 20px rgba(15,23,42,.07); margin-top:13px;
+  }
+  .dg-sidemock .sec{
+    display:flex; align-items:center; gap:9px; padding:8px 10px; border-radius:9px;
+    font-size:11.5px; font-weight:800; color:#334155; background:#f8fafc;
+  }
+  .dg-sidemock .sec i.cv{ margin-inline-start:auto; font-size:9px; color:#94a3b8; transform:rotate(180deg); }
+  .dg-sidemock .sub{
+    display:flex; align-items:center; gap:8px; padding:7px 10px 7px;
+    margin-inline-start:18px; border-radius:8px; font-size:11px; font-weight:700; color:#64748b;
+  }
+  .dg-sidemock .sub.on{
+    background:#ede9fe; color:#5b21b6; font-weight:900; position:relative;
+  }
+  .dg-sidemock .sub.on::after{
+    content:"\f060"; font-family:"Font Awesome 6 Free"; font-weight:900;
+    margin-inline-start:auto; font-size:9px; animation:dgPoint 1.2s ease-in-out infinite;
+  }
+  @keyframes dgPoint{ 0%,100%{ transform:translateX(0); } 50%{ transform:translateX(-4px); } }
+
+  /* محاكاة مفتاح شهري/سنوي + منتقي الفترة */
+  .dg-seg{ display:inline-flex; background:#f1f5f9; border-radius:11px; padding:3px; gap:3px; }
+  .dg-seg span{
+    padding:6px 14px; border-radius:9px; font-size:11px; font-weight:800; color:#64748b;
+  }
+  .dg-seg span.on{
+    background:linear-gradient(135deg,#7c3aed,#5b21b6); color:#fff;
+    box-shadow:0 4px 10px rgba(124,58,237,.3);
+  }
+  .dg-period-pick{
+    display:inline-flex; align-items:center; gap:7px;
+    border:1.5px solid #c4b5fd; background:#faf5ff; border-radius:9px;
+    padding:5px 11px; font-size:11px; font-weight:800; color:#5b21b6;
+  }
+  .dg-period-pick i{ font-size:9px; color:#a78bfa; }
+
+  /* محاكاة بطاقات KPI */
+  .dg-kpis{ display:grid; grid-template-columns:repeat(3,1fr); gap:9px; }
+  @media (max-width:480px){ .dg-kpis{ grid-template-columns:repeat(2,1fr); } }
+  .dg-kpi{
+    border:1px solid #e2e8f0; border-radius:11px; padding:9px 11px; background:#fff;
+    display:grid; gap:3px;
+  }
+  .dg-kpi .l{ font-size:9.5px; font-weight:800; color:#94a3b8; display:flex; align-items:center; gap:5px; }
+  .dg-kpi .l i{ font-size:10px; }
+  .dg-kpi .v{ font-size:14px; font-weight:900; color:#0f172a; }
+  .dg-kpi .s{ font-size:9px; color:#94a3b8; }
+  .dg-kpi.brand .l i{ color:#7c3aed; }  .dg-kpi.brand{ border-color:#e9e5fc; background:#fdfcff; }
+  .dg-kpi.amber .l i{ color:#f59e0b; }
+  .dg-kpi.blue  .l i{ color:#3b82f6; }
+  .dg-kpi.green .l i{ color:#10b981; }
+  .dg-kpi.red   .l i{ color:#ef4444; }
+
+  /* محاكاة سطرَي الدخل/الصرف */
+  .dg-flow{ display:grid; grid-template-columns:1fr 1fr; gap:9px; }
+  @media (max-width:480px){ .dg-flow{ grid-template-columns:1fr; } }
+  .dg-flow-item{
+    display:flex; gap:9px; align-items:center; border-radius:11px; padding:10px 12px;
+  }
+  .dg-flow-item.in{ background:#f0fdf4; border:1px solid #bbf7d0; }
+  .dg-flow-item.out{ background:#fff7ed; border:1px solid #fed7aa; }
+  .dg-flow-item .ic{
+    width:28px; height:28px; border-radius:9px; flex:none; display:grid; place-items:center; font-size:11px;
+  }
+  .dg-flow-item.in .ic{ background:#dcfce7; color:#15803d; }
+  .dg-flow-item.out .ic{ background:#ffedd5; color:#c2410c; }
+  .dg-flow-item .l{ font-size:9.5px; font-weight:800; color:#64748b; }
+  .dg-flow-item .v{ font-size:13px; font-weight:900; color:#0f172a; }
+
+  /* محاكاة بلاطات حالة المشتركين */
+  .dg-tiles{ display:grid; grid-template-columns:repeat(6,1fr); gap:7px; }
+  @media (max-width:560px){ .dg-tiles{ grid-template-columns:repeat(3,1fr); } }
+  .dg-tile{
+    border:1px solid #e2e8f0; border-radius:10px; padding:8px 6px; text-align:center; background:#fff;
+  }
+  .dg-tile .v{ font-size:13px; font-weight:900; color:#0f172a; }
+  .dg-tile .l{ font-size:8.5px; font-weight:800; color:#94a3b8; margin-top:2px; }
+  .dg-tile i{ font-size:10px; display:block; margin-bottom:3px; }
+  .dg-tile.brand i{ color:#7c3aed; } .dg-tile.green i{ color:#10b981; } .dg-tile.blue i{ color:#3b82f6; }
+  .dg-tile.amber i{ color:#f59e0b; } .dg-tile.red i{ color:#ef4444; }  .dg-tile.grey i{ color:#94a3b8; }
+
+  /* محاكاة مسار أداء (lane) مع أعمدة sparkline */
+  .dg-lane{
+    border:1px solid #e2e8f0; border-radius:12px; padding:11px 13px; background:#fff; display:grid; gap:7px;
+    max-width:280px;
+  }
+  .dg-lane .hd{ display:flex; align-items:center; gap:8px; font-size:11px; font-weight:800; color:#334155; }
+  .dg-lane .hd i{ color:#7c3aed; }
+  .dg-lane .v{ font-size:16px; font-weight:900; color:#0f172a; }
+  .dg-lane .s{ font-size:9.5px; color:#94a3b8; }
+  .dg-spark{ display:flex; align-items:flex-end; gap:4px; height:42px; }
+  .dg-spark span{
+    flex:1; border-radius:3px 3px 0 0; min-height:3px;
+    background:linear-gradient(180deg,#a78bfa,#7c3aed);
+  }
+  .dg-spark-axis{ display:flex; gap:4px; }
+  .dg-spark-axis span{ flex:1; text-align:center; font-size:7.5px; color:#cbd5e1; font-weight:700; }
+  .dg-flink{
+    display:inline-flex; align-items:center; gap:6px; font-size:10px; font-weight:800; color:#6b5aed;
+  }
+
+  /* محاكاة بلاطات الديون */
+  .dg-debt{ display:grid; grid-template-columns:repeat(2,1fr); gap:9px; }
+  .dg-debt-tile{ border-radius:11px; padding:10px 12px; display:grid; gap:3px; }
+  .dg-debt-tile .l{ font-size:9.5px; font-weight:800; display:flex; align-items:center; gap:5px; }
+  .dg-debt-tile .v{ font-size:14px; font-weight:900; color:#0f172a; }
+  .dg-debt-tile .m{ font-size:9px; color:#94a3b8; }
+  .dg-debt-tile.amber{ background:#fffbeb; border:1px solid #fde68a; }
+  .dg-debt-tile.amber .l{ color:#b45309; }
+  .dg-debt-tile.red{ background:#fef2f2; border:1px solid #fecaca; }
+  .dg-debt-tile.red .l{ color:#b91c1c; }
+  .dg-debt-tile.green{ background:#f0fdf4; border:1px solid #bbf7d0; }
+  .dg-debt-tile.green .l{ color:#15803d; }
+  .dg-debt-tile.total{ background:#f5f3ff; border:1px solid #ddd6fe; }
+  .dg-debt-tile.total .l{ color:#5b21b6; }
+
+  /* محاكاة شريط أدوات الجدول الموحّد + الجدول */
+  .dg-tbar{
+    display:flex; align-items:center; gap:7px; justify-content:flex-end;
+    padding-bottom:9px; border-bottom:1px dashed #eef2f7;
+  }
+  .dg-tbar .cnt{ margin-inline-end:auto; font-size:9.5px; font-weight:800; color:#94a3b8; }
+  .dg-tbtn{
+    display:inline-flex; align-items:center; gap:5px;
+    border:1px solid #e2e8f0; background:#f8fafc; border-radius:8px;
+    padding:5px 10px; font-size:10px; font-weight:800; color:#475569;
+  }
+  .dg-tbtn.ic-only{ padding:5px 8px; }
+  .dg-tbtn .csv{ color:#16a34a; } .dg-tbtn .xls{ color:#15803d; } .dg-tbtn .pdf{ color:#dc2626; }
+
+  .dg-rowmock{
+    margin-top:0; border:1px solid #e2e8f0; border-radius:12px;
+    overflow:hidden;
+  }
+  .dg-rowmock .hd, .dg-rowmock .rw{
+    display:grid; grid-template-columns:1.3fr .9fr .7fr .9fr 1fr; gap:8px;
+    padding:9px 13px; font-size:10px; align-items:center;
+  }
+  .dg-rowmock .hd{ background:#f5f3ff; color:#5b21b6; font-weight:900; }
+  .dg-rowmock .hd .si{ font-size:8px; color:#c4b5fd; margin-inline-start:3px; }
+  .dg-rowmock .rw{ background:#fff; color:#334155; font-weight:700; border-top:1px solid #f1f5f9; }
+  .dg-rowmock .neg{ color:#dc2626; }
+  .dg-rowmock .lnk{ color:#6b5aed; font-weight:800; font-size:9.5px; }
+  .dg-pager{
+    display:flex; align-items:center; gap:9px; justify-content:space-between;
+    padding-top:9px; font-size:9.5px; font-weight:700; color:#94a3b8;
+  }
+  .dg-pager .pg{ display:flex; gap:4px; }
+  .dg-pager .pg span{
+    width:20px; height:20px; border-radius:6px; display:grid; place-items:center;
+    border:1px solid #e2e8f0; font-size:9px;
+  }
+  .dg-pager .pg span.on{ background:#7c3aed; color:#fff; border-color:#7c3aed; }
+
+  /* محاكاة شريط الحصّة (الكوتة) */
+  .dg-share{ display:flex; align-items:center; gap:6px; }
+  .dg-share .trk{ flex:1; height:6px; border-radius:99px; background:#f1f5f9; overflow:hidden; }
+  .dg-share .trk span{ display:block; height:100%; border-radius:99px; background:linear-gradient(90deg,#7c3aed,#a78bfa); }
+
+  .dg-cap{ font-size:11px; color:#94a3b8; margin-top:8px; line-height:1.7; }
+  .dg-cap i{ color:#c4b5fd; }
+
+  /* جدول مرجعي صغير (شو يعني كل رقم) */
+  .dg-ref{ width:100%; border-collapse:collapse; margin:8px 0 4px; font-size:12px; }
+  .dg-ref th{
+    background:#f5f3ff; color:#5b21b6; font-weight:900; text-align:start;
+    padding:8px 11px; border:1px solid #ece9fb; font-size:11.5px;
+  }
+  .dg-ref td{ padding:8px 11px; border:1px solid #eef2f7; color:#475569; line-height:1.8; }
+  .dg-ref td:first-child{ font-weight:800; color:#241e4e; white-space:nowrap; }
+
+  /* ════ الطباعة: «حفظ كـ PDF» = window.print() ════ */
+  @media print{
+    .hb-side, .hb-side-overlay, .hb-topbar, header.hb-top,
+    .dg-toc, .dg-noprint, .hub-hero-actions{ display:none !important; }
+    .dg-layout{ grid-template-columns:1fr; }
+    .dg-card, .dg-mock, .dg-sidemock, .dg-rowmock{
+      box-shadow:none !important; break-inside:avoid;
+    }
+    .dg-step{ break-inside:avoid; }
+    body{ background:#fff !important; }
+    .dg-badge, .dg-tip, .dg-warn, .dg-seg span.on, .dg-spark span,
+    .dg-debt-tile, .dg-flow-item, .dg-rowmock .hd, .dg-ref th,
+    .dg-pager .pg span.on, .dg-share .trk span{
+      -webkit-print-color-adjust:exact; print-color-adjust:exact;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{{ hub.hero(
+  "دليل: نظرة عامة — المشتركون",
+  subtitle="لوحة الأرقام الكبيرة لمشتركيك: شو يعني كل رقم، كل بطاقة، وكل زر — بدقة متناهية.",
+  icon="users-viewfinder",
+  actions_html='
+    <button type="button" class="hub-btn hub-btn--secondary" onclick="window.print()">
+      <i class="fa-solid fa-file-pdf"></i> حفظ كـ PDF
+    </button>
+    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.docs_section', cat_slug='subscribers') + '">
+      <i class="fa-solid fa-arrow-right"></i> أدلة المشتركين
+    </a>
+  '
+) }}
+
+<div class="dg-layout">
+
+  {# ───── الفهرس الجانبي اللاصق ───── #}
+  <nav class="dg-toc dg-noprint" aria-label="فهرس الدليل">
+    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> فهرس الأقسام</div>
+    <a href="#dg-s1" data-dg-toc><span class="n">1</span> شو هي الصفحة ووين ألاقيها</a>
+    <a href="#dg-s2" data-dg-toc><span class="n">2</span> شهري / سنوي واختيار الفترة</a>
+    <a href="#dg-s3" data-dg-toc><span class="n">3</span> الدخل والصرف وبطاقات الأرقام</a>
+    <a href="#dg-s4" data-dg-toc><span class="n">4</span> بلاطات حالة المشتركين</a>
+    <a href="#dg-s5" data-dg-toc><span class="n">5</span> الأداء حسب الفترة (الأعمدة)</a>
+    <a href="#dg-s6" data-dg-toc><span class="n">6</span> «شو ضل» — الديون</a>
+    <a href="#dg-s7" data-dg-toc><span class="n">7</span> جدولا المدينين والكوتة</a>
+    <a href="#dg-s8" data-dg-toc><span class="n">8</span> مهام عملية يومية</a>
+  </nav>
+
+  {# ───── عمود المحتوى ───── #}
+  <div class="dg-main">
+
+    <div class="dg-lead">
+      <span class="ic"><i class="fa-solid fa-lightbulb"></i></span>
+      <div>
+        <h3>قبل ما نبدأ — ليش هالصفحة مهمة؟</h3>
+        <p>
+          «نظرة عامة — المشتركون» هي لوحة القيادة المالية والتشغيلية لمشتركيك: كم حصّلت منهم،
+          كم أعطيتهم سلفًا، كم ضلّ عليهم، كم جيجا استهلكوا، ومين متصل الآن — كل هذا في شاشة
+          واحدة للقراءة فقط. ما في فيها أي زر يعدّل بيانات، فجرّب براحتك: أسوأ شي يصير إنك
+          تفتح صفحة ثانية. خلّينا نمشي على كل جزء فيها بالتفصيل.
+        </p>
+      </div>
+    </div>
+
+    {# ════ القسم 1 ════ #}
+    <section class="dg-step" id="dg-s1">
+      <div class="dg-badge">1</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-door-open"></i> شو هي الصفحة، ووين ألاقيها؟</h2>
+        <p>
+          من القائمة الجانبية افتح قسم <strong>«المشتركون»</strong> ثم اضغط أول بند:
+          <strong>«نظرة عامة»</strong>. رح تفتح لك لوحة كاملة مقسومة من فوق لتحت إلى:
+        </p>
+        <ol>
+          <li><strong>الترويسة (الهيرو):</strong> العنوان + مفتاح شهري/سنوي + منتقي الفترة.</li>
+          <li><strong>سطرا الدخل والصرف:</strong> المُحصّل من المشتركين مقابل المصروف لهم (سلف).</li>
+          <li><strong>ست بطاقات أرقام (KPI):</strong> المُحصّل، السلف، التفعيل، الجيجات، الديون، المشتركون.</li>
+          <li><strong>بلاطات حالة المشتركين:</strong> الإجمالي، مفعّل، متصل الآن، منتهي، معطّل، موقوف.</li>
+          <li><strong>«الأداء حسب الفترة»:</strong> أربعة مسارات بأعمدة صغيرة لآخر 12 فترة.</li>
+          <li><strong>«شو ضل — الديون حتى اللحظة»:</strong> أربع بلاطات ملوّنة للمتبقّي.</li>
+          <li><strong>جدولان:</strong> «أكبر المدينين» و«الكوتة المخصّصة حسب الباقة».</li>
+        </ol>
+
+        <div class="dg-sidemock" aria-hidden="true">
+          <div class="sec"><i class="fa-solid fa-users"></i> المشتركون <i class="fa-solid fa-chevron-down cv"></i></div>
+          <div class="sub on">نظرة عامة</div>
+          <div class="sub">المشتركين 360</div>
+          <div class="sub">إضافة مشترك</div>
+          <div class="sub">مجموعات المشتركين</div>
+          <div class="sub">المشتركون المتصلون</div>
+        </div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> أول بند تحت «المشتركون» — اضغط البند المظلّل بالبنفسجي.</div>
+
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة:</b> تحت العنوان مباشرة رح تشوف سطرًا صغيرًا مثل
+          <span class="dg-kbd">250 مشترك · 34 متصل الآن</span> — هذا أسرع نبض للشبكة بدون ما تنزل بالصفحة.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ القسم 2 ════ #}
+    <section class="dg-step" id="dg-s2">
+      <div class="dg-badge">2</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-calendar-days"></i> مفتاح «شهري / سنوي» ومنتقي الفترة — شو بيتغيّر لما تستخدمهم؟</h2>
+        <p>
+          أعلى يسار اللوحة في زرّان متجاوران: <strong>«شهري»</strong> و<strong>«سنوي»</strong>.
+          هذول مش فلتر شكلي — هما اللي يحددان <strong>طريقة تجميع كل الأرقام الزمنية</strong> في الصفحة:
+        </p>
+        <ul>
+          <li><strong>شهري:</strong> كل فترة = شهر واحد (مثل <span class="dg-kbd">2026-06</span>). أعمدة «الأداء حسب الفترة» تصير آخر 12 شهرًا.</li>
+          <li><strong>سنوي:</strong> كل فترة = سنة كاملة (مثل <span class="dg-kbd">2026</span>). الأعمدة تصير سنواتك المسجّلة.</li>
+        </ul>
+        <p>
+          وبجانب العنوان في شارة <strong>«الفترة المعروضة»</strong> وفيها <strong>قائمة منسدلة</strong>
+          بكل الفترات اللي عندك بيانات فيها. لما تختار فترة منها، الصفحة تعيد التحميل فورًا وتتغيّر:
+        </p>
+        <ul>
+          <li>أرقام سطرَي <strong>الدخل والصرف</strong> (المُحصّل والسلف) لتلك الفترة.</li>
+          <li>أرقام بطاقات <strong>المُحصّل، السلف، التفعيل، الجيجات</strong>.</li>
+          <li>القيمة الكبيرة المعروضة فوق كل مسار في «الأداء حسب الفترة».</li>
+        </ul>
+        <p>
+          أما <strong>الديون («شو ضل»)</strong> و<strong>بلاطات حالة المشتركين</strong>
+          و<strong>الكوتة</strong> فهي أرقام «حتى اللحظة» — <strong>لا تتأثر</strong> بالفترة المختارة
+          أبدًا، ومكتوب جنبها صراحةً «حتى اللحظة (غير مرتبط بالفترة)».
+        </p>
+
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">نظرة عامة — المشتركون › الترويسة</span></div>
+          <div class="dg-mock-body">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+              <span class="dg-period-pick"><i class="fa-solid fa-calendar"></i> الفترة المعروضة: 2026-06 <i class="fa-solid fa-chevron-down"></i></span>
+              <span class="dg-seg"><span class="on"><i class="fa-solid fa-calendar-days"></i> شهري</span><span>سنوي</span></span>
+            </div>
+          </div>
+        </div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> الزر البنفسجي هو الوضع الفعّال — والمنسدلة تنقلك لأي شهر سابق بضغطة.</div>
+
+        <div class="dg-warn">
+          <span class="ic">⚠️</span>
+          <span><b>انتبه:</b> لما تبدّل من شهري لسنوي، الفترة المختارة ترجع تلقائيًا
+          <b>لأحدث فترة</b> — إذا كنت تراجع شهرًا قديمًا وبدّلت الوضع، رجّع اختر الفترة من المنسدلة.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ القسم 3 ════ #}
+    <section class="dg-step" id="dg-s3">
+      <div class="dg-badge">3</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-coins"></i> سطرا الدخل والصرف + بطاقات الأرقام الست — شو يعني كل رقم؟</h2>
+        <p>
+          أول سطرين ملوّنين تحت الترويسة هما خلاصة الفترة الماليّة من زاويتين متقابلتين:
+        </p>
+        <div class="dg-flow" aria-hidden="true">
+          <div class="dg-flow-item in">
+            <span class="ic"><i class="fa-solid fa-arrow-down-long"></i></span>
+            <span><span class="l">المُحصّل من المشتركين (دخل)</span><div class="v">12.5K</div></span>
+          </div>
+          <div class="dg-flow-item out">
+            <span class="ic"><i class="fa-solid fa-arrow-up-long"></i></span>
+            <span><span class="l">المصروف للمشتركين — سلف (صرف)</span><div class="v">1.8K</div></span>
+          </div>
+        </div>
+        <p style="margin-top:11px">
+          وتحتهما <strong>ست بطاقات أرقام</strong> — هذا معنى كل واحدة بالضبط، مع السطر الصغير تحت الرقم:
+        </p>
+        <table class="dg-ref">
+          <tr><th>البطاقة</th><th>شو يعني رقمها</th><th>السطر الصغير تحتها</th></tr>
+          <tr>
+            <td>المُحصّل</td>
+            <td>مجموع المبالغ اللي دفعها المشتركون فعليًا خلال الفترة المختارة (تجديد، شحن، تسديد...).</td>
+            <td>عدد الدفعات — مثل «38 دفعة».</td>
+          </tr>
+          <tr>
+            <td>السلف</td>
+            <td>مجموع ما أعطيته للمشتركين «على الحساب» خلال الفترة — خدمة قبل الدفع.</td>
+            <td>عدد السلف + مجموع الوقت الممنوح بها (أيام/ساعات).</td>
+          </tr>
+          <tr>
+            <td>التفعيل</td>
+            <td>عدد عمليات التفعيل (دفعات منحت المشترك وقتًا/تجديدًا) خلال الفترة.</td>
+            <td>قيمة تلك التفعيلات + الوقت الممنوح.</td>
+          </tr>
+          <tr>
+            <td>الجيجات</td>
+            <td>إجمالي الاستهلاك الفعلي (تنزيل + رفع) بالجيجابايت خلال الفترة.</td>
+            <td>عدد الجلسات اللي ولّدت هذا الاستهلاك.</td>
+          </tr>
+          <tr>
+            <td>الديون</td>
+            <td>إجمالي المتبقّي على المشتركين <strong>حتى اللحظة</strong> (سلف مفتوحة + أرصدة سالبة) — لا يتبع الفترة.</td>
+            <td>«حتى اللحظة» — تذكير أنه رقم لحظي.</td>
+          </tr>
+          <tr>
+            <td>المشتركون</td>
+            <td>إجمالي عدد المشتركين المسجّلين عندك حاليًا.</td>
+            <td>كم واحد منهم متصل الآن.</td>
+          </tr>
+        </table>
+
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">نظرة عامة — المشتركون › بطاقات الأرقام</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-kpis">
+              <div class="dg-kpi brand"><span class="l"><i class="fa-solid fa-coins"></i> المُحصّل</span><span class="v">12.5K</span><span class="s">38 دفعة</span></div>
+              <div class="dg-kpi amber"><span class="l"><i class="fa-solid fa-hand-holding-dollar"></i> السلف</span><span class="v">1.8K</span><span class="s">7 سلف · 12 يوم</span></div>
+              <div class="dg-kpi blue"><span class="l"><i class="fa-solid fa-bolt"></i> التفعيل</span><span class="v">41</span><span class="s">11.9K · 30 يوم</span></div>
+              <div class="dg-kpi green"><span class="l"><i class="fa-solid fa-database"></i> الجيجات</span><span class="v">3,240 GB</span><span class="s">1,205 جلسة</span></div>
+              <div class="dg-kpi red"><span class="l"><i class="fa-solid fa-scale-unbalanced"></i> الديون</span><span class="v">2.3K</span><span class="s">حتى اللحظة</span></div>
+              <div class="dg-kpi brand"><span class="l"><i class="fa-solid fa-users"></i> المشتركون</span><span class="v">250</span><span class="s">34 متصل</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة لقراءة سريعة:</b> قارن السطرين الملوّنين ببعض —
+          إذا «المصروف (سلف)» يقترب من «المُحصّل» فهذا إنذار مبكر: زبائنك ياخذون خدمة
+          أكثر مما يدفعون، وآن وقت متابعة جدول «أكبر المدينين» تحت.</span>
+        </div>
+        <div class="dg-warn">
+          <span class="ic">⚠️</span>
+          <span><b>انتبه:</b> الأرقام الكبيرة تُختصر — <span class="dg-kbd">12.5K</span> يعني 12,500.
+          مرّر الفأرة فوق أعمدة الرسوم لاحقًا لتشوف القيمة الدقيقة لكل فترة.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ القسم 4 ════ #}
+    <section class="dg-step" id="dg-s4">
+      <div class="dg-badge">4</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-table-cells"></i> بلاطات حالة المشتركين — التعداد اللحظي</h2>
+        <p>
+          آخر صف داخل الترويسة هو ست بلاطات صغيرة تقسم مشتركيك حسب حالتهم <strong>الآن</strong>
+          (لا يتبع الفترة المختارة):
+        </p>
+        <table class="dg-ref">
+          <tr><th>البلاطة</th><th>مين يدخل فيها</th></tr>
+          <tr><td>الإجمالي</td><td>كل المشتركين المسجّلين (غير المحذوفين) أيًا كانت حالتهم.</td></tr>
+          <tr><td>مفعّل</td><td>حسابات شغّالة — صاحبها يقدر يدخل على الإنترنت متى شاء.</td></tr>
+          <tr><td>متصل الآن</td><td>عندهم جلسة إنترنت مفتوحة في هذه اللحظة (يُحسب من سجلات الجلسات الحيّة).</td></tr>
+          <tr><td>منتهي</td><td>خلصت مدة اشتراكهم ولم يجدّدوا بعد — هؤلاء أهداف التحصيل الأولى.</td></tr>
+          <tr><td>معطّل</td><td>عطّلتهم يدويًا (أنت أو مدير آخر) — لا يستطيعون الدخول حتى تعيد تفعيلهم.</td></tr>
+          <tr><td>موقوف</td><td>موقوفون مؤقتًا (إجراء وسط بين المفعّل والمعطّل).</td></tr>
+        </table>
+
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">نظرة عامة — المشتركون › حالة المشتركين</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-tiles">
+              <div class="dg-tile brand"><i class="fa-solid fa-users"></i><div class="v">250</div><div class="l">الإجمالي</div></div>
+              <div class="dg-tile green"><i class="fa-solid fa-circle-check"></i><div class="v">198</div><div class="l">مفعّل</div></div>
+              <div class="dg-tile blue"><i class="fa-solid fa-wifi"></i><div class="v">34</div><div class="l">متصل الآن</div></div>
+              <div class="dg-tile amber"><i class="fa-solid fa-hourglass-end"></i><div class="v">37</div><div class="l">منتهي</div></div>
+              <div class="dg-tile red"><i class="fa-solid fa-ban"></i><div class="v">11</div><div class="l">معطّل</div></div>
+              <div class="dg-tile grey"><i class="fa-solid fa-circle-pause"></i><div class="v">4</div><div class="l">موقوف</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة:</b> «مفعّل + منتهي + معطّل + موقوف» لازم يساوي «الإجمالي».
+          أما «متصل الآن» فهو عدّ مستقل (المتصل غالبًا مفعّل أصلًا) — لا تجمعه معهم.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ القسم 5 ════ #}
+    <section class="dg-step" id="dg-s5">
+      <div class="dg-badge">5</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-chart-column"></i> «الأداء حسب الفترة» — اقرأ الأعمدة الصغيرة صح</h2>
+        <p>
+          هذا القسم أربعة <strong>مسارات</strong> متجاورة: <strong>المُحصّل</strong>،
+          <strong>السلف</strong>، <strong>التفعيل</strong>، و<strong>الجيجات المستهلَكة</strong>.
+          كل مسار يتكوّن من فوق لتحت من:
+        </p>
+        <ul>
+          <li><strong>الرقم الكبير:</strong> قيمة الفترة المختارة حاليًا (نفس رقم بطاقة الـ KPI فوق).</li>
+          <li><strong>سطر توضيحي:</strong> مثل «7 سلف · 3 مفتوحة» أو «1,205 جلسة خلال الفترة».</li>
+          <li><strong>أعمدة صغيرة (sparkline):</strong> آخر 12 فترة من اليمين لليسار — العمود الأطول هو أعلى فترة. <strong>مرّر الفأرة فوق أي عمود</strong> يطلع لك تلميح فيه الفترة وقيمتها الدقيقة.</li>
+          <li><strong>أرقام المحور:</strong> تحت الأعمدة أرقام الأشهر (06، 07...) أو السنوات.</li>
+          <li><strong>رابط بنفسجي بأيقونة سهم خارجي:</strong> ينقلك لصفحة التفصيل في قسم المالية —
+            «السجل المالي» للمُحصّل والتفعيل، «تفاصيل السلف» للسلف، و«الإيرادات» للجيجات.</li>
+        </ul>
+
+        <div class="dg-mock" aria-hidden="true" style="max-width:340px">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">الأداء حسب الفترة › مسار «المُحصّل»</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-lane" style="max-width:none;border:none;padding:0">
+              <div class="hd"><i class="fa-solid fa-coins"></i> المُحصّل</div>
+              <div class="v">12.5K</div>
+              <div class="s">المبالغ المُحصّلة من المشتركين خلال الفترة</div>
+              <div class="dg-spark">
+                <span style="height:30%"></span><span style="height:45%"></span><span style="height:38%"></span>
+                <span style="height:60%"></span><span style="height:52%"></span><span style="height:70%"></span>
+                <span style="height:64%"></span><span style="height:85%"></span><span style="height:78%"></span>
+                <span style="height:92%"></span><span style="height:88%"></span><span style="height:100%"></span>
+              </div>
+              <div class="dg-spark-axis">
+                <span>07</span><span>08</span><span>09</span><span>10</span><span>11</span><span>12</span>
+                <span>01</span><span>02</span><span>03</span><span>04</span><span>05</span><span>06</span>
+              </div>
+              <span class="dg-flink"><i class="fa-solid fa-up-right-from-square"></i> السجل المالي</span>
+            </div>
+          </div>
+        </div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> أعمدة تصعد من اليمين لليسار = إيراد ينمو شهرًا بعد شهر. 👌</div>
+
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة:</b> هذه الصفحة «خريطة» لا «دفتر» — لو احتجت تعرف <b>مين دفع شو ومتى</b>،
+          اضغط رابط «السجل المالي» أسفل المسار: كل أرقام النظرة العامة تفاصيلها هناك في قسم المالية.</span>
+        </div>
+        <div class="dg-warn">
+          <span class="ic">⚠️</span>
+          <span><b>انتبه:</b> طول كل عمود نسبي <b>لأعلى قيمة في نفس المسار فقط</b> —
+          لا تقارن طول عمود في «المُحصّل» بطول عمود في «الجيجات»؛ كل مسار له مقياسه الخاص.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ القسم 6 ════ #}
+    <section class="dg-step" id="dg-s6">
+      <div class="dg-badge">6</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-scale-unbalanced"></i> «شو ضل — الديون حتى اللحظة» — أربع بلاطات تحسم الموقف</h2>
+        <p>
+          هذا القسم يجاوب أهم سؤال عند أي مزوّد: <strong>كم ضلّ لي عند الناس؟</strong>
+          وكل أرقامه لحظية (مكتوب جنب العنوان «حتى اللحظة — غير مرتبط بالفترة»):
+        </p>
+        <table class="dg-ref">
+          <tr><th>البلاطة</th><th>لونها</th><th>شو تعني</th></tr>
+          <tr>
+            <td>سلف مفتوحة</td><td>أصفر</td>
+            <td>مجموع السلف اللي أعطيتها وما انسدّدت بعد — مع عددها ومجموع وقتها تحت الرقم.</td>
+          </tr>
+          <tr>
+            <td>أرصدة سالبة (عليهم)</td><td>أحمر</td>
+            <td>مشتركون رصيد محفظتهم تحت الصفر — أي مدينون لك خارج نظام السلف، مع عددهم.</td>
+          </tr>
+          <tr>
+            <td>أرصدة موجبة (رصيد لهم)</td><td>أخضر</td>
+            <td>العكس: مشتركون دفعوا زيادة وعندهم رصيد محفوظ لهم عندك — هذا التزام عليك لا لك.</td>
+          </tr>
+          <tr>
+            <td>إجمالي المتبقّي</td><td>بنفسجي</td>
+            <td>الخلاصة = سلف مفتوحة + أرصدة سالبة. هذا هو «الدين الكلي» وهو نفسه رقم بطاقة «الديون» فوق.</td>
+          </tr>
+        </table>
+        <p>
+          وتحت البلاطات <strong>رابطان</strong>: «تفاصيل الديون في المالية» و«تفاصيل السلف في المالية» —
+          كلاهما ينقلك لصفحات قسم المالية حيث التفصيل دينًا دينًا وسلفةً سلفة.
+        </p>
+
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">نظرة عامة — المشتركون › شو ضل</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-debt">
+              <div class="dg-debt-tile amber"><span class="l"><i class="fa-solid fa-hand-holding-dollar"></i> سلف مفتوحة</span><span class="v">1.4K</span><span class="m">5 سلف · 9 يوم</span></div>
+              <div class="dg-debt-tile red"><span class="l"><i class="fa-solid fa-circle-minus"></i> أرصدة سالبة (عليهم)</span><span class="v">900</span><span class="m">12 مشترك</span></div>
+              <div class="dg-debt-tile green"><span class="l"><i class="fa-solid fa-circle-plus"></i> أرصدة موجبة (رصيد لهم)</span><span class="v">350</span><span class="m">6 مشتركين</span></div>
+              <div class="dg-debt-tile total"><span class="l"><i class="fa-solid fa-scale-unbalanced"></i> إجمالي المتبقّي</span><span class="v">2.3K</span><span class="m">سلف مفتوحة + أرصدة سالبة</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="dg-warn">
+          <span class="ic">⚠️</span>
+          <span><b>انتبه:</b> «الأرصدة الموجبة» الخضراء <b>لا تُطرح</b> من إجمالي المتبقّي —
+          الإجمالي يجمع ما عليهم فقط. الرصيد الموجب معلومة منفصلة: فلوس أمانة عندك لمشتركيك.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ القسم 7 ════ #}
+    <section class="dg-step" id="dg-s7">
+      <div class="dg-badge">7</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-table-list"></i> جدولا «أكبر المدينين» و«الكوتة» — وأزرار الجدول كلها</h2>
+
+        <h3>أ) جدول «أكبر المدينين»</h3>
+        <p>
+          يسرد حتى 50 مشتركًا عليهم أكبر مديونيات، بأعمدة:
+          <strong>المشترك</strong> (اسم الدخول وتحت منه الاسم الكامل إن وُجد)،
+          <strong>سلف مفتوحة</strong>، <strong>عدد السلف</strong>،
+          <strong>الرصيد</strong> (يتلوّن أحمر إذا كان سالبًا)،
+          و<strong>التفصيل</strong> وفيه رابط <strong>«ملف المالية»</strong> الذي يفتح
+          الصفحة المالية الخاصة بهذا المشترك بالذات.
+        </p>
+
+        <h3>ب) أزرار شريط الجدول — كل زر شو بيعمل بالضبط</h3>
+        <ul>
+          <li><strong>زر «أعمدة» <i class="fa-solid fa-table-columns" style="color:#7c3aed"></i>:</strong>
+            يفتح قائمة فيها مربع اختيار لكل عمود — أزل العلامة عن أي عمود ليختفي مؤقتًا
+            (وتُستثنى الأعمدة المخفية من التصدير أيضًا).</li>
+          <li><strong>ثلاثة أزرار تصدير بأيقونات فقط:</strong>
+            <i class="fa-solid fa-file-csv" style="color:#16a34a"></i> <strong>CSV</strong>
+            (يبني الملف فورًا في متصفحك وينزّله — يفتح في Excel بالعربي مباشرة)،
+            <i class="fa-solid fa-file-excel" style="color:#15803d"></i> <strong>Excel</strong>
+            و<i class="fa-solid fa-file-pdf" style="color:#dc2626"></i> <strong>PDF</strong>
+            (يجهّزهما الخادم وينزلان كملف منسّق). التصدير يشمل <strong>كل الصفوف</strong>
+            لا الصفحة الظاهرة فقط، والأعمدة <strong>الظاهرة</strong> فقط.</li>
+          <li><strong>رؤوس الأعمدة نفسها أزرار فرز:</strong> اضغط على رأس أي عمود (تشوف جنبه علامة ⇅)
+            ليترتب الجدول تصاعديًا، واضغطه ثانية لينعكس تنازليًا — اضغط «الرصيد» مرتين مثلًا
+            لتطلع أسوأ الأرصدة فوق.</li>
+          <li><strong>أسفل الجدول:</strong> منسدلة «صفوف بالصفحة» (10، 25، 50...)، وعدّاد
+            «عرض 1–10 من 50»، وأزرار تنقّل بين الصفحات.</li>
+        </ul>
+
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">أكبر المدينين › الجدول الموحّد</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-tbar">
+              <span class="cnt">50 صفًا</span>
+              <span class="dg-tbtn"><i class="fa-solid fa-table-columns" style="color:#7c3aed"></i> أعمدة</span>
+              <span class="dg-tbtn ic-only"><i class="fa-solid fa-file-csv csv"></i></span>
+              <span class="dg-tbtn ic-only"><i class="fa-solid fa-file-excel xls"></i></span>
+              <span class="dg-tbtn ic-only"><i class="fa-solid fa-file-pdf pdf"></i></span>
+            </div>
+            <div class="dg-rowmock">
+              <div class="hd"><span>المشترك <i class="si">⇅</i></span><span>سلف مفتوحة <i class="si">⇅</i></span><span>عدد السلف <i class="si">⇅</i></span><span>الرصيد <i class="si">⇅</i></span><span>التفصيل</span></div>
+              <div class="rw">
+                <span style="font-weight:900;color:#241e4e">ahmad2026<div style="font-weight:600;color:#94a3b8;font-size:8.5px">أحمد خالد</div></span>
+                <span>450</span><span>2</span><span class="neg">-120</span>
+                <span class="lnk"><i class="fa-solid fa-up-right-from-square"></i> ملف المالية</span>
+              </div>
+              <div class="rw">
+                <span style="font-weight:900;color:#241e4e">sara_net</span>
+                <span>300</span><span>1</span><span>0</span>
+                <span class="lnk"><i class="fa-solid fa-up-right-from-square"></i> ملف المالية</span>
+              </div>
+            </div>
+            <div class="dg-pager">
+              <span>صفوف بالصفحة <b style="color:#475569">10</b></span>
+              <span>عرض 1–10 من 50</span>
+              <span class="pg"><span>‹</span><span class="on">1</span><span>2</span><span>3</span><span>›</span></span>
+            </div>
+          </div>
+        </div>
+
+        <h3>ج) جدول «الكوتة المخصّصة حسب الباقة»</h3>
+        <p>
+          آخر قسم بالصفحة، بنفس نظام الجدول الموحّد (نفس أزرار الأعمدة والتصدير والفرز والترقيم)، وأعمدته:
+        </p>
+        <ul>
+          <li><strong>الباقة:</strong> اسم الباقة اللي عليها مشتركون فعليون (الباقات الفارغة لا تظهر).</li>
+          <li><strong>المشتركون:</strong> كم مشتركًا على هذه الباقة.</li>
+          <li><strong>كوتة المشترك:</strong> الحصة المسموحة للمشترك الواحد بالجيجا — أو «غير محدودة» إذا الباقة بلا حد.</li>
+          <li><strong>إجمالي المخصّص:</strong> كوتة المشترك × عدد المشتركين = أقصى ما قد تستهلكه الباقة كلها.</li>
+          <li><strong>الحصّة:</strong> شريط بنفسجي بنسبة مئوية يبيّن نصيب الباقة من إجمالي المخصّص عندك.</li>
+        </ul>
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">الكوتة المخصّصة حسب الباقة</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-rowmock">
+              <div class="hd" style="grid-template-columns:1.2fr .8fr .9fr .9fr 1fr"><span>الباقة</span><span>المشتركون</span><span>كوتة المشترك</span><span>إجمالي المخصّص</span><span>الحصّة</span></div>
+              <div class="rw" style="grid-template-columns:1.2fr .8fr .9fr .9fr 1fr">
+                <span style="font-weight:900;color:#241e4e">باقة 10 ميجا</span><span>120</span><span>50.0 GB</span><span>6,000 GB</span>
+                <span><span class="dg-share"><span class="trk"><span style="width:62%"></span></span><b style="font-size:9px;color:#64748b">62%</b></span></span>
+              </div>
+              <div class="rw" style="grid-template-columns:1.2fr .8fr .9fr .9fr 1fr">
+                <span style="font-weight:900;color:#241e4e">باقة 20 ميجا</span><span>45</span><span>غير محدودة</span><span>—</span>
+                <span><span class="dg-share"><span class="trk"><span style="width:0%"></span></span><b style="font-size:9px;color:#64748b">0%</b></span></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة:</b> «الكوتة» هنا = <b>المخصّص (الحدّ الأقصى)</b> لا الاستهلاك الفعلي —
+          الاستهلاك الفعلي تجده في بطاقة «الجيجات» ومسارها فوق. الملاحظة ذاتها مكتوبة تحت الجدول في الصفحة.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ القسم 8 ════ #}
+    <section class="dg-step" id="dg-s8">
+      <div class="dg-badge">8</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-list-check"></i> مهام عملية — جاوب أسئلتك اليومية من هالصفحة</h2>
+
+        <h3>«كيف أعرف مين منتهي هالشهر؟»</h3>
+        <ol>
+          <li>شوف بلاطة <strong>«منتهي»</strong> الصفراء في الترويسة — هذا عدد المنتهين الآن.</li>
+          <li>للأسماء نفسها: افتح <strong>«المشتركين 360»</strong> من نفس قسم القائمة الجانبية
+            وفلتر الحالة على «منتهي» — النظرة العامة تعطيك العدد، و360 تعطيك القائمة.</li>
+        </ol>
+
+        <h3>«كيف أعرف إذا شهري الحالي أحسن من اللي قبله؟»</h3>
+        <ol>
+          <li>خلّي الوضع <strong>«شهري»</strong> وانزل لقسم «الأداء حسب الفترة».</li>
+          <li>قارن آخر عمودين في مسار <strong>«المُحصّل»</strong> — ومرّر الفأرة فوقهما للقيم الدقيقة.</li>
+          <li>كرّر النظرة على مسار «الجيجات»: استهلاك يرتفع وتحصيل يثبت = باقات تحتاج إعادة تسعير.</li>
+        </ol>
+
+        <h3>«بدي ألحّق على أكبر مدين عندي — شو أعمل؟»</h3>
+        <ol>
+          <li>انزل لجدول <strong>«أكبر المدينين»</strong> واضغط رأس عمود «سلف مفتوحة» مرتين (الأكبر فوق).</li>
+          <li>اضغط <strong>«ملف المالية»</strong> في صف المشترك — يفتح ملفه المالي الشخصي بكل حركاته.</li>
+          <li>من هناك تسجّل تحصيلًا أو تسوية — النظرة العامة نفسها للقراءة فقط.</li>
+        </ol>
+
+        <h3>«بدي قائمة المديونيات على ورق أطلعها للمحاسب»</h3>
+        <ol>
+          <li>في شريط جدول «أكبر المدينين» اضغط زر <strong>«أعمدة»</strong> وخبّئ عمود «التفصيل» (روابط لا تنفع ورقيًا).</li>
+          <li>اضغط أيقونة <i class="fa-solid fa-file-pdf" style="color:#dc2626"></i> <strong>PDF</strong>
+            (أو <i class="fa-solid fa-file-excel" style="color:#15803d"></i> Excel إذا المحاسب يحب يفلتر بنفسه) — ينزل الملف جاهزًا.</li>
+        </ol>
+
+        <h3>«بدي أراجع سنة كاملة لاجتماع نهاية السنة»</h3>
+        <ol>
+          <li>اضغط زر <strong>«سنوي»</strong> في الترويسة — كل عمود يصير سنة.</li>
+          <li>اختر السنة من منسدلة «الفترة المعروضة» إن أردت سنة قديمة.</li>
+          <li>أرقام المُحصّل والسلف والتفعيل والجيجات تتجمع للسنة كلها — والديون تبقى لحظية كالعادة.</li>
+        </ol>
+
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>القاعدة الذهبية للصفحة:</b> النظرة العامة <b>تكشف</b> والمالية <b>تنفّذ</b> —
+          كل رقم لفت نظرك هنا، اضغط الرابط البنفسجي جنبه وكمّل القصة في قسم المالية أو ملف المشترك.</span>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+{# ── scrollspy خفيف: يبرز بند الفهرس المقابل للقسم الظاهر ── #}
+<script>
+(function(){
+  'use strict';
+  var links = Array.prototype.slice.call(document.querySelectorAll('[data-dg-toc]'));
+  if (!links.length || !('IntersectionObserver' in window)) return;
+  var map = {};
+  links.forEach(function(a){ map[a.getAttribute('href').slice(1)] = a; });
+  var obs = new IntersectionObserver(function(entries){
+    entries.forEach(function(en){
+      if (!en.isIntersecting) return;
+      links.forEach(function(a){ a.classList.remove('is-active'); });
+      var a = map[en.target.id];
+      if (a) a.classList.add('is-active');
+    });
+  }, { rootMargin: '-35% 0px -55% 0px' });
+  Object.keys(map).forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) obs.observe(el);
+  });
+})();
+</script>
+
+{% endblock %}

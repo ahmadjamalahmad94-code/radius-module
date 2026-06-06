@@ -12,6 +12,8 @@
 {% block page_sub %}<span class="sub">طلبات الدفع والمراجعة والمطابقة في صفحة واحدة</span>{% endblock %}
 
 {% block head_extra %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
 <style>
 /* ── Retained: tab switcher pills (kept inside the unified hero) ── */
 .fc-tabs{display:flex;flex-wrap:wrap;gap:8px}
@@ -33,10 +35,56 @@
 @media(max-width:560px){.fc-form-grid{grid-template-columns:1fr}}
 .fc-form-grid label{display:flex;flex-direction:column;gap:5px;font-size:13px;font-weight:800;color:var(--hub-text-soft)}
 .fc-toggle-row{flex-direction:row !important;align-items:center;gap:10px}
+/* ── شريط تجميد قسم التحصيل — يظهر فقط عندما لا توجد بوابة دفع مربوطة ── */
+.fc-freeze{display:flex;align-items:center;gap:14px;margin:0 0 var(--cc-gap-section);padding:16px 18px;border-radius:16px;
+  background:linear-gradient(135deg,#FFFBEB 0%,#EFF6FF 100%);border:1px solid #FDE68A;
+  box-shadow:0 8px 24px rgba(180,130,20,.08)}
+.fc-freeze-icon{flex:0 0 auto;width:46px;height:46px;border-radius:13px;display:grid;place-items:center;
+  background:#FEF3C7;color:#B45309;font-size:20px;border:1px solid #FDE68A}
+.fc-freeze-body{flex:1 1 auto;min-width:0}
+.fc-freeze-title{margin:0 0 3px;font-size:15px;font-weight:900;color:#92400E;display:flex;align-items:center;gap:8px}
+.fc-freeze-text{margin:0;font-size:13px;font-weight:700;color:#78716C;line-height:1.8}
+.fc-freeze-pill{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;
+  background:#FEF3C7;color:#B45309;font-size:11px;font-weight:900;border:1px solid #FDE68A}
 </style>
 {% endblock %}
 
 {% block content %}
+
+{# ── خرائط تعريب القيم الخام (enums) — تُعرض بالعربي مع إبقاء الخام في title.
+   القيم الخام تطابق payments_repo.PAYMENT_STATUSES / PAYMENT_PURPOSES،
+   ولا تُستخدم للإرسال (الإرسال يبقى بالقيمة الخام). #}
+{% set _status_ar = {
+  'pending': 'قيد الانتظار', 'proof_submitted': 'إثبات مُرسَل',
+  'under_review': 'قيد المراجعة', 'paid': 'مدفوع', 'rejected': 'مرفوض',
+  'expired': 'منتهٍ', 'cancelled': 'ملغى', 'failed': 'فشل'
+} %}
+{% set _purpose_ar = {
+  'card_purchase': 'شراء كروت', 'monthly_subscription': 'اشتراك شهري',
+  'subscriber_renewal': 'تجديد مشترك', 'quota_topup': 'شحن باقة',
+  'time_extension': 'تمديد وقت', 'distributor_payment': 'دفعة موزّع',
+  'loan_settlement': 'تسوية دين'
+} %}
+{% set _payer_ar = {'subscriber': 'مشترك', 'distributor': 'موزّع'} %}
+
+{# ═══════════ شريط التجميد — القسم مجمّد حتى ربط بوابة دفع حقيقية ═══════════
+   يظهر عندما يكون frozen=True (انظر collection_frozen في finance_collection.py).
+   الإعدادات تبقى متاحة للتحضير، وكل إجراءات الدفع معطّلة في الخلفية أيضًا. #}
+{% if frozen %}
+<div class="fc-freeze" role="status">
+  <div class="fc-freeze-icon"><i class="fa-solid fa-snowflake"></i></div>
+  <div class="fc-freeze-body">
+    <p class="fc-freeze-title"><i class="fa-solid fa-lock" style="font-size:12px"></i> قسم التحصيل مجمّد <span class="fc-freeze-pill"><i class="fa-solid fa-snowflake"></i> مجمّد</span></p>
+    {# تعريب اسم المزوّد ضمن الجملة العربية مع إبقاء الاسم الأصلي بين قوسين #}
+    <p class="fc-freeze-text">لا استخدام للمدفوعات الإلكترونية حتى ربط بوابة دفع (مثل جَوّال باي (Jawwal Pay)). الإعدادات تبقى متاحة للتحضير.
+      {% if endpoint_exists is defined and endpoint_exists('radius.payments_lab') %}
+      جرّب تجربة الدفع كاملةً الآن (محاكاة بلا مال حقيقي) من
+      <a href="{{ url_for('radius.payments_lab') }}" style="color:#6D28D9;font-weight:900">مختبر الدفع الإلكتروني <i class="fa-solid fa-flask" style="font-size:11px"></i></a>.
+      {% endif %}
+    </p>
+  </div>
+</div>
+{% endif %}
 
 {# ═══════════ Unified hero: title + subtitle + icon + KPIs + integrated filter ═══════════
    The collection tab switcher is integrated as the hero's actions; the status
@@ -68,7 +116,7 @@
   <input type="hidden" name="tab" value="requests">
   <select class="hub-select" name="status" onchange="this.form.submit()">
     <option value="">كل الحالات</option>
-    {% for s in statuses %}<option value="{{ s }}" {% if status == s %}selected{% endif %}>{{ s }}</option>{% endfor %}
+    {% for s in statuses %}<option value="{{ s }}" {% if status == s %}selected{% endif %} title="{{ s }}">{{ _status_ar.get(s, s) }}</option>{% endfor %}
   </select>
   <span class="hub-spacer"></span>
   {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
@@ -92,7 +140,7 @@
 )) %}
   {% call hub.section("طلبات الدفع", icon="file-invoice-dollar", meta=(requests_list|length|string + " طلب") if requests_list else "", flush=True) %}
     {% if requests_list %}
-    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="15" style="border:none;border-radius:0">
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="15" data-uds-export-title="طلبات الدفع" style="border:none;border-radius:0">
       <table class="hub-table">
         <thead>
           <tr>
@@ -110,11 +158,11 @@
           {% for item in requests_list %}
           <tr>
             <td><strong>{{ item.id }}</strong></td>
-            <td>{{ item.payer_type }}{% if item.payer_id %} #{{ item.payer_id }}{% endif %}</td>
-            <td>{{ item.purpose or "—" }}</td>
+            <td><span title="{{ item.payer_type }}">{{ _payer_ar.get(item.payer_type, item.payer_type) }}</span>{% if item.payer_id %} <span class="mono small">#{{ item.payer_id }}</span>{% endif %}</td>
+            <td>{% if item.purpose %}<span title="{{ item.purpose }}">{{ _purpose_ar.get(item.purpose, item.purpose) }}</span>{% else %}—{% endif %}</td>
             <td class="num mono" style="font-variant-numeric:tabular-nums;direction:ltr"><strong>{{ item.amount|money }}</strong></td>
             <td class="mono small">{{ item.reference_code or "—" }}</td>
-            <td>{{ hub.pill(item.status, variant="green" if item.status=="paid" else ("amber" if item.status in ("under_review","proof_submitted") else "grey")) }}</td>
+            <td title="{{ item.status }}">{{ hub.pill(_status_ar.get(item.status, item.status), variant="green" if item.status=="paid" else ("amber" if item.status in ("under_review","proof_submitted") else "grey")) }}</td>
             <td class="small hub-text-mute" style="direction:ltr">{{ item.created_at|dt_local if item.created_at else "—" }}</td>
             <td><a class="hub-btn hub-btn--ghost hub-btn--sm" href="{{ url_for('radius.payment_collection_request_detail', request_id=item.id) }}"><i class="fa-solid fa-arrow-left"></i> تفاصيل</a></td>
           </tr>
@@ -143,7 +191,7 @@
 )) %}
   {% call hub.section("قائمة المراجعة", icon="clipboard-check", meta=(review_list|length|string + " بانتظار المراجعة") if review_list else "", flush=True) %}
     {% if review_list %}
-    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="15" style="border:none;border-radius:0">
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="15" data-uds-export-title="قائمة المراجعة" style="border:none;border-radius:0">
       <table class="hub-table">
         <thead>
           <tr>
@@ -159,11 +207,21 @@
           {% for item in review_list %}
           <tr>
             <td><strong>{{ item.id }}</strong></td>
-            <td>{{ item.purpose or "—" }}</td>
+            <td>{% if item.purpose %}<span title="{{ item.purpose }}">{{ _purpose_ar.get(item.purpose, item.purpose) }}</span>{% else %}—{% endif %}</td>
             <td class="num mono" style="font-variant-numeric:tabular-nums;direction:ltr"><strong>{{ item.amount|money }}</strong></td>
-            <td>{{ hub.pill(item.status, variant="amber") }}</td>
+            <td title="{{ item.status }}">{{ hub.pill(_status_ar.get(item.status, item.status), variant="amber") }}</td>
             <td class="mono small">{{ item.reference_code or "—" }}</td>
-            <td><a class="hub-btn hub-btn--primary hub-btn--sm" href="{{ url_for('radius.payment_collection_request_detail', request_id=item.id) }}"><i class="fa-solid fa-magnifying-glass"></i> مراجعة</a></td>
+            <td>
+              {% if frozen %}
+              {# مجمّد: زر المراجعة معطّل مع شرح — لا قرارات دفع قبل ربط بوابة #}
+              <span style="display:inline-flex;align-items:center;gap:6px">
+                <button class="hub-btn hub-btn--primary hub-btn--sm" type="button" disabled style="opacity:.45;cursor:not-allowed"><i class="fa-solid fa-magnifying-glass"></i> مراجعة</button>
+                <span class="hub-hint" tabindex="0" data-hint="مجمّد حتى ربط بوابة دفع"><i class="fa-solid fa-snowflake"></i></span>
+              </span>
+              {% else %}
+              <a class="hub-btn hub-btn--primary hub-btn--sm" href="{{ url_for('radius.payment_collection_request_detail', request_id=item.id) }}"><i class="fa-solid fa-magnifying-glass"></i> مراجعة</a>
+              {% endif %}
+            </td>
           </tr>
           {% endfor %}
         </tbody>
@@ -206,12 +264,15 @@
         <label>المزوّد
           <select class="hub-select" name="provider">
             <option value="manual_wallet" {% if not settings or settings.provider == 'manual_wallet' %}selected{% endif %}>محفظة يدوية</option>
-            <option value="jawwal_pay" {% if settings and settings.provider == 'jawwal_pay' %}selected{% endif %}>Jawwal Pay (غير مفعّل)</option>
+            {# تعريب اسم المزوّد مع إبقاء value الخام jawwal_pay كما يعتمده الـPOST #}
+            <option value="jawwal_pay" {% if settings and settings.provider == 'jawwal_pay' %}selected{% endif %}>جَوّال باي (Jawwal Pay) — غير مفعّل</option>
           </select>
         </label>
         <label>العملة
+          {# تعريب أسماء العملات: نعرض الاسم العربي + الكود مع إبقاء value الخام (ILS/USD/JOD) كما يعتمده الـPOST #}
+          {% set _currency_names = {'ILS': 'شيكل ₪', 'USD': 'دولار $', 'JOD': 'دينار أردني'} %}
           <select class="hub-select" name="currency">
-            {% for c in ['ILS','USD','JOD'] %}<option value="{{ c }}" {% if (settings.currency if settings else 'ILS') == c %}selected{% endif %}>{{ c }}</option>{% endfor %}
+            {% for c in ['ILS','USD','JOD'] %}<option value="{{ c }}" {% if (settings.currency if settings else 'ILS') == c %}selected{% endif %}>{{ _currency_names.get(c, c) }} ({{ c }})</option>{% endfor %}
           </select>
         </label>
         <label>رقم المحفظة<input class="hub-input" name="wallet_number" value="{{ settings.wallet_number if settings else '' }}"></label>
@@ -250,4 +311,5 @@
   {% endif %}
 })();
 </script>
+<script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
 {% endblock %}

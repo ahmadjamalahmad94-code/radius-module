@@ -1,23 +1,50 @@
-{# Cards list — UNIFIED DESIGN SYSTEM (merged hero + help panel).
-   Backend data: items, total, page, pages_count, batches, plans, preserve, per_page, q, used, revoked, batch_id. Zero route/behaviour change. #}
+{# ═══════════════════════════════════════════════════════════════════════
+   كل الكروت — إعادة تصميم على نظام hub-hero-shell الموحّد (2026-06-04)
+
+   بيانات الراوت (radius.cards_list — بدون أي تغيير في السلوك):
+     items / plans / batches / total / page / per_page / pages_count /
+     preserve / q / batch_id / used / revoked / status / status_counts / now
+
+   البنية:
+     1. صدفة هيرو موحّدة (hub-hero-shell): عنوان + أزرار + شريط KPI
+        (صف واحد إجباري) + شريط الفلترة — كتلة واحدة بفواصل ناعمة.
+     2. جدول موحّد (uds): فرز + اختيار أعمدة، مع إبقاء ترقيم الصفحات
+        على الخادم (data-uds-page-size=100 = أقصى per_page حتى لا
+        يتنازع المُرقِّمان — راجع تعليق الجدول بالأسفل).
+   ═══════════════════════════════════════════════════════════════════════ #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
 {% block title %}كل الكروت{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-id-card"></i>{% endblock %}
 {% block page_title %}كل الكروت{% endblock %}
-{% block page_sub %}<span class="sub">{{ total }} بطاقة — صفحة {{ page }} من {{ pages_count }}</span>{% endblock %}
+{% block page_sub %}<span class="sub"><bdi dir="ltr">{{ total }}</bdi> بطاقة — صفحة <bdi dir="ltr">{{ page }}</bdi> من <bdi dir="ltr">{{ pages_count }}</bdi></span>{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+{# نظام الجداول الموحد: أنماط uds-table (فرز + اختيار أعمدة + ترقيم) #}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
+<style>
+  /* ترقيم الصفحات (خادم) أسفل الجدول — إيقاع موحّد مع بقية الصفحة */
+  .cl-pager{
+    display:flex; gap:4px; align-items:center; justify-content:center;
+    flex-wrap:wrap; padding:14px 16px;
+    border-top:1px solid var(--hub-border-soft);
+  }
+  /* عمود الباسورد: قيمة أحادية المسافة بلا التفاف */
+  .cl-pw{ display:inline-flex; align-items:center; gap:6px; white-space:nowrap; }
+</style>
+{% endblock %}
 
 {% block content %}
 
-{% set _ready   = items|rejectattr('used')|rejectattr('revoked')|list|length %}
-{% set _used    = items|selectattr('used')|rejectattr('revoked')|list|length %}
-{% set _revoked = items|selectattr('revoked')|list|length %}
+{% set _filtered = q or batch_id or used or revoked or status %}
 
-{# ───── Merged hero: title + actions + KPI strip + integrated search/filters ───── #}
+{# ───── الصدفة الموحّدة: هيرو + KPI + فلترة في كتلة واحدة ───── #}
+<section class="hub-hero-shell">
 {% call hub.megahero(
   "كل الكروت",
-  subtitle="عرض كل الكروت المولّدة عبر الدفعات — مع تصفية حسب الدفعة والحالة، وبحث مباشر باليوزر.",
+  subtitle="عرض كل الكروت المولّدة عبر الدفعات — تصفية حسب الحالة والدفعة، وبحث مباشر باليوزر. الأرقام بالأعلى لكامل النطاق الحالي وليس للصفحة فقط.",
   icon="id-card",
   actions_html='
     <a class="hub-btn hub-btn--primary" href="' + url_for('radius.cards_generate') + '">
@@ -30,146 +57,172 @@
       <i class="fa-solid fa-magnifying-glass"></i> فحص بطاقة
     </a>',
   kpis=[
-    {'label': 'إجمالي النتائج', 'value': total,    'icon': 'id-card',     'variant': 'brand'},
-    {'label': 'جاهزة (الصفحة)', 'value': _ready,   'icon': 'circle-check','variant': 'green'},
-    {'label': 'مستخدمة (الصفحة)','value': _used,    'icon': 'circle-user', 'variant': 'blue'},
-    {'label': 'ملغاة (الصفحة)', 'value': _revoked, 'icon': 'ban',         'variant': 'red'},
+    {'label': 'الإجمالي', 'value': status_counts.total,     'icon': 'id-card',       'variant': 'brand'},
+    {'label': 'متاحة',    'value': status_counts.available, 'icon': 'circle-check',  'variant': 'green'},
+    {'label': 'مستخدمة',  'value': status_counts.used,      'icon': 'circle-user',   'variant': 'blue'},
+    {'label': 'منتهية',   'value': status_counts.expired,   'icon': 'hourglass-end', 'variant': 'amber'},
+    {'label': 'محظورة',   'value': status_counts.revoked,   'icon': 'ban',           'variant': 'red'},
   ],
   search_action=url_for('radius.cards_list')
 ) %}
+  {# فلاتر used/revoked القديمة (روابط/إشارات مرجعية قديمة) تبقى محفوظة
+     كحقول مخفية حتى لا يفقدها إرسال النموذج — فلتر «الحالة» الجديد
+     يغطي الاستخدام اليومي. #}
+  {% if used is not none and used != '' %}<input type="hidden" name="used" value="{{ used }}">{% endif %}
+  {% if revoked is not none and revoked != '' %}<input type="hidden" name="revoked" value="{{ revoked }}">{% endif %}
   <input class="hub-input grow" type="search" name="q" value="{{ q or '' }}"
          placeholder="بحث في اليوزر..." autocomplete="off">
-  <select class="hub-select" name="batch_id">
+  <select class="hub-select" name="status" aria-label="فلتر الحالة">
+    <option value="">كل الحالات</option>
+    <option value="available" title="available" {% if status == 'available' %}selected{% endif %}>متاحة</option>
+    <option value="used"      title="used"      {% if status == 'used'      %}selected{% endif %}>مستخدمة</option>
+    <option value="expired"   title="expired"   {% if status == 'expired'   %}selected{% endif %}>منتهية</option>
+    <option value="revoked"   title="revoked"   {% if status == 'revoked'   %}selected{% endif %}>محظورة</option>
+  </select>
+  <select class="hub-select" name="batch_id" aria-label="فلتر الدفعة">
     <option value="">كل الدفعات</option>
     {% for bid, b in batches.items() %}
       <option value="{{ bid }}" {% if batch_id == bid %}selected{% endif %}>{{ b.batch_code or bid }}</option>
     {% endfor %}
   </select>
-  <select class="hub-select" name="used">
-    <option value="">كل الحالات (مستخدم)</option>
-    <option value="0" {% if used == '0' %}selected{% endif %}>غير مستخدم</option>
-    <option value="1" {% if used == '1' %}selected{% endif %}>مستخدم</option>
-  </select>
-  <select class="hub-select" name="revoked">
-    <option value="">كل الحالات (إلغاء)</option>
-    <option value="0" {% if revoked == '0' %}selected{% endif %}>غير ملغاة</option>
-    <option value="1" {% if revoked == '1' %}selected{% endif %}>ملغاة</option>
-  </select>
-  <select class="hub-select" name="per_page">
+  <select class="hub-select" name="per_page" aria-label="عدد النتائج بالصفحة">
     {% for n in [25, 50, 100] %}
       <option value="{{ n }}" {% if per_page == n %}selected{% endif %}>{{ n }}/صفحة</option>
     {% endfor %}
   </select>
   {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
-  {% if q or batch_id or used or revoked %}
+  {% if _filtered %}
     {{ hub.btn("إعادة ضبط", icon="rotate-left", variant="ghost", size="sm",
                 attrs='onclick="window.location=' + "'" + url_for('radius.cards_list') + "'" + '"') }}
   {% endif %}
 {% endcall %}
+</section>{# /hub-hero-shell #}
 
-{% if items %}
-{# ───── Main (carded table) + help panel on the LEFT ───── #}
+{# ───── تخطيط العمل: المحتوى + لوحة شرح قابلة للطي على اليسار ───── #}
 {% call hub.worklayout(aside_html=hub.helppanel(
-  "كيف تقرأ هذه الصفحة؟",
-  intro="كل صف هو بطاقة (كرت) ضمن دفعة، تحمل يوزر وباسورد وباقة محددة.",
+  "كيف تقرأ قائمة الكروت؟",
+  intro="كل صف هو كرت مولّد ضمن دفعة، يحمل اليوزر والباسورد وحالته وتفاصيل استخدامه.",
   items=[
-    {'icon': 'circle-check', 'text': 'البطاقة «جاهزة» لم تُستخدم بعد ويمكن بيعها؛ «مستخدمة» جرى تفعيلها.'},
-    {'icon': 'ban',          'text': 'البطاقة «ملغاة» أُبطلت يدويًا ولن تعمل — هذا الإجراء نهائي للبطاقة.'},
-    {'icon': 'layer-group',  'text': 'اضغط كود الدفعة لعرض كل كروت تلك الدفعة فقط.'},
-    {'icon': 'filter',       'text': 'استخدم البحث والفلاتر بالأعلى لتضييق النتائج؛ التنقّل يحفظ الفلاتر.'},
+    {'icon': 'filter',     'text': 'فلاتر الأعلى تعمل على كامل النطاق: الحالة، الدفعة، وبحث مباشر باليوزر. الأرقام في الهيرو لكامل النطاق لا للصفحة.'},
+    {'icon': 'circle-info', 'text': 'الحالة معرّبة (متاحة / مستخدمة / منتهية / محظورة)؛ مرّر المؤشر فوق الحالة لرؤية القيمة الخام.'},
+    {'icon': 'arrow-up-wide-short', 'text': 'اضغط رأس أي عمود للترتيب تصاعديًا أو تنازليًا، وزر «الأعمدة» لإظهار/إخفاء أعمدة.'},
+    {'icon': 'ban',        'text': 'زر الإلغاء يوقف الكرت نهائيًا بعد تأكيد؛ لا يظهر للكروت المحظورة سلفًا.'},
   ],
-  note="عدد النتائج بالأعلى للإجمالي عبر كل الصفحات، أما مؤشرات الحالة فتخص الصفحة الحالية."
+  note="الترقيم يبقى على الخادم: استخدم منتقي «النتائج بالصفحة» وأزرار التنقل أسفل الجدول."
 )) %}
-  {% call hub.section("الكروت", icon="table-list", meta=total|string + " بطاقة", flush=True) %}
-    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
-      <table class="hub-table">
-        <thead>
-          <tr>
-            <th class="num" style="width:60px">#</th>
-            <th>اليوزر</th>
-            <th>الباسورد</th>
-            <th>الباقة</th>
-            <th>الدفعة</th>
-            <th>الحالة</th>
-            <th>تنتهي</th>
-            <th style="width:80px" data-uds-nosort>إجراء</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for c in items %}
-          <tr>
-            <td class="num mono">{{ c.id }}</td>
-            <td class="mono"><strong>{{ c.username }}</strong></td>
-            <td class="mono small">{{ c.password }}</td>
-            <td>{{ plans[c.plan_id].name if plans.get(c.plan_id) else '—' }}</td>
-            <td class="mono small">
-              <a href="{{ url_for('radius.cards_of_batch', batch_id=c.batch_id) }}"
-                 style="color:var(--hub-brand-ink);text-decoration:none;font-weight:700">
-                {{ batches[c.batch_id].batch_code if batches.get(c.batch_id) else c.batch_id }}
-              </a>
-            </td>
-            <td>
-              {% if c.revoked %}{{ hub.pill("ملغاة", variant="red") }}
-              {% elif c.used %}{{ hub.pill("مستخدمة", variant="blue") }}
-              {% else %}{{ hub.pill("جاهزة", variant="green") }}{% endif %}
-            </td>
-            <td class="mono small">{{ c.expire_at|date_local if c.expire_at else '—' }}</td>
-            <td>
-              {% if not c.revoked %}
-              <form method="post" action="{{ url_for('radius.cards_revoke', card_id=c.id) }}"
-                    onsubmit="return confirm('إلغاء البطاقة {{ c.username }}؟');" style="display:inline">
-                <button type="submit" class="hub-btn hub-btn--danger hub-btn--icon" title="إلغاء">
-                  <i class="fa-solid fa-ban"></i>
-                </button>
-              </form>
-              {% endif %}
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
+{% if items %}
+{% call hub.section("الكروت", icon="table-list", meta=total|string + " بطاقة — صفحة " + page|string + " من " + pages_count|string, flush=True) %}
+  {# ترقيم الصفحات يبقى على الخادم (per_page ≤ 100). data-uds-page-size=100
+     = سقف per_page حتى لا يقسم مُرقِّم uds صفحة الخادم — نستفيد من الفرز
+     واختيار الأعمدة دون تعارض بين المُرقِّمين. #}
+  <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="100" style="border:none;border-radius:0">
+    <table class="hub-table">
+      <thead>
+        <tr>
+          <th class="num" style="width:60px">#</th>
+          <th>اليوزر</th>
+          <th data-uds-nosort>الباسورد</th>
+          <th>الباقة</th>
+          <th>الدفعة</th>
+          <th>الحالة</th>
+          <th>أول استخدام</th>
+          <th>MAC</th>
+          <th>تنتهي</th>
+          <th style="width:80px" data-uds-nosort data-uds-nocol>إجراء</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in items %}
+        {% set _p = plans.get(c.plan_id) %}
+        {% set _expired = (not c.revoked) and c.expire_at and now and c.expire_at < now %}
+        <tr>
+          <td class="num mono">{{ c.id }}</td>
+          <td class="mono"><strong><bdi dir="ltr">{{ c.username }}</bdi></strong></td>
+          <td class="small">
+            <span class="cl-pw">
+              <span class="mono"><bdi dir="ltr">{{ c.password }}</bdi></span>
+            </span>
+          </td>
+          <td>
+            {% if _p %}
+              {{ _p.name }}
+              {% if _p.price %}<span class="hub-text-mute small"> — <bdi dir="ltr">{{ _p.price|money }}</bdi></span>{% endif %}
+            {% else %}<span class="hub-text-mute">—</span>{% endif %}
+          </td>
+          <td class="mono small">
+            {% if c.batch_id %}
+            <a href="{{ url_for('radius.cards_of_batch', batch_id=c.batch_id) }}"
+               style="color:var(--hub-brand-ink);text-decoration:none;font-weight:700">
+              <bdi dir="ltr">{{ batches[c.batch_id].batch_code if batches.get(c.batch_id) else c.batch_id }}</bdi>
+            </a>
+            {% else %}<span class="hub-text-mute">—</span>{% endif %}
+          </td>
+          <td>
+            {# الحالة معرّبة + القيمة الخام (enum) متاحة في title لمن يحتاج المرجع التقني #}
+            {% if c.revoked %}<span title="revoked">{{ hub.pill("محظورة", variant="red") }}</span>
+            {% elif _expired %}<span title="expired">{{ hub.pill("منتهية", variant="amber") }}</span>
+            {% elif c.used %}<span title="used">{{ hub.pill("مستخدمة", variant="blue") }}</span>
+            {% else %}<span title="available">{{ hub.pill("متاحة", variant="green") }}</span>{% endif %}
+          </td>
+          <td class="mono small"><bdi dir="ltr">{{ c.first_used_at|dt_local if c.first_used_at else '—' }}</bdi></td>
+          <td class="mono small">{% if c.used_by_mac %}<bdi dir="ltr">{{ c.used_by_mac|upper }}</bdi>{% else %}<span class="hub-text-mute">—</span>{% endif %}</td>
+          <td class="mono small"><bdi dir="ltr">{{ c.expire_at|date_local if c.expire_at else '—' }}</bdi></td>
+          <td>
+            {% if not c.revoked %}
+            <form method="post" action="{{ url_for('radius.cards_revoke', card_id=c.id) }}"
+                  onsubmit="return confirm('إلغاء البطاقة {{ c.username }}؟');" style="display:inline">
+              <button type="submit" class="hub-btn hub-btn--danger hub-btn--icon" title="إلغاء البطاقة">
+                <i class="fa-solid fa-ban"></i>
+              </button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 
-    {# Pagination — server-side, preserves filters #}
-    {% if pages_count > 1 %}
-    <nav style="display:flex;gap:4px;align-items:center;justify-content:center;padding:14px 0">
-      {% set prev = page - 1 %}
-      {% set next = page + 1 %}
-      {% macro page_link(p, label, disabled=false) -%}
-        {% if disabled %}
-          <span class="hub-btn hub-btn--ghost hub-btn--icon" style="opacity:.4;cursor:default">{{ label }}</span>
-        {% else %}
-          {% set qs = preserve.copy() %}{% set _ = qs.update({'page': p}) %}
-          <a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ url_for('radius.cards_list', **qs) }}">{{ label }}</a>
-        {% endif %}
-      {%- endmacro %}
-      {{ page_link(1,           '«', disabled=(page == 1)) }}
-      {{ page_link(prev,        '‹', disabled=(page == 1)) }}
-      {% set window_lo = [page - 2, 1] | max %}
-      {% set window_hi = [page + 2, pages_count] | min %}
-      {% if window_lo > 1 %}<span class="hub-text-mute">…</span>{% endif %}
-      {% for p in range(window_lo, window_hi + 1) %}
-        {% if p == page %}
-          <span class="hub-btn hub-btn--primary hub-btn--sm">{{ p }}</span>
-        {% else %}
-          {{ page_link(p, p) }}
-        {% endif %}
-      {% endfor %}
-      {% if window_hi < pages_count %}<span class="hub-text-mute">…</span>{% endif %}
-      {{ page_link(next,        '›', disabled=(page == pages_count)) }}
-      {{ page_link(pages_count, '»', disabled=(page == pages_count)) }}
-    </nav>
-    {% endif %}
-  {% endcall %}
+  {# ───── ترقيم الصفحات (خادم) — يحافظ على البحث والفلاتر ───── #}
+  {% if pages_count > 1 %}
+  <nav class="cl-pager" aria-label="تنقّل بين الصفحات">
+    {% set prev = page - 1 %}
+    {% set next = page + 1 %}
+    {% macro page_link(p, label, disabled=false) -%}
+      {% if disabled %}
+        <span class="hub-btn hub-btn--ghost hub-btn--icon" style="opacity:.4;cursor:default">{{ label }}</span>
+      {% else %}
+        {% set qs = preserve.copy() %}{% set _ = qs.update({'page': p}) %}
+        <a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ url_for('radius.cards_list', **qs) }}">{{ label }}</a>
+      {% endif %}
+    {%- endmacro %}
+    {{ page_link(1,           '«', disabled=(page == 1)) }}
+    {{ page_link(prev,        '‹', disabled=(page == 1)) }}
+    {% set window_lo = [page - 2, 1] | max %}
+    {% set window_hi = [page + 2, pages_count] | min %}
+    {% if window_lo > 1 %}<span class="hub-text-mute">…</span>{% endif %}
+    {% for p in range(window_lo, window_hi + 1) %}
+      {% if p == page %}
+        <span class="hub-btn hub-btn--primary hub-btn--sm">{{ p }}</span>
+      {% else %}
+        {{ page_link(p, p) }}
+      {% endif %}
+    {% endfor %}
+    {% if window_hi < pages_count %}<span class="hub-text-mute">…</span>{% endif %}
+    {{ page_link(next,        '›', disabled=(page == pages_count)) }}
+    {{ page_link(pages_count, '»', disabled=(page == pages_count)) }}
+  </nav>
+  {% endif %}
 {% endcall %}
 {% else %}
 {{ hub.empty(
-  "لا كروت تطابق الفلتر" if (q or batch_id or used or revoked) else "لا كروت بعد",
-  sub="ولّد دفعة جديدة من زرّ «توليد كروت» أعلى الصفحة" if not (q or batch_id or used or revoked) else "جرّب تخفيف معايير البحث.",
+  "لا كروت تطابق الفلتر" if _filtered else "لا كروت بعد",
+  sub="جرّب تخفيف معايير البحث أو تغيير الحالة." if _filtered else "ولّد دفعة جديدة من زرّ «توليد كروت» أعلى الصفحة.",
   icon="id-card"
 ) }}
 {% endif %}
+{% endcall %}{# /worklayout #}
 
+{# الجداول الموحدة: فرز + اختيار أعمدة (الترقيم يبقى على الخادم) #}
+<script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
 {% endblock %}
-</content>
-</invoke>

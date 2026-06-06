@@ -126,11 +126,15 @@ def distributors_list():
         "radius/distributors_list.html",
         distributors=items,
         status=status or "",
+        # ?new=1 يفتح الصندوق العائم «إضافة موزع» تلقائيًا (رابط /distributors/new القديم)
+        open_new_modal=(request.args.get("new") == "1"),
     )
 
 
 def distributors_new():
-    return render_template("radius/distributors_form.html", form={}, is_new=True)
+    # نموذج الإنشاء أصبح صندوقًا عائمًا داخل صفحة القائمة —
+    # الرابط القديم يبقى حيًّا ويفتح النافذة تلقائيًا عبر ?new=1.
+    return redirect(url_for("radius.distributors_list", new=1))
 
 
 def distributors_create():

@@ -86,17 +86,29 @@ def _status_active(value: str, allowed: set[str]) -> bool:
     return str(value or "").strip().lower() in allowed
 
 
+def _ar_count(n: int, one: str, two: str, few: str, many: str) -> str:
+    """مطابقة العدد للمعدود بالعربية (تغطية مبسّطة تكفي أرقام البطاقات الصغيرة):
+    1 → مفرد، 2 → مثنى، 3-10 → جمع القلة، 11+ → تمييز مفرد منصوب."""
+    if n == 1:
+        return one
+    if n == 2:
+        return two
+    if 3 <= n <= 10:
+        return f"{n} {few}"
+    return f"{n} {many}"
+
+
 def _duration_label(minutes: int) -> str:
     minutes = int(minutes or 0)
     if minutes <= 0:
         return ""
     if minutes % 1440 == 0:
         days = minutes // 1440
-        return f"{days} يوم" if days == 1 else f"{days} أيام"
+        return _ar_count(days, "يوم واحد", "يومان", "أيام", "يوماً")
     if minutes % 60 == 0:
         hours = minutes // 60
-        return f"{hours} ساعة"
-    return f"{minutes} دقيقة"
+        return _ar_count(hours, "ساعة واحدة", "ساعتان", "ساعات", "ساعة")
+    return _ar_count(minutes, "دقيقة واحدة", "دقيقتان", "دقائق", "دقيقة")
 
 
 def _quota_label(megabytes: int) -> str:

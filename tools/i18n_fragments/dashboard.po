@@ -1,0 +1,230 @@
+msgid "مركز إدارة الشبكة - Hobe Hub"
+msgstr "Network Operations Center - Hobe Hub"
+
+msgid "مركز إدارة الشبكة"
+msgstr "Network Operations Center"
+
+msgid "ملخص تشغيلي"
+msgstr "Operations Overview"
+
+msgid "واجهة هادئة لمتابعة الشبكة: من المتصل الآن، ما المتاح للبيع، وما الذي يحتاج انتباهك اليوم."
+msgstr "A calm view of your network: who is online now, what is available to sell, and what needs your attention today."
+
+msgid "مشترك جديد"
+msgstr "New Subscriber"
+
+msgid "إنشاء حزمة"
+msgstr "Generate Batch"
+
+msgid "تجهيز راوتر"
+msgstr "Set Up Router"
+
+msgid "ملخص أقسام الراديوس"
+msgstr "RADIUS modules overview"
+
+msgid "المشتركون"
+msgstr "Subscribers"
+
+msgid "من يدفع الخدمة ومن هو متصل ومن يحتاج متابعة قبل انتهاء الاشتراك."
+msgstr "Who is paying for the service, who is online, and who needs follow-up before their subscription expires."
+
+msgid "مشترك"
+msgstr "subscribers"
+
+msgid "متصلون الآن"
+msgstr "Online now"
+
+msgid "نشطون"
+msgstr "Active"
+
+msgid "منتهي اشتراكهم"
+msgstr "Expired"
+
+msgid "ينتهي خلال 3 أيام"
+msgstr "Expiring within 3 days"
+
+msgid "إدارة المشتركين"
+msgstr "Manage Subscribers"
+
+msgid "البطاقات والحزم"
+msgstr "Cards & Batches"
+
+msgid "مخزون الكروت المطبوعة والحزم الجاهزة للتفعيل أو البيع المباشر."
+msgstr "Inventory of printed cards and batches ready for activation or direct sale."
+
+msgid "كرت مطبوع"
+msgstr "printed cards"
+
+msgid "متاح"
+msgstr "Available"
+
+msgid "الحزم"
+msgstr "Batches"
+
+msgid "متصل"
+msgstr "Connected"
+
+msgid "مباع اليوم"
+msgstr "Sold today"
+
+msgid "حزم البطاقات"
+msgstr "Card Batches"
+
+msgid "البطاقات الإلكترونية"
+msgstr "Electronic Cards"
+
+msgid "حزم البيع الإلكتروني ومستخدمي الكروت الذين يشترون من المحفظة."
+msgstr "Electronic sales batches and card users who buy from their wallet."
+
+msgid "كرت إلكتروني"
+msgstr "electronic cards"
+
+msgid "حزم البيع"
+msgstr "Sales Batches"
+
+msgid "المستخدمون"
+msgstr "Users"
+
+msgid "الشبكة"
+msgstr "Network"
+
+msgid "أجهزة الشبكة والراوترات التي يعتمد عليها تسجيل الدخول والمحاسبة."
+msgstr "Network devices and routers that login and accounting depend on."
+
+msgid "جهاز"
+msgstr "devices"
+
+msgid "مفعلة"
+msgstr "Enabled"
+
+msgid "متصلون"
+msgstr "Online"
+
+msgid "الأجهزة"
+msgstr "Devices"
+
+msgid "العروض"
+msgstr "Plans"
+
+msgid "باقات الإنترنت، السرعات، الحصص، وشروط الاستخدام للمشتركين والكروت."
+msgstr "Internet plans, speeds, quotas, and usage terms for subscribers and cards."
+
+msgid "عرض"
+msgstr "plans"
+
+msgid "معطلة"
+msgstr "Disabled"
+
+msgid "إدارة العروض"
+msgstr "Manage Plans"
+
+msgid "عرض جديد"
+msgstr "New Plan"
+
+msgid "المالية"
+msgstr "Finance"
+
+msgid "إيرادات الشبكة، الديون، والتقارير التي تساعدك تراجع الأداء."
+msgstr "Network revenue, debts, and reports that help you review performance."
+
+msgid "هذا الشهر"
+msgstr "This month"
+
+msgid "اليوم"
+msgstr "Today"
+
+msgid "السنة"
+msgstr "This year"
+
+msgid "التقارير"
+msgstr "Reports"
+
+msgid "آخر الحزم"
+msgstr "Latest Batches"
+
+msgid "حزمة بدون اسم"
+msgstr "Unnamed batch"
+
+msgid "بدون كود"
+msgstr "No code"
+
+msgid "لا توجد حزم بعد"
+msgstr "No batches yet"
+
+msgid "ستظهر أحدث الحزم هنا"
+msgstr "The latest batches will appear here"
+
+msgid "ما يحتاج انتباه"
+msgstr "Needs Attention"
+
+msgid "لا توجد ملاحظات تشغيلية مهمة الآن."
+msgstr "No important operational notes right now."
+
+msgid "ملخص خادم الربط"
+msgstr "Server overview"
+
+msgid "الخادم"
+msgstr "Server"
+
+msgid "خادم الربط"
+msgstr "Host server"
+
+msgid "نظام التشغيل"
+msgstr "Operating system"
+
+msgid "مدة تشغيل خادم الربط"
+msgstr "Server uptime"
+
+msgid "مدة التشغيل"
+msgstr "Uptime"
+
+msgid "تشغيل الخادم"
+msgstr "Server running"
+
+msgid "مدة تشغيل التطبيق"
+msgstr "Application uptime"
+
+msgid "التطبيق"
+msgstr "Application"
+
+msgid "عملية HobeRadius"
+msgstr "HobeRadius process"
+
+msgid "فحص الشبكة"
+msgstr "Network check"
+
+msgid "الفحص ناجح"
+msgstr "Check passed"
+
+msgid "بانتظار الفحص"
+msgstr "Awaiting check"
+
+msgid "سليم"
+msgstr "Healthy"
+
+msgid "فحص"
+msgstr "Checking"
+
+msgid "استخدام المعالج"
+msgstr "CPU usage"
+
+msgid "المعالج"
+msgstr "CPU"
+
+msgid "%(n)s نواة"
+msgstr "%(n)s cores"
+
+msgid "استهلاك الذاكرة"
+msgstr "Memory usage"
+
+msgid "الذاكرة"
+msgstr "Memory"
+
+msgid "%(amount)s متاح"
+msgstr "%(amount)s available"
+
+msgid "استخدام القرص"
+msgstr "Disk usage"
+
+msgid "القرص"
+msgstr "Disk"

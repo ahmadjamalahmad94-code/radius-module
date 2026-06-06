@@ -11,21 +11,15 @@
 {% block head_extra %}
 {{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/subscribers_polish.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
 <style>
-  .ff-kpis{ display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:10px; margin-bottom:14px; }
+  /* ملاحظة: KPIs انتقلت إلى hub.megahero (uds-hero-kpis) فحُذف grid الـ ff-kpis. */
   .ff-actions{ display:flex; flex-wrap:wrap; gap:10px; margin-bottom:16px; }
   .ff-actions .hub-btn{ font-size:14px; padding:12px 20px; }
-  /* ── floating modal ── */
-  .ff-modal{ position:fixed; inset:0; z-index:1200; display:none; place-items:center; padding:24px; background:rgba(15,23,42,.52); }
-  .ff-modal.is-open{ display:grid; }
-  .ff-dialog{ width:min(560px,100%); max-height:min(88vh,760px); overflow:auto; border-radius:16px; background:#fff;
-    box-shadow:0 28px 80px rgba(15,23,42,.32); }
-  .ff-head{ position:sticky; top:0; display:flex; align-items:center; justify-content:space-between; gap:12px;
-    padding:15px 18px; border-bottom:1px solid var(--hub-border-soft,#e2e8f0); background:#fff; }
-  .ff-head h3{ margin:0; font-size:17px; font-weight:900; color:var(--hub-text,#0f172a); }
-  .ff-x{ border:0; background:transparent; color:#94a3b8; font-size:18px; cursor:pointer; }
-  .ff-body{ padding:16px 18px; display:grid; gap:12px; }
-  .ff-foot{ display:flex; justify-content:flex-end; gap:8px; padding:13px 18px; border-top:1px solid var(--hub-border-soft,#e2e8f0); background:#fbfdff; }
+  /* بنية النافذة (الخلفية/الصندوق/الترويسة/التذييل) صارت من نظام uds-modal
+     الموحّد في unified_design.css؛ هنا نُبقي فقط تنسيق المحتوى الداخلي.
+     نضبط ترصيف عمودي للحقول داخل جسم النافذة الموحّد. */
+  #ff-payment .uds-modal-body, #ff-loan .uds-modal-body{ display:grid; gap:12px; }
   .ff-grid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
   .ff-field{ display:flex; flex-direction:column; gap:5px; font-size:12.5px; font-weight:800; color:var(--hub-text-soft,#475569); }
   .ff-field.wide{ grid-column:1 / -1; }
@@ -73,7 +67,24 @@
 {% block content %}
 {% set open_loans = loans|selectattr('status','equalto','open')|list %}
 
-{{ hub.hero(
+{# تعريب القيم الخام للعرض — المعرّف الإنجليزي يبقى في title للمرجع التقني.
+   نطابق خريطة التعريب المعتمدة في سجل القيود (accounting_ledger) لتوحيد المصطلح. #}
+{% set pay_status_ar = {
+  'paid': 'مدفوعة', 'pending': 'معلّقة', 'void': 'ملغاة',
+  'refunded': 'مستردّة', 'failed': 'فاشلة', 'completed': 'مكتملة'
+} %}
+{% set type_ar = {
+  'payment': 'دفعة', 'loan': 'سلفة', 'settlement': 'تسوية',
+  'void': 'إلغاء', 'reversal': 'عكسي', 'correction': 'تصحيح',
+  'invoice': 'فاتورة', 'refund': 'استرداد', 'adjustment': 'تعديل',
+  'collection': 'تحصيل', 'expense': 'مصروف', 'balance': 'رصيد',
+  'subscriber': 'مشترك', 'card': 'بطاقة', 'manual': 'يدوي'
+} %}
+
+{# الهيرو الموحّد: megahero يدمج العنوان + الإجراءات + شريط الـKPIs في كتلة
+   .uds-hero واحدة (بدّلنا hub.hero القديم + ff-kpis المنفصلة + غلاف
+   hub-hero-shell امتثالًا لقاعدة «هيرو واحد مدموج فقط»). #}
+{{ hub.megahero(
   "دفعات وسلف المستفيد",
   subtitle="السعر والمدة تُحتسب تلقائيًا حسب باقة المشترك: " + sub.username,
   icon="wallet",
@@ -84,28 +95,32 @@
     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.finance_ledger', subscriber_id=sub.id) + '">
       <i class="fa-solid fa-scale-balanced"></i> قيود هذا المستفيد
     </a>
-  '
+  ',
+  kpis=[
+    {'label': 'الرصيد الحالي', 'value': (sub.balance or 0)|money, 'icon': 'scale-balanced',
+     'variant': ('red' if (sub.balance or 0) < 0 else 'green'),
+     'sub': ('عليه دين' if (sub.balance or 0) < 0 else 'رصيد دائن')},
+    {'label': 'سعر الباقة الفعّال', 'value': eff_price|money, 'icon': 'tag',
+     'variant': 'brand', 'sub': ('سعر مخصّص' if price_custom else 'سعر العرض')},
+    {'label': 'الدفعات', 'value': payments|length, 'icon': 'receipt', 'variant': 'blue'},
+    {'label': 'سلف مفتوحة', 'value': open_loans|length, 'icon': 'hand-holding-dollar', 'variant': 'amber'}
+  ]
 ) }}
 
-<div class="ff-kpis">
-  {{ hub.kpi("الرصيد الحالي", (sub.balance or 0)|money, icon="scale-balanced", variant=("red" if (sub.balance or 0) < 0 else "green"), sub=("عليه دين" if (sub.balance or 0) < 0 else "رصيد دائن")) }}
-  {{ hub.kpi("سعر الباقة الفعّال", eff_price|money, icon="tag", variant="brand", sub=("سعر مخصّص" if price_custom else "سعر العرض")) }}
-  {{ hub.kpi("الدفعات", payments|length, icon="receipt", variant="blue") }}
-  {{ hub.kpi("سلف مفتوحة", open_loans|length, icon="hand-holding-dollar", variant="amber") }}
-</div>
-
+{# الأزرار تفتح النوافذ عبر آلية uds الموحّدة (data-uds-modal-open)، مع إبقاء
+   data-ff-open لأن JS المعاينة واختبار الويب يعتمدانها. #}
 <div class="ff-actions">
-  <button class="hub-btn hub-btn--primary" type="button" data-ff-open="payment">
+  <button class="hub-btn hub-btn--primary" type="button" data-ff-open="payment" data-uds-modal-open="ff-payment">
     <i class="fa-solid fa-money-bill-wave"></i> تسجيل دفعة نقدية
   </button>
-  <button class="hub-btn hub-btn--secondary" type="button" data-ff-open="loan">
+  <button class="hub-btn hub-btn--secondary" type="button" data-ff-open="loan" data-uds-modal-open="ff-loan">
     <i class="fa-solid fa-hand-holding-dollar"></i> منح سلفة
   </button>
 </div>
 
 {% if payments %}
 {% call hub.section("آخر الدفعات", icon="receipt", meta=payments|length|string + " دفعة", flush=True) %}
-  <div class="hub-table-wrap" style="border:none;border-radius:0">
+  <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
     <table class="hub-table">
       <thead><tr><th class="num" style="width:60px">#</th><th>المبلغ</th><th>المدة المستحقة</th><th>الخصم</th><th>الحالة</th><th>التاريخ</th></tr></thead>
       <tbody>
@@ -115,7 +130,15 @@
           <td class="mono"><strong>{{ p.amount|money }}</strong></td>
           <td>{{ p.earned_minutes|dur_days }}</td>
           <td class="mono">{{ (p.discount_amount or 0)|money }}</td>
-          <td>{{ hub.pill(p.status, variant="green") }}</td>
+          <td>
+            {% if p.status in ('void','refunded','failed') %}
+              <span title="{{ p.status }}">{{ hub.pill(pay_status_ar.get(p.status, p.status), variant="red") }}</span>
+            {% elif p.status == 'pending' %}
+              <span title="{{ p.status }}">{{ hub.pill(pay_status_ar.get(p.status, p.status), variant="amber") }}</span>
+            {% else %}
+              <span title="{{ p.status }}">{{ hub.pill(pay_status_ar.get(p.status, p.status or 'مدفوعة'), variant="green") }}</span>
+            {% endif %}
+          </td>
           <td class="mono small">{{ p.created_at|dt_local }}</td>
         </tr>
         {% endfor %}
@@ -129,7 +152,7 @@
 
 {% if loans %}
 {% call hub.section("السلف والتسويات", icon="handshake", meta=loans|length|string + " سلفة", flush=True) %}
-  <div class="hub-table-wrap" style="border:none;border-radius:0">
+  <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
     <table class="hub-table">
       <thead><tr><th class="num" style="width:60px">#</th><th>المدة</th><th>القيمة</th><th>الحالة</th><th>السبب</th><th style="width:340px">تسوية</th></tr></thead>
       <tbody>
@@ -148,6 +171,8 @@
             {% if loan.status == 'open' %}
             <form method="post" action="{{ url_for('radius.users_loan_settle', username=sub.username, loan_id=loan.id) }}"
                   style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+              {# توكن CSRF: بدونه يرفض الخادم تسوية السلفة بـ 400. #}
+              {{ csrf_token_input() | safe }}
               <input class="hub-input" name="amount" type="number" step="0.01" min="0" value="{{ loan.amount }}" style="width:100px">
               <input class="hub-input" name="notes" placeholder="ملاحظة" style="width:160px;flex:1">
               <button class="hub-btn hub-btn--secondary hub-btn--sm" type="submit">تسوية</button>
@@ -166,21 +191,21 @@
 
 {% if ledger %}
 {% call hub.section("سجل القيود", icon="scale-balanced", meta=ledger|length|string + " قيد", flush=True) %}
-  <div class="hub-table-wrap" style="border:none;border-radius:0">
+  <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
     <table class="hub-table">
       <thead><tr><th class="num" style="width:60px">#</th><th>النوع</th><th>الاتجاه</th><th>المبلغ</th><th>المصدر</th><th>ملاحظات</th><th>التاريخ</th></tr></thead>
       <tbody>
         {% for entry in ledger %}
         <tr>
           <td class="num mono">{{ entry.id }}</td>
-          <td>{{ entry.entry_type }}</td>
+          <td><span title="{{ entry.entry_type }}">{{ type_ar.get(entry.entry_type, entry.entry_type) }}</span></td>
           <td>
             {% if entry.direction == 'credit' %}{{ hub.pill("دائن", variant="green", dot=False) }}
             {% elif entry.direction == 'debit' %}{{ hub.pill("مدين", variant="amber", dot=False) }}
             {% else %}{{ hub.pill(entry.direction or '—', variant="grey", dot=False) }}{% endif %}
           </td>
           <td class="mono"><strong>{{ entry.amount|money }}</strong></td>
-          <td class="small">{{ entry.source_type or '—' }}{% if entry.source_id %} #{{ entry.source_id }}{% endif %}</td>
+          <td class="small">{% if entry.source_type %}<span title="{{ entry.source_type }}">{{ type_ar.get(entry.source_type, entry.source_type) }}</span>{% else %}—{% endif %}{% if entry.source_id %} <span class="hub-text-mute mono">#{{ entry.source_id }}</span>{% endif %}</td>
           <td class="small">{{ entry.notes or '—' }}</td>
           <td class="mono small">{{ entry.created_at|dt_local }}</td>
         </tr>
@@ -193,12 +218,17 @@
   {% call hub.section("سجل القيود", icon="scale-balanced") %}{{ hub.empty("لا توجد قيود مالية بعد", icon="scale-balanced") }}{% endcall %}
 {% endif %}
 
-{# ───────────── floating: تسجيل دفعة ───────────── #}
-<div class="ff-modal" data-ff-modal="payment" hidden>
-  <div class="ff-dialog" role="dialog" aria-modal="true">
-    <form data-ff-form="payment" action="{{ url_for('radius.users_payment_create', username=sub.username) }}">
-      <div class="ff-head"><h3>تسجيل دفعة نقدية</h3><button type="button" class="ff-x" data-ff-close><i class="fa-solid fa-xmark"></i></button></div>
-      <div class="ff-body">
+{# ───────────── نافذة موحّدة (uds-modal): تسجيل دفعة ─────────────
+   تبنّينا بنية النافذة الموحّدة (uds-modal/uds-modal-dialog) بدل ff-modal،
+   مع إبقاء سمة data-ff-modal لأن JS المعاينة واختبار الويب يعتمدانها. #}
+<div class="uds-modal" id="ff-payment" data-uds-modal data-ff-modal="payment" hidden>
+  <div class="uds-modal-dialog" role="dialog" aria-modal="true" aria-label="تسجيل دفعة نقدية">
+    {# method="post" ضروري: حاقن الـ CSRF التلقائي يستهدف فقط <form method="post">. #}
+    <form method="post" data-ff-form="payment" action="{{ url_for('radius.users_payment_create', username=sub.username) }}">
+      {# توكن CSRF صريح حتى لا يُرفض الطلب بـ 400. #}
+      {{ csrf_token_input() | safe }}
+      <div class="uds-modal-head"><h3><i class="fa-solid fa-money-bill-wave"></i> تسجيل دفعة نقدية</h3><button type="button" class="hub-btn hub-btn--ghost hub-btn--icon" data-uds-modal-close data-ff-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button></div>
+      <div class="uds-modal-body">
         <div class="ff-current">
           <div><span>المشترك</span><strong>{{ sub.username }}</strong></div>
           <div><span>سعر الباقة</span><strong>{{ eff_price|money }}</strong></div>
@@ -249,20 +279,23 @@
         <div class="ff-hint" data-ff-pay-coverage>أدخل المبلغ لعرض عدد الأيام التي يغطّيها.</div>
         <div class="ff-msg" data-ff-pay-msg hidden></div>
       </div>
-      <div class="ff-foot">
-        <button class="hub-btn hub-btn--ghost" type="button" data-ff-close>إغلاق</button>
+      {# الأزرار داخل الـ form (لا footer_html) كي يبقى التقديم وحقن CSRF سليمين. #}
+      <div class="uds-modal-foot">
+        <button class="hub-btn hub-btn--ghost" type="button" data-uds-modal-close data-ff-close>إلغاء</button>
         <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-plus"></i> تسجيل</button>
       </div>
     </form>
   </div>
 </div>
 
-{# ───────────── floating: منح سلفة ───────────── #}
-<div class="ff-modal" data-ff-modal="loan" hidden>
-  <div class="ff-dialog" role="dialog" aria-modal="true">
-    <form data-ff-form="loan" action="{{ url_for('radius.users_loan_create', username=sub.username) }}">
-      <div class="ff-head"><h3>منح سلفة</h3><button type="button" class="ff-x" data-ff-close><i class="fa-solid fa-xmark"></i></button></div>
-      <div class="ff-body">
+{# ───────────── نافذة موحّدة (uds-modal): منح سلفة ───────────── #}
+<div class="uds-modal" id="ff-loan" data-uds-modal data-ff-modal="loan" hidden>
+  <div class="uds-modal-dialog" role="dialog" aria-modal="true" aria-label="منح سلفة">
+    <form method="post" data-ff-form="loan" action="{{ url_for('radius.users_loan_create', username=sub.username) }}">
+      {# توكن CSRF صريح حتى لا يُرفض الطلب بـ 400. #}
+      {{ csrf_token_input() | safe }}
+      <div class="uds-modal-head"><h3><i class="fa-solid fa-hand-holding-dollar"></i> منح سلفة</h3><button type="button" class="hub-btn hub-btn--ghost hub-btn--icon" data-uds-modal-close data-ff-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button></div>
+      <div class="uds-modal-body">
         <div class="ff-current">
           <div><span>المشترك</span><strong>{{ sub.username }}</strong></div>
           <div><span>سعر الباقة</span><strong>{{ eff_price|money }}</strong></div>
@@ -293,8 +326,8 @@
         <div class="ff-hint" data-ff-loan-hint>سلفة وقت مجانية — تُمنح مدة فقط دون تسجيل دين.</div>
         <div class="ff-msg" data-ff-loan-msg hidden></div>
       </div>
-      <div class="ff-foot">
-        <button class="hub-btn hub-btn--ghost" type="button" data-ff-close>إغلاق</button>
+      <div class="uds-modal-foot">
+        <button class="hub-btn hub-btn--ghost" type="button" data-uds-modal-close data-ff-close>إلغاء</button>
         <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-plus"></i> منح</button>
       </div>
     </form>
@@ -316,13 +349,10 @@
   function arDays(n){ n = Math.max(0, Math.round(n)); if(n===1) return "يوم"; if(n===2) return "يومان"; if(n>=3&&n<=10) return `${n} أيام`; return `${n} يوم`; }
   const priceLabel = IS_CUSTOM ? "السعر المخصّص" : "سعر العرض";
 
-  // فتح وإغلاق النوافذ.
-  function open(key){ const m = root.querySelector(`[data-ff-modal='${key}']`); if(m){ m.hidden=false; m.classList.add("is-open"); m.querySelector("input,select,textarea,button")?.focus(); } }
-  function closeAll(){ root.querySelectorAll("[data-ff-modal]").forEach(m=>{ m.classList.remove("is-open"); m.hidden=true; }); }
-  root.querySelectorAll("[data-ff-open]").forEach(b=> b.addEventListener("click", ()=>{ open(b.dataset.ffOpen); if(b.dataset.ffOpen==="payment") payCoverage(); if(b.dataset.ffOpen==="loan") loanSync(); }));
-  root.querySelectorAll("[data-ff-close]").forEach(b=> b.addEventListener("click", closeAll));
-  root.querySelectorAll("[data-ff-modal]").forEach(m=> m.addEventListener("click", e=>{ if(e.target===m) closeAll(); }));
-  root.addEventListener("keydown", e=>{ if(e.key==="Escape") closeAll(); });
+  // الفتح/الإغلاق يتولّاهما نظام uds-modal الموحّد (unified_design.js): إظهار
+  // النافذة، النقر على الخلفية، وزر الإغلاق ومفتاح Esc. هنا نكتفي بتحديث
+  // المعاينة (الأيام/قيمة الدين) لحظة الفتح عبر سمة data-ff-open الباقية.
+  root.querySelectorAll("[data-ff-open]").forEach(b=> b.addEventListener("click", ()=>{ if(b.dataset.ffOpen==="payment") payCoverage(); if(b.dataset.ffOpen==="loan") loanSync(); }));
 
   // معاينة الدفعة وتسوية السلف.
   const payModal = root.querySelector("[data-ff-modal='payment']");
@@ -420,4 +450,6 @@
   wire(root.querySelector("[data-ff-form='loan']"), "[data-ff-loan-msg]");
 })();
 </script>
+{# الجداول الموحدة: فرز + اختيار أعمدة + ترقيم صفحات وعدد صفوف #}
+<script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
 {% endblock %}

@@ -72,8 +72,8 @@
         <label>اسم المجموعة <span style="color:var(--hub-red)">*</span></label>
         <input class="hub-input" type="text" name="name" required
                value="{{ group.name if group else '' }}"
-               placeholder="مثال: VIP — Office Hours">
-        <div class="help">يجب أن يكون فريدًا داخل هذا الـ tenant.</div>
+               placeholder="مثال: عملاء مميّزون — أوقات الدوام">
+        <div class="help">يجب أن يكون الاسم فريدًا داخل هذه المؤسسة.</div>
       </div>
       <div class="sgf-field">
         <label>الوصف</label>
@@ -88,14 +88,15 @@
   {% call hub.section("الخدمات المُطبَّقة على أعضاء المجموعة", icon="layer-group") %}
     <div class="hub-form-row">
       <div class="sgf-field">
-        <label>جدولة سرعة (Bandwidth schedule)</label>
+        <label>جدولة السرعة</label>
         <select class="hub-input" name="bandwidth_schedule_id">
           <option value="">— بدون —</option>
           {% for s in schedules %}
+            {# قيمة target_type خام (إنجليزية) — تبقى في title فقط ولا تُعرض نصًّا #}
             <option value="{{ s.id }}"
-              {% if group and group.bandwidth_schedule_id == s.id %}selected{% endif %}>
+              {% if group and group.bandwidth_schedule_id == s.id %}selected{% endif %}
+              {% if s.target_type %}title="{{ s.target_type }}"{% endif %}>
               {{ s.name or s.id }}
-              {%- if s.target_type %} — {{ s.target_type }}{% endif -%}
             </option>
           {% endfor %}
         </select>
@@ -159,10 +160,11 @@
               </td>
               <td>{{ m.full_name or '—' }}</td>
               <td class="mono small">{{ m.mobile or '—' }}</td>
-              <td>
+              <td title="{{ m.status }}">
                 {%- if m.status == 'enabled' -%}{{ hub.pill("مفعَّل", variant="green") }}
                 {%- elif m.status == 'disabled' -%}{{ hub.pill("معطَّل", variant="red") }}
-                {%- else -%}{{ hub.pill(m.status, variant="grey") }}{%- endif -%}
+                {%- elif m.status == 'expired' -%}{{ hub.pill("منتهٍ", variant="amber") }}
+                {%- else -%}{{ hub.pill("غير معروف", variant="grey") }}{%- endif -%}
               </td>
             </tr>
           {% endfor %}

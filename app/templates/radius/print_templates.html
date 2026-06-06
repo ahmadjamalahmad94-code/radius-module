@@ -10,30 +10,85 @@
 {{ super() }}
 <style>
   .print-room{--pr-navy:#0f172a;--pr-cyan:#22a7bd;--pr-gold:#f59e0b;display:grid;gap:16px}
-  /* ── Mega-hero: title + actions + KPI strip in ONE panel ── */
-  .pr-hero{position:relative;overflow:hidden;border-radius:18px;padding:18px 20px;
-    border:1px solid #cbd5e1;
-    background:
-      radial-gradient(640px 320px at 100% 0%, rgba(124,58,237,.08) 0%, transparent 60%),
-      linear-gradient(180deg,#faf8ff 0%,#fff 100%);
-    box-shadow:0 1px 0 rgba(255,255,255,.85) inset, 0 4px 14px rgba(15,23,42,.05)}
-  .pr-hero h2{margin:0 0 4px;font-size:20px;font-weight:800;letter-spacing:0;color:#0f172a;
-    display:flex;align-items:center;gap:12px}
-  .pr-hero h2::before{content:"\f0d0";font-family:"Font Awesome 6 Free";font-weight:900;
-    width:46px;height:46px;flex:0 0 auto;border-radius:13px;display:inline-grid;place-items:center;font-size:18px;
-    color:#fff;background:linear-gradient(135deg,#7c3aed,#5b21b6);box-shadow:0 6px 16px rgba(124,58,237,.32)}
-  .pr-hero p{margin:0;max-width:880px;color:#475569;line-height:1.7;font-weight:600;font-size:13px}
-  .pr-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+  /* الهيرو القديم (.pr-hero) استُبدل بـ hub-hero-shell + hub.megahero —
+     راجع كتلة المحتوى. شريط الـ KPI أصبح kpis داخل الميجاهيرو.
+     الشبكة الأم توفر الفجوة، فنلغي هامش الشل السفلي لمنع فجوة مزدوجة. */
+  .print-room > .hub-hero-shell{margin-bottom:0}
   .pr-shell{display:grid;grid-template-columns:minmax(360px,1.05fr) minmax(460px,1.4fr);gap:14px;align-items:start}
   @media(max-width:1100px){.pr-shell{grid-template-columns:1fr}}
   .pr-panel{border:1px solid var(--hub-border-soft);background:var(--hub-bg-card);border-radius:16px;box-shadow:0 10px 28px rgba(15,23,42,.06);overflow:hidden}
   .pr-panel-head{padding:14px 16px;border-bottom:1px solid var(--hub-border-soft);display:flex;align-items:center;justify-content:space-between;gap:10px}
   .pr-panel-head h3{margin:0;font-size:17px;font-weight:900;color:var(--hub-text)}
   .pr-panel-body{padding:16px}
-  .pr-tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
-  .pr-tab{border:1px solid var(--hub-border-soft);background:var(--hub-bg-soft);border-radius:999px;padding:8px 11px;font-weight:900;font-size:12px;color:var(--hub-text-soft);cursor:pointer}
+  /* ── شريط أقسام المحرر (تبويبات أفقية) ──
+     انتقل الشريط من عمود المحرر إلى عمود المعاينة: يجلس فوق معاينة
+     البطاقة مباشرة داخل اللوحة الملاصقة (.pr-stage sticky)، فيبقى
+     ظاهرًا دائمًا مع المعاينة مهما تمرر المستخدم في المحرر. الأزرار
+     type="button" خارج النموذج لكنها تتحكم بنفس الألواح (data-pr-pane)
+     في عمود المحرر عبر نفس الـ JS بلا أي تغيير في الأسماء. */
+  .pr-tabs{display:flex;flex-wrap:wrap;gap:7px;
+    background:var(--hub-bg-soft);padding:8px 12px;
+    border-bottom:1px solid var(--hub-border-soft)}
+  .pr-tab{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--hub-border-soft);background:var(--hub-bg-soft);border-radius:999px;padding:8px 12px;font-weight:900;font-size:12px;color:var(--hub-text-soft);cursor:pointer;font-family:inherit;transition:background .15s,color .15s,border-color .15s}
+  .pr-tab i{font-size:11px;opacity:.75}
+  .pr-tab:hover{border-color:rgba(34,167,189,.55);color:var(--hub-text)}
   .pr-tab.is-active{background:var(--pr-navy);color:#fff;border-color:var(--pr-navy)}
+  .pr-tab.is-active i{opacity:1}
   .pr-pane{display:none}.pr-pane.is-active{display:block}
+  /* ── تبويبات فرعية داخل قسم «الحقول» ──
+     ثلاث حبّات (اليوزر / الباسورد / الباركود) تعرض مجموعة واحدة في
+     كل مرة بدل التكديس العمودي. الإخفاء عرضي (display) فقط — الحقول
+     المخفية تبقى داخل النموذج وتُرسل قيمها كالمعتاد. */
+  .pr-fieldtabs{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:12px}
+  .pr-fieldtab{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--hub-border-soft);background:var(--hub-bg-soft);border-radius:999px;padding:7px 12px;font-weight:900;font-size:12px;color:var(--hub-text-soft);cursor:pointer;font-family:inherit;transition:background .15s,color .15s,border-color .15s}
+  .pr-fieldtab i{font-size:11px;opacity:.75}
+  .pr-fieldtab:hover{border-color:rgba(34,167,189,.55);color:var(--hub-text)}
+  .pr-fieldtab.is-active{background:var(--pr-cyan);color:#fff;border-color:var(--pr-cyan)}
+  .pr-fieldtab.is-active i{opacity:1}
+  [data-pr-pane="fields"] [data-layer-section]{display:none}
+  [data-pr-pane="fields"] [data-layer-section].is-active{display:grid}
+  /* ── سطر «اسم القالب» النحيف أعلى المصمم ──
+     صف واحد خفيف: التسمية + أيقونة شرح (hub-hint) بجانبها والحقل في
+     نفس السطر — لمسة بنفسجية ناعمة بلا صندوق ثقيل أو فقرة شرح.
+     نفس name="name" ونفس data-preview بلا أي تغيير وظيفي. */
+  .pr-template-name-card{
+    border:1px solid rgba(124,58,237,.18);
+    background:rgba(124,58,237,.05);
+    border-radius:12px;padding:8px 12px;margin-bottom:12px;
+  }
+  .pr-template-name-card label{
+    display:flex;align-items:center;gap:10px;
+    font-size:12.5px;font-weight:950;color:#5b21b6;
+  }
+  .pr-template-name-card label > span{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;flex:0 0 auto}
+  .pr-template-name-card label > span > i.fa-signature{color:#7c3aed}
+  .pr-template-name-card input.hub-input{
+    flex:1 1 auto;min-width:0;
+    font-size:13px;font-weight:900;padding:7px 11px;border-radius:10px;
+    border:1px solid rgba(124,58,237,.25);background:#fff;color:var(--hub-text);
+  }
+  .pr-template-name-card input.hub-input:focus{
+    border-color:#7c3aed;box-shadow:0 0 0 3px rgba(124,58,237,.14);outline:none;
+  }
+  /* أيقونات الشرح أعلى المصمم: بطاقة الشرح تفتح للأسفل بدل الأعلى —
+     اللوحة (.pr-panel) عليها overflow:hidden ولا مساحة فوق أول صف،
+     فالفتح للأعلى كان سيقصّ البطاقة عند حافة اللوحة. */
+  .pr-template-name-card .hub-hint::after,
+  .pr-design-source .hub-hint::after{
+    bottom:auto;top:calc(100% + 10px);transform:translateY(4px);
+  }
+  .pr-template-name-card .hub-hint::before,
+  .pr-design-source .hub-hint::before{
+    bottom:auto;top:calc(100% + 5px);
+    border-bottom:none;border-inline-end:none;
+    border-top:1px solid var(--hub-border,#E8E7F0);
+    border-inline-start:1px solid var(--hub-border,#E8E7F0);
+    transform:rotate(45deg) translateY(2px);
+  }
+  .pr-template-name-card .hub-hint:hover::after,.pr-template-name-card .hub-hint:focus::after,
+  .pr-design-source .hub-hint:hover::after,.pr-design-source .hub-hint:focus::after{transform:none}
+  .pr-template-name-card .hub-hint:hover::before,.pr-template-name-card .hub-hint:focus::before,
+  .pr-design-source .hub-hint:hover::before,.pr-design-source .hub-hint:focus::before{transform:rotate(45deg)}
   .pr-form{display:grid;gap:12px}.pr-grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
   .pr-grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
   .pr-grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
@@ -90,18 +145,22 @@
   .pr-engine-option span{font-size:12px;color:var(--hub-text);font-weight:950}
   .pr-engine-option em{font-style:normal;font-size:10px;color:var(--hub-text-mute);font-weight:800}
   .pr-engine-select-field{display:none!important}
-  .pr-design-source{border:1px solid rgba(34,167,189,.22);border-radius:14px;background:#fff;padding:12px;display:grid;gap:10px}
-  .pr-design-source-head{display:flex;align-items:flex-end;justify-content:space-between;gap:10px}
-  .pr-design-source-head strong{font-size:14px;color:var(--hub-text);font-weight:950}
-  .pr-design-source-head small{font-size:11px;color:var(--hub-text-mute);font-weight:800;line-height:1.6;text-align:left}
+  /* ── بطاقتا «اختر نظام التصميم» — نسخة مدمجة ──
+     حُذفت فقرات الوصف من البطاقتين ومن الترويسة؛ الشرح صار أيقونة
+     (hub-hint) صغيرة بجانب عنوان كل بطاقة (data-hint يحمل النص).
+     البطاقة الآن صف واحد: أيقونة + عنوان + أيقونة شرح — بلا تكديس. */
+  .pr-design-source{border:1px solid rgba(34,167,189,.22);border-radius:14px;background:#fff;padding:10px 12px;display:grid;gap:9px}
+  .pr-design-source-head{display:flex;align-items:center;gap:10px}
+  .pr-design-source-head strong{font-size:13px;color:var(--hub-text);font-weight:950}
   .pr-design-source-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
   @media(max-width:520px){.pr-design-source-options{grid-template-columns:1fr}}
-  .pr-design-source-option{border:1px solid var(--hub-border-soft);background:var(--hub-bg-soft);border-radius:14px;padding:12px;display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:10px;cursor:pointer;text-align:right;font-family:inherit;color:var(--hub-text);transition:border-color .15s ease,box-shadow .15s ease,transform .15s ease}
-  .pr-design-source-option:hover,.pr-design-source-option.is-selected{border-color:rgba(34,167,189,.76);box-shadow:0 12px 24px rgba(15,23,42,.08);transform:translateY(-1px)}
+  .pr-design-source-option{border:1px solid var(--hub-border-soft);background:var(--hub-bg-soft);border-radius:12px;padding:8px 10px;display:flex;align-items:center;gap:9px;cursor:pointer;text-align:right;font-family:inherit;color:var(--hub-text);min-width:0;transition:border-color .15s ease,box-shadow .15s ease,transform .15s ease}
+  .pr-design-source-option:hover,.pr-design-source-option.is-selected{border-color:rgba(34,167,189,.76);box-shadow:0 8px 18px rgba(15,23,42,.07);transform:translateY(-1px)}
   .pr-design-source-option.is-selected{outline:2px solid rgba(34,167,189,.18);background:#fff}
-  .pr-design-source-option i{width:38px;height:38px;border-radius:12px;background:rgba(34,167,189,.12);color:var(--pr-cyan);display:grid;place-items:center;font-size:18px}
-  .pr-design-source-option span{display:block;font-size:13px;font-weight:950;color:var(--hub-text)}
-  .pr-design-source-option em{display:block;font-style:normal;font-size:11px;font-weight:800;color:var(--hub-text-mute);line-height:1.55}
+  .pr-design-source-option i.pr-design-source-ico{width:30px;height:30px;border-radius:10px;background:rgba(34,167,189,.12);color:var(--pr-cyan);display:grid;place-items:center;font-size:14px;flex:0 0 auto}
+  .pr-design-source-option .pr-design-source-text{display:flex;align-items:center;gap:7px;min-width:0}
+  /* العنوان فقط — لا تلمس أيقونة الشرح (hub-hint) المجاورة له */
+  .pr-design-source-option .pr-design-source-text > span:not(.hub-hint){font-size:12.5px;font-weight:950;color:var(--hub-text);line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .pr-design-source-select-field{display:none!important}
   .pr-form[data-design-source="image"] [data-system-design-only]{display:none!important}
   .pr-form[data-design-source="preset"] [data-upload-design-only]{display:none!important}
@@ -322,12 +381,6 @@
   .pr-file-clear:hover{color:#b91c1c;border-color:#fecaca;background:#fee2e2}
   .pr-file-error{margin:0;color:#b91c1c;background:#fee2e2;border:1px solid #fecaca;border-radius:10px;padding:8px 10px;font-size:12px;font-weight:800;line-height:1.5}
   .pr-file-hint{margin:0;color:var(--hub-text-mute);font-weight:700;font-size:11.5px;line-height:1.6}
-  /* KPI strip lives inside the mega-hero, on a hairline divider */
-  .pr-data{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;
-    margin-top:16px;padding-top:16px;border-top:1px solid #e2e8f0}
-  .pr-kpi{border:1px solid #cbd5e1;border-radius:12px;background:#fff;padding:12px 14px}
-  .pr-kpi small{display:block;color:#64748b;font-weight:700;font-size:12px}
-  .pr-kpi strong{font-size:22px;color:#0f172a;font-weight:800;font-variant-numeric:tabular-nums}
   .pr-table-actions{display:flex;gap:7px;flex-wrap:wrap}
   .pr-pager{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border-top:1px solid var(--hub-border-soft);background:var(--hub-bg-soft);font-weight:900;color:var(--hub-text-soft)}
   .pr-pager-buttons{display:flex;gap:8px;align-items:center}
@@ -352,6 +405,14 @@
   .pr-template-thumb.is-vertical{height:150px;width:108px;margin-inline:auto}
   .pr-template-thumb:before{content:"";position:absolute;left:10%;right:10%;top:12%;height:6px;border-radius:999px;background:var(--thumb-accent,#f59e0b)}
   .pr-template-thumb:after{content:"USER  CARD1234\A PASS  ******";white-space:pre;position:absolute;left:10%;top:34%;width:48%;border-radius:9px;background:rgba(255,255,255,.92);color:#0f172a;padding:8px;font-size:11px;font-weight:950;line-height:1.7}
+  /* المصغّر الحي: SVG القالب الحقيقي من محرك العرض الموحّد. نلغي
+     الرسم الزخرفي القديم (:before/:after) ونملأ الإطار بالصورة نفسها.
+     عند فشل التحميل (is-broken) يرجع التدرج كخلفية احتياطية فقط. */
+  .pr-template-thumb--live:before,.pr-template-thumb--live:after{display:none}
+  .pr-template-thumb--live{display:grid;place-items:center;background:var(--hub-bg-soft);box-shadow:inset 0 0 0 1px rgba(15,23,42,.08)}
+  .pr-template-thumb--live .pr-template-thumb-img{width:100%;height:100%;object-fit:contain;display:block;direction:ltr}
+  .pr-template-thumb--live.is-broken{background:linear-gradient(135deg,var(--thumb-a,#0f172a),var(--thumb-b,#22a7bd))}
+  .pr-template-thumb--live.is-broken .pr-template-thumb-img{display:none}
   .pr-template-qr{position:absolute;right:10%;top:34%;width:25%;aspect-ratio:1;border-radius:10px;background:#fff;color:#0f172a;display:grid;place-items:center;font-weight:950;font-size:15px}
   .pr-template-image-badge{position:absolute;left:10px;bottom:10px;background:rgba(15,23,42,.76);color:#fff;border-radius:999px;padding:5px 9px;font-size:11px;font-weight:900}
   .pr-template-card h4{margin:0;color:var(--hub-text);font-size:15px;font-weight:950}
@@ -387,6 +448,8 @@
   .pr-designer-summary{cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px;background:var(--hub-bg-soft);font-weight:950;color:var(--hub-text);font-size:15px;list-style:none}
   .pr-designer-summary::-webkit-details-marker{display:none}
   .pr-designer-summary small{font-weight:800;color:var(--hub-text-mute);font-size:12px}
+  /* عنوان شريط المصمم: صف مرن يحتضن شارة «معاينة مباشرة» بجانب الاسم */
+  .pr-designer-summary > span{display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap}
   .pr-designer-drawer[open] > .pr-designer-summary{border-bottom:1px solid var(--hub-border-soft)}
   /* Preview-fragment styling (mirrors the export.html copy so the same partial renders here) */
   .pt-fragment{display:grid;gap:12px}
@@ -426,6 +489,9 @@
   .pr-template-picker-card strong{color:var(--hub-text);font-weight:950}.pr-template-picker-card small{color:var(--hub-text-mute);font-weight:800;line-height:1.6}
   .pr-selected-template{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:center;border:1px solid var(--hub-border-soft);border-radius:12px;background:var(--hub-bg-card);padding:10px}
   .pr-selected-template .pr-chip-swatch{width:58px;height:40px}.pr-selected-template strong{display:block;color:var(--hub-text);font-weight:950}.pr-selected-template small{display:block;color:var(--hub-text-mute);font-weight:800}
+  /* مصغّر القالب المختار: نفس SVG القالب الحقيقي بدل المربع المتدرج */
+  .pr-selected-thumb{width:92px;height:58px;border-radius:10px;border:1px solid rgba(15,23,42,.12);background:var(--hub-bg-soft);object-fit:contain;flex:0 0 auto;direction:ltr}
+  .pr-selected-thumb.is-vertical{width:46px;height:74px}
   html.is-modal-open{overflow:hidden}
   .pr-template-modal[hidden]{display:none!important}.pr-template-modal{position:fixed;inset:0;z-index:1200;display:grid;place-items:center;padding:24px}
   .pr-template-modal-backdrop{position:absolute;inset:0;background:rgba(15,23,42,.58);backdrop-filter:blur(6px)}
@@ -438,12 +504,24 @@
   .pr-template-choice.is-selected{outline:3px solid rgba(34,167,189,.22)}
   .pr-template-choice .pr-template-thumb{height:118px}.pr-template-choice .pr-template-thumb.is-vertical{height:136px;width:96px}
   .pr-template-choice h4{margin:0;color:var(--hub-text);font-size:14px;font-weight:950;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.pr-template-choice p{margin:0;color:var(--hub-text-mute);font-size:12px;font-weight:800;line-height:1.5}
-  .pr-template-choice-actions{display:flex;gap:7px;flex-wrap:wrap;align-items:center}.pr-template-choice-actions .hub-btn{padding:6px 10px;font-size:12px}
-  /* ── Room tabs (#23): split into «غرفة الطباعة» + «غرفة التصميم» ──
-     Tab strip toggles two independent panels. No existing IDs/selectors
-     change — the export/designer/templates/jobs sections keep their IDs
-     and just get grouped under a tab panel each. */
-  .pr-roomtabs{display:flex;flex-wrap:wrap;gap:8px;border:1px solid #cbd5e1;background:linear-gradient(180deg,#faf8ff 0%,#fff 100%);border-radius:16px;padding:8px;box-shadow:0 4px 14px rgba(15,23,42,.05)}
+  /* أزرار بطاقة القالب: صف واحد متساوٍ دائمًا (لا تكديس ولا التفاف) —
+     ثلاث خانات متساوية: تعديل · عينة · حذف. */
+  .pr-template-choice-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;align-items:stretch}
+  .pr-template-choice-actions form{display:contents}
+  .pr-template-choice-actions .hub-btn{padding:6px 8px;font-size:12px;justify-content:center;white-space:nowrap;width:100%}
+  /* ── تبويبا الغرفتين: «غرفة الطباعة» + «غرفة التصميم» ──
+     يعيشان الآن كحزام سفلي داخل hub-hero-shell (نفس نمط fc-tabs في
+     المركز المالي): فاصل علوي ناعم بدل شريط عائم منفصل. اللوحتان
+     تحتفظان بكل المُعرّفات والمحددات كما هي. */
+  .hub-hero-shell > .pr-roomtabs{
+    display:flex;flex-wrap:wrap;gap:8px;
+    padding:10px 22px 12px;
+    border-top:1px solid var(--hub-border-soft);
+    background:rgba(255,255,255,.55);
+    /* الزوايا السفلية تتبع زوايا الشل (آخر عنصر داخله) */
+    border-end-start-radius:var(--hub-r-xl);
+    border-end-end-radius:var(--hub-r-xl);
+  }
   .pr-roomtab{flex:1 1 220px;display:flex;align-items:center;justify-content:center;gap:9px;border:1px solid transparent;background:transparent;border-radius:12px;padding:12px 14px;cursor:pointer;font-family:inherit;font-weight:900;font-size:14px;color:var(--hub-text-soft);transition:background .15s ease,color .15s ease,box-shadow .15s ease}
   .pr-roomtab i{font-size:16px}
   .pr-roomtab small{display:block;font-weight:700;font-size:11px;color:var(--hub-text-mute);line-height:1.5;margin-top:2px}
@@ -457,50 +535,41 @@
 
 {% block content %}
 <div class="print-room" data-print-room>
-  <section class="pr-hero">
-    <h2>غرفة عمليات تصميم وتصدير البطاقات</h2>
-    <p>صمّم شكل البطاقة من داخل النظام، اختر حزمة حقيقية، راجع معاينة بصرية مباشرة، ثم صدّر PDF متعدد الصفحات. كلمة المرور لا تظهر في القوائم أو المعاينة العامة؛ تظهر فقط داخل ملف التصدير المصرح.</p>
-    <div class="pr-actions">
-      <a class="hub-btn hub-btn--primary" href="#export"><i class="fa-solid fa-file-export"></i> غرفة التصدير</a>
-      <a class="hub-btn" href="#designer"><i class="fa-solid fa-wand-magic-sparkles"></i> فتح المصمم</a>
-      <a class="hub-btn" href="#templates"><i class="fa-solid fa-layer-group"></i> القوالب المحفوظة</a>
-      <a class="hub-btn" href="#jobs"><i class="fa-solid fa-clock-rotate-left"></i> سجل التصدير</a>
-      <form method="POST"
-            action="{{ url_for('radius.print_templates_cleanup_fixtures') }}"
-            onsubmit="return confirm('حذف القوالب التي أنشأتها الاختبارات تلقائيًا (Print UI / ops_room_ / template_…)؟');"
-            style="margin:0">
-        <button type="submit" class="hub-btn"
-                title="يحذف فقط القوالب التي أنشأتها الاختبارات تلقائيًا، لن يلمس قوالبك الحقيقية.">
-          <i class="fa-solid fa-broom"></i> تنظيف قوالب الاختبار
-        </button>
-      </form>
-    </div>
-
-    <div class="pr-data">
-      <div class="pr-kpi"><small>قوالب محفوظة</small><strong>{{ templates|length }}</strong></div>
-      <div class="pr-kpi"><small>حزم متاحة للتصدير</small><strong>{{ batches|length }}</strong></div>
-      <div class="pr-kpi"><small>عمليات تصدير أخيرة</small><strong>{{ jobs|length }}</strong></div>
-      <div class="pr-kpi"><small>وضع PDF</small><strong>فعّال</strong></div>
-    </div>
-  </section>
-
-  {# ── Room tabs (#23): «غرفة الطباعة» (export/print) vs «غرفة التصميم»
-     (designer + saved templates). Two independent panels toggled by JS.
-     Default active = print room; switches to design when the designer
-     is opened (edit_template / preview / form_state). #}
+  {# ───── هيرو مدمج (hub-hero-shell): العنوان + المؤشرات + تبويبا
+     الغرفتين كحزام سفلي داخل صدفة واحدة — بدل الهيرو القديم المنفصل
+     وشريط التبويبات العائم. الجداول (القوالب المحفوظة + سجل التصدير)
+     انتقلت لصفحة «الإحصائيات» المستقلة المرتبطة من زر الهيرو. ───── #}
   {%- set design_active = (preview or form_state) -%}
+  {% set _hero_kpis = [
+    {'label': 'قوالب محفوظة',       'value': templates|length, 'icon': 'layer-group',       'variant': 'brand'},
+    {'label': 'حزم متاحة للتصدير',  'value': batches|length,   'icon': 'boxes-stacked',     'variant': 'blue'},
+    {'label': 'عمليات تصدير أخيرة', 'value': jobs|length,      'icon': 'clock-rotate-left', 'variant': 'green'},
+    {'label': 'وضع PDF',            'value': 'فعّال',          'icon': 'file-pdf',          'variant': 'amber'},
+  ] %}
+  <section class="hub-hero-shell">
+  {{ hub.megahero(
+    "غرفة عمليات تصميم وتصدير البطاقات",
+    subtitle="صمّم شكل البطاقة من داخل النظام، اختر حزمة حقيقية، راجع معاينة بصرية مباشرة، ثم صدّر PDF متعدد الصفحات. كلمة المرور لا تظهر في القوائم أو المعاينة العامة؛ تظهر فقط داخل ملف التصدير المصرح.",
+    icon="wand-magic-sparkles",
+    actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.print_templates_stats') ~ '"><i class="fa-solid fa-chart-column"></i> الإحصائيات</a>',
+    kpis=_hero_kpis
+  ) }}
+
+  {# ── تبويبا الغرفتين: «غرفة الطباعة» و«غرفة التصميم» — حزام سفلي
+     داخل الشل. لوحتان مستقلتان يبدّل بينهما JS بدون تغيير أي مُعرّف. #}
   <div class="pr-roomtabs" role="tablist" data-room-tabs>
     <button type="button" class="pr-roomtab{% if not design_active %} is-active{% endif %}"
             role="tab" data-room-tab="print" aria-selected="{{ 'false' if design_active else 'true' }}">
       <i class="fa-solid fa-print"></i>
-      <span>غرفة الطباعة <small>اختيار حزمة وقالب ثم تصدير PDF + سجل التصدير</small></span>
+      <span>غرفة الطباعة <small>اختيار حزمة وقالب ثم تصدير PDF</small></span>
     </button>
     <button type="button" class="pr-roomtab{% if design_active %} is-active{% endif %}"
             role="tab" data-room-tab="design" aria-selected="{{ 'true' if design_active else 'false' }}">
       <i class="fa-solid fa-wand-magic-sparkles"></i>
-      <span>غرفة التصميم <small>محرر القوالب والتصاميم المحفوظة</small></span>
+      <span>غرفة التصميم <small>محرر القوالب والمعاينة الحية</small></span>
     </button>
   </div>
+  </section>{# /hub-hero-shell #}
 
   {# ───── غرفة الطباعة (print room) ───── #}
   <div class="pr-roompanel{% if not design_active %} is-active{% endif %}" data-room-panel="print">
@@ -595,6 +664,14 @@
             <label class="pr-field">عنوان بوابة الدخول / DNS
               <input class="hub-input" name="hotspot_address" data-export-override placeholder="اتركه فارغًا لاستخدام القالب">
             </label>
+            {# رابط الدخول التلقائي وقت التصدير: يكتب المشغّل العنوان هنا
+               (مثل 10.10.10.10) فيشفَّر رمز QR رابط دخول تلقائي حتى لو
+               كان القالب المحفوظ بلا رابط — نفس سلوك غرفة التصميم. #}
+            <label class="pr-field">رابط دخول الهوت سبوت (QR تلقائي)
+              <input class="hub-input" name="hotspot_login_url" data-export-override dir="ltr"
+                     placeholder="مثال: 10.10.10.10 — فارغ = إعداد القالب"
+                     style="text-align:left">
+            </label>
             <label class="pr-field">السعر الظاهر
               <input class="hub-input" name="price_text" data-export-override placeholder="مثال: {{ cfg.currency }} 1.00">
             </label>
@@ -681,25 +758,36 @@
                       data-template-gradient-start="{{ layout.gradient_start or '#0f172a' }}"
                       data-template-gradient-end="{{ layout.gradient_end or '#22a7bd' }}"
                       data-template-accent="{{ layout.accent_color or '#f59e0b' }}"
+                      data-template-thumb-url="{{ url_for('radius.print_templates_thumbnail', template_id=item.id) }}"
+                      data-template-orientation="{{ orientation }}"
                       {% if is_default %}data-is-default="1"{% endif %}>
-                <span class="pr-template-thumb{% if orientation == 'vertical' %} is-vertical{% endif %}"
-                      style="--thumb-a:{{ layout.gradient_start or '#0f172a' }};--thumb-b:{{ layout.gradient_end or '#22a7bd' }};--thumb-accent:{{ layout.accent_color or '#f59e0b' }}">
-                  <span class="pr-template-qr">QR</span>
+                {# المصغّر الحقيقي: نفس SVG القالب المحفوظ عبر محرك العرض
+                   الموحّد (print_templates_thumbnail) — لا معاينة عامة بعد الآن.
+                   loading="lazy" يبقي النافذة خفيفة مع عشرات القوالب. #}
+                <span class="pr-template-thumb pr-template-thumb--live{% if orientation == 'vertical' %} is-vertical{% endif %}"
+                      style="--thumb-a:{{ layout.gradient_start or '#0f172a' }};--thumb-b:{{ layout.gradient_end or '#22a7bd' }}">
+                  <img class="pr-template-thumb-img"
+                       src="{{ url_for('radius.print_templates_thumbnail', template_id=item.id) }}"
+                       alt="معاينة القالب {{ item.name }}"
+                       loading="lazy" decoding="async"
+                       onerror="this.closest('.pr-template-thumb').classList.add('is-broken')">
                   {% if layout.background_image_data_url %}<span class="pr-template-image-badge"><i class="fa-solid fa-image"></i> صورة</span>{% endif %}
                 </span>
                 <h4>{{ item.name }}{% if is_default %} <span class="pr-default-pill"><i class="fa-solid fa-star"></i> افتراضي</span>{% endif %}</h4>
                 <p>{{ layout.design_preset or 'custom' }} · {{ orientation }}</p>
+                {# صف إجراءات موحّد: تعديل · عينة · حذف — ثلاث خانات متساوية
+                     في سطر واحد (نفس النماذج والمسارات بدون تغيير وظيفي). #}
                 <span class="pr-template-choice-actions" onclick="event.stopPropagation()">
                   <a class="hub-btn hub-btn--sm" href="{{ url_for('radius.print_templates') }}?edit_template={{ item.id }}#designer">
                     <i class="fa-solid fa-pen"></i> تعديل
+                  </a>
+                  <a class="hub-btn hub-btn--sm" href="{{ url_for('radius.print_templates_export_pdf', template_id=item.id) }}">
+                    <i class="fa-solid fa-file-pdf"></i> عينة
                   </a>
                   <form method="POST" action="{{ url_for('radius.print_templates_delete', template_id=item.id) }}" style="margin:0" onsubmit="return confirm('حذف هذا القالب؟');">
                     <input type="hidden" name="next" value="{{ url_for('radius.print_templates') }}#export">
                     <button type="submit" class="hub-btn hub-btn--sm hub-btn--danger"><i class="fa-solid fa-trash"></i> حذف</button>
                   </form>
-                  <a class="hub-btn hub-btn--sm" href="{{ url_for('radius.print_templates_export_pdf', template_id=item.id) }}">
-                    <i class="fa-solid fa-file-pdf"></i> عينة
-                  </a>
                 </span>
               </article>
             {% else %}
@@ -711,55 +799,30 @@
     </div>
   </section>
 
-  {# Export history lives in the print room (relocated from the page
-     tail as part of #23 — IDs/selectors unchanged). #}
-  <section class="pr-panel" id="jobs">
-    <div class="pr-panel-head"><h3><i class="fa-solid fa-clock-rotate-left"></i> سجل التصدير</h3></div>
-    <div class="hub-table-wrap" style="border:none;border-radius:0" data-paginated-table data-page-size="10">
-      <table class="hub-table">
-        <thead><tr><th>#</th><th>القالب</th><th>الحزمة</th><th>النوع</th><th>الحالة</th><th>البطاقات</th><th>الوقت</th></tr></thead>
-        <tbody>
-        {% for job in jobs %}
-          <tr data-page-row>
-            <td>{{ job.id }}</td>
-            <td>{{ job.template_name or job.template_id or '-' }}</td>
-            <td>{{ job.batch_code or job.batch_id or 'عينة' }}</td>
-            <td>{{ job.export_type }}</td>
-            <td>{{ hub.pill(job.status, variant='green' if job.status == 'success' else 'amber', dot=False) }}</td>
-            <td>{{ job.card_count }}</td>
-            <td class="small hub-text-mute">{{ job.created_at|dt_local if job.created_at else '—' }}</td>
-          </tr>
-        {% else %}
-          <tr><td colspan="7" class="hub-empty">لا توجد عمليات تصدير بعد.</td></tr>
-        {% endfor %}
-        </tbody>
-      </table>
-      <div class="pr-pager" data-pager hidden>
-        <span data-pager-status>صفحة 1</span>
-        <div class="pr-pager-buttons">
-          <button class="hub-btn hub-btn--sm" type="button" data-pager-prev><i class="fa-solid fa-chevron-right"></i> السابق</button>
-          <button class="hub-btn hub-btn--sm hub-btn--primary" type="button" data-pager-next>التالي <i class="fa-solid fa-chevron-left"></i></button>
-        </div>
-      </div>
-    </div>
-  </section>
+  {# جدول «سجل التصدير» انتقل إلى صفحة الإحصائيات المستقلة
+     (radius.print_templates_stats) — لا جداول تحت غرفة الطباعة. #}
   </div>{# /.pr-roompanel[print] #}
 
-  {# ───── غرفة التصميم (design room): designer editor + saved templates ───── #}
+  {# ───── غرفة التصميم (design room): محرر القوالب + المعاينة الحية فقط.
+     جدول القوالب المحفوظة وسجل التصدير انتقلا لصفحة الإحصائيات. ───── #}
   <div class="pr-roompanel{% if design_active %} is-active{% endif %}" data-room-panel="design">
 
-  {# Designer drawer: closed by default — the export workflow above is the
-     primary surface; the full designer opens on-demand. #}
+  {# درج المصمم: يُفتح تلقائيًا عند تفعيل تبويب غرفة التصميم (راجع JS)
+     أو عند الوصول عبر ?edit_template / #designer. #}
   <details class="pr-designer-drawer" id="designer" {% if preview or form_state %}open{% endif %}>
     <summary class="pr-designer-summary">
-      <span><i class="fa-solid fa-wand-magic-sparkles"></i> مصمم القوالب</span>
+      <span><i class="fa-solid fa-wand-magic-sparkles"></i> مصمم القوالب
+        {# شارة «معاينة مباشرة» انتقلت من رأس محرر القالب إلى شريط
+           المصمم العلوي هنا — تبقى ظاهرة حتى والدرج مطوي. #}
+        <span class="hub-pill hub-pill--blue">معاينة مباشرة</span>
+      </span>
       <small>افتح لعرض/تعديل القوالب أو إنشاء قالب جديد</small>
     </summary>
   <div class="pr-shell">
     <section class="pr-panel">
       <div class="pr-panel-head">
         <h3><i class="fa-solid fa-sliders"></i> محرر القالب</h3>
-        <span class="hub-pill hub-pill--blue">معاينة مباشرة</span>
+        {# شارة «معاينة مباشرة» انتقلت لشريط المصمم العلوي (pr-designer-summary) #}
       </div>
       <div class="pr-panel-body">
         {% set fs = form_state or {} %}
@@ -769,27 +832,77 @@
         {% set fallback_engine_orientation = 'vertical' if fl.card_orientation == 'vertical' else 'horizontal' %}
         {% set active_render_engine = saved_engine if saved_engine in ['en_horizontal','en_vertical','ar_horizontal','ar_vertical'] else fallback_engine_lang ~ '_' ~ fallback_engine_orientation %}
         {% set initial_bg_mode = fl.background_style or ('image' if fl.background_image_data_url else 'preset') %}
-        {% macro slider_field(label, name, value, min_value, max_value, step_value, unit='', hint='') -%}
+        {# auto='1' يعني أن القيمة معبّأة تلقائيًا من القيم الفعلية للمحرك
+           (وليست تخصيصًا يدويًا محفوظًا) — فعند تبديل محرك التصميم يعيد
+           الـ JS هذه الحقول للوضع التلقائي ثم يقرأ الأماكن الجديدة من
+           المعاينة المرسومة. أول تعديل يدوي يحوّلها لقيمة مثبّتة. #}
+        {% macro slider_field(label, name, value, min_value, max_value, step_value, unit='', hint='', auto='0') -%}
           <label class="pr-slider-field">
             <span class="pr-slider-head">
               <span>{{ label }}</span>
               <output class="pr-slider-value" data-range-value="{{ name }}" data-unit="{{ unit }}">{{ value }}{{ unit }}</output>
             </span>
-            <input class="hub-input pr-range" type="range" name="{{ name }}" min="{{ min_value }}" max="{{ max_value }}" step="{{ step_value }}" value="{{ value }}" data-range-input="{{ name }}" data-preview="{{ name }}">
+            <input class="hub-input pr-range" type="range" name="{{ name }}" min="{{ min_value }}" max="{{ max_value }}" step="{{ step_value }}" value="{{ value }}" data-range-input="{{ name }}" data-preview="{{ name }}" data-auto-default="{{ auto }}">
             {% if hint %}<small>{{ hint }}</small>{% endif %}
           </label>
         {%- endmacro %}
+        {# القيم الفعلية لمكان/حجم العناصر كما يرسمها المحرك فعلًا —
+           تأتي من _effective_field_layout في المسار، فتبدأ الحقول معبأة
+           بالمكان الحقيقي بدل الصفر (0 كان يعني «الافتراضي» فقط). #}
+        {% set eff = effective_fields or {} %}
         <form class="pr-form" method="post" action="{{ url_for('radius.print_templates_update', template_id=edit_template_id) if edit_template_id else url_for('radius.print_templates_create') }}" enctype="multipart/form-data" data-pr-form data-design-source="{{ 'image' if initial_bg_mode == 'image' else 'preset' }}">
           {% if form_error %}
             <div class="pr-file-error" role="alert">{{ form_error }}</div>
           {% endif %}
-          <div class="pr-tabs" role="tablist">
-            <button class="pr-tab is-active" type="button" data-pr-tab="design">التصميم</button>
-            <button class="pr-tab" type="button" data-pr-tab="content">المحتوى</button>
-            <button class="pr-tab" type="button" data-pr-tab="layout">المقاسات</button>
+
+          {# ── اسم القالب: سطر واحد خفيف (تسمية + أيقونة شرح + حقل).
+             فقرة الشرح صارت أيقونة hub-hint بجانب التسمية.
+             نفس name="name" ونفس data-preview بلا أي تغيير وظيفي. #}
+          <div class="pr-template-name-card">
+            <label>
+              <span>
+                <i class="fa-solid fa-signature"></i> اسم القالب
+                <span class="hub-hint" tabindex="0" data-hint="سمِّ القالب باسم واضح يميّزه في غرفة الطباعة وصفحة الإحصائيات — مثل اسم العرض أو الحزمة. يُحفظ مع التصميم ولا يظهر على البطاقة المطبوعة."><i class="fa-solid fa-info"></i></span>
+              </span>
+              <input class="hub-input" name="name" required value="{{ fs.name or 'قالب حديث' }}" data-preview="templateName" placeholder="مثال: بطاقات رمضان — 4 ساعات">
+            </label>
           </div>
 
-          <div class="pr-pane is-active" data-pr-pane="design">
+          {# ── اختر نظام التصميم: قرار جوهري (صورة مرفوعة / تصميم من
+             النظام) فانتقل ليجلس مباشرة تحت اسم القالب وقبل ألواح
+             الأقسام. التأثيرات العرضية (data-system-design-only /
+             data-upload-design-only) محكومة بـ data-design-source على
+             النموذج نفسه فتعمل عبر كل الألواح بلا تغيير. #}
+          <div class="pr-design-source" aria-label="اختيار نظام التصميم">
+            {# الترويسة بلا سطر تمهيدي — الشرح أيقونة hub-hint بجانب
+               عنوان كل بطاقة (data-hint يحمل النص الكامل القديم). #}
+            <div class="pr-design-source-head">
+              <strong>اختر نظام التصميم</strong>
+            </div>
+            <div class="pr-design-source-options">
+              <button class="pr-design-source-option{% if initial_bg_mode == 'image' %} is-selected{% endif %}" type="button" data-design-source-option="image">
+                <i class="fa-solid fa-image pr-design-source-ico"></i>
+                <span class="pr-design-source-text">
+                  <span>صورة مرفوعة</span>
+                  <span class="hub-hint" tabindex="0" data-hint="نحافظ على الصورة كما هي، ونضيف فوقها اليوزر والباس وQR والنصوص فقط."><i class="fa-solid fa-info"></i></span>
+                </span>
+              </button>
+              <button class="pr-design-source-option{% if initial_bg_mode != 'image' %} is-selected{% endif %}" type="button" data-design-source-option="preset">
+                <i class="fa-solid fa-layer-group pr-design-source-ico"></i>
+                <span class="pr-design-source-text">
+                  <span>تصميم من النظام</span>
+                  <span class="hub-hint" tabindex="0" data-hint="قوالب جاهزة مع تحكم كامل بالألوان والزخارف والخلفية والطبقات."><i class="fa-solid fa-info"></i></span>
+                </span>
+              </button>
+            </div>
+          </div>
+
+          {# شريط التبويبات (pr-tabs) انتقل إلى عمود المعاينة — فوق
+             معاينة البطاقة مباشرة داخل اللوحة الملاصقة. الألواح
+             (data-pr-pane) تبقى هنا داخل النموذج كما هي. #}
+
+          {# ───── قسم: الأساسيات — المحرك + القوالب الجاهزة ───── #}
+          <div class="pr-pane is-active" data-pr-pane="basics">
             <div class="pr-engine-card">
               <div class="pr-engine-head">
                 <strong>اختر مود التصميم</strong>
@@ -827,24 +940,8 @@
               </label>
               <small>هذا الاختيار يثبت اللغة والاتجاه والشكل معًا. العربي يعكس توزيع البطاقة كاملًا، والإنجليزي يبقى يسار إلى يمين.</small>
             </div>
-            <div class="pr-design-source" aria-label="اختيار نظام التصميم">
-              <div class="pr-design-source-head">
-                <strong>اختر نظام التصميم</strong>
-                <small>مساران منفصلان تمامًا: صورة جاهزة من جهازك، أو تصميم مبني داخل النظام.</small>
-              </div>
-              <div class="pr-design-source-options">
-                <button class="pr-design-source-option{% if initial_bg_mode == 'image' %} is-selected{% endif %}" type="button" data-design-source-option="image">
-                  <i class="fa-solid fa-image"></i>
-                  <span>صورة مرفوعة</span>
-                  <em>نحافظ على الصورة كما هي، ونضيف فوقها اليوزر والباس وQR والنصوص فقط.</em>
-                </button>
-                <button class="pr-design-source-option{% if initial_bg_mode != 'image' %} is-selected{% endif %}" type="button" data-design-source-option="preset">
-                  <i class="fa-solid fa-layer-group"></i>
-                  <span>تصميم من النظام</span>
-                  <em>قوالب جاهزة مع تحكم كامل بالألوان والزخارف والخلفية والطبقات.</em>
-                </button>
-              </div>
-            </div>
+            {# كتلة «اختر نظام التصميم» انتقلت أعلى — تحت اسم القالب
+               مباشرة وقبل ألواح الأقسام (قرار جوهري يسبق التفاصيل). #}
             <div class="pr-preset-picker" aria-label="اختيار قالب جاهز" data-system-design-only>
               <div class="pr-preset-picker-head">
                 <strong>اختر شكل القالب</strong>
@@ -877,9 +974,6 @@
                 {% endfor %}
               </select>
             </label>
-            <label class="pr-field" style="margin-top:12px">اسم القالب
-              <input class="hub-input" name="name" required value="{{ fs.name or 'قالب حديث' }}" data-preview="templateName">
-            </label>
             <div class="pr-grid3" style="margin-top:12px">
               <label class="pr-field">اتجاه الكرت
                 <select class="hub-select" name="card_orientation" data-preview="cardOrientation">
@@ -887,6 +981,24 @@
                   <option value="vertical" {% if fl.card_orientation == 'vertical' %}selected{% endif %}>عمودي</option>
                 </select>
               </label>
+            </div>
+          </div>
+
+          {# ───── قسم: الألوان — تدرّج الخلفية وألوان النصوص والشرائط ───── #}
+          <div class="pr-pane" data-pr-pane="colors">
+            <div class="pr-grid3">
+              <label class="pr-field" data-system-design-only>بداية الخلفية<input class="hub-input" type="color" name="gradient_start" value="{{ fl.gradient_start or '#0f172a' }}" data-preview="gradientStart"></label>
+              <label class="pr-field" data-system-design-only>نهاية الخلفية<input class="hub-input" type="color" name="gradient_end" value="{{ fl.gradient_end or '#22a7bd' }}" data-preview="gradientEnd"></label>
+              <label class="pr-field" data-system-design-only>لون التمييز<input class="hub-input" type="color" name="accent_color" value="{{ fl.accent_color or '#f59e0b' }}" data-preview="accent"></label>
+              <label class="pr-field" data-system-design-only>لون النص<input class="hub-input" type="color" name="text_color" value="{{ fl.text_color or fs.color or '#ffffff' }}" data-preview="textColor"></label>
+              <label class="pr-field" data-system-design-only>لون شرائط البيانات<input class="hub-input" type="color" name="surface_color" value="{{ fl.surface_color or '#e8f7fb' }}" data-preview="surfaceColor"></label>
+              <label class="pr-field">لون PDF legacy<input class="hub-input" type="color" name="color" value="{{ fs.color or fl.text_color or '#ffffff' }}"></label>
+            </div>
+          </div>
+
+          {# ───── قسم: الزخرفة والخلفية — نمط الزخرفة + مصدر الخلفية + صورة الخلفية ───── #}
+          <div class="pr-pane" data-pr-pane="pattern">
+            <div class="pr-grid3">
               <label class="pr-field" data-system-design-only>نمط الزخرفة
                 <select class="hub-select" name="pattern_style" data-preview="patternStyle">
                   <option value="signal" {% if (fl.pattern_style or 'signal') == 'signal' %}selected{% endif %}>إشارة وشبكات</option>
@@ -904,12 +1016,6 @@
                 <small>الرسوم الجاهزة والصورة المرفوعة لهما مساران منفصلان في المعاينة والتصدير.</small>
               </label>
               <label class="pr-field" data-upload-design-only>شفافية الصورة<input class="hub-input" type="range" name="image_opacity" min="0.15" max="1" step="0.05" value="{{ fl.image_opacity or '0.82' }}" data-preview="imageOpacity"></label>
-              <label class="pr-field" data-system-design-only>بداية الخلفية<input class="hub-input" type="color" name="gradient_start" value="{{ fl.gradient_start or '#0f172a' }}" data-preview="gradientStart"></label>
-              <label class="pr-field" data-system-design-only>نهاية الخلفية<input class="hub-input" type="color" name="gradient_end" value="{{ fl.gradient_end or '#22a7bd' }}" data-preview="gradientEnd"></label>
-              <label class="pr-field" data-system-design-only>لون التمييز<input class="hub-input" type="color" name="accent_color" value="{{ fl.accent_color or '#f59e0b' }}" data-preview="accent"></label>
-              <label class="pr-field" data-system-design-only>لون النص<input class="hub-input" type="color" name="text_color" value="{{ fl.text_color or fs.color or '#ffffff' }}" data-preview="textColor"></label>
-              <label class="pr-field" data-system-design-only>لون شرائط البيانات<input class="hub-input" type="color" name="surface_color" value="{{ fl.surface_color or '#e8f7fb' }}" data-preview="surfaceColor"></label>
-              <label class="pr-field">لون PDF legacy<input class="hub-input" type="color" name="color" value="{{ fs.color or fl.text_color or '#ffffff' }}"></label>
             </div>
             {# Background-image picker (strict).
                - File input is hidden; the trigger button + drag&drop
@@ -983,6 +1089,15 @@
                 </select>
               </label>
             </div>
+            {# رابط الدخول التلقائي: عند تعبئته يشفّر رمز QR رابط
+               /login?username=&password= فيدخل الزبون فور مسح الرمز.
+               فارغ = القوالب القديمة تبقى كما هي (QR = اسم المستخدم). #}
+            <label class="pr-field">رابط دخول الهوت سبوت (DNS)
+              <input class="hub-input" name="hotspot_login_url" value="{{ fl.hotspot_login_url or '' }}"
+                     dir="ltr" placeholder="http://login.net" autocomplete="off" spellcheck="false"
+                     style="font-family:'Menlo','Consolas',monospace;text-align:left">
+              <small class="pr-file-hint">امسح QR يدخل الزبون تلقائيًا: الرابط + اسم المستخدم وكلمة المرور بنفس العنوان</small>
+            </label>
             <label class="pr-field">نص أسفل البطاقة
               <input class="hub-input" name="footer_text" value="{{ fl.footer_text or 'احتفظ ببيانات الدخول حتى انتهاء الصلاحية' }}" data-preview="footer">
             </label>
@@ -1018,16 +1133,29 @@
                   {{ slider_field('حجم خط عام احتياطي', 'font_size', fs.font_size or 12, 6, 40, 1, 'px', 'يستخدم فقط كقيمة احتياطية للقوالب القديمة.') }}
                 </div>
               </section>
+            </div>
+          </div>
 
-              <section class="pr-control-section" data-layer-section="username">
+          {# ───── قسم: الحقول — اليوزر والباس وQR (المكان والحجم والألوان) ───── #}
+          <div class="pr-pane" data-pr-pane="fields">
+            {# تبويبات فرعية: مجموعة واحدة ظاهرة في كل مرة (اليوزر /
+               الباسورد / الباركود). الإخفاء عرضي فقط — كل الحقول تبقى
+               داخل النموذج وتُرسل قيمها عند الحفظ كالمعتاد. #}
+            <div class="pr-fieldtabs" role="tablist" aria-label="حقول البطاقة">
+              <button class="pr-fieldtab is-active" type="button" role="tab" aria-selected="true" data-pr-fieldtab="username"><i class="fa-solid fa-user"></i> حقل اسم المستخدم</button>
+              <button class="pr-fieldtab" type="button" role="tab" aria-selected="false" data-pr-fieldtab="password"><i class="fa-solid fa-key"></i> حقل كلمة المرور</button>
+              <button class="pr-fieldtab" type="button" role="tab" aria-selected="false" data-pr-fieldtab="barcode"><i class="fa-solid fa-qrcode"></i> حقل الباركود</button>
+            </div>
+            <div class="pr-control-stack">
+              <section class="pr-control-section is-active" data-layer-section="username">
                 <div class="pr-control-section-head">
                   <h4><i class="fa-solid fa-user"></i> اسم المستخدم</h4>
                   <small>حجم الخط، اللون، الخلفية، ومكان اليوزر داخل البطاقة.</small>
                 </div>
                 <div class="pr-grid2">
-                  {{ slider_field('المكان أفقيًا', 'username_x', fs.username_x or 0, 0, 110, 0.1, 'mm', '0 يعني المكان الافتراضي للمحرك.') }}
-                  {{ slider_field('المكان عموديًا', 'username_y', fs.username_y or 0, 0, 110, 0.1, 'mm', '0 يعني المكان الافتراضي للمحرك.') }}
-                  {{ slider_field('حجم خط اليوزر', 'username_font_size', fl.username_font_size or 0, 0, 90, 0.5, 'px', '0 يعني تلقائي حسب حجم البطاقة.') }}
+                  {{ slider_field('المكان أفقيًا', 'username_x', fs.username_x or eff.username_x or 0, 0, 110, 0.1, 'mm', 'القيمة الحالية هي مكان العنصر الفعلي على البطاقة.', auto='0' if fs.username_x else '1') }}
+                  {{ slider_field('المكان عموديًا', 'username_y', fs.username_y or eff.username_y or 0, 0, 110, 0.1, 'mm', 'القيمة الحالية هي مكان العنصر الفعلي على البطاقة.', auto='0' if fs.username_y else '1') }}
+                  {{ slider_field('حجم خط اليوزر', 'username_font_size', fl.username_font_size or eff.username_font_size or 0, 0, 90, 0.5, 'px', 'القيمة الحالية هي الحجم الفعلي المرسوم على البطاقة.', auto='0' if fl.username_font_size else '1') }}
                   <label class="pr-field">لون اليوزر<input class="hub-input" type="color" name="credential_text_color" value="{{ fl.credential_text_color or '#0f172a' }}" data-preview="credentialTextColor"></label>
                   <label class="pr-field">خلفية اليوزر<input class="hub-input" type="color" name="username_surface_color" value="{{ fl.username_surface_color or fl.surface_color or '#e8f7fb' }}" data-preview="usernameSurfaceColor"></label>
                   {% set user_bg = fl.username_surface_enabled if 'username_surface_enabled' in fl else true %}
@@ -1041,14 +1169,14 @@
                   <small>تحكم مستقل بالباس حتى لو احتجته أكبر أو بمكان مختلف.</small>
                 </div>
                 <div class="pr-grid2">
-                  {{ slider_field('المكان أفقيًا', 'password_x', fs.password_x or 0, 0, 110, 0.1, 'mm', '0 يعني المكان الافتراضي للمحرك.') }}
-                  {{ slider_field('المكان عموديًا', 'password_y', fs.password_y or 0, 0, 110, 0.1, 'mm', '0 يعني المكان الافتراضي للمحرك.') }}
-                  {{ slider_field('حجم خط الباسورد', 'password_font_size', fl.password_font_size or 0, 0, 90, 0.5, 'px', '0 يعني تلقائي حسب حجم البطاقة.') }}
+                  {{ slider_field('المكان أفقيًا', 'password_x', fs.password_x or eff.password_x or 0, 0, 110, 0.1, 'mm', 'القيمة الحالية هي مكان العنصر الفعلي على البطاقة.', auto='0' if fs.password_x else '1') }}
+                  {{ slider_field('المكان عموديًا', 'password_y', fs.password_y or eff.password_y or 0, 0, 110, 0.1, 'mm', 'القيمة الحالية هي مكان العنصر الفعلي على البطاقة.', auto='0' if fs.password_y else '1') }}
+                  {{ slider_field('حجم خط الباسورد', 'password_font_size', fl.password_font_size or eff.password_font_size or 0, 0, 90, 0.5, 'px', 'القيمة الحالية هي الحجم الفعلي المرسوم على البطاقة.', auto='0' if fl.password_font_size else '1') }}
                   <label class="pr-field">لون التسميات<input class="hub-input" type="color" name="credential_label_color" value="{{ fl.credential_label_color or '#64748b' }}" data-preview="credentialLabelColor"></label>
                   <label class="pr-field">خلفية الباسورد<input class="hub-input" type="color" name="password_surface_color" value="{{ fl.password_surface_color or fl.surface_color or '#e8f7fb' }}" data-preview="passwordSurfaceColor"></label>
                   {% set pass_bg = fl.password_surface_enabled if 'password_surface_enabled' in fl else true %}
                   <label class="pr-check"><input type="checkbox" name="password_surface_enabled" value="1" {% if pass_bg %}checked{% endif %} data-preview-toggle="password_surface_enabled"> إظهار خلفية الباسورد<input type="hidden" name="password_surface_enabled" value="0"></label>
-                  {{ slider_field('حجم تسميات USER/PASS', 'credential_label_font_size', fl.credential_label_font_size or 0, 0, 50, 0.5, 'px', '0 يعني تلقائي.') }}
+                  {{ slider_field('حجم تسميات USER/PASS', 'credential_label_font_size', fl.credential_label_font_size or eff.credential_label_font_size or 0, 0, 50, 0.5, 'px', 'القيمة الحالية هي الحجم الفعلي المرسوم على البطاقة.', auto='0' if fl.credential_label_font_size else '1') }}
                   {% set credential_bg = fl.credential_background_enabled if 'credential_background_enabled' in fl else true %}
                   <label class="pr-check"><input type="checkbox" name="credential_background_enabled" value="1" {% if credential_bg %}checked{% endif %} data-preview-toggle="credential_background_enabled"> تفعيل خلفيات النصوص<input type="hidden" name="credential_background_enabled" value="0"></label>
                 </div>
@@ -1060,9 +1188,9 @@
                   <small>مكان الرمز وحجمه وألوانه. قيمة الحجم 0 تعني تلقائي.</small>
                 </div>
                 <div class="pr-grid2">
-                  {{ slider_field('المكان أفقيًا', 'qr_x', fs.qr_x or 0, 0, 110, 0.1, 'mm', '0 يعني المكان الافتراضي للمحرك.') }}
-                  {{ slider_field('المكان عموديًا', 'qr_y', fs.qr_y or 0, 0, 110, 0.1, 'mm', '0 يعني المكان الافتراضي للمحرك.') }}
-                  {{ slider_field('حجم QR', 'qr_size_pct', fl.qr_size_pct or 0, 0, 60, 0.5, '%', '0 يعني تلقائي. هذا كان سبب منع الحفظ سابقًا.') }}
+                  {{ slider_field('المكان أفقيًا', 'qr_x', fs.qr_x or eff.qr_x or 0, 0, 110, 0.1, 'mm', 'القيمة الحالية هي مكان العنصر الفعلي على البطاقة.', auto='0' if fs.qr_x else '1') }}
+                  {{ slider_field('المكان عموديًا', 'qr_y', fs.qr_y or eff.qr_y or 0, 0, 110, 0.1, 'mm', 'القيمة الحالية هي مكان العنصر الفعلي على البطاقة.', auto='0' if fs.qr_y else '1') }}
+                  {{ slider_field('حجم QR', 'qr_size_pct', fl.qr_size_pct or eff.qr_size_pct or 0, 0, 60, 0.5, '%', 'القيمة الحالية هي حجم QR الفعلي المرسوم على البطاقة.', auto='0' if fl.qr_size_pct else '1') }}
                   <label class="pr-field">لون QR<input class="hub-input" type="color" name="qr_color" value="{{ fl.qr_color or '#0f172a' }}" data-preview="qrColor"></label>
                   <label class="pr-field">خلفية QR<input class="hub-input" type="color" name="qr_background_color" value="{{ fl.qr_background_color or '#ffffff' }}" data-preview="qrBackgroundColor"></label>
                 </div>
@@ -1079,6 +1207,18 @@
       <div class="pr-panel-head">
         <h3><i class="fa-solid fa-eye"></i> معاينة البطاقة</h3>
         <span class="hub-pill hub-pill--green" data-preview-source-badge>{{ 'صورة مرفوعة' if initial_bg_mode == 'image' else 'تصميم من النظام' }}</span>
+      </div>
+      {# ── شريط أقسام المحرر: انتقل من عمود المحرر ليجلس فوق معاينة
+         البطاقة مباشرة — يبقى ظاهرًا دائمًا مع اللوحة الملاصقة (sticky)
+         مهما تمرر المستخدم في النموذج. الأزرار type="button" خارج
+         النموذج وتتحكم بنفس الألواح (data-pr-pane) عبر نفس الـ JS. #}
+      <div class="pr-tabs" role="tablist" aria-label="أقسام المحرر">
+        <button class="pr-tab is-active" type="button" role="tab" aria-selected="true" data-pr-tab="basics"><i class="fa-solid fa-shapes"></i> الأساسيات</button>
+        <button class="pr-tab" type="button" role="tab" aria-selected="false" data-pr-tab="colors"><i class="fa-solid fa-palette"></i> الألوان</button>
+        <button class="pr-tab" type="button" role="tab" aria-selected="false" data-pr-tab="pattern"><i class="fa-solid fa-swatchbook"></i> الزخرفة والخلفية</button>
+        <button class="pr-tab" type="button" role="tab" aria-selected="false" data-pr-tab="content"><i class="fa-solid fa-pen-nib"></i> النصوص</button>
+        <button class="pr-tab" type="button" role="tab" aria-selected="false" data-pr-tab="fields"><i class="fa-solid fa-arrows-up-down-left-right"></i> الحقول</button>
+        <button class="pr-tab" type="button" role="tab" aria-selected="false" data-pr-tab="layout"><i class="fa-solid fa-ruler-combined"></i> المقاسات</button>
       </div>
       {# Designer preview — pure SVG mount driven by the unified
          renderer. The legacy `.pr-card-preview` HTML / CSS was
@@ -1118,77 +1258,21 @@
   </div>
   </details>
 
-  <section class="pr-panel" id="templates">
-    <div class="pr-panel-head">
-      <h3><i class="fa-solid fa-layer-group"></i> القوالب المحفوظة</h3>
-      <span class="hub-pill hub-pill--blue">{{ templates|length }} قالب</span>
-    </div>
-    <div class="hub-table-wrap" style="border:none;border-radius:0" data-paginated-table data-page-size="10">
-      <table class="hub-table">
-        <thead><tr><th>القالب</th><th>الشكل</th><th>البطاقة</th><th>الأمان</th><th>إجراءات</th></tr></thead>
-        <tbody>
-        {% for item in templates %}
-          {% set layout = item.layout_json or {} %}
-          {% set is_default = layout.is_default or (default_template_id == item.id) %}
-          <tr data-page-row>
-            <td>
-              <strong>{{ item.name }}</strong>
-              {% if is_default %}<span class="pr-default-pill"><i class="fa-solid fa-star"></i> افتراضي</span>{% endif %}
-              <div class="small hub-text-mute">{{ layout.brand_name or 'HobeRadius' }} · {{ layout.card_title or 'بطاقة إنترنت' }}</div>
-            </td>
-            <td><span class="hub-pill hub-pill--cyan">{{ layout.design_preset or 'modern' }}</span></td>
-            <td>{{ layout.card_orientation or 'horizontal' }} · {{ layout.card_width_mm or 85 }}×{{ layout.card_height_mm or 54 }} mm</td>
-            <td><span class="hub-pill hub-pill--amber">كلمة المرور في PDF فقط</span></td>
-            <td>
-              <div class="pr-table-actions">
-                <form method="POST"
-                      action="{{ url_for('radius.print_templates_set_default', template_id=item.id) }}"
-                      style="margin:0">
-                  <button type="submit"
-                          class="pr-star-btn{% if is_default %} is-default{% endif %}"
-                          title="{% if is_default %}القالب الافتراضي{% else %}اعتمد كقالب افتراضي{% endif %}">
-                    <i class="fa-{% if is_default %}solid{% else %}regular{% endif %} fa-star"></i>
-                  </button>
-                </form>
-                <form method="post" action="{{ url_for('radius.print_templates_preview', template_id=item.id) }}">
-                  <input type="hidden" name="sample_username" value="CARD1234">
-                  <button class="hub-btn hub-btn--sm" type="submit"><i class="fa-solid fa-eye"></i> معاينة</button>
-                </form>
-                <a class="hub-btn hub-btn--sm" href="{{ url_for('radius.print_templates_export_pdf', template_id=item.id) }}"><i class="fa-solid fa-file-pdf"></i> PDF عينة</a>
-                <a class="hub-btn hub-btn--sm hub-btn--primary" href="{{ url_for('radius.print_templates_export_center') }}"><i class="fa-solid fa-print"></i> فتح التصدير</a>
-                <form method="POST"
-                      action="{{ url_for('radius.print_templates_delete', template_id=item.id) }}"
-                      onsubmit="return confirm('حذف القالب «{{ item.name|e }}» نهائيًا؟');"
-                      style="margin:0">
-                  <button type="submit" class="hub-btn hub-btn--sm" title="حذف القالب">
-                    <i class="fa-solid fa-trash"></i>
-                  </button>
-                </form>
-              </div>
-            </td>
-          </tr>
-        {% else %}
-          <tr><td colspan="5" class="hub-empty">لا توجد قوالب بعد. أنشئ أول قالب من محرر التصميم.</td></tr>
-        {% endfor %}
-        </tbody>
-      </table>
-      <div class="pr-pager" data-pager hidden>
-        <span data-pager-status>صفحة 1</span>
-        <div class="pr-pager-buttons">
-          <button class="hub-btn hub-btn--sm" type="button" data-pager-prev><i class="fa-solid fa-chevron-right"></i> السابق</button>
-          <button class="hub-btn hub-btn--sm hub-btn--primary" type="button" data-pager-next>التالي <i class="fa-solid fa-chevron-left"></i></button>
-        </div>
-      </div>
-    </div>
-  </section>
+  {# جدول «القوالب المحفوظة» انتقل إلى صفحة الإحصائيات المستقلة
+     (radius.print_templates_stats). داخل غرفة التصميم يبقى الوصول
+     للقوالب عبر نافذة الاختيار بالمصغرات + روابط «تعديل». #}
+  <div class="hub-flex-row" style="gap:8px;flex-wrap:wrap">
+    <a class="hub-btn" href="{{ url_for('radius.print_templates_stats') }}">
+      <i class="fa-solid fa-chart-column"></i> القوالب المحفوظة وسجل التصدير — صفحة الإحصائيات
+    </a>
+  </div>
   </div>{# /.pr-roompanel[design] #}
 </div>
 
-{# ── Room tabs toggle (#23). Switches between «غرفة الطباعة» and
-   «غرفة التصميم» without touching any existing IDs / selectors. The
-   designer + templates live in the design panel, export + jobs in the
-   print panel. Hero quick-links and the «تعديل قالب» flow activate the
-   matching tab. #}
+{# ── مبدّل تبويبي الغرفتين: «غرفة الطباعة» و«غرفة التصميم» بدون تغيير
+   أي مُعرّف أو محدد. المصمم في لوحة التصميم، التصدير في لوحة الطباعة،
+   والجداول (القوالب المحفوظة + سجل التصدير) في صفحة الإحصائيات
+   المستقلة. روابط #designer / ?edit_template تفعّل التبويب المطابق. #}
 <script>
 (function(){
   var room = document.querySelector('[data-print-room]');
@@ -1206,6 +1290,13 @@
     panels.forEach(function(p){
       p.classList.toggle('is-active', p.getAttribute('data-room-panel') === name);
     });
+    // غرفة التصميم أصبحت المصمم نفسه (بعد نقل جدول القوالب لصفحة
+    // الإحصائيات) — افتح درج المصمم تلقائيًا عند دخول الغرفة حتى لا
+    // يستقبل المستخدم درجًا مطويًا فارغًا.
+    if(name === 'design'){
+      var drawer = room.querySelector('#designer');
+      if(drawer && !drawer.open) drawer.open = true;
+    }
   }
 
   tabs.forEach(function(t){
@@ -1214,8 +1305,10 @@
     });
   });
 
-  // Map the existing hash anchors to the right tab so the hero
-  // quick-links keep working.
+  // ربط المراسي القديمة بالتبويب الصحيح حتى تبقى الروابط القادمة من
+  // صفحات أخرى (حزم البطاقات / صفحة الإحصائيات) تعمل كما هي.
+  // #jobs و#templates انتقلا لصفحة الإحصائيات لكن نُبقي الربط دفاعيًا
+  // لأي رابط قديم محفوظ.
   var hashToTab = { '#export': 'print', '#jobs': 'print',
                     '#designer': 'design', '#templates': 'design' };
   room.querySelectorAll('a[href^="#"]').forEach(function(a){
@@ -1249,11 +1342,12 @@
     return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
   }
   function cardSizeMm(){
-    let w = numeric('card_width_mm', 85);
-    let h = numeric('card_height_mm', 54);
-    if(val('card_orientation','horizontal') === 'vertical' && w > h){
-      const nextW = h; h = w; w = nextW;
-    }
+    // ملاحظة: المحرك (card_renderer._resolve_positions) يقسم دائمًا على
+    // card_width_mm/card_height_mm كما أُرسلا — بلا تبديل في الوضع
+    // العمودي. كان الـ JS يبدّلهما هنا فتنحرف إحداثيات السحب والمزامنة
+    // على المحركات العمودية؛ الآن نفس معادلة الخادم حرفيًا.
+    const w = numeric('card_width_mm', 85);
+    const h = numeric('card_height_mm', 54);
     return {w, h};
   }
   function syncRangeOutput(input){
@@ -1371,6 +1465,28 @@
   // the full form state to /print-templates/designer-svg and swaps
   // the returned SVG into [data-designer-svg-mount]. Drag handlers
   // are re-attached after each fetch.
+
+  // ── تحميل خط المراعي قسريًا لنص الـSVG ───────────────────────────
+  // كروم لا يحمّل وجوه @font-face «كسولة التحميل» من أجل <text> داخل
+  // SVG محقون عبر innerHTML — فيظهر النص بخط Cairo/Tahoma البديل رغم
+  // أن font-family يطلب Almarai أولًا. document.fonts.load() يجبر
+  // المتصفح على جلب الأوزان المطلوبة، وبمجرد اكتمال التحميل يعيد
+  // المتصفح الرسم تلقائيًا — لا حاجة لإعادة جلب المعاينة.
+  let almaraiFontsRequested = false;
+  function ensureAlmaraiLoaded(){
+    if(almaraiFontsRequested) return;
+    almaraiFontsRequested = true;
+    try {
+      if(document.fonts && document.fonts.load){
+        document.fonts.load('12px Almarai');
+        document.fonts.load('700 12px Almarai');
+        document.fonts.load('800 12px Almarai');
+      }
+    } catch (e) { /* خطوة تجميلية — لا تكسر المعاينة أبدًا */ }
+  }
+  // عند تحميل الصفحة مباشرة، قبل أول معاينة.
+  ensureAlmaraiLoaded();
+
   let fetchSeq = 0;
   let fetchTimer = null;
   let previewAbort = null;
@@ -1397,8 +1513,11 @@
     if(previewAbort) previewAbort.abort();
     previewAbort = new AbortController();
     syncPreviewOrientation();
-    svgMount.classList.add('is-loading');
+    // وميض التعتيم (is-loading) للتحميل الأول فقط — أثناء التحديثات
+    // الحية المتلاحقة (سحب الشرائط) يبقى الكرت بكامل وضوحه ويُستبدل
+    // محتواه فور وصول الـ SVG الجديد، فلا نبض ولا اهتزاز بصري.
     if(!svgMount.querySelector('svg')){
+      svgMount.classList.add('is-loading');
       showSvgPlaceholder('جارٍ تحضير المعاينة...');
     }
     const timeout = setTimeout(() => previewAbort && previewAbort.abort(), 10000);
@@ -1425,6 +1544,8 @@
         throw new Error('استجابة المعاينة ليست SVG');
       }
       svgMount.innerHTML = svg;
+      // تأمين خط المراعي بعد حقن الـSVG (لا يفعل شيئًا بعد أول مرة).
+      ensureAlmaraiLoaded();
       syncPreviewOrientation();
       attachSvgDrag();
     } catch (err) {
@@ -1440,12 +1561,29 @@
       if(seq === fetchSeq) svgMount.classList.remove('is-loading');
     }
   }
+  // ── جدولة التحديث الحي: خانق + نداء لاحق (throttle + trailing) ──
+  // المنطق القديم كان مؤقت تأجيل صِرف (debounce 120ms) يعيد ضبط نفسه مع
+  // كل حدث input — وأثناء سحب شريط الأبعاد تتدفق الأحداث كل بضع ميلي
+  // ثانية فلا ينقضي المؤقت أبدًا، ولا تتحدث المعاينة إلا عند إفلات
+  // الشريط. الآن: إن مرّ ما يكفي منذ آخر جلب نطلق جلبًا فوريًا (فتتحدث
+  // المعاينة أثناء السحب نفسه)، وإلا نؤجل نداءً لاحقًا يضمن أن آخر قيمة
+  // تصل دائمًا. حارس fetchSeq يُسقط أي استجابة قديمة فلا وميض ولا تضارب.
+  let lastFetchAt = 0;
+  const LIVE_FETCH_INTERVAL_MS = 180;
   function scheduleFetch(){
     const seq = ++fetchSeq;
     syncPreviewOrientation();
-    if(previewAbort) previewAbort.abort();
     if(fetchTimer) clearTimeout(fetchTimer);
-    fetchTimer = setTimeout(() => fetchSvg(seq), 120);
+    const now = Date.now();
+    if(now - lastFetchAt >= LIVE_FETCH_INTERVAL_MS){
+      lastFetchAt = now;
+      fetchSvg(seq);
+      return;
+    }
+    fetchTimer = setTimeout(() => {
+      lastFetchAt = Date.now();
+      fetchSvg(seq);
+    }, LIVE_FETCH_INTERVAL_MS - (now - lastFetchAt));
   }
   function update(){
     scheduleFetch();
@@ -1497,48 +1635,105 @@
       return null;
     }
   }
-  // Populate the numeric position inputs from the element's ACTUAL
-  // rendered coordinates so "المكان أفقيًا/عموديًا" reflect where the
-  // element really sits — not the stored override (which is 0 when the
-  // engine default is in effect). Runs after every SVG (re)render and
-  // is the single source of truth for the displayed coordinates.
+  // تعبئة حقول المكان/الحجم من إحداثيات العنصر «الفعلية» المرسومة —
+  // التعبئة الأساسية تأتي من الخادم (effective_fields) عند تحميل
+  // الصفحة، وهذه المزامنة تكمل الدور أثناء الجلسة: بعد تبديل محرك أو
+  // مصدر التصميم تُصفَّر الحقول التلقائية ثم تُقرأ الأماكن الجديدة هنا.
+  // data-auto-default="1" يعني أن قيمة الحقل معبأة تلقائيًا من القيم
+  // الفعلية للمحرك (وليست تخصيصًا يدويًا). أول تعديل يدوي (سحب شريط /
+  // سحب العنصر على البطاقة) يثبّت الحقل (auto=0) فلا يُعاد ضبطه أبدًا.
+  function setAutoField(input, isAuto){
+    if(input) input.dataset.autoDefault = isAuto ? '1' : '0';
+  }
+  // تعبئة لمرة واحدة: نكتب القيمة المقاسة فقط حين يكون الحقل عند صفر
+  // (= «استخدم افتراضي المحرك» — بعد تبديل محرك/مصدر أو حالة قديمة).
+  // الحقول غير الصفرية لا تُمسّ إطلاقًا، فلا حلقة قياس/إعادة كتابة
+  // تراكمية بعد كل رسم، والمعبّأة من الخادم تبقى كما حسبها المحرك.
+  function writeAutoValue(input, value){
+    if(!input) return;
+    if((parseFloat(input.value) || 0) !== 0) return;
+    input.value = value;
+    setAutoField(input, true);
+    syncRangeOutput(input);
+  }
   function syncPositionInputsFromSvg(){
     if(!svgMount || !form) return;
     const svg = svgMount.querySelector('svg');
     if(!svg) return;
     const {vbW, vbH} = svgViewBox(svg);
     const mm = cardSizeMm();
+    // محدد القياس: getBBox يرجع صندوقًا صفريًا حين تكون المعاينة مخفية
+    // (لوحة الغرفة غير النشطة / درج المصمم مطوي) — نتجاهل القياس عندها
+    // ونحاول لاحقًا بعد أول رسم مرئي، فلا نكتب «0.0» الزائفة في الحقول.
+    const pills = svg.querySelectorAll('.card-pill');
     const map = [
-      [`.card-pill:nth-of-type(${pillIndex(svg, 'user') + 1})`, 'username'],
-      [`.card-pill:nth-of-type(${pillIndex(svg, 'pass') + 1})`, 'password'],
-      ['.card-qr', 'qr'],
+      [pills[0] || null, 'username'],
+      [pills[1] || null, 'password'],
+      [svg.querySelector('.card-qr'), 'qr'],
     ];
-    map.forEach(([selector, prefix]) => {
-      const el = svg.querySelector(selector);
+    map.forEach(([el, prefix]) => {
       if(!el) return;
-      const tl = groupTopLeft(el);
-      if(!tl) return;
+      let box = null;
+      // الأدق: مستطيل السطح/الخلفية المباشر يحمل x/y/width العنصر كما
+      // أصدرها المحرك حرفيًا (حتى لو كانت المعاينة مخفية لحظة القياس).
+      const surfaceRect = el.querySelector(':scope > rect');
+      if(surfaceRect){
+        box = {
+          x: parseFloat(surfaceRect.getAttribute('x')) || 0,
+          y: parseFloat(surfaceRect.getAttribute('y')) || 0,
+          width: parseFloat(surfaceRect.getAttribute('width')) || 0,
+          height: parseFloat(surfaceRect.getAttribute('height')) || 0,
+        };
+      } else {
+        // لا مستطيل (خلفية الحبة مطفأة): نقيس صندوق المجموعة. getBBox
+        // يرجع صندوقًا صفريًا حين تكون المعاينة مخفية — نتجاهله عندها
+        // ونحاول بعد أول رسم مرئي، فلا نكتب «0.0» الزائفة في الحقول.
+        try { box = el.getBBox(); } catch (_e) { return; }
+      }
+      if(!box || (box.width === 0 && box.height === 0)) return;
       const xInput = form.querySelector(`[name="${prefix}_x"]`);
       const yInput = form.querySelector(`[name="${prefix}_y"]`);
-      const xMm = (tl.x / vbW) * mm.w;
-      const yMm = (tl.y / vbH) * mm.h;
-      // Fill the field with the element's REAL top-left coordinate when
-      // it's still at the 0 sentinel (= "use engine default"). The
-      // renderer (card_renderer._merge_*_positions) anchors both the
-      // default AND an explicit override at the element top-left as a
-      // fraction of card size, so surfacing the measured default is
-      // idempotent: re-rendering with this value reproduces the exact
-      // same placement (no drift / feedback loop). Once the user drags
-      // or types, the value is a real override and we leave it alone.
-      if(xInput && (parseFloat(xInput.value) || 0) === 0){
-        xInput.value = xMm.toFixed(1);
-        syncRangeOutput(xInput);
-      }
-      if(yInput && (parseFloat(yInput.value) || 0) === 0){
-        yInput.value = yMm.toFixed(1);
-        syncRangeOutput(yInput);
+      // تعبئة الحقل بإحداثيات العنصر الفعلية (الزاوية العلوية) ما دام
+      // الحقل تلقائيًا. المحرك يرسّخ الافتراضي والتخصيص عند نفس النقطة
+      // (كسر من مقاس البطاقة)، فإعادة الإرسال بهذه القيمة تعيد إنتاج
+      // نفس الموضع حرفيًا — لا انجراف ولا حلقة تغذية راجعة. أما الحقول
+      // المثبّتة يدويًا فلا نلمسها أبدًا.
+      writeAutoValue(xInput, ((box.x / vbW) * mm.w).toFixed(1));
+      writeAutoValue(yInput, ((box.y / vbH) * mm.h).toFixed(1));
+      if(prefix === 'qr'){
+        // حجم QR الفعلي = عرض مجموعة الرمز كنسبة من عرض الكانفس.
+        const qrSizeInput = form.querySelector('[name="qr_size_pct"]');
+        writeAutoValue(qrSizeInput, ((box.width / vbW) * 100).toFixed(1));
+      } else {
+        // حجم خط القيمة وتسمية USER/PASS الفعليان من نصّي الحبة نفسها.
+        const texts = el.querySelectorAll('text');
+        const valueText = texts[texts.length - 1] || null;
+        const fontInput = form.querySelector(`[name="${prefix}_font_size"]`);
+        const fontSize = valueText ? parseFloat(valueText.getAttribute('font-size')) : 0;
+        if(fontSize > 0) writeAutoValue(fontInput, fontSize.toFixed(1));
+        if(prefix === 'username' && texts.length > 1){
+          const labelInput = form.querySelector('[name="credential_label_font_size"]');
+          const labelSize = parseFloat(texts[0].getAttribute('font-size'));
+          if(labelSize > 0) writeAutoValue(labelInput, labelSize.toFixed(1));
+        }
       }
     });
+  }
+  // عند تبديل محرك التصميم (عربي/إنجليزي · أفقي/عمودي) أو مصدر التصميم،
+  // تتغير الأماكن الافتراضية كليًا — نعيد كل الحقول «التلقائية» إلى 0
+  // (= استخدم افتراضي المحرك الجديد) قبل إعادة الرسم، ثم تقرأ
+  // syncPositionInputsFromSvg الأماكن الجديدة من الـ SVG وتعبئها.
+  // الحقول المثبّتة يدويًا تبقى كما هي (نفس السلوك القديم تمامًا).
+  function resetAutoFieldsToEngineDefaults(){
+    if(!form) return;
+    ['username_x','username_y','password_x','password_y','qr_x','qr_y',
+     'username_font_size','password_font_size','credential_label_font_size','qr_size_pct']
+      .forEach(name => {
+        const input = form.querySelector(`[name="${name}"]`);
+        if(!input || input.dataset.autoDefault !== '1') return;
+        input.value = 0;
+        syncRangeOutput(input);
+      });
   }
   function attachSvgDrag(){
     if(!svgMount) return;
@@ -1546,14 +1741,15 @@
     if(!svg) return;
     // Reflect the freshly-rendered element positions into the inputs.
     syncPositionInputsFromSvg();
-    function bind(selector, prefix){
-      const el = svg.querySelector(selector);
+    function bind(el, prefix){
       if(!el) return;
       const xInput = form && form.querySelector(`[name="${prefix}_x"]`);
       const yInput = form && form.querySelector(`[name="${prefix}_y"]`);
       let dragging = false;
-      let startPt = null;      // pointer canvas pos at pointerdown
-      let originTopLeft = null; // element top-left at pointerdown
+      let startPt = null;       // pointer canvas pos at pointerdown
+      let baseTopLeft = null;   // element's UNTRANSFORMED top-left (getBBox)
+      let originTopLeft = null; // element's VISUAL top-left at pointerdown
+      let keepScale = 1;        // مقياس محلي مؤقت (تحجيم QR قبل إعادة الرسم)
       let pendingFrame = null;
       let lastCanvas = null;
       // Live, cheap visual update: translate ONLY this group via a
@@ -1561,19 +1757,28 @@
       // no background reload). rAF-throttled to one paint per frame.
       function paint(){
         pendingFrame = null;
-        if(!lastCanvas || !originTopLeft) return;
+        if(!lastCanvas || !originTopLeft || !baseTopLeft) return;
         const tx = (lastCanvas.x - startPt.x);
         const ty = (lastCanvas.y - startPt.y);
-        // Clamp so the element stays on the canvas.
-        const nx = Math.max(0, Math.min(lastCanvas.vbW, originTopLeft.x + tx)) - originTopLeft.x;
-        const ny = Math.max(0, Math.min(lastCanvas.vbH, originTopLeft.y + ty)) - originTopLeft.y;
-        el.setAttribute('transform', `translate(${nx.toFixed(2)},${ny.toFixed(2)})`);
+        // Clamp so the element stays on the canvas (visual coords).
+        const vx = Math.max(0, Math.min(lastCanvas.vbW, originTopLeft.x + tx));
+        const vy = Math.max(0, Math.min(lastCanvas.vbH, originTopLeft.y + ty));
+        // التحويل يُكتب نسبةً إلى هندسة العنصر غير المحوَّلة (baseTopLeft)
+        // — مع الحفاظ على أي مقياس محلي مؤقت (تحجيم QR من الشريط) حتى
+        // لا «يقفز» الحجم لحظة السحب قبل وصول إعادة الرسم المرجعية.
+        const offX = vx - keepScale * baseTopLeft.x;
+        const offY = vy - keepScale * baseTopLeft.y;
+        el.setAttribute('transform', keepScale === 1
+          ? `translate(${offX.toFixed(2)},${offY.toFixed(2)})`
+          : `translate(${offX.toFixed(2)},${offY.toFixed(2)}) scale(${keepScale.toFixed(4)})`);
         // Keep the numeric inputs live while dragging.
         const mm = cardSizeMm();
-        const xMm = ((originTopLeft.x + nx) / lastCanvas.vbW) * mm.w;
-        const yMm = ((originTopLeft.y + ny) / lastCanvas.vbH) * mm.h;
-        if(xInput){ xInput.value = xMm.toFixed(1); syncRangeOutput(xInput); }
-        if(yInput){ yInput.value = yMm.toFixed(1); syncRangeOutput(yInput); }
+        const xMm = (vx / lastCanvas.vbW) * mm.w;
+        const yMm = (vy / lastCanvas.vbH) * mm.h;
+        // السحب اليدوي يثبّت الحقلين (لم يعودا «تلقائيين») حتى لا تعيد
+        // مزامنة ما بعد الرسم أو تبديل المحرك الكتابة فوق اختيار المستخدم.
+        if(xInput){ xInput.value = xMm.toFixed(1); setAutoField(xInput, false); syncRangeOutput(xInput); }
+        if(yInput){ yInput.value = yMm.toFixed(1); setAutoField(yInput, false); syncRangeOutput(yInput); }
       }
       function move(event){
         if(!dragging) return;
@@ -1594,7 +1799,23 @@
       }
       el.addEventListener('pointerdown', (event) => {
         dragging = true;
-        originTopLeft = groupTopLeft(el) || {x: 0, y: 0};
+        baseTopLeft = groupTopLeft(el) || {x: 0, y: 0};
+        originTopLeft = {x: baseTopLeft.x, y: baseTopLeft.y};
+        keepScale = 1;
+        // إن كان على المجموعة تحويل محلي مؤقت (من سحب شريط لم تعقبه
+        // إعادة رسم بعد) نحسب الموضع المرئي الحقيقي منه حتى لا يقفز
+        // العنصر للخلف لحظة الإمساك به. getBBox يتجاهل transform
+        // المجموعة نفسها فالقاعدة (baseTopLeft) تبقى غير محوَّلة.
+        const cur = el.getAttribute('transform') || '';
+        const t = /translate\(\s*(-?[\d.]+)[,\s]+(-?[\d.]+)\s*\)/.exec(cur);
+        const s = /scale\(\s*(-?[\d.]+)\s*\)/.exec(cur);
+        if(s){ keepScale = parseFloat(s[1]) || 1; }
+        if(t){
+          originTopLeft = {
+            x: keepScale * baseTopLeft.x + parseFloat(t[1]),
+            y: keepScale * baseTopLeft.y + parseFloat(t[2]),
+          };
+        }
         startPt = pointerToCanvas(svg, event);
         lastCanvas = startPt;
         el.setPointerCapture && el.setPointerCapture(event.pointerId);
@@ -1604,25 +1825,197 @@
       el.addEventListener('pointerup', end);
       el.addEventListener('pointercancel', end);
     }
-    // Element ids match the renderer (`id="user"` lives on the pill's
-    // <g class="card-pill">; we use class+order since the renderer
-    // doesn't put an id on the group itself).
+    // المحرك يرسم حبة USER قبل حبة PASS في ترتيب المصدر؛ نلتقط
+    // المجموعتين مباشرة من قائمة العناصر بدل محددات nth-of-type
+    // الهشّة (التي تتأثر بأي <g> شقيق آخر مثل شعار البطاقة).
     const pills = svg.querySelectorAll('.card-pill');
-    if(pills.length >= 1) bind(`.card-pill:nth-of-type(${pillIndex(svg, 'user') + 1})`, 'username');
-    if(pills.length >= 2) bind(`.card-pill:nth-of-type(${pillIndex(svg, 'pass') + 1})`, 'password');
-    bind('.card-qr', 'qr');
+    if(pills[0]) bind(pills[0], 'username');
+    if(pills[1]) bind(pills[1], 'password');
+    const qrGroup = svg.querySelector('.card-qr');
+    if(qrGroup) bind(qrGroup, 'qr');
   }
-  function pillIndex(svg, _id){
-    // The renderer emits USER pill before PASS pill in source order,
-    // so index 0 is USER and 1 is PASS.
-    return _id === 'user' ? 0 : 1;
+
+  // ── المعاينة الفورية المحلية لشرائط «الحقول» ─────────────────────
+  // سحب شرائط المكان/الحجم كان يطلق POST خانقًا (180ms) للخادم مع كل
+  // حركة — يعمل لكنه ثقيل ومتعلّق. الآن نعكس اتجاه نفس معادلة السحب
+  // على الكانفس: أثناء سحب الشريط نحرّك/نحجّم مجموعة العنصر داخل الـ
+  // SVG المحمَّل محليًا (transform / font-size) بلا أي نداء شبكة، وعند
+  // الإفلات (حدث change) نطلق جلبًا واحدًا للخادم يرسم البطاقة رسمًا
+  // مرجعيًا فيمسح التحويلات المؤقتة. نفس تحويل المليمتر → الكانفس الذي
+  // يستخدمه المحرك حرفيًا: canvas = (mm / card_mm) * viewBox.
+  const LOCAL_POSITION_SLIDERS = new Set([
+    'username_x','username_y','password_x','password_y','qr_x','qr_y',
+  ]);
+  const LOCAL_SIZE_SLIDERS = new Set([
+    'username_font_size','password_font_size','credential_label_font_size','qr_size_pct',
+  ]);
+  function isLocalSlider(name){
+    return LOCAL_POSITION_SLIDERS.has(name) || LOCAL_SIZE_SLIDERS.has(name);
   }
+  // قراءة الصندوق «الأصلي» للعنصر كما أصدره المحرك (قبل أي transform
+  // مؤقت): مستطيل السطح المباشر يحمل الإحداثيات حرفيًا، وإلا getBBox —
+  // وكلاهما يتجاهل transform المجموعة نفسها فالقاعدة ثابتة أثناء السحب.
+  function readBaseBox(el){
+    if(!el) return null;
+    const surfaceRect = el.querySelector(':scope > rect');
+    if(surfaceRect){
+      return {
+        x: parseFloat(surfaceRect.getAttribute('x')) || 0,
+        y: parseFloat(surfaceRect.getAttribute('y')) || 0,
+        width: parseFloat(surfaceRect.getAttribute('width')) || 0,
+        height: parseFloat(surfaceRect.getAttribute('height')) || 0,
+      };
+    }
+    try {
+      const b = el.getBBox();
+      if(b && (b.width || b.height)) return {x: b.x, y: b.y, width: b.width, height: b.height};
+    } catch (_e) { /* معاينة مخفية — نفشل بهدوء ويتكفل الجلب الاحتياطي */ }
+    return null;
+  }
+  function svgElementFor(prefix){
+    const svg = svgMount && svgMount.querySelector('svg');
+    if(!svg) return null;
+    if(prefix === 'qr') return svg.querySelector('.card-qr');
+    const pills = svg.querySelectorAll('.card-pill');
+    return prefix === 'username' ? (pills[0] || null) : (pills[1] || null);
+  }
+  // قيمة محور من الحقل: > 0 = مخصصة (نحوّلها لكانفس)، 0 = «افتراضي
+  // المحرك» فلا نحرّك هذا المحور محليًا ونُبقيه على موضعه المرسوم.
+  function axisTarget(prefix, axis, base, mm, vb){
+    const input = form && form.querySelector(`[name="${prefix}_${axis}"]`);
+    const v = input ? parseFloat(input.value) : NaN;
+    if(!Number.isFinite(v) || v <= 0) return axis === 'x' ? base.x : base.y;
+    const frac = Math.max(0, Math.min(1, v / (axis === 'x' ? mm.w : mm.h)));
+    return frac * (axis === 'x' ? vb.vbW : vb.vbH);
+  }
+  // تطبيق التحويل المحلي لعنصر واحد (مكان + مقياس QR معًا) — يُعاد
+  // حسابه كاملًا من قيم الحقول الحالية فلا تراكم ولا انجراف.
+  function applyLocalTransform(prefix){
+    const svg = svgMount && svgMount.querySelector('svg');
+    const el = svgElementFor(prefix);
+    if(!svg || !el || !form) return false;
+    const base = readBaseBox(el);
+    if(!base || (base.width === 0 && base.height === 0)) return false;
+    const vb = svgViewBox(svg);
+    const mm = cardSizeMm();
+    const tx = axisTarget(prefix, 'x', base, mm, vb);
+    const ty = axisTarget(prefix, 'y', base, mm, vb);
+    let scale = 1;
+    if(prefix === 'qr'){
+      const sizeInput = form.querySelector('[name="qr_size_pct"]');
+      const pct = sizeInput ? parseFloat(sizeInput.value) : NaN;
+      if(Number.isFinite(pct) && pct > 0 && base.width > 0){
+        // نفس قصّ المحرك: 8% ≤ كسر الحجم ≤ 48% من عرض الكانفس.
+        const frac = Math.max(0.08, Math.min(0.48, pct / 100));
+        scale = (frac * vb.vbW) / base.width;
+      }
+    }
+    // translate(T) scale(s): النقطة (bx,by) تهبط على (s·bx+Tx, s·by+Ty)
+    // — نختار T بحيث تستقر الزاوية العلوية للعنصر على الهدف تمامًا.
+    const offX = tx - scale * base.x;
+    const offY = ty - scale * base.y;
+    const transform = scale === 1
+      ? `translate(${offX.toFixed(2)},${offY.toFixed(2)})`
+      : `translate(${offX.toFixed(2)},${offY.toFixed(2)}) scale(${scale.toFixed(4)})`;
+    el.setAttribute('transform', transform);
+    return true;
+  }
+  // أحجام الخطوط: قيمة الشريط (px) هي نفسها وحدات الكانفس التي يكتبها
+  // المحرك في font-size — تعيين مباشر بلا أي تحويل.
+  function applyLocalFontSize(name){
+    const value = parseFloat(val(name));
+    if(!Number.isFinite(value) || value <= 0) return false; // 0 = تلقائي، يحتاج الخادم
+    if(name === 'credential_label_font_size'){
+      let applied = false;
+      ['username','password'].forEach(prefix => {
+        const el = svgElementFor(prefix);
+        if(!el) return;
+        const texts = el.querySelectorAll('text');
+        if(texts.length > 1){ texts[0].setAttribute('font-size', value); applied = true; }
+      });
+      return applied;
+    }
+    const prefix = name === 'username_font_size' ? 'username' : 'password';
+    const el = svgElementFor(prefix);
+    if(!el) return false;
+    const texts = el.querySelectorAll('text');
+    const valueText = texts[texts.length - 1];
+    if(!valueText) return false;
+    valueText.setAttribute('font-size', value);
+    return true;
+  }
+  // مدخل واحد: يحاول التطبيق المحلي ويرجع true عند النجاح. خانق rAF —
+  // أول حدث في الإطار يُطبَّق فورًا (إحساس لحظي)، والبقية تتجمع لإطار
+  // الرسم التالي فلا نعيد الحساب مئات المرات في الثانية بلا داعٍ.
+  function applyLocalSliderNow(name){
+    if(LOCAL_POSITION_SLIDERS.has(name)){
+      return applyLocalTransform(name.replace(/_(x|y)$/, ''));
+    }
+    if(name === 'qr_size_pct'){
+      return applyLocalTransform('qr');
+    }
+    return applyLocalFontSize(name);
+  }
+  const localPending = new Set(); // أسماء بانتظار إطار الرسم التالي
+  let localFrame = null;
+  function flushLocalFrame(){
+    localFrame = null;
+    localPending.forEach(name => applyLocalSliderNow(name));
+    localPending.clear();
+  }
+  function applyLocalSlider(name){
+    if(localFrame != null){
+      // إطار قيد الانتظار: نضم الاسم للدفعة. النجاح السابق في نفس
+      // الجولة يكفي دليلًا على الجدوى (الـ SVG لم يتبدل بين إطارين).
+      localPending.add(name);
+      return true;
+    }
+    const ok = applyLocalSliderNow(name);
+    if(!ok) return false;
+    localFrame = requestAnimationFrame(flushLocalFrame);
+    return true;
+  }
+  // شبكة أمان: حين يتعذر التطبيق المحلي (عنصر مخفي/غير مرسوم بعد)
+  // نلجأ لجلب خادم مخفَّف بمؤقت لاحق طويل (400ms) بدل خانق الـ 180ms —
+  // فلا يغرق الخادم أثناء السحب وتصل آخر قيمة دائمًا.
+  let safetyTimer = null;
+  function scheduleSafetyFetch(){
+    if(safetyTimer) clearTimeout(safetyTimer);
+    safetyTimer = setTimeout(() => {
+      safetyTimer = null;
+      const seq = ++fetchSeq;
+      lastFetchAt = Date.now();
+      fetchSvg(seq);
+    }, 400);
+  }
+
+  // ── تبويبات أقسام المحرر ──
+  // قسم واحد ظاهر في كل مرة؛ كل الحقول تبقى داخل النموذج (الإخفاء
+  // عرضي display فقط) فلا يتغير ما يُرسل للخادم أو للمعاينة الحية.
   $$('[data-pr-tab]').forEach(btn => btn.addEventListener('click', () => {
-    $$('[data-pr-tab]').forEach(x => x.classList.remove('is-active'));
+    $$('[data-pr-tab]').forEach(x => {
+      x.classList.remove('is-active');
+      x.setAttribute('aria-selected', 'false');
+    });
     $$('[data-pr-pane]').forEach(x => x.classList.remove('is-active'));
     btn.classList.add('is-active');
+    btn.setAttribute('aria-selected', 'true');
     const pane = root.querySelector(`[data-pr-pane="${btn.dataset.prTab}"]`);
     if(pane) pane.classList.add('is-active');
+  }));
+  // ── تبويبات قسم «الحقول» الفرعية ──
+  // مجموعة واحدة (اليوزر / الباسورد / الباركود) ظاهرة في كل مرة.
+  // الإخفاء عرضي display فقط — الحقول المخفية تبقى في النموذج وتُرسل.
+  $$('[data-pr-fieldtab]').forEach(btn => btn.addEventListener('click', () => {
+    $$('[data-pr-fieldtab]').forEach(x => {
+      x.classList.remove('is-active');
+      x.setAttribute('aria-selected', 'false');
+    });
+    btn.classList.add('is-active');
+    btn.setAttribute('aria-selected', 'true');
+    $$('[data-layer-section]').forEach(sec => {
+      sec.classList.toggle('is-active', sec.dataset.layerSection === btn.dataset.prFieldtab);
+    });
   }));
   $$('[data-preset]').forEach(btn => btn.addEventListener('click', () => {
     const presetKey = btn.dataset.preset || 'modern';
@@ -1645,11 +2038,18 @@
   $$('[data-engine-option]').forEach(btn => btn.addEventListener('click', () => {
     const engineInput = form && form.querySelector('[name="render_engine"]');
     if(engineInput) engineInput.value = btn.dataset.engineOption || 'ar_horizontal';
+    // تبديل المحرك يغيّر الأماكن الافتراضية كليًا (انعكاس عربي/إنجليزي
+    // وأبعاد عمودي/أفقي): نعيد الحقول التلقائية للافتراضي الجديد، وبعد
+    // الرسم تعبئها المزامنة بالأماكن الفعلية الجديدة. المثبّتة يدويًا تبقى.
+    resetAutoFieldsToEngineDefaults();
     syncRenderEngine();
     update();
   }));
   $$('[data-design-source-option]').forEach(btn => btn.addEventListener('click', () => {
     setDesignSource(btn.dataset.designSourceOption || 'preset');
+    // تبديل مصدر التصميم (صورة/نظام) يغيّر تركيب العناصر الافتراضي —
+    // نفس منطق إعادة الحقول التلقائية ثم التعبئة من الرسم الجديد.
+    resetAutoFieldsToEngineDefaults();
     scheduleFetch();
   }));
   syncRenderEngine();
@@ -1661,18 +2061,47 @@
     syncPreviewOrientation();
   }));
   window.addEventListener('hashchange', openDesignerDrawerFromHash);
+  // حدث input يطلق التحديث الحي أثناء سحب الشرائط نفسه (وليس عند
+  // الإفلات فقط). شرائط «الحقول» (مكان/حجم العناصر) تتحرك محليًا داخل
+  // الـ SVG المحمَّل بلا أي نداء شبكة — إحساس لحظي — وبقية المدخلات
+  // تمر عبر scheduleFetch الخانق كالمعتاد.
   if(form) form.addEventListener('input', (event) => {
-    if(event.target && event.target.matches('[data-range-input]')){
-      syncRangeOutput(event.target);
+    const target = event.target;
+    if(target && target.matches('[data-range-input]')){
+      syncRangeOutput(target);
+      // تعديل المستخدم المباشر يثبّت الحقل: لم يعد «تلقائيًا».
+      setAutoField(target, false);
+      if(isLocalSlider(target.name)){
+        // تحريك/تحجيم محلي فوري داخل الـ SVG. عند النجاح لا شبكة أبدًا
+        // أثناء السحب (المزامنة المرجعية تأتي مع change عند الإفلات)؛
+        // وعند التعذر (عنصر مخفي/لم يُرسم) جلب احتياطي مخفَّف 400ms.
+        if(applyLocalSlider(target.name)) return;
+        scheduleSafetyFetch();
+        return;
+      }
     }
     update();
   });
   if(form) form.addEventListener('change', (event) => {
-    if(event.target && event.target.matches('[data-range-input]')){
-      syncRangeOutput(event.target);
+    const target = event.target;
+    if(target && target.matches('[data-range-input]')){
+      syncRangeOutput(target);
+      setAutoField(target, false);
+      if(isLocalSlider(target.name)){
+        // إفلات شريط «الحقول»: السحب كله كان محليًا — الآن جلب خادم
+        // واحد مرجعي يرسم البطاقة بالقيمة النهائية ويمسح التحويلات
+        // المؤقتة (الـ SVG الجديد يستبدل القديم بكامله).
+        if(safetyTimer){ clearTimeout(safetyTimer); safetyTimer = null; }
+        scheduleFetch();
+        return;
+      }
+      // بقية الشرائط (مقاس البطاقة/الشفافية/الخط الاحتياطي): أحداث
+      // input أثناء السحب أطلقت الجلب الخانق وآخرها حمل القيمة
+      // النهائية — حدث change عند الإفلات مكرر فلا جلب إضافيًا.
+      return;
     }
-    if(event.target && event.target.name === 'render_engine') syncRenderEngine();
-    if(event.target && event.target.name === 'background_style') setDesignSource(event.target.value);
+    if(target && target.name === 'render_engine') syncRenderEngine();
+    if(target && target.name === 'background_style') setDesignSource(target.value);
     update();
   });
   syncAllRangeOutputs();
@@ -1886,7 +2315,7 @@
   const selectedTemplateSummary = $('[data-selected-template-summary]');
   const PREVIEW_OVERRIDE_FIELDS = new Set([
     'brand_name','card_title','footer_text',
-    'hotspot_address','price_text','validity_text'
+    'hotspot_address','hotspot_login_url','price_text','validity_text'
   ]);
   const PREVIEW_FRAGMENT_URL_TEMPLATE =
     `{{ url_for('radius.print_templates_preview_fragment', template_id=0) }}`;
@@ -1942,8 +2371,16 @@
     const start = cardEl.dataset.templateGradientStart || '#0f172a';
     const end = cardEl.dataset.templateGradientEnd || '#22a7bd';
     const accent = cardEl.dataset.templateAccent || '#f59e0b';
+    const thumbUrl = cardEl.dataset.templateThumbUrl || '';
+    const isVertical = (cardEl.dataset.templateOrientation || '') === 'vertical';
+    // المصغّر الحقيقي للقالب (نفس SVG المحفوظ) — مع رجوع للمربع المتدرج
+    // القديم فقط إذا لم يتوفر رابط المصغّر أو فشل تحميله.
+    const thumbHtml = thumbUrl
+      ? `<img class="pr-selected-thumb${isVertical ? ' is-vertical' : ''}" src="${escapeHtml(thumbUrl)}" alt="معاينة ${escapeHtml(name)}" decoding="async"
+              onerror="this.outerHTML='<span class=&quot;pr-chip-swatch&quot; style=&quot;--ca:${escapeHtml(start)};--cb:${escapeHtml(end)};--cacc:${escapeHtml(accent)}&quot;></span>'">`
+      : `<span class="pr-chip-swatch" style="--ca:${escapeHtml(start)};--cb:${escapeHtml(end)};--cacc:${escapeHtml(accent)}"></span>`;
     selectedTemplateSummary.innerHTML = `
-      <span class="pr-chip-swatch" style="--ca:${escapeHtml(start)};--cb:${escapeHtml(end)};--cacc:${escapeHtml(accent)}"></span>
+      ${thumbHtml}
       <span>
         <strong>${escapeHtml(name)}</strong>
         <small>${escapeHtml(meta)} · جاهز للمعاينة والتصدير</small>
@@ -2246,3 +2683,4 @@
 })();
 </script>
 {% endblock %}
+

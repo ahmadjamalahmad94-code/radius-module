@@ -162,6 +162,10 @@
     }
     .submit-btn:hover{filter:brightness(1.05)}
     .submit-btn:active{transform:translateY(1px)}
+    .submit-btn:focus-visible{outline:3px solid var(--accent-ring);outline-offset:3px}
+
+    /* شبكة حقول النموذج — بديل عن style مضمّن (محاذاة مع portal_card_login) */
+    .login-form{display:grid;gap:14px}
 
     /* ── Foot ───────────────────────────────────────── */
     .form-foot{
@@ -176,11 +180,12 @@
 
   <main class="login-card" data-testid="subscriber-portal-login">
 
-    <aside class="brand-side">
+    {# اللوحة التعريفية زخرفية بحتة — نخفيها عن قارئات الشاشة (مطابقة للمرجع portal_card_login) #}
+    <aside class="brand-side" aria-hidden="true">
       <div class="brand-mark">HR</div>
       <div class="brand-head">
         <h1>بوابة المشترك</h1>
-        <p>تابع حالة اشتراكك واستهلاكك وطلبات السلف والتجديد والدعم من مكان واحد. حتى المنتهي اشتراكه يمكنه الدخول إذا سمحت الشبكة بهذا الرابط.</p>
+        <p>تابع حالة اشتراكك واستهلاكك، وقدّم طلبات سلفة الوقت والتجديد، وتواصل مع الدعم — كل ذلك من مكان واحد.</p>
       </div>
       <ul class="brand-list">
         <li><i class="fa-solid fa-gauge-high"></i> حالة الاشتراك والاستهلاك</li>
@@ -212,13 +217,13 @@
         {% endif %}
       {% endwith %}
 
-      <form method="post" style="display:grid;gap:14px">
+      <form method="post" class="login-form" autocomplete="on">
         <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
 
         <div class="field">
           <label for="sp-user">اسم المستخدم</label>
           <div class="field-wrap">
-            <i class="fa-solid fa-user"></i>
+            <i class="fa-solid fa-user" aria-hidden="true"></i>
             <input id="sp-user" type="text" name="username" required autofocus
                    autocomplete="username" placeholder="اسم المستخدم">
           </div>
@@ -227,29 +232,52 @@
         <div class="field">
           <label for="sp-pwd">كلمة المرور</label>
           <div class="field-wrap">
-            <i class="fa-solid fa-lock"></i>
+            <i class="fa-solid fa-lock" aria-hidden="true"></i>
             <input id="sp-pwd" type="password" name="password" required
                    autocomplete="current-password" placeholder="••••••••">
-            <button type="button" class="pwd-toggle" aria-label="إظهار كلمة المرور"
-                    onclick="(function(b){var i=document.getElementById('sp-pwd');var on=i.type==='password';i.type=on?'text':'password';var ico=b.querySelector('i');if(ico){ico.classList.toggle('fa-eye',on);ico.classList.toggle('fa-eye-slash',!on);}})(this)">
-              <i class="fa-solid fa-eye"></i>
+            {# زر كشف كلمة المرور — السلوك في <script> بآخر الصفحة ليُحدِّث
+               الأيقونة وحالة aria معًا (بدل onclick مضمّن لا يحدّث aria) #}
+            <button type="button" class="pwd-toggle" id="sp-pwd-toggle"
+                    aria-label="إظهار كلمة المرور" aria-pressed="false">
+              <i class="fa-solid fa-eye" aria-hidden="true"></i>
             </button>
           </div>
         </div>
 
         <button class="submit-btn" type="submit">
-          <i class="fa-solid fa-arrow-left-to-bracket"></i>
+          <i class="fa-solid fa-arrow-left-to-bracket" aria-hidden="true"></i>
           <span>فتح البوابة</span>
         </button>
 
         <div class="form-foot">
-          <span><i class="fa-solid fa-shield-halved"></i> اتصال آمن</span>
-          <span>HobeRadius © 2026</span>
+          <span><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> اتصال آمن</span>
+          <span><bdi dir="ltr">HobeRadius</bdi> © 2026</span>
         </div>
       </form>
     </section>
 
   </main>
+
+  <script>
+  // كشف/إخفاء كلمة المرور — يحدّث الأيقونة ونصّ aria وحالة aria-pressed معًا
+  (function(){
+    var toggle = document.getElementById('sp-pwd-toggle');
+    var input  = document.getElementById('sp-pwd');
+    if (!toggle || !input) return;
+    toggle.addEventListener('click', function(){
+      var reveal = input.type === 'password';      // هل سنُظهر الآن؟
+      input.type = reveal ? 'text' : 'password';
+      toggle.setAttribute('aria-pressed', reveal ? 'true' : 'false');
+      toggle.setAttribute('aria-label', reveal ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور');
+      var ico = toggle.querySelector('i');
+      if (ico){
+        ico.classList.toggle('fa-eye', !reveal);
+        ico.classList.toggle('fa-eye-slash', reveal);
+      }
+      input.focus();
+    });
+  })();
+  </script>
 
 </body>
 </html>

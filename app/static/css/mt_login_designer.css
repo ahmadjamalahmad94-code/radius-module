@@ -1,71 +1,565 @@
-/* R2 — Hotspot login-page designer.
-   Two-column layout, picker cards, live-preview iframe. Reuses
-   .mt-card / .mt-program-grid from the dashboard + programming
-   pages so the designer feels like part of the same hub. */
+/* ═══════════════════════════════════════════════════════════════
+   مصمّم صفحة الدخول (mtld) — إعادة بناء كاملة على نظام HOB v2.
 
-.mt-designer { display: flex; flex-direction: column; gap: 16px; }
+   المبادئ:
+     • السلم المعتمد: هيرو 20px (من hub_v2)، عناوين أقسام 14px،
+       نص 12.5–13px. فجوات موحّدة 14px بين الأقسام و10px داخلها.
+     • مصغّرات المعرض: صناديق بنسبة أبعاد ثابتة + iframe بمقياس
+       محسوب — أبعاد موحّدة بلا تشوّه ولا فيضان.
+     • المعاينة الكبيرة: إطار جوال مثبّت (sticky) بعرض 390px.
+     • RTL بخصائص منطقية (inline-start/end) حيث يلزم.
+   ═══════════════════════════════════════════════════════════════ */
 
-.mt-designer-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
-  gap: 16px;
-  align-items: start;
-}
-@media (max-width: 1024px) {
-  .mt-designer-grid { grid-template-columns: 1fr; }
-}
-
-.mt-designer-form {
+.mtld {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  /* إيقاع المسافات الموحّد (§4.5 / قاعدة #13): الخطوة العمودية بين الكتل = توكن القسم */
+  gap: var(--cc-gap-section, 16px);
 }
 
-.mt-designer-picker {
+/* ── رسائل الحالة (حفظ / خطأ) ─────────────────────────────────── */
+.mtld-flash {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.7;
+  border: 1px solid transparent;
+}
+.mtld-flash--ok {
+  background: #ECFDF5;
+  border-color: #A7F3D0;
+  color: #065F46;
+}
+.mtld-flash--err {
+  background: #FEF2F2;
+  border-color: #FECACA;
+  color: #991B1B;
+}
+
+/* ── سطر تمهيدي داخل الأقسام ──────────────────────────────────── */
+.mtld-lead {
+  margin: 0 0 12px;
+  color: var(--hub-text-soft, #475569);
+  font-size: 13px;
+  line-height: 1.9;
+}
+
+/* ═══ معرض التصاميم ════════════════════════════════════════════ */
+.mtld-gallery {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+}
+.mtld-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border: 1.5px solid var(--hub-border, #E2E8F0);
+  border-radius: 12px;
+  background: #fff;
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color .12s, box-shadow .12s, transform .12s;
+}
+.mtld-card:hover {
+  border-color: #94A3B8;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, .08);
+}
+.mtld-card.is-active {
+  border-color: var(--hub-brand, #2563EB);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, .15);
+}
+/* زر الراديو مخفي بصريًا — البطاقة كلها هي عنصر الاختيار */
+.mtld-card input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* صندوق المصغّرة: نسبة أبعاد ثابتة 3/4 → كل البطاقات بنفس
+   الارتفاع تمامًا. الـ iframe يعرض جوال 390px ويُصغَّر بمقياس
+   نسبي (المتغير --mtld-thumb-scale)، ويُقصّ الفائض بأمان. */
+.mtld-thumb {
+  position: relative;
+  display: block;
+  aspect-ratio: 3 / 4;
+  background: #F1F5F9;
+  border-bottom: 1px solid var(--hub-border, #E2E8F0);
+  overflow: hidden;
+  pointer-events: none; /* النقرات تذهب للبطاقة لا للـ iframe */
+}
+.mtld-thumb-frame {
+  --mtld-thumb-scale: .52;
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 390px;
+  height: 760px;
+  border: 0;
+  /* بلا خلفية افتراضيًا: الإطار الكسول (بلا src بعد) يبقى شفافًا
+     فيظهر مؤشّر الانتظار خلفه؛ وعند التحميل يُبيَّض. */
+  background: transparent;
+  transform: translateX(-50%) scale(var(--mtld-thumb-scale));
+  transform-origin: top center;
+  pointer-events: none;
+}
+.mtld-thumb-frame[src] { background: #fff; }
+/* مؤشّر انتظار خلف المصغّرة — يظهر في خلفية الصندوق الرمادية
+   قبل أن يحمّل IntersectionObserver الـ iframe الكسول، ويختفي
+   بصريًا بمجرد أن يرسم الإطار فوقه. */
+.mtld-thumb-spin {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 22px;
+  height: 22px;
+  margin: -11px 0 0 -11px;
+  border: 2.5px solid var(--hub-border, #E2E8F0);
+  border-top-color: var(--hub-brand, #2563EB);
+  border-radius: 50%;
+  animation: mtld-spin 1s linear infinite;
+  z-index: 0;
+}
+/* الإطار نفسه absolute أصلًا (قاعدة المقياس أعلاه) — يكفي رفعه
+   فوق المؤشّر؛ إن لم يكن له src تبقى خلفيته شفافة فيظهر المؤشّر. */
+.mtld-thumb-frame { z-index: 1; }
+@keyframes mtld-spin { to { transform: rotate(360deg); } }
+
+/* علامة الاختيار — تظهر فقط على البطاقة النشطة */
+.mtld-check {
+  position: absolute;
+  inset-block-start: 8px;
+  inset-inline-start: 8px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--hub-brand, #2563EB);
+  color: #fff;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, .35);
+}
+.mtld-card.is-active .mtld-check { display: flex; }
+
+.mtld-card-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 12px 12px;
+}
+.mtld-card-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--hub-text, #0F172A);
+}
+.mtld-card-desc {
+  font-size: 12px;
+  color: var(--hub-text-soft, #64748B);
+  line-height: 1.6;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ═══ مساحة العمل: الحقول + المعاينة الكبيرة ═══════════════════ */
+.mtld-work {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 440px;
+  /* توكن القسم لكلا المحورين والخطوة العلوية (§4.5) */
+  gap: var(--cc-gap-section, 16px);
+  align-items: start;
+  margin-top: var(--cc-gap-section, 16px);
+}
+@media (max-width: 1100px) {
+  .mtld-work { grid-template-columns: 1fr; }
+}
+
+/* ── شريط الأقسام (تبويبات نموذج التخصيص) ─────────────────────
+   حبوب أفقية أعلى النموذج — قسم واحد ظاهر في كل مرة. الإخفاء
+   عرضي فقط (display) فتبقى كل الحقول تُرسل مع النموذج. */
+.mtld-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 14px;
+  padding: 6px;
+  background: var(--hub-surface-2, #F8FAFC);
+  border: 1px solid var(--hub-border, #E2E8F0);
+  border-radius: 12px;
+}
+.mtld-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 13px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--hub-text-soft, #475569);
+  font-size: 12.5px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background .12s, color .12s, border-color .12s;
+}
+.mtld-tab:hover {
+  background: #fff;
+  border-color: var(--hub-border, #E2E8F0);
+}
+.mtld-tab.is-active {
+  background: var(--hub-brand, #2563EB);
+  border-color: var(--hub-brand, #2563EB);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, .25);
+}
+.mtld-tab i { font-size: 11px; }
+
+/* حقل خارج القسم النشط — مخفي عرضيًا فقط (يبقى في DOM ويُرسل) */
+.mtld-sec-hidden { display: none !important; }
+
+/* حقل «قوالب محفوظة» — صف عريض خارج شبكة العمودين */
+.mtld-presets-field { margin-top: 2px; }
+
+/* حقول التخصيص — عمودان متساويان داخل القسم */
+.mtld-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+@media (max-width: 700px) {
+  .mtld-fields { grid-template-columns: 1fr; }
+}
+.mtld-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+.mtld-field-label {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--hub-text, #0F172A);
+}
+.mtld-field-help {
+  font-size: 11.5px;
+  color: var(--hub-text-mute, #94A3B8);
+  line-height: 1.6;
+}
+
+/* ═══════════ ارتفاع موحّد لكل عناصر التحكم (42px) ═══════════
+   نفس نمط صفحة الإعدادات (settings_page): الحقول النصية والقوائم
+   المنسدلة وأزرار الإضافة/الحذف في صفوف الموزعين/العروض كانت
+   بارتفاعات متفاوتة — هنا نوحّدها كلها على 42px فتتحاذى بصريًا. */
+.mtld-fields .hub-input,
+.mtld-fields select.hub-input,
+.mtld-fields .hub-btn,
+.mtld-presets-field .hub-input,
+.mtld-presets-field .hub-btn {
+  min-height: 42px;
+  box-sizing: border-box;
+}
+/* زر حذف الصف (×) في محرر القوائم — مربع 42×42 بمحاذاة بقية الحقول */
+.mtld-json-row > .hub-btn {
+  min-width: 42px;
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  padding: 0 12px;
+}
+/* زر «أضف موزعًا / أضف عرضًا» بنفس الارتفاع الموحّد */
+.mtld-json-add { min-height: 42px; }
+/* منتقي اللون بنفس ارتفاع حقل hex المجاور */
+.mtld-fields .mtld-color-swatch {
+  block-size: 42px;
+  inline-size: 56px;
+}
+
+/* صف اللون: منتقي + نص hex متجاوران */
+.mtld-color-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.mtld-color-row .mtld-color-text { flex: 1; min-width: 0; }
+.mtld-color-swatch {
+  inline-size: 38px;
+  block-size: 34px;
+  padding: 2px;
+  border: 1px solid var(--hub-border, #E2E8F0);
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+  flex: none;
+}
+
+/* صف الشعار: زر رفع + معاينة مصغّرة + زر إزالة */
+.mtld-logo-row {
+  display: flex;
+  align-items: center;
   gap: 10px;
 }
-.mt-designer-card {
-  position: relative;
-  border: 1.5px solid #E2E8F0;
-  border-radius: 12px;
-  padding: 14px;
-  cursor: pointer;
-  background: #fff;
-  transition: border-color .12s, background .12s;
-}
-.mt-designer-card input[type="radio"] {
+.mtld-logo-file {
   position: absolute;
-  inset-block-start: 10px;
-  inset-inline-end: 10px;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
 }
-.mt-designer-card:hover { border-color: #94A3B8; background: #F8FAFC; }
-.mt-designer-card.is-active {
-  border-color: #2563EB;
-  background: #EFF6FF;
+.mtld-logo-btn { cursor: pointer; flex: none; }
+.mtld-logo-preview {
+  max-height: 40px;
+  max-width: 110px;
+  border: 1px solid var(--hub-border, #E2E8F0);
+  border-radius: 8px;
+  background:
+    repeating-conic-gradient(#F1F5F9 0 25%, #fff 0 50%) 0 0/12px 12px;
+  padding: 2px;
+  object-fit: contain;
 }
-.mt-designer-card-body {
-  display: flex; flex-direction: column; gap: 4px;
+.mtld-logo-clear {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #FEF2F2;
+  color: #991B1B;
+  cursor: pointer;
+  font-size: 12px;
+  flex: none;
 }
-.mt-designer-card-title { font-weight: 600; color: #0F172A; }
-.mt-designer-card-desc { color: #475569; font-size: 13px; line-height: 1.5; }
-.mt-designer-card-slug {
+.mtld-logo-url-alt { margin-top: 6px; }
+.mtld-logo-url-alt summary {
+  font-size: 11.5px;
+  color: var(--hub-text-mute, #94A3B8);
+  cursor: pointer;
+}
+.mtld-logo-url-alt input { margin-top: 6px; }
+
+/* ═══ رفع تصميم خاص: منطقة اسحب أو انقر — نفس نمط رفع الشعار في الإعدادات ═══ */
+.mtld-custom-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-end;
+}
+.mtld-custom-name-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.mtld-custom-drop {
+  flex: 1;
+  min-width: 260px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 14px;
+  border: 2px dashed var(--hub-border, #E2E8F0);
+  border-radius: var(--hub-r-lg, 14px);
+  background: var(--hub-bg-soft, #F8FAFC);
+  cursor: pointer;
+  transition: all .18s ease;
+}
+.mtld-custom-drop:hover,
+.mtld-custom-drop:focus-visible {
+  border-color: var(--hub-brand, #7C5CFC);
+  background: var(--hub-brand-soft, #F4F1FE);
+}
+/* أثناء سحب ملف فوق المنطقة */
+.mtld-custom-drop.is-dragover {
+  border-color: var(--hub-brand, #7C5CFC);
+  border-style: solid;
+  background: var(--hub-brand-soft, #F4F1FE);
+  box-shadow: 0 0 0 4px var(--hub-brand-soft, #F4F1FE);
+}
+.mtld-custom-drop-icon {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  background: #fff;
+  border: 1px solid var(--hub-border, #E2E8F0);
+  border-radius: 10px;
+  font-size: 17px;
+  color: var(--hub-brand, #7C5CFC);
+}
+.mtld-custom-drop-text {
+  flex: 1;
+  min-width: 170px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.mtld-custom-drop-text strong {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--hub-text, #0F172A);
+}
+.mtld-custom-drop-text span {
+  font-size: 11px;
+  color: var(--hub-text-mute, #94A3B8);
+  font-weight: 700;
+}
+/* اسم الملف المختار قبل الرفع — شارة خضراء صغيرة */
+.mtld-custom-filename {
   align-self: flex-start;
-  font-family: ui-monospace, "Cairo", monospace;
+  color: var(--hub-green-ink, #047857) !important;
+  background: var(--hub-green-soft, #D1FAE5);
+  border-radius: 999px;
+  padding: 2px 9px;
+  direction: ltr;
+}
+.mtld-custom-pick-btn { flex: 0 0 auto; pointer-events: none; } /* الزر شكلي — النقرة على كامل المنطقة */
+.mtld-custom-submit { flex: 0 0 auto; }
+
+/* صف الحفظ */
+.mtld-save-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--hub-border, #E2E8F0);
+}
+.mtld-save-note {
+  font-size: 12px;
+  color: var(--hub-text-mute, #94A3B8);
+}
+
+/* عمود المعاينة الكبيرة — مثبّت أثناء التمرير.
+   ملاحظات التثبيت:
+     • top يحسب ارتفاع الشريط العلوي الثابت (--hr-topbar-h) — القيمة
+       القديمة 14px كانت تجعل المعاينة تنزلق خلف الشريط العلوي.
+     • align-self: start ضروري حتى لا يمدّد الجريد العمود لطول عمود
+       الحقول فيبطل أثر sticky (الافتراضي stretch يساوي الارتفاعين).
+     • max-height + تمرير داخلي عند الشاشات القصيرة كي لا يقصّ
+       الإطار الجوال خارج نافذة العرض. */
+.mtld-preview-col {
+  position: sticky;
+  top: calc(var(--hr-topbar-h, 50px) + 14px);
+  align-self: start;
+  max-height: calc(100vh - var(--hr-topbar-h, 50px) - 28px);
+  overflow-y: auto;
+}
+/* عمود واحد على الشاشات الضيقة — التثبيت هناك يحجب الحقول، فنلغيه. */
+@media (max-width: 1100px) {
+  .mtld-preview-col {
+    position: static;
+    max-height: none;
+    overflow: visible;
+  }
+}
+.mtld-slug {
+  font-family: ui-monospace, monospace;
   font-size: 11px;
   background: #F1F5F9;
   color: #475569;
   padding: 2px 6px;
   border-radius: 4px;
+  direction: ltr;
 }
 
-.mt-designer-preview-card { position: sticky; top: 16px; }
-.mt-designer-preview-body { padding: 0; }
-.mt-designer-frame {
-  width: 100%;
-  height: 640px;
-  border: 0;
-  display: block;
-  background: #fff;
+/* إطار الجوال حول المعاينة */
+.mtld-phone {
+  position: relative;
+  margin: 0 auto;
+  inline-size: min(100%, 406px);
+  border: 8px solid #0F172A;
+  border-radius: 26px;
+  background: #0F172A;
+  overflow: hidden;
+  box-shadow: 0 16px 36px rgba(15, 23, 42, .18);
 }
+.mtld-phone-notch {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 110px;
+  height: 14px;
+  background: #0F172A;
+  border-radius: 0 0 10px 10px;
+  z-index: 2;
+}
+.mtld-frame {
+  display: block;
+  inline-size: 100%;
+  block-size: 620px;
+  border: 0;
+  background: #fff;
+  border-radius: 18px;
+}
+.mtld-preview-hint {
+  margin: 10px 0 0;
+  text-align: center;
+  font-size: 11.5px;
+  color: var(--hub-text-mute, #94A3B8);
+}
+
+/* ═══ شريط النشر ═══════════════════════════════════════════════ */
+.mtld-deploy {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.mtld-deploy-text { flex: 1 1 320px; min-width: 0; }
+.mtld-deploy-text .mtld-lead { margin-bottom: 8px; }
+.mtld-confirm {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--hub-text, #0F172A);
+  cursor: pointer;
+}
+.mtld-confirm input { accent-color: var(--hub-brand, #2563EB); }
+.mtld-deploy-btn { flex: none; }
+
+/* نتيجة النشر */
+.mtld-deploy-result {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.8;
+  border: 1px solid transparent;
+}
+.mtld-deploy-result.is-ok {
+  background: #ECFDF5;
+  border-color: #A7F3D0;
+  color: #065F46;
+}
+.mtld-deploy-result.is-err {
+  background: #FEF2F2;
+  border-color: #FECACA;
+  color: #991B1B;
+}
+.mtld-deploy-result i { margin-top: 3px; }
+.mtld-deploy-result code {
+  font-size: 12px;
+  background: rgba(15, 23, 42, .06);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+.mtld-err-msg { font-size: 12px; }

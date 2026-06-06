@@ -1,0 +1,208 @@
+{# ═══════════════════════════════════════════════════════════════
+   رسائل أخطاء الهوتسبوت — التحكم بنصوص errors.txt الخاصة بالميكروتك.
+
+   البنية (نظام HOB v2):
+     1) صدفة الهيرو الموحّدة: العنوان + الغرض + مؤشرات KPI.
+     2) قسم واحد: جدول قابل للتحرير — كل صف = مفتاح خطأ
+        (مونوسبيس <bdi> + اسم عربي + تلميح «متى يظهر») + حقل النص
+        العربي (42px) + مفتاح تفعيل + زر استعادة الافتراضي للصف.
+     3) شريط الحفظ: زر أساسي + استعادة الكل + تلميح عن آلية النشر.
+
+   عند نشر صفحة الدخول لأي راوتر يُبنى errors.txt من هذه الرسائل
+   ويُرفع تلقائيًا إلى hotspot/errors.txt (انظر mt_login_designer).
+   ═══════════════════════════════════════════════════════════════ #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}رسائل أخطاء الهوتسبوت{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-triangle-exclamation"></i>{% endblock %}
+{% block page_title %}رسائل أخطاء الهوتسبوت{% endblock %}
+{% block page_sub %}<span class="sub">تحكّم بالنصوص التي تظهر للمشترك عند فشل الدخول على صفحة الهوت سبوت</span>{% endblock %}
+
+{% block head_extra %}{{ super() }}
+{# نظام النوافذ العائمة الموحّد (uds): مودال تأكيد «استعادة الكل» بدل confirm() #}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
+{% endblock %}
+
+{% block content %}
+{% set _custom_count = rows | selectattr('is_custom') | list | length %}
+
+<section class="he-wrap" id="hotspot-errors">
+
+  {# ───── صدفة الهيرو الموحّدة ───── #}
+  <section class="hub-hero-shell" data-testid="hotspot-errors-hero">
+  {{ hub.megahero(
+    "رسائل أخطاء الهوتسبوت",
+    subtitle="عدّل النصوص العربية التي تظهر للمشترك مكان رسالة الخطأ على صفحة الدخول. تُرفع تلقائيًا إلى الراوتر (errors.txt) عند نشر صفحة الدخول من مصمّم أي راوتر.",
+    icon="triangle-exclamation",
+    kpis=[
+      {'label': 'عدد الرسائل', 'value': rows|length, 'icon': 'list-check', 'variant': 'blue'},
+      {'label': 'رسائل معدّلة عن الافتراضي', 'value': _custom_count, 'icon': 'pen', 'variant': 'brand'},
+      {'label': 'صيغة الملف', 'value': 'errors.txt', 'icon': 'file-lines', 'variant': 'slate'}
+    ]
+  ) }}
+  </section>
+
+  {# ───── رسائل الحالة ───── #}
+  {% if saved %}
+  <div class="he-flash he-flash--ok" role="status">
+    <i class="fa-solid fa-circle-check"></i> تم حفظ الرسائل بنجاح — ستُرفع إلى الراوتر تلقائيًا في المرة القادمة التي تنشر فيها صفحة الدخول.
+  </div>
+  {% endif %}
+  {% if flash_ok %}
+  <div class="he-flash he-flash--ok" role="status">
+    <i class="fa-solid fa-circle-check"></i> {{ flash_ok }}
+  </div>
+  {% endif %}
+  {% if error %}
+  <div class="he-flash he-flash--err" role="alert">
+    <i class="fa-solid fa-triangle-exclamation"></i> {{ error }}
+  </div>
+  {% endif %}
+
+  <form method="post" action="{{ url_for('radius.hotspot_errors_save') }}">
+    {{ csrf_token_input() | safe }}
+
+    {% call hub.section("نصوص رسائل الأخطاء", icon="list-check",
+                        meta=(rows|length|string) ~ " رسالة") %}
+      <p class="he-lead">
+        لكل خطأ يحدث على صفحة الهوت سبوت نصّ يُعرض للمشترك. عدّل النص العربي كما تشاء،
+        أو عطّل أي رسالة لترك النص الأصلي المدمج في الراوتر.
+        <span class="hub-hint" tabindex="0" data-hint="يمكنك استخدام متغيّرات يملؤها الراوتر وقت العرض: $(error-orig) نص الخطأ الأصلي، $(ip) عنوان الجهاز، $(username) اسم المستخدم."><i class="fa-solid fa-info"></i></span>
+      </p>
+      <p class="he-vars">
+        متغيّرات متاحة داخل النص:
+        {% for v in allowed_vars %}<bdi class="he-var">{{ v }}</bdi>{% if not loop.last %} · {% endif %}{% endfor %}
+        — يملؤها الراوتر تلقائيًا وقت العرض.
+      </p>
+
+      <div class="he-table-scroll">
+      <table class="he-table">
+        <thead>
+          <tr>
+            <th class="he-th-key">مفتاح الخطأ</th>
+            <th class="he-th-msg">النص المعروض للمشترك</th>
+            <th class="he-th-en">مُفعّل</th>
+            <th class="he-th-act"></th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for r in rows %}
+          <tr class="he-row{% if not r.enabled %} is-off{% endif %}">
+            <td class="he-key">
+              <bdi class="he-key-code">{{ r.key }}</bdi>
+              <span class="he-key-name">{{ r.name_ar }}
+                <span class="hub-hint" tabindex="0" data-hint="{{ r.when_ar }}"><i class="fa-solid fa-info"></i></span>
+              </span>
+              {% if r.is_custom %}<span class="he-badge">معدّل</span>{% endif %}
+            </td>
+            <td class="he-msg">
+              <input type="text"
+                     class="he-input"
+                     name="msg__{{ r.key }}"
+                     value="{{ r.message_ar }}"
+                     maxlength="{{ msg_max_len }}"
+                     dir="auto"
+                     placeholder="{{ r.default_ar }}">
+            </td>
+            <td class="he-en">
+              <label class="he-toggle">
+                <input type="checkbox" name="en__{{ r.key }}" value="1"
+                       {% if r.enabled %}checked{% endif %}>
+                <span class="he-toggle-track"><span class="he-toggle-knob"></span></span>
+              </label>
+            </td>
+            <td class="he-act">
+              <button type="submit"
+                      class="hub-btn hub-btn--ghost hub-btn--sm"
+                      formaction="{{ url_for('radius.hotspot_errors_reset') }}"
+                      formnovalidate
+                      name="key" value="{{ r.key }}"
+                      title="استعادة النص الافتراضي لهذه الرسالة">
+                <i class="fa-solid fa-rotate-left"></i>
+              </button>
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      </div>
+    {% endcall %}
+
+    {# ───── شريط الحفظ ───── #}
+    <div class="he-savebar">
+      <div class="he-savebar-hint">
+        <i class="fa-solid fa-circle-info"></i>
+        تُحفظ الرسائل هنا، وتُرفع إلى كل راوتر تلقائيًا عند نشر صفحة الدخول من مصمّمه (أو ضمن حزمة ZIP للرفع اليدوي).
+      </div>
+      <div class="he-savebar-actions">
+        {# استعادة الكل عبر مودال تأكيد عائم موحّد بدل confirm() #}
+        <button type="button"
+                class="hub-btn hub-btn--ghost"
+                data-uds-modal-open="heResetAllModal">
+          <i class="fa-solid fa-rotate-left"></i> استعادة الكل
+        </button>
+        <button type="submit" class="hub-btn hub-btn--primary">
+          <i class="fa-solid fa-floppy-disk"></i> حفظ الرسائل
+        </button>
+      </div>
+    </div>
+  </form>
+</section>
+
+{# ───── مودال تأكيد «استعادة الكل» العائم الموحّد (بدل confirm) ───── #}
+{% call hub.modal("heResetAllModal", "استعادة كل الرسائل", icon="rotate-left", size="sm",
+   footer_html='<button type="button" class="hub-btn hub-btn--ghost" data-uds-modal-close>إلغاء</button>') %}
+  <div class="uds-modal-warn uds-modal-warn--amber">
+    <i class="fa-solid fa-triangle-exclamation"></i>
+    <span>ستُستعاد <strong>كل الرسائل</strong> إلى نصوصها الافتراضية المدمجة، وستفقد أي تعديلات أجريتها عليها. لا يؤثّر ذلك على الراوتر حتى تنشر صفحة الدخول من جديد.</span>
+  </div>
+  {# نموذج الاستعادة الكاملة: POST إلى نفس مسار الاستعادة بلا مفتاح = استعادة الكل #}
+  <form method="post" action="{{ url_for('radius.hotspot_errors_reset') }}" style="margin:14px 0 0;display:flex;justify-content:flex-end">
+    {{ csrf_token_input() | safe }}
+    <button type="submit" class="hub-btn hub-btn--danger">
+      <i class="fa-solid fa-rotate-left"></i> استعادة الكل
+    </button>
+  </form>
+{% endcall %}
+
+{# سلوك النوافذ العائمة الموحّد: فتح عبر data-uds-modal-open، إغلاق/ESC تلقائيًا #}
+<script src="{{ url_for('static', filename='js/unified_design.js') }}"></script>
+
+<style>
+.he-wrap{display:flex;flex-direction:column;gap:18px}
+.he-flash{display:flex;align-items:center;gap:8px;padding:12px 16px;border-radius:12px;font-size:14px;font-weight:600}
+.he-flash--ok{background:#ECFDF5;color:#065F46;border:1px solid #A7F3D0}
+.he-flash--err{background:#FEF2F2;color:#991B1B;border:1px solid #FECACA}
+.he-lead{color:#475569;font-size:14px;line-height:1.7;margin:0 0 6px}
+.he-vars{color:#64748B;font-size:12.5px;margin:0 0 14px}
+.he-var{display:inline-block;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;background:#F1F5F9;color:#334155;padding:2px 8px;border-radius:6px;direction:ltr;font-size:12px}
+.he-table-scroll{overflow-x:auto;border-radius:12px;border:1px solid #E2E8F0}
+.he-table{width:100%;border-collapse:collapse;font-size:14px;min-width:760px}
+.he-table thead th{background:#F8FAFC;color:#475569;font-weight:700;font-size:12.5px;text-align:right;padding:11px 14px;border-bottom:1px solid #E2E8F0;white-space:nowrap}
+.he-th-en,.he-th-act{text-align:center}
+.he-table tbody td{padding:12px 14px;border-bottom:1px solid #EEF2F7;vertical-align:middle}
+.he-table tbody tr:last-child td{border-bottom:0}
+.he-row.is-off{opacity:.55}
+.he-key{width:30%;min-width:230px}
+.he-key-code{display:inline-block;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;background:#EEF2FF;color:#4338CA;padding:2px 8px;border-radius:6px;direction:ltr;font-size:12.5px;margin-bottom:4px}
+.he-key-name{display:block;color:#0F172A;font-weight:600;font-size:13px}
+.he-badge{display:inline-block;margin-top:4px;font-size:10.5px;font-weight:700;color:#9333EA;background:#FAF5FF;border:1px solid #E9D5FF;border-radius:999px;padding:1px 8px}
+.he-msg{width:auto}
+.he-input{width:100%;height:42px;box-sizing:border-box;padding:0 14px;border:1.5px solid #CBD5E1;border-radius:10px;font-size:14px;font-family:inherit;background:#fff;transition:border-color .15s ease}
+.he-input:focus{outline:none;border-color:#6D28D9;box-shadow:0 0 0 3px rgba(109,40,217,.12)}
+.he-en{text-align:center;width:80px}
+.he-act{text-align:center;width:64px}
+.he-toggle{display:inline-flex;cursor:pointer;align-items:center}
+.he-toggle input{position:absolute;opacity:0;width:0;height:0}
+.he-toggle-track{width:42px;height:24px;border-radius:999px;background:#CBD5E1;position:relative;transition:background .15s ease}
+.he-toggle-knob{position:absolute;top:3px;right:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:transform .15s ease;box-shadow:0 1px 2px rgba(0,0,0,.2)}
+.he-toggle input:checked + .he-toggle-track{background:#7C3AED}
+.he-toggle input:checked + .he-toggle-track .he-toggle-knob{transform:translateX(-18px)}
+.he-savebar{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;background:#fff;border:1px solid #E2E8F0;border-radius:14px;padding:14px 18px}
+.he-savebar-hint{color:#64748B;font-size:12.5px;line-height:1.6;flex:1;min-width:240px}
+.he-savebar-hint i{color:#7C3AED;margin-inline-end:4px}
+.he-savebar-actions{display:flex;gap:10px;flex-wrap:wrap}
+.hub-btn--sm{padding:7px 10px;font-size:13px}
+</style>
+{% endblock %}

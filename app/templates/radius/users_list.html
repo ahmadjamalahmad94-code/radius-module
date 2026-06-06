@@ -24,6 +24,12 @@
 {% block head_extra %}
 {{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/subscribers_polish.css') }}">
+{# نظام الجداول الموحد (uds): نستعير المظهر فقط — كروم المُرقِّم
+   uds-pager-* وشريط الأدوات «أعمدة» — كما في cards_batches/cards_of_batch.
+   ⚠ لا نضيف data-uds-table على جدول المشتركين: الترقيم هنا يملكه
+   dashboard_table.js ومنطق الأعمدة/الفرز خاص بالصفحة، وuds_table.js
+   سيتصارع معهما لو فُعِّل. القشرة البصرية تأتي من CSS أدناه. #}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
 <style>
   .usq-panel{
     display:flex; align-items:center; justify-content:space-between; gap:14px;
@@ -134,6 +140,10 @@
     background:#fff; color:var(--hub-text-soft); font-size:12px; font-weight:800; cursor:pointer;
   }
   .usq-sms-tpl:hover{ border-color:var(--hub-brand,#7c3aed); background:#f5f3ff; color:#5b21b6; }
+  /* قائمة مستلمي الرسالة في وضع الإرسال الجماعي */
+  .usq-sms-recips{ display:flex; flex-wrap:wrap; gap:5px; margin-top:5px; max-height:96px; overflow:auto; }
+  .usq-sms-recip{ display:inline-flex; align-items:center; gap:5px; padding:3px 10px; border-radius:999px;
+    background:#f5f3ff; border:1px solid #ddd6fe; color:#5b21b6; font-size:12px; font-weight:800; }
   /* Inline loan result message (AJAX) */
   .usq-loan-msg{ margin-top:8px; padding:8px 10px; border-radius:var(--hub-r-md); font-size:12.5px; font-weight:800; line-height:1.6; }
   .usq-loan-msg[hidden]{ display:none; }
@@ -238,6 +248,118 @@
   }
   .col-picker-foot button{ flex:1; }
 
+  /* ── جسر المظهر الموحّد (uds bridge) ─────────────────────────
+     على سابقة cards_batches/cards_of_batch: نستعير كروم نظام
+     الجداول الموحّد (unified_design.css) بدون uds_table.js.
+     dashboard_table.js يبقى مالك الترقيم كما هو — هذه القواعد
+     تعيد تجليد عناصره (.dt-pager/.dt-size/.dt-pages) لتطابق
+     uds-table-pager / uds-pager-size / uds-pager-info /
+     uds-pager-btn حرفيًا (نفس الخطوط والألوان والأقطار). */
+
+  /* 1) شريط الأدوات العلوي (هيدر القسم): «N صف» + زر «الأعمدة»
+        بنفس طباعة uds-table-toolbar (.uds-table-meta). */
+  [data-users-page] .hub-section-head-meta{
+    display:inline-flex; align-items:center; gap:10px;
+    font-size:12px; color:var(--hub-text-mute); font-weight:800;
+  }
+
+  /* 2) لوحة منتقي الأعمدة — نفس كروم قائمة uds-menu. */
+  [data-users-page] .col-picker-panel{
+    border-radius:var(--hub-r-lg, 14px);
+    border:1px solid var(--hub-border-soft, #e2e8f0);
+    box-shadow:0 14px 36px rgba(15,23,42,.18);
+    padding:7px;
+  }
+  [data-users-page] .col-picker-item{
+    border-radius:var(--hub-r-md, 10px);
+    font-size:13px; font-weight:700; gap:9px;
+  }
+  [data-users-page] .col-picker-item input{
+    width:15px; height:15px; accent-color:var(--hub-brand); margin:0;
+  }
+
+  /* 3) المُرقِّم السفلي — مظهر .uds-table-pager فوق DOM الذي يبنيه
+        dashboard_table.js. display:contents يفكّ .dt-controls حتى
+        تصبح القائمة المنسدلة والأزرار عناصر مرنة مباشرة فنرتّبها
+        كصفّ uds: «صفوف بالصفحة» + select ← المعلومات ← أزرار التنقل. */
+  [data-users-page] .dt-pager{
+    /* فجوة 4px = فجوة uds-pager-nav بين أزرار التنقل؛ المسافات الأوسع
+       بين المجموعات تأتي من هامش الوسم وmargin-inline:auto للمعلومات. */
+    display:flex; align-items:center; justify-content:flex-start;
+    gap:4px; flex-wrap:wrap;
+    padding:11px 14px;
+    border-top:1px solid var(--hub-border-soft, #e2e8f0);
+    background:linear-gradient(180deg, #fff, var(--hub-bg-soft, #f8fafc));
+    /* المُرقِّم يعيش داخل حاوية التمرير الأفقي (.hr-table-scroll) —
+       sticky على بداية المحور يثبّته بعرض الإطار المرئي مهما
+       تمرّر الجدول العريض تحته. */
+    position:sticky; inset-inline-start:0;
+  }
+  [data-users-page] .dt-controls{ display:contents; }
+  /* وسم «صفوف بالصفحة» قبل القائمة (uds-pager-size) */
+  [data-users-page] .dt-controls::before{
+    content:"صفوف بالصفحة";
+    order:-2; margin-inline-end:4px; /* 4px + فجوة 4px = 8px مثل uds-pager-size */
+    font-size:12px; color:var(--hub-text-soft, #475569); font-weight:800;
+  }
+  [data-users-page] .dt-size{
+    order:-1;
+    min-height:0; height:auto;
+    font-family:inherit; font-size:12.5px; font-weight:800;
+    color:var(--hub-text, #0f172a); background:var(--hub-bg-card, #fff);
+    border:1px solid var(--hub-border, #e2e8f0); border-radius:var(--hub-r-md, 10px);
+    padding:5px 9px; cursor:pointer;
+  }
+  /* hub_select.js يلفّ .dt-size بغلاف .hbsel — الغلاف نفسه يحتاج
+     الترتيب بجانب الوسم، والزر بمقاس مضغوط يطابق أزرار التنقل */
+  [data-users-page] .dt-controls > .hbsel{
+    order:-1; min-width:0; margin-inline-end:8px;
+  }
+  [data-users-page] .dt-controls > .hbsel .hbsel-trigger{
+    height:30px; min-width:64px; padding:0 10px;
+    font-size:12.5px;
+  }
+  /* «X – Y من N» في المنتصف (uds-pager-info) */
+  [data-users-page] .dt-info{
+    order:0; margin-inline:auto;
+    font-size:12px; color:var(--hub-text-mute, #94a3b8); font-weight:700;
+  }
+  /* أزرار التنقل + أرقام الصفحات — كروم uds-pager-btn */
+  [data-users-page] .dt-pages{ display:inline-flex; align-items:center; gap:4px; }
+  [data-users-page] .dt-controls button,
+  [data-users-page] .dt-pages button{
+    min-width:30px; min-height:30px; height:30px; padding:0 9px;
+    display:inline-grid; place-items:center;
+    border:1px solid var(--hub-border, #e2e8f0); border-radius:var(--hub-r-md, 10px);
+    background:var(--hub-bg-card, #fff); color:var(--hub-text-soft, #475569);
+    font-family:inherit; font-weight:800; font-size:12.5px; cursor:pointer;
+    transition:border-color .15s ease, color .15s ease;
+  }
+  [data-users-page] .dt-controls button:hover:not(:disabled),
+  [data-users-page] .dt-pages button:hover:not(:disabled){
+    border-color:var(--hub-brand-line, #c7b9f7); color:var(--hub-brand-ink, #5b21b6);
+    background:var(--hub-bg-card, #fff);
+  }
+  [data-users-page] .dt-pages button.active{
+    background:linear-gradient(135deg, var(--hub-brand, #7c3aed), var(--hub-brand-deep, #5b21b6));
+    color:#fff; border-color:transparent;
+  }
+  [data-users-page] .dt-controls button:disabled{ opacity:.45; cursor:default; }
+  /* استبدال محارف ⏪◀▶⏩ بسهام Font Awesome (نفس chevrons جداول uds).
+     font-size:0 يخفي المحرف النصي والأيقونة تأتي من ::before. RTL:
+     «السابقة» تشير يمينًا و«التالية» يسارًا، والأولى/الأخيرة زوايا مزدوجة. */
+  [data-users-page] .dt-controls button[data-act]{ font-size:0; }
+  [data-users-page] .dt-controls button[data-act]::before{
+    font-family:"Font Awesome 6 Free"; font-weight:900; font-size:11px;
+  }
+  [data-users-page] .dt-controls button[data-act="first"]::before{ content:"\f101"; }
+  [data-users-page] .dt-controls button[data-act="prev"]::before{  content:"\f054"; }
+  [data-users-page] .dt-controls button[data-act="next"]::before{  content:"\f053"; }
+  [data-users-page] .dt-controls button[data-act="last"]::before{  content:"\f100"; }
+  @media (max-width: 780px){
+    [data-users-page] .dt-info{ flex-basis:100%; order:1; text-align:center; }
+  }
+
   /* ── Per-row action menus (two tidy dropdowns) ───────────── */
   .urow-actions{ display:inline-flex; gap:6px; flex-wrap:nowrap; }
   .urow-menu-btn{ white-space:nowrap; }
@@ -332,7 +454,9 @@
     box-shadow:
       0 1px 0 rgba(255,255,255,.85) inset,
       0 4px 14px rgba(15,23,42,.05);
-    overflow:hidden;
+    /* كان overflow:hidden يقصّ القوائم المنسدلة (usq-menu-panel) الخارجة
+       عن حدود الهيدر — فكانت تفتح ولا تظهر. */
+    overflow:visible;
   }
   /* Hero band — now seamless inside the shell. */
   .users-hero-shell > .users-mega-hero{
@@ -362,6 +486,42 @@
     .users-mega-hero-text{ flex:1 1 100%; }
     .users-mega-hero-actions{ flex:1 1 100%; justify-content:flex-start; }
   }
+
+  /* ── شريط البحث المطوّر (نطاق + أيقونة + مسح + مدى تاريخ) ── */
+  .usrch-scope-label{
+    font-size:12.5px; font-weight:800; color:var(--hub-text-soft,#475569);
+    white-space:nowrap; align-self:center;
+  }
+  .usrch-box{
+    position:relative; display:flex; align-items:center; min-width:0;
+  }
+  .usrch-box[hidden]{ display:none; }
+  /* الأيقونة داخل الحقل من جهة البداية (يمين في RTL) */
+  .usrch-icon{
+    position:absolute; inset-inline-start:12px; pointer-events:none;
+    color:var(--hub-text-mute,#94a3b8); font-size:13px;
+  }
+  .usrch-box .usrch-input{
+    width:100%;
+    padding-inline-start:34px;   /* مساحة الأيقونة */
+    padding-inline-end:32px;     /* مساحة زر المسح */
+  }
+  .usrch-clear{
+    position:absolute; inset-inline-end:8px;
+    width:22px; height:22px; border:0; border-radius:50%;
+    display:inline-flex; align-items:center; justify-content:center;
+    background:var(--hub-bg-soft,#f1f5f9); color:var(--hub-text-soft,#64748b);
+    cursor:pointer; font-size:11px; line-height:1; padding:0;
+  }
+  .usrch-clear:hover{ background:#fee2e2; color:#991b1b; }
+  .usrch-dates{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .usrch-dates[hidden]{ display:none; }
+  .usrch-date-label{
+    display:inline-flex; align-items:center; gap:6px;
+    font-size:12.5px; font-weight:800; color:var(--hub-text-soft,#475569);
+    white-space:nowrap;
+  }
+  .usrch-date{ min-width:140px; }
 </style>
 {% endblock %}
 
@@ -413,11 +573,50 @@
 
 {# ───── Filter Bar (inside the hero shell) ────────────────── #}
 <form method="get" class="hub-filterbar hr-toolbar">
-  <input class="hub-input grow" type="text" name="q" placeholder="بحث بالاسم أو اسم الدخول أو الجوال..." value="{{ q or '' }}">
+  {# ── شريط البحث المطوّر ──────────────────────────────────────
+     «البحث بواسطة» + حقل بحث بأيقونة وزر مسح + مدى تاريخ من/إلى:
+       • القائمة data-users-search-scope تحدد نطاق الفلترة الفورية
+         (كل الأعمدة / اليوزر / الاسم / الجوال / تاريخ الإنشاء).
+       • عند اختيار «تاريخ الإنشاء» يظهر حقلا «من / إلى» ويُفلتر
+         الجدول فوريًا على عمود الإنشاء (data-sort-value = timestamp).
+       • حقل q يحتفظ باسمه وبخاصية data-users-live-search كما هي —
+         الفلترة الفورية وإرسال البحث للخادم (Enter/تطبيق) بلا تغيير.
+       • عناصر النطاق والتاريخ بلا name فلا تُرسل للخادم (عميل فقط). #}
+  <label class="usrch-scope-label" for="usrch-scope">البحث بواسطة</label>
+  <select class="hub-select" id="usrch-scope" data-users-search-scope
+          aria-label="البحث بواسطة">
+    <option value="">كل الأعمدة</option>
+    <option value="user">اليوزر</option>
+    <option value="name">الاسم</option>
+    <option value="mobile">الجوال</option>
+    <option value="created">تاريخ الإنشاء</option>
+  </select>
+  <div class="usrch-box grow" data-users-search-box>
+    <i class="fa-solid fa-magnifying-glass usrch-icon" aria-hidden="true"></i>
+    <input class="hub-input usrch-input" type="text" name="q" data-users-live-search
+           placeholder="بحث بالاسم أو اسم الدخول أو الجوال..." value="{{ q or '' }}">
+    <button type="button" class="usrch-clear" data-users-search-clear
+            title="مسح البحث" aria-label="مسح البحث" hidden>
+      <i class="fa-solid fa-xmark"></i>
+    </button>
+  </div>
+  <div class="usrch-dates" data-users-date-range hidden>
+    <label class="usrch-date-label">من
+      <input class="hub-input usrch-date" type="date" data-users-date-from aria-label="تاريخ الإنشاء من">
+    </label>
+    <label class="usrch-date-label">إلى
+      <input class="hub-input usrch-date" type="date" data-users-date-to aria-label="تاريخ الإنشاء إلى">
+    </label>
+  </div>
+  {# تعريب قيم الحالة الخام للعرض؛ القيمة المُرسَلة للخادم تبقى الخام (enabled…) #}
+  {% set _status_ar = {
+    'enabled': 'مفعَّل', 'disabled': 'معطَّل', 'expired': 'منتهٍ',
+    'suspended': 'موقوف', 'pending': 'قيد الانتظار'
+  } %}
   <select class="hub-select" name="status">
     <option value="">كل الحالات</option>
     {% for s in statuses %}
-      <option value="{{ s }}" {% if status == s %}selected{% endif %}>{{ s }}</option>
+      <option value="{{ s }}" {% if status == s %}selected{% endif %}>{{ _status_ar.get(s, s) }}</option>
     {% endfor %}
   </select>
   <select class="hub-select" name="plan_id">
@@ -434,8 +633,12 @@
   </select>
   {{ hub.btn("تطبيق",   icon="filter", variant="primary",   type="submit", size="sm") }}
   <span class="hub-spacer"></span>
-  {{ hub.btn("CSV",    icon="file-csv",   variant="secondary", size="sm") }}
-  {{ hub.btn("طباعة", icon="print",      variant="ghost",     size="sm") }}
+  {# أزرار التصدير الثلاثة (أيقونات فقط): CSV محلي، Excel/PDF عبر
+     /admin/radius/export/table — كلها عبر window.hubTableExport #}
+  {{ hub.btn("", icon="file-csv",   variant="secondary", size="sm", attrs='data-users-export="csv"  title="CSV"   aria-label="CSV"') }}
+  {{ hub.btn("", icon="file-excel", variant="secondary", size="sm", attrs='data-users-export="xlsx" title="Excel" aria-label="Excel"') }}
+  {{ hub.btn("", icon="file-pdf",   variant="secondary", size="sm", attrs='data-users-export="pdf"  title="PDF"   aria-label="PDF"') }}
+  {{ hub.btn("طباعة", icon="print",      variant="ghost",     size="sm", attrs='data-users-print') }}
 </form>
 
 <div class="usq-panel" data-users-quick-panel hidden>
@@ -452,7 +655,12 @@
     .usq-menu > summary::-webkit-details-marker{ display:none; }
     .usq-menu .usq-caret{ font-size:10px; transition:transform .15s ease; }
     .usq-menu[open] .usq-caret{ transform:rotate(180deg); }
-    .usq-menu-panel{ position:absolute; z-index:70; inset-inline-start:0; margin-top:6px; min-width:230px; display:flex; flex-direction:column; gap:4px; padding:8px; background:#fff; border:1px solid var(--hub-border,#e7e9f2); border-radius:12px; box-shadow:0 8px 24px rgba(16,24,40,.12); }
+    /* z-index 90 = فوق شريط التحديد اللاصق وكل عناصر الصفحة (إصلاح القص). */
+    .usq-menu-panel{ position:absolute; z-index:90; inset-inline-start:0; margin-top:6px; min-width:230px; max-width:min(320px, calc(100vw - 28px)); display:flex; flex-direction:column; gap:4px; padding:8px; background:#fff; border:1px solid var(--hub-border,#e7e9f2); border-radius:12px; box-shadow:0 8px 24px rgba(16,24,40,.12); }
+    /* آخر قائمة في الشريط (إجراءات إدارية) تفتح محاذيةً لنهاية الزر بدل
+       بدايته، حتى لا تتجاوز حافة المحتوى الجانبية وتُقص بـ overflow-x
+       الموجود على .main — اللوحة تبقى كاملةً داخل نافذة العرض. */
+    .usq-menu:last-child .usq-menu-panel{ inset-inline-start:auto; inset-inline-end:0; }
     .usq-menu-panel .hub-btn, .usq-menu-panel form{ width:100%; }
     .usq-menu-panel .hub-btn{ justify-content:flex-start; }
     @media (prefers-reduced-motion: reduce){ .usq-menu .usq-caret{ transition:none; } }
@@ -472,22 +680,24 @@
         <i class="fa-solid fa-bolt"></i> التفعيل والرصيد <i class="fa-solid fa-chevron-down usq-caret"></i>
       </summary>
       <div class="usq-menu-panel">
-        <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-usq-open="extend">
+        {# data-multi-ok: كل إجراءات التفعيل والرصيد تدعم التحديد المتعدد —
+           النافذة تعرض المستلمين وتُرسل لمسار الدفعة (القيمة لكل مشترك). #}
+        <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-multi-ok data-usq-open="extend">
           <i class="fa-solid fa-clock"></i> إضافة وقت
         </button>
-        <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-usq-open="quota">
+        <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-multi-ok data-usq-open="quota">
           <i class="fa-solid fa-gauge-high"></i> إضافة كوتة
         </button>
-        <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-usq-open="quota-reset">
+        <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-multi-ok data-usq-open="quota-reset">
           <i class="fa-solid fa-rotate-left"></i> استعادة الكوتة اليومية
         </button>
-        <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-usq-open="balance">
+        <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-multi-ok data-usq-open="balance">
           <i class="fa-solid fa-coins"></i> إضافة رصيد نقدي
         </button>
-        <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-usq-open="payment">
+        <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-multi-ok data-usq-open="payment">
           <i class="fa-solid fa-money-bill-wave"></i> دفعة نقدية
         </button>
-        <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-usq-open="loan">
+        <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-multi-ok data-usq-open="loan">
           <i class="fa-solid fa-hand-holding-dollar"></i> إضافة سلفة
         </button>
       </div>
@@ -497,24 +707,32 @@
         <i class="fa-solid fa-sliders"></i> إجراءات إدارية <i class="fa-solid fa-chevron-down usq-caret"></i>
       </summary>
       <div class="usq-menu-panel">
-        <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-usq-open="sms">
+        {# data-multi-ok: إرسال الرسائل يدعم التحديد المتعدد فلا يُعطَّل #}
+        <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-multi-ok data-usq-open="sms">
           <i class="fa-solid fa-paper-plane"></i> إرسال رسالة قصيرة
         </button>
         <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-usq-open="plan">
           <i class="fa-solid fa-right-left"></i> تغيير العرض
         </button>
-        <form method="post" data-single-action data-usq-form="disconnect" action="{{ url_for('radius.online_disconnect') }}">
+        {# data-multi-ok: مسار الفصل يقبل أصلًا حقول username متكررة (getlist) #}
+        <form method="post" data-single-action data-multi-ok data-usq-form="disconnect" action="{{ url_for('radius.online_disconnect') }}">
           <input type="hidden" name="username" data-usq-field="username">
           <button class="hub-btn hub-btn--ghost hub-btn--sm" type="submit">
             <i class="fa-solid fa-scissors"></i> فصل الاتصال
           </button>
         </form>
-        <form method="post" data-single-action data-usq-form="toggle" data-action-template="{{ url_for('radius.users_toggle', username='__USERNAME__') }}">
+        {# data-multi-ok: عند تحديد عدة مشتركين يتحول action لمسار التبديل الجماعي #}
+        <form method="post" data-single-action data-multi-ok data-usq-form="toggle"
+              data-action-template="{{ url_for('radius.users_toggle', username='__USERNAME__') }}"
+              data-bulk-action="{{ url_for('radius.users_toggle_bulk') }}">
           <button class="hub-btn hub-btn--ghost hub-btn--sm" type="submit" data-usq-toggle-label>
             <i class="fa-solid fa-pause"></i> تغيير الحالة
           </button>
         </form>
-        <form method="post" data-single-action data-usq-form="delete" data-action-template="{{ url_for('radius.users_delete', username='__USERNAME__') }}">
+        {# data-multi-ok: عند تحديد عدة مشتركين يتحول action لمسار الأرشفة الجماعية #}
+        <form method="post" data-single-action data-multi-ok data-usq-form="delete"
+              data-action-template="{{ url_for('radius.users_delete', username='__USERNAME__') }}"
+              data-bulk-action="{{ url_for('radius.users_bulk_delete') }}">
           <button class="hub-btn hub-btn--danger hub-btn--sm" type="submit">
             <i class="fa-solid fa-box-archive"></i> أرشفة
           </button>
@@ -553,7 +771,7 @@
 {{ _total|string }} صف
 <span class="col-picker-wrap" style="margin-inline-start:8px">
   <button type="button" class="hub-btn hub-btn--secondary hub-btn--sm" data-col-picker-toggle aria-haspopup="true" aria-expanded="false">
-    <i class="fa-solid fa-table-columns"></i> الأعمدة
+    <i class="fa-solid fa-table-columns"></i> أعمدة
   </button>
   <div class="col-picker-panel" data-col-picker-panel hidden role="menu" aria-label="اختيار الأعمدة"></div>
 </span>
@@ -580,7 +798,7 @@
           <th data-col="upload"     data-sortable="number" class="num">رفع</th>
           <th data-col="sessions"   data-sortable="number" class="num">الجلسات</th>
           <th data-col="mac"        data-sortable="text">MAC</th>
-          <th data-col="ip"         data-sortable="text">العنوان / الجهاز</th>
+          <th data-col="ip"         data-sortable="text">عنوان IP</th>
           <th data-col="speed"      data-sortable="number" class="num">السرعة</th>
           <th data-col="first_login" data-sortable="number">أول استخدام</th>
           <th data-col="expire"      data-sortable="number">ينتهي</th>
@@ -679,7 +897,10 @@
             {% if u.status == 'enabled' %}{{ hub.pill("مفعَّل", variant="green") }}
             {% elif u.status == 'expired' %}{{ hub.pill("منتهٍ", variant="amber") }}
             {% elif u.status == 'disabled' %}{{ hub.pill("معطَّل", variant="red") }}
-            {% else %}{{ hub.pill(u.status, variant="grey") }}{% endif %}
+            {% elif u.status == 'suspended' %}{{ hub.pill("موقوف", variant="grey") }}
+            {% elif u.status == 'pending' %}{{ hub.pill("قيد الانتظار", variant="grey") }}
+            {# لا تُعرَض حالة خام بالإنجليزية؛ الخام محفوظ في data-sort-value/title #}
+            {% else %}<span title="{{ u.status }}">{{ hub.pill(u.status, variant="grey") }}</span>{% endif %}
           </td>
           <td data-col="remaining" data-sort-value="{{ _expire_ts }}" data-expire-ts="{{ _expire_ts }}" class="num mono">
             {% if _expire_ts %}<span data-remaining-display>—</span>{% else %}—{% endif %}
@@ -809,11 +1030,18 @@
   </div>
 {% endcall %}
 {% else %}
-{{ hub.empty(
-  "لا مشتركين بهذه الفلترة",
-  sub="جرّب تخفيف معايير البحث أو أضف مشترك جديد من الزر أعلى الصفحة.",
-  icon="users-slash"
-) }}
+{# حالة فارغة أنيقة: عنوان + سبب + زر CTA مباشر (ماكرو hub.empty لا يدعم زرًا) #}
+<div style="text-align:center">
+  {{ hub.empty(
+    "اللوحة فارغة — لا مشتركين بهذه الفلترة",
+    sub="جرّب تخفيف معايير البحث، أو أنشئ مشتركًا جديدًا للبدء.",
+    icon="users-slash"
+  ) }}
+  <a class="hub-btn hub-btn--primary" href="{{ url_for('radius.users_new') }}"
+     style="margin-top:4px">
+    <i class="fa-solid fa-user-plus"></i> إضافة مشترك
+  </a>
+</div>
 {% endif %}
 
 <div class="usq-modal" data-usq-modal="plan" hidden>
@@ -874,8 +1102,8 @@
         </div>
       </div>
       <div class="usq-foot">
-        <button class="hub-btn hub-btn--ghost" type="button" data-usq-close>إغلاق</button>
-        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-check"></i> موافق</button>
+        <button class="hub-btn hub-btn--ghost" type="button" data-usq-close>إلغاء</button>
+        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-check"></i> تغيير العرض</button>
       </div>
     </form>
   </div>
@@ -883,17 +1111,30 @@
 
 <div class="usq-modal" data-usq-modal="extend" hidden>
   <div class="usq-dialog" role="dialog" aria-modal="true" aria-labelledby="usq-extend-title">
-    <form method="post" data-usq-modal-form="extend" data-action-template="{{ url_for('radius.users_extend', username='__USERNAME__') }}">
+    <form method="post" data-usq-modal-form="extend"
+          data-action-template="{{ url_for('radius.users_extend', username='__USERNAME__') }}"
+          data-bulk-action="{{ url_for('radius.users_extend_bulk') }}">
       <input type="hidden" name="minutes" data-usq-minutes value="1440">
+      {# حاوية حقول usernames المخفية — تُملأ بالـ JS عند التنفيذ الجماعي #}
+      <div data-usq-multi-usernames hidden></div>
       <div class="usq-head">
         <h3 id="usq-extend-title">إضافة وقت</h3>
         <button class="hub-btn hub-btn--ghost hub-btn--icon" type="button" data-usq-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="usq-body">
-        <div class="usq-current">
+        <div class="usq-current" data-usq-single-box>
           <div><span>المشترك</span><strong data-usq-current="username">—</strong></div>
           <div><span>العرض الحالي</span><strong data-usq-current="plan">—</strong></div>
           <div><span>سعر الباقة</span><strong data-usq-current="price">—</strong></div>
+        </div>
+        {# وضع التنفيذ الجماعي — قائمة المشتركين المحدَّدين + تنبيه «لكل مشترك» #}
+        <div class="usq-field wide" data-usq-multi-box hidden>
+          المشتركون المحدَّدون (<span data-usq-multi-count>0</span>)
+          <div class="usq-sms-recips" data-usq-multi-list></div>
+          <div class="hub-text-mute small" style="margin-top:6px;line-height:1.6;font-weight:700">
+            المدة المحدَّدة تُضاف لكل مشترك على حدة (يوم = يوم لكل واحد)؛
+            وفي الوضع المدفوع/الدين تُحتسب القيمة تلقائيًا من سعر كل مشترك.
+          </div>
         </div>
         <div class="usq-form-grid">
           <label class="usq-field wide">عدد الأيام
@@ -935,7 +1176,7 @@
         </label>
       </div>
       <div class="usq-foot">
-        <button class="hub-btn hub-btn--ghost" type="button" data-usq-close>إغلاق</button>
+        <button class="hub-btn hub-btn--ghost" type="button" data-usq-close>إلغاء</button>
         <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-plus"></i> إضافة</button>
       </div>
     </form>
@@ -944,16 +1185,41 @@
 
 <div class="usq-modal" data-usq-modal="sms" hidden>
   <div class="usq-dialog" role="dialog" aria-modal="true" aria-labelledby="usq-sms-title">
-    <form method="post" data-usq-modal-form="sms" data-action-template="{{ url_for('radius.users_send_sms', username='__USERNAME__') }}">
+    <form method="post" data-usq-modal-form="sms"
+          data-action-template="{{ url_for('radius.users_send_sms', username='__USERNAME__') }}"
+          data-bulk-action="{{ url_for('radius.users_send_sms_bulk') }}">
+      {# حاوية حقول usernames المخفية — تُملأ بالـ JS عند الإرسال الجماعي #}
+      <div data-sms-usernames hidden></div>
       <div class="usq-head">
-        <h3 id="usq-sms-title">إرسال رسالة قصيرة للمشترك</h3>
+        <h3 id="usq-sms-title" data-sms-title>إرسال رسالة قصيرة للمشترك</h3>
         <button class="hub-btn hub-btn--ghost hub-btn--icon" type="button" data-usq-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="usq-body">
-        <div class="usq-current">
+        {# وضع مشترك واحد — البيانات الحالية كما كانت #}
+        <div class="usq-current" data-sms-single>
           <div><span>المشترك</span><strong data-usq-current="username">—</strong></div>
           <div><span>العرض الحالي</span><strong data-usq-current="plan">—</strong></div>
           <div><span>ينتهي</span><strong data-usq-current="expire">—</strong></div>
+        </div>
+        {# وضع الإرسال الجماعي — قائمة المستلمين المحددين #}
+        <div class="usq-field wide" data-sms-multi hidden>
+          المستلمون (<span data-sms-multi-count>0</span> مشترك)
+          <div class="usq-sms-recips" data-sms-multi-list></div>
+        </div>
+        {# اختيار قناة الإرسال — SMS أو واتساب (كلاهما مفعّل في محرك الإشعارات) #}
+        <div class="usq-field wide">قناة الإرسال
+          <div class="usq-seg" style="margin-top:4px">
+            <label data-sms-channel-seg="sms" class="is-active">
+              <input type="radio" name="channel" value="sms" checked data-sms-channel-input>
+              <i class="fa-solid fa-comment-sms usq-seg-ico"></i>
+              <span><strong>رسالة SMS</strong><small>عبر مزوّد الرسائل القصيرة.</small></span>
+            </label>
+            <label data-sms-channel-seg="whatsapp">
+              <input type="radio" name="channel" value="whatsapp" data-sms-channel-input>
+              <i class="fa-brands fa-whatsapp usq-seg-ico"></i>
+              <span><strong>واتساب</strong><small>عبر قناة واتساب المهيّأة.</small></span>
+            </label>
+          </div>
         </div>
         <div class="usq-field wide">قوالب جاهزة — اضغط لتعبئة الرسالة
           <div class="usq-sms-tpls" style="margin-top:4px">
@@ -969,7 +1235,7 @@
         </label>
       </div>
       <div class="usq-foot">
-        <button class="hub-btn hub-btn--ghost" type="button" data-usq-close>إغلاق</button>
+        <button class="hub-btn hub-btn--ghost" type="button" data-usq-close>إلغاء</button>
         <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-paper-plane"></i> إرسال</button>
       </div>
     </form>
@@ -978,12 +1244,24 @@
 
 <div class="usq-modal" data-usq-modal="quota" hidden>
   <div class="usq-dialog" role="dialog" aria-modal="true" aria-labelledby="usq-quota-title">
-    <form method="post" data-usq-modal-form="quota" data-action-template="{{ url_for('radius.users_quota_topup', username='__USERNAME__') }}">
+    <form method="post" data-usq-modal-form="quota"
+          data-action-template="{{ url_for('radius.users_quota_topup', username='__USERNAME__') }}"
+          data-bulk-action="{{ url_for('radius.users_quota_topup_bulk') }}">
+      {# حاوية حقول usernames المخفية — تُملأ بالـ JS عند التنفيذ الجماعي #}
+      <div data-usq-multi-usernames hidden></div>
       <div class="usq-head">
         <h3 id="usq-quota-title">إضافة كوتة</h3>
         <button class="hub-btn hub-btn--ghost hub-btn--icon" type="button" data-usq-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="usq-body">
+        {# وضع التنفيذ الجماعي — قائمة المشتركين المحدَّدين + تنبيه «لكل مشترك» #}
+        <div class="usq-field wide" data-usq-multi-box hidden>
+          المشتركون المحدَّدون (<span data-usq-multi-count>0</span>)
+          <div class="usq-sms-recips" data-usq-multi-list></div>
+          <div class="hub-text-mute small" style="margin-top:6px;line-height:1.6;font-weight:700">
+            حجم الكوتة (والمبلغ إن وُجد) يُضاف لكل مشترك على حدة، لا يُقسَّم بينهم.
+          </div>
+        </div>
         <div class="usq-form-grid">
           <label class="usq-field">حجم الكوتة
             {{ unit_input_picker(name="quota_mb", value=0, kind="quota") }}
@@ -1031,7 +1309,7 @@
         </label>
       </div>
       <div class="usq-foot">
-        <button class="hub-btn hub-btn--ghost" type="button" data-usq-close>إغلاق</button>
+        <button class="hub-btn hub-btn--ghost" type="button" data-usq-close>إلغاء</button>
         <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-plus"></i> إضافة</button>
       </div>
     </form>
@@ -1040,16 +1318,28 @@
 
 <div class="usq-modal" data-usq-modal="quota-reset" hidden>
   <div class="usq-dialog" role="dialog" aria-modal="true" aria-labelledby="usq-quota-reset-title">
-    <form method="post" data-usq-modal-form="quota-reset" data-action-template="{{ url_for('radius.users_quota_reset_daily', username='__USERNAME__') }}">
+    <form method="post" data-usq-modal-form="quota-reset"
+          data-action-template="{{ url_for('radius.users_quota_reset_daily', username='__USERNAME__') }}"
+          data-bulk-action="{{ url_for('radius.users_quota_reset_daily_bulk') }}">
+      {# حاوية حقول usernames المخفية — تُملأ بالـ JS عند التنفيذ الجماعي #}
+      <div data-usq-multi-usernames hidden></div>
       <div class="usq-head">
         <h3 id="usq-quota-reset-title">استعادة الكوتة اليومية</h3>
         <button class="hub-btn hub-btn--ghost hub-btn--icon" type="button" data-usq-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="usq-body">
-        <div class="usq-current">
+        <div class="usq-current" data-usq-single-box>
           <div><span>المشترك</span><strong data-usq-current="username">—</strong></div>
           <div><span>العرض الحالي</span><strong data-usq-current="plan">—</strong></div>
           <div><span>الكوتة اليومية</span><strong data-usq-current="daily_quota">—</strong></div>
+        </div>
+        {# وضع التنفيذ الجماعي — قائمة المشتركين المحدَّدين + تنبيه «لكل مشترك» #}
+        <div class="usq-field wide" data-usq-multi-box hidden>
+          المشتركون المحدَّدون (<span data-usq-multi-count>0</span>)
+          <div class="usq-sms-recips" data-usq-multi-list></div>
+          <div class="hub-text-mute small" style="margin-top:6px;line-height:1.6;font-weight:700">
+            تُستعاد الكوتة اليومية لكل مشترك على حدة (والمبلغ إن وُجد يُسجَّل لكل واحد).
+          </div>
         </div>
         <p class="hub-text-mute small" style="margin:2px 0 0;line-height:1.6;font-weight:600">
           تُصفَّر العدّادات المستهلَكة ليعود للمشترك كامل كوتته اليومية فورًا.
@@ -1089,7 +1379,7 @@
         </label>
       </div>
       <div class="usq-foot">
-        <button class="hub-btn hub-btn--ghost" type="button" data-usq-close>إغلاق</button>
+        <button class="hub-btn hub-btn--ghost" type="button" data-usq-close>إلغاء</button>
         <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-rotate-left"></i> استعادة</button>
       </div>
     </form>
@@ -1098,16 +1388,28 @@
 
 <div class="usq-modal" data-usq-modal="balance" hidden>
   <div class="usq-dialog" role="dialog" aria-modal="true" aria-labelledby="usq-balance-title">
-    <form method="post" data-usq-modal-form="balance" data-action-template="{{ url_for('radius.users_balance_add', username='__USERNAME__') }}">
+    <form method="post" data-usq-modal-form="balance"
+          data-action-template="{{ url_for('radius.users_balance_add', username='__USERNAME__') }}"
+          data-bulk-action="{{ url_for('radius.users_balance_add_bulk') }}">
+      {# حاوية حقول usernames المخفية — تُملأ بالـ JS عند التنفيذ الجماعي #}
+      <div data-usq-multi-usernames hidden></div>
       <div class="usq-head">
         <h3 id="usq-balance-title">إضافة رصيد نقدي</h3>
         <button class="hub-btn hub-btn--ghost hub-btn--icon" type="button" data-usq-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="usq-body">
-        <div class="usq-current">
+        <div class="usq-current" data-usq-single-box>
           <div><span>المشترك</span><strong data-usq-current="username">—</strong></div>
           <div><span>العرض الحالي</span><strong data-usq-current="plan">—</strong></div>
           <div><span>سعر الباقة</span><strong data-usq-current="price">—</strong></div>
+        </div>
+        {# وضع التنفيذ الجماعي — قائمة المشتركين المحدَّدين + تنبيه «لكل مشترك» #}
+        <div class="usq-field wide" data-usq-multi-box hidden>
+          المشتركون المحدَّدون (<span data-usq-multi-count>0</span>)
+          <div class="usq-sms-recips" data-usq-multi-list></div>
+          <div class="hub-text-mute small" style="margin-top:6px;line-height:1.6;font-weight:700">
+            المبلغ يُضاف كاملًا إلى محفظة كل مشترك على حدة، لا يُقسَّم بينهم.
+          </div>
         </div>
         <div class="usq-form-grid">
           <label class="usq-field">المبلغ
@@ -1130,7 +1432,7 @@
         </div>
       </div>
       <div class="usq-foot">
-        <button class="hub-btn hub-btn--ghost" type="button" data-usq-close>إغلاق</button>
+        <button class="hub-btn hub-btn--ghost" type="button" data-usq-close>إلغاء</button>
         <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-plus"></i> إضافة</button>
       </div>
     </form>
@@ -1139,12 +1441,25 @@
 
 <div class="usq-modal" data-usq-modal="payment" hidden>
   <div class="usq-dialog" role="dialog" aria-modal="true" aria-labelledby="usq-payment-title">
-    <form method="post" data-usq-modal-form="payment" data-action-template="{{ url_for('radius.users_payment_create', username='__USERNAME__') }}">
+    <form method="post" data-usq-modal-form="payment"
+          data-action-template="{{ url_for('radius.users_payment_create', username='__USERNAME__') }}"
+          data-bulk-action="{{ url_for('radius.users_payment_create_bulk') }}">
+      {# حاوية حقول usernames المخفية — تُملأ بالـ JS عند التنفيذ الجماعي #}
+      <div data-usq-multi-usernames hidden></div>
       <div class="usq-head">
         <h3 id="usq-payment-title">تسجيل دفعة نقدية</h3>
         <button class="hub-btn hub-btn--ghost hub-btn--icon" type="button" data-usq-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="usq-body">
+        {# وضع التنفيذ الجماعي — قائمة المشتركين المحدَّدين + تنبيه «لكل مشترك» #}
+        <div class="usq-field wide" data-usq-multi-box hidden>
+          المشتركون المحدَّدون (<span data-usq-multi-count>0</span>)
+          <div class="usq-sms-recips" data-usq-multi-list></div>
+          <div class="hub-text-mute small" style="margin-top:6px;line-height:1.6;font-weight:700">
+            تُسجَّل دفعة بالمبلغ المُدخل لكل مشترك على حدة وتُطبَّق على حسابه
+            (المدة تُحتسب من سعر كل مشترك).
+          </div>
+        </div>
         <div class="usq-form-grid">
           <label class="usq-field">المبلغ
             <input class="hub-input" name="amount" type="number" step="0.01" min="0.01" required>
@@ -1173,7 +1488,7 @@
         </div>
       </div>
       <div class="usq-foot">
-        <button class="hub-btn hub-btn--ghost" type="button" data-usq-close>إغلاق</button>
+        <button class="hub-btn hub-btn--ghost" type="button" data-usq-close>إلغاء</button>
         <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-plus"></i> تسجيل</button>
       </div>
     </form>
@@ -1182,12 +1497,25 @@
 
 <div class="usq-modal" data-usq-modal="loan" hidden>
   <div class="usq-dialog" role="dialog" aria-modal="true" aria-labelledby="usq-loan-title">
-    <form method="post" data-usq-modal-form="loan" data-action-template="{{ url_for('radius.users_loan_create', username='__USERNAME__') }}">
+    <form method="post" data-usq-modal-form="loan"
+          data-action-template="{{ url_for('radius.users_loan_create', username='__USERNAME__') }}"
+          data-bulk-action="{{ url_for('radius.users_loan_create_bulk') }}">
+      {# حاوية حقول usernames المخفية — تُملأ بالـ JS عند التنفيذ الجماعي #}
+      <div data-usq-multi-usernames hidden></div>
       <div class="usq-head">
         <h3 id="usq-loan-title">إضافة سلفة</h3>
         <button class="hub-btn hub-btn--ghost hub-btn--icon" type="button" data-usq-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="usq-body">
+        {# وضع التنفيذ الجماعي — قائمة المشتركين المحدَّدين + تنبيه «لكل مشترك» #}
+        <div class="usq-field wide" data-usq-multi-box hidden>
+          المشتركون المحدَّدون (<span data-usq-multi-count>0</span>)
+          <div class="usq-sms-recips" data-usq-multi-list></div>
+          <div class="hub-text-mute small" style="margin-top:6px;line-height:1.6;font-weight:700">
+            المدة المحدَّدة تُمنح لكل مشترك على حدة؛ وفي وضع الدين تُحتسب
+            قيمة السلفة تلقائيًا من سعر كل مشترك.
+          </div>
+        </div>
         <div class="usq-field wide">نوع السلفة
           <div class="usq-seg" style="margin-top:4px">
             <label data-usq-loan-seg="free" class="is-active">
@@ -1231,7 +1559,7 @@
         <div class="usq-loan-msg" data-usq-loan-msg hidden></div>
       </div>
       <div class="usq-foot">
-        <button class="hub-btn hub-btn--ghost" type="button" data-usq-close>إغلاق</button>
+        <button class="hub-btn hub-btn--ghost" type="button" data-usq-close>إلغاء</button>
         <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-plus"></i> إضافة</button>
       </div>
     </form>
@@ -1296,6 +1624,16 @@
 
   function setDisabled(disabled) {
     singleActions.forEach((el) => {
+      // العناصر الموسومة data-multi-ok (الرسائل/الفصل/التبديل/الأرشفة)
+      // تعمل مع التحديد المتعدد أيضًا فلا تُعطَّل عند اختيار أكثر من مشترك.
+      if (el.hasAttribute("data-multi-ok")) {
+        if (el.tagName === "FORM") {
+          Array.from(el.elements).forEach((field) => { field.disabled = false; });
+        } else {
+          el.disabled = false;
+        }
+        return;
+      }
       if (el.tagName === "A") {
         el.setAttribute("aria-disabled", disabled ? "true" : "false");
       } else if (el.tagName === "FORM") {
@@ -1603,9 +1941,16 @@
       applyRow(rows[0]);
     } else {
       pickedTitle.textContent = `${rows.length} مشتركين محددين`;
-      pickedSub.textContent = "الإجراءات السريعة الحالية تعمل على مشترك واحد فقط.";
+      // الشرح صار أيقونة hub-hint موحّدة — بطاقة أنيقة عند المرور بدل النص الحاشر
+      pickedSub.innerHTML = '<span class="hub-hint" tabindex="0" ' +
+        'data-hint="إجراءات التفعيل والرصيد والرسائل والفصل وتغيير الحالة والأرشفة تعمل على كل المحدَّدين؛ الملف والتعديل وتغيير العرض لمشترك واحد فقط.">' +
+        '<i class="fa-solid fa-info"></i></span>';
       setDisabled(true);
       activeRow = null;
+      // في الوضع الجماعي لا صف نشط، فنعيد تسمية زر التبديل تسمية محايدة
+      // (الخادم يبدّل كل مشترك حسب حالته الفعلية).
+      const toggleLabel = page.querySelector("[data-usq-toggle-label]");
+      if (toggleLabel) toggleLabel.innerHTML = '<i class="fa-solid fa-pause"></i> تغيير الحالة';
     }
   }
 
@@ -1730,12 +2075,20 @@
 
   // Open an activation modal for the CURRENT activeRow. Shared by the
   // quick-panel buttons and the per-row «تفعيل»/«إدارية» dropdowns.
+  // إجراءات التفعيل والرصيد التي تدعم التنفيذ الجماعي (نافذة المستلمين).
+  const MULTI_MODALS = ["extend", "quota", "quota-reset", "balance", "payment", "loan"];
+
   function openActionModal(key) {
-    if (!activeRow || !key) return;
+    // الرسائل وإجراءات التفعيل والرصيد: مسموح فتحها بدون صف نشط
+    // عند تحديد عدة مشتركين (تتحول النافذة للوضع الجماعي).
+    const multiAllowed = key === "sms" || MULTI_MODALS.includes(key);
+    if (!key || (!activeRow && !(multiAllowed && selectedRows().length > 1))) return;
     const modal = page.querySelector(`[data-usq-modal='${key}']`);
     if (!modal) return;
     const form = modal.querySelector("form[data-action-template]");
-    if (form) form.action = actionUrl(form.dataset.actionTemplate, activeRow.dataset.username);
+    if (form && activeRow) form.action = actionUrl(form.dataset.actionTemplate, activeRow.dataset.username);
+    if (key === "sms") setupSmsModal();
+    if (MULTI_MODALS.includes(key)) setupMultiModal(key);
     if (key === "plan") updatePlanPolicy();
     if (key === "extend") { updateMinutes(); syncChargeMode("extend"); }
     if (key === "balance") loadLoansInto("balance");
@@ -1825,14 +2178,120 @@
   // Smart-activation interactivity: live coverage + segmented reveals.
   page.querySelector("[data-usq-balance-amount]")?.addEventListener("input", updateBalanceCoverage);
   page.querySelector("[data-usq-modal='payment'] [name='amount']")?.addEventListener("input", () => syncMoneyCoverage("payment"));
+  // ── نافذة إرسال الرسائل: وضع فردي/جماعي + اختيار القناة ──────
+  // عند فتح النافذة: مشترك واحد → السلوك القديم (action للمشترك)؛
+  // عدة مشتركين → action يتحول لمسار الإرسال الجماعي مع حقول
+  // usernames مخفية وقائمة مستلمين مرئية (الخادم يستقبل getlist).
+  function setupSmsModal() {
+    const modal = page.querySelector("[data-usq-modal='sms']");
+    if (!modal) return;
+    const form = modal.querySelector("form[data-usq-modal-form='sms']");
+    const rows = selectedRows();
+    // جماعي فقط عند تحديد أكثر من مشترك بدون صف نشط — فتح القائمة من
+    // صفٍّ بعينه (data-urow-open) يعيّن activeRow فيبقى الإرسال فرديًا له.
+    const multi = !activeRow && rows.length > 1;
+    const single = modal.querySelector("[data-sms-single]");
+    const multiBox = modal.querySelector("[data-sms-multi]");
+    const list = modal.querySelector("[data-sms-multi-list]");
+    const count = modal.querySelector("[data-sms-multi-count]");
+    const title = modal.querySelector("[data-sms-title]");
+    const holder = modal.querySelector("[data-sms-usernames]");
+    if (single) single.hidden = multi;
+    if (multiBox) multiBox.hidden = !multi;
+    if (title) title.textContent = multi ? `إرسال رسالة لـ ${rows.length} مشتركين` : "إرسال رسالة قصيرة للمشترك";
+    if (holder) holder.innerHTML = "";
+    if (multi) {
+      form.action = form.dataset.bulkAction || form.action;
+      if (count) count.textContent = String(rows.length);
+      if (list) list.innerHTML = "";
+      rows.forEach((row) => {
+        const d = row.dataset;
+        // شريحة مستلم: الاسم الكامل إن وُجد + اسم المستخدم
+        if (list) {
+          const chip = document.createElement("span");
+          chip.className = "usq-sms-recip";
+          chip.textContent = d.fullName ? `${d.fullName} (${d.username})` : (d.username || "");
+          list.appendChild(chip);
+        }
+        if (holder) {
+          const input = document.createElement("input");
+          input.type = "hidden";
+          input.name = "usernames";
+          input.value = d.username || "";
+          holder.appendChild(input);
+        }
+      });
+    } else if (activeRow) {
+      form.action = actionUrl(form.dataset.actionTemplate, activeRow.dataset.username);
+    }
+  }
+  // ── نوافذ التفعيل والرصيد: وضع فردي/جماعي (نفس نمط نافذة الرسائل) ──
+  // فردي (صف نشط) → السلوك القديم كما هو (action للمشترك نفسه).
+  // جماعي (عدة مشتركين بدون صف نشط) → نخفي بيانات المشترك الواحد، نعرض
+  // قائمة المحدَّدين (عدد + شرائح)، نحقن حقول usernames المخفية، ونحوّل
+  // action لمسار الدفعة — القيمة/المدة تُطبَّق لكل مشترك على حدة.
+  function setupMultiModal(key) {
+    const modal = page.querySelector(`[data-usq-modal='${key}']`);
+    if (!modal) return;
+    const form = modal.querySelector("form[data-action-template]");
+    if (!form) return;
+    const rows = selectedRows();
+    const multi = !activeRow && rows.length > 1;
+    const singleBox = modal.querySelector("[data-usq-single-box]");
+    const multiBox = modal.querySelector("[data-usq-multi-box]");
+    const list = modal.querySelector("[data-usq-multi-list]");
+    const count = modal.querySelector("[data-usq-multi-count]");
+    const holder = modal.querySelector("[data-usq-multi-usernames]");
+    if (singleBox) singleBox.hidden = multi;
+    if (multiBox) multiBox.hidden = !multi;
+    if (holder) holder.innerHTML = "";
+    if (multi) {
+      form.action = form.dataset.bulkAction || form.action;
+      if (count) count.textContent = String(rows.length);
+      if (list) list.innerHTML = "";
+      rows.forEach((row) => {
+        const d = row.dataset;
+        // شريحة مشترك: الاسم الكامل إن وُجد + اسم المستخدم (مثل الرسائل).
+        if (list) {
+          const chip = document.createElement("span");
+          chip.className = "usq-sms-recip";
+          chip.textContent = d.fullName ? `${d.fullName} (${d.username})` : (d.username || "");
+          list.appendChild(chip);
+        }
+        if (holder) {
+          const input = document.createElement("input");
+          input.type = "hidden";
+          input.name = "usernames";
+          input.value = d.username || "";
+          holder.appendChild(input);
+        }
+      });
+      // تسوية السلف المفتوحة ميزة فردية — نفرغ صندوقها وحقلها في الوضع الجماعي.
+      const loansBox = modal.querySelector("[data-usq-loans-box]");
+      if (loansBox) { loansBox.hidden = true; loansBox.innerHTML = ""; }
+      const actionsField = modal.querySelector("[data-usq-actions]");
+      if (actionsField) actionsField.value = "";
+    } else if (activeRow) {
+      form.action = actionUrl(form.dataset.actionTemplate, activeRow.dataset.username);
+    }
+  }
+  // مبدّل القناة (SMS / واتساب) — تفعيل بصري للشريحة المختارة.
+  page.querySelectorAll("[data-sms-channel-input]").forEach((input) =>
+    input.addEventListener("change", () => {
+      const val = page.querySelector("[data-sms-channel-input]:checked")?.value || "sms";
+      page.querySelectorAll("[data-sms-channel-seg]").forEach((seg) =>
+        seg.classList.toggle("is-active", seg.dataset.smsChannelSeg === val));
+    }));
   // قوالب الرسائل القصيرة — تملأ نص الرسالة ببيانات المشترك النشط.
+  // في الوضع الجماعي يُترك {username} كما هو ليُعوَّض في الخادم لكل مستلم.
   page.querySelectorAll("[data-sms-tpl]").forEach((btn) => {
     btn.addEventListener("click", () => {
       const ta = page.querySelector("[data-usq-modal='sms'] [name='message']");
       if (!ta) return;
       const d = (activeRow && activeRow.dataset) || {};
-      ta.value = (btn.dataset.smsTpl || "")
-        .replace(/\{username\}/g, d.username || "")
+      let text = btn.dataset.smsTpl || "";
+      if (activeRow) text = text.replace(/\{username\}/g, d.username || "");
+      ta.value = text
         .replace(/\{expire\}/g, d.expire || "")
         .replace(/\{plan\}/g, d.planName || "");
       ta.focus();
@@ -1886,7 +2345,61 @@
       if (!window.confirm(message)) event.preventDefault();
     });
   });
+  // ── نماذج الفصل/التبديل/الأرشفة: وضع فردي/جماعي ─────────────
+  // فردي (صف نشط واحد) → السلوك القديم كما هو (action للمشترك نفسه).
+  // جماعي (عدة مشتركين بدون صف نشط) → نحقن حقول usernames المخفية لكل
+  // المحدَّدين ونحوّل action لمسار الدفعة (نفس نمط نافذة الرسائل)،
+  // مع نافذة تأكيد تعرض العدد وقائمة الأسماء.
+  function setupBulkPostForm(form, names) {
+    // إزالة أي حقول محقونة من إرسال سابق ثم بناء حقل لكل اسم.
+    form.querySelectorAll("input[data-usq-bulk-field]").forEach((el) => el.remove());
+    names.forEach((name) => {
+      const input = document.createElement("input");
+      input.type = "hidden";
+      // مسار الفصل يقرأ getlist("username")؛ مسارا الدفعة يقرآن usernames.
+      input.name = form.dataset.usqForm === "disconnect" ? "username" : "usernames";
+      input.value = name;
+      input.setAttribute("data-usq-bulk-field", "1");
+      form.appendChild(input);
+    });
+  }
+  function confirmNames(intro, names, tail) {
+    const list = names.join("، ");
+    return window.confirm(`${intro} (${names.length}):\n${list}\n${tail || ""}`.trim());
+  }
+  page.querySelector("[data-usq-form='disconnect']")?.addEventListener("submit", (event) => {
+    const rows = selectedRows();
+    if (!activeRow && rows.length > 1) {
+      const names = rows.map((row) => row.dataset.username || "").filter(Boolean);
+      if (!confirmNames("فصل اتصال المشتركين المحدَّدين", names)) { event.preventDefault(); return; }
+      // نفرغ حقل المشترك الفردي (قد يحمل قيمة قديمة) ونحقن اسمًا لكل صف.
+      const singleField = event.target.querySelector("[data-usq-field='username']");
+      if (singleField) singleField.value = "";
+      setupBulkPostForm(event.target, names);
+    }
+  });
+  page.querySelector("[data-usq-form='toggle']")?.addEventListener("submit", (event) => {
+    const rows = selectedRows();
+    if (!activeRow && rows.length > 1) {
+      const names = rows.map((row) => row.dataset.username || "").filter(Boolean);
+      if (!confirmNames("تغيير حالة المشتركين المحدَّدين", names, "المفعَّل يُعطَّل والمعطَّل يُفعَّل.")) {
+        event.preventDefault(); return;
+      }
+      event.target.action = event.target.dataset.bulkAction || event.target.action;
+      setupBulkPostForm(event.target, names);
+    }
+  });
   page.querySelector("[data-usq-form='delete']")?.addEventListener("submit", (event) => {
+    const rows = selectedRows();
+    if (!activeRow && rows.length > 1) {
+      const names = rows.map((row) => row.dataset.username || "").filter(Boolean);
+      if (!confirmNames("أرشفة المشتركين المحدَّدين", names, "يمكن استعادتهم من سلة المحذوفات.")) {
+        event.preventDefault(); return;
+      }
+      event.target.action = event.target.dataset.bulkAction || event.target.action;
+      setupBulkPostForm(event.target, names);
+      return;
+    }
     const username = activeRow?.dataset.username || "";
     if (!window.confirm(`أرشفة ${username}؟ يمكن استعادته من سلة المحذوفات.`)) {
       event.preventDefault();
@@ -1957,6 +2470,117 @@
 </script>
 
 {# ──────────────────────────────────────────────────────────────
+   بحث فوري + تصدير CSV/Excel/PDF + طباعة.
+   التصدير عبر window.hubTableExport (في uds_table.js): CSV يُبنى
+   محليًا، وExcel/PDF عبر POST إلى /admin/radius/export/table الذي
+   يبني ملف openpyxl منسّقًا أو PDF فاخرًا من pdf_theme.
+─────────────────────────────────────────────────────────────── #}
+<script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
+<script>
+(() => {
+  const table = document.querySelector(".hr-data-table");
+  if (!table || !table.tBodies.length) return;
+  const rows = () => Array.from(table.tBodies[0].rows);
+
+  /* ── بحث فوري مطوّر: نطاق بحث + مدى تاريخ إنشاء + زر مسح ──
+     • «كل الأعمدة» يفلتر على نص الصف كاملًا (السلوك الأصلي).
+     • اختيار عمود (اليوزر/الاسم/الجوال) يحصر الفلترة بخلية ذلك
+       العمود فقط (data-col).
+     • «تاريخ الإنشاء» يخفي حقل النص ويُظهر «من/إلى» ويقارن
+       timestamp الموجود في data-sort-value لخلية الإنشاء.
+     عقد الخادم محفوظ: حقل q بنفس الاسم والخاصية، وعناصر النطاق
+     والتاريخ بلا name فلا تظهر في رابط البحث المُرسَل. */
+  const q = document.querySelector("[data-users-live-search]");
+  const scopeSel  = document.querySelector("[data-users-search-scope]");
+  const searchBox = document.querySelector("[data-users-search-box]");
+  const clearBtn  = document.querySelector("[data-users-search-clear]");
+  const dateWrap  = document.querySelector("[data-users-date-range]");
+  const dateFrom  = document.querySelector("[data-users-date-from]");
+  const dateTo    = document.querySelector("[data-users-date-to]");
+
+  const cellText = (r, col) => {
+    const td = r.querySelector('[data-col="' + col + '"]');
+    return td ? td.textContent.toLowerCase() : "";
+  };
+  /* تاريخ <input type=date> → حدود يوم كاملة بثوانٍ (timestamps محلية) */
+  const dayStart = (v) => v ? (new Date(v + "T00:00:00").getTime() / 1000) : null;
+  const dayEnd   = (v) => v ? (new Date(v + "T23:59:59").getTime() / 1000) : null;
+
+  const applyFilter = () => {
+    const scope  = scopeSel ? scopeSel.value : "";
+    const needle = q ? q.value.trim().toLowerCase() : "";
+    const from = dateFrom ? dayStart(dateFrom.value) : null;
+    const to   = dateTo   ? dayEnd(dateTo.value)     : null;
+    rows().forEach(r => {
+      let hit;
+      if (scope === "created") {
+        const td = r.querySelector('[data-col="created"]');
+        const ts = td ? parseFloat(td.getAttribute("data-sort-value") || "0") : 0;
+        hit = (!from && !to)
+           || (ts > 0 && (from === null || ts >= from) && (to === null || ts <= to));
+      } else if (scope) {
+        hit = !needle || cellText(r, scope).includes(needle);
+      } else {
+        hit = !needle || r.textContent.toLowerCase().includes(needle);
+      }
+      r.toggleAttribute("data-live-hidden", !hit);
+      r.style.display = hit ? "" : "none";
+    });
+    if (clearBtn) clearBtn.hidden = !(q && q.value);
+  };
+
+  if (q) {
+    let t = null;
+    q.addEventListener("input", () => {
+      clearTimeout(t);
+      t = setTimeout(applyFilter, 120);
+    });
+  }
+  if (clearBtn && q) {
+    clearBtn.addEventListener("click", () => {
+      q.value = "";
+      q.focus();
+      applyFilter();
+    });
+  }
+  if (scopeSel) {
+    scopeSel.addEventListener("change", () => {
+      const isDate = scopeSel.value === "created";
+      if (dateWrap)  dateWrap.hidden  = !isDate;
+      if (searchBox) searchBox.hidden = isDate;   // التاريخ يحلّ مكان حقل النص
+      applyFilter();
+    });
+  }
+  [dateFrom, dateTo].forEach(el => {
+    if (el) el.addEventListener("change", applyFilter);
+  });
+  if (q && q.value) applyFilter();   // أظهر زر المسح إن وُجد بحث محفوظ من الخادم
+
+  /* ── تصدير CSV / Excel / PDF ──
+     نصدّر كل الصفوف (لا الصفحة الحالية فقط) مع احترام البحث الفوري،
+     ونستثني عمودَي التحديد والإجراءات من الملف. */
+  if (table.tHead) {
+    Array.from(table.tHead.rows[0].cells).forEach(th => {
+      const k = th.dataset.col;
+      if (k === "chk" || k === "actions") th.setAttribute("data-uds-noexport", "");
+    });
+  }
+  const exportRows = () => rows().filter(r => !r.hasAttribute("data-live-hidden"));
+  document.querySelectorAll("[data-users-export]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      if (!window.hubTableExport) return;
+      window.hubTableExport(table, "قائمة المشتركين",
+        btn.getAttribute("data-users-export"), { rows: exportRows() });
+    });
+  });
+
+  /* ── طباعة ── */
+  const prBtn = document.querySelector("[data-users-print]");
+  if (prBtn) prBtn.addEventListener("click", () => window.print());
+})();
+</script>
+
+{# ──────────────────────────────────────────────────────────────
    Column show/hide picker + sortable headers + "المتبقي" client-side.
    All state persists to localStorage under users-list:cols / :sort.
    No backend changes.
@@ -1975,7 +2599,7 @@
     device:"الجهاز / النظام", status:"الحالة", remaining:"المتبقي",
     last_login:"آخر اتصال", last_seen:"آخر فصل",
     download:"تحميل", upload:"رفع", sessions:"الجلسات",
-    mac:"عنوان الجهاز", ip:"العنوان / الجهاز", speed:"السرعة",
+    mac:"عنوان MAC", ip:"عنوان IP", speed:"السرعة",
     first_login:"أول استخدام", expire:"ينتهي", created:"الإنشاء",
     actions:"إجراءات",
   };

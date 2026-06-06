@@ -43,10 +43,12 @@
     <option value="open"     {% if filters.status == 'open' %}selected{% endif %}>المفتوحة</option>
     <option value="resolved" {% if filters.status == 'resolved' %}selected{% endif %}>المغلقة</option>
   </select>
+  {# تسميات الشدة بالعربي بدل القيم الخام (info/warning/critical) #}
+  {% set severity_labels = {'critical': 'حرجة', 'warning': 'تحذير', 'info': 'معلومة'} %}
   <select class="hub-select" name="severity" data-mt-alerts-severity>
     <option value="">كل الشدات</option>
     {% for s in severities %}
-    <option value="{{ s }}" {% if filters.severity == s %}selected{% endif %}>{{ s }}</option>
+    <option value="{{ s }}" {% if filters.severity == s %}selected{% endif %}>{{ severity_labels.get(s, s) }}</option>
     {% endfor %}
   </select>
   <input class="hub-input" type="text" name="router_id" value="{{ filters.router_id or '' }}"
@@ -97,7 +99,15 @@
         <tbody>
           {% for a in rows %}
           <tr data-mt-alert-row="{{ a.id }}">
-            <td><strong style="color:var(--hub-text)">{{ a.title_ar }}</strong></td>
+            {# عنوان التنبيه نفسه رابط لصفحة التفاصيل — وليس زر «التفاصيل» فقط #}
+            <td>
+              <a href="{{ url_for('radius.mt_alerts_detail', alert_id=a.id) }}"
+                 style="text-decoration:none"
+                 onmouseover="this.firstElementChild.style.textDecoration='underline'"
+                 onmouseout="this.firstElementChild.style.textDecoration='none'">
+                <strong style="color:var(--hub-text)">{{ a.title_ar }}</strong>
+              </a>
+            </td>
             <td>
               {% if a.severity == 'critical' %}
               {{ hub.pill("حرجة", variant="red") }}
@@ -265,5 +275,3 @@
 })();
 </script>
 {% endblock %}
-</content>
-</invoke>

@@ -18,7 +18,7 @@ import os
 from datetime import datetime, timedelta
 from typing import Optional
 
-from flask import Blueprint, request
+from flask import Blueprint, g, request
 
 from ..radius.db.repos import admins_repo, api_tokens_repo
 from ..radius.stores.tenants_store import TenantsStore
@@ -46,6 +46,8 @@ def register(bp: Blueprint) -> None:
                     admin_login, methods=["POST"])
     bp.add_url_rule("/admin/me", "admin_me",
                     require_api_token(admin_me), methods=["GET"])
+    bp.add_url_rule("/admin/password", "admin_password",
+                    require_api_token(admin_password), methods=["POST"])
     bp.add_url_rule("/admin/logout", "admin_logout",
                     require_api_token(admin_logout), methods=["POST"])
 
@@ -130,23 +132,11 @@ def admin_login():
 def admin_me():
     """Returns the admin associated with the calling token. Identifies the
     admin via api_tokens.created_by (set by /admin/login)."""
-    from flask import g
-    token_id = getattr(g, "api_token_id", None)
-    if not token_id:
+    admin = _current_admin_from_token()
+    if admin is None:
         return fail("unauthorized",
-                    "هذا الـ endpoint يتطلب admin token (من /api/admin/login)",
+                    "هذا المسار يتطلب تسجيل دخول إداري من التطبيق.",
                     status=401)
-    rec = next(
-        (t for t in api_tokens_repo.list_tokens(getattr(g, "tenant_id", 1))
-         if t["id"] == token_id),
-        None,
-    )
-    if not rec or not rec.get("created_by"):
-        return fail("unauthorized",
-                    "الـ token غير مرتبط بأدمن", status=401)
-    admin = admins_repo.get_admin(int(rec["created_by"]))
-    if not admin:
-        return fail("not_found", "admin not found", status=404)
     perms = list(admins_repo.admin_permissions(admin))
     return ok({
         "admin": _serialize_admin(admin),
@@ -155,9 +145,88 @@ def admin_me():
     })
 
 
+def admin_password():
+    admin = _current_admin_from_token()
+    if admin is None:
+        return fail("unauthorized",
+                    "هذا المسار يتطلب تسجيل دخول إداري من التطبيق.",
+                    status=401)
+
+    body = request.get_json(silent=True) or {}
+    current_password = str(body.get("current_password") or "")
+    new_password = str(body.get("new_password") or "")
+    confirm_password = str(body.get("confirm_password") or "")
+
+    if not current_password or not new_password or not confirm_password:
+        return fail(
+            "validation_error",
+            "كلمة المرور الحالية والجديدة وتأكيدها مطلوبة.",
+            status=422,
+        )
+    if not admins_repo.verify_password(current_password, admin.password_hash):
+        return fail(
+            "invalid_current_password",
+            "كلمة المرور الحالية غير صحيحة.",
+            status=422,
+        )
+    if len(new_password) < 8:
+        return fail(
+            "validation_error",
+            "كلمة المرور الجديدة يجب أن تكون 8 أحرف على الأقل.",
+            status=422,
+        )
+    if new_password != confirm_password:
+        return fail(
+            "validation_error",
+            "تأكيد كلمة المرور غير مطابق.",
+            status=422,
+        )
+
+    if admin.managed_by_license_admin:
+        from ..radius.services.license_admin_identity_sync import LicenseAdminIdentitySyncService
+
+        result = LicenseAdminIdentitySyncService().change_password_from_runtime(
+            admin=admin,
+            new_password=new_password,
+            tenant_id=int(getattr(g, "tenant_id", 1) or 1),
+        )
+        if not result.get("ok"):
+            error = result.get("error") if isinstance(result.get("error"), dict) else {}
+            return fail(
+                str(error.get("code") or result.get("status") or "license_admin_password_change_failed"),
+                str(error.get("message") or "تعذر تحديث كلمة المرور عبر لوحة التراخيص."),
+                status=502,
+            )
+        return ok({
+            "updated": True,
+            "source": "license_admin",
+            "message": "تم تحديث كلمة المرور من لوحة التراخيص.",
+        })
+
+    admins_repo.update_admin(int(admin.id or 0), password=new_password)
+    return ok({
+        "updated": True,
+        "source": "local",
+        "message": "تم تحديث كلمة المرور المحلية.",
+    })
+
+
 def admin_logout():
-    from flask import g
     token_id = getattr(g, "api_token_id", None)
     if token_id:
         api_tokens_repo.revoke_token(getattr(g, "tenant_id", 1), token_id)
     return ok({"logged_out": True})
+
+
+def _current_admin_from_token():
+    token_id = getattr(g, "api_token_id", None)
+    if not token_id:
+        return None
+    rec = next(
+        (t for t in api_tokens_repo.list_tokens(getattr(g, "tenant_id", 1))
+         if t["id"] == token_id),
+        None,
+    )
+    if not rec or not rec.get("created_by"):
+        return None
+    return admins_repo.get_admin(int(rec["created_by"]))

@@ -1,0 +1,423 @@
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}التحكم اليدوي بالسرعة{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-sliders"></i>{% endblock %}
+{% block page_title %}التحكم اليدوي بالسرعة{% endblock %}
+{% block page_sub %}<span class="sub">سلايدرات حية لضبط النِّسَب فورًا — معاينة آمنة بدون تنفيذ على الشبكة.</span>{% endblock %}
+
+{% block head_extra %}{{ super() }}
+{# نظام الجداول والبطاقات الموحد (uds) — نفس أسلوب باقي المراكز #}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
+{# محرّك التحكم اليدوي السريع (السلايدر + الحلقة) — تنسيقات مكتفية ذاتيًا بقيم احتياطية #}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/ops_speed_control.css') }}">
+<style>
+/* ── شريط التنقّل بين صفحتَي التحكم بالسرعة (المجدول / اليدوي) ──
+   حزام سفلي داخل صدفة الهيرو، بنفس أسلوب تبويبات المركز المالي. */
+.hub-hero-shell > .spc-tabs{
+  display:flex;flex-wrap:wrap;gap:8px;
+  padding:12px 22px;
+  border-top:1px solid var(--hub-border-soft,#e2e8f0);
+}
+.spc-tabs a{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:9px 16px;border-radius:999px;
+  font-size:13px;font-weight:800;text-decoration:none;
+  color:var(--hub-text-soft,#475569);border:1px solid transparent;
+  transition:background .12s,color .12s;
+}
+.spc-tabs a:hover{background:#fff;color:var(--hub-text,#0f172a)}
+.spc-tabs a.is-active{
+  background:linear-gradient(135deg,#4f46e5,#4338ca);color:#fff;
+  box-shadow:0 6px 16px rgba(67,56,202,.25);
+}
+</style>
+{% endblock %}
+
+{# تحويل كيلوبت → ميغابت للعرض #}
+{% macro mb(kbps) %}{{ '%.2f'|format((kbps or 0) / 1000) }}{% endmacro %}
+
+{% block content %}
+
+{# ───── صدفة الهيرو الموحّدة: عنوان + سطر تعريفي + مؤشرات + تبويب الشقيقتين ───── #}
+{% set _total_subs = control_profiles|sum(attribute='subscribers') %}
+{% set _total_online = control_profiles|sum(attribute='online') %}
+<section class="hub-hero-shell" data-testid="speed-manual-hero">
+{{ hub.megahero(
+  "التحكم اليدوي بالسرعة",
+  subtitle="اسحب الشريط أو حرّك المؤشر لضبط النِّسَب فورًا لكل الباقات أو لكل باقة على حدة — معاينة حية ثم حفظ كسياسة معاينة.",
+  icon="sliders",
+  kpis=[
+    {'label': 'عدد الباقات', 'value': control_profiles|length, 'icon': 'layer-group', 'variant': 'blue'},
+    {'label': 'المشتركون المشمولون', 'value': _total_subs, 'icon': 'users', 'variant': 'brand'},
+    {'label': 'المتصلون الآن', 'value': _total_online, 'icon': 'wifi', 'variant': 'green'},
+    {'label': 'السياسات المحفوظة', 'value': policies|length, 'icon': 'floppy-disk', 'variant': 'amber'}
+  ]
+) }}
+{# تبويب الانتقال بين الصفحتين الشقيقتين #}
+<nav class="spc-tabs" data-testid="speed-control-tabs" aria-label="صفحات التحكم بالسرعة">
+  <a href="{{ url_for('radius.operations_speed_control') }}">
+    <i class="fa-solid fa-calendar-check"></i> التحكم المجدول
+  </a>
+  <a class="is-active" href="{{ url_for('radius.operations_speed_control_manual') }}" aria-current="page">
+    <i class="fa-solid fa-sliders"></i> التحكم اليدوي
+  </a>
+</nav>
+</section>{# /hub-hero-shell #}
+
+{# زر رجوع سريع إلى قائمة ملفات السرعة (Bandwidth) — هذه الصفحة تتبع قسم «التحكم بالسرعة» #}
+<div style="display:flex;justify-content:flex-end;margin-bottom:14px">
+  <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.bw_list') }}" data-testid="speed-control-back-bandwidth">
+    <i class="fa-solid fa-arrow-right"></i> العودة إلى ملفات السرعة
+  </a>
+</div>
+
+{# ═══════════════════ التحكم اليدوي السريع ═══════════════════
+   الواجهة التفاعلية الأصلية (السلايدر القابل للسحب + الحلقة الدائرية).
+   المحرّك: ops_speed_control.js + ops_speed_control.css، ويرسل عبر نفس عقد الخادم
+   (preset / multiplier / profile_ids / settings_json / save_policy) من نموذج مخفي
+   يُرسَل إلى هذا المسار نفسه — ومنطق POST مشترك مع صفحة «التحكم المجدول». #}
+
+{# الغلاف .opsx-redesign مطلوب لأن كل تنسيقات ops_speed_control.css مقيّدة بهذا النطاق #}
+<div class="opsx-redesign">
+<section class="spdx" data-speed-control data-mode="unified" data-testid="speed-manual-section">
+
+  {# ── الشريط العلوي: مبدّل وضع التحكم (موحّد / تحميل-رفع منفصل) ── #}
+  <header class="spdx-topbar">
+    <div class="spdx-topbar__title">
+      <span class="spdx-topbar__icon"><i class="fa-solid fa-sliders"></i></span>
+      <span>التحكم اليدوي السريع</span>
+    </div>
+    <div class="spdx-topbar__tools">
+      <div class="spdx-modeswitch" role="group" aria-label="طريقة التحكم اليدوي بالباندويث">
+        <button type="button" class="spdx-modeswitch__btn is-active" aria-pressed="true"
+                data-mode-btn="unified"><i class="fa-solid fa-layer-group" aria-hidden="true"></i> التحكم الموحّد</button>
+        <button type="button" class="spdx-modeswitch__btn" aria-pressed="false"
+                data-mode-btn="separate"><i class="fa-solid fa-arrows-up-down" aria-hidden="true"></i> تحميل / رفع منفصل</button>
+        <span class="spdx-modeswitch__thumb" data-mode-thumb aria-hidden="true"></span>
+      </div>
+      <button type="button" class="spdx-icon-btn" data-action="refresh" title="إعادة الضبط للسرعة الأصلية" aria-label="إعادة الضبط">
+        <i class="fa-solid fa-arrows-rotate"></i>
+      </button>
+    </div>
+  </header>
+
+  <p class="spdx-lede" data-mode-lede>
+    <span data-lede="unified">تحكّم موحّد في نسبة الباندويث لجميع الباقات المُدارة.</span>
+    <span data-lede="separate" hidden>تحكّم منفصل في نسبتَي التحميل والرفع لكل باقة على حدة.</span>
+  </p>
+
+  {# ── مؤشرات سريعة (تتحدّث حيًّا أثناء السحب) ── #}
+  <div class="spdx-kpis" data-kpis>
+    <article class="spdx-kpi spdx-kpi--teal">
+      <span class="spdx-kpi__icon"><i class="fa-solid fa-arrow-trend-up"></i></span>
+      <span class="spdx-kpi__body">
+        <span class="spdx-kpi__label" data-kpi-avg-label>متوسط النسبة الحالية</span>
+        <span class="spdx-kpi__value"><span data-kpi-avg>100</span><i>%</i></span>
+      </span>
+    </article>
+    <article class="spdx-kpi spdx-kpi--purple" data-kpi-avg2-card hidden>
+      <span class="spdx-kpi__icon"><i class="fa-solid fa-arrow-up-from-bracket"></i></span>
+      <span class="spdx-kpi__body">
+        <span class="spdx-kpi__label">متوسط الرفع الحالي</span>
+        <span class="spdx-kpi__value"><span data-kpi-avg2>100</span><i>%</i></span>
+      </span>
+    </article>
+    <article class="spdx-kpi spdx-kpi--indigo">
+      <span class="spdx-kpi__icon"><i class="fa-solid fa-layer-group"></i></span>
+      <span class="spdx-kpi__body">
+        <span class="spdx-kpi__label">إجمالي الباقات</span>
+        <span class="spdx-kpi__value"><span data-kpi-total>{{ control_profiles|length }}</span></span>
+      </span>
+    </article>
+    <article class="spdx-kpi spdx-kpi--green">
+      <span class="spdx-kpi__icon"><i class="fa-solid fa-shield-halved"></i></span>
+      <span class="spdx-kpi__body">
+        <span class="spdx-kpi__label">المتحكَّم بها</span>
+        <span class="spdx-kpi__value"><span data-kpi-controlled>0</span></span>
+      </span>
+    </article>
+    <article class="spdx-kpi spdx-kpi--muted" data-kpi-uncontrolled-card>
+      <span class="spdx-kpi__icon"><i class="fa-solid fa-ban"></i></span>
+      <span class="spdx-kpi__body">
+        <span class="spdx-kpi__label">غير متحكَّم بها</span>
+        <span class="spdx-kpi__value"><span data-kpi-uncontrolled>0</span></span>
+      </span>
+    </article>
+  </div>
+
+  {# ── التحكم الرئيسي — الوضع الموحّد: الحلقة الدائرية + السلايدر الرئيسي ── #}
+  <section class="spdx-master" data-view="unified">
+    <div class="spdx-master__head">
+      <span class="spdx-master__title"><i class="fa-solid fa-sliders"></i> النسبة الموحّدة لجميع الباقات المتحكَّم بها</span>
+    </div>
+    <div class="spdx-master__grid">
+      {# الحلقة الدائرية: ثلاث لفّات لونية (بنفسجي → كهرماني → أحمر) حتى 300% #}
+      <div class="spdx-ring" aria-hidden="true">
+        <svg viewBox="0 0 120 120" class="spdx-ring__svg">
+          <circle class="spdx-ring__track" cx="60" cy="60" r="52"></circle>
+          <circle class="spdx-ring__lap spdx-ring__lap--1" cx="60" cy="60" r="52" data-ring-lap="1"></circle>
+          <circle class="spdx-ring__lap spdx-ring__lap--2" cx="60" cy="60" r="52" data-ring-lap="2"></circle>
+          <circle class="spdx-ring__lap spdx-ring__lap--3" cx="60" cy="60" r="52" data-ring-lap="3"></circle>
+        </svg>
+        <div class="spdx-ring__label">
+          <strong data-ring-value>100</strong><span>%</span>
+          <small>النسبة الموحّدة</small>
+        </div>
+      </div>
+
+      <div class="spdx-master__center">
+        {# السلايدر الرئيسي القابل للسحب (0–300%) #}
+        <div class="spdx-slider" data-slider-wrap>
+          <div class="spdx-slider__bubble" data-bubble>100%</div>
+          <div class="spdx-slider__rail">
+            <span class="spdx-slider__fill" data-fill></span>
+            <input type="range" min="0" max="300" step="1" value="100"
+                   class="spdx-slider__input" data-global-uni
+                   aria-label="النسبة الموحّدة لجميع الباقات">
+          </div>
+          <div class="spdx-slider__ticks"><span>0%</span><span>100%</span><span>200%</span><span>300%</span></div>
+        </div>
+        <label class="spdx-switchrow">
+          <span class="spdx-switch">
+            <input type="checkbox" data-controlled-only checked aria-label="تطبيق على الباقات المتحكَّم بها فقط">
+            <span class="spdx-switch__track"></span>
+          </span>
+          <span class="spdx-switchrow__text">
+            <strong>تطبيق على الباقات المتحكَّم بها فقط</strong>
+            <small>سيتم تجاهل الباقات غير المتحكَّم بها.</small>
+          </span>
+        </label>
+      </div>
+
+      <aside class="spdx-impact" aria-live="polite">
+        <div class="spdx-impact__head"><i class="fa-regular fa-eye"></i> معاينة التأثير</div>
+        <p class="spdx-impact__note" data-impact-note>سيتم تطبيق <b>100%</b> على <b>0</b> باقات.</p>
+        <div class="spdx-impact__row"><span>إجمالي السرعة الأصلية</span><b data-impact-base>0.00 Mb</b></div>
+        <div class="spdx-impact__row"><span>إجمالي السرعة بعد التطبيق</span><b class="is-accent" data-impact-eff>0.00 Mb</b></div>
+        <div class="spdx-impact__row spdx-impact__row--total">
+          <span>التغيير الكلي</span>
+          <b class="spdx-delta" data-impact-delta><i class="fa-solid fa-arrow-down"></i> 0.00 Mb (0%)</b>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  {# ── التحكم الرئيسي — وضع التحميل/الرفع المنفصل: بطاقتان بسلايدرَين ── #}
+  <section class="spdx-master spdx-master--split" data-view="separate" hidden>
+    <div class="spdx-master__head">
+      <span class="spdx-master__title"><i class="fa-solid fa-sliders"></i> التحكّم الرئيسي — تأثير عام على جميع الباقات</span>
+    </div>
+    <div class="spdx-dualgrid">
+      <div class="spdx-globalcard spdx-globalcard--purple">
+        <div class="spdx-globalcard__head">
+          <span class="spdx-globalcard__icon"><i class="fa-solid fa-arrow-down"></i></span>
+          <span class="spdx-globalcard__label">حدّ التحميل %<small>الحدّ الحالي</small></span>
+          <span class="spdx-globalcard__pct"><span data-global-down-pct>100</span>%</span>
+        </div>
+        <div class="spdx-slider" data-slider-wrap>
+          <div class="spdx-slider__bubble" data-bubble>100%</div>
+          <div class="spdx-slider__rail">
+            <span class="spdx-slider__fill" data-fill></span>
+            <input type="range" min="0" max="300" step="1" value="100"
+                   class="spdx-slider__input spdx-slider__input--purple" data-global-down
+                   aria-label="حدّ التحميل لجميع الباقات">
+          </div>
+          <div class="spdx-slider__ticks"><span>0%</span><span>100%</span><span>200%</span><span>300%</span></div>
+        </div>
+        <p class="spdx-globalcard__hint">التأثير المتوقّع: سيتم تقييد التحميل إلى <b data-global-down-echo>100%</b> من السرعة الأصلية.</p>
+      </div>
+
+      <div class="spdx-globalcard spdx-globalcard--teal">
+        <div class="spdx-globalcard__head">
+          <span class="spdx-globalcard__icon"><i class="fa-solid fa-arrow-up"></i></span>
+          <span class="spdx-globalcard__label">حدّ الرفع %<small>الحدّ الحالي</small></span>
+          <span class="spdx-globalcard__pct"><span data-global-up-pct>100</span>%</span>
+        </div>
+        <div class="spdx-slider spdx-slider--teal" data-slider-wrap>
+          <div class="spdx-slider__bubble" data-bubble>100%</div>
+          <div class="spdx-slider__rail">
+            <span class="spdx-slider__fill" data-fill></span>
+            <input type="range" min="0" max="300" step="1" value="100"
+                   class="spdx-slider__input spdx-slider__input--teal" data-global-up
+                   aria-label="حدّ الرفع لجميع الباقات">
+          </div>
+          <div class="spdx-slider__ticks"><span>0%</span><span>100%</span><span>200%</span><span>300%</span></div>
+        </div>
+        <p class="spdx-globalcard__hint">التأثير المتوقّع: سيتم تقييد الرفع إلى <b data-global-up-echo>100%</b> من السرعة الأصلية.</p>
+      </div>
+    </div>
+  </section>
+
+  {# ── قائمة الباقات: سلايدر لكل باقة + مفتاح تفعيل + استعادة ── #}
+  <section class="spdx-profiles">
+    <div class="spdx-profiles__head">
+      <span class="spdx-profiles__title">الباقات المتحكَّم بها <em data-profiles-count>({{ control_profiles|length }})</em></span>
+    </div>
+
+    <div class="spdx-profiles__list" data-profiles-list>
+      {% for p in control_profiles %}
+      <article class="spdx-profile" data-profile
+               data-id="{{ p.id }}" data-name="{{ p.name }}"
+               data-down="{{ p.down_kbps }}" data-up="{{ p.up_kbps }}"
+               data-default="{{ 1 if p.is_default else 0 }}"
+               data-subs="{{ p.subscribers }}" data-online="{{ p.online }}">
+
+        <div class="spdx-profile__main">
+          <div class="spdx-profile__id">
+            <span class="spdx-profile__avatar"><i class="fa-solid fa-globe"></i></span>
+            <span class="spdx-profile__name">
+              <strong>{{ p.name }}</strong>
+              <span class="spdx-profile__tags">
+                {% if p.is_default %}<span class="spdx-tag spdx-tag--default">افتراضي</span>{% endif %}
+                <span class="spdx-tag spdx-status" data-status>مفعّل</span>
+              </span>
+            </span>
+          </div>
+
+          {# سلايدر موحّد واحد للباقة #}
+          <div class="spdx-profile__ctl" data-ctl="unified">
+            <div class="spdx-slider spdx-slider--row" data-slider-wrap>
+              <div class="spdx-slider__bubble" data-bubble>100%</div>
+              <div class="spdx-slider__rail">
+                <span class="spdx-slider__fill" data-fill></span>
+                <input type="range" min="0" max="300" step="1" value="100"
+                       class="spdx-slider__input" data-row-uni
+                       aria-label="النسبة الحالية لباقة {{ p.name }}">
+              </div>
+              <div class="spdx-slider__ticks"><span>0%</span><span>100%</span><span>200%</span><span>300%</span></div>
+            </div>
+          </div>
+
+          {# سلايدران منفصلان: تحميل + رفع #}
+          <div class="spdx-profile__ctl" data-ctl="separate" hidden>
+            <div class="spdx-slider spdx-slider--row spdx-slider--mini" data-slider-wrap>
+              <div class="spdx-slider__caption">التحميل %</div>
+              <div class="spdx-slider__bubble" data-bubble>100%</div>
+              <div class="spdx-slider__rail">
+                <span class="spdx-slider__fill" data-fill></span>
+                <input type="range" min="0" max="300" step="1" value="100"
+                       class="spdx-slider__input spdx-slider__input--purple" data-row-down
+                       aria-label="نسبة التحميل لباقة {{ p.name }}">
+              </div>
+            </div>
+            <div class="spdx-slider spdx-slider--row spdx-slider--mini spdx-slider--teal" data-slider-wrap>
+              <div class="spdx-slider__caption">الرفع %</div>
+              <div class="spdx-slider__bubble" data-bubble>100%</div>
+              <div class="spdx-slider__rail">
+                <span class="spdx-slider__fill" data-fill></span>
+                <input type="range" min="0" max="300" step="1" value="100"
+                       class="spdx-slider__input spdx-slider__input--teal" data-row-up
+                       aria-label="نسبة الرفع لباقة {{ p.name }}">
+              </div>
+            </div>
+          </div>
+
+          <div class="spdx-profile__speeds">
+            <div class="spdx-speedcol">
+              <span class="spdx-speedcol__label"><i class="fa-solid fa-gauge"></i> السرعة الأصلية</span>
+              <span class="spdx-speedcol__val spdx-speedcol__val--dual">
+                <b>{{ mb(p.down_kbps) }}</b><small>↓</small> / <b>{{ mb(p.up_kbps) }}</b><small>↑</small>
+              </span>
+            </div>
+            <div class="spdx-speedcol spdx-speedcol--eff">
+              <span class="spdx-speedcol__label"><i class="fa-solid fa-bolt"></i> السرعة الفعلية</span>
+              <span class="spdx-speedcol__val spdx-speedcol__val--dual">
+                <b data-eff-down>{{ mb(p.down_kbps) }}</b><small>↓</small> / <b data-eff-up>{{ mb(p.up_kbps) }}</b><small>↑</small>
+              </span>
+            </div>
+          </div>
+
+          <div class="spdx-profile__actions">
+            <label class="spdx-switch spdx-switch--sm">
+              <input type="checkbox" data-enable checked aria-label="تفعيل التحكّم لباقة {{ p.name }}">
+              <span class="spdx-switch__track"></span>
+            </label>
+            <button type="button" class="spdx-ghost-btn" data-action="restore-one" title="استعادة السرعة الأصلية">
+              <i class="fa-solid fa-rotate-left"></i> استعادة
+            </button>
+          </div>
+        </div>
+      </article>
+      {% else %}
+      <div class="spdx-empty">
+        <i class="fa-solid fa-inbox"></i>
+        <p>لا توجد باقات نشطة بعد. أنشئ باقة سرعة أولًا لتظهر هنا.</p>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  {# ── شريط الإجراءات: استعادة الكل / معاينة / حفظ ── #}
+  <div class="spdx-actionbar">
+    <span class="spdx-actionbar__note"><i class="fa-solid fa-circle-info"></i> معاينة آمنة — لا تُطبَّق على الشبكة إلا بعد اعتماد صريح.</span>
+    <div class="spdx-actionbar__btns">
+      <button type="button" class="spdx-btn spdx-btn--danger" data-action="restore-all">
+        <i class="fa-solid fa-rotate-left"></i> استعادة الكل
+      </button>
+      <button type="button" class="spdx-btn spdx-btn--ghost" data-action="preview">
+        <i class="fa-regular fa-eye"></i> معاينة الأثر
+      </button>
+      <button type="button" class="spdx-btn spdx-btn--primary" data-action="save">
+        <i class="fa-solid fa-check"></i> حفظ التغييرات
+      </button>
+    </div>
+  </div>
+
+  <p class="spdx-toast" data-toast hidden role="status"></p>
+
+  {# ── النموذج المخفي للإرسال: نفس عقد الخادم تمامًا (يملؤه السكربت ثم يرسله).
+     بدون action → يُرسَل إلى هذا المسار نفسه الذي يقبل POST بنفس المنطق المشترك. ── #}
+  <form method="post" class="spdx-hidden-form" data-testid="speed-manual-form" data-save-form hidden>
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+    <input type="hidden" name="policy_key" value="">
+    <input type="hidden" name="title" value="">
+    <input type="hidden" name="preset" value="normal">
+    <input type="hidden" name="multiplier" value="1.0">
+    <input type="hidden" name="profile_ids" value="">
+    <input type="hidden" name="settings_json" value="">
+    <input type="hidden" name="save_policy" value="1">
+  </form>
+
+</section>{# /spdx #}
+</div>{# /opsx-redesign #}
+
+{# ───── آخر السياسات المحفوظة (مرجع سريع): جدول موحّد uds ───── #}
+{% set _policy_status_labels = {
+  'dry_run_ready': 'جاهزة للمعاينة', 'pending': 'معلّقة', 'applied': 'مطبّقة', 'cancelled': 'ملغاة'
+} %}
+{% call hub.section("سياسات المعاينة المحفوظة", icon="box-archive",
+                    meta=(policies|length|string + " سياسة"), flush=True) %}
+  {% if policies %}
+  <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
+    <table class="hub-table" data-testid="speed-manual-policies-table">
+      <thead>
+        <tr>
+          <th>الرقم</th><th>الاسم</th><th>المعرّف المختصر</th>
+          <th>الحالة</th><th>مطبّقة على خدمة المصادقة</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for policy in policies %}
+          <tr>
+            <td><bdi dir="ltr">#{{ policy.id }}</bdi></td>
+            <td>{{ policy.title }}</td>
+            <td class="mono"><bdi dir="ltr">{{ policy.policy_key }}</bdi></td>
+            <td>{{ hub.pill(_policy_status_labels.get(policy.status, 'حالة غير معروفة'),
+                            variant=("green" if policy.status == "dry_run_ready" else "grey")) }}</td>
+            <td>{{ "نعم" if policy.applied_to_radius else "لا" }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    {{ hub.empty("لا توجد سياسات محفوظة حتى الآن.", sub="احفظ أول تغيير من المحرّك أعلاه لتظهر هنا.", icon="box-archive") }}
+  {% endif %}
+{% endcall %}
+
+{# نظام الجداول الموحد (فرز + ترقيم صفحات) + محرّك التحكم اليدوي (سلايدرات + حلقة)
+   المحرّك معزول بنطاقه: ops_speed_control.js يعمل داخل [data-speed-control] فقط #}
+<script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
+<script defer src="{{ url_for('static', filename='js/ops_speed_control.js') }}"></script>
+{% endblock %}

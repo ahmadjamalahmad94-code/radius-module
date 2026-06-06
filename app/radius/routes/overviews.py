@@ -65,38 +65,82 @@ def users_overview():
 
 def plans_overview():
     tid = _tid()
-    # top plans by subscriber count
+    # أكثر الباقات اشتراكًا — مع مواصفات إضافية (سرعة/كوتا/حالة) للجدول الموحّد
     top = [dict(r) for r in db().execute("""
-        SELECT p.id, p.name, p.plan_type, p.price, p.currency,
+        SELECT p.id, p.name, p.plan_type, p.price, p.currency, p.enabled,
+               p.color, p.speed_down_kbps, p.speed_up_kbps,
+               p.quota_total_mb, p.validity_days,
                COUNT(s.id) AS subscribers_count
         FROM access_plans p
         LEFT JOIN subscribers s ON s.plan_id = p.id AND s.tenant_id = p.tenant_id
-        WHERE p.tenant_id = ?
+        WHERE p.tenant_id = ? AND p.deleted_at IS NULL
         GROUP BY p.id
         ORDER BY subscribers_count DESC, p.priority
         LIMIT 20
     """, (tid,)).fetchall()]
 
-    # totals
+    # الإجماليات
     total_plans = db().execute(
-        "SELECT COUNT(*) AS c FROM access_plans WHERE tenant_id = ?", (tid,)
+        "SELECT COUNT(*) AS c FROM access_plans WHERE tenant_id = ? AND deleted_at IS NULL", (tid,)
     ).fetchone()["c"]
     enabled_plans = db().execute(
-        "SELECT COUNT(*) AS c FROM access_plans WHERE tenant_id = ? AND enabled = 1", (tid,)
+        "SELECT COUNT(*) AS c FROM access_plans WHERE tenant_id = ? AND enabled = 1 AND deleted_at IS NULL", (tid,)
     ).fetchone()["c"]
 
-    # by type
-    by_type = {r["plan_type"]: r["c"] for r in db().execute("""
-        SELECT plan_type, COUNT(*) AS c FROM access_plans WHERE tenant_id = ? GROUP BY plan_type
-    """, (tid,)).fetchall()}
+    # متوسّط / أدنى / أعلى سعر (الباقات المسعَّرة فقط)
+    price_row = db().execute("""
+        SELECT COALESCE(AVG(price),0) AS avg_p,
+               COALESCE(MIN(price),0) AS min_p,
+               COALESCE(MAX(price),0) AS max_p
+        FROM access_plans
+        WHERE tenant_id = ? AND deleted_at IS NULL AND price > 0
+    """, (tid,)).fetchone()
+    avg_price, min_price, max_price = price_row["avg_p"], price_row["min_p"], price_row["max_p"]
 
-    # revenue estimate (subscribers × plan price)
+    # توزيع حسب النوع — عدد الباقات + عدد المشتركين لكل نوع (لمسارات so-lane)
+    by_type_rows = [dict(r) for r in db().execute("""
+        SELECT p.plan_type, COUNT(DISTINCT p.id) AS plans_count,
+               COUNT(s.id) AS subscribers_count
+        FROM access_plans p
+        LEFT JOIN subscribers s ON s.plan_id = p.id AND s.tenant_id = p.tenant_id
+        WHERE p.tenant_id = ? AND p.deleted_at IS NULL
+        GROUP BY p.plan_type
+        ORDER BY plans_count DESC
+    """, (tid,)).fetchall()]
+    by_type = {r["plan_type"]: r["plans_count"] for r in by_type_rows}
+
+    # المشتركون الموزَّعون على باقات + باقات بلا مشتركين
+    assigned_subs = db().execute("""
+        SELECT COUNT(*) AS c FROM subscribers s
+        JOIN access_plans p ON s.plan_id = p.id AND p.tenant_id = s.tenant_id
+        WHERE s.tenant_id = ? AND p.deleted_at IS NULL
+    """, (tid,)).fetchone()["c"]
+    unused_plans = db().execute("""
+        SELECT COUNT(*) AS c FROM access_plans p
+        WHERE p.tenant_id = ? AND p.deleted_at IS NULL
+          AND NOT EXISTS (SELECT 1 FROM subscribers s
+                          WHERE s.plan_id = p.id AND s.tenant_id = p.tenant_id)
+    """, (tid,)).fetchone()["c"]
+
+    # تقدير الإيراد (مشتركون مفعَّلون × سعر باقتهم)
     rev = db().execute("""
         SELECT COALESCE(SUM(p.price), 0) AS rev
         FROM subscribers s JOIN access_plans p ON s.plan_id = p.id
         WHERE s.tenant_id = ? AND s.status = 'enabled'
     """, (tid,)).fetchone()["rev"] or 0.0
 
+    # آخر الباقات المُنشأة (للوحة جانبية سريعة)
+    recent = [dict(r) for r in db().execute("""
+        SELECT id, name, plan_type, price, enabled, created_at, color
+        FROM access_plans
+        WHERE tenant_id = ? AND deleted_at IS NULL
+        ORDER BY id DESC LIMIT 8
+    """, (tid,)).fetchall()]
+
     return render_template("radius/plans_overview.html",
                             top=top, total_plans=total_plans, enabled_plans=enabled_plans,
-                            by_type=by_type, revenue_estimate=rev)
+                            by_type=by_type, by_type_rows=by_type_rows,
+                            revenue_estimate=rev,
+                            avg_price=avg_price, min_price=min_price, max_price=max_price,
+                            assigned_subs=assigned_subs, unused_plans=unused_plans,
+                            recent=recent)

@@ -1159,6 +1159,29 @@
   overflow:hidden;
 }
 
+/* ── الهيرو داخل الغلاف الموحّد (hub-hero-shell) — وصفة users_profile ──
+   الغلاف وحده يملك الكروم؛ شريط البحث التفاعلي (.cc-hero) يفقد حدّه
+   وظلّه وزواياه وخلفيته ويصبح كتلةً مسطّحة يفصلها عن الميجاهيرو فاصل
+   علوي ناعم فقط. overflow:visible حتى لا يُقص أي عنصر منبثق. */
+.cc-hero-shell > .cc-hero{
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: rgba(255,255,255,.55);
+  box-shadow: none;
+  border-top: 1px solid var(--hub-border-soft, #EEEDF3);
+  padding: 14px 20px;
+  overflow: visible;
+}
+/* الأوْرب الزخرفي كان يعتمد على overflow:hidden — نخفيه داخل الغلاف
+   حتى لا يطفو خارج حدود الكتلة بعد فتح الـ overflow. */
+.cc-hero-shell > .cc-hero::before{ content: none; }
+/* الزوايا السفلية لآخر عنصر تتبع زوايا الغلاف */
+.cc-hero-shell > .cc-hero:last-child{
+  border-end-start-radius: var(--hub-r-xl, 18px);
+  border-end-end-radius: var(--hub-r-xl, 18px);
+}
+
 /* Subtle decorative gradient orb at top-end corner for premium feel */
 .cc-hero::before{
   content:"";

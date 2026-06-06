@@ -1,9 +1,9 @@
 {% extends "admin/_admin_layout.html" %}
 
-{% block title %}مركز إدارة الشبكة - Hobe Hub{% endblock %}
+{% block title %}{{ _('مركز إدارة الشبكة - Hobe Hub') }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-tower-broadcast"></i>{% endblock %}
-{% block page_title %}مركز إدارة الشبكة{% endblock %}
-{% block page_sub %}<span class="sub">ملخص تشغيلي</span>{% endblock %}
+{% block page_title %}{{ _('مركز إدارة الشبكة') }}{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('ملخص تشغيلي') }}</span>{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
@@ -554,6 +554,25 @@
     color:var(--tone,#2563eb);
     background:var(--tone-soft,#eff6ff);
   }
+  /* تنبيه قابل للنقر: نحافظ على نفس الشكل + حالة hover وسهم انتقال */
+  a.ops-alert--link{
+    text-decoration:none;
+    color:#334155;
+    cursor:pointer;
+    transition:background .13s;
+  }
+  a.ops-alert--link:hover{ background:var(--tone-soft,#eff6ff); }
+  .ops-alert .ops-alert-go{
+    flex:0 0 auto;
+    width:auto;height:auto;
+    margin-inline-start:auto;
+    background:transparent;
+    color:#94a3b8;
+    font-size:11px;
+    opacity:0;
+    transition:opacity .13s;
+  }
+  a.ops-alert--link:hover .ops-alert-go{ opacity:1; }
   @media (max-width:1240px){
     .ops-vps-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
     .ops-modules{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -706,37 +725,37 @@
     <div class="ops-title">
       <span class="ops-mark"><i class="fa-solid fa-tower-broadcast"></i></span>
       <div>
-        <h1>مركز إدارة الشبكة</h1>
-        <p>واجهة هادئة لمتابعة الشبكة: من المتصل الآن، ما المتاح للبيع، وما الذي يحتاج انتباهك اليوم.</p>
+        <h1>{{ _('مركز إدارة الشبكة') }}</h1>
+        <p>{{ _('واجهة هادئة لمتابعة الشبكة: من المتصل الآن، ما المتاح للبيع، وما الذي يحتاج انتباهك اليوم.') }}</p>
       </div>
     </div>
     <div class="ops-actions">
-      <a class="ops-btn ops-btn--main" href="{{ url_for('radius.users_new') }}"><i class="fa-solid fa-user-plus"></i> مشترك جديد</a>
-      <a class="ops-btn ops-btn--second" href="{{ url_for('radius.cards_generate') }}"><i class="fa-solid fa-wand-magic-sparkles"></i> إنشاء حزمة</a>
-      <a class="ops-btn" href="{{ url_for('radius.setup_wizard_v3_page') }}"><i class="fa-solid fa-network-wired"></i> تجهيز راوتر</a>
+      <a class="ops-btn ops-btn--main" href="{{ url_for('radius.users_new') }}"><i class="fa-solid fa-user-plus"></i> {{ _('مشترك جديد') }}</a>
+      <a class="ops-btn ops-btn--second" href="{{ url_for('radius.cards_generate') }}"><i class="fa-solid fa-wand-magic-sparkles"></i> {{ _('إنشاء حزمة') }}</a>
+      <a class="ops-btn" href="{{ url_for('radius.setup_wizard_v3_page') }}"><i class="fa-solid fa-network-wired"></i> {{ _('تجهيز راوتر') }}</a>
     </div>
   </section>
 
-  <section class="ops-modules" aria-label="ملخص أقسام الراديوس">
+  <section class="ops-modules" aria-label="{{ _('ملخص أقسام الراديوس') }}">
     <article class="ops-module" style="--tone:#2563eb;--soft-tone:#eff6ff;--glow:rgba(37,99,235,.10)">
       <div class="ops-module-head">
         <div>
-          <h2>المشتركون</h2>
-          <p>من يدفع الخدمة ومن هو متصل ومن يحتاج متابعة قبل انتهاء الاشتراك.</p>
+          <h2>{{ _('المشتركون') }}</h2>
+          <p>{{ _('من يدفع الخدمة ومن هو متصل ومن يحتاج متابعة قبل انتهاء الاشتراك.') }}</p>
         </div>
         <span class="ops-big-icon"><i class="fa-solid fa-users"></i></span>
       </div>
       <div>
-        <div class="ops-primary-number"><strong>{{ "{:,}".format(sub_total) }}</strong><span>مشترك</span></div>
+        <div class="ops-primary-number"><strong>{{ "{:,}".format(sub_total) }}</strong><span>{{ _('مشترك') }}</span></div>
         <div class="ops-metrics">
-          <div class="ops-metric"><span>متصلون الآن</span><strong>{{ "{:,}".format(sub_online) }}</strong></div>
-          <div class="ops-metric"><span>نشطون</span><strong>{{ "{:,}".format(sub_active) }}</strong></div>
-          <div class="ops-metric"><span>منتهي اشتراكهم</span><strong>{{ "{:,}".format((subs.expired or snap.expired_subscribers or 0)|int) }}</strong></div>
-          <div class="ops-metric"><span>ينتهي خلال 3 أيام</span><strong>{{ "{:,}".format((subs.expiring_soon or 0)|int) }}</strong></div>
+          <div class="ops-metric"><span>{{ _('متصلون الآن') }}</span><strong>{{ "{:,}".format(sub_online) }}</strong></div>
+          <div class="ops-metric"><span>{{ _('نشطون') }}</span><strong>{{ "{:,}".format(sub_active) }}</strong></div>
+          <div class="ops-metric"><span>{{ _('منتهي اشتراكهم') }}</span><strong>{{ "{:,}".format((subs.expired or snap.expired_subscribers or 0)|int) }}</strong></div>
+          <div class="ops-metric"><span>{{ _('ينتهي خلال 3 أيام') }}</span><strong>{{ "{:,}".format((subs.expiring_soon or 0)|int) }}</strong></div>
         </div>
       </div>
       <div class="ops-module-foot">
-        <a class="ops-link" href="{{ url_for('radius.users_list') }}"><i class="fa-solid fa-list"></i> إدارة المشتركين</a>
+        <a class="ops-link" href="{{ url_for('radius.users_list') }}"><i class="fa-solid fa-list"></i> {{ _('إدارة المشتركين') }}</a>
         <div class="ops-mini-bar"><span style="width:{{ sub_pct }}%"></span></div>
       </div>
     </article>
@@ -744,22 +763,22 @@
     <article class="ops-module" style="--tone:#7c3aed;--soft-tone:#f3e8ff;--glow:rgba(124,58,237,.11)">
       <div class="ops-module-head">
         <div>
-          <h2>البطاقات والحزم</h2>
-          <p>مخزون الكروت المطبوعة والحزم الجاهزة للتفعيل أو البيع المباشر.</p>
+          <h2>{{ _('البطاقات والحزم') }}</h2>
+          <p>{{ _('مخزون الكروت المطبوعة والحزم الجاهزة للتفعيل أو البيع المباشر.') }}</p>
         </div>
         <span class="ops-big-icon"><i class="fa-solid fa-layer-group"></i></span>
       </div>
       <div>
-        <div class="ops-primary-number"><strong>{{ "{:,}".format(printed_total) }}</strong><span>كرت مطبوع</span></div>
+        <div class="ops-primary-number"><strong>{{ "{:,}".format(printed_total) }}</strong><span>{{ _('كرت مطبوع') }}</span></div>
         <div class="ops-metrics">
-          <div class="ops-metric"><span>متاح</span><strong>{{ "{:,}".format(printed_available) }}</strong></div>
-          <div class="ops-metric"><span>الحزم</span><strong>{{ "{:,}".format(printed_batches) }}</strong></div>
-          <div class="ops-metric"><span>متصل</span><strong>{{ "{:,}".format(printed_connected) }}</strong></div>
-          <div class="ops-metric"><span>مباع اليوم</span><strong>{{ "{:,}".format(printed_sold_today) }}</strong></div>
+          <div class="ops-metric"><span>{{ _('متاح') }}</span><strong>{{ "{:,}".format(printed_available) }}</strong></div>
+          <div class="ops-metric"><span>{{ _('الحزم') }}</span><strong>{{ "{:,}".format(printed_batches) }}</strong></div>
+          <div class="ops-metric"><span>{{ _('متصل') }}</span><strong>{{ "{:,}".format(printed_connected) }}</strong></div>
+          <div class="ops-metric"><span>{{ _('مباع اليوم') }}</span><strong>{{ "{:,}".format(printed_sold_today) }}</strong></div>
         </div>
       </div>
       <div class="ops-module-foot">
-        <a class="ops-link" href="{{ url_for('radius.cards_batches') }}"><i class="fa-solid fa-boxes-stacked"></i> حزم البطاقات</a>
+        <a class="ops-link" href="{{ url_for('radius.cards_batches') }}"><i class="fa-solid fa-boxes-stacked"></i> {{ _('حزم البطاقات') }}</a>
         <div class="ops-mini-bar"><span style="width:{{ printed_pct }}%"></span></div>
       </div>
     </article>
@@ -767,23 +786,23 @@
     <article class="ops-module" style="--tone:#14b8a6;--soft-tone:#ecfeff;--glow:rgba(20,184,166,.12)">
       <div class="ops-module-head">
         <div>
-          <h2>البطاقات الإلكترونية</h2>
-          <p>حزم البيع الإلكتروني ومستخدمي الكروت الذين يشترون من المحفظة.</p>
+          <h2>{{ _('البطاقات الإلكترونية') }}</h2>
+          <p>{{ _('حزم البيع الإلكتروني ومستخدمي الكروت الذين يشترون من المحفظة.') }}</p>
         </div>
         <span class="ops-big-icon"><i class="fa-solid fa-wallet"></i></span>
       </div>
       <div>
-        <div class="ops-primary-number"><strong>{{ "{:,}".format(electronic_total) }}</strong><span>كرت إلكتروني</span></div>
+        <div class="ops-primary-number"><strong>{{ "{:,}".format(electronic_total) }}</strong><span>{{ _('كرت إلكتروني') }}</span></div>
         <div class="ops-metrics">
-          <div class="ops-metric"><span>متاح</span><strong>{{ "{:,}".format(electronic_available) }}</strong></div>
-          <div class="ops-metric"><span>الحزم</span><strong>{{ "{:,}".format(electronic_batches) }}</strong></div>
-          <div class="ops-metric"><span>متصل</span><strong>{{ "{:,}".format(electronic_connected) }}</strong></div>
-          <div class="ops-metric"><span>مباع اليوم</span><strong>{{ "{:,}".format(electronic_sold_today) }}</strong></div>
+          <div class="ops-metric"><span>{{ _('متاح') }}</span><strong>{{ "{:,}".format(electronic_available) }}</strong></div>
+          <div class="ops-metric"><span>{{ _('الحزم') }}</span><strong>{{ "{:,}".format(electronic_batches) }}</strong></div>
+          <div class="ops-metric"><span>{{ _('متصل') }}</span><strong>{{ "{:,}".format(electronic_connected) }}</strong></div>
+          <div class="ops-metric"><span>{{ _('مباع اليوم') }}</span><strong>{{ "{:,}".format(electronic_sold_today) }}</strong></div>
         </div>
       </div>
       <div class="ops-module-foot">
-        <a class="ops-link" href="{{ url_for('radius.card_marketplace') }}"><i class="fa-solid fa-store"></i> حزم البيع</a>
-        <a class="ops-link" href="{{ url_for('radius.card_users_list') }}"><i class="fa-solid fa-user-tag"></i> المستخدمون</a>
+        <a class="ops-link" href="{{ url_for('radius.card_marketplace') }}"><i class="fa-solid fa-store"></i> {{ _('حزم البيع') }}</a>
+        <a class="ops-link" href="{{ url_for('radius.card_users_list') }}"><i class="fa-solid fa-user-tag"></i> {{ _('المستخدمون') }}</a>
         <div class="ops-mini-bar"><span style="width:{{ electronic_pct }}%"></span></div>
       </div>
     </article>
@@ -791,20 +810,20 @@
     <article class="ops-module" style="--tone:#0891b2;--soft-tone:#ecfeff;--glow:rgba(8,145,178,.12)">
       <div class="ops-module-head">
         <div>
-          <h2>الشبكة</h2>
-          <p>أجهزة الشبكة والراوترات التي يعتمد عليها تسجيل الدخول والمحاسبة.</p>
+          <h2>{{ _('الشبكة') }}</h2>
+          <p>{{ _('أجهزة الشبكة والراوترات التي يعتمد عليها تسجيل الدخول والمحاسبة.') }}</p>
         </div>
         <span class="ops-big-icon"><i class="fa-solid fa-network-wired"></i></span>
       </div>
       <div>
-        <div class="ops-primary-number"><strong>{{ "{:,}".format(nas_total) }}</strong><span>جهاز</span></div>
+        <div class="ops-primary-number"><strong>{{ "{:,}".format(nas_total) }}</strong><span>{{ _('جهاز') }}</span></div>
         <div class="ops-metrics">
-          <div class="ops-metric"><span>مفعلة</span><strong>{{ "{:,}".format(nas_enabled) }}</strong></div>
-          <div class="ops-metric"><span>متصلون</span><strong>{{ "{:,}".format(sub_online) }}</strong></div>
+          <div class="ops-metric"><span>{{ _('مفعلة') }}</span><strong>{{ "{:,}".format(nas_enabled) }}</strong></div>
+          <div class="ops-metric"><span>{{ _('متصلون') }}</span><strong>{{ "{:,}".format(sub_online) }}</strong></div>
         </div>
       </div>
       <div class="ops-module-foot">
-        <a class="ops-link" href="{{ url_for('radius.devices_list') }}"><i class="fa-solid fa-server"></i> الأجهزة</a>
+        <a class="ops-link" href="{{ url_for('radius.devices_list') }}"><i class="fa-solid fa-server"></i> {{ _('الأجهزة') }}</a>
         <div class="ops-mini-bar"><span style="width:{{ nas_pct }}%"></span></div>
       </div>
     </article>
@@ -812,42 +831,42 @@
     <article class="ops-module" style="--tone:#f59e0b;--soft-tone:#fffbeb;--glow:rgba(245,158,11,.14)">
       <div class="ops-module-head">
         <div>
-          <h2>العروض</h2>
-          <p>باقات الإنترنت، السرعات، الحصص، وشروط الاستخدام للمشتركين والكروت.</p>
+          <h2>{{ _('العروض') }}</h2>
+          <p>{{ _('باقات الإنترنت، السرعات، الحصص، وشروط الاستخدام للمشتركين والكروت.') }}</p>
         </div>
         <span class="ops-big-icon"><i class="fa-solid fa-tags"></i></span>
       </div>
       <div>
-        <div class="ops-primary-number"><strong>{{ "{:,}".format((plans.total or snap.plans_total or 0)|int) }}</strong><span>عرض</span></div>
+        <div class="ops-primary-number"><strong>{{ "{:,}".format((plans.total or snap.plans_total or 0)|int) }}</strong><span>{{ _('عرض') }}</span></div>
         <div class="ops-metrics">
-          <div class="ops-metric"><span>مفعلة</span><strong>{{ "{:,}".format((plans.enabled or 0)|int) }}</strong></div>
-          <div class="ops-metric"><span>معطلة</span><strong>{{ "{:,}".format((plans.disabled or 0)|int) }}</strong></div>
+          <div class="ops-metric"><span>{{ _('مفعلة') }}</span><strong>{{ "{:,}".format((plans.enabled or 0)|int) }}</strong></div>
+          <div class="ops-metric"><span>{{ _('معطلة') }}</span><strong>{{ "{:,}".format((plans.disabled or 0)|int) }}</strong></div>
         </div>
       </div>
       <div class="ops-module-foot">
-        <a class="ops-link" href="{{ url_for('radius.plans_list') }}"><i class="fa-solid fa-sliders"></i> إدارة العروض</a>
-        <a class="ops-link" href="{{ url_for('radius.plans_new') }}"><i class="fa-solid fa-plus"></i> عرض جديد</a>
+        <a class="ops-link" href="{{ url_for('radius.plans_list') }}"><i class="fa-solid fa-sliders"></i> {{ _('إدارة العروض') }}</a>
+        <a class="ops-link" href="{{ url_for('radius.plans_new') }}"><i class="fa-solid fa-plus"></i> {{ _('عرض جديد') }}</a>
       </div>
     </article>
 
     <article class="ops-module" style="--tone:#fb923c;--soft-tone:#fff7ed;--glow:rgba(251,146,60,.14)">
       <div class="ops-module-head">
         <div>
-          <h2>المالية</h2>
-          <p>إيرادات الشبكة، الديون، والتقارير التي تساعدك تراجع الأداء.</p>
+          <h2>{{ _('المالية') }}</h2>
+          <p>{{ _('إيرادات الشبكة، الديون، والتقارير التي تساعدك تراجع الأداء.') }}</p>
         </div>
         <span class="ops-big-icon"><i class="fa-solid fa-chart-line"></i></span>
       </div>
       <div>
-        <div class="ops-primary-number"><strong>{{ revenue_month|money }}</strong><span>هذا الشهر</span></div>
+        <div class="ops-primary-number"><strong>{{ revenue_month|money }}</strong><span>{{ _('هذا الشهر') }}</span></div>
         <div class="ops-metrics">
-          <div class="ops-metric"><span>اليوم</span><strong>{{ revenue_today|money }}</strong></div>
-          <div class="ops-metric"><span>السنة</span><strong>{{ revenue_year|money }}</strong></div>
+          <div class="ops-metric"><span>{{ _('اليوم') }}</span><strong>{{ revenue_today|money }}</strong></div>
+          <div class="ops-metric"><span>{{ _('السنة') }}</span><strong>{{ revenue_year|money }}</strong></div>
         </div>
       </div>
       <div class="ops-module-foot">
-        <a class="ops-link" href="{{ url_for('radius.business_finance') }}"><i class="fa-solid fa-wallet"></i> المالية</a>
-        <a class="ops-link" href="{{ url_for('radius.reports_home') }}"><i class="fa-solid fa-chart-simple"></i> التقارير</a>
+        <a class="ops-link" href="{{ url_for('radius.business_finance') }}"><i class="fa-solid fa-wallet"></i> {{ _('المالية') }}</a>
+        <a class="ops-link" href="{{ url_for('radius.reports_home') }}"><i class="fa-solid fa-chart-simple"></i> {{ _('التقارير') }}</a>
       </div>
     </article>
   </section>
@@ -855,15 +874,15 @@
   <section class="ops-secondary">
     <article class="ops-list-card">
       <div class="ops-list-head">
-        <h3>آخر الحزم</h3>
+        <h3>{{ _('آخر الحزم') }}</h3>
         <i class="fa-solid fa-clock-rotate-left"></i>
       </div>
       {% for batch in metrics.recent_batches[:4] %}
         <div class="ops-row">
           <span class="ops-row-code">#{{ batch.id }}</span>
           <div>
-            <div class="ops-row-title">{{ batch.package_name or batch.batch_code or "حزمة بدون اسم" }}</div>
-            <div class="ops-row-sub">{{ batch.batch_code or "بدون كود" }}</div>
+            <div class="ops-row-title">{{ batch.package_name or batch.batch_code or _("حزمة بدون اسم") }}</div>
+            <div class="ops-row-sub">{{ batch.batch_code or _("بدون كود") }}</div>
           </div>
           <span class="ops-row-num">{{ batch.used or 0 }} / {{ batch.count or batch.generated or 0 }}</span>
         </div>
@@ -871,8 +890,8 @@
         <div class="ops-row">
           <span class="ops-row-code">--</span>
           <div>
-            <div class="ops-row-title">لا توجد حزم بعد</div>
-            <div class="ops-row-sub">ستظهر أحدث الحزم هنا</div>
+            <div class="ops-row-title">{{ _('لا توجد حزم بعد') }}</div>
+            <div class="ops-row-sub">{{ _('ستظهر أحدث الحزم هنا') }}</div>
           </div>
           <span class="ops-row-num">0</span>
         </div>
@@ -881,35 +900,41 @@
 
     <article class="ops-list-card">
       <div class="ops-list-head">
-        <h3>ما يحتاج انتباه</h3>
+        <h3>{{ _('ما يحتاج انتباه') }}</h3>
         <i class="fa-solid fa-triangle-exclamation"></i>
       </div>
       {% for alert in alerts[:4] %}
-        <div class="ops-alert" style="--tone:{{ '#ef4444' if alert.level == 'danger' else ('#f59e0b' if alert.level == 'warn' else '#2563eb') }};--tone-soft:{{ '#fff1f2' if alert.level == 'danger' else ('#fffbeb' if alert.level == 'warn' else '#eff6ff') }}">
+        {# كل تنبيه قابل للنقر: يذهب إلى الصفحة المرتبطة به (link_endpoint)،
+           وإن لم يوجد رابط → مركز التنبيهات الذكية كوجهة افتراضية. #}
+        {%- set _ep = alert.link_endpoint if (alert.link_endpoint and endpoint_exists(alert.link_endpoint)) else
+                      ('radius.mt_alerts_index' if endpoint_exists('radius.mt_alerts_index') else none) -%}
+        <a class="ops-alert ops-alert--link" href="{{ url_for(_ep) if _ep else '#' }}"
+           style="--tone:{{ '#ef4444' if alert.level == 'danger' else ('#f59e0b' if alert.level == 'warn' else '#2563eb') }};--tone-soft:{{ '#fff1f2' if alert.level == 'danger' else ('#fffbeb' if alert.level == 'warn' else '#eff6ff') }}">
           <i class="fa-solid {{ 'fa-circle-exclamation' if alert.level == 'danger' else ('fa-triangle-exclamation' if alert.level == 'warn' else 'fa-circle-info') }}"></i>
           <span>{{ alert.message }}</span>
-        </div>
+          <i class="fa-solid fa-chevron-left ops-alert-go" aria-hidden="true"></i>
+        </a>
       {% else %}
         <div class="ops-alert" style="--tone:#16a34a;--tone-soft:#f0fdf4">
           <i class="fa-solid fa-circle-check"></i>
-          <span>لا توجد ملاحظات تشغيلية مهمة الآن.</span>
+          <span>{{ _('لا توجد ملاحظات تشغيلية مهمة الآن.') }}</span>
         </div>
       {% endfor %}
     </article>
   </section>
-  <section class="ops-vps-grid" aria-label="ملخص خادم الربط">
+  <section class="ops-vps-grid" aria-label="{{ _('ملخص خادم الربط') }}">
     <article class="ops-vps-card ops-vps--brand">
       <div class="ops-vps-head">
         <span class="ops-vps-icon"><i class="fa-solid fa-server"></i></span>
         <div>
-          <div class="ops-vps-label">الخادم</div>
-          <span class="ops-vps-status">خادم الربط</span>
+          <div class="ops-vps-label">{{ _('الخادم') }}</div>
+          <span class="ops-vps-status">{{ _('خادم الربط') }}</span>
         </div>
       </div>
       <div class="ops-vps-body">
         <div>
           <div class="ops-vps-value ops-vps-value--name">{{ system.hostname or "—" }}</div>
-          <div class="ops-vps-sub">{{ (system.platform or "نظام التشغيل")|replace("-", " ")|truncate(34, True) }}</div>
+          <div class="ops-vps-sub">{{ (system.platform or _("نظام التشغيل"))|replace("-", " ")|truncate(34, True) }}</div>
         </div>
         <span class="ops-vps-ring" aria-hidden="true"><i class="fa-solid fa-cloud"></i></span>
       </div>
@@ -920,14 +945,14 @@
       <div class="ops-vps-head">
         <span class="ops-vps-icon"><i class="fa-solid fa-clock-rotate-left"></i></span>
         <div>
-          <div class="ops-vps-label">مدة تشغيل خادم الربط</div>
-          <span class="ops-vps-status">مدة التشغيل</span>
+          <div class="ops-vps-label">{{ _('مدة تشغيل خادم الربط') }}</div>
+          <span class="ops-vps-status">{{ _('مدة التشغيل') }}</span>
         </div>
       </div>
       <div class="ops-vps-body">
         <div>
           <div class="ops-vps-value ops-vps-value--rtl">{{ system.system_uptime or "—" }}</div>
-          <div class="ops-vps-sub">تشغيل الخادم</div>
+          <div class="ops-vps-sub">{{ _('تشغيل الخادم') }}</div>
         </div>
         <span class="ops-vps-ring" aria-hidden="true"><i class="fa-regular fa-clock"></i></span>
       </div>
@@ -937,14 +962,14 @@
       <div class="ops-vps-head">
         <span class="ops-vps-icon"><i class="fa-solid fa-code"></i></span>
         <div>
-          <div class="ops-vps-label">مدة تشغيل التطبيق</div>
-          <span class="ops-vps-status">التطبيق</span>
+          <div class="ops-vps-label">{{ _('مدة تشغيل التطبيق') }}</div>
+          <span class="ops-vps-status">{{ _('التطبيق') }}</span>
         </div>
       </div>
       <div class="ops-vps-body">
         <div>
           <div class="ops-vps-value ops-vps-value--rtl">{{ system.process_uptime or "—" }}</div>
-          <div class="ops-vps-sub">عملية HobeRadius</div>
+          <div class="ops-vps-sub">{{ _('عملية HobeRadius') }}</div>
         </div>
         <span class="ops-vps-ring" aria-hidden="true"><i class="fa-solid fa-terminal"></i></span>
       </div>
@@ -954,8 +979,8 @@
       <div class="ops-vps-head">
         <span class="ops-vps-icon"><i class="fa-solid fa-signal"></i></span>
         <div>
-          <div class="ops-vps-label">فحص الشبكة</div>
-          <span class="ops-vps-status">{{ "الفحص ناجح" if vps_network.ping_ok else "بانتظار الفحص" }}</span>
+          <div class="ops-vps-label">{{ _('فحص الشبكة') }}</div>
+          <span class="ops-vps-status">{{ _('الفحص ناجح') if vps_network.ping_ok else _('بانتظار الفحص') }}</span>
         </div>
       </div>
       <div class="ops-vps-body">
@@ -972,7 +997,7 @@
         <span class="ops-vps-icon"><i class="fa-solid fa-globe"></i></span>
         <div>
           <div class="ops-vps-label">DNS</div>
-          <span class="ops-vps-status">{{ "سليم" if vps_network.dns_ok else "فحص" }}</span>
+          <span class="ops-vps-status">{{ _('سليم') if vps_network.dns_ok else _('فحص') }}</span>
         </div>
       </div>
       <div class="ops-vps-body">
@@ -988,14 +1013,14 @@
       <div class="ops-vps-head">
         <span class="ops-vps-icon"><i class="fa-solid fa-microchip"></i></span>
         <div>
-          <div class="ops-vps-label">استخدام المعالج</div>
-          <span class="ops-vps-status">المعالج</span>
+          <div class="ops-vps-label">{{ _('استخدام المعالج') }}</div>
+          <span class="ops-vps-status">{{ _('المعالج') }}</span>
         </div>
       </div>
       <div class="ops-vps-body">
         <div>
           <div class="ops-vps-value">{{ "%.1f"|format(vps_cpu_pct|float) ~ "%" if vps_cpu_pct is not none else "—" }}</div>
-          <div class="ops-vps-sub">{{ system.cpu_count or 0 }} نواة</div>
+          <div class="ops-vps-sub">{{ _('%(n)s نواة', n=(system.cpu_count or 0)) }}</div>
         </div>
         <span class="ops-vps-ring" aria-hidden="true"><i class="fa-solid fa-gauge-high"></i></span>
       </div>
@@ -1005,14 +1030,14 @@
       <div class="ops-vps-head">
         <span class="ops-vps-icon"><i class="fa-solid fa-memory"></i></span>
         <div>
-          <div class="ops-vps-label">استهلاك الذاكرة</div>
-          <span class="ops-vps-status">الذاكرة</span>
+          <div class="ops-vps-label">{{ _('استهلاك الذاكرة') }}</div>
+          <span class="ops-vps-status">{{ _('الذاكرة') }}</span>
         </div>
       </div>
       <div class="ops-vps-body">
         <div>
           <div class="ops-vps-value">{{ "%.1f"|format(vps_ram_pct|float) ~ "%" if vps_ram_pct is not none else "—" }}</div>
-          <div class="ops-vps-sub">{{ vps_memory.available_human or "—" }} متاح</div>
+          <div class="ops-vps-sub">{{ _('%(amount)s متاح', amount=(vps_memory.available_human or "—")) }}</div>
         </div>
         <span class="ops-vps-ring" aria-hidden="true"><i class="fa-solid fa-memory"></i></span>
       </div>
@@ -1022,14 +1047,14 @@
       <div class="ops-vps-head">
         <span class="ops-vps-icon"><i class="fa-solid fa-hard-drive"></i></span>
         <div>
-          <div class="ops-vps-label">استخدام القرص</div>
-          <span class="ops-vps-status">القرص</span>
+          <div class="ops-vps-label">{{ _('استخدام القرص') }}</div>
+          <span class="ops-vps-status">{{ _('القرص') }}</span>
         </div>
       </div>
       <div class="ops-vps-body">
         <div>
           <div class="ops-vps-value">{{ "%.1f"|format(vps_disk_pct|float) ~ "%" if vps_disk_pct is not none else "—" }}</div>
-          <div class="ops-vps-sub">{{ vps_disk.free_human or "—" }} متاح</div>
+          <div class="ops-vps-sub">{{ _('%(amount)s متاح', amount=(vps_disk.free_human or "—")) }}</div>
         </div>
         <span class="ops-vps-ring" aria-hidden="true"><i class="fa-solid fa-database"></i></span>
       </div>

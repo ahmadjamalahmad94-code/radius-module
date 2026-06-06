@@ -276,7 +276,7 @@
         {% if engine_version %}
         <span class="ci-build-chip" title="نسخة محرّك الاستيراد — يجب أن تتطابق مع آخر تحديث على GitHub">
           <i class="fa-solid fa-microchip"></i>
-          اصدار <span dir="ltr">{{ engine_version }}</span>
+          إصدار <span dir="ltr">{{ engine_version }}</span>
           {% if engine_build_note %}<small style="opacity:.7;margin-inline-start:6px">({{ engine_build_note }})</small>{% endif %}
         </span>
         {% endif %}
@@ -456,9 +456,9 @@
       push('عمود المستخدم', '#' + (data.username_index + 1));
     }
     if (data.password_index !== null && data.password_index !== undefined) {
-      push('عمود الباس', '#' + (data.password_index + 1));
+      push('عمود كلمة المرور', '#' + (data.password_index + 1));
     } else {
-      push('عمود الباس', '— غير موجود');
+      push('عمود كلمة المرور', '— غير موجود');
     }
     if (data.rows_seen) push('صفوف مقروءة', String(data.rows_seen));
     if (data.rows_skipped) push('صفوف متجاهلة', String(data.rows_skipped));

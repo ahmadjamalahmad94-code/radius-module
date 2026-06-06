@@ -1,10 +1,11 @@
 {# ═══════════════════════════════════════════════════════════════════════
-   Sessions report — UNIFIED DESIGN SYSTEM (megahero + worklayout + help).
-
-   Same backend data: `items` (radacct rows), `username` (filter value),
-   `limit`, `filters`. Zero route/behaviour change.
-
-   Columns mirror radacct fields used by route in reports.py.
+   تقرير الجلسات — إعادة تصميم من الصفر على نظام hub_v2:
+     • صدفة هيرو واحدة (hub-hero-shell): عنوان + سطر تعريفي + مؤشرات بصف
+       واحد + حزام الفلترة — بلا أي هيروات/لافتات مكدّسة.
+     • جدول uds موحّد (فرز + ترقيم + تصدير) مع تعريب أسباب الإنهاء
+       (القيمة الخام تبقى في title) والقيم الفنية mono داخل <bdi>.
+     • نفس معطيات المسار: `items` (صفوف radacct)، `username` (قيمة
+       الفلتر)، `limit`، `filters` — صفر تغيير على المسار أو السلوك.
    ═══════════════════════════════════════════════════════════════════════ #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
@@ -14,7 +15,12 @@
 {% block page_title %}تقرير الجلسات والمحاسبة{% endblock %}
 {% block page_sub %}<span class="sub">{{ items|length }} صف</span>{% endblock %}
 
-{# ── local formatting helpers (mirror users_profile.html, no backend deps) ── #}
+{% block head_extra %}{{ super() }}
+{# نظام الجداول الموحد (uds): فرز + ترقيم صفحات لجدول الجلسات #}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
+{% endblock %}
+
+{# ── مُنسِّقات محلية للمدة والحجم (تطابق users_profile.html، بلا اعتماد خلفي) ── #}
 {% macro fmt_dur(secs) -%}
   {%- set s = secs|int -%}
   {%- if s >= 86400 -%}{{ (s // 86400) }} يوم {{ ((s % 86400) // 3600) }}س
@@ -33,18 +39,40 @@
 {%- endmacro %}
 
 {% block content %}
-{% include "radius/reports_nav.html" %}
+{# متحكّم «انتقال سريع» المضغوط — يُحقن في صف عنوان الهيرو بدل الشريطين الكبيرين #}
+{% set _report_jump %}{% include "radius/reports_nav.html" %}{% endset %}
 
-{# ───── KPIs derived from the same `items` (no backend change) ───── #}
+{# ── تعريب أسباب إنهاء الجلسة القياسية في RADIUS (تبقى القيمة الأصلية في title) ── #}
+{% set cause_labels = {
+  'User-Request':        'طلب المستخدم',
+  'Lost-Carrier':        'انقطاع الاتصال',
+  'Lost-Service':        'انقطاع الخدمة',
+  'Idle-Timeout':        'مهلة خمول',
+  'Session-Timeout':     'انتهاء مدة الجلسة',
+  'Admin-Reset':         'إنهاء إداري',
+  'Admin-Reboot':        'إعادة تشغيل إدارية',
+  'Port-Error':          'خطأ منفذ',
+  'NAS-Error':           'خطأ جهاز الشبكة',
+  'NAS-Request':         'طلب جهاز الشبكة',
+  'NAS-Reboot':          'إعادة تشغيل جهاز الشبكة',
+  'Port-Unneeded':       'منفذ غير مطلوب',
+  'Service-Unavailable': 'الخدمة غير متاحة',
+  'Host-Request':        'طلب المضيف'
+} %}
+
+{# ───── مؤشرات مشتقة من نفس `items` (بلا أي تغيير خلفي) ───── #}
 {% set _active = items|rejectattr('acctstoptime')|list|length %}
-{% set _total_down = items|sum(attribute='acctinputoctets') %}
-{% set _total_up = items|sum(attribute='acctoutputoctets') %}
+{# الجمع بأمان: حقول الأوكتات قد تكون NULL في radacct للجلسات النشطة #}
+{% set _total_down = items|map(attribute='acctinputoctets')|map('int', 0)|sum %}
+{% set _total_up   = items|map(attribute='acctoutputoctets')|map('int', 0)|sum %}
 
-{# ───── Merged hero: title + subtitle + KPI strip + integrated filters ───── #}
+{# ───── صدفة الهيرو الواحدة: عنوان + سطر تعريفي + مؤشرات بصف واحد + حزام الفلترة ───── #}
+<section class="hub-hero-shell" data-testid="sessions-hero">
 {% call hub.megahero(
   "تقرير الجلسات",
   subtitle="سجل جلسات المصادقة من جدول radacct — مع الاستهلاك والمدة وسبب الإنهاء.",
   icon="chart-line",
+  actions_html=_report_jump,
   kpis=[
     {'label': 'الصفوف',   'value': items|length, 'icon': 'table-list',  'variant': 'brand'},
     {'label': 'نشطة',     'value': _active,      'icon': 'circle-play', 'variant': 'green'},
@@ -65,80 +93,87 @@
     {% endfor %}
   </select>
   {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
-  {% if username %}
+  {% if username or (filters and (filters.date_from or filters.date_to)) %}
     {{ hub.btn("إعادة ضبط", icon="rotate-left", variant="ghost", size="sm",
                attrs='onclick="window.location=' + "'" + url_for('radius.rep_sessions') + "'" + '"') }}
   {% endif %}
+  <span class="hub-hint" tabindex="0"
+        data-hint="الفلترة تعمل على اسم المستخدم ونطاق تاريخ بداية الجلسة، ويمكن رفع حد الصفوف حتى 1000."><i class="fa-solid fa-info"></i></span>
 {% endcall %}
+</section>{# /hub-hero-shell #}
 
 {% if items %}
-{# ───── Main (carded table) + help panel on the LEFT ───── #}
-{% call hub.worklayout(aside_html=hub.helppanel(
-  "كيف تقرأ هذا التقرير؟",
-  intro="كل صف هو جلسة محاسبة (radacct) لمستخدم — من لحظة الدخول حتى الإنهاء.",
-  items=[
-    {'icon': 'clock',        'text': 'المدة هي زمن الجلسة الفعلي معروضًا بصيغة أيام/ساعات/دقائق.'},
-    {'icon': 'arrows-up-down','text': 'تنزيل/رفع هما حجم البيانات المنقولة خلال الجلسة.'},
-    {'icon': 'circle-play',  'text': 'الجلسة بلا «انتهت» تعني أنها لا تزال نشطة الآن.'},
-    {'icon': 'right-from-bracket', 'text': 'سبب الإنهاء يوضّح لماذا أُغلقت الجلسة (انقطاع، مهلة، تسجيل خروج…).'},
-  ],
-  note="هذا التقرير للقراءة فقط — البيانات تأتي مباشرة من جدول المحاسبة radacct."
-)) %}
-  {% call hub.section("سجل الجلسات", icon="table-list",
-                      meta=items|length|string + " صف", flush=True) %}
-    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="15" style="border:none;border-radius:0">
-      <table class="hub-table">
-        <thead>
-          <tr>
-            <th class="num" style="width:70px">#</th>
-            <th>المستخدم</th>
-            <th>رقم الجلسة</th>
-            <th>جهاز الشبكة</th>
-            <th>IP العميل</th>
-            <th>MAC</th>
-            <th class="num" style="white-space:nowrap">المدة</th>
-            <th class="num" style="white-space:nowrap">تنزيل</th>
-            <th class="num" style="white-space:nowrap">رفع</th>
-            <th>بدأت</th>
-            <th>انتهت</th>
-            <th>سبب الإنهاء</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for r in items %}
-          <tr>
-            <td class="num mono">{{ r.radacctid }}</td>
-            <td><strong>{{ r.username }}</strong></td>
-            <td class="mono small" title="{{ r.acctsessionid or '' }}">
-              {{ (r.acctsessionid or '')[:18] }}{% if (r.acctsessionid or '')|length > 18 %}…{% endif %}
-            </td>
-            <td class="mono small">{{ r.nasipaddress or '—' }}</td>
-            <td class="mono small">{{ r.framedipaddress or '—' }}</td>
-            <td class="mono small">{{ r.callingstationid or '—' }}</td>
-            <td class="num mono"
-                style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
-              {{ fmt_dur(r.acctsessiontime or 0) }}
-            </td>
-            <td class="num mono"
-                style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
-              {{ fmt_bytes_raw(r.acctinputoctets or 0) }}
-            </td>
-            <td class="num mono"
-                style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
-              {{ fmt_bytes_raw(r.acctoutputoctets or 0) }}
-            </td>
-            <td class="mono small">{{ r.acctstarttime[:16] if r.acctstarttime else '—' }}</td>
-            <td class="mono small">
-              {% if r.acctstoptime %}{{ r.acctstoptime[:16] }}
-              {% else %}{{ hub.pill("نشطة", variant="green") }}{% endif %}
-            </td>
-            <td class="mono small">{{ r.acctterminatecause or '—' }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  {% endcall %}
+{# ───── جدول الجلسات — uds موحّد (فرز + ترقيم + تصدير)، بلا أي كتل مكدّسة ───── #}
+{% call hub.section("سجل الجلسات", icon="table-list",
+                    meta=items|length|string + " جلسة", flush=True) %}
+  <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25"
+       style="border:none;border-radius:0">
+    <table class="hub-table rep-table">
+      <thead>
+        <tr>
+          <th class="num" style="width:70px" data-uds-nosort>الرقم</th>
+          <th>المستخدم</th>
+          <th data-uds-nosort data-uds-nocol>رقم الجلسة</th>
+          <th>جهاز الشبكة</th>
+          <th>عنوان IP</th>
+          <th>عنوان MAC</th>
+          <th class="num" style="white-space:nowrap">المدة</th>
+          <th class="num" style="white-space:nowrap">تنزيل</th>
+          <th class="num" style="white-space:nowrap">رفع</th>
+          <th>بدأت</th>
+          <th>انتهت</th>
+          <th data-uds-nosort>سبب الإنهاء</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in items %}
+        <tr>
+          <td class="num mono"><bdi>#{{ r.radacctid }}</bdi></td>
+          <td><strong><bdi>{{ r.username }}</bdi></strong></td>
+          <td class="mono small" title="{{ r.acctsessionid or '' }}">
+            <bdi>{{ (r.acctsessionid or '')[:18] }}{% if (r.acctsessionid or '')|length > 18 %}…{% endif %}</bdi>
+          </td>
+          <td class="mono small"><bdi>{{ r.nasipaddress or '—' }}</bdi></td>
+          <td class="mono small"><bdi>{{ r.framedipaddress or '—' }}</bdi></td>
+          <td class="mono small"><bdi>{{ r.callingstationid or '—' }}</bdi></td>
+          <td class="num mono"
+              style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
+            {{ fmt_dur(r.acctsessiontime or 0) }}
+          </td>
+          <td class="num mono"
+              style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
+            {{ fmt_bytes_raw(r.acctinputoctets or 0) }}
+          </td>
+          <td class="num mono"
+              style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
+            {{ fmt_bytes_raw(r.acctoutputoctets or 0) }}
+          </td>
+          {% set _st = r.acctstarttime|dt_local if r.acctstarttime else '' %}
+          <td class="mono"
+              style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
+            <span class="rep-primary">{{ _st[:10] or '—' }}</span>
+            <span class="rep-sub">{{ _st[11:16] }}</span>
+          </td>
+          <td class="mono"
+              style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
+            {% if r.acctstoptime %}
+              {% set _et = r.acctstoptime|dt_local %}
+              <span class="rep-primary">{{ _et[:10] }}</span>
+              <span class="rep-sub">{{ _et[11:16] }}</span>
+            {% else %}{{ hub.pill("نشطة", variant="green") }}{% endif %}
+          </td>
+          {# سبب الإنهاء معرَّب من خريطة RADIUS القياسية — والقيمة الخام في title #}
+          <td class="small" title="{{ r.acctterminatecause or '' }}">
+            {%- if not r.acctterminatecause -%}—
+            {%- elif r.acctterminatecause in cause_labels -%}{{ cause_labels[r.acctterminatecause] }}
+            {%- else -%}<bdi class="mono">{{ r.acctterminatecause }}</bdi>
+            {%- endif -%}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 {% endcall %}
 {% else %}
 {{ hub.empty(
@@ -148,4 +183,6 @@
 ) }}
 {% endif %}
 
+{# نظام الجداول الموحد: فرز + ترقيم صفحات لجدول الجلسات #}
+<script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
 {% endblock %}

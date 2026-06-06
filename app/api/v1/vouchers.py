@@ -81,6 +81,12 @@ def generate_vouchers():
         return fail("validation_error", "معرّف الباقة يجب أن يكون رقمًا صحيحًا.", status=422)
     if amount <= 0:
         return fail("validation_error", "قيمة القسيمة يجب أن تكون أكبر من صفر.", status=422)
+    # عدد خانات الكود (اختياري) — الافتراضي 12، والحدود الآمنة 6–16.
+    try:
+        code_length = int(body.get("code_length") or vouchers_repo.CODE_LEN_DEFAULT)
+    except (TypeError, ValueError):
+        return fail("validation_error", "عدد خانات الكود يجب أن يكون رقمًا صحيحًا.", status=422)
+    code_length = min(max(code_length, vouchers_repo.CODE_LEN_MIN), vouchers_repo.CODE_LEN_MAX)
     items = vouchers_repo.generate_bulk(
         tenant_id=_tid(),
         amount=amount,
@@ -88,6 +94,7 @@ def generate_vouchers():
         plan_id=parsed_plan_id,
         expire_at=expire_at,
         generated_by=int(getattr(g, "admin_id", 0) or 0),
+        code_length=code_length,
     )
     return ok({"items": [_item(v) for v in items], "count": len(items)}, status=201)
 

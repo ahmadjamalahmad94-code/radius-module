@@ -1,0 +1,518 @@
+{# ══════════════════════════════════════════════════════════════════════
+   دليل «نظرة عامة — الكروت» — قسم البطاقات في مركز «كيف تستخدمني».
+
+   نفس بنية الدليل الذهبي docs_add_subscriber.html حرفيًا:
+     • hero + شريط أدوات (حفظ كـ PDF / كل الأدلة).
+     • فهرس جانبي لاصق على يسار الصفحة (order:2) + scrollspy.
+     • خطوات مرقّمة ببطاقات وشارات بنفسجية متدرّجة.
+     • رسوم HTML/CSS تحاكي صفحة cards_overview.html الحقيقية.
+
+   المحتوى مطابق للصفحة الفعلية (cards_overview.html + routes/cards.py
+   ‏_cards_overview_snapshot): عناوين الـ KPI، أقسام المبيعات والتنبيهات
+   وجداول المخزون وآخر 5 دفعات منسوخة حرفيًا — عند تغيير الصفحة حدّث
+   الدليل معها.
+   ══════════════════════════════════════════════════════════════════════ #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}دليل: نظرة عامة — الكروت — كيف تستخدمني{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<style>
+  /* ── التخطيط: فهرس جانبي لاصق + عمود المحتوى (الفهرس يسار الصفحة) ── */
+  .dg-layout{ display:grid; grid-template-columns:minmax(0,1fr) 230px; gap:20px; align-items:start; }
+  .dg-toc{ order:2; }
+  .dg-main{ order:1; }
+  @media (max-width:980px){ .dg-layout{ grid-template-columns:1fr; } .dg-toc{ order:1; } .dg-main{ order:2; } }
+
+  .dg-toc{
+    position:sticky; top:84px;
+    background:#fff; border:1px solid #e8edf3; border-radius:14px;
+    padding:14px 13px; display:grid; gap:3px;
+  }
+  @media (max-width:980px){ .dg-toc{ position:static; } }
+  .dg-toc-title{
+    display:flex; align-items:center; gap:8px; font-size:12px; font-weight:900;
+    color:#7c7a99; margin-bottom:7px; padding-inline:6px;
+  }
+  .dg-toc a{
+    display:flex; align-items:center; gap:9px;
+    padding:8px 10px; border-radius:9px; text-decoration:none;
+    font-size:12.5px; font-weight:700; color:#475569;
+    transition:background .14s, color .14s;
+  }
+  .dg-toc a .n{
+    width:21px; height:21px; border-radius:50%; flex:none;
+    display:grid; place-items:center; font-size:10.5px; font-weight:900;
+    background:#f1f5f9; color:#94a3b8;
+  }
+  .dg-toc a:hover{ background:#f5f3ff; color:#5b21b6; }
+  .dg-toc a.is-active{ background:#ede9fe; color:#5b21b6; }
+  .dg-toc a.is-active .n{ background:linear-gradient(135deg,#7c3aed,#5b21b6); color:#fff; }
+
+  /* ── عمود الخطوات ── */
+  .dg-main{ min-width:0; display:grid; gap:18px; }
+
+  .dg-lead{
+    display:flex; gap:13px; align-items:flex-start;
+    background:linear-gradient(135deg,#f5f3ff,#fdfcff);
+    border:1px solid #e9e5fc; border-radius:14px; padding:15px 17px;
+  }
+  .dg-lead .ic{ width:40px;height:40px;border-radius:12px;flex:none;display:grid;place-items:center;
+    font-size:17px;background:#ede9fe;color:#6d28d9; }
+  .dg-lead h3{ margin:0 0 4px; font-size:13.5px; font-weight:800; color:#241e4e; }
+  .dg-lead p{ margin:0; font-size:12.5px; line-height:1.9; color:#5b5a78; }
+
+  .dg-step{ display:grid; grid-template-columns:auto 1fr; gap:15px; align-items:start; scroll-margin-top:90px; }
+  @media (max-width:560px){ .dg-step{ grid-template-columns:1fr; } }
+  .dg-badge{
+    width:42px; height:42px; border-radius:50%; flex:none;
+    display:grid; place-items:center; font-size:17px; font-weight:900; color:#fff;
+    background:linear-gradient(135deg,#7c3aed,#5b21b6);
+    box-shadow:0 8px 18px rgba(124,58,237,.3);
+  }
+  .dg-card{
+    min-width:0; background:#fff; border:1px solid #e8edf3; border-radius:15px;
+    padding:16px 18px;
+  }
+  .dg-card h2{
+    margin:0 0 8px; font-size:15.5px; font-weight:800; color:#0f172a;
+    display:flex; align-items:center; gap:9px; flex-wrap:wrap;
+  }
+  .dg-card h2 i{ color:#7c3aed; }
+  .dg-card p{ margin:0 0 7px; font-size:13px; line-height:1.95; color:#475569; }
+  .dg-card p:last-child{ margin-bottom:0; }
+  .dg-card ul{ margin:4px 0 8px; padding-inline-start:22px; font-size:13px; line-height:2; color:#475569; }
+  .dg-card strong{ color:#241e4e; }
+  .dg-kbd{
+    font-family:ui-monospace,Consolas,monospace; font-size:11.5px;
+    background:#f1f5f9; border:1px solid #e2e8f0; border-radius:5px;
+    padding:1px 7px; color:#5b21b6;
+  }
+
+  .dg-tip, .dg-warn{
+    display:flex; gap:11px; align-items:flex-start;
+    border-radius:12px; padding:11px 14px; margin-top:11px;
+    font-size:12.5px; line-height:1.9;
+  }
+  .dg-tip{ background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; }
+  .dg-warn{ background:#fffbeb; border:1px solid #fde68a; color:#92400e; }
+  .dg-tip .ic, .dg-warn .ic{ flex:none; font-size:15px; line-height:1.6; }
+  .dg-tip b, .dg-warn b{ font-weight:900; }
+
+  /* ════ الرسوم: محاكاة مصغّرة للصفحة الحقيقية ════ */
+  .dg-mock{
+    border:1px solid #e2e8f0; border-radius:14px; overflow:hidden;
+    background:#fff; box-shadow:0 8px 20px rgba(15,23,42,.07);
+    margin-top:13px; max-width:560px;
+  }
+  .dg-mock-bar{
+    display:flex; align-items:center; gap:7px; padding:8px 12px;
+    background:#f1f5f9; border-bottom:1px solid #e2e8f0;
+  }
+  .dg-mock-bar .dots{ display:flex; gap:5px; }
+  .dg-mock-bar .dots i{ width:9px; height:9px; border-radius:50%; }
+  .dg-mock-bar .dots i:nth-child(1){ background:#f87171; }
+  .dg-mock-bar .dots i:nth-child(2){ background:#fbbf24; }
+  .dg-mock-bar .dots i:nth-child(3){ background:#34d399; }
+  .dg-mock-bar .crumb{
+    flex:1; background:#fff; border:1px solid #e2e8f0; border-radius:7px;
+    padding:4px 10px; font-size:10.5px; font-weight:700; color:#64748b;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .dg-mock-body{ padding:14px; display:grid; gap:11px; }
+
+  /* محاكاة شريط الـ KPI الخماسي */
+  .dg-kpis{ display:grid; grid-template-columns:repeat(5,1fr); gap:8px; }
+  @media (max-width:560px){ .dg-kpis{ grid-template-columns:repeat(2,1fr); } }
+  .dg-kpi{
+    border:1px solid #e8edf3; border-radius:11px; padding:9px 10px;
+    display:grid; gap:3px; background:#fff;
+  }
+  .dg-kpi .lb{ font-size:9.5px; font-weight:800; color:#94a3b8; }
+  .dg-kpi .vl{ font-size:15px; font-weight:900; color:#0f172a; font-family:ui-monospace,Consolas,monospace; }
+  .dg-kpi .sb{ font-size:8.5px; color:#a3aec2; }
+  .dg-kpi.brand{ border-color:#ddd6fe; background:#faf5ff; }
+  .dg-kpi.brand .vl{ color:#5b21b6; }
+  .dg-kpi.green{ border-color:#bbf7d0; background:#f0fdf4; } .dg-kpi.green .vl{ color:#15803d; }
+  .dg-kpi.blue{ border-color:#bfdbfe; background:#eff6ff; } .dg-kpi.blue .vl{ color:#1d4ed8; }
+  .dg-kpi.amber{ border-color:#fde68a; background:#fffbeb; } .dg-kpi.amber .vl{ color:#b45309; }
+
+  /* محاكاة بطاقة فترة مبيعات */
+  .dg-lanes{ display:grid; grid-template-columns:repeat(2,1fr); gap:9px; }
+  @media (max-width:480px){ .dg-lanes{ grid-template-columns:1fr; } }
+  .dg-lane{ border:1px solid #e8edf3; border-radius:11px; padding:10px 11px; display:grid; gap:6px; }
+  .dg-lane .hd{ display:flex; align-items:center; justify-content:space-between; font-size:11px; font-weight:900; color:#241e4e; }
+  .dg-lane .hd i{ color:#94a3b8; font-size:10px; }
+  .dg-lane .mt{ display:flex; gap:12px; font-size:10px; color:#64748b; font-weight:700; }
+  .dg-lane .mt b{ color:#0f172a; font-family:ui-monospace,Consolas,monospace; }
+  .dg-split{ height:7px; border-radius:99px; background:#f1f5f9; overflow:hidden; display:flex; }
+  .dg-split .p{ background:linear-gradient(90deg,#7c3aed,#a78bfa); }
+  .dg-split .e{ background:#34d399; }
+  .dg-lane .lg{ display:flex; gap:10px; font-size:8.5px; color:#94a3b8; font-weight:700; }
+  .dg-lane .lk{ font-size:9.5px; font-weight:800; color:#6d28d9; }
+
+  /* محاكاة تنبيه */
+  .dg-alerts{ display:grid; gap:7px; }
+  .dg-alert{
+    display:flex; gap:9px; align-items:flex-start; border-radius:10px;
+    padding:8px 11px; font-size:10.5px; font-weight:700; line-height:1.7;
+  }
+  .dg-alert small{ display:block; font-size:9px; opacity:.75; font-weight:700; }
+  .dg-alert.red{ background:#fef2f2; border:1px solid #fecaca; color:#b91c1c; }
+  .dg-alert.amber{ background:#fffbeb; border:1px solid #fde68a; color:#b45309; }
+  .dg-alert.green{ background:#f0fdf4; border:1px solid #bbf7d0; color:#15803d; }
+  .dg-alert.grey{ background:#f8fafc; border:1px solid #e2e8f0; color:#475569; }
+
+  /* جدول محاكاة عام */
+  .dg-rowmock{
+    margin-top:11px; border:1px solid #e2e8f0; border-radius:12px;
+    overflow:hidden; box-shadow:0 6px 16px rgba(15,23,42,.06); max-width:560px;
+  }
+  .dg-rowmock .hd, .dg-rowmock .rw{
+    display:grid; gap:8px; padding:9px 13px; font-size:10px; align-items:center;
+  }
+  .dg-rowmock.cols6 .hd, .dg-rowmock.cols6 .rw{ grid-template-columns:1.5fr .7fr .7fr .7fr .7fr 1fr; }
+  .dg-rowmock.cols7 .hd, .dg-rowmock.cols7 .rw{ grid-template-columns:1fr 1fr .6fr .6fr .7fr .6fr 1fr; }
+  .dg-rowmock .hd{ background:#f5f3ff; color:#5b21b6; font-weight:900; }
+  .dg-rowmock .rw{ background:#fff; color:#334155; font-weight:700; border-top:1px solid #f1f5f9; }
+  .dg-rowmock .rw .mono{ font-family:ui-monospace,Consolas,monospace; }
+  .dg-pill{
+    display:inline-flex; align-items:center; gap:5px; border-radius:999px;
+    padding:2px 9px; font-size:9px; font-weight:900; background:#dcfce7; color:#15803d;
+  }
+  .dg-pill .dot{ width:6px; height:6px; border-radius:50%; background:#16a34a; }
+  .dg-pill.violet{ background:#ede9fe; color:#6d28d9; } .dg-pill.violet .dot{ background:#7c3aed; }
+
+  .dg-cap{ font-size:11px; color:#94a3b8; margin-top:8px; line-height:1.7; }
+  .dg-cap i{ color:#c4b5fd; }
+
+  /* ════ الطباعة ════ */
+  @media print{
+    .hb-side, .hb-side-overlay, .hb-topbar, header.hb-top,
+    .dg-toc, .dg-noprint, .hub-hero-actions{ display:none !important; }
+    .dg-layout{ grid-template-columns:1fr; }
+    .dg-card, .dg-mock, .dg-rowmock{ box-shadow:none !important; break-inside:avoid; }
+    .dg-step{ break-inside:avoid; }
+    body{ background:#fff !important; }
+    .dg-badge, .dg-tip, .dg-warn, .dg-pill, .dg-kpi, .dg-alert,
+    .dg-rowmock .hd, .dg-split .p, .dg-split .e{
+      -webkit-print-color-adjust:exact; print-color-adjust:exact;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{{ hub.hero(
+  "دليل: نظرة عامة — الكروت",
+  subtitle="لوحة الكروت السريعة بكل أرقامها: المخزون، المبيعات، التنبيهات — شو يعني كل رقم ووين يوديك كل رابط.",
+  icon="id-card",
+  actions_html='
+    <button type="button" class="hub-btn hub-btn--secondary" onclick="window.print()">
+      <i class="fa-solid fa-file-pdf"></i> حفظ كـ PDF
+    </button>
+    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.docs_center') + '">
+      <i class="fa-solid fa-arrow-right"></i> كل الأدلة
+    </a>
+  '
+) }}
+
+<div class="dg-layout">
+
+  {# ───── الفهرس الجانبي اللاصق ───── #}
+  <nav class="dg-toc dg-noprint" aria-label="فهرس الدليل">
+    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> فهرس الخطوات</div>
+    <a href="#dg-s1" data-dg-toc><span class="n">1</span> افتح الصفحة وافهم دورها</a>
+    <a href="#dg-s2" data-dg-toc><span class="n">2</span> شريط الأرقام الكبيرة</a>
+    <a href="#dg-s3" data-dg-toc><span class="n">3</span> مبيعات الكروت بالفترات</a>
+    <a href="#dg-s4" data-dg-toc><span class="n">4</span> التنبيهات المختصرة</a>
+    <a href="#dg-s5" data-dg-toc><span class="n">5</span> ملخص مخزون الحزم</a>
+    <a href="#dg-s6" data-dg-toc><span class="n">6</span> آخر 5 دفعات</a>
+  </nav>
+
+  {# ───── عمود المحتوى ───── #}
+  <div class="dg-main">
+
+    <div class="dg-lead">
+      <span class="ic"><i class="fa-solid fa-lightbulb"></i></span>
+      <div>
+        <h3>قبل ما نبدأ — شو هي «نظرة عامة الكروت»؟</h3>
+        <p>
+          هي لوحة القيادة السريعة لعالم البطاقات عندك: بنظرة وحدة تعرف كم كرت متاح بالمخزون،
+          كم انباع اليوم والشهر، وين في حزمة قربت تخلص، وشو آخر الدفعات اللي ولّدتها.
+          الصفحة <strong>للقراءة فقط</strong> — ما فيها أزرار تعديل، لكن كل رقم وتنبيه فيها
+          رابط يوديك على مكان المعالجة الصحيح. خلّينا نقرأها قسمًا قسمًا.
+        </p>
+      </div>
+    </div>
+
+    {# ════ الخطوة 1 ════ #}
+    <section class="dg-step" id="dg-s1">
+      <div class="dg-badge">1</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-door-open"></i> افتح «نظرة عامة» وافهم أزرار الرأس</h2>
+        <p>
+          من القائمة الجانبية افتح قسم <strong>«البطاقات»</strong> ثم اضغط
+          <strong>«نظرة عامة»</strong> — أول بند في القسم. أعلى الصفحة رح تشوف العنوان
+          <strong>«نظرة سريعة — الكروت»</strong> وبجانبه زرّان جاهزان للقفز السريع:
+        </p>
+        <ul>
+          <li><strong>«الدفعات»:</strong> يفتح صفحة <strong>حزم البطاقات</strong> — مركز إدارة الحزم وتوليدها (لها دليل خاص في هذا القسم).</li>
+          <li><strong>«فحص كرت»:</strong> يفتح <strong>مركز فحص البطاقات</strong> — تكتب كود الكرت وتشوف كل شيء عنه (له دليل خاص أيضًا).</li>
+        </ul>
+
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">البطاقات › نظرة عامة</span></div>
+          <div class="dg-mock-body">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+              <div style="display:flex;align-items:center;gap:9px">
+                <span style="width:32px;height:32px;border-radius:10px;display:grid;place-items:center;background:#ede9fe;color:#6d28d9"><i class="fa-solid fa-id-card"></i></span>
+                <div>
+                  <div style="font-size:12px;font-weight:900;color:#0f172a">نظرة سريعة — الكروت</div>
+                  <div style="font-size:9px;color:#94a3b8">مختصر المخزون والاستخدام والمبيعات بدون تفاصيل تشغيلية.</div>
+                </div>
+              </div>
+              <div style="display:flex;gap:6px">
+                <span style="border:1px solid #e2e8f0;border-radius:8px;padding:5px 10px;font-size:9.5px;font-weight:800;color:#475569"><i class="fa-solid fa-layer-group"></i> الدفعات</span>
+                <span style="border:1px solid #e2e8f0;border-radius:8px;padding:5px 10px;font-size:9.5px;font-weight:800;color:#475569"><i class="fa-solid fa-magnifying-glass"></i> فحص كرت</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> هيك يبدو رأس الصفحة — الزران على اليسار اختصاران لأكثر صفحتين رح تحتاجهما.</div>
+
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة:</b> خلّي هذه الصفحة نقطة بدايتك الصباحية: افتحها أول النهار،
+          اقرأ التنبيهات، وبعدها انطلق للصفحة اللي تحتاج معالجة.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 2 ════ #}
+    <section class="dg-step" id="dg-s2">
+      <div class="dg-badge">2</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-gauge-high"></i> اقرأ شريط الأرقام الكبيرة (KPIs)</h2>
+        <p>
+          تحت العنوان مباشرة خمس بطاقات أرقام — هذا ملخص صحة المخزون كله:
+        </p>
+        <ul>
+          <li><strong>إجمالي الكروت:</strong> كل الكروت في النظام (بكل حالاتها) — يكبر مع كل توليد أو استيراد.</li>
+          <li><strong>متاح:</strong> الكروت الجاهزة للبيع: ما انستخدمت، ما انلغت، وما انتهت صلاحيتها. <strong>هذا أهم رقم</strong> — هو مخزونك الفعلي.</li>
+          <li><strong>مستخدم:</strong> كروت اتصل بها زبون مرة واحدة على الأقل (انفعّلت).</li>
+          <li><strong>منتهي / محظور:</strong> رقمان بشرطة: الكروت اللي انتهى وقتها / والكروت الملغاة يدويًا.</li>
+          <li><strong>إيراد الشهر:</strong> قيمة تقديرية من الكروت المستخدمة هذا الشهر — تُحسب من سعر البيع المسجّل على الحزمة.</li>
+        </ul>
+
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">نظرة عامة › شريط الأرقام</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-kpis">
+              <div class="dg-kpi brand"><span class="lb">إجمالي الكروت</span><span class="vl">1,240</span></div>
+              <div class="dg-kpi green"><span class="lb">متاح</span><span class="vl">486</span></div>
+              <div class="dg-kpi blue"><span class="lb">مستخدم</span><span class="vl">702</span></div>
+              <div class="dg-kpi amber"><span class="lb">منتهي / محظور</span><span class="vl">38 / 14</span></div>
+              <div class="dg-kpi brand"><span class="lb">إيراد الشهر</span><span class="vl">2.4K</span><span class="sb">تقديري من الكروت المستخدمة</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="dg-warn">
+          <span class="ic">⚠️</span>
+          <span><b>انتبه:</b> «إيراد الشهر» <b>تقديري</b> — يعتمد على سعر البيع اللي كتبته
+          وقت توليد الحزمة. إذا تركت السعر 0 وقت التوليد، رح يطلع الإيراد ناقصًا.
+          عوّد نفسك تعبّي «سعر البيع» في كل حزمة جديدة.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 3 ════ #}
+    <section class="dg-step" id="dg-s3">
+      <div class="dg-badge">3</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-receipt"></i> قسم «مبيعات الكروت» — أربع فترات بنقرة</h2>
+        <p>
+          قسم المبيعات يجمع البيع <strong>المطبوع</strong> (كرت انفعّل بأول اتصال = اعتُبر مباعًا)
+          والبيع <strong>الإلكتروني</strong> (شراء مكتمل من سوق البطاقات). فوق تشوف أربع خلاصات:
+          <strong>إجمالي الكروت المباعة</strong>، <strong>إجمالي الإيرادات</strong>،
+          <strong>مطبوعة</strong>، و<strong>إلكترونية</strong> — كلها لفترة الشهر الحالي.
+        </p>
+        <p>وتحتها أربع بطاقات فترة: <strong>اليوم / الأسبوع / الشهر / السنة</strong>. في كل بطاقة:</p>
+        <ul>
+          <li><strong>زر التقويم</strong> <span class="dg-kbd">📅</span> بجانب اسم الفترة: يفتح منتقي تاريخ — اختر يومًا أو شهرًا ماضيًا وتتحدث الأرقام لتلك الفترة.</li>
+          <li>رقما <strong>«الكروت»</strong> و<strong>«الإيراد»</strong> للفترة المختارة.</li>
+          <li><strong>شريط ملوّن</strong> يقسم المبيعات: بنفسجي = مطبوعة، أخضر = إلكترونية.</li>
+          <li>رابط <strong>«فتح سجل الفترة»</strong>: يفتح نافذة فيها جدول كل عملية بيع — النوع (مطبوعة/إلكترونية)، اسم المستخدم، الحزمة، السعر، والوقت.</li>
+        </ul>
+
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">نظرة عامة › مبيعات الكروت</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-lanes">
+              <div class="dg-lane">
+                <div class="hd"><span>اليوم</span><i class="fa-solid fa-calendar-day"></i></div>
+                <div class="mt"><span>الكروت <b>14</b></span><span>الإيراد <b>70.0</b></span></div>
+                <div class="dg-split"><span class="p" style="width:64%"></span><span class="e" style="width:36%"></span></div>
+                <div class="lg"><span>🖨️ مطبوعة 9</span><span>👛 إلكترونية 5</span></div>
+                <span class="lk"><i class="fa-solid fa-table-list"></i> فتح سجل الفترة</span>
+              </div>
+              <div class="dg-lane">
+                <div class="hd"><span>الشهر</span><i class="fa-solid fa-calendar-day"></i></div>
+                <div class="mt"><span>الكروت <b>342</b></span><span>الإيراد <b>1,710</b></span></div>
+                <div class="dg-split"><span class="p" style="width:78%"></span><span class="e" style="width:22%"></span></div>
+                <div class="lg"><span>🖨️ مطبوعة 268</span><span>👛 إلكترونية 74</span></div>
+                <span class="lk"><i class="fa-solid fa-table-list"></i> فتح سجل الفترة</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> الشريط الملوّن يخبرك بسرعة: أكثر بيعك مطبوع ولا إلكتروني؟</div>
+
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة:</b> «كرت مطبوع مباع» يعني <b>أول اتصال للكرت</b> — يوم ما الزبون
+          فعّل الكرت يُحتسب بيعه بسعر حزمته. لذلك أرقام البيع المطبوع تتأخر عن لحظة
+          تسليم الكرت للزبون حتى يستعمله فعلًا.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 4 ════ #}
+    <section class="dg-step" id="dg-s4">
+      <div class="dg-badge">4</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-bell"></i> «تنبيهات مختصرة» — اضغط التنبيه يوصلك للمعالجة</h2>
+        <p>
+          هذا أذكى قسم في الصفحة: النظام يفحص وضعك ويطلع لك حتى 4 تنبيهات ملوّنة.
+          <strong>كل تنبيه رابط قابل للنقر</strong> — يوديك مباشرة على الصفحة اللي تعالج فيها المشكلة:
+        </p>
+        <ul>
+          <li><strong>أحمر — «لا يوجد مخزون كروت متاح حاليًا.»:</strong> المتاح صفر! الضغط يفتح حزم البطاقات لتولّد أو تستورد كروتًا فورًا.</li>
+          <li><strong>برتقالي — «المخزون المتاح منخفض: N كرت فقط.»:</strong> يظهر لما يبقى 10 كروت أو أقل، أو لما تقترب حزمة معينة من النفاد.</li>
+          <li><strong>أحمر — «N كرت منتهي يحتاج مراجعة.»:</strong> يفتح قائمة الكروت مفلترة على المنتهية لتراجعها أو تؤرشفها.</li>
+          <li><strong>رمادي — «N كرت محظور ضمن المخزون.»:</strong> يفتح قائمة الكروت الملغاة.</li>
+          <li><strong>أخضر — «وضع الكروت مستقر ولا توجد ملاحظات عاجلة.»:</strong> كل شيء تمام.</li>
+        </ul>
+
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">نظرة عامة › تنبيهات مختصرة</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-alerts">
+              <div class="dg-alert amber"><i class="fa-solid fa-triangle-exclamation"></i><span>المخزون المتاح منخفض: 8 كرت فقط.<small>راجع الحزم وولّد كروتًا إضافية قبل النفاد ←</small></span></div>
+              <div class="dg-alert red"><i class="fa-solid fa-circle-exclamation"></i><span>38 كرت منتهي يحتاج مراجعة.<small>اعرض الكروت المنتهية لمراجعتها أو أرشفتها ←</small></span></div>
+              <div class="dg-alert green"><i class="fa-solid fa-circle-check"></i><span>وضع الكروت مستقر ولا توجد ملاحظات عاجلة.<small>كل شيء تمام — تصفح الحزم ←</small></span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة:</b> السطر الصغير تحت نص التنبيه يخبرك مسبقًا وين رح يوديك النقر —
+          ما في مفاجآت.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 5 ════ #}
+    <section class="dg-step" id="dg-s5">
+      <div class="dg-badge">5</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-boxes-stacked"></i> «ملخص مخزون حزم البطاقات» — جدولان جنب بعض</h2>
+        <p>
+          هنا توزيع المخزون حزمةً حزمة، مقسومًا لجدولين:
+          <strong>«حزم مطبوعة»</strong> (دفعات الطباعة العادية) و<strong>«حزم البيع الإلكتروني»</strong>
+          (حزم سوق البطاقات). أعمدة الجدول المطبوع:
+        </p>
+        <ul>
+          <li><strong>الحزمة:</strong> اسم الحزمة وتحته كود الدفعة (batch code).</li>
+          <li><strong>إجمالي:</strong> كل كروت الحزمة.</li>
+          <li><strong>باقي:</strong> الجاهز للبيع — راقب هذا العمود لتعرف أي حزمة قربت تخلص.</li>
+          <li><strong>منتهي:</strong> كروت انتهت صلاحيتها.</li>
+          <li><strong>متصل:</strong> كروت لها جلسة حيّة الآن.</li>
+          <li><strong>مستخدم غير متصل:</strong> انفعّلت لكن صاحبها مو متصل هاللحظة.</li>
+        </ul>
+        <p>
+          جدول الحزم الإلكترونية بنفس الأعمدة، لكن أول عمود رقمي اسمه <strong>«مباع»</strong>
+          بدل «إجمالي» — لأن الكرت الإلكتروني ما يدخل الجدول إلا بعد شراء مكتمل.
+        </p>
+
+        <div class="dg-rowmock cols6" aria-hidden="true">
+          <div class="hd"><span>الحزمة</span><span>إجمالي</span><span>باقي</span><span>منتهي</span><span>متصل</span><span>مستخدم غير متصل</span></div>
+          <div class="rw"><span><strong>حزمة ساعة</strong><br><span class="mono" style="font-size:8.5px;color:#94a3b8">BCH-2026-014</span></span><span class="mono">200</span><span class="mono">112</span><span class="mono">6</span><span class="mono">17</span><span class="mono">65</span></div>
+          <div class="rw"><span><strong>حزمة يوم كامل</strong><br><span class="mono" style="font-size:8.5px;color:#94a3b8">BCH-2026-013</span></span><span class="mono">100</span><span class="mono">8</span><span class="mono">3</span><span class="mono">9</span><span class="mono">80</span></div>
+        </div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> الجدول فيه فرز وترقيم صفحات — اضغط رأس أي عمود لترتيب الحزم به.</div>
+
+        <div class="dg-warn">
+          <span class="ic">⚠️</span>
+          <span><b>انتبه:</b> «الباقي» في الصف الثاني فوق نزل لـ 8 — هذا بالضبط
+          اللي يولّد تنبيه «قريب من النفاد» في الخطوة السابقة. لا تنتظر الصفر:
+          ولّد دفعة جديدة من نفس الحزمة قبل ما يطلبها الموزع وما تلاقي.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 6 ════ #}
+    <section class="dg-step" id="dg-s6">
+      <div class="dg-badge">6</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-clock-rotate-left"></i> «آخر 5 دفعات» — وش صار مؤخرًا</h2>
+        <p>
+          آخر قسم في الصفحة جدول بأحدث خمس دفعات ولّدتها، بالأعمدة:
+          <strong>الدفعة</strong> (كودها)، <strong>العرض</strong> (الباقة المرتبطة)،
+          <strong>العدد</strong>، <strong>متاح</strong>، <strong>مستخدم</strong>،
+          <strong>متصل</strong>، و<strong>آخر نشاط</strong> (تاريخ الإنشاء).
+        </p>
+
+        <div class="dg-rowmock cols7" aria-hidden="true">
+          <div class="hd"><span>الدفعة</span><span>العرض</span><span>العدد</span><span>متاح</span><span>مستخدم</span><span>متصل</span><span>آخر نشاط</span></div>
+          <div class="rw"><span class="mono"><strong>BCH-2026-014</strong></span><span>باقة ساعة</span><span class="mono">200</span><span class="mono">112</span><span class="mono">88</span><span class="mono">17</span><span style="color:#94a3b8">2026-06-03</span></div>
+          <div class="rw"><span class="mono"><strong>BCH-2026-013</strong></span><span>باقة يوم</span><span class="mono">100</span><span class="mono">8</span><span class="mono">89</span><span class="mono">9</span><span style="color:#94a3b8">2026-05-28</span></div>
+        </div>
+
+        <p style="margin-top:13px">وبعدين؟ من هنا تتفرع رحلتك حسب اللي شفته:</p>
+        <ul>
+          <li>مخزون ناقص؟ → افتح <strong>حزم البطاقات</strong> وولّد دفعة (دليل «حزم البطاقات وإضافة حزمة»).</li>
+          <li>زبون يشتكي من كرت؟ → افتح <strong>فحص بطاقة</strong> واكتب كوده (دليل «فحص بطاقة»).</li>
+          <li>بدك تطبع كروت جديدة؟ → <strong>بطاقات الطباعة</strong> و<strong>قوالب الطباعة</strong> (دليلاهما في نفس القسم).</li>
+        </ul>
+
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>خلاصة الصفحة:</b> «نظرة عامة» تجيب على ثلاثة أسئلة بثلاثين ثانية:
+          <b>كم باقي عندي؟ كم بعت؟ وين المشكلة؟</b> — وكل جواب فيه رابط للخطوة التالية.</span>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+{# ── scrollspy خفيف: يبرز بند الفهرس المقابل للخطوة الظاهرة ── #}
+<script>
+(function(){
+  'use strict';
+  var links = Array.prototype.slice.call(document.querySelectorAll('[data-dg-toc]'));
+  if (!links.length || !('IntersectionObserver' in window)) return;
+  var map = {};
+  links.forEach(function(a){ map[a.getAttribute('href').slice(1)] = a; });
+  var obs = new IntersectionObserver(function(entries){
+    entries.forEach(function(en){
+      if (!en.isIntersecting) return;
+      links.forEach(function(a){ a.classList.remove('is-active'); });
+      var a = map[en.target.id];
+      if (a) a.classList.add('is-active');
+    });
+  }, { rootMargin: '-35% 0px -55% 0px' });
+  Object.keys(map).forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) obs.observe(el);
+  });
+})();
+</script>
+
+{% endblock %}

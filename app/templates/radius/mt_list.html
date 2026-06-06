@@ -9,6 +9,8 @@
 
 {% block content %}
 
+{# ───── الصدفة الموحّدة: هيرو + شريط KPI بفاصل ناعم بدل كتلتين مكدّستين ───── #}
+<section class="hub-hero-shell">
 {{ hub.hero(
   "اتصالات الراوترات",
   subtitle="إدارة اتصالات الراوتر — العنوان، المنفذ، الاتصال المشفّر، وحالة آخر فحص",
@@ -19,7 +21,6 @@
     </a>
   '
 ) }}
-
 {% if items %}
 {% set _enabled = items|selectattr('enabled')|list|length %}
 {% set _tls     = items|selectattr('use_tls')|list|length %}
@@ -29,7 +30,10 @@
   {{ hub.kpi("معطَّل",      items|length - _enabled, icon="toggle-off", variant="amber") }}
   {{ hub.kpi("اتصال مشفّر", _tls,         icon="lock",        variant="blue") }}
 </div>
+{% endif %}
+</section>{# /hub-hero-shell #}
 
+{% if items %}
 {% call hub.section("الاتصالات", icon="table-list", meta=items|length|string + " اتصال", flush=True) %}
   <div class="hub-table-wrap" style="border:none;border-radius:0">
     <table class="hub-table">

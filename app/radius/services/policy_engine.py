@@ -66,6 +66,7 @@ _MSG = {
     "outside_days":      "خارج أيام الدوام المسموحة",
     "quota_exhausted":   "نفدت الكوتا — يلزم تجديد",
     "mac_mismatch":      "هذا الجهاز غير مصرَّح بالدخول لهذا الحساب",
+    "random_mac_blocked": "هذا الجهاز يستخدم عنوان MAC عشوائي/خاص — أوقف «العنوان الخاص» في إعدادات الواي فاي ثم أعد المحاولة",
     "concurrent_limit":  "تجاوزت الحد الأقصى للجلسات المتزامنة",
     "ok_welcome":        "أهلًا بك",
     "ok_expires_soon":   "اشتراكك ينتهي قريبًا — جدّد قبل الانقطاع",
@@ -207,6 +208,35 @@ def _check_mac(sub: Subscriber, req: AuthRequest) -> Optional[AuthDecision]:
     return None
 
 
+def _check_random_mac(req: AuthRequest, source: str) -> Optional[AuthDecision]:
+    """يمنع تسجيل الدخول من أجهزة تستخدم عنوان MAC عشوائي/خاص
+    (locally-administered) عند تفعيل المفتاح المناسب لنوع الحساب.
+
+    مفتاحان مستقلّان في الإعدادات (كل تفعيل منفصل عن الآخر):
+      • security.block_random_mac_cards       → يخص دخول البطاقات (source='card')
+      • security.block_random_mac_subscribers → يخص دخول المشتركين
+
+    الكشف يعتمد على «بت الإدارة المحلية» في أول ثُماني من العنوان (الخانة
+    السداسية الثانية ضمن {2,6,A,E}). محصّن: أي خطأ في قراءة الإعداد أو
+    تحليل العنوان لا يكسر مسار الـ auth (يُرجع None = سماح).
+    """
+    try:
+        from ..services.device_fingerprint import is_random_mac
+        from ..db.repos import tenants_repo
+        key = ("security.block_random_mac_cards" if source == "card"
+               else "security.block_random_mac_subscribers")
+        enabled = tenants_repo.get_setting(req.tenant_id, key, "0") in (
+            "1", "true", "t", "on", "True")
+        if not enabled:
+            return None
+        if is_random_mac(req.calling_station_id):
+            return _reject("random_mac_blocked")
+    except Exception:  # noqa: BLE001 — لا نكسر الـ auth أبدًا بسبب هذا الفحص
+        _LOG.warning("policy_engine: random-MAC check failed for %r",
+                      req.username, exc_info=True)
+    return None
+
+
 def _check_concurrent(sub: Subscriber, plan: Optional[AccessPlan]) -> Optional[AuthDecision]:
     limit = sub.override_concurrent or (plan.concurrent_sessions if plan else 0) or 0
     if limit <= 0: return None
@@ -304,6 +334,7 @@ def authorize(req: AuthRequest) -> AuthDecision:
         lambda: _check_days(plan, now),
         lambda: _check_quota(sub, plan),
         lambda: _check_mac(sub, req),
+        lambda: _check_random_mac(req, source),
         lambda: _check_concurrent(sub, plan),
     ):
         bad = fn()

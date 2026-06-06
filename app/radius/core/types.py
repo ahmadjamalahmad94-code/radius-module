@@ -151,6 +151,8 @@ class AccessPlan:
     loan_enabled: bool = False
     max_loan_minutes: int = 0
     speed_override_allowed: bool = False
+    # جلسة واحدة فعّالة (بطاقة مشتركة/يومية) — الدخول الجديد يفصل القديم (migration 103)
+    shared_single_session: bool = False
     # ساعات العرض
     offer_hours_from: str = ""
     offer_hours_to: str = ""
@@ -442,6 +444,9 @@ class Admin:
     is_super_admin: bool = False              # عابر للـ tenants
     enabled: bool = True
     last_login_at: Optional[datetime] = None
+    # لغة الواجهة المفضّلة لهذا المسؤول (i18n, migration 104). '' = اتبع
+    # الإعداد العام general.default_locale ثم العربية. يخزَّن كرمز ISO ('ar'/'en').
+    locale: str = ""
     # ── RM-H6: profile + RBAC fields (migration 015) ──
     phone: str = ""
     last_login_ip: str = ""

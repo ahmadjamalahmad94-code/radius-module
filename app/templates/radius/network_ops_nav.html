@@ -26,5 +26,8 @@
   <a class="{{ 'is-active' if _prob }}" href="{{ url_for('radius.mt_problems_index') }}"><i class="fa-solid fa-triangle-exclamation"></i> مركز المشاكل</a>
   <a class="{{ 'is-active' if _diag }}" href="{{ url_for('radius.diagnostics') }}"><i class="fa-solid fa-stethoscope"></i> تشخيص الراوترات</a>
   <span class="nnav-sep"></span>
-  <a class="nnav-ghost" href="{{ url_for('radius.setup_wizard_page') }}" title="عرض الإعداد الهندسي وأدوات الاسترجاع"><i class="fa-solid fa-screwdriver-wrench"></i> الإعداد الهندسي</a>
+  {# مخفي مؤقتاً بطلب المالك — رابط «الإعداد الهندسي» (setup_wizard_page).
+     المسار يبقى حيًّا لكنه محروس super_admin فقط (انظر _PERM_GUARDED في
+     blueprint.py). لإعادته: أزل التعليق عن السطر التالي. #}
+  {# <a class="nnav-ghost" href="{{ url_for('radius.setup_wizard_page') }}" title="عرض الإعداد الهندسي وأدوات الاسترجاع"><i class="fa-solid fa-screwdriver-wrench"></i> الإعداد الهندسي</a> #}
 </nav>

@@ -5,6 +5,7 @@ from ..core.system_config import default_currency
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 
 from ..core.tenant import DEFAULT_TENANT_ID
+from .finance_collection import collection_frozen
 from ..db.repos.payments_repo import (
     PaymentCollectionLedgerRepository,
     PaymentProofRepository,
@@ -18,6 +19,19 @@ from ..db.repos.payments_repo import (
 
 def _tid() -> int:
     return DEFAULT_TENANT_ID
+
+
+# رسالة التجميد الموحّدة — تظهر عند محاولة أي إجراء تحصيل والقسم مجمّد.
+FROZEN_MESSAGE = "قسم التحصيل مجمّد — اربط بوابة دفع أولًا."
+
+
+def _frozen() -> bool:
+    """هل قسم التحصيل مجمّد؟ (انظر سياسة collection_frozen في finance_collection)
+
+    يُستخدم لصد كل إجراءات التحصيل (قبول/رفض/تطبيق خدمة) حتى ربط بوابة
+    دفع حقيقية. حفظ الإعدادات مستثنى عمدًا ليبقى التحضير ممكنًا.
+    """
+    return collection_frozen(PaymentSettingsRepository().get(_tid()))
 
 
 def register_payment_collection_routes(bp: Blueprint) -> None:
@@ -131,6 +145,8 @@ def payment_collection_request_detail(request_id: int):
         item=item,
         proofs=proofs,
         apply_attempts=apply_attempts,
+        # تجميد القسم: لتعطيل أزرار الاعتماد/الرفض/تطبيق الخدمة في الصفحة.
+        frozen=_frozen(),
     )
 
 
@@ -161,6 +177,10 @@ def _reviewable(request_id: int):
 
 
 def payment_collection_approve_web(request_id: int):
+    # تجميد القسم: لا اعتماد لأي دفع قبل ربط بوابة دفع.
+    if _frozen():
+        flash(FROZEN_MESSAGE, "warning")
+        return redirect(url_for("radius.payment_collection_request_detail", request_id=request_id))
     proof, item = _reviewable(request_id)
     if proof and item:
         PaymentProofRepository().mark_reviewed(
@@ -187,6 +207,10 @@ def payment_collection_approve_web(request_id: int):
 
 
 def payment_collection_reject_web(request_id: int):
+    # تجميد القسم: لا رفض/مراجعة قبل ربط بوابة دفع.
+    if _frozen():
+        flash(FROZEN_MESSAGE, "warning")
+        return redirect(url_for("radius.payment_collection_request_detail", request_id=request_id))
     proof, _item = _reviewable(request_id)
     if proof:
         PaymentProofRepository().mark_reviewed(
@@ -201,6 +225,10 @@ def payment_collection_reject_web(request_id: int):
 
 
 def payment_collection_apply_service_web(request_id: int):
+    # تجميد القسم: لا تطبيق خدمة قبل ربط بوابة دفع.
+    if _frozen():
+        flash(FROZEN_MESSAGE, "warning")
+        return redirect(url_for("radius.payment_collection_request_detail", request_id=request_id))
     try:
         # ملاحظة: simulate_failure أداة اختبار عبر API فقط ولا تُمرَّر من الويب.
         PaymentServiceApplyRepository().apply_paid_request(

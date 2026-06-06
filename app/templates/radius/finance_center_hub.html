@@ -1,7 +1,8 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}المركز المالي — Hobe Hub{% endblock %}
+{# تعريب كامل لعنوان التبويب في المتصفح بدل خلط الإنجليزية #}
+{% block title %}المركز المالي — مركز Hobe المالي{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-coins"></i>{% endblock %}
 {% block page_title %}المركز المالي{% endblock %}
 {% block page_sub %}<span class="sub">الخزائن والمحافظ والإيرادات والديون والسلف في صفحة تشغيلية واحدة</span>{% endblock %}
@@ -37,6 +38,15 @@
   }.get(source_type, source_type or 'مصدر مالي') }}
 {%- endmacro %}
 
+{% macro wallet_status_label(status) -%}
+  {{ {
+    'active': 'نشطة',
+    'frozen': 'مجمّدة',
+    'closed': 'مغلقة',
+    'suspended': 'موقوفة'
+  }.get(status, status or 'غير محددة') }}
+{%- endmacro %}
+
 {% macro loan_status_label(status) -%}
   {{ {
     'open': 'مفتوحة',
@@ -55,17 +65,62 @@
 {%- endmacro %}
 
 {% block head_extra %}
+{# نظام الجداول الموحد: أنماط uds-table (فرز + اختيار أعمدة + ترقيم صفحات) #}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
 <style>
-.fc-tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
-.fc-tabs a{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border:1px solid var(--hub-border-soft);border-radius:10px;background:#fff;color:var(--hub-text-mute);font-weight:900;text-decoration:none}
+/* تبويبات المركز المالي — تعيش الآن داخل hub-hero-shell كحزام سفلي
+   للهيرو: فاصل علوي ناعم بدل أن تكون شريطًا عائمًا منفصلًا. */
+.hub-hero-shell > .fc-tabs{
+  display:flex;flex-wrap:wrap;gap:8px;
+  padding:12px 22px;
+  border-top:1px solid var(--hub-border-soft);
+  background:rgba(255,255,255,.55);
+  /* الزوايا السفلية تتبع زوايا الشل (آخر عنصر داخله) */
+  border-end-start-radius:var(--hub-r-xl);
+  border-end-end-radius:var(--hub-r-xl);
+}
+.fc-tabs a{display:inline-flex;align-items:center;gap:8px;padding:9px 14px;border:1px solid var(--hub-border-soft);border-radius:10px;background:#fff;color:var(--hub-text-mute);font-weight:900;text-decoration:none}
 .fc-tabs a:hover,.fc-tabs a.is-active{background:var(--hub-bg-soft);color:var(--hub-brand-ink);border-color:var(--hub-brand-soft)}
 .fc-table-actions{display:grid;gap:7px;min-width:250px}
-.fc-wallet-form{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
-.fc-wallet-form .hub-input{min-width:110px;max-width:150px}
-.fc-pill-filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
-.fc-pill-filters a{padding:7px 12px;border-radius:999px;border:1px solid var(--hub-border-soft);background:#fff;color:var(--hub-text-mute);font-weight:800;text-decoration:none;font-size:12px}
-.fc-pill-filters a.is-active{background:var(--hub-bg-soft);color:var(--hub-brand-ink);border-color:var(--hub-brand-soft)}
+.fc-wallet-form{display:flex;gap:6px;align-items:center;flex-wrap:nowrap}
+/* ── حقل «إجراء» مدمج: نوع الحركة (شحن/خصم) + المبلغ في جسم واحد — نمط bc-time-group ── */
+.fcw-act-group{display:inline-flex;align-items:stretch}
+.fcw-act-group input[name="amount"]{
+  width:96px;min-width:0;text-align:center;
+  border-top-left-radius:0;border-bottom-left-radius:0;
+  font-variant-numeric:tabular-nums;
+}
+.fcw-act-group select[name="wallet_action"]{
+  margin-right:-1px;height:100%;
+  border-top-right-radius:0;border-bottom-right-radius:0;
+  /* لون أزرق دلالي من توكِنات hub_v2 بدل hex خام (راجع §12.1) */
+  background:var(--hub-blue-soft);border-color:var(--hub-blue-soft);color:var(--hub-blue-ink);font-weight:800;
+}
+.fcw-act .hub-btn{white-space:nowrap}
 @media(max-width:640px){.fc-tabs a{width:100%;justify-content:center}.fc-wallet-form .hub-input{max-width:none;flex:1}}
+/* شبكة تبويب «النظرة العامة»: عمودان بفجوة موحّدة (نفس إيقاع الصفحة)،
+   والأقسام داخلها تتخلى عن هامشها الخاص حتى تبقى الفجوات متسقة. */
+.hub-grid--2{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:var(--hub-gap-section);
+  margin-bottom:var(--hub-gap-section);
+}
+.hub-grid--2 > .hub-section{margin-bottom:0;min-width:0}
+@media(max-width:900px){.hub-grid--2{grid-template-columns:1fr}}
+/* ── صندوق عائم منبثق لإنشاء محفظة (نفس نمط ff-modal في users_finance) ── */
+.fcw-modal{ position:fixed; inset:0; z-index:1200; display:none; place-items:center; padding:24px; background:rgba(15,23,42,.52); }
+.fcw-modal.is-open{ display:grid; }
+.fcw-dialog{ width:min(560px,100%); max-height:min(88vh,760px); overflow:auto; border-radius:16px; background:#fff;
+  box-shadow:0 28px 80px rgba(15,23,42,.32); }
+.fcw-head{ position:sticky; top:0; z-index:2; display:flex; align-items:center; justify-content:space-between; gap:12px;
+  padding:15px 18px; border-bottom:1px solid var(--hub-border-soft,#e2e8f0); background:#fff; }
+.fcw-head h3{ margin:0; font-size:17px; font-weight:900; color:var(--hub-text,#0f172a); }
+.fcw-x{ border:0; background:transparent; color:#94a3b8; font-size:18px; cursor:pointer; }
+.fcw-body{ padding:16px 18px; display:grid; gap:12px; }
+.fcw-foot{ display:flex; justify-content:flex-end; gap:8px; padding:13px 18px; border-top:1px solid var(--hub-border-soft,#e2e8f0); background:#fbfdff; }
+/* شريط الإجراءات فوق قائمة الخزائن والمحافظ (يحتضن زر فتح النافذة) */
+.fcw-actions{ display:flex; justify-content:flex-end; margin-bottom:12px; }
 </style>
 {% endblock %}
 
@@ -102,8 +157,10 @@
   ] %}
 {% endif %}
 
-{# ───── Single full-width megahero: title + subtitle + icon + actions + financial KPIs.
+{# ───── الهيرو + شريط الـ KPI + التبويبات داخل صدفة واحدة (hub-hero-shell)
+        بفواصل داخلية ناعمة بدل كروت متفرقة بفجوات غير متسقة.
         Loans tab embeds the status filter as the integrated search-row body. ───── #}
+<section class="hub-hero-shell">
 {% if tab == 'loans_debts' %}
 {% call hub.megahero(
   "المركز المالي",
@@ -114,7 +171,8 @@
   search_action=url_for('radius.finance_center_hub')
 ) %}
   <input type="hidden" name="tab" value="loans_debts">
-  <select class="hub-input" name="status">
+  {# الفئة الصحيحة hub-select للاتساق مع نمط القوائم المنسدلة الموحّد #}
+  <select class="hub-select" name="status">
     <option value="" {% if not loan_status %}selected{% endif %}>كل الحالات</option>
     <option value="open" {% if loan_status == "open" %}selected{% endif %}>مفتوحة</option>
     <option value="settled" {% if loan_status == "settled" %}selected{% endif %}>مسددة</option>
@@ -138,23 +196,31 @@
   <a href="{{ url_for('radius.finance_center_hub', tab='revenue') }}" class="{{ 'is-active' if tab == 'revenue' }}"><i class="fa-solid fa-coins"></i> الإيرادات</a>
   <a href="{{ url_for('radius.finance_center_hub', tab='loans_debts') }}" class="{{ 'is-active' if tab == 'loans_debts' }}"><i class="fa-solid fa-file-invoice-dollar"></i> الديون والسلف</a>
 </nav>
+</section>{# /hub-hero-shell #}
 
 {% if tab == 'dashboard' %}
+{# بطاقتان بكل صف داخل القسمين (بدل 3+1) — بطلب التصميم #}
+<style>
+  .fc-tiles-2{ display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:10px; }
+  .fc-tiles-2 > *{ min-width:0; }
+</style>
 <div class="hub-grid hub-grid--2">
   {% call hub.section("مؤشرات التشغيل المالي", icon="gauge-high") %}
-    <div class="hub-tile-grid">
+    <div class="fc-tiles-2">
       {{ hub.tile("عدد المحافظ", summary.wallet_count, icon="wallet") }}
       {{ hub.tile("قيود دفتر الأستاذ", summary.ledger_entries, icon="book") }}
-      {{ hub.tile("سجلات الإيراد", summary.revenue_records, icon="receipt") }}
-      {{ hub.tile("سلف مفتوحة", summary.open_loan_count, icon="hand-holding-dollar") }}
+      {# إيراد = أخضر فاتح، سلف/خصوم = أحمر فاتح حسب قاعدة الألوان الدلالية #}
+      {{ hub.tile("سجلات الإيراد", summary.revenue_records, icon="receipt", variant="green") }}
+      {{ hub.tile("سلف مفتوحة", summary.open_loan_count, icon="hand-holding-dollar", variant="red") }}
     </div>
   {% endcall %}
 
   {% call hub.section("المشاركة والتسويات", icon="scale-balanced") %}
-    <div class="hub-tile-grid">
-      {{ hub.tile("حصص الموزعين", summary.distributor_shares|money, icon="people-arrows") }}
-      {{ hub.tile("قيمة السلف المفتوحة", summary.total_loans|money, icon="hand-holding-dollar") }}
-      {{ hub.tile("إجمالي الديون", debts.total|money, icon="file-invoice-dollar") }}
+    <div class="fc-tiles-2">
+      {# حصص الموزعين إيراد = أخضر، السلف والديون خصوم = أحمر #}
+      {{ hub.tile("حصص الموزعين", summary.distributor_shares|money, icon="people-arrows", variant="green") }}
+      {{ hub.tile("قيمة السلف المفتوحة", summary.total_loans|money, icon="hand-holding-dollar", variant="red") }}
+      {{ hub.tile("إجمالي الديون", debts.total|money, icon="file-invoice-dollar", variant="red") }}
       {{ hub.tile("إجمالي دفتر الأستاذ", summary.ledger_total|money, icon="book-open") }}
     </div>
   {% endcall %}
@@ -169,25 +235,12 @@
 {% endif %}
 
 {% if tab == 'wallets' %}
-{% call hub.section("إنشاء محفظة", icon="circle-plus") %}
-  <form method="post" action="{{ url_for('radius.business_finance_wallets_create') }}" class="hub-form-grid">
-    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-    <label class="hub-field">
-      <span class="hub-field-label">نوع المالك</span>
-      <select class="hub-input" name="owner_type">
-        <option value="company">الشركة</option>
-        <option value="manager">مدير</option>
-        <option value="distributor">موزّع</option>
-        <option value="subscriber">مشترك</option>
-        <option value="card_user">مستخدم بطاقات</option>
-      </select>
-      <span class="hub-field-hint">اختر الجهة التي ستتبع لها المحفظة.</span>
-    </label>
-    {{ hub.field("رقم المالك", "owner_id", "", type="number", hint="اتركه فارغًا لمحفظة الشركة.") }}
-    {{ hub.field("العملة", "currency", cfg.currency, hint="تستخدم في عرض الرصيد والحركات.") }}
-    {{ hub.btn("إنشاء محفظة", variant="primary", icon="plus", type="submit") }}
-  </form>
-{% endcall %}
+{# زر فتح النافذة العائمة لإنشاء محفظة — فوق قائمة الخزائن والمحافظ #}
+<div class="fcw-actions">
+  <button type="button" class="hub-btn hub-btn--primary" data-fcw-open="wallet-create">
+    <i class="fa-solid fa-plus"></i> إنشاء محفظة
+  </button>
+</div>
 
 {% call hub.section("قائمة الخزائن والمحافظ", icon="wallet", meta=(wallets|length|string + " محفظة"), flush=True) %}
   {% if wallets %}
@@ -209,7 +262,8 @@
           <td class="num mono">{{ wallet.id }}</td>
           <td>{{ owner_label(wallet.owner_type) }}{% if wallet.owner_id %} #{{ wallet.owner_id }}{% endif %}</td>
           <td class="num"><strong>{{ wallet.balance|money }}</strong></td>
-          <td>{{ hub.pill("نشطة" if wallet.status == "active" else wallet.status, "green" if wallet.status == "active" else "grey") }}</td>
+          {# الحالة بالعربي دائمًا؛ الخام يبقى في title للتتبّع التقني #}
+          <td title="{{ wallet.status }}">{{ hub.pill(wallet_status_label(wallet.status), "green" if wallet.status == "active" else "grey") }}</td>
           <td>
             {% for tx in tx_by_wallet.get(wallet.id, []) %}
               <div style="font-size:12px">{{ tx_label(tx.transaction_type) }} — {{ tx.amount|money }} — {{ tx.created_at|dt_local }}</div>
@@ -218,18 +272,26 @@
             {% endfor %}
           </td>
           <td>
-            <div class="fc-table-actions">
-              <form method="post" action="{{ url_for('radius.business_finance_wallet_credit', wallet_id=wallet.id) }}" class="fc-wallet-form">
-                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                <input class="hub-input" name="amount" placeholder="مبلغ الشحن" {% if not can_wallet_credit %}disabled{% endif %}>
-                <button class="hub-btn hub-btn--secondary" type="submit" {% if not can_wallet_credit %}disabled{% endif %}>شحن</button>
-              </form>
-              <form method="post" action="{{ url_for('radius.business_finance_wallet_debit', wallet_id=wallet.id) }}" class="fc-wallet-form">
-                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                <input class="hub-input" name="amount" placeholder="مبلغ الخصم" {% if not can_wallet_debit %}disabled{% endif %}>
-                <button class="hub-btn hub-btn--ghost" type="submit" {% if not can_wallet_debit %}disabled{% endif %}>خصم</button>
-              </form>
-            </div>
+            {# حقل واحد مدمج: نوع الحركة (شحن/خصم) + المبلغ — نصف عرض الحقلين السابقين.
+               الحركة تبدّل وجهة النموذج بين مسارَي الشحن والخصم، واسم الحقل المُرسَل يبقى amount. #}
+            <form method="post" class="fc-wallet-form fcw-act"
+                  action="{{ url_for('radius.business_finance_wallet_credit', wallet_id=wallet.id) }}"
+                  data-fcw-act
+                  data-credit-url="{{ url_for('radius.business_finance_wallet_credit', wallet_id=wallet.id) }}"
+                  data-debit-url="{{ url_for('radius.business_finance_wallet_debit', wallet_id=wallet.id) }}">
+              <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+              <span class="fcw-act-group">
+                <select class="hub-select" name="wallet_action" aria-label="نوع الحركة">
+                  <option value="credit" {% if not can_wallet_credit %}disabled{% endif %}>شحن</option>
+                  <option value="debit" {% if not can_wallet_debit %}disabled{% endif %}>خصم</option>
+                </select>
+                <input class="hub-input" name="amount" type="number" min="0" step="0.01" inputmode="decimal"
+                       placeholder="المبلغ" aria-label="المبلغ"
+                       {% if not can_wallet_credit and not can_wallet_debit %}disabled{% endif %}>
+              </span>
+              <button class="hub-btn hub-btn--secondary" type="submit"
+                      {% if not can_wallet_credit and not can_wallet_debit %}disabled{% endif %}>تنفيذ</button>
+            </form>
           </td>
         </tr>
       {% endfor %}
@@ -240,6 +302,74 @@
     {{ hub.empty("لا توجد محافظ بعد.", sub="ابدأ بمحفظة الشركة أو محفظة مدير أو موزّع.", icon="wallet") }}
   {% endif %}
 {% endcall %}
+
+{# ───────────── صندوق عائم: إنشاء محفظة ───────────── #}
+<div class="fcw-modal" data-fcw-modal="wallet-create" hidden>
+  <div class="fcw-dialog" role="dialog" aria-modal="true" aria-labelledby="fcw-wallet-create-title">
+    {# method="post" ضروري: حاقن الـ CSRF التلقائي يستهدف فقط <form method="post">،
+       وبدونه يرفض الخادم الطلب بـ 400 (طلب غير صحيح). #}
+    <form method="post" action="{{ url_for('radius.business_finance_wallets_create') }}">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+      <div class="fcw-head">
+        <h3 id="fcw-wallet-create-title"><i class="fa-solid fa-circle-plus"></i> إنشاء محفظة</h3>
+        <button type="button" class="fcw-x" data-fcw-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="fcw-body">
+        <label class="hub-field">
+          <span class="hub-field-label">نوع المالك</span>
+          <select class="hub-input" name="owner_type">
+            <option value="company">الشركة</option>
+            <option value="manager">مدير</option>
+            <option value="distributor">موزّع</option>
+            <option value="subscriber">مشترك</option>
+            <option value="card_user">مستخدم بطاقات</option>
+          </select>
+          <span class="hub-field-hint">اختر الجهة التي ستتبع لها المحفظة.</span>
+        </label>
+        {{ hub.field("رقم المالك", "owner_id", "", type="number", hint="اتركه فارغًا لمحفظة الشركة.") }}
+        <label class="hub-field">
+          <span class="hub-field-label">العملة</span>
+          {# الافتراضي دائمًا شيكل (ILS) بغضّ النظر عن عملة المستأجر #}
+          <select class="hub-input" name="currency">
+            <option value="ILS" selected>ILS — شيكل</option>
+            <option value="JOD">JOD — دينار أردني</option>
+            <option value="USD">USD — دولار</option>
+            <option value="EUR">EUR — يورو</option>
+            <option value="SAR">SAR — ريال سعودي</option>
+          </select>
+          <span class="hub-field-hint">تستخدم في عرض الرصيد والحركات.</span>
+        </label>
+      </div>
+      <div class="fcw-foot">
+        <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>إغلاق</button>
+        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-plus"></i> إنشاء محفظة</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+(() => {
+  "use strict";
+  // فتح وإغلاق النافذة العائمة لإنشاء محفظة (نفس نمط ff-modal في users_finance).
+  const root = document;
+  function open(key){ const m = root.querySelector(`[data-fcw-modal='${key}']`); if(m){ m.hidden=false; m.classList.add("is-open"); m.querySelector("input,select,textarea,button")?.focus(); } }
+  function closeAll(){ root.querySelectorAll("[data-fcw-modal]").forEach(m=>{ m.classList.remove("is-open"); m.hidden=true; }); }
+  root.querySelectorAll("[data-fcw-open]").forEach(b=> b.addEventListener("click", ()=> open(b.dataset.fcwOpen)));
+  root.querySelectorAll("[data-fcw-close]").forEach(b=> b.addEventListener("click", closeAll));
+  // النقر على الخلفية المعتمة يغلق النافذة.
+  root.querySelectorAll("[data-fcw-modal]").forEach(m=> m.addEventListener("click", e=>{ if(e.target===m) closeAll(); }));
+  root.addEventListener("keydown", e=>{ if(e.key==="Escape") closeAll(); });
+  // حقل الإجراء المدمج: اختيار «شحن/خصم» يبدّل وجهة النموذج بين مسارَي الشحن والخصم.
+  root.querySelectorAll("[data-fcw-act]").forEach(form=>{
+    const choice = form.querySelector('select[name="wallet_action"]');
+    if(!choice) return;
+    const sync = ()=>{ form.action = (choice.value === "debit") ? form.dataset.debitUrl : form.dataset.creditUrl; };
+    choice.addEventListener("change", sync);
+    sync();
+  });
+})();
+</script>
 {% endif %}
 
 {% if tab == 'revenue' %}
@@ -335,7 +465,8 @@
         <tr>
           <td class="num mono">{{ loan.id }}</td>
           <td>{{ loan.username or loan.subscriber_id }}</td>
-          <td class="num">{{ loan.duration_minutes }} دقيقة</td>
+          {# المدة بصيغة إنسانية (أيام/ساعات) بدل عدد الدقائق الخام — عبر فلتر dur_days #}
+          <td class="num" data-sort-value="{{ loan.duration_minutes or 0 }}">{{ loan.duration_minutes|dur_days }}</td>
           <td class="num">{{ loan.amount|money }}</td>
           <td>{{ hub.pill(loan_status_label(loan.status), "amber" if loan.status == "open" else "green") }}</td>
           <td class="mono small">{{ loan.starts_at|dt_local }}</td>
@@ -350,4 +481,6 @@
   {% endif %}
 {% endcall %}
 {% endif %}
+{# نظام الجداول الموحد (فرز + أعمدة + ترقيم صفحات) لجداول المركز المالي #}
+<script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
 {% endblock %}

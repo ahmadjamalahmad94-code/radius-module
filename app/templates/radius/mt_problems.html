@@ -9,6 +9,22 @@
 {% block page_title %}مركز المشاكل التشغيلية{% endblock %}
 {% block page_sub %}<span class="sub">قائمة موحدة لما يحتاج إجراء على مستوى الشبكة</span>{% endblock %}
 
+{# ── تسميات عربية لمعرّفات أنواع المشاكل التقنية (router.offline … إلخ) ──
+   مُعرّفة على مستوى الوحدة حتى تراها الماكروات أدناه (متغيرات block content
+   لا تصل إلى نطاق الماكرو). #}
+{% set _type_labels = {
+  'router.offline':  'راوتر غير متصل',
+  'router.disabled': 'راوتر معطّل',
+  'snapshot.stale':  'بيانات قديمة',
+  'snapshot.failed': 'فشل قراءة الحالة',
+  'backup.missing':  'بلا نسخة احتياطية',
+  'backup.stale':    'نسخة احتياطية قديمة',
+  'alert.critical':  'تنبيه حرج',
+  'alert.warning':   'تنبيه تحذيري',
+  'audit.failure':   'عملية فاشلة',
+  'audit.partial':   'تطبيق جزئي'
+} %}
+
 {% macro problem_row(p) -%}
 <tr class="hub-table-row"
     data-mt-problem-row
@@ -24,7 +40,7 @@
     {% elif p.severity == 'warning' %}{{ hub.pill("تحذير", variant="amber") }}
     {% else %}{{ hub.pill("معلومة", variant="brand") }}{% endif %}
   </td>
-  <td class="mono small">{{ p.type }}</td>
+  <td class="small">{{ _type_labels.get(p.type, p.type) }}</td>
   <td class="mono small">{% if p.router_id %}#{{ p.router_id }}{% else %}<span class="hub-text-mute">—</span>{% endif %}</td>
   <td class="mono small">{% if p.last_seen %}{{ p.last_seen|dt_local }}{% else %}<span class="hub-text-mute">—</span>{% endif %}</td>
   <td>
@@ -84,7 +100,7 @@
   <select class="hub-input" name="type" data-mt-problems-filter-type>
     <option value="">كل الأنواع</option>
     {% for t in all_problem_types %}
-    <option value="{{ t }}" {% if filters.type == t %}selected{% endif %}>{{ t }}</option>
+    <option value="{{ t }}" {% if filters.type == t %}selected{% endif %}>{{ _type_labels.get(t, t) }}</option>
     {% endfor %}
   </select>
   <input class="hub-input grow" type="text" name="router_id" value="{{ filters.router_id or '' }}"

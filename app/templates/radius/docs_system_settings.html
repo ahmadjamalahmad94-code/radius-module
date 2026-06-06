@@ -1,0 +1,440 @@
+{# ══════════════════════════════════════════════════════════════════════
+   دليل «إعدادات النظام» — ضمن قسم «الإعدادات».
+
+   نفس بنية النمط الذهبي docs_add_subscriber.html: hero + شريط أدوات،
+   فهرس لاصق order:2 + scrollspy، شارات خطوات بنفسجية، رسوم HTML/CSS،
+   تلميحات 💡/⚠️، حفظ PDF بـwindow.print.
+
+   المحتوى مطابق للصفحة الفعلية settings_page.html (المسار
+   /admin/radius/settings): التبويبات الثمانية، رفع الشعار بالسحب،
+   منع الماك العشوائي، وعنوان IP سيرفر الراديوس وأهميته لمتجر البطاقات.
+   أسماء التبويبات والحقول منسوخة حرفيًا.
+   ══════════════════════════════════════════════════════════════════════ #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}دليل: إعدادات النظام — كيف تستخدمني{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<style>
+  /* ── التخطيط: فهرس جانبي لاصق + عمود المحتوى ── */
+  .dg-layout{ display:grid; grid-template-columns:minmax(0,1fr) 230px; gap:20px; align-items:start; }
+  .dg-toc{ order:2; }
+  .dg-main{ order:1; }
+  @media (max-width:980px){ .dg-layout{ grid-template-columns:1fr; } .dg-toc{ order:1; } .dg-main{ order:2; } }
+
+  .dg-toc{
+    position:sticky; top:84px;
+    background:#fff; border:1px solid #e8edf3; border-radius:14px;
+    padding:14px 13px; display:grid; gap:3px;
+  }
+  @media (max-width:980px){ .dg-toc{ position:static; } }
+  .dg-toc-title{
+    display:flex; align-items:center; gap:8px; font-size:12px; font-weight:900;
+    color:#7c7a99; margin-bottom:7px; padding-inline:6px;
+  }
+  .dg-toc a{
+    display:flex; align-items:center; gap:9px;
+    padding:8px 10px; border-radius:9px; text-decoration:none;
+    font-size:12.5px; font-weight:700; color:#475569;
+    transition:background .14s, color .14s;
+  }
+  .dg-toc a .n{
+    width:21px; height:21px; border-radius:50%; flex:none;
+    display:grid; place-items:center; font-size:10.5px; font-weight:900;
+    background:#f1f5f9; color:#94a3b8;
+  }
+  .dg-toc a:hover{ background:#f5f3ff; color:#5b21b6; }
+  .dg-toc a.is-active{ background:#ede9fe; color:#5b21b6; }
+  .dg-toc a.is-active .n{ background:linear-gradient(135deg,#7c3aed,#5b21b6); color:#fff; }
+
+  /* ── عمود الخطوات ── */
+  .dg-main{ min-width:0; display:grid; gap:18px; }
+
+  /* تمهيد «ماذا ستتعلم» */
+  .dg-lead{
+    display:flex; gap:13px; align-items:flex-start;
+    background:linear-gradient(135deg,#f5f3ff,#fdfcff);
+    border:1px solid #e9e5fc; border-radius:14px; padding:15px 17px;
+  }
+  .dg-lead .ic{ width:40px;height:40px;border-radius:12px;flex:none;display:grid;place-items:center;
+    font-size:17px;background:#ede9fe;color:#6d28d9; }
+  .dg-lead h3{ margin:0 0 4px; font-size:13.5px; font-weight:800; color:#241e4e; }
+  .dg-lead p{ margin:0; font-size:12.5px; line-height:1.9; color:#5b5a78; }
+
+  /* بطاقة الخطوة */
+  .dg-step{ display:grid; grid-template-columns:auto 1fr; gap:15px; align-items:start; scroll-margin-top:90px; }
+  @media (max-width:560px){ .dg-step{ grid-template-columns:1fr; } }
+  .dg-badge{
+    width:42px; height:42px; border-radius:50%; flex:none;
+    display:grid; place-items:center; font-size:17px; font-weight:900; color:#fff;
+    background:linear-gradient(135deg,#7c3aed,#5b21b6);
+    box-shadow:0 8px 18px rgba(124,58,237,.3);
+  }
+  .dg-card{
+    min-width:0; background:#fff; border:1px solid #e8edf3; border-radius:15px;
+    padding:16px 18px;
+  }
+  .dg-card h2{
+    margin:0 0 8px; font-size:15.5px; font-weight:800; color:#0f172a;
+    display:flex; align-items:center; gap:9px; flex-wrap:wrap;
+  }
+  .dg-card h2 i{ color:#7c3aed; }
+  .dg-card p{ margin:0 0 7px; font-size:13px; line-height:1.95; color:#475569; }
+  .dg-card p:last-child{ margin-bottom:0; }
+  .dg-card ul{ margin:4px 0 8px; padding-inline-start:22px; font-size:13px; line-height:2; color:#475569; }
+  .dg-card strong{ color:#241e4e; }
+  .dg-kbd{
+    font-family:ui-monospace,Consolas,monospace; font-size:11.5px;
+    background:#f1f5f9; border:1px solid #e2e8f0; border-radius:5px;
+    padding:1px 7px; color:#5b21b6;
+  }
+
+  /* صناديق التلميح */
+  .dg-tip, .dg-warn{
+    display:flex; gap:11px; align-items:flex-start;
+    border-radius:12px; padding:11px 14px; margin-top:11px;
+    font-size:12.5px; line-height:1.9;
+  }
+  .dg-tip{ background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; }
+  .dg-warn{ background:#fffbeb; border:1px solid #fde68a; color:#92400e; }
+  .dg-tip .ic, .dg-warn .ic{ flex:none; font-size:15px; line-height:1.6; }
+  .dg-tip b, .dg-warn b{ font-weight:900; }
+
+  /* ════ الرسوم: محاكاة مصغّرة للصفحة الحقيقية ════ */
+  .dg-mock{
+    border:1px solid #e2e8f0; border-radius:14px; overflow:hidden;
+    background:#fff; box-shadow:0 8px 20px rgba(15,23,42,.07);
+    margin-top:13px; max-width:560px;
+  }
+  .dg-mock-bar{
+    display:flex; align-items:center; gap:7px; padding:8px 12px;
+    background:#f1f5f9; border-bottom:1px solid #e2e8f0;
+  }
+  .dg-mock-bar .dots{ display:flex; gap:5px; }
+  .dg-mock-bar .dots i{ width:9px; height:9px; border-radius:50%; }
+  .dg-mock-bar .dots i:nth-child(1){ background:#f87171; }
+  .dg-mock-bar .dots i:nth-child(2){ background:#fbbf24; }
+  .dg-mock-bar .dots i:nth-child(3){ background:#34d399; }
+  .dg-mock-bar .crumb{
+    flex:1; background:#fff; border:1px solid #e2e8f0; border-radius:7px;
+    padding:4px 10px; font-size:10.5px; font-weight:700; color:#64748b;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .dg-mock-body{ padding:14px; display:grid; gap:11px; }
+  .dg-mf{ display:grid; gap:5px; min-width:0; }
+  .dg-mf label{ font-size:10.5px; font-weight:800; color:#475569; }
+  .dg-mf-input{
+    border:1.5px solid #e2e8f0; border-radius:8px; padding:8px 10px;
+    font-size:11.5px; color:#0f172a; background:#fff;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .dg-mf-input.hl{ border-color:#c4b5fd; background:#faf5ff; }
+  .dg-mf-help{ font-size:9.5px; color:#94a3b8; line-height:1.6; }
+
+  .dg-cap{ font-size:11px; color:#94a3b8; margin-top:8px; line-height:1.7; }
+  .dg-cap i{ color:#c4b5fd; }
+
+  /* ════ محاكاة خاصة بهذا الدليل ════ */
+  /* شريط التبويبات */
+  .dg-tabs{ display:flex; flex-wrap:wrap; gap:5px; }
+  .dg-tabs .tb{ display:inline-flex; align-items:center; gap:6px; border-radius:9px; padding:7px 11px; font-size:11px; font-weight:800; color:#64748b; background:#f8fafc; border:1px solid #eef2f7; }
+  .dg-tabs .tb .c{ background:#e2e8f0; color:#64748b; border-radius:999px; padding:0 6px; font-size:8.5px; }
+  .dg-tabs .tb.on{ background:#ede9fe; color:#5b21b6; border-color:#ddd6fe; }
+  .dg-tabs .tb.on .c{ background:#ddd6fe; color:#5b21b6; }
+
+  /* منطقة السحب والإفلات */
+  .dg-drop{ border:1.5px dashed #c4b5fd; border-radius:12px; background:#faf5ff; padding:18px 14px; text-align:center; }
+  .dg-drop .ic{ font-size:22px; color:#a78bfa; }
+  .dg-drop .t{ font-size:11.5px; font-weight:800; color:#5b21b6; margin-top:7px; }
+  .dg-drop .s{ font-size:9.5px; color:#94a3b8; margin-top:3px; }
+  .dg-drop .b{ display:inline-flex; align-items:center; gap:6px; margin-top:9px; border-radius:8px; padding:6px 13px; font-size:10.5px; font-weight:800; background:#ede9fe; color:#5b21b6; }
+
+  /* مفتاح تبديل (toggle) */
+  .dg-tog{ display:flex; align-items:center; gap:9px; }
+  .dg-tog .sw{ position:relative; width:36px; height:20px; background:#7c3aed; border-radius:99px; flex:none; }
+  .dg-tog .sw i{ position:absolute; top:2.5px; inset-inline-end:3px; width:15px; height:15px; background:#fff; border-radius:50%; box-shadow:0 1px 2px rgba(0,0,0,.2); }
+  .dg-tog .lb{ font-size:10.5px; font-weight:800; color:#5b21b6; }
+
+  /* بطاقة إبراز عنوان الراديوس */
+  .dg-spot{ display:flex; gap:11px; align-items:flex-start; margin-top:13px; max-width:560px;
+    background:linear-gradient(135deg,#eef2ff,#fdfcff); border:1px solid #c7d2fe; border-radius:13px; padding:13px 15px; }
+  .dg-spot .ic{ width:34px; height:34px; border-radius:10px; background:#e0e7ff; color:#4338ca; display:grid; place-items:center; font-size:14px; flex:none; }
+  .dg-spot .t{ font-size:12.5px; font-weight:900; color:#312e81; }
+  .dg-spot p{ margin:5px 0 0; font-size:11.5px; color:#475569; line-height:1.85; }
+  .dg-spot code{ font-family:ui-monospace,Consolas,monospace; font-size:10.5px; background:#fff; border:1px solid #c7d2fe; border-radius:5px; padding:1px 6px; color:#4338ca; }
+
+  /* ════ الطباعة ════ */
+  @media print{
+    .hb-side, .hb-side-overlay, .hb-topbar, header.hb-top,
+    .dg-toc, .dg-noprint, .hub-hero-actions{ display:none !important; }
+    .dg-layout{ grid-template-columns:1fr; }
+    .dg-card, .dg-mock, .dg-spot{ box-shadow:none !important; break-inside:avoid; }
+    .dg-step{ break-inside:avoid; }
+    body{ background:#fff !important; }
+    .dg-badge, .dg-tip, .dg-warn, .dg-tabs .tb.on, .dg-drop, .dg-tog .sw, .dg-spot, .dg-spot .ic{
+      -webkit-print-color-adjust:exact; print-color-adjust:exact;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{{ hub.hero(
+  "دليل: إعدادات النظام",
+  subtitle="عصب الموقع: هويتك وعملتك وتوقيتك وسلوكك العام — جولة في التبويبات الثمانية، ولماذا عنوان سيرفر الراديوس يهمّ متجر البطاقات.",
+  icon="gear",
+  actions_html='
+    <button type="button" class="hub-btn hub-btn--secondary" onclick="window.print()">
+      <i class="fa-solid fa-file-pdf"></i> حفظ كـ PDF
+    </button>
+    <a class="hub-btn hub-btn--secondary" href="/admin/radius/docs/section/settings">
+      <i class="fa-solid fa-arrow-right"></i> كل الأدلة
+    </a>
+  '
+) }}
+
+<div class="dg-layout">
+
+  {# ───── الفهرس الجانبي اللاصق ───── #}
+  <nav class="dg-toc dg-noprint" aria-label="فهرس الدليل">
+    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> فهرس الخطوات</div>
+    <a href="#dg-s1" data-dg-toc><span class="n">1</span> افتح الإعدادات</a>
+    <a href="#dg-s2" data-dg-toc><span class="n">2</span> التبويبات الثمانية</a>
+    <a href="#dg-s3" data-dg-toc><span class="n">3</span> رفع الشعار بالسحب</a>
+    <a href="#dg-s4" data-dg-toc><span class="n">4</span> منع الماك العشوائي</a>
+    <a href="#dg-s5" data-dg-toc><span class="n">5</span> عنوان سيرفر الراديوس</a>
+    <a href="#dg-s6" data-dg-toc><span class="n">6</span> احفظ التغييرات</a>
+  </nav>
+
+  {# ───── عمود المحتوى ───── #}
+  <div class="dg-main">
+
+    <div class="dg-lead">
+      <span class="ic"><i class="fa-solid fa-lightbulb"></i></span>
+      <div>
+        <h3>قبل ما نبدأ — ليش الإعدادات مهمة؟</h3>
+        <p>
+          صفحة <strong>«إعدادات النظام»</strong> هي عصب الموقع: اسم نظامك وشعاره ولونه وعملته
+          وتوقيته وسلوكه العام — أي تعديل هنا ينعكس فورًا على كل الصفحات بعد الحفظ. كل شيء مقسّم
+          إلى تبويبات مرتّبة، وفي هذا الدليل نمرّ عليها كلها، ونركّز على ثلاثة أشياء يكثر السؤال
+          عنها: رفع الشعار، منع الماك العشوائي، وعنوان سيرفر الراديوس.
+        </p>
+      </div>
+    </div>
+
+    {# ════ الخطوة 1 ════ #}
+    <section class="dg-step" id="dg-s1">
+      <div class="dg-badge">1</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-door-open"></i> افتح صفحة الإعدادات</h2>
+        <p>
+          من القائمة الجانبية افتح قسم <strong>«الإعدادات»</strong>. تفتح الصفحة على تبويب
+          <strong>«هوية النظام»</strong> افتراضيًا، وفي رأسها زر <strong>«حفظ التغييرات»</strong>
+          البنفسجي يبقى ظاهرًا دائمًا. وفي أعلى الرأس مؤشرات سريعة: العملة الحالية، توقيت النظام،
+          إعدادات مخصّصة، وإجمالي الإعدادات.
+        </p>
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة:</b> أي تبويب فيه تعديل غير محفوظ تظهر بجانب اسمه <b>نقطة برتقالية</b>
+          صغيرة، فتعرف أين تركت تغييرًا قبل أن تحفظ.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 2 ════ #}
+    <section class="dg-step" id="dg-s2">
+      <div class="dg-badge">2</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-folder-tree"></i> تعرّف على التبويبات الثمانية</h2>
+        <p>كل تبويب يجمع إعدادات متجانسة، وبجانب اسمه عدّاد بعدد حقوله:</p>
+        <ul>
+          <li><strong>هوية النظام:</strong> الاسم، الدولة، مفتاح الدولة، اللون الأساسي، الشعار.</li>
+          <li><strong>المالية:</strong> عملة النظام، نسبة الضريبة %.</li>
+          <li><strong>الوقت والمنطقة:</strong> توقيت النظام، مهلة جلسة الإدارة.</li>
+          <li><strong>المشتركون والوصول:</strong> إعادة كلمة المرور، عرض الأقسام غير المصرّح بها،
+          تنبيهات الكوتا، صفوف الصفحة، منع الماك العشوائي للمشتركين.</li>
+          <li><strong>صفحة المشترك:</strong> تسعة مفاتيح تتحكّم بما يراه العميل ويفعله في بوّابته.</li>
+          <li><strong>الكروت:</strong> أطوال اسم/كلمة البطاقة الافتراضية، منع الماك العشوائي للبطاقات.</li>
+          <li><strong>الرسائل والتنبيهات:</strong> رابط Webhook الخارجي وسرّه الموقِّع.</li>
+          <li><strong>متقدم:</strong> حد طلبات الـ API، الراوتر الافتراضي، عنوان سيرفر الراديوس، عنوان VPS العام.</li>
+        </ul>
+
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">إعدادات النظام › التبويبات</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-tabs">
+              <span class="tb on"><i class="fa-solid fa-id-badge"></i> هوية النظام <span class="c">5</span></span>
+              <span class="tb"><i class="fa-solid fa-coins"></i> المالية <span class="c">2</span></span>
+              <span class="tb"><i class="fa-solid fa-clock"></i> الوقت والمنطقة <span class="c">2</span></span>
+              <span class="tb"><i class="fa-solid fa-users"></i> المشتركون والوصول <span class="c">6</span></span>
+              <span class="tb"><i class="fa-solid fa-id-card-clip"></i> صفحة المشترك <span class="c">9</span></span>
+              <span class="tb"><i class="fa-solid fa-credit-card"></i> الكروت <span class="c">3</span></span>
+              <span class="tb"><i class="fa-solid fa-bell"></i> الرسائل والتنبيهات <span class="c">2</span></span>
+              <span class="tb"><i class="fa-solid fa-screwdriver-wrench"></i> متقدم <span class="c">4</span></span>
+            </div>
+          </div>
+        </div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> «الوقت والمنطقة» تبويب مستقل بين «المالية» و«المشتركون والوصول».</div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 3 ════ #}
+    <section class="dg-step" id="dg-s3">
+      <div class="dg-badge">3</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-cloud-arrow-up"></i> ارفع الشعار بالسحب والإفلات</h2>
+        <p>
+          في تبويب <strong>«هوية النظام»</strong> حقل <strong>«شعار النظام»</strong>: منطقة كبيرة
+          تكتب «<strong>اسحب صورة الشعار هنا أو انقر للاختيار</strong>». اسحب ملف الصورة من جهازك
+          وأفلِته فوقها، أو انقرها لتختار ملفًا. الصيغ المدعومة:
+          <span class="dg-kbd">PNG · JPG · SVG · WEBP</span> بحد أقصى 2MB.
+        </p>
+        <p>
+          إن كان لديك شعار سابق يظهر عنوان «<strong>الشعار الحالي — اسحب صورة جديدة أو انقر
+          للاستبدال</strong>». ويوجد بديل: حقل «<strong>أو رابط خارجي</strong>» إن أردت رابط صورة
+          بدل الرفع. الملف يُرفع ويُحفظ على خادمك تحت <span class="dg-kbd">uploads/branding</span>.
+        </p>
+
+        <div class="dg-mock" aria-hidden="true" style="max-width:420px">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">هوية النظام › شعار النظام</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-drop">
+              <div class="ic"><i class="fa-solid fa-cloud-arrow-up"></i></div>
+              <div class="t">اسحب صورة الشعار هنا أو انقر للاختيار</div>
+              <div class="s">PNG · JPG · SVG · WEBP — بحد أقصى 2MB</div>
+              <span class="b"><i class="fa-solid fa-folder-open"></i> اختيار ملف</span>
+            </div>
+          </div>
+        </div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> الشعار يظهر في ترويسة الموقع وصفحات الطباعة والفواتير.</div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 4 ════ #}
+    <section class="dg-step" id="dg-s4">
+      <div class="dg-badge">4</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-shield-halved"></i> منع الماك العشوائي</h2>
+        <p>
+          أجهزة iOS 14+ و Android 10+ تولّد عنوان MAC <strong>عشوائيًا</strong> لكل شبكة حفاظًا على
+          الخصوصية — وهذا يكسر قفل الجهاز (MAC lock). لذلك يوجد مفتاحان مستقلّان تمامًا عن بعضهما:
+        </p>
+        <ul>
+          <li><strong>منع MAC العشوائي في المشتركين</strong> — في تبويب «المشتركون والوصول».</li>
+          <li><strong>منع MAC العشوائي في البطاقات</strong> — في تبويب «الكروت».</li>
+        </ul>
+        <p>
+          عند تفعيل أيّهما، تُرفض مصادقة المشترك/البطاقة إذا كان الجهاز يستخدم عنوانًا عشوائيًا،
+          حتى يوقف المستخدم خيار «العنوان الخاص» في إعدادات الواي فاي فيثبت عنوانه.
+        </p>
+
+        <div class="dg-mock" aria-hidden="true" style="max-width:460px">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">المشتركون والوصول › أمان</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-mf">
+              <label>منع MAC العشوائي في المشتركين</label>
+              <div class="dg-tog"><span class="sw"><i></i></span><span class="lb">مفعَّل</span></div>
+              <div class="dg-mf-help">عند التفعيل تُرفض مصادقة المشترك إذا كان جهازه يستخدم عنوان MAC عشوائي/خاص.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة:</b> المفتاحان منفصلان عمدًا — تقدر تشدّد على المشتركين وتترك البطاقات،
+          أو العكس، حسب طبيعة زبائنك.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 5 ════ #}
+    <section class="dg-step" id="dg-s5">
+      <div class="dg-badge">5</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-store"></i> عنوان IP سيرفر الراديوس — يشغّل متجر البطاقات</h2>
+        <p>
+          في تبويب <strong>«متقدم»</strong> حقل اسمه <strong>«عنوان IP سيرفر الراديوس»</strong>.
+          هو العنوان الذي تصل إليه أجهزة المشتركين عبر الراوتر (عادةً عنوان WireGuard/VPN مثل
+          <span class="dg-kbd">10.10.0.1</span>).
+        </p>
+        <p>
+          أهميته الكبرى: منه يبني النظام <strong>تلقائيًا</strong> رابط <strong>متجر البطاقات
+          الإلكترونية</strong> <span class="dg-kbd">http://&lt;العنوان&gt;/portal/card</span> في كل
+          تصاميم صفحات الهوت سبوت. تضبطه مرة واحدة، فيُستخدم في كل التصاميم دون أن تكتب أي رابط
+          يدويًا.
+        </p>
+
+        <div class="dg-spot" aria-hidden="true">
+          <span class="ic"><i class="fa-solid fa-store"></i></span>
+          <div>
+            <div class="t">رابط المتجر يُبنى تلقائيًا</div>
+            <p>اضبط العنوان مرة واحدة → يظهر زر متجر البطاقات في كل صفحات الدخول كـ <code>http://10.10.0.1/portal/card</code> — لا كتابة يدوية في التصاميم.</p>
+          </div>
+        </div>
+
+        <div class="dg-warn">
+          <span class="ic">⚠️</span>
+          <span><b>انتبه:</b> لا تنسَ إضافة هذا العنوان إلى <b>walled-garden</b> على الراوتر، وإلا
+          لن تصل أجهزة المشتركين إلى المتجر قبل تسجيل الدخول. ولو تركت الحقل فارغًا فلن تعمل روابط
+          المتجر في صفحات الهوت سبوت.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 6 ════ #}
+    <section class="dg-step" id="dg-s6">
+      <div class="dg-badge">6</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-floppy-disk"></i> احفظ التغييرات</h2>
+        <p>
+          بعد أي تعديل، اضغط <strong>«حفظ التغييرات»</strong> (في الرأس أو في شريط الحفظ السفلي).
+          يحفظ الزر كل التبويبات معًا — لا تحتاج تحفظ كل تبويب على حدة. وبجواره
+          <strong>«إلغاء والعودة»</strong> يعيدك للوحة دون حفظ.
+        </p>
+        <div class="dg-mock" aria-hidden="true" style="max-width:420px">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">إعدادات النظام › أسفل الصفحة</span></div>
+          <div class="dg-mock-body">
+            <div style="display:flex;justify-content:flex-end;gap:9px">
+              <span style="display:inline-flex;align-items:center;gap:6px;border-radius:9px;padding:8px 14px;font-size:11px;font-weight:800;background:#f1f5f9;color:#475569">إلغاء والعودة</span>
+              <span style="display:inline-flex;align-items:center;gap:6px;border-radius:9px;padding:8px 16px;font-size:11px;font-weight:800;background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff"><i class="fa-solid fa-floppy-disk"></i> حفظ التغييرات</span>
+            </div>
+          </div>
+        </div>
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة:</b> قبل الحفظ يخبرك شريط الحالة كم تعديلًا غير محفوظ لديك؛ وبعد الحفظ
+          يعود إلى «لا تعديلات غير محفوظة — كل القيم مطابقة لآخر حفظ».</span>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+{# ── scrollspy خفيف: يبرز بند الفهرس المقابل للخطوة الظاهرة ── #}
+<script>
+(function(){
+  'use strict';
+  var links = Array.prototype.slice.call(document.querySelectorAll('[data-dg-toc]'));
+  if (!links.length || !('IntersectionObserver' in window)) return;
+  var map = {};
+  links.forEach(function(a){ map[a.getAttribute('href').slice(1)] = a; });
+  var obs = new IntersectionObserver(function(entries){
+    entries.forEach(function(en){
+      if (!en.isIntersecting) return;
+      links.forEach(function(a){ a.classList.remove('is-active'); });
+      var a = map[en.target.id];
+      if (a) a.classList.add('is-active');
+    });
+  }, { rootMargin: '-35% 0px -55% 0px' });
+  Object.keys(map).forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) obs.observe(el);
+  });
+})();
+</script>
+
+{% endblock %}

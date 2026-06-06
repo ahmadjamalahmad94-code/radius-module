@@ -1,97 +1,107 @@
 {# ═══════════════════════════════════════════════════════════════════════
-   MAC history per user — UNIFIED DESIGN SYSTEM (megahero + worklayout + help).
-
-   Same backend data: `items` (rows of {username, mac, nasipaddress,
-   sessions, last_seen} aggregated from radacct), `filters` (only `q`).
-   Zero route/behaviour change.
+   سجل عناوين الأجهزة (MAC) — إعادة تصميم من الصفر على نظام hub_v2:
+     • صدفة هيرو واحدة (hub-hero-shell): عنوان + سطر تعريفي + مؤشرات بصف
+       واحد + حزام الفلترة — بلا أي هيروات/لافتات مكدّسة.
+     • جدول uds موحّد (فرز + ترقيم + تصدير) مع تعريب كل القيم الظاهرة
+       والعناوين الفنية (MAC / IP) بخط mono داخل <bdi>.
+     • نفس معطيات المسار: `items` (أزواج مستخدم × MAC مجمّعة من radacct
+       مع عدد الجلسات وآخر ظهور)، `filters` (q فقط) — صفر تغيير على
+       المسار أو السلوك أو عقد الفلاتر.
    ═══════════════════════════════════════════════════════════════════════ #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
 {% block title %}سجل عناوين الأجهزة{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-fingerprint"></i>{% endblock %}
-{% block page_title %}سجل عناوين أجهزة المستفيدين{% endblock %}
+{% block page_title %}سجل عناوين الأجهزة (MAC){% endblock %}
 {% block page_sub %}<span class="sub">{{ items|length }} صف</span>{% endblock %}
 
+{% block head_extra %}{{ super() }}
+{# نظام الجداول الموحد (uds): فرز + ترقيم صفحات + تصدير لجدول العناوين #}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
+{% endblock %}
+
 {% block content %}
-{% include "radius/reports_nav.html" %}
+{# متحكّم «انتقال سريع» المضغوط — يُحقن في صف عنوان الهيرو بدل الشريطين الكبيرين #}
+{% set _report_jump %}{% include "radius/reports_nav.html" %}{% endset %}
 
-{# ───── KPIs derived from the same `items` (no backend change) ───── #}
-{% set _total_sessions = items|sum(attribute='sessions') %}
+{# ── مؤشرات مشتقة من نفس `items` (بلا أي استعلام إضافي) ── #}
 {% set _distinct_users = items|map(attribute='username')|unique|list|length %}
+{% set _distinct_macs  = items|map(attribute='mac')|unique|list|length %}
+{% set _total_sessions = items|sum(attribute='sessions') %}
 
-{# ───── Merged hero: title + subtitle + KPI strip + integrated filter ───── #}
+{# ───── صدفة الهيرو الواحدة: عنوان + سطر تعريفي + مؤشرات بصف واحد + حزام الفلترة ───── #}
+<section class="hub-hero-shell" data-testid="mac-history-hero">
 {% call hub.megahero(
   "سجل عناوين الأجهزة (MAC)",
-  subtitle="كل MAC ميّز جلسة لكل مستخدم — مع عدد الجلسات وآخر ظهور.",
+  subtitle="كل جهاز اتصل به كل مستخدم — مع عدد الجلسات وآخر ظهور وجهاز الشبكة الموجِّه.",
   icon="fingerprint",
+  actions_html=_report_jump,
   kpis=[
-    {'label': 'الصفوف',     'value': items|length,    'icon': 'table-list',   'variant': 'brand'},
-    {'label': 'المستخدمون', 'value': _distinct_users, 'icon': 'users',        'variant': 'blue'},
-    {'label': 'الجلسات',    'value': _total_sessions, 'icon': 'circle-play',  'variant': 'green'},
+    {'label': 'الأزواج',        'value': items|length,    'icon': 'table-list',  'variant': 'brand'},
+    {'label': 'مستخدمون',       'value': _distinct_users, 'icon': 'users',       'variant': 'blue'},
+    {'label': 'أجهزة مختلفة',   'value': _distinct_macs,  'icon': 'laptop',      'variant': 'amber'},
+    {'label': 'إجمالي الجلسات', 'value': _total_sessions, 'icon': 'circle-play', 'variant': 'green'},
   ],
   search_action=url_for('radius.rep_mac_history')
 ) %}
   <input class="hub-input grow" type="text" name="q"
          value="{{ filters.q if filters else '' }}"
-         placeholder="بحث (مستخدم / عنوان الجهاز)…">
+         placeholder="بحث (مستخدم / عنوان جهاز / جهاز شبكة)…">
   {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
   {% if filters and filters.q %}
-    {{ hub.btn("مسح", icon="rotate-left", variant="ghost", size="sm",
+    {{ hub.btn("إعادة ضبط", icon="rotate-left", variant="ghost", size="sm",
                attrs='onclick="window.location=' + "'" + url_for('radius.rep_mac_history') + "'" + '"') }}
   {% endif %}
+  <span class="hub-hint" tabindex="0"
+        data-hint="البحث يطابق اسم المستخدم أو عنوان الجهاز (MAC) أو عنوان جهاز الشبكة (NAS). كل صف هو زوج فريد (مستخدم × جهاز) مُجمَّع من جلسات المحاسبة radacct، ويُعرض حتى 500 صف من الأحدث ظهورًا."><i class="fa-solid fa-info"></i></span>
 {% endcall %}
+</section>{# /hub-hero-shell #}
 
 {% if items %}
-{# ───── Main (carded table) + help panel on the LEFT ───── #}
-{% call hub.worklayout(aside_html=hub.helppanel(
-  "كيف تقرأ هذا التقرير؟",
-  intro="كل صف هو زوج (مستخدم × عنوان جهاز) فريد، مُجمَّع من جلسات المحاسبة radacct.",
-  items=[
-    {'icon': 'fingerprint',  'text': 'عنوان الجهاز (MAC) هو المعرّف الفيزيائي للجهاز الذي اتصل به المستخدم.'},
-    {'icon': 'hashtag',      'text': 'عدد الجلسات هو كم مرة ظهر هذا الجهاز لهذا المستخدم.'},
-    {'icon': 'clock',        'text': 'آخر ظهور هو أحدث وقت بدأ فيه هذا الجهاز جلسة.'},
-    {'icon': 'server',       'text': 'جهاز الشبكة (NAS IP) هو عنوان الجهاز الذي وجّه الاتصال.'},
-  ],
-  note="هذا التقرير للقراءة فقط — البيانات تأتي مباشرة من جدول المحاسبة radacct."
-)) %}
-  {% call hub.section("MAC × مستخدم", icon="table-list",
-                      meta=items|length|string + " صف", flush=True) %}
-    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25" style="border:none;border-radius:0">
-      <table class="hub-table">
-        <thead>
-          <tr>
-            <th>المستخدم</th>
-            <th>عنوان الجهاز (MAC)</th>
-            <th>جهاز الشبكة</th>
-            <th class="num" style="white-space:nowrap">عدد الجلسات</th>
-            <th>آخر ظهور</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for r in items %}
-          <tr>
-            <td><strong>{{ r.username }}</strong></td>
-            <td class="mono small" style="white-space:nowrap;direction:ltr">{{ r.mac }}</td>
-            <td class="mono small" style="white-space:nowrap;direction:ltr">{{ r.nasipaddress or '—' }}</td>
-            <td class="num mono"
-                style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
-              {{ r.sessions }}
-            </td>
-            <td class="mono small" style="white-space:nowrap;direction:ltr">{{ r.last_seen[:16] if r.last_seen else '—' }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  {% endcall %}
+{# ───── جدول الأزواج (مستخدم × جهاز) — uds موحّد (فرز + ترقيم + تصدير) ───── #}
+{% call hub.section("الأجهزة لكل مستخدم", icon="table-list",
+                    meta=items|length|string + " صف", flush=True) %}
+  <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25"
+       style="border:none;border-radius:0">
+    <table class="hub-table rep-table">
+      <thead>
+        <tr>
+          <th>المستخدم</th>
+          <th>عنوان الجهاز (MAC)</th>
+          <th>جهاز الشبكة (NAS)</th>
+          <th class="num" style="white-space:nowrap">عدد الجلسات</th>
+          <th>آخر ظهور</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in items %}
+        <tr>
+          <td><strong><bdi>{{ r.username }}</bdi></strong></td>
+          <td class="mono small"><bdi>{{ r.mac }}</bdi></td>
+          <td class="mono small"><bdi>{{ r.nasipaddress or '—' }}</bdi></td>
+          <td class="num mono"
+              style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
+            {{ r.sessions }}
+          </td>
+          {% set _ls = r.last_seen|dt_local if r.last_seen else '' %}
+          <td class="mono"
+              style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
+            <span class="rep-primary">{{ _ls[:10] or '—' }}</span>
+            <span class="rep-sub">{{ _ls[11:16] }}</span>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 {% endcall %}
 {% else %}
-{{ hub.empty(
-  "لا سجلات MAC حتى الآن",
-  sub="يظهر هنا أول MAC بعد بدء أول جلسة accounting.",
-  icon="fingerprint"
-) }}
+{{ hub.empty("لا سجلات أجهزة مطابقة",
+   sub="غيّر البحث، أو سيظهر أول جهاز هنا بعد بدء أول جلسة محاسبة.",
+   icon="fingerprint") }}
 {% endif %}
 
+{# نظام الجداول الموحد: فرز + ترقيم صفحات + تصدير #}
+<script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
 {% endblock %}

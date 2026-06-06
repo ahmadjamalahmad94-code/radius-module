@@ -1,116 +1,167 @@
-{# Tenants list — UNIFIED DESIGN SYSTEM (merged hero + help panel).
-   Same backend data: items list. Zero route/behaviour change. #}
+{# ═══════════════════════════════════════════════════════════════════════
+   الجهات (Tenants) — إعادة تصميم على نظام hub-hero-shell الموحّد (2026-06-05)
+
+   بيانات المسار (radius.tenants_list — بدون أي تغيير في السلوك):
+     items        قائمة Tenant {id, slug, name, display_name, email, phone,
+                  currency, locale, timezone, plan_tier, status,
+                  max_subscribers, max_nas, api_rpm, created_at, …}
+     tier_limits  حدود كل فئة اشتراك (TIER_LIMITS)
+
+   البنية المبسّطة:
+     1. صدفة هيرو واحدة (hub-hero-shell): عنوان + سطر تعريفي + مؤشرات بصف
+        واحد + حقل بحث حي — بلا أي هيروات أو لوحات مكدّسة.
+     2. جدول uds موحّد (فرز + ترقيم + تصدير) مع فئة الاشتراك والحالة
+        كحبوب ملوّنة معرّبة، واحتواء أي قيمة مجهولة.
+   عقود ثابتة (لا تغيير في الخادم):
+     • GET radius.tenants_new / radius.tenants_edit(tenant_id) كما هي.
+     • البحث حي داخل المتصفح (المسار لا يقرأ معاملات بحث أصلًا).
+   ═══════════════════════════════════════════════════════════════════════ #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}الجهات{% endblock %}
+{% block title %}الجهات — هوب ريديوس{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-building"></i>{% endblock %}
 {% block page_title %}الجهات{% endblock %}
-{% block page_sub %}<span class="sub">{{ items|length }} جهة</span>{% endblock %}
+{% block page_sub %}<span class="sub"><bdi dir="ltr">{{ items|length }}</bdi> جهة مسجّلة</span>{% endblock %}
+
+{% block head_extra %}{{ super() }}
+{# نظام الجداول الموحّد (uds): فرز + ترقيم + أزرار التصدير #}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
+{% endblock %}
 
 {% block content %}
+{# ── خرائط التعريب الثابتة للقيم القادمة من قاعدة البيانات ──
+   فئة الاشتراك → (التسمية العربية، لون الحبّة) #}
+{% set tier_map = {
+  'starter':    ('أساسية',  'grey'),
+  'pro':        ('احترافية', 'blue'),
+  'enterprise': ('مؤسسية',  'brand')
+} %}
+{# حالة الجهة → (التسمية العربية، لون الحبّة) — أي قيمة مجهولة تُحتوى رماديًا #}
+{% set status_map = {
+  'active':    ('مفعَّلة',  'green'),
+  'trial':     ('تجريبية', 'amber'),
+  'suspended': ('موقوفة',  'red'),
+  'closed':    ('مغلقة',   'grey')
+} %}
 
-{% set _active    = items|selectattr('status','equalto','active')|list|length %}
-{% set _trial     = items|selectattr('status','equalto','trial')|list|length %}
-{% set _suspended = items|selectattr('status','equalto','suspended')|list|length %}
+{# عدّادات من النتائج الحالية (بلا استعلامات إضافية) #}
+{% set _active    = items|selectattr('status', 'equalto', 'active')|list|length %}
+{% set _trial     = items|selectattr('status', 'equalto', 'trial')|list|length %}
+{% set _suspended = items|selectattr('status', 'equalto', 'suspended')|list|length %}
 
-{# ───── Merged hero: title + actions + KPI strip + integrated search ───── #}
+{# ───── صدفة الهيرو الموحّدة: عنوان + مؤشرات بصف واحد + بحث حي ───── #}
+<section class="hub-hero-shell" data-testid="tenants-hero">
 {% call hub.megahero(
   "الجهات",
-  subtitle="إدارة الـ Tenants — الفئات والحالات والحدود التشغيلية لكل جهة، في مكان واحد.",
+  subtitle="كل جهة حساب مستقل بمشتركيه وأجهزته وحدوده — فئة الاشتراك تحدّد السقوف الافتراضية والحالة تتحكم بالدخول.",
   icon="building",
   actions_html='
-    <a class="hub-btn hub-btn--primary" href="' + url_for('radius.tenants_new') + '">
+    <a class="hub-btn hub-btn--primary" href="' ~ url_for('radius.tenants_new') ~ '">
       <i class="fa-solid fa-plus"></i> إضافة جهة
     </a>',
   kpis=[
-    {'label': 'الإجمالي', 'value': items|length, 'icon': 'building',       'variant': 'brand'},
-    {'label': 'مفعَّلة',   'value': _active,      'icon': 'circle-check',   'variant': 'green'},
-    {'label': 'تجريبية',  'value': _trial,       'icon': 'hourglass-half', 'variant': 'amber'},
-    {'label': 'موقوفة',   'value': _suspended,   'icon': 'ban',            'variant': 'red'},
-  ],
-  search_action=url_for('radius.tenants_list')
+    {'label': 'إجمالي الجهات', 'value': items|length, 'icon': 'building',       'variant': 'brand'},
+    {'label': 'مفعَّلة',        'value': _active,      'icon': 'circle-check',   'variant': 'green'},
+    {'label': 'تجريبية',       'value': _trial,       'icon': 'hourglass-half', 'variant': 'amber'},
+    {'label': 'موقوفة',        'value': _suspended,   'icon': 'ban',            'variant': 'red'},
+  ]
 ) %}
-  <input class="hub-input grow" type="text" name="q"
-         placeholder="بحث باسم/معرّف الجهة..." value="{{ request.args.get('q', '') }}">
-  {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
+  {# بحث حي داخل المتصفح — لا يلمس الخادم (المسار لا يقرأ معاملات بحث) #}
+  <input class="hub-input grow" type="search" id="tn-search"
+         placeholder="بحث حي بالمعرّف أو الاسم أو البريد…" autocomplete="off">
+  <span class="hub-spacer"></span>
+  <span class="hub-hint" tabindex="0"
+        data-hint="اختيار فئة الاشتراك عند الإنشاء يضبط حدود المشتركين والأجهزة والطلبات تلقائيًا. إيقاف جهة يمنع دخولها دون حذف بياناتها."><i class="fa-solid fa-info"></i></span>
 {% endcall %}
+</section>{# /hub-hero-shell #}
 
 {% if items %}
-{# ───── Main (carded table) + help panel on the LEFT ───── #}
-{% call hub.worklayout(aside_html=hub.helppanel(
-  "كيف تقرأ هذه الصفحة؟",
-  intro="كل صف هو جهة (Tenant) داخل النظام: فئتها وحالتها وحدودها التشغيلية.",
-  items=[
-    {'icon': 'layer-group',  'text': 'الفئة تحدد باقة الجهة: Starter / Pro / Enterprise.'},
-    {'icon': 'circle-check', 'text': 'الحالة تبيّن إن كانت الجهة مفعَّلة أو تجريبية أو موقوفة أو مغلقة.'},
-    {'icon': 'gauge-high',   'text': 'الحدود تعرض سقف المشتركين والأجهزة ومعدّل الطلبات للجهة.'},
-    {'icon': 'pen',          'text': 'استخدم زر التعديل لضبط بيانات الجهة وحدودها.'},
-  ],
-  note="تغيير فئة الجهة قد يعدّل حدودها التشغيلية تلقائيًا حسب الباقة."
-)) %}
-  {% call hub.section("قائمة الجهات", icon="table-list", meta=items|length|string + " جهة", flush=True) %}
-    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
-      <table class="hub-table">
-        <thead>
-          <tr>
-            <th class="num" style="width:60px">#</th>
-            <th>المعرّف</th>
-            <th>الاسم</th>
-            <th>الفئة</th>
-            <th>الحالة</th>
-            <th>الحدود</th>
-            <th>المنطقة</th>
-            <th>أُنشئ</th>
-            <th style="width:80px" data-uds-nosort data-uds-nocol>إجراءات</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for t in items %}
-          <tr {% if t.id == tenant_id %}class="is-highlight"{% endif %}>
-            <td class="num mono">{{ t.id }}</td>
-            <td class="mono"><strong>{{ t.slug }}</strong></td>
-            <td>
-              <strong>{{ t.display_name or t.name }}</strong>
-              {% if t.email %}<div class="mono small hub-text-mute">{{ t.email }}</div>{% endif %}
-            </td>
-            <td>
-              {% if t.plan_tier == 'enterprise' %}{{ hub.pill(t.plan_tier, variant="brand", dot=False) }}
-              {% elif t.plan_tier == 'pro' %}{{ hub.pill(t.plan_tier, variant="blue", dot=False) }}
-              {% else %}{{ hub.pill(t.plan_tier, variant="grey", dot=False) }}{% endif %}
-            </td>
-            <td>
-              {% if t.status == 'active' %}{{ hub.pill("مفعَّلة", variant="green") }}
-              {% elif t.status == 'trial' %}{{ hub.pill("تجريبية", variant="amber") }}
-              {% elif t.status == 'suspended' %}{{ hub.pill("موقوفة", variant="red") }}
-              {% elif t.status == 'closed' %}{{ hub.pill("مغلقة", variant="grey") }}
-              {% else %}{{ hub.pill(t.status, variant="grey") }}{% endif %}
-            </td>
-            <td class="mono small">
-              <div>{{ t.max_subscribers }} مشترك</div>
-              <div class="hub-text-mute">{{ t.max_nas }} جهاز · {{ t.api_rpm }} طلب/د</div>
-            </td>
-            <td class="small">{{ t.currency }} · {{ t.locale }}</td>
-            <td class="mono small">{{ t.created_at|date_local if t.created_at else '—' }}</td>
-            <td>
-              <a class="hub-btn hub-btn--ghost hub-btn--icon" title="تعديل"
-                 href="{{ url_for('radius.tenants_edit', tenant_id=t.id) }}">
-                <i class="fa-solid fa-pen"></i>
-              </a>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  {% endcall %}
+{# ───── جدول الجهات — uds موحّد (فرز + ترقيم + تصدير) ───── #}
+{% call hub.section("قائمة الجهات", icon="table-list",
+                    meta=items|length|string ~ " جهة", flush=True) %}
+  <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25"
+       data-uds-export-title="الجهات" style="border:none;border-radius:0">
+    <table class="hub-table">
+      <thead>
+        <tr>
+          <th class="num" style="width:60px">#</th>
+          <th>المعرّف</th>
+          <th>الجهة</th>
+          <th>فئة الاشتراك</th>
+          <th>الحالة</th>
+          <th data-uds-nosort>الحدود التشغيلية</th>
+          <th>العملة واللغة</th>
+          <th>أُنشئت</th>
+          <th style="width:70px" data-uds-nosort data-uds-nocol data-uds-noexport>تعديل</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in items %}
+        {% set _tier = tier_map.get(t.plan_tier, (t.plan_tier, 'grey')) %}
+        {% set _st   = status_map.get(t.status, (t.status, 'grey')) %}
+        {# الجهة الحالية (النشطة في الجلسة) تُبرز بصريًا #}
+        <tr {% if t.id == tenant_id %}class="is-highlight"{% endif %}>
+          <td class="num mono"><bdi dir="ltr">{{ t.id }}</bdi></td>
+          <td class="mono"><strong><bdi dir="ltr">{{ t.slug }}</bdi></strong></td>
+          <td>
+            <strong>{{ t.display_name or t.name }}</strong>
+            {% if t.email %}<div class="mono small hub-text-mute"><bdi dir="ltr">{{ t.email }}</bdi></div>{% endif %}
+          </td>
+          {# فئة الاشتراك بتسميتها العربية + المفتاح التقني للمرجعية #}
+          <td>
+            {{ hub.pill(_tier[0], variant=_tier[1], dot=False) }}
+            <div class="mono small hub-text-mute"><bdi dir="ltr">{{ t.plan_tier }}</bdi></div>
+          </td>
+          <td>{{ hub.pill(_st[0], variant=_st[1]) }}</td>
+          {# السقوف التشغيلية: مشتركون / أجهزة شبكة / معدّل طلبات الواجهة #}
+          <td class="small">
+            <div><bdi dir="ltr">{{ t.max_subscribers }}</bdi> مشترك</div>
+            <div class="hub-text-mute"><bdi dir="ltr">{{ t.max_nas }}</bdi> جهاز · <bdi dir="ltr">{{ t.api_rpm }}</bdi> طلب/دقيقة</div>
+          </td>
+          <td class="mono small"><bdi dir="ltr">{{ t.currency }} · {{ t.locale }}</bdi></td>
+          <td class="mono small">
+            {% if t.created_at %}<bdi dir="ltr">{{ t.created_at|date_local }}</bdi>
+            {% else %}<span class="hub-text-mute">—</span>{% endif %}
+          </td>
+          <td>
+            <a class="hub-btn hub-btn--secondary hub-btn--icon" title="تعديل الجهة"
+               href="{{ url_for('radius.tenants_edit', tenant_id=t.id) }}">
+              <i class="fa-solid fa-pen"></i>
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 {% endcall %}
 {% else %}
 {{ hub.empty(
-  "لا توجد جهات بعد",
-  sub="أضف أول جهة من زرّ «إضافة جهة» في الأعلى.",
+  "لا جهات مسجّلة بعد",
+  sub="أنشئ أول جهة من زرّ «إضافة جهة» في الأعلى — تحصل كل جهة على حسابها وحدودها المستقلة.",
   icon="building"
 ) }}
 {% endif %}
 
+{# نظام الجداول الموحّد: فرز + ترقيم + تصدير #}
+<script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
+<script>
+(function(){
+  "use strict";
+  // البحث الحي: يمرّر فلترًا لواجهة جدول uds (setFilter) فيُحترم الترقيم
+  var input = document.getElementById("tn-search");
+  var wrap  = document.querySelector("[data-uds-table]");
+  if (!input || !wrap) return;
+  function apply(){
+    var q = (input.value || "").trim().toLowerCase();
+    var api = wrap.__udsApi;
+    if (!api) return;
+    api.setFilter(q ? function(row){
+      return (row.textContent || "").toLowerCase().indexOf(q) !== -1;
+    } : null);
+  }
+  input.addEventListener("input", apply);
+})();
+</script>
 {% endblock %}

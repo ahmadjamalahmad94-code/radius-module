@@ -17,14 +17,50 @@
    except the section containing the active item which is force-opened.
    ══════════════════════════════════════════════════════════════════════ #}
 
-{%- macro nav_item(endpoint, icon, label, match) -%}
+{# ───── RBAC UI GATING ─────
+   can() / ui_unauth_mode() / perm_for_endpoint() are injected by the
+   app context processor (app/__init__.py → app/radius/auth/ui_permissions.py).
+   When any of them is missing (older host app) the sidebar falls back to
+   the historical behaviour: everything visible.
+     • nav_can(ep)  — does the current admin hold the permission mapped
+       to this endpoint? (unmapped endpoints = open to everyone)
+     • mode "hide"   — non-permitted items vanish entirely.
+     • mode "freeze" — non-permitted items render as locked, dimmed,
+       non-clickable rows with a hub-hint «ليست ضمن صلاحياتك». #}
+{%- set _rbac_ui = (can is defined and perm_for_endpoint is defined) -%}
+{%- set _ui_mode = ui_unauth_mode() if (_rbac_ui and ui_unauth_mode is defined) else 'freeze' -%}
+
+{%- macro nav_can(endpoint, perm=None) -%}
+{#- Text-returning helper (Jinja macros can't return booleans):
+    emits "1" when the item is permitted. Use: nav_can(ep)|trim. -#}
+{%- if not _rbac_ui -%}1{%- elif can(perm if perm is not none else perm_for_endpoint(endpoint)) -%}1{%- endif -%}
+{%- endmacro -%}
+
+{%- macro frozen_row(label, sub=False, icon=None) -%}
+{#- بند مجمّد: غير قابل للنقر، قفل + خفوت 45% + تلميح «ليست ضمن صلاحياتك» -#}
+<div class="hb-side-{{ 'subitem' if sub else 'item' }} hb-side-frozen"
+     style="opacity:.45;cursor:not-allowed"
+     data-hb-label="{{ label }}" aria-disabled="true" tabindex="0">
+  {%- if not sub %}
+  <span class="hb-side-icon"><i class="fa-solid fa-{{ icon or 'lock' }}"></i></span>
+  {%- endif %}
+  <span class="hb-side-text">{{ label }}</span>
+  <span class="hub-hint" tabindex="0" data-hint="{{ _('ليست ضمن صلاحياتك') }}"
+        style="margin-inline-start:auto"><i class="fa-solid fa-lock" style="font-size:10px"></i></span>
+</div>
+{%- endmacro -%}
+
+{%- macro nav_item(endpoint, icon, label, match, perm=None) -%}
 {#- Defensive endpoint check — skip the link entirely if the
     route isn't registered yet (partial rollout, server restart
     pending, etc.) instead of taking the whole sidebar down
     with a BuildError. `endpoint_exists` is injected by the
     app's context processor in app/__init__.py — O(1) lookup
-    against `app.view_functions`. -#}
+    against `app.view_functions`.
+    RBAC: `perm` overrides the automatic perm_for_endpoint(endpoint)
+    resolution; non-permitted → skipped (hide) or locked (freeze). -#}
 {%- if endpoint_exists is defined and endpoint_exists(endpoint) -%}
+  {%- if nav_can(endpoint, perm)|trim -%}
   {%- set href = url_for(endpoint) -%}
   {%- set is_active = match -%}
 <a class="hb-side-item{% if is_active %} is-active{% endif %}"
@@ -33,10 +69,13 @@
   <span class="hb-side-icon"><i class="fa-solid fa-{{ icon }}"></i></span>
   <span class="hb-side-text">{{ label }}</span>
 </a>
+  {%- elif _ui_mode == 'freeze' -%}
+{{ frozen_row(label, sub=False, icon=icon) }}
+  {%- endif -%}
 {%- endif -%}
 {%- endmacro -%}
 
-{%- macro sub_item(endpoint, label, match, args={}) -%}
+{%- macro sub_item(endpoint, label, match, args={}, perm=None) -%}
 {#- Tolerate a missing endpoint silently — happens during
     partial rollouts (new sidebar entry ships before the
     route is wired in, or when running an older blueprint
@@ -44,8 +83,11 @@
     down every admin page that includes the sidebar.
     `endpoint_exists` is injected by the app context processor
     in app/__init__.py — O(1) lookup; `url_for` is only called
-    when the route is confirmed present. -#}
+    when the route is confirmed present.
+    RBAC: same contract as nav_item — `perm` overrides automatic
+    perm_for_endpoint(endpoint); non-permitted → hide or freeze. -#}
 {%- if endpoint_exists is defined and endpoint_exists(endpoint) -%}
+  {%- if nav_can(endpoint, perm)|trim -%}
   {%- if args -%}
     {%- set _href = url_for(endpoint, **args) -%}
   {%- else -%}
@@ -55,7 +97,35 @@
    href="{{ _href }}">
   <span class="hb-side-text">{{ label }}</span>
 </a>
+  {%- elif _ui_mode == 'freeze' -%}
+{{ frozen_row(label, sub=True) }}
+  {%- endif -%}
 {%- endif -%}
+{%- endmacro -%}
+
+{%- macro section_can(endpoints) -%}
+{#- "1" إذا كان بند واحد على الأقل من القسم ضمن الصلاحيات —
+    تُستدعى على رأس كل قسم: القسم كله يُخفى/يُجمّد عندما تكون كل
+    بنوده خارج الصلاحيات. -#}
+{%- if not _rbac_ui -%}1{%- else -%}
+{%- set ns_sec = namespace(ok=false) -%}
+{%- for ep in endpoints -%}{%- if can(perm_for_endpoint(ep)) -%}{%- set ns_sec.ok = true -%}{%- endif -%}{%- endfor -%}
+{%- if ns_sec.ok -%}1{%- endif -%}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro frozen_section(label, icon) -%}
+{#- رأس قسم مجمّد بالكامل: كل بنوده خارج الصلاحيات + الوضع تجميد -#}
+<div class="hb-side-section">
+  <div class="hb-side-section-head hb-side-frozen"
+       style="opacity:.45;cursor:not-allowed" aria-disabled="true"
+       data-hb-label="{{ label }}" tabindex="0">
+    <span class="hb-side-icon"><i class="fa-solid fa-{{ icon }}"></i></span>
+    <span class="hb-side-text">{{ label }}</span>
+    <span class="hub-hint" tabindex="0" data-hint="{{ _('ليست ضمن صلاحياتك') }}"
+          style="margin-inline-start:auto"><i class="fa-solid fa-lock" style="font-size:10px"></i></span>
+  </div>
+</div>
 {%- endmacro -%}
 
 {# ───── ACTIVE-STATE DETECTION HELPERS ─────
@@ -81,6 +151,7 @@
 {%- set m_print_templates  = '/print-templates' in path -%}
 
 {# Plans & Bandwidth #}
+{%- set m_plans_overview = (endpoint_exists is defined and endpoint_exists('radius.plans_overview') and path == url_for('radius.plans_overview')) -%}
 {%- set m_plans_list  = (path == url_for('radius.plans_list')) -%}
 {%- set m_plans_new   = (path == url_for('radius.plans_new')) -%}
 {%- set m_bw_list     = (endpoint == 'radius.bw_list') -%}
@@ -107,6 +178,8 @@
 {%- set m_npc_walled     = ('/network-policy/walled-garden' in path) -%}
 
 {# Accounting / Payments #}
+{# لوحة الشحن — مطابقة بالـ endpoint لتشمل صفحتها فقط (نقاط JSON لا تُعرض) #}
+{%- set m_recharge_panel = (endpoint == 'radius.recharge_panel') -%}
 {%- set m_invoices    = '/invoices' in path -%}
 {%- set m_vouchers    = '/vouchers' in path -%}
 {%- set m_billing_hub = ('/finance/billing' in path) or m_invoices or m_vouchers -%}
@@ -120,16 +193,21 @@
 {%- set m_payment_reconciliation = (path == url_for('radius.payment_collection_reconciliation_web')) -%}
 {%- set m_payment_collection_hub = (path == url_for('radius.collection_hub')) -%}
 {%- set m_payment_collection = m_payment_collection_hub or m_payment_settings or m_payment_requests or m_payment_review or m_payment_reconciliation or ('/payments/requests/' in path) -%}
+{# مختبر الدفع الإلكتروني — وضع تجريبي (محاكاة) #}
+{%- set m_payments_lab = ('/payments-lab' in path) or ('/pay-demo' in path) -%}
 
 {# Support #}
 {%- set m_tickets     = '/tickets' in path -%}
 {%- set m_services    = '/services' in path -%}
 
 {# Administration #}
-{%- set m_admins      = '/admins' in path and '/profile' not in path -%}
+{# صفحة «أسعار العروض للمدراء» لها بند جانبي خاص — تُستثنى من تمييز m_admins #}
+{%- set m_admin_pricing = '/admins/pricing' in path -%}
+{%- set m_admins      = '/admins' in path and '/profile' not in path and '/pricing' not in path -%}
 {%- set m_admin_profile = '/admins/profile' in path -%}
 {%- set m_distributors= '/distributors' in path -%}
 {%- set m_roles       = '/roles' in path -%}
+{# أُزيل من لوحة العميل — يُعاد مركزياً عبر لوحة التراخيص (قرار معماري): m_licensing #}
 {%- set m_recycle     = '/recycle-bin' in path -%}
 {# Global backups page lives under /admin/.../backups; per-router
    backups live under /mt/<id>/backups — exclude the latter so the
@@ -180,6 +258,8 @@
 {%- set m_events_investigations = (path == url_for('radius.events_investigations')) -%}
 {%- set m_operations_center = (path == url_for('radius.operations_center')) -%}
 {%- set m_operations_speed = (path == url_for('radius.operations_speed_control')) -%}
+{# صفحة التحكم اليدوي بالسرعة (السلايدرات) — مسار شقيق للتحكم المجدول #}
+{%- set m_operations_speed_manual = (endpoint_exists is defined and endpoint_exists('radius.operations_speed_control_manual') and path == url_for('radius.operations_speed_control_manual')) -%}
 {%- set m_reports_home = (path == url_for('radius.reports_home')) -%}
 {%- set m_reports_financial = (path == url_for('radius.reports_financial')) -%}
 {%- set m_reports_cards = (path == url_for('radius.reports_cards')) -%}
@@ -214,14 +294,17 @@
 {%- set sec_cards_active    = m_cards_overview or m_cards_checker or m_cards_batches or m_cards_generate or m_cards_online or m_print_templates or m_cards_print -%}
 {%- set m_cards_recharge    = '/cards/recharge' in path -%}
 {%- set sec_e_cards_active  = m_card_users or m_card_marketplace or m_cards_recharge -%}
-{%- set sec_offers_active   = m_plans_list or m_plans_new or m_bw_list or m_bw_sched -%}
+{%- set sec_offers_active   = m_plans_overview or m_plans_list or m_plans_new or m_bw_list or m_bw_sched -%}
+{# صفحات التحكم بالسرعة (مجدول/يدوي) صارت عائلة داخل قسم «الشبكة» —
+   تدخل في علم القسم حتى يُفتح تلقائيًا عند زيارتها. #}
 {%- set sec_network_active  = m_devices or m_pools or m_mt
                                 or m_topology or m_alerts
                                 or m_audit_log or m_jobs
-                                or m_problems or m_npc -%}
+                                or m_problems or m_npc
+                                or m_operations_speed or m_operations_speed_manual -%}
 {%- set sec_billing_active  = m_business_finance or m_business_wallets or m_business_revenue or m_business_debts
                                 or m_business_loans or m_billing_hub or m_ledger or m_payment_collection
-                                or m_company_inventory -%}
+                                or m_payments_lab or m_company_inventory or m_recharge_panel -%}
 {%- set sec_engagement_active = m_communications or m_communications_templates or m_communications_send
                                   or m_communications_campaigns or m_communications_deliveries or m_communications_audience
                                   or m_communications_channels or m_communications_bot or m_communications_notifications
@@ -237,7 +320,7 @@
                                or m_reports_user_events or m_reports_speed_failures or m_reports_used_cards
                                or m_reports_balance_moves or m_reports_cash_tx -%}
 {%- set sec_support_active  = m_tickets or m_services or m_customer_portals -%}
-{%- set sec_admin_active    = m_admins or m_admin_profile or m_distributors or m_roles or m_recycle or m_backups
+{%- set sec_admin_active    = m_admins or m_admin_profile or m_admin_pricing or m_distributors or m_roles or m_recycle or m_backups
                                 or m_settings or m_sync or m_tenants
                                 or m_lifecycle or m_business_operators or m_perms -%}
 {%- set sec_integration_active = m_webhooks or m_tokens or m_admin_bridge or m_license_file -%}
@@ -245,6 +328,10 @@
 
 {# Standalone Dashboard #}
 {%- set m_dashboard = (path == url_for('radius.dashboard')) or (path == url_for('radius.dashboard_alias')) -%}
+
+{# مركز الأدلة «كيف تستخدمني» — بند مستقل أسفل القائمة.
+   نطابق endpoint لا المسار حتى لا يتداخل مع أي /docs آخر. #}
+{%- set m_docs_center = endpoint.startswith('radius.docs_') -%}
 
 <aside class="hb-side" id="hb-side">
 
@@ -254,297 +341,532 @@
       <span class="hb-side-logo-mark">Ho</span>
       <div class="hb-side-logo-text">
         <div class="hb-side-logo-title">Hobe Hub</div>
-        <div class="hb-side-logo-sub">مركز الإدارة</div>
+        <div class="hb-side-logo-sub">{{ _('مركز الإدارة') }}</div>
       </div>
     </div>
     <button type="button" class="hb-side-collapse-btn"
             data-hb-toggle="collapse"
-            aria-label="طيّ القائمة">
+            aria-label="{{ _('طيّ القائمة') }}">
       <i class="fa-solid fa-chevron-right"></i>
     </button>
     <button type="button" class="hb-side-mobile-close"
             data-hb-toggle="mobile-close"
-            aria-label="إغلاق">
+            aria-label="{{ _('إغلاق') }}">
       <i class="fa-solid fa-xmark"></i>
     </button>
   </div>
 
   {# ════════════════ NAV ════════════════ #}
-  <nav class="hb-side-nav" aria-label="القائمة الرئيسية">
+  <nav class="hb-side-nav" aria-label="{{ _('القائمة الرئيسية') }}">
 
     {# Standalone Dashboard #}
     <a class="hb-side-item{% if m_dashboard %} is-active{% endif %}"
        href="{{ url_for('radius.dashboard') }}"
-       data-hb-label="لوحة التحكم">
+       data-hb-label="{{ _('لوحة التحكم') }}">
       <span class="hb-side-icon"><i class="fa-solid fa-gauge-high"></i></span>
-      <span class="hb-side-text">لوحة التحكم</span>
+      <span class="hb-side-text">{{ _('لوحة التحكم') }}</span>
     </a>
 
     {# ───────── المشتركون ───────── #}
+    {%- set _eps_subs = ['subscribers_overview','subscribers_list','users_new','subscriber_groups_list','online_list'] -%}
+    {% if section_can(_eps_subs)|trim %}
     <div class="hb-side-section{% if sec_subs_active %} is-open has-active{% endif %}"
          data-hb-section="subscribers" data-hb-tone="sky">
       <button type="button" class="hb-side-section-head"
-              data-hb-section-toggle data-hb-label="المشتركون">
+              data-hb-section-toggle data-hb-label="{{ _('المشتركون') }}">
         <span class="hb-side-icon"><i class="fa-solid fa-users"></i></span>
-        <span class="hb-side-text">المشتركون</span>
+        <span class="hb-side-text">{{ _('المشتركون') }}</span>
         <span class="hb-side-chevron"><i class="fa-solid fa-chevron-down"></i></span>
       </button>
       <div class="hb-side-section-body"><div class="hb-side-section-body-inner">
-        {{ sub_item('radius.subscribers_overview', 'نظرة عامة', m_subscribers_overview) }}
-        {{ sub_item('radius.subscribers_list', 'المشتركين 360', m_subscribers_360) }}
-        {{ sub_item('radius.users_new',   'إضافة مشترك',     m_users_new) }}
-        {{ sub_item('radius.subscriber_groups_list', 'مجموعات المشتركين', m_subscriber_groups) }}
-        {{ sub_item('radius.online_list', 'المشتركون المتصلون', m_online_users) }}
+        {{ sub_item('radius.subscribers_overview', _('نظرة عامة'), m_subscribers_overview) }}
+        {{ sub_item('radius.subscribers_list', _('المشتركين 360'), m_subscribers_360) }}
+        {{ sub_item('radius.users_new',   _('إضافة مشترك'),     m_users_new) }}
+        {{ sub_item('radius.subscriber_groups_list', _('مجموعات المشتركين'), m_subscriber_groups) }}
+        {{ sub_item('radius.online_list', _('المشتركون المتصلون'), m_online_users) }}
       </div></div>
     </div>
+    {% elif _ui_mode == 'freeze' %}{{ frozen_section(_('المشتركون'), 'users') }}{% endif %}
 
     {# ───────── البطاقات ───────── #}
+    {%- set _eps_cards = ['cards_overview','cards_checker','cards_batches','cards_generate','cards_print_list','online_list','print_templates'] -%}
+    {% if section_can(_eps_cards)|trim %}
     <div class="hb-side-section{% if sec_cards_active %} is-open has-active{% endif %}"
          data-hb-section="cards" data-hb-tone="indigo">
       <button type="button" class="hb-side-section-head"
-              data-hb-section-toggle data-hb-label="البطاقات">
+              data-hb-section-toggle data-hb-label="{{ _('البطاقات') }}">
         <span class="hb-side-icon"><i class="fa-solid fa-id-card"></i></span>
-        <span class="hb-side-text">البطاقات</span>
+        <span class="hb-side-text">{{ _('البطاقات') }}</span>
         <span class="hb-side-chevron"><i class="fa-solid fa-chevron-down"></i></span>
       </button>
       <div class="hb-side-section-body"><div class="hb-side-section-body-inner">
-        {{ sub_item('radius.cards_overview', 'نظرة عامة',       m_cards_overview) }}
-        {{ sub_item('radius.cards_checker',  'فحص بطاقة',       m_cards_checker) }}
-        {{ sub_item('radius.cards_batches',  'حزم البطاقات',    m_cards_batches) }}
-        {{ sub_item('radius.cards_generate', 'إضافة حزمة',      m_cards_generate) }}
-        {{ sub_item('radius.cards_print_list', '🖨️ بطاقات الطباعة', m_cards_print) }}
-        {{ sub_item('radius.online_list', 'البطاقات المتصلة', m_cards_online, {'type':'card'}) }}
-        {{ sub_item('radius.print_templates','قوالب الطباعة',   m_print_templates) }}
+        {{ sub_item('radius.cards_overview', _('نظرة عامة'),       m_cards_overview) }}
+        {{ sub_item('radius.cards_checker',  _('فحص بطاقة'),       m_cards_checker) }}
+        {{ sub_item('radius.cards_batches',  _('حزم البطاقات'),    m_cards_batches) }}
+        {{ sub_item('radius.cards_generate', _('إضافة حزمة'),      m_cards_generate) }}
+        {{ sub_item('radius.cards_print_list', _('🖨️ بطاقات الطباعة'), m_cards_print) }}
+        {{ sub_item('radius.online_list', _('البطاقات المتصلة'), m_cards_online, {'type':'card'}) }}
+        {{ sub_item('radius.print_templates', _('قوالب الطباعة'),   m_print_templates) }}
       </div></div>
     </div>
+    {% elif _ui_mode == 'freeze' %}{{ frozen_section(_('البطاقات'), 'id-card') }}{% endif %}
 
     {# ───────── البطاقات الإلكترونية ───────── #}
+    {%- set _eps_ecards = ['card_marketplace','card_users_list','cards_recharge_list'] -%}
+    {% if section_can(_eps_ecards)|trim %}
     <div class="hb-side-section{% if sec_e_cards_active %} is-open has-active{% endif %}"
          data-hb-section="electronic-cards" data-hb-tone="cyan">
       <button type="button" class="hb-side-section-head"
-              data-hb-section-toggle data-hb-label="البطاقات الإلكترونية">
+              data-hb-section-toggle data-hb-label="{{ _('البطاقات الإلكترونية') }}">
         <span class="hb-side-icon"><i class="fa-solid fa-wallet"></i></span>
-        <span class="hb-side-text">البطاقات الإلكترونية</span>
+        <span class="hb-side-text">{{ _('البطاقات الإلكترونية') }}</span>
         <span class="hb-side-chevron"><i class="fa-solid fa-chevron-down"></i></span>
       </button>
       <div class="hb-side-section-body"><div class="hb-side-section-body-inner">
-        {{ sub_item('radius.card_marketplace', 'سوق البطاقات', m_card_marketplace) }}
-        {{ sub_item('radius.card_users_list', 'مستخدمو البطاقات', m_card_users) }}
-        {{ sub_item('radius.cards_recharge_list', '⚡ بطاقات الشحن المسبق', m_cards_recharge) }}
+        {{ sub_item('radius.card_marketplace', _('سوق البطاقات'), m_card_marketplace) }}
+        {{ sub_item('radius.card_users_list', _('مستخدمو البطاقات'), m_card_users) }}
+        {{ sub_item('radius.cards_recharge_list', _('⚡ بطاقات الشحن المسبق'), m_cards_recharge) }}
       </div></div>
     </div>
-
-    {# ───────── التحكم بعرض الحزمة (قسم رئيسي مستقل) ───────── #}
-    <div class="hb-side-section{% if m_operations_speed %} is-open has-active{% endif %}"
-         data-hb-section="bandwidth-control" data-hb-tone="violet">
-      <button type="button" class="hb-side-section-head"
-              data-hb-section-toggle data-hb-label="التحكم بعرض الحزمة">
-        <span class="hb-side-icon"><i class="fa-solid fa-gauge-high"></i></span>
-        <span class="hb-side-text">التحكم بعرض الحزمة</span>
-        <span class="hb-side-chevron"><i class="fa-solid fa-chevron-down"></i></span>
-      </button>
-      <div class="hb-side-section-body"><div class="hb-side-section-body-inner">
-        {{ sub_item('radius.operations_speed_control', 'إدارة السرعات', m_operations_speed) }}
-      </div></div>
-    </div>
+    {% elif _ui_mode == 'freeze' %}{{ frozen_section(_('البطاقات الإلكترونية'), 'wallet') }}{% endif %}
 
     {# ───────── العروض والسرعات ───────── #}
+    {%- set _eps_offers = ['plans_overview','plans_list','plans_new','bw_list','bandwidth_schedules'] -%}
+    {% if section_can(_eps_offers)|trim %}
     <div class="hb-side-section{% if sec_offers_active %} is-open has-active{% endif %}"
          data-hb-section="offers" data-hb-tone="amber">
       <button type="button" class="hb-side-section-head"
-              data-hb-section-toggle data-hb-label="العروض والسرعات">
+              data-hb-section-toggle data-hb-label="{{ _('العروض والسرعات') }}">
         <span class="hb-side-icon"><i class="fa-solid fa-tags"></i></span>
-        <span class="hb-side-text">العروض والسرعات</span>
+        <span class="hb-side-text">{{ _('العروض والسرعات') }}</span>
         <span class="hb-side-chevron"><i class="fa-solid fa-chevron-down"></i></span>
       </button>
       <div class="hb-side-section-body"><div class="hb-side-section-body-inner">
-        {{ sub_item('radius.plans_list',          'قائمة العروض',  m_plans_list) }}
-        {{ sub_item('radius.plans_new',           'إضافة عرض',     m_plans_new) }}
-        {{ sub_item('radius.bw_list',             'السرعات',       m_bw_list) }}
-        {{ sub_item('radius.bandwidth_schedules', 'جدولة السرعات', m_bw_sched) }}
+        {# نظرة عامة أولًا — كما في مجموعة «المشتركون» #}
+        {{ sub_item('radius.plans_overview',      _('نظرة عامة'),     m_plans_overview) }}
+        {{ sub_item('radius.plans_list',          _('قائمة العروض'),  m_plans_list) }}
+        {{ sub_item('radius.plans_new',           _('إضافة عرض'),     m_plans_new) }}
+        {{ sub_item('radius.bw_list',             _('السرعات'),       m_bw_list) }}
+        {{ sub_item('radius.bandwidth_schedules', _('جدولة السرعات'), m_bw_sched) }}
       </div></div>
     </div>
+    {% elif _ui_mode == 'freeze' %}{{ frozen_section(_('العروض والسرعات'), 'tags') }}{% endif %}
 
     {# ───────── الشبكة (موحَّد) ─────────
-       تم دمج "الإعداد والتشغيل" + "الشبكة" في قسم واحد.
-       بنود سياسات الشبكة الفرعية تعيش الآن داخل لوحة كل راوتر. #}
+       تم دمج "الإعداد والتشغيل" + "الشبكة" + «التحكم بالسرعة» في قسم واحد.
+       بنود سياسات الشبكة الفرعية تعيش الآن داخل لوحة كل راوتر.
+       بنود القسم مقسومة على 4 عوائل قابلة للطي (hb-side-subgroup) —
+       نفس عقد عوائل التقارير حرفيًا: رأس العائلة زر يفتح/يغلق أبناءها,
+       افتراضيًا مغلقة جميعًا إلا عائلة الصفحة النشطة (is-open has-active
+       من الخادم), وحالة الفتح تُحفظ في localStorage عبر sidebar_v2.js
+       (المفتاح العام hobe_sidebar_open_subgroups — معرّفات بسابقة network-).
+       التقسيم بالملكية المباشرة:
+         • إدارة الراوترات   — التشغيل اليومي: غرفة عمليات الراوترات وكل ما
+                               يتبعها (الخريطة/المشاكل/التشخيص داخلها) + جرد
+                               الأجهزة ونطاقات العناوين.
+         • إضافة وإعداد      — مساران واضحان لإدخال راوتر جديد للنظام.
+         • التحكم بالسرعة    — كان قسمًا مستقلًا؛ مكانه الطبيعي تحت الشبكة
+                               (يضرب طوابير الراوترات مباشرة): مجدول/يدوي.
+         • المراقبة والسجلات — أدوات عابرة لكل الراوترات: تنبيهات/تدقيق/دفع. #}
+    {%- set _eps_network = ['mt_setup_form','setup_wizard_v3_page','devices_list','mt_operations','pool_list',
+                            'operations_speed_control','operations_speed_control_manual',
+                            'mt_alerts_index','audit_log_index','mt_push_setup'] -%}
+    {% if section_can(_eps_network)|trim %}
     <div class="hb-side-section{% if sec_network_active or sec_setup_ops_active %} is-open has-active{% endif %}"
          data-hb-section="network" data-hb-tone="emerald">
       <button type="button" class="hb-side-section-head"
-              data-hb-section-toggle data-hb-label="الشبكة">
+              data-hb-section-toggle data-hb-label="{{ _('الشبكة') }}">
         <span class="hb-side-icon"><i class="fa-solid fa-network-wired"></i></span>
-        <span class="hb-side-text">الشبكة</span>
+        <span class="hb-side-text">{{ _('الشبكة') }}</span>
         <span class="hb-side-chevron"><i class="fa-solid fa-chevron-down"></i></span>
       </button>
       <div class="hb-side-section-body"><div class="hb-side-section-body-inner">
-        <div class="hb-side-subhead"><i class="fa-solid fa-wand-magic-sparkles"></i>الإعداد والتشغيل</div>
-        {# مساران واضحان لإضافة راوتر بدل خمسة متكررين:
+
+        {# أعلام تفعيل كل عائلة — لفتح عائلة الصفحة النشطة تلقائيًا #}
+        {%- set fam_routers_active = ('/mt/operations' in path) or m_topology or m_problems or m_diag
+                                       or m_devices or m_pools -%}
+        {%- set fam_setup_active   = m_mt_setup or m_setup_wizard_v3 -%}
+        {%- set fam_speed_active   = m_operations_speed or m_operations_speed_manual -%}
+        {%- set fam_watch_active   = m_alerts or m_audit_log or m_push -%}
+
+        {# ── إدارة الراوترات — التشغيل اليومي وما يتبعه مباشرة ── #}
+        {%- set _eps_net_routers = ['mt_operations','devices_list','pool_list','hotspot_errors_page'] -%}
+        {% if section_can(_eps_net_routers)|trim or _ui_mode == 'freeze' %}
+        <div class="hb-side-subgroup{% if fam_routers_active %} is-open has-active{% endif %}"
+             data-hb-subgroup="network-routers">
+          <button type="button" class="hb-side-subhead" data-hb-subgroup-toggle>
+            <i class="fa-solid fa-server"></i><span class="hb-side-text">{{ _('إدارة الراوترات') }}</span>
+            <span class="hb-side-subchevron"><i class="fa-solid fa-chevron-down"></i></span>
+          </button>
+          <div class="hb-side-subgroup-body"><div class="hb-side-subgroup-body-inner">
+            {# «غرفة عمليات الراوترات» (mt_operations) هي المدخل التشغيلي
+               الموحّد — «خريطة الشبكة» و«مركز المشاكل» و«تشخيص الراوترات»
+               تعيش داخلها (شريطها الداخلي), لذا تبقى مساراتها ضمن مُطابقة
+               التحديد حتى يبقى البند مُبرزًا عند فتح أي منها.
+               الاسم مطابق لعنوان الصفحة نفسها لتفادي الالتباس مع
+               «غرفة العمليات» الخاصة بمركز التواصل. #}
+            {{ sub_item('radius.mt_operations', _('🛜 غرفة عمليات الراوترات'), ('/mt/operations' in path) or m_topology or m_problems or m_diag) }}
+            {{ sub_item('radius.devices_list',  _('أجهزة الشبكة'),     m_devices) }}
+            {{ sub_item('radius.pool_list',     _('نطاقات العناوين'),  m_pools) }}
+            {# رسائل أخطاء الهوتسبوت — نصوص errors.txt تُرفع للراوترات
+               عند نشر صفحة الدخول. عام على مستوى المستأجر. #}
+            {{ sub_item('radius.hotspot_errors_page', _('رسائل أخطاء الهوتسبوت'), '/hotspot-errors' in path) }}
+            {# ────────────────────────────────────────────────────
+               Network Operations family (Sprints 1-6, 2026-05-28).
+               HIDDEN until next release — operator decision:
+               ملاحظة تنظيمية: تخفيف عرض أقسام الشبكة الجديدة حتى يكتمل صقل التجربة.
+                ما يبقى الهم اثر حاليا، للنسخة القادمة».
+               Routes stay REGISTERED (no 404 for any bookmarks);
+               background monitor is gated by HOBERADIUS_NETWORK_OPS_ENABLED.
+               Re-enable: uncomment the 3 lines + flip the env var.
+               الحالة: مخفية عن التنقل الأساسي حتى اكتمال صقل التجربة وتوثيق متطلبات التوجيه.
+               ────────────────────────────────────────────────── #}
+            {# {{ sub_item('radius.network_devices_list', '📡 تابع أجهزة الشبكة', '/network/devices' in path) }} #}
+            {# {{ sub_item('radius.network_ip_scan_page', '🛰️ مسح الشبكة', '/network/scan' in path) }} #}
+            {# {{ sub_item('radius.network_telegram_settings', '🔔 تنبيهات Telegram', '/network/telegram' in path) }} #}
+          </div></div>
+        </div>
+        {% endif %}
+
+        {# ── إضافة وإعداد — مساران واضحان لإضافة راوتر بدل خمسة متكررين:
            - سريع: mt_setup_form (3 حقول → سكربت → اختبار)
            - متقدم: setup_wizard_v3_page (معالج كامل بخطوات + خدمات)
            معالج v2 و«أسطول الراوترات» و«الإعداد الهندسي» تبقى مساراتها
-           حيّة (للـ bookmarks) لكن خارج القائمة: v2 استبدله v3، و«الأسطول»
-           تحوّل لـ«إدارة الراوترات»، و«الهندسي» يُفتح عند الحاجة من صفحة
-           إدارة الراوترات. #}
-        {{ sub_item('radius.mt_setup_form',        'إضافة راوتر (سريع)', m_mt_setup) }}
-        {{ sub_item('radius.setup_wizard_v3_page', 'إعداد راوتر متقدم',  m_setup_wizard_v3) }}
+           حيّة (للـ bookmarks) لكن خارج القائمة: v2 استبدله v3, و«الأسطول»
+           تحوّل لغرفة العمليات, و«الهندسي» يُفتح عند الحاجة من داخلها. ── #}
+        {%- set _eps_net_setup = ['mt_setup_form','setup_wizard_v3_page'] -%}
+        {% if section_can(_eps_net_setup)|trim or _ui_mode == 'freeze' %}
+        <div class="hb-side-subgroup{% if fam_setup_active %} is-open has-active{% endif %}"
+             data-hb-subgroup="network-setup">
+          <button type="button" class="hb-side-subhead" data-hb-subgroup-toggle>
+            <i class="fa-solid fa-wand-magic-sparkles"></i><span class="hb-side-text">{{ _('إضافة وإعداد') }}</span>
+            <span class="hb-side-subchevron"><i class="fa-solid fa-chevron-down"></i></span>
+          </button>
+          <div class="hb-side-subgroup-body"><div class="hb-side-subgroup-body-inner">
+            {{ sub_item('radius.mt_setup_form',        _('إضافة راوتر (سريع)'), m_mt_setup) }}
+            {{ sub_item('radius.setup_wizard_v3_page', _('إعداد راوتر متقدم'),  m_setup_wizard_v3) }}
+          </div></div>
+        </div>
+        {% endif %}
 
-        {# Inventory + operational view — mt_operations is now THE
-           unified router management page (replaced the old separate
-           «أسطول الراوترات» link). #}
-        {{ sub_item('radius.devices_list',     'أجهزة الشبكة',         m_devices) }}
-        {# «إدارة الراوترات» تأتي مباشرة تحت أجهزة الشبكة (المدخل التشغيلي العام).
-           «خريطة الشبكة» أُزيلت من القائمة الجانبية لأنها متاحة من داخل
-           صفحة إدارة الراوترات — نُبقي m_topology ضمن مُطابقة التحديد حتى
-           يبقى البند مُبرزًا عند فتح الخريطة. #}
-        {{ sub_item('radius.mt_operations',    '🛜 إدارة الراوترات',   ('/mt/operations' in path) or m_topology or m_problems or m_diag) }}
-        {{ sub_item('radius.pool_list',        'نطاقات العناوين',      m_pools) }}
-        {# ────────────────────────────────────────────────────
-           Network Operations family (Sprints 1-6, 2026-05-28).
-           HIDDEN until next release — operator decision:
-           ملاحظة تنظيمية: تخفيف عرض أقسام الشبكة الجديدة حتى يكتمل صقل التجربة.
-            ما يبقى الهم اثر حاليا، للنسخة القادمة».
-           Routes stay REGISTERED (no 404 for any bookmarks);
-           background monitor is gated by HOBERADIUS_NETWORK_OPS_ENABLED.
-           Re-enable: uncomment the 3 lines + flip the env var.
-           الحالة: مخفية عن التنقل الأساسي حتى اكتمال صقل التجربة وتوثيق متطلبات التوجيه.
-           ────────────────────────────────────────────────── #}
-        {# {{ sub_item('radius.network_devices_list', '📡 تابع أجهزة الشبكة', '/network/devices' in path) }} #}
-        {# {{ sub_item('radius.network_ip_scan_page', '🛰️ مسح الشبكة', '/network/scan' in path) }} #}
-        {# {{ sub_item('radius.network_telegram_settings', '🔔 تنبيهات Telegram', '/network/telegram' in path) }} #}
+        {# ── التحكم بالسرعة — كان قسمًا رئيسيًا مستقلًا؛ انتقل عائلةً تحت
+           الشبكة لأنه يضرب طوابير الراوترات مباشرة (مجدول/يدوي). ── #}
+        {%- set _eps_net_speed = ['operations_speed_control','operations_speed_control_manual'] -%}
+        {% if section_can(_eps_net_speed)|trim or _ui_mode == 'freeze' %}
+        <div class="hb-side-subgroup{% if fam_speed_active %} is-open has-active{% endif %}"
+             data-hb-subgroup="network-speed">
+          <button type="button" class="hb-side-subhead" data-hb-subgroup-toggle>
+            <i class="fa-solid fa-gauge-high"></i><span class="hb-side-text">{{ _('التحكم بالسرعة') }}</span>
+            <span class="hb-side-subchevron"><i class="fa-solid fa-chevron-down"></i></span>
+          </button>
+          <div class="hb-side-subgroup-body"><div class="hb-side-subgroup-body-inner">
+            {{ sub_item('radius.operations_speed_control',        _('مجدول'), m_operations_speed) }}
+            {{ sub_item('radius.operations_speed_control_manual', _('يدوي'),  m_operations_speed_manual) }}
+          </div></div>
+        </div>
+        {% endif %}
 
-        {# Observability / governance — global tools that span
-           every router. #}
-        {{ sub_item('radius.mt_alerts_index',      'التنبيهات الذكيّة',  m_alerts) }}
-        {{ sub_item('radius.audit_log_index',      'سجل العمليات',     m_audit_log) }}
-        {{ sub_item('radius.mt_push_setup',        'دفع بيانات التوزيع', m_push) }}
+        {# ── المراقبة والسجلات — أدوات حوكمة عابرة لكل الراوترات ── #}
+        {%- set _eps_net_watch = ['mt_alerts_index','audit_log_index','mt_push_setup'] -%}
+        {% if section_can(_eps_net_watch)|trim or _ui_mode == 'freeze' %}
+        <div class="hb-side-subgroup{% if fam_watch_active %} is-open has-active{% endif %}"
+             data-hb-subgroup="network-watch">
+          <button type="button" class="hb-side-subhead" data-hb-subgroup-toggle>
+            <i class="fa-solid fa-satellite-dish"></i><span class="hb-side-text">{{ _('المراقبة والسجلات') }}</span>
+            <span class="hb-side-subchevron"><i class="fa-solid fa-chevron-down"></i></span>
+          </button>
+          <div class="hb-side-subgroup-body"><div class="hb-side-subgroup-body-inner">
+            {{ sub_item('radius.mt_alerts_index', _('التنبيهات الذكيّة'),   m_alerts) }}
+            {{ sub_item('radius.audit_log_index', _('سجل العمليات'),       m_audit_log) }}
+            {{ sub_item('radius.mt_push_setup',   _('دفع بيانات التوزيع'), m_push) }}
+          </div></div>
+        </div>
+        {% endif %}
+
       </div></div>
     </div>
+    {% elif _ui_mode == 'freeze' %}{{ frozen_section(_('الشبكة'), 'network-wired') }}{% endif %}
 
     {# ───────── المال والتحصيل ───────── #}
+    {%- set _eps_billing = ['recharge_panel','finance_center_hub','accounting_hub','billing_hub','collection_hub','payments_lab','company_inventory'] -%}
+    {% if section_can(_eps_billing)|trim %}
     <div class="hb-side-section{% if sec_billing_active %} is-open has-active{% endif %}"
          data-hb-section="billing" data-hb-tone="green">
       <button type="button" class="hb-side-section-head"
-              data-hb-section-toggle data-hb-label="المال والتحصيل">
+              data-hb-section-toggle data-hb-label="{{ _('المال والتحصيل') }}">
         <span class="hb-side-icon"><i class="fa-solid fa-file-invoice-dollar"></i></span>
-        <span class="hb-side-text">المال والتحصيل</span>
+        <span class="hb-side-text">{{ _('المال والتحصيل') }}</span>
         <span class="hb-side-chevron"><i class="fa-solid fa-chevron-down"></i></span>
       </button>
       <div class="hb-side-section-body"><div class="hb-side-section-body-inner">
-        {{ sub_item('radius.finance_center_hub', 'المركز المالي', m_finance_center_hub or m_business_finance or m_business_wallets or m_business_revenue or m_business_debts or m_business_loans) }}
-        {{ sub_item('radius.accounting_hub', 'السجل والتقارير المحاسبية', m_accounting_hub or m_ledger) }}
-        {{ sub_item('radius.billing_hub',     'الفواتير والكوبونات', m_billing_hub) }}
-        {{ sub_item('radius.collection_hub', 'التحصيل والمدفوعات', m_payment_collection) }}
-        {{ sub_item('radius.company_inventory', 'مخزون ومصروفات الشركة', m_company_inventory) }}
+        {# لوحة الشحن — تفعيل/تجديد سريع للمدراء والموزعين #}
+        {{ sub_item('radius.recharge_panel', _('⚡ لوحة الشحن'), m_recharge_panel) }}
+        {{ sub_item('radius.finance_center_hub', _('المركز المالي'), m_finance_center_hub or m_business_finance or m_business_wallets or m_business_revenue or m_business_debts or m_business_loans) }}
+        {{ sub_item('radius.accounting_hub', _('السجل والتقارير المحاسبية'), m_accounting_hub or m_ledger) }}
+        {{ sub_item('radius.billing_hub',     _('الفواتير والكوبونات'), m_billing_hub) }}
+        {# التحصيل والمدفوعات — مع شارة «مجمّد» عندما لا توجد بوابة دفع مربوطة.
+           collection_is_frozen دالة كسولة من context processor التطبيق:
+           استعلام واحد خفيف ولا تكسر الصفحة أبدًا. #}
+        {% if endpoint_exists is defined and endpoint_exists('radius.collection_hub') %}
+          {% if nav_can('collection_hub')|trim %}
+        <a class="hb-side-subitem{% if m_payment_collection %} is-active{% endif %}"
+           href="{{ url_for('radius.collection_hub') }}">
+          <span class="hb-side-text">{{ _('التحصيل والمدفوعات') }}</span>
+          {% if collection_is_frozen is defined and collection_is_frozen() %}
+          <span style="margin-inline-start:auto;display:inline-flex;align-items:center;gap:4px;padding:1px 8px;border-radius:999px;background:#FEF3C7;color:#B45309;font-size:10px;font-weight:900;border:1px solid #FDE68A;line-height:1.7"><i class="fa-solid fa-snowflake" style="font-size:9px"></i> {{ _('مجمّد') }}</span>
+          {% endif %}
+        </a>
+          {% elif _ui_mode == 'freeze' %}{{ frozen_row(_('التحصيل والمدفوعات'), sub=True) }}{% endif %}
+        {% endif %}
+        {# مختبر الدفع الإلكتروني — وضع تجريبي (محاكاة كاملة قبل ربط البوابات) #}
+        {% if endpoint_exists is defined and endpoint_exists('radius.payments_lab') %}
+          {% if nav_can('payments_lab')|trim %}
+        <a class="hb-side-subitem{% if m_payments_lab %} is-active{% endif %}"
+           href="{{ url_for('radius.payments_lab') }}">
+          <span class="hb-side-text">{{ _('مختبر الدفع الإلكتروني') }}</span>
+          <span style="margin-inline-start:auto;display:inline-flex;align-items:center;gap:4px;padding:1px 8px;border-radius:999px;background:#F3EEFF;color:#6D28D9;font-size:10px;font-weight:900;border:1px solid #DDD0FB;line-height:1.7"><i class="fa-solid fa-flask" style="font-size:9px"></i> {{ _('تجريبي') }}</span>
+        </a>
+          {% elif _ui_mode == 'freeze' %}{{ frozen_row(_('مختبر الدفع الإلكتروني'), sub=True) }}{% endif %}
+        {% endif %}
+        {{ sub_item('radius.company_inventory', _('مخزون ومصروفات الشركة'), m_company_inventory) }}
       </div></div>
     </div>
+    {% elif _ui_mode == 'freeze' %}{{ frozen_section(_('المال والتحصيل'), 'file-invoice-dollar') }}{% endif %}
 
     {# ───────── التشغيل والمخاطر ───────── #}
+    {%- set _eps_engagement = ['communications','whatsapp','events_center','operations_center'] -%}
+    {% if section_can(_eps_engagement)|trim %}
     <div class="hb-side-section{% if sec_engagement_active %} is-open has-active{% endif %}"
          data-hb-section="engagement" data-hb-tone="rose">
       <button type="button" class="hb-side-section-head"
-              data-hb-section-toggle data-hb-label="التشغيل والمخاطر">
+              data-hb-section-toggle data-hb-label="{{ _('التشغيل والمخاطر') }}">
         <span class="hb-side-icon"><i class="fa-solid fa-tower-broadcast"></i></span>
-        <span class="hb-side-text">التشغيل والمخاطر</span>
+        <span class="hb-side-text">{{ _('التشغيل والمخاطر') }}</span>
         <span class="hb-side-chevron"><i class="fa-solid fa-chevron-down"></i></span>
       </button>
       <div class="hb-side-section-body"><div class="hb-side-section-body-inner">
         {# التواصل والحملات — مركز موحّد: شريط تبويب داخلي يصل لكل الصفحات الفرعية
            (قنوات/بوت/إشعارات/رصيد/قوالب/إرسال/حملات/جمهور/سجل/دليل). #}
-        {{ sub_item('radius.communications', 'التواصل والحملات', m_communications_hub) }}
-        {{ sub_item('radius.whatsapp', 'رسائل واتساب للمشتركين', m_whatsapp_subscribers) }}
+        {{ sub_item('radius.communications', _('التواصل والحملات'), m_communications_hub) }}
+        {{ sub_item('radius.whatsapp', _('رسائل واتساب للمشتركين'), m_whatsapp_subscribers) }}
         {# الأحداث والمخاطر — مركز موحّد: شريط تبويب داخلي يصل للأحداث وتقييم
            المخاطر والأمان والتحقيقات (وتفاصيل كل حدث على صفحتها المستقلة). #}
-        {{ sub_item('radius.events_center', 'الأحداث والمخاطر', m_events_center) }}
-        {{ sub_item('radius.operations_center', 'مركز العمليات', m_operations_center) }}
+        {{ sub_item('radius.events_center', _('الأحداث والمخاطر'), m_events_center) }}
+        {{ sub_item('radius.operations_center', _('مركز العمليات'), m_operations_center) }}
       </div></div>
     </div>
+    {% elif _ui_mode == 'freeze' %}{{ frozen_section(_('التشغيل والمخاطر'), 'tower-broadcast') }}{% endif %}
 
-    {# ───────── التقارير ───────── #}
+    {# ───────── التقارير ─────────
+       كل بنود القسم محروسة خادميًا بـ reports.view (و finance_reports
+       بـ reports.finance) — perm_for_endpoint يحلّها من _PERM_GUARDED. #}
+    {%- set _eps_reports = ['reports_home','finance_reports'] -%}
+    {% if section_can(_eps_reports)|trim %}
     <div class="hb-side-section{% if sec_reports_active %} is-open has-active{% endif %}"
          data-hb-section="reports" data-hb-tone="slate">
       <button type="button" class="hb-side-section-head"
-              data-hb-section-toggle data-hb-label="التقارير">
+              data-hb-section-toggle data-hb-label="{{ _('التقارير') }}">
         <span class="hb-side-icon"><i class="fa-solid fa-chart-line"></i></span>
-        <span class="hb-side-text">التقارير</span>
+        <span class="hb-side-text">{{ _('التقارير') }}</span>
         <span class="hb-side-chevron"><i class="fa-solid fa-chevron-down"></i></span>
       </button>
       <div class="hb-side-section-body"><div class="hb-side-section-body-inner">
-        {# التقارير — 5 محاور موحّدة: كل محور صفحة عليها شريط تبويب من مستويين
-           (المحاور + تقارير المحور النشط) يصل لكل تقرير دون إغراق الشريط الجانبي.
+        {# التقارير — كل التقارير صارت بنودًا فرعية، مقسومة على 5 عوائل
+           قابلة للطي (hb-side-subgroup): رأس العائلة زر يفتح/يغلق أبناءها،
+           افتراضيًا مغلقة جميعًا — إلا العائلة التي تضم الصفحة النشطة
+           (is-open has-active من الخادم). حالة الفتح/الإغلاق تُحفظ في
+           localStorage عبر sidebar_v2.js (نفس آلية الأقسام الرئيسية،
+           بمفتاح مستقل hobe_sidebar_open_subgroups).
            «تقارير المحاسبة» رابط متقاطع يبقى ضمن محور المحاسبة. #}
-        {{ sub_item('radius.reports_home', 'التقارير التنفيذية',
-            m_reports_home or m_reports_financial or m_reports_cards or m_reports_distributors or m_reports_archive) }}
-        {{ sub_item('radius.rep_login_states', 'الدخول والأمان',
-            m_reports_login_states or m_reports_failed_logins or m_reports_login_status or m_reports_manager_login) }}
-        {{ sub_item('radius.rep_sessions', 'الشبكة والجلسات',
-            m_reports_sessions or m_reports_mac_history or m_reports_coa_failures or m_reports_speed_failures) }}
-        {{ sub_item('radius.rep_manager_events', 'النشاط والأحداث',
-            m_reports_manager_events or m_reports_user_events or m_reports_profile_changes or m_reports_api_messages) }}
-        {{ sub_item('radius.rep_used_cards', 'المالية والموازنات',
-            m_reports_used_cards or m_reports_cash_tx or m_reports_balance_moves) }}
-        {{ sub_item('radius.finance_reports', 'تقارير المحاسبة', m_finance_rep) }}
+
+        {# أعلام تفعيل كل عائلة — لفتح عائلة الصفحة النشطة تلقائيًا #}
+        {%- set fam_exec_active = m_reports_home or m_reports_financial or m_reports_cards
+                                    or m_reports_distributors or m_reports_archive -%}
+        {%- set fam_auth_active = m_reports_login_states or m_reports_failed_logins
+                                    or m_reports_login_status or m_reports_manager_login -%}
+        {%- set fam_net_active  = m_reports_sessions or m_reports_mac_history
+                                    or m_reports_coa_failures or m_reports_speed_failures -%}
+        {%- set fam_act_active  = m_reports_manager_events or m_reports_user_events
+                                    or m_reports_profile_changes or m_reports_api_messages -%}
+        {%- set fam_fin_active  = m_reports_used_cards or m_reports_cash_tx
+                                    or m_reports_balance_moves or m_finance_rep -%}
+
+        {# ── العائلة التنفيذية ── #}
+        <div class="hb-side-subgroup{% if fam_exec_active %} is-open has-active{% endif %}"
+             data-hb-subgroup="reports-exec">
+          <button type="button" class="hb-side-subhead" data-hb-subgroup-toggle>
+            <i class="fa-solid fa-chart-line"></i><span class="hb-side-text">{{ _('التقارير التنفيذية') }}</span>
+            <span class="hb-side-subchevron"><i class="fa-solid fa-chevron-down"></i></span>
+          </button>
+          <div class="hb-side-subgroup-body"><div class="hb-side-subgroup-body-inner">
+            {{ sub_item('radius.reports_home',         _('نظرة عامة'),        m_reports_home) }}
+            {{ sub_item('radius.reports_financial',    _('التقرير المالي'),   m_reports_financial) }}
+            {{ sub_item('radius.reports_cards',        _('تقارير البطاقات'),  m_reports_cards) }}
+            {{ sub_item('radius.reports_distributors', _('تقارير الموزعين'),  m_reports_distributors) }}
+            {{ sub_item('radius.reports_archive',      _('الأرشيف'),          m_reports_archive) }}
+          </div></div>
+        </div>
+
+        {# ── الدخول والأمان — الصفحات الفرعية (?actor=…) تشارك مسار
+           حالات تسجيل الدخول فيبقى التفعيل تلقائيًا عبر request.path ── #}
+        <div class="hb-side-subgroup{% if fam_auth_active %} is-open has-active{% endif %}"
+             data-hb-subgroup="reports-auth">
+          <button type="button" class="hb-side-subhead" data-hb-subgroup-toggle>
+            <i class="fa-solid fa-right-to-bracket"></i><span class="hb-side-text">{{ _('الدخول والأمان') }}</span>
+            <span class="hb-side-subchevron"><i class="fa-solid fa-chevron-down"></i></span>
+          </button>
+          <div class="hb-side-subgroup-body"><div class="hb-side-subgroup-body-inner">
+            {{ sub_item('radius.rep_login_states',         _('حالات تسجيل الدخول'),   m_reports_login_states) }}
+            {{ sub_item('radius.rep_failed_logins',        _('فشل دخول الشبكة'),      m_reports_failed_logins) }}
+            {{ sub_item('radius.rep_login_status',         _('حالة دخول المشتركين'),  m_reports_login_status) }}
+            {{ sub_item('radius.rep_manager_login_status', _('حالة دخول المدراء'),    m_reports_manager_login) }}
+          </div></div>
+        </div>
+
+        {# ── الشبكة والجلسات ── #}
+        <div class="hb-side-subgroup{% if fam_net_active %} is-open has-active{% endif %}"
+             data-hb-subgroup="reports-network">
+          <button type="button" class="hb-side-subhead" data-hb-subgroup-toggle>
+            <i class="fa-solid fa-network-wired"></i><span class="hb-side-text">{{ _('الشبكة والجلسات') }}</span>
+            <span class="hb-side-subchevron"><i class="fa-solid fa-chevron-down"></i></span>
+          </button>
+          <div class="hb-side-subgroup-body"><div class="hb-side-subgroup-body-inner">
+            {{ sub_item('radius.rep_sessions',       _('تقارير الجلسات'),     m_reports_sessions) }}
+            {{ sub_item('radius.rep_mac_history',    _('سجل تغييرات الماك'),  m_reports_mac_history) }}
+            {{ sub_item('radius.rep_coa_failures',   _('فشل الفصل/التحديث'),  m_reports_coa_failures) }}
+            {{ sub_item('radius.rep_speed_failures', _('فشل تحديث السرعة'),   m_reports_speed_failures) }}
+          </div></div>
+        </div>
+
+        {# ── النشاط والأحداث ── #}
+        <div class="hb-side-subgroup{% if fam_act_active %} is-open has-active{% endif %}"
+             data-hb-subgroup="reports-activity">
+          <button type="button" class="hb-side-subhead" data-hb-subgroup-toggle>
+            <i class="fa-solid fa-clock-rotate-left"></i><span class="hb-side-text">{{ _('النشاط والأحداث') }}</span>
+            <span class="hb-side-subchevron"><i class="fa-solid fa-chevron-down"></i></span>
+          </button>
+          <div class="hb-side-subgroup-body"><div class="hb-side-subgroup-body-inner">
+            {{ sub_item('radius.rep_manager_events',  _('أحداث المدراء'),     m_reports_manager_events) }}
+            {{ sub_item('radius.rep_user_events',     _('أحداث المشتركين'),   m_reports_user_events) }}
+            {{ sub_item('radius.rep_profile_changes', _('تغيير العروض'),      m_reports_profile_changes) }}
+            {{ sub_item('radius.rep_api_messages',    _('سجل رسائل الربط'),   m_reports_api_messages) }}
+          </div></div>
+        </div>
+
+        {# ── المالية والموازنات ── #}
+        <div class="hb-side-subgroup{% if fam_fin_active %} is-open has-active{% endif %}"
+             data-hb-subgroup="reports-finance">
+          <button type="button" class="hb-side-subhead" data-hb-subgroup-toggle>
+            <i class="fa-solid fa-coins"></i><span class="hb-side-text">{{ _('المالية والموازنات') }}</span>
+            <span class="hb-side-subchevron"><i class="fa-solid fa-chevron-down"></i></span>
+          </button>
+          <div class="hb-side-subgroup-body"><div class="hb-side-subgroup-body-inner">
+            {{ sub_item('radius.rep_used_cards',        _('كروت الشحن المستخدمة'), m_reports_used_cards) }}
+            {{ sub_item('radius.rep_cash_transactions', _('معاملات الكاش'),        m_reports_cash_tx) }}
+            {{ sub_item('radius.rep_balance_movements', _('تحويلات الرصيد'),       m_reports_balance_moves) }}
+            {{ sub_item('radius.finance_reports',       _('تقارير المحاسبة'),      m_finance_rep) }}
+          </div></div>
+        </div>
       </div></div>
     </div>
+    {% elif _ui_mode == 'freeze' %}{{ frozen_section(_('التقارير'), 'chart-line') }}{% endif %}
 
     {# ───────── الدعم ───────── #}
+    {%- set _eps_support = ['tk_list','svc_list','customer_portals_admin'] -%}
+    {% if section_can(_eps_support)|trim %}
     <div class="hb-side-section{% if sec_support_active %} is-open has-active{% endif %}"
          data-hb-section="support" data-hb-tone="cyan">
       <button type="button" class="hb-side-section-head"
-              data-hb-section-toggle data-hb-label="الدعم">
+              data-hb-section-toggle data-hb-label="{{ _('الدعم') }}">
         <span class="hb-side-icon"><i class="fa-solid fa-headset"></i></span>
-        <span class="hb-side-text">الدعم</span>
+        <span class="hb-side-text">{{ _('الدعم') }}</span>
         <span class="hb-side-chevron"><i class="fa-solid fa-chevron-down"></i></span>
       </button>
       <div class="hb-side-section-body"><div class="hb-side-section-body-inner">
-        {{ sub_item('radius.tk_list',  'التذاكر',           m_tickets) }}
-        {{ sub_item('radius.svc_list', 'الخدمات / المعدّات', m_services) }}
-        {{ sub_item('radius.customer_portals_admin', 'بوابات العملاء', m_customer_portals) }}
+        {{ sub_item('radius.tk_list',  _('التذاكر'),           m_tickets) }}
+        {{ sub_item('radius.svc_list', _('الخدمات / المعدّات'), m_services) }}
+        {{ sub_item('radius.customer_portals_admin', _('بوابات العملاء'), m_customer_portals) }}
       </div></div>
     </div>
+    {% elif _ui_mode == 'freeze' %}{{ frozen_section(_('الدعم'), 'headset') }}{% endif %}
 
     {# ───────── الإدارة ───────── #}
+    {%- set _eps_admin = ['business_operators','admin_pricing_page','roles_list','backups','settings_page','sync_list','tenants_list'] -%}
+    {% if section_can(_eps_admin)|trim %}
     <div class="hb-side-section{% if sec_admin_active %} is-open has-active{% endif %}"
          data-hb-section="administration" data-hb-tone="orange">
       <button type="button" class="hb-side-section-head"
-              data-hb-section-toggle data-hb-label="الإدارة">
+              data-hb-section-toggle data-hb-label="{{ _('الإدارة') }}">
         <span class="hb-side-icon"><i class="fa-solid fa-user-shield"></i></span>
-        <span class="hb-side-text">الإدارة</span>
+        <span class="hb-side-text">{{ _('الإدارة') }}</span>
         <span class="hb-side-chevron"><i class="fa-solid fa-chevron-down"></i></span>
       </button>
       <div class="hb-side-section-body"><div class="hb-side-section-body-inner">
         {# الإدارة — 3 محاور موحّدة (كل محور صفحة عليها شريط تبويب داخلي يصل
            لصفحاته الفرعية) + إعدادات النظام الحسّاسة تبقى مستقلة. العمليات
            الخطيرة (استعادة/أرشفة/حذف) تبقى على مساراتها المحمية بتأكيد. #}
-        {{ sub_item('radius.business_operators', 'المدراء والموزعون',
+        {{ sub_item('radius.business_operators', _('المدراء والموزعون'),
             m_business_operators or m_admins or m_admin_profile or m_distributors) }}
-        {{ sub_item('radius.roles_list', 'الأدوار والصلاحيات', m_roles or m_perms) }}
-        {{ sub_item('radius.backups', 'البيانات والحفظ والأرشفة',
+        {# أسعار العروض للمدراء — سعر خاص لكل (مدير × عرض) حسب الاتفاق #}
+        {{ sub_item('radius.admin_pricing_page', _('أسعار العروض للمدراء'), m_admin_pricing) }}
+        {{ sub_item('radius.roles_list', _('الأدوار والصلاحيات'), m_roles or m_perms) }}
+        {# أُزيل من لوحة العميل — يُعاد مركزياً عبر لوحة التراخيص (قرار معماري):
+           بند «تراخيص أنفاق الراوترات» (radius.licensing_index). #}
+        {{ sub_item('radius.backups', _('البيانات والحفظ والأرشفة'),
             m_backups or m_recycle or m_lifecycle) }}
-        {{ sub_item('radius.settings_page',     'إعدادات النظام',     m_settings) }}
-        {{ sub_item('radius.sync_list',         'المزامنة',           m_sync) }}
-        {{ sub_item('radius.tenants_list',      'المستأجرون',         m_tenants) }}
+        {{ sub_item('radius.settings_page',     _('إعدادات النظام'),     m_settings) }}
+        {# طابور المزامنة — عصب التحكم بالراوترات: اسم أوضح + شارة بعدد
+           المهام المنتظرة (queued/retrying/syncing) حتى يُرى التعثّر فورًا.
+           sync_pending_count دالة كسولة من context processor التطبيق:
+           استعلام عدّ واحد خفيف ولا تكسر الصفحة أبدًا (نفس نمط شارة التحصيل). #}
+        {% if endpoint_exists is defined and endpoint_exists('radius.sync_list') %}
+          {% if nav_can('sync_list')|trim %}
+        {% set _sync_pending = sync_pending_count() if sync_pending_count is defined else 0 %}
+        <a class="hb-side-subitem{% if m_sync %} is-active{% endif %}"
+           href="{{ url_for('radius.sync_list') }}">
+          <span class="hb-side-text">{{ _('طابور المزامنة') }}</span>
+          {% if _sync_pending %}
+          <span style="margin-inline-start:auto;display:inline-flex;align-items:center;gap:4px;padding:1px 8px;border-radius:999px;background:#EDE9FE;color:#5B4BD8;font-size:10px;font-weight:900;border:1px solid #DDD6FE;line-height:1.7"><i class="fa-solid fa-arrows-rotate" style="font-size:9px"></i> {{ _sync_pending }}</span>
+          {% endif %}
+        </a>
+          {% elif _ui_mode == 'freeze' %}{{ frozen_row(_('طابور المزامنة'), sub=True) }}{% endif %}
+        {% endif %}
+        {{ sub_item('radius.tenants_list',      _('المستأجرون'),         m_tenants) }}
       </div></div>
     </div>
+    {% elif _ui_mode == 'freeze' %}{{ frozen_section(_('الإدارة'), 'user-shield') }}{% endif %}
 
     {# ───────── التكامل ───────── #}
+    {%- set _eps_integration = ['admin_bridge','license_file','wh_settings','tok_list'] -%}
+    {% if section_can(_eps_integration)|trim %}
     <div class="hb-side-section{% if sec_integration_active %} is-open has-active{% endif %}"
          data-hb-section="integration" data-hb-tone="blue">
       <button type="button" class="hb-side-section-head"
-              data-hb-section-toggle data-hb-label="التكامل والجسر">
+              data-hb-section-toggle data-hb-label="{{ _('التكامل والجسر') }}">
         <span class="hb-side-icon"><i class="fa-solid fa-plug-circle-bolt"></i></span>
-        <span class="hb-side-text">التكامل والجسر</span>
+        <span class="hb-side-text">{{ _('التكامل والجسر') }}</span>
         <span class="hb-side-chevron"><i class="fa-solid fa-chevron-down"></i></span>
       </button>
       <div class="hb-side-section-body"><div class="hb-side-section-body-inner">
-        {{ sub_item('radius.admin_bridge', 'جسر الإدارة', m_admin_bridge) }}
-        {{ sub_item('radius.license_file', 'ملف التراخيص', m_license_file) }}
-        {{ sub_item('radius.wh_settings', 'إشعارات الربط',    m_webhooks) }}
-        {{ sub_item('radius.tok_list',    'مفاتيح الواجهة',   m_tokens) }}
+        {{ sub_item('radius.admin_bridge', _('جسر الإدارة'), m_admin_bridge) }}
+        {# ترخيص النظام — اتصال الريدياس بلوحة التراخيص السحابية وعقد التشغيل (ليس تراخيص أنفاق الراوترات) #}
+        {{ sub_item('radius.license_file', _('ترخيص النظام'), m_license_file) }}
+        {{ sub_item('radius.wh_settings', _('إشعارات الربط'),    m_webhooks) }}
+        {{ sub_item('radius.tok_list',    _('مفاتيح الواجهة'),   m_tokens) }}
+        {# توثيق الواجهة يتبع نفس مفتاح القسم (api.use) #}
+        {% if nav_can('', 'api.use')|trim %}
         <a class="hb-side-subitem" href="/api/docs" target="_blank">
-          <span class="hb-side-text">توثيق الواجهة</span>
+          <span class="hb-side-text">{{ _('توثيق الواجهة') }}</span>
         </a>
+        {% elif _ui_mode == 'freeze' %}{{ frozen_row(_('توثيق الواجهة'), sub=True) }}{% endif %}
       </div></div>
     </div>
+    {% elif _ui_mode == 'freeze' %}{{ frozen_section(_('التكامل والجسر'), 'plug-circle-bolt') }}{% endif %}
+
+    {# ───────── كيف تستخدمني (مركز الأدلة المصوّرة) ─────────
+       بند مستقل أسفل القائمة — شروحات خطوة بخطوة داخل الموقع.
+       يستخدم nav_item نفسه فيختفي بهدوء إن لم يكن المسار مسجَّلًا بعد. #}
+    {{ nav_item('radius.docs_center', 'graduation-cap', _('كيف تستخدمني'), m_docs_center) }}
 
   </nav>
 
@@ -554,7 +876,7 @@
       <span class="hb-side-user-ava">{{ (session.get('admin_name') or session.get('admin_user') or 'A')[:1]|upper }}</span>
       <div class="hb-side-user-text">
         <div class="hb-side-user-name">{{ session.get('admin_user') or 'admin' }}</div>
-        <div class="hb-side-user-role">مدير النظام</div>
+        <div class="hb-side-user-role">{{ _('مدير النظام') }}</div>
       </div>
       <i class="fa-solid fa-chevron-down hb-side-user-caret"></i>
     </div>

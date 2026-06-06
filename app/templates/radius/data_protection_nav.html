@@ -1,7 +1,9 @@
-{# ── البيانات والحفظ والأرشفة — in-section nav (backups + recycle + lifecycle) ──
-   Active tab from request.path. The sensitive POST actions (restore /
-   lifecycle run / delete) keep their own confirmation-gated endpoints —
-   this bar only navigates between the three landing pages. #}
+{# ── البيانات والحفظ والأرشفة — شريط تنقّل داخلي للقسم (النسخ + السلة + الأرشفة) ──
+   التبويب النشط يُحدَّد من request.path. الإجراءات الحسّاسة (الاستعادة /
+   تشغيل دورة الحياة / الحذف) تحتفظ بمسارات التأكيد الخاصة بها — هذا الشريط
+   للتنقّل بين الصفحات الثلاث فقط.
+   ملاحظة: تدرّج اللون البرتقالي للتبويب النشط هو لون هوية «قسم حماية
+   البيانات» (لا يوجد متغيّر نظام برتقالي حتى الآن — معلّق لقرار توكِنات). #}
 {% set p = request.path %}
 <style>
 .dpnav{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:16px;padding:8px;
@@ -9,7 +11,7 @@
 .dpnav a{display:inline-flex;align-items:center;gap:7px;padding:8px 13px;border-radius:999px;
   font-size:12.5px;font-weight:800;text-decoration:none;color:var(--hub-text-soft,#475569);
   border:1px solid transparent;white-space:nowrap;transition:background .12s,color .12s}
-.dpnav a:hover{background:#fff;color:var(--hub-text,#0f172a)}
+.dpnav a:hover{background:var(--hub-surface,#fff);color:var(--hub-text,#0f172a)}
 .dpnav a.is-active{background:linear-gradient(135deg,#ea580c,#9a3412);color:#fff;box-shadow:0 6px 16px rgba(234,88,12,.22)}
 .dpnav a i{font-size:12px}
 </style>

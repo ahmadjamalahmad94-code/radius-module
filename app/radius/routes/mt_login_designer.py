@@ -4,6 +4,13 @@ Routes:
   GET  /admin/radius/mt/<id>/login-designer        — picker + form
   POST /admin/radius/mt/<id>/login-designer/save   — persist choice
   GET  /admin/radius/mt/<id>/login-designer/preview — iframe target
+  GET/POST /admin/radius/mt/<id>/login-designer/download.zip
+        — حزمة ZIP جاهزة للرفع اليدوي (login.html [+ store.html
+          + خط المراعي Almarai إن لزم]) بالقيم الحالية في النموذج.
+  POST /admin/radius/mt/<id>/login-designer/custom/upload
+        — رفع تصميم خاص (HTML أو ZIP يحوي login.html) إلى المعرض.
+  POST /admin/radius/mt/<id>/login-designer/custom/delete
+        — حذف تصميم خاص من المعرض.
 
 The preview endpoint returns rendered HTML (with $(...) stripped
 via `hotspot_templates.preview`) so a designer iframe can show a
@@ -11,8 +18,14 @@ WYSIWYG view without ever calling the router.
 """
 from __future__ import annotations
 
+import io
+import os
+import re
+import zipfile
+
 from flask import (
-    Blueprint, Response, abort, g, render_template, request,
+    Blueprint, Response, abort, current_app, g, render_template,
+    request, send_from_directory, url_for,
 )
 
 from ..core.tenant import DEFAULT_TENANT_ID
@@ -57,17 +70,89 @@ def register_mt_login_designer_routes(bp: Blueprint) -> None:
         requires_perm(PERM_MANAGE)(mt_login_designer_save),
         methods=["POST"],
     )
+    # المعاينة تقبل GET (مصغّرات المعرض — template_slug فقط، رابط
+    # قصير) و POST (المعاينة الكبيرة — كل المتغيّرات في جسم الطلب).
+    # سبب POST: متغيّرات قوائم JSON + شعار data-URL تجاوزت حدّ سطر
+    # الطلب في gunicorn (limit_request_line ≈ 4094 بايت) فكانت كل
+    # طلبات المعاينة GET تُرفض بـ 414 وتتجمّد المعاينة كليًا.
     bp.add_url_rule(
         "/mt/<int:nas_id>/login-designer/preview",
         "mt_login_designer_preview",
         requires_perm(PERM_VIEW)(mt_login_designer_preview),
-        methods=["GET"],
+        methods=["GET", "POST"],
+    )
+    # معاينة متجر الراوتر المستقل (store.html): تعيد نفس الصفحة
+    # التي تُرفع للراوتر حرفيًا (render_store_page) — زر المتجر في
+    # معاينة صفحة الدخول يفتحها بدل بوابة /portal/card، فيرى
+    # المشغّل التصميم المستقل الحقيقي الذي يتخاطب مع API الراديوس.
+    bp.add_url_rule(
+        "/mt/<int:nas_id>/login-designer/store-preview",
+        "mt_login_designer_store_preview",
+        requires_perm(PERM_VIEW)(mt_login_designer_store_preview),
+        methods=["GET", "POST"],
     )
     bp.add_url_rule(
         "/mt/<int:nas_id>/login-designer/deploy",
         "mt_login_designer_deploy",
         requires_perm(PERM_DEPLOY_LOGIN)(mt_login_designer_deploy),
         methods=["POST"],
+    )
+    # «قوالب محفوظة» — مكتبة مصغّرة لكل راوتر: حفظ مجموعة
+    # المتغيّرات الحالية باسم، إعادة تطبيقها، أو حذفها.
+    bp.add_url_rule(
+        "/mt/<int:nas_id>/login-designer/presets/save",
+        "mt_login_designer_preset_save",
+        requires_perm(PERM_MANAGE)(mt_login_designer_preset_save),
+        methods=["POST"],
+    )
+    bp.add_url_rule(
+        "/mt/<int:nas_id>/login-designer/presets/apply",
+        "mt_login_designer_preset_apply",
+        requires_perm(PERM_MANAGE)(mt_login_designer_preset_apply),
+        methods=["POST"],
+    )
+    bp.add_url_rule(
+        "/mt/<int:nas_id>/login-designer/presets/delete",
+        "mt_login_designer_preset_delete",
+        requires_perm(PERM_MANAGE)(mt_login_designer_preset_delete),
+        methods=["POST"],
+    )
+    # «تحميل الحزمة (ZIP)» — يبني حزمة هوت سبوت جاهزة في الذاكرة
+    # (login.html بقيم النموذج الحالية مع إبقاء placeholders راوتر
+    # أو إس + store.html عند تفعيل المتجر + خط المراعي إن كان
+    # التصميم يشير إليه). POST مثل المعاينة الكبيرة — القيم (قوائم
+    # JSON وشعار data-URL) تتجاوز حدّ سطر الطلب في GET؛ وGET يبقى
+    # مدعومًا للروابط القصيرة (يُحمّل التصميم المحفوظ).
+    bp.add_url_rule(
+        "/mt/<int:nas_id>/login-designer/download.zip",
+        "mt_login_designer_download_zip",
+        requires_perm(PERM_VIEW)(mt_login_designer_download_zip),
+        methods=["GET", "POST"],
+    )
+    # «رفع تصميم خاص» — HTML أو ZIP يحوي login.html؛ يُفحص
+    # (placeholders راوتر أو إس + الحجم) ويُخزَّن للمستأجر فيظهر
+    # في المعرض بجانب المكتبة بصيغة custom:<id>.
+    bp.add_url_rule(
+        "/mt/<int:nas_id>/login-designer/custom/upload",
+        "mt_login_designer_custom_upload",
+        requires_perm(PERM_MANAGE)(mt_login_designer_custom_upload),
+        methods=["POST"],
+    )
+    bp.add_url_rule(
+        "/mt/<int:nas_id>/login-designer/custom/delete",
+        "mt_login_designer_custom_delete",
+        requires_perm(PERM_MANAGE)(mt_login_designer_custom_delete),
+        methods=["POST"],
+    )
+    # خطوط الهوت سبوت (المراعي Almarai بوزنيه + Tajawal القديم) —
+    # القوالب تشير إليها بمسار نسبي fonts/... يُحلّ هنا أثناء
+    # المعاينة (iframe). على الراوتر يسقط الخط بأمان إلى خطوط
+    # النظام إن لم يرفع المشغّل الملفات بجانب login.html.
+    bp.add_url_rule(
+        "/mt/<int:nas_id>/login-designer/fonts/<path:filename>",
+        "mt_login_designer_font",
+        requires_perm(PERM_VIEW)(mt_login_designer_font),
+        methods=["GET"],
     )
 
 
@@ -91,6 +176,94 @@ def _connect_client(nas_id: int):
     )
 
 
+def _last_deploy(nas_id: int) -> dict | None:
+    """آخر محاولة نشر لهذا الراوتر من سجل الأحداث — تُغذّي مؤشر
+    «حالة النشر الأخيرة» في صدفة الهيرو. None إن لم يُنشر بعد."""
+    try:
+        row = db().execute(
+            "SELECT result_status, created_at, error_message "
+            "FROM audit_log "
+            "WHERE tenant_id=? AND router_id=? "
+            "  AND action='mt.login_designer.deploy' "
+            "ORDER BY id DESC LIMIT 1",
+            (_tid(), int(nas_id)),
+        ).fetchone()
+    except Exception:  # noqa: BLE001 — جدول قديم بلا أعمدة S2.1
+        return None
+    return dict(row) if row else None
+
+
+def _auto_store_url() -> str:
+    """رابط متجر البطاقات المحسوب تلقائيًا لهذا المستأجر.
+
+    يقرأ IP سيرفر الراديوس من الإعدادات (network.radius_server_ip)
+    عبر hotspot_templates.resolve_store_url ثم يسقط إلى host
+    الطلب الحالي (نفس العنوان الذي يفتح به المدير اللوحة غالبًا
+    هو عنوان السيرفر) — فيعمل المتجر دون أي إدخال يدوي.
+    يعيد "" فقط عندما يستحيل التخمين (خارج سياق طلب وبلا إعداد)."""
+    url = ht.resolve_store_url(_tid())
+    if url:
+        return url
+    try:
+        host = (request.host or "").split(":", 1)[0]
+    except RuntimeError:  # خارج سياق طلب (اختبارات)
+        host = ""
+    if host:
+        return "http://" + host + ht.STORE_PORTAL_PATH
+    return ""
+
+
+def _auto_api_base() -> str:
+    """عنوان سيرفر الراديوس الأساسي (http://<host>) لمتجر الراوتر.
+
+    نفس مصادر _auto_store_url لكن بلا مسار /portal/card: إعداد
+    network.radius_server_ip أولًا ثم host الطلب الحالي — يُحقن
+    في store.html مكان {{API_BASE}} عند النشر."""
+    base = ht.resolve_store_api_base(_tid())
+    if base:
+        return base
+    try:
+        host = (request.host or "").split(":", 1)[0]
+    except RuntimeError:  # خارج سياق طلب (اختبارات)
+        host = ""
+    return ("http://" + host) if host else ""
+
+
+def _variable_defaults() -> dict[str, str]:
+    """افتراضيات المتغيّرات مع حقن رابط المتجر المحسوب تلقائيًا —
+    فأي تصميم لم يكتب فيه المشغّل رابطًا يدويًا يحصل على رابط
+    /portal/card الصحيح من إعدادات السيرفر بدل المثال الثابت."""
+    defaults = {v.slug: v.default for v in ht.TEMPLATE_VARIABLES}
+    auto = _auto_store_url()
+    if auto:
+        defaults["STORE_URL"] = auto
+    return defaults
+
+
+# القيمة الافتراضية الثابتة القديمة لرابط المتجر — التصاميم المحفوظة
+# قبل ميزة «الرابط التلقائي» خزّنت هذا المثال حرفيًا؛ نعامله كأنه
+# «لم يُحدَّد» فيُستبدل بالرابط المحسوب تلقائيًا عند التحميل.
+_LEGACY_STORE_URL = "http://192.168.88.2" + ht.STORE_PORTAL_PATH
+
+
+def _is_manual_store_url(url: str) -> bool:
+    """هل كتب المشغّل رابط متجر مخصصًا فعلًا (تجاوز يدوي)؟
+
+    أي قيمة غير: فارغة / المثال القديم / رابط بوابة /portal/card
+    المحسوب تلقائيًا / اسم ملف المتجر النسبي — تُعتبر تجاوزًا
+    يدويًا فيُحترم رابطها في المعاينة والنشر بدل store.html."""
+    u = (url or "").strip()
+    if not u or u in (_LEGACY_STORE_URL, ht.STORE_ONROUTER_FILENAME):
+        return False
+    if u == _auto_store_url():
+        return False
+    # روابط /portal/card المبنية من أي IP — هي «التلقائي القديم»
+    # وليست تجاوزًا مقصودًا؛ زر المتجر صار يفتح store.html المحلي.
+    if u.endswith(ht.STORE_PORTAL_PATH):
+        return False
+    return True
+
+
 def _current_design(nas_id: int) -> dict:
     """Either the row from the DB or sensible defaults so the
     GET form has something to render even on first visit."""
@@ -98,15 +271,98 @@ def _current_design(nas_id: int) -> dict:
     if not row:
         return {
             "template_slug": "classic",
-            "variables": {v.slug: v.default
-                          for v in ht.TEMPLATE_VARIABLES},
+            "variables": _variable_defaults(),
         }
+    variables = {**_variable_defaults(), **(row.get("variables") or {})}
+    # ترقية ودّية: الرابط المخزَّن هو المثال الثابت القديم أو فارغ
+    # → استبدله بالرابط المحسوب من إعداد IP الراديوس (إن وُجد).
+    stored_url = (variables.get("STORE_URL") or "").strip()
+    if stored_url in ("", _LEGACY_STORE_URL):
+        auto = _auto_store_url()
+        if auto:
+            variables["STORE_URL"] = auto
+    # تصميم خاص محفوظ ثم حُذف من المعرض → نعود للكلاسيكي بدل
+    # كسر المعاينة/النشر بـ slug يتيم.
+    slug = row.get("template_slug") or "classic"
+    if not _known_slug(slug):
+        slug = "classic"
     return {
-        "template_slug": row.get("template_slug") or "classic",
-        "variables": {**{v.slug: v.default
-                         for v in ht.TEMPLATE_VARIABLES},
-                      **(row.get("variables") or {})},
+        "template_slug": slug,
+        "variables": variables,
     }
+
+
+def _known_slug(slug: str) -> bool:
+    """هل slug صالح للحفظ/المعاينة/النشر؟ تصاميم المكتبة المدمجة
+    أو تصميم خاص مرفوع custom:<id> موجود فعلًا لهذا المستأجر."""
+    if slug in ht.TEMPLATES_BY_SLUG:
+        return True
+    if ht.is_custom_slug(slug):
+        return hotspot_designs_repo.get_custom_template(
+            _tid(), ht.custom_slug_id(slug)) is not None
+    return False
+
+
+def _gallery(nas_id: int) -> list[dict]:
+    """معرض التصاميم الموحّد: تصاميم المكتبة المدمجة + التصاميم
+    الخاصة المرفوعة للمستأجر (slug = custom:<id>) — كل عنصر قاموس
+    بنفس الحقول التي يتوقعها القالب فيُعامل الجميع سواسية."""
+    items = [{
+        "slug": t.slug,
+        "name_ar": t.name_ar,
+        "description_ar": t.description_ar,
+        "is_custom": False,
+        "custom_id": 0,
+    } for t in ht.LIBRARY]
+    for row in hotspot_designs_repo.list_custom_templates(_tid()):
+        items.append({
+            "slug": ht.CUSTOM_SLUG_PREFIX + str(row["id"]),
+            "name_ar": row.get("name") or "تصميم خاص",
+            "description_ar": ("تصميم خاص مرفوع — آخر تحديث "
+                               + str(row.get("updated_at") or "")[:16]
+                               .replace("T", " ")),
+            "is_custom": True,
+            "custom_id": int(row["id"]),
+        })
+    return items
+
+
+def _render_designer(nas_id: int, nas: dict, design: dict, *,
+                     saved: bool = False, error: str = "",
+                     deploy_result=None, store_result=None,
+                     wg_result=None, flash_ok: str = ""):
+    """يجمع كل ما تحتاجه صفحة المصمّم — بما فيها «قوالب محفوظة»."""
+    # رابط المتجر التلقائي + هل إعداد IP الراديوس مضبوط فعلًا؟
+    # عندما لا يكون مضبوطًا (الرابط محسوب من host الطلب كأفضل
+    # تخمين) يُظهر المصمّم تلميحًا «حدد IP الراديوس في الإعدادات».
+    store_url_auto = _auto_store_url()
+    radius_ip_configured = bool(ht.resolve_store_url(_tid()))
+    # أمر walled-garden الجاهز للنسخ — يُعرض في قسم المتجر دائمًا
+    # (للرفع اليدوي عبر ZIP) وفي نتيجة النشر عند فشل الإضافة الآلية.
+    from ..services.hotspot_store_page import walled_garden_command
+    wg_command = walled_garden_command(_auto_api_base())
+    return render_template(
+        "radius/mt_login_designer.html",
+        nas=nas,
+        library=_gallery(nas_id),
+        variables=ht.TEMPLATE_VARIABLES,
+        design=design,
+        saved=saved,
+        error=error,
+        deploy_result=deploy_result,
+        store_result=store_result,
+        wg_result=wg_result,
+        wg_command=wg_command,
+        flash_ok=flash_ok,
+        presets=hotspot_designs_repo.list_presets(_tid(), nas_id),
+        last_deploy=_last_deploy(nas_id),
+        store_url_auto=store_url_auto,
+        # عنوان API المتجر (IP الراديوس فقط بلا مسار) — هو ما يُحقن
+        # فعلًا في store.html؛ زر المتجر نفسه صار رابطًا نسبيًا
+        # store.html على الراوتر فلا يحتاج المشغّل كتابة أي رابط.
+        store_api_base_auto=_auto_api_base(),
+        radius_ip_configured=radius_ip_configured,
+    )
 
 
 def mt_login_designer(nas_id: int):
@@ -114,15 +370,7 @@ def mt_login_designer(nas_id: int):
     if not nas:
         abort(404)
     design = _current_design(nas_id)
-    return render_template(
-        "radius/mt_login_designer.html",
-        nas=nas,
-        library=ht.LIBRARY,
-        variables=ht.TEMPLATE_VARIABLES,
-        design=design,
-        saved=False,
-        error="",
-    )
+    return _render_designer(nas_id, nas, design)
 
 
 def mt_login_designer_save(nas_id: int):
@@ -132,9 +380,15 @@ def mt_login_designer_save(nas_id: int):
     slug = (request.form.get("template_slug") or "").strip()
     values = {v.slug: (request.form.get(v.slug) or "").strip()
               for v in ht.TEMPLATE_VARIABLES}
+    # رابط متجر فارغ = «استخدم الرابط التلقائي» — يُحقن الرابط
+    # المحسوب من إعداد IP الراديوس قبل التحقق فيُحفظ رابط صالح
+    # دائمًا دون أي إدخال يدوي من المشغّل.
+    if not values.get("STORE_URL"):
+        values["STORE_URL"] = _auto_store_url()
     error = ""
     saved = False
-    if slug not in ht.TEMPLATES_BY_SLUG:
+    # _known_slug يقبل أيضًا التصاميم الخاصة المرفوعة custom:<id>.
+    if not _known_slug(slug):
         error = "قالب غير معروف."
     else:
         try:
@@ -171,27 +425,45 @@ def mt_login_designer_save(nas_id: int):
             )
     design = {"template_slug": slug if slug else "classic",
               "variables": values}
-    return render_template(
-        "radius/mt_login_designer.html",
-        nas=nas,
-        library=ht.LIBRARY,
-        variables=ht.TEMPLATE_VARIABLES,
-        design=design,
-        saved=saved,
-        error=error,
-    )
+    return _render_designer(nas_id, nas, design,
+                            saved=saved, error=error)
+
+
+def _companion_summary(ok_names: list[str], fail_names: list[str]) -> str:
+    """يبني سطر ملخص عربيًا لرفع الصفحات المرافقة: «تم رفع: login,
+    status, ... | فشل: ...» — يُلحق برسالة نجاح النشر فيرى المشغّل
+    أي ملف نجح وأيّها فشل دون أن يُفشل ذلك النشر كله."""
+    parts = []
+    if ok_names:
+        parts.append("تم رفع: login, "
+                     + ", ".join(n.replace(".html", "")
+                                 for n in ok_names))
+    if fail_names:
+        parts.append("فشل: "
+                     + ", ".join(n.replace(".html", "")
+                                 for n in fail_names))
+    return " | ".join(parts)
 
 
 def mt_login_designer_deploy(nas_id: int):
     """R3 — Render the saved design + upload login.html to the
     router. Requires the confirm checkbox; refuses on validation
-    failure; writes one audit-log entry per attempt."""
+    failure; writes one audit-log entry per attempt.
+
+    بعد رفع login.html ينجح، تُرفع أيضًا الصفحات القياسية المرافقة
+    (alogin/status/logout/error/rlogin/redirect/radvert) بنفس ثيم
+    التصميم + errors.txt + (store.html عند تفعيل المتجر) — كل ملف
+    على حدة، وفشل ملف لا يُفشل البقية. ملخص النجاح/الفشل يُلحق
+    برسالة النشر."""
     nas = _load_nas(nas_id)
     if not nas:
         abort(404)
     confirmed = request.form.get("confirm") == "1"
     error = ""
     deploy_result = None
+    store_result = None  # نتيجة رفع متجر الراوتر (إن فُعّل المتجر)
+    wg_result = None  # نتيجة تجهيز walled-garden (مع المتجر فقط)
+    companion_summary = ""  # ملخص رفع الصفحات المرافقة (نجاح/فشل)
     design = _current_design(nas_id)
 
     if not confirmed:
@@ -207,11 +479,122 @@ def mt_login_designer_deploy(nas_id: int):
             if client is None:
                 error = "الراوتر غير موجود."
             else:
+                # متجر المايكروتيك: عند تفعيل المتجر يُرفع store.html
+                # بجانب login.html ويُحوَّل زر المتجر لرابط نسبي
+                # «store.html» — فيعمل المتجر من الراوتر نفسه ويتخاطب
+                # مع الراديوس عبر /api/v1/store/* فقط.
+                store_enabled = safe.get("STORE_ENABLED") == "yes"
+                store_api_base = _auto_api_base() if store_enabled else ""
+                # حارس النشر: عنوان راديوس فارغ أو محلي (127.x /
+                # localhost) لا تصل إليه أجهزة الزبائن أبدًا — نرفض
+                # نشر المتجر برسالة عربية واضحة بدل صفحة لا تعمل.
+                if store_enabled:
+                    from ..services.hotspot_store_page import (
+                        API_BASE_LOOPBACK_MSG, api_base_unusable,
+                    )
+                    if api_base_unusable(store_api_base):
+                        return _render_designer(
+                            nas_id, nas, design,
+                            error=API_BASE_LOOPBACK_MSG)
+                login_vars = dict(safe)
+                # زر المتجر يفتح التصميم المستقل المرفوع على الراوتر
+                # نفسه (رابط نسبي store.html — يعمل على أي راوتر).
+                # التجاوز اليدوي المقصود فقط يحتفظ برابطه المخصص.
+                if (store_enabled and store_api_base
+                        and not _is_manual_store_url(
+                            safe.get("STORE_URL", ""))):
+                    login_vars["STORE_URL"] = ht.STORE_ONROUTER_FILENAME
                 try:
                     client.connect()
                     deploy_result = ht.deploy_login(
-                        client, design["template_slug"], safe,
+                        client, design["template_slug"], login_vars,
+                        tenant_id=_tid(),
                     )
+                    # رسائل أخطاء الهوت سبوت — يُرفع errors.txt بجانب
+                    # login.html من رسائل المشغّل (لوحة «رسائل أخطاء
+                    # الهوتسبوت»). فشله لا يُفشل نشر صفحة الدخول.
+                    if deploy_result and deploy_result.ok:
+                        try:
+                            from ..db.repos import (
+                                hotspot_error_messages_repo as _err_repo,
+                            )
+                            from ..services.hotspot_error_messages import (
+                                build_errors_txt,
+                            )
+                            _msgs, _en = _err_repo.resolved_messages(_tid())
+                            ht.deploy_errors_txt(
+                                client,
+                                build_errors_txt(_msgs, enabled=_en))
+                        except Exception:  # noqa: BLE001
+                            pass
+                        # ── الصفحات القياسية المرافقة ──
+                        # مجلد هوت سبوت كامل يحتاج alogin/status/
+                        # logout/error/rlogin/redirect/radvert بجانب
+                        # login.html — نبنيها بنفس ثيم التصميم ونرفع
+                        # كل ملف على حدة. فشل ملف لا يُفشل البقية ولا
+                        # نشر صفحة الدخول؛ نجمع ملخصًا للرسالة.
+                        try:
+                            from ..services.hotspot_companion_pages import (
+                                build_all_companions,
+                            )
+                            # زر متجر البطاقات في status.html يفتح
+                            # store.html المرفوع بجانبها (نفس قرار زر
+                            # المتجر في login.html) عند تفعيل المتجر.
+                            comp_store = (
+                                ht.STORE_ONROUTER_FILENAME
+                                if (store_enabled and store_api_base)
+                                else "")
+                            pages = build_all_companions(
+                                safe, store_url=comp_store)
+                            ok_names, fail_names = [], []
+                            for fname, fhtml in pages.items():
+                                try:
+                                    r = ht.deploy_hotspot_file(
+                                        client, fname, fhtml)
+                                except Exception:  # noqa: BLE001
+                                    r = None
+                                if r and r.ok:
+                                    ok_names.append(fname)
+                                else:
+                                    fail_names.append(fname)
+                            companion_summary = _companion_summary(
+                                ok_names, fail_names)
+                        except Exception:  # noqa: BLE001
+                            # بناء الصفحات نفسه فشل (لن يحدث عمليًا) —
+                            # لا نُفشل نشر صفحة الدخول.
+                            companion_summary = ""
+                    if (store_enabled and store_api_base
+                            and deploy_result and deploy_result.ok):
+                        from ..services.hotspot_store_page import (
+                            deploy_store, ensure_walled_garden,
+                        )
+                        from ..services.store_key import (
+                            get_or_create_store_key,
+                        )
+                        # توليد/جلب مفتاح المتجر وحقنه في الصفحة المنشورة
+                        # — يصبح الفرض على الـ API فعّالًا فور هذا النشر.
+                        store_result = deploy_store(
+                            client,
+                            api_base=store_api_base,
+                            tenant_name=safe.get("TENANT_NAME", ""),
+                            accent_color=safe.get("ACCENT_COLOR", ""),
+                            logo_url=safe.get("TENANT_LOGO_URL", ""),
+                            store_key=get_or_create_store_key(
+                                _tid(),
+                                by=int(getattr(g, "admin_id", 0) or 0)),
+                        )
+                        if not store_result.ok:
+                            # صفحة الدخول نُشرت لكن المتجر فشل —
+                            # نُظهر السبب دون اعتبار النشر كله فاشلًا.
+                            error = ("نُشرت صفحة الدخول لكن رفع متجر "
+                                     "الراوتر فشل: " + store_result.error)
+                        else:
+                            # تجهيز walled-garden تلقائيًا — بدون هذه
+                            # القواعد لا يصل المتجر للراديوس قبل تسجيل
+                            # دخول الإنترنت. فشلها لا يُفشل النشر:
+                            # يعرض المصمّم أمر النسخ اليدوي بدلًا.
+                            wg_result = ensure_walled_garden(
+                                client, api_base=store_api_base)
                 except Exception as e:  # noqa: BLE001
                     error = "تعذّر الاتصال بالراوتر: " + str(e)
                 finally:
@@ -252,43 +635,647 @@ def mt_login_designer_deploy(nas_id: int):
                         "ok": bool(deploy_result and deploy_result.ok),
                         "error": (deploy_result.error
                                   if deploy_result else error),
+                        # متجر الراوتر — يُرفع تلقائيًا مع التصميم
+                        # عند تفعيل المتجر (store.html + API base).
+                        "store_enabled": store_enabled,
+                        "store_api_base": store_api_base,
+                        "store_ok": bool(store_result and store_result.ok),
+                        "store_path": (store_result.path
+                                       if store_result else ""),
+                        "store_bytes": (store_result.bytes
+                                        if store_result else 0),
+                        "store_error": (store_result.error
+                                        if store_result else ""),
+                        # walled-garden — يُجهَّز آليًا مع المتجر.
+                        "wg_ok": bool(wg_result and wg_result.ok),
+                        "wg_added": (wg_result.added if wg_result else 0),
+                        "wg_error": (wg_result.error if wg_result else ""),
                     },
                 )
 
-    return render_template(
-        "radius/mt_login_designer.html",
-        nas=nas,
-        library=ht.LIBRARY,
-        variables=ht.TEMPLATE_VARIABLES,
-        design=design,
-        saved=False,
-        error=error,
-        deploy_result=deploy_result,
-    )
+    # ملخص رفع الصفحات المرافقة يُعرض كرسالة نجاح إضافية (فقط عند
+    # نجاح نشر صفحة الدخول — الملخص لا يُبنى أصلًا قبل ذلك).
+    flash_ok = (companion_summary
+                if (deploy_result and deploy_result.ok) else "")
+    return _render_designer(nas_id, nas, design,
+                            error=error, deploy_result=deploy_result,
+                            store_result=store_result,
+                            wg_result=wg_result, flash_ok=flash_ok)
 
 
-def mt_login_designer_preview(nas_id: int):
-    """Return the rendered HTML for the iframe. Reads slug +
-    values from query string so the designer JS can re-call this
-    with whatever the operator is typing without first hitting the
-    DB. If the values fail validation we still return *something*
-    — the saved design or, failing that, the classic template
-    with defaults — so the iframe never blanks out."""
+# ─── «قوالب محفوظة» — حفظ/تطبيق/حذف مجموعة المتغيّرات باسم ──────
+
+
+def mt_login_designer_preset_save(nas_id: int):
+    """يحفظ القالب والمتغيّرات الحالية (من نفس نموذج الحفظ) باسم
+    يحدده المشغّل — UPSERT فالاسم المكرر يحدّث القالب المحفوظ."""
     nas = _load_nas(nas_id)
     if not nas:
         abort(404)
-    slug = (request.args.get("template_slug") or "").strip()
-    if slug not in ht.TEMPLATES_BY_SLUG:
+    name = (request.form.get("preset_name") or "").strip()[:40]
+    slug = (request.form.get("template_slug") or "").strip()
+    values = {v.slug: (request.form.get(v.slug) or "").strip()
+              for v in ht.TEMPLATE_VARIABLES}
+    # نفس منطق الحفظ: رابط متجر فارغ → الرابط التلقائي المحسوب.
+    if not values.get("STORE_URL"):
+        values["STORE_URL"] = _auto_store_url()
+    error = ""
+    flash_ok = ""
+    if not name:
+        error = "اكتب اسمًا للقالب المحفوظ أولًا."
+    elif not _known_slug(slug):
+        error = "قالب غير معروف."
+    else:
+        try:
+            safe = ht.validate_vars(values)
+        except ValueError as e:
+            error = str(e)
+        else:
+            hotspot_designs_repo.save_preset(
+                _tid(), nas_id,
+                name=name, template_slug=slug, variables=safe,
+            )
+            values = safe
+            flash_ok = f"حُفظ القالب «{name}» في قوالبك المحفوظة."
+            actor = str(getattr(g, "admin_id", None) or "ui")
+            get_audit_service().record(
+                actor=actor,
+                action="mt.login_designer.preset_save",
+                target_type="mikrotik_nas",
+                target_id=str(nas_id),
+                severity="info",
+                result_status="success",
+                router_id=int(nas_id),
+                payload={"name": name, "template_slug": slug},
+            )
+    design = {"template_slug": slug if slug else "classic",
+              "variables": values}
+    return _render_designer(nas_id, nas, design,
+                            error=error, flash_ok=flash_ok)
+
+
+def mt_login_designer_preset_apply(nas_id: int):
+    """يعيد تطبيق قالب محفوظ: يصبح هو التصميم الحالي للراوتر
+    (يُحفظ في hotspot_designs) ويُعاد تحميل النموذج بقيمه."""
+    nas = _load_nas(nas_id)
+    if not nas:
+        abort(404)
+    try:
+        preset_id = int(request.form.get("preset_id") or 0)
+    except ValueError:
+        preset_id = 0
+    preset = hotspot_designs_repo.get_preset(_tid(), nas_id, preset_id)
+    if not preset:
+        return _render_designer(
+            nas_id, nas, _current_design(nas_id),
+            error="القالب المحفوظ غير موجود.")
+    slug = preset.get("template_slug") or "classic"
+    if not _known_slug(slug):
+        slug = "classic"
+    try:
+        safe = ht.validate_vars(preset.get("variables") or {})
+    except ValueError as e:
+        return _render_designer(
+            nas_id, nas, _current_design(nas_id), error=str(e))
+    hotspot_designs_repo.save_design(
+        _tid(), nas_id, template_slug=slug, variables=safe)
+    actor = str(getattr(g, "admin_id", None) or "ui")
+    get_audit_service().record(
+        actor=actor,
+        action="mt.login_designer.preset_apply",
+        target_type="mikrotik_nas",
+        target_id=str(nas_id),
+        severity="info",
+        result_status="success",
+        router_id=int(nas_id),
+        payload={"preset_id": preset_id,
+                 "name": preset.get("name", ""),
+                 "template_slug": slug},
+    )
+    design = {"template_slug": slug, "variables": safe}
+    return _render_designer(
+        nas_id, nas, design, saved=True,
+        flash_ok=f"طُبّق القالب المحفوظ «{preset.get('name', '')}».")
+
+
+def mt_login_designer_preset_delete(nas_id: int):
+    nas = _load_nas(nas_id)
+    if not nas:
+        abort(404)
+    try:
+        preset_id = int(request.form.get("preset_id") or 0)
+    except ValueError:
+        preset_id = 0
+    preset = hotspot_designs_repo.get_preset(_tid(), nas_id, preset_id)
+    flash_ok = ""
+    if preset:
+        hotspot_designs_repo.delete_preset(_tid(), nas_id, preset_id)
+        flash_ok = f"حُذف القالب المحفوظ «{preset.get('name', '')}»."
+    return _render_designer(
+        nas_id, nas, _current_design(nas_id), flash_ok=flash_ok)
+
+
+# ─── «تحميل الحزمة (ZIP)» + «رفع تصميم خاص» ─────────────────────
+
+
+# الخطوط التي تشير إليها الصفحات بمسار نسبي fonts/... — تُضمَّن في
+# الحزمة فقط عندما يظهر مسارها فعلًا في HTML الناتج (login أو store).
+# الخط المعتمد للهوت سبوت هو المراعي (Almarai) بوزنين woff2 خفيفين
+# (~100KB للاثنين)؛ Tajawal يبقى لتوافق التصاميم الخاصة القديمة.
+_FONT_REL_PATHS = (
+    "fonts/Almarai-Regular.woff2",
+    "fonts/Almarai-Bold.woff2",
+    "fonts/Tajawal-Regular.ttf",
+)
+
+
+def mt_login_designer_download_zip(nas_id: int):
+    """يبني حزمة هوت سبوت جاهزة للرفع اليدوي على الميكروتك ويعيدها
+    كملف ZIP مبني في الذاكرة (zipfile + BytesIO — لا ملفات مؤقتة):
+
+      • login.html  — التصميم الحالي بقيم النموذج، مع إبقاء
+        placeholders راوتر أو إس $(...) كما هي (نفس ناتج النشر
+        المباشر حرفيًا، بما فيه سكربت الدخول التلقائي بالـ QR).
+      • store.html  — عند تفعيل المتجر: صفحة متجر الراوتر الكاملة
+        (نفس باني النشر render_store_page) وزر المتجر في login.html
+        يتحوّل لرابط نسبي store.html.
+      • fonts/Almarai-*.woff2 (وTajawal للتصاميم القديمة) — فقط
+        إن كان التصميم يشير إليها بمسارها النسبي.
+      • README.txt  — تعليمات رفع عربية مختصرة.
+
+    GET (بلا حقول) يحزم التصميم المحفوظ؛ POST من زر المصمّم يحزم
+    القيم الحالية على الشاشة — POST لنفس سبب المعاينة الكبيرة:
+    قوائم JSON وشعار data-URL تتجاوز حدّ سطر الطلب في GET (414).
+    """
+    nas = _load_nas(nas_id)
+    if not nas:
+        abort(404)
+    # نفس تسامح المعاينة: GET بلا حقول → التصميم المحفوظ؛ POST →
+    # قيم النموذج. القيم تُفحص حقلًا حقلًا فلا يُسقط حقل ناقص الحزمة.
+    slug = (request.values.get("template_slug") or "").strip()
+    if not _known_slug(slug):
+        design = _current_design(nas_id)
+        slug = design["template_slug"]
+        base_values = design["variables"]
+    else:
+        saved_vars = _current_design(nas_id)["variables"]
+        base_values = {}
+        for v in ht.TEMPLATE_VARIABLES:
+            raw = request.values.get(v.slug)
+            base_values[v.slug] = (raw.strip() if raw is not None
+                                   else saved_vars.get(v.slug, v.default))
+    if not (base_values.get("STORE_URL") or "").strip():
+        base_values["STORE_URL"] = _auto_store_url()
+    tolerant: dict[str, str] = {}
+    for v in ht.TEMPLATE_VARIABLES:
+        try:
+            checked = ht.validate_vars(
+                {v.slug: base_values.get(v.slug, "")})
+            tolerant[v.slug] = checked[v.slug]
+        except ValueError:
+            tolerant[v.slug] = (_auto_store_url() or v.default) \
+                if v.slug == "STORE_URL" else v.default
+
+    # متجر الراوتر — نفس قرار مسار النشر المباشر: عند التفعيل
+    # يُرفق store.html ويتحوّل زر المتجر لرابط نسبي «store.html»
+    # (نفس المجلد على الراوتر). إن تعذّر بناء صفحة المتجر (لا IP
+    # راديوس مضبوط) تبقى الحزمة بلا store.html وزر المتجر برابطه.
+    store_html = ""
+    wg_command = ""
+    if tolerant.get("STORE_ENABLED") == "yes":
+        from ..services.hotspot_store_page import (
+            API_BASE_LOOPBACK_MSG, StorePageError, api_base_unusable,
+            render_store_page, walled_garden_command,
+        )
+        api_base = _auto_api_base()
+        # حارس الحزمة: عنوان راديوس فارغ/محلي → store.html المحقون
+        # به عديم الفائدة من أجهزة الزبائن — نرفض برسالة واضحة بدل
+        # حزمة تبدو سليمة ولا تعمل.
+        if api_base_unusable(api_base):
+            return _render_designer(
+                nas_id, nas, _current_design(nas_id),
+                error=API_BASE_LOOPBACK_MSG)
+        try:
+            from ..services.store_key import get_or_create_store_key
+            store_html = render_store_page(
+                api_base=api_base,
+                tenant_name=tolerant.get("TENANT_NAME", ""),
+                accent_color=tolerant.get("ACCENT_COLOR", ""),
+                logo_url=tolerant.get("TENANT_LOGO_URL", ""),
+                # الحزمة اليدوية تحمل المفتاح أيضًا (يُولَّد إن لزم) —
+                # ينشط الفرض بمجرد رفعها للراوتر واستخدامها.
+                store_key=get_or_create_store_key(
+                    _tid(), by=int(getattr(g, "admin_id", 0) or 0)),
+            )
+            # الرفع اليدوي لا يجهّز walled-garden آليًا — نضمّن
+            # الأمر الجاهز في README الحزمة.
+            wg_command = walled_garden_command(api_base)
+        except StorePageError:
+            store_html = ""
+
+    login_vars = dict(tolerant)
+    if store_html and not _is_manual_store_url(
+            tolerant.get("STORE_URL", "")):
+        login_vars["STORE_URL"] = ht.STORE_ONROUTER_FILENAME
+    try:
+        # render (وليس preview): placeholders $(...) تبقى حرفية —
+        # هذا هو الملف الذي يُرفع للراوتر، لا معاينة متصفح.
+        login_html = ht.render(slug, login_vars, tenant_id=_tid())
+    except ValueError as e:
+        return _render_designer(
+            nas_id, nas, _current_design(nas_id), error=str(e))
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr("login.html", login_html)
+        # errors.txt — رسائل أخطاء الهوت سبوت بصيغة الميكروتك، تُرفع
+        # بجانب login.html فيلتقطها الراوتر مكان $(error). نفس مصدر
+        # النشر المباشر (لوحة «رسائل أخطاء الهوتسبوت»).
+        try:
+            from ..db.repos import (
+                hotspot_error_messages_repo as _err_repo,
+            )
+            from ..services.hotspot_error_messages import build_errors_txt
+            _msgs, _en = _err_repo.resolved_messages(_tid())
+            z.writestr("errors.txt",
+                       build_errors_txt(_msgs, enabled=_en))
+        except Exception:  # noqa: BLE001
+            pass
+        if store_html:
+            z.writestr(ht.STORE_ONROUTER_FILENAME, store_html)
+        # ── الصفحات القياسية المرافقة ──
+        # مجلد هوت سبوت كامل يحتاج alogin/status/logout/error/rlogin/
+        # redirect/radvert بجانب login.html — نبنيها بنفس ثيم التصميم
+        # ونكتبها في الحزمة فيكون الرفع اليدوي للمجلد كاملًا. زر متجر
+        # البطاقات في status.html يفتح store.html إن كان مرفقًا.
+        from ..services.hotspot_companion_pages import build_all_companions
+        comp_store = ht.STORE_ONROUTER_FILENAME if store_html else ""
+        companion_pages = build_all_companions(
+            tolerant, store_url=comp_store)
+        for fname, fhtml in companion_pages.items():
+            z.writestr(fname, fhtml)
+        # الخطوط — كل خط يُضمَّن فقط إن كان أحد ملفات الحزمة (صفحة
+        # الدخول أو المتجر أو الصفحات المرافقة) يشير إليه بمساره
+        # النسبي. الصفحات المرافقة تشير لخط المراعي دائمًا، فيُضمَّن
+        # حتى لو كان تصميم الدخول لا يستخدمه.
+        _all_html = [login_html] + list(companion_pages.values())
+        if store_html:
+            _all_html.append(store_html)
+        for rel in _FONT_REL_PATHS:
+            if not any(rel in h for h in _all_html):
+                continue
+            font_path = os.path.join(
+                current_app.static_folder, "hotspot", "fonts",
+                os.path.basename(rel))
+            if os.path.isfile(font_path):
+                with open(font_path, "rb") as fh:
+                    z.writestr(rel, fh.read())
+        readme = (
+            "حزمة صفحة الهوت سبوت — HobeRadius\n"
+            "================================\n\n"
+            "محتويات الحزمة (مجلد هوت سبوت كامل):\n"
+            "  login.html    — صفحة الدخول (التصميم المختار).\n"
+            "  alogin.html   — الدخول التلقائي (يرسله الراوتر بعد\n"
+            "                  المصادقة).\n"
+            "  status.html   — لوحة الجلسة بعد الدخول (مدة/استهلاك/\n"
+            "                  IP + زر خروج).\n"
+            "  logout.html   — صفحة الخروج + زر دخول من جديد.\n"
+            "  error.html    — صفحة الأخطاء المنسّقة.\n"
+            "  rlogin.html   — إعادة توجيه «تسجيل الدخول مطلوب».\n"
+            "  redirect.html — إعادة توجيه عامة.\n"
+            "  radvert.html  — صفحة الإعلان/التحويل.\n"
+            "  errors.txt    — رسائل أخطاء الهوت سبوت بالعربية.\n"
+            + ("  store.html    — متجر البطاقات الإلكتروني.\n"
+               if store_html else "")
+            + "  fonts/        — خط المراعي (Almarai) إن لزم.\n"
+            + "  README.txt    — هذا الملف.\n\n"
+            "كل الصفحات بنفس هوية التصميم (الألوان/الشعار/الاسم/الخط)\n"
+            "فتظهر متناسقة مع صفحة الدخول.\n\n"
+            "طريقة الرفع اليدوي على الميكروتك:\n"
+            "1) افتح Winbox → Files.\n"
+            "2) ارفع *كل* محتويات هذه الحزمة إلى مجلد hotspot/ بحيث\n"
+            "   يصبح المسار النهائي hotspot/login.html و\n"
+            "   hotspot/status.html ... إلخ (ومجلد fonts/ بجانبها في\n"
+            "   نفس المجلد). رفع login.html وحده لا يكفي — تنكسر\n"
+            "   صفحات الحالة والخروج وإعادة التوجيه.\n"
+            "   مجلد fonts/ يحوي خط المراعي (Almarai) — ارفعه كما هو\n"
+            "   حتى تظهر الصفحات بالخط المعتمد؛ إن لم يُرفع تسقط\n"
+            "   الصفحات بأمان إلى خطوط النظام.\n"
+            "3) تأكد أن بروفايل سيرفر الهوت سبوت يستخدم\n"
+            "   html-directory=hotspot.\n\n"
+            "ملاحظة: placeholders بالشكل $(...) يملؤها RouterOS\n"
+            "تلقائيًا وقت الطلب — لا تعدّلها.\n")
+        if store_html and wg_command:
+            readme += (
+                "\nمهم — قائمة السماح (walled-garden) للمتجر:\n"
+                "===========================================\n"
+                "حتى يتصل متجر store.html بسيرفر الراديوس قبل تسجيل\n"
+                "دخول الزبائن للإنترنت، أضف قاعدة walled-garden على\n"
+                "الراوتر. انسخ هذا الأمر والصقه في Terminal — نفس\n"
+                "الصيغة تعمل في RouterOS v6 و v7:\n\n"
+                "  " + wg_command + "\n\n"
+                "(النشر المباشر من المصمّم يضيف هذه القاعدة تلقائيًا —\n"
+                "هذا الأمر يلزم فقط مع الرفع اليدوي.)\n")
+        z.writestr("README.txt", readme)
+    buf.seek(0)
+
+    safe_slug = slug.replace(":", "-")
+    fname = f"hotspot_{safe_slug}_nas{nas_id}.zip"
+    return Response(
+        buf.getvalue(),
+        mimetype="application/zip",
+        headers={
+            "Content-Disposition": f'attachment; filename="{fname}"',
+        },
+    )
+
+
+def mt_login_designer_custom_upload(nas_id: int):
+    """«رفع تصميم خاص» — يقبل ملف .html مباشرة أو .zip يحوي
+    login.html، يفحصه (placeholders راوتر أو إس الإجبارية + وجود
+    </body> + الحجم ≤ 2MB) ثم يخزّنه للمستأجر فيظهر في معرض
+    التصاميم بصيغة custom:<id> ويُعامل مثل أي تصميم مكتبة
+    (معاينة / حفظ / نشر / تحميل ZIP)."""
+    nas = _load_nas(nas_id)
+    if not nas:
+        abort(404)
+    error = ""
+    flash_ok = ""
+    f = request.files.get("custom_file")
+    name = (request.form.get("custom_name") or "").strip()[:40]
+    if f is None or not (f.filename or "").strip():
+        error = "اختر ملف التصميم أولًا (HTML أو ZIP يحوي login.html)."
+    else:
+        # قراءة بسقف الحجم + 1 — لو تجاوزه الملف نرفض فورًا دون
+        # تحميل ملف عملاق كاملًا في الذاكرة.
+        raw = f.read(ht.CUSTOM_TEMPLATE_MAX_BYTES + 1)
+        if len(raw) > ht.CUSTOM_TEMPLATE_MAX_BYTES:
+            error = ("حجم الملف يتجاوز الحد المسموح (2 ميجابايت) — "
+                     "صغّر الصور المضمّنة وأعد المحاولة.")
+        else:
+            html = ""
+            fname = (f.filename or "").lower()
+            if fname.endswith(".zip") or zipfile.is_zipfile(
+                    io.BytesIO(raw)):
+                # ZIP: نبحث عن login.html (في الجذر أو أي مجلد) —
+                # نفس بنية حزمة «تحميل الحزمة (ZIP)» فالحزمة
+                # المحمَّلة من المصمّم تصلح للرفع مجددًا كما هي.
+                try:
+                    with zipfile.ZipFile(io.BytesIO(raw)) as z:
+                        entry = next(
+                            (n for n in z.namelist()
+                             if n.lower().rsplit("/", 1)[-1]
+                             == "login.html"), None)
+                        if entry is None:
+                            error = ("ملف ZIP لا يحوي login.html — "
+                                     "ضع صفحة الدخول باسم login.html "
+                                     "داخل الحزمة.")
+                        else:
+                            data = z.read(entry)
+                            if len(data) > ht.CUSTOM_TEMPLATE_MAX_BYTES:
+                                error = ("حجم login.html داخل الحزمة "
+                                         "يتجاوز الحد المسموح "
+                                         "(2 ميجابايت).")
+                            else:
+                                html = data.decode("utf-8",
+                                                   errors="replace")
+                except zipfile.BadZipFile:
+                    error = "ملف ZIP تالف — أعد ضغط الحزمة وحاول مجددًا."
+            else:
+                html = raw.decode("utf-8", errors="replace")
+
+            if not error:
+                # اسم افتراضي ودّي من اسم الملف إن لم يكتب المدير اسمًا.
+                if not name:
+                    stem = os.path.splitext(
+                        os.path.basename(f.filename or ""))[0]
+                    name = (stem or "تصميم خاص")[:40]
+                # تعقيم الاسم: حروف/أرقام/مسافات/شرطة/نقطة وعربية فقط
+                # (نفس روح _BRAND_NAME_RE) — الاسم يدخل لاحقًا في
+                # سلاسل confirm() بالواجهة فلا نسمح بعلامات اقتباس.
+                name = re.sub(r"[^\w\s\-\.؀-ۿ]", "", name).strip()[:40]
+                if not name:
+                    name = "تصميم خاص"
+                # حذف غطاء «جاري التحميل» نهائيًا من التصميم المرفوع
+                # قبل التخزين — فيُخزَّن نظيفًا وتُعرض الصفحة مباشرة.
+                # render() يحذفه أيضًا عند النشر (حماية مزدوجة للسجلات
+                # القديمة)، لكن الحذف هنا يبقي قاعدة البيانات نظيفة.
+                html = ht.strip_splash(html)
+                try:
+                    # الفحص الحاسم: placeholders ميكروتك الإجبارية
+                    # و</body> والحجم — رسائل عربية واضحة عند الرفض.
+                    ht.validate_custom_template_html(html)
+                except ValueError as e:
+                    error = str(e)
+                else:
+                    new_id = hotspot_designs_repo.save_custom_template(
+                        _tid(), name=name, html=html)
+                    flash_ok = (f"رُفع التصميم الخاص «{name}» — "
+                                "ستجده الآن في معرض التصاميم، اختره "
+                                "ثم احفظ وانشر كأي تصميم آخر.")
+                    actor = str(getattr(g, "admin_id", None) or "ui")
+                    get_audit_service().record(
+                        actor=actor,
+                        action="mt.login_designer.custom_upload",
+                        target_type="mikrotik_nas",
+                        target_id=str(nas_id),
+                        severity="info",
+                        result_status="success",
+                        router_id=int(nas_id),
+                        payload={"name": name,
+                                 "custom_id": new_id,
+                                 "bytes": len(html.encode("utf-8"))},
+                    )
+    return _render_designer(
+        nas_id, nas, _current_design(nas_id),
+        error=error, flash_ok=flash_ok)
+
+
+def mt_login_designer_custom_delete(nas_id: int):
+    """حذف تصميم خاص من المعرض — التصميم المحفوظ الذي كان يشير
+    إليه يسقط تلقائيًا إلى «الكلاسيكي» (انظر _current_design)."""
+    nas = _load_nas(nas_id)
+    if not nas:
+        abort(404)
+    try:
+        custom_id = int(request.form.get("custom_id") or 0)
+    except ValueError:
+        custom_id = 0
+    row = hotspot_designs_repo.get_custom_template(_tid(), custom_id)
+    flash_ok = ""
+    if row:
+        hotspot_designs_repo.delete_custom_template(_tid(), custom_id)
+        flash_ok = f"حُذف التصميم الخاص «{row.get('name', '')}»."
+        actor = str(getattr(g, "admin_id", None) or "ui")
+        get_audit_service().record(
+            actor=actor,
+            action="mt.login_designer.custom_delete",
+            target_type="mikrotik_nas",
+            target_id=str(nas_id),
+            severity="info",
+            result_status="success",
+            router_id=int(nas_id),
+            payload={"name": row.get("name", ""),
+                     "custom_id": custom_id},
+        )
+    return _render_designer(
+        nas_id, nas, _current_design(nas_id), flash_ok=flash_ok)
+
+
+def mt_login_designer_font(nas_id: int, filename: str):
+    """يخدم ملفات خطوط الهوت سبوت (Almarai/Tajawal) لمعاينات المصمّم.
+
+    send_from_directory تمنع تجاوز المسار (path traversal)؛
+    nas_id غير مستخدم فعليًا لكنه جزء من المسار حتى يُحلّ المسار
+    النسبي fonts/... داخل صفحة المعاينة بشكل صحيح."""
+    import os
+    fonts_dir = os.path.join(
+        current_app.static_folder, "hotspot", "fonts")
+    return send_from_directory(fonts_dir, filename)
+
+
+def mt_login_designer_store_preview(nas_id: int):
+    """معاينة متجر الراوتر المستقل — ناتج render_store_page حرفيًا.
+
+    نفس صفحة store.html التي تُرفع للراوتر عند النشر/التحميل:
+    تصميم مستقل بالكامل يتخاطب مع سيرفر الراديوس عبر
+    /api/v1/store/* فقط (api_base من إعداد network.radius_server_ip).
+    تقبل GET (زر المتجر داخل iframe المعاينة) و POST (قيم النموذج
+    الحالية من المصمّم إن أردنا معاينة حية قبل الحفظ).
+
+    placeholders راوتر أو إس $(...) تُجرَّد كما في معاينة الدخول،
+    ويُحقن <base> ليحلّ الخط النسبي fonts/Almarai-*.woff2 عبر
+    نقطة mt_login_designer_font."""
+    nas = _load_nas(nas_id)
+    if not nas:
+        abort(404)
+    from ..services.hotspot_store_page import (
+        StorePageError, render_store_page,
+    )
+    saved_vars = _current_design(nas_id)["variables"]
+    # POST من المصمّم يمرر القيم الحالية؛ GET يسقط للتصميم المحفوظ.
+    def _val(slug: str) -> str:
+        raw = request.values.get(slug)
+        return raw.strip() if raw is not None else (
+            saved_vars.get(slug) or "")
+    try:
+        # strict=False في المعاينة: حتى بلا IP راديوس مضبوط نعرض
+        # الصفحة الحقيقية وفوقها شريط تحذير «اضبط network.radius_server_ip»
+        # (حارس JS داخل الصفحة) بدل صفحة خطأ مبهمة — فيرى المشغّل
+        # تمامًا ما سيراه الزبون ويفهم سبب توقّف المتجر.
+        # المعاينة تقرأ المفتاح فقط (لا تولّده) — فلا تُفعّل الفرض
+        # بمجرد العرض؛ الفرض ينشط عند النشر/الحزمة. حقن المفتاح هنا
+        # يجعل ping الحيّ داخل iframe المعاينة ينجح بعد ضبط المفتاح.
+        from ..services.store_key import get_store_key
+        html = render_store_page(
+            api_base=_auto_api_base(),
+            tenant_name=_val("TENANT_NAME"),
+            accent_color=_val("ACCENT_COLOR"),
+            logo_url=_val("TENANT_LOGO_URL"),
+            store_key=get_store_key(_tid()),
+            strict=False,
+        )
+    except StorePageError as e:
+        # احتياط (لن يحدث مع strict=False) — صفحة تنبيه ودّية.
+        return Response(
+            "<!DOCTYPE html><html lang='ar' dir='rtl'><body "
+            "style='font-family:Tahoma;padding:30px;text-align:center;"
+            "color:#b45309'>" + str(e) + "</body></html>",
+            mimetype="text/html")
+    # تجريد placeholders راوتر أو إس (نموذج الدخول المخفي) —
+    # نفس روح ht.preview حتى لا تظهر $(link-login-only) حرفيًا.
+    html = re.sub(r"\$\([^)]+\)", "", html)
+    # <base> ليحلّ fonts/... النسبي إلى نقطة خدمة الخطوط المجاورة.
+    base_href = url_for("radius.mt_login_designer_store_preview",
+                        nas_id=nas_id)
+    if "<head>" in html:
+        html = html.replace(
+            "<head>", '<head><base href="' + base_href + '">', 1)
+    return Response(html, mimetype="text/html")
+
+
+def mt_login_designer_preview(nas_id: int):
+    """Return the rendered HTML for the iframe.
+
+    * GET — مصغّرات المعرض ورابط الـ iframe الأولي: تقرأ من
+      query string (روابط قصيرة — template_slug فقط أو لا شيء).
+    * POST — المعاينة الكبيرة الحيّة: المصمّم يرسل كل المتغيّرات
+      (بما فيها قوائم JSON وشعار data-URL الضخم) في جسم الطلب عبر
+      fetch ثم يعرض الناتج بـ iframe.srcdoc — فلا يصطدم الرابط
+      أبدًا بحدّ طول سطر الطلب في الخادم (414).
+
+    If the values fail validation we still return *something*
+    — كل حقل غير صالح يسقط وحده إلى قيمته الافتراضية بدل أن
+    تنهار كل القيم معًا — so the iframe never blanks out."""
+    nas = _load_nas(nas_id)
+    if not nas:
+        abort(404)
+    # request.values يجمع query string (GET) وحقول النموذج (POST)
+    # فنخدم المسارين بنفس المنطق تمامًا.
+    slug = (request.values.get("template_slug") or "").strip()
+    if not _known_slug(slug):
         design = _current_design(nas_id)
         slug = design["template_slug"]
         values = design["variables"]
     else:
-        values = {v.slug: (request.args.get(v.slug) or "").strip()
-                  for v in ht.TEMPLATE_VARIABLES}
+        # المتغيّر الغائب كليًا من الطلب (مصغّرات المعرض تمرر
+        # template_slug فقط) يسقط إلى starter_vars الخاصة بالقالب
+        # ثم إلى الافتراضي — فتُظهر المصغّرة طابع التصميم الحقيقي
+        # (مثل زر المتجر في «بوابة المتجر»). التصاميم الخاصة
+        # المرفوعة (custom:<id>) بلا starter_vars — افتراضيات فقط.
+        _lib = ht.TEMPLATES_BY_SLUG.get(slug)
+        starter = (_lib.starter_vars if _lib else None) or {}
+        values = {}
+        for v in ht.TEMPLATE_VARIABLES:
+            raw = request.values.get(v.slug)
+            if raw is None:
+                values[v.slug] = starter.get(v.slug, v.default)
+            else:
+                values[v.slug] = raw.strip()
+    # تسامح لكل حقل على حدة: الحقل غير الصالح (لون ناقص أثناء
+    # الكتابة مثلًا) يعود وحده للافتراضي — بقية ما كتبه المشغّل
+    # يبقى ظاهرًا في المعاينة بدل أن «يختفي كل شيء».
+    # رابط متجر فارغ في المعاينة → الرابط التلقائي (نفس ما يحدث
+    # عند الحفظ) فتطابق المعاينة الناتج المنشور تمامًا.
+    if not (values.get("STORE_URL") or "").strip():
+        values["STORE_URL"] = _auto_store_url()
+    tolerant: dict[str, str] = {}
+    for v in ht.TEMPLATE_VARIABLES:
+        try:
+            # validate_vars يطبّق نفس قواعد الحفظ (بما فيها تطبيع
+            # STORE_URL الودّي) على الحقل وحده — فتتطابق المعاينة
+            # مع ما سيُحفظ فعلًا.
+            checked = ht.validate_vars({v.slug: values.get(v.slug, "")})
+            tolerant[v.slug] = checked[v.slug]
+        except ValueError:
+            tolerant[v.slug] = (_auto_store_url() or v.default) \
+                if v.slug == "STORE_URL" else v.default
+    # ── زر المتجر في المعاينة يفتح متجر الراوتر المستقل ──
+    # على الراوتر يتحوّل الزر لرابط نسبي store.html (التصميم
+    # المستقل المرفوع بجانب صفحة الدخول)؛ وفي المعاينة نوجّهه إلى
+    # نقطة معاينة المتجر التي تعيد ناتج render_store_page حرفيًا —
+    # لا إحالة لبوابة /portal/card على السيرفر بعد الآن. التجاوز
+    # اليدوي المقصود (رابط مخصص مختلف كليًا) يبقى محترمًا.
+    if (tolerant.get("STORE_ENABLED") == "yes"
+            and not _is_manual_store_url(tolerant.get("STORE_URL", ""))):
+        tolerant["STORE_URL"] = url_for(
+            "radius.mt_login_designer_store_preview", nas_id=nas_id)
     try:
-        html = ht.preview(slug, values)
-    except ValueError:
-        # Operator typed something invalid in real time — fall
-        # back to defaults so the iframe doesn't go blank.
-        html = ht.preview(slug, {})
+        html = ht.preview(slug, tolerant, tenant_id=_tid())
+    except ValueError:  # noqa: PERF203 — مسار نادر (قالب معطوب)
+        try:
+            html = ht.preview(slug, {}, tenant_id=_tid())
+        except ValueError:
+            # تصميم خاص حُذف بين تحميل الصفحة وطلب المصغّرة —
+            # نعرض الكلاسيكي بدل صفحة خطأ داخل الـ iframe.
+            html = ht.preview("classic", {})
+    # حقن <base> برابط نقطة المعاينة نفسها: عند العرض عبر
+    # iframe.srcdoc لا يملك المستند رابطًا أصليًا، فبدون <base>
+    # تنكسر المسارات النسبية مثل خط fonts/Tajawal-Regular.ttf
+    # (تنحلّ نسبةً إلى صفحة المصمّم لا إلى مسار المعاينة).
+    base_href = url_for("radius.mt_login_designer_preview",
+                        nas_id=nas_id)
+    if "<head>" in html:
+        html = html.replace(
+            "<head>", '<head><base href="' + base_href + '">', 1)
     return Response(html, mimetype="text/html")

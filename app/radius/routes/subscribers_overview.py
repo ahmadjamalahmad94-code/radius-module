@@ -179,7 +179,7 @@ def _subscribers_overview_snapshot(tenant_id: int, period: str) -> dict:
     outstanding = accounting_repo.outstanding_summary(tenant_id)
     census = _subscriber_census(tenant_id)
     quota = _quota_allocation(tenant_id)
-    debtors = accounting_repo.top_debtors(tenant_id, limit=8)
+    debtors = accounting_repo.top_debtors(tenant_id, limit=50)
 
     selected_label = (
         sales_sel.get("period")
@@ -190,10 +190,20 @@ def _subscribers_overview_snapshot(tenant_id: int, period: str) -> dict:
         or "—"
     )
 
+    # ── الفترات المتاحة للاختيار (سنوات أو أشهر) — union كل السلاسل ──
+    period_options: list[str] = []
+    for rows in (sales_rows, loan_rows, act_rows, data_rows):
+        for row in rows:
+            p = str(row.get("period") or "")
+            if p and p not in period_options:
+                period_options.append(p)
+    period_options.sort(reverse=True)
+
     return {
         "period": period,
         "grain": grain,
         "selected_label": selected_label,
+        "period_options": period_options,
         # دخل + صرف headline (الاثنين)
         "collected_total": float(sales_sel.get("total") or 0),   # المُحصّل من المشتركين
         "disbursed_total": float(loan_sel.get("total") or 0),    # المصروف (سلف) للمشتركين

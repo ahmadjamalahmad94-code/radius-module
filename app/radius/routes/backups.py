@@ -182,7 +182,7 @@ def backups_upload_panel():
     elif result.get("status") == "no_backup_found":
         flash("لا توجد نسخة محلية ناجحة لرفعها. شغّل نسخة محلية أولاً.", "error")
     elif result.get("status") in {"disabled", "config_missing"}:
-        flash("جسر لوحة التراخيص غير مُعدّ. راجع صفحة «ملف التراخيص» لإكمال الربط.", "error")
+        flash("جسر لوحة التراخيص غير مُعدّ. راجع صفحة «ترخيص النظام» لإكمال الربط.", "error")
     else:
         err = (result.get("error") or {}).get("message") or result.get("status") or "تعذر الرفع."
         flash(f"تعذّر رفع النسخة إلى لوحة التراخيص: {err}", "error")

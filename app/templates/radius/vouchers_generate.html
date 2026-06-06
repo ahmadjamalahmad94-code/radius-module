@@ -44,6 +44,18 @@
         <div class="hub-field-hint">ربط الكوبون بباقة معينة سيمكِّن المشترك من تفعيلها تلقائيًا.</div>
       </div>
 
+      {# عدد خانات الكود — الافتراضي 12 (الطول التاريخي XXXX-XXXX-XXXX) #}
+      <div class="hub-field">
+        <label class="hub-field-label" for="hub-f-code_length">عدد خانات الكود</label>
+        <select class="hub-select" id="hub-f-code_length" name="code_length">
+          <option value="6">6 خانات</option>
+          <option value="8">8 خانات</option>
+          <option value="10">10 خانات</option>
+          <option value="12" selected>12 خانة (الافتراضي)</option>
+        </select>
+        <div class="hub-field-hint">طول كود الكوبون المولَّد — يُقسَّم بشرطات كل 4 خانات.</div>
+      </div>
+
       <div class="hub-field">
         <label class="hub-field-label" for="hub-f-expire_at">تنتهي في</label>
         <input class="hub-input" type="date" id="hub-f-expire_at" name="expire_at">

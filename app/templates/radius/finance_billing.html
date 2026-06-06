@@ -7,6 +7,8 @@
 {% block page_sub %}<span class="sub">إصدار الفواتير وتوليد الكوبونات في صفحة واحدة</span>{% endblock %}
 
 {% block head_extra %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
 <style>
 /* ── Retained: tab switcher pills (kept inside the unified hero) ── */
 .fb-tabs{display:flex;flex-wrap:wrap;gap:8px}
@@ -18,19 +20,35 @@
 .fb-filters{display:flex;flex-wrap:wrap;gap:6px}
 .fb-filters a{padding:6px 12px;border-radius:999px;border:1px solid var(--hub-border-soft);background:#fff;color:var(--hub-text-mute);font-weight:800;text-decoration:none;font-size:12px}
 .fb-filters a.is-active{background:var(--hub-bg-soft);color:var(--hub-brand-ink);border-color:var(--hub-brand-soft)}
-/* ── Retained: bespoke create-dialogs (untouched <dialog> + JS below) ── */
-.fb-modal{border:none;border-radius:18px;padding:0;max-width:680px;width:calc(100% - 32px);box-shadow:0 30px 80px rgba(15,23,42,.35);background:#fff}
-.fb-modal::backdrop{background:rgba(15,23,42,.55);backdrop-filter:blur(2px)}
-.fb-modal-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px;border-bottom:1px solid var(--hub-border-soft)}
+/* ── Retained: bespoke create-dialogs (untouched <dialog> + JS below) ──
+   تظبيط الصندوق بنفس نمط ff-modal في users_finance: رأس ثابت، جسم قابل
+   للتمرير بارتفاع محدود، شبكة عمودين بمسافات متّسقة، وتذييل بأزرار محاذاة. */
+.fb-modal{border:none;border-radius:16px;padding:0;max-width:620px;width:calc(100% - 32px);
+  max-height:min(88vh,760px);box-shadow:0 28px 80px rgba(15,23,42,.32);background:#fff;overflow:visible}
+.fb-modal::backdrop{background:rgba(15,23,42,.52);backdrop-filter:blur(2px)}
+.fb-modal form{display:flex;flex-direction:column;max-height:inherit}
+.fb-modal-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 18px;
+  border-bottom:1px solid var(--hub-border-soft);flex:0 0 auto}
 .fb-modal-head h3{margin:0;font-size:17px;font-weight:900;color:var(--hub-text);display:flex;align-items:center;gap:9px}
-.fb-modal-body{padding:18px 20px}
-.fb-modal-foot{display:flex;justify-content:flex-end;gap:8px;padding:14px 20px;border-top:1px solid var(--hub-border-soft);background:var(--hub-bg-soft);border-radius:0 0 18px 18px}
+.fb-modal-body{padding:16px 18px;overflow:auto;flex:1 1 auto;min-height:0}
+.fb-modal-foot{display:flex;justify-content:flex-end;align-items:center;gap:8px;padding:13px 18px;
+  border-top:1px solid var(--hub-border-soft);background:#fbfdff;border-radius:0 0 16px 16px;flex:0 0 auto}
 .fb-x{width:34px;height:34px;border-radius:9px;border:1px solid var(--hub-border-soft);background:#fff;cursor:pointer;color:var(--hub-text-mute)}
 .fb-x:hover{background:var(--hub-bg-soft);color:var(--hub-text)}
-.fb-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+/* شبكة الحقول: عمودان متساويان، العنوان فوق الحقل، فجوة موحّدة 10px */
+.fb-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .fb-form-grid .span2{grid-column:1 / -1}
 @media(max-width:560px){.fb-form-grid{grid-template-columns:1fr}}
-.fb-form-grid label{display:flex;flex-direction:column;gap:5px;font-size:13px;font-weight:800;color:var(--hub-text-soft)}
+/* العنوان والنجمة على سطر واحد، والحقل تحتهما — block بدل عمود flex
+   (عمود الـ flex كان يكسر النجمة لسطر مستقل بين العنوان والحقل) */
+.fb-form-grid label{display:block;font-size:12.5px;font-weight:800;color:var(--hub-text-soft)}
+.fb-form-grid label > .hub-input,
+.fb-form-grid label > .hbsel,
+.fb-form-grid label > textarea{margin-top:5px}
+.fb-form-grid .req{color:var(--hub-red,#EF4444);margin-inline-start:2px}
+/* الحقول والقوائم تمتد بعرض خليتها كاملة لمحاذاة متناسقة */
+.fb-form-grid .hub-input,.fb-form-grid .hbsel{width:100%;box-sizing:border-box}
+.fb-form-grid .hbsel{display:block}
 </style>
 {% endblock %}
 
@@ -84,6 +102,7 @@
     <a href="?tab=vouchers&status=revoked" class="{{ 'is-active' if status=='revoked' }}">ملغاة</a>
   </div>
   <span class="hub-spacer"></span>
+  <button class="hub-btn hub-btn--secondary hub-btn--sm" type="button" data-modal-open="voucherRedeem"><i class="fa-solid fa-hand-holding-dollar"></i> صرف كوبون</button>
   <button class="hub-btn hub-btn--primary hub-btn--sm" type="button" data-modal-open="voucher"><i class="fa-solid fa-plus"></i> توليد كوبونات</button>
   {% endif %}
 {% endcall %}
@@ -103,7 +122,7 @@
 )) %}
   {% call hub.section("الفواتير", icon="file-invoice", meta=(invoices|length|string + " فاتورة") if invoices else "", flush=True) %}
     {% if invoices %}
-    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25" data-uds-export-title="الفواتير" style="border:none;border-radius:0">
       <table class="hub-table">
         <thead>
           <tr>
@@ -117,6 +136,11 @@
             <th>التاريخ</th>
           </tr>
         </thead>
+        {# قواميس تعريب قيم enum الخام القادمة من قاعدة البيانات — تطابق
+           خيارات مودال الإصدار. القيمة الخام تبقى في title للمراجعة الفنية. #}
+        {% set _dir_ar = {'charge': 'تحصيل', 'refund': 'إرجاع', 'deposit': 'إيداع', 'withdraw': 'سحب', 'credit': 'رصيد'} %}
+        {% set _pm_ar = {'cash': 'نقدًا', 'transfer': 'حوالة', 'card': 'بطاقة', 'online': 'دفع إلكتروني', 'manual': 'يدوي'} %}
+        {% set _inv_status_ar = {'paid': 'مدفوعة', 'pending': 'معلَّقة', 'failed': 'فشلت'} %}
         <tbody>
           {% for i in invoices %}
           <tr>
@@ -124,9 +148,12 @@
             <td>{{ i.username }}</td>
             <td>{{ i.plan_name or "—" }}</td>
             <td class="num"><strong>{{ i.amount|money }}</strong></td>
-            <td>{{ i.direction or "—" }}</td>
-            <td>{{ i.payment_method or "—" }}</td>
-            <td>{{ hub.pill(i.status, variant="green" if i.status=="paid" else ("amber" if i.status=="pending" else "grey")) }}</td>
+            {# الاتجاه معرّب — القيمة الخام في title #}
+            <td>{% if i.direction %}<span title="{{ i.direction }}">{{ _dir_ar.get(i.direction, i.direction) }}</span>{% else %}—{% endif %}</td>
+            {# طريقة الدفع معرّبة — القيمة الخام في title #}
+            <td>{% if i.payment_method %}<span title="{{ i.payment_method }}">{{ _pm_ar.get(i.payment_method, i.payment_method) }}</span>{% else %}—{% endif %}</td>
+            {# الحالة معرّبة قبل تمريرها للـ pill — القيمة الخام في title #}
+            <td><span title="{{ i.status }}">{{ hub.pill(_inv_status_ar.get(i.status, i.status), variant="green" if i.status=="paid" else ("amber" if i.status=="pending" else "grey")) }}</span></td>
             <td class="small hub-text-mute">{{ i.created_at|dt_local if i.created_at else "—" }}</td>
           </tr>
           {% endfor %}
@@ -155,7 +182,7 @@
 )) %}
   {% call hub.section("الكوبونات", icon="ticket", meta=(vouchers|length|string + " كوبون") if vouchers else "", flush=True) %}
     {% if vouchers %}
-    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25" data-uds-export-title="الكوبونات" style="border:none;border-radius:0">
       <table class="hub-table">
         <thead>
           <tr>
@@ -173,8 +200,11 @@
             <td class="mono"><strong>{{ v.code }}</strong></td>
             <td class="num">{{ v.amount|money }}</td>
             <td>{{ plans_map[v.plan_id].name if v.plan_id and v.plan_id in plans_map else "—" }}</td>
-            <td>{{ hub.pill(v.status, variant="green" if v.status=="active" else ("blue" if v.status=="used" else "grey")) }}</td>
-            <td class="small hub-text-mute">{{ v.expire_at or "—" }}</td>
+            {# الحالة معرّبة — والقيمة الخام تبقى في title للمراجعة الفنية #}
+            {% set _vch_status_ar = {'active': 'نشطة', 'used': 'مستخدمة', 'revoked': 'ملغاة', 'expired': 'منتهية'} %}
+            {% set _vch_status_variant = {'active': 'green', 'used': 'blue', 'revoked': 'red', 'expired': 'grey'} %}
+            <td><span title="{{ v.status }}">{{ hub.pill(_vch_status_ar.get(v.status, v.status), variant=_vch_status_variant.get(v.status, 'grey')) }}</span></td>
+            <td class="small hub-text-mute">{{ v.expire_at|date_local if v.expire_at else "—" }}</td>
             <td>
               {% if v.status == 'active' %}
               <button type="button" class="hub-btn hub-btn--ghost hub-btn--sm"
@@ -234,7 +264,10 @@
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
       <div class="fb-form-grid">
         <label class="span2">المشترك <span class="req">*</span>
-          <select class="hub-select" name="subscriber_id" required>
+          {# data-search-placeholder: يخصّص نص حقل البحث الفوري داخل القائمة
+             (يظهر تلقائيًا عند +8 خيارات) — اختيار العنصر = اعتماد المشترك #}
+          <select class="hub-select" name="subscriber_id" required
+                  data-search-placeholder="ابحث بالاسم أو اليوزر...">
             <option value="">— اختر —</option>
             {% for s in subs %}<option value="{{ s.id }}">{{ s.username }} — {{ s.full_name or '—' }}</option>{% endfor %}
           </select>
@@ -284,10 +317,49 @@
         <label>الباقة (اختياري)
           <select class="hub-select" name="plan_id"><option value="">— بدون ربط —</option>{% for p in plans %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}</select>
         </label>
-        <label>تنتهي في<input class="hub-input" type="date" name="expire_at"></label>
+        {# عدد خانات الكود — الافتراضي 12 (الطول التاريخي XXXX-XXXX-XXXX) #}
+        <label>عدد خانات الكود
+          <select class="hub-select" name="code_length">
+            <option value="6">6 خانات</option>
+            <option value="8">8 خانات</option>
+            <option value="10">10 خانات</option>
+            <option value="12" selected>12 خانة (الافتراضي)</option>
+          </select>
+        </label>
+        <label class="span2">تنتهي في<input class="hub-input" type="date" name="expire_at"></label>
       </div>
     </div>
     <div class="fb-modal-foot"><button class="hub-btn hub-btn--ghost" type="button" data-modal-close>إلغاء</button><button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-plus"></i> توليد</button></div>
+  </form>
+</dialog>
+
+{# Redeem modal — صرف كوبون لمشترك: يرسل إلى radius.vch_redeem الذي يتحقق
+   من الكود (موجود/نشط/غير منتهٍ) ويعلّمه مستخدمًا ويضيف قيمته لرصيد المشترك. #}
+<dialog class="fb-modal" data-modal="voucherRedeem">
+  <form method="post" action="{{ url_for('radius.vch_redeem') }}">
+    <div class="fb-modal-head"><h3><i class="fa-solid fa-hand-holding-dollar"></i> صرف كوبون</h3><button class="fb-x" type="button" data-modal-close><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="fb-modal-body">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+      <div class="fb-form-grid">
+        <label class="span2">كود الكوبون <span class="req">*</span>
+          <input class="hub-input mono" name="code" required autocomplete="off"
+                 placeholder="مثال: AB12-CD34-EF56" style="text-transform:uppercase">
+        </label>
+        <label class="span2">المشترك <span class="req">*</span>
+          {# نفس نمط منتقي المشترك في مودال الفاتورة — بحث فوري داخل القائمة #}
+          <select class="hub-select" name="username" required
+                  data-search-placeholder="ابحث بالاسم أو اليوزر...">
+            <option value="">— اختر —</option>
+            {% for s in subs %}<option value="{{ s.username }}">{{ s.username }} — {{ s.full_name or '—' }}</option>{% endfor %}
+          </select>
+        </label>
+        <div class="span2 uds-modal-warn uds-modal-warn--amber" style="margin:0">
+          <i class="fa-solid fa-circle-info"></i>
+          <span>سيُعلَّم الكوبون «مستخدمًا» وتُضاف قيمته فورًا إلى رصيد المشترك — لا يمكن صرفه مرتين.</span>
+        </div>
+      </div>
+    </div>
+    <div class="fb-modal-foot"><button class="hub-btn hub-btn--ghost" type="button" data-modal-close>إلغاء</button><button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-check"></i> صرف الكوبون</button></div>
   </form>
 </dialog>
 
@@ -298,8 +370,14 @@
     var o = ev.target.closest('[data-modal-open]');
     if(o){ var d = dialogFor(o.getAttribute('data-modal-open')); if(d && d.showModal) d.showModal(); return; }
     if(ev.target.closest('[data-modal-close]')){ var dlg = ev.target.closest('dialog'); if(dlg) dlg.close(); return; }
-    if(ev.target.tagName === 'DIALOG' && ev.target.classList.contains('fb-modal')){ ev.target.close(); }
+    // الضغط على خلفية المودال يغلقه — إلا إذا كانت قائمة منسدلة (hbsel)
+    // مفتوحة بداخله؛ عندها النقرة تُغلق القائمة فقط ولا تُغلق المودال.
+    if(ev.target.tagName === 'DIALOG' && ev.target.classList.contains('fb-modal')){
+      if(ev.target.querySelector('.hbsel-panel:not([hidden])')) return;
+      ev.target.close();
+    }
   });
 })();
 </script>
+<script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
 {% endblock %}

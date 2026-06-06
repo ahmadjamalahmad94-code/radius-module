@@ -24,6 +24,127 @@
 
   var SIZES = [10, 25, 50, 100];
 
+  /* ════════════════════════════════════════════════════════════════
+     تصدير الجداول الموحّد — window.hubTableExport(table, title, fmt, opts)
+     يجمع الأعمدة الظاهرة + كل الصفوف (لا الصفحة الحالية فقط) ثم:
+       • csv  → يُبنى محليًا في المتصفح (UTF-8 + BOM) وينزل فورًا.
+       • xlsx / pdf → نموذج مخفي POST إلى /admin/radius/export/table
+         (target=_blank) — توكن CSRF يُقرأ من <meta name=csrf-token>
+         أو من أي حقل _csrf_token حقنه الخادم في الصفحة.
+     opts.rows (اختياري): مصفوفة <tr> محددة (مثلاً بعد فلترة حية).
+     قابلة لإعادة الاستخدام من أي صفحة — جداول uds وغيرها سواء.
+     ════════════════════════════════════════════════════════════════ */
+  function cellText(cell) {
+    // نص الخلية بدون مؤشرات الفرز (⇅/▲/▼) وبمسافات مطبَّعة
+    var clone = cell.cloneNode(true);
+    clone.querySelectorAll(".uds-sort-ind").forEach(function (n) { n.remove(); });
+    // checkboxes/أزرار الإجراءات لا قيمة نصية لها — تبقى فارغة تلقائيًا
+    return (clone.textContent || "").replace(/\s+/g, " ").trim();
+  }
+
+  function colVisible(th) {
+    // getComputedStyle يلتقط الإخفاء سواء كان inline style أو class
+    // (مثل is-col-hidden في صفحة المشتركين)
+    if (!th || th.hidden) return false;
+    try { return window.getComputedStyle(th).display !== "none"; }
+    catch (_e) { return th.style.display !== "none"; }
+  }
+
+  function collect(table, opts) {
+    opts = opts || {};
+    var ths = table.tHead ? [].slice.call(table.tHead.rows[0].cells) : [];
+    var keep = ths.map(colVisible);
+    // نستبعد الأعمدة بلا عنوان (خانات الاختيار) وأي عمود موسوم
+    // data-uds-noexport (مثل عمود الإجراءات) من التصدير
+    ths.forEach(function (th, i) {
+      if (!cellText(th) || th.hasAttribute("data-uds-noexport")) keep[i] = false;
+    });
+    var columns = ths.filter(function (_t, i) { return keep[i]; }).map(cellText);
+    var srcRows = opts.rows || (table.tBodies[0] ? [].slice.call(table.tBodies[0].rows) : []);
+    var rows = srcRows.map(function (r) {
+      return [].slice.call(r.cells)
+        .filter(function (_c, i) { return keep[i]; })
+        .map(cellText);
+    });
+    return { columns: columns, rows: rows };
+  }
+
+  function csrfToken() {
+    var meta = document.querySelector('meta[name="csrf-token"]');
+    if (meta && meta.content) return meta.content;
+    var inp = document.querySelector('input[name="_csrf_token"]');
+    return inp ? inp.value : "";
+  }
+
+  function downloadCsv(data, title) {
+    var esc = function (v) { return '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"'; };
+    var lines = [data.columns.map(esc).join(",")];
+    data.rows.forEach(function (r) { lines.push(r.map(esc).join(",")); });
+    // BOM حتى يفتح Excel الملف بترميز UTF-8 العربي مباشرة
+    var blob = new Blob(["﻿" + lines.join("\r\n")], { type: "text/csv;charset=utf-8" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = (title || "export") + "-" + new Date().toISOString().slice(0, 10) + ".csv";
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 0);
+  }
+
+  function postExport(data, title, fmt) {
+    // نموذج مخفي بدل fetch: ينزّل الملف مباشرة ويمرّر CSRF كحقل عادي
+    var form = document.createElement("form");
+    form.method = "post";
+    form.action = "/admin/radius/export/table";
+    form.target = "_blank";
+    form.style.display = "none";
+    var add = function (name, value) {
+      var inp = document.createElement("input");
+      inp.type = "hidden"; inp.name = name; inp.value = value;
+      form.appendChild(inp);
+    };
+    add("_csrf_token", csrfToken());
+    add("title", title || "تصدير جدول");
+    add("fmt", fmt);
+    add("columns", JSON.stringify(data.columns));
+    add("rows", JSON.stringify(data.rows));
+    document.body.appendChild(form);
+    form.submit();
+    setTimeout(function () { form.remove(); }, 0);
+  }
+
+  function hubTableExport(table, title, fmt, opts) {
+    if (!table) return;
+    var data = collect(table, opts);
+    if (fmt === "csv") downloadCsv(data, title);
+    else postExport(data, title, fmt);
+  }
+  window.hubTableExport = hubTableExport;
+
+  /* الأزرار الأنيقة الثلاثة (أيقونات فقط مع tooltip) — تُعاد من هنا
+     حتى تستعملها أي صفحة غير-uds أيضًا عبر window.hubTableExportButtons */
+  var EXPORT_KINDS = [
+    { fmt: "csv",  icon: "fa-file-csv",   tip: "CSV" },
+    { fmt: "xlsx", icon: "fa-file-excel", tip: "Excel" },
+    { fmt: "pdf",  icon: "fa-file-pdf",   tip: "PDF" },
+  ];
+  function buildExportButtons(getTable, getTitle, getRows) {
+    var frag = document.createDocumentFragment();
+    EXPORT_KINDS.forEach(function (k) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "hub-btn hub-btn--secondary hub-btn--sm";
+      b.title = k.tip;
+      b.setAttribute("aria-label", k.tip);
+      b.innerHTML = '<i class="fa-solid ' + k.icon + '"></i>';
+      b.addEventListener("click", function () {
+        hubTableExport(getTable(), getTitle(), k.fmt, { rows: getRows ? getRows() : null });
+      });
+      frag.appendChild(b);
+    });
+    return frag;
+  }
+  window.hubTableExportButtons = buildExportButtons;
+
   function toNum(v) {
     var t = (v || "").replace(/[٫]/g, ".").replace(/[^\d.\-]/g, "");
     if (t === "" || t === "-" || t === ".") return null;
@@ -87,6 +208,24 @@
     var colWrap = document.createElement("div");
     colWrap.className = "uds-table-cols";
     colWrap.appendChild(colBtn);
+
+    /* ── أزرار التصدير الثلاثة (CSV / Excel / PDF) بعد زر «أعمدة» ──
+       أيقونات فقط بلا نصوص؛ تصدّر كل الصفوف (مع احترام الفلترة الحية
+       إن وُجدت) والأعمدة الظاهرة فقط. العنوان من data-uds-export-title
+       أو من أقرب عنوان بطاقة/صفحة، وإلا عنوان المستند. */
+    function exportTitle() {
+      var t = wrap.getAttribute("data-uds-export-title");
+      if (t) return t;
+      var card = wrap.closest(".hub-card, .hub-panel, section");
+      var h = card && card.querySelector("h1,h2,h3,.hub-card-title,.hub-section-title");
+      var label = h ? (h.textContent || "").replace(/\s+/g, " ").trim() : "";
+      return label || (document.title || "تصدير جدول").split("—")[0].trim();
+    }
+    colWrap.appendChild(buildExportButtons(
+      function () { return table; },
+      exportTitle,
+      function () { return state.filter ? rows.filter(function (r) { return state.filter(r); }) : rows; }
+    ));
     toolbar.appendChild(colWrap);
 
     /* ---- sortable centred headers ---- */
@@ -177,13 +316,17 @@
     }
 
     function render() {
-      var total = rows.length;
+      /* فلترة اختيارية: تمر الصفوف عبر state.filter (إن وُجد) قبل الترقيم —
+         تُضبط من الصفحة عبر wrap.__udsApi.setFilter(fn) دون كسر أي صفحة قائمة. */
+      var pool = state.filter ? rows.filter(function (r) { return state.filter(r); }) : rows;
+      rows.forEach(function (r) { r.style.display = "none"; });
+      var total = pool.length;
       var pages = Math.max(1, Math.ceil(total / state.size));
       if (state.page > pages) state.page = pages;
       var start = (state.page - 1) * state.size;
       var end = Math.min(start + state.size, total);
       var vis = 0;
-      rows.forEach(function (r, idx) {
+      pool.forEach(function (r, idx) {
         var show = idx >= start && idx < end;
         r.style.display = show ? "" : "none";
         if (show) { r.classList.toggle("uds-rowalt", vis % 2 === 1); vis++; }
@@ -203,6 +346,12 @@
 
     applyCols();
     render();
+
+    /* واجهة صغيرة للصفحات: فلترة الصفوف (مثلاً بحث حي) متوافقة مع الترقيم */
+    wrap.__udsApi = {
+      setFilter: function (fn) { state.filter = (typeof fn === "function") ? fn : null; state.page = 1; render(); },
+      refresh: render,
+    };
   }
 
   function initAll(root) {

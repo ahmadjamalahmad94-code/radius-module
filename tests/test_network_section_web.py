@@ -80,8 +80,11 @@ def test_router_management_landing_has_shared_nav(app):
     html = res.get_data(as_text=True)
     assert 'data-testid="network-ops-nav"' in html
     for label in ("إدارة الراوترات", "خريطة الشبكة", "مركز المشاكل",
-                  "تشخيص الراوترات", "الإعداد الهندسي"):
+                  "تشخيص الراوترات"):
         assert label in html, label
+    # «الإعداد الهندسي» مخفي مؤقتاً بطلب المالك — أزيل رابطه من الشريط
+    # (network_ops_nav.html) وصار مساره super_admin فقط.
+    assert "الإعداد الهندسي" not in html
 
 
 def test_sidebar_keeps_router_management_topology_moved_into_it(app):

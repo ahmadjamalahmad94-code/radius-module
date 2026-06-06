@@ -53,6 +53,48 @@ def _settings_key(channel: str, field: str) -> str:
     return f"comms.{channel}.{field}"
 
 
+# ── مفتاح إعداد «مفتاح الدولة» (صفحة الإعدادات → هوية النظام) ──
+DIAL_CODE_SETTING = "comms.country_dial_code"
+DEFAULT_DIAL_CODE = "+970"
+
+
+def normalize_msisdn(phone: str, dial_code: str = "") -> str:
+    """تطبيع رقم الجوال إلى الصيغة الدولية قبل الإرسال عبر SMS/واتساب.
+
+    القاعدة بسيطة وآمنة: الرقم المحلي الذي يبدأ بصفر واحد (0599...)
+    يُستبدل صفره بمفتاح الدولة (+970599...). الأرقام الدولية أصلًا
+    (تبدأ بـ + أو 00) تُترك كما هي، وكذلك أي رقم لا نفهم صيغته —
+    لا نخمّن أبدًا حتى لا نكسر إرسالًا كان يعمل.
+    """
+    raw = str(phone or "").strip().replace(" ", "").replace("-", "")
+    if not raw:
+        return ""
+    code = str(dial_code or "").strip()
+    # دوليّ أصلًا — لا تلمسه.
+    if raw.startswith("+"):
+        return raw
+    if raw.startswith("00"):
+        return "+" + raw[2:]
+    # محلي يبدأ بصفر واحد + يوجد مفتاح دولة مضبوط → استبدال الصفر بالمفتاح.
+    if code and raw.startswith("0") and not raw.startswith("00") and raw[1:].isdigit():
+        return code + raw[1:]
+    return raw
+
+
+def tenant_dial_code(tenant_id: int) -> str:
+    """قراءة مفتاح الدولة المضبوط للمستأجر (فارغ = الافتراضي +970).
+
+    القراءة دفاعية: أي فشل في الوصول للإعدادات يعيد القيمة الافتراضية
+    حتى لا يتعطّل خط الإرسال بسبب الإعدادات.
+    """
+    try:
+        from ..db.repos import tenants_repo
+
+        return (tenants_repo.get_setting(int(tenant_id or 1), DIAL_CODE_SETTING, DEFAULT_DIAL_CODE) or "").strip()
+    except Exception:  # noqa: BLE001 — قراءة الإعداد يجب ألا تكسر الإرسال
+        return DEFAULT_DIAL_CODE
+
+
 def _truthy(value: Any) -> bool:
     return str(value or "").strip().lower() in ("1", "true", "yes", "on")
 
@@ -283,6 +325,11 @@ class GenericHttpProvider(NotificationProvider):
                 error_message="لا يوجد رقم هاتف للمستلم.",
                 result={"external_send": False, "reason": "no_recipient_phone", "mode": mode},
             )
+
+        # ── تطبيع الرقم بمفتاح الدولة (إعداد comms.country_dial_code) ──
+        # الرقم المحلي 0599... يصبح +970599... قبل أن يصل للمزوّد، حتى
+        # تقبل بوابات SMS/واتساب الدولية الرقم بدون تدخل يدوي.
+        phone = normalize_msisdn(phone, tenant_dial_code(self.tenant_id))
 
         message = str((notification or {}).get("body") or "")
 

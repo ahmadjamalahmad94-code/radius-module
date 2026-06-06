@@ -8,6 +8,38 @@
 {% block page_title %}الموزعون{% endblock %}
 {% block page_sub %}<span class="sub">{{ distributors|length }} موزع في النتائج</span>{% endblock %}
 
+{% block head_extra %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
+<style>
+/* ── الصندوق العائم المنبثق «إضافة موزع» (نفس نمط fcw في finance_center_hub) ── */
+.fcw-modal{ position:fixed; inset:0; z-index:1200; display:none; place-items:center; padding:24px; background:rgba(15,23,42,.52); }
+.fcw-modal.is-open{ display:grid; }
+.fcw-dialog{ width:min(720px,100%); max-height:min(90vh,820px); overflow:auto; border-radius:16px; background:#fff;
+  box-shadow:0 28px 80px rgba(15,23,42,.32); }
+.fcw-head{ position:sticky; top:0; z-index:2; display:flex; align-items:center; justify-content:space-between; gap:12px;
+  padding:15px 18px; border-bottom:1px solid var(--hub-border-soft,#e2e8f0); background:#fff; }
+.fcw-head h3{ margin:0; font-size:17px; font-weight:900; color:var(--hub-text,#0f172a); }
+.fcw-x{ border:0; background:transparent; color:#94a3b8; font-size:18px; cursor:pointer; }
+.fcw-body{ padding:16px 18px; display:grid; gap:14px; }
+.fcw-foot{ display:flex; justify-content:flex-end; gap:8px; padding:13px 18px; border-top:1px solid var(--hub-border-soft,#e2e8f0); background:#fbfdff; }
+/* شبكة حقول النافذة: عمودان على الشاشات الواسعة، عمود واحد على الضيقة */
+.fcw-grid{ display:grid; gap:12px; grid-template-columns:repeat(2,minmax(0,1fr)); }
+.fcw-grid .full{ grid-column:1/-1; }
+@media (max-width:640px){ .fcw-grid{ grid-template-columns:1fr; } }
+/* عنوان مجموعة حقول داخل النافذة (هوية / مالية / صلاحيات) */
+.fcw-group{ display:flex; align-items:center; gap:8px; font-size:12.5px; font-weight:900;
+  color:var(--hub-brand-ink,#4338ca); padding-top:4px; border-top:1px dashed var(--hub-border-soft,#e2e8f0); margin-top:2px; }
+.fcw-group:first-child{ border-top:0; margin-top:0; padding-top:0; }
+/* بطاقات اختيار الصلاحيات داخل النافذة */
+.fcw-choice{ display:flex; align-items:flex-start; gap:10px; padding:11px 12px;
+  border:1px solid var(--hub-border,#e2e8f0); border-radius:12px; background:var(--hub-bg-soft,#f8fafc); cursor:pointer; }
+.fcw-choice input{ margin-top:3px; accent-color:var(--hub-brand,#6366f1); }
+.fcw-choice strong{ display:block; color:var(--hub-text,#0f172a); font-size:12.5px; margin-bottom:2px; }
+.fcw-choice span{ display:block; color:var(--hub-text-mute,#64748b); font-size:11px; line-height:1.7; }
+</style>
+{% endblock %}
+
 {% block content %}
 {% include "radius/admin_operations_nav.html" %}
 
@@ -21,9 +53,9 @@
   subtitle="إدارة شبكة الموزعين — الرصيد، الديون، الحدود الائتمانية، الصلاحيات والنطاق.",
   icon="people-arrows",
   actions_html='
-    <a class="hub-btn hub-btn--primary" href="' + url_for('radius.distributors_new') + '">
+    <button type="button" class="hub-btn hub-btn--primary" data-fcw-open="distributor-create">
       <i class="fa-solid fa-user-plus"></i> إضافة موزع
-    </a>',
+    </button>',
   kpis=[
     {'label': 'الإجمالي',      'value': distributors|length,        'icon': 'users',               'variant': 'brand'},
     {'label': 'مفعَّلون',       'value': _active,                    'icon': 'circle-check',        'variant': 'green'},
@@ -143,4 +175,142 @@
 ) }}
 {% endif %}
 
+{# ───────────── صندوق عائم منبثق: إضافة موزع ─────────────
+   نفس عقد الإنشاء القائم حرفيًا: POST → radius.distributors_create
+   بأسماء الحقول: name / display_name / phone / email / status /
+   permissions (checkboxes) / scope_json / balance / credit_limit /
+   debt_balance / notes — صفر تغيير خلفي.
+   الرابط القديم /distributors/new يعيد التوجيه إلى هنا بـ ?new=1 فيفتح
+   النافذة تلقائيًا (deep-link محفوظ). #}
+<div class="fcw-modal" data-fcw-modal="distributor-create" hidden>
+  <div class="fcw-dialog" role="dialog" aria-modal="true" aria-labelledby="fcw-distributor-create-title">
+    {# method="post" ضروري: حاقن الـ CSRF التلقائي يستهدف فقط <form method="post">. #}
+    <form method="post" action="{{ url_for('radius.distributors_create') }}">
+      <div class="fcw-head">
+        <h3 id="fcw-distributor-create-title"><i class="fa-solid fa-user-plus"></i> إضافة موزع</h3>
+        <button type="button" class="fcw-x" data-fcw-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="fcw-body">
+
+        {# ── 1) هوية الموزع ── #}
+        <div class="fcw-group"><i class="fa-solid fa-id-card"></i> هوية الموزع</div>
+        <div class="fcw-grid">
+          <label class="hub-field">
+            <span class="hub-field-label">اسم الدخول <span style="color:#dc2626">*</span></span>
+            <input class="hub-input" type="text" name="name" required maxlength="80"
+                   placeholder="dealer_north" dir="ltr">
+            <span class="hub-field-hint">معرّف داخلي فريد (لا يتكرر) يُستخدم للتتبع وربط الحزم والقيود — يُفضَّل بالأحرف اللاتينية بلا مسافات.</span>
+          </label>
+          <label class="hub-field">
+            <span class="hub-field-label">الاسم الظاهر</span>
+            <input class="hub-input" type="text" name="display_name" maxlength="120"
+                   placeholder="موزع الشمال">
+            <span class="hub-field-hint">الاسم الودّي الذي يظهر في القوائم والتقارير — إن تُرك فارغًا يُستخدم اسم الدخول.</span>
+          </label>
+          <label class="hub-field">
+            <span class="hub-field-label">رقم الهاتف</span>
+            <input class="hub-input" type="tel" name="phone" maxlength="40" dir="ltr" placeholder="05XXXXXXXX">
+            <span class="hub-field-hint">للتواصل والتحصيل الميداني — اختياري لكنه يسهّل المتابعة.</span>
+          </label>
+          <label class="hub-field">
+            <span class="hub-field-label">البريد الإلكتروني</span>
+            <input class="hub-input" type="email" name="email" maxlength="160" dir="ltr" placeholder="dealer@example.com">
+            <span class="hub-field-hint">يُستخدم في المراسلات والكشوف — اختياري.</span>
+          </label>
+          <label class="hub-field full">
+            <span class="hub-field-label">الحالة</span>
+            <select class="hub-select" name="status">
+              <option value="active" selected>مفعَّل — يعمل ويُربَط بالحزم</option>
+              <option value="inactive">غير مفعَّل — موقوف مؤقتًا</option>
+              <option value="blocked">محظور — ممنوع من أي عملية</option>
+            </select>
+            <span class="hub-field-hint">تتحكم بظهوره في العمليات — تغيير الحالة لاحقًا لا يمسّ الحزم المربوطة به.</span>
+          </label>
+        </div>
+
+        {# ── 2) الجانب المالي (قيم مرجعية للمتابعة — التسويات الفعلية من صفحة التفاصيل) ── #}
+        <div class="fcw-group"><i class="fa-solid fa-wallet"></i> الجانب المالي</div>
+        <div class="fcw-grid">
+          <label class="hub-field">
+            <span class="hub-field-label">الرصيد الافتتاحي</span>
+            <input class="hub-input" type="number" name="balance" step="0.01" value="0" dir="ltr">
+            <span class="hub-field-hint">ما يملكه الموزع لديك عند البداية — الحركات اللاحقة تُسجَّل من «تسوية» في صفحة تفاصيله.</span>
+          </label>
+          <label class="hub-field">
+            <span class="hub-field-label">حد الائتمان</span>
+            <input class="hub-input" type="number" name="credit_limit" step="0.01" min="0" value="0" dir="ltr">
+            <span class="hub-field-hint">أقصى دين تسمح له بتجميعه قبل إيقاف الصرف — قيمة مرجعية للمتابعة وليست نظام فوترة.</span>
+          </label>
+          <label class="hub-field full">
+            <span class="hub-field-label">الدين الحالي</span>
+            <input class="hub-input" type="number" name="debt_balance" step="0.01" min="0" value="0" dir="ltr">
+            <span class="hub-field-hint">ما عليه لك عند إنشاء الحساب (رصيد افتتاحي للذمم) — اتركه 0 لموزع جديد بلا التزامات.</span>
+          </label>
+        </div>
+
+        {# ── 3) الصلاحيات ونطاق البيانات ── #}
+        <div class="fcw-group"><i class="fa-solid fa-shield-halved"></i> الصلاحيات ونطاق البيانات</div>
+        <div class="fcw-grid">
+          <label class="fcw-choice full">
+            <input type="checkbox" name="permissions" value="cards.read" checked>
+            <span>
+              <strong>عرض الكروت والحزم</strong>
+              <span>يسمح للموزع برؤية الحزم المربوطة به ومتابعة حالتها — الأساس لأي عمل.</span>
+            </span>
+          </label>
+          <label class="fcw-choice full">
+            <input type="checkbox" name="permissions" value="cards.sell" checked>
+            <span>
+              <strong>بيع الكروت</strong>
+              <span>يسمح بتنفيذ عمليات البيع ضمن الحزم المسموحة له فقط.</span>
+            </span>
+          </label>
+          {# نطاق العزل الفعلي المدعوم حاليًا: الحزم المعيّنة فقط — لذا يُرسَل كقيمة ثابتة #}
+          <input type="hidden" name="scope_json" value='{"card_batches":"assigned"}'>
+          <div class="fcw-choice full" style="cursor:default">
+            <i class="fa-solid fa-user-shield" style="margin-top:2px;color:var(--hub-brand,#6366f1)"></i>
+            <span>
+              <strong>نطاق البيانات: الحزم المعيّنة فقط</strong>
+              <span>الموزع لا يرى إلا ما رُبط به — اربط الحزم من صفحة تفاصيله بعد الإنشاء (زر «ربط حزمة»).</span>
+            </span>
+          </div>
+        </div>
+
+        {# ── 4) ملاحظات ── #}
+        <div class="fcw-group"><i class="fa-solid fa-note-sticky"></i> ملاحظات</div>
+        <label class="hub-field">
+          <span class="hub-field-label">ملاحظات داخلية</span>
+          <textarea class="hub-textarea" name="notes" rows="2" placeholder="منطقة العمل، اتفاق الحصة، أي شروط خاصة..."></textarea>
+          <span class="hub-field-hint">تظهر للإدارة فقط — لا يراها الموزع. الحد 500 حرف.</span>
+        </label>
+
+      </div>
+      <div class="fcw-foot">
+        <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>إغلاق</button>
+        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-user-plus"></i> حفظ الموزع</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+(() => {
+  "use strict";
+  // فتح وإغلاق الصندوق العائم (نفس نمط fcw في finance_center_hub).
+  const root = document;
+  function open(key){ const m = root.querySelector(`[data-fcw-modal='${key}']`); if(m){ m.hidden=false; m.classList.add("is-open"); m.querySelector("input,select,textarea,button")?.focus(); } }
+  function closeAll(){ root.querySelectorAll("[data-fcw-modal]").forEach(m=>{ m.classList.remove("is-open"); m.hidden=true; }); }
+  root.querySelectorAll("[data-fcw-open]").forEach(b=> b.addEventListener("click", ()=> open(b.dataset.fcwOpen)));
+  root.querySelectorAll("[data-fcw-close]").forEach(b=> b.addEventListener("click", closeAll));
+  // النقر على الخلفية المعتمة يغلق النافذة.
+  root.querySelectorAll("[data-fcw-modal]").forEach(m=> m.addEventListener("click", e=>{ if(e.target===m) closeAll(); }));
+  root.addEventListener("keydown", e=>{ if(e.key==="Escape") closeAll(); });
+  {% if open_new_modal %}
+  // الرابط العميق /distributors/new أعاد التوجيه بـ ?new=1 — افتح النافذة تلقائيًا.
+  open("distributor-create");
+  {% endif %}
+})();
+</script>
+
+<script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
 {% endblock %}

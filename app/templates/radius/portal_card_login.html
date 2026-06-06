@@ -179,7 +179,7 @@
     .field input{
       width:100%;padding:13px 16px;
       border:1px solid var(--hair);border-radius:11px;
-      background:#fff;font-size:14.5px;font-weight:700;color:var(--ink-1);
+      background:#fff;font-size:14px;font-weight:700;color:var(--ink-1);
       font-family:inherit;letter-spacing:.03em;
       transition:border-color .15s ease, box-shadow .15s ease;
     }
@@ -208,12 +208,13 @@
     }
     .check{display:inline-flex;align-items:center;gap:7px;cursor:pointer;font-weight:700}
     .check input{accent-color:var(--accent);width:14px;height:14px}
+    .field-hint{color:var(--ink-3);font-size:12px;font-weight:700}
 
     .btn-primary{
       margin-top:6px;
       background:linear-gradient(135deg,var(--accent) 0%,var(--accent-2) 100%);
       color:#fff;border:0;border-radius:12px;
-      padding:14px 22px;font-size:15px;font-weight:900;
+      padding:14px 22px;font-size:16px;font-weight:900;
       cursor:pointer;font-family:inherit;
       display:inline-flex;align-items:center;justify-content:center;gap:10px;
       box-shadow:0 8px 18px rgba(124,58,237,.32);
@@ -343,9 +344,11 @@
             <input type="checkbox" name="remember" value="1">
             تذكّرني
           </label>
-          <a href="#" tabindex="-1" style="color:var(--ink-3);font-size:12px;text-decoration:none">
-            تواصل مع الدعم
-          </a>
+          {# نص مساعِد بدل رابط ميت: لا يوجد مسار «دعم» للزبون في البوابة،
+             فنعرض إرشادًا نصيًا بدل href="#" غير المفعَّل. #}
+          <span class="field-hint">
+            نسيت كلمة المرور؟ راجع مزوّد الخدمة
+          </span>
         </div>
 
         <button type="submit" class="btn-primary">

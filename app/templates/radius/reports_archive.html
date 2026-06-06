@@ -4,104 +4,187 @@
 {% block title %}أرشيف التقارير — Hobe Hub{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-box-archive"></i>{% endblock %}
 {% block page_title %}أرشيف التقارير{% endblock %}
-{% block page_sub %}{% endblock %}
+{% block page_sub %}<span class="sub">لقطات ثابتة مجمّدة لا تتأثر بأي حركة لاحقة</span>{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
+<style>
+/* ── الصندوق العائم لإنشاء لقطة أرشيف (نفس نمط fcw في finance_center_hub) ── */
+.fcw-modal{ position:fixed; inset:0; z-index:1200; display:none; place-items:center; padding:24px; background:rgba(15,23,42,.52); }
+.fcw-modal.is-open{ display:grid; }
+.fcw-dialog{ width:min(560px,100%); max-height:min(88vh,760px); overflow:auto; border-radius:16px; background:#fff;
+  box-shadow:0 28px 80px rgba(15,23,42,.32); }
+.fcw-head{ position:sticky; top:0; z-index:2; display:flex; align-items:center; justify-content:space-between; gap:12px;
+  padding:15px 18px; border-bottom:1px solid var(--hub-border-soft,#e2e8f0); background:#fff; }
+.fcw-head h3{ margin:0; font-size:17px; font-weight:900; color:var(--hub-text,#0f172a); }
+.fcw-x{ border:0; background:transparent; color:#94a3b8; font-size:18px; cursor:pointer; }
+.fcw-body{ padding:16px 18px; display:grid; gap:12px; }
+.fcw-foot{ display:flex; justify-content:flex-end; gap:8px; padding:13px 18px; border-top:1px solid var(--hub-border-soft,#e2e8f0); background:#fbfdff; }
+</style>
+{% endblock %}
 
 {% block content %}
-{% include "radius/reports_nav.html" %}
+{# متحكّم «انتقال سريع» المضغوط — يُحقن في صف عنوان الهيرو بدل الشريطين الكبيرين #}
+{% set _report_jump %}{% include "radius/reports_nav.html" %}{% endset %}
 
 {% set _yearly  = archives|selectattr('archive_type', 'equalto', 'yearly')|list|length %}
 {% set _monthly = archives|selectattr('archive_type', 'equalto', 'monthly')|list|length %}
 {% set _daily   = archives|selectattr('archive_type', 'equalto', 'daily')|list|length %}
 
-{# ───── Merged hero: title + action + KPI strip ───── #}
+{# ───── صدفة هيرو واحدة (hub-hero-shell): العنوان + المؤشرات + الإجراءات ───── #}
+<section class="hub-hero-shell">
+{# _report_jump متغيّر block-set (Markup) — يُعلَّم الجزء الحرفي |safe قبل دمجه بـ«~» وإلا تُهرَّب وسومه فتظهر الأزرار نصًّا خامًا #}
 {{ hub.megahero(
   "أرشيف التقارير",
-  subtitle="اللقطة تحفظ نتيجة التقرير كما كانت وقت الإنشاء. اللقطات السابقة لا تُستبدل ولا تُحذف تلقائيًا.",
+  subtitle="اللقطة تحفظ نتيجة التقرير كما كانت وقت الإنشاء — مرجع ثابت لا يُستبدل ولا يُحذف، حتى لو تغيّرت الأرقام لاحقًا.",
   icon="box-archive",
-  actions_html='
+  actions_html=_report_jump ~ ('
+    <button type="button" class="hub-btn hub-btn--primary" data-fcw-open="archive-create">
+      <i class="fa-solid fa-lock"></i> إنشاء لقطة أرشيف
+    </button>
     <a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.reports_home') ~ '">
-      <i class="fa-solid fa-chart-line"></i> التقارير
-    </a>',
+      <i class="fa-solid fa-chart-line"></i> التقارير الحية
+    </a>')|safe,
   kpis=[
-    {'label': 'الإجمالي', 'value': archives|length, 'icon': 'box-archive', 'variant': 'brand'},
-    {'label': 'سنوية',    'value': _yearly,         'icon': 'calendar',    'variant': 'green'},
-    {'label': 'شهرية',    'value': _monthly,        'icon': 'calendar-day','variant': 'amber'},
-    {'label': 'يومية',    'value': _daily,          'icon': 'clock',       'variant': 'brand'},
+    {'label': 'إجمالي اللقطات', 'value': archives|length, 'icon': 'box-archive',  'variant': 'brand',
+     'sub': 'كل اللقطات المحفوظة بلا حذف'},
+    {'label': 'سنوية',          'value': _yearly,         'icon': 'calendar',     'variant': 'green',
+     'sub': 'لقطة لكل سنة كاملة'},
+    {'label': 'شهرية',          'value': _monthly,        'icon': 'calendar-day', 'variant': 'amber',
+     'sub': 'لقطة لكل شهر كامل'},
+    {'label': 'يومية',          'value': _daily,          'icon': 'clock',        'variant': 'blue',
+     'sub': 'لقطة ليوم محدد'},
   ]
 ) }}
+</section>{# /hub-hero-shell #}
 
-{# ───── Main (create form + snapshots table) + help panel on the LEFT ───── #}
-{% call hub.worklayout(aside_html=hub.helppanel(
-  "كيف تعمل اللقطات؟",
-  intro="كل لقطة تجمّد نتيجة التقرير في لحظة إنشائها، فتبقى مرجعًا ثابتًا لا يتأثر بالتغييرات اللاحقة.",
-  items=[
-    {'icon': 'lock',        'text': 'اللقطة المحفوظة لا تُعدَّل ولا تُستبدل بعد إنشائها.'},
-    {'icon': 'calendar',    'text': 'اختر نوع الأرشفة (سنوية/شهرية/يومية) ثم حدّد الفترة المناسبة لها.'},
-    {'icon': 'hashtag',     'text': 'صيغة الفترة: 2026 للسنة، 2026-05 للشهر، 2026-05-25 لليوم.'},
-    {'icon': 'circle-info', 'text': 'إنشاء لقطة لفترة موجودة لا يستبدلها — تبقى النسخة الأصلية كما هي.'},
-  ],
-  note="لإنشاء التقارير الحية غير المؤرشفة، استخدم زر «التقارير» في الأعلى."
-)) %}
-  {% call hub.section("إنشاء لقطة أرشيف", icon="box-archive") %}
-    <form method="post" action="{{ url_for('radius.reports_archive_create') }}" class="hub-form-grid" data-testid="archive-create-form">
-      <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-      <label>نوع الأرشفة
-        <select name="archive_type">
-          <option value="yearly">سنوية</option>
-          <option value="monthly">شهرية</option>
-          <option value="daily">يومية</option>
-        </select>
-      </label>
-      <label>الفترة <input name="period" placeholder="2026 أو 2026-05 أو 2026-05-25"></label>
-      <label>نوع التقرير
-        <select name="report_type" aria-label="نوع التقرير">
-          <option value="financial">مالي</option>
-        </select>
-      </label>
-      <button class="hub-btn hub-btn--primary" type="submit">إنشاء لقطة ثابتة</button>
-    </form>
-  {% endcall %}
-
-  {% call hub.section("اللقطات المحفوظة", icon="lock", meta=archives|length|string + " لقطة", flush=True) %}
-    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25" style="border:none;border-radius:0">
-      <table class="hub-table rep-table" data-testid="archive-snapshots-table" data-persist-key="rep-archive">
-        <thead>
-          <tr>
-            <th class="num">الرقم</th>
-            <th>النوع</th>
-            <th>الفترة</th>
-            <th>التقرير</th>
-            <th class="num">الإيرادات</th>
-            <th>تاريخ الإنشاء</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for archive in archives %}
-            <tr>
-              <td class="num mono">#{{ archive.id }}</td>
-              <td>
-                {% if archive.archive_type == 'yearly' %}سنوية
-                {% elif archive.archive_type == 'monthly' %}شهرية
-                {% elif archive.archive_type == 'daily' %}يومية
-                {% else %}{{ archive.archive_type }}{% endif %}
-              </td>
-              <td class="mono small">{{ archive.period }}</td>
-              <td>{% if archive.report_type == 'financial' %}مالي{% else %}{{ archive.report_type }}{% endif %}</td>
-              <td class="num">{{ archive.summary.finance.revenue if archive.summary.finance is defined else '' }}</td>
-              <td class="mono small">{{ archive.created_at }}</td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  {% endcall %}
+{% if archives %}
+{# ───── جدول اللقطات المحفوظة — نفس أعمدة جدول لقطات المحاسبة:
+        الفترة (من–إلى) + عدد الصفوف + الإجمالي، من اللقطة المصدر المجمّدة.
+        الأرشيفات القديمة بلا لقطة مصدر تعرض «—» بدل أرقام مضلِّلة. ───── #}
+{% call hub.section("اللقطات المحفوظة", icon="lock", meta=archives|length|string + " لقطة", flush=True) %}
+  <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25" style="border:none;border-radius:0">
+    <table class="hub-table" data-testid="archive-snapshots-table" data-persist-key="rep-archive">
+      <thead>
+        <tr>
+          <th class="num" style="width:64px">#</th>
+          <th>النوع</th>
+          <th>فترة الأرشفة</th>
+          <th>الفترة (من–إلى)
+            <span class="hub-hint" tabindex="0" data-hint="نطاق التواريخ الذي فُلترت به صفوف اللقطة المصدر وقت التجميد. اللقطات الأقدم من هذه الميزة تعرض «—»."><i class="fa-solid fa-info"></i></span>
+          </th>
+          <th class="num">عدد الصفوف</th>
+          <th class="num">الإجمالي</th>
+          <th class="num">الإيرادات</th>
+          <th>أنشئت بواسطة</th>
+          <th>تاريخ الإنشاء</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for archive in archives %}
+        <tr>
+          <td class="num mono small">#{{ archive.id }}</td>
+          <td>
+            {% if archive.archive_type == 'yearly' %}{{ hub.pill("سنوية", variant="green", dot=False) }}
+            {% elif archive.archive_type == 'monthly' %}{{ hub.pill("شهرية", variant="amber", dot=False) }}
+            {% elif archive.archive_type == 'daily' %}{{ hub.pill("يومية", variant="blue", dot=False) }}
+            {# نوع غير معروف: نعرض ملصقًا عربيًا محايدًا ونحفظ القيمة الخام في title بدل عرض إنجليزي خام #}
+            {% else %}<span title="{{ archive.archive_type or '' }}">{{ hub.pill("غير محدد", variant="grey", dot=False) }}</span>{% endif %}
+          </td>
+          <td class="mono small">{{ archive.period }}</td>
+          <td class="mono small" style="white-space:nowrap;direction:ltr;text-align:end">
+            {%- if archive.snapshot_date_from or archive.snapshot_date_to -%}
+              {{ archive.snapshot_date_from or '…' }} ← {{ archive.snapshot_date_to or '…' }}
+            {%- else -%}—{%- endif -%}
+          </td>
+          <td class="num mono small" style="font-variant-numeric:tabular-nums;direction:ltr">
+            {{ archive.snapshot_rows if archive.snapshot_rows is not none else '—' }}
+          </td>
+          <td class="num mono small" style="font-variant-numeric:tabular-nums;direction:ltr">
+            {%- if archive.snapshot_total is not none -%}<strong>{{ archive.snapshot_total|money }}</strong>{%- else -%}—{%- endif -%}
+          </td>
+          {# إيرادات ملخّص اللوحة وقت الأرشفة (summary_json) — عمود سياقي #}
+          <td class="num mono small" style="font-variant-numeric:tabular-nums;direction:ltr">
+            {%- if archive.summary.finance is defined and archive.summary.finance.revenue is defined -%}
+              {{ archive.summary.finance.revenue|money }}
+            {%- else -%}—{%- endif -%}
+          </td>
+          <td class="small">{{ archive.created_by or '—' }}</td>
+          <td class="num mono small" style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">{{ archive.created_at|dt_local }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 {% endcall %}
-
-{% if not archives %}
+{% else %}
 {{ hub.empty(
   "لا توجد لقطات أرشيف حتى الآن",
-  sub="أنشئ أول لقطة من نموذج «إنشاء لقطة أرشيف» لحفظ نتيجة تقرير كمرجع ثابت.",
+  sub="اضغط زر «إنشاء لقطة أرشيف» في الأعلى لحفظ نتيجة تقرير كمرجع ثابت لا يتغيّر.",
   icon="box-archive"
 ) }}
 {% endif %}
+
+{# ───────────── صندوق عائم: إنشاء لقطة أرشيف ───────────── #}
+<div class="fcw-modal" data-fcw-modal="archive-create" hidden>
+  <div class="fcw-dialog" role="dialog" aria-modal="true" aria-labelledby="fcw-archive-create-title">
+    {# method="post" ضروري: حاقن الـ CSRF التلقائي يستهدف <form method="post"> فقط. #}
+    <form method="post" action="{{ url_for('radius.reports_archive_create') }}" data-testid="archive-create-form">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+      <div class="fcw-head">
+        <h3 id="fcw-archive-create-title"><i class="fa-solid fa-lock"></i> إنشاء لقطة أرشيف</h3>
+        <button type="button" class="fcw-x" data-fcw-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="fcw-body">
+        <label class="hub-field">
+          <span class="hub-field-label">نوع الأرشفة</span>
+          <select class="hub-input" name="archive_type">
+            <option value="yearly">سنوية — سنة كاملة</option>
+            <option value="monthly">شهرية — شهر كامل</option>
+            <option value="daily">يومية — يوم واحد</option>
+          </select>
+          <span class="hub-field-hint">يحدّد نطاق الفترة التي ستُفلتر بها صفوف اللقطة.</span>
+        </label>
+        <label class="hub-field">
+          <span class="hub-field-label">الفترة</span>
+          <input class="hub-input" name="period" placeholder="2026 أو 2026-05 أو 2026-05-25" dir="ltr">
+          <span class="hub-field-hint">الصيغة: 2026 للسنة، 2026-05 للشهر، 2026-05-25 لليوم. اتركها فارغة للفترة الحالية.</span>
+        </label>
+        <label class="hub-field">
+          <span class="hub-field-label">نوع التقرير</span>
+          <select class="hub-input" name="report_type" aria-label="نوع التقرير">
+            <option value="financial">مالي</option>
+          </select>
+          <span class="hub-field-hint">حاليًا التقرير المالي فقط قابل للأرشفة.</span>
+        </label>
+        <div class="hub-text-soft" style="font-size:12px;line-height:1.8">
+          <i class="fa-solid fa-circle-info" style="color:var(--hub-brand-ink)"></i>
+          إنشاء لقطة لفترة موجودة مسبقًا لا يستبدلها — تبقى النسخة الأصلية كما هي.
+        </div>
+      </div>
+      <div class="fcw-foot">
+        <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>إغلاق</button>
+        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-lock"></i> إنشاء اللقطة</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+(() => {
+  "use strict";
+  // فتح وإغلاق النافذة العائمة (نفس نمط fcw في finance_center_hub).
+  const root = document;
+  function open(key){ const m = root.querySelector(`[data-fcw-modal='${key}']`); if(m){ m.hidden=false; m.classList.add("is-open"); m.querySelector("input,select,textarea,button")?.focus(); } }
+  function closeAll(){ root.querySelectorAll("[data-fcw-modal]").forEach(m=>{ m.classList.remove("is-open"); m.hidden=true; }); }
+  root.querySelectorAll("[data-fcw-open]").forEach(b=> b.addEventListener("click", ()=> open(b.dataset.fcwOpen)));
+  root.querySelectorAll("[data-fcw-close]").forEach(b=> b.addEventListener("click", closeAll));
+  root.querySelectorAll("[data-fcw-modal]").forEach(m=> m.addEventListener("click", e=>{ if(e.target===m) closeAll(); }));
+  root.addEventListener("keydown", e=>{ if(e.key==="Escape") closeAll(); });
+})();
+</script>
+
+{# الجداول الموحدة: فرز + اختيار أعمدة + ترقيم صفحات #}
+<script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
 {% endblock %}

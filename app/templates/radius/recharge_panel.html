@@ -1,0 +1,907 @@
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}لوحة الشحن — Hobe Hub{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-bolt"></i>{% endblock %}
+{% block page_title %}لوحة الشحن{% endblock %}
+{% block page_sub %}<span class="sub">تفعيل وتجديد المشتركين بسرعة — تجديد الباقة، تفعيل بالوقت، تغيير العرض، أو شحن نقدي</span>{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
+<style>
+/* ════════ لوحة الشحن — طبقة جمالية فوق نظام HOB v2 (بنفس المتغيرات) ════════ */
+
+/* ── البحث الكبير داخل حزام الهيرو المدموج (uds-hero-search) ──
+   حقل البحث نفسه يرث ستايل .hub-input من hub_v2.css بارتفاع 42px موحّد؛
+   نضيف فقط مرونة التمدّد لملء عرض الحزام. */
+.uds-hero-search #rcp-q{ font-weight:800; }
+/* نجعل حزام البحث مرجعًا للموضع حتى تلتصق قائمة النتائج أسفله مباشرة. */
+.uds-hero .uds-hero-search{ position:relative; }
+/* قائمة النتائج اللحظية — تُحاذى أسفل حقل البحث داخل حزام الهيرو. */
+.rcp-results{
+  position:absolute; inset-inline:0; top:calc(100% + 6px); z-index:60;
+  background:#fff; border:1px solid var(--hub-border-soft,#E2E8F0);
+  border-radius:16px; box-shadow:0 28px 70px rgba(15,23,42,.22);
+  overflow:hidden; display:none; max-height:340px; overflow-y:auto;
+}
+.rcp-results.is-open{ display:block; animation:rcp-pop .15s ease; }
+@keyframes rcp-pop{ from{ opacity:0; transform:translateY(-6px);} to{ opacity:1; transform:none;} }
+.rcp-result{
+  display:flex; align-items:center; gap:12px; width:100%;
+  padding:11px 16px; border:0; background:#fff; cursor:pointer; text-align:start;
+  border-bottom:1px solid var(--hub-border-soft,#EEF1F6); font:inherit;
+}
+.rcp-result:last-child{ border-bottom:0; }
+.rcp-result:hover, .rcp-result.is-hot{ background:var(--hub-bg-soft,#F4F2FF); }
+.rcp-result-av{
+  width:36px; height:36px; border-radius:50%; flex:0 0 36px;
+  display:grid; place-items:center; font-weight:900; font-size:14px; color:#fff;
+  background:linear-gradient(135deg,var(--hub-brand,#6B5AED),#9B8CFF);
+}
+.rcp-result-name{ font-weight:900; color:var(--hub-text,#0F172A); font-size:14px; }
+.rcp-result-sub{ color:var(--hub-text-mute,#64748B); font-size:12px; font-weight:700; }
+.rcp-result-meta{ margin-inline-start:auto; }
+
+/* ── بطاقة المشترك (Spotlight) ── */
+.rcp-spot{ display:none; }
+.rcp-spot.is-on{ display:block; animation:rcp-rise .28s ease; }
+@keyframes rcp-rise{ from{ opacity:0; transform:translateY(14px);} to{ opacity:1; transform:none;} }
+.rcp-spot-card{
+  position:relative; overflow:hidden;
+  background:linear-gradient(135deg,#FBFAFF 0%,#F4F2FF 100%);
+  border:1px solid var(--hub-brand-soft,#DDD6FE); border-radius:20px;
+  padding:20px 22px; margin-bottom:var(--hub-gap-section,18px);
+  box-shadow:0 16px 44px rgba(107,90,237,.12);
+}
+.rcp-spot-card::before{
+  content:""; position:absolute; inset-inline-start:-60px; top:-60px;
+  width:200px; height:200px; border-radius:50%;
+  background:radial-gradient(circle,rgba(107,90,237,.14),transparent 70%);
+}
+.rcp-spot-head{ display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
+.rcp-spot-av{
+  width:60px; height:60px; border-radius:50%; flex:0 0 60px;
+  display:grid; place-items:center; font-weight:900; font-size:24px; color:#fff;
+  background:linear-gradient(135deg,var(--hub-brand,#6B5AED),#9B8CFF);
+  box-shadow:0 8px 22px rgba(107,90,237,.35);
+}
+.rcp-spot-name{ font-size:19px; font-weight:900; color:var(--hub-text,#0F172A); }
+.rcp-spot-user{ color:var(--hub-text-mute,#64748B); font-weight:800; font-size:13px; }
+.rcp-spot-facts{
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  gap:10px; margin-top:16px;
+}
+.rcp-fact{
+  background:rgba(255,255,255,.85); border:1px solid var(--hub-border-soft,#E9E5FB);
+  border-radius:14px; padding:10px 14px;
+}
+.rcp-fact-l{ font-size:11.5px; font-weight:900; color:var(--hub-text-mute,#64748B); display:flex; align-items:center; gap:6px; }
+.rcp-fact-l i{ color:var(--hub-brand,#6B5AED); font-size:11px; }
+.rcp-fact-v{ font-size:15px; font-weight:900; color:var(--hub-text,#0F172A); margin-top:3px; font-variant-numeric:tabular-nums; }
+.rcp-fact-s{ font-size:11px; font-weight:800; color:var(--hub-text-mute,#94A3B8); margin-top:1px; }
+.rcp-fact-v.neg{ color:#DC2626; } .rcp-fact-v.pos{ color:#15803D; }
+
+/* ── بطاقات اختيار العملية ── */
+.rcp-actions{
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr));
+  gap:12px;
+}
+.rcp-act{
+  position:relative; border:2px solid var(--hub-border-soft,#E2E8F0);
+  border-radius:16px; background:#fff; padding:16px 14px; cursor:pointer;
+  display:flex; flex-direction:column; align-items:center; gap:8px; text-align:center;
+  transition:border-color .16s ease, box-shadow .16s ease, transform .16s ease;
+  font:inherit;
+}
+.rcp-act:hover{ transform:translateY(-2px); border-color:var(--hub-brand-soft,#C4B5FD); }
+.rcp-act.is-sel{
+  border-color:var(--hub-brand,#6B5AED);
+  background:linear-gradient(180deg,#FBFAFF, #F4F2FF);
+  box-shadow:0 12px 30px rgba(107,90,237,.22);
+}
+.rcp-act.is-sel::after{
+  content:"\f00c"; font-family:"Font Awesome 6 Free"; font-weight:900;
+  position:absolute; top:8px; inset-inline-end:8px;
+  width:20px; height:20px; border-radius:50%; display:grid; place-items:center;
+  background:var(--hub-brand,#6B5AED); color:#fff; font-size:10px;
+}
+.rcp-act[disabled]{ opacity:.55; cursor:not-allowed; transform:none; }
+.rcp-act-ic{
+  width:44px; height:44px; border-radius:13px; display:grid; place-items:center;
+  font-size:18px; color:var(--hub-brand,#6B5AED);
+  background:var(--hub-bg-soft,#F4F2FF);
+}
+.rcp-act.is-sel .rcp-act-ic{ background:linear-gradient(135deg,var(--hub-brand,#6B5AED),#9B8CFF); color:#fff; }
+.rcp-act-t{ font-weight:900; font-size:13.5px; color:var(--hub-text,#0F172A); }
+.rcp-act-s{ font-weight:700; font-size:11px; color:var(--hub-text-mute,#94A3B8); }
+
+/* ── مدخلات كل عملية ── */
+.rcp-panes{ margin-top:14px; }
+.rcp-pane{ display:none; }
+.rcp-pane.is-on{ display:flex; flex-wrap:wrap; align-items:flex-end; gap:14px; animation:rcp-pop .18s ease; }
+.rcp-field label{ display:block; font-size:12px; font-weight:900; color:var(--hub-text-mute,#64748B); margin-bottom:6px; }
+.rcp-field .hub-input{ height:42px; }
+/* عدّاد المرات ×1 ×2 ×3 */
+.rcp-step{ display:inline-flex; align-items:center; border:1px solid var(--hub-border-soft,#E2E8F0); border-radius:12px; overflow:hidden; background:#fff; }
+.rcp-step button{ width:42px; height:42px; border:0; background:var(--hub-bg-soft,#F4F2FF); color:var(--hub-brand,#6B5AED); font-size:15px; font-weight:900; cursor:pointer; }
+.rcp-step button:hover{ background:#EDE9FE; }
+.rcp-step input{ width:64px; height:42px; border:0; text-align:center; font-weight:900; font-size:16px; outline:0; font-variant-numeric:tabular-nums; }
+.rcp-total-chip{
+  display:inline-flex; align-items:center; gap:8px; padding:9px 16px; border-radius:12px;
+  background:linear-gradient(135deg,#F4F2FF,#EDE9FE); border:1px solid var(--hub-brand-soft,#DDD6FE);
+  color:var(--hub-brand-ink,#4C3FBF); font-weight:900; font-size:14px;
+  font-variant-numeric:tabular-nums;
+}
+
+/* ── شريط التأكيد اللاصق ── */
+.rcp-bar{
+  position:sticky; bottom:14px; z-index:50; display:none;
+  align-items:center; gap:18px; flex-wrap:wrap;
+  margin-top:var(--hub-gap-section,18px);
+  background:linear-gradient(135deg,#241B5E 0%,#4C3FBF 55%,#6B5AED 100%);
+  border-radius:18px; padding:14px 22px; color:#fff;
+  box-shadow:0 22px 60px rgba(36,27,94,.45);
+}
+.rcp-bar.is-on{ display:flex; animation:rcp-rise .25s ease; }
+.rcp-bar-kv{ display:flex; flex-direction:column; gap:2px; min-width:120px; }
+.rcp-bar-kv .l{ font-size:11px; font-weight:800; color:rgba(255,255,255,.7); }
+.rcp-bar-kv .v{ font-size:17px; font-weight:900; font-variant-numeric:tabular-nums; }
+.rcp-bar-go{
+  margin-inline-start:auto;
+  display:inline-flex; align-items:center; gap:10px;
+  border:0; cursor:pointer; border-radius:14px; padding:13px 34px;
+  background:#fff; color:var(--hub-brand-ink,#4C3FBF);
+  font:inherit; font-weight:900; font-size:16px;
+  box-shadow:0 10px 26px rgba(0,0,0,.25);
+  transition:transform .15s ease, box-shadow .15s ease;
+}
+.rcp-bar-go:hover{ transform:translateY(-2px); box-shadow:0 14px 32px rgba(0,0,0,.3); }
+.rcp-bar-go[disabled]{ opacity:.6; cursor:wait; transform:none; }
+
+/* ── نافذة النجاح ── */
+.rcp-success-check{
+  width:84px; height:84px; border-radius:50%; margin:6px auto 14px;
+  display:grid; place-items:center; font-size:36px; color:#fff;
+  background:linear-gradient(135deg,#16A34A,#4ADE80);
+  box-shadow:0 14px 38px rgba(22,163,74,.4);
+  animation:rcp-check .45s cubic-bezier(.2,1.4,.4,1);
+}
+@keyframes rcp-check{ from{ transform:scale(.3); opacity:0;} to{ transform:scale(1); opacity:1;} }
+.rcp-success-msg{ text-align:center; font-weight:900; font-size:16px; color:var(--hub-text,#0F172A); }
+.rcp-success-sub{ text-align:center; font-weight:700; font-size:13px; color:var(--hub-text-mute,#64748B); margin-top:4px; }
+
+/* ── شريط آخر العمليات ── */
+.rcp-recent-row{ display:flex; align-items:center; gap:12px; padding:9px 4px; border-bottom:1px dashed var(--hub-border-soft,#EEF1F6); }
+.rcp-recent-row:last-child{ border-bottom:0; }
+.rcp-recent-ic{ width:30px; height:30px; border-radius:9px; display:grid; place-items:center; background:#ECFDF5; color:#15803D; font-size:12px; flex:0 0 30px; }
+.rcp-recent-t{ font-weight:900; font-size:13px; color:var(--hub-text,#0F172A); }
+.rcp-recent-s{ font-weight:700; font-size:11.5px; color:var(--hub-text-mute,#94A3B8); }
+.rcp-recent-amt{ margin-inline-start:auto; font-weight:900; color:#15803D; font-variant-numeric:tabular-nums; }
+
+/* إيصال الطباعة */
+@media print{
+  body *{ visibility:hidden !important; }
+  #rcp-receipt, #rcp-receipt *{ visibility:visible !important; }
+  #rcp-receipt{ position:fixed; inset:0; background:#fff; padding:28px; display:block !important; }
+}
+#rcp-receipt{ display:none; }
+
+/* ── تنبيه عائم بديل عن alert() (ممنوع نظاميًا §12) ── */
+.rcp-toast{
+  position:fixed; inset-block-end:24px; inset-inline:0; margin-inline:auto;
+  width:max-content; max-width:min(92vw,440px); z-index:9999;
+  display:none; align-items:flex-start; gap:10px;
+  background:var(--hub-text,#1F2937); color:#fff;
+  padding:13px 18px; border-radius:14px; font-weight:800; font-size:13.5px;
+  box-shadow:0 18px 48px rgba(15,23,42,.34); text-align:start;
+}
+.rcp-toast.is-on{ display:flex; animation:rcp-rise .22s ease; }
+.rcp-toast i{ font-size:15px; margin-top:1px; color:var(--hub-amber,#F59E0B); }
+.rcp-toast.is-err i{ color:var(--hub-red,#EF4444); }
+
+@media (max-width:720px){
+  .rcp-bar-go{ width:100%; justify-content:center; margin-inline-start:0; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+{# ═════════ الهيرو المدموج: العنوان + المؤشرات الثلاثة + البحث الكبير ═════════
+   نمط UDS الموحّد: {% call hub.megahero(...) %} يدمج البحث داخل .uds-hero عبر
+   نموذج uds-hero-search — لا هيرو منفصل ولا hub-hero-shell قديمة. البحث هنا
+   لحظي (autocomplete عبر JS) لا يُرسَل بالنموذج، لذا نمنع الإرسال بـ onsubmit. #}
+{% call hub.megahero(
+    "لوحة الشحن",
+    subtitle="ابحث عن المشترك، اختر العملية، وفعّل بنقرة — كل العمليات تُسجَّل في السجل المالي الموحّد.",
+    icon="bolt",
+    kpis=[
+      {'label': 'رصيد المحفظة',        'value': kpis.wallet_balance|money,   'icon': 'wallet',        'variant': 'brand', 'sub': 'محافظك المسجّلة في المركز المالي'},
+      {'label': 'الديون المفتوحة',     'value': kpis.open_debts|money,       'icon': 'file-invoice-dollar', 'variant': 'amber', 'sub': 'سلف غير مسددة'},
+      {'label': 'محصلة اليوم',         'value': kpis.collected_today|money,  'icon': 'cash-register', 'variant': 'green', 'sub': 'دفعاتك المرحَّلة اليوم'},
+    ]
+) %}
+  {# حقل البحث النصي يندمج في حزام uds-hero-search (الارتفاع 42px يُطبَّق
+     تلقائيًا من hub_v2.css). قائمة النتائج اللحظية تُعرض أسفله. #}
+  <input type="text" id="rcp-q" name="q" class="hub-input grow" autocomplete="off"
+         spellcheck="false" placeholder="ابحث برقم المشترك أو الاسم أو الجوال…"
+         role="combobox" aria-expanded="false" aria-controls="rcp-results"
+         onkeydown="if(event.key==='Enter')event.preventDefault();">
+  <div class="rcp-results" id="rcp-results" role="listbox"></div>
+{% endcall %}
+
+{# ═════════ بطاقة المشترك + اختيار العملية ═════════ #}
+<div class="rcp-spot" id="rcp-spot">
+  <div class="rcp-spot-card">
+    <div class="rcp-spot-head">
+      <div class="rcp-spot-av" id="sp-av">؟</div>
+      <div>
+        <div class="rcp-spot-name"><bdi id="sp-name">—</bdi></div>
+        <div class="rcp-spot-user"><bdi dir="ltr" id="sp-user">—</bdi></div>
+      </div>
+      <span id="sp-status" style="margin-inline-start:auto"></span>
+    </div>
+    <div class="rcp-spot-facts">
+      <div class="rcp-fact">
+        <div class="rcp-fact-l"><i class="fa-solid fa-tags"></i> الباقة الحالية</div>
+        <div class="rcp-fact-v" id="sp-plan">—</div>
+        <div class="rcp-fact-s" id="sp-price-note">سعرك الفعلي لهذا المشترك</div>
+      </div>
+      <div class="rcp-fact">
+        <div class="rcp-fact-l"><i class="fa-solid fa-coins"></i> السعر</div>
+        <div class="rcp-fact-v" id="sp-price">—</div>
+        <div class="rcp-fact-s" id="sp-price-src"></div>
+      </div>
+      <div class="rcp-fact">
+        <div class="rcp-fact-l"><i class="fa-solid fa-hourglass-half"></i> ينتهي في</div>
+        <div class="rcp-fact-v" id="sp-exp">—</div>
+        <div class="rcp-fact-s" id="sp-exp-rel"></div>
+      </div>
+      <div class="rcp-fact">
+        <div class="rcp-fact-l"><i class="fa-solid fa-scale-balanced"></i> الرصيد</div>
+        <div class="rcp-fact-v" id="sp-bal">—</div>
+        <div class="rcp-fact-s" id="sp-loans"></div>
+      </div>
+      <div class="rcp-fact">
+        <div class="rcp-fact-l"><i class="fa-solid fa-receipt"></i> آخر فاتورة</div>
+        <div class="rcp-fact-v" id="sp-lastpay">—</div>
+        <div class="rcp-fact-s" id="sp-lastpay-sub"></div>
+      </div>
+    </div>
+  </div>
+
+  {% call hub.section("اختر العملية", icon="wand-magic-sparkles") %}
+    {# ═══ RBAC على مستوى العملية — النمط المرجعي لكل الصفحات ═══
+       كل بطاقة عملية مربوطة بمفتاح الحارس الخادمي نفسه (راجع
+       _PERM_GUARDED في routes/blueprint.py):
+         تجديد/شحن نقدي → users.payments (users_payment_create)
+         تفعيل بالوقت   → users.extend  (users_extend)
+         تغيير العرض    → users.change_plan (users_change_plan)
+       can() و ui_unauth_mode() من context processor التطبيق:
+         can=True            → البطاقة طبيعية.
+         can=False + hide    → البطاقة لا تُعرض إطلاقًا.
+         can=False + freeze  → معطّلة (disabled) بقفل + hub-hint
+                               «ليست ضمن صلاحياتك» — الخادم يمنعها
+                               بـ 403 على أي حال؛ هذا للوضوح فقط. #}
+    {%- macro rcp_action(act, icon, title, sub, perm) -%}
+      {%- set _allowed = can(perm) if can is defined else true -%}
+      {%- set _mode = ui_unauth_mode() if ui_unauth_mode is defined else 'freeze' -%}
+      {%- if _allowed -%}
+      <button type="button" class="rcp-act" data-act="{{ act }}">
+        <span class="rcp-act-ic"><i class="fa-solid fa-{{ icon }}"></i></span>
+        <span class="rcp-act-t">{{ title }}</span>
+        <span class="rcp-act-s">{{ sub }}</span>
+      </button>
+      {%- elif _mode == 'freeze' -%}
+      <button type="button" class="rcp-act" data-act="{{ act }}" disabled
+              style="opacity:.45;cursor:not-allowed" aria-disabled="true">
+        <span class="rcp-act-ic"><i class="fa-solid fa-lock"></i></span>
+        <span class="rcp-act-t">{{ title }}
+          <span class="hub-hint" tabindex="0" data-hint="ليست ضمن صلاحياتك"><i class="fa-solid fa-lock"></i></span>
+        </span>
+        <span class="rcp-act-s">ليست ضمن صلاحياتك</span>
+      </button>
+      {%- endif -%}
+    {%- endmacro -%}
+    <div class="rcp-actions" id="rcp-actions">
+      {{ rcp_action('renew', 'rotate', 'تجديد نفس الباقة', 'دفعة بسعر الباقة × عدد المرات', 'users.payments') }}
+      {{ rcp_action('time', 'clock', 'تفعيل بالوقت', 'إضافة أيام/ساعات للحساب', 'users.extend') }}
+      {{ rcp_action('plan', 'shuffle', 'تغيير العرض ثم تفعيل', 'نقل المشترك لعرض آخر وتجديده', 'users.change_plan') }}
+      {{ rcp_action('cash', 'money-bill-wave', 'شحن مبلغ نقدي', 'المبلغ يتحوّل وقتًا تناسبيًا', 'users.payments') }}
+      {# تفعيل بالكارت — مسار كروت الهوتسبوت الحالي لا يدعم شحن مشترك
+         مباشرة بكود كرت من لوحة الإدارة؛ يُفعَّل لاحقًا عند توفر الخدمة. #}
+      <button type="button" class="rcp-act" data-act="card" disabled>
+        <span class="rcp-act-ic"><i class="fa-solid fa-id-card"></i></span>
+        <span class="rcp-act-t">تفعيل بالكارت
+          <span class="hub-hint" tabindex="0" data-hint="شحن المشترك بكود كرت من لوحة الإدارة غير متاح بعد — قريباً."><i class="fa-solid fa-circle-info"></i></span>
+        </span>
+        <span class="rcp-act-s">قريباً</span>
+      </button>
+    </div>
+
+    <div class="rcp-panes">
+      {# تجديد نفس الباقة: عدد المرات × السعر الفعلي #}
+      <div class="rcp-pane" data-pane="renew">
+        <div class="rcp-field">
+          <label>عدد المرات</label>
+          <span class="rcp-step">
+            <button type="button" data-step="-1" aria-label="إنقاص"><i class="fa-solid fa-minus"></i></button>
+            <input type="number" id="renew-count" value="1" min="1" max="24">
+            <button type="button" data-step="1" aria-label="زيادة"><i class="fa-solid fa-plus"></i></button>
+          </span>
+        </div>
+        <span class="rcp-total-chip"><i class="fa-solid fa-equals"></i> الإجمالي: <span id="renew-total">—</span></span>
+        <label style="display:inline-flex;align-items:center;gap:8px;font-weight:800;font-size:13px;color:var(--hub-text-mute)">
+          <input type="checkbox" id="renew-apply" checked> تطبيق المدة فورًا على الحساب
+          <span class="hub-hint" tabindex="0" data-hint="عند التفعيل تُضاف المدة المكتسبة مباشرة إلى تاريخ انتهاء المشترك في RADIUS."><i class="fa-solid fa-circle-info"></i></span>
+        </label>
+      </div>
+
+      {# تفعيل بالوقت: مدة + وضع المحاسبة #}
+      <div class="rcp-pane" data-pane="time">
+        <div class="rcp-field">
+          <label>المدة</label>
+          <input type="number" class="hub-input" id="time-value" value="1" min="1" style="width:110px">
+        </div>
+        <div class="rcp-field">
+          <label>الوحدة</label>
+          <select class="hub-input" id="time-unit" style="min-width:130px">
+            <option value="1440" selected>أيام</option>
+            <option value="60">ساعات</option>
+            <option value="1">دقائق</option>
+          </select>
+        </div>
+        <div class="rcp-field">
+          <label>المحاسبة</label>
+          <select class="hub-input" id="time-mode" style="min-width:170px">
+            <option value="paid" selected>مدفوعة (من سعر الباقة)</option>
+            <option value="debt">على الدين</option>
+            <option value="free">مجانية</option>
+          </select>
+        </div>
+        <span class="rcp-total-chip"><i class="fa-solid fa-equals"></i> القيمة: <span id="time-total">—</span></span>
+      </div>
+
+      {# تغيير العرض ثم تفعيل #}
+      <div class="rcp-pane" data-pane="plan">
+        <div class="rcp-field">
+          <label>العرض الجديد</label>
+          <select class="hub-input" id="plan-select" style="min-width:240px">
+            {% for p in plans %}
+            <option value="{{ p.id }}" data-price="{{ p.price or 0 }}" data-name="{{ p.name }}">{{ p.name }} — {{ (p.price or 0)|money }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="rcp-field">
+          <label>سياسة المدة المتبقية
+            <span class="hub-hint" tabindex="0" data-hint="«الحفاظ على الانتهاء» يبقي تاريخ الانتهاء كما هو. خيارات التعويض/الدين تتطلب أن يكون العرض الجديد أرخص/أغلى فعلًا."><i class="fa-solid fa-circle-info"></i></span>
+          </label>
+          <select class="hub-input" id="plan-policy" style="min-width:230px">
+            <option value="neutral_keep_expiry" selected>الحفاظ على تاريخ الانتهاء</option>
+            <option value="lower_compensate">عرض أرخص — تعويض أيام إضافية</option>
+            <option value="lower_keep_expiry">عرض أرخص — إبقاء الانتهاء</option>
+            <option value="higher_debt">عرض أغلى — تسجيل فرق دين</option>
+            <option value="higher_reduce_days">عرض أغلى — إنقاص الأيام</option>
+            <option value="higher_keep_expiry">عرض أغلى — إبقاء الانتهاء</option>
+          </select>
+        </div>
+        <label style="display:inline-flex;align-items:center;gap:8px;font-weight:800;font-size:13px;color:var(--hub-text-mute)">
+          <input type="checkbox" id="plan-activate" checked> تفعيل دورة جديدة بعد التغيير
+        </label>
+        <span class="rcp-total-chip"><i class="fa-solid fa-equals"></i> الإجمالي: <span id="plan-total">—</span></span>
+      </div>
+
+      {# شحن مبلغ نقدي #}
+      <div class="rcp-pane" data-pane="cash">
+        <div class="rcp-field">
+          <label>المبلغ ({{ currency }})</label>
+          <input type="number" class="hub-input" id="cash-amount" min="0.01" step="0.01" placeholder="0.00" style="width:150px">
+        </div>
+        <div class="rcp-field">
+          <label>طريقة الدفع</label>
+          <select class="hub-input" id="cash-method" style="min-width:140px">
+            <option value="cash" selected>نقدًا</option>
+            <option value="transfer">حوالة</option>
+            <option value="wallet">محفظة</option>
+          </select>
+        </div>
+        <span class="rcp-total-chip"><i class="fa-solid fa-hourglass-half"></i> يكسب: <span id="cash-days">—</span></span>
+        <label style="display:inline-flex;align-items:center;gap:8px;font-weight:800;font-size:13px;color:var(--hub-text-mute)">
+          <input type="checkbox" id="cash-apply" checked> تطبيق المدة فورًا على الحساب
+        </label>
+      </div>
+    </div>
+  {% endcall %}
+
+  {# ═════════ شريط التأكيد اللاصق ═════════ #}
+  <div class="rcp-bar" id="rcp-bar">
+    <div class="rcp-bar-kv"><span class="l">المشترك</span><span class="v"><bdi id="bar-user">—</bdi></span></div>
+    <div class="rcp-bar-kv"><span class="l">العملية</span><span class="v" id="bar-act">—</span></div>
+    <div class="rcp-bar-kv"><span class="l">إجمالي الشحن</span><span class="v" id="bar-total">—</span></div>
+    <div class="rcp-bar-kv"><span class="l">محصلة اليوم بعد العملية</span><span class="v" id="bar-after">—</span></div>
+    <button type="button" class="rcp-bar-go" id="rcp-go">
+      <i class="fa-solid fa-bolt"></i> تفعيل
+    </button>
+  </div>
+</div>
+
+{# ═════════ آخر عملياتك اليوم ═════════ #}
+{# قاموس ترجمة طريقة الدفع — الخادم يعيد القيمة الخام الإنجليزية فنترجمها هنا. #}
+{% set _method_labels = {'cash': 'نقدًا', 'transfer': 'حوالة', 'wallet': 'محفظة'} %}
+{% call hub.section("آخر عملياتك اليوم", icon="clock-rotate-left", meta="آخر 5 عمليات") %}
+  <div id="rcp-recent">
+    {% if recent %}
+      {% for op in recent %}
+      <div class="rcp-recent-row">
+        <span class="rcp-recent-ic"><i class="fa-solid fa-check"></i></span>
+        <div>
+          <div class="rcp-recent-t"><bdi dir="ltr">{{ op.username }}</bdi></div>
+          <div class="rcp-recent-s">{{ op.created_at|dt_local }} · {{ _method_labels.get(op.method, op.method or 'نقدًا') }}</div>
+        </div>
+        <span class="rcp-recent-amt">{{ op.amount_label }}</span>
+      </div>
+      {% endfor %}
+    {% else %}
+      {{ hub.empty("لا عمليات اليوم بعد.", sub="أول عملية شحن تنجزها ستظهر هنا فورًا.", icon="bolt") }}
+    {% endif %}
+  </div>
+{% endcall %}
+
+{# ═════════ نافذة التأكيد العائمة ═════════ #}
+{% call hub.modal("rcp-confirm", "تأكيد العملية", icon="bolt",
+     footer_html='<button type="button" class="hub-btn hub-btn--ghost" data-uds-modal-close>إلغاء</button>'
+                 ~ '<button type="button" class="hub-btn hub-btn--primary" id="rcp-confirm-go"><i class="fa-solid fa-check"></i> تأكيد وتنفيذ</button>') %}
+  <div id="rcp-confirm-body"></div>
+{% endcall %}
+
+{# ═════════ نافذة النجاح ═════════ #}
+{% call hub.modal("rcp-done", "تمت العملية", icon="circle-check",
+     footer_html='<button type="button" class="hub-btn hub-btn--secondary" id="rcp-print"><i class="fa-solid fa-print"></i> طباعة الفاتورة</button>'
+                 ~ '<button type="button" class="hub-btn hub-btn--primary" id="rcp-new" data-uds-modal-close><i class="fa-solid fa-plus"></i> عملية جديدة</button>') %}
+  <div class="rcp-success-check"><i class="fa-solid fa-check"></i></div>
+  <div class="rcp-success-msg" id="rcp-done-msg">تم تنفيذ العملية بنجاح.</div>
+  <div class="rcp-success-sub" id="rcp-done-sub"></div>
+{% endcall %}
+
+{# إيصال الطباعة (يُملأ بعد النجاح ويُطبع وحده) #}
+<div id="rcp-receipt" dir="rtl"></div>
+
+{# تنبيه عائم — بديل نظامي عن alert() المحظور #}
+<div class="rcp-toast" id="rcp-toast" role="alert" aria-live="assertive">
+  <i class="fa-solid fa-circle-exclamation"></i><span id="rcp-toast-msg"></span>
+</div>
+
+<script src="{{ url_for('static', filename='js/unified_design.js') }}"></script>
+<script>
+(function(){
+  "use strict";
+  // ── ثوابت من الخادم ──
+  var CSRF = {{ csrf_token()|tojson }};
+  var CUR  = {{ currency|tojson }};
+  var URL_SEARCH  = {{ url_for('radius.recharge_search_json')|tojson }};
+  var URL_SUB     = {{ url_for('radius.recharge_subscriber_json', username='__U__')|tojson }};
+  var URL_RECENT  = {{ url_for('radius.recharge_recent_json')|tojson }};
+  // مسارات العمليات القائمة (نعيد استخدامها كما هي — لا منطق مال جديد)
+  var URL_PAY     = {{ url_for('radius.users_payment_create', username='__U__')|tojson }};
+  var URL_EXTEND  = {{ url_for('radius.users_extend', username='__U__')|tojson }};
+  var URL_CHPLAN  = {{ url_for('radius.users_change_plan', username='__U__')|tojson }};
+  var COLLECTED_TODAY = {{ kpis.collected_today|float }};
+  var ACTOR = {{ (session.get('admin_name') or session.get('admin_user') or '')|tojson }};
+
+  var $ = function(s, r){ return (r||document).querySelector(s); };
+  var $$ = function(s, r){ return Array.prototype.slice.call((r||document).querySelectorAll(s)); };
+
+  var state = { sub:null, act:null, busy:false };
+
+  function fmt(n){
+    if (n === null || n === undefined || isNaN(n)) return "—";
+    return Number(n).toLocaleString("en-US",{minimumFractionDigits:2, maximumFractionDigits:2}) + " " + CUR;
+  }
+  function esc(s){ var d=document.createElement("div"); d.textContent=String(s==null?"":s); return d.innerHTML; }
+  // تنبيه عائم بديل عن alert() المحظور — يختفي تلقائيًا.
+  var _toastT=null;
+  function toast(msg){
+    var t=$("#rcp-toast"); if(!t) return;
+    $("#rcp-toast-msg").textContent = msg || "حدث خطأ غير متوقع.";
+    t.classList.add("is-on","is-err");
+    clearTimeout(_toastT);
+    _toastT=setTimeout(function(){ t.classList.remove("is-on"); }, 4200);
+  }
+
+  /* ════════ 1) البحث اللحظي ════════ */
+  var q = $("#rcp-q"), box = $("#rcp-results"), hot = -1, debounce=null, lastQ="";
+  // خريطة ترجمة حالة المشترك — endpoint البحث يعيد القيمة الخام الإنجليزية،
+  // فنترجمها هنا للعربية قبل العرض في قائمة النتائج (نفس قاموس الخادم).
+  var STATUS_MAP = {enabled:"نشط", disabled:"معطّل", expired:"منتهي", suspended:"موقوف", pending:"قيد التفعيل", banned:"محظور"};
+  function statusLabel(s){ return STATUS_MAP[s] || s || "غير معروف"; }
+  // خريطة ترجمة طريقة الدفع — تُستخدم في تحديث «آخر العمليات» الحي.
+  var METHOD_MAP = {cash:"نقدًا", transfer:"حوالة", wallet:"محفظة"};
+  function methodLabel(m){ return METHOD_MAP[m] || m || "نقدًا"; }
+  function closeResults(){ box.classList.remove("is-open"); box.innerHTML=""; hot=-1; q.setAttribute("aria-expanded","false"); }
+  function renderResults(items){
+    if (!items.length){ closeResults(); return; }
+    box.innerHTML = items.map(function(it,i){
+      var init = (it.full_name || it.username || "؟").trim().charAt(0);
+      return '<button type="button" class="rcp-result" role="option" data-u="'+esc(it.username)+'" data-i="'+i+'">'
+        + '<span class="rcp-result-av">'+esc(init)+'</span>'
+        + '<span><span class="rcp-result-name"><bdi>'+esc(it.full_name || it.username)+'</bdi></span><br>'
+        + '<span class="rcp-result-sub"><bdi dir="ltr">'+esc(it.username)+'</bdi>'
+        + (it.mobile ? ' · <bdi dir="ltr">'+esc(it.mobile)+'</bdi>' : '') + '</span></span>'
+        + '<span class="rcp-result-meta rcp-result-sub">'+esc(statusLabel(it.status))+'</span>'
+        + '</button>';
+    }).join("");
+    box.classList.add("is-open"); hot=-1; q.setAttribute("aria-expanded","true");
+  }
+  q.addEventListener("input", function(){
+    var v = q.value.trim();
+    clearTimeout(debounce);
+    if (!v){ closeResults(); return; }
+    debounce = setTimeout(function(){
+      lastQ = v;
+      fetch(URL_SEARCH + "?q=" + encodeURIComponent(v), {credentials:"same-origin"})
+        .then(function(r){ return r.json(); })
+        .then(function(j){ if (lastQ === v) renderResults((j && j.items) || []); })
+        .catch(function(){ closeResults(); });
+    }, 220);
+  });
+  q.addEventListener("keydown", function(e){
+    var rows = $$(".rcp-result", box);
+    if (e.key === "ArrowDown" || e.key === "ArrowUp"){
+      if (!rows.length) return;
+      e.preventDefault();
+      hot = e.key === "ArrowDown" ? Math.min(hot+1, rows.length-1) : Math.max(hot-1, 0);
+      rows.forEach(function(r,i){ r.classList.toggle("is-hot", i===hot); });
+      rows[hot].scrollIntoView({block:"nearest"});
+    } else if (e.key === "Enter"){
+      if (hot >= 0 && rows[hot]){ e.preventDefault(); pick(rows[hot].getAttribute("data-u")); }
+      else if (rows.length === 1){ e.preventDefault(); pick(rows[0].getAttribute("data-u")); }
+    } else if (e.key === "Escape"){ closeResults(); }
+  });
+  box.addEventListener("click", function(e){
+    var b = e.target.closest(".rcp-result");
+    if (b) pick(b.getAttribute("data-u"));
+  });
+  document.addEventListener("click", function(e){
+    // إغلاق النتائج عند النقر خارج حزام البحث المدموج أو خارج القائمة نفسها
+    if (!e.target.closest(".uds-hero-search") && !e.target.closest("#rcp-results")) closeResults();
+  });
+
+  /* ════════ 2) بطاقة المشترك ════════ */
+  function relExpiry(iso){
+    if (!iso) return ["—",""];
+    var d = new Date(iso); if (isNaN(d)) return [iso,""];
+    var diff = d.getTime() - Date.now();
+    var days = Math.floor(Math.abs(diff)/86400000);
+    var hrs  = Math.floor((Math.abs(diff)%86400000)/3600000);
+    var span = days > 0 ? (days + " يوم" + (hrs? " و"+hrs+" ساعة":"")) : (hrs + " ساعة");
+    // تنسيق التاريخ والوقت بالعربية (بدل en-GB) ليتسق مع لغة الواجهة
+    var label = d.toLocaleDateString("ar") + " " + d.toLocaleTimeString("ar",{hour:"2-digit",minute:"2-digit"});
+    return [label, diff >= 0 ? ("متبقٍ " + span) : ("منتهٍ منذ " + span)];
+  }
+  function pick(username){
+    closeResults();
+    q.value = username;
+    fetch(URL_SUB.replace("__U__", encodeURIComponent(username)), {credentials:"same-origin"})
+      .then(function(r){ return r.json(); })
+      .then(function(j){
+        if (!j || !j.ok){ toast((j && j.error) || "تعذّر جلب بيانات المشترك."); return; }
+        state.sub = j.subscriber; state.lastPayment = j.last_payment || null;
+        renderSpot();
+        $("#rcp-spot").classList.add("is-on");
+        recalc();
+        $("#rcp-spot").scrollIntoView({behavior:"smooth", block:"start"});
+      })
+      .catch(function(){ toast("تعذّر الاتصال بالخادم."); });
+  }
+  function renderSpot(){
+    var s = state.sub;
+    $("#sp-av").textContent = (s.full_name || s.username || "؟").trim().charAt(0);
+    $("#sp-name").textContent = s.full_name || s.username;
+    $("#sp-user").textContent = s.username + (s.mobile ? " · " + s.mobile : "");
+    var stVar = {enabled:"green", expired:"red", disabled:"grey", suspended:"amber", pending:"blue", banned:"red"}[s.status] || "grey";
+    $("#sp-status").innerHTML = '<span class="hub-pill hub-pill--'+stVar+'"><span class="dot"></span>'+esc(s.status_label)+'</span>';
+    $("#sp-plan").textContent = s.plan_name || "بدون باقة";
+    $("#sp-price").textContent = s.price_label;
+    $("#sp-price-src").textContent = s.price_custom ? "سعر مخصّص لهذا المشترك" : "سعر العرض / سعر المدير المتفق عليه";
+    var rel = relExpiry(s.expire_at);
+    $("#sp-exp").textContent = rel[0];
+    $("#sp-exp-rel").textContent = rel[1];
+    var bal = $("#sp-bal");
+    bal.textContent = s.balance_label;
+    bal.classList.toggle("neg", s.balance < 0);
+    bal.classList.toggle("pos", s.balance > 0);
+    $("#sp-loans").textContent = s.open_loans > 0 ? ("سلف مفتوحة: " + s.open_loans_label) : "لا سلف مفتوحة";
+    if (state.lastPayment){
+      $("#sp-lastpay").textContent = state.lastPayment.amount_label;
+      $("#sp-lastpay-sub").textContent = (state.lastPayment.created_at || "").replace("T"," ").slice(0,16);
+    } else {
+      $("#sp-lastpay").textContent = "—";
+      $("#sp-lastpay-sub").textContent = "لا دفعات سابقة";
+    }
+  }
+
+  /* ════════ 3) اختيار العملية + الحسابات الحية ════════ */
+  var ACT_LABEL = {renew:"تجديد نفس الباقة", time:"تفعيل بالوقت", plan:"تغيير العرض ثم تفعيل", cash:"شحن مبلغ نقدي"};
+  $("#rcp-actions").addEventListener("click", function(e){
+    var b = e.target.closest(".rcp-act");
+    if (!b || b.disabled) return;
+    state.act = b.getAttribute("data-act");
+    $$(".rcp-act").forEach(function(x){ x.classList.toggle("is-sel", x===b); });
+    $$(".rcp-pane").forEach(function(p){ p.classList.toggle("is-on", p.getAttribute("data-pane")===state.act); });
+    recalc();
+  });
+  // عدّاد المرات
+  $$("[data-step]").forEach(function(b){
+    b.addEventListener("click", function(){
+      var inp = $("#renew-count");
+      inp.value = Math.max(1, Math.min(24, (parseInt(inp.value,10)||1) + parseInt(b.getAttribute("data-step"),10)));
+      recalc();
+    });
+  });
+  ["renew-count","time-value","time-unit","time-mode","plan-select","plan-policy","plan-activate","cash-amount","cash-method","renew-apply","cash-apply"]
+    .forEach(function(id){
+      var el = document.getElementById(id);
+      if (el){ el.addEventListener("input", recalc); el.addEventListener("change", recalc); }
+    });
+
+  function planSelPrice(){
+    var sel = $("#plan-select");
+    var opt = sel && sel.options[sel.selectedIndex];
+    return opt ? parseFloat(opt.getAttribute("data-price") || "0") : 0;
+  }
+  function currentTotal(){
+    var s = state.sub; if (!s) return 0;
+    if (state.act === "renew"){
+      return (parseInt($("#renew-count").value,10)||1) * (s.price||0);
+    }
+    if (state.act === "time"){
+      var mode = $("#time-mode").value;
+      if (mode === "free") return 0;
+      var mins = (parseFloat($("#time-value").value)||0) * (parseInt($("#time-unit").value,10)||1);
+      if (!s.price || !s.plan_minutes) return 0;
+      return Math.round(s.price * (mins / s.plan_minutes) * 100) / 100;
+    }
+    if (state.act === "plan"){
+      return $("#plan-activate").checked ? planSelPrice() : 0;
+    }
+    if (state.act === "cash"){
+      return parseFloat($("#cash-amount").value) || 0;
+    }
+    return 0;
+  }
+  function recalc(){
+    var s = state.sub;
+    var bar = $("#rcp-bar");
+    if (!s || !state.act){ bar.classList.remove("is-on"); return; }
+    var total = currentTotal();
+    // شارات كل لوحة
+    $("#renew-total").textContent = fmt((parseInt($("#renew-count").value,10)||1) * (s.price||0));
+    var mins = (parseFloat($("#time-value").value)||0) * (parseInt($("#time-unit").value,10)||1);
+    var tval = (s.price && s.plan_minutes) ? Math.round(s.price * (mins/s.plan_minutes) * 100)/100 : 0;
+    $("#time-total").textContent = $("#time-mode").value === "free" ? "مجانية" : fmt(tval);
+    $("#plan-total").textContent = $("#plan-activate").checked ? fmt(planSelPrice()) : "تغيير فقط — بدون دفعة";
+    var amt = parseFloat($("#cash-amount").value)||0;
+    if (s.price > 0 && s.plan_minutes > 0 && amt > 0){
+      var em = Math.floor(s.plan_minutes * (amt / s.price));
+      $("#cash-days").textContent = (Math.floor(em/1440)) + " يوم و" + Math.floor((em%1440)/60) + " ساعة";
+    } else { $("#cash-days").textContent = "—"; }
+    // الشريط اللاصق
+    $("#bar-user").textContent = s.full_name || s.username;
+    $("#bar-act").textContent = ACT_LABEL[state.act] || "—";
+    $("#bar-total").textContent = total > 0 ? fmt(total) : "بدون مبلغ";
+    // معاينة محصلة اليوم بعد العملية — التمديد المجاني/الدين لا يضيف تحصيلًا.
+    var counts = !(state.act === "time" && $("#time-mode").value !== "paid");
+    $("#bar-after").textContent = fmt(COLLECTED_TODAY + (counts ? total : 0));
+    bar.classList.add("is-on");
+  }
+
+  /* ════════ 4) التأكيد ثم التنفيذ ════════ */
+  $("#rcp-go").addEventListener("click", function(){
+    var s = state.sub; if (!s || !state.act) return;
+    var total = currentTotal();
+    if (state.act === "cash" && total <= 0){ toast("أدخل مبلغًا أكبر من صفر."); return; }
+    if (state.act === "time" && ((parseFloat($("#time-value").value)||0) <= 0)){ toast("أدخل مدة صحيحة."); return; }
+    if (state.act === "time" && $("#time-mode").value !== "free" && total <= 0){
+      toast("لا يمكن احتساب قيمة المدة — لا سعر/مدة لباقة المشترك. استخدم وضع «مجانية» أو حدّد سعرًا للمشترك.");
+      return;
+    }
+    if (state.act === "renew" && total <= 0){ toast("لا سعر فعلي لهذا المشترك — حدّد سعر الباقة أو سعرًا مخصّصًا أولًا."); return; }
+    if (state.act === "plan" && $("#plan-activate").checked && total <= 0){ toast("العرض المختار بلا سعر — ألغِ خيار التفعيل أو اختر عرضًا بسعر."); return; }
+    var lines = [
+      ["المشترك", (s.full_name || s.username) + " (" + s.username + ")"],
+      ["العملية", ACT_LABEL[state.act]],
+    ];
+    if (state.act === "renew") lines.push(["عدد المرات", $("#renew-count").value], ["الإجمالي", fmt(total)]);
+    if (state.act === "time"){
+      var unitTxt = {1440:"يوم",60:"ساعة",1:"دقيقة"}[$("#time-unit").value] || "";
+      lines.push(["المدة", $("#time-value").value + " " + unitTxt],
+                 ["المحاسبة", $("#time-mode").options[$("#time-mode").selectedIndex].text],
+                 ["القيمة", $("#time-mode").value==="free" ? "مجانية" : fmt(total)]);
+    }
+    if (state.act === "plan"){
+      var opt = $("#plan-select").options[$("#plan-select").selectedIndex];
+      lines.push(["العرض الجديد", opt ? opt.getAttribute("data-name") : "—"],
+                 ["تفعيل بعد التغيير", $("#plan-activate").checked ? "نعم — " + fmt(total) : "لا"]);
+    }
+    if (state.act === "cash") lines.push(["المبلغ", fmt(total)], ["طريقة الدفع", $("#cash-method").options[$("#cash-method").selectedIndex].text]);
+    $("#rcp-confirm-body").innerHTML =
+      '<dl class="uds-kv">' + lines.map(function(l){
+        return '<div class="uds-kv-row"><span class="uds-kv-label">'+esc(l[0])+'</span><span class="uds-kv-value">'+esc(l[1])+'</span></div>';
+      }).join("") + '</dl>';
+    var m = $("#rcp-confirm"); m.hidden = false;
+  });
+
+  function postForm(url, data, wantsJson){
+    var fd = new FormData();
+    fd.append("_csrf_token", CSRF);
+    Object.keys(data).forEach(function(k){ fd.append(k, data[k]); });
+    var headers = wantsJson ? {"X-Requested-With":"fetch"} : {};
+    return fetch(url, {method:"POST", credentials:"same-origin", headers:headers, body:fd});
+  }
+
+  $("#rcp-confirm-go").addEventListener("click", function(){
+    if (state.busy) return;
+    var s = state.sub, total = currentTotal();
+    var btn = this; state.busy = true; btn.disabled = true;
+    var done = function(msg, sub){
+      state.busy = false; btn.disabled = false;
+      $("#rcp-confirm").hidden = true;
+      $("#rcp-done-msg").textContent = msg;
+      $("#rcp-done-sub").textContent = sub || "";
+      buildReceipt(msg, total);
+      $("#rcp-done").hidden = false;
+      // الدفعات (تجديد/نقدي/تفعيل بعد تغيير العرض) تدخل المحصلة؛ التمديد
+      // المجاني/الدين لا يدخل — وسيُصحَّح الرقم من الخادم في refreshAfterOp.
+      COLLECTED_TODAY += (state.act === "time" && $("#time-mode").value !== "paid") ? 0 : total;
+      refreshAfterOp();
+    };
+    var fail = function(msg){
+      state.busy = false; btn.disabled = false;
+      toast(msg || "تعذّر تنفيذ العملية.");
+    };
+
+    if (state.act === "renew" || state.act === "cash"){
+      // دفعة عبر المسار المالي الموحّد — نفس نافذة الدفع في صفحة المشترك.
+      var payload = {
+        amount: total.toFixed(2),
+        currency: CUR,
+        method: state.act === "cash" ? $("#cash-method").value : "cash",
+        notes: state.act === "renew" ? ("لوحة الشحن — تجديد ×" + ($("#renew-count").value||1)) : "لوحة الشحن — شحن نقدي",
+        apply_to_radius: (state.act === "renew" ? $("#renew-apply").checked : $("#cash-apply").checked) ? "1" : "",
+      };
+      postForm(URL_PAY.replace("__U__", encodeURIComponent(s.username)), payload, true)
+        .then(function(r){ return r.json(); })
+        .then(function(j){
+          if (j && j.ok) done(j.message || "تم تسجيل الدفعة بنجاح.", "");
+          else fail(j && j.error);
+        })
+        .catch(function(){ fail("تعذّر الاتصال بالخادم."); });
+      return;
+    }
+
+    if (state.act === "time"){
+      var mins = Math.round((parseFloat($("#time-value").value)||0) * (parseInt($("#time-unit").value,10)||1));
+      var mode = $("#time-mode").value;
+      postForm(URL_EXTEND.replace("__U__", encodeURIComponent(s.username)), {
+        minutes: mins,
+        charge_mode: mode,
+        amount: mode === "free" ? "0" : total.toFixed(2),
+        currency: CUR,
+        notes: "لوحة الشحن — تفعيل بالوقت",
+      }, false)
+        .then(function(r){
+          if (!r.ok) return fail("رفض الخادم العملية.");
+          done("تم تمديد حساب المشترك " + mins + " دقيقة.",
+               mode === "free" ? "تمديد مجاني." : "سُجّلت القيمة " + fmt(total) + " في السجل المالي.");
+        })
+        .catch(function(){ fail("تعذّر الاتصال بالخادم."); });
+      return;
+    }
+
+    if (state.act === "plan"){
+      var planId = $("#plan-select").value;
+      var policy = $("#plan-policy").value;
+      postForm(URL_CHPLAN.replace("__U__", encodeURIComponent(s.username)), {
+        plan_id: planId, policy: policy,
+      }, false)
+        .then(function(r){
+          if (!r.ok) return fail("رفض الخادم تغيير العرض.");
+          if (!$("#plan-activate").checked){
+            done("تم تغيير عرض المشترك.", "بدون دفعة تفعيل.");
+            return;
+          }
+          // نعيد جلب المشترك أولًا: السعر الفعلي بعد التغيير قد يختلف عن
+          // سعر العرض المعلن (سعر مخصّص / سعر مدير متفاوض عليه).
+          fetch(URL_SUB.replace("__U__", encodeURIComponent(s.username)), {credentials:"same-origin"})
+            .then(function(r0){ return r0.json(); })
+            .then(function(j0){
+              var eff = (j0 && j0.ok && j0.subscriber.price > 0) ? j0.subscriber.price : total;
+              total = eff;
+              // ثم دفعة تفعيل عبر المسار المالي الموحّد بالسعر الفعلي.
+              postForm(URL_PAY.replace("__U__", encodeURIComponent(s.username)), {
+                amount: eff.toFixed(2),
+                currency: CUR,
+                method: "cash",
+                plan_id: planId,
+                notes: "لوحة الشحن — تغيير العرض ثم تفعيل",
+                apply_to_radius: "1",
+              }, true)
+                .then(function(r2){ return r2.json(); })
+                .then(function(j){
+                  if (j && j.ok) done("تم تغيير العرض وتفعيل دورة جديدة.", j.message || "");
+                  else fail("تم تغيير العرض، لكن تعذّرت دفعة التفعيل: " + ((j && j.error) || ""));
+                })
+                .catch(function(){ fail("تم تغيير العرض، لكن تعذّر الاتصال لدفعة التفعيل."); });
+            })
+            .catch(function(){ fail("تم تغيير العرض، لكن تعذّر جلب السعر الجديد لدفعة التفعيل."); });
+        })
+        .catch(function(){ fail("تعذّر الاتصال بالخادم."); });
+      return;
+    }
+  });
+
+  /* ════════ 5) بعد النجاح: تحديث البطاقة والمؤشرات والشريط ════════ */
+  function refreshAfterOp(){
+    if (state.sub) {
+      fetch(URL_SUB.replace("__U__", encodeURIComponent(state.sub.username)), {credentials:"same-origin"})
+        .then(function(r){ return r.json(); })
+        .then(function(j){ if (j && j.ok){ state.sub = j.subscriber; state.lastPayment = j.last_payment || null; renderSpot(); recalc(); } })
+        .catch(function(){});
+    }
+    fetch(URL_RECENT, {credentials:"same-origin"})
+      .then(function(r){ return r.json(); })
+      .then(function(j){
+        if (!j || !j.ok) return;
+        // المؤشرات الثلاثة
+        var vals = [j.kpis.wallet_balance, j.kpis.open_debts, j.kpis.collected_today];
+        $$(".uds-hero-kpis .hub-kpi-value").forEach(function(el,i){ if (vals[i] !== undefined) el.textContent = vals[i]; });
+        // شريط آخر العمليات
+        var host = $("#rcp-recent");
+        if (!j.items.length) return;
+        host.innerHTML = j.items.map(function(op){
+          return '<div class="rcp-recent-row">'
+            + '<span class="rcp-recent-ic"><i class="fa-solid fa-check"></i></span>'
+            + '<div><div class="rcp-recent-t"><bdi dir="ltr">'+esc(op.username)+'</bdi></div>'
+            + '<div class="rcp-recent-s">'+esc((op.created_at||"").replace("T"," ").slice(0,16))+' · '+esc(methodLabel(op.method))+'</div></div>'
+            + '<span class="rcp-recent-amt">'+esc(op.amount_label)+'</span></div>';
+        }).join("");
+      })
+      .catch(function(){});
+  }
+
+  /* ════════ 6) الطباعة + عملية جديدة ════════ */
+  function buildReceipt(msg, total){
+    var s = state.sub || {};
+    var now = new Date();
+    $("#rcp-receipt").innerHTML =
+      '<div style="max-width:420px;margin:0 auto;font-family:inherit">'
+      + '<h2 style="text-align:center;margin:0 0 4px">فاتورة شحن</h2>'
+      + '<div style="text-align:center;color:#64748B;font-size:12px;margin-bottom:18px">Hobe Hub · ' + now.toLocaleString("ar") + '</div>'
+      + '<table style="width:100%;border-collapse:collapse;font-size:14px">'
+      + [["المشترك", (s.full_name||"") + " (" + (s.username||"") + ")"],
+         ["العملية", ACT_LABEL[state.act] || "—"],
+         ["المبلغ", total > 0 ? fmt(total) : "بدون مبلغ"],
+         ["النتيجة", msg],
+         ["المنفّذ", ACTOR]]
+        .map(function(r){ return '<tr><td style="padding:8px 4px;border-bottom:1px dashed #E2E8F0;font-weight:800;color:#475569">'+esc(r[0])+'</td><td style="padding:8px 4px;border-bottom:1px dashed #E2E8F0;text-align:left">'+esc(r[1])+'</td></tr>'; }).join("")
+      + '</table>'
+      + '<div style="text-align:center;color:#94A3B8;font-size:11px;margin-top:20px">شكرًا لتعاملكم — HobeRadius</div>'
+      + '</div>';
+  }
+  $("#rcp-print").addEventListener("click", function(){ window.print(); });
+  $("#rcp-new").addEventListener("click", function(){
+    state.act = null;
+    $$(".rcp-act").forEach(function(x){ x.classList.remove("is-sel"); });
+    $$(".rcp-pane").forEach(function(p){ p.classList.remove("is-on"); });
+    $("#rcp-bar").classList.remove("is-on");
+    q.value = ""; q.focus();
+    $("#rcp-spot").classList.remove("is-on");
+    state.sub = null;
+    window.scrollTo({top:0, behavior:"smooth"});
+  });
+
+  // اختصار: التركيز على البحث عند فتح الصفحة
+  q.focus();
+})();
+</script>
+{% endblock %}

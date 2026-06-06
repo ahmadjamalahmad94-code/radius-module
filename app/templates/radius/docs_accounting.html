@@ -1,0 +1,531 @@
+{# ══════════════════════════════════════════════════════════════════════
+   دليل «السجل والتقارير المحاسبية» — قسم المحاسبة والمالية.
+
+   يشرح صفحة المحاسبة الحقيقية (finance_accounting.html ←
+   /admin/radius/finance/accounting): تبويبا السجل المالي (دفتر القيود)
+   والتقارير المالية. يغطّي معنى «القيد»، أثر كل نوع حركة على الأرقام،
+   كيف تعكس قيدًا (التصحيح بقيد معاكس لا بالحذف)، أنواع التقارير التسعة،
+   التصدير، وحفظ لقطة ثابتة.
+
+   البنية والأنماط منسوخة من النمط الذهبي docs_add_subscriber.html.
+   القالب ثابت بالكامل — التسميات منسوخة حرفيًا من finance_accounting.html
+   وكتالوج _REPORTS (routes/accounting.py)؛ عند تغييرها حدّث الدليل معها.
+   ══════════════════════════════════════════════════════════════════════ #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}دليل: السجل والتقارير المحاسبية — كيف تستخدمني{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<style>
+  /* ── التخطيط: فهرس جانبي لاصق + عمود المحتوى (نفس النمط الذهبي) ── */
+  .dg-layout{ display:grid; grid-template-columns:minmax(0,1fr) 230px; gap:20px; align-items:start; }
+  .dg-toc{ order:2; }
+  .dg-main{ order:1; }
+  @media (max-width:980px){ .dg-layout{ grid-template-columns:1fr; } .dg-toc{ order:1; } .dg-main{ order:2; } }
+
+  .dg-toc{
+    position:sticky; top:84px;
+    background:#fff; border:1px solid #e8edf3; border-radius:14px;
+    padding:14px 13px; display:grid; gap:3px;
+  }
+  @media (max-width:980px){ .dg-toc{ position:static; } }
+  .dg-toc-title{
+    display:flex; align-items:center; gap:8px; font-size:12px; font-weight:900;
+    color:#7c7a99; margin-bottom:7px; padding-inline:6px;
+  }
+  .dg-toc a{
+    display:flex; align-items:center; gap:9px;
+    padding:8px 10px; border-radius:9px; text-decoration:none;
+    font-size:12.5px; font-weight:700; color:#475569;
+    transition:background .14s, color .14s;
+  }
+  .dg-toc a .n{
+    width:21px; height:21px; border-radius:50%; flex:none;
+    display:grid; place-items:center; font-size:10.5px; font-weight:900;
+    background:#f1f5f9; color:#94a3b8;
+  }
+  .dg-toc a:hover{ background:#f5f3ff; color:#5b21b6; }
+  .dg-toc a.is-active{ background:#ede9fe; color:#5b21b6; }
+  .dg-toc a.is-active .n{ background:linear-gradient(135deg,#7c3aed,#5b21b6); color:#fff; }
+
+  /* ── عمود الخطوات ── */
+  .dg-main{ min-width:0; display:grid; gap:18px; }
+  .dg-lead{
+    display:flex; gap:13px; align-items:flex-start;
+    background:linear-gradient(135deg,#f5f3ff,#fdfcff);
+    border:1px solid #e9e5fc; border-radius:14px; padding:15px 17px;
+  }
+  .dg-lead .ic{ width:40px;height:40px;border-radius:12px;flex:none;display:grid;place-items:center;
+    font-size:17px;background:#ede9fe;color:#6d28d9; }
+  .dg-lead h3{ margin:0 0 4px; font-size:13.5px; font-weight:800; color:#241e4e; }
+  .dg-lead p{ margin:0; font-size:12.5px; line-height:1.9; color:#5b5a78; }
+
+  .dg-step{ display:grid; grid-template-columns:auto 1fr; gap:15px; align-items:start; scroll-margin-top:90px; }
+  @media (max-width:560px){ .dg-step{ grid-template-columns:1fr; } }
+  .dg-badge{
+    width:42px; height:42px; border-radius:50%; flex:none;
+    display:grid; place-items:center; font-size:17px; font-weight:900; color:#fff;
+    background:linear-gradient(135deg,#7c3aed,#5b21b6);
+    box-shadow:0 8px 18px rgba(124,58,237,.3);
+  }
+  .dg-card{
+    min-width:0; background:#fff; border:1px solid #e8edf3; border-radius:15px;
+    padding:16px 18px;
+  }
+  .dg-card h2{
+    margin:0 0 8px; font-size:15.5px; font-weight:800; color:#0f172a;
+    display:flex; align-items:center; gap:9px; flex-wrap:wrap;
+  }
+  .dg-card h2 i{ color:#7c3aed; }
+  .dg-card p{ margin:0 0 7px; font-size:13px; line-height:1.95; color:#475569; }
+  .dg-card p:last-child{ margin-bottom:0; }
+  .dg-card ul{ margin:4px 0 8px; padding-inline-start:22px; font-size:13px; line-height:2; color:#475569; }
+  .dg-card strong{ color:#241e4e; }
+  .dg-kbd{
+    font-family:ui-monospace,Consolas,monospace; font-size:11.5px;
+    background:#f1f5f9; border:1px solid #e2e8f0; border-radius:5px;
+    padding:1px 7px; color:#5b21b6;
+  }
+
+  /* صناديق التلميح */
+  .dg-tip, .dg-warn{
+    display:flex; gap:11px; align-items:flex-start;
+    border-radius:12px; padding:11px 14px; margin-top:11px;
+    font-size:12.5px; line-height:1.9;
+  }
+  .dg-tip{ background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; }
+  .dg-warn{ background:#fffbeb; border:1px solid #fde68a; color:#92400e; }
+  .dg-tip .ic, .dg-warn .ic{ flex:none; font-size:15px; line-height:1.6; }
+  .dg-tip b, .dg-warn b{ font-weight:900; }
+
+  /* ════ الرسوم: محاكاة مصغّرة ════ */
+  .dg-mock{
+    border:1px solid #e2e8f0; border-radius:14px; overflow:hidden;
+    background:#fff; box-shadow:0 8px 20px rgba(15,23,42,.07);
+    margin-top:13px; max-width:560px;
+  }
+  .dg-mock-bar{
+    display:flex; align-items:center; gap:7px; padding:8px 12px;
+    background:#f1f5f9; border-bottom:1px solid #e2e8f0;
+  }
+  .dg-mock-bar .dots{ display:flex; gap:5px; }
+  .dg-mock-bar .dots i{ width:9px; height:9px; border-radius:50%; }
+  .dg-mock-bar .dots i:nth-child(1){ background:#f87171; }
+  .dg-mock-bar .dots i:nth-child(2){ background:#fbbf24; }
+  .dg-mock-bar .dots i:nth-child(3){ background:#34d399; }
+  .dg-mock-bar .crumb{
+    flex:1; background:#fff; border:1px solid #e2e8f0; border-radius:7px;
+    padding:4px 10px; font-size:10.5px; font-weight:700; color:#64748b;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .dg-mock-body{ padding:14px; display:grid; gap:11px; }
+  .dg-mf{ display:grid; gap:5px; min-width:0; }
+  .dg-mf label{ font-size:10.5px; font-weight:800; color:#475569; }
+  .dg-mf-input{
+    border:1.5px solid #e2e8f0; border-radius:8px; padding:8px 10px;
+    font-size:11.5px; color:#0f172a; background:#fff;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .dg-mf-input.hl{ border-color:#c4b5fd; background:#faf5ff; }
+  .dg-mf-input.ph{ color:#a3aec2; }
+  .dg-mf-select{ position:relative; }
+  .dg-mf-select::after{
+    content:"\f078"; font-family:"Font Awesome 6 Free"; font-weight:900;
+    position:absolute; inset-inline-end:10px; top:50%; transform:translateY(-50%);
+    font-size:9px; color:#94a3b8; pointer-events:none;
+  }
+  .dg-mock-grid2{ display:grid; grid-template-columns:1fr 1fr; gap:11px; }
+  @media (max-width:480px){ .dg-mock-grid2{ grid-template-columns:1fr; } }
+
+  /* ════ إضافات: مؤشرات + تبويبات + جدول مصغّر ════ */
+  .dg-kpis{ display:grid; grid-template-columns:repeat(4,1fr); gap:9px; }
+  @media (max-width:520px){ .dg-kpis{ grid-template-columns:1fr 1fr; } }
+  .dg-kpi{ border:1px solid #e8edf3; border-radius:11px; padding:10px 11px; background:#fff; display:grid; gap:5px; }
+  .dg-kpi .lab{ font-size:9.5px; font-weight:800; color:#94a3b8; display:flex; align-items:center; gap:5px; }
+  .dg-kpi .lab i{ color:#a78bfa; }
+  .dg-kpi .val{ font-size:14px; font-weight:900; color:#0f172a; font-variant-numeric:tabular-nums; direction:ltr; text-align:start; }
+  .dg-kpi.green .val{ color:#15803d; }
+  .dg-kpi.amber .val{ color:#b45309; }
+  .dg-kpi.blue  .val{ color:#1e5c9f; }
+  .dg-kpi.brand .val{ color:#5b21b6; }
+  .dg-kpi.red   .val{ color:#b91c1c; }
+
+  .dg-tabs{ display:flex; gap:6px; flex-wrap:wrap; }
+  .dg-tabs span{
+    display:inline-flex; align-items:center; gap:6px; padding:6px 12px; border-radius:999px;
+    border:1px solid #e2e8f0; background:#fff; font-size:10.5px; font-weight:800; color:#64748b;
+  }
+  .dg-tabs span.on{ background:#5b21b6; color:#fff; border-color:#5b21b6; }
+
+  .dg-tbl{ width:100%; border-collapse:collapse; font-size:10.5px; }
+  .dg-tbl th{ text-align:start; padding:6px 8px; background:#f5f3ff; color:#5b21b6; font-weight:900; white-space:nowrap; }
+  .dg-tbl td{ padding:6px 8px; border-top:1px solid #f1f5f9; color:#334155; font-weight:700; }
+  .dg-tbl td.num{ text-align:start; font-variant-numeric:tabular-nums; direction:ltr; }
+  .dg-tbl td.mono{ font-family:ui-monospace,Consolas,monospace; }
+
+  .dg-pill{
+    display:inline-flex; align-items:center; gap:5px; border-radius:999px;
+    padding:2px 9px; font-size:9.5px; font-weight:900; background:#dcfce7; color:#15803d;
+  }
+  .dg-pill .dot{ width:6px; height:6px; border-radius:50%; background:#16a34a; }
+  .dg-pill.amber{ background:#fef3c7; color:#b45309; } .dg-pill.amber .dot{ background:#d97706; }
+  .dg-pill.red{ background:#fee2e2; color:#b91c1c; } .dg-pill.red .dot{ background:#dc2626; }
+  .dg-pill.blue{ background:#dbeafe; color:#1e5c9f; } .dg-pill.blue .dot{ background:#2563eb; }
+  .dg-pill.brand{ background:#ede9fe; color:#5b21b6; } .dg-pill.brand .dot{ background:#7c3aed; }
+  .dg-pill.grey{ background:#f1f5f9; color:#64748b; } .dg-pill.grey .dot{ background:#94a3b8; }
+
+  /* بطاقة شرح أثر القيد (شبكة) */
+  .dg-effects{ display:grid; grid-template-columns:1fr 1fr; gap:9px; margin-top:11px; }
+  @media (max-width:560px){ .dg-effects{ grid-template-columns:1fr; } }
+  .dg-effect{ border:1px solid #e8edf3; border-radius:11px; padding:10px 12px; background:#fff; }
+  .dg-effect .t{ display:flex; align-items:center; gap:7px; font-size:12px; font-weight:900; color:#241e4e; margin-bottom:4px; }
+  .dg-effect .t i{ color:#7c3aed; }
+  .dg-effect .d{ font-size:11px; line-height:1.7; color:#64748b; }
+
+  .dg-mock-actions{ display:flex; justify-content:flex-end; gap:9px; padding-top:4px; flex-wrap:wrap; }
+  .dg-mock-btn{
+    display:inline-flex; align-items:center; gap:7px; border:0; border-radius:9px;
+    padding:8px 14px; font:inherit; font-size:11px; font-weight:800; cursor:default;
+  }
+  .dg-mock-btn.primary{
+    background:linear-gradient(135deg,#7c3aed,#5b21b6); color:#fff;
+    box-shadow:0 6px 14px rgba(124,58,237,.28);
+  }
+  .dg-mock-btn.ghost{ background:#f1f5f9; color:#475569; }
+  .dg-mock-btn.amber{ background:#fef3c7; color:#b45309; }
+  .dg-mock-btn.csv{ background:#f1f5f9; color:#475569; border:1px solid #e2e8f0; }
+
+  .dg-cap{ font-size:11px; color:#94a3b8; margin-top:8px; line-height:1.7; }
+  .dg-cap i{ color:#c4b5fd; }
+
+  /* ════ الطباعة ════ */
+  @media print{
+    .hb-side, .hb-side-overlay, .hb-topbar, header.hb-top,
+    .dg-toc, .dg-noprint, .hub-hero-actions{ display:none !important; }
+    .dg-layout{ grid-template-columns:1fr; }
+    .dg-card, .dg-mock, .dg-effect{ box-shadow:none !important; break-inside:avoid; }
+    .dg-step{ break-inside:avoid; }
+    body{ background:#fff !important; }
+    .dg-badge, .dg-mock-btn.primary, .dg-tip, .dg-warn, .dg-pill,
+    .dg-tbl th, .dg-tabs span.on, .dg-kpi{
+      -webkit-print-color-adjust:exact; print-color-adjust:exact;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{{ hub.hero(
+  "دليل: السجل والتقارير المحاسبية",
+  subtitle="دفتر القيود التراكمي والتقارير المالية — 7 خطوات تشرح القيد وأثر كل حركة وكيف تقرأ التقارير.",
+  icon="scale-balanced",
+  actions_html='
+    <button type="button" class="hub-btn hub-btn--secondary" onclick="window.print()">
+      <i class="fa-solid fa-file-pdf"></i> حفظ كـ PDF
+    </button>
+    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.accounting_hub') + '">
+      <i class="fa-solid fa-up-right-from-square"></i> افتح الصفحة
+    </a>
+    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.docs_center') + '">
+      <i class="fa-solid fa-arrow-right"></i> كل الأدلة
+    </a>
+  '
+) }}
+
+<div class="dg-layout">
+
+  {# ───── الفهرس الجانبي اللاصق ───── #}
+  <nav class="dg-toc dg-noprint" aria-label="فهرس الدليل">
+    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> فهرس الخطوات</div>
+    <a href="#dg-s1" data-dg-toc><span class="n">1</span> الصفحة وما هو القيد</a>
+    <a href="#dg-s2" data-dg-toc><span class="n">2</span> تبويب السجل المالي</a>
+    <a href="#dg-s3" data-dg-toc><span class="n">3</span> قراءة جدول القيود</a>
+    <a href="#dg-s4" data-dg-toc><span class="n">4</span> أنواع القيود وأثرها</a>
+    <a href="#dg-s5" data-dg-toc><span class="n">5</span> عكس قيد</a>
+    <a href="#dg-s6" data-dg-toc><span class="n">6</span> تبويب التقارير</a>
+    <a href="#dg-s7" data-dg-toc><span class="n">7</span> حفظ لقطة ثابتة</a>
+  </nav>
+
+  {# ───── عمود المحتوى ───── #}
+  <div class="dg-main">
+
+    <div class="dg-lead">
+      <span class="ic"><i class="fa-solid fa-lightbulb"></i></span>
+      <div>
+        <h3>قبل ما نبدأ — شو هو «القيد»؟</h3>
+        <p>
+          القيد ببساطة = <strong>سطر تسجيل لأي حركة فلوس</strong>. كل ما صار شي بالمال (دفعة، سلفة،
+          تسوية…) ينكتب سطر جديد هنا — و<strong>لا شيء يُحذف أبدًا</strong>. الدفتر تراكمي
+          (append-only): التصحيح دائمًا <strong>بقيد جديد معاكس</strong>، لا بحذف أو تعديل قيد قديم.
+          هيك تبقى الأرقام قابلة للتدقيق دائمًا، وكل التقارير مبنية من هذه القيود نفسها.
+        </p>
+      </div>
+    </div>
+
+    {# ════ الخطوة 1 ════ #}
+    <section class="dg-step" id="dg-s1">
+      <div class="dg-badge">1</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-door-open"></i> افتح الصفحة واعرف التبويبين</h2>
+        <p>
+          من قسم <strong>«المحاسبة والمالية»</strong> افتح <strong>«السجل والتقارير المحاسبية»</strong>.
+          فيها تبويبان:
+        </p>
+        <ul>
+          <li><strong>السجل المالي:</strong> دفتر القيود — كل حركة مالية بصف.</li>
+          <li><strong>التقارير المالية:</strong> تقارير مبنية من نفس القيود (يومية، شهرية، أرباح…).</li>
+        </ul>
+
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">السجل والتقارير المحاسبية</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-tabs">
+              <span class="on"><i class="fa-solid fa-table-list"></i> السجل المالي</span>
+              <span><i class="fa-solid fa-chart-line"></i> التقارير المالية</span>
+            </div>
+          </div>
+        </div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> التبويبان يتشاركان نفس القيود — التقارير مجرد تجميعات لها.</div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 2 ════ #}
+    <section class="dg-step" id="dg-s2">
+      <div class="dg-badge">2</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-table-list"></i> تبويب «السجل المالي» — المؤشرات والفلاتر</h2>
+        <p>شريط مؤشرات السجل أربعة أرقام محسوبة من القيود المعروضة:</p>
+
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">السجل المالي › المؤشرات</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-kpis">
+              <div class="dg-kpi brand"><span class="lab"><i class="fa-solid fa-table-list"></i> عدد القيود</span><span class="val">300</span></div>
+              <div class="dg-kpi green"><span class="lab"><i class="fa-solid fa-hand-holding-dollar"></i> دفعات</span><span class="val">210</span></div>
+              <div class="dg-kpi amber"><span class="lab"><i class="fa-solid fa-clock-rotate-left"></i> سلف</span><span class="val">42</span></div>
+              <div class="dg-kpi red"><span class="lab"><i class="fa-solid fa-rotate-left"></i> قيود تصحيحية</span><span class="val">8</span></div>
+            </div>
+            <div class="dg-mock-grid2" style="margin-top:6px">
+              <div class="dg-mf"><label>نوع القيد</label><div class="dg-mf-select"><div class="dg-mf-input">كل أنواع القيود</div></div></div>
+              <div class="dg-mf"><label>رقم المستفيد</label><div class="dg-mf-input ph">رقم المستفيد…</div></div>
+            </div>
+          </div>
+        </div>
+
+        <ul>
+          <li><strong>عدد القيود:</strong> كل القيود المعروضة بعد الفلترة.</li>
+          <li><strong>دفعات / سلف:</strong> عدد قيود الدفع وعدد قيود السلف.</li>
+          <li><strong>قيود تصحيحية:</strong> الإلغاء والعكس والتصحيح.</li>
+          <li><strong>الفلاتر:</strong> نوع القيد (دفعة/سلفة/تسوية/إلغاء/عكسي/تصحيح) + رقم المستفيد.</li>
+        </ul>
+      </div>
+    </section>
+
+    {# ════ الخطوة 3 ════ #}
+    <section class="dg-step" id="dg-s3">
+      <div class="dg-badge">3</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-list-ul"></i> اقرأ جدول القيود — كل عمود شو يعني</h2>
+        <p>كل صف قيد، وأعمدته:</p>
+        <ul>
+          <li><strong>النوع:</strong> دفعة، سلفة، تسوية… (الوقوف عليه يُظهر أثره).</li>
+          <li><strong>المستفيد:</strong> اسم المشترك ورقمه.</li>
+          <li><strong>الاتجاه:</strong> <span class="dg-pill green"><span class="dot"></span> دائن</span> يزيد الرصيد،
+            <span class="dg-pill red"><span class="dot"></span> مدين</span> ينقصه.</li>
+          <li><strong>المبلغ</strong> و<strong>الحالة:</strong> <span class="dg-pill green"><span class="dot"></span> مرحَّل</span> أو <span class="dg-pill grey"><span class="dot"></span> ملغى</span>.</li>
+          <li><strong>المصدر</strong> (دفعة/سلفة/بيع بطاقة…)، <strong>ملاحظات</strong>، و<strong>التاريخ</strong>.</li>
+          <li><strong>عكس القيد:</strong> حقل سبب + زر (الخطوة 5).</li>
+        </ul>
+
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">السجل المالي › القيود</span></div>
+          <div class="dg-mock-body">
+            <table class="dg-tbl">
+              <thead><tr><th>#</th><th>النوع</th><th>المستفيد</th><th>الاتجاه</th><th>المبلغ</th><th>الحالة</th></tr></thead>
+              <tbody>
+                <tr><td class="num">312</td><td><span class="dg-pill brand"><span class="dot"></span> دفعة</span></td><td>ahmad2026</td><td><span class="dg-pill green"><span class="dot"></span> دائن</span></td><td class="num">50.00</td><td><span class="dg-pill green"><span class="dot"></span> مرحَّل</span></td></tr>
+                <tr><td class="num">311</td><td><span class="dg-pill brand"><span class="dot"></span> سلفة</span></td><td>sara_net</td><td><span class="dg-pill red"><span class="dot"></span> مدين</span></td><td class="num">20.00</td><td><span class="dg-pill green"><span class="dot"></span> مرحَّل</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> الجدول يدعم الفرز واختيار الأعمدة والترقيم (نظام الجداول الموحّد).</div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 4 ════ #}
+    <section class="dg-step" id="dg-s4">
+      <div class="dg-badge">4</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-diagram-project"></i> أنواع القيود وأثر كل حركة</h2>
+        <p>كل نوع قيد يؤثر على الأرقام بشكل مختلف — هذه أكثر الأنواع شيوعًا:</p>
+
+        <div class="dg-effects" aria-hidden="true">
+          <div class="dg-effect">
+            <div class="t"><i class="fa-solid fa-hand-holding-dollar"></i> دفعة</div>
+            <div class="d">المشترك دفع — قيد <b>دائن</b> يزيد رصيده/مدته. أكثر قيد رح تشوفه.</div>
+          </div>
+          <div class="dg-effect">
+            <div class="t"><i class="fa-solid fa-clock-rotate-left"></i> سلفة</div>
+            <div class="d">مدة مُنحت قبل الدفع — <b>دين</b> مسجَّل على المشترك حتى يسدده.</div>
+          </div>
+          <div class="dg-effect">
+            <div class="t"><i class="fa-solid fa-scale-balanced"></i> تسوية</div>
+            <div class="d">سداد يقفل سلفة مفتوحة ويصفّر دينها — السلفة الأصلية تبقى ظاهرة بالسجل.</div>
+          </div>
+          <div class="dg-effect">
+            <div class="t"><i class="fa-solid fa-rotate-left"></i> إلغاء / عكسي / تصحيح</div>
+            <div class="d">قيد معاكس يصفّر أثر قيد سابق — الأصل <b>لا يُحذف</b> ويبقى للمراجعة.</div>
+          </div>
+        </div>
+
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة:</b> في الصفحة نفسها، <b>قف بالماوس على شارة النوع</b> في أي صف لتظهر لك
+          جملة تشرح أثر هذه الحركة بالضبط — دون مغادرة الجدول.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 5 ════ #}
+    <section class="dg-step" id="dg-s5">
+      <div class="dg-badge">5</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-rotate-left"></i> عكس قيد — التصحيح بقيد معاكس لا بالحذف</h2>
+        <p>
+          غلطت بقيد؟ ما منحذفه. في آخر كل صف (للقيود غير التصحيحية) حقل
+          <strong>«سبب التصحيح»</strong> وزر عكس. اكتب السبب ثم اضغط الزر، فيُنشئ النظام
+          <strong>قيدًا جديدًا معاكسًا</strong> يصفّر أثر القيد الأصلي على الأرقام، ويبقى الاثنان
+          ظاهرين في السجل للمراجعة.
+        </p>
+
+        <div class="dg-mock" aria-hidden="true" style="max-width:440px">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">عكس القيد</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-mock-actions" style="justify-content:flex-start">
+              <span class="dg-mf-input ph" style="min-width:150px">سبب التصحيح</span>
+              <span class="dg-mock-btn amber"><i class="fa-solid fa-rotate-left"></i></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="dg-warn">
+          <span class="ic">⚠️</span>
+          <span><b>انتبه:</b> <b>سبب التصحيح إجباري</b> — لن يقبل النظام العكس بدونه. والقيود التصحيحية
+          نفسها (إلغاء/عكسي/تصحيح) لا تُعكس مجددًا؛ تظهر بدل الزر عبارة «قيد تصحيحي».</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 6 ════ #}
+    <section class="dg-step" id="dg-s6">
+      <div class="dg-badge">6</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-chart-line"></i> تبويب «التقارير» — اختر النوع واقرأ الأعمدة وصدّر</h2>
+        <p>
+          بدّل لتبويب «التقارير المالية». من القائمة المنسدلة اختر نوع التقرير، فيُعرض جدوله مع
+          إيضاح أعمدته أسفله. الأنواع المتاحة:
+        </p>
+        <ul>
+          <li><strong>مبيعات يومية / شهرية / سنوية:</strong> الدفعات المرحَّلة مجمّعة بالفترة.</li>
+          <li><strong>دفعات المستفيدين:</strong> كم دفع كل مستفيد.</li>
+          <li><strong>السلف / التفعيلات / مبيعات الكروت.</strong></li>
+          <li><strong>ربح / خسارة:</strong> صف ملخّص (إيرادات/مصروفات/صافي).</li>
+          <li><strong>ديون الموزعين:</strong> رصيد الدين والرصيد لكل موزّع.</li>
+        </ul>
+
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">التقارير المالية › مبيعات يومية</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-kpis">
+              <div class="dg-kpi brand"><span class="lab"><i class="fa-solid fa-chart-line"></i> نوع التقرير</span><span class="val" style="font-size:11px">مبيعات يومية</span></div>
+              <div class="dg-kpi blue"><span class="lab"><i class="fa-solid fa-table-list"></i> صفوف التقرير</span><span class="val">14</span></div>
+              <div class="dg-kpi green"><span class="lab"><i class="fa-solid fa-coins"></i> إجمالي العمود</span><span class="val">9,800.00</span></div>
+              <div class="dg-kpi amber"><span class="lab"><i class="fa-solid fa-box-archive"></i> لقطات محفوظة</span><span class="val">3</span></div>
+            </div>
+            <div class="dg-mock-actions" style="justify-content:flex-start">
+              <span class="dg-mock-btn csv"><i class="fa-solid fa-file-csv"></i> CSV</span>
+              <span class="dg-mock-btn csv"><i class="fa-solid fa-file-excel"></i> Excel</span>
+              <span class="dg-mock-btn csv"><i class="fa-solid fa-file-pdf"></i> PDF</span>
+              <span class="dg-mock-btn primary"><i class="fa-solid fa-lock"></i> حفظ لقطة ثابتة</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة:</b> تحت الجدول دائمًا سطر <b>«دليل قراءة أعمدة»</b> يشرح ما يعنيه كل عمود
+          في التقرير المختار بالضبط — اقرأه إذا حيّرك عمود.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 7 ════ #}
+    <section class="dg-step" id="dg-s7">
+      <div class="dg-badge">7</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-lock"></i> احفظ لقطة ثابتة — واعرضها لاحقًا</h2>
+        <p>
+          زر <strong>«حفظ لقطة ثابتة»</strong> يفتح نافذة تحدّد فيها <strong>من تاريخ</strong> و<strong>إلى تاريخ</strong>
+          و<strong>ملاحظة</strong> اختيارية. يُفلتر التقرير بالنطاق ثم <strong>يُجمَّد كما هو</strong> — لا
+          يتأثر بأي حركة لاحقة. (ترك التاريخين فارغين يحفظ التقرير كاملًا.)
+        </p>
+
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">حفظ لقطة ثابتة</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-mock-grid2">
+              <div class="dg-mf"><label>من تاريخ</label><div class="dg-mf-input ph">بداية مفتوحة</div></div>
+              <div class="dg-mf"><label>إلى تاريخ</label><div class="dg-mf-input ph">نهاية مفتوحة</div></div>
+            </div>
+            <div class="dg-mf"><label>ملاحظة (اختياري)</label><div class="dg-mf-input hl">جرد نهاية الشهر</div></div>
+            <div class="dg-mock-actions">
+              <span class="dg-mock-btn ghost">إغلاق</span>
+              <span class="dg-mock-btn primary"><i class="fa-solid fa-lock"></i> حفظ اللقطة</span>
+            </div>
+          </div>
+        </div>
+
+        <p style="margin-top:13px">
+          تظهر اللقطات المحفوظة في جدول <strong>«آخر اللقطات الثابتة»</strong> (الفترة، عدد الصفوف،
+          الإجمالي، الملاحظة، من أنشأها). زر <strong>«عرض»</strong> يفتح صفوفها المجمّدة في نافذة.
+        </p>
+
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>وبعدين؟</b> اللقطة مفيدة للجرد الدوري: تحفظ صورة رسمية للأرقام في لحظة معيّنة
+          (نهاية شهر مثلًا) وتبقى ثابتة للرجوع إليها مهما تغيّرت الحركات بعدها.</span>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+{# ── scrollspy خفيف (منسوخ من النمط الذهبي) ── #}
+<script>
+(function(){
+  'use strict';
+  var links = Array.prototype.slice.call(document.querySelectorAll('[data-dg-toc]'));
+  if (!links.length || !('IntersectionObserver' in window)) return;
+  var map = {};
+  links.forEach(function(a){ map[a.getAttribute('href').slice(1)] = a; });
+  var obs = new IntersectionObserver(function(entries){
+    entries.forEach(function(en){
+      if (!en.isIntersecting) return;
+      links.forEach(function(a){ a.classList.remove('is-active'); });
+      var a = map[en.target.id];
+      if (a) a.classList.add('is-active');
+    });
+  }, { rootMargin: '-35% 0px -55% 0px' });
+  Object.keys(map).forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) obs.observe(el);
+  });
+})();
+</script>
+
+{% endblock %}

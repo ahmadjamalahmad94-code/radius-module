@@ -3,9 +3,19 @@
 Arabic support note
 ===================
 Card text (brand, title, footer, hotspot, …) can be any mix of Arabic
-and Latin. ReportLab's built-in Helvetica covers Latin only, so we
-ship the Almarai TTF font under app/static/fonts/ and register it on
-first import. The PDF adapter inspects each text run:
+and Latin. The live SVG preview renders Arabic with the Almarai family
+first (Cairo as fallback — both loaded by the admin layout / shipped
+under app/static/fonts/), so the PDF export rasterizes Arabic runs with
+the SAME shipped Almarai TTFs (falling back to Cairo) whenever Pillow
+has Raqm shaping (the default in official wheels) — preview and export
+use identical letterforms. Without Raqm the export
+falls back to arabic-reshaper presentation forms drawn with a system
+font that maps those legacy codepoints (Tahoma/Arial/Noto Naskh/
+DejaVu → bundled Almarai), so Arabic never degrades to tofu squares.
+
+ReportLab's built-in Helvetica covers Latin only, so we also ship the
+Almarai TTF under app/static/fonts/ and register it on first import
+for the rare vector-text fallback. The PDF adapter inspects each run:
 
   - All-Latin    → Helvetica / Helvetica-Bold (unchanged)
   - Contains AR → Almarai / Almarai-Bold, after the run is reshaped
@@ -95,11 +105,22 @@ _FONTS_DIR = os.path.join(
 )
 _ALMARAI_REGULAR_PATH = os.path.join(_FONTS_DIR, "Almarai-Regular.ttf")
 _ALMARAI_BOLD_PATH = os.path.join(_FONTS_DIR, "Almarai-Bold.ttf")
+_ALMARAI_EXTRABOLD_PATH = os.path.join(_FONTS_DIR, "Almarai-ExtraBold.ttf")
+
+# Cairo is the family the live SVG preview actually renders with (the
+# admin layout loads it from Google Fonts and the SVG font stack lists
+# it first). We ship the same family so the PDF export matches the
+# preview glyph-for-glyph instead of falling back to Tahoma / Noto
+# Naskh, whose letterforms look nothing like the preview.
+_CAIRO_REGULAR_PATH = os.path.join(_FONTS_DIR, "Cairo-Regular.ttf")
+_CAIRO_BOLD_PATH = os.path.join(_FONTS_DIR, "Cairo-Bold.ttf")
+_CAIRO_BLACK_PATH = os.path.join(_FONTS_DIR, "Cairo-Black.ttf")
 
 PDF_FONT_LATIN = "Helvetica"
 PDF_FONT_LATIN_BOLD = "Helvetica-Bold"
 PDF_FONT_ARABIC = "Almarai"
 PDF_FONT_ARABIC_BOLD = "Almarai-Bold"
+PDF_FONT_ARABIC_EXTRABOLD = "Almarai-ExtraBold"
 
 # Arabic block ranges that should trigger the Almarai path.
 #   U+0600–U+06FF  Arabic
@@ -112,13 +133,15 @@ _ARABIC_RE = re.compile(
 )
 
 _arabic_fonts_ready: bool | None = None
-_arabic_text_image_cache: dict[tuple[Any, ...], tuple[bytes, int, int]] = {}
+# هل سُجّل وجه ExtraBold مع ReportLab؟ يُحسم مع أول استدعاء للتسجيل.
+_arabic_extrabold_ready: bool = False
+_arabic_text_image_cache: dict[tuple[Any, ...], tuple[bytes, int, int, dict]] = {}
 _uploaded_background_reader_cache: dict[str, Any] = {}
 
 
 def _ensure_arabic_fonts() -> bool:
     """Register Almarai with ReportLab. Cached after the first call."""
-    global _arabic_fonts_ready
+    global _arabic_fonts_ready, _arabic_extrabold_ready
     if _arabic_fonts_ready is not None:
         return _arabic_fonts_ready
     try:
@@ -133,6 +156,18 @@ def _ensure_arabic_fonts() -> bool:
         # only do it once anyway.
         pdfmetrics.registerFont(TTFont(PDF_FONT_ARABIC, _ALMARAI_REGULAR_PATH))
         pdfmetrics.registerFont(TTFont(PDF_FONT_ARABIC_BOLD, _ALMARAI_BOLD_PATH))
+        # وجه ExtraBold (وزن 800) اختياري: عناوين البطاقة تطلب 900/950
+        # في المعاينة فيحلّها المتصفح إلى ExtraBold — تسجيله هنا يجعل
+        # مسار النص المتجهي في الـPDF يطابق نفس الوزن. غيابه لا يكسر
+        # شيئًا: نسقط إلى Bold كما كان.
+        if os.path.isfile(_ALMARAI_EXTRABOLD_PATH):
+            try:
+                pdfmetrics.registerFont(
+                    TTFont(PDF_FONT_ARABIC_EXTRABOLD, _ALMARAI_EXTRABOLD_PATH)
+                )
+                _arabic_extrabold_ready = True
+            except Exception:  # pragma: no cover — ملف تالف؟ نتجاهل
+                _arabic_extrabold_ready = False
         _arabic_fonts_ready = True
     except Exception:  # pragma: no cover — defensive
         _arabic_fonts_ready = False
@@ -200,15 +235,25 @@ def _shape_arabic(text: str) -> str:
         return text
 
 
-def _pick_pdf_font(text: str, *, bold: bool) -> str:
-    """Choose the right font for a text run.
+def _pick_pdf_font(text: str, *, weight: int = 400) -> str:
+    """Choose the right font for a text run — weight-aware.
 
     Arabic strings need Almarai (shipped TTF). Pure Latin strings stay
     on Helvetica so existing receipts look identical to before. If
     Almarai isn't available for any reason we fall back to Helvetica
     — the Arabic glyphs won't render, but the PDF still opens.
+
+    خريطة الأوزان (نفس ما يحلّه المتصفح في المعاينة الحية):
+      وزن ≥ 800 → Almarai-ExtraBold (إن سُجّل) — عناوين البطاقة 900/950.
+      وزن ≥ 600 → Almarai-Bold.
+      غير ذلك   → Almarai العادي.
+    Helvetica لا تملك وجهًا أثقل من Bold فيُحلّ ≥600 كله إلى
+    Helvetica-Bold — نفس تدهور المتصفح عند غياب وجه أثقل.
     """
+    bold = weight >= 600
     if _has_arabic(text) and _ensure_arabic_fonts():
+        if weight >= 800 and _arabic_extrabold_ready:
+            return PDF_FONT_ARABIC_EXTRABOLD
         return PDF_FONT_ARABIC_BOLD if bold else PDF_FONT_ARABIC
     return PDF_FONT_LATIN_BOLD if bold else PDF_FONT_LATIN
 
@@ -224,15 +269,267 @@ def _rgba_from_pdf_color(value: str, *, opacity: float = 1.0) -> tuple[int, int,
     )
 
 
-def _font_path_for_arabic(*, bold: bool) -> str:
-    """Pick a font that can draw Arabic presentation-form glyphs.
+_pil_raqm_available: bool | None = None
 
-    The raster path receives text after arabic-reshaper converts it to
-    Unicode presentation forms. The bundled Almarai font is fine for
-    normal Arabic shaping in browsers, but Pillow without libraqm draws
-    some Almarai presentation forms as thin placeholder bars. Prefer
-    system Arabic fonts known to contain those glyphs, then fall back to
-    bundled Almarai so exports still work on minimal installs.
+
+def _pil_supports_raqm() -> bool:
+    """True when Pillow was built with libraqm (HarfBuzz text shaping).
+
+    With Raqm, Pillow shapes Arabic from the ORIGINAL logical text using
+    the font's own OpenType tables — exactly like a browser does — so we
+    can draw with the shipped Cairo family and get glyphs identical to
+    the live SVG preview. Official Pillow wheels bundle Raqm since 8.2,
+    so this is the common case on both Windows and Linux installs.
+    """
+    global _pil_raqm_available
+    if _pil_raqm_available is not None:
+        return _pil_raqm_available
+    try:
+        from PIL import features
+
+        _pil_raqm_available = bool(features.check("raqm"))
+    except Exception:  # pragma: no cover — defensive
+        _pil_raqm_available = False
+    if not _pil_raqm_available:
+        # تحذير يُسجَّل مرة واحدة فقط (الفحص نفسه مخزّن): بدون Raqm
+        # يسقط تصدير الـPDF إلى مسار أشكال العرض القديمة المرسومة بخط
+        # نظام (Tahoma/Arial/Noto) — فيختلف شكل النص العربي في الـPDF
+        # عن خط المراعي الظاهر في المعاينة الحية. الحل: تثبيت عجلة
+        # Pillow الرسمية (pip install --force-reinstall pillow) التي
+        # تشحن Raqm منذ الإصدار 8.2. شغّل tools/check_font_pipeline.py
+        # لرؤية ما سيبدو عليه نص الـPDF فعليًا على هذا الجهاز.
+        try:
+            import logging
+
+            logging.getLogger(__name__).warning(
+                "Pillow بدون دعم Raqm: نص الـPDF العربي سيُرسم بخط نظام "
+                "(Tahoma/Arial) بدل خط المراعي الظاهر في المعاينة. "
+                "ثبّت عجلة Pillow الرسمية لاستعادة التطابق، وشغّل "
+                "python tools/check_font_pipeline.py للتشخيص."
+            )
+        except Exception:  # pragma: no cover — defensive
+            pass
+    return _pil_raqm_available
+
+
+def _almarai_font_path(*, weight: int) -> str | None:
+    """يعيد ملف خط المراعي (Almarai) المطابق للوزن المطلوب، أو None.
+
+    المراعي هو خط البطاقات الأساسي الآن: المعاينة الحية تطلبه أولًا في
+    سلسلة font-family، لذا يجب أن يرسم تصدير الـPDF بنفس الملفات حتى
+    تتطابق الحروف حرفًا بحرف. الأوزان 400/700/800 موجودة كملفات TTF
+    مشحونة؛ الأوزان 900/950 (عناوين البطاقة) تُحلّ إلى ExtraBold تمامًا
+    كما يحلّها المتصفح عند غياب وزن أثقل. الخريطة الموحّدة في كل
+    المسارات (نقطي + متجهي): ≥800 → ExtraBold، ≥600 → Bold، وإلا Regular.
+    """
+    if weight >= 800:
+        for path in (_ALMARAI_EXTRABOLD_PATH, _ALMARAI_BOLD_PATH, _ALMARAI_REGULAR_PATH):
+            if os.path.isfile(path):
+                return path
+    if weight >= 600:
+        for path in (_ALMARAI_BOLD_PATH, _ALMARAI_EXTRABOLD_PATH, _ALMARAI_REGULAR_PATH):
+            if os.path.isfile(path):
+                return path
+    for path in (_ALMARAI_REGULAR_PATH, _ALMARAI_BOLD_PATH, _ALMARAI_EXTRABOLD_PATH):
+        if os.path.isfile(path):
+            return path
+    return None
+
+
+def _cairo_font_path(*, weight: int) -> str | None:
+    """Return the shipped Cairo TTF matching a CSS-ish weight, or None.
+
+    The SVG preview asks for weights 900/950 on headings and labels, so
+    the export maps >=900 to Cairo Black, >=700 to Cairo Bold and
+    everything else to Cairo Regular — same resolution the browser does
+    against the Google-Fonts Cairo faces.
+    """
+    if weight >= 900 and os.path.isfile(_CAIRO_BLACK_PATH):
+        return _CAIRO_BLACK_PATH
+    if weight >= 600:
+        for path in (_CAIRO_BOLD_PATH, _CAIRO_BLACK_PATH):
+            if os.path.isfile(path):
+                return path
+    for path in (_CAIRO_REGULAR_PATH, _CAIRO_BOLD_PATH, _CAIRO_BLACK_PATH):
+        if os.path.isfile(path):
+            return path
+    return None
+
+
+def _arabic_raster_font_path(*, weight: int) -> str | None:
+    """مُختار خط مسار التصيير النقطي للعربية: المراعي أولًا ثم القاهرة.
+
+    سلسلة font-family في معاينة SVG تبدأ بـ'Almarai' ثم 'Cairo'، لذا
+    يطابق التصدير نفس الترتيب: إن وُجدت ملفات المراعي استُخدمت، وإلا
+    سقطنا إلى القاهرة المشحونة كما كان سابقًا — لا مراجع مكسورة أبدًا.
+    """
+    return _almarai_font_path(weight=weight) or _cairo_font_path(weight=weight)
+
+
+# ─── تغطية المحارف (glyph coverage) ────────────────────────────────
+# خط المراعي (وكذلك القاهرة) لا يحتوي رموز عملات مثل الشيكل ₪ (U+20AA)
+# والليرة ₺ (U+20BA) — فكانت تظهر مربعات (tofu) في تصدير البطاقات منذ
+# التحويل إلى المراعي. المتصفح في معاينة SVG يحل المشكلة تلقائيًا عبر
+# سلسلة font-family (يسقط للرمز الناقص إلى Tahoma/Arial)، لكن مسار
+# Pillow النقطي يرسم بخط واحد فقط. الحل هنا: قبل رسم أي نص نقطيًا
+# نفحص أن كل محارفه موجودة في cmap الخط المختار؛ وإن نقص محرف نرسم
+# النص كله بخط بديل يغطيه (نفس ما يفعله المتصفح بصريًا تقريبًا)،
+# وإن لم يغطه أي خط متاح نستبدل رموز العملات المعروفة بنص مكافئ.
+
+_font_codepoints_cache: dict[str, frozenset[int] | None] = {}
+
+# محارف لا تحتاج غلافًا في cmap (مسافات/تحكم/فواصل عامة).
+_COVERAGE_IGNORABLE = frozenset(
+    {0x09, 0x0A, 0x0D, 0x20, 0xA0, 0x200C, 0x200D, 0x200E, 0x200F,
+     0x202A, 0x202B, 0x202C, 0x202D, 0x202E, 0x2066, 0x2067, 0x2068, 0x2069}
+)
+
+# بدائل نصية أخيرة لرموز لا يغطيها أي خط متاح على الجهاز —
+# تُستخدم فقط عند فشل كل الخطوط (الخيار ب): مربع tofu أسوأ من نص واضح.
+_SYMBOL_TEXT_FALLBACKS = {
+    "₪": "ILS",   # ₪ شيكل
+    "₺": "TL",    # ₺ ليرة تركية
+    "€": "EUR",   # € يورو
+    "﷼": "ر.س",   # ﷼ ريال
+    "✦": "*",     # ✦ نجمة زخرفية
+}
+
+
+def _font_codepoints(font_path: str) -> frozenset[int] | None:
+    """يعيد مجموعة الكودبوينتات التي يغطيها ملف الخط (مخزّنة).
+
+    يعتمد fontTools (موجودة ضمن تبعيات Pillow/reportlab عادة)؛ عند
+    غيابها أو فشل قراءة الملف نعيد None = «لا نعرف» فلا نغيّر الخط —
+    نفس السلوك القديم تمامًا (أمان للأنظمة الناقصة).
+    """
+    cached = _font_codepoints_cache.get(font_path)
+    if cached is not None or font_path in _font_codepoints_cache:
+        return cached
+    result: frozenset[int] | None = None
+    try:
+        from fontTools.ttLib import TTFont as _FTFont
+
+        ft = _FTFont(font_path, lazy=True, fontNumber=0)
+        try:
+            result = frozenset(ft.getBestCmap().keys())
+        finally:
+            ft.close()
+    except Exception:  # pragma: no cover — fontTools غائبة أو ملف تالف
+        result = None
+    _font_codepoints_cache[font_path] = result
+    return result
+
+
+def _font_covers_text(font_path: str, text: str) -> bool:
+    """True إن كان الخط يغطي كل محارف النص (أو تعذّر الفحص أصلًا)."""
+    coverage = _font_codepoints(font_path)
+    if coverage is None:
+        return True  # لا نستطيع الفحص — نُبقي الخط كما هو
+    return all(
+        (cp in coverage)
+        for cp in (ord(ch) for ch in text)
+        if cp not in _COVERAGE_IGNORABLE
+    )
+
+
+def _missing_codepoints(font_path: str, text: str) -> set[int]:
+    coverage = _font_codepoints(font_path)
+    if coverage is None:
+        return set()
+    return {
+        cp
+        for cp in (ord(ch) for ch in text)
+        if cp not in _COVERAGE_IGNORABLE and cp not in coverage
+    }
+
+
+def _symbol_fallback_font_candidates(*, weight: int) -> list[str]:
+    """خطوط بديلة مرتّبة لرسم سطر فيه رمز ناقص من المراعي.
+
+    الترتيب يطابق روح سلسلة font-family في معاينة SVG: القاهرة أولًا
+    (شكلها أقرب للمراعي)، ثم خطوط النظام التي تجمع العربية مع رموز
+    العملات (Tahoma/Arial/Segoe على ويندوز، Noto/DejaVu على لينكس).
+    """
+    bold = weight >= 600
+    candidates = [
+        _cairo_font_path(weight=weight),
+        r"C:\Windows\Fonts\tahomabd.ttf" if bold else r"C:\Windows\Fonts\tahoma.ttf",
+        r"C:\Windows\Fonts\segoeuib.ttf" if bold else r"C:\Windows\Fonts\segoeui.ttf",
+        r"C:\Windows\Fonts\arialbd.ttf" if bold else r"C:\Windows\Fonts\arial.ttf",
+        "/usr/share/fonts/truetype/noto/NotoNaskhArabic-Bold.ttf" if bold else "/usr/share/fonts/truetype/noto/NotoNaskhArabic-Regular.ttf",
+        "/usr/share/fonts/truetype/noto/NotoSansArabic-Bold.ttf" if bold else "/usr/share/fonts/truetype/noto/NotoSansArabic-Regular.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf" if bold else "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+    ]
+    return [path for path in candidates if path and os.path.isfile(path)]
+
+
+def _resolve_raster_font_for_text(
+    text: str, primary_path: str, *, weight: int
+) -> tuple[str, str]:
+    """يختار (الخط، النص) الفعليين لرسم سطر نقطي بلا مربعات tofu.
+
+    1) إن غطّى الخط الأساسي (المراعي عادة) كل المحارف → لا تغيير.
+    2) وإلا نجرّب الخطوط البديلة بالترتيب ونرسم السطر كاملًا بأول خط
+       يغطي كل محارفه — سطر كامل بخط واحد أبسط وأكثر اتساقًا بصريًا
+       من خلط الخطوط داخل السطر الواحد.
+    3) إن لم يغطِّ أي خط كل المحارف نستبدل رموز العملات/الزخارف
+       المعروفة بنص مكافئ ونعيد المحاولة — وإلا نُبقي الأصل (أسوأ
+       الحالات = السلوك القديم حرفيًا).
+    """
+    if _font_covers_text(primary_path, text):
+        return primary_path, text
+    for candidate in _symbol_fallback_font_candidates(weight=weight):
+        if _font_covers_text(candidate, text):
+            return candidate, text
+    substituted = "".join(
+        _SYMBOL_TEXT_FALLBACKS.get(ch, ch) for ch in text
+    )
+    if substituted != text:
+        if _font_covers_text(primary_path, substituted):
+            return primary_path, substituted
+        for candidate in _symbol_fallback_font_candidates(weight=weight):
+            if _font_covers_text(candidate, substituted):
+                return candidate, substituted
+        return primary_path, substituted
+    return primary_path, text
+
+
+# محارف فوق U+00FF تغطيها Helvetica المدمجة فعلًا (ترميز WinAnsi):
+# نقطة التعداد • وعلامات الاقتباس والشرطات و… واليورو €. هذه تبقى على
+# المسار المتجهي القديم حرفيًا حتى لا يتغير شكل كلمات المرور المقنّعة
+# (••••••) ولا محاذاتها.
+_WINANSI_EXTRA = frozenset(
+    {0x20AC, 0x2018, 0x2019, 0x201A, 0x201C, 0x201D, 0x201E,
+     0x2013, 0x2014, 0x2020, 0x2021, 0x2022, 0x2026, 0x2030,
+     0x2039, 0x203A, 0x02C6, 0x02DC, 0x0152, 0x0153, 0x0160,
+     0x0161, 0x0178, 0x017D, 0x017E, 0x0192, 0x2122}
+)
+
+
+# محارف خارج تغطية Helvetica المدمجة في ReportLab (WinAnsi):
+# رموز عملات مثل ₪/₺ والعربية والزخارف يجب أن تمر عبر مسار الصورة
+# النقطية وإلا ظهرت مربعات سوداء في PDF.
+def _needs_raster_text(text: str) -> bool:
+    if not text:
+        return False
+    if _has_arabic(text):
+        return True
+    return any(
+        ord(ch) > 0xFF and ord(ch) not in _WINANSI_EXTRA for ch in text
+    )
+
+
+def _font_path_for_arabic(*, bold: bool) -> str:
+    """Pick a fallback font that can draw Arabic presentation-form glyphs.
+
+    Used only when Pillow has NO Raqm support: the raster path then
+    receives text after arabic-reshaper converts it to Unicode
+    presentation forms (U+FBxx/U+FExx). Cairo/Almarai/Tajawal — like
+    most modern Google fonts — do not map those legacy codepoints, so
+    without Raqm we must fall back to system fonts that do (Tahoma,
+    Arial, Noto Naskh, DejaVu). Prefer those, then bundled Almarai so
+    exports still work on minimal installs.
     """
     candidates = [
         # Windows dev/customer machines.
@@ -251,25 +548,48 @@ def _font_path_for_arabic(*, bold: bool) -> str:
     return _ALMARAI_BOLD_PATH if bold and os.path.isfile(_ALMARAI_BOLD_PATH) else _ALMARAI_REGULAR_PATH
 
 
-def _fit_arabic_raw_text(raw_text: str, *, font, max_width: int) -> str:
+def _arabic_run_bbox(font, text: str, *, use_raqm: bool, direction: str):
+    """Measure a text run, letting Raqm shape it when available."""
+    if use_raqm:
+        try:
+            return font.getbbox(
+                text,
+                direction="rtl" if direction == "rtl" else "ltr",
+                language="ar",
+            )
+        except Exception:  # pragma: no cover — Raqm probing safety
+            pass
+    return font.getbbox(text)
+
+
+def _fit_arabic_raw_text(
+    raw_text: str,
+    *,
+    font,
+    max_width: int,
+    use_raqm: bool = False,
+    direction: str = "rtl",
+) -> str:
     """Return raw Arabic text that fits after shaping.
 
     We trim before shaping because the PDF raster path draws the shaped
     visual string into a fixed canvas. This mirrors `_shrink_to_fit`
-    for vector text but avoids cutting glyphs mid-image.
+    for vector text but avoids cutting glyphs mid-image. On the Raqm
+    path the font itself shapes the logical text, so no reshaping pass
+    is needed for measurement.
     """
     if max_width <= 0:
         return raw_text
     text = raw_text
     ellipsis = "…"
     while text:
-        shaped = _shape_arabic(text)
-        bbox = font.getbbox(shaped)
+        probe = text if use_raqm else _shape_arabic(text)
+        bbox = _arabic_run_bbox(font, probe, use_raqm=use_raqm, direction=direction)
         if (bbox[2] - bbox[0]) <= max_width:
             return text
         text = text[:-1]
-    shaped_ellipsis = _shape_arabic(ellipsis)
-    bbox = font.getbbox(shaped_ellipsis)
+    probe = ellipsis if use_raqm else _shape_arabic(ellipsis)
+    bbox = _arabic_run_bbox(font, probe, use_raqm=use_raqm, direction=direction)
     return ellipsis if (bbox[2] - bbox[0]) <= max_width else ""
 
 
@@ -282,7 +602,7 @@ def _build_arabic_text_image(
     max_width: float = 0,
     direction: str = "rtl",
     opacity: float = 1.0,
-) -> tuple[bytes, int, int] | None:
+) -> tuple[bytes, int, int, dict] | None:
     """Rasterize an Arabic text run to a transparent PNG.
 
     ReportLab can embed the Almarai font, but PDF viewers still vary in
@@ -291,44 +611,107 @@ def _build_arabic_text_image(
     behave like the live preview screenshot: letters stay connected,
     glyph order is stable, and the whole text block scales uniformly
     with the card form.
+
+    Font selection (preview/export convergence):
+      - Pillow built with Raqm (the default in official wheels) →
+        draw the ORIGINAL logical text with the shipped Cairo family,
+        letting Raqm/HarfBuzz shape it through Cairo's OpenType tables.
+        That is exactly what the browser does for the live SVG preview,
+        so the exported glyphs match the preview.
+      - No Raqm → legacy path: arabic-reshaper presentation forms drawn
+        with a system font that maps those legacy codepoints (Tahoma /
+        Arial / Noto Naskh / DejaVu), falling back to bundled Almarai.
     """
-    if not raw_text or not _has_arabic(raw_text):
+    # يُستدعى أيضًا لنصوص لاتينية تحمل رموزًا خارج تغطية Helvetica
+    # (مثل سعر "₪ 1.50" بلا حرف عربي) — لذا الشرط هو «نص يحتاج
+    # تصييرًا نقطيًا» وليس «نص عربي» فقط.
+    if not raw_text or not _needs_raster_text(raw_text):
         return None
     try:
         from PIL import Image, ImageDraw, ImageFont
     except Exception:  # pragma: no cover - optional dependency safety
         return None
-    font_path = _font_path_for_arabic(bold=weight >= 700)
+    use_raqm = False
+    font_path = None
+    if _pil_supports_raqm():
+        # المراعي أولًا (نفس ترتيب سلسلة الخطوط في معاينة SVG) ثم القاهرة.
+        font_path = _arabic_raster_font_path(weight=int(weight))
+        use_raqm = font_path is not None
+    if font_path is None:
+        # مسار ما-قبل-Raqm: خطوط النظام لا تملك ExtraBold فيتدهور كل
+        # وزن ≥600 إلى الوجه العريض المتاح — أفضل تقريب ممكن.
+        font_path = _font_path_for_arabic(bold=weight >= 600)
     if not os.path.isfile(font_path):
+        return None
+    # فحص تغطية المحارف: المراعي لا يحوي ₪/₺ وغيرها فتُرسم مربعات.
+    # عند نقص أي محرف نرسم السطر كاملًا بخط بديل يغطيه (القاهرة ثم
+    # خطوط النظام)، وكحل أخير نستبدل الرمز بنص مكافئ — لا tofu أبدًا.
+    font_path, raw_text = _resolve_raster_font_for_text(
+        raw_text, font_path, weight=int(weight)
+    )
+    if not raw_text:
         return None
     font_size = max(1, int(round(size)))
     box_width = int(math.ceil(max_width)) if max_width and max_width > 0 else 0
+    direction = "rtl" if direction == "rtl" else "ltr"
     cache_key = (
         raw_text,
         font_size,
         color,
         int(weight),
         box_width,
-        "rtl" if direction == "rtl" else "ltr",
+        direction,
         round(max(0.0, min(1.0, opacity)), 3),
+        os.path.basename(font_path),
+        use_raqm,
     )
     cached = _arabic_text_image_cache.get(cache_key)
     if cached:
         return cached
     try:
-        font = ImageFont.truetype(font_path, font_size)
+        if use_raqm:
+            font = ImageFont.truetype(font_path, font_size)
+        else:
+            # The legacy path feeds PRE-shaped presentation forms; the
+            # basic layout engine must draw them verbatim. (If Raqm is
+            # compiled in but we chose the legacy path, Raqm's default
+            # layout would re-apply bidi and mirror the string.)
+            try:
+                layout = ImageFont.Layout.BASIC
+            except AttributeError:  # Pillow < 9.1
+                layout = ImageFont.LAYOUT_BASIC
+            font = ImageFont.truetype(font_path, font_size, layout_engine=layout)
     except Exception:  # pragma: no cover - corrupt font safety
         return None
 
     available_width = max(1, box_width - max(2, int(font_size * 0.16))) if box_width else 0
-    fitted_raw = _fit_arabic_raw_text(raw_text, font=font, max_width=available_width) if available_width else raw_text
-    shaped = _shape_arabic(fitted_raw)
+    fitted_raw = (
+        _fit_arabic_raw_text(
+            raw_text,
+            font=font,
+            max_width=available_width,
+            use_raqm=use_raqm,
+            direction=direction,
+        )
+        if available_width
+        else raw_text
+    )
+    if use_raqm:
+        # Raqm shapes + bidi-reorders the logical string itself.
+        shaped = fitted_raw
+    else:
+        shaped = _shape_arabic(fitted_raw)
     if not shaped:
         return None
 
-    bbox = font.getbbox(shaped)
+    bbox = _arabic_run_bbox(font, shaped, use_raqm=use_raqm, direction=direction)
     text_w = max(1, int(math.ceil(bbox[2] - bbox[0])))
     text_h = max(1, int(math.ceil(bbox[3] - bbox[1])))
+    # حشوة صغيرة فقط لحماية حواف الحروف من القص عند التنعيم (AA) —
+    # تُعاد قيمها للمستدعي كي يلغيها عند وضع الصورة على الصفحة، فيقع
+    # أصل التخطيط (قمة الصاعد) في نفس نقطة معاينة SVG حرفيًا. سابقًا
+    # كانت الحشوة + التوسيط العمودي داخل صندوق 1.35×الحجم تزيح النص
+    # العربي المُصدَّر ~10–14px عن موضعه في المعاينة (خلل المطابقة).
     pad_x = max(2, int(math.ceil(font_size * 0.12)))
     pad_y = max(2, int(math.ceil(font_size * 0.22)))
     width = max(box_width, text_w + pad_x * 2)
@@ -338,10 +721,33 @@ def _build_arabic_text_image(
     draw = ImageDraw.Draw(image)
     draw_x = width - pad_x - text_w if direction == "rtl" else pad_x
     draw_y = (height - text_h) / 2 - bbox[1]
-    draw.text((draw_x, draw_y), shaped, font=font, fill=_rgba_from_pdf_color(color, opacity=opacity))
+    fill = _rgba_from_pdf_color(color, opacity=opacity)
+    if use_raqm:
+        try:
+            draw.text((draw_x, draw_y), shaped, font=font, fill=fill,
+                      direction=direction, language="ar")
+        except Exception:  # pragma: no cover — Raqm runtime safety
+            draw.text((draw_x, draw_y), _shape_arabic(shaped), font=font, fill=fill)
+    else:
+        draw.text((draw_x, draw_y), shaped, font=font, fill=fill)
     buf = BytesIO()
     image.save(buf, format="PNG")
-    result = (buf.getvalue(), width, height)
+    try:
+        ascent_px = float(font.getmetrics()[0])
+    except Exception:  # pragma: no cover — defensive
+        ascent_px = font_size * 0.78
+    # origin_x/origin_y: موضع أصل تخطيط PIL (يسار النص، قمة الصاعد)
+    # داخل الصورة — بهما يضع محوّل PDF النص في نفس إحداثيات SVG تمامًا.
+    result = (
+        buf.getvalue(), width, height,
+        {
+            "origin_x": float(draw_x),
+            "origin_y": float(draw_y),
+            "text_w": float(text_w),
+            "ascent": ascent_px,
+            "font_size": float(font_size),
+        },
+    )
     # Keep the cache bounded; export jobs may process hundreds of cards.
     if len(_arabic_text_image_cache) > 512:
         _arabic_text_image_cache.clear()
@@ -362,7 +768,20 @@ def _pdf_draw_arabic_text_image(
     direction: str,
     opacity: float,
     ch: float,
+    anchor: str = "top",
 ) -> bool:
+    """يرسم سطر النص النقطي بحيث يطابق موضعه معاينة SVG حرفيًا.
+
+    anchor="top"   : y = قمة الصاعد (نفس dominant-baseline="hanging"
+                     في SVG) — للعناوين/الميتا/الفوتر.
+    anchor="middle": y = منتصف النص بصريًا (نفس dominant-baseline=
+                     "middle") — لتسميات/قيم شرائط اليوزر والباس.
+
+    أفقيًا: rtl ← الحافة اليمنى للنص عند x+max_width (نفس
+    text-anchor="end")، وltr ← يسار النص عند x (نفس "start").
+    التعويضات origin_x/origin_y الراجعة من باني الصورة تلغي الحشوة
+    الداخلية، فلا انزياح ~10px كما في السابق.
+    """
     rendered = _build_arabic_text_image(
         raw_text,
         size=size,
@@ -376,11 +795,42 @@ def _pdf_draw_arabic_text_image(
         return False
     from reportlab.lib.utils import ImageReader
 
-    png_bytes, width, height = rendered
-    pdf_y = ch - y - height
+    png_bytes, width, height, meta = rendered
+    origin_x = float(meta.get("origin_x") or 0.0)
+    origin_y = float(meta.get("origin_y") or 0.0)
+    text_w = float(meta.get("text_w") or width)
+    ascent = float(meta.get("ascent") or size * 0.78)
+
+    # ── أفقيًا ──
+    if direction == "rtl" and max_width and max_width > 0:
+        # الحافة اليمنى للحبر عند x+max_width (مطابق لمرساة "end").
+        image_left = (x + max_width) - (origin_x + text_w)
+    else:
+        # يسار النص عند x (مطابق لمرساة "start").
+        image_left = x - origin_x
+
+    # ── عموديًا ──
+    if anchor == "middle":
+        # منتصف SVG ≈ خط القاعدة − 0.26×الحجم (نصف ارتفاع x تقريبًا
+        # كما تفسره المتصفحات وresvg). خط القاعدة داخل الصورة عند
+        # origin_y + ascent.
+        baseline_target = y + size * 0.26
+        image_top = baseline_target - (origin_y + ascent)
+    else:
+        # "top" = dominant-baseline="hanging" في SVG: المتصفح (وresvg)
+        # يضع «خط التعليق» عند y، وخط التعليق يقع عند 0.8×الصاعد فوق
+        # خط القاعدة (قاعدة CSS عند غياب جدول BASE في الخط — حال
+        # المراعي/القاهرة). إذًا خط القاعدة المستهدف = y + 0.8×الصاعد،
+        # وداخل صورة PIL يقع خط القاعدة عند origin_y + الصاعد — أي أن
+        # قمة الصورة = y − origin_y − 0.2×الصاعد. (التقويم القديم وضع
+        # قمة الصاعد عند y فنزل النص ~0.2×الصاعد ≈ 9–14px عن المعاينة.)
+        baseline_target = y + 0.8 * ascent
+        image_top = baseline_target - (origin_y + ascent)
+
+    pdf_y = ch - image_top - height
     pdf.drawImage(
         ImageReader(BytesIO(png_bytes)),
-        x,
+        image_left,
         pdf_y,
         width=width,
         height=height,
@@ -536,6 +986,10 @@ def build_card_render_model(
     label_font_size = _optional_positive_float(layout.get("credential_label_font_size"))
     qr_color = _safe_hex(layout.get("qr_color"), "#0f172a")
     qr_background_color = _safe_hex(layout.get("qr_background_color"), "#ffffff")
+    # نمط رمز QR من المصمم: boxed = مربعات حادة فوق لوحة بيضاء (السلوك
+    # التاريخي)، rounded = «ناعم» وحدات دائرية/منحنية، clean = «بسيط»
+    # بدون لوحة/إطار خلف الرمز (الوحدات فقط فوق الخلفية).
+    qr_style = _normalize_qr_style(layout.get("qr_style"))
 
     username, password, card_id = _extract_card_fields(card)
     uploaded_design = _is_uploaded_design(layout)
@@ -607,7 +1061,17 @@ def build_card_render_model(
 
     if show["qr"]:
         qr = positions["qr"]
-        payload = _qr_login_payload(layout, username, password, card_id)
+        # رمز QR يجب أن يحترم حقول «الاستبدال» القادمة من غرفة الطباعة
+        # تمامًا كما تحترمها النصوص الظاهرة: المستخدم يكتب عنوان البوابة
+        # (hotspot_address) أو رابط الدخول التلقائي (hotspot_login_url)
+        # في غرفة التصدير، فيجب أن يدخل العنوان في رابط QR نفسه — وإلا
+        # عملت المعاينة في غرفة التصميم وفشل التصدير (الخلل المُبلَّغ).
+        qr_layout = dict(layout)
+        for qr_key in ("hotspot_login_url", "hotspot_address"):
+            qr_override = str(overrides.get(qr_key) or "").strip()
+            if qr_override:
+                qr_layout[qr_key] = qr_override
+        payload = _qr_login_payload(qr_layout, username, password, card_id)
         elements.append({
             "kind": "qr",
             "id": "qr",
@@ -617,6 +1081,8 @@ def build_card_render_model(
             "size": qr["size"] * canvas_w,
             "bg": qr_background_color,
             "fg": qr_color,
+            # يمرَّر النمط لمحوّلي SVG وPDF معًا فيتطابق الشكل حرفيًا.
+            "style": qr_style,
         })
 
     # Meta line: hotspot · price · validity · #serial
@@ -684,7 +1150,53 @@ def build_card_render_model(
 # SVG adapter
 # ───────────────────────────────────────────────────────────────────
 
-def render_card_svg(model: dict, *, mask_password: bool = True) -> str:
+# ذاكرة على مستوى الموديول لقاعدة base64 لخطوط المراعي المضمَّنة في
+# SVG المصغّرات: تُقرأ ملفات TTF وتُرمَّز مرة واحدة فقط مهما تكرر الطلب.
+_embedded_font_css_cache: str | None = None
+
+
+def _embedded_almarai_font_css() -> str:
+    """يبني كتلة <style> بقواعد @font-face لخط المراعي مضمّنة data: URI.
+
+    لماذا التضمين؟ المصغّرات تُعرض داخل <img src=".../thumbnail.svg">،
+    وSVG داخل <img> معزول تمامًا: لا يرى CSS الصفحة ولا يستطيع تحميل
+    خطوط من روابط خارجية — الطريقة الوحيدة ليظهر المراعي هي تضمين ملف
+    الخط نفسه base64 داخل ملف الـSVG. النتيجة تُحسب مرة واحدة وتُحفظ
+    على مستوى الموديول (الترميز ~500KB) فلا قراءة/ترميز لكل طلب.
+    """
+    global _embedded_font_css_cache
+    if _embedded_font_css_cache is not None:
+        return _embedded_font_css_cache
+    faces: list[str] = []
+    # الوزن 800 (ExtraBold) مهم: عناوين البطاقة تطلب 900/950 والمتصفح
+    # يحلّها إلى أثقل وجه مسجّل — بدونه تُركَّب «عريض صناعي» قبيح.
+    for path, weight in (
+        (_ALMARAI_REGULAR_PATH, 400),
+        (_ALMARAI_BOLD_PATH, 700),
+        (_ALMARAI_EXTRABOLD_PATH, 800),
+    ):
+        try:
+            if not os.path.isfile(path):
+                continue
+            with open(path, "rb") as fh:
+                encoded = base64.b64encode(fh.read()).decode("ascii")
+            faces.append(
+                "@font-face{font-family:'Almarai';font-style:normal;"
+                f"font-weight:{weight};"
+                f"src:url(data:font/ttf;base64,{encoded}) format('truetype');}}"
+            )
+        except Exception:  # pragma: no cover — defensive: never break SVG
+            continue
+    css = ""
+    if faces:
+        # CDATA يحمي صلاحية XML حتى لو احتوى CSS محارف خاصة مستقبلًا.
+        css = "<style type=\"text/css\"><![CDATA[" + "".join(faces) + "]]></style>"
+    _embedded_font_css_cache = css
+    return css
+
+
+def render_card_svg(model: dict, *, mask_password: bool = True,
+                    embed_fonts: bool = False) -> str:
     """Render the model as an inline SVG string.
 
     The SVG uses `viewBox="0 0 W H"` and `preserveAspectRatio="xMidYMid meet"`,
@@ -692,6 +1204,11 @@ def render_card_svg(model: dict, *, mask_password: bool = True) -> str:
     distortion. `mask_password=True` (default) replaces the password
     value with bullets — the live preview never reveals the real
     password.
+
+    `embed_fonts=True` يضمّن وجوه خط المراعي كـdata: URI داخل الـSVG —
+    مطلوب فقط عندما يُعرض الملف داخل <img> (المصغّرات/منتقي القوالب)
+    حيث لا يصل CSS الصفحة ولا خطوطها. المعاينة الحية المضمّنة في الصفحة
+    تبقى بدون تضمين (False) لتظل خفيفة وتستخدم خطوط الصفحة نفسها.
     """
     w = int(model["canvas"]["width"]); h = int(model["canvas"]["height"])
     bg = model.get("background") or {}
@@ -718,6 +1235,9 @@ def render_card_svg(model: dict, *, mask_password: bool = True) -> str:
         f'style="display:block;direction:ltr;overflow:visible;max-width:100%;max-height:100%">'
     )
     parts.append('<defs>')
+    if embed_fonts:
+        # تضمين المراعي لعرض الـSVG داخل <img> (لا وصول لخطوط الصفحة).
+        parts.append(_embedded_almarai_font_css())
     parts.extend(_svg_defs(bg, w, h, bg_id=bg_id, pattern_id=pattern_id))
     parts.append(f'<clipPath id="{clip_id}"><rect x="0" y="0" width="{w}" height="{h}" rx="{int(w*0.025)}" ry="{int(w*0.025)}"/></clipPath>')
     parts.append('</defs>')
@@ -794,14 +1314,24 @@ def render_card_pdf(pdf, model: dict, *, form_name: str,
 
 
 def _embed_arabic_font_marker(pdf, ch: float) -> None:
-    """Embed Almarai even when Arabic is rasterized for perfect shaping."""
+    """Embed Almarai even when Arabic is rasterized for perfect shaping.
+
+    تُختم الأوجه الثلاثة (Regular/Bold/ExtraBold) بحرف غير مرئي خارج
+    الصفحة، فتظهر العائلة كاملة في قائمة خطوط الـPDF المضمّنة — توثيق
+    أن العناوين العريضة رُسمت بأوزانها الصحيحة حتى عندما تكون النصوص
+    العربية نفسها صورًا نقطية (subset بحرف واحد ≈ بضعة كيلوبايتات فقط).
+    """
     if not _ensure_arabic_fonts():
         return
+    faces = [PDF_FONT_ARABIC, PDF_FONT_ARABIC_BOLD]
+    if _arabic_extrabold_ready:
+        faces.append(PDF_FONT_ARABIC_EXTRABOLD)
     try:
         pdf.saveState()
-        pdf.setFont(PDF_FONT_ARABIC, 1)
         pdf.setFillColorRGB(1, 1, 1)
-        pdf.drawString(-1000, ch + 1000, "ا")
+        for face in faces:
+            pdf.setFont(face, 1)
+            pdf.drawString(-1000, ch + 1000, "ا")
         pdf.restoreState()
     except Exception:
         try:
@@ -856,12 +1386,54 @@ def _card_slot_fit(model: dict, *, slot_x: float, slot_y: float,
     }
 
 
-def _uploaded_background_image_reader(bg: dict):
+def _cover_crop_image_bytes(image_bytes: bytes, *, aspect: float) -> bytes:
+    """يقصّ الصورة مركزيًا إلى نسبة أبعاد البطاقة (مكافئ slice في SVG).
+
+    معاينة SVG ترسم الخلفية بـpreserveAspectRatio="xMidYMid slice"
+    (تغطية مع قص مركزي بلا تشويه)، بينما كان مسار PDF يمدّد الصورة
+    (preserveAspectRatio=False) — فإذا اختلفت نسبة الصورة عن نسبة
+    البطاقة انضغط التصميم المرفوع كله وتحركت كل العناصر المرسومة فوقه
+    عن مواضعها في المعاينة (الخلل المُبلَّغ: «التوزيع يختلف»). القص هنا
+    يجعل التصدير يطابق المعاينة هندسيًا حرفيًا. أي فشل → الأصل كما هو.
+    """
+    try:
+        from PIL import Image
+
+        with Image.open(BytesIO(image_bytes)) as img:
+            w, h = img.size
+            if w <= 0 or h <= 0 or aspect <= 0:
+                return image_bytes
+            current = w / h
+            if abs(current - aspect) < 1e-3:
+                return image_bytes
+            if current > aspect:
+                # أعرض من البطاقة → قص من الجانبين.
+                new_w = int(round(h * aspect))
+                left = (w - new_w) // 2
+                box = (left, 0, left + new_w, h)
+            else:
+                # أطول من البطاقة → قص من الأعلى والأسفل.
+                new_h = int(round(w / aspect))
+                top = (h - new_h) // 2
+                box = (0, top, w, top + new_h)
+            cropped = img.crop(box)
+            out = BytesIO()
+            if cropped.mode in {"RGBA", "LA", "P"}:
+                cropped.convert("RGBA").save(out, format="PNG")
+            else:
+                cropped.convert("RGB").save(out, format="JPEG", quality=90)
+            return out.getvalue()
+    except Exception:  # pragma: no cover — defensive: never break export
+        return image_bytes
+
+
+def _uploaded_background_image_reader(bg: dict, *, aspect: float | None = None):
     image_url = str(bg.get("image_data_url") or "")
     source = str(bg.get("source") or "preset")
     if source != "image" or not image_url.startswith("data:image/") or ";base64," not in image_url:
         return None
-    cached = _uploaded_background_reader_cache.get(image_url)
+    cache_key = f"{round(aspect, 4) if aspect else 0}|{image_url}"
+    cached = _uploaded_background_reader_cache.get(cache_key)
     if cached is not None:
         return cached
     try:
@@ -873,10 +1445,13 @@ def _uploaded_background_image_reader(bg: dict):
             image_bytes = _convert_bitmap_for_reportlab(image_bytes)
         if mime_part not in {"data:image/png", "data:image/jpeg", "data:image/jpg", "data:image/webp"}:
             return None
+        if aspect:
+            # نفس سلوك المعاينة (xMidYMid slice): قص مركزي بلا تشويه.
+            image_bytes = _cover_crop_image_bytes(image_bytes, aspect=aspect)
         image = ImageReader(BytesIO(image_bytes))
         if len(_uploaded_background_reader_cache) > 8:
             _uploaded_background_reader_cache.clear()
-        _uploaded_background_reader_cache[image_url] = image
+        _uploaded_background_reader_cache[cache_key] = image
         return image
     except Exception:
         return None
@@ -901,7 +1476,10 @@ def draw_uploaded_background_uniform(pdf, model: dict, *, slot_x: float, slot_y:
     from reportlab.lib import colors
 
     bg = model.get("background") or {}
-    image = _uploaded_background_image_reader(bg)
+    cw = float(model["canvas"]["width"]) or 1.0
+    ch = float(model["canvas"]["height"]) or 1.0
+    # القص المركزي لنسبة البطاقة = نفس slice في معاينة SVG، فلا تشويه.
+    image = _uploaded_background_image_reader(bg, aspect=cw / ch)
     if image is None:
         return False
     fit = _card_slot_fit(
@@ -1000,7 +1578,9 @@ def _pdf_background(pdf, bg: dict, cw: float, ch: float) -> None:
     source = str(bg.get("source") or "preset")
     if source == "image" and image_url.startswith("data:image/") and ";base64," in image_url:
         try:
-            from io import BytesIO
+            # ملاحظة: لا نستورد BytesIO محليًا هنا — الاستيراد المحلي كان
+            # يجعل الاسم محليًا للدالة كلها فيكسر فرع الزخرفة أدناه
+            # (UnboundLocalError صامت داخل try). نستخدم استيراد الموديول.
             from reportlab.lib.utils import ImageReader
 
             mime_part, encoded = image_url.split(";base64,", 1)
@@ -1008,6 +1588,12 @@ def _pdf_background(pdf, bg: dict, cw: float, ch: float) -> None:
             if mime_part == "data:image/webp":
                 image_bytes = _convert_bitmap_for_reportlab(image_bytes)
             if mime_part in {"data:image/png", "data:image/jpeg", "data:image/jpg", "data:image/webp"}:
+                # نفس معاينة SVG (xMidYMid slice): قص مركزي لنسبة
+                # البطاقة بدل التمديد — التمديد كان يشوّه التصميم
+                # المرفوع ويزيح كل عناصره عن مواضع المعاينة.
+                image_bytes = _cover_crop_image_bytes(
+                    image_bytes, aspect=(cw / ch) if ch else 0.0
+                )
                 image = ImageReader(BytesIO(image_bytes))
                 opacity = max(0.0, min(1.0, float(bg.get("image_opacity") or 1.0)))
                 pdf.saveState()
@@ -1023,58 +1609,225 @@ def _pdf_background(pdf, bg: dict, cw: float, ch: float) -> None:
 
     start = _pdf_color(bg.get("gradient_start", "#0f172a"))
     end = _pdf_color(bg.get("gradient_end", "#22a7bd"))
-    # 24 horizontal bands of interpolated colour.
-    bands = 24
-    band_h = ch / bands
-    for i in range(bands):
-        t = i / max(bands - 1, 1)
-        r = start.red   + (end.red   - start.red)   * t
-        g = start.green + (end.green - start.green) * t
-        b = start.blue  + (end.blue  - start.blue)  * t
-        pdf.setFillColor(colors.Color(r, g, b))
-        # PDF origin is bottom-left; band i (top→bottom in the model)
-        # sits at (ch - (i+1)*band_h) in PDF space.
-        pdf.rect(0, ch - (i + 1) * band_h, cw, band_h + 0.5, stroke=0, fill=1)
+    # تدرّج قطري حقيقي مطابق لمعاينة SVG: linearGradient من (0,0) إلى
+    # (1,1). الشرائط الأفقية القديمة (24 شريطًا من أعلى لأسفل) أنتجت
+    # تدرجًا «عموديًا» مختلف الاتجاه عن المعاينة القطرية — فبدت ألوان
+    # البطاقة المصدَّرة موزعة بشكل مغاير للمعاينة (جزء من خلل المطابقة
+    # المُبلَّغ). نرسمه الآن صورة نقطية بنفس معادلة SVG بالضبط.
+    gradient_png = _build_diagonal_gradient_png(
+        (start.red, start.green, start.blue),
+        (end.red, end.green, end.blue),
+        int(cw), int(ch),
+    )
+    if gradient_png is not None:
+        try:
+            from reportlab.lib.utils import ImageReader
 
-    # Decorative pattern overlay. Colour + transparency come from the
-    # saved layout instead of the old hardcoded white so the PDF matches
-    # the live preview. `pattern_opacity` is None for untouched templates,
-    # in which case the legacy per-pattern alpha is used.
-    pattern = bg.get("pattern") or "signal"
+            pdf.drawImage(
+                ImageReader(BytesIO(gradient_png)),
+                0, 0, width=cw, height=ch,
+                preserveAspectRatio=False,
+            )
+        except Exception:  # pragma: no cover — defensive
+            gradient_png = None
+    if gradient_png is None:
+        # سقوط آمن: الشرائط الأفقية القديمة (لو غابت Pillow لأي سبب).
+        bands = 24
+        band_h = ch / bands
+        for i in range(bands):
+            t = i / max(bands - 1, 1)
+            r = start.red   + (end.red   - start.red)   * t
+            g = start.green + (end.green - start.green) * t
+            b = start.blue  + (end.blue  - start.blue)  * t
+            pdf.setFillColor(colors.Color(r, g, b))
+            # PDF origin is bottom-left; band i (top→bottom in the model)
+            # sits at (ch - (i+1)*band_h) in PDF space.
+            pdf.rect(0, ch - (i + 1) * band_h, cw, band_h + 0.5, stroke=0, fill=1)
+
+    # Decorative pattern overlay (نمط الزخرفة). Drawn as a transparent
+    # RGBA PNG and embedded via drawImage(mask="auto") instead of vector
+    # shapes with alpha colours.
+    #
+    # WHY a bitmap: this whole background is drawn inside a ReportLab
+    # Form XObject (`pdf.beginForm`). ReportLab silently DROPS the
+    # transparency ExtGState inside forms, so the old vector path drew
+    # the "faint white" pattern as 100% OPAQUE white — solid white grid
+    # lines / signal bars / a hard white circle covering the gradient.
+    # That is exactly the «نمط الزخرفة يختفي/الملف يطلع أبيض» export bug:
+    # the live SVG preview showed a soft translucent pattern while the
+    # exported PDF showed ugly opaque white. PNG alpha (SMask) survives
+    # form reuse fine — the Arabic-text raster path in this module
+    # already relies on it — so we rasterize the same geometry the SVG
+    # adapter emits (same colour, same per-pattern legacy opacity) and
+    # the export now matches the preview pixel-for-pixel.
+    overlay_png = _build_pattern_overlay_png(bg, int(cw), int(ch))
+    if overlay_png is not None:
+        try:
+            from reportlab.lib.utils import ImageReader
+
+            pdf.drawImage(
+                ImageReader(BytesIO(overlay_png)),
+                0, 0, width=cw, height=ch,
+                preserveAspectRatio=False,
+                mask="auto",
+            )
+        except Exception:  # pragma: no cover — defensive: never break export
+            pass
+
+
+# Bounded cache: export jobs render the same template background for
+# hundreds of cards; the overlay only depends on (pattern, colour,
+# opacity, canvas size) so one bitmap serves the whole job.
+_pattern_overlay_png_cache: dict[tuple[Any, ...], bytes | None] = {}
+
+# ذاكرة تدرّج الخلفية القطري — لون البداية/النهاية + المقاس فقط، فصورة
+# واحدة تخدم مئات البطاقات في مهمة التصدير الواحدة.
+_diagonal_gradient_png_cache: dict[tuple[Any, ...], bytes | None] = {}
+
+
+def _build_diagonal_gradient_png(
+    start_rgb: tuple[float, float, float],
+    end_rgb: tuple[float, float, float],
+    w: int,
+    h: int,
+) -> bytes | None:
+    """يبني تدرّجًا قطريًا (0,0)→(1,1) مطابقًا لـlinearGradient في SVG.
+
+    إسقاط SVG: المعامل t لكل نقطة = إسقاطها على متجه التدرج
+    ((x/w)+(y/h))/2 في إحداثيات objectBoundingBox — نفس المعادلة هنا.
+    يُحسب على شبكة مصغّرة ثم يُكبَّر خطيًا (التدرج خطي أصلًا فلا فرق
+    بصري). None عند غياب Pillow → يسقط المستدعي للشرائط القديمة.
+    """
+    key = (
+        tuple(round(c, 4) for c in start_rgb),
+        tuple(round(c, 4) for c in end_rgb),
+        int(w), int(h),
+    )
+    if key in _diagonal_gradient_png_cache:
+        return _diagonal_gradient_png_cache[key]
+    try:
+        from PIL import Image
+    except Exception:  # pragma: no cover — optional dependency safety
+        return None
+    scale = 4
+    sw, sh = max(2, int(w) // scale), max(2, int(h) // scale)
+    img = Image.new("RGB", (sw, sh))
+    px = img.load()
+    r0, g0, b0 = (max(0.0, min(1.0, c)) for c in start_rgb)
+    r1, g1, b1 = (max(0.0, min(1.0, c)) for c in end_rgb)
+    for yy in range(sh):
+        fy = yy / (sh - 1)
+        for xx in range(sw):
+            fx = xx / (sw - 1)
+            t = (fx + fy) / 2.0  # إسقاط على القطر (1,1)
+            px[xx, yy] = (
+                int(round((r0 + (r1 - r0) * t) * 255)),
+                int(round((g0 + (g1 - g0) * t) * 255)),
+                int(round((b0 + (b1 - b0) * t) * 255)),
+            )
+    img = img.resize((max(1, int(w)), max(1, int(h))), Image.Resampling.BILINEAR)
+    buf = BytesIO()
+    img.save(buf, format="PNG")
+    result = buf.getvalue()
+    if len(_diagonal_gradient_png_cache) > 16:
+        _diagonal_gradient_png_cache.clear()
+    _diagonal_gradient_png_cache[key] = result
+    return result
+
+
+def _build_pattern_overlay_png(bg: dict, w: int, h: int) -> bytes | None:
+    """Rasterize the decorative pattern to a transparent PNG.
+
+    Geometry, colour and opacity mirror `_svg_defs` / `_svg_background`
+    exactly (same step sizes, same bottom-30% signal bars, same radial
+    wave highlight, same legacy per-pattern alpha) so the exported PDF
+    background is identical to the live designer preview. Returns None
+    for "clean" / unknown patterns or when Pillow is unavailable.
+    """
+    pattern = str(bg.get("pattern") or "signal")
+    if pattern not in {"grid", "signal", "wave"}:
+        return None
     deco_hex = bg.get("pattern_color") or "#ffffff"
     deco_base, deco_hex_alpha = _split_hex_alpha(deco_hex)
-    base = _pdf_color(deco_base)
     saved_opacity = bg.get("pattern_opacity")
+    # Same legacy defaults the SVG adapter uses for untouched templates.
+    legacy_overlay = {"grid": 0.20, "signal": 0.18, "wave": 0.30}
+    overlay = saved_opacity if saved_opacity is not None else legacy_overlay.get(pattern, 0.30)
+    alpha = max(0.0, min(1.0, float(overlay) * float(deco_hex_alpha)))
+    if alpha <= 0:
+        return None
 
-    def _deco(legacy_alpha: float):
-        eff = (saved_opacity if saved_opacity is not None else legacy_alpha) * deco_hex_alpha
-        return colors.Color(base.red, base.green, base.blue, alpha=max(0.0, min(1.0, eff)))
+    cache_key = (pattern, deco_base, round(alpha, 4), int(w), int(h))
+    if cache_key in _pattern_overlay_png_cache:
+        return _pattern_overlay_png_cache[cache_key]
+
+    try:
+        from PIL import Image, ImageDraw
+    except Exception:  # pragma: no cover — optional dependency safety
+        return None
+
+    base = _pdf_color(deco_base)
+    r = int(round(base.red * 255))
+    g = int(round(base.green * 255))
+    b = int(round(base.blue * 255))
+    a = int(round(alpha * 255))
+    fill = (r, g, b, a)
+
+    image = Image.new("RGBA", (max(1, w), max(1, h)), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(image)
 
     if pattern == "grid":
-        pdf.setStrokeColor(_deco(0.30))
-        pdf.setLineWidth(0.6)
-        step = max(cw * 0.045, 12)
-        x = 0.0
-        while x <= cw:
-            pdf.line(x, 0, x, ch)
+        # SVG: patternUnits tile of `step`, path stroke 1px → grid lines
+        # every `step` px across the whole card.
+        step = max(int(w * 0.045), 8)
+        x = 0
+        while x <= w:
+            draw.rectangle([x, 0, x, h], fill=fill)
             x += step
-        y = 0.0
-        while y <= ch:
-            pdf.line(0, y, cw, y)
+        y = 0
+        while y <= h:
+            draw.rectangle([0, y, w, y], fill=fill)
             y += step
     elif pattern == "signal":
-        pdf.setFillColor(_deco(0.35))
-        bar_w = max(cw * 0.005, 2.0)
-        gap = max(cw * 0.020, 6.0)
-        x = 0.0
-        bar_h = ch * 0.30
-        while x <= cw:
-            pdf.rect(x, 0, bar_w, bar_h, stroke=0, fill=1)
-            x += bar_w + gap
+        # SVG: vertical bars in the bottom 30% of the card, tile width
+        # max(2.5% of w, 6), bar width max(0.5% of w, 2).
+        tile = max(int(w * 0.025), 6)
+        bar_w = max(int(w * 0.005), 2)
+        top = int(h * 0.7)
+        x = 0
+        while x <= w:
+            draw.rectangle([x, top, x + bar_w - 1, h], fill=fill)
+            x += tile
     elif pattern == "wave":
-        # Single faint highlight in the top-left quadrant.
-        pdf.setFillColor(_deco(0.18))
-        pdf.circle(cw * 0.25, ch * 0.70, min(cw, ch) * 0.30, stroke=0, fill=1)
+        # SVG: radialGradient cx=20% cy=30% r=55%, colour fades to 0 at
+        # the 60% stop. Reproduce the soft highlight per-pixel on a
+        # downscaled grid then upscale — fast and visually identical.
+        scale = 4  # compute at 1/4 resolution, bilinear upscale hides it
+        sw, sh = max(1, w // scale), max(1, h // scale)
+        small = Image.new("RGBA", (sw, sh), (0, 0, 0, 0))
+        px = small.load()
+        # Distances in normalized box coordinates: the SVG gradient uses
+        # objectBoundingBox units, so on a non-square card the highlight
+        # is elliptical (stretched with the rect) — mirror that here.
+        fade_end = 0.55 * 0.60  # r=55% × colour fades out at the 60% stop
+        for yy in range(sh):
+            ny = (yy / max(sh - 1, 1)) - 0.30
+            for xx in range(sw):
+                nx = (xx / max(sw - 1, 1)) - 0.20
+                dist = math.hypot(nx, ny)
+                if dist >= fade_end:
+                    continue
+                t = 1.0 - (dist / fade_end)
+                px[xx, yy] = (r, g, b, int(round(a * t)))
+        image = small.resize((max(1, w), max(1, h)), Image.Resampling.BILINEAR)
+
+    buf = BytesIO()
+    image.save(buf, format="PNG")
+    result = buf.getvalue()
+    if len(_pattern_overlay_png_cache) > 16:
+        _pattern_overlay_png_cache.clear()
+    _pattern_overlay_png_cache[cache_key] = result
+    return result
 
 
 def _convert_bitmap_for_reportlab(raw: bytes) -> bytes:
@@ -1152,7 +1905,10 @@ def _pdf_text(pdf, el: dict, ch: float) -> None:
         return
     max_width = float(el.get("max_width") or 0)
     opacity = float(el.get("opacity", 1.0))
-    if _has_arabic(raw_text):
+    # المسار النقطي يخدم العربية ورموز العملات معًا: Helvetica المدمجة
+    # لا ترسم ₪/€/₺ — أي نص يحمل محرفًا فوق U+00FF يُرسم صورة بخط
+    # مناسب (مع سقوط ذكي لخط يغطي الرمز — انظر _resolve_raster_font_for_text).
+    if _needs_raster_text(raw_text):
         if _pdf_draw_arabic_text_image(
             pdf,
             raw_text,
@@ -1169,7 +1925,7 @@ def _pdf_text(pdf, el: dict, ch: float) -> None:
             return
     # Pick the right font for the text content and shape Arabic so
     # ReportLab gets the correctly-ordered presentation glyphs.
-    font = _pick_pdf_font(raw_text, bold=weight >= 700)
+    font = _pick_pdf_font(raw_text, weight=weight)
     text = _shape_arabic(raw_text) if _has_arabic(raw_text) else raw_text
     pdf.setFont(font, size)
     color = _pdf_color(el.get("color", "#ffffff"))
@@ -1206,17 +1962,21 @@ def _pdf_pill(pdf, el: dict, ch: float, *, expose_password: bool) -> None:
     label_box_w = max(1, el["width"] - 2 * el["padding_x"])
     if el.get("show_label", True):
         # Label (USER/PASS or Arabic labels).
+        # نفس مرساة SVG حرفيًا: منتصف التسمية عند y + 0.36×الارتفاع
+        # (dominant-baseline="middle") — كانت الصيغة القديمة (قمة عند
+        # 0.18h ثم 0.78×الحجم) تزيح التسمية بضعة بكسلات عن المعاينة.
         label_raw = str(el["label"])
-        label_font = _pick_pdf_font(label_raw, bold=True)
+        # التسمية تُعرض بوزن 900 في معاينة SVG — نفس الوزن هنا.
+        label_font = _pick_pdf_font(label_raw, weight=900)
         label_text = _shape_arabic(label_raw) if _has_arabic(label_raw) else label_raw
         label_size = max(float(el["label_font_size"]), 4.0)
-        label_top = el["y"] + el["height"] * 0.18
+        label_middle = el["y"] + el["height"] * 0.36
         label_direction = "rtl" if el.get("label_direction") == "rtl" else "ltr"
-        if _has_arabic(label_raw) and _pdf_draw_arabic_text_image(
+        if _needs_raster_text(label_raw) and _pdf_draw_arabic_text_image(
             pdf,
             label_raw,
             x=label_box_x,
-            y=label_top,
+            y=label_middle,
             size=label_size,
             color=el["label_color"],
             weight=900,
@@ -1224,12 +1984,15 @@ def _pdf_pill(pdf, el: dict, ch: float, *, expose_password: bool) -> None:
             direction=label_direction,
             opacity=1.0,
             ch=ch,
+            anchor="middle",
         ):
             pass
         else:
             pdf.setFont(label_font, label_size)
             pdf.setFillColor(_pdf_color(el["label_color"]))
-            label_baseline = ch - label_top - label_size * 0.78
+            # خط القاعدة = المنتصف + 0.26×الحجم (نصف ارتفاع x) — نفس
+            # تفسير المتصفح لـdominant-baseline="middle" في المعاينة.
+            label_baseline = ch - (label_middle + label_size * 0.26)
             if label_direction == "rtl":
                 pdf.drawRightString(el["x"] + el["width"] - el["padding_x"],
                                     label_baseline,
@@ -1243,16 +2006,18 @@ def _pdf_pill(pdf, el: dict, ch: float, *, expose_password: bool) -> None:
     raw_value = el["value"]
     if el.get("is_password") and not expose_password:
         raw_value = "•" * min(max(len(raw_value), 6), 10)
-    value_font = _pick_pdf_font(raw_value, bold=True)
+    # القيمة (اليوزر/الباس) وزنها 900 في المعاينة — نطابقه في التصدير.
+    value_font = _pick_pdf_font(raw_value, weight=900)
     value_text = _shape_arabic(raw_value) if _has_arabic(raw_value) else raw_value
     value_size = max(float(el["value_font_size"]), 5.0)
-    value_top = el["y"] + el["height"] * (0.46 if el.get("show_label", True) else 0.28)
+    # منتصف القيمة في SVG: y + h×(0.72 مع تسمية | 0.54 بدونها).
+    value_middle = el["y"] + el["height"] * (0.72 if el.get("show_label", True) else 0.54)
     max_value_width = el["width"] - 2 * el["padding_x"]
-    if _has_arabic(raw_value) and _pdf_draw_arabic_text_image(
+    if _needs_raster_text(raw_value) and _pdf_draw_arabic_text_image(
         pdf,
         raw_value,
         x=el["x"] + el["padding_x"],
-        y=value_top,
+        y=value_middle,
         size=value_size,
         color=el["ink"],
         weight=900,
@@ -1260,6 +2025,7 @@ def _pdf_pill(pdf, el: dict, ch: float, *, expose_password: bool) -> None:
         direction="rtl",
         opacity=1.0,
         ch=ch,
+        anchor="middle",
     ):
         return
     pdf.setFont(value_font, value_size)
@@ -1268,7 +2034,7 @@ def _pdf_pill(pdf, el: dict, ch: float, *, expose_password: bool) -> None:
         value_text = _shrink_to_fit(pdf, value_text, value_font,
                                      value_size, max_value_width)
     pdf.drawString(el["x"] + el["padding_x"],
-                   ch - value_top - value_size * 0.78,
+                   ch - (value_middle + value_size * 0.26),
                    value_text)
 
 
@@ -1280,22 +2046,61 @@ def _pdf_qr(pdf, el: dict, ch: float) -> None:
     around the actual QR pattern). The remaining 4% inner padding plus
     the white background rectangle itself give the scanner enough
     quiet area without making the panel visually oversized.
+
+    أنماط QR (نفس قيم معاينة SVG حرفيًا):
+      - boxed «مربع واضح»: لوحة + وحدات مربعة (السلوك التاريخي).
+      - rounded «ناعم»: لوحة + وحدات دائرية مرسومة يدويًا من نفس
+        مصفوفة الوحدات.
+      - clean «بسيط»: وحدات مربعة بلا لوحة/إطار خلف الرمز.
     """
     from reportlab.graphics.barcode.qr import QrCodeWidget
     from reportlab.graphics import renderPDF
     from reportlab.graphics.shapes import Drawing
-    from reportlab.lib import colors
 
     size = float(el["size"])
     pdf_y_top = ch - el["y"]  # top of the QR box in PDF coords
     pdf_y_bottom = pdf_y_top - size
+    style = _normalize_qr_style(el.get("style"))
 
-    # Rounded background sits at the model's allocated size.
-    pdf.setFillColor(_pdf_color(el.get("bg", "#ffffff")))
-    pdf.roundRect(el["x"], pdf_y_bottom, size, size, size * 0.10,
-                  stroke=0, fill=1)
+    # «بسيط» clean: لا لوحة خلف الرمز — تبقى المنطقة الهادئة بنفس
+    # المساحة (الحشوة الداخلية 4%) لكن بلا مستطيل أبيض/إطار.
+    if style != "clean":
+        # Rounded background sits at the model's allocated size.
+        pdf.setFillColor(_pdf_color(el.get("bg", "#ffffff")))
+        pdf.roundRect(el["x"], pdf_y_bottom, size, size, size * 0.10,
+                      stroke=0, fill=1)
 
     payload = str(el.get("payload") or "SAMPLE")
+    inner = size * 0.92  # 4% padding each side — visually tight
+    inner_x = el["x"] + (size - inner) / 2
+    inner_y = pdf_y_bottom + (size - inner) / 2
+
+    if style == "rounded":
+        # «ناعم»: نرسم الوحدات دوائر يدويًا من نفس مصفوفة QrCodeWidget
+        # المستعملة في معاينة SVG — فيتطابق الشكل المطبوع مع المعاينة.
+        matrix = _qr_module_matrix(payload)
+        if matrix:
+            n = len(matrix)
+            cell = inner / n
+            radius = cell * 0.5
+            pdf.setFillColor(_pdf_color(el.get("fg", "#0f172a")))
+            for row_idx, row in enumerate(matrix):
+                # محور Y في PDF من الأسفل؛ الصف الأول أعلى الرمز.
+                cy = inner_y + inner - (row_idx + 0.5) * cell
+                for col_idx, on in enumerate(row):
+                    if not on:
+                        continue
+                    cx = inner_x + (col_idx + 0.5) * cell
+                    if _qr_in_finder(row_idx, col_idx, n):
+                        # مربعات التحديد تبقى مربعة (نفس معاينة SVG)
+                        # حتى لا تفشل الماسحات في التقاط الرمز.
+                        pdf.rect(cx - cell / 2, cy - cell / 2,
+                                 cell * 1.02, cell * 1.02, stroke=0, fill=1)
+                    else:
+                        pdf.circle(cx, cy, radius, stroke=0, fill=1)
+            return
+        # فشل استخراج المصفوفة → نسقط للمسار المربع المعتاد أدناه.
+
     try:
         widget = QrCodeWidget(payload, barBorder=0)
         try:
@@ -1306,15 +2111,12 @@ def _pdf_qr(pdf, el: dict, ch: float) -> None:
         bounds = widget.getBounds()
         w = bounds[2] - bounds[0]
         h = bounds[3] - bounds[1]
-        inner = size * 0.92  # 4% padding each side — visually tight
         scale_x = inner / max(w, 1)
         scale_y = inner / max(h, 1)
         drawing = Drawing(inner, inner,
                           transform=[scale_x, 0, 0, scale_y, 0, 0])
         drawing.add(widget)
-        renderPDF.draw(drawing, pdf,
-                       el["x"] + (size - inner) / 2,
-                       pdf_y_bottom + (size - inner) / 2)
+        renderPDF.draw(drawing, pdf, inner_x, inner_y)
     except Exception:
         pass
 
@@ -1546,9 +2348,34 @@ def _is_uploaded_design(layout: dict) -> bool:
 
 
 def _qr_login_payload(layout: dict, username: str, password: str, card_id: str) -> str:
+    """يبني محتوى رمز QR المطبوع على البطاقة.
+
+    الأولوية لحقل القالب الجديد «رابط دخول الهوت سبوت (DNS)»
+    (hotspot_login_url): عند تعبئته يصبح الرمز رابط دخول تلقائي
+    بصيغة ميكروتك الرسمية:
+
+        http://<العنوان>/login?username=<u>&password=<p>&u=<u>&p=<p>
+
+    - username/password: تستهلكهما RouterOS مباشرة (HTTP-PAP) فيدخل
+      الزبون فور المسح دون فتح صفحة الدخول.
+    - u/p: مفتاحا الاحتياط اللذان تقرؤهما جافاسكربت الدخول التلقائي
+      المحقونة في قوالب صفحات الهوت سبوت لدينا
+      (QR_AUTOLOGIN_USER_KEY / QR_AUTOLOGIN_PASS_KEY في
+      hotspot_templates.py) — إن رفض الراوتر الدخول عبر GET
+      (CHAP فقط مثلًا) تُعرض صفحة الدخول فتعبّئ الجافاسكربت الحقول
+      وترسل النموذج تلقائيًا.
+
+    القوالب القديمة (بدون hotspot_login_url) تحافظ على سلوكها
+    حرفيًا: login_url / hotspot_address / hotspot_url ← رابط
+    /login?username=&password= فقط، وبدون أي عنوان ← اسم المستخدم
+    نصًا كما كان.
+    """
     user = str(username or card_id or "SAMPLE")
     secret = str(password or "")
-    host = str(
+    # الحقل المخصص الجديد — يضيف مفتاحي u/p للتوافق مع جافاسكربت
+    # صفحة الدخول إضافة إلى صيغة ميكروتك القياسية.
+    autologin_host = str(layout.get("hotspot_login_url") or "").strip()
+    host = autologin_host or str(
         layout.get("login_url")
         or layout.get("hotspot_address")
         or layout.get("hotspot_url")
@@ -1561,7 +2388,12 @@ def _qr_login_payload(layout: dict, username: str, password: str, card_id: str) 
     base = host.rstrip("/")
     if not base.lower().endswith("/login"):
         base += "/login"
-    return base + "?" + urlencode({"username": user, "password": secret})
+    params = {"username": user, "password": secret}
+    if autologin_host:
+        # مفتاحا الاحتياط لصفحات الدخول المنشورة من مصمم الهوت سبوت.
+        params["u"] = user
+        params["p"] = secret
+    return base + "?" + urlencode(params)
 
 
 def _override(overrides: dict, key: str, layout: dict, default: str) -> str:
@@ -1783,7 +2615,7 @@ def _svg_text(el: dict, *, uid: str) -> str:
         f'data-original="{_xml(text)}" '
         f'data-render-direction="{direction}" '
         f'direction="{svg_direction}" unicode-bidi="{unicode_bidi}" '
-        f'font-family="\'Cairo\', \'Almarai\', \'Noto Kufi Arabic\', Tahoma, Arial, sans-serif" '
+        f'font-family="\'Almarai\', \'Cairo\', \'Noto Kufi Arabic\', Tahoma, Arial, sans-serif" '
         f'font-size="{el["size"]:.1f}" font-weight="{weight}" '
         f'fill="{_xml(el.get("color", "#fff"))}" opacity="{opacity:.2f}" '
         f'dominant-baseline="hanging" text-anchor="{anchor}" xml:space="preserve">'
@@ -1828,28 +2660,80 @@ def _svg_pill(el: dict, *, mask_password: bool, uid: str) -> str:
         f'fill="{_xml(surface_fill)}" opacity="{surface_opacity:.3f}"/>'
         if el.get("surface_enabled", True) else ""
     )
+    label_svg = (
+        f'<text x="{label_x:.1f}" y="{label_y:.1f}" clip-path="url(#{clip_id})" '
+        f'data-original="{_xml(label_text)}" '
+        f'data-render-direction="{label_dir}" '
+        f'direction="{svg_label_dir}" unicode-bidi="{label_unicode_bidi}" '
+        f'font-family="\'Almarai\', \'Cairo\', \'Noto Kufi Arabic\', Tahoma, Arial, sans-serif" '
+        f'font-size="{label_size:.1f}" font-weight="900" '
+        f'fill="{_xml(el["label_color"])}" '
+        f'dominant-baseline="middle" text-anchor="{label_anchor}" xml:space="preserve">'
+        f'{_xml(display_label)}</text>'
+        if show_label else ""
+    )
     return (
         f'<g class="card-pill">'
         f'{text_clip}'
         f'{surface}'
-        f'{f"""<text x="{label_x:.1f}" y="{label_y:.1f}" clip-path="url(#{clip_id})" '
-        f'data-original="{_xml(label_text)}" '
-        f'data-render-direction="{label_dir}" '
-        f'direction="{svg_label_dir}" unicode-bidi="{label_unicode_bidi}" '
-        f'font-family="\'Cairo\', \'Almarai\', \'Noto Kufi Arabic\', Tahoma, Arial, sans-serif" '
-        f'font-size="{label_size:.1f}" font-weight="900" '
-        f'fill="{_xml(el["label_color"])}" '
-        f'dominant-baseline="middle" text-anchor="{label_anchor}" xml:space="preserve">'
-        f'{_xml(display_label)}</text>""" if show_label else ""}'
+        f'{label_svg}'
+        # خط القيمة Helvetica/Arial — نفس Helvetica-Bold التي يرسم بها
+        # تصدير PDF اليوزر/الباس فعلًا. كان monospace (Menlo/Consolas)
+        # فظهرت الحروف في المعاينة بشكل وعرض مختلفين عن الملف المصدَّر
+        # (الخلل المُبلَّغ: «الخط يختلف»). التصدير هو الحقيقة فطُوبقت
+        # المعاينة عليه.
         f'<text x="{x+pad:.1f}" y="{value_y:.1f}" clip-path="url(#{clip_id})" '
         f'direction="ltr" '
-        f'font-family="\'Menlo\', \'Consolas\', monospace" '
+        f'font-family="Helvetica, Arial, sans-serif" '
         f'font-size="{value_size:.1f}" font-weight="900" '
         f'fill="{_xml(el["ink"])}" '
         f'dominant-baseline="middle" text-anchor="start" xml:space="preserve">'
         f'{_xml(display_value)}</text>'
         f'</g>'
     )
+
+
+def _qr_in_finder(row: int, col: int, n: int) -> bool:
+    """هل الوحدة داخل أحد مربعات التحديد الثلاثة (7×7 في الزوايا)؟
+
+    في النمط «الناعم» نُبقي مربعات التحديد مربعةً صلبة ونرسم وحدات
+    البيانات فقط دوائر — هذا ما تفعله مولدات QR المنقّطة الشائعة لأن
+    الماسحات تعتمد على حواف مربعات التحديد الحادة لالتقاط الرمز.
+    """
+    return (
+        (row < 7 and col < 7)
+        or (row < 7 and col >= n - 7)
+        or (row >= n - 7 and col < 7)
+    )
+
+
+def _qr_module_matrix(payload: str) -> list[list[bool]] | None:
+    """يستخرج مصفوفة وحدات QR (صح/خطأ) لنفس المكتبة في المسارين.
+
+    نفس QrCodeWidget الذي يستعمله محوّل PDF — فيتطابق الرمز المعروض
+    في المعاينة مع المطبوع. ترجع None عند أي فشل (حمولة طويلة جدًا…)
+    فيتكفّل المستدعي بالرسم البديل.
+    """
+    try:
+        from reportlab.graphics.barcode.qr import QrCodeWidget
+
+        widget = QrCodeWidget(payload)
+        widget.getBounds()
+        # `.qr.modules`: كل صف إما سلسلة "1"/"0" أو قائمة قيم منطقية
+        # حسب نسخة reportlab — نوحّد الشكلين إلى bool.
+        qr = getattr(widget, "qr", None)
+        modules = getattr(qr, "modules", None) if qr is not None else None
+        if not modules or len(modules) <= 0:
+            return None
+        matrix: list[list[bool]] = []
+        for row in modules:
+            matrix.append([
+                bool(int(value)) if isinstance(value, str) else bool(value)
+                for value in row
+            ])
+        return matrix
+    except Exception:
+        return None
 
 
 def _svg_qr_placeholder(el: dict) -> str:
@@ -1861,6 +2745,13 @@ def _svg_qr_placeholder(el: dict) -> str:
     per dark module. This guarantees the preview and the PDF show
     the same QR symbol for the same payload.
 
+    أنماط QR الثلاثة (نمط QR في المصمم):
+      - boxed «مربع واضح»: لوحة بيضاء بزوايا مدوّرة + وحدات مربعة —
+        السلوك التاريخي بلا تغيير.
+      - rounded «ناعم»: نفس اللوحة لكن الوحدات دوائر ناعمة.
+      - clean «بسيط»: بلا لوحة/إطار خلف الرمز إطلاقًا — الوحدات فقط
+        فوق خلفية البطاقة (تبقى المنطقة الهادئة محفوظة بالمساحة نفسها).
+
     Falls back to a labelled placeholder square if the QR engine
     fails for any reason (e.g. extremely long payload). The card
     layout never depends on the QR shape — only on the slot.
@@ -1870,46 +2761,56 @@ def _svg_qr_placeholder(el: dict) -> str:
     x = float(el["x"]); y = float(el["y"])
     bg = el.get("bg", "#fff")
     fg = el.get("fg", "#0f172a")
+    style = _normalize_qr_style(el.get("style"))
     # 4 % inner padding to match the PDF adapter — keeps the white
     # panel hugging the QR symbol instead of floating around it.
     pad = size * 0.04
-    inner = _qr_inline_svg(payload, x + pad, y + pad, size - 2 * pad, fg)
-    return (
-        f'<g class="card-qr">'
+    inner = _qr_inline_svg(payload, x + pad, y + pad, size - 2 * pad, fg,
+                           style=style)
+    # «بسيط»: لا نرسم لوحة الخلفية إطلاقًا — الوحدات مباشرة فوق البطاقة.
+    panel = (
         f'<rect x="{x:.1f}" y="{y:.1f}" width="{size:.1f}" height="{size:.1f}" '
         f'rx="{size*0.10:.1f}" ry="{size*0.10:.1f}" '
         f'fill="{_xml(bg)}"/>'
+        if style != "clean" else ""
+    )
+    return (
+        f'<g class="card-qr">'
+        f'{panel}'
         f'{inner}'
         f'</g>'
     )
 
 
-def _qr_inline_svg(payload: str, x: float, y: float, size: float, fg: str) -> str:
-    """Generate the dark-module rects of a QR symbol for `payload`."""
-    try:
-        from reportlab.graphics.barcode.qr import QrCodeWidget
+def _qr_inline_svg(payload: str, x: float, y: float, size: float, fg: str,
+                   *, style: str = "boxed") -> str:
+    """Generate the dark-module shapes of a QR symbol for `payload`.
 
-        widget = QrCodeWidget(payload)
-        bounds = widget.getBounds()
-        # The QrCodeWidget exposes its underlying matrix on `.qr`. Each
-        # row is a string of "1"/"0" or a list of bools depending on the
-        # reportlab version, so we coerce both shapes into bool.
-        qr = getattr(widget, "qr", None)
-        modules = getattr(qr, "modules", None) if qr is not None else None
-        if not modules:
-            return _svg_placeholder_grid(x, y, size, fg)
-        n = len(modules)
-        if n <= 0:
-            return _svg_placeholder_grid(x, y, size, fg)
-        cell = size / n
-        rects: list[str] = []
-        for row_idx, row in enumerate(modules):
-            for col_idx, value in enumerate(row):
-                on = bool(int(value)) if isinstance(value, str) else bool(value)
-                if not on:
-                    continue
-                rx = x + col_idx * cell
-                ry = y + row_idx * cell
+    boxed/clean ← مربعات (نفس الهندسة التاريخية)، rounded ← دوائر
+    ناعمة بقطر يساوي الخلية تقريبًا فتبقى أنماط التحديد قابلة للمسح.
+    """
+    matrix = _qr_module_matrix(payload)
+    if not matrix:
+        return _svg_placeholder_grid(x, y, size, fg)
+    n = len(matrix)
+    cell = size / n
+    rects: list[str] = []
+    rounded = style == "rounded"
+    radius = cell * 0.5
+    for row_idx, row in enumerate(matrix):
+        for col_idx, on in enumerate(row):
+            if not on:
+                continue
+            rx = x + col_idx * cell
+            ry = y + row_idx * cell
+            if rounded and not _qr_in_finder(row_idx, col_idx, n):
+                # «ناعم»: دوائر لوحدات البيانات فقط — مربعات التحديد
+                # الثلاثة تبقى مربعة حتى يلتقطها الماسح بثقة.
+                rects.append(
+                    f'<circle cx="{rx + cell/2:.2f}" cy="{ry + cell/2:.2f}" '
+                    f'r="{radius:.2f}" fill="{_xml(fg)}"/>'
+                )
+            else:
                 # Slight overlap (cell * 1.02) prevents thin white
                 # hairlines between modules at fractional zoom levels.
                 rects.append(
@@ -1917,9 +2818,7 @@ def _qr_inline_svg(payload: str, x: float, y: float, size: float, fg: str) -> st
                     f'width="{cell*1.02:.2f}" height="{cell*1.02:.2f}" '
                     f'fill="{_xml(fg)}"/>'
                 )
-        return "".join(rects)
-    except Exception:
-        return _svg_placeholder_grid(x, y, size, fg)
+    return "".join(rects)
 
 
 def _svg_placeholder_grid(x: float, y: float, size: float, fg: str) -> str:
@@ -1975,6 +2874,21 @@ def _safe_hex(value: Any, fallback: str) -> str:
     if not _HEX_RE.match(raw):
         return fallback
     return raw
+
+
+def _normalize_qr_style(value: Any) -> str:
+    """يطبّع نمط QR المحفوظ إلى واحدة من القيم الثلاث المدعومة.
+
+    «مربع واضح» boxed (الافتراضي/السلوك التاريخي)، «ناعم» rounded،
+    «بسيط» clean. أي قيمة غريبة أو قديمة تسقط إلى boxed حتى لا تتغير
+    القوالب المحفوظة قبل دعم الأنماط.
+    """
+    raw = str(value or "").strip().lower()
+    if raw in {"rounded", "soft", "circle", "dots"}:
+        return "rounded"
+    if raw in {"clean", "plain", "minimal", "borderless"}:
+        return "clean"
+    return "boxed"
 
 
 def _svg_fill_opacity(value: str, *, opacity: float = 1.0) -> tuple[str, float]:

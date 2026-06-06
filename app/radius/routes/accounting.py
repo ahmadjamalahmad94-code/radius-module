@@ -59,9 +59,18 @@ def register_accounting_routes(bp: Blueprint) -> None:
         finance_reports_snapshot,
         methods=["POST"],
     )
+    # عرض صفوف لقطة محفوظة — تستهلكه نافذة «عرض اللقطة» العائمة (fetch).
+    bp.add_url_rule(
+        "/finance/reports/snapshot/<int:snapshot_id>.json",
+        "finance_reports_snapshot_json",
+        finance_reports_snapshot_json,
+        methods=["GET"],
+    )
     bp.add_url_rule("/users/<username>/finance", "users_finance", users_finance, methods=["GET"])
     bp.add_url_rule("/users/<username>/payments", "users_payment_create", users_payment_create, methods=["POST"])
+    bp.add_url_rule("/users/payments-bulk", "users_payment_create_bulk", users_payment_create_bulk, methods=["POST"])
     bp.add_url_rule("/users/<username>/loans", "users_loan_create", users_loan_create, methods=["POST"])
+    bp.add_url_rule("/users/loans-bulk", "users_loan_create_bulk", users_loan_create_bulk, methods=["POST"])
     bp.add_url_rule(
         "/users/<username>/loans/<int:loan_id>/settle",
         "users_loan_settle",
@@ -103,6 +112,22 @@ def _parse_loan_actions() -> list[dict]:
     except (ValueError, TypeError):
         return []
     return data if isinstance(data, list) else []
+
+
+def _bulk_usernames() -> list[str]:
+    """قراءة أسماء المشتركين المحدَّدين من حقل `usernames` المتكرر —
+    نفس نمط مسارات الدفعات الجماعية في users.py (تسامح + إزالة تكرار)."""
+    raw = request.form.getlist("usernames")
+    if len(raw) == 1 and "," in raw[0]:
+        raw = raw[0].split(",")
+    seen: set[str] = set()
+    usernames: list[str] = []
+    for name in raw:
+        name = (name or "").strip()
+        if name and name not in seen:
+            seen.add(name)
+            usernames.append(name)
+    return usernames
 
 
 def _wants_json() -> bool:
@@ -231,6 +256,58 @@ def users_payment_create(username: str):
     return redirect(url_for("radius.users_finance", username=username))
 
 
+def users_payment_create_bulk():
+    """تسجيل دفعة نقدية لعدة مشتركين محدَّدين في POST واحد — المبلغ لكل مشترك.
+
+    يعيد استخدام نفس مسار التسجيل الفردي — create_payment() — لكل اسم
+    (نفس التدقيق والتطبيق على RADIUS لكل مشترك على حدة). تسوية السلف
+    ودين الرصيد (loan_actions / settle_balance) ميزات فردية فتُتجاهل هنا.
+    الأسماء الفاشلة تُتخطّى وتُعرض في الملخص دون إيقاف الدفعة.
+    """
+    usernames = _bulk_usernames()
+    if not usernames:
+        flash("لم يتم تحديد أي مشترك لتسجيل الدفعة.", "warning")
+        return redirect(url_for("radius.users_list"))
+    try:
+        amount_f = float(_field("amount") or 0)
+    except (TypeError, ValueError):
+        amount_f = 0.0
+    if amount_f <= 0:
+        flash("قيمة الدفعة غير صحيحة.", "error")
+        return redirect(url_for("radius.users_list"))
+
+    svc = _svc()
+    actor = _actor()
+    done = 0
+    failed: list[str] = []
+    for name in usernames:
+        body = {
+            "username": name,
+            "amount": _field("amount"),
+            "currency": _field("currency") or default_currency(),
+            "method": _field("method") or "cash",
+            "notes": _field("notes"),
+            "rounding_mode": _field("rounding_mode") or "floor",
+            "apply_to_radius": _truthy("apply_to_radius"),
+            "dry_run": _truthy("dry_run"),
+        }
+        try:
+            svc.create_payment(body, actor=actor)
+            done += 1
+        except RadiusError:
+            failed.append(name)
+        except Exception:  # noqa: BLE001 — لا نوقف الدفعة بسبب مشترك واحد
+            current_app.logger.exception("bulk payment create failed for %s", name)
+            failed.append(name)
+
+    if done:
+        flash(f"تم تسجيل دفعة {amount_f:.2f} لكل مشترك من {done} مشترك وتطبيقها على حساباتهم.", "success")
+    if failed:
+        preview = "، ".join(failed[:10]) + ("…" if len(failed) > 10 else "")
+        flash(f"تعذّر تسجيل الدفعة لـ {len(failed)} مشترك: {preview}", "warning")
+    return redirect(url_for("radius.users_list"))
+
+
 def users_loan_create(username: str):
     _subscriber(username)
     body = {
@@ -268,6 +345,64 @@ def users_loan_create(username: str):
             return jsonify({"ok": False, "error": reason}), 500
         flash(reason, "error")
     return redirect(url_for("radius.users_finance", username=username))
+
+
+def users_loan_create_bulk():
+    """إضافة سلفة لعدة مشتركين محدَّدين في POST واحد — المدة لكل مشترك.
+
+    يعيد استخدام نفس مسار المنح الفردي — create_loan() — لكل اسم؛ في وضع
+    الدين (price_from_days=1) تُحتسب قيمة السلفة لكل مشترك من سعره الفعلي
+    (العرض/المخصّص) داخل الخدمة نفسها. النافذة تُرسل عبر fetch فنرد JSON
+    بملخص الدفعة. الأسماء الفاشلة تُتخطّى دون إيقاف الدفعة.
+    """
+    usernames = _bulk_usernames()
+    if not usernames:
+        if _wants_json():
+            return jsonify({"ok": False, "error": "لم يتم تحديد أي مشترك لمنح السلفة."}), 400
+        flash("لم يتم تحديد أي مشترك لمنح السلفة.", "warning")
+        return redirect(url_for("radius.users_list"))
+
+    svc = _svc()
+    actor = _actor()
+    done = 0
+    failed: list[str] = []
+    for name in usernames:
+        body = {
+            "username": name,
+            "hours": _field("hours"),
+            "days": _field("days"),
+            "duration_minutes": _field("duration_minutes"),
+            # في وضع الدين تُحتسب القيمة داخل الخدمة لكل مشترك من سعره؛
+            # لذا لا نمرّر القيمة المحسوبة في الواجهة (خاصة بصفٍّ واحد).
+            "amount": 0,
+            "price_from_days": _truthy("price_from_days"),
+            "currency": _field("currency") or default_currency(),
+            "reason": _field("reason"),
+            "apply_to_radius": _truthy("apply_to_radius"),
+            "dry_run": _truthy("dry_run"),
+        }
+        try:
+            svc.create_loan(body, actor=actor)
+            done += 1
+        except RadiusError:
+            failed.append(name)
+        except Exception:  # noqa: BLE001 — لا نوقف الدفعة بسبب مشترك واحد
+            current_app.logger.exception("bulk loan create failed for %s", name)
+            failed.append(name)
+
+    parts = []
+    if done:
+        parts.append(f"تم تسجيل السلفة لـ {done} مشترك (المدة لكلٍّ منهم).")
+    if failed:
+        preview = "، ".join(failed[:10]) + ("…" if len(failed) > 10 else "")
+        parts.append(f"تعذّر المنح لـ {len(failed)} مشترك: {preview}")
+    msg = " ".join(parts) or "لم يتم منح أي سلفة."
+    if _wants_json():
+        if done:
+            return jsonify({"ok": True, "message": msg})
+        return jsonify({"ok": False, "error": msg}), 400
+    flash(msg, "success" if done else "error")
+    return redirect(url_for("radius.users_list"))
 
 
 def users_loan_settle(username: str, loan_id: int):
@@ -420,17 +555,71 @@ def finance_reports_export_pdf():
     )
 
 
+def _snapshot_date(name: str) -> str:
+    """قراءة حقل تاريخ اختياري بصيغة ISO (YYYY-MM-DD) من نافذة اللقطة.
+
+    الحقل اختياري للحفاظ على التوافق: النماذج القديمة بلا تواريخ تظل تعمل
+    (لقطة كاملة بلا فلترة). أي قيمة غير صالحة تُرفض برسالة عربية واضحة.
+    """
+    raw = _field(name)
+    if not raw:
+        return ""
+    try:
+        from datetime import date
+        date.fromisoformat(raw)
+    except (TypeError, ValueError):
+        raise RadiusValidationError("صيغة التاريخ غير صحيحة — استخدم سنة-شهر-يوم.")
+    return raw
+
+
 def finance_reports_snapshot():
     report_type = _field("report_type") or "daily"
     if report_type not in _REPORTS:
         report_type = "daily"
     try:
+        # نطاق من/إلى وملاحظة اختياريان (نافذة «حفظ لقطة ثابتة» العائمة) —
+        # غيابهما يعني لقطة كاملة كما كان السلوك القديم تمامًا.
+        date_from = _snapshot_date("date_from")
+        date_to = _snapshot_date("date_to")
+        if date_from and date_to and date_from > date_to:
+            raise RadiusValidationError("تاريخ «من» يجب أن يسبق تاريخ «إلى».")
         snapshot = _svc().create_report_snapshot(
             report_type=report_type,
             actor=_actor(),
+            date_from=date_from,
+            date_to=date_to,
+            note=_field("note"),
             parameters={"web_route": "finance_reports"},
         )
-        flash(f"تم حفظ لقطة ثابتة للتقرير #{snapshot['id']}.", "success")
+        rng = f" للفترة {date_from or '…'} ← {date_to or '…'}" if (date_from or date_to) else ""
+        flash(f"تم حفظ لقطة ثابتة للتقرير #{snapshot['id']}{rng}.", "success")
     except RadiusValidationError as e:
         flash(e.message, "error")
     return redirect(url_for("radius.accounting_hub", tab="reports", type=report_type))
+
+
+def finance_reports_snapshot_json(snapshot_id: int):
+    """صفوف لقطة محفوظة كـ JSON — تعرضها نافذة «عرض اللقطة» العائمة.
+
+    البيانات مأخوذة من result_json المجمّد وقت الإنشاء (لا إعادة احتساب)،
+    فاللقطة تبقى مرجعًا ثابتًا حتى لو تغيّر دفتر القيود لاحقًا.
+    """
+    try:
+        snapshot = _svc().get_report_snapshot(snapshot_id)
+    except RadiusValidationError as e:
+        return jsonify({"ok": False, "error": e.message}), 404
+    result = snapshot.get("result") or {}
+    return jsonify({
+        "ok": True,
+        "id": snapshot.get("id"),
+        "report_type": snapshot.get("report_type"),
+        "report_label": _REPORTS.get(snapshot.get("report_type"), snapshot.get("report_type")),
+        "created_at": snapshot.get("created_at"),
+        "created_by": snapshot.get("created_by"),
+        "date_from": snapshot.get("date_from") or result.get("date_from") or "",
+        "date_to": snapshot.get("date_to") or result.get("date_to") or "",
+        "note": result.get("note") or (snapshot.get("parameters") or {}).get("note") or "",
+        "count": result.get("count", len(result.get("items") or [])),
+        "total": result.get("total"),
+        "items": result.get("items") or [],
+    })

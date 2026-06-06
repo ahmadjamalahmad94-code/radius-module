@@ -1,128 +1,269 @@
-{# Tickets list — UNIFIED DESIGN SYSTEM (merged hero + help panel).
-   Same backend data: items, status. Zero route/behaviour change. #}
+{# ═══════════════════════════════════════════════════════════════════════
+   التذاكر والشكاوى — إعادة تصميم على نظام hub-hero-shell الموحّد (2026-06-05)
+
+   بيانات المسار (radius.tk_list — بدون أي تغيير في السلوك):
+     items (قائمة Ticket) / status (فلتر الحالة الحالي أو None)
+
+   البنية المبسّطة:
+     1. صدفة هيرو واحدة (hub-hero-shell): عنوان + سطر تعريفي + مؤشرات بصف
+        واحد + حزام فلترة الحالة — بلا أي هيروات أو لوحات مكدّسة.
+     2. جدول uds موحّد (فرز + ترقيم + تصدير CSV/Excel/PDF تلقائيًا)
+        مع تعريب كل القيم الظاهرة وحالات/أولويات كحبوب ملوّنة.
+   عقد الفلترة: GET ?status=… إلى نفس المسار — كما هو.
+   ═══════════════════════════════════════════════════════════════════════ #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}التذاكر / الشكاوى{% endblock %}
+{% block title %}التذاكر والشكاوى{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-headset"></i>{% endblock %}
 {% block page_title %}التذاكر{% endblock %}
-{% block page_sub %}<span class="sub">{{ items|length }} تذكرة في النتائج</span>{% endblock %}
+{% block page_sub %}<span class="sub"><bdi dir="ltr">{{ items|length }}</bdi> تذكرة في النتائج</span>{% endblock %}
+
+{% block head_extra %}{{ super() }}
+{# نظام الجداول الموحّد (uds): فرز + ترقيم + أزرار التصدير #}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
+<style>
+/* ── الصندوق العائم المنبثق «تذكرة جديدة» (نفس نمط fcw في finance_center_hub) ── */
+.fcw-modal{ position:fixed; inset:0; z-index:1200; display:none; place-items:center; padding:24px; background:rgba(15,23,42,.52); }
+.fcw-modal.is-open{ display:grid; }
+.fcw-dialog{ width:min(640px,100%); max-height:min(90vh,820px); overflow:auto; border-radius:16px; background:#fff;
+  box-shadow:0 28px 80px rgba(15,23,42,.32); }
+.fcw-head{ position:sticky; top:0; z-index:2; display:flex; align-items:center; justify-content:space-between; gap:12px;
+  padding:15px 18px; border-bottom:1px solid var(--hub-border-soft,#e2e8f0); background:#fff; }
+.fcw-head h3{ margin:0; font-size:17px; font-weight:900; color:var(--hub-text,#0f172a); }
+.fcw-x{ border:0; background:transparent; color:#94a3b8; font-size:18px; cursor:pointer; }
+.fcw-body{ padding:16px 18px; display:grid; gap:12px; }
+.fcw-foot{ display:flex; justify-content:flex-end; gap:8px; padding:13px 18px; border-top:1px solid var(--hub-border-soft,#e2e8f0); background:#fbfdff; }
+.fcw-grid{ display:grid; gap:12px; grid-template-columns:repeat(2,minmax(0,1fr)); }
+.fcw-grid .full{ grid-column:1/-1; }
+@media (max-width:640px){ .fcw-grid{ grid-template-columns:1fr; } }
+/* بطاقات اختيار الأولوية داخل النافذة (راديو حقيقي — نفس عقد priority) */
+.tkm-prio{ display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; }
+@media (max-width:640px){ .tkm-prio{ grid-template-columns:repeat(2,minmax(0,1fr)); } }
+.tkm-prio label{ position:relative; display:flex; flex-direction:column; align-items:center; gap:5px;
+  padding:10px 6px; border:1.5px solid var(--hub-border,#e2e8f0); border-radius:12px;
+  background:var(--hub-bg-soft,#f8fafc); cursor:pointer; font-size:12px; font-weight:800;
+  color:var(--hub-text-soft,#475569); transition:border-color .15s, background .15s; }
+.tkm-prio input{ position:absolute; opacity:0; pointer-events:none; }
+.tkm-prio i{ font-size:14px; }
+.tkm-prio label:has(input:checked){ border-color:var(--hub-brand,#6366f1); background:#eef2ff; color:var(--hub-brand-ink,#4338ca); }
+</style>
+{% endblock %}
 
 {% block content %}
+{# ── خرائط التعريب الثابتة للقيم القادمة من قاعدة البيانات ── #}
 {% set category_labels = {
-  'general': 'عام',
-  'billing': 'الفواتير والدفع',
-  'connection': 'الاتصال والخدمة',
-  'hardware': 'الأجهزة والمعدات',
-  'complaint': 'شكوى',
+  'general':         'عام',
+  'billing':         'الفواتير والدفع',
+  'connection':      'الاتصال والخدمة',
+  'hardware':        'الأجهزة والمعدّات',
+  'complaint':       'شكوى',
   'service_request': 'طلب خدمة'
 } %}
+{% set status_map = {
+  'open':        ('مفتوحة',      'amber'),
+  'pending':     ('معلَّقة',      'amber'),
+  'in_progress': ('قيد المعالجة', 'blue'),
+  'resolved':    ('محلولة',      'green'),
+  'closed':      ('مغلقة',       'grey')
+} %}
+{% set prio_map = {
+  'urgent': ('عاجلة',  'red'),
+  'high':   ('مرتفعة', 'amber'),
+  'normal': ('عادية',  'blue'),
+  'low':    ('منخفضة', 'grey')
+} %}
 
+{# عدّادات الحالة من النتائج الحالية (بلا استعلامات إضافية) #}
 {% set _open  = items|selectattr('status','equalto','open')|list|length %}
 {% set _prog  = items|selectattr('status','equalto','in_progress')|list|length %}
 {% set _resol = items|selectattr('status','equalto','resolved')|list|length %}
 
-{# ───── Merged hero: title + actions + KPI strip + integrated status filter ───── #}
+{# ───── صدفة الهيرو الموحّدة: عنوان + مؤشرات بصف واحد + حزام فلترة الحالة ───── #}
+<section class="hub-hero-shell">
 {% call hub.megahero(
   "التذاكر والشكاوى",
-  subtitle="إدارة طلبات الدعم — فلترة بالحالة، عرض المحادثات، تحديث الأولويات.",
+  subtitle="متابعة طلبات الدعم والشكاوى من المشتركين حتى الإغلاق — فلترة بالحالة وفتح المحادثة من الجدول.",
   icon="headset",
   actions_html='
-    <a class="hub-btn hub-btn--primary" href="' + url_for('radius.tk_new') + '">
+    <button type="button" class="hub-btn hub-btn--primary" data-fcw-open="ticket-create">
       <i class="fa-solid fa-plus"></i> تذكرة جديدة
-    </a>',
+    </button>',
   kpis=[
-    {'label': 'في النتائج',  'value': items|length, 'icon': 'list',        'variant': 'brand'},
-    {'label': 'مفتوحة',      'value': _open,        'icon': 'folder-open', 'variant': 'amber'},
-    {'label': 'قيد المعالجة', 'value': _prog,        'icon': 'spinner',     'variant': 'blue'},
-    {'label': 'محلولة',      'value': _resol,       'icon': 'circle-check', 'variant': 'green'},
+    {'label': 'في النتائج',   'value': items|length, 'icon': 'list',         'variant': 'brand'},
+    {'label': 'مفتوحة',       'value': _open,        'icon': 'folder-open',  'variant': 'amber'},
+    {'label': 'قيد المعالجة', 'value': _prog,        'icon': 'spinner',      'variant': 'blue'},
+    {'label': 'محلولة',       'value': _resol,       'icon': 'circle-check', 'variant': 'green'},
   ],
   search_action=url_for('radius.tk_list')
 ) %}
+  {# عقد الفلترة كما هو: GET ?status=… #}
   <select class="hub-select" name="status">
     <option value="">كل الحالات</option>
-    <option value="open"         {% if status=='open' %}selected{% endif %}>مفتوحة</option>
-    <option value="pending"      {% if status=='pending' %}selected{% endif %}>معلَّقة</option>
-    <option value="in_progress"  {% if status=='in_progress' %}selected{% endif %}>قيد المعالجة</option>
-    <option value="resolved"     {% if status=='resolved' %}selected{% endif %}>محلولة</option>
-    <option value="closed"       {% if status=='closed' %}selected{% endif %}>مغلقة</option>
+    <option value="open"        {% if status == 'open' %}selected{% endif %}>مفتوحة</option>
+    <option value="pending"     {% if status == 'pending' %}selected{% endif %}>معلَّقة</option>
+    <option value="in_progress" {% if status == 'in_progress' %}selected{% endif %}>قيد المعالجة</option>
+    <option value="resolved"    {% if status == 'resolved' %}selected{% endif %}>محلولة</option>
+    <option value="closed"      {% if status == 'closed' %}selected{% endif %}>مغلقة</option>
   </select>
   {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
+  {% if status %}
+    {{ hub.btn("إعادة ضبط", icon="rotate-left", variant="ghost", size="sm",
+               attrs='onclick="window.location=' + "'" + url_for('radius.tk_list') + "'" + '"') }}
+  {% endif %}
+  <span class="hub-hint" tabindex="0"
+        data-hint="مسار التذكرة المعتاد: مفتوحة ← قيد المعالجة ← محلولة ← مغلقة. الأولوية «عاجلة/مرتفعة» تُعالج أولًا."><i class="fa-solid fa-info"></i></span>
 {% endcall %}
+</section>{# /hub-hero-shell #}
 
 {% if items %}
-{# ───── Main (carded table) + help panel on the LEFT ───── #}
-{% call hub.worklayout(aside_html=hub.helppanel(
-  "كيف تقرأ هذه الصفحة؟",
-  intro="كل صف هو تذكرة دعم من مشترك. اللون والوسم يميّزان حالة التذكرة وأولويتها بصريًا.",
-  items=[
-    {'icon': 'folder-open',  'text': 'الحالة تُظهر مسار التذكرة: مفتوحة ← قيد المعالجة ← محلولة ← مغلقة.'},
-    {'icon': 'fire',         'text': 'الأولوية «عاجل/مرتفع» تستحق المعالجة أولًا قبل العادي والمنخفض.'},
-    {'icon': 'user-gear',    'text': 'المسؤول هو الإداري المُسنَدة إليه التذكرة؛ «—» يعني غير مُسنَدة بعد.'},
-  ],
-  note="استخدم فلتر الحالة في الأعلى لتضييق القائمة، ثم افتح أي تذكرة لعرض المحادثة كاملة."
-)) %}
-  {% call hub.section("قائمة التذاكر", icon="table-list", meta=items|length|string + " تذكرة", flush=True) %}
-    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
-      <table class="hub-table">
-        <thead>
-          <tr>
-            <th class="num" style="width:60px">#</th>
-            <th>الموضوع</th>
-            <th>الفئة</th>
-            <th>الأولوية</th>
-            <th>الحالة</th>
-            <th>المسؤول</th>
-            <th>أُنشئت</th>
-            <th style="width:80px" data-uds-nosort data-uds-nocol>عرض</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for t in items %}
-          <tr>
-            <td class="num mono">{{ t.id }}</td>
-            <td>
-              <a href="{{ url_for('radius.tk_view', tid=t.id) }}"
-                 style="font-weight:700;color:var(--hub-brand-ink);text-decoration:none">
-                {{ t.subject }}
-              </a>
-            </td>
-            <td>{{ hub.pill(category_labels.get(t.category, t.category or '—'), variant="grey", dot=False) }}</td>
-            <td>
-              {% if t.priority == 'urgent' %}{{ hub.pill("عاجل", variant="red") }}
-              {% elif t.priority == 'high' %}{{ hub.pill("مرتفع", variant="amber") }}
-              {% elif t.priority == 'low' %}{{ hub.pill("منخفض", variant="grey") }}
-              {% else %}{{ hub.pill("عادي", variant="blue") }}{% endif %}
-            </td>
-            <td>
-              {% if t.status == 'open' %}{{ hub.pill("مفتوحة", variant="amber") }}
-              {% elif t.status == 'in_progress' %}{{ hub.pill("قيد المعالجة", variant="blue") }}
-              {% elif t.status == 'pending' %}{{ hub.pill("معلَّقة", variant="amber") }}
-              {% elif t.status == 'resolved' %}{{ hub.pill("محلولة", variant="green") }}
-              {% elif t.status == 'closed' %}{{ hub.pill("مغلقة", variant="grey") }}
-              {% else %}{{ hub.pill(t.status, variant="grey") }}{% endif %}
-            </td>
-            <td class="mono small">{{ t.assignee_admin_id or '—' }}</td>
-            <td class="mono small">{{ t.created_at|dt_local if t.created_at else '—' }}</td>
-            <td>
-              <a class="hub-btn hub-btn--primary hub-btn--icon" title="عرض"
-                 href="{{ url_for('radius.tk_view', tid=t.id) }}">
-                <i class="fa-solid fa-eye"></i>
-              </a>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  {% endcall %}
+{# ───── جدول التذاكر — uds موحّد (فرز + ترقيم + تصدير) ───── #}
+{% call hub.section("قائمة التذاكر", icon="table-list", meta=items|length|string + " تذكرة", flush=True) %}
+  <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25"
+       data-uds-export-title="التذاكر" style="border:none;border-radius:0">
+    <table class="hub-table">
+      <thead>
+        <tr>
+          <th class="num" style="width:60px">#</th>
+          <th>الموضوع</th>
+          <th>الفئة</th>
+          <th>الأولوية</th>
+          <th>الحالة</th>
+          <th>المسؤول</th>
+          <th>أُنشئت</th>
+          <th style="width:70px" data-uds-nosort data-uds-nocol data-uds-noexport>فتح</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in items %}
+        {% set _st = status_map.get(t.status, (t.status, 'grey')) %}
+        {% set _pr = prio_map.get(t.priority, (t.priority, 'grey')) %}
+        <tr>
+          <td class="num mono"><bdi dir="ltr">{{ t.id }}</bdi></td>
+          <td>
+            <a href="{{ url_for('radius.tk_view', tid=t.id) }}"
+               style="font-weight:700;color:var(--hub-brand-ink);text-decoration:none">{{ t.subject }}</a>
+          </td>
+          <td>{{ hub.pill(category_labels.get(t.category, t.category or '—'), variant="grey", dot=False) }}</td>
+          <td>{{ hub.pill(_pr[0], variant=_pr[1]) }}</td>
+          <td>{{ hub.pill(_st[0], variant=_st[1]) }}</td>
+          {# المسؤول = رقم الإداري المُسنَدة إليه التذكرة؛ «—» تعني غير مُسنَدة #}
+          <td class="mono small">{% if t.assignee_admin_id %}<bdi dir="ltr">#{{ t.assignee_admin_id }}</bdi>{% else %}<span class="hub-text-mute">—</span>{% endif %}</td>
+          <td class="mono small"><bdi dir="ltr">{{ t.created_at|dt_local if t.created_at else '—' }}</bdi></td>
+          <td>
+            <a class="hub-btn hub-btn--primary hub-btn--icon" title="فتح التذكرة"
+               href="{{ url_for('radius.tk_view', tid=t.id) }}">
+              <i class="fa-solid fa-eye"></i>
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 {% endcall %}
 {% else %}
 {{ hub.empty(
-  "لا تذاكر بهذه الفلترة",
-  sub="أنشئ تذكرة جديدة من زرّ «تذكرة جديدة» في الأعلى أو غيّر الفلتر.",
+  "لا تذاكر تطابق الفلتر" if status else "لا تذاكر بعد",
+  sub="غيّر فلتر الحالة في الأعلى أو أنشئ تذكرة جديدة." if status else "أنشئ أول تذكرة من زرّ «تذكرة جديدة» أعلى الصفحة.",
   icon="headset"
 ) }}
 {% endif %}
 
+{# ───────────── صندوق عائم منبثق: تذكرة جديدة ─────────────
+   نفس عقد الإنشاء القائم حرفيًا: POST → radius.tk_create بأسماء الحقول:
+   subscriber_id / subject / category / priority / body — صفر تغيير خلفي.
+   الرابط القديم /tickets/new يعيد التوجيه إلى هنا بـ ?new=1 فيفتح
+   النافذة تلقائيًا (deep-link محفوظ). #}
+<div class="fcw-modal" data-fcw-modal="ticket-create" hidden>
+  <div class="fcw-dialog" role="dialog" aria-modal="true" aria-labelledby="fcw-ticket-create-title">
+    {# method="post" ضروري: حاقن الـ CSRF التلقائي يستهدف فقط <form method="post">. #}
+    <form method="post" action="{{ url_for('radius.tk_create') }}">
+      <div class="fcw-head">
+        <h3 id="fcw-ticket-create-title"><i class="fa-solid fa-headset"></i> تذكرة جديدة</h3>
+        <button type="button" class="fcw-x" data-fcw-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="fcw-body">
+
+        <div class="fcw-grid">
+          <label class="hub-field">
+            <span class="hub-field-label">المشترك <span style="color:#dc2626">*</span></span>
+            <select class="hub-select" name="subscriber_id" required>
+              <option value="">— اختر مشتركًا —</option>
+              {% for s in subs %}
+                <option value="{{ s.id }}">{{ s.username }} — {{ s.full_name or '—' }}</option>
+              {% endfor %}
+            </select>
+            <span class="hub-field-hint">صاحب التذكرة — تظهر في سجلّه وتُحتسب ضمن متابعاته.</span>
+          </label>
+
+          <label class="hub-field">
+            <span class="hub-field-label">الفئة</span>
+            <select class="hub-select" name="category">
+              <option value="general">عام</option>
+              <option value="billing">الفواتير والدفع</option>
+              <option value="connection">الاتصال والخدمة</option>
+              <option value="hardware">الأجهزة والمعدّات</option>
+              <option value="complaint">شكوى</option>
+              <option value="service_request">طلب خدمة</option>
+            </select>
+            <span class="hub-field-hint">تسهّل الفرز وتوجيه التذكرة للفريق المختص.</span>
+          </label>
+
+          <label class="hub-field full">
+            <span class="hub-field-label">الموضوع <span style="color:#dc2626">*</span></span>
+            <input class="hub-input" type="text" name="subject" required
+                   placeholder="مثال: انقطاع متكرر في الخدمة منذ يومين">
+            <span class="hub-field-hint">سطر واحد يلخّص المشكلة — يظهر عنوانًا في قائمة التذاكر.</span>
+          </label>
+
+          <div class="hub-field full">
+            <span class="hub-field-label">الأولوية</span>
+            {# راديو حقيقي بنفس حقل priority — التصميم بطاقات لا قائمة #}
+            <div class="tkm-prio" role="radiogroup" aria-label="الأولوية">
+              <label><input type="radio" name="priority" value="low"><i class="fa-solid fa-angle-down"></i> منخفضة</label>
+              <label><input type="radio" name="priority" value="normal" checked><i class="fa-solid fa-minus"></i> عادية</label>
+              <label><input type="radio" name="priority" value="high"><i class="fa-solid fa-angle-up"></i> مرتفعة</label>
+              <label><input type="radio" name="priority" value="urgent"><i class="fa-solid fa-triangle-exclamation"></i> عاجلة</label>
+            </div>
+            <span class="hub-field-hint">تحدّد ترتيب المعالجة — استخدم «عاجلة» للحالات الحرجة فقط.</span>
+          </div>
+
+          <label class="hub-field full">
+            <span class="hub-field-label">التفاصيل</span>
+            <textarea class="hub-textarea" name="body" rows="5"
+                      placeholder="اشرح المشكلة بوضوح: متى بدأت؟ ما الأعراض؟ ماذا جُرّب؟"></textarea>
+            <span class="hub-field-hint">تفاصيل أوضح = حلّ أسرع وأخذ وردّ أقل.</span>
+          </label>
+        </div>
+
+      </div>
+      <div class="fcw-foot">
+        <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>إغلاق</button>
+        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-paper-plane"></i> إنشاء التذكرة</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+(() => {
+  "use strict";
+  // فتح وإغلاق الصندوق العائم (نفس نمط fcw في finance_center_hub).
+  const root = document;
+  function open(key){ const m = root.querySelector(`[data-fcw-modal='${key}']`); if(m){ m.hidden=false; m.classList.add("is-open"); m.querySelector("input,select,textarea,button")?.focus(); } }
+  function closeAll(){ root.querySelectorAll("[data-fcw-modal]").forEach(m=>{ m.classList.remove("is-open"); m.hidden=true; }); }
+  root.querySelectorAll("[data-fcw-open]").forEach(b=> b.addEventListener("click", ()=> open(b.dataset.fcwOpen)));
+  root.querySelectorAll("[data-fcw-close]").forEach(b=> b.addEventListener("click", closeAll));
+  root.querySelectorAll("[data-fcw-modal]").forEach(m=> m.addEventListener("click", e=>{ if(e.target===m) closeAll(); }));
+  root.addEventListener("keydown", e=>{ if(e.key==="Escape") closeAll(); });
+  {% if open_new_modal %}
+  // الرابط العميق /tickets/new أعاد التوجيه بـ ?new=1 — افتح النافذة تلقائيًا.
+  open("ticket-create");
+  {% endif %}
+})();
+</script>
+
+{# نظام الجداول الموحّد: فرز + ترقيم + تصدير #}
+<script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
 {% endblock %}

@@ -7,9 +7,16 @@
 {% block page_title %}التقارير المالية{% endblock %}
 {% block page_sub %}<span class="sub">{{ report_label }}</span>{% endblock %}
 
+{% block head_extra %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
+{% endblock %}
+
 {% block content %}
 
-{{ hub.hero(
+{# هيرو مدموج موحّد (UDS): العنوان + حقول فلترة التقرير + التصدير داخل كتلة واحدة.
+   نموذج البحث هنا GET على finance_reports (نفس action القديم) فيصبح هو .uds-hero-search. #}
+{% call hub.megahero(
   "التقارير المالية",
   subtitle="تقارير مبنية من السجل المالي — يومية، شهرية، سنوية، دفعات، سلف، تفعيلات، ربح/خسارة",
   icon="chart-line",
@@ -17,17 +24,11 @@
     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.finance_ledger') + '">
       <i class="fa-solid fa-scale-balanced"></i> السجل المالي
     </a>
-  '
-) }}
-
-<div style="margin-bottom:var(--hub-gap-section);padding:11px 16px;font-size:13px;font-weight:600;
-            border-radius:var(--hub-r-lg);border:1px solid #bfdbfe;
-            background:var(--hub-blue-soft);color:var(--hub-blue-ink)">
-  <i class="fa-solid fa-circle-info"></i>
-  هذه التقارير مبنية من السجل المالي. القيود العكسية والتصحيحات لا تحذف الأصل، لذلك قد تظهر القيم المعدّلة حسب القيد والـ void.
-</div>
-
-<form method="get" action="{{ url_for('radius.finance_reports') }}" class="hub-filterbar">
+  ',
+  search_action=url_for('radius.finance_reports'),
+  search_method="get"
+) %}
+  {# منتقي نوع التقرير — نفس اسم الحقل type الذي يعتمده الـ GET بالخلفية #}
   <select class="hub-select grow" name="type" style="min-width:220px">
     {% for key, label in reports.items() %}
       <option value="{{ key }}" {% if report_type == key %}selected{% endif %}>{{ label }}</option>
@@ -35,13 +36,24 @@
   </select>
   {{ hub.btn("عرض التقرير", icon="chart-line", variant="primary", type="submit", size="sm") }}
   <span class="hub-spacer"></span>
+  {# أزرار التصدير الثلاثة — روابط مباشرة لمسارات التصدير حسب النوع الحالي #}
   {{ hub.btn("CSV", href=url_for('radius.finance_reports_export_csv', type=report_type), icon="file-csv", variant="secondary", size="sm") }}
   {{ hub.btn("Excel", href=url_for('radius.finance_reports_export_xlsx', type=report_type), icon="file-excel", variant="secondary", size="sm") }}
   {{ hub.btn("PDF", href=url_for('radius.finance_reports_export_pdf', type=report_type), icon="file-pdf", variant="secondary", size="sm") }}
-  {{ hub.btn("طباعة", icon="print", variant="ghost", size="sm") }}
-</form>
+  {# زر الطباعة: أضيف onclick=window.print() لأن hub.btn بلا href ينتج زر بلا فعل #}
+  {{ hub.btn("طباعة", icon="print", variant="ghost", size="sm", attrs='onclick="window.print()"') }}
+{% endcall %}
 
-<form method="post" action="{{ url_for('radius.finance_reports_snapshot') }}" class="hub-filterbar" style="margin-top:-8px">
+<div style="margin-bottom:var(--hub-gap-section);padding:11px 16px;font-size:13px;font-weight:600;
+            border-radius:var(--hub-r-lg);border:1px solid var(--hub-blue-soft);
+            background:var(--hub-blue-soft);color:var(--hub-blue-ink)">
+  <i class="fa-solid fa-circle-info"></i>
+  هذه التقارير مبنية من السجل المالي. القيود العكسية والتصحيحات لا تحذف الأصل، لذلك قد تظهر القيم المعدّلة حسب القيد والـ void.
+</div>
+
+{# نموذج حفظ اللقطة منفصل عن الهيرو لأنه POST ولا يصح تداخل النماذج؛
+   حقوله (report_type + CSRF) كما يعتمدها المعالج بالخلفية دون تغيير. #}
+<form method="post" action="{{ url_for('radius.finance_reports_snapshot') }}" class="hub-filterbar">
   <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
   <input type="hidden" name="report_type" value="{{ report_type }}">
   <div class="small muted grow">
@@ -52,7 +64,7 @@
 
 {% if snapshots %}
   {% call hub.section("آخر اللقطات الثابتة", icon="box-archive", meta=snapshots|length|string + " لقطة", flush=True) %}
-    <div class="hub-table-wrap" style="border:none;border-radius:0">
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" data-uds-export-title="اللقطات الثابتة" style="border:none;border-radius:0">
       <table class="hub-table rep-table">
         <thead>
           <tr>
@@ -83,19 +95,46 @@
 
 {% if items %}
   {% set columns = items[0].keys()|list %}
+  {# تعريب رؤوس الأعمدة + تنسيق القيم المالية — بدل أسماء الحقول الخام
+     الإنجليزية (نفس خريطة الأعمدة المعتمدة في صفحة المحاسبة الموحّدة). #}
+  {% set col_labels = {
+    'period': 'الفترة', 'day': 'اليوم', 'count': 'العدد', 'total': 'الإجمالي',
+    'amount': 'المبلغ', 'minutes': 'الدقائق', 'still_open': 'سلف مفتوحة',
+    'username': 'المستخدم', 'subscriber_id': 'رقم المستفيد', 'balance': 'الرصيد',
+    'entry_type': 'النوع', 'direction': 'الاتجاه', 'status': 'الحالة',
+    'currency': 'العملة', 'created_at': 'التاريخ', 'notes': 'ملاحظات',
+    'sessions': 'الجلسات', 'plan': 'الباقة', 'plan_name': 'الباقة',
+    'earned_minutes': 'الدقائق المكتسبة', 'method': 'طريقة الدفع',
+    'outstanding': 'المتبقي', 'paid': 'المدفوع', 'discount_amount': 'الخصم',
+    'credits': 'الإيرادات (دائن)', 'debits': 'المصروفات (مدين)', 'net': 'الصافي',
+    'entries': 'عدد القيود', 'source': 'المصدر', 'batch_id': 'رقم الحزمة',
+    'distributor_id': 'رقم الموزع', 'name': 'اسم الموزع', 'display_name': 'الاسم المعروض',
+    'debt_balance': 'رصيد الدين', 'credit_limit': 'سقف الائتمان',
+  } %}
+  {% set money_cols = ['total', 'amount', 'balance', 'outstanding', 'paid',
+                       'discount_amount', 'credits', 'debits', 'net',
+                       'debt_balance', 'credit_limit'] %}
   {% call hub.section(report_label, icon="chart-pie", meta=items|length|string + " صف", flush=True) %}
-    <div class="hub-table-wrap" style="border:none;border-radius:0">
-      <table class="hub-table rep-table" data-paginated="1" data-page-size="25" data-page-sizes="10,25,50,100" data-persist-key="reports-list">
+    {# جدول بيانات UDS: data-uds-table يفعّل شريط الأعمدة والفرز والترقيم وأزرار التصدير تلقائيًا.
+       أُزيلت خصائص الترقيم القديمة (data-paginated/data-page-sizes/data-persist-key). #}
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25" data-uds-export-title="{{ report_label }}" style="border:none;border-radius:0">
+      <table class="hub-table rep-table">
         <thead>
           <tr>
-            {% for column in columns %}<th>{{ column }}</th>{% endfor %}
+            {% for column in columns %}<th{% if column in money_cols or column == 'count' %} class="num"{% endif %}>{{ col_labels.get(column, column) }}</th>{% endfor %}
           </tr>
         </thead>
         <tbody>
           {% for row in items %}
           <tr>
             {% for column in columns %}
-              <td class="mono small">{{ row.get(column, '—') }}</td>
+              {% set v = row.get(column) %}
+              <td class="mono small{% if column in money_cols or column == 'count' %} num{% endif %}">
+                {%- if v is none or v == '' -%}—
+                {%- elif column in money_cols -%}{{ v|money }}
+                {%- else -%}{{ v }}
+                {%- endif -%}
+              </td>
             {% endfor %}
           </tr>
           {% endfor %}
@@ -111,4 +150,6 @@
 ) }}
 {% endif %}
 
+{# سكربت جداول UDS بعد كل الجداول داخل المحتوى، مع defer لتفادي سباق التهيئة #}
+<script defer src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
 {% endblock %}

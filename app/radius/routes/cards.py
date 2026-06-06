@@ -289,11 +289,16 @@ def _cards_overview_snapshot(tenant_id: int) -> dict:
     expired = int(counts.get("expired") or 0)
     revoked = int(counts.get("revoked") or 0)
     used_today = int(totals.get("used_today") or 0)
+    # كل تنبيه يحمل href + hint حتى يكون قابلًا للنقر ويوصل لمكان المعالجة
     alerts = []
     if total and available == 0:
-        alerts.append({"level": "red", "text": "لا يوجد مخزون كروت متاح حاليًا."})
+        alerts.append({"level": "red", "text": "لا يوجد مخزون كروت متاح حاليًا.",
+                       "href": url_for("radius.cards_batches"),
+                       "hint": "افتح حزم البطاقات لتوليد أو استيراد كروت جديدة"})
     elif 0 < available <= 10:
-        alerts.append({"level": "amber", "text": f"المخزون المتاح منخفض: {available} كرت فقط."})
+        alerts.append({"level": "amber", "text": f"المخزون المتاح منخفض: {available} كرت فقط.",
+                       "href": url_for("radius.cards_batches"),
+                       "hint": "راجع الحزم وولّد كروتًا إضافية قبل النفاد"})
     for package in printed_stock_packages:
         package_total = int(package.get("total_cards") or 0)
         package_available = int(package.get("available_cards") or 0)
@@ -301,14 +306,22 @@ def _cards_overview_snapshot(tenant_id: int) -> dict:
             alerts.append({
                 "level": "amber",
                 "text": f"{package.get('package_name')} قريب من النفاد: {package_available} متاح.",
+                "href": url_for("radius.cards_batches"),
+                "hint": "افتح الحزمة لطباعة/توليد كروت جديدة",
             })
             break
     if expired:
-        alerts.append({"level": "red", "text": f"{expired} كرت منتهي يحتاج مراجعة."})
+        alerts.append({"level": "red", "text": f"{expired} كرت منتهي يحتاج مراجعة.",
+                       "href": url_for("radius.cards_list", status="expired"),
+                       "hint": "اعرض الكروت المنتهية لمراجعتها أو أرشفتها"})
     if revoked:
-        alerts.append({"level": "grey", "text": f"{revoked} كرت محظور ضمن المخزون."})
+        alerts.append({"level": "grey", "text": f"{revoked} كرت محظور ضمن المخزون.",
+                       "href": url_for("radius.cards_list", status="revoked"),
+                       "hint": "اعرض الكروت المحظورة"})
     if not alerts:
-        alerts.append({"level": "green", "text": "وضع الكروت مستقر ولا توجد ملاحظات عاجلة."})
+        alerts.append({"level": "green", "text": "وضع الكروت مستقر ولا توجد ملاحظات عاجلة.",
+                       "href": url_for("radius.cards_batches"),
+                       "hint": "كل شيء تمام — تصفح الحزم"})
 
     return {
         "cards": {
@@ -1285,34 +1298,13 @@ def cards_batches_export_xlsx():
 
 
 def cards_batches_export_pdf():
-    from reportlab.lib import colors
-    from reportlab.lib.pagesizes import A4, landscape
-    from reportlab.platypus import SimpleDocTemplate, Spacer, Table, TableStyle
+    # تصدير PDF فاخر بهوية HobeRadius — الثيم الموحّد في pdf_theme
+    # يتكفّل بخط Cairo العربي وتشكيل RTL والرأس/التذييل والجدول المنسّق.
+    from ..services.pdf_theme import build_batches_pdf
 
-    rows = _batch_export_table(_batch_export_rows())
-    pdf_columns = [0, 1, 2, 3, 5, 8, 10, 11, 19, 20, 23]
-    pdf_rows = [[row[i] for i in pdf_columns] for row in rows[:101]]
-    out = io.BytesIO()
-    doc = SimpleDocTemplate(
-        out,
-        pagesize=landscape(A4),
-        leftMargin=18,
-        rightMargin=18,
-        topMargin=18,
-        bottomMargin=18,
-    )
-    table = Table(pdf_rows, repeatRows=1)
-    table.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#123056")),
-        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-        ("FONTSIZE", (0, 0), (-1, -1), 7),
-        ("GRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#d8dee8")),
-        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f4f7fb")]),
-    ]))
-    doc.build([table, Spacer(1, 6)])
+    payload = build_batches_pdf(_batch_export_rows())
     return Response(
-        out.getvalue(),
+        payload,
         mimetype="application/pdf",
         headers={"Content-Disposition": "attachment; filename=card-batches.pdf"},
     )
@@ -1879,6 +1871,14 @@ def cards_list():
     revoked = request.args.get("revoked")
     revoked_b = True if revoked == "1" else (False if revoked == "0" else None)
 
+    # ـ فلتر «الحالة» الموحّد ?status=available|used|expired|revoked —
+    #   روابط لوحة الكروت (مثل تنبيه «كرت منتهي يحتاج مراجعة») كانت
+    #   تمرّره ولا أحد يقرأه فتظهر القائمة بلا فلترة. الآن يُترجم إلى
+    #   شرط SQL حقيقي في cards_repo ويبقى متوافقًا مع used/revoked. ـ
+    status = (request.args.get("status") or "").strip().lower()
+    if status not in ("available", "used", "expired", "revoked"):
+        status = ""
+
     raw_batch = (request.args.get("batch_id") or "").strip()
     try:
         batch_id = int(raw_batch) if raw_batch else None
@@ -1902,7 +1902,8 @@ def cards_list():
 
     svc = get_cards_service()
     total = svc.count_cards(used=used_b, revoked=revoked_b,
-                             batch_id=batch_id, search=q or None)
+                             batch_id=batch_id, search=q or None,
+                             status=status or None)
     pages_count = max(1, (total + per_page - 1) // per_page)
     if page > pages_count:
         page = pages_count
@@ -1910,7 +1911,11 @@ def cards_list():
 
     items = svc.list_cards(used=used_b, revoked=revoked_b,
                            batch_id=batch_id, search=q or None,
+                           status=status or None,
                            limit=per_page, offset=offset)
+    # عدّادات شريط الـ KPI — توزيع الحالات الحقيقي ضمن نطاق البحث/الدفعة
+    # (وليس عدّ صفوف الصفحة الحالية كما كان سابقًا، فقد كان مضلِّلًا).
+    status_counts = svc.cards_status_counts(batch_id=batch_id, search=q or None)
     plans = {p.id: p for p in get_plans_service().list(limit=500)}
     batches = {b.id: b for b in svc.list_batches(limit=500)}
 
@@ -1919,6 +1924,7 @@ def cards_list():
     preserve = {}
     if used is not None: preserve["used"] = used
     if revoked is not None: preserve["revoked"] = revoked
+    if status: preserve["status"] = status
     if batch_id is not None: preserve["batch_id"] = batch_id
     if q: preserve["q"] = q
     preserve["per_page"] = per_page
@@ -1926,9 +1932,14 @@ def cards_list():
     return render_template(
         "radius/cards_list.html",
         items=items, plans=plans, batches=batches,
-        used=used, revoked=revoked, batch_id=batch_id, q=q,
+        used=used, revoked=revoked, status=status, batch_id=batch_id, q=q,
+        status_counts=status_counts,
         page=page, per_page=per_page, total=total,
         pages_count=pages_count, preserve=preserve,
+        # «الآن» بتوقيت UTC كنص ISO — expire_at مخزّن نصًا، والمقارنة
+        # النصية بين ISO strings صحيحة زمنيًا (مقارنة datetime بنص كانت
+        # ترمي TypeError وتسبب 500 مع فلتر الحالة).
+        now=datetime.utcnow().isoformat(sep=" ", timespec="seconds"),
     )
 
 

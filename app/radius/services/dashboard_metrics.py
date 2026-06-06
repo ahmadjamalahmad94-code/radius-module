@@ -13,6 +13,8 @@ from __future__ import annotations
 import time
 from typing import Optional
 
+from flask_babel import gettext as _
+
 from ..core.tenant import DEFAULT_TENANT_ID
 from ..db.connection import db
 
@@ -220,52 +222,57 @@ def build_alerts(*, subs: dict, cards: dict, plans: dict,
     levels: danger | warn | info"""
     out: list[dict] = []
 
-    # نظام
+    # نظام — كل تنبيه يحمل link_endpoint حتى يكون قابلاً للنقر في الواجهة
+    # ملاحظة i18n: نصوص التنبيهات مغلّفة بـ gettext (نمط طبقة بايثون). الرسائل
+    # ذات الأرقام تستخدم نمط %(name)s المسمّى ليُترجَم النص دون كسر الاستيفاء.
     if not system.get("db_ok"):
-        out.append({"level": "danger",
-                     "message": "تعذّر الاتصال بقاعدة البيانات."})
+        out.append({"level": "danger", "link_endpoint": "radius.settings_page",
+                     "message": _("تعذّر الاتصال بقاعدة البيانات.")})
     if not system.get("radius_ok"):
-        out.append({"level": "warn",
-                     "message": "RADIUS adapter غير جاهز — افحص الإعدادات."})
+        out.append({"level": "warn", "link_endpoint": "radius.settings_page",
+                     "message": _("RADIUS adapter غير جاهز — افحص الإعدادات.")})
 
     # موارد
     for k, label in (("cpu_pct", "CPU"), ("ram_pct", "RAM"), ("disk_pct", "Disk")):
         v = system.get(k)
         if v is not None and v >= 90:
             out.append({"level": "danger",
-                         "message": f"استخدام {label} مرتفع جدًا ({v}%)."})
+                         "message": _("استخدام %(label)s مرتفع جدًا (%(v)s%%).",
+                                      label=label, v=v)})
         elif v is not None and v >= 75:
             out.append({"level": "warn",
-                         "message": f"استخدام {label} مرتفع ({v}%)."})
+                         "message": _("استخدام %(label)s مرتفع (%(v)s%%).",
+                                      label=label, v=v)})
 
     # مشتركون
     exp_soon = subs.get("expiring_soon") or 0
     if exp_soon > 0:
         out.append({"level": "warn", "link_endpoint": "radius.users_list",
-                     "message": f"{exp_soon} مشترك ينتهي اشتراكه خلال 3 أيام."})
+                     "message": _("%(n)s مشترك ينتهي اشتراكه خلال 3 أيام.", n=exp_soon)})
     expired = subs.get("expired") or 0
     if expired > 0:
         out.append({"level": "info", "link_endpoint": "radius.users_list",
-                     "message": f"{expired} مشترك انتهى اشتراكه — جدّد أو احذف."})
+                     "message": _("%(n)s مشترك انتهى اشتراكه — جدّد أو احذف.", n=expired)})
 
     # كروت
     avail = cards.get("available") or 0
     if cards.get("total", 0) > 0 and avail == 0:
-        out.append({"level": "danger",
-                     "message": "لا توجد كروت متاحة — وَلِّد دفعة جديدة."})
+        # رابط مباشر لتوليد دفعة جديدة من الكروت
+        out.append({"level": "danger", "link_endpoint": "radius.cards_generate",
+                     "message": _("لا توجد كروت متاحة — وَلِّد دفعة جديدة.")})
     elif 0 < avail < 10:
         out.append({"level": "warn", "link_endpoint": "radius.cards_generate",
-                     "message": f"الكروت المتاحة منخفضة ({avail}) — جدّد المخزون."})
+                     "message": _("الكروت المتاحة منخفضة (%(n)s) — جدّد المخزون.", n=avail)})
 
     # خطط
     if plans.get("total", 0) == 0:
         out.append({"level": "info", "link_endpoint": "radius.plans_new",
-                     "message": "لا توجد باقات بعد — أنشئ أول باقة."})
+                     "message": _("لا توجد باقات بعد — أنشئ أول باقة.")})
 
     # NAS
     if nas.get("total", 0) == 0:
         out.append({"level": "info", "link_endpoint": "radius.devices_list",
-                     "message": "لا توجد أجهزة NAS مُسجَّلة — أضِف router/AP."})
+                     "message": _("لا توجد أجهزة NAS مُسجَّلة — أضِف router/AP.")})
 
     return out
 

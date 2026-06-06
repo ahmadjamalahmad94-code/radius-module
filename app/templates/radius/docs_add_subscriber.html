@@ -1,0 +1,598 @@
+{# ══════════════════════════════════════════════════════════════════════
+   دليل «إضافة مشترك جديد» — أول أدلة «كيف تستخدمني».
+
+   البنية:
+     • hero + شريط أدوات (عودة للفهرس / حفظ كـ PDF).
+     • فهرس جانبي لاصق (anchor links + scrollspy خفيف بلا مكتبات).
+     • خطوات مرقّمة: كل خطوة بطاقة فيها شارة رقم بنفسجية متدرّجة،
+       عنوان، شرح بلغة بسيطة بصيغة المخاطَب، ورسم توضيحي.
+     • الرسوم محاكاة HTML/CSS مصغّرة للنموذج الحقيقي (users_form.html)
+       بألوان منظومة التصميم — لا لقطات شاشة تَقدُم مع كل تحديث.
+     • تلميحات 💡 نصيحة / ⚠️ انتبه كصناديق ملوّنة.
+
+   المحتوى مطابق للنموذج الفعلي: أسماء الحقول والأقسام منسوخة حرفيًا
+   من users_form.html (اسم الدخول، كلمة المرور، باقة الخدمة، المدير
+   المسؤول، نوع الخدمة...) — عند تغيير النموذج حدّث الدليل معه.
+
+   تصدير PDF = window.print() مع @media print أدناه (انظر تعليل
+   القرار في routes/docs_center.py).
+   ══════════════════════════════════════════════════════════════════════ #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}دليل: إضافة مشترك جديد — كيف تستخدمني{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<style>
+  /* ── التخطيط: فهرس جانبي لاصق + عمود المحتوى ── */
+  /* الفهرس على الجهة الثانية من الصفحة (طلب المستخدم): عمود المحتوى أولاً
+     ثم الفهرس اللاصق في نهاية السطر — أي يسار الصفحة في اتجاه RTL */
+  .dg-layout{ display:grid; grid-template-columns:minmax(0,1fr) 230px; gap:20px; align-items:start; }
+  .dg-toc{ order:2; }
+  .dg-main{ order:1; }
+  /* على الشاشات الضيقة يرجع الفهرس فوق المحتوى كما كان */
+  @media (max-width:980px){ .dg-layout{ grid-template-columns:1fr; } .dg-toc{ order:1; } .dg-main{ order:2; } }
+
+  .dg-toc{
+    position:sticky; top:84px;
+    background:#fff; border:1px solid #e8edf3; border-radius:14px;
+    padding:14px 13px; display:grid; gap:3px;
+  }
+  @media (max-width:980px){ .dg-toc{ position:static; } }
+  .dg-toc-title{
+    display:flex; align-items:center; gap:8px; font-size:12px; font-weight:900;
+    color:#7c7a99; margin-bottom:7px; padding-inline:6px;
+  }
+  .dg-toc a{
+    display:flex; align-items:center; gap:9px;
+    padding:8px 10px; border-radius:9px; text-decoration:none;
+    font-size:12.5px; font-weight:700; color:#475569;
+    transition:background .14s, color .14s;
+  }
+  .dg-toc a .n{
+    width:21px; height:21px; border-radius:50%; flex:none;
+    display:grid; place-items:center; font-size:10.5px; font-weight:900;
+    background:#f1f5f9; color:#94a3b8;
+  }
+  .dg-toc a:hover{ background:#f5f3ff; color:#5b21b6; }
+  .dg-toc a.is-active{ background:#ede9fe; color:#5b21b6; }
+  .dg-toc a.is-active .n{ background:linear-gradient(135deg,#7c3aed,#5b21b6); color:#fff; }
+
+  /* ── عمود الخطوات ── */
+  .dg-main{ min-width:0; display:grid; gap:18px; }
+
+  /* تمهيد «ماذا ستتعلم» */
+  .dg-lead{
+    display:flex; gap:13px; align-items:flex-start;
+    background:linear-gradient(135deg,#f5f3ff,#fdfcff);
+    border:1px solid #e9e5fc; border-radius:14px; padding:15px 17px;
+  }
+  .dg-lead .ic{ width:40px;height:40px;border-radius:12px;flex:none;display:grid;place-items:center;
+    font-size:17px;background:#ede9fe;color:#6d28d9; }
+  .dg-lead h3{ margin:0 0 4px; font-size:13.5px; font-weight:800; color:#241e4e; }
+  .dg-lead p{ margin:0; font-size:12.5px; line-height:1.9; color:#5b5a78; }
+
+  /* بطاقة الخطوة */
+  .dg-step{ display:grid; grid-template-columns:auto 1fr; gap:15px; align-items:start; scroll-margin-top:90px; }
+  @media (max-width:560px){ .dg-step{ grid-template-columns:1fr; } }
+  .dg-badge{
+    width:42px; height:42px; border-radius:50%; flex:none;
+    display:grid; place-items:center; font-size:17px; font-weight:900; color:#fff;
+    background:linear-gradient(135deg,#7c3aed,#5b21b6);
+    box-shadow:0 8px 18px rgba(124,58,237,.3);
+  }
+  .dg-card{
+    min-width:0; background:#fff; border:1px solid #e8edf3; border-radius:15px;
+    padding:16px 18px;
+  }
+  .dg-card h2{
+    margin:0 0 8px; font-size:15.5px; font-weight:800; color:#0f172a;
+    display:flex; align-items:center; gap:9px; flex-wrap:wrap;
+  }
+  .dg-card h2 i{ color:#7c3aed; }
+  .dg-card p{ margin:0 0 7px; font-size:13px; line-height:1.95; color:#475569; }
+  .dg-card p:last-child{ margin-bottom:0; }
+  .dg-card ul{ margin:4px 0 8px; padding-inline-start:22px; font-size:13px; line-height:2; color:#475569; }
+  .dg-card strong{ color:#241e4e; }
+  .dg-kbd{
+    font-family:ui-monospace,Consolas,monospace; font-size:11.5px;
+    background:#f1f5f9; border:1px solid #e2e8f0; border-radius:5px;
+    padding:1px 7px; color:#5b21b6;
+  }
+
+  /* صناديق التلميح */
+  .dg-tip, .dg-warn{
+    display:flex; gap:11px; align-items:flex-start;
+    border-radius:12px; padding:11px 14px; margin-top:11px;
+    font-size:12.5px; line-height:1.9;
+  }
+  .dg-tip{ background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; }
+  .dg-warn{ background:#fffbeb; border:1px solid #fde68a; color:#92400e; }
+  .dg-tip .ic, .dg-warn .ic{ flex:none; font-size:15px; line-height:1.6; }
+  .dg-tip b, .dg-warn b{ font-weight:900; }
+
+  /* ════ الرسوم: محاكاة مصغّرة للنموذج الحقيقي ════ */
+  .dg-mock{
+    border:1px solid #e2e8f0; border-radius:14px; overflow:hidden;
+    background:#fff; box-shadow:0 8px 20px rgba(15,23,42,.07);
+    margin-top:13px; max-width:520px;
+  }
+  .dg-mock-bar{
+    display:flex; align-items:center; gap:7px; padding:8px 12px;
+    background:#f1f5f9; border-bottom:1px solid #e2e8f0;
+  }
+  .dg-mock-bar .dots{ display:flex; gap:5px; }
+  .dg-mock-bar .dots i{ width:9px; height:9px; border-radius:50%; }
+  .dg-mock-bar .dots i:nth-child(1){ background:#f87171; }
+  .dg-mock-bar .dots i:nth-child(2){ background:#fbbf24; }
+  .dg-mock-bar .dots i:nth-child(3){ background:#34d399; }
+  .dg-mock-bar .crumb{
+    flex:1; background:#fff; border:1px solid #e2e8f0; border-radius:7px;
+    padding:4px 10px; font-size:10.5px; font-weight:700; color:#64748b;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .dg-mock-body{ padding:14px; display:grid; gap:11px; }
+  .dg-mock-sechead{
+    display:flex; align-items:center; gap:9px; font-size:12px; font-weight:800; color:#241e4e;
+    padding-bottom:9px; border-bottom:1px dashed #eef2f7;
+  }
+  .dg-mock-sechead .ic{
+    width:26px; height:26px; border-radius:8px; display:grid; place-items:center;
+    font-size:11px; background:#ede9fe; color:#6d28d9; flex:none;
+  }
+  .dg-mock-grid2{ display:grid; grid-template-columns:1fr 1fr; gap:11px; }
+  @media (max-width:480px){ .dg-mock-grid2{ grid-template-columns:1fr; } }
+  .dg-mf{ display:grid; gap:5px; min-width:0; }
+  .dg-mf label{ font-size:10.5px; font-weight:800; color:#475569; }
+  .dg-mf label .req{ color:#dc2626; }
+  .dg-mf-input{
+    border:1.5px solid #e2e8f0; border-radius:8px; padding:8px 10px;
+    font-size:11.5px; color:#0f172a; background:#fff;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .dg-mf-input.hl{ border-color:#c4b5fd; background:#faf5ff; }
+  .dg-mf-input.ph{ color:#a3aec2; }
+  .dg-mf-select{ position:relative; }
+  .dg-mf-select::after{
+    content:"\f078"; font-family:"Font Awesome 6 Free"; font-weight:900;
+    position:absolute; inset-inline-end:10px; top:50%; transform:translateY(-50%);
+    font-size:9px; color:#94a3b8; pointer-events:none;
+  }
+  .dg-mf-help{ font-size:9.5px; color:#94a3b8; line-height:1.6; }
+
+  /* بطاقتا نوع الخدمة (محاكاة) */
+  .dg-svc{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  @media (max-width:480px){ .dg-svc{ grid-template-columns:1fr; } }
+  .dg-svc-card{
+    display:flex; gap:10px; align-items:center; border-radius:11px;
+    border:1.5px solid #e2e8f0; padding:10px 12px; background:#fff;
+  }
+  .dg-svc-card.on{
+    border-color:#7c3aed; background:#faf5ff;
+    box-shadow:0 0 0 3px rgba(124,58,237,.10);
+  }
+  .dg-svc-card .ic{
+    width:32px; height:32px; border-radius:9px; flex:none;
+    display:grid; place-items:center; font-size:13px;
+    background:#f1f5f9; color:#64748b;
+  }
+  .dg-svc-card.on .ic{ background:#ede9fe; color:#6d28d9; }
+  .dg-svc-card .t{ font-size:11.5px; font-weight:800; color:#0f172a; }
+  .dg-svc-card .d{ font-size:9.5px; color:#94a3b8; margin-top:2px; line-height:1.5; }
+  .dg-svc-card .ck{
+    margin-inline-start:auto; width:17px; height:17px; border-radius:5px; flex:none;
+    border:1.5px solid #cbd5e1; display:grid; place-items:center; font-size:9px; color:#fff;
+  }
+  .dg-svc-card.on .ck{ background:#7c3aed; border-color:#7c3aed; }
+
+  /* زر الحفظ (محاكاة) */
+  .dg-mock-actions{ display:flex; justify-content:flex-end; gap:9px; padding-top:4px; }
+  .dg-mock-btn{
+    display:inline-flex; align-items:center; gap:7px; border:0; border-radius:9px;
+    padding:8px 16px; font:inherit; font-size:11.5px; font-weight:800; cursor:default;
+  }
+  .dg-mock-btn.primary{
+    background:linear-gradient(135deg,#7c3aed,#5b21b6); color:#fff;
+    box-shadow:0 6px 14px rgba(124,58,237,.28);
+  }
+  .dg-mock-btn.ghost{ background:#f1f5f9; color:#475569; }
+
+  /* محاكاة القائمة الجانبية (الخطوة 1) */
+  .dg-sidemock{
+    max-width:240px; background:#fff; border:1px solid #e2e8f0; border-radius:13px;
+    padding:11px 10px; box-shadow:0 8px 20px rgba(15,23,42,.07); margin-top:13px;
+  }
+  .dg-sidemock .sec{
+    display:flex; align-items:center; gap:9px; padding:8px 10px; border-radius:9px;
+    font-size:11.5px; font-weight:800; color:#334155; background:#f8fafc;
+  }
+  .dg-sidemock .sec i.cv{ margin-inline-start:auto; font-size:9px; color:#94a3b8; transform:rotate(180deg); }
+  .dg-sidemock .sub{
+    display:flex; align-items:center; gap:8px; padding:7px 10px 7px;
+    margin-inline-start:18px; border-radius:8px; font-size:11px; font-weight:700; color:#64748b;
+  }
+  .dg-sidemock .sub.on{
+    background:#ede9fe; color:#5b21b6; font-weight:900; position:relative;
+  }
+  .dg-sidemock .sub.on::after{
+    content:"\f060"; font-family:"Font Awesome 6 Free"; font-weight:900;
+    margin-inline-start:auto; font-size:9px; animation:dgPoint 1.2s ease-in-out infinite;
+  }
+  @keyframes dgPoint{ 0%,100%{ transform:translateX(0); } 50%{ transform:translateX(-4px); } }
+
+  /* محاكاة شريط النجاح (الخطوة الأخيرة) */
+  .dg-flash{
+    display:flex; align-items:center; gap:10px; max-width:520px; margin-top:13px;
+    background:#f0fdf4; border:1px solid #86efac; border-radius:11px;
+    padding:10px 14px; font-size:12px; font-weight:800; color:#15803d;
+  }
+  .dg-flash i{ font-size:14px; }
+
+  /* صف مشترك في قائمة المشتركين (محاكاة) */
+  .dg-rowmock{
+    max-width:520px; margin-top:11px; border:1px solid #e2e8f0; border-radius:12px;
+    overflow:hidden; box-shadow:0 6px 16px rgba(15,23,42,.06);
+  }
+  .dg-rowmock .hd, .dg-rowmock .rw{
+    display:grid; grid-template-columns:1.2fr 1fr .8fr .8fr; gap:8px;
+    padding:9px 13px; font-size:10.5px; align-items:center;
+  }
+  .dg-rowmock .hd{ background:#f5f3ff; color:#5b21b6; font-weight:900; }
+  .dg-rowmock .rw{ background:#fff; color:#334155; font-weight:700; border-top:1px solid #f1f5f9; }
+  .dg-rowmock .rw.new{ background:#faf5ff; }
+  .dg-pill{
+    display:inline-flex; align-items:center; gap:5px; border-radius:999px;
+    padding:2px 9px; font-size:9.5px; font-weight:900; background:#dcfce7; color:#15803d;
+  }
+  .dg-pill .dot{ width:6px; height:6px; border-radius:50%; background:#16a34a; }
+
+  .dg-cap{ font-size:11px; color:#94a3b8; margin-top:8px; line-height:1.7; }
+  .dg-cap i{ color:#c4b5fd; }
+
+  /* ════ الطباعة: «حفظ كـ PDF» = window.print() ════
+     نخفي إطار الإدارة والفهرس والأزرار، ونفرد المحتوى بعرض كامل.
+     الرسوم HTML تُطبع كما هي (exact colors) فيخرج PDF بنفس روح
+     أدلة pdf_theme دون إعادة بناء reportlab. */
+  @media print{
+    .hb-side, .hb-side-overlay, .hb-topbar, header.hb-top,
+    .dg-toc, .dg-noprint, .hub-hero-actions{ display:none !important; }
+    .dg-layout{ grid-template-columns:1fr; }
+    .dg-card, .dg-mock, .dg-sidemock, .dg-rowmock{
+      box-shadow:none !important; break-inside:avoid;
+    }
+    .dg-step{ break-inside:avoid; }
+    body{ background:#fff !important; }
+    .dg-badge, .dg-mock-btn.primary, .dg-svc-card.on, .dg-tip, .dg-warn,
+    .dg-flash, .dg-pill, .dg-rowmock .hd{
+      -webkit-print-color-adjust:exact; print-color-adjust:exact;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{{ hub.hero(
+  "دليل: إضافة مشترك جديد",
+  subtitle="من فتح الصفحة حتى ظهور المشترك في القائمة — 6 خطوات بسيطة، خمس دقائق وتخلص.",
+  icon="user-plus",
+  actions_html='
+    <button type="button" class="hub-btn hub-btn--secondary" onclick="window.print()">
+      <i class="fa-solid fa-file-pdf"></i> حفظ كـ PDF
+    </button>
+    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.docs_center') + '">
+      <i class="fa-solid fa-arrow-right"></i> كل الأدلة
+    </a>
+  '
+) }}
+
+<div class="dg-layout">
+
+  {# ───── الفهرس الجانبي اللاصق ───── #}
+  <nav class="dg-toc dg-noprint" aria-label="فهرس الدليل">
+    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> فهرس الخطوات</div>
+    <a href="#dg-s1" data-dg-toc><span class="n">1</span> افتح صفحة الإضافة</a>
+    <a href="#dg-s2" data-dg-toc><span class="n">2</span> اسم الدخول وكلمة المرور</a>
+    <a href="#dg-s3" data-dg-toc><span class="n">3</span> نوع الخدمة</a>
+    <a href="#dg-s4" data-dg-toc><span class="n">4</span> الباقة والمدير</a>
+    <a href="#dg-s5" data-dg-toc><span class="n">5</span> البيانات الإضافية</a>
+    <a href="#dg-s6" data-dg-toc><span class="n">6</span> الحفظ وما بعده</a>
+  </nav>
+
+  {# ───── عمود المحتوى ───── #}
+  <div class="dg-main">
+
+    <div class="dg-lead">
+      <span class="ic"><i class="fa-solid fa-lightbulb"></i></span>
+      <div>
+        <h3>قبل ما نبدأ — شو يعني «مشترك»؟</h3>
+        <p>
+          المشترك هو الزبون اللي بيدخل على الإنترنت عندك باسم وكلمة مرور (هوت سبوت أو برودباند).
+          في هذا الدليل رح نضيف مشتركًا جديدًا من الصفر: حقلين إجباريين فقط، والباقي اختياري
+          تعبّيه وقت ما تحتاجه. خلّينا نمشي خطوة خطوة.
+        </p>
+      </div>
+    </div>
+
+    {# ════ الخطوة 1 ════ #}
+    <section class="dg-step" id="dg-s1">
+      <div class="dg-badge">1</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-door-open"></i> افتح صفحة «إضافة مشترك»</h2>
+        <p>
+          من القائمة الجانبية افتح قسم <strong>«المشتركون»</strong>، ثم اضغط على
+          <strong>«إضافة مشترك»</strong>. رح تفتح لك صفحة النموذج مقسّمة لأقسام واضحة،
+          وفيها فهرس جانبي اسمه «أقسام النموذج» يساعدك تتنقّل.
+        </p>
+
+        <div class="dg-sidemock" aria-hidden="true">
+          <div class="sec"><i class="fa-solid fa-users"></i> المشتركون <i class="fa-solid fa-chevron-down cv"></i></div>
+          <div class="sub">نظرة عامة</div>
+          <div class="sub">المشتركين 360</div>
+          <div class="sub on">إضافة مشترك</div>
+          <div class="sub">مجموعات المشتركين</div>
+          <div class="sub">المشتركون المتصلون</div>
+        </div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> هكذا تبدو القائمة — اضغط البند المظلّل بالبنفسجي.</div>
+
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة:</b> ما يلزمك تعبّي كل الأقسام. القسم الأول «حساب الإنترنت» هو المهم —
+          الباقي (السرعة، الحصة، الشبكة، البرودباند) اختياري للتخصيص.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 2 ════ #}
+    <section class="dg-step" id="dg-s2">
+      <div class="dg-badge">2</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-key"></i> عبّي اسم الدخول وكلمة المرور</h2>
+        <p>
+          في قسم <strong>«حساب الإنترنت»</strong> أول حقلين هما الإجباريان الوحيدان
+          (المعلَّمان بنجمة حمراء <span style="color:#dc2626;font-weight:900">*</span>):
+        </p>
+        <ul>
+          <li><strong>اسم الدخول:</strong> الاسم الذي يكتبه المشترك ليدخل على الإنترنت — مثل <span class="dg-kbd">ahmad2026</span>.</li>
+          <li><strong>كلمة المرور:</strong> تستخدمها أجهزة الشبكة للتحقق من الحساب. زر العين بجانبها يُظهرها لك.</li>
+        </ul>
+
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">إضافة مشترك › حساب الإنترنت</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-mock-sechead"><span class="ic"><i class="fa-solid fa-wifi"></i></span> حساب الإنترنت</div>
+            <div class="dg-mock-grid2">
+              <div class="dg-mf">
+                <label>اسم الدخول <span class="req">*</span></label>
+                <div class="dg-mf-input hl">ahmad2026</div>
+                <div class="dg-mf-help">الاسم الذي يستخدمه المشترك لتسجيل الدخول.</div>
+              </div>
+              <div class="dg-mf">
+                <label>كلمة المرور <span class="req">*</span></label>
+                <div class="dg-mf-input hl">••••••••&nbsp;&nbsp;<i class="fa-solid fa-eye" style="color:#a78bfa"></i></div>
+                <div class="dg-mf-help">اضغط على العين لإظهارها أو على أيقونة النسخ لتعطيها للمشترك.</div>
+              </div>
+            </div>
+            <div class="dg-mock-grid2">
+              <div class="dg-mf">
+                <label>الحالة</label>
+                <div class="dg-mf-select"><div class="dg-mf-input">مفعَّل</div></div>
+                <div class="dg-mf-help">عند التعطيل لن يستطيع المشترك الدخول.</div>
+              </div>
+              <div class="dg-mf">
+                <label>تجديد تلقائي</label>
+                <div style="display:flex;align-items:center;gap:8px;padding-top:3px">
+                  <span style="position:relative;width:36px;height:20px;background:#e2e8f0;border-radius:99px;flex:none">
+                    <span style="position:absolute;top:2.5px;inset-inline-start:3px;width:15px;height:15px;background:#fff;border-radius:50%;box-shadow:0 1px 2px rgba(0,0,0,.2)"></span></span>
+                  <span style="font-size:10px;font-weight:800;color:#64748b">معطَّل</span>
+                </div>
+                <div class="dg-mf-help">يجدد الحساب تلقائيًا عند الانتهاء.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="dg-warn">
+          <span class="ic">⚠️</span>
+          <span><b>انتبه:</b> اسم الدخول <b>لا يمكن تغييره بعد الحفظ</b> — اختره صح من أول مرة.
+          الحالة اتركها «مفعَّل» حتى يقدر المشترك يدخل فورًا.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 3 ════ #}
+    <section class="dg-step" id="dg-s3">
+      <div class="dg-badge">3</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-toggle-on"></i> اختر نوع الخدمة</h2>
+        <p>
+          تحت الحقول رح تشوف بطاقتين كبيرتين — اضغط على اللي تناسب طريقة اتصال المشترك
+          (وتقدر تختار الاثنتين معًا):
+        </p>
+        <ul>
+          <li><strong>هوت سبوت:</strong> دخول عبر صفحة Captive Portal — مناسب لكروت الواي فاي والزبائن المؤقتين.</li>
+          <li><strong>برودباند:</strong> اشتراك منزلي باسم وكلمة سرّ (PPPoE) — مناسب للزبائن الثابتين.</li>
+        </ul>
+
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">إضافة مشترك › نوع الخدمة</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-svc">
+              <div class="dg-svc-card on">
+                <span class="ic"><i class="fa-solid fa-wifi"></i></span>
+                <span><span class="t">هوت سبوت</span><div class="d">دخول عبر صفحة Captive Portal</div></span>
+                <span class="ck"><i class="fa-solid fa-check"></i></span>
+              </div>
+              <div class="dg-svc-card">
+                <span class="ic"><i class="fa-solid fa-plug"></i></span>
+                <span><span class="t">برودباند</span><div class="d">اشتراك منزلي باسم وكلمة سرّ</div></span>
+                <span class="ck"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> البطاقة المختارة تتلوّن بالبنفسجي مع علامة صح.</div>
+
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة:</b> مش متأكد؟ ابدأ بـ«هوت سبوت» — أغلب مزوّدي الخدمة يبدؤون فيها،
+          وتقدر تضيف «برودباند» لنفس المشترك لاحقًا بدون إعادة إنشاء.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 4 ════ #}
+    <section class="dg-step" id="dg-s4">
+      <div class="dg-badge">4</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-tags"></i> اختر الباقة (وحدّد المدير إن أردت)</h2>
+        <p>
+          هون القرار الأهم: حقل <strong>«باقة الخدمة»</strong>. الباقة هي اللي تحدد
+          <strong>السرعة والحصة ومدة الاشتراك والسعر</strong> — يعني تاريخ انتهاء المشترك
+          يُحسب تلقائيًا من مدة الباقة، ما تحتاج تكتبه بيدك.
+        </p>
+        <ul>
+          <li><strong>المدير المسؤول:</strong> اختياري — اختر المدير أو الموزع الذي يتابع هذا الحساب.</li>
+          <li><strong>المجموعة:</strong> اختياري — لتصنيف المشتركين (حي، برج، نوع زبون...).</li>
+          <li><strong>السعر المخصّص:</strong> اتركه فارغًا ليُعتمد سعر الباقة؛ عبّيه فقط إذا اتفقت مع هذا المشترك على سعر مختلف.</li>
+        </ul>
+
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">إضافة مشترك › الباقة والإدارة</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-mock-grid2">
+              <div class="dg-mf">
+                <label>باقة الخدمة</label>
+                <div class="dg-mf-select"><div class="dg-mf-input hl">باقة 10 ميجا — شهري</div></div>
+                <div class="dg-mf-help">تحدد السرعة والحصة ومدة الاستخدام.</div>
+              </div>
+              <div class="dg-mf">
+                <label>المدير المسؤول</label>
+                <div class="dg-mf-select"><div class="dg-mf-input">— بدون —</div></div>
+                <div class="dg-mf-help">اختر المدير الذي يتابع هذا الحساب.</div>
+              </div>
+            </div>
+            <div class="dg-mock-grid2">
+              <div class="dg-mf">
+                <label>المجموعة</label>
+                <div class="dg-mf-select"><div class="dg-mf-input">— بدون —</div></div>
+              </div>
+              <div class="dg-mf">
+                <label>السعر المخصّص لهذا المشترك</label>
+                <div class="dg-mf-input ph">اتركه فارغًا لاستخدام سعر العرض</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="dg-warn">
+          <span class="ic">⚠️</span>
+          <span><b>انتبه:</b> إذا تركت الباقة على «— بدون —» رح ينحفظ المشترك لكن بلا سرعة ولا
+          مدة محددة. جهّز باقاتك أولًا من <b>العروض والسرعات ← إضافة عرض</b>، بعدين أضف المشتركين.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 5 ════ #}
+    <section class="dg-step" id="dg-s5">
+      <div class="dg-badge">5</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-id-card"></i> البيانات الإضافية — كلها اختيارية</h2>
+        <p>
+          باقي أقسام النموذج تخصيصات تعبّيها وقت الحاجة فقط. أكثرها فائدة قسم
+          <strong>«المعلومات الشخصية»</strong>: اكتب اسم المشترك ورقم <strong>الجوال</strong> —
+          الجوال تحديدًا مهم لأنه يُستخدم لاحقًا في رسائل الواتساب والتنبيهات.
+        </p>
+        <ul>
+          <li><strong>المعلومات الشخصية:</strong> الاسم، الجوال، البريد، المدينة، ملاحظات.</li>
+          <li><strong>السرعة:</strong> سرعة مخصصة أو مؤقتة تتجاوز سرعة الباقة (اتركها 0 = قيمة الباقة).</li>
+          <li><strong>الحصة والوقت:</strong> كوتا تنزيل/رفع وحدود وقت الاتصال.</li>
+          <li><strong>الشبكة:</strong> قفل ماك أدرس، IP ثابت، عدد الأجهزة المسموحة.</li>
+          <li><strong>البرودباند:</strong> اسم دخول وكلمة مرور PPPoE منفصلان (إن اخترت خدمة البرودباند).</li>
+        </ul>
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة:</b> القاعدة الذهبية في كل حقول السرعة والحصة: <b>0 أو فارغ = استخدم قيمة الباقة</b>.
+          لا تعبّي رقمًا إلا إذا كنت تريد فعلًا تجاوز ما تحدده الباقة لهذا المشترك بالذات.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 6 ════ #}
+    <section class="dg-step" id="dg-s6">
+      <div class="dg-badge">6</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-floppy-disk"></i> احفظ — وشوف وين راح المشترك</h2>
+        <p>
+          انزل لآخر الصفحة واضغط زر <strong>«حفظ المشترك»</strong> البنفسجي.
+        </p>
+
+        <div class="dg-mock" aria-hidden="true" style="max-width:420px">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">إضافة مشترك › أسفل الصفحة</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-mock-actions">
+              <span class="dg-mock-btn ghost">إلغاء</span>
+              <span class="dg-mock-btn primary"><i class="fa-solid fa-floppy-disk"></i> حفظ المشترك</span>
+            </div>
+          </div>
+        </div>
+
+        <p style="margin-top:13px">بعد الحفظ يصير ثلاث أشياء تلقائيًا:</p>
+        <ul>
+          <li>تظهر رسالة نجاح خضراء: <strong>«تم إنشاء المستخدم»</strong>.</li>
+          <li>ينقلك النظام مباشرة إلى <strong>قائمة المشتركين</strong> وفيها المشترك الجديد بحالة «مفعَّل».</li>
+          <li>يُحسب <strong>تاريخ الانتهاء</strong> من مدة الباقة، ويصير المشترك جاهزًا للدخول فورًا باسمه وكلمة مروره.</li>
+        </ul>
+
+        <div class="dg-flash" aria-hidden="true">
+          <i class="fa-solid fa-circle-check"></i> تم إنشاء المستخدم «ahmad2026».
+        </div>
+
+        <div class="dg-rowmock" aria-hidden="true">
+          <div class="hd"><span>اسم الدخول</span><span>الباقة</span><span>الحالة</span><span>الانتهاء</span></div>
+          <div class="rw new">
+            <span style="font-weight:900;color:#241e4e">ahmad2026</span>
+            <span>باقة 10 ميجا</span>
+            <span><span class="dg-pill"><span class="dot"></span> مفعَّل</span></span>
+            <span>بعد 30 يومًا</span>
+          </div>
+          <div class="rw"><span>sara_net</span><span>باقة 20 ميجا</span><span><span class="dg-pill"><span class="dot"></span> مفعَّل</span></span><span>بعد 12 يومًا</span></div>
+        </div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> المشترك الجديد يظهر أعلى القائمة — اضغط على اسمه لفتح ملفه الكامل (360°).</div>
+
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>وبعدين؟</b> من ملف المشترك تقدر تمدّد الاشتراك، تغيّر الباقة، ترسل له رسالة،
+          أو تشوف جلساته واستهلاكه — كل العمليات اليومية من مكان واحد.</span>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+{# ── scrollspy خفيف: يبرز بند الفهرس المقابل للخطوة الظاهرة ── #}
+<script>
+(function(){
+  'use strict';
+  var links = Array.prototype.slice.call(document.querySelectorAll('[data-dg-toc]'));
+  if (!links.length || !('IntersectionObserver' in window)) return;
+  var map = {};
+  links.forEach(function(a){ map[a.getAttribute('href').slice(1)] = a; });
+  var obs = new IntersectionObserver(function(entries){
+    entries.forEach(function(en){
+      if (!en.isIntersecting) return;
+      links.forEach(function(a){ a.classList.remove('is-active'); });
+      var a = map[en.target.id];
+      if (a) a.classList.add('is-active');
+    });
+  }, { rootMargin: '-35% 0px -55% 0px' });
+  Object.keys(map).forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) obs.observe(el);
+  });
+})();
+</script>
+
+{% endblock %}

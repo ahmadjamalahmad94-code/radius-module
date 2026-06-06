@@ -90,6 +90,16 @@ def notify_whatsapp(
 
     # The bridge enqueue is the only step that may reach the network. Wrap it so
     # NOTHING it does can propagate into the caller's RADIUS / dunning / etc flow.
+    # ── تطبيع الرقم بمفتاح الدولة (إعداد comms.country_dial_code) ──
+    # المحلي 0599... يصبح +970599... قبل تسليمه لجسر واتساب. أي فشل في
+    # التطبيع غير قاتل: نُبقي الرقم كما هو ونكمل الإرسال.
+    try:
+        from .comms_providers import normalize_msisdn, tenant_dial_code
+
+        recipient_phone = normalize_msisdn(recipient_phone, tenant_dial_code(tenant_id)) or recipient_phone
+    except Exception:  # noqa: BLE001 — التطبيع يجب ألا يكسر خط الإرسال
+        pass
+
     try:
         from .admin_panel_client import AdminPanelClient
 

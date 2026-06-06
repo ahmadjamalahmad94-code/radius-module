@@ -1,16 +1,46 @@
 <!doctype html>
-<html lang="ar" dir="rtl">
+<html lang="{{ get_locale() }}" dir="{{ text_dir }}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  {# توكن CSRF للنماذج المبنية بالجافاسكربت (تصدير الجداول وغيره) #}
+  <meta name="csrf-token" content="{{ csrf_token() if csrf_token is defined else '' }}">
   <title>{% block title %}Hobe Hub — Radius{% endblock %}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <style>
+    /* Local Cairo fallback — keeps the UI (and the card SVG preview)
+       on the exact same family the PDF export embeds, even when the
+       Google Fonts CDN is unreachable. The CDN stylesheet below is
+       parsed later, so when it loads its faces win (unchanged look);
+       offline, these shipped TTFs take over. */
+    @font-face{font-family:'Cairo';font-style:normal;font-weight:400;font-display:swap;
+      src:url("{{ url_for('static', filename='fonts/Cairo-Regular.ttf') }}") format('truetype')}
+    @font-face{font-family:'Cairo';font-style:normal;font-weight:500 700;font-display:swap;
+      src:url("{{ url_for('static', filename='fonts/Cairo-Bold.ttf') }}") format('truetype')}
+    @font-face{font-family:'Cairo';font-style:normal;font-weight:800 900;font-display:swap;
+      src:url("{{ url_for('static', filename='fonts/Cairo-Black.ttf') }}") format('truetype')}
+    /* خط المراعي (Almarai) — خط البطاقات الأساسي: معاينة SVG في مصمم
+       البطاقات تطلب 'Almarai' أولًا، وتصدير PDF يرسم بنفس ملفات TTF
+       المشحونة هذه، فتتطابق المعاينة مع الملف المطبوع حرفًا بحرف.
+       الأوزان: 400 عادي، 700 عريض، 800-950 عريض جدًا (ExtraBold). */
+    @font-face{font-family:'Almarai';font-style:normal;font-weight:400;font-display:swap;
+      src:url("{{ url_for('static', filename='fonts/Almarai-Regular.ttf') }}") format('truetype')}
+    @font-face{font-family:'Almarai';font-style:normal;font-weight:500 700;font-display:swap;
+      src:url("{{ url_for('static', filename='fonts/Almarai-Bold.ttf') }}") format('truetype')}
+    @font-face{font-family:'Almarai';font-style:normal;font-weight:800 950;font-display:swap;
+      src:url("{{ url_for('static', filename='fonts/Almarai-ExtraBold.ttf') }}") format('truetype')}
+  </style>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap">
+  {# الخط اللاتيني (Inter) — يُستخدم عند اختيار الإنجليزية بجانب Cairo للعربية #}
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_layout.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/sidebar_v2.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/hub_v2.css') }}">
+  {# نظام الجداول والهيرو الموحّد (uds) — يُحمَّل عالميًا لأن كثيرًا من الصفحات
+     تستخدم ماكروهات hub.megahero/uds دون تضمين الملف يدويًا، فكان تصميمها يضيع #}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_design_system.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_visual_polish.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/reports.css') }}">
@@ -174,27 +204,118 @@
 </div>
 
 <header class="topbar">
-  <button type="button" class="hb-burger" data-hb-mobile-open aria-label="فتح القائمة">
+  <button type="button" class="hb-burger" data-hb-mobile-open aria-label="{{ _('فتح القائمة') }}">
     <i class="fa-solid fa-bars"></i>
   </button>
   <div class="actions">
     {# #16: top-bar icons wired to real routes (endpoint_exists guard → never 500s).
        gear → RADIUS settings · bell → alerts/notifications center · envelope →
        license-panel messages (welcome / renewal / near-expiry deliveries). #}
-    <a class="ic" title="إعدادات الراديوس"
+    <a class="ic" title="{{ _('إعدادات الراديوس') }}"
        href="{{ url_for('radius.settings_page') if endpoint_exists('radius.settings_page') else '#' }}">
       <i class="fa-solid fa-gear"></i>
     </a>
-    <a class="ic" title="مركز التنبيهات"
-       href="{{ url_for('radius.mt_alerts_index') if endpoint_exists('radius.mt_alerts_index') else '#' }}">
-      <i class="fa-solid fa-bell"></i>
-      <span class="dot">2</span>
-    </a>
-    <a class="ic" title="رسائل لوحة التراخيص"
+    {# الجرس: قائمة منسدلة بأحدث التنبيهات المفتوحة — كل تنبيه رابط يفتح
+       صفحة تفاصيله مباشرة، والعدّاد حقيقي من قاعدة البيانات بدل الرقم الثابت. #}
+    {% set _bell = topbar_alerts(6) if topbar_alerts is defined else {'count': 0, 'items': []} %}
+    {% set _alerts_url = url_for('radius.mt_alerts_index') if endpoint_exists('radius.mt_alerts_index') else '#' %}
+    <div class="bell-wrap" style="position:relative">
+      <a class="ic" title="{{ _('مركز التنبيهات') }}" href="{{ _alerts_url }}" id="bell-toggle"
+         onclick="var m=document.getElementById('bell-menu');if(m){event.preventDefault();m.classList.toggle('open');m.style.display=m.classList.contains('open')?'block':'none';}">
+        <i class="fa-solid fa-bell"></i>
+        {% if _bell['count'] %}<span class="dot">{{ _bell['count'] if _bell['count'] < 100 else '99+' }}</span>{% endif %}
+      </a>
+      {# لوحة الجرس — بهوية النظام (أبيض، زوايا 14px، ظل ناعم، بنفسجي للهوفر) #}
+      <div id="bell-menu"
+           style="display:none;position:absolute;top:44px;inset-inline-end:0;background:#fff;
+                  border:1px solid #EEEDF3;border-radius:14px;padding:6px;
+                  box-shadow:0 10px 30px rgba(15,23,42,.10), 0 2px 8px rgba(15,23,42,.06);
+                  min-width:300px;max-width:340px;z-index:90;overflow:hidden">
+        <div style="padding:8px 12px;font-size:11px;color:#2E1F8C;
+                    letter-spacing:.4px;font-weight:800;border-radius:9px;
+                    background:#F4F1FE;margin-bottom:4px;
+                    display:flex;align-items:center;justify-content:space-between">
+          <span><i class="fa-solid fa-bell" style="font-size:10px;margin-inline-end:5px;color:#6B5AED"></i>{{ _('التنبيهات المفتوحة') }}</span>
+          <span style="background:#EDE9FE;color:#2E1F8C;border-radius:999px;padding:1px 8px;font-size:10.5px">{{ _bell['count'] }}</span>
+        </div>
+        {% if _bell['items'] %}
+          {% for n in _bell['items'] %}
+          {# كل تنبيه قابل للنقر → صفحة تفاصيل التنبيه نفسه #}
+          <a href="{{ url_for('radius.mt_alerts_detail', alert_id=n.id) if endpoint_exists('radius.mt_alerts_detail') else _alerts_url }}"
+             style="display:flex;align-items:flex-start;gap:9px;padding:9px 10px;text-decoration:none;
+                    color:#1F2937;font-size:12.5px;line-height:1.6;border-radius:9px"
+             onmouseover="this.style.background='#F4F1FE'"
+             onmouseout="this.style.background='transparent'">
+            <i class="fa-solid {{ 'fa-circle-exclamation' if n.severity == 'critical' else ('fa-triangle-exclamation' if n.severity == 'warning' else 'fa-circle-info') }}"
+               style="margin-top:3px;font-size:12px;
+                      color:{{ '#EF4444' if n.severity == 'critical' else ('#F59E0B' if n.severity == 'warning' else '#3D8DD6') }}"></i>
+            <span style="flex:1;font-weight:700">{{ n.title }}</span>
+            <i class="fa-solid fa-chevron-left" style="margin-top:4px;font-size:9px;color:#94A3B8"></i>
+          </a>
+          {% endfor %}
+        {% else %}
+          <div style="padding:16px 12px;font-size:12.5px;color:#94A3B8;text-align:center">
+            <i class="fa-regular fa-bell-slash" style="display:block;font-size:18px;margin-bottom:6px;color:#B6BCC8"></i>
+            {{ _('لا توجد تنبيهات مفتوحة الآن.') }}
+          </div>
+        {% endif %}
+        <a href="{{ _alerts_url }}"
+           style="display:block;margin-top:4px;padding:9px 12px;text-decoration:none;text-align:center;
+                  color:#6B5AED;font-size:11.5px;font-weight:800;background:#F4F1FE;border-radius:9px"
+           onmouseover="this.style.background='#EDE9FE'"
+           onmouseout="this.style.background='#F4F1FE'">
+          {{ _('عرض كل التنبيهات') }} <i class="fa-solid fa-arrow-left" style="font-size:10px"></i>
+        </a>
+      </div>
+    </div>
+    <a class="ic" title="{{ _('رسائل لوحة التراخيص') }}"
        href="{{ url_for('radius.communications_deliveries') if endpoint_exists('radius.communications_deliveries') else '#' }}">
       <i class="fa-solid fa-envelope"></i>
       <span class="dot">3</span>
     </a>
+
+    {# ───── مبدّل اللغة ─────
+       زر مصغّر يعرض علم/اسم اللغة الحالية، وعند النقر يفتح قائمة بكل اللغات
+       المدعومة. كل عنصر رابط إلى radius.set_locale يحفظ الاختيار ويعيد التحميل
+       لنفس الصفحة (next=request.path). يتبع نفس هوية قوائم الهيدر (أبيض،
+       زوايا 14px، ظل ناعم، بنفسجي للهوفر) ونفس آلية الفتح/الإغلاق بالأسفل. #}
+    {% set _cur_lang = LANGUAGES.get(current_locale, {}) %}
+    <div class="lang-wrap" style="position:relative">
+      <span class="lang-pill" id="lang-toggle"
+            onclick="document.getElementById('lang-menu').classList.toggle('open')"
+            title="{{ _('تغيير اللغة') }}"
+            style="display:flex;align-items:center;gap:7px;background:#F4F1FE;
+                   color:#1F2937;padding:5px 12px;border-radius:8px;font-size:12px;
+                   font-weight:700;cursor:pointer;border:1px solid #E3E1EC">
+        <span style="font-size:14px;line-height:1">{{ _cur_lang.get('flag', '🌐') }}</span>
+        <span>{{ _cur_lang.get('name', current_locale) }}</span>
+        <i class="fa-solid fa-caret-down" style="font-size:9px;opacity:.7"></i>
+      </span>
+      <div id="lang-menu"
+           style="display:none;position:absolute;top:44px;inset-inline-end:0;background:#fff;
+                  border:1px solid #EEEDF3;border-radius:14px;padding:6px;
+                  box-shadow:0 10px 30px rgba(15,23,42,.10), 0 2px 8px rgba(15,23,42,.06);
+                  min-width:200px;z-index:90;overflow:hidden">
+        <div style="padding:8px 12px;font-size:11px;color:#2E1F8C;
+                    letter-spacing:.4px;font-weight:800;border-radius:9px;
+                    background:#F4F1FE;margin-bottom:4px">
+          <i class="fa-solid fa-globe" style="font-size:10px;margin-inline-end:5px;color:#6B5AED"></i>{{ _('اللغة') }}
+        </div>
+        {% for code in SUPPORTED_LOCALES %}
+        {% set _lang = LANGUAGES.get(code, {}) %}
+        <a href="{{ url_for('radius.set_locale', locale=code, next=request.path) }}"
+           style="display:flex;align-items:center;gap:9px;padding:9px 10px;text-decoration:none;
+                  color:#1F2937;font-size:12.5px;font-weight:700;border-radius:9px;
+                  {% if code == current_locale %}background:#F4F1FE{% endif %}"
+           onmouseover="this.style.background='#F4F1FE'"
+           onmouseout="this.style.background='{{ '#F4F1FE' if code == current_locale else 'transparent' }}'">
+          <span style="font-size:15px;line-height:1">{{ _lang.get('flag', '🌐') }}</span>
+          <span style="flex:1">{{ _lang.get('name', code) }}</span>
+          {% if code == current_locale %}<i class="fa-solid fa-check" style="font-size:10px;color:#6B5AED"></i>{% endif %}
+        </a>
+        {% endfor %}
+      </div>
+    </div>
 
     {# Tenant switcher #}
     {% set _admin_tenants = admin_tenants() %}
@@ -216,7 +337,7 @@
         <div style="padding:7px 12px;font-size:10px;color:var(--hr-text-muted);
                     text-transform:uppercase;letter-spacing:.8px;font-weight:800;
                     border-bottom:1px solid var(--hr-border);background:var(--hr-soft)">
-          تبديل الجهة
+          {{ _('تبديل الجهة') }}
         </div>
         {% for t in _admin_tenants %}
         <form method="post" action="{{ url_for('radius.auth_switch_tenant') }}" style="margin:0">
@@ -237,7 +358,7 @@
            style="display:block;padding:8px 12px;border-top:1px solid var(--hr-border);
                   text-decoration:none;color:var(--hr-cyan-700);font-size:11.5px;
                   background:var(--hr-soft);font-weight:700">
-          <i class="fa-solid fa-cog"></i>&nbsp; إدارة الجهات
+          <i class="fa-solid fa-cog"></i>&nbsp; {{ _('إدارة الجهات') }}
         </a>
         {% endif %}
       </div>
@@ -259,11 +380,11 @@
                   box-shadow:var(--hr-shadow-pop);min-width:180px;z-index:60;overflow:hidden">
         <a href="{{ url_for('radius.account') }}"
            style="display:block;padding:9px 12px;text-decoration:none;color:var(--hr-text);font-size:12.5px;border-bottom:1px solid var(--hr-divider, var(--hr-border))">
-          <i class="fa-solid fa-user-shield"></i>&nbsp; الملف الشخصي
+          <i class="fa-solid fa-user-shield"></i>&nbsp; {{ _('الملف الشخصي') }}
         </a>
         <a href="{{ url_for('radius.auth_logout') }}"
            style="display:block;padding:9px 12px;text-decoration:none;color:var(--hr-red);font-size:12.5px;background:#FCEEF1;font-weight:700">
-          <i class="fa-solid fa-right-from-bracket"></i>&nbsp; تسجيل الخروج
+          <i class="fa-solid fa-right-from-bracket"></i>&nbsp; {{ _('تسجيل الخروج') }}
         </a>
       </div>
     </div>
@@ -297,11 +418,10 @@
     <div class="mt-warn-banner" role="alert">
       <i class="fa-solid fa-triangle-exclamation"></i>
       <span>
-        {{ mt_health.skipped }} راوتر مايكروتيك غير متاح حالياً —
-        لن تعمل عمليات DHCP / reconciliation / CoA حتى يعود.
+        {{ _('%(count)s راوتر مايكروتيك غير متاح حالياً — لن تعمل عمليات DHCP / reconciliation / CoA حتى يعود.', count=mt_health.skipped) }}
       </span>
       <a class="mt-warn-cta" href="{{ url_for('radius.diagnostics') }}">
-        تشخيص الآن <i class="fa-solid fa-arrow-left"></i>
+        {{ _('تشخيص الآن') }} <i class="fa-solid fa-arrow-left"></i>
       </a>
     </div>
   {% endif %}
@@ -312,7 +432,7 @@
         {% for cat, msg in messages %}
           <div class="flash flash-{{ cat }}" role="alert">
             <span class="flash-msg">{{ msg }}</span>
-            <button type="button" class="flash-close" aria-label="إغلاق" onclick="this.parentNode.remove()">&times;</button>
+            <button type="button" class="flash-close" aria-label="{{ _('إغلاق') }}" onclick="this.parentNode.remove()">&times;</button>
           </div>
         {% endfor %}
       </div>
@@ -341,34 +461,161 @@
   {% block content %}{% endblock %}
 
   <div class="app-footer">
-    <span>الإصدار 0.1.0</span>
-    <span>حقوق النشر © 2017-2026 Hobe Hub</span>
+    <span>{{ _('الإصدار %(v)s', v='0.1.0') }}</span>
+    <span>{{ _('حقوق النشر') }} © <bdi dir="ltr">2017–2026</bdi> Hobe Hub</span>
   </div>
 </main>
 
 <script src="{{ url_for('static', filename='js/dashboard_table.js') }}"></script>
 <script src="{{ url_for('static', filename='js/sidebar_v2.js') }}"></script>
 <script src="{{ url_for('static', filename='js/page_guide_collapse.js') }}"></script>
+{# القوائم المنسدلة الحديثة الموحّدة — يلفّ كل select.hub-select تلقائيًا #}
+<script src="{{ url_for('static', filename='js/hub_select.js') }}"></script>
+{# منتقي التاريخ العربي الموحّد — يستبدل تقويم المتصفح لكل حقول
+   date / datetime-local (أشهر شامية، اختيار يكتب ISO في الحقل الأصلي) #}
+<script src="{{ url_for('static', filename='js/hub_date.js') }}"></script>
+{# بطاقات الشرح العائمة الموحّدة (.hub-hint) — portal لا يُقص أبدًا #}
+<script src="{{ url_for('static', filename='js/hub_hint.js') }}"></script>
 <script>
-  // dropdowns (tenant + user)
+  // ───── حزمة الترجمة لنصوص JavaScript المرئية ─────
+  // كل النصوص العربية التي يبنيها السكربت ديناميكيًا تُبثّ هنا من Jinja عبر
+  // _() ثم |tojson، فتُترجم تلقائيًا عند اختيار الإنجليزية (صفر عربي مكتوب
+  // داخل JS). قاموس مساعدة الحقول (hints) يُبثّ كذلك مع _() لكل قيمة.
+  window.__I18N__ = {
+    pageSections: {{ _('أقسام الصفحة')|tojson }},
+    sectionsNote: {{ _('ابدأ من القسم الأقرب لعملك. عند الانتقال لقسم مغلق سأفتحه لك تلقائيًا.')|tojson }},
+    sectionPrefix: {{ _('القسم')|tojson }},
+    hints: {
+      username: {{ _('اسم الدخول الذي يستخدمه الشخص عند الاتصال أو تسجيل الدخول.')|tojson }},
+      password: {{ _('اكتب كلمة مرور آمنة، واتركها فارغة إذا لم تكن تريد تغييرها.')|tojson }},
+      name: {{ _('اكتب اسمًا واضحًا يظهر في القوائم ويسهّل البحث.')|tojson }},
+      code: {{ _('رمز داخلي قصير يساعدك في الترتيب والبحث.')|tojson }},
+      display_name: {{ _('الاسم الظاهر للمستخدم داخل الواجهة.')|tojson }},
+      full_name: {{ _('الاسم الحقيقي أو الوصفي لصاحب الحساب.')|tojson }},
+      email: {{ _('بريد للتواصل أو استلام التنبيهات عند الحاجة.')|tojson }},
+      mobile: {{ _('رقم جوال واضح للتواصل السريع.')|tojson }},
+      phone: {{ _('رقم بديل إن وجد.')|tojson }},
+      notes: {{ _('ملاحظات داخلية تساعدك عند المراجعة ولا تظهر عادة للمستفيد.')|tojson }},
+      description: {{ _('وصف قصير يوضّح الهدف من هذا العنصر.')|tojson }},
+      enabled: {{ _('عند التعطيل يبقى العنصر محفوظًا لكنه لا يعمل في الاستخدام الجديد.')|tojson }},
+      status: {{ _('اختر الحالة الحالية لهذا العنصر.')|tojson }},
+      plan_id: {{ _('اختر باقة الخدمة التي تحدد السرعة والحصة ومدة الاستخدام.')|tojson }},
+      service_type: {{ _('اختر نوع الخدمة التي سيستخدمها الحساب على الشبكة.')|tojson }},
+      account_type: {{ _('اختر نوع الحساب حسب طريقة استخدامه.')|tojson }},
+      auth_mode: {{ _('طريقة الدخول التي سيستخدمها المستفيد على الشبكة.')|tojson }},
+      group_name: {{ _('اسم مجموعة اختياري لتنظيم الحسابات المتشابهة.')|tojson }},
+      manager_id: {{ _('رقم المدير المسؤول إن كنت تستخدم توزيعًا إداريًا.')|tojson }},
+      subscriber_ref: {{ _('مرجع اختياري يربط الحساب بسجل داخلي آخر.')|tojson }},
+      package_name: {{ _('اسم واضح لهذه الدفعة حتى تميّزها عند المراجعة.')|tojson }},
+      count: {{ _('عدد العناصر التي سيتم إنشاؤها في هذه العملية.')|tojson }},
+      username_length: {{ _('عدد خانات اسم الدخول الذي سيتم توليده.')|tojson }},
+      password_length: {{ _('عدد خانات كلمة المرور التي سيتم توليدها.')|tojson }},
+      password_generation_type: {{ _('اختر نمط كلمة المرور حسب مستوى الأمان المطلوب.')|tojson }},
+      prefix_or_suffix_value: {{ _('نص اختياري يُضاف قبل أو بعد الاسم المولّد.')|tojson }},
+      time_value: {{ _('استخدم 0 عندما تريد الاعتماد على قيمة الباقة الأساسية.')|tojson }},
+      time_unit: {{ _('الوحدة التي سيتم احتساب مدة البطاقة أو الحساب بها.')|tojson }},
+      device_count: {{ _('أقصى عدد أجهزة يمكنها استخدام نفس الحساب في نفس الوقت.')|tojson }},
+      quota_total_mb: {{ _('إجمالي الحصة بالميجابايت، و0 يعني بلا حد خاص.')|tojson }},
+      daily_download_quota_mb: {{ _('كمية التنزيل المتاحة يوميًا لهذا الحساب أو الباقة.')|tojson }},
+      daily_upload_quota_mb: {{ _('كمية الرفع المتاحة يوميًا لهذا الحساب أو الباقة.')|tojson }},
+      monthly_download_quota_mb: {{ _('كمية التنزيل المتاحة خلال الشهر.')|tojson }},
+      monthly_upload_quota_mb: {{ _('كمية الرفع المتاحة خلال الشهر.')|tojson }},
+      speed_down_kbps: {{ _('سرعة التنزيل بالكيلوبت، 1024 تعني تقريبًا 1 ميجابت.')|tojson }},
+      speed_up_kbps: {{ _('سرعة الرفع بالكيلوبت، 1024 تعني تقريبًا 1 ميجابت.')|tojson }},
+      address: {{ _('عنوان الجهاز أو الخادم داخل الشبكة.')|tojson }},
+      shortname: {{ _('اسم مختصر يظهر في السجلات والقوائم.')|tojson }},
+      secret: {{ _('المفتاح المشترك يجب أن يطابق إعداد جهاز الشبكة.')|tojson }},
+      auth_port: {{ _('منفذ المصادقة القياسي غالبًا 1812.')|tojson }},
+      acct_port: {{ _('منفذ المحاسبة القياسي غالبًا 1813.')|tojson }},
+      coa_port: {{ _('منفذ قطع الجلسة أو تحديثها غالبًا 3799.')|tojson }},
+      api_port: {{ _('منفذ واجهة الربط، غالبًا 8728 أو 8729 للاتصال الآمن.')|tojson }},
+      api_user: {{ _('اسم مستخدم الراوتر المسموح له بإدارة الإعدادات.')|tojson }},
+      api_password: {{ _('كلمة مرور الراوتر، احفظها بعناية.')|tojson }},
+      snmp_community: {{ _('نص يستخدمه النظام لقراءة بيانات المراقبة من الجهاز.')|tojson }},
+      role_id: {{ _('الدور يحدد الصلاحيات التي يحصل عليها هذا المدير.')|tojson }},
+      permissions: {{ _('اختر الصلاحيات المناسبة فقط لهذا الدور.')|tojson }},
+      currency: {{ _('رمز العملة المستخدم في العرض والتقارير.')|tojson }},
+      price: {{ _('السعر المرجعي أو التجاري لهذا العنصر.')|tojson }},
+      tags: {{ _('وسوم قصيرة للتنظيم، افصل بينها بفاصلة عند الحاجة.')|tojson }},
+      slug: {{ _('معرّف قصير مناسب للرابط، ويفضّل تثبيته بعد استخدامه.')|tojson }},
+      plan_tier: {{ _('فئة الاشتراك تحدد الحدود الافتراضية لهذه الجهة.')|tojson }},
+      max_subscribers: {{ _('أقصى عدد مستفيدين مسموح، و0 يعني استخدام حد الفئة.')|tojson }},
+      max_nas: {{ _('أقصى عدد أجهزة شبكة مسموح لهذه الجهة.')|tojson }},
+      api_rpm: {{ _('عدد طلبات واجهة الربط المسموح بها في الدقيقة.')|tojson }},
+      locale: {{ _('لغة الواجهة الافتراضية لهذه الجهة.')|tojson }},
+      timezone: {{ _('المنطقة الزمنية المستخدمة في التواريخ والتقارير.')|tojson }},
+      primary_color: {{ _('لون العلامة المستخدم في أجزاء من الواجهة.')|tojson }},
+      logo_url: {{ _('رابط الشعار إن كنت تريد إظهاره للجهة.')|tojson }},
+      pool_name: {{ _('اسم نطاق العناوين كما سيظهر في القوائم.')|tojson }},
+      range_ip: {{ _('مدى العناوين الذي سيوزّع منه جهاز الشبكة.')|tojson }},
+      local_ip: {{ _('عنوان البوابة المحلية المرتبطة بهذا النطاق.')|tojson }},
+      router_id: {{ _('اختر جهاز الشبكة المسؤول عن هذا النطاق.')|tojson }},
+      rate_down: {{ _('سرعة التنزيل لهذا الملف.')|tojson }},
+      rate_up: {{ _('سرعة الرفع لهذا الملف.')|tojson }},
+      burst: {{ _('إعداد اختياري للسرعة المؤقتة على الراوتر.')|tojson }},
+      host: {{ _('عنوان الراوتر أو اسم المضيف.')|tojson }},
+      port: {{ _('منفذ الاتصال مع الجهاز.')|tojson }},
+      timeout_sec: {{ _('مدة الانتظار قبل اعتبار الاتصال غير ناجح.')|tojson }},
+      target_url: {{ _('الرابط الذي ستُرسل له إشعارات الربط.')|tojson }},
+      subscriber_id: {{ _('رقم المستفيد المرتبط بهذا السجل.')|tojson }},
+      amount: {{ _('المبلغ المالي المطلوب أو المسجل.')|tojson }},
+      payment_method: {{ _('طريقة الدفع المستخدمة أو المرجعية.')|tojson }},
+      expiration_at: {{ _('تاريخ انتهاء صلاحية هذا السجل.')|tojson }},
+      subject: {{ _('عنوان مختصر يوضح سبب التذكرة.')|tojson }},
+      category: {{ _('الفئة تساعد فريق الدعم على فرز الطلب.')|tojson }},
+      body: {{ _('اكتب التفاصيل المطلوبة بوضوح.')|tojson }},
+      priority: {{ _('الأولوية تحدد ترتيب المعالجة.')|tojson }},
+      serial: {{ _('الرقم التسلسلي للجهاز أو المعدة إن وجد.')|tojson }},
+      mac: {{ _('عنوان الجهاز الفيزيائي عند الحاجة للربط.')|tojson }},
+      rent_per_month: {{ _('قيمة الإيجار الشهري إن كانت الخدمة مؤجرة.')|tojson }},
+      given_at: {{ _('تاريخ تسليم المعدة أو بدء الخدمة.')|tojson }},
+      returned_at: {{ _('تاريخ الإرجاع إن وجد.')|tojson }},
+      usernames: {{ _('اكتب كل اسم دخول في سطر مستقل.')|tojson }},
+      action: {{ _('اختر العملية التي تريد تنفيذها.')|tojson }},
+      minutes: {{ _('عدد الدقائق التي ستضاف أو تعدل.')|tojson }},
+      new_password: {{ _('كلمة المرور الجديدة للحسابات المحددة.')|tojson }},
+      mult_down: {{ _('مضاعف سرعة التنزيل، مثل 0.5 للتنصيف.')|tojson }},
+      mult_up: {{ _('مضاعف سرعة الرفع، مثل 2 للمضاعفة.')|tojson }},
+      set_down: {{ _('قيمة تنزيل ثابتة تتجاوز المضاعف عند تعبئتها.')|tojson }},
+      set_up: {{ _('قيمة رفع ثابتة تتجاوز المضاعف عند تعبئتها.')|tojson }},
+      calling_station_id: {{ _('عنوان جهاز المستفيد المستخدم في الاختبار.')|tojson }},
+      called_station_id: {{ _('معرّف نقطة الاتصال أو الجهاز المستقبل.')|tojson }},
+      nas_ip: {{ _('عنوان جهاز الشبكة الذي سترسل منه تجربة المصادقة.')|tojson }},
+      nas_port_type: {{ _('نوع منفذ الاتصال المستخدم في الاختبار.')|tojson }}
+    }
+  };
+
+  // dropdowns (tenant + user + bell التنبيهات)
   (function(){
     function applyOpen(){
-      document.querySelectorAll('#tenant-menu.open, #user-menu.open').forEach(el => el.style.display='block');
+      document.querySelectorAll('#tenant-menu.open, #user-menu.open, #bell-menu.open, #lang-menu.open').forEach(el => el.style.display='block');
     }
     document.addEventListener('click', function(e){
       var tEl = document.getElementById('tenant-menu');
       var uEl = document.getElementById('user-menu');
+      var bEl = document.getElementById('bell-menu');
+      var lEl = document.getElementById('lang-menu');
       var tSwitch = e.target.closest('.tenant-switch');
       var uPill = e.target.closest('.user-pill');
+      var bWrap = e.target.closest('.bell-wrap');
+      var lWrap = e.target.closest('.lang-wrap');
       if (tEl && !tSwitch && !e.target.closest('#tenant-menu')) {
         tEl.classList.remove('open'); tEl.style.display='none';
       }
       if (uEl && !uPill && !e.target.closest('#user-menu')) {
         uEl.classList.remove('open'); uEl.style.display='none';
       }
+      // إغلاق قائمة الجرس عند النقر خارجها (مع إبقاء روابط عناصرها تعمل)
+      if (bEl && !bWrap) {
+        bEl.classList.remove('open'); bEl.style.display='none';
+      }
+      // إغلاق قائمة اللغة عند النقر خارجها
+      if (lEl && !lWrap) {
+        lEl.classList.remove('open'); lEl.style.display='none';
+      }
       applyOpen();
     });
-    document.querySelectorAll('.tenant-pill, .user-pill').forEach(function(el){
+    document.querySelectorAll('.tenant-pill, .user-pill, #bell-toggle, .lang-pill').forEach(function(el){
       el.addEventListener('click', function(){ setTimeout(applyOpen, 0); });
     });
   })();
@@ -430,16 +677,18 @@
       host.classList.add('hr-page-nav-host');
       var nav = document.createElement('aside');
       nav.className = 'hr-page-nav';
-      nav.setAttribute('aria-label', 'أقسام الصفحة');
+      nav.setAttribute('aria-label', window.__I18N__.pageSections);
       nav.innerHTML =
-        '<div class="hr-page-nav-title"><i class="fa-solid fa-compass"></i><span>أقسام الصفحة</span></div>' +
+        '<div class="hr-page-nav-title"><i class="fa-solid fa-compass"></i><span></span></div>' +
         '<nav class="hr-page-nav-list"></nav>' +
-        '<div class="hr-page-nav-note">ابدأ من القسم الأقرب لعملك. عند الانتقال لقسم مغلق سأفتحه لك تلقائيًا.</div>';
+        '<div class="hr-page-nav-note"></div>';
+      nav.querySelector('.hr-page-nav-title span').textContent = window.__I18N__.pageSections;
+      nav.querySelector('.hr-page-nav-note').textContent = window.__I18N__.sectionsNote;
 
       var list = nav.querySelector('.hr-page-nav-list');
       cards.forEach(function(card, index){
         if (!card.id) card.id = 'hr-section-' + (index + 1);
-        var label = cleanHeadingText(card) || ('القسم ' + (index + 1));
+        var label = cleanHeadingText(card) || (window.__I18N__.sectionPrefix + ' ' + (index + 1));
         var a = document.createElement('a');
         a.href = '#' + card.id;
         a.innerHTML = '<i class="fa-solid fa-angle-left"></i><span></span>';
@@ -476,104 +725,10 @@
     }
 
     function addFieldHelp(){
-      var hints = {
-        username: 'اسم الدخول الذي يستخدمه الشخص عند الاتصال أو تسجيل الدخول.',
-        password: 'اكتب كلمة مرور آمنة، واتركها فارغة إذا لم تكن تريد تغييرها.',
-        name: 'اكتب اسمًا واضحًا يظهر في القوائم ويسهّل البحث.',
-        code: 'رمز داخلي قصير يساعدك في الترتيب والبحث.',
-        display_name: 'الاسم الظاهر للمستخدم داخل الواجهة.',
-        full_name: 'الاسم الحقيقي أو الوصفي لصاحب الحساب.',
-        email: 'بريد للتواصل أو استلام التنبيهات عند الحاجة.',
-        mobile: 'رقم جوال واضح للتواصل السريع.',
-        phone: 'رقم بديل إن وجد.',
-        notes: 'ملاحظات داخلية تساعدك عند المراجعة ولا تظهر عادة للمستفيد.',
-        description: 'وصف قصير يوضّح الهدف من هذا العنصر.',
-        enabled: 'عند التعطيل يبقى العنصر محفوظًا لكنه لا يعمل في الاستخدام الجديد.',
-        status: 'اختر الحالة الحالية لهذا العنصر.',
-        plan_id: 'اختر باقة الخدمة التي تحدد السرعة والحصة ومدة الاستخدام.',
-        service_type: 'اختر نوع الخدمة التي سيستخدمها الحساب على الشبكة.',
-        account_type: 'اختر نوع الحساب حسب طريقة استخدامه.',
-        auth_mode: 'طريقة الدخول التي سيستخدمها المستفيد على الشبكة.',
-        group_name: 'اسم مجموعة اختياري لتنظيم الحسابات المتشابهة.',
-        manager_id: 'رقم المدير المسؤول إن كنت تستخدم توزيعًا إداريًا.',
-        subscriber_ref: 'مرجع اختياري يربط الحساب بسجل داخلي آخر.',
-        package_name: 'اسم واضح لهذه الدفعة حتى تميّزها عند المراجعة.',
-        count: 'عدد العناصر التي سيتم إنشاؤها في هذه العملية.',
-        username_length: 'عدد خانات اسم الدخول الذي سيتم توليده.',
-        password_length: 'عدد خانات كلمة المرور التي سيتم توليدها.',
-        password_generation_type: 'اختر نمط كلمة المرور حسب مستوى الأمان المطلوب.',
-        prefix_or_suffix_value: 'نص اختياري يُضاف قبل أو بعد الاسم المولّد.',
-        time_value: 'استخدم 0 عندما تريد الاعتماد على قيمة الباقة الأساسية.',
-        time_unit: 'الوحدة التي سيتم احتساب مدة البطاقة أو الحساب بها.',
-        device_count: 'أقصى عدد أجهزة يمكنها استخدام نفس الحساب في نفس الوقت.',
-        quota_total_mb: 'إجمالي الحصة بالميجابايت، و0 يعني بلا حد خاص.',
-        daily_download_quota_mb: 'كمية التنزيل المتاحة يوميًا لهذا الحساب أو الباقة.',
-        daily_upload_quota_mb: 'كمية الرفع المتاحة يوميًا لهذا الحساب أو الباقة.',
-        monthly_download_quota_mb: 'كمية التنزيل المتاحة خلال الشهر.',
-        monthly_upload_quota_mb: 'كمية الرفع المتاحة خلال الشهر.',
-        speed_down_kbps: 'سرعة التنزيل بالكيلوبت، 1024 تعني تقريبًا 1 ميجابت.',
-        speed_up_kbps: 'سرعة الرفع بالكيلوبت، 1024 تعني تقريبًا 1 ميجابت.',
-        address: 'عنوان الجهاز أو الخادم داخل الشبكة.',
-        shortname: 'اسم مختصر يظهر في السجلات والقوائم.',
-        secret: 'المفتاح المشترك يجب أن يطابق إعداد جهاز الشبكة.',
-        auth_port: 'منفذ المصادقة القياسي غالبًا 1812.',
-        acct_port: 'منفذ المحاسبة القياسي غالبًا 1813.',
-        coa_port: 'منفذ قطع الجلسة أو تحديثها غالبًا 3799.',
-        api_port: 'منفذ واجهة الربط، غالبًا 8728 أو 8729 للاتصال الآمن.',
-        api_user: 'اسم مستخدم الراوتر المسموح له بإدارة الإعدادات.',
-        api_password: 'كلمة مرور الراوتر، احفظها بعناية.',
-        snmp_community: 'نص يستخدمه النظام لقراءة بيانات المراقبة من الجهاز.',
-        role_id: 'الدور يحدد الصلاحيات التي يحصل عليها هذا المدير.',
-        permissions: 'اختر الصلاحيات المناسبة فقط لهذا الدور.',
-        currency: 'رمز العملة المستخدم في العرض والتقارير.',
-        price: 'السعر المرجعي أو التجاري لهذا العنصر.',
-        tags: 'وسوم قصيرة للتنظيم، افصل بينها بفاصلة عند الحاجة.'
-        ,slug: 'معرّف قصير مناسب للرابط، ويفضّل تثبيته بعد استخدامه.'
-        ,plan_tier: 'فئة الاشتراك تحدد الحدود الافتراضية لهذه الجهة.'
-        ,max_subscribers: 'أقصى عدد مستفيدين مسموح، و0 يعني استخدام حد الفئة.'
-        ,max_nas: 'أقصى عدد أجهزة شبكة مسموح لهذه الجهة.'
-        ,api_rpm: 'عدد طلبات واجهة الربط المسموح بها في الدقيقة.'
-        ,locale: 'لغة الواجهة الافتراضية لهذه الجهة.'
-        ,timezone: 'المنطقة الزمنية المستخدمة في التواريخ والتقارير.'
-        ,primary_color: 'لون العلامة المستخدم في أجزاء من الواجهة.'
-        ,logo_url: 'رابط الشعار إن كنت تريد إظهاره للجهة.'
-        ,pool_name: 'اسم نطاق العناوين كما سيظهر في القوائم.'
-        ,range_ip: 'مدى العناوين الذي سيوزّع منه جهاز الشبكة.'
-        ,local_ip: 'عنوان البوابة المحلية المرتبطة بهذا النطاق.'
-        ,router_id: 'اختر جهاز الشبكة المسؤول عن هذا النطاق.'
-        ,rate_down: 'سرعة التنزيل لهذا الملف.'
-        ,rate_up: 'سرعة الرفع لهذا الملف.'
-        ,burst: 'إعداد اختياري للسرعة المؤقتة على الراوتر.'
-        ,host: 'عنوان الراوتر أو اسم المضيف.'
-        ,port: 'منفذ الاتصال مع الجهاز.'
-        ,timeout_sec: 'مدة الانتظار قبل اعتبار الاتصال غير ناجح.'
-        ,target_url: 'الرابط الذي ستُرسل له إشعارات الربط.'
-        ,subscriber_id: 'رقم المستفيد المرتبط بهذا السجل.'
-        ,amount: 'المبلغ المالي المطلوب أو المسجل.'
-        ,payment_method: 'طريقة الدفع المستخدمة أو المرجعية.'
-        ,expiration_at: 'تاريخ انتهاء صلاحية هذا السجل.'
-        ,subject: 'عنوان مختصر يوضح سبب التذكرة.'
-        ,category: 'الفئة تساعد فريق الدعم على فرز الطلب.'
-        ,body: 'اكتب التفاصيل المطلوبة بوضوح.'
-        ,priority: 'الأولوية تحدد ترتيب المعالجة.'
-        ,serial: 'الرقم التسلسلي للجهاز أو المعدة إن وجد.'
-        ,mac: 'عنوان الجهاز الفيزيائي عند الحاجة للربط.'
-        ,rent_per_month: 'قيمة الإيجار الشهري إن كانت الخدمة مؤجرة.'
-        ,given_at: 'تاريخ تسليم المعدة أو بدء الخدمة.'
-        ,returned_at: 'تاريخ الإرجاع إن وجد.'
-        ,usernames: 'اكتب كل اسم دخول في سطر مستقل.'
-        ,action: 'اختر العملية التي تريد تنفيذها.'
-        ,minutes: 'عدد الدقائق التي ستضاف أو تعدل.'
-        ,new_password: 'كلمة المرور الجديدة للحسابات المحددة.'
-        ,mult_down: 'مضاعف سرعة التنزيل، مثل 0.5 للتنصيف.'
-        ,mult_up: 'مضاعف سرعة الرفع، مثل 2 للمضاعفة.'
-        ,set_down: 'قيمة تنزيل ثابتة تتجاوز المضاعف عند تعبئتها.'
-        ,set_up: 'قيمة رفع ثابتة تتجاوز المضاعف عند تعبئتها.'
-        ,calling_station_id: 'عنوان جهاز المستفيد المستخدم في الاختبار.'
-        ,called_station_id: 'معرّف نقطة الاتصال أو الجهاز المستقبل.'
-        ,nas_ip: 'عنوان جهاز الشبكة الذي سترسل منه تجربة المصادقة.'
-        ,nas_port_type: 'نوع منفذ الاتصال المستخدم في الاختبار.'
-      };
+      // قاموس مساعدة الحقول يُقرأ من حزمة الترجمة المبثوثة من Jinja أعلاه
+      // (window.__I18N__.hints) — كل قيمة مرّت عبر _() فتُترجم تلقائيًا،
+      // فلا يبقى أي نص عربي مكتوب داخل JavaScript.
+      var hints = (window.__I18N__ && window.__I18N__.hints) || {};
       document.querySelectorAll('.main .sec-card .f-field, .main .sec-card .form-field, .main .sec-card .field-group, .main .card .field, .main .card .form-field, .main .card .field-group').forEach(function(box){
         if (box.querySelector('.field-help, .hint')) return;
         var control = box.querySelector('input:not([type="hidden"]):not([type="submit"]):not([type="button"]), select, textarea');

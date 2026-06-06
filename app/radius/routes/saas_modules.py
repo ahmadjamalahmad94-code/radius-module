@@ -62,6 +62,7 @@ def register_saas_routes(bp: Blueprint) -> None:
     # ─── Vouchers ───
     bp.add_url_rule("/vouchers", "vch_list", vch_list, methods=["GET"])
     bp.add_url_rule("/vouchers/generate", "vch_generate", vch_generate, methods=["GET", "POST"])
+    bp.add_url_rule("/vouchers/redeem", "vch_redeem", vch_redeem, methods=["POST"])
     bp.add_url_rule("/vouchers/<int:vid>/revoke", "vch_revoke", vch_revoke, methods=["POST"])
     # ─── Invoices ───
     bp.add_url_rule("/invoices", "inv_list", inv_list, methods=["GET"])
@@ -212,16 +213,85 @@ def vch_generate():
             return redirect(url_for("radius.vch_generate"))
         plan_id = request.form.get("plan_id")
         expire = _date("expire_at")
+        # عدد خانات الكود (اختياري) — الافتراضي 12 خانة كما كان سابقًا،
+        # والحدود الآمنة (6–16) تُفرض داخل الـ repo أيضًا.
+        code_length = _i("code_length", vouchers_repo.CODE_LEN_DEFAULT)
+        code_length = min(max(code_length, vouchers_repo.CODE_LEN_MIN), vouchers_repo.CODE_LEN_MAX)
         new_items = vouchers_repo.generate_bulk(
             tenant_id=_tid(), amount=amount, count=count,
             plan_id=int(plan_id) if plan_id else None,
             expire_at=expire,
             generated_by=session.get("admin_id") or 0,
+            code_length=code_length,
         )
         flash(f"تم توليد {len(new_items)} كوبون.", "success")
         return redirect(url_for("radius.billing_hub", tab="vouchers", status="active"))
     # GET: the generate form now lives in a modal on the billing hub.
     return redirect(url_for("radius.billing_hub", tab="vouchers"))
+
+
+def vch_redeem():
+    """صرف كوبون لمشترك: تحقق (موجود/نشط/غير منتهٍ) ثم تعليمه مستخدمًا
+    وإضافة قيمته إلى رصيد المشترك عبر خدمة الرصيد النقدي القائمة
+    (نفس مسار «إضافة رصيد نقدي» — لا منطق مالي جديد)."""
+    back = redirect(url_for("radius.billing_hub", tab="vouchers"))
+    code = (request.form.get("code") or "").strip()
+    username = (request.form.get("username") or "").strip()
+    if not code or not username:
+        flash("كود الكوبون والمشترك مطلوبان.", "error")
+        return back
+
+    v = vouchers_repo.get_by_code(_tid(), code)
+    if not v:
+        flash("الكوبون غير موجود — تأكد من الكود.", "error")
+        return back
+    if v.status == "used":
+        flash("هذا الكوبون استُخدم من قبل.", "error")
+        return back
+    if v.status != "active":
+        flash("هذا الكوبون ملغى ولا يمكن صرفه.", "error")
+        return back
+    if v.expire_at and v.expire_at < datetime.now():
+        flash("انتهت صلاحية هذا الكوبون.", "error")
+        return back
+    if float(v.amount or 0) <= 0:
+        flash("لا توجد قيمة صالحة لهذا الكوبون.", "error")
+        return back
+
+    sub = subscribers_repo.get_subscriber(_tid(), username)
+    if not sub:
+        flash("المشترك غير موجود.", "error")
+        return back
+
+    # تعليم الكوبون مستخدمًا أولًا وذريًا (يمنع الصرف المزدوج عند التزامن)،
+    # ثم إضافة القيمة للرصيد. لو فشل الإيداع نعيد الكوبون نشطًا.
+    if not vouchers_repo.mark_used(_tid(), v.id, subscriber_id=int(sub.id)):
+        flash("تم صرف هذا الكوبون للتو من جهة أخرى.", "error")
+        return back
+    try:
+        from ..services.users import get_users_service
+        saved = get_users_service().add_cash_balance(
+            actor=_actor(),
+            username=sub.username,
+            amount=float(v.amount),
+            notes=f"صرف كوبون {v.code}",
+        )
+    except Exception as e:  # noqa: BLE001 — إعادة الكوبون نشطًا عند أي فشل في الإيداع
+        from ..db.connection import transaction as _txn
+        with _txn() as conn:
+            conn.execute(
+                "UPDATE vouchers SET status='active', used_by_subscriber_id=NULL, used_at=NULL "
+                "WHERE tenant_id=? AND id=?", (_tid(), v.id))
+        msg = getattr(e, "message", None) or str(e)
+        flash(f"تعذّر إضافة الرصيد — لم يُصرف الكوبون: {msg}", "error")
+        return back
+
+    flash(
+        f"تم صرف الكوبون {v.code} بقيمة {float(v.amount):.2f} للمشترك {sub.username}. "
+        f"الرصيد الحالي {float(saved.balance or 0):.2f}.",
+        "success",
+    )
+    return redirect(url_for("radius.billing_hub", tab="vouchers", status="used"))
 
 
 def vch_revoke(vid: int):
@@ -292,12 +362,19 @@ def inv_status(iid: int):
 def tk_list():
     status = request.args.get("status") or None
     items = tickets_repo.list_tickets(_tid(), status=status, limit=500)
-    return render_template("radius/tickets_list.html", items=items, status=status)
+    # المشتركون مطلوبون لنموذج «تذكرة جديدة» الذي يعيش الآن كصندوق عائم في هذه الصفحة
+    subs = subscribers_repo.list_subscribers(_tid(), limit=500)
+    return render_template(
+        "radius/tickets_list.html", items=items, status=status, subs=subs,
+        # ?new=1 يفتح الصندوق العائم تلقائيًا (الرابط القديم /tickets/new يبقى حيًّا)
+        open_new_modal=(request.args.get("new") == "1"),
+    )
 
 
 def tk_new():
-    subs = subscribers_repo.list_subscribers(_tid(), limit=500)
-    return render_template("radius/tickets_form.html", subs=subs)
+    # نموذج الإنشاء أصبح صندوقًا عائمًا داخل صفحة القائمة —
+    # الرابط القديم يبقى حيًّا ويفتح النافذة تلقائيًا عبر ?new=1.
+    return redirect(url_for("radius.tk_list", new=1))
 
 
 def tk_create():
@@ -350,13 +427,19 @@ def tk_status(tid: int):
 
 def svc_list():
     items = services_repo.list_all(_tid(), limit=500)
-    return render_template("radius/services_list.html", items=items)
+    # المشتركون مطلوبون لنموذج «إضافة معدّة» الذي يعيش الآن كصندوق عائم في هذه الصفحة
+    subs = subscribers_repo.list_subscribers(_tid(), limit=500)
+    return render_template(
+        "radius/services_list.html", items=items, subs=subs,
+        # ?new=1 يفتح الصندوق العائم تلقائيًا (الرابط القديم /services/new يبقى حيًّا)
+        open_new_modal=(request.args.get("new") == "1"),
+    )
 
 
 def svc_new():
-    blank = Service(id=None, tenant_id=_tid(), subscriber_id=0, name="")
-    subs = subscribers_repo.list_subscribers(_tid(), limit=500)
-    return render_template("radius/services_form.html", item=blank, subs=subs, is_new=True)
+    # نموذج الإنشاء أصبح صندوقًا عائمًا داخل صفحة القائمة —
+    # الرابط القديم يبقى حيًّا ويفتح النافذة تلقائيًا عبر ?new=1.
+    return redirect(url_for("radius.svc_list", new=1))
 
 
 def _svc_dto(existing=None) -> Service:
