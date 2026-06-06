@@ -151,6 +151,87 @@
   .mtld-custom-name-input { min-width: 220px; }
   /* حقل مساعدة بفاصل علوي صغير */
   .mtld-field-help--gap { margin-top: 8px; }
+
+  /* ── شريط تقدّم النشر (خطوة بخطوة) ── */
+  .mtld-progress { margin-top: 14px; }
+  .mtld-progress[hidden] { display: none; }
+  .mtld-progress-bar {
+    height: 8px;
+    border-radius: 999px;
+    background: var(--hub-border, #E2E8F0);
+    overflow: hidden;
+    margin-bottom: 12px;
+  }
+  .mtld-progress-fill {
+    height: 100%;
+    width: 0;
+    border-radius: 999px;
+    background: var(--hub-primary, #2563EB);
+    transition: width .35s ease, background .25s ease;
+  }
+  .mtld-progress.is-done .mtld-progress-fill { background: var(--hub-green, #16A34A); }
+  .mtld-progress.is-fail .mtld-progress-fill { background: var(--hub-red, #DC2626); }
+  .mtld-progress-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: 12.5px;
+    font-weight: 800;
+    margin-bottom: 8px;
+  }
+  .mtld-progress-pct { color: var(--hub-text-mute, #64748B); font-variant-numeric: tabular-nums; }
+  .mtld-steps { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; }
+  .mtld-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    padding: 8px 10px;
+    border: 1px solid var(--hub-border, #E2E8F0);
+    border-radius: var(--hub-r-sm, 8px);
+    font-size: 12.5px;
+    background: var(--hub-bg-soft, #F8FAFC);
+  }
+  .mtld-step-ico {
+    flex: 0 0 auto;
+    width: 18px;
+    text-align: center;
+    margin-top: 1px;
+  }
+  .mtld-step-body { flex: 1; min-width: 0; }
+  .mtld-step-label { font-weight: 700; }
+  .mtld-step-detail {
+    display: block;
+    font-size: 11.5px;
+    color: var(--hub-text-mute, #64748B);
+    word-break: break-word;
+    margin-top: 1px;
+  }
+  /* حالات الخطوة */
+  .mtld-step.is-pending { opacity: .6; }
+  .mtld-step.is-pending .mtld-step-ico { color: var(--hub-text-mute, #94A3B8); }
+  .mtld-step.is-running { border-color: var(--hub-primary, #2563EB); background: var(--hub-primary-soft, #EFF6FF); }
+  .mtld-step.is-running .mtld-step-ico { color: var(--hub-primary, #2563EB); }
+  .mtld-step.is-ok { border-color: var(--hub-green, #16A34A); }
+  .mtld-step.is-ok .mtld-step-ico { color: var(--hub-green, #16A34A); }
+  .mtld-step.is-failed { border-color: var(--hub-red, #DC2626); background: var(--hub-red-soft, #FEF2F2); }
+  .mtld-step.is-failed .mtld-step-ico { color: var(--hub-red, #DC2626); }
+  .mtld-step.is-failed .mtld-step-detail { color: var(--hub-red, #B91C1C); font-weight: 600; }
+  .mtld-step.is-skip { opacity: .55; }
+  .mtld-step.is-skip .mtld-step-ico { color: var(--hub-text-mute, #94A3B8); }
+  @media (prefers-reduced-motion: no-preference) {
+    .mtld-step.is-running .mtld-step-ico i { animation: mtld-spin 1s linear infinite; }
+  }
+  @keyframes mtld-spin { to { transform: rotate(360deg); } }
+  /* لوحة تشخيص لوب الجلب 401 */
+  .mtld-loop-note { margin-top: 14px; }
+  .mtld-loop-note > summary {
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--hub-text-mute, #64748B);
+  }
+  .mtld-loop-note p { font-size: 11.5px; margin: 8px 0 6px; line-height: 1.7; }
 </style>
 {% endblock %}
 
@@ -740,7 +821,8 @@
   {# ════ شريط النشر: نموذج مستقل حتى لا يتشارك الحفظ والنشر زر إرسال واحدًا ════ #}
   <form method="post"
         action="{{ url_for('radius.mt_login_designer_deploy', nas_id=nas.id) }}"
-        data-mt-designer-deploy-form>
+        data-mt-designer-deploy-form
+        data-mt-deploy-stream-url="{{ url_for('radius.mt_login_designer_deploy_stream', nas_id=nas.id) }}">
     {% call hub.section("النشر على الراوتر", icon="cloud-arrow-up") %}
       <div class="mtld-deploy">
         <div class="mtld-deploy-text">
@@ -759,6 +841,20 @@
                 data-mt-designer-deploy-submit>
           <i class="fa-solid fa-rocket"></i> نشر على الراوتر
         </button>
+      </div>
+
+      {# ── شريط التقدّم الحيّ: يُملأ عبر JS من بثّ NDJSON خطوة بخطوة.
+         يبقى مخفيًّا حتى يُضغط «نشر»؛ بلا JavaScript يبقى مخفيًّا
+         ويعمل النموذج بمساره المتزامن العادي (النتيجة بالأسفل). #}
+      <div class="mtld-progress" data-mt-deploy-progress hidden>
+        <div class="mtld-progress-head">
+          <span data-mt-deploy-progress-title>جارٍ النشر…</span>
+          <span class="mtld-progress-pct" data-mt-deploy-progress-pct>0%</span>
+        </div>
+        <div class="mtld-progress-bar">
+          <div class="mtld-progress-fill" data-mt-deploy-progress-fill></div>
+        </div>
+        <ul class="mtld-steps" data-mt-deploy-steps></ul>
       </div>
 
       {# نتيجة آخر محاولة نشر ضمن نفس الطلب #}
@@ -822,6 +918,34 @@
         </div>
       </div>
       {% endif %}
+
+      {# ── تشخيص: لوب «Download FAILED: 401» على الراوتر ──
+         النشر هنا يدفع الملفات مباشرةً عبر API الراوتر (/file/add)،
+         فلا يطلب من الراوتر جلبها بنفسه — لذا لا يولّد هذا المسار أي
+         401 ولا لوب. إن ظهر في سجل راوترك تكرار «Download from … FAILED:
+         401 should contain www-authenticate header» مع scheduler يشغّل
+         hotspot.rsc، فمصدره جدولة قديمة (إعداد يدوي/نسخة سابقة) تجلب
+         الملفات بـ /tool fetch من نقطة تتطلّب جلسة أدمن — و/tool fetch
+         لا يرسل كوكي الجلسة فيرتدّ 401 ويعيد المجدول المحاولة بلا حد. #}
+      <details class="mtld-loop-note">
+        <summary><i class="fa-solid fa-circle-question"></i> راوترك يكرّر «Download FAILED: 401»؟ (لوب الجلب القديم)</summary>
+        <p>
+          هذا النشر يرفع الملفات بدفع API مباشر (<code dir="ltr">/file/add</code>) — لا
+          يطلب من الراوتر جلبها، فلا 401 ولا لوب منه. إن كان راوترك يكرّر
+          الخطأ فالسبب جدولة قديمة تجلب الملفات عبر <code dir="ltr">/tool fetch</code>
+          من نقطة محمية بجلسة أدمن (و<code dir="ltr">/tool fetch</code> لا يرسل
+          الكوكي → 401). أوقفها بحذف المجدول والسكربت من الراوتر:
+        </p>
+        <pre dir="ltr" class="mtld-cmd">/system scheduler print where name~"hotspot"
+/system scheduler remove [find name~"hotspot"]
+/system script remove [find name~"hotspot"]
+/file remove [find name="hotspot.rsc"]</pre>
+        <p>
+          راجع ناتج <code dir="ltr">print</code> أولًا للتأكد أنها فعلًا جدولة الجلب
+          القديمة قبل الحذف، ثم أعد النشر من هنا — تكفي طريقة الدفع المباشر
+          وحدها ولا حاجة لأي <code dir="ltr">/tool fetch</code>.
+        </p>
+      </details>
     {% endcall %}
   </form>
 
@@ -1383,6 +1507,197 @@
         .then(() => { pingBtn.disabled = false; });
     });
   }
+})();
+
+// ════ شريط تقدّم النشر — يقرأ بثّ NDJSON خطوة بخطوة ════
+// تحسين تدريجي: لو الزر ضُغط بلا confirm، أو المتصفّح لا يدعم
+// fetch/ReadableStream، يُترك النموذج يُرسَل بمساره المتزامن العادي
+// (الخادم يعرض النتيجة بالأسفل). عند التأكيد + الدعم نعترض الإرسال
+// ونعرض شريط التقدّم الحيّ بدل طلب أصمّ.
+(function () {
+  "use strict";
+  const form = document.querySelector("[data-mt-designer-deploy-form]");
+  if (!form) return;
+  const streamUrl = form.dataset.mtDeployStreamUrl;
+  const confirmBox = form.querySelector("[data-mt-designer-deploy-confirm]");
+  const submitBtn = form.querySelector("[data-mt-designer-deploy-submit]");
+  const panel = form.querySelector("[data-mt-deploy-progress]");
+  const stepsEl = form.querySelector("[data-mt-deploy-steps]");
+  const fillEl = form.querySelector("[data-mt-deploy-progress-fill]");
+  const pctEl = form.querySelector("[data-mt-deploy-progress-pct]");
+  const titleEl = form.querySelector("[data-mt-deploy-progress-title]");
+  if (!streamUrl || !panel || !stepsEl) return;
+
+  // دعم البثّ التدريجي مطلوب؛ بدونه نسقط لمسار النموذج العادي.
+  const supported = !!(window.fetch && window.ReadableStream
+                       && window.TextDecoder && window.FormData);
+
+  const TERMINAL = { ok: 1, failed: 1, skip: 1 };
+  const ICONS = {
+    pending: "fa-regular fa-circle",
+    running: "fa-solid fa-spinner",
+    ok: "fa-solid fa-circle-check",
+    failed: "fa-solid fa-circle-xmark",
+    skip: "fa-solid fa-minus",
+  };
+  const stepNodes = {};   // key → عنصر <li>
+  let totalSteps = 0;
+
+  function csrfToken() {
+    const saveForm = document.querySelector("[data-mt-designer-form]");
+    const tok = saveForm
+      && saveForm.querySelector('input[name="_csrf_token"]');
+    return tok ? tok.value : "";
+  }
+
+  function resetPanel() {
+    stepsEl.textContent = "";
+    Object.keys(stepNodes).forEach(k => delete stepNodes[k]);
+    totalSteps = 0;
+    panel.classList.remove("is-done", "is-fail");
+    fillEl.style.width = "0%";
+    pctEl.textContent = "0%";
+    titleEl.textContent = "جارٍ النشر…";
+    panel.hidden = false;
+  }
+
+  function buildSteps(steps) {
+    totalSteps = steps.length;
+    steps.forEach(function (s) {
+      const li = document.createElement("li");
+      li.className = "mtld-step is-pending";
+      li.innerHTML =
+        '<span class="mtld-step-ico"><i class="' + ICONS.pending + '"></i></span>'
+        + '<span class="mtld-step-body">'
+        + '<span class="mtld-step-label"></span>'
+        + '<span class="mtld-step-detail"></span></span>';
+      li.querySelector(".mtld-step-label").textContent = s.label || s.key;
+      stepsEl.appendChild(li);
+      stepNodes[s.key] = li;
+    });
+    updateProgress();
+  }
+
+  function setStep(key, status, detail) {
+    const li = stepNodes[key];
+    if (!li) return;
+    li.className = "mtld-step is-" + status;
+    li.querySelector(".mtld-step-ico i").className =
+      ICONS[status] || ICONS.pending;
+    if (detail != null && detail !== "") {
+      li.querySelector(".mtld-step-detail").textContent = detail;
+    }
+    updateProgress();
+  }
+
+  function updateProgress() {
+    if (!totalSteps) return;
+    let done = 0;
+    Object.keys(stepNodes).forEach(function (k) {
+      const cls = stepNodes[k].className;
+      if (/is-ok|is-failed|is-skip/.test(cls)) done++;
+    });
+    const pct = Math.round((done / totalSteps) * 100);
+    fillEl.style.width = pct + "%";
+    pctEl.textContent = pct + "%";
+  }
+
+  function finish(ev) {
+    fillEl.style.width = "100%";
+    pctEl.textContent = "100%";
+    if (ev && ev.ok) {
+      panel.classList.add("is-done");
+      titleEl.innerHTML =
+        '<i class="fa-solid fa-circle-check"></i> تم النشر بنجاح'
+        + (ev.summary ? ' — ' + escapeHtml(ev.summary) : '');
+    } else {
+      panel.classList.add("is-fail");
+      titleEl.innerHTML =
+        '<i class="fa-solid fa-circle-exclamation"></i> فشل النشر'
+        + (ev && ev.error ? ' — ' + escapeHtml(ev.error) : '');
+    }
+  }
+
+  function escapeHtml(s) {
+    const d = document.createElement("div");
+    d.textContent = String(s == null ? "" : s);
+    return d.innerHTML;
+  }
+
+  function handleEvent(ev) {
+    if (!ev || !ev.type) return;
+    if (ev.type === "plan") buildSteps(ev.steps || []);
+    else if (ev.type === "step") setStep(ev.key, ev.status, ev.detail);
+    else if (ev.type === "done") finish(ev);
+  }
+
+  function disableSubmit(on) {
+    if (submitBtn) submitBtn.disabled = on;
+    if (confirmBox) confirmBox.disabled = on;
+  }
+
+  function streamDeploy() {
+    resetPanel();
+    disableSubmit(true);
+    const fd = new FormData();
+    fd.append("confirm", "1");
+    const tok = csrfToken();
+    if (tok) fd.append("_csrf_token", tok);
+    fetch(streamUrl, {
+      method: "POST",
+      body: fd,
+      credentials: "same-origin",
+      headers: tok ? { "X-CSRFToken": tok } : {},
+    }).then(function (res) {
+      if (!res.ok || !res.body) throw new Error("HTTP " + res.status);
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder("utf-8");
+      let buf = "";
+      function pump() {
+        return reader.read().then(function (r) {
+          if (r.done) {
+            // عالج بقايا السطر الأخير إن وُجدت.
+            buf += decoder.decode();
+            flush(buf, true);
+            disableSubmit(false);
+            return;
+          }
+          buf += decoder.decode(r.value, { stream: true });
+          const nl = buf.lastIndexOf("\n");
+          if (nl >= 0) {
+            flush(buf.slice(0, nl), false);
+            buf = buf.slice(nl + 1);
+          }
+          return pump();
+        });
+      }
+      return pump();
+    }).catch(function (e) {
+      // انقطع البثّ — أظهر فشلًا واضحًا بدل تعليق صامت.
+      panel.classList.add("is-fail");
+      titleEl.innerHTML =
+        '<i class="fa-solid fa-circle-exclamation"></i> انقطع الاتصال أثناء النشر — '
+        + escapeHtml(e && e.message ? e.message : "حاول مجددًا");
+      disableSubmit(false);
+    });
+  }
+
+  function flush(chunk, isFinal) {
+    chunk.split("\n").forEach(function (line) {
+      line = line.trim();
+      if (!line) return;
+      try { handleEvent(JSON.parse(line)); }
+      catch (e) { /* سطر غير مكتمل/غير JSON — تجاهله */ }
+    });
+  }
+
+  form.addEventListener("submit", function (e) {
+    // بلا تأكيد أو بلا دعم بثّ → اترك المسار المتزامن العادي يعمل.
+    if (!supported) return;
+    if (confirmBox && !confirmBox.checked) return;
+    e.preventDefault();
+    streamDeploy();
+  });
 })();
 </script>
 
