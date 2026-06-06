@@ -297,17 +297,40 @@ def card_users_list():
 
 
 def card_users_create():
+    """إنشاء مستفيد/زبون بطاقات من اللوحة (مودال «إضافة مستفيد»).
+
+    يعيد استخدام خدمة التسجيل المعتمدة register_card_user(source="admin")
+    فيطبّق نفس قواعد المتجر المتقدّم: اسم ثلاثي، صيغة جوال صالحة، كلمة مرور
+    4 أحرف على الأقل، ومنع تكرار رقم جوال نشط — مع تهشيم كلمة المرور وإنشاء
+    محفظة تشغيلية. الحساب فعّال فورًا. الرصيد الابتدائي اختياري ويُشحن فور
+    الإنشاء إن أُدخل مبلغ موجب. ثم نعود إلى القائمة محدّثة برسالة عربية."""
+    service = _service()
     try:
-        card_user = _service().create_card_user(
+        card_user = service.register_card_user(
             display_name=request.form.get("display_name") or "",
             mobile=request.form.get("mobile") or "",
             password=request.form.get("password") or "",
+            source="admin",
         )
-        flash("تم إنشاء مستخدم كروت مع محفظة تشغيلية.", "success")
-        return redirect(url_for("radius.card_user_360", card_user_id=card_user["id"]))
-    except CardMarketplaceError as exc:
+        opening = _money(request.form.get("initial_balance"))
+        if opening > 0:
+            service.recharge_wallet(
+                card_user_id=int(card_user["id"]),
+                amount=opening,
+                actor=_actor(),
+            )
+            flash(
+                f"تم إنشاء حساب «{card_user['display_name']}» وشحن محفظته بـ {opening:g}.",
+                "success",
+            )
+        else:
+            flash(
+                f"تم إنشاء حساب «{card_user['display_name']}» مع محفظة تشغيلية.",
+                "success",
+            )
+    except (CardMarketplaceError, ValueError) as exc:
         flash(str(exc), "error")
-        return redirect(url_for("radius.card_users_list"))
+    return redirect(url_for("radius.card_users_list"))
 
 
 def card_user_360(card_user_id: int):

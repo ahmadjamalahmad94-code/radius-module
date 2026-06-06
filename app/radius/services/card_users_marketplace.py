@@ -145,8 +145,9 @@ class CardUsersMarketplaceService:
         display_name: str,
         mobile: str,
         password: str,
+        source: str = "store",
     ) -> dict[str, Any]:
-        """تسجيل ذاتي لزبون من المتجر — ينشئ حساب مستخدم بطاقة **فعّالًا
+        """تسجيل زبون بطاقات — ينشئ حساب مستخدم بطاقة **فعّالًا
         فورًا** (بمحفظة) بلا أي تأكيد إداري، فيقدر يدخل ويشحن ويشتري
         مباشرة. كلمة المرور تُخزَّن مهشّمة (نفس آلية مستخدمي البطاقات
         عبر create_card_user). يفرض:
@@ -154,6 +155,11 @@ class CardUsersMarketplaceService:
           • رقم جوال صالح الصيغة.
           • كلمة مرور 4 أحرف على الأقل (نفس حد set_card_user_password).
           • منع تكرار رقم جوال نشط.
+
+        source: مصدر الإنشاء — "store" (تسجيل ذاتي للزبون من المتجر،
+        الافتراضي) أو "admin" (أنشأه موظف من لوحة «مستخدمو البطاقات»).
+        يضبط البيانات الوصفية وحدث السجلّ بصدق، مع توحيد منطق التحقّق
+        وإنشاء الحساب بين المسارَين (لا تكرار).
 
         ملاحظة تزامن: فحص التكرار ثم الإدراج ليسا ذرّيين (لا قيد فرادة
         على mobile في المخطط) — احتمال سباق ضعيف (نفس الزبون يرسل مرتين)
@@ -172,20 +178,23 @@ class CardUsersMarketplaceService:
             raise CardMarketplaceError(
                 "رقم الجوال مسجّل مسبقًا — سجّل الدخول أو استخدم رقمًا آخر."
             )
+        self_registered = (source == "store")
         user = self.create_card_user(
             display_name=name,
             mobile=phone,
             password=str(password),
-            metadata={"self_registered": True, "source": "store"},
+            metadata={"self_registered": self_registered, "source": source},
         )
         self.events.record_event(
             tenant_id=self.tenant_id,
             category="card",
-            event_key="card_user.self_registered",
-            message="سجّل زبون حسابًا جديدًا من المتجر.",
+            event_key="card_user.self_registered" if self_registered
+            else "card_user.admin_registered",
+            message="سجّل زبون حسابًا جديدًا من المتجر." if self_registered
+            else "أنشأ موظف حساب مستفيد بطاقات من اللوحة.",
             target_type="card_user",
             target_id=int(user["id"]),
-            metadata={"mobile": phone, "source": "store"},
+            metadata={"mobile": phone, "source": source},
         )
         return user
 
