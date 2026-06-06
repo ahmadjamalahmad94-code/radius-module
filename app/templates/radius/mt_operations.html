@@ -234,30 +234,26 @@
         </td>
         <td>
           {# ── خلية نظام مدمجة في سطر واحد: الإصدار + أيقونات الأنفاق ──
-             أيقونة الدرع = نفق الإدارة، أيقونة المسار = نفق حركة
-             الإنترنت؛ التفاصيل كلها في بطاقة الشرح (hub-hint). #}
-          {% set _mtype  = item.management_tunnel_type %}
-          {% set _mlabel = {'wireguard':'WireGuard','sstp_mgmt':'SSTP','direct':'مباشر'}.get(_mtype, _mtype) %}
-          {% set _scolor = {'connected':'green','pending':'amber','failed':'red','disabled':'grey'}.get(item.management_tunnel_status, 'grey') %}
-          {% set _slabel = {'connected':'متصل','pending':'قيد الإعداد','failed':'فشل','disabled':'معطّل'}.get(item.management_tunnel_status, item.management_tunnel_status) %}
+             أيقونة الدرع = نفق الإدارة (حالة محسوبة في item.mgmt)،
+             أيقونة المسار = نفق حركة الإنترنت؛ التفاصيل في التلميح. #}
           {% set _tmlabel = {'full_tunnel':'توجيه كامل','selected_pool':'مجموعة محددة','disabled':'معطّل'}.get(item.traffic_mode, item.traffic_mode) %}
           <span class="mt-sys-cell" data-mt-tunnels>
             {% if item.ros_version %}
               <span class="hub-pill hub-pill--brand mt-mini-pill">إصدار {{ item.ros_version }}.x</span>
             {% else %}
-              <span class="hub-pill hub-pill--grey mt-mini-pill">غير محدد</span>
+              <span class="hub-pill hub-pill--grey mt-mini-pill">إصدار غير معروف</span>
             {% endif %}
-            {% if _mtype and _mtype != 'none' %}
-              <span class="hub-hint mt-sys-hint mt-sys-hint--{{ _scolor }}" tabindex="0"
-                    data-hint="نفق إدارة — إدارة: {{ _mlabel }} ({{ _slabel }})">
-                <i class="fa-solid fa-shield-halved"></i>
-              </span>
-            {% else %}
-              <span class="hub-hint mt-sys-hint mt-sys-hint--grey" tabindex="0"
-                    data-hint="لا نفق إدارة مُعدّ">
-                <i class="fa-solid fa-shield-halved"></i>
-              </span>
-            {% endif %}
+            {# نفق الإدارة: حالة صادقة مشتقّة من فحص الوصول عبر النفق +
+               وجود peer + دورة التجهيز (بدل عمود management_tunnel_status
+               الساكن). درع ملوّن + شارة نصّية + تلميح يشرح السبب. #}
+            {% set _mg = item.mgmt %}
+            <span class="hub-hint mt-sys-hint mt-sys-hint--{{ _mg.color }}" tabindex="0"
+                  data-hint="{{ _mg.reason }}" data-mt-mgmt-state="{{ _mg.state }}">
+              <i class="fa-solid fa-shield-halved"></i>
+            </span>
+            <span class="hub-pill hub-pill--{{ _mg.color }} mt-mini-pill" data-mt-mgmt-label>
+              {% if _mg.state == 'active' %}<span class="dot"></span>{% endif %}{{ _mg.label }}
+            </span>
             {% if item.traffic_enabled and item.traffic_tunnel_type != 'none' %}
               {% set _is_pptp = item.traffic_tunnel_type == 'pptp_traffic' %}
               {% if _is_pptp %}
