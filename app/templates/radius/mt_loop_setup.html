@@ -1,17 +1,18 @@
-{# Loop tracking «تتبّع اللوب» — UNIFIED DESIGN SYSTEM.
-   Same backend data: base_url, tokens, suggested_token_name, routers (each
-   with .probes). Zero route/behaviour change. Merged megahero (header +
-   KPI strip), help panel on the LEFT explaining the probe trick, every group
-   inside a hub.section card. All JS hooks preserved verbatim:
-     #lp-router #lp-ifaces #lp-url #lp-token #lp-script-body [data-copy-script]
-   and the whole rebuild()/copy() IIFE. #}
+{# تتبّع اللوب «Loop tracking» — UNIFIED DESIGN SYSTEM.
+   إعادة تصميم جذرية: لا توليد scheduler/‏fetch على الراوتر بعد الآن.
+     • التركيب: عبر «خدمات المنافذ» (loop_detect) — عميل DHCP موسوم
+       HR-LoopDetect لكل منفذ مختار، يُركَّب تلقائيًا عبر النفق.
+     • الكشف: استطلاع هادئ من جهة اللوحة كل ٥ دقائق (worker
+       loop_probe_poller) يقرأ /ip dhcp-client عبر النفق الإداري.
+   هذه الصفحة = حالة + إرشاد + تنظيف بقايا الآلية القديمة. تستقبل: routers
+   (لكلٍّ .probes). #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
 {% block title %}تتبّع اللوب على الراوتر{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-arrows-spin"></i>{% endblock %}
 {% block page_title %}تتبّع اللوب (الحلقات) على الراوتر{% endblock %}
-{% block page_sub %}<span class="sub">مجسّ DHCP سلبي على منفذ مختار — لو حصل على إيجار فهناك لوب</span>{% endblock %}
+{% block page_sub %}<span class="sub">عميل DHCP سلبي على منافذ الزبائن — لو حصل على إيجار فهناك لوب. الكشف باستطلاع من اللوحة كل ٥ دقائق</span>{% endblock %}
 
 {% block content %}
 {% set _probe_routers = routers | selectattr('probes') | list %}
@@ -29,7 +30,7 @@
 {# ───── Merged hero: title + KPI summary strip ───── #}
 {% call hub.megahero(
   "تتبّع اللوب (الحلقات) على الراوتر",
-  subtitle="ركّب مجسّ DHCP على منفذ، ولو أخذ إيجارًا فهذا دليل لوب — يظهر هنا بالـIP وفي التنبيهات الذكية.",
+  subtitle="ركّب خدمة كشف اللوب على منافذ الزبائن من «خدمات المنافذ»، واللوحة تستطلع حالتها كل ٥ دقائق عبر النفق — لا scheduler ولا طلبات من الراوتر.",
   icon="arrows-spin",
   actions_html='
     <a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.mt_alerts_index') ~ '">
@@ -37,31 +38,31 @@
     </a>',
   kpis=[
     {'label': 'راوترات تُراقَب', 'value': _probe_routers | length, 'icon': 'router',       'variant': 'brand'},
-    {'label': 'مجسّات نشطة',     'value': _probe_total,             'icon': 'wave-square',  'variant': 'brand'},
+    {'label': 'منافذ مُراقَبة',  'value': _probe_total,             'icon': 'wave-square',  'variant': 'brand'},
     {'label': 'لوب مكتشَف',      'value': _loop_total,              'icon': 'triangle-exclamation', 'variant': ('red' if _loop_total else 'green')},
-    {'label': 'رموز الربط',      'value': tokens | length,          'icon': 'key',          'variant': ('brand' if tokens else 'amber')},
   ]
 ) %}{% endcall %}
 
 {# ───── Main column + help panel on the LEFT ───── #}
 {% call hub.worklayout(aside_html=hub.helppanel(
   "كيف يعمل التتبّع؟",
-  intro="نضع DHCP Client سلبيًا (بدون default route ولا DNS) على المنفذ المختار. المنفذ المفترض ألا يصله DHCP، فيبقى searching.",
+  intro="نركّب DHCP Client سلبيًا (بدون default route ولا DNS) موسومًا HR-LoopDetect على منافذ الزبائن. المنفذ المفترض ألا يصله DHCP، فيبقى searching.",
   icon="circle-info",
   items=[
-    {'icon': 'plug',               'text': 'لو حصل لوب أعاد المنفذ إلى شبكة فيها DHCP server، يأخذ المجسّ إيجارًا (bound).'},
+    {'icon': 'plug',                'text': 'لو حصل لوب أعاد المنفذ إلى شبكة فيها DHCP server، يأخذ المجسّ إيجارًا (bound).'},
     {'icon': 'location-crosshairs', 'text': 'الـIP المُستأجَر يدلّك على المقطع الذي حدث فيه اللوب.'},
-    {'icon': 'bell',               'text': 'الراوتر يدفع القراءات للخادم، وأي لوب يظهر في التنبيهات الذكية مع المنفذ والـIP.'},
+    {'icon': 'satellite-dish',      'text': 'اللوحة تقرأ حالة المنافذ من الراوتر كل ٥ دقائق عبر النفق الإداري — لا يرسل الراوتر شيئًا.'},
+    {'icon': 'bell',                'text': 'أي لوب يظهر في حالة المنافذ بالأسفل وفي التنبيهات الذكية مع المنفذ والـIP.'},
   ],
-  note="اكتب أسماء المنافذ التي يجب ألا يصلها DHCP (منافذ الزبائن) — مفصولة بفاصلة."
+  note="التركيب والإزالة يتمّان من «خدمات المنافذ» باختيار منافذ الزبائن."
 )) %}
 
   {# ── Live status per router ── #}
-  {% call hub.section("حالة التتبّع الحالية", icon="wave-square") %}
+  {% call hub.section("حالة المنافذ المراقَبة", icon="wave-square") %}
     {% if not _probe_routers %}
     {{ hub.empty(
-        "لا توجد مجسّات بعد",
-        sub="ركّب السكربت بالأسفل على راوتر لتبدأ القراءات.",
+        "لا توجد منافذ مراقَبة بعد",
+        sub="فعّل خدمة «تتبّع اللوب» على منافذ راوتر من «خدمات المنافذ» لتبدأ القراءات.",
         icon="wave-square"
     ) }}
     {% else %}
@@ -85,164 +86,41 @@
     {% endif %}
   {% endcall %}
 
-  {% if not tokens %}
-  {% call hub.section("تنبيه: لا يوجد رمز ربط", icon="triangle-exclamation") %}
-    <div class="hub-empty" style="text-align:initial;padding:12px 14px;background:#fffbeb;border-color:#fcd34d">
-      <div class="hub-empty-msg" style="color:#92400e">لا يوجد رمز ربط بعد لدفع القراءات إلى الخادم.</div>
-      <div class="hub-empty-sub">
-        أنشئ واحدًا من
-        <a href="{{ url_for('radius.tok_list') }}" target="_blank" rel="noopener" style="font-weight:800;color:#92400e;text-decoration:underline">إدارة رموز الربط</a>.
+  {# ── Install / manage via port-services (per router) ── #}
+  {% call hub.section("تركيب الخدمة وإزالتها", icon="screwdriver-wrench") %}
+    <div class="hub-empty-sub" style="margin-bottom:12px">
+      اختر الراوتر لتفتح «خدمات المنافذ» — فعّل «تتبّع اللوب» باختيار منافذ الزبائن، فيُركَّب عميل DHCP الموسوم HR-LoopDetect تلقائيًا على كل منفذ عبر النفق. الإزالة من الصفحة نفسها.
+    </div>
+    {% if not routers %}
+      {{ hub.empty("لا توجد راوترات مُسجّلة", sub="أضف راوترًا أولًا.", icon="router") }}
+    {% else %}
+      {% for r in routers %}
+      <div class="hub-flex-row" style="justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;padding:9px 12px;border:1px solid var(--hub-border,#e2e8f0);border-radius:10px;margin-bottom:7px;background:var(--hub-bg-soft,#fafbfc)">
+        <span style="font-weight:800;color:var(--hub-fg,#0f172a)"><i class="fa-solid fa-router hub-text-mute"></i> {{ r.name }} <span style="color:var(--hub-fg-mute,#64748b);font-weight:600">(#{{ r.id }})</span></span>
+        <a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ url_for('radius.mt_port_services_form', nas_id=r.id) }}">
+          <i class="fa-solid fa-screwdriver-wrench"></i> خدمات المنافذ
+        </a>
       </div>
-    </div>
-  {% endcall %}
-  {% endif %}
-
-  {# ── Install probe form (JS-driven; IDs preserved exactly) ── #}
-  {% call hub.section("تركيب مجسّ التتبّع", icon="screwdriver-wrench") %}
-    <div class="hub-field">
-      <label class="hub-field-label" for="lp-router">الراوتر</label>
-      <select class="hub-select" id="lp-router">
-        {% for r in routers %}<option value="{{ r.id }}">{{ r.name }} (#{{ r.id }})</option>{% endfor %}
-        {% if not routers %}<option value="">لا توجد راوترات مُسجّلة</option>{% endif %}
-      </select>
-    </div>
-    <div class="hub-field">
-      <label class="hub-field-label" for="lp-ifaces">المنافذ المراقَبة</label>
-      <input class="hub-input" type="text" id="lp-ifaces" value="ether2" placeholder="مثال: ether2,ether3" dir="ltr">
-      <div class="hub-field-hint">المنافذ التي يجب ألا يصلها DHCP — منافذ الزبائن، مفصولة بفاصلة.</div>
-    </div>
-    <div class="hub-field">
-      <label class="hub-field-label" for="lp-url">عنوان الخادم</label>
-      <input class="hub-input" type="text" id="lp-url" value="{{ base_url }}" dir="ltr">
-    </div>
-    <div class="hub-field">
-      <label class="hub-field-label" for="lp-token">رمز الربط</label>
-      <input class="hub-input" type="text" id="lp-token" value="" autocomplete="off" placeholder="الصق رمز الربط" dir="ltr">
-      <div class="hub-field-hint">
-        <a href="{{ url_for('radius.tok_list') }}" style="font-weight:700;color:#5b21b6">إدارة الرموز →</a>
-      </div>
-    </div>
+      {% endfor %}
+    {% endif %}
   {% endcall %}
 
-  {# ── Generated router script ── #}
-  {% call hub.section("سكربت الراوتر", icon="code") %}
-    <div class="hub-fix" style="margin:0">
-      <div class="hub-flex-row" style="justify-content:flex-end;margin-bottom:8px">
-        <button class="hub-btn hub-btn--secondary hub-btn--sm" type="button" data-copy-script>
-          <i class="fa-solid fa-copy"></i> نسخ
-        </button>
-      </div>
-<pre id="lp-script-body" dir="ltr" style="margin:0;padding:14px 16px;border-radius:12px;background:#0f172a;color:#bfdbfe;font-family:var(--hub-mono,ui-monospace,monospace);font-size:12px;line-height:1.65;overflow:auto;white-space:pre">جارٍ توليد السكربت…</pre>
+  {# ── Cleanup of the OLD (removed) router-side fetch/scheduler ── #}
+  {% call hub.section("تنظيف بقايا الآلية القديمة على الراوتر", icon="broom") %}
+    <div class="hub-empty-sub" style="margin-bottom:10px">
+      لم تعد اللوحة تُنشئ أي scheduler يجلب (fetch) على الراوتر. إن كان راوترٌ يحمل المجدول القديم العالق (كان يلوب على خطأ 401)، نظّفه مرّة واحدة بهذه الأوامر عبر Winbox/WebFig Terminal:
     </div>
-  {% endcall %}
-
-  {# ── Teardown script ── #}
-  {% call hub.section("إيقاف التتبّع وإزالته", icon="broom") %}
     <div class="hub-fix" style="margin:0">
 <pre dir="ltr" style="margin:0;padding:14px 16px;border-radius:12px;background:#0f172a;color:#e2e8f0;font-family:var(--hub-mono,ui-monospace,monospace);font-size:12.5px;line-height:1.7;overflow:auto;white-space:pre">/system scheduler remove [find name=hoberadius-loop-probe]
-/ip dhcp-client remove [find comment="hoberadius-loop"]</pre>
+/system script remove [find name=hoberadius-loop-probe]
+/ip dhcp-client remove [find comment="hoberadius-loop"]
+:global HRloopFail; :set HRloopFail 0</pre>
+    </div>
+    <div class="hub-empty-sub" style="margin-top:10px">
+      ملاحظة: عملاء DHCP الحاليون لكشف اللوب يحملون الكومنت <code dir="ltr">HR-LoopDetect</code> ولا تمسّهم أوامر التنظيف أعلاه — أزِلهم عند الحاجة من «خدمات المنافذ».
     </div>
   {% endcall %}
 
 {% endcall %}
 </section>
-
-<script>
-(function(){
-  "use strict";
-  var routerSel=document.getElementById("lp-router");
-  var ifInp=document.getElementById("lp-ifaces");
-  var urlInp=document.getElementById("lp-url");
-  var tokInp=document.getElementById("lp-token");
-  var scriptEl=document.getElementById("lp-script-body");
-
-  function rebuild(){
-    var url=(urlInp.value||"").trim().replace(/\/+$/,"");
-    var tok=(tokInp.value||"").trim();
-    var rid=(routerSel&&routerSel.value)||"";
-    var endpoint=url+"/api/v1/routers/"+rid+"/loop/ingest";
-    var isHttps=/^https:\/\//i.test(url);
-    var modeAndCert=isHttps?"mode=https check-certificate=no":"mode=http";
-    var ifaces=(ifInp.value||"").split(/[,\s]+/).map(function(s){return s.trim();}).filter(Boolean);
-
-    // ── Guard: a blank token produces `Authorization: Bearer ` which the
-    // server rejects with 401 on EVERY run — the classic infinite scheduler
-    // loop (executing script from scheduler … failed: 401). Refuse to emit a
-    // scheduler without a token; show the cleanup commands instead so a stuck
-    // router can be cleared safely.
-    if(!tok){
-      scriptEl.textContent=[
-        '# ⚠️ الصق «رمز الربط» (Bearer token) في الحقل أعلاه أولاً.',
-        '# بدون رمز صالح يرفض الخادم كل طلب (401) ويتكرر الفشل بلا نهاية.',
-        '#',
-        '# للتنظيف فقط — إزالة أي مجسّ/مجدول قديم عالق على الراوتر:',
-        '/system scheduler remove [find name=hoberadius-loop-probe]',
-        '/ip dhcp-client remove [find comment="hoberadius-loop"]'
-      ].join("\n");
-      return;
-    }
-
-    var lines=[];
-    lines.push('/ip dhcp-client remove [find comment="hoberadius-loop"]');
-    lines.push('/system scheduler remove [find name=hoberadius-loop-probe]');
-    lines.push("");
-    ifaces.forEach(function(i){
-      lines.push('/ip dhcp-client add interface='+i+' add-default-route=no use-peer-dns=no use-peer-ntp=no disabled=no comment="hoberadius-loop"');
-    });
-    lines.push("");
-    // Scheduler: read every hoberadius-loop dhcp-client + POST its status.
-    var ev=
-      '/system scheduler add name="hoberadius-loop-probe" interval=5m \\\n'+
-      '    start-time=startup comment="HobeRadius loop probe" \\\n'+
-      '    on-event="\n'+
-      ':global HRloopFail;\n'+
-      ':if ([:typeof \\$HRloopFail]=\\"nothing\\") do={ :set HRloopFail 0 };\n'+
-      ':local body \\"{\\\\\\"probes\\\\\\":[\\";\n'+
-      ':local first true;\n'+
-      ':foreach c in=[/ip dhcp-client find comment=\\"hoberadius-loop\\"] do={\n'+
-      '  :local ifn [/ip dhcp-client get \\$c interface];\n'+
-      '  :local st [/ip dhcp-client get \\$c status];\n'+
-      '  :local addr \\"\\";\n'+
-      '  :do { :set addr [/ip dhcp-client get \\$c address] } on-error={};\n'+
-      '  :local gw \\"\\";\n'+
-      '  :do { :set gw [/ip dhcp-client get \\$c gateway] } on-error={};\n'+
-      '  :if (!\\$first) do={ :set body (\\$body . \\",\\") };\n'+
-      '  :set body (\\$body . \\"{\\\\\\"interface\\\\\\":\\\\\\"\\" . \\$ifn . \\"\\\\\\",\\\\\\"status\\\\\\":\\\\\\"\\" . \\$st . \\"\\\\\\",\\\\\\"address\\\\\\":\\\\\\"\\" . \\$addr . \\"\\\\\\",\\\\\\"server\\\\\\":\\\\\\"\\" . \\$gw . \\"\\\\\\"}\\");\n'+
-      '  :set first false;\n'+
-      '};\n'+
-      ':set body (\\$body . \\"]}\\");\n'+
-      // Wrap the POST: on a persistent error (401 bad token, wrong URL,
-      // server down) count the failures and DISABLE the scheduler after 5
-      // strikes so it can never hammer the endpoint forever. A successful
-      // post resets the counter. This is the real \"no scheduler loops on a
-      // constant error\" safeguard for already-installed routers.
-      ':do {\n'+
-      '/tool fetch url=\\"'+endpoint+'\\" \\\\\n'+
-      '    http-method=post '+modeAndCert+' \\\\\n'+
-      '    http-header-field=\\"Content-Type: application/json,Authorization: Bearer '+tok+'\\" \\\\\n'+
-      '    http-data=\\$body output=none;\n'+
-      ':set HRloopFail 0;\n'+
-      '} on-error={\n'+
-      ':set HRloopFail (\\$HRloopFail + 1);\n'+
-      ':if (\\$HRloopFail>=5) do={\n'+
-      '  /system scheduler set [find name=hoberadius-loop-probe] disabled=yes;\n'+
-      '  :log warning \\"HobeRadius loop-probe disabled after 5 failed posts — check the link token / server URL\\";\n'+
-      '};\n'+
-      '};\n'+
-      '"';
-    lines.push(ev);
-    scriptEl.textContent=lines.join("\n");
-  }
-
-  function copy(text,btn){
-    navigator.clipboard.writeText(text).then(function(){
-      var o=btn.innerHTML; btn.innerHTML='<i class="fa-solid fa-check"></i> منسوخ'; btn.classList.add("is-copied");
-      setTimeout(function(){ btn.innerHTML=o; btn.classList.remove("is-copied"); },1700);
-    });
-  }
-  [routerSel,ifInp,urlInp,tokInp].forEach(function(el){ if(el){ el.addEventListener("input",rebuild); el.addEventListener("change",rebuild); } });
-  var b=document.querySelector("[data-copy-script]"); if(b) b.addEventListener("click",function(){ copy(scriptEl.textContent,this); });
-  rebuild();
-})();
-</script>
 {% endblock %}
