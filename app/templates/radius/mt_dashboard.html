@@ -3107,22 +3107,10 @@ body.mt-modal-open{overflow:hidden}
     });
   }
 
-  // ── تصنيف الواجهة من اسمها (تجميع منطقي) + ترتيب طبيعي ──
-  // المجموعات بترتيب ثابت: منافذ فيزيائية ← لاسلكي ← جسور ← منطقية/تعليم
-  // ← أخرى. الترتيب الطبيعي يضع ether2 قبل ether10 (لا أبجديًا).
-  const IFACE_CATS = [
-    { key: "phys",    label: "المنافذ الفيزيائية",     re: /^(ether|sfp|combo|qsfp)/i },
-    { key: "wifi",    label: "اللاسلكي",               re: /^(wlan|wifi|wl\d)/i },
-    { key: "bridge",  label: "الجسور",                 re: /^(bridge|br[-\d])/i },
-    { key: "logical", label: "واجهات منطقية / تعليم",  re: /^(mark-|vlan|pppoe|wg|gre|eoip|bond|vrrp|vpls|ovpn|l2tp|pptp|sstp|lo$|loopback|dynamic)/i },
-  ];
-  function ifaceCat(name) {
-    const n = String(name == null ? "" : name).trim().toLowerCase();
-    for (let i = 0; i < IFACE_CATS.length; i++) {
-      if (IFACE_CATS[i].re.test(n)) return IFACE_CATS[i];
-    }
-    return { key: "other", label: "أخرى", re: null };
-  }
+  // التجميع حسب «نوع الخدمة» (service_type) — البيانات تصل أصلًا مجمّعة
+  // هكذا من الجرد، فكل مجموعة تصبح قسمًا بعنوانه (الاسم العربي من
+  // SVC_META) + عدّاد، والعناصر داخله مرتّبة طبيعيًا. عنصر بلا نوع
+  // خدمة يقع تحت «أخرى».
   // مفتاح ترتيب طبيعي: نُصفّر الأرقام لطول ثابت فيُقارَن ether2 < ether10.
   function natKey(name) {
     return String(name == null ? "" : name).toLowerCase()
@@ -3135,7 +3123,7 @@ body.mt-modal-open{overflow:hidden}
     const date = it.expires_at ? ("ينتهي " + esc(it.expires_at)) : "";
     return (
       '<div class="rh-added-row" data-src="' + (isMan ? "operator" : "hoberadius") +
-        '" data-group="' + e.cat.key + '">' +
+        '" data-group="' + esc(e.svcKey) + '">' +
         '<button type="button" class="rh-added-del" title="حذف هذه الخدمة"' +
           ' data-svc="' + esc(e.g.service_type) + '"' +
           ' data-target="' + esc(it.target) + '"' +
@@ -3155,33 +3143,39 @@ body.mt-modal-open{overflow:hidden}
     );
   }
 
-  // يبني القائمة مجمّعةً حسب نوع الواجهة ومرتّبةً طبيعيًا + يحدّث العدّادات.
+  // يبني القائمة مقسّمةً إلى أقسام حسب «نوع الخدمة» (service_type) مع
+  // عنوان قسم + عدّاد، والعناصر داخل كل قسم مرتّبة طبيعيًا + يحدّث العدّادات.
   function renderAdded(groups) {
     if (!addedList) return;
-    // 1) سطّح كل العناصر مع تصنيف واجهتها.
-    const entries = [];
     let cAuto = 0, cMan = 0;
+    let nItems = 0;
+    // جمّع حسب نوع الخدمة بترتيب أوّل ظهور (نفس ترتيب الخادم). نوع فارغ
+    // → قسم «أخرى». عنصرٌ بلا meta معروفة يأخذ اسم/أيقونة احتياطية.
+    const sections = [];
+    const byKey = {};
     (groups || []).forEach((g) => {
       const meta = SVC_META[g.service_type]
         || { ar: g.title || g.service_type, icon: "circle-dot", color: "np-svc-icon--slate" };
+      const key = g.service_type || "other";
+      let sec = byKey[key];
+      if (!sec) {
+        sec = { key: key, label: (g.service_type ? meta.ar : "أخرى"), items: [] };
+        byKey[key] = sec; sections.push(sec);
+      }
       (g.items || []).forEach((it) => {
         const isMan = it.source === "operator";
         if (isMan) cMan++; else cAuto++;
-        entries.push({ g: g, it: it, meta: meta, isMan: isMan, cat: ifaceCat(it.label) });
+        nItems++;
+        sec.items.push({ g: g, it: it, meta: meta, isMan: isMan, svcKey: key });
       });
     });
-    // 2) جمّع حسب التصنيف بالترتيب الثابت، ورتّب طبيعيًا داخل كل مجموعة.
-    const order = IFACE_CATS.map((c) => c.key).concat("other");
-    const byCat = {};
-    entries.forEach((e) => { (byCat[e.cat.key] = byCat[e.cat.key] || []).push(e); });
     const html = [];
-    order.forEach((key) => {
-      const list = byCat[key];
-      if (!list || !list.length) return;
-      list.sort((a, b) => natKey(a.it.label).localeCompare(natKey(b.it.label)));
-      html.push('<div class="rh-added-group-h" data-rh-added-group="' + key + '">' +
-                esc(list[0].cat.label) + ' <span>' + list.length + '</span></div>');
-      list.forEach((e) => html.push(addedCardHtml(e)));
+    sections.forEach((sec) => {
+      if (!sec.items.length) return;
+      sec.items.sort((a, b) => natKey(a.it.label).localeCompare(natKey(b.it.label)));
+      html.push('<div class="rh-added-group-h" data-rh-added-group="' + esc(sec.key) + '">' +
+                esc(sec.label) + ' <span>' + sec.items.length + '</span></div>');
+      sec.items.forEach((e) => html.push(addedCardHtml(e)));
     });
     addedList.innerHTML = html.join("");
     const setCount = (k, n) => {
@@ -3193,7 +3187,7 @@ body.mt-modal-open{overflow:hidden}
     setCount("operator", cMan);
     const totalEl = panel.querySelector("[data-rh-added-total]");
     if (totalEl) totalEl.textContent = String(cAuto + cMan);
-    if (addedEmpty) addedEmpty.hidden = entries.length > 0;
+    if (addedEmpty) addedEmpty.hidden = nItems > 0;
     applyAddedFilter();
   }
 
