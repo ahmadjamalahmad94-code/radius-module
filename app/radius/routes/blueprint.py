@@ -134,6 +134,7 @@ def _register_all(bp: Blueprint) -> None:
     from .finance_collection import register_finance_collection_routes
     from .company_inventory import register_company_inventory_routes
     from .card_users_marketplace import register_card_users_marketplace_routes
+    from .store_support import register_store_support_routes
     from .manager_distributor_ops import register_manager_distributor_ops_routes
     # لوحة الشحن — تفعيل/تجديد سريع للمدراء والموزعين (قراءات فقط؛
     # كل عمليات المال تمرّ عبر مسارات users/accounting القائمة).
@@ -184,6 +185,7 @@ def _register_all(bp: Blueprint) -> None:
     register_finance_collection_routes(bp)
     register_company_inventory_routes(bp)
     register_card_users_marketplace_routes(bp)
+    register_store_support_routes(bp)
     register_manager_distributor_ops_routes(bp)
     register_recharge_panel_routes(bp)
     register_communications_routes(bp)
