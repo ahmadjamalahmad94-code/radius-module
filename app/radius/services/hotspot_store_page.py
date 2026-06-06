@@ -286,6 +286,11 @@ class StoreDeployResult:
     path: str
     bytes: int
     error: str = ""
+    # قناة الرفع الفعلية (api/ftp) + عدد دفعات FTP + الأصول المنزوعة —
+    # نفس عقد DeployResult لصفحة الدخول، يعرضها شريط التقدّم.
+    via: str = "api"
+    chunks: int = 0
+    assets: int = 0
 
 
 def deploy_store(
@@ -298,15 +303,22 @@ def deploy_store(
     store_key: str = "",
     support_whatsapp: str = "",
     target_path: str = DEFAULT_STORE_PATH,
+    ftp: dict | None = None,
+    on_retry=None,
+    on_progress=None,
+    on_asset=None,
 ) -> StoreDeployResult:
-    """يرفع store.html إلى الراوتر — نفس خطوات deploy_login حرفيًا:
+    """يرفع store.html إلى الراوتر عبر **نفس مسار الملفات الكبيرة الآمن**
+    الذي تستعمله صفحة الدخول (`hotspot_templates._put_file_smart`):
 
-      1. /file/print للتأكد هل الملف موجود.
-      2a. موجود → /file/set [.id=X] contents=<html>.
-      2b. غير موجود → /file/add name=<path> contents=<html>.
+      • نزع الصور المضمّنة الكبيرة (شعار base64) لملفات منفصلة تُرفع
+        عبر FTP، فيصغر store.html ويمرّ عبر API بأمان.
+      • التوجيه الذكي: API للصغير (مع إعادة محاولة عند الانقطاع العابر)،
+        وFTP المجزّأ للكبير أو كحلّ بديل — فلا نداء `/file/add` ضخم واحد
+        يقطعه الراوتر (كان يسبب «EOF — الراوتر أغلق الاتصال»).
 
-    store_key: مفتاح تطبيق المتجر يُحقن في الصفحة (انظر render_store_page)
-    — يمرّره مسار النشر عبر store_key.get_or_create_store_key.
+    store_key: مفتاح تطبيق المتجر يُحقن في الصفحة (انظر render_store_page).
+    `ftp`/`on_*` تُمرَّر من مسار النشر مثل deploy_login.
     """
     # حارس عنوان محلي: 127.0.0.1/localhost أو فارغ → الصفحة المنشورة
     # لن تصل أبدًا للـ API من أجهزة الزبائن — نرفض برسالة واضحة.
@@ -325,29 +337,26 @@ def deploy_store(
     except StorePageError as e:
         return StoreDeployResult(ok=False, path=target_path, bytes=0,
                                  error=str(e))
-    try:
-        existing = client.run("/file/print",
-                              attrs={"where": "name=" + target_path})
-    except Exception as e:  # noqa: BLE001
-        return StoreDeployResult(ok=False, path=target_path, bytes=0,
-                                 error=f"/file/print فشل: {e}")
-    found_id = None
-    for row in (existing or []):
-        if (row.get("name") or "") == target_path:
-            found_id = row.get(".id") or row.get("id")
-            break
-    try:
-        if found_id:
-            client.run("/file/set", attrs={".id": found_id,
-                                           "contents": html})
-        else:
-            client.run("/file/add", attrs={"name": target_path,
-                                           "contents": html})
-    except Exception as e:  # noqa: BLE001
-        return StoreDeployResult(ok=False, path=target_path,
-                                 bytes=len(html),
-                                 error=f"رفع متجر الراوتر فشل: {e}")
-    return StoreDeployResult(ok=True, path=target_path, bytes=len(html))
+
+    # نفس مسار صفحة الدخول الكبيرة: نزع الأصول (إن توفّر FTP) ثم رفع
+    # ذكي API↔FTP. استيراد متأخر يتفادى دورة الاستيراد مع hotspot_templates.
+    from .hotspot_templates import _put_file_smart, _upload_inline_assets
+    n_assets = 0
+    if ftp:
+        html, n_assets = _upload_inline_assets(
+            html, target_path, ftp, on_asset=on_asset)
+    res = _put_file_smart(client, target_path, html,
+                          on_retry=on_retry, ftp=ftp, on_progress=on_progress)
+    if not res.ok:
+        # نُبقي صياغة «رفع متجر الراوتر فشل» المألوفة في الواجهة/التدقيق،
+        # ونلحق السبب الواضح من المسار الذكي (انقطاع/حجم/FTP).
+        return StoreDeployResult(
+            ok=False, path=target_path, bytes=res.bytes,
+            error="رفع متجر الراوتر فشل: " + res.error,
+            via=res.via, chunks=res.chunks, assets=n_assets)
+    return StoreDeployResult(
+        ok=True, path=target_path, bytes=res.bytes,
+        via=res.via, chunks=res.chunks, assets=n_assets)
 
 
 # ═══════════════════════════════════════════════════════════════
