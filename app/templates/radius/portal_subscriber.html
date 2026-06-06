@@ -23,7 +23,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#5b21b6">
-  <title>بوابة المشترك — HobeRadius</title>
+  <title>{{ _('بوابة المشترك — HobeRadius') }}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap">
@@ -209,7 +209,7 @@
       </div>
     </div>
     <a class="logout-link" href="{{ url_for('radius.portal_subscriber_logout') }}">
-      <i class="fa-solid fa-right-from-bracket"></i> تسجيل الخروج
+      <i class="fa-solid fa-right-from-bracket"></i> {{ _('تسجيل الخروج') }}
     </a>
   </header>
 
@@ -246,12 +246,12 @@
 
   {# ── Tabs — نمط tablist كامل: كل زر tab يحمل aria-selected و aria-controls
        مربوطين بلوحته (role=tabpanel)، ليقرأها قارئ الشاشة كحزمة تبويب. #}
-  <nav class="tabs" role="tablist" aria-label="أقسام البوابة">
-    <button class="tab is-active" data-tab="overview" id="tab-overview" role="tab" aria-selected="true" aria-controls="pane-overview"><i class="fa-solid fa-gauge-high" aria-hidden="true"></i> نظرة عامة</button>
-    <button class="tab" data-tab="profile" id="tab-profile" role="tab" aria-selected="false" aria-controls="pane-profile"><i class="fa-solid fa-id-card" aria-hidden="true"></i> الملف الشخصي</button>
-    {% if pf.show_usage %}<button class="tab" data-tab="usage" id="tab-usage" role="tab" aria-selected="false" aria-controls="pane-usage"><i class="fa-solid fa-chart-area" aria-hidden="true"></i> الاستخدام</button>{% endif %}
-    {% if pf.show_invoices %}<button class="tab" data-tab="billing" id="tab-billing" role="tab" aria-selected="false" aria-controls="pane-billing"><i class="fa-solid fa-receipt" aria-hidden="true"></i> الفواتير والمحفظة</button>{% endif %}
-    {% if pf_requests %}<button class="tab" data-tab="requests" id="tab-requests" role="tab" aria-selected="false" aria-controls="pane-requests"><i class="fa-solid fa-hand-holding-dollar" aria-hidden="true"></i> الطلبات والدعم</button>{% endif %}
+  <nav class="tabs" role="tablist" aria-label="{{ _('أقسام البوابة') }}">
+    <button class="tab is-active" data-tab="overview" id="tab-overview" role="tab" aria-selected="true" aria-controls="pane-overview"><i class="fa-solid fa-gauge-high" aria-hidden="true"></i> {{ _('نظرة عامة') }}</button>
+    <button class="tab" data-tab="profile" id="tab-profile" role="tab" aria-selected="false" aria-controls="pane-profile"><i class="fa-solid fa-id-card" aria-hidden="true"></i> {{ _('الملف الشخصي') }}</button>
+    {% if pf.show_usage %}<button class="tab" data-tab="usage" id="tab-usage" role="tab" aria-selected="false" aria-controls="pane-usage"><i class="fa-solid fa-chart-area" aria-hidden="true"></i> {{ _('الاستخدام') }}</button>{% endif %}
+    {% if pf.show_invoices %}<button class="tab" data-tab="billing" id="tab-billing" role="tab" aria-selected="false" aria-controls="pane-billing"><i class="fa-solid fa-receipt" aria-hidden="true"></i> {{ _('الفواتير والمحفظة') }}</button>{% endif %}
+    {% if pf_requests %}<button class="tab" data-tab="requests" id="tab-requests" role="tab" aria-selected="false" aria-controls="pane-requests"><i class="fa-solid fa-hand-holding-dollar" aria-hidden="true"></i> {{ _('الطلبات والدعم') }}</button>{% endif %}
   </nav>
 
   {# ════════════ نظرة عامة ════════════ #}
@@ -267,7 +267,7 @@
     <div class="grid-2">
       {# Subscription summary #}
       {% call hub.section("حالة الاشتراك", icon="calendar-check") %}
-        <p class="card-intro">يوضّح هذا القسم المدة المتبقية على اشتراكك وتاريخ انتهائه.</p>
+        <p class="card-intro">{{ _('يوضّح هذا القسم المدة المتبقية على اشتراكك وتاريخ انتهائه.') }}</p>
         {{ hub.kv([
           {'label': 'الحالة', 'value': status_label},
           {'label': 'ينتهي في', 'value': (sub.expire_at or '—')[:16], 'mono': True},
@@ -292,7 +292,7 @@
         <div style="display:grid;gap:10px">
           {% if rem is not none and rem < 0 %}
             <div class="note danger"><i class="fa-solid fa-circle-exclamation"></i>
-              <span>انتهى اشتراكك. بعض الخدمات معطّلة حتى التجديد.</span></div>
+              <span>{{ _('انتهى اشتراكك. بعض الخدمات معطّلة حتى التجديد.') }}</span></div>
           {% elif rem is not none and rem <= 3 %}
             <div class="note warn"><i class="fa-solid fa-triangle-exclamation"></i>
               <span>باقي {{ rem }} يوم على انتهاء الاشتراك.</span></div>
@@ -310,7 +310,7 @@
           {% endfor %}
           {% if not dashboard.notifications and not (rem is not none and rem <= 3) and not (dashboard.debt and dashboard.debt > 0) %}
             <div class="note ok"><i class="fa-solid fa-circle-check"></i>
-              <span>لا توجد تنبيهات حالياً. كل شيء على ما يرام.</span></div>
+              <span>{{ _('لا توجد تنبيهات حالياً. كل شيء على ما يرام.') }}</span></div>
           {% endif %}
         </div>
       {% endcall %}
@@ -321,7 +321,7 @@
   <section class="pane" data-pane="profile" id="pane-profile" role="tabpanel" aria-labelledby="tab-profile" tabindex="0">
     <div class="grid-2">
       {% call hub.section("بياناتي", icon="id-card") %}
-        <p class="card-intro">معلومات حسابك الأساسية كما هي مسجّلة لدى مزوّد الخدمة.</p>
+        <p class="card-intro">{{ _('معلومات حسابك الأساسية كما هي مسجّلة لدى مزوّد الخدمة.') }}</p>
         {{ hub.kv([
           {'label': 'الاسم', 'value': (dashboard.subscriber.full_name or '—')},
           {'label': 'اسم المستخدم', 'value': dashboard.subscriber.username, 'mono': True},
@@ -331,7 +331,7 @@
       {% endcall %}
 
       {% call hub.section("الباقة", icon="cubes") %}
-        <p class="card-intro">تفاصيل الباقة المرتبطة باشتراكك الحالي.</p>
+        <p class="card-intro">{{ _('تفاصيل الباقة المرتبطة باشتراكك الحالي.') }}</p>
         {{ hub.kv([
           {'label': 'اسم الباقة', 'value': (dashboard.plan.name if dashboard.plan and dashboard.plan.name else '—')},
           {'label': 'السعر', 'value': (dashboard.plan.price|money if dashboard.plan and dashboard.plan.price is defined else '—')},
@@ -361,8 +361,8 @@
         <table class="hub-table uds-table" data-testid="subscriber-sessions-table">
           <thead>
             <tr>
-              <th class="num">#</th><th>معرّف الجلسة</th><th>جهاز الشبكة</th><th>IP</th>
-              <th>البداية</th><th>النهاية</th><th>المدة</th><th>تحميل</th><th>رفع</th>
+              <th class="num">#</th><th>{{ _('معرّف الجلسة') }}</th><th>{{ _('جهاز الشبكة') }}</th><th>IP</th>
+              <th>{{ _('البداية') }}</th><th>{{ _('النهاية') }}</th><th>{{ _('المدة') }}</th><th>{{ _('تحميل') }}</th><th>{{ _('رفع') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -408,7 +408,7 @@
       {% if dashboard.payments %}
       <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
         <table class="hub-table uds-table">
-          <thead><tr><th class="num">#</th><th>المبلغ</th><th>الحالة</th><th>التاريخ</th></tr></thead>
+          <thead><tr><th class="num">#</th><th>{{ _('المبلغ') }}</th><th>{{ _('الحالة') }}</th><th>{{ _('التاريخ') }}</th></tr></thead>
           <tbody>
           {% for p in dashboard.payments %}
             <tr>
@@ -423,7 +423,7 @@
                 {% elif ps in ['refunded'] %}{{ hub.pill("مستردّة", variant="grey") }}
                 {# أي حالة غير معروفة: نعرض «غير محددة» معرّبة مع حفظ الخام في title #}
                 {% elif ps %}<span title="{{ p.status }}">{{ hub.pill("غير محددة", variant="grey") }}</span>
-                {% else %}<span class="kv-empty">غير محددة</span>{% endif %}
+                {% else %}<span class="kv-empty">{{ _('غير محددة') }}</span>{% endif %}
               </td>
               <td class="mono">{{ p.created_at|dt_local if p.created_at else '—' }}</td>
             </tr>
@@ -440,7 +440,7 @@
       {% if dashboard.loans %}
       <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
         <table class="hub-table uds-table">
-          <thead><tr><th class="num">#</th><th>المدة</th><th>القيمة</th><th>الحالة</th><th>السبب</th></tr></thead>
+          <thead><tr><th class="num">#</th><th>{{ _('المدة') }}</th><th>{{ _('القيمة') }}</th><th>{{ _('الحالة') }}</th><th>{{ _('السبب') }}</th></tr></thead>
           <tbody>
           {% for l in dashboard.loans %}
             <tr>
@@ -454,7 +454,7 @@
                 {% elif ls in ['rejected','cancelled','canceled'] %}{{ hub.pill("ملغاة", variant="grey") }}
                 {# أي حالة غير معروفة: «غير محددة» معرّبة مع حفظ الخام في title #}
                 {% elif ls %}<span title="{{ l.status }}">{{ hub.pill("غير محددة", variant="grey") }}</span>
-                {% else %}<span class="kv-empty">غير محددة</span>{% endif %}
+                {% else %}<span class="kv-empty">{{ _('غير محددة') }}</span>{% endif %}
               </td>
               <td>{{ l.reason or '—' }}</td>
             </tr>
@@ -479,7 +479,7 @@
       {# Renewal — portal.allow_renewal_request #}
       {% if pf.allow_renewal_request %}
       {% call hub.section("تجديد الاشتراك", icon="rotate") %}
-        <p class="card-intro">أرسل طلب تجديد لاشتراكك. سيراجعه فريق الدعم ويفعّله حسب باقتك.</p>
+        <p class="card-intro">{{ _('أرسل طلب تجديد لاشتراكك. سيراجعه فريق الدعم ويفعّله حسب باقتك.') }}</p>
         {% if rem is not none and rem <= 7 %}
           <div class="note warn" style="margin-bottom:12px"><i class="fa-solid fa-triangle-exclamation"></i>
             <span>{% if rem < 0 %}اشتراكك منتهٍ{% else %}باقي {{ rem }} يوم{% endif %} — التجديد مُوصى به الآن.</span></div>
@@ -488,8 +488,8 @@
               data-testid="subscriber-renewal-request-form">
           <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
           <div class="field">
-            <label>ملاحظة (اختياري)</label>
-            <textarea name="reason" placeholder="أي تفاصيل تساعد الدعم في تجديد اشتراكك"></textarea>
+            <label>{{ _('ملاحظة (اختياري)') }}</label>
+            <textarea name="reason" placeholder="{{ _('أي تفاصيل تساعد الدعم في تجديد اشتراكك') }}"></textarea>
           </div>
           {{ hub.btn("إرسال طلب التجديد", variant="primary", icon="paper-plane", type="submit") }}
         </form>
@@ -501,7 +501,7 @@
       {% call hub.section("طلب سلفة وقت", icon="hand-holding-dollar") %}
         {% if policy.enabled %}
           <div class="note ok" style="margin-bottom:12px"><i class="fa-solid fa-bolt"></i>
-            <span>السلفة التلقائية مفعّلة. حتى <strong>{{ fmt_mins(policy.allowed_minutes) }}</strong> تُعتمد فوراً دون انتظار.</span></div>
+            <span>{{ _('السلفة التلقائية مفعّلة. حتى') }} <strong>{{ fmt_mins(policy.allowed_minutes) }}</strong> {{ _('تُعتمد فوراً دون انتظار.') }}</span></div>
         {% else %}
           <div class="note warn" style="margin-bottom:12px"><i class="fa-solid fa-clock"></i>
             <span>{{ policy.reason or 'السلفة التلقائية غير متاحة لباقتك حالياً — سيُرسَل طلبك للمراجعة اليدوية.' }}</span></div>
@@ -510,7 +510,7 @@
               data-testid="subscriber-loan-request-form">
           <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
           <div class="field">
-            <label>الدقائق المطلوبة</label>
+            <label>{{ _('الدقائق المطلوبة') }}</label>
             {# Number+unit → unified unit-input picker (base unit = minutes).
                The hidden field still posts `requested_minutes` in minutes. #}
             {{ unit_input_picker(
@@ -520,8 +520,8 @@
                  min=1) }}
           </div>
           <div class="field">
-            <label>السبب (اختياري)</label>
-            <textarea name="reason" placeholder="سبب طلب السلفة"></textarea>
+            <label>{{ _('السبب (اختياري)') }}</label>
+            <textarea name="reason" placeholder="{{ _('سبب طلب السلفة') }}"></textarea>
           </div>
           {{ hub.btn(
                ('طلب سلفة فورية' if policy.enabled else 'إرسال طلب للمراجعة'),
@@ -539,13 +539,13 @@
        prefix; no dedicated backend. #}
     {% if pf.show_support %}
     {% call hub.section("تقديم شكوى أو طلب دعم", icon="headset") %}
-      <p class="card-intro">صف مشكلتك أو استفسارك وسيصل إلى فريق الدعم لمتابعته.</p>
+      <p class="card-intro">{{ _('صف مشكلتك أو استفسارك وسيصل إلى فريق الدعم لمتابعته.') }}</p>
       <form method="post" action="{{ url_for('radius.portal_subscriber_renewal_request') }}"
-            onsubmit="var r=this.querySelector('[name=reason]'); if(r && r.value.indexOf('[شكوى]')!==0){ r.value='[شكوى] '+r.value; }">
+            onsubmit="var r=this.querySelector('[name=reason]'); if(r && r.value.indexOf('[شكوى]')!==0){ r.value='{{ _('[شكوى]') }}'+r.value; }">
         <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
         <div class="field">
-          <label>تفاصيل الشكوى أو الطلب <span style="color:var(--err)">*</span></label>
-          <textarea name="reason" required placeholder="اكتب تفاصيل المشكلة: انقطاع، بطء، فاتورة، إلخ"></textarea>
+          <label>{{ _('تفاصيل الشكوى أو الطلب') }} <span style="color:var(--err)">*</span></label>
+          <textarea name="reason" required placeholder="{{ _('اكتب تفاصيل المشكلة: انقطاع، بطء، فاتورة، إلخ') }}"></textarea>
         </div>
         {{ hub.btn("إرسال للدعم", variant="secondary", icon="paper-plane", type="submit") }}
       </form>

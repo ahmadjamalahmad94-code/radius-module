@@ -20,7 +20,7 @@
 {% block title %}سجل التدقيق{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-shield-halved"></i>{% endblock %}
 {% block page_title %}سجل التدقيق{% endblock %}
-{% block page_sub %}<span class="sub">من فعل ماذا، على أي هدف، وما نتيجة العملية</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('من فعل ماذا، على أي هدف، وما نتيجة العملية') }}</span>{% endblock %}
 
 {% block head_extra %}{{ super() }}
 {# نظام الجداول الموحد (uds): فرز + ترقيم صفحات + تصدير لجدول السجل #}
@@ -65,21 +65,21 @@
 ) %}
   <input class="hub-input grow" type="text" name="q" data-audit-filter-search
          value="{{ filters.search or '' }}"
-         placeholder="بحث (المنفّذ / الهدف / جزء من الإجراء)…">
+         placeholder="{{ _('بحث (المنفّذ / الهدف / جزء من الإجراء)…') }}">
   <input class="hub-input" type="text" name="router_id" inputmode="numeric" data-audit-filter-router
-         value="{{ filters.router_id or '' }}" placeholder="رقم الراوتر"
-         title="رقم الراوتر" style="max-width:130px">
+         value="{{ filters.router_id or '' }}" placeholder="{{ _('رقم الراوتر') }}"
+         title="{{ _('رقم الراوتر') }}" style="max-width:130px">
   <input class="hub-input" type="text" name="action" data-audit-filter-action
-         value="{{ filters.action or '' }}" placeholder="رمز الإجراء (اختياري)"
-         title="رمز الإجراء" style="max-width:190px">
-  <select class="hub-select" name="severity" data-audit-filter-severity title="الشدة" style="max-width:150px">
-    <option value="">كل الشدّات</option>
+         value="{{ filters.action or '' }}" placeholder="{{ _('رمز الإجراء (اختياري)') }}"
+         title="{{ _('رمز الإجراء') }}" style="max-width:190px">
+  <select class="hub-select" name="severity" data-audit-filter-severity title="{{ _('الشدة') }}" style="max-width:150px">
+    <option value="">{{ _('كل الشدّات') }}</option>
     {% for s in severities %}
       <option value="{{ s }}" {% if filters.severity == s %}selected{% endif %}>{{ severity_labels.get(s, s) }}</option>
     {% endfor %}
   </select>
-  <select class="hub-select" name="result_status" data-audit-filter-result title="النتيجة" style="max-width:150px">
-    <option value="">كل النتائج</option>
+  <select class="hub-select" name="result_status" data-audit-filter-result title="{{ _('النتيجة') }}" style="max-width:150px">
+    <option value="">{{ _('كل النتائج') }}</option>
     {% for r in result_statuses %}
       <option value="{{ r }}" {% if filters.result_status == r %}selected{% endif %}>{{ result_labels.get(r, r) }}</option>
     {% endfor %}
@@ -104,15 +104,15 @@
     <table class="hub-table audit-table">
       <thead>
         <tr>
-          <th class="num" style="width:70px" data-uds-nosort>الرقم</th>
-          <th>الوقت</th>
-          <th>المنفّذ</th>
-          <th>الإجراء</th>
-          <th>الهدف</th>
-          <th data-uds-nosort>الشدة</th>
-          <th data-uds-nosort>النتيجة</th>
-          <th>الراوتر</th>
-          <th data-uds-nosort>التفاصيل</th>
+          <th class="num" style="width:70px" data-uds-nosort>{{ _('الرقم') }}</th>
+          <th>{{ _('الوقت') }}</th>
+          <th>{{ _('المنفّذ') }}</th>
+          <th>{{ _('الإجراء') }}</th>
+          <th>{{ _('الهدف') }}</th>
+          <th data-uds-nosort>{{ _('الشدة') }}</th>
+          <th data-uds-nosort>{{ _('النتيجة') }}</th>
+          <th>{{ _('الراوتر') }}</th>
+          <th data-uds-nosort>{{ _('التفاصيل') }}</th>
         </tr>
       </thead>
       <tbody data-audit-log-rows>

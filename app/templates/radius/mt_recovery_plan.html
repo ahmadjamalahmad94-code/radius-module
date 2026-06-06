@@ -81,7 +81,7 @@
         {% endfor %}
       </ol>
       <p class="hub-text-mute" style="margin:14px 0 0;font-size:13px">
-        هذه خطة استشاريّة فقط — التراجع التلقائي غير مفعّل في هذه المرحلة.
+        {{ _('هذه خطة استشاريّة فقط — التراجع التلقائي غير مفعّل في هذه المرحلة.') }}
       </p>
     </div>
   {% endcall %}
@@ -100,7 +100,7 @@
         <a class="hub-btn hub-btn--secondary hub-btn--sm"
            href="{{ url_for('radius.mt_backups_list', nas_id=plan.router_id) }}"
            data-mt-recovery-backup-link>
-          <i class="fa-solid fa-arrow-right"></i> صفحة النسخ
+          <i class="fa-solid fa-arrow-right"></i> {{ _('صفحة النسخ') }}
         </a>
       </div>
     </div>
@@ -116,7 +116,7 @@
       <a class="hub-btn hub-btn--secondary hub-btn--sm"
          href="{{ url_for('radius.jobs_show', job_id=plan.related_job.id) }}"
          data-mt-recovery-job-link>
-        <i class="fa-solid fa-magnifying-glass"></i> تفاصيل
+        <i class="fa-solid fa-magnifying-glass"></i> {{ _('تفاصيل') }}
       </a>
     </div>
   {% endcall %}
@@ -127,12 +127,12 @@
     <div class="hub-flex-row" style="gap:10px;flex-wrap:wrap">
       <a class="hub-btn hub-btn--secondary hub-btn--sm"
          href="{{ url_for('radius.audit_log_detail', audit_id=plan.audit_id) }}">
-        <i class="fa-solid fa-clipboard-list"></i> عرض سجل العملية التفصيلي
+        <i class="fa-solid fa-clipboard-list"></i> {{ _('عرض سجل العملية التفصيلي') }}
       </a>
       {% if plan.router_id %}
       <a class="hub-btn hub-btn--secondary hub-btn--sm"
          href="{{ url_for('radius.mt_router_overview', nas_id=plan.router_id) }}">
-        <i class="fa-solid fa-clipboard-check"></i> نظرة عامة على الراوتر
+        <i class="fa-solid fa-clipboard-check"></i> {{ _('نظرة عامة على الراوتر') }}
       </a>
       {% endif %}
     </div>

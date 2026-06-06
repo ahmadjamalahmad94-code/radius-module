@@ -58,7 +58,7 @@
 <div class="st-worker-grid">
   {% for w in s.workers %}
   <div class="st-worker">
-    <div class="lbl">العامل</div>
+    <div class="lbl">{{ _('العامل') }}</div>
     <div class="val">
       {% if w.is_alive %}<span class="st-dot-ok">●</span>{% else %}<span class="st-dot-err">●</span>{% endif %}
       {{ w.name }}
@@ -68,9 +68,9 @@
   </div>
   {% else %}
   <div class="st-worker">
-    <div class="lbl">العاملون</div>
-    <div class="val st-dot-warn">لا يوجد عاملون نشطون</div>
-    <div class="sub">شغّل المشروع بدون <code>HOBERADIUS_NO_WORKER=1</code></div>
+    <div class="lbl">{{ _('العاملون') }}</div>
+    <div class="val st-dot-warn">{{ _('لا يوجد عاملون نشطون') }}</div>
+    <div class="sub">{{ _('شغّل المشروع بدون') }} <code>HOBERADIUS_NO_WORKER=1</code></div>
   </div>
   {% endfor %}
 </div>
@@ -103,13 +103,13 @@
 
 <div style="display:flex;gap:8px;margin:6px 0 var(--hub-gap-section);flex-wrap:wrap">
   <a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ url_for('radius.sync_list') }}">
-    <i class="fa-solid fa-list"></i> فتح طابور المزامنة
+    <i class="fa-solid fa-list"></i> {{ _('فتح طابور المزامنة') }}
   </a>
   <a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ url_for('radius.wh_deliveries') }}">
-    <i class="fa-solid fa-bolt"></i> فتح سجل الإشعارات
+    <i class="fa-solid fa-bolt"></i> {{ _('فتح سجل الإشعارات') }}
   </a>
   <a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ url_for('radius.mt_list') }}">
-    <i class="fa-solid fa-router"></i> إدارة الراوترات
+    <i class="fa-solid fa-router"></i> {{ _('إدارة الراوترات') }}
   </a>
 </div>
 
@@ -119,8 +119,8 @@
     <table class="hub-table">
       <thead>
         <tr>
-          <th>الكيان</th>
-          <th class="num" style="width:120px">العدد</th>
+          <th>{{ _('الكيان') }}</th>
+          <th class="num" style="width:120px">{{ _('العدد') }}</th>
         </tr>
       </thead>
       <tbody>
@@ -144,11 +144,11 @@
         <thead>
           <tr>
             <th class="num" style="width:60px">#</th>
-            <th>الاسم</th>
-            <th>المضيف</th>
-            <th>الحالة</th>
-            <th>آخر فحص</th>
-            <th>آخر نتيجة</th>
+            <th>{{ _('الاسم') }}</th>
+            <th>{{ _('المضيف') }}</th>
+            <th>{{ _('الحالة') }}</th>
+            <th>{{ _('آخر فحص') }}</th>
+            <th>{{ _('آخر نتيجة') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -178,7 +178,7 @@
 {% endif %}
 
 <div class="hub-text-mute" style="margin-top:10px;font-size:12px;line-height:1.7">
-  للاستجابة الفنية استخدم <code>?format=json</code> أو <code>Accept: application/json</code>.
+  {{ _('للاستجابة الفنية استخدم') }} <code>?format=json</code> {{ _('أو') }} <code>Accept: application/json</code>.
   آخر تحديث: <span class="mono">{{ s.now }}</span>
 </div>
 

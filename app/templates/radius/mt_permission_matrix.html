@@ -212,20 +212,20 @@
   {% call hub.section("مصفوفة المدراء والصلاحيات", icon="table-cells-large", meta="قراءة فقط") %}
     {% if not matrix.rows %}
       {{ hub.empty("لا يوجد مدراء نشطون.", icon="user-slash") }}
-      <span data-mt-perm-empty hidden>لا يوجد مدراء نشطون.</span>
+      <span data-mt-perm-empty hidden>{{ _('لا يوجد مدراء نشطون.') }}</span>
     {% else %}
     <div class="permx-table-wrap" style="direction:ltr">
       <table class="permx-table" data-mt-perm-table style="direction:rtl">
         <thead>
           <tr>
-            <th class="permx-admin-cell">المدير</th>
+            <th class="permx-admin-cell">{{ _('المدير') }}</th>
             {% for p in matrix.permissions %}
             <th class="permx-perm-head{% if p in risky_perms %} is-risky{% endif %}" data-mt-perm-col="{{ p }}" title="{{ p }}">
               {{ perm_labels.get(p, p) }}
               <span class="permx-code">{{ p }}</span>
             </th>
             {% endfor %}
-            <th>الإجمالي</th>
+            <th>{{ _('الإجمالي') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -264,7 +264,7 @@
         </tbody>
         <tfoot>
           <tr>
-            <th class="permx-admin-cell">الإجمالي</th>
+            <th class="permx-admin-cell">{{ _('الإجمالي') }}</th>
             {% for p in matrix.permissions %}
             <th data-mt-perm-col-count="{{ p }}">{{ grant_counts.get(p, 0) }} / {{ total_admins }}</th>
             {% endfor %}

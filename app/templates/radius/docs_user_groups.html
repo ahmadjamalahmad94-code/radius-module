@@ -231,14 +231,14 @@
 <div class="dg-layout">
 
   {# ───── الفهرس الجانبي اللاصق ───── #}
-  <nav class="dg-toc dg-noprint" aria-label="فهرس الدليل">
-    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> فهرس الخطوات</div>
-    <a href="#dg-s1" data-dg-toc><span class="n">1</span> شو فايدة المجموعات؟</a>
-    <a href="#dg-s2" data-dg-toc><span class="n">2</span> أنشئ مجموعة جديدة</a>
-    <a href="#dg-s3" data-dg-toc><span class="n">3</span> خدمات المجموعة</a>
-    <a href="#dg-s4" data-dg-toc><span class="n">4</span> أضف وأزل الأعضاء</a>
-    <a href="#dg-s5" data-dg-toc><span class="n">5</span> اقرأ جدول المجموعات</a>
-    <a href="#dg-s6" data-dg-toc><span class="n">6</span> إجراءات المجموعة</a>
+  <nav class="dg-toc dg-noprint" aria-label="{{ _('فهرس الدليل') }}">
+    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> {{ _('فهرس الخطوات') }}</div>
+    <a href="#dg-s1" data-dg-toc><span class="n">1</span> {{ _('شو فايدة المجموعات؟') }}</a>
+    <a href="#dg-s2" data-dg-toc><span class="n">2</span> {{ _('أنشئ مجموعة جديدة') }}</a>
+    <a href="#dg-s3" data-dg-toc><span class="n">3</span> {{ _('خدمات المجموعة') }}</a>
+    <a href="#dg-s4" data-dg-toc><span class="n">4</span> {{ _('أضف وأزل الأعضاء') }}</a>
+    <a href="#dg-s5" data-dg-toc><span class="n">5</span> {{ _('اقرأ جدول المجموعات') }}</a>
+    <a href="#dg-s6" data-dg-toc><span class="n">6</span> {{ _('إجراءات المجموعة') }}</a>
   </nav>
 
   {# ───── عمود المحتوى ───── #}
@@ -247,7 +247,7 @@
     <div class="dg-lead">
       <span class="ic"><i class="fa-solid fa-lightbulb"></i></span>
       <div>
-        <h3>قبل ما نبدأ — شو يعني «مجموعة مشتركين»؟</h3>
+        <h3>{{ _('قبل ما نبدأ — شو يعني «مجموعة مشتركين»؟') }}</h3>
         <p>
           المجموعة سلّة تجمع فيها مشتركين بينهم شيء مشترك: سكان حي واحد، زبائن برج، فئة
           VIP... وبدل ما تكرر العملية لكل واحد، تنفّذها على المجموعة كلها مرة واحدة:
@@ -260,21 +260,21 @@
     <section class="dg-step" id="dg-s1">
       <div class="dg-badge">1</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-door-open"></i> افتح الصفحة وافهم فكرتها</h2>
+        <h2><i class="fa-solid fa-door-open"></i> {{ _('افتح الصفحة وافهم فكرتها') }}</h2>
         <p>
-          من القائمة الجانبية افتح <strong>«المشتركون»</strong> ثم
-          <strong>«مجموعات المشتركين»</strong>. أعلى الصفحة:
+          {{ _('من القائمة الجانبية افتح') }} <strong>{{ _('«المشتركون»') }}</strong> {{ _('ثم') }}
+          <strong>{{ _('«مجموعات المشتركين»') }}</strong>{{ _('. أعلى الصفحة:') }}
         </p>
         <ul>
-          <li>زر <strong>«إضافة مجموعة»</strong> البنفسجي — لإنشاء مجموعة جديدة.</li>
-          <li>أيقونة <strong>المكبّرة 🔍</strong> — اضغطها يتمدد حقل بحث يفلتر المجموعات
+          <li>{{ _('زر') }} <strong>{{ _('«إضافة مجموعة»') }}</strong> {{ _('البنفسجي — لإنشاء مجموعة جديدة.') }}</li>
+          <li>{{ _('أيقونة') }} <strong>{{ _('المكبّرة 🔍') }}</strong> — اضغطها يتمدد حقل بحث يفلتر المجموعات
               فوريًا بالاسم أو الوصف وأنت تكتب.</li>
-          <li>أربع بطاقات أرقام: <strong>عدد المجموعات</strong>، <strong>إجمالي الأعضاء</strong>،
-              <strong>متصلون الآن</strong>، <strong>إجمالي الاستهلاك</strong> (تحميل + رفع لكل المجموعات).</li>
+          <li>{{ _('أربع بطاقات أرقام:') }} <strong>{{ _('عدد المجموعات') }}</strong>{{ _('،') }} <strong>{{ _('إجمالي الأعضاء') }}</strong>{{ _('،') }}
+              <strong>{{ _('متصلون الآن') }}</strong>{{ _('،') }} <strong>{{ _('إجمالي الاستهلاك') }}</strong> {{ _('(تحميل + رفع لكل المجموعات).') }}</li>
         </ul>
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>نصيحة:</b> فكّر بالمجموعات كتقسيم جغرافي أو تجاري: «برج السلام»، «حي الجامعة»،
+          <span><b>{{ _('نصيحة:') }}</b> فكّر بالمجموعات كتقسيم جغرافي أو تجاري: «برج السلام»، «حي الجامعة»،
           «زبائن VIP» — أي تقسيم رح تحتاج تتعامل معه ككتلة واحدة لاحقًا.</span>
         </div>
       </div>
@@ -284,36 +284,36 @@
     <section class="dg-step" id="dg-s2">
       <div class="dg-badge">2</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-plus"></i> أنشئ مجموعة — اسم ووصف وخلصت</h2>
+        <h2><i class="fa-solid fa-plus"></i> {{ _('أنشئ مجموعة — اسم ووصف وخلصت') }}</h2>
         <p>
-          اضغط <strong>«إضافة مجموعة»</strong>. أول قسم في النموذج اسمه
-          <strong>«الهويّة»</strong> وفيه حقلان فقط:
+          {{ _('اضغط') }} <strong>{{ _('«إضافة مجموعة»') }}</strong>{{ _('. أول قسم في النموذج اسمه') }}
+          <strong>{{ _('«الهويّة»') }}</strong> {{ _('وفيه حقلان فقط:') }}
         </p>
         <ul>
-          <li><strong>اسم المجموعة</strong> (إجباري — بنجمة حمراء): يجب أن يكون فريدًا،
-              مثل <span class="dg-kbd">VIP — Office Hours</span> أو «برج السلام».</li>
-          <li><strong>الوصف:</strong> ملاحظة اختيارية تذكّرك لماذا أنشأتها.</li>
+          <li><strong>{{ _('اسم المجموعة') }}</strong> (إجباري — بنجمة حمراء): يجب أن يكون فريدًا،
+              مثل <span class="dg-kbd">VIP — Office Hours</span> {{ _('أو «برج السلام».') }}</li>
+          <li><strong>{{ _('الوصف:') }}</strong> {{ _('ملاحظة اختيارية تذكّرك لماذا أنشأتها.') }}</li>
         </ul>
-        <p>وفي آخر الصفحة زر <strong>«إنشاء المجموعة»</strong> البنفسجي وبجانبه «إلغاء».</p>
+        <p>{{ _('وفي آخر الصفحة زر') }} <strong>{{ _('«إنشاء المجموعة»') }}</strong> {{ _('البنفسجي وبجانبه «إلغاء».') }}</p>
 
         <div class="dg-mock" aria-hidden="true">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">إضافة مجموعة مشتركين › الهويّة</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('إضافة مجموعة مشتركين › الهويّة') }}</span></div>
           <div class="dg-mock-body">
-            <div class="dg-mock-sechead"><span class="ic"><i class="fa-solid fa-id-card"></i></span> الهويّة</div>
+            <div class="dg-mock-sechead"><span class="ic"><i class="fa-solid fa-id-card"></i></span> {{ _('الهويّة') }}</div>
             <div class="dg-mock-grid2">
               <div class="dg-mf">
-                <label>اسم المجموعة <span class="req">*</span></label>
-                <div class="dg-mf-input hl">برج السلام</div>
-                <div class="dg-mf-help">يجب أن يكون فريدًا.</div>
+                <label>{{ _('اسم المجموعة') }} <span class="req">*</span></label>
+                <div class="dg-mf-input hl">{{ _('برج السلام') }}</div>
+                <div class="dg-mf-help">{{ _('يجب أن يكون فريدًا.') }}</div>
               </div>
               <div class="dg-mf">
-                <label>الوصف</label>
-                <div class="dg-mf-input ph">ملاحظة اختيارية عن المجموعة</div>
+                <label>{{ _('الوصف') }}</label>
+                <div class="dg-mf-input ph">{{ _('ملاحظة اختيارية عن المجموعة') }}</div>
               </div>
             </div>
             <div class="dg-mock-actions">
-              <span class="dg-fbtn ghost">إلغاء</span>
-              <span class="dg-fbtn primary"><i class="fa-solid fa-floppy-disk"></i> إنشاء المجموعة</span>
+              <span class="dg-fbtn ghost">{{ _('إلغاء') }}</span>
+              <span class="dg-fbtn primary"><i class="fa-solid fa-floppy-disk"></i> {{ _('إنشاء المجموعة') }}</span>
             </div>
           </div>
         </div>
@@ -324,55 +324,55 @@
     <section class="dg-step" id="dg-s3">
       <div class="dg-badge">3</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-layer-group"></i> اضبط الخدمات المُطبَّقة على الأعضاء</h2>
+        <h2><i class="fa-solid fa-layer-group"></i> {{ _('اضبط الخدمات المُطبَّقة على الأعضاء') }}</h2>
         <p>
-          القسم الثاني في النموذج: <strong>«الخدمات المُطبَّقة على أعضاء المجموعة»</strong> —
+          {{ _('القسم الثاني في النموذج:') }} <strong>{{ _('«الخدمات المُطبَّقة على أعضاء المجموعة»') }}</strong> —
           هنا قوة المجموعات الحقيقية. كل ما تختاره هنا يسري على كل عضو تلقائيًا:
         </p>
         <ul>
-          <li><strong>جدولة سرعة (Bandwidth schedule):</strong> جدول سرعات (مثلًا: تخفيض ليلي)
+          <li><strong>{{ _('جدولة سرعة (Bandwidth schedule):') }}</strong> جدول سرعات (مثلًا: تخفيض ليلي)
               يُطبَّق على كل أعضاء المجموعة دفعة واحدة.</li>
-          <li><strong>الباقة الافتراضية:</strong> عند إضافة عضو جديد للمجموعة تُسنَد له
+          <li><strong>{{ _('الباقة الافتراضية:') }}</strong> عند إضافة عضو جديد للمجموعة تُسنَد له
               هذه الباقة تلقائيًا.</li>
-          <li><strong>التجديد التلقائي:</strong> مفتاح يجعل التجديد التلقائي مفعَّلًا
+          <li><strong>{{ _('التجديد التلقائي:') }}</strong> مفتاح يجعل التجديد التلقائي مفعَّلًا
               افتراضيًا لأعضاء المجموعة.</li>
-          <li><strong>الأيام والأوقات المسموحة:</strong> منتقي جدول دخول — حدد متى يُسمح
+          <li><strong>{{ _('الأيام والأوقات المسموحة:') }}</strong> منتقي جدول دخول — حدد متى يُسمح
               لأعضاء المجموعة بالاتصال (مفيد للمكاتب وساعات الدوام).</li>
         </ul>
         <p>
-          وعند <strong>تعديل</strong> مجموعة قائمة تظهر أيضًا لوحة <strong>جداول السرعة</strong>
-          الخاصة بها وجدول <strong>«الأعضاء»</strong> (اسم المستخدم، الاسم، الجوّال، الحالة) —
+          {{ _('وعند') }} <strong>{{ _('تعديل') }}</strong> {{ _('مجموعة قائمة تظهر أيضًا لوحة') }} <strong>{{ _('جداول السرعة') }}</strong>
+          {{ _('الخاصة بها وجدول') }} <strong>{{ _('«الأعضاء»') }}</strong> (اسم المستخدم، الاسم، الجوّال، الحالة) —
           اضغط على أي اسم لفتح ملفه.
         </p>
 
         <div class="dg-mock" aria-hidden="true">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">تعديل المجموعة › الخدمات</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('تعديل المجموعة › الخدمات') }}</span></div>
           <div class="dg-mock-body">
-            <div class="dg-mock-sechead"><span class="ic"><i class="fa-solid fa-layer-group"></i></span> الخدمات المُطبَّقة على أعضاء المجموعة</div>
+            <div class="dg-mock-sechead"><span class="ic"><i class="fa-solid fa-layer-group"></i></span> {{ _('الخدمات المُطبَّقة على أعضاء المجموعة') }}</div>
             <div class="dg-mock-grid2">
               <div class="dg-mf">
-                <label>جدولة سرعة (Bandwidth schedule)</label>
-                <div class="dg-mf-select"><div class="dg-mf-input">— بدون —</div></div>
-                <div class="dg-mf-help">جدول السرعات يطبَّق على كل عضو في المجموعة.</div>
+                <label>{{ _('جدولة سرعة (Bandwidth schedule)') }}</label>
+                <div class="dg-mf-select"><div class="dg-mf-input">{{ _('— بدون —') }}</div></div>
+                <div class="dg-mf-help">{{ _('جدول السرعات يطبَّق على كل عضو في المجموعة.') }}</div>
               </div>
               <div class="dg-mf">
-                <label>الباقة الافتراضية</label>
-                <div class="dg-mf-select"><div class="dg-mf-input hl">باقة 10 ميجا — شهري</div></div>
-                <div class="dg-mf-help">تُسنَد تلقائيًا لكل عضو جديد.</div>
+                <label>{{ _('الباقة الافتراضية') }}</label>
+                <div class="dg-mf-select"><div class="dg-mf-input hl">{{ _('باقة 10 ميجا — شهري') }}</div></div>
+                <div class="dg-mf-help">{{ _('تُسنَد تلقائيًا لكل عضو جديد.') }}</div>
               </div>
             </div>
             <div class="dg-mock-grid2">
               <div class="dg-mf">
-                <label>التجديد التلقائي</label>
+                <label>{{ _('التجديد التلقائي') }}</label>
                 <div style="display:flex;align-items:center;gap:8px;padding-top:3px">
                   <span style="position:relative;width:36px;height:20px;background:#7c3aed;border-radius:99px;flex:none">
                     <span style="position:absolute;top:2.5px;inset-inline-end:3px;width:15px;height:15px;background:#fff;border-radius:50%;box-shadow:0 1px 2px rgba(0,0,0,.2)"></span></span>
-                  <span style="font-size:10px;font-weight:800;color:#5b21b6">مفعَّل افتراضيًا للأعضاء</span>
+                  <span style="font-size:10px;font-weight:800;color:#5b21b6">{{ _('مفعَّل افتراضيًا للأعضاء') }}</span>
                 </div>
               </div>
               <div class="dg-mf">
-                <label>الأيام والأوقات المسموحة</label>
-                <div class="dg-mf-input ph">كل الأيام — 24 ساعة</div>
+                <label>{{ _('الأيام والأوقات المسموحة') }}</label>
+                <div class="dg-mf-input ph">{{ _('كل الأيام — 24 ساعة') }}</div>
               </div>
             </div>
           </div>
@@ -380,7 +380,7 @@
 
         <div class="dg-warn">
           <span class="ic">⚠️</span>
-          <span><b>انتبه:</b> «جدولة السرعة» تسري على <b>كل</b> أعضاء المجموعة — لو حطيت
+          <span><b>{{ _('انتبه:') }}</b> {{ _('«جدولة السرعة» تسري على') }} <b>{{ _('كل') }}</b> أعضاء المجموعة — لو حطيت
           تخفيضًا ليليًا رح يتأثر الجميع. تأكد أن كل أعضاء المجموعة فعلًا يستحقون نفس السياسة.</span>
         </div>
       </div>
@@ -390,34 +390,34 @@
     <section class="dg-step" id="dg-s4">
       <div class="dg-badge">4</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-user-plus"></i> أضف وأزل الأعضاء — من ملف المشترك</h2>
+        <h2><i class="fa-solid fa-user-plus"></i> {{ _('أضف وأزل الأعضاء — من ملف المشترك') }}</h2>
         <p>
-          العضوية تُسنَد من <strong>نموذج المشترك نفسه</strong>، لا من صفحة المجموعات:
+          {{ _('العضوية تُسنَد من') }} <strong>{{ _('نموذج المشترك نفسه') }}</strong>{{ _('، لا من صفحة المجموعات:') }}
         </p>
         <ul>
-          <li><strong>للإضافة:</strong> افتح المشترك (تعديل أو إضافة جديد)، وفي حقل
-              <strong>«المجموعة»</strong> اختر اسم المجموعة ثم احفظ — صار عضوًا فيها.</li>
-          <li><strong>للإزالة:</strong> نفس الحقل — رجّعه إلى <strong>«— بدون —»</strong>
-              أو بدّله لمجموعة أخرى ثم احفظ.</li>
-          <li><strong>لرؤية الأعضاء:</strong> من جدول المجموعات اضغط زر
-              <strong>«الأعضاء»</strong> في صف المجموعة — يفتح لك قائمة المشتركين 360
+          <li><strong>{{ _('للإضافة:') }}</strong> {{ _('افتح المشترك (تعديل أو إضافة جديد)، وفي حقل') }}
+              <strong>{{ _('«المجموعة»') }}</strong> {{ _('اختر اسم المجموعة ثم احفظ — صار عضوًا فيها.') }}</li>
+          <li><strong>{{ _('للإزالة:') }}</strong> {{ _('نفس الحقل — رجّعه إلى') }} <strong>{{ _('«— بدون —»') }}</strong>
+              {{ _('أو بدّله لمجموعة أخرى ثم احفظ.') }}</li>
+          <li><strong>{{ _('لرؤية الأعضاء:') }}</strong> {{ _('من جدول المجموعات اضغط زر') }}
+              <strong>{{ _('«الأعضاء»') }}</strong> في صف المجموعة — يفتح لك قائمة المشتركين 360
               مفلترة على هذه المجموعة، أو افتح «تعديل» المجموعة لقسم الأعضاء.</li>
         </ul>
 
         <div class="dg-mock" aria-hidden="true" style="max-width:430px">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">تعديل المشترك › الباقة والإدارة</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('تعديل المشترك › الباقة والإدارة') }}</span></div>
           <div class="dg-mock-body">
             <div class="dg-mf">
-              <label>المجموعة</label>
-              <div class="dg-mf-select"><div class="dg-mf-input hl">برج السلام</div></div>
-              <div class="dg-mf-help">اختر المجموعة من القائمة ثم احفظ المشترك — صار عضوًا فيها.</div>
+              <label>{{ _('المجموعة') }}</label>
+              <div class="dg-mf-select"><div class="dg-mf-input hl">{{ _('برج السلام') }}</div></div>
+              <div class="dg-mf-help">{{ _('اختر المجموعة من القائمة ثم احفظ المشترك — صار عضوًا فيها.') }}</div>
             </div>
           </div>
         </div>
 
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>نصيحة:</b> المشترك ينتمي لمجموعة واحدة في كل لحظة — لو نقل سكنه من برج
+          <span><b>{{ _('نصيحة:') }}</b> المشترك ينتمي لمجموعة واحدة في كل لحظة — لو نقل سكنه من برج
           لآخر، مجرد تبديل قيمة «المجموعة» في ملفه يكفي.</span>
         </div>
       </div>
@@ -427,42 +427,42 @@
     <section class="dg-step" id="dg-s5">
       <div class="dg-badge">5</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-table-list"></i> اقرأ جدول المجموعات صح</h2>
-        <p>كل صف في الجدول لوحة معلومات مصغّرة عن المجموعة — الأعمدة بالترتيب:</p>
+        <h2><i class="fa-solid fa-table-list"></i> {{ _('اقرأ جدول المجموعات صح') }}</h2>
+        <p>{{ _('كل صف في الجدول لوحة معلومات مصغّرة عن المجموعة — الأعمدة بالترتيب:') }}</p>
         <ul>
-          <li><strong>المجموعة:</strong> الاسم (اضغطه لفتح التعديل) وتحته الوصف.</li>
-          <li><strong>الأعضاء:</strong> كم مشتركًا فيها.</li>
-          <li><strong>المتصلون:</strong> كم جلسة نشطة الآن من أعضائها.</li>
-          <li><strong>التحميل / الرفع:</strong> الاستهلاك التراكمي لكل الأعضاء.</li>
-          <li><strong>الحالة:</strong> حبوب ملوّنة — <span class="dg-pill g">نشط 12</span>
-              <span class="dg-pill r">معطل 2</span> <span class="dg-pill a">منتهي 3</span>
-              تلخّص أوضاع الأعضاء.</li>
-          <li><strong>الخدمات:</strong> حبوب تبيّن ما هو مفعَّل على المجموعة —
-              <span class="dg-pill a">جدولة سرعة</span> <span class="dg-pill v">باقة افتراضية</span>
-              <span class="dg-pill g">تجديد تلقائي</span>، أو «—» إن لم يُضبط شيء.</li>
-          <li><strong>السرعة:</strong> <span class="dg-pill b">مؤقتة N</span> /
-              <span class="dg-pill a">خاصة N</span> لعدد الأعضاء بسرعات غير سرعة العرض،
+          <li><strong>{{ _('المجموعة:') }}</strong> {{ _('الاسم (اضغطه لفتح التعديل) وتحته الوصف.') }}</li>
+          <li><strong>{{ _('الأعضاء:') }}</strong> {{ _('كم مشتركًا فيها.') }}</li>
+          <li><strong>{{ _('المتصلون:') }}</strong> {{ _('كم جلسة نشطة الآن من أعضائها.') }}</li>
+          <li><strong>{{ _('التحميل / الرفع:') }}</strong> {{ _('الاستهلاك التراكمي لكل الأعضاء.') }}</li>
+          <li><strong>{{ _('الحالة:') }}</strong> {{ _('حبوب ملوّنة —') }} <span class="dg-pill g">{{ _('نشط 12') }}</span>
+              <span class="dg-pill r">{{ _('معطل 2') }}</span> <span class="dg-pill a">{{ _('منتهي 3') }}</span>
+              {{ _('تلخّص أوضاع الأعضاء.') }}</li>
+          <li><strong>{{ _('الخدمات:') }}</strong> {{ _('حبوب تبيّن ما هو مفعَّل على المجموعة —') }}
+              <span class="dg-pill a">{{ _('جدولة سرعة') }}</span> <span class="dg-pill v">{{ _('باقة افتراضية') }}</span>
+              <span class="dg-pill g">{{ _('تجديد تلقائي') }}</span>{{ _('، أو «—» إن لم يُضبط شيء.') }}</li>
+          <li><strong>{{ _('السرعة:') }}</strong> <span class="dg-pill b">{{ _('مؤقتة N') }}</span> /
+              <span class="dg-pill a">{{ _('خاصة N') }}</span> لعدد الأعضاء بسرعات غير سرعة العرض،
               أو «العرض» إن كان الجميع على السرعة الافتراضية.</li>
-          <li><strong>آخر نشاط:</strong> تاريخ آخر حركة لأي عضو.</li>
-          <li><strong>إجراءات المجموعة:</strong> أزرار التنفيذ — نشرحها في الخطوة الأخيرة.</li>
+          <li><strong>{{ _('آخر نشاط:') }}</strong> {{ _('تاريخ آخر حركة لأي عضو.') }}</li>
+          <li><strong>{{ _('إجراءات المجموعة:') }}</strong> {{ _('أزرار التنفيذ — نشرحها في الخطوة الأخيرة.') }}</li>
         </ul>
 
         <div class="dg-mock" aria-hidden="true">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">مجموعات المشتركين › الجدول</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('مجموعات المشتركين › الجدول') }}</span></div>
           <div class="dg-mock-body" style="padding:0">
             <div class="dg-tbl" style="border:0;border-radius:0">
-              <div class="hd"><span>المجموعة</span><span>الأعضاء</span><span>المتصلون</span><span>الحالة</span><span>الخدمات</span></div>
+              <div class="hd"><span>{{ _('المجموعة') }}</span><span>{{ _('الأعضاء') }}</span><span>{{ _('المتصلون') }}</span><span>{{ _('الحالة') }}</span><span>{{ _('الخدمات') }}</span></div>
               <div class="rw">
-                <span style="text-align:start"><b style="color:#5b21b6">برج السلام</b><br><small style="color:#94a3b8">سكان البرج الشمالي</small></span>
+                <span style="text-align:start"><b style="color:#5b21b6">{{ _('برج السلام') }}</b><br><small style="color:#94a3b8">{{ _('سكان البرج الشمالي') }}</small></span>
                 <span><b>17</b></span><span><b>5</b></span>
-                <span><span class="dg-pill g">نشط 14</span> <span class="dg-pill a">منتهي 3</span></span>
-                <span><span class="dg-pill v">باقة افتراضية</span></span>
+                <span><span class="dg-pill g">{{ _('نشط 14') }}</span> <span class="dg-pill a">{{ _('منتهي 3') }}</span></span>
+                <span><span class="dg-pill v">{{ _('باقة افتراضية') }}</span></span>
               </div>
               <div class="rw">
-                <span style="text-align:start"><b style="color:#5b21b6">VIP</b><br><small style="color:#94a3b8">زبائن مميزون</small></span>
+                <span style="text-align:start"><b style="color:#5b21b6">VIP</b><br><small style="color:#94a3b8">{{ _('زبائن مميزون') }}</small></span>
                 <span><b>6</b></span><span><b>4</b></span>
-                <span><span class="dg-pill g">نشط 6</span></span>
-                <span><span class="dg-pill a">جدولة سرعة</span> <span class="dg-pill g">تجديد تلقائي</span></span>
+                <span><span class="dg-pill g">{{ _('نشط 6') }}</span></span>
+                <span><span class="dg-pill a">{{ _('جدولة سرعة') }}</span> <span class="dg-pill g">{{ _('تجديد تلقائي') }}</span></span>
               </div>
             </div>
           </div>
@@ -474,47 +474,47 @@
     <section class="dg-step" id="dg-s6">
       <div class="dg-badge">6</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-bolt"></i> إجراءات المجموعة — كل زر شو بيعمل</h2>
-        <p>آخر عمود في كل صف سبعة أزرار، من اليمين لليسار:</p>
+        <h2><i class="fa-solid fa-bolt"></i> {{ _('إجراءات المجموعة — كل زر شو بيعمل') }}</h2>
+        <p>{{ _('آخر عمود في كل صف سبعة أزرار، من اليمين لليسار:') }}</p>
         <ul>
-          <li><strong>«الأعضاء» 👥:</strong> يفتح قائمة المشتركين 360 مفلترة على أعضاء
+          <li><strong>{{ _('«الأعضاء» 👥:') }}</strong> يفتح قائمة المشتركين 360 مفلترة على أعضاء
               هذه المجموعة — ومنها تنفّذ عليهم كل إجراءات القائمة الجماعية.</li>
-          <li><strong>«المتصلون» 📶:</strong> يفتح صفحة «المتصلون الآن» مفلترة على
+          <li><strong>{{ _('«المتصلون» 📶:') }}</strong> يفتح صفحة «المتصلون الآن» مفلترة على
               جلسات أعضاء المجموعة فقط.</li>
-          <li><strong>«السرعة» 🎚:</strong> يفتح صفحة تعديل المجموعة حيث تدير جدولة
+          <li><strong>{{ _('«السرعة» 🎚:') }}</strong> يفتح صفحة تعديل المجموعة حيث تدير جدولة
               السرعة والخدمات.</li>
-          <li><strong>زر الاستعادة ↺:</strong> <strong>استعادة الكوتة اليومية</strong> لكل
+          <li><strong>{{ _('زر الاستعادة ↺:') }}</strong> <strong>{{ _('استعادة الكوتة اليومية') }}</strong> لكل
               أعضاء المجموعة دفعة واحدة (بتأكيد قبل التنفيذ).</li>
-          <li><strong>زر المقص ✂ (أحمر):</strong> <strong>فصل كل الجلسات المتصلة</strong>
-              لأعضاء المجموعة فورًا (بتأكيد).</li>
-          <li><strong>زر القلم ✏:</strong> تعديل بيانات وخدمات المجموعة.</li>
-          <li><strong>زر السلة 🗑 (أحمر):</strong> <strong>حذف المجموعة</strong> — رسالة
+          <li><strong>{{ _('زر المقص ✂ (أحمر):') }}</strong> <strong>{{ _('فصل كل الجلسات المتصلة') }}</strong>
+              {{ _('لأعضاء المجموعة فورًا (بتأكيد).') }}</li>
+          <li><strong>{{ _('زر القلم ✏:') }}</strong> {{ _('تعديل بيانات وخدمات المجموعة.') }}</li>
+          <li><strong>{{ _('زر السلة 🗑 (أحمر):') }}</strong> <strong>{{ _('حذف المجموعة') }}</strong> — رسالة
               التأكيد تخبرك بعدد المشتركين الذين سيُفصلون عنها.</li>
         </ul>
 
         <div class="dg-rowacts" aria-hidden="true">
-          <span class="b"><i class="fa-solid fa-users"></i> الأعضاء</span>
-          <span class="b"><i class="fa-solid fa-wifi"></i> المتصلون</span>
-          <span class="b"><i class="fa-solid fa-gauge-high"></i> السرعة</span>
+          <span class="b"><i class="fa-solid fa-users"></i> {{ _('الأعضاء') }}</span>
+          <span class="b"><i class="fa-solid fa-wifi"></i> {{ _('المتصلون') }}</span>
+          <span class="b"><i class="fa-solid fa-gauge-high"></i> {{ _('السرعة') }}</span>
           <span class="b"><i class="fa-solid fa-rotate-left"></i></span>
           <span class="b danger"><i class="fa-solid fa-scissors"></i></span>
           <span class="b"><i class="fa-solid fa-pen"></i></span>
           <span class="b danger"><i class="fa-solid fa-trash"></i></span>
         </div>
-        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> شريط «إجراءات المجموعة» كما يظهر في كل صف.</div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> {{ _('شريط «إجراءات المجموعة» كما يظهر في كل صف.') }}</div>
 
         <div class="dg-warn">
           <span class="ic">⚠️</span>
-          <span><b>انتبه:</b> حذف المجموعة <b>لا يحذف المشتركين</b> — يفصلهم عنها فقط
+          <span><b>{{ _('انتبه:') }}</b> {{ _('حذف المجموعة') }} <b>{{ _('لا يحذف المشتركين') }}</b> — يفصلهم عنها فقط
           ويبقون بحساباتهم كما هي. لكن «فصل المتصلين» يقطع إنترنت كل الأعضاء المتصلين
           في نفس اللحظة — استخدمه للصيانة أو الحالات الطارئة.</span>
         </div>
 
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>وبعدين؟</b> جرّب: أنشئ مجموعة «تجربة»، أسند لها مشتركَين من ملفيهما،
+          <span><b>{{ _('وبعدين؟') }}</b> جرّب: أنشئ مجموعة «تجربة»، أسند لها مشتركَين من ملفيهما،
           ثم اضغط «الأعضاء» وشوف كيف تتفلتر القائمة. ولمراقبة جلساتهم الحيّة اقرأ دليل
-          <b>«المتصلون الآن»</b>.</span>
+          <b>{{ _('«المتصلون الآن»') }}</b>.</span>
         </div>
       </div>
     </section>

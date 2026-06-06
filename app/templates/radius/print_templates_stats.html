@@ -4,7 +4,7 @@
 {% block title %}إحصائيات قوالب الطباعة{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-chart-column"></i>{% endblock %}
 {% block page_title %}إحصائيات قوالب الطباعة{% endblock %}
-{% block page_sub %}<span class="sub">القوالب المحفوظة وسجل عمليات التصدير في صفحة مستقلة عن غرفتي الطباعة والتصميم</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('القوالب المحفوظة وسجل عمليات التصدير في صفحة مستقلة عن غرفتي الطباعة والتصميم') }}</span>{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
@@ -55,11 +55,11 @@
     <table class="hub-table">
       <thead>
         <tr>
-          <th>القالب</th>
-          <th>الشكل</th>
-          <th>البطاقة</th>
-          <th>الأمان</th>
-          <th data-uds-nosort data-uds-nocol>إجراءات</th>
+          <th>{{ _('القالب') }}</th>
+          <th>{{ _('الشكل') }}</th>
+          <th>{{ _('البطاقة') }}</th>
+          <th>{{ _('الأمان') }}</th>
+          <th data-uds-nosort data-uds-nocol>{{ _('إجراءات') }}</th>
         </tr>
       </thead>
       <tbody>
@@ -76,7 +76,7 @@
                    onerror="this.style.display='none'">
               <div>
                 <strong>{{ item.name }}</strong>
-                {% if is_default %}<span class="pr-default-pill"><i class="fa-solid fa-star"></i> افتراضي</span>{% endif %}
+                {% if is_default %}<span class="pr-default-pill"><i class="fa-solid fa-star"></i> {{ _('افتراضي') }}</span>{% endif %}
                 <div class="small hub-text-mute">{{ layout.brand_name or 'HobeRadius' }} · {{ layout.card_title or 'بطاقة إنترنت' }}</div>
               </div>
             </div>
@@ -88,7 +88,7 @@
           {% set _orient_ar = {'horizontal':'أفقي','vertical':'عمودي'} %}
           <td><span class="hub-pill hub-pill--cyan" title="{{ _preset_raw }}">{{ _preset_ar.get(_preset_raw, _preset_raw) }}</span></td>
           <td><span title="{{ _orient_raw }}">{{ _orient_ar.get(_orient_raw, _orient_raw) }}</span> · {{ layout.card_width_mm or 85 }}×{{ layout.card_height_mm or 54 }} <bdi>mm</bdi></td>
-          <td><span class="hub-pill hub-pill--amber">كلمة المرور في PDF فقط</span></td>
+          <td><span class="hub-pill hub-pill--amber">{{ _('كلمة المرور في PDF فقط') }}</span></td>
           <td class="pts-actions-col">
             <div class="pts-table-actions">
               {# اعتماد القالب الافتراضي — next يعيدنا لهذه الصفحة بدل صفحة التصدير #}
@@ -102,17 +102,17 @@
                   <i class="fa-{% if is_default %}solid{% else %}regular{% endif %} fa-star"></i>
                 </button>
               </form>
-              <a class="hub-btn hub-btn--sm" href="{{ url_for('radius.print_templates') }}?edit_template={{ item.id }}#designer" title="تعديل القالب">
-                <i class="fa-solid fa-pen"></i> تعديل
+              <a class="hub-btn hub-btn--sm" href="{{ url_for('radius.print_templates') }}?edit_template={{ item.id }}#designer" title="{{ _('تعديل القالب') }}">
+                <i class="fa-solid fa-pen"></i> {{ _('تعديل') }}
               </a>
-              <a class="hub-btn hub-btn--sm" href="{{ url_for('radius.print_templates_export_pdf', template_id=item.id) }}" title="تنزيل PDF عينة"><i class="fa-solid fa-file-pdf"></i> عينة</a>
-              <a class="hub-btn hub-btn--sm hub-btn--primary" href="{{ url_for('radius.print_templates') }}#export" title="فتح غرفة الطباعة"><i class="fa-solid fa-print"></i></a>
+              <a class="hub-btn hub-btn--sm" href="{{ url_for('radius.print_templates_export_pdf', template_id=item.id) }}" title="{{ _('تنزيل PDF عينة') }}"><i class="fa-solid fa-file-pdf"></i> {{ _('عينة') }}</a>
+              <a class="hub-btn hub-btn--sm hub-btn--primary" href="{{ url_for('radius.print_templates') }}#export" title="{{ _('فتح غرفة الطباعة') }}"><i class="fa-solid fa-print"></i></a>
               <form method="POST"
                     action="{{ url_for('radius.print_templates_delete', template_id=item.id) }}"
                     onsubmit="return confirm('حذف القالب «{{ item.name|e }}» نهائيًا؟');"
                     style="margin:0">
                 <input type="hidden" name="next" value="{{ url_for('radius.print_templates_stats') }}">
-                <button type="submit" class="hub-btn hub-btn--sm" title="حذف القالب">
+                <button type="submit" class="hub-btn hub-btn--sm" title="{{ _('حذف القالب') }}">
                   <i class="fa-solid fa-trash"></i>
                 </button>
               </form>
@@ -136,12 +136,12 @@
       <thead>
         <tr>
           <th class="num">#</th>
-          <th>القالب</th>
-          <th>الحزمة</th>
-          <th>النوع</th>
-          <th>الحالة</th>
-          <th class="num">البطاقات</th>
-          <th>الوقت</th>
+          <th>{{ _('القالب') }}</th>
+          <th>{{ _('الحزمة') }}</th>
+          <th>{{ _('النوع') }}</th>
+          <th>{{ _('الحالة') }}</th>
+          <th class="num">{{ _('البطاقات') }}</th>
+          <th>{{ _('الوقت') }}</th>
         </tr>
       </thead>
       <tbody>

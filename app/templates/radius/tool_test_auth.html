@@ -66,7 +66,7 @@
       {{ hub.field("عنوان جهاز الشبكة", "nas_ip", value=form.nas_ip,
                     placeholder="10.0.0.1") }}
       <div class="hub-field">
-        <label class="hub-field-label" for="hub-f-nas_port_type">نوع منفذ جهاز الشبكة</label>
+        <label class="hub-field-label" for="hub-f-nas_port_type">{{ _('نوع منفذ جهاز الشبكة') }}</label>
         <select class="hub-select" id="hub-f-nas_port_type" name="nas_port_type">
           {% for t in ["Ethernet","Wireless-802.11","ADSL-CAP","ADSL-DMT","Virtual","PPP"] %}
             <option value="{{ t }}" {% if form.nas_port_type == t %}selected{% endif %}>{{ t }}</option>
@@ -91,13 +91,13 @@
   {% call hub.section(_ttl, icon=_icon, meta=result.reason or "") %}
     {% if result.message %}
       <div style="padding:4px 0 12px;font-size:13.5px">
-        <strong>الرسالة:</strong> {{ result.message }}
+        <strong>{{ _('الرسالة:') }}</strong> {{ result.message }}
       </div>
     {% endif %}
 
     {% if result.reply_attrs %}
       <div style="font-weight:700;margin-bottom:8px;color:var(--hub-text-soft)">
-        <i class="fa-solid fa-list"></i> خصائص الرد:
+        <i class="fa-solid fa-list"></i> {{ _('خصائص الرد:') }}
       </div>
       {% set _rows = [] %}
       {% for k, v in result.reply_attrs.items() %}
@@ -105,7 +105,7 @@
       {% endfor %}
       {{ hub.kv(_rows) }}
     {% else %}
-      <div class="hub-text-mute" style="font-size:12.5px">لا خصائص رد.</div>
+      <div class="hub-text-mute" style="font-size:12.5px">{{ _('لا خصائص رد.') }}</div>
     {% endif %}
 
     {# colored side accent #}

@@ -73,34 +73,34 @@
   {% call hub.section("بيانات الموزع", icon="id-card") %}
     <div class="ds-grid">
       <div class="ds-field">
-        <label>اسم الدخول <span class="req">*</span></label>
+        <label>{{ _('اسم الدخول') }} <span class="req">*</span></label>
         <input class="hub-input" type="text" name="name" required maxlength="80"
                value="{{ form.get('name','') }}" placeholder="dealer_north">
-        <div class="help">اسم مختصر داخلي يستخدم للتتبع والربط.</div>
+        <div class="help">{{ _('اسم مختصر داخلي يستخدم للتتبع والربط.') }}</div>
       </div>
       <div class="ds-field">
-        <label>الاسم الظاهر</label>
+        <label>{{ _('الاسم الظاهر') }}</label>
         <input class="hub-input" type="text" name="display_name" maxlength="120"
-               value="{{ form.get('display_name','') }}" placeholder="موزع الشمال">
-        <div class="help">الاسم الذي يظهر داخل التقارير والشاشات.</div>
+               value="{{ form.get('display_name','') }}" placeholder="{{ _('موزع الشمال') }}">
+        <div class="help">{{ _('الاسم الذي يظهر داخل التقارير والشاشات.') }}</div>
       </div>
       <div class="ds-field">
-        <label>رقم الهاتف</label>
+        <label>{{ _('رقم الهاتف') }}</label>
         <input class="hub-input" type="tel" name="phone" maxlength="40"
                value="{{ form.get('phone','') }}">
       </div>
       <div class="ds-field">
-        <label>البريد الإلكتروني</label>
+        <label>{{ _('البريد الإلكتروني') }}</label>
         <input class="hub-input" type="email" name="email" maxlength="160"
                value="{{ form.get('email','') }}">
       </div>
       <div class="ds-field">
-        <label>الحالة</label>
+        <label>{{ _('الحالة') }}</label>
         {% set st = form.get('status','active') %}
         <select class="hub-select" name="status">
-          <option value="active"   {% if st == 'active' %}selected{% endif %}>مفعَّل</option>
-          <option value="inactive" {% if st == 'inactive' %}selected{% endif %}>غير مفعَّل</option>
-          <option value="blocked"  {% if st == 'blocked' %}selected{% endif %}>محظور</option>
+          <option value="active"   {% if st == 'active' %}selected{% endif %}>{{ _('مفعَّل') }}</option>
+          <option value="inactive" {% if st == 'inactive' %}selected{% endif %}>{{ _('غير مفعَّل') }}</option>
+          <option value="blocked"  {% if st == 'blocked' %}selected{% endif %}>{{ _('محظور') }}</option>
         </select>
       </div>
     </div>
@@ -110,18 +110,18 @@
   {% call hub.section("الجانب المالي", icon="wallet") %}
     <div class="ds-grid">
       <div class="ds-field">
-        <label>حد الائتمان</label>
+        <label>{{ _('حد الائتمان') }}</label>
         <input class="hub-input" type="number" name="credit_limit" step="0.01" min="0"
                value="{{ form.get('credit_limit','0') }}">
-        <div class="help">قيمة مرجعية للمتابعة، وليست نظام فوترة كاملًا.</div>
+        <div class="help">{{ _('قيمة مرجعية للمتابعة، وليست نظام فوترة كاملًا.') }}</div>
       </div>
       <div class="ds-field">
-        <label>الرصيد الحالي</label>
+        <label>{{ _('الرصيد الحالي') }}</label>
         <input class="hub-input" type="number" name="balance" step="0.01"
                value="{{ form.get('balance','0') }}">
       </div>
       <div class="ds-field">
-        <label>الدين الحالي</label>
+        <label>{{ _('الدين الحالي') }}</label>
         <input class="hub-input" type="number" name="debt_balance" step="0.01" min="0"
                value="{{ form.get('debt_balance','0') }}">
       </div>
@@ -132,7 +132,7 @@
   {% call hub.section("الصلاحيات ونطاق البيانات", icon="shield-halved") %}
     <div class="ds-grid">
       <div class="ds-field full">
-        <label>الصلاحيات</label>
+        <label>{{ _('الصلاحيات') }}</label>
         {% set perms_raw = (form.get('permissions','cards.read, cards.sell') or '') %}
         {% set perms_norm = ',' ~ perms_raw|replace('\n', ',')|replace(' ', '') ~ ',' %}
         <div class="ds-choice-list">
@@ -140,32 +140,32 @@
             <input type="checkbox" name="permissions" value="cards.read"
                    {% if ',cards.read,' in perms_norm %}checked{% endif %}>
             <span>
-              <strong>عرض الكروت والحزم</strong>
-              <span>يسمح للموزع برؤية الحزم المرتبطة به ومتابعة حالتها.</span>
+              <strong>{{ _('عرض الكروت والحزم') }}</strong>
+              <span>{{ _('يسمح للموزع برؤية الحزم المرتبطة به ومتابعة حالتها.') }}</span>
             </span>
           </label>
           <label class="ds-choice">
             <input type="checkbox" name="permissions" value="cards.sell"
                    {% if ',cards.sell,' in perms_norm %}checked{% endif %}>
             <span>
-              <strong>بيع الكروت</strong>
-              <span>يسمح بتنفيذ عمليات البيع ضمن الحزم المسموحة فقط.</span>
+              <strong>{{ _('بيع الكروت') }}</strong>
+              <span>{{ _('يسمح بتنفيذ عمليات البيع ضمن الحزم المسموحة فقط.') }}</span>
             </span>
           </label>
         </div>
-        <div class="help">اختر الصلاحيات من القائمة بدل كتابة رموز تقنية.</div>
+        <div class="help">{{ _('اختر الصلاحيات من القائمة بدل كتابة رموز تقنية.') }}</div>
       </div>
       <div class="ds-field full">
-        <label>نطاق البيانات</label>
+        <label>{{ _('نطاق البيانات') }}</label>
         <input type="hidden" name="scope_json" value='{"card_batches":"assigned"}'>
         <div class="ds-choice">
           <i class="fa-solid fa-user-shield" style="margin-top:2px;color:var(--hub-brand)"></i>
           <span>
-            <strong>الحزم المعيّنة فقط</strong>
-            <span>لتوسيع وصول الموزع، اربط حزمًا إضافية من صفحة تفاصيل الموزع.</span>
+            <strong>{{ _('الحزم المعيّنة فقط') }}</strong>
+            <span>{{ _('لتوسيع وصول الموزع، اربط حزمًا إضافية من صفحة تفاصيل الموزع.') }}</span>
           </span>
         </div>
-        <div class="help">هذا هو نطاق العزل الفعلي المدعوم حاليًا، لذلك لا يظهر حقل إعدادات يدوية.</div>
+        <div class="help">{{ _('هذا هو نطاق العزل الفعلي المدعوم حاليًا، لذلك لا يظهر حقل إعدادات يدوية.') }}</div>
       </div>
     </div>
   {% endcall %}
@@ -174,14 +174,14 @@
   {% call hub.section("ملاحظات", icon="note-sticky") %}
     <div class="ds-grid">
       <div class="ds-field full">
-        <label>ملاحظات داخلية</label>
+        <label>{{ _('ملاحظات داخلية') }}</label>
         <textarea class="hub-textarea" name="notes" rows="3">{{ form.get('notes','') }}</textarea>
       </div>
     </div>
   {% endcall %}
 
   <div style="display:flex;gap:10px;justify-content:flex-end;padding:6px 4px 0">
-    <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.distributors_list') }}">إلغاء</a>
+    <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.distributors_list') }}">{{ _('إلغاء') }}</a>
     <button class="hub-btn hub-btn--primary" type="submit">
       <i class="fa-solid fa-floppy-disk"></i> {{ "حفظ الموزع" if is_new else "حفظ التعديلات" }}
     </button>

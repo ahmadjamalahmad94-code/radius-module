@@ -4,7 +4,7 @@
 {% block title %}الفواتير والكوبونات — Hobe Hub{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-file-invoice-dollar"></i>{% endblock %}
 {% block page_title %}الفواتير والكوبونات{% endblock %}
-{% block page_sub %}<span class="sub">إصدار الفواتير وتوليد الكوبونات في صفحة واحدة</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('إصدار الفواتير وتوليد الكوبونات في صفحة واحدة') }}</span>{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
@@ -87,23 +87,23 @@
 ) %}
   {% if tab == 'invoices' %}
   <div class="fb-filters">
-    <a href="?tab=invoices" class="{{ 'is-active' if not status }}">الكل</a>
-    <a href="?tab=invoices&status=paid" class="{{ 'is-active' if status=='paid' }}">مدفوعة</a>
-    <a href="?tab=invoices&status=pending" class="{{ 'is-active' if status=='pending' }}">معلّقة</a>
-    <a href="?tab=invoices&status=failed" class="{{ 'is-active' if status=='failed' }}">فشلت</a>
+    <a href="?tab=invoices" class="{{ 'is-active' if not status }}">{{ _('الكل') }}</a>
+    <a href="?tab=invoices&status=paid" class="{{ 'is-active' if status=='paid' }}">{{ _('مدفوعة') }}</a>
+    <a href="?tab=invoices&status=pending" class="{{ 'is-active' if status=='pending' }}">{{ _('معلّقة') }}</a>
+    <a href="?tab=invoices&status=failed" class="{{ 'is-active' if status=='failed' }}">{{ _('فشلت') }}</a>
   </div>
   <span class="hub-spacer"></span>
-  <button class="hub-btn hub-btn--primary hub-btn--sm" type="button" data-modal-open="invoice"><i class="fa-solid fa-plus"></i> فاتورة جديدة</button>
+  <button class="hub-btn hub-btn--primary hub-btn--sm" type="button" data-modal-open="invoice"><i class="fa-solid fa-plus"></i> {{ _('فاتورة جديدة') }}</button>
   {% else %}
   <div class="fb-filters">
-    <a href="?tab=vouchers" class="{{ 'is-active' if not status }}">الكل</a>
-    <a href="?tab=vouchers&status=active" class="{{ 'is-active' if status=='active' }}">نشطة</a>
-    <a href="?tab=vouchers&status=used" class="{{ 'is-active' if status=='used' }}">مستخدمة</a>
-    <a href="?tab=vouchers&status=revoked" class="{{ 'is-active' if status=='revoked' }}">ملغاة</a>
+    <a href="?tab=vouchers" class="{{ 'is-active' if not status }}">{{ _('الكل') }}</a>
+    <a href="?tab=vouchers&status=active" class="{{ 'is-active' if status=='active' }}">{{ _('نشطة') }}</a>
+    <a href="?tab=vouchers&status=used" class="{{ 'is-active' if status=='used' }}">{{ _('مستخدمة') }}</a>
+    <a href="?tab=vouchers&status=revoked" class="{{ 'is-active' if status=='revoked' }}">{{ _('ملغاة') }}</a>
   </div>
   <span class="hub-spacer"></span>
-  <button class="hub-btn hub-btn--secondary hub-btn--sm" type="button" data-modal-open="voucherRedeem"><i class="fa-solid fa-hand-holding-dollar"></i> صرف كوبون</button>
-  <button class="hub-btn hub-btn--primary hub-btn--sm" type="button" data-modal-open="voucher"><i class="fa-solid fa-plus"></i> توليد كوبونات</button>
+  <button class="hub-btn hub-btn--secondary hub-btn--sm" type="button" data-modal-open="voucherRedeem"><i class="fa-solid fa-hand-holding-dollar"></i> {{ _('صرف كوبون') }}</button>
+  <button class="hub-btn hub-btn--primary hub-btn--sm" type="button" data-modal-open="voucher"><i class="fa-solid fa-plus"></i> {{ _('توليد كوبونات') }}</button>
   {% endif %}
 {% endcall %}
 
@@ -122,18 +122,18 @@
 )) %}
   {% call hub.section("الفواتير", icon="file-invoice", meta=(invoices|length|string + " فاتورة") if invoices else "", flush=True) %}
     {% if invoices %}
-    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25" data-uds-export-title="الفواتير" style="border:none;border-radius:0">
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25" data-uds-export-title="{{ _('الفواتير') }}" style="border:none;border-radius:0">
       <table class="hub-table">
         <thead>
           <tr>
-            <th>الرقم</th>
-            <th>المشترك</th>
-            <th>الباقة</th>
-            <th class="num">المبلغ</th>
-            <th>الاتجاه</th>
-            <th>طريقة الدفع</th>
-            <th>الحالة</th>
-            <th>التاريخ</th>
+            <th>{{ _('الرقم') }}</th>
+            <th>{{ _('المشترك') }}</th>
+            <th>{{ _('الباقة') }}</th>
+            <th class="num">{{ _('المبلغ') }}</th>
+            <th>{{ _('الاتجاه') }}</th>
+            <th>{{ _('طريقة الدفع') }}</th>
+            <th>{{ _('الحالة') }}</th>
+            <th>{{ _('التاريخ') }}</th>
           </tr>
         </thead>
         {# قواميس تعريب قيم enum الخام القادمة من قاعدة البيانات — تطابق
@@ -182,16 +182,16 @@
 )) %}
   {% call hub.section("الكوبونات", icon="ticket", meta=(vouchers|length|string + " كوبون") if vouchers else "", flush=True) %}
     {% if vouchers %}
-    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25" data-uds-export-title="الكوبونات" style="border:none;border-radius:0">
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25" data-uds-export-title="{{ _('الكوبونات') }}" style="border:none;border-radius:0">
       <table class="hub-table">
         <thead>
           <tr>
-            <th>الكود</th>
-            <th class="num">القيمة</th>
-            <th>الباقة</th>
-            <th>الحالة</th>
-            <th>تنتهي في</th>
-            <th data-uds-nosort data-uds-nocol>إجراء</th>
+            <th>{{ _('الكود') }}</th>
+            <th class="num">{{ _('القيمة') }}</th>
+            <th>{{ _('الباقة') }}</th>
+            <th>{{ _('الحالة') }}</th>
+            <th>{{ _('تنتهي في') }}</th>
+            <th data-uds-nosort data-uds-nocol>{{ _('إجراء') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -210,7 +210,7 @@
               <button type="button" class="hub-btn hub-btn--ghost hub-btn--sm"
                       data-vch-revoke data-vch-code="{{ v.code|e }}"
                       data-vch-action="{{ url_for('radius.vch_revoke', vid=v.id) }}">
-                <i class="fa-solid fa-ban"></i> إلغاء
+                <i class="fa-solid fa-ban"></i> {{ _('إلغاء') }}
               </button>
               {% else %}<span class="hub-text-mute">—</span>{% endif %}
             </td>
@@ -234,7 +234,7 @@
      ~ '<button type="submit" class="hub-btn hub-btn--danger"><i class="fa-solid fa-ban"></i> إلغاء الكوبون</button></form>') %}
   <div class="uds-modal-warn uds-modal-warn--amber">
     <i class="fa-solid fa-circle-info"></i>
-    <span>سيتم إلغاء الكوبون «<strong data-vch-revoke-code class="mono"></strong>» نهائيًا ولن يمكن استخدامه بعد ذلك.</span>
+    <span>{{ _('سيتم إلغاء الكوبون «') }}<strong data-vch-revoke-code class="mono"></strong>{{ _('» نهائيًا ولن يمكن استخدامه بعد ذلك.') }}</span>
   </div>
 {% endcall %}
 <script>
@@ -259,77 +259,77 @@
 {# Invoice modal — posts to the unchanged inv_create endpoint #}
 <dialog class="fb-modal" data-modal="invoice">
   <form method="post" action="{{ url_for('radius.inv_create') }}">
-    <div class="fb-modal-head"><h3><i class="fa-solid fa-file-invoice"></i> فاتورة جديدة</h3><button class="fb-x" type="button" data-modal-close><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="fb-modal-head"><h3><i class="fa-solid fa-file-invoice"></i> {{ _('فاتورة جديدة') }}</h3><button class="fb-x" type="button" data-modal-close><i class="fa-solid fa-xmark"></i></button></div>
     <div class="fb-modal-body">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
       <div class="fb-form-grid">
-        <label class="span2">المشترك <span class="req">*</span>
+        <label class="span2">{{ _('المشترك') }} <span class="req">*</span>
           {# data-search-placeholder: يخصّص نص حقل البحث الفوري داخل القائمة
              (يظهر تلقائيًا عند +8 خيارات) — اختيار العنصر = اعتماد المشترك #}
           <select class="hub-select" name="subscriber_id" required
-                  data-search-placeholder="ابحث بالاسم أو اليوزر...">
-            <option value="">— اختر —</option>
+                  data-search-placeholder="{{ _('ابحث بالاسم أو اليوزر...') }}">
+            <option value="">{{ _('— اختر —') }}</option>
             {% for s in subs %}<option value="{{ s.id }}">{{ s.username }} — {{ s.full_name or '—' }}</option>{% endfor %}
           </select>
         </label>
-        <label>الباقة
+        <label>{{ _('الباقة') }}
           <select class="hub-select" name="plan_id">
-            <option value="">— بدون —</option>
+            <option value="">{{ _('— بدون —') }}</option>
             {% for p in plans %}<option value="{{ p.id }}">{{ p.name }} ({{ p.price|money }})</option>{% endfor %}
           </select>
         </label>
-        <label>المبلغ <span class="req">*</span><input class="hub-input" type="number" name="amount" step="0.01" min="0" required value="0"></label>
-        <label>الاتجاه
+        <label>{{ _('المبلغ') }} <span class="req">*</span><input class="hub-input" type="number" name="amount" step="0.01" min="0" required value="0"></label>
+        <label>{{ _('الاتجاه') }}
           <select class="hub-select" name="direction">
-            <option value="charge">تحصيل</option><option value="refund">إرجاع</option>
-            <option value="deposit">إيداع</option><option value="withdraw">سحب</option><option value="credit">رصيد</option>
+            <option value="charge">{{ _('تحصيل') }}</option><option value="refund">{{ _('إرجاع') }}</option>
+            <option value="deposit">{{ _('إيداع') }}</option><option value="withdraw">{{ _('سحب') }}</option><option value="credit">{{ _('رصيد') }}</option>
           </select>
         </label>
-        <label>نوع الخدمة
-          <select class="hub-select" name="service_type"><option value="Hotspot">بوابة الدخول</option><option value="PPPoE">برودباند</option><option value="Balance">الرصيد</option></select>
+        <label>{{ _('نوع الخدمة') }}
+          <select class="hub-select" name="service_type"><option value="Hotspot">{{ _('بوابة الدخول') }}</option><option value="PPPoE">{{ _('برودباند') }}</option><option value="Balance">{{ _('الرصيد') }}</option></select>
         </label>
-        <label>طريقة الدفع
+        <label>{{ _('طريقة الدفع') }}
           <select class="hub-select" name="payment_method">
-            <option value="cash">نقدًا</option><option value="transfer">حوالة</option><option value="card">بطاقة</option>
-            <option value="online">دفع إلكتروني</option><option value="manual">يدوي</option>
+            <option value="cash">{{ _('نقدًا') }}</option><option value="transfer">{{ _('حوالة') }}</option><option value="card">{{ _('بطاقة') }}</option>
+            <option value="online">{{ _('دفع إلكتروني') }}</option><option value="manual">{{ _('يدوي') }}</option>
           </select>
         </label>
-        <label>الحالة
-          <select class="hub-select" name="status"><option value="paid">مدفوعة</option><option value="pending">معلَّقة</option><option value="failed">فشلت</option></select>
+        <label>{{ _('الحالة') }}
+          <select class="hub-select" name="status"><option value="paid">{{ _('مدفوعة') }}</option><option value="pending">{{ _('معلَّقة') }}</option><option value="failed">{{ _('فشلت') }}</option></select>
         </label>
-        <label>تنتهي في<input class="hub-input" type="date" name="expiration_at"></label>
-        <label class="span2">ملاحظة<input class="hub-input" name="note"></label>
+        <label>{{ _('تنتهي في') }}<input class="hub-input" type="date" name="expiration_at"></label>
+        <label class="span2">{{ _('ملاحظة') }}<input class="hub-input" name="note"></label>
       </div>
     </div>
-    <div class="fb-modal-foot"><button class="hub-btn hub-btn--ghost" type="button" data-modal-close>إلغاء</button><button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-check"></i> إصدار الفاتورة</button></div>
+    <div class="fb-modal-foot"><button class="hub-btn hub-btn--ghost" type="button" data-modal-close>{{ _('إلغاء') }}</button><button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-check"></i> {{ _('إصدار الفاتورة') }}</button></div>
   </form>
 </dialog>
 
 {# Voucher modal — posts to the unchanged vch_generate endpoint #}
 <dialog class="fb-modal" data-modal="voucher">
   <form method="post" action="{{ url_for('radius.vch_generate') }}">
-    <div class="fb-modal-head"><h3><i class="fa-solid fa-ticket"></i> توليد كوبونات</h3><button class="fb-x" type="button" data-modal-close><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="fb-modal-head"><h3><i class="fa-solid fa-ticket"></i> {{ _('توليد كوبونات') }}</h3><button class="fb-x" type="button" data-modal-close><i class="fa-solid fa-xmark"></i></button></div>
     <div class="fb-modal-body">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
       <div class="fb-form-grid">
-        <label>عدد الكوبونات <span class="req">*</span><input class="hub-input" type="number" name="count" min="1" max="5000" required value="20"></label>
-        <label>القيمة لكل كوبون <span class="req">*</span><input class="hub-input" type="number" name="amount" step="0.01" min="0.01" required value="5.00"></label>
-        <label>الباقة (اختياري)
-          <select class="hub-select" name="plan_id"><option value="">— بدون ربط —</option>{% for p in plans %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}</select>
+        <label>{{ _('عدد الكوبونات') }} <span class="req">*</span><input class="hub-input" type="number" name="count" min="1" max="5000" required value="20"></label>
+        <label>{{ _('القيمة لكل كوبون') }} <span class="req">*</span><input class="hub-input" type="number" name="amount" step="0.01" min="0.01" required value="5.00"></label>
+        <label>{{ _('الباقة (اختياري)') }}
+          <select class="hub-select" name="plan_id"><option value="">{{ _('— بدون ربط —') }}</option>{% for p in plans %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}</select>
         </label>
         {# عدد خانات الكود — الافتراضي 12 (الطول التاريخي XXXX-XXXX-XXXX) #}
-        <label>عدد خانات الكود
+        <label>{{ _('عدد خانات الكود') }}
           <select class="hub-select" name="code_length">
-            <option value="6">6 خانات</option>
-            <option value="8">8 خانات</option>
-            <option value="10">10 خانات</option>
-            <option value="12" selected>12 خانة (الافتراضي)</option>
+            <option value="6">{{ _('6 خانات') }}</option>
+            <option value="8">{{ _('8 خانات') }}</option>
+            <option value="10">{{ _('10 خانات') }}</option>
+            <option value="12" selected>{{ _('12 خانة (الافتراضي)') }}</option>
           </select>
         </label>
-        <label class="span2">تنتهي في<input class="hub-input" type="date" name="expire_at"></label>
+        <label class="span2">{{ _('تنتهي في') }}<input class="hub-input" type="date" name="expire_at"></label>
       </div>
     </div>
-    <div class="fb-modal-foot"><button class="hub-btn hub-btn--ghost" type="button" data-modal-close>إلغاء</button><button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-plus"></i> توليد</button></div>
+    <div class="fb-modal-foot"><button class="hub-btn hub-btn--ghost" type="button" data-modal-close>{{ _('إلغاء') }}</button><button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-plus"></i> {{ _('توليد') }}</button></div>
   </form>
 </dialog>
 
@@ -337,29 +337,29 @@
    من الكود (موجود/نشط/غير منتهٍ) ويعلّمه مستخدمًا ويضيف قيمته لرصيد المشترك. #}
 <dialog class="fb-modal" data-modal="voucherRedeem">
   <form method="post" action="{{ url_for('radius.vch_redeem') }}">
-    <div class="fb-modal-head"><h3><i class="fa-solid fa-hand-holding-dollar"></i> صرف كوبون</h3><button class="fb-x" type="button" data-modal-close><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="fb-modal-head"><h3><i class="fa-solid fa-hand-holding-dollar"></i> {{ _('صرف كوبون') }}</h3><button class="fb-x" type="button" data-modal-close><i class="fa-solid fa-xmark"></i></button></div>
     <div class="fb-modal-body">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
       <div class="fb-form-grid">
-        <label class="span2">كود الكوبون <span class="req">*</span>
+        <label class="span2">{{ _('كود الكوبون') }} <span class="req">*</span>
           <input class="hub-input mono" name="code" required autocomplete="off"
-                 placeholder="مثال: AB12-CD34-EF56" style="text-transform:uppercase">
+                 placeholder="{{ _('مثال: AB12-CD34-EF56') }}" style="text-transform:uppercase">
         </label>
-        <label class="span2">المشترك <span class="req">*</span>
+        <label class="span2">{{ _('المشترك') }} <span class="req">*</span>
           {# نفس نمط منتقي المشترك في مودال الفاتورة — بحث فوري داخل القائمة #}
           <select class="hub-select" name="username" required
-                  data-search-placeholder="ابحث بالاسم أو اليوزر...">
-            <option value="">— اختر —</option>
+                  data-search-placeholder="{{ _('ابحث بالاسم أو اليوزر...') }}">
+            <option value="">{{ _('— اختر —') }}</option>
             {% for s in subs %}<option value="{{ s.username }}">{{ s.username }} — {{ s.full_name or '—' }}</option>{% endfor %}
           </select>
         </label>
         <div class="span2 uds-modal-warn uds-modal-warn--amber" style="margin:0">
           <i class="fa-solid fa-circle-info"></i>
-          <span>سيُعلَّم الكوبون «مستخدمًا» وتُضاف قيمته فورًا إلى رصيد المشترك — لا يمكن صرفه مرتين.</span>
+          <span>{{ _('سيُعلَّم الكوبون «مستخدمًا» وتُضاف قيمته فورًا إلى رصيد المشترك — لا يمكن صرفه مرتين.') }}</span>
         </div>
       </div>
     </div>
-    <div class="fb-modal-foot"><button class="hub-btn hub-btn--ghost" type="button" data-modal-close>إلغاء</button><button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-check"></i> صرف الكوبون</button></div>
+    <div class="fb-modal-foot"><button class="hub-btn hub-btn--ghost" type="button" data-modal-close>{{ _('إلغاء') }}</button><button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-check"></i> {{ _('صرف الكوبون') }}</button></div>
   </form>
 </dialog>
 

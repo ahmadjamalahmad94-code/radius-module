@@ -58,7 +58,7 @@
 
   {% call hub.section("آخر النشاط", icon="clock-rotate-left") %}
     <div class="hub-text-mute" style="font-size:12px;margin-bottom:10px">
-      <span data-mt-timeline-total>{{ entries|length }}</span> حدث
+      <span data-mt-timeline-total>{{ entries|length }}</span> {{ _('حدث') }}
     </div>
 
     {% if not entries %}
@@ -129,7 +129,7 @@
                class="hub-btn hub-btn--ghost hub-btn--sm"
                data-mt-timeline-raw="{{ e.audit_id }}">
               <i class="fa-solid fa-magnifying-glass"></i>
-              تفاصيل الراو
+              {{ _('تفاصيل الراو') }}
             </a>
             {% if e.related_job_id %}
             <a href="{{ url_for('radius.jobs_show', job_id=e.related_job_id) }}"

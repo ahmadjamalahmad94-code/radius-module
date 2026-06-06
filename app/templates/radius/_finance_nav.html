@@ -6,24 +6,24 @@
 </style>
 <nav class="finance-tabs">
   <a class="hub-tab{% if active == 'dashboard' %} is-active{% endif %}" href="{{ url_for('radius.finance_center_hub', tab='dashboard') }}">
-    <i class="fa-solid fa-chart-pie"></i> المركز المالي
+    <i class="fa-solid fa-chart-pie"></i> {{ _('المركز المالي') }}
   </a>
   <a class="hub-tab{% if active == 'wallets' %} is-active{% endif %}" href="{{ url_for('radius.finance_center_hub', tab='wallets') }}">
-    <i class="fa-solid fa-wallet"></i> الخزائن والمحافظ
+    <i class="fa-solid fa-wallet"></i> {{ _('الخزائن والمحافظ') }}
   </a>
   <a class="hub-tab" href="{{ url_for('radius.accounting_hub') }}">
-    <i class="fa-solid fa-book"></i> القيود
+    <i class="fa-solid fa-book"></i> {{ _('القيود') }}
   </a>
   <a class="hub-tab{% if active == 'invoices' %} is-active{% endif %}" href="{{ url_for('radius.inv_list') }}">
-    <i class="fa-solid fa-file-invoice-dollar"></i> الفواتير
+    <i class="fa-solid fa-file-invoice-dollar"></i> {{ _('الفواتير') }}
   </a>
   <a class="hub-tab{% if active == 'revenue' %} is-active{% endif %}" href="{{ url_for('radius.finance_center_hub', tab='revenue') }}">
-    <i class="fa-solid fa-coins"></i> الإيرادات
+    <i class="fa-solid fa-coins"></i> {{ _('الإيرادات') }}
   </a>
   <a class="hub-tab{% if active == 'debts' %} is-active{% endif %}" href="{{ url_for('radius.finance_center_hub', tab='loans_debts', status='open') }}">
-    <i class="fa-solid fa-file-invoice-dollar"></i> الديون
+    <i class="fa-solid fa-file-invoice-dollar"></i> {{ _('الديون') }}
   </a>
   <a class="hub-tab{% if active == 'loans' %} is-active{% endif %}" href="{{ url_for('radius.finance_center_hub', tab='loans_debts') }}">
-    <i class="fa-solid fa-hand-holding-dollar"></i> السلف
+    <i class="fa-solid fa-hand-holding-dollar"></i> {{ _('السلف') }}
   </a>
 </nav>

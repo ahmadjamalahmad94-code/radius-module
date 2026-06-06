@@ -47,7 +47,7 @@
 ) %}
   <input class="hub-input grow" type="text" name="q"
          value="{{ filters.q if filters else '' }}"
-         placeholder="بحث (مستخدم / عنوان جهاز / جهاز شبكة)…">
+         placeholder="{{ _('بحث (مستخدم / عنوان جهاز / جهاز شبكة)…') }}">
   {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
   {% if filters and filters.q %}
     {{ hub.btn("إعادة ضبط", icon="rotate-left", variant="ghost", size="sm",
@@ -67,11 +67,11 @@
     <table class="hub-table rep-table">
       <thead>
         <tr>
-          <th>المستخدم</th>
-          <th>عنوان الجهاز (MAC)</th>
-          <th>جهاز الشبكة (NAS)</th>
-          <th class="num" style="white-space:nowrap">عدد الجلسات</th>
-          <th>آخر ظهور</th>
+          <th>{{ _('المستخدم') }}</th>
+          <th>{{ _('عنوان الجهاز (MAC)') }}</th>
+          <th>{{ _('جهاز الشبكة (NAS)') }}</th>
+          <th class="num" style="white-space:nowrap">{{ _('عدد الجلسات') }}</th>
+          <th>{{ _('آخر ظهور') }}</th>
         </tr>
       </thead>
       <tbody>

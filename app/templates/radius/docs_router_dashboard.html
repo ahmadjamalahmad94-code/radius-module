@@ -208,14 +208,14 @@
 <div class="dg-layout">
 
   {# ───── الفهرس الجانبي اللاصق ───── #}
-  <nav class="dg-toc dg-noprint" aria-label="فهرس الدليل">
-    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> فهرس الخطوات</div>
-    <a href="#dg-s1" data-dg-toc><span class="n">1</span> افتح لوحة الراوتر</a>
-    <a href="#dg-s2" data-dg-toc><span class="n">2</span> تنقّل بين التبويبات</a>
-    <a href="#dg-s3" data-dg-toc><span class="n">3</span> المؤشرات الحية</a>
-    <a href="#dg-s4" data-dg-toc><span class="n">4</span> الإجراءات السريعة</a>
-    <a href="#dg-s5" data-dg-toc><span class="n">5</span> تبويب «خدماتي»</a>
-    <a href="#dg-s6" data-dg-toc><span class="n">6</span> نفق تغيير العنوان</a>
+  <nav class="dg-toc dg-noprint" aria-label="{{ _('فهرس الدليل') }}">
+    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> {{ _('فهرس الخطوات') }}</div>
+    <a href="#dg-s1" data-dg-toc><span class="n">1</span> {{ _('افتح لوحة الراوتر') }}</a>
+    <a href="#dg-s2" data-dg-toc><span class="n">2</span> {{ _('تنقّل بين التبويبات') }}</a>
+    <a href="#dg-s3" data-dg-toc><span class="n">3</span> {{ _('المؤشرات الحية') }}</a>
+    <a href="#dg-s4" data-dg-toc><span class="n">4</span> {{ _('الإجراءات السريعة') }}</a>
+    <a href="#dg-s5" data-dg-toc><span class="n">5</span> {{ _('تبويب «خدماتي»') }}</a>
+    <a href="#dg-s6" data-dg-toc><span class="n">6</span> {{ _('نفق تغيير العنوان') }}</a>
   </nav>
 
   {# ───── عمود المحتوى ───── #}
@@ -224,10 +224,10 @@
     <div class="dg-lead">
       <span class="ic"><i class="fa-solid fa-lightbulb"></i></span>
       <div>
-        <h3>قبل ما نبدأ — شو هي «لوحة الراوتر»؟</h3>
+        <h3>{{ _('قبل ما نبدأ — شو هي «لوحة الراوتر»؟') }}</h3>
         <p>
-          لمّا تضغط زر <strong>«خدمات»</strong> لأي راوتر في غرفة العمليات (أو تضغط اسمه)، تفتح
-          <strong>لوحة الراوتر المنفرد</strong>: بيت هذا الراوتر بالكامل. فوقها مؤشرات حيّة من
+          {{ _('لمّا تضغط زر') }} <strong>{{ _('«خدمات»') }}</strong> {{ _('لأي راوتر في غرفة العمليات (أو تضغط اسمه)، تفتح') }}
+          <strong>{{ _('لوحة الراوتر المنفرد') }}</strong>: بيت هذا الراوتر بالكامل. فوقها مؤشرات حيّة من
           داخله، تحتها تبويبات للقراءة والتشخيص، وأوامر سريعة تنفّذ مباشرةً عليه، وتبويب
           «خدماتي» يجمع كل خدماته في مكان واحد. هي صفحة قراءة وتشغيل — لا تعديل بيانات مشتركين.
         </p>
@@ -238,15 +238,15 @@
     <section class="dg-step" id="dg-s1">
       <div class="dg-badge">1</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-door-open"></i> افتح لوحة الراوتر</h2>
+        <h2><i class="fa-solid fa-door-open"></i> {{ _('افتح لوحة الراوتر') }}</h2>
         <p>
-          من <strong>«إدارة الراوترات»</strong> اضغط زر <strong>«خدمات»</strong> لأي راوتر، أو
+          {{ _('من') }} <strong>{{ _('«إدارة الراوترات»') }}</strong> {{ _('اضغط زر') }} <strong>{{ _('«خدمات»') }}</strong> لأي راوتر، أو
           اضغط اسمه في الجدول. تفتح اللوحة برأس فيه اسم الراوتر، وتحته مباشرةً حزام المؤشرات
           الحية، ثم شريط التبويبات.
         </p>
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>نصيحة:</b> اللوحة تقرأ حالة الراوتر حيًّا عند فتحها — كل مؤشر له نقطة حالة
+          <span><b>{{ _('نصيحة:') }}</b> اللوحة تقرأ حالة الراوتر حيًّا عند فتحها — كل مؤشر له نقطة حالة
           تُفحص مباشرةً من الراوتر، فما تراه هو وضعه الآن لا قبل دقائق.</span>
         </div>
       </div>
@@ -256,35 +256,35 @@
     <section class="dg-step" id="dg-s2">
       <div class="dg-badge">2</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-folder-tree"></i> تنقّل بين التبويبات التسعة</h2>
+        <h2><i class="fa-solid fa-folder-tree"></i> {{ _('تنقّل بين التبويبات التسعة') }}</h2>
         <p>
-          شريط التبويبات يقسّم كل شيء حسب الغرض. اضغط أي تبويب لتفتح محتواه دون مغادرة الصفحة:
+          {{ _('شريط التبويبات يقسّم كل شيء حسب الغرض. اضغط أي تبويب لتفتح محتواه دون مغادرة الصفحة:') }}
         </p>
         <ul>
-          <li><strong>نظرة عامة:</strong> الحالة والصحة والإجراءات السريعة.</li>
-          <li><strong>الواجهات:</strong> منافذ الراوتر وحالتها.</li>
-          <li><strong>العناوين:</strong> عناوين IP المضبوطة.</li>
-          <li><strong>المسارات:</strong> جدول التوجيه (routes).</li>
-          <li><strong>الجيران:</strong> الأجهزة المجاورة المكتشَفة.</li>
-          <li><strong>الجلسات:</strong> المشتركون المتصلون الآن عبر هذا الراوتر.</li>
-          <li><strong>السجلات:</strong> سجل أحداث الراوتر (log).</li>
-          <li><strong>التشخيص:</strong> فحوص وأدوات استكشاف الأعطال.</li>
-          <li><strong>خدماتي:</strong> بيت كل خدمات الراوتر وأدواته (نشرحه في خطوته).</li>
+          <li><strong>{{ _('نظرة عامة:') }}</strong> {{ _('الحالة والصحة والإجراءات السريعة.') }}</li>
+          <li><strong>{{ _('الواجهات:') }}</strong> {{ _('منافذ الراوتر وحالتها.') }}</li>
+          <li><strong>{{ _('العناوين:') }}</strong> {{ _('عناوين IP المضبوطة.') }}</li>
+          <li><strong>{{ _('المسارات:') }}</strong> {{ _('جدول التوجيه (routes).') }}</li>
+          <li><strong>{{ _('الجيران:') }}</strong> {{ _('الأجهزة المجاورة المكتشَفة.') }}</li>
+          <li><strong>{{ _('الجلسات:') }}</strong> {{ _('المشتركون المتصلون الآن عبر هذا الراوتر.') }}</li>
+          <li><strong>{{ _('السجلات:') }}</strong> {{ _('سجل أحداث الراوتر (log).') }}</li>
+          <li><strong>{{ _('التشخيص:') }}</strong> {{ _('فحوص وأدوات استكشاف الأعطال.') }}</li>
+          <li><strong>{{ _('خدماتي:') }}</strong> {{ _('بيت كل خدمات الراوتر وأدواته (نشرحه في خطوته).') }}</li>
         </ul>
 
         <div class="dg-mock" aria-hidden="true">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">لوحة الراوتر › التبويبات</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('لوحة الراوتر › التبويبات') }}</span></div>
           <div class="dg-mock-body">
             <div class="dg-tabs">
-              <span class="tb on"><i class="fa-solid fa-gauge-high"></i> نظرة عامة</span>
-              <span class="tb"><i class="fa-solid fa-ethernet"></i> الواجهات</span>
-              <span class="tb"><i class="fa-solid fa-network-wired"></i> العناوين</span>
-              <span class="tb"><i class="fa-solid fa-route"></i> المسارات</span>
-              <span class="tb"><i class="fa-solid fa-people-arrows"></i> الجيران</span>
-              <span class="tb"><i class="fa-solid fa-users"></i> الجلسات</span>
-              <span class="tb"><i class="fa-solid fa-list"></i> السجلات</span>
-              <span class="tb"><i class="fa-solid fa-stethoscope"></i> التشخيص</span>
-              <span class="tb"><i class="fa-solid fa-screwdriver-wrench"></i> خدماتي</span>
+              <span class="tb on"><i class="fa-solid fa-gauge-high"></i> {{ _('نظرة عامة') }}</span>
+              <span class="tb"><i class="fa-solid fa-ethernet"></i> {{ _('الواجهات') }}</span>
+              <span class="tb"><i class="fa-solid fa-network-wired"></i> {{ _('العناوين') }}</span>
+              <span class="tb"><i class="fa-solid fa-route"></i> {{ _('المسارات') }}</span>
+              <span class="tb"><i class="fa-solid fa-people-arrows"></i> {{ _('الجيران') }}</span>
+              <span class="tb"><i class="fa-solid fa-users"></i> {{ _('الجلسات') }}</span>
+              <span class="tb"><i class="fa-solid fa-list"></i> {{ _('السجلات') }}</span>
+              <span class="tb"><i class="fa-solid fa-stethoscope"></i> {{ _('التشخيص') }}</span>
+              <span class="tb"><i class="fa-solid fa-screwdriver-wrench"></i> {{ _('خدماتي') }}</span>
             </div>
           </div>
         </div>
@@ -295,27 +295,27 @@
     <section class="dg-step" id="dg-s3">
       <div class="dg-badge">3</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-wave-square"></i> اقرأ المؤشرات الحية</h2>
+        <h2><i class="fa-solid fa-wave-square"></i> {{ _('اقرأ المؤشرات الحية') }}</h2>
         <p>
-          فوق التبويبات حزام من ثماني بطاقات تقرأ حالة الراوتر لحظيًا:
-          <strong>مدة تشغيل النظام</strong> و<strong>استخدام المعالج</strong> و
-          <strong>استهلاك الذاكرة</strong> و<strong>استخدام القرص</strong> و
-          <strong>حرارة المعالج</strong> و<strong>الوقت داخل النظام</strong> و
-          <strong>إصدار النظام</strong> و<strong>العنوان المتصل به</strong>.
+          {{ _('فوق التبويبات حزام من ثماني بطاقات تقرأ حالة الراوتر لحظيًا:') }}
+          <strong>{{ _('مدة تشغيل النظام') }}</strong> {{ _('و') }}<strong>{{ _('استخدام المعالج') }}</strong> {{ _('و') }}
+          <strong>{{ _('استهلاك الذاكرة') }}</strong> {{ _('و') }}<strong>{{ _('استخدام القرص') }}</strong> {{ _('و') }}
+          <strong>{{ _('حرارة المعالج') }}</strong> {{ _('و') }}<strong>{{ _('الوقت داخل النظام') }}</strong> {{ _('و') }}
+          <strong>{{ _('إصدار النظام') }}</strong> {{ _('و') }}<strong>{{ _('العنوان المتصل به') }}</strong>.
         </p>
 
         <div class="dg-mock" aria-hidden="true">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">لوحة الراوتر › المؤشرات الحية</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('لوحة الراوتر › المؤشرات الحية') }}</span></div>
           <div class="dg-mock-body">
             <div class="dg-kpis">
-              <div class="dg-kpi"><span class="ic" style="background:#ede9fe;color:#6d28d9"><i class="fa-solid fa-clock-rotate-left"></i></span><div class="v">12 يوم</div><div class="l">مدة تشغيل النظام</div></div>
-              <div class="dg-kpi"><span class="ic" style="background:#dbeafe;color:#2563eb"><i class="fa-solid fa-microchip"></i></span><div class="v">7%</div><div class="l">استخدام المعالج</div></div>
-              <div class="dg-kpi"><span class="ic" style="background:#dcfce7;color:#16a34a"><i class="fa-solid fa-memory"></i></span><div class="v">41%</div><div class="l">استهلاك الذاكرة</div></div>
-              <div class="dg-kpi"><span class="ic" style="background:#ccfbf1;color:#0d9488"><i class="fa-solid fa-hard-drive"></i></span><div class="v">18%</div><div class="l">استخدام القرص</div></div>
+              <div class="dg-kpi"><span class="ic" style="background:#ede9fe;color:#6d28d9"><i class="fa-solid fa-clock-rotate-left"></i></span><div class="v">{{ _('12 يوم') }}</div><div class="l">{{ _('مدة تشغيل النظام') }}</div></div>
+              <div class="dg-kpi"><span class="ic" style="background:#dbeafe;color:#2563eb"><i class="fa-solid fa-microchip"></i></span><div class="v">7%</div><div class="l">{{ _('استخدام المعالج') }}</div></div>
+              <div class="dg-kpi"><span class="ic" style="background:#dcfce7;color:#16a34a"><i class="fa-solid fa-memory"></i></span><div class="v">41%</div><div class="l">{{ _('استهلاك الذاكرة') }}</div></div>
+              <div class="dg-kpi"><span class="ic" style="background:#ccfbf1;color:#0d9488"><i class="fa-solid fa-hard-drive"></i></span><div class="v">18%</div><div class="l">{{ _('استخدام القرص') }}</div></div>
             </div>
           </div>
         </div>
-        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> «حرارة المعالج» تأتي من صحة النظام (system/health) إن دعمها الجهاز.</div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> {{ _('«حرارة المعالج» تأتي من صحة النظام (system/health) إن دعمها الجهاز.') }}</div>
       </div>
     </section>
 
@@ -323,44 +323,44 @@
     <section class="dg-step" id="dg-s4">
       <div class="dg-badge">4</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-bolt"></i> الإجراءات السريعة — ثلاث مجموعات</h2>
+        <h2><i class="fa-solid fa-bolt"></i> {{ _('الإجراءات السريعة — ثلاث مجموعات') }}</h2>
         <p>
-          في «نظرة عامة» قسم <strong>«إجراءات سريعة»</strong> (أوامر مباشرة على الراوتر) مرتّب
+          {{ _('في «نظرة عامة» قسم') }} <strong>{{ _('«إجراءات سريعة»') }}</strong> (أوامر مباشرة على الراوتر) مرتّب
           في ثلاث مجموعات بحسب الخطورة، فتعرف من اللون ماذا تتوقّع:
         </p>
         <ul>
-          <li><strong>تشخيص وقراءة</strong> (أوامر آمنة لجمع المعلومات): <strong>اختبار الوصول</strong>،
-          <strong>تتبّع المسار</strong>، <strong>حفظ نسخة احتياطية</strong>.</li>
-          <li><strong>صيانة سريعة</strong> (مهام دوريّة تُنفَّذ فورًا): <strong>مسح كاش DNS</strong>،
-          <strong>مزامنة الوقت</strong>.</li>
-          <li><strong>عمليات حسّاسة</strong> (تأكيد مطلوب قبل التنفيذ): <strong>تعديل اسم الراوتر</strong>،
-          <strong>إعادة تشغيل</strong>.</li>
+          <li><strong>{{ _('تشخيص وقراءة') }}</strong> {{ _('(أوامر آمنة لجمع المعلومات):') }} <strong>{{ _('اختبار الوصول') }}</strong>{{ _('،') }}
+          <strong>{{ _('تتبّع المسار') }}</strong>{{ _('،') }} <strong>{{ _('حفظ نسخة احتياطية') }}</strong>.</li>
+          <li><strong>{{ _('صيانة سريعة') }}</strong> {{ _('(مهام دوريّة تُنفَّذ فورًا):') }} <strong>{{ _('مسح كاش DNS') }}</strong>{{ _('،') }}
+          <strong>{{ _('مزامنة الوقت') }}</strong>.</li>
+          <li><strong>{{ _('عمليات حسّاسة') }}</strong> {{ _('(تأكيد مطلوب قبل التنفيذ):') }} <strong>{{ _('تعديل اسم الراوتر') }}</strong>{{ _('،') }}
+          <strong>{{ _('إعادة تشغيل') }}</strong>.</li>
         </ul>
 
         <div class="dg-mock" aria-hidden="true">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">نظرة عامة › إجراءات سريعة</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('نظرة عامة › إجراءات سريعة') }}</span></div>
           <div class="dg-mock-body">
             <div class="dg-qa">
               <div class="dg-qa-grp teal">
-                <div class="h"><i class="fa-solid fa-magnifying-glass"></i> تشخيص وقراءة</div>
+                <div class="h"><i class="fa-solid fa-magnifying-glass"></i> {{ _('تشخيص وقراءة') }}</div>
                 <div class="b">
-                  <span class="dg-qbtn"><i class="fa-solid fa-bullseye"></i> اختبار الوصول</span>
-                  <span class="dg-qbtn"><i class="fa-solid fa-route"></i> تتبّع المسار</span>
-                  <span class="dg-qbtn"><i class="fa-solid fa-floppy-disk"></i> حفظ نسخة احتياطية</span>
+                  <span class="dg-qbtn"><i class="fa-solid fa-bullseye"></i> {{ _('اختبار الوصول') }}</span>
+                  <span class="dg-qbtn"><i class="fa-solid fa-route"></i> {{ _('تتبّع المسار') }}</span>
+                  <span class="dg-qbtn"><i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ نسخة احتياطية') }}</span>
                 </div>
               </div>
               <div class="dg-qa-grp amber">
-                <div class="h"><i class="fa-solid fa-wrench"></i> صيانة سريعة</div>
+                <div class="h"><i class="fa-solid fa-wrench"></i> {{ _('صيانة سريعة') }}</div>
                 <div class="b">
-                  <span class="dg-qbtn"><i class="fa-solid fa-broom"></i> مسح كاش DNS</span>
-                  <span class="dg-qbtn"><i class="fa-solid fa-clock-rotate-left"></i> مزامنة الوقت</span>
+                  <span class="dg-qbtn"><i class="fa-solid fa-broom"></i> {{ _('مسح كاش DNS') }}</span>
+                  <span class="dg-qbtn"><i class="fa-solid fa-clock-rotate-left"></i> {{ _('مزامنة الوقت') }}</span>
                 </div>
               </div>
               <div class="dg-qa-grp danger">
-                <div class="h"><i class="fa-solid fa-triangle-exclamation"></i> عمليات حسّاسة</div>
+                <div class="h"><i class="fa-solid fa-triangle-exclamation"></i> {{ _('عمليات حسّاسة') }}</div>
                 <div class="b">
-                  <span class="dg-qbtn"><i class="fa-solid fa-pen-to-square"></i> تعديل اسم الراوتر</span>
-                  <span class="dg-qbtn"><i class="fa-solid fa-power-off"></i> إعادة تشغيل</span>
+                  <span class="dg-qbtn"><i class="fa-solid fa-pen-to-square"></i> {{ _('تعديل اسم الراوتر') }}</span>
+                  <span class="dg-qbtn"><i class="fa-solid fa-power-off"></i> {{ _('إعادة تشغيل') }}</span>
                 </div>
               </div>
             </div>
@@ -369,8 +369,8 @@
 
         <div class="dg-warn">
           <span class="ic">⚠️</span>
-          <span><b>انتبه:</b> أزرار المجموعة الحمراء تطلب تأكيدًا قبل التنفيذ. <b>«إعادة تشغيل»</b>
-          يقطع اتصال الراوتر لدقيقة تقريبًا — لا تستخدمه وقت الذروة إلا لضرورة.</span>
+          <span><b>{{ _('انتبه:') }}</b> {{ _('أزرار المجموعة الحمراء تطلب تأكيدًا قبل التنفيذ.') }} <b>{{ _('«إعادة تشغيل»') }}</b>
+          {{ _('يقطع اتصال الراوتر لدقيقة تقريبًا — لا تستخدمه وقت الذروة إلا لضرورة.') }}</span>
         </div>
       </div>
     </section>
@@ -379,34 +379,34 @@
     <section class="dg-step" id="dg-s5">
       <div class="dg-badge">5</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-screwdriver-wrench"></i> تبويب «خدماتي» — بيت خدمات الراوتر</h2>
+        <h2><i class="fa-solid fa-screwdriver-wrench"></i> {{ _('تبويب «خدماتي» — بيت خدمات الراوتر') }}</h2>
         <p>
-          تبويب <strong>«خدماتي»</strong> يجمع كل خدمات الراوتر في بطاقات تُضيفها وتُديرها. أبرزها:
+          {{ _('تبويب') }} <strong>{{ _('«خدماتي»') }}</strong> {{ _('يجمع كل خدمات الراوتر في بطاقات تُضيفها وتُديرها. أبرزها:') }}
         </p>
         <ul>
-          <li><strong>تغيير IP الخروج:</strong> توجيه المشتركين عبر IP عام جديد.</li>
-          <li><strong>اتصال عن بُعد:</strong> نفق إدارة آمن للراوتر.</li>
-          <li><strong>برمجة بوابة الدخول:</strong> بوابة دخول عامّة مع صفحة تسجيل.</li>
-          <li><strong>برمجة البرودباند:</strong> اشتراك ثابت لكل مستخدم.</li>
-          <li><strong>حجب المواقع</strong> و<strong>فتح المواقع</strong> و<strong>تتبّع اللوب</strong>.</li>
+          <li><strong>{{ _('تغيير IP الخروج:') }}</strong> {{ _('توجيه المشتركين عبر IP عام جديد.') }}</li>
+          <li><strong>{{ _('اتصال عن بُعد:') }}</strong> {{ _('نفق إدارة آمن للراوتر.') }}</li>
+          <li><strong>{{ _('برمجة بوابة الدخول:') }}</strong> {{ _('بوابة دخول عامّة مع صفحة تسجيل.') }}</li>
+          <li><strong>{{ _('برمجة البرودباند:') }}</strong> {{ _('اشتراك ثابت لكل مستخدم.') }}</li>
+          <li><strong>{{ _('حجب المواقع') }}</strong> {{ _('و') }}<strong>{{ _('فتح المواقع') }}</strong> {{ _('و') }}<strong>{{ _('تتبّع اللوب') }}</strong>.</li>
         </ul>
 
         <div class="dg-mock" aria-hidden="true">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">لوحة الراوتر › خدماتي</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('لوحة الراوتر › خدماتي') }}</span></div>
           <div class="dg-mock-body">
             <div class="dg-svcgrid">
-              <div class="dg-svc2"><span class="ic" style="background:#fef3c7;color:#b45309"><i class="fa-solid fa-globe"></i></span><div><div class="t">تغيير IP الخروج</div><div class="d">توجيه المشتركين عبر IP عام جديد</div></div></div>
-              <div class="dg-svc2"><span class="ic" style="background:#ede9fe;color:#6d28d9"><i class="fa-solid fa-key"></i></span><div><div class="t">اتصال عن بُعد</div><div class="d">نفذ نفق إدارة آمن للراوتر</div></div></div>
-              <div class="dg-svc2"><span class="ic" style="background:#dbeafe;color:#2563eb"><i class="fa-solid fa-wifi"></i></span><div><div class="t">برمجة بوابة الدخول</div><div class="d">بوابة دخول عامّة مع صفحة تسجيل</div></div></div>
-              <div class="dg-svc2"><span class="ic" style="background:#dcfce7;color:#16a34a"><i class="fa-solid fa-ethernet"></i></span><div><div class="t">برمجة البرودباند</div><div class="d">اشتراك ثابت لكل مستخدم</div></div></div>
+              <div class="dg-svc2"><span class="ic" style="background:#fef3c7;color:#b45309"><i class="fa-solid fa-globe"></i></span><div><div class="t">{{ _('تغيير IP الخروج') }}</div><div class="d">{{ _('توجيه المشتركين عبر IP عام جديد') }}</div></div></div>
+              <div class="dg-svc2"><span class="ic" style="background:#ede9fe;color:#6d28d9"><i class="fa-solid fa-key"></i></span><div><div class="t">{{ _('اتصال عن بُعد') }}</div><div class="d">{{ _('نفذ نفق إدارة آمن للراوتر') }}</div></div></div>
+              <div class="dg-svc2"><span class="ic" style="background:#dbeafe;color:#2563eb"><i class="fa-solid fa-wifi"></i></span><div><div class="t">{{ _('برمجة بوابة الدخول') }}</div><div class="d">{{ _('بوابة دخول عامّة مع صفحة تسجيل') }}</div></div></div>
+              <div class="dg-svc2"><span class="ic" style="background:#dcfce7;color:#16a34a"><i class="fa-solid fa-ethernet"></i></span><div><div class="t">{{ _('برمجة البرودباند') }}</div><div class="d">{{ _('اشتراك ثابت لكل مستخدم') }}</div></div></div>
             </div>
           </div>
         </div>
-        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> أسفل البطاقات قسم «حالة الخدمات» يفلتر بين: الكل · تلقائيّة · يدويّة — مع زر حذف آمن لكل خدمة.</div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> {{ _('أسفل البطاقات قسم «حالة الخدمات» يفلتر بين: الكل · تلقائيّة · يدويّة — مع زر حذف آمن لكل خدمة.') }}</div>
 
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>نصيحة:</b> تبويب «خدماتي» يضم أيضًا شريط «الأدوات وصفحات الراوتر» (برمجة الشبكة،
+          <span><b>{{ _('نصيحة:') }}</b> تبويب «خدماتي» يضم أيضًا شريط «الأدوات وصفحات الراوتر» (برمجة الشبكة،
           نظرة عامة، مصمّم صفحة الدخول، النسخ الاحتياطية، سياسات الشبكة…) — مدخل سريع لكل أداة دون
           العودة لغرفة العمليات.</span>
         </div>
@@ -417,18 +417,18 @@
     <section class="dg-step" id="dg-s6">
       <div class="dg-badge">6</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-route"></i> خدمة «نفق تغيير العنوان وتمرير الحركة»</h2>
+        <h2><i class="fa-solid fa-route"></i> {{ _('خدمة «نفق تغيير العنوان وتمرير الحركة»') }}</h2>
         <p>
-          ضمن «خدماتي» بطاقة مميّزة بوسم <strong>«متقدم»</strong> اسمها
-          <strong>«نفق تغيير العنوان وتمرير الحركة»</strong>. وظيفتها: تمرّر حركة المشتركين عبر
-          الخادم لتغيير <strong>العنوان العام</strong> لهذا الراوتر. وهي <strong>خدمة مدفوعة محدودة
-          السرعة — ليست مجانية ولا بيد المشترك</strong>، وتعمل لإصدارَي RouterOS 6 و7.
+          {{ _('ضمن «خدماتي» بطاقة مميّزة بوسم') }} <strong>{{ _('«متقدم»') }}</strong> {{ _('اسمها') }}
+          <strong>{{ _('«نفق تغيير العنوان وتمرير الحركة»') }}</strong>. وظيفتها: تمرّر حركة المشتركين عبر
+          الخادم لتغيير <strong>{{ _('العنوان العام') }}</strong> {{ _('لهذا الراوتر. وهي') }} <strong>خدمة مدفوعة محدودة
+          السرعة — ليست مجانية ولا بيد المشترك</strong>{{ _('، وتعمل لإصدارَي RouterOS 6 و7.') }}
         </p>
         <p>
-          التفعيل لا يتم من هنا مباشرةً، بل من <strong>«تراخيص أنفاق الراوترات»</strong>: تختار السرعة
-          المستهدفة فيظهر سعرها، ثم تضغط <strong>«طلب الخدمة»</strong> فتفتح نافذة
-          <strong>«طلب خدمة نفق تغيير IP»</strong> — تختار شريحة السرعة وتكتب ملاحظة (سبب الطلب)
-          ثم <strong>«إرسال الطلب»</strong>. يُسجَّل الطلب فقط، والتفعيل يتم لاحقًا من «تراخيص أنفاق الراوترات»
+          {{ _('التفعيل لا يتم من هنا مباشرةً، بل من') }} <strong>{{ _('«تراخيص أنفاق الراوترات»') }}</strong>: تختار السرعة
+          المستهدفة فيظهر سعرها، ثم تضغط <strong>{{ _('«طلب الخدمة»') }}</strong> {{ _('فتفتح نافذة') }}
+          <strong>{{ _('«طلب خدمة نفق تغيير IP»') }}</strong> — تختار شريحة السرعة وتكتب ملاحظة (سبب الطلب)
+          ثم <strong>{{ _('«إرسال الطلب»') }}</strong>. يُسجَّل الطلب فقط، والتفعيل يتم لاحقًا من «تراخيص أنفاق الراوترات»
           بعد المراجعة.
         </p>
 
@@ -436,22 +436,22 @@
           <div class="h">
             <span class="ic"><i class="fa-solid fa-route"></i></span>
             <div>
-              <div class="t">نفق تغيير العنوان وتمرير الحركة</div>
-              <div class="s">نفق تغيير IP (تمرير الترافيك)</div>
+              <div class="t">{{ _('نفق تغيير العنوان وتمرير الحركة') }}</div>
+              <div class="s">{{ _('نفق تغيير IP (تمرير الترافيك)') }}</div>
             </div>
-            <span style="margin-inline-start:auto"><span class="dg-pill grey">غير مفعّلة</span></span>
+            <span style="margin-inline-start:auto"><span class="dg-pill grey">{{ _('غير مفعّلة') }}</span></span>
           </div>
           <div class="b">
-            <span class="dg-paybadge"><i class="fa-solid fa-id-card"></i> خدمة مدفوعة محدودة السرعة — ليست مجانية ولا بيد المشترك</span>
-            <p style="margin:9px 0 0;font-size:11px;color:#64748b;line-height:1.8">لا يوجد ترخيص لهذا الراوتر بعد. اطلب الخدمة باختيار سرعة مستهدفة — يظهر سعرها ثم يُرسَل الطلب إلى «تراخيص أنفاق الراوترات».</p>
-            <div style="margin-top:10px"><span style="display:inline-flex;align-items:center;gap:6px;border-radius:9px;padding:8px 14px;font-size:11px;font-weight:800;background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff"><i class="fa-solid fa-paper-plane"></i> طلب الخدمة</span></div>
+            <span class="dg-paybadge"><i class="fa-solid fa-id-card"></i> {{ _('خدمة مدفوعة محدودة السرعة — ليست مجانية ولا بيد المشترك') }}</span>
+            <p style="margin:9px 0 0;font-size:11px;color:#64748b;line-height:1.8">{{ _('لا يوجد ترخيص لهذا الراوتر بعد. اطلب الخدمة باختيار سرعة مستهدفة — يظهر سعرها ثم يُرسَل الطلب إلى «تراخيص أنفاق الراوترات».') }}</p>
+            <div style="margin-top:10px"><span style="display:inline-flex;align-items:center;gap:6px;border-radius:9px;padding:8px 14px;font-size:11px;font-weight:800;background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff"><i class="fa-solid fa-paper-plane"></i> {{ _('طلب الخدمة') }}</span></div>
           </div>
         </div>
 
         <div class="dg-warn">
           <span class="ic">⚠️</span>
-          <span><b>انتبه:</b> الإرسال يسجّل <b>طلبًا فقط</b> ولا يفعّل الخدمة. كل إدارة وتعديل
-          وإعادة تفعيل لاحقًا تتم من <b>«تراخيص أنفاق الراوترات»</b>، والسعر يُثبَّت وقت الطلب حسب السرعة المختارة.</span>
+          <span><b>{{ _('انتبه:') }}</b> {{ _('الإرسال يسجّل') }} <b>{{ _('طلبًا فقط') }}</b> ولا يفعّل الخدمة. كل إدارة وتعديل
+          وإعادة تفعيل لاحقًا تتم من <b>{{ _('«تراخيص أنفاق الراوترات»') }}</b>{{ _('، والسعر يُثبَّت وقت الطلب حسب السرعة المختارة.') }}</span>
         </div>
       </div>
     </section>

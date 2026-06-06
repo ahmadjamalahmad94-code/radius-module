@@ -269,14 +269,14 @@
 <div class="dg-layout">
 
   {# ───── الفهرس الجانبي اللاصق ───── #}
-  <nav class="dg-toc dg-noprint" aria-label="فهرس الدليل">
-    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> فهرس الخطوات</div>
-    <a href="#dg-s1" data-dg-toc><span class="n">1</span> الغرفتان والقائمة</a>
-    <a href="#dg-s2" data-dg-toc><span class="n">2</span> قالب جديد: الاسم والأساس</a>
-    <a href="#dg-s3" data-dg-toc><span class="n">3</span> محرر الحقول والأبعاد</a>
-    <a href="#dg-s4" data-dg-toc><span class="n">4</span> رمز QR والدخول التلقائي</a>
-    <a href="#dg-s5" data-dg-toc><span class="n">5</span> المعاينة الحية والحفظ</a>
-    <a href="#dg-s6" data-dg-toc><span class="n">6</span> غرفة الطباعة والتصدير</a>
+  <nav class="dg-toc dg-noprint" aria-label="{{ _('فهرس الدليل') }}">
+    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> {{ _('فهرس الخطوات') }}</div>
+    <a href="#dg-s1" data-dg-toc><span class="n">1</span> {{ _('الغرفتان والقائمة') }}</a>
+    <a href="#dg-s2" data-dg-toc><span class="n">2</span> {{ _('قالب جديد: الاسم والأساس') }}</a>
+    <a href="#dg-s3" data-dg-toc><span class="n">3</span> {{ _('محرر الحقول والأبعاد') }}</a>
+    <a href="#dg-s4" data-dg-toc><span class="n">4</span> {{ _('رمز QR والدخول التلقائي') }}</a>
+    <a href="#dg-s5" data-dg-toc><span class="n">5</span> {{ _('المعاينة الحية والحفظ') }}</a>
+    <a href="#dg-s6" data-dg-toc><span class="n">6</span> {{ _('غرفة الطباعة والتصدير') }}</a>
   </nav>
 
   {# ───── عمود المحتوى ───── #}
@@ -285,7 +285,7 @@
     <div class="dg-lead">
       <span class="ic"><i class="fa-solid fa-lightbulb"></i></span>
       <div>
-        <h3>قبل ما نبدأ — شو يعني «قالب طباعة»؟</h3>
+        <h3>{{ _('قبل ما نبدأ — شو يعني «قالب طباعة»؟') }}</h3>
         <p>
           القالب هو شكل البطاقة المطبوعة: الألوان، الخطوط، مكان اليوزر والباس ورمز QR،
           واسم شبكتك. تصممه مرة واحدة، وبعدين تطبع عليه أي حزمة كروت — مئات البطاقات
@@ -299,42 +299,42 @@
     <section class="dg-step" id="dg-s1">
       <div class="dg-badge">1</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-door-open"></i> افتح الصفحة وتعرّف على الغرفتين</h2>
+        <h2><i class="fa-solid fa-door-open"></i> {{ _('افتح الصفحة وتعرّف على الغرفتين') }}</h2>
         <p>
-          من القائمة الجانبية افتح <strong>«قوالب الطباعة»</strong>. رح تستقبلك صفحة
-          <strong>«غرفة عمليات تصميم وتصدير البطاقات»</strong> وفي أعلاها تبويبان —
+          {{ _('من القائمة الجانبية افتح') }} <strong>{{ _('«قوالب الطباعة»') }}</strong>{{ _('. رح تستقبلك صفحة') }}
+          <strong>{{ _('«غرفة عمليات تصميم وتصدير البطاقات»') }}</strong> وفي أعلاها تبويبان —
           فكّر فيهما كغرفتين منفصلتين لكل واحدة شغلة:
         </p>
         <ul>
-          <li><strong>غرفة الطباعة:</strong> تختار حزمة بطاقات وقالبًا محفوظًا، تضبط الورقة، وتصدّر PDF. هذه وجهتك اليومية.</li>
-          <li><strong>غرفة التصميم:</strong> فيها مصمم القوالب والمعاينة الحية — هنا تنشئ القالب أو تعدّله.</li>
+          <li><strong>{{ _('غرفة الطباعة:') }}</strong> {{ _('تختار حزمة بطاقات وقالبًا محفوظًا، تضبط الورقة، وتصدّر PDF. هذه وجهتك اليومية.') }}</li>
+          <li><strong>{{ _('غرفة التصميم:') }}</strong> {{ _('فيها مصمم القوالب والمعاينة الحية — هنا تنشئ القالب أو تعدّله.') }}</li>
         </ul>
 
         <div class="dg-mock" aria-hidden="true">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">قوالب الطباعة › تبويبا الغرفتين</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('قوالب الطباعة › تبويبا الغرفتين') }}</span></div>
           <div class="dg-mock-body">
             <div class="dg-rooms">
               <div class="dg-room">
                 <span class="ic"><i class="fa-solid fa-print"></i></span>
-                <span><span class="t">غرفة الطباعة</span><div class="d">اختيار حزمة وقالب ثم تصدير PDF</div></span>
+                <span><span class="t">{{ _('غرفة الطباعة') }}</span><div class="d">{{ _('اختيار حزمة وقالب ثم تصدير PDF') }}</div></span>
               </div>
               <div class="dg-room on">
                 <span class="ic"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
-                <span><span class="t">غرفة التصميم</span><div class="d">محرر القوالب والمعاينة الحية</div></span>
+                <span><span class="t">{{ _('غرفة التصميم') }}</span><div class="d">{{ _('محرر القوالب والمعاينة الحية') }}</div></span>
               </div>
             </div>
           </div>
         </div>
-        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> التبويب المظلّل هو الغرفة المفتوحة — اضغط «غرفة التصميم» لأننا رح نصمم أول قالب.</div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> {{ _('التبويب المظلّل هو الغرفة المفتوحة — اضغط «غرفة التصميم» لأننا رح نصمم أول قالب.') }}</div>
 
         <p>
           فوق التبويبين تشوف مؤشرات سريعة (قوالب محفوظة، حزم متاحة، آخر عمليات تصدير)،
-          وزر <strong>«الإحصائيات»</strong> يفتح صفحة منفصلة فيها جدول كل قوالبك وسجل التصدير الكامل.
+          وزر <strong>{{ _('«الإحصائيات»') }}</strong> {{ _('يفتح صفحة منفصلة فيها جدول كل قوالبك وسجل التصدير الكامل.') }}
         </p>
 
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>نصيحة:</b> داخل غرفة التصميم يوجد درج اسمه <b>«مصمم القوالب»</b> —
+          <span><b>{{ _('نصيحة:') }}</b> {{ _('داخل غرفة التصميم يوجد درج اسمه') }} <b>{{ _('«مصمم القوالب»') }}</b> —
           يفتح تلقائيًا لما تدخل الغرفة. إذا لقيته مطويًا اضغط على شريطه وينفرد لك المحرر والمعاينة جنبًا إلى جنب.</span>
         </div>
       </div>
@@ -344,47 +344,47 @@
     <section class="dg-step" id="dg-s2">
       <div class="dg-badge">2</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-signature"></i> أنشئ قالبًا جديدًا: الاسم ونظام التصميم</h2>
+        <h2><i class="fa-solid fa-signature"></i> {{ _('أنشئ قالبًا جديدًا: الاسم ونظام التصميم') }}</h2>
         <p>
-          أول سطر في المحرر هو <strong>«اسم القالب»</strong> — سمِّه باسم يميّزه في غرفة الطباعة
-          لاحقًا، مثل اسم العرض أو الحزمة: <span class="dg-kbd">بطاقات رمضان — 4 ساعات</span>.
-          الاسم يُحفظ مع التصميم لكنه <strong>لا يُطبع</strong> على البطاقة نفسها.
+          {{ _('أول سطر في المحرر هو') }} <strong>{{ _('«اسم القالب»') }}</strong> — سمِّه باسم يميّزه في غرفة الطباعة
+          لاحقًا، مثل اسم العرض أو الحزمة: <span class="dg-kbd">{{ _('بطاقات رمضان — 4 ساعات') }}</span>.
+          الاسم يُحفظ مع التصميم لكنه <strong>{{ _('لا يُطبع') }}</strong> {{ _('على البطاقة نفسها.') }}
         </p>
-        <p>تحته مباشرة قراران يحددان أساس البطاقة:</p>
+        <p>{{ _('تحته مباشرة قراران يحددان أساس البطاقة:') }}</p>
         <ul>
-          <li><strong>اختر نظام التصميم:</strong> بطاقتان — <strong>«صورة مرفوعة»</strong> (ترفع تصميمك الجاهز PNG/JPG/WEBP حتى 8MB والنظام يضيف فوقه اليوزر والباس وQR فقط) أو <strong>«تصميم من النظام»</strong> (قوالب جاهزة بتحكم كامل بالألوان والزخارف).</li>
-          <li><strong>اختر مود التصميم:</strong> أربع خيارات تثبت اللغة والاتجاه معًا — <strong>عربي أفقي / عربي عمودي / إنجليزي أفقي / إنجليزي عمودي</strong>. العربي يعكس توزيع البطاقة كاملًا RTL.</li>
+          <li><strong>{{ _('اختر نظام التصميم:') }}</strong> {{ _('بطاقتان —') }} <strong>{{ _('«صورة مرفوعة»') }}</strong> {{ _('(ترفع تصميمك الجاهز PNG/JPG/WEBP حتى 8MB والنظام يضيف فوقه اليوزر والباس وQR فقط) أو') }} <strong>{{ _('«تصميم من النظام»') }}</strong> {{ _('(قوالب جاهزة بتحكم كامل بالألوان والزخارف).') }}</li>
+          <li><strong>{{ _('اختر مود التصميم:') }}</strong> {{ _('أربع خيارات تثبت اللغة والاتجاه معًا —') }} <strong>{{ _('عربي أفقي / عربي عمودي / إنجليزي أفقي / إنجليزي عمودي') }}</strong>{{ _('. العربي يعكس توزيع البطاقة كاملًا RTL.') }}</li>
         </ul>
 
         <div class="dg-mock" aria-hidden="true">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">غرفة التصميم › محرر القالب › الأساسيات</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('غرفة التصميم › محرر القالب › الأساسيات') }}</span></div>
           <div class="dg-mock-body">
             <div class="dg-mf">
-              <label>اسم القالب</label>
-              <div class="dg-mf-input hl">بطاقات رمضان — 4 ساعات</div>
-              <div class="dg-mf-help">يظهر في غرفة الطباعة وصفحة الإحصائيات فقط — لا يُطبع على البطاقة.</div>
+              <label>{{ _('اسم القالب') }}</label>
+              <div class="dg-mf-input hl">{{ _('بطاقات رمضان — 4 ساعات') }}</div>
+              <div class="dg-mf-help">{{ _('يظهر في غرفة الطباعة وصفحة الإحصائيات فقط — لا يُطبع على البطاقة.') }}</div>
             </div>
             <div class="dg-rooms">
               <div class="dg-room">
                 <span class="ic"><i class="fa-solid fa-image"></i></span>
-                <span><span class="t">صورة مرفوعة</span><div class="d">نضيف فوقها اليوزر والباس وQR فقط</div></span>
+                <span><span class="t">{{ _('صورة مرفوعة') }}</span><div class="d">{{ _('نضيف فوقها اليوزر والباس وQR فقط') }}</div></span>
               </div>
               <div class="dg-room on">
                 <span class="ic"><i class="fa-solid fa-layer-group"></i></span>
-                <span><span class="t">تصميم من النظام</span><div class="d">تحكم كامل بالألوان والزخارف</div></span>
+                <span><span class="t">{{ _('تصميم من النظام') }}</span><div class="d">{{ _('تحكم كامل بالألوان والزخارف') }}</div></span>
               </div>
             </div>
           </div>
         </div>
 
         <p>
-          إذا اخترت «تصميم من النظام» يظهر تحته <strong>«اختر شكل القالب»</strong>: شبكة قوالب
+          {{ _('إذا اخترت «تصميم من النظام» يظهر تحته') }} <strong>{{ _('«اختر شكل القالب»') }}</strong>: شبكة قوالب
           جاهزة بألوانها — اضغط واحدًا كنقطة انطلاق ثم عدّل فوقه كما تشاء.
         </p>
 
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>نصيحة:</b> ارفعت صورة كبيرة؟ ولا يهمك — النظام يضغطها تلقائيًا ويحفظ نسخة
+          <span><b>{{ _('نصيحة:') }}</b> ارفعت صورة كبيرة؟ ولا يهمك — النظام يضغطها تلقائيًا ويحفظ نسخة
           مناسبة للتصدير حتى لا تتضخم ملفات PDF. الرسوم الجاهزة والصورة المرفوعة لهما مساران
           منفصلان فالتبديل بينهما لا يضيع إعداداتك.</span>
         </div>
@@ -395,44 +395,44 @@
     <section class="dg-step" id="dg-s3">
       <div class="dg-badge">3</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-arrows-up-down-left-right"></i> محرر الأقسام: حرّك العناصر ولوّن البطاقة</h2>
+        <h2><i class="fa-solid fa-arrows-up-down-left-right"></i> {{ _('محرر الأقسام: حرّك العناصر ولوّن البطاقة') }}</h2>
         <p>
-          فوق معاينة البطاقة مباشرة (في العمود الثاني) يجلس <strong>شريط أقسام المحرر</strong> —
+          {{ _('فوق معاينة البطاقة مباشرة (في العمود الثاني) يجلس') }} <strong>{{ _('شريط أقسام المحرر') }}</strong> —
           ستة أزرار تبدّل ألواح النموذج، وتبقى ظاهرة دائمًا مهما نزلت في الصفحة:
         </p>
 
         <div class="dg-mock" aria-hidden="true">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">معاينة البطاقة › شريط أقسام المحرر</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('معاينة البطاقة › شريط أقسام المحرر') }}</span></div>
           <div class="dg-mock-body">
             <div class="dg-tabs">
-              <span class="dg-tab on"><i class="fa-solid fa-shapes"></i> الأساسيات</span>
-              <span class="dg-tab"><i class="fa-solid fa-palette"></i> الألوان</span>
-              <span class="dg-tab"><i class="fa-solid fa-swatchbook"></i> الزخرفة والخلفية</span>
-              <span class="dg-tab"><i class="fa-solid fa-pen-nib"></i> النصوص</span>
-              <span class="dg-tab"><i class="fa-solid fa-arrows-up-down-left-right"></i> الحقول</span>
-              <span class="dg-tab"><i class="fa-solid fa-ruler-combined"></i> المقاسات</span>
+              <span class="dg-tab on"><i class="fa-solid fa-shapes"></i> {{ _('الأساسيات') }}</span>
+              <span class="dg-tab"><i class="fa-solid fa-palette"></i> {{ _('الألوان') }}</span>
+              <span class="dg-tab"><i class="fa-solid fa-swatchbook"></i> {{ _('الزخرفة والخلفية') }}</span>
+              <span class="dg-tab"><i class="fa-solid fa-pen-nib"></i> {{ _('النصوص') }}</span>
+              <span class="dg-tab"><i class="fa-solid fa-arrows-up-down-left-right"></i> {{ _('الحقول') }}</span>
+              <span class="dg-tab"><i class="fa-solid fa-ruler-combined"></i> {{ _('المقاسات') }}</span>
             </div>
             <div class="dg-tabs">
-              <span class="dg-tab cyan"><i class="fa-solid fa-user"></i> حقل اسم المستخدم</span>
-              <span class="dg-tab"><i class="fa-solid fa-key"></i> حقل كلمة المرور</span>
-              <span class="dg-tab"><i class="fa-solid fa-qrcode"></i> حقل الباركود</span>
+              <span class="dg-tab cyan"><i class="fa-solid fa-user"></i> {{ _('حقل اسم المستخدم') }}</span>
+              <span class="dg-tab"><i class="fa-solid fa-key"></i> {{ _('حقل كلمة المرور') }}</span>
+              <span class="dg-tab"><i class="fa-solid fa-qrcode"></i> {{ _('حقل الباركود') }}</span>
             </div>
           </div>
         </div>
-        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> الصف الثاني هو التبويبات الفرعية داخل قسم «الحقول» — مجموعة واحدة ظاهرة في كل مرة.</div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> {{ _('الصف الثاني هو التبويبات الفرعية داخل قسم «الحقول» — مجموعة واحدة ظاهرة في كل مرة.') }}</div>
 
         <ul>
-          <li><strong>الألوان:</strong> بداية ونهاية تدرّج الخلفية، لون التمييز (الشريط العلوي)، لون النص، ولون شرائط البيانات.</li>
-          <li><strong>الزخرفة والخلفية:</strong> نمط الزخرفة — <strong>إشارة وشبكات / موجات ضوئية / شبكة تقنية / نظيف</strong> — ورفع صورة الخلفية مع شريط شفافيتها.</li>
-          <li><strong>النصوص:</strong> اسم الشبكة، عنوان البطاقة، السعر، الصلاحية، النص أسفل البطاقة، ومفاتيح إظهار/إخفاء كل عنصر.</li>
-          <li><strong>الحقول:</strong> لكل من اليوزر والباس وQR منزلقات <strong>«المكان أفقيًا» و«المكان عموديًا»</strong> بالمليمتر الحقيقي <span class="dg-kbd">mm</span> + حجم الخط واللون والخلفية. وتقدر ببساطة <strong>تسحب العنصر بالماوس</strong> فوق المعاينة — السحب يعبّي المنزلقات تلقائيًا.</li>
-          <li><strong>المقاسات:</strong> عرض وارتفاع البطاقة بالمليمتر (الافتراضي 85×54 — مقاس بطاقة الفيزا).</li>
+          <li><strong>{{ _('الألوان:') }}</strong> {{ _('بداية ونهاية تدرّج الخلفية، لون التمييز (الشريط العلوي)، لون النص، ولون شرائط البيانات.') }}</li>
+          <li><strong>{{ _('الزخرفة والخلفية:') }}</strong> {{ _('نمط الزخرفة —') }} <strong>{{ _('إشارة وشبكات / موجات ضوئية / شبكة تقنية / نظيف') }}</strong> {{ _('— ورفع صورة الخلفية مع شريط شفافيتها.') }}</li>
+          <li><strong>{{ _('النصوص:') }}</strong> {{ _('اسم الشبكة، عنوان البطاقة، السعر، الصلاحية، النص أسفل البطاقة، ومفاتيح إظهار/إخفاء كل عنصر.') }}</li>
+          <li><strong>{{ _('الحقول:') }}</strong> {{ _('لكل من اليوزر والباس وQR منزلقات') }} <strong>{{ _('«المكان أفقيًا» و«المكان عموديًا»') }}</strong> {{ _('بالمليمتر الحقيقي') }} <span class="dg-kbd">mm</span> {{ _('+ حجم الخط واللون والخلفية. وتقدر ببساطة') }} <strong>{{ _('تسحب العنصر بالماوس') }}</strong> {{ _('فوق المعاينة — السحب يعبّي المنزلقات تلقائيًا.') }}</li>
+          <li><strong>{{ _('المقاسات:') }}</strong> {{ _('عرض وارتفاع البطاقة بالمليمتر (الافتراضي 85×54 — مقاس بطاقة الفيزا).') }}</li>
         </ul>
 
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>نصيحة:</b> منزلقات المكان والحجم تبدأ معبأة بالقيم <b>الفعلية</b> المرسومة على
-          البطاقة — مش أصفار. والنصوص العربية تُرسم بخط <b>المراعي (Almarai)</b> المضمّن في
+          <span><b>{{ _('نصيحة:') }}</b> {{ _('منزلقات المكان والحجم تبدأ معبأة بالقيم') }} <b>{{ _('الفعلية') }}</b> المرسومة على
+          البطاقة — مش أصفار. والنصوص العربية تُرسم بخط <b>{{ _('المراعي (Almarai)') }}</b> المضمّن في
           النظام، فتطلع في المعاينة وملف PDF بنفس الشكل تمامًا، بلا مربعات ولا خطوط بديلة.</span>
         </div>
       </div>
@@ -442,37 +442,37 @@
     <section class="dg-step" id="dg-s4">
       <div class="dg-badge">4</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-qrcode"></i> رمز QR — وسرّ الدخول التلقائي</h2>
+        <h2><i class="fa-solid fa-qrcode"></i> {{ _('رمز QR — وسرّ الدخول التلقائي') }}</h2>
         <p>
-          رمز QR هو أسرع طريقة يدخل فيها الزبون على الإنترنت. من قسم <strong>«النصوص»</strong>
-          اختر <strong>«نمط QR»</strong>: <strong>مربع واضح / ناعم / بسيط</strong>،
-          ومن تبويب <strong>«حقل الباركود»</strong> في قسم «الحقول» تتحكم بمكانه وحجمه
+          {{ _('رمز QR هو أسرع طريقة يدخل فيها الزبون على الإنترنت. من قسم') }} <strong>{{ _('«النصوص»') }}</strong>
+          {{ _('اختر') }} <strong>{{ _('«نمط QR»') }}</strong>: <strong>{{ _('مربع واضح / ناعم / بسيط') }}</strong>،
+          ومن تبويب <strong>{{ _('«حقل الباركود»') }}</strong> في قسم «الحقول» تتحكم بمكانه وحجمه
           (0 = حجم تلقائي) ولونه وخلفيته.
         </p>
         <p>
-          الميزة الذهبية هي حقل <strong>«رابط دخول الهوت سبوت (DNS)»</strong>:
+          {{ _('الميزة الذهبية هي حقل') }} <strong>{{ _('«رابط دخول الهوت سبوت (DNS)»') }}</strong>:
         </p>
         <ul>
-          <li><strong>فارغ:</strong> الرمز يحمل اسم المستخدم فقط — سلوك القوالب القديمة كما هو.</li>
-          <li><strong>معبّأ:</strong> الرمز يصير رابط دخول كامل بصيغة <span class="dg-kbd">login?username=…&amp;password=…</span> — الزبون يمسح الرمز بكاميرا جواله <strong>فيدخل على الإنترنت فورًا</strong> بدون كتابة أي حرف.</li>
+          <li><strong>{{ _('فارغ:') }}</strong> {{ _('الرمز يحمل اسم المستخدم فقط — سلوك القوالب القديمة كما هو.') }}</li>
+          <li><strong>{{ _('معبّأ:') }}</strong> {{ _('الرمز يصير رابط دخول كامل بصيغة') }} <span class="dg-kbd">login?username=…&amp;password=…</span> {{ _('— الزبون يمسح الرمز بكاميرا جواله') }} <strong>{{ _('فيدخل على الإنترنت فورًا') }}</strong> {{ _('بدون كتابة أي حرف.') }}</li>
         </ul>
 
         <div class="dg-mock" aria-hidden="true">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">محرر القالب › النصوص › رابط الدخول التلقائي</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('محرر القالب › النصوص › رابط الدخول التلقائي') }}</span></div>
           <div class="dg-mock-body">
             <div class="dg-mf">
-              <label>رابط دخول الهوت سبوت (DNS)</label>
+              <label>{{ _('رابط دخول الهوت سبوت (DNS)') }}</label>
               <div class="dg-mf-input hl mono">10.10.10.10</div>
-              <div class="dg-mf-help">امسح QR يدخل الزبون تلقائيًا: الرابط + اسم المستخدم وكلمة المرور بنفس العنوان.</div>
+              <div class="dg-mf-help">{{ _('امسح QR يدخل الزبون تلقائيًا: الرابط + اسم المستخدم وكلمة المرور بنفس العنوان.') }}</div>
             </div>
             <div class="dg-mock-grid2">
               <div class="dg-mf">
-                <label>نمط QR</label>
-                <div class="dg-mf-select"><div class="dg-mf-input">مربع واضح</div></div>
+                <label>{{ _('نمط QR') }}</label>
+                <div class="dg-mf-select"><div class="dg-mf-input">{{ _('مربع واضح') }}</div></div>
               </div>
               <div class="dg-mf">
-                <label>حجم QR</label>
-                <div class="dg-mf-input ph">0 = تلقائي</div>
+                <label>{{ _('حجم QR') }}</label>
+                <div class="dg-mf-input ph">{{ _('0 = تلقائي') }}</div>
               </div>
             </div>
           </div>
@@ -480,8 +480,8 @@
 
         <div class="dg-warn">
           <span class="ic">⚠️</span>
-          <span><b>انتبه:</b> اكتب عنوان بوابة الهوت سبوت عندك (مثل <b>10.10.10.10</b> أو
-          <b>login.net</b>) — حتى لو نسيت <span class="dg-kbd">http://</span> النظام يضيفها
+          <span><b>{{ _('انتبه:') }}</b> {{ _('اكتب عنوان بوابة الهوت سبوت عندك (مثل') }} <b>10.10.10.10</b> {{ _('أو') }}
+          <b>login.net</b>{{ _(') — حتى لو نسيت') }} <span class="dg-kbd">http://</span> النظام يضيفها
           تلقائيًا قبل الحفظ. وتأكد أن العنوان هو نفسه اللي تفتحه صفحة دخول الراوتر،
           وإلا الرمز يمسح لكن ما يوصل لصفحة الدخول.</span>
         </div>
@@ -492,51 +492,51 @@
     <section class="dg-step" id="dg-s5">
       <div class="dg-badge">5</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-eye"></i> المعاينة الحية = الإخراج النهائي — واحفظ</h2>
+        <h2><i class="fa-solid fa-eye"></i> {{ _('المعاينة الحية = الإخراج النهائي — واحفظ') }}</h2>
         <p>
-          لوحة <strong>«معاينة البطاقة»</strong> الملاصقة في العمود الثاني تتحدث مع
-          <strong>كل حرف تكتبه وكل منزلق تحركه</strong> — بلا زر تحديث. وهي مش «صورة تقريبية»:
-          المعاينة يرسمها <strong>نفس المحرك</strong> الذي يولّد ملف PDF النهائي، فما تشوفه
+          {{ _('لوحة') }} <strong>{{ _('«معاينة البطاقة»') }}</strong> {{ _('الملاصقة في العمود الثاني تتحدث مع') }}
+          <strong>{{ _('كل حرف تكتبه وكل منزلق تحركه') }}</strong> — بلا زر تحديث. وهي مش «صورة تقريبية»:
+          المعاينة يرسمها <strong>{{ _('نفس المحرك') }}</strong> الذي يولّد ملف PDF النهائي، فما تشوفه
           هنا يطلع في المطبعة حرفيًا — نفس الخط، نفس الألوان، نفس مكان كل عنصر.
         </p>
 
         <div class="dg-mock" aria-hidden="true">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">غرفة التصميم › معاينة البطاقة (مباشرة)</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('غرفة التصميم › معاينة البطاقة (مباشرة)') }}</span></div>
           <div class="dg-mock-body" style="place-items:center">
             <div class="dg-cardprev">
               <span class="acc"></span>
               <span class="br">HobeRadius</span>
-              <span class="tt">بطاقة إنترنت</span>
+              <span class="tt">{{ _('بطاقة إنترنت') }}</span>
               <span class="pill user"><small>USER</small> CARD1234</span>
               <span class="pill pass"><small>PASS</small> ••••••••</span>
               <span class="qr"><i class="fa-solid fa-qrcode"></i></span>
-              <span class="ft">احتفظ ببيانات الدخول حتى انتهاء الصلاحية</span>
+              <span class="ft">{{ _('احتفظ ببيانات الدخول حتى انتهاء الصلاحية') }}</span>
             </div>
           </div>
         </div>
-        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> اسحب شريط اليوزر أو الباس أو رمز QR مباشرة فوق هذه المعاينة — مكانه الجديد يُكتب بالمليمتر في حقول قسم «الحقول».</div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> {{ _('اسحب شريط اليوزر أو الباس أو رمز QR مباشرة فوق هذه المعاينة — مكانه الجديد يُكتب بالمليمتر في حقول قسم «الحقول».') }}</div>
 
         <p>
-          لما يعجبك الشكل انزل لآخر المحرر واضغط <strong>«حفظ القالب»</strong>
-          (أو <strong>«تحديث القالب»</strong> إذا كنت تعدّل قالبًا موجودًا):
+          {{ _('لما يعجبك الشكل انزل لآخر المحرر واضغط') }} <strong>{{ _('«حفظ القالب»') }}</strong>
+          {{ _('(أو') }} <strong>{{ _('«تحديث القالب»') }}</strong> {{ _('إذا كنت تعدّل قالبًا موجودًا):') }}
         </p>
 
         <div class="dg-mock" aria-hidden="true" style="max-width:420px">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">محرر القالب › أسفل النموذج</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('محرر القالب › أسفل النموذج') }}</span></div>
           <div class="dg-mock-body">
             <div class="dg-mock-actions">
-              <span class="dg-mock-btn primary"><i class="fa-solid fa-floppy-disk"></i> حفظ القالب</span>
+              <span class="dg-mock-btn primary"><i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ القالب') }}</span>
             </div>
           </div>
         </div>
 
         <div class="dg-flash" aria-hidden="true">
-          <i class="fa-solid fa-circle-check"></i> تم حفظ قالب التصميم. يمكنك الآن تصدير PDF عينة أو ربطه بحزمة بطاقات فعلية.
+          <i class="fa-solid fa-circle-check"></i> {{ _('تم حفظ قالب التصميم. يمكنك الآن تصدير PDF عينة أو ربطه بحزمة بطاقات فعلية.') }}
         </div>
 
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>نصيحة:</b> كلمة المرور تظهر في المعاينة دائمًا كنقاط <b>••••••••</b> —
+          <span><b>{{ _('نصيحة:') }}</b> {{ _('كلمة المرور تظهر في المعاينة دائمًا كنقاط') }} <b>••••••••</b> —
           هذا متعمد للخصوصية. كلمات المرور الحقيقية تظهر فقط داخل ملف PDF المصدَّر.</span>
         </div>
       </div>
@@ -546,61 +546,61 @@
     <section class="dg-step" id="dg-s6">
       <div class="dg-badge">6</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-print"></i> استخدم القالب: غرفة الطباعة وتصدير PDF</h2>
+        <h2><i class="fa-solid fa-print"></i> {{ _('استخدم القالب: غرفة الطباعة وتصدير PDF') }}</h2>
         <p>
-          ارجع لتبويب <strong>«غرفة الطباعة»</strong> — هنا يلتقي قالبك مع كروتك الحقيقية:
+          {{ _('ارجع لتبويب') }} <strong>{{ _('«غرفة الطباعة»') }}</strong> {{ _('— هنا يلتقي قالبك مع كروتك الحقيقية:') }}
         </p>
         <ul>
-          <li><strong>الحزمة:</strong> اختر حزمة بطاقات من القائمة (تقدر توصل لنفس الغرفة من صفحة حزم البطاقات أيضًا).</li>
-          <li><strong>اختيار قالب محفوظ:</strong> يفتح نافذة بمصغرات حقيقية لكل قوالبك — كل مصغرة هي بطاقة القالب الفعلية. من نفس النافذة تقدر <strong>تعديل / عينة / حذف</strong> أي قالب.</li>
-          <li><strong>إعدادات الورقة والرص:</strong> حجم الورقة (A4/ليتر)، اتجاهها، عدد الأعمدة والصفوف، والمسافات والهوامش بالمليمتر — هذه للتصدير فقط ولا تغيّر القالب المحفوظ.</li>
-          <li><strong>المعاينة الحية:</strong> بمجرد اختيار قالب وحزمة تشوف أول 4 بطاقات بأسماء المستخدمين الفعلية.</li>
+          <li><strong>{{ _('الحزمة:') }}</strong> {{ _('اختر حزمة بطاقات من القائمة (تقدر توصل لنفس الغرفة من صفحة حزم البطاقات أيضًا).') }}</li>
+          <li><strong>{{ _('اختيار قالب محفوظ:') }}</strong> {{ _('يفتح نافذة بمصغرات حقيقية لكل قوالبك — كل مصغرة هي بطاقة القالب الفعلية. من نفس النافذة تقدر') }} <strong>{{ _('تعديل / عينة / حذف') }}</strong> {{ _('أي قالب.') }}</li>
+          <li><strong>{{ _('إعدادات الورقة والرص:') }}</strong> {{ _('حجم الورقة (A4/ليتر)، اتجاهها، عدد الأعمدة والصفوف، والمسافات والهوامش بالمليمتر — هذه للتصدير فقط ولا تغيّر القالب المحفوظ.') }}</li>
+          <li><strong>{{ _('المعاينة الحية:') }}</strong> {{ _('بمجرد اختيار قالب وحزمة تشوف أول 4 بطاقات بأسماء المستخدمين الفعلية.') }}</li>
         </ul>
-        <p>أزرار التصدير الثلاثة:</p>
+        <p>{{ _('أزرار التصدير الثلاثة:') }}</p>
         <ul>
-          <li><strong>«تصدير PDF للحزمة»:</strong> الزر الرئيسي — يولّد ملف PDF متعدد الصفحات بكل بطاقات الحزمة على قالبك، مع شريط تقدم بالمراحل ثم تنزيل تلقائي.</li>
-          <li><strong>«PDF عينة»:</strong> صفحة تجريبية ببيانات وهمية — مثالية تطبعها وتشيك الألوان والمقاسات قبل ما تصرف ورق المطبعة.</li>
-          <li><strong>«تنظيف القوالب المؤقتة»:</strong> يحذف فقط القوالب التي أنشأتها الاختبارات تلقائيًا — لا يمسّ قوالبك.</li>
+          <li><strong>{{ _('«تصدير PDF للحزمة»:') }}</strong> {{ _('الزر الرئيسي — يولّد ملف PDF متعدد الصفحات بكل بطاقات الحزمة على قالبك، مع شريط تقدم بالمراحل ثم تنزيل تلقائي.') }}</li>
+          <li><strong>{{ _('«PDF عينة»:') }}</strong> {{ _('صفحة تجريبية ببيانات وهمية — مثالية تطبعها وتشيك الألوان والمقاسات قبل ما تصرف ورق المطبعة.') }}</li>
+          <li><strong>{{ _('«تنظيف القوالب المؤقتة»:') }}</strong> {{ _('يحذف فقط القوالب التي أنشأتها الاختبارات تلقائيًا — لا يمسّ قوالبك.') }}</li>
         </ul>
 
         <div class="dg-mock" aria-hidden="true">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">غرفة الطباعة › إعداد التصدير</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('غرفة الطباعة › إعداد التصدير') }}</span></div>
           <div class="dg-mock-body">
             <div class="dg-mock-grid2">
               <div class="dg-mf">
-                <label>الحزمة</label>
-                <div class="dg-mf-select"><div class="dg-mf-input hl">B-1042 — عرض 4 ساعات (200 بطاقة)</div></div>
+                <label>{{ _('الحزمة') }}</label>
+                <div class="dg-mf-select"><div class="dg-mf-input hl">{{ _('B-1042 — عرض 4 ساعات (200 بطاقة)') }}</div></div>
               </div>
               <div class="dg-mf">
-                <label>القالب المعتمد للتصدير</label>
-                <div class="dg-mf-input hl">بطاقات رمضان — 4 ساعات</div>
+                <label>{{ _('القالب المعتمد للتصدير') }}</label>
+                <div class="dg-mf-input hl">{{ _('بطاقات رمضان — 4 ساعات') }}</div>
               </div>
             </div>
             <div class="dg-mock-actions" style="justify-content:flex-start">
-              <span class="dg-mock-btn primary"><i class="fa-solid fa-print"></i> تصدير PDF للحزمة</span>
-              <span class="dg-mock-btn ghost"><i class="fa-solid fa-file-pdf"></i> PDF عينة</span>
+              <span class="dg-mock-btn primary"><i class="fa-solid fa-print"></i> {{ _('تصدير PDF للحزمة') }}</span>
+              <span class="dg-mock-btn ghost"><i class="fa-solid fa-file-pdf"></i> {{ _('PDF عينة') }}</span>
             </div>
             <div class="dg-prog">
-              <span class="ok"><i class="fa-solid fa-check-circle"></i> اختيار الحزمة</span>
-              <span class="ok"><i class="fa-solid fa-palette"></i> اختيار القالب</span>
-              <span class="ok"><i class="fa-solid fa-gears"></i> تجهيز ملف التصدير</span>
-              <span><i class="fa-solid fa-download"></i> بدء تنزيل PDF</span>
+              <span class="ok"><i class="fa-solid fa-check-circle"></i> {{ _('اختيار الحزمة') }}</span>
+              <span class="ok"><i class="fa-solid fa-palette"></i> {{ _('اختيار القالب') }}</span>
+              <span class="ok"><i class="fa-solid fa-gears"></i> {{ _('تجهيز ملف التصدير') }}</span>
+              <span><i class="fa-solid fa-download"></i> {{ _('بدء تنزيل PDF') }}</span>
             </div>
           </div>
         </div>
-        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> مراحل التصدير الأربع تتلون بالأخضر واحدة واحدة حتى يبدأ تنزيل الملف تلقائيًا.</div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> {{ _('مراحل التصدير الأربع تتلون بالأخضر واحدة واحدة حتى يبدأ تنزيل الملف تلقائيًا.') }}</div>
 
         <div class="dg-warn">
           <span class="ic">⚠️</span>
-          <span><b>انتبه:</b> حقول «عنوان بوابة الدخول» و«رابط دخول الهوت سبوت» و«السعر» في غرفة
-          الطباعة هي <b>استبدالات وقت التصدير فقط</b> — تتغلب على إعداد القالب في هذا الملف بالذات
+          <span><b>{{ _('انتبه:') }}</b> حقول «عنوان بوابة الدخول» و«رابط دخول الهوت سبوت» و«السعر» في غرفة
+          الطباعة هي <b>{{ _('استبدالات وقت التصدير فقط') }}</b> — تتغلب على إعداد القالب في هذا الملف بالذات
           دون تعديل القالب المحفوظ. اتركها فارغة ليُعتمد ما في القالب.</span>
         </div>
 
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>وبعدين؟</b> من زر «الإحصائيات» تشوف كل قوالبك المحفوظة وسجل عمليات التصدير،
-          وتقدر تعتمد قالبًا <b>افتراضيًا</b> (نجمة ⭐) فتختاره غرفة الطباعة تلقائيًا في كل مرة.</span>
+          <span><b>{{ _('وبعدين؟') }}</b> من زر «الإحصائيات» تشوف كل قوالبك المحفوظة وسجل عمليات التصدير،
+          وتقدر تعتمد قالبًا <b>{{ _('افتراضيًا') }}</b> {{ _('(نجمة ⭐) فتختاره غرفة الطباعة تلقائيًا في كل مرة.') }}</span>
         </div>
       </div>
     </section>

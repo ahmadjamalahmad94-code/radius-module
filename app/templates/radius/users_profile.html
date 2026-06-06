@@ -701,7 +701,7 @@
          {% if temp_speed_state.ends_at %}title="ينتهي: {{ temp_speed_state.ends_at|replace('T', ' ') }}"{% endif %}>
       <span class="ts-clock"><i class="fa-regular fa-clock"></i></span>
       <span class="ts-body">
-        <span class="ts-label">سرعة مؤقتة — باقي</span>
+        <span class="ts-label">{{ _('سرعة مؤقتة — باقي') }}</span>
         <span class="ts-remaining" data-temp-speed-remaining>
           {%- if temp_speed_state.unknown -%}مفتوحة (بدون وقت نهاية){%- else -%}…{%- endif -%}
         </span>
@@ -714,7 +714,7 @@
             action="{{ url_for('radius.users_temp_speed_cancel', username=sub.username) }}"
             style="display:contents"
             onsubmit="return confirm('إلغاء السرعة المؤقتة الآن وإرجاع السرعة الطبيعية؟');">
-        <button type="submit" class="ts-cancel" title="إلغاء السرعة المؤقتة الآن">
+        <button type="submit" class="ts-cancel" title="{{ _('إلغاء السرعة المؤقتة الآن') }}">
           <i class="fa-solid fa-xmark"></i>
         </button>
       </form>
@@ -745,7 +745,7 @@
 {# ═══ 3. TABS NAV ═════════════════════════════════════════════ #}
 <div class="p360-tabs" role="tablist">
   <button type="button" class="p360-tab is-active" data-tab="info">
-    <i class="fa-solid fa-circle-info"></i> معلومات
+    <i class="fa-solid fa-circle-info"></i> {{ _('معلومات') }}
   </button>
   <button type="button" class="p360-tab" data-tab="events">
     <i class="fa-solid fa-clock-rotate-left"></i> الأحداث
@@ -764,21 +764,21 @@
     {% if session_rows %}<span class="count">{{ session_rows|length }}</span>{% endif %}
   </button>
   <button type="button" class="p360-tab" data-tab="daily">
-    <i class="fa-solid fa-calendar-day"></i> الاستخدام اليومي
+    <i class="fa-solid fa-calendar-day"></i> {{ _('الاستخدام اليومي') }}
   </button>
   <button type="button" class="p360-tab" data-tab="mgr">
     <i class="fa-solid fa-user-tie"></i> أحداث المدراء
     {% if manager_events %}<span class="count">{{ manager_events|length }}</span>{% endif %}
   </button>
   <button type="button" class="p360-tab" data-tab="bw">
-    <i class="fa-solid fa-gauge-high"></i> باندويث
+    <i class="fa-solid fa-gauge-high"></i> {{ _('باندويث') }}
   </button>
   <button type="button" class="p360-tab" data-tab="cards">
     <i class="fa-solid fa-id-card"></i> الكروت المستخدمة
     {% if used_cards %}<span class="count">{{ used_cards|length }}</span>{% endif %}
   </button>
   <button type="button" class="p360-tab" data-tab="ledger">
-    <i class="fa-solid fa-book"></i> كشف الحساب
+    <i class="fa-solid fa-book"></i> {{ _('كشف الحساب') }}
   </button>
 </div>
 </section>
@@ -791,7 +791,7 @@
 
   <div class="p360-quota">
     <div class="head">
-      <span><i class="fa-solid fa-database"></i> استهلاك الكوتا</span>
+      <span><i class="fa-solid fa-database"></i> {{ _('استهلاك الكوتا') }}</span>
       <span>{{ fmt_bytes_mb(profile.used_mb) }} / {{ fmt_bytes_mb(profile.quota_total_mb) }}</span>
     </div>
     {%- set pct = (profile.used_mb / profile.quota_total_mb * 100) if profile.quota_total_mb else 0 -%}
@@ -805,61 +805,61 @@
   <div class="hub-grid-1-1">
     {% call hub.section("بيانات الحساب", icon="user") %}
       <div class="p360-kv">
-        <div class="row"><span class="k">اسم المستخدم</span><span class="v mono">{{ sub.username }}</span></div>
-        <div class="row"><span class="k">الاسم الكامل</span><span class="v">{{ sub.full_name or "—" }}</span></div>
-        <div class="row"><span class="k">اسم الأب</span><span class="v">{{ sub.father_name or "—" }}</span></div>
-        <div class="row"><span class="k">الجوّال</span><span class="v mono">{{ sub.mobile or "—" }}</span></div>
-        <div class="row"><span class="k">البريد</span><span class="v">{{ sub.email or "—" }}</span></div>
-        <div class="row"><span class="k">الجنسية</span><span class="v">{{ sub.nationality or "—" }}</span></div>
-        <div class="row"><span class="k">الرقم الوطني</span><span class="v mono">{{ sub.national_id or "—" }}</span></div>
-        <div class="row"><span class="k">المدينة</span><span class="v">{{ sub.city or "—" }}</span></div>
-        <div class="row"><span class="k">المنطقة</span><span class="v">{{ sub.district or "—" }}</span></div>
-        <div class="row"><span class="k">العنوان</span><span class="v">{{ sub.address or "—" }}</span></div>
-        <div class="row"><span class="k">نوع الحساب</span><span class="v">{{ fmt_account_type(sub.account_type) }}</span></div>
-        <div class="row"><span class="k">المجموعة</span><span class="v">{{ sub.group or "—" }}</span></div>
+        <div class="row"><span class="k">{{ _('اسم المستخدم') }}</span><span class="v mono">{{ sub.username }}</span></div>
+        <div class="row"><span class="k">{{ _('الاسم الكامل') }}</span><span class="v">{{ sub.full_name or "—" }}</span></div>
+        <div class="row"><span class="k">{{ _('اسم الأب') }}</span><span class="v">{{ sub.father_name or "—" }}</span></div>
+        <div class="row"><span class="k">{{ _('الجوّال') }}</span><span class="v mono">{{ sub.mobile or "—" }}</span></div>
+        <div class="row"><span class="k">{{ _('البريد') }}</span><span class="v">{{ sub.email or "—" }}</span></div>
+        <div class="row"><span class="k">{{ _('الجنسية') }}</span><span class="v">{{ sub.nationality or "—" }}</span></div>
+        <div class="row"><span class="k">{{ _('الرقم الوطني') }}</span><span class="v mono">{{ sub.national_id or "—" }}</span></div>
+        <div class="row"><span class="k">{{ _('المدينة') }}</span><span class="v">{{ sub.city or "—" }}</span></div>
+        <div class="row"><span class="k">{{ _('المنطقة') }}</span><span class="v">{{ sub.district or "—" }}</span></div>
+        <div class="row"><span class="k">{{ _('العنوان') }}</span><span class="v">{{ sub.address or "—" }}</span></div>
+        <div class="row"><span class="k">{{ _('نوع الحساب') }}</span><span class="v">{{ fmt_account_type(sub.account_type) }}</span></div>
+        <div class="row"><span class="k">{{ _('المجموعة') }}</span><span class="v">{{ sub.group or "—" }}</span></div>
       </div>
     {% endcall %}
 
     {% call hub.section("الباقة + الشبكة", icon="network-wired") %}
       <div class="p360-kv">
-        <div class="row"><span class="k">الباقة</span><span class="v">{{ plan.name if plan else "—" }}</span></div>
+        <div class="row"><span class="k">{{ _('الباقة') }}</span><span class="v">{{ plan.name if plan else "—" }}</span></div>
         <div class="row">
-          <span class="k">السعر المعتمد</span>
+          <span class="k">{{ _('السعر المعتمد') }}</span>
           <span class="v">
             {%- if sub.custom_price and sub.custom_price > 0 -%}
-              {{ sub.custom_price|money }} <small style="color:var(--hub-brand-ink);font-weight:700">(مخصّص)</small>
+              {{ sub.custom_price|money }} <small style="color:var(--hub-brand-ink);font-weight:700">{{ _('(مخصّص)') }}</small>
             {%- elif plan and plan.price -%}
-              {{ plan.price|money }} <small style="color:var(--hub-text-mute)">(سعر العرض)</small>
+              {{ plan.price|money }} <small style="color:var(--hub-text-mute)">{{ _('(سعر العرض)') }}</small>
             {%- else -%}—{%- endif -%}
           </span>
         </div>
-        <div class="row"><span class="k">نوع الخدمة</span><span class="v">{{ fmt_service_type(sub.service_type) }}</span></div>
-        <div class="row"><span class="k">نوع المستخدم</span><span class="v">{{ fmt_user_type(sub.user_type) }}</span></div>
-        <div class="row"><span class="k">سرعة التنزيل</span><span class="v">{{ fmt_speed(profile.speed_dn) }}</span></div>
-        <div class="row"><span class="k">سرعة الرفع</span><span class="v">{{ fmt_speed(profile.speed_up) }}</span></div>
-        <div class="row"><span class="k">سرعة مخصّصة</span><span class="v">{{ "نعم" if sub.custom_speed else "لا" }}</span></div>
+        <div class="row"><span class="k">{{ _('نوع الخدمة') }}</span><span class="v">{{ fmt_service_type(sub.service_type) }}</span></div>
+        <div class="row"><span class="k">{{ _('نوع المستخدم') }}</span><span class="v">{{ fmt_user_type(sub.user_type) }}</span></div>
+        <div class="row"><span class="k">{{ _('سرعة التنزيل') }}</span><span class="v">{{ fmt_speed(profile.speed_dn) }}</span></div>
+        <div class="row"><span class="k">{{ _('سرعة الرفع') }}</span><span class="v">{{ fmt_speed(profile.speed_up) }}</span></div>
+        <div class="row"><span class="k">{{ _('سرعة مخصّصة') }}</span><span class="v">{{ "نعم" if sub.custom_speed else "لا" }}</span></div>
         {# سرعة مؤقّتة — بدل «نعم/لا» الثابتة: شارة حيّة بنفس عدّاد الهيرو
            (data-temp-speed-remaining يُحدَّث كل ثانية من نفس الـ epoch). #}
-        <div class="row"><span class="k">سرعة مؤقّتة</span><span class="v">
+        <div class="row"><span class="k">{{ _('سرعة مؤقّتة') }}</span><span class="v">
           {%- if temp_speed_state and temp_speed_state.has_flag -%}
             <span class="temp-pill" data-temp-speed-bar
                   data-expires-at="{{ temp_speed_state.ends_at_epoch or 0 }}">
               <i class="fa-regular fa-clock"></i>
               <span>{{ temp_speed_state.down_kbps }}k/{{ temp_speed_state.up_kbps }}k</span>
-              <span>· باقي</span>
+              <span>{{ _('· باقي') }}</span>
               <span class="v-count" data-temp-speed-remaining>
                 {%- if temp_speed_state.unknown -%}مفتوحة{%- else -%}…{%- endif -%}
               </span>
             </span>
           {%- else -%}لا{%- endif -%}
         </span></div>
-        <div class="row"><span class="k">MAC مقفل</span><span class="v mono">{{ sub.mac_lock or "—" }}</span></div>
-        <div class="row"><span class="k">IP ثابت</span><span class="v mono">{{ sub.static_ip or "—" }}</span></div>
+        <div class="row"><span class="k">{{ _('MAC مقفل') }}</span><span class="v mono">{{ sub.mac_lock or "—" }}</span></div>
+        <div class="row"><span class="k">{{ _('IP ثابت') }}</span><span class="v mono">{{ sub.static_ip or "—" }}</span></div>
         <div class="row"><span class="k">VLAN</span><span class="v">{{ sub.vlan_id or "—" }}</span></div>
-        <div class="row"><span class="k">حد الجلسات المتزامنة</span><span class="v">{{ sub.override_concurrent or "—" }}</span></div>
-        <div class="row"><span class="k">حد الأجهزة</span><span class="v">{{ sub.device_count or "—" }}</span></div>
-        <div class="row"><span class="k">المجمّع</span><span class="v mono">{{ sub.pool or "—" }}</span></div>
-        <div class="row"><span class="k">معرّف المتّصل</span><span class="v mono">{{ sub.caller_id or "—" }}</span></div>
+        <div class="row"><span class="k">{{ _('حد الجلسات المتزامنة') }}</span><span class="v">{{ sub.override_concurrent or "—" }}</span></div>
+        <div class="row"><span class="k">{{ _('حد الأجهزة') }}</span><span class="v">{{ sub.device_count or "—" }}</span></div>
+        <div class="row"><span class="k">{{ _('المجمّع') }}</span><span class="v mono">{{ sub.pool or "—" }}</span></div>
+        <div class="row"><span class="k">{{ _('معرّف المتّصل') }}</span><span class="v mono">{{ sub.caller_id or "—" }}</span></div>
       </div>
     {% endcall %}
   </div>
@@ -867,29 +867,29 @@
   <div class="hub-grid-1-1">
     {% call hub.section("الحالة + الوقت", icon="clock") %}
       <div class="p360-kv">
-        <div class="row"><span class="k">الحالة</span><span class="v">{{ status_pill(sub.status) }}</span></div>
-        <div class="row"><span class="k">التجديد التلقائي</span><span class="v">{{ "مفعَّل" if sub.auto_renewal else "معطَّل" }}</span></div>
-        <div class="row"><span class="k">أوّل دخول</span><span class="v muted">{{ fmt_dt(sub.first_login_at) }}</span></div>
-        <div class="row"><span class="k">آخر دخول</span><span class="v muted">{{ fmt_dt(sub.last_login_at) }}</span></div>
-        <div class="row"><span class="k">آخر ظهور</span><span class="v muted">{{ fmt_dt(sub.last_seen_at) }}</span></div>
-        <div class="row"><span class="k">تاريخ الانتهاء</span><span class="v muted">{{ fmt_dt(sub.expire_at) }}</span></div>
-        <div class="row"><span class="k">تاريخ الإنشاء</span><span class="v muted">{{ fmt_dt(sub.created_at) }}</span></div>
-        <div class="row"><span class="k">آخر تعديل</span><span class="v muted">{{ fmt_dt(sub.updated_at) }}</span></div>
+        <div class="row"><span class="k">{{ _('الحالة') }}</span><span class="v">{{ status_pill(sub.status) }}</span></div>
+        <div class="row"><span class="k">{{ _('التجديد التلقائي') }}</span><span class="v">{{ "مفعَّل" if sub.auto_renewal else "معطَّل" }}</span></div>
+        <div class="row"><span class="k">{{ _('أوّل دخول') }}</span><span class="v muted">{{ fmt_dt(sub.first_login_at) }}</span></div>
+        <div class="row"><span class="k">{{ _('آخر دخول') }}</span><span class="v muted">{{ fmt_dt(sub.last_login_at) }}</span></div>
+        <div class="row"><span class="k">{{ _('آخر ظهور') }}</span><span class="v muted">{{ fmt_dt(sub.last_seen_at) }}</span></div>
+        <div class="row"><span class="k">{{ _('تاريخ الانتهاء') }}</span><span class="v muted">{{ fmt_dt(sub.expire_at) }}</span></div>
+        <div class="row"><span class="k">{{ _('تاريخ الإنشاء') }}</span><span class="v muted">{{ fmt_dt(sub.created_at) }}</span></div>
+        <div class="row"><span class="k">{{ _('آخر تعديل') }}</span><span class="v muted">{{ fmt_dt(sub.updated_at) }}</span></div>
       </div>
     {% endcall %}
 
     {% call hub.section("الحدود + الكوتا", icon="ruler-combined") %}
       <div class="p360-kv">
-        <div class="row"><span class="k">كوتا التنزيل</span><span class="v">{{ fmt_bytes_mb(sub.download_quota_mb) if sub.download_quota_mb else "—" }}</span></div>
-        <div class="row"><span class="k">كوتا الرفع</span><span class="v">{{ fmt_bytes_mb(sub.upload_quota_mb) if sub.upload_quota_mb else "—" }}</span></div>
-        <div class="row"><span class="k">كوتا مدمجة</span><span class="v">{{ fmt_bytes_mb(sub.combined_quota_mb) if sub.combined_quota_mb else "—" }}</span></div>
-        <div class="row"><span class="k">إجمالي وقت الاتصال</span><span class="v">{{ sub.total_connection_time_min|dur_days }}</span></div>
-        <div class="row"><span class="k">حد الاتصال اليومي</span><span class="v">{{ sub.daily_connection_time_min|dur_days }}</span></div>
-        <div class="row"><span class="k">أيام العمل</span><span class="v">{{ sub.working_days or "—" }}</span></div>
-        <div class="row"><span class="k">MACs المسموحة</span><span class="v mono">{{ sub.allowed_macs or "—" }}</span></div>
-        <div class="row"><span class="k">الرصيد</span><span class="v">{{ (sub.balance or 0)|money }}</span></div>
-        <div class="row"><span class="k">المرجع المالي</span><span class="v">{{ sub.payment_reference or "—" }}</span></div>
-        <div class="row"><span class="k">طريقة الدفع</span><span class="v">
+        <div class="row"><span class="k">{{ _('كوتا التنزيل') }}</span><span class="v">{{ fmt_bytes_mb(sub.download_quota_mb) if sub.download_quota_mb else "—" }}</span></div>
+        <div class="row"><span class="k">{{ _('كوتا الرفع') }}</span><span class="v">{{ fmt_bytes_mb(sub.upload_quota_mb) if sub.upload_quota_mb else "—" }}</span></div>
+        <div class="row"><span class="k">{{ _('كوتا مدمجة') }}</span><span class="v">{{ fmt_bytes_mb(sub.combined_quota_mb) if sub.combined_quota_mb else "—" }}</span></div>
+        <div class="row"><span class="k">{{ _('إجمالي وقت الاتصال') }}</span><span class="v">{{ sub.total_connection_time_min|dur_days }}</span></div>
+        <div class="row"><span class="k">{{ _('حد الاتصال اليومي') }}</span><span class="v">{{ sub.daily_connection_time_min|dur_days }}</span></div>
+        <div class="row"><span class="k">{{ _('أيام العمل') }}</span><span class="v">{{ sub.working_days or "—" }}</span></div>
+        <div class="row"><span class="k">{{ _('MACs المسموحة') }}</span><span class="v mono">{{ sub.allowed_macs or "—" }}</span></div>
+        <div class="row"><span class="k">{{ _('الرصيد') }}</span><span class="v">{{ (sub.balance or 0)|money }}</span></div>
+        <div class="row"><span class="k">{{ _('المرجع المالي') }}</span><span class="v">{{ sub.payment_reference or "—" }}</span></div>
+        <div class="row"><span class="k">{{ _('طريقة الدفع') }}</span><span class="v">
           {%- set _spm = {"cash":"نقداً","card":"بطاقة","bank":"حوالة بنكية","bank_transfer":"حوالة بنكية","wallet":"محفظة","voucher":"قسيمة","online":"دفع إلكتروني","credit":"رصيد"} -%}
           {%- if sub.payment_method -%}<bdi title="{{ sub.payment_method }}">{{ _spm.get((sub.payment_method|string)|lower, sub.payment_method) }}</bdi>{%- else -%}—{%- endif -%}
         </span></div>
@@ -911,7 +911,7 @@
     <section class="cc-section" data-cc-section="subscriber_timeline">
       <header class="cc-section-head">
         <span class="cc-section-head-icon"><i class="fa-solid fa-timeline"></i></span>
-        <span class="cc-section-head-title">النشاط الأخير للمشترك</span>
+        <span class="cc-section-head-title">{{ _('النشاط الأخير للمشترك') }}</span>
         <span class="cc-section-head-link">{{ activity_events|length }} حدث</span>
       </header>
       <div class="cc-section-body">
@@ -951,8 +951,8 @@
       <div class="hub-table-wrap" style="border:none;border-radius:0">
         <table class="hub-table">
           <thead><tr>
-            <th>#</th><th>التاريخ</th><th>الوصف</th>
-            <th class="num">المبلغ</th><th>الحالة</th>
+            <th>#</th><th>{{ _('التاريخ') }}</th><th>{{ _('الوصف') }}</th>
+            <th class="num">{{ _('المبلغ') }}</th><th>{{ _('الحالة') }}</th>
           </tr></thead>
           <tbody>
             {% for inv in invoices %}
@@ -990,8 +990,8 @@
       <div class="hub-table-wrap" style="border:none;border-radius:0">
         <table class="hub-table">
           <thead><tr>
-            <th>التاريخ</th><th>الطريقة</th><th>المرجع</th>
-            <th class="num">المبلغ</th><th>ملاحظة</th>
+            <th>{{ _('التاريخ') }}</th><th>{{ _('الطريقة') }}</th><th>{{ _('المرجع') }}</th>
+            <th class="num">{{ _('المبلغ') }}</th><th>{{ _('ملاحظة') }}</th>
           </tr></thead>
           <tbody>
             {% for p in payments %}
@@ -1020,23 +1020,23 @@
   {% if session_views %}
     <div class="p360-session-summary">
       <div class="p360-session-stat">
-        <div><div class="label">الجلسات</div><div class="value">{{ session_summary.sessions_count or session_views|length }}</div><div class="sub">نشطة الآن: {{ session_summary.online_sessions or 0 }}</div></div>
+        <div><div class="label">{{ _('الجلسات') }}</div><div class="value">{{ session_summary.sessions_count or session_views|length }}</div><div class="sub">نشطة الآن: {{ session_summary.online_sessions or 0 }}</div></div>
         <span class="icon"><i class="fa-solid fa-wave-square"></i></span>
       </div>
       <div class="p360-session-stat">
-        <div><div class="label">ماكات فريدة</div><div class="value">{{ session_summary.unique_macs or 0 }}</div><div class="sub">أجهزة ظهرت في السجل</div></div>
+        <div><div class="label">{{ _('ماكات فريدة') }}</div><div class="value">{{ session_summary.unique_macs or 0 }}</div><div class="sub">{{ _('أجهزة ظهرت في السجل') }}</div></div>
         <span class="icon"><i class="fa-solid fa-fingerprint"></i></span>
       </div>
       <div class="p360-session-stat">
-        <div><div class="label">IP فريد</div><div class="value">{{ session_summary.unique_ips or 0 }}</div><div class="sub">عناوين مستخدمة</div></div>
+        <div><div class="label">{{ _('IP فريد') }}</div><div class="value">{{ session_summary.unique_ips or 0 }}</div><div class="sub">{{ _('عناوين مستخدمة') }}</div></div>
         <span class="icon"><i class="fa-solid fa-globe"></i></span>
       </div>
       <div class="p360-session-stat">
-        <div><div class="label">إجمالي التحميل</div><div class="value">{{ fmt_bytes_raw(session_summary.total_download_bytes or 0) }}</div><div class="sub">مجموع كل الجلسات</div></div>
+        <div><div class="label">{{ _('إجمالي التحميل') }}</div><div class="value">{{ fmt_bytes_raw(session_summary.total_download_bytes or 0) }}</div><div class="sub">{{ _('مجموع كل الجلسات') }}</div></div>
         <span class="icon"><i class="fa-solid fa-arrow-down"></i></span>
       </div>
       <div class="p360-session-stat">
-        <div><div class="label">إجمالي الرفع</div><div class="value">{{ fmt_bytes_raw(session_summary.total_upload_bytes or 0) }}</div><div class="sub">مجموع كل الجلسات</div></div>
+        <div><div class="label">{{ _('إجمالي الرفع') }}</div><div class="value">{{ fmt_bytes_raw(session_summary.total_upload_bytes or 0) }}</div><div class="sub">{{ _('مجموع كل الجلسات') }}</div></div>
         <span class="icon"><i class="fa-solid fa-arrow-up"></i></span>
       </div>
     </div>
@@ -1044,7 +1044,7 @@
     <section class="cc-section" data-cc-section="sessions">
       <header class="cc-section-head">
         <span class="cc-section-head-icon"><i class="fa-solid fa-clock-rotate-left"></i></span>
-        <span class="cc-section-head-title">آخر الجلسات</span>
+        <span class="cc-section-head-title">{{ _('آخر الجلسات') }}</span>
         <span class="cc-section-head-link">{{ session_views|length }} جلسة</span>
       </header>
       <div class="cc-section-body">
@@ -1052,21 +1052,21 @@
           <table class="cc-sessions-table">
             <thead>
               <tr>
-                <th>الحالة</th>
+                <th>{{ _('الحالة') }}</th>
                 <th>IP</th>
                 <th>MAC</th>
-                <th>الجهاز / النظام</th>
-                <th class="num">تحميل</th>
-                <th class="num">رفع</th>
-                <th class="num">تحميل مجاني</th>
-                <th class="num">رفع مجاني</th>
-                <th class="num">المحصّلة</th>
-                <th>تاريخ البدء</th>
-                <th>تاريخ الإنتهاء</th>
-                <th class="num">الوقت</th>
-                <th>معرّف الخدمة</th>
-                <th>منفذ الاتصال</th>
-                <th>جهاز الشبكة</th>
+                <th>{{ _('الجهاز / النظام') }}</th>
+                <th class="num">{{ _('تحميل') }}</th>
+                <th class="num">{{ _('رفع') }}</th>
+                <th class="num">{{ _('تحميل مجاني') }}</th>
+                <th class="num">{{ _('رفع مجاني') }}</th>
+                <th class="num">{{ _('المحصّلة') }}</th>
+                <th>{{ _('تاريخ البدء') }}</th>
+                <th>{{ _('تاريخ الإنتهاء') }}</th>
+                <th class="num">{{ _('الوقت') }}</th>
+                <th>{{ _('معرّف الخدمة') }}</th>
+                <th>{{ _('منفذ الاتصال') }}</th>
+                <th>{{ _('جهاز الشبكة') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -1075,9 +1075,9 @@
               <tr data-cc-session="{{ ses.session_id or ses.id }}" class="{% if ses.online %}is-live{% endif %}">
                 <td>
                   {% if ses.online %}
-                    <span class="cc-pill cc-pill-green"><span class="dot"></span>حيّة</span>
+                    <span class="cc-pill cc-pill-green"><span class="dot"></span>{{ _('حيّة') }}</span>
                   {% else %}
-                    <span class="cc-pill cc-pill-grey"><span class="dot"></span>منتهية</span>
+                    <span class="cc-pill cc-pill-grey"><span class="dot"></span>{{ _('منتهية') }}</span>
                   {% endif %}
                 </td>
                 <td class="mono">{{ ses.ip_address or '—' }}</td>
@@ -1145,27 +1145,27 @@
   {% if daily_usage %}
     <div class="p360-session-summary">
       <div class="p360-session-stat">
-        <div><div class="label">أيام فيها استخدام</div><div class="value">{{ daily_usage|length }}</div><div class="sub">آخر 14 يوم حسب الجلسات</div></div>
+        <div><div class="label">{{ _('أيام فيها استخدام') }}</div><div class="value">{{ daily_usage|length }}</div><div class="sub">{{ _('آخر 14 يوم حسب الجلسات') }}</div></div>
         <span class="icon"><i class="fa-solid fa-calendar-day"></i></span>
       </div>
       <div class="p360-session-stat">
-        <div><div class="label">إجمالي التحميل</div><div class="value">{{ fmt_bytes_raw(session_summary.total_download_bytes or 0) }}</div><div class="sub">من سجل الجلسات</div></div>
+        <div><div class="label">{{ _('إجمالي التحميل') }}</div><div class="value">{{ fmt_bytes_raw(session_summary.total_download_bytes or 0) }}</div><div class="sub">{{ _('من سجل الجلسات') }}</div></div>
         <span class="icon"><i class="fa-solid fa-arrow-down"></i></span>
       </div>
       <div class="p360-session-stat">
-        <div><div class="label">إجمالي الرفع</div><div class="value">{{ fmt_bytes_raw(session_summary.total_upload_bytes or 0) }}</div><div class="sub">من سجل الجلسات</div></div>
+        <div><div class="label">{{ _('إجمالي الرفع') }}</div><div class="value">{{ fmt_bytes_raw(session_summary.total_upload_bytes or 0) }}</div><div class="sub">{{ _('من سجل الجلسات') }}</div></div>
         <span class="icon"><i class="fa-solid fa-arrow-up"></i></span>
       </div>
       <div class="p360-session-stat">
-        <div><div class="label">إجمالي الوقت</div><div class="value">{{ fmt_dur(session_summary.total_session_seconds or 0) }}</div><div class="sub">كل الأيام</div></div>
+        <div><div class="label">{{ _('إجمالي الوقت') }}</div><div class="value">{{ fmt_dur(session_summary.total_session_seconds or 0) }}</div><div class="sub">{{ _('كل الأيام') }}</div></div>
         <span class="icon"><i class="fa-solid fa-clock"></i></span>
       </div>
     </div>
 
     <section class="p360-chart-card">
       <header class="p360-chart-head">
-        <div class="p360-chart-title"><i class="fa-solid fa-chart-column"></i> الاستهلاك اليومي</div>
-        <div class="p360-chart-meta">تحميل / رفع حسب يوم بداية الجلسة</div>
+        <div class="p360-chart-title"><i class="fa-solid fa-chart-column"></i> {{ _('الاستهلاك اليومي') }}</div>
+        <div class="p360-chart-meta">{{ _('تحميل / رفع حسب يوم بداية الجلسة') }}</div>
       </header>
       <div class="p360-bars">
         {% for d in daily_usage %}
@@ -1199,7 +1199,7 @@
       <div class="hub-table-wrap" style="border:none;border-radius:0">
         <table class="hub-table">
           <thead><tr>
-            <th>الوقت</th><th>المنفِّذ</th><th>الإجراء</th><th>تفاصيل</th>
+            <th>{{ _('الوقت') }}</th><th>{{ _('المنفِّذ') }}</th><th>{{ _('الإجراء') }}</th><th>{{ _('تفاصيل') }}</th>
           </tr></thead>
           <tbody>
             {# تعريب أكواد الإجراءات (كانت تظهر إنجليزي خام: update, create...) #}
@@ -1236,26 +1236,26 @@
   {% if bandwidth_samples %}
     <div class="p360-live-panel">
       <div class="p360-live-card">
-        <div class="label">تحميل تقديري للجلسة الحالية</div>
+        <div class="label">{{ _('تحميل تقديري للجلسة الحالية') }}</div>
         <div class="value">{{ fmt_rate_bps(bandwidth_current.download_bps or 0) }}</div>
         <div class="sub">{{ bandwidth_current.device or bandwidth_current.mac or bandwidth_current.ip or "آخر جلسة" }}</div>
       </div>
       <div class="p360-live-card">
-        <div class="label">رفع تقديري للجلسة الحالية</div>
+        <div class="label">{{ _('رفع تقديري للجلسة الحالية') }}</div>
         <div class="value">{{ fmt_rate_bps(bandwidth_current.upload_bps or 0) }}</div>
         <div class="sub">{{ "جلسة نشطة" if bandwidth_current.online else "آخر جلسة مسجلة" }}</div>
       </div>
       <div class="p360-live-card">
-        <div class="label">المحصلة</div>
+        <div class="label">{{ _('المحصلة') }}</div>
         <div class="value">{{ fmt_rate_bps(bandwidth_current.total_bps or 0) }}</div>
-        <div class="sub">محسوبة من حجم البيانات / مدة الجلسة</div>
+        <div class="sub">{{ _('محسوبة من حجم البيانات / مدة الجلسة') }}</div>
       </div>
     </div>
 
     <section class="p360-chart-card">
       <header class="p360-chart-head">
-        <div class="p360-chart-title"><i class="fa-solid fa-gauge-high"></i> قراءة السرعة حسب الجلسات</div>
-        <div class="p360-chart-meta">متوسط تحميل / رفع لكل جلسة</div>
+        <div class="p360-chart-title"><i class="fa-solid fa-gauge-high"></i> {{ _('قراءة السرعة حسب الجلسات') }}</div>
+        <div class="p360-chart-meta">{{ _('متوسط تحميل / رفع لكل جلسة') }}</div>
       </header>
       <div class="p360-bars">
         {% for b in bandwidth_samples %}
@@ -1269,7 +1269,7 @@
             </div>
             <div class="p360-bar-total">
               {{ fmt_rate_bps(b.total_bps) }}
-              {% if b.online %}<span class="cc-pill cc-pill-green"><span class="dot"></span>حيّة</span>{% endif %}
+              {% if b.online %}<span class="cc-pill cc-pill-green"><span class="dot"></span>{{ _('حيّة') }}</span>{% endif %}
             </div>
           </div>
         {% endfor %}
@@ -1289,9 +1289,9 @@
       <div class="hub-table-wrap" style="border:none;border-radius:0">
         <table class="hub-table">
           <thead><tr>
-            <th>اسم المستخدم</th><th>كلمة السرّ</th>
-            <th>الباتش</th><th>أوّل استخدام</th>
-            <th>MAC</th><th>الانتهاء</th><th>الحالة</th>
+            <th>{{ _('اسم المستخدم') }}</th><th>{{ _('كلمة السرّ') }}</th>
+            <th>{{ _('الباتش') }}</th><th>{{ _('أوّل استخدام') }}</th>
+            <th>MAC</th><th>{{ _('الانتهاء') }}</th><th>{{ _('الحالة') }}</th>
           </tr></thead>
           <tbody>
             {% for c in used_cards %}
@@ -1326,7 +1326,7 @@
         <div class="hub-table-wrap" style="border:none;border-radius:0">
           <table class="hub-table">
             <thead><tr>
-              <th>التاريخ</th><th>المبلغ</th><th>المتبقّي</th><th>الحالة</th>
+              <th>{{ _('التاريخ') }}</th><th>{{ _('المبلغ') }}</th><th>{{ _('المتبقّي') }}</th><th>{{ _('الحالة') }}</th>
             </tr></thead>
             <tbody>
               {% for l in loans %}

@@ -17,7 +17,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>توثيق HobeRadius API</title>
+  <title>{{ _('توثيق HobeRadius API') }}</title>
 
   {# خط Cairo محلّي كحلّ احتياطي (يطابق رأس layout الموقع)، ثم CDN #}
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -228,34 +228,34 @@
       <div class="apidoc-hero-row">
         <span class="apidoc-hero-icon"><i class="fa-solid fa-plug-circle-bolt"></i></span>
         <div>
-          <h1 class="apidoc-hero-title">توثيق واجهة HobeRadius البرمجية</h1>
-          <p class="apidoc-hero-sub">كل نقاط الـ REST API لإدارة المشتركين والباقات والبطاقات والجلسات — في صفحة واحدة منظّمة.</p>
+          <h1 class="apidoc-hero-title">{{ _('توثيق واجهة HobeRadius البرمجية') }}</h1>
+          <p class="apidoc-hero-sub">{{ _('كل نقاط الـ REST API لإدارة المشتركين والباقات والبطاقات والجلسات — في صفحة واحدة منظّمة.') }}</p>
         </div>
         <div class="apidoc-hero-actions">
           <a class="hub-btn hub-btn--secondary" href="{{ base_url }}/openapi.json" target="_blank" rel="noopener">
-            <i class="fa-solid fa-code"></i> مواصفة OpenAPI
+            <i class="fa-solid fa-code"></i> {{ _('مواصفة OpenAPI') }}
           </a>
         </div>
       </div>
 
       <div class="apidoc-intro">
-        <b>شو هو الـ API؟</b> هو الباب البرمجي الذي تتصل عبره التطبيقات (تطبيق الأندرويد، سطح المكتب،
+        <b>{{ _('شو هو الـ API؟') }}</b> هو الباب البرمجي الذي تتصل عبره التطبيقات (تطبيق الأندرويد، سطح المكتب،
         أو أي نظام خارجي) مع HobeRadius مباشرةً بدل واجهة الموقع — لتقرأ البيانات أو تنفّذ العمليات
-        آليًّا. كل طلب يُرسَل بصيغة <code class="mono">JSON</code> ويُرجع ردًّا موحّدًا
-        <code class="mono">{ ok, data, meta }</code> (أو <code class="mono">{ ok:false, error, meta }</code> عند الخطأ).
+        آليًّا. كل طلب يُرسَل بصيغة <code class="mono">JSON</code> {{ _('ويُرجع ردًّا موحّدًا') }}
+        <code class="mono">{ ok, data, meta }</code> {{ _('(أو') }} <code class="mono">{ ok:false, error, meta }</code> {{ _('عند الخطأ).') }}
       </div>
 
       <div class="apidoc-kpis">
         <div class="apidoc-kpi">
-          <div class="apidoc-kpi-label">إجمالي النقاط</div>
+          <div class="apidoc-kpi-label">{{ _('إجمالي النقاط') }}</div>
           <div class="apidoc-kpi-value">{{ total }}</div>
         </div>
         <div class="apidoc-kpi">
-          <div class="apidoc-kpi-label">المجموعات</div>
+          <div class="apidoc-kpi-label">{{ _('المجموعات') }}</div>
           <div class="apidoc-kpi-value">{{ group_count }}</div>
         </div>
         <div class="apidoc-kpi">
-          <div class="apidoc-kpi-label">نقاط عامة (بلا توكن)</div>
+          <div class="apidoc-kpi-label">{{ _('نقاط عامة (بلا توكن)') }}</div>
           <div class="apidoc-kpi-value">{{ public_total }}</div>
         </div>
       </div>
@@ -264,30 +264,30 @@
     {# ── صندوق المصادقة البارز ── #}
     <section class="apidoc-auth">
       <div class="apidoc-auth-head">
-        <i class="fa-solid fa-key"></i> المصادقة (التوكن)
+        <i class="fa-solid fa-key"></i> {{ _('المصادقة (التوكن)') }}
       </div>
       <div class="apidoc-auth-body">
-        <p>معظم النقاط محميّة. أرسِل توكن الـ API في ترويسة <code class="mono">Authorization</code> بصيغة
-        <b>Bearer</b> مع كل طلب:</p>
+        <p>{{ _('معظم النقاط محميّة. أرسِل توكن الـ API في ترويسة') }} <code class="mono">Authorization</code> {{ _('بصيغة') }}
+        <b>Bearer</b> {{ _('مع كل طلب:') }}</p>
         <div class="apidoc-codeblock">
-          <button class="apidoc-copy" data-copy="Authorization: Bearer &lt;your-token&gt;">نسخ</button>
+          <button class="apidoc-copy" data-copy="Authorization: Bearer &lt;your-token&gt;">{{ _('نسخ') }}</button>
           <pre>Authorization: Bearer &lt;your-token&gt;</pre>
         </div>
-        <p>تُنشئ التوكنات وتُدار من مجموعة <b>توكنات الـ API</b> أدناه (‎<code class="mono">/api/v1/tokens</code>‎).
-        لطلبات البثّ المباشر <code class="mono">EventSource (SSE)</code> فقط، يمكن تمرير التوكن عبر
-        <code class="mono">?api_token=…</code> في الرابط (طلبات GET حصرًا).</p>
-        <p style="margin-bottom:0">عند انتهاء صلاحية التوكن يُرجع الخادم <code class="mono">401</code> برمز
-        <code class="mono">token_expired</code>. وقد يُفعّل المشغّل حدًّا للطلبات فيُرجع
-        <code class="mono">429</code> برمز <code class="mono">rate_limited</code>.</p>
+        <p>{{ _('تُنشئ التوكنات وتُدار من مجموعة') }} <b>{{ _('توكنات الـ API') }}</b> {{ _('أدناه (‎') }}<code class="mono">/api/v1/tokens</code>‎).
+        لطلبات البثّ المباشر <code class="mono">EventSource (SSE)</code> {{ _('فقط، يمكن تمرير التوكن عبر') }}
+        <code class="mono">?api_token=…</code> {{ _('في الرابط (طلبات GET حصرًا).') }}</p>
+        <p style="margin-bottom:0">{{ _('عند انتهاء صلاحية التوكن يُرجع الخادم') }} <code class="mono">401</code> {{ _('برمز') }}
+        <code class="mono">token_expired</code>{{ _('. وقد يُفعّل المشغّل حدًّا للطلبات فيُرجع') }}
+        <code class="mono">429</code> {{ _('برمز') }} <code class="mono">rate_limited</code>.</p>
       </div>
     </section>
 
     {# ── شريط البحث الفوري ── #}
     <div class="apidoc-search">
       <i class="fa-solid fa-magnifying-glass"></i>
-      <input type="text" id="apidoc-q" placeholder="ابحث عن نقطة… (المسار، الطريقة، أو الوصف)" autocomplete="off">
+      <input type="text" id="apidoc-q" placeholder="{{ _('ابحث عن نقطة… (المسار، الطريقة، أو الوصف)') }}" autocomplete="off">
     </div>
-    <div class="apidoc-noresults" id="apidoc-noresults">لا توجد نتائج مطابقة لبحثك.</div>
+    <div class="apidoc-noresults" id="apidoc-noresults">{{ _('لا توجد نتائج مطابقة لبحثك.') }}</div>
 
     {# ── المجموعات ── #}
     {% for g in groups %}
@@ -312,26 +312,26 @@
             <span class="apidoc-method {{ e.method_class }}">{{ e.method }}</span>
             <span class="apidoc-ep-path">
               <bdi class="mono-path">{{ e.path }}</bdi>
-              <button class="apidoc-copy-inline" data-copy="{{ e.path }}" title="نسخ المسار">
-                <i class="fa-regular fa-copy"></i> نسخ
+              <button class="apidoc-copy-inline" data-copy="{{ e.path }}" title="{{ _('نسخ المسار') }}">
+                <i class="fa-regular fa-copy"></i> {{ _('نسخ') }}
               </button>
             </span>
-            {% if e.public %}<span class="apidoc-pill-public">عام</span>{% endif %}
+            {% if e.public %}<span class="apidoc-pill-public">{{ _('عام') }}</span>{% endif %}
           </div>
 
           <div class="apidoc-ep-desc">{{ e.desc }}</div>
 
           {% if e.path_params %}
           <div class="apidoc-ep-params">
-            <span class="lbl">بارامترات المسار:</span>
+            <span class="lbl">{{ _('بارامترات المسار:') }}</span>
             {% for p in e.path_params %}<span class="apidoc-param">{{ p }}</span>{% endfor %}
           </div>
           {% endif %}
 
           <details>
-            <summary><i class="fa-solid fa-terminal"></i> مثال curl</summary>
+            <summary><i class="fa-solid fa-terminal"></i> {{ _('مثال curl') }}</summary>
             <div class="apidoc-codeblock">
-              <button class="apidoc-copy" data-copy="{{ e.curl }}">نسخ</button>
+              <button class="apidoc-copy" data-copy="{{ e.curl }}">{{ _('نسخ') }}</button>
               <pre>{{ e.curl }}</pre>
             </div>
           </details>
@@ -342,9 +342,9 @@
     {% endfor %}
 
     <div class="apidoc-foot">
-      المواصفة الكاملة القابلة للقراءة آليًّا:
+      {{ _('المواصفة الكاملة القابلة للقراءة آليًّا:') }}
       <a href="{{ base_url }}/openapi.json" target="_blank" rel="noopener">openapi.json</a><br>
-      جميع النقاط أعلاه مُولَّدة مباشرةً من راوتات الخادم الفعلية.
+      {{ _('جميع النقاط أعلاه مُولَّدة مباشرةً من راوتات الخادم الفعلية.') }}
     </div>
   </div>
 

@@ -42,10 +42,10 @@
 {%- set total_pages = (total_pages|int) or 1 -%}
 {%- set prev_disabled = (page <= 1) -%}
 {%- set next_disabled = (page >= total_pages) -%}
-<nav class="hub-foot" role="navigation" aria-label="ترقيم الصفحات">
+<nav class="hub-foot" role="navigation" aria-label="{{ _('ترقيم الصفحات') }}">
   <div class="hub-foot-left">
     {%- if per_page_options -%}
-      <label class="hub-foot-info" for="hub-foot-pp" style="margin-inline-end:6px;">عرض</label>
+      <label class="hub-foot-info" for="hub-foot-pp" style="margin-inline-end:6px;">{{ _('عرض') }}</label>
       <select id="hub-foot-pp" name="{{ page_param }}_size"
               class="hub-foot-select"
               onchange="this.form && this.form.submit();">
@@ -53,27 +53,27 @@
           <option value="{{ opt }}"{% if opt == per_page %} selected{% endif %}>{{ opt }}</option>
         {%- endfor -%}
       </select>
-      <span class="hub-foot-info">في الصفحة</span>
+      <span class="hub-foot-info">{{ _('في الصفحة') }}</span>
     {%- endif -%}
   </div>
 
   <div class="hub-foot-mid">
     {%- if prev_disabled -%}
-      <button type="button" class="hub-foot-nav" disabled aria-label="السابق">
+      <button type="button" class="hub-foot-nav" disabled aria-label="{{ _('السابق') }}">
         <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
       </button>
     {%- else -%}
-      <a class="hub-foot-nav" href="{{ _href(base_url, page_param, page - 1) }}" aria-label="السابق">
+      <a class="hub-foot-nav" href="{{ _href(base_url, page_param, page - 1) }}" aria-label="{{ _('السابق') }}">
         <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
       </a>
     {%- endif -%}
     <span class="hub-foot-page">{{ page }} / {{ total_pages }}</span>
     {%- if next_disabled -%}
-      <button type="button" class="hub-foot-nav" disabled aria-label="التالي">
+      <button type="button" class="hub-foot-nav" disabled aria-label="{{ _('التالي') }}">
         <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
       </button>
     {%- else -%}
-      <a class="hub-foot-nav" href="{{ _href(base_url, page_param, page + 1) }}" aria-label="التالي">
+      <a class="hub-foot-nav" href="{{ _href(base_url, page_param, page + 1) }}" aria-label="{{ _('التالي') }}">
         <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
       </a>
     {%- endif -%}

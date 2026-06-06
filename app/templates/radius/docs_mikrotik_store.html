@@ -231,14 +231,14 @@
 <div class="dg-layout">
 
   {# ───── الفهرس الجانبي اللاصق ───── #}
-  <nav class="dg-toc dg-noprint" aria-label="فهرس الدليل">
-    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> فهرس الخطوات</div>
-    <a href="#dg-s1" data-dg-toc><span class="n">1</span> شو هو المتجر؟</a>
-    <a href="#dg-s2" data-dg-toc><span class="n">2</span> شروط التشغيل</a>
-    <a href="#dg-s3" data-dg-toc><span class="n">3</span> تبويبات المتجر الأربعة</a>
-    <a href="#dg-s4" data-dg-toc><span class="n">4</span> دخول الزبون والشحن</a>
-    <a href="#dg-s5" data-dg-toc><span class="n">5</span> الشراء والدخول التلقائي</a>
-    <a href="#dg-s6" data-dg-toc><span class="n">6</span> استكشاف أخطاء الاتصال</a>
+  <nav class="dg-toc dg-noprint" aria-label="{{ _('فهرس الدليل') }}">
+    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> {{ _('فهرس الخطوات') }}</div>
+    <a href="#dg-s1" data-dg-toc><span class="n">1</span> {{ _('شو هو المتجر؟') }}</a>
+    <a href="#dg-s2" data-dg-toc><span class="n">2</span> {{ _('شروط التشغيل') }}</a>
+    <a href="#dg-s3" data-dg-toc><span class="n">3</span> {{ _('تبويبات المتجر الأربعة') }}</a>
+    <a href="#dg-s4" data-dg-toc><span class="n">4</span> {{ _('دخول الزبون والشحن') }}</a>
+    <a href="#dg-s5" data-dg-toc><span class="n">5</span> {{ _('الشراء والدخول التلقائي') }}</a>
+    <a href="#dg-s6" data-dg-toc><span class="n">6</span> {{ _('استكشاف أخطاء الاتصال') }}</a>
   </nav>
 
   {# ───── عمود المحتوى ───── #}
@@ -247,9 +247,9 @@
     <div class="dg-lead">
       <span class="ic"><i class="fa-solid fa-shop"></i></span>
       <div>
-        <h3>قبل ما نبدأ — شو يعني «متجر المايكروتيك»؟</h3>
+        <h3>{{ _('قبل ما نبدأ — شو يعني «متجر المايكروتيك»؟') }}</h3>
         <p>
-          هو صفحة متجر <strong>تُرفع إلى الراوتر نفسه</strong> بجانب صفحة الدخول (الهوت سبوت)،
+          {{ _('هو صفحة متجر') }} <strong>{{ _('تُرفع إلى الراوتر نفسه') }}</strong> بجانب صفحة الدخول (الهوت سبوت)،
           فيقدر الزبون — وهو لسّا غير متصل بالإنترنت — يفتحها من شبكة الواي فاي، يشحن رصيده،
           يشتري باقة، ويدخل بها مباشرة. المتجر يتخاطب مع سيرفر الراديوس عندك فقط، بلا أي
           إنترنت خارجي. في هذا الدليل رح نضبط شروط تشغيله وننشره، ثم نمشي مع الزبون من الدخول
@@ -262,35 +262,35 @@
     <section class="dg-step" id="dg-s1">
       <div class="dg-badge">1</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-router"></i> شو هو المتجر — ووين يعيش؟</h2>
+        <h2><i class="fa-solid fa-router"></i> {{ _('شو هو المتجر — ووين يعيش؟') }}</h2>
         <p>
-          المتجر صفحة <strong>مكتفية ذاتيًا</strong> (HTML واحدة بلا أي ملفات خارجية) تُنشر في
+          {{ _('المتجر صفحة') }} <strong>{{ _('مكتفية ذاتيًا') }}</strong> (HTML واحدة بلا أي ملفات خارجية) تُنشر في
           مجلد الهوت سبوت على الراوتر بجانب <span class="dg-kbd">login.html</span>. لأنه يعيش على
           الراوتر:
         </p>
         <ul>
-          <li>يفتحه الزبون <strong>قبل تسجيل الدخول</strong> للشبكة — لا يحتاج إنترنت للوصول إليه.</li>
-          <li>يتصل فقط بسيرفر الراديوس عندك عبر نقاط <span class="dg-kbd">/api/v1/store/*</span>.</li>
-          <li>يعرض محفظة الزبون وباقاته في واجهة عربية بسيطة بأربعة تبويبات.</li>
+          <li>{{ _('يفتحه الزبون') }} <strong>{{ _('قبل تسجيل الدخول') }}</strong> {{ _('للشبكة — لا يحتاج إنترنت للوصول إليه.') }}</li>
+          <li>{{ _('يتصل فقط بسيرفر الراديوس عندك عبر نقاط') }} <span class="dg-kbd">/api/v1/store/*</span>.</li>
+          <li>{{ _('يعرض محفظة الزبون وباقاته في واجهة عربية بسيطة بأربعة تبويبات.') }}</li>
         </ul>
 
         <div class="dg-phone" aria-hidden="true">
           <div class="dg-phone-top">
-            <div class="nm">متجر الإنترنت</div>
-            <div class="bal">رصيدك: 12.00</div>
+            <div class="nm">{{ _('متجر الإنترنت') }}</div>
+            <div class="bal">{{ _('رصيدك: 12.00') }}</div>
           </div>
           <div class="dg-phone-body">
-            <div class="dg-phone-card">8 ساعات / 2 ميجا <span class="buy">شراء الآن</span></div>
-            <div class="dg-phone-card">يوم كامل <span class="buy">شراء الآن</span></div>
+            <div class="dg-phone-card">{{ _('8 ساعات / 2 ميجا') }} <span class="buy">{{ _('شراء الآن') }}</span></div>
+            <div class="dg-phone-card">{{ _('يوم كامل') }} <span class="buy">{{ _('شراء الآن') }}</span></div>
           </div>
           <div class="dg-tabs">
-            <span class="on"><span class="em">💳</span> رصيدي</span>
-            <span><span class="em">🛒</span> المعرض</span>
-            <span><span class="em">🎫</span> بطاقاتي</span>
-            <span><span class="em">🧾</span> السجل</span>
+            <span class="on"><span class="em">💳</span> {{ _('رصيدي') }}</span>
+            <span><span class="em">🛒</span> {{ _('المعرض') }}</span>
+            <span><span class="em">🎫</span> {{ _('بطاقاتي') }}</span>
+            <span><span class="em">🧾</span> {{ _('السجل') }}</span>
           </div>
         </div>
-        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> هكذا يراه الزبون على جواله داخل شبكة الواي فاي.</div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> {{ _('هكذا يراه الزبون على جواله داخل شبكة الواي فاي.') }}</div>
       </div>
     </section>
 
@@ -298,19 +298,19 @@
     <section class="dg-step" id="dg-s2">
       <div class="dg-badge">2</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-list-check"></i> شروط التشغيل الثلاثة</h2>
+        <h2><i class="fa-solid fa-list-check"></i> {{ _('شروط التشغيل الثلاثة') }}</h2>
         <p>
-          حتى يعمل المتجر فعليًا من أجهزة الزبائن، لازم تتحقق ثلاثة شروط بالترتيب:
+          {{ _('حتى يعمل المتجر فعليًا من أجهزة الزبائن، لازم تتحقق ثلاثة شروط بالترتيب:') }}
         </p>
 
         <div class="dg-reqs">
           <div class="dg-req">
             <span class="rn">1</span>
             <div>
-              <h4>عنوان سيرفر الراديوس في الإعدادات</h4>
+              <h4>{{ _('عنوان سيرفر الراديوس في الإعدادات') }}</h4>
               <p>
-                اضبط حقل <span class="dg-kbd">network.radius_server_ip</span> في
-                <strong>الإعدادات</strong> على عنوان IP الذي تصله أجهزة الزبائن. هذا هو المصدر
+                {{ _('اضبط حقل') }} <span class="dg-kbd">network.radius_server_ip</span> {{ _('في') }}
+                <strong>{{ _('الإعدادات') }}</strong> على عنوان IP الذي تصله أجهزة الزبائن. هذا هو المصدر
                 الذي يبني منه النظام رابط المتجر تلقائيًا — تضبطه مرة واحدة ولا تكتب أي رابط يدويًا.
               </p>
             </div>
@@ -318,35 +318,35 @@
           <div class="dg-req">
             <span class="rn">2</span>
             <div>
-              <h4>قواعد walled-garden على الراوتر</h4>
+              <h4>{{ _('قواعد walled-garden على الراوتر') }}</h4>
               <p>
                 بدونها يحجب الراوتر كل اتصال قبل الدخول فيفشل تحميل المتجر. النظام يضيف قواعد
                 السماح تلقائيًا عند النشر (للعنوان والمنافذ 80/443 ومنفذ الـ API) تحت تعليق
-                مميّز <span class="dg-kbd">HobeRadius-Store</span>، ولا يكرّرها إن وُجدت.
+                مميّز <span class="dg-kbd">HobeRadius-Store</span>{{ _('، ولا يكرّرها إن وُجدت.') }}
               </p>
             </div>
           </div>
           <div class="dg-req">
             <span class="rn">3</span>
             <div>
-              <h4>النشر من مصمم صفحة الدخول</h4>
+              <h4>{{ _('النشر من مصمم صفحة الدخول') }}</h4>
               <p>
-                فعّل المتجر في تصميمك ثم اضغط زر <strong>«نشر»</strong> في
-                <strong>مصمم صفحة الدخول</strong>. النشر يرفع صفحة المتجر للراوتر ويجهّز قواعد
+                {{ _('فعّل المتجر في تصميمك ثم اضغط زر') }} <strong>{{ _('«نشر»') }}</strong> {{ _('في') }}
+                <strong>{{ _('مصمم صفحة الدخول') }}</strong>. النشر يرفع صفحة المتجر للراوتر ويجهّز قواعد
                 walled-garden في خطوة واحدة.
               </p>
             </div>
           </div>
         </div>
 
-        <div class="dg-kbd-line"><span class="c"># قاعدة walled-garden التي يضيفها النظام تلقائيًا:</span>
+        <div class="dg-kbd-line"><span class="c">{{ _('# قاعدة walled-garden التي يضيفها النظام تلقائيًا:') }}</span>
 /ip hotspot walled-garden ip add action=accept \
   dst-address=&lt;عنوان الراديوس&gt; dst-port=&lt;المنفذ&gt; \
   protocol=tcp comment="HobeRadius-Store"</div>
 
         <div class="dg-warn">
           <span class="ic">⚠️</span>
-          <span><b>انتبه:</b> النشر يرفض العنوان المحلي (127.x أو localhost) — «عنوان محلي لن
+          <span><b>{{ _('انتبه:') }}</b> النشر يرفض العنوان المحلي (127.x أو localhost) — «عنوان محلي لن
           يعمل من أجهزة الزبائن». اضبط <b>network.radius_server_ip</b> على عنوان حقيقي تصله
           أجهزة الزبائن قبل النشر، وإلا ظهر شريط تحذير ولن يفتح المتجر عندهم.</span>
         </div>
@@ -357,34 +357,34 @@
     <section class="dg-step" id="dg-s3">
       <div class="dg-badge">3</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-table-columns"></i> تبويبات المتجر الأربعة</h2>
+        <h2><i class="fa-solid fa-table-columns"></i> {{ _('تبويبات المتجر الأربعة') }}</h2>
         <p>
-          يتنقّل الزبون بين أربعة تبويبات في أسفل الشاشة:
+          {{ _('يتنقّل الزبون بين أربعة تبويبات في أسفل الشاشة:') }}
         </p>
         <ul>
-          <li><strong>💳 رصيدي:</strong> محفظته الحالية + شحن بطاقة (إدخال كود ورقم سري).</li>
-          <li><strong>🛒 المعرض:</strong> باقات السوق المتاحة مع شراء فوري بضغطة.</li>
-          <li><strong>🎫 بطاقاتي:</strong> بطاقاته المشتراة وحالتها من الراديوس + زر الدخول بها.</li>
-          <li><strong>🧾 السجل:</strong> سجل عمليات الشراء مصفّحًا.</li>
+          <li><strong>{{ _('💳 رصيدي:') }}</strong> {{ _('محفظته الحالية + شحن بطاقة (إدخال كود ورقم سري).') }}</li>
+          <li><strong>{{ _('🛒 المعرض:') }}</strong> {{ _('باقات السوق المتاحة مع شراء فوري بضغطة.') }}</li>
+          <li><strong>{{ _('🎫 بطاقاتي:') }}</strong> {{ _('بطاقاته المشتراة وحالتها من الراديوس + زر الدخول بها.') }}</li>
+          <li><strong>{{ _('🧾 السجل:') }}</strong> {{ _('سجل عمليات الشراء مصفّحًا.') }}</li>
         </ul>
 
         <div class="dg-phone" aria-hidden="true">
           <div class="dg-phone-top">
-            <div class="nm">🎫 بطاقاتي</div>
-            <div class="bal">بطاقة واحدة نشطة</div>
+            <div class="nm">{{ _('🎫 بطاقاتي') }}</div>
+            <div class="bal">{{ _('بطاقة واحدة نشطة') }}</div>
           </div>
           <div class="dg-phone-body">
-            <div class="dg-phone-card">a8f3k2 · 7g9q1m <span class="buy" style="background:#22c55e">نشطة</span></div>
-            <div class="dg-phone-btn teal">🔓 دخول بهذه البطاقة</div>
+            <div class="dg-phone-card">a8f3k2 · 7g9q1m <span class="buy" style="background:#22c55e">{{ _('نشطة') }}</span></div>
+            <div class="dg-phone-btn teal">{{ _('🔓 دخول بهذه البطاقة') }}</div>
           </div>
           <div class="dg-tabs">
-            <span><span class="em">💳</span> رصيدي</span>
-            <span><span class="em">🛒</span> المعرض</span>
-            <span class="on"><span class="em">🎫</span> بطاقاتي</span>
-            <span><span class="em">🧾</span> السجل</span>
+            <span><span class="em">💳</span> {{ _('رصيدي') }}</span>
+            <span><span class="em">🛒</span> {{ _('المعرض') }}</span>
+            <span class="on"><span class="em">🎫</span> {{ _('بطاقاتي') }}</span>
+            <span><span class="em">🧾</span> {{ _('السجل') }}</span>
           </div>
         </div>
-        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> حالات البطاقة: نشطة / غير مستخدمة / منتهية / مستهلكة / ملغاة — كلٌّ بلونها.</div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> {{ _('حالات البطاقة: نشطة / غير مستخدمة / منتهية / مستهلكة / ملغاة — كلٌّ بلونها.') }}</div>
       </div>
     </section>
 
@@ -392,37 +392,37 @@
     <section class="dg-step" id="dg-s4">
       <div class="dg-badge">4</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-mobile-screen-button"></i> دخول الزبون بالجوال — والشحن بكود</h2>
+        <h2><i class="fa-solid fa-mobile-screen-button"></i> {{ _('دخول الزبون بالجوال — والشحن بكود') }}</h2>
         <p>
-          أول ما يفتح المتجر تظهر شاشة دخول: يكتب الزبون <strong>رقم الجوال</strong>
-          (مثل <span class="dg-kbd">05xxxxxxxx</span>) و<strong>كلمة المرور</strong>، ثم
-          <strong>«تسجيل الدخول»</strong>. ينحفظ توكن الجلسة على جهازه فلا يعيد الدخول كل مرة.
+          {{ _('أول ما يفتح المتجر تظهر شاشة دخول: يكتب الزبون') }} <strong>{{ _('رقم الجوال') }}</strong>
+          {{ _('(مثل') }} <span class="dg-kbd">05xxxxxxxx</span>{{ _(') و') }}<strong>{{ _('كلمة المرور') }}</strong>{{ _('، ثم') }}
+          <strong>{{ _('«تسجيل الدخول»') }}</strong>{{ _('. ينحفظ توكن الجلسة على جهازه فلا يعيد الدخول كل مرة.') }}
         </p>
         <p>
-          بعدها من تبويب <strong>«رصيدي»</strong> يشحن محفظته: يُدخل <strong>رقم/كود البطاقة</strong>،
-          و<strong>الرقم السري</strong> (إن وُجد)، ويضغط <strong>«⚡ شحن الرصيد»</strong> فتُضاف
+          {{ _('بعدها من تبويب') }} <strong>{{ _('«رصيدي»') }}</strong> {{ _('يشحن محفظته: يُدخل') }} <strong>{{ _('رقم/كود البطاقة') }}</strong>،
+          و<strong>{{ _('الرقم السري') }}</strong> {{ _('(إن وُجد)، ويضغط') }} <strong>{{ _('«⚡ شحن الرصيد»') }}</strong> فتُضاف
           القيمة لمحفظته فورًا.
         </p>
 
         <div class="dg-mock" aria-hidden="true" style="max-width:300px">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">💳 رصيدي › شحن بطاقة</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('💳 رصيدي › شحن بطاقة') }}</span></div>
           <div class="dg-mock-body">
             <div class="dg-mf">
-              <label>رقم / كود البطاقة</label>
+              <label>{{ _('رقم / كود البطاقة') }}</label>
               <div class="dg-mf-input hl">3041 7782 9920</div>
             </div>
             <div class="dg-mf">
-              <label>الرقم السري (إن وُجد)</label>
+              <label>{{ _('الرقم السري (إن وُجد)') }}</label>
               <div class="dg-mf-input ph">••••</div>
             </div>
-            <div class="dg-phone-btn teal" style="border-radius:9px">⚡ شحن الرصيد</div>
+            <div class="dg-phone-btn teal" style="border-radius:9px">{{ _('⚡ شحن الرصيد') }}</div>
           </div>
         </div>
-        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> عند النجاح: «تم شحن المبلغ لمحفظتك بنجاح 🎉».</div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> {{ _('عند النجاح: «تم شحن المبلغ لمحفظتك بنجاح 🎉».') }}</div>
 
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>نصيحة:</b> رقم الجوال هو هوية الزبون داخل المتجر — تأكد أن كل زبون مسجّل
+          <span><b>{{ _('نصيحة:') }}</b> رقم الجوال هو هوية الزبون داخل المتجر — تأكد أن كل زبون مسجّل
           برقمه الصحيح ليجد محفظته وبطاقاته في أي جهاز يدخل منه.</span>
         </div>
       </div>
@@ -432,30 +432,30 @@
     <section class="dg-step" id="dg-s5">
       <div class="dg-badge">5</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-cart-shopping"></i> الشراء — والدخول التلقائي بالبطاقة</h2>
+        <h2><i class="fa-solid fa-cart-shopping"></i> {{ _('الشراء — والدخول التلقائي بالبطاقة') }}</h2>
         <p>
-          من تبويب <strong>«المعرض»</strong> يختار الزبون باقة ويضغط <strong>«شراء الآن»</strong>
-          (أو يجد <strong>«نفدت الكمية»</strong> إن كانت غير متاحة). يُخصم السعر من محفظته،
-          وتظهر نافذة <strong>«تم الشراء بنجاح!»</strong> فيها اسم المستخدم وكلمة المرور.
+          {{ _('من تبويب') }} <strong>{{ _('«المعرض»') }}</strong> {{ _('يختار الزبون باقة ويضغط') }} <strong>{{ _('«شراء الآن»') }}</strong>
+          {{ _('(أو يجد') }} <strong>{{ _('«نفدت الكمية»') }}</strong> إن كانت غير متاحة). يُخصم السعر من محفظته،
+          وتظهر نافذة <strong>{{ _('«تم الشراء بنجاح!»') }}</strong> {{ _('فيها اسم المستخدم وكلمة المرور.') }}
         </p>
         <p>
-          في تلك النافذة — وفي تبويب «بطاقاتي» — يوجد زر <strong>«🔓 دخول بهذه البطاقة»</strong>:
-          يعبّئ بيانات الكرت في نموذج الهوت سبوت ويُسجّل الزبون <strong>على الشبكة تلقائيًا</strong>
-          بلا أن ينسخ شيئًا. وتظهر رسالة «جارٍ تسجيل دخولك للشبكة…».
+          {{ _('في تلك النافذة — وفي تبويب «بطاقاتي» — يوجد زر') }} <strong>{{ _('«🔓 دخول بهذه البطاقة»') }}</strong>:
+          يعبّئ بيانات الكرت في نموذج الهوت سبوت ويُسجّل الزبون <strong>{{ _('على الشبكة تلقائيًا') }}</strong>
+          {{ _('بلا أن ينسخ شيئًا. وتظهر رسالة «جارٍ تسجيل دخولك للشبكة…».') }}
         </p>
 
         <div class="dg-mock" aria-hidden="true" style="max-width:300px">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">✓ تم الشراء بنجاح!</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('✓ تم الشراء بنجاح!') }}</span></div>
           <div class="dg-mock-body">
-            <div class="dg-mf"><label>اسم المستخدم</label><div class="dg-mf-input hl" style="font-family:monospace">a8f3k2</div></div>
-            <div class="dg-mf"><label>كلمة المرور</label><div class="dg-mf-input hl" style="font-family:monospace">7g9q1m</div></div>
-            <div class="dg-phone-btn teal" style="border-radius:9px">🔓 دخول بهذه البطاقة الآن</div>
+            <div class="dg-mf"><label>{{ _('اسم المستخدم') }}</label><div class="dg-mf-input hl" style="font-family:monospace">a8f3k2</div></div>
+            <div class="dg-mf"><label>{{ _('كلمة المرور') }}</label><div class="dg-mf-input hl" style="font-family:monospace">7g9q1m</div></div>
+            <div class="dg-phone-btn teal" style="border-radius:9px">{{ _('🔓 دخول بهذه البطاقة الآن') }}</div>
           </div>
         </div>
 
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>نصيحة:</b> بجانب اسم المستخدم وكلمة المرور زرّ نسخ 📋 (يظهر «تم النسخ ✓») —
+          <span><b>{{ _('نصيحة:') }}</b> بجانب اسم المستخدم وكلمة المرور زرّ نسخ 📋 (يظهر «تم النسخ ✓») —
           مفيد لو أراد الزبون حفظ بياناته أو الدخول من جهاز آخر لاحقًا.</span>
         </div>
       </div>
@@ -465,32 +465,32 @@
     <section class="dg-step" id="dg-s6">
       <div class="dg-badge">6</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-triangle-exclamation"></i> استكشاف أخطاء الاتصال</h2>
+        <h2><i class="fa-solid fa-triangle-exclamation"></i> {{ _('استكشاف أخطاء الاتصال') }}</h2>
         <p>
-          أغلب مشاكل المتجر سببها أحد شرطي التشغيل الأولين. هذه أشهر الرسائل وحلّها:
+          {{ _('أغلب مشاكل المتجر سببها أحد شرطي التشغيل الأولين. هذه أشهر الرسائل وحلّها:') }}
         </p>
         <ul>
-          <li><strong>«لم يتم ضبط عنوان سيرفر الراديوس…»</strong> أو <strong>«عنوان محلي لن يعمل…»</strong>:
-              اضبط <span class="dg-kbd">network.radius_server_ip</span> على عنوان حقيقي ثم أعد النشر.</li>
+          <li><strong>{{ _('«لم يتم ضبط عنوان سيرفر الراديوس…»') }}</strong> {{ _('أو') }} <strong>{{ _('«عنوان محلي لن يعمل…»') }}</strong>:
+              اضبط <span class="dg-kbd">network.radius_server_ip</span> {{ _('على عنوان حقيقي ثم أعد النشر.') }}</li>
           <li><strong>«تعذر الاتصال بالخادم — تأكد من الشبكة… تأكد أن مزود الخدمة سمح بالوصول
               لخادم التعبئة (walled garden)»</strong>: قواعد walled-garden ناقصة — أعد النشر من
-              المصمم ليضيفها، أو تحقق من قاعدة <span class="dg-kbd">HobeRadius-Store</span> على الراوتر.</li>
-          <li><strong>«انتهت الجلسة — سجّل الدخول من جديد»</strong>: توكن الزبون انتهى؛ يكفي أن
+              المصمم ليضيفها، أو تحقق من قاعدة <span class="dg-kbd">HobeRadius-Store</span> {{ _('على الراوتر.') }}</li>
+          <li><strong>{{ _('«انتهت الجلسة — سجّل الدخول من جديد»') }}</strong>: توكن الزبون انتهى؛ يكفي أن
               يعيد تسجيل الدخول برقم جواله.</li>
-          <li><strong>«أدخل رقم الجوال وكلمة المرور أولًا» / «أدخل رقم البطاقة أولًا»</strong>:
+          <li><strong>{{ _('«أدخل رقم الجوال وكلمة المرور أولًا» / «أدخل رقم البطاقة أولًا»') }}</strong>:
               حقول مطلوبة فارغة — رسائل إرشادية للزبون لا أعطال.</li>
         </ul>
 
         <div class="dg-warn">
           <span class="ic">⚠️</span>
-          <span><b>انتبه:</b> لو فتح المتجر عندك على جهاز الإدارة لكنه فشل على جوال زبون،
+          <span><b>{{ _('انتبه:') }}</b> لو فتح المتجر عندك على جهاز الإدارة لكنه فشل على جوال زبون،
           فالسبب غالبًا <b>walled-garden</b> أو عنوان راديوس محلي — جرّب دائمًا من جهاز زبون
           حقيقي متصل بالواي فاي، لا من شبكتك الداخلية.</span>
         </div>
 
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>قائمة فحص سريعة:</b> ① عنوان راديوس حقيقي في الإعدادات؟ ② نشرتَ من المصمم
+          <span><b>{{ _('قائمة فحص سريعة:') }}</b> ① عنوان راديوس حقيقي في الإعدادات؟ ② نشرتَ من المصمم
           بعد آخر تعديل؟ ③ ظهرت قاعدة walled-garden على الراوتر؟ إذا الثلاثة «نعم» — المتجر يعمل.</span>
         </div>
       </div>

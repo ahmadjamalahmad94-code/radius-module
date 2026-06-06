@@ -561,12 +561,12 @@
     <button type="button" class="pr-roomtab{% if not design_active %} is-active{% endif %}"
             role="tab" data-room-tab="print" aria-selected="{{ 'false' if design_active else 'true' }}">
       <i class="fa-solid fa-print"></i>
-      <span>غرفة الطباعة <small>اختيار حزمة وقالب ثم تصدير PDF</small></span>
+      <span>{{ _('غرفة الطباعة') }} <small>{{ _('اختيار حزمة وقالب ثم تصدير PDF') }}</small></span>
     </button>
     <button type="button" class="pr-roomtab{% if design_active %} is-active{% endif %}"
             role="tab" data-room-tab="design" aria-selected="{{ 'true' if design_active else 'false' }}">
       <i class="fa-solid fa-wand-magic-sparkles"></i>
-      <span>غرفة التصميم <small>محرر القوالب والمعاينة الحية</small></span>
+      <span>{{ _('غرفة التصميم') }} <small>{{ _('محرر القوالب والمعاينة الحية') }}</small></span>
     </button>
   </div>
   </section>{# /hub-hero-shell #}
@@ -581,135 +581,135 @@
     <div class="pr-export-room-shell">
       <section class="export-panel">
         <div class="pr-panel-head">
-          <h3><i class="fa-solid fa-list-check"></i> إعداد التصدير</h3>
+          <h3><i class="fa-solid fa-list-check"></i> {{ _('إعداد التصدير') }}</h3>
           <span class="hub-pill hub-pill--blue">{{ batches|length }} حزمة</span>
         </div>
         <div class="pr-export-body">
-          <label class="pr-field">الحزمة
+          <label class="pr-field">{{ _('الحزمة') }}
             <select class="hub-select" data-export-batch-select>
-              <option value="">اختر حزمة بطاقات</option>
+              <option value="">{{ _('اختر حزمة بطاقات') }}</option>
               {% for b in batches %}
                 <option value="{{ b.id }}">{{ b.batch_code }} - {{ b.package_name or b.plan_name or 'حزمة' }} ({{ b.total_cards or b.generated or 0 }} بطاقة)</option>
               {% endfor %}
             </select>
-            <small>يمكنك أيضًا فتح هذه الغرفة من صفحة حزم البطاقات.</small>
+            <small>{{ _('يمكنك أيضًا فتح هذه الغرفة من صفحة حزم البطاقات.') }}</small>
           </label>
           <div class="pr-template-picker-card">
             <div class="pr-export-card-head">
               <div>
-                <strong><i class="fa-solid fa-images"></i> القالب المعتمد للتصدير</strong>
-                <small>اختر قالبًا محفوظًا من نافذة واضحة بالمصغرات. القالب المختار يصبح جاهزًا للمرحلة الثانية: المعاينة والتصدير.</small>
+                <strong><i class="fa-solid fa-images"></i> {{ _('القالب المعتمد للتصدير') }}</strong>
+                <small>{{ _('اختر قالبًا محفوظًا من نافذة واضحة بالمصغرات. القالب المختار يصبح جاهزًا للمرحلة الثانية: المعاينة والتصدير.') }}</small>
               </div>
               <button type="button" class="hub-btn hub-btn--primary" data-open-template-picker>
-                <i class="fa-solid fa-layer-group"></i> اختيار قالب محفوظ
+                <i class="fa-solid fa-layer-group"></i> {{ _('اختيار قالب محفوظ') }}
               </button>
             </div>
             <div class="pr-selected-template" data-selected-template-summary>
               <span class="pr-chip-swatch" style="--ca:#0f172a;--cb:#22a7bd;--cacc:#f59e0b"></span>
               <span>
-                <strong>لم يتم اختيار قالب بعد</strong>
-                <small>افتح نافذة القوالب المحفوظة واختر التصميم المناسب للحزمة.</small>
+                <strong>{{ _('لم يتم اختيار قالب بعد') }}</strong>
+                <small>{{ _('افتح نافذة القوالب المحفوظة واختر التصميم المناسب للحزمة.') }}</small>
               </span>
             </div>
           </div>
           <div class="pr-export-sheet-settings">
             <div class="pr-export-card-head">
-              <strong><i class="fa-solid fa-table-cells-large"></i> إعدادات الورقة والرص</strong>
-              <small>هذه الإعدادات خاصة بالتصدير فقط، ولا تغيّر شكل القالب المحفوظ.</small>
+              <strong><i class="fa-solid fa-table-cells-large"></i> {{ _('إعدادات الورقة والرص') }}</strong>
+              <small>{{ _('هذه الإعدادات خاصة بالتصدير فقط، ولا تغيّر شكل القالب المحفوظ.') }}</small>
             </div>
             <div class="pr-grid2">
-              <label class="pr-field">حجم الورقة
+              <label class="pr-field">{{ _('حجم الورقة') }}
                 <select class="hub-select" name="print_page_size" data-export-print-setting>
                   <option value="A4" selected>A4</option>
-                  <option value="Letter">ليتر</option>
+                  <option value="Letter">{{ _('ليتر') }}</option>
                 </select>
               </label>
-              <label class="pr-field">اتجاه الورقة
+              <label class="pr-field">{{ _('اتجاه الورقة') }}
                 <select class="hub-select" name="print_orientation" data-export-print-setting>
-                  <option value="portrait" selected>عمودي</option>
-                  <option value="landscape">أفقي</option>
+                  <option value="portrait" selected>{{ _('عمودي') }}</option>
+                  <option value="landscape">{{ _('أفقي') }}</option>
                 </select>
               </label>
-              <label class="pr-field">عدد الأعمدة
+              <label class="pr-field">{{ _('عدد الأعمدة') }}
                 <input class="hub-input" type="number" name="print_columns" min="1" max="12" value="2" data-export-print-setting>
               </label>
-              <label class="pr-field">عدد الصفوف
+              <label class="pr-field">{{ _('عدد الصفوف') }}
                 <input class="hub-input" type="number" name="print_rows" min="1" max="20" value="5" data-export-print-setting>
               </label>
             </div>
             <div class="pr-grid2">
-              <label class="pr-field">المسافة بين الأعمدة mm
+              <label class="pr-field">{{ _('المسافة بين الأعمدة mm') }}
                 <input class="hub-input" type="number" name="print_column_gap_mm" min="0" max="60" step="0.5" value="4" data-export-print-setting>
               </label>
-              <label class="pr-field">المسافة بين الصفوف mm
+              <label class="pr-field">{{ _('المسافة بين الصفوف mm') }}
                 <input class="hub-input" type="number" name="print_row_gap_mm" min="0" max="60" step="0.5" value="4" data-export-print-setting>
               </label>
             </div>
             <div class="pr-grid4">
-              <label class="pr-field">هامش علوي mm
+              <label class="pr-field">{{ _('هامش علوي mm') }}
                 <input class="hub-input" type="number" name="print_margin_top_mm" min="0" max="80" step="0.5" value="10" data-export-print-setting>
               </label>
-              <label class="pr-field">هامش أيمن mm
+              <label class="pr-field">{{ _('هامش أيمن mm') }}
                 <input class="hub-input" type="number" name="print_margin_right_mm" min="0" max="80" step="0.5" value="10" data-export-print-setting>
               </label>
-              <label class="pr-field">هامش سفلي mm
+              <label class="pr-field">{{ _('هامش سفلي mm') }}
                 <input class="hub-input" type="number" name="print_margin_bottom_mm" min="0" max="80" step="0.5" value="10" data-export-print-setting>
               </label>
-              <label class="pr-field">هامش أيسر mm
+              <label class="pr-field">{{ _('هامش أيسر mm') }}
                 <input class="hub-input" type="number" name="print_margin_left_mm" min="0" max="80" step="0.5" value="10" data-export-print-setting>
               </label>
             </div>
           </div>
           <div class="pr-grid2">
-            <label class="pr-field">عنوان بوابة الدخول / DNS
-              <input class="hub-input" name="hotspot_address" data-export-override placeholder="اتركه فارغًا لاستخدام القالب">
+            <label class="pr-field">{{ _('عنوان بوابة الدخول / DNS') }}
+              <input class="hub-input" name="hotspot_address" data-export-override placeholder="{{ _('اتركه فارغًا لاستخدام القالب') }}">
             </label>
             {# رابط الدخول التلقائي وقت التصدير: يكتب المشغّل العنوان هنا
                (مثل 10.10.10.10) فيشفَّر رمز QR رابط دخول تلقائي حتى لو
                كان القالب المحفوظ بلا رابط — نفس سلوك غرفة التصميم. #}
-            <label class="pr-field">رابط دخول الهوت سبوت (QR تلقائي)
+            <label class="pr-field">{{ _('رابط دخول الهوت سبوت (QR تلقائي)') }}
               <input class="hub-input" name="hotspot_login_url" data-export-override dir="ltr"
-                     placeholder="مثال: 10.10.10.10 — فارغ = إعداد القالب"
+                     placeholder="{{ _('مثال: 10.10.10.10 — فارغ = إعداد القالب') }}"
                      style="text-align:left">
             </label>
-            <label class="pr-field">السعر الظاهر
+            <label class="pr-field">{{ _('السعر الظاهر') }}
               <input class="hub-input" name="price_text" data-export-override placeholder="مثال: {{ cfg.currency }} 1.00">
             </label>
-            <label class="pr-field">الصلاحية الظاهرة
-              <input class="hub-input" name="validity_text" data-export-override placeholder="مثال: 4 ساعات">
+            <label class="pr-field">{{ _('الصلاحية الظاهرة') }}
+              <input class="hub-input" name="validity_text" data-export-override placeholder="{{ _('مثال: 4 ساعات') }}">
             </label>
-            <label class="pr-field">النص أسفل البطاقة
-              <input class="hub-input" name="footer_text" data-export-override placeholder="اتركه فارغًا لاستخدام القالب">
+            <label class="pr-field">{{ _('النص أسفل البطاقة') }}
+              <input class="hub-input" name="footer_text" data-export-override placeholder="{{ _('اتركه فارغًا لاستخدام القالب') }}">
             </label>
           </div>
           <div class="hub-flex-row" style="gap:8px;flex-wrap:wrap">
             <a class="hub-btn hub-btn--primary" data-export-pdf-link
                data-export-job-url-template="{{ url_for('radius.print_templates_export_job_start', template_id=0) }}"
-               href="#" title="اختر قالبًا وحزمة أولًا">
-              <i class="fa-solid fa-print"></i> تصدير PDF للحزمة
+               href="#" title="{{ _('اختر قالبًا وحزمة أولًا') }}">
+              <i class="fa-solid fa-print"></i> {{ _('تصدير PDF للحزمة') }}
             </a>
-            <a class="hub-btn" data-export-sample-link href="#" title="اختر قالبًا">
-              <i class="fa-solid fa-file-pdf"></i> PDF عينة
+            <a class="hub-btn" data-export-sample-link href="#" title="{{ _('اختر قالبًا') }}">
+              <i class="fa-solid fa-file-pdf"></i> {{ _('PDF عينة') }}
             </a>
             <form method="POST"
                   action="{{ url_for('radius.print_templates_cleanup_fixtures') }}"
                   onsubmit="return confirm('حذف القوالب التي أنشأتها الاختبارات تلقائيًا (Print UI / ops_room_ / template_…)؟');"
                   style="margin:0">
               <button type="submit" class="hub-btn"
-                      title="يحذف فقط القوالب التي أنشأتها الاختبارات تلقائيًا.">
-                <i class="fa-solid fa-broom"></i> تنظيف القوالب المؤقتة
+                      title="{{ _('يحذف فقط القوالب التي أنشأتها الاختبارات تلقائيًا.') }}">
+                <i class="fa-solid fa-broom"></i> {{ _('تنظيف القوالب المؤقتة') }}
               </button>
             </form>
           </div>
           <div class="pr-export-progress" data-export-progress>
-            <strong data-progress-title>جاهز للتصدير</strong>
+            <strong data-progress-title>{{ _('جاهز للتصدير') }}</strong>
             <small class="pr-progress-detail" data-progress-detail></small>
             <div class="pr-progress-track"><div class="pr-progress-bar" data-progress-bar></div></div>
             <div class="pr-progress-steps">
-              <div class="pr-progress-step" data-progress-step="0"><i class="fa-solid fa-check-circle"></i> اختيار الحزمة</div>
-              <div class="pr-progress-step" data-progress-step="1"><i class="fa-solid fa-palette"></i> اختيار القالب</div>
-              <div class="pr-progress-step" data-progress-step="2"><i class="fa-solid fa-gears"></i> تجهيز ملف التصدير</div>
-              <div class="pr-progress-step" data-progress-step="3"><i class="fa-solid fa-download"></i> بدء تنزيل PDF</div>
+              <div class="pr-progress-step" data-progress-step="0"><i class="fa-solid fa-check-circle"></i> {{ _('اختيار الحزمة') }}</div>
+              <div class="pr-progress-step" data-progress-step="1"><i class="fa-solid fa-palette"></i> {{ _('اختيار القالب') }}</div>
+              <div class="pr-progress-step" data-progress-step="2"><i class="fa-solid fa-gears"></i> {{ _('تجهيز ملف التصدير') }}</div>
+              <div class="pr-progress-step" data-progress-step="3"><i class="fa-solid fa-download"></i> {{ _('بدء تنزيل PDF') }}</div>
             </div>
           </div>
         </div>
@@ -717,17 +717,17 @@
 
       <section class="export-panel">
         <div class="pr-panel-head">
-          <h3><i class="fa-solid fa-eye"></i> معاينة حية</h3>
+          <h3><i class="fa-solid fa-eye"></i> {{ _('معاينة حية') }}</h3>
           <div class="hub-flex-row" style="gap:6px;flex-wrap:wrap;justify-content:flex-end">
-            <span class="hub-pill" title="التصميم مغلق كقطعة واحدة — يكبر ويصغر بدون تشوّه عند تغيير المقاسات أو عدد البطاقات بالصف">
-              <i class="fa-solid fa-lock"></i> تصميم مغلق
+            <span class="hub-pill" title="{{ _('التصميم مغلق كقطعة واحدة — يكبر ويصغر بدون تشوّه عند تغيير المقاسات أو عدد البطاقات بالصف') }}">
+              <i class="fa-solid fa-lock"></i> {{ _('تصميم مغلق') }}
             </span>
-            <span class="hub-pill hub-pill--cyan" data-preview-hint>اختر قالبًا وحزمة لرؤية أول ٤ بطاقات بأسماء المستخدمين الفعلية</span>
+            <span class="hub-pill hub-pill--cyan" data-preview-hint>{{ _('اختر قالبًا وحزمة لرؤية أول ٤ بطاقات بأسماء المستخدمين الفعلية') }}</span>
           </div>
         </div>
         <div class="pr-export-body">
           <div data-preview-mount>
-            <div class="hub-empty">لم تُختَر بطاقة بعد. اضغط على قالب من اليسار ثم اختر حزمة.</div>
+            <div class="hub-empty">{{ _('لم تُختَر بطاقة بعد. اضغط على قالب من اليسار ثم اختر حزمة.') }}</div>
           </div>
         </div>
       </section>
@@ -737,10 +737,10 @@
       <section class="pr-template-modal-panel">
         <div class="pr-template-modal-head">
           <div>
-            <h3 id="template-picker-title"><i class="fa-solid fa-images"></i> اختر قالبًا محفوظًا</h3>
-            <p>اختر قالبًا من المصغرات الواضحة ليصبح معتمدًا في مركز التصدير. يمكنك تعديل القالب أو حذفه من نفس النافذة.</p>
+            <h3 id="template-picker-title"><i class="fa-solid fa-images"></i> {{ _('اختر قالبًا محفوظًا') }}</h3>
+            <p>{{ _('اختر قالبًا من المصغرات الواضحة ليصبح معتمدًا في مركز التصدير. يمكنك تعديل القالب أو حذفه من نفس النافذة.') }}</p>
           </div>
-          <button type="button" class="hub-btn" data-close-template-picker><i class="fa-solid fa-xmark"></i> إغلاق</button>
+          <button type="button" class="hub-btn" data-close-template-picker><i class="fa-solid fa-xmark"></i> {{ _('إغلاق') }}</button>
         </div>
         <div class="pr-template-modal-body">
           <div class="pr-template-modal-grid">
@@ -771,27 +771,27 @@
                        alt="معاينة القالب {{ item.name }}"
                        loading="lazy" decoding="async"
                        onerror="this.closest('.pr-template-thumb').classList.add('is-broken')">
-                  {% if layout.background_image_data_url %}<span class="pr-template-image-badge"><i class="fa-solid fa-image"></i> صورة</span>{% endif %}
+                  {% if layout.background_image_data_url %}<span class="pr-template-image-badge"><i class="fa-solid fa-image"></i> {{ _('صورة') }}</span>{% endif %}
                 </span>
-                <h4>{{ item.name }}{% if is_default %} <span class="pr-default-pill"><i class="fa-solid fa-star"></i> افتراضي</span>{% endif %}</h4>
+                <h4>{{ item.name }}{% if is_default %} <span class="pr-default-pill"><i class="fa-solid fa-star"></i> {{ _('افتراضي') }}</span>{% endif %}</h4>
                 <p>{{ layout.design_preset or 'custom' }} · {{ orientation }}</p>
                 {# صف إجراءات موحّد: تعديل · عينة · حذف — ثلاث خانات متساوية
                      في سطر واحد (نفس النماذج والمسارات بدون تغيير وظيفي). #}
                 <span class="pr-template-choice-actions" onclick="event.stopPropagation()">
                   <a class="hub-btn hub-btn--sm" href="{{ url_for('radius.print_templates') }}?edit_template={{ item.id }}#designer">
-                    <i class="fa-solid fa-pen"></i> تعديل
+                    <i class="fa-solid fa-pen"></i> {{ _('تعديل') }}
                   </a>
                   <a class="hub-btn hub-btn--sm" href="{{ url_for('radius.print_templates_export_pdf', template_id=item.id) }}">
-                    <i class="fa-solid fa-file-pdf"></i> عينة
+                    <i class="fa-solid fa-file-pdf"></i> {{ _('عينة') }}
                   </a>
                   <form method="POST" action="{{ url_for('radius.print_templates_delete', template_id=item.id) }}" style="margin:0" onsubmit="return confirm('حذف هذا القالب؟');">
                     <input type="hidden" name="next" value="{{ url_for('radius.print_templates') }}#export">
-                    <button type="submit" class="hub-btn hub-btn--sm hub-btn--danger"><i class="fa-solid fa-trash"></i> حذف</button>
+                    <button type="submit" class="hub-btn hub-btn--sm hub-btn--danger"><i class="fa-solid fa-trash"></i> {{ _('حذف') }}</button>
                   </form>
                 </span>
               </article>
             {% else %}
-              <div class="hub-empty">لا توجد قوالب محفوظة. افتح المصمم وأنشئ أول قالب.</div>
+              <div class="hub-empty">{{ _('لا توجد قوالب محفوظة. افتح المصمم وأنشئ أول قالب.') }}</div>
             {% endfor %}
           </div>
         </div>
@@ -814,14 +814,14 @@
       <span><i class="fa-solid fa-wand-magic-sparkles"></i> مصمم القوالب
         {# شارة «معاينة مباشرة» انتقلت من رأس محرر القالب إلى شريط
            المصمم العلوي هنا — تبقى ظاهرة حتى والدرج مطوي. #}
-        <span class="hub-pill hub-pill--blue">معاينة مباشرة</span>
+        <span class="hub-pill hub-pill--blue">{{ _('معاينة مباشرة') }}</span>
       </span>
-      <small>افتح لعرض/تعديل القوالب أو إنشاء قالب جديد</small>
+      <small>{{ _('افتح لعرض/تعديل القوالب أو إنشاء قالب جديد') }}</small>
     </summary>
   <div class="pr-shell">
     <section class="pr-panel">
       <div class="pr-panel-head">
-        <h3><i class="fa-solid fa-sliders"></i> محرر القالب</h3>
+        <h3><i class="fa-solid fa-sliders"></i> {{ _('محرر القالب') }}</h3>
         {# شارة «معاينة مباشرة» انتقلت لشريط المصمم العلوي (pr-designer-summary) #}
       </div>
       <div class="pr-panel-body">
@@ -861,10 +861,10 @@
           <div class="pr-template-name-card">
             <label>
               <span>
-                <i class="fa-solid fa-signature"></i> اسم القالب
+                <i class="fa-solid fa-signature"></i> {{ _('اسم القالب') }}
                 <span class="hub-hint" tabindex="0" data-hint="سمِّ القالب باسم واضح يميّزه في غرفة الطباعة وصفحة الإحصائيات — مثل اسم العرض أو الحزمة. يُحفظ مع التصميم ولا يظهر على البطاقة المطبوعة."><i class="fa-solid fa-info"></i></span>
               </span>
-              <input class="hub-input" name="name" required value="{{ fs.name or 'قالب حديث' }}" data-preview="templateName" placeholder="مثال: بطاقات رمضان — 4 ساعات">
+              <input class="hub-input" name="name" required value="{{ fs.name or 'قالب حديث' }}" data-preview="templateName" placeholder="{{ _('مثال: بطاقات رمضان — 4 ساعات') }}">
             </label>
           </div>
 
@@ -873,24 +873,24 @@
              الأقسام. التأثيرات العرضية (data-system-design-only /
              data-upload-design-only) محكومة بـ data-design-source على
              النموذج نفسه فتعمل عبر كل الألواح بلا تغيير. #}
-          <div class="pr-design-source" aria-label="اختيار نظام التصميم">
+          <div class="pr-design-source" aria-label="{{ _('اختيار نظام التصميم') }}">
             {# الترويسة بلا سطر تمهيدي — الشرح أيقونة hub-hint بجانب
                عنوان كل بطاقة (data-hint يحمل النص الكامل القديم). #}
             <div class="pr-design-source-head">
-              <strong>اختر نظام التصميم</strong>
+              <strong>{{ _('اختر نظام التصميم') }}</strong>
             </div>
             <div class="pr-design-source-options">
               <button class="pr-design-source-option{% if initial_bg_mode == 'image' %} is-selected{% endif %}" type="button" data-design-source-option="image">
                 <i class="fa-solid fa-image pr-design-source-ico"></i>
                 <span class="pr-design-source-text">
-                  <span>صورة مرفوعة</span>
+                  <span>{{ _('صورة مرفوعة') }}</span>
                   <span class="hub-hint" tabindex="0" data-hint="نحافظ على الصورة كما هي، ونضيف فوقها اليوزر والباس وQR والنصوص فقط."><i class="fa-solid fa-info"></i></span>
                 </span>
               </button>
               <button class="pr-design-source-option{% if initial_bg_mode != 'image' %} is-selected{% endif %}" type="button" data-design-source-option="preset">
                 <i class="fa-solid fa-layer-group pr-design-source-ico"></i>
                 <span class="pr-design-source-text">
-                  <span>تصميم من النظام</span>
+                  <span>{{ _('تصميم من النظام') }}</span>
                   <span class="hub-hint" tabindex="0" data-hint="قوالب جاهزة مع تحكم كامل بالألوان والزخارف والخلفية والطبقات."><i class="fa-solid fa-info"></i></span>
                 </span>
               </button>
@@ -905,47 +905,47 @@
           <div class="pr-pane is-active" data-pr-pane="basics">
             <div class="pr-engine-card">
               <div class="pr-engine-head">
-                <strong>اختر مود التصميم</strong>
-                <small>اختيار سريع قبل القوالب: اللغة + الاتجاه + شكل البطاقة.</small>
+                <strong>{{ _('اختر مود التصميم') }}</strong>
+                <small>{{ _('اختيار سريع قبل القوالب: اللغة + الاتجاه + شكل البطاقة.') }}</small>
               </div>
-              <div class="pr-engine-options" aria-label="اختيار محرك التصميم">
+              <div class="pr-engine-options" aria-label="{{ _('اختيار محرك التصميم') }}">
                 <button class="pr-engine-option{% if active_render_engine == 'ar_horizontal' %} is-selected{% endif %}" type="button" data-engine-option="ar_horizontal">
                   <i class="pr-engine-mini is-rtl"></i>
-                  <span>عربي أفقي</span>
-                  <em>RTL / عرضي</em>
+                  <span>{{ _('عربي أفقي') }}</span>
+                  <em>{{ _('RTL / عرضي') }}</em>
                 </button>
                 <button class="pr-engine-option{% if active_render_engine == 'ar_vertical' %} is-selected{% endif %}" type="button" data-engine-option="ar_vertical">
                   <i class="pr-engine-mini is-rtl is-vertical"></i>
-                  <span>عربي عمودي</span>
-                  <em>RTL / طولاني</em>
+                  <span>{{ _('عربي عمودي') }}</span>
+                  <em>{{ _('RTL / طولاني') }}</em>
                 </button>
                 <button class="pr-engine-option{% if active_render_engine == 'en_horizontal' %} is-selected{% endif %}" type="button" data-engine-option="en_horizontal">
                   <i class="pr-engine-mini"></i>
-                  <span>إنجليزي أفقي</span>
-                  <em>يسار إلى يمين / عريض</em>
+                  <span>{{ _('إنجليزي أفقي') }}</span>
+                  <em>{{ _('يسار إلى يمين / عريض') }}</em>
                 </button>
                 <button class="pr-engine-option{% if active_render_engine == 'en_vertical' %} is-selected{% endif %}" type="button" data-engine-option="en_vertical">
                   <i class="pr-engine-mini is-vertical"></i>
-                  <span>إنجليزي عمودي</span>
-                  <em>يسار إلى يمين / طويل</em>
+                  <span>{{ _('إنجليزي عمودي') }}</span>
+                  <em>{{ _('يسار إلى يمين / طويل') }}</em>
                 </button>
               </div>
-              <label class="pr-field pr-engine-select-field">محرك التصميم المحكم
+              <label class="pr-field pr-engine-select-field">{{ _('محرك التصميم المحكم') }}
                 <select class="hub-select" name="render_engine" data-render-engine>
-                  <option value="ar_horizontal" {% if active_render_engine == 'ar_horizontal' %}selected{% endif %}>عربي أفقي</option>
-                  <option value="ar_vertical" {% if active_render_engine == 'ar_vertical' %}selected{% endif %}>عربي عمودي</option>
-                  <option value="en_horizontal" {% if active_render_engine == 'en_horizontal' %}selected{% endif %}>إنجليزي أفقي</option>
-                  <option value="en_vertical" {% if active_render_engine == 'en_vertical' %}selected{% endif %}>إنجليزي عمودي</option>
+                  <option value="ar_horizontal" {% if active_render_engine == 'ar_horizontal' %}selected{% endif %}>{{ _('عربي أفقي') }}</option>
+                  <option value="ar_vertical" {% if active_render_engine == 'ar_vertical' %}selected{% endif %}>{{ _('عربي عمودي') }}</option>
+                  <option value="en_horizontal" {% if active_render_engine == 'en_horizontal' %}selected{% endif %}>{{ _('إنجليزي أفقي') }}</option>
+                  <option value="en_vertical" {% if active_render_engine == 'en_vertical' %}selected{% endif %}>{{ _('إنجليزي عمودي') }}</option>
                 </select>
               </label>
-              <small>هذا الاختيار يثبت اللغة والاتجاه والشكل معًا. العربي يعكس توزيع البطاقة كاملًا، والإنجليزي يبقى يسار إلى يمين.</small>
+              <small>{{ _('هذا الاختيار يثبت اللغة والاتجاه والشكل معًا. العربي يعكس توزيع البطاقة كاملًا، والإنجليزي يبقى يسار إلى يمين.') }}</small>
             </div>
             {# كتلة «اختر نظام التصميم» انتقلت أعلى — تحت اسم القالب
                مباشرة وقبل ألواح الأقسام (قرار جوهري يسبق التفاصيل). #}
-            <div class="pr-preset-picker" aria-label="اختيار قالب جاهز" data-system-design-only>
+            <div class="pr-preset-picker" aria-label="{{ _('اختيار قالب جاهز') }}" data-system-design-only>
               <div class="pr-preset-picker-head">
-                <strong>اختر شكل القالب</strong>
-                <small>اختيار بصري سريع، ثم عدّل الألوان والنصوص كما تريد.</small>
+                <strong>{{ _('اختر شكل القالب') }}</strong>
+                <small>{{ _('اختيار بصري سريع، ثم عدّل الألوان والنصوص كما تريد.') }}</small>
               </div>
               <div class="pr-presets">
                 {% for preset in presets %}
@@ -967,7 +967,7 @@
                 {% endfor %}
               </div>
             </div>
-            <label class="pr-field pr-preset-select-field" data-system-design-only>قوالب جاهزة
+            <label class="pr-field pr-preset-select-field" data-system-design-only>{{ _('قوالب جاهزة') }}
               <select class="hub-select" name="design_preset" data-preview="preset">
                 {% for preset in presets %}
                   <option value="{{ preset.key }}" {% if (fl.design_preset or 'modern') == preset.key %}selected{% endif %}>{{ preset.label }}</option>
@@ -975,10 +975,10 @@
               </select>
             </label>
             <div class="pr-grid3" style="margin-top:12px">
-              <label class="pr-field">اتجاه الكرت
+              <label class="pr-field">{{ _('اتجاه الكرت') }}
                 <select class="hub-select" name="card_orientation" data-preview="cardOrientation">
-                  <option value="horizontal" {% if (fl.card_orientation or 'horizontal') == 'horizontal' %}selected{% endif %}>أفقي</option>
-                  <option value="vertical" {% if fl.card_orientation == 'vertical' %}selected{% endif %}>عمودي</option>
+                  <option value="horizontal" {% if (fl.card_orientation or 'horizontal') == 'horizontal' %}selected{% endif %}>{{ _('أفقي') }}</option>
+                  <option value="vertical" {% if fl.card_orientation == 'vertical' %}selected{% endif %}>{{ _('عمودي') }}</option>
                 </select>
               </label>
             </div>
@@ -987,35 +987,35 @@
           {# ───── قسم: الألوان — تدرّج الخلفية وألوان النصوص والشرائط ───── #}
           <div class="pr-pane" data-pr-pane="colors">
             <div class="pr-grid3">
-              <label class="pr-field" data-system-design-only>بداية الخلفية<input class="hub-input" type="color" name="gradient_start" value="{{ fl.gradient_start or '#0f172a' }}" data-preview="gradientStart"></label>
-              <label class="pr-field" data-system-design-only>نهاية الخلفية<input class="hub-input" type="color" name="gradient_end" value="{{ fl.gradient_end or '#22a7bd' }}" data-preview="gradientEnd"></label>
-              <label class="pr-field" data-system-design-only>لون التمييز<input class="hub-input" type="color" name="accent_color" value="{{ fl.accent_color or '#f59e0b' }}" data-preview="accent"></label>
-              <label class="pr-field" data-system-design-only>لون النص<input class="hub-input" type="color" name="text_color" value="{{ fl.text_color or fs.color or '#ffffff' }}" data-preview="textColor"></label>
-              <label class="pr-field" data-system-design-only>لون شرائط البيانات<input class="hub-input" type="color" name="surface_color" value="{{ fl.surface_color or '#e8f7fb' }}" data-preview="surfaceColor"></label>
-              <label class="pr-field">لون PDF legacy<input class="hub-input" type="color" name="color" value="{{ fs.color or fl.text_color or '#ffffff' }}"></label>
+              <label class="pr-field" data-system-design-only>{{ _('بداية الخلفية') }}<input class="hub-input" type="color" name="gradient_start" value="{{ fl.gradient_start or '#0f172a' }}" data-preview="gradientStart"></label>
+              <label class="pr-field" data-system-design-only>{{ _('نهاية الخلفية') }}<input class="hub-input" type="color" name="gradient_end" value="{{ fl.gradient_end or '#22a7bd' }}" data-preview="gradientEnd"></label>
+              <label class="pr-field" data-system-design-only>{{ _('لون التمييز') }}<input class="hub-input" type="color" name="accent_color" value="{{ fl.accent_color or '#f59e0b' }}" data-preview="accent"></label>
+              <label class="pr-field" data-system-design-only>{{ _('لون النص') }}<input class="hub-input" type="color" name="text_color" value="{{ fl.text_color or fs.color or '#ffffff' }}" data-preview="textColor"></label>
+              <label class="pr-field" data-system-design-only>{{ _('لون شرائط البيانات') }}<input class="hub-input" type="color" name="surface_color" value="{{ fl.surface_color or '#e8f7fb' }}" data-preview="surfaceColor"></label>
+              <label class="pr-field">{{ _('لون PDF legacy') }}<input class="hub-input" type="color" name="color" value="{{ fs.color or fl.text_color or '#ffffff' }}"></label>
             </div>
           </div>
 
           {# ───── قسم: الزخرفة والخلفية — نمط الزخرفة + مصدر الخلفية + صورة الخلفية ───── #}
           <div class="pr-pane" data-pr-pane="pattern">
             <div class="pr-grid3">
-              <label class="pr-field" data-system-design-only>نمط الزخرفة
+              <label class="pr-field" data-system-design-only>{{ _('نمط الزخرفة') }}
                 <select class="hub-select" name="pattern_style" data-preview="patternStyle">
-                  <option value="signal" {% if (fl.pattern_style or 'signal') == 'signal' %}selected{% endif %}>إشارة وشبكات</option>
-                  <option value="wave" {% if fl.pattern_style == 'wave' %}selected{% endif %}>موجات ضوئية</option>
-                  <option value="grid" {% if fl.pattern_style == 'grid' %}selected{% endif %}>شبكة تقنية</option>
-                  <option value="clean" {% if fl.pattern_style == 'clean' %}selected{% endif %}>نظيف</option>
+                  <option value="signal" {% if (fl.pattern_style or 'signal') == 'signal' %}selected{% endif %}>{{ _('إشارة وشبكات') }}</option>
+                  <option value="wave" {% if fl.pattern_style == 'wave' %}selected{% endif %}>{{ _('موجات ضوئية') }}</option>
+                  <option value="grid" {% if fl.pattern_style == 'grid' %}selected{% endif %}>{{ _('شبكة تقنية') }}</option>
+                  <option value="clean" {% if fl.pattern_style == 'clean' %}selected{% endif %}>{{ _('نظيف') }}</option>
                 </select>
               </label>
               {% set bg_mode = initial_bg_mode %}
-              <label class="pr-field pr-design-source-select-field">مصدر الخلفية
+              <label class="pr-field pr-design-source-select-field">{{ _('مصدر الخلفية') }}
                 <select class="hub-select" name="background_style" data-background-style data-preview="backgroundStyle">
-                  <option value="preset" {% if bg_mode != 'image' %}selected{% endif %}>رسوم جاهزة من النظام</option>
-                  <option value="image" {% if bg_mode == 'image' %}selected{% endif %}>صورة محفوظة / مرفوعة</option>
+                  <option value="preset" {% if bg_mode != 'image' %}selected{% endif %}>{{ _('رسوم جاهزة من النظام') }}</option>
+                  <option value="image" {% if bg_mode == 'image' %}selected{% endif %}>{{ _('صورة محفوظة / مرفوعة') }}</option>
                 </select>
-                <small>الرسوم الجاهزة والصورة المرفوعة لهما مساران منفصلان في المعاينة والتصدير.</small>
+                <small>{{ _('الرسوم الجاهزة والصورة المرفوعة لهما مساران منفصلان في المعاينة والتصدير.') }}</small>
               </label>
-              <label class="pr-field" data-upload-design-only>شفافية الصورة<input class="hub-input" type="range" name="image_opacity" min="0.15" max="1" step="0.05" value="{{ fl.image_opacity or '0.82' }}" data-preview="imageOpacity"></label>
+              <label class="pr-field" data-upload-design-only>{{ _('شفافية الصورة') }}<input class="hub-input" type="range" name="image_opacity" min="0.15" max="1" step="0.05" value="{{ fl.image_opacity or '0.82' }}" data-preview="imageOpacity"></label>
             </div>
             {# Background-image picker (strict).
                - File input is hidden; the trigger button + drag&drop
@@ -1029,7 +1029,7 @@
                  (also resets --card-image on the live preview).
                - All copy is in Arabic, matching the rest of the form. #}
             <div class="pr-field" style="margin-top:12px" data-upload-design-only>
-              صورة خلفية من الجهاز
+              {{ _('صورة خلفية من الجهاز') }}
               <div class="pr-file-picker" data-bg-picker>
                 <input type="file" name="background_image"
                        accept="image/png,image/jpeg,image/webp"
@@ -1046,7 +1046,7 @@
                  <input type="hidden" name="background_image_name"
                         data-background-image-name value="{{ fl.background_image_name or '' }}">
                 <button type="button" class="pr-file-trigger" data-bg-trigger>
-                  <i class="fa-solid fa-image"></i> اختر صورة الخلفية
+                  <i class="fa-solid fa-image"></i> {{ _('اختر صورة الخلفية') }}
                 </button>
                 <div class="pr-file-info" hidden data-bg-info>
                   <img class="pr-file-thumb" data-bg-thumb alt="">
@@ -1055,53 +1055,53 @@
                     <small data-bg-size></small>
                   </div>
                   <button type="button" class="pr-file-clear" data-bg-clear
-                          title="إزالة الصورة">
-                    <i class="fa-solid fa-xmark"></i> إزالة
+                          title="{{ _('إزالة الصورة') }}">
+                    <i class="fa-solid fa-xmark"></i> {{ _('إزالة') }}
                   </button>
                 </div>
                 <p class="pr-file-error" hidden data-bg-error role="alert"></p>
-                <small class="pr-file-hint">PNG / JPG / WEBP — حتى 8MB. يضغطها النظام تلقائيًا ويحفظ نسخة مناسبة للتصدير.</small>
+                <small class="pr-file-hint">{{ _('PNG / JPG / WEBP — حتى 8MB. يضغطها النظام تلقائيًا ويحفظ نسخة مناسبة للتصدير.') }}</small>
               </div>
             </div>
           </div>
 
           <div class="pr-pane" data-pr-pane="content">
             <div class="pr-grid2">
-              <label class="pr-field">اسم الشبكة/العلامة<input class="hub-input" name="brand_name" value="{{ fl.brand_name or 'HobeRadius' }}" data-preview="brand"></label>
-              <label class="pr-field">عنوان البطاقة<input class="hub-input" name="card_title" value="{{ fl.card_title or 'بطاقة إنترنت' }}" data-preview="title"></label>
-              <label class="pr-field">عنوان بوابة الدخول / DNS<input class="hub-input" name="hotspot_address" value="{{ fl.hotspot_address or 'hotspot.local' }}" data-preview="hotspot"></label>
-              <label class="pr-field">السعر<input class="hub-input" name="price_text" value="{{ fl.price_text or '' }}" placeholder="مثال: {{ cfg.currency }} 1.00" data-preview="price"></label>
-              <label class="pr-field">الصلاحية<input class="hub-input" name="validity_text" value="{{ fl.validity_text or '' }}" placeholder="مثال: 4 ساعات" data-preview="validity"></label>
-              <label class="pr-field">نمط QR
-                <select class="hub-select" name="qr_style"><option value="boxed" {% if (fl.qr_style or 'boxed') == 'boxed' %}selected{% endif %}>مربع واضح</option><option value="rounded" {% if fl.qr_style == 'rounded' %}selected{% endif %}>ناعم</option><option value="clean" {% if fl.qr_style == 'clean' %}selected{% endif %}>بسيط</option></select>
+              <label class="pr-field">{{ _('اسم الشبكة/العلامة') }}<input class="hub-input" name="brand_name" value="{{ fl.brand_name or 'HobeRadius' }}" data-preview="brand"></label>
+              <label class="pr-field">{{ _('عنوان البطاقة') }}<input class="hub-input" name="card_title" value="{{ fl.card_title or 'بطاقة إنترنت' }}" data-preview="title"></label>
+              <label class="pr-field">{{ _('عنوان بوابة الدخول / DNS') }}<input class="hub-input" name="hotspot_address" value="{{ fl.hotspot_address or 'hotspot.local' }}" data-preview="hotspot"></label>
+              <label class="pr-field">{{ _('السعر') }}<input class="hub-input" name="price_text" value="{{ fl.price_text or '' }}" placeholder="مثال: {{ cfg.currency }} 1.00" data-preview="price"></label>
+              <label class="pr-field">{{ _('الصلاحية') }}<input class="hub-input" name="validity_text" value="{{ fl.validity_text or '' }}" placeholder="{{ _('مثال: 4 ساعات') }}" data-preview="validity"></label>
+              <label class="pr-field">{{ _('نمط QR') }}
+                <select class="hub-select" name="qr_style"><option value="boxed" {% if (fl.qr_style or 'boxed') == 'boxed' %}selected{% endif %}>{{ _('مربع واضح') }}</option><option value="rounded" {% if fl.qr_style == 'rounded' %}selected{% endif %}>{{ _('ناعم') }}</option><option value="clean" {% if fl.qr_style == 'clean' %}selected{% endif %}>{{ _('بسيط') }}</option></select>
               </label>
-              <label class="pr-field">اتجاه النص
+              <label class="pr-field">{{ _('اتجاه النص') }}
                 <select class="hub-select" name="text_direction">
-                  <option value="auto" {% if (fl.text_direction or 'auto') == 'auto' %}selected{% endif %}>تلقائي حسب اللغة</option>
-                  <option value="rtl" {% if fl.text_direction == 'rtl' %}selected{% endif %}>عربي RTL</option>
-                  <option value="ltr" {% if fl.text_direction == 'ltr' %}selected{% endif %}>إنجليزي LTR</option>
+                  <option value="auto" {% if (fl.text_direction or 'auto') == 'auto' %}selected{% endif %}>{{ _('تلقائي حسب اللغة') }}</option>
+                  <option value="rtl" {% if fl.text_direction == 'rtl' %}selected{% endif %}>{{ _('عربي RTL') }}</option>
+                  <option value="ltr" {% if fl.text_direction == 'ltr' %}selected{% endif %}>{{ _('إنجليزي LTR') }}</option>
                 </select>
               </label>
-              <label class="pr-field">تسميات اليوزر والباس
+              <label class="pr-field">{{ _('تسميات اليوزر والباس') }}
                 <select class="hub-select" name="credential_label_language">
-                  <option value="english" {% if (fl.credential_label_language or 'english') == 'english' %}selected{% endif %}>اسم المستخدم / كلمة المرور</option>
-                  <option value="arabic" {% if fl.credential_label_language == 'arabic' %}selected{% endif %}>اسم المستخدم / كلمة المرور</option>
+                  <option value="english" {% if (fl.credential_label_language or 'english') == 'english' %}selected{% endif %}>{{ _('اسم المستخدم / كلمة المرور') }}</option>
+                  <option value="arabic" {% if fl.credential_label_language == 'arabic' %}selected{% endif %}>{{ _('اسم المستخدم / كلمة المرور') }}</option>
                 </select>
               </label>
             </div>
             {# رابط الدخول التلقائي: عند تعبئته يشفّر رمز QR رابط
                /login?username=&password= فيدخل الزبون فور مسح الرمز.
                فارغ = القوالب القديمة تبقى كما هي (QR = اسم المستخدم). #}
-            <label class="pr-field">رابط دخول الهوت سبوت (DNS)
+            <label class="pr-field">{{ _('رابط دخول الهوت سبوت (DNS)') }}
               <input class="hub-input" name="hotspot_login_url" value="{{ fl.hotspot_login_url or '' }}"
                      dir="ltr" placeholder="http://login.net" autocomplete="off" spellcheck="false"
                      style="font-family:'Menlo','Consolas',monospace;text-align:left">
-              <small class="pr-file-hint">امسح QR يدخل الزبون تلقائيًا: الرابط + اسم المستخدم وكلمة المرور بنفس العنوان</small>
+              <small class="pr-file-hint">{{ _('امسح QR يدخل الزبون تلقائيًا: الرابط + اسم المستخدم وكلمة المرور بنفس العنوان') }}</small>
             </label>
-            <label class="pr-field">نص أسفل البطاقة
+            <label class="pr-field">{{ _('نص أسفل البطاقة') }}
               <input class="hub-input" name="footer_text" value="{{ fl.footer_text or 'احتفظ ببيانات الدخول حتى انتهاء الصلاحية' }}" data-preview="footer">
             </label>
-            <label class="pr-field">تعليمات الاستخدام
+            <label class="pr-field">{{ _('تعليمات الاستخدام') }}
               <textarea class="hub-input" name="instructions_text" rows="3">{{ fl.instructions_text or 'استخدم اسم المستخدم وكلمة المرور أو رمز QR لتسجيل الدخول.' }}</textarea>
             </label>
             <div class="pr-checks">
@@ -1124,8 +1124,8 @@
             <div class="pr-control-stack">
               <section class="pr-control-section">
                 <div class="pr-control-section-head">
-                  <h4><i class="fa-solid fa-ruler-combined"></i> مقاس البطاقة العام</h4>
-                  <small>هذه القيم تخص شكل البطاقة فقط، أما توزيع الورقة والهوامش فهو في مركز التصدير.</small>
+                  <h4><i class="fa-solid fa-ruler-combined"></i> {{ _('مقاس البطاقة العام') }}</h4>
+                  <small>{{ _('هذه القيم تخص شكل البطاقة فقط، أما توزيع الورقة والهوامش فهو في مركز التصدير.') }}</small>
                 </div>
                 <div class="pr-grid3">
                   {{ slider_field('عرض البطاقة', 'card_width_mm', fl.card_width_mm or 85, 35, 110, 0.1, 'mm') }}
@@ -1141,58 +1141,58 @@
             {# تبويبات فرعية: مجموعة واحدة ظاهرة في كل مرة (اليوزر /
                الباسورد / الباركود). الإخفاء عرضي فقط — كل الحقول تبقى
                داخل النموذج وتُرسل قيمها عند الحفظ كالمعتاد. #}
-            <div class="pr-fieldtabs" role="tablist" aria-label="حقول البطاقة">
-              <button class="pr-fieldtab is-active" type="button" role="tab" aria-selected="true" data-pr-fieldtab="username"><i class="fa-solid fa-user"></i> حقل اسم المستخدم</button>
-              <button class="pr-fieldtab" type="button" role="tab" aria-selected="false" data-pr-fieldtab="password"><i class="fa-solid fa-key"></i> حقل كلمة المرور</button>
-              <button class="pr-fieldtab" type="button" role="tab" aria-selected="false" data-pr-fieldtab="barcode"><i class="fa-solid fa-qrcode"></i> حقل الباركود</button>
+            <div class="pr-fieldtabs" role="tablist" aria-label="{{ _('حقول البطاقة') }}">
+              <button class="pr-fieldtab is-active" type="button" role="tab" aria-selected="true" data-pr-fieldtab="username"><i class="fa-solid fa-user"></i> {{ _('حقل اسم المستخدم') }}</button>
+              <button class="pr-fieldtab" type="button" role="tab" aria-selected="false" data-pr-fieldtab="password"><i class="fa-solid fa-key"></i> {{ _('حقل كلمة المرور') }}</button>
+              <button class="pr-fieldtab" type="button" role="tab" aria-selected="false" data-pr-fieldtab="barcode"><i class="fa-solid fa-qrcode"></i> {{ _('حقل الباركود') }}</button>
             </div>
             <div class="pr-control-stack">
               <section class="pr-control-section is-active" data-layer-section="username">
                 <div class="pr-control-section-head">
-                  <h4><i class="fa-solid fa-user"></i> اسم المستخدم</h4>
-                  <small>حجم الخط، اللون، الخلفية، ومكان اليوزر داخل البطاقة.</small>
+                  <h4><i class="fa-solid fa-user"></i> {{ _('اسم المستخدم') }}</h4>
+                  <small>{{ _('حجم الخط، اللون، الخلفية، ومكان اليوزر داخل البطاقة.') }}</small>
                 </div>
                 <div class="pr-grid2">
                   {{ slider_field('المكان أفقيًا', 'username_x', fs.username_x or eff.username_x or 0, 0, 110, 0.1, 'mm', 'القيمة الحالية هي مكان العنصر الفعلي على البطاقة.', auto='0' if fs.username_x else '1') }}
                   {{ slider_field('المكان عموديًا', 'username_y', fs.username_y or eff.username_y or 0, 0, 110, 0.1, 'mm', 'القيمة الحالية هي مكان العنصر الفعلي على البطاقة.', auto='0' if fs.username_y else '1') }}
                   {{ slider_field('حجم خط اليوزر', 'username_font_size', fl.username_font_size or eff.username_font_size or 0, 0, 90, 0.5, 'px', 'القيمة الحالية هي الحجم الفعلي المرسوم على البطاقة.', auto='0' if fl.username_font_size else '1') }}
-                  <label class="pr-field">لون اليوزر<input class="hub-input" type="color" name="credential_text_color" value="{{ fl.credential_text_color or '#0f172a' }}" data-preview="credentialTextColor"></label>
-                  <label class="pr-field">خلفية اليوزر<input class="hub-input" type="color" name="username_surface_color" value="{{ fl.username_surface_color or fl.surface_color or '#e8f7fb' }}" data-preview="usernameSurfaceColor"></label>
+                  <label class="pr-field">{{ _('لون اليوزر') }}<input class="hub-input" type="color" name="credential_text_color" value="{{ fl.credential_text_color or '#0f172a' }}" data-preview="credentialTextColor"></label>
+                  <label class="pr-field">{{ _('خلفية اليوزر') }}<input class="hub-input" type="color" name="username_surface_color" value="{{ fl.username_surface_color or fl.surface_color or '#e8f7fb' }}" data-preview="usernameSurfaceColor"></label>
                   {% set user_bg = fl.username_surface_enabled if 'username_surface_enabled' in fl else true %}
-                  <label class="pr-check"><input type="checkbox" name="username_surface_enabled" value="1" {% if user_bg %}checked{% endif %} data-preview-toggle="username_surface_enabled"> إظهار خلفية اليوزر<input type="hidden" name="username_surface_enabled" value="0"></label>
+                  <label class="pr-check"><input type="checkbox" name="username_surface_enabled" value="1" {% if user_bg %}checked{% endif %} data-preview-toggle="username_surface_enabled"> {{ _('إظهار خلفية اليوزر') }}<input type="hidden" name="username_surface_enabled" value="0"></label>
                 </div>
               </section>
 
               <section class="pr-control-section" data-layer-section="password">
                 <div class="pr-control-section-head">
-                  <h4><i class="fa-solid fa-key"></i> كلمة المرور</h4>
-                  <small>تحكم مستقل بالباس حتى لو احتجته أكبر أو بمكان مختلف.</small>
+                  <h4><i class="fa-solid fa-key"></i> {{ _('كلمة المرور') }}</h4>
+                  <small>{{ _('تحكم مستقل بالباس حتى لو احتجته أكبر أو بمكان مختلف.') }}</small>
                 </div>
                 <div class="pr-grid2">
                   {{ slider_field('المكان أفقيًا', 'password_x', fs.password_x or eff.password_x or 0, 0, 110, 0.1, 'mm', 'القيمة الحالية هي مكان العنصر الفعلي على البطاقة.', auto='0' if fs.password_x else '1') }}
                   {{ slider_field('المكان عموديًا', 'password_y', fs.password_y or eff.password_y or 0, 0, 110, 0.1, 'mm', 'القيمة الحالية هي مكان العنصر الفعلي على البطاقة.', auto='0' if fs.password_y else '1') }}
                   {{ slider_field('حجم خط الباسورد', 'password_font_size', fl.password_font_size or eff.password_font_size or 0, 0, 90, 0.5, 'px', 'القيمة الحالية هي الحجم الفعلي المرسوم على البطاقة.', auto='0' if fl.password_font_size else '1') }}
-                  <label class="pr-field">لون التسميات<input class="hub-input" type="color" name="credential_label_color" value="{{ fl.credential_label_color or '#64748b' }}" data-preview="credentialLabelColor"></label>
-                  <label class="pr-field">خلفية الباسورد<input class="hub-input" type="color" name="password_surface_color" value="{{ fl.password_surface_color or fl.surface_color or '#e8f7fb' }}" data-preview="passwordSurfaceColor"></label>
+                  <label class="pr-field">{{ _('لون التسميات') }}<input class="hub-input" type="color" name="credential_label_color" value="{{ fl.credential_label_color or '#64748b' }}" data-preview="credentialLabelColor"></label>
+                  <label class="pr-field">{{ _('خلفية الباسورد') }}<input class="hub-input" type="color" name="password_surface_color" value="{{ fl.password_surface_color or fl.surface_color or '#e8f7fb' }}" data-preview="passwordSurfaceColor"></label>
                   {% set pass_bg = fl.password_surface_enabled if 'password_surface_enabled' in fl else true %}
-                  <label class="pr-check"><input type="checkbox" name="password_surface_enabled" value="1" {% if pass_bg %}checked{% endif %} data-preview-toggle="password_surface_enabled"> إظهار خلفية الباسورد<input type="hidden" name="password_surface_enabled" value="0"></label>
+                  <label class="pr-check"><input type="checkbox" name="password_surface_enabled" value="1" {% if pass_bg %}checked{% endif %} data-preview-toggle="password_surface_enabled"> {{ _('إظهار خلفية الباسورد') }}<input type="hidden" name="password_surface_enabled" value="0"></label>
                   {{ slider_field('حجم تسميات USER/PASS', 'credential_label_font_size', fl.credential_label_font_size or eff.credential_label_font_size or 0, 0, 50, 0.5, 'px', 'القيمة الحالية هي الحجم الفعلي المرسوم على البطاقة.', auto='0' if fl.credential_label_font_size else '1') }}
                   {% set credential_bg = fl.credential_background_enabled if 'credential_background_enabled' in fl else true %}
-                  <label class="pr-check"><input type="checkbox" name="credential_background_enabled" value="1" {% if credential_bg %}checked{% endif %} data-preview-toggle="credential_background_enabled"> تفعيل خلفيات النصوص<input type="hidden" name="credential_background_enabled" value="0"></label>
+                  <label class="pr-check"><input type="checkbox" name="credential_background_enabled" value="1" {% if credential_bg %}checked{% endif %} data-preview-toggle="credential_background_enabled"> {{ _('تفعيل خلفيات النصوص') }}<input type="hidden" name="credential_background_enabled" value="0"></label>
                 </div>
               </section>
 
               <section class="pr-control-section" data-layer-section="barcode">
                 <div class="pr-control-section-head">
-                  <h4><i class="fa-solid fa-qrcode"></i> QR / الباركود</h4>
-                  <small>مكان الرمز وحجمه وألوانه. قيمة الحجم 0 تعني تلقائي.</small>
+                  <h4><i class="fa-solid fa-qrcode"></i> {{ _('QR / الباركود') }}</h4>
+                  <small>{{ _('مكان الرمز وحجمه وألوانه. قيمة الحجم 0 تعني تلقائي.') }}</small>
                 </div>
                 <div class="pr-grid2">
                   {{ slider_field('المكان أفقيًا', 'qr_x', fs.qr_x or eff.qr_x or 0, 0, 110, 0.1, 'mm', 'القيمة الحالية هي مكان العنصر الفعلي على البطاقة.', auto='0' if fs.qr_x else '1') }}
                   {{ slider_field('المكان عموديًا', 'qr_y', fs.qr_y or eff.qr_y or 0, 0, 110, 0.1, 'mm', 'القيمة الحالية هي مكان العنصر الفعلي على البطاقة.', auto='0' if fs.qr_y else '1') }}
                   {{ slider_field('حجم QR', 'qr_size_pct', fl.qr_size_pct or eff.qr_size_pct or 0, 0, 60, 0.5, '%', 'القيمة الحالية هي حجم QR الفعلي المرسوم على البطاقة.', auto='0' if fl.qr_size_pct else '1') }}
-                  <label class="pr-field">لون QR<input class="hub-input" type="color" name="qr_color" value="{{ fl.qr_color or '#0f172a' }}" data-preview="qrColor"></label>
-                  <label class="pr-field">خلفية QR<input class="hub-input" type="color" name="qr_background_color" value="{{ fl.qr_background_color or '#ffffff' }}" data-preview="qrBackgroundColor"></label>
+                  <label class="pr-field">{{ _('لون QR') }}<input class="hub-input" type="color" name="qr_color" value="{{ fl.qr_color or '#0f172a' }}" data-preview="qrColor"></label>
+                  <label class="pr-field">{{ _('خلفية QR') }}<input class="hub-input" type="color" name="qr_background_color" value="{{ fl.qr_background_color or '#ffffff' }}" data-preview="qrBackgroundColor"></label>
                 </div>
               </section>
             </div>
@@ -1205,20 +1205,20 @@
 
     <section class="pr-panel pr-stage">
       <div class="pr-panel-head">
-        <h3><i class="fa-solid fa-eye"></i> معاينة البطاقة</h3>
+        <h3><i class="fa-solid fa-eye"></i> {{ _('معاينة البطاقة') }}</h3>
         <span class="hub-pill hub-pill--green" data-preview-source-badge>{{ 'صورة مرفوعة' if initial_bg_mode == 'image' else 'تصميم من النظام' }}</span>
       </div>
       {# ── شريط أقسام المحرر: انتقل من عمود المحرر ليجلس فوق معاينة
          البطاقة مباشرة — يبقى ظاهرًا دائمًا مع اللوحة الملاصقة (sticky)
          مهما تمرر المستخدم في النموذج. الأزرار type="button" خارج
          النموذج وتتحكم بنفس الألواح (data-pr-pane) عبر نفس الـ JS. #}
-      <div class="pr-tabs" role="tablist" aria-label="أقسام المحرر">
-        <button class="pr-tab is-active" type="button" role="tab" aria-selected="true" data-pr-tab="basics"><i class="fa-solid fa-shapes"></i> الأساسيات</button>
-        <button class="pr-tab" type="button" role="tab" aria-selected="false" data-pr-tab="colors"><i class="fa-solid fa-palette"></i> الألوان</button>
-        <button class="pr-tab" type="button" role="tab" aria-selected="false" data-pr-tab="pattern"><i class="fa-solid fa-swatchbook"></i> الزخرفة والخلفية</button>
-        <button class="pr-tab" type="button" role="tab" aria-selected="false" data-pr-tab="content"><i class="fa-solid fa-pen-nib"></i> النصوص</button>
-        <button class="pr-tab" type="button" role="tab" aria-selected="false" data-pr-tab="fields"><i class="fa-solid fa-arrows-up-down-left-right"></i> الحقول</button>
-        <button class="pr-tab" type="button" role="tab" aria-selected="false" data-pr-tab="layout"><i class="fa-solid fa-ruler-combined"></i> المقاسات</button>
+      <div class="pr-tabs" role="tablist" aria-label="{{ _('أقسام المحرر') }}">
+        <button class="pr-tab is-active" type="button" role="tab" aria-selected="true" data-pr-tab="basics"><i class="fa-solid fa-shapes"></i> {{ _('الأساسيات') }}</button>
+        <button class="pr-tab" type="button" role="tab" aria-selected="false" data-pr-tab="colors"><i class="fa-solid fa-palette"></i> {{ _('الألوان') }}</button>
+        <button class="pr-tab" type="button" role="tab" aria-selected="false" data-pr-tab="pattern"><i class="fa-solid fa-swatchbook"></i> {{ _('الزخرفة والخلفية') }}</button>
+        <button class="pr-tab" type="button" role="tab" aria-selected="false" data-pr-tab="content"><i class="fa-solid fa-pen-nib"></i> {{ _('النصوص') }}</button>
+        <button class="pr-tab" type="button" role="tab" aria-selected="false" data-pr-tab="fields"><i class="fa-solid fa-arrows-up-down-left-right"></i> {{ _('الحقول') }}</button>
+        <button class="pr-tab" type="button" role="tab" aria-selected="false" data-pr-tab="layout"><i class="fa-solid fa-ruler-combined"></i> {{ _('المقاسات') }}</button>
       </div>
       {# Designer preview — pure SVG mount driven by the unified
          renderer. The legacy `.pr-card-preview` HTML / CSS was
@@ -1232,14 +1232,14 @@
           <div class="pr-svg-mount" data-designer-svg-mount>
             <div class="pr-svg-empty">
               <i class="fa-solid fa-eye"></i>
-              <span>جارٍ تحضير المعاينة...</span>
+              <span>{{ _('جارٍ تحضير المعاينة...') }}</span>
             </div>
           </div>
         </div>
       </div>
       {% if preview %}
       <div class="pr-panel-body">
-        <h3 style="margin:0 0 8px">تفاصيل المعاينة</h3>
+        <h3 style="margin:0 0 8px">{{ _('تفاصيل المعاينة') }}</h3>
         <div class="hub-table-wrap" style="border:none;border-radius:0">
           <table class="hub-table" data-print-preview-summary>
             <tbody>
@@ -1263,7 +1263,7 @@
      للقوالب عبر نافذة الاختيار بالمصغرات + روابط «تعديل». #}
   <div class="hub-flex-row" style="gap:8px;flex-wrap:wrap">
     <a class="hub-btn" href="{{ url_for('radius.print_templates_stats') }}">
-      <i class="fa-solid fa-chart-column"></i> القوالب المحفوظة وسجل التصدير — صفحة الإحصائيات
+      <i class="fa-solid fa-chart-column"></i> {{ _('القوالب المحفوظة وسجل التصدير — صفحة الإحصائيات') }}
     </a>
   </div>
   </div>{# /.pr-roompanel[design] #}

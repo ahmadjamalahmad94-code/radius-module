@@ -53,7 +53,7 @@
 ) %}
   <input class="hub-input grow" type="text" name="q"
          value="{{ filters.q if filters else '' }}"
-         placeholder="بحث (اسم المدير / اليوزر / البريد)…">
+         placeholder="{{ _('بحث (اسم المدير / اليوزر / البريد)…') }}">
   {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
   {% if filters and filters.q %}
     {{ hub.btn("إعادة ضبط", icon="rotate-left", variant="ghost", size="sm",
@@ -73,13 +73,13 @@
     <table class="hub-table rep-table">
       <thead>
         <tr>
-          <th class="num" style="width:60px" data-uds-nosort>الرقم</th>
-          <th>المدير</th>
-          <th>الدور</th>
-          <th>البريد الإلكتروني</th>
-          <th data-uds-nosort>الحالة</th>
-          <th>آخر دخول</th>
-          <th>أُنشئ في</th>
+          <th class="num" style="width:60px" data-uds-nosort>{{ _('الرقم') }}</th>
+          <th>{{ _('المدير') }}</th>
+          <th>{{ _('الدور') }}</th>
+          <th>{{ _('البريد الإلكتروني') }}</th>
+          <th data-uds-nosort>{{ _('الحالة') }}</th>
+          <th>{{ _('آخر دخول') }}</th>
+          <th>{{ _('أُنشئ في') }}</th>
         </tr>
       </thead>
       <tbody>
@@ -97,7 +97,7 @@
               <span title="super_admin">{{ hub.pill("مدير عام", variant="brand") }}</span>
             {% elif r.role_name %}
               <span title="role_id: {{ r.role_id }}">{{ hub.pill(r.role_name, variant="blue") }}</span>
-            {% else %}<span class="rep-muted">بدون دور</span>{% endif %}
+            {% else %}<span class="rep-muted">{{ _('بدون دور') }}</span>{% endif %}
           </td>
           <td class="rep-mono small">
             {% if r.email %}<bdi>{{ r.email }}</bdi>
@@ -111,7 +111,7 @@
           <td class="rep-mono"
               style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
             {% if _ll %}<span class="rep-primary">{{ _ll[:10] }}</span><span class="rep-sub">{{ _ll[11:16] }}</span>
-            {% else %}<span class="rep-sub">لم يدخل قط</span>{% endif %}
+            {% else %}<span class="rep-sub">{{ _('لم يدخل قط') }}</span>{% endif %}
           </td>
           <td class="rep-mono"
               style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">

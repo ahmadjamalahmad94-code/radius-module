@@ -21,7 +21,7 @@
   <span class="sub">
     <a href="{{ url_for('radius.network_devices_list') }}"
        style="color:var(--hub-brand-ink);text-decoration:none">
-      <i class="fa-solid fa-arrow-right"></i> العودة للقائمة
+      <i class="fa-solid fa-arrow-right"></i> {{ _('العودة للقائمة') }}
     </a>
   </span>
 {% endblock %}
@@ -30,7 +30,7 @@
 
 {% set _actions %}
   <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.network_devices_list') }}">
-    <i class="fa-solid fa-arrow-right"></i> العودة للقائمة
+    <i class="fa-solid fa-arrow-right"></i> {{ _('العودة للقائمة') }}
   </a>
   <button class="hub-btn hub-btn--primary" type="submit" form="nd-form">
     <i class="fa-solid fa-{{ 'floppy-disk' if is_edit else 'plus' }}"></i>
@@ -71,9 +71,9 @@
   {% call hub.section("الهوية والربط", icon="network-wired") %}
     <div class="hub-form-row">
       <div class="hub-field">
-        <label class="hub-field-label" for="router_id">الراوتر <span class="req">*</span></label>
+        <label class="hub-field-label" for="router_id">{{ _('الراوتر') }} <span class="req">*</span></label>
         <select class="hub-select" name="router_id" id="router_id" required>
-          <option value="">-- اختر الراوتر الذي يتبع له هذا الجهاز --</option>
+          <option value="">{{ _('-- اختر الراوتر الذي يتبع له هذا الجهاز --') }}</option>
           {% for r in routers %}
             <option value="{{ r.id }}"
                     {% if device and device.router_id == r.id %}selected{% endif %}>
@@ -81,36 +81,36 @@
             </option>
           {% endfor %}
         </select>
-        <div class="hub-field-hint">الراوتر الذي يقع الجهاز في شبكته الداخلية (LAN).</div>
+        <div class="hub-field-hint">{{ _('الراوتر الذي يقع الجهاز في شبكته الداخلية (LAN).') }}</div>
       </div>
 
       <div class="hub-field">
-        <label class="hub-field-label" for="name">الاسم <span class="req">*</span></label>
+        <label class="hub-field-label" for="name">{{ _('الاسم') }} <span class="req">*</span></label>
         <input class="hub-input" type="text" name="name" id="name" required
                value="{{ device.name if device else '' }}"
-               placeholder="أكسس بوينت الطابق الأول">
-        <div class="hub-field-hint">اسم وصفي يساعدك على تمييز الجهاز.</div>
+               placeholder="{{ _('أكسس بوينت الطابق الأول') }}">
+        <div class="hub-field-hint">{{ _('اسم وصفي يساعدك على تمييز الجهاز.') }}</div>
       </div>
 
       <div class="hub-field">
-        <label class="hub-field-label" for="device_type">النوع</label>
+        <label class="hub-field-label" for="device_type">{{ _('النوع') }}</label>
         {% set _t = device.device_type if device else 'ap' %}
         <select class="hub-select" name="device_type" id="device_type">
-          <option value="ap"     {% if _t=='ap'     %}selected{% endif %}>أكسس بوينت</option>
-          <option value="router" {% if _t=='router' %}selected{% endif %}>راوتر</option>
-          <option value="switch" {% if _t=='switch' %}selected{% endif %}>سويتش</option>
-          <option value="camera" {% if _t=='camera' %}selected{% endif %}>كاميرا</option>
+          <option value="ap"     {% if _t=='ap'     %}selected{% endif %}>{{ _('أكسس بوينت') }}</option>
+          <option value="router" {% if _t=='router' %}selected{% endif %}>{{ _('راوتر') }}</option>
+          <option value="switch" {% if _t=='switch' %}selected{% endif %}>{{ _('سويتش') }}</option>
+          <option value="camera" {% if _t=='camera' %}selected{% endif %}>{{ _('كاميرا') }}</option>
           <option value="nvr"    {% if _t=='nvr'    %}selected{% endif %}>NVR</option>
-          <option value="server" {% if _t=='server' %}selected{% endif %}>سيرفر</option>
-          <option value="other"  {% if _t=='other'  %}selected{% endif %}>أخرى</option>
+          <option value="server" {% if _t=='server' %}selected{% endif %}>{{ _('سيرفر') }}</option>
+          <option value="other"  {% if _t=='other'  %}selected{% endif %}>{{ _('أخرى') }}</option>
         </select>
       </div>
 
       <div class="hub-field">
-        <label class="hub-field-label" for="location">الموقع</label>
+        <label class="hub-field-label" for="location">{{ _('الموقع') }}</label>
         <input class="hub-input" type="text" name="location" id="location"
                value="{{ device.location if device else '' }}"
-               placeholder="السطح / المكتب الرئيسي / ...">
+               placeholder="{{ _('السطح / المكتب الرئيسي / ...') }}">
       </div>
     </div>
   {% endcall %}
@@ -119,27 +119,27 @@
   {% call hub.section("الشبكة", icon="ethernet") %}
     <div class="hub-form-row">
       <div class="hub-field">
-        <label class="hub-field-label" for="ip_address">IP الجهاز</label>
+        <label class="hub-field-label" for="ip_address">{{ _('IP الجهاز') }}</label>
         <input class="hub-input mono" type="text" name="ip_address" id="ip_address" dir="ltr"
                value="{{ device.ip_address if device else '' }}"
                placeholder="192.168.1.10">
-        <div class="hub-field-hint">العنوان الداخلي في الشبكة. اتركه فارغًا إن لم يكن مثبّتًا بعد.</div>
+        <div class="hub-field-hint">{{ _('العنوان الداخلي في الشبكة. اتركه فارغًا إن لم يكن مثبّتًا بعد.') }}</div>
       </div>
 
       <div class="hub-field">
-        <label class="hub-field-label" for="mac_address">MAC (اختياري)</label>
+        <label class="hub-field-label" for="mac_address">{{ _('MAC (اختياري)') }}</label>
         <input class="hub-input mono" type="text" name="mac_address" id="mac_address" dir="ltr"
                value="{{ device.mac_address if device else '' }}"
                placeholder="AA:BB:CC:DD:EE:FF">
-        <div class="hub-field-hint">مطلوب لخدمة «تجهيز الجهاز للإدارة» (DHCP + IP Binding).</div>
+        <div class="hub-field-hint">{{ _('مطلوب لخدمة «تجهيز الجهاز للإدارة» (DHCP + IP Binding).') }}</div>
       </div>
 
       <div class="hub-field">
-        <label class="hub-field-label" for="management_port">منفذ الإدارة</label>
+        <label class="hub-field-label" for="management_port">{{ _('منفذ الإدارة') }}</label>
         <input class="hub-input" type="number" name="management_port" id="management_port"
                min="1" max="65535"
                value="{{ device.management_port if device else 80 }}">
-        <div class="hub-field-hint">80 لواجهة الويب · 443 للاتصال الآمن · 8291 لبرنامج الإدارة. يُستخدم في «الفتح عن بُعد».</div>
+        <div class="hub-field-hint">{{ _('80 لواجهة الويب · 443 للاتصال الآمن · 8291 لبرنامج الإدارة. يُستخدم في «الفتح عن بُعد».') }}</div>
       </div>
     </div>
   {% endcall %}
@@ -147,17 +147,17 @@
   {# ── 3. الملاحظات والمراقبة ───────────────────── #}
   {% call hub.section("الملاحظات والمراقبة", icon="eye") %}
     <div class="hub-field" style="margin-bottom:14px">
-      <label class="hub-field-label" for="notes">ملاحظات</label>
+      <label class="hub-field-label" for="notes">{{ _('ملاحظات') }}</label>
       <textarea class="hub-textarea" name="notes" id="notes" rows="2"
-                placeholder="أي ملاحظة تساعدك عند المراجعة — اسم الزبون، رقم تذكرة، ...">{{ device.notes if device else '' }}</textarea>
+                placeholder="{{ _('أي ملاحظة تساعدك عند المراجعة — اسم الزبون، رقم تذكرة، ...') }}">{{ device.notes if device else '' }}</textarea>
     </div>
 
     <div class="ndf-toggle-row">
       <div class="ndf-toggle-text">
         <span class="ndf-toggle-label">
-          <i class="fa-solid fa-star" style="color:#F59E0B"></i> جهاز مهم
+          <i class="fa-solid fa-star" style="color:#F59E0B"></i> {{ _('جهاز مهم') }}
         </span>
-        <span class="ndf-toggle-meta">يظهر في لوحة المتابعة وتُفعَّل تنبيهاته تلقائيًا.</span>
+        <span class="ndf-toggle-meta">{{ _('يظهر في لوحة المتابعة وتُفعَّل تنبيهاته تلقائيًا.') }}</span>
       </div>
       {{ toggle_switch(name="is_critical", id="is_critical", checked=(device.is_critical if device else False)) }}
     </div>
@@ -165,9 +165,9 @@
     <div class="ndf-toggle-row">
       <div class="ndf-toggle-text">
         <span class="ndf-toggle-label">
-          <i class="fa-solid fa-eye" style="color:#2563EB"></i> فعِّل المراقبة الدوريّة
+          <i class="fa-solid fa-eye" style="color:#2563EB"></i> {{ _('فعِّل المراقبة الدوريّة') }}
         </span>
-        <span class="ndf-toggle-meta">يفحص النظام اتصال الجهاز دوريًّا ويحدّث حالته في القائمة.</span>
+        <span class="ndf-toggle-meta">{{ _('يفحص النظام اتصال الجهاز دوريًّا ويحدّث حالته في القائمة.') }}</span>
       </div>
       {{ toggle_switch(name="watch_enabled", id="watch_enabled", checked=(device.watch_enabled if device else False)) }}
     </div>
@@ -175,15 +175,15 @@
     <div class="ndf-toggle-row">
       <div class="ndf-toggle-text">
         <span class="ndf-toggle-label">
-          <i class="fa-solid fa-bell" style="color:#DC2626"></i> أرسل تنبيهًا عند الانقطاع
+          <i class="fa-solid fa-bell" style="color:#DC2626"></i> {{ _('أرسل تنبيهًا عند الانقطاع') }}
         </span>
-        <span class="ndf-toggle-meta">يُرسَل إشعار تلجرام عند توقّف الجهاز (يحتاج إعداد تلجرام مفعّلًا).</span>
+        <span class="ndf-toggle-meta">{{ _('يُرسَل إشعار تلجرام عند توقّف الجهاز (يحتاج إعداد تلجرام مفعّلًا).') }}</span>
       </div>
       {{ toggle_switch(name="alert_enabled", id="alert_enabled", checked=(device.alert_enabled if device else False)) }}
     </div>
 
     <div class="hub-field-hint" style="margin-top:10px">
-      عند تفعيل المراقبة والتنبيهات يحفظ النظام هذه الخيارات ويستخدمها في فحص الحالة وإشعارات الانقطاع عند توفّر بيانات الاتصال.
+      {{ _('عند تفعيل المراقبة والتنبيهات يحفظ النظام هذه الخيارات ويستخدمها في فحص الحالة وإشعارات الانقطاع عند توفّر بيانات الاتصال.') }}
     </div>
   {% endcall %}
 
@@ -202,7 +202,7 @@
    can't reach the LAN (no hr-wg → LAN route configured). #}
 {% call hub.section("مراقبة من الراوتر (Netwatch)", icon="tower-broadcast") %}
   <p class="hub-text-mute" style="margin:0 0 14px;font-size:12.5px;line-height:1.8">
-    خيار متقدّم: يُفعِّل <code>/tool netwatch</code> على الراوتر بنفسه ليرسل
+    {{ _('خيار متقدّم: يُفعِّل') }} <code>/tool netwatch</code> على الراوتر بنفسه ليرسل
     تنبيهًا لـ HobeRadius فور تغيُّر حالة الجهاز (انقطاع/عودة). مفيد عندما
     لا يصل خادم الربط مباشرة للشبكة الداخلية. يعمل بالتوازي مع المراقبة الدوريّة من خادم الربط —
     أيّهما يأتي أولًا يُسجَّل، وتنبيه تلجرام يُرسل مرة واحدة خلال فترة التهدئة.
@@ -213,7 +213,7 @@
           style="display:inline">
       {{ csrf_token_input() | safe }}
       <button type="submit" class="hub-btn hub-btn--primary" style="padding:6px 14px;font-size:12.5px">
-        <i class="fa-solid fa-play"></i> فعِّل على الراوتر
+        <i class="fa-solid fa-play"></i> {{ _('فعِّل على الراوتر') }}
       </button>
     </form>
     <form method="post"
@@ -222,13 +222,13 @@
           style="display:inline">
       {{ csrf_token_input() | safe }}
       <button type="submit" class="hub-btn hub-btn--ghost" style="padding:6px 14px;font-size:12.5px">
-        <i class="fa-solid fa-stop"></i> ألغِ من الراوتر
+        <i class="fa-solid fa-stop"></i> {{ _('ألغِ من الراوتر') }}
       </button>
     </form>
   </div>
   <p class="hub-text-mute" style="margin:14px 0 0;font-size:11.5px;line-height:1.8">
     <i class="fa-solid fa-circle-info"></i>
-    يحتاج المتغيّر <code>HOBERADIUS_PUBLIC_URL</code> مضبوطًا في الخادم
+    {{ _('يحتاج المتغيّر') }} <code>HOBERADIUS_PUBLIC_URL</code> مضبوطًا في الخادم
     (مثل <code dir="ltr">https://radius.example.com</code>) ليصل الـ webhook
     من الراوتر بنجاح.
   </p>

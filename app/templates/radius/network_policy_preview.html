@@ -602,11 +602,11 @@
 {% set _actions %}
   <a class="hub-btn hub-btn--secondary"
      href="{{ url_for('radius.npc_' ~ service.key ~ '_list') }}">
-    <i class="fa-solid fa-arrow-right"></i> رجوع للقائمة
+    <i class="fa-solid fa-arrow-right"></i> {{ _('رجوع للقائمة') }}
   </a>
   <a class="hub-btn hub-btn--secondary"
      href="{{ url_for('radius.npc_' ~ service.key ~ '_edit', policy_id=policy.id) }}">
-    <i class="fa-regular fa-pen-to-square"></i> تحرير السياسة
+    <i class="fa-regular fa-pen-to-square"></i> {{ _('تحرير السياسة') }}
   </a>
   <form method="POST"
         action="{{ url_for('radius.npc_' ~ service.key ~ '_preview', policy_id=policy.id) }}"
@@ -614,7 +614,7 @@
     {{ csrf_token_input() | safe }}
     <button class="hub-btn hub-btn--primary" type="submit"
       {% if not plan.can_apply %}disabled{% endif %}>
-      <i class="fa-solid fa-arrows-rotate"></i> توليد المعاينة وحفظها
+      <i class="fa-solid fa-arrows-rotate"></i> {{ _('توليد المعاينة وحفظها') }}
     </button>
   </form>
 {% endset %}
@@ -646,12 +646,12 @@
           <span class="hub-pill hub-pill--blue"
                 data-test="npc-status-prev">
             <i class="fa-regular fa-circle-check"></i>
-            الخطّة سليمة
+            {{ _('الخطّة سليمة') }}
           </span>
         {% else %}
           <span class="hub-pill hub-pill--red">
             <i class="fa-solid fa-ban"></i>
-            الخطّة محظورة — راجع الأخطاء
+            {{ _('الخطّة محظورة — راجع الأخطاء') }}
           </span>
         {% endif %}
 
@@ -660,31 +660,31 @@
           <span class="hub-pill hub-pill--red"
                 data-test="npc-risk-pill">
             <i class="fa-solid fa-triangle-exclamation"></i>
-            مستوى الخطر: حرج
+            {{ _('مستوى الخطر: حرج') }}
           </span>
         {% elif risk == 'high' %}
           <span class="hub-pill hub-pill--red"
                 data-test="npc-risk-pill">
             <i class="fa-solid fa-triangle-exclamation"></i>
-            مستوى الخطر: مرتفع
+            {{ _('مستوى الخطر: مرتفع') }}
           </span>
         {% elif risk == 'medium' %}
           <span class="hub-pill hub-pill--amber"
                 data-test="npc-risk-pill">
             <i class="fa-solid fa-circle-exclamation"></i>
-            مستوى الخطر: متوسط
+            {{ _('مستوى الخطر: متوسط') }}
           </span>
         {% else %}
           <span class="hub-pill hub-pill--green"
                 data-test="npc-risk-pill">
             <i class="fa-solid fa-shield"></i>
-            مستوى الخطر: منخفض
+            {{ _('مستوى الخطر: منخفض') }}
           </span>
         {% endif %}
 
         <span class="hub-pill hub-pill--grey">
           <i class="fa-solid fa-vial-virus"></i>
-          معاينة فقط — لم يتم التطبيق على الراوتر
+          {{ _('معاينة فقط — لم يتم التطبيق على الراوتر') }}
         </span>
       </div>
 
@@ -698,7 +698,7 @@
         {{ intelligence.impact.summary_ar }}
       </p>
       <p class="npc-score-note" style="margin-top:6px;">
-        تقييم استشاري فقط — راجع التفاصيل أدناه قبل التطبيق.
+        {{ _('تقييم استشاري فقط — راجع التفاصيل أدناه قبل التطبيق.') }}
       </p>
     </div>
   {% endcall %}
@@ -712,13 +712,13 @@
         <span class="hub-pill hub-pill--green"
               data-test="npc-readiness-ready">
           <i class="fa-solid fa-shield-check"></i>
-          جاهزة (وفق المعايير الحاليّة)
+          {{ _('جاهزة (وفق المعايير الحاليّة)') }}
         </span>
       {% else %}
         <span class="hub-pill hub-pill--red"
               data-test="npc-readiness-not-ready">
           <i class="fa-solid fa-shield-halved"></i>
-          غير جاهزة — راجع الموانع
+          {{ _('غير جاهزة — راجع الموانع') }}
         </span>
       {% endif %}
     </div>
@@ -731,7 +731,7 @@
            data-test="npc-readiness-blockers">
         <strong style="color:#b91c1c; font-size:13.5px;">
           <i class="fa-solid fa-ban"></i>
-          موانع التنفيذ
+          {{ _('موانع التنفيذ') }}
         </strong>
         <ul style="margin:6px 0 0;
                    padding-inline-start:22px;
@@ -752,7 +752,7 @@
            data-test="npc-readiness-warnings">
         <strong style="color:#b45309; font-size:13.5px;">
           <i class="fa-solid fa-triangle-exclamation"></i>
-          تنبيهات
+          {{ _('تنبيهات') }}
         </strong>
         <ul style="margin:6px 0 0;
                    padding-inline-start:22px;
@@ -794,7 +794,7 @@
                 padding-top:10px;
                 border-top:1px dashed #EEEDF3;">
       <span style="font-size:12.5px; color:#4b5563;">
-        صلاحية التنفيذ المطلوبة:
+        {{ _('صلاحية التنفيذ المطلوبة:') }}
         <code style="background:#F4F1FE;
                      color:#4036A6;
                      padding:1px 6px; border-radius:4px;">
@@ -807,7 +807,7 @@
          style="margin-inline-start:auto;"
          data-test="npc-changes-link">
         <i class="fa-regular fa-rectangle-list"></i>
-        سجل التغييرات
+        {{ _('سجل التغييرات') }}
       </a>
     </div>
 
@@ -829,7 +829,7 @@
         <strong style="font-size:13.5px; color:#1F2937;">
           <i class="fa-solid fa-shield-check"
              style="color:#6B5AED;"></i>
-          تنفيذ آمن — مع موافقات صريحة
+          {{ _('تنفيذ آمن — مع موافقات صريحة') }}
         </strong>
 
         {% set CONFIRM_LABELS = {
@@ -848,7 +848,7 @@
         {% if rdy.required_confirmations %}
           <p style="font-size:12.5px; color:#4b5563;
                     margin: 8px 0 10px;">
-            عَلِّم كل موافقة مطلوبة قبل التنفيذ:
+            {{ _('عَلِّم كل موافقة مطلوبة قبل التنفيذ:') }}
           </p>
           <div style="display:grid; gap:8px;"
                data-test="npc-confirm-grid">
@@ -873,14 +873,14 @@
           <label style="font-size:12.5px; color:#4b5563;
                         display:flex; align-items:center;
                         gap:6px;">
-            وضع التنفيذ:
+            {{ _('وضع التنفيذ:') }}
             <select name="execution_mode"
                     style="padding:4px 8px;
                            border:1px solid #E3E1EC;
                            border-radius:6px; font-size:12px;">
-              <option value="full">كامل (full)</option>
-              <option value="canary">تدريجي (canary)</option>
-              <option value="staged">مرحلتين (staged)</option>
+              <option value="full">{{ _('كامل (full)') }}</option>
+              <option value="canary">{{ _('تدريجي (canary)') }}</option>
+              <option value="staged">{{ _('مرحلتين (staged)') }}</option>
             </select>
           </label>
 
@@ -893,7 +893,7 @@
                          opacity:0.55; cursor:not-allowed;
                          {% endif %}">
             <i class="fa-solid fa-shield-halved"></i>
-            تطبيق آمن
+            {{ _('تطبيق آمن') }}
           </button>
         </div>
 
@@ -901,7 +901,7 @@
           <p style="margin-top:10px;
                     color:#b91c1c; font-size:12px;">
             <i class="fa-solid fa-ban"></i>
-            عالج الموانع أعلاه قبل التنفيذ.
+            {{ _('عالج الموانع أعلاه قبل التنفيذ.') }}
           </p>
         {% endif %}
       </form>
@@ -1001,7 +1001,7 @@
                        padding:6px 12px; border-radius:8px;
                        font-size:12px; cursor:pointer;
                        white-space:nowrap;">
-          <i class="fa-regular fa-copy"></i> نسخ
+          <i class="fa-regular fa-copy"></i> {{ _('نسخ') }}
         </button>
       </div>
     {% endfor %}
@@ -1016,7 +1016,7 @@
     <div data-test="npc-section-remote-access-urls">
     <p style="margin:0 0 14px; color:#6b7280;
               font-size:13px;">
-      هذه روابط <strong>عامّة</strong> تمرّ عبر خادم الربط الذي يحوّل
+      {{ _('هذه روابط') }} <strong>{{ _('عامّة') }}</strong> تمرّ عبر خادم الربط الذي يحوّل
       الاتصال إلى الراوتر عبر النفق الآمن. تعمل من أيّ مكان في
       العالم — مفيدة حين تكون خارج الشبكة المحلّية للراوتر.
     </p>
@@ -1069,7 +1069,7 @@
                        padding:6px 12px; border-radius:8px;
                        font-size:12px; cursor:pointer;
                        white-space:nowrap;">
-          <i class="fa-regular fa-copy"></i> نسخ
+          <i class="fa-regular fa-copy"></i> {{ _('نسخ') }}
         </button>
       </div>
     {% endfor %}
@@ -1080,14 +1080,14 @@
                 border-radius:8px; font-size:12px;
                 color:#78350F;">
       <i class="fa-solid fa-shield-halved"></i>
-      ⚠️ هذه الروابط <strong>متاحة على الإنترنت العامّ</strong>.
+      {{ _('⚠️ هذه الروابط') }} <strong>{{ _('متاحة على الإنترنت العامّ') }}</strong>.
       تأكّد من أنّ:
       <ul style="margin:6px 0 0 18px; padding:0;">
-        <li>كلمة مرور الراوتر قوية ولم تتسرّب.</li>
+        <li>{{ _('كلمة مرور الراوتر قوية ولم تتسرّب.') }}</li>
         <li>قائمة العناوين المسموحة على الراوتر
           ({{ policy.source_address_list or 'غير محدّدة' }})
           تشمل عنوان خادم الربط وواجهة النفق حتى يعمل التحويل.</li>
-        <li>صلاحية apply لا تُمنح إلا لمن يحتاجها فعلاً.</li>
+        <li>{{ _('صلاحية apply لا تُمنح إلا لمن يحتاجها فعلاً.') }}</li>
       </ul>
     </div>
     </div>
@@ -1101,60 +1101,60 @@
   <div class="npc-drawer-overlay" id="npc-drawer-overlay"
        onclick="npcCloseDrawer()"></div>
 
-  <nav class="npc-side-strip" aria-label="تفاصيل وشروحات">
+  <nav class="npc-side-strip" aria-label="{{ _('تفاصيل وشروحات') }}">
     <button type="button" class="npc-side-strip__btn"
             onclick="npcOpenDrawer('npc-section-impact')"
-            title="ماذا سيحدث؟">
+            title="{{ _('ماذا سيحدث؟') }}">
       <i class="fa-regular fa-comment-dots"></i>
-      <span class="npc-tip">ماذا سيحدث؟</span>
+      <span class="npc-tip">{{ _('ماذا سيحدث؟') }}</span>
     </button>
     <button type="button" class="npc-side-strip__btn"
             onclick="npcOpenDrawer('npc-section-blast')"
-            title="حجم التأثير">
+            title="{{ _('حجم التأثير') }}">
       <i class="fa-solid fa-radiation"></i>
-      <span class="npc-tip">حجم التأثير</span>
+      <span class="npc-tip">{{ _('حجم التأثير') }}</span>
     </button>
     <button type="button" class="npc-side-strip__btn"
             onclick="npcOpenDrawer('npc-section-conflicts')"
-            title="التعارضات">
+            title="{{ _('التعارضات') }}">
       <i class="fa-solid fa-triangle-exclamation"></i>
-      <span class="npc-tip">التعارضات</span>
+      <span class="npc-tip">{{ _('التعارضات') }}</span>
     </button>
     <button type="button" class="npc-side-strip__btn"
             onclick="npcOpenDrawer('npc-section-deps')"
-            title="الخدمات المتأثّرة">
+            title="{{ _('الخدمات المتأثّرة') }}">
       <i class="fa-solid fa-diagram-project"></i>
-      <span class="npc-tip">الخدمات المتأثّرة</span>
+      <span class="npc-tip">{{ _('الخدمات المتأثّرة') }}</span>
     </button>
     <button type="button" class="npc-side-strip__btn"
             onclick="npcOpenDrawer('npc-section-recs')"
-            title="اقتراحات ذكيّة">
+            title="{{ _('اقتراحات ذكيّة') }}">
       <i class="fa-solid fa-lightbulb"></i>
-      <span class="npc-tip">اقتراحات ذكيّة</span>
+      <span class="npc-tip">{{ _('اقتراحات ذكيّة') }}</span>
     </button>
     <button type="button" class="npc-side-strip__btn"
             onclick="npcOpenDrawer('npc-section-canary')"
-            title="خطة التطبيق الآمنة">
+            title="{{ _('خطة التطبيق الآمنة') }}">
       <i class="fa-solid fa-shield-halved"></i>
-      <span class="npc-tip">خطة التطبيق الآمنة</span>
+      <span class="npc-tip">{{ _('خطة التطبيق الآمنة') }}</span>
     </button>
     <button type="button" class="npc-side-strip__btn"
             onclick="npcOpenDrawer('npc-section-rollback')"
-            title="إمكانية التراجع">
+            title="{{ _('إمكانية التراجع') }}">
       <i class="fa-solid fa-rotate-left"></i>
-      <span class="npc-tip">إمكانية التراجع</span>
+      <span class="npc-tip">{{ _('إمكانية التراجع') }}</span>
     </button>
     <button type="button" class="npc-side-strip__btn"
             onclick="npcOpenDrawer('npc-section-glossary')"
-            title="شرح المصطلحات">
+            title="{{ _('شرح المصطلحات') }}">
       <i class="fa-solid fa-book-open"></i>
-      <span class="npc-tip">شرح المصطلحات</span>
+      <span class="npc-tip">{{ _('شرح المصطلحات') }}</span>
     </button>
     <button type="button" class="npc-side-strip__btn"
             onclick="npcOpenDrawer('npc-section-script')"
-            title="السكربت الخام">
+            title="{{ _('السكربت الخام') }}">
       <i class="fa-solid fa-file-code"></i>
-      <span class="npc-tip">السكربت الخام</span>
+      <span class="npc-tip">{{ _('السكربت الخام') }}</span>
     </button>
   </nav>
 
@@ -1163,10 +1163,10 @@
     <div class="npc-drawer__head">
       <i class="fa-solid fa-circle-info"
          style="color:#6B5AED; font-size:18px;"></i>
-      <h2 class="npc-drawer__title">تفاصيل وشروحات</h2>
+      <h2 class="npc-drawer__title">{{ _('تفاصيل وشروحات') }}</h2>
       <button type="button" class="npc-drawer__close"
               onclick="npcCloseDrawer()"
-              aria-label="إغلاق">
+              aria-label="{{ _('إغلاق') }}">
         <i class="fa-solid fa-xmark"></i>
       </button>
     </div>
@@ -1178,7 +1178,7 @@
       <span class="npc-sec-num">2</span>
       <h2><i class="fa-regular fa-comment-dots"
              style="color:#6B5AED;"></i>
-        ماذا سيحدث؟</h2>
+        {{ _('ماذا سيحدث؟') }}</h2>
     </div>
 
     <div class="npc-impact-quote">
@@ -1209,25 +1209,25 @@
       <span class="npc-sec-num">3</span>
       <h2><i class="fa-solid fa-users-viewfinder"
              style="color:#6B5AED;"></i>
-        حجم التأثير المتوقَّع</h2>
+        {{ _('حجم التأثير المتوقَّع') }}</h2>
     </div>
 
     {% set b = intelligence.blast %}
     <div class="npc-blast-grid" style="margin-bottom: 12px;">
       <div class="npc-blast-tile">
         <div class="n">{{ b.affected_router_count }}</div>
-        <div class="l">راوتر متأثّر</div>
+        <div class="l">{{ _('راوتر متأثّر') }}</div>
       </div>
       {% if b.estimated_user_count is not none %}
         <div class="npc-blast-tile">
           <div class="n">{{ b.estimated_user_count }}</div>
-          <div class="l">مستخدمون (تقدير)</div>
+          <div class="l">{{ _('مستخدمون (تقدير)') }}</div>
         </div>
       {% endif %}
       {% if b.estimated_profile_count is not none %}
         <div class="npc-blast-tile">
           <div class="n">{{ b.estimated_profile_count }}</div>
-          <div class="l">ملفّات التعريف</div>
+          <div class="l">{{ _('ملفّات التعريف') }}</div>
         </div>
       {% endif %}
       <div class="npc-blast-tile">
@@ -1237,7 +1237,7 @@
           {% elif b.blast_radius == 'large' %}واسع
           {% else %}حرج{% endif %}
         </span>
-        <div class="l" style="margin-top:6px;">نطاق التأثير</div>
+        <div class="l" style="margin-top:6px;">{{ _('نطاق التأثير') }}</div>
       </div>
     </div>
 
@@ -1257,14 +1257,14 @@
       <span class="npc-sec-num">4</span>
       <h2><i class="fa-solid fa-bolt"
              style="color:#6B5AED;"></i>
-        التعارضات مع السياسات الأخرى</h2>
+        {{ _('التعارضات مع السياسات الأخرى') }}</h2>
     </div>
 
     {% set c = intelligence.conflicts %}
     {% if not c.has_conflicts %}
       <div class="npc-empty-inline" data-test="npc-conflicts-empty">
         <i class="fa-regular fa-circle-check"></i>
-        لم يتم اكتشاف تعارضات.
+        {{ _('لم يتم اكتشاف تعارضات.') }}
       </div>
     {% else %}
       {% for conflict in c.conflicts %}
@@ -1278,17 +1278,17 @@
             {% if conflict.severity == 'high' %}
               <span class="hub-pill hub-pill--red">
                 <i class="fa-solid fa-triangle-exclamation"></i>
-                خطر مرتفع
+                {{ _('خطر مرتفع') }}
               </span>
             {% elif conflict.severity == 'medium' %}
               <span class="hub-pill hub-pill--amber">
                 <i class="fa-solid fa-circle-exclamation"></i>
-                خطر متوسط
+                {{ _('خطر متوسط') }}
               </span>
             {% else %}
               <span class="hub-pill hub-pill--green">
                 <i class="fa-solid fa-circle-info"></i>
-                ملاحظة
+                {{ _('ملاحظة') }}
               </span>
             {% endif %}
             <span style="color:#6b7280; font-size:12px;
@@ -1315,14 +1315,14 @@
       <span class="npc-sec-num">5</span>
       <h2><i class="fa-solid fa-diagram-project"
              style="color:#6B5AED;"></i>
-        الخدمات التي قد تتأثَّر</h2>
+        {{ _('الخدمات التي قد تتأثَّر') }}</h2>
     </div>
 
     {% set d = intelligence.dependencies %}
     {% if not d.dependencies %}
       <div class="npc-empty-inline" data-test="npc-deps-empty">
         <i class="fa-regular fa-circle-check"></i>
-        لا توجد خدمات معروفة متوقَّع تأثرها بهذه السياسة.
+        {{ _('لا توجد خدمات معروفة متوقَّع تأثرها بهذه السياسة.') }}
       </div>
     {% else %}
       <div class="npc-dep-grid">
@@ -1369,14 +1369,14 @@
       <span class="npc-sec-num">6</span>
       <h2><i class="fa-solid fa-wand-magic-sparkles"
              style="color:#6B5AED;"></i>
-        اقتراحات ذكيّة</h2>
+        {{ _('اقتراحات ذكيّة') }}</h2>
     </div>
 
     {% set r = intelligence.recommendations %}
     {% if not r.recommendations %}
       <div class="npc-empty-inline" data-test="npc-recs-empty">
         <i class="fa-regular fa-circle-check"></i>
-        لا توجد توصيات إضافيّة حالياً — السياسة تبدو سليمة.
+        {{ _('لا توجد توصيات إضافيّة حالياً — السياسة تبدو سليمة.') }}
       </div>
     {% else %}
       {% for rec in r.recommendations %}
@@ -1405,13 +1405,13 @@
       <span class="npc-sec-num">7</span>
       <h2><i class="fa-solid fa-route"
              style="color:#6B5AED;"></i>
-        خطّة تطبيق آمنة مقترحة</h2>
+        {{ _('خطّة تطبيق آمنة مقترحة') }}</h2>
     </div>
 
     {% set cn = intelligence.canary %}
     <div class="npc-canary-banner">
       <i class="fa-solid fa-circle-info"></i>
-      اقتراح فقط — لا يتم تنفيذ أي شيء تلقائياً.
+      {{ _('اقتراح فقط — لا يتم تنفيذ أي شيء تلقائياً.') }}
       <span style="margin-inline-start:auto; font-weight:700;">
         {% if cn.recommended_strategy == 'full' %}تطبيق مباشر
         {% elif cn.recommended_strategy == 'staged' %}تطبيق على مرحلتين
@@ -1447,7 +1447,7 @@
       <span class="npc-sec-num">8</span>
       <h2><i class="fa-solid fa-rotate-left"
              style="color:#6B5AED;"></i>
-        إمكانية التراجع</h2>
+        {{ _('إمكانية التراجع') }}</h2>
     </div>
 
     {% if intelligence.impact.rollback_available %}
@@ -1478,7 +1478,7 @@
       <span class="npc-sec-num">9</span>
       <h2><i class="fa-regular fa-circle-question"
              style="color:#6B5AED;"></i>
-        شرح مبسَّط للمصطلحات</h2>
+        {{ _('شرح مبسَّط للمصطلحات') }}</h2>
     </div>
     <p class="npc-section-sub">
       {{ intelligence.beginner.simple_ar }}
@@ -1488,7 +1488,7 @@
     {% if not g %}
       <div class="npc-empty-inline">
         <i class="fa-regular fa-circle-check"></i>
-        لا توجد مصطلحات إضافية تحتاج شرحاً لهذه السياسة.
+        {{ _('لا توجد مصطلحات إضافية تحتاج شرحاً لهذه السياسة.') }}
       </div>
     {% else %}
       <details>
@@ -1523,7 +1523,7 @@
         <strong style="font-size:12.5px; color:#374151;">
           <i class="fa-solid fa-lightbulb"
              style="color:#b45309;"></i>
-          ملاحظات للمشغّل
+          {{ _('ملاحظات للمشغّل') }}
         </strong>
         <ul style="margin:6px 0 0; padding-inline-start:20px;
                     font-size:12.5px; color:#4b5563;
@@ -1543,7 +1543,7 @@
       <span class="npc-sec-num">10</span>
       <i class="fa-solid fa-file-code"
          style="color:#6B5AED;"></i>
-      سكربت الراوتر (للمتقدّمين)
+      {{ _('سكربت الراوتر (للمتقدّمين)') }}
       <span style="margin-inline-start:10px; color:#6b7280;
                    font-size:12px; font-weight:500;">
         {{ summary.command_count }} سطر فعّال ·
@@ -1570,14 +1570,14 @@
         <div style="display:flex; gap:6px; align-items:center;
                     flex-wrap:wrap; margin-bottom:10px;">
           <strong style="font-size:13px;">
-            سكربت forward
+            {{ _('سكربت forward') }}
           </strong>
           <span style="margin-inline-start:auto;
                        display:flex; gap:6px;">
             <button class="hub-btn hub-btn--secondary" type="button"
               onclick="navigator.clipboard.writeText(document.getElementById('npc-forward').textContent); this.innerText='تم النسخ ✓';">
               <i class="fa-regular fa-clipboard"></i>
-              نسخ
+              {{ _('نسخ') }}
             </button>
             <a class="hub-btn hub-btn--secondary"
                href="{{ url_for('radius.npc_' ~ service.key ~ '_preview_download', policy_id=policy.id) }}"
@@ -1594,13 +1594,13 @@
           <div style="display:flex; gap:6px; align-items:center;
                       flex-wrap:wrap; margin: 14px 0 10px;">
             <strong style="font-size:13px;">
-              سكربت rollback (التراجع)
+              {{ _('سكربت rollback (التراجع)') }}
             </strong>
             <span style="margin-inline-start:auto;">
               <button class="hub-btn hub-btn--secondary" type="button"
                 onclick="navigator.clipboard.writeText(document.getElementById('npc-rollback').textContent); this.innerText='تم النسخ ✓';">
                 <i class="fa-regular fa-clipboard"></i>
-                نسخ
+                {{ _('نسخ') }}
               </button>
             </span>
           </div>

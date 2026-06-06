@@ -38,7 +38,7 @@
     {% if batch %}
       <span class="hub-pill hub-pill--green">{{ cards|length }} / {{ batch.count_to_make or batch.created_count or '?' }}</span>
     {% else %}
-      <span class="hub-pill">اختر حزمة لرؤية بطاقات حقيقية</span>
+      <span class="hub-pill">{{ _('اختر حزمة لرؤية بطاقات حقيقية') }}</span>
     {% endif %}
   </header>
 
@@ -54,7 +54,7 @@
           {{ entry.svg | safe }}
         </article>
       {% else %}
-        <div class="hub-empty">هذه الحزمة لا تحتوي بطاقات بعد. ولّد البطاقات داخل الحزمة أولًا.</div>
+        <div class="hub-empty">{{ _('هذه الحزمة لا تحتوي بطاقات بعد. ولّد البطاقات داخل الحزمة أولًا.') }}</div>
       {% endfor %}
     </div>
 

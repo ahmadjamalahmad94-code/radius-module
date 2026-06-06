@@ -549,16 +549,16 @@
     <div class="users-mega-hero-text">
       <span class="hub-hero-icon"><i class="fa-solid fa-users"></i></span>
       <div>
-        <h1 class="users-mega-hero-title">المشتركون</h1>
-        <div class="users-mega-hero-sub">إدارة كاملة لمستخدمي الراديوس — بحث، فلترة، تعديل، تعطيل، أرشفة</div>
+        <h1 class="users-mega-hero-title">{{ _('المشتركون') }}</h1>
+        <div class="users-mega-hero-sub">{{ _('إدارة كاملة لمستخدمي الراديوس — بحث، فلترة، تعديل، تعطيل، أرشفة') }}</div>
       </div>
     </div>
     <div class="users-mega-hero-actions">
       <a class="hub-btn hub-btn--primary" href="{{ url_for('radius.users_new') }}">
-        <i class="fa-solid fa-user-plus"></i> إضافة مشترك
+        <i class="fa-solid fa-user-plus"></i> {{ _('إضافة مشترك') }}
       </a>
       <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.online_list') }}">
-        <i class="fa-solid fa-wifi"></i> المتصلون الآن
+        <i class="fa-solid fa-wifi"></i> {{ _('المتصلون الآن') }}
       </a>
     </div>
   </header>
@@ -582,30 +582,30 @@
        • حقل q يحتفظ باسمه وبخاصية data-users-live-search كما هي —
          الفلترة الفورية وإرسال البحث للخادم (Enter/تطبيق) بلا تغيير.
        • عناصر النطاق والتاريخ بلا name فلا تُرسل للخادم (عميل فقط). #}
-  <label class="usrch-scope-label" for="usrch-scope">البحث بواسطة</label>
+  <label class="usrch-scope-label" for="usrch-scope">{{ _('البحث بواسطة') }}</label>
   <select class="hub-select" id="usrch-scope" data-users-search-scope
-          aria-label="البحث بواسطة">
-    <option value="">كل الأعمدة</option>
-    <option value="user">اليوزر</option>
-    <option value="name">الاسم</option>
-    <option value="mobile">الجوال</option>
-    <option value="created">تاريخ الإنشاء</option>
+          aria-label="{{ _('البحث بواسطة') }}">
+    <option value="">{{ _('كل الأعمدة') }}</option>
+    <option value="user">{{ _('اليوزر') }}</option>
+    <option value="name">{{ _('الاسم') }}</option>
+    <option value="mobile">{{ _('الجوال') }}</option>
+    <option value="created">{{ _('تاريخ الإنشاء') }}</option>
   </select>
   <div class="usrch-box grow" data-users-search-box>
     <i class="fa-solid fa-magnifying-glass usrch-icon" aria-hidden="true"></i>
     <input class="hub-input usrch-input" type="text" name="q" data-users-live-search
-           placeholder="بحث بالاسم أو اسم الدخول أو الجوال..." value="{{ q or '' }}">
+           placeholder="{{ _('بحث بالاسم أو اسم الدخول أو الجوال...') }}" value="{{ q or '' }}">
     <button type="button" class="usrch-clear" data-users-search-clear
-            title="مسح البحث" aria-label="مسح البحث" hidden>
+            title="{{ _('مسح البحث') }}" aria-label="{{ _('مسح البحث') }}" hidden>
       <i class="fa-solid fa-xmark"></i>
     </button>
   </div>
   <div class="usrch-dates" data-users-date-range hidden>
-    <label class="usrch-date-label">من
-      <input class="hub-input usrch-date" type="date" data-users-date-from aria-label="تاريخ الإنشاء من">
+    <label class="usrch-date-label">{{ _('من') }}
+      <input class="hub-input usrch-date" type="date" data-users-date-from aria-label="{{ _('تاريخ الإنشاء من') }}">
     </label>
-    <label class="usrch-date-label">إلى
-      <input class="hub-input usrch-date" type="date" data-users-date-to aria-label="تاريخ الإنشاء إلى">
+    <label class="usrch-date-label">{{ _('إلى') }}
+      <input class="hub-input usrch-date" type="date" data-users-date-to aria-label="{{ _('تاريخ الإنشاء إلى') }}">
     </label>
   </div>
   {# تعريب قيم الحالة الخام للعرض؛ القيمة المُرسَلة للخادم تبقى الخام (enabled…) #}
@@ -614,19 +614,19 @@
     'suspended': 'موقوف', 'pending': 'قيد الانتظار'
   } %}
   <select class="hub-select" name="status">
-    <option value="">كل الحالات</option>
+    <option value="">{{ _('كل الحالات') }}</option>
     {% for s in statuses %}
       <option value="{{ s }}" {% if status == s %}selected{% endif %}>{{ _status_ar.get(s, s) }}</option>
     {% endfor %}
   </select>
   <select class="hub-select" name="plan_id">
-    <option value="">كل الباقات</option>
+    <option value="">{{ _('كل الباقات') }}</option>
     {% for p in plans %}
       <option value="{{ p.id }}" {% if plan_id == p.id %}selected{% endif %}>{{ p.name }}</option>
     {% endfor %}
   </select>
   <select class="hub-select" name="group_id">
-    <option value="">كل المجموعات</option>
+    <option value="">{{ _('كل المجموعات') }}</option>
     {% for g in subscriber_groups or [] %}
       <option value="{{ g.id }}" {% if group_id == g.id %}selected{% endif %}>{{ g.name }}</option>
     {% endfor %}
@@ -645,8 +645,8 @@
   <div class="usq-picked">
     <span class="usq-picked-icon"><i class="fa-solid fa-user-check"></i></span>
     <div>
-      <div class="usq-picked-title" data-users-picked-title>اختر مشتركًا واحدًا</div>
-      <div class="usq-picked-sub" data-users-picked-sub>ستظهر الإجراءات المتاحة فقط لهذا المشترك.</div>
+      <div class="usq-picked-title" data-users-picked-title>{{ _('اختر مشتركًا واحدًا') }}</div>
+      <div class="usq-picked-sub" data-users-picked-sub>{{ _('ستظهر الإجراءات المتاحة فقط لهذا المشترك.') }}</div>
     </div>
   </div>
   <style>
@@ -667,58 +667,58 @@
   </style>
   <div class="usq-actions">
     <a class="hub-btn hub-btn--primary hub-btn--sm" data-single-action data-usq-link="profile" href="#">
-      <i class="fa-solid fa-id-badge"></i> الملف
+      <i class="fa-solid fa-id-badge"></i> {{ _('الملف') }}
     </a>
     <a class="hub-btn hub-btn--secondary hub-btn--sm" data-single-action data-usq-link="edit" href="#">
-      <i class="fa-solid fa-pen"></i> تعديل
+      <i class="fa-solid fa-pen"></i> {{ _('تعديل') }}
     </a>
     <a class="hub-btn hub-btn--secondary hub-btn--sm" data-single-action data-usq-link="finance" href="#">
-      <i class="fa-solid fa-wallet"></i> الدفعات والسلف
+      <i class="fa-solid fa-wallet"></i> {{ _('الدفعات والسلف') }}
     </a>
     <details class="usq-menu" data-usq-menu>
       <summary class="hub-btn hub-btn--secondary hub-btn--sm">
-        <i class="fa-solid fa-bolt"></i> التفعيل والرصيد <i class="fa-solid fa-chevron-down usq-caret"></i>
+        <i class="fa-solid fa-bolt"></i> {{ _('التفعيل والرصيد') }} <i class="fa-solid fa-chevron-down usq-caret"></i>
       </summary>
       <div class="usq-menu-panel">
         {# data-multi-ok: كل إجراءات التفعيل والرصيد تدعم التحديد المتعدد —
            النافذة تعرض المستلمين وتُرسل لمسار الدفعة (القيمة لكل مشترك). #}
         <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-multi-ok data-usq-open="extend">
-          <i class="fa-solid fa-clock"></i> إضافة وقت
+          <i class="fa-solid fa-clock"></i> {{ _('إضافة وقت') }}
         </button>
         <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-multi-ok data-usq-open="quota">
-          <i class="fa-solid fa-gauge-high"></i> إضافة كوتة
+          <i class="fa-solid fa-gauge-high"></i> {{ _('إضافة كوتة') }}
         </button>
         <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-multi-ok data-usq-open="quota-reset">
-          <i class="fa-solid fa-rotate-left"></i> استعادة الكوتة اليومية
+          <i class="fa-solid fa-rotate-left"></i> {{ _('استعادة الكوتة اليومية') }}
         </button>
         <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-multi-ok data-usq-open="balance">
-          <i class="fa-solid fa-coins"></i> إضافة رصيد نقدي
+          <i class="fa-solid fa-coins"></i> {{ _('إضافة رصيد نقدي') }}
         </button>
         <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-multi-ok data-usq-open="payment">
-          <i class="fa-solid fa-money-bill-wave"></i> دفعة نقدية
+          <i class="fa-solid fa-money-bill-wave"></i> {{ _('دفعة نقدية') }}
         </button>
         <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-multi-ok data-usq-open="loan">
-          <i class="fa-solid fa-hand-holding-dollar"></i> إضافة سلفة
+          <i class="fa-solid fa-hand-holding-dollar"></i> {{ _('إضافة سلفة') }}
         </button>
       </div>
     </details>
     <details class="usq-menu" data-usq-menu>
       <summary class="hub-btn hub-btn--secondary hub-btn--sm">
-        <i class="fa-solid fa-sliders"></i> إجراءات إدارية <i class="fa-solid fa-chevron-down usq-caret"></i>
+        <i class="fa-solid fa-sliders"></i> {{ _('إجراءات إدارية') }} <i class="fa-solid fa-chevron-down usq-caret"></i>
       </summary>
       <div class="usq-menu-panel">
         {# data-multi-ok: إرسال الرسائل يدعم التحديد المتعدد فلا يُعطَّل #}
         <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-multi-ok data-usq-open="sms">
-          <i class="fa-solid fa-paper-plane"></i> إرسال رسالة قصيرة
+          <i class="fa-solid fa-paper-plane"></i> {{ _('إرسال رسالة قصيرة') }}
         </button>
         <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-single-action data-usq-open="plan">
-          <i class="fa-solid fa-right-left"></i> تغيير العرض
+          <i class="fa-solid fa-right-left"></i> {{ _('تغيير العرض') }}
         </button>
         {# data-multi-ok: مسار الفصل يقبل أصلًا حقول username متكررة (getlist) #}
         <form method="post" data-single-action data-multi-ok data-usq-form="disconnect" action="{{ url_for('radius.online_disconnect') }}">
           <input type="hidden" name="username" data-usq-field="username">
           <button class="hub-btn hub-btn--ghost hub-btn--sm" type="submit">
-            <i class="fa-solid fa-scissors"></i> فصل الاتصال
+            <i class="fa-solid fa-scissors"></i> {{ _('فصل الاتصال') }}
           </button>
         </form>
         {# data-multi-ok: عند تحديد عدة مشتركين يتحول action لمسار التبديل الجماعي #}
@@ -726,7 +726,7 @@
               data-action-template="{{ url_for('radius.users_toggle', username='__USERNAME__') }}"
               data-bulk-action="{{ url_for('radius.users_toggle_bulk') }}">
           <button class="hub-btn hub-btn--ghost hub-btn--sm" type="submit" data-usq-toggle-label>
-            <i class="fa-solid fa-pause"></i> تغيير الحالة
+            <i class="fa-solid fa-pause"></i> {{ _('تغيير الحالة') }}
           </button>
         </form>
         {# data-multi-ok: عند تحديد عدة مشتركين يتحول action لمسار الأرشفة الجماعية #}
@@ -734,7 +734,7 @@
               data-action-template="{{ url_for('radius.users_delete', username='__USERNAME__') }}"
               data-bulk-action="{{ url_for('radius.users_bulk_delete') }}">
           <button class="hub-btn hub-btn--danger hub-btn--sm" type="submit">
-            <i class="fa-solid fa-box-archive"></i> أرشفة
+            <i class="fa-solid fa-box-archive"></i> {{ _('أرشفة') }}
           </button>
         </form>
       </div>
@@ -749,14 +749,14 @@
 <div class="ubulk-bar" data-users-bulk-bar hidden>
   <div class="ubulk-info">
     <span class="ubulk-count" data-users-bulk-count>0</span>
-    <span>مشترك محدَّد</span>
+    <span>{{ _('مشترك محدَّد') }}</span>
   </div>
   <div class="ubulk-actions">
     <button type="button" class="hub-btn hub-btn--ghost hub-btn--sm" data-users-bulk-clear>
-      <i class="fa-solid fa-xmark"></i> إلغاء التحديد
+      <i class="fa-solid fa-xmark"></i> {{ _('إلغاء التحديد') }}
     </button>
     <button type="button" class="hub-btn hub-btn--danger" data-users-bulk-open>
-      <i class="fa-solid fa-trash-can"></i> حذف المحدد (<span data-users-bulk-count2>0</span>)
+      <i class="fa-solid fa-trash-can"></i> {{ _('حذف المحدد (') }}<span data-users-bulk-count2>0</span>)
     </button>
   </div>
 </div>
@@ -771,9 +771,9 @@
 {{ _total|string }} صف
 <span class="col-picker-wrap" style="margin-inline-start:8px">
   <button type="button" class="hub-btn hub-btn--secondary hub-btn--sm" data-col-picker-toggle aria-haspopup="true" aria-expanded="false">
-    <i class="fa-solid fa-table-columns"></i> أعمدة
+    <i class="fa-solid fa-table-columns"></i> {{ _('أعمدة') }}
   </button>
-  <div class="col-picker-panel" data-col-picker-panel hidden role="menu" aria-label="اختيار الأعمدة"></div>
+  <div class="col-picker-panel" data-col-picker-panel hidden role="menu" aria-label="{{ _('اختيار الأعمدة') }}"></div>
 </span>
 {% endset %}
 {% call hub.section("قائمة المشتركين", icon="table-list", meta=_picker_meta, flush=True) %}
@@ -781,29 +781,29 @@
     <table class="hub-table hr-data-table" data-paginated="1" data-page-size="20" data-page-sizes="10,20,50,100" data-persist-key="users-list">
       <thead>
         <tr>
-          <th data-col="chk" style="width:36px"><input type="checkbox" aria-label="تحديد الكل" data-users-check-all></th>
+          <th data-col="chk" style="width:36px"><input type="checkbox" aria-label="{{ _('تحديد الكل') }}" data-users-check-all></th>
           <th data-col="id"       data-sortable="number" style="width:60px" class="num">#</th>
-          <th data-col="user"     data-sortable="text">اليوزر</th>
-          <th data-col="password" style="width:170px">كلمة المرور</th>
-          <th data-col="name"     data-sortable="text">الاسم</th>
-          <th data-col="mobile"   data-sortable="text">الجوال</th>
-          <th data-col="plan"     data-sortable="text">الباقة</th>
-          <th data-col="card"     data-sortable="text">الكرت</th>
-          <th data-col="device"   data-sortable="text">الجهاز / النظام</th>
-          <th data-col="status"   data-sortable="text">الحالة</th>
-          <th data-col="remaining"  data-sortable="number" class="num">المتبقي</th>
-          <th data-col="last_login" data-sortable="number">آخر اتصال</th>
-          <th data-col="last_seen"  data-sortable="number">آخر فصل</th>
-          <th data-col="download"   data-sortable="number" class="num">تحميل</th>
-          <th data-col="upload"     data-sortable="number" class="num">رفع</th>
-          <th data-col="sessions"   data-sortable="number" class="num">الجلسات</th>
+          <th data-col="user"     data-sortable="text">{{ _('اليوزر') }}</th>
+          <th data-col="password" style="width:170px">{{ _('كلمة المرور') }}</th>
+          <th data-col="name"     data-sortable="text">{{ _('الاسم') }}</th>
+          <th data-col="mobile"   data-sortable="text">{{ _('الجوال') }}</th>
+          <th data-col="plan"     data-sortable="text">{{ _('الباقة') }}</th>
+          <th data-col="card"     data-sortable="text">{{ _('الكرت') }}</th>
+          <th data-col="device"   data-sortable="text">{{ _('الجهاز / النظام') }}</th>
+          <th data-col="status"   data-sortable="text">{{ _('الحالة') }}</th>
+          <th data-col="remaining"  data-sortable="number" class="num">{{ _('المتبقي') }}</th>
+          <th data-col="last_login" data-sortable="number">{{ _('آخر اتصال') }}</th>
+          <th data-col="last_seen"  data-sortable="number">{{ _('آخر فصل') }}</th>
+          <th data-col="download"   data-sortable="number" class="num">{{ _('تحميل') }}</th>
+          <th data-col="upload"     data-sortable="number" class="num">{{ _('رفع') }}</th>
+          <th data-col="sessions"   data-sortable="number" class="num">{{ _('الجلسات') }}</th>
           <th data-col="mac"        data-sortable="text">MAC</th>
-          <th data-col="ip"         data-sortable="text">عنوان IP</th>
-          <th data-col="speed"      data-sortable="number" class="num">السرعة</th>
-          <th data-col="first_login" data-sortable="number">أول استخدام</th>
-          <th data-col="expire"      data-sortable="number">ينتهي</th>
-          <th data-col="created"     data-sortable="number">الإنشاء</th>
-          <th data-col="actions" style="width:220px">إجراءات</th>
+          <th data-col="ip"         data-sortable="text">{{ _('عنوان IP') }}</th>
+          <th data-col="speed"      data-sortable="number" class="num">{{ _('السرعة') }}</th>
+          <th data-col="first_login" data-sortable="number">{{ _('أول استخدام') }}</th>
+          <th data-col="expire"      data-sortable="number">{{ _('ينتهي') }}</th>
+          <th data-col="created"     data-sortable="number">{{ _('الإنشاء') }}</th>
+          <th data-col="actions" style="width:220px">{{ _('إجراءات') }}</th>
         </tr>
       </thead>
       <tbody>
@@ -848,7 +848,7 @@
           <td data-col="user"     data-sort-value="{{ u.username }}">
             <a href="{{ url_for('radius.users_profile', username=u.username) }}"
                style="font-weight:700;color:var(--hub-brand-ink);text-decoration:none"
-               title="فتح ملف 360°">{{ u.username }}</a>
+               title="{{ _('فتح ملف 360°') }}">{{ u.username }}</a>
           </td>
           {# Password cell — masked by default; eye reveals, copy hands it to the operator
              without revealing on-screen. Plaintext is required by RADIUS PAP/CHAP and the
@@ -857,12 +857,12 @@
             {% if u.password %}
               <span class="hr-pw-text mono" data-hr-pw-text>••••••••</span>
               <button type="button" class="hub-btn hub-btn--ghost hub-btn--icon"
-                      data-hr-pw-toggle aria-label="إظهار/إخفاء" title="إظهار/إخفاء"
+                      data-hr-pw-toggle aria-label="{{ _('إظهار/إخفاء') }}" title="{{ _('إظهار/إخفاء') }}"
                       style="padding:2px 6px;min-width:0">
                 <i class="fa-solid fa-eye"></i>
               </button>
               <button type="button" class="hub-btn hub-btn--ghost hub-btn--icon"
-                      data-hr-pw-copy aria-label="نسخ" title="نسخ"
+                      data-hr-pw-copy aria-label="{{ _('نسخ') }}" title="{{ _('نسخ') }}"
                       style="padding:2px 6px;min-width:0">
                 <i class="fa-solid fa-copy"></i>
               </button>
@@ -950,7 +950,7 @@
           </td>
           <td data-col="actions">
             <div class="urow-actions">
-              <a class="hub-btn hub-btn--primary hub-btn--icon" title="ملف 360°"
+              <a class="hub-btn hub-btn--primary hub-btn--icon" title="{{ _('ملف 360°') }}"
                  href="{{ url_for('radius.users_profile', username=u.username) }}">
                 <i class="fa-solid fa-id-badge"></i>
               </a>
@@ -958,53 +958,53 @@
               {# ── «تفعيل» menu — activation / balance / quota / loan ── #}
               <button type="button" class="hub-btn hub-btn--secondary hub-btn--sm urow-menu-btn"
                       data-urow-trigger aria-haspopup="true" aria-expanded="false">
-                <i class="fa-solid fa-bolt"></i> تفعيل <i class="fa-solid fa-chevron-down urow-caret"></i>
+                <i class="fa-solid fa-bolt"></i> {{ _('تفعيل') }} <i class="fa-solid fa-chevron-down urow-caret"></i>
               </button>
-              <div class="urow-pop" data-urow-pop hidden role="menu" aria-label="إجراءات التفعيل">
+              <div class="urow-pop" data-urow-pop hidden role="menu" aria-label="{{ _('إجراءات التفعيل') }}">
                 <button type="button" class="urow-item" data-urow-open="extend">
-                  <i class="fa-solid fa-clock"></i> تجديد / إضافة وقت
+                  <i class="fa-solid fa-clock"></i> {{ _('تجديد / إضافة وقت') }}
                 </button>
                 <button type="button" class="urow-item" data-urow-open="balance">
-                  <i class="fa-solid fa-coins"></i> إضافة رصيد نقدي
+                  <i class="fa-solid fa-coins"></i> {{ _('إضافة رصيد نقدي') }}
                 </button>
                 <button type="button" class="urow-item" data-urow-open="quota">
-                  <i class="fa-solid fa-gauge-high"></i> إضافة كوتة / جيجا
+                  <i class="fa-solid fa-gauge-high"></i> {{ _('إضافة كوتة / جيجا') }}
                 </button>
                 <button type="button" class="urow-item" data-urow-open="payment">
-                  <i class="fa-solid fa-money-bill-wave"></i> تسجيل دفعة نقدية
+                  <i class="fa-solid fa-money-bill-wave"></i> {{ _('تسجيل دفعة نقدية') }}
                 </button>
                 <button type="button" class="urow-item" data-urow-open="loan">
-                  <i class="fa-solid fa-hand-holding-dollar"></i> منح سلفة
+                  <i class="fa-solid fa-hand-holding-dollar"></i> {{ _('منح سلفة') }}
                 </button>
                 <div class="urow-sep"></div>
                 <button type="button" class="urow-item" data-urow-open="quota-reset">
-                  <i class="fa-solid fa-rotate-left"></i> استعادة الكوتة اليومية
+                  <i class="fa-solid fa-rotate-left"></i> {{ _('استعادة الكوتة اليومية') }}
                 </button>
               </div>
 
               {# ── «إدارية» menu — رسائل قصيرة / تعطيل / فصل / عرض / أرشفة ── #}
               <button type="button" class="hub-btn hub-btn--ghost hub-btn--sm urow-menu-btn"
                       data-urow-trigger aria-haspopup="true" aria-expanded="false">
-                <i class="fa-solid fa-sliders"></i> إدارية <i class="fa-solid fa-chevron-down urow-caret"></i>
+                <i class="fa-solid fa-sliders"></i> {{ _('إدارية') }} <i class="fa-solid fa-chevron-down urow-caret"></i>
               </button>
-              <div class="urow-pop" data-urow-pop hidden role="menu" aria-label="إجراءات إدارية">
+              <div class="urow-pop" data-urow-pop hidden role="menu" aria-label="{{ _('إجراءات إدارية') }}">
                 <a class="urow-item" href="{{ url_for('radius.users_edit', username=u.username) }}">
-                  <i class="fa-solid fa-pen"></i> تعديل المشترك
+                  <i class="fa-solid fa-pen"></i> {{ _('تعديل المشترك') }}
                 </a>
                 <a class="urow-item" href="{{ url_for('radius.users_finance', username=u.username) }}">
-                  <i class="fa-solid fa-wallet"></i> الدفعات والسلف
+                  <i class="fa-solid fa-wallet"></i> {{ _('الدفعات والسلف') }}
                 </a>
                 <div class="urow-sep"></div>
                 <button type="button" class="urow-item" data-urow-open="sms">
-                  <i class="fa-solid fa-paper-plane"></i> إرسال رسالة تفعيل
+                  <i class="fa-solid fa-paper-plane"></i> {{ _('إرسال رسالة تفعيل') }}
                 </button>
                 <button type="button" class="urow-item" data-urow-open="plan">
-                  <i class="fa-solid fa-right-left"></i> تغيير العرض / السرعة
+                  <i class="fa-solid fa-right-left"></i> {{ _('تغيير العرض / السرعة') }}
                 </button>
                 <form method="post" action="{{ url_for('radius.online_disconnect') }}">
                   <input type="hidden" name="username" value="{{ u.username }}">
                   <button type="submit" class="urow-item">
-                    <i class="fa-solid fa-scissors"></i> فصل الاتصال
+                    <i class="fa-solid fa-scissors"></i> {{ _('فصل الاتصال') }}
                   </button>
                 </form>
                 <form method="post" action="{{ url_for('radius.users_toggle', username=u.username) }}">
@@ -1017,7 +1017,7 @@
                 <form method="post" action="{{ url_for('radius.users_delete', username=u.username) }}"
                       data-urow-confirm="أرشفة {{ u.username|e }}؟ يمكن استعادته من سلة المحذوفات.">
                   <button type="submit" class="urow-item urow-item--danger">
-                    <i class="fa-solid fa-box-archive"></i> أرشفة المشترك
+                    <i class="fa-solid fa-box-archive"></i> {{ _('أرشفة المشترك') }}
                   </button>
                 </form>
               </div>
@@ -1039,7 +1039,7 @@
   ) }}
   <a class="hub-btn hub-btn--primary" href="{{ url_for('radius.users_new') }}"
      style="margin-top:4px">
-    <i class="fa-solid fa-user-plus"></i> إضافة مشترك
+    <i class="fa-solid fa-user-plus"></i> {{ _('إضافة مشترك') }}
   </a>
 </div>
 {% endif %}
@@ -1048,20 +1048,20 @@
   <div class="usq-dialog" role="dialog" aria-modal="true" aria-labelledby="usq-plan-title">
     <form method="post" data-usq-modal-form="plan" data-action-template="{{ url_for('radius.users_change_plan', username='__USERNAME__') }}">
       <div class="usq-head">
-        <h3 id="usq-plan-title">تغيير العرض للمشترك</h3>
-        <button class="hub-btn hub-btn--ghost hub-btn--icon" type="button" data-usq-close aria-label="إغلاق">
+        <h3 id="usq-plan-title">{{ _('تغيير العرض للمشترك') }}</h3>
+        <button class="hub-btn hub-btn--ghost hub-btn--icon" type="button" data-usq-close aria-label="{{ _('إغلاق') }}">
           <i class="fa-solid fa-xmark"></i>
         </button>
       </div>
       <div class="usq-body">
         <div class="usq-current">
-          <div><span>المشترك</span><strong data-usq-current="username">—</strong></div>
-          <div><span>العرض الحالي</span><strong data-usq-current="plan">—</strong></div>
-          <div><span>ينتهي</span><strong data-usq-current="expire">—</strong></div>
+          <div><span>{{ _('المشترك') }}</span><strong data-usq-current="username">—</strong></div>
+          <div><span>{{ _('العرض الحالي') }}</span><strong data-usq-current="plan">—</strong></div>
+          <div><span>{{ _('ينتهي') }}</span><strong data-usq-current="expire">—</strong></div>
         </div>
-        <label class="usq-field">عرض جديد
+        <label class="usq-field">{{ _('عرض جديد') }}
           <select class="hub-select" name="plan_id" required data-usq-plan-select>
-            <option value="">اختر العرض</option>
+            <option value="">{{ _('اختر العرض') }}</option>
             {% for p in plans %}
               <option value="{{ p.id }}" data-price="{{ p.price or 0 }}" data-minutes="{{ p.duration_minutes or 0 }}">
                 {{ p.name }} — {{ (p.price or 0)|money }}{% if p.duration_minutes %} · {{ p.duration_minutes|dur_days }}{% endif %}
@@ -1069,41 +1069,41 @@
             {% endfor %}
           </select>
         </label>
-        <div class="hub-text-mute small" data-usq-plan-hint>اختر عرضًا جديدًا لعرض خيارات التعويض أو الدين.</div>
+        <div class="hub-text-mute small" data-usq-plan-hint>{{ _('اختر عرضًا جديدًا لعرض خيارات التعويض أو الدين.') }}</div>
         <div class="usq-policy" data-usq-policy="lower" hidden>
           <label class="usq-choice">
             <input type="radio" name="policy" value="lower_compensate">
-            <span><strong>تعويض أيام إضافية</strong><small>يحافظ على قيمة الأيام المتبقية ويحوّلها لأيام أكثر حسب سعر العرض الأقل.</small></span>
+            <span><strong>{{ _('تعويض أيام إضافية') }}</strong><small>{{ _('يحافظ على قيمة الأيام المتبقية ويحوّلها لأيام أكثر حسب سعر العرض الأقل.') }}</small></span>
           </label>
           <label class="usq-choice">
             <input type="radio" name="policy" value="lower_keep_expiry">
-            <span><strong>تغيير العرض بدون تعويض</strong><small>يتم تغيير العرض فقط مع بقاء تاريخ الانتهاء الحالي كما هو.</small></span>
+            <span><strong>{{ _('تغيير العرض بدون تعويض') }}</strong><small>{{ _('يتم تغيير العرض فقط مع بقاء تاريخ الانتهاء الحالي كما هو.') }}</small></span>
           </label>
         </div>
         <div class="usq-policy" data-usq-policy="higher" hidden>
           <label class="usq-choice">
             <input type="radio" name="policy" value="higher_debt">
-            <span><strong>تسجيل دين فرق السعر</strong><small>يبقى عدد الأيام كما هو، ويتم تسجيل فرق السعر كدين على رصيد المشترك.</small></span>
+            <span><strong>{{ _('تسجيل دين فرق السعر') }}</strong><small>{{ _('يبقى عدد الأيام كما هو، ويتم تسجيل فرق السعر كدين على رصيد المشترك.') }}</small></span>
           </label>
           <label class="usq-choice">
             <input type="radio" name="policy" value="higher_reduce_days">
-            <span><strong>إنقاص الأيام</strong><small>يتم تقليل الأيام المتبقية حسب قيمة العرض الأعلى بدون تسجيل دين.</small></span>
+            <span><strong>{{ _('إنقاص الأيام') }}</strong><small>{{ _('يتم تقليل الأيام المتبقية حسب قيمة العرض الأعلى بدون تسجيل دين.') }}</small></span>
           </label>
           <label class="usq-choice">
             <input type="radio" name="policy" value="higher_keep_expiry">
-            <span><strong>تغيير العرض بدون دين أو إنقاص أيام</strong><small>تغيير إداري مباشر للعرض فقط مع بقاء تاريخ الانتهاء كما هو.</small></span>
+            <span><strong>{{ _('تغيير العرض بدون دين أو إنقاص أيام') }}</strong><small>{{ _('تغيير إداري مباشر للعرض فقط مع بقاء تاريخ الانتهاء كما هو.') }}</small></span>
           </label>
         </div>
         <div class="usq-policy" data-usq-policy="neutral">
           <label class="usq-choice">
             <input type="radio" name="policy" value="neutral_keep_expiry" checked>
-            <span><strong>تغيير العرض فقط</strong><small>يستخدم عندما يكون السعر مساويًا أو لا تتوفر بيانات كافية للتعويض.</small></span>
+            <span><strong>{{ _('تغيير العرض فقط') }}</strong><small>{{ _('يستخدم عندما يكون السعر مساويًا أو لا تتوفر بيانات كافية للتعويض.') }}</small></span>
           </label>
         </div>
       </div>
       <div class="usq-foot">
-        <button class="hub-btn hub-btn--ghost" type="button" data-usq-close>إلغاء</button>
-        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-check"></i> تغيير العرض</button>
+        <button class="hub-btn hub-btn--ghost" type="button" data-usq-close>{{ _('إلغاء') }}</button>
+        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-check"></i> {{ _('تغيير العرض') }}</button>
       </div>
     </form>
   </div>
@@ -1118,18 +1118,18 @@
       {# حاوية حقول usernames المخفية — تُملأ بالـ JS عند التنفيذ الجماعي #}
       <div data-usq-multi-usernames hidden></div>
       <div class="usq-head">
-        <h3 id="usq-extend-title">إضافة وقت</h3>
-        <button class="hub-btn hub-btn--ghost hub-btn--icon" type="button" data-usq-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
+        <h3 id="usq-extend-title">{{ _('إضافة وقت') }}</h3>
+        <button class="hub-btn hub-btn--ghost hub-btn--icon" type="button" data-usq-close aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="usq-body">
         <div class="usq-current" data-usq-single-box>
-          <div><span>المشترك</span><strong data-usq-current="username">—</strong></div>
-          <div><span>العرض الحالي</span><strong data-usq-current="plan">—</strong></div>
-          <div><span>سعر الباقة</span><strong data-usq-current="price">—</strong></div>
+          <div><span>{{ _('المشترك') }}</span><strong data-usq-current="username">—</strong></div>
+          <div><span>{{ _('العرض الحالي') }}</span><strong data-usq-current="plan">—</strong></div>
+          <div><span>{{ _('سعر الباقة') }}</span><strong data-usq-current="price">—</strong></div>
         </div>
         {# وضع التنفيذ الجماعي — قائمة المشتركين المحدَّدين + تنبيه «لكل مشترك» #}
         <div class="usq-field wide" data-usq-multi-box hidden>
-          المشتركون المحدَّدون (<span data-usq-multi-count>0</span>)
+          {{ _('المشتركون المحدَّدون (') }}<span data-usq-multi-count>0</span>)
           <div class="usq-sms-recips" data-usq-multi-list></div>
           <div class="hub-text-mute small" style="margin-top:6px;line-height:1.6;font-weight:700">
             المدة المحدَّدة تُضاف لكل مشترك على حدة (يوم = يوم لكل واحد)؛
@@ -1137,47 +1137,47 @@
           </div>
         </div>
         <div class="usq-form-grid">
-          <label class="usq-field wide">عدد الأيام
+          <label class="usq-field wide">{{ _('عدد الأيام') }}
             <input class="hub-input" type="number" min="0" value="1" data-usq-days>
           </label>
         </div>
-        <div class="usq-field wide" style="margin-top:2px">طريقة الإضافة
+        <div class="usq-field wide" style="margin-top:2px">{{ _('طريقة الإضافة') }}
           <div class="usq-seg" style="margin-top:4px">
             <label data-usq-charge-seg="free" class="is-active">
               <i class="fa-solid fa-gift usq-seg-ico"></i>
               <input type="radio" name="charge_mode" value="free" checked data-usq-charge-input>
-              <span><strong>مجاني</strong><small>إضافة وقت بدون مقابل مالي.</small></span>
+              <span><strong>{{ _('مجاني') }}</strong><small>{{ _('إضافة وقت بدون مقابل مالي.') }}</small></span>
             </label>
             <label data-usq-charge-seg="paid">
               <i class="fa-solid fa-money-bill-wave usq-seg-ico"></i>
               <input type="radio" name="charge_mode" value="paid" data-usq-charge-input>
-              <span><strong>مدفوع — نقدًا</strong><small>دفعة نقدية تُسجَّل دائنة.</small></span>
+              <span><strong>{{ _('مدفوع — نقدًا') }}</strong><small>{{ _('دفعة نقدية تُسجَّل دائنة.') }}</small></span>
             </label>
             <label data-usq-charge-seg="debt">
               <i class="fa-solid fa-file-invoice-dollar usq-seg-ico"></i>
               <input type="radio" name="charge_mode" value="debt" data-usq-charge-input>
-              <span><strong>مدفوع — دين</strong><small>تُسجَّل كدين على المشترك.</small></span>
+              <span><strong>{{ _('مدفوع — دين') }}</strong><small>{{ _('تُسجَّل كدين على المشترك.') }}</small></span>
             </label>
           </div>
           <div class="hub-text-mute small" data-usq-charge-hint style="margin-top:6px;line-height:1.6;font-weight:600">
-            إضافة وقت مجانية بدون أي قيمة مالية.
+            {{ _('إضافة وقت مجانية بدون أي قيمة مالية.') }}
           </div>
         </div>
         <div class="usq-form-grid usq-reveal" data-usq-paid-only hidden style="margin-top:4px">
-          <label class="usq-field">السعر (يُحتسب تلقائيًا)
-            <input class="hub-input" name="amount" type="number" step="0.01" min="0" value="0" data-usq-extend-amount readonly title="سعر الوقت المُضاف حسب سعر العرض/المخصّص">
+          <label class="usq-field">{{ _('السعر (يُحتسب تلقائيًا)') }}
+            <input class="hub-input" name="amount" type="number" step="0.01" min="0" value="0" data-usq-extend-amount readonly title="{{ _('سعر الوقت المُضاف حسب سعر العرض/المخصّص') }}">
           </label>
-          <label class="usq-field">العملة
-            <input class="hub-input" name="currency" value="{{ cfg.currency }}" maxlength="8" readonly title="عملة النظام — تُضبط من الإعدادات">
+          <label class="usq-field">{{ _('العملة') }}
+            <input class="hub-input" name="currency" value="{{ cfg.currency }}" maxlength="8" readonly title="{{ _('عملة النظام — تُضبط من الإعدادات') }}">
           </label>
         </div>
-        <label class="usq-field wide">ملاحظات
+        <label class="usq-field wide">{{ _('ملاحظات') }}
           <textarea class="hub-textarea" name="notes" rows="2"></textarea>
         </label>
       </div>
       <div class="usq-foot">
-        <button class="hub-btn hub-btn--ghost" type="button" data-usq-close>إلغاء</button>
-        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-plus"></i> إضافة</button>
+        <button class="hub-btn hub-btn--ghost" type="button" data-usq-close>{{ _('إلغاء') }}</button>
+        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-plus"></i> {{ _('إضافة') }}</button>
       </div>
     </form>
   </div>
@@ -1191,52 +1191,52 @@
       {# حاوية حقول usernames المخفية — تُملأ بالـ JS عند الإرسال الجماعي #}
       <div data-sms-usernames hidden></div>
       <div class="usq-head">
-        <h3 id="usq-sms-title" data-sms-title>إرسال رسالة قصيرة للمشترك</h3>
-        <button class="hub-btn hub-btn--ghost hub-btn--icon" type="button" data-usq-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
+        <h3 id="usq-sms-title" data-sms-title>{{ _('إرسال رسالة قصيرة للمشترك') }}</h3>
+        <button class="hub-btn hub-btn--ghost hub-btn--icon" type="button" data-usq-close aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="usq-body">
         {# وضع مشترك واحد — البيانات الحالية كما كانت #}
         <div class="usq-current" data-sms-single>
-          <div><span>المشترك</span><strong data-usq-current="username">—</strong></div>
-          <div><span>العرض الحالي</span><strong data-usq-current="plan">—</strong></div>
-          <div><span>ينتهي</span><strong data-usq-current="expire">—</strong></div>
+          <div><span>{{ _('المشترك') }}</span><strong data-usq-current="username">—</strong></div>
+          <div><span>{{ _('العرض الحالي') }}</span><strong data-usq-current="plan">—</strong></div>
+          <div><span>{{ _('ينتهي') }}</span><strong data-usq-current="expire">—</strong></div>
         </div>
         {# وضع الإرسال الجماعي — قائمة المستلمين المحددين #}
         <div class="usq-field wide" data-sms-multi hidden>
-          المستلمون (<span data-sms-multi-count>0</span> مشترك)
+          {{ _('المستلمون (') }}<span data-sms-multi-count>0</span> {{ _('مشترك)') }}
           <div class="usq-sms-recips" data-sms-multi-list></div>
         </div>
         {# اختيار قناة الإرسال — SMS أو واتساب (كلاهما مفعّل في محرك الإشعارات) #}
-        <div class="usq-field wide">قناة الإرسال
+        <div class="usq-field wide">{{ _('قناة الإرسال') }}
           <div class="usq-seg" style="margin-top:4px">
             <label data-sms-channel-seg="sms" class="is-active">
               <input type="radio" name="channel" value="sms" checked data-sms-channel-input>
               <i class="fa-solid fa-comment-sms usq-seg-ico"></i>
-              <span><strong>رسالة SMS</strong><small>عبر مزوّد الرسائل القصيرة.</small></span>
+              <span><strong>{{ _('رسالة SMS') }}</strong><small>{{ _('عبر مزوّد الرسائل القصيرة.') }}</small></span>
             </label>
             <label data-sms-channel-seg="whatsapp">
               <input type="radio" name="channel" value="whatsapp" data-sms-channel-input>
               <i class="fa-brands fa-whatsapp usq-seg-ico"></i>
-              <span><strong>واتساب</strong><small>عبر قناة واتساب المهيّأة.</small></span>
+              <span><strong>{{ _('واتساب') }}</strong><small>{{ _('عبر قناة واتساب المهيّأة.') }}</small></span>
             </label>
           </div>
         </div>
-        <div class="usq-field wide">قوالب جاهزة — اضغط لتعبئة الرسالة
+        <div class="usq-field wide">{{ _('قوالب جاهزة — اضغط لتعبئة الرسالة') }}
           <div class="usq-sms-tpls" style="margin-top:4px">
-            <button type="button" class="usq-sms-tpl" data-sms-tpl="أهلاً {username} 👋 تم تفعيل اشتراكك بنجاح. نشكر ثقتك بنا، وأي استفسار نحن بخدمتك.">ترحيب</button>
-            <button type="button" class="usq-sms-tpl" data-sms-tpl="عزيزنا {username}، اشتراكك ({plan}) ينتهي بتاريخ {expire}. يُرجى التجديد لتفادي انقطاع الخدمة.">تذكير انتهاء</button>
-            <button type="button" class="usq-sms-tpl" data-sms-tpl="تم استلام دفعتك وتجديد اشتراكك بنجاح ✅ شكرًا لك.">تأكيد دفعة</button>
-            <button type="button" class="usq-sms-tpl" data-sms-tpl="عزيزنا {username}، لديكم مستحقات على الاشتراك. يُرجى المراجعة لتسوية الحساب. شكرًا.">تذكير سداد</button>
-            <button type="button" class="usq-sms-tpl" data-sms-tpl="إشعار صيانة: سنعمل على تحسين الشبكة وقد تنقطع الخدمة مؤقتًا. نعتذر عن الإزعاج.">صيانة</button>
+            <button type="button" class="usq-sms-tpl" data-sms-tpl="أهلاً {username} 👋 تم تفعيل اشتراكك بنجاح. نشكر ثقتك بنا، وأي استفسار نحن بخدمتك.">{{ _('ترحيب') }}</button>
+            <button type="button" class="usq-sms-tpl" data-sms-tpl="عزيزنا {username}، اشتراكك ({plan}) ينتهي بتاريخ {expire}. يُرجى التجديد لتفادي انقطاع الخدمة.">{{ _('تذكير انتهاء') }}</button>
+            <button type="button" class="usq-sms-tpl" data-sms-tpl="تم استلام دفعتك وتجديد اشتراكك بنجاح ✅ شكرًا لك.">{{ _('تأكيد دفعة') }}</button>
+            <button type="button" class="usq-sms-tpl" data-sms-tpl="عزيزنا {username}، لديكم مستحقات على الاشتراك. يُرجى المراجعة لتسوية الحساب. شكرًا.">{{ _('تذكير سداد') }}</button>
+            <button type="button" class="usq-sms-tpl" data-sms-tpl="إشعار صيانة: سنعمل على تحسين الشبكة وقد تنقطع الخدمة مؤقتًا. نعتذر عن الإزعاج.">{{ _('صيانة') }}</button>
           </div>
         </div>
-        <label class="usq-field">نص الرسالة
-          <textarea class="hub-textarea" name="message" rows="4" required placeholder="اكتب نص الرسالة هنا أو اختر قالبًا"></textarea>
+        <label class="usq-field">{{ _('نص الرسالة') }}
+          <textarea class="hub-textarea" name="message" rows="4" required placeholder="{{ _('اكتب نص الرسالة هنا أو اختر قالبًا') }}"></textarea>
         </label>
       </div>
       <div class="usq-foot">
-        <button class="hub-btn hub-btn--ghost" type="button" data-usq-close>إلغاء</button>
-        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-paper-plane"></i> إرسال</button>
+        <button class="hub-btn hub-btn--ghost" type="button" data-usq-close>{{ _('إلغاء') }}</button>
+        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-paper-plane"></i> {{ _('إرسال') }}</button>
       </div>
     </form>
   </div>
@@ -1250,67 +1250,67 @@
       {# حاوية حقول usernames المخفية — تُملأ بالـ JS عند التنفيذ الجماعي #}
       <div data-usq-multi-usernames hidden></div>
       <div class="usq-head">
-        <h3 id="usq-quota-title">إضافة كوتة</h3>
-        <button class="hub-btn hub-btn--ghost hub-btn--icon" type="button" data-usq-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
+        <h3 id="usq-quota-title">{{ _('إضافة كوتة') }}</h3>
+        <button class="hub-btn hub-btn--ghost hub-btn--icon" type="button" data-usq-close aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="usq-body">
         {# وضع التنفيذ الجماعي — قائمة المشتركين المحدَّدين + تنبيه «لكل مشترك» #}
         <div class="usq-field wide" data-usq-multi-box hidden>
-          المشتركون المحدَّدون (<span data-usq-multi-count>0</span>)
+          {{ _('المشتركون المحدَّدون (') }}<span data-usq-multi-count>0</span>)
           <div class="usq-sms-recips" data-usq-multi-list></div>
           <div class="hub-text-mute small" style="margin-top:6px;line-height:1.6;font-weight:700">
-            حجم الكوتة (والمبلغ إن وُجد) يُضاف لكل مشترك على حدة، لا يُقسَّم بينهم.
+            {{ _('حجم الكوتة (والمبلغ إن وُجد) يُضاف لكل مشترك على حدة، لا يُقسَّم بينهم.') }}
           </div>
         </div>
         <div class="usq-form-grid">
           <label class="usq-field">حجم الكوتة
             {{ unit_input_picker(name="quota_mb", value=0, kind="quota") }}
           </label>
-          <label class="usq-field">نوع الكوتة
+          <label class="usq-field">{{ _('نوع الكوتة') }}
             <select class="hub-select" name="quota_target">
-              <option value="combined">مشتركة تنزيل/رفع</option>
-              <option value="download">تنزيل فقط</option>
-              <option value="upload">رفع فقط</option>
+              <option value="combined">{{ _('مشتركة تنزيل/رفع') }}</option>
+              <option value="download">{{ _('تنزيل فقط') }}</option>
+              <option value="upload">{{ _('رفع فقط') }}</option>
             </select>
           </label>
         </div>
-        <div class="usq-field wide" style="margin-top:2px">طريقة الإضافة
+        <div class="usq-field wide" style="margin-top:2px">{{ _('طريقة الإضافة') }}
           <div class="usq-seg" style="margin-top:4px">
             <label data-usq-charge-seg="free" class="is-active">
               <i class="fa-solid fa-gift usq-seg-ico"></i>
               <input type="radio" name="charge_mode" value="free" checked data-usq-charge-input>
-              <span><strong>مجاني</strong><small>بدون أي مقابل مالي.</small></span>
+              <span><strong>{{ _('مجاني') }}</strong><small>{{ _('بدون أي مقابل مالي.') }}</small></span>
             </label>
             <label data-usq-charge-seg="paid">
               <i class="fa-solid fa-money-bill-wave usq-seg-ico"></i>
               <input type="radio" name="charge_mode" value="paid" data-usq-charge-input>
-              <span><strong>مدفوع — نقدًا</strong><small>دفعة نقدية تُسجَّل دائنة.</small></span>
+              <span><strong>{{ _('مدفوع — نقدًا') }}</strong><small>{{ _('دفعة نقدية تُسجَّل دائنة.') }}</small></span>
             </label>
             <label data-usq-charge-seg="debt">
               <i class="fa-solid fa-file-invoice-dollar usq-seg-ico"></i>
               <input type="radio" name="charge_mode" value="debt" data-usq-charge-input>
-              <span><strong>مدفوع — دين</strong><small>تُسجَّل كدين على المشترك.</small></span>
+              <span><strong>{{ _('مدفوع — دين') }}</strong><small>{{ _('تُسجَّل كدين على المشترك.') }}</small></span>
             </label>
           </div>
           <div class="hub-text-mute small" data-usq-charge-hint style="margin-top:6px;line-height:1.6;font-weight:600">
-            كوتة مجانية — تُضاف بدون أي قيمة مالية أو دين على المشترك.
+            {{ _('كوتة مجانية — تُضاف بدون أي قيمة مالية أو دين على المشترك.') }}
           </div>
         </div>
         <div class="usq-form-grid usq-reveal" data-usq-paid-only hidden style="margin-top:4px">
-          <label class="usq-field">المبلغ
+          <label class="usq-field">{{ _('المبلغ') }}
             <input class="hub-input" name="amount" type="number" step="0.01" min="0" value="0" data-usq-req="1">
           </label>
-          <label class="usq-field">العملة
-            <input class="hub-input" name="currency" value="{{ cfg.currency }}" maxlength="8" readonly title="عملة النظام — تُضبط من الإعدادات">
+          <label class="usq-field">{{ _('العملة') }}
+            <input class="hub-input" name="currency" value="{{ cfg.currency }}" maxlength="8" readonly title="{{ _('عملة النظام — تُضبط من الإعدادات') }}">
           </label>
         </div>
-        <label class="usq-field wide">ملاحظات
+        <label class="usq-field wide">{{ _('ملاحظات') }}
           <textarea class="hub-textarea" name="notes" rows="2"></textarea>
         </label>
       </div>
       <div class="usq-foot">
-        <button class="hub-btn hub-btn--ghost" type="button" data-usq-close>إلغاء</button>
-        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-plus"></i> إضافة</button>
+        <button class="hub-btn hub-btn--ghost" type="button" data-usq-close>{{ _('إلغاء') }}</button>
+        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-plus"></i> {{ _('إضافة') }}</button>
       </div>
     </form>
   </div>
@@ -1324,63 +1324,63 @@
       {# حاوية حقول usernames المخفية — تُملأ بالـ JS عند التنفيذ الجماعي #}
       <div data-usq-multi-usernames hidden></div>
       <div class="usq-head">
-        <h3 id="usq-quota-reset-title">استعادة الكوتة اليومية</h3>
-        <button class="hub-btn hub-btn--ghost hub-btn--icon" type="button" data-usq-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
+        <h3 id="usq-quota-reset-title">{{ _('استعادة الكوتة اليومية') }}</h3>
+        <button class="hub-btn hub-btn--ghost hub-btn--icon" type="button" data-usq-close aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="usq-body">
         <div class="usq-current" data-usq-single-box>
-          <div><span>المشترك</span><strong data-usq-current="username">—</strong></div>
-          <div><span>العرض الحالي</span><strong data-usq-current="plan">—</strong></div>
-          <div><span>الكوتة اليومية</span><strong data-usq-current="daily_quota">—</strong></div>
+          <div><span>{{ _('المشترك') }}</span><strong data-usq-current="username">—</strong></div>
+          <div><span>{{ _('العرض الحالي') }}</span><strong data-usq-current="plan">—</strong></div>
+          <div><span>{{ _('الكوتة اليومية') }}</span><strong data-usq-current="daily_quota">—</strong></div>
         </div>
         {# وضع التنفيذ الجماعي — قائمة المشتركين المحدَّدين + تنبيه «لكل مشترك» #}
         <div class="usq-field wide" data-usq-multi-box hidden>
-          المشتركون المحدَّدون (<span data-usq-multi-count>0</span>)
+          {{ _('المشتركون المحدَّدون (') }}<span data-usq-multi-count>0</span>)
           <div class="usq-sms-recips" data-usq-multi-list></div>
           <div class="hub-text-mute small" style="margin-top:6px;line-height:1.6;font-weight:700">
-            تُستعاد الكوتة اليومية لكل مشترك على حدة (والمبلغ إن وُجد يُسجَّل لكل واحد).
+            {{ _('تُستعاد الكوتة اليومية لكل مشترك على حدة (والمبلغ إن وُجد يُسجَّل لكل واحد).') }}
           </div>
         </div>
         <p class="hub-text-mute small" style="margin:2px 0 0;line-height:1.6;font-weight:600">
-          تُصفَّر العدّادات المستهلَكة ليعود للمشترك كامل كوتته اليومية فورًا.
+          {{ _('تُصفَّر العدّادات المستهلَكة ليعود للمشترك كامل كوتته اليومية فورًا.') }}
         </p>
-        <div class="usq-field wide" style="margin-top:2px">طريقة الاستعادة
+        <div class="usq-field wide" style="margin-top:2px">{{ _('طريقة الاستعادة') }}
           <div class="usq-seg" style="margin-top:4px">
             <label data-usq-charge-seg="free" class="is-active">
               <i class="fa-solid fa-gift usq-seg-ico"></i>
               <input type="radio" name="charge_mode" value="free" checked data-usq-charge-input>
-              <span><strong>مجاني</strong><small>تجديد بدون أي مقابل مالي.</small></span>
+              <span><strong>{{ _('مجاني') }}</strong><small>{{ _('تجديد بدون أي مقابل مالي.') }}</small></span>
             </label>
             <label data-usq-charge-seg="paid">
               <i class="fa-solid fa-money-bill-wave usq-seg-ico"></i>
               <input type="radio" name="charge_mode" value="paid" data-usq-charge-input>
-              <span><strong>مدفوع — نقدًا</strong><small>دفعة نقدية تُسجَّل دائنة.</small></span>
+              <span><strong>{{ _('مدفوع — نقدًا') }}</strong><small>{{ _('دفعة نقدية تُسجَّل دائنة.') }}</small></span>
             </label>
             <label data-usq-charge-seg="debt">
               <i class="fa-solid fa-file-invoice-dollar usq-seg-ico"></i>
               <input type="radio" name="charge_mode" value="debt" data-usq-charge-input>
-              <span><strong>مدفوع — دين</strong><small>تُسجَّل كدين على المشترك.</small></span>
+              <span><strong>{{ _('مدفوع — دين') }}</strong><small>{{ _('تُسجَّل كدين على المشترك.') }}</small></span>
             </label>
           </div>
           <div class="hub-text-mute small" data-usq-charge-hint style="margin-top:6px;line-height:1.6;font-weight:600">
-            استعادة مجانية — تُصفَّر العدّادات بدون أي قيمة مالية أو دين على المشترك.
+            {{ _('استعادة مجانية — تُصفَّر العدّادات بدون أي قيمة مالية أو دين على المشترك.') }}
           </div>
         </div>
         <div class="usq-form-grid usq-reveal" data-usq-paid-only hidden style="margin-top:4px">
-          <label class="usq-field">المبلغ
+          <label class="usq-field">{{ _('المبلغ') }}
             <input class="hub-input" name="amount" type="number" step="0.01" min="0" value="0" data-usq-req="1">
           </label>
-          <label class="usq-field">العملة
-            <input class="hub-input" name="currency" value="{{ cfg.currency }}" maxlength="8" readonly title="عملة النظام — تُضبط من الإعدادات">
+          <label class="usq-field">{{ _('العملة') }}
+            <input class="hub-input" name="currency" value="{{ cfg.currency }}" maxlength="8" readonly title="{{ _('عملة النظام — تُضبط من الإعدادات') }}">
           </label>
         </div>
-        <label class="usq-field wide">ملاحظات
+        <label class="usq-field wide">{{ _('ملاحظات') }}
           <textarea class="hub-textarea" name="notes" rows="2"></textarea>
         </label>
       </div>
       <div class="usq-foot">
-        <button class="hub-btn hub-btn--ghost" type="button" data-usq-close>إلغاء</button>
-        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-rotate-left"></i> استعادة</button>
+        <button class="hub-btn hub-btn--ghost" type="button" data-usq-close>{{ _('إلغاء') }}</button>
+        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-rotate-left"></i> {{ _('استعادة') }}</button>
       </div>
     </form>
   </div>
@@ -1394,31 +1394,31 @@
       {# حاوية حقول usernames المخفية — تُملأ بالـ JS عند التنفيذ الجماعي #}
       <div data-usq-multi-usernames hidden></div>
       <div class="usq-head">
-        <h3 id="usq-balance-title">إضافة رصيد نقدي</h3>
-        <button class="hub-btn hub-btn--ghost hub-btn--icon" type="button" data-usq-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
+        <h3 id="usq-balance-title">{{ _('إضافة رصيد نقدي') }}</h3>
+        <button class="hub-btn hub-btn--ghost hub-btn--icon" type="button" data-usq-close aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="usq-body">
         <div class="usq-current" data-usq-single-box>
-          <div><span>المشترك</span><strong data-usq-current="username">—</strong></div>
-          <div><span>العرض الحالي</span><strong data-usq-current="plan">—</strong></div>
-          <div><span>سعر الباقة</span><strong data-usq-current="price">—</strong></div>
+          <div><span>{{ _('المشترك') }}</span><strong data-usq-current="username">—</strong></div>
+          <div><span>{{ _('العرض الحالي') }}</span><strong data-usq-current="plan">—</strong></div>
+          <div><span>{{ _('سعر الباقة') }}</span><strong data-usq-current="price">—</strong></div>
         </div>
         {# وضع التنفيذ الجماعي — قائمة المشتركين المحدَّدين + تنبيه «لكل مشترك» #}
         <div class="usq-field wide" data-usq-multi-box hidden>
-          المشتركون المحدَّدون (<span data-usq-multi-count>0</span>)
+          {{ _('المشتركون المحدَّدون (') }}<span data-usq-multi-count>0</span>)
           <div class="usq-sms-recips" data-usq-multi-list></div>
           <div class="hub-text-mute small" style="margin-top:6px;line-height:1.6;font-weight:700">
-            المبلغ يُضاف كاملًا إلى محفظة كل مشترك على حدة، لا يُقسَّم بينهم.
+            {{ _('المبلغ يُضاف كاملًا إلى محفظة كل مشترك على حدة، لا يُقسَّم بينهم.') }}
           </div>
         </div>
         <div class="usq-form-grid">
-          <label class="usq-field">المبلغ
+          <label class="usq-field">{{ _('المبلغ') }}
             <input class="hub-input" name="amount" type="number" step="0.01" min="0.01" required data-usq-balance-amount>
           </label>
-          <label class="usq-field">العملة
-            <input class="hub-input" name="currency" value="{{ cfg.currency }}" maxlength="8" readonly title="عملة النظام — تُضبط من الإعدادات">
+          <label class="usq-field">{{ _('العملة') }}
+            <input class="hub-input" name="currency" value="{{ cfg.currency }}" maxlength="8" readonly title="{{ _('عملة النظام — تُضبط من الإعدادات') }}">
           </label>
-          <label class="usq-field wide">ملاحظات
+          <label class="usq-field wide">{{ _('ملاحظات') }}
             <textarea class="hub-textarea" name="notes" rows="2"></textarea>
           </label>
         </div>
@@ -1428,12 +1428,12 @@
         <div data-usq-loans-box hidden style="margin-top:8px"></div>
         <input type="hidden" name="loan_actions" data-usq-actions>
         <div class="hub-text-mute small" data-usq-balance-hint style="margin-top:8px;line-height:1.7">
-          يُضاف المبلغ إلى رصيد المحفظة؛ يُستخدم عند التجديد التلقائي أو لتغطية الباقة.
+          {{ _('يُضاف المبلغ إلى رصيد المحفظة؛ يُستخدم عند التجديد التلقائي أو لتغطية الباقة.') }}
         </div>
       </div>
       <div class="usq-foot">
-        <button class="hub-btn hub-btn--ghost" type="button" data-usq-close>إلغاء</button>
-        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-plus"></i> إضافة</button>
+        <button class="hub-btn hub-btn--ghost" type="button" data-usq-close>{{ _('إلغاء') }}</button>
+        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-plus"></i> {{ _('إضافة') }}</button>
       </div>
     </form>
   </div>
@@ -1447,13 +1447,13 @@
       {# حاوية حقول usernames المخفية — تُملأ بالـ JS عند التنفيذ الجماعي #}
       <div data-usq-multi-usernames hidden></div>
       <div class="usq-head">
-        <h3 id="usq-payment-title">تسجيل دفعة نقدية</h3>
-        <button class="hub-btn hub-btn--ghost hub-btn--icon" type="button" data-usq-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
+        <h3 id="usq-payment-title">{{ _('تسجيل دفعة نقدية') }}</h3>
+        <button class="hub-btn hub-btn--ghost hub-btn--icon" type="button" data-usq-close aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="usq-body">
         {# وضع التنفيذ الجماعي — قائمة المشتركين المحدَّدين + تنبيه «لكل مشترك» #}
         <div class="usq-field wide" data-usq-multi-box hidden>
-          المشتركون المحدَّدون (<span data-usq-multi-count>0</span>)
+          {{ _('المشتركون المحدَّدون (') }}<span data-usq-multi-count>0</span>)
           <div class="usq-sms-recips" data-usq-multi-list></div>
           <div class="hub-text-mute small" style="margin-top:6px;line-height:1.6;font-weight:700">
             تُسجَّل دفعة بالمبلغ المُدخل لكل مشترك على حدة وتُطبَّق على حسابه
@@ -1461,20 +1461,20 @@
           </div>
         </div>
         <div class="usq-form-grid">
-          <label class="usq-field">المبلغ
+          <label class="usq-field">{{ _('المبلغ') }}
             <input class="hub-input" name="amount" type="number" step="0.01" min="0.01" required>
           </label>
-          <label class="usq-field">العملة
-            <input class="hub-input" name="currency" value="{{ cfg.currency }}" maxlength="8" readonly title="عملة النظام — تُضبط من الإعدادات">
+          <label class="usq-field">{{ _('العملة') }}
+            <input class="hub-input" name="currency" value="{{ cfg.currency }}" maxlength="8" readonly title="{{ _('عملة النظام — تُضبط من الإعدادات') }}">
           </label>
-          <label class="usq-field">طريقة الدفع
+          <label class="usq-field">{{ _('طريقة الدفع') }}
             <select class="hub-select" name="method">
-              <option value="cash">نقدًا</option>
-              <option value="bank">تحويل بنكي</option>
-              <option value="manual">يدوي</option>
+              <option value="cash">{{ _('نقدًا') }}</option>
+              <option value="bank">{{ _('تحويل بنكي') }}</option>
+              <option value="manual">{{ _('يدوي') }}</option>
             </select>
           </label>
-          <label class="usq-field wide">ملاحظات
+          <label class="usq-field wide">{{ _('ملاحظات') }}
             <textarea class="hub-textarea" name="notes" rows="2"></textarea>
           </label>
           {# رسمي: الدفعة تُسجَّل وتُطبَّق فعليًا — بدون معاينة ولا تقريب يدوي. #}
@@ -1484,12 +1484,12 @@
         <div data-usq-loans-box hidden style="margin-top:8px"></div>
         <input type="hidden" name="loan_actions" data-usq-actions>
         <div class="hub-text-mute small" data-usq-coverage style="margin-top:8px;line-height:1.7;font-weight:600">
-          أدخل المبلغ لعرض عدد الأيام التي يغطّيها.
+          {{ _('أدخل المبلغ لعرض عدد الأيام التي يغطّيها.') }}
         </div>
       </div>
       <div class="usq-foot">
-        <button class="hub-btn hub-btn--ghost" type="button" data-usq-close>إلغاء</button>
-        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-plus"></i> تسجيل</button>
+        <button class="hub-btn hub-btn--ghost" type="button" data-usq-close>{{ _('إلغاء') }}</button>
+        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-plus"></i> {{ _('تسجيل') }}</button>
       </div>
     </form>
   </div>
@@ -1503,55 +1503,55 @@
       {# حاوية حقول usernames المخفية — تُملأ بالـ JS عند التنفيذ الجماعي #}
       <div data-usq-multi-usernames hidden></div>
       <div class="usq-head">
-        <h3 id="usq-loan-title">إضافة سلفة</h3>
-        <button class="hub-btn hub-btn--ghost hub-btn--icon" type="button" data-usq-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
+        <h3 id="usq-loan-title">{{ _('إضافة سلفة') }}</h3>
+        <button class="hub-btn hub-btn--ghost hub-btn--icon" type="button" data-usq-close aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="usq-body">
         {# وضع التنفيذ الجماعي — قائمة المشتركين المحدَّدين + تنبيه «لكل مشترك» #}
         <div class="usq-field wide" data-usq-multi-box hidden>
-          المشتركون المحدَّدون (<span data-usq-multi-count>0</span>)
+          {{ _('المشتركون المحدَّدون (') }}<span data-usq-multi-count>0</span>)
           <div class="usq-sms-recips" data-usq-multi-list></div>
           <div class="hub-text-mute small" style="margin-top:6px;line-height:1.6;font-weight:700">
             المدة المحدَّدة تُمنح لكل مشترك على حدة؛ وفي وضع الدين تُحتسب
             قيمة السلفة تلقائيًا من سعر كل مشترك.
           </div>
         </div>
-        <div class="usq-field wide">نوع السلفة
+        <div class="usq-field wide">{{ _('نوع السلفة') }}
           <div class="usq-seg" style="margin-top:4px">
             <label data-usq-loan-seg="free" class="is-active">
               <i class="fa-solid fa-gift usq-seg-ico"></i>
               <input type="radio" name="_loan_kind" value="free" checked data-usq-loan-input>
-              <span><strong>مجانية</strong><small>منح وقت فقط بدون قيمة مالية.</small></span>
+              <span><strong>{{ _('مجانية') }}</strong><small>{{ _('منح وقت فقط بدون قيمة مالية.') }}</small></span>
             </label>
             <label data-usq-loan-seg="debt">
               <i class="fa-solid fa-file-invoice-dollar usq-seg-ico"></i>
               <input type="radio" name="_loan_kind" value="debt" data-usq-loan-input>
-              <span><strong>تسجيل دين (مدين)</strong><small>تُسجَّل قيمتها كدين على المشترك.</small></span>
+              <span><strong>{{ _('تسجيل دين (مدين)') }}</strong><small>{{ _('تُسجَّل قيمتها كدين على المشترك.') }}</small></span>
             </label>
           </div>
           <div class="hub-text-mute small" data-usq-loan-hint style="margin-top:6px;line-height:1.6;font-weight:600">
-            سلفة وقت مجانية بدون قيمة مالية — تُمنح مدة فقط دون تسجيل دين.
+            {{ _('سلفة وقت مجانية بدون قيمة مالية — تُمنح مدة فقط دون تسجيل دين.') }}
           </div>
         </div>
         <div class="usq-form-grid" style="margin-top:4px">
-          <label class="usq-field">عدد الأيام
+          <label class="usq-field">{{ _('عدد الأيام') }}
             <input class="hub-input" name="days" type="number" min="0" value="1">
           </label>
-          <label class="usq-field">عدد الساعات
+          <label class="usq-field">{{ _('عدد الساعات') }}
             <input class="hub-input" name="hours" type="number" min="0" value="0">
           </label>
         </div>
         <div class="usq-form-grid usq-reveal" data-usq-debt-only hidden style="margin-top:4px">
-          <label class="usq-field">قيمة السلفة (تُحتسب تلقائيًا)
-            <input class="hub-input" name="amount" type="number" step="0.01" min="0" value="0" data-usq-loan-amount readonly title="تُحتسب من سعر العرض/المخصّص × عدد الأيام">
+          <label class="usq-field">{{ _('قيمة السلفة (تُحتسب تلقائيًا)') }}
+            <input class="hub-input" name="amount" type="number" step="0.01" min="0" value="0" data-usq-loan-amount readonly title="{{ _('تُحتسب من سعر العرض/المخصّص × عدد الأيام') }}">
           </label>
-          <label class="usq-field">العملة
-            <input class="hub-input" name="currency" value="{{ cfg.currency }}" maxlength="8" readonly title="عملة النظام — تُضبط من الإعدادات">
+          <label class="usq-field">{{ _('العملة') }}
+            <input class="hub-input" name="currency" value="{{ cfg.currency }}" maxlength="8" readonly title="{{ _('عملة النظام — تُضبط من الإعدادات') }}">
           </label>
         </div>
         {# debt loans are priced from DAYS server-side (effective price × duration). #}
         <input type="hidden" name="price_from_days" value="0" data-usq-loan-pfd>
-        <label class="usq-field wide">سبب السلفة
+        <label class="usq-field wide">{{ _('سبب السلفة') }}
           <textarea class="hub-textarea" name="reason" rows="2"></textarea>
         </label>
         {# رسمي: السلفة تُسجَّل وتُطبَّق فعليًا — بدون معاينة. #}
@@ -1559,8 +1559,8 @@
         <div class="usq-loan-msg" data-usq-loan-msg hidden></div>
       </div>
       <div class="usq-foot">
-        <button class="hub-btn hub-btn--ghost" type="button" data-usq-close>إلغاء</button>
-        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-plus"></i> إضافة</button>
+        <button class="hub-btn hub-btn--ghost" type="button" data-usq-close>{{ _('إلغاء') }}</button>
+        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-plus"></i> {{ _('إضافة') }}</button>
       </div>
     </form>
   </div>
@@ -1570,8 +1570,8 @@
 <div class="usq-modal" data-users-bulk-modal hidden>
   <div class="usq-dialog" role="dialog" aria-modal="true" aria-labelledby="ubulk-title" style="width:min(560px,100%)">
     <div class="usq-head">
-      <h3 id="ubulk-title">تأكيد حذف المشتركين المحددين</h3>
-      <button class="hub-btn hub-btn--ghost hub-btn--icon" type="button" data-users-bulk-cancel aria-label="إغلاق">
+      <h3 id="ubulk-title">{{ _('تأكيد حذف المشتركين المحددين') }}</h3>
+      <button class="hub-btn hub-btn--ghost hub-btn--icon" type="button" data-users-bulk-cancel aria-label="{{ _('إغلاق') }}">
         <i class="fa-solid fa-xmark"></i>
       </button>
     </div>
@@ -1579,21 +1579,21 @@
       <div class="ubulk-danger-note">
         <i class="fa-solid fa-triangle-exclamation" style="margin-top:2px"></i>
         <div>
-          سيتم أرشفة <strong><span data-users-bulk-count3>0</span> مشترك</strong> دفعة واحدة.
-          هذا إجراء حسّاس — يمكن استعادتهم من <strong>سلة المحذوفات</strong> عند الحاجة.
-          للتأكيد اكتب <strong>أرشفة المشتركين</strong> في الحقل أدناه.
+          {{ _('سيتم أرشفة') }} <strong><span data-users-bulk-count3>0</span> {{ _('مشترك') }}</strong> دفعة واحدة.
+          هذا إجراء حسّاس — يمكن استعادتهم من <strong>{{ _('سلة المحذوفات') }}</strong> عند الحاجة.
+          للتأكيد اكتب <strong>{{ _('أرشفة المشتركين') }}</strong> {{ _('في الحقل أدناه.') }}
         </div>
       </div>
       <ul class="ubulk-confirm-list" data-users-bulk-names></ul>
-      <label class="ubulk-type-field">اكتب عبارة التأكيد
+      <label class="ubulk-type-field">{{ _('اكتب عبارة التأكيد') }}
         <input class="hub-input" type="text" data-users-bulk-type autocomplete="off"
-               placeholder="أرشفة المشتركين">
+               placeholder="{{ _('أرشفة المشتركين') }}">
       </label>
     </div>
     <div class="usq-foot">
-      <button class="hub-btn hub-btn--ghost" type="button" data-users-bulk-cancel>إلغاء</button>
+      <button class="hub-btn hub-btn--ghost" type="button" data-users-bulk-cancel>{{ _('إلغاء') }}</button>
       <button class="hub-btn hub-btn--danger" type="button" data-users-bulk-confirm disabled>
-        <i class="fa-solid fa-trash-can"></i> حذف نهائي للتحديد
+        <i class="fa-solid fa-trash-can"></i> {{ _('حذف نهائي للتحديد') }}
       </button>
     </div>
   </div>

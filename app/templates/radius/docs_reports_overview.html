@@ -214,14 +214,14 @@
 <div class="dg-layout">
 
   {# ───── الفهرس الجانبي اللاصق ───── #}
-  <nav class="dg-toc dg-noprint" aria-label="فهرس الدليل">
-    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> فهرس الخطوات</div>
-    <a href="#dg-s1" data-dg-toc><span class="n">1</span> ما هو مركز التقارير</a>
-    <a href="#dg-s2" data-dg-toc><span class="n">2</span> العائلات الخمس</a>
-    <a href="#dg-s3" data-dg-toc><span class="n">3</span> الانتقال السريع</a>
-    <a href="#dg-s4" data-dg-toc><span class="n">4</span> التصدير الثلاثي</a>
-    <a href="#dg-s5" data-dg-toc><span class="n">5</span> فلاتر التاريخ</a>
-    <a href="#dg-s6" data-dg-toc><span class="n">6</span> الأرشيف واللقطات</a>
+  <nav class="dg-toc dg-noprint" aria-label="{{ _('فهرس الدليل') }}">
+    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> {{ _('فهرس الخطوات') }}</div>
+    <a href="#dg-s1" data-dg-toc><span class="n">1</span> {{ _('ما هو مركز التقارير') }}</a>
+    <a href="#dg-s2" data-dg-toc><span class="n">2</span> {{ _('العائلات الخمس') }}</a>
+    <a href="#dg-s3" data-dg-toc><span class="n">3</span> {{ _('الانتقال السريع') }}</a>
+    <a href="#dg-s4" data-dg-toc><span class="n">4</span> {{ _('التصدير الثلاثي') }}</a>
+    <a href="#dg-s5" data-dg-toc><span class="n">5</span> {{ _('فلاتر التاريخ') }}</a>
+    <a href="#dg-s6" data-dg-toc><span class="n">6</span> {{ _('الأرشيف واللقطات') }}</a>
   </nav>
 
   {# ───── عمود المحتوى ───── #}
@@ -230,7 +230,7 @@
     <div class="dg-lead">
       <span class="ic"><i class="fa-solid fa-chart-pie"></i></span>
       <div>
-        <h3>قبل ما نبدأ — شو يعني «مركز التقارير»؟</h3>
+        <h3>{{ _('قبل ما نبدأ — شو يعني «مركز التقارير»؟') }}</h3>
         <p>
           هو بوابة واحدة لكل قراءات الأعمال: مؤشرات تنفيذية فورية، مكتبة تقارير تفصيلية
           منظّمة في خمس عائلات، وأرشيف لقطات ثابتة. كل تقرير صفحة فيها جدول موحّد تقدر تفرزه
@@ -244,24 +244,24 @@
     <section class="dg-step" id="dg-s1">
       <div class="dg-badge">1</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-gauge"></i> الصفحة الرئيسية — أربعة مؤشرات فورية</h2>
+        <h2><i class="fa-solid fa-gauge"></i> {{ _('الصفحة الرئيسية — أربعة مؤشرات فورية') }}</h2>
         <p>
-          تفتح مركز التقارير من القائمة الجانبية تحت <strong>التقارير ← نظرة عامة</strong>.
-          أعلى الصفحة هيرو فيه <strong>أربعة مؤشرات</strong> تعطيك صورة لحظية قبل ما تغوص في
+          {{ _('تفتح مركز التقارير من القائمة الجانبية تحت') }} <strong>{{ _('التقارير ← نظرة عامة') }}</strong>.
+          أعلى الصفحة هيرو فيه <strong>{{ _('أربعة مؤشرات') }}</strong> تعطيك صورة لحظية قبل ما تغوص في
           التفاصيل:
         </p>
 
         <div class="dg-kpis" aria-hidden="true">
-          <div class="dg-kpi"><span class="ic"><i class="fa-solid fa-users"></i></span><small>المشتركون</small><strong>360</strong></div>
-          <div class="dg-kpi"><span class="ic"><i class="fa-solid fa-wifi"></i></span><small>المتصلون الآن</small><strong>48</strong></div>
-          <div class="dg-kpi"><span class="ic"><i class="fa-solid fa-coins"></i></span><small>الإيرادات</small><strong>12,400</strong></div>
-          <div class="dg-kpi"><span class="ic"><i class="fa-solid fa-id-card"></i></span><small>البطاقات</small><strong>1,250</strong></div>
+          <div class="dg-kpi"><span class="ic"><i class="fa-solid fa-users"></i></span><small>{{ _('المشتركون') }}</small><strong>360</strong></div>
+          <div class="dg-kpi"><span class="ic"><i class="fa-solid fa-wifi"></i></span><small>{{ _('المتصلون الآن') }}</small><strong>48</strong></div>
+          <div class="dg-kpi"><span class="ic"><i class="fa-solid fa-coins"></i></span><small>{{ _('الإيرادات') }}</small><strong>12,400</strong></div>
+          <div class="dg-kpi"><span class="ic"><i class="fa-solid fa-id-card"></i></span><small>{{ _('البطاقات') }}</small><strong>1,250</strong></div>
         </div>
-        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> المؤشرات: المشتركون، المتصلون الآن، الإيرادات، البطاقات.</div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> {{ _('المؤشرات: المشتركون، المتصلون الآن، الإيرادات، البطاقات.') }}</div>
 
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>نصيحة:</b> أسفل المؤشرات «مكتبة التقارير» — بطاقات تأخذك مباشرة لأهم
+          <span><b>{{ _('نصيحة:') }}</b> أسفل المؤشرات «مكتبة التقارير» — بطاقات تأخذك مباشرة لأهم
           التقارير التنفيذية. استخدمها كنقطة بداية، والسايدبار للوصول الكامل لكل تقرير.</span>
         </div>
       </div>
@@ -271,30 +271,30 @@
     <section class="dg-step" id="dg-s2">
       <div class="dg-badge">2</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-sitemap"></i> العائلات الخمس في السايدبار</h2>
+        <h2><i class="fa-solid fa-sitemap"></i> {{ _('العائلات الخمس في السايدبار') }}</h2>
         <p>
-          كل التقارير منظّمة في <strong>خمس عائلات قابلة للطي</strong> ضمن قسم «التقارير» في
+          {{ _('كل التقارير منظّمة في') }} <strong>{{ _('خمس عائلات قابلة للطي') }}</strong> ضمن قسم «التقارير» في
           القائمة الجانبية — تفتح العائلة فتظهر تقاريرها:
         </p>
         <ul>
-          <li><strong>التقارير التنفيذية:</strong> نظرة عامة، التقرير المالي، تقارير البطاقات، تقارير الموزعين، الأرشيف.</li>
-          <li><strong>الدخول والأمان:</strong> حالات تسجيل الدخول، فشل دخول الشبكة، حالة دخول المشتركين، حالة دخول المدراء.</li>
-          <li><strong>الشبكة والجلسات:</strong> تقارير الجلسات، سجل تغييرات الماك، فشل الفصل/التحديث، فشل تحديث السرعة.</li>
-          <li><strong>النشاط والأحداث:</strong> أحداث المدراء، أحداث المشتركين، تغيير العروض، سجل رسائل الربط.</li>
-          <li><strong>المالية والموازنات:</strong> كروت الشحن المستخدمة، معاملات الكاش، تحويلات الرصيد، تقارير المحاسبة.</li>
+          <li><strong>{{ _('التقارير التنفيذية:') }}</strong> {{ _('نظرة عامة، التقرير المالي، تقارير البطاقات، تقارير الموزعين، الأرشيف.') }}</li>
+          <li><strong>{{ _('الدخول والأمان:') }}</strong> {{ _('حالات تسجيل الدخول، فشل دخول الشبكة، حالة دخول المشتركين، حالة دخول المدراء.') }}</li>
+          <li><strong>{{ _('الشبكة والجلسات:') }}</strong> {{ _('تقارير الجلسات، سجل تغييرات الماك، فشل الفصل/التحديث، فشل تحديث السرعة.') }}</li>
+          <li><strong>{{ _('النشاط والأحداث:') }}</strong> {{ _('أحداث المدراء، أحداث المشتركين، تغيير العروض، سجل رسائل الربط.') }}</li>
+          <li><strong>{{ _('المالية والموازنات:') }}</strong> {{ _('كروت الشحن المستخدمة، معاملات الكاش، تحويلات الرصيد، تقارير المحاسبة.') }}</li>
         </ul>
 
         <div class="dg-fams" aria-hidden="true" style="max-width:460px">
           <div class="dg-fam">
-            <div class="dg-fam-head"><span class="fi" style="background:#7c3aed"><i class="fa-solid fa-briefcase"></i></span> التقارير التنفيذية <i class="fa-solid fa-chevron-down cv"></i></div>
-            <div class="dg-fam-body"><span>نظرة عامة</span><span>التقرير المالي</span><span>تقارير البطاقات</span><span>تقارير الموزعين</span><span>الأرشيف</span></div>
+            <div class="dg-fam-head"><span class="fi" style="background:#7c3aed"><i class="fa-solid fa-briefcase"></i></span> {{ _('التقارير التنفيذية') }} <i class="fa-solid fa-chevron-down cv"></i></div>
+            <div class="dg-fam-body"><span>{{ _('نظرة عامة') }}</span><span>{{ _('التقرير المالي') }}</span><span>{{ _('تقارير البطاقات') }}</span><span>{{ _('تقارير الموزعين') }}</span><span>{{ _('الأرشيف') }}</span></div>
           </div>
           <div class="dg-fam">
-            <div class="dg-fam-head"><span class="fi" style="background:#ec4899"><i class="fa-solid fa-right-to-bracket"></i></span> الدخول والأمان <i class="fa-solid fa-chevron-down cv"></i></div>
-            <div class="dg-fam-body"><span>حالات تسجيل الدخول</span><span>فشل دخول الشبكة</span><span>دخول المشتركين</span><span>دخول المدراء</span></div>
+            <div class="dg-fam-head"><span class="fi" style="background:#ec4899"><i class="fa-solid fa-right-to-bracket"></i></span> {{ _('الدخول والأمان') }} <i class="fa-solid fa-chevron-down cv"></i></div>
+            <div class="dg-fam-body"><span>{{ _('حالات تسجيل الدخول') }}</span><span>{{ _('فشل دخول الشبكة') }}</span><span>{{ _('دخول المشتركين') }}</span><span>{{ _('دخول المدراء') }}</span></div>
           </div>
         </div>
-        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> هكذا تبدو العائلات في السايدبار — اضغط رأس العائلة ليفتح تقاريرها.</div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> {{ _('هكذا تبدو العائلات في السايدبار — اضغط رأس العائلة ليفتح تقاريرها.') }}</div>
       </div>
     </section>
 
@@ -302,25 +302,25 @@
     <section class="dg-step" id="dg-s3">
       <div class="dg-badge">3</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-diagram-project"></i> الانتقال السريع من الهيرو</h2>
+        <h2><i class="fa-solid fa-diagram-project"></i> {{ _('الانتقال السريع من الهيرو') }}</h2>
         <p>
-          داخل أي صفحة تقرير يوجد في الهيرو <strong>منتقٍ سريع</strong> يعرف العائلة التي أنت
-          فيها ويظهر لك <strong>تقاريرها الشقيقة</strong> فقط — فتنتقل بينها بنقرة بلا رجوع
+          {{ _('داخل أي صفحة تقرير يوجد في الهيرو') }} <strong>{{ _('منتقٍ سريع') }}</strong> يعرف العائلة التي أنت
+          فيها ويظهر لك <strong>{{ _('تقاريرها الشقيقة') }}</strong> فقط — فتنتقل بينها بنقرة بلا رجوع
           للسايدبار. التقرير الحالي مميّز.
         </p>
 
         <div class="dg-jump" aria-hidden="true">
-          <span class="lbl"><i class="fa-solid fa-bolt"></i> انتقال سريع</span>
-          <a class="on">تقارير الجلسات</a>
-          <a>سجل تغييرات الماك</a>
-          <a>فشل الفصل/التحديث</a>
-          <a>فشل تحديث السرعة</a>
+          <span class="lbl"><i class="fa-solid fa-bolt"></i> {{ _('انتقال سريع') }}</span>
+          <a class="on">{{ _('تقارير الجلسات') }}</a>
+          <a>{{ _('سجل تغييرات الماك') }}</a>
+          <a>{{ _('فشل الفصل/التحديث') }}</a>
+          <a>{{ _('فشل تحديث السرعة') }}</a>
         </div>
-        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> يعرض تقارير عائلة «الشبكة والجلسات» لأنك داخل أحدها.</div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> {{ _('يعرض تقارير عائلة «الشبكة والجلسات» لأنك داخل أحدها.') }}</div>
 
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>نصيحة:</b> المنتقي السريع أسرع طريق للتنقّل <b>داخل نفس العائلة</b>. للقفز
+          <span><b>{{ _('نصيحة:') }}</b> {{ _('المنتقي السريع أسرع طريق للتنقّل') }} <b>{{ _('داخل نفس العائلة') }}</b>. للقفز
           إلى عائلة أخرى استخدم السايدبار.</span>
         </div>
       </div>
@@ -330,15 +330,15 @@
     <section class="dg-step" id="dg-s4">
       <div class="dg-badge">4</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-file-export"></i> التصدير — CSV / Excel / PDF</h2>
+        <h2><i class="fa-solid fa-file-export"></i> {{ _('التصدير — CSV / Excel / PDF') }}</h2>
         <p>
-          كل جدول تقرير فيه ثلاثة أزرار تصدير في رأسه. تصدّر <strong>الأعمدة الظاهرة وكل
-          الصفوف</strong> (لا الصفحة الحالية فقط):
+          {{ _('كل جدول تقرير فيه ثلاثة أزرار تصدير في رأسه. تصدّر') }} <strong>الأعمدة الظاهرة وكل
+          الصفوف</strong> {{ _('(لا الصفحة الحالية فقط):') }}
         </p>
         <ul>
-          <li><strong>CSV:</strong> تنزيل مباشر من المتصفح (UTF-8 مع BOM) — يفتح في أي برنامج جداول.</li>
-          <li><strong>Excel:</strong> ملف <span class="dg-kbd">.xlsx</span> منسّق بهوية النظام (RTL، صف رأس بنفسجي، صفوف متناوبة).</li>
-          <li><strong>PDF:</strong> ملف بهوية HobeRadius وخط Cairo مع تشكيل عربي — جاهز للطباعة أو المشاركة.</li>
+          <li><strong>CSV:</strong> {{ _('تنزيل مباشر من المتصفح (UTF-8 مع BOM) — يفتح في أي برنامج جداول.') }}</li>
+          <li><strong>Excel:</strong> {{ _('ملف') }} <span class="dg-kbd">.xlsx</span> {{ _('منسّق بهوية النظام (RTL، صف رأس بنفسجي، صفوف متناوبة).') }}</li>
+          <li><strong>PDF:</strong> {{ _('ملف بهوية HobeRadius وخط Cairo مع تشكيل عربي — جاهز للطباعة أو المشاركة.') }}</li>
         </ul>
 
         <div class="dg-exports" aria-hidden="true">
@@ -346,11 +346,11 @@
           <span class="dg-export xls"><i class="fa-solid fa-file-excel"></i> Excel</span>
           <span class="dg-export pdf"><i class="fa-solid fa-file-pdf"></i> PDF</span>
         </div>
-        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> هذه الأزرار ثابتة في رأس كل جدول تقرير عبر النظام.</div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> {{ _('هذه الأزرار ثابتة في رأس كل جدول تقرير عبر النظام.') }}</div>
 
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>نصيحة:</b> فلتر أولًا (بالتاريخ أو البحث) ثم صدّر — التصدير يأخذ ما هو ظاهر
+          <span><b>{{ _('نصيحة:') }}</b> فلتر أولًا (بالتاريخ أو البحث) ثم صدّر — التصدير يأخذ ما هو ظاهر
           بعد الفلترة، فتحصل على ملف نظيف بما يهمّك فقط.</span>
         </div>
       </div>
@@ -360,32 +360,32 @@
     <section class="dg-step" id="dg-s5">
       <div class="dg-badge">5</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-calendar-days"></i> فلاتر التاريخ — من / إلى</h2>
+        <h2><i class="fa-solid fa-calendar-days"></i> {{ _('فلاتر التاريخ — من / إلى') }}</h2>
         <p>
-          أغلب التقارير فيها حزام فلترة في الهيرو، وأهم أداة فيه <strong>نطاق التاريخ</strong>:
-          منتقيا <strong>«من تاريخ»</strong> و<strong>«إلى تاريخ»</strong>. تختار النطاق ثم تضغط
-          <strong>«تطبيق»</strong>، فيُحسب «من» من بداية اليوم و«إلى» حتى نهايته — يدخل اليومان
+          {{ _('أغلب التقارير فيها حزام فلترة في الهيرو، وأهم أداة فيه') }} <strong>{{ _('نطاق التاريخ') }}</strong>:
+          منتقيا <strong>{{ _('«من تاريخ»') }}</strong> {{ _('و') }}<strong>{{ _('«إلى تاريخ»') }}</strong>{{ _('. تختار النطاق ثم تضغط') }}
+          <strong>{{ _('«تطبيق»') }}</strong>، فيُحسب «من» من بداية اليوم و«إلى» حتى نهايته — يدخل اليومان
           الطرفيان كاملين.
         </p>
 
         <div class="dg-mock" aria-hidden="true" style="max-width:430px">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">تقرير الجلسات › الفلاتر</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('تقرير الجلسات › الفلاتر') }}</span></div>
           <div class="dg-mock-body">
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px">
-              <div class="dg-mf"><label>من تاريخ</label><div class="dg-mf-input hl">2026-06-01</div></div>
-              <div class="dg-mf"><label>إلى تاريخ</label><div class="dg-mf-input hl">2026-06-05</div></div>
+              <div class="dg-mf"><label>{{ _('من تاريخ') }}</label><div class="dg-mf-input hl">2026-06-01</div></div>
+              <div class="dg-mf"><label>{{ _('إلى تاريخ') }}</label><div class="dg-mf-input hl">2026-06-05</div></div>
             </div>
             <div style="display:flex;gap:8px;justify-content:flex-end">
-              <span style="font-size:11px;font-weight:800;color:#475569;background:#f1f5f9;border-radius:8px;padding:7px 13px"><i class="fa-solid fa-rotate-left"></i> إعادة ضبط</span>
-              <span style="font-size:11px;font-weight:900;color:#fff;background:linear-gradient(135deg,#7c3aed,#5b21b6);border-radius:8px;padding:7px 14px"><i class="fa-solid fa-filter"></i> تطبيق</span>
+              <span style="font-size:11px;font-weight:800;color:#475569;background:#f1f5f9;border-radius:8px;padding:7px 13px"><i class="fa-solid fa-rotate-left"></i> {{ _('إعادة ضبط') }}</span>
+              <span style="font-size:11px;font-weight:900;color:#fff;background:linear-gradient(135deg,#7c3aed,#5b21b6);border-radius:8px;padding:7px 14px"><i class="fa-solid fa-filter"></i> {{ _('تطبيق') }}</span>
             </div>
           </div>
         </div>
-        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> بجانب التاريخ غالبًا حقل بحث وقوائم حالة/مصدر حسب التقرير.</div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> {{ _('بجانب التاريخ غالبًا حقل بحث وقوائم حالة/مصدر حسب التقرير.') }}</div>
 
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>نصيحة:</b> زر <b>«إعادة ضبط»</b> يمسح كل الفلاتر ويرجعك للعرض الكامل —
+          <span><b>{{ _('نصيحة:') }}</b> {{ _('زر') }} <b>{{ _('«إعادة ضبط»') }}</b> يمسح كل الفلاتر ويرجعك للعرض الكامل —
           استخدمه إذا اختفت النتائج بسبب نطاق تاريخ ضيّق.</span>
         </div>
       </div>
@@ -395,27 +395,27 @@
     <section class="dg-step" id="dg-s6">
       <div class="dg-badge">6</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-box-archive"></i> الأرشيف — لقطات ثابتة لا تُعاد كتابتها</h2>
+        <h2><i class="fa-solid fa-box-archive"></i> {{ _('الأرشيف — لقطات ثابتة لا تُعاد كتابتها') }}</h2>
         <p>
-          آخر عائلة فيها <strong>الأرشيف</strong>: بينما التقارير الحيّة تُحسب من البيانات
-          الحالية كل مرة تفتحها، الأرشيف يحفظ <strong>لقطة ثابتة</strong> لتقرير في لحظة معيّنة
+          {{ _('آخر عائلة فيها') }} <strong>{{ _('الأرشيف') }}</strong>: بينما التقارير الحيّة تُحسب من البيانات
+          الحالية كل مرة تفتحها، الأرشيف يحفظ <strong>{{ _('لقطة ثابتة') }}</strong> لتقرير في لحظة معيّنة
           فتبقى كما هي مهما تغيّرت البيانات لاحقًا.
         </p>
         <ul>
-          <li>مفيد لإغلاق الشهر/الفترة: تحفظ النتيجة النهائية فلا تتأثر بأي تعديل لاحق.</li>
-          <li>مرجع للمراجعة والتدقيق — لقطة موثّقة بتاريخها.</li>
+          <li>{{ _('مفيد لإغلاق الشهر/الفترة: تحفظ النتيجة النهائية فلا تتأثر بأي تعديل لاحق.') }}</li>
+          <li>{{ _('مرجع للمراجعة والتدقيق — لقطة موثّقة بتاريخها.') }}</li>
         </ul>
 
         <div class="dg-warn">
           <span class="ic">⚠️</span>
-          <span><b>انتبه:</b> فرّق بين <b>التصدير</b> (ملف ينزل على جهازك من بيانات اللحظة)
-          و<b>الأرشفة</b> (لقطة محفوظة داخل النظام). للإقفالات المالية اعتمد الأرشيف، وللمشاركة
+          <span><b>{{ _('انتبه:') }}</b> {{ _('فرّق بين') }} <b>{{ _('التصدير') }}</b> (ملف ينزل على جهازك من بيانات اللحظة)
+          و<b>{{ _('الأرشفة') }}</b> (لقطة محفوظة داخل النظام). للإقفالات المالية اعتمد الأرشيف، وللمشاركة
           السريعة يكفي التصدير.</span>
         </div>
 
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>وبعدين؟</b> لكل عائلة دليلها المفصّل في هذا القسم — ابدأ من «حالات تسجيل
+          <span><b>{{ _('وبعدين؟') }}</b> لكل عائلة دليلها المفصّل في هذا القسم — ابدأ من «حالات تسجيل
           الدخول» لتشخيص مشاكل اتصال المشتركين، أو من تقارير الجلسات لقراءة الاستهلاك.</span>
         </div>
       </div>

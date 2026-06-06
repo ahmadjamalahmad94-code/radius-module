@@ -227,15 +227,15 @@
 <div class="dg-layout">
 
   {# ───── الفهرس الجانبي اللاصق ───── #}
-  <nav class="dg-toc dg-noprint" aria-label="فهرس الدليل">
-    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> فهرس الخطوات</div>
-    <a href="#dg-s1" data-dg-toc><span class="n">1</span> افتح غرفة العمليات</a>
-    <a href="#dg-s2" data-dg-toc><span class="n">2</span> مؤشرات صحة الأسطول</a>
-    <a href="#dg-s3" data-dg-toc><span class="n">3</span> جدول الراوترات</a>
-    <a href="#dg-s4" data-dg-toc><span class="n">4</span> صف الأيقونات</a>
-    <a href="#dg-s5" data-dg-toc><span class="n">5</span> الشريط الجماعي</a>
-    <a href="#dg-s6" data-dg-toc><span class="n">6</span> إضافة بالمعالج</a>
-    <a href="#dg-s7" data-dg-toc><span class="n">7</span> تفريغ الطوارئ</a>
+  <nav class="dg-toc dg-noprint" aria-label="{{ _('فهرس الدليل') }}">
+    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> {{ _('فهرس الخطوات') }}</div>
+    <a href="#dg-s1" data-dg-toc><span class="n">1</span> {{ _('افتح غرفة العمليات') }}</a>
+    <a href="#dg-s2" data-dg-toc><span class="n">2</span> {{ _('مؤشرات صحة الأسطول') }}</a>
+    <a href="#dg-s3" data-dg-toc><span class="n">3</span> {{ _('جدول الراوترات') }}</a>
+    <a href="#dg-s4" data-dg-toc><span class="n">4</span> {{ _('صف الأيقونات') }}</a>
+    <a href="#dg-s5" data-dg-toc><span class="n">5</span> {{ _('الشريط الجماعي') }}</a>
+    <a href="#dg-s6" data-dg-toc><span class="n">6</span> {{ _('إضافة بالمعالج') }}</a>
+    <a href="#dg-s7" data-dg-toc><span class="n">7</span> {{ _('تفريغ الطوارئ') }}</a>
   </nav>
 
   {# ───── عمود المحتوى ───── #}
@@ -244,9 +244,9 @@
     <div class="dg-lead">
       <span class="ic"><i class="fa-solid fa-lightbulb"></i></span>
       <div>
-        <h3>قبل ما نبدأ — شو هي «غرفة العمليات»؟</h3>
+        <h3>{{ _('قبل ما نبدأ — شو هي «غرفة العمليات»؟') }}</h3>
         <p>
-          صفحة <strong>«إدارة الراوترات»</strong> هي غرفة عمليات أسطولك: كل راوترات MikroTik
+          {{ _('صفحة') }} <strong>{{ _('«إدارة الراوترات»') }}</strong> هي غرفة عمليات أسطولك: كل راوترات MikroTik
           عندك في جدول واحد، فوقه مؤشرات صحة حيّة، ولكل راوتر صف أزرار يوصلك لخدماته وأدواته.
           من هنا تضيف راوترًا جديدًا بالمعالج، وتتابع المتصل من المنقطع، وتنفّذ الإجراءات
           الجماعية والحسّاسة. خلّينا نتعرّف على كل جزء.
@@ -258,21 +258,21 @@
     <section class="dg-step" id="dg-s1">
       <div class="dg-badge">1</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-door-open"></i> افتح صفحة «إدارة الراوترات»</h2>
+        <h2><i class="fa-solid fa-door-open"></i> {{ _('افتح صفحة «إدارة الراوترات»') }}</h2>
         <p>
-          من القائمة الجانبية افتح قسم <strong>«الراوترات والشبكة»</strong> ثم
-          <strong>«إدارة الراوترات»</strong>. تفتح الصفحة برأس فيه عنوان «إدارة الراوترات»
+          {{ _('من القائمة الجانبية افتح قسم') }} <strong>{{ _('«الراوترات والشبكة»') }}</strong> {{ _('ثم') }}
+          <strong>{{ _('«إدارة الراوترات»') }}</strong>. تفتح الصفحة برأس فيه عنوان «إدارة الراوترات»
           وشرح: «غرفة عمليات الأسطول: التجهيز، الصحة الحية، وخدمات كل راوتر في مكان واحد».
         </p>
         <p>
-          في أعلى يمين الرأس ثلاثة أزرار للأسطول كله: <strong>«إضافة بالمعالج»</strong> و
-          <strong>«إعادة تخصيص العناوين»</strong> و<strong>«تفريغ طوارئ»</strong> — نشرح كلًّا منها
+          {{ _('في أعلى يمين الرأس ثلاثة أزرار للأسطول كله:') }} <strong>{{ _('«إضافة بالمعالج»') }}</strong> {{ _('و') }}
+          <strong>{{ _('«إعادة تخصيص العناوين»') }}</strong> {{ _('و') }}<strong>{{ _('«تفريغ طوارئ»') }}</strong> — نشرح كلًّا منها
           في خطوته. وعلى يسار الصفحة لوحة مساعدة قابلة للطيّ اسمها «غرفة عمليات الراوترات»
           تختصر لك القواعد.
         </p>
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>نصيحة:</b> الصفحة للقراءة والتشغيل اليومي — كل بياناتها تُحدَّث تلقائيًا من فحص
+          <span><b>{{ _('نصيحة:') }}</b> الصفحة للقراءة والتشغيل اليومي — كل بياناتها تُحدَّث تلقائيًا من فحص
           حيّ لكل راوتر، فلا تحتاج تعمل «تحديث» يدويًا.</span>
         </div>
       </div>
@@ -282,34 +282,34 @@
     <section class="dg-step" id="dg-s2">
       <div class="dg-badge">2</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-heart-pulse"></i> اقرأ مؤشرات صحة الأسطول</h2>
+        <h2><i class="fa-solid fa-heart-pulse"></i> {{ _('اقرأ مؤشرات صحة الأسطول') }}</h2>
         <p>
           تحت الرأس مباشرةً ستّ بطاقات تلخّص حالة كل راوتراتك بنظرة واحدة. كل بطاقة
           رقمها يتحدّث حيًّا:
         </p>
         <ul>
-          <li><strong>الإجمالي:</strong> عدد راوتراتك كلها.</li>
-          <li><strong>متصل:</strong> تجاوب تام من واجهة الربط — كل شيء سليم.</li>
-          <li><strong>غير متصل:</strong> انتهت المهلة أو لا يردّ — يحتاج فحصًا.</li>
-          <li><strong>جزئي:</strong> بعض المؤشرات فقط تردّ — اتصال متذبذب.</li>
-          <li><strong>قيد التجهيز:</strong> لم يكتمل إعداده بعد عبر المعالج.</li>
-          <li><strong>معطَّل:</strong> أوقفته أنت إداريًا فلا يُفحص.</li>
+          <li><strong>{{ _('الإجمالي:') }}</strong> {{ _('عدد راوتراتك كلها.') }}</li>
+          <li><strong>{{ _('متصل:') }}</strong> {{ _('تجاوب تام من واجهة الربط — كل شيء سليم.') }}</li>
+          <li><strong>{{ _('غير متصل:') }}</strong> {{ _('انتهت المهلة أو لا يردّ — يحتاج فحصًا.') }}</li>
+          <li><strong>{{ _('جزئي:') }}</strong> {{ _('بعض المؤشرات فقط تردّ — اتصال متذبذب.') }}</li>
+          <li><strong>{{ _('قيد التجهيز:') }}</strong> {{ _('لم يكتمل إعداده بعد عبر المعالج.') }}</li>
+          <li><strong>{{ _('معطَّل:') }}</strong> {{ _('أوقفته أنت إداريًا فلا يُفحص.') }}</li>
         </ul>
 
         <div class="dg-mock" aria-hidden="true">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">إدارة الراوترات › صحة الأسطول</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('إدارة الراوترات › صحة الأسطول') }}</span></div>
           <div class="dg-mock-body">
             <div class="dg-kpis">
-              <div class="dg-kpi"><span class="ic" style="background:#ede9fe;color:#6d28d9"><i class="fa-solid fa-server"></i></span><div><div class="v">12</div><div class="l">الإجمالي</div></div></div>
-              <div class="dg-kpi"><span class="ic" style="background:#dcfce7;color:#16a34a"><i class="fa-solid fa-circle-check"></i></span><div><div class="v">9</div><div class="l">متصل</div></div></div>
-              <div class="dg-kpi"><span class="ic" style="background:#fee2e2;color:#dc2626"><i class="fa-solid fa-circle-xmark"></i></span><div><div class="v">1</div><div class="l">غير متصل</div></div></div>
-              <div class="dg-kpi"><span class="ic" style="background:#fef3c7;color:#d97706"><i class="fa-solid fa-circle-half-stroke"></i></span><div><div class="v">1</div><div class="l">جزئي</div></div></div>
-              <div class="dg-kpi"><span class="ic" style="background:#fef3c7;color:#d97706"><i class="fa-solid fa-screwdriver-wrench"></i></span><div><div class="v">1</div><div class="l">قيد التجهيز</div></div></div>
-              <div class="dg-kpi"><span class="ic" style="background:#f1f5f9;color:#64748b"><i class="fa-solid fa-power-off"></i></span><div><div class="v">0</div><div class="l">معطَّل</div></div></div>
+              <div class="dg-kpi"><span class="ic" style="background:#ede9fe;color:#6d28d9"><i class="fa-solid fa-server"></i></span><div><div class="v">12</div><div class="l">{{ _('الإجمالي') }}</div></div></div>
+              <div class="dg-kpi"><span class="ic" style="background:#dcfce7;color:#16a34a"><i class="fa-solid fa-circle-check"></i></span><div><div class="v">9</div><div class="l">{{ _('متصل') }}</div></div></div>
+              <div class="dg-kpi"><span class="ic" style="background:#fee2e2;color:#dc2626"><i class="fa-solid fa-circle-xmark"></i></span><div><div class="v">1</div><div class="l">{{ _('غير متصل') }}</div></div></div>
+              <div class="dg-kpi"><span class="ic" style="background:#fef3c7;color:#d97706"><i class="fa-solid fa-circle-half-stroke"></i></span><div><div class="v">1</div><div class="l">{{ _('جزئي') }}</div></div></div>
+              <div class="dg-kpi"><span class="ic" style="background:#fef3c7;color:#d97706"><i class="fa-solid fa-screwdriver-wrench"></i></span><div><div class="v">1</div><div class="l">{{ _('قيد التجهيز') }}</div></div></div>
+              <div class="dg-kpi"><span class="ic" style="background:#f1f5f9;color:#64748b"><i class="fa-solid fa-power-off"></i></span><div><div class="v">0</div><div class="l">{{ _('معطَّل') }}</div></div></div>
             </div>
           </div>
         </div>
-        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> حالة «متصل/غير متصل» تأتي من فحص حيّ لواجهة الربط — تُحدَّث دوريًا.</div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> {{ _('حالة «متصل/غير متصل» تأتي من فحص حيّ لواجهة الربط — تُحدَّث دوريًا.') }}</div>
       </div>
     </section>
 
@@ -317,31 +317,31 @@
     <section class="dg-step" id="dg-s3">
       <div class="dg-badge">3</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-table-list"></i> اقرأ جدول الراوترات</h2>
+        <h2><i class="fa-solid fa-table-list"></i> {{ _('اقرأ جدول الراوترات') }}</h2>
         <p>
-          القلب هو الجدول. أعمدته بالترتيب: <strong>مربع الاختيار</strong> ثم
-          <strong>#</strong> (رقم) ثم <strong>الاسم</strong> (اضغطه يفتح لوحة الراوتر) ثم
-          <strong>العنوان</strong> (IP) ثم <strong>الحالة</strong> ثم <strong>المتصلون</strong>
-          (بوابة + برودباند) ثم <strong>حركة الإنترنت</strong> (↓ تنزيل · ↑ رفع) ثم
-          <strong>نظام الراوتر</strong> (إصدار RouterOS وأيقونات الأنفاق) ثم <strong>إجراءات</strong>.
+          {{ _('القلب هو الجدول. أعمدته بالترتيب:') }} <strong>{{ _('مربع الاختيار') }}</strong> {{ _('ثم') }}
+          <strong>#</strong> {{ _('(رقم) ثم') }} <strong>{{ _('الاسم') }}</strong> {{ _('(اضغطه يفتح لوحة الراوتر) ثم') }}
+          <strong>{{ _('العنوان') }}</strong> {{ _('(IP) ثم') }} <strong>{{ _('الحالة') }}</strong> {{ _('ثم') }} <strong>{{ _('المتصلون') }}</strong>
+          {{ _('(بوابة + برودباند) ثم') }} <strong>{{ _('حركة الإنترنت') }}</strong> {{ _('(↓ تنزيل · ↑ رفع) ثم') }}
+          <strong>{{ _('نظام الراوتر') }}</strong> {{ _('(إصدار RouterOS وأيقونات الأنفاق) ثم') }} <strong>{{ _('إجراءات') }}</strong>.
         </p>
 
         <div class="dg-mock" aria-hidden="true">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">إدارة الراوترات › الجدول</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('إدارة الراوترات › الجدول') }}</span></div>
           <div class="dg-mock-body" style="padding:0">
             <div class="dg-tbl" style="margin:0;max-width:none;border:0;box-shadow:none;border-radius:0">
-              <div class="hd"><span></span><span>الاسم</span><span>العنوان</span><span>الحالة</span></div>
-              <div class="rw"><span class="chk"></span><span style="font-weight:900;color:#241e4e">برج-A</span><span class="dg-mono">10.10.0.2</span><span><span class="dg-pill green"><span class="dot"></span> متصل</span></span></div>
-              <div class="rw"><span class="chk"></span><span style="font-weight:900;color:#241e4e">حي-الشمال</span><span class="dg-mono">10.10.0.5</span><span><span class="dg-pill red"><span class="dot"></span> غير متصل</span></span></div>
-              <div class="rw"><span class="chk"></span><span style="font-weight:900;color:#241e4e">المخزن</span><span class="dg-mono">10.10.0.9</span><span><span class="dg-pill amber"><span class="dot"></span> قيد التجهيز</span></span></div>
+              <div class="hd"><span></span><span>{{ _('الاسم') }}</span><span>{{ _('العنوان') }}</span><span>{{ _('الحالة') }}</span></div>
+              <div class="rw"><span class="chk"></span><span style="font-weight:900;color:#241e4e">{{ _('برج-A') }}</span><span class="dg-mono">10.10.0.2</span><span><span class="dg-pill green"><span class="dot"></span> {{ _('متصل') }}</span></span></div>
+              <div class="rw"><span class="chk"></span><span style="font-weight:900;color:#241e4e">{{ _('حي-الشمال') }}</span><span class="dg-mono">10.10.0.5</span><span><span class="dg-pill red"><span class="dot"></span> {{ _('غير متصل') }}</span></span></div>
+              <div class="rw"><span class="chk"></span><span style="font-weight:900;color:#241e4e">{{ _('المخزن') }}</span><span class="dg-mono">10.10.0.9</span><span><span class="dg-pill amber"><span class="dot"></span> {{ _('قيد التجهيز') }}</span></span></div>
             </div>
           </div>
         </div>
-        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> في عمود «نظام الراوتر» أيقونة الدرع تشرح نفق الإدارة، وأيقونة المسار تشرح نفق حركة الإنترنت.</div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> {{ _('في عمود «نظام الراوتر» أيقونة الدرع تشرح نفق الإدارة، وأيقونة المسار تشرح نفق حركة الإنترنت.') }}</div>
 
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>نصيحة:</b> الراوتر الذي أُضيف عبر المعالج يحمل شارة <b>«معالَج آليًّا»</b> بجوار
+          <span><b>{{ _('نصيحة:') }}</b> {{ _('الراوتر الذي أُضيف عبر المعالج يحمل شارة') }} <b>{{ _('«معالَج آليًّا»') }}</b> بجوار
           اسمه — فتعرف أنه جُهِّز تلقائيًا من الصفر.</span>
         </div>
       </div>
@@ -351,17 +351,17 @@
     <section class="dg-step" id="dg-s4">
       <div class="dg-badge">4</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-screwdriver-wrench"></i> صف الأيقونات لكل راوتر</h2>
+        <h2><i class="fa-solid fa-screwdriver-wrench"></i> {{ _('صف الأيقونات لكل راوتر') }}</h2>
         <p>
-          في عمود <strong>«إجراءات»</strong> يبدأ الصف بزر <strong>«خدمات»</strong> البنفسجي —
+          {{ _('في عمود') }} <strong>{{ _('«إجراءات»') }}</strong> {{ _('يبدأ الصف بزر') }} <strong>{{ _('«خدمات»') }}</strong> البنفسجي —
           هو الباب الرئيسي: يفتح لوحة الراوتر (خدمات + مراقبة + أدوات). وأثناء التجهيز يظهر زر
-          <strong>«متابعة»</strong> الكهرماني الذي يكمل المعالج من حيث توقّف. بعدهما صف أيقونات
+          <strong>{{ _('«متابعة»') }}</strong> الكهرماني الذي يكمل المعالج من حيث توقّف. بعدهما صف أيقونات
           مختصرة، مرّر فوق كل واحدة لترى وظيفتها:
         </p>
 
         <div class="dg-iconrow" aria-hidden="true">
-          <span class="ib primary"><i class="fa-solid fa-screwdriver-wrench"></i> خدمات</span>
-          <span class="ib warn"><i class="fa-solid fa-forward"></i> متابعة</span>
+          <span class="ib primary"><i class="fa-solid fa-screwdriver-wrench"></i> {{ _('خدمات') }}</span>
+          <span class="ib warn"><i class="fa-solid fa-forward"></i> {{ _('متابعة') }}</span>
           <span class="ib"><i class="fa-solid fa-chart-line"></i></span>
           <span class="ib"><i class="fa-solid fa-diagram-project"></i></span>
           <span class="ib"><i class="fa-solid fa-tower-broadcast"></i></span>
@@ -373,19 +373,19 @@
         </div>
 
         <div class="dg-iclist">
-          <div class="r"><span class="ic"><i class="fa-solid fa-chart-line"></i></span><span><b>اللوحة الحية:</b> تفتح لوحة الراوتر المنفرد بمؤشراته اللحظية.</span></div>
-          <div class="r"><span class="ic"><i class="fa-solid fa-diagram-project"></i></span><span><b>برمجة الشبكة:</b> بوابة الدخول والبرودباند.</span></div>
-          <div class="r"><span class="ic"><i class="fa-solid fa-tower-broadcast"></i></span><span><b>خدمات المنافذ:</b> منع بث البلوتوث/الواي فاي وتتبّع اللوب.</span></div>
-          <div class="r"><span class="ic"><i class="fa-solid fa-palette"></i></span><span><b>مصمّم صفحة الدخول:</b> تحرير شكل صفحة دخول الهوت سبوت.</span></div>
-          <div class="r"><span class="ic"><i class="fa-solid fa-floppy-disk"></i></span><span><b>النسخ الاحتياطية:</b> إدارة نسخ هذا الراوتر.</span></div>
-          <div class="r"><span class="ic"><i class="fa-solid fa-code"></i></span><span><b>سكربت الإعداد:</b> عرض سكربت RouterOS (يظهر عند معرفة الإصدار).</span></div>
-          <div class="r"><span class="ic"><i class="fa-solid fa-pen-to-square"></i></span><span><b>تعديل بيانات الراوتر:</b> الاسم والعنوان وبيانات الربط.</span></div>
-          <div class="r"><span class="ic" style="background:#fee2e2;color:#dc2626"><i class="fa-solid fa-power-off"></i></span><span><b>تفعيل/تعطيل:</b> تبديل حالة الراوتر (يصير «معطَّل» فلا يُفحص).</span></div>
+          <div class="r"><span class="ic"><i class="fa-solid fa-chart-line"></i></span><span><b>{{ _('اللوحة الحية:') }}</b> {{ _('تفتح لوحة الراوتر المنفرد بمؤشراته اللحظية.') }}</span></div>
+          <div class="r"><span class="ic"><i class="fa-solid fa-diagram-project"></i></span><span><b>{{ _('برمجة الشبكة:') }}</b> {{ _('بوابة الدخول والبرودباند.') }}</span></div>
+          <div class="r"><span class="ic"><i class="fa-solid fa-tower-broadcast"></i></span><span><b>{{ _('خدمات المنافذ:') }}</b> {{ _('منع بث البلوتوث/الواي فاي وتتبّع اللوب.') }}</span></div>
+          <div class="r"><span class="ic"><i class="fa-solid fa-palette"></i></span><span><b>{{ _('مصمّم صفحة الدخول:') }}</b> {{ _('تحرير شكل صفحة دخول الهوت سبوت.') }}</span></div>
+          <div class="r"><span class="ic"><i class="fa-solid fa-floppy-disk"></i></span><span><b>{{ _('النسخ الاحتياطية:') }}</b> {{ _('إدارة نسخ هذا الراوتر.') }}</span></div>
+          <div class="r"><span class="ic"><i class="fa-solid fa-code"></i></span><span><b>{{ _('سكربت الإعداد:') }}</b> {{ _('عرض سكربت RouterOS (يظهر عند معرفة الإصدار).') }}</span></div>
+          <div class="r"><span class="ic"><i class="fa-solid fa-pen-to-square"></i></span><span><b>{{ _('تعديل بيانات الراوتر:') }}</b> {{ _('الاسم والعنوان وبيانات الربط.') }}</span></div>
+          <div class="r"><span class="ic" style="background:#fee2e2;color:#dc2626"><i class="fa-solid fa-power-off"></i></span><span><b>{{ _('تفعيل/تعطيل:') }}</b> {{ _('تبديل حالة الراوتر (يصير «معطَّل» فلا يُفحص).') }}</span></div>
         </div>
 
         <div class="dg-warn">
           <span class="ic">⚠️</span>
-          <span><b>انتبه:</b> «تعطيل الراوتر» لا يحذفه — يوقف فحصه فقط ويصبح بحالة «معطَّل».
+          <span><b>{{ _('انتبه:') }}</b> «تعطيل الراوتر» لا يحذفه — يوقف فحصه فقط ويصبح بحالة «معطَّل».
           أعد تفعيله من نفس الأيقونة متى شئت.</span>
         </div>
       </div>
@@ -395,26 +395,26 @@
     <section class="dg-step" id="dg-s5">
       <div class="dg-badge">5</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-square-check"></i> الشريط الجماعي اللاصق</h2>
+        <h2><i class="fa-solid fa-square-check"></i> {{ _('الشريط الجماعي اللاصق') }}</h2>
         <p>
-          لمّا تختار صفًّا واحدًا أو أكثر بمربعات الاختيار، يظهر تلقائيًا
-          <strong>شريط الإجراءات الجماعية</strong> ملتصقًا أسفل الشاشة، يكتب لك عدد المختار
-          «<strong>N راوتر مختار</strong>»، وفيه ثلاثة أزرار:
+          {{ _('لمّا تختار صفًّا واحدًا أو أكثر بمربعات الاختيار، يظهر تلقائيًا') }}
+          <strong>{{ _('شريط الإجراءات الجماعية') }}</strong> ملتصقًا أسفل الشاشة، يكتب لك عدد المختار
+          «<strong>{{ _('N راوتر مختار') }}</strong>{{ _('»، وفيه ثلاثة أزرار:') }}
         </p>
         <ul>
-          <li><strong>تفعيل المحدّد:</strong> يفعّل كل الراوترات المختارة دفعة واحدة.</li>
-          <li><strong>تعطيل المحدّد:</strong> يعطّلها كلها دفعة واحدة.</li>
-          <li><strong>إلغاء الاختيار:</strong> يلغي التحديد فيختفي الشريط.</li>
+          <li><strong>{{ _('تفعيل المحدّد:') }}</strong> {{ _('يفعّل كل الراوترات المختارة دفعة واحدة.') }}</li>
+          <li><strong>{{ _('تعطيل المحدّد:') }}</strong> {{ _('يعطّلها كلها دفعة واحدة.') }}</li>
+          <li><strong>{{ _('إلغاء الاختيار:') }}</strong> {{ _('يلغي التحديد فيختفي الشريط.') }}</li>
         </ul>
 
         <div class="dg-bulk" aria-hidden="true">
-          <span class="cnt"><i class="fa-solid fa-square-check" style="color:#6366f1"></i> 3 راوتر مختار</span>
+          <span class="cnt"><i class="fa-solid fa-square-check" style="color:#6366f1"></i> {{ _('3 راوتر مختار') }}</span>
           <span class="sp"></span>
-          <span class="dg-bbtn green"><i class="fa-solid fa-circle-check"></i> تفعيل المحدّد</span>
-          <span class="dg-bbtn grey"><i class="fa-solid fa-power-off"></i> تعطيل المحدّد</span>
-          <span class="dg-bbtn ghost"><i class="fa-solid fa-xmark"></i> إلغاء الاختيار</span>
+          <span class="dg-bbtn green"><i class="fa-solid fa-circle-check"></i> {{ _('تفعيل المحدّد') }}</span>
+          <span class="dg-bbtn grey"><i class="fa-solid fa-power-off"></i> {{ _('تعطيل المحدّد') }}</span>
+          <span class="dg-bbtn ghost"><i class="fa-solid fa-xmark"></i> {{ _('إلغاء الاختيار') }}</span>
         </div>
-        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> مربع الاختيار في رأس الجدول يحدّد كل الصفوف دفعة واحدة.</div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> {{ _('مربع الاختيار في رأس الجدول يحدّد كل الصفوف دفعة واحدة.') }}</div>
       </div>
     </section>
 
@@ -422,27 +422,27 @@
     <section class="dg-step" id="dg-s6">
       <div class="dg-badge">6</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-wand-magic-sparkles"></i> أضف راوترًا جديدًا بالمعالج</h2>
+        <h2><i class="fa-solid fa-wand-magic-sparkles"></i> {{ _('أضف راوترًا جديدًا بالمعالج') }}</h2>
         <p>
-          أعلى الصفحة زر <strong>«إضافة بالمعالج»</strong> البنفسجي. اضغطه ليفتح
-          <strong>معالج التجهيز</strong> الذي يأخذك خطوة بخطوة حتى يصير الراوتر جاهزًا —
+          {{ _('أعلى الصفحة زر') }} <strong>{{ _('«إضافة بالمعالج»') }}</strong> {{ _('البنفسجي. اضغطه ليفتح') }}
+          <strong>{{ _('معالج التجهيز') }}</strong> الذي يأخذك خطوة بخطوة حتى يصير الراوتر جاهزًا —
           يتولّد كل شيء تلقائيًا (سجل الراوتر، عنوان الربط، نفق الإدارة، إعداد RADIUS وAPI).
         </p>
         <p>
-          الراوتر الذي ما زال في الطريق يظهر بحالة <strong>«قيد التجهيز»</strong> ومعه زر
-          <strong>«متابعة»</strong> في صفه — اضغطه لتكمل المعالج من حيث توقّفت بدل البدء من جديد.
+          {{ _('الراوتر الذي ما زال في الطريق يظهر بحالة') }} <strong>{{ _('«قيد التجهيز»') }}</strong> {{ _('ومعه زر') }}
+          <strong>{{ _('«متابعة»') }}</strong> {{ _('في صفه — اضغطه لتكمل المعالج من حيث توقّفت بدل البدء من جديد.') }}
         </p>
 
         <div class="dg-iconrow" aria-hidden="true" style="margin-top:13px">
-          <span class="ib primary"><i class="fa-solid fa-wand-magic-sparkles"></i> إضافة بالمعالج</span>
+          <span class="ib primary"><i class="fa-solid fa-wand-magic-sparkles"></i> {{ _('إضافة بالمعالج') }}</span>
           <span class="ib"><i class="fa-solid fa-recycle"></i></span>
           <span class="ib danger"><i class="fa-solid fa-triangle-exclamation"></i></span>
         </div>
-        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> أزرار الرأس الثلاثة: «إضافة بالمعالج»، «إعادة تخصيص العناوين»، «تفريغ طوارئ».</div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> {{ _('أزرار الرأس الثلاثة: «إضافة بالمعالج»، «إعادة تخصيص العناوين»، «تفريغ طوارئ».') }}</div>
 
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>نصيحة:</b> زر <b>«إعادة تخصيص العناوين»</b> (أيقونة إعادة التدوير) أداة صيانة
+          <span><b>{{ _('نصيحة:') }}</b> {{ _('زر') }} <b>{{ _('«إعادة تخصيص العناوين»') }}</b> (أيقونة إعادة التدوير) أداة صيانة
           هادئة: ينظّف عناوين خدمة الربط المحجوزة من محاولات تجهيز انتهت صلاحيتها — استعمله إن
           نفدت العناوين ولديك محاولات قديمة عالقة.</span>
         </div>
@@ -453,33 +453,33 @@
     <section class="dg-step" id="dg-s7">
       <div class="dg-badge">7</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-triangle-exclamation"></i> تفريغ الطوارئ — للحالات الحرجة فقط</h2>
+        <h2><i class="fa-solid fa-triangle-exclamation"></i> {{ _('تفريغ الطوارئ — للحالات الحرجة فقط') }}</h2>
         <p>
-          زر <strong>«تفريغ طوارئ»</strong> الأحمر هو آخر حلّ حين يحدث اختلاف بين مفاتيح الربط
+          {{ _('زر') }} <strong>{{ _('«تفريغ طوارئ»') }}</strong> الأحمر هو آخر حلّ حين يحدث اختلاف بين مفاتيح الربط
           وعناوين الإدارة ولا يمكن استعادة الحالة. عند الضغط تفتح نافذة تأكيد تشرح بالضبط ما
-          سيُحذف: <strong>كل سجلات تجهيز الراوترات</strong> من قاعدة البيانات (السجل، تخصيصات
+          سيُحذف: <strong>{{ _('كل سجلات تجهيز الراوترات') }}</strong> من قاعدة البيانات (السجل، تخصيصات
           العناوين، أحداث الدورة الحياتية، نظراء الربط، جلسات المعالج، ومخرجات v3).
         </p>
         <p>
-          ولأنه إجراء حسّاس، لا يُفعَّل الزر إلا بعد أن تكتب العبارة
-          <span class="dg-kbd">RESET-WIZARD-FLEET</span> بالضبط في خانة التأكيد.
+          {{ _('ولأنه إجراء حسّاس، لا يُفعَّل الزر إلا بعد أن تكتب العبارة') }}
+          <span class="dg-kbd">RESET-WIZARD-FLEET</span> {{ _('بالضبط في خانة التأكيد.') }}
         </p>
 
         <div class="dg-modal" aria-hidden="true">
-          <div class="hd"><i class="fa-solid fa-triangle-exclamation"></i> تفريغ طوارئ لأسطول التجهيز</div>
+          <div class="hd"><i class="fa-solid fa-triangle-exclamation"></i> {{ _('تفريغ طوارئ لأسطول التجهيز') }}</div>
           <div class="bd">
-            <p style="margin:0;font-size:11.5px;color:#7f1d1d;line-height:1.8">يحذف هذا الإجراء كل سجلات تجهيز الراوترات. <b>لن يلمس</b> المشتركين أو البطاقات أو إعدادات الراوترات نفسها.</p>
+            <p style="margin:0;font-size:11.5px;color:#7f1d1d;line-height:1.8">{{ _('يحذف هذا الإجراء كل سجلات تجهيز الراوترات.') }} <b>{{ _('لن يلمس') }}</b> {{ _('المشتركين أو البطاقات أو إعدادات الراوترات نفسها.') }}</p>
             <div class="ph">RESET-WIZARD-FLEET</div>
             <div class="ft">
-              <span class="mb ghost">إلغاء</span>
-              <span class="mb danger"><i class="fa-solid fa-triangle-exclamation"></i> نعم، نفّذ التفريغ</span>
+              <span class="mb ghost">{{ _('إلغاء') }}</span>
+              <span class="mb danger"><i class="fa-solid fa-triangle-exclamation"></i> {{ _('نعم، نفّذ التفريغ') }}</span>
             </div>
           </div>
         </div>
 
         <div class="dg-warn">
           <span class="ic">⚠️</span>
-          <span><b>طمأنة وتحذير:</b> التفريغ <b>لن يلمس</b> المشتركين ولا البطاقات ولا إعدادات
+          <span><b>{{ _('طمأنة وتحذير:') }}</b> {{ _('التفريغ') }} <b>{{ _('لن يلمس') }}</b> المشتركين ولا البطاقات ولا إعدادات
           الراوترات نفسها — يمسح سجلات التجهيز فقط. ومع ذلك لا تستخدمه إلا عند حالة عطل حقيقية
           لا حلّ لها غيره، لأنك ستحتاج إعادة تجهيز كل راوتر بالمعالج من جديد.</span>
         </div>

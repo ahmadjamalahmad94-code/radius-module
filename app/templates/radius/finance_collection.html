@@ -9,7 +9,7 @@
 {% block title %}التحصيل والمدفوعات — Hobe Hub{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-money-bill-transfer"></i>{% endblock %}
 {% block page_title %}التحصيل والمدفوعات{% endblock %}
-{% block page_sub %}<span class="sub">طلبات الدفع والمراجعة والمطابقة في صفحة واحدة</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('طلبات الدفع والمراجعة والمطابقة في صفحة واحدة') }}</span>{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
@@ -74,12 +74,12 @@
 <div class="fc-freeze" role="status">
   <div class="fc-freeze-icon"><i class="fa-solid fa-snowflake"></i></div>
   <div class="fc-freeze-body">
-    <p class="fc-freeze-title"><i class="fa-solid fa-lock" style="font-size:12px"></i> قسم التحصيل مجمّد <span class="fc-freeze-pill"><i class="fa-solid fa-snowflake"></i> مجمّد</span></p>
+    <p class="fc-freeze-title"><i class="fa-solid fa-lock" style="font-size:12px"></i> {{ _('قسم التحصيل مجمّد') }} <span class="fc-freeze-pill"><i class="fa-solid fa-snowflake"></i> {{ _('مجمّد') }}</span></p>
     {# تعريب اسم المزوّد ضمن الجملة العربية مع إبقاء الاسم الأصلي بين قوسين #}
     <p class="fc-freeze-text">لا استخدام للمدفوعات الإلكترونية حتى ربط بوابة دفع (مثل جَوّال باي (Jawwal Pay)). الإعدادات تبقى متاحة للتحضير.
       {% if endpoint_exists is defined and endpoint_exists('radius.payments_lab') %}
       جرّب تجربة الدفع كاملةً الآن (محاكاة بلا مال حقيقي) من
-      <a href="{{ url_for('radius.payments_lab') }}" style="color:#6D28D9;font-weight:900">مختبر الدفع الإلكتروني <i class="fa-solid fa-flask" style="font-size:11px"></i></a>.
+      <a href="{{ url_for('radius.payments_lab') }}" style="color:#6D28D9;font-weight:900">{{ _('مختبر الدفع الإلكتروني') }} <i class="fa-solid fa-flask" style="font-size:11px"></i></a>.
       {% endif %}
     </p>
   </div>
@@ -115,7 +115,7 @@
   {% if tab in ('requests', 'settings') %}
   <input type="hidden" name="tab" value="requests">
   <select class="hub-select" name="status" onchange="this.form.submit()">
-    <option value="">كل الحالات</option>
+    <option value="">{{ _('كل الحالات') }}</option>
     {% for s in statuses %}<option value="{{ s }}" {% if status == s %}selected{% endif %} title="{{ s }}">{{ _status_ar.get(s, s) }}</option>{% endfor %}
   </select>
   <span class="hub-spacer"></span>
@@ -140,18 +140,18 @@
 )) %}
   {% call hub.section("طلبات الدفع", icon="file-invoice-dollar", meta=(requests_list|length|string + " طلب") if requests_list else "", flush=True) %}
     {% if requests_list %}
-    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="15" data-uds-export-title="طلبات الدفع" style="border:none;border-radius:0">
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="15" data-uds-export-title="{{ _('طلبات الدفع') }}" style="border:none;border-radius:0">
       <table class="hub-table">
         <thead>
           <tr>
             <th>#</th>
-            <th>الدافع</th>
-            <th>الغرض</th>
-            <th class="num">المبلغ</th>
-            <th>المرجع</th>
-            <th>الحالة</th>
-            <th>التاريخ</th>
-            <th data-uds-nosort data-uds-nocol>إجراء</th>
+            <th>{{ _('الدافع') }}</th>
+            <th>{{ _('الغرض') }}</th>
+            <th class="num">{{ _('المبلغ') }}</th>
+            <th>{{ _('المرجع') }}</th>
+            <th>{{ _('الحالة') }}</th>
+            <th>{{ _('التاريخ') }}</th>
+            <th data-uds-nosort data-uds-nocol>{{ _('إجراء') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -164,7 +164,7 @@
             <td class="mono small">{{ item.reference_code or "—" }}</td>
             <td title="{{ item.status }}">{{ hub.pill(_status_ar.get(item.status, item.status), variant="green" if item.status=="paid" else ("amber" if item.status in ("under_review","proof_submitted") else "grey")) }}</td>
             <td class="small hub-text-mute" style="direction:ltr">{{ item.created_at|dt_local if item.created_at else "—" }}</td>
-            <td><a class="hub-btn hub-btn--ghost hub-btn--sm" href="{{ url_for('radius.payment_collection_request_detail', request_id=item.id) }}"><i class="fa-solid fa-arrow-left"></i> تفاصيل</a></td>
+            <td><a class="hub-btn hub-btn--ghost hub-btn--sm" href="{{ url_for('radius.payment_collection_request_detail', request_id=item.id) }}"><i class="fa-solid fa-arrow-left"></i> {{ _('تفاصيل') }}</a></td>
           </tr>
           {% endfor %}
         </tbody>
@@ -191,16 +191,16 @@
 )) %}
   {% call hub.section("قائمة المراجعة", icon="clipboard-check", meta=(review_list|length|string + " بانتظار المراجعة") if review_list else "", flush=True) %}
     {% if review_list %}
-    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="15" data-uds-export-title="قائمة المراجعة" style="border:none;border-radius:0">
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="15" data-uds-export-title="{{ _('قائمة المراجعة') }}" style="border:none;border-radius:0">
       <table class="hub-table">
         <thead>
           <tr>
             <th>#</th>
-            <th>الغرض</th>
-            <th class="num">المبلغ</th>
-            <th>الحالة</th>
-            <th>المرجع</th>
-            <th data-uds-nosort data-uds-nocol>إجراء</th>
+            <th>{{ _('الغرض') }}</th>
+            <th class="num">{{ _('المبلغ') }}</th>
+            <th>{{ _('الحالة') }}</th>
+            <th>{{ _('المرجع') }}</th>
+            <th data-uds-nosort data-uds-nocol>{{ _('إجراء') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -215,11 +215,11 @@
               {% if frozen %}
               {# مجمّد: زر المراجعة معطّل مع شرح — لا قرارات دفع قبل ربط بوابة #}
               <span style="display:inline-flex;align-items:center;gap:6px">
-                <button class="hub-btn hub-btn--primary hub-btn--sm" type="button" disabled style="opacity:.45;cursor:not-allowed"><i class="fa-solid fa-magnifying-glass"></i> مراجعة</button>
+                <button class="hub-btn hub-btn--primary hub-btn--sm" type="button" disabled style="opacity:.45;cursor:not-allowed"><i class="fa-solid fa-magnifying-glass"></i> {{ _('مراجعة') }}</button>
                 <span class="hub-hint" tabindex="0" data-hint="مجمّد حتى ربط بوابة دفع"><i class="fa-solid fa-snowflake"></i></span>
               </span>
               {% else %}
-              <a class="hub-btn hub-btn--primary hub-btn--sm" href="{{ url_for('radius.payment_collection_request_detail', request_id=item.id) }}"><i class="fa-solid fa-magnifying-glass"></i> مراجعة</a>
+              <a class="hub-btn hub-btn--primary hub-btn--sm" href="{{ url_for('radius.payment_collection_request_detail', request_id=item.id) }}"><i class="fa-solid fa-magnifying-glass"></i> {{ _('مراجعة') }}</a>
               {% endif %}
             </td>
           </tr>
@@ -256,16 +256,16 @@
 {# ═══════════════ SETTINGS MODAL (retained bespoke dialog — posts to the unchanged endpoint) ═══════════════ #}
 <dialog class="fc-modal" data-modal="settings">
   <form method="post" action="{{ url_for('radius.payment_collection_settings') }}">
-    <div class="fc-modal-head"><h3><i class="fa-solid fa-gear"></i> إعدادات التحصيل</h3><button class="fc-x" type="button" data-modal-close><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="fc-modal-head"><h3><i class="fa-solid fa-gear"></i> {{ _('إعدادات التحصيل') }}</h3><button class="fc-x" type="button" data-modal-close><i class="fa-solid fa-xmark"></i></button></div>
     <div class="fc-modal-body">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
       <div class="fc-form-grid">
         <label class="span2 fc-toggle-row">{{ toggle_switch(name="enabled", checked=(settings and settings.enabled), show_label=False) }} تفعيل تحصيل الدفعات</label>
-        <label>المزوّد
+        <label>{{ _('المزوّد') }}
           <select class="hub-select" name="provider">
-            <option value="manual_wallet" {% if not settings or settings.provider == 'manual_wallet' %}selected{% endif %}>محفظة يدوية</option>
+            <option value="manual_wallet" {% if not settings or settings.provider == 'manual_wallet' %}selected{% endif %}>{{ _('محفظة يدوية') }}</option>
             {# تعريب اسم المزوّد مع إبقاء value الخام jawwal_pay كما يعتمده الـPOST #}
-            <option value="jawwal_pay" {% if settings and settings.provider == 'jawwal_pay' %}selected{% endif %}>جَوّال باي (Jawwal Pay) — غير مفعّل</option>
+            <option value="jawwal_pay" {% if settings and settings.provider == 'jawwal_pay' %}selected{% endif %}>{{ _('جَوّال باي (Jawwal Pay) — غير مفعّل') }}</option>
           </select>
         </label>
         <label>العملة
@@ -275,23 +275,23 @@
             {% for c in ['ILS','USD','JOD'] %}<option value="{{ c }}" {% if (settings.currency if settings else 'ILS') == c %}selected{% endif %}>{{ _currency_names.get(c, c) }} ({{ c }})</option>{% endfor %}
           </select>
         </label>
-        <label>رقم المحفظة<input class="hub-input" name="wallet_number" value="{{ settings.wallet_number if settings else '' }}"></label>
-        <label>اسم صاحب المحفظة<input class="hub-input" name="wallet_owner_name" value="{{ settings.wallet_owner_name if settings else '' }}"></label>
-        <label>وضع التأكيد
+        <label>{{ _('رقم المحفظة') }}<input class="hub-input" name="wallet_number" value="{{ settings.wallet_number if settings else '' }}"></label>
+        <label>{{ _('اسم صاحب المحفظة') }}<input class="hub-input" name="wallet_owner_name" value="{{ settings.wallet_owner_name if settings else '' }}"></label>
+        <label>{{ _('وضع التأكيد') }}
           <select class="hub-select" name="confirmation_mode">
-            <option value="manual" {% if not settings or settings.confirmation_mode == 'manual' %}selected{% endif %}>مراجعة يدوية</option>
-            <option value="api" {% if settings and settings.confirmation_mode == 'api' %}selected{% endif %}>ربط آلي (غير مفعّل)</option>
+            <option value="manual" {% if not settings or settings.confirmation_mode == 'manual' %}selected{% endif %}>{{ _('مراجعة يدوية') }}</option>
+            <option value="api" {% if settings and settings.confirmation_mode == 'api' %}selected{% endif %}>{{ _('ربط آلي (غير مفعّل)') }}</option>
           </select>
         </label>
-        <label>مهلة الطلب (دقائق)<input class="hub-input" type="number" min="1" name="payment_request_ttl_minutes" value="{{ settings.payment_request_ttl_minutes if settings else 1440 }}"></label>
-        <label>أقل مبلغ<input class="hub-input" type="number" step="0.01" min="0" name="min_amount" value="{{ settings.min_amount if settings and settings.min_amount is not none else '' }}"></label>
-        <label>أعلى مبلغ<input class="hub-input" type="number" step="0.01" min="0" name="max_amount" value="{{ settings.max_amount if settings and settings.max_amount is not none else '' }}"></label>
+        <label>{{ _('مهلة الطلب (دقائق)') }}<input class="hub-input" type="number" min="1" name="payment_request_ttl_minutes" value="{{ settings.payment_request_ttl_minutes if settings else 1440 }}"></label>
+        <label>{{ _('أقل مبلغ') }}<input class="hub-input" type="number" step="0.01" min="0" name="min_amount" value="{{ settings.min_amount if settings and settings.min_amount is not none else '' }}"></label>
+        <label>{{ _('أعلى مبلغ') }}<input class="hub-input" type="number" step="0.01" min="0" name="max_amount" value="{{ settings.max_amount if settings and settings.max_amount is not none else '' }}"></label>
         <label class="fc-toggle-row">{{ toggle_switch(name="allow_cards", checked=(not settings or settings.allow_cards), show_label=False) }} السماح بشراء الكروت</label>
         <label class="fc-toggle-row">{{ toggle_switch(name="allow_monthly_subscriptions", checked=(not settings or settings.allow_monthly_subscriptions), show_label=False) }} الاشتراكات الشهرية</label>
         <label class="span2 fc-toggle-row">{{ toggle_switch(name="allow_distributor_payments", checked=(settings and settings.allow_distributor_payments), show_label=False) }} مدفوعات الموزعين</label>
       </div>
     </div>
-    <div class="fc-modal-foot"><button class="hub-btn hub-btn--ghost" type="button" data-modal-close>إلغاء</button><button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-check"></i> حفظ الإعدادات</button></div>
+    <div class="fc-modal-foot"><button class="hub-btn hub-btn--ghost" type="button" data-modal-close>{{ _('إلغاء') }}</button><button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-check"></i> {{ _('حفظ الإعدادات') }}</button></div>
   </form>
 </dialog>
 

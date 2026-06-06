@@ -82,12 +82,12 @@
     {# Toolbar — row range + per-page selector #}
     <div class="hub-flex-row" style="gap:14px;flex-wrap:wrap;align-items:center;padding:12px 16px;border-bottom:1px solid var(--hub-border)">
       <div class="hub-text-mute" style="font-size:12.5px;font-variant-numeric:tabular-nums">
-        عرض <strong style="color:var(--hub-text)">{{ range_lo }}–{{ range_hi }}</strong>
-        من <strong style="color:var(--hub-text)">{{ total_cards }}</strong>
-        ·  صفحة <strong style="color:var(--hub-text)">{{ page }}</strong> من <strong style="color:var(--hub-text)">{{ pages_count }}</strong>
+        {{ _('عرض') }} <strong style="color:var(--hub-text)">{{ range_lo }}–{{ range_hi }}</strong>
+        {{ _('من') }} <strong style="color:var(--hub-text)">{{ total_cards }}</strong>
+        {{ _('·  صفحة') }} <strong style="color:var(--hub-text)">{{ page }}</strong> {{ _('من') }} <strong style="color:var(--hub-text)">{{ pages_count }}</strong>
       </div>
       <form method="get" class="hub-flex-row" style="gap:8px;align-items:center;margin-inline-start:auto">
-        <label for="pp" class="hub-text-mute" style="font-size:12.5px">عدد الصفوف:</label>
+        <label for="pp" class="hub-text-mute" style="font-size:12.5px">{{ _('عدد الصفوف:') }}</label>
         <select id="pp" class="hub-select" name="per_page" onchange="this.form.submit()" style="width:auto">
           {% for n in [10, 20, 50, 100] %}
             <option value="{{ n }}" {% if per_page == n %}selected{% endif %}>{{ n }}</option>
@@ -102,9 +102,9 @@
         <thead>
           <tr>
             <th class="num" style="width:60px">#</th>
-            <th>اسم الدخول</th>
-            <th>كلمة المرور</th>
-            <th style="width:170px">أُنشئت</th>
+            <th>{{ _('اسم الدخول') }}</th>
+            <th>{{ _('كلمة المرور') }}</th>
+            <th style="width:170px">{{ _('أُنشئت') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -122,7 +122,7 @@
 
     {# Pagination — server-side, preserves per_page #}
     {% if pages_count > 1 %}
-    <nav style="display:flex;gap:4px;align-items:center;justify-content:center;padding:14px 0" aria-label="تنقل الصفحات">
+    <nav style="display:flex;gap:4px;align-items:center;justify-content:center;padding:14px 0" aria-label="{{ _('تنقل الصفحات') }}">
       {% set prev = page - 1 %}
       {% set next = page + 1 %}
       {% macro page_link(p, label, disabled=false) -%}
@@ -163,18 +163,18 @@
   <section class="batch-print-modal__panel" role="dialog" aria-modal="true" aria-labelledby="batchPrintTitle">
     <header class="batch-print-modal__header">
       <div>
-        <p>طباعة مباشرة للحزمة</p>
-        <h2 id="batchPrintTitle">تجهيز ملف البطاقات</h2>
-        <span data-print-batch-summary>اختر قالبًا ثم ابدأ التصدير.</span>
+        <p>{{ _('طباعة مباشرة للحزمة') }}</p>
+        <h2 id="batchPrintTitle">{{ _('تجهيز ملف البطاقات') }}</h2>
+        <span data-print-batch-summary>{{ _('اختر قالبًا ثم ابدأ التصدير.') }}</span>
       </div>
-      <button type="button" class="batch-print-modal__close" data-print-modal-close aria-label="إغلاق">
+      <button type="button" class="batch-print-modal__close" data-print-modal-close aria-label="{{ _('إغلاق') }}">
         <i class="fa-solid fa-xmark"></i>
       </button>
     </header>
 
     <div class="batch-print-modal__body">
       <div class="batch-print-modal__templates">
-        <h3>اختيار قالب محفوظ</h3>
+        <h3>{{ _('اختيار قالب محفوظ') }}</h3>
         {% if print_templates %}
           <div class="batch-template-picker" data-print-template-picker>
             {% for t in print_templates %}
@@ -191,71 +191,71 @@
           </div>
         {% else %}
           <div class="batch-print-warning">
-            لا توجد قوالب محفوظة بعد. أنشئ قالبًا من مركز تصميم البطاقات أولًا.
+            {{ _('لا توجد قوالب محفوظة بعد. أنشئ قالبًا من مركز تصميم البطاقات أولًا.') }}
           </div>
         {% endif %}
       </div>
 
       <form class="batch-print-form" data-batch-print-form>
         <input type="hidden" name="batch_id" data-print-batch-id>
-        <h3>إعدادات الطباعة</h3>
+        <h3>{{ _('إعدادات الطباعة') }}</h3>
         <div class="batch-print-grid">
-          <label>مقاس الورقة
+          <label>{{ _('مقاس الورقة') }}
             <select class="hub-select" name="print_page_size">
               <option value="A4">A4</option>
               <option value="Letter">Letter</option>
             </select>
           </label>
-          <label>اتجاه الورقة
+          <label>{{ _('اتجاه الورقة') }}
             <select class="hub-select" name="print_orientation">
-              <option value="portrait">طولي</option>
-              <option value="landscape">أفقي</option>
+              <option value="portrait">{{ _('طولي') }}</option>
+              <option value="landscape">{{ _('أفقي') }}</option>
             </select>
           </label>
-          <label>عدد الأعمدة
+          <label>{{ _('عدد الأعمدة') }}
             <input type="number" name="print_columns" min="1" max="8" value="3">
           </label>
-          <label>عدد الصفوف
+          <label>{{ _('عدد الصفوف') }}
             <input type="number" name="print_rows" min="1" max="12" value="5">
           </label>
-          <label>المسافة بين الأعمدة <span dir="ltr">(mm)</span>
+          <label>{{ _('المسافة بين الأعمدة') }} <span dir="ltr">(mm)</span>
             <input type="number" name="print_column_gap_mm" min="0" max="30" step="0.5" value="3">
           </label>
-          <label>المسافة بين الصفوف <span dir="ltr">(mm)</span>
+          <label>{{ _('المسافة بين الصفوف') }} <span dir="ltr">(mm)</span>
             <input type="number" name="print_row_gap_mm" min="0" max="30" step="0.5" value="3">
           </label>
-          <label>الهامش العلوي <span dir="ltr">(mm)</span>
+          <label>{{ _('الهامش العلوي') }} <span dir="ltr">(mm)</span>
             <input type="number" name="print_margin_top_mm" min="0" max="40" step="0.5" value="8">
           </label>
-          <label>الهامش الأيمن <span dir="ltr">(mm)</span>
+          <label>{{ _('الهامش الأيمن') }} <span dir="ltr">(mm)</span>
             <input type="number" name="print_margin_right_mm" min="0" max="40" step="0.5" value="8">
           </label>
-          <label>الهامش السفلي <span dir="ltr">(mm)</span>
+          <label>{{ _('الهامش السفلي') }} <span dir="ltr">(mm)</span>
             <input type="number" name="print_margin_bottom_mm" min="0" max="40" step="0.5" value="8">
           </label>
-          <label>الهامش الأيسر <span dir="ltr">(mm)</span>
+          <label>{{ _('الهامش الأيسر') }} <span dir="ltr">(mm)</span>
             <input type="number" name="print_margin_left_mm" min="0" max="40" step="0.5" value="8">
           </label>
         </div>
         <button class="batch-btn batch-btn--primary batch-print-submit" type="submit" {% if not print_templates %}disabled{% endif %}>
-          <i class="fa-solid fa-file-pdf"></i> إنشاء ملف PDF
+          <i class="fa-solid fa-file-pdf"></i> {{ _('إنشاء ملف PDF') }}
         </button>
       </form>
 
       <div class="batch-print-progress" data-print-progress hidden>
         <div class="batch-print-progress__top">
-          <strong data-print-progress-title>بدء تجهيز ملف PDF...</strong>
+          <strong data-print-progress-title>{{ _('بدء تجهيز ملف PDF...') }}</strong>
           <span data-print-progress-percent>0%</span>
         </div>
         <div class="batch-print-progress__bar"><span data-print-progress-bar></span></div>
         <ol>
-          <li data-print-stage="queued"><i class="fa-regular fa-circle"></i> إنشاء مهمة التصدير</li>
-          <li data-print-stage="rendering"><i class="fa-regular fa-circle"></i> رسم البطاقات بالقالب المختار</li>
-          <li data-print-stage="pdf"><i class="fa-regular fa-circle"></i> ترتيب الصفحات والهوامش</li>
-          <li data-print-stage="done"><i class="fa-regular fa-circle"></i> تجهيز رابط التحميل</li>
+          <li data-print-stage="queued"><i class="fa-regular fa-circle"></i> {{ _('إنشاء مهمة التصدير') }}</li>
+          <li data-print-stage="rendering"><i class="fa-regular fa-circle"></i> {{ _('رسم البطاقات بالقالب المختار') }}</li>
+          <li data-print-stage="pdf"><i class="fa-regular fa-circle"></i> {{ _('ترتيب الصفحات والهوامش') }}</li>
+          <li data-print-stage="done"><i class="fa-regular fa-circle"></i> {{ _('تجهيز رابط التحميل') }}</li>
         </ol>
         <a class="batch-btn batch-btn--soft" data-print-download hidden href="#">
-          <i class="fa-solid fa-download"></i> تحميل الملف
+          <i class="fa-solid fa-download"></i> {{ _('تحميل الملف') }}
         </a>
         <p data-print-error class="batch-print-error" hidden></p>
       </div>

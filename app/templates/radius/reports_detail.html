@@ -16,7 +16,7 @@
 {% block title %}{{ title }} - هوب ريديوس{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-file-lines"></i>{% endblock %}
 {% block page_title %}{{ title }}{% endblock %}
-{% block page_sub %}<span class="sub">عرض تفصيلي للتقرير بعد الفلترة.</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('عرض تفصيلي للتقرير بعد الفلترة.') }}</span>{% endblock %}
 
 {% block head_extra %}{{ super() }}
 {# نظام الجداول الموحد (uds): فرز + ترقيم صفحات لجدول التقرير #}
@@ -94,10 +94,10 @@
 ) %}
   {# تمرير type كما هو إن جاء في الرابط (?type=yearly) — نفس سلوك القالب للمسارين #}
   {% if request.args.get('type') %}<input type="hidden" name="type" value="{{ request.args.get('type') }}">{% endif %}
-  <label class="hub-field-label" for="rd-from" style="margin:0">من تاريخ</label>
+  <label class="hub-field-label" for="rd-from" style="margin:0">{{ _('من تاريخ') }}</label>
   <input class="hub-input" type="date" id="rd-from" name="date_from"
          value="{{ request.args.get('date_from','') }}">
-  <label class="hub-field-label" for="rd-to" style="margin:0">إلى تاريخ</label>
+  <label class="hub-field-label" for="rd-to" style="margin:0">{{ _('إلى تاريخ') }}</label>
   <input class="hub-input" type="date" id="rd-to" name="date_to"
          value="{{ request.args.get('date_to','') }}">
   {{ hub.btn("تطبيق الفترة", icon="filter", variant="primary", type="submit", size="sm") }}
@@ -122,9 +122,9 @@
       <table class="hub-table rep-table" data-testid="report-detail-table">
         <thead>
           <tr>
-            <th class="num">رقم الموزع</th>
-            <th class="num">عدد الحصص</th>
-            <th class="num">إجمالي الأرباح</th>
+            <th class="num">{{ _('رقم الموزع') }}</th>
+            <th class="num">{{ _('عدد الحصص') }}</th>
+            <th class="num">{{ _('إجمالي الأرباح') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -135,7 +135,7 @@
             <td class="num mono">{{ row.share_total|money }}</td>
           </tr>
           {% else %}
-          <tr><td colspan="3">لا توجد حصص موزعين مسجّلة بعد.</td></tr>
+          <tr><td colspan="3">{{ _('لا توجد حصص موزعين مسجّلة بعد.') }}</td></tr>
           {% endfor %}
         </tbody>
       </table>
@@ -148,8 +148,8 @@
       <table class="hub-table rep-table" data-testid="report-detail-table">
         <thead>
           <tr>
-            <th>المؤشر</th>
-            <th class="num">القيمة</th>
+            <th>{{ _('المؤشر') }}</th>
+            <th class="num">{{ _('القيمة') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -162,7 +162,7 @@
             </td>
           </tr>
           {% else %}
-          <tr><td colspan="2">لا توجد بيانات ضمن هذا الفلتر.</td></tr>
+          <tr><td colspan="2">{{ _('لا توجد بيانات ضمن هذا الفلتر.') }}</td></tr>
           {% endfor %}
         </tbody>
       </table>

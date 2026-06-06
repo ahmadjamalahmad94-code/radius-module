@@ -6,10 +6,10 @@
    vps_exit_nodes_repo. We fetch the list once on page load via a
    helper endpoint and render a dropdown. Falls back to a clear
    guidance message when none exist (no fake button). #}
-<h2>تغيير IP الخروج (Site Exit)</h2>
+<h2>{{ _('تغيير IP الخروج (Site Exit)') }}</h2>
 <p class="swsvf-pane-sub">
-  تستطيع توجيه مشتركي هذا الراوتر للخروج عبر IP عام مختلف، بربط الراوتر بـ
-  <strong>عقدة خروج خادم الربط</strong> لها عنوان عام منفصل. مفيد لتغيير الموقع الجغرافي
+  {{ _('تستطيع توجيه مشتركي هذا الراوتر للخروج عبر IP عام مختلف، بربط الراوتر بـ') }}
+  <strong>{{ _('عقدة خروج خادم الربط') }}</strong> لها عنوان عام منفصل. مفيد لتغيير الموقع الجغرافي
   المرئي، أو لفصل بعض المواقع عن باقي الحركة.
 </p>
 
@@ -53,13 +53,13 @@
 
 <div class="swip-loading" data-swip-loading>
   <i class="fa-solid fa-spinner fa-spin"></i>
-  جارٍ تحميل قائمة عقد الخروج…
+  {{ _('جارٍ تحميل قائمة عقد الخروج…') }}
 </div>
 
 <div data-swip-noNodes hidden>
   <div class="swip-warning">
     <i class="fa-solid fa-circle-exclamation"></i>
-    <strong>لا توجد عقد خروج معرّفة بعد.</strong><br>
+    <strong>{{ _('لا توجد عقد خروج معرّفة بعد.') }}</strong><br>
     لاستخدام هذه الخدمة، أضِف عقدة خروج (Exit Node) من إعدادات النظام أولاً —
     العقدة تحتوي على IP العام الذي ستوجَّه الحركة عبره.
   </div>
@@ -67,18 +67,18 @@
 
 <div data-swip-form hidden>
   <div class="swip-section">
-    <div class="swip-section-title">عقدة خروج خادم الربط</div>
+    <div class="swip-section-title">{{ _('عقدة خروج خادم الربط') }}</div>
     <p class="swip-help">
-      اختر خادم الربط الذي ستمرّ منه الحركة. كل عقدة لها عنوان عام منفصل.
+      {{ _('اختر خادم الربط الذي ستمرّ منه الحركة. كل عقدة لها عنوان عام منفصل.') }}
     </p>
     <select class="swip-select" data-swip-node>
-      <option value="">— اختر عقدة —</option>
+      <option value="">{{ _('— اختر عقدة —') }}</option>
     </select>
     <div class="swip-node-meta" data-swip-node-meta></div>
   </div>
 
   <div class="swip-section">
-    <div class="swip-section-title">المواقع المراد توجيهها</div>
+    <div class="swip-section-title">{{ _('المواقع المراد توجيهها') }}</div>
     <p class="swip-help">
       اكتب domain في كل سطر — هذه المواقع ستخرج عبر الـ IP الجديد. باقي
       الحركة تبقى على المسار الافتراضي.
@@ -87,7 +87,7 @@
               placeholder="example.com
 streaming.service.com"></textarea>
     <div class="swip-count">
-      عدد المواقع: <strong data-swip-count>0</strong>
+      {{ _('عدد المواقع:') }} <strong data-swip-count>0</strong>
     </div>
   </div>
 </div>

@@ -2,7 +2,7 @@
    يضيف قواعد تسمح بالخدمات المختارة من عنوان مصدر محدد لمدة محدودة،
    ثم يحذفها تلقائيًا عبر المجدول. لا ينشئ صف سياسة في قاعدة البيانات؛
    تحمل القواعد تعليق HOBERADIUS_TECH:<token> للتحقق والإلغاء. #}
-<h2>اتصال عن بُعد للفنّي</h2>
+<h2>{{ _('اتصال عن بُعد للفنّي') }}</h2>
 <p class="swsvf-pane-sub">
   افتح للفنّي صلاحيّة الدخول للراوتر مؤقّتاً عبر إدارة وينبوكس أو
   الدخول النصي أو واجهة الويب من عنوان مصدر محدّد. القواعد تُحذف
@@ -110,27 +110,27 @@
 </style>
 
 <div class="swra-section">
-  <div class="swra-section-title">الخدمات المسموحة للفنّي</div>
+  <div class="swra-section-title">{{ _('الخدمات المسموحة للفنّي') }}</div>
   <div class="swra-services" data-swra-services>
     <label class="swra-svc-chip is-checked">
       <input type="checkbox" data-swra-svc value="winbox" data-port="8291" checked>
       <i class="fa-solid fa-window-restore"></i>
-      <span>إدارة وينبوكس — منفذ 8291</span>
+      <span>{{ _('إدارة وينبوكس — منفذ 8291') }}</span>
     </label>
     <label class="swra-svc-chip">
       <input type="checkbox" data-swra-svc value="ssh" data-port="22">
       <i class="fa-solid fa-terminal"></i>
-      <span>الدخول النصي — منفذ 22</span>
+      <span>{{ _('الدخول النصي — منفذ 22') }}</span>
     </label>
     <label class="swra-svc-chip">
       <input type="checkbox" data-swra-svc value="webfig" data-port="80">
       <i class="fa-solid fa-globe"></i>
-      <span>واجهة الويب — منفذ 80</span>
+      <span>{{ _('واجهة الويب — منفذ 80') }}</span>
     </label>
     <label class="swra-svc-chip">
       <input type="checkbox" data-swra-svc value="api" data-port="8728">
       <i class="fa-solid fa-plug"></i>
-      <span>واجهة الربط البرمجية — منفذ 8728</span>
+      <span>{{ _('واجهة الربط البرمجية — منفذ 8728') }}</span>
     </label>
   </div>
 </div>
@@ -138,19 +138,19 @@
 <div class="swra-section">
   <div class="swra-fields">
     <label>
-      <div class="swra-section-title">مدّة الإتاحة</div>
+      <div class="swra-section-title">{{ _('مدّة الإتاحة') }}</div>
       <select class="swra-select" data-swra-ttl>
         <optgroup label="مؤقّت — للفنّي (يُحذف تلقائياً)">
-          <option value="1">ساعة واحدة</option>
-          <option value="4" selected>4 ساعات</option>
-          <option value="8">8 ساعات</option>
-          <option value="24">يوم واحد (24 ساعة)</option>
-          <option value="72">3 أيام</option>
-          <option value="168">أسبوع (7 أيام)</option>
-          <option value="720">شهر (30 يوم)</option>
+          <option value="1">{{ _('ساعة واحدة') }}</option>
+          <option value="4" selected>{{ _('4 ساعات') }}</option>
+          <option value="8">{{ _('8 ساعات') }}</option>
+          <option value="24">{{ _('يوم واحد (24 ساعة)') }}</option>
+          <option value="72">{{ _('3 أيام') }}</option>
+          <option value="168">{{ _('أسبوع (7 أيام)') }}</option>
+          <option value="720">{{ _('شهر (30 يوم)') }}</option>
         </optgroup>
         <optgroup label="دائم — لي">
-          <option value="0">دائم (لا يُحذف تلقائياً)</option>
+          <option value="0">{{ _('دائم (لا يُحذف تلقائياً)') }}</option>
         </optgroup>
       </select>
       <div class="swra-hint" style="margin-top:6px">
@@ -160,19 +160,19 @@
       </div>
     </label>
     <label>
-      <div class="swra-section-title">عنوان المصدر (اختياري)</div>
+      <div class="swra-section-title">{{ _('عنوان المصدر (اختياري)') }}</div>
       <input type="text" class="swra-input" data-swra-source
-             placeholder="مثال: 1.2.3.4">
+             placeholder="{{ _('مثال: 1.2.3.4') }}">
       <div class="swra-hint">
         <i class="fa-solid fa-circle-info"></i>
-        اتركه فارغًا للسماح من أي عنوان. الأفضل أمنيّاً تحديد عنوان الفنّي العام.
+        {{ _('اتركه فارغًا للسماح من أي عنوان. الأفضل أمنيّاً تحديد عنوان الفنّي العام.') }}
       </div>
     </label>
   </div>
 </div>
 
 <div class="swra-section">
-  <div class="swra-section-title">صلاحيّات الفنّي على الراوتر</div>
+  <div class="swra-section-title">{{ _('صلاحيّات الفنّي على الراوتر') }}</div>
   <div class="swra-help">
     سنُنشئ مستخدمًا مؤقّتًا على الراوتر خاصًا بهذا الوصول. لن يستعمل الفنّي
     كلمة مرور مديرك الأساسي. عند انتهاء المدّة، يُحذف المستخدم
@@ -182,29 +182,29 @@
     <label class="swra-perm-chip">
       <input type="radio" name="swra-perm" value="read">
       <div class="swra-perm-body">
-        <strong>قراءة فقط</strong>
-        <span>مشاهدة الإعدادات دون التعديل. للاطّلاع/التشخيص.</span>
+        <strong>{{ _('قراءة فقط') }}</strong>
+        <span>{{ _('مشاهدة الإعدادات دون التعديل. للاطّلاع/التشخيص.') }}</span>
       </div>
     </label>
     <label class="swra-perm-chip is-checked">
       <input type="radio" name="swra-perm" value="write" checked>
       <div class="swra-perm-body">
-        <strong>تعديل محدود</strong>
-        <span>قراءة + كتابة على الشبكة، بدون إعدادات النظام أو المستخدمين أو الملفات.</span>
+        <strong>{{ _('تعديل محدود') }}</strong>
+        <span>{{ _('قراءة + كتابة على الشبكة، بدون إعدادات النظام أو المستخدمين أو الملفات.') }}</span>
       </div>
     </label>
     <label class="swra-perm-chip">
       <input type="radio" name="swra-perm" value="full">
       <div class="swra-perm-body">
-        <strong>تعديل كامل</strong>
-        <span>صلاحيات مدير كاملة — استعمله بحذر للفنّيين الموثوقين.</span>
+        <strong>{{ _('تعديل كامل') }}</strong>
+        <span>{{ _('صلاحيات مدير كاملة — استعمله بحذر للفنّيين الموثوقين.') }}</span>
       </div>
     </label>
   </div>
 </div>
 
 <div class="swra-token-row" data-swra-token-display hidden>
-  معرّف القاعدة: <span data-swra-token>—</span>
+  {{ _('معرّف القاعدة:') }} <span data-swra-token>—</span>
 </div>
 
 {# Post-apply connection card — operator hands this to the tech.
@@ -212,10 +212,10 @@
 <div class="swra-conn-card" data-swra-conn-card hidden>
   <h3>
     <i class="fa-solid fa-circle-check" style="color:var(--swsvf-green)"></i>
-    معلومات الاتصال للفنّي
+    {{ _('معلومات الاتصال للفنّي') }}
   </h3>
   <p class="swra-help" style="margin-bottom:10px">
-    أعطِ الفنّي القيم التالية ليفتح الخدمة المطلوبة على الراوتر:
+    {{ _('أعطِ الفنّي القيم التالية ليفتح الخدمة المطلوبة على الراوتر:') }}
   </p>
 
   {# بيانات مؤقتة تظهر مرة واحدة عند التطبيق. كلمة المرور لا تُحفظ
@@ -223,30 +223,30 @@
   <div class="swra-creds" data-swra-creds hidden>
     <h4>
       <i class="fa-solid fa-shield-halved"></i>
-      مستخدم مؤقّت خاص بهذا الوصول
+      {{ _('مستخدم مؤقّت خاص بهذا الوصول') }}
     </h4>
     <div class="swra-warn">
       ⚠️ هذي آخر فرصة لنسخ كلمة المرور. لا يتمّ حفظها في HobeRadius —
       بعد إغلاق الصفحة لن تستطيع استرجاعها.
     </div>
     <div class="swra-creds-row">
-      <span class="swra-creds-label">اسم المستخدم</span>
+      <span class="swra-creds-label">{{ _('اسم المستخدم') }}</span>
       <span class="swra-creds-value" data-swra-creds-user>—</span>
       <button type="button" class="swra-creds-copy"
-              data-rh-inv-copy="" data-which="user" title="نسخ">
+              data-rh-inv-copy="" data-which="user" title="{{ _('نسخ') }}">
         <i class="fa-solid fa-copy"></i>
       </button>
     </div>
     <div class="swra-creds-row">
-      <span class="swra-creds-label">كلمة المرور</span>
+      <span class="swra-creds-label">{{ _('كلمة المرور') }}</span>
       <span class="swra-creds-value" data-swra-creds-pass>—</span>
       <button type="button" class="swra-creds-copy"
-              data-rh-inv-copy="" data-which="pass" title="نسخ">
+              data-rh-inv-copy="" data-which="pass" title="{{ _('نسخ') }}">
         <i class="fa-solid fa-copy"></i>
       </button>
     </div>
     <div class="swra-creds-row">
-      <span class="swra-creds-label">الصلاحيّة</span>
+      <span class="swra-creds-label">{{ _('الصلاحيّة') }}</span>
       <span class="swra-creds-value" data-swra-creds-perm
             style="font-family:Cairo">—</span>
     </div>
@@ -258,7 +258,7 @@
   <button type="button" class="swsvf-btn swra-copy-btn" data-swra-copy
           style="margin-top:10px">
     <i class="fa-solid fa-copy"></i>
-    نسخ كل المعلومات للحافظة
+    {{ _('نسخ كل المعلومات للحافظة') }}
   </button>
 </div>
 

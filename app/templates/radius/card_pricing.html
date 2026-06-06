@@ -8,7 +8,7 @@
 {% block title %}تسعير البطاقات - Hobe Hub{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-tags"></i>{% endblock %}
 {% block page_title %}تسعير البطاقات{% endblock %}
-{% block page_sub %}<span class="sub">سياسات سعر البيع والجملة وتكلفة الحزم قبل البيع أو التحميل على المدراء</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('سياسات سعر البيع والجملة وتكلفة الحزم قبل البيع أو التحميل على المدراء') }}</span>{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
@@ -70,18 +70,18 @@
   {% call hub.section("سياسات تسعير الباقات", icon="scale-balanced",
        meta=num(packages|length + priced_batches|length) + " عنصر تسعير", flush=True) %}
     <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="15"
-         data-uds-export-title="سياسات تسعير الباقات"
+         data-uds-export-title="{{ _('سياسات تسعير الباقات') }}"
          data-testid="card-pricing-packages" style="border:none;border-radius:0">
       <table class="hub-table">
         <thead>
           <tr>
-            <th>الاسم</th>
-            <th>المعرّف</th>
-            <th class="num">عدد الكروت</th>
-            <th class="num">سعر البيع</th>
-            <th class="num">سعر الجملة</th>
-            <th class="num">الهامش</th>
-            <th style="width:120px" data-uds-nosort data-uds-nocol>إجراءات</th>
+            <th>{{ _('الاسم') }}</th>
+            <th>{{ _('المعرّف') }}</th>
+            <th class="num">{{ _('عدد الكروت') }}</th>
+            <th class="num">{{ _('سعر البيع') }}</th>
+            <th class="num">{{ _('سعر الجملة') }}</th>
+            <th class="num">{{ _('الهامش') }}</th>
+            <th style="width:120px" data-uds-nosort data-uds-nocol>{{ _('إجراءات') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -103,7 +103,7 @@
               <td class="num" dir="ltr" style="font-variant-numeric:tabular-nums"><strong>{{ money(margin, package.currency) }}</strong></td>
               <td>
                 <div class="hub-flex-row" style="gap:4px;flex-wrap:nowrap">
-                  <button type="button" class="hub-btn hub-btn--ghost hub-btn--icon" title="تعديل سياسة السعر"
+                  <button type="button" class="hub-btn hub-btn--ghost hub-btn--icon" title="{{ _('تعديل سياسة السعر') }}"
                           data-pkg-edit
                           data-pkg-name="{{ package.name|e }}"
                           data-pkg-action="{{ url_for('radius.card_pricing_update_package', package_id=package.id) }}"
@@ -133,7 +133,7 @@
               <td class="num" dir="ltr" style="font-variant-numeric:tabular-nums"><strong>{{ money(batch.margin, batch.currency) }}</strong></td>
               <td>
                 <div class="hub-flex-row" style="gap:4px;flex-wrap:nowrap">
-                  <a class="hub-btn hub-btn--ghost hub-btn--icon" title="تعديل أسعار الحزمة"
+                  <a class="hub-btn hub-btn--ghost hub-btn--icon" title="{{ _('تعديل أسعار الحزمة') }}"
                      href="{{ url_for('radius.cards_batch_edit', batch_id=batch.id) }}">
                     <i class="fa-solid fa-pen"></i>
                   </a>
@@ -159,7 +159,7 @@
     <form method="post" action="{{ url_for('radius.card_pricing_create_batch') }}" class="cp-cost-form" data-testid="costed-batch-form">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
       <div class="hub-field">
-        <label class="hub-field-label">الباقة</label>
+        <label class="hub-field-label">{{ _('الباقة') }}</label>
         <select class="hub-input" name="package_id" required>
           {% for package in packages %}
             <option value="{{ package.id }}">{{ package.name }} - جملة {{ package.wholesale_price|money }}</option>
@@ -167,7 +167,7 @@
         </select>
       </div>
       <div class="hub-field">
-        <label class="hub-field-label">المدير المسؤول</label>
+        <label class="hub-field-label">{{ _('المدير المسؤول') }}</label>
         <select class="hub-input" name="responsible_manager_id" required>
           {% for manager in managers %}
             <option value="{{ manager.id }}">{{ manager.display_name }} - رصيد {{ manager.balance|money }}</option>
@@ -175,12 +175,12 @@
         </select>
       </div>
       <div class="hub-field">
-        <label class="hub-field-label">عدد الكروت</label>
+        <label class="hub-field-label">{{ _('عدد الكروت') }}</label>
         <input class="hub-input" name="count" type="number" min="1" value="10" required>
       </div>
       <button class="hub-btn hub-btn--primary" type="submit">
         <i class="fa-solid fa-file-invoice-dollar"></i>
-        تسجيل تكلفة الحزمة
+        {{ _('تسجيل تكلفة الحزمة') }}
       </button>
     </form>
   {% endcall %}
@@ -218,35 +218,35 @@
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
     <div class="uds-modal-warn uds-modal-warn--amber" style="margin-bottom:6px">
       <i class="fa-solid fa-tag"></i>
-      <span>سياسة سعر الباقة «<strong data-pkg-form-name></strong>».</span>
+      <span>{{ _('سياسة سعر الباقة «') }}<strong data-pkg-form-name></strong>».</span>
     </div>
     <div class="hub-flex-row" style="gap:10px;flex-wrap:wrap">
       <div class="hub-field" style="flex:1;min-width:140px">
-        <label class="hub-field-label">سعر البيع</label>
+        <label class="hub-field-label">{{ _('سعر البيع') }}</label>
         <input class="hub-input" name="retail_price" type="number" min="0" step="0.01" data-pkg-f-retail>
       </div>
       <div class="hub-field" style="flex:1;min-width:140px">
-        <label class="hub-field-label">سعر الجملة</label>
+        <label class="hub-field-label">{{ _('سعر الجملة') }}</label>
         <input class="hub-input" name="wholesale_price" type="number" min="0" step="0.01" data-pkg-f-wholesale>
       </div>
     </div>
     <div class="hub-flex-row" style="gap:10px;flex-wrap:wrap">
       <div class="hub-field" style="flex:1;min-width:140px">
-        <label class="hub-field-label">الحد الأدنى</label>
+        <label class="hub-field-label">{{ _('الحد الأدنى') }}</label>
         <input class="hub-input" name="min_price" type="number" min="0" step="0.01" data-pkg-f-min>
       </div>
       <div class="hub-field" style="flex:1;min-width:140px">
-        <label class="hub-field-label">أقصى خصم</label>
+        <label class="hub-field-label">{{ _('أقصى خصم') }}</label>
         <input class="hub-input" name="max_discount" type="number" min="0" step="0.01" data-pkg-f-maxdisc>
       </div>
     </div>
     <div class="hub-field">
-      <label class="hub-field-label">مدراء مسموحون</label>
-      <input class="hub-input" name="allowed_manager_ids" placeholder="مثال: 1, 4, 9">
+      <label class="hub-field-label">{{ _('مدراء مسموحون') }}</label>
+      <input class="hub-input" name="allowed_manager_ids" placeholder="{{ _('مثال: 1, 4, 9') }}">
     </div>
     <div class="hub-field">
-      <label class="hub-field-label">موزعون مسموحون</label>
-      <input class="hub-input" name="allowed_distributor_ids" placeholder="اختياري">
+      <label class="hub-field-label">{{ _('موزعون مسموحون') }}</label>
+      <input class="hub-input" name="allowed_distributor_ids" placeholder="{{ _('اختياري') }}">
     </div>
   </form>
 {% endcall %}

@@ -5,7 +5,7 @@
 {% block title %}المركز المالي — مركز Hobe المالي{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-coins"></i>{% endblock %}
 {% block page_title %}المركز المالي{% endblock %}
-{% block page_sub %}<span class="sub">الخزائن والمحافظ والإيرادات والديون والسلف في صفحة تشغيلية واحدة</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('الخزائن والمحافظ والإيرادات والديون والسلف في صفحة تشغيلية واحدة') }}</span>{% endblock %}
 
 {% macro owner_label(owner_type) -%}
   {{ {
@@ -173,10 +173,10 @@
   <input type="hidden" name="tab" value="loans_debts">
   {# الفئة الصحيحة hub-select للاتساق مع نمط القوائم المنسدلة الموحّد #}
   <select class="hub-select" name="status">
-    <option value="" {% if not loan_status %}selected{% endif %}>كل الحالات</option>
-    <option value="open" {% if loan_status == "open" %}selected{% endif %}>مفتوحة</option>
-    <option value="settled" {% if loan_status == "settled" %}selected{% endif %}>مسددة</option>
-    <option value="voided" {% if loan_status == "voided" %}selected{% endif %}>ملغاة</option>
+    <option value="" {% if not loan_status %}selected{% endif %}>{{ _('كل الحالات') }}</option>
+    <option value="open" {% if loan_status == "open" %}selected{% endif %}>{{ _('مفتوحة') }}</option>
+    <option value="settled" {% if loan_status == "settled" %}selected{% endif %}>{{ _('مسددة') }}</option>
+    <option value="voided" {% if loan_status == "voided" %}selected{% endif %}>{{ _('ملغاة') }}</option>
   </select>
   {{ hub.btn("تطبيق الفلتر", icon="filter", variant="primary", type="submit", size="sm") }}
 {% endcall %}
@@ -190,11 +190,11 @@
 ) }}
 {% endif %}
 
-<nav class="fc-tabs" aria-label="تبويبات المركز المالي">
-  <a href="{{ url_for('radius.finance_center_hub', tab='dashboard') }}" class="{{ 'is-active' if tab == 'dashboard' }}"><i class="fa-solid fa-chart-pie"></i> النظرة العامة</a>
-  <a href="{{ url_for('radius.finance_center_hub', tab='wallets') }}" class="{{ 'is-active' if tab == 'wallets' }}"><i class="fa-solid fa-wallet"></i> الخزائن والمحافظ</a>
-  <a href="{{ url_for('radius.finance_center_hub', tab='revenue') }}" class="{{ 'is-active' if tab == 'revenue' }}"><i class="fa-solid fa-coins"></i> الإيرادات</a>
-  <a href="{{ url_for('radius.finance_center_hub', tab='loans_debts') }}" class="{{ 'is-active' if tab == 'loans_debts' }}"><i class="fa-solid fa-file-invoice-dollar"></i> الديون والسلف</a>
+<nav class="fc-tabs" aria-label="{{ _('تبويبات المركز المالي') }}">
+  <a href="{{ url_for('radius.finance_center_hub', tab='dashboard') }}" class="{{ 'is-active' if tab == 'dashboard' }}"><i class="fa-solid fa-chart-pie"></i> {{ _('النظرة العامة') }}</a>
+  <a href="{{ url_for('radius.finance_center_hub', tab='wallets') }}" class="{{ 'is-active' if tab == 'wallets' }}"><i class="fa-solid fa-wallet"></i> {{ _('الخزائن والمحافظ') }}</a>
+  <a href="{{ url_for('radius.finance_center_hub', tab='revenue') }}" class="{{ 'is-active' if tab == 'revenue' }}"><i class="fa-solid fa-coins"></i> {{ _('الإيرادات') }}</a>
+  <a href="{{ url_for('radius.finance_center_hub', tab='loans_debts') }}" class="{{ 'is-active' if tab == 'loans_debts' }}"><i class="fa-solid fa-file-invoice-dollar"></i> {{ _('الديون والسلف') }}</a>
 </nav>
 </section>{# /hub-hero-shell #}
 
@@ -228,8 +228,8 @@
 
 {% call hub.section("قاعدة الأمان المالي", icon="shield-halved") %}
   <div class="hub-empty" style="text-align:initial">
-    <div class="hub-empty-msg">لا يوجد حذف مباشر للحركات المالية.</div>
-    <div class="hub-empty-sub">أي شحن أو خصم يمر عبر المسار الأصلي ويترك قيدًا قابلًا للمراجعة، لذلك تبقى الأرقام قابلة للتدقيق.</div>
+    <div class="hub-empty-msg">{{ _('لا يوجد حذف مباشر للحركات المالية.') }}</div>
+    <div class="hub-empty-sub">{{ _('أي شحن أو خصم يمر عبر المسار الأصلي ويترك قيدًا قابلًا للمراجعة، لذلك تبقى الأرقام قابلة للتدقيق.') }}</div>
   </div>
 {% endcall %}
 {% endif %}
@@ -238,7 +238,7 @@
 {# زر فتح النافذة العائمة لإنشاء محفظة — فوق قائمة الخزائن والمحافظ #}
 <div class="fcw-actions">
   <button type="button" class="hub-btn hub-btn--primary" data-fcw-open="wallet-create">
-    <i class="fa-solid fa-plus"></i> إنشاء محفظة
+    <i class="fa-solid fa-plus"></i> {{ _('إنشاء محفظة') }}
   </button>
 </div>
 
@@ -249,11 +249,11 @@
       <thead>
         <tr>
           <th class="num">#</th>
-          <th>المالك</th>
-          <th class="num">الرصيد</th>
-          <th>الحالة</th>
-          <th data-uds-nosort>آخر الحركات</th>
-          <th data-uds-nosort data-uds-nocol>إجراء</th>
+          <th>{{ _('المالك') }}</th>
+          <th class="num">{{ _('الرصيد') }}</th>
+          <th>{{ _('الحالة') }}</th>
+          <th data-uds-nosort>{{ _('آخر الحركات') }}</th>
+          <th data-uds-nosort data-uds-nocol>{{ _('إجراء') }}</th>
         </tr>
       </thead>
       <tbody>
@@ -268,7 +268,7 @@
             {% for tx in tx_by_wallet.get(wallet.id, []) %}
               <div style="font-size:12px">{{ tx_label(tx.transaction_type) }} — {{ tx.amount|money }} — {{ tx.created_at|dt_local }}</div>
             {% else %}
-              <span class="muted">لا توجد حركات بعد.</span>
+              <span class="muted">{{ _('لا توجد حركات بعد.') }}</span>
             {% endfor %}
           </td>
           <td>
@@ -281,16 +281,16 @@
                   data-debit-url="{{ url_for('radius.business_finance_wallet_debit', wallet_id=wallet.id) }}">
               <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
               <span class="fcw-act-group">
-                <select class="hub-select" name="wallet_action" aria-label="نوع الحركة">
-                  <option value="credit" {% if not can_wallet_credit %}disabled{% endif %}>شحن</option>
-                  <option value="debit" {% if not can_wallet_debit %}disabled{% endif %}>خصم</option>
+                <select class="hub-select" name="wallet_action" aria-label="{{ _('نوع الحركة') }}">
+                  <option value="credit" {% if not can_wallet_credit %}disabled{% endif %}>{{ _('شحن') }}</option>
+                  <option value="debit" {% if not can_wallet_debit %}disabled{% endif %}>{{ _('خصم') }}</option>
                 </select>
                 <input class="hub-input" name="amount" type="number" min="0" step="0.01" inputmode="decimal"
-                       placeholder="المبلغ" aria-label="المبلغ"
+                       placeholder="{{ _('المبلغ') }}" aria-label="{{ _('المبلغ') }}"
                        {% if not can_wallet_credit and not can_wallet_debit %}disabled{% endif %}>
               </span>
               <button class="hub-btn hub-btn--secondary" type="submit"
-                      {% if not can_wallet_credit and not can_wallet_debit %}disabled{% endif %}>تنفيذ</button>
+                      {% if not can_wallet_credit and not can_wallet_debit %}disabled{% endif %}>{{ _('تنفيذ') }}</button>
             </form>
           </td>
         </tr>
@@ -311,38 +311,38 @@
     <form method="post" action="{{ url_for('radius.business_finance_wallets_create') }}">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
       <div class="fcw-head">
-        <h3 id="fcw-wallet-create-title"><i class="fa-solid fa-circle-plus"></i> إنشاء محفظة</h3>
-        <button type="button" class="fcw-x" data-fcw-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
+        <h3 id="fcw-wallet-create-title"><i class="fa-solid fa-circle-plus"></i> {{ _('إنشاء محفظة') }}</h3>
+        <button type="button" class="fcw-x" data-fcw-close aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="fcw-body">
         <label class="hub-field">
-          <span class="hub-field-label">نوع المالك</span>
+          <span class="hub-field-label">{{ _('نوع المالك') }}</span>
           <select class="hub-input" name="owner_type">
-            <option value="company">الشركة</option>
-            <option value="manager">مدير</option>
-            <option value="distributor">موزّع</option>
-            <option value="subscriber">مشترك</option>
-            <option value="card_user">مستخدم بطاقات</option>
+            <option value="company">{{ _('الشركة') }}</option>
+            <option value="manager">{{ _('مدير') }}</option>
+            <option value="distributor">{{ _('موزّع') }}</option>
+            <option value="subscriber">{{ _('مشترك') }}</option>
+            <option value="card_user">{{ _('مستخدم بطاقات') }}</option>
           </select>
-          <span class="hub-field-hint">اختر الجهة التي ستتبع لها المحفظة.</span>
+          <span class="hub-field-hint">{{ _('اختر الجهة التي ستتبع لها المحفظة.') }}</span>
         </label>
         {{ hub.field("رقم المالك", "owner_id", "", type="number", hint="اتركه فارغًا لمحفظة الشركة.") }}
         <label class="hub-field">
-          <span class="hub-field-label">العملة</span>
+          <span class="hub-field-label">{{ _('العملة') }}</span>
           {# الافتراضي دائمًا شيكل (ILS) بغضّ النظر عن عملة المستأجر #}
           <select class="hub-input" name="currency">
-            <option value="ILS" selected>ILS — شيكل</option>
-            <option value="JOD">JOD — دينار أردني</option>
-            <option value="USD">USD — دولار</option>
-            <option value="EUR">EUR — يورو</option>
-            <option value="SAR">SAR — ريال سعودي</option>
+            <option value="ILS" selected>{{ _('ILS — شيكل') }}</option>
+            <option value="JOD">{{ _('JOD — دينار أردني') }}</option>
+            <option value="USD">{{ _('USD — دولار') }}</option>
+            <option value="EUR">{{ _('EUR — يورو') }}</option>
+            <option value="SAR">{{ _('SAR — ريال سعودي') }}</option>
           </select>
-          <span class="hub-field-hint">تستخدم في عرض الرصيد والحركات.</span>
+          <span class="hub-field-hint">{{ _('تستخدم في عرض الرصيد والحركات.') }}</span>
         </label>
       </div>
       <div class="fcw-foot">
-        <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>إغلاق</button>
-        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-plus"></i> إنشاء محفظة</button>
+        <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>{{ _('إغلاق') }}</button>
+        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-plus"></i> {{ _('إنشاء محفظة') }}</button>
       </div>
     </form>
   </div>
@@ -380,12 +380,12 @@
       <thead>
         <tr>
           <th class="num">#</th>
-          <th>المصدر</th>
-          <th class="num">السعر الأصلي</th>
-          <th class="num">المحصّل</th>
-          <th class="num">تكلفة الجملة</th>
-          <th class="num">الربح الصافي</th>
-          <th>التاريخ</th>
+          <th>{{ _('المصدر') }}</th>
+          <th class="num">{{ _('السعر الأصلي') }}</th>
+          <th class="num">{{ _('المحصّل') }}</th>
+          <th class="num">{{ _('تكلفة الجملة') }}</th>
+          <th class="num">{{ _('الربح الصافي') }}</th>
+          <th>{{ _('التاريخ') }}</th>
         </tr>
       </thead>
       <tbody>
@@ -417,12 +417,12 @@
       <thead>
         <tr>
           <th class="num">#</th>
-          <th>المشترك</th>
-          <th class="num">المبلغ</th>
-          <th>السبب</th>
-          <th>الاعتماد</th>
-          <th>بدأت</th>
-          <th>تنتهي</th>
+          <th>{{ _('المشترك') }}</th>
+          <th class="num">{{ _('المبلغ') }}</th>
+          <th>{{ _('السبب') }}</th>
+          <th>{{ _('الاعتماد') }}</th>
+          <th>{{ _('بدأت') }}</th>
+          <th>{{ _('تنتهي') }}</th>
         </tr>
       </thead>
       <tbody>
@@ -452,12 +452,12 @@
       <thead>
         <tr>
           <th class="num">#</th>
-          <th>المشترك</th>
-          <th class="num">المدة</th>
-          <th class="num">المبلغ</th>
-          <th>الحالة</th>
-          <th>البداية</th>
-          <th>النهاية</th>
+          <th>{{ _('المشترك') }}</th>
+          <th class="num">{{ _('المدة') }}</th>
+          <th class="num">{{ _('المبلغ') }}</th>
+          <th>{{ _('الحالة') }}</th>
+          <th>{{ _('البداية') }}</th>
+          <th>{{ _('النهاية') }}</th>
         </tr>
       </thead>
       <tbody>

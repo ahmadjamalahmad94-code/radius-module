@@ -388,16 +388,16 @@
     <div class="ol-hero-id">
       <span class="ol-hero-icon"><i class="fa-solid fa-wifi"></i></span>
       <div>
-        <h1 class="ol-hero-title">المتصلون الآن</h1>
+        <h1 class="ol-hero-title">{{ _('المتصلون الآن') }}</h1>
         <div class="ol-hero-sub">الجلسات الحيّة على الشبكة — {{ "كروت" if filter_type == "card" else "مشتركون" }} — وضع التشغيل: {{ mode_label }}</div>
       </div>
     </div>
     <div class="ol-hero-actions">
       <a class="hub-btn hub-btn--{{ 'primary' if filter_type != 'card' else 'secondary' }}" href="{{ url_for('radius.online_list') }}">
-        <i class="fa-solid fa-users"></i> المشتركون
+        <i class="fa-solid fa-users"></i> {{ _('المشتركون') }}
       </a>
       <a class="hub-btn hub-btn--{{ 'primary' if filter_type == 'card' else 'secondary' }}" href="{{ url_for('radius.online_list', type='card') }}">
-        <i class="fa-solid fa-id-card"></i> الكروت
+        <i class="fa-solid fa-id-card"></i> {{ _('الكروت') }}
       </a>
     </div>
   </div>
@@ -414,43 +414,43 @@
     {% if filter_type %}<input type="hidden" name="type" value="{{ filter_type }}">{% endif %}
     <div class="online-filter-fields">
       <div class="ol-filter">
-        <label for="ol-f-nas"><i class="fa-solid fa-server"></i> السيرفر</label>
+        <label for="ol-f-nas"><i class="fa-solid fa-server"></i> {{ _('السيرفر') }}</label>
         <select id="ol-f-nas" name="nas">
-          <option value="">كل السيرفرات</option>
+          <option value="">{{ _('كل السيرفرات') }}</option>
           {% for nas in nas_options %}
             <option value="{{ nas }}" {% if selected_nas == nas %}selected{% endif %}>{{ nas }}</option>
           {% endfor %}
         </select>
       </div>
       <div class="ol-filter">
-        <label for="ol-f-plan"><i class="fa-solid fa-cubes"></i> العرض</label>
+        <label for="ol-f-plan"><i class="fa-solid fa-cubes"></i> {{ _('العرض') }}</label>
         <select id="ol-f-plan" name="plan">
-          <option value="">كل العروض</option>
+          <option value="">{{ _('كل العروض') }}</option>
           {% for plan in plan_options %}
             <option value="{{ plan }}" {% if selected_plan == plan %}selected{% endif %}>{{ plan }}</option>
           {% endfor %}
         </select>
       </div>
       <div class="ol-filter">
-        <label for="ol-f-group"><i class="fa-solid fa-people-group"></i> المجموعة</label>
+        <label for="ol-f-group"><i class="fa-solid fa-people-group"></i> {{ _('المجموعة') }}</label>
         <select id="ol-f-group" name="group_id">
-          <option value="">كل المجموعات</option>
+          <option value="">{{ _('كل المجموعات') }}</option>
           {% for g in group_options or [] %}
             <option value="{{ g.id }}" {% if selected_group_id == g.id %}selected{% endif %}>{{ g.name }}</option>
           {% endfor %}
         </select>
       </div>
       <div class="ol-filter">
-        <label for="ol-f-speed"><i class="fa-solid fa-gauge-high"></i> نوع السرعة</label>
+        <label for="ol-f-speed"><i class="fa-solid fa-gauge-high"></i> {{ _('نوع السرعة') }}</label>
         <select id="ol-f-speed" name="speed">
-          <option value="" {% if not selected_speed %}selected{% endif %}>كل السرعات</option>
-          <option value="special" {% if selected_speed == "special" %}selected{% endif %}>سرعة خاصة أو مؤقتة</option>
-          <option value="temporary" {% if selected_speed == "temporary" %}selected{% endif %}>سرعة مؤقتة فقط</option>
-          <option value="normal" {% if selected_speed == "normal" %}selected{% endif %}>بدون سرعة خاصة</option>
+          <option value="" {% if not selected_speed %}selected{% endif %}>{{ _('كل السرعات') }}</option>
+          <option value="special" {% if selected_speed == "special" %}selected{% endif %}>{{ _('سرعة خاصة أو مؤقتة') }}</option>
+          <option value="temporary" {% if selected_speed == "temporary" %}selected{% endif %}>{{ _('سرعة مؤقتة فقط') }}</option>
+          <option value="normal" {% if selected_speed == "normal" %}selected{% endif %}>{{ _('بدون سرعة خاصة') }}</option>
         </select>
       </div>
     </div>
-    <button class="hub-btn hub-btn--primary ol-filter-go" type="submit"><i class="fa-solid fa-filter"></i> عرض</button>
+    <button class="hub-btn hub-btn--primary ol-filter-go" type="submit"><i class="fa-solid fa-filter"></i> {{ _('عرض') }}</button>
   </form>
 </section>
 
@@ -458,7 +458,7 @@
 <div class="hub-section" style="margin-bottom:14px;border-color:var(--hub-amber-soft)">
   <div class="hub-section-body" style="display:flex;gap:10px;align-items:center;background:var(--hub-amber-soft);color:var(--hub-amber-ink)">
     <i class="fa-solid fa-circle-info"></i>
-    <div>الوضع اليدوي — لا توجد جلسات حية. فعّل وضع الربط الفعلي من إعدادات التشغيل لعرض الجلسات المباشرة.</div>
+    <div>{{ _('الوضع اليدوي — لا توجد جلسات حية. فعّل وضع الربط الفعلي من إعدادات التشغيل لعرض الجلسات المباشرة.') }}</div>
   </div>
 </div>
 {% endif %}
@@ -478,44 +478,44 @@
   {# عدّاد التحديد المتعدد — يظهر عدد الجلسات المحددة حاليًا #}
   <span class="hub-btn hub-btn--secondary" data-online-selected-count
         style="pointer-events:none;background:#eef2ff;border-color:#c7d2fe;color:#3730a3;font-weight:800">
-    <i class="fa-solid fa-check-double"></i> المحدد: <span data-count>0</span>
+    <i class="fa-solid fa-check-double"></i> {{ _('المحدد:') }} <span data-count>0</span>
   </span>
   <form method="post" action="{{ url_for('radius.online_disconnect') }}" data-online-disconnect-form style="display:inline">
     <input type="hidden" name="next" value="{{ request.full_path }}">
     {# تُحقن حقول username/session_id لكل جلسة محددة عبر الجافاسكربت (تحديد متعدد) #}
     <button type="submit" class="hub-btn hub-btn--danger online-action" aria-disabled="true" disabled>
-      <i class="fa-solid fa-scissors"></i> فصل الاتصال
+      <i class="fa-solid fa-scissors"></i> {{ _('فصل الاتصال') }}
     </button>
   </form>
   <a class="hub-btn hub-btn--secondary online-action" aria-disabled="true" data-action="profile" href="#">
-    <i class="fa-solid fa-gauge-high"></i> عرض 360°
+    <i class="fa-solid fa-gauge-high"></i> {{ _('عرض 360°') }}
   </a>
   <form method="post" action="{{ url_for('radius.online_lock_mac') }}" data-online-lock-mac-form style="display:inline">
     <input type="hidden" name="next" value="{{ request.full_path }}">
     {# تُحقن حقول username/session_id لكل جلسة محددة عبر الجافاسكربت (تحديد متعدد) #}
     <button type="submit" class="hub-btn hub-btn--secondary online-action" aria-disabled="true" disabled>
-      <i class="fa-solid fa-lock"></i> إغلاق بالماك
+      <i class="fa-solid fa-lock"></i> {{ _('إغلاق بالماك') }}
     </button>
   </form>
   <form method="post" action="{{ url_for('radius.online_lock_ip') }}" data-online-lock-ip-form style="display:inline">
     <input type="hidden" name="next" value="{{ request.full_path }}">
     {# تُحقن حقول username/session_id لكل جلسة محددة عبر الجافاسكربت (تحديد متعدد) #}
     <button type="submit" class="hub-btn hub-btn--secondary online-action" aria-disabled="true" disabled>
-      <i class="fa-solid fa-lock"></i> تثبيت IP
+      <i class="fa-solid fa-lock"></i> {{ _('تثبيت IP') }}
     </button>
   </form>
   <a class="hub-btn hub-btn--secondary online-action" aria-disabled="true" data-action="edit" href="#">
-    <i class="fa-solid fa-pen-to-square"></i> تعديل
+    <i class="fa-solid fa-pen-to-square"></i> {{ _('تعديل') }}
   </a>
   <form method="post" action="{{ url_for('radius.users_send_sms', username='__username__') }}" data-online-sms-form data-action-template="{{ url_for('radius.users_send_sms', username='__username__') }}" style="display:inline">
     <input type="hidden" name="message" value="">
     <button type="submit" class="hub-btn hub-btn--secondary online-action" aria-disabled="true" disabled>
-      <i class="fa-solid fa-paper-plane"></i> إرسال رسالة
+      <i class="fa-solid fa-paper-plane"></i> {{ _('إرسال رسالة') }}
     </button>
   </form>
   <div class="online-col-menu" data-column-menu>
     <button class="hub-btn hub-btn--secondary" type="button" data-column-toggle>
-      <i class="fa-solid fa-table-columns"></i> عرض/إخفاء الأعمدة
+      <i class="fa-solid fa-table-columns"></i> {{ _('عرض/إخفاء الأعمدة') }}
     </button>
     <div class="online-col-panel" data-column-panel>
       {# أسماء الأعمدة هنا يجب أن تطابق رؤوس الجدول حرفيًا حتى لا يربك المشغّل
@@ -557,25 +557,25 @@
         <tr>
           <th class="online-select-cell" data-col="select">
             {# تحديد/إلغاء تحديد الكل دفعة واحدة #}
-            <input type="checkbox" data-online-select-all aria-label="تحديد الكل" title="تحديد الكل">
+            <input type="checkbox" data-online-select-all aria-label="{{ _('تحديد الكل') }}" title="{{ _('تحديد الكل') }}">
           </th>
           <th class="num" style="width:52px" data-col="rownum">#</th>
-          <th data-col="name">المستخدم</th>
-          <th data-col="plan">العرض</th>
-          <th data-col="ip">عنوان IP</th>
-          <th data-col="nas">جهاز الشبكة</th>
-          <th data-col="device">نوع الجهاز</th>
-          <th data-col="down_speed" class="num">سرعة العرض</th>
-          <th data-col="up_speed" class="num">السرعة الحالية</th>
-          <th data-col="speed_state">حالة السرعة</th>
-          <th data-col="duration">وقت الجلسة</th>
-          <th data-col="download" class="num">تنزيل</th>
-          <th data-col="upload" class="num">رفع</th>
-          <th data-col="mac">عنوان MAC</th>
-          <th data-col="manager">المدير</th>
-          <th data-col="service">معرف الخدمة</th>
-          <th data-col="port">منفذ الاتصال</th>
-          <th data-col="actions" style="width:168px;min-width:168px">إجراءات</th>
+          <th data-col="name">{{ _('المستخدم') }}</th>
+          <th data-col="plan">{{ _('العرض') }}</th>
+          <th data-col="ip">{{ _('عنوان IP') }}</th>
+          <th data-col="nas">{{ _('جهاز الشبكة') }}</th>
+          <th data-col="device">{{ _('نوع الجهاز') }}</th>
+          <th data-col="down_speed" class="num">{{ _('سرعة العرض') }}</th>
+          <th data-col="up_speed" class="num">{{ _('السرعة الحالية') }}</th>
+          <th data-col="speed_state">{{ _('حالة السرعة') }}</th>
+          <th data-col="duration">{{ _('وقت الجلسة') }}</th>
+          <th data-col="download" class="num">{{ _('تنزيل') }}</th>
+          <th data-col="upload" class="num">{{ _('رفع') }}</th>
+          <th data-col="mac">{{ _('عنوان MAC') }}</th>
+          <th data-col="manager">{{ _('المدير') }}</th>
+          <th data-col="service">{{ _('معرف الخدمة') }}</th>
+          <th data-col="port">{{ _('منفذ الاتصال') }}</th>
+          <th data-col="actions" style="width:168px;min-width:168px">{{ _('إجراءات') }}</th>
         </tr>
       </thead>
       <tbody>
@@ -654,9 +654,9 @@
               <span class="online-speed-pill is-temp"
                     title="{% if _temp_state and _temp_state.ends_at %}ينتهي: {{ _temp_state.ends_at }}{% else %}مؤقتة بدون وقت نهاية مسجّل{% endif %}">
                 <i class="fa-solid fa-clock"></i>
-                <span>مؤقتة</span>
+                <span>{{ _('مؤقتة') }}</span>
                 {% if _temp_state and _temp_state.remaining_seconds is not none %}
-                  <span>باقٍ</span>
+                  <span>{{ _('باقٍ') }}</span>
                   {# العدّاد يحمل epoch وقت النهاية (data-temp-expires-at) إضافة
                      إلى اللقطة القديمة — JS يفضّل الـ epoch فيحسب المتبقي من
                      ساعة الحائط كل ثانية (لا انحراف عند نوم التبويب، ويستمر
@@ -665,13 +665,13 @@
                         data-temp-countdown="{{ _temp_state.remaining_seconds|int }}"
                         data-temp-expires-at="{{ _temp_state.ends_at_epoch|int if _temp_state.ends_at_epoch is defined else 0 }}">--:--</span>
                 {% elif _temp_unknown %}
-                  <span class="online-speed-countdown">مفتوح</span>
+                  <span class="online-speed-countdown">{{ _('مفتوح') }}</span>
                 {% endif %}
               </span>
             {% elif s.has_custom_speed %}
-              <span class="online-speed-pill is-custom"><i class="fa-solid fa-bolt"></i> خاصة</span>
+              <span class="online-speed-pill is-custom"><i class="fa-solid fa-bolt"></i> {{ _('خاصة') }}</span>
             {% else %}
-              <span class="online-speed-pill is-normal">العرض</span>
+              <span class="online-speed-pill is-normal">{{ _('العرض') }}</span>
             {% endif %}
           </td>
           <td data-col="duration" class="mono small">{{ fmt_duration(s.started_at, now) }}</td>
@@ -686,10 +686,10 @@
           <td data-col="port" class="mono small">{{ _called or s.nas_port_id or s.nas_port_type or '—' }}</td>
           <td data-col="actions">
             <div class="online-mini-actions">
-              <a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ _profile_url }}" title="عرض 360°">
+              <a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ _profile_url }}" title="{{ _('عرض 360°') }}">
                 <i class="fa-solid fa-gauge-high"></i>
               </a>
-              <a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ _edit_url }}" title="تعديل">
+              <a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ _edit_url }}" title="{{ _('تعديل') }}">
                 <i class="fa-solid fa-pen-to-square"></i>
               </a>
               <form method="post" action="{{ url_for('radius.online_disconnect') }}"
@@ -698,7 +698,7 @@
                 <input type="hidden" name="next" value="{{ request.full_path }}">
                 <input type="hidden" name="username" value="{{ s.username }}">
                 <input type="hidden" name="session_id" value="{{ s.session_id }}">
-                <button type="submit" class="hub-btn hub-btn--danger hub-btn--sm" title="قطع">
+                <button type="submit" class="hub-btn hub-btn--danger hub-btn--sm" title="{{ _('قطع') }}">
                   <i class="fa-solid fa-plug-circle-xmark"></i>
                 </button>
               </form>
@@ -706,7 +706,7 @@
                  inside the scrolling table). The trigger flags the row data; the
                  single shared modal below is populated + centered on open. #}
               <button type="button" class="hub-btn hub-btn--secondary hub-btn--sm online-temp-open{% if _temp_active %} is-temp-on{% endif %}"
-                      title="سرعة مؤقتة (تطبيق فوري + رجوع تلقائي)"
+                      title="{{ _('سرعة مؤقتة (تطبيق فوري + رجوع تلقائي)') }}"
                       data-username="{{ s.username }}"
                       data-session-id="{{ s.session_id }}"
                       data-temp-active="{{ 1 if _temp_active else 0 }}"
@@ -745,8 +745,8 @@
     <input type="hidden" name="session_id" value="" data-temp-session>
 
     <div class="online-temp-modal-head">
-      <span><i class="fa-solid fa-gauge-simple-high"></i> سرعة مؤقتة</span>
-      <button type="button" class="online-temp-modal-x" data-temp-close aria-label="إغلاق">
+      <span><i class="fa-solid fa-gauge-simple-high"></i> {{ _('سرعة مؤقتة') }}</span>
+      <button type="button" class="online-temp-modal-x" data-temp-close aria-label="{{ _('إغلاق') }}">
         <i class="fa-solid fa-xmark"></i>
       </button>
     </div>
@@ -755,11 +755,11 @@
     {# شريط «باقٍ» — عدّاد حي تنازلي + زر X أحمر للإلغاء الفوري؛ يظهر فقط
        عند وجود سرعة مؤقتة فعّالة. زر X يُرسل لمسار الإلغاء الموجود. #}
     <div class="ts-remain" data-temp-remain hidden>
-      <span class="ts-remain-lbl"><i class="fa-solid fa-clock"></i> باقٍ</span>
+      <span class="ts-remain-lbl"><i class="fa-solid fa-clock"></i> {{ _('باقٍ') }}</span>
       <span class="ts-remain-val"
             data-temp-remain-val data-temp-expires-at="0" data-temp-remaining="0">--:--</span>
       <button type="submit" formaction="{{ url_for('radius.online_temp_speed_cancel') }}"
-              class="ts-remain-x" data-temp-cancel title="إلغاء السرعة المؤقتة الآن">
+              class="ts-remain-x" data-temp-cancel title="{{ _('إلغاء السرعة المؤقتة الآن') }}">
         <i class="fa-solid fa-xmark"></i>
       </button>
     </div>
@@ -768,19 +768,19 @@
     <label class="ts-switch">
       <input type="checkbox" name="temp_enabled" value="1" checked data-temp-master>
       <span class="ts-switch-track"><span class="ts-switch-thumb"></span></span>
-      <span class="ts-switch-lbl">سرعة مؤقتة</span>
+      <span class="ts-switch-lbl">{{ _('سرعة مؤقتة') }}</span>
     </label>
 
     {# صفّ السرعتين — حقلان رقميان أخضران + تحويل حي تحت كل واحد #}
     <div class="ts-grid" data-temp-fields>
       <div class="ts-col">
-        <label class="online-temp-lbl">سرعة التحميل (Kbit/s)</label>
+        <label class="online-temp-lbl">{{ _('سرعة التحميل (Kbit/s)') }}</label>
         <input type="number" name="down_kbps" min="0" max="1000000" step="64" value="2500"
                class="hub-input ts-num" data-temp-conv-input>
         <div class="ts-conv" data-temp-conv>—</div>
       </div>
       <div class="ts-col">
-        <label class="online-temp-lbl">سرعة الرفع (Kbit/s)</label>
+        <label class="online-temp-lbl">{{ _('سرعة الرفع (Kbit/s)') }}</label>
         <input type="number" name="up_kbps" min="0" max="1000000" step="64" value="2500"
                class="hub-input ts-num" data-temp-conv-input>
         <div class="ts-conv" data-temp-conv>—</div>
@@ -791,24 +791,24 @@
     <label class="ts-switch ts-switch--sm">
       <input type="checkbox" name="bw_control" value="1" checked>
       <span class="ts-switch-track"><span class="ts-switch-thumb"></span></span>
-      <span class="ts-switch-lbl">تفعيل التحكم بالباندويث</span>
+      <span class="ts-switch-lbl">{{ _('تفعيل التحكم بالباندويث') }}</span>
     </label>
 
     {# الوقت — قيمة رقمية + وحدة (دقائق/ساعات) مع تحقق «أكبر من 0» #}
-    <label class="online-temp-lbl">الوقت</label>
+    <label class="online-temp-lbl">{{ _('الوقت') }}</label>
     <div class="ts-time-row">
       <input type="number" name="duration" min="1" max="1440" value="30"
              class="hub-input ts-num" data-temp-duration>
       <select name="duration_unit" class="hub-select ts-unit" data-temp-unit>
-        <option value="minutes" selected>دقائق</option>
-        <option value="hours">ساعات</option>
+        <option value="minutes" selected>{{ _('دقائق') }}</option>
+        <option value="hours">{{ _('ساعات') }}</option>
       </select>
     </div>
-    <div class="ts-err" data-temp-err hidden>هذه القيمة يجب ان تكون اكبر من 0</div>
+    <div class="ts-err" data-temp-err hidden>{{ _('هذه القيمة يجب ان تكون اكبر من 0') }}</div>
 
     <button type="submit" class="hub-btn hub-btn--primary" data-temp-apply
             style="width:100%;margin-top:12px;">
-      <i class="fa-solid fa-bolt"></i> تطبيق فوري
+      <i class="fa-solid fa-bolt"></i> {{ _('تطبيق فوري') }}
     </button>
   </form>
 </div>

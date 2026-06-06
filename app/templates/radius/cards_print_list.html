@@ -341,18 +341,18 @@
   {% else %}
 
   <div class="pc-toolbar">
-    <div class="pc-switch" id="pc-view-switcher" role="tablist" aria-label="عرض الحزم">
+    <div class="pc-switch" id="pc-view-switcher" role="tablist" aria-label="{{ _('عرض الحزم') }}">
       <span class="pill" aria-hidden="true"></span>
       <button type="button" data-view="chips" class="is-active" role="tab" aria-selected="true">
-        <i class="fa-solid fa-th-large" aria-hidden="true"></i> بطاقات
+        <i class="fa-solid fa-th-large" aria-hidden="true"></i> {{ _('بطاقات') }}
       </button>
       <button type="button" data-view="table" role="tab" aria-selected="false">
-        <i class="fa-solid fa-table-list" aria-hidden="true"></i> جدول
+        <i class="fa-solid fa-table-list" aria-hidden="true"></i> {{ _('جدول') }}
       </button>
     </div>
     <div class="pc-toolbar-hint">
       <i class="fa-solid fa-circle-info" aria-hidden="true" style="color:#94a3b8"></i>
-      اضغط أي حزمة لفتح بطاقاتها وتجهيز ملف الطباعة
+      {{ _('اضغط أي حزمة لفتح بطاقاتها وتجهيز ملف الطباعة') }}
     </div>
   </div>
 
@@ -370,9 +370,9 @@
           {{ hub.pill("طباعة", variant="blue", dot=False) }}
         </div>
         <div class="pc-card-stats">
-          <div class="pc-stat"><div class="k">عدد</div><div class="v">{{ b.card_count or 0 }}</div></div>
-          <div class="pc-stat"><div class="k">بيع</div><div class="v">{{ b.price_per_card|money }}</div></div>
-          <div class="pc-stat"><div class="k">جملة</div><div class="v">{{ b.price_bulk|money }}</div></div>
+          <div class="pc-stat"><div class="k">{{ _('عدد') }}</div><div class="v">{{ b.card_count or 0 }}</div></div>
+          <div class="pc-stat"><div class="k">{{ _('بيع') }}</div><div class="v">{{ b.price_per_card|money }}</div></div>
+          <div class="pc-stat"><div class="k">{{ _('جملة') }}</div><div class="v">{{ b.price_bulk|money }}</div></div>
         </div>
       </a>
 
@@ -381,12 +381,12 @@
         <span class="meta">{{ b.created_at|date_local if b.created_at else '' }}</span>
 
         <a href="{{ url_for('radius.cards_print_batch', batch_id=b.id) }}"
-           class="pc-act pc-act--preview" title="معاينة" aria-label="معاينة الحزمة">
+           class="pc-act pc-act--preview" title="{{ _('معاينة') }}" aria-label="{{ _('معاينة الحزمة') }}">
           <i class="fa-solid fa-eye" aria-hidden="true"></i>
         </a>
 
-        <button type="button" class="pc-act pc-act--print" title="طباعة"
-                aria-label="طباعة الحزمة"
+        <button type="button" class="pc-act pc-act--print" title="{{ _('طباعة') }}"
+                aria-label="{{ _('طباعة الحزمة') }}"
                 data-print-batch
                 data-batch-id="{{ b.id }}"
                 data-batch-code="{{ b.batch_code or '' }}"
@@ -399,12 +399,12 @@
               action="{{ url_for('radius.cards_print_batch_delete', batch_id=b.id) }}"
               style="display:inline-flex;margin:0"
               data-confirm-form
-              data-confirm-title="حذف حزمة الطباعة"
+              data-confirm-title="{{ _('حذف حزمة الطباعة') }}"
               data-confirm-msg="هل تريد حذف الحزمة «{{ (b.package_name or ('#' ~ b.id))|e }}»؟ سيتم حذف الحزمة وكل بطاقاتها — لا يمكن التراجع."
               data-confirm-ok="نعم، احذف">
           {{ csrf_token_input() | safe }}
-          <button type="submit" class="pc-act pc-act--delete" title="حذف"
-                  aria-label="حذف الحزمة">
+          <button type="submit" class="pc-act pc-act--delete" title="{{ _('حذف') }}"
+                  aria-label="{{ _('حذف الحزمة') }}">
             <i class="fa-solid fa-trash-can" aria-hidden="true"></i>
           </button>
         </form>
@@ -420,12 +420,12 @@
       <thead>
         <tr>
           <th style="width:60px">#</th>
-          <th>اسم الحزمة</th>
-          <th style="width:100px">العدد</th>
-          <th style="width:110px">سعر البيع</th>
-          <th style="width:110px">سعر الجملة</th>
-          <th style="width:170px">التاريخ</th>
-          <th style="width:170px;text-align:end" data-uds-nosort data-uds-noexport>إجراءات</th>
+          <th>{{ _('اسم الحزمة') }}</th>
+          <th style="width:100px">{{ _('العدد') }}</th>
+          <th style="width:110px">{{ _('سعر البيع') }}</th>
+          <th style="width:110px">{{ _('سعر الجملة') }}</th>
+          <th style="width:170px">{{ _('التاريخ') }}</th>
+          <th style="width:170px;text-align:end" data-uds-nosort data-uds-noexport>{{ _('إجراءات') }}</th>
         </tr>
       </thead>
       <tbody>
@@ -443,11 +443,11 @@
           <td>
             <div style="display:flex;gap:6px;justify-content:flex-end">
               <a href="{{ url_for('radius.cards_print_batch', batch_id=b.id) }}"
-                 class="pc-act pc-act--preview" title="معاينة" aria-label="معاينة الحزمة">
+                 class="pc-act pc-act--preview" title="{{ _('معاينة') }}" aria-label="{{ _('معاينة الحزمة') }}">
                 <i class="fa-solid fa-eye" aria-hidden="true"></i>
               </a>
-              <button type="button" class="pc-act pc-act--print" title="طباعة"
-                      aria-label="طباعة الحزمة"
+              <button type="button" class="pc-act pc-act--print" title="{{ _('طباعة') }}"
+                      aria-label="{{ _('طباعة الحزمة') }}"
                       data-print-batch
                       data-batch-id="{{ b.id }}"
                       data-batch-code="{{ b.batch_code or '' }}"
@@ -459,12 +459,12 @@
                     action="{{ url_for('radius.cards_print_batch_delete', batch_id=b.id) }}"
                     style="display:inline-flex;margin:0"
                     data-confirm-form
-              data-confirm-title="حذف حزمة الطباعة"
+              data-confirm-title="{{ _('حذف حزمة الطباعة') }}"
               data-confirm-msg="سيتم حذف الحزمة وكل بطاقاتها. هذا الإجراء لا يمكن التراجع عنه."
               data-confirm-ok="نعم، احذف">
                 {{ csrf_token_input() | safe }}
-                <button type="submit" class="pc-act pc-act--delete" title="حذف"
-                        aria-label="حذف الحزمة">
+                <button type="submit" class="pc-act pc-act--delete" title="{{ _('حذف') }}"
+                        aria-label="{{ _('حذف الحزمة') }}">
                   <i class="fa-solid fa-trash-can" aria-hidden="true"></i>
                 </button>
               </form>
@@ -487,18 +487,18 @@
   <section class="batch-print-modal__panel" role="dialog" aria-modal="true" aria-labelledby="batchPrintTitle">
     <header class="batch-print-modal__header">
       <div>
-        <p>طباعة مباشرة للحزمة</p>
-        <h2 id="batchPrintTitle">تجهيز ملف البطاقات</h2>
-        <span data-print-batch-summary>اختر قالبًا ثم ابدأ التصدير.</span>
+        <p>{{ _('طباعة مباشرة للحزمة') }}</p>
+        <h2 id="batchPrintTitle">{{ _('تجهيز ملف البطاقات') }}</h2>
+        <span data-print-batch-summary>{{ _('اختر قالبًا ثم ابدأ التصدير.') }}</span>
       </div>
-      <button type="button" class="batch-print-modal__close" data-print-modal-close aria-label="إغلاق">
+      <button type="button" class="batch-print-modal__close" data-print-modal-close aria-label="{{ _('إغلاق') }}">
         <i class="fa-solid fa-xmark"></i>
       </button>
     </header>
 
     <div class="batch-print-modal__body">
       <div class="batch-print-modal__templates">
-        <h3>اختيار قالب محفوظ</h3>
+        <h3>{{ _('اختيار قالب محفوظ') }}</h3>
         {% if print_templates %}
           <div class="batch-template-picker" data-print-template-picker>
             {% for t in print_templates %}
@@ -515,71 +515,71 @@
           </div>
         {% else %}
           <div class="batch-print-warning">
-            لا توجد قوالب محفوظة بعد. أنشئ قالبًا من مركز تصميم البطاقات أولًا.
+            {{ _('لا توجد قوالب محفوظة بعد. أنشئ قالبًا من مركز تصميم البطاقات أولًا.') }}
           </div>
         {% endif %}
       </div>
 
       <form class="batch-print-form" data-batch-print-form>
         <input type="hidden" name="batch_id" data-print-batch-id>
-        <h3>إعدادات الطباعة</h3>
+        <h3>{{ _('إعدادات الطباعة') }}</h3>
         <div class="batch-print-grid">
-          <label>مقاس الورقة
+          <label>{{ _('مقاس الورقة') }}
             <select class="hub-select" name="print_page_size">
               <option value="A4">A4</option>
               <option value="Letter">Letter</option>
             </select>
           </label>
-          <label>اتجاه الورقة
+          <label>{{ _('اتجاه الورقة') }}
             <select class="hub-select" name="print_orientation">
-              <option value="portrait">طولي</option>
-              <option value="landscape">أفقي</option>
+              <option value="portrait">{{ _('طولي') }}</option>
+              <option value="landscape">{{ _('أفقي') }}</option>
             </select>
           </label>
-          <label>عدد الأعمدة
+          <label>{{ _('عدد الأعمدة') }}
             <input type="number" name="print_columns" min="1" max="8" value="3">
           </label>
-          <label>عدد الصفوف
+          <label>{{ _('عدد الصفوف') }}
             <input type="number" name="print_rows" min="1" max="12" value="5">
           </label>
-          <label>المسافة بين الأعمدة <span dir="ltr">(mm)</span>
+          <label>{{ _('المسافة بين الأعمدة') }} <span dir="ltr">(mm)</span>
             <input type="number" name="print_column_gap_mm" min="0" max="30" step="0.5" value="3">
           </label>
-          <label>المسافة بين الصفوف <span dir="ltr">(mm)</span>
+          <label>{{ _('المسافة بين الصفوف') }} <span dir="ltr">(mm)</span>
             <input type="number" name="print_row_gap_mm" min="0" max="30" step="0.5" value="3">
           </label>
-          <label>الهامش العلوي <span dir="ltr">(mm)</span>
+          <label>{{ _('الهامش العلوي') }} <span dir="ltr">(mm)</span>
             <input type="number" name="print_margin_top_mm" min="0" max="40" step="0.5" value="8">
           </label>
-          <label>الهامش الأيمن <span dir="ltr">(mm)</span>
+          <label>{{ _('الهامش الأيمن') }} <span dir="ltr">(mm)</span>
             <input type="number" name="print_margin_right_mm" min="0" max="40" step="0.5" value="8">
           </label>
-          <label>الهامش السفلي <span dir="ltr">(mm)</span>
+          <label>{{ _('الهامش السفلي') }} <span dir="ltr">(mm)</span>
             <input type="number" name="print_margin_bottom_mm" min="0" max="40" step="0.5" value="8">
           </label>
-          <label>الهامش الأيسر <span dir="ltr">(mm)</span>
+          <label>{{ _('الهامش الأيسر') }} <span dir="ltr">(mm)</span>
             <input type="number" name="print_margin_left_mm" min="0" max="40" step="0.5" value="8">
           </label>
         </div>
         <button class="batch-btn batch-btn--primary batch-print-submit" type="submit" {% if not print_templates %}disabled{% endif %}>
-          <i class="fa-solid fa-file-pdf"></i> إنشاء ملف PDF
+          <i class="fa-solid fa-file-pdf"></i> {{ _('إنشاء ملف PDF') }}
         </button>
       </form>
 
       <div class="batch-print-progress" data-print-progress hidden>
         <div class="batch-print-progress__top">
-          <strong data-print-progress-title>بدء تجهيز ملف PDF...</strong>
+          <strong data-print-progress-title>{{ _('بدء تجهيز ملف PDF...') }}</strong>
           <span data-print-progress-percent>0%</span>
         </div>
         <div class="batch-print-progress__bar"><span data-print-progress-bar></span></div>
         <ol>
-          <li data-print-stage="queued"><i class="fa-regular fa-circle"></i> إنشاء مهمة التصدير</li>
-          <li data-print-stage="rendering"><i class="fa-regular fa-circle"></i> رسم البطاقات بالقالب المختار</li>
-          <li data-print-stage="pdf"><i class="fa-regular fa-circle"></i> ترتيب الصفحات والهوامش</li>
-          <li data-print-stage="done"><i class="fa-regular fa-circle"></i> تجهيز رابط التحميل</li>
+          <li data-print-stage="queued"><i class="fa-regular fa-circle"></i> {{ _('إنشاء مهمة التصدير') }}</li>
+          <li data-print-stage="rendering"><i class="fa-regular fa-circle"></i> {{ _('رسم البطاقات بالقالب المختار') }}</li>
+          <li data-print-stage="pdf"><i class="fa-regular fa-circle"></i> {{ _('ترتيب الصفحات والهوامش') }}</li>
+          <li data-print-stage="done"><i class="fa-regular fa-circle"></i> {{ _('تجهيز رابط التحميل') }}</li>
         </ol>
         <a class="batch-btn batch-btn--soft" data-print-download hidden href="#">
-          <i class="fa-solid fa-download"></i> تحميل الملف
+          <i class="fa-solid fa-download"></i> {{ _('تحميل الملف') }}
         </a>
         <p data-print-error class="batch-print-error" hidden></p>
       </div>
@@ -694,16 +694,16 @@
         <i class="fa-solid fa-triangle-exclamation"></i>
       </span>
       <div>
-        <h3 class="pc-confirm-title" id="pc-confirm-title">تأكيد العملية</h3>
-        <p class="pc-confirm-msg" id="pc-confirm-msg">هل أنت متأكد؟</p>
+        <h3 class="pc-confirm-title" id="pc-confirm-title">{{ _('تأكيد العملية') }}</h3>
+        <p class="pc-confirm-msg" id="pc-confirm-msg">{{ _('هل أنت متأكد؟') }}</p>
       </div>
     </div>
     <div class="pc-confirm-actions">
       <button type="button" class="pc-confirm-btn pc-confirm-btn--cancel" id="pc-confirm-cancel">
-        إلغاء
+        {{ _('إلغاء') }}
       </button>
       <button type="button" class="pc-confirm-btn pc-confirm-btn--danger" id="pc-confirm-ok">
-        نعم، احذف
+        {{ _('نعم، احذف') }}
       </button>
     </div>
   </div>

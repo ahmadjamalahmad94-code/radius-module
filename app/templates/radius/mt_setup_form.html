@@ -146,31 +146,31 @@
     <div class="mtw-grid">
       <div class="mtw-field">
         <span class="mtw-label">
-          اسم الراوتر <span class="req">*</span>
+          {{ _('اسم الراوتر') }} <span class="req">*</span>
           <span class="hub-hint" tabindex="0" data-hint="معرّف يظهر في لوحة الإدارة فقط — لا يُرسَل للراوتر."><i class="fa-solid fa-info"></i></span>
         </span>
         <input class="hub-input" type="text" name="name" required maxlength="64"
-               placeholder="مثال: MT-Office" autofocus>
+               placeholder="{{ _('مثال: MT-Office') }}" autofocus>
       </div>
 
       <div class="mtw-field" data-mt-address-field>
         <span class="mtw-label">
-          عنوان الراوتر أو الدومين
+          {{ _('عنوان الراوتر أو الدومين') }}
           <span class="hub-hint" tabindex="0" data-hint="الإصدار 7: يُولَّد تلقائيًّا عبر نفق الإدارة — اتركه فارغًا. الإصدار 6: مطلوب للاتصال المباشر."><i class="fa-solid fa-info"></i></span>
         </span>
         <input class="hub-input mono" type="text" name="address" maxlength="128"
-               placeholder="مثال: 192.168.1.1">
+               placeholder="{{ _('مثال: 192.168.1.1') }}">
         <span class="mtw-help" data-mt-address-hint-v7>
-          <strong>الإصدار 7:</strong> يُولَّد تلقائيًّا عبر نفق الإدارة الحديث — اتركه فارغًا.
+          <strong>{{ _('الإصدار 7:') }}</strong> {{ _('يُولَّد تلقائيًّا عبر نفق الإدارة الحديث — اتركه فارغًا.') }}
         </span>
         <span class="mtw-help" data-mt-address-hint-v6 hidden>
-          <strong>الإصدار 6:</strong> مطلوب — لا يدعم نفق الإدارة الحديث، نحتاج عنوانًا مباشرًا للوصول.
+          <strong>{{ _('الإصدار 6:') }}</strong> {{ _('مطلوب — لا يدعم نفق الإدارة الحديث، نحتاج عنوانًا مباشرًا للوصول.') }}
         </span>
       </div>
 
       <div class="mtw-field full">
         <span class="mtw-label">
-          إصدار نظام الراوتر <span class="req">*</span>
+          {{ _('إصدار نظام الراوتر') }} <span class="req">*</span>
           <span class="hub-hint" tabindex="0" data-hint="إذا غير متأكّد اختر 7. السكربت يطلع جاهزًا للنسخ بعد الحفظ."><i class="fa-solid fa-info"></i></span>
         </span>
         <div class="mtw-vers">
@@ -190,11 +190,11 @@
 
       <div class="mtw-field full">
         <span class="mtw-label">
-          عنوان السيرفر (كما يراه الراوتر)
+          {{ _('عنوان السيرفر (كما يراه الراوتر)') }}
           <span class="hub-hint" tabindex="0" data-hint="يُدمج في السكربت كعنوان خادم المصادقة. اكتشفه النظام تلقائيًّا — عدّله لو الراوتر يحتاج عنوانًا مختلفًا (مثل عنوان الربط الداخلي)."><i class="fa-solid fa-info"></i></span>
         </span>
         <input class="hub-input mono" type="text" name="server_ip" value="{{ default_server_ip }}"
-               placeholder="مثال: 187.77.70.18" maxlength="128">
+               placeholder="{{ _('مثال: 187.77.70.18') }}" maxlength="128">
       </div>
     </div>
   {% endcall %}
@@ -208,9 +208,9 @@
 
   {# ── شريط الإجراءات ── #}
   <div class="mt-setup-actions" style="justify-content:flex-end;padding:4px 2px 0">
-    <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.mt_operations') }}">إلغاء</a>
+    <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.mt_operations') }}">{{ _('إلغاء') }}</a>
     <button class="hub-btn hub-btn--primary" type="submit">
-      <i class="fa-solid fa-wand-magic-sparkles"></i> توليد + إنشاء
+      <i class="fa-solid fa-wand-magic-sparkles"></i> {{ _('توليد + إنشاء') }}
     </button>
   </div>
 </form>

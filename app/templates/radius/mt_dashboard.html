@@ -1107,59 +1107,59 @@ body.mt-modal-open{overflow:hidden}
     <header class="mt-router-hero-top">
       <div class="mt-router-hero-titles">
         <span class="mt-router-hero-kicker">
-          <i class="fa-solid fa-router"></i> لوحة الراوتر
+          <i class="fa-solid fa-router"></i> {{ _('لوحة الراوتر') }}
         </span>
         <h2 class="mt-router-hero-name">{{ nas.name }}</h2>
-        <p class="mt-router-hero-sub">إدارة ومراقبة الراوتر مباشرةً — كل الأقسام والإجراءات في مكان واحد.</p>
+        <p class="mt-router-hero-sub">{{ _('إدارة ومراقبة الراوتر مباشرةً — كل الأقسام والإجراءات في مكان واحد.') }}</p>
       </div>
       {# Status pill — moved into the hero top-right (RTL: top-left).
          Kept as a single DOM element so every JS hook stays valid. #}
       <div class="mt-tabs-status mt-tabs-status--hero" data-mt-status>
         <span class="mt-tabs-status-pill" data-mt-status-pill>
           <span class="dot"></span>
-          <span data-mt-status-label>جارٍ الاتصال…</span>
+          <span data-mt-status-label>{{ _('جارٍ الاتصال…') }}</span>
         </span>
         <span class="mt-tabs-status-meta" data-mt-status-meta>{{ nas.address or "—" }}</span>
       </div>
     </header>
 
   <div class="mt-tabs-row">
-  <nav class="mt-tabs" data-mt-tabs role="tablist" aria-label="أقسام الراوتر">
+  <nav class="mt-tabs" data-mt-tabs role="tablist" aria-label="{{ _('أقسام الراوتر') }}">
     <button type="button" class="mt-tab is-active"
             data-mt-tab="overview" role="tab" aria-selected="true">
-      <i class="fa-solid fa-gauge-high"></i> نظرة عامة
+      <i class="fa-solid fa-gauge-high"></i> {{ _('نظرة عامة') }}
     </button>
     <button type="button" class="mt-tab"
             data-mt-tab="interfaces" role="tab" aria-selected="false">
-      <i class="fa-solid fa-ethernet"></i> الواجهات
+      <i class="fa-solid fa-ethernet"></i> {{ _('الواجهات') }}
     </button>
     <button type="button" class="mt-tab"
             data-mt-tab="ips" role="tab" aria-selected="false">
-      <i class="fa-solid fa-network-wired"></i> العناوين
+      <i class="fa-solid fa-network-wired"></i> {{ _('العناوين') }}
     </button>
     <button type="button" class="mt-tab"
             data-mt-tab="routes" role="tab" aria-selected="false">
-      <i class="fa-solid fa-route"></i> المسارات
+      <i class="fa-solid fa-route"></i> {{ _('المسارات') }}
     </button>
     <button type="button" class="mt-tab"
             data-mt-tab="neighbors" role="tab" aria-selected="false">
-      <i class="fa-solid fa-people-arrows"></i> الجيران
+      <i class="fa-solid fa-people-arrows"></i> {{ _('الجيران') }}
     </button>
     <button type="button" class="mt-tab"
             data-mt-tab="sessions" role="tab" aria-selected="false">
-      <i class="fa-solid fa-users"></i> الجلسات
+      <i class="fa-solid fa-users"></i> {{ _('الجلسات') }}
     </button>
     <button type="button" class="mt-tab"
             data-mt-tab="logs" role="tab" aria-selected="false">
-      <i class="fa-solid fa-list"></i> السجلات
+      <i class="fa-solid fa-list"></i> {{ _('السجلات') }}
     </button>
     <button type="button" class="mt-tab"
             data-mt-tab="diagnostics" role="tab" aria-selected="false">
-      <i class="fa-solid fa-stethoscope"></i> التشخيص
+      <i class="fa-solid fa-stethoscope"></i> {{ _('التشخيص') }}
     </button>
     <button type="button" class="mt-tab"
             data-mt-tab="my-services" role="tab" aria-selected="false">
-      <i class="fa-solid fa-screwdriver-wrench"></i> خدماتي
+      <i class="fa-solid fa-screwdriver-wrench"></i> {{ _('خدماتي') }}
     </button>
   </nav>
 
@@ -1193,74 +1193,74 @@ body.mt-modal-open{overflow:hidden}
       <header class="hub-kpi-head">
         <span class="hub-kpi-icon"><i class="fa-solid fa-clock-rotate-left"></i></span>
         <div class="hub-kpi-titles">
-          <span class="hub-kpi-label">مدة تشغيل النظام</span>
-          <span class="hub-kpi-status">زمن التشغيل</span>
+          <span class="hub-kpi-label">{{ _('مدة تشغيل النظام') }}</span>
+          <span class="hub-kpi-status">{{ _('زمن التشغيل') }}</span>
         </div>
       </header>
       <div class="hub-kpi-value" data-mt-kpi-value dir="ltr">—</div>
-      <div class="hub-kpi-sub" data-mt-kpi-sub>منذ آخر إقلاع</div>
+      <div class="hub-kpi-sub" data-mt-kpi-sub>{{ _('منذ آخر إقلاع') }}</div>
     </div>
     <div class="hub-kpi hub-kpi--blue" data-mt-kpi="cpu">
       <header class="hub-kpi-head">
         <span class="hub-kpi-icon"><i class="fa-solid fa-microchip"></i></span>
         <div class="hub-kpi-titles">
-          <span class="hub-kpi-label">استخدام المعالج</span>
+          <span class="hub-kpi-label">{{ _('استخدام المعالج') }}</span>
           <span class="hub-kpi-status">CPU</span>
         </div>
       </header>
       <div class="hub-kpi-value" data-mt-kpi-value dir="ltr">—</div>
-      <div class="hub-kpi-sub" data-mt-kpi-sub>الحمل اللحظي</div>
+      <div class="hub-kpi-sub" data-mt-kpi-sub>{{ _('الحمل اللحظي') }}</div>
     </div>
     <div class="hub-kpi hub-kpi--green" data-mt-kpi="memory">
       <header class="hub-kpi-head">
         <span class="hub-kpi-icon"><i class="fa-solid fa-memory"></i></span>
         <div class="hub-kpi-titles">
-          <span class="hub-kpi-label">استهلاك الذاكرة</span>
+          <span class="hub-kpi-label">{{ _('استهلاك الذاكرة') }}</span>
           <span class="hub-kpi-status">RAM</span>
         </div>
       </header>
       <div class="hub-kpi-value" data-mt-kpi-value dir="ltr">—</div>
-      <div class="hub-kpi-sub" data-mt-kpi-sub>متاح / إجمالي</div>
+      <div class="hub-kpi-sub" data-mt-kpi-sub>{{ _('متاح / إجمالي') }}</div>
     </div>
     <div class="hub-kpi hub-kpi--teal" data-mt-kpi="disk">
       <header class="hub-kpi-head">
         <span class="hub-kpi-icon"><i class="fa-solid fa-hard-drive"></i></span>
         <div class="hub-kpi-titles">
-          <span class="hub-kpi-label">استخدام القرص</span>
-          <span class="hub-kpi-status">التخزين</span>
+          <span class="hub-kpi-label">{{ _('استخدام القرص') }}</span>
+          <span class="hub-kpi-status">{{ _('التخزين') }}</span>
         </div>
       </header>
       <div class="hub-kpi-value" data-mt-kpi-value dir="ltr">—</div>
-      <div class="hub-kpi-sub" data-mt-kpi-sub>مستخدم / إجمالي</div>
+      <div class="hub-kpi-sub" data-mt-kpi-sub>{{ _('مستخدم / إجمالي') }}</div>
     </div>
     <div class="hub-kpi hub-kpi--amber" data-mt-kpi="temperature">
       <header class="hub-kpi-head">
         <span class="hub-kpi-icon"><i class="fa-solid fa-temperature-half"></i></span>
         <div class="hub-kpi-titles">
-          <span class="hub-kpi-label">حرارة المعالج</span>
-          <span class="hub-kpi-status">الصحة</span>
+          <span class="hub-kpi-label">{{ _('حرارة المعالج') }}</span>
+          <span class="hub-kpi-status">{{ _('الصحة') }}</span>
         </div>
       </header>
       <div class="hub-kpi-value" data-mt-kpi-value dir="ltr">—</div>
-      <div class="hub-kpi-sub" data-mt-kpi-sub>من /system/health</div>
+      <div class="hub-kpi-sub" data-mt-kpi-sub>{{ _('من /system/health') }}</div>
     </div>
     <div class="hub-kpi hub-kpi--blue" data-mt-kpi="clock">
       <header class="hub-kpi-head">
         <span class="hub-kpi-icon"><i class="fa-solid fa-clock"></i></span>
         <div class="hub-kpi-titles">
-          <span class="hub-kpi-label">الوقت داخل النظام</span>
-          <span class="hub-kpi-status">الساعة</span>
+          <span class="hub-kpi-label">{{ _('الوقت داخل النظام') }}</span>
+          <span class="hub-kpi-status">{{ _('الساعة') }}</span>
         </div>
       </header>
       <div class="hub-kpi-value" data-mt-kpi-value dir="ltr">—</div>
-      <div class="hub-kpi-sub" data-mt-kpi-sub>وقت الراوتر الحالي</div>
+      <div class="hub-kpi-sub" data-mt-kpi-sub>{{ _('وقت الراوتر الحالي') }}</div>
     </div>
     <div class="hub-kpi hub-kpi--purple" data-mt-kpi="version">
       <header class="hub-kpi-head">
         <span class="hub-kpi-icon"><i class="fa-solid fa-award"></i></span>
         <div class="hub-kpi-titles">
-          <span class="hub-kpi-label">إصدار النظام</span>
-          <span class="hub-kpi-status">نظام الراوتر</span>
+          <span class="hub-kpi-label">{{ _('إصدار النظام') }}</span>
+          <span class="hub-kpi-status">{{ _('نظام الراوتر') }}</span>
         </div>
       </header>
       <div class="hub-kpi-value" data-mt-kpi-value dir="ltr">—</div>
@@ -1270,8 +1270,8 @@ body.mt-modal-open{overflow:hidden}
       <header class="hub-kpi-head">
         <span class="hub-kpi-icon"><i class="fa-solid fa-network-wired"></i></span>
         <div class="hub-kpi-titles">
-          <span class="hub-kpi-label">العنوان المتصل به</span>
-          <span class="hub-kpi-status">الرابط</span>
+          <span class="hub-kpi-label">{{ _('العنوان المتصل به') }}</span>
+          <span class="hub-kpi-status">{{ _('الرابط') }}</span>
         </div>
       </header>
       <div class="hub-kpi-value" data-mt-kpi-value dir="ltr">—</div>
@@ -1322,14 +1322,14 @@ body.mt-modal-open{overflow:hidden}
         <div class="mt-live-title">
           <span class="mt-live-icon"><i class="fa-solid fa-chart-line"></i></span>
           <div>
-            <h3>حركة الواجهات</h3>
-            <span class="mt-live-sub">قراءة حية لمعدل الرفع والتنزيل</span>
+            <h3>{{ _('حركة الواجهات') }}</h3>
+            <span class="mt-live-sub">{{ _('قراءة حية لمعدل الرفع والتنزيل') }}</span>
           </div>
         </div>
         <span class="mt-card-meta mt-live-select">
-          <label class="mt-iface-label">الواجهة</label>
+          <label class="mt-iface-label">{{ _('الواجهة') }}</label>
             <select class="mt-iface-select" data-mt-interface-select>
-              <option value="">— اختر الواجهة —</option>
+              <option value="">{{ _('— اختر الواجهة —') }}</option>
             </select>
         </span>
       </header>
@@ -1350,7 +1350,7 @@ body.mt-modal-open{overflow:hidden}
             <path class="mt-spark-rx" data-mt-spark-rx d=""></path>
             <path class="mt-spark-tx" data-mt-spark-tx d=""></path>
           </svg>
-          <p class="mt-empty" data-mt-traffic-msg>اختر واجهة لعرض الحركة الحية.</p>
+          <p class="mt-empty" data-mt-traffic-msg>{{ _('اختر واجهة لعرض الحركة الحية.') }}</p>
         </div>
       </div>
     </section>
@@ -1360,35 +1360,35 @@ body.mt-modal-open{overflow:hidden}
         <div class="mt-live-title">
           <span class="mt-live-icon"><i class="fa-solid fa-users"></i></span>
           <div>
-            <h3>المتصلون الآن</h3>
-            <span class="mt-live-sub">جلسات بوابة الدخول والبرودباند الفعالة</span>
+            <h3>{{ _('المتصلون الآن') }}</h3>
+            <span class="mt-live-sub">{{ _('جلسات بوابة الدخول والبرودباند الفعالة') }}</span>
           </div>
         </div>
-        <span class="mt-card-meta">تحديث تلقائي كل 10 ثواني</span>
+        <span class="mt-card-meta">{{ _('تحديث تلقائي كل 10 ثواني') }}</span>
       </header>
       <div class="mt-card-body" data-mt-active-users-body>
         <div class="mt-users-summary">
           <div class="mt-users-total">
             <span class="mt-users-total-icon"><i class="fa-solid fa-signal"></i></span>
             <div>
-              <small>إجمالي الجلسات</small>
+              <small>{{ _('إجمالي الجلسات') }}</small>
               <strong data-mt-active-users-total>—</strong>
             </div>
           </div>
           <div class="mt-users-pill mt-users-pill--hotspot">
-            <span>بوابة الدخول</span>
+            <span>{{ _('بوابة الدخول') }}</span>
             <strong data-mt-hotspot-count>—</strong>
           </div>
           <div class="mt-users-pill mt-users-pill--ppp">
-            <span>برودباند</span>
+            <span>{{ _('برودباند') }}</span>
             <strong data-mt-ppp-count>—</strong>
           </div>
         </div>
         <div class="mt-users-list">
-          <p class="mt-empty" data-mt-active-users-empty>جارٍ التحميل…</p>
+          <p class="mt-empty" data-mt-active-users-empty>{{ _('جارٍ التحميل…') }}</p>
           <table class="mt-users-table" data-mt-active-users-table hidden>
             <thead>
-              <tr><th>النوع</th><th>المستخدم</th><th>العنوان</th><th>المدة</th></tr>
+              <tr><th>{{ _('النوع') }}</th><th>{{ _('المستخدم') }}</th><th>{{ _('العنوان') }}</th><th>{{ _('المدة') }}</th></tr>
             </thead>
             <tbody data-mt-active-users-rows></tbody>
           </table>
@@ -1399,8 +1399,8 @@ body.mt-modal-open{overflow:hidden}
 
   <section class="mt-card mt-card--actions" data-mt-quick-actions>
     <header class="mt-card-head">
-      <h3><i class="fa-solid fa-bolt"></i> إجراءات سريعة</h3>
-      <span class="mt-card-meta">أوامر مباشرة على الراوتر</span>
+      <h3><i class="fa-solid fa-bolt"></i> {{ _('إجراءات سريعة') }}</h3>
+      <span class="mt-card-meta">{{ _('أوامر مباشرة على الراوتر') }}</span>
     </header>
     <div class="mt-card-body">
       <div class="np-cmd-panel">
@@ -1410,8 +1410,8 @@ body.mt-modal-open{overflow:hidden}
           <header class="np-cmd-group-head">
             <span class="np-cmd-group-icon"><i class="fa-solid fa-magnifying-glass"></i></span>
             <div class="np-cmd-group-text">
-              <h4 class="np-cmd-group-title">تشخيص وقراءة</h4>
-              <p class="np-cmd-group-sub">أوامر آمنة لجمع المعلومات</p>
+              <h4 class="np-cmd-group-title">{{ _('تشخيص وقراءة') }}</h4>
+              <p class="np-cmd-group-sub">{{ _('أوامر آمنة لجمع المعلومات') }}</p>
             </div>
           </header>
           <div class="np-cmd-actions">
@@ -1420,16 +1420,16 @@ body.mt-modal-open{overflow:hidden}
                 data-mt-action-ping>
           <i class="fa-solid fa-bullseye"></i>
           <span class="mt-action-btn-body">
-            <span class="mt-action-label">اختبار الوصول</span>
-            <span class="mt-action-sub">فحص الوصول لعنوان</span>
+            <span class="mt-action-label">{{ _('اختبار الوصول') }}</span>
+            <span class="mt-action-sub">{{ _('فحص الوصول لعنوان') }}</span>
           </span>
         </button>
         <button type="button" class="mt-action-btn mt-action-btn--info"
                 data-mt-action-traceroute>
           <i class="fa-solid fa-route"></i>
           <span class="mt-action-btn-body">
-            <span class="mt-action-label">تتبّع المسار</span>
-            <span class="mt-action-sub">مسار الحزم خطوة بخطوة</span>
+            <span class="mt-action-label">{{ _('تتبّع المسار') }}</span>
+            <span class="mt-action-sub">{{ _('مسار الحزم خطوة بخطوة') }}</span>
           </span>
         </button>
         {# DNS resolve tile removed — RouterOS 7 rejects the `/resolve
@@ -1441,8 +1441,8 @@ body.mt-modal-open{overflow:hidden}
                 data-mt-action-backup>
           <i class="fa-solid fa-floppy-disk"></i>
           <span class="mt-action-btn-body">
-            <span class="mt-action-label">حفظ نسخة احتياطية</span>
-            <span class="mt-action-sub">ينشئ ملف نسخة احتياطية على الراوتر</span>
+            <span class="mt-action-label">{{ _('حفظ نسخة احتياطية') }}</span>
+            <span class="mt-action-sub">{{ _('ينشئ ملف نسخة احتياطية على الراوتر') }}</span>
           </span>
         </button>
 
@@ -1455,8 +1455,8 @@ body.mt-modal-open{overflow:hidden}
           <header class="np-cmd-group-head">
             <span class="np-cmd-group-icon"><i class="fa-solid fa-wrench"></i></span>
             <div class="np-cmd-group-text">
-              <h4 class="np-cmd-group-title">صيانة سريعة</h4>
-              <p class="np-cmd-group-sub">مهام دوريّة تُنفَّذ فورًا</p>
+              <h4 class="np-cmd-group-title">{{ _('صيانة سريعة') }}</h4>
+              <p class="np-cmd-group-sub">{{ _('مهام دوريّة تُنفَّذ فورًا') }}</p>
             </div>
           </header>
           <div class="np-cmd-actions">
@@ -1464,16 +1464,16 @@ body.mt-modal-open{overflow:hidden}
                 data-mt-action-dns-flush>
           <i class="fa-solid fa-broom"></i>
           <span class="mt-action-btn-body">
-            <span class="mt-action-label">مسح كاش DNS</span>
-            <span class="mt-action-sub">يفرغ /ip dns cache</span>
+            <span class="mt-action-label">{{ _('مسح كاش DNS') }}</span>
+            <span class="mt-action-sub">{{ _('يفرغ /ip dns cache') }}</span>
           </span>
         </button>
         <button type="button" class="mt-action-btn mt-action-btn--warn"
                 data-mt-action-clock-sync>
           <i class="fa-solid fa-clock-rotate-left"></i>
           <span class="mt-action-btn-body">
-            <span class="mt-action-label">مزامنة الوقت</span>
-            <span class="mt-action-sub">إعادة ضبط الـ NTP</span>
+            <span class="mt-action-label">{{ _('مزامنة الوقت') }}</span>
+            <span class="mt-action-sub">{{ _('إعادة ضبط الـ NTP') }}</span>
           </span>
         </button>
 
@@ -1486,8 +1486,8 @@ body.mt-modal-open{overflow:hidden}
           <header class="np-cmd-group-head">
             <span class="np-cmd-group-icon"><i class="fa-solid fa-triangle-exclamation"></i></span>
             <div class="np-cmd-group-text">
-              <h4 class="np-cmd-group-title">عمليات حسّاسة</h4>
-              <p class="np-cmd-group-sub">تأكيد مطلوب قبل التنفيذ</p>
+              <h4 class="np-cmd-group-title">{{ _('عمليات حسّاسة') }}</h4>
+              <p class="np-cmd-group-sub">{{ _('تأكيد مطلوب قبل التنفيذ') }}</p>
             </div>
           </header>
           <div class="np-cmd-actions">
@@ -1495,16 +1495,16 @@ body.mt-modal-open{overflow:hidden}
                 data-mt-action-identity>
           <i class="fa-solid fa-pen-to-square"></i>
           <span class="mt-action-btn-body">
-            <span class="mt-action-label">تعديل اسم الراوتر</span>
-            <span class="mt-action-sub">يحتاج تأكيدًا</span>
+            <span class="mt-action-label">{{ _('تعديل اسم الراوتر') }}</span>
+            <span class="mt-action-sub">{{ _('يحتاج تأكيدًا') }}</span>
           </span>
         </button>
         <button type="button" class="mt-action-btn mt-action-btn--danger"
                 data-mt-action-reboot>
           <i class="fa-solid fa-power-off"></i>
           <span class="mt-action-btn-body">
-            <span class="mt-action-label">إعادة تشغيل</span>
-            <span class="mt-action-sub">يقطع الاتصال لدقيقة</span>
+            <span class="mt-action-label">{{ _('إعادة تشغيل') }}</span>
+            <span class="mt-action-sub">{{ _('يقطع الاتصال لدقيقة') }}</span>
           </span>
         </button>
           </div>
@@ -1530,10 +1530,10 @@ body.mt-modal-open{overflow:hidden}
       <header class="mt-action-modal-head">
         <h3 class="mt-action-modal-title" id="mt-action-modal-title"
             data-mt-action-modal-title>
-          <i class="fa-solid fa-bolt"></i> <span>الإجراء</span>
+          <i class="fa-solid fa-bolt"></i> <span>{{ _('الإجراء') }}</span>
         </h3>
         <button type="button" class="mt-action-modal-close"
-                data-mt-action-modal-dismiss aria-label="إغلاق">
+                data-mt-action-modal-dismiss aria-label="{{ _('إغلاق') }}">
           <i class="fa-solid fa-xmark"></i>
         </button>
       </header>
@@ -1552,9 +1552,9 @@ body.mt-modal-open{overflow:hidden}
            role="tabpanel" hidden>
     <div class="mt-page-hero mt-page-hero--green">
       <span class="mt-page-hero-kicker">
-        <i class="fa-solid fa-ethernet"></i> الواجهات
+        <i class="fa-solid fa-ethernet"></i> {{ _('الواجهات') }}
       </span>
-      <h3>واجهات الراوتر — حالة وحركة لحظيّة</h3>
+      <h3>{{ _('واجهات الراوتر — حالة وحركة لحظيّة') }}</h3>
       <p>
         كل واجهة من Ethernet إلى VLAN إلى Bridge، مع حالة التشغيل
         وعدّادات الـ RX/TX اللحظيّة. اختر واجهة لمتابعة حركتها.
@@ -1569,10 +1569,10 @@ body.mt-modal-open{overflow:hidden}
               class="mt-live-bridge-toggle"
               data-mt-live-bridge-toggle
               aria-pressed="false"
-              title="بث حيّ ~1 ثانية من الراوتر بدل التحديث كل 5 ثوانٍ">
+              title="{{ _('بث حيّ ~1 ثانية من الراوتر بدل التحديث كل 5 ثوانٍ') }}">
         <span class="mt-live-bridge-dot" aria-hidden="true"></span>
         <i class="fa-solid fa-broadcast-tower"></i>
-        <span data-mt-live-bridge-label>تفعيل البث الحي</span>
+        <span data-mt-live-bridge-label>{{ _('تفعيل البث الحي') }}</span>
       </button>
     </div>
     {# Stats strip — mirrors data-mt-interfaces-count into a
@@ -1583,7 +1583,7 @@ body.mt-modal-open{overflow:hidden}
           <i class="fa-solid fa-ethernet"></i>
         </span>
         <div class="np-stat-pill-body">
-          <span class="np-stat-pill-label">إجمالي الواجهات</span>
+          <span class="np-stat-pill-label">{{ _('إجمالي الواجهات') }}</span>
           <span class="np-stat-pill-value"
                 data-np-mirror="[data-mt-interfaces-count]">—</span>
         </div>
@@ -1593,7 +1593,7 @@ body.mt-modal-open{overflow:hidden}
           <i class="fa-solid fa-router"></i>
         </span>
         <div class="np-stat-pill-body">
-          <span class="np-stat-pill-label">المنبع</span>
+          <span class="np-stat-pill-label">{{ _('المنبع') }}</span>
           <span class="np-stat-pill-value" style="font-size:13px">/interface/print</span>
         </div>
       </div>
@@ -1601,31 +1601,31 @@ body.mt-modal-open{overflow:hidden}
 
     <section class="mt-card" data-mt-interfaces-card>
       <header class="mt-card-head">
-        <h3><i class="fa-solid fa-ethernet"></i> الواجهات</h3>
+        <h3><i class="fa-solid fa-ethernet"></i> {{ _('الواجهات') }}</h3>
         <span class="mt-card-meta">
-          <span data-mt-interfaces-count>—</span> واجهة ·
+          <span data-mt-interfaces-count>—</span> {{ _('واجهة ·') }}
           <button type="button" class="mt-mini-btn"
                   data-mt-interfaces-refresh>
-            <i class="fa-solid fa-rotate"></i> تحديث
+            <i class="fa-solid fa-rotate"></i> {{ _('تحديث') }}
           </button>
         </span>
       </header>
       <div class="mt-card-body">
-        <p class="mt-empty" data-mt-interfaces-msg>جارٍ التحميل…</p>
+        <p class="mt-empty" data-mt-interfaces-msg>{{ _('جارٍ التحميل…') }}</p>
         <div class="mt-table-wrap" data-mt-interfaces-wrap hidden>
           <table class="mt-iface-table" data-mt-interfaces-table>
             <thead>
               <tr>
-                <th>الاسم</th>
-                <th>النوع</th>
-                <th>الاتصال</th>
+                <th>{{ _('الاسم') }}</th>
+                <th>{{ _('النوع') }}</th>
+                <th>{{ _('الاتصال') }}</th>
                 <th>MAC</th>
                 <th>MTU</th>
-                <th>الحالة</th>
-                <th title="سرعة التنزيل اللحظيّة"><i class="fa-solid fa-arrow-down"></i> تنزيل</th>
-                <th title="سرعة الرفع اللحظيّة"><i class="fa-solid fa-arrow-up"></i> رفع</th>
-                <th>الإجمالي (RX / TX)</th>
-                <th>أخطاء</th>
+                <th>{{ _('الحالة') }}</th>
+                <th title="{{ _('سرعة التنزيل اللحظيّة') }}"><i class="fa-solid fa-arrow-down"></i> {{ _('تنزيل') }}</th>
+                <th title="{{ _('سرعة الرفع اللحظيّة') }}"><i class="fa-solid fa-arrow-up"></i> {{ _('رفع') }}</th>
+                <th>{{ _('الإجمالي (RX / TX)') }}</th>
+                <th>{{ _('أخطاء') }}</th>
               </tr>
             </thead>
             <tbody data-mt-interfaces-rows></tbody>
@@ -1640,9 +1640,9 @@ body.mt-modal-open{overflow:hidden}
            role="tabpanel" hidden>
     <div class="mt-page-hero mt-page-hero--teal">
               <span class="mt-page-hero-kicker">
-          <i class="fa-solid fa-network-wired"></i> العناوين
+          <i class="fa-solid fa-network-wired"></i> {{ _('العناوين') }}
         </span>
-        <h3>عناوين IP المُخصَّصة على الراوتر</h3>
+        <h3>{{ _('عناوين IP المُخصَّصة على الراوتر') }}</h3>
         <p>
           كل عنوان شبكي مربوط بواجهة — ثابت أو متغيّر، مع
           نطاق الشبكة والتعليق. مفيد لتتبّع البرمجة قبل أيّ تغيير.
@@ -1655,7 +1655,7 @@ body.mt-modal-open{overflow:hidden}
           <i class="fa-solid fa-network-wired"></i>
         </span>
         <div class="np-stat-pill-body">
-          <span class="np-stat-pill-label">إجمالي العناوين</span>
+          <span class="np-stat-pill-label">{{ _('إجمالي العناوين') }}</span>
           <span class="np-stat-pill-value"
                 data-np-mirror="[data-mt-ips-count]">—</span>
         </div>
@@ -1665,7 +1665,7 @@ body.mt-modal-open{overflow:hidden}
           <i class="fa-solid fa-database"></i>
         </span>
         <div class="np-stat-pill-body">
-          <span class="np-stat-pill-label">المنبع</span>
+          <span class="np-stat-pill-label">{{ _('المنبع') }}</span>
           <span class="np-stat-pill-value" style="font-size:13px">/ip/address/print</span>
         </div>
       </div>
@@ -1673,25 +1673,25 @@ body.mt-modal-open{overflow:hidden}
 
     <section class="mt-card" data-mt-ips-card>
       <header class="mt-card-head">
-        <h3><i class="fa-solid fa-network-wired"></i> العناوين</h3>
+        <h3><i class="fa-solid fa-network-wired"></i> {{ _('العناوين') }}</h3>
         <span class="mt-card-meta">
-          <span data-mt-ips-count>—</span> عنوان ·
+          <span data-mt-ips-count>—</span> {{ _('عنوان ·') }}
           <button type="button" class="mt-mini-btn" data-mt-ips-refresh>
-            <i class="fa-solid fa-rotate"></i> تحديث
+            <i class="fa-solid fa-rotate"></i> {{ _('تحديث') }}
           </button>
         </span>
       </header>
       <div class="mt-card-body">
-        <p class="mt-empty" data-mt-ips-msg>جارٍ التحميل…</p>
+        <p class="mt-empty" data-mt-ips-msg>{{ _('جارٍ التحميل…') }}</p>
         <div class="mt-table-wrap" data-mt-ips-wrap hidden>
           <table class="mt-iface-table" data-mt-ips-table>
             <thead>
               <tr>
-                <th>العنوان</th>
-                <th>الشبكة</th>
-                <th>الواجهة</th>
-                <th>الحالة</th>
-                <th>تعليق</th>
+                <th>{{ _('العنوان') }}</th>
+                <th>{{ _('الشبكة') }}</th>
+                <th>{{ _('الواجهة') }}</th>
+                <th>{{ _('الحالة') }}</th>
+                <th>{{ _('تعليق') }}</th>
               </tr>
             </thead>
             <tbody data-mt-ips-rows></tbody>
@@ -1706,9 +1706,9 @@ body.mt-modal-open{overflow:hidden}
            role="tabpanel" hidden>
     <div class="mt-page-hero mt-page-hero--amber">
               <span class="mt-page-hero-kicker">
-          <i class="fa-solid fa-route"></i> المسارات
+          <i class="fa-solid fa-route"></i> {{ _('المسارات') }}
         </span>
-        <h3>جدول التوجيه — أين تذهب الحزم</h3>
+        <h3>{{ _('جدول التوجيه — أين تذهب الحزم') }}</h3>
         <p>
           كل مسار مع الوجهة والبوابة وجدول التوجيه.
           هنا تشوف مسارات «تغيير IP الخروج» وأي مسار يدوي.
@@ -1721,7 +1721,7 @@ body.mt-modal-open{overflow:hidden}
           <i class="fa-solid fa-route"></i>
         </span>
         <div class="np-stat-pill-body">
-          <span class="np-stat-pill-label">إجمالي المسارات</span>
+          <span class="np-stat-pill-label">{{ _('إجمالي المسارات') }}</span>
           <span class="np-stat-pill-value"
                 data-np-mirror="[data-mt-routes-count]">—</span>
         </div>
@@ -1731,7 +1731,7 @@ body.mt-modal-open{overflow:hidden}
           <i class="fa-solid fa-arrows-turn-to-dots"></i>
         </span>
         <div class="np-stat-pill-body">
-          <span class="np-stat-pill-label">المنبع</span>
+          <span class="np-stat-pill-label">{{ _('المنبع') }}</span>
           <span class="np-stat-pill-value" style="font-size:13px">/ip/route/print</span>
         </div>
       </div>
@@ -1739,26 +1739,26 @@ body.mt-modal-open{overflow:hidden}
 
     <section class="mt-card" data-mt-routes-card>
       <header class="mt-card-head">
-        <h3><i class="fa-solid fa-route"></i> المسارات</h3>
+        <h3><i class="fa-solid fa-route"></i> {{ _('المسارات') }}</h3>
         <span class="mt-card-meta">
-          <span data-mt-routes-count>—</span> مسار ·
+          <span data-mt-routes-count>—</span> {{ _('مسار ·') }}
           <button type="button" class="mt-mini-btn" data-mt-routes-refresh>
-            <i class="fa-solid fa-rotate"></i> تحديث
+            <i class="fa-solid fa-rotate"></i> {{ _('تحديث') }}
           </button>
         </span>
       </header>
       <div class="mt-card-body">
-        <p class="mt-empty" data-mt-routes-msg>جارٍ التحميل…</p>
+        <p class="mt-empty" data-mt-routes-msg>{{ _('جارٍ التحميل…') }}</p>
         <div class="mt-table-wrap" data-mt-routes-wrap hidden>
           <table class="mt-iface-table" data-mt-routes-table>
             <thead>
               <tr>
-                <th>الوجهة</th>
-                <th>البوابة</th>
-                <th>المسافة</th>
-                <th>الحالة</th>
-                <th>المصدر</th>
-                <th>تعليق</th>
+                <th>{{ _('الوجهة') }}</th>
+                <th>{{ _('البوابة') }}</th>
+                <th>{{ _('المسافة') }}</th>
+                <th>{{ _('الحالة') }}</th>
+                <th>{{ _('المصدر') }}</th>
+                <th>{{ _('تعليق') }}</th>
               </tr>
             </thead>
             <tbody data-mt-routes-rows></tbody>
@@ -1773,9 +1773,9 @@ body.mt-modal-open{overflow:hidden}
            role="tabpanel" hidden>
     <div class="mt-page-hero mt-page-hero--rose">
               <span class="mt-page-hero-kicker">
-          <i class="fa-solid fa-people-arrows"></i> الجيران
+          <i class="fa-solid fa-people-arrows"></i> {{ _('الجيران') }}
         </span>
-        <h3>الأجهزة المكتشَفة على الشبكة</h3>
+        <h3>{{ _('الأجهزة المكتشَفة على الشبكة') }}</h3>
         <p>
           الراوترات والأجهزة الأخرى اللي يراها هذا الراوتر عبر
           MNDP / LLDP / CDP — مفيد للتعرّف على بنية الشبكة الفعليّة.
@@ -1788,7 +1788,7 @@ body.mt-modal-open{overflow:hidden}
           <i class="fa-solid fa-people-arrows"></i>
         </span>
         <div class="np-stat-pill-body">
-          <span class="np-stat-pill-label">أجهزة مكتشَفة</span>
+          <span class="np-stat-pill-label">{{ _('أجهزة مكتشَفة') }}</span>
           <span class="np-stat-pill-value"
                 data-np-mirror="[data-mt-neighbors-count]">—</span>
         </div>
@@ -1798,7 +1798,7 @@ body.mt-modal-open{overflow:hidden}
           <i class="fa-solid fa-tower-broadcast"></i>
         </span>
         <div class="np-stat-pill-body">
-          <span class="np-stat-pill-label">البروتوكولات</span>
+          <span class="np-stat-pill-label">{{ _('البروتوكولات') }}</span>
           <span class="np-stat-pill-value" style="font-size:13px">MNDP · CDP · LLDP</span>
         </div>
       </div>
@@ -1809,7 +1809,7 @@ body.mt-modal-open{overflow:hidden}
         <i class="fa-solid fa-info"></i>
       </span>
       <div>
-        قائمة الجيران تأتي من <code>/ip/neighbor</code> وتعتمد على
+        {{ _('قائمة الجيران تأتي من') }} <code>/ip/neighbor</code> وتعتمد على
         رسائل MNDP/CDP/LLDP من الأجهزة المجاورة. التغييرات قد تتأخّر
         دقيقة أو أكثر بين الإشارات.
       </div>
@@ -1817,28 +1817,28 @@ body.mt-modal-open{overflow:hidden}
 
     <section class="mt-card" data-mt-neighbors-card>
       <header class="mt-card-head">
-        <h3><i class="fa-solid fa-people-arrows"></i> الجيران</h3>
+        <h3><i class="fa-solid fa-people-arrows"></i> {{ _('الجيران') }}</h3>
         <span class="mt-card-meta">
-          <span data-mt-neighbors-count>—</span> جهاز ·
+          <span data-mt-neighbors-count>—</span> {{ _('جهاز ·') }}
           <button type="button" class="mt-mini-btn"
                   data-mt-neighbors-refresh>
-            <i class="fa-solid fa-rotate"></i> تحديث
+            <i class="fa-solid fa-rotate"></i> {{ _('تحديث') }}
           </button>
         </span>
       </header>
       <div class="mt-card-body">
-        <p class="mt-empty" data-mt-neighbors-msg>جارٍ التحميل…</p>
+        <p class="mt-empty" data-mt-neighbors-msg>{{ _('جارٍ التحميل…') }}</p>
         <div class="mt-table-wrap" data-mt-neighbors-wrap hidden>
           <table class="mt-iface-table" data-mt-neighbors-table>
             <thead>
               <tr>
-                <th>الاسم</th>
+                <th>{{ _('الاسم') }}</th>
                 <th>MAC</th>
                 <th>IPv4</th>
-                <th>الواجهة</th>
-                <th>المنصّة</th>
-                <th>اللوحة</th>
-                <th>الإصدار</th>
+                <th>{{ _('الواجهة') }}</th>
+                <th>{{ _('المنصّة') }}</th>
+                <th>{{ _('اللوحة') }}</th>
+                <th>{{ _('الإصدار') }}</th>
               </tr>
             </thead>
             <tbody data-mt-neighbors-rows></tbody>
@@ -1853,9 +1853,9 @@ body.mt-modal-open{overflow:hidden}
            role="tabpanel" hidden>
     <div class="mt-page-hero mt-page-hero--slate">
               <span class="mt-page-hero-kicker">
-          <i class="fa-solid fa-list"></i> السجلّات
+          <i class="fa-solid fa-list"></i> {{ _('السجلّات') }}
         </span>
-        <h3>سجلّ أحداث الراوتر الحيّ</h3>
+        <h3>{{ _('سجلّ أحداث الراوتر الحيّ') }}</h3>
         <p>
           آخر 250 سطر من سجلّ الراوتر، يتحدّث كل 5 ثوانٍ. صفِّ
           حسب الموضوع باستخدام الأزرار أدناه لتركّز نظرك.
@@ -1864,15 +1864,15 @@ body.mt-modal-open{overflow:hidden}
     </div>
     <section class="mt-card" data-mt-logs-card>
       <header class="mt-card-head">
-        <h3><i class="fa-solid fa-list"></i> السجلات الحيّة</h3>
+        <h3><i class="fa-solid fa-list"></i> {{ _('السجلات الحيّة') }}</h3>
         <span class="mt-card-meta">
-          <span data-mt-logs-count>—</span> سطر ·
+          <span data-mt-logs-count>—</span> {{ _('سطر ·') }}
           <label class="mt-logs-pause">
             <input type="checkbox" data-mt-logs-pause>
-            إيقاف مؤقّت
+            {{ _('إيقاف مؤقّت') }}
           </label>
           <button type="button" class="mt-mini-btn" data-mt-logs-refresh>
-            <i class="fa-solid fa-rotate"></i> تحديث
+            <i class="fa-solid fa-rotate"></i> {{ _('تحديث') }}
           </button>
         </span>
       </header>
@@ -1881,7 +1881,7 @@ body.mt-modal-open{overflow:hidden}
            on each row; the backend just substring-matches the chip
            values, so multi-select is a simple "any-of." #}
         <div class="mt-logs-topics" data-mt-logs-topics
-             aria-label="فلتر بالموضوع">
+             aria-label="{{ _('فلتر بالموضوع') }}">
           {% for slug, label in [
             ('',         'الكلّ'),
             ('error',    'أخطاء'),
@@ -1911,36 +1911,36 @@ body.mt-modal-open{overflow:hidden}
         <div class="np-logs-legend" data-mt-logs-legend>
           <div class="np-logs-stat np-logs-stat--crit">
             <span class="np-logs-stat-dot" aria-hidden="true"></span>
-            <span class="np-logs-stat-label">حرج</span>
+            <span class="np-logs-stat-label">{{ _('حرج') }}</span>
             <span class="np-logs-stat-num"
                   data-mt-logs-stat-critical>0</span>
           </div>
           <div class="np-logs-stat np-logs-stat--err">
             <span class="np-logs-stat-dot" aria-hidden="true"></span>
-            <span class="np-logs-stat-label">خطأ</span>
+            <span class="np-logs-stat-label">{{ _('خطأ') }}</span>
             <span class="np-logs-stat-num"
                   data-mt-logs-stat-error>0</span>
           </div>
           <div class="np-logs-stat np-logs-stat--warn">
             <span class="np-logs-stat-dot" aria-hidden="true"></span>
-            <span class="np-logs-stat-label">تحذير</span>
+            <span class="np-logs-stat-label">{{ _('تحذير') }}</span>
             <span class="np-logs-stat-num"
                   data-mt-logs-stat-warn>0</span>
           </div>
           <div class="np-logs-stat np-logs-stat--info">
             <span class="np-logs-stat-dot" aria-hidden="true"></span>
-            <span class="np-logs-stat-label">معلومات</span>
+            <span class="np-logs-stat-label">{{ _('معلومات') }}</span>
             <span class="np-logs-stat-num"
                   data-mt-logs-stat-info>0</span>
           </div>
           <div class="np-logs-updated">
             <i class="fa-solid fa-clock-rotate-left"
                aria-hidden="true"></i>
-            آخر تحديث: <span data-mt-logs-updated>—</span>
+            {{ _('آخر تحديث:') }} <span data-mt-logs-updated>—</span>
           </div>
         </div>
 
-        <p class="mt-empty" data-mt-logs-msg>جارٍ التحميل…</p>
+        <p class="mt-empty" data-mt-logs-msg>{{ _('جارٍ التحميل…') }}</p>
         <pre class="mt-logs-output" data-mt-logs-output
              aria-live="polite"></pre>
       </div>
@@ -1952,9 +1952,9 @@ body.mt-modal-open{overflow:hidden}
            role="tabpanel" hidden>
     <div class="mt-page-hero mt-page-hero--green">
               <span class="mt-page-hero-kicker">
-          <i class="fa-solid fa-users"></i> الجلسات الحيّة
+          <i class="fa-solid fa-users"></i> {{ _('الجلسات الحيّة') }}
         </span>
-        <h3>المتصلون الآن على الراوتر</h3>
+        <h3>{{ _('المتصلون الآن على الراوتر') }}</h3>
         <p>
           جلسات بوابة الدخول — كروت ويوزرات منفصلة — وجلسات البرودباند.
           كل جلسة بزرّ «قطع» مباشر لإيقاف الاتصال فوراً.
@@ -1970,14 +1970,14 @@ body.mt-modal-open{overflow:hidden}
           <span class="np-summary-card-icon">
             <i class="fa-solid fa-credit-card"></i>
           </span>
-          <span class="np-summary-card-title">جلسات الكروت</span>
+          <span class="np-summary-card-title">{{ _('جلسات الكروت') }}</span>
           <span class="np-summary-card-dot"
                 data-np-active-when="[data-mt-hotspot-cards-count]"></span>
         </div>
         <div class="np-summary-card-body">
           <span class="np-summary-card-value"
                 data-np-mirror="[data-mt-hotspot-cards-count]">—</span>
-          <span class="np-summary-card-sub">متّصلون عبر بطاقات بوابة الدخول</span>
+          <span class="np-summary-card-sub">{{ _('متّصلون عبر بطاقات بوابة الدخول') }}</span>
         </div>
       </div>
       <div class="np-summary-card np-summary-card--green">
@@ -1985,14 +1985,14 @@ body.mt-modal-open{overflow:hidden}
           <span class="np-summary-card-icon">
             <i class="fa-solid fa-wifi"></i>
           </span>
-          <span class="np-summary-card-title">جلسات اليوزرات</span>
+          <span class="np-summary-card-title">{{ _('جلسات اليوزرات') }}</span>
           <span class="np-summary-card-dot"
                 data-np-active-when="[data-mt-hotspot-users-count]"></span>
         </div>
         <div class="np-summary-card-body">
           <span class="np-summary-card-value"
                 data-np-mirror="[data-mt-hotspot-users-count]">—</span>
-          <span class="np-summary-card-sub">يوزرات بوابة الدخول الاعتياديّون</span>
+          <span class="np-summary-card-sub">{{ _('يوزرات بوابة الدخول الاعتياديّون') }}</span>
         </div>
       </div>
       <div class="np-summary-card np-summary-card--purple">
@@ -2000,14 +2000,14 @@ body.mt-modal-open{overflow:hidden}
           <span class="np-summary-card-icon">
             <i class="fa-solid fa-plug"></i>
           </span>
-          <span class="np-summary-card-title">جلسات PPP</span>
+          <span class="np-summary-card-title">{{ _('جلسات PPP') }}</span>
           <span class="np-summary-card-dot"
                 data-np-active-when="[data-mt-ppp-sessions-count]"></span>
         </div>
         <div class="np-summary-card-body">
           <span class="np-summary-card-value"
                 data-np-mirror="[data-mt-ppp-sessions-count]">—</span>
-          <span class="np-summary-card-sub">اشتراكات البرودباند النشطة</span>
+          <span class="np-summary-card-sub">{{ _('اشتراكات البرودباند النشطة') }}</span>
         </div>
       </div>
     </div>
@@ -2015,30 +2015,30 @@ body.mt-modal-open{overflow:hidden}
     {# ── بوابة الدخول — جلسات الكروت الرقمية أو القصيرة ── #}
     <section class="mt-card" data-mt-hotspot-cards-card data-mt-hotspot-card>
       <header class="mt-card-head">
-        <h3><i class="fa-solid fa-credit-card"></i> بوابة الدخول — جلسات الكروت</h3>
+        <h3><i class="fa-solid fa-credit-card"></i> {{ _('بوابة الدخول — جلسات الكروت') }}</h3>
         <span class="mt-card-meta">
-          <span data-mt-hotspot-cards-count>—</span> متّصل ·
-          <span class="mt-card-note">للقراءة فقط</span> ·
+          <span data-mt-hotspot-cards-count>—</span> {{ _('متّصل ·') }}
+          <span class="mt-card-note">{{ _('للقراءة فقط') }}</span> ·
           <button type="button" class="mt-mini-btn"
                   data-mt-hotspot-cards-refresh>
-            <i class="fa-solid fa-rotate"></i> تحديث
+            <i class="fa-solid fa-rotate"></i> {{ _('تحديث') }}
           </button>
         </span>
       </header>
       <div class="mt-card-body">
-        <p class="mt-empty" data-mt-hotspot-cards-msg>جارٍ التحميل…</p>
+        <p class="mt-empty" data-mt-hotspot-cards-msg>{{ _('جارٍ التحميل…') }}</p>
         <div class="mt-table-wrap" data-mt-hotspot-cards-wrap hidden>
           <table class="mt-iface-table" data-mt-hotspot-cards-table data-mt-hotspot-sessions-table>
             <thead>
               <tr>
-                <th>المستخدم</th>
-                <th>العنوان</th>
+                <th>{{ _('المستخدم') }}</th>
+                <th>{{ _('العنوان') }}</th>
                 <th>MAC</th>
-                <th>المدة</th>
+                <th>{{ _('المدة') }}</th>
                 <th>RX</th>
                 <th>TX</th>
-                <th>تعليق</th>
-                <th>إجراء</th>
+                <th>{{ _('تعليق') }}</th>
+                <th>{{ _('إجراء') }}</th>
               </tr>
             </thead>
             <tbody data-mt-hotspot-cards-rows data-mt-hotspot-sessions-rows></tbody>
@@ -2050,29 +2050,29 @@ body.mt-modal-open{overflow:hidden}
     {# ── بوابة الدخول — جلسات اليوزرات العادية ── #}
     <section class="mt-card" data-mt-hotspot-users-card style="margin-top:18px">
       <header class="mt-card-head">
-        <h3><i class="fa-solid fa-wifi"></i> بوابة الدخول — جلسات اليوزرات</h3>
+        <h3><i class="fa-solid fa-wifi"></i> {{ _('بوابة الدخول — جلسات اليوزرات') }}</h3>
         <span class="mt-card-meta">
-          <span data-mt-hotspot-users-count>—</span> متّصل ·
+          <span data-mt-hotspot-users-count>—</span> {{ _('متّصل ·') }}
           <button type="button" class="mt-mini-btn"
                   data-mt-hotspot-users-refresh>
-            <i class="fa-solid fa-rotate"></i> تحديث
+            <i class="fa-solid fa-rotate"></i> {{ _('تحديث') }}
           </button>
         </span>
       </header>
       <div class="mt-card-body">
-        <p class="mt-empty" data-mt-hotspot-users-msg>جارٍ التحميل…</p>
+        <p class="mt-empty" data-mt-hotspot-users-msg>{{ _('جارٍ التحميل…') }}</p>
         <div class="mt-table-wrap" data-mt-hotspot-users-wrap hidden>
           <table class="mt-iface-table" data-mt-hotspot-users-table>
             <thead>
               <tr>
-                <th>المستخدم</th>
-                <th>العنوان</th>
+                <th>{{ _('المستخدم') }}</th>
+                <th>{{ _('العنوان') }}</th>
                 <th>MAC</th>
-                <th>المدة</th>
+                <th>{{ _('المدة') }}</th>
                 <th>RX</th>
                 <th>TX</th>
-                <th>تعليق</th>
-                <th>إجراء</th>
+                <th>{{ _('تعليق') }}</th>
+                <th>{{ _('إجراء') }}</th>
               </tr>
             </thead>
             <tbody data-mt-hotspot-users-rows></tbody>
@@ -2084,27 +2084,27 @@ body.mt-modal-open{overflow:hidden}
     {# ── PPP sessions sub-card ── #}
     <section class="mt-card" data-mt-ppp-card style="margin-top:18px">
       <header class="mt-card-head">
-        <h3><i class="fa-solid fa-plug"></i> جلسات البرودباند</h3>
+        <h3><i class="fa-solid fa-plug"></i> {{ _('جلسات البرودباند') }}</h3>
         <span class="mt-card-meta">
-          <span data-mt-ppp-sessions-count>—</span> متّصل ·
+          <span data-mt-ppp-sessions-count>—</span> {{ _('متّصل ·') }}
           <button type="button" class="mt-mini-btn"
                   data-mt-ppp-sessions-refresh>
-            <i class="fa-solid fa-rotate"></i> تحديث
+            <i class="fa-solid fa-rotate"></i> {{ _('تحديث') }}
           </button>
         </span>
       </header>
       <div class="mt-card-body">
-        <p class="mt-empty" data-mt-ppp-sessions-msg>جارٍ التحميل…</p>
+        <p class="mt-empty" data-mt-ppp-sessions-msg>{{ _('جارٍ التحميل…') }}</p>
         <div class="mt-table-wrap" data-mt-ppp-sessions-wrap hidden>
           <table class="mt-iface-table" data-mt-ppp-sessions-table>
             <thead>
               <tr>
-                <th>المستخدم</th>
-                <th>الخدمة</th>
-                <th>العنوان</th>
-                <th>المتصل</th>
-                <th>المدة</th>
-                <th>إجراء</th>
+                <th>{{ _('المستخدم') }}</th>
+                <th>{{ _('الخدمة') }}</th>
+                <th>{{ _('العنوان') }}</th>
+                <th>{{ _('المتصل') }}</th>
+                <th>{{ _('المدة') }}</th>
+                <th>{{ _('إجراء') }}</th>
               </tr>
             </thead>
             <tbody data-mt-ppp-sessions-rows></tbody>
@@ -2119,9 +2119,9 @@ body.mt-modal-open{overflow:hidden}
            role="tabpanel" hidden>
     <div class="mt-page-hero mt-page-hero--rose">
               <span class="mt-page-hero-kicker">
-          <i class="fa-solid fa-stethoscope"></i> التشخيص
+          <i class="fa-solid fa-stethoscope"></i> {{ _('التشخيص') }}
         </span>
-        <h3>إشارات خطر + صحّة الراوتر</h3>
+        <h3>{{ _('إشارات خطر + صحّة الراوتر') }}</h3>
         <p>
           فحوصات تلقائيّة تكشف المشاكل المحتملة قبل أن يشتكي
           العميل: حرارة عالية، CPU مرتفع، اتصالات شاذّة، …
@@ -2139,7 +2139,7 @@ body.mt-modal-open{overflow:hidden}
         <div class="np-diag-card-body">
           <span class="np-diag-card-value"
                 data-np-mirror-num="[data-mt-health-summary-critical]">0</span>
-          <span class="np-diag-card-label">إشارات حرجة</span>
+          <span class="np-diag-card-label">{{ _('إشارات حرجة') }}</span>
         </div>
       </div>
       <div class="np-diag-card np-diag-card--warning">
@@ -2149,7 +2149,7 @@ body.mt-modal-open{overflow:hidden}
         <div class="np-diag-card-body">
           <span class="np-diag-card-value"
                 data-np-mirror-num="[data-mt-health-summary-warning]">0</span>
-          <span class="np-diag-card-label">تحذيرات</span>
+          <span class="np-diag-card-label">{{ _('تحذيرات') }}</span>
         </div>
       </div>
       <div class="np-diag-card np-diag-card--ok">
@@ -2159,7 +2159,7 @@ body.mt-modal-open{overflow:hidden}
         <div class="np-diag-card-body">
           <span class="np-diag-card-value"
                 data-np-mirror-num="[data-mt-health-summary-ok]">0</span>
-          <span class="np-diag-card-label">فحوصات سليمة</span>
+          <span class="np-diag-card-label">{{ _('فحوصات سليمة') }}</span>
         </div>
       </div>
     </div>
@@ -2167,17 +2167,17 @@ body.mt-modal-open{overflow:hidden}
     <section class="mt-card" data-mt-health-card>
       <header class="mt-card-head">
         <h3><i class="fa-solid fa-stethoscope"></i>
-            تحليل إشارات الخطر</h3>
+            {{ _('تحليل إشارات الخطر') }}</h3>
         <span class="mt-card-meta">
           <span class="mt-iface-state mt-iface-state--off"
-                data-mt-health-summary-critical>0 حرجة</span>
+                data-mt-health-summary-critical>{{ _('0 حرجة') }}</span>
           <span class="mt-iface-state mt-iface-state--down"
-                data-mt-health-summary-warning>0 تحذير</span>
+                data-mt-health-summary-warning>{{ _('0 تحذير') }}</span>
           <span class="mt-iface-state mt-iface-state--up"
-                data-mt-health-summary-ok>0 سليمة</span>
+                data-mt-health-summary-ok>{{ _('0 سليمة') }}</span>
           <button type="button" class="mt-mini-btn"
                   data-mt-health-refresh>
-            <i class="fa-solid fa-rotate"></i> فحص الآن
+            <i class="fa-solid fa-rotate"></i> {{ _('فحص الآن') }}
           </button>
         </span>
       </header>
@@ -2186,7 +2186,7 @@ body.mt-modal-open{overflow:hidden}
           فحص محلي يعتمد على الردود المُخزّنة من
           /interface و /ip/address — لا يُضيف ضغطًا على الراوتر.
         </p>
-        <p class="mt-empty" data-mt-health-msg>جارٍ التحميل…</p>
+        <p class="mt-empty" data-mt-health-msg>{{ _('جارٍ التحميل…') }}</p>
         <ul class="mt-health-list" data-mt-health-list></ul>
       </div>
     </section>
@@ -2214,31 +2214,31 @@ body.mt-modal-open{overflow:hidden}
        data-test="mt-dashboard-npc-link"، روابط network-policies
        الثلاثة المُجزّأة، data-rh-loop-tile + وصف اللوب. #}
     <div class="np-status-panel rh-svc-panel" data-mt-router-quicknav
-         aria-label="خدمات الراوتر وأدواته">
+         aria-label="{{ _('خدمات الراوتر وأدواته') }}">
       <div class="rh-svc-head">
         <div class="rh-svc-head-text">
-          <h4>خدمات الراوتر وأدواته</h4>
+          <h4>{{ _('خدمات الراوتر وأدواته') }}</h4>
           <p>كل خدمات الراوتر وصفحاته في مكان واحد — اضغط أي بطاقة لإدارتها.
              النقطة الملوّنة على البطاقة تبيّن إن كانت الخدمة مفعّلة على الراوتر.</p>
         </div>
         {# زر تحديث صغير واحد بزاوية القسم — يعيد فحص حالة الخدمات. #}
         <button type="button" class="rh-svc-refresh" data-rh-inv-refresh
-                title="تحديث حالة الخدمات" aria-label="تحديث حالة الخدمات">
+                title="{{ _('تحديث حالة الخدمات') }}" aria-label="{{ _('تحديث حالة الخدمات') }}">
           <i class="fa-solid fa-rotate"></i>
         </button>
       </div>
       <div class="rh-svc-error" data-rh-inv-error hidden></div>
 
       {# ── مجموعة 1: برمجة وتشغيل ───────────────────────────── #}
-      <h5 class="rh-svc-group">برمجة وتشغيل</h5>
+      <h5 class="rh-svc-group">{{ _('برمجة وتشغيل') }}</h5>
       <div class="np-svc-grid">
         {# برمجة الشبكة الكاملة (أداة — لا حالة جرد). #}
         <a class="np-svc-card np-svc-card--tool"
            data-mt-router-link="program"
            href="{{ url_for('radius.mt_program_form', nas_id=nas.id) }}">
           <span class="np-svc-icon np-svc-icon--slate"><i class="fa-solid fa-network-wired"></i></span>
-          <h5 class="np-svc-title">برمجة الشبكة</h5>
-          <span class="np-svc-status-dot is-tool" title="أداة"></span>
+          <h5 class="np-svc-title">{{ _('برمجة الشبكة') }}</h5>
+          <span class="np-svc-status-dot is-tool" title="{{ _('أداة') }}"></span>
         </a>
         {# بوابة الدخول — خدمة، نقطة الحالة من جرد hotspot. #}
         <a class="np-svc-card"
@@ -2246,8 +2246,8 @@ body.mt-modal-open{overflow:hidden}
            href="{{ url_for('radius.setup_wizard_v3_router_service_flow',
                             router_id=nas.id, service_key='hotspot') }}">
           <span class="np-svc-icon np-svc-icon--blue"><i class="fa-solid fa-wifi"></i></span>
-          <h5 class="np-svc-title">بوابة الدخول</h5>
-          <span class="np-svc-status-dot is-inactive" data-rh-svc-status title="غير مفعّلة"></span>
+          <h5 class="np-svc-title">{{ _('بوابة الدخول') }}</h5>
+          <span class="np-svc-status-dot is-inactive" data-rh-svc-status title="{{ _('غير مفعّلة') }}"></span>
         </a>
         {# البرودباند — خدمة، نقطة الحالة من جرد broadband. #}
         <a class="np-svc-card"
@@ -2255,16 +2255,16 @@ body.mt-modal-open{overflow:hidden}
            href="{{ url_for('radius.setup_wizard_v3_router_service_flow',
                             router_id=nas.id, service_key='broadband') }}">
           <span class="np-svc-icon np-svc-icon--green"><i class="fa-solid fa-ethernet"></i></span>
-          <h5 class="np-svc-title">البرودباند</h5>
-          <span class="np-svc-status-dot is-inactive" data-rh-svc-status title="غير مفعّلة"></span>
+          <h5 class="np-svc-title">{{ _('البرودباند') }}</h5>
+          <span class="np-svc-status-dot is-inactive" data-rh-svc-status title="{{ _('غير مفعّلة') }}"></span>
         </a>
         {# مصمّم صفحة الدخول (أداة). #}
         <a class="np-svc-card np-svc-card--tool"
            data-mt-router-link="login-designer"
            href="{{ url_for('radius.mt_login_designer', nas_id=nas.id) }}">
           <span class="np-svc-icon np-svc-icon--purple"><i class="fa-solid fa-palette"></i></span>
-          <h5 class="np-svc-title">مصمّم صفحة الدخول</h5>
-          <span class="np-svc-status-dot is-tool" title="أداة"></span>
+          <h5 class="np-svc-title">{{ _('مصمّم صفحة الدخول') }}</h5>
+          <span class="np-svc-status-dot is-tool" title="{{ _('أداة') }}"></span>
         </a>
         {# أُزيل من لوحة العميل — يُعاد مركزياً عبر لوحة التراخيص (قرار معماري):
            بطاقة «نفق تغيير IP» المدفوعة (تفتح نافذة طلب الخدمة/الترخيص).
@@ -2272,7 +2272,7 @@ body.mt-modal-open{overflow:hidden}
       </div>
 
       {# ── مجموعة 2: الحماية والمواقع ───────────────────────── #}
-      <h5 class="rh-svc-group">الحماية والمواقع</h5>
+      <h5 class="rh-svc-group">{{ _('الحماية والمواقع') }}</h5>
       <div class="np-svc-grid">
         {# سياسات الشبكة — صفحة الهبوط المُجزّأة لكل راوتر (أداة).
            تحمل data-test="mt-dashboard-npc-link" لاختبار NPC. #}
@@ -2281,8 +2281,8 @@ body.mt-modal-open{overflow:hidden}
            data-mt-router-link="network-policies"
            href="{{ url_for('radius.npc_router_landing', nas_id=nas.id) }}">
           <span class="np-svc-icon np-svc-icon--slate"><i class="fa-solid fa-shield-halved"></i></span>
-          <h5 class="np-svc-title">سياسات الشبكة</h5>
-          <span class="np-svc-status-dot is-tool" title="أداة"></span>
+          <h5 class="np-svc-title">{{ _('سياسات الشبكة') }}</h5>
+          <span class="np-svc-status-dot is-tool" title="{{ _('أداة') }}"></span>
         </a>
         {# الوصول البعيد — القائمة المُجزّأة لهذا الراوتر، ونقطة
            الحالة من جرد remote-access (دمج بطاقة «اتصال عن بُعد»
@@ -2292,8 +2292,8 @@ body.mt-modal-open{overflow:hidden}
            data-rh-svc-card="remote-access"
            href="{{ url_for('radius.npc_remote_access_list_scoped', nas_id=nas.id) }}">
           <span class="np-svc-icon np-svc-icon--purple"><i class="fa-solid fa-key"></i></span>
-          <h5 class="np-svc-title">الوصول البعيد</h5>
-          <span class="np-svc-status-dot is-inactive" data-rh-svc-status title="غير مفعّلة"></span>
+          <h5 class="np-svc-title">{{ _('الوصول البعيد') }}</h5>
+          <span class="np-svc-status-dot is-inactive" data-rh-svc-status title="{{ _('غير مفعّلة') }}"></span>
         </a>
         {# حجب المواقع — مرّة واحدة فقط (دُمجت خدمة block-sites مع
            قائمة قواعد الحجب). نقطة الحالة من جرد block-sites. #}
@@ -2302,8 +2302,8 @@ body.mt-modal-open{overflow:hidden}
            data-rh-svc-card="block-sites"
            href="{{ url_for('radius.npc_web_block_list_scoped', nas_id=nas.id) }}">
           <span class="np-svc-icon np-svc-icon--red"><i class="fa-solid fa-ban"></i></span>
-          <h5 class="np-svc-title">حجب المواقع</h5>
-          <span class="np-svc-status-dot is-inactive" data-rh-svc-status title="غير مفعّلة"></span>
+          <h5 class="np-svc-title">{{ _('حجب المواقع') }}</h5>
+          <span class="np-svc-status-dot is-inactive" data-rh-svc-status title="{{ _('غير مفعّلة') }}"></span>
         </a>
         {# المواقع المسموحة — مرّة واحدة (دُمجت خدمة open-sites مع
            قائمة walled-garden). نقطة الحالة من جرد open-sites. #}
@@ -2312,8 +2312,8 @@ body.mt-modal-open{overflow:hidden}
            data-rh-svc-card="open-sites"
            href="{{ url_for('radius.npc_walled_garden_list_scoped', nas_id=nas.id) }}">
           <span class="np-svc-icon np-svc-icon--teal"><i class="fa-solid fa-door-open"></i></span>
-          <h5 class="np-svc-title">المواقع المسموحة</h5>
-          <span class="np-svc-status-dot is-inactive" data-rh-svc-status title="غير مفعّلة"></span>
+          <h5 class="np-svc-title">{{ _('المواقع المسموحة') }}</h5>
+          <span class="np-svc-status-dot is-inactive" data-rh-svc-status title="{{ _('غير مفعّلة') }}"></span>
         </a>
         {# منع بث البلوتوث والواي فاي — خدمة سكربت منافذ. كانت في صفحة
            «خدمات المنافذ» المنفصلة؛ صارت بطاقة موحّدة تفتح نافذة عائمة
@@ -2323,11 +2323,11 @@ body.mt-modal-open{overflow:hidden}
         {% set _btw = (pss_services or {}).get('bt_wifi_block', {}) %}
         <button type="button" class="np-svc-card np-svc-card--pss"
                 data-pss-open="bt_wifi_block"
-                data-pss-title="منع بث البلوتوث والواي فاي">
+                data-pss-title="{{ _('منع بث البلوتوث والواي فاي') }}">
           <span class="np-svc-icon np-svc-icon--slate"><i class="fa-solid fa-tower-broadcast"></i></span>
           <h5 class="np-svc-title">
             منع البث (بلوتوث/واي فاي)
-            {% if _btw.get('placeholder') %}<span class="rh-svc-await">بانتظار السكربت</span>{% endif %}
+            {% if _btw.get('placeholder') %}<span class="rh-svc-await">{{ _('بانتظار السكربت') }}</span>{% endif %}
           </h5>
           <span class="np-svc-status-dot {{ 'is-active' if _btw.get('enabled') else 'is-inactive' }}"
                 title="{{ 'مفعّلة على المنافذ: ' ~ (_btw.get('ports') | join(', ')) if _btw.get('enabled') else 'غير مفعّلة' }}"></span>
@@ -2340,35 +2340,35 @@ body.mt-modal-open{overflow:hidden}
       </div>
 
       {# ── مجموعة 3: أدوات وصفحات ───────────────────────────── #}
-      <h5 class="rh-svc-group">أدوات وصفحات</h5>
+      <h5 class="rh-svc-group">{{ _('أدوات وصفحات') }}</h5>
       <div class="np-svc-grid">
         {# النسخ الاحتياطية (أداة). #}
         <a class="np-svc-card np-svc-card--tool"
            data-mt-router-link="backups"
            href="{{ url_for('radius.mt_backups_list', nas_id=nas.id) }}">
           <span class="np-svc-icon np-svc-icon--slate"><i class="fa-solid fa-floppy-disk"></i></span>
-          <h5 class="np-svc-title">النسخ الاحتياطية</h5>
-          <span class="np-svc-status-dot is-tool" title="أداة"></span>
+          <h5 class="np-svc-title">{{ _('النسخ الاحتياطية') }}</h5>
+          <span class="np-svc-status-dot is-tool" title="{{ _('أداة') }}"></span>
         </a>
         {# تتبّع اللوب — يفتح صفحة التتبّع، نقطة الحالة من loop_active
            (قراءة فقط، server-side). #}
         <a class="np-svc-card" data-rh-loop-tile
            href="{{ url_for('radius.mt_loop_setup') }}"
-           title="كشف اللوب عبر مجس DHCP على منافذ الزبائن">
+           title="{{ _('كشف اللوب عبر مجس DHCP على منافذ الزبائن') }}">
           <span class="np-svc-icon np-svc-icon--purple"><i class="fa-solid fa-arrows-spin"></i></span>
           <h5 class="np-svc-title">
-            تتبّع اللوب
+            {{ _('تتبّع اللوب') }}
             <span class="rh-svc-loop {{ 'is-on' if loop_active else 'is-off' }}">{{ 'مفعّل' if loop_active else 'غير مفعّل' }}</span>
           </h5>
-          <span class="np-svc-status-dot {{ 'is-active' if loop_active else 'is-inactive' }}" title="كشف اللوب عبر مجس DHCP على منافذ الزبائن"></span>
+          <span class="np-svc-status-dot {{ 'is-active' if loop_active else 'is-inactive' }}" title="{{ _('كشف اللوب عبر مجس DHCP على منافذ الزبائن') }}"></span>
         </a>
         {# تشخيص الفلِيت (أداة — لكل المستأجر، لا nas_id). #}
         <a class="np-svc-card np-svc-card--tool"
            data-mt-router-link="diagnostics"
            href="{{ url_for('radius.diagnostics') }}">
           <span class="np-svc-icon np-svc-icon--slate"><i class="fa-solid fa-stethoscope"></i></span>
-          <h5 class="np-svc-title">تشخيص الفلِيت</h5>
-          <span class="np-svc-status-dot is-tool" title="أداة"></span>
+          <h5 class="np-svc-title">{{ _('تشخيص الفلِيت') }}</h5>
+          <span class="np-svc-status-dot is-tool" title="{{ _('أداة') }}"></span>
         </a>
       </div>
 
@@ -2380,30 +2380,30 @@ body.mt-modal-open{overflow:hidden}
          endpoint الحذف القديم (/inventory/remove). يتغذّى من نفس
          جلب النقاط الملوّنة فوق (طلب واحد). الفلاتر حبوب صغيرة. #}
       <div class="rh-svc-group rh-svc-group--added">
-        <span>الخدمات المضافة على الراوتر</span>
-        <div class="rh-added-bar" role="tablist" aria-label="تصفية الخدمات المضافة">
+        <span>{{ _('الخدمات المضافة على الراوتر') }}</span>
+        <div class="rh-added-bar" role="tablist" aria-label="{{ _('تصفية الخدمات المضافة') }}">
           <button type="button" class="rh-added-chip is-active"
                   data-rh-added-filter="all" role="tab" aria-selected="true">
-            الكل <span data-rh-added-count="all">0</span>
+            {{ _('الكل') }} <span data-rh-added-count="all">0</span>
           </button>
           <button type="button" class="rh-added-chip"
                   data-rh-added-filter="hoberadius" role="tab" aria-selected="false">
-            تلقائيّة <span data-rh-added-count="hoberadius">0</span>
+            {{ _('تلقائيّة') }} <span data-rh-added-count="hoberadius">0</span>
           </button>
           <button type="button" class="rh-added-chip"
                   data-rh-added-filter="operator" role="tab" aria-selected="false">
-            يدويّة <span data-rh-added-count="operator">0</span>
+            {{ _('يدويّة') }} <span data-rh-added-count="operator">0</span>
           </button>
         </div>
       </div>
       <div class="rh-added">
         <div class="rh-added-loading" data-rh-added-loading hidden>
           <i class="fa-solid fa-spinner fa-spin"></i>
-          <span>جارٍ قراءة الخدمات المضافة من الراوتر…</span>
+          <span>{{ _('جارٍ قراءة الخدمات المضافة من الراوتر…') }}</span>
         </div>
         <div class="rh-added-empty" data-rh-added-empty hidden>
           <i class="fa-solid fa-circle-info"></i>
-          <span>لا توجد خدمات مُضافة على هذا الراوتر بعد.</span>
+          <span>{{ _('لا توجد خدمات مُضافة على هذا الراوتر بعد.') }}</span>
         </div>
         <div class="rh-added-list" data-rh-added-list></div>
       </div>
@@ -2416,18 +2416,18 @@ body.mt-modal-open{overflow:hidden}
   <div class="fcw-modal" data-fcw-modal="svc-del" hidden>
     <div class="fcw-dialog" role="dialog" aria-modal="true" aria-labelledby="fcw-svcdel-title">
       <div class="fcw-head">
-        <h3 id="fcw-svcdel-title"><i class="fa-solid fa-triangle-exclamation" style="color:#dc2626"></i> تأكيد حذف الخدمة</h3>
-        <button type="button" class="fcw-x" data-fcw-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
+        <h3 id="fcw-svcdel-title"><i class="fa-solid fa-triangle-exclamation" style="color:#dc2626"></i> {{ _('تأكيد حذف الخدمة') }}</h3>
+        <button type="button" class="fcw-x" data-fcw-close aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="fcw-body">
-        <p style="margin:0;font-size:13px;color:#475569">سيُحذف هذا العنصر من الراوتر نهائيًا — لا يمكن التراجع:</p>
+        <p style="margin:0;font-size:13px;color:#475569">{{ _('سيُحذف هذا العنصر من الراوتر نهائيًا — لا يمكن التراجع:') }}</p>
         <div class="rh-added-del-target" data-rh-del-target></div>
         <div class="rh-added-del-result" data-rh-del-result hidden></div>
       </div>
       <div class="fcw-foot">
-        <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>إلغاء</button>
+        <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>{{ _('إلغاء') }}</button>
         <button class="hub-btn hub-btn--danger" type="button" data-rh-del-confirm>
-          <i class="fa-solid fa-trash"></i> نعم، احذف
+          <i class="fa-solid fa-trash"></i> {{ _('نعم، احذف') }}
         </button>
       </div>
     </div>
@@ -2445,13 +2445,13 @@ body.mt-modal-open{overflow:hidden}
          aria-labelledby="fcw-pss-title">
       <div class="fcw-head">
         <h3 id="fcw-pss-title"><i class="fa-solid fa-diagram-project" style="color:#475569"></i>
-          <span data-pss-modal-title>خدمات المنافذ</span></h3>
-        <button type="button" class="fcw-x" data-fcw-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
+          <span data-pss-modal-title>{{ _('خدمات المنافذ') }}</span></h3>
+        <button type="button" class="fcw-x" data-fcw-close aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="fcw-body">
         <div class="rh-pss-loading" data-pss-loading hidden>
           <i class="fa-solid fa-spinner fa-spin"></i>
-          <span>جارٍ تحميل تدفّق المنافذ…</span>
+          <span>{{ _('جارٍ تحميل تدفّق المنافذ…') }}</span>
         </div>
         <div class="rh-pss-error" data-pss-error hidden></div>
         {# يُحقَن هنا جزء [data-mt-port-services] من صفحة «خدمات المنافذ». #}

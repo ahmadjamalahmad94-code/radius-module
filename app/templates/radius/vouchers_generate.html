@@ -23,43 +23,43 @@
   {% call hub.section("معطيات الدفعة", icon="sliders") %}
     <div class="hub-form">
       <div class="hub-field">
-        <label class="hub-field-label" for="hub-f-count">عدد الكوبونات <span class="req">*</span></label>
+        <label class="hub-field-label" for="hub-f-count">{{ _('عدد الكوبونات') }} <span class="req">*</span></label>
         <input class="hub-input" type="number" id="hub-f-count" name="count" min="1" max="5000" required value="20">
-        <div class="hub-field-hint">حدّ أقصى 5000 كوبون في الدفعة.</div>
+        <div class="hub-field-hint">{{ _('حدّ أقصى 5000 كوبون في الدفعة.') }}</div>
       </div>
 
       <div class="hub-field">
-        <label class="hub-field-label" for="hub-f-amount">القيمة لكل كوبون <span class="req">*</span></label>
+        <label class="hub-field-label" for="hub-f-amount">{{ _('القيمة لكل كوبون') }} <span class="req">*</span></label>
         <input class="hub-input" type="number" id="hub-f-amount" name="amount" step="0.01" min="0.01" required value="5.00">
       </div>
 
       <div class="hub-field">
-        <label class="hub-field-label" for="hub-f-plan_id">الباقة (اختياري)</label>
+        <label class="hub-field-label" for="hub-f-plan_id">{{ _('الباقة (اختياري)') }}</label>
         <select class="hub-select" id="hub-f-plan_id" name="plan_id">
-          <option value="">— بدون ربط —</option>
+          <option value="">{{ _('— بدون ربط —') }}</option>
           {% for p in plans %}
             <option value="{{ p.id }}">{{ p.name }}</option>
           {% endfor %}
         </select>
-        <div class="hub-field-hint">ربط الكوبون بباقة معينة سيمكِّن المشترك من تفعيلها تلقائيًا.</div>
+        <div class="hub-field-hint">{{ _('ربط الكوبون بباقة معينة سيمكِّن المشترك من تفعيلها تلقائيًا.') }}</div>
       </div>
 
       {# عدد خانات الكود — الافتراضي 12 (الطول التاريخي XXXX-XXXX-XXXX) #}
       <div class="hub-field">
-        <label class="hub-field-label" for="hub-f-code_length">عدد خانات الكود</label>
+        <label class="hub-field-label" for="hub-f-code_length">{{ _('عدد خانات الكود') }}</label>
         <select class="hub-select" id="hub-f-code_length" name="code_length">
-          <option value="6">6 خانات</option>
-          <option value="8">8 خانات</option>
-          <option value="10">10 خانات</option>
-          <option value="12" selected>12 خانة (الافتراضي)</option>
+          <option value="6">{{ _('6 خانات') }}</option>
+          <option value="8">{{ _('8 خانات') }}</option>
+          <option value="10">{{ _('10 خانات') }}</option>
+          <option value="12" selected>{{ _('12 خانة (الافتراضي)') }}</option>
         </select>
-        <div class="hub-field-hint">طول كود الكوبون المولَّد — يُقسَّم بشرطات كل 4 خانات.</div>
+        <div class="hub-field-hint">{{ _('طول كود الكوبون المولَّد — يُقسَّم بشرطات كل 4 خانات.') }}</div>
       </div>
 
       <div class="hub-field">
-        <label class="hub-field-label" for="hub-f-expire_at">تنتهي في</label>
+        <label class="hub-field-label" for="hub-f-expire_at">{{ _('تنتهي في') }}</label>
         <input class="hub-input" type="date" id="hub-f-expire_at" name="expire_at">
-        <div class="hub-field-hint">اتركه فارغًا للكوبونات دون تاريخ انتهاء.</div>
+        <div class="hub-field-hint">{{ _('اتركه فارغًا للكوبونات دون تاريخ انتهاء.') }}</div>
       </div>
     </div>
   {% endcall %}

@@ -4,7 +4,7 @@
 {% block title %}السلف — Hobe Hub{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-hand-holding-dollar"></i>{% endblock %}
 {% block page_title %}السلف{% endblock %}
-{% block page_sub %}<span class="sub">سلف المشتركين الحالية من سجل المحاسبة</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('سلف المشتركين الحالية من سجل المحاسبة') }}</span>{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
@@ -35,11 +35,11 @@
   search_action=url_for('radius.business_finance_loans')
 ) %}
   {# حزام الفلترة داخل الميجاهيرو — يطبَّق ارتفاع 42px الموحّد تلقائياً #}
-  <select class="hub-select" name="status" aria-label="الحالة">
-    <option value="" {% if not status %}selected{% endif %}>كل الحالات</option>
-    <option value="open" {% if status == "open" %}selected{% endif %}>مفتوحة</option>
-    <option value="settled" {% if status == "settled" %}selected{% endif %}>مسددة</option>
-    <option value="voided" {% if status == "voided" %}selected{% endif %}>ملغاة</option>
+  <select class="hub-select" name="status" aria-label="{{ _('الحالة') }}">
+    <option value="" {% if not status %}selected{% endif %}>{{ _('كل الحالات') }}</option>
+    <option value="open" {% if status == "open" %}selected{% endif %}>{{ _('مفتوحة') }}</option>
+    <option value="settled" {% if status == "settled" %}selected{% endif %}>{{ _('مسددة') }}</option>
+    <option value="voided" {% if status == "voided" %}selected{% endif %}>{{ _('ملغاة') }}</option>
   </select>
   {{ hub.btn("تطبيق الفلتر", variant="primary", icon="filter", type="submit", size="sm") }}
 {% endcall %}
@@ -52,12 +52,12 @@
       <thead>
         <tr>
           <th>#</th>
-          <th>المشترك</th>
-          <th>المدة</th>
-          <th>المبلغ</th>
-          <th>الحالة</th>
-          <th>البداية</th>
-          <th>النهاية</th>
+          <th>{{ _('المشترك') }}</th>
+          <th>{{ _('المدة') }}</th>
+          <th>{{ _('المبلغ') }}</th>
+          <th>{{ _('الحالة') }}</th>
+          <th>{{ _('البداية') }}</th>
+          <th>{{ _('النهاية') }}</th>
         </tr>
       </thead>
       <tbody>

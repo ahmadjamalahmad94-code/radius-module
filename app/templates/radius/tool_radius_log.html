@@ -22,11 +22,11 @@
   subtitle="آخر قرارات خدمة المصادقة من سجل الدخول — يتحدّث ذاتيًا.",
   icon="rss"
 ) %}
-  <select id="poll-int" class="hub-select grow" title="معدّل التحديث">
-    <option value="2000">كل 2 ثانية</option>
-    <option value="5000" selected>كل 5 ثوانٍ</option>
-    <option value="10000">كل 10 ثوانٍ</option>
-    <option value="0">إيقاف التحديث</option>
+  <select id="poll-int" class="hub-select grow" title="{{ _('معدّل التحديث') }}">
+    <option value="2000">{{ _('كل 2 ثانية') }}</option>
+    <option value="5000" selected>{{ _('كل 5 ثوانٍ') }}</option>
+    <option value="10000">{{ _('كل 10 ثوانٍ') }}</option>
+    <option value="0">{{ _('إيقاف التحديث') }}</option>
   </select>
   {{ hub.btn("تحديث الآن", icon="rotate", variant="primary", type="button", size="sm",
              attrs='id="refresh-now"') }}
@@ -52,16 +52,16 @@
         <thead>
           <tr>
             <th class="num" style="width:70px">#</th>
-            <th style="width:170px">الوقت</th>
-            <th>المستخدم</th>
-            <th style="width:120px">النتيجة</th>
-            <th style="width:140px">جهاز الشبكة</th>
-            <th>السبب</th>
+            <th style="width:170px">{{ _('الوقت') }}</th>
+            <th>{{ _('المستخدم') }}</th>
+            <th style="width:120px">{{ _('النتيجة') }}</th>
+            <th style="width:140px">{{ _('جهاز الشبكة') }}</th>
+            <th>{{ _('السبب') }}</th>
           </tr>
         </thead>
         <tbody id="log-body">
           <tr><td colspan="6" style="text-align:center;padding:28px;color:var(--hub-text-mute)">
-            <i class="fa-solid fa-spinner fa-spin"></i> يتمّ التحميل…
+            <i class="fa-solid fa-spinner fa-spin"></i> {{ _('يتمّ التحميل…') }}
           </td></tr>
         </tbody>
       </table>

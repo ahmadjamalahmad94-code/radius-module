@@ -8,7 +8,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#5b21b6">
-  <title>محفظتي · HobeRadius</title>
+  <title>{{ _('محفظتي · HobeRadius') }}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap">
@@ -489,7 +489,7 @@
   </div>
   <a href="{{ url_for('portal.card_logout') }}" class="nav-logout">
     <i class="fa-solid fa-arrow-right-from-bracket" aria-hidden="true"></i>
-    خروج
+    {{ _('خروج') }}
   </a>
 </nav>
 
@@ -517,29 +517,29 @@
   {% set user_name = dashboard.card_user.display_name or 'مستخدم' %}
 
   {# ── Balance hero — horizontal layout: balance | divider | stats ── #}
-  <section class="balance-card" aria-label="رصيد المحفظة">
+  <section class="balance-card" aria-label="{{ _('رصيد المحفظة') }}">
     <div class="balance-side">
-      <div class="label">رصيد المحفظة</div>
+      <div class="label">{{ _('رصيد المحفظة') }}</div>
       <div class="amount">
         <span>{{ wallet_balance|money }}</span>
         {# عرض وحدة العملة (كان wallet_currency يُحسب ولا يُستخدم) #}
         <span class="currency">{{ wallet_currency }}</span>
       </div>
       <div class="greeting">
-        مرحباً <strong>{{ user_name }}</strong>
+        {{ _('مرحباً') }} <strong>{{ user_name }}</strong>
       </div>
     </div>
     <div class="meta">
       <div class="item">
-        <span class="k">بطاقاتي</span>
+        <span class="k">{{ _('بطاقاتي') }}</span>
         <span class="v">{{ dashboard.cards|length if dashboard.cards else 0 }}</span>
       </div>
       <div class="item">
-        <span class="k">المشتريات</span>
+        <span class="k">{{ _('المشتريات') }}</span>
         <span class="v">{{ dashboard.purchases|length if dashboard.purchases else 0 }}</span>
       </div>
       <div class="item">
-        <span class="k">العروض</span>
+        <span class="k">{{ _('العروض') }}</span>
         <span class="v">{{ dashboard.marketplace|length if dashboard.marketplace else 0 }}</span>
       </div>
     </div>
@@ -549,41 +549,41 @@
 
     {# ── Recharge form ─────────────────────────────── #}
     <section class="card">
-      <h2><span class="icon"><i class="fa-solid fa-bolt"></i></span>شحن الرصيد</h2>
-      <p class="sub">أدخل رقم البطاقة والرقم السري ليُضاف الرصيد لمحفظتك مباشرة.</p>
+      <h2><span class="icon"><i class="fa-solid fa-bolt"></i></span>{{ _('شحن الرصيد') }}</h2>
+      <p class="sub">{{ _('أدخل رقم البطاقة والرقم السري ليُضاف الرصيد لمحفظتك مباشرة.') }}</p>
       <form method="post" action="{{ url_for('portal.card_redeem') }}" class="recharge-form">
         <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
         <div class="field">
           <label for="card_number">
-            <i class="fa-solid fa-id-card icon"></i>رقم البطاقة
+            <i class="fa-solid fa-id-card icon"></i>{{ _('رقم البطاقة') }}
           </label>
           <input id="card_number" name="card_number"
                  inputmode="numeric" pattern="[0-9]*"
-                 placeholder="مثل: 1234567890"
+                 placeholder="{{ _('مثل: 1234567890') }}"
                  maxlength="14"
                  required autocomplete="off">
         </div>
         <div class="field">
           <label for="card_password">
-            <i class="fa-solid fa-key icon"></i>الرقم السري (PIN)
+            <i class="fa-solid fa-key icon"></i>{{ _('الرقم السري (PIN)') }}
           </label>
           <input id="card_password" name="card_password"
                  inputmode="numeric" pattern="[0-9]*"
-                 placeholder="مثل: 12345"
+                 placeholder="{{ _('مثل: 12345') }}"
                  maxlength="8"
                  required autocomplete="off">
         </div>
         <button class="btn-primary" type="submit">
           <i class="fa-solid fa-arrow-up-from-bracket"></i>
-          شحن الرصيد
+          {{ _('شحن الرصيد') }}
         </button>
       </form>
     </section>
 
     {# ── Recent history ────────────────────────────── #}
     <section class="card">
-      <h2><span class="icon"><i class="fa-solid fa-clock-rotate-left"></i></span>آخر العمليات</h2>
-      <p class="sub">سجلّ آخر عمليات الشحن والشراء على محفظتك.</p>
+      <h2><span class="icon"><i class="fa-solid fa-clock-rotate-left"></i></span>{{ _('آخر العمليات') }}</h2>
+      <p class="sub">{{ _('سجلّ آخر عمليات الشحن والشراء على محفظتك.') }}</p>
       <div class="history">
         {% set recent = (dashboard.purchases or [])[:5] %}
         {% if recent %}
@@ -601,7 +601,7 @@
         {% else %}
           <div class="history-empty">
             <i class="fa-regular fa-clock"></i>
-            <div>لا توجد عمليات بعد — اشحن رصيدك لتبدأ.</div>
+            <div>{{ _('لا توجد عمليات بعد — اشحن رصيدك لتبدأ.') }}</div>
           </div>
         {% endif %}
       </div>
@@ -612,8 +612,8 @@
   {# ── Marketplace — buy a card from available packages ── #}
   {% if dashboard.marketplace %}
   <section class="card" style="margin-top:18px">
-    <h2><span class="icon"><i class="fa-solid fa-store"></i></span>معرض البطاقات</h2>
-    <p class="sub">اختر باقة من العروض التالية. تُخصم القيمة من رصيد محفظتك.</p>
+    <h2><span class="icon"><i class="fa-solid fa-store"></i></span>{{ _('معرض البطاقات') }}</h2>
+    <p class="sub">{{ _('اختر باقة من العروض التالية. تُخصم القيمة من رصيد محفظتك.') }}</p>
     <div class="market-grid">
       {% for pkg in dashboard.marketplace %}
         {% set _price = (pkg.suggested_price or pkg.price or 0)|float %}
@@ -665,8 +665,8 @@
   {# ── My cards — rich detail + login button ───────── #}
   {% if dashboard.cards %}
   <section class="card" style="margin-top:18px">
-    <h2><span class="icon"><i class="fa-solid fa-credit-card"></i></span>بطاقاتي</h2>
-    <p class="sub">البطاقات التي اشتريتها. اضغط «دخول تلقائي» للاتصال بشبكة الواي فاي مباشرة.</p>
+    <h2><span class="icon"><i class="fa-solid fa-credit-card"></i></span>{{ _('بطاقاتي') }}</h2>
+    <p class="sub">{{ _('البطاقات التي اشتريتها. اضغط «دخول تلقائي» للاتصال بشبكة الواي فاي مباشرة.') }}</p>
     <div class="cards-grid">
       {% for c in dashboard.cards %}
         {% set _used    = c.used and c.used != 0 %}
@@ -684,22 +684,22 @@
           {% if c.package_name %}<div class="my-card-pkg">{{ c.package_name }}</div>{% endif %}
           <div class="my-card-meta">
             <div class="cell">
-              <span class="k">تاريخ الشراء</span>
+              <span class="k">{{ _('تاريخ الشراء') }}</span>
               <span class="v">{{ c.created_at|date_local if c.created_at else '—' }}</span>
             </div>
             <div class="cell">
-              <span class="k">أول استخدام</span>
+              <span class="k">{{ _('أول استخدام') }}</span>
               <span class="v">{{ c.first_used_at|date_local if c.first_used_at else '—' }}</span>
             </div>
             {% if c.expire_at %}
             <div class="cell">
-              <span class="k">تنتهي</span>
+              <span class="k">{{ _('تنتهي') }}</span>
               <span class="v">{{ c.expire_at[:10] }}</span>
             </div>
             {% endif %}
             {% if c.total_seconds is defined and c.total_seconds %}
             <div class="cell">
-              <span class="k">الاستخدام</span>
+              <span class="k">{{ _('الاستخدام') }}</span>
               <span class="v">{{ (c.total_seconds // 60) }} دقيقة</span>
             </div>
             {% endif %}
@@ -712,7 +712,7 @@
                   data-card-user="{{ c.username }}"
                   data-card-pass="{{ c.password or '' }}">
             <i class="fa-solid fa-arrow-right-to-bracket"></i>
-            دخول تلقائي
+            {{ _('دخول تلقائي') }}
           </button>
           {% endif %}
           <button type="button" class="my-card-btn"
@@ -724,7 +724,7 @@
                   data-card-expire="{{ (c.expire_at or '')[:19] }}"
                   data-card-status="{% if _revoked %}ملغاة{% elif _used %}مستخدمة{% else %}جاهزة{% endif %}">
             <i class="fa-regular fa-circle-info"></i>
-            التفاصيل
+            {{ _('التفاصيل') }}
           </button>
         </div>
       </div>
@@ -735,7 +735,7 @@
 
   <div class="foot">
     <i class="fa-solid fa-shield-halved"></i>
-    اتصالك آمن — HobeRadius · محفظتي
+    {{ _('اتصالك آمن — HobeRadius · محفظتي') }}
   </div>
 
 </main>
@@ -746,17 +746,17 @@
     <div class="modal-head">
       <span class="modal-icon"><i class="fa-solid fa-cart-shopping" aria-hidden="true"></i></span>
       <div>
-        <h3 class="modal-title" id="buy-title">تأكيد الشراء</h3>
-        <p class="modal-msg" id="buy-msg">سيتم خصم القيمة من رصيد محفظتك.</p>
+        <h3 class="modal-title" id="buy-title">{{ _('تأكيد الشراء') }}</h3>
+        <p class="modal-msg" id="buy-msg">{{ _('سيتم خصم القيمة من رصيد محفظتك.') }}</p>
       </div>
     </div>
     <form method="post" action="{{ url_for('portal.card_purchase') }}" id="buy-form">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
       <input type="hidden" name="package_id" id="buy-package-id" value="">
       <div class="modal-actions">
-        <button type="button" class="modal-btn modal-btn--cancel" data-modal-close>إلغاء</button>
+        <button type="button" class="modal-btn modal-btn--cancel" data-modal-close>{{ _('إلغاء') }}</button>
         <button type="submit" class="modal-btn modal-btn--primary">
-          <i class="fa-solid fa-check"></i> أكّد الشراء
+          <i class="fa-solid fa-check"></i> {{ _('أكّد الشراء') }}
         </button>
       </div>
     </form>
@@ -769,13 +769,13 @@
     <div class="modal-head">
       <span class="modal-icon"><i class="fa-solid fa-credit-card" aria-hidden="true"></i></span>
       <div>
-        <h3 class="modal-title" id="detail-title">تفاصيل البطاقة</h3>
-        <p class="modal-msg" id="detail-sub">معلومات كاملة عن هذه البطاقة.</p>
+        <h3 class="modal-title" id="detail-title">{{ _('تفاصيل البطاقة') }}</h3>
+        <p class="modal-msg" id="detail-sub">{{ _('معلومات كاملة عن هذه البطاقة.') }}</p>
       </div>
     </div>
     <div class="modal-credentials" id="detail-rows"></div>
     <div class="modal-actions">
-      <button type="button" class="modal-btn modal-btn--cancel" data-modal-close>إغلاق</button>
+      <button type="button" class="modal-btn modal-btn--cancel" data-modal-close>{{ _('إغلاق') }}</button>
     </div>
   </div>
 </div>

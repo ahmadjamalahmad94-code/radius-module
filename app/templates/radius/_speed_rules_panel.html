@@ -455,11 +455,11 @@
     <div class="sr2-bulk">
       <button class="hub-btn hub-btn--ghost hub-btn--sm" type="submit"
               name="_speed_rule_action" value="enable_all" formnovalidate>
-        <i class="fa-solid fa-toggle-on"></i> تفعيل الكل
+        <i class="fa-solid fa-toggle-on"></i> {{ _('تفعيل الكل') }}
       </button>
       <button class="hub-btn hub-btn--ghost hub-btn--sm" type="submit"
               name="_speed_rule_action" value="disable_all" formnovalidate>
-        <i class="fa-solid fa-toggle-off"></i> تعطيل الكل
+        <i class="fa-solid fa-toggle-off"></i> {{ _('تعطيل الكل') }}
       </button>
     </div>
     {% endif %}
@@ -470,7 +470,7 @@
     {% if not speed_rules_panel.rules %}
       <div class="sr2-empty">
         <i class="fa-solid fa-clock"></i>
-        لا توجد قواعد سرعة بعد. أضف قاعدة جديدة من البطاقة أدناه.
+        {{ _('لا توجد قواعد سرعة بعد. أضف قاعدة جديدة من البطاقة أدناه.') }}
       </div>
     {% else %}
       {% for rule in speed_rules_panel.rules %}
@@ -498,13 +498,13 @@
             >{{ rule.starts_at_time or '--:--' }} ← {{ rule.ends_at_time or '--:--' }}</span>
           </span>
           <span class="sr2-sum-speed">
-            <i class="fa-solid fa-arrow-down" title="تنزيل"></i>
+            <i class="fa-solid fa-arrow-down" title="{{ _('تنزيل') }}"></i>
             {%- if d_kbps >= 1024 and (d_kbps % 1024 == 0) %} {{ (d_kbps // 1024) }} Mbps
             {%- elif d_kbps >= 1024 %} {{ '%.1f' % (d_kbps / 1024) }} Mbps
             {%- else %} {{ d_kbps }} Kbps
             {%- endif -%}
             <span class="sr2-sum-sep">·</span>
-            <i class="fa-solid fa-arrow-up" title="رفع"></i>
+            <i class="fa-solid fa-arrow-up" title="{{ _('رفع') }}"></i>
             {%- if u_kbps >= 1024 and (u_kbps % 1024 == 0) %} {{ (u_kbps // 1024) }} Mbps
             {%- elif u_kbps >= 1024 %} {{ '%.1f' % (u_kbps / 1024) }} Mbps
             {%- else %} {{ u_kbps }} Kbps
@@ -525,11 +525,11 @@
             {% else %}<i class="fa-solid fa-circle-pause"></i> معطَّلة{% endif %}
           </span>
           <button type="button" class="sr2-sum-edit" data-toggle-rule="{{ rule.id }}">
-            <i class="fa-solid fa-pen"></i> تعديل
+            <i class="fa-solid fa-pen"></i> {{ _('تعديل') }}
           </button>
           <button class="sr2-sum-del" type="submit"
                   name="_speed_rule_action" value="delete:{{ rule.id }}" formnovalidate
-                  title="حذف القاعدة"
+                  title="{{ _('حذف القاعدة') }}"
                   onclick="return confirm('حذف هذه القاعدة؟');">
             <i class="fa-solid fa-trash"></i>
           </button>
@@ -542,11 +542,11 @@
         {# Row 1: name + days #}
         <div class="sr2-row">
           <div class="sr2-field">
-            <label>اسم القاعدة</label>
+            <label>{{ _('اسم القاعدة') }}</label>
             <input name="sr_edit_name_{{ rule.id }}" value="{{ rule.name or 'قاعدة سرعة' }}">
           </div>
           <div class="sr2-field">
-            <label>الأيام (فاضي = كل الأيام)</label>
+            <label>{{ _('الأيام (فاضي = كل الأيام)') }}</label>
             <div class="sr2-days">
               {% for code, lbl in ALL_DAYS %}
               <label class="sr2-day">
@@ -562,19 +562,19 @@
         {# Row 2 (4 cols): from + to + speed-down + speed-up. #}
         <div class="sr2-row sr2-row--4">
           <div class="sr2-field">
-            <label>من الساعة</label>
+            <label>{{ _('من الساعة') }}</label>
             {{ time_picker_circular(name="sr_edit_starts_at_time_" ~ rule.id|string, value=rule.starts_at_time or "") }}
           </div>
           <div class="sr2-field">
-            <label>إلى الساعة</label>
+            <label>{{ _('إلى الساعة') }}</label>
             {{ time_picker_circular(name="sr_edit_ends_at_time_" ~ rule.id|string, value=rule.ends_at_time or "") }}
           </div>
           <div class="sr2-field">
-            <label>سرعة التنزيل</label>
+            <label>{{ _('سرعة التنزيل') }}</label>
             {{ unit_input_picker(name="sr_edit_speed_down_kbps_" ~ rule.id|string, value=rule.speed_down_kbps or 0, kind="speed", units=["kbps","Mbps"]) }}
           </div>
           <div class="sr2-field">
-            <label>سرعة الرفع</label>
+            <label>{{ _('سرعة الرفع') }}</label>
             {{ unit_input_picker(name="sr_edit_speed_up_kbps_" ~ rule.id|string, value=rule.speed_up_kbps or 0, kind="speed", units=["kbps","Mbps"]) }}
           </div>
         </div>
@@ -582,20 +582,20 @@
         {# Row 3 (3 cols): restore-mode + priority + saved-schedule (read-only here). #}
         <div class="sr2-row sr2-row--3">
           <div class="sr2-field">
-            <label>بعد الانتهاء</label>
+            <label>{{ _('بعد الانتهاء') }}</label>
             <select name="sr_edit_restore_mode_{{ rule.id }}">
-              <option value="profile_default" {% if rule.restore_mode == 'profile_default' %}selected{% endif %}>الرجوع للسرعة الأساسية</option>
-              <option value="keep_current"    {% if rule.restore_mode == 'keep_current'    %}selected{% endif %}>إبقاء آخر سرعة</option>
-              <option value="disconnect"      {% if rule.restore_mode == 'disconnect'      %}selected{% endif %}>فصل الجلسة</option>
+              <option value="profile_default" {% if rule.restore_mode == 'profile_default' %}selected{% endif %}>{{ _('الرجوع للسرعة الأساسية') }}</option>
+              <option value="keep_current"    {% if rule.restore_mode == 'keep_current'    %}selected{% endif %}>{{ _('إبقاء آخر سرعة') }}</option>
+              <option value="disconnect"      {% if rule.restore_mode == 'disconnect'      %}selected{% endif %}>{{ _('فصل الجلسة') }}</option>
             </select>
           </div>
           <div class="sr2-field">
-            <label>الأولوية (1-10)</label>
+            <label>{{ _('الأولوية (1-10)') }}</label>
             <input type="number" min="1" max="10" step="1" name="sr_edit_priority_{{ rule.id }}"
                    value="{{ rule.priority if (rule.priority and rule.priority <= 10) else 5 }}">
           </div>
           <div class="sr2-field">
-            <label>الجدول المصدر</label>
+            <label>{{ _('الجدول المصدر') }}</label>
             <input value="{% if rule.source_schedule_id %}#{{ rule.source_schedule_id }}{% else %}—{% endif %}" disabled>
           </div>
         </div>
@@ -614,7 +614,7 @@
           <div class="sr2-foot-actions">
             <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button"
                     data-collapse-rule="{{ rule.id }}">
-              <i class="fa-solid fa-xmark"></i> إغلاق
+              <i class="fa-solid fa-xmark"></i> {{ _('إغلاق') }}
             </button>
             {# «تم» = JS-only: refresh the summary preview from the
                current inputs, collapse, and flash. The actual write
@@ -622,12 +622,12 @@
                sr_edit_*_<id> for every rule and persists in one go). #}
             <button class="hub-btn hub-btn--primary hub-btn--sm" type="button"
                     data-update-rule="{{ rule.id }}">
-              <i class="fa-solid fa-check"></i> تم
+              <i class="fa-solid fa-check"></i> {{ _('تم') }}
             </button>
             <button class="hub-btn hub-btn--danger hub-btn--sm" type="submit"
                     name="_speed_rule_action" value="delete:{{ rule.id }}" formnovalidate
                     onclick="return confirm('حذف هذه القاعدة؟');">
-              <i class="fa-solid fa-trash"></i> حذف
+              <i class="fa-solid fa-trash"></i> {{ _('حذف') }}
             </button>
           </div>
         </div>
@@ -642,7 +642,7 @@
   {%- set sr_default_scope = 'subscriber' if speed_rules_panel.target_type not in ['plan','card_batch'] else 'package' -%}
   <div class="sr2-add-trigger-row">
     <button type="button" class="hub-btn hub-btn--primary" data-sr-open-add>
-      <i class="fa-solid fa-plus"></i> إضافة جدولة/قاعدة سرعة جديدة
+      <i class="fa-solid fa-plus"></i> {{ _('إضافة جدولة/قاعدة سرعة جديدة') }}
     </button>
   </div>
 
@@ -655,8 +655,8 @@
     <div class="sr2-modal-backdrop" data-sr-close-add></div>
     <div class="sr2-modal-panel">
       <div class="sr2-modal-head">
-        <h3 id="sr2-add-title"><i class="fa-solid fa-plus"></i> إضافة جدولة/قاعدة سرعة جديدة</h3>
-        <button type="button" class="sr2-modal-x" data-sr-close-add aria-label="إغلاق">
+        <h3 id="sr2-add-title"><i class="fa-solid fa-plus"></i> {{ _('إضافة جدولة/قاعدة سرعة جديدة') }}</h3>
+        <button type="button" class="sr2-modal-x" data-sr-close-add aria-label="{{ _('إغلاق') }}">
           <i class="fa-solid fa-xmark"></i>
         </button>
       </div>
@@ -670,20 +670,20 @@
              toggles which field groups are visible (progressive
              disclosure). Backend field set stays identical. #}
           <div class="sr2-scope">
-            <span class="sr2-scope-label"><i class="fa-solid fa-eye"></i> نطاق العرض</span>
+            <span class="sr2-scope-label"><i class="fa-solid fa-eye"></i> {{ _('نطاق العرض') }}</span>
             <div class="sr2-scope-opts">
               <label class="sr2-scope-opt">
                 <input type="radio" name="sr_scope_view" value="package"
                        {% if sr_default_scope == 'package' %}checked{% endif %} data-sr-scope>
-                <span>عرض / باقة
-                  <span class="so-sub">قاعدة تنطبق على كامل العرض أو الباقة</span>
+                <span>{{ _('عرض / باقة') }}
+                  <span class="so-sub">{{ _('قاعدة تنطبق على كامل العرض أو الباقة') }}</span>
                 </span>
               </label>
               <label class="sr2-scope-opt">
                 <input type="radio" name="sr_scope_view" value="subscriber"
                        {% if sr_default_scope == 'subscriber' %}checked{% endif %} data-sr-scope>
-                <span>مشترك
-                  <span class="so-sub">قاعدة خاصة بهذا المشترك فقط</span>
+                <span>{{ _('مشترك') }}
+                  <span class="so-sub">{{ _('قاعدة خاصة بهذا المشترك فقط') }}</span>
                 </span>
               </label>
             </div>
@@ -691,11 +691,11 @@
 
           <div class="sr2-row" style="margin-top:12px">
             <div class="sr2-field">
-              <label>اسم القاعدة</label>
-              <input name="sr_name" placeholder="مثال: سرعة المساء">
+              <label>{{ _('اسم القاعدة') }}</label>
+              <input name="sr_name" placeholder="{{ _('مثال: سرعة المساء') }}">
             </div>
             <div class="sr2-field">
-              <label>الأيام (فاضي = كل الأيام)</label>
+              <label>{{ _('الأيام (فاضي = كل الأيام)') }}</label>
               <div class="sr2-days">
                 {% for code, lbl in ALL_DAYS %}
                 <label class="sr2-day">
@@ -710,19 +710,19 @@
           {# Row 2 (4 cols): from + to + speed-down + speed-up. #}
           <div class="sr2-row sr2-row--4" style="margin-top:12px">
             <div class="sr2-field">
-              <label>من الساعة</label>
+              <label>{{ _('من الساعة') }}</label>
               {{ time_picker_circular(name="sr_starts_at_time", value="") }}
             </div>
             <div class="sr2-field">
-              <label>إلى الساعة</label>
+              <label>{{ _('إلى الساعة') }}</label>
               {{ time_picker_circular(name="sr_ends_at_time", value="") }}
             </div>
             <div class="sr2-field">
-              <label>سرعة التنزيل</label>
+              <label>{{ _('سرعة التنزيل') }}</label>
               {{ unit_input_picker(name="sr_speed_down_kbps", value=0, kind="speed", units=["kbps","Mbps"]) }}
             </div>
             <div class="sr2-field">
-              <label>سرعة الرفع</label>
+              <label>{{ _('سرعة الرفع') }}</label>
               {{ unit_input_picker(name="sr_speed_up_kbps", value=0, kind="speed", units=["kbps","Mbps"]) }}
             </div>
           </div>
@@ -738,21 +738,21 @@
              so readAddCard() keeps reading them and saves stay valid. #}
           <div class="sr2-row sr2-row--3" style="margin-top:12px">
             <div class="sr2-field" data-scope-only="subscriber">
-              <label>بعد الانتهاء</label>
+              <label>{{ _('بعد الانتهاء') }}</label>
               <select name="sr_restore_mode">
-                <option value="profile_default">الرجوع للسرعة الأساسية</option>
-                <option value="keep_current">إبقاء آخر سرعة</option>
-                <option value="disconnect">فصل الجلسة</option>
+                <option value="profile_default">{{ _('الرجوع للسرعة الأساسية') }}</option>
+                <option value="keep_current">{{ _('إبقاء آخر سرعة') }}</option>
+                <option value="disconnect">{{ _('فصل الجلسة') }}</option>
               </select>
             </div>
             <div class="sr2-field">
-              <label>الأولوية (1-10)</label>
+              <label>{{ _('الأولوية (1-10)') }}</label>
               <input type="number" min="1" max="10" step="1" name="sr_priority" value="5">
             </div>
             <div class="sr2-field" data-scope-only="package">
-              <label>جدول محفوظ</label>
+              <label>{{ _('جدول محفوظ') }}</label>
               <select name="sr_source_schedule_id">
-                <option value="">اختيار من الجداول المحفوظة</option>
+                <option value="">{{ _('اختيار من الجداول المحفوظة') }}</option>
                 {% for preset in speed_rules_panel.presets or [] %}
                   <option value="{{ preset.id }}">
                     {{ preset.name or ('#' ~ preset.id) }} —
@@ -778,15 +778,15 @@
           </span>
           <button class="hub-btn hub-btn--secondary hub-btn--sm" type="button"
                   data-add-action="copy">
-            <i class="fa-solid fa-copy"></i> نسخ من جدول محفوظ
+            <i class="fa-solid fa-copy"></i> {{ _('نسخ من جدول محفوظ') }}
           </button>
           <button class="hub-btn hub-btn--primary hub-btn--sm" type="button"
                   data-add-action="manual">
-            <i class="fa-solid fa-plus"></i> إضافة القاعدة
+            <i class="fa-solid fa-plus"></i> {{ _('إضافة القاعدة') }}
           </button>
         {% else %}
           <span class="sr2-help" style="flex:1">
-            لو تركتِ الفترة عابرة لمنتصف الليل (مثلاً 22:00 → 06:00) تُفهَم تلقائيًا.
+            {{ _('لو تركتِ الفترة عابرة لمنتصف الليل (مثلاً 22:00 → 06:00) تُفهَم تلقائيًا.') }}
           </span>
           {# Buttons stay type=submit by default (other forms keep the old
              reload semantics). When the panel is wrapped in a host that
@@ -797,12 +797,12 @@
           <button class="hub-btn hub-btn--secondary hub-btn--sm" type="submit"
                   name="_speed_rule_action" value="copy" formnovalidate
                   data-add-action="copy">
-            <i class="fa-solid fa-copy"></i> نسخ من جدول محفوظ
+            <i class="fa-solid fa-copy"></i> {{ _('نسخ من جدول محفوظ') }}
           </button>
           <button class="hub-btn hub-btn--primary hub-btn--sm" type="submit"
                   name="_speed_rule_action" value="manual" formnovalidate
                   data-add-action="manual">
-            <i class="fa-solid fa-check"></i> اعتماد القاعدة
+            <i class="fa-solid fa-check"></i> {{ _('اعتماد القاعدة') }}
           </button>
         {% endif %}
       </div>

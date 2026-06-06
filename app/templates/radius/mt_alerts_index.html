@@ -8,7 +8,7 @@
 {% block title %}التنبيهات{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-triangle-exclamation"></i>{% endblock %}
 {% block page_title %}التنبيهات الذكية{% endblock %}
-{% block page_sub %}<span class="sub">مركز إشارات حقيقي مبني على قواعد التنبيه المحفوظة</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('مركز إشارات حقيقي مبني على قواعد التنبيه المحفوظة') }}</span>{% endblock %}
 
 {% block head_extra %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/mt_dashboard.css') }}">
@@ -40,19 +40,19 @@
   search_action=url_for('radius.mt_alerts_index')
 ) %}
   <select class="hub-select" name="status" data-mt-alerts-status>
-    <option value="open"     {% if filters.status == 'open' %}selected{% endif %}>المفتوحة</option>
-    <option value="resolved" {% if filters.status == 'resolved' %}selected{% endif %}>المغلقة</option>
+    <option value="open"     {% if filters.status == 'open' %}selected{% endif %}>{{ _('المفتوحة') }}</option>
+    <option value="resolved" {% if filters.status == 'resolved' %}selected{% endif %}>{{ _('المغلقة') }}</option>
   </select>
   {# تسميات الشدة بالعربي بدل القيم الخام (info/warning/critical) #}
   {% set severity_labels = {'critical': 'حرجة', 'warning': 'تحذير', 'info': 'معلومة'} %}
   <select class="hub-select" name="severity" data-mt-alerts-severity>
-    <option value="">كل الشدات</option>
+    <option value="">{{ _('كل الشدات') }}</option>
     {% for s in severities %}
     <option value="{{ s }}" {% if filters.severity == s %}selected{% endif %}>{{ severity_labels.get(s, s) }}</option>
     {% endfor %}
   </select>
   <input class="hub-input" type="text" name="router_id" value="{{ filters.router_id or '' }}"
-         placeholder="راوتر (مثلا 42)" data-mt-alerts-router>
+         placeholder="{{ _('راوتر (مثلا 42)') }}" data-mt-alerts-router>
   {{ hub.btn("تطبيق", icon="magnifying-glass", variant="primary", type="submit", size="sm") }}
 {% endcall %}
 
@@ -70,7 +70,7 @@
        meta=("المفتوحة" if filters.status == "open" else "المغلقة"), flush=True) %}
     {% if not rows %}
     <div class="hub-section-body" data-mt-alerts-empty style="line-height:1.9">
-      <p style="font-weight:800;margin:0 0 6px;font-size:14px">لا توجد تنبيهات حالياً.</p>
+      <p style="font-weight:800;margin:0 0 6px;font-size:14px">{{ _('لا توجد تنبيهات حالياً.') }}</p>
       <p style="margin:0">
         هذه الصفحة تُظهر تنبيهات مبنيّة على فحوصات الراوترات: النسخ الاحتياطي،
         حداثة اللقطات، وأخطاء تطبيق الإعدادات. أمّا <strong>المراقبة
@@ -79,7 +79,7 @@
         للتحقق من حالة الإرسال.
       </p>
       <p style="margin:8px 0 0;color:var(--hub-text-mute,#64748b);font-size:12.5px">
-        لمتابعة حالة الراوترات الآن: افتح «إدارة الراوترات» وراقب حالة كل راوتر مباشرة.
+        {{ _('لمتابعة حالة الراوترات الآن: افتح «إدارة الراوترات» وراقب حالة كل راوتر مباشرة.') }}
       </p>
     </div>
     {% else %}
@@ -88,12 +88,12 @@
       <table class="hub-table" data-mt-alerts-rows>
         <thead>
           <tr>
-            <th>التنبيه</th>
-            <th style="width:110px">الشدة</th>
-            <th>الراوتر</th>
-            <th>القاعدة</th>
-            <th>آخر رصد</th>
-            <th style="width:120px" data-uds-nosort data-uds-nocol>إجراءات</th>
+            <th>{{ _('التنبيه') }}</th>
+            <th style="width:110px">{{ _('الشدة') }}</th>
+            <th>{{ _('الراوتر') }}</th>
+            <th>{{ _('القاعدة') }}</th>
+            <th>{{ _('آخر رصد') }}</th>
+            <th style="width:120px" data-uds-nosort data-uds-nocol>{{ _('إجراءات') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -121,10 +121,10 @@
             <td class="mono small">{{ a.rule }}</td>
             <td class="mono small">{{ a.last_seen|dt_local }}</td>
             <td>
-              <a class="hub-btn hub-btn--ghost hub-btn--sm" title="التفاصيل"
+              <a class="hub-btn hub-btn--ghost hub-btn--sm" title="{{ _('التفاصيل') }}"
                  href="{{ url_for('radius.mt_alerts_detail', alert_id=a.id) }}"
                  data-mt-alert-detail="{{ a.id }}">
-                <i class="fa-solid fa-eye"></i> التفاصيل
+                <i class="fa-solid fa-eye"></i> {{ _('التفاصيل') }}
               </a>
             </td>
           </tr>
@@ -148,50 +148,50 @@
   <div class="sa-backdrop" data-sa-close></div>
   <form class="sa-dialog" method="post" action="{{ url_for('radius.mt_alerts_settings_save') }}" role="dialog" aria-modal="true">
     <div class="sa-head">
-      <h3><i class="fa-solid fa-gear"></i> إعدادات التنبيهات الذكية</h3>
-      <button type="button" class="sa-x" data-sa-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
+      <h3><i class="fa-solid fa-gear"></i> {{ _('إعدادات التنبيهات الذكية') }}</h3>
+      <button type="button" class="sa-x" data-sa-close aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <div class="sa-body">
       <div class="sa-note">
         <i class="fa-solid fa-circle-info"></i>
-        الكشف يعتمد على دفع الراوتر لمقاييسه كل دقيقتين.
-        <a href="{{ url_for('radius.mt_metrics_setup') }}">إعداد عميل المقاييس على الراوتر ←</a>
+        {{ _('الكشف يعتمد على دفع الراوتر لمقاييسه كل دقيقتين.') }}
+        <a href="{{ url_for('radius.mt_metrics_setup') }}">{{ _('إعداد عميل المقاييس على الراوتر ←') }}</a>
         &nbsp;·&nbsp;
-        <a href="{{ url_for('radius.mt_loop_setup') }}">تتبّع اللوب (الحلقات) ←</a>
+        <a href="{{ url_for('radius.mt_loop_setup') }}">{{ _('تتبّع اللوب (الحلقات) ←') }}</a>
       </div>
 
       <div class="sa-card">
-        <div class="sa-card-title">التشغيل العام</div>
-        <label class="sa-toggle"><input type="checkbox" name="enabled" value="1" {% if settings.enabled %}checked{% endif %}><span>تفعيل التنبيهات الذكية</span></label>
-        <label class="sa-toggle"><input type="checkbox" name="telegram" value="1" {% if settings.telegram %}checked{% endif %}><span>إرسال إشعار تيليجرام عند تنبيه جديد</span></label>
+        <div class="sa-card-title">{{ _('التشغيل العام') }}</div>
+        <label class="sa-toggle"><input type="checkbox" name="enabled" value="1" {% if settings.enabled %}checked{% endif %}><span>{{ _('تفعيل التنبيهات الذكية') }}</span></label>
+        <label class="sa-toggle"><input type="checkbox" name="telegram" value="1" {% if settings.telegram %}checked{% endif %}><span>{{ _('إرسال إشعار تيليجرام عند تنبيه جديد') }}</span></label>
       </div>
 
       <div class="sa-card">
-        <div class="sa-card-title">أنواع الكشف</div>
-        <label class="sa-toggle"><input type="checkbox" name="offline" value="1" {% if settings.offline %}checked{% endif %}><span>راوتر مفصول (توقّف عن الإرسال)</span></label>
-        <label class="sa-toggle"><input type="checkbox" name="high_traffic" value="1" {% if settings.high_traffic %}checked{% endif %}><span>حركة عالية فوق حدّ السرعة</span></label>
-        <label class="sa-toggle"><input type="checkbox" name="high_usage" value="1" {% if settings.high_usage %}checked{% endif %}><span>استهلاك عالٍ فوق حدّ الجيجابايت</span></label>
-        <label class="sa-toggle"><input type="checkbox" name="loop" value="1" {% if settings.loop %}checked{% endif %}><span>حلقة (لوب) على منفذ — عبر مجسّ DHCP</span></label>
+        <div class="sa-card-title">{{ _('أنواع الكشف') }}</div>
+        <label class="sa-toggle"><input type="checkbox" name="offline" value="1" {% if settings.offline %}checked{% endif %}><span>{{ _('راوتر مفصول (توقّف عن الإرسال)') }}</span></label>
+        <label class="sa-toggle"><input type="checkbox" name="high_traffic" value="1" {% if settings.high_traffic %}checked{% endif %}><span>{{ _('حركة عالية فوق حدّ السرعة') }}</span></label>
+        <label class="sa-toggle"><input type="checkbox" name="high_usage" value="1" {% if settings.high_usage %}checked{% endif %}><span>{{ _('استهلاك عالٍ فوق حدّ الجيجابايت') }}</span></label>
+        <label class="sa-toggle"><input type="checkbox" name="loop" value="1" {% if settings.loop %}checked{% endif %}><span>{{ _('حلقة (لوب) على منفذ — عبر مجسّ DHCP') }}</span></label>
         <div class="sa-grid">
-          <label class="sa-field">يُعدّ مفصولًا بعد (دقيقة)
+          <label class="sa-field">{{ _('يُعدّ مفصولًا بعد (دقيقة)') }}
             <input type="number" min="2" name="offline_after_min" value="{{ settings.offline_after_min }}">
           </label>
         </div>
       </div>
 
       <div class="sa-card">
-        <div class="sa-card-title">الحدود الافتراضية (لكل الراوترات)</div>
+        <div class="sa-card-title">{{ _('الحدود الافتراضية (لكل الراوترات)') }}</div>
         <div class="sa-grid">
-          <label class="sa-field">السرعة الطبيعية (Mbps)
+          <label class="sa-field">{{ _('السرعة الطبيعية (Mbps)') }}
             <input type="number" min="0" name="default_speed_mbps" value="{{ settings.default_speed_mbps }}">
           </label>
-          <label class="sa-field">الاستهلاك الطبيعي (GB)
+          <label class="sa-field">{{ _('الاستهلاك الطبيعي (GB)') }}
             <input type="number" min="0" name="default_usage_gb" value="{{ settings.default_usage_gb }}">
           </label>
-          <label class="sa-field">نافذة الاستهلاك
+          <label class="sa-field">{{ _('نافذة الاستهلاك') }}
             <select name="usage_window">
-              <option value="day" {% if settings.usage_window == 'day' %}selected{% endif %}>يومي</option>
-              <option value="month" {% if settings.usage_window == 'month' %}selected{% endif %}>شهري</option>
+              <option value="day" {% if settings.usage_window == 'day' %}selected{% endif %}>{{ _('يومي') }}</option>
+              <option value="month" {% if settings.usage_window == 'month' %}selected{% endif %}>{{ _('شهري') }}</option>
             </select>
           </label>
         </div>
@@ -199,7 +199,7 @@
 
       {% if routers %}
       <div class="sa-card">
-        <div class="sa-card-title">حدود مخصّصة لكل راوتر <small>(فارغ = يستخدم الافتراضي)</small></div>
+        <div class="sa-card-title">{{ _('حدود مخصّصة لكل راوتر') }} <small>{{ _('(فارغ = يستخدم الافتراضي)') }}</small></div>
         <div class="sa-routers">
           {% for r in routers %}
           <div class="sa-router">
@@ -208,13 +208,13 @@
               <label class="sa-toggle sa-toggle--sm"><input type="checkbox" name="r_{{ r.id }}_enabled" value="1" {% if r.enabled %}checked{% endif %}><span>{{ r.name }}</span></label>
             </div>
             <div class="sa-grid sa-grid--4">
-              <label class="sa-field">مفصول بعد (د)<input type="number" min="2" name="r_{{ r.id }}_offline" value="{{ r.offline_after_min }}"></label>
-              <label class="sa-field">سرعة (Mbps)<input type="number" min="0" name="r_{{ r.id }}_speed" value="{{ r.normal_speed_mbps }}"></label>
-              <label class="sa-field">استهلاك (GB)<input type="number" min="0" name="r_{{ r.id }}_usage" value="{{ r.normal_usage_gb }}"></label>
-              <label class="sa-field">النافذة
+              <label class="sa-field">{{ _('مفصول بعد (د)') }}<input type="number" min="2" name="r_{{ r.id }}_offline" value="{{ r.offline_after_min }}"></label>
+              <label class="sa-field">{{ _('سرعة (Mbps)') }}<input type="number" min="0" name="r_{{ r.id }}_speed" value="{{ r.normal_speed_mbps }}"></label>
+              <label class="sa-field">{{ _('استهلاك (GB)') }}<input type="number" min="0" name="r_{{ r.id }}_usage" value="{{ r.normal_usage_gb }}"></label>
+              <label class="sa-field">{{ _('النافذة') }}
                 <select name="r_{{ r.id }}_window">
-                  <option value="day" {% if r.usage_window == 'day' %}selected{% endif %}>يومي</option>
-                  <option value="month" {% if r.usage_window == 'month' %}selected{% endif %}>شهري</option>
+                  <option value="day" {% if r.usage_window == 'day' %}selected{% endif %}>{{ _('يومي') }}</option>
+                  <option value="month" {% if r.usage_window == 'month' %}selected{% endif %}>{{ _('شهري') }}</option>
                 </select>
               </label>
             </div>
@@ -225,8 +225,8 @@
       {% endif %}
     </div>
     <div class="sa-foot">
-      <button type="button" class="hub-btn hub-btn--ghost" data-sa-close>إغلاق</button>
-      <button type="submit" class="hub-btn hub-btn--primary"><i class="fa-solid fa-floppy-disk"></i> حفظ</button>
+      <button type="button" class="hub-btn hub-btn--ghost" data-sa-close>{{ _('إغلاق') }}</button>
+      <button type="submit" class="hub-btn hub-btn--primary"><i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ') }}</button>
     </div>
   </form>
 </div>

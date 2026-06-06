@@ -21,7 +21,7 @@
 {% block title %}تذكرة #{{ ticket.id }} — {{ ticket.subject }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-headset"></i>{% endblock %}
 {% block page_title %}تذكرة #{{ ticket.id }}{% endblock %}
-{% block page_sub %}<span class="sub">متابعة المحادثة وتحديث حالة التذكرة.</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('متابعة المحادثة وتحديث حالة التذكرة.') }}</span>{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
@@ -140,14 +140,14 @@
 ) %}
   {# عقد تغيير الحالة كما هو: حقل status بنفس القيم الخمس #}
   <label class="hub-field-label" for="tk-status" style="margin:0;font-weight:900">
-    <i class="fa-solid fa-arrows-rotate"></i> تغيير الحالة
+    <i class="fa-solid fa-arrows-rotate"></i> {{ _('تغيير الحالة') }}
   </label>
   <select class="hub-select" id="tk-status" name="status">
-    <option value="open"        {% if ticket.status == 'open' %}selected{% endif %}>مفتوحة</option>
-    <option value="pending"     {% if ticket.status == 'pending' %}selected{% endif %}>معلَّقة</option>
-    <option value="in_progress" {% if ticket.status == 'in_progress' %}selected{% endif %}>قيد المعالجة</option>
-    <option value="resolved"    {% if ticket.status == 'resolved' %}selected{% endif %}>محلولة</option>
-    <option value="closed"      {% if ticket.status == 'closed' %}selected{% endif %}>مغلقة</option>
+    <option value="open"        {% if ticket.status == 'open' %}selected{% endif %}>{{ _('مفتوحة') }}</option>
+    <option value="pending"     {% if ticket.status == 'pending' %}selected{% endif %}>{{ _('معلَّقة') }}</option>
+    <option value="in_progress" {% if ticket.status == 'in_progress' %}selected{% endif %}>{{ _('قيد المعالجة') }}</option>
+    <option value="resolved"    {% if ticket.status == 'resolved' %}selected{% endif %}>{{ _('محلولة') }}</option>
+    <option value="closed"      {% if ticket.status == 'closed' %}selected{% endif %}>{{ _('مغلقة') }}</option>
   </select>
   {{ hub.btn("تحديث الحالة", icon="check", variant="primary", type="submit", size="sm") }}
   <span class="hub-hint" tabindex="0"
@@ -168,8 +168,8 @@
           <div class="tkv-bubble">
             <div class="tkv-meta">
               <span class="tkv-who">المشترك #{{ ticket.subscriber_id }}</span>
-              <span class="tkv-tag">مشترك</span>
-              <span class="tkv-origin-flag"><i class="fa-solid fa-star"></i> نص التذكرة الأصلي</span>
+              <span class="tkv-tag">{{ _('مشترك') }}</span>
+              <span class="tkv-origin-flag"><i class="fa-solid fa-star"></i> {{ _('نص التذكرة الأصلي') }}</span>
               <span class="tkv-when mono"><bdi dir="ltr">{{ ticket.created_at|dt_local if ticket.created_at else '' }}</bdi></span>
             </div>
             <div class="tkv-text">{{ ticket.body or '—' }}</div>
@@ -197,12 +197,12 @@
       {# ── صندوق الردّ اللاصق — عقد قائم: POST إلى radius.tk_reply بحقل body ── #}
       <form method="post" action="{{ url_for('radius.tk_reply', tid=ticket.id) }}" class="tkv-composer">
         <label class="hub-field-label" for="tk-reply-body" style="display:flex;align-items:center;gap:7px;margin-bottom:7px">
-          <i class="fa-solid fa-reply" style="color:var(--hub-brand-ink,#4338ca)"></i> إضافة ردّ
+          <i class="fa-solid fa-reply" style="color:var(--hub-brand-ink,#4338ca)"></i> {{ _('إضافة ردّ') }}
         </label>
         <textarea class="hub-textarea" id="tk-reply-body" name="body" rows="3" required
-                  placeholder="اكتب ردّك على المشترك..."></textarea>
+                  placeholder="{{ _('اكتب ردّك على المشترك...') }}"></textarea>
         <div class="tkv-composer-foot">
-          <span class="tkv-composer-hint">يظهر الردّ في سجلّ المحادثة باسم الإداري الحالي.</span>
+          <span class="tkv-composer-hint">{{ _('يظهر الردّ في سجلّ المحادثة باسم الإداري الحالي.') }}</span>
           {{ hub.btn("إرسال الردّ", icon="paper-plane", variant="primary", type="submit") }}
         </div>
       </form>
@@ -214,7 +214,7 @@
     <details open>
       <summary>
         <i class="fa-solid fa-circle-info" style="color:var(--hub-brand-ink,#4338ca)"></i>
-        تفاصيل التذكرة
+        {{ _('تفاصيل التذكرة') }}
         <i class="fa-solid fa-chevron-down chev"></i>
       </summary>
       <div class="tkv-aside-body">

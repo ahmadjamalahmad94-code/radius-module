@@ -16,7 +16,7 @@
 .dpnav a i{font-size:12px}
 </style>
 <nav class="dpnav" data-testid="data-protection-nav">
-  <a class="{{ 'is-active' if url_for('radius.backups') == p }}" href="{{ url_for('radius.backups') }}"><i class="fa-solid fa-database"></i> النسخ الاحتياطي</a>
-  <a class="{{ 'is-active' if url_for('radius.recycle_bin') == p }}" href="{{ url_for('radius.recycle_bin') }}"><i class="fa-solid fa-trash-arrow-up"></i> سلة المحذوفات</a>
-  <a class="{{ 'is-active' if url_for('radius.lifecycle_settings') == p }}" href="{{ url_for('radius.lifecycle_settings') }}"><i class="fa-solid fa-clock-rotate-left"></i> الأرشفة التلقائية</a>
+  <a class="{{ 'is-active' if url_for('radius.backups') == p }}" href="{{ url_for('radius.backups') }}"><i class="fa-solid fa-database"></i> {{ _('النسخ الاحتياطي') }}</a>
+  <a class="{{ 'is-active' if url_for('radius.recycle_bin') == p }}" href="{{ url_for('radius.recycle_bin') }}"><i class="fa-solid fa-trash-arrow-up"></i> {{ _('سلة المحذوفات') }}</a>
+  <a class="{{ 'is-active' if url_for('radius.lifecycle_settings') == p }}" href="{{ url_for('radius.lifecycle_settings') }}"><i class="fa-solid fa-clock-rotate-left"></i> {{ _('الأرشفة التلقائية') }}</a>
 </nav>

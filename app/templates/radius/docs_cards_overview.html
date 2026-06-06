@@ -223,14 +223,14 @@
 <div class="dg-layout">
 
   {# ───── الفهرس الجانبي اللاصق ───── #}
-  <nav class="dg-toc dg-noprint" aria-label="فهرس الدليل">
-    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> فهرس الخطوات</div>
-    <a href="#dg-s1" data-dg-toc><span class="n">1</span> افتح الصفحة وافهم دورها</a>
-    <a href="#dg-s2" data-dg-toc><span class="n">2</span> شريط الأرقام الكبيرة</a>
-    <a href="#dg-s3" data-dg-toc><span class="n">3</span> مبيعات الكروت بالفترات</a>
-    <a href="#dg-s4" data-dg-toc><span class="n">4</span> التنبيهات المختصرة</a>
-    <a href="#dg-s5" data-dg-toc><span class="n">5</span> ملخص مخزون الحزم</a>
-    <a href="#dg-s6" data-dg-toc><span class="n">6</span> آخر 5 دفعات</a>
+  <nav class="dg-toc dg-noprint" aria-label="{{ _('فهرس الدليل') }}">
+    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> {{ _('فهرس الخطوات') }}</div>
+    <a href="#dg-s1" data-dg-toc><span class="n">1</span> {{ _('افتح الصفحة وافهم دورها') }}</a>
+    <a href="#dg-s2" data-dg-toc><span class="n">2</span> {{ _('شريط الأرقام الكبيرة') }}</a>
+    <a href="#dg-s3" data-dg-toc><span class="n">3</span> {{ _('مبيعات الكروت بالفترات') }}</a>
+    <a href="#dg-s4" data-dg-toc><span class="n">4</span> {{ _('التنبيهات المختصرة') }}</a>
+    <a href="#dg-s5" data-dg-toc><span class="n">5</span> {{ _('ملخص مخزون الحزم') }}</a>
+    <a href="#dg-s6" data-dg-toc><span class="n">6</span> {{ _('آخر 5 دفعات') }}</a>
   </nav>
 
   {# ───── عمود المحتوى ───── #}
@@ -239,11 +239,11 @@
     <div class="dg-lead">
       <span class="ic"><i class="fa-solid fa-lightbulb"></i></span>
       <div>
-        <h3>قبل ما نبدأ — شو هي «نظرة عامة الكروت»؟</h3>
+        <h3>{{ _('قبل ما نبدأ — شو هي «نظرة عامة الكروت»؟') }}</h3>
         <p>
           هي لوحة القيادة السريعة لعالم البطاقات عندك: بنظرة وحدة تعرف كم كرت متاح بالمخزون،
           كم انباع اليوم والشهر، وين في حزمة قربت تخلص، وشو آخر الدفعات اللي ولّدتها.
-          الصفحة <strong>للقراءة فقط</strong> — ما فيها أزرار تعديل، لكن كل رقم وتنبيه فيها
+          الصفحة <strong>{{ _('للقراءة فقط') }}</strong> — ما فيها أزرار تعديل، لكن كل رقم وتنبيه فيها
           رابط يوديك على مكان المعالجة الصحيح. خلّينا نقرأها قسمًا قسمًا.
         </p>
       </div>
@@ -253,40 +253,40 @@
     <section class="dg-step" id="dg-s1">
       <div class="dg-badge">1</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-door-open"></i> افتح «نظرة عامة» وافهم أزرار الرأس</h2>
+        <h2><i class="fa-solid fa-door-open"></i> {{ _('افتح «نظرة عامة» وافهم أزرار الرأس') }}</h2>
         <p>
-          من القائمة الجانبية افتح قسم <strong>«البطاقات»</strong> ثم اضغط
-          <strong>«نظرة عامة»</strong> — أول بند في القسم. أعلى الصفحة رح تشوف العنوان
-          <strong>«نظرة سريعة — الكروت»</strong> وبجانبه زرّان جاهزان للقفز السريع:
+          {{ _('من القائمة الجانبية افتح قسم') }} <strong>{{ _('«البطاقات»') }}</strong> {{ _('ثم اضغط') }}
+          <strong>{{ _('«نظرة عامة»') }}</strong> {{ _('— أول بند في القسم. أعلى الصفحة رح تشوف العنوان') }}
+          <strong>{{ _('«نظرة سريعة — الكروت»') }}</strong> {{ _('وبجانبه زرّان جاهزان للقفز السريع:') }}
         </p>
         <ul>
-          <li><strong>«الدفعات»:</strong> يفتح صفحة <strong>حزم البطاقات</strong> — مركز إدارة الحزم وتوليدها (لها دليل خاص في هذا القسم).</li>
-          <li><strong>«فحص كرت»:</strong> يفتح <strong>مركز فحص البطاقات</strong> — تكتب كود الكرت وتشوف كل شيء عنه (له دليل خاص أيضًا).</li>
+          <li><strong>{{ _('«الدفعات»:') }}</strong> {{ _('يفتح صفحة') }} <strong>{{ _('حزم البطاقات') }}</strong> {{ _('— مركز إدارة الحزم وتوليدها (لها دليل خاص في هذا القسم).') }}</li>
+          <li><strong>{{ _('«فحص كرت»:') }}</strong> {{ _('يفتح') }} <strong>{{ _('مركز فحص البطاقات') }}</strong> {{ _('— تكتب كود الكرت وتشوف كل شيء عنه (له دليل خاص أيضًا).') }}</li>
         </ul>
 
         <div class="dg-mock" aria-hidden="true">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">البطاقات › نظرة عامة</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('البطاقات › نظرة عامة') }}</span></div>
           <div class="dg-mock-body">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
               <div style="display:flex;align-items:center;gap:9px">
                 <span style="width:32px;height:32px;border-radius:10px;display:grid;place-items:center;background:#ede9fe;color:#6d28d9"><i class="fa-solid fa-id-card"></i></span>
                 <div>
-                  <div style="font-size:12px;font-weight:900;color:#0f172a">نظرة سريعة — الكروت</div>
-                  <div style="font-size:9px;color:#94a3b8">مختصر المخزون والاستخدام والمبيعات بدون تفاصيل تشغيلية.</div>
+                  <div style="font-size:12px;font-weight:900;color:#0f172a">{{ _('نظرة سريعة — الكروت') }}</div>
+                  <div style="font-size:9px;color:#94a3b8">{{ _('مختصر المخزون والاستخدام والمبيعات بدون تفاصيل تشغيلية.') }}</div>
                 </div>
               </div>
               <div style="display:flex;gap:6px">
-                <span style="border:1px solid #e2e8f0;border-radius:8px;padding:5px 10px;font-size:9.5px;font-weight:800;color:#475569"><i class="fa-solid fa-layer-group"></i> الدفعات</span>
-                <span style="border:1px solid #e2e8f0;border-radius:8px;padding:5px 10px;font-size:9.5px;font-weight:800;color:#475569"><i class="fa-solid fa-magnifying-glass"></i> فحص كرت</span>
+                <span style="border:1px solid #e2e8f0;border-radius:8px;padding:5px 10px;font-size:9.5px;font-weight:800;color:#475569"><i class="fa-solid fa-layer-group"></i> {{ _('الدفعات') }}</span>
+                <span style="border:1px solid #e2e8f0;border-radius:8px;padding:5px 10px;font-size:9.5px;font-weight:800;color:#475569"><i class="fa-solid fa-magnifying-glass"></i> {{ _('فحص كرت') }}</span>
               </div>
             </div>
           </div>
         </div>
-        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> هيك يبدو رأس الصفحة — الزران على اليسار اختصاران لأكثر صفحتين رح تحتاجهما.</div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> {{ _('هيك يبدو رأس الصفحة — الزران على اليسار اختصاران لأكثر صفحتين رح تحتاجهما.') }}</div>
 
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>نصيحة:</b> خلّي هذه الصفحة نقطة بدايتك الصباحية: افتحها أول النهار،
+          <span><b>{{ _('نصيحة:') }}</b> خلّي هذه الصفحة نقطة بدايتك الصباحية: افتحها أول النهار،
           اقرأ التنبيهات، وبعدها انطلق للصفحة اللي تحتاج معالجة.</span>
         </div>
       </div>
@@ -296,34 +296,34 @@
     <section class="dg-step" id="dg-s2">
       <div class="dg-badge">2</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-gauge-high"></i> اقرأ شريط الأرقام الكبيرة (KPIs)</h2>
+        <h2><i class="fa-solid fa-gauge-high"></i> {{ _('اقرأ شريط الأرقام الكبيرة (KPIs)') }}</h2>
         <p>
-          تحت العنوان مباشرة خمس بطاقات أرقام — هذا ملخص صحة المخزون كله:
+          {{ _('تحت العنوان مباشرة خمس بطاقات أرقام — هذا ملخص صحة المخزون كله:') }}
         </p>
         <ul>
-          <li><strong>إجمالي الكروت:</strong> كل الكروت في النظام (بكل حالاتها) — يكبر مع كل توليد أو استيراد.</li>
-          <li><strong>متاح:</strong> الكروت الجاهزة للبيع: ما انستخدمت، ما انلغت، وما انتهت صلاحيتها. <strong>هذا أهم رقم</strong> — هو مخزونك الفعلي.</li>
-          <li><strong>مستخدم:</strong> كروت اتصل بها زبون مرة واحدة على الأقل (انفعّلت).</li>
-          <li><strong>منتهي / محظور:</strong> رقمان بشرطة: الكروت اللي انتهى وقتها / والكروت الملغاة يدويًا.</li>
-          <li><strong>إيراد الشهر:</strong> قيمة تقديرية من الكروت المستخدمة هذا الشهر — تُحسب من سعر البيع المسجّل على الحزمة.</li>
+          <li><strong>{{ _('إجمالي الكروت:') }}</strong> {{ _('كل الكروت في النظام (بكل حالاتها) — يكبر مع كل توليد أو استيراد.') }}</li>
+          <li><strong>{{ _('متاح:') }}</strong> {{ _('الكروت الجاهزة للبيع: ما انستخدمت، ما انلغت، وما انتهت صلاحيتها.') }} <strong>{{ _('هذا أهم رقم') }}</strong> {{ _('— هو مخزونك الفعلي.') }}</li>
+          <li><strong>{{ _('مستخدم:') }}</strong> {{ _('كروت اتصل بها زبون مرة واحدة على الأقل (انفعّلت).') }}</li>
+          <li><strong>{{ _('منتهي / محظور:') }}</strong> {{ _('رقمان بشرطة: الكروت اللي انتهى وقتها / والكروت الملغاة يدويًا.') }}</li>
+          <li><strong>{{ _('إيراد الشهر:') }}</strong> {{ _('قيمة تقديرية من الكروت المستخدمة هذا الشهر — تُحسب من سعر البيع المسجّل على الحزمة.') }}</li>
         </ul>
 
         <div class="dg-mock" aria-hidden="true">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">نظرة عامة › شريط الأرقام</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('نظرة عامة › شريط الأرقام') }}</span></div>
           <div class="dg-mock-body">
             <div class="dg-kpis">
-              <div class="dg-kpi brand"><span class="lb">إجمالي الكروت</span><span class="vl">1,240</span></div>
-              <div class="dg-kpi green"><span class="lb">متاح</span><span class="vl">486</span></div>
-              <div class="dg-kpi blue"><span class="lb">مستخدم</span><span class="vl">702</span></div>
-              <div class="dg-kpi amber"><span class="lb">منتهي / محظور</span><span class="vl">38 / 14</span></div>
-              <div class="dg-kpi brand"><span class="lb">إيراد الشهر</span><span class="vl">2.4K</span><span class="sb">تقديري من الكروت المستخدمة</span></div>
+              <div class="dg-kpi brand"><span class="lb">{{ _('إجمالي الكروت') }}</span><span class="vl">1,240</span></div>
+              <div class="dg-kpi green"><span class="lb">{{ _('متاح') }}</span><span class="vl">486</span></div>
+              <div class="dg-kpi blue"><span class="lb">{{ _('مستخدم') }}</span><span class="vl">702</span></div>
+              <div class="dg-kpi amber"><span class="lb">{{ _('منتهي / محظور') }}</span><span class="vl">38 / 14</span></div>
+              <div class="dg-kpi brand"><span class="lb">{{ _('إيراد الشهر') }}</span><span class="vl">2.4K</span><span class="sb">{{ _('تقديري من الكروت المستخدمة') }}</span></div>
             </div>
           </div>
         </div>
 
         <div class="dg-warn">
           <span class="ic">⚠️</span>
-          <span><b>انتبه:</b> «إيراد الشهر» <b>تقديري</b> — يعتمد على سعر البيع اللي كتبته
+          <span><b>{{ _('انتبه:') }}</b> {{ _('«إيراد الشهر»') }} <b>{{ _('تقديري') }}</b> — يعتمد على سعر البيع اللي كتبته
           وقت توليد الحزمة. إذا تركت السعر 0 وقت التوليد، رح يطلع الإيراد ناقصًا.
           عوّد نفسك تعبّي «سعر البيع» في كل حزمة جديدة.</span>
         </div>
@@ -334,47 +334,47 @@
     <section class="dg-step" id="dg-s3">
       <div class="dg-badge">3</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-receipt"></i> قسم «مبيعات الكروت» — أربع فترات بنقرة</h2>
+        <h2><i class="fa-solid fa-receipt"></i> {{ _('قسم «مبيعات الكروت» — أربع فترات بنقرة') }}</h2>
         <p>
-          قسم المبيعات يجمع البيع <strong>المطبوع</strong> (كرت انفعّل بأول اتصال = اعتُبر مباعًا)
-          والبيع <strong>الإلكتروني</strong> (شراء مكتمل من سوق البطاقات). فوق تشوف أربع خلاصات:
-          <strong>إجمالي الكروت المباعة</strong>، <strong>إجمالي الإيرادات</strong>،
-          <strong>مطبوعة</strong>، و<strong>إلكترونية</strong> — كلها لفترة الشهر الحالي.
+          {{ _('قسم المبيعات يجمع البيع') }} <strong>{{ _('المطبوع') }}</strong> (كرت انفعّل بأول اتصال = اعتُبر مباعًا)
+          والبيع <strong>{{ _('الإلكتروني') }}</strong> {{ _('(شراء مكتمل من سوق البطاقات). فوق تشوف أربع خلاصات:') }}
+          <strong>{{ _('إجمالي الكروت المباعة') }}</strong>{{ _('،') }} <strong>{{ _('إجمالي الإيرادات') }}</strong>{{ _('،') }}
+          <strong>{{ _('مطبوعة') }}</strong>{{ _('، و') }}<strong>{{ _('إلكترونية') }}</strong> {{ _('— كلها لفترة الشهر الحالي.') }}
         </p>
-        <p>وتحتها أربع بطاقات فترة: <strong>اليوم / الأسبوع / الشهر / السنة</strong>. في كل بطاقة:</p>
+        <p>{{ _('وتحتها أربع بطاقات فترة:') }} <strong>{{ _('اليوم / الأسبوع / الشهر / السنة') }}</strong>{{ _('. في كل بطاقة:') }}</p>
         <ul>
-          <li><strong>زر التقويم</strong> <span class="dg-kbd">📅</span> بجانب اسم الفترة: يفتح منتقي تاريخ — اختر يومًا أو شهرًا ماضيًا وتتحدث الأرقام لتلك الفترة.</li>
-          <li>رقما <strong>«الكروت»</strong> و<strong>«الإيراد»</strong> للفترة المختارة.</li>
-          <li><strong>شريط ملوّن</strong> يقسم المبيعات: بنفسجي = مطبوعة، أخضر = إلكترونية.</li>
-          <li>رابط <strong>«فتح سجل الفترة»</strong>: يفتح نافذة فيها جدول كل عملية بيع — النوع (مطبوعة/إلكترونية)، اسم المستخدم، الحزمة، السعر، والوقت.</li>
+          <li><strong>{{ _('زر التقويم') }}</strong> <span class="dg-kbd">📅</span> {{ _('بجانب اسم الفترة: يفتح منتقي تاريخ — اختر يومًا أو شهرًا ماضيًا وتتحدث الأرقام لتلك الفترة.') }}</li>
+          <li>{{ _('رقما') }} <strong>{{ _('«الكروت»') }}</strong> {{ _('و') }}<strong>{{ _('«الإيراد»') }}</strong> {{ _('للفترة المختارة.') }}</li>
+          <li><strong>{{ _('شريط ملوّن') }}</strong> {{ _('يقسم المبيعات: بنفسجي = مطبوعة، أخضر = إلكترونية.') }}</li>
+          <li>{{ _('رابط') }} <strong>{{ _('«فتح سجل الفترة»') }}</strong>{{ _(': يفتح نافذة فيها جدول كل عملية بيع — النوع (مطبوعة/إلكترونية)، اسم المستخدم، الحزمة، السعر، والوقت.') }}</li>
         </ul>
 
         <div class="dg-mock" aria-hidden="true">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">نظرة عامة › مبيعات الكروت</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('نظرة عامة › مبيعات الكروت') }}</span></div>
           <div class="dg-mock-body">
             <div class="dg-lanes">
               <div class="dg-lane">
-                <div class="hd"><span>اليوم</span><i class="fa-solid fa-calendar-day"></i></div>
-                <div class="mt"><span>الكروت <b>14</b></span><span>الإيراد <b>70.0</b></span></div>
+                <div class="hd"><span>{{ _('اليوم') }}</span><i class="fa-solid fa-calendar-day"></i></div>
+                <div class="mt"><span>{{ _('الكروت') }} <b>14</b></span><span>{{ _('الإيراد') }} <b>70.0</b></span></div>
                 <div class="dg-split"><span class="p" style="width:64%"></span><span class="e" style="width:36%"></span></div>
-                <div class="lg"><span>🖨️ مطبوعة 9</span><span>👛 إلكترونية 5</span></div>
-                <span class="lk"><i class="fa-solid fa-table-list"></i> فتح سجل الفترة</span>
+                <div class="lg"><span>{{ _('🖨️ مطبوعة 9') }}</span><span>{{ _('👛 إلكترونية 5') }}</span></div>
+                <span class="lk"><i class="fa-solid fa-table-list"></i> {{ _('فتح سجل الفترة') }}</span>
               </div>
               <div class="dg-lane">
-                <div class="hd"><span>الشهر</span><i class="fa-solid fa-calendar-day"></i></div>
-                <div class="mt"><span>الكروت <b>342</b></span><span>الإيراد <b>1,710</b></span></div>
+                <div class="hd"><span>{{ _('الشهر') }}</span><i class="fa-solid fa-calendar-day"></i></div>
+                <div class="mt"><span>{{ _('الكروت') }} <b>342</b></span><span>{{ _('الإيراد') }} <b>1,710</b></span></div>
                 <div class="dg-split"><span class="p" style="width:78%"></span><span class="e" style="width:22%"></span></div>
-                <div class="lg"><span>🖨️ مطبوعة 268</span><span>👛 إلكترونية 74</span></div>
-                <span class="lk"><i class="fa-solid fa-table-list"></i> فتح سجل الفترة</span>
+                <div class="lg"><span>{{ _('🖨️ مطبوعة 268') }}</span><span>{{ _('👛 إلكترونية 74') }}</span></div>
+                <span class="lk"><i class="fa-solid fa-table-list"></i> {{ _('فتح سجل الفترة') }}</span>
               </div>
             </div>
           </div>
         </div>
-        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> الشريط الملوّن يخبرك بسرعة: أكثر بيعك مطبوع ولا إلكتروني؟</div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> {{ _('الشريط الملوّن يخبرك بسرعة: أكثر بيعك مطبوع ولا إلكتروني؟') }}</div>
 
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>نصيحة:</b> «كرت مطبوع مباع» يعني <b>أول اتصال للكرت</b> — يوم ما الزبون
+          <span><b>{{ _('نصيحة:') }}</b> {{ _('«كرت مطبوع مباع» يعني') }} <b>{{ _('أول اتصال للكرت') }}</b> — يوم ما الزبون
           فعّل الكرت يُحتسب بيعه بسعر حزمته. لذلك أرقام البيع المطبوع تتأخر عن لحظة
           تسليم الكرت للزبون حتى يستعمله فعلًا.</span>
         </div>
@@ -385,33 +385,33 @@
     <section class="dg-step" id="dg-s4">
       <div class="dg-badge">4</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-bell"></i> «تنبيهات مختصرة» — اضغط التنبيه يوصلك للمعالجة</h2>
+        <h2><i class="fa-solid fa-bell"></i> {{ _('«تنبيهات مختصرة» — اضغط التنبيه يوصلك للمعالجة') }}</h2>
         <p>
-          هذا أذكى قسم في الصفحة: النظام يفحص وضعك ويطلع لك حتى 4 تنبيهات ملوّنة.
-          <strong>كل تنبيه رابط قابل للنقر</strong> — يوديك مباشرة على الصفحة اللي تعالج فيها المشكلة:
+          {{ _('هذا أذكى قسم في الصفحة: النظام يفحص وضعك ويطلع لك حتى 4 تنبيهات ملوّنة.') }}
+          <strong>{{ _('كل تنبيه رابط قابل للنقر') }}</strong> {{ _('— يوديك مباشرة على الصفحة اللي تعالج فيها المشكلة:') }}
         </p>
         <ul>
-          <li><strong>أحمر — «لا يوجد مخزون كروت متاح حاليًا.»:</strong> المتاح صفر! الضغط يفتح حزم البطاقات لتولّد أو تستورد كروتًا فورًا.</li>
-          <li><strong>برتقالي — «المخزون المتاح منخفض: N كرت فقط.»:</strong> يظهر لما يبقى 10 كروت أو أقل، أو لما تقترب حزمة معينة من النفاد.</li>
-          <li><strong>أحمر — «N كرت منتهي يحتاج مراجعة.»:</strong> يفتح قائمة الكروت مفلترة على المنتهية لتراجعها أو تؤرشفها.</li>
-          <li><strong>رمادي — «N كرت محظور ضمن المخزون.»:</strong> يفتح قائمة الكروت الملغاة.</li>
-          <li><strong>أخضر — «وضع الكروت مستقر ولا توجد ملاحظات عاجلة.»:</strong> كل شيء تمام.</li>
+          <li><strong>{{ _('أحمر — «لا يوجد مخزون كروت متاح حاليًا.»:') }}</strong> {{ _('المتاح صفر! الضغط يفتح حزم البطاقات لتولّد أو تستورد كروتًا فورًا.') }}</li>
+          <li><strong>{{ _('برتقالي — «المخزون المتاح منخفض: N كرت فقط.»:') }}</strong> {{ _('يظهر لما يبقى 10 كروت أو أقل، أو لما تقترب حزمة معينة من النفاد.') }}</li>
+          <li><strong>{{ _('أحمر — «N كرت منتهي يحتاج مراجعة.»:') }}</strong> {{ _('يفتح قائمة الكروت مفلترة على المنتهية لتراجعها أو تؤرشفها.') }}</li>
+          <li><strong>{{ _('رمادي — «N كرت محظور ضمن المخزون.»:') }}</strong> {{ _('يفتح قائمة الكروت الملغاة.') }}</li>
+          <li><strong>{{ _('أخضر — «وضع الكروت مستقر ولا توجد ملاحظات عاجلة.»:') }}</strong> {{ _('كل شيء تمام.') }}</li>
         </ul>
 
         <div class="dg-mock" aria-hidden="true">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">نظرة عامة › تنبيهات مختصرة</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('نظرة عامة › تنبيهات مختصرة') }}</span></div>
           <div class="dg-mock-body">
             <div class="dg-alerts">
-              <div class="dg-alert amber"><i class="fa-solid fa-triangle-exclamation"></i><span>المخزون المتاح منخفض: 8 كرت فقط.<small>راجع الحزم وولّد كروتًا إضافية قبل النفاد ←</small></span></div>
-              <div class="dg-alert red"><i class="fa-solid fa-circle-exclamation"></i><span>38 كرت منتهي يحتاج مراجعة.<small>اعرض الكروت المنتهية لمراجعتها أو أرشفتها ←</small></span></div>
-              <div class="dg-alert green"><i class="fa-solid fa-circle-check"></i><span>وضع الكروت مستقر ولا توجد ملاحظات عاجلة.<small>كل شيء تمام — تصفح الحزم ←</small></span></div>
+              <div class="dg-alert amber"><i class="fa-solid fa-triangle-exclamation"></i><span>{{ _('المخزون المتاح منخفض: 8 كرت فقط.') }}<small>{{ _('راجع الحزم وولّد كروتًا إضافية قبل النفاد ←') }}</small></span></div>
+              <div class="dg-alert red"><i class="fa-solid fa-circle-exclamation"></i><span>{{ _('38 كرت منتهي يحتاج مراجعة.') }}<small>{{ _('اعرض الكروت المنتهية لمراجعتها أو أرشفتها ←') }}</small></span></div>
+              <div class="dg-alert green"><i class="fa-solid fa-circle-check"></i><span>{{ _('وضع الكروت مستقر ولا توجد ملاحظات عاجلة.') }}<small>{{ _('كل شيء تمام — تصفح الحزم ←') }}</small></span></div>
             </div>
           </div>
         </div>
 
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>نصيحة:</b> السطر الصغير تحت نص التنبيه يخبرك مسبقًا وين رح يوديك النقر —
+          <span><b>{{ _('نصيحة:') }}</b> السطر الصغير تحت نص التنبيه يخبرك مسبقًا وين رح يوديك النقر —
           ما في مفاجآت.</span>
         </div>
       </div>
@@ -421,35 +421,35 @@
     <section class="dg-step" id="dg-s5">
       <div class="dg-badge">5</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-boxes-stacked"></i> «ملخص مخزون حزم البطاقات» — جدولان جنب بعض</h2>
+        <h2><i class="fa-solid fa-boxes-stacked"></i> {{ _('«ملخص مخزون حزم البطاقات» — جدولان جنب بعض') }}</h2>
         <p>
-          هنا توزيع المخزون حزمةً حزمة، مقسومًا لجدولين:
-          <strong>«حزم مطبوعة»</strong> (دفعات الطباعة العادية) و<strong>«حزم البيع الإلكتروني»</strong>
-          (حزم سوق البطاقات). أعمدة الجدول المطبوع:
+          {{ _('هنا توزيع المخزون حزمةً حزمة، مقسومًا لجدولين:') }}
+          <strong>{{ _('«حزم مطبوعة»') }}</strong> {{ _('(دفعات الطباعة العادية) و') }}<strong>{{ _('«حزم البيع الإلكتروني»') }}</strong>
+          {{ _('(حزم سوق البطاقات). أعمدة الجدول المطبوع:') }}
         </p>
         <ul>
-          <li><strong>الحزمة:</strong> اسم الحزمة وتحته كود الدفعة (batch code).</li>
-          <li><strong>إجمالي:</strong> كل كروت الحزمة.</li>
-          <li><strong>باقي:</strong> الجاهز للبيع — راقب هذا العمود لتعرف أي حزمة قربت تخلص.</li>
-          <li><strong>منتهي:</strong> كروت انتهت صلاحيتها.</li>
-          <li><strong>متصل:</strong> كروت لها جلسة حيّة الآن.</li>
-          <li><strong>مستخدم غير متصل:</strong> انفعّلت لكن صاحبها مو متصل هاللحظة.</li>
+          <li><strong>{{ _('الحزمة:') }}</strong> {{ _('اسم الحزمة وتحته كود الدفعة (batch code).') }}</li>
+          <li><strong>{{ _('إجمالي:') }}</strong> {{ _('كل كروت الحزمة.') }}</li>
+          <li><strong>{{ _('باقي:') }}</strong> {{ _('الجاهز للبيع — راقب هذا العمود لتعرف أي حزمة قربت تخلص.') }}</li>
+          <li><strong>{{ _('منتهي:') }}</strong> {{ _('كروت انتهت صلاحيتها.') }}</li>
+          <li><strong>{{ _('متصل:') }}</strong> {{ _('كروت لها جلسة حيّة الآن.') }}</li>
+          <li><strong>{{ _('مستخدم غير متصل:') }}</strong> {{ _('انفعّلت لكن صاحبها مو متصل هاللحظة.') }}</li>
         </ul>
         <p>
-          جدول الحزم الإلكترونية بنفس الأعمدة، لكن أول عمود رقمي اسمه <strong>«مباع»</strong>
-          بدل «إجمالي» — لأن الكرت الإلكتروني ما يدخل الجدول إلا بعد شراء مكتمل.
+          {{ _('جدول الحزم الإلكترونية بنفس الأعمدة، لكن أول عمود رقمي اسمه') }} <strong>{{ _('«مباع»') }}</strong>
+          {{ _('بدل «إجمالي» — لأن الكرت الإلكتروني ما يدخل الجدول إلا بعد شراء مكتمل.') }}
         </p>
 
         <div class="dg-rowmock cols6" aria-hidden="true">
-          <div class="hd"><span>الحزمة</span><span>إجمالي</span><span>باقي</span><span>منتهي</span><span>متصل</span><span>مستخدم غير متصل</span></div>
-          <div class="rw"><span><strong>حزمة ساعة</strong><br><span class="mono" style="font-size:8.5px;color:#94a3b8">BCH-2026-014</span></span><span class="mono">200</span><span class="mono">112</span><span class="mono">6</span><span class="mono">17</span><span class="mono">65</span></div>
-          <div class="rw"><span><strong>حزمة يوم كامل</strong><br><span class="mono" style="font-size:8.5px;color:#94a3b8">BCH-2026-013</span></span><span class="mono">100</span><span class="mono">8</span><span class="mono">3</span><span class="mono">9</span><span class="mono">80</span></div>
+          <div class="hd"><span>{{ _('الحزمة') }}</span><span>{{ _('إجمالي') }}</span><span>{{ _('باقي') }}</span><span>{{ _('منتهي') }}</span><span>{{ _('متصل') }}</span><span>{{ _('مستخدم غير متصل') }}</span></div>
+          <div class="rw"><span><strong>{{ _('حزمة ساعة') }}</strong><br><span class="mono" style="font-size:8.5px;color:#94a3b8">BCH-2026-014</span></span><span class="mono">200</span><span class="mono">112</span><span class="mono">6</span><span class="mono">17</span><span class="mono">65</span></div>
+          <div class="rw"><span><strong>{{ _('حزمة يوم كامل') }}</strong><br><span class="mono" style="font-size:8.5px;color:#94a3b8">BCH-2026-013</span></span><span class="mono">100</span><span class="mono">8</span><span class="mono">3</span><span class="mono">9</span><span class="mono">80</span></div>
         </div>
-        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> الجدول فيه فرز وترقيم صفحات — اضغط رأس أي عمود لترتيب الحزم به.</div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> {{ _('الجدول فيه فرز وترقيم صفحات — اضغط رأس أي عمود لترتيب الحزم به.') }}</div>
 
         <div class="dg-warn">
           <span class="ic">⚠️</span>
-          <span><b>انتبه:</b> «الباقي» في الصف الثاني فوق نزل لـ 8 — هذا بالضبط
+          <span><b>{{ _('انتبه:') }}</b> «الباقي» في الصف الثاني فوق نزل لـ 8 — هذا بالضبط
           اللي يولّد تنبيه «قريب من النفاد» في الخطوة السابقة. لا تنتظر الصفر:
           ولّد دفعة جديدة من نفس الحزمة قبل ما يطلبها الموزع وما تلاقي.</span>
         </div>
@@ -460,31 +460,31 @@
     <section class="dg-step" id="dg-s6">
       <div class="dg-badge">6</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-clock-rotate-left"></i> «آخر 5 دفعات» — وش صار مؤخرًا</h2>
+        <h2><i class="fa-solid fa-clock-rotate-left"></i> {{ _('«آخر 5 دفعات» — وش صار مؤخرًا') }}</h2>
         <p>
-          آخر قسم في الصفحة جدول بأحدث خمس دفعات ولّدتها، بالأعمدة:
-          <strong>الدفعة</strong> (كودها)، <strong>العرض</strong> (الباقة المرتبطة)،
-          <strong>العدد</strong>، <strong>متاح</strong>، <strong>مستخدم</strong>،
-          <strong>متصل</strong>، و<strong>آخر نشاط</strong> (تاريخ الإنشاء).
+          {{ _('آخر قسم في الصفحة جدول بأحدث خمس دفعات ولّدتها، بالأعمدة:') }}
+          <strong>{{ _('الدفعة') }}</strong> {{ _('(كودها)،') }} <strong>{{ _('العرض') }}</strong> {{ _('(الباقة المرتبطة)،') }}
+          <strong>{{ _('العدد') }}</strong>{{ _('،') }} <strong>{{ _('متاح') }}</strong>{{ _('،') }} <strong>{{ _('مستخدم') }}</strong>{{ _('،') }}
+          <strong>{{ _('متصل') }}</strong>{{ _('، و') }}<strong>{{ _('آخر نشاط') }}</strong> {{ _('(تاريخ الإنشاء).') }}
         </p>
 
         <div class="dg-rowmock cols7" aria-hidden="true">
-          <div class="hd"><span>الدفعة</span><span>العرض</span><span>العدد</span><span>متاح</span><span>مستخدم</span><span>متصل</span><span>آخر نشاط</span></div>
-          <div class="rw"><span class="mono"><strong>BCH-2026-014</strong></span><span>باقة ساعة</span><span class="mono">200</span><span class="mono">112</span><span class="mono">88</span><span class="mono">17</span><span style="color:#94a3b8">2026-06-03</span></div>
-          <div class="rw"><span class="mono"><strong>BCH-2026-013</strong></span><span>باقة يوم</span><span class="mono">100</span><span class="mono">8</span><span class="mono">89</span><span class="mono">9</span><span style="color:#94a3b8">2026-05-28</span></div>
+          <div class="hd"><span>{{ _('الدفعة') }}</span><span>{{ _('العرض') }}</span><span>{{ _('العدد') }}</span><span>{{ _('متاح') }}</span><span>{{ _('مستخدم') }}</span><span>{{ _('متصل') }}</span><span>{{ _('آخر نشاط') }}</span></div>
+          <div class="rw"><span class="mono"><strong>BCH-2026-014</strong></span><span>{{ _('باقة ساعة') }}</span><span class="mono">200</span><span class="mono">112</span><span class="mono">88</span><span class="mono">17</span><span style="color:#94a3b8">2026-06-03</span></div>
+          <div class="rw"><span class="mono"><strong>BCH-2026-013</strong></span><span>{{ _('باقة يوم') }}</span><span class="mono">100</span><span class="mono">8</span><span class="mono">89</span><span class="mono">9</span><span style="color:#94a3b8">2026-05-28</span></div>
         </div>
 
-        <p style="margin-top:13px">وبعدين؟ من هنا تتفرع رحلتك حسب اللي شفته:</p>
+        <p style="margin-top:13px">{{ _('وبعدين؟ من هنا تتفرع رحلتك حسب اللي شفته:') }}</p>
         <ul>
-          <li>مخزون ناقص؟ → افتح <strong>حزم البطاقات</strong> وولّد دفعة (دليل «حزم البطاقات وإضافة حزمة»).</li>
-          <li>زبون يشتكي من كرت؟ → افتح <strong>فحص بطاقة</strong> واكتب كوده (دليل «فحص بطاقة»).</li>
-          <li>بدك تطبع كروت جديدة؟ → <strong>بطاقات الطباعة</strong> و<strong>قوالب الطباعة</strong> (دليلاهما في نفس القسم).</li>
+          <li>{{ _('مخزون ناقص؟ → افتح') }} <strong>{{ _('حزم البطاقات') }}</strong> {{ _('وولّد دفعة (دليل «حزم البطاقات وإضافة حزمة»).') }}</li>
+          <li>{{ _('زبون يشتكي من كرت؟ → افتح') }} <strong>{{ _('فحص بطاقة') }}</strong> {{ _('واكتب كوده (دليل «فحص بطاقة»).') }}</li>
+          <li>{{ _('بدك تطبع كروت جديدة؟ →') }} <strong>{{ _('بطاقات الطباعة') }}</strong> {{ _('و') }}<strong>{{ _('قوالب الطباعة') }}</strong> {{ _('(دليلاهما في نفس القسم).') }}</li>
         </ul>
 
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>خلاصة الصفحة:</b> «نظرة عامة» تجيب على ثلاثة أسئلة بثلاثين ثانية:
-          <b>كم باقي عندي؟ كم بعت؟ وين المشكلة؟</b> — وكل جواب فيه رابط للخطوة التالية.</span>
+          <span><b>{{ _('خلاصة الصفحة:') }}</b> {{ _('«نظرة عامة» تجيب على ثلاثة أسئلة بثلاثين ثانية:') }}
+          <b>{{ _('كم باقي عندي؟ كم بعت؟ وين المشكلة؟') }}</b> {{ _('— وكل جواب فيه رابط للخطوة التالية.') }}</span>
         </div>
       </div>
     </section>

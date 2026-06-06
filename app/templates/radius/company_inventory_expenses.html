@@ -4,7 +4,7 @@
 {% block title %}مخزون ومصروفات الشركة — Hobe Hub{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-boxes-stacked"></i>{% endblock %}
 {% block page_title %}مخزون ومصروفات الشركة{% endblock %}
-{% block page_sub %}<span class="sub">دفتر تشغيلي داخلي مستقل عن القيود المالية الرسمية</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('دفتر تشغيلي داخلي مستقل عن القيود المالية الرسمية') }}</span>{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
@@ -65,11 +65,11 @@
 
 {# ───── Page navigation tabs (server-side ?tab= links — unchanged routing) ───── #}
 <nav class="cie-tabs">
-  <a href="?tab=overview" class="{{ 'is-active' if tab == 'overview' }}"><i class="fa-solid fa-warehouse"></i> ملخص المخزون</a>
-  <a href="?tab=incoming" class="{{ 'is-active' if tab == 'incoming' }}"><i class="fa-solid fa-truck-ramp-box"></i> الوارد</a>
-  <a href="?tab=usage" class="{{ 'is-active' if tab == 'usage' }}"><i class="fa-solid fa-screwdriver-wrench"></i> الصرف</a>
-  <a href="?tab=expenses" class="{{ 'is-active' if tab == 'expenses' }}"><i class="fa-solid fa-receipt"></i> المصروفات</a>
-  <a href="?tab=reports" class="{{ 'is-active' if tab == 'reports' }}"><i class="fa-solid fa-chart-column"></i> التقارير</a>
+  <a href="?tab=overview" class="{{ 'is-active' if tab == 'overview' }}"><i class="fa-solid fa-warehouse"></i> {{ _('ملخص المخزون') }}</a>
+  <a href="?tab=incoming" class="{{ 'is-active' if tab == 'incoming' }}"><i class="fa-solid fa-truck-ramp-box"></i> {{ _('الوارد') }}</a>
+  <a href="?tab=usage" class="{{ 'is-active' if tab == 'usage' }}"><i class="fa-solid fa-screwdriver-wrench"></i> {{ _('الصرف') }}</a>
+  <a href="?tab=expenses" class="{{ 'is-active' if tab == 'expenses' }}"><i class="fa-solid fa-receipt"></i> {{ _('المصروفات') }}</a>
+  <a href="?tab=reports" class="{{ 'is-active' if tab == 'reports' }}"><i class="fa-solid fa-chart-column"></i> {{ _('التقارير') }}</a>
 </nav>
 
 {% call hub.worklayout(aside_html=hub.helppanel(
@@ -92,7 +92,7 @@
    flush=True) %}
   <div class="hub-section-toolbar" style="display:flex;justify-content:flex-end;padding:12px 14px 0">
     <button class="hub-btn hub-btn--primary" type="button" data-modal-open="item">
-      <i class="fa-solid fa-plus"></i> صنف جديد
+      <i class="fa-solid fa-plus"></i> {{ _('صنف جديد') }}
     </button>
   </div>
   {% if overview %}
@@ -100,11 +100,11 @@
     <table class="hub-table">
       <thead>
         <tr>
-          <th>الصنف</th><th>الفئة</th><th data-uds-nosort>الوحدة</th>
-          <th class="num">الوارد</th><th class="num">المصروف</th>
-          <th class="num">المتبقي</th><th class="num">القيمة</th>
-          <th>آخر حركة</th><th>الحالة</th>
-          <th data-uds-nosort data-uds-nocol>إجراء</th>
+          <th>{{ _('الصنف') }}</th><th>{{ _('الفئة') }}</th><th data-uds-nosort>{{ _('الوحدة') }}</th>
+          <th class="num">{{ _('الوارد') }}</th><th class="num">{{ _('المصروف') }}</th>
+          <th class="num">{{ _('المتبقي') }}</th><th class="num">{{ _('القيمة') }}</th>
+          <th>{{ _('آخر حركة') }}</th><th>{{ _('الحالة') }}</th>
+          <th data-uds-nosort data-uds-nocol>{{ _('إجراء') }}</th>
         </tr>
       </thead>
       <tbody>
@@ -126,7 +126,7 @@
             <form method="post" action="{{ url_for('radius.company_inventory_item_deactivate', item_id=item.id) }}"
                   onsubmit="return confirm('تعطيل هذا الصنف؟ لن تُحذف حركاته.');">
               <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-              <button class="hub-btn hub-btn--ghost hub-btn--sm" type="submit"><i class="fa-solid fa-box-archive"></i> تعطيل</button>
+              <button class="hub-btn hub-btn--ghost hub-btn--sm" type="submit"><i class="fa-solid fa-box-archive"></i> {{ _('تعطيل') }}</button>
             </form>
           </td>
         </tr>
@@ -137,7 +137,7 @@
   {% else %}
     <div class="cie-empty-cta">
       {{ hub.empty("لا توجد أصناف بعد.", sub="أضف أول وارد مخزون وسيظهر الصنف هنا تلقائيًا.", icon="boxes-stacked") }}
-      <div style="margin-top:14px"><button class="hub-btn hub-btn--primary" type="button" data-modal-open="incoming"><i class="fa-solid fa-plus"></i> تسجيل أول وارد</button></div>
+      <div style="margin-top:14px"><button class="hub-btn hub-btn--primary" type="button" data-modal-open="incoming"><i class="fa-solid fa-plus"></i> {{ _('تسجيل أول وارد') }}</button></div>
     </div>
   {% endif %}
 {% endcall %}
@@ -150,14 +150,14 @@
    flush=True) %}
   <div class="hub-section-toolbar" style="display:flex;justify-content:flex-end;padding:12px 14px 0">
     <button class="hub-btn hub-btn--primary" type="button" data-modal-open="incoming">
-      <i class="fa-solid fa-plus"></i> تسجيل وارد
+      <i class="fa-solid fa-plus"></i> {{ _('تسجيل وارد') }}
     </button>
   </div>
   {% if incoming_records %}
   <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="15" style="border:none;border-radius:0">
     <table class="hub-table">
       <thead>
-        <tr><th>التاريخ</th><th>الصنف</th><th class="num">الكمية</th><th class="num">سعر الوحدة</th><th class="num">الإجمالي</th><th>المورّد</th><th>المرجع</th></tr>
+        <tr><th>{{ _('التاريخ') }}</th><th>{{ _('الصنف') }}</th><th class="num">{{ _('الكمية') }}</th><th class="num">{{ _('سعر الوحدة') }}</th><th class="num">{{ _('الإجمالي') }}</th><th>{{ _('المورّد') }}</th><th>{{ _('المرجع') }}</th></tr>
       </thead>
       <tbody>
         {% for m in incoming_records %}
@@ -187,14 +187,14 @@
    flush=True) %}
   <div class="hub-section-toolbar" style="display:flex;justify-content:flex-end;padding:12px 14px 0">
     <button class="hub-btn hub-btn--primary" type="button" data-modal-open="usage">
-      <i class="fa-solid fa-plus"></i> تسجيل صرف
+      <i class="fa-solid fa-plus"></i> {{ _('تسجيل صرف') }}
     </button>
   </div>
   {% if usage_records %}
   <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="15" style="border:none;border-radius:0">
     <table class="hub-table">
       <thead>
-        <tr><th>التاريخ</th><th>الصنف</th><th class="num">الكمية</th><th>السبب</th><th>الموقع</th><th>الفني</th></tr>
+        <tr><th>{{ _('التاريخ') }}</th><th>{{ _('الصنف') }}</th><th class="num">{{ _('الكمية') }}</th><th>{{ _('السبب') }}</th><th>{{ _('الموقع') }}</th><th>{{ _('الفني') }}</th></tr>
       </thead>
       <tbody>
         {% for m in usage_records %}
@@ -223,14 +223,14 @@
    flush=True) %}
   <div class="hub-section-toolbar" style="display:flex;justify-content:flex-end;padding:12px 14px 0">
     <button class="hub-btn hub-btn--primary" type="button" data-modal-open="expense">
-      <i class="fa-solid fa-plus"></i> مصروف جديد
+      <i class="fa-solid fa-plus"></i> {{ _('مصروف جديد') }}
     </button>
   </div>
   {% if expense_records %}
   <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="15" style="border:none;border-radius:0">
     <table class="hub-table">
       <thead>
-        <tr><th>التاريخ</th><th>العنوان</th><th>الفئة</th><th class="num">المبلغ</th><th>مدفوع إلى</th><th>طريقة الدفع</th></tr>
+        <tr><th>{{ _('التاريخ') }}</th><th>{{ _('العنوان') }}</th><th>{{ _('الفئة') }}</th><th class="num">{{ _('المبلغ') }}</th><th>{{ _('مدفوع إلى') }}</th><th>{{ _('طريقة الدفع') }}</th></tr>
       </thead>
       <tbody>
         {% for e in expense_records %}
@@ -257,24 +257,24 @@
 {% call hub.section("تصفية السجل والتقارير", icon="filter") %}
   <form method="get" action="{{ url_for('radius.company_inventory') }}" class="cie-form-grid">
     <input type="hidden" name="tab" value="reports">
-    <label>من تاريخ <input class="hub-input" type="date" name="date_from" value="{{ filters.date_from }}"></label>
-    <label>إلى تاريخ <input class="hub-input" type="date" name="date_to" value="{{ filters.date_to }}"></label>
-    <label>الصنف
+    <label>{{ _('من تاريخ') }} <input class="hub-input" type="date" name="date_from" value="{{ filters.date_from }}"></label>
+    <label>{{ _('إلى تاريخ') }} <input class="hub-input" type="date" name="date_to" value="{{ filters.date_to }}"></label>
+    <label>{{ _('الصنف') }}
       <select class="hub-select" name="item_id">
-        <option value="">كل الأصناف</option>
+        <option value="">{{ _('كل الأصناف') }}</option>
         {% for it in items %}<option value="{{ it.id }}" {% if filters.item_id == it.id|string %}selected{% endif %}>{{ it.name }}</option>{% endfor %}
       </select>
     </label>
-    <label>نوع الحركة
+    <label>{{ _('نوع الحركة') }}
       <select class="hub-select" name="movement_type">
-        <option value="">الكل</option>
-        <option value="incoming" {% if filters.movement_type=='incoming' %}selected{% endif %}>وارد</option>
-        <option value="usage" {% if filters.movement_type=='usage' %}selected{% endif %}>صرف</option>
-        <option value="adjustment" {% if filters.movement_type=='adjustment' %}selected{% endif %}>تسوية</option>
+        <option value="">{{ _('الكل') }}</option>
+        <option value="incoming" {% if filters.movement_type=='incoming' %}selected{% endif %}>{{ _('وارد') }}</option>
+        <option value="usage" {% if filters.movement_type=='usage' %}selected{% endif %}>{{ _('صرف') }}</option>
+        <option value="adjustment" {% if filters.movement_type=='adjustment' %}selected{% endif %}>{{ _('تسوية') }}</option>
       </select>
     </label>
-    <label>فئة المصروف <input class="hub-input" name="expense_category" value="{{ filters.expense_category }}"></label>
-    <label style="justify-content:flex-end"><button class="hub-btn hub-btn--secondary" type="submit"><i class="fa-solid fa-filter"></i> تصفية</button></label>
+    <label>{{ _('فئة المصروف') }} <input class="hub-input" name="expense_category" value="{{ filters.expense_category }}"></label>
+    <label style="justify-content:flex-end"><button class="hub-btn hub-btn--secondary" type="submit"><i class="fa-solid fa-filter"></i> {{ _('تصفية') }}</button></label>
   </form>
 {% endcall %}
 
@@ -289,7 +289,7 @@
 <div style="margin-top:16px">{% call hub.section("المصروفات حسب الفئة", icon="layer-group", flush=True) %}
   <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="15" style="border:none;border-radius:0">
     <table class="hub-table">
-      <thead><tr><th>الفئة</th><th class="num">الإجمالي</th><th class="num">العدد</th></tr></thead>
+      <thead><tr><th>{{ _('الفئة') }}</th><th class="num">{{ _('الإجمالي') }}</th><th class="num">{{ _('العدد') }}</th></tr></thead>
       <tbody>{% for c in reports.expenses_by_category %}
         <tr><td><strong>{{ c.category }}</strong></td><td class="num mono tabular-nums" style="direction:ltr">{{ c.total|money }}</td><td class="num mono tabular-nums" style="direction:ltr">{{ c.count }}</td></tr>
       {% endfor %}</tbody>
@@ -302,15 +302,15 @@
   {% if reports.movements %}
   <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="15" style="border:none;border-radius:0">
     <table class="hub-table">
-      <thead><tr><th>التاريخ</th><th>الصنف</th><th>النوع</th><th class="num">الكمية</th><th class="num">القيمة</th><th data-uds-nosort>التفاصيل</th></tr></thead>
+      <thead><tr><th>{{ _('التاريخ') }}</th><th>{{ _('الصنف') }}</th><th>{{ _('النوع') }}</th><th class="num">{{ _('الكمية') }}</th><th class="num">{{ _('القيمة') }}</th><th data-uds-nosort>{{ _('التفاصيل') }}</th></tr></thead>
       <tbody>{% for m in reports.movements %}
         <tr>
           <td>{{ m.movement_date }}</td>
           <td><strong>{{ m.item_name or "—" }}</strong></td>
           <td>
-            {% if m.movement_type=='incoming' %}<span class="cie-badge cie-badge--in">وارد</span>
-            {% elif m.movement_type=='usage' %}<span class="cie-badge cie-badge--use">صرف</span>
-            {% else %}<span class="cie-badge cie-badge--adj">تسوية</span>{% endif %}
+            {% if m.movement_type=='incoming' %}<span class="cie-badge cie-badge--in">{{ _('وارد') }}</span>
+            {% elif m.movement_type=='usage' %}<span class="cie-badge cie-badge--use">{{ _('صرف') }}</span>
+            {% else %}<span class="cie-badge cie-badge--adj">{{ _('تسوية') }}</span>{% endif %}
           </td>
           <td class="num mono tabular-nums" style="direction:ltr">{{ "%g"|format(m.quantity) }} {{ m.item_unit or "" }}</td>
           <td class="num mono tabular-nums" style="direction:ltr">{{ m.total_cost|money if m.total_cost else "—" }}</td>
@@ -330,93 +330,93 @@
 {# Item modal #}
 <dialog class="cie-modal" data-modal="item">
   <form method="post" action="{{ url_for('radius.company_inventory_item_create') }}">
-    <div class="cie-modal-head"><h3><i class="fa-solid fa-tag"></i> صنف جديد</h3><button class="cie-x" type="button" data-modal-close><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="cie-modal-head"><h3><i class="fa-solid fa-tag"></i> {{ _('صنف جديد') }}</h3><button class="cie-x" type="button" data-modal-close><i class="fa-solid fa-xmark"></i></button></div>
     <div class="cie-modal-body">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
       <div class="cie-form-grid">
-        <label class="span2">اسم الصنف <input class="hub-input" name="name" required placeholder="مثال: كابل CAT6"></label>
-        <label>الفئة <input class="hub-input" name="category" placeholder="شبكات / معدات"></label>
-        <label>الوحدة <input class="hub-input" name="unit" placeholder="متر / قطعة"></label>
-        <label>حد التنبيه (اختياري) <input class="hub-input" type="number" min="0" step="0.01" name="low_stock_threshold"></label>
-        <label class="span2">ملاحظات <input class="hub-input" name="notes"></label>
+        <label class="span2">{{ _('اسم الصنف') }} <input class="hub-input" name="name" required placeholder="{{ _('مثال: كابل CAT6') }}"></label>
+        <label>{{ _('الفئة') }} <input class="hub-input" name="category" placeholder="{{ _('شبكات / معدات') }}"></label>
+        <label>{{ _('الوحدة') }} <input class="hub-input" name="unit" placeholder="{{ _('متر / قطعة') }}"></label>
+        <label>{{ _('حد التنبيه (اختياري)') }} <input class="hub-input" type="number" min="0" step="0.01" name="low_stock_threshold"></label>
+        <label class="span2">{{ _('ملاحظات') }} <input class="hub-input" name="notes"></label>
       </div>
     </div>
-    <div class="cie-modal-foot"><button class="hub-btn hub-btn--ghost" type="button" data-modal-close>إلغاء</button><button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-check"></i> حفظ الصنف</button></div>
+    <div class="cie-modal-foot"><button class="hub-btn hub-btn--ghost" type="button" data-modal-close>{{ _('إلغاء') }}</button><button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-check"></i> {{ _('حفظ الصنف') }}</button></div>
   </form>
 </dialog>
 
 {# Incoming modal #}
 <dialog class="cie-modal" data-modal="incoming">
   <form method="post" action="{{ url_for('radius.company_inventory_incoming') }}">
-    <div class="cie-modal-head"><h3><i class="fa-solid fa-truck-ramp-box"></i> تسجيل وارد مخزون</h3><button class="cie-x" type="button" data-modal-close><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="cie-modal-head"><h3><i class="fa-solid fa-truck-ramp-box"></i> {{ _('تسجيل وارد مخزون') }}</h3><button class="cie-x" type="button" data-modal-close><i class="fa-solid fa-xmark"></i></button></div>
     <div class="cie-modal-body">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
       <div class="cie-form-grid">
-        <label class="span2">صنف موجود
+        <label class="span2">{{ _('صنف موجود') }}
           <select class="hub-select" name="item_id">
-            <option value="">— صنف جديد بالأسفل —</option>
+            <option value="">{{ _('— صنف جديد بالأسفل —') }}</option>
             {% for it in items %}<option value="{{ it.id }}">{{ it.name }}{% if it.unit %} ({{ it.unit }}){% endif %}</option>{% endfor %}
           </select>
         </label>
-        <label>اسم صنف جديد <input class="hub-input" name="item_name" placeholder="إن لم يكن موجودًا"></label>
-        <label>الفئة <input class="hub-input" name="category"></label>
-        <label>الوحدة <input class="hub-input" name="unit" placeholder="متر / قطعة"></label>
-        <label>الكمية <input class="hub-input" type="number" min="0.01" step="0.01" name="quantity" required></label>
-        <label>سعر الوحدة (اختياري) <input class="hub-input" type="number" min="0" step="0.01" name="unit_cost"></label>
-        <label>المورّد <input class="hub-input" name="supplier"></label>
-        <label>المرجع/الفاتورة <input class="hub-input" name="reference"></label>
-        <label>تاريخ الشراء <input class="hub-input" type="date" name="movement_date"></label>
-        <label class="span2">ملاحظات <input class="hub-input" name="notes"></label>
+        <label>{{ _('اسم صنف جديد') }} <input class="hub-input" name="item_name" placeholder="{{ _('إن لم يكن موجودًا') }}"></label>
+        <label>{{ _('الفئة') }} <input class="hub-input" name="category"></label>
+        <label>{{ _('الوحدة') }} <input class="hub-input" name="unit" placeholder="{{ _('متر / قطعة') }}"></label>
+        <label>{{ _('الكمية') }} <input class="hub-input" type="number" min="0.01" step="0.01" name="quantity" required></label>
+        <label>{{ _('سعر الوحدة (اختياري)') }} <input class="hub-input" type="number" min="0" step="0.01" name="unit_cost"></label>
+        <label>{{ _('المورّد') }} <input class="hub-input" name="supplier"></label>
+        <label>{{ _('المرجع/الفاتورة') }} <input class="hub-input" name="reference"></label>
+        <label>{{ _('تاريخ الشراء') }} <input class="hub-input" type="date" name="movement_date"></label>
+        <label class="span2">{{ _('ملاحظات') }} <input class="hub-input" name="notes"></label>
       </div>
     </div>
-    <div class="cie-modal-foot"><button class="hub-btn hub-btn--ghost" type="button" data-modal-close>إلغاء</button><button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-plus"></i> تسجيل الوارد</button></div>
+    <div class="cie-modal-foot"><button class="hub-btn hub-btn--ghost" type="button" data-modal-close>{{ _('إلغاء') }}</button><button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-plus"></i> {{ _('تسجيل الوارد') }}</button></div>
   </form>
 </dialog>
 
 {# Usage modal #}
 <dialog class="cie-modal" data-modal="usage">
   <form method="post" action="{{ url_for('radius.company_inventory_usage') }}">
-    <div class="cie-modal-head"><h3><i class="fa-solid fa-screwdriver-wrench"></i> تسجيل صرف مخزون</h3><button class="cie-x" type="button" data-modal-close><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="cie-modal-head"><h3><i class="fa-solid fa-screwdriver-wrench"></i> {{ _('تسجيل صرف مخزون') }}</h3><button class="cie-x" type="button" data-modal-close><i class="fa-solid fa-xmark"></i></button></div>
     <div class="cie-modal-body">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
       <div class="cie-form-grid">
-        <label class="span2">الصنف
+        <label class="span2">{{ _('الصنف') }}
           <select class="hub-select" name="item_id" required>
-            <option value="">— اختر صنفًا —</option>
+            <option value="">{{ _('— اختر صنفًا —') }}</option>
             {% for it in items %}<option value="{{ it.id }}">{{ it.name }}{% if it.unit %} ({{ it.unit }}){% endif %}</option>{% endfor %}
           </select>
         </label>
-        <label>الكمية المستخدمة <input class="hub-input" type="number" min="0.01" step="0.01" name="quantity" required></label>
-        <label>سبب الاستخدام <input class="hub-input" name="usage_reason" placeholder="تركيب / استبدال"></label>
-        <label>الموقع <input class="hub-input" name="location"></label>
-        <label>الفني/الموظف <input class="hub-input" name="technician"></label>
-        <label>رقم عميل مرتبط (للمعلومة) <input class="hub-input" type="number" min="1" name="related_customer_id"></label>
-        <label>تاريخ الصرف <input class="hub-input" type="date" name="movement_date"></label>
-        <label class="span2">ملاحظات <input class="hub-input" name="notes"></label>
+        <label>{{ _('الكمية المستخدمة') }} <input class="hub-input" type="number" min="0.01" step="0.01" name="quantity" required></label>
+        <label>{{ _('سبب الاستخدام') }} <input class="hub-input" name="usage_reason" placeholder="{{ _('تركيب / استبدال') }}"></label>
+        <label>{{ _('الموقع') }} <input class="hub-input" name="location"></label>
+        <label>{{ _('الفني/الموظف') }} <input class="hub-input" name="technician"></label>
+        <label>{{ _('رقم عميل مرتبط (للمعلومة)') }} <input class="hub-input" type="number" min="1" name="related_customer_id"></label>
+        <label>{{ _('تاريخ الصرف') }} <input class="hub-input" type="date" name="movement_date"></label>
+        <label class="span2">{{ _('ملاحظات') }} <input class="hub-input" name="notes"></label>
       </div>
     </div>
-    <div class="cie-modal-foot"><button class="hub-btn hub-btn--ghost" type="button" data-modal-close>إلغاء</button><button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-minus"></i> تسجيل الصرف</button></div>
+    <div class="cie-modal-foot"><button class="hub-btn hub-btn--ghost" type="button" data-modal-close>{{ _('إلغاء') }}</button><button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-minus"></i> {{ _('تسجيل الصرف') }}</button></div>
   </form>
 </dialog>
 
 {# Expense modal #}
 <dialog class="cie-modal" data-modal="expense">
   <form method="post" action="{{ url_for('radius.company_expense_add') }}">
-    <div class="cie-modal-head"><h3><i class="fa-solid fa-receipt"></i> مصروف جديد</h3><button class="cie-x" type="button" data-modal-close><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="cie-modal-head"><h3><i class="fa-solid fa-receipt"></i> {{ _('مصروف جديد') }}</h3><button class="cie-x" type="button" data-modal-close><i class="fa-solid fa-xmark"></i></button></div>
     <div class="cie-modal-body">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
       <div class="cie-form-grid">
-        <label class="span2">عنوان المصروف <input class="hub-input" name="title" required placeholder="مثال: اشتراك إنترنت"></label>
-        <label>المبلغ <input class="hub-input" type="number" min="0.01" step="0.01" name="amount" required></label>
-        <label>الفئة <input class="hub-input" name="category" placeholder="تشغيل / أجور / صيانة"></label>
-        <label>التاريخ <input class="hub-input" type="date" name="expense_date"></label>
-        <label>مدفوع إلى <input class="hub-input" name="paid_to"></label>
-        <label>طريقة الدفع <input class="hub-input" name="payment_method" placeholder="نقدًا / تحويل"></label>
-        <label>مرجع <input class="hub-input" name="reference"></label>
-        <label class="span2">ملاحظات <input class="hub-input" name="notes"></label>
+        <label class="span2">{{ _('عنوان المصروف') }} <input class="hub-input" name="title" required placeholder="{{ _('مثال: اشتراك إنترنت') }}"></label>
+        <label>{{ _('المبلغ') }} <input class="hub-input" type="number" min="0.01" step="0.01" name="amount" required></label>
+        <label>{{ _('الفئة') }} <input class="hub-input" name="category" placeholder="{{ _('تشغيل / أجور / صيانة') }}"></label>
+        <label>{{ _('التاريخ') }} <input class="hub-input" type="date" name="expense_date"></label>
+        <label>{{ _('مدفوع إلى') }} <input class="hub-input" name="paid_to"></label>
+        <label>{{ _('طريقة الدفع') }} <input class="hub-input" name="payment_method" placeholder="{{ _('نقدًا / تحويل') }}"></label>
+        <label>{{ _('مرجع') }} <input class="hub-input" name="reference"></label>
+        <label class="span2">{{ _('ملاحظات') }} <input class="hub-input" name="notes"></label>
       </div>
     </div>
-    <div class="cie-modal-foot"><button class="hub-btn hub-btn--ghost" type="button" data-modal-close>إلغاء</button><button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-check"></i> تسجيل المصروف</button></div>
+    <div class="cie-modal-foot"><button class="hub-btn hub-btn--ghost" type="button" data-modal-close>{{ _('إلغاء') }}</button><button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-check"></i> {{ _('تسجيل المصروف') }}</button></div>
   </form>
 </dialog>
 

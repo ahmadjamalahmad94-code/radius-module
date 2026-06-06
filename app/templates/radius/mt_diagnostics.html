@@ -9,7 +9,7 @@
 {% block title %}تشخيص اتصال الراوترات{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-stethoscope"></i>{% endblock %}
 {% block page_title %}تشخيص اتصال الراوترات{% endblock %}
-{% block page_sub %}<span class="sub">فحص المنفذ، دخول واجهة الربط، هوية الراوتر، وأوامر إصلاح قابلة للنسخ</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('فحص المنفذ، دخول واجهة الربط، هوية الراوتر، وأوامر إصلاح قابلة للنسخ') }}</span>{% endblock %}
 
 {% block content %}
 {% include "radius/network_ops_nav.html" %}
@@ -49,7 +49,7 @@
   {# ── Current-scan meta card ── #}
   {% call hub.section("الفحص الحالي", icon="rotate") %}
     <div class="hub-flex-row" style="gap:8px;flex-wrap:wrap;align-items:center">
-      <span class="hub-text-mute">IP الخادم كما ظهر للطلب</span>
+      <span class="hub-text-mute">{{ _('IP الخادم كما ظهر للطلب') }}</span>
       <code style="font-family:var(--hub-mono,ui-monospace,monospace);background:var(--hub-bg-soft,#f1f5f9);padding:3px 9px;border-radius:8px;font-size:13px">{{ vps_ip }}</code>
     </div>
   {% endcall %}
@@ -62,10 +62,10 @@
   ) }}
   <div class="hub-flex-row" style="gap:8px;justify-content:center;margin-top:-8px">
     <a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ url_for('radius.mt_list') }}">
-      <i class="fa-solid fa-sliders"></i> إعدادات الراوترات
+      <i class="fa-solid fa-sliders"></i> {{ _('إعدادات الراوترات') }}
     </a>
     <a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ url_for('radius.devices_list') }}">
-      <i class="fa-solid fa-network-wired"></i> أجهزة الشبكة
+      <i class="fa-solid fa-network-wired"></i> {{ _('أجهزة الشبكة') }}
     </a>
   </div>
   {% endif %}
@@ -87,10 +87,10 @@
               data-mt-conn-mode="{{ r.connection_mode }}">
           {% if r.connection_mode == 'vpn' %}
             <i class="fa-solid fa-shield-halved hub-text-mute"></i>
-            <span class="hub-text-mute">نفق الإدارة</span>
+            <span class="hub-text-mute">{{ _('نفق الإدارة') }}</span>
           {% else %}
             <i class="fa-solid fa-network-wired hub-text-mute"></i>
-            <span class="hub-text-mute">اتصال مباشر</span>
+            <span class="hub-text-mute">{{ _('اتصال مباشر') }}</span>
           {% endif %}
         </span>
       </div>
@@ -134,7 +134,7 @@
       <div class="hub-fix" style="margin-top:14px;border-inline-start:3px solid var(--hub-danger,#dc2626)">
         <div class="hub-flex-row" style="gap:8px;align-items:center;margin-bottom:10px">
           <i class="fa-solid fa-list-check hub-text-mute"></i>
-          <strong>الأسباب الأرجح وحلولها (مرتّبة حسب الاحتمال)</strong>
+          <strong>{{ _('الأسباب الأرجح وحلولها (مرتّبة حسب الاحتمال)') }}</strong>
         </div>
         <ol style="margin:0;padding-inline-start:18px;display:flex;flex-direction:column;gap:12px">
           {% for c in r.probable_causes %}
@@ -159,7 +159,7 @@
         <div class="hub-flex-row" style="gap:8px;align-items:flex-start">
           <i class="fa-solid fa-clock hub-text-mute" style="margin-top:3px"></i>
           <div>
-            <strong>تزامن وقت الراوتر / NTP غير مفعّل</strong>
+            <strong>{{ _('تزامن وقت الراوتر / NTP غير مفعّل') }}</strong>
             <div class="hub-text-mute" style="font-size:12.5px;margin-top:4px">{{ r.ntp.warning }}</div>
             {% if r.ntp.clock %}<div class="hub-text-mute" style="font-size:12px;margin-top:4px">ساعة الراوتر الآن: {{ r.ntp.clock }}</div>{% endif %}
           </div>
@@ -183,7 +183,7 @@
           <strong>{{ repair_label }}</strong>
           <button class="hub-btn hub-btn--secondary hub-btn--sm" type="button"
                   onclick="navigator.clipboard.writeText(this.closest('.hub-fix').querySelector('pre').textContent); this.textContent='منسوخ ✓'">
-            <i class="fa-solid fa-copy"></i> نسخ
+            <i class="fa-solid fa-copy"></i> {{ _('نسخ') }}
           </button>
         </div>
 <pre class="mtd-code" style="margin:0;padding:14px 16px;border-radius:12px;background:#0f172a;color:#e2e8f0;font-family:var(--hub-mono,ui-monospace,monospace);font-size:12.5px;line-height:1.7;overflow:auto;white-space:pre-wrap;word-break:break-word">/ip service set api address={{ repair_address }} disabled=no port={{ r.port }}
@@ -197,10 +197,10 @@
       {% elif r.status == 'api_failed' %}
       <div class="hub-fix" style="margin-top:14px">
         <div class="hub-flex-row" style="justify-content:space-between;align-items:center;margin-bottom:8px;gap:10px">
-          <strong>تحقق من حساب الربط على الراوتر</strong>
+          <strong>{{ _('تحقق من حساب الربط على الراوتر') }}</strong>
           <button class="hub-btn hub-btn--secondary hub-btn--sm" type="button"
                   onclick="navigator.clipboard.writeText(this.closest('.hub-fix').querySelector('pre').textContent); this.textContent='منسوخ ✓'">
-            <i class="fa-solid fa-copy"></i> نسخ
+            <i class="fa-solid fa-copy"></i> {{ _('نسخ') }}
           </button>
         </div>
 <pre class="mtd-code" style="margin:0;padding:14px 16px;border-radius:12px;background:#0f172a;color:#e2e8f0;font-family:var(--hub-mono,ui-monospace,monospace);font-size:12.5px;line-height:1.7;overflow:auto;white-space:pre-wrap;word-break:break-word">/user print where name=USERNAME_HERE

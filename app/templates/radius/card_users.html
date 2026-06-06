@@ -65,13 +65,13 @@
           <tr>
             <th style="width:36px" data-uds-nosort data-uds-nocol><input type="checkbox"></th>
             <th class="num" style="width:60px">#</th>
-            <th>الاسم</th>
-            <th style="width:140px">الجوال</th>
-            <th class="num" style="width:130px">الرصيد</th>
-            <th class="num" style="width:100px">المشتريات</th>
-            <th class="num" style="width:100px">البطاقات</th>
-            <th style="width:90px">الحالة</th>
-            <th style="width:80px" data-uds-nosort data-uds-nocol>إجراءات</th>
+            <th>{{ _('الاسم') }}</th>
+            <th style="width:140px">{{ _('الجوال') }}</th>
+            <th class="num" style="width:130px">{{ _('الرصيد') }}</th>
+            <th class="num" style="width:100px">{{ _('المشتريات') }}</th>
+            <th class="num" style="width:100px">{{ _('البطاقات') }}</th>
+            <th style="width:90px">{{ _('الحالة') }}</th>
+            <th style="width:80px" data-uds-nosort data-uds-nocol>{{ _('إجراءات') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -92,7 +92,7 @@
             </td>
             <td>
               <div class="hub-flex-row" style="gap:4px;flex-wrap:nowrap">
-                <a class="hub-btn hub-btn--ghost hub-btn--icon" title="فتح"
+                <a class="hub-btn hub-btn--ghost hub-btn--icon" title="{{ _('فتح') }}"
                    href="{{ url_for('radius.card_user_360', card_user_id=u.id) }}">
                   <i class="fa-solid fa-arrow-up-right-from-square"></i>
                 </a>
@@ -115,21 +115,21 @@
     {{ csrf_token_input() | safe }}
     <div class="uds-modal-warn">
       <i class="fa-solid fa-circle-info"></i>
-      <span>تُنشَأ محفظة إلكترونية تلقائياً مع الحساب. الدخول للزبون عبر /portal/card.</span>
+      <span>{{ _('تُنشَأ محفظة إلكترونية تلقائياً مع الحساب. الدخول للزبون عبر /portal/card.') }}</span>
     </div>
     <div class="hub-field" style="margin-top:14px">
-      <label class="hub-field-label" for="cu-display_name">الاسم الكامل <span class="req">*</span></label>
-      <input class="hub-input" id="cu-display_name" name="display_name" required maxlength="120" placeholder="مثل: أحمد محمد">
+      <label class="hub-field-label" for="cu-display_name">{{ _('الاسم الكامل') }} <span class="req">*</span></label>
+      <input class="hub-input" id="cu-display_name" name="display_name" required maxlength="120" placeholder="{{ _('مثل: أحمد محمد') }}">
     </div>
     <div class="hub-field" style="margin-top:12px">
-      <label class="hub-field-label" for="cu-mobile">رقم الجوال</label>
+      <label class="hub-field-label" for="cu-mobile">{{ _('رقم الجوال') }}</label>
       <input class="hub-input" id="cu-mobile" name="mobile" maxlength="20" inputmode="tel" pattern="[0-9+\-\s]*"
-             placeholder="مثل: 0599123456" style="direction:ltr;text-align:start">
+             placeholder="{{ _('مثل: 0599123456') }}" style="direction:ltr;text-align:start">
     </div>
     <div class="hub-field" style="margin-top:12px">
-      <label class="hub-field-label" for="cu-password">كلمة المرور <span class="req">*</span></label>
+      <label class="hub-field-label" for="cu-password">{{ _('كلمة المرور') }} <span class="req">*</span></label>
       <input class="hub-input" id="cu-password" name="password" type="password" required minlength="4" maxlength="64"
-             placeholder="على الأقل 4 أحرف" autocomplete="new-password">
+             placeholder="{{ _('على الأقل 4 أحرف') }}" autocomplete="new-password">
     </div>
   </form>
 {% endcall %}

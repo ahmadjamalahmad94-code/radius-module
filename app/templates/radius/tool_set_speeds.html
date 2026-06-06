@@ -45,10 +45,10 @@
                      onclick="document.querySelectorAll('input[name=plan_ids]').forEach(x=>x.checked=this.checked)">
             </th>
             <th class="num">#</th>
-            <th>الاسم</th>
-            <th>تنزيل حالي</th>
-            <th>رفع حالي</th>
-            <th>النوع</th>
+            <th>{{ _('الاسم') }}</th>
+            <th>{{ _('تنزيل حالي') }}</th>
+            <th>{{ _('رفع حالي') }}</th>
+            <th>{{ _('النوع') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -72,21 +72,21 @@
   {% call hub.section("عمليّة التعديل", icon="sliders") %}
     <div class="hub-form-row">
       <div class="hub-field">
-        <label class="hub-field-label">مضاعفة التنزيل ×</label>
+        <label class="hub-field-label">{{ _('مضاعفة التنزيل ×') }}</label>
         <input class="hub-input" type="number" step="0.1" name="mult_down" value="1.0">
-        <div class="hub-field-hint">مثلًا 0.5 لتنصيف السرعة، 2 للمضاعفة.</div>
+        <div class="hub-field-hint">{{ _('مثلًا 0.5 لتنصيف السرعة، 2 للمضاعفة.') }}</div>
       </div>
       <div class="hub-field">
-        <label class="hub-field-label">مضاعفة الرفع ×</label>
+        <label class="hub-field-label">{{ _('مضاعفة الرفع ×') }}</label>
         <input class="hub-input" type="number" step="0.1" name="mult_up" value="1.0">
       </div>
       <div class="hub-field">
-        <label class="hub-field-label">أو ضع قيمة تنزيل ثابتة</label>
+        <label class="hub-field-label">{{ _('أو ضع قيمة تنزيل ثابتة') }}</label>
         {{ unit_input_picker(name="set_down", value=0, kind="speed") }}
-        <div class="hub-field-hint">إن وضعت قيمة هنا، تتجاوز المضاعف.</div>
+        <div class="hub-field-hint">{{ _('إن وضعت قيمة هنا، تتجاوز المضاعف.') }}</div>
       </div>
       <div class="hub-field">
-        <label class="hub-field-label">أو قيمة رفع ثابتة</label>
+        <label class="hub-field-label">{{ _('أو قيمة رفع ثابتة') }}</label>
         {{ unit_input_picker(name="set_up", value=0, kind="speed") }}
       </div>
     </div>

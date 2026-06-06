@@ -254,15 +254,15 @@
 <div class="dg-layout">
 
   {# ───── الفهرس الجانبي اللاصق ───── #}
-  <nav class="dg-toc dg-noprint" aria-label="فهرس الدليل">
-    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> فهرس الخطوات</div>
-    <a href="#dg-s1" data-dg-toc><span class="n">1</span> افتح الصفحة وابحث</a>
-    <a href="#dg-s2" data-dg-toc><span class="n">2</span> اقرأ بطاقة النتيجة</a>
-    <a href="#dg-s3" data-dg-toc><span class="n">3</span> لوحة المعلومات والأرقام</a>
-    <a href="#dg-s4" data-dg-toc><span class="n">4</span> الجهاز والنشاط الأخير</a>
-    <a href="#dg-s5" data-dg-toc><span class="n">5</span> جدول آخر الجلسات</a>
-    <a href="#dg-s6" data-dg-toc><span class="n">6</span> الإجراءات الذكية</a>
-    <a href="#dg-s7" data-dg-toc><span class="n">7</span> الوضع البسيط</a>
+  <nav class="dg-toc dg-noprint" aria-label="{{ _('فهرس الدليل') }}">
+    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> {{ _('فهرس الخطوات') }}</div>
+    <a href="#dg-s1" data-dg-toc><span class="n">1</span> {{ _('افتح الصفحة وابحث') }}</a>
+    <a href="#dg-s2" data-dg-toc><span class="n">2</span> {{ _('اقرأ بطاقة النتيجة') }}</a>
+    <a href="#dg-s3" data-dg-toc><span class="n">3</span> {{ _('لوحة المعلومات والأرقام') }}</a>
+    <a href="#dg-s4" data-dg-toc><span class="n">4</span> {{ _('الجهاز والنشاط الأخير') }}</a>
+    <a href="#dg-s5" data-dg-toc><span class="n">5</span> {{ _('جدول آخر الجلسات') }}</a>
+    <a href="#dg-s6" data-dg-toc><span class="n">6</span> {{ _('الإجراءات الذكية') }}</a>
+    <a href="#dg-s7" data-dg-toc><span class="n">7</span> {{ _('الوضع البسيط') }}</a>
   </nav>
 
   {# ───── عمود المحتوى ───── #}
@@ -271,7 +271,7 @@
     <div class="dg-lead">
       <span class="ic"><i class="fa-solid fa-lightbulb"></i></span>
       <div>
-        <h3>قبل ما نبدأ — متى تفتح «فحص بطاقة»؟</h3>
+        <h3>{{ _('قبل ما نبدأ — متى تفتح «فحص بطاقة»؟') }}</h3>
         <p>
           لما يتصل زبون يقول «الكرت ما يشتغل» أو «وين راح وقتي؟» — هذه صفحتك.
           تكتب كود الكرت ويطلع لك كل شيء: حالته، باقته، وقته المتبقي، استهلاكه،
@@ -285,38 +285,38 @@
     <section class="dg-step" id="dg-s1">
       <div class="dg-badge">1</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-door-open"></i> افتح الصفحة واكتب كود البطاقة</h2>
+        <h2><i class="fa-solid fa-door-open"></i> {{ _('افتح الصفحة واكتب كود البطاقة') }}</h2>
         <p>
-          من القائمة الجانبية: <strong>«البطاقات» ← «فحص بطاقة»</strong>. رح تستقبلك
-          صفحة عنوانها <strong>«مركز عمليات البطاقة»</strong> وفي وسطها شريط بحث كبير
-          مكتوب فيه: <span class="dg-kbd">ابحث برقم البطاقة أو MAC أو اسم العميل…</span>
+          {{ _('من القائمة الجانبية:') }} <strong>{{ _('«البطاقات» ← «فحص بطاقة»') }}</strong>. رح تستقبلك
+          صفحة عنوانها <strong>{{ _('«مركز عمليات البطاقة»') }}</strong> وفي وسطها شريط بحث كبير
+          مكتوب فيه: <span class="dg-kbd">{{ _('ابحث برقم البطاقة أو MAC أو اسم العميل…') }}</span>
         </p>
         <ul>
-          <li>اكتب <strong>رقم البطاقة</strong> (اسم الدخول المطبوع على الكرت) — أدق طريقة.</li>
-          <li>أو الصق <strong>عنوان MAC</strong> لجهاز الزبون — يلاقي الكرت اللي اتصل منه.</li>
-          <li>اضغط زر <strong>«بحث»</strong> أو Enter.</li>
+          <li>{{ _('اكتب') }} <strong>{{ _('رقم البطاقة') }}</strong> {{ _('(اسم الدخول المطبوع على الكرت) — أدق طريقة.') }}</li>
+          <li>{{ _('أو الصق') }} <strong>{{ _('عنوان MAC') }}</strong> {{ _('لجهاز الزبون — يلاقي الكرت اللي اتصل منه.') }}</li>
+          <li>{{ _('اضغط زر') }} <strong>{{ _('«بحث»') }}</strong> {{ _('أو Enter.') }}</li>
         </ul>
         <p>
-          فوق شريط البحث مفتاحان: <strong>«متقدّم»</strong> (الافتراضي — كل التفاصيل والإجراءات)
-          و<strong>«بسيط»</strong> (عرض مختصر للفحص السريع — نشرحه في الخطوة الأخيرة).
+          {{ _('فوق شريط البحث مفتاحان:') }} <strong>{{ _('«متقدّم»') }}</strong> (الافتراضي — كل التفاصيل والإجراءات)
+          و<strong>{{ _('«بسيط»') }}</strong> {{ _('(عرض مختصر للفحص السريع — نشرحه في الخطوة الأخيرة).') }}
         </p>
 
         <div class="dg-mock" aria-hidden="true">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">البطاقات › فحص بطاقة</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('البطاقات › فحص بطاقة') }}</span></div>
           <div class="dg-mock-body">
             <div class="dg-search">
-              <div class="dg-modes"><span class="on"><i class="fa-solid fa-layer-group"></i> متقدّم</span><span><i class="fa-solid fa-bolt"></i> بسيط</span></div>
+              <div class="dg-modes"><span class="on"><i class="fa-solid fa-layer-group"></i> {{ _('متقدّم') }}</span><span><i class="fa-solid fa-bolt"></i> {{ _('بسيط') }}</span></div>
               <div class="dg-searchbox"><i class="fa-solid fa-magnifying-glass"></i> 48201375</div>
-              <span class="dg-searchbtn">بحث</span>
+              <span class="dg-searchbtn">{{ _('بحث') }}</span>
             </div>
           </div>
         </div>
-        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> قبل أي بحث تظهر رسالة «مركز فحص البطاقات جاهز» — وإذا الكود غلط: «لم نَجد بطاقة باسم …».</div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> {{ _('قبل أي بحث تظهر رسالة «مركز فحص البطاقات جاهز» — وإذا الكود غلط: «لم نَجد بطاقة باسم …».') }}</div>
 
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>نصيحة:</b> أزرار رأس الصفحة جاهزة للخدمة: <b>رجوع</b> (لقائمة الكروت)،
-          <b>تحديث</b> (يعيد الفحص بنفس الكود)، <b>طباعة</b>، و<b>نسخ الرابط</b> — انسخ الرابط
+          <span><b>{{ _('نصيحة:') }}</b> {{ _('أزرار رأس الصفحة جاهزة للخدمة:') }} <b>{{ _('رجوع') }}</b> {{ _('(لقائمة الكروت)،') }}
+          <b>{{ _('تحديث') }}</b> {{ _('(يعيد الفحص بنفس الكود)،') }} <b>{{ _('طباعة') }}</b>{{ _('، و') }}<b>{{ _('نسخ الرابط') }}</b> — انسخ الرابط
           وأرسله لزميلك فيفتح نفس نتيجة الفحص مباشرة.</span>
         </div>
       </div>
@@ -326,34 +326,34 @@
     <section class="dg-step" id="dg-s2">
       <div class="dg-badge">2</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-credit-card"></i> اقرأ بطاقة النتيجة — الكرت البنفسجي الكبير</h2>
+        <h2><i class="fa-solid fa-credit-card"></i> {{ _('اقرأ بطاقة النتيجة — الكرت البنفسجي الكبير') }}</h2>
         <p>
-          أول ما يطلع كرت بنفسجي فاخر بشكل بطاقة ائتمان — هذا ملخص هوية البطاقة:
+          {{ _('أول ما يطلع كرت بنفسجي فاخر بشكل بطاقة ائتمان — هذا ملخص هوية البطاقة:') }}
         </p>
         <ul>
-          <li><strong>شارة الحالة</strong> (أعلى الكرت): <strong>نشطة الآن</strong> (خضراء — في جلسة حية)، <strong>غير متّصلة</strong> (رمادية)، أو <strong>ملغاة / معطّلة</strong> (تحذيرية).</li>
-          <li><strong>رقم البطاقة الكبير</strong> مع نجمة — هذا اسم الدخول.</li>
-          <li><strong>كلمة المرور</strong> مخفية بنقاط <span class="dg-kbd">••••••••</span> — زر <strong>العين</strong> يكشفها (تنخفي تلقائيًا بعد 8 ثوانٍ وكل كشف يُسجَّل في سجل التدقيق)، وزر <strong>النسخ</strong> ينسخها للزبون.</li>
-          <li>حبيبات معلومات على الجانبين: <strong>الحزمة</strong>، <strong>الاشتراك</strong> (الباقة)، <strong>سعر البيع</strong>، <strong>سعر الجملة</strong>، <strong>المُنشئ</strong>، <strong>المالك</strong>، و<strong>الموزّع</strong>.</li>
-          <li>أسفل الكرت: <strong>«تم إصدارها: …»</strong> — تاريخ توليد البطاقة.</li>
+          <li><strong>{{ _('شارة الحالة') }}</strong> {{ _('(أعلى الكرت):') }} <strong>{{ _('نشطة الآن') }}</strong> {{ _('(خضراء — في جلسة حية)،') }} <strong>{{ _('غير متّصلة') }}</strong> {{ _('(رمادية)، أو') }} <strong>{{ _('ملغاة / معطّلة') }}</strong> {{ _('(تحذيرية).') }}</li>
+          <li><strong>{{ _('رقم البطاقة الكبير') }}</strong> {{ _('مع نجمة — هذا اسم الدخول.') }}</li>
+          <li><strong>{{ _('كلمة المرور') }}</strong> {{ _('مخفية بنقاط') }} <span class="dg-kbd">••••••••</span> {{ _('— زر') }} <strong>{{ _('العين') }}</strong> {{ _('يكشفها (تنخفي تلقائيًا بعد 8 ثوانٍ وكل كشف يُسجَّل في سجل التدقيق)، وزر') }} <strong>{{ _('النسخ') }}</strong> {{ _('ينسخها للزبون.') }}</li>
+          <li>{{ _('حبيبات معلومات على الجانبين:') }} <strong>{{ _('الحزمة') }}</strong>{{ _('،') }} <strong>{{ _('الاشتراك') }}</strong> {{ _('(الباقة)،') }} <strong>{{ _('سعر البيع') }}</strong>{{ _('،') }} <strong>{{ _('سعر الجملة') }}</strong>{{ _('،') }} <strong>{{ _('المُنشئ') }}</strong>{{ _('،') }} <strong>{{ _('المالك') }}</strong>{{ _('، و') }}<strong>{{ _('الموزّع') }}</strong>.</li>
+          <li>{{ _('أسفل الكرت:') }} <strong>{{ _('«تم إصدارها: …»') }}</strong> {{ _('— تاريخ توليد البطاقة.') }}</li>
         </ul>
 
         <div class="dg-herocard" aria-hidden="true">
-          <div class="top"><span class="st"><span class="dot"></span> نشطة الآن</span><span class="chip"></span></div>
+          <div class="top"><span class="st"><span class="dot"></span> {{ _('نشطة الآن') }}</span><span class="chip"></span></div>
           <div class="num"><i class="fa-solid fa-star"></i> 48201375</div>
           <div class="pwd"><i class="fa-solid fa-key"></i> •••••••• <i class="fa-solid fa-eye"></i> <i class="fa-solid fa-copy"></i></div>
           <div class="rows">
-            <span class="rw">الحزمة <b>حزمة ساعة</b></span>
-            <span class="rw">الاشتراك 👑 <b>باقة ساعة سريعة</b></span>
-            <span class="rw">سعر البيع <b>5.00</b></span>
-            <span class="rw">الموزّع <b>بقالة المدينة</b></span>
+            <span class="rw">{{ _('الحزمة') }} <b>{{ _('حزمة ساعة') }}</b></span>
+            <span class="rw">{{ _('الاشتراك 👑') }} <b>{{ _('باقة ساعة سريعة') }}</b></span>
+            <span class="rw">{{ _('سعر البيع') }} <b>5.00</b></span>
+            <span class="rw">{{ _('الموزّع') }} <b>{{ _('بقالة المدينة') }}</b></span>
           </div>
-          <div class="bt"><i class="fa-regular fa-calendar"></i> تم إصدارها: 2026-06-01 10:24</div>
+          <div class="bt"><i class="fa-regular fa-calendar"></i> {{ _('تم إصدارها: 2026-06-01 10:24') }}</div>
         </div>
 
         <div class="dg-warn">
           <span class="ic">⚠️</span>
-          <span><b>انتبه:</b> كشف كلمة المرور <b>مسجَّل ومراقَب</b> — كل ضغطة عين تُحفظ
+          <span><b>{{ _('انتبه:') }}</b> {{ _('كشف كلمة المرور') }} <b>{{ _('مسجَّل ومراقَب') }}</b> — كل ضغطة عين تُحفظ
           باسمك في سجل التدقيق. اكشفها فقط عند حاجة فعلية (زبون ضيّع كلمة مروره مثلًا).</span>
         </div>
       </div>
@@ -363,49 +363,49 @@
     <section class="dg-step" id="dg-s3">
       <div class="dg-badge">3</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-table-list"></i> لوحة المعلومات وبلاطات الأرقام العشر</h2>
+        <h2><i class="fa-solid fa-table-list"></i> {{ _('لوحة المعلومات وبلاطات الأرقام العشر') }}</h2>
         <p>
-          بجانب الكرت البنفسجي لوحة معلومات بستة صفوف:
-          <strong>حالة البطاقة</strong> (جاهزة / استُعملت / نشطة الآن / معطّلة / ملغاة)،
-          <strong>أوّل اتصال</strong>، <strong>آخر اتصال</strong>، <strong>IP</strong>،
-          <strong>جهاز الشبكة</strong> (الراوتر/NAS)، و<strong>MAC الحالي</strong>.
+          {{ _('بجانب الكرت البنفسجي لوحة معلومات بستة صفوف:') }}
+          <strong>{{ _('حالة البطاقة') }}</strong> {{ _('(جاهزة / استُعملت / نشطة الآن / معطّلة / ملغاة)،') }}
+          <strong>{{ _('أوّل اتصال') }}</strong>{{ _('،') }} <strong>{{ _('آخر اتصال') }}</strong>{{ _('،') }} <strong>IP</strong>{{ _('،') }}
+          <strong>{{ _('جهاز الشبكة') }}</strong> {{ _('(الراوتر/NAS)، و') }}<strong>{{ _('MAC الحالي') }}</strong>.
         </p>
-        <p>وتحتها صفّان من بلاطات الأرقام — الصف الأول يحكي قصة الاتصال:</p>
+        <p>{{ _('وتحتها صفّان من بلاطات الأرقام — الصف الأول يحكي قصة الاتصال:') }}</p>
         <ul>
-          <li><strong>الجلسات:</strong> كم مرة اتصل الكرت إجمالًا (وكم جلسة نشطة الآن).</li>
-          <li><strong>ماكات فريدة:</strong> كم جهازًا مختلفًا استخدم البطاقة — رقم كبير هنا = الكرت يتشارك بين أكثر من شخص!</li>
-          <li><strong>الأجهزة المتّصلة:</strong> كم جهازًا متصلًا في هذه اللحظة.</li>
-          <li><strong>الوقت المتبقّي:</strong> كم ضل من عمر الكرت.</li>
-          <li><strong>طريقة الاحتساب:</strong> «بالثانية» (الكرت مفعَّل والوقت يجري) أو «من أول اتصال» (لسا ما انفعّل — العداد ينطلق مع أول جلسة).</li>
+          <li><strong>{{ _('الجلسات:') }}</strong> {{ _('كم مرة اتصل الكرت إجمالًا (وكم جلسة نشطة الآن).') }}</li>
+          <li><strong>{{ _('ماكات فريدة:') }}</strong> {{ _('كم جهازًا مختلفًا استخدم البطاقة — رقم كبير هنا = الكرت يتشارك بين أكثر من شخص!') }}</li>
+          <li><strong>{{ _('الأجهزة المتّصلة:') }}</strong> {{ _('كم جهازًا متصلًا في هذه اللحظة.') }}</li>
+          <li><strong>{{ _('الوقت المتبقّي:') }}</strong> {{ _('كم ضل من عمر الكرت.') }}</li>
+          <li><strong>{{ _('طريقة الاحتساب:') }}</strong> {{ _('«بالثانية» (الكرت مفعَّل والوقت يجري) أو «من أول اتصال» (لسا ما انفعّل — العداد ينطلق مع أول جلسة).') }}</li>
         </ul>
-        <p>والصف الثاني قصة البيانات: <strong>إجمالي التنزيل</strong>، <strong>إجمالي الرفع</strong>،
-          <strong>إجمالي الاستهلاك</strong> (رفع + تحميل)، <strong>الكوتة المتبقّية</strong>،
-          و<strong>الكوتة الكلّية</strong> («بلا حد» إذا الباقة بدون كوتا).</p>
+        <p>{{ _('والصف الثاني قصة البيانات:') }} <strong>{{ _('إجمالي التنزيل') }}</strong>{{ _('،') }} <strong>{{ _('إجمالي الرفع') }}</strong>{{ _('،') }}
+          <strong>{{ _('إجمالي الاستهلاك') }}</strong> {{ _('(رفع + تحميل)،') }} <strong>{{ _('الكوتة المتبقّية') }}</strong>،
+          و<strong>{{ _('الكوتة الكلّية') }}</strong> {{ _('(«بلا حد» إذا الباقة بدون كوتا).') }}</p>
 
         <div class="dg-mock" aria-hidden="true">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">فحص بطاقة › الأرقام</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('فحص بطاقة › الأرقام') }}</span></div>
           <div class="dg-mock-body">
             <div class="dg-metrics">
-              <div class="dg-metric"><span class="lb">الجلسات</span><span class="vl">12</span><span class="sb">نشطة الآن: 1</span></div>
-              <div class="dg-metric"><span class="lb">ماكات فريدة</span><span class="vl">2</span><span class="sb">استخدمت البطاقة</span></div>
-              <div class="dg-metric"><span class="lb">الأجهزة المتّصلة</span><span class="vl">1</span><span class="sb">الآن</span></div>
-              <div class="dg-metric"><span class="lb">الوقت المتبقّي</span><span class="vl">3 ساعة 20 دقيقة</span></div>
-              <div class="dg-metric"><span class="lb">طريقة الاحتساب</span><span class="vl">بالثانية</span><span class="sb">الوقت يجري الآن</span></div>
+              <div class="dg-metric"><span class="lb">{{ _('الجلسات') }}</span><span class="vl">12</span><span class="sb">{{ _('نشطة الآن: 1') }}</span></div>
+              <div class="dg-metric"><span class="lb">{{ _('ماكات فريدة') }}</span><span class="vl">2</span><span class="sb">{{ _('استخدمت البطاقة') }}</span></div>
+              <div class="dg-metric"><span class="lb">{{ _('الأجهزة المتّصلة') }}</span><span class="vl">1</span><span class="sb">{{ _('الآن') }}</span></div>
+              <div class="dg-metric"><span class="lb">{{ _('الوقت المتبقّي') }}</span><span class="vl">{{ _('3 ساعة 20 دقيقة') }}</span></div>
+              <div class="dg-metric"><span class="lb">{{ _('طريقة الاحتساب') }}</span><span class="vl">{{ _('بالثانية') }}</span><span class="sb">{{ _('الوقت يجري الآن') }}</span></div>
             </div>
             <div class="dg-metrics">
-              <div class="dg-metric"><span class="lb">إجمالي التنزيل</span><span class="vl">3.2 GB</span></div>
-              <div class="dg-metric"><span class="lb">إجمالي الرفع</span><span class="vl">410 MB</span></div>
-              <div class="dg-metric"><span class="lb">إجمالي الاستهلاك</span><span class="vl">3.6 GB</span><span class="sb">رفع + تحميل</span></div>
-              <div class="dg-metric"><span class="lb">الكوتة المتبقّية</span><span class="vl">1424 MB</span><span class="sb">من 5120 MB</span></div>
-              <div class="dg-metric"><span class="lb">الكوتة الكلّية</span><span class="vl">5120 MB</span><span class="sb">حسب الباقة</span></div>
+              <div class="dg-metric"><span class="lb">{{ _('إجمالي التنزيل') }}</span><span class="vl">3.2 GB</span></div>
+              <div class="dg-metric"><span class="lb">{{ _('إجمالي الرفع') }}</span><span class="vl">410 MB</span></div>
+              <div class="dg-metric"><span class="lb">{{ _('إجمالي الاستهلاك') }}</span><span class="vl">3.6 GB</span><span class="sb">{{ _('رفع + تحميل') }}</span></div>
+              <div class="dg-metric"><span class="lb">{{ _('الكوتة المتبقّية') }}</span><span class="vl">1424 MB</span><span class="sb">{{ _('من 5120 MB') }}</span></div>
+              <div class="dg-metric"><span class="lb">{{ _('الكوتة الكلّية') }}</span><span class="vl">5120 MB</span><span class="sb">{{ _('حسب الباقة') }}</span></div>
             </div>
           </div>
         </div>
 
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>سيناريو شائع:</b> زبون يقول «الكرت خلص بسرعة!» — بصّ على «ماكات فريدة»:
-          إذا فيها 4 أجهزة، الكرت موزَّع على غيره. الحل في الخطوة 6: <b>قفل MAC</b>.</span>
+          <span><b>{{ _('سيناريو شائع:') }}</b> زبون يقول «الكرت خلص بسرعة!» — بصّ على «ماكات فريدة»:
+          إذا فيها 4 أجهزة، الكرت موزَّع على غيره. الحل في الخطوة 6: <b>{{ _('قفل MAC') }}</b>.</span>
         </div>
       </div>
     </section>
@@ -414,25 +414,25 @@
     <section class="dg-step" id="dg-s4">
       <div class="dg-badge">4</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-microchip"></i> «الجهاز المستخدم حاليًا» و«النشاط الأخير»</h2>
-        <p>صفّان جنب بعض يكملان الصورة:</p>
+        <h2><i class="fa-solid fa-microchip"></i> {{ _('«الجهاز المستخدم حاليًا» و«النشاط الأخير»') }}</h2>
+        <p>{{ _('صفّان جنب بعض يكملان الصورة:') }}</p>
         <ul>
-          <li><strong>الجهاز المستخدم حاليًا:</strong> اسم الجهاز كما تعرّفه المايكروتيك من DHCP
-            (مثل <span class="dg-kbd">Redmi-Note-12</span>) مع شارات: <strong>نشط الآن / غير متّصل</strong>،
+          <li><strong>{{ _('الجهاز المستخدم حاليًا:') }}</strong> اسم الجهاز كما تعرّفه المايكروتيك من DHCP
+            (مثل <span class="dg-kbd">Redmi-Note-12</span>{{ _(') مع شارات:') }} <strong>{{ _('نشط الآن / غير متّصل') }}</strong>،
             الشركة المصنّعة، ونوع الاتصال — وتحتها MAC وIP وجهاز الشبكة، مع رسمة توضيحية للجهاز (جوال/لابتوب/راوتر).</li>
-          <li><strong>النشاط الأخير للبطاقة:</strong> خط زمني بثلاث محطات:
-            <strong>إنشاء</strong> (إصدارها ضمن الحزمة) ← <strong>اتصال</strong> (بداية الجلسة الأولى)
-            ← <strong>نشط</strong> (جلسة حية الآن إن وُجدت).</li>
+          <li><strong>{{ _('النشاط الأخير للبطاقة:') }}</strong> {{ _('خط زمني بثلاث محطات:') }}
+            <strong>{{ _('إنشاء') }}</strong> {{ _('(إصدارها ضمن الحزمة) ←') }} <strong>{{ _('اتصال') }}</strong> (بداية الجلسة الأولى)
+            ← <strong>{{ _('نشط') }}</strong> {{ _('(جلسة حية الآن إن وُجدت).') }}</li>
         </ul>
 
         <div class="dg-mock" aria-hidden="true">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">فحص بطاقة › الجهاز الحالي</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('فحص بطاقة › الجهاز الحالي') }}</span></div>
           <div class="dg-mock-body">
             <div style="display:flex;gap:10px;align-items:center">
               <div style="flex:1">
                 <div style="font-size:11px;font-weight:900;color:#0f172a">Redmi-Note-12-Pro</div>
                 <div style="display:flex;gap:5px;margin-top:5px">
-                  <span class="dg-pill"><span class="dot"></span> نشط الآن</span>
+                  <span class="dg-pill"><span class="dot"></span> {{ _('نشط الآن') }}</span>
                   <span class="dg-pill grey">Xiaomi</span>
                 </div>
                 <div style="font-size:8.5px;color:#94a3b8;margin-top:7px;font-family:ui-monospace,Consolas,monospace">
@@ -446,8 +446,8 @@
 
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>نصيحة:</b> عمود اسم الجهاز يعتمد على بيانات DHCP من المايكروتيك —
-          إذا طالع «—»، اضغط زر <b>«تحديث DHCP»</b> فوق جدول الجلسات (الخطوة التالية)
+          <span><b>{{ _('نصيحة:') }}</b> عمود اسم الجهاز يعتمد على بيانات DHCP من المايكروتيك —
+          إذا طالع «—»، اضغط زر <b>{{ _('«تحديث DHCP»') }}</b> فوق جدول الجلسات (الخطوة التالية)
           ليسحب الأسماء فورًا بدل انتظار التحديث الدوري.</span>
         </div>
       </div>
@@ -457,31 +457,31 @@
     <section class="dg-step" id="dg-s5">
       <div class="dg-badge">5</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-clock-rotate-left"></i> جدول «آخر الجلسات» — السجل الكامل</h2>
+        <h2><i class="fa-solid fa-clock-rotate-left"></i> {{ _('جدول «آخر الجلسات» — السجل الكامل') }}</h2>
         <p>
-          جدول عريض بكل جلسات البطاقة، الحيّة والمنتهية. أعمدته بالترتيب:
-          <strong>الحالة</strong> (حيّة بشارة خضراء / منتهية رمادية)، <strong>IP</strong>،
-          <strong>MAC</strong>, <strong>الجهاز / النظام</strong>، <strong>تحميل</strong>،
-          <strong>رفع</strong>، <strong>تحميل مجاني</strong>، <strong>رفع مجاني</strong>،
-          <strong>المحصّلة</strong> (مجموع الاستهلاك)، <strong>تاريخ البدء</strong>،
-          <strong>تاريخ الإنتهاء</strong>، <strong>الوقت</strong> (مدة الجلسة)،
-          <strong>معرّف الخدمة</strong>، و<strong>منفذ الاتصال</strong>.
+          {{ _('جدول عريض بكل جلسات البطاقة، الحيّة والمنتهية. أعمدته بالترتيب:') }}
+          <strong>{{ _('الحالة') }}</strong> {{ _('(حيّة بشارة خضراء / منتهية رمادية)،') }} <strong>IP</strong>{{ _('،') }}
+          <strong>MAC</strong>, <strong>{{ _('الجهاز / النظام') }}</strong>{{ _('،') }} <strong>{{ _('تحميل') }}</strong>{{ _('،') }}
+          <strong>{{ _('رفع') }}</strong>{{ _('،') }} <strong>{{ _('تحميل مجاني') }}</strong>{{ _('،') }} <strong>{{ _('رفع مجاني') }}</strong>{{ _('،') }}
+          <strong>{{ _('المحصّلة') }}</strong> {{ _('(مجموع الاستهلاك)،') }} <strong>{{ _('تاريخ البدء') }}</strong>{{ _('،') }}
+          <strong>{{ _('تاريخ الإنتهاء') }}</strong>{{ _('،') }} <strong>{{ _('الوقت') }}</strong> {{ _('(مدة الجلسة)،') }}
+          <strong>{{ _('معرّف الخدمة') }}</strong>{{ _('، و') }}<strong>{{ _('منفذ الاتصال') }}</strong>.
         </p>
         <ul>
-          <li>زر <strong>«تحديث DHCP»</strong> في رأس القسم: يسحب أسماء الأجهزة من المايكروتيك الآن.</li>
-          <li>أسفل الجدول منتقي عدد الصفوف (10 / 25 / 50 / 100 / الكل) وأزرار تنقل.</li>
+          <li>{{ _('زر') }} <strong>{{ _('«تحديث DHCP»') }}</strong> {{ _('في رأس القسم: يسحب أسماء الأجهزة من المايكروتيك الآن.') }}</li>
+          <li>{{ _('أسفل الجدول منتقي عدد الصفوف (10 / 25 / 50 / 100 / الكل) وأزرار تنقل.') }}</li>
         </ul>
 
         <div class="dg-sess" aria-hidden="true">
-          <div class="hd"><span>الحالة</span><span>IP</span><span>الجهاز</span><span>تحميل</span><span>رفع</span><span>الوقت</span></div>
-          <div class="rw live"><span><span class="dg-pill"><span class="dot"></span> حيّة</span></span><span class="mono">10.5.50.117</span><span>Redmi-Note-12</span><span class="mono">820 MB</span><span class="mono">96 MB</span><span class="mono">1 ساعة 12 د</span></div>
-          <div class="rw"><span><span class="dg-pill grey"><span class="dot"></span> منتهية</span></span><span class="mono">10.5.50.103</span><span>iPhone-13</span><span class="mono">1.4 GB</span><span class="mono">210 MB</span><span class="mono">2 ساعة 40 د</span></div>
+          <div class="hd"><span>{{ _('الحالة') }}</span><span>IP</span><span>{{ _('الجهاز') }}</span><span>{{ _('تحميل') }}</span><span>{{ _('رفع') }}</span><span>{{ _('الوقت') }}</span></div>
+          <div class="rw live"><span><span class="dg-pill"><span class="dot"></span> {{ _('حيّة') }}</span></span><span class="mono">10.5.50.117</span><span>Redmi-Note-12</span><span class="mono">820 MB</span><span class="mono">96 MB</span><span class="mono">{{ _('1 ساعة 12 د') }}</span></div>
+          <div class="rw"><span><span class="dg-pill grey"><span class="dot"></span> {{ _('منتهية') }}</span></span><span class="mono">10.5.50.103</span><span>iPhone-13</span><span class="mono">1.4 GB</span><span class="mono">210 MB</span><span class="mono">{{ _('2 ساعة 40 د') }}</span></div>
         </div>
-        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> الجدول الحقيقي أعرض (14 عمودًا) — مرّر أفقيًا على الشاشات الضيقة.</div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> {{ _('الجدول الحقيقي أعرض (14 عمودًا) — مرّر أفقيًا على الشاشات الضيقة.') }}</div>
 
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>نصيحة تحقيق:</b> عمودا MAC والجهاز هما دليلك في الخلافات — تشوف بالضبط
+          <span><b>{{ _('نصيحة تحقيق:') }}</b> عمودا MAC والجهاز هما دليلك في الخلافات — تشوف بالضبط
           أي جهاز اتصل بأي وقت وكم استهلك. سجل لا يقبل الجدل أمام الزبون.</span>
         </div>
       </div>
@@ -491,52 +491,52 @@
     <section class="dg-step" id="dg-s6">
       <div class="dg-badge">6</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-bolt"></i> «إجراءات ذكية» — كل زر شو بيعمل بالضبط</h2>
+        <h2><i class="fa-solid fa-bolt"></i> {{ _('«إجراءات ذكية» — كل زر شو بيعمل بالضبط') }}</h2>
         <p>
-          آخر قسم وأقواه: شبكة أزرار <strong>«تحكّم كامل في بطاقة العميل»</strong>.
+          {{ _('آخر قسم وأقواه: شبكة أزرار') }} <strong>{{ _('«تحكّم كامل في بطاقة العميل»') }}</strong>.
           كل زر يفتح نافذة تأكيد أنيقة قبل التنفيذ — ما في شيء يصير بضغطة عفوية:
         </p>
         <ul>
-          <li><strong>قطع الجلسة:</strong> يعرض لك قائمة الأجهزة المتصلة الآن — تختار جهازًا
+          <li><strong>{{ _('قطع الجلسة:') }}</strong> يعرض لك قائمة الأجهزة المتصلة الآن — تختار جهازًا
             واحدًا أو الكل (أزرار «تحديد الكل / إلغاء التحديد») ويرسل أمر قطع للمايكروتيك.
             الأجهزة غير المختارة تبقى متصلة.</li>
-          <li><strong>إعادة الاستخدام:</strong> يصفّر الوقت المستهلَك — عدّاد البطاقة يبدأ
+          <li><strong>{{ _('إعادة الاستخدام:') }}</strong> يصفّر الوقت المستهلَك — عدّاد البطاقة يبدأ
             من جديد عند أول اتصال. مفيد كتعويض لزبون أو لإعادة بيع كرت تجريبي.</li>
-          <li><strong>قفل MAC:</strong> يثبّت البطاقة على جهاز محدد. النافذة تعرض الماكات
+          <li><strong>{{ _('قفل MAC:') }}</strong> يثبّت البطاقة على جهاز محدد. النافذة تعرض الماكات
             اللي استخدمت الكرت سابقًا (مع اسم كل جهاز) — اختر منها أو الصق MAC يدويًا
             (يقبل أكثر من عنوان مفصولًا بفواصل). بعد القفل: أي جهاز غريب ينرفض، والجلسات
             غير المطابقة تُقطع فورًا. إذا الكرت مقفول أصلًا يصير الزر
-            <strong>«إدارة قفل MAC»</strong>: تعديل القائمة أو فك القفل تمامًا.</li>
-          <li><strong>تغيير الوقت:</strong> إضافة أو خصم وقت <strong>لهذه البطاقة فقط</strong> —
+            <strong>{{ _('«إدارة قفل MAC»') }}</strong>{{ _(': تعديل القائمة أو فك القفل تمامًا.') }}</li>
+          <li><strong>{{ _('تغيير الوقت:') }}</strong> {{ _('إضافة أو خصم وقت') }} <strong>{{ _('لهذه البطاقة فقط') }}</strong> —
             تختار العملية (إضافة/خصم)، الوحدة (دقائق/ساعات/أيام)، والمقدار. التحديث يوصل
             للمايكروتيك فورًا إن كانت الجلسة نشطة (CoA)، وإلا يُطبَّق بالجلسة التالية.</li>
-          <li><strong>تغيير السرعة:</strong> سرعة تنزيل/رفع مخصصة بالـ kbps لهذه البطاقة
+          <li><strong>{{ _('تغيير السرعة:') }}</strong> سرعة تنزيل/رفع مخصصة بالـ kbps لهذه البطاقة
             تتجاوز سرعة الحزمة — والقيمة 0 و0 ترجّعها لسرعة الحزمة. تُطبَّق حيًّا بدون قطع الجلسة.</li>
-          <li><strong>تعطيل البطاقة:</strong> إيقاف مؤقت <strong>يجمّد الوقت المتبقي</strong> —
-            لا ينقص أثناء التعطيل ويرجع كاملًا عند الضغط على <strong>«إعادة التفعيل»</strong>.
+          <li><strong>{{ _('تعطيل البطاقة:') }}</strong> {{ _('إيقاف مؤقت') }} <strong>{{ _('يجمّد الوقت المتبقي') }}</strong> —
+            لا ينقص أثناء التعطيل ويرجع كاملًا عند الضغط على <strong>{{ _('«إعادة التفعيل»') }}</strong>.
             التعطيل يقطع كل الجلسات النشطة فورًا. (تقدر تكتب سبب التعطيل — اختياري.)</li>
-          <li><strong>نقل للمحذوفات:</strong> الحذف الافتراضي <strong>آمن</strong> — البطاقة
+          <li><strong>{{ _('نقل للمحذوفات:') }}</strong> {{ _('الحذف الافتراضي') }} <strong>{{ _('آمن') }}</strong> — البطاقة
             تروح لسلة المحذوفات وتقدر تستعيدها من شاشة سلة المحذوفات متى شئت.</li>
         </ul>
 
         <div class="dg-mock" aria-hidden="true">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">فحص بطاقة › إجراءات ذكية</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('فحص بطاقة › إجراءات ذكية') }}</span></div>
           <div class="dg-mock-body">
             <div class="dg-actions">
-              <div class="dg-action"><span class="ic amber"><i class="fa-solid fa-plug-circle-xmark"></i></span><span><span class="t">قطع الجلسة</span><div class="s">1 جهاز متّصل الآن</div></span></div>
-              <div class="dg-action"><span class="ic cyan"><i class="fa-solid fa-rotate-right"></i></span><span><span class="t">إعادة الاستخدام</span><div class="s">احتساب الوقت من الصفر</div></span></div>
-              <div class="dg-action"><span class="ic purple"><i class="fa-solid fa-lock"></i></span><span><span class="t">قفل MAC</span><div class="s">تثبيت على عنوان واحد</div></span></div>
-              <div class="dg-action"><span class="ic amber"><i class="fa-solid fa-clock-rotate-left"></i></span><span><span class="t">تغيير الوقت</span><div class="s">للبطاقة فقط</div></span></div>
-              <div class="dg-action"><span class="ic teal"><i class="fa-solid fa-gauge-high"></i></span><span><span class="t">تغيير السرعة</span><div class="s">للبطاقة فقط</div></span></div>
-              <div class="dg-action"><span class="ic blue"><i class="fa-solid fa-pause"></i></span><span><span class="t">تعطيل البطاقة</span><div class="s">يجمّد الوقت المتبقي</div></span></div>
-              <div class="dg-action danger"><span class="ic red"><i class="fa-solid fa-trash"></i></span><span><span class="t">نقل للمحذوفات</span><div class="s">يمكن الاستعادة</div></span></div>
+              <div class="dg-action"><span class="ic amber"><i class="fa-solid fa-plug-circle-xmark"></i></span><span><span class="t">{{ _('قطع الجلسة') }}</span><div class="s">{{ _('1 جهاز متّصل الآن') }}</div></span></div>
+              <div class="dg-action"><span class="ic cyan"><i class="fa-solid fa-rotate-right"></i></span><span><span class="t">{{ _('إعادة الاستخدام') }}</span><div class="s">{{ _('احتساب الوقت من الصفر') }}</div></span></div>
+              <div class="dg-action"><span class="ic purple"><i class="fa-solid fa-lock"></i></span><span><span class="t">{{ _('قفل MAC') }}</span><div class="s">{{ _('تثبيت على عنوان واحد') }}</div></span></div>
+              <div class="dg-action"><span class="ic amber"><i class="fa-solid fa-clock-rotate-left"></i></span><span><span class="t">{{ _('تغيير الوقت') }}</span><div class="s">{{ _('للبطاقة فقط') }}</div></span></div>
+              <div class="dg-action"><span class="ic teal"><i class="fa-solid fa-gauge-high"></i></span><span><span class="t">{{ _('تغيير السرعة') }}</span><div class="s">{{ _('للبطاقة فقط') }}</div></span></div>
+              <div class="dg-action"><span class="ic blue"><i class="fa-solid fa-pause"></i></span><span><span class="t">{{ _('تعطيل البطاقة') }}</span><div class="s">{{ _('يجمّد الوقت المتبقي') }}</div></span></div>
+              <div class="dg-action danger"><span class="ic red"><i class="fa-solid fa-trash"></i></span><span><span class="t">{{ _('نقل للمحذوفات') }}</span><div class="s">{{ _('يمكن الاستعادة') }}</div></span></div>
             </div>
           </div>
         </div>
 
         <div class="dg-warn">
           <span class="ic">⚠️</span>
-          <span><b>انتبه:</b> بعد «تغيير الوقت» أو «تغيير السرعة» اقرأ الرسالة الخضراء:
+          <span><b>{{ _('انتبه:') }}</b> بعد «تغيير الوقت» أو «تغيير السرعة» اقرأ الرسالة الخضراء:
           إذا فيها «وصل التحديث للـ MikroTik (CoA-ACK)» فالتغيير طُبّق على الجلسة الحية
           فورًا — وإذا «لا جلسة نشطة الآن» فالتغيير محفوظ ويُطبَّق مع الاتصال التالي.</span>
         </div>
@@ -547,24 +547,24 @@
     <section class="dg-step" id="dg-s7">
       <div class="dg-badge">7</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-bolt"></i> الوضع «بسيط» — للفحص السريع على الكاشير</h2>
+        <h2><i class="fa-solid fa-bolt"></i> {{ _('الوضع «بسيط» — للفحص السريع على الكاشير') }}</h2>
         <p>
-          اضغط <strong>«بسيط»</strong> في مفتاح أعلى الصفحة وتتحول الشاشة لعرض مختصر:
+          {{ _('اضغط') }} <strong>{{ _('«بسيط»') }}</strong> في مفتاح أعلى الصفحة وتتحول الشاشة لعرض مختصر:
           الكرت البنفسجي + أربع بلاطات فقط (<strong>الجلسات، الأجهزة المتّصلة، الوقت المتبقّي،
-          الاستهلاك</strong>) + قسما «آخر نشاط» و«الجهاز الحالي» + أربعة أزرار
-          <strong>«إجراءات سريعة»</strong>:
+          الاستهلاك</strong>{{ _(') + قسما «آخر نشاط» و«الجهاز الحالي» + أربعة أزرار') }}
+          <strong>{{ _('«إجراءات سريعة»') }}</strong>:
         </p>
         <ul>
-          <li><strong>تحديث:</strong> يعيد فحص البطاقة بأحدث البيانات.</li>
-          <li><strong>إعادة ضبط:</strong> نفس «إعادة الاستخدام» — تصفير الوقت المستهلَك.</li>
-          <li><strong>فصل الجلسة:</strong> نفس منتقي الأجهزة في الوضع المتقدّم — تختار مين تقطع.</li>
-          <li><strong>نقل للمحذوفات:</strong> الحذف الآمن نفسه.</li>
+          <li><strong>{{ _('تحديث:') }}</strong> {{ _('يعيد فحص البطاقة بأحدث البيانات.') }}</li>
+          <li><strong>{{ _('إعادة ضبط:') }}</strong> {{ _('نفس «إعادة الاستخدام» — تصفير الوقت المستهلَك.') }}</li>
+          <li><strong>{{ _('فصل الجلسة:') }}</strong> {{ _('نفس منتقي الأجهزة في الوضع المتقدّم — تختار مين تقطع.') }}</li>
+          <li><strong>{{ _('نقل للمحذوفات:') }}</strong> {{ _('الحذف الآمن نفسه.') }}</li>
         </ul>
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>متى أيهما؟</b> الوضع البسيط ممتاز لنقطة البيع: «الكرت شغال؟ كم باقي؟» —
+          <span><b>{{ _('متى أيهما؟') }}</b> الوضع البسيط ممتاز لنقطة البيع: «الكرت شغال؟ كم باقي؟» —
           جواب بثانيتين. أما التحقيق في مشكلة (مين سرق الكرت؟ ليش خلص؟) فافتح
-          <b>المتقدّم</b> وانزل لجدول الجلسات والإجراءات الذكية.</span>
+          <b>{{ _('المتقدّم') }}</b> {{ _('وانزل لجدول الجلسات والإجراءات الذكية.') }}</span>
         </div>
       </div>
     </section>

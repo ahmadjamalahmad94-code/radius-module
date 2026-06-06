@@ -149,30 +149,30 @@
   {% call hub.section("إجراءات سريعة", icon="bolt") %}
     <div class="hub-grid hub-grid--2">
       <div class="hub-field">
-        <label>شحن المحفظة يدوياً</label>
-        <div class="hub-field-hint">يُضاف المبلغ مباشرة لرصيد المحفظة (شحن إداري — ليس من بطاقة).</div>
+        <label>{{ _('شحن المحفظة يدوياً') }}</label>
+        <div class="hub-field-hint">{{ _('يُضاف المبلغ مباشرة لرصيد المحفظة (شحن إداري — ليس من بطاقة).') }}</div>
         <form method="post" action="{{ url_for('radius.card_user_recharge', card_user_id=user.id) }}">
           {{ csrf_token_input() | safe }}
           <div class="u360-action-row" style="margin-top:8px">
             <input class="hub-input" name="amount" type="number" step="0.01" min="0.01" required
                    placeholder="0.00" inputmode="decimal">
             <button type="submit" class="hub-btn hub-btn--primary">
-              <i class="fa-solid fa-plus" aria-hidden="true"></i> شحن
+              <i class="fa-solid fa-plus" aria-hidden="true"></i> {{ _('شحن') }}
             </button>
           </div>
         </form>
       </div>
 
       <div class="hub-field">
-        <label>تعيين كلمة مرور البوابة</label>
-        <div class="hub-field-hint">يستعملها العميل للدخول إلى <code>/portal/card</code> وشحن محفظته.</div>
+        <label>{{ _('تعيين كلمة مرور البوابة') }}</label>
+        <div class="hub-field-hint">{{ _('يستعملها العميل للدخول إلى') }} <code>/portal/card</code> {{ _('وشحن محفظته.') }}</div>
         <form method="post" action="{{ url_for('radius.card_user_password', card_user_id=user.id) }}">
           {{ csrf_token_input() | safe }}
           <div class="u360-action-row" style="margin-top:8px">
             <input class="hub-input" name="password" type="text" minlength="4" maxlength="64" required
-                   placeholder="كلمة مرور جديدة (4 أحرف على الأقل)" autocomplete="off">
+                   placeholder="{{ _('كلمة مرور جديدة (4 أحرف على الأقل)') }}" autocomplete="off">
             <button type="submit" class="hub-btn hub-btn--secondary">
-              <i class="fa-solid fa-rotate" aria-hidden="true"></i> حفظ
+              <i class="fa-solid fa-rotate" aria-hidden="true"></i> {{ _('حفظ') }}
             </button>
           </div>
         </form>
@@ -223,12 +223,12 @@
       <div class="u360-pack-actions">
         <div class="info">
           <i class="fa-solid fa-wallet" style="color:var(--hub-brand-ink)" aria-hidden="true"></i>
-          رصيد المحفظة: <strong>{{ balance|money }}</strong>
+          {{ _('رصيد المحفظة:') }} <strong>{{ balance|money }}</strong>
           <span id="u360-purchase-summary" style="margin-inline-start:12px"></span>
         </div>
         <button type="submit" class="hub-btn hub-btn--primary" id="u360-purchase-submit" disabled>
           <i class="fa-solid fa-cart-shopping" aria-hidden="true"></i>
-          شراء البطاقة
+          {{ _('شراء البطاقة') }}
         </button>
       </div>
     </form>
@@ -255,12 +255,12 @@
         <thead>
           <tr>
             <th class="num" style="width:50px">#</th>
-            <th>الرمز</th>
-            <th>الباقة</th>
-            <th class="num">المبلغ</th>
-            <th>الحالة</th>
-            <th>تاريخ الشراء</th>
-            <th>أول استخدام</th>
+            <th>{{ _('الرمز') }}</th>
+            <th>{{ _('الباقة') }}</th>
+            <th class="num">{{ _('المبلغ') }}</th>
+            <th>{{ _('الحالة') }}</th>
+            <th>{{ _('تاريخ الشراء') }}</th>
+            <th>{{ _('أول استخدام') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -279,11 +279,11 @@
             </td>
             <td>
               {% if c.revoked %}
-                <span class="u360-status u360-status--revoked">ملغاة</span>
+                <span class="u360-status u360-status--revoked">{{ _('ملغاة') }}</span>
               {% elif c.used %}
-                <span class="u360-status u360-status--used">مستخدمة</span>
+                <span class="u360-status u360-status--used">{{ _('مستخدمة') }}</span>
               {% else %}
-                <span class="u360-status u360-status--fresh">جاهزة</span>
+                <span class="u360-status u360-status--fresh">{{ _('جاهزة') }}</span>
               {% endif %}
             </td>
             <td class="small mono hub-text-mute">{{ c.created_at|date_local if c.created_at else '—' }}</td>
@@ -314,10 +314,10 @@
         <thead>
           <tr>
             <th class="num" style="width:50px">#</th>
-            <th>النوع</th>
-            <th>الوصف</th>
-            <th class="num">المبلغ</th>
-            <th>التاريخ</th>
+            <th>{{ _('النوع') }}</th>
+            <th>{{ _('الوصف') }}</th>
+            <th class="num">{{ _('المبلغ') }}</th>
+            <th>{{ _('التاريخ') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -337,7 +337,7 @@
               <td class="num mono">{{ loop.index }}</td>
               <td>
                 <span class="u360-tl-type u360-tl-type--purchase">
-                  <i class="fa-solid fa-cart-shopping"></i> شراء
+                  <i class="fa-solid fa-cart-shopping"></i> {{ _('شراء') }}
                 </span>
               </td>
               <td>شراء «{{ row.package_name }}» — <small class="hub-text-mute">{{ status_ar2 }}</small></td>
@@ -398,7 +398,7 @@
               <td>
                 {% if ekey %}<strong>{{ ekey|replace('_', ' ')|replace('.', ' ') }}</strong>{% endif %}
                 {% if msg %}{% if ekey %} — {% endif %}<small class="hub-text-mute">{{ msg }}</small>
-                {% elif not ekey %}<small class="hub-text-mute">حدث بلا تفاصيل</small>{% endif %}
+                {% elif not ekey %}<small class="hub-text-mute">{{ _('حدث بلا تفاصيل') }}</small>{% endif %}
               </td>
               <td class="num"><span class="hub-text-mute">—</span></td>
               <td class="small mono hub-text-mute">{{ when }}</td>

@@ -21,7 +21,7 @@
 <div class="npc-banner" role="status" aria-live="polite">
   <span class="npc-banner-ic"><i class="fa-solid fa-vial-virus"></i></span>
   <div class="npc-banner-text">
-    <strong>معاينة فقط بدون تنفيذ</strong>
+    <strong>{{ _('معاينة فقط بدون تنفيذ') }}</strong>
     <span>لم يتم التطبيق على الراوتر — لا قواعد حقيقية تُكتب من هذه
       الصفحات؛ التطبيق المباشر يتطلب صلاحية تطبيق منفصلة.</span>
   </div>
@@ -29,7 +29,7 @@
 {% endmacro %}
 
 {% macro npc_tabs(active_slug, services) %}
-<nav class="npc-tabs" aria-label="فرعيّات سياسات الشبكة">
+<nav class="npc-tabs" aria-label="{{ _('فرعيّات سياسات الشبكة') }}">
   {% for s in services %}
     <a class="npc-tab{% if s.url_slug == active_slug %} is-active{% endif %}"
        href="{{ url_for('radius.npc_' ~ s.key ~ '_list') }}">
@@ -43,25 +43,25 @@
 {# شارات الخطر/الحالة — تُصاغ بفئات hub-pill الموحّدة (لا CSS خاصّ). #}
 {% macro npc_risk_pill(risk) %}
   {%- if risk == 'high' -%}
-    <span class="hub-pill hub-pill--red"><i class="fa-solid fa-triangle-exclamation"></i> مرتفع</span>
+    <span class="hub-pill hub-pill--red"><i class="fa-solid fa-triangle-exclamation"></i> {{ _('مرتفع') }}</span>
   {%- elif risk == 'medium' -%}
-    <span class="hub-pill hub-pill--amber"><i class="fa-solid fa-circle-exclamation"></i> متوسط</span>
+    <span class="hub-pill hub-pill--amber"><i class="fa-solid fa-circle-exclamation"></i> {{ _('متوسط') }}</span>
   {%- else -%}
-    <span class="hub-pill hub-pill--green"><i class="fa-solid fa-shield"></i> منخفض</span>
+    <span class="hub-pill hub-pill--green"><i class="fa-solid fa-shield"></i> {{ _('منخفض') }}</span>
   {%- endif -%}
 {% endmacro %}
 
 {% macro npc_status_pill(status) %}
   {%- if status == 'previewed' -%}
-    <span class="hub-pill hub-pill--blue"><i class="fa-regular fa-circle-check"></i> تمت المعاينة</span>
+    <span class="hub-pill hub-pill--blue"><i class="fa-regular fa-circle-check"></i> {{ _('تمت المعاينة') }}</span>
   {%- elif status == 'applied' -%}
-    <span class="hub-pill hub-pill--green"><i class="fa-solid fa-circle-check"></i> مُطبَّق</span>
+    <span class="hub-pill hub-pill--green"><i class="fa-solid fa-circle-check"></i> {{ _('مُطبَّق') }}</span>
   {%- elif status == 'failed' -%}
-    <span class="hub-pill hub-pill--red"><i class="fa-solid fa-circle-xmark"></i> فشل</span>
+    <span class="hub-pill hub-pill--red"><i class="fa-solid fa-circle-xmark"></i> {{ _('فشل') }}</span>
   {%- elif status == 'disabled' -%}
-    <span class="hub-pill hub-pill--grey"><i class="fa-regular fa-circle-pause"></i> مُعطَّلة</span>
+    <span class="hub-pill hub-pill--grey"><i class="fa-regular fa-circle-pause"></i> {{ _('مُعطَّلة') }}</span>
   {%- else -%}
-    <span class="hub-pill hub-pill--grey"><i class="fa-regular fa-pen-to-square"></i> مسودّة</span>
+    <span class="hub-pill hub-pill--grey"><i class="fa-regular fa-pen-to-square"></i> {{ _('مسودّة') }}</span>
   {%- endif -%}
 {% endmacro %}
 

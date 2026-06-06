@@ -4,7 +4,7 @@
 {% block title %}أرشيف التقارير — Hobe Hub{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-box-archive"></i>{% endblock %}
 {% block page_title %}أرشيف التقارير{% endblock %}
-{% block page_sub %}<span class="sub">لقطات ثابتة مجمّدة لا تتأثر بأي حركة لاحقة</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('لقطات ثابتة مجمّدة لا تتأثر بأي حركة لاحقة') }}</span>{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
@@ -69,16 +69,16 @@
       <thead>
         <tr>
           <th class="num" style="width:64px">#</th>
-          <th>النوع</th>
-          <th>فترة الأرشفة</th>
-          <th>الفترة (من–إلى)
+          <th>{{ _('النوع') }}</th>
+          <th>{{ _('فترة الأرشفة') }}</th>
+          <th>{{ _('الفترة (من–إلى)') }}
             <span class="hub-hint" tabindex="0" data-hint="نطاق التواريخ الذي فُلترت به صفوف اللقطة المصدر وقت التجميد. اللقطات الأقدم من هذه الميزة تعرض «—»."><i class="fa-solid fa-info"></i></span>
           </th>
-          <th class="num">عدد الصفوف</th>
-          <th class="num">الإجمالي</th>
-          <th class="num">الإيرادات</th>
-          <th>أنشئت بواسطة</th>
-          <th>تاريخ الإنشاء</th>
+          <th class="num">{{ _('عدد الصفوف') }}</th>
+          <th class="num">{{ _('الإجمالي') }}</th>
+          <th class="num">{{ _('الإيرادات') }}</th>
+          <th>{{ _('أنشئت بواسطة') }}</th>
+          <th>{{ _('تاريخ الإنشاء') }}</th>
         </tr>
       </thead>
       <tbody>
@@ -133,39 +133,39 @@
     <form method="post" action="{{ url_for('radius.reports_archive_create') }}" data-testid="archive-create-form">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
       <div class="fcw-head">
-        <h3 id="fcw-archive-create-title"><i class="fa-solid fa-lock"></i> إنشاء لقطة أرشيف</h3>
-        <button type="button" class="fcw-x" data-fcw-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
+        <h3 id="fcw-archive-create-title"><i class="fa-solid fa-lock"></i> {{ _('إنشاء لقطة أرشيف') }}</h3>
+        <button type="button" class="fcw-x" data-fcw-close aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="fcw-body">
         <label class="hub-field">
-          <span class="hub-field-label">نوع الأرشفة</span>
+          <span class="hub-field-label">{{ _('نوع الأرشفة') }}</span>
           <select class="hub-input" name="archive_type">
-            <option value="yearly">سنوية — سنة كاملة</option>
-            <option value="monthly">شهرية — شهر كامل</option>
-            <option value="daily">يومية — يوم واحد</option>
+            <option value="yearly">{{ _('سنوية — سنة كاملة') }}</option>
+            <option value="monthly">{{ _('شهرية — شهر كامل') }}</option>
+            <option value="daily">{{ _('يومية — يوم واحد') }}</option>
           </select>
-          <span class="hub-field-hint">يحدّد نطاق الفترة التي ستُفلتر بها صفوف اللقطة.</span>
+          <span class="hub-field-hint">{{ _('يحدّد نطاق الفترة التي ستُفلتر بها صفوف اللقطة.') }}</span>
         </label>
         <label class="hub-field">
-          <span class="hub-field-label">الفترة</span>
-          <input class="hub-input" name="period" placeholder="2026 أو 2026-05 أو 2026-05-25" dir="ltr">
-          <span class="hub-field-hint">الصيغة: 2026 للسنة، 2026-05 للشهر، 2026-05-25 لليوم. اتركها فارغة للفترة الحالية.</span>
+          <span class="hub-field-label">{{ _('الفترة') }}</span>
+          <input class="hub-input" name="period" placeholder="{{ _('2026 أو 2026-05 أو 2026-05-25') }}" dir="ltr">
+          <span class="hub-field-hint">{{ _('الصيغة: 2026 للسنة، 2026-05 للشهر، 2026-05-25 لليوم. اتركها فارغة للفترة الحالية.') }}</span>
         </label>
         <label class="hub-field">
-          <span class="hub-field-label">نوع التقرير</span>
-          <select class="hub-input" name="report_type" aria-label="نوع التقرير">
-            <option value="financial">مالي</option>
+          <span class="hub-field-label">{{ _('نوع التقرير') }}</span>
+          <select class="hub-input" name="report_type" aria-label="{{ _('نوع التقرير') }}">
+            <option value="financial">{{ _('مالي') }}</option>
           </select>
-          <span class="hub-field-hint">حاليًا التقرير المالي فقط قابل للأرشفة.</span>
+          <span class="hub-field-hint">{{ _('حاليًا التقرير المالي فقط قابل للأرشفة.') }}</span>
         </label>
         <div class="hub-text-soft" style="font-size:12px;line-height:1.8">
           <i class="fa-solid fa-circle-info" style="color:var(--hub-brand-ink)"></i>
-          إنشاء لقطة لفترة موجودة مسبقًا لا يستبدلها — تبقى النسخة الأصلية كما هي.
+          {{ _('إنشاء لقطة لفترة موجودة مسبقًا لا يستبدلها — تبقى النسخة الأصلية كما هي.') }}
         </div>
       </div>
       <div class="fcw-foot">
-        <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>إغلاق</button>
-        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-lock"></i> إنشاء اللقطة</button>
+        <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>{{ _('إغلاق') }}</button>
+        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-lock"></i> {{ _('إنشاء اللقطة') }}</button>
       </div>
     </form>
   </div>

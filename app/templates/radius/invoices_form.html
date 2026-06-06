@@ -46,88 +46,88 @@
     <div class="hub-form-row">
 
       <div class="hub-field" style="grid-column:1/-1">
-        <label class="hub-field-label" for="hub-f-subscriber_id">المشترك <span class="req">*</span></label>
+        <label class="hub-field-label" for="hub-f-subscriber_id">{{ _('المشترك') }} <span class="req">*</span></label>
         <select class="hub-select" id="hub-f-subscriber_id" name="subscriber_id" required
-                data-search-placeholder="ابحث بالاسم أو اليوزر...">
-          <option value="">— اختر —</option>
+                data-search-placeholder="{{ _('ابحث بالاسم أو اليوزر...') }}">
+          <option value="">{{ _('— اختر —') }}</option>
           {% for s in subs %}
             <option value="{{ s.id }}">{{ s.username }} — {{ s.full_name or '—' }}</option>
           {% endfor %}
         </select>
-        <div class="hub-field-hint">صاحب الفاتورة — تُسجَّل في كشف حسابه وتؤثر في رصيده.</div>
+        <div class="hub-field-hint">{{ _('صاحب الفاتورة — تُسجَّل في كشف حسابه وتؤثر في رصيده.') }}</div>
       </div>
 
       <div class="hub-field">
-        <label class="hub-field-label" for="hub-f-plan_id">الباقة</label>
+        <label class="hub-field-label" for="hub-f-plan_id">{{ _('الباقة') }}</label>
         <select class="hub-select" id="hub-f-plan_id" name="plan_id">
-          <option value="">— بدون —</option>
+          <option value="">{{ _('— بدون —') }}</option>
           {% for p in plans %}
             <option value="{{ p.id }}">{{ p.name }} ({{ p.price|money }})</option>
           {% endfor %}
         </select>
-        <div class="hub-field-hint">اختياري — لربط الفاتورة بباقة محدّدة لأغراض التقارير.</div>
+        <div class="hub-field-hint">{{ _('اختياري — لربط الفاتورة بباقة محدّدة لأغراض التقارير.') }}</div>
       </div>
 
       <div class="hub-field">
-        <label class="hub-field-label" for="hub-f-amount">المبلغ <span class="req">*</span></label>
+        <label class="hub-field-label" for="hub-f-amount">{{ _('المبلغ') }} <span class="req">*</span></label>
         <input class="hub-input" type="number" id="hub-f-amount" name="amount" step="0.01" min="0" required value="0">
-        <div class="hub-field-hint">قيمة الفاتورة بالشيكل ₪ — يُحتسب على رصيد المشترك.</div>
+        <div class="hub-field-hint">{{ _('قيمة الفاتورة بالشيكل ₪ — يُحتسب على رصيد المشترك.') }}</div>
       </div>
 
       <div class="hub-field">
-        <label class="hub-field-label" for="hub-f-direction">الاتجاه</label>
+        <label class="hub-field-label" for="hub-f-direction">{{ _('الاتجاه') }}</label>
         <select class="hub-select" id="hub-f-direction" name="direction">
-          <option value="charge">تحصيل</option>
-          <option value="refund">إرجاع</option>
-          <option value="deposit">إيداع</option>
-          <option value="withdraw">سحب</option>
-          <option value="credit">رصيد</option>
+          <option value="charge">{{ _('تحصيل') }}</option>
+          <option value="refund">{{ _('إرجاع') }}</option>
+          <option value="deposit">{{ _('إيداع') }}</option>
+          <option value="withdraw">{{ _('سحب') }}</option>
+          <option value="credit">{{ _('رصيد') }}</option>
         </select>
-        <div class="hub-field-hint">يحدّد أثر الحركة: تحصيل/سحب يخصم، إيداع/رصيد يضيف.</div>
+        <div class="hub-field-hint">{{ _('يحدّد أثر الحركة: تحصيل/سحب يخصم، إيداع/رصيد يضيف.') }}</div>
       </div>
 
       <div class="hub-field">
-        <label class="hub-field-label" for="hub-f-service_type">نوع الخدمة</label>
+        <label class="hub-field-label" for="hub-f-service_type">{{ _('نوع الخدمة') }}</label>
         <select class="hub-select" id="hub-f-service_type" name="service_type">
-          <option value="Hotspot">بوابة الدخول</option>
-          <option value="PPPoE">برودباند</option>
-          <option value="Balance">الرصيد</option>
+          <option value="Hotspot">{{ _('بوابة الدخول') }}</option>
+          <option value="PPPoE">{{ _('برودباند') }}</option>
+          <option value="Balance">{{ _('الرصيد') }}</option>
         </select>
-        <div class="hub-field-hint">نوع الخدمة المرتبطة بالفاتورة لتصنيفها في التقارير.</div>
+        <div class="hub-field-hint">{{ _('نوع الخدمة المرتبطة بالفاتورة لتصنيفها في التقارير.') }}</div>
       </div>
 
       <div class="hub-field">
-        <label class="hub-field-label" for="hub-f-payment_method">طريقة الدفع</label>
+        <label class="hub-field-label" for="hub-f-payment_method">{{ _('طريقة الدفع') }}</label>
         <select class="hub-select" id="hub-f-payment_method" name="payment_method">
-          <option value="cash">نقدًا</option>
-          <option value="transfer">حوالة</option>
-          <option value="card">بطاقة</option>
-          <option value="online">دفع إلكتروني</option>
-          <option value="manual">يدوي</option>
+          <option value="cash">{{ _('نقدًا') }}</option>
+          <option value="transfer">{{ _('حوالة') }}</option>
+          <option value="card">{{ _('بطاقة') }}</option>
+          <option value="online">{{ _('دفع إلكتروني') }}</option>
+          <option value="manual">{{ _('يدوي') }}</option>
         </select>
-        <div class="hub-field-hint">الوسيلة التي حُصِّل بها المبلغ — توثّق في سجلّ الدفع.</div>
+        <div class="hub-field-hint">{{ _('الوسيلة التي حُصِّل بها المبلغ — توثّق في سجلّ الدفع.') }}</div>
       </div>
 
       <div class="hub-field">
-        <label class="hub-field-label" for="hub-f-status">الحالة</label>
+        <label class="hub-field-label" for="hub-f-status">{{ _('الحالة') }}</label>
         <select class="hub-select" id="hub-f-status" name="status">
-          <option value="paid">مدفوعة</option>
-          <option value="pending">معلَّقة</option>
-          <option value="failed">فشلت</option>
+          <option value="paid">{{ _('مدفوعة') }}</option>
+          <option value="pending">{{ _('معلَّقة') }}</option>
+          <option value="failed">{{ _('فشلت') }}</option>
         </select>
-        <div class="hub-field-hint">«مدفوعة» تعتمد الحركة فورًا؛ «معلَّقة» تنتظر التحصيل.</div>
+        <div class="hub-field-hint">{{ _('«مدفوعة» تعتمد الحركة فورًا؛ «معلَّقة» تنتظر التحصيل.') }}</div>
       </div>
 
       <div class="hub-field">
-        <label class="hub-field-label" for="hub-f-expiration_at">تنتهي في</label>
+        <label class="hub-field-label" for="hub-f-expiration_at">{{ _('تنتهي في') }}</label>
         <input class="hub-input" type="date" id="hub-f-expiration_at" name="expiration_at">
-        <div class="hub-field-hint">اختياري — تاريخ انتهاء صلاحية الخدمة المرتبطة بالفاتورة.</div>
+        <div class="hub-field-hint">{{ _('اختياري — تاريخ انتهاء صلاحية الخدمة المرتبطة بالفاتورة.') }}</div>
       </div>
 
       <div class="hub-field" style="grid-column:1/-1">
-        <label class="hub-field-label" for="hub-f-note">ملاحظات</label>
-        <textarea class="hub-textarea" id="hub-f-note" name="note" rows="3" placeholder="ملاحظات إضافية..."></textarea>
-        <div class="hub-field-hint">تفاصيل داخلية تظهر مع الفاتورة — لا تُرسل للمشترك.</div>
+        <label class="hub-field-label" for="hub-f-note">{{ _('ملاحظات') }}</label>
+        <textarea class="hub-textarea" id="hub-f-note" name="note" rows="3" placeholder="{{ _('ملاحظات إضافية...') }}"></textarea>
+        <div class="hub-field-hint">{{ _('تفاصيل داخلية تظهر مع الفاتورة — لا تُرسل للمشترك.') }}</div>
       </div>
 
     </div>

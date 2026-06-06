@@ -350,16 +350,16 @@
 <div class="dg-layout">
 
   {# ───── الفهرس الجانبي اللاصق ───── #}
-  <nav class="dg-toc dg-noprint" aria-label="فهرس الدليل">
-    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> فهرس الأقسام</div>
-    <a href="#dg-s1" data-dg-toc><span class="n">1</span> شو هي الصفحة ووين ألاقيها</a>
-    <a href="#dg-s2" data-dg-toc><span class="n">2</span> شهري / سنوي واختيار الفترة</a>
-    <a href="#dg-s3" data-dg-toc><span class="n">3</span> الدخل والصرف وبطاقات الأرقام</a>
-    <a href="#dg-s4" data-dg-toc><span class="n">4</span> بلاطات حالة المشتركين</a>
-    <a href="#dg-s5" data-dg-toc><span class="n">5</span> الأداء حسب الفترة (الأعمدة)</a>
-    <a href="#dg-s6" data-dg-toc><span class="n">6</span> «شو ضل» — الديون</a>
-    <a href="#dg-s7" data-dg-toc><span class="n">7</span> جدولا المدينين والكوتة</a>
-    <a href="#dg-s8" data-dg-toc><span class="n">8</span> مهام عملية يومية</a>
+  <nav class="dg-toc dg-noprint" aria-label="{{ _('فهرس الدليل') }}">
+    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> {{ _('فهرس الأقسام') }}</div>
+    <a href="#dg-s1" data-dg-toc><span class="n">1</span> {{ _('شو هي الصفحة ووين ألاقيها') }}</a>
+    <a href="#dg-s2" data-dg-toc><span class="n">2</span> {{ _('شهري / سنوي واختيار الفترة') }}</a>
+    <a href="#dg-s3" data-dg-toc><span class="n">3</span> {{ _('الدخل والصرف وبطاقات الأرقام') }}</a>
+    <a href="#dg-s4" data-dg-toc><span class="n">4</span> {{ _('بلاطات حالة المشتركين') }}</a>
+    <a href="#dg-s5" data-dg-toc><span class="n">5</span> {{ _('الأداء حسب الفترة (الأعمدة)') }}</a>
+    <a href="#dg-s6" data-dg-toc><span class="n">6</span> {{ _('«شو ضل» — الديون') }}</a>
+    <a href="#dg-s7" data-dg-toc><span class="n">7</span> {{ _('جدولا المدينين والكوتة') }}</a>
+    <a href="#dg-s8" data-dg-toc><span class="n">8</span> {{ _('مهام عملية يومية') }}</a>
   </nav>
 
   {# ───── عمود المحتوى ───── #}
@@ -368,7 +368,7 @@
     <div class="dg-lead">
       <span class="ic"><i class="fa-solid fa-lightbulb"></i></span>
       <div>
-        <h3>قبل ما نبدأ — ليش هالصفحة مهمة؟</h3>
+        <h3>{{ _('قبل ما نبدأ — ليش هالصفحة مهمة؟') }}</h3>
         <p>
           «نظرة عامة — المشتركون» هي لوحة القيادة المالية والتشغيلية لمشتركيك: كم حصّلت منهم،
           كم أعطيتهم سلفًا، كم ضلّ عليهم، كم جيجا استهلكوا، ومين متصل الآن — كل هذا في شاشة
@@ -382,35 +382,35 @@
     <section class="dg-step" id="dg-s1">
       <div class="dg-badge">1</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-door-open"></i> شو هي الصفحة، ووين ألاقيها؟</h2>
+        <h2><i class="fa-solid fa-door-open"></i> {{ _('شو هي الصفحة، ووين ألاقيها؟') }}</h2>
         <p>
-          من القائمة الجانبية افتح قسم <strong>«المشتركون»</strong> ثم اضغط أول بند:
-          <strong>«نظرة عامة»</strong>. رح تفتح لك لوحة كاملة مقسومة من فوق لتحت إلى:
+          {{ _('من القائمة الجانبية افتح قسم') }} <strong>{{ _('«المشتركون»') }}</strong> {{ _('ثم اضغط أول بند:') }}
+          <strong>{{ _('«نظرة عامة»') }}</strong>{{ _('. رح تفتح لك لوحة كاملة مقسومة من فوق لتحت إلى:') }}
         </p>
         <ol>
-          <li><strong>الترويسة (الهيرو):</strong> العنوان + مفتاح شهري/سنوي + منتقي الفترة.</li>
-          <li><strong>سطرا الدخل والصرف:</strong> المُحصّل من المشتركين مقابل المصروف لهم (سلف).</li>
-          <li><strong>ست بطاقات أرقام (KPI):</strong> المُحصّل، السلف، التفعيل، الجيجات، الديون، المشتركون.</li>
-          <li><strong>بلاطات حالة المشتركين:</strong> الإجمالي، مفعّل، متصل الآن، منتهي، معطّل، موقوف.</li>
-          <li><strong>«الأداء حسب الفترة»:</strong> أربعة مسارات بأعمدة صغيرة لآخر 12 فترة.</li>
-          <li><strong>«شو ضل — الديون حتى اللحظة»:</strong> أربع بلاطات ملوّنة للمتبقّي.</li>
-          <li><strong>جدولان:</strong> «أكبر المدينين» و«الكوتة المخصّصة حسب الباقة».</li>
+          <li><strong>{{ _('الترويسة (الهيرو):') }}</strong> {{ _('العنوان + مفتاح شهري/سنوي + منتقي الفترة.') }}</li>
+          <li><strong>{{ _('سطرا الدخل والصرف:') }}</strong> {{ _('المُحصّل من المشتركين مقابل المصروف لهم (سلف).') }}</li>
+          <li><strong>{{ _('ست بطاقات أرقام (KPI):') }}</strong> {{ _('المُحصّل، السلف، التفعيل، الجيجات، الديون، المشتركون.') }}</li>
+          <li><strong>{{ _('بلاطات حالة المشتركين:') }}</strong> {{ _('الإجمالي، مفعّل، متصل الآن، منتهي، معطّل، موقوف.') }}</li>
+          <li><strong>{{ _('«الأداء حسب الفترة»:') }}</strong> {{ _('أربعة مسارات بأعمدة صغيرة لآخر 12 فترة.') }}</li>
+          <li><strong>{{ _('«شو ضل — الديون حتى اللحظة»:') }}</strong> {{ _('أربع بلاطات ملوّنة للمتبقّي.') }}</li>
+          <li><strong>{{ _('جدولان:') }}</strong> {{ _('«أكبر المدينين» و«الكوتة المخصّصة حسب الباقة».') }}</li>
         </ol>
 
         <div class="dg-sidemock" aria-hidden="true">
-          <div class="sec"><i class="fa-solid fa-users"></i> المشتركون <i class="fa-solid fa-chevron-down cv"></i></div>
-          <div class="sub on">نظرة عامة</div>
-          <div class="sub">المشتركين 360</div>
-          <div class="sub">إضافة مشترك</div>
-          <div class="sub">مجموعات المشتركين</div>
-          <div class="sub">المشتركون المتصلون</div>
+          <div class="sec"><i class="fa-solid fa-users"></i> {{ _('المشتركون') }} <i class="fa-solid fa-chevron-down cv"></i></div>
+          <div class="sub on">{{ _('نظرة عامة') }}</div>
+          <div class="sub">{{ _('المشتركين 360') }}</div>
+          <div class="sub">{{ _('إضافة مشترك') }}</div>
+          <div class="sub">{{ _('مجموعات المشتركين') }}</div>
+          <div class="sub">{{ _('المشتركون المتصلون') }}</div>
         </div>
-        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> أول بند تحت «المشتركون» — اضغط البند المظلّل بالبنفسجي.</div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> {{ _('أول بند تحت «المشتركون» — اضغط البند المظلّل بالبنفسجي.') }}</div>
 
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>نصيحة:</b> تحت العنوان مباشرة رح تشوف سطرًا صغيرًا مثل
-          <span class="dg-kbd">250 مشترك · 34 متصل الآن</span> — هذا أسرع نبض للشبكة بدون ما تنزل بالصفحة.</span>
+          <span><b>{{ _('نصيحة:') }}</b> {{ _('تحت العنوان مباشرة رح تشوف سطرًا صغيرًا مثل') }}
+          <span class="dg-kbd">{{ _('250 مشترك · 34 متصل الآن') }}</span> {{ _('— هذا أسرع نبض للشبكة بدون ما تنزل بالصفحة.') }}</span>
         </div>
       </div>
     </section>
@@ -419,45 +419,45 @@
     <section class="dg-step" id="dg-s2">
       <div class="dg-badge">2</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-calendar-days"></i> مفتاح «شهري / سنوي» ومنتقي الفترة — شو بيتغيّر لما تستخدمهم؟</h2>
+        <h2><i class="fa-solid fa-calendar-days"></i> {{ _('مفتاح «شهري / سنوي» ومنتقي الفترة — شو بيتغيّر لما تستخدمهم؟') }}</h2>
         <p>
-          أعلى يسار اللوحة في زرّان متجاوران: <strong>«شهري»</strong> و<strong>«سنوي»</strong>.
-          هذول مش فلتر شكلي — هما اللي يحددان <strong>طريقة تجميع كل الأرقام الزمنية</strong> في الصفحة:
+          {{ _('أعلى يسار اللوحة في زرّان متجاوران:') }} <strong>{{ _('«شهري»') }}</strong> {{ _('و') }}<strong>{{ _('«سنوي»') }}</strong>.
+          هذول مش فلتر شكلي — هما اللي يحددان <strong>{{ _('طريقة تجميع كل الأرقام الزمنية') }}</strong> {{ _('في الصفحة:') }}
         </p>
         <ul>
-          <li><strong>شهري:</strong> كل فترة = شهر واحد (مثل <span class="dg-kbd">2026-06</span>). أعمدة «الأداء حسب الفترة» تصير آخر 12 شهرًا.</li>
-          <li><strong>سنوي:</strong> كل فترة = سنة كاملة (مثل <span class="dg-kbd">2026</span>). الأعمدة تصير سنواتك المسجّلة.</li>
+          <li><strong>{{ _('شهري:') }}</strong> {{ _('كل فترة = شهر واحد (مثل') }} <span class="dg-kbd">2026-06</span>{{ _('). أعمدة «الأداء حسب الفترة» تصير آخر 12 شهرًا.') }}</li>
+          <li><strong>{{ _('سنوي:') }}</strong> {{ _('كل فترة = سنة كاملة (مثل') }} <span class="dg-kbd">2026</span>{{ _('). الأعمدة تصير سنواتك المسجّلة.') }}</li>
         </ul>
         <p>
-          وبجانب العنوان في شارة <strong>«الفترة المعروضة»</strong> وفيها <strong>قائمة منسدلة</strong>
-          بكل الفترات اللي عندك بيانات فيها. لما تختار فترة منها، الصفحة تعيد التحميل فورًا وتتغيّر:
+          {{ _('وبجانب العنوان في شارة') }} <strong>{{ _('«الفترة المعروضة»') }}</strong> {{ _('وفيها') }} <strong>{{ _('قائمة منسدلة') }}</strong>
+          {{ _('بكل الفترات اللي عندك بيانات فيها. لما تختار فترة منها، الصفحة تعيد التحميل فورًا وتتغيّر:') }}
         </p>
         <ul>
-          <li>أرقام سطرَي <strong>الدخل والصرف</strong> (المُحصّل والسلف) لتلك الفترة.</li>
-          <li>أرقام بطاقات <strong>المُحصّل، السلف، التفعيل، الجيجات</strong>.</li>
-          <li>القيمة الكبيرة المعروضة فوق كل مسار في «الأداء حسب الفترة».</li>
+          <li>{{ _('أرقام سطرَي') }} <strong>{{ _('الدخل والصرف') }}</strong> {{ _('(المُحصّل والسلف) لتلك الفترة.') }}</li>
+          <li>{{ _('أرقام بطاقات') }} <strong>{{ _('المُحصّل، السلف، التفعيل، الجيجات') }}</strong>.</li>
+          <li>{{ _('القيمة الكبيرة المعروضة فوق كل مسار في «الأداء حسب الفترة».') }}</li>
         </ul>
         <p>
-          أما <strong>الديون («شو ضل»)</strong> و<strong>بلاطات حالة المشتركين</strong>
-          و<strong>الكوتة</strong> فهي أرقام «حتى اللحظة» — <strong>لا تتأثر</strong> بالفترة المختارة
+          {{ _('أما') }} <strong>{{ _('الديون («شو ضل»)') }}</strong> {{ _('و') }}<strong>{{ _('بلاطات حالة المشتركين') }}</strong>
+          {{ _('و') }}<strong>{{ _('الكوتة') }}</strong> {{ _('فهي أرقام «حتى اللحظة» —') }} <strong>{{ _('لا تتأثر') }}</strong> بالفترة المختارة
           أبدًا، ومكتوب جنبها صراحةً «حتى اللحظة (غير مرتبط بالفترة)».
         </p>
 
         <div class="dg-mock" aria-hidden="true">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">نظرة عامة — المشتركون › الترويسة</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('نظرة عامة — المشتركون › الترويسة') }}</span></div>
           <div class="dg-mock-body">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
-              <span class="dg-period-pick"><i class="fa-solid fa-calendar"></i> الفترة المعروضة: 2026-06 <i class="fa-solid fa-chevron-down"></i></span>
-              <span class="dg-seg"><span class="on"><i class="fa-solid fa-calendar-days"></i> شهري</span><span>سنوي</span></span>
+              <span class="dg-period-pick"><i class="fa-solid fa-calendar"></i> {{ _('الفترة المعروضة: 2026-06') }} <i class="fa-solid fa-chevron-down"></i></span>
+              <span class="dg-seg"><span class="on"><i class="fa-solid fa-calendar-days"></i> {{ _('شهري') }}</span><span>{{ _('سنوي') }}</span></span>
             </div>
           </div>
         </div>
-        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> الزر البنفسجي هو الوضع الفعّال — والمنسدلة تنقلك لأي شهر سابق بضغطة.</div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> {{ _('الزر البنفسجي هو الوضع الفعّال — والمنسدلة تنقلك لأي شهر سابق بضغطة.') }}</div>
 
         <div class="dg-warn">
           <span class="ic">⚠️</span>
-          <span><b>انتبه:</b> لما تبدّل من شهري لسنوي، الفترة المختارة ترجع تلقائيًا
-          <b>لأحدث فترة</b> — إذا كنت تراجع شهرًا قديمًا وبدّلت الوضع، رجّع اختر الفترة من المنسدلة.</span>
+          <span><b>{{ _('انتبه:') }}</b> {{ _('لما تبدّل من شهري لسنوي، الفترة المختارة ترجع تلقائيًا') }}
+          <b>{{ _('لأحدث فترة') }}</b> {{ _('— إذا كنت تراجع شهرًا قديمًا وبدّلت الوضع، رجّع اختر الفترة من المنسدلة.') }}</span>
         </div>
       </div>
     </section>
@@ -466,80 +466,80 @@
     <section class="dg-step" id="dg-s3">
       <div class="dg-badge">3</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-coins"></i> سطرا الدخل والصرف + بطاقات الأرقام الست — شو يعني كل رقم؟</h2>
+        <h2><i class="fa-solid fa-coins"></i> {{ _('سطرا الدخل والصرف + بطاقات الأرقام الست — شو يعني كل رقم؟') }}</h2>
         <p>
-          أول سطرين ملوّنين تحت الترويسة هما خلاصة الفترة الماليّة من زاويتين متقابلتين:
+          {{ _('أول سطرين ملوّنين تحت الترويسة هما خلاصة الفترة الماليّة من زاويتين متقابلتين:') }}
         </p>
         <div class="dg-flow" aria-hidden="true">
           <div class="dg-flow-item in">
             <span class="ic"><i class="fa-solid fa-arrow-down-long"></i></span>
-            <span><span class="l">المُحصّل من المشتركين (دخل)</span><div class="v">12.5K</div></span>
+            <span><span class="l">{{ _('المُحصّل من المشتركين (دخل)') }}</span><div class="v">12.5K</div></span>
           </div>
           <div class="dg-flow-item out">
             <span class="ic"><i class="fa-solid fa-arrow-up-long"></i></span>
-            <span><span class="l">المصروف للمشتركين — سلف (صرف)</span><div class="v">1.8K</div></span>
+            <span><span class="l">{{ _('المصروف للمشتركين — سلف (صرف)') }}</span><div class="v">1.8K</div></span>
           </div>
         </div>
         <p style="margin-top:11px">
-          وتحتهما <strong>ست بطاقات أرقام</strong> — هذا معنى كل واحدة بالضبط، مع السطر الصغير تحت الرقم:
+          {{ _('وتحتهما') }} <strong>{{ _('ست بطاقات أرقام') }}</strong> {{ _('— هذا معنى كل واحدة بالضبط، مع السطر الصغير تحت الرقم:') }}
         </p>
         <table class="dg-ref">
-          <tr><th>البطاقة</th><th>شو يعني رقمها</th><th>السطر الصغير تحتها</th></tr>
+          <tr><th>{{ _('البطاقة') }}</th><th>{{ _('شو يعني رقمها') }}</th><th>{{ _('السطر الصغير تحتها') }}</th></tr>
           <tr>
-            <td>المُحصّل</td>
-            <td>مجموع المبالغ اللي دفعها المشتركون فعليًا خلال الفترة المختارة (تجديد، شحن، تسديد...).</td>
-            <td>عدد الدفعات — مثل «38 دفعة».</td>
+            <td>{{ _('المُحصّل') }}</td>
+            <td>{{ _('مجموع المبالغ اللي دفعها المشتركون فعليًا خلال الفترة المختارة (تجديد، شحن، تسديد...).') }}</td>
+            <td>{{ _('عدد الدفعات — مثل «38 دفعة».') }}</td>
           </tr>
           <tr>
-            <td>السلف</td>
-            <td>مجموع ما أعطيته للمشتركين «على الحساب» خلال الفترة — خدمة قبل الدفع.</td>
-            <td>عدد السلف + مجموع الوقت الممنوح بها (أيام/ساعات).</td>
+            <td>{{ _('السلف') }}</td>
+            <td>{{ _('مجموع ما أعطيته للمشتركين «على الحساب» خلال الفترة — خدمة قبل الدفع.') }}</td>
+            <td>{{ _('عدد السلف + مجموع الوقت الممنوح بها (أيام/ساعات).') }}</td>
           </tr>
           <tr>
-            <td>التفعيل</td>
-            <td>عدد عمليات التفعيل (دفعات منحت المشترك وقتًا/تجديدًا) خلال الفترة.</td>
-            <td>قيمة تلك التفعيلات + الوقت الممنوح.</td>
+            <td>{{ _('التفعيل') }}</td>
+            <td>{{ _('عدد عمليات التفعيل (دفعات منحت المشترك وقتًا/تجديدًا) خلال الفترة.') }}</td>
+            <td>{{ _('قيمة تلك التفعيلات + الوقت الممنوح.') }}</td>
           </tr>
           <tr>
-            <td>الجيجات</td>
-            <td>إجمالي الاستهلاك الفعلي (تنزيل + رفع) بالجيجابايت خلال الفترة.</td>
-            <td>عدد الجلسات اللي ولّدت هذا الاستهلاك.</td>
+            <td>{{ _('الجيجات') }}</td>
+            <td>{{ _('إجمالي الاستهلاك الفعلي (تنزيل + رفع) بالجيجابايت خلال الفترة.') }}</td>
+            <td>{{ _('عدد الجلسات اللي ولّدت هذا الاستهلاك.') }}</td>
           </tr>
           <tr>
-            <td>الديون</td>
-            <td>إجمالي المتبقّي على المشتركين <strong>حتى اللحظة</strong> (سلف مفتوحة + أرصدة سالبة) — لا يتبع الفترة.</td>
-            <td>«حتى اللحظة» — تذكير أنه رقم لحظي.</td>
+            <td>{{ _('الديون') }}</td>
+            <td>{{ _('إجمالي المتبقّي على المشتركين') }} <strong>{{ _('حتى اللحظة') }}</strong> {{ _('(سلف مفتوحة + أرصدة سالبة) — لا يتبع الفترة.') }}</td>
+            <td>{{ _('«حتى اللحظة» — تذكير أنه رقم لحظي.') }}</td>
           </tr>
           <tr>
-            <td>المشتركون</td>
-            <td>إجمالي عدد المشتركين المسجّلين عندك حاليًا.</td>
-            <td>كم واحد منهم متصل الآن.</td>
+            <td>{{ _('المشتركون') }}</td>
+            <td>{{ _('إجمالي عدد المشتركين المسجّلين عندك حاليًا.') }}</td>
+            <td>{{ _('كم واحد منهم متصل الآن.') }}</td>
           </tr>
         </table>
 
         <div class="dg-mock" aria-hidden="true">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">نظرة عامة — المشتركون › بطاقات الأرقام</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('نظرة عامة — المشتركون › بطاقات الأرقام') }}</span></div>
           <div class="dg-mock-body">
             <div class="dg-kpis">
-              <div class="dg-kpi brand"><span class="l"><i class="fa-solid fa-coins"></i> المُحصّل</span><span class="v">12.5K</span><span class="s">38 دفعة</span></div>
-              <div class="dg-kpi amber"><span class="l"><i class="fa-solid fa-hand-holding-dollar"></i> السلف</span><span class="v">1.8K</span><span class="s">7 سلف · 12 يوم</span></div>
-              <div class="dg-kpi blue"><span class="l"><i class="fa-solid fa-bolt"></i> التفعيل</span><span class="v">41</span><span class="s">11.9K · 30 يوم</span></div>
-              <div class="dg-kpi green"><span class="l"><i class="fa-solid fa-database"></i> الجيجات</span><span class="v">3,240 GB</span><span class="s">1,205 جلسة</span></div>
-              <div class="dg-kpi red"><span class="l"><i class="fa-solid fa-scale-unbalanced"></i> الديون</span><span class="v">2.3K</span><span class="s">حتى اللحظة</span></div>
-              <div class="dg-kpi brand"><span class="l"><i class="fa-solid fa-users"></i> المشتركون</span><span class="v">250</span><span class="s">34 متصل</span></div>
+              <div class="dg-kpi brand"><span class="l"><i class="fa-solid fa-coins"></i> {{ _('المُحصّل') }}</span><span class="v">12.5K</span><span class="s">{{ _('38 دفعة') }}</span></div>
+              <div class="dg-kpi amber"><span class="l"><i class="fa-solid fa-hand-holding-dollar"></i> {{ _('السلف') }}</span><span class="v">1.8K</span><span class="s">{{ _('7 سلف · 12 يوم') }}</span></div>
+              <div class="dg-kpi blue"><span class="l"><i class="fa-solid fa-bolt"></i> {{ _('التفعيل') }}</span><span class="v">41</span><span class="s">{{ _('11.9K · 30 يوم') }}</span></div>
+              <div class="dg-kpi green"><span class="l"><i class="fa-solid fa-database"></i> {{ _('الجيجات') }}</span><span class="v">3,240 GB</span><span class="s">{{ _('1,205 جلسة') }}</span></div>
+              <div class="dg-kpi red"><span class="l"><i class="fa-solid fa-scale-unbalanced"></i> {{ _('الديون') }}</span><span class="v">2.3K</span><span class="s">{{ _('حتى اللحظة') }}</span></div>
+              <div class="dg-kpi brand"><span class="l"><i class="fa-solid fa-users"></i> {{ _('المشتركون') }}</span><span class="v">250</span><span class="s">{{ _('34 متصل') }}</span></div>
             </div>
           </div>
         </div>
 
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>نصيحة لقراءة سريعة:</b> قارن السطرين الملوّنين ببعض —
+          <span><b>{{ _('نصيحة لقراءة سريعة:') }}</b> قارن السطرين الملوّنين ببعض —
           إذا «المصروف (سلف)» يقترب من «المُحصّل» فهذا إنذار مبكر: زبائنك ياخذون خدمة
           أكثر مما يدفعون، وآن وقت متابعة جدول «أكبر المدينين» تحت.</span>
         </div>
         <div class="dg-warn">
           <span class="ic">⚠️</span>
-          <span><b>انتبه:</b> الأرقام الكبيرة تُختصر — <span class="dg-kbd">12.5K</span> يعني 12,500.
+          <span><b>{{ _('انتبه:') }}</b> {{ _('الأرقام الكبيرة تُختصر —') }} <span class="dg-kbd">12.5K</span> يعني 12,500.
           مرّر الفأرة فوق أعمدة الرسوم لاحقًا لتشوف القيمة الدقيقة لكل فترة.</span>
         </div>
       </div>
@@ -549,38 +549,38 @@
     <section class="dg-step" id="dg-s4">
       <div class="dg-badge">4</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-table-cells"></i> بلاطات حالة المشتركين — التعداد اللحظي</h2>
+        <h2><i class="fa-solid fa-table-cells"></i> {{ _('بلاطات حالة المشتركين — التعداد اللحظي') }}</h2>
         <p>
-          آخر صف داخل الترويسة هو ست بلاطات صغيرة تقسم مشتركيك حسب حالتهم <strong>الآن</strong>
-          (لا يتبع الفترة المختارة):
+          {{ _('آخر صف داخل الترويسة هو ست بلاطات صغيرة تقسم مشتركيك حسب حالتهم') }} <strong>{{ _('الآن') }}</strong>
+          {{ _('(لا يتبع الفترة المختارة):') }}
         </p>
         <table class="dg-ref">
-          <tr><th>البلاطة</th><th>مين يدخل فيها</th></tr>
-          <tr><td>الإجمالي</td><td>كل المشتركين المسجّلين (غير المحذوفين) أيًا كانت حالتهم.</td></tr>
-          <tr><td>مفعّل</td><td>حسابات شغّالة — صاحبها يقدر يدخل على الإنترنت متى شاء.</td></tr>
-          <tr><td>متصل الآن</td><td>عندهم جلسة إنترنت مفتوحة في هذه اللحظة (يُحسب من سجلات الجلسات الحيّة).</td></tr>
-          <tr><td>منتهي</td><td>خلصت مدة اشتراكهم ولم يجدّدوا بعد — هؤلاء أهداف التحصيل الأولى.</td></tr>
-          <tr><td>معطّل</td><td>عطّلتهم يدويًا (أنت أو مدير آخر) — لا يستطيعون الدخول حتى تعيد تفعيلهم.</td></tr>
-          <tr><td>موقوف</td><td>موقوفون مؤقتًا (إجراء وسط بين المفعّل والمعطّل).</td></tr>
+          <tr><th>{{ _('البلاطة') }}</th><th>{{ _('مين يدخل فيها') }}</th></tr>
+          <tr><td>{{ _('الإجمالي') }}</td><td>{{ _('كل المشتركين المسجّلين (غير المحذوفين) أيًا كانت حالتهم.') }}</td></tr>
+          <tr><td>{{ _('مفعّل') }}</td><td>{{ _('حسابات شغّالة — صاحبها يقدر يدخل على الإنترنت متى شاء.') }}</td></tr>
+          <tr><td>{{ _('متصل الآن') }}</td><td>{{ _('عندهم جلسة إنترنت مفتوحة في هذه اللحظة (يُحسب من سجلات الجلسات الحيّة).') }}</td></tr>
+          <tr><td>{{ _('منتهي') }}</td><td>{{ _('خلصت مدة اشتراكهم ولم يجدّدوا بعد — هؤلاء أهداف التحصيل الأولى.') }}</td></tr>
+          <tr><td>{{ _('معطّل') }}</td><td>{{ _('عطّلتهم يدويًا (أنت أو مدير آخر) — لا يستطيعون الدخول حتى تعيد تفعيلهم.') }}</td></tr>
+          <tr><td>{{ _('موقوف') }}</td><td>{{ _('موقوفون مؤقتًا (إجراء وسط بين المفعّل والمعطّل).') }}</td></tr>
         </table>
 
         <div class="dg-mock" aria-hidden="true">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">نظرة عامة — المشتركون › حالة المشتركين</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('نظرة عامة — المشتركون › حالة المشتركين') }}</span></div>
           <div class="dg-mock-body">
             <div class="dg-tiles">
-              <div class="dg-tile brand"><i class="fa-solid fa-users"></i><div class="v">250</div><div class="l">الإجمالي</div></div>
-              <div class="dg-tile green"><i class="fa-solid fa-circle-check"></i><div class="v">198</div><div class="l">مفعّل</div></div>
-              <div class="dg-tile blue"><i class="fa-solid fa-wifi"></i><div class="v">34</div><div class="l">متصل الآن</div></div>
-              <div class="dg-tile amber"><i class="fa-solid fa-hourglass-end"></i><div class="v">37</div><div class="l">منتهي</div></div>
-              <div class="dg-tile red"><i class="fa-solid fa-ban"></i><div class="v">11</div><div class="l">معطّل</div></div>
-              <div class="dg-tile grey"><i class="fa-solid fa-circle-pause"></i><div class="v">4</div><div class="l">موقوف</div></div>
+              <div class="dg-tile brand"><i class="fa-solid fa-users"></i><div class="v">250</div><div class="l">{{ _('الإجمالي') }}</div></div>
+              <div class="dg-tile green"><i class="fa-solid fa-circle-check"></i><div class="v">198</div><div class="l">{{ _('مفعّل') }}</div></div>
+              <div class="dg-tile blue"><i class="fa-solid fa-wifi"></i><div class="v">34</div><div class="l">{{ _('متصل الآن') }}</div></div>
+              <div class="dg-tile amber"><i class="fa-solid fa-hourglass-end"></i><div class="v">37</div><div class="l">{{ _('منتهي') }}</div></div>
+              <div class="dg-tile red"><i class="fa-solid fa-ban"></i><div class="v">11</div><div class="l">{{ _('معطّل') }}</div></div>
+              <div class="dg-tile grey"><i class="fa-solid fa-circle-pause"></i><div class="v">4</div><div class="l">{{ _('موقوف') }}</div></div>
             </div>
           </div>
         </div>
 
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>نصيحة:</b> «مفعّل + منتهي + معطّل + موقوف» لازم يساوي «الإجمالي».
+          <span><b>{{ _('نصيحة:') }}</b> «مفعّل + منتهي + معطّل + موقوف» لازم يساوي «الإجمالي».
           أما «متصل الآن» فهو عدّ مستقل (المتصل غالبًا مفعّل أصلًا) — لا تجمعه معهم.</span>
         </div>
       </div>
@@ -590,28 +590,28 @@
     <section class="dg-step" id="dg-s5">
       <div class="dg-badge">5</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-chart-column"></i> «الأداء حسب الفترة» — اقرأ الأعمدة الصغيرة صح</h2>
+        <h2><i class="fa-solid fa-chart-column"></i> {{ _('«الأداء حسب الفترة» — اقرأ الأعمدة الصغيرة صح') }}</h2>
         <p>
-          هذا القسم أربعة <strong>مسارات</strong> متجاورة: <strong>المُحصّل</strong>،
-          <strong>السلف</strong>، <strong>التفعيل</strong>، و<strong>الجيجات المستهلَكة</strong>.
+          {{ _('هذا القسم أربعة') }} <strong>{{ _('مسارات') }}</strong> {{ _('متجاورة:') }} <strong>{{ _('المُحصّل') }}</strong>{{ _('،') }}
+          <strong>{{ _('السلف') }}</strong>{{ _('،') }} <strong>{{ _('التفعيل') }}</strong>{{ _('، و') }}<strong>{{ _('الجيجات المستهلَكة') }}</strong>.
           كل مسار يتكوّن من فوق لتحت من:
         </p>
         <ul>
-          <li><strong>الرقم الكبير:</strong> قيمة الفترة المختارة حاليًا (نفس رقم بطاقة الـ KPI فوق).</li>
-          <li><strong>سطر توضيحي:</strong> مثل «7 سلف · 3 مفتوحة» أو «1,205 جلسة خلال الفترة».</li>
-          <li><strong>أعمدة صغيرة (sparkline):</strong> آخر 12 فترة من اليمين لليسار — العمود الأطول هو أعلى فترة. <strong>مرّر الفأرة فوق أي عمود</strong> يطلع لك تلميح فيه الفترة وقيمتها الدقيقة.</li>
-          <li><strong>أرقام المحور:</strong> تحت الأعمدة أرقام الأشهر (06، 07...) أو السنوات.</li>
-          <li><strong>رابط بنفسجي بأيقونة سهم خارجي:</strong> ينقلك لصفحة التفصيل في قسم المالية —
+          <li><strong>{{ _('الرقم الكبير:') }}</strong> {{ _('قيمة الفترة المختارة حاليًا (نفس رقم بطاقة الـ KPI فوق).') }}</li>
+          <li><strong>{{ _('سطر توضيحي:') }}</strong> {{ _('مثل «7 سلف · 3 مفتوحة» أو «1,205 جلسة خلال الفترة».') }}</li>
+          <li><strong>{{ _('أعمدة صغيرة (sparkline):') }}</strong> {{ _('آخر 12 فترة من اليمين لليسار — العمود الأطول هو أعلى فترة.') }} <strong>{{ _('مرّر الفأرة فوق أي عمود') }}</strong> {{ _('يطلع لك تلميح فيه الفترة وقيمتها الدقيقة.') }}</li>
+          <li><strong>{{ _('أرقام المحور:') }}</strong> {{ _('تحت الأعمدة أرقام الأشهر (06، 07...) أو السنوات.') }}</li>
+          <li><strong>{{ _('رابط بنفسجي بأيقونة سهم خارجي:') }}</strong> ينقلك لصفحة التفصيل في قسم المالية —
             «السجل المالي» للمُحصّل والتفعيل، «تفاصيل السلف» للسلف، و«الإيرادات» للجيجات.</li>
         </ul>
 
         <div class="dg-mock" aria-hidden="true" style="max-width:340px">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">الأداء حسب الفترة › مسار «المُحصّل»</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('الأداء حسب الفترة › مسار «المُحصّل»') }}</span></div>
           <div class="dg-mock-body">
             <div class="dg-lane" style="max-width:none;border:none;padding:0">
-              <div class="hd"><i class="fa-solid fa-coins"></i> المُحصّل</div>
+              <div class="hd"><i class="fa-solid fa-coins"></i> {{ _('المُحصّل') }}</div>
               <div class="v">12.5K</div>
-              <div class="s">المبالغ المُحصّلة من المشتركين خلال الفترة</div>
+              <div class="s">{{ _('المبالغ المُحصّلة من المشتركين خلال الفترة') }}</div>
               <div class="dg-spark">
                 <span style="height:30%"></span><span style="height:45%"></span><span style="height:38%"></span>
                 <span style="height:60%"></span><span style="height:52%"></span><span style="height:70%"></span>
@@ -622,20 +622,20 @@
                 <span>07</span><span>08</span><span>09</span><span>10</span><span>11</span><span>12</span>
                 <span>01</span><span>02</span><span>03</span><span>04</span><span>05</span><span>06</span>
               </div>
-              <span class="dg-flink"><i class="fa-solid fa-up-right-from-square"></i> السجل المالي</span>
+              <span class="dg-flink"><i class="fa-solid fa-up-right-from-square"></i> {{ _('السجل المالي') }}</span>
             </div>
           </div>
         </div>
-        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> أعمدة تصعد من اليمين لليسار = إيراد ينمو شهرًا بعد شهر. 👌</div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> {{ _('أعمدة تصعد من اليمين لليسار = إيراد ينمو شهرًا بعد شهر. 👌') }}</div>
 
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>نصيحة:</b> هذه الصفحة «خريطة» لا «دفتر» — لو احتجت تعرف <b>مين دفع شو ومتى</b>،
+          <span><b>{{ _('نصيحة:') }}</b> {{ _('هذه الصفحة «خريطة» لا «دفتر» — لو احتجت تعرف') }} <b>{{ _('مين دفع شو ومتى') }}</b>،
           اضغط رابط «السجل المالي» أسفل المسار: كل أرقام النظرة العامة تفاصيلها هناك في قسم المالية.</span>
         </div>
         <div class="dg-warn">
           <span class="ic">⚠️</span>
-          <span><b>انتبه:</b> طول كل عمود نسبي <b>لأعلى قيمة في نفس المسار فقط</b> —
+          <span><b>{{ _('انتبه:') }}</b> {{ _('طول كل عمود نسبي') }} <b>{{ _('لأعلى قيمة في نفس المسار فقط') }}</b> —
           لا تقارن طول عمود في «المُحصّل» بطول عمود في «الجيجات»؛ كل مسار له مقياسه الخاص.</span>
         </div>
       </div>
@@ -645,50 +645,50 @@
     <section class="dg-step" id="dg-s6">
       <div class="dg-badge">6</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-scale-unbalanced"></i> «شو ضل — الديون حتى اللحظة» — أربع بلاطات تحسم الموقف</h2>
+        <h2><i class="fa-solid fa-scale-unbalanced"></i> {{ _('«شو ضل — الديون حتى اللحظة» — أربع بلاطات تحسم الموقف') }}</h2>
         <p>
-          هذا القسم يجاوب أهم سؤال عند أي مزوّد: <strong>كم ضلّ لي عند الناس؟</strong>
-          وكل أرقامه لحظية (مكتوب جنب العنوان «حتى اللحظة — غير مرتبط بالفترة»):
+          {{ _('هذا القسم يجاوب أهم سؤال عند أي مزوّد:') }} <strong>{{ _('كم ضلّ لي عند الناس؟') }}</strong>
+          {{ _('وكل أرقامه لحظية (مكتوب جنب العنوان «حتى اللحظة — غير مرتبط بالفترة»):') }}
         </p>
         <table class="dg-ref">
-          <tr><th>البلاطة</th><th>لونها</th><th>شو تعني</th></tr>
+          <tr><th>{{ _('البلاطة') }}</th><th>{{ _('لونها') }}</th><th>{{ _('شو تعني') }}</th></tr>
           <tr>
-            <td>سلف مفتوحة</td><td>أصفر</td>
-            <td>مجموع السلف اللي أعطيتها وما انسدّدت بعد — مع عددها ومجموع وقتها تحت الرقم.</td>
+            <td>{{ _('سلف مفتوحة') }}</td><td>{{ _('أصفر') }}</td>
+            <td>{{ _('مجموع السلف اللي أعطيتها وما انسدّدت بعد — مع عددها ومجموع وقتها تحت الرقم.') }}</td>
           </tr>
           <tr>
-            <td>أرصدة سالبة (عليهم)</td><td>أحمر</td>
-            <td>مشتركون رصيد محفظتهم تحت الصفر — أي مدينون لك خارج نظام السلف، مع عددهم.</td>
+            <td>{{ _('أرصدة سالبة (عليهم)') }}</td><td>{{ _('أحمر') }}</td>
+            <td>{{ _('مشتركون رصيد محفظتهم تحت الصفر — أي مدينون لك خارج نظام السلف، مع عددهم.') }}</td>
           </tr>
           <tr>
-            <td>أرصدة موجبة (رصيد لهم)</td><td>أخضر</td>
-            <td>العكس: مشتركون دفعوا زيادة وعندهم رصيد محفوظ لهم عندك — هذا التزام عليك لا لك.</td>
+            <td>{{ _('أرصدة موجبة (رصيد لهم)') }}</td><td>{{ _('أخضر') }}</td>
+            <td>{{ _('العكس: مشتركون دفعوا زيادة وعندهم رصيد محفوظ لهم عندك — هذا التزام عليك لا لك.') }}</td>
           </tr>
           <tr>
-            <td>إجمالي المتبقّي</td><td>بنفسجي</td>
-            <td>الخلاصة = سلف مفتوحة + أرصدة سالبة. هذا هو «الدين الكلي» وهو نفسه رقم بطاقة «الديون» فوق.</td>
+            <td>{{ _('إجمالي المتبقّي') }}</td><td>{{ _('بنفسجي') }}</td>
+            <td>{{ _('الخلاصة = سلف مفتوحة + أرصدة سالبة. هذا هو «الدين الكلي» وهو نفسه رقم بطاقة «الديون» فوق.') }}</td>
           </tr>
         </table>
         <p>
-          وتحت البلاطات <strong>رابطان</strong>: «تفاصيل الديون في المالية» و«تفاصيل السلف في المالية» —
+          {{ _('وتحت البلاطات') }} <strong>{{ _('رابطان') }}</strong>: «تفاصيل الديون في المالية» و«تفاصيل السلف في المالية» —
           كلاهما ينقلك لصفحات قسم المالية حيث التفصيل دينًا دينًا وسلفةً سلفة.
         </p>
 
         <div class="dg-mock" aria-hidden="true">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">نظرة عامة — المشتركون › شو ضل</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('نظرة عامة — المشتركون › شو ضل') }}</span></div>
           <div class="dg-mock-body">
             <div class="dg-debt">
-              <div class="dg-debt-tile amber"><span class="l"><i class="fa-solid fa-hand-holding-dollar"></i> سلف مفتوحة</span><span class="v">1.4K</span><span class="m">5 سلف · 9 يوم</span></div>
-              <div class="dg-debt-tile red"><span class="l"><i class="fa-solid fa-circle-minus"></i> أرصدة سالبة (عليهم)</span><span class="v">900</span><span class="m">12 مشترك</span></div>
-              <div class="dg-debt-tile green"><span class="l"><i class="fa-solid fa-circle-plus"></i> أرصدة موجبة (رصيد لهم)</span><span class="v">350</span><span class="m">6 مشتركين</span></div>
-              <div class="dg-debt-tile total"><span class="l"><i class="fa-solid fa-scale-unbalanced"></i> إجمالي المتبقّي</span><span class="v">2.3K</span><span class="m">سلف مفتوحة + أرصدة سالبة</span></div>
+              <div class="dg-debt-tile amber"><span class="l"><i class="fa-solid fa-hand-holding-dollar"></i> {{ _('سلف مفتوحة') }}</span><span class="v">1.4K</span><span class="m">{{ _('5 سلف · 9 يوم') }}</span></div>
+              <div class="dg-debt-tile red"><span class="l"><i class="fa-solid fa-circle-minus"></i> {{ _('أرصدة سالبة (عليهم)') }}</span><span class="v">900</span><span class="m">{{ _('12 مشترك') }}</span></div>
+              <div class="dg-debt-tile green"><span class="l"><i class="fa-solid fa-circle-plus"></i> {{ _('أرصدة موجبة (رصيد لهم)') }}</span><span class="v">350</span><span class="m">{{ _('6 مشتركين') }}</span></div>
+              <div class="dg-debt-tile total"><span class="l"><i class="fa-solid fa-scale-unbalanced"></i> {{ _('إجمالي المتبقّي') }}</span><span class="v">2.3K</span><span class="m">{{ _('سلف مفتوحة + أرصدة سالبة') }}</span></div>
             </div>
           </div>
         </div>
 
         <div class="dg-warn">
           <span class="ic">⚠️</span>
-          <span><b>انتبه:</b> «الأرصدة الموجبة» الخضراء <b>لا تُطرح</b> من إجمالي المتبقّي —
+          <span><b>{{ _('انتبه:') }}</b> {{ _('«الأرصدة الموجبة» الخضراء') }} <b>{{ _('لا تُطرح') }}</b> من إجمالي المتبقّي —
           الإجمالي يجمع ما عليهم فقط. الرصيد الموجب معلومة منفصلة: فلوس أمانة عندك لمشتركيك.</span>
         </div>
       </div>
@@ -698,90 +698,90 @@
     <section class="dg-step" id="dg-s7">
       <div class="dg-badge">7</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-table-list"></i> جدولا «أكبر المدينين» و«الكوتة» — وأزرار الجدول كلها</h2>
+        <h2><i class="fa-solid fa-table-list"></i> {{ _('جدولا «أكبر المدينين» و«الكوتة» — وأزرار الجدول كلها') }}</h2>
 
-        <h3>أ) جدول «أكبر المدينين»</h3>
+        <h3>{{ _('أ) جدول «أكبر المدينين»') }}</h3>
         <p>
-          يسرد حتى 50 مشتركًا عليهم أكبر مديونيات، بأعمدة:
-          <strong>المشترك</strong> (اسم الدخول وتحت منه الاسم الكامل إن وُجد)،
-          <strong>سلف مفتوحة</strong>، <strong>عدد السلف</strong>،
-          <strong>الرصيد</strong> (يتلوّن أحمر إذا كان سالبًا)،
-          و<strong>التفصيل</strong> وفيه رابط <strong>«ملف المالية»</strong> الذي يفتح
+          {{ _('يسرد حتى 50 مشتركًا عليهم أكبر مديونيات، بأعمدة:') }}
+          <strong>{{ _('المشترك') }}</strong> {{ _('(اسم الدخول وتحت منه الاسم الكامل إن وُجد)،') }}
+          <strong>{{ _('سلف مفتوحة') }}</strong>{{ _('،') }} <strong>{{ _('عدد السلف') }}</strong>{{ _('،') }}
+          <strong>{{ _('الرصيد') }}</strong> (يتلوّن أحمر إذا كان سالبًا)،
+          و<strong>{{ _('التفصيل') }}</strong> {{ _('وفيه رابط') }} <strong>{{ _('«ملف المالية»') }}</strong> الذي يفتح
           الصفحة المالية الخاصة بهذا المشترك بالذات.
         </p>
 
-        <h3>ب) أزرار شريط الجدول — كل زر شو بيعمل بالضبط</h3>
+        <h3>{{ _('ب) أزرار شريط الجدول — كل زر شو بيعمل بالضبط') }}</h3>
         <ul>
-          <li><strong>زر «أعمدة» <i class="fa-solid fa-table-columns" style="color:#7c3aed"></i>:</strong>
+          <li><strong>{{ _('زر «أعمدة»') }} <i class="fa-solid fa-table-columns" style="color:#7c3aed"></i>:</strong>
             يفتح قائمة فيها مربع اختيار لكل عمود — أزل العلامة عن أي عمود ليختفي مؤقتًا
             (وتُستثنى الأعمدة المخفية من التصدير أيضًا).</li>
-          <li><strong>ثلاثة أزرار تصدير بأيقونات فقط:</strong>
+          <li><strong>{{ _('ثلاثة أزرار تصدير بأيقونات فقط:') }}</strong>
             <i class="fa-solid fa-file-csv" style="color:#16a34a"></i> <strong>CSV</strong>
-            (يبني الملف فورًا في متصفحك وينزّله — يفتح في Excel بالعربي مباشرة)،
+            {{ _('(يبني الملف فورًا في متصفحك وينزّله — يفتح في Excel بالعربي مباشرة)،') }}
             <i class="fa-solid fa-file-excel" style="color:#15803d"></i> <strong>Excel</strong>
-            و<i class="fa-solid fa-file-pdf" style="color:#dc2626"></i> <strong>PDF</strong>
-            (يجهّزهما الخادم وينزلان كملف منسّق). التصدير يشمل <strong>كل الصفوف</strong>
-            لا الصفحة الظاهرة فقط، والأعمدة <strong>الظاهرة</strong> فقط.</li>
-          <li><strong>رؤوس الأعمدة نفسها أزرار فرز:</strong> اضغط على رأس أي عمود (تشوف جنبه علامة ⇅)
+            {{ _('و') }}<i class="fa-solid fa-file-pdf" style="color:#dc2626"></i> <strong>PDF</strong>
+            {{ _('(يجهّزهما الخادم وينزلان كملف منسّق). التصدير يشمل') }} <strong>{{ _('كل الصفوف') }}</strong>
+            {{ _('لا الصفحة الظاهرة فقط، والأعمدة') }} <strong>{{ _('الظاهرة') }}</strong> {{ _('فقط.') }}</li>
+          <li><strong>{{ _('رؤوس الأعمدة نفسها أزرار فرز:') }}</strong> اضغط على رأس أي عمود (تشوف جنبه علامة ⇅)
             ليترتب الجدول تصاعديًا، واضغطه ثانية لينعكس تنازليًا — اضغط «الرصيد» مرتين مثلًا
             لتطلع أسوأ الأرصدة فوق.</li>
-          <li><strong>أسفل الجدول:</strong> منسدلة «صفوف بالصفحة» (10، 25، 50...)، وعدّاد
+          <li><strong>{{ _('أسفل الجدول:') }}</strong> منسدلة «صفوف بالصفحة» (10، 25، 50...)، وعدّاد
             «عرض 1–10 من 50»، وأزرار تنقّل بين الصفحات.</li>
         </ul>
 
         <div class="dg-mock" aria-hidden="true">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">أكبر المدينين › الجدول الموحّد</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('أكبر المدينين › الجدول الموحّد') }}</span></div>
           <div class="dg-mock-body">
             <div class="dg-tbar">
-              <span class="cnt">50 صفًا</span>
-              <span class="dg-tbtn"><i class="fa-solid fa-table-columns" style="color:#7c3aed"></i> أعمدة</span>
+              <span class="cnt">{{ _('50 صفًا') }}</span>
+              <span class="dg-tbtn"><i class="fa-solid fa-table-columns" style="color:#7c3aed"></i> {{ _('أعمدة') }}</span>
               <span class="dg-tbtn ic-only"><i class="fa-solid fa-file-csv csv"></i></span>
               <span class="dg-tbtn ic-only"><i class="fa-solid fa-file-excel xls"></i></span>
               <span class="dg-tbtn ic-only"><i class="fa-solid fa-file-pdf pdf"></i></span>
             </div>
             <div class="dg-rowmock">
-              <div class="hd"><span>المشترك <i class="si">⇅</i></span><span>سلف مفتوحة <i class="si">⇅</i></span><span>عدد السلف <i class="si">⇅</i></span><span>الرصيد <i class="si">⇅</i></span><span>التفصيل</span></div>
+              <div class="hd"><span>{{ _('المشترك') }} <i class="si">⇅</i></span><span>{{ _('سلف مفتوحة') }} <i class="si">⇅</i></span><span>{{ _('عدد السلف') }} <i class="si">⇅</i></span><span>{{ _('الرصيد') }} <i class="si">⇅</i></span><span>{{ _('التفصيل') }}</span></div>
               <div class="rw">
-                <span style="font-weight:900;color:#241e4e">ahmad2026<div style="font-weight:600;color:#94a3b8;font-size:8.5px">أحمد خالد</div></span>
+                <span style="font-weight:900;color:#241e4e">ahmad2026<div style="font-weight:600;color:#94a3b8;font-size:8.5px">{{ _('أحمد خالد') }}</div></span>
                 <span>450</span><span>2</span><span class="neg">-120</span>
-                <span class="lnk"><i class="fa-solid fa-up-right-from-square"></i> ملف المالية</span>
+                <span class="lnk"><i class="fa-solid fa-up-right-from-square"></i> {{ _('ملف المالية') }}</span>
               </div>
               <div class="rw">
                 <span style="font-weight:900;color:#241e4e">sara_net</span>
                 <span>300</span><span>1</span><span>0</span>
-                <span class="lnk"><i class="fa-solid fa-up-right-from-square"></i> ملف المالية</span>
+                <span class="lnk"><i class="fa-solid fa-up-right-from-square"></i> {{ _('ملف المالية') }}</span>
               </div>
             </div>
             <div class="dg-pager">
-              <span>صفوف بالصفحة <b style="color:#475569">10</b></span>
-              <span>عرض 1–10 من 50</span>
+              <span>{{ _('صفوف بالصفحة') }} <b style="color:#475569">10</b></span>
+              <span>{{ _('عرض 1–10 من 50') }}</span>
               <span class="pg"><span>‹</span><span class="on">1</span><span>2</span><span>3</span><span>›</span></span>
             </div>
           </div>
         </div>
 
-        <h3>ج) جدول «الكوتة المخصّصة حسب الباقة»</h3>
+        <h3>{{ _('ج) جدول «الكوتة المخصّصة حسب الباقة»') }}</h3>
         <p>
-          آخر قسم بالصفحة، بنفس نظام الجدول الموحّد (نفس أزرار الأعمدة والتصدير والفرز والترقيم)، وأعمدته:
+          {{ _('آخر قسم بالصفحة، بنفس نظام الجدول الموحّد (نفس أزرار الأعمدة والتصدير والفرز والترقيم)، وأعمدته:') }}
         </p>
         <ul>
-          <li><strong>الباقة:</strong> اسم الباقة اللي عليها مشتركون فعليون (الباقات الفارغة لا تظهر).</li>
-          <li><strong>المشتركون:</strong> كم مشتركًا على هذه الباقة.</li>
-          <li><strong>كوتة المشترك:</strong> الحصة المسموحة للمشترك الواحد بالجيجا — أو «غير محدودة» إذا الباقة بلا حد.</li>
-          <li><strong>إجمالي المخصّص:</strong> كوتة المشترك × عدد المشتركين = أقصى ما قد تستهلكه الباقة كلها.</li>
-          <li><strong>الحصّة:</strong> شريط بنفسجي بنسبة مئوية يبيّن نصيب الباقة من إجمالي المخصّص عندك.</li>
+          <li><strong>{{ _('الباقة:') }}</strong> {{ _('اسم الباقة اللي عليها مشتركون فعليون (الباقات الفارغة لا تظهر).') }}</li>
+          <li><strong>{{ _('المشتركون:') }}</strong> {{ _('كم مشتركًا على هذه الباقة.') }}</li>
+          <li><strong>{{ _('كوتة المشترك:') }}</strong> {{ _('الحصة المسموحة للمشترك الواحد بالجيجا — أو «غير محدودة» إذا الباقة بلا حد.') }}</li>
+          <li><strong>{{ _('إجمالي المخصّص:') }}</strong> {{ _('كوتة المشترك × عدد المشتركين = أقصى ما قد تستهلكه الباقة كلها.') }}</li>
+          <li><strong>{{ _('الحصّة:') }}</strong> {{ _('شريط بنفسجي بنسبة مئوية يبيّن نصيب الباقة من إجمالي المخصّص عندك.') }}</li>
         </ul>
         <div class="dg-mock" aria-hidden="true">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">الكوتة المخصّصة حسب الباقة</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('الكوتة المخصّصة حسب الباقة') }}</span></div>
           <div class="dg-mock-body">
             <div class="dg-rowmock">
-              <div class="hd" style="grid-template-columns:1.2fr .8fr .9fr .9fr 1fr"><span>الباقة</span><span>المشتركون</span><span>كوتة المشترك</span><span>إجمالي المخصّص</span><span>الحصّة</span></div>
+              <div class="hd" style="grid-template-columns:1.2fr .8fr .9fr .9fr 1fr"><span>{{ _('الباقة') }}</span><span>{{ _('المشتركون') }}</span><span>{{ _('كوتة المشترك') }}</span><span>{{ _('إجمالي المخصّص') }}</span><span>{{ _('الحصّة') }}</span></div>
               <div class="rw" style="grid-template-columns:1.2fr .8fr .9fr .9fr 1fr">
-                <span style="font-weight:900;color:#241e4e">باقة 10 ميجا</span><span>120</span><span>50.0 GB</span><span>6,000 GB</span>
+                <span style="font-weight:900;color:#241e4e">{{ _('باقة 10 ميجا') }}</span><span>120</span><span>50.0 GB</span><span>6,000 GB</span>
                 <span><span class="dg-share"><span class="trk"><span style="width:62%"></span></span><b style="font-size:9px;color:#64748b">62%</b></span></span>
               </div>
               <div class="rw" style="grid-template-columns:1.2fr .8fr .9fr .9fr 1fr">
-                <span style="font-weight:900;color:#241e4e">باقة 20 ميجا</span><span>45</span><span>غير محدودة</span><span>—</span>
+                <span style="font-weight:900;color:#241e4e">{{ _('باقة 20 ميجا') }}</span><span>45</span><span>{{ _('غير محدودة') }}</span><span>—</span>
                 <span><span class="dg-share"><span class="trk"><span style="width:0%"></span></span><b style="font-size:9px;color:#64748b">0%</b></span></span>
               </div>
             </div>
@@ -790,7 +790,7 @@
 
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>نصيحة:</b> «الكوتة» هنا = <b>المخصّص (الحدّ الأقصى)</b> لا الاستهلاك الفعلي —
+          <span><b>{{ _('نصيحة:') }}</b> {{ _('«الكوتة» هنا =') }} <b>{{ _('المخصّص (الحدّ الأقصى)') }}</b> لا الاستهلاك الفعلي —
           الاستهلاك الفعلي تجده في بطاقة «الجيجات» ومسارها فوق. الملاحظة ذاتها مكتوبة تحت الجدول في الصفحة.</span>
         </div>
       </div>
@@ -800,46 +800,46 @@
     <section class="dg-step" id="dg-s8">
       <div class="dg-badge">8</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-list-check"></i> مهام عملية — جاوب أسئلتك اليومية من هالصفحة</h2>
+        <h2><i class="fa-solid fa-list-check"></i> {{ _('مهام عملية — جاوب أسئلتك اليومية من هالصفحة') }}</h2>
 
-        <h3>«كيف أعرف مين منتهي هالشهر؟»</h3>
+        <h3>{{ _('«كيف أعرف مين منتهي هالشهر؟»') }}</h3>
         <ol>
-          <li>شوف بلاطة <strong>«منتهي»</strong> الصفراء في الترويسة — هذا عدد المنتهين الآن.</li>
-          <li>للأسماء نفسها: افتح <strong>«المشتركين 360»</strong> من نفس قسم القائمة الجانبية
+          <li>{{ _('شوف بلاطة') }} <strong>{{ _('«منتهي»') }}</strong> {{ _('الصفراء في الترويسة — هذا عدد المنتهين الآن.') }}</li>
+          <li>{{ _('للأسماء نفسها: افتح') }} <strong>{{ _('«المشتركين 360»') }}</strong> من نفس قسم القائمة الجانبية
             وفلتر الحالة على «منتهي» — النظرة العامة تعطيك العدد، و360 تعطيك القائمة.</li>
         </ol>
 
-        <h3>«كيف أعرف إذا شهري الحالي أحسن من اللي قبله؟»</h3>
+        <h3>{{ _('«كيف أعرف إذا شهري الحالي أحسن من اللي قبله؟»') }}</h3>
         <ol>
-          <li>خلّي الوضع <strong>«شهري»</strong> وانزل لقسم «الأداء حسب الفترة».</li>
-          <li>قارن آخر عمودين في مسار <strong>«المُحصّل»</strong> — ومرّر الفأرة فوقهما للقيم الدقيقة.</li>
-          <li>كرّر النظرة على مسار «الجيجات»: استهلاك يرتفع وتحصيل يثبت = باقات تحتاج إعادة تسعير.</li>
+          <li>{{ _('خلّي الوضع') }} <strong>{{ _('«شهري»') }}</strong> {{ _('وانزل لقسم «الأداء حسب الفترة».') }}</li>
+          <li>{{ _('قارن آخر عمودين في مسار') }} <strong>{{ _('«المُحصّل»') }}</strong> {{ _('— ومرّر الفأرة فوقهما للقيم الدقيقة.') }}</li>
+          <li>{{ _('كرّر النظرة على مسار «الجيجات»: استهلاك يرتفع وتحصيل يثبت = باقات تحتاج إعادة تسعير.') }}</li>
         </ol>
 
-        <h3>«بدي ألحّق على أكبر مدين عندي — شو أعمل؟»</h3>
+        <h3>{{ _('«بدي ألحّق على أكبر مدين عندي — شو أعمل؟»') }}</h3>
         <ol>
-          <li>انزل لجدول <strong>«أكبر المدينين»</strong> واضغط رأس عمود «سلف مفتوحة» مرتين (الأكبر فوق).</li>
-          <li>اضغط <strong>«ملف المالية»</strong> في صف المشترك — يفتح ملفه المالي الشخصي بكل حركاته.</li>
-          <li>من هناك تسجّل تحصيلًا أو تسوية — النظرة العامة نفسها للقراءة فقط.</li>
+          <li>{{ _('انزل لجدول') }} <strong>{{ _('«أكبر المدينين»') }}</strong> {{ _('واضغط رأس عمود «سلف مفتوحة» مرتين (الأكبر فوق).') }}</li>
+          <li>{{ _('اضغط') }} <strong>{{ _('«ملف المالية»') }}</strong> {{ _('في صف المشترك — يفتح ملفه المالي الشخصي بكل حركاته.') }}</li>
+          <li>{{ _('من هناك تسجّل تحصيلًا أو تسوية — النظرة العامة نفسها للقراءة فقط.') }}</li>
         </ol>
 
-        <h3>«بدي قائمة المديونيات على ورق أطلعها للمحاسب»</h3>
+        <h3>{{ _('«بدي قائمة المديونيات على ورق أطلعها للمحاسب»') }}</h3>
         <ol>
-          <li>في شريط جدول «أكبر المدينين» اضغط زر <strong>«أعمدة»</strong> وخبّئ عمود «التفصيل» (روابط لا تنفع ورقيًا).</li>
-          <li>اضغط أيقونة <i class="fa-solid fa-file-pdf" style="color:#dc2626"></i> <strong>PDF</strong>
-            (أو <i class="fa-solid fa-file-excel" style="color:#15803d"></i> Excel إذا المحاسب يحب يفلتر بنفسه) — ينزل الملف جاهزًا.</li>
+          <li>{{ _('في شريط جدول «أكبر المدينين» اضغط زر') }} <strong>{{ _('«أعمدة»') }}</strong> {{ _('وخبّئ عمود «التفصيل» (روابط لا تنفع ورقيًا).') }}</li>
+          <li>{{ _('اضغط أيقونة') }} <i class="fa-solid fa-file-pdf" style="color:#dc2626"></i> <strong>PDF</strong>
+            {{ _('(أو') }} <i class="fa-solid fa-file-excel" style="color:#15803d"></i> {{ _('Excel إذا المحاسب يحب يفلتر بنفسه) — ينزل الملف جاهزًا.') }}</li>
         </ol>
 
-        <h3>«بدي أراجع سنة كاملة لاجتماع نهاية السنة»</h3>
+        <h3>{{ _('«بدي أراجع سنة كاملة لاجتماع نهاية السنة»') }}</h3>
         <ol>
-          <li>اضغط زر <strong>«سنوي»</strong> في الترويسة — كل عمود يصير سنة.</li>
-          <li>اختر السنة من منسدلة «الفترة المعروضة» إن أردت سنة قديمة.</li>
-          <li>أرقام المُحصّل والسلف والتفعيل والجيجات تتجمع للسنة كلها — والديون تبقى لحظية كالعادة.</li>
+          <li>{{ _('اضغط زر') }} <strong>{{ _('«سنوي»') }}</strong> {{ _('في الترويسة — كل عمود يصير سنة.') }}</li>
+          <li>{{ _('اختر السنة من منسدلة «الفترة المعروضة» إن أردت سنة قديمة.') }}</li>
+          <li>{{ _('أرقام المُحصّل والسلف والتفعيل والجيجات تتجمع للسنة كلها — والديون تبقى لحظية كالعادة.') }}</li>
         </ol>
 
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>القاعدة الذهبية للصفحة:</b> النظرة العامة <b>تكشف</b> والمالية <b>تنفّذ</b> —
+          <span><b>{{ _('القاعدة الذهبية للصفحة:') }}</b> {{ _('النظرة العامة') }} <b>{{ _('تكشف') }}</b> {{ _('والمالية') }} <b>{{ _('تنفّذ') }}</b> —
           كل رقم لفت نظرك هنا، اضغط الرابط البنفسجي جنبه وكمّل القصة في قسم المالية أو ملف المشترك.</span>
         </div>
       </div>

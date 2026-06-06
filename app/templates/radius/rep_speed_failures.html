@@ -47,11 +47,11 @@
 ) %}
   <input class="hub-input grow" type="text" name="q"
          value="{{ filters.q if filters else '' }}"
-         placeholder="بحث (منفّذ / إجراء / هدف / نص الخطأ)…">
+         placeholder="{{ _('بحث (منفّذ / إجراء / هدف / نص الخطأ)…') }}">
   <input class="hub-input" type="date" name="date_from"
-         value="{{ filters.date_from if filters else '' }}" title="من تاريخ">
+         value="{{ filters.date_from if filters else '' }}" title="{{ _('من تاريخ') }}">
   <input class="hub-input" type="date" name="date_to"
-         value="{{ filters.date_to if filters else '' }}" title="إلى تاريخ">
+         value="{{ filters.date_to if filters else '' }}" title="{{ _('إلى تاريخ') }}">
   {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
   {% if filters and (filters.q or filters.date_from or filters.date_to) %}
     {{ hub.btn("إعادة ضبط", icon="rotate-left", variant="ghost", size="sm",
@@ -71,11 +71,11 @@
     <table class="hub-table rep-table">
       <thead>
         <tr>
-          <th>الوقت</th>
-          <th>المنفّذ</th>
-          <th data-uds-nosort>الإجراء</th>
-          <th>الهدف</th>
-          <th data-uds-nosort data-uds-nocol>سبب الفشل</th>
+          <th>{{ _('الوقت') }}</th>
+          <th>{{ _('المنفّذ') }}</th>
+          <th data-uds-nosort>{{ _('الإجراء') }}</th>
+          <th>{{ _('الهدف') }}</th>
+          <th data-uds-nosort data-uds-nocol>{{ _('سبب الفشل') }}</th>
         </tr>
       </thead>
       <tbody>

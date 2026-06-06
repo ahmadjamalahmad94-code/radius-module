@@ -4,7 +4,7 @@
 {% block title %}التحكم اليدوي بالسرعة{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-sliders"></i>{% endblock %}
 {% block page_title %}التحكم اليدوي بالسرعة{% endblock %}
-{% block page_sub %}<span class="sub">سلايدرات حية لضبط النِّسَب فورًا — معاينة آمنة بدون تنفيذ على الشبكة.</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('سلايدرات حية لضبط النِّسَب فورًا — معاينة آمنة بدون تنفيذ على الشبكة.') }}</span>{% endblock %}
 
 {% block head_extra %}{{ super() }}
 {# نظام الجداول والبطاقات الموحد (uds) — نفس أسلوب باقي المراكز #}
@@ -55,12 +55,12 @@
   ]
 ) }}
 {# تبويب الانتقال بين الصفحتين الشقيقتين #}
-<nav class="spc-tabs" data-testid="speed-control-tabs" aria-label="صفحات التحكم بالسرعة">
+<nav class="spc-tabs" data-testid="speed-control-tabs" aria-label="{{ _('صفحات التحكم بالسرعة') }}">
   <a href="{{ url_for('radius.operations_speed_control') }}">
-    <i class="fa-solid fa-calendar-check"></i> التحكم المجدول
+    <i class="fa-solid fa-calendar-check"></i> {{ _('التحكم المجدول') }}
   </a>
   <a class="is-active" href="{{ url_for('radius.operations_speed_control_manual') }}" aria-current="page">
-    <i class="fa-solid fa-sliders"></i> التحكم اليدوي
+    <i class="fa-solid fa-sliders"></i> {{ _('التحكم اليدوي') }}
   </a>
 </nav>
 </section>{# /hub-hero-shell #}
@@ -68,7 +68,7 @@
 {# زر رجوع سريع إلى قائمة ملفات السرعة (Bandwidth) — هذه الصفحة تتبع قسم «التحكم بالسرعة» #}
 <div style="display:flex;justify-content:flex-end;margin-bottom:14px">
   <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.bw_list') }}" data-testid="speed-control-back-bandwidth">
-    <i class="fa-solid fa-arrow-right"></i> العودة إلى ملفات السرعة
+    <i class="fa-solid fa-arrow-right"></i> {{ _('العودة إلى ملفات السرعة') }}
   </a>
 </div>
 
@@ -86,25 +86,25 @@
   <header class="spdx-topbar">
     <div class="spdx-topbar__title">
       <span class="spdx-topbar__icon"><i class="fa-solid fa-sliders"></i></span>
-      <span>التحكم اليدوي السريع</span>
+      <span>{{ _('التحكم اليدوي السريع') }}</span>
     </div>
     <div class="spdx-topbar__tools">
-      <div class="spdx-modeswitch" role="group" aria-label="طريقة التحكم اليدوي بالباندويث">
+      <div class="spdx-modeswitch" role="group" aria-label="{{ _('طريقة التحكم اليدوي بالباندويث') }}">
         <button type="button" class="spdx-modeswitch__btn is-active" aria-pressed="true"
-                data-mode-btn="unified"><i class="fa-solid fa-layer-group" aria-hidden="true"></i> التحكم الموحّد</button>
+                data-mode-btn="unified"><i class="fa-solid fa-layer-group" aria-hidden="true"></i> {{ _('التحكم الموحّد') }}</button>
         <button type="button" class="spdx-modeswitch__btn" aria-pressed="false"
-                data-mode-btn="separate"><i class="fa-solid fa-arrows-up-down" aria-hidden="true"></i> تحميل / رفع منفصل</button>
+                data-mode-btn="separate"><i class="fa-solid fa-arrows-up-down" aria-hidden="true"></i> {{ _('تحميل / رفع منفصل') }}</button>
         <span class="spdx-modeswitch__thumb" data-mode-thumb aria-hidden="true"></span>
       </div>
-      <button type="button" class="spdx-icon-btn" data-action="refresh" title="إعادة الضبط للسرعة الأصلية" aria-label="إعادة الضبط">
+      <button type="button" class="spdx-icon-btn" data-action="refresh" title="{{ _('إعادة الضبط للسرعة الأصلية') }}" aria-label="{{ _('إعادة الضبط') }}">
         <i class="fa-solid fa-arrows-rotate"></i>
       </button>
     </div>
   </header>
 
   <p class="spdx-lede" data-mode-lede>
-    <span data-lede="unified">تحكّم موحّد في نسبة الباندويث لجميع الباقات المُدارة.</span>
-    <span data-lede="separate" hidden>تحكّم منفصل في نسبتَي التحميل والرفع لكل باقة على حدة.</span>
+    <span data-lede="unified">{{ _('تحكّم موحّد في نسبة الباندويث لجميع الباقات المُدارة.') }}</span>
+    <span data-lede="separate" hidden>{{ _('تحكّم منفصل في نسبتَي التحميل والرفع لكل باقة على حدة.') }}</span>
   </p>
 
   {# ── مؤشرات سريعة (تتحدّث حيًّا أثناء السحب) ── #}
@@ -112,35 +112,35 @@
     <article class="spdx-kpi spdx-kpi--teal">
       <span class="spdx-kpi__icon"><i class="fa-solid fa-arrow-trend-up"></i></span>
       <span class="spdx-kpi__body">
-        <span class="spdx-kpi__label" data-kpi-avg-label>متوسط النسبة الحالية</span>
+        <span class="spdx-kpi__label" data-kpi-avg-label>{{ _('متوسط النسبة الحالية') }}</span>
         <span class="spdx-kpi__value"><span data-kpi-avg>100</span><i>%</i></span>
       </span>
     </article>
     <article class="spdx-kpi spdx-kpi--purple" data-kpi-avg2-card hidden>
       <span class="spdx-kpi__icon"><i class="fa-solid fa-arrow-up-from-bracket"></i></span>
       <span class="spdx-kpi__body">
-        <span class="spdx-kpi__label">متوسط الرفع الحالي</span>
+        <span class="spdx-kpi__label">{{ _('متوسط الرفع الحالي') }}</span>
         <span class="spdx-kpi__value"><span data-kpi-avg2>100</span><i>%</i></span>
       </span>
     </article>
     <article class="spdx-kpi spdx-kpi--indigo">
       <span class="spdx-kpi__icon"><i class="fa-solid fa-layer-group"></i></span>
       <span class="spdx-kpi__body">
-        <span class="spdx-kpi__label">إجمالي الباقات</span>
+        <span class="spdx-kpi__label">{{ _('إجمالي الباقات') }}</span>
         <span class="spdx-kpi__value"><span data-kpi-total>{{ control_profiles|length }}</span></span>
       </span>
     </article>
     <article class="spdx-kpi spdx-kpi--green">
       <span class="spdx-kpi__icon"><i class="fa-solid fa-shield-halved"></i></span>
       <span class="spdx-kpi__body">
-        <span class="spdx-kpi__label">المتحكَّم بها</span>
+        <span class="spdx-kpi__label">{{ _('المتحكَّم بها') }}</span>
         <span class="spdx-kpi__value"><span data-kpi-controlled>0</span></span>
       </span>
     </article>
     <article class="spdx-kpi spdx-kpi--muted" data-kpi-uncontrolled-card>
       <span class="spdx-kpi__icon"><i class="fa-solid fa-ban"></i></span>
       <span class="spdx-kpi__body">
-        <span class="spdx-kpi__label">غير متحكَّم بها</span>
+        <span class="spdx-kpi__label">{{ _('غير متحكَّم بها') }}</span>
         <span class="spdx-kpi__value"><span data-kpi-uncontrolled>0</span></span>
       </span>
     </article>
@@ -149,7 +149,7 @@
   {# ── التحكم الرئيسي — الوضع الموحّد: الحلقة الدائرية + السلايدر الرئيسي ── #}
   <section class="spdx-master" data-view="unified">
     <div class="spdx-master__head">
-      <span class="spdx-master__title"><i class="fa-solid fa-sliders"></i> النسبة الموحّدة لجميع الباقات المتحكَّم بها</span>
+      <span class="spdx-master__title"><i class="fa-solid fa-sliders"></i> {{ _('النسبة الموحّدة لجميع الباقات المتحكَّم بها') }}</span>
     </div>
     <div class="spdx-master__grid">
       {# الحلقة الدائرية: ثلاث لفّات لونية (بنفسجي → كهرماني → أحمر) حتى 300% #}
@@ -162,7 +162,7 @@
         </svg>
         <div class="spdx-ring__label">
           <strong data-ring-value>100</strong><span>%</span>
-          <small>النسبة الموحّدة</small>
+          <small>{{ _('النسبة الموحّدة') }}</small>
         </div>
       </div>
 
@@ -174,29 +174,29 @@
             <span class="spdx-slider__fill" data-fill></span>
             <input type="range" min="0" max="300" step="1" value="100"
                    class="spdx-slider__input" data-global-uni
-                   aria-label="النسبة الموحّدة لجميع الباقات">
+                   aria-label="{{ _('النسبة الموحّدة لجميع الباقات') }}">
           </div>
           <div class="spdx-slider__ticks"><span>0%</span><span>100%</span><span>200%</span><span>300%</span></div>
         </div>
         <label class="spdx-switchrow">
           <span class="spdx-switch">
-            <input type="checkbox" data-controlled-only checked aria-label="تطبيق على الباقات المتحكَّم بها فقط">
+            <input type="checkbox" data-controlled-only checked aria-label="{{ _('تطبيق على الباقات المتحكَّم بها فقط') }}">
             <span class="spdx-switch__track"></span>
           </span>
           <span class="spdx-switchrow__text">
-            <strong>تطبيق على الباقات المتحكَّم بها فقط</strong>
-            <small>سيتم تجاهل الباقات غير المتحكَّم بها.</small>
+            <strong>{{ _('تطبيق على الباقات المتحكَّم بها فقط') }}</strong>
+            <small>{{ _('سيتم تجاهل الباقات غير المتحكَّم بها.') }}</small>
           </span>
         </label>
       </div>
 
       <aside class="spdx-impact" aria-live="polite">
-        <div class="spdx-impact__head"><i class="fa-regular fa-eye"></i> معاينة التأثير</div>
-        <p class="spdx-impact__note" data-impact-note>سيتم تطبيق <b>100%</b> على <b>0</b> باقات.</p>
-        <div class="spdx-impact__row"><span>إجمالي السرعة الأصلية</span><b data-impact-base>0.00 Mb</b></div>
-        <div class="spdx-impact__row"><span>إجمالي السرعة بعد التطبيق</span><b class="is-accent" data-impact-eff>0.00 Mb</b></div>
+        <div class="spdx-impact__head"><i class="fa-regular fa-eye"></i> {{ _('معاينة التأثير') }}</div>
+        <p class="spdx-impact__note" data-impact-note>{{ _('سيتم تطبيق') }} <b>100%</b> {{ _('على') }} <b>0</b> {{ _('باقات.') }}</p>
+        <div class="spdx-impact__row"><span>{{ _('إجمالي السرعة الأصلية') }}</span><b data-impact-base>0.00 Mb</b></div>
+        <div class="spdx-impact__row"><span>{{ _('إجمالي السرعة بعد التطبيق') }}</span><b class="is-accent" data-impact-eff>0.00 Mb</b></div>
         <div class="spdx-impact__row spdx-impact__row--total">
-          <span>التغيير الكلي</span>
+          <span>{{ _('التغيير الكلي') }}</span>
           <b class="spdx-delta" data-impact-delta><i class="fa-solid fa-arrow-down"></i> 0.00 Mb (0%)</b>
         </div>
       </aside>
@@ -206,13 +206,13 @@
   {# ── التحكم الرئيسي — وضع التحميل/الرفع المنفصل: بطاقتان بسلايدرَين ── #}
   <section class="spdx-master spdx-master--split" data-view="separate" hidden>
     <div class="spdx-master__head">
-      <span class="spdx-master__title"><i class="fa-solid fa-sliders"></i> التحكّم الرئيسي — تأثير عام على جميع الباقات</span>
+      <span class="spdx-master__title"><i class="fa-solid fa-sliders"></i> {{ _('التحكّم الرئيسي — تأثير عام على جميع الباقات') }}</span>
     </div>
     <div class="spdx-dualgrid">
       <div class="spdx-globalcard spdx-globalcard--purple">
         <div class="spdx-globalcard__head">
           <span class="spdx-globalcard__icon"><i class="fa-solid fa-arrow-down"></i></span>
-          <span class="spdx-globalcard__label">حدّ التحميل %<small>الحدّ الحالي</small></span>
+          <span class="spdx-globalcard__label">حدّ التحميل %<small>{{ _('الحدّ الحالي') }}</small></span>
           <span class="spdx-globalcard__pct"><span data-global-down-pct>100</span>%</span>
         </div>
         <div class="spdx-slider" data-slider-wrap>
@@ -221,17 +221,17 @@
             <span class="spdx-slider__fill" data-fill></span>
             <input type="range" min="0" max="300" step="1" value="100"
                    class="spdx-slider__input spdx-slider__input--purple" data-global-down
-                   aria-label="حدّ التحميل لجميع الباقات">
+                   aria-label="{{ _('حدّ التحميل لجميع الباقات') }}">
           </div>
           <div class="spdx-slider__ticks"><span>0%</span><span>100%</span><span>200%</span><span>300%</span></div>
         </div>
-        <p class="spdx-globalcard__hint">التأثير المتوقّع: سيتم تقييد التحميل إلى <b data-global-down-echo>100%</b> من السرعة الأصلية.</p>
+        <p class="spdx-globalcard__hint">{{ _('التأثير المتوقّع: سيتم تقييد التحميل إلى') }} <b data-global-down-echo>100%</b> {{ _('من السرعة الأصلية.') }}</p>
       </div>
 
       <div class="spdx-globalcard spdx-globalcard--teal">
         <div class="spdx-globalcard__head">
           <span class="spdx-globalcard__icon"><i class="fa-solid fa-arrow-up"></i></span>
-          <span class="spdx-globalcard__label">حدّ الرفع %<small>الحدّ الحالي</small></span>
+          <span class="spdx-globalcard__label">حدّ الرفع %<small>{{ _('الحدّ الحالي') }}</small></span>
           <span class="spdx-globalcard__pct"><span data-global-up-pct>100</span>%</span>
         </div>
         <div class="spdx-slider spdx-slider--teal" data-slider-wrap>
@@ -240,11 +240,11 @@
             <span class="spdx-slider__fill" data-fill></span>
             <input type="range" min="0" max="300" step="1" value="100"
                    class="spdx-slider__input spdx-slider__input--teal" data-global-up
-                   aria-label="حدّ الرفع لجميع الباقات">
+                   aria-label="{{ _('حدّ الرفع لجميع الباقات') }}">
           </div>
           <div class="spdx-slider__ticks"><span>0%</span><span>100%</span><span>200%</span><span>300%</span></div>
         </div>
-        <p class="spdx-globalcard__hint">التأثير المتوقّع: سيتم تقييد الرفع إلى <b data-global-up-echo>100%</b> من السرعة الأصلية.</p>
+        <p class="spdx-globalcard__hint">{{ _('التأثير المتوقّع: سيتم تقييد الرفع إلى') }} <b data-global-up-echo>100%</b> {{ _('من السرعة الأصلية.') }}</p>
       </div>
     </div>
   </section>
@@ -252,7 +252,7 @@
   {# ── قائمة الباقات: سلايدر لكل باقة + مفتاح تفعيل + استعادة ── #}
   <section class="spdx-profiles">
     <div class="spdx-profiles__head">
-      <span class="spdx-profiles__title">الباقات المتحكَّم بها <em data-profiles-count>({{ control_profiles|length }})</em></span>
+      <span class="spdx-profiles__title">{{ _('الباقات المتحكَّم بها') }} <em data-profiles-count>({{ control_profiles|length }})</em></span>
     </div>
 
     <div class="spdx-profiles__list" data-profiles-list>
@@ -269,8 +269,8 @@
             <span class="spdx-profile__name">
               <strong>{{ p.name }}</strong>
               <span class="spdx-profile__tags">
-                {% if p.is_default %}<span class="spdx-tag spdx-tag--default">افتراضي</span>{% endif %}
-                <span class="spdx-tag spdx-status" data-status>مفعّل</span>
+                {% if p.is_default %}<span class="spdx-tag spdx-tag--default">{{ _('افتراضي') }}</span>{% endif %}
+                <span class="spdx-tag spdx-status" data-status>{{ _('مفعّل') }}</span>
               </span>
             </span>
           </div>
@@ -315,13 +315,13 @@
 
           <div class="spdx-profile__speeds">
             <div class="spdx-speedcol">
-              <span class="spdx-speedcol__label"><i class="fa-solid fa-gauge"></i> السرعة الأصلية</span>
+              <span class="spdx-speedcol__label"><i class="fa-solid fa-gauge"></i> {{ _('السرعة الأصلية') }}</span>
               <span class="spdx-speedcol__val spdx-speedcol__val--dual">
                 <b>{{ mb(p.down_kbps) }}</b><small>↓</small> / <b>{{ mb(p.up_kbps) }}</b><small>↑</small>
               </span>
             </div>
             <div class="spdx-speedcol spdx-speedcol--eff">
-              <span class="spdx-speedcol__label"><i class="fa-solid fa-bolt"></i> السرعة الفعلية</span>
+              <span class="spdx-speedcol__label"><i class="fa-solid fa-bolt"></i> {{ _('السرعة الفعلية') }}</span>
               <span class="spdx-speedcol__val spdx-speedcol__val--dual">
                 <b data-eff-down>{{ mb(p.down_kbps) }}</b><small>↓</small> / <b data-eff-up>{{ mb(p.up_kbps) }}</b><small>↑</small>
               </span>
@@ -333,8 +333,8 @@
               <input type="checkbox" data-enable checked aria-label="تفعيل التحكّم لباقة {{ p.name }}">
               <span class="spdx-switch__track"></span>
             </label>
-            <button type="button" class="spdx-ghost-btn" data-action="restore-one" title="استعادة السرعة الأصلية">
-              <i class="fa-solid fa-rotate-left"></i> استعادة
+            <button type="button" class="spdx-ghost-btn" data-action="restore-one" title="{{ _('استعادة السرعة الأصلية') }}">
+              <i class="fa-solid fa-rotate-left"></i> {{ _('استعادة') }}
             </button>
           </div>
         </div>
@@ -342,7 +342,7 @@
       {% else %}
       <div class="spdx-empty">
         <i class="fa-solid fa-inbox"></i>
-        <p>لا توجد باقات نشطة بعد. أنشئ باقة سرعة أولًا لتظهر هنا.</p>
+        <p>{{ _('لا توجد باقات نشطة بعد. أنشئ باقة سرعة أولًا لتظهر هنا.') }}</p>
       </div>
       {% endfor %}
     </div>
@@ -350,16 +350,16 @@
 
   {# ── شريط الإجراءات: استعادة الكل / معاينة / حفظ ── #}
   <div class="spdx-actionbar">
-    <span class="spdx-actionbar__note"><i class="fa-solid fa-circle-info"></i> معاينة آمنة — لا تُطبَّق على الشبكة إلا بعد اعتماد صريح.</span>
+    <span class="spdx-actionbar__note"><i class="fa-solid fa-circle-info"></i> {{ _('معاينة آمنة — لا تُطبَّق على الشبكة إلا بعد اعتماد صريح.') }}</span>
     <div class="spdx-actionbar__btns">
       <button type="button" class="spdx-btn spdx-btn--danger" data-action="restore-all">
-        <i class="fa-solid fa-rotate-left"></i> استعادة الكل
+        <i class="fa-solid fa-rotate-left"></i> {{ _('استعادة الكل') }}
       </button>
       <button type="button" class="spdx-btn spdx-btn--ghost" data-action="preview">
-        <i class="fa-regular fa-eye"></i> معاينة الأثر
+        <i class="fa-regular fa-eye"></i> {{ _('معاينة الأثر') }}
       </button>
       <button type="button" class="spdx-btn spdx-btn--primary" data-action="save">
-        <i class="fa-solid fa-check"></i> حفظ التغييرات
+        <i class="fa-solid fa-check"></i> {{ _('حفظ التغييرات') }}
       </button>
     </div>
   </div>
@@ -393,8 +393,8 @@
     <table class="hub-table" data-testid="speed-manual-policies-table">
       <thead>
         <tr>
-          <th>الرقم</th><th>الاسم</th><th>المعرّف المختصر</th>
-          <th>الحالة</th><th>مطبّقة على خدمة المصادقة</th>
+          <th>{{ _('الرقم') }}</th><th>{{ _('الاسم') }}</th><th>{{ _('المعرّف المختصر') }}</th>
+          <th>{{ _('الحالة') }}</th><th>{{ _('مطبّقة على خدمة المصادقة') }}</th>
         </tr>
       </thead>
       <tbody>

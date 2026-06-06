@@ -9,7 +9,7 @@
 {% block title %}403 — صلاحية مطلوبة{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-lock"></i>{% endblock %}
 {% block page_title %}صلاحية مطلوبة{% endblock %}
-{% block page_sub %}<span class="sub">لا تملك إذنًا لهذه الصفحة</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('لا تملك إذنًا لهذه الصفحة') }}</span>{% endblock %}
 
 {% block content %}
 
@@ -29,7 +29,7 @@
       </p>
       <div class="mt-program-actions">
         <a class="mt-mini-btn" href="{{ url_for('radius.dashboard') if request.endpoint else '/admin/radius/' }}">
-          <i class="fa-solid fa-house"></i> العودة للرئيسية
+          <i class="fa-solid fa-house"></i> {{ _('العودة للرئيسية') }}
         </a>
       </div>
     </div>

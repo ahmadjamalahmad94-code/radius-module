@@ -25,7 +25,7 @@
 ) %}
   {# حزام الفلاتر داخل الهيرو الموحّد — نفس أسماء الحقول التي يعتمدها الـGET #}
   <select class="hub-select" name="entry_type">
-    <option value="">كل أنواع القيود</option>
+    <option value="">{{ _('كل أنواع القيود') }}</option>
     {% for t in ['payment','loan','settlement','void','reversal','correction'] %}
       <option value="{{ t }}" {% if entry_type == t %}selected{% endif %}>
         {% if t == 'payment' %}دفعة
@@ -39,7 +39,7 @@
     {% endfor %}
   </select>
   <input class="hub-input" type="text" name="subscriber_id" value="{{ subscriber_id }}"
-         placeholder="رقم المستفيد..." inputmode="numeric" style="max-width:180px">
+         placeholder="{{ _('رقم المستفيد...') }}" inputmode="numeric" style="max-width:180px">
   {{ hub.btn("فلترة", icon="filter", variant="primary", type="submit", size="sm") }}
   {# زر «مسح» عبر href بدل onclick غير الآمن — أنظف وأسهل صيانة #}
   {{ hub.btn("مسح", icon="rotate-left", variant="ghost", size="sm",
@@ -58,20 +58,20 @@
 {% if items %}
 {% call hub.section("القيود", icon="table-list", meta=items|length|string + " قيد", flush=True) %}
   {# جدول بيانات موحّد uds-table: يفعّل شريط الأعمدة + الفرز + الترقيم + أزرار التصدير الثلاثة #}
-  <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="50" data-uds-export-title="السجل المالي — القيود" style="border:none;border-radius:0">
+  <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="50" data-uds-export-title="{{ _('السجل المالي — القيود') }}" style="border:none;border-radius:0">
     <table class="hub-table">
       <thead>
         <tr>
           <th class="num" style="width:60px">#</th>
-          <th>النوع</th>
-          <th>المستفيد</th>
-          <th>الاتجاه</th>
-          <th class="num">المبلغ</th>
-          <th>الحالة</th>
-          <th>المصدر</th>
-          <th>ملاحظات</th>
-          <th>التاريخ</th>
-          <th style="width:240px">عكس القيد</th>
+          <th>{{ _('النوع') }}</th>
+          <th>{{ _('المستفيد') }}</th>
+          <th>{{ _('الاتجاه') }}</th>
+          <th class="num">{{ _('المبلغ') }}</th>
+          <th>{{ _('الحالة') }}</th>
+          <th>{{ _('المصدر') }}</th>
+          <th>{{ _('ملاحظات') }}</th>
+          <th>{{ _('التاريخ') }}</th>
+          <th style="width:240px">{{ _('عكس القيد') }}</th>
         </tr>
       </thead>
       <tbody>
@@ -103,14 +103,14 @@
               {# توكن CSRF لحماية إرسال عكس القيد #}
               <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
               <input type="hidden" name="entry_id" value="{{ entry.id }}">
-              <input class="hub-input" name="reason" placeholder="سبب التصحيح" required style="font-size:12px;padding:5px 8px;min-width:120px">
-              <button type="submit" class="hub-btn hub-btn--icon" title="عكس القيد"
+              <input class="hub-input" name="reason" placeholder="{{ _('سبب التصحيح') }}" required style="font-size:12px;padding:5px 8px;min-width:120px">
+              <button type="submit" class="hub-btn hub-btn--icon" title="{{ _('عكس القيد') }}"
                 style="background:var(--hub-amber-soft);color:var(--hub-amber-ink);border-color:transparent">
                 <i class="fa-solid fa-rotate-left"></i>
               </button>
             </form>
             {% else %}
-              <span class="hub-text-mute small">قيد تصحيحي</span>
+              <span class="hub-text-mute small">{{ _('قيد تصحيحي') }}</span>
             {% endif %}
           </td>
         </tr>

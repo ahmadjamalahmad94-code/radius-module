@@ -23,7 +23,7 @@
 {% block title %}المدراء والموزعون — هوب ريديوس{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-user-tie"></i>{% endblock %}
 {% block page_title %}المدراء والموزعون{% endblock %}
-{% block page_sub %}<span class="sub"><bdi dir="ltr">{{ managers|length + distributors|length }}</bdi> مشغّلًا ضمن نطاق الجهة</span>{% endblock %}
+{% block page_sub %}<span class="sub"><bdi dir="ltr">{{ managers|length + distributors|length }}</bdi> {{ _('مشغّلًا ضمن نطاق الجهة') }}</span>{% endblock %}
 
 {% block head_extra %}{{ super() }}
 {# نظام الجداول الموحّد (uds): فرز + ترقيم + أزرار التصدير #}
@@ -66,7 +66,7 @@
   {# لا فلاتر خادمية في هذا المسار — الفرز والترقيم والتصدير من الجدولين مباشرة #}
   <span class="hub-text-soft" style="font-size:12.5px;font-weight:700">
     <i class="fa-solid fa-shield-halved" style="color:var(--hub-brand-ink)"></i>
-    التطبيق المباشر للسياسات متوقف حاليًا — تُحفظ كأساس قابل للتوسعة لاحقًا.
+    {{ _('التطبيق المباشر للسياسات متوقف حاليًا — تُحفظ كأساس قابل للتوسعة لاحقًا.') }}
   </span>
   <span class="hub-hint" tabindex="0"
         data-hint="المدراء يديرون النظام ضمن صلاحياتهم؛ الموزّعون يبيعون ويشحنون ضمن محافظهم ونطاقهم. من ملف المشغّل تضبط الصلاحيات والحدود وتشحن المحفظة."><i class="fa-solid fa-info"></i></span>
@@ -78,15 +78,15 @@
                     meta=(managers|length|string ~ " مدير") if managers else "", flush=True) %}
   {% if managers %}
   <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10"
-       data-uds-export-title="المدراء" style="border:none;border-radius:0">
+       data-uds-export-title="{{ _('المدراء') }}" style="border:none;border-radius:0">
     <table class="hub-table" data-testid="manager-operators-table">
       <thead>
         <tr>
           <th class="num" style="width:64px">#</th>
-          <th>الاسم</th>
-          <th>اسم الدخول</th>
-          <th>الحالة</th>
-          <th style="width:88px" data-uds-nosort data-uds-nocol data-uds-noexport>الملف</th>
+          <th>{{ _('الاسم') }}</th>
+          <th>{{ _('اسم الدخول') }}</th>
+          <th>{{ _('الحالة') }}</th>
+          <th style="width:88px" data-uds-nosort data-uds-nocol data-uds-noexport>{{ _('الملف') }}</th>
         </tr>
       </thead>
       <tbody>
@@ -97,7 +97,7 @@
           <td class="mono small"><bdi dir="ltr">{{ manager.username }}</bdi></td>
           <td>{{ op_status(manager.status) }}</td>
           <td>
-            <a class="hub-btn hub-btn--primary hub-btn--icon" title="فتح ملف المدير"
+            <a class="hub-btn hub-btn--primary hub-btn--icon" title="{{ _('فتح ملف المدير') }}"
                href="{{ url_for('radius.business_operator_profile', entity_type='manager', entity_id=manager.id) }}">
               <i class="fa-solid fa-arrow-up-right-from-square"></i>
             </a>
@@ -119,14 +119,14 @@
                     meta=(distributors|length|string ~ " موزع") if distributors else "", flush=True) %}
   {% if distributors %}
   <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10"
-       data-uds-export-title="الموزعون" style="border:none;border-radius:0">
+       data-uds-export-title="{{ _('الموزعون') }}" style="border:none;border-radius:0">
     <table class="hub-table" data-testid="distributor-operators-table">
       <thead>
         <tr>
           <th class="num" style="width:64px">#</th>
-          <th>الاسم</th>
-          <th>الحالة</th>
-          <th style="width:88px" data-uds-nosort data-uds-nocol data-uds-noexport>الملف</th>
+          <th>{{ _('الاسم') }}</th>
+          <th>{{ _('الحالة') }}</th>
+          <th style="width:88px" data-uds-nosort data-uds-nocol data-uds-noexport>{{ _('الملف') }}</th>
         </tr>
       </thead>
       <tbody>
@@ -136,7 +136,7 @@
           <td style="font-weight:700">{{ distributor.full_name or distributor.username or '—' }}</td>
           <td>{{ op_status(distributor.status) }}</td>
           <td>
-            <a class="hub-btn hub-btn--primary hub-btn--icon" title="فتح ملف الموزّع"
+            <a class="hub-btn hub-btn--primary hub-btn--icon" title="{{ _('فتح ملف الموزّع') }}"
                href="{{ url_for('radius.business_operator_profile', entity_type='distributor', entity_id=distributor.id) }}">
               <i class="fa-solid fa-arrow-up-right-from-square"></i>
             </a>

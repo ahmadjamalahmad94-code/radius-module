@@ -1027,11 +1027,11 @@
       <span class="acs-title-icon"><i class="fa-solid fa-calendar-days"></i></span>
       {{ title }}
     </span>
-    <div class="acs-segment" role="tablist" aria-label="وضع الجدولة">
+    <div class="acs-segment" role="tablist" aria-label="{{ _('وضع الجدولة') }}">
       <button type="button" class="acs-segment-btn is-active"
-              data-acs-mode-btn="simple">بسيط</button>
+              data-acs-mode-btn="simple">{{ _('بسيط') }}</button>
       <button type="button" class="acs-segment-btn"
-              data-acs-mode-btn="advanced">متقدم</button>
+              data-acs-mode-btn="advanced">{{ _('متقدم') }}</button>
     </div>
   </div>
 
@@ -1039,20 +1039,20 @@
   <div class="acs-simple">
     <div class="acs-block">
       <div class="acs-block-label">
-        <i class="fa-solid fa-calendar"></i> أيام السماح
-        <span class="acs-block-hint">اتركيها فاضية = كل الأيام</span>
+        <i class="fa-solid fa-calendar"></i> {{ _('أيام السماح') }}
+        <span class="acs-block-hint">{{ _('اتركيها فاضية = كل الأيام') }}</span>
       </div>
       <div class="acs-days" data-acs-days></div>
     </div>
 
     <div class="acs-block">
       <div class="acs-block-label">
-        <i class="fa-solid fa-clock"></i> الفترات الزمنية
-        <span class="acs-block-hint">اتركي الأوقات فاضية = طول اليوم</span>
+        <i class="fa-solid fa-clock"></i> {{ _('الفترات الزمنية') }}
+        <span class="acs-block-hint">{{ _('اتركي الأوقات فاضية = طول اليوم') }}</span>
       </div>
       <div class="acs-windows" data-acs-windows></div>
       <button type="button" class="acs-add-window" data-acs-add-window>
-        <i class="fa-solid fa-plus"></i> إضافة فترة جديدة
+        <i class="fa-solid fa-plus"></i> {{ _('إضافة فترة جديدة') }}
       </button>
     </div>
   </div>
@@ -1063,7 +1063,7 @@
     <label class="acs-add-day">
       <i class="fa-solid fa-plus"></i>
       <select data-acs-add-day>
-        <option value="">+ إضافة يوم آخر</option>
+        <option value="">{{ _('+ إضافة يوم آخر') }}</option>
       </select>
     </label>
   </div>

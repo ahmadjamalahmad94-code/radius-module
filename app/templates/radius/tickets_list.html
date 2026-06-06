@@ -17,7 +17,7 @@
 {% block title %}التذاكر والشكاوى{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-headset"></i>{% endblock %}
 {% block page_title %}التذاكر{% endblock %}
-{% block page_sub %}<span class="sub"><bdi dir="ltr">{{ items|length }}</bdi> تذكرة في النتائج</span>{% endblock %}
+{% block page_sub %}<span class="sub"><bdi dir="ltr">{{ items|length }}</bdi> {{ _('تذكرة في النتائج') }}</span>{% endblock %}
 
 {% block head_extra %}{{ super() }}
 {# نظام الجداول الموحّد (uds): فرز + ترقيم + أزرار التصدير #}
@@ -99,12 +99,12 @@
 ) %}
   {# عقد الفلترة كما هو: GET ?status=… #}
   <select class="hub-select" name="status">
-    <option value="">كل الحالات</option>
-    <option value="open"        {% if status == 'open' %}selected{% endif %}>مفتوحة</option>
-    <option value="pending"     {% if status == 'pending' %}selected{% endif %}>معلَّقة</option>
-    <option value="in_progress" {% if status == 'in_progress' %}selected{% endif %}>قيد المعالجة</option>
-    <option value="resolved"    {% if status == 'resolved' %}selected{% endif %}>محلولة</option>
-    <option value="closed"      {% if status == 'closed' %}selected{% endif %}>مغلقة</option>
+    <option value="">{{ _('كل الحالات') }}</option>
+    <option value="open"        {% if status == 'open' %}selected{% endif %}>{{ _('مفتوحة') }}</option>
+    <option value="pending"     {% if status == 'pending' %}selected{% endif %}>{{ _('معلَّقة') }}</option>
+    <option value="in_progress" {% if status == 'in_progress' %}selected{% endif %}>{{ _('قيد المعالجة') }}</option>
+    <option value="resolved"    {% if status == 'resolved' %}selected{% endif %}>{{ _('محلولة') }}</option>
+    <option value="closed"      {% if status == 'closed' %}selected{% endif %}>{{ _('مغلقة') }}</option>
   </select>
   {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
   {% if status %}
@@ -120,18 +120,18 @@
 {# ───── جدول التذاكر — uds موحّد (فرز + ترقيم + تصدير) ───── #}
 {% call hub.section("قائمة التذاكر", icon="table-list", meta=items|length|string + " تذكرة", flush=True) %}
   <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25"
-       data-uds-export-title="التذاكر" style="border:none;border-radius:0">
+       data-uds-export-title="{{ _('التذاكر') }}" style="border:none;border-radius:0">
     <table class="hub-table">
       <thead>
         <tr>
           <th class="num" style="width:60px">#</th>
-          <th>الموضوع</th>
-          <th>الفئة</th>
-          <th>الأولوية</th>
-          <th>الحالة</th>
-          <th>المسؤول</th>
-          <th>أُنشئت</th>
-          <th style="width:70px" data-uds-nosort data-uds-nocol data-uds-noexport>فتح</th>
+          <th>{{ _('الموضوع') }}</th>
+          <th>{{ _('الفئة') }}</th>
+          <th>{{ _('الأولوية') }}</th>
+          <th>{{ _('الحالة') }}</th>
+          <th>{{ _('المسؤول') }}</th>
+          <th>{{ _('أُنشئت') }}</th>
+          <th style="width:70px" data-uds-nosort data-uds-nocol data-uds-noexport>{{ _('فتح') }}</th>
         </tr>
       </thead>
       <tbody>
@@ -151,7 +151,7 @@
           <td class="mono small">{% if t.assignee_admin_id %}<bdi dir="ltr">#{{ t.assignee_admin_id }}</bdi>{% else %}<span class="hub-text-mute">—</span>{% endif %}</td>
           <td class="mono small"><bdi dir="ltr">{{ t.created_at|dt_local if t.created_at else '—' }}</bdi></td>
           <td>
-            <a class="hub-btn hub-btn--primary hub-btn--icon" title="فتح التذكرة"
+            <a class="hub-btn hub-btn--primary hub-btn--icon" title="{{ _('فتح التذكرة') }}"
                href="{{ url_for('radius.tk_view', tid=t.id) }}">
               <i class="fa-solid fa-eye"></i>
             </a>
@@ -180,67 +180,67 @@
     {# method="post" ضروري: حاقن الـ CSRF التلقائي يستهدف فقط <form method="post">. #}
     <form method="post" action="{{ url_for('radius.tk_create') }}">
       <div class="fcw-head">
-        <h3 id="fcw-ticket-create-title"><i class="fa-solid fa-headset"></i> تذكرة جديدة</h3>
-        <button type="button" class="fcw-x" data-fcw-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
+        <h3 id="fcw-ticket-create-title"><i class="fa-solid fa-headset"></i> {{ _('تذكرة جديدة') }}</h3>
+        <button type="button" class="fcw-x" data-fcw-close aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="fcw-body">
 
         <div class="fcw-grid">
           <label class="hub-field">
-            <span class="hub-field-label">المشترك <span style="color:#dc2626">*</span></span>
+            <span class="hub-field-label">{{ _('المشترك') }} <span style="color:#dc2626">*</span></span>
             <select class="hub-select" name="subscriber_id" required>
-              <option value="">— اختر مشتركًا —</option>
+              <option value="">{{ _('— اختر مشتركًا —') }}</option>
               {% for s in subs %}
                 <option value="{{ s.id }}">{{ s.username }} — {{ s.full_name or '—' }}</option>
               {% endfor %}
             </select>
-            <span class="hub-field-hint">صاحب التذكرة — تظهر في سجلّه وتُحتسب ضمن متابعاته.</span>
+            <span class="hub-field-hint">{{ _('صاحب التذكرة — تظهر في سجلّه وتُحتسب ضمن متابعاته.') }}</span>
           </label>
 
           <label class="hub-field">
-            <span class="hub-field-label">الفئة</span>
+            <span class="hub-field-label">{{ _('الفئة') }}</span>
             <select class="hub-select" name="category">
-              <option value="general">عام</option>
-              <option value="billing">الفواتير والدفع</option>
-              <option value="connection">الاتصال والخدمة</option>
-              <option value="hardware">الأجهزة والمعدّات</option>
-              <option value="complaint">شكوى</option>
-              <option value="service_request">طلب خدمة</option>
+              <option value="general">{{ _('عام') }}</option>
+              <option value="billing">{{ _('الفواتير والدفع') }}</option>
+              <option value="connection">{{ _('الاتصال والخدمة') }}</option>
+              <option value="hardware">{{ _('الأجهزة والمعدّات') }}</option>
+              <option value="complaint">{{ _('شكوى') }}</option>
+              <option value="service_request">{{ _('طلب خدمة') }}</option>
             </select>
-            <span class="hub-field-hint">تسهّل الفرز وتوجيه التذكرة للفريق المختص.</span>
+            <span class="hub-field-hint">{{ _('تسهّل الفرز وتوجيه التذكرة للفريق المختص.') }}</span>
           </label>
 
           <label class="hub-field full">
-            <span class="hub-field-label">الموضوع <span style="color:#dc2626">*</span></span>
+            <span class="hub-field-label">{{ _('الموضوع') }} <span style="color:#dc2626">*</span></span>
             <input class="hub-input" type="text" name="subject" required
-                   placeholder="مثال: انقطاع متكرر في الخدمة منذ يومين">
-            <span class="hub-field-hint">سطر واحد يلخّص المشكلة — يظهر عنوانًا في قائمة التذاكر.</span>
+                   placeholder="{{ _('مثال: انقطاع متكرر في الخدمة منذ يومين') }}">
+            <span class="hub-field-hint">{{ _('سطر واحد يلخّص المشكلة — يظهر عنوانًا في قائمة التذاكر.') }}</span>
           </label>
 
           <div class="hub-field full">
-            <span class="hub-field-label">الأولوية</span>
+            <span class="hub-field-label">{{ _('الأولوية') }}</span>
             {# راديو حقيقي بنفس حقل priority — التصميم بطاقات لا قائمة #}
-            <div class="tkm-prio" role="radiogroup" aria-label="الأولوية">
-              <label><input type="radio" name="priority" value="low"><i class="fa-solid fa-angle-down"></i> منخفضة</label>
-              <label><input type="radio" name="priority" value="normal" checked><i class="fa-solid fa-minus"></i> عادية</label>
-              <label><input type="radio" name="priority" value="high"><i class="fa-solid fa-angle-up"></i> مرتفعة</label>
-              <label><input type="radio" name="priority" value="urgent"><i class="fa-solid fa-triangle-exclamation"></i> عاجلة</label>
+            <div class="tkm-prio" role="radiogroup" aria-label="{{ _('الأولوية') }}">
+              <label><input type="radio" name="priority" value="low"><i class="fa-solid fa-angle-down"></i> {{ _('منخفضة') }}</label>
+              <label><input type="radio" name="priority" value="normal" checked><i class="fa-solid fa-minus"></i> {{ _('عادية') }}</label>
+              <label><input type="radio" name="priority" value="high"><i class="fa-solid fa-angle-up"></i> {{ _('مرتفعة') }}</label>
+              <label><input type="radio" name="priority" value="urgent"><i class="fa-solid fa-triangle-exclamation"></i> {{ _('عاجلة') }}</label>
             </div>
-            <span class="hub-field-hint">تحدّد ترتيب المعالجة — استخدم «عاجلة» للحالات الحرجة فقط.</span>
+            <span class="hub-field-hint">{{ _('تحدّد ترتيب المعالجة — استخدم «عاجلة» للحالات الحرجة فقط.') }}</span>
           </div>
 
           <label class="hub-field full">
-            <span class="hub-field-label">التفاصيل</span>
+            <span class="hub-field-label">{{ _('التفاصيل') }}</span>
             <textarea class="hub-textarea" name="body" rows="5"
-                      placeholder="اشرح المشكلة بوضوح: متى بدأت؟ ما الأعراض؟ ماذا جُرّب؟"></textarea>
-            <span class="hub-field-hint">تفاصيل أوضح = حلّ أسرع وأخذ وردّ أقل.</span>
+                      placeholder="{{ _('اشرح المشكلة بوضوح: متى بدأت؟ ما الأعراض؟ ماذا جُرّب؟') }}"></textarea>
+            <span class="hub-field-hint">{{ _('تفاصيل أوضح = حلّ أسرع وأخذ وردّ أقل.') }}</span>
           </label>
         </div>
 
       </div>
       <div class="fcw-foot">
-        <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>إغلاق</button>
-        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-paper-plane"></i> إنشاء التذكرة</button>
+        <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>{{ _('إغلاق') }}</button>
+        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-paper-plane"></i> {{ _('إنشاء التذكرة') }}</button>
       </div>
     </form>
   </div>

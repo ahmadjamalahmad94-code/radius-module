@@ -316,11 +316,11 @@
 {% set hero_actions %}
   <form method="post" action="{{ url_for('radius.license_file_sync') }}" style="margin:0;display:flex;flex-wrap:wrap;gap:8px">
     {{ csrf_token_input() }}
-    <button class="hub-btn hub-btn--primary" name="action" value="both" type="submit"><i class="fa-solid fa-arrows-rotate"></i> مزامنة الكل</button>
-    <button class="hub-btn hub-btn--secondary" name="action" value="runtime" type="submit"><i class="fa-solid fa-file-contract"></i> عقد التشغيل</button>
-    <button class="hub-btn hub-btn--ghost" name="action" value="identity" type="submit"><i class="fa-solid fa-users-gear"></i> الهوية</button>
+    <button class="hub-btn hub-btn--primary" name="action" value="both" type="submit"><i class="fa-solid fa-arrows-rotate"></i> {{ _('مزامنة الكل') }}</button>
+    <button class="hub-btn hub-btn--secondary" name="action" value="runtime" type="submit"><i class="fa-solid fa-file-contract"></i> {{ _('عقد التشغيل') }}</button>
+    <button class="hub-btn hub-btn--ghost" name="action" value="identity" type="submit"><i class="fa-solid fa-users-gear"></i> {{ _('الهوية') }}</button>
   </form>
-  <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.license_file_portal_sso') }}" target="_blank" rel="noopener"><i class="fa-solid fa-arrow-up-right-from-square"></i> افتح بوابة العميل</a>
+  <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.license_file_portal_sso') }}" target="_blank" rel="noopener"><i class="fa-solid fa-arrow-up-right-from-square"></i> {{ _('افتح بوابة العميل') }}</a>
 {% endset %}
 {{ hub.megahero(
   "ترخيص النظام",
@@ -369,62 +369,62 @@
   {% call hub.section("ربط الترخيص من صفحة العميل", icon="link") %}
     <p style="margin:0 0 12px; color:var(--hub-text-soft); font-size:13.5px; line-height:1.8">
       نعم، الريدياس يأخذ الترخيص والصلاحيات من لوحة التراخيص. افتح صفحة العميل في لوحة التراخيص،
-      ثم انسخ <strong>مفتاح الترخيص</strong> و<strong>سر الربط</strong> والصقهما هنا. بعد الحفظ اضغط مزامنة ليقرأ الريدياس عقد التشغيل من واجهة ربط موقّعة.
+      ثم انسخ <strong>{{ _('مفتاح الترخيص') }}</strong> {{ _('و') }}<strong>{{ _('سر الربط') }}</strong> والصقهما هنا. بعد الحفظ اضغط مزامنة ليقرأ الريدياس عقد التشغيل من واجهة ربط موقّعة.
       لا يتم قراءة الصفحة المعروضة نفسها، بل يتم استخدام هذه القيم كتعريف أولي للعميل.
     </p>
     <form method="post" action="{{ url_for('radius.license_file_config') }}" class="hub-form-grid">
       {{ csrf_token_input() }}
       <div class="hub-field full">
-        <label>رابط لوحة التراخيص الثابت</label>
+        <label>{{ _('رابط لوحة التراخيص الثابت') }}</label>
         <input class="hub-input ltr" name="base_url" value="{{ config_form.base_url }}" readonly>
-        <div class="hub-field-hint">هذا هو عنوان لوحة التراخيص التي يستلم منها الريدياس الترخيص والصلاحيات. الحقل مقفول حتى لا يتغير بالغلط.</div>
+        <div class="hub-field-hint">{{ _('هذا هو عنوان لوحة التراخيص التي يستلم منها الريدياس الترخيص والصلاحيات. الحقل مقفول حتى لا يتغير بالغلط.') }}</div>
       </div>
       <div class="hub-field">
-        <label>مفتاح الترخيص من صفحة العميل</label>
+        <label>{{ _('مفتاح الترخيص من صفحة العميل') }}</label>
         <input class="hub-input ltr" name="license_key" autocomplete="off" placeholder="{{ 'موجود ومحفوظ' if config_form.has_license_key else 'الصق مفتاح الترخيص هنا' }}">
-        <div class="hub-field-hint">اتركه فارغًا إذا كان محفوظًا بالفعل. لا نعرض المفتاح كاملًا بعد الحفظ.</div>
+        <div class="hub-field-hint">{{ _('اتركه فارغًا إذا كان محفوظًا بالفعل. لا نعرض المفتاح كاملًا بعد الحفظ.') }}</div>
       </div>
       <div class="hub-field">
-        <label>سر الربط من صفحة العميل</label>
+        <label>{{ _('سر الربط من صفحة العميل') }}</label>
         <input class="hub-input ltr" name="shared_secret" type="password" autocomplete="new-password" placeholder="{{ 'موجود ومحفوظ' if config_form.has_shared_secret else 'الصق سر الربط هنا' }}">
-        <div class="hub-field-hint">السر يوقّع الطلبات بين الريدياس ولوحة التراخيص ولا يظهر كاملًا في الصفحة.</div>
+        <div class="hub-field-hint">{{ _('السر يوقّع الطلبات بين الريدياس ولوحة التراخيص ولا يظهر كاملًا في الصفحة.') }}</div>
       </div>
       <div class="full">
         <div class="lf-toggle-grid">
           <div class="lf-toggle-cell">
-            <span class="lf-toggle-title">تفعيل الجسر مع لوحة التراخيص</span>
+            <span class="lf-toggle-title">{{ _('تفعيل الجسر مع لوحة التراخيص') }}</span>
             {{ toggle_switch(name="enabled", checked=config_view.enabled, value="1", id="lf-enabled") }}
           </div>
           <div class="lf-toggle-cell">
-            <span class="lf-toggle-title">استخدام عقد التشغيل الجديد</span>
+            <span class="lf-toggle-title">{{ _('استخدام عقد التشغيل الجديد') }}</span>
             {{ toggle_switch(name="runtime_contract_sync", checked=config_view.runtime_contract_sync, value="1", id="lf-runtime") }}
           </div>
           <div class="lf-toggle-cell">
-            <span class="lf-toggle-title">مزامنة الهوية عبر اتصال آمن</span>
+            <span class="lf-toggle-title">{{ _('مزامنة الهوية عبر اتصال آمن') }}</span>
             {{ toggle_switch(name="identity_sync_enabled", checked=config_view.identity_sync_enabled, value="1", id="lf-identity") }}
           </div>
           <div class="lf-toggle-cell">
-            <span class="lf-toggle-title">مزامنة سريعة قبل تسجيل الدخول</span>
+            <span class="lf-toggle-title">{{ _('مزامنة سريعة قبل تسجيل الدخول') }}</span>
             {{ toggle_switch(name="identity_sync_on_login", checked=config_view.identity_sync_on_login, value="1", id="lf-onlogin") }}
           </div>
           <div class="lf-toggle-cell">
-            <span class="lf-toggle-title">تشغيل عامل المزامنة الخلفي</span>
+            <span class="lf-toggle-title">{{ _('تشغيل عامل المزامنة الخلفي') }}</span>
             {{ toggle_switch(name="worker_enabled", checked=config_view.worker_enabled, value="1", id="lf-worker") }}
           </div>
         </div>
       </div>
       <div class="hub-field">
-        <label>فاصل المزامنة التلقائية</label>
+        <label>{{ _('فاصل المزامنة التلقائية') }}</label>
         <input class="hub-input" name="sync_interval_seconds" type="number" min="60" max="86400" step="30" value="{{ config_view.sync_interval_seconds or 300 }}">
-        <div class="hub-field-hint">اكتب عدد الثواني بين كل مزامنة وأخرى. أقل قيمة مسموحة 60 ثانية.</div>
+        <div class="hub-field-hint">{{ _('اكتب عدد الثواني بين كل مزامنة وأخرى. أقل قيمة مسموحة 60 ثانية.') }}</div>
       </div>
       <div class="hub-field full">
         <label>
           بصمة السيرفر الثابتة (اختياري لكن مهم)
           {% if config_view.fingerprint_is_stable %}
-            <span class="hub-pill hub-pill--green" style="font-size:11px"><i class="fa-solid fa-lock"></i> ثابتة ومحفوظة</span>
+            <span class="hub-pill hub-pill--green" style="font-size:11px"><i class="fa-solid fa-lock"></i> {{ _('ثابتة ومحفوظة') }}</span>
           {% else %}
-            <span class="hub-pill hub-pill--amber" style="font-size:11px"><i class="fa-solid fa-triangle-exclamation"></i> تلقائية — قد تتغيّر</span>
+            <span class="hub-pill hub-pill--amber" style="font-size:11px"><i class="fa-solid fa-triangle-exclamation"></i> {{ _('تلقائية — قد تتغيّر') }}</span>
           {% endif %}
         </label>
         <input class="hub-input ltr" name="server_fingerprint"
@@ -433,13 +433,13 @@
         <div class="hub-field-hint">
           البصمة التي يُرسلها هذا السيرفر للوحة التراخيص في كل فحص.
           بصمة البصمة الحالية (التلقائية): <code class="mono">{{ config_view.server_fingerprint_active or '—' }}</code><br>
-          <strong>المشكلة</strong>: البصمة التلقائية تتغيّر لو تغيّر الـ hostname (Docker restart، reboot، تغيير الإعدادات) → يرفضك النظام.<br>
-          <strong>الحل</strong>: اكتب أي نص ثابت من اختيارك (مثال: <code class="mono">vps-main-2026</code>). لن تحتاج reset البصمات أبداً.
+          <strong>{{ _('المشكلة') }}</strong>{{ _(': البصمة التلقائية تتغيّر لو تغيّر الـ hostname (Docker restart، reboot، تغيير الإعدادات) → يرفضك النظام.') }}<br>
+          <strong>{{ _('الحل') }}</strong>{{ _(': اكتب أي نص ثابت من اختيارك (مثال:') }} <code class="mono">vps-main-2026</code>{{ _('). لن تحتاج reset البصمات أبداً.') }}
         </div>
       </div>
       <div class="hub-form-foot full" style="padding-top:4px">
         <button class="hub-btn hub-btn--primary" type="submit">
-          <i class="fa-solid fa-floppy-disk"></i> حفظ بيانات الربط
+          <i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ بيانات الربط') }}
         </button>
       </div>
     </form>
@@ -459,7 +459,7 @@
       {'label': 'فاصل المزامنة التلقائية', 'value': (config_view.sync_interval_seconds or 300) ~ ' ثانية', 'mono': True},
     ]) }}
     <p class="hub-field-hint" style="margin-top:12px">
-      السر يظهر مختصرًا فقط. كل عمليات المزامنة تتم عبر اتصال آمن — لا يمكن استخدام اتصال غير آمن.
+      {{ _('السر يظهر مختصرًا فقط. كل عمليات المزامنة تتم عبر اتصال آمن — لا يمكن استخدام اتصال غير آمن.') }}
     </p>
   {% endcall %}
 
@@ -492,13 +492,13 @@
               {% endif %}
             </div>
             <div class="lf-snap-meta">
-              آخر تحديث: <span class="mono">{{ (snap.fetched_at or snap.created_at)|dt_local if (snap.fetched_at or snap.created_at) else "—" }}</span>
+              {{ _('آخر تحديث:') }} <span class="mono">{{ (snap.fetched_at or snap.created_at)|dt_local if (snap.fetched_at or snap.created_at) else "—" }}</span>
             </div>
           {% else %}
             <div>
-              <span class="hub-pill hub-pill--grey"><span class="dot"></span>لا توجد لقطة بعد</span>
+              <span class="hub-pill hub-pill--grey"><span class="dot"></span>{{ _('لا توجد لقطة بعد') }}</span>
             </div>
-            <div class="lf-snap-meta">شغّل المزامنة بعد إكمال إعدادات الربط.</div>
+            <div class="lf-snap-meta">{{ _('شغّل المزامنة بعد إكمال إعدادات الربط.') }}</div>
           {% endif %}
         </div>
       {% endfor %}
@@ -517,7 +517,7 @@
   {% call hub.section("الخدمات المفعّلة في عقدك", icon="shapes",
        meta=(_svc.values()|selectattr('status','equalto','active')|list|length ~ ' مفعّلة من ' ~ _svc|length) if _svc else '') %}
     <p class="card-intro" style="margin:0 0 16px;font-size:12.5px;color:var(--hub-text-soft,#475569);line-height:1.7">
-      هذه قائمة بالخدمات مقسّمة حسب الفئة. كل بطاقة توضّح اسم الخدمة، هل هي مفعّلة الآن، وحدودها كما استلمها الريدياس من عقد التشغيل.
+      {{ _('هذه قائمة بالخدمات مقسّمة حسب الفئة. كل بطاقة توضّح اسم الخدمة، هل هي مفعّلة الآن، وحدودها كما استلمها الريدياس من عقد التشغيل.') }}
     </p>
     {% if _svc %}
       {# ── render each category group ── #}
@@ -559,11 +559,11 @@
               <span class="lf-svc-ico"><i class="fa-solid fa-{{ service_icons.get(key, 'shapes') }}"></i></span>
               <span class="lf-svc-name">{{ _name }}</span>
               {% if _status == 'active' %}
-                <span class="hub-pill hub-pill--green"><span class="dot"></span>مفعّلة</span>
+                <span class="hub-pill hub-pill--green"><span class="dot"></span>{{ _('مفعّلة') }}</span>
               {% elif _status == 'suspended' %}
-                <span class="hub-pill hub-pill--amber"><span class="dot"></span>موقوفة</span>
+                <span class="hub-pill hub-pill--amber"><span class="dot"></span>{{ _('موقوفة') }}</span>
               {% elif _status == 'expired' %}
-                <span class="hub-pill hub-pill--red"><span class="dot"></span>منتهية</span>
+                <span class="hub-pill hub-pill--red"><span class="dot"></span>{{ _('منتهية') }}</span>
               {% else %}
                 <span class="hub-pill hub-pill--grey"><span class="dot"></span>{{ _stlabel }}</span>
               {% endif %}
@@ -599,14 +599,14 @@
                       data-status-kind="{{ 'green' if _on else ('amber' if _status=='suspended' else ('red' if _status=='expired' else 'grey')) }}"
                       data-desc="{{ _desc }}"
                       data-limits="{{ _ns.chips }}">
-                <i class="fa-solid fa-circle-info"></i> المزيد
+                <i class="fa-solid fa-circle-info"></i> {{ _('المزيد') }}
               </button>
               {% if not _on %}
                 <form method="post" action="{{ url_for('radius.license_file_service_request') }}">
                   {{ csrf_token_input() }}
                   <input type="hidden" name="service_name" value="{{ _name }}">
                   <button type="submit" class="lf-svc-btn is-req">
-                    <i class="fa-solid fa-paper-plane"></i> طلب تفعيل
+                    <i class="fa-solid fa-paper-plane"></i> {{ _('طلب تفعيل') }}
                   </button>
                 </form>
               {% endif %}
@@ -631,7 +631,7 @@
         <div class="lf-cat-block">
           <div class="lf-cat-head">
             <span class="lf-cat-ico"><i class="fa-solid fa-cube"></i></span>
-            <span class="lf-cat-title">خدمات أخرى</span>
+            <span class="lf-cat-title">{{ _('خدمات أخرى') }}</span>
           </div>
           <div class="lf-svc-grid">
             {% for key in ns_extra.keys %}{% set val = _svc[key] %}
@@ -647,9 +647,9 @@
                 <div class="lf-svc-top">
                   <span class="lf-svc-ico"><i class="fa-solid fa-{{ service_icons.get(key, 'cube') }}"></i></span>
                   <span class="lf-svc-name">{{ _name }}</span>
-                  {% if _status == 'active' %}<span class="hub-pill hub-pill--green"><span class="dot"></span>مفعّلة</span>
-                  {% elif _status == 'suspended' %}<span class="hub-pill hub-pill--amber"><span class="dot"></span>موقوفة</span>
-                  {% elif _status == 'expired' %}<span class="hub-pill hub-pill--red"><span class="dot"></span>منتهية</span>
+                  {% if _status == 'active' %}<span class="hub-pill hub-pill--green"><span class="dot"></span>{{ _('مفعّلة') }}</span>
+                  {% elif _status == 'suspended' %}<span class="hub-pill hub-pill--amber"><span class="dot"></span>{{ _('موقوفة') }}</span>
+                  {% elif _status == 'expired' %}<span class="hub-pill hub-pill--red"><span class="dot"></span>{{ _('منتهية') }}</span>
                   {% else %}<span class="hub-pill hub-pill--grey"><span class="dot"></span>{{ _stlabel }}</span>{% endif %}
                 </div>
                 <p class="lf-svc-desc">{{ _desc }}</p>
@@ -658,13 +658,13 @@
                 </div>
                 <div class="lf-svc-foot">
                   <button type="button" class="lf-svc-btn" data-lf-more data-name="{{ _name }}" data-icon="{{ service_icons.get(key,'cube') }}" data-status="{{ _stlabel }}" data-status-kind="{{ 'green' if _on else 'grey' }}" data-desc="{{ _desc }}" data-limits="{{ _ns.chips }}">
-                    <i class="fa-solid fa-circle-info"></i> المزيد
+                    <i class="fa-solid fa-circle-info"></i> {{ _('المزيد') }}
                   </button>
                   {% if not _on %}
                     <form method="post" action="{{ url_for('radius.license_file_service_request') }}">
                       {{ csrf_token_input() }}
                       <input type="hidden" name="service_name" value="{{ _name }}">
-                      <button type="submit" class="lf-svc-btn is-req"><i class="fa-solid fa-paper-plane"></i> طلب تفعيل</button>
+                      <button type="submit" class="lf-svc-btn is-req"><i class="fa-solid fa-paper-plane"></i> {{ _('طلب تفعيل') }}</button>
                     </form>
                   {% endif %}
                 </div>
@@ -682,7 +682,7 @@
   {# ── Limits the contract enforces ── #}
   {% call hub.section("حدود الاستخدام المسموحة", icon="ruler-combined", meta=(_lim|length ~ ' حد') if _lim else '') %}
     <p class="card-intro" style="margin:0 0 14px;font-size:12.5px;color:var(--hub-text-soft,#475569);line-height:1.7">
-      أقصى الأعداد المسموح بها في تثبيتك حسب باقتك (مشتركون، أجهزة شبكة، كروت…). يطبّقها الريدياس تلقائيًا.
+      {{ _('أقصى الأعداد المسموح بها في تثبيتك حسب باقتك (مشتركون، أجهزة شبكة، كروت…). يطبّقها الريدياس تلقائيًا.') }}
     </p>
     {% if _lim %}
       <div class="lf-lim-grid">
@@ -708,8 +708,8 @@
   <div class="lf-dialog">
     <div class="lf-dialog-head">
       <span class="lf-dialog-ico" id="lf-svc-modal-ico"><i class="fa-solid fa-shapes"></i></span>
-      <h3 class="lf-dialog-title" id="lf-svc-modal-title">تفاصيل الخدمة</h3>
-      <button type="button" class="lf-dialog-close" id="lf-svc-modal-close" aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
+      <h3 class="lf-dialog-title" id="lf-svc-modal-title">{{ _('تفاصيل الخدمة') }}</h3>
+      <button type="button" class="lf-dialog-close" id="lf-svc-modal-close" aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <div class="lf-dialog-body">
       <div class="lf-dialog-status" id="lf-svc-modal-status"></div>

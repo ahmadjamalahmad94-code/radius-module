@@ -4,7 +4,7 @@
 {% block title %}مركز التقارير - هوب ريديوس{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-chart-line"></i>{% endblock %}
 {% block page_title %}مركز التقارير{% endblock %}
-{% block page_sub %}<span class="sub">تحليلات تنفيذية، تقارير تفصيلية، ولقطات أرشيف ثابتة.</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('تحليلات تنفيذية، تقارير تفصيلية، ولقطات أرشيف ثابتة.') }}</span>{% endblock %}
 
 {% block head_extra %}{{ super() }}
 {# نظام الجداول الموحد (uds): فرز + ترقيم صفحات لجدول المؤشرات التفصيلية #}
@@ -33,10 +33,10 @@
   search_action=url_for('radius.reports_home')
 ) %}
   {# فلترة بنطاق تاريخ: تعيد حساب المؤشرات للفترة المختارة فقط #}
-  <label class="hub-field-label" for="rc-from" style="margin:0">من تاريخ</label>
+  <label class="hub-field-label" for="rc-from" style="margin:0">{{ _('من تاريخ') }}</label>
   <input class="hub-input" type="date" id="rc-from" name="date_from"
          value="{{ summary.filters.date_from }}">
-  <label class="hub-field-label" for="rc-to" style="margin:0">إلى تاريخ</label>
+  <label class="hub-field-label" for="rc-to" style="margin:0">{{ _('إلى تاريخ') }}</label>
   <input class="hub-input" type="date" id="rc-to" name="date_to"
          value="{{ summary.filters.date_to }}">
   {{ hub.btn("تطبيق الفترة", icon="filter", variant="primary", type="submit", size="sm") }}
@@ -99,17 +99,17 @@
       <table class="hub-table rep-table" data-testid="drilldown-links">
         <thead>
           <tr>
-            <th>المؤشر</th>
-            <th class="num">القيمة</th>
-            <th data-uds-nosort>فتح التفاصيل</th>
+            <th>{{ _('المؤشر') }}</th>
+            <th class="num">{{ _('القيمة') }}</th>
+            <th data-uds-nosort>{{ _('فتح التفاصيل') }}</th>
           </tr>
         </thead>
         <tbody>
-          <tr><td>المشتركون النشطون</td><td class="num mono">{{ summary.subscribers.active }}</td><td><a class="hub-btn hub-btn--ghost hub-btn--sm" href="{{ summary.drilldowns.subscribers_active }}"><i class="fa-solid fa-arrow-up-right-from-square"></i> فتح</a></td></tr>
-          <tr><td>المشتركون المعطلون</td><td class="num mono">{{ summary.subscribers.disabled }}</td><td><a class="hub-btn hub-btn--ghost hub-btn--sm" href="{{ summary.drilldowns.subscribers_disabled }}"><i class="fa-solid fa-arrow-up-right-from-square"></i> فتح</a></td></tr>
-          <tr><td>المستخدمون المتصلون</td><td class="num mono">{{ summary.subscribers.online }}</td><td><a class="hub-btn hub-btn--ghost hub-btn--sm" href="{{ summary.drilldowns.online_users }}"><i class="fa-solid fa-arrow-up-right-from-square"></i> فتح</a></td></tr>
-          <tr><td>البطاقات غير المستخدمة</td><td class="num mono">{{ summary.cards.unused }}</td><td><a class="hub-btn hub-btn--ghost hub-btn--sm" href="{{ summary.drilldowns.cards_unused }}"><i class="fa-solid fa-arrow-up-right-from-square"></i> فتح</a></td></tr>
-          <tr><td>التقارير المالية</td><td class="num mono">{{ summary.finance.revenue_year }}</td><td><a class="hub-btn hub-btn--ghost hub-btn--sm" href="{{ summary.drilldowns.financial_reports }}"><i class="fa-solid fa-arrow-up-right-from-square"></i> فتح</a></td></tr>
+          <tr><td>{{ _('المشتركون النشطون') }}</td><td class="num mono">{{ summary.subscribers.active }}</td><td><a class="hub-btn hub-btn--ghost hub-btn--sm" href="{{ summary.drilldowns.subscribers_active }}"><i class="fa-solid fa-arrow-up-right-from-square"></i> {{ _('فتح') }}</a></td></tr>
+          <tr><td>{{ _('المشتركون المعطلون') }}</td><td class="num mono">{{ summary.subscribers.disabled }}</td><td><a class="hub-btn hub-btn--ghost hub-btn--sm" href="{{ summary.drilldowns.subscribers_disabled }}"><i class="fa-solid fa-arrow-up-right-from-square"></i> {{ _('فتح') }}</a></td></tr>
+          <tr><td>{{ _('المستخدمون المتصلون') }}</td><td class="num mono">{{ summary.subscribers.online }}</td><td><a class="hub-btn hub-btn--ghost hub-btn--sm" href="{{ summary.drilldowns.online_users }}"><i class="fa-solid fa-arrow-up-right-from-square"></i> {{ _('فتح') }}</a></td></tr>
+          <tr><td>{{ _('البطاقات غير المستخدمة') }}</td><td class="num mono">{{ summary.cards.unused }}</td><td><a class="hub-btn hub-btn--ghost hub-btn--sm" href="{{ summary.drilldowns.cards_unused }}"><i class="fa-solid fa-arrow-up-right-from-square"></i> {{ _('فتح') }}</a></td></tr>
+          <tr><td>{{ _('التقارير المالية') }}</td><td class="num mono">{{ summary.finance.revenue_year }}</td><td><a class="hub-btn hub-btn--ghost hub-btn--sm" href="{{ summary.drilldowns.financial_reports }}"><i class="fa-solid fa-arrow-up-right-from-square"></i> {{ _('فتح') }}</a></td></tr>
         </tbody>
       </table>
     </div>
@@ -137,7 +137,7 @@
     </div>
     <p class="hub-text-soft" style="margin:12px 0 0;font-size:12.5px">
       <i class="fa-solid fa-shield-halved"></i>
-      هذه الأرقام مشتقة من المعاملات المسجّلة فقط
+      {{ _('هذه الأرقام مشتقة من المعاملات المسجّلة فقط') }}
       <span class="hub-hint" tabindex="0"
             data-hint="الهامش = الإيراد بعد خصم حصص الموزعين والتكاليف المسجّلة. أي لقطة أرشيف تُحفَظ نسخة ثابتة لا تتأثر بتعديلات لاحقة."><i class="fa-solid fa-info"></i></span>
     </p>

@@ -9,7 +9,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#5b21b6">
-  <title>تسجيل الدخول — بوابة المشترك · HobeRadius</title>
+  <title>{{ _('تسجيل الدخول — بوابة المشترك · HobeRadius') }}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap">
@@ -184,21 +184,21 @@
     <aside class="brand-side" aria-hidden="true">
       <div class="brand-mark">HR</div>
       <div class="brand-head">
-        <h1>بوابة المشترك</h1>
-        <p>تابع حالة اشتراكك واستهلاكك، وقدّم طلبات سلفة الوقت والتجديد، وتواصل مع الدعم — كل ذلك من مكان واحد.</p>
+        <h1>{{ _('بوابة المشترك') }}</h1>
+        <p>{{ _('تابع حالة اشتراكك واستهلاكك، وقدّم طلبات سلفة الوقت والتجديد، وتواصل مع الدعم — كل ذلك من مكان واحد.') }}</p>
       </div>
       <ul class="brand-list">
-        <li><i class="fa-solid fa-gauge-high"></i> حالة الاشتراك والاستهلاك</li>
-        <li><i class="fa-solid fa-hand-holding-dollar"></i> طلب سلفة وقت أو تجديد</li>
-        <li><i class="fa-solid fa-clock-rotate-left"></i> سجل الجلسات والدفعات</li>
-        <li><i class="fa-solid fa-headset"></i> تواصل مع الدعم</li>
+        <li><i class="fa-solid fa-gauge-high"></i> {{ _('حالة الاشتراك والاستهلاك') }}</li>
+        <li><i class="fa-solid fa-hand-holding-dollar"></i> {{ _('طلب سلفة وقت أو تجديد') }}</li>
+        <li><i class="fa-solid fa-clock-rotate-left"></i> {{ _('سجل الجلسات والدفعات') }}</li>
+        <li><i class="fa-solid fa-headset"></i> {{ _('تواصل مع الدعم') }}</li>
       </ul>
     </aside>
 
     <section class="form-side">
       <div class="form-head">
-        <h2>تسجيل الدخول</h2>
-        <p>أدخل بيانات حسابك للوصول إلى بوابتك.</p>
+        <h2>{{ _('تسجيل الدخول') }}</h2>
+        <p>{{ _('أدخل بيانات حسابك للوصول إلى بوابتك.') }}</p>
       </div>
 
       {% with messages = get_flashed_messages(with_categories=true) %}
@@ -221,16 +221,16 @@
         <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
 
         <div class="field">
-          <label for="sp-user">اسم المستخدم</label>
+          <label for="sp-user">{{ _('اسم المستخدم') }}</label>
           <div class="field-wrap">
             <i class="fa-solid fa-user" aria-hidden="true"></i>
             <input id="sp-user" type="text" name="username" required autofocus
-                   autocomplete="username" placeholder="اسم المستخدم">
+                   autocomplete="username" placeholder="{{ _('اسم المستخدم') }}">
           </div>
         </div>
 
         <div class="field">
-          <label for="sp-pwd">كلمة المرور</label>
+          <label for="sp-pwd">{{ _('كلمة المرور') }}</label>
           <div class="field-wrap">
             <i class="fa-solid fa-lock" aria-hidden="true"></i>
             <input id="sp-pwd" type="password" name="password" required
@@ -238,7 +238,7 @@
             {# زر كشف كلمة المرور — السلوك في <script> بآخر الصفحة ليُحدِّث
                الأيقونة وحالة aria معًا (بدل onclick مضمّن لا يحدّث aria) #}
             <button type="button" class="pwd-toggle" id="sp-pwd-toggle"
-                    aria-label="إظهار كلمة المرور" aria-pressed="false">
+                    aria-label="{{ _('إظهار كلمة المرور') }}" aria-pressed="false">
               <i class="fa-solid fa-eye" aria-hidden="true"></i>
             </button>
           </div>
@@ -246,11 +246,11 @@
 
         <button class="submit-btn" type="submit">
           <i class="fa-solid fa-arrow-left-to-bracket" aria-hidden="true"></i>
-          <span>فتح البوابة</span>
+          <span>{{ _('فتح البوابة') }}</span>
         </button>
 
         <div class="form-foot">
-          <span><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> اتصال آمن</span>
+          <span><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> {{ _('اتصال آمن') }}</span>
           <span><bdi dir="ltr">HobeRadius</bdi> © 2026</span>
         </div>
       </form>

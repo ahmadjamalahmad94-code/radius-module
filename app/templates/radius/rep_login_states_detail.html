@@ -45,7 +45,7 @@
 </style>
 <nav class="ls-tabs" data-testid="login-states-tabs">
   <a href="{{ url_for('radius.rep_login_states') }}">
-    <i class="fa-solid fa-arrow-right"></i> كل الأقسام
+    <i class="fa-solid fa-arrow-right"></i> {{ _('كل الأقسام') }}
   </a>
   {% for k, m in kinds.items() %}
   <a class="{{ 'is-active' if k == kind else '' }}" href="{{ url_for('radius.rep_login_states', actor=k) }}">
@@ -74,23 +74,23 @@
   <input type="hidden" name="actor" value="{{ kind }}">
   <input class="hub-input grow" type="text" name="q"
          value="{{ filters.q }}" placeholder="{{ meta.search_ph }}">
-  <select class="hub-input" name="result" title="الحالة">
-    <option value="">كل الحالات</option>
-    <option value="success" {% if filters.result=='success' %}selected{% endif %}>نجاح</option>
-    <option value="fail"    {% if filters.result=='fail' %}selected{% endif %}>فشل</option>
+  <select class="hub-input" name="result" title="{{ _('الحالة') }}">
+    <option value="">{{ _('كل الحالات') }}</option>
+    <option value="success" {% if filters.result=='success' %}selected{% endif %}>{{ _('نجاح') }}</option>
+    <option value="fail"    {% if filters.result=='fail' %}selected{% endif %}>{{ _('فشل') }}</option>
   </select>
   {% if kind != 'admin' %}
   {# المدراء يدخلون من لوحة الإدارة فقط — فلتر المصدر يظهر للمشتركين والكروت #}
-  <select class="hub-input" name="source" title="المصدر">
-    <option value="">كل المصادر</option>
-    <option value="portal"  {% if filters.source=='portal' %}selected{% endif %}>البوابة</option>
-    <option value="network" {% if filters.source=='network' %}selected{% endif %}>شبكة المصادقة</option>
+  <select class="hub-input" name="source" title="{{ _('المصدر') }}">
+    <option value="">{{ _('كل المصادر') }}</option>
+    <option value="portal"  {% if filters.source=='portal' %}selected{% endif %}>{{ _('البوابة') }}</option>
+    <option value="network" {% if filters.source=='network' %}selected{% endif %}>{{ _('شبكة المصادقة') }}</option>
   </select>
   {% endif %}
   <input class="hub-input" type="date" name="date_from"
-         value="{{ filters.date_from }}" title="من تاريخ">
+         value="{{ filters.date_from }}" title="{{ _('من تاريخ') }}">
   <input class="hub-input" type="date" name="date_to"
-         value="{{ filters.date_to }}" title="إلى تاريخ">
+         value="{{ filters.date_to }}" title="{{ _('إلى تاريخ') }}">
   {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
   {% if filters.result or filters.source or filters.q or filters.date_from or filters.date_to %}
     {{ hub.btn("إعادة ضبط", icon="rotate-left", variant="ghost", size="sm",
@@ -110,12 +110,12 @@
     <table class="hub-table rep-table">
       <thead>
         <tr>
-          <th>الوقت</th>
-          <th>الجهة</th>
-          <th data-uds-nosort>النتيجة</th>
-          {% if kind != 'admin' %}<th>المصدر</th>{% endif %}
-          <th data-uds-nosort>الشبكة (عنوان الشبكة / جهاز الشبكة)</th>
-          <th data-uds-nosort>الجهاز (المتصفح / عنوان الجهاز)</th>
+          <th>{{ _('الوقت') }}</th>
+          <th>{{ _('الجهة') }}</th>
+          <th data-uds-nosort>{{ _('النتيجة') }}</th>
+          {% if kind != 'admin' %}<th>{{ _('المصدر') }}</th>{% endif %}
+          <th data-uds-nosort>{{ _('الشبكة (عنوان الشبكة / جهاز الشبكة)') }}</th>
+          <th data-uds-nosort>{{ _('الجهاز (المتصفح / عنوان الجهاز)') }}</th>
         </tr>
       </thead>
       <tbody>
@@ -148,7 +148,7 @@
           <td class="rep-mono">
             {% if r.ip or r.nas %}
               <span class="rep-primary"><bdi>{{ r.ip or '—' }}</bdi></span>
-              {% if r.nas %}<span class="rep-sub">جهاز الشبكة: <bdi>{{ r.nas }}</bdi></span>{% endif %}
+              {% if r.nas %}<span class="rep-sub">{{ _('جهاز الشبكة:') }} <bdi>{{ r.nas }}</bdi></span>{% endif %}
             {% else %}<span class="rep-muted">—</span>{% endif %}
           </td>
           <td>
@@ -160,7 +160,7 @@
               {% else %}<i class="fa-solid fa-wifi"></i>{% endif %}
               <div>
                 <span class="rep-primary">{{ r.os or 'جهاز شبكة' }}{% if r.browser %} · {{ r.browser }}{% endif %}</span>
-                {% if r.mac %}<span class="rep-sub rep-mono">عنوان الجهاز: <bdi>{{ r.mac }}</bdi></span>{% endif %}
+                {% if r.mac %}<span class="rep-sub rep-mono">{{ _('عنوان الجهاز:') }} <bdi>{{ r.mac }}</bdi></span>{% endif %}
               </div>
             </div>
             {% else %}<span class="rep-muted">—</span>{% endif %}

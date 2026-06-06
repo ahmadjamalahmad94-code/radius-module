@@ -113,14 +113,14 @@
   {% call hub.section("معطيات الملف", icon="sliders") %}
     <div class="bf-grid">
       <div class="bf-field full">
-        <label>الاسم <span class="req">*</span></label>
+        <label>{{ _('الاسم') }} <span class="req">*</span></label>
         <input class="hub-input" type="text" name="name" required value="{{ item.name }}"
-               placeholder="مثال: 10M/5M عادي">
-        <div class="help">اسم وصفي يميّز ملف السرعة في القوائم.</div>
+               placeholder="{{ _('مثال: 10M/5M عادي') }}">
+        <div class="help">{{ _('اسم وصفي يميّز ملف السرعة في القوائم.') }}</div>
       </div>
 
       <div class="bf-field">
-        <label>سرعة التنزيل <span class="req">*</span></label>
+        <label>{{ _('سرعة التنزيل') }} <span class="req">*</span></label>
         <div class="bf-rate-row">
           <input class="hub-input" type="number" name="rate_down" min="0" value="{{ item.rate_down }}"
                  placeholder="10">
@@ -130,11 +130,11 @@
             {% endfor %}
           </select>
         </div>
-        <div class="help">أقصى سرعة تحميل للمشترك.</div>
+        <div class="help">{{ _('أقصى سرعة تحميل للمشترك.') }}</div>
       </div>
 
       <div class="bf-field">
-        <label>سرعة الرفع <span class="req">*</span></label>
+        <label>{{ _('سرعة الرفع') }} <span class="req">*</span></label>
         <div class="bf-rate-row">
           <input class="hub-input" type="number" name="rate_up" min="0" value="{{ item.rate_up }}"
                  placeholder="5">
@@ -144,14 +144,14 @@
             {% endfor %}
           </select>
         </div>
-        <div class="help">أقصى سرعة رفع للمشترك.</div>
+        <div class="help">{{ _('أقصى سرعة رفع للمشترك.') }}</div>
       </div>
 
       <div class="bf-field">
-        <label>الأولوية</label>
+        <label>{{ _('الأولوية') }}</label>
         <input class="hub-input" type="number" name="priority" value="{{ item.priority }}"
                placeholder="8">
-        <div class="help">يُستخدم عند تداخل قواعد السرعة (1 = الأعلى أولوية).</div>
+        <div class="help">{{ _('يُستخدم عند تداخل قواعد السرعة (1 = الأعلى أولوية).') }}</div>
       </div>
 
       {# ── «متقدم» disclosure: holds the raw MikroTik rate-limit line +
@@ -162,23 +162,23 @@
       <div class="bf-field full">
         <div class="bf-adv-toggle" id="bfAdvToggle" role="button" tabindex="0"
              aria-expanded="false" aria-controls="bfAdvPanel">
-          <span class="lbl"><i class="fa-solid fa-gears lead"></i> إعدادات متقدمة (Burst وسطر السرعة اليدوي)</span>
+          <span class="lbl"><i class="fa-solid fa-gears lead"></i> {{ _('إعدادات متقدمة (Burst وسطر السرعة اليدوي)') }}</span>
           <i class="fa-solid fa-chevron-down chev"></i>
         </div>
 
         <div class="bf-adv-panel" id="bfAdvPanel" hidden>
           <div class="bf-adv-note">
-            سطر السرعة يُبنى تلقائيًا من سرعتي التنزيل والرفع أعلاه على الصيغة
-            <code>&lt;تنزيل&gt;/&lt;رفع&gt;</code>. فعِّل Burst لإضافة سرعة مؤقتة، أو عدّل السطر يدويًا.
+            {{ _('سطر السرعة يُبنى تلقائيًا من سرعتي التنزيل والرفع أعلاه على الصيغة') }}
+            <code>&lt;تنزيل&gt;/&lt;رفع&gt;</code>{{ _('. فعِّل Burst لإضافة سرعة مؤقتة، أو عدّل السطر يدويًا.') }}
           </div>
 
           <label class="bf-burst-on">
-            <input type="checkbox" id="bfBurstEnable"> تفعيل السرعة المؤقتة (Burst)
+            <input type="checkbox" id="bfBurstEnable"> {{ _('تفعيل السرعة المؤقتة (Burst)') }}
           </label>
 
           <div class="bf-burst-grid" id="bfBurstGrid" hidden>
             <div class="bf-field">
-              <label>سرعة Burst تنزيل</label>
+              <label>{{ _('سرعة Burst تنزيل') }}</label>
               <div class="bf-rate-row">
                 <input class="hub-input" type="number" id="bfBurstDown" min="0" placeholder="20">
                 <select class="hub-select" id="bfBurstDownUnit">
@@ -186,10 +186,10 @@
                   <option value="Kbps">Kbps</option>
                 </select>
               </div>
-              <div class="help">السرعة القصوى المؤقتة للتنزيل.</div>
+              <div class="help">{{ _('السرعة القصوى المؤقتة للتنزيل.') }}</div>
             </div>
             <div class="bf-field">
-              <label>سرعة Burst رفع</label>
+              <label>{{ _('سرعة Burst رفع') }}</label>
               <div class="bf-rate-row">
                 <input class="hub-input" type="number" id="bfBurstUp" min="0" placeholder="10">
                 <select class="hub-select" id="bfBurstUpUnit">
@@ -197,26 +197,26 @@
                   <option value="Kbps">Kbps</option>
                 </select>
               </div>
-              <div class="help">السرعة القصوى المؤقتة للرفع.</div>
+              <div class="help">{{ _('السرعة القصوى المؤقتة للرفع.') }}</div>
             </div>
             <div class="bf-field">
-              <label>مدة Burst (ث)</label>
+              <label>{{ _('مدة Burst (ث)') }}</label>
               <input class="hub-input" type="number" id="bfBurstTime" min="0" value="8" placeholder="8">
-              <div class="help">عدد الثواني المسموح بها للسرعة المؤقتة.</div>
+              <div class="help">{{ _('عدد الثواني المسموح بها للسرعة المؤقتة.') }}</div>
             </div>
             <div class="bf-field">
-              <label>حد Burst (٪ من السرعة)</label>
+              <label>{{ _('حد Burst (٪ من السرعة)') }}</label>
               <input class="hub-input" type="number" id="bfBurstThresh" min="0" max="100" value="75" placeholder="75">
-              <div class="help">نسبة العتبة التي يبدأ بعدها احتساب Burst.</div>
+              <div class="help">{{ _('نسبة العتبة التي يبدأ بعدها احتساب Burst.') }}</div>
             </div>
           </div>
 
           <div class="bf-field full" style="margin-top:10px">
-            <label>سطر السرعة المؤقتة على الراوتر</label>
+            <label>{{ _('سطر السرعة المؤقتة على الراوتر') }}</label>
             <input class="hub-input mono" type="text" name="burst" id="bfBurst" value="{{ item.burst }}"
                    placeholder="10M/5M">
             <div class="help">
-              سطر تحديد السرعة الكامل على الراوتر (rate-limit). يُملأ تلقائيًا — عدّله فقط إذا كنت تعرف صيغة MikroTik.
+              {{ _('سطر تحديد السرعة الكامل على الراوتر (rate-limit). يُملأ تلقائيًا — عدّله فقط إذا كنت تعرف صيغة MikroTik.') }}
             </div>
           </div>
         </div>
@@ -225,7 +225,7 @@
   {% endcall %}
 
   <div style="display:flex;gap:10px;justify-content:flex-end;padding:6px 4px 0">
-    <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.bw_list') }}">إلغاء</a>
+    <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.bw_list') }}">{{ _('إلغاء') }}</a>
     <button class="hub-btn hub-btn--primary" type="submit">
       <i class="fa-solid fa-floppy-disk"></i> {{ "إنشاء الملف" if is_new else "حفظ التعديلات" }}
     </button>

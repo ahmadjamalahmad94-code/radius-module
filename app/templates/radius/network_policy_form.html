@@ -20,7 +20,7 @@
   {% else %}سياسة جديدة — {{ service.label_ar }}{% endif %}
 {% endblock %}
 {% block page_sub %}
-  <span class="sub">معاينة فقط — لم يُطبَّق على الراوتر</span>
+  <span class="sub">{{ _('معاينة فقط — لم يُطبَّق على الراوتر') }}</span>
 {% endblock %}
 
 {% block head_extra %}
@@ -34,12 +34,12 @@
 {% set _actions %}
   <a class="hub-btn hub-btn--secondary"
      href="{{ url_for('radius.npc_' ~ service.key ~ '_list') }}">
-    <i class="fa-solid fa-arrow-right"></i> رجوع إلى القائمة
+    <i class="fa-solid fa-arrow-right"></i> {{ _('رجوع إلى القائمة') }}
   </a>
   {% if policy %}
     <a class="hub-btn hub-btn--primary"
        href="{{ url_for('radius.npc_' ~ service.key ~ '_preview', policy_id=policy.id) }}">
-      <i class="fa-solid fa-eye"></i> توليد المعاينة
+      <i class="fa-solid fa-eye"></i> {{ _('توليد المعاينة') }}
     </a>
   {% endif %}
 {% endset %}
@@ -71,14 +71,14 @@
       {% call hub.section("بيانات السياسة", icon="pen-to-square") %}
 
         <div class="hub-field">
-          <label class="hub-field-label" for="name">الاسم</label>
+          <label class="hub-field-label" for="name">{{ _('الاسم') }}</label>
           <input class="hub-input" type="text" name="name" id="name" required
                  value="{{ policy.name if policy else '' }}"
-                 placeholder="مثلاً: حظر تيك توك — مقهى مركزي">
+                 placeholder="{{ _('مثلاً: حظر تيك توك — مقهى مركزي') }}">
         </div>
 
         <div class="hub-field">
-          <label class="hub-field-label" for="router_id">الراوتر المستهدف</label>
+          <label class="hub-field-label" for="router_id">{{ _('الراوتر المستهدف') }}</label>
           {% if policy %}
             <input class="hub-input" type="text" disabled
                    value="{{ policy.router_id }}">
@@ -88,7 +88,7 @@
             </span>
           {% else %}
             <select class="hub-select" name="router_id" id="router_id" required>
-              <option value="">— اختر —</option>
+              <option value="">{{ _('— اختر —') }}</option>
               {% for r in routers %}
                 <option value="{{ r.id }}"
                   {% if preset_router_id and r.id == preset_router_id %}selected{% endif %}>
@@ -98,7 +98,7 @@
             </select>
             {% if preset_router_id %}
               <span class="hub-field-hint">
-                الراوتر مُحدَّد مسبقاً لأنك دخلت من لوحة هذا الراوتر.
+                {{ _('الراوتر مُحدَّد مسبقاً لأنك دخلت من لوحة هذا الراوتر.') }}
               </span>
             {% endif %}
           {% endif %}
@@ -131,11 +131,11 @@
 
           <div class="hub-field" style="margin-top:14px;">
             <label class="hub-field-label" for="source_address_list">
-              قائمة عناوين IP المصدر (اختياري)
+              {{ _('قائمة عناوين IP المصدر (اختياري)') }}
             </label>
             <input class="hub-input" type="text" name="source_address_list"
                    id="source_address_list"
-                   placeholder="مثلاً: ops-bastion"
+                   placeholder="{{ _('مثلاً: ops-bastion') }}"
                    value="{{ policy.source_address_list if policy else '' }}">
             <span class="hub-field-hint">
               اسم address-list داخل الراوتر يحوي IP المسؤولين فقط.
@@ -145,7 +145,7 @@
 
           <div class="hub-field">
             <label class="hub-field-label" for="expires_at">
-              ينتهي تلقائياً في (ISO-8601 / UTC)
+              {{ _('ينتهي تلقائياً في (ISO-8601 / UTC)') }}
             </label>
             <input class="hub-input" type="text" name="expires_at" id="expires_at"
                    placeholder="2026-06-01T12:00:00Z"
@@ -157,9 +157,9 @@
           </div>
 
           <div class="hub-field">
-            <label class="hub-field-label" for="reason">سبب فتح الوصول</label>
+            <label class="hub-field-label" for="reason">{{ _('سبب فتح الوصول') }}</label>
             <textarea class="hub-input" name="reason" id="reason" rows="2"
-                      placeholder="مثلاً: تحقيق في انقطاع الراوتر"
+                      placeholder="{{ _('مثلاً: تحقيق في انقطاع الراوتر') }}"
             >{{ policy.reason if policy else '' }}</textarea>
           </div>
         {% endcall %}
@@ -167,30 +167,30 @@
       {% elif service.key == 'web_block' %}
         {% call hub.section("إعدادات الحظر", icon="ban") %}
           <div class="hub-field">
-            <label class="hub-field-label" for="scope">نطاق التطبيق</label>
+            <label class="hub-field-label" for="scope">{{ _('نطاق التطبيق') }}</label>
             <select class="hub-select" name="scope" id="scope">
               <option value="all_users"
                 {% if not policy or policy.scope == 'all_users' %}selected{% endif %}
-              >كل المستخدمين</option>
+              >{{ _('كل المستخدمين') }}</option>
             </select>
             <span class="hub-field-hint">
-              النطاقات الأخرى تتطلب صلاحية تطبيق منفصلة.
+              {{ _('النطاقات الأخرى تتطلب صلاحية تطبيق منفصلة.') }}
             </span>
           </div>
           <div class="hub-field">
-            <label class="hub-field-label" for="schedule_id">جدولة الوقت (اختياري)</label>
+            <label class="hub-field-label" for="schedule_id">{{ _('جدولة الوقت (اختياري)') }}</label>
             <input class="hub-input" type="text" name="schedule_id" id="schedule_id"
-                   placeholder="مثلاً: schedule-evenings"
+                   placeholder="{{ _('مثلاً: schedule-evenings') }}"
                    value="{{ policy.schedule_id if policy else '' }}">
             <span class="hub-field-hint">
-              ID جدول من قسم «جدولة السرعات»؛ تركها فارغة = دائم.
+              {{ _('ID جدول من قسم «جدولة السرعات»؛ تركها فارغة = دائم.') }}
             </span>
           </div>
           {% set _fail_open_checked = (policy.fail_open if policy else True) %}
           <div class="uds-toggle-row">
             <div class="uds-toggle-row-text">
-              <span class="uds-toggle-row-label">الوضع الآمن — إن كانت قائمة الوجهات فارغة، لا تُولَّد قاعدة حظر</span>
-              <span class="uds-toggle-row-meta">موصى به</span>
+              <span class="uds-toggle-row-label">{{ _('الوضع الآمن — إن كانت قائمة الوجهات فارغة، لا تُولَّد قاعدة حظر') }}</span>
+              <span class="uds-toggle-row-meta">{{ _('موصى به') }}</span>
             </div>
             {{ toggle_switch(name="fail_open", id="fail_open", checked=_fail_open_checked) }}
           </div>
@@ -200,11 +200,11 @@
         {% call hub.section("إعدادات الاستثناء", icon="shield-halved") %}
           <div class="hub-field">
             <label class="hub-field-label" for="hotspot_profile">
-              نطاق ملف بوابة الدخول (اختياري)
+              {{ _('نطاق ملف بوابة الدخول (اختياري)') }}
             </label>
             <input class="hub-input" type="text" name="hotspot_profile"
                    id="hotspot_profile"
-                   placeholder="مثلاً: hsprof1"
+                   placeholder="{{ _('مثلاً: hsprof1') }}"
                    value="{{ policy.hotspot_profile if policy else '' }}">
             <span class="hub-field-hint">
               اسم ملف بوابة الدخول في الراوتر لتقييد التطبيق؛
@@ -218,7 +218,7 @@
         {% set _enabled_checked = (policy.enabled if policy else True) %}
         <div class="uds-toggle-row">
           <div class="uds-toggle-row-text">
-            <span class="uds-toggle-row-label">السياسة مُفعَّلة</span>
+            <span class="uds-toggle-row-label">{{ _('السياسة مُفعَّلة') }}</span>
           </div>
           {{ toggle_switch(name="enabled", id="enabled", checked=_enabled_checked) }}
         </div>
@@ -231,7 +231,7 @@
           <a class="hub-btn hub-btn--secondary"
              href="{{ url_for('radius.npc_' ~ service.key ~ '_list') }}">
             <i class="fa-solid fa-xmark"></i>
-            إلغاء
+            {{ _('إلغاء') }}
           </a>
         </div>
       {% endcall %}
@@ -271,39 +271,39 @@
 
             {% if service.key == 'web_block' %}
               <div class="hub-field" style="flex:2 1 220px; margin:0;">
-                <label class="hub-field-label">دومين / IP / CIDR</label>
+                <label class="hub-field-label">{{ _('دومين / IP / CIDR') }}</label>
                 <input class="hub-input" type="text" name="value" required
                        placeholder="tiktok.com">
               </div>
               <div class="hub-field" style="flex:1 1 120px; margin:0;">
-                <label class="hub-field-label">الفئة</label>
+                <label class="hub-field-label">{{ _('الفئة') }}</label>
                 <input class="hub-input" type="text" name="category"
                        value="custom"
                        placeholder="custom / tiktok / gambling …">
               </div>
             {% else %}
               <div class="hub-field" style="flex:2 1 220px; margin:0;">
-                <label class="hub-field-label">القيمة</label>
+                <label class="hub-field-label">{{ _('القيمة') }}</label>
                 <input class="hub-input" type="text" name="value" required
-                       placeholder="api.payments.test أو 8.8.8.8">
+                       placeholder="{{ _('api.payments.test أو 8.8.8.8') }}">
               </div>
               <div class="hub-field" style="flex:1 1 140px; margin:0;">
-                <label class="hub-field-label">النوع</label>
+                <label class="hub-field-label">{{ _('النوع') }}</label>
                 <select class="hub-select" name="entry_type" required>
-                  <option value="dst_host">اسم نطاق (dst_host)</option>
-                  <option value="dst_address">عنوان IP (dst_address)</option>
+                  <option value="dst_host">{{ _('اسم نطاق (dst_host)') }}</option>
+                  <option value="dst_address">{{ _('عنوان IP (dst_address)') }}</option>
                   <option value="dst_address_list">
-                    قائمة عناوين (dst_address_list)
+                    {{ _('قائمة عناوين (dst_address_list)') }}
                   </option>
                 </select>
               </div>
               <div class="hub-field" style="flex:1 1 70px; margin:0;">
-                <label class="hub-field-label">المنفذ</label>
+                <label class="hub-field-label">{{ _('المنفذ') }}</label>
                 <input class="hub-input" type="text" name="dst_port"
                        placeholder="443">
               </div>
               <div class="hub-field" style="flex:1 1 70px; margin:0;">
-                <label class="hub-field-label">البروتوكول</label>
+                <label class="hub-field-label">{{ _('البروتوكول') }}</label>
                 <input class="hub-input" type="text" name="protocol"
                        placeholder="tcp">
               </div>
@@ -311,7 +311,7 @@
 
             <button class="hub-btn hub-btn--primary" type="submit">
               <i class="fa-solid fa-plus"></i>
-              إضافة
+              {{ _('إضافة') }}
             </button>
           </form>
 
@@ -345,7 +345,7 @@
                         style="margin-inline-start:auto;">
                     {{ csrf_token_input() | safe }}
                     <button class="hub-btn hub-btn--danger hub-btn--icon" type="submit"
-                            title="حذف">
+                            title="{{ _('حذف') }}">
                       <i class="fa-regular fa-trash-can"></i>
                     </button>
                   </form>
@@ -354,7 +354,7 @@
             </ul>
           {% else %}
             <div class="hub-text-mute" style="font-size:12.5px; padding:8px 0;">
-              لا توجد إدخالات بعد — أضف أوّل واحد من النموذج أعلاه.
+              {{ _('لا توجد إدخالات بعد — أضف أوّل واحد من النموذج أعلاه.') }}
             </div>
           {% endif %}
         {% endcall %}

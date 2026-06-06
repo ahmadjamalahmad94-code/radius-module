@@ -2,7 +2,7 @@
    verify on the router (address-list + filter rule appears).
 
    Uses AddedServicesPhasePlanner with service_key="block_sites". #}
-<h2>حجب المواقع</h2>
+<h2>{{ _('حجب المواقع') }}</h2>
 <p class="swsvf-pane-sub">
   اكتب قائمة الـ domains المراد منع الوصول إليها من شبكة الراوتر — domain
   في كل سطر. سيتم إنشاء قائمة عناوين + قاعدة جدار حماية تمنع الحركة لها.
@@ -29,25 +29,25 @@
 </style>
 
 <div class="swbl-section">
-  <div class="swbl-section-title">قائمة المواقع المحجوبة</div>
+  <div class="swbl-section-title">{{ _('قائمة المواقع المحجوبة') }}</div>
   <p class="swbl-help">
-    اكتب domain في كل سطر، مثل <code>facebook.com</code> أو <code>twitter.com</code>.
-    لا تكتب <code>https://</code> أو <code>www.</code> — فقط اسم النطاق.<br>
-    <strong>ملاحظة:</strong> هذه القائمة <strong>الكاملة</strong> — ما تُرسله
+    {{ _('اكتب domain في كل سطر، مثل') }} <code>facebook.com</code> {{ _('أو') }} <code>twitter.com</code>.
+    لا تكتب <code>https://</code> {{ _('أو') }} <code>www.</code> {{ _('— فقط اسم النطاق.') }}<br>
+    <strong>{{ _('ملاحظة:') }}</strong> {{ _('هذه القائمة') }} <strong>{{ _('الكاملة') }}</strong> — ما تُرسله
     يحلّ محلّ ما كان موجوداً سابقاً. لإضافة موقع جديد: احتفظ بالقديم واكتب
     الجديد تحته. لحذف موقع: امسحه من القائمة.
   </p>
   <div class="swbl-loading" data-swbl-loading hidden style="color:var(--swsvf-mute);font-size:12px;margin-bottom:8px">
     <i class="fa-solid fa-spinner fa-spin"></i>
-    جارٍ تحميل القائمة الحاليّة من الراوتر…
+    {{ _('جارٍ تحميل القائمة الحاليّة من الراوتر…') }}
   </div>
   <textarea class="swbl-textarea" data-swbl-domains
             placeholder="example.com
 another-site.com
 ads.network.com"></textarea>
   <div class="swbl-count">
-    عدد المواقع: <strong data-swbl-count>0</strong>
-    <span style="color:var(--swsvf-mute);margin-inline-start:8px">(الحدّ الأقصى: 200)</span>
+    {{ _('عدد المواقع:') }} <strong data-swbl-count>0</strong>
+    <span style="color:var(--swsvf-mute);margin-inline-start:8px">{{ _('(الحدّ الأقصى: 200)') }}</span>
   </div>
 </div>
 

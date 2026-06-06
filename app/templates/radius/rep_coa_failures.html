@@ -58,11 +58,11 @@
 ) %}
   <input class="hub-input grow" type="text" name="q"
          value="{{ filters.q if filters else '' }}"
-         placeholder="بحث (نوع الأمر / الحالة)…">
+         placeholder="{{ _('بحث (نوع الأمر / الحالة)…') }}">
   <input class="hub-input" type="date" name="date_from"
-         value="{{ filters.date_from if filters else '' }}" title="من تاريخ">
+         value="{{ filters.date_from if filters else '' }}" title="{{ _('من تاريخ') }}">
   <input class="hub-input" type="date" name="date_to"
-         value="{{ filters.date_to if filters else '' }}" title="إلى تاريخ">
+         value="{{ filters.date_to if filters else '' }}" title="{{ _('إلى تاريخ') }}">
   {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
   {% if filters and (filters.q or filters.date_from or filters.date_to) %}
     {{ hub.btn("إعادة ضبط", icon="rotate-left", variant="ghost", size="sm",
@@ -82,14 +82,14 @@
     <table class="hub-table rep-table">
       <thead>
         <tr>
-          <th class="num" style="width:70px" data-uds-nosort>الرقم</th>
-          <th>الوقت</th>
-          <th data-uds-nosort>نوع الأمر</th>
-          <th>المستخدم</th>
-          <th data-uds-nosort>الحالة</th>
-          <th class="num" style="white-space:nowrap">المحاولات</th>
-          <th data-uds-nosort data-uds-nocol>آخر خطأ</th>
-          <th style="width:80px" data-uds-nosort data-uds-nocol>إجراء</th>
+          <th class="num" style="width:70px" data-uds-nosort>{{ _('الرقم') }}</th>
+          <th>{{ _('الوقت') }}</th>
+          <th data-uds-nosort>{{ _('نوع الأمر') }}</th>
+          <th>{{ _('المستخدم') }}</th>
+          <th data-uds-nosort>{{ _('الحالة') }}</th>
+          <th class="num" style="white-space:nowrap">{{ _('المحاولات') }}</th>
+          <th data-uds-nosort data-uds-nocol>{{ _('آخر خطأ') }}</th>
+          <th style="width:80px" data-uds-nosort data-uds-nocol>{{ _('إجراء') }}</th>
         </tr>
       </thead>
       <tbody>
@@ -124,7 +124,7 @@
           <td>
             {# إعادة إدراج المهمة في طابور المزامنة — نفس النهاية POST دون تغيير #}
             <form method="post" action="{{ url_for('radius.sync_retry', job_id=r.id) }}" style="display:inline">
-              <button type="submit" class="hub-btn hub-btn--primary hub-btn--icon" title="إعادة المحاولة">
+              <button type="submit" class="hub-btn hub-btn--primary hub-btn--icon" title="{{ _('إعادة المحاولة') }}">
                 <i class="fa-solid fa-rotate"></i>
               </button>
             </form>

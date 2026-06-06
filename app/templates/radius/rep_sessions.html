@@ -82,11 +82,11 @@
   search_action=url_for('radius.rep_sessions')
 ) %}
   <input class="hub-input grow" type="text" name="username"
-         placeholder="بحث باسم المستخدم..." value="{{ username or '' }}">
+         placeholder="{{ _('بحث باسم المستخدم...') }}" value="{{ username or '' }}">
   <input class="hub-input" type="date" name="date_from"
-         value="{{ filters.date_from if filters else '' }}" title="من تاريخ">
+         value="{{ filters.date_from if filters else '' }}" title="{{ _('من تاريخ') }}">
   <input class="hub-input" type="date" name="date_to"
-         value="{{ filters.date_to if filters else '' }}" title="إلى تاريخ">
+         value="{{ filters.date_to if filters else '' }}" title="{{ _('إلى تاريخ') }}">
   <select class="hub-select" name="limit">
     {% for n in [100, 200, 500, 1000] %}
       <option value="{{ n }}" {% if limit == n %}selected{% endif %}>{{ n }} صف</option>
@@ -111,18 +111,18 @@
     <table class="hub-table rep-table">
       <thead>
         <tr>
-          <th class="num" style="width:70px" data-uds-nosort>الرقم</th>
-          <th>المستخدم</th>
-          <th data-uds-nosort data-uds-nocol>رقم الجلسة</th>
-          <th>جهاز الشبكة</th>
-          <th>عنوان IP</th>
-          <th>عنوان MAC</th>
-          <th class="num" style="white-space:nowrap">المدة</th>
-          <th class="num" style="white-space:nowrap">تنزيل</th>
-          <th class="num" style="white-space:nowrap">رفع</th>
-          <th>بدأت</th>
-          <th>انتهت</th>
-          <th data-uds-nosort>سبب الإنهاء</th>
+          <th class="num" style="width:70px" data-uds-nosort>{{ _('الرقم') }}</th>
+          <th>{{ _('المستخدم') }}</th>
+          <th data-uds-nosort data-uds-nocol>{{ _('رقم الجلسة') }}</th>
+          <th>{{ _('جهاز الشبكة') }}</th>
+          <th>{{ _('عنوان IP') }}</th>
+          <th>{{ _('عنوان MAC') }}</th>
+          <th class="num" style="white-space:nowrap">{{ _('المدة') }}</th>
+          <th class="num" style="white-space:nowrap">{{ _('تنزيل') }}</th>
+          <th class="num" style="white-space:nowrap">{{ _('رفع') }}</th>
+          <th>{{ _('بدأت') }}</th>
+          <th>{{ _('انتهت') }}</th>
+          <th data-uds-nosort>{{ _('سبب الإنهاء') }}</th>
         </tr>
       </thead>
       <tbody>

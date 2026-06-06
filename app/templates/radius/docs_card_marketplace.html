@@ -255,14 +255,14 @@
 <div class="dg-layout">
 
   {# ───── الفهرس الجانبي اللاصق ───── #}
-  <nav class="dg-toc dg-noprint" aria-label="فهرس الدليل">
-    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> فهرس الخطوات</div>
-    <a href="#dg-s1" data-dg-toc><span class="n">1</span> النظامان: فوري ومخزون</a>
-    <a href="#dg-s2" data-dg-toc><span class="n">2</span> مفتاح التصفية</a>
-    <a href="#dg-s3" data-dg-toc><span class="n">3</span> إنشاء باقة بيع</a>
-    <a href="#dg-s4" data-dg-toc><span class="n">4</span> تعبئة المخزون</a>
-    <a href="#dg-s5" data-dg-toc><span class="n">5</span> العدّادات وفتح العرض</a>
-    <a href="#dg-s6" data-dg-toc><span class="n">6</span> سجل المبيعات</a>
+  <nav class="dg-toc dg-noprint" aria-label="{{ _('فهرس الدليل') }}">
+    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> {{ _('فهرس الخطوات') }}</div>
+    <a href="#dg-s1" data-dg-toc><span class="n">1</span> {{ _('النظامان: فوري ومخزون') }}</a>
+    <a href="#dg-s2" data-dg-toc><span class="n">2</span> {{ _('مفتاح التصفية') }}</a>
+    <a href="#dg-s3" data-dg-toc><span class="n">3</span> {{ _('إنشاء باقة بيع') }}</a>
+    <a href="#dg-s4" data-dg-toc><span class="n">4</span> {{ _('تعبئة المخزون') }}</a>
+    <a href="#dg-s5" data-dg-toc><span class="n">5</span> {{ _('العدّادات وفتح العرض') }}</a>
+    <a href="#dg-s6" data-dg-toc><span class="n">6</span> {{ _('سجل المبيعات') }}</a>
   </nav>
 
   {# ───── عمود المحتوى ───── #}
@@ -271,12 +271,12 @@
     <div class="dg-lead">
       <span class="ic"><i class="fa-solid fa-store"></i></span>
       <div>
-        <h3>قبل ما نبدأ — شو يعني «سوق البطاقات الإلكترونية»؟</h3>
+        <h3>{{ _('قبل ما نبدأ — شو يعني «سوق البطاقات الإلكترونية»؟') }}</h3>
         <p>
-          هذه صفحة بيع البطاقات <strong>رقميًا</strong> للزبون النهائي: تجهّز فيها «باقات بيع»
+          {{ _('هذه صفحة بيع البطاقات') }} <strong>{{ _('رقميًا') }}</strong> للزبون النهائي: تجهّز فيها «باقات بيع»
           (مثل «8 ساعات / 2 ميجا» بسعر معيّن)، وكل باقة تظهر في بوابة الزبون فيشتريها بنفسه
           من رصيد محفظته. تفتحها من القائمة الجانبية تحت <strong>البطاقات الإلكترونية ← سوق
-          البطاقات</strong> (المسار <span class="dg-kbd">/card-marketplace</span>). خلّينا نمشي
+          البطاقات</strong> {{ _('(المسار') }} <span class="dg-kbd">/card-marketplace</span>). خلّينا نمشي
           خطوة خطوة: أول شي نفهم النظامين، بعدين نُنشئ باقة ونعبّي مخزونها ونتابع مبيعاتها.
         </p>
       </div>
@@ -286,36 +286,36 @@
     <section class="dg-step" id="dg-s1">
       <div class="dg-badge">1</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-layer-group"></i> النظامان: «توليد فوري» مقابل «مخزون»</h2>
+        <h2><i class="fa-solid fa-layer-group"></i> {{ _('النظامان: «توليد فوري» مقابل «مخزون»') }}</h2>
         <p>
           كل باقة بيع تعمل بواحد من نظامين — تختاره وقت الإنشاء وتقدر تعرفه من شارة ملوّنة
           على البطاقة:
         </p>
         <ul>
-          <li><strong>كرت توليد فوري:</strong> النظام يُنشئ كرتًا جديدًا <strong>لحظة كل عملية شراء</strong>
-              ويسلّمه للزبون فورًا. مناسب للبيع الرقمي اللحظي — بلا مخزون مُسبق.</li>
-          <li><strong>نظام حزم / مخزون:</strong> تُحمّل كروتًا جاهزة مسبقًا (توليد عدد أو رفع ملف)،
-              ويُباع منها كرت واحد لكل عملية. مناسب للكروت المطبوعة والمعارض — ويعرض <strong>«المباع / المتبقّي»</strong>.</li>
+          <li><strong>{{ _('كرت توليد فوري:') }}</strong> {{ _('النظام يُنشئ كرتًا جديدًا') }} <strong>{{ _('لحظة كل عملية شراء') }}</strong>
+              {{ _('ويسلّمه للزبون فورًا. مناسب للبيع الرقمي اللحظي — بلا مخزون مُسبق.') }}</li>
+          <li><strong>{{ _('نظام حزم / مخزون:') }}</strong> تُحمّل كروتًا جاهزة مسبقًا (توليد عدد أو رفع ملف)،
+              ويُباع منها كرت واحد لكل عملية. مناسب للكروت المطبوعة والمعارض — ويعرض <strong>{{ _('«المباع / المتبقّي»') }}</strong>.</li>
         </ul>
 
         <div class="dg-mock" aria-hidden="true" style="max-width:440px">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">سوق البطاقات › بطاقات العروض</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('سوق البطاقات › بطاقات العروض') }}</span></div>
           <div class="dg-mock-body">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
-              <strong style="font-size:12px;color:#241e4e">8 ساعات / 2 ميجا</strong>
-              <span class="dg-mode instant"><i class="fa-solid fa-bolt"></i> توليد فوري</span>
+              <strong style="font-size:12px;color:#241e4e">{{ _('8 ساعات / 2 ميجا') }}</strong>
+              <span class="dg-mode instant"><i class="fa-solid fa-bolt"></i> {{ _('توليد فوري') }}</span>
             </div>
             <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
-              <strong style="font-size:12px;color:#241e4e">كرت يومي مطبوع</strong>
-              <span class="dg-mode stock"><i class="fa-solid fa-boxes-stacked"></i> بيع من المخزون</span>
+              <strong style="font-size:12px;color:#241e4e">{{ _('كرت يومي مطبوع') }}</strong>
+              <span class="dg-mode stock"><i class="fa-solid fa-boxes-stacked"></i> {{ _('بيع من المخزون') }}</span>
             </div>
           </div>
         </div>
-        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> الشارة البنفسجية = توليد فوري، والزرقاء = مخزون.</div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> {{ _('الشارة البنفسجية = توليد فوري، والزرقاء = مخزون.') }}</div>
 
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>نصيحة:</b> فوق الصفحة يوجد حقل <b>«النمط الافتراضي»</b> — اختياره يجعل كل
+          <span><b>{{ _('نصيحة:') }}</b> {{ _('فوق الصفحة يوجد حقل') }} <b>{{ _('«النمط الافتراضي»') }}</b> — اختياره يجعل كل
           باقة جديدة ترث هذا النظام تلقائيًا، فلا تعيد ضبطه كل مرة. تقدر دائمًا تغيّره لباقة بعينها.</span>
         </div>
       </div>
@@ -325,30 +325,30 @@
     <section class="dg-step" id="dg-s2">
       <div class="dg-badge">2</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-filter"></i> مفتاح التصفية — اعرض ما يهمّك فقط</h2>
+        <h2><i class="fa-solid fa-filter"></i> {{ _('مفتاح التصفية — اعرض ما يهمّك فقط') }}</h2>
         <p>
-          فوق قائمة العروض يوجد مفتاح من ثلاثة أزرار يصفّي البطاقات حسب نظامها، وبجانبه
-          <strong>عدّاد العروض</strong> يتحدّث مع كل ضغطة:
+          {{ _('فوق قائمة العروض يوجد مفتاح من ثلاثة أزرار يصفّي البطاقات حسب نظامها، وبجانبه') }}
+          <strong>{{ _('عدّاد العروض') }}</strong> {{ _('يتحدّث مع كل ضغطة:') }}
         </p>
         <ul>
-          <li><strong>الكل:</strong> يعرض جميع الباقات (هو المختار افتراضيًا).</li>
-          <li><strong>نظام التوليد:</strong> يُظهر باقات «التوليد الفوري» فقط.</li>
-          <li><strong>نظام المخزون:</strong> يُظهر باقات «المخزون» فقط.</li>
+          <li><strong>{{ _('الكل:') }}</strong> {{ _('يعرض جميع الباقات (هو المختار افتراضيًا).') }}</li>
+          <li><strong>{{ _('نظام التوليد:') }}</strong> {{ _('يُظهر باقات «التوليد الفوري» فقط.') }}</li>
+          <li><strong>{{ _('نظام المخزون:') }}</strong> {{ _('يُظهر باقات «المخزون» فقط.') }}</li>
         </ul>
 
         <div aria-hidden="true">
           <span class="dg-seg">
-            <span class="on"><i class="fa-solid fa-layer-group"></i> الكل</span>
-            <span><i class="fa-solid fa-bolt"></i> نظام التوليد</span>
-            <span><i class="fa-solid fa-boxes-stacked"></i> نظام المخزون</span>
+            <span class="on"><i class="fa-solid fa-layer-group"></i> {{ _('الكل') }}</span>
+            <span><i class="fa-solid fa-bolt"></i> {{ _('نظام التوليد') }}</span>
+            <span><i class="fa-solid fa-boxes-stacked"></i> {{ _('نظام المخزون') }}</span>
           </span>
-          <span class="dg-segcount">12 عرض</span>
+          <span class="dg-segcount">{{ _('12 عرض') }}</span>
         </div>
-        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> التصفية تتم في المتصفح فورًا — لا تُعيد تحميل الصفحة.</div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> {{ _('التصفية تتم في المتصفح فورًا — لا تُعيد تحميل الصفحة.') }}</div>
 
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>نصيحة:</b> لو صار عندك عروض كثيرة، استخدم «نظام المخزون» لتراجع بسرعة أي
+          <span><b>{{ _('نصيحة:') }}</b> لو صار عندك عروض كثيرة، استخدم «نظام المخزون» لتراجع بسرعة أي
           باقة قارب مخزونها على النفاد وتعبّيها قبل أن تتوقف عن البيع.</span>
         </div>
       </div>
@@ -358,66 +358,66 @@
     <section class="dg-step" id="dg-s3">
       <div class="dg-badge">3</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-plus"></i> أنشئ باقة بيع — النافذة الجديدة</h2>
+        <h2><i class="fa-solid fa-plus"></i> {{ _('أنشئ باقة بيع — النافذة الجديدة') }}</h2>
         <p>
-          اضغط زر <strong>«إضافة باقة بيع»</strong> البنفسجي أعلى الصفحة فتفتح نافذة فيها
+          {{ _('اضغط زر') }} <strong>{{ _('«إضافة باقة بيع»') }}</strong> البنفسجي أعلى الصفحة فتفتح نافذة فيها
           الحقول التالية بالترتيب:
         </p>
         <ul>
-          <li><strong>العرض الأساسي <span style="color:#dc2626;font-weight:900">*</span>:</strong>
-              البروفايل الذي يرث منه الكرت المدة والسرعة والسعر المقترح — <strong>اختياره يملأ بقية الحقول تلقائيًا</strong> وتقدر تعدّلها.</li>
-          <li><strong>اسم الباقة في السوق <span style="color:#dc2626;font-weight:900">*</span>:</strong> الاسم الذي يراه الزبون في بوابته (مثال: <span class="dg-kbd">8 ساعات / 2 ميجا</span>).</li>
-          <li><strong>السعر <span style="color:#dc2626;font-weight:900">*</span>:</strong> المبلغ الذي يُخصم من محفظة الزبون عند الشراء.</li>
-          <li><strong>مدة البطاقة / سرعة التنزيل / سرعة الرفع:</strong> اتركها <strong>صفرًا</strong> لاعتماد قيم العرض الأساسي كما هي.</li>
-          <li><strong>نمط البيع:</strong> «توليد فوري» أو «نظام حزم / مخزون».</li>
-          <li><strong>لون البطاقة:</strong> لون شريط الباقة في المعرض وبوابة الزبون — من ألوان جاهزة أو لون مخصّص.</li>
+          <li><strong>{{ _('العرض الأساسي') }} <span style="color:#dc2626;font-weight:900">*</span>:</strong>
+              {{ _('البروفايل الذي يرث منه الكرت المدة والسرعة والسعر المقترح —') }} <strong>{{ _('اختياره يملأ بقية الحقول تلقائيًا') }}</strong> {{ _('وتقدر تعدّلها.') }}</li>
+          <li><strong>{{ _('اسم الباقة في السوق') }} <span style="color:#dc2626;font-weight:900">*</span>:</strong> {{ _('الاسم الذي يراه الزبون في بوابته (مثال:') }} <span class="dg-kbd">{{ _('8 ساعات / 2 ميجا') }}</span>).</li>
+          <li><strong>{{ _('السعر') }} <span style="color:#dc2626;font-weight:900">*</span>:</strong> {{ _('المبلغ الذي يُخصم من محفظة الزبون عند الشراء.') }}</li>
+          <li><strong>{{ _('مدة البطاقة / سرعة التنزيل / سرعة الرفع:') }}</strong> {{ _('اتركها') }} <strong>{{ _('صفرًا') }}</strong> {{ _('لاعتماد قيم العرض الأساسي كما هي.') }}</li>
+          <li><strong>{{ _('نمط البيع:') }}</strong> {{ _('«توليد فوري» أو «نظام حزم / مخزون».') }}</li>
+          <li><strong>{{ _('لون البطاقة:') }}</strong> {{ _('لون شريط الباقة في المعرض وبوابة الزبون — من ألوان جاهزة أو لون مخصّص.') }}</li>
         </ul>
 
         <div class="dg-mock" aria-hidden="true">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">إضافة باقة بيع</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('إضافة باقة بيع') }}</span></div>
           <div class="dg-mock-body">
-            <div class="dg-mock-sechead"><span class="ic"><i class="fa-solid fa-store"></i></span> باقة بيع جديدة</div>
+            <div class="dg-mock-sechead"><span class="ic"><i class="fa-solid fa-store"></i></span> {{ _('باقة بيع جديدة') }}</div>
             <div class="dg-mf">
-              <label>العرض الأساسي <span class="req">*</span></label>
-              <div class="dg-mf-select"><div class="dg-mf-input hl">باقة 2 ميجا — 8 ساعات</div></div>
-              <div class="dg-mf-help">يملأ بقية الحقول تلقائيًا — ويمكنك تعديلها.</div>
+              <label>{{ _('العرض الأساسي') }} <span class="req">*</span></label>
+              <div class="dg-mf-select"><div class="dg-mf-input hl">{{ _('باقة 2 ميجا — 8 ساعات') }}</div></div>
+              <div class="dg-mf-help">{{ _('يملأ بقية الحقول تلقائيًا — ويمكنك تعديلها.') }}</div>
             </div>
             <div class="dg-mock-grid2">
               <div class="dg-mf">
-                <label>اسم الباقة في السوق <span class="req">*</span></label>
-                <div class="dg-mf-input hl">8 ساعات / 2 ميجا</div>
+                <label>{{ _('اسم الباقة في السوق') }} <span class="req">*</span></label>
+                <div class="dg-mf-input hl">{{ _('8 ساعات / 2 ميجا') }}</div>
               </div>
               <div class="dg-mf">
-                <label>السعر <span class="req">*</span></label>
+                <label>{{ _('السعر') }} <span class="req">*</span></label>
                 <div class="dg-mf-input hl">5.00</div>
               </div>
             </div>
             <div class="dg-mock-grid2">
               <div class="dg-mf">
-                <label>نمط البيع</label>
-                <div class="dg-mf-select"><div class="dg-mf-input">كرت توليد فوري</div></div>
+                <label>{{ _('نمط البيع') }}</label>
+                <div class="dg-mf-select"><div class="dg-mf-input">{{ _('كرت توليد فوري') }}</div></div>
               </div>
               <div class="dg-mf">
-                <label>مدة البطاقة</label>
-                <div class="dg-mf-input ph">0 = مدة العرض الأساسي</div>
+                <label>{{ _('مدة البطاقة') }}</label>
+                <div class="dg-mf-input ph">{{ _('0 = مدة العرض الأساسي') }}</div>
               </div>
             </div>
             <div class="dg-mock-actions">
-              <span class="dg-mock-btn ghost">إلغاء</span>
-              <span class="dg-mock-btn primary"><i class="fa-solid fa-plus"></i> إضافة الباقة</span>
+              <span class="dg-mock-btn ghost">{{ _('إلغاء') }}</span>
+              <span class="dg-mock-btn primary"><i class="fa-solid fa-plus"></i> {{ _('إضافة الباقة') }}</span>
             </div>
           </div>
         </div>
 
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>ماذا يحدث عند الشراء؟</b> يُخصم السعر من محفظة الزبون، يُولَّد كرت جديد
+          <span><b>{{ _('ماذا يحدث عند الشراء؟') }}</b> يُخصم السعر من محفظة الزبون، يُولَّد كرت جديد
           (أو يُسحب من المخزون حسب النمط)، ثم يظهر الكرت للزبون في تبويب «بطاقاتي».</span>
         </div>
 
         <div class="dg-warn">
           <span class="ic">⚠️</span>
-          <span><b>انتبه:</b> لازم تجهّز <b>العرض الأساسي</b> أولًا من قسم البطاقات/العروض —
+          <span><b>{{ _('انتبه:') }}</b> {{ _('لازم تجهّز') }} <b>{{ _('العرض الأساسي') }}</b> أولًا من قسم البطاقات/العروض —
           بدونه لن تستطيع إنشاء باقة بيع، لأن الكرت يرث منه المدة والسرعة والسعر.</span>
         </div>
       </div>
@@ -427,45 +427,45 @@
     <section class="dg-step" id="dg-s4">
       <div class="dg-badge">4</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-boxes-stacked"></i> عبّئ المخزون — رفع ملف أو توليد حزمة</h2>
+        <h2><i class="fa-solid fa-boxes-stacked"></i> {{ _('عبّئ المخزون — رفع ملف أو توليد حزمة') }}</h2>
         <p>
-          هذه الخطوة <strong>لباقات نظام المخزون فقط</strong>. على بطاقة العرض يظهر زرّان لتغذية
+          {{ _('هذه الخطوة') }} <strong>{{ _('لباقات نظام المخزون فقط') }}</strong>. على بطاقة العرض يظهر زرّان لتغذية
           المخزون بالكروت:
         </p>
         <ul>
-          <li><strong>رفع ملف بطاقات:</strong> ارفع ملف <span class="dg-kbd">Excel / CSV / PDF</span>
-              وفيه أزواج (اسم المستخدم + كلمة المرور). المحرك يستخرجها ويضيفها للمخزون،
-              <strong>والأسماء المكررة تُتخطى تلقائيًا</strong>. الحد: 12MB و5000 بطاقة بالدفعة.</li>
-          <li><strong>توليد حزمة:</strong> يولّد النظام بطاقات فريدة جاهزة. تحدّد فيها:
-            <strong>عدد البطاقات</strong> (1–5000) و<strong>طول كلمة المرور</strong> (4–16).</li>
+          <li><strong>{{ _('رفع ملف بطاقات:') }}</strong> {{ _('ارفع ملف') }} <span class="dg-kbd">Excel / CSV / PDF</span>
+              {{ _('وفيه أزواج (اسم المستخدم + كلمة المرور). المحرك يستخرجها ويضيفها للمخزون،') }}
+              <strong>{{ _('والأسماء المكررة تُتخطى تلقائيًا') }}</strong>{{ _('. الحد: 12MB و5000 بطاقة بالدفعة.') }}</li>
+          <li><strong>{{ _('توليد حزمة:') }}</strong> {{ _('يولّد النظام بطاقات فريدة جاهزة. تحدّد فيها:') }}
+            <strong>{{ _('عدد البطاقات') }}</strong> {{ _('(1–5000) و') }}<strong>{{ _('طول كلمة المرور') }}</strong> (4–16).</li>
         </ul>
 
         <div class="dg-mock" aria-hidden="true" style="max-width:460px">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">توليد حزمة — 8 ساعات / 2 ميجا</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('توليد حزمة — 8 ساعات / 2 ميجا') }}</span></div>
           <div class="dg-mock-body">
             <div class="dg-mock-grid2">
               <div class="dg-mf">
-                <label>عدد البطاقات</label>
+                <label>{{ _('عدد البطاقات') }}</label>
                 <div class="dg-mf-input hl">100</div>
-                <div class="dg-mf-help">من 1 إلى 5000.</div>
+                <div class="dg-mf-help">{{ _('من 1 إلى 5000.') }}</div>
               </div>
               <div class="dg-mf">
-                <label>طول كلمة المرور</label>
+                <label>{{ _('طول كلمة المرور') }}</label>
                 <div class="dg-mf-input">8</div>
-                <div class="dg-mf-help">من 4 إلى 16 حرفًا.</div>
+                <div class="dg-mf-help">{{ _('من 4 إلى 16 حرفًا.') }}</div>
               </div>
             </div>
             <div class="dg-mock-actions">
-              <span class="dg-mock-btn ghost">إلغاء</span>
-              <span class="dg-mock-btn primary"><i class="fa-solid fa-wand-magic-sparkles"></i> توليد وإضافة</span>
+              <span class="dg-mock-btn ghost">{{ _('إلغاء') }}</span>
+              <span class="dg-mock-btn primary"><i class="fa-solid fa-wand-magic-sparkles"></i> {{ _('توليد وإضافة') }}</span>
             </div>
           </div>
         </div>
-        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> الكروت المولّدة/المرفوعة تدخل المخزون فورًا وتصبح جاهزة للبيع.</div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> {{ _('الكروت المولّدة/المرفوعة تدخل المخزون فورًا وتصبح جاهزة للبيع.') }}</div>
 
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>نصيحة:</b> «توليد حزمة» أسرع طريقة للبدء — يصنع لك كروتًا فريدة بنقرة.
+          <span><b>{{ _('نصيحة:') }}</b> «توليد حزمة» أسرع طريقة للبدء — يصنع لك كروتًا فريدة بنقرة.
           استخدم «رفع ملف» فقط إذا عندك كروت جاهزة من نظام قديم أو مطبعة خارجية.</span>
         </div>
       </div>
@@ -475,47 +475,47 @@
     <section class="dg-step" id="dg-s5">
       <div class="dg-badge">5</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-chart-simple"></i> اقرأ العدّادات وافتح العرض</h2>
+        <h2><i class="fa-solid fa-chart-simple"></i> {{ _('اقرأ العدّادات وافتح العرض') }}</h2>
         <p>
-          كل باقة مخزون تعرض ثلاثة عدّادات: <strong>الكل</strong> (إجمالي ما حُمِّل)،
-          <strong>المباع</strong>، و<strong>المتبقي</strong>. وعند نقص المخزون يظهر تنبيه ملوّن:
+          {{ _('كل باقة مخزون تعرض ثلاثة عدّادات:') }} <strong>{{ _('الكل') }}</strong> {{ _('(إجمالي ما حُمِّل)،') }}
+          <strong>{{ _('المباع') }}</strong>{{ _('، و') }}<strong>{{ _('المتبقي') }}</strong>{{ _('. وعند نقص المخزون يظهر تنبيه ملوّن:') }}
         </p>
         <ul>
-          <li><strong>مخزون منخفض</strong> (مثلث أصفر): المتبقّي أقل من 10% من الإجمالي.</li>
-          <li><strong>نفد المخزون</strong> (دائرة حمراء): لم يبقَ أي كرت — توقّف البيع حتى تعبّي.</li>
+          <li><strong>{{ _('مخزون منخفض') }}</strong> (مثلث أصفر): المتبقّي أقل من 10% من الإجمالي.</li>
+          <li><strong>{{ _('نفد المخزون') }}</strong> {{ _('(دائرة حمراء): لم يبقَ أي كرت — توقّف البيع حتى تعبّي.') }}</li>
         </ul>
 
         <div class="dg-stats" aria-hidden="true" style="max-width:380px">
-          <div class="dg-stat"><small>الكل</small><strong>100</strong></div>
-          <div class="dg-stat"><small>المباع</small><strong>92</strong></div>
-          <div class="dg-stat"><small>المتبقي</small><strong>8</strong></div>
+          <div class="dg-stat"><small>{{ _('الكل') }}</small><strong>100</strong></div>
+          <div class="dg-stat"><small>{{ _('المباع') }}</small><strong>92</strong></div>
+          <div class="dg-stat"><small>{{ _('المتبقي') }}</small><strong>8</strong></div>
         </div>
         <div aria-hidden="true">
-          <span class="dg-lowstock low"><i class="fa-solid fa-triangle-exclamation"></i> مخزون منخفض</span>
-          <span class="dg-lowstock out"><i class="fa-solid fa-circle-exclamation"></i> نفد المخزون</span>
+          <span class="dg-lowstock low"><i class="fa-solid fa-triangle-exclamation"></i> {{ _('مخزون منخفض') }}</span>
+          <span class="dg-lowstock out"><i class="fa-solid fa-circle-exclamation"></i> {{ _('نفد المخزون') }}</span>
         </div>
 
         <p style="margin-top:13px">
-          زر <strong>«فتح العرض»</strong> يأخذك لصفحة بطاقات العرض — جدول بكل كرت داخله:
+          {{ _('زر') }} <strong>{{ _('«فتح العرض»') }}</strong> {{ _('يأخذك لصفحة بطاقات العرض — جدول بكل كرت داخله:') }}
         </p>
         <div class="dg-rowmock" aria-hidden="true">
           <div class="hd" style="grid-template-columns:1fr 1fr .8fr 1fr">
-            <span>الكود</span><span>كلمة المرور</span><span>الحالة</span><span>المشتري</span>
+            <span>{{ _('الكود') }}</span><span>{{ _('كلمة المرور') }}</span><span>{{ _('الحالة') }}</span><span>{{ _('المشتري') }}</span>
           </div>
           <div class="rw" style="grid-template-columns:1fr 1fr .8fr 1fr">
             <span style="font-family:monospace;font-weight:900;color:#241e4e">a8f3k2</span>
             <span style="font-family:monospace">7g9q1m</span>
-            <span><span class="dg-pill" style="background:#dbeafe;color:#1d4ed8"><span class="dot" style="background:#2563eb"></span> مباعة</span></span>
+            <span><span class="dg-pill" style="background:#dbeafe;color:#1d4ed8"><span class="dot" style="background:#2563eb"></span> {{ _('مباعة') }}</span></span>
             <span>0599…123</span>
           </div>
           <div class="rw" style="grid-template-columns:1fr 1fr .8fr 1fr">
             <span style="font-family:monospace;font-weight:900;color:#241e4e">b2m7x5</span>
             <span style="font-family:monospace">4t6w8e</span>
-            <span><span class="dg-pill"><span class="dot"></span> بالمخزون</span></span>
+            <span><span class="dg-pill"><span class="dot"></span> {{ _('بالمخزون') }}</span></span>
             <span>—</span>
           </div>
         </div>
-        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> الأعمدة: الكود، كلمة المرور، الحالة (بالمخزون/مباعة/مستخدمة/منتهية/ملغاة)، تاريخ التوليد، المشتري، السعر، الحزمة.</div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> {{ _('الأعمدة: الكود، كلمة المرور، الحالة (بالمخزون/مباعة/مستخدمة/منتهية/ملغاة)، تاريخ التوليد، المشتري، السعر، الحزمة.') }}</div>
       </div>
     </section>
 
@@ -523,32 +523,32 @@
     <section class="dg-step" id="dg-s6">
       <div class="dg-badge">6</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-receipt"></i> تابع سجل المبيعات</h2>
+        <h2><i class="fa-solid fa-receipt"></i> {{ _('تابع سجل المبيعات') }}</h2>
         <p>
-          أسفل الصفحة يوجد <strong>سجل آخر العمليات</strong> — جدول مصفّح يعرض كل عملية بيع
+          {{ _('أسفل الصفحة يوجد') }} <strong>{{ _('سجل آخر العمليات') }}</strong> — جدول مصفّح يعرض كل عملية بيع
           تمّت من السوق، بأعمدته الستة:
         </p>
 
         <div class="dg-rowmock" aria-hidden="true">
           <div class="hd" style="grid-template-columns:1fr 1fr .9fr .7fr .7fr .9fr">
-            <span>المشتري</span><span>العرض</span><span>الكرت</span><span>المبلغ</span><span>الحالة</span><span>التاريخ</span>
+            <span>{{ _('المشتري') }}</span><span>{{ _('العرض') }}</span><span>{{ _('الكرت') }}</span><span>{{ _('المبلغ') }}</span><span>{{ _('الحالة') }}</span><span>{{ _('التاريخ') }}</span>
           </div>
           <div class="rw" style="grid-template-columns:1fr 1fr .9fr .7fr .7fr .9fr">
-            <span>0599…123</span><span>8 ساعات / 2 ميجا</span>
+            <span>0599…123</span><span>{{ _('8 ساعات / 2 ميجا') }}</span>
             <span style="font-family:monospace">a8f3k2</span><span>5.00</span>
-            <span><span class="dg-pill"><span class="dot"></span> مكتملة</span></span><span>اليوم 14:20</span>
+            <span><span class="dg-pill"><span class="dot"></span> {{ _('مكتملة') }}</span></span><span>{{ _('اليوم 14:20') }}</span>
           </div>
           <div class="rw" style="grid-template-columns:1fr 1fr .9fr .7fr .7fr .9fr">
-            <span>0567…998</span><span>يوم كامل</span>
+            <span>0567…998</span><span>{{ _('يوم كامل') }}</span>
             <span style="font-family:monospace">c4n1p7</span><span>8.00</span>
-            <span><span class="dg-pill"><span class="dot"></span> مكتملة</span></span><span>اليوم 13:05</span>
+            <span><span class="dg-pill"><span class="dot"></span> {{ _('مكتملة') }}</span></span><span>{{ _('اليوم 13:05') }}</span>
           </div>
         </div>
-        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> الأعمدة: المشتري، العرض، الكرت، المبلغ، الحالة، التاريخ — مع ترقيم صفحات للعمليات الأقدم.</div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> {{ _('الأعمدة: المشتري، العرض، الكرت، المبلغ، الحالة، التاريخ — مع ترقيم صفحات للعمليات الأقدم.') }}</div>
 
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>وبعدين؟</b> قسم <b>«الحزم الإلكترونية المتولدة»</b> (سجل فني قابل للطي) أسفل
+          <span><b>{{ _('وبعدين؟') }}</b> {{ _('قسم') }} <b>{{ _('«الحزم الإلكترونية المتولدة»') }}</b> (سجل فني قابل للطي) أسفل
           الصفحة يجمع كل كرت مولّد داخل حزم قابلة للمراجعة — افتحه إذا أردت تدقيق ما بيع
           وما تبقّى على مستوى كل حزمة.</span>
         </div>

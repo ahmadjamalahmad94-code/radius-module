@@ -59,16 +59,16 @@
 
   <section class="mt-card">
     <header class="mt-card-head">
-      <h3><i class="fa-solid fa-circle-info"></i> ملخّص</h3>
+      <h3><i class="fa-solid fa-circle-info"></i> {{ _('ملخّص') }}</h3>
       <span class="mt-card-meta">
         {% if job.status == "success" %}
-        <span class="mt-iface-state mt-iface-state--up">نجح</span>
+        <span class="mt-iface-state mt-iface-state--up">{{ _('نجح') }}</span>
         {% elif job.status == "failed" %}
-        <span class="mt-iface-state mt-iface-state--off">فشل</span>
+        <span class="mt-iface-state mt-iface-state--off">{{ _('فشل') }}</span>
         {% elif job.status == "cancelled" %}
-        <span class="mt-iface-state mt-iface-state--down">ملغاة</span>
+        <span class="mt-iface-state mt-iface-state--down">{{ _('ملغاة') }}</span>
         {% elif job.status == "running" %}
-        <span class="mt-iface-state mt-iface-state--down">جارية</span>
+        <span class="mt-iface-state mt-iface-state--down">{{ _('جارية') }}</span>
         {% else %}
         <span class="mt-iface-state mt-iface-state--down">{{ job.status }}</span>
         {% endif %}
@@ -76,13 +76,13 @@
     </header>
     <div class="mt-card-body">
       <ul class="mt-program-summary" data-mt-job-meta>
-        <li>التقدم: <strong>{{ job.progress }}%</strong>
+        <li>{{ _('التقدم:') }} <strong>{{ job.progress }}%</strong>
           {% if job.current_step %}— {{ job.current_step }}{% endif %}
         </li>
         {% if job.router_id %}<li>الراوتر: #{{ job.router_id }}</li>{% endif %}
-        <li>أُنشئت: <code>{{ job.created_at|dt_local }}</code></li>
-        {% if job.started_at %}<li>بدأت: <code>{{ job.started_at|dt_local }}</code></li>{% endif %}
-        {% if job.finished_at %}<li>انتهت: <code>{{ job.finished_at|dt_local }}</code></li>{% endif %}
+        <li>{{ _('أُنشئت:') }} <code>{{ job.created_at|dt_local }}</code></li>
+        {% if job.started_at %}<li>{{ _('بدأت:') }} <code>{{ job.started_at|dt_local }}</code></li>{% endif %}
+        {% if job.finished_at %}<li>{{ _('انتهت:') }} <code>{{ job.finished_at|dt_local }}</code></li>{% endif %}
       </ul>
 
       {% if job.error_message %}

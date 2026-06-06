@@ -21,7 +21,7 @@
 {% block title %}قائمة العروض{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-tags"></i>{% endblock %}
 {% block page_title %}العروض والخطط{% endblock %}
-{% block page_sub %}<span class="sub"><bdi dir="ltr">{{ items|length }}</bdi> عرض</span>{% endblock %}
+{% block page_sub %}<span class="sub"><bdi dir="ltr">{{ items|length }}</bdi> {{ _('عرض') }}</span>{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
@@ -157,25 +157,25 @@
 ) %}
   {# فلترة حيّة (عميل) — لا يوجد فلتر خادم لهذا الراوت، فالبحث فوري على الصفوف #}
   <input class="hub-input grow" type="search" data-pl-search
-         placeholder="بحث باسم / كود الباقة..." autocomplete="off">
-  <select class="hub-select" data-pl-filter-type aria-label="فلترة حسب النوع">
-    <option value="">كل الأنواع</option>
+         placeholder="{{ _('بحث باسم / كود الباقة...') }}" autocomplete="off">
+  <select class="hub-select" data-pl-filter-type aria-label="{{ _('فلترة حسب النوع') }}">
+    <option value="">{{ _('كل الأنواع') }}</option>
     {% for t in items|map(attribute='plan_type')|unique|sort %}
       <option value="{{ t }}">{{ TYPE_AR.get(t, t) }}</option>
     {% endfor %}
   </select>
-  <select class="hub-select" data-pl-filter-status aria-label="فلترة حسب الحالة">
-    <option value="">كل الحالات</option>
-    <option value="1">مفعَّلة</option>
-    <option value="0">معطَّلة</option>
+  <select class="hub-select" data-pl-filter-status aria-label="{{ _('فلترة حسب الحالة') }}">
+    <option value="">{{ _('كل الحالات') }}</option>
+    <option value="1">{{ _('مفعَّلة') }}</option>
+    <option value="0">{{ _('معطَّلة') }}</option>
   </select>
   <span class="hub-spacer" style="flex:1"></span>
-  <div class="pl-view-toggle" role="group" aria-label="طريقة العرض" data-plans-view-toggle>
+  <div class="pl-view-toggle" role="group" aria-label="{{ _('طريقة العرض') }}" data-plans-view-toggle>
     <button type="button" data-plans-view-btn="table" aria-pressed="true">
-      <i class="fa-solid fa-table"></i> جدول
+      <i class="fa-solid fa-table"></i> {{ _('جدول') }}
     </button>
     <button type="button" data-plans-view-btn="cards" aria-pressed="false">
-      <i class="fa-solid fa-grip"></i> بطاقات
+      <i class="fa-solid fa-grip"></i> {{ _('بطاقات') }}
     </button>
   </div>
 {% endcall %}
@@ -192,19 +192,19 @@
       <thead>
         <tr>
           <th class="num" style="width:54px">#</th>
-          <th>الاسم</th>
-          <th>الكود</th>
-          <th>النوع</th>
-          <th>الخدمة</th>
-          <th>السرعة</th>
-          <th>الكوتا</th>
-          <th>المدة / الصلاحية</th>
-          <th class="num">الجلسات</th>
-          <th class="num">السعر</th>
-          <th class="num">المشتركون</th>
-          <th>الحالة</th>
-          <th class="num">الأولوية</th>
-          <th style="width:140px" data-uds-nosort data-uds-nocol>إجراءات</th>
+          <th>{{ _('الاسم') }}</th>
+          <th>{{ _('الكود') }}</th>
+          <th>{{ _('النوع') }}</th>
+          <th>{{ _('الخدمة') }}</th>
+          <th>{{ _('السرعة') }}</th>
+          <th>{{ _('الكوتا') }}</th>
+          <th>{{ _('المدة / الصلاحية') }}</th>
+          <th class="num">{{ _('الجلسات') }}</th>
+          <th class="num">{{ _('السعر') }}</th>
+          <th class="num">{{ _('المشتركون') }}</th>
+          <th>{{ _('الحالة') }}</th>
+          <th class="num">{{ _('الأولوية') }}</th>
+          <th style="width:140px" data-uds-nosort data-uds-nocol>{{ _('إجراءات') }}</th>
         </tr>
       </thead>
       <tbody>
@@ -234,17 +234,17 @@
           <td class="mono small">
             {% if p.speed_down_kbps or p.speed_up_kbps %}
               <bdi dir="ltr">{{ (p.speed_down_kbps or 0) // 1024 if (p.speed_down_kbps or 0) >= 1024 else (p.speed_down_kbps or 0) }}{{ 'M' if (p.speed_down_kbps or 0) >= 1024 else 'K' }}↓ / {{ (p.speed_up_kbps or 0) // 1024 if (p.speed_up_kbps or 0) >= 1024 else (p.speed_up_kbps or 0) }}{{ 'M' if (p.speed_up_kbps or 0) >= 1024 else 'K' }}↑</bdi>
-              {% if p.burst_enabled or p.burst_down_kbps %}<span class="hub-text-mute" title="Burst مفعَّل"> ⚡</span>{% endif %}
-            {% else %}<span class="hub-text-mute">غير محدّدة</span>{% endif %}
+              {% if p.burst_enabled or p.burst_down_kbps %}<span class="hub-text-mute" title="{{ _('Burst مفعَّل') }}"> ⚡</span>{% endif %}
+            {% else %}<span class="hub-text-mute">{{ _('غير محدّدة') }}</span>{% endif %}
           </td>
           <td class="mono small">
             {% if p.quota_total_mb %}
               <bdi dir="ltr">{{ "%.1f"|format(p.quota_total_mb/1024) }} GB</bdi>
-              {% if p.quota_daily_mb %}<span class="hub-text-mute" title="كوتا يومية"> · <bdi dir="ltr">{{ "%.1f"|format(p.quota_daily_mb/1024) }}/يوم</bdi></span>{% endif %}
+              {% if p.quota_daily_mb %}<span class="hub-text-mute" title="{{ _('كوتا يومية') }}"> · <bdi dir="ltr">{{ "%.1f"|format(p.quota_daily_mb/1024) }}/يوم</bdi></span>{% endif %}
             {% elif p.quota_daily_mb or p.quota_monthly_mb or p.daily_combined_quota_mb or p.monthly_combined_quota_mb %}
               {% if p.quota_daily_mb or p.daily_combined_quota_mb %}<bdi dir="ltr">{{ "%.1f"|format(((p.quota_daily_mb or p.daily_combined_quota_mb))/1024) }} GB</bdi>/يوم{% endif %}
               {% if p.quota_monthly_mb or p.monthly_combined_quota_mb %}{% if p.quota_daily_mb or p.daily_combined_quota_mb %} · {% endif %}<bdi dir="ltr">{{ "%.1f"|format(((p.quota_monthly_mb or p.monthly_combined_quota_mb))/1024) }} GB</bdi>/شهر{% endif %}
-            {% else %}<span class="hub-text-mute">غير محدودة</span>{% endif %}
+            {% else %}<span class="hub-text-mute">{{ _('غير محدودة') }}</span>{% endif %}
           </td>
           <td class="mono small">
             {% if p.duration_minutes %}
@@ -253,7 +253,7 @@
               {% else %}<bdi dir="ltr">{{ p.duration_minutes }}</bdi> د{% endif %}
             {% endif %}
             {% if p.validity_days %}{% if p.duration_minutes %} · {% endif %}صلاحية <bdi dir="ltr">{{ p.validity_days }}</bdi> يوم{% endif %}
-            {% if not p.duration_minutes and not p.validity_days %}<span class="hub-text-mute">غير محدودة</span>{% endif %}
+            {% if not p.duration_minutes and not p.validity_days %}<span class="hub-text-mute">{{ _('غير محدودة') }}</span>{% endif %}
           </td>
           <td class="num mono">{{ p.concurrent_sessions or 1 }}</td>
           <td class="num"><strong><bdi dir="ltr">{{ p.price|money }}</bdi></strong></td>
@@ -266,17 +266,17 @@
           <td>
             {# صف إجراءات واحد مرتّب: تفاصيل / تعديل / أرشفة — كل النقاط النهائية محفوظة #}
             <div class="pl-actions">
-              <button type="button" class="hub-btn hub-btn--ghost hub-btn--icon" title="كل التفاصيل"
+              <button type="button" class="hub-btn hub-btn--ghost hub-btn--icon" title="{{ _('كل التفاصيل') }}"
                       data-uds-modal-open="pl-detail-modal" data-pl-detail-for="{{ p.id }}">
                 <i class="fa-solid fa-circle-info"></i>
               </button>
-              <a class="hub-btn hub-btn--ghost hub-btn--icon" title="تعديل"
+              <a class="hub-btn hub-btn--ghost hub-btn--icon" title="{{ _('تعديل') }}"
                  href="{{ url_for('radius.plans_edit', plan_id=p.id) }}">
                 <i class="fa-solid fa-pen"></i>
               </a>
               <form method="post" action="{{ url_for('radius.plans_delete', plan_id=p.id) }}"
                     onsubmit="return confirm('أرشفة «{{ p.name|e }}»؟ يمكن استعادتها من سلة المحذوفات.');">
-                <button type="submit" class="hub-btn hub-btn--danger hub-btn--icon" title="أرشفة">
+                <button type="submit" class="hub-btn hub-btn--danger hub-btn--icon" title="{{ _('أرشفة') }}">
                   <i class="fa-solid fa-box-archive"></i>
                 </button>
               </form>
@@ -316,15 +316,15 @@
         </div>
         <div class="pl-card__specs">
           <div class="pl-card__spec">
-            <span>السرعة</span>
+            <span>{{ _('السرعة') }}</span>
             <strong><bdi dir="ltr">{{ p.speed_down_kbps or 0 }}↓ / {{ p.speed_up_kbps or 0 }}↑ K</bdi></strong>
           </div>
           <div class="pl-card__spec">
-            <span>الكوتا</span>
+            <span>{{ _('الكوتا') }}</span>
             <strong>{% if p.quota_total_mb %}<bdi dir="ltr">{{ "%.1f"|format(p.quota_total_mb/1024) }} GB</bdi>{% else %}غير محدودة{% endif %}</strong>
           </div>
           <div class="pl-card__spec">
-            <span>المدة / الصلاحية</span>
+            <span>{{ _('المدة / الصلاحية') }}</span>
             <strong>
               {% if p.duration_minutes %}<bdi dir="ltr">{{ p.duration_minutes }}</bdi> د{% endif %}
               {% if p.validity_days %}{% if p.duration_minutes %} · {% endif %}<bdi dir="ltr">{{ p.validity_days }}</bdi> يوم{% endif %}
@@ -332,22 +332,22 @@
             </strong>
           </div>
           <div class="pl-card__spec">
-            <span>الجلسات / الأولوية</span>
+            <span>{{ _('الجلسات / الأولوية') }}</span>
             <strong><bdi dir="ltr">{{ p.concurrent_sessions or 1 }}</bdi> · {{ p.priority or '—' }}</strong>
           </div>
         </div>
         <div class="pl-card__actions">
-          <button type="button" class="hub-btn hub-btn--ghost hub-btn--sm" title="كل التفاصيل"
+          <button type="button" class="hub-btn hub-btn--ghost hub-btn--sm" title="{{ _('كل التفاصيل') }}"
                   data-uds-modal-open="pl-detail-modal" data-pl-detail-for="{{ p.id }}">
-            <i class="fa-solid fa-circle-info"></i> تفاصيل
+            <i class="fa-solid fa-circle-info"></i> {{ _('تفاصيل') }}
           </button>
-          <a class="hub-btn hub-btn--secondary hub-btn--sm" title="تعديل"
+          <a class="hub-btn hub-btn--secondary hub-btn--sm" title="{{ _('تعديل') }}"
              href="{{ url_for('radius.plans_edit', plan_id=p.id) }}">
-            <i class="fa-solid fa-pen"></i> تعديل
+            <i class="fa-solid fa-pen"></i> {{ _('تعديل') }}
           </a>
           <form method="post" action="{{ url_for('radius.plans_delete', plan_id=p.id) }}"
                 onsubmit="return confirm('أرشفة «{{ p.name|e }}»؟ يمكن استعادتها من سلة المحذوفات.');">
-            <button type="submit" class="hub-btn hub-btn--danger hub-btn--icon hub-btn--sm" title="أرشفة">
+            <button type="submit" class="hub-btn hub-btn--danger hub-btn--icon hub-btn--sm" title="{{ _('أرشفة') }}">
               <i class="fa-solid fa-box-archive"></i>
             </button>
           </form>
@@ -376,7 +376,7 @@
 
       {# ── أساسيات وتجاري ── #}
       <div class="pl-detail-group">
-        <h4><i class="fa-solid fa-circle-info"></i> أساسيات</h4>
+        <h4><i class="fa-solid fa-circle-info"></i> {{ _('أساسيات') }}</h4>
         {{ hub.kv([
           {'label':'الاسم',    'value': p.name},
           {'label':'الكود',    'value': p.code or '—', 'mono': True},
@@ -390,7 +390,7 @@
       </div>
 
       <div class="pl-detail-group">
-        <h4><i class="fa-solid fa-coins"></i> التسعير</h4>
+        <h4><i class="fa-solid fa-coins"></i> {{ _('التسعير') }}</h4>
         {{ hub.kv([
           {'label':'السعر',        'value': p.price|money, 'mono': True},
           {'label':'العملة',       'value': p.currency or 'عملة النظام'},
@@ -401,7 +401,7 @@
 
       {# ── السرعات و Burst و CIR ── #}
       <div class="pl-detail-group">
-        <h4><i class="fa-solid fa-gauge-high"></i> السرعات</h4>
+        <h4><i class="fa-solid fa-gauge-high"></i> {{ _('السرعات') }}</h4>
         {{ hub.kv([
           {'label':'تنزيل',          'value': ((p.speed_down_kbps|string) + ' Kbps') if p.speed_down_kbps else 'غير محدّدة', 'mono': True},
           {'label':'رفع',            'value': ((p.speed_up_kbps|string) + ' Kbps') if p.speed_up_kbps else 'غير محدّدة', 'mono': True},
@@ -418,7 +418,7 @@
 
       {# ── الكوتا التفصيلية ── #}
       <div class="pl-detail-group">
-        <h4><i class="fa-solid fa-database"></i> الكوتا</h4>
+        <h4><i class="fa-solid fa-database"></i> {{ _('الكوتا') }}</h4>
         {{ hub.kv([
           {'label':'إجمالية',        'value': ("%.1f GB"|format(p.quota_total_mb/1024)) if p.quota_total_mb else 'غير محدودة', 'mono': True},
           {'label':'يومية',          'value': ("%.1f GB"|format(p.quota_daily_mb/1024)) if p.quota_daily_mb else '—', 'mono': True},
@@ -431,7 +431,7 @@
 
       {# ── الوقت والصلاحية ── #}
       <div class="pl-detail-group">
-        <h4><i class="fa-solid fa-hourglass-half"></i> الوقت والصلاحية</h4>
+        <h4><i class="fa-solid fa-hourglass-half"></i> {{ _('الوقت والصلاحية') }}</h4>
         {{ hub.kv([
           {'label':'المدة',             'value': ((p.duration_minutes|string) + ' دقيقة') if p.duration_minutes else 'غير محدودة', 'mono': True},
           {'label':'الصلاحية',          'value': ((p.validity_days|string) + ' يوم') if p.validity_days else '—', 'mono': True},
@@ -447,7 +447,7 @@
 
       {# ── الشبكة والجلسات ── #}
       <div class="pl-detail-group">
-        <h4><i class="fa-solid fa-network-wired"></i> الشبكة والجلسات</h4>
+        <h4><i class="fa-solid fa-network-wired"></i> {{ _('الشبكة والجلسات') }}</h4>
         {{ hub.kv([
           {'label':'جلسات متزامنة', 'value': p.concurrent_sessions or 1, 'mono': True},
           {'label':'Address Pool',  'value': p.address_pool or '—', 'mono': True},
@@ -461,7 +461,7 @@
 
       {# ── الخدمات والقيود ── #}
       <div class="pl-detail-group">
-        <h4><i class="fa-solid fa-sliders"></i> الخدمات والقيود</h4>
+        <h4><i class="fa-solid fa-sliders"></i> {{ _('الخدمات والقيود') }}</h4>
         {{ hub.kv([
           {'label':'هوتسبوت',          'value': 'مفعَّل' if p.hotspot_enabled else 'معطَّل'},
           {'label':'PPP',              'value': 'مفعَّل' if p.ppp_enabled else 'معطَّل'},
@@ -477,7 +477,7 @@
     </div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
       <a class="hub-btn hub-btn--primary hub-btn--sm" href="{{ url_for('radius.plans_edit', plan_id=p.id) }}">
-        <i class="fa-solid fa-pen"></i> تعديل الباقة
+        <i class="fa-solid fa-pen"></i> {{ _('تعديل الباقة') }}
       </a>
     </div>
   </div>

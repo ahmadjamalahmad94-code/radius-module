@@ -3,7 +3,7 @@
 {% block title %}سجل التدقيق{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-clock-rotate-left"></i>{% endblock %}
 {% block page_title %}سجل التدقيق{% endblock %}
-{% block page_sub %}<span class="sub">(آخر 300 عملية)</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('(آخر 300 عملية)') }}</span>{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
@@ -24,13 +24,13 @@
         <thead>
           <tr>
             <th class="num">#</th>
-            <th>المنفّذ</th>
-            <th>الفعل</th>
-            <th>الكيان</th>
-            <th>المعرّف</th>
-            <th>عنوان الشبكة</th>
-            <th>الوقت</th>
-            <th>التفاصيل</th>
+            <th>{{ _('المنفّذ') }}</th>
+            <th>{{ _('الفعل') }}</th>
+            <th>{{ _('الكيان') }}</th>
+            <th>{{ _('المعرّف') }}</th>
+            <th>{{ _('عنوان الشبكة') }}</th>
+            <th>{{ _('الوقت') }}</th>
+            <th>{{ _('التفاصيل') }}</th>
           </tr>
         </thead>
         <tbody>

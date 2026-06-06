@@ -17,7 +17,7 @@
   <span class="sub">
     <a href="{{ url_for('radius.network_devices_list') }}"
        style="color:#6D28D9;text-decoration:none">
-      <i class="fa-solid fa-arrow-right"></i> تابع أجهزة الشبكة
+      <i class="fa-solid fa-arrow-right"></i> {{ _('تابع أجهزة الشبكة') }}
     </a>
   </span>
 {% endblock %}
@@ -29,7 +29,7 @@
 {% set _actions %}
   <a class="hub-btn hub-btn--secondary"
      href="{{ url_for('radius.network_devices_list') }}">
-    <i class="fa-solid fa-arrow-right"></i> تابع أجهزة الشبكة
+    <i class="fa-solid fa-arrow-right"></i> {{ _('تابع أجهزة الشبكة') }}
   </a>
 {% endset %}
 {{ hub.hero(
@@ -50,23 +50,23 @@
   ) %}
     <ol style="margin:0;padding-inline-start:20px;color:var(--hub-text-soft);font-size:12.5px;line-height:2">
       <li>
-        افتح <a href="https://t.me/BotFather" target="_blank" rel="noopener"
+        {{ _('افتح') }} <a href="https://t.me/BotFather" target="_blank" rel="noopener"
                 style="color:var(--hub-brand-ink);font-weight:700">@BotFather</a>
-        على تلجرام، أرسل <code>/newbot</code> واتبع التعليمات.
-        انسخ الـ <strong>bot token</strong> اللي يطلع.
+        {{ _('على تلجرام، أرسل') }} <code>/newbot</code> واتبع التعليمات.
+        انسخ الـ <strong>bot token</strong> {{ _('اللي يطلع.') }}
       </li>
       <li>
-        ابدأ محادثة مع البوت واضغط زر البدء داخل تلجرام، ثم افتح
+        {{ _('ابدأ محادثة مع البوت واضغط زر البدء داخل تلجرام، ثم افتح') }}
         <code>https://api.telegram.org/bot&lt;token&gt;/getUpdates</code>
-        وانسخ <strong>معرّف المحادثة</strong> من النتيجة (رقم سالب لمجموعة، موجب لشخص).
+        {{ _('وانسخ') }} <strong>{{ _('معرّف المحادثة') }}</strong> {{ _('من النتيجة (رقم سالب لمجموعة، موجب لشخص).') }}
       </li>
       <li>
-        ألصق القيمتين + فعّل «تنبيهات تلجرام» + اضغط «إرسال رسالة اختبار».
+        {{ _('ألصق القيمتين + فعّل «تنبيهات تلجرام» + اضغط «إرسال رسالة اختبار».') }}
       </li>
     </ol>
     <a href="{{ url_for('radius.communications_guide') }}#wt-telegram"
        style="display:inline-flex;align-items:center;gap:7px;margin-top:14px;color:var(--hub-brand-ink);font-weight:800;font-size:12.5px;text-decoration:none">
-      <i class="fa-solid fa-book-open"></i> تحتاج مساعدة؟ افتح الدليل المصوّر خطوة بخطوة
+      <i class="fa-solid fa-book-open"></i> {{ _('تحتاج مساعدة؟ افتح الدليل المصوّر خطوة بخطوة') }}
     </a>
   {% endcall %}
 {% endset %}
@@ -83,7 +83,7 @@
 
       <div class="hub-field">
         <label class="hub-field-label" for="bot_token">
-          رمز البوت <span class="req">*</span>
+          {{ _('رمز البوت') }} <span class="req">*</span>
         </label>
         <input class="hub-input" type="text" name="bot_token" id="bot_token" required
                value="{{ settings.bot_token }}"
@@ -91,35 +91,35 @@
                dir="ltr"
                style="font-family:monospace">
         <div class="hub-field-hint">
-          رمز الربط الذي يعطيك إياه BotFather. يُخزَّن كما هو — احذره من المشاركة.
+          {{ _('رمز الربط الذي يعطيك إياه BotFather. يُخزَّن كما هو — احذره من المشاركة.') }}
         </div>
       </div>
 
       <div class="hub-field">
         <label class="hub-field-label" for="chat_id">
-          معرّف المحادثة <span class="req">*</span>
+          {{ _('معرّف المحادثة') }} <span class="req">*</span>
         </label>
         <input class="hub-input" type="text" name="chat_id" id="chat_id" required
                value="{{ settings.chat_id }}"
-               placeholder="-1001234567890  أو  123456789"
+               placeholder="{{ _('-1001234567890  أو  123456789') }}"
                dir="ltr"
                style="font-family:monospace">
         <div class="hub-field-hint">
-          رقم موجب لشخص، سالب لمجموعة عاديّة، يبدأ بـ <code>-100</code> للقنوات.
+          {{ _('رقم موجب لشخص، سالب لمجموعة عاديّة، يبدأ بـ') }} <code>-100</code> {{ _('للقنوات.') }}
         </div>
       </div>
 
       <div class="hub-field">
         <label class="hub-field-label" for="thread_id">
-          Thread ID (اختياري)
+          {{ _('Thread ID (اختياري)') }}
         </label>
         <input class="hub-input" type="text" name="thread_id" id="thread_id"
                value="{{ settings.thread_id }}"
-               placeholder="فارغ في الغالب"
+               placeholder="{{ _('فارغ في الغالب') }}"
                dir="ltr"
                style="font-family:monospace">
         <div class="hub-field-hint">
-          فقط إذا كنت تستخدم Forum Supergroup وتريد التنبيهات في موضوع محدّد.
+          {{ _('فقط إذا كنت تستخدم Forum Supergroup وتريد التنبيهات في موضوع محدّد.') }}
         </div>
       </div>
 
@@ -130,10 +130,10 @@
       <div class="uds-toggle-row">
         <div class="uds-toggle-row-text">
           <span class="uds-toggle-row-label">
-            <i class="fa-solid fa-bell" style="color:var(--hub-brand-ink)"></i> تفعيل تنبيهات تلجرام
+            <i class="fa-solid fa-bell" style="color:var(--hub-brand-ink)"></i> {{ _('تفعيل تنبيهات تلجرام') }}
           </span>
           <span class="uds-toggle-row-meta">
-            عند الإيقاف، تبقى الإعدادات محفوظة لكن لن ترسل أي تنبيهات.
+            {{ _('عند الإيقاف، تبقى الإعدادات محفوظة لكن لن ترسل أي تنبيهات.') }}
           </span>
         </div>
         {{ toggle_switch(name="enabled", id="enabled", checked=settings.enabled) }}
@@ -141,7 +141,7 @@
 
       <div style="display:flex;gap:10px;margin-top:18px;">
         <button type="submit" class="hub-btn hub-btn--primary">
-          <i class="fa-solid fa-save"></i> حفظ الإعدادات
+          <i class="fa-solid fa-save"></i> {{ _('حفظ الإعدادات') }}
         </button>
       </div>
 
@@ -155,17 +155,17 @@
       {{ csrf_token_input() | safe }}
       <button type="submit" class="hub-btn hub-btn--secondary"
               {% if not settings.enabled or not settings.bot_token or not settings.chat_id %}disabled
-                title="فعّل الإعدادات أولًا وأكمل الحقول"{% endif %}>
-        <i class="fa-solid fa-paper-plane"></i> إرسال رسالة اختبار
+                title="{{ _('فعّل الإعدادات أولًا وأكمل الحقول') }}"{% endif %}>
+        <i class="fa-solid fa-paper-plane"></i> {{ _('إرسال رسالة اختبار') }}
       </button>
       <div class="hub-field-hint" style="margin-top:8px">
-        يرسل رسالة جاهزة للتأكّد من وصول التنبيهات قبل أي عطل حقيقي.
+        {{ _('يرسل رسالة جاهزة للتأكّد من وصول التنبيهات قبل أي عطل حقيقي.') }}
       </div>
     </form>
 
     {% if settings.updated_at %}
     <p style="margin-top:14px;color:var(--hub-text-soft);font-size:11.5px;direction:ltr;text-align:start">
-      آخر تحديث: <code>{{ settings.updated_at|dt_local if settings.updated_at else '—' }}</code>
+      {{ _('آخر تحديث:') }} <code>{{ settings.updated_at|dt_local if settings.updated_at else '—' }}</code>
     </p>
     {% endif %}
   {% endcall %}

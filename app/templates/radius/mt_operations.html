@@ -49,41 +49,41 @@
   <div class="hub-kpi hub-kpi--green" data-mt-fleet="connected">
     <span class="hub-kpi-icon"><i class="fa-solid fa-circle-check"></i></span>
     <div class="hub-kpi-body">
-      <div class="hub-kpi-label">متصل</div>
+      <div class="hub-kpi-label">{{ _('متصل') }}</div>
       <div class="hub-kpi-value" data-mt-fleet-value>—</div>
-      <div class="hub-kpi-sub">تجاوب تام من واجهة الربط</div>
+      <div class="hub-kpi-sub">{{ _('تجاوب تام من واجهة الربط') }}</div>
     </div>
   </div>
   <div class="hub-kpi hub-kpi--red" data-mt-fleet="unreachable">
     <span class="hub-kpi-icon"><i class="fa-solid fa-circle-xmark"></i></span>
     <div class="hub-kpi-body">
-      <div class="hub-kpi-label">غير متصل</div>
+      <div class="hub-kpi-label">{{ _('غير متصل') }}</div>
       <div class="hub-kpi-value" data-mt-fleet-value>—</div>
-      <div class="hub-kpi-sub">انتهت المهلة أو لا يرد</div>
+      <div class="hub-kpi-sub">{{ _('انتهت المهلة أو لا يرد') }}</div>
     </div>
   </div>
   <div class="hub-kpi hub-kpi--amber" data-mt-fleet="partial">
     <span class="hub-kpi-icon"><i class="fa-solid fa-circle-half-stroke"></i></span>
     <div class="hub-kpi-body">
-      <div class="hub-kpi-label">جزئي</div>
+      <div class="hub-kpi-label">{{ _('جزئي') }}</div>
       <div class="hub-kpi-value" data-mt-fleet-value>—</div>
-      <div class="hub-kpi-sub">بعض المؤشرات فقط</div>
+      <div class="hub-kpi-sub">{{ _('بعض المؤشرات فقط') }}</div>
     </div>
   </div>
   <div class="hub-kpi hub-kpi--amber" data-mt-fleet="provisioning">
     <span class="hub-kpi-icon"><i class="fa-solid fa-screwdriver-wrench"></i></span>
     <div class="hub-kpi-body">
-      <div class="hub-kpi-label">قيد التجهيز</div>
+      <div class="hub-kpi-label">{{ _('قيد التجهيز') }}</div>
       <div class="hub-kpi-value">{{ provisioning_count }}</div>
-      <div class="hub-kpi-sub">لم يكتمل الإعداد بعد</div>
+      <div class="hub-kpi-sub">{{ _('لم يكتمل الإعداد بعد') }}</div>
     </div>
   </div>
   <div class="hub-kpi hub-kpi--grey" data-mt-fleet="disabled">
     <span class="hub-kpi-icon"><i class="fa-solid fa-power-off"></i></span>
     <div class="hub-kpi-body">
-      <div class="hub-kpi-label">معطَّل</div>
+      <div class="hub-kpi-label">{{ _('معطَّل') }}</div>
       <div class="hub-kpi-value">{{ _disabled }}</div>
-      <div class="hub-kpi-sub">إداريًا مغلق</div>
+      <div class="hub-kpi-sub">{{ _('إداريًا مغلق') }}</div>
     </div>
   </div>
 </div>
@@ -98,35 +98,35 @@
      role="dialog" aria-modal="true" aria-labelledby="mt-emergency-title">
   <div class="mt-emergency-card">
     <button type="button" class="mt-emergency-close" data-mt-emergency-close
-            aria-label="إغلاق">×</button>
-    <span class="mt-emergency-kicker">إجراء حسّاس</span>
-    <h2 id="mt-emergency-title">تفريغ طوارئ لأسطول التجهيز</h2>
+            aria-label="{{ _('إغلاق') }}">×</button>
+    <span class="mt-emergency-kicker">{{ _('إجراء حسّاس') }}</span>
+    <h2 id="mt-emergency-title">{{ _('تفريغ طوارئ لأسطول التجهيز') }}</h2>
     <p class="mt-emergency-warning">
-      هذا الإجراء يحذف <b>كل</b> سجلات تجهيز الراوترات من قاعدة البيانات
+      {{ _('هذا الإجراء يحذف') }} <b>{{ _('كل') }}</b> سجلات تجهيز الراوترات من قاعدة البيانات
       (السجل، تخصيصات العناوين، أحداث الدورة الحياتية، نظراء الربط،
       جلسات المعالج، ومخرجات v3). يُستخدم فقط عندما يحدث اختلاف بين
       مفاتيح الربط وعناوين الإدارة ولا يمكن استعادة الحالة.
     </p>
     <p class="mt-emergency-warning">
-      <b>لن يلمس</b>: المشتركين، البطاقات، سياسات NPC غير المرتبطة بالمعالج،
+      <b>{{ _('لن يلمس') }}</b>: المشتركين، البطاقات، سياسات NPC غير المرتبطة بالمعالج،
       أو إعدادات الراوترات نفسها.
     </p>
     <div class="mt-emergency-counts" data-mt-emergency-counts>
-      <p>جاري حساب ما سيتم حذفه...</p>
+      <p>{{ _('جاري حساب ما سيتم حذفه...') }}</p>
     </div>
     <label class="mt-emergency-confirm">
-      لتفعيل الإجراء، اكتب العبارة <code>RESET-WIZARD-FLEET</code>:
+      {{ _('لتفعيل الإجراء، اكتب العبارة') }} <code>RESET-WIZARD-FLEET</code>:
       <input type="text" autocomplete="off" data-mt-emergency-input dir="ltr"
              placeholder="RESET-WIZARD-FLEET">
     </label>
     <label class="mt-emergency-check">
       <input type="checkbox" data-mt-emergency-files checked>
-      احذف أيضاً ملفات نظراء الربط من <code dir="ltr">peers.d</code>
+      {{ _('احذف أيضاً ملفات نظراء الربط من') }} <code dir="ltr">peers.d</code>
     </label>
     <div class="mt-emergency-actions">
-      <button type="button" class="hub-btn hub-btn--ghost" data-mt-emergency-cancel>إلغاء</button>
+      <button type="button" class="hub-btn hub-btn--ghost" data-mt-emergency-cancel>{{ _('إلغاء') }}</button>
       <button type="button" class="hub-btn hub-btn--danger" data-mt-emergency-execute disabled>
-        نعم، نفّذ التفريغ
+        {{ _('نعم، نفّذ التفريغ') }}
       </button>
     </div>
     <pre class="mt-emergency-result" data-mt-emergency-result hidden></pre>
@@ -159,16 +159,16 @@
       <tr>
         <th style="width:38px">
           <input type="checkbox" data-mt-bulk-toggle-all
-                 title="اختيار/إلغاء الكل">
+                 title="{{ _('اختيار/إلغاء الكل') }}">
         </th>
         <th class="num" style="width:46px">#</th>
-        <th>الاسم</th>
-        <th>العنوان</th>
-        <th>الحالة</th>
-        <th>المتصلون</th>
-        <th>حركة الإنترنت</th>
-        <th>نظام الراوتر</th>
-        <th>إجراءات</th>
+        <th>{{ _('الاسم') }}</th>
+        <th>{{ _('العنوان') }}</th>
+        <th>{{ _('الحالة') }}</th>
+        <th>{{ _('المتصلون') }}</th>
+        <th>{{ _('حركة الإنترنت') }}</th>
+        <th>{{ _('نظام الراوتر') }}</th>
+        <th>{{ _('إجراءات') }}</th>
       </tr>
     </thead>
     <tbody>
@@ -196,8 +196,8 @@
           </a>
           {% if item.provisioned_at %}
             <span class="hub-pill hub-pill--brand mt-mini-pill"
-                  title="أُضيف وجُهّز عبر المعالج آليًّا">
-              <span class="dot"></span> معالَج آليًّا
+                  title="{{ _('أُضيف وجُهّز عبر المعالج آليًّا') }}">
+              <span class="dot"></span> {{ _('معالَج آليًّا') }}
             </span>
           {% endif %}
         </td>
@@ -214,7 +214,7 @@
           {% elif item.enabled %}
             <span class="hub-pill hub-pill--grey" data-mt-row-status>
               <span class="dot"></span>
-              <span data-mt-row-status-label>جارٍ الفحص…</span>
+              <span data-mt-row-status-label>{{ _('جارٍ الفحص…') }}</span>
             </span>
           {% else %}
             {{ hub.pill("معطَّل", "amber") }}
@@ -222,8 +222,8 @@
         </td>
         <td>
           <span class="mt-row-users" data-mt-row-users>
-            <span data-mt-row-hotspot>—</span> بوابة ·
-            <span data-mt-row-ppp>—</span> برودباند
+            <span data-mt-row-hotspot>—</span> {{ _('بوابة ·') }}
+            <span data-mt-row-ppp>—</span> {{ _('برودباند') }}
           </span>
         </td>
         <td>
@@ -241,7 +241,7 @@
             {% if item.ros_version %}
               <span class="hub-pill hub-pill--brand mt-mini-pill">إصدار {{ item.ros_version }}.x</span>
             {% else %}
-              <span class="hub-pill hub-pill--grey mt-mini-pill">إصدار غير معروف</span>
+              <span class="hub-pill hub-pill--grey mt-mini-pill">{{ _('إصدار غير معروف') }}</span>
             {% endif %}
             {# نفق الإدارة: حالة صادقة مشتقّة من فحص الوصول عبر النفق +
                وجود peer + دورة التجهيز (بدل عمود management_tunnel_status
@@ -261,7 +261,7 @@
                       data-hint="حركة الإنترنت: نفق قديم PPTP ({{ _tmlabel }}) — غير آمن، يُنصح بالترقية إلى L2TP/IPsec">
                   <i class="fa-solid fa-route"></i>
                 </span>
-                <span class="hub-pill hub-pill--red mt-mini-pill"><span class="dot"></span>غير آمن</span>
+                <span class="hub-pill hub-pill--red mt-mini-pill"><span class="dot"></span>{{ _('غير آمن') }}</span>
               {% else %}
                 <span class="hub-hint mt-sys-hint mt-sys-hint--green" tabindex="0"
                       data-hint="حركة الإنترنت: نفق مشفّر L2TP/IPsec ({{ _tmlabel }})">
@@ -275,15 +275,15 @@
           {# الإجراء الأساسي — يفتح مركز خدمات الراوتر الموحّد. #}
           <a class="hub-btn hub-btn--sm hub-btn--primary"
              href="{{ url_for('radius.mt_dashboard', nas_id=item.id) }}"
-             title="فتح صفحة الراوتر — خدمات + مراقبة + أدوات">
-            <i class="fa-solid fa-screwdriver-wrench"></i> خدمات
+             title="{{ _('فتح صفحة الراوتر — خدمات + مراقبة + أدوات') }}">
+            <i class="fa-solid fa-screwdriver-wrench"></i> {{ _('خدمات') }}
           </a>
           {% if item.is_provisioning and item.wizard_run_id %}
           {# يظهر فقط أثناء تجهيز غير مكتمل — يعيد المشغّل للمعالج. #}
           <a class="hub-btn hub-btn--sm hub-btn--amber"
              href="{{ url_for('radius.setup_wizard_v3_page') }}?run={{ item.wizard_run_id }}"
-             title="متابعة معالج التجهيز من حيث توقّف">
-            <i class="fa-solid fa-forward"></i> متابعة
+             title="{{ _('متابعة معالج التجهيز من حيث توقّف') }}">
+            <i class="fa-solid fa-forward"></i> {{ _('متابعة') }}
           </a>
           {% endif %}
           {# صف أيقونات مضغوط في سطر واحد — أُبقيت فقط الإجراءات الأساسية:
@@ -291,12 +291,12 @@
              أدوات الخدمات (اللوحة/برمجة/خدمات المنافذ/النسخ/السكربت) لأنها
              صارت داخل تبويب «خدماتي» بلوحة الراوتر، فلا داعي لتكرارها هنا. #}
           <span class="mt-iconrow">
-            <a class="hub-btn hub-btn--ghost hub-btn--icon" title="مصمّم صفحة الدخول"
+            <a class="hub-btn hub-btn--ghost hub-btn--icon" title="{{ _('مصمّم صفحة الدخول') }}"
                href="{{ url_for('radius.mt_login_designer', nas_id=item.id) }}"
                data-mt-row-link="login-designer">
               <i class="fa-solid fa-palette"></i>
             </a>
-            <a class="hub-btn hub-btn--ghost hub-btn--icon" title="تعديل بيانات الراوتر"
+            <a class="hub-btn hub-btn--ghost hub-btn--icon" title="{{ _('تعديل بيانات الراوتر') }}"
                href="{{ url_for('radius.devices_edit', nas_id=item.id) }}">
               <i class="fa-solid fa-pen-to-square"></i>
             </a>
@@ -310,12 +310,12 @@
                      value="{{ 'disable' if item.enabled else 'enable' }}">
               {% if item.enabled %}
               <button type="submit" class="hub-btn hub-btn--ghost hub-btn--icon mt-icon-danger"
-                      title="تعطيل الراوتر">
+                      title="{{ _('تعطيل الراوتر') }}">
                 <i class="fa-solid fa-power-off"></i>
               </button>
               {% else %}
               <button type="submit" class="hub-btn hub-btn--ghost hub-btn--icon mt-icon-ok"
-                      title="تفعيل الراوتر">
+                      title="{{ _('تفعيل الراوتر') }}">
                 <i class="fa-solid fa-circle-check"></i>
               </button>
               {% endif %}
@@ -325,7 +325,7 @@
             <button type="button" class="hub-btn hub-btn--danger hub-btn--icon"
                     data-mt-retire="{{ item.registry_id }}"
                     data-mt-retire-name="{{ item.name|e }}"
-                    title="تقاعد محاولة تجهيز فاشلة وتحرير عنوان الربط">
+                    title="{{ _('تقاعد محاولة تجهيز فاشلة وتحرير عنوان الربط') }}">
               <i class="fa-solid fa-box-archive"></i>
             </button>
             {% endif %}
@@ -350,19 +350,19 @@
   {{ csrf_token_input() | safe }}
   <span class="mt-bulk-label">
     <i class="fa-solid fa-square-check"></i>
-    <span data-mt-bulk-count>0</span> راوتر مختار
+    <span data-mt-bulk-count>0</span> {{ _('راوتر مختار') }}
   </span>
   <button type="submit" name="action" value="enable"
           class="hub-btn hub-btn--sm" disabled data-mt-bulk-action>
-    <i class="fa-solid fa-circle-check"></i> تفعيل المحدّد
+    <i class="fa-solid fa-circle-check"></i> {{ _('تفعيل المحدّد') }}
   </button>
   <button type="submit" name="action" value="disable"
           class="hub-btn hub-btn--sm" disabled data-mt-bulk-action>
-    <i class="fa-solid fa-power-off"></i> تعطيل المحدّد
+    <i class="fa-solid fa-power-off"></i> {{ _('تعطيل المحدّد') }}
   </button>
   <button type="button" class="hub-btn hub-btn--ghost hub-btn--sm" data-mt-bulk-clear
-          title="إلغاء اختيار كل الصفوف">
-    <i class="fa-solid fa-xmark"></i> إلغاء الاختيار
+          title="{{ _('إلغاء اختيار كل الصفوف') }}">
+    <i class="fa-solid fa-xmark"></i> {{ _('إلغاء الاختيار') }}
   </button>
 </form>
 

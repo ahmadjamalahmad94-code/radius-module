@@ -69,17 +69,17 @@
   {% call hub.section("الهويّة", icon="id-card") %}
     <div class="hub-form-row">
       <div class="sgf-field">
-        <label>اسم المجموعة <span style="color:var(--hub-red)">*</span></label>
+        <label>{{ _('اسم المجموعة') }} <span style="color:var(--hub-red)">*</span></label>
         <input class="hub-input" type="text" name="name" required
                value="{{ group.name if group else '' }}"
-               placeholder="مثال: عملاء مميّزون — أوقات الدوام">
-        <div class="help">يجب أن يكون الاسم فريدًا داخل هذه المؤسسة.</div>
+               placeholder="{{ _('مثال: عملاء مميّزون — أوقات الدوام') }}">
+        <div class="help">{{ _('يجب أن يكون الاسم فريدًا داخل هذه المؤسسة.') }}</div>
       </div>
       <div class="sgf-field">
-        <label>الوصف</label>
+        <label>{{ _('الوصف') }}</label>
         <input class="hub-input" type="text" name="description"
                value="{{ group.description if group else '' }}"
-               placeholder="ملاحظة اختيارية عن المجموعة">
+               placeholder="{{ _('ملاحظة اختيارية عن المجموعة') }}">
       </div>
     </div>
   {% endcall %}
@@ -88,9 +88,9 @@
   {% call hub.section("الخدمات المُطبَّقة على أعضاء المجموعة", icon="layer-group") %}
     <div class="hub-form-row">
       <div class="sgf-field">
-        <label>جدولة السرعة</label>
+        <label>{{ _('جدولة السرعة') }}</label>
         <select class="hub-input" name="bandwidth_schedule_id">
-          <option value="">— بدون —</option>
+          <option value="">{{ _('— بدون —') }}</option>
           {% for s in schedules %}
             {# قيمة target_type خام (إنجليزية) — تبقى في title فقط ولا تُعرض نصًّا #}
             <option value="{{ s.id }}"
@@ -100,13 +100,13 @@
             </option>
           {% endfor %}
         </select>
-        <div class="help">جدول السرعات يطبَّق على كل عضو في المجموعة.</div>
+        <div class="help">{{ _('جدول السرعات يطبَّق على كل عضو في المجموعة.') }}</div>
       </div>
 
       <div class="sgf-field">
-        <label>الباقة الافتراضية</label>
+        <label>{{ _('الباقة الافتراضية') }}</label>
         <select class="hub-input" name="default_plan_id">
-          <option value="">— بدون —</option>
+          <option value="">{{ _('— بدون —') }}</option>
           {% for p in plans %}
             <option value="{{ p.id }}"
               {% if group and group.default_plan_id == p.id %}selected{% endif %}>
@@ -114,13 +114,13 @@
             </option>
           {% endfor %}
         </select>
-        <div class="help">عند إضافة عضو جديد، تُسنَد له هذه الباقة تلقائيًا.</div>
+        <div class="help">{{ _('عند إضافة عضو جديد، تُسنَد له هذه الباقة تلقائيًا.') }}</div>
       </div>
     </div>
 
     <div class="hub-form-row" style="margin-top: var(--hub-gap-md)">
       <div class="sgf-field">
-        <label>التجديد التلقائي</label>
+        <label>{{ _('التجديد التلقائي') }}</label>
         {{ toggle_switch(name="default_auto_renewal", checked=(not group or group.default_auto_renewal), value="1", on_label="تفعيل التجديد التلقائي افتراضيًا للأعضاء", off_label="بدون تجديد تلقائي") }}
       </div>
 
@@ -150,7 +150,7 @@
                         meta=(members|length)|string + " عضو", flush=True) %}
       <div class="hub-table-wrap" style="border:none;border-radius:0">
         <table class="hub-table">
-          <thead><tr><th>اسم المستخدم</th><th>الاسم</th><th>الجوّال</th><th>الحالة</th></tr></thead>
+          <thead><tr><th>{{ _('اسم المستخدم') }}</th><th>{{ _('الاسم') }}</th><th>{{ _('الجوّال') }}</th><th>{{ _('الحالة') }}</th></tr></thead>
           <tbody>
           {% for m in members %}
             <tr>
@@ -177,7 +177,7 @@
   {# ── Actions ─────────────────────────────────────────── #}
   <div class="hub-flex-row" style="justify-content:flex-end;gap:10px;margin-top:var(--hub-gap-section)">
     <a class="hub-btn hub-btn--ghost"
-       href="{{ url_for('radius.subscriber_groups_list') }}">إلغاء</a>
+       href="{{ url_for('radius.subscriber_groups_list') }}">{{ _('إلغاء') }}</a>
     <button class="hub-btn hub-btn--primary" type="submit">
       <i class="fa-solid fa-floppy-disk"></i>
       {{ "إنشاء المجموعة" if is_new else "حفظ التعديلات" }}

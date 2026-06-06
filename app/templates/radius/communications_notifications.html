@@ -5,7 +5,7 @@
 {% block title %}الإشعارات الحدثية — مركز التواصل{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-bell"></i>{% endblock %}
 {% block page_title %}الإشعارات الحدثية{% endblock %}
-{% block page_sub %}<span class="sub">فعّل أي حدث، اختر القنوات، وعدّل نص الرسالة — جاهز مسبقًا ويعمل بكبسة زر.</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('فعّل أي حدث، اختر القنوات، وعدّل نص الرسالة — جاهز مسبقًا ويعمل بكبسة زر.') }}</span>{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
@@ -105,10 +105,10 @@
         فعّل أي حدث بالمفتاح، اختر القنوات التي تريد الإرسال عبرها، وعدّل نص الرسالة إن رغبت
         (انقر أي متغيّر لإدراجه داخل النص عند موضع المؤشّر). كل حدث يأتي برسالة افتراضية جاهزة — يمكنك الحفظ مباشرة.
         قنوات الرسائل القصيرة وواتساب تُضبط من
-        <a href="{{ url_for('radius.communications_channels') }}">قنوات الإرسال</a>،
+        <a href="{{ url_for('radius.communications_channels') }}">{{ _('قنوات الإرسال') }}</a>،
         وقناة تلجرام من
-        <a href="{{ url_for('radius.network_telegram_settings') if endpoint_exists('radius.network_telegram_settings') else url_for('radius.communications_channels') }}">إعدادات تلجرام</a>،
-        وللشرح المصوّر <a href="{{ url_for('radius.communications_guide') }}">افتح الدليل</a>.
+        <a href="{{ url_for('radius.network_telegram_settings') if endpoint_exists('radius.network_telegram_settings') else url_for('radius.communications_channels') }}">{{ _('إعدادات تلجرام') }}</a>،
+        وللشرح المصوّر <a href="{{ url_for('radius.communications_guide') }}">{{ _('افتح الدليل') }}</a>.
       </div>
     </div>
   {% endcall %}
@@ -141,9 +141,9 @@
               <i class="fa-{{ 'brands' if ch in ('whatsapp','telegram') else 'solid' }} fa-{{ lbl[1] if lbl else 'paper-plane' }}"></i>
               {{ lbl[0] if lbl else ch }}
               {%- if ch in ('sms','whatsapp') and not (channels.get(ch) and channels[ch].active) %}
-                <span class="warn" title="القناة غير مهيأة بعد">(غير مهيأة)</span>
+                <span class="warn" title="{{ _('القناة غير مهيأة بعد') }}">{{ _('(غير مهيأة)') }}</span>
               {%- elif ch == 'telegram' and not telegram_ready %}
-                <span class="warn" title="تلجرام غير مهيأ بعد">(غير مهيأة)</span>
+                <span class="warn" title="{{ _('تلجرام غير مهيأ بعد') }}">{{ _('(غير مهيأة)') }}</span>
               {%- endif -%}
             </label>
           {% endfor %}
@@ -152,19 +152,19 @@
         {# days_before — only for the dunning reminder #}
         {% if rule.event.has_days_before %}
           <div class="cnf-days">
-            <label for="{{ ek }}-days">أرسل التذكير قبل الانتهاء بـ</label>
+            <label for="{{ ek }}-days">{{ _('أرسل التذكير قبل الانتهاء بـ') }}</label>
             <input type="number" id="{{ ek }}-days" name="{{ ek }}__days_before" min="1" max="60" value="{{ rule.days_before }}">
-            <span class="u">يوم</span>
+            <span class="u">{{ _('يوم') }}</span>
           </div>
         {% endif %}
 
         {# message #}
         <div class="cnf-field">
-          <label for="{{ ek }}-msg">نص الرسالة</label>
+          <label for="{{ ek }}-msg">{{ _('نص الرسالة') }}</label>
           <textarea class="cnf-area" id="{{ ek }}-msg" name="{{ ek }}__template" data-msg>{{ rule.template }}</textarea>
           <div class="cnf-vars" data-vars-for="{{ ek }}-msg">
-            {% for v in base_vars %}<span class="cnf-var" data-var="{{ v }}" title="انقر لإدراجه في النص">{{ v }}</span>{% endfor %}
-            {% for ev in rule.event.extra_vars %}<span class="cnf-var" data-var="{{ '{' ~ ev ~ '}' }}" title="انقر لإدراجه في النص">{{ '{' ~ ev ~ '}' }}</span>{% endfor %}
+            {% for v in base_vars %}<span class="cnf-var" data-var="{{ v }}" title="{{ _('انقر لإدراجه في النص') }}">{{ v }}</span>{% endfor %}
+            {% for ev in rule.event.extra_vars %}<span class="cnf-var" data-var="{{ '{' ~ ev ~ '}' }}" title="{{ _('انقر لإدراجه في النص') }}">{{ '{' ~ ev ~ '}' }}</span>{% endfor %}
           </div>
         </div>
       </div>
@@ -173,7 +173,7 @@
 
   <div class="cnf-save">
     {{ hub.btn("حفظ كل الإعدادات", icon="floppy-disk", variant="primary", type="submit") }}
-    <span class="hint">يتم حفظ كل البطاقات دفعة واحدة. الإعدادات الافتراضية جاهزة — يمكنك الحفظ مباشرة.</span>
+    <span class="hint">{{ _('يتم حفظ كل البطاقات دفعة واحدة. الإعدادات الافتراضية جاهزة — يمكنك الحفظ مباشرة.') }}</span>
   </div>
   {% endcall %}
 </form>

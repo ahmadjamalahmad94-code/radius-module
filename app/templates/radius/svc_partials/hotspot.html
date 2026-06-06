@@ -15,7 +15,7 @@
      Phase 3: on entry, POST /apply. Animate substep ticks.
      Phase 4: on entry, GET /verify. Render the checks list.
 #}
-<h2>تهيئة بوابة الدخول</h2>
+<h2>{{ _('تهيئة بوابة الدخول') }}</h2>
 <p class="swsvf-pane-sub">
   اختر واجهات الشبكة التي ستعمل عليها بوابة الدخول، ثم اضغط «التالي».
   سنحضّر المعاينة قبل تطبيق أي شيء على الراوتر.
@@ -126,8 +126,8 @@
    الفعالة فقط. #}
 <div class="swhs-section">
   <div class="swhs-section-title">
-    واجهات الشبكة
-    <span class="swhs-iface-counter" data-swhs-counter>0 واجهة مختارة</span>
+    {{ _('واجهات الشبكة') }}
+    <span class="swhs-iface-counter" data-swhs-counter>{{ _('0 واجهة مختارة') }}</span>
   </div>
   <p class="swhs-help">
     اختر الواجهة (أو الواجهات) التي يتّصل بها المستخدمون. عادةً ether2 أو ether3،
@@ -136,30 +136,30 @@
   <button type="button" class="swsvf-btn swhs-discover-btn"
           data-swhs-discover>
     <i class="fa-solid fa-magnifying-glass"></i>
-    اكتشف الواجهات من الراوتر
+    {{ _('اكتشف الواجهات من الراوتر') }}
   </button>
   <div class="swhs-iface-list" data-swhs-iface-list>
     <div class="swhs-iface-empty" data-swhs-iface-empty>
-      اضغط «اكتشف الواجهات» لتحميل قائمة المنافذ من الراوتر.
+      {{ _('اضغط «اكتشف الواجهات» لتحميل قائمة المنافذ من الراوتر.') }}
     </div>
   </div>
 </div>
 
 {# ───── Section 2: subnet ───── #}
 <div class="swhs-section">
-  <div class="swhs-section-title">نطاق العناوين الداخلي</div>
+  <div class="swhs-section-title">{{ _('نطاق العناوين الداخلي') }}</div>
   <p class="swhs-help">
     النطاق الذي يوزّعه DHCP على أجهزة المستخدمين. اتركه على الافتراضي إن لم
-    يكن لديك تعارض مع شبكة أخرى — أو اضغط <strong>توليد</strong> ليُحسب رقم
+    يكن لديك تعارض مع شبكة أخرى — أو اضغط <strong>{{ _('توليد') }}</strong> ليُحسب رقم
     عشوائي ضمن النطاقات الخاصّة الآمنة (RFC1918).
   </p>
   <div class="swhs-input-row">
     <input type="text" class="swhs-input" data-swhs-subnet
            value="10.20.0.0/16" placeholder="10.20.0.0/16">
     <button type="button" class="swhs-gen-btn" data-swhs-gen
-            title="توليد نطاق عشوائي آمن">
+            title="{{ _('توليد نطاق عشوائي آمن') }}">
       <i class="fa-solid fa-dice"></i>
-      <span>توليد</span>
+      <span>{{ _('توليد') }}</span>
     </button>
   </div>
 </div>

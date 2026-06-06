@@ -124,7 +124,7 @@
         <strong>غير متصل — درجة الصحة {{ health.score }}/100</strong>
         {% else %}
         <i class="fa-solid fa-question"></i>
-        <strong>الحالة غير معروفة — لا توجد بيانات كافية</strong>
+        <strong>{{ _('الحالة غير معروفة — لا توجد بيانات كافية') }}</strong>
         {% endif %}
         <span data-mt-health-recommendation>{{ health.recommended_action_ar }}</span>
       </div>
@@ -142,13 +142,13 @@
          data-mt-overview-safe-banner="safe"
          style="background:#DCFCE7;border-color:#86EFAC;color:#166534">
       <i class="fa-solid fa-circle-check"></i>
-      <strong>الراوتر آمن للتعديل حاليًا.</strong>
+      <strong>{{ _('الراوتر آمن للتعديل حاليًا.') }}</strong>
     </div>
     {% else %}
     <div class="mt-program-banner mt-program-banner--risk"
          data-mt-overview-safe-banner="unsafe">
       <i class="fa-solid fa-shield-halved"></i>
-      <strong>الراوتر غير آمن للتعديل الآن — راجع الأسباب:</strong>
+      <strong>{{ _('الراوتر غير آمن للتعديل الآن — راجع الأسباب:') }}</strong>
       <ul style="margin:6px 0 0;list-style:disc;padding-inline-start:24px">
       {% for r in ov.safety_reasons %}
         <li>{{ r }}</li>
@@ -191,7 +191,7 @@
       {% if ov.vpn_peer_address %}
       <dl class="uds-kv" data-mt-overview-identity>
         <div class="uds-kv-row">
-          <span class="uds-kv-label">عنوان نفق الإدارة</span>
+          <span class="uds-kv-label">{{ _('عنوان نفق الإدارة') }}</span>
           <span class="uds-kv-value mono">{{ ov.vpn_peer_address }}</span>
         </div>
       </dl>
@@ -220,8 +220,8 @@
           <table class="hub-table">
             <thead>
               <tr>
-                <th>المؤشر</th>
-                <th class="num" style="width:180px">القيمة</th>
+                <th>{{ _('المؤشر') }}</th>
+                <th class="num" style="width:180px">{{ _('القيمة') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -249,7 +249,7 @@
           <code style="font-family:var(--hub-mono,ui-monospace,monospace)">{{ ov.last_failed_action }}</code>
           · <span class="mono" style="white-space:nowrap;direction:ltr;unicode-bidi:plaintext">{{ ov.last_failed_at }}</span>
           · <a href="{{ url_for('radius.audit_log_detail', audit_id=ov.last_failed_id) }}"
-               data-mt-overview-last-failed-link>تفاصيل</a>
+               data-mt-overview-last-failed-link>{{ _('تفاصيل') }}</a>
         </li>
         {% endif %}
         {% if ov.last_danger_id and ov.last_danger_id != ov.last_failed_id %}
@@ -258,7 +258,7 @@
           <code style="font-family:var(--hub-mono,ui-monospace,monospace)">{{ ov.last_danger_action }}</code>
           · <span class="mono" style="white-space:nowrap;direction:ltr;unicode-bidi:plaintext">{{ ov.last_danger_at }}</span>
           · <a href="{{ url_for('radius.audit_log_detail', audit_id=ov.last_danger_id) }}"
-               data-mt-overview-last-danger-link>تفاصيل</a>
+               data-mt-overview-last-danger-link>{{ _('تفاصيل') }}</a>
         </li>
         {% endif %}
       </ul>

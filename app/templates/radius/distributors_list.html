@@ -65,10 +65,10 @@
   search_action=url_for('radius.distributors_list')
 ) %}
   <select class="hub-select" name="status">
-    <option value="">كل الحالات</option>
-    <option value="active"   {% if status=='active' %}selected{% endif %}>مفعَّل</option>
-    <option value="blocked"  {% if status=='blocked' %}selected{% endif %}>محظور</option>
-    <option value="inactive" {% if status=='inactive' %}selected{% endif %}>متوقّف</option>
+    <option value="">{{ _('كل الحالات') }}</option>
+    <option value="active"   {% if status=='active' %}selected{% endif %}>{{ _('مفعَّل') }}</option>
+    <option value="blocked"  {% if status=='blocked' %}selected{% endif %}>{{ _('محظور') }}</option>
+    <option value="inactive" {% if status=='inactive' %}selected{% endif %}>{{ _('متوقّف') }}</option>
   </select>
   {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
 {% endcall %}
@@ -91,14 +91,14 @@
         <thead>
           <tr>
             <th class="num" style="width:60px">#</th>
-            <th>اسم الدخول</th>
-            <th>الاسم الظاهر</th>
-            <th>التواصل</th>
-            <th>الصلاحيات</th>
-            <th>النطاق</th>
-            <th>الرصيد والدين</th>
-            <th>الحالة</th>
-            <th style="width:110px" data-uds-nosort>إجراءات</th>
+            <th>{{ _('اسم الدخول') }}</th>
+            <th>{{ _('الاسم الظاهر') }}</th>
+            <th>{{ _('التواصل') }}</th>
+            <th>{{ _('الصلاحيات') }}</th>
+            <th>{{ _('النطاق') }}</th>
+            <th>{{ _('الرصيد والدين') }}</th>
+            <th>{{ _('الحالة') }}</th>
+            <th style="width:110px" data-uds-nosort>{{ _('إجراءات') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -122,7 +122,7 @@
                 {% for p in _perms[:3] %}
                   {{ hub.pill(p, variant="brand", dot=False) }}
                 {% else %}
-                  <span class="hub-text-mute small">لم تحدد بعد</span>
+                  <span class="hub-text-mute small">{{ _('لم تحدد بعد') }}</span>
                 {% endfor %}
                 {% if _perms|length > 3 %}
                   {{ hub.pill("+" + (_perms|length - 3)|string, variant="grey", dot=False) }}
@@ -137,7 +137,7 @@
               {% endif %}
             </td>
             <td>
-              <div class="mono small"><strong>رصيد:</strong> {{ (d.balance or 0)|money }}</div>
+              <div class="mono small"><strong>{{ _('رصيد:') }}</strong> {{ (d.balance or 0)|money }}</div>
               <div class="mono small hub-text-mute">
                 دين: {{ (d.debt_balance or 0)|money }} · حد: {{ (d.credit_limit or 0)|money }}
               </div>
@@ -150,11 +150,11 @@
             </td>
             <td>
               <div class="hub-flex-row" style="gap:4px">
-                <a class="hub-btn hub-btn--primary hub-btn--icon" title="عرض"
+                <a class="hub-btn hub-btn--primary hub-btn--icon" title="{{ _('عرض') }}"
                    href="{{ url_for('radius.distributors_detail', distributor_id=d.id) }}">
                   <i class="fa-solid fa-eye"></i>
                 </a>
-                <a class="hub-btn hub-btn--secondary hub-btn--icon" title="تعديل"
+                <a class="hub-btn hub-btn--secondary hub-btn--icon" title="{{ _('تعديل') }}"
                    href="{{ url_for('radius.distributors_edit', distributor_id=d.id) }}">
                   <i class="fa-solid fa-pen"></i>
                 </a>
@@ -187,82 +187,82 @@
     {# method="post" ضروري: حاقن الـ CSRF التلقائي يستهدف فقط <form method="post">. #}
     <form method="post" action="{{ url_for('radius.distributors_create') }}">
       <div class="fcw-head">
-        <h3 id="fcw-distributor-create-title"><i class="fa-solid fa-user-plus"></i> إضافة موزع</h3>
-        <button type="button" class="fcw-x" data-fcw-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
+        <h3 id="fcw-distributor-create-title"><i class="fa-solid fa-user-plus"></i> {{ _('إضافة موزع') }}</h3>
+        <button type="button" class="fcw-x" data-fcw-close aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="fcw-body">
 
         {# ── 1) هوية الموزع ── #}
-        <div class="fcw-group"><i class="fa-solid fa-id-card"></i> هوية الموزع</div>
+        <div class="fcw-group"><i class="fa-solid fa-id-card"></i> {{ _('هوية الموزع') }}</div>
         <div class="fcw-grid">
           <label class="hub-field">
-            <span class="hub-field-label">اسم الدخول <span style="color:#dc2626">*</span></span>
+            <span class="hub-field-label">{{ _('اسم الدخول') }} <span style="color:#dc2626">*</span></span>
             <input class="hub-input" type="text" name="name" required maxlength="80"
                    placeholder="dealer_north" dir="ltr">
-            <span class="hub-field-hint">معرّف داخلي فريد (لا يتكرر) يُستخدم للتتبع وربط الحزم والقيود — يُفضَّل بالأحرف اللاتينية بلا مسافات.</span>
+            <span class="hub-field-hint">{{ _('معرّف داخلي فريد (لا يتكرر) يُستخدم للتتبع وربط الحزم والقيود — يُفضَّل بالأحرف اللاتينية بلا مسافات.') }}</span>
           </label>
           <label class="hub-field">
-            <span class="hub-field-label">الاسم الظاهر</span>
+            <span class="hub-field-label">{{ _('الاسم الظاهر') }}</span>
             <input class="hub-input" type="text" name="display_name" maxlength="120"
-                   placeholder="موزع الشمال">
-            <span class="hub-field-hint">الاسم الودّي الذي يظهر في القوائم والتقارير — إن تُرك فارغًا يُستخدم اسم الدخول.</span>
+                   placeholder="{{ _('موزع الشمال') }}">
+            <span class="hub-field-hint">{{ _('الاسم الودّي الذي يظهر في القوائم والتقارير — إن تُرك فارغًا يُستخدم اسم الدخول.') }}</span>
           </label>
           <label class="hub-field">
-            <span class="hub-field-label">رقم الهاتف</span>
+            <span class="hub-field-label">{{ _('رقم الهاتف') }}</span>
             <input class="hub-input" type="tel" name="phone" maxlength="40" dir="ltr" placeholder="05XXXXXXXX">
-            <span class="hub-field-hint">للتواصل والتحصيل الميداني — اختياري لكنه يسهّل المتابعة.</span>
+            <span class="hub-field-hint">{{ _('للتواصل والتحصيل الميداني — اختياري لكنه يسهّل المتابعة.') }}</span>
           </label>
           <label class="hub-field">
-            <span class="hub-field-label">البريد الإلكتروني</span>
+            <span class="hub-field-label">{{ _('البريد الإلكتروني') }}</span>
             <input class="hub-input" type="email" name="email" maxlength="160" dir="ltr" placeholder="dealer@example.com">
-            <span class="hub-field-hint">يُستخدم في المراسلات والكشوف — اختياري.</span>
+            <span class="hub-field-hint">{{ _('يُستخدم في المراسلات والكشوف — اختياري.') }}</span>
           </label>
           <label class="hub-field full">
-            <span class="hub-field-label">الحالة</span>
+            <span class="hub-field-label">{{ _('الحالة') }}</span>
             <select class="hub-select" name="status">
-              <option value="active" selected>مفعَّل — يعمل ويُربَط بالحزم</option>
-              <option value="inactive">غير مفعَّل — موقوف مؤقتًا</option>
-              <option value="blocked">محظور — ممنوع من أي عملية</option>
+              <option value="active" selected>{{ _('مفعَّل — يعمل ويُربَط بالحزم') }}</option>
+              <option value="inactive">{{ _('غير مفعَّل — موقوف مؤقتًا') }}</option>
+              <option value="blocked">{{ _('محظور — ممنوع من أي عملية') }}</option>
             </select>
-            <span class="hub-field-hint">تتحكم بظهوره في العمليات — تغيير الحالة لاحقًا لا يمسّ الحزم المربوطة به.</span>
+            <span class="hub-field-hint">{{ _('تتحكم بظهوره في العمليات — تغيير الحالة لاحقًا لا يمسّ الحزم المربوطة به.') }}</span>
           </label>
         </div>
 
         {# ── 2) الجانب المالي (قيم مرجعية للمتابعة — التسويات الفعلية من صفحة التفاصيل) ── #}
-        <div class="fcw-group"><i class="fa-solid fa-wallet"></i> الجانب المالي</div>
+        <div class="fcw-group"><i class="fa-solid fa-wallet"></i> {{ _('الجانب المالي') }}</div>
         <div class="fcw-grid">
           <label class="hub-field">
-            <span class="hub-field-label">الرصيد الافتتاحي</span>
+            <span class="hub-field-label">{{ _('الرصيد الافتتاحي') }}</span>
             <input class="hub-input" type="number" name="balance" step="0.01" value="0" dir="ltr">
-            <span class="hub-field-hint">ما يملكه الموزع لديك عند البداية — الحركات اللاحقة تُسجَّل من «تسوية» في صفحة تفاصيله.</span>
+            <span class="hub-field-hint">{{ _('ما يملكه الموزع لديك عند البداية — الحركات اللاحقة تُسجَّل من «تسوية» في صفحة تفاصيله.') }}</span>
           </label>
           <label class="hub-field">
-            <span class="hub-field-label">حد الائتمان</span>
+            <span class="hub-field-label">{{ _('حد الائتمان') }}</span>
             <input class="hub-input" type="number" name="credit_limit" step="0.01" min="0" value="0" dir="ltr">
-            <span class="hub-field-hint">أقصى دين تسمح له بتجميعه قبل إيقاف الصرف — قيمة مرجعية للمتابعة وليست نظام فوترة.</span>
+            <span class="hub-field-hint">{{ _('أقصى دين تسمح له بتجميعه قبل إيقاف الصرف — قيمة مرجعية للمتابعة وليست نظام فوترة.') }}</span>
           </label>
           <label class="hub-field full">
-            <span class="hub-field-label">الدين الحالي</span>
+            <span class="hub-field-label">{{ _('الدين الحالي') }}</span>
             <input class="hub-input" type="number" name="debt_balance" step="0.01" min="0" value="0" dir="ltr">
-            <span class="hub-field-hint">ما عليه لك عند إنشاء الحساب (رصيد افتتاحي للذمم) — اتركه 0 لموزع جديد بلا التزامات.</span>
+            <span class="hub-field-hint">{{ _('ما عليه لك عند إنشاء الحساب (رصيد افتتاحي للذمم) — اتركه 0 لموزع جديد بلا التزامات.') }}</span>
           </label>
         </div>
 
         {# ── 3) الصلاحيات ونطاق البيانات ── #}
-        <div class="fcw-group"><i class="fa-solid fa-shield-halved"></i> الصلاحيات ونطاق البيانات</div>
+        <div class="fcw-group"><i class="fa-solid fa-shield-halved"></i> {{ _('الصلاحيات ونطاق البيانات') }}</div>
         <div class="fcw-grid">
           <label class="fcw-choice full">
             <input type="checkbox" name="permissions" value="cards.read" checked>
             <span>
-              <strong>عرض الكروت والحزم</strong>
-              <span>يسمح للموزع برؤية الحزم المربوطة به ومتابعة حالتها — الأساس لأي عمل.</span>
+              <strong>{{ _('عرض الكروت والحزم') }}</strong>
+              <span>{{ _('يسمح للموزع برؤية الحزم المربوطة به ومتابعة حالتها — الأساس لأي عمل.') }}</span>
             </span>
           </label>
           <label class="fcw-choice full">
             <input type="checkbox" name="permissions" value="cards.sell" checked>
             <span>
-              <strong>بيع الكروت</strong>
-              <span>يسمح بتنفيذ عمليات البيع ضمن الحزم المسموحة له فقط.</span>
+              <strong>{{ _('بيع الكروت') }}</strong>
+              <span>{{ _('يسمح بتنفيذ عمليات البيع ضمن الحزم المسموحة له فقط.') }}</span>
             </span>
           </label>
           {# نطاق العزل الفعلي المدعوم حاليًا: الحزم المعيّنة فقط — لذا يُرسَل كقيمة ثابتة #}
@@ -270,24 +270,24 @@
           <div class="fcw-choice full" style="cursor:default">
             <i class="fa-solid fa-user-shield" style="margin-top:2px;color:var(--hub-brand,#6366f1)"></i>
             <span>
-              <strong>نطاق البيانات: الحزم المعيّنة فقط</strong>
-              <span>الموزع لا يرى إلا ما رُبط به — اربط الحزم من صفحة تفاصيله بعد الإنشاء (زر «ربط حزمة»).</span>
+              <strong>{{ _('نطاق البيانات: الحزم المعيّنة فقط') }}</strong>
+              <span>{{ _('الموزع لا يرى إلا ما رُبط به — اربط الحزم من صفحة تفاصيله بعد الإنشاء (زر «ربط حزمة»).') }}</span>
             </span>
           </div>
         </div>
 
         {# ── 4) ملاحظات ── #}
-        <div class="fcw-group"><i class="fa-solid fa-note-sticky"></i> ملاحظات</div>
+        <div class="fcw-group"><i class="fa-solid fa-note-sticky"></i> {{ _('ملاحظات') }}</div>
         <label class="hub-field">
-          <span class="hub-field-label">ملاحظات داخلية</span>
-          <textarea class="hub-textarea" name="notes" rows="2" placeholder="منطقة العمل، اتفاق الحصة، أي شروط خاصة..."></textarea>
-          <span class="hub-field-hint">تظهر للإدارة فقط — لا يراها الموزع. الحد 500 حرف.</span>
+          <span class="hub-field-label">{{ _('ملاحظات داخلية') }}</span>
+          <textarea class="hub-textarea" name="notes" rows="2" placeholder="{{ _('منطقة العمل، اتفاق الحصة، أي شروط خاصة...') }}"></textarea>
+          <span class="hub-field-hint">{{ _('تظهر للإدارة فقط — لا يراها الموزع. الحد 500 حرف.') }}</span>
         </label>
 
       </div>
       <div class="fcw-foot">
-        <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>إغلاق</button>
-        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-user-plus"></i> حفظ الموزع</button>
+        <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>{{ _('إغلاق') }}</button>
+        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-user-plus"></i> {{ _('حفظ الموزع') }}</button>
       </div>
     </form>
   </div>

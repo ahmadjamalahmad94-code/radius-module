@@ -57,14 +57,14 @@
 
   {% call hub.section("الكروت", icon="ticket", flush=True) %}
     <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25"
-         data-uds-export-title="كروت الدفعة المالية">
+         data-uds-export-title="{{ _('كروت الدفعة المالية') }}">
       <table class="hub-table" data-testid="batch-cards-table">
-        <thead><tr><th>اسم المستخدم</th><th>الحالة</th><th>تاريخ الإنشاء</th></tr></thead>
+        <thead><tr><th>{{ _('اسم المستخدم') }}</th><th>{{ _('الحالة') }}</th><th>{{ _('تاريخ الإنشاء') }}</th></tr></thead>
         <tbody>
           {% for card in result.cards %}
             <tr><td>{{ card.username }}</td><td>{{ "مستخدم" if card.used else "غير مستخدم" }}</td><td>{{ card.created_at|dt_local if card.created_at else '—' }}</td></tr>
           {% else %}
-            <tr><td colspan="3">لم يتم توليد الكروت في هذا المسار المالي.</td></tr>
+            <tr><td colspan="3">{{ _('لم يتم توليد الكروت في هذا المسار المالي.') }}</td></tr>
           {% endfor %}
         </tbody>
       </table>

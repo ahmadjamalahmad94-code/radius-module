@@ -9,7 +9,7 @@
   <span class="sub">
     <a href="{{ url_for('radius.network_devices_list') }}"
        style="color:#6D28D9;text-decoration:none">
-      <i class="fa-solid fa-arrow-right"></i> العودة للقائمة
+      <i class="fa-solid fa-arrow-right"></i> {{ _('العودة للقائمة') }}
     </a>
   </span>
 {% endblock %}
@@ -64,30 +64,30 @@
 {# ── Security note ── #}
 <section class="rda-note rda-note--security">
   <i class="fa-solid fa-shield-halved"></i>
-  <strong>تنويه أمني:</strong>
+  <strong>{{ _('تنويه أمني:') }}</strong>
   الجلسة تفتح منفذ وصول مؤقّت على خادم الربط فقط أثناء المدّة المختارة، ويُغلَق
   بالكامل (LISTENER + NAT على الراوتر) عند انتهاء المدّة أو الضغط
   على «إغلاق الآن». مسار الاتصال:
-  <code dir="ltr">المتصفّح → خادم الربط:المنفذ → نفق الإدارة → الراوتر → الجهاز</code>.
+  <code dir="ltr">{{ _('المتصفّح → خادم الربط:المنفذ → نفق الإدارة → الراوتر → الجهاز') }}</code>.
 </section>
 
 {% if not vps_public_host %}
 <section class="rda-note rda-note--config">
   <i class="fa-solid fa-triangle-exclamation"></i>
-  <strong>تحذير إعداد:</strong>
-  المتغيّر <code>HOBERADIUS_VPS_PUBLIC_IP</code> غير محدّد على الخادم —
+  <strong>{{ _('تحذير إعداد:') }}</strong>
+  {{ _('المتغيّر') }} <code>HOBERADIUS_VPS_PUBLIC_IP</code> غير محدّد على الخادم —
   الجلسات ستفتح لكن لن تعرض رابط الوصول بشكل صحيح. اضبط المتغيّر في
-  <code>deploy/.env</code> وأعد تشغيل خدمة التشغيل.
+  <code>deploy/.env</code> {{ _('وأعد تشغيل خدمة التشغيل.') }}
 </section>
 {% endif %}
 
 {# ── Device summary ── #}
 <section class="rda-summary">
   <div class="rda-summary-grid">
-    <div><strong>الجهاز:</strong> {{ device.name }}</div>
-    <div><strong>IP الداخلي:</strong> <code dir="ltr">{{ device.ip_address or '— غير محدّد' }}</code></div>
-    <div><strong>المنفذ الافتراضي:</strong> <code dir="ltr">{{ device.management_port }}</code></div>
-    <div><strong>الراوتر:</strong> {{ nas.name }} (<code dir="ltr">{{ nas.address }}</code>)</div>
+    <div><strong>{{ _('الجهاز:') }}</strong> {{ device.name }}</div>
+    <div><strong>{{ _('IP الداخلي:') }}</strong> <code dir="ltr">{{ device.ip_address or '— غير محدّد' }}</code></div>
+    <div><strong>{{ _('المنفذ الافتراضي:') }}</strong> <code dir="ltr">{{ device.management_port }}</code></div>
+    <div><strong>{{ _('الراوتر:') }}</strong> {{ nas.name }} (<code dir="ltr">{{ nas.address }}</code>)</div>
   </div>
 </section>
 
@@ -101,51 +101,51 @@
   {{ csrf_token_input() | safe }}
 
   <h3 style="margin:0 0 16px;color:#0F172A;font-size:15px;font-weight:800">
-    <i class="fa-solid fa-play"></i> فتح جلسة جديدة
+    <i class="fa-solid fa-play"></i> {{ _('فتح جلسة جديدة') }}
   </h3>
 
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:760px">
 
     <div class="hr-field">
       <label for="protocol" style="display:block;font-weight:700;font-size:13px;color:#374151;margin-bottom:6px">
-        البروتوكول
+        {{ _('البروتوكول') }}
       </label>
       <select name="protocol" id="protocol"
               style="width:100%;padding:9px 12px;border:1px solid #D1D5DB;border-radius:8px;font-size:13px">
-        <option value="http">واجهة الويب العادية (80)</option>
-        <option value="https">واجهة الويب الآمنة (443)</option>
-        <option value="winbox">جلسة الإدارة الرسومية (8291)</option>
+        <option value="http">{{ _('واجهة الويب العادية (80)') }}</option>
+        <option value="https">{{ _('واجهة الويب الآمنة (443)') }}</option>
+        <option value="winbox">{{ _('جلسة الإدارة الرسومية (8291)') }}</option>
         <option value="ssh">SSH (22)</option>
       </select>
     </div>
 
     <div class="hr-field">
       <label for="ttl_minutes" style="display:block;font-weight:700;font-size:13px;color:#374151;margin-bottom:6px">
-        مدّة الجلسة
+        {{ _('مدّة الجلسة') }}
       </label>
       <select name="ttl_minutes" id="ttl_minutes"
               style="width:100%;padding:9px 12px;border:1px solid #D1D5DB;border-radius:8px;font-size:13px">
-        <option value="15">15 دقيقة</option>
-        <option value="30" selected>30 دقيقة</option>
-        <option value="60">ساعة</option>
-        <option value="120">ساعتان</option>
-        <option value="240">4 ساعات (الحد الأقصى)</option>
+        <option value="15">{{ _('15 دقيقة') }}</option>
+        <option value="30" selected>{{ _('30 دقيقة') }}</option>
+        <option value="60">{{ _('ساعة') }}</option>
+        <option value="120">{{ _('ساعتان') }}</option>
+        <option value="240">{{ _('4 ساعات (الحد الأقصى)') }}</option>
       </select>
     </div>
 
     <div class="hr-field" style="grid-column:1 / -1">
       <label for="notes" style="display:block;font-weight:700;font-size:13px;color:#374151;margin-bottom:6px">
-        ملاحظة / سبب الجلسة (اختياري)
+        {{ _('ملاحظة / سبب الجلسة (اختياري)') }}
       </label>
       <input type="text" name="notes" id="notes" maxlength="500"
-             placeholder="مثل: تيكت #4231 — صيانة AP طابق 2"
+             placeholder="{{ _('مثل: تيكت #4231 — صيانة AP طابق 2') }}"
              style="width:100%;padding:9px 12px;border:1px solid #D1D5DB;border-radius:8px;font-size:13px">
     </div>
   </div>
 
   <div style="margin-top:24px;padding-top:18px;border-top:1px solid #F3F4F6">
     <button type="submit" class="hub-btn hub-btn--primary">
-      <i class="fa-solid fa-key"></i> افتح الجلسة
+      <i class="fa-solid fa-key"></i> {{ _('افتح الجلسة') }}
     </button>
   </div>
 </form>
@@ -157,26 +157,26 @@
   <header style="padding:14px 22px;border-bottom:1px solid #F3F4F6">
     <h3 style="margin:0;color:#0F172A;font-size:14.5px;font-weight:800">
       <i class="fa-solid fa-clock-rotate-left"></i>
-      جلسات سابقة + الحاليّة
+      {{ _('جلسات سابقة + الحاليّة') }}
     </h3>
   </header>
 
   {% if not sessions %}
   <div style="padding:32px 24px;text-align:center;color:#64748B;font-size:13px">
-    لا توجد جلسات لهذا الجهاز بعد.
+    {{ _('لا توجد جلسات لهذا الجهاز بعد.') }}
   </div>
   {% else %}
   <table class="hub-table hr-data-table">
     <thead>
       <tr>
         <th>#</th>
-        <th>الحالة</th>
-        <th>البروتوكول</th>
-        <th>المنفذ الخارجي</th>
-        <th>أُنشئت</th>
-        <th>تنتهي / انتهت</th>
-        <th>طلبها</th>
-        <th style="width:140px">إجراء</th>
+        <th>{{ _('الحالة') }}</th>
+        <th>{{ _('البروتوكول') }}</th>
+        <th>{{ _('المنفذ الخارجي') }}</th>
+        <th>{{ _('أُنشئت') }}</th>
+        <th>{{ _('تنتهي / انتهت') }}</th>
+        <th>{{ _('طلبها') }}</th>
+        <th style="width:140px">{{ _('إجراء') }}</th>
       </tr>
     </thead>
     <tbody>
@@ -186,19 +186,19 @@
         <td>
           {% if s.status == 'active' %}
             <span class="hr-chip" style="background:#DCFCE7;color:#166534;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700">
-              <i class="fa-solid fa-circle"></i> نشطة
+              <i class="fa-solid fa-circle"></i> {{ _('نشطة') }}
             </span>
           {% elif s.status == 'expired' %}
             <span class="hr-chip" style="background:#FEF3C7;color:#92400E;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700">
-              انتهت
+              {{ _('انتهت') }}
             </span>
           {% elif s.status == 'closed' %}
             <span class="hr-chip" style="background:#F1F5F9;color:#64748B;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700">
-              مُغلقة
+              {{ _('مُغلقة') }}
             </span>
           {% else %}
             <span class="hr-chip" style="background:#FEE2E2;color:#991B1B;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700">
-              فشلت
+              {{ _('فشلت') }}
             </span>
           {% endif %}
         </td>
@@ -221,7 +221,7 @@
             {% endif %}
           {% else %}
             <code dir="ltr" style="font-size:12px;color:#9CA3AF">
-              :{{ s.external_port }} <small>(اضبط عنوان خادم الربط العام)</small>
+              :{{ s.external_port }} <small>{{ _('(اضبط عنوان خادم الربط العام)') }}</small>
             </code>
           {% endif %}
         </td>
@@ -237,7 +237,7 @@
             {{ csrf_token_input() | safe }}
             <button type="submit" class="hub-btn hub-btn--danger"
                     style="padding:4px 10px;font-size:11.5px">
-              <i class="fa-solid fa-xmark"></i> إغلاق الآن
+              <i class="fa-solid fa-xmark"></i> {{ _('إغلاق الآن') }}
             </button>
           </form>
           {% else %}

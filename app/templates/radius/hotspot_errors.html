@@ -17,7 +17,7 @@
 {% block title %}رسائل أخطاء الهوتسبوت{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-triangle-exclamation"></i>{% endblock %}
 {% block page_title %}رسائل أخطاء الهوتسبوت{% endblock %}
-{% block page_sub %}<span class="sub">تحكّم بالنصوص التي تظهر للمشترك عند فشل الدخول على صفحة الهوت سبوت</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('تحكّم بالنصوص التي تظهر للمشترك عند فشل الدخول على صفحة الهوت سبوت') }}</span>{% endblock %}
 
 {% block head_extra %}{{ super() }}
 {# نظام النوافذ العائمة الموحّد (uds): مودال تأكيد «استعادة الكل» بدل confirm() #}
@@ -46,7 +46,7 @@
   {# ───── رسائل الحالة ───── #}
   {% if saved %}
   <div class="he-flash he-flash--ok" role="status">
-    <i class="fa-solid fa-circle-check"></i> تم حفظ الرسائل بنجاح — ستُرفع إلى الراوتر تلقائيًا في المرة القادمة التي تنشر فيها صفحة الدخول.
+    <i class="fa-solid fa-circle-check"></i> {{ _('تم حفظ الرسائل بنجاح — ستُرفع إلى الراوتر تلقائيًا في المرة القادمة التي تنشر فيها صفحة الدخول.') }}
   </div>
   {% endif %}
   {% if flash_ok %}
@@ -80,9 +80,9 @@
       <table class="he-table">
         <thead>
           <tr>
-            <th class="he-th-key">مفتاح الخطأ</th>
-            <th class="he-th-msg">النص المعروض للمشترك</th>
-            <th class="he-th-en">مُفعّل</th>
+            <th class="he-th-key">{{ _('مفتاح الخطأ') }}</th>
+            <th class="he-th-msg">{{ _('النص المعروض للمشترك') }}</th>
+            <th class="he-th-en">{{ _('مُفعّل') }}</th>
             <th class="he-th-act"></th>
           </tr>
         </thead>
@@ -94,7 +94,7 @@
               <span class="he-key-name">{{ r.name_ar }}
                 <span class="hub-hint" tabindex="0" data-hint="{{ r.when_ar }}"><i class="fa-solid fa-info"></i></span>
               </span>
-              {% if r.is_custom %}<span class="he-badge">معدّل</span>{% endif %}
+              {% if r.is_custom %}<span class="he-badge">{{ _('معدّل') }}</span>{% endif %}
             </td>
             <td class="he-msg">
               <input type="text"
@@ -118,7 +118,7 @@
                       formaction="{{ url_for('radius.hotspot_errors_reset') }}"
                       formnovalidate
                       name="key" value="{{ r.key }}"
-                      title="استعادة النص الافتراضي لهذه الرسالة">
+                      title="{{ _('استعادة النص الافتراضي لهذه الرسالة') }}">
                 <i class="fa-solid fa-rotate-left"></i>
               </button>
             </td>
@@ -133,17 +133,17 @@
     <div class="he-savebar">
       <div class="he-savebar-hint">
         <i class="fa-solid fa-circle-info"></i>
-        تُحفظ الرسائل هنا، وتُرفع إلى كل راوتر تلقائيًا عند نشر صفحة الدخول من مصمّمه (أو ضمن حزمة ZIP للرفع اليدوي).
+        {{ _('تُحفظ الرسائل هنا، وتُرفع إلى كل راوتر تلقائيًا عند نشر صفحة الدخول من مصمّمه (أو ضمن حزمة ZIP للرفع اليدوي).') }}
       </div>
       <div class="he-savebar-actions">
         {# استعادة الكل عبر مودال تأكيد عائم موحّد بدل confirm() #}
         <button type="button"
                 class="hub-btn hub-btn--ghost"
                 data-uds-modal-open="heResetAllModal">
-          <i class="fa-solid fa-rotate-left"></i> استعادة الكل
+          <i class="fa-solid fa-rotate-left"></i> {{ _('استعادة الكل') }}
         </button>
         <button type="submit" class="hub-btn hub-btn--primary">
-          <i class="fa-solid fa-floppy-disk"></i> حفظ الرسائل
+          <i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ الرسائل') }}
         </button>
       </div>
     </div>
@@ -155,13 +155,13 @@
    footer_html='<button type="button" class="hub-btn hub-btn--ghost" data-uds-modal-close>إلغاء</button>') %}
   <div class="uds-modal-warn uds-modal-warn--amber">
     <i class="fa-solid fa-triangle-exclamation"></i>
-    <span>ستُستعاد <strong>كل الرسائل</strong> إلى نصوصها الافتراضية المدمجة، وستفقد أي تعديلات أجريتها عليها. لا يؤثّر ذلك على الراوتر حتى تنشر صفحة الدخول من جديد.</span>
+    <span>{{ _('ستُستعاد') }} <strong>{{ _('كل الرسائل') }}</strong> {{ _('إلى نصوصها الافتراضية المدمجة، وستفقد أي تعديلات أجريتها عليها. لا يؤثّر ذلك على الراوتر حتى تنشر صفحة الدخول من جديد.') }}</span>
   </div>
   {# نموذج الاستعادة الكاملة: POST إلى نفس مسار الاستعادة بلا مفتاح = استعادة الكل #}
   <form method="post" action="{{ url_for('radius.hotspot_errors_reset') }}" style="margin:14px 0 0;display:flex;justify-content:flex-end">
     {{ csrf_token_input() | safe }}
     <button type="submit" class="hub-btn hub-btn--danger">
-      <i class="fa-solid fa-rotate-left"></i> استعادة الكل
+      <i class="fa-solid fa-rotate-left"></i> {{ _('استعادة الكل') }}
     </button>
   </form>
 {% endcall %}

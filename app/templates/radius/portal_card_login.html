@@ -11,7 +11,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#5b21b6">
-  <title>تسجيل الدخول — محفظتي · HobeRadius</title>
+  <title>{{ _('تسجيل الدخول — محفظتي · HobeRadius') }}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap">
@@ -250,7 +250,7 @@
       <span class="name">HobeRadius</span>
     </div>
 
-    <h2 class="brand-title">محفظتك للإنترنت بين يديك</h2>
+    <h2 class="brand-title">{{ _('محفظتك للإنترنت بين يديك') }}</h2>
     <p class="brand-sub">
       ادخل بحسابك لتشحن الرصيد، تشتري الباقات، وتدير بطاقاتك من
       مكان واحد — سريع وآمن.
@@ -259,22 +259,22 @@
     <ul class="brand-features">
       <li>
         <span class="ico"><i class="fa-solid fa-bolt"></i></span>
-        شحن فوري بقيمة البطاقة
+        {{ _('شحن فوري بقيمة البطاقة') }}
       </li>
       <li>
         <span class="ico"><i class="fa-solid fa-store"></i></span>
-        تسوّق الباقات بكل سهولة
+        {{ _('تسوّق الباقات بكل سهولة') }}
       </li>
       <li>
         <span class="ico"><i class="fa-solid fa-shield-halved"></i></span>
-        اتصال آمن مشفّر
+        {{ _('اتصال آمن مشفّر') }}
       </li>
     </ul>
 
     <div class="brand-chips">
       <span class="brand-chip"><i class="fa-solid fa-wifi"></i> Wi-Fi</span>
-      <span class="brand-chip"><i class="fa-solid fa-credit-card"></i> رصيد</span>
-      <span class="brand-chip"><i class="fa-solid fa-clock-rotate-left"></i> سجل كامل</span>
+      <span class="brand-chip"><i class="fa-solid fa-credit-card"></i> {{ _('رصيد') }}</span>
+      <span class="brand-chip"><i class="fa-solid fa-clock-rotate-left"></i> {{ _('سجل كامل') }}</span>
     </div>
   </aside>
 
@@ -282,10 +282,10 @@
   <section class="form-side">
     <header class="form-head">
       <div class="form-eyebrow">
-        <i class="fa-solid fa-circle"></i> بوابة الزبون
+        <i class="fa-solid fa-circle"></i> {{ _('بوابة الزبون') }}
       </div>
-      <h1 class="form-title">تسجيل الدخول</h1>
-      <p class="form-sub">ادخل برقم الجوال وكلمة المرور للوصول إلى محفظتك.</p>
+      <h1 class="form-title">{{ _('تسجيل الدخول') }}</h1>
+      <p class="form-sub">{{ _('ادخل برقم الجوال وكلمة المرور للوصول إلى محفظتك.') }}</p>
     </header>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
@@ -310,12 +310,12 @@
         <div class="field">
           <label for="f-mobile">
             <i class="fa-solid fa-mobile-screen-button"></i>
-            رقم الجوال
+            {{ _('رقم الجوال') }}
           </label>
           <div class="input-wrap">
             <input id="f-mobile" name="mobile"
                    inputmode="tel" pattern="[0-9+\-\s]*"
-                   placeholder="مثل: 0599123456"
+                   placeholder="{{ _('مثل: 0599123456') }}"
                    autocomplete="tel"
                    style="direction:ltr;text-align:start"
                    required>
@@ -325,7 +325,7 @@
         <div class="field">
           <label for="f-password">
             <i class="fa-solid fa-key"></i>
-            كلمة المرور
+            {{ _('كلمة المرور') }}
           </label>
           <div class="input-wrap">
             <input id="f-password" name="password" type="password"
@@ -333,7 +333,7 @@
                    autocomplete="current-password"
                    required>
             <button type="button" class="pwd-toggle" id="pwd-toggle"
-                    aria-label="إظهار / إخفاء كلمة المرور">
+                    aria-label="{{ _('إظهار / إخفاء كلمة المرور') }}">
               <i class="fa-regular fa-eye"></i>
             </button>
           </div>
@@ -342,18 +342,18 @@
         <div class="field-row">
           <label class="check">
             <input type="checkbox" name="remember" value="1">
-            تذكّرني
+            {{ _('تذكّرني') }}
           </label>
           {# نص مساعِد بدل رابط ميت: لا يوجد مسار «دعم» للزبون في البوابة،
              فنعرض إرشادًا نصيًا بدل href="#" غير المفعَّل. #}
           <span class="field-hint">
-            نسيت كلمة المرور؟ راجع مزوّد الخدمة
+            {{ _('نسيت كلمة المرور؟ راجع مزوّد الخدمة') }}
           </span>
         </div>
 
         <button type="submit" class="btn-primary">
           <i class="fa-solid fa-arrow-left-to-bracket"></i>
-          فتح البوابة
+          {{ _('فتح البوابة') }}
         </button>
       </div>
     </form>
@@ -361,7 +361,7 @@
     <div class="form-foot">
       <span>
         <i class="fa-solid fa-shield-halved" style="color:var(--accent-2)"></i>
-        اتصال آمن
+        {{ _('اتصال آمن') }}
       </span>
       <span>HobeRadius © 2026</span>
     </div>

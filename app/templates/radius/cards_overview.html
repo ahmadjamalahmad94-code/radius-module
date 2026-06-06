@@ -673,35 +673,35 @@
   <div class="co-sales-board">
     <div class="co-sales-board-head">
       <div>
-        <div class="co-sales-kicker"><i class="fa-solid fa-receipt"></i> سجل المبيعات حسب الفترة</div>
-        <div class="co-sales-title">حركة الكروت: كمية، إيراد، وقنوات البيع</div>
+        <div class="co-sales-kicker"><i class="fa-solid fa-receipt"></i> {{ _('سجل المبيعات حسب الفترة') }}</div>
+        <div class="co-sales-title">{{ _('حركة الكروت: كمية، إيراد، وقنوات البيع') }}</div>
       </div>
     </div>
     <div class="co-sales-summary">
       <div class="co-sales-summary-item">
-        <span>إجمالي الكروت المباعة</span>
+        <span>{{ _('إجمالي الكروت المباعة') }}</span>
         <strong>{{ sales.total.monthly.count }}</strong>
         <i class="co-sales-summary-icon fa-solid fa-receipt"></i>
       </div>
       <div class="co-sales-summary-item co-sales-summary-item--money">
-        <span>إجمالي الإيرادات</span>
+        <span>{{ _('إجمالي الإيرادات') }}</span>
         <strong>{{ sales.total.monthly.amount|money }}</strong>
         <i class="co-sales-summary-icon fa-solid fa-coins"></i>
       </div>
       <div class="co-sales-summary-item co-sales-summary-item--print">
-        <span>مطبوعة</span>
+        <span>{{ _('مطبوعة') }}</span>
         <strong>{{ sales.printed.monthly.count }}</strong>
         <i class="co-sales-summary-icon fa-solid fa-print"></i>
       </div>
       <div class="co-sales-summary-item co-sales-summary-item--wallet">
-        <span>إلكترونية</span>
+        <span>{{ _('إلكترونية') }}</span>
         <strong>{{ sales.electronic.monthly.count }}</strong>
         <i class="co-sales-summary-icon fa-solid fa-wallet"></i>
       </div>
     </div>
     <div class="co-sales-performance-head">
-      <strong><i class="fa-solid fa-chart-line"></i> أداء مبيعات الكروت</strong>
-      <span>الفترات المختارة</span>
+      <strong><i class="fa-solid fa-chart-line"></i> {{ _('أداء مبيعات الكروت') }}</strong>
+      <span>{{ _('الفترات المختارة') }}</span>
     </div>
     <div class="co-sales-periods">
     {% for period in sales.periods %}
@@ -738,11 +738,11 @@
         <div class="co-table-note">{{ period.range }}</div>
         <div class="co-sales-metrics">
           <div class="co-sales-metric">
-            <span>الكروت</span>
+            <span>{{ _('الكروت') }}</span>
             <strong class="co-sales-value">{{ sales.total[key].count }}</strong>
           </div>
           <div class="co-sales-metric">
-            <span>الإيراد</span>
+            <span>{{ _('الإيراد') }}</span>
             <strong class="co-sales-value co-sales-value--money">{{ sales.total[key].amount|money }}</strong>
           </div>
         </div>
@@ -757,7 +757,7 @@
           </div>
         </div>
         <a class="co-sales-link" href="#sales-{{ key }}">
-          <i class="fa-solid fa-table-list"></i> فتح سجل الفترة
+          <i class="fa-solid fa-table-list"></i> {{ _('فتح سجل الفترة') }}
         </a>
       </div>
     {% endfor %}
@@ -769,7 +769,7 @@
     <div class="co-sales-dialog">
       <div class="co-sales-dialog-head">
         <h3 id="sales-title-{{ key }}">الكروت المباعة - {{ period.label }} ({{ period.range }})</h3>
-        <a class="co-sales-close" href="#" aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></a>
+        <a class="co-sales-close" href="#" aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></a>
       </div>
       {% if sales.details[key] %}
       {# لا تضع data-uds-table هنا: قسم المبيعات (#co-sales-section) يعاد بناؤه بالكامل عبر updateSales/replaceWith فيتعارض مع لقطة الصفوف في uds_table.js #}
@@ -778,11 +778,11 @@
           <thead>
             <tr>
               <th>#</th>
-              <th>النوع</th>
-              <th>اسم المستخدم</th>
-              <th>حزمة</th>
-              <th class="num">السعر</th>
-              <th>الوقت</th>
+              <th>{{ _('النوع') }}</th>
+              <th>{{ _('اسم المستخدم') }}</th>
+              <th>{{ _('حزمة') }}</th>
+              <th class="num">{{ _('السعر') }}</th>
+              <th>{{ _('الوقت') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -791,9 +791,9 @@
               <td class="mono">{{ loop.index }}</td>
               <td>
                 {% if sale.sale_type == "electronic" %}
-                  <span class="co-type-pill co-type-pill--electronic"><i class="fa-solid fa-wallet"></i> إلكترونية</span>
+                  <span class="co-type-pill co-type-pill--electronic"><i class="fa-solid fa-wallet"></i> {{ _('إلكترونية') }}</span>
                 {% else %}
-                  <span class="co-type-pill co-type-pill--printed"><i class="fa-solid fa-print"></i> مطبوعة</span>
+                  <span class="co-type-pill co-type-pill--printed"><i class="fa-solid fa-print"></i> {{ _('مطبوعة') }}</span>
                 {% endif %}
               </td>
               <td class="mono"><strong>{{ sale.username or "—" }}</strong></td>
@@ -838,20 +838,20 @@
     <div class="co-stock-tables">
       <div class="co-stock-table-card co-stock-table-card--printed">
         <div class="co-stock-table-head">
-          <span class="co-stock-table-title"><i class="fa-solid fa-print"></i> حزم مطبوعة</span>
-          <span class="co-stock-table-total">دفعات الطباعة</span>
+          <span class="co-stock-table-title"><i class="fa-solid fa-print"></i> {{ _('حزم مطبوعة') }}</span>
+          <span class="co-stock-table-total">{{ _('دفعات الطباعة') }}</span>
         </div>
         {# تفعيل نظام الجداول الموحد المعتمد (فرز + أعمدة + ترقيم صفحات) #}
         <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
           <table class="hub-table">
             <thead>
               <tr>
-                <th>الحزمة</th>
-                <th class="num">إجمالي</th>
-                <th class="num">باقي</th>
-                <th class="num">منتهي</th>
-                <th class="num">متصل</th>
-                <th class="num">مستخدم غير متصل</th>
+                <th>{{ _('الحزمة') }}</th>
+                <th class="num">{{ _('إجمالي') }}</th>
+                <th class="num">{{ _('باقي') }}</th>
+                <th class="num">{{ _('منتهي') }}</th>
+                <th class="num">{{ _('متصل') }}</th>
+                <th class="num">{{ _('مستخدم غير متصل') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -868,7 +868,7 @@
                   <td class="num mono">{{ package.get("used_offline_cards", 0)|int }}</td>
                 </tr>
               {% else %}
-                <tr><td colspan="6" class="co-table-note">لا توجد حزم مطبوعة بعد</td></tr>
+                <tr><td colspan="6" class="co-table-note">{{ _('لا توجد حزم مطبوعة بعد') }}</td></tr>
               {% endfor %}
             </tbody>
           </table>
@@ -877,20 +877,20 @@
 
       <div class="co-stock-table-card co-stock-table-card--electronic">
         <div class="co-stock-table-head">
-          <span class="co-stock-table-title"><i class="fa-solid fa-wallet"></i> حزم البيع الإلكتروني</span>
-          <span class="co-stock-table-total">سوق الكروت</span>
+          <span class="co-stock-table-title"><i class="fa-solid fa-wallet"></i> {{ _('حزم البيع الإلكتروني') }}</span>
+          <span class="co-stock-table-total">{{ _('سوق الكروت') }}</span>
         </div>
         {# تفعيل نظام الجداول الموحد المعتمد (فرز + أعمدة + ترقيم صفحات) #}
         <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
           <table class="hub-table">
             <thead>
               <tr>
-                <th>الحزمة</th>
-                <th class="num">مباع</th>
-                <th class="num">باقي</th>
-                <th class="num">منتهي</th>
-                <th class="num">متصل</th>
-                <th class="num">مستخدم غير متصل</th>
+                <th>{{ _('الحزمة') }}</th>
+                <th class="num">{{ _('مباع') }}</th>
+                <th class="num">{{ _('باقي') }}</th>
+                <th class="num">{{ _('منتهي') }}</th>
+                <th class="num">{{ _('متصل') }}</th>
+                <th class="num">{{ _('مستخدم غير متصل') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -904,7 +904,7 @@
                   <td class="num mono">{{ package.get("used_offline_cards", 0)|int }}</td>
                 </tr>
               {% else %}
-                <tr><td colspan="6" class="co-table-note">لا توجد حزم بيع إلكتروني بعد</td></tr>
+                <tr><td colspan="6" class="co-table-note">{{ _('لا توجد حزم بيع إلكتروني بعد') }}</td></tr>
               {% endfor %}
             </tbody>
           </table>
@@ -923,13 +923,13 @@
     <table class="hub-table">
       <thead>
         <tr>
-          <th>الدفعة</th>
-          <th>العرض</th>
-          <th class="num">العدد</th>
-          <th class="num">متاح</th>
-          <th class="num">مستخدم</th>
-          <th class="num">متصل</th>
-          <th>آخر نشاط</th>
+          <th>{{ _('الدفعة') }}</th>
+          <th>{{ _('العرض') }}</th>
+          <th class="num">{{ _('العدد') }}</th>
+          <th class="num">{{ _('متاح') }}</th>
+          <th class="num">{{ _('مستخدم') }}</th>
+          <th class="num">{{ _('متصل') }}</th>
+          <th>{{ _('آخر نشاط') }}</th>
         </tr>
       </thead>
       <tbody>

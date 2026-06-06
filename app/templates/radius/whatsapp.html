@@ -26,7 +26,7 @@
 {% block title %}رسائل واتساب للمشتركين — Hobe Hub{% endblock %}
 {% block page_icon %}<i class="fa-brands fa-whatsapp"></i>{% endblock %}
 {% block page_title %}رسائل واتساب للمشتركين{% endblock %}
-{% block page_sub %}<span class="sub">التحكم بأنواع رسائل واتساب الرسمية المسموح إرسالها للمشتركين عبر لوحة التراخيص.</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('التحكم بأنواع رسائل واتساب الرسمية المسموح إرسالها للمشتركين عبر لوحة التراخيص.') }}</span>{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
@@ -150,15 +150,15 @@
       <div class="wa-status {{ cls }}" data-testid="wa-status" data-onboarding="{{ status.onboarding }}">
         <div class="wa-status-top">
           <span class="wa-status-ic"><i class="fa-brands fa-whatsapp"></i></span>
-          <div class="wa-status-name">واتساب للأعمال
-            <small>تُدار عبر لوحة التراخيص</small></div>
+          <div class="wa-status-name">{{ _('واتساب للأعمال') }}
+            <small>{{ _('تُدار عبر لوحة التراخيص') }}</small></div>
           {# حبة الحالة الملوّنة — تعكس حالة الربط الحية #}
           {% if status.onboarding == 'connected' %}
-            <span class="wa-pill on"><span class="dot"></span> متصل</span>
+            <span class="wa-pill on"><span class="dot"></span> {{ _('متصل') }}</span>
           {% elif status.onboarding == 'not_connected' %}
-            <span class="wa-pill off"><span class="dot"></span> غير متصل</span>
+            <span class="wa-pill off"><span class="dot"></span> {{ _('غير متصل') }}</span>
           {% else %}
-            <span class="wa-pill dead"><span class="dot"></span> بحاجة إلى الإعداد</span>
+            <span class="wa-pill dead"><span class="dot"></span> {{ _('بحاجة إلى الإعداد') }}</span>
           {% endif %}
         </div>
         <div class="wa-status-meta">
@@ -169,19 +169,19 @@
             </span>
           {% endif %}
           {% if status.business %}
-            <span class="wa-tag">النشاط: <b>{{ status.business }}</b></span>
+            <span class="wa-tag">{{ _('النشاط:') }} <b>{{ status.business }}</b></span>
           {% endif %}
           {% if status.phone %}
             {# الرقم مُعرّف تقني: يبقى لاتينيًا بخط أحادي المسافة وباتجاه يسار-يمين #}
-            <span class="wa-tag">الرقم: <b class="num"><bdi dir="ltr">{{ status.phone }}</bdi></b></span>
+            <span class="wa-tag">{{ _('الرقم:') }} <b class="num"><bdi dir="ltr">{{ status.phone }}</bdi></b></span>
           {% endif %}
           {% if status.usage %}
-            {% if status.usage.sent is defined %}<span class="wa-tag">المُرسَل: <b class="num">{{ status.usage.sent }}</b></span>{% endif %}
-            {% if status.usage.remaining is defined %}<span class="wa-tag">المتبقّي: <b class="num">{{ status.usage.remaining }}</b></span>{% endif %}
-            {% if status.usage.limit is defined %}<span class="wa-tag">الحد الأقصى: <b class="num">{{ status.usage.limit }}</b></span>{% endif %}
+            {% if status.usage.sent is defined %}<span class="wa-tag">{{ _('المُرسَل:') }} <b class="num">{{ status.usage.sent }}</b></span>{% endif %}
+            {% if status.usage.remaining is defined %}<span class="wa-tag">{{ _('المتبقّي:') }} <b class="num">{{ status.usage.remaining }}</b></span>{% endif %}
+            {% if status.usage.limit is defined %}<span class="wa-tag">{{ _('الحد الأقصى:') }} <b class="num">{{ status.usage.limit }}</b></span>{% endif %}
           {% endif %}
           {% if not status.phone and not status.usage %}
-            <span class="wa-tag">لا توجد تفاصيل استخدام بعد.</span>
+            <span class="wa-tag">{{ _('لا توجد تفاصيل استخدام بعد.') }}</span>
           {% endif %}
         </div>
       </div>
@@ -190,7 +190,7 @@
       <div class="wa-pending" data-testid="wa-status-pending">
         <span class="ic"><i class="fa-solid fa-triangle-exclamation"></i></span>
         <div class="tx">
-          <b>تعذّر جلب الحالة من لوحة التراخيص</b>
+          <b>{{ _('تعذّر جلب الحالة من لوحة التراخيص') }}</b>
           تأكد من تفعيل الجسر ورابط لوحة التراخيص الآمن (HTTPS) وسر الربط في صفحة «ترخيص النظام»، ثم حدّث الصفحة.
           يمكنك ضبط أنواع الرسائل بالأسفل الآن — ستُطبَّق فور توفّر الربط.
         </div>
@@ -214,9 +214,9 @@
         <table class="hub-table">
           <thead>
             <tr>
-              <th>نوع الرسالة وشرحه</th>
-              <th data-uds-nosort>مُعرّف الإعداد</th>
-              <th data-uds-nosort data-uds-nocol>السماح بالإرسال</th>
+              <th>{{ _('نوع الرسالة وشرحه') }}</th>
+              <th data-uds-nosort>{{ _('مُعرّف الإعداد') }}</th>
+              <th data-uds-nosort data-uds-nocol>{{ _('السماح بالإرسال') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -238,8 +238,8 @@
       </div>
 
       <div class="hub-form-actions" style="margin-top:16px">
-        <button type="submit" class="hub-btn hub-btn--primary"><i class="fa-solid fa-floppy-disk"></i> حفظ الإعدادات</button>
-        <span class="hub-field-hint">الافتراضي: كل الأنواع متوقفة حتى تفعّلها يدويًا.</span>
+        <button type="submit" class="hub-btn hub-btn--primary"><i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ الإعدادات') }}</button>
+        <span class="hub-field-hint">{{ _('الافتراضي: كل الأنواع متوقفة حتى تفعّلها يدويًا.') }}</span>
       </div>
     </form>
   {% endcall %}
@@ -250,21 +250,21 @@
       {{ csrf_token_input() | safe }}
 
       <div class="hub-field" style="max-width:360px">
-        <label for="wa-phone">رقم هاتف المستلم
+        <label for="wa-phone">{{ _('رقم هاتف المستلم') }}
           <span class="hub-hint" tabindex="0" data-hint="أدخل الرقم بالصيغة الدولية الكاملة (رمز الدولة ثم الرقم بلا صفر بادئ ولا رموز). تُرسل رسالة قالب اختبار واحدة فقط."><i class="fa-solid fa-info"></i></span>
         </label>
         <input id="wa-phone" class="hub-input mono" type="tel" name="recipient_phone" inputmode="tel" placeholder="9627xxxxxxxx" autocomplete="off" dir="ltr">
-        <div class="hub-field-hint">أدخل الرقم بصيغة دولية. تُرسل رسالة قالب اختبار واحدة عبر مزوّد لوحة التراخيص.</div>
+        <div class="hub-field-hint">{{ _('أدخل الرقم بصيغة دولية. تُرسل رسالة قالب اختبار واحدة عبر مزوّد لوحة التراخيص.') }}</div>
       </div>
 
       <div class="hub-form-actions" style="margin-top:16px;flex-wrap:wrap">
-        <button type="submit" class="hub-btn hub-btn--primary"><i class="fa-brands fa-whatsapp"></i> إرسال اختبار</button>
+        <button type="submit" class="hub-btn hub-btn--primary"><i class="fa-brands fa-whatsapp"></i> {{ _('إرسال اختبار') }}</button>
         {# اختبار ثانٍ عبر بيانات الربط السحابي المُدارة في اللوحة — نفس النموذج بوجهة مختلفة #}
         <button type="submit" class="hub-btn hub-btn--secondary" formaction="{{ url_for('radius.whatsapp_cloud_test') }}"
-                title="عبر بيانات الربط السحابي المُدارة في لوحة التراخيص">
-          <i class="fa-solid fa-cloud"></i> إرسال اختبار عبر الربط السحابي
+                title="{{ _('عبر بيانات الربط السحابي المُدارة في لوحة التراخيص') }}">
+          <i class="fa-solid fa-cloud"></i> {{ _('إرسال اختبار عبر الربط السحابي') }}
         </button>
-        <span class="hub-field-hint">لا يتم إرسال أي رسالة من هذا النظام مباشرة — كل شيء يمر عبر لوحة التراخيص.</span>
+        <span class="hub-field-hint">{{ _('لا يتم إرسال أي رسالة من هذا النظام مباشرة — كل شيء يمر عبر لوحة التراخيص.') }}</span>
       </div>
     </form>
   {% endcall %}
@@ -273,10 +273,10 @@
   {% if panel_portal_url %}
     {% call hub.section("إدارة ربط واتساب", icon="plug-circle-bolt", meta="من بوابة لوحة التراخيص") %}
       <div class="hub-empty" data-testid="wa-portal-link" style="text-align:initial">
-        <div class="hub-empty-msg">الربط الرسمي للحساب واعتماد القوالب يتمّان في بوابة لوحة التراخيص</div>
-        <div class="hub-empty-sub" style="margin-bottom:14px">من هناك تربط الحساب الرسمي وتعتمد القوالب، وتعود حالتها لتظهر بالأعلى تلقائيًا.</div>
+        <div class="hub-empty-msg">{{ _('الربط الرسمي للحساب واعتماد القوالب يتمّان في بوابة لوحة التراخيص') }}</div>
+        <div class="hub-empty-sub" style="margin-bottom:14px">{{ _('من هناك تربط الحساب الرسمي وتعتمد القوالب، وتعود حالتها لتظهر بالأعلى تلقائيًا.') }}</div>
         <a class="hub-btn hub-btn--secondary" href="{{ panel_portal_url }}" target="_blank" rel="noopener" data-testid="wa-manage-link">
-          <i class="fa-solid fa-up-right-from-square"></i> إدارة ربط واتساب</a>
+          <i class="fa-solid fa-up-right-from-square"></i> {{ _('إدارة ربط واتساب') }}</a>
       </div>
     {% endcall %}
   {% endif %}

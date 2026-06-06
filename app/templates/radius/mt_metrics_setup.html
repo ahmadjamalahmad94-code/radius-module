@@ -10,7 +10,7 @@
 {% block title %}إعداد دفع مقاييس الراوتر{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-gauge-high"></i>{% endblock %}
 {% block page_title %}إعداد دفع مقاييس الراوتر{% endblock %}
-{% block page_sub %}<span class="sub">الراوتر يرسل مقاييسه للخادم كل دقيقتين حتى تعمل تنبيهات الفصل والاستهلاك</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('الراوتر يرسل مقاييسه للخادم كل دقيقتين حتى تعمل تنبيهات الفصل والاستهلاك') }}</span>{% endblock %}
 
 {% block content %}
 <section data-mt-metrics-setup-page>
@@ -42,10 +42,10 @@
   {% if not tokens %}
   {% call hub.section("تنبيه: لا يوجد رمز ربط مفعل", icon="triangle-exclamation") %}
     <div class="hub-text-mute" style="font-size:13.5px;line-height:1.9">
-      لا يوجد رمز ربط مفعل بعد. أنشئ رمزًا من
+      {{ _('لا يوجد رمز ربط مفعل بعد. أنشئ رمزًا من') }}
       <a href="{{ url_for('radius.tok_list') }}" target="_blank" rel="noopener"
-         style="font-weight:800;color:var(--hub-brand,#5b21b6);text-decoration:underline">إدارة رموز الربط</a>
-      ثم ارجع والصقه في الحقل أدناه.
+         style="font-weight:800;color:var(--hub-brand,#5b21b6);text-decoration:underline">{{ _('إدارة رموز الربط') }}</a>
+      {{ _('ثم ارجع والصقه في الحقل أدناه.') }}
     </div>
   {% endcall %}
   {% endif %}
@@ -53,27 +53,27 @@
   {# ── Generation inputs ── #}
   {% call hub.section("بيانات التوليد", icon="screwdriver-wrench") %}
     <div class="hub-field">
-      <label class="hub-field-label" for="mx-router">الراوتر</label>
+      <label class="hub-field-label" for="mx-router">{{ _('الراوتر') }}</label>
       <select class="hub-select" id="mx-router">
         {% for r in routers %}
         <option value="{{ r.id }}">{{ r.name }} (#{{ r.id }})</option>
         {% endfor %}
-        {% if not routers %}<option value="">لا توجد راوترات مسجلة</option>{% endif %}
+        {% if not routers %}<option value="">{{ _('لا توجد راوترات مسجلة') }}</option>{% endif %}
       </select>
     </div>
 
     <div class="hub-field">
-      <label class="hub-field-label" for="mx-url">عنوان الخادم</label>
+      <label class="hub-field-label" for="mx-url">{{ _('عنوان الخادم') }}</label>
       <input class="hub-input" type="text" id="mx-url" value="{{ base_url }}" dir="ltr">
     </div>
 
     <div class="hub-field">
-      <label class="hub-field-label" for="mx-token">رمز الربط</label>
+      <label class="hub-field-label" for="mx-token">{{ _('رمز الربط') }}</label>
       <input class="hub-input" type="text" id="mx-token" value="" autocomplete="off" dir="ltr"
-             placeholder="الصق رمز الربط من شاشة إدارة الرموز">
+             placeholder="{{ _('الصق رمز الربط من شاشة إدارة الرموز') }}">
       <div class="hub-field-hint">
-        لديك <strong>{{ tokens|length }}</strong> رمز مفعل{% if suggested_token_name %}، مثل: <strong>{{ suggested_token_name }}</strong>{% endif %}.
-        <a href="{{ url_for('radius.tok_list') }}" style="font-weight:800;color:var(--hub-brand,#5b21b6)">إدارة الرموز</a>
+        {{ _('لديك') }} <strong>{{ tokens|length }}</strong> رمز مفعل{% if suggested_token_name %}، مثل: <strong>{{ suggested_token_name }}</strong>{% endif %}.
+        <a href="{{ url_for('radius.tok_list') }}" style="font-weight:800;color:var(--hub-brand,#5b21b6)">{{ _('إدارة الرموز') }}</a>
       </div>
     </div>
   {% endcall %}
@@ -81,10 +81,10 @@
   {# ── Steps ── #}
   {% call hub.section("خطوات التطبيق", icon="list-ol") %}
     <ol style="margin:0;padding-inline-start:20px;font-size:13.5px;line-height:2;color:var(--hub-text,#1f2937)">
-      <li>اختر الراوتر، وتأكد من عنوان الخادم، والصق رمز الربط.</li>
-      <li>انسخ السكربت الناتج من الصندوق التالي.</li>
-      <li>الصقه مرة واحدة في طرفية الراوتر واضغط إدخال.</li>
-      <li>بعد دقيقتين تقريبًا ستبدأ التنبيهات الذكية باستقبال المقاييس لهذا الراوتر.</li>
+      <li>{{ _('اختر الراوتر، وتأكد من عنوان الخادم، والصق رمز الربط.') }}</li>
+      <li>{{ _('انسخ السكربت الناتج من الصندوق التالي.') }}</li>
+      <li>{{ _('الصقه مرة واحدة في طرفية الراوتر واضغط إدخال.') }}</li>
+      <li>{{ _('بعد دقيقتين تقريبًا ستبدأ التنبيهات الذكية باستقبال المقاييس لهذا الراوتر.') }}</li>
     </ol>
   {% endcall %}
 
@@ -92,35 +92,35 @@
   {% call hub.section("سكربت الراوتر", icon="code") %}
     <div class="hub-fix">
       <div class="hub-flex-row" style="justify-content:space-between;align-items:center;margin-bottom:8px;gap:10px">
-        <strong>السكربت الكامل (يُلصق مرة واحدة)</strong>
+        <strong>{{ _('السكربت الكامل (يُلصق مرة واحدة)') }}</strong>
         <button class="hub-btn hub-btn--secondary hub-btn--sm" type="button" data-copy-script>
-          <i class="fa-solid fa-copy"></i> نسخ
+          <i class="fa-solid fa-copy"></i> {{ _('نسخ') }}
         </button>
       </div>
-<pre id="mx-script-body" dir="ltr" style="margin:0;padding:14px 16px;border-radius:12px;background:#0f172a;color:#bfdbfe;font-family:var(--hub-mono,ui-monospace,monospace);font-size:12px;line-height:1.65;overflow:auto;white-space:pre">جاري توليد السكربت...</pre>
+<pre id="mx-script-body" dir="ltr" style="margin:0;padding:14px 16px;border-radius:12px;background:#0f172a;color:#bfdbfe;font-family:var(--hub-mono,ui-monospace,monospace);font-size:12px;line-height:1.65;overflow:auto;white-space:pre">{{ _('جاري توليد السكربت...') }}</pre>
     </div>
   {% endcall %}
 
   {# ── Quick test command ── #}
   {% call hub.section("اختبار سريع قبل الجدولة", icon="vial") %}
     <p class="hub-text-mute" style="font-size:12.5px;margin:0 0 10px;line-height:1.7">
-      انسخ الأمر التالي إذا أردت تجربة إرسال عينة واحدة قبل تشغيل المجدول الدائم.
+      {{ _('انسخ الأمر التالي إذا أردت تجربة إرسال عينة واحدة قبل تشغيل المجدول الدائم.') }}
     </p>
     <div class="hub-fix">
       <div class="hub-flex-row" style="justify-content:space-between;align-items:center;margin-bottom:8px;gap:10px">
-        <strong>أمر اختبار إرسال عينة واحدة</strong>
+        <strong>{{ _('أمر اختبار إرسال عينة واحدة') }}</strong>
         <button class="hub-btn hub-btn--secondary hub-btn--sm" type="button" data-copy-test>
-          <i class="fa-solid fa-copy"></i> نسخ
+          <i class="fa-solid fa-copy"></i> {{ _('نسخ') }}
         </button>
       </div>
-<pre id="mx-test-body" dir="ltr" style="margin:0;padding:14px 16px;border-radius:12px;background:#0f172a;color:#bfdbfe;font-family:var(--hub-mono,ui-monospace,monospace);font-size:12px;line-height:1.65;overflow:auto;white-space:pre">جاري توليد أمر الاختبار...</pre>
+<pre id="mx-test-body" dir="ltr" style="margin:0;padding:14px 16px;border-radius:12px;background:#0f172a;color:#bfdbfe;font-family:var(--hub-mono,ui-monospace,monospace);font-size:12px;line-height:1.65;overflow:auto;white-space:pre">{{ _('جاري توليد أمر الاختبار...') }}</pre>
     </div>
   {% endcall %}
 
   {# ── Stop pushing metrics ── #}
   {% call hub.section("إيقاف دفع المقاييس من الراوتر", icon="broom") %}
     <p class="hub-text-mute" style="font-size:12.5px;margin:0 0 10px;line-height:1.7">
-      استخدم هذا الأمر على الراوتر إذا أردت إيقاف إرسال المقاييس لهذا الخادم.
+      {{ _('استخدم هذا الأمر على الراوتر إذا أردت إيقاف إرسال المقاييس لهذا الخادم.') }}
     </p>
 <pre dir="ltr" style="margin:0;padding:14px 16px;border-radius:12px;background:#0f172a;color:#e2e8f0;font-family:var(--hub-mono,ui-monospace,monospace);font-size:12.5px;line-height:1.7;overflow:auto;white-space:pre-wrap;word-break:break-word">/system scheduler remove [find name=hoberadius-push-metrics]</pre>
   {% endcall %}

@@ -226,7 +226,7 @@
        بحث نصي في الحزام. وحيث لا حقل نصي إطلاقًا (حزام فلاتر فقط)
        تُخفى الأيقونة تلقائيًا عبر قاعدة :has() في hub_v2.css بدل أن
        تبقى أيقونة ميتة توحي ببحث غير موجود. #}
-    <button type="button" class="uds-search-ic" aria-label="الانتقال إلى حقل البحث"
+    <button type="button" class="uds-search-ic" aria-label="{{ _('الانتقال إلى حقل البحث') }}"
             onclick="var f=this.closest('form'),i=f&&f.querySelector('input[type=text],input[type=search],input:not([type]),input[type=number],input[type=tel]');if(i){i.focus();if(i.select)i.select();}">
       <i class="fa-solid fa-magnifying-glass"></i>
     </button>
@@ -333,7 +333,7 @@
     <div class="uds-modal-head">
       <h3><i class="fa-solid fa-{{ icon }}"></i> {{ title }}</h3>
       <button type="button" class="hub-btn hub-btn--ghost hub-btn--icon"
-              data-uds-modal-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
+              data-uds-modal-close aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <div class="uds-modal-body">{{ caller() }}</div>
     {%- if footer_html %}<div class="uds-modal-foot">{{ footer_html|safe }}</div>{% endif %}

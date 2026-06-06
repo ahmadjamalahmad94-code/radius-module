@@ -58,38 +58,38 @@
   {% call hub.section("معطيات النطاق", icon="circle-info") %}
     <div class="pf-grid">
       <div class="pf-field">
-        <label>الاسم <span class="req">*</span></label>
+        <label>{{ _('الاسم') }} <span class="req">*</span></label>
         <input class="hub-input" type="text" name="pool_name" required
                value="{{ item.pool_name or '' }}" placeholder="hotspot-pool-1">
       </div>
       <div class="pf-field">
-        <label>النطاق <span class="req">*</span></label>
+        <label>{{ _('النطاق') }} <span class="req">*</span></label>
         <input class="hub-input mono" type="text" name="range_ip" required
                value="{{ item.range_ip or '' }}" placeholder="10.0.0.10-10.0.0.250">
-        <div class="help">يمكن إدخال نطاق بصيغة <code>start-end</code> أو CIDR.</div>
+        <div class="help">{{ _('يمكن إدخال نطاق بصيغة') }} <code>start-end</code> {{ _('أو CIDR.') }}</div>
       </div>
 
       <div class="pf-field">
-        <label>العنوان المحلي</label>
+        <label>{{ _('العنوان المحلي') }}</label>
         <input class="hub-input mono" type="text" name="local_ip"
                value="{{ item.local_ip or '' }}" placeholder="10.0.0.1">
-        <div class="help">عنوان البوّابة (Gateway) المخصص للمشتركين داخل هذا النطاق.</div>
+        <div class="help">{{ _('عنوان البوّابة (Gateway) المخصص للمشتركين داخل هذا النطاق.') }}</div>
       </div>
       <div class="pf-field">
-        <label>الراوتر</label>
+        <label>{{ _('الراوتر') }}</label>
         <select class="hub-select" name="router_id">
-          <option value="">— بدون —</option>
+          <option value="">{{ _('— بدون —') }}</option>
           {% for n in nas %}
             <option value="{{ n.id }}" {% if item.router_id == n.id %}selected{% endif %}>{{ n.name }}</option>
           {% endfor %}
         </select>
-        <div class="help">اربط النطاق بجهاز شبكة محدّد لتقييد توزيعه.</div>
+        <div class="help">{{ _('اربط النطاق بجهاز شبكة محدّد لتقييد توزيعه.') }}</div>
       </div>
     </div>
   {% endcall %}
 
   <div style="display:flex;gap:10px;justify-content:flex-end;padding:6px 4px 0">
-    <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.pool_list') }}">إلغاء</a>
+    <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.pool_list') }}">{{ _('إلغاء') }}</a>
     <button class="hub-btn hub-btn--primary" type="submit">
       <i class="fa-solid fa-floppy-disk"></i> {{ "حفظ" if is_new else "حفظ التعديلات" }}
     </button>

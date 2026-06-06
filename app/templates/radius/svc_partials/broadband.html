@@ -9,7 +9,7 @@
    Shell APIs used:
      window.SWSVF.setPreview, setApplySubstep, setApplyLabel,
                   showApplyError, setVerifyChecks, setPhase #}
-<h2>برمجة البرودباند</h2>
+<h2>{{ _('برمجة البرودباند') }}</h2>
 <p class="swsvf-pane-sub">
   يفتح للمشتركين اشتراكاً ثابتاً باسم مستخدم وكلمة مرور. اختر الواجهات
   التي سيُسمح عليها باشتراكات البرودباند، ثم اضغط «التالي».
@@ -103,8 +103,8 @@
    This form stays focused on creating / editing the active set. #}
 <div class="swbb-section">
   <div class="swbb-section-title">
-    واجهات البرودباند
-    <span class="swbb-iface-counter" data-swbb-counter>0 واجهة مختارة</span>
+    {{ _('واجهات البرودباند') }}
+    <span class="swbb-iface-counter" data-swbb-counter>{{ _('0 واجهة مختارة') }}</span>
   </div>
   <p class="swbb-help">
     اختر الواجهة (أو الواجهات) التي ستُشغّل عليها خدمة البرودباند — عادةً منفذ LAN
@@ -113,18 +113,18 @@
   <button type="button" class="swsvf-btn swbb-discover-btn"
           data-swbb-discover>
     <i class="fa-solid fa-magnifying-glass"></i>
-    اكتشف الواجهات من الراوتر
+    {{ _('اكتشف الواجهات من الراوتر') }}
   </button>
   <div class="swbb-iface-list" data-swbb-iface-list>
     <div class="swbb-iface-empty" data-swbb-iface-empty>
-      اضغط «اكتشف الواجهات» لتحميل قائمة المنافذ من الراوتر.
+      {{ _('اضغط «اكتشف الواجهات» لتحميل قائمة المنافذ من الراوتر.') }}
     </div>
   </div>
 </div>
 
 {# ── Section 2: pool (optional) ── #}
 <div class="swbb-section">
-  <div class="swbb-section-title">عناوين الاشتراك (اختياري)</div>
+  <div class="swbb-section-title">{{ _('عناوين الاشتراك (اختياري)') }}</div>
   <p class="swbb-help">
     اتركها فارغة لاستخدام الإعدادات الافتراضيّة (10.30.0.1 للخادم،
     10.30.1.0/24 للمشتركين). عدّلها فقط لو في تعارض مع شبكة أخرى.
@@ -132,14 +132,14 @@
   <div class="swbb-fields">
     <label>
       <small style="display:block;color:var(--swsvf-mute);margin-bottom:4px">
-        عنوان الخادم (Local) — IP فقط
+        {{ _('عنوان الخادم (Local) — IP فقط') }}
       </small>
       <input type="text" class="swbb-input" data-swbb-local
              placeholder="10.30.0.1">
     </label>
     <label>
       <small style="display:block;color:var(--swsvf-mute);margin-bottom:4px">
-        نطاق المشتركين (Pool) — CIDR
+        {{ _('نطاق المشتركين (Pool) — CIDR') }}
       </small>
       <input type="text" class="swbb-input" data-swbb-pool
              placeholder="10.30.1.0/24">

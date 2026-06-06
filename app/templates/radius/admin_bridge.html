@@ -20,7 +20,7 @@
 {% block title %}جسر الإدارة — Hobe Hub{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-bridge"></i>{% endblock %}
 {% block page_title %}جسر الإدارة{% endblock %}
-{% block page_sub %}<span class="sub">صفحة قراءة آمنة فقط لحالة الربط المحلي.</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('صفحة قراءة آمنة فقط لحالة الربط المحلي.') }}</span>{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
@@ -198,12 +198,12 @@
       <div class="ab-hero-id">
         <span class="ab-hero-icon"><i class="fa-solid fa-bridge"></i></span>
         <div>
-          <h1 class="ab-hero-title">جسر الإدارة</h1>
-          <div class="ab-hero-sub">صفحة قراءة فقط لحالة المسارات المحلية للجسر بين الريدياس ولوحة التراخيص — بلا أي كتابة أو رفع أو تفعيل من هنا.</div>
+          <h1 class="ab-hero-title">{{ _('جسر الإدارة') }}</h1>
+          <div class="ab-hero-sub">{{ _('صفحة قراءة فقط لحالة المسارات المحلية للجسر بين الريدياس ولوحة التراخيص — بلا أي كتابة أو رفع أو تفعيل من هنا.') }}</div>
         </div>
       </div>
       <span class="ab-readonly-pill">
-        <i class="fa-solid fa-shield-halved"></i> وضع قراءة فقط
+        <i class="fa-solid fa-shield-halved"></i> {{ _('وضع قراءة فقط') }}
       </span>
     </div>
 
@@ -225,10 +225,10 @@
   {# ───── Explanation card ──────────────────────────────────── #}
   {% call hub.section("ماذا تشاهد في هذه الصفحة؟", icon="circle-question") %}
     <ol class="ab-help">
-      <li><strong>الحالة العامة.</strong> الأربع تايلات أعلى الصفحة تعطي صورة سريعة عن السعة والأحداث والصحة ووضع التنفيذ.</li>
-      <li><strong>المسارات المتاحة.</strong> كل مسار في الجسر له بطاقة منفصلة بأيقونة وحالة وملاحظة توضّح ما يفعله — وما لا يفعله.</li>
-      <li><strong>التفاصيل المحلية.</strong> بطاقتان: قراءة آخر عقد سعة محفوظ، وآخر خمسة أحداث جسر — لمساعدتك في التشخيص.</li>
-      <li><strong>الأمان.</strong> هذه الصفحة لا تنفّذ أي طلب POST أو رفع نسخ أو استعادة أو تفعيل خدمات.</li>
+      <li><strong>{{ _('الحالة العامة.') }}</strong> {{ _('الأربع تايلات أعلى الصفحة تعطي صورة سريعة عن السعة والأحداث والصحة ووضع التنفيذ.') }}</li>
+      <li><strong>{{ _('المسارات المتاحة.') }}</strong> {{ _('كل مسار في الجسر له بطاقة منفصلة بأيقونة وحالة وملاحظة توضّح ما يفعله — وما لا يفعله.') }}</li>
+      <li><strong>{{ _('التفاصيل المحلية.') }}</strong> {{ _('بطاقتان: قراءة آخر عقد سعة محفوظ، وآخر خمسة أحداث جسر — لمساعدتك في التشخيص.') }}</li>
+      <li><strong>{{ _('الأمان.') }}</strong> {{ _('هذه الصفحة لا تنفّذ أي طلب POST أو رفع نسخ أو استعادة أو تفعيل خدمات.') }}</li>
     </ol>
   {% endcall %}
 
@@ -268,7 +268,7 @@
                           if capacity.contract is defined and capacity.contract.status is defined
                           else capacity.status %}
       <div class="ab-state-line">
-        <span class="ab-state-label">الحالة الحالية</span>
+        <span class="ab-state-label">{{ _('الحالة الحالية') }}</span>
         {# تُعرض بالعربي عبر STATUS_AR والقيمة الخام تبقى في title للتشخيص #}
         {% set _cap_ar = STATUS_AR.get(_cap_status, _cap_status) or 'غير معروف' %}
         {% if _cap_status in ['active','ok','enabled','valid'] %}
@@ -282,12 +282,12 @@
         {% endif %}
       </div>
       <p class="hub-field-hint" style="margin:0">
-        قراءة محلية فقط من آخر عقد سعة محفوظ. لا يظهر مفتاح الترخيص أو سر الإدارة هنا.
+        {{ _('قراءة محلية فقط من آخر عقد سعة محفوظ. لا يظهر مفتاح الترخيص أو سر الإدارة هنا.') }}
       </p>
       {% if capacity.warnings %}
         <div class="ab-warn-list">
           <div class="ab-warn-title">
-            <i class="fa-solid fa-triangle-exclamation"></i> تنبيهات
+            <i class="fa-solid fa-triangle-exclamation"></i> {{ _('تنبيهات') }}
           </div>
           <ul>
           {% for warning in capacity.warnings %}

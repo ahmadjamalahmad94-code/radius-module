@@ -51,11 +51,11 @@
           <tr>
             <th style="width:36px" data-uds-nosort data-uds-nocol><input type="checkbox"></th>
             <th class="num" style="width:60px">#</th>
-            <th>الاسم</th>
-            <th>النطاق</th>
-            <th>العنوان المحلي</th>
-            <th>الراوتر</th>
-            <th style="width:120px" data-uds-nosort>إجراءات</th>
+            <th>{{ _('الاسم') }}</th>
+            <th>{{ _('النطاق') }}</th>
+            <th>{{ _('العنوان المحلي') }}</th>
+            <th>{{ _('الراوتر') }}</th>
+            <th style="width:120px" data-uds-nosort>{{ _('إجراءات') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -75,13 +75,13 @@
             </td>
             <td>
               <div class="hub-flex-row" style="gap:4px;flex-wrap:nowrap">
-                <a class="hub-btn hub-btn--ghost hub-btn--icon" title="تعديل"
+                <a class="hub-btn hub-btn--ghost hub-btn--icon" title="{{ _('تعديل') }}"
                    href="{{ url_for('radius.pool_edit', pid=p.id) }}">
                   <i class="fa-solid fa-pen"></i>
                 </a>
                 <form method="post" action="{{ url_for('radius.pool_delete', pid=p.id) }}"
                       onsubmit="return confirm('حذف؟')" style="display:inline">
-                  <button type="submit" class="hub-btn hub-btn--danger hub-btn--icon" title="حذف">
+                  <button type="submit" class="hub-btn hub-btn--danger hub-btn--icon" title="{{ _('حذف') }}">
                     <i class="fa-solid fa-trash"></i>
                   </button>
                 </form>

@@ -94,17 +94,17 @@
         <thead>
           <tr>
             <th class="num" style="width:60px">#</th>
-            <th>المدير
+            <th>{{ _('المدير') }}
               <span class="hub-hint" tabindex="0" data-hint="حساب المدير كما هو في صفحة «المدراء» — التسعير يطبَّق على المشتركين التابعين له (manager_id)."><i class="fa-solid fa-info"></i></span>
             </th>
-            <th>عدد الأسعار الخاصة
+            <th>{{ _('عدد الأسعار الخاصة') }}
               <span class="hub-hint" tabindex="0" data-hint="كم عرضًا له سعر متفق عليه يخالف السعر الرسمي — صفر يعني أن المدير يدفع الأسعار الافتراضية."><i class="fa-solid fa-info"></i></span>
             </th>
-            <th data-uds-nosort>أمثلة
+            <th data-uds-nosort>{{ _('أمثلة') }}
               <span class="hub-hint" tabindex="0" data-hint="حتى ثلاثة من أسعاره الخاصة (اسم العرض ← السعر) — افتح «تعديل» لرؤية القائمة الكاملة."><i class="fa-solid fa-info"></i></span>
             </th>
-            <th>آخر تحديث</th>
-            <th style="width:170px" data-uds-nosort data-uds-nocol>إجراءات</th>
+            <th>{{ _('آخر تحديث') }}</th>
+            <th style="width:170px" data-uds-nosort data-uds-nocol>{{ _('إجراءات') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -130,19 +130,19 @@
                 {% endfor %}
                 {% if ov|length > 3 %}<span class="hub-text-mute small">+{{ ov|length - 3 }}</span>{% endif %}
               {% else %}
-                <span class="hub-text-mute">الأسعار الافتراضية</span>
+                <span class="hub-text-mute">{{ _('الأسعار الافتراضية') }}</span>
               {% endif %}
             </td>
             <td class="mono small">{{ _last|dt_local if _last else '—' }}</td>
             <td>
               <div class="hub-flex-row" style="gap:4px;flex-wrap:nowrap">
                 <button type="button" class="hub-btn hub-btn--primary hub-btn--sm" data-fcw-open="apx-{{ a.id }}">
-                  <i class="fa-solid fa-pen"></i> تعديل
+                  <i class="fa-solid fa-pen"></i> {{ _('تعديل') }}
                 </button>
                 {# الاستعادة الخطيرة تمرّ عبر نافذة تأكيد fcw (apxr-<id>) بدل confirm() الخام #}
-                <button type="button" class="hub-btn hub-btn--ghost hub-btn--sm" title="استعادة الافتراضي"
+                <button type="button" class="hub-btn hub-btn--ghost hub-btn--sm" title="{{ _('استعادة الافتراضي') }}"
                         data-fcw-open="apxr-{{ a.id }}" {% if not ov %}disabled{% endif %}>
-                  <i class="fa-solid fa-rotate-left"></i> استعادة
+                  <i class="fa-solid fa-rotate-left"></i> {{ _('استعادة') }}
                 </button>
               </div>
             </td>
@@ -176,24 +176,24 @@
           <i class="fa-solid fa-tags"></i>
           أسعار العروض — {{ a.full_name or a.username }}
         </h3>
-        <button type="button" class="fcw-x" data-fcw-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
+        <button type="button" class="fcw-x" data-fcw-close aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="fcw-body">
         <div class="hub-field-hint" style="display:flex;align-items:center;gap:6px">
           <i class="fa-solid fa-circle-info" style="color:var(--hub-brand,#6B5AED)"></i>
-          اترك الحقل فارغًا ليدفع المدير السعر الأساسي — اكتب رقمًا ليُعتمد سعره الخاص لهذا العرض.
+          {{ _('اترك الحقل فارغًا ليدفع المدير السعر الأساسي — اكتب رقمًا ليُعتمد سعره الخاص لهذا العرض.') }}
         </div>
         <table class="apx-table">
           <thead>
             <tr>
-              <th>العرض</th>
-              <th>السعر الأساسي
+              <th>{{ _('العرض') }}</th>
+              <th>{{ _('السعر الأساسي') }}
                 <span class="hub-hint" tabindex="0" data-hint="السعر الرسمي للعرض كما في صفحة «العروض» — يُستخدم لكل من لا اتفاق خاصًّا له."><i class="fa-solid fa-info"></i></span>
               </th>
-              <th>السعر الخاص
+              <th>{{ _('السعر الخاص') }}
                 <span class="hub-hint" tabindex="0" data-hint="السعر المتفق عليه مع هذا المدير — يحلّ مكان السعر الأساسي عند تفعيل/تجديد مشتركيه بهذا العرض."><i class="fa-solid fa-info"></i></span>
               </th>
-              <th>أنشئ بواسطة
+              <th>{{ _('أنشئ بواسطة') }}
                 <span class="hub-hint" tabindex="0" data-hint="آخر مشغّل عدّل هذا السعر الخاص ومتى — فارغ إن لم يكن للعرض سعر خاص."><i class="fa-solid fa-info"></i></span>
               </th>
             </tr>
@@ -227,11 +227,11 @@
         {# «استعادة الافتراضي» داخل النافذة: زر يفتح نافذة تأكيد fcw (apxr-<id>) — لا confirm() خام #}
         <button type="button" class="hub-btn hub-btn--ghost"
                 data-fcw-open="apxr-{{ a.id }}" {% if not ov %}disabled{% endif %}>
-          <i class="fa-solid fa-rotate-left"></i> استعادة الافتراضي
+          <i class="fa-solid fa-rotate-left"></i> {{ _('استعادة الافتراضي') }}
         </button>
         <div style="display:flex;gap:8px">
-          <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>إغلاق</button>
-          <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> حفظ الأسعار</button>
+          <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>{{ _('إغلاق') }}</button>
+          <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ الأسعار') }}</button>
         </div>
       </div>
     </form>
@@ -244,20 +244,20 @@
   <div class="fcw-dialog" style="width:min(520px,100%)" role="dialog" aria-modal="true" aria-labelledby="fcw-apxr-{{ a.id }}-title">
     <form method="post" action="{{ url_for('radius.admin_pricing_reset', admin_id=a.id) }}">
       <div class="fcw-head">
-        <h3 id="fcw-apxr-{{ a.id }}-title"><i class="fa-solid fa-rotate-left" style="color:var(--hub-red,#dc2626)"></i> استعادة الأسعار الافتراضية</h3>
-        <button type="button" class="fcw-x" data-fcw-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
+        <h3 id="fcw-apxr-{{ a.id }}-title"><i class="fa-solid fa-rotate-left" style="color:var(--hub-red,#dc2626)"></i> {{ _('استعادة الأسعار الافتراضية') }}</h3>
+        <button type="button" class="fcw-x" data-fcw-close aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="fcw-body">
         <p style="margin:0;font-weight:700;color:var(--hub-text,#0f172a)">
-          سيُمسح <b>{{ ov|length }}</b> سعرًا خاصًا للمدير «{{ a.full_name or a.username }}»، ويعود لكل الأسعار الرسمية للعروض.
+          {{ _('سيُمسح') }} <b>{{ ov|length }}</b> سعرًا خاصًا للمدير «{{ a.full_name or a.username }}»، ويعود لكل الأسعار الرسمية للعروض.
         </p>
         <p class="hub-field-hint" style="margin:0">
-          لا يمكن التراجع عن هذه الخطوة — المدفوعات والقيود السابقة لا تتأثر؛ التسعير الجديد يسري على العمليات القادمة فقط.
+          {{ _('لا يمكن التراجع عن هذه الخطوة — المدفوعات والقيود السابقة لا تتأثر؛ التسعير الجديد يسري على العمليات القادمة فقط.') }}
         </p>
       </div>
       <div class="fcw-foot" style="justify-content:flex-end">
-        <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>إلغاء</button>
-        <button class="hub-btn hub-btn--danger" type="submit"><i class="fa-solid fa-rotate-left"></i> تأكيد الاستعادة</button>
+        <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>{{ _('إلغاء') }}</button>
+        <button class="hub-btn hub-btn--danger" type="submit"><i class="fa-solid fa-rotate-left"></i> {{ _('تأكيد الاستعادة') }}</button>
       </div>
     </form>
   </div>
@@ -269,20 +269,20 @@
   <div class="fcw-dialog" style="width:min(520px,100%)" role="dialog" aria-modal="true" aria-labelledby="fcw-reset-all-title">
     <form method="post" action="{{ url_for('radius.admin_pricing_reset_all') }}">
       <div class="fcw-head">
-        <h3 id="fcw-reset-all-title"><i class="fa-solid fa-rotate-left" style="color:var(--hub-red,#dc2626)"></i> استعادة الكل</h3>
-        <button type="button" class="fcw-x" data-fcw-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
+        <h3 id="fcw-reset-all-title"><i class="fa-solid fa-rotate-left" style="color:var(--hub-red,#dc2626)"></i> {{ _('استعادة الكل') }}</h3>
+        <button type="button" class="fcw-x" data-fcw-close aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="fcw-body">
         <p style="margin:0;font-weight:700;color:var(--hub-text,#0f172a)">
-          سيُمسح <b>{{ overrides_count }}</b> سعرًا خاصًا لجميع المدراء، ويعود الجميع للأسعار الرسمية للعروض.
+          {{ _('سيُمسح') }} <b>{{ overrides_count }}</b> {{ _('سعرًا خاصًا لجميع المدراء، ويعود الجميع للأسعار الرسمية للعروض.') }}
         </p>
         <p class="hub-field-hint" style="margin:0">
-          لا يمكن التراجع عن هذه الخطوة — المدفوعات والقيود السابقة لا تتأثر؛ التسعير الجديد يسري على العمليات القادمة فقط.
+          {{ _('لا يمكن التراجع عن هذه الخطوة — المدفوعات والقيود السابقة لا تتأثر؛ التسعير الجديد يسري على العمليات القادمة فقط.') }}
         </p>
       </div>
       <div class="fcw-foot" style="justify-content:flex-end">
-        <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>إلغاء</button>
-        <button class="hub-btn hub-btn--danger" type="submit"><i class="fa-solid fa-rotate-left"></i> نعم، استعد الكل</button>
+        <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>{{ _('إلغاء') }}</button>
+        <button class="hub-btn hub-btn--danger" type="submit"><i class="fa-solid fa-rotate-left"></i> {{ _('نعم، استعد الكل') }}</button>
       </div>
     </form>
   </div>
