@@ -191,6 +191,29 @@ def _connect_client(nas_id: int):
     )
 
 
+def _ftp_config(nas_id: int) -> dict | None:
+    """إعداد FTP للراوتر (نفس عنوان/مستخدم/كلمة مرور API — لا أسرار
+    زائدة) للملفات الكبيرة + الأصول الـbinary. يعيد None إن نقص
+    اعتماد جوهري. FTP على RouterOS يستعمل اعتماد مستخدم الراوتر نفسه."""
+    row = db().execute(
+        "SELECT address, api_user, api_password, connection_mode, "
+        "       vpn_peer_address "
+        "FROM nas_devices "
+        "WHERE id=? AND tenant_id=? "
+        "  AND (deleted_at IS NULL OR deleted_at='')",
+        (nas_id, _tid()),
+    ).fetchone()
+    if not row or not (row["api_user"] or ""):
+        return None
+    return {
+        "host": resolve_connection_address(row),
+        "user": row["api_user"],
+        "password": row["api_password"] or "",
+        "port": 21,
+        "timeout": 30.0,
+    }
+
+
 def _last_deploy(nas_id: int) -> dict | None:
     """آخر محاولة نشر لهذا الراوتر من سجل الأحداث — تُغذّي مؤشر
     «حالة النشر الأخيرة» في صدفة الهيرو. None إن لم يُنشر بعد."""
@@ -529,11 +552,20 @@ def _iter_deploy(nas_id: int, nas: dict, design: dict, *, confirmed: bool):
     store_enabled = safe.get("STORE_ENABLED") == "yes"
     store_api_base = _auto_api_base() if store_enabled else ""
 
+    # إعداد FTP (إن توفّر اعتماد) — قناة الملفات الكبيرة + الأصول
+    # الـbinary. عند توفّره تظهر خطوة «رفع الأصول» (نزع الشعار base64).
+    ftp_cfg = _ftp_config(nas_id)
+
     # هيكل الخطوات المعروف مسبقًا — تعرضه الواجهة هيكلًا ساكنًا ثم
     # تحدّث كل خطوة عند وصول حدثها. خطوتا المتجر تظهران فقط عند تفعيله.
     steps = [
         {"key": "prepare", "label": "تجهيز ملفات التصميم والتحقّق"},
         {"key": "connect", "label": "الاتصال بالراوتر"},
+    ]
+    if ftp_cfg:
+        steps.append({"key": "assets",
+                      "label": "رفع أصول التصميم (الشعار) عبر FTP"})
+    steps += [
         {"key": "login", "label": "رفع صفحة الدخول login.html"},
         {"key": "errors", "label": "رفع رسائل الأخطاء errors.txt"},
         {"key": "companions",
@@ -586,22 +618,56 @@ def _iter_deploy(nas_id: int, nas: dict, design: dict, *, confirmed: bool):
         client.connect()
         yield _deploy_step("connect", "ok", "تم الاتصال بالراوتر.")
 
-        # ── رفع login.html (مع إعادة محاولة آلية عند الانقطاع العابر) ──
-        current = "login"
+        # ── رفع login.html (نزع الأصول الكبيرة + API/FTP حسب الحجم) ──
+        # on_retry/on_asset يُجمعان في قوائم لأن deploy_login يحجب أثناء
+        # العملية (متزامن)؛ نُثري التفاصيل بعد عودته (عدد المحاولات/الأصول
+        # والقناة الفعلية api/ftp).
+        current = "assets" if ftp_cfg else "login"
+        if ftp_cfg:
+            yield _deploy_step(
+                "assets", "running", "جارٍ نزع الشعار ورفعه عبر FTP…")
         yield _deploy_step("login", "running", "جارٍ رفع صفحة الدخول…")
-        # on_retry يجمع محاولات الانقطاع العابر؛ deploy_login يحجب أثناء
-        # إعادة المحاولة (متزامن) فنُثري التفاصيل بعد عودته بعدد المحاولات.
         _login_retries: list = []
+        _assets_log: list = []  # (name, ok, nbytes)
+        current = "login"
         deploy_result = ht.deploy_login(
             client, design["template_slug"], login_vars, tenant_id=_tid(),
-            on_retry=lambda att, reason: _login_retries.append((att, reason)))
+            ftp=ftp_cfg,
+            on_retry=lambda att, reason: _login_retries.append((att, reason)),
+            on_asset=lambda name, ok, nbytes: _assets_log.append(
+                (name, ok, nbytes)))
+
+        # نتيجة خطوة «رفع الأصول» (فقط عند توفّر FTP).
+        if ftp_cfg:
+            if not _assets_log:
+                yield _deploy_step(
+                    "assets", "ok", "لا أصول كبيرة مضمّنة — الصفحة خفيفة.")
+            else:
+                _aok = [a for a in _assets_log if a[1]]
+                _afail = [a for a in _assets_log if not a[1]]
+                if _afail:
+                    yield _deploy_step(
+                        "assets", "failed",
+                        f"رُفع {len(_aok)}/{len(_assets_log)} أصل — البقية "
+                        "بقيت مضمّنة (FTP غير متاح؟).")
+                else:
+                    _kb = sum(a[2] for a in _aok) // 1024
+                    yield _deploy_step(
+                        "assets", "ok",
+                        f"رُفع {len(_aok)} أصل ({_kb} ك.ب) عبر FTP — "
+                        "صغُر login.html.")
+
         if deploy_result and deploy_result.ok:
-            _retry_note = (f" (نجح بعد {len(_login_retries)} إعادة محاولة)"
+            _via = ("FTP (رفع مجزّأ)" if deploy_result.via == "ftp"
+                    else "API")
+            _parts = (f"، {deploy_result.chunks} جزء"
+                      if deploy_result.chunks else "")
+            _retry_note = (f"، نجح بعد {len(_login_retries)} إعادة محاولة"
                            if _login_retries else "")
             yield _deploy_step(
                 "login", "ok",
-                f"رُفع {deploy_result.bytes} بايت إلى {deploy_result.path}"
-                + _retry_note)
+                f"رُفع {deploy_result.bytes} بايت عبر {_via}{_parts} إلى "
+                f"{deploy_result.path}{_retry_note}")
 
             # ── errors.txt (فشله لا يُفشل النشر) ──
             current = "errors"
@@ -615,7 +681,8 @@ def _iter_deploy(nas_id: int, nas: dict, design: dict, *, confirmed: bool):
                 )
                 _msgs, _en = _err_repo.resolved_messages(_tid())
                 _er = ht.deploy_errors_txt(
-                    client, build_errors_txt(_msgs, enabled=_en))
+                    client, build_errors_txt(_msgs, enabled=_en),
+                    ftp=ftp_cfg)
                 if _er and _er.ok:
                     yield _deploy_step("errors", "ok", "رُفع errors.txt.")
                 else:
@@ -644,7 +711,8 @@ def _iter_deploy(nas_id: int, nas: dict, design: dict, *, confirmed: bool):
                     # deploy_hotspot_file يُعيد المحاولة آليًا عند الانقطاع
                     # العابر داخليًا (_put_file)؛ فشل ملف لا يُفشل البقية.
                     try:
-                        r = ht.deploy_hotspot_file(client, fname, fhtml)
+                        r = ht.deploy_hotspot_file(
+                            client, fname, fhtml, ftp=ftp_cfg)
                     except Exception:  # noqa: BLE001
                         r = None
                     done_n += 1
