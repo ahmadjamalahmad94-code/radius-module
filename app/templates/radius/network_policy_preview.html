@@ -435,6 +435,15 @@
     .npc-script-section .npc-script-body {
       margin-top: 14px;
     }
+    /* صندوق عرض السكربت (.rsc) — نقل من الـshell المشترك بعد تنحيفه. */
+    .npc-script-pre {
+      background: #0f172a; color: #e8eef7;
+      font-family: var(--hub-mono);
+      padding: 14px; border-radius: var(--hub-r-lg);
+      overflow: auto; max-height: 420px;
+      font-size: 12.5px; line-height: 1.6;
+      white-space: pre; direction: ltr; text-align: left;
+    }
 
     /* ───── Side strip + slide-in drawer ─────
        The page foregrounds: hero, readiness pill, access
@@ -634,13 +643,13 @@
       <div style="display:flex; gap:8px; flex-wrap:wrap;
                   margin-bottom:12px;">
         {% if plan.can_apply %}
-          <span class="npc-pill npc-pill-status-prev"
+          <span class="hub-pill hub-pill--blue"
                 data-test="npc-status-prev">
             <i class="fa-regular fa-circle-check"></i>
             الخطّة سليمة
           </span>
         {% else %}
-          <span class="npc-pill npc-pill-status-fail">
+          <span class="hub-pill hub-pill--red">
             <i class="fa-solid fa-ban"></i>
             الخطّة محظورة — راجع الأخطاء
           </span>
@@ -648,32 +657,32 @@
 
         {# Risk pill from impact_analysis #}
         {% if risk == 'critical' %}
-          <span class="npc-pill npc-pill-risk-high"
+          <span class="hub-pill hub-pill--red"
                 data-test="npc-risk-pill">
             <i class="fa-solid fa-triangle-exclamation"></i>
             مستوى الخطر: حرج
           </span>
         {% elif risk == 'high' %}
-          <span class="npc-pill npc-pill-risk-high"
+          <span class="hub-pill hub-pill--red"
                 data-test="npc-risk-pill">
             <i class="fa-solid fa-triangle-exclamation"></i>
             مستوى الخطر: مرتفع
           </span>
         {% elif risk == 'medium' %}
-          <span class="npc-pill npc-pill-risk-mid"
+          <span class="hub-pill hub-pill--amber"
                 data-test="npc-risk-pill">
             <i class="fa-solid fa-circle-exclamation"></i>
             مستوى الخطر: متوسط
           </span>
         {% else %}
-          <span class="npc-pill npc-pill-risk-low"
+          <span class="hub-pill hub-pill--green"
                 data-test="npc-risk-pill">
             <i class="fa-solid fa-shield"></i>
             مستوى الخطر: منخفض
           </span>
         {% endif %}
 
-        <span class="npc-pill npc-pill-status-draft">
+        <span class="hub-pill hub-pill--grey">
           <i class="fa-solid fa-vial-virus"></i>
           معاينة فقط — لم يتم التطبيق على الراوتر
         </span>
@@ -700,13 +709,13 @@
     <div data-test="npc-section-readiness">
     <div style="display:flex; margin-bottom:14px;">
       {% if rdy.ready_for_future_apply %}
-        <span class="npc-pill npc-pill-status-app"
+        <span class="hub-pill hub-pill--green"
               data-test="npc-readiness-ready">
           <i class="fa-solid fa-shield-check"></i>
           جاهزة (وفق المعايير الحاليّة)
         </span>
       {% else %}
-        <span class="npc-pill npc-pill-status-fail"
+        <span class="hub-pill hub-pill--red"
               data-test="npc-readiness-not-ready">
           <i class="fa-solid fa-shield-halved"></i>
           غير جاهزة — راجع الموانع
@@ -793,7 +802,7 @@
         </code>
       </span>
 
-      <a class="npc-btn"
+      <a class="hub-btn hub-btn--secondary"
          href="{{ url_for('radius.npc_' ~ service.key ~ '_changes', policy_id=policy.id) }}"
          style="margin-inline-start:auto;"
          data-test="npc-changes-link">
@@ -876,7 +885,7 @@
           </label>
 
           <button type="submit"
-                  class="npc-btn is-primary"
+                  class="hub-btn hub-btn--primary"
                   data-test="npc-apply-submit"
                   {% if rdy.blockers_ar %}disabled{% endif %}
                   style="margin-inline-start:auto;
@@ -1267,17 +1276,17 @@
               {{ conflict.policy_name }}
             </span>
             {% if conflict.severity == 'high' %}
-              <span class="npc-pill npc-pill-risk-high">
+              <span class="hub-pill hub-pill--red">
                 <i class="fa-solid fa-triangle-exclamation"></i>
                 خطر مرتفع
               </span>
             {% elif conflict.severity == 'medium' %}
-              <span class="npc-pill npc-pill-risk-mid">
+              <span class="hub-pill hub-pill--amber">
                 <i class="fa-solid fa-circle-exclamation"></i>
                 خطر متوسط
               </span>
             {% else %}
-              <span class="npc-pill npc-pill-risk-low">
+              <span class="hub-pill hub-pill--green">
                 <i class="fa-solid fa-circle-info"></i>
                 ملاحظة
               </span>
@@ -1379,7 +1388,7 @@
             <div class="npc-rec-body">{{ rec.explanation_ar }}</div>
           </div>
           <div class="npc-rec-meta">
-            <span class="npc-pill npc-pill-status-draft">
+            <span class="hub-pill hub-pill--grey">
               {% if rec.confidence == 'high' %}عالية
               {% elif rec.confidence == 'medium' %}متوسطة
               {% else %}محدودة{% endif %}
@@ -1544,9 +1553,9 @@
 
     <div class="npc-script-body">
       {% if render_error %}
-        <div class="npc-card" style="border-color:#fecaca;
-                                      background:#fef2f2;
-                                      color:#b91c1c;">
+        <div style="border:1px solid var(--hub-red); background:var(--hub-red-soft);
+                    color:var(--hub-red-ink); padding:14px 16px;
+                    border-radius:var(--hub-r-lg); font-size:13px;">
           <i class="fa-solid fa-triangle-exclamation"></i>
           {{ render_error }}
         </div>
@@ -1565,12 +1574,12 @@
           </strong>
           <span style="margin-inline-start:auto;
                        display:flex; gap:6px;">
-            <button class="npc-btn" type="button"
+            <button class="hub-btn hub-btn--secondary" type="button"
               onclick="navigator.clipboard.writeText(document.getElementById('npc-forward').textContent); this.innerText='تم النسخ ✓';">
               <i class="fa-regular fa-clipboard"></i>
               نسخ
             </button>
-            <a class="npc-btn"
+            <a class="hub-btn hub-btn--secondary"
                href="{{ url_for('radius.npc_' ~ service.key ~ '_preview_download', policy_id=policy.id) }}"
                download>
               <i class="fa-solid fa-download"></i>
@@ -1588,7 +1597,7 @@
               سكربت rollback (التراجع)
             </strong>
             <span style="margin-inline-start:auto;">
-              <button class="npc-btn" type="button"
+              <button class="hub-btn hub-btn--secondary" type="button"
                 onclick="navigator.clipboard.writeText(document.getElementById('npc-rollback').textContent); this.innerText='تم النسخ ✓';">
                 <i class="fa-regular fa-clipboard"></i>
                 نسخ

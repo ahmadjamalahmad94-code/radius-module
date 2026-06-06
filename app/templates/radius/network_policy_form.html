@@ -87,7 +87,7 @@
               لاستهداف راوتر آخر.
             </span>
           {% else %}
-            <select class="hub-input" name="router_id" id="router_id" required>
+            <select class="hub-select" name="router_id" id="router_id" required>
               <option value="">— اختر —</option>
               {% for r in routers %}
                 <option value="{{ r.id }}"
@@ -168,7 +168,7 @@
         {% call hub.section("إعدادات الحظر", icon="ban") %}
           <div class="hub-field">
             <label class="hub-field-label" for="scope">نطاق التطبيق</label>
-            <select class="hub-input" name="scope" id="scope">
+            <select class="hub-select" name="scope" id="scope">
               <option value="all_users"
                 {% if not policy or policy.scope == 'all_users' %}selected{% endif %}
               >كل المستخدمين</option>
@@ -289,7 +289,7 @@
               </div>
               <div class="hub-field" style="flex:1 1 140px; margin:0;">
                 <label class="hub-field-label">النوع</label>
-                <select class="hub-input" name="entry_type" required>
+                <select class="hub-select" name="entry_type" required>
                   <option value="dst_host">اسم نطاق (dst_host)</option>
                   <option value="dst_address">عنوان IP (dst_address)</option>
                   <option value="dst_address_list">
@@ -365,6 +365,12 @@
 </form>
 
 <style>
+  /* تخطيط النموذج عمودان على الشاشات الواسعة (الحقول + المساعدة/العناصر). */
+  .npc-form-grid{
+    display:grid; gap:var(--hub-gap-xl);
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  }
+  @media (max-width: 1024px){ .npc-form-grid{ grid-template-columns: 1fr; } }
   /* Toggle row: label/meta on one side, switch on the other — inside a card. */
   .uds-toggle-row{
     display:flex; align-items:center; gap:12px;
