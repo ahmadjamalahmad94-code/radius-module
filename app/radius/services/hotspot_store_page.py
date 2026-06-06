@@ -619,6 +619,8 @@ body{min-height:100vh;background:
 .reqs .rq-txt span{font-size:10px;color:var(--mut)}
 .reqs .rq-reason{display:block;font-size:10px;color:var(--bad);
   font-weight:700;margin-top:2px;white-space:normal;line-height:1.6}
+.reqs .rq-receipt{display:inline-block;font-size:10px;color:var(--accent);
+  font-weight:800;margin-top:3px;text-decoration:underline}
 .reqs .rq-amt{font-size:12.5px;font-weight:800;direction:ltr;text-align:left}
 
 /* ───── ورقة منزلقة (modal طويلة قابلة للتمرير) ───── */
@@ -704,7 +706,15 @@ body{min-height:100vh;background:
 .msg small{display:block;font-size:9px;opacity:.6;margin-top:3px}
 .msg.me{align-self:flex-start;background:var(--accent);color:#fff;border-bottom-right-radius:4px}
 .msg.them{align-self:flex-end;background:#f1f5f9;color:var(--ink);border-bottom-left-radius:4px}
-.msg img{display:block;max-width:100%;border-radius:10px;margin-top:6px}
+.msg img{display:block;max-width:170px;max-height:200px;border-radius:10px;
+  margin-top:6px;cursor:pointer;object-fit:cover}
+.msg-att{display:block;margin-top:6px}
+/* رابط احتياطي يظهر فقط إن تعذّر تحميل الصورة المصغّرة (onerror) —
+   فيبقى المرفق قابلًا للفتح دائمًا حتى لو لم تُحمَّل المعاينة. */
+.msg-att .att-link{display:none;font-size:11.5px;font-weight:800;
+  text-decoration:underline;cursor:pointer}
+.msg.me .att-link{color:#fff}.msg.them .att-link{color:var(--accent)}
+.msg-att.att-fail .att-link{display:inline-block}
 .chat-bar{display:flex;align-items:center;gap:6px;margin-top:10px;
   border-top:1px solid var(--line);padding-top:10px}
 .chat-bar input[type=text]{flex:1;border:1.5px solid var(--line);border-radius:999px;
@@ -1728,11 +1738,17 @@ body{min-height:100vh;background:
       var reason = (r.status === 'rejected' && r.admin_note)
         ? '<span class="rq-reason">السبب: ' + esc(r.admin_note) + '</span>'
         : '';
+      // رابط وصل الإيداع الذي رفعه الزبون (عنوان مطلق ليعمل على الراوتر).
+      var receipt = (dep && r.receipt_image_url)
+        ? '<a class="rq-receipt" href="' + esc(API + r.receipt_image_url) +
+          '" target="_blank" rel="noopener">📎 عرض الوصل</a>'
+        : '';
       return '<div class="rq"><span class="rq-ico ' + (dep ? 'dep' : '') +
         '">' + (dep ? '💰' : '💸') + '</span>' +
         '<span class="rq-txt"><b>' + (dep ? 'شحن بتحويل' : 'سحب رصيد') +
           ' · ' + esc(r.status_ar || '') + '</b>' +
-          '<span>' + fmtWhen(r.created_at) + '</span>' + reason + '</span>' +
+          '<span>' + fmtWhen(r.created_at) + '</span>' + reason + receipt +
+          '</span>' +
         '<span class="rq-amt">' + esc(amt || '') +
           ' <small>' + esc(r.currency || '') + '</small></span></div>';
     }).join('');
@@ -1948,6 +1964,12 @@ body{min-height:100vh;background:
       }
     }).catch(function () {});
   }
+  /* نبني الرسالة بـDOM (لا دمج نصوص) — يتفادى مزالق الهروب ويسمح
+     بربط onerror بخاصية بدل سمة inline. المرفق يظهر صورةً مصغّرة قابلة
+     للنقر (تفتح الحجم الكامل)؛ فإن تعذّر تحميل المعاينة (تعذّر وصول
+     الرابط من سياق الراوتر مثلاً) يظهر رابط «عرض المرفق» بدلًا عنها
+     فلا يختفي المرفق أبدًا. عنوان مطلق (API + image_url) ليعمل من
+     صفحة المتجر على الراوتر أيضًا. */
   function appendChat(items, first) {
     var body = $('chatBody');
     if (first) body.innerHTML = '';
@@ -1956,10 +1978,29 @@ body{min-height:100vh;background:
       var me = m.sender === 'customer';
       var div = document.createElement('div');
       div.className = 'msg ' + (me ? 'me' : 'them');
-      var html = m.body ? esc(m.body) : '';
-      if (m.image_url) html += '<img src="' + esc(API + m.image_url) + '" alt="">';
-      html += '<small>' + fmtWhen(m.created_at) + '</small>';
-      div.innerHTML = html;
+      if (m.body) {
+        var p = document.createElement('span');
+        p.textContent = m.body;   // نص آمن بلا حقن
+        div.appendChild(p);
+      }
+      if (m.image_url) {
+        var url = (m.image_url.indexOf('http') === 0)
+          ? m.image_url : (API + m.image_url);
+        var a = document.createElement('a');
+        a.href = url; a.target = '_blank'; a.rel = 'noopener';
+        a.className = 'msg-att';
+        var img = document.createElement('img');
+        img.src = url; img.alt = 'صورة مرفقة';
+        img.onerror = function () { a.classList.add('att-fail'); };
+        var lbl = document.createElement('span');
+        lbl.className = 'att-link';
+        lbl.textContent = '📎 عرض المرفق';
+        a.appendChild(img); a.appendChild(lbl);
+        div.appendChild(a);
+      }
+      var sm = document.createElement('small');
+      sm.textContent = fmtWhen(m.created_at);
+      div.appendChild(sm);
       body.appendChild(div);
     });
     body.scrollTop = body.scrollHeight;
