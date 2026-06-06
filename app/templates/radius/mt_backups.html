@@ -83,11 +83,11 @@
       <table class="hub-table">
         <thead>
           <tr>
-            <th>الوقت</th>
-            <th>النوع</th>
-            <th>اسم الملف</th>
-            <th data-uds-nosort>الحالة</th>
-            <th data-uds-nosort>حسّاس</th>
+            <th>{{ _('الوقت') }}</th>
+            <th>{{ _('النوع') }}</th>
+            <th>{{ _('اسم الملف') }}</th>
+            <th data-uds-nosort>{{ _('الحالة') }}</th>
+            <th data-uds-nosort>{{ _('حسّاس') }}</th>
           </tr>
         </thead>
         <tbody data-mt-backups-rows>
@@ -135,21 +135,21 @@
             data-mt-backups-restore-form>
         {{ csrf_token_input() | safe if csrf_token_input is defined else '' }}
         <label class="hub-field" style="display:block;margin-bottom:14px">
-          <span class="hub-field-label">ملف النسخة الاحتياطية للفحص</span>
+          <span class="hub-field-label">{{ _('ملف النسخة الاحتياطية للفحص') }}</span>
           <input class="hub-input" type="file" name="backup_file"
                  data-mt-backups-restore-file>
         </label>
         <div class="hub-flex-row" style="gap:8px;flex-wrap:wrap">
           <button type="submit" class="hub-btn hub-btn--primary"
                   data-mt-backups-restore-inspect>
-            <i class="fa-solid fa-magnifying-glass"></i> افحص الملف
+            <i class="fa-solid fa-magnifying-glass"></i> {{ _('افحص الملف') }}
           </button>
           <button type="button"
                   class="hub-btn hub-btn--danger"
                   disabled
-                  title="مقفل لحماية الراوتر ويتطلب موافقة تشغيلية منفصلة"
+                  title="{{ _('مقفل لحماية الراوتر ويتطلب موافقة تشغيلية منفصلة') }}"
                   data-mt-backups-restore-apply>
-            <i class="fa-solid fa-bolt"></i> تطبيق الاستعادة (مقفل)
+            <i class="fa-solid fa-bolt"></i> {{ _('تطبيق الاستعادة (مقفل)') }}
           </button>
         </div>
       </form>
@@ -166,8 +166,8 @@
         <table class="hub-table">
           <thead>
             <tr>
-              <th>البند</th>
-              <th>القيمة</th>
+              <th>{{ _('البند') }}</th>
+              <th>{{ _('القيمة') }}</th>
             </tr>
           </thead>
           <tbody>

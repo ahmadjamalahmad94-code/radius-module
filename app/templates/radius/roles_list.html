@@ -24,7 +24,7 @@
 {% block title %}الأدوار والصلاحيات — هوب ريديوس{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-key"></i>{% endblock %}
 {% block page_title %}الأدوار والصلاحيات{% endblock %}
-{% block page_sub %}<span class="sub"><bdi dir="ltr">{{ roles|length }}</bdi> دور · <bdi dir="ltr">{{ perms|length }}</bdi> صلاحية متاحة</span>{% endblock %}
+{% block page_sub %}<span class="sub"><bdi dir="ltr">{{ roles|length }}</bdi> {{ _('دور ·') }} <bdi dir="ltr">{{ perms|length }}</bdi> {{ _('صلاحية متاحة') }}</span>{% endblock %}
 
 {% block head_extra %}{{ super() }}
 {# نظام التصميم الموحّد (uds): المودال العائم + تلوينات الحبوب #}
@@ -140,7 +140,7 @@
   {# لا فلاتر خادمية في هذا المسار — سطر إرشادي بسيط بدلًا منها #}
   <span class="hub-text-soft" style="font-size:12.5px;font-weight:700">
     <i class="fa-solid fa-shield-halved" style="color:var(--hub-brand-ink)"></i>
-    امنح كل مشرف أقل صلاحيات تكفي لعمله — هذا أأمن لمنظومتك.
+    {{ _('امنح كل مشرف أقل صلاحيات تكفي لعمله — هذا أأمن لمنظومتك.') }}
   </span>
   <span class="hub-spacer"></span>
   <span class="hub-hint" tabindex="0"
@@ -175,26 +175,26 @@
         {# أول 4 صلاحيات بالتسمية العربية + المفتاح، والبقية كعدّاد #}
         {% for p in r.permissions[:4] %}{{ pl.perm_chip(p) }}{% endfor %}
         {% if r.permissions|length > 4 %}
-          <span class="rl-chip-more" title="افتح «تعديل» لرؤية كل الصلاحيات">+{{ r.permissions|length - 4 }}</span>
+          <span class="rl-chip-more" title="{{ _('افتح «تعديل» لرؤية كل الصلاحيات') }}">+{{ r.permissions|length - 4 }}</span>
         {% elif not r.permissions %}
-          <span class="perm-pill" style="color:var(--hub-text-mute)">بدون صلاحيات</span>
+          <span class="perm-pill" style="color:var(--hub-text-mute)">{{ _('بدون صلاحيات') }}</span>
         {% endif %}
       </div>
       <div class="rl-actions">
         <a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ url_for('radius.roles_edit', role_id=r.id) }}">
-          <i class="fa-solid fa-pen"></i> تعديل
+          <i class="fa-solid fa-pen"></i> {{ _('تعديل') }}
         </a>
         {% if r.is_system %}
         <button type="button" class="hub-btn hub-btn--ghost hub-btn--sm" disabled
-                title="دور نظام محمي — لا يمكن أرشفته">
-          <i class="fa-solid fa-lock"></i> محمي
+                title="{{ _('دور نظام محمي — لا يمكن أرشفته') }}">
+          <i class="fa-solid fa-lock"></i> {{ _('محمي') }}
         </button>
         {% else %}
         <button type="button" class="hub-btn hub-btn--danger hub-btn--sm"
                 data-role-archive
                 data-role-name="{{ (r.display_name or r.name)|e }}"
                 data-role-action="{{ url_for('radius.roles_delete', role_id=r.id) }}">
-          <i class="fa-solid fa-box-archive"></i> أرشفة
+          <i class="fa-solid fa-box-archive"></i> {{ _('أرشفة') }}
         </button>
         {% endif %}
       </div>
@@ -218,7 +218,7 @@
      ~ '<button type="submit" class="hub-btn hub-btn--danger"><i class="fa-solid fa-box-archive"></i> أرشفة الدور</button></form>') %}
   <div class="uds-modal-warn uds-modal-warn--amber">
     <i class="fa-solid fa-circle-info"></i>
-    <span>سيتم أرشفة الدور «<strong data-role-archive-name></strong>». الأرشفة قابلة للعكس — يُستعاد الدور لاحقًا من سلة المحذوفات.</span>
+    <span>{{ _('سيتم أرشفة الدور «') }}<strong data-role-archive-name></strong>{{ _('». الأرشفة قابلة للعكس — يُستعاد الدور لاحقًا من سلة المحذوفات.') }}</span>
   </div>
 {% endcall %}
 

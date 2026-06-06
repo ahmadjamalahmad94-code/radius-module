@@ -4,7 +4,7 @@
 {% block title %}غرفة العمليات — Hobe Hub{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-satellite-dish"></i>{% endblock %}
 {% block page_title %}غرفة العمليات{% endblock %}
-{% block page_sub %}<span class="sub">مركز التواصل الموحّد — حالة كل القنوات والإشعارات والبوت في مكان واحد، وكل إجراء بكبسة زر.</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('مركز التواصل الموحّد — حالة كل القنوات والإشعارات والبوت في مكان واحد، وكل إجراء بكبسة زر.') }}</span>{% endblock %}
 
 {# ── tiny Arabic helpers ── #}
 {% macro mode_label(m) %}{{ {'self_api':'ربط ذاتي عبر واجهة الربط','admin_quota':'كوتة من الإدارة'}.get(m, 'غير محدد') }}{% endmacro %}
@@ -120,29 +120,29 @@
       <div class="oc-send-head">
         <span class="ic"><i class="fa-solid fa-bolt"></i></span>
         <div>
-          <h2>إرسال رسالة سريعة</h2>
-          <div class="sub">اكتب رسالة وأرسلها لجمهور المشتركين بكبسة زر — عبر القناة التي تختارها.</div>
+          <h2>{{ _('إرسال رسالة سريعة') }}</h2>
+          <div class="sub">{{ _('اكتب رسالة وأرسلها لجمهور المشتركين بكبسة زر — عبر القناة التي تختارها.') }}</div>
         </div>
       </div>
       <div class="oc-send-grid">
         <div class="oc-fld">
-          <label for="oc-ch">القناة</label>
+          <label for="oc-ch">{{ _('القناة') }}</label>
           {# hub-select — يترقّى تلقائيًا لقائمة hbsel الموحّدة #}
           <select id="oc-ch" name="channel" class="hub-select">
-            <option value="whatsapp">واتساب</option>
-            <option value="sms">الرسائل القصيرة</option>
-            <option value="internal">داخلية (الطابور)</option>
+            <option value="whatsapp">{{ _('واتساب') }}</option>
+            <option value="sms">{{ _('الرسائل القصيرة') }}</option>
+            <option value="internal">{{ _('داخلية (الطابور)') }}</option>
           </select>
         </div>
         <div class="oc-fld">
-          <label for="oc-msg">نص الرسالة</label>
-          <textarea id="oc-msg" name="message" class="hub-textarea" rows="3" placeholder="اكتب رسالتك هنا…" required></textarea>
+          <label for="oc-msg">{{ _('نص الرسالة') }}</label>
+          <textarea id="oc-msg" name="message" class="hub-textarea" rows="3" placeholder="{{ _('اكتب رسالتك هنا…') }}" required></textarea>
         </div>
       </div>
       <div class="oc-send-foot">
-        <button type="submit" class="oc-send-btn"><i class="fa-solid fa-paper-plane"></i> إرسال الآن</button>
-        <span class="oc-send-note">تذهب للمعاينة ثم الإرسال. لإرسال موجّه لشريحة محدّدة استخدم
-          <a href="{{ url_for('radius.communications_send') }}">صفحة الإرسال الكاملة</a>.</span>
+        <button type="submit" class="oc-send-btn"><i class="fa-solid fa-paper-plane"></i> {{ _('إرسال الآن') }}</button>
+        <span class="oc-send-note">{{ _('تذهب للمعاينة ثم الإرسال. لإرسال موجّه لشريحة محدّدة استخدم') }}
+          <a href="{{ url_for('radius.communications_send') }}">{{ _('صفحة الإرسال الكاملة') }}</a>.</span>
       </div>
     </form>
   {% endcall %}
@@ -152,43 +152,43 @@
     <div class="oc-actions" data-testid="oc-actions">
       <a class="oc-act" href="{{ url_for('radius.communications_channels') }}">
         <span class="oc-act-ic"><i class="fa-solid fa-tower-broadcast"></i></span>
-        <div class="oc-act-b"><div class="ttl">قنوات الإرسال <i class="fa-solid fa-arrow-left arr"></i></div>
-          <div class="hint">فعّل الرسائل القصيرة وواتساب واضبط روابط المزوّد ونمط الإرسال.</div></div>
+        <div class="oc-act-b"><div class="ttl">{{ _('قنوات الإرسال') }} <i class="fa-solid fa-arrow-left arr"></i></div>
+          <div class="hint">{{ _('فعّل الرسائل القصيرة وواتساب واضبط روابط المزوّد ونمط الإرسال.') }}</div></div>
       </a>
       <a class="oc-act" href="{{ url_for('radius.communications_bot') }}">
         <span class="oc-act-ic green"><i class="fa-solid fa-robot"></i></span>
-        <div class="oc-act-b"><div class="ttl">بوت واتساب <i class="fa-solid fa-arrow-left arr"></i></div>
-          <div class="hint">ردود ذاتية على المشتركين: الرصيد، الباقة، معلومات الحساب.</div></div>
+        <div class="oc-act-b"><div class="ttl">{{ _('بوت واتساب') }} <i class="fa-solid fa-arrow-left arr"></i></div>
+          <div class="hint">{{ _('ردود ذاتية على المشتركين: الرصيد، الباقة، معلومات الحساب.') }}</div></div>
       </a>
       <a class="oc-act" href="{{ url_for('radius.communications_notifications') }}">
         <span class="oc-act-ic amber"><i class="fa-solid fa-bell"></i></span>
-        <div class="oc-act-b"><div class="ttl">الإشعارات الحدثية <i class="fa-solid fa-arrow-left arr"></i></div>
-          <div class="hint">تنبيهات تلقائية عند الإنشاء والتجديد وقرب الانتهاء وغيرها.</div></div>
+        <div class="oc-act-b"><div class="ttl">{{ _('الإشعارات الحدثية') }} <i class="fa-solid fa-arrow-left arr"></i></div>
+          <div class="hint">{{ _('تنبيهات تلقائية عند الإنشاء والتجديد وقرب الانتهاء وغيرها.') }}</div></div>
       </a>
       <a class="oc-act" href="{{ url_for('radius.communications_quota') }}">
         <span class="oc-act-ic"><i class="fa-solid fa-wallet"></i></span>
-        <div class="oc-act-b"><div class="ttl">الرصيد والحِزم <i class="fa-solid fa-arrow-left arr"></i></div>
-          <div class="hint">رصيد الرسائل المدفوعة لكل قناة، وطلب حزمة جديدة.</div></div>
+        <div class="oc-act-b"><div class="ttl">{{ _('الرصيد والحِزم') }} <i class="fa-solid fa-arrow-left arr"></i></div>
+          <div class="hint">{{ _('رصيد الرسائل المدفوعة لكل قناة، وطلب حزمة جديدة.') }}</div></div>
       </a>
       <a class="oc-act" href="{{ url_for('radius.communications_templates') }}">
         <span class="oc-act-ic blue"><i class="fa-solid fa-file-lines"></i></span>
-        <div class="oc-act-b"><div class="ttl">القوالب <i class="fa-solid fa-arrow-left arr"></i></div>
-          <div class="hint">قوالب رسائل جاهزة بمتغيّرات تُملأ تلقائيًا عند الإرسال.</div></div>
+        <div class="oc-act-b"><div class="ttl">{{ _('القوالب') }} <i class="fa-solid fa-arrow-left arr"></i></div>
+          <div class="hint">{{ _('قوالب رسائل جاهزة بمتغيّرات تُملأ تلقائيًا عند الإرسال.') }}</div></div>
       </a>
       <a class="oc-act" href="{{ url_for('radius.communications_send') }}">
         <span class="oc-act-ic"><i class="fa-solid fa-paper-plane"></i></span>
-        <div class="oc-act-b"><div class="ttl">إرسال رسالة <i class="fa-solid fa-arrow-left arr"></i></div>
-          <div class="hint">إرسال موجّه لشريحة من المشتركين مع معاينة قبل الإرسال.</div></div>
+        <div class="oc-act-b"><div class="ttl">{{ _('إرسال رسالة') }} <i class="fa-solid fa-arrow-left arr"></i></div>
+          <div class="hint">{{ _('إرسال موجّه لشريحة من المشتركين مع معاينة قبل الإرسال.') }}</div></div>
       </a>
       <a class="oc-act" href="{{ url_for('radius.communications_deliveries') }}">
         <span class="oc-act-ic slate"><i class="fa-solid fa-truck-fast"></i></span>
-        <div class="oc-act-b"><div class="ttl">سجل الإرسال <i class="fa-solid fa-arrow-left arr"></i></div>
-          <div class="hint">تتبّع كل رسالة: الحالة، المستلم، ورد المزوّد.</div></div>
+        <div class="oc-act-b"><div class="ttl">{{ _('سجل الإرسال') }} <i class="fa-solid fa-arrow-left arr"></i></div>
+          <div class="hint">{{ _('تتبّع كل رسالة: الحالة، المستلم، ورد المزوّد.') }}</div></div>
       </a>
       <a class="oc-act" href="{{ url_for('radius.communications_guide') }}">
         <span class="oc-act-ic green"><i class="fa-solid fa-book-open"></i></span>
-        <div class="oc-act-b"><div class="ttl">دليل وشروحات <i class="fa-solid fa-arrow-left arr"></i></div>
-          <div class="hint">شرح مصوّر خطوة بخطوة لربط بوت واتساب وتنبيهات تلجرام.</div></div>
+        <div class="oc-act-b"><div class="ttl">{{ _('دليل وشروحات') }} <i class="fa-solid fa-arrow-left arr"></i></div>
+          <div class="hint">{{ _('شرح مصوّر خطوة بخطوة لربط بوت واتساب وتنبيهات تلجرام.') }}</div></div>
       </a>
     </div>
   {% endcall %}
@@ -198,7 +198,7 @@
     {% if deliveries %}
       <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
         <table class="hub-table">
-          <thead><tr><th class="num">الرقم</th><th>القناة</th><th>الحالة</th><th>المستلم</th></tr></thead>
+          <thead><tr><th class="num">{{ _('الرقم') }}</th><th>{{ _('القناة') }}</th><th>{{ _('الحالة') }}</th><th>{{ _('المستلم') }}</th></tr></thead>
           <tbody>
             {% for item in deliveries %}
               <tr>

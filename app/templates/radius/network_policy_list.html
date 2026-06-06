@@ -41,11 +41,11 @@
 {% set _actions %}
   {% if scoped_to_nas %}
     <a class="hub-btn hub-btn--ghost" href="{{ url_for('radius.mt_dashboard', nas_id=scoped_to_nas.id) }}">
-      <i class="fa-solid fa-arrow-right"></i> لوحة الراوتر
+      <i class="fa-solid fa-arrow-right"></i> {{ _('لوحة الراوتر') }}
     </a>
   {% endif %}
   <a class="hub-btn hub-btn--primary" href="{{ _new_href }}">
-    <i class="fa-solid fa-plus"></i> سياسة جديدة
+    <i class="fa-solid fa-plus"></i> {{ _('سياسة جديدة') }}
   </a>
 {% endset %}
 
@@ -65,7 +65,7 @@
 
 {# ───── شريط التبويبات بين الخدمات (يحمل nas_id في الوضع المُجزّأ) ───── #}
 {% if scoped_to_nas %}
-  <nav class="npc-tabs" aria-label="سياسات الراوتر">
+  <nav class="npc-tabs" aria-label="{{ _('سياسات الراوتر') }}">
     {% for s in services %}
       <a class="npc-tab{% if s.url_slug == service.url_slug %} is-active{% endif %}"
          href="{{ url_for('radius.npc_' ~ s.key ~ '_list_scoped', nas_id=scoped_to_nas.id) }}">
@@ -102,13 +102,13 @@
       <table class="hub-table">
         <thead>
           <tr>
-            <th>الاسم</th>
-            <th>الراوتر</th>
-            <th>الحالة</th>
-            <th>الخطر</th>
-            <th class="num">عناصر</th>
-            <th data-uds-nosort>آخر معاينة</th>
-            <th style="width:300px" data-uds-nosort data-uds-nocol data-uds-noexport>إجراءات</th>
+            <th>{{ _('الاسم') }}</th>
+            <th>{{ _('الراوتر') }}</th>
+            <th>{{ _('الحالة') }}</th>
+            <th>{{ _('الخطر') }}</th>
+            <th class="num">{{ _('عناصر') }}</th>
+            <th data-uds-nosort>{{ _('آخر معاينة') }}</th>
+            <th style="width:300px" data-uds-nosort data-uds-nocol data-uds-noexport>{{ _('إجراءات') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -132,18 +132,18 @@
             </td>
             <td>
               <div class="hub-flex-row" style="gap:4px;flex-wrap:nowrap">
-                <a class="hub-btn hub-btn--secondary hub-btn--sm" title="معاينة"
+                <a class="hub-btn hub-btn--secondary hub-btn--sm" title="{{ _('معاينة') }}"
                    href="{{ url_for('radius.npc_' ~ service.key ~ '_preview', policy_id=p.id) }}">
-                  <i class="fa-solid fa-eye"></i> معاينة
+                  <i class="fa-solid fa-eye"></i> {{ _('معاينة') }}
                 </a>
-                <a class="hub-btn hub-btn--ghost hub-btn--icon" title="تحرير"
+                <a class="hub-btn hub-btn--ghost hub-btn--icon" title="{{ _('تحرير') }}"
                    href="{{ url_for('radius.npc_' ~ service.key ~ '_edit', policy_id=p.id) }}">
                   <i class="fa-regular fa-pen-to-square"></i>
                 </a>
                 <form class="npc-inline-form" method="POST"
                       action="{{ url_for('radius.npc_' ~ service.key ~ '_duplicate', policy_id=p.id) }}">
                   {{ csrf_token_input() | safe }}
-                  <button class="hub-btn hub-btn--ghost hub-btn--icon" type="submit" title="إنشاء نسخة">
+                  <button class="hub-btn hub-btn--ghost hub-btn--icon" type="submit" title="{{ _('إنشاء نسخة') }}">
                     <i class="fa-regular fa-copy"></i>
                   </button>
                 </form>
@@ -151,7 +151,7 @@
                       action="{{ url_for('radius.npc_' ~ service.key ~ '_delete', policy_id=p.id) }}"
                       onsubmit="return confirm('حذف هذه السياسة؟ (محلياً فقط — لا يطبَّق على الراوتر)');">
                   {{ csrf_token_input() | safe }}
-                  <button class="hub-btn hub-btn--danger hub-btn--icon" type="submit" title="حذف">
+                  <button class="hub-btn hub-btn--danger hub-btn--icon" type="submit" title="{{ _('حذف') }}">
                     <i class="fa-regular fa-trash-can"></i>
                   </button>
                 </form>

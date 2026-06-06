@@ -12,17 +12,17 @@
          value="{{ filters.q if filters else '' }}" placeholder="{{ q_placeholder }}">
   {%- if show_date %}
   <input class="hub-input" type="date" name="date_from"
-         value="{{ filters.date_from if filters else '' }}" title="من تاريخ">
+         value="{{ filters.date_from if filters else '' }}" title="{{ _('من تاريخ') }}">
   <input class="hub-input" type="date" name="date_to"
-         value="{{ filters.date_to if filters else '' }}" title="إلى تاريخ">
+         value="{{ filters.date_to if filters else '' }}" title="{{ _('إلى تاريخ') }}">
   {%- endif %}
   {{ extra_html|safe }}
   <button class="hub-btn hub-btn--primary hub-btn--sm" type="submit">
-    <i class="fa-solid fa-filter"></i> تطبيق
+    <i class="fa-solid fa-filter"></i> {{ _('تطبيق') }}
   </button>
   {%- if filters and (filters.q or filters.date_from or filters.date_to) %}
   <a class="hub-btn hub-btn--ghost hub-btn--sm" href="{{ url_for(endpoint) }}">
-    <i class="fa-solid fa-rotate-left"></i> مسح
+    <i class="fa-solid fa-rotate-left"></i> {{ _('مسح') }}
   </a>
   {%- endif %}
 </form>

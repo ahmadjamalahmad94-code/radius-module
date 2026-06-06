@@ -122,11 +122,11 @@
 
     <div class="rc-toolbar" style="padding:14px 18px 0">
       <div class="info">
-        عرض <strong>{{ range_lo }}–{{ range_hi }}</strong> من <strong>{{ total_cards }}</strong>
-        ·  صفحة <strong>{{ page }}</strong> من <strong>{{ pages_count }}</strong>
+        {{ _('عرض') }} <strong>{{ range_lo }}–{{ range_hi }}</strong> {{ _('من') }} <strong>{{ total_cards }}</strong>
+        {{ _('·  صفحة') }} <strong>{{ page }}</strong> {{ _('من') }} <strong>{{ pages_count }}</strong>
       </div>
       <form method="get" class="per-page">
-        <label for="pp">عدد الصفوف:</label>
+        <label for="pp">{{ _('عدد الصفوف:') }}</label>
         <select class="hub-select" id="pp" name="per_page" onchange="this.form.submit()" style="width:auto">
           {% for n in [10, 20, 50, 100] %}
             <option value="{{ n }}" {% if per_page == n %}selected{% endif %}>{{ n }}</option>
@@ -140,17 +140,17 @@
        truth, so the uds page-size is large enough to keep the loaded slice
        (≤100) on one client page — sort + column-picker only. #}
     <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="100"
-         data-uds-export-title="بطاقات حزمة الشحن"
+         data-uds-export-title="{{ _('بطاقات حزمة الشحن') }}"
          style="border:none;border-radius:0">
       <table class="hub-table">
         <thead>
           <tr>
             <th class="num" style="width:60px" data-uds-nosort>#</th>
-            <th>الرمز</th>
-            <th>الـ PIN</th>
-            <th class="num" style="width:100px">القيمة</th>
-            <th style="width:90px" data-uds-nosort>الحالة</th>
-            <th style="width:170px">استُخدمت</th>
+            <th>{{ _('الرمز') }}</th>
+            <th>{{ _('الـ PIN') }}</th>
+            <th class="num" style="width:100px">{{ _('القيمة') }}</th>
+            <th style="width:90px" data-uds-nosort>{{ _('الحالة') }}</th>
+            <th style="width:170px">{{ _('استُخدمت') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -188,7 +188,7 @@
         {%- endif -%}
       {%- endmacro %}
 
-      <nav class="rc-pager" aria-label="تنقل الصفحات" style="margin:0 18px 4px">
+      <nav class="rc-pager" aria-label="{{ _('تنقل الصفحات') }}" style="margin:0 18px 4px">
         {{ pglink(1, '«', disabled=(page == 1)) }}
         {{ pglink(page - 1, '‹', disabled=(page == 1)) }}
         {% set lo = [page - 2, 1] | max %}

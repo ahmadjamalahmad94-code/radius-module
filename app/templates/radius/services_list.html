@@ -18,7 +18,7 @@
 {% block title %}الخدمات والمعدّات{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-toolbox"></i>{% endblock %}
 {% block page_title %}الخدمات والمعدّات{% endblock %}
-{% block page_sub %}<span class="sub"><bdi dir="ltr">{{ items|length }}</bdi> معدّة مسجَّلة</span>{% endblock %}
+{% block page_sub %}<span class="sub"><bdi dir="ltr">{{ items|length }}</bdi> {{ _('معدّة مسجَّلة') }}</span>{% endblock %}
 
 {% block head_extra %}{{ super() }}
 {# نظام الجداول الموحّد (uds): فرز + ترقيم + أزرار التصدير #}
@@ -88,7 +88,7 @@
 ) %}
   {# بحث فوري في المتصفح (الاسم/السيريال/MAC/المشترك) — لا يرسل للخادم #}
   <input class="hub-input grow" type="search" id="svc-q" autocomplete="off"
-         placeholder="بحث فوري بالاسم أو السيريال أو MAC...">
+         placeholder="{{ _('بحث فوري بالاسم أو السيريال أو MAC...') }}">
   <span class="hub-hint" tabindex="0"
         data-hint="البحث يفلتر الجدول فورًا دون إعادة تحميل. «مسلَّمة» = بحوزة المشترك الآن، و«مرتجعة» = عادت إليك — المفقودة والتالفة تبقى مسجَّلة للمحاسبة."><i class="fa-solid fa-info"></i></span>
 {% endcall %}
@@ -98,20 +98,20 @@
 {# ───── جدول المعدّات — uds موحّد (فرز + ترقيم + تصدير) ───── #}
 {% call hub.section("قائمة المعدّات", icon="table-list", meta=items|length|string + " معدّة", flush=True) %}
   <div class="hub-table-wrap uds-table-wrap" id="svc-table" data-uds-table data-uds-page-size="25"
-       data-uds-export-title="المعدات" style="border:none;border-radius:0">
+       data-uds-export-title="{{ _('المعدات') }}" style="border:none;border-radius:0">
     <table class="hub-table">
       <thead>
         <tr>
           <th class="num" style="width:60px">#</th>
-          <th>الاسم</th>
-          <th>النوع</th>
-          <th>السيريال</th>
+          <th>{{ _('الاسم') }}</th>
+          <th>{{ _('النوع') }}</th>
+          <th>{{ _('السيريال') }}</th>
           <th>MAC</th>
-          <th>المشترك</th>
-          <th class="num">الإيجار/شهر</th>
-          <th>الحالة</th>
-          <th>تاريخ التسليم</th>
-          <th style="width:100px" data-uds-nosort data-uds-nocol data-uds-noexport>إجراءات</th>
+          <th>{{ _('المشترك') }}</th>
+          <th class="num">{{ _('الإيجار/شهر') }}</th>
+          <th>{{ _('الحالة') }}</th>
+          <th>{{ _('تاريخ التسليم') }}</th>
+          <th style="width:100px" data-uds-nosort data-uds-nocol data-uds-noexport>{{ _('إجراءات') }}</th>
         </tr>
       </thead>
       <tbody>
@@ -129,7 +129,7 @@
           <td class="mono small"><bdi dir="ltr">{{ s.given_at|date_local if s.given_at else '—' }}</bdi></td>
           <td>
             <div class="hub-flex-row" style="gap:4px;flex-wrap:nowrap">
-              <a class="hub-btn hub-btn--ghost hub-btn--icon" title="تعديل"
+              <a class="hub-btn hub-btn--ghost hub-btn--icon" title="{{ _('تعديل') }}"
                  href="{{ url_for('radius.svc_edit', sid=s.id) }}">
                 <i class="fa-solid fa-pen"></i>
               </a>
@@ -137,7 +137,7 @@
                  نفس عقد POST القائم: الزر يفتح النافذة والإرسال يتم من نموذجها. #}
               <form method="post" action="{{ url_for('radius.svc_delete', sid=s.id) }}"
                     data-svc-delete-form data-svc-name="{{ s.name|e }}" style="display:inline">
-                <button type="button" class="hub-btn hub-btn--danger hub-btn--icon" title="حذف"
+                <button type="button" class="hub-btn hub-btn--danger hub-btn--icon" title="{{ _('حذف') }}"
                         data-svc-delete-open>
                   <i class="fa-solid fa-trash"></i>
                 </button>
@@ -170,89 +170,89 @@
     {# method="post" ضروري: حاقن الـ CSRF التلقائي يستهدف فقط <form method="post">. #}
     <form method="post" action="{{ url_for('radius.svc_create') }}">
       <div class="fcw-head">
-        <h3 id="fcw-service-create-title"><i class="fa-solid fa-toolbox"></i> إضافة معدّة</h3>
-        <button type="button" class="fcw-x" data-fcw-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
+        <h3 id="fcw-service-create-title"><i class="fa-solid fa-toolbox"></i> {{ _('إضافة معدّة') }}</h3>
+        <button type="button" class="fcw-x" data-fcw-close aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="fcw-body">
 
         {# ── 1) هوية المعدّة ── #}
-        <div class="fcw-group"><i class="fa-solid fa-microchip"></i> هوية المعدّة</div>
+        <div class="fcw-group"><i class="fa-solid fa-microchip"></i> {{ _('هوية المعدّة') }}</div>
         <div class="fcw-grid">
           <label class="hub-field full">
-            <span class="hub-field-label">المشترك <span style="color:#dc2626">*</span></span>
+            <span class="hub-field-label">{{ _('المشترك') }} <span style="color:#dc2626">*</span></span>
             <select class="hub-select" name="subscriber_id" required>
-              <option value="">— اختر مشتركًا —</option>
+              <option value="">{{ _('— اختر مشتركًا —') }}</option>
               {% for s in subs %}
                 <option value="{{ s.id }}">{{ s.username }} — {{ s.full_name or '—' }}</option>
               {% endfor %}
             </select>
-            <span class="hub-field-hint">المشترك الذي تسلَّم المعدّة — يُحتسب عليه إيجارها وتظهر في سجلّه.</span>
+            <span class="hub-field-hint">{{ _('المشترك الذي تسلَّم المعدّة — يُحتسب عليه إيجارها وتظهر في سجلّه.') }}</span>
           </label>
           <label class="hub-field">
-            <span class="hub-field-label">الاسم <span style="color:#dc2626">*</span></span>
-            <input class="hub-input" type="text" name="name" required placeholder="مثال: راوتر منزلي TP-Link">
-            <span class="hub-field-hint">اسم وصفي يميّز المعدّة في القوائم والتقارير.</span>
+            <span class="hub-field-label">{{ _('الاسم') }} <span style="color:#dc2626">*</span></span>
+            <input class="hub-input" type="text" name="name" required placeholder="{{ _('مثال: راوتر منزلي TP-Link') }}">
+            <span class="hub-field-hint">{{ _('اسم وصفي يميّز المعدّة في القوائم والتقارير.') }}</span>
           </label>
           <label class="hub-field">
-            <span class="hub-field-label">النوع</span>
+            <span class="hub-field-label">{{ _('النوع') }}</span>
             <select class="hub-select" name="type">
               {% for t in ['router', 'onu', 'modem', 'cable', 'antenna', 'other'] %}
                 <option value="{{ t }}" {% if t == 'router' %}selected{% endif %}>{{ type_labels.get(t, t) }}</option>
               {% endfor %}
             </select>
-            <span class="hub-field-hint">تصنيف الجهاز — يسهّل الجرد والفلترة.</span>
+            <span class="hub-field-hint">{{ _('تصنيف الجهاز — يسهّل الجرد والفلترة.') }}</span>
           </label>
           <label class="hub-field">
-            <span class="hub-field-label">الرقم التسلسلي</span>
+            <span class="hub-field-label">{{ _('الرقم التسلسلي') }}</span>
             <input class="hub-input mono" type="text" name="serial" dir="ltr" placeholder="SN-XXXXXXXX">
-            <span class="hub-field-hint">يميّز القطعة بدقة عند الدعم أو الاسترجاع — اختياري.</span>
+            <span class="hub-field-hint">{{ _('يميّز القطعة بدقة عند الدعم أو الاسترجاع — اختياري.') }}</span>
           </label>
           <label class="hub-field">
-            <span class="hub-field-label">عنوان MAC</span>
+            <span class="hub-field-label">{{ _('عنوان MAC') }}</span>
             <input class="hub-input mono" type="text" name="mac" dir="ltr" placeholder="AA:BB:CC:DD:EE:FF">
-            <span class="hub-field-hint">العنوان الفيزيائي للجهاز إن وُجد — اختياري.</span>
+            <span class="hub-field-hint">{{ _('العنوان الفيزيائي للجهاز إن وُجد — اختياري.') }}</span>
           </label>
         </div>
 
         {# ── 2) الإسناد والحالة ── #}
-        <div class="fcw-group"><i class="fa-solid fa-clipboard-check"></i> الإسناد والحالة</div>
+        <div class="fcw-group"><i class="fa-solid fa-clipboard-check"></i> {{ _('الإسناد والحالة') }}</div>
         <div class="fcw-grid">
           <label class="hub-field">
-            <span class="hub-field-label">الإيجار / شهر</span>
+            <span class="hub-field-label">{{ _('الإيجار / شهر') }}</span>
             <input class="hub-input" type="number" step="0.01" min="0" name="rent_per_month" value="0" dir="ltr">
-            <span class="hub-field-hint">مبلغ مرجعي للفوترة الدورية بعملة النظام — اترك 0 إن كانت بلا إيجار.</span>
+            <span class="hub-field-hint">{{ _('مبلغ مرجعي للفوترة الدورية بعملة النظام — اترك 0 إن كانت بلا إيجار.') }}</span>
           </label>
           <label class="hub-field">
-            <span class="hub-field-label">الحالة</span>
+            <span class="hub-field-label">{{ _('الحالة') }}</span>
             <select class="hub-select" name="status">
               {% for st in ['given', 'returned', 'lost', 'damaged'] %}
                 <option value="{{ st }}" {% if st == 'given' %}selected{% endif %}>{{ status_map.get(st, (st,))[0] }}</option>
               {% endfor %}
             </select>
-            <span class="hub-field-hint">«مسلَّمة» = بحوزة المشترك الآن — تغيير الحالة لاحقًا لا يحذف السجل.</span>
+            <span class="hub-field-hint">{{ _('«مسلَّمة» = بحوزة المشترك الآن — تغيير الحالة لاحقًا لا يحذف السجل.') }}</span>
           </label>
           <label class="hub-field">
-            <span class="hub-field-label">تاريخ التسليم</span>
+            <span class="hub-field-label">{{ _('تاريخ التسليم') }}</span>
             <input class="hub-input" type="date" name="given_at" dir="ltr">
-            <span class="hub-field-hint">يوم تسليم الجهاز للمشترك.</span>
+            <span class="hub-field-hint">{{ _('يوم تسليم الجهاز للمشترك.') }}</span>
           </label>
           <label class="hub-field">
-            <span class="hub-field-label">تاريخ الإرجاع</span>
+            <span class="hub-field-label">{{ _('تاريخ الإرجاع') }}</span>
             <input class="hub-input" type="date" name="returned_at" dir="ltr">
-            <span class="hub-field-hint">يُملأ عند استعادة الجهاز — اتركه فارغًا للمعدّة الجديدة.</span>
+            <span class="hub-field-hint">{{ _('يُملأ عند استعادة الجهاز — اتركه فارغًا للمعدّة الجديدة.') }}</span>
           </label>
           <label class="hub-field full">
-            <span class="hub-field-label">ملاحظات</span>
+            <span class="hub-field-label">{{ _('ملاحظات') }}</span>
             <textarea class="hub-textarea" name="notes" rows="2"
-                      placeholder="حالة الجهاز، ملحقاته، أي اتفاق خاص..."></textarea>
-            <span class="hub-field-hint">أي تفاصيل تفيد عند الاسترجاع أو المحاسبة.</span>
+                      placeholder="{{ _('حالة الجهاز، ملحقاته، أي اتفاق خاص...') }}"></textarea>
+            <span class="hub-field-hint">{{ _('أي تفاصيل تفيد عند الاسترجاع أو المحاسبة.') }}</span>
           </label>
         </div>
 
       </div>
       <div class="fcw-foot">
-        <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>إغلاق</button>
-        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> حفظ المعدّة</button>
+        <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>{{ _('إغلاق') }}</button>
+        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ المعدّة') }}</button>
       </div>
     </form>
   </div>
@@ -262,19 +262,19 @@
 <div class="fcw-modal" data-fcw-modal="service-delete" hidden>
   <div class="fcw-dialog" role="dialog" aria-modal="true" aria-labelledby="fcw-service-delete-title" style="width:min(440px,100%)">
     <div class="fcw-head">
-      <h3 id="fcw-service-delete-title" style="color:#b91c1c"><i class="fa-solid fa-trash"></i> حذف معدّة</h3>
-      <button type="button" class="fcw-x" data-fcw-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
+      <h3 id="fcw-service-delete-title" style="color:#b91c1c"><i class="fa-solid fa-trash"></i> {{ _('حذف معدّة') }}</h3>
+      <button type="button" class="fcw-x" data-fcw-close aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <div class="fcw-body">
       <div style="font-size:13.5px;line-height:1.9;color:var(--hub-text,#0f172a)">
-        سيُحذف سجل المعدّة <strong id="svc-del-name" style="color:#b91c1c">—</strong> نهائيًا
+        {{ _('سيُحذف سجل المعدّة') }} <strong id="svc-del-name" style="color:#b91c1c">—</strong> نهائيًا
         ولا يمكن استرجاعه. هل أنت متأكد؟
       </div>
     </div>
     <div class="fcw-foot">
-      <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>إلغاء</button>
+      <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>{{ _('إلغاء') }}</button>
       <button class="hub-btn hub-btn--danger" type="button" id="svc-del-confirm">
-        <i class="fa-solid fa-trash"></i> حذف نهائيًا
+        <i class="fa-solid fa-trash"></i> {{ _('حذف نهائيًا') }}
       </button>
     </div>
   </div>

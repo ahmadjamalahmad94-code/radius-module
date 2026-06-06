@@ -243,14 +243,14 @@
 <div class="dg-layout">
 
   {# ───── الفهرس الجانبي اللاصق ───── #}
-  <nav class="dg-toc dg-noprint" aria-label="فهرس الدليل">
-    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> فهرس الخطوات</div>
-    <a href="#dg-s1" data-dg-toc><span class="n">1</span> الصفحة والتبويبان</a>
-    <a href="#dg-s2" data-dg-toc><span class="n">2</span> تبويب الفواتير</a>
-    <a href="#dg-s3" data-dg-toc><span class="n">3</span> إصدار فاتورة جديدة</a>
-    <a href="#dg-s4" data-dg-toc><span class="n">4</span> تبويب الكوبونات</a>
-    <a href="#dg-s5" data-dg-toc><span class="n">5</span> توليد كوبونات</a>
-    <a href="#dg-s6" data-dg-toc><span class="n">6</span> صرف وإلغاء كوبون</a>
+  <nav class="dg-toc dg-noprint" aria-label="{{ _('فهرس الدليل') }}">
+    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> {{ _('فهرس الخطوات') }}</div>
+    <a href="#dg-s1" data-dg-toc><span class="n">1</span> {{ _('الصفحة والتبويبان') }}</a>
+    <a href="#dg-s2" data-dg-toc><span class="n">2</span> {{ _('تبويب الفواتير') }}</a>
+    <a href="#dg-s3" data-dg-toc><span class="n">3</span> {{ _('إصدار فاتورة جديدة') }}</a>
+    <a href="#dg-s4" data-dg-toc><span class="n">4</span> {{ _('تبويب الكوبونات') }}</a>
+    <a href="#dg-s5" data-dg-toc><span class="n">5</span> {{ _('توليد كوبونات') }}</a>
+    <a href="#dg-s6" data-dg-toc><span class="n">6</span> {{ _('صرف وإلغاء كوبون') }}</a>
   </nav>
 
   {# ───── عمود المحتوى ───── #}
@@ -259,11 +259,11 @@
     <div class="dg-lead">
       <span class="ic"><i class="fa-solid fa-lightbulb"></i></span>
       <div>
-        <h3>قبل ما نبدأ — شو الفرق بين الفاتورة والكوبون؟</h3>
+        <h3>{{ _('قبل ما نبدأ — شو الفرق بين الفاتورة والكوبون؟') }}</h3>
         <p>
-          <strong>الفاتورة</strong> حركة مالية مرتبطة بمشترك محدّد (تحصيل، إرجاع، إيداع…).
-          <strong>الكوبون</strong> رمز شحن بقيمة محددة يُولَّد بالجملة، يدخله المشترك أو الموزّع
-          لشحن قيمته. الصفحة تجمع الاثنين في تبويبين — وهي <strong>واجهة عرض موحّدة</strong>: كل
+          <strong>{{ _('الفاتورة') }}</strong> {{ _('حركة مالية مرتبطة بمشترك محدّد (تحصيل، إرجاع، إيداع…).') }}
+          <strong>{{ _('الكوبون') }}</strong> رمز شحن بقيمة محددة يُولَّد بالجملة، يدخله المشترك أو الموزّع
+          لشحن قيمته. الصفحة تجمع الاثنين في تبويبين — وهي <strong>{{ _('واجهة عرض موحّدة') }}</strong>: كل
           إصدار أو توليد يمرّ بمنطق الفوترة والكوبونات الأصلي دون تغيير.
         </p>
       </div>
@@ -273,26 +273,26 @@
     <section class="dg-step" id="dg-s1">
       <div class="dg-badge">1</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-door-open"></i> افتح الصفحة واعرف التبويبين</h2>
+        <h2><i class="fa-solid fa-door-open"></i> {{ _('افتح الصفحة واعرف التبويبين') }}</h2>
         <p>
-          من قسم <strong>«المحاسبة والمالية»</strong> افتح <strong>«الفواتير والكوبونات»</strong>.
+          {{ _('من قسم') }} <strong>{{ _('«المحاسبة والمالية»') }}</strong> {{ _('افتح') }} <strong>{{ _('«الفواتير والكوبونات»') }}</strong>.
           أعلى الصفحة تبويبان تبدّل بينهما، وكل تبويب له شريط مؤشرات وأزرار خاصة:
         </p>
         <ul>
-          <li><strong>الفواتير:</strong> قائمة فواتير المشتركين + زر «فاتورة جديدة».</li>
-          <li><strong>الكوبونات:</strong> قائمة رموز الشحن + زرّا «صرف كوبون» و«توليد كوبونات».</li>
+          <li><strong>{{ _('الفواتير:') }}</strong> {{ _('قائمة فواتير المشتركين + زر «فاتورة جديدة».') }}</li>
+          <li><strong>{{ _('الكوبونات:') }}</strong> {{ _('قائمة رموز الشحن + زرّا «صرف كوبون» و«توليد كوبونات».') }}</li>
         </ul>
 
         <div class="dg-mock" aria-hidden="true">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">الفواتير والكوبونات</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('الفواتير والكوبونات') }}</span></div>
           <div class="dg-mock-body">
             <div class="dg-tabs">
-              <span class="on"><i class="fa-solid fa-file-invoice"></i> الفواتير</span>
-              <span><i class="fa-solid fa-ticket"></i> الكوبونات</span>
+              <span class="on"><i class="fa-solid fa-file-invoice"></i> {{ _('الفواتير') }}</span>
+              <span><i class="fa-solid fa-ticket"></i> {{ _('الكوبونات') }}</span>
             </div>
           </div>
         </div>
-        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> التبويب المختار يتلوّن بالبنفسجي، وتتبدّل معه المؤشرات والأزرار.</div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> {{ _('التبويب المختار يتلوّن بالبنفسجي، وتتبدّل معه المؤشرات والأزرار.') }}</div>
       </div>
     </section>
 
@@ -300,37 +300,37 @@
     <section class="dg-step" id="dg-s2">
       <div class="dg-badge">2</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-file-invoice"></i> تبويب الفواتير — المؤشرات والفلاتر والجدول</h2>
-        <p>شريط مؤشرات الفواتير أربعة أرقام:</p>
+        <h2><i class="fa-solid fa-file-invoice"></i> {{ _('تبويب الفواتير — المؤشرات والفلاتر والجدول') }}</h2>
+        <p>{{ _('شريط مؤشرات الفواتير أربعة أرقام:') }}</p>
 
         <div class="dg-mock" aria-hidden="true">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">الفواتير › المؤشرات</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('الفواتير › المؤشرات') }}</span></div>
           <div class="dg-mock-body">
             <div class="dg-kpis">
-              <div class="dg-kpi brand"><span class="lab"><i class="fa-solid fa-file-invoice-dollar"></i> إجمالي الفواتير</span><span class="val">8,200.00</span></div>
-              <div class="dg-kpi green"><span class="lab"><i class="fa-solid fa-circle-check"></i> المدفوعة</span><span class="val">6,500.00</span></div>
-              <div class="dg-kpi amber"><span class="lab"><i class="fa-solid fa-clock"></i> المعلّقة</span><span class="val">1,700.00</span></div>
-              <div class="dg-kpi blue"><span class="lab"><i class="fa-solid fa-hashtag"></i> عدد الفواتير</span><span class="val">42</span></div>
+              <div class="dg-kpi brand"><span class="lab"><i class="fa-solid fa-file-invoice-dollar"></i> {{ _('إجمالي الفواتير') }}</span><span class="val">8,200.00</span></div>
+              <div class="dg-kpi green"><span class="lab"><i class="fa-solid fa-circle-check"></i> {{ _('المدفوعة') }}</span><span class="val">6,500.00</span></div>
+              <div class="dg-kpi amber"><span class="lab"><i class="fa-solid fa-clock"></i> {{ _('المعلّقة') }}</span><span class="val">1,700.00</span></div>
+              <div class="dg-kpi blue"><span class="lab"><i class="fa-solid fa-hashtag"></i> {{ _('عدد الفواتير') }}</span><span class="val">42</span></div>
             </div>
             <div class="dg-filters" style="margin-top:6px">
-              <span class="on">الكل</span><span>مدفوعة</span><span>معلّقة</span><span>فشلت</span>
+              <span class="on">{{ _('الكل') }}</span><span>{{ _('مدفوعة') }}</span><span>{{ _('معلّقة') }}</span><span>{{ _('فشلت') }}</span>
             </div>
             <table class="dg-tbl">
-              <thead><tr><th>الرقم</th><th>المشترك</th><th>المبلغ</th><th>الاتجاه</th><th>الحالة</th></tr></thead>
+              <thead><tr><th>{{ _('الرقم') }}</th><th>{{ _('المشترك') }}</th><th>{{ _('المبلغ') }}</th><th>{{ _('الاتجاه') }}</th><th>{{ _('الحالة') }}</th></tr></thead>
               <tbody>
-                <tr><td class="mono">INV-031</td><td>ahmad2026</td><td class="num">50.00</td><td>تحصيل</td><td><span class="dg-pill"><span class="dot"></span> مدفوعة</span></td></tr>
-                <tr><td class="mono">INV-030</td><td>sara_net</td><td class="num">20.00</td><td>تحصيل</td><td><span class="dg-pill amber"><span class="dot"></span> معلّقة</span></td></tr>
+                <tr><td class="mono">INV-031</td><td>ahmad2026</td><td class="num">50.00</td><td>{{ _('تحصيل') }}</td><td><span class="dg-pill"><span class="dot"></span> {{ _('مدفوعة') }}</span></td></tr>
+                <tr><td class="mono">INV-030</td><td>sara_net</td><td class="num">20.00</td><td>{{ _('تحصيل') }}</td><td><span class="dg-pill amber"><span class="dot"></span> {{ _('معلّقة') }}</span></td></tr>
               </tbody>
             </table>
           </div>
         </div>
 
         <ul>
-          <li><strong>الفلاتر:</strong> الكل / مدفوعة / معلّقة / فشلت — لعرض دفعة محددة.</li>
-          <li><strong>الحالة:</strong> <span class="dg-pill"><span class="dot"></span> مدفوعة</span> وصل المبلغ،
-            <span class="dg-pill amber"><span class="dot"></span> معلّقة</span> بانتظار التحصيل،
-            <span class="dg-pill grey"><span class="dot"></span> فشلت</span> لم تكتمل.</li>
-          <li><strong>الاتجاه:</strong> تحصيل / إرجاع / إيداع / سحب / رصيد — يحدّد أثر الحركة على الحساب.</li>
+          <li><strong>{{ _('الفلاتر:') }}</strong> {{ _('الكل / مدفوعة / معلّقة / فشلت — لعرض دفعة محددة.') }}</li>
+          <li><strong>{{ _('الحالة:') }}</strong> <span class="dg-pill"><span class="dot"></span> {{ _('مدفوعة') }}</span> {{ _('وصل المبلغ،') }}
+            <span class="dg-pill amber"><span class="dot"></span> {{ _('معلّقة') }}</span> {{ _('بانتظار التحصيل،') }}
+            <span class="dg-pill grey"><span class="dot"></span> {{ _('فشلت') }}</span> {{ _('لم تكتمل.') }}</li>
+          <li><strong>{{ _('الاتجاه:') }}</strong> {{ _('تحصيل / إرجاع / إيداع / سحب / رصيد — يحدّد أثر الحركة على الحساب.') }}</li>
         </ul>
       </div>
     </section>
@@ -339,47 +339,47 @@
     <section class="dg-step" id="dg-s3">
       <div class="dg-badge">3</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-plus"></i> إصدار فاتورة جديدة — كل حقل شو معناه</h2>
+        <h2><i class="fa-solid fa-plus"></i> {{ _('إصدار فاتورة جديدة — كل حقل شو معناه') }}</h2>
         <p>
-          اضغط زر <strong>«فاتورة جديدة»</strong>؛ تفتح نافذة فيها هذه الحقول (المعلَّمة بنجمة
-          <span style="color:#dc2626;font-weight:900">*</span> إجبارية):
+          {{ _('اضغط زر') }} <strong>{{ _('«فاتورة جديدة»') }}</strong>{{ _('؛ تفتح نافذة فيها هذه الحقول (المعلَّمة بنجمة') }}
+          <span style="color:#dc2626;font-weight:900">*</span> {{ _('إجبارية):') }}
         </p>
         <ul>
-          <li><strong>المشترك *:</strong> منتقي بحث فوري بالاسم أو اليوزر.</li>
-          <li><strong>الباقة:</strong> اختيارية — تربط الفاتورة بباقة وسعرها.</li>
-          <li><strong>المبلغ *:</strong> قيمة الفاتورة.</li>
-          <li><strong>الاتجاه:</strong> تحصيل / إرجاع / إيداع / سحب / رصيد.</li>
-          <li><strong>نوع الخدمة:</strong> بوابة الدخول (Hotspot) / برودباند (PPPoE) / الرصيد.</li>
-          <li><strong>طريقة الدفع:</strong> نقدًا / حوالة / بطاقة / دفع إلكتروني / يدوي.</li>
-          <li><strong>الحالة:</strong> مدفوعة / معلَّقة / فشلت.</li>
-          <li><strong>تنتهي في:</strong> تاريخ اختياري. و<strong>ملاحظة</strong> حرّة.</li>
+          <li><strong>{{ _('المشترك *:') }}</strong> {{ _('منتقي بحث فوري بالاسم أو اليوزر.') }}</li>
+          <li><strong>{{ _('الباقة:') }}</strong> {{ _('اختيارية — تربط الفاتورة بباقة وسعرها.') }}</li>
+          <li><strong>{{ _('المبلغ *:') }}</strong> {{ _('قيمة الفاتورة.') }}</li>
+          <li><strong>{{ _('الاتجاه:') }}</strong> {{ _('تحصيل / إرجاع / إيداع / سحب / رصيد.') }}</li>
+          <li><strong>{{ _('نوع الخدمة:') }}</strong> {{ _('بوابة الدخول (Hotspot) / برودباند (PPPoE) / الرصيد.') }}</li>
+          <li><strong>{{ _('طريقة الدفع:') }}</strong> {{ _('نقدًا / حوالة / بطاقة / دفع إلكتروني / يدوي.') }}</li>
+          <li><strong>{{ _('الحالة:') }}</strong> {{ _('مدفوعة / معلَّقة / فشلت.') }}</li>
+          <li><strong>{{ _('تنتهي في:') }}</strong> {{ _('تاريخ اختياري. و') }}<strong>{{ _('ملاحظة') }}</strong> {{ _('حرّة.') }}</li>
         </ul>
 
         <div class="dg-mock" aria-hidden="true">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">فاتورة جديدة</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('فاتورة جديدة') }}</span></div>
           <div class="dg-mock-body">
             <div class="dg-mf">
-              <label>المشترك <span class="req">*</span></label>
-              <div class="dg-mf-select"><div class="dg-mf-input hl">ahmad2026 — أحمد</div></div>
+              <label>{{ _('المشترك') }} <span class="req">*</span></label>
+              <div class="dg-mf-select"><div class="dg-mf-input hl">{{ _('ahmad2026 — أحمد') }}</div></div>
             </div>
             <div class="dg-mock-grid2">
-              <div class="dg-mf"><label>المبلغ <span class="req">*</span></label><div class="dg-mf-input hl">50.00</div></div>
-              <div class="dg-mf"><label>الاتجاه</label><div class="dg-mf-select"><div class="dg-mf-input">تحصيل</div></div></div>
+              <div class="dg-mf"><label>{{ _('المبلغ') }} <span class="req">*</span></label><div class="dg-mf-input hl">50.00</div></div>
+              <div class="dg-mf"><label>{{ _('الاتجاه') }}</label><div class="dg-mf-select"><div class="dg-mf-input">{{ _('تحصيل') }}</div></div></div>
             </div>
             <div class="dg-mock-grid2">
-              <div class="dg-mf"><label>طريقة الدفع</label><div class="dg-mf-select"><div class="dg-mf-input">نقدًا</div></div></div>
-              <div class="dg-mf"><label>الحالة</label><div class="dg-mf-select"><div class="dg-mf-input">مدفوعة</div></div></div>
+              <div class="dg-mf"><label>{{ _('طريقة الدفع') }}</label><div class="dg-mf-select"><div class="dg-mf-input">{{ _('نقدًا') }}</div></div></div>
+              <div class="dg-mf"><label>{{ _('الحالة') }}</label><div class="dg-mf-select"><div class="dg-mf-input">{{ _('مدفوعة') }}</div></div></div>
             </div>
             <div class="dg-mock-actions">
-              <span class="dg-mock-btn ghost">إلغاء</span>
-              <span class="dg-mock-btn primary"><i class="fa-solid fa-check"></i> إصدار الفاتورة</span>
+              <span class="dg-mock-btn ghost">{{ _('إلغاء') }}</span>
+              <span class="dg-mock-btn primary"><i class="fa-solid fa-check"></i> {{ _('إصدار الفاتورة') }}</span>
             </div>
           </div>
         </div>
 
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>نصيحة:</b> إذا قبضت المبلغ فعلًا اختر الحالة «مدفوعة»؛ وإذا الفاتورة بانتظار الدفع
+          <span><b>{{ _('نصيحة:') }}</b> إذا قبضت المبلغ فعلًا اختر الحالة «مدفوعة»؛ وإذا الفاتورة بانتظار الدفع
           اتركها «معلَّقة» حتى يتحدّث مؤشر «المعلّقة» تلقائيًا.</span>
         </div>
       </div>
@@ -389,35 +389,35 @@
     <section class="dg-step" id="dg-s4">
       <div class="dg-badge">4</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-ticket"></i> تبويب الكوبونات — المؤشرات والجدول والحالات</h2>
+        <h2><i class="fa-solid fa-ticket"></i> {{ _('تبويب الكوبونات — المؤشرات والجدول والحالات') }}</h2>
         <p>بدّل لتبويب «الكوبونات». مؤشراته: القيمة الإجمالية، نشطة، مستخدمة، ملغاة. والجدول أعمدته:
           الكود، القيمة، الباقة، الحالة، تنتهي في، وإجراء.</p>
 
         <div class="dg-mock" aria-hidden="true">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">الكوبونات</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('الكوبونات') }}</span></div>
           <div class="dg-mock-body">
             <div class="dg-kpis">
-              <div class="dg-kpi brand"><span class="lab"><i class="fa-solid fa-sack-dollar"></i> القيمة الإجمالية</span><span class="val">1,000.00</span></div>
-              <div class="dg-kpi green"><span class="lab"><i class="fa-solid fa-ticket"></i> نشطة</span><span class="val">180</span></div>
-              <div class="dg-kpi blue"><span class="lab"><i class="fa-solid fa-circle-check"></i> مستخدمة</span><span class="val">14</span></div>
-              <div class="dg-kpi amber"><span class="lab"><i class="fa-solid fa-ban"></i> ملغاة</span><span class="val">6</span></div>
+              <div class="dg-kpi brand"><span class="lab"><i class="fa-solid fa-sack-dollar"></i> {{ _('القيمة الإجمالية') }}</span><span class="val">1,000.00</span></div>
+              <div class="dg-kpi green"><span class="lab"><i class="fa-solid fa-ticket"></i> {{ _('نشطة') }}</span><span class="val">180</span></div>
+              <div class="dg-kpi blue"><span class="lab"><i class="fa-solid fa-circle-check"></i> {{ _('مستخدمة') }}</span><span class="val">14</span></div>
+              <div class="dg-kpi amber"><span class="lab"><i class="fa-solid fa-ban"></i> {{ _('ملغاة') }}</span><span class="val">6</span></div>
             </div>
             <table class="dg-tbl">
-              <thead><tr><th>الكود</th><th>القيمة</th><th>الحالة</th><th>تنتهي في</th><th>إجراء</th></tr></thead>
+              <thead><tr><th>{{ _('الكود') }}</th><th>{{ _('القيمة') }}</th><th>{{ _('الحالة') }}</th><th>{{ _('تنتهي في') }}</th><th>{{ _('إجراء') }}</th></tr></thead>
               <tbody>
-                <tr><td class="mono">AB12-CD34-EF56</td><td class="num">5.00</td><td><span class="dg-pill"><span class="dot"></span> نشطة</span></td><td>2026-07-01</td><td><span class="dg-mock-btn danger" style="padding:3px 8px"><i class="fa-solid fa-ban"></i> إلغاء</span></td></tr>
-                <tr><td class="mono">GH78-IJ90-KL12</td><td class="num">5.00</td><td><span class="dg-pill blue"><span class="dot"></span> مستخدمة</span></td><td>—</td><td>—</td></tr>
+                <tr><td class="mono">AB12-CD34-EF56</td><td class="num">5.00</td><td><span class="dg-pill"><span class="dot"></span> {{ _('نشطة') }}</span></td><td>2026-07-01</td><td><span class="dg-mock-btn danger" style="padding:3px 8px"><i class="fa-solid fa-ban"></i> {{ _('إلغاء') }}</span></td></tr>
+                <tr><td class="mono">GH78-IJ90-KL12</td><td class="num">5.00</td><td><span class="dg-pill blue"><span class="dot"></span> {{ _('مستخدمة') }}</span></td><td>—</td><td>—</td></tr>
               </tbody>
             </table>
           </div>
         </div>
 
         <ul>
-          <li><span class="dg-pill"><span class="dot"></span> نشطة</span> جاهز للصرف،
-            <span class="dg-pill blue"><span class="dot"></span> مستخدمة</span> صُرف،
-            <span class="dg-pill red"><span class="dot"></span> ملغاة</span> أُوقف،
-            <span class="dg-pill grey"><span class="dot"></span> منتهية</span> انقضى تاريخها.</li>
-          <li><strong>الفلاتر:</strong> الكل / نشطة / مستخدمة / ملغاة.</li>
+          <li><span class="dg-pill"><span class="dot"></span> {{ _('نشطة') }}</span> {{ _('جاهز للصرف،') }}
+            <span class="dg-pill blue"><span class="dot"></span> {{ _('مستخدمة') }}</span> {{ _('صُرف،') }}
+            <span class="dg-pill red"><span class="dot"></span> {{ _('ملغاة') }}</span> {{ _('أُوقف،') }}
+            <span class="dg-pill grey"><span class="dot"></span> {{ _('منتهية') }}</span> {{ _('انقضى تاريخها.') }}</li>
+          <li><strong>{{ _('الفلاتر:') }}</strong> {{ _('الكل / نشطة / مستخدمة / ملغاة.') }}</li>
         </ul>
       </div>
     </section>
@@ -426,37 +426,37 @@
     <section class="dg-step" id="dg-s5">
       <div class="dg-badge">5</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-layer-group"></i> توليد دفعة كوبونات</h2>
-        <p>اضغط <strong>«توليد كوبونات»</strong>؛ تنشئ النافذة دفعة كاملة دفعة واحدة بهذه الحقول:</p>
+        <h2><i class="fa-solid fa-layer-group"></i> {{ _('توليد دفعة كوبونات') }}</h2>
+        <p>{{ _('اضغط') }} <strong>{{ _('«توليد كوبونات»') }}</strong>{{ _('؛ تنشئ النافذة دفعة كاملة دفعة واحدة بهذه الحقول:') }}</p>
         <ul>
-          <li><strong>عدد الكوبونات *:</strong> كم رمزًا تولّد (حتى 5000).</li>
-          <li><strong>القيمة لكل كوبون *:</strong> المبلغ الذي يُضاف عند تفعيل الكوبون.</li>
-          <li><strong>الباقة:</strong> اختياري — لربط الكوبونات بباقة.</li>
-          <li><strong>عدد خانات الكود:</strong> 6 / 8 / 10 / <strong>12 (الافتراضي)</strong> بصيغة XXXX-XXXX-XXXX.</li>
-          <li><strong>تنتهي في:</strong> تاريخ انتهاء اختياري للدفعة.</li>
+          <li><strong>{{ _('عدد الكوبونات *:') }}</strong> {{ _('كم رمزًا تولّد (حتى 5000).') }}</li>
+          <li><strong>{{ _('القيمة لكل كوبون *:') }}</strong> {{ _('المبلغ الذي يُضاف عند تفعيل الكوبون.') }}</li>
+          <li><strong>{{ _('الباقة:') }}</strong> {{ _('اختياري — لربط الكوبونات بباقة.') }}</li>
+          <li><strong>{{ _('عدد خانات الكود:') }}</strong> 6 / 8 / 10 / <strong>{{ _('12 (الافتراضي)') }}</strong> {{ _('بصيغة XXXX-XXXX-XXXX.') }}</li>
+          <li><strong>{{ _('تنتهي في:') }}</strong> {{ _('تاريخ انتهاء اختياري للدفعة.') }}</li>
         </ul>
 
         <div class="dg-mock" aria-hidden="true">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">توليد كوبونات</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('توليد كوبونات') }}</span></div>
           <div class="dg-mock-body">
             <div class="dg-mock-grid2">
-              <div class="dg-mf"><label>عدد الكوبونات <span class="req">*</span></label><div class="dg-mf-input hl">20</div></div>
-              <div class="dg-mf"><label>القيمة لكل كوبون <span class="req">*</span></label><div class="dg-mf-input hl">5.00</div></div>
+              <div class="dg-mf"><label>{{ _('عدد الكوبونات') }} <span class="req">*</span></label><div class="dg-mf-input hl">20</div></div>
+              <div class="dg-mf"><label>{{ _('القيمة لكل كوبون') }} <span class="req">*</span></label><div class="dg-mf-input hl">5.00</div></div>
             </div>
             <div class="dg-mock-grid2">
-              <div class="dg-mf"><label>عدد خانات الكود</label><div class="dg-mf-select"><div class="dg-mf-input">12 خانة (الافتراضي)</div></div></div>
-              <div class="dg-mf"><label>تنتهي في</label><div class="dg-mf-input ph">اختياري</div></div>
+              <div class="dg-mf"><label>{{ _('عدد خانات الكود') }}</label><div class="dg-mf-select"><div class="dg-mf-input">{{ _('12 خانة (الافتراضي)') }}</div></div></div>
+              <div class="dg-mf"><label>{{ _('تنتهي في') }}</label><div class="dg-mf-input ph">{{ _('اختياري') }}</div></div>
             </div>
             <div class="dg-mock-actions">
-              <span class="dg-mock-btn ghost">إلغاء</span>
-              <span class="dg-mock-btn primary"><i class="fa-solid fa-plus"></i> توليد</span>
+              <span class="dg-mock-btn ghost">{{ _('إلغاء') }}</span>
+              <span class="dg-mock-btn primary"><i class="fa-solid fa-plus"></i> {{ _('توليد') }}</span>
             </div>
           </div>
         </div>
 
         <div class="dg-warn">
           <span class="ic">⚠️</span>
-          <span><b>انتبه:</b> القيمة وعدد الكوبونات يحدّدان <b>إجمالي قيمة الدفعة</b> (مثلًا 20 × 5 = 100).
+          <span><b>{{ _('انتبه:') }}</b> {{ _('القيمة وعدد الكوبونات يحدّدان') }} <b>{{ _('إجمالي قيمة الدفعة') }}</b> (مثلًا 20 × 5 = 100).
           راجع الرقمين قبل التوليد — الدفعة تُنشأ كاملة فورًا.</span>
         </div>
       </div>
@@ -466,46 +466,46 @@
     <section class="dg-step" id="dg-s6">
       <div class="dg-badge">6</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-hand-holding-dollar"></i> صرف كوبون — وإلغاء كوبون</h2>
+        <h2><i class="fa-solid fa-hand-holding-dollar"></i> {{ _('صرف كوبون — وإلغاء كوبون') }}</h2>
         <p>
-          <strong>صرف كوبون:</strong> زر «صرف كوبون» يفتح نافذة تدخل فيها <strong>كود الكوبون *</strong>
-          وتختار <strong>المشترك *</strong>. عند التأكيد يتحقق النظام أن الكود موجود ونشط وغير منتهٍ،
-          ثم يُعلِّمه <strong>«مستخدمًا»</strong> ويضيف قيمته فورًا إلى رصيد المشترك.
+          <strong>{{ _('صرف كوبون:') }}</strong> {{ _('زر «صرف كوبون» يفتح نافذة تدخل فيها') }} <strong>{{ _('كود الكوبون *') }}</strong>
+          {{ _('وتختار') }} <strong>{{ _('المشترك *') }}</strong>. عند التأكيد يتحقق النظام أن الكود موجود ونشط وغير منتهٍ،
+          ثم يُعلِّمه <strong>{{ _('«مستخدمًا»') }}</strong> {{ _('ويضيف قيمته فورًا إلى رصيد المشترك.') }}
         </p>
 
         <div class="dg-mock" aria-hidden="true" style="max-width:460px">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">صرف كوبون</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('صرف كوبون') }}</span></div>
           <div class="dg-mock-body">
             <div class="dg-mf">
-              <label>كود الكوبون <span class="req">*</span></label>
+              <label>{{ _('كود الكوبون') }} <span class="req">*</span></label>
               <div class="dg-mf-input hl mono">AB12-CD34-EF56</div>
             </div>
             <div class="dg-mf">
-              <label>المشترك <span class="req">*</span></label>
-              <div class="dg-mf-select"><div class="dg-mf-input">ahmad2026 — أحمد</div></div>
+              <label>{{ _('المشترك') }} <span class="req">*</span></label>
+              <div class="dg-mf-select"><div class="dg-mf-input">{{ _('ahmad2026 — أحمد') }}</div></div>
             </div>
             <div class="dg-mock-actions">
-              <span class="dg-mock-btn ghost">إلغاء</span>
-              <span class="dg-mock-btn primary"><i class="fa-solid fa-check"></i> صرف الكوبون</span>
+              <span class="dg-mock-btn ghost">{{ _('إلغاء') }}</span>
+              <span class="dg-mock-btn primary"><i class="fa-solid fa-check"></i> {{ _('صرف الكوبون') }}</span>
             </div>
           </div>
         </div>
 
         <p style="margin-top:13px">
-          <strong>إلغاء كوبون:</strong> في عمود «إجراء» بصف أي كوبون <strong>نشط</strong> زر «إلغاء».
-          يفتح تأكيدًا ثم يوقف الكوبون <strong>نهائيًا</strong>.
+          <strong>{{ _('إلغاء كوبون:') }}</strong> {{ _('في عمود «إجراء» بصف أي كوبون') }} <strong>{{ _('نشط') }}</strong> زر «إلغاء».
+          يفتح تأكيدًا ثم يوقف الكوبون <strong>{{ _('نهائيًا') }}</strong>.
         </p>
 
         <div class="dg-warn">
           <span class="ic">⚠️</span>
-          <span><b>انتبه:</b> كلاهما لا رجوع فيه — الكوبون لا يُصرف مرتين، وإلغاؤه <b>نهائي</b> ولا يمكن
+          <span><b>{{ _('انتبه:') }}</b> {{ _('كلاهما لا رجوع فيه — الكوبون لا يُصرف مرتين، وإلغاؤه') }} <b>{{ _('نهائي') }}</b> ولا يمكن
           التراجع. تأكّد من الكود والمشترك قبل التأكيد.</span>
         </div>
 
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>وبعدين؟</b> بعد الصرف تظهر قيمة الكوبون في رصيد المشترك، والحركة المالية تنعكس في
-          <b>المركز المالي</b> و<b>السجل المحاسبي</b> — راجع دليليهما لمتابعتها.</span>
+          <span><b>{{ _('وبعدين؟') }}</b> {{ _('بعد الصرف تظهر قيمة الكوبون في رصيد المشترك، والحركة المالية تنعكس في') }}
+          <b>{{ _('المركز المالي') }}</b> {{ _('و') }}<b>{{ _('السجل المحاسبي') }}</b> {{ _('— راجع دليليهما لمتابعتها.') }}</span>
         </div>
       </div>
     </section>

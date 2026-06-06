@@ -14,7 +14,7 @@
 {% block title %}إشعارات الربط الخارجي — Hobe Hub{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-bolt"></i>{% endblock %}
 {% block page_title %}إشعارات الربط الخارجي{% endblock %}
-{% block page_sub %}<span class="sub">إرسال أحداث النظام إلى رابط خارجي بتوقيع أمني</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('إرسال أحداث النظام إلى رابط خارجي بتوقيع أمني') }}</span>{% endblock %}
 
 {% block content %}
 <div class="hr-page-shell" data-admin-rhythm>
@@ -22,10 +22,10 @@
 {# ───── Unified hero: title + subtitle + save/deliveries actions ───── #}
 {% set _actions %}
   <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.wh_deliveries') }}">
-    <i class="fa-solid fa-list-check"></i> سجل الإرسال
+    <i class="fa-solid fa-list-check"></i> {{ _('سجل الإرسال') }}
   </a>
   <button class="hub-btn hub-btn--primary" type="submit" form="wh-settings-form">
-    <i class="fa-solid fa-floppy-disk"></i> حفظ الإعدادات
+    <i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ الإعدادات') }}
   </button>
 {% endset %}
 {{ hub.hero(
@@ -45,28 +45,28 @@
     icon="circle-question"
   ) %}
     <ol style="margin:0;padding-inline-start:20px;color:var(--hub-text-soft);font-size:12.5px;line-height:2">
-      <li><strong>تنبيه فوري بأحداث النظام.</strong> عند كل دفعة جديدة، تجديد اشتراك، أو تنبيه أمني، يرسل النظام إشعارًا آليًا للرابط الذي تحدده.</li>
-      <li><strong>توقيع آمن بكل طلب.</strong> كل إشعار يحمل توقيعًا أمنيًا محسوبًا بالمفتاح السري. تحقّق من التوقيع قبل الوثوق بالبيانات.</li>
-      <li><strong>إعادة محاولة ذكية.</strong> الفشل المؤقت (أخطاء شبكة أو 5xx) يُعاد بفترات متصاعدة، والفشل النهائي (4xx) يتوقف فورًا.</li>
-      <li><strong>سجل كامل.</strong> كل عملية إرسال محفوظة في سجل الإرسال — راجعها وأعد المحاولة يدويًا عند الحاجة.</li>
+      <li><strong>{{ _('تنبيه فوري بأحداث النظام.') }}</strong> {{ _('عند كل دفعة جديدة، تجديد اشتراك، أو تنبيه أمني، يرسل النظام إشعارًا آليًا للرابط الذي تحدده.') }}</li>
+      <li><strong>{{ _('توقيع آمن بكل طلب.') }}</strong> {{ _('كل إشعار يحمل توقيعًا أمنيًا محسوبًا بالمفتاح السري. تحقّق من التوقيع قبل الوثوق بالبيانات.') }}</li>
+      <li><strong>{{ _('إعادة محاولة ذكية.') }}</strong> {{ _('الفشل المؤقت (أخطاء شبكة أو 5xx) يُعاد بفترات متصاعدة، والفشل النهائي (4xx) يتوقف فورًا.') }}</li>
+      <li><strong>{{ _('سجل كامل.') }}</strong> {{ _('كل عملية إرسال محفوظة في سجل الإرسال — راجعها وأعد المحاولة يدويًا عند الحاجة.') }}</li>
     </ol>
 
     <div style="margin-top:16px;font-weight:800;font-size:12.5px;color:var(--hub-text)">
-      <i class="fa-solid fa-rotate" style="color:var(--hub-brand-ink)"></i> سياسة إعادة المحاولة
+      <i class="fa-solid fa-rotate" style="color:var(--hub-brand-ink)"></i> {{ _('سياسة إعادة المحاولة') }}
     </div>
     <div style="margin:6px 0 8px;color:var(--hub-text-soft);font-size:12px;line-height:1.7">
-      عند فشل مؤقت، النظام يحاول الإرسال خمس مرات قبل التوقف:
+      {{ _('عند فشل مؤقت، النظام يحاول الإرسال خمس مرات قبل التوقف:') }}
     </div>
     <ul class="uds-help-list" style="font-variant-numeric:tabular-nums">
-      <li><i class="fa-solid fa-1"></i><span>المحاولة 1 — بعد 30 ثانية</span></li>
-      <li><i class="fa-solid fa-2"></i><span>المحاولة 2 — بعد دقيقتين</span></li>
-      <li><i class="fa-solid fa-3"></i><span>المحاولة 3 — بعد 8 دقائق</span></li>
-      <li><i class="fa-solid fa-4"></i><span>المحاولة 4 — بعد 30 دقيقة</span></li>
-      <li><i class="fa-solid fa-5"></i><span>المحاولة 5 — بعد ساعتين</span></li>
+      <li><i class="fa-solid fa-1"></i><span>{{ _('المحاولة 1 — بعد 30 ثانية') }}</span></li>
+      <li><i class="fa-solid fa-2"></i><span>{{ _('المحاولة 2 — بعد دقيقتين') }}</span></li>
+      <li><i class="fa-solid fa-3"></i><span>{{ _('المحاولة 3 — بعد 8 دقائق') }}</span></li>
+      <li><i class="fa-solid fa-4"></i><span>{{ _('المحاولة 4 — بعد 30 دقيقة') }}</span></li>
+      <li><i class="fa-solid fa-5"></i><span>{{ _('المحاولة 5 — بعد ساعتين') }}</span></li>
     </ul>
     <div class="uds-help-note">
       <i class="fa-solid fa-circle-info"></i>
-      <span>أكواد <code>4xx</code> (عدا 408 و 429) تُعتبر فشلًا نهائيًا فورًا — تحقّق من رابطك وكود الاستجابة عنده.</span>
+      <span>{{ _('أكواد') }} <code>4xx</code> {{ _('(عدا 408 و 429) تُعتبر فشلًا نهائيًا فورًا — تحقّق من رابطك وكود الاستجابة عنده.') }}</span>
     </div>
   {% endcall %}
 {% endset %}
@@ -96,39 +96,39 @@
 
       <div class="hub-field">
         <label class="hub-field-label" for="target_url">
-          رابط الاستقبال <span class="req">*</span>
+          {{ _('رابط الاستقبال') }} <span class="req">*</span>
         </label>
         <input class="hub-input" type="text" name="target_url" id="target_url"
                value="{{ current.target_url if current else '' }}"
                placeholder="https://hobehub.example.com/webhooks/radius"
                dir="ltr" style="font-family:monospace">
         <div class="hub-field-hint">
-          رابط <code>HTTPS</code> كامل يستقبل طلبات POST. يجب أن يرجع كود استجابة
-          <code>2xx</code> لاعتبار الإرسال ناجحًا. أي شيء آخر يعتبر فشلًا.
+          {{ _('رابط') }} <code>HTTPS</code> {{ _('كامل يستقبل طلبات POST. يجب أن يرجع كود استجابة') }}
+          <code>2xx</code> {{ _('لاعتبار الإرسال ناجحًا. أي شيء آخر يعتبر فشلًا.') }}
         </div>
       </div>
 
       <div class="hub-field">
         <label class="hub-field-label" for="secret">
-          المفتاح السري (HMAC) <span class="req">*</span>
+          {{ _('المفتاح السري (HMAC)') }} <span class="req">*</span>
         </label>
         <input class="hub-input" type="text" name="secret" id="secret"
                value="{{ current.secret if current else '' }}"
-               placeholder="مفتاح سري طويل وعشوائي"
+               placeholder="{{ _('مفتاح سري طويل وعشوائي') }}"
                dir="ltr" style="font-family:monospace">
         <div class="hub-field-hint">
-          مفتاح سرّي مشترك بين الريدياس وخادم الاستقبال. يستخدم لتوقيع كل طلب عبر
-          <code>HMAC-SHA256</code>. لا تشاركه ولا تضعه في أي مكان عام.
+          {{ _('مفتاح سرّي مشترك بين الريدياس وخادم الاستقبال. يستخدم لتوقيع كل طلب عبر') }}
+          <code>HMAC-SHA256</code>{{ _('. لا تشاركه ولا تضعه في أي مكان عام.') }}
         </div>
       </div>
 
       <div class="uds-toggle-row">
         <div class="uds-toggle-row-text">
           <span class="uds-toggle-row-label">
-            <i class="fa-solid fa-toggle-on" style="color:var(--hub-brand-ink)"></i> تفعيل الإرسال
+            <i class="fa-solid fa-toggle-on" style="color:var(--hub-brand-ink)"></i> {{ _('تفعيل الإرسال') }}
           </span>
           <span class="uds-toggle-row-meta">
-            عند الإيقاف، تبقى الإعدادات محفوظة لكن لن يرسل أي إشعار للرابط أعلاه.
+            {{ _('عند الإيقاف، تبقى الإعدادات محفوظة لكن لن يرسل أي إشعار للرابط أعلاه.') }}
           </span>
         </div>
         {{ toggle_switch(
@@ -140,10 +140,10 @@
 
       <div style="display:flex;gap:10px;margin-top:18px;">
         <button type="submit" class="hub-btn hub-btn--primary">
-          <i class="fa-solid fa-floppy-disk"></i> حفظ الإعدادات
+          <i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ الإعدادات') }}
         </button>
         <a class="hub-btn hub-btn--ghost" href="{{ url_for('radius.wh_deliveries') }}">
-          <i class="fa-solid fa-list-check"></i> فتح سجل الإرسال
+          <i class="fa-solid fa-list-check"></i> {{ _('فتح سجل الإرسال') }}
         </a>
       </div>
 
@@ -157,11 +157,11 @@
       وتفاصيل مختصرة عن العملية مثل قيمة الدفعة أو اسم المشترك:
     </div>
     <div class="wh-events">
-      <span class="wh-event-chip"><i class="fa-solid fa-circle"></i> دفعة جديدة</span>
-      <span class="wh-event-chip"><i class="fa-solid fa-circle"></i> تجديد اشتراك</span>
-      <span class="wh-event-chip"><i class="fa-solid fa-circle"></i> إنشاء كرت</span>
-      <span class="wh-event-chip"><i class="fa-solid fa-circle"></i> تعطيل مشترك</span>
-      <span class="wh-event-chip"><i class="fa-solid fa-circle"></i> تنبيه أمني</span>
+      <span class="wh-event-chip"><i class="fa-solid fa-circle"></i> {{ _('دفعة جديدة') }}</span>
+      <span class="wh-event-chip"><i class="fa-solid fa-circle"></i> {{ _('تجديد اشتراك') }}</span>
+      <span class="wh-event-chip"><i class="fa-solid fa-circle"></i> {{ _('إنشاء كرت') }}</span>
+      <span class="wh-event-chip"><i class="fa-solid fa-circle"></i> {{ _('تعطيل مشترك') }}</span>
+      <span class="wh-event-chip"><i class="fa-solid fa-circle"></i> {{ _('تنبيه أمني') }}</span>
     </div>
     <div class="hub-field-hint" style="margin-top:12px">
       لا تعرض هذه الصفحة كودًا للمشغّل؛ عند الربط البرمجي استخدم التوثيق الفني الداخلي

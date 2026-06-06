@@ -295,7 +295,7 @@ li[data-status="pending"] .swsvf-verify-icon{
   <a class="swsvf-back"
      href="{{ url_for('radius.mt_dashboard', nas_id=router_id, _anchor='tab-my-services') }}">
     <i class="fa-solid fa-arrow-right"></i>
-    <span>العودة إلى خدماتي</span>
+    <span>{{ _('العودة إلى خدماتي') }}</span>
   </a>
 
   {# ─── Service header ─── #}
@@ -309,22 +309,22 @@ li[data-status="pending"] .swsvf-verify-icon{
   <div class="swsvf-stepper" data-swsvf-stepper>
     <div class="swsvf-step is-active" data-swsvf-step="configure">
       <span class="swsvf-step-num">1</span>
-      <span class="swsvf-step-label">تهيئة</span>
+      <span class="swsvf-step-label">{{ _('تهيئة') }}</span>
     </div>
     <span class="swsvf-step-arrow"><i class="fa-solid fa-arrow-left"></i></span>
     <div class="swsvf-step" data-swsvf-step="preview">
       <span class="swsvf-step-num">2</span>
-      <span class="swsvf-step-label">معاينة</span>
+      <span class="swsvf-step-label">{{ _('معاينة') }}</span>
     </div>
     <span class="swsvf-step-arrow"><i class="fa-solid fa-arrow-left"></i></span>
     <div class="swsvf-step" data-swsvf-step="apply">
       <span class="swsvf-step-num">3</span>
-      <span class="swsvf-step-label">إرسال</span>
+      <span class="swsvf-step-label">{{ _('إرسال') }}</span>
     </div>
     <span class="swsvf-step-arrow"><i class="fa-solid fa-arrow-left"></i></span>
     <div class="swsvf-step" data-swsvf-step="verify">
       <span class="swsvf-step-num">4</span>
-      <span class="swsvf-step-label">تحقّق</span>
+      <span class="swsvf-step-label">{{ _('تحقّق') }}</span>
     </div>
   </div>
 
@@ -333,28 +333,28 @@ li[data-status="pending"] .swsvf-verify-icon{
     {% if service_config_partial %}
       {% include service_config_partial ignore missing %}
     {% else %}
-      <h2>تهيئة الخدمة</h2>
+      <h2>{{ _('تهيئة الخدمة') }}</h2>
       <p class="swsvf-pane-sub">
-        هذه الخدمة لا تملك شاشة تهيئة مفعّلة لهذا الراوتر. ارجع إلى صفحة الخدمات واختر خدمة مكتملة الإعداد.
+        {{ _('هذه الخدمة لا تملك شاشة تهيئة مفعّلة لهذا الراوتر. ارجع إلى صفحة الخدمات واختر خدمة مكتملة الإعداد.') }}
       </p>
     {% endif %}
     <div class="swsvf-pane-foot">
       {% if service_config_partial %}
         <span style="color:var(--swsvf-mute);font-size:12px">
-          املأ الحقول أعلاه ثم اضغط التالي
+          {{ _('املأ الحقول أعلاه ثم اضغط التالي') }}
         </span>
         <button type="button" class="swsvf-btn swsvf-btn-primary"
                 data-swsvf-next="preview">
-          التالي
+          {{ _('التالي') }}
           <i class="fa-solid fa-arrow-left"></i>
         </button>
       {% else %}
         <span style="color:var(--swsvf-mute);font-size:12px">
-          لا يوجد نموذج تهيئة متاح لهذه الخدمة على هذا الراوتر.
+          {{ _('لا يوجد نموذج تهيئة متاح لهذه الخدمة على هذا الراوتر.') }}
         </span>
         <a class="swsvf-btn swsvf-btn-primary"
            href="{{ url_for('radius.mt_dashboard', nas_id=router.id) }}">
-          العودة إلى الخدمات
+          {{ _('العودة إلى الخدمات') }}
           <i class="fa-solid fa-arrow-left"></i>
         </a>
       {% endif %}
@@ -363,13 +363,13 @@ li[data-status="pending"] .swsvf-verify-icon{
 
   {# ─── Phase 2: Preview (what will happen) ─── #}
   <section class="swsvf-pane" data-swsvf-pane="preview" hidden>
-    <h2>معاينة ما سيُطبَّق على الراوتر</h2>
+    <h2>{{ _('معاينة ما سيُطبَّق على الراوتر') }}</h2>
     <p class="swsvf-pane-sub">
       راجع بنود التغيير بلغة بسيطة قبل الإرسال. لا يوجد أي تأثير على الراوتر
       حتى تضغط «إرسال للراوتر».
     </p>
     <ul class="swsvf-preview-list" data-swsvf-preview-list>
-      <li class="swsvf-preview-empty">جارٍ تحضير المعاينة…</li>
+      <li class="swsvf-preview-empty">{{ _('جارٍ تحضير المعاينة…') }}</li>
     </ul>
     {# Optional: full script display — only renders when the backend
        returned `script` in the preview response. Collapsed by default
@@ -377,19 +377,19 @@ li[data-status="pending"] .swsvf-verify-icon{
        see RouterOS commands unless they specifically open the panel. #}
     <details class="swsvf-script-details" data-swsvf-script-details hidden>
       <summary>
-        <span class="swsvf-script-badge">للفنّيين فقط</span>
-        عرض السكربت بصيغته الخام (للمراجعة)
+        <span class="swsvf-script-badge">{{ _('للفنّيين فقط') }}</span>
+        {{ _('عرض السكربت بصيغته الخام (للمراجعة)') }}
       </summary>
       <pre class="swsvf-script-text" data-swsvf-script-text dir="ltr"></pre>
     </details>
     <div class="swsvf-pane-foot">
       <button type="button" class="swsvf-btn" data-swsvf-prev="configure">
         <i class="fa-solid fa-arrow-right"></i>
-        رجوع للتهيئة
+        {{ _('رجوع للتهيئة') }}
       </button>
       <button type="button" class="swsvf-btn swsvf-btn-primary"
               data-swsvf-next="apply">
-        إرسال للراوتر
+        {{ _('إرسال للراوتر') }}
         <i class="fa-solid fa-paper-plane"></i>
       </button>
     </div>
@@ -397,24 +397,24 @@ li[data-status="pending"] .swsvf-verify-icon{
 
   {# ─── Phase 3: Apply (progress) ─── #}
   <section class="swsvf-pane" data-swsvf-pane="apply" hidden>
-    <h2>جارٍ الإرسال للراوتر</h2>
+    <h2>{{ _('جارٍ الإرسال للراوتر') }}</h2>
     <p class="swsvf-pane-sub">
-      نحن نتولّى الباقي — لا حاجة لفتح نافذة طرفية أو لصق سكربتات.
+      {{ _('نحن نتولّى الباقي — لا حاجة لفتح نافذة طرفية أو لصق سكربتات.') }}
     </p>
     <div class="swsvf-apply-status">
       <div class="swsvf-apply-spinner" data-swsvf-apply-spinner></div>
-      <p class="swsvf-apply-label" data-swsvf-apply-label>الاتصال بالراوتر…</p>
-      <p class="swsvf-apply-sub" data-swsvf-apply-sub>قد يستغرق ذلك بضع ثوان.</p>
+      <p class="swsvf-apply-label" data-swsvf-apply-label>{{ _('الاتصال بالراوتر…') }}</p>
+      <p class="swsvf-apply-sub" data-swsvf-apply-sub>{{ _('قد يستغرق ذلك بضع ثوان.') }}</p>
     </div>
     <ul class="swsvf-apply-substeps" data-swsvf-apply-substeps>
-      <li data-status="active" data-substep="connect">الاتصال بالراوتر</li>
-      <li data-substep="send">إرسال الإعدادات</li>
-      <li data-substep="commit">حفظ التغييرات</li>
+      <li data-status="active" data-substep="connect">{{ _('الاتصال بالراوتر') }}</li>
+      <li data-substep="send">{{ _('إرسال الإعدادات') }}</li>
+      <li data-substep="commit">{{ _('حفظ التغييرات') }}</li>
     </ul>
     <div class="swsvf-error-banner" data-swsvf-apply-error hidden>
       <i class="fa-solid fa-circle-exclamation"></i>
       <div style="flex:1;min-width:0">
-        <strong>تعذّر الإرسال</strong>
+        <strong>{{ _('تعذّر الإرسال') }}</strong>
         {# white-space:pre-wrap preserves newlines coming from the
            backend's debug_script payload — operator can see + copy
            the actual .rsc that hit the router. #}
@@ -430,19 +430,19 @@ li[data-status="pending"] .swsvf-verify-icon{
     <div class="swsvf-pane-foot" data-swsvf-apply-foot hidden>
       <button type="button" class="swsvf-btn" data-swsvf-prev="preview">
         <i class="fa-solid fa-arrow-right"></i>
-        رجوع للمعاينة
+        {{ _('رجوع للمعاينة') }}
       </button>
       <button type="button" class="swsvf-btn swsvf-btn-primary"
               data-swsvf-retry="apply">
         <i class="fa-solid fa-rotate-right"></i>
-        إعادة المحاولة
+        {{ _('إعادة المحاولة') }}
       </button>
     </div>
   </section>
 
   {# ─── Phase 4: Verify (real probe) ─── #}
   <section class="swsvf-pane" data-swsvf-pane="verify" hidden>
-    <h2>التحقّق من نجاح الإعداد</h2>
+    <h2>{{ _('التحقّق من نجاح الإعداد') }}</h2>
     <p class="swsvf-pane-sub">
       نفحص الراوتر فحصاً حقيقياً للتأكّد أنّ الخدمة تعمل فعلاً. لا تُسجَّل
       كـ «مكتملة» إلّا بعد أن تنجح كل النقاط أدناه.
@@ -450,13 +450,13 @@ li[data-status="pending"] .swsvf-verify-icon{
     <ul class="swsvf-verify-list" data-swsvf-verify-list>
       <li data-status="pending">
         <span class="swsvf-verify-icon">…</span>
-        <span>جارٍ تحضير الفحوص…</span>
+        <span>{{ _('جارٍ تحضير الفحوص…') }}</span>
       </li>
     </ul>
     <div class="swsvf-pane-foot">
       <button type="button" class="swsvf-btn" data-swsvf-retry="verify">
         <i class="fa-solid fa-rotate-right"></i>
-        إعادة الفحص
+        {{ _('إعادة الفحص') }}
       </button>
       {# Revoke button — only enabled once verify proves the service
          IS running. Sends a rollback script tagged with the same
@@ -465,11 +465,11 @@ li[data-status="pending"] .swsvf-verify-icon{
       <button type="button" class="swsvf-btn swsvf-btn-danger"
               data-swsvf-revoke hidden>
         <i class="fa-solid fa-power-off"></i>
-        إيقاف هذه الخدمة
+        {{ _('إيقاف هذه الخدمة') }}
       </button>
       <button type="button" class="swsvf-btn swsvf-btn-primary"
               data-swsvf-finish disabled>
-        تمّ — العودة للوحة الخدمات
+        {{ _('تمّ — العودة للوحة الخدمات') }}
         <i class="fa-solid fa-check"></i>
       </button>
     </div>
@@ -479,18 +479,18 @@ li[data-status="pending"] .swsvf-verify-icon{
   <div class="swsvf-modal" data-swsvf-revoke-modal hidden
        role="dialog" aria-modal="true">
     <div class="swsvf-modal-card">
-      <h3>إيقاف هذه الخدمة؟</h3>
+      <h3>{{ _('إيقاف هذه الخدمة؟') }}</h3>
       <p>
         سيتم حذف كل الإعدادات التي أُضيفت لهذه الخدمة على الراوتر.
         المستخدمون المرتبطون بها قد يفقدون الاتصال فوراً.
       </p>
       <div class="swsvf-modal-actions">
         <button type="button" class="swsvf-btn" data-swsvf-revoke-cancel>
-          إلغاء
+          {{ _('إلغاء') }}
         </button>
         <button type="button" class="swsvf-btn swsvf-btn-danger"
                 data-swsvf-revoke-confirm>
-          نعم، أوقف الخدمة
+          {{ _('نعم، أوقف الخدمة') }}
         </button>
       </div>
       <div class="swsvf-modal-result" data-swsvf-revoke-result hidden></div>

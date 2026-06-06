@@ -4,7 +4,7 @@
 {% block title %}التحكم المجدول بالسرعة{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-calendar-check"></i>{% endblock %}
 {% block page_title %}التحكم المجدول بالسرعة{% endblock %}
-{% block page_sub %}<span class="sub">معاينة آمنة لسياسات السرعة — لا يُنفَّذ أي تغيير على الشبكة.</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('معاينة آمنة لسياسات السرعة — لا يُنفَّذ أي تغيير على الشبكة.') }}</span>{% endblock %}
 
 {% block head_extra %}{{ super() }}
 {# نظام الجداول والبطاقات الموحد (uds) — نفس أسلوب مركز العمليات #}
@@ -98,12 +98,12 @@
   ]
 ) }}
 {# تبويب الانتقال بين الصفحتين الشقيقتين: المجدول (هنا) واليدوي #}
-<nav class="spc-tabs" data-testid="speed-control-tabs" aria-label="صفحات التحكم بالسرعة">
+<nav class="spc-tabs" data-testid="speed-control-tabs" aria-label="{{ _('صفحات التحكم بالسرعة') }}">
   <a class="is-active" href="{{ url_for('radius.operations_speed_control') }}" aria-current="page">
-    <i class="fa-solid fa-calendar-check"></i> التحكم المجدول
+    <i class="fa-solid fa-calendar-check"></i> {{ _('التحكم المجدول') }}
   </a>
   <a href="{{ url_for('radius.operations_speed_control_manual') }}" data-testid="speed-control-link-manual">
-    <i class="fa-solid fa-sliders"></i> التحكم اليدوي
+    <i class="fa-solid fa-sliders"></i> {{ _('التحكم اليدوي') }}
   </a>
 </nav>
 </section>{# /hub-hero-shell #}
@@ -112,7 +112,7 @@
    زر رجوع سريع إلى قائمة ملفات السرعة (Bandwidth). #}
 <div style="display:flex;justify-content:flex-end;margin-bottom:14px">
   <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.bw_list') }}" data-testid="speed-control-back-bandwidth">
-    <i class="fa-solid fa-arrow-right"></i> العودة إلى ملفات السرعة
+    <i class="fa-solid fa-arrow-right"></i> {{ _('العودة إلى ملفات السرعة') }}
   </a>
 </div>
 
@@ -128,7 +128,7 @@
   {# ── 1) اختيار الوضع — أول شيء في الصفحة ── #}
   {% call hub.section("اختر طريقة التحكم", icon="hand-pointer",
                       meta="كل اختيار يُظهر حقوله فقط") %}
-    <div class="uds-cardselect spc-modes" role="radiogroup" aria-label="طريقة التحكم بالسرعة">
+    <div class="uds-cardselect spc-modes" role="radiogroup" aria-label="{{ _('طريقة التحكم بالسرعة') }}">
       {% for key, p in presets.items() %}
       <label class="uds-cardselect-opt">
         <input type="radio" name="preset" value="{{ key }}"
@@ -140,7 +140,7 @@
         <span class="uds-cardselect-ic"><i class="fa-solid fa-{{ _preset_meta.get(key, {}).get('icon', 'bookmark') }}"></i></span>
         <span class="uds-cardselect-body">
           <span class="uds-cardselect-title">{{ p.label }}</span>
-          <span class="uds-cardselect-sub"><bdi dir="ltr">{{ (p.multiplier * 100)|int }}%</bdi> من السرعة الأصلية</span>
+          <span class="uds-cardselect-sub"><bdi dir="ltr">{{ (p.multiplier * 100)|int }}%</bdi> {{ _('من السرعة الأصلية') }}</span>
         </span>
       </label>
       {% endfor %}
@@ -149,8 +149,8 @@
         <input type="radio" name="preset" value="normal" data-spc-choice="custom">
         <span class="uds-cardselect-ic"><i class="fa-solid fa-percent"></i></span>
         <span class="uds-cardselect-body">
-          <span class="uds-cardselect-title">نسبة مخصصة</span>
-          <span class="uds-cardselect-sub">معامل واحد تحدده بنفسك لكل الباقات المختارة</span>
+          <span class="uds-cardselect-title">{{ _('نسبة مخصصة') }}</span>
+          <span class="uds-cardselect-sub">{{ _('معامل واحد تحدده بنفسك لكل الباقات المختارة') }}</span>
         </span>
       </label>
       {# تخصيص لكل باقة: نِسَب تنزيل/رفع مستقلة عبر settings_json #}
@@ -158,8 +158,8 @@
         <input type="radio" name="preset" value="normal" data-spc-choice="per_profile">
         <span class="uds-cardselect-ic"><i class="fa-solid fa-table-list"></i></span>
         <span class="uds-cardselect-body">
-          <span class="uds-cardselect-title">تخصيص لكل باقة</span>
-          <span class="uds-cardselect-sub">نسبة تنزيل ورفع مستقلة لكل باقة على حدة</span>
+          <span class="uds-cardselect-title">{{ _('تخصيص لكل باقة') }}</span>
+          <span class="uds-cardselect-sub">{{ _('نسبة تنزيل ورفع مستقلة لكل باقة على حدة') }}</span>
         </span>
       </label>
     </div>
@@ -170,12 +170,12 @@
     {% call hub.section("ملخص الوضع المختار", icon="circle-info", meta="معاينة بدون تنفيذ") %}
       <div class="spc-summary" data-testid="speed-preset-summary">
         <div class="spc-summary-main">
-          <div class="spc-summary-title" data-spc-summary-label>الوضع الطبيعي</div>
+          <div class="spc-summary-title" data-spc-summary-label>{{ _('الوضع الطبيعي') }}</div>
           <p class="spc-summary-sub" data-spc-summary-desc>إرجاع جميع الباقات إلى سرعتها الأصلية (100%).</p>
         </div>
         <div class="spc-summary-pct">
           <bdi dir="ltr"><span data-spc-summary-pct>100</span>%</bdi>
-          <small>من السرعة الأصلية</small>
+          <small>{{ _('من السرعة الأصلية') }}</small>
         </div>
       </div>
     {% endcall %}
@@ -186,20 +186,20 @@
     {% call hub.section("النسبة المخصصة", icon="percent") %}
       <div class="spc-grid">
         <div class="hub-field">
-          <label class="hub-field-label" for="spc-multiplier">معامل السرعة</label>
+          <label class="hub-field-label" for="spc-multiplier">{{ _('معامل السرعة') }}</label>
           <input class="hub-input" type="number" id="spc-multiplier" name="multiplier"
                  value="1.0" min="0" max="5" step="0.05" inputmode="decimal"
                  data-spc-multiplier disabled>
           <div class="hub-field-hint">
-            <bdi dir="ltr">1</bdi> = السرعة الأصلية ·
-            <bdi dir="ltr">0.5</bdi> = نصف السرعة ·
-            <bdi dir="ltr">2</bdi> = ضعف السرعة (الحد الأقصى <bdi dir="ltr">5</bdi>)
+            <bdi dir="ltr">1</bdi> {{ _('= السرعة الأصلية ·') }}
+            <bdi dir="ltr">0.5</bdi> {{ _('= نصف السرعة ·') }}
+            <bdi dir="ltr">2</bdi> {{ _('= ضعف السرعة (الحد الأقصى') }} <bdi dir="ltr">5</bdi>)
           </div>
         </div>
         <div class="hub-field">
-          <label class="hub-field-label">ما يعادل</label>
+          <label class="hub-field-label">{{ _('ما يعادل') }}</label>
           <div class="spc-summary-pct" style="font-size:22px"><bdi dir="ltr"><span data-spc-custom-pct>100</span>%</bdi></div>
-          <div class="hub-field-hint">نسبة السرعة الجديدة من السرعة الأصلية</div>
+          <div class="hub-field-hint">{{ _('نسبة السرعة الجديدة من السرعة الأصلية') }}</div>
         </div>
       </div>
     {% endcall %}
@@ -214,11 +214,11 @@
         <table class="hub-table" data-testid="speed-scope-table">
           <thead>
             <tr>
-              <th data-uds-nosort>اختيار</th>
-              <th>الباقة</th>
-              <th>السرعة الأصلية (ميغابت)</th>
-              <th>المشتركون</th>
-              <th>المتصلون الآن</th>
+              <th data-uds-nosort>{{ _('اختيار') }}</th>
+              <th>{{ _('الباقة') }}</th>
+              <th>{{ _('السرعة الأصلية (ميغابت)') }}</th>
+              <th>{{ _('المشتركون') }}</th>
+              <th>{{ _('المتصلون الآن') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -249,9 +249,9 @@
         <table class="hub-table spc-overrides" data-testid="speed-overrides-table">
           <thead>
             <tr>
-              <th>شمول</th>
-              <th>الباقة</th>
-              <th>السرعة الأصلية (ميغابت)</th>
+              <th>{{ _('شمول') }}</th>
+              <th>{{ _('الباقة') }}</th>
+              <th>{{ _('السرعة الأصلية (ميغابت)') }}</th>
               <th>نسبة التنزيل %</th>
               <th>نسبة الرفع %</th>
             </tr>
@@ -282,22 +282,22 @@
                       meta="اختياري — للمعاينة فقط يكفي زر «معاينة الأثر»") %}
     <div class="spc-grid">
       <div class="hub-field">
-        <label class="hub-field-label" for="spc-title">اسم السياسة</label>
+        <label class="hub-field-label" for="spc-title">{{ _('اسم السياسة') }}</label>
         <input class="hub-input" type="text" id="spc-title" name="title"
-               placeholder="مثال: خفض الذروة المسائية">
-        <div class="hub-field-hint">يظهر في قائمة السياسات المحفوظة. يُولَّد تلقائيًا إن تُرك فارغًا.</div>
+               placeholder="{{ _('مثال: خفض الذروة المسائية') }}">
+        <div class="hub-field-hint">{{ _('يظهر في قائمة السياسات المحفوظة. يُولَّد تلقائيًا إن تُرك فارغًا.') }}</div>
       </div>
       <div class="hub-field">
-        <label class="hub-field-label" for="spc-key">المعرّف المختصر</label>
+        <label class="hub-field-label" for="spc-key">{{ _('المعرّف المختصر') }}</label>
         <input class="hub-input" type="text" id="spc-key" name="policy_key"
                placeholder="evening-pressure" dir="ltr" style="text-align:start">
-        <div class="hub-field-hint">حروف لاتينية وأرقام وشرطات فقط. يُولَّد تلقائيًا إن تُرك فارغًا.</div>
+        <div class="hub-field-hint">{{ _('حروف لاتينية وأرقام وشرطات فقط. يُولَّد تلقائيًا إن تُرك فارغًا.') }}</div>
       </div>
     </div>
     <div class="spc-actions">
       <p class="spc-actions-note">
         <i class="fa-solid fa-shield-halved"></i>
-        معاينة آمنة — لا يُرسَل أي أمر مباشر إلى أجهزة الشبكة.
+        {{ _('معاينة آمنة — لا يُرسَل أي أمر مباشر إلى أجهزة الشبكة.') }}
         <span class="hub-hint" tabindex="0" data-hint="المعاينة تحسب الأثر فقط، والحفظ يخزّن السياسة كمسودة جاهزة دون أي تطبيق مباشر على RADIUS أو CoA."><i class="fa-solid fa-info"></i></span>
       </p>
       {{ hub.btn("معاينة الأثر", icon="eye", variant="secondary", type="submit",
@@ -322,9 +322,9 @@
     <table class="hub-table" data-testid="speed-impact-table">
       <thead>
         <tr>
-          <th>الباقة</th><th>المشتركون</th>
-          <th>الأصلية ↓/↑ (كيلوبت)</th><th>الفعلية ↓/↑ (كيلوبت)</th>
-          <th>المتصلون</th><th>تحديث الجلسات</th>
+          <th>{{ _('الباقة') }}</th><th>{{ _('المشتركون') }}</th>
+          <th>{{ _('الأصلية ↓/↑ (كيلوبت)') }}</th><th>{{ _('الفعلية ↓/↑ (كيلوبت)') }}</th>
+          <th>{{ _('المتصلون') }}</th><th>{{ _('تحديث الجلسات') }}</th>
         </tr>
       </thead>
       <tbody>
@@ -338,7 +338,7 @@
             <td>{{ "نعم" if item.coa_required else "لا" }}</td>
           </tr>
         {% else %}
-          <tr><td colspan="6">لم يتم اختيار أي باقات.</td></tr>
+          <tr><td colspan="6">{{ _('لم يتم اختيار أي باقات.') }}</td></tr>
         {% endfor %}
       </tbody>
     </table>
@@ -354,8 +354,8 @@
     <table class="hub-table" data-testid="speed-policies-table">
       <thead>
         <tr>
-          <th>الرقم</th><th>الاسم</th><th>المعرّف المختصر</th>
-          <th>النمط</th><th>الحالة</th><th>مطبّقة على خدمة المصادقة</th>
+          <th>{{ _('الرقم') }}</th><th>{{ _('الاسم') }}</th><th>{{ _('المعرّف المختصر') }}</th>
+          <th>{{ _('النمط') }}</th><th>{{ _('الحالة') }}</th><th>{{ _('مطبّقة على خدمة المصادقة') }}</th>
         </tr>
       </thead>
       <tbody>

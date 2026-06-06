@@ -87,13 +87,13 @@
           <tr>
             <th style="width:36px" data-uds-nosort data-uds-nocol><input type="checkbox"></th>
             <th class="num" style="width:60px">#</th>
-            <th>الاسم</th>
-            <th style="width:140px">الجوال</th>
-            <th class="num" style="width:130px">الرصيد</th>
-            <th class="num" style="width:100px">المشتريات</th>
-            <th class="num" style="width:100px">البطاقات</th>
-            <th style="width:90px">الحالة</th>
-            <th style="width:80px" data-uds-nosort data-uds-nocol>إجراءات</th>
+            <th>{{ _('الاسم') }}</th>
+            <th style="width:140px">{{ _('الجوال') }}</th>
+            <th class="num" style="width:130px">{{ _('الرصيد') }}</th>
+            <th class="num" style="width:100px">{{ _('المشتريات') }}</th>
+            <th class="num" style="width:100px">{{ _('البطاقات') }}</th>
+            <th style="width:90px">{{ _('الحالة') }}</th>
+            <th style="width:80px" data-uds-nosort data-uds-nocol>{{ _('إجراءات') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -114,7 +114,7 @@
             </td>
             <td>
               <div class="hub-flex-row" style="gap:4px;flex-wrap:nowrap">
-                <a class="hub-btn hub-btn--ghost hub-btn--icon" title="فتح"
+                <a class="hub-btn hub-btn--ghost hub-btn--icon" title="{{ _('فتح') }}"
                    href="{{ url_for('radius.card_user_360', card_user_id=u.id) }}">
                   <i class="fa-solid fa-arrow-up-right-from-square"></i>
                 </a>
@@ -135,41 +135,41 @@
     <form id="cuAddForm" method="post" action="{{ url_for('radius.card_users_create') }}">
       {{ csrf_token_input() | safe }}
       <div class="fcw-head">
-        <h3 id="cuAddTitle"><i class="fa-solid fa-user-plus"></i> إضافة مستفيد جديد</h3>
-        <button type="button" class="fcw-x" data-fcw-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
+        <h3 id="cuAddTitle"><i class="fa-solid fa-user-plus"></i> {{ _('إضافة مستفيد جديد') }}</h3>
+        <button type="button" class="fcw-x" data-fcw-close aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="fcw-body">
         <p class="fcw-note">
           <i class="fa-solid fa-circle-info"></i>
           تُنشَأ محفظة إلكترونية تلقائياً مع الحساب، ويصبح فعّالاً فوراً.
-          يدخل الزبون عبر <bdi>/portal/card</bdi> باسمه وكلمة مروره.
+          يدخل الزبون عبر <bdi>/portal/card</bdi> {{ _('باسمه وكلمة مروره.') }}
         </p>
         <div class="hub-field">
-          <label class="hub-field-label" for="cu-display_name">الاسم الثلاثي <span class="req">*</span></label>
+          <label class="hub-field-label" for="cu-display_name">{{ _('الاسم الثلاثي') }} <span class="req">*</span></label>
           <input class="hub-input" id="cu-display_name" name="display_name" required maxlength="120"
-                 pattern="\S+\s+\S+.*" title="اكتب اسمًا ثلاثيًا (كلمتان على الأقل): اسمك واسم أبيك وجدّك."
-                 placeholder="مثل: أحمد محمد علي">
+                 pattern="\S+\s+\S+.*" title="{{ _('اكتب اسمًا ثلاثيًا (كلمتان على الأقل): اسمك واسم أبيك وجدّك.') }}"
+                 placeholder="{{ _('مثل: أحمد محمد علي') }}">
         </div>
         <div class="hub-field">
-          <label class="hub-field-label" for="cu-mobile">رقم الجوال <span class="req">*</span></label>
+          <label class="hub-field-label" for="cu-mobile">{{ _('رقم الجوال') }} <span class="req">*</span></label>
           <input class="hub-input" id="cu-mobile" name="mobile" required maxlength="20" inputmode="tel"
-                 pattern="[0-9+\-\s()]*" title="أرقام فقط (7–15 رقمًا)، يجوز أن يبدأ بـ +."
-                 placeholder="مثل: 0599123456" style="direction:ltr;text-align:start">
+                 pattern="[0-9+\-\s()]*" title="{{ _('أرقام فقط (7–15 رقمًا)، يجوز أن يبدأ بـ +.') }}"
+                 placeholder="{{ _('مثل: 0599123456') }}" style="direction:ltr;text-align:start">
         </div>
         <div class="hub-field">
-          <label class="hub-field-label" for="cu-password">كلمة المرور <span class="req">*</span></label>
+          <label class="hub-field-label" for="cu-password">{{ _('كلمة المرور') }} <span class="req">*</span></label>
           <input class="hub-input" id="cu-password" name="password" type="password" required minlength="4" maxlength="64"
-                 placeholder="على الأقل 4 أحرف" autocomplete="new-password">
+                 placeholder="{{ _('على الأقل 4 أحرف') }}" autocomplete="new-password">
         </div>
         <div class="hub-field">
-          <label class="hub-field-label" for="cu-initial_balance">رصيد ابتدائي <span style="color:#94a3b8;font-weight:600">(اختياري)</span></label>
+          <label class="hub-field-label" for="cu-initial_balance">{{ _('رصيد ابتدائي') }} <span style="color:#94a3b8;font-weight:600">{{ _('(اختياري)') }}</span></label>
           <input class="hub-input" id="cu-initial_balance" name="initial_balance" type="number" min="0" step="0.01"
                  placeholder="0.00" style="direction:ltr;text-align:start">
         </div>
       </div>
       <div class="fcw-foot">
-        <button type="button" class="hub-btn hub-btn--ghost" data-fcw-close>إلغاء</button>
-        <button type="submit" class="hub-btn hub-btn--primary"><i class="fa-solid fa-user-plus"></i> إنشاء الحساب + المحفظة</button>
+        <button type="button" class="hub-btn hub-btn--ghost" data-fcw-close>{{ _('إلغاء') }}</button>
+        <button type="submit" class="hub-btn hub-btn--primary"><i class="fa-solid fa-user-plus"></i> {{ _('إنشاء الحساب + المحفظة') }}</button>
       </div>
     </form>
   </div>

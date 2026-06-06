@@ -54,7 +54,7 @@
       <span class="so-spark-bar" style="height:{{ '%.1f'|format(b.pct) }}%"
             title="{{ b.period }}: {{ money_value(b.value) }}"></span>
     {%- else %}
-      <span class="so-spark-empty">لا بيانات بعد</span>
+      <span class="so-spark-empty">{{ _('لا بيانات بعد') }}</span>
     {%- endfor %}
   </div>
   <div class="so-spark-axis">
@@ -73,12 +73,12 @@
     <div class="so-hero-id">
       <span class="so-hero-icon"><i class="fa-solid fa-users-viewfinder"></i></span>
       <div>
-        <h1 class="so-hero-title">نظرة عامة — المشتركون</h1>
+        <h1 class="so-hero-title">{{ _('نظرة عامة — المشتركون') }}</h1>
         <div class="so-hero-sub">
-          ملخّص إجمالي لِما اندفع وما صُرف وما ضلّ على المشتركين — شهري وسنوي فقط.
+          {{ _('ملخّص إجمالي لِما اندفع وما صُرف وما ضلّ على المشتركين — شهري وسنوي فقط.') }}
           <span class="so-hero-chip"><i class="fa-solid fa-calendar"></i> الفترة المعروضة:
             {% if period_options and period_options|length > 1 %}
-            <select class="so-period-pick" aria-label="اختيار الفترة"
+            <select class="so-period-pick" aria-label="{{ _('اختيار الفترة') }}"
                     onchange="if(this.value) location.href = this.value">
               {%- for p in period_options %}
               <option value="{{ url_for('radius.subscribers_overview', period=period, month=(p if period == 'monthly' else None), year=(p if period == 'yearly' else None)) }}"
@@ -90,16 +90,16 @@
         </div>
       </div>
     </div>
-    <div class="so-hero-toggle" role="tablist" aria-label="نوع الفترة">
+    <div class="so-hero-toggle" role="tablist" aria-label="{{ _('نوع الفترة') }}">
       <a class="so-seg{% if period == 'monthly' %} is-active{% endif %}"
          href="{{ url_for('radius.subscribers_overview', period='monthly') }}"
          role="tab" aria-selected="{{ 'true' if period == 'monthly' else 'false' }}">
-        <i class="fa-solid fa-calendar-days"></i> شهري
+        <i class="fa-solid fa-calendar-days"></i> {{ _('شهري') }}
       </a>
       <a class="so-seg{% if period == 'yearly' %} is-active{% endif %}"
          href="{{ url_for('radius.subscribers_overview', period='yearly') }}"
          role="tab" aria-selected="{{ 'true' if period == 'yearly' else 'false' }}">
-        <i class="fa-solid fa-calendar"></i> سنوي
+        <i class="fa-solid fa-calendar"></i> {{ _('سنوي') }}
       </a>
     </div>
   </div>
@@ -109,14 +109,14 @@
     <div class="so-flow-item so-flow-item--in">
       <span class="so-flow-icon"><i class="fa-solid fa-arrow-down-long"></i></span>
       <div>
-        <div class="so-flow-label">المُحصّل من المشتركين (دخل)</div>
+        <div class="so-flow-label">{{ _('المُحصّل من المشتركين (دخل)') }}</div>
         <div class="so-flow-value">{{ collected_total|money }}</div>
       </div>
     </div>
     <div class="so-flow-item so-flow-item--out">
       <span class="so-flow-icon"><i class="fa-solid fa-arrow-up-long"></i></span>
       <div>
-        <div class="so-flow-label">المصروف للمشتركين — سلف (صرف)</div>
+        <div class="so-flow-label">{{ _('المصروف للمشتركين — سلف (صرف)') }}</div>
         <div class="so-flow-value">{{ disbursed_total|money }}</div>
       </div>
     </div>
@@ -179,24 +179,24 @@
   <div class="so-debt">
     <div class="so-debt-tiles">
       <div class="so-debt-tile so-debt-tile--amber">
-        <div class="so-debt-tile-label"><i class="fa-solid fa-hand-holding-dollar"></i> سلف مفتوحة</div>
+        <div class="so-debt-tile-label"><i class="fa-solid fa-hand-holding-dollar"></i> {{ _('سلف مفتوحة') }}</div>
         <div class="so-debt-tile-value">{{ open_loans|money }}</div>
         <div class="so-debt-tile-meta">{{ outstanding.open_loans_count or 0 }} سلفة · {{ fmt_minutes(outstanding.open_loans_minutes) }}</div>
       </div>
       <div class="so-debt-tile so-debt-tile--red">
-        <div class="so-debt-tile-label"><i class="fa-solid fa-circle-minus"></i> أرصدة سالبة (عليهم)</div>
+        <div class="so-debt-tile-label"><i class="fa-solid fa-circle-minus"></i> {{ _('أرصدة سالبة (عليهم)') }}</div>
         <div class="so-debt-tile-value">{{ owed|money }}</div>
         <div class="so-debt-tile-meta">{{ outstanding.balance_owed_count or 0 }} مشترك</div>
       </div>
       <div class="so-debt-tile so-debt-tile--green">
-        <div class="so-debt-tile-label"><i class="fa-solid fa-circle-plus"></i> أرصدة موجبة (رصيد لهم)</div>
+        <div class="so-debt-tile-label"><i class="fa-solid fa-circle-plus"></i> {{ _('أرصدة موجبة (رصيد لهم)') }}</div>
         <div class="so-debt-tile-value">{{ credit|money }}</div>
         <div class="so-debt-tile-meta">{{ outstanding.balance_credit_count or 0 }} مشترك</div>
       </div>
       <div class="so-debt-tile so-debt-tile--total">
-        <div class="so-debt-tile-label"><i class="fa-solid fa-scale-unbalanced"></i> إجمالي المتبقّي</div>
+        <div class="so-debt-tile-label"><i class="fa-solid fa-scale-unbalanced"></i> {{ _('إجمالي المتبقّي') }}</div>
         <div class="so-debt-tile-value">{{ total_out|money }}</div>
-        <div class="so-debt-tile-meta">سلف مفتوحة + أرصدة سالبة</div>
+        <div class="so-debt-tile-meta">{{ _('سلف مفتوحة + أرصدة سالبة') }}</div>
       </div>
     </div>
     <div class="so-debt-links">
@@ -214,12 +214,12 @@
     <table class="hub-table" data-so-debtors>
       <thead>
         <tr>
-          <th>المشترك</th>
-          <th class="num">سلف مفتوحة</th>
-          <th class="num">عدد السلف</th>
-          <th class="num">الرصيد</th>
+          <th>{{ _('المشترك') }}</th>
+          <th class="num">{{ _('سلف مفتوحة') }}</th>
+          <th class="num">{{ _('عدد السلف') }}</th>
+          <th class="num">{{ _('الرصيد') }}</th>
           {# عمود إجراء (رابط ملف المالية) — يُستثنى من التصدير لأن نصّه غير ذي معنى في CSV/Excel #}
-          <th data-uds-noexport>التفصيل</th>
+          <th data-uds-noexport>{{ _('التفصيل') }}</th>
         </tr>
       </thead>
       <tbody>
@@ -251,11 +251,11 @@
     <table class="hub-table">
       <thead>
         <tr>
-          <th>الباقة</th>
-          <th class="num">المشتركون</th>
-          <th class="num">كوتة المشترك</th>
-          <th class="num">إجمالي المخصّص</th>
-          <th>الحصّة</th>
+          <th>{{ _('الباقة') }}</th>
+          <th class="num">{{ _('المشتركون') }}</th>
+          <th class="num">{{ _('كوتة المشترك') }}</th>
+          <th class="num">{{ _('إجمالي المخصّص') }}</th>
+          <th>{{ _('الحصّة') }}</th>
         </tr>
       </thead>
       <tbody>
@@ -264,7 +264,7 @@
           <td><strong>{{ q.name }}</strong></td>
           <td class="num mono">{{ q.subs or 0 }}</td>
           <td class="num mono">
-            {% if q.metered %}{{ fmt_gb((q.per_sub_mb or 0) / 1024.0) }}{% else %}<span class="so-muted">غير محدودة</span>{% endif %}
+            {% if q.metered %}{{ fmt_gb((q.per_sub_mb or 0) / 1024.0) }}{% else %}<span class="so-muted">{{ _('غير محدودة') }}</span>{% endif %}
           </td>
           <td class="num mono">{% if q.metered %}{{ fmt_gb(q.allocated_gb) }}{% else %}—{% endif %}</td>
           <td>
@@ -278,7 +278,7 @@
       </tbody>
     </table>
   </div>
-  <div class="so-note"><i class="fa-solid fa-circle-info"></i> الكوتة هنا = المخصّص لكل باقة (الحدّ). الاستهلاك الفعلي معروض في بطاقة «الجيجات» أعلاه.</div>
+  <div class="so-note"><i class="fa-solid fa-circle-info"></i> {{ _('الكوتة هنا = المخصّص لكل باقة (الحدّ). الاستهلاك الفعلي معروض في بطاقة «الجيجات» أعلاه.') }}</div>
   {% else %}
     {{ hub.empty("لا باقات بكوتة محدّدة", sub="عند تخصيص كوتة للباقات سيظهر توزيعها هنا.", icon="layer-group") }}
   {% endif %}

@@ -49,22 +49,22 @@
   {% call hub.section("اتصال الجهاز", icon="network-wired") %}
     <div class="mt-grid">
       <div class="mt-field">
-        <label>الاسم <span class="req">*</span></label>
+        <label>{{ _('الاسم') }} <span class="req">*</span></label>
         <input class="hub-input" type="text" name="name" required
                value="{{ item.name or '' }}" placeholder="MT-HQ-Core">
       </div>
       <div class="mt-field">
-        <label>المضيف <span class="req">*</span></label>
+        <label>{{ _('المضيف') }} <span class="req">*</span></label>
         <input class="hub-input mono" type="text" name="host" required
                value="{{ item.host or '' }}" placeholder="10.0.0.1">
       </div>
       <div class="mt-field">
-        <label>المنفذ</label>
+        <label>{{ _('المنفذ') }}</label>
         <input class="hub-input" type="number" name="port" value="{{ item.port or 8728 }}">
-        <div class="help">الافتراضي 8728 (بدون تشفير) أو 8729 (مشفر).</div>
+        <div class="help">{{ _('الافتراضي 8728 (بدون تشفير) أو 8729 (مشفر).') }}</div>
       </div>
       <div class="mt-field">
-        <label>المهلة (ثانية)</label>
+        <label>{{ _('المهلة (ثانية)') }}</label>
         <input class="hub-input" type="number" name="timeout_sec" value="{{ item.timeout_sec or 10 }}">
       </div>
     </div>
@@ -73,7 +73,7 @@
   {% call hub.section("بيانات الدخول", icon="key") %}
     <div class="mt-grid">
       <div class="mt-field">
-        <label>اسم المستخدم <span class="req">*</span></label>
+        <label>{{ _('اسم المستخدم') }} <span class="req">*</span></label>
         <input class="hub-input mono" type="text" name="username" required
                value="{{ item.username or 'admin' }}">
       </div>
@@ -89,19 +89,19 @@
   {% call hub.section("التشغيل والتشفير", icon="shield-halved") %}
     <div class="mt-grid">
       <div class="mt-field">
-        <label>تفعيل التشفير</label>
+        <label>{{ _('تفعيل التشفير') }}</label>
         <div class="mt-chk">
           {{ toggle_switch(name="use_tls", checked=item.use_tls, value="1", id="mt-tls", on_label="تشفير الاتصال", off_label="بدون تشفير") }}
         </div>
       </div>
       <div class="mt-field">
-        <label>تحقّق من الشهادة</label>
+        <label>{{ _('تحقّق من الشهادة') }}</label>
         <div class="mt-chk">
           {{ toggle_switch(name="verify_tls", checked=(item.verify_tls or is_new), value="1", id="mt-vtls", on_label="رفض الشهادات غير الموثّقة", off_label="قبول الكل") }}
         </div>
       </div>
       <div class="mt-field full">
-        <label>الحالة</label>
+        <label>{{ _('الحالة') }}</label>
         <div class="mt-chk">
           {{ toggle_switch(name="enabled", checked=(item.enabled or is_new), value="1", id="mt-en", on_label="الاتصال مفعَّل ضمن العاملين", off_label="معطَّل") }}
         </div>
@@ -110,7 +110,7 @@
   {% endcall %}
 
   <div style="display:flex;gap:10px;justify-content:flex-end;padding:6px 4px 0">
-    <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.mt_list') }}">إلغاء</a>
+    <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.mt_list') }}">{{ _('إلغاء') }}</a>
     <button class="hub-btn hub-btn--primary" type="submit">
       <i class="fa-solid fa-floppy-disk"></i> {{ "إنشاء الاتصال" if is_new else "حفظ التعديلات" }}
     </button>

@@ -201,13 +201,13 @@
 <div class="dg-layout">
 
   {# ───── الفهرس الجانبي اللاصق ───── #}
-  <nav class="dg-toc dg-noprint" aria-label="فهرس الدليل">
-    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> فهرس الخطوات</div>
-    <a href="#dg-s1" data-dg-toc><span class="n">1</span> ما هو الطابور؟</a>
-    <a href="#dg-s2" data-dg-toc><span class="n">2</span> حالات المهمة</a>
-    <a href="#dg-s3" data-dg-toc><span class="n">3</span> اقرأ الجدول</a>
-    <a href="#dg-s4" data-dg-toc><span class="n">4</span> لأي راوتر؟</a>
-    <a href="#dg-s5" data-dg-toc><span class="n">5</span> إعادة وإلغاء</a>
+  <nav class="dg-toc dg-noprint" aria-label="{{ _('فهرس الدليل') }}">
+    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> {{ _('فهرس الخطوات') }}</div>
+    <a href="#dg-s1" data-dg-toc><span class="n">1</span> {{ _('ما هو الطابور؟') }}</a>
+    <a href="#dg-s2" data-dg-toc><span class="n">2</span> {{ _('حالات المهمة') }}</a>
+    <a href="#dg-s3" data-dg-toc><span class="n">3</span> {{ _('اقرأ الجدول') }}</a>
+    <a href="#dg-s4" data-dg-toc><span class="n">4</span> {{ _('لأي راوتر؟') }}</a>
+    <a href="#dg-s5" data-dg-toc><span class="n">5</span> {{ _('إعادة وإلغاء') }}</a>
   </nav>
 
   {# ───── عمود المحتوى ───── #}
@@ -216,11 +216,11 @@
     <div class="dg-lead">
       <span class="ic"><i class="fa-solid fa-lightbulb"></i></span>
       <div>
-        <h3>قبل ما نبدأ — ليش يوجد «طابور مزامنة»؟</h3>
+        <h3>{{ _('قبل ما نبدأ — ليش يوجد «طابور مزامنة»؟') }}</h3>
         <p>
           لمّا تعدّل مشتركًا أو باقة في النظام، لا يكفي حفظ التغيير في قاعدة البيانات — لازم
-          يوصل أيضًا إلى راوتراتك حتى يطبّقه الزبون فعلًا على الإنترنت. <strong>طابور المزامنة</strong>
-          هو الوسيط: كل تغيير يتحوّل إلى <strong>مهمة</strong> تُدفع للراوترات تلقائيًا، وهذه الصفحة
+          يوصل أيضًا إلى راوتراتك حتى يطبّقه الزبون فعلًا على الإنترنت. <strong>{{ _('طابور المزامنة') }}</strong>
+          {{ _('هو الوسيط: كل تغيير يتحوّل إلى') }} <strong>{{ _('مهمة') }}</strong> تُدفع للراوترات تلقائيًا، وهذه الصفحة
           تريك ما اكتمل وما تعثّر. ما تحتاج تعمل شيئًا في العادة — تابعها فقط عند الشك.
         </p>
       </div>
@@ -230,28 +230,28 @@
     <section class="dg-step" id="dg-s1">
       <div class="dg-badge">1</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-arrows-rotate"></i> ما هو طابور المزامنة؟</h2>
+        <h2><i class="fa-solid fa-arrows-rotate"></i> {{ _('ما هو طابور المزامنة؟') }}</h2>
         <p>
-          من القائمة الجانبية افتح <strong>«طابور المزامنة»</strong>. شعار الصفحة يلخّص الفكرة:
+          {{ _('من القائمة الجانبية افتح') }} <strong>{{ _('«طابور المزامنة»') }}</strong>. شعار الصفحة يلخّص الفكرة:
           «كل تغيير على المشتركين والباقات يتحوّل إلى مهمة تُدفع للراوترات تلقائيًا — تابع هنا
           ما اكتمل وما تعثّر».
         </p>
-        <p>أنواع المهام التي تدخل الطابور:</p>
+        <p>{{ _('أنواع المهام التي تدخل الطابور:') }}</p>
         <ul>
-          <li><strong>تحديث مشترك</strong> و<strong>حذف مشترك</strong>.</li>
-          <li><strong>تحديث باقة</strong> و<strong>حذف باقة</strong>.</li>
-          <li><strong>تحديث حوض عناوين</strong>.</li>
-          <li><strong>قطع جلسة</strong> و<strong>إعادة تعيين كلمة المرور</strong>.</li>
+          <li><strong>{{ _('تحديث مشترك') }}</strong> {{ _('و') }}<strong>{{ _('حذف مشترك') }}</strong>.</li>
+          <li><strong>{{ _('تحديث باقة') }}</strong> {{ _('و') }}<strong>{{ _('حذف باقة') }}</strong>.</li>
+          <li><strong>{{ _('تحديث حوض عناوين') }}</strong>.</li>
+          <li><strong>{{ _('قطع جلسة') }}</strong> {{ _('و') }}<strong>{{ _('إعادة تعيين كلمة المرور') }}</strong>.</li>
         </ul>
 
         <div class="dg-flow" aria-hidden="true">
-          <span class="node"><i class="fa-solid fa-pen"></i> عدّلت مشتركًا</span>
+          <span class="node"><i class="fa-solid fa-pen"></i> {{ _('عدّلت مشتركًا') }}</span>
           <span class="ar"><i class="fa-solid fa-arrow-left"></i></span>
-          <span class="node"><i class="fa-solid fa-list-check"></i> مهمة في الطابور</span>
+          <span class="node"><i class="fa-solid fa-list-check"></i> {{ _('مهمة في الطابور') }}</span>
           <span class="ar"><i class="fa-solid fa-arrow-left"></i></span>
-          <span class="node"><i class="fa-solid fa-server"></i> تُدفع للراوترات</span>
+          <span class="node"><i class="fa-solid fa-server"></i> {{ _('تُدفع للراوترات') }}</span>
         </div>
-        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> عامل خلفيّ يلتقط المهام المستحقّة وينفّذها على الراوترات تلقائيًا — لا تشغيل يدوي.</div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> {{ _('عامل خلفيّ يلتقط المهام المستحقّة وينفّذها على الراوترات تلقائيًا — لا تشغيل يدوي.') }}</div>
       </div>
     </section>
 
@@ -259,36 +259,36 @@
     <section class="dg-step" id="dg-s2">
       <div class="dg-badge">2</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-traffic-light"></i> حالات المهمة الخمس</h2>
+        <h2><i class="fa-solid fa-traffic-light"></i> {{ _('حالات المهمة الخمس') }}</h2>
         <p>
           لكل مهمة حالة ملوّنة تعرف منها أين وصلت. الحزام العلوي يلخّص أعدادها
           (في الانتظار · تُعاد المحاولة · مكتملة · فاشلة):
         </p>
 
         <div class="dg-states">
-          <div class="r"><span class="dg-pill blue"><span class="ic"><i class="fa-solid fa-hourglass-half"></i></span> في الانتظار</span> <span><b>queued</b> — مُسجَّلة وتنتظر دورها.</span></div>
-          <div class="r"><span class="dg-pill blue">جاري المزامنة</span> <span><b>syncing</b> — العامل يدفعها للراوترات الآن.</span></div>
-          <div class="r"><span class="dg-pill amber"><span class="ic"><i class="fa-solid fa-rotate-right"></i></span> تُعاد المحاولة</span> <span><b>retrying</b> — فشلت مؤقتًا وستُعاد بفاصل متصاعد.</span></div>
-          <div class="r"><span class="dg-pill green"><span class="ic"><i class="fa-solid fa-circle-check"></i></span> مكتملة</span> <span><b>done</b> — وصلت للراوترات بنجاح.</span></div>
-          <div class="r"><span class="dg-pill red"><span class="ic"><i class="fa-solid fa-circle-xmark"></i></span> فاشلة</span> <span><b>failed</b> — تجاوزت المحاولات أو أُلغيت يدويًا.</span></div>
+          <div class="r"><span class="dg-pill blue"><span class="ic"><i class="fa-solid fa-hourglass-half"></i></span> {{ _('في الانتظار') }}</span> <span><b>queued</b> {{ _('— مُسجَّلة وتنتظر دورها.') }}</span></div>
+          <div class="r"><span class="dg-pill blue">{{ _('جاري المزامنة') }}</span> <span><b>syncing</b> {{ _('— العامل يدفعها للراوترات الآن.') }}</span></div>
+          <div class="r"><span class="dg-pill amber"><span class="ic"><i class="fa-solid fa-rotate-right"></i></span> {{ _('تُعاد المحاولة') }}</span> <span><b>retrying</b> {{ _('— فشلت مؤقتًا وستُعاد بفاصل متصاعد.') }}</span></div>
+          <div class="r"><span class="dg-pill green"><span class="ic"><i class="fa-solid fa-circle-check"></i></span> {{ _('مكتملة') }}</span> <span><b>done</b> {{ _('— وصلت للراوترات بنجاح.') }}</span></div>
+          <div class="r"><span class="dg-pill red"><span class="ic"><i class="fa-solid fa-circle-xmark"></i></span> {{ _('فاشلة') }}</span> <span><b>failed</b> {{ _('— تجاوزت المحاولات أو أُلغيت يدويًا.') }}</span></div>
         </div>
 
         <div class="dg-mock" aria-hidden="true" style="max-width:520px;margin-top:14px">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">طابور المزامنة › الملخّص</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('طابور المزامنة › الملخّص') }}</span></div>
           <div class="dg-mock-body">
             <div class="dg-kpis">
-              <div class="dg-kpi"><span class="ic" style="background:#dbeafe;color:#1d4ed8"><i class="fa-solid fa-hourglass-half"></i></span><div><div class="v">4</div><div class="l">في الانتظار</div></div></div>
-              <div class="dg-kpi"><span class="ic" style="background:#fef3c7;color:#d97706"><i class="fa-solid fa-rotate-right"></i></span><div><div class="v">1</div><div class="l">تُعاد المحاولة</div></div></div>
-              <div class="dg-kpi"><span class="ic" style="background:#dcfce7;color:#16a34a"><i class="fa-solid fa-circle-check"></i></span><div><div class="v">218</div><div class="l">مكتملة</div></div></div>
-              <div class="dg-kpi"><span class="ic" style="background:#fee2e2;color:#dc2626"><i class="fa-solid fa-circle-xmark"></i></span><div><div class="v">0</div><div class="l">فاشلة</div></div></div>
+              <div class="dg-kpi"><span class="ic" style="background:#dbeafe;color:#1d4ed8"><i class="fa-solid fa-hourglass-half"></i></span><div><div class="v">4</div><div class="l">{{ _('في الانتظار') }}</div></div></div>
+              <div class="dg-kpi"><span class="ic" style="background:#fef3c7;color:#d97706"><i class="fa-solid fa-rotate-right"></i></span><div><div class="v">1</div><div class="l">{{ _('تُعاد المحاولة') }}</div></div></div>
+              <div class="dg-kpi"><span class="ic" style="background:#dcfce7;color:#16a34a"><i class="fa-solid fa-circle-check"></i></span><div><div class="v">218</div><div class="l">{{ _('مكتملة') }}</div></div></div>
+              <div class="dg-kpi"><span class="ic" style="background:#fee2e2;color:#dc2626"><i class="fa-solid fa-circle-xmark"></i></span><div><div class="v">0</div><div class="l">{{ _('فاشلة') }}</div></div></div>
             </div>
           </div>
         </div>
 
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>نصيحة:</b> المهمة الفاشلة تُعاد تلقائيًا بفواصل متصاعدة (١٥ ثانية، ثم دقيقة،
-          ثم ٥ دقائق… حتى ٦ محاولات) قبل أن تصبح <b>«فاشلة»</b> نهائيًا. فلا داعي للقلق من تعثّر
+          <span><b>{{ _('نصيحة:') }}</b> المهمة الفاشلة تُعاد تلقائيًا بفواصل متصاعدة (١٥ ثانية، ثم دقيقة،
+          ثم ٥ دقائق… حتى ٦ محاولات) قبل أن تصبح <b>{{ _('«فاشلة»') }}</b> نهائيًا. فلا داعي للقلق من تعثّر
           لحظي.</span>
         </div>
       </div>
@@ -298,31 +298,31 @@
     <section class="dg-step" id="dg-s3">
       <div class="dg-badge">3</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-table-list"></i> اقرأ جدول المهام</h2>
+        <h2><i class="fa-solid fa-table-list"></i> {{ _('اقرأ جدول المهام') }}</h2>
         <p>
-          الجدول يعرض المهام (الأحدث أولًا). أعمدته: <strong>#</strong> ثم <strong>نوع المهمة</strong>
-          (شارة) ثم <strong>العنصر</strong> (اسم المشترك أو الباقة) ثم <strong>الراوتر المستهدف</strong>
-          ثم <strong>الحالة</strong> ثم <strong>المحاولات</strong> ثم <strong>المحاولة التالية</strong>
-          ثم <strong>آخر خطأ</strong> ثم <strong>إجراء</strong>.
+          {{ _('الجدول يعرض المهام (الأحدث أولًا). أعمدته:') }} <strong>#</strong> {{ _('ثم') }} <strong>{{ _('نوع المهمة') }}</strong>
+          {{ _('(شارة) ثم') }} <strong>{{ _('العنصر') }}</strong> {{ _('(اسم المشترك أو الباقة) ثم') }} <strong>{{ _('الراوتر المستهدف') }}</strong>
+          {{ _('ثم') }} <strong>{{ _('الحالة') }}</strong> {{ _('ثم') }} <strong>{{ _('المحاولات') }}</strong> {{ _('ثم') }} <strong>{{ _('المحاولة التالية') }}</strong>
+          {{ _('ثم') }} <strong>{{ _('آخر خطأ') }}</strong> {{ _('ثم') }} <strong>{{ _('إجراء') }}</strong>.
         </p>
 
         <div class="dg-mock" aria-hidden="true">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">طابور المزامنة › الجدول</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('طابور المزامنة › الجدول') }}</span></div>
           <div class="dg-mock-body" style="padding:0">
             <div class="dg-tbl">
-              <div class="hd"><span>نوع المهمة</span><span>العنصر</span><span>الراوتر المستهدف</span><span>الحالة</span></div>
-              <div class="rw"><span><span class="dg-pill blue">تحديث مشترك</span></span><span class="dg-mono">ahmad2026</span><span>كل الراوترات المفعّلة (12)</span><span><span class="dg-pill green"><span class="ic"><i class="fa-solid fa-circle-check"></i></span> مكتملة</span></span></div>
-              <div class="rw"><span><span class="dg-pill blue">تحديث باقة</span></span><span class="dg-mono">10M-شهري</span><span>كل الراوترات المفعّلة (12)</span><span><span class="dg-pill amber"><span class="ic"><i class="fa-solid fa-rotate-right"></i></span> تُعاد المحاولة</span></span></div>
-              <div class="rw"><span><span class="dg-pill blue">قطع جلسة</span></span><span class="dg-mono">sara_net</span><span>كل الراوترات المفعّلة (12)</span><span><span class="dg-pill blue"><span class="ic"><i class="fa-solid fa-hourglass-half"></i></span> في الانتظار</span></span></div>
+              <div class="hd"><span>{{ _('نوع المهمة') }}</span><span>{{ _('العنصر') }}</span><span>{{ _('الراوتر المستهدف') }}</span><span>{{ _('الحالة') }}</span></div>
+              <div class="rw"><span><span class="dg-pill blue">{{ _('تحديث مشترك') }}</span></span><span class="dg-mono">ahmad2026</span><span>{{ _('كل الراوترات المفعّلة (12)') }}</span><span><span class="dg-pill green"><span class="ic"><i class="fa-solid fa-circle-check"></i></span> {{ _('مكتملة') }}</span></span></div>
+              <div class="rw"><span><span class="dg-pill blue">{{ _('تحديث باقة') }}</span></span><span class="dg-mono">{{ _('10M-شهري') }}</span><span>{{ _('كل الراوترات المفعّلة (12)') }}</span><span><span class="dg-pill amber"><span class="ic"><i class="fa-solid fa-rotate-right"></i></span> {{ _('تُعاد المحاولة') }}</span></span></div>
+              <div class="rw"><span><span class="dg-pill blue">{{ _('قطع جلسة') }}</span></span><span class="dg-mono">sara_net</span><span>{{ _('كل الراوترات المفعّلة (12)') }}</span><span><span class="dg-pill blue"><span class="ic"><i class="fa-solid fa-hourglass-half"></i></span> {{ _('في الانتظار') }}</span></span></div>
             </div>
           </div>
         </div>
-        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> «آخر خطأ» يُقتطع في الجدول — مرّر فوقه لقراءة النص الكامل. وعمودا «المحاولة التالية» يظهران للحالات المنتظِرة فقط.</div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> {{ _('«آخر خطأ» يُقتطع في الجدول — مرّر فوقه لقراءة النص الكامل. وعمودا «المحاولة التالية» يظهران للحالات المنتظِرة فقط.') }}</div>
 
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>نصيحة:</b> استعمل فلتر <b>«الحالة»</b> أعلى الجدول ثم <b>«تطبيق»</b> لعرض الفاشلة
-          فقط مثلًا. لو الطابور فارغ تمامًا تظهر رسالة <b>«الطابور فارغ — كل شيء متزامن»</b>.</span>
+          <span><b>{{ _('نصيحة:') }}</b> {{ _('استعمل فلتر') }} <b>{{ _('«الحالة»') }}</b> {{ _('أعلى الجدول ثم') }} <b>{{ _('«تطبيق»') }}</b> لعرض الفاشلة
+          فقط مثلًا. لو الطابور فارغ تمامًا تظهر رسالة <b>{{ _('«الطابور فارغ — كل شيء متزامن»') }}</b>.</span>
         </div>
       </div>
     </section>
@@ -331,17 +331,17 @@
     <section class="dg-step" id="dg-s4">
       <div class="dg-badge">4</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-tower-broadcast"></i> لأي راوتر تذهب كل مهمة؟</h2>
+        <h2><i class="fa-solid fa-tower-broadcast"></i> {{ _('لأي راوتر تذهب كل مهمة؟') }}</h2>
         <p>
-          التصميم <strong>بثّي</strong>: المهمة الواحدة تُدفع لكل راوتراتك المفعّلة دفعة واحدة، فلا
-          تكرّر العملية لكل راوتر. لذلك يعرض عمود <strong>«الراوتر المستهدف»</strong> افتراضيًا
-          «<strong>كل الراوترات المفعّلة (N)</strong>» حيث N عددها.
+          {{ _('التصميم') }} <strong>{{ _('بثّي') }}</strong>: المهمة الواحدة تُدفع لكل راوتراتك المفعّلة دفعة واحدة، فلا
+          تكرّر العملية لكل راوتر. لذلك يعرض عمود <strong>{{ _('«الراوتر المستهدف»') }}</strong> افتراضيًا
+          «<strong>{{ _('كل الراوترات المفعّلة (N)') }}</strong>{{ _('» حيث N عددها.') }}
         </p>
         <ul>
-          <li>في الحالات النادرة التي تخصّ راوترًا بعينه، يظهر <strong>اسم الراوتر</strong> بدل العبارة العامة.</li>
-          <li>عند فشل المهمة على راوتر معيّن، يظهر بنص أحمر <strong>«آخر فشل على: …»</strong> باسم أو رقم الراوتر الذي فشل.</li>
+          <li>{{ _('في الحالات النادرة التي تخصّ راوترًا بعينه، يظهر') }} <strong>{{ _('اسم الراوتر') }}</strong> {{ _('بدل العبارة العامة.') }}</li>
+          <li>{{ _('عند فشل المهمة على راوتر معيّن، يظهر بنص أحمر') }} <strong>{{ _('«آخر فشل على: …»') }}</strong> {{ _('باسم أو رقم الراوتر الذي فشل.') }}</li>
         </ul>
-        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> أيقونة المعلومات بجوار العنوان تشرح: «كل مهمة تُدفع لكل الراوترات المفعّلة دفعة واحدة».</div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> {{ _('أيقونة المعلومات بجوار العنوان تشرح: «كل مهمة تُدفع لكل الراوترات المفعّلة دفعة واحدة».') }}</div>
       </div>
     </section>
 
@@ -349,26 +349,26 @@
     <section class="dg-step" id="dg-s5">
       <div class="dg-badge">5</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-rotate"></i> «إعادة الآن» و«إلغاء»</h2>
+        <h2><i class="fa-solid fa-rotate"></i> {{ _('«إعادة الآن» و«إلغاء»') }}</h2>
         <p>
-          في عمود <strong>«إجراء»</strong> زرّان حسب حالة المهمة:
+          {{ _('في عمود') }} <strong>{{ _('«إجراء»') }}</strong> {{ _('زرّان حسب حالة المهمة:') }}
         </p>
         <ul>
-          <li><strong>إعادة الآن:</strong> (للحالات في الانتظار / تُعاد المحاولة / فاشلة) — يعيد
+          <li><strong>{{ _('إعادة الآن:') }}</strong> (للحالات في الانتظار / تُعاد المحاولة / فاشلة) — يعيد
           المهمة فورًا بدل انتظار الفاصل التالي، فترجع لحالة «في الانتظار» وتُدفع من جديد.</li>
-          <li><strong>إلغاء:</strong> (للمنتظِرة فقط: في الانتظار / تُعاد المحاولة) — يوقف المهمة
-          نهائيًا فتصير «فاشلة» <strong>ولا يصل التغيير إلى الراوتر</strong>. يطلب تأكيدًا في نافذة
+          <li><strong>{{ _('إلغاء:') }}</strong> (للمنتظِرة فقط: في الانتظار / تُعاد المحاولة) — يوقف المهمة
+          نهائيًا فتصير «فاشلة» <strong>{{ _('ولا يصل التغيير إلى الراوتر') }}</strong>. يطلب تأكيدًا في نافذة
           قبل التنفيذ.</li>
         </ul>
 
         <div class="dg-acts" aria-hidden="true">
-          <span class="dg-abtn brand"><i class="fa-solid fa-rotate"></i> إعادة الآن</span>
-          <span class="dg-abtn danger"><i class="fa-solid fa-ban"></i> إلغاء</span>
+          <span class="dg-abtn brand"><i class="fa-solid fa-rotate"></i> {{ _('إعادة الآن') }}</span>
+          <span class="dg-abtn danger"><i class="fa-solid fa-ban"></i> {{ _('إلغاء') }}</span>
         </div>
 
         <div class="dg-warn">
           <span class="ic">⚠️</span>
-          <span><b>انتبه:</b> الإلغاء قرار نهائي — نافذة التأكيد تنبّهك: «ستُلغى المهمة نهائيًا —
+          <span><b>{{ _('انتبه:') }}</b> الإلغاء قرار نهائي — نافذة التأكيد تنبّهك: «ستُلغى المهمة نهائيًا —
           لن يُدفع هذا التغيير إلى الراوتر». استعمله فقط لمهمة عالقة تعرف أنها لم تعد لازمة.</span>
         </div>
       </div>

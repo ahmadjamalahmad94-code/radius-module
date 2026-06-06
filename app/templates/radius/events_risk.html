@@ -11,7 +11,7 @@
 {% block title %}مركز المخاطر — هوب ريديوس{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-shield-halved"></i>{% endblock %}
 {% block page_title %}مركز المخاطر{% endblock %}
-{% block page_sub %}<span class="sub">تنبيهات الاحتيال وقواعد المخاطر مع بقاء الأحداث الأصلية محفوظة للمراجعة.</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('تنبيهات الاحتيال وقواعد المخاطر مع بقاء الأحداث الأصلية محفوظة للمراجعة.') }}</span>{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
@@ -96,12 +96,12 @@
       <table class="hub-table" data-testid="fraud-flags-table">
         <thead>
           <tr>
-            <th class="num">الرقم</th>
-            <th>نوع التنبيه</th>
-            <th>الخطورة</th>
-            <th class="num">النقاط</th>
-            <th>الكيان</th>
-            <th>الملخص</th>
+            <th class="num">{{ _('الرقم') }}</th>
+            <th>{{ _('نوع التنبيه') }}</th>
+            <th>{{ _('الخطورة') }}</th>
+            <th class="num">{{ _('النقاط') }}</th>
+            <th>{{ _('الكيان') }}</th>
+            <th>{{ _('الملخص') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -123,7 +123,7 @@
               <td class="small">{{ flag.summary }}</td>
             </tr>
           {% else %}
-            <tr><td colspan="6">لا توجد تنبيهات احتيال حتى الآن.</td></tr>
+            <tr><td colspan="6">{{ _('لا توجد تنبيهات احتيال حتى الآن.') }}</td></tr>
           {% endfor %}
         </tbody>
       </table>

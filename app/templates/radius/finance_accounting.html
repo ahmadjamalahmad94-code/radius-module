@@ -4,7 +4,7 @@
 {% block title %}السجل والتقارير المحاسبية — Hobe Hub{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-scale-balanced"></i>{% endblock %}
 {% block page_title %}السجل والتقارير المحاسبية{% endblock %}
-{% block page_sub %}<span class="sub">دفتر القيود والتقارير المالية في صفحة واحدة</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('دفتر القيود والتقارير المالية في صفحة واحدة') }}</span>{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
@@ -134,7 +134,7 @@
   {% if tab == 'reports' %}
   <input type="hidden" name="tab" value="reports">
   {# hub-select يفعّل منتقي القوائم الموحّد hbsel (hub_select.js) مع دعم العربية #}
-  <select class="hub-input hub-select grow" name="type" onchange="this.form.submit()" aria-label="نوع التقرير">
+  <select class="hub-input hub-select grow" name="type" onchange="this.form.submit()" aria-label="{{ _('نوع التقرير') }}">
     {% for key, label in reports.items() %}
       <option value="{{ key }}" {% if report_type == key %}selected{% endif %}>{{ label }}</option>
     {% endfor %}
@@ -143,8 +143,8 @@
   {% else %}
   <input type="hidden" name="tab" value="ledger">
   {# hub-select يفعّل منتقي القوائم الموحّد hbsel (hub_select.js) #}
-  <select class="hub-input hub-select" name="entry_type" onchange="this.form.submit()" aria-label="نوع القيد">
-    <option value="">كل أنواع القيود</option>
+  <select class="hub-input hub-select" name="entry_type" onchange="this.form.submit()" aria-label="{{ _('نوع القيد') }}">
+    <option value="">{{ _('كل أنواع القيود') }}</option>
     {% for t in entry_types %}
       <option value="{{ t }}" {% if entry_type == t %}selected{% endif %}>
         {% if t == 'payment' %}دفعة{% elif t == 'loan' %}سلفة{% elif t == 'settlement' %}تسوية
@@ -154,14 +154,14 @@
     {% endfor %}
   </select>
   <input class="hub-input grow" type="text" name="subscriber_id" value="{{ subscriber_id }}"
-         placeholder="رقم المستفيد..." inputmode="numeric">
+         placeholder="{{ _('رقم المستفيد...') }}" inputmode="numeric">
   {{ hub.btn("فلترة", icon="filter", variant="primary", type="submit", size="sm") }}
   {% endif %}
 {% endcall %}
 
-<nav class="fa-tabs" aria-label="تبويبات المحاسبة">
-  <a href="?tab=ledger" class="{{ 'is-active' if tab == 'ledger' }}"><i class="fa-solid fa-table-list"></i> السجل المالي</a>
-  <a href="?tab=reports" class="{{ 'is-active' if tab == 'reports' }}"><i class="fa-solid fa-chart-line"></i> التقارير المالية</a>
+<nav class="fa-tabs" aria-label="{{ _('تبويبات المحاسبة') }}">
+  <a href="?tab=ledger" class="{{ 'is-active' if tab == 'ledger' }}"><i class="fa-solid fa-table-list"></i> {{ _('السجل المالي') }}</a>
+  <a href="?tab=reports" class="{{ 'is-active' if tab == 'reports' }}"><i class="fa-solid fa-chart-line"></i> {{ _('التقارير المالية') }}</a>
 </nav>
 </section>{# /hub-hero-shell #}
 
@@ -187,20 +187,20 @@
     {% if ledger_items %}
     {# uds-table-wrap فقط (بلا hub-table-wrap) فلا حدود/زوايا مزدوجة داخل القسم
        flush — استغنينا عن أنماط style المضمّنة بإسقاط فئة hub-table-wrap. #}
-    <div class="uds-table-wrap" data-uds-table data-uds-page-size="25" data-uds-export-title="السجل المالي — القيود">
+    <div class="uds-table-wrap" data-uds-table data-uds-page-size="25" data-uds-export-title="{{ _('السجل المالي — القيود') }}">
       <table class="uds-table">
         <thead>
           <tr>
             <th class="num" style="width:56px">#</th>
-            <th>النوع</th>
-            <th>المستفيد</th>
-            <th>الاتجاه</th>
-            <th class="num">المبلغ</th>
-            <th>الحالة</th>
-            <th>المصدر</th>
-            <th data-uds-nosort>ملاحظات</th>
-            <th>التاريخ</th>
-            <th data-uds-nosort data-uds-nocol style="width:230px">عكس القيد
+            <th>{{ _('النوع') }}</th>
+            <th>{{ _('المستفيد') }}</th>
+            <th>{{ _('الاتجاه') }}</th>
+            <th class="num">{{ _('المبلغ') }}</th>
+            <th>{{ _('الحالة') }}</th>
+            <th>{{ _('المصدر') }}</th>
+            <th data-uds-nosort>{{ _('ملاحظات') }}</th>
+            <th>{{ _('التاريخ') }}</th>
+            <th data-uds-nosort data-uds-nocol style="width:230px">{{ _('عكس القيد') }}
               <span class="hub-hint" tabindex="0" data-hint="عكس القيد لا يحذف القيد الأصلي — يُنشئ قيدًا جديدًا معاكسًا له يصفّر أثره على الأرقام، ويبقى الاثنان ظاهرين في السجل للمراجعة. اكتب سبب التصحيح ثم اضغط زر السهم."><i class="fa-solid fa-info"></i></span>
             </th>
           </tr>
@@ -261,13 +261,13 @@
               <form method="post" action="{{ url_for('radius.finance_ledger_void') }}" class="hub-flex-row" style="gap:4px;flex-wrap:nowrap">
                 <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
                 <input type="hidden" name="entry_id" value="{{ entry.id }}">
-                <input class="hub-input" name="reason" placeholder="سبب التصحيح" required style="font-size:12px;padding:5px 8px;min-width:110px">
-                <button type="submit" class="hub-btn hub-btn--icon" title="عكس القيد"
+                <input class="hub-input" name="reason" placeholder="{{ _('سبب التصحيح') }}" required style="font-size:12px;padding:5px 8px;min-width:110px">
+                <button type="submit" class="hub-btn hub-btn--icon" title="{{ _('عكس القيد') }}"
                   style="background:var(--hub-amber-soft);color:var(--hub-amber-ink);border-color:transparent">
                   <i class="fa-solid fa-rotate-left"></i>
                 </button>
               </form>
-              {% else %}<span class="hub-text-mute small">قيد تصحيحي</span>{% endif %}
+              {% else %}<span class="hub-text-mute small">{{ _('قيد تصحيحي') }}</span>{% endif %}
             </td>
           </tr>
           {% endfor %}
@@ -295,7 +295,7 @@
       {# الزر يفتح نافذة عائمة لتحديد الفترة من/إلى وملاحظة اختيارية —
          بدل الحفظ الأعمى للتقرير كاملًا (طلب المستخدم: «شو استفدت من اللقطة؟») #}
       <button type="button" class="hub-btn hub-btn--primary hub-btn--sm" data-fcw-open="snapshot-create">
-        <i class="fa-solid fa-lock"></i> حفظ لقطة ثابتة
+        <i class="fa-solid fa-lock"></i> {{ _('حفظ لقطة ثابتة') }}
       </button>
     </div>
     {% if report_items %}
@@ -361,20 +361,20 @@
   {% if snapshots %}
   {% call hub.section("آخر اللقطات الثابتة", icon="box-archive", meta=snapshots|length|string + " لقطة", flush=True) %}
     {# uds-table-wrap فقط (بلا hub-table-wrap وبلا أنماط مضمّنة) #}
-    <div class="uds-table-wrap" data-uds-table data-uds-page-size="25" data-uds-export-title="اللقطات الثابتة">
+    <div class="uds-table-wrap" data-uds-table data-uds-page-size="25" data-uds-export-title="{{ _('اللقطات الثابتة') }}">
       <table class="uds-table">
         <thead><tr>
           <th class="num">#</th>
-          <th>النوع</th>
-          <th>الفترة (من–إلى)
+          <th>{{ _('النوع') }}</th>
+          <th>{{ _('الفترة (من–إلى)') }}
             <span class="hub-hint" tabindex="0" data-hint="النطاق الذي اختير في نافذة حفظ اللقطة. اللقطات القديمة المحفوظة بلا نطاق تظهر «كامل التقرير»."><i class="fa-solid fa-info"></i></span>
           </th>
-          <th class="num">عدد الصفوف</th>
-          <th class="num">الإجمالي</th>
-          <th>ملاحظة</th>
-          <th>أنشئت بواسطة</th>
-          <th>الوقت</th>
-          <th data-uds-nosort data-uds-nocol>عرض</th>
+          <th class="num">{{ _('عدد الصفوف') }}</th>
+          <th class="num">{{ _('الإجمالي') }}</th>
+          <th>{{ _('ملاحظة') }}</th>
+          <th>{{ _('أنشئت بواسطة') }}</th>
+          <th>{{ _('الوقت') }}</th>
+          <th data-uds-nosort data-uds-nocol>{{ _('عرض') }}</th>
         </tr></thead>
         <tbody>
           {% for snap in snapshots %}
@@ -390,7 +390,7 @@
             <td>{{ reports.get(snap.report_type, snap.report_type) }}</td>
             <td class="mono small" style="white-space:nowrap;direction:ltr;text-align:end">
               {%- if _from or _to -%}{{ _from or '…' }} ← {{ _to or '…' }}
-              {%- else -%}<span class="hub-text-mute">كامل التقرير</span>{%- endif -%}
+              {%- else -%}<span class="hub-text-mute">{{ _('كامل التقرير') }}</span>{%- endif -%}
             </td>
             <td class="num mono small" style="font-variant-numeric:tabular-nums;direction:ltr">{{ _res.get('count', 0) }}</td>
             <td class="num mono small" style="font-variant-numeric:tabular-nums;direction:ltr">
@@ -402,7 +402,7 @@
             <td>
               <button type="button" class="hub-btn hub-btn--secondary hub-btn--sm" data-snap-view="{{ snap.id }}"
                       data-snap-url="{{ url_for('radius.finance_reports_snapshot_json', snapshot_id=snap.id) }}">
-                <i class="fa-solid fa-eye"></i> عرض
+                <i class="fa-solid fa-eye"></i> {{ _('عرض') }}
               </button>
             </td>
           </tr>
@@ -422,25 +422,25 @@
       <input type="hidden" name="report_type" value="{{ report_type }}">
       <div class="fcw-head">
         <h3 id="fcw-snapshot-title"><i class="fa-solid fa-lock"></i> حفظ لقطة ثابتة — {{ report_label }}</h3>
-        <button type="button" class="fcw-x" data-fcw-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
+        <button type="button" class="fcw-x" data-fcw-close aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="fcw-body">
         <div class="fcw-range">
           <label class="hub-field">
-            <span class="hub-field-label">من تاريخ</span>
+            <span class="hub-field-label">{{ _('من تاريخ') }}</span>
             <input class="hub-input" type="date" name="date_from">
-            <span class="hub-field-hint">اتركه فارغًا لبداية مفتوحة.</span>
+            <span class="hub-field-hint">{{ _('اتركه فارغًا لبداية مفتوحة.') }}</span>
           </label>
           <label class="hub-field">
-            <span class="hub-field-label">إلى تاريخ</span>
+            <span class="hub-field-label">{{ _('إلى تاريخ') }}</span>
             <input class="hub-input" type="date" name="date_to">
-            <span class="hub-field-hint">اتركه فارغًا لنهاية مفتوحة.</span>
+            <span class="hub-field-hint">{{ _('اتركه فارغًا لنهاية مفتوحة.') }}</span>
           </label>
         </div>
         <label class="hub-field">
-          <span class="hub-field-label">ملاحظة (اختياري)</span>
-          <input class="hub-input" type="text" name="note" maxlength="200" placeholder="مثال: جرد نهاية الشهر">
-          <span class="hub-field-hint">تظهر في جدول اللقطات لتعرف لماذا حُفظت هذه اللقطة.</span>
+          <span class="hub-field-label">{{ _('ملاحظة (اختياري)') }}</span>
+          <input class="hub-input" type="text" name="note" maxlength="200" placeholder="{{ _('مثال: جرد نهاية الشهر') }}">
+          <span class="hub-field-hint">{{ _('تظهر في جدول اللقطات لتعرف لماذا حُفظت هذه اللقطة.') }}</span>
         </label>
         <div class="hub-text-soft" style="font-size:12px;line-height:1.8">
           <i class="fa-solid fa-circle-info" style="color:var(--hub-brand-ink)"></i>
@@ -449,8 +449,8 @@
         </div>
       </div>
       <div class="fcw-foot">
-        <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>إغلاق</button>
-        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-lock"></i> حفظ اللقطة</button>
+        <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>{{ _('إغلاق') }}</button>
+        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-lock"></i> {{ _('حفظ اللقطة') }}</button>
       </div>
     </form>
   </div>
@@ -460,8 +460,8 @@
 <div class="fcw-modal" data-fcw-modal="snapshot-view" hidden>
   <div class="fcw-dialog fcw-dialog--wide" role="dialog" aria-modal="true" aria-labelledby="fcw-snapview-title">
     <div class="fcw-head">
-      <h3 id="fcw-snapview-title"><i class="fa-solid fa-eye"></i> <span data-snapview-title>عرض اللقطة</span></h3>
-      <button type="button" class="fcw-x" data-fcw-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
+      <h3 id="fcw-snapview-title"><i class="fa-solid fa-eye"></i> <span data-snapview-title>{{ _('عرض اللقطة') }}</span></h3>
+      <button type="button" class="fcw-x" data-fcw-close aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <div class="fcw-body">
       <div class="fcw-snap-meta" data-snapview-meta></div>
@@ -470,7 +470,7 @@
       </div>
     </div>
     <div class="fcw-foot">
-      <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>إغلاق</button>
+      <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>{{ _('إغلاق') }}</button>
     </div>
   </div>
 </div>

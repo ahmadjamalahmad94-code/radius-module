@@ -6,7 +6,7 @@
 {% block title %}الرصيد والحِزم — مركز التواصل{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-wallet"></i>{% endblock %}
 {% block page_title %}الرصيد والحِزم{% endblock %}
-{% block page_sub %}<span class="sub">رصيد الرسائل المدفوعة لكل قناة، طلب حزمة جديدة من لوحة التراخيص، وإضافة رصيد يدويًا.</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('رصيد الرسائل المدفوعة لكل قناة، طلب حزمة جديدة من لوحة التراخيص، وإضافة رصيد يدويًا.') }}</span>{% endblock %}
 
 {# Arabic labels for channel + mode #}
 {% macro ch_label(ch) %}{{ {'sms':'الرسائل القصيرة','whatsapp':'واتساب'}.get(ch, 'قناة غير معروفة') }}{% endmacro %}
@@ -106,7 +106,7 @@
         <span class="hub-section-head-icon"><i class="fa-{{ 'brands' if ch == 'whatsapp' else 'solid' }} fa-{{ ch_icon(ch) }}"></i></span>
         <div style="min-width:0">
           <strong style="font-size:15px;color:var(--hub-text)">{{ ch_label(ch) }}</strong>
-          <div class="hub-text-mute" style="font-size:11.5px;margin-top:2px">رصيد الرسائل والحِزم المدفوعة</div>
+          <div class="hub-text-mute" style="font-size:11.5px;margin-top:2px">{{ _('رصيد الرسائل والحِزم المدفوعة') }}</div>
         </div>
         <div class="hub-flex-row" style="gap:6px;flex-wrap:wrap;justify-content:flex-end;margin-inline-start:auto">
           {{ hub.pill(mode_label(q.mode), variant="brand") }}
@@ -119,26 +119,26 @@
           <div class="cq-meter">
             <div>
               <div class="big {{ 'zero' if q.balance == 0 else '' }}">{{ q.balance }}</div>
-              <div class="lbl">رسالة متبقّية</div>
+              <div class="lbl">{{ _('رسالة متبقّية') }}</div>
             </div>
             <div class="used">
               <div class="n">{{ q.used }}</div>
-              <div class="t">رسالة مُستهلكة</div>
+              <div class="t">{{ _('رسالة مُستهلكة') }}</div>
             </div>
           </div>
           {% if q.balance == 0 %}
-            <div class="cq-zero-note"><i class="fa-solid fa-triangle-exclamation"></i> نفدت كوتة الرسائل — لن يتم الإرسال على هذه القناة حتى تتم إضافة رصيد.</div>
+            <div class="cq-zero-note"><i class="fa-solid fa-triangle-exclamation"></i> {{ _('نفدت كوتة الرسائل — لن يتم الإرسال على هذه القناة حتى تتم إضافة رصيد.') }}</div>
           {% endif %}
         {% else %}
           <div class="cq-selfnote">
             <i class="fa-solid fa-circle-info"></i>
-            هذه القناة تستخدم ربطًا مباشرًا من العميل، لذا الإرسال غير محدود ولا يستهلك رصيدًا. لتفعيل نظام الرصيد المدفوع غيّر نمط القناة إلى «رصيد مخصص من الإدارة» من صفحة قنوات الإرسال.
+            {{ _('هذه القناة تستخدم ربطًا مباشرًا من العميل، لذا الإرسال غير محدود ولا يستهلك رصيدًا. لتفعيل نظام الرصيد المدفوع غيّر نمط القناة إلى «رصيد مخصص من الإدارة» من صفحة قنوات الإرسال.') }}
           </div>
         {% endif %}
 
         {# ── short ledger (last 10) ── #}
         <div class="cq-ledger">
-          <div class="h">آخر الحركات</div>
+          <div class="h">{{ _('آخر الحركات') }}</div>
           {% if ledger %}
           <table>
             <tbody>
@@ -153,7 +153,7 @@
             </tbody>
           </table>
           {% else %}
-          <div class="empty">لا توجد حركات بعد على هذه القناة.</div>
+          <div class="empty">{{ _('لا توجد حركات بعد على هذه القناة.') }}</div>
           {% endif %}
         </div>
 
@@ -162,38 +162,38 @@
           <form method="post" action="{{ url_for('radius.communications_quota_request') }}" class="cq-form">
             {{ csrf_token_input() }}
             <input type="hidden" name="channel" value="{{ ch }}">
-            <div class="cq-form-title"><i class="fa-solid fa-cart-shopping" style="color:#7c3aed"></i> طلب حزمة رسائل</div>
+            <div class="cq-form-title"><i class="fa-solid fa-cart-shopping" style="color:#7c3aed"></i> {{ _('طلب حزمة رسائل') }}</div>
             <div class="cq-row2">
               <div class="cq-field">
-                <label for="qty-{{ ch }}">عدد الرسائل في الحزمة</label>
-                <input class="hub-input" id="qty-{{ ch }}" type="number" min="1" step="1" name="quantity" placeholder="مثال: 1000" required>
+                <label for="qty-{{ ch }}">{{ _('عدد الرسائل في الحزمة') }}</label>
+                <input class="hub-input" id="qty-{{ ch }}" type="number" min="1" step="1" name="quantity" placeholder="{{ _('مثال: 1000') }}" required>
               </div>
               <div class="cq-field">
-                <label for="rnote-{{ ch }}">ملاحظة (اختياري)</label>
-                <input class="hub-input" id="rnote-{{ ch }}" name="note" placeholder="أي تفاصيل للإدارة">
+                <label for="rnote-{{ ch }}">{{ _('ملاحظة (اختياري)') }}</label>
+                <input class="hub-input" id="rnote-{{ ch }}" name="note" placeholder="{{ _('أي تفاصيل للإدارة') }}">
               </div>
             </div>
-            <div class="hint">يُرسل الطلب إلى لوحة التراخيص ليراجعه المشغّل ويشحن الرصيد عند الموافقة. لا يتغيّر رصيدك إلا بعد الموافقة.</div>
-            <button type="submit" class="hub-btn hub-btn--primary"><i class="fa-solid fa-paper-plane"></i> إرسال الطلب إلى لوحة التراخيص</button>
+            <div class="hint">{{ _('يُرسل الطلب إلى لوحة التراخيص ليراجعه المشغّل ويشحن الرصيد عند الموافقة. لا يتغيّر رصيدك إلا بعد الموافقة.') }}</div>
+            <button type="submit" class="hub-btn hub-btn--primary"><i class="fa-solid fa-paper-plane"></i> {{ _('إرسال الطلب إلى لوحة التراخيص') }}</button>
           </form>
 
           {# ── operator: add balance locally ── #}
           <form method="post" action="{{ url_for('radius.communications_quota_credit') }}" class="cq-form op">
             {{ csrf_token_input() }}
             <input type="hidden" name="channel" value="{{ ch }}">
-            <div class="cq-form-title"><i class="fa-solid fa-plus" style="color:#d97706"></i> إضافة رصيد يدويًا <span class="tag">للمزوّد/الإدارة</span></div>
+            <div class="cq-form-title"><i class="fa-solid fa-plus" style="color:#d97706"></i> {{ _('إضافة رصيد يدويًا') }} <span class="tag">{{ _('للمزوّد/الإدارة') }}</span></div>
             <div class="cq-row2">
               <div class="cq-field">
-                <label for="amt-{{ ch }}">عدد الرسائل المضافة</label>
-                <input class="hub-input" id="amt-{{ ch }}" type="number" min="1" step="1" name="amount" placeholder="مثال: 500" required>
+                <label for="amt-{{ ch }}">{{ _('عدد الرسائل المضافة') }}</label>
+                <input class="hub-input" id="amt-{{ ch }}" type="number" min="1" step="1" name="amount" placeholder="{{ _('مثال: 500') }}" required>
               </div>
               <div class="cq-field">
-                <label for="cnote-{{ ch }}">سبب/مرجع الإضافة</label>
-                <input class="hub-input" id="cnote-{{ ch }}" name="note" placeholder="مثال: حزمة مدفوعة #123">
+                <label for="cnote-{{ ch }}">{{ _('سبب/مرجع الإضافة') }}</label>
+                <input class="hub-input" id="cnote-{{ ch }}" name="note" placeholder="{{ _('مثال: حزمة مدفوعة #123') }}">
               </div>
             </div>
-            <div class="hint">يضيف الرصيد محليًا فورًا ويُسجَّل في سجل الحركات وسجل التدقيق. مخصّص لمشغّل لوحة التراخيص أو المزوّد.</div>
-            <button type="submit" class="hub-btn cq-btn-amber"><i class="fa-solid fa-wallet"></i> إضافة الرصيد الآن</button>
+            <div class="hint">{{ _('يضيف الرصيد محليًا فورًا ويُسجَّل في سجل الحركات وسجل التدقيق. مخصّص لمشغّل لوحة التراخيص أو المزوّد.') }}</div>
+            <button type="submit" class="hub-btn cq-btn-amber"><i class="fa-solid fa-wallet"></i> {{ _('إضافة الرصيد الآن') }}</button>
           </form>
         </div>
       </div>

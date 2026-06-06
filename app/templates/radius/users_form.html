@@ -846,18 +846,18 @@
 <div class="uf-layout">
 
   {# ───── Sticky side nav ────────────────────────────────── #}
-  <aside class="uf-side" aria-label="أقسام النموذج">
-    <div class="uf-side-title"><i class="fa-solid fa-compass"></i> أقسام النموذج</div>
+  <aside class="uf-side" aria-label="{{ _('أقسام النموذج') }}">
+    <div class="uf-side-title"><i class="fa-solid fa-compass"></i> {{ _('أقسام النموذج') }}</div>
     <nav class="uf-side-list">
-      <a href="#uf-account"><i class="fa-solid fa-wifi"></i> حساب الإنترنت</a>
-      <a href="#uf-personal"><i class="fa-solid fa-id-card"></i> البيانات الشخصية</a>
-      <a href="#uf-speed"><i class="fa-solid fa-gauge-high"></i> السرعة</a>
-      <a href="#uf-quota"><i class="fa-solid fa-clock"></i> الحصة والوقت</a>
-      <a href="#uf-network"><i class="fa-solid fa-network-wired"></i> الشبكة</a>
-      <a href="#uf-pppoe"><i class="fa-solid fa-plug"></i> البرودباند</a>
+      <a href="#uf-account"><i class="fa-solid fa-wifi"></i> {{ _('حساب الإنترنت') }}</a>
+      <a href="#uf-personal"><i class="fa-solid fa-id-card"></i> {{ _('البيانات الشخصية') }}</a>
+      <a href="#uf-speed"><i class="fa-solid fa-gauge-high"></i> {{ _('السرعة') }}</a>
+      <a href="#uf-quota"><i class="fa-solid fa-clock"></i> {{ _('الحصة والوقت') }}</a>
+      <a href="#uf-network"><i class="fa-solid fa-network-wired"></i> {{ _('الشبكة') }}</a>
+      <a href="#uf-pppoe"><i class="fa-solid fa-plug"></i> {{ _('البرودباند') }}</a>
     </nav>
     <div class="uf-side-note">
-      ابدأ من حساب الإنترنت والباقة. باقي الأقسام اختيارية وتُستخدم عند الحاجة لتخصيص هذا المشترك.
+      {{ _('ابدأ من حساب الإنترنت والباقة. باقي الأقسام اختيارية وتُستخدم عند الحاجة لتخصيص هذا المشترك.') }}
     </div>
   </aside>
 
@@ -877,7 +877,7 @@
     <section class="uf-section uf-section--acct" id="uf-account">
       <header class="uf-section-head">
         <span class="uf-section-icon"><i class="fa-solid fa-wifi"></i></span>
-        <span class="uf-section-title">حساب الإنترنت</span>
+        <span class="uf-section-title">{{ _('حساب الإنترنت') }}</span>
       </header>
       <div class="uf-section-body">
         <input type="hidden" name="beneficiary_ref" value="{{ sub.beneficiary_ref or '' }}">
@@ -888,10 +888,10 @@
            Row 3: plan (1) | manager (1) | group (span-2) #}
         <div class="uf-grid">
           <div class="uf-field">
-            <label>اسم الدخول <span class="req">*</span></label>
+            <label>{{ _('اسم الدخول') }} <span class="req">*</span></label>
             <input class="hub-input" type="text" name="username" required {% if not is_new %}readonly{% endif %}
                    value="{{ sub.username or '' }}" placeholder="user123">
-            <div class="help">الاسم الذي يستخدمه المشترك لتسجيل الدخول.</div>
+            <div class="help">{{ _('الاسم الذي يستخدمه المشترك لتسجيل الدخول.') }}</div>
           </div>
 
           <div class="uf-field">
@@ -902,22 +902,22 @@
                      value="{{ sub.password or '' }}"
                      autocomplete="off">
               <button type="button" class="uf-pw-toggle" data-uf-pw-toggle
-                      aria-label="إظهار/إخفاء كلمة المرور" title="إظهار/إخفاء">
+                      aria-label="{{ _('إظهار/إخفاء كلمة المرور') }}" title="{{ _('إظهار/إخفاء') }}">
                 <i class="fa-solid fa-eye"></i>
               </button>
               {% if not is_new %}
               <button type="button" class="uf-pw-toggle" data-uf-pw-copy
                       data-pw="{{ sub.password|e }}"
-                      aria-label="نسخ كلمة المرور" title="نسخ">
+                      aria-label="{{ _('نسخ كلمة المرور') }}" title="{{ _('نسخ') }}">
                 <i class="fa-solid fa-copy"></i>
               </button>
               {% endif %}
             </div>
-            <div class="help">تستخدمها أجهزة الشبكة للتحقق من الحساب. اضغط على العين لإظهارها أو على أيقونة النسخ لتعطيها للمشترك.</div>
+            <div class="help">{{ _('تستخدمها أجهزة الشبكة للتحقق من الحساب. اضغط على العين لإظهارها أو على أيقونة النسخ لتعطيها للمشترك.') }}</div>
           </div>
 
           <div class="uf-field">
-            <label>الحالة</label>
+            <label>{{ _('الحالة') }}</label>
             <select class="hub-select" name="status">
               {% for s in statuses %}
                 <option value="{{ s }}" {% if sub.status == s %}selected{% endif %}>
@@ -925,17 +925,17 @@
                 </option>
               {% endfor %}
             </select>
-            <div class="help">عند التعطيل لن يستطيع المشترك الدخول.</div>
+            <div class="help">{{ _('عند التعطيل لن يستطيع المشترك الدخول.') }}</div>
           </div>
 
           <div class="uf-field">
-            <label>تجديد تلقائي</label>
+            <label>{{ _('تجديد تلقائي') }}</label>
             {{ toggle_switch(name="auto_renewal", checked=sub.auto_renewal, id="auto-renew") }}
-            <div class="help">يجدد الحساب تلقائيًا عند الانتهاء.</div>
+            <div class="help">{{ _('يجدد الحساب تلقائيًا عند الانتهاء.') }}</div>
           </div>
 
           <div class="uf-field full">
-            <label>نوع الخدمة</label>
+            <label>{{ _('نوع الخدمة') }}</label>
             {%- set svc = (sub.service_type or '')|lower -%}
             {%- set svc_hs = svc in ('hotspot','both') -%}
             {%- set svc_pppoe = svc in ('pppoe','both','broadband') -%}
@@ -945,8 +945,8 @@
                   {% if svc_hs %}checked{% endif %}>
                 <span class="uf-svc-icon"><i class="fa-solid fa-wifi"></i></span>
                 <span class="uf-svc-body">
-                  <span class="uf-svc-title">هوت سبوت</span>
-                  <span class="uf-svc-sub">دخول عبر صفحة تسجيل الدخول للهوت سبوت</span>
+                  <span class="uf-svc-title">{{ _('هوت سبوت') }}</span>
+                  <span class="uf-svc-sub">{{ _('دخول عبر صفحة تسجيل الدخول للهوت سبوت') }}</span>
                 </span>
               </label>
               <label class="uf-svc-card {% if svc_pppoe %}is-checked{% endif %}">
@@ -954,12 +954,12 @@
                   {% if svc_pppoe %}checked{% endif %}>
                 <span class="uf-svc-icon"><i class="fa-solid fa-plug"></i></span>
                 <span class="uf-svc-body">
-                  <span class="uf-svc-title">برودباند</span>
-                  <span class="uf-svc-sub">اشتراك منزلي باسم وكلمة سرّ</span>
+                  <span class="uf-svc-title">{{ _('برودباند') }}</span>
+                  <span class="uf-svc-sub">{{ _('اشتراك منزلي باسم وكلمة سرّ') }}</span>
                 </span>
               </label>
             </div>
-            <div class="help">يمكنك اختيار خدمة واحدة أو الاثنتين معًا.</div>
+            <div class="help">{{ _('يمكنك اختيار خدمة واحدة أو الاثنتين معًا.') }}</div>
           </div>
 
           {# Row 3: three equal columns via a sub-grid so plan/manager/group
@@ -967,22 +967,22 @@
              gap or force a span-2 imbalance). #}
           <div class="uf-subrow-3">
             <div class="uf-field">
-              <label>باقة الخدمة</label>
+              <label>{{ _('باقة الخدمة') }}</label>
               <select class="hub-select" name="plan_id">
-                <option value="">— بدون —</option>
+                <option value="">{{ _('— بدون —') }}</option>
                 {% for p in plans %}
                   <option value="{{ p.id }}" {% if sub.plan_id == p.id %}selected{% endif %}>
                     {{ p.display_name or p.name }}
                   </option>
                 {% endfor %}
               </select>
-              <div class="help">تحدد السرعة والحصة ومدة الاستخدام.</div>
+              <div class="help">{{ _('تحدد السرعة والحصة ومدة الاستخدام.') }}</div>
             </div>
 
             <div class="uf-field">
-              <label>المدير المسؤول</label>
+              <label>{{ _('المدير المسؤول') }}</label>
               <select class="hub-select" name="manager_id">
-                <option value="">— بدون —</option>
+                <option value="">{{ _('— بدون —') }}</option>
                 {% for a in admins %}
                   <option value="{{ a.id }}" {% if sub.manager_id == a.id %}selected{% endif %}>
                     {{ a.full_name or a.username }}
@@ -990,13 +990,13 @@
                   </option>
                 {% endfor %}
               </select>
-              <div class="help">اختر المدير الذي يتابع هذا الحساب.</div>
+              <div class="help">{{ _('اختر المدير الذي يتابع هذا الحساب.') }}</div>
             </div>
 
             <div class="uf-field">
-              <label>المجموعة</label>
+              <label>{{ _('المجموعة') }}</label>
               <select class="hub-select" name="group">
-                <option value="">— بدون —</option>
+                <option value="">{{ _('— بدون —') }}</option>
                 {% for g in subscriber_groups %}
                   <option value="{{ g.name }}" {% if sub.group == g.name %}selected{% endif %}>
                     {{ g.name }}
@@ -1004,19 +1004,19 @@
                 {% endfor %}
               </select>
               <div class="help">
-                تُدار من
+                {{ _('تُدار من') }}
                 <a href="{{ url_for('radius.subscriber_groups_list') }}"
-                   style="color:var(--hub-brand-ink);font-weight:700;text-decoration:none">مجموعات المشتركين</a>.
+                   style="color:var(--hub-brand-ink);font-weight:700;text-decoration:none">{{ _('مجموعات المشتركين') }}</a>.
               </div>
             </div>
           </div>
 
           <div class="uf-field">
-            <label>السعر المخصّص لهذا المشترك</label>
+            <label>{{ _('السعر المخصّص لهذا المشترك') }}</label>
             <input class="hub-input" type="number" step="0.01" min="0"
                    name="custom_price" value="{{ sub.custom_price or '' }}"
-                   placeholder="اتركه فارغًا لاستخدام سعر العرض">
-            <div class="help">إذا عبّأت هذه الخانة يُعتمد هذا السعر ويتجاوز سعر العرض. اتركه فارغًا أو 0 لاستخدام سعر الباقة.</div>
+                   placeholder="{{ _('اتركه فارغًا لاستخدام سعر العرض') }}">
+            <div class="help">{{ _('إذا عبّأت هذه الخانة يُعتمد هذا السعر ويتجاوز سعر العرض. اتركه فارغًا أو 0 لاستخدام سعر الباقة.') }}</div>
           </div>
         </div>
       </div>
@@ -1026,7 +1026,7 @@
     <section class="uf-section uf-section--pers" id="uf-personal">
       <header class="uf-section-head">
         <span class="uf-section-icon"><i class="fa-solid fa-id-card"></i></span>
-        <span class="uf-section-title">المعلومات الشخصية</span>
+        <span class="uf-section-title">{{ _('المعلومات الشخصية') }}</span>
       </header>
       <div class="uf-section-body">
         {% set _name_parts = (sub.full_name or '').split() %}
@@ -1038,34 +1038,34 @@
           <input type="hidden" name="full_name" value="{{ sub.full_name or '' }}" data-full-name-field>
           <input type="hidden" name="father_name" value="{{ sub.father_name or _second_name }}" data-father-name-field>
           <input type="hidden" name="country" value="{{ sub.country or default_country or '' }}">
-          <div class="uf-field"><label>الاسم الأول</label>
+          <div class="uf-field"><label>{{ _('الاسم الأول') }}</label>
             <input class="hub-input" type="text" value="{{ _first_name }}" data-name-part="first"></div>
-          <div class="uf-field"><label>الاسم الثاني</label>
+          <div class="uf-field"><label>{{ _('الاسم الثاني') }}</label>
             <input class="hub-input" type="text" value="{{ _second_name }}" data-name-part="second"></div>
-          <div class="uf-field"><label>الاسم الثالث</label>
+          <div class="uf-field"><label>{{ _('الاسم الثالث') }}</label>
             <input class="hub-input" type="text" value="{{ _third_name }}" data-name-part="third"></div>
-          <div class="uf-field"><label>الاسم الرابع</label>
+          <div class="uf-field"><label>{{ _('الاسم الرابع') }}</label>
             <input class="hub-input" type="text" value="{{ _fourth_name }}" data-name-part="fourth"></div>
-          <div class="uf-field"><label>الجوال</label>
+          <div class="uf-field"><label>{{ _('الجوال') }}</label>
             <input class="hub-input" type="tel" name="mobile" value="{{ sub.mobile or '' }}">
-            <div class="help">رقم التواصل مع المشترك للتذكير والتحصيل.</div></div>
-          <div class="uf-field"><label>البريد الإلكتروني</label>
+            <div class="help">{{ _('رقم التواصل مع المشترك للتذكير والتحصيل.') }}</div></div>
+          <div class="uf-field"><label>{{ _('البريد الإلكتروني') }}</label>
             <input class="hub-input" type="email" name="email" value="{{ sub.email or '' }}">
-            <div class="help">اختياري — يُستخدم للمراسلات والإشعارات.</div></div>
-          <div class="uf-field"><label>الرقم الوطني</label>
+            <div class="help">{{ _('اختياري — يُستخدم للمراسلات والإشعارات.') }}</div></div>
+          <div class="uf-field"><label>{{ _('الرقم الوطني') }}</label>
             <input class="hub-input" type="text" name="national_id" value="{{ sub.national_id or '' }}">
-            <div class="help">لتوثيق هوية المشترك في السجلات.</div></div>
-          <div class="uf-field"><label>طريقة الدفع المفضلة</label>
-            <input class="hub-input" type="text" name="payment_method" value="{{ sub.payment_method or '' }}" placeholder="نقدًا / محفظة / تحويل">
-            <div class="help">للتذكير كيف يفضّل المشترك أن يدفع.</div></div>
-          <div class="uf-field"><label>المدينة</label>
+            <div class="help">{{ _('لتوثيق هوية المشترك في السجلات.') }}</div></div>
+          <div class="uf-field"><label>{{ _('طريقة الدفع المفضلة') }}</label>
+            <input class="hub-input" type="text" name="payment_method" value="{{ sub.payment_method or '' }}" placeholder="{{ _('نقدًا / محفظة / تحويل') }}">
+            <div class="help">{{ _('للتذكير كيف يفضّل المشترك أن يدفع.') }}</div></div>
+          <div class="uf-field"><label>{{ _('المدينة') }}</label>
             <input class="hub-input" type="text" name="city" value="{{ sub.city or '' }}">
-            <div class="help">مدينة سكن المشترك.</div></div>
-          <div class="uf-field"><label>المنطقة / الحي</label>
+            <div class="help">{{ _('مدينة سكن المشترك.') }}</div></div>
+          <div class="uf-field"><label>{{ _('المنطقة / الحي') }}</label>
             <input class="hub-input" type="text" name="district" value="{{ sub.district or '' }}">
-            <div class="help">يساعد فرق الصيانة على الوصول للموقع.</div></div>
-          <div class="uf-field full"><label>ملاحظات</label>
-            <textarea class="hub-textarea" name="remark" rows="2" placeholder="أي ملاحظات تخص المشترك (اختياري)">{{ sub.remark or '' }}</textarea></div>
+            <div class="help">{{ _('يساعد فرق الصيانة على الوصول للموقع.') }}</div></div>
+          <div class="uf-field full"><label>{{ _('ملاحظات') }}</label>
+            <textarea class="hub-textarea" name="remark" rows="2" placeholder="{{ _('أي ملاحظات تخص المشترك (اختياري)') }}">{{ sub.remark or '' }}</textarea></div>
         </div>
       </div>
     </section>
@@ -1087,11 +1087,11 @@
          الداخلية». #}
       <header class="uf-section-head uf-section-head--rich">
         <span class="uf-section-icon"><i class="fa-solid fa-gauge-high"></i></span>
-        <span class="uf-section-title">السرعة</span>
-        <span class="uf-section-tag" data-bw-status>سرعة أساسية</span>
+        <span class="uf-section-title">{{ _('السرعة') }}</span>
+        <span class="uf-section-tag" data-bw-status>{{ _('سرعة أساسية') }}</span>
         <input type="hidden" name="bandwidth_control_enabled" id="bw-en-hidden"
                value="{{ 1 if sub.bandwidth_control_enabled else 0 }}">
-        <span class="uf-section-help">قيم ثابتة تتجاوز سرعة الباقة. اتركها 0 لاستخدام قيمة الباقة.</span>
+        <span class="uf-section-help">{{ _('قيم ثابتة تتجاوز سرعة الباقة. اتركها 0 لاستخدام قيمة الباقة.') }}</span>
         <i class="fa-solid fa-chevron-down uf-section-toggle"></i>
       </header>
       <div class="uf-section-body">
@@ -1100,56 +1100,56 @@
            visual RIGHT in RTL per user feedback) + download + upload. #}
         <div class="uf-row3">
           <div class="uf-field">
-            <label>سرعة مخصصة</label>
+            <label>{{ _('سرعة مخصصة') }}</label>
             {{ toggle_switch(name="custom_speed", checked=sub.custom_speed, id="cs") }}
-            <div class="help">فعّلها لتطبيق سرعة خاصة بدل سرعة الباقة.</div>
+            <div class="help">{{ _('فعّلها لتطبيق سرعة خاصة بدل سرعة الباقة.') }}</div>
           </div>
           <div class="uf-field">
-            <label>سرعة التنزيل</label>
+            <label>{{ _('سرعة التنزيل') }}</label>
             {{ unit_input_picker(name="download_speed_kbps", value=sub.download_speed_kbps or 0, kind="speed", units=["kbps","Mbps"]) }}
-            <div class="help">0 = استخدم قيمة الباقة.</div>
+            <div class="help">{{ _('0 = استخدم قيمة الباقة.') }}</div>
           </div>
           <div class="uf-field">
-            <label>سرعة الرفع</label>
+            <label>{{ _('سرعة الرفع') }}</label>
             {{ unit_input_picker(name="upload_speed_kbps", value=sub.upload_speed_kbps or 0, kind="speed", units=["kbps","Mbps"]) }}
-            <div class="help">0 = استخدم قيمة الباقة.</div>
+            <div class="help">{{ _('0 = استخدم قيمة الباقة.') }}</div>
           </div>
         </div>
 
         {# Row B: «سرعة مؤقتة» toggle + duration + temporary download/upload. #}
         <div class="uf-row4">
           <div class="uf-field">
-            <label>سرعة مؤقتة</label>
+            <label>{{ _('سرعة مؤقتة') }}</label>
             {{ toggle_switch(name="temporary_speed", checked=sub.temporary_speed, id="ts") }}
-            <div class="help">رفع مؤقت بدون تغيير الباقة.</div>
+            <div class="help">{{ _('رفع مؤقت بدون تغيير الباقة.') }}</div>
           </div>
           <div class="uf-field">
-            <label>مدة السرعة المؤقتة</label>
+            <label>{{ _('مدة السرعة المؤقتة') }}</label>
             <div class="uf-inline-control">
               {{ unit_input_picker(name="temporary_speed_duration_minutes", value=sub.temporary_speed_duration_minutes or 30, kind="time", units=["min","hr"]) }}
               {# «30 دقيقة» quick-preset button removed per request #3.
                  The JS binding (tempPreset30) is null-guarded, so this is safe. #}
             </div>
-            <div class="help">بعد انتهاء المدة يرجع المشترك لسرعته العادية.</div>
+            <div class="help">{{ _('بعد انتهاء المدة يرجع المشترك لسرعته العادية.') }}</div>
           </div>
           <div class="uf-field">
-            <label>سرعة تنزيل مؤقتة</label>
+            <label>{{ _('سرعة تنزيل مؤقتة') }}</label>
             {{ unit_input_picker(name="temporary_download_speed_kbps", value=sub.temporary_download_speed_kbps or sub.download_speed_kbps or 0, kind="speed", units=["kbps","Mbps"]) }}
-            <div class="help">سرعة التنزيل خلال فترة الرفع المؤقت.</div>
+            <div class="help">{{ _('سرعة التنزيل خلال فترة الرفع المؤقت.') }}</div>
           </div>
           <div class="uf-field">
-            <label>سرعة رفع مؤقتة</label>
+            <label>{{ _('سرعة رفع مؤقتة') }}</label>
             {{ unit_input_picker(name="temporary_upload_speed_kbps", value=sub.temporary_upload_speed_kbps or sub.upload_speed_kbps or 0, kind="speed", units=["kbps","Mbps"]) }}
-            <div class="help">سرعة الرفع خلال فترة الرفع المؤقت.</div>
+            <div class="help">{{ _('سرعة الرفع خلال فترة الرفع المؤقت.') }}</div>
           </div>
           <input type="hidden" name="temporary_speed_from" value="{{ sub.temporary_speed_from or '' }}">
           <input type="hidden" name="temporary_speed_to" value="{{ sub.temporary_speed_to or '' }}">
           <div class="uf-temp-countdown is-muted"
                data-temp-speed-countdown
                data-temp-speed-updated-at="{{ sub.updated_at or '' }}">
-            <span data-temp-speed-status>السرعة المؤقتة غير مفعّلة</span>
+            <span data-temp-speed-status>{{ _('السرعة المؤقتة غير مفعّلة') }}</span>
             <strong data-temp-speed-remaining>--:--</strong>
-            <button type="button" class="uf-chip-btn" data-temp-speed-cancel hidden>إلغاء السرعة المؤقتة</button>
+            <button type="button" class="uf-chip-btn" data-temp-speed-cancel hidden>{{ _('إلغاء السرعة المؤقتة') }}</button>
           </div>
         </div>
 
@@ -1160,7 +1160,7 @@
            inside the panel, but reachable at the sub-section level). #}
         <div class="uf-sub-head uf-sub-head--sched" style="margin-top: 18px;">
           <span class="uf-sub-dot"></span>
-          <span class="uf-sub-title">قواعد سرعة مجدوَلة</span>
+          <span class="uf-sub-title">{{ _('قواعد سرعة مجدوَلة') }}</span>
           <label class="tsw" onclick="event.stopPropagation()" data-sched-master-wrap>
             <input type="checkbox" data-sched-master>
             <span class="tsw-track"><span class="tsw-thumb"></span></span>
@@ -1172,17 +1172,17 @@
              actual persistence happens at the main «حفظ» click. #}
           <span class="uf-sub-bulk">
             <button class="uf-bulk-btn uf-bulk-btn--on" type="button"
-                    data-bulk="enable" title="تفعيل كل القواعد">
+                    data-bulk="enable" title="{{ _('تفعيل كل القواعد') }}">
               <i class="fa-solid fa-toggle-on"></i>
-              <span>فعّل الكل</span>
+              <span>{{ _('فعّل الكل') }}</span>
             </button>
             <button class="uf-bulk-btn uf-bulk-btn--off" type="button"
-                    data-bulk="disable" title="تعطيل كل القواعد">
+                    data-bulk="disable" title="{{ _('تعطيل كل القواعد') }}">
               <i class="fa-solid fa-toggle-off"></i>
-              <span>عطّل الكل</span>
+              <span>{{ _('عطّل الكل') }}</span>
             </button>
           </span>
-          <span class="uf-sub-help">قواعد بفترات زمنية وأيام محددة</span>
+          <span class="uf-sub-help">{{ _('قواعد بفترات زمنية وأيام محددة') }}</span>
         </div>
         {% include "radius/_speed_rules_panel.html" %}
 
@@ -1489,7 +1489,7 @@
     <section class="uf-section uf-section--quota is-collapsible is-collapsed" data-sec="quota" id="uf-quota">
       <header class="uf-section-head">
         <span class="uf-section-icon"><i class="fa-solid fa-clock"></i></span>
-        <span class="uf-section-title">الحصة والوقت</span>
+        <span class="uf-section-title">{{ _('الحصة والوقت') }}</span>
         <i class="fa-solid fa-chevron-down uf-section-toggle"></i>
       </header>
       <div class="uf-section-body">
@@ -1498,43 +1498,43 @@
            التوزيع المتساوي) move into «خيارات متقدمة» (collapsed). All
            inputs stay in the DOM so the POST body is unchanged. #}
         <div class="uf-grid">
-          <div class="uf-field full"><label>كوتا إجمالية (مدمجة)</label>
+          <div class="uf-field full"><label>{{ _('كوتا إجمالية (مدمجة)') }}</label>
             {{ unit_input_picker(name="combined_quota_mb", value=sub.combined_quota_mb or 0, kind="quota", units=["MB","GB"]) }}
-            <div class="help">إجمالي البيانات المسموحة للحساب؛ إن حُدِّدت تحلّ محل كوتا التنزيل/الرفع المنفصلة. 0 = غير محدودة.</div></div>
-          <div class="uf-field"><label>كوتا التنزيل</label>
+            <div class="help">{{ _('إجمالي البيانات المسموحة للحساب؛ إن حُدِّدت تحلّ محل كوتا التنزيل/الرفع المنفصلة. 0 = غير محدودة.') }}</div></div>
+          <div class="uf-field"><label>{{ _('كوتا التنزيل') }}</label>
             {{ unit_input_picker(name="download_quota_mb", value=sub.download_quota_mb or 0, kind="quota", units=["MB","GB"]) }}
-            <div class="help">حدّ التنزيل المنفصل للحساب. 0 = غير محدودة.</div></div>
-          <div class="uf-field"><label>كوتا الرفع</label>
+            <div class="help">{{ _('حدّ التنزيل المنفصل للحساب. 0 = غير محدودة.') }}</div></div>
+          <div class="uf-field"><label>{{ _('كوتا الرفع') }}</label>
             {{ unit_input_picker(name="upload_quota_mb", value=sub.upload_quota_mb or 0, kind="quota", units=["MB","GB"]) }}
-            <div class="help">حدّ الرفع المنفصل للحساب. 0 = غير محدودة.</div></div>
-          <div class="uf-field"><label>إجمالي وقت الاتصال</label>
+            <div class="help">{{ _('حدّ الرفع المنفصل للحساب. 0 = غير محدودة.') }}</div></div>
+          <div class="uf-field"><label>{{ _('إجمالي وقت الاتصال') }}</label>
             {{ unit_input_picker(name="total_connection_time_min", value=sub.total_connection_time_min or 0, kind="time", units=["min","hr","day"]) }}
-            <div class="help">أقصى وقت اتصال إجمالي للحساب. 0 = بلا حد خاص.</div></div>
-          <div class="uf-field"><label>تطبيق حد الكوتا</label>
+            <div class="help">{{ _('أقصى وقت اتصال إجمالي للحساب. 0 = بلا حد خاص.') }}</div></div>
+          <div class="uf-field"><label>{{ _('تطبيق حد الكوتا') }}</label>
             {{ toggle_switch(name="quota_limit_enabled", checked=sub.quota_limit_enabled, id="ql") }}
-            <div class="help">عند التفعيل تُطبَّق كوتا التنزيل/الرفع/المدمجة؛ لو معطَّل يُسمح باستخدام غير محدود.</div></div>
-          <div class="uf-field"><label>تطبيق حد وقت الاتصال</label>
+            <div class="help">{{ _('عند التفعيل تُطبَّق كوتا التنزيل/الرفع/المدمجة؛ لو معطَّل يُسمح باستخدام غير محدود.') }}</div></div>
+          <div class="uf-field"><label>{{ _('تطبيق حد وقت الاتصال') }}</label>
             {{ toggle_switch(name="connection_time_limit_enabled", checked=sub.connection_time_limit_enabled, id="ctl") }}
-            <div class="help">عند التفعيل يُطبَّق وقت الاتصال أعلاه؛ لو معطَّل يُتجاهَل الحدّ حتى لو وُضعت أرقام.</div></div>
+            <div class="help">{{ _('عند التفعيل يُطبَّق وقت الاتصال أعلاه؛ لو معطَّل يُتجاهَل الحدّ حتى لو وُضعت أرقام.') }}</div></div>
 
           {# ── خيارات متقدمة (الحصة والوقت) — مطوية، الحقول تبقى في DOM ── #}
           <div class="uf-adv-block" data-adv>
             <div class="uf-adv-head" data-adv-toggle>
               <i class="fa-solid fa-sliders"></i>
-              <span>خيارات متقدمة</span>
+              <span>{{ _('خيارات متقدمة') }}</span>
               <i class="fa-solid fa-chevron-down uf-adv-caret"></i>
             </div>
             <div class="uf-adv-body">
               <div class="uf-adv-grid">
-                <div class="uf-field"><label>وقت الاتصال اليومي</label>
+                <div class="uf-field"><label>{{ _('وقت الاتصال اليومي') }}</label>
                   {{ unit_input_picker(name="daily_connection_time_min", value=sub.daily_connection_time_min or 0, kind="time", units=["min","hr"]) }}
-                  <div class="help">أقصى وقت اتصال مسموح في اليوم الواحد. 0 = بلا حد.</div></div>
-                <div class="uf-field"><label>توزيع متساوٍ للتنزيل</label>
+                  <div class="help">{{ _('أقصى وقت اتصال مسموح في اليوم الواحد. 0 = بلا حد.') }}</div></div>
+                <div class="uf-field"><label>{{ _('توزيع متساوٍ للتنزيل') }}</label>
                   {{ toggle_switch(name="equal_share_download", checked=sub.equal_share_download, id="esd") }}
-                  <div class="help">يتقاسم المشترك سرعة التنزيل بالتساوي بين كل جلساته المتصلة.</div></div>
-                <div class="uf-field"><label>توزيع متساوٍ للرفع</label>
+                  <div class="help">{{ _('يتقاسم المشترك سرعة التنزيل بالتساوي بين كل جلساته المتصلة.') }}</div></div>
+                <div class="uf-field"><label>{{ _('توزيع متساوٍ للرفع') }}</label>
                   {{ toggle_switch(name="equal_share_upload", checked=sub.equal_share_upload, id="esu") }}
-                  <div class="help">يتقاسم المشترك سرعة الرفع بالتساوي بين كل جلساته المتصلة.</div></div>
+                  <div class="help">{{ _('يتقاسم المشترك سرعة الرفع بالتساوي بين كل جلساته المتصلة.') }}</div></div>
               </div>
             </div>
           </div>
@@ -1557,7 +1557,7 @@
     <section class="uf-section uf-section--netw is-collapsible is-collapsed" data-sec="net" id="uf-network">
       <header class="uf-section-head">
         <span class="uf-section-icon"><i class="fa-solid fa-network-wired"></i></span>
-        <span class="uf-section-title">الشبكة وقيود الاتصال</span>
+        <span class="uf-section-title">{{ _('الشبكة وقيود الاتصال') }}</span>
         <i class="fa-solid fa-chevron-down uf-section-toggle"></i>
       </header>
       <div class="uf-section-body">
@@ -1573,19 +1573,19 @@
                degrades gracefully (labels just won't persist). #}
             <input type="hidden" name="mac_lock_labels" value="{{ sub.mac_lock_labels or '' }}" data-mac-labels-hidden>
             <div class="uf-field">
-              <label>عنوان <bdi>MAC</bdi> <span class="hub-text-mute" style="font-weight:600">(مع اسم اختياري للجهاز)</span></label>
+              <label>{{ _('عنوان') }} <bdi>MAC</bdi> <span class="hub-text-mute" style="font-weight:600">{{ _('(مع اسم اختياري للجهاز)') }}</span></label>
               <div class="uf-mac-add uf-mac-add--labeled">
                 <span class="uf-net-input"><input class="hub-input" type="text" data-mac-input placeholder="AA:BB:CC:DD:EE:FF"><i class="fa-solid fa-laptop"></i></span>
-                <input class="hub-input" type="text" data-mac-label-input placeholder="اسم الجهاز (جوال، لابتوب…)" maxlength="40">
-                <button type="button" class="uf-icon-btn" data-mac-add title="إضافة MAC"><i class="fa-solid fa-plus"></i></button>
+                <input class="hub-input" type="text" data-mac-label-input placeholder="{{ _('اسم الجهاز (جوال، لابتوب…)') }}" maxlength="40">
+                <button type="button" class="uf-icon-btn" data-mac-add title="{{ _('إضافة MAC') }}"><i class="fa-solid fa-plus"></i></button>
               </div>
-              <div class="help">الماكات الموجودة هنا هي المسموحة بالدخول لهذا الحساب. اسم الجهاز اختياري ويساعدك على التمييز بين الأجهزة.</div>
+              <div class="help">{{ _('الماكات الموجودة هنا هي المسموحة بالدخول لهذا الحساب. اسم الجهاز اختياري ويساعدك على التمييز بين الأجهزة.') }}</div>
             </div>
             <div class="uf-mac-alert" data-mac-alert role="alert" aria-live="polite"></div>
             <div class="uf-mac-list" data-mac-list></div>
             {% if login_macs %}
             <div class="uf-field full">
-              <label>اختيار من سجل دخول المستخدم</label>
+              <label>{{ _('اختيار من سجل دخول المستخدم') }}</label>
               <div class="uf-mac-history">
                 {% for item in login_macs %}
                 <button type="button" class="uf-mac-history-btn" data-mac-pick="{{ item.mac }}"
@@ -1597,29 +1597,29 @@
             </div>
             {% endif %}
           </div>
-          <div class="uf-field"><label>عنوان <bdi>IP</bdi> ثابت</label>
+          <div class="uf-field"><label>{{ _('عنوان') }} <bdi>IP</bdi> {{ _('ثابت') }}</label>
             <span class="uf-net-input"><input class="hub-input" type="text" name="static_ip" value="{{ sub.static_ip or '' }}" placeholder="10.0.0.5"><i class="fa-solid fa-laptop"></i></span>
-            <div class="help">عنوان ثابت للمشترك عند الحاجة.</div></div>
-          <div class="uf-field"><label>عنوان <bdi>IP</bdi> لجهاز الشبكة</label>
+            <div class="help">{{ _('عنوان ثابت للمشترك عند الحاجة.') }}</div></div>
+          <div class="uf-field"><label>{{ _('عنوان') }} <bdi>IP</bdi> {{ _('لجهاز الشبكة') }}</label>
             <span class="uf-net-input"><input class="hub-input" type="text" name="nas_ip_address" value="{{ sub.nas_ip_address or '' }}" placeholder="10.0.0.1"><i class="fa-solid fa-laptop"></i></span>
-            <div class="help">عنوان جهاز الشبكة الذي يرسل طلبات المصادقة.</div></div>
-          <div class="uf-field"><label>اسم الخدمة</label>
+            <div class="help">{{ _('عنوان جهاز الشبكة الذي يرسل طلبات المصادقة.') }}</div></div>
+          <div class="uf-field"><label>{{ _('اسم الخدمة') }}</label>
             <span class="uf-net-input"><input class="hub-input" type="text" name="service_name" value="{{ sub.service_name or '' }}" placeholder="pppoe / hotspot"><i class="fa-solid fa-laptop"></i></span>
-            <div class="help">اسم الخدمة عند الحاجة للتطابق مع إعدادات الجهاز.</div></div>
-          <div class="uf-field"><label>عدد الأجهزة المسموحة</label>
+            <div class="help">{{ _('اسم الخدمة عند الحاجة للتطابق مع إعدادات الجهاز.') }}</div></div>
+          <div class="uf-field"><label>{{ _('عدد الأجهزة المسموحة') }}</label>
             <input class="hub-input" type="number" min="1" name="device_count" value="{{ sub.device_count or 1 }}">
-            <div class="help">الحد الأقصى للجلسات المتزامنة.</div></div>
+            <div class="help">{{ _('الحد الأقصى للجلسات المتزامنة.') }}</div></div>
 
           <div class="uf-subrow-3">
-            <div class="uf-field"><label>خادم DNS الأساسي (PPP)</label>
+            <div class="uf-field"><label>{{ _('خادم DNS الأساسي (PPP)') }}</label>
               <span class="uf-net-input"><input class="hub-input" type="text" name="primary_dns_ppp" value="{{ sub.primary_dns_ppp or '' }}" placeholder="1.1.1.1"><i class="fa-solid fa-laptop"></i></span>
-              <div class="help">خادم DNS يُرسل للمشترك عند الاتصال. فارغ = إعداد الجهاز.</div></div>
-            <div class="uf-field"><label>خادم DNS الثانوي (PPP)</label>
+              <div class="help">{{ _('خادم DNS يُرسل للمشترك عند الاتصال. فارغ = إعداد الجهاز.') }}</div></div>
+            <div class="uf-field"><label>{{ _('خادم DNS الثانوي (PPP)') }}</label>
               <span class="uf-net-input"><input class="hub-input" type="text" name="secondary_dns_ppp" value="{{ sub.secondary_dns_ppp or '' }}" placeholder="8.8.8.8"><i class="fa-solid fa-laptop"></i></span>
-              <div class="help">خادم احتياطي يُستخدم إذا تعطّل الأساسي.</div></div>
-            <div class="uf-field"><label>منفذ الاتصال للجهاز</label>
+              <div class="help">{{ _('خادم احتياطي يُستخدم إذا تعطّل الأساسي.') }}</div></div>
+            <div class="uf-field"><label>{{ _('منفذ الاتصال للجهاز') }}</label>
               <span class="uf-net-input"><input class="hub-input" type="text" name="nas_port_id" value="{{ sub.nas_port_id or '' }}" placeholder="ether1 / wlan1"><i class="fa-solid fa-laptop"></i></span>
-              <div class="help">يقيّد دخول المشترك على منفذ معيّن في الراوتر.</div></div>
+              <div class="help">{{ _('يقيّد دخول المشترك على منفذ معيّن في الراوتر.') }}</div></div>
           </div>
 
           <input type="hidden" name="override_concurrent" value="{{ sub.override_concurrent or 0 }}">
@@ -1635,25 +1635,25 @@
     <section class="uf-section uf-section--pppoe is-collapsible is-collapsed" data-sec="pppoe" id="uf-pppoe">
       <header class="uf-section-head">
         <span class="uf-section-icon"><i class="fa-solid fa-plug"></i></span>
-        <span class="uf-section-title">البرودباند (اختياري)</span>
+        <span class="uf-section-title">{{ _('البرودباند (اختياري)') }}</span>
         <i class="fa-solid fa-chevron-down uf-section-toggle"></i>
       </header>
       <div class="uf-section-body">
         <div class="uf-grid">
           <div class="uf-field">
-            <label>اسم دخول البرودباند</label>
+            <label>{{ _('اسم دخول البرودباند') }}</label>
             <input class="hub-input" type="text" name="pppoe_username" value="{{ sub.pppoe_username or '' }}">
-            <div class="help">اتركه فارغًا إذا كان نفس اسم الدخول الأساسي.</div>
+            <div class="help">{{ _('اتركه فارغًا إذا كان نفس اسم الدخول الأساسي.') }}</div>
           </div>
           <div class="uf-field">
-            <label>كلمة مرور البرودباند</label>
+            <label>{{ _('كلمة مرور البرودباند') }}</label>
             <input class="hub-input" type="text" name="pppoe_password" value="{{ sub.pppoe_password or '' }}">
-            <div class="help">اتركها فارغة لاستخدام كلمة المرور الأساسية.</div>
+            <div class="help">{{ _('اتركها فارغة لاستخدام كلمة المرور الأساسية.') }}</div>
           </div>
           <div class="uf-field">
-            <label>عنوان البرودباند</label>
+            <label>{{ _('عنوان البرودباند') }}</label>
             <input class="hub-input" type="text" name="pppoe_ip" value="{{ sub.pppoe_ip or '' }}" placeholder="10.0.0.5">
-            <div class="help">عنوان ثابت اختياري.</div>
+            <div class="help">{{ _('عنوان ثابت اختياري.') }}</div>
           </div>
         </div>
       </div>
@@ -1663,49 +1663,49 @@
     <section class="uf-section uf-section--mt is-collapsible is-collapsed" data-sec="mt" id="uf-advanced">
       <header class="uf-section-head">
         <span class="uf-section-icon"><i class="fa-solid fa-microchip"></i></span>
-        <span class="uf-section-title">إعدادات شبكة متقدمة جدًا</span>
+        <span class="uf-section-title">{{ _('إعدادات شبكة متقدمة جدًا') }}</span>
         <i class="fa-solid fa-chevron-down uf-section-toggle"></i>
       </header>
       <div class="uf-section-body">
         <div style="font-size:12px;color:var(--hub-text-mute);margin-bottom:12px">
           <i class="fa-solid fa-circle-info"></i>
-          للحالات الخاصة فقط. اتركها فارغة إلا إذا كان عندك سياسة جهاز شبكة محددة لهذا المشترك.
+          {{ _('للحالات الخاصة فقط. اتركها فارغة إلا إذا كان عندك سياسة جهاز شبكة محددة لهذا المشترك.') }}
         </div>
         <div class="uf-grid">
-          <div class="uf-field"><label>سلسلة فلترة الراوتر</label>
+          <div class="uf-field"><label>{{ _('سلسلة فلترة الراوتر') }}</label>
             <input class="hub-input" type="text" name="mikrotik_filter_chain" value="{{ sub.mikrotik_filter_chain or '' }}" placeholder="forward / input">
-            <div class="help">تمرّر ترافيك المشترك عبر سلسلة Firewall محددة.</div></div>
-          <div class="uf-field"><label>قائمة عناوين الراوتر</label>
+            <div class="help">{{ _('تمرّر ترافيك المشترك عبر سلسلة Firewall محددة.') }}</div></div>
+          <div class="uf-field"><label>{{ _('قائمة عناوين الراوتر') }}</label>
             <input class="hub-input" type="text" name="mikrotik_address_list" value="{{ sub.mikrotik_address_list or '' }}">
-            <div class="help">يضيف عنوان المشترك لقائمة Address-List في الراوتر.</div></div>
-          <div class="uf-field"><label>مسار الراوتر الموجَّه</label>
+            <div class="help">{{ _('يضيف عنوان المشترك لقائمة Address-List في الراوتر.') }}</div></div>
+          <div class="uf-field"><label>{{ _('مسار الراوتر الموجَّه') }}</label>
             <input class="hub-input" type="text" name="mikrotik_framed_route" value="{{ sub.mikrotik_framed_route or '' }}" placeholder="10.10.0.0/24 10.10.0.1">
-            <div class="help">شبكة إضافية توجَّه خلف اتصال المشترك.</div></div>
-          <div class="uf-field"><label>مجموعة مستخدم الراوتر</label>
+            <div class="help">{{ _('شبكة إضافية توجَّه خلف اتصال المشترك.') }}</div></div>
+          <div class="uf-field"><label>{{ _('مجموعة مستخدم الراوتر') }}</label>
             <input class="hub-input" type="text" name="mikrotik_user_group" value="{{ sub.mikrotik_user_group or '' }}">
-            <div class="help">مجموعة صلاحيات Hotspot في الراوتر.</div></div>
-          <div class="uf-field"><label>مجموعة إدارة الراوتر</label>
+            <div class="help">{{ _('مجموعة صلاحيات Hotspot في الراوتر.') }}</div></div>
+          <div class="uf-field"><label>{{ _('مجموعة إدارة الراوتر') }}</label>
             <input class="hub-input" type="text" name="mikrotik_winbox_group" value="{{ sub.mikrotik_winbox_group or '' }}">
-            <div class="help">صلاحيات دخول إدارية (Winbox) إن وجدت.</div></div>
-          <div class="uf-field"><label>أولوية طابور السرعة</label>
+            <div class="help">{{ _('صلاحيات دخول إدارية (Winbox) إن وجدت.') }}</div></div>
+          <div class="uf-field"><label>{{ _('أولوية طابور السرعة') }}</label>
             <input class="hub-input" type="text" name="mikrotik_queue_priority" value="{{ sub.mikrotik_queue_priority or '' }}" placeholder="1..8">
-            <div class="help">1 = أعلى أولوية عند ازدحام الشبكة.</div></div>
-          <div class="uf-field"><label>نطاق عناوين الجلسات</label>
+            <div class="help">{{ _('1 = أعلى أولوية عند ازدحام الشبكة.') }}</div></div>
+          <div class="uf-field"><label>{{ _('نطاق عناوين الجلسات') }}</label>
             <input class="hub-input" type="text" name="framed_pool" value="{{ sub.framed_pool or '' }}">
-            <div class="help">اسم Pool يأخذ منه المشترك عنوانه.</div></div>
-          <div class="uf-field"><label>فترة تحديث الاستهلاك (ث)</label>
+            <div class="help">{{ _('اسم Pool يأخذ منه المشترك عنوانه.') }}</div></div>
+          <div class="uf-field"><label>{{ _('فترة تحديث الاستهلاك (ث)') }}</label>
             <input class="hub-input" type="number" min="0" name="acct_interim_interval_sec" value="{{ sub.acct_interim_interval_sec or '' }}" placeholder="60">
-            <div class="help">كل كم ثانية يبلّغ الراوتر عن استهلاك الجلسة.</div></div>
-          <div class="uf-field full"><label>خصائص PPP إضافية</label>
-            <textarea class="hub-textarea" name="ppp_attributes_extra" placeholder="خاصية=قيمة (سطر لكل واحدة)">{{ sub.ppp_attributes_extra or '' }}</textarea>
-            <div class="help">سطر لكل خاصية.</div></div>
+            <div class="help">{{ _('كل كم ثانية يبلّغ الراوتر عن استهلاك الجلسة.') }}</div></div>
+          <div class="uf-field full"><label>{{ _('خصائص PPP إضافية') }}</label>
+            <textarea class="hub-textarea" name="ppp_attributes_extra" placeholder="{{ _('خاصية=قيمة (سطر لكل واحدة)') }}">{{ sub.ppp_attributes_extra or '' }}</textarea>
+            <div class="help">{{ _('سطر لكل خاصية.') }}</div></div>
         </div>
       </div>
     </section>
 
     {# ── Action bar ───────────────────────────────────── #}
     <div class="uf-actions">
-      <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.users_list') }}">إلغاء</a>
+      <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.users_list') }}">{{ _('إلغاء') }}</a>
       <button class="hub-btn hub-btn--primary" type="submit">
         <i class="fa-solid fa-floppy-disk"></i> {{ "حفظ المشترك" if is_new else "حفظ التعديلات" }}
       </button>

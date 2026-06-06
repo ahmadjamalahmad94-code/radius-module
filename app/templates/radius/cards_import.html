@@ -209,41 +209,41 @@
   {% call hub.section("بيانات الملف", icon="box-archive") %}
     <div class="hub-form-row">
       <div class="hub-field">
-        <label class="hub-field-label" for="plan_id">الباقة المرتبطة <span class="req">*</span></label>
+        <label class="hub-field-label" for="plan_id">{{ _('الباقة المرتبطة') }} <span class="req">*</span></label>
         <select class="hub-select" id="plan_id" name="plan_id" required>
-          <option value="">اختر الباقة</option>
+          <option value="">{{ _('اختر الباقة') }}</option>
           {% for p in plans %}
             <option value="{{ p.id }}" {% if form.get('plan_id')|string == p.id|string %}selected{% endif %}>
               {{ p.name }} · {{ p.price|money }}
             </option>
           {% endfor %}
         </select>
-        <div class="hub-field-hint">تستخدم للتصنيف والعدادات، ولا تعني تطبيقًا على الشبكة إذا كان الملف خارجيًا.</div>
+        <div class="hub-field-hint">{{ _('تستخدم للتصنيف والعدادات، ولا تعني تطبيقًا على الشبكة إذا كان الملف خارجيًا.') }}</div>
       </div>
 
       <div class="hub-field">
-        <label class="hub-field-label" for="package_name">اسم الحزمة</label>
-        <input class="hub-input" id="package_name" name="package_name" value="{{ form.get('package_name') or '' }}" placeholder="مثال: ملف شهر 6">
+        <label class="hub-field-label" for="package_name">{{ _('اسم الحزمة') }}</label>
+        <input class="hub-input" id="package_name" name="package_name" value="{{ form.get('package_name') or '' }}" placeholder="{{ _('مثال: ملف شهر 6') }}">
       </div>
 
       <div class="hub-field">
-        <label class="hub-field-label" for="service_name">اسم الخدمة</label>
-        <input class="hub-input" id="service_name" name="service_name" value="{{ form.get('service_name') or '' }}" placeholder="اختياري">
+        <label class="hub-field-label" for="service_name">{{ _('اسم الخدمة') }}</label>
+        <input class="hub-input" id="service_name" name="service_name" value="{{ form.get('service_name') or '' }}" placeholder="{{ _('اختياري') }}">
       </div>
 
       <div class="hub-field">
-        <label class="hub-field-label" for="price_per_card">سعر البطاقة</label>
+        <label class="hub-field-label" for="price_per_card">{{ _('سعر البطاقة') }}</label>
         <input class="hub-input" id="price_per_card" name="price_per_card" type="number" step="0.01" min="0" value="{{ form.get('price_per_card') or 0 }}">
       </div>
 
       <div class="hub-field">
-        <label class="hub-field-label" for="total_price">السعر الإجمالي</label>
+        <label class="hub-field-label" for="total_price">{{ _('السعر الإجمالي') }}</label>
         <input class="hub-input" id="total_price" name="total_price" type="number" step="0.01" min="0" value="{{ form.get('total_price') or 0 }}">
       </div>
     </div>
 
     <div class="hub-field" style="margin-top:14px">
-      <label class="hub-field-label">نوع المصدر</label>
+      <label class="hub-field-label">{{ _('نوع المصدر') }}</label>
       {{ hub.cardselect("source_type",
         [
           {"value": "external", "title": "ملف خارجي للحساب فقط", "sub": "لا ينشئ حسابات في خدمة المصادقة ولا ينفّذ أي إجراء على أجهزة الشبكة", "icon": "folder-open"},
@@ -255,7 +255,7 @@
     <div class="hub-field" style="margin-top:14px">
       {{ toggle_switch(name="sync_to_radius", checked=form.get('sync_to_radius'), value="1", on_label="مزامنة حسابات خدمة المصادقة للملف المستورد", off_label="بدون مزامنة خدمة المصادقة") }}
       <div class="hub-field-hint">
-        يتم تجاهل هذا الخيار تلقائيًا إذا كان نوع المصدر “ملف خارجي”. استخدمه فقط عندما تريد أن تصبح الكروت المستوردة حسابات فعلية في خدمة المصادقة.
+        {{ _('يتم تجاهل هذا الخيار تلقائيًا إذا كان نوع المصدر “ملف خارجي”. استخدمه فقط عندما تريد أن تصبح الكروت المستوردة حسابات فعلية في خدمة المصادقة.') }}
       </div>
     </div>
   {% endcall %}
@@ -267,16 +267,16 @@
          data-engine-version="{{ engine_version or '?' }}">
       <div class="ci-smart-head">
         <span class="icon"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
-        <h3>محرّك الاستيراد الذكي</h3>
-        <span class="badge">جديد</span>
+        <h3>{{ _('محرّك الاستيراد الذكي') }}</h3>
+        <span class="badge">{{ _('جديد') }}</span>
         {# ── Engine build chip — proves which version of the parser
            the running container has. Change the number on every
            detection-logic update and you can verify your deploy
            at a glance. ── #}
         {% if engine_version %}
-        <span class="ci-build-chip" title="نسخة محرّك الاستيراد — يجب أن تتطابق مع آخر تحديث على GitHub">
+        <span class="ci-build-chip" title="{{ _('نسخة محرّك الاستيراد — يجب أن تتطابق مع آخر تحديث على GitHub') }}">
           <i class="fa-solid fa-microchip"></i>
-          إصدار <span dir="ltr">{{ engine_version }}</span>
+          {{ _('إصدار') }} <span dir="ltr">{{ engine_version }}</span>
           {% if engine_build_note %}<small style="opacity:.7;margin-inline-start:6px">({{ engine_build_note }})</small>{% endif %}
         </span>
         {% endif %}
@@ -292,30 +292,30 @@
         <button type="button" id="ci-smart-btn" class="ci-smart-btn">
           <i class="fa-solid fa-bolt static"></i>
           <i class="fa-solid fa-circle-notch spin"></i>
-          <span>تحليل الملف</span>
+          <span>{{ _('تحليل الملف') }}</span>
         </button>
       </div>
 
       {# ── Stage tracker: receive → sniff → extract → detect → build ── #}
       <ol class="ci-stages" id="ci-stages" hidden>
-        <li data-stage="receive">  <span class="dot">1</span><span class="lbl">استلام الملف</span></li>
-        <li data-stage="sniff">    <span class="dot">2</span><span class="lbl">كشف الصيغة</span></li>
-        <li data-stage="extract">  <span class="dot">3</span><span class="lbl">استخراج الجدول</span></li>
-        <li data-stage="detect">   <span class="dot">4</span><span class="lbl">كشف الأعمدة</span></li>
-        <li data-stage="build">    <span class="dot">5</span><span class="lbl">بناء الكروت</span></li>
+        <li data-stage="receive">  <span class="dot">1</span><span class="lbl">{{ _('استلام الملف') }}</span></li>
+        <li data-stage="sniff">    <span class="dot">2</span><span class="lbl">{{ _('كشف الصيغة') }}</span></li>
+        <li data-stage="extract">  <span class="dot">3</span><span class="lbl">{{ _('استخراج الجدول') }}</span></li>
+        <li data-stage="detect">   <span class="dot">4</span><span class="lbl">{{ _('كشف الأعمدة') }}</span></li>
+        <li data-stage="build">    <span class="dot">5</span><span class="lbl">{{ _('بناء الكروت') }}</span></li>
       </ol>
 
       <div class="ci-smart-status" id="ci-smart-status" hidden aria-live="polite"></div>
       <div class="ci-counter" id="ci-counter" hidden>
         <span class="num" id="ci-counter-num">0</span>
-        <span class="lbl">بطاقة جاهزة للاستيراد</span>
+        <span class="lbl">{{ _('بطاقة جاهزة للاستيراد') }}</span>
       </div>
       <div id="ci-smart-detected" class="ci-smart-detected" hidden></div>
       <div id="ci-smart-preview" class="ci-smart-preview" hidden></div>
     </div>
 
     <div class="hub-field">
-      <label class="hub-field-label" for="csv_text">الكروت</label>
+      <label class="hub-field-label" for="csv_text">{{ _('الكروت') }}</label>
       <textarea class="hub-input ci-textarea" id="csv_text" name="csv_text" required
         placeholder="username,password&#10;card001,pass001&#10;card002,pass002"></textarea>
       <div class="hub-field-hint">
@@ -327,8 +327,8 @@
 
   {% call hub.section("اعتماد الاستيراد", icon="shield-halved") %}
     <div class="hub-field">
-      <label class="hub-field-label" for="notes">ملاحظات</label>
-      <textarea class="hub-input" id="notes" name="notes" rows="3" placeholder="سبب الاستيراد أو مرجع الملف">{{ form.get('notes') or '' }}</textarea>
+      <label class="hub-field-label" for="notes">{{ _('ملاحظات') }}</label>
+      <textarea class="hub-input" id="notes" name="notes" rows="3" placeholder="{{ _('سبب الاستيراد أو مرجع الملف') }}">{{ form.get('notes') or '' }}</textarea>
     </div>
     <div class="hub-flex-row" style="gap:8px;flex-wrap:wrap;margin-top:14px">
       {{ hub.btn("استيراد الملف", icon="file-import", type="submit", variant="primary") }}

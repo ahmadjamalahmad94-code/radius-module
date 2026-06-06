@@ -4,7 +4,7 @@
 {% block title %}الإيرادات — Hobe Hub{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-coins"></i>{% endblock %}
 {% block page_title %}الإيرادات{% endblock %}
-{% block page_sub %}<span class="sub">سجلات السعر والتحصيل والتكلفة والربح</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('سجلات السعر والتحصيل والتكلفة والربح') }}</span>{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
@@ -43,7 +43,7 @@
 ) %}
   {# بحث فوري في المتصفح (المصدر/المعرّف/التاريخ) — يفلتر الجدول مباشرة دون إرسال للخادم #}
   <input class="hub-input grow" type="search" id="rev-q" autocomplete="off"
-         placeholder="بحث فوري في سجلات الإيراد بالمصدر أو المعرّف...">
+         placeholder="{{ _('بحث فوري في سجلات الإيراد بالمصدر أو المعرّف...') }}">
 {% endcall %}
 </section>{# /hub-hero-shell #}
 {% include "radius/_finance_nav.html" %}
@@ -52,17 +52,17 @@
   {% if revenue %}
   {# جدول uds موحّد: فرز + ترقيم + تصدير — مع عنوان تصدير صريح لملفات CSV/XLSX/PDF #}
   <div class="table-responsive hub-table-wrap uds-table-wrap" id="rev-table" data-uds-table
-       data-uds-page-size="25" data-uds-export-title="سجلات الإيرادات">
+       data-uds-page-size="25" data-uds-export-title="{{ _('سجلات الإيرادات') }}">
     <table class="table hub-table">
       <thead>
         <tr>
           <th>#</th>
-          <th>المصدر</th>
-          <th>السعر الأصلي</th>
-          <th>المحصّل</th>
-          <th>تكلفة الجملة</th>
-          <th>الربح الصافي</th>
-          <th>التاريخ</th>
+          <th>{{ _('المصدر') }}</th>
+          <th>{{ _('السعر الأصلي') }}</th>
+          <th>{{ _('المحصّل') }}</th>
+          <th>{{ _('تكلفة الجملة') }}</th>
+          <th>{{ _('الربح الصافي') }}</th>
+          <th>{{ _('التاريخ') }}</th>
         </tr>
       </thead>
       <tbody>

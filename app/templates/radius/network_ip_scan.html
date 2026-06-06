@@ -17,7 +17,7 @@
   <span class="sub">
     <a href="{{ url_for('radius.network_devices_list') }}"
        style="color:#6D28D9;text-decoration:none">
-      <i class="fa-solid fa-arrow-right"></i> تابع أجهزة الشبكة
+      <i class="fa-solid fa-arrow-right"></i> {{ _('تابع أجهزة الشبكة') }}
     </a>
   </span>
 {% endblock %}
@@ -46,7 +46,7 @@
 ) %}
   {{ csrf_token_input() | safe }}
   <select class="hub-input grow" name="router_id" id="router_id" required>
-    <option value="">-- اختر الراوتر --</option>
+    <option value="">{{ _('-- اختر الراوتر --') }}</option>
     {% for r in routers %}
       <option value="{{ r.id }}"
               {% if selected_router_id == r.id %}selected{% endif %}>
@@ -60,7 +60,7 @@
 {% if scan_error %}
 <div class="uds-modal-warn" style="margin-bottom:18px">
   <i class="fa-solid fa-circle-xmark"></i>
-  <span>تعذّر إجراء المسح: <code dir="ltr">{{ scan_error }}</code></span>
+  <span>{{ _('تعذّر إجراء المسح:') }} <code dir="ltr">{{ scan_error }}</code></span>
 </div>
 {% endif %}
 
@@ -93,11 +93,11 @@
           <tr>
             <th>IP</th>
             <th>MAC</th>
-            <th>الاسم</th>
-            <th>الواجهة</th>
-            <th data-uds-nosort>المصدر</th>
-            <th>الحالة</th>
-            <th style="width:140px" data-uds-nosort data-uds-nocol>إجراء</th>
+            <th>{{ _('الاسم') }}</th>
+            <th>{{ _('الواجهة') }}</th>
+            <th data-uds-nosort>{{ _('المصدر') }}</th>
+            <th>{{ _('الحالة') }}</th>
+            <th style="width:140px" data-uds-nosort data-uds-nocol>{{ _('إجراء') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -121,7 +121,7 @@
               {% if row.ip in known_ips %}
                 {{ hub.pill("مُسجَّل", variant="green") }}
               {% else %}
-                <span class="hub-text-mute" style="font-size:12px">جديد</span>
+                <span class="hub-text-mute" style="font-size:12px">{{ _('جديد') }}</span>
               {% endif %}
             </td>
             <td>
@@ -134,8 +134,8 @@
                 <input type="hidden" name="mac"       value="{{ row.mac }}">
                 <input type="hidden" name="hostname"  value="{{ row.hostname }}">
                 <button type="submit" class="hub-btn hub-btn--ghost hub-btn--sm"
-                        title="أضف هذا الجهاز إلى السجلّ مع تفعيل المراقبة">
-                  <i class="fa-solid fa-plus"></i> أضف للمتابعة
+                        title="{{ _('أضف هذا الجهاز إلى السجلّ مع تفعيل المراقبة') }}">
+                  <i class="fa-solid fa-plus"></i> {{ _('أضف للمتابعة') }}
                 </button>
               </form>
               {% else %}

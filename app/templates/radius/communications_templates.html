@@ -4,7 +4,7 @@
 {% block title %}قوالب الرسائل — Hobe Hub{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-file-lines"></i>{% endblock %}
 {% block page_title %}قوالب الرسائل{% endblock %}
-{% block page_sub %}<span class="sub">نصوص جاهزة وقابلة لإعادة الاستخدام للرسائل الداخلية والقنوات الخارجية.</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('نصوص جاهزة وقابلة لإعادة الاستخدام للرسائل الداخلية والقنوات الخارجية.') }}</span>{% endblock %}
 
 {% macro ch_label(c) %}{{ {'sms':'الرسائل القصيرة','whatsapp':'واتساب','telegram':'تلجرام','internal':'داخلية','email':'البريد','push':'إشعار فوري'}.get(c|string, c|string if c else '—') }}{% endmacro %}
 
@@ -77,34 +77,34 @@
   {% call hub.section("نماذج جاهزة للبدء السريع", icon="wand-magic-sparkles", meta="اضغط لملء النموذج") %}
     <div class="ctpl-seed" id="ctpl-seed">
       <button type="button" class="ctpl-seed-chip" data-seed
-        data-key="welcome" data-title="ترحيب بمشترك جديد" data-channel="whatsapp" data-vars="name, username, prof"
+        data-key="welcome" data-title="{{ _('ترحيب بمشترك جديد') }}" data-channel="whatsapp" data-vars="name, username, prof"
         data-body="مرحبًا {name} 👋&#10;تم إنشاء حسابك بنجاح.&#10;اسم المستخدم: {username}&#10;الباقة: {prof}">
-        <i class="fa-solid fa-hand-sparkles"></i> ترحيب بمشترك جديد</button>
+        <i class="fa-solid fa-hand-sparkles"></i> {{ _('ترحيب بمشترك جديد') }}</button>
 
       <button type="button" class="ctpl-seed-chip" data-seed
-        data-key="renewal-reminder" data-title="تذكير بقرب الانتهاء" data-channel="sms" data-vars="username, exp"
+        data-key="renewal-reminder" data-title="{{ _('تذكير بقرب الانتهاء') }}" data-channel="sms" data-vars="username, exp"
         data-body="تذكير ⏰ اشتراكك «{username}» سينتهي بتاريخ {exp}. جدّد الآن لتجنّب انقطاع الخدمة.">
-        <i class="fa-solid fa-clock"></i> تذكير بقرب الانتهاء</button>
+        <i class="fa-solid fa-clock"></i> {{ _('تذكير بقرب الانتهاء') }}</button>
 
       <button type="button" class="ctpl-seed-chip" data-seed
-        data-key="renewed-thanks" data-title="تأكيد تجديد" data-channel="whatsapp" data-vars="prof, exp"
+        data-key="renewed-thanks" data-title="{{ _('تأكيد تجديد') }}" data-channel="whatsapp" data-vars="prof, exp"
         data-body="تم تجديد اشتراكك بنجاح ♻️&#10;الباقة: {prof}&#10;تاريخ الانتهاء الجديد: {exp}&#10;شكرًا لك.">
-        <i class="fa-solid fa-rotate"></i> تأكيد تجديد</button>
+        <i class="fa-solid fa-rotate"></i> {{ _('تأكيد تجديد') }}</button>
 
       <button type="button" class="ctpl-seed-chip" data-seed
-        data-key="recharge-confirm" data-title="تأكيد شحن رصيد" data-channel="sms" data-vars="amount, balance"
+        data-key="recharge-confirm" data-title="{{ _('تأكيد شحن رصيد') }}" data-channel="sms" data-vars="amount, balance"
         data-body="تم شحن حسابك 💳&#10;المبلغ: {amount}&#10;الرصيد الحالي: {balance}">
-        <i class="fa-solid fa-wallet"></i> تأكيد شحن رصيد</button>
+        <i class="fa-solid fa-wallet"></i> {{ _('تأكيد شحن رصيد') }}</button>
 
       <button type="button" class="ctpl-seed-chip" data-seed
-        data-key="maintenance-notice" data-title="إشعار صيانة" data-channel="whatsapp" data-vars=""
+        data-key="maintenance-notice" data-title="{{ _('إشعار صيانة') }}" data-channel="whatsapp" data-vars=""
         data-body="عزيزنا المشترك 🛠️&#10;ستجري صيانة مجدولة للشبكة وقد تتأثر الخدمة مؤقتًا. نعتذر عن الإزعاج ونشكر تفهّمك.">
-        <i class="fa-solid fa-screwdriver-wrench"></i> إشعار صيانة</button>
+        <i class="fa-solid fa-screwdriver-wrench"></i> {{ _('إشعار صيانة') }}</button>
 
       <button type="button" class="ctpl-seed-chip" data-seed
-        data-key="offer-promo" data-title="عرض ترويجي" data-channel="whatsapp" data-vars="name"
+        data-key="offer-promo" data-title="{{ _('عرض ترويجي') }}" data-channel="whatsapp" data-vars="name"
         data-body="مرحبًا {name} 🎉&#10;لدينا عرض خاص هذا الشهر على باقات الإنترنت! تواصل معنا لمعرفة التفاصيل والاستفادة قبل انتهاء العرض.">
-        <i class="fa-solid fa-tags"></i> عرض ترويجي</button>
+        <i class="fa-solid fa-tags"></i> {{ _('عرض ترويجي') }}</button>
     </div>
   {% endcall %}
 
@@ -113,51 +113,51 @@
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
       <div class="ctpl-row">
         <div class="ctpl-fld">
-          <label for="tpl-key">معرّف القالب</label>
+          <label for="tpl-key">{{ _('معرّف القالب') }}</label>
           <input id="tpl-key" class="ctpl-input mono" name="template_key" required placeholder="renewal-reminder">
-          <div class="hint">معرّف فريد بالإنجليزية بدون مسافات.</div>
+          <div class="hint">{{ _('معرّف فريد بالإنجليزية بدون مسافات.') }}</div>
         </div>
         <div class="ctpl-fld">
-          <label for="tpl-title">العنوان</label>
-          <input id="tpl-title" class="ctpl-input" name="title" required placeholder="تذكير بقرب الانتهاء">
+          <label for="tpl-title">{{ _('العنوان') }}</label>
+          <input id="tpl-title" class="ctpl-input" name="title" required placeholder="{{ _('تذكير بقرب الانتهاء') }}">
         </div>
       </div>
 
       <div class="ctpl-row">
         <div class="ctpl-fld">
-          <label for="tpl-channel">القناة</label>
+          <label for="tpl-channel">{{ _('القناة') }}</label>
           <select id="tpl-channel" class="ctpl-select" name="channel">
-            <option value="internal">رسالة داخلية</option>
-            <option value="sms">الرسائل القصيرة</option>
-            <option value="whatsapp">واتساب</option>
-            <option value="telegram">تلجرام</option>
-            <option value="email">البريد الإلكتروني</option>
-            <option value="push">إشعار فوري</option>
+            <option value="internal">{{ _('رسالة داخلية') }}</option>
+            <option value="sms">{{ _('الرسائل القصيرة') }}</option>
+            <option value="whatsapp">{{ _('واتساب') }}</option>
+            <option value="telegram">{{ _('تلجرام') }}</option>
+            <option value="email">{{ _('البريد الإلكتروني') }}</option>
+            <option value="push">{{ _('إشعار فوري') }}</option>
           </select>
         </div>
         <div class="ctpl-fld">
-          <label for="tpl-subject">العنوان المختصر <span style="font-weight:600;color:#94a3b8">(اختياري)</span></label>
-          <input id="tpl-subject" class="ctpl-input" name="subject" placeholder="يُستخدم للبريد والإشعارات">
+          <label for="tpl-subject">{{ _('العنوان المختصر') }} <span style="font-weight:600;color:#94a3b8">{{ _('(اختياري)') }}</span></label>
+          <input id="tpl-subject" class="ctpl-input" name="subject" placeholder="{{ _('يُستخدم للبريد والإشعارات') }}">
         </div>
         <div class="ctpl-fld">
-          <label for="tpl-vars">المتغيرات</label>
+          <label for="tpl-vars">{{ _('المتغيرات') }}</label>
           <input id="tpl-vars" class="ctpl-input mono" name="variables" placeholder="name, expire_at, balance">
-          <div class="hint">أسماء المتغيّرات المستخدمة، مفصولة بفاصلة.</div>
+          <div class="hint">{{ _('أسماء المتغيّرات المستخدمة، مفصولة بفاصلة.') }}</div>
         </div>
       </div>
 
       <div class="ctpl-fld">
-        <label for="tpl-body">نص القالب</label>
-        <textarea id="tpl-body" class="ctpl-area" name="body" rows="5" required placeholder="اكتب نص القالب… أدرج المتغيّرات بالضغط على الأزرار أدناه."></textarea>
+        <label for="tpl-body">{{ _('نص القالب') }}</label>
+        <textarea id="tpl-body" class="ctpl-area" name="body" rows="5" required placeholder="{{ _('اكتب نص القالب… أدرج المتغيّرات بالضغط على الأزرار أدناه.') }}"></textarea>
         <div class="ctpl-vars" data-vars-for="tpl-body">
           {% for v in ['{name}','{username}','{prof}','{exp}','{balance}','{amount}','{status}'] %}
-            <span class="ctpl-var" data-var="{{ v }}" title="انقر لإدراجه في النص">{{ v }}</span>
+            <span class="ctpl-var" data-var="{{ v }}" title="{{ _('انقر لإدراجه في النص') }}">{{ v }}</span>
           {% endfor %}
         </div>
       </div>
 
       <div>
-        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> حفظ القالب</button>
+        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ القالب') }}</button>
       </div>
     </form>
   {% endcall %}
@@ -166,7 +166,7 @@
     {% if templates %}
       <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
         <table class="hub-table" data-testid="notification-templates-table">
-          <thead><tr><th>المفتاح</th><th>القناة</th><th>العنوان</th><th data-uds-nosort>الحالة</th></tr></thead>
+          <thead><tr><th>{{ _('المفتاح') }}</th><th>{{ _('القناة') }}</th><th>{{ _('العنوان') }}</th><th data-uds-nosort>{{ _('الحالة') }}</th></tr></thead>
           <tbody>
             {% for item in templates %}
               <tr>
@@ -175,7 +175,7 @@
                 <td>{{ item.title }}</td>
                 <td>
                   {%- set _st = item.status|string -%}
-                  {%- if _st in ('active','enabled') -%}<span class="ctpl-stpill on">مفعّل</span>
+                  {%- if _st in ('active','enabled') -%}<span class="ctpl-stpill on">{{ _('مفعّل') }}</span>
                   {%- elif _st -%}<span class="ctpl-stpill off">{{ _st }}</span>
                   {%- else -%}—{%- endif -%}
                 </td>

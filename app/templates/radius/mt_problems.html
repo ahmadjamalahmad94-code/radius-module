@@ -7,7 +7,7 @@
 {% block title %}مركز المشاكل التشغيلية{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-triangle-exclamation"></i>{% endblock %}
 {% block page_title %}مركز المشاكل التشغيلية{% endblock %}
-{% block page_sub %}<span class="sub">قائمة موحدة لما يحتاج إجراء على مستوى الشبكة</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('قائمة موحدة لما يحتاج إجراء على مستوى الشبكة') }}</span>{% endblock %}
 
 {# ── تسميات عربية لمعرّفات أنواع المشاكل التقنية (router.offline … إلخ) ──
    مُعرّفة على مستوى الوحدة حتى تراها الماكروات أدناه (متغيرات block content
@@ -56,12 +56,12 @@
   <table class="hub-table">
     <thead>
       <tr>
-        <th>المشكلة</th>
-        <th style="width:90px">الشدة</th>
-        <th style="width:140px">النوع</th>
-        <th style="width:90px">الراوتر</th>
-        <th style="width:150px">آخر رصد</th>
-        <th style="width:160px" data-uds-nosort data-uds-nocol>الإجراء</th>
+        <th>{{ _('المشكلة') }}</th>
+        <th style="width:90px">{{ _('الشدة') }}</th>
+        <th style="width:140px">{{ _('النوع') }}</th>
+        <th style="width:90px">{{ _('الراوتر') }}</th>
+        <th style="width:150px">{{ _('آخر رصد') }}</th>
+        <th style="width:160px" data-uds-nosort data-uds-nocol>{{ _('الإجراء') }}</th>
       </tr>
     </thead>
     <tbody>{% for p in rows %}{{ problem_row(p) }}{% endfor %}</tbody>
@@ -92,19 +92,19 @@
   search_action=url_for('radius.mt_problems_index')
 ) %}
   <select class="hub-input" name="severity" data-mt-problems-filter-severity>
-    <option value="">كل الشدات</option>
-    <option value="critical" {% if filters.severity == 'critical' %}selected{% endif %}>حرجة</option>
-    <option value="warning" {% if filters.severity == 'warning' %}selected{% endif %}>تحذير</option>
-    <option value="info" {% if filters.severity == 'info' %}selected{% endif %}>معلومة</option>
+    <option value="">{{ _('كل الشدات') }}</option>
+    <option value="critical" {% if filters.severity == 'critical' %}selected{% endif %}>{{ _('حرجة') }}</option>
+    <option value="warning" {% if filters.severity == 'warning' %}selected{% endif %}>{{ _('تحذير') }}</option>
+    <option value="info" {% if filters.severity == 'info' %}selected{% endif %}>{{ _('معلومة') }}</option>
   </select>
   <select class="hub-input" name="type" data-mt-problems-filter-type>
-    <option value="">كل الأنواع</option>
+    <option value="">{{ _('كل الأنواع') }}</option>
     {% for t in all_problem_types %}
     <option value="{{ t }}" {% if filters.type == t %}selected{% endif %}>{{ _type_labels.get(t, t) }}</option>
     {% endfor %}
   </select>
   <input class="hub-input grow" type="text" name="router_id" value="{{ filters.router_id or '' }}"
-         placeholder="رقم الراوتر مثلا 42" data-mt-problems-filter-router>
+         placeholder="{{ _('رقم الراوتر مثلا 42') }}" data-mt-problems-filter-router>
   {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
 {% endcall %}
 
@@ -126,7 +126,7 @@
     sub="جرّب إعادة الضبط أو توسيع نطاق الفلترة لعرض كل المشاكل.",
     icon="circle-check"
   ) }}
-  <span data-mt-problems-empty hidden>لا توجد مشاكل تطابق هذه الفلاتر.</span>
+  <span data-mt-problems-empty hidden>{{ _('لا توجد مشاكل تطابق هذه الفلاتر.') }}</span>
   {% endif %}
 
   {% if now_problems %}

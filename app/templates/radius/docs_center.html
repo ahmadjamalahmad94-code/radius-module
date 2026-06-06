@@ -106,7 +106,7 @@
 <div class="dc-intro">
   <span class="ic"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
   <div>
-    <h3>كل قسم = مجموعة أدلة لصفحاته</h3>
+    <h3>{{ _('كل قسم = مجموعة أدلة لصفحاته') }}</h3>
     <p>
       اختر القسم الذي تشتغل فيه (المشتركون، البطاقات، المحاسبة...) وستجد داخله دليلًا
       مفصّلًا لكل صفحة: شو وظيفتها، شو يعني كل رقم وكل زر، وكيف تنفّذ مهامك اليومية
@@ -127,7 +127,7 @@
       <div class="dc-card-sub">{{ c.desc }}</div>
       <div class="dc-card-meta">
         <span class="dc-ready-count"><i class="fa-solid fa-book-open"></i> {{ c.ready_count }} أدلة جاهزة</span>
-        <span class="dc-card-go">افتح القسم <i class="fa-solid fa-arrow-left"></i></span>
+        <span class="dc-card-go">{{ _('افتح القسم') }} <i class="fa-solid fa-arrow-left"></i></span>
       </div>
     </a>
     {% else %}
@@ -135,7 +135,7 @@
       <div class="dc-card-top">
         <span class="dc-card-ic"><i class="fa-solid fa-{{ c.icon }}"></i></span>
         <span class="dc-card-title">{{ c.title }}</span>
-        <span class="dc-soon-badge"><i class="fa-regular fa-hourglass-half"></i> قريبًا</span>
+        <span class="dc-soon-badge"><i class="fa-regular fa-hourglass-half"></i> {{ _('قريبًا') }}</span>
       </div>
       <div class="dc-card-sub">{{ c.desc }}</div>
     </div>

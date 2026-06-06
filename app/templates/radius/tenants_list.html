@@ -22,7 +22,7 @@
 {% block title %}الجهات — هوب ريديوس{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-building"></i>{% endblock %}
 {% block page_title %}الجهات{% endblock %}
-{% block page_sub %}<span class="sub"><bdi dir="ltr">{{ items|length }}</bdi> جهة مسجّلة</span>{% endblock %}
+{% block page_sub %}<span class="sub"><bdi dir="ltr">{{ items|length }}</bdi> {{ _('جهة مسجّلة') }}</span>{% endblock %}
 
 {% block head_extra %}{{ super() }}
 {# نظام الجداول الموحّد (uds): فرز + ترقيم + أزرار التصدير #}
@@ -69,7 +69,7 @@
 ) %}
   {# بحث حي داخل المتصفح — لا يلمس الخادم (المسار لا يقرأ معاملات بحث) #}
   <input class="hub-input grow" type="search" id="tn-search"
-         placeholder="بحث حي بالمعرّف أو الاسم أو البريد…" autocomplete="off">
+         placeholder="{{ _('بحث حي بالمعرّف أو الاسم أو البريد…') }}" autocomplete="off">
   <span class="hub-spacer"></span>
   <span class="hub-hint" tabindex="0"
         data-hint="اختيار فئة الاشتراك عند الإنشاء يضبط حدود المشتركين والأجهزة والطلبات تلقائيًا. إيقاف جهة يمنع دخولها دون حذف بياناتها."><i class="fa-solid fa-info"></i></span>
@@ -81,19 +81,19 @@
 {% call hub.section("قائمة الجهات", icon="table-list",
                     meta=items|length|string ~ " جهة", flush=True) %}
   <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25"
-       data-uds-export-title="الجهات" style="border:none;border-radius:0">
+       data-uds-export-title="{{ _('الجهات') }}" style="border:none;border-radius:0">
     <table class="hub-table">
       <thead>
         <tr>
           <th class="num" style="width:60px">#</th>
-          <th>المعرّف</th>
-          <th>الجهة</th>
-          <th>فئة الاشتراك</th>
-          <th>الحالة</th>
-          <th data-uds-nosort>الحدود التشغيلية</th>
-          <th>العملة واللغة</th>
-          <th>أُنشئت</th>
-          <th style="width:70px" data-uds-nosort data-uds-nocol data-uds-noexport>تعديل</th>
+          <th>{{ _('المعرّف') }}</th>
+          <th>{{ _('الجهة') }}</th>
+          <th>{{ _('فئة الاشتراك') }}</th>
+          <th>{{ _('الحالة') }}</th>
+          <th data-uds-nosort>{{ _('الحدود التشغيلية') }}</th>
+          <th>{{ _('العملة واللغة') }}</th>
+          <th>{{ _('أُنشئت') }}</th>
+          <th style="width:70px" data-uds-nosort data-uds-nocol data-uds-noexport>{{ _('تعديل') }}</th>
         </tr>
       </thead>
       <tbody>
@@ -116,8 +116,8 @@
           <td>{{ hub.pill(_st[0], variant=_st[1]) }}</td>
           {# السقوف التشغيلية: مشتركون / أجهزة شبكة / معدّل طلبات الواجهة #}
           <td class="small">
-            <div><bdi dir="ltr">{{ t.max_subscribers }}</bdi> مشترك</div>
-            <div class="hub-text-mute"><bdi dir="ltr">{{ t.max_nas }}</bdi> جهاز · <bdi dir="ltr">{{ t.api_rpm }}</bdi> طلب/دقيقة</div>
+            <div><bdi dir="ltr">{{ t.max_subscribers }}</bdi> {{ _('مشترك') }}</div>
+            <div class="hub-text-mute"><bdi dir="ltr">{{ t.max_nas }}</bdi> {{ _('جهاز ·') }} <bdi dir="ltr">{{ t.api_rpm }}</bdi> {{ _('طلب/دقيقة') }}</div>
           </td>
           <td class="mono small"><bdi dir="ltr">{{ t.currency }} · {{ t.locale }}</bdi></td>
           <td class="mono small">
@@ -125,7 +125,7 @@
             {% else %}<span class="hub-text-mute">—</span>{% endif %}
           </td>
           <td>
-            <a class="hub-btn hub-btn--secondary hub-btn--icon" title="تعديل الجهة"
+            <a class="hub-btn hub-btn--secondary hub-btn--icon" title="{{ _('تعديل الجهة') }}"
                href="{{ url_for('radius.tenants_edit', tenant_id=t.id) }}">
               <i class="fa-solid fa-pen"></i>
             </a>

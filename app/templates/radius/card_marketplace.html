@@ -4,7 +4,7 @@
 {% block title %}سوق البطاقات الإلكترونية - Hobe Hub{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-store"></i>{% endblock %}
 {% block page_title %}سوق البطاقات الإلكترونية{% endblock %}
-{% block page_sub %}<span class="sub">إعداد عروض الشراء التي تظهر لمستخدمي البطاقات في بوابة الزبون.</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('إعداد عروض الشراء التي تظهر لمستخدمي البطاقات في بوابة الزبون.') }}</span>{% endblock %}
 
 {% macro num(value) -%}
   {{ "{:,}".format((value or 0)|int) }}
@@ -649,13 +649,13 @@
     <div class="market-title">
       <span class="market-icon"><i class="fa-solid fa-store"></i></span>
       <div style="flex:1;min-width:0">
-        <h1>سوق البطاقات الإلكترونية</h1>
-        <p>أنشئ عروض بيع تظهر في بوابة الزبون. عند الشراء يتم توليد بطاقة حقيقية، تخزينها داخل حزمة، وتسليم رقمها للزبون.</p>
+        <h1>{{ _('سوق البطاقات الإلكترونية') }}</h1>
+        <p>{{ _('أنشئ عروض بيع تظهر في بوابة الزبون. عند الشراء يتم توليد بطاقة حقيقية، تخزينها داخل حزمة، وتسليم رقمها للزبون.') }}</p>
       </div>
       <div class="market-hero-actions">
         <button class="market-btn market-btn--primary" type="button" data-market-create-open>
           <i class="fa-solid fa-plus"></i>
-          إضافة باقة بيع
+          {{ _('إضافة باقة بيع') }}
         </button>
         <a class="market-btn market-btn--ghost" href="{{ url_for('radius.store_support') }}">
           <i class="fa-solid fa-headset"></i>
@@ -664,10 +664,10 @@
       </div>
     </div>
     <div class="market-metrics">
-      <article class="market-metric" style="--metric:#2563eb"><i class="fa-solid fa-boxes-stacked"></i><div class="metric-body"><span>حزم إلكترونية</span><strong>{{ num(market_summary.batches) }}</strong></div></article>
-      <article class="market-metric" style="--metric:#7c3aed"><i class="fa-solid fa-ticket"></i><div class="metric-body"><span>كروت متاحة</span><strong>{{ num(market_summary.available) }}</strong></div></article>
-      <article class="market-metric" style="--metric:#d97706"><i class="fa-solid fa-cart-shopping"></i><div class="metric-body"><span>مباعة</span><strong>{{ num(market_summary.sold) }}</strong></div></article>
-      <article class="market-metric" style="--metric:#5b21b6"><i class="fa-solid fa-coins"></i><div class="metric-body"><span>الإيراد</span><strong>{{ money(market_summary.revenue, market_summary.currency) }}</strong></div></article>
+      <article class="market-metric" style="--metric:#2563eb"><i class="fa-solid fa-boxes-stacked"></i><div class="metric-body"><span>{{ _('حزم إلكترونية') }}</span><strong>{{ num(market_summary.batches) }}</strong></div></article>
+      <article class="market-metric" style="--metric:#7c3aed"><i class="fa-solid fa-ticket"></i><div class="metric-body"><span>{{ _('كروت متاحة') }}</span><strong>{{ num(market_summary.available) }}</strong></div></article>
+      <article class="market-metric" style="--metric:#d97706"><i class="fa-solid fa-cart-shopping"></i><div class="metric-body"><span>{{ _('مباعة') }}</span><strong>{{ num(market_summary.sold) }}</strong></div></article>
+      <article class="market-metric" style="--metric:#5b21b6"><i class="fa-solid fa-coins"></i><div class="metric-body"><span>{{ _('الإيراد') }}</span><strong>{{ money(market_summary.revenue, market_summary.currency) }}</strong></div></article>
     </div>
   </section>
 
@@ -681,21 +681,21 @@
     <form method="post" action="{{ url_for('radius.card_marketplace_package_create') }}" data-market-package-form novalidate>
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
       <div class="fcw-head">
-        <h3 id="market-create-title"><i class="fa-solid fa-store" style="color:var(--violet)"></i> إضافة باقة بيع</h3>
-        <button type="button" class="fcw-x" data-market-create-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
+        <h3 id="market-create-title"><i class="fa-solid fa-store" style="color:var(--violet)"></i> {{ _('إضافة باقة بيع') }}</h3>
+        <button type="button" class="fcw-x" data-market-create-close aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="fcw-body mkc-body">
-        <p class="mkc-sub">هذه الباقة هي التي تظهر للزبون للشراء داخل بوابة البطاقات — اختر العرض الأساسي وستُملأ بقية الحقول تلقائيًا، ويمكنك تعديل أي قيمة قبل الحفظ.</p>
+        <p class="mkc-sub">{{ _('هذه الباقة هي التي تظهر للزبون للشراء داخل بوابة البطاقات — اختر العرض الأساسي وستُملأ بقية الحقول تلقائيًا، ويمكنك تعديل أي قيمة قبل الحفظ.') }}</p>
 
         <div class="mkc-grid">
           {# ── الصف 1: العرض الأساسي بعرض كامل ── #}
           <div class="mkc-field mkc-field--full" data-mkc-field="plan_id">
             <span class="mkc-label">
-              العرض الأساسي <b class="req">*</b>
+              {{ _('العرض الأساسي') }} <b class="req">*</b>
               <span class="hub-hint" tabindex="0" data-hint="العرض (البروفايل) الذي يرث منه الكرت المدة والسرعة والسعر المقترح. اختياره يملأ بقية الحقول تلقائيًا ويمكنك تعديلها."><i class="fa-solid fa-info"></i></span>
             </span>
             <select name="plan_id" required data-market-plan data-msg="اختر العرض الأساسي أولًا">
-              <option value="">اختر عرضًا…</option>
+              <option value="">{{ _('اختر عرضًا…') }}</option>
               {% for plan in marketplace_plans %}
                 <option value="{{ plan.id }}"
                         data-name="{{ plan.display_name }}"
@@ -708,31 +708,31 @@
                 </option>
               {% endfor %}
             </select>
-            <em class="mkc-err" hidden>اختر العرض الأساسي أولًا</em>
+            <em class="mkc-err" hidden>{{ _('اختر العرض الأساسي أولًا') }}</em>
           </div>
 
           {# ── الصف 2: الاسم + السعر ── #}
           <div class="mkc-field" data-mkc-field="name">
             <span class="mkc-label">
-              اسم الباقة في السوق <b class="req">*</b>
+              {{ _('اسم الباقة في السوق') }} <b class="req">*</b>
               <span class="hub-hint" tabindex="0" data-hint="الاسم الذي يراه الزبون في بوابته. يُقترح تلقائيًا من المدة والسرعة ويمكنك كتابته بحرّية."><i class="fa-solid fa-info"></i></span>
             </span>
-            <input class="mkc-input" name="name" data-market-name placeholder="مثال: 8 ساعات / 2 ميجا" required data-msg="اكتب اسم الباقة كما سيظهر للزبون">
-            <em class="mkc-err" hidden>اكتب اسم الباقة كما سيظهر للزبون</em>
+            <input class="mkc-input" name="name" data-market-name placeholder="{{ _('مثال: 8 ساعات / 2 ميجا') }}" required data-msg="اكتب اسم الباقة كما سيظهر للزبون">
+            <em class="mkc-err" hidden>{{ _('اكتب اسم الباقة كما سيظهر للزبون') }}</em>
           </div>
           <div class="mkc-field" data-mkc-field="price">
             <span class="mkc-label">
-              السعر <b class="req">*</b>
+              {{ _('السعر') }} <b class="req">*</b>
               <span class="hub-hint" tabindex="0" data-hint="المبلغ الذي يُخصم من محفظة الزبون عند الشراء. يُقترح تلقائيًا من سعر العرض الأساسي."><i class="fa-solid fa-info"></i></span>
             </span>
             <input class="mkc-input" name="price" data-market-price type="number" min="0.01" step="0.01" placeholder="5.00" required data-msg="أدخل سعر بيع أكبر من صفر">
-            <em class="mkc-err" hidden>أدخل سعر بيع أكبر من صفر</em>
+            <em class="mkc-err" hidden>{{ _('أدخل سعر بيع أكبر من صفر') }}</em>
           </div>
 
           {# ── الصف 3: المدة + سرعتا التنزيل والرفع (وحدات مدموجة رقم + وحدة) ── #}
           <div class="mkc-field" data-mkc-field="duration_minutes">
             <span class="mkc-label">
-              مدة البطاقة
+              {{ _('مدة البطاقة') }}
               <span class="hub-hint" tabindex="0" data-hint="عمر الكرت بعد أول استخدام. اتركها صفرًا لاعتماد مدة العرض الأساسي كما هي."><i class="fa-solid fa-info"></i></span>
             </span>
             {{ unit_input_picker(name="duration_minutes", value=0, kind="time", units=["min","hr","day"]) }}
@@ -740,14 +740,14 @@
           <div class="mkc-field mkc-field--speeds">
             <div class="mkc-speed">
               <span class="mkc-label">
-                سرعة التنزيل
+                {{ _('سرعة التنزيل') }}
                 <span class="hub-hint" tabindex="0" data-hint="حد سرعة التنزيل للكرت. صفر = يرث سرعة العرض الأساسي."><i class="fa-solid fa-info"></i></span>
               </span>
               {{ unit_input_picker(name="speed_down_kbps", value=0, kind="speed", units=["kbps","Mbps"]) }}
             </div>
             <div class="mkc-speed">
               <span class="mkc-label">
-                سرعة الرفع
+                {{ _('سرعة الرفع') }}
                 <span class="hub-hint" tabindex="0" data-hint="حد سرعة الرفع للكرت. صفر = يرث سرعة العرض الأساسي."><i class="fa-solid fa-info"></i></span>
               </span>
               {{ unit_input_picker(name="speed_up_kbps", value=0, kind="speed", units=["kbps","Mbps"]) }}
@@ -757,17 +757,17 @@
           {# ── الصف 4: نمط البيع + لون البطاقة (حُبيبات جاهزة + منتقي حر) ── #}
           <div class="mkc-field" data-mkc-field="sale_mode">
             <span class="mkc-label">
-              نمط البيع
+              {{ _('نمط البيع') }}
               <span class="hub-hint" tabindex="0" data-hint="«توليد فوري»: يُنشأ كرت جديد لحظة كل شراء. «حزم / مخزون»: يُباع من كروت محمّلة مسبقًا (توليد عدد أو رفع ملف)."><i class="fa-solid fa-info"></i></span>
             </span>
             <select name="sale_mode">
-              <option value="instant" {{ 'selected' if (default_sale_mode or 'instant') != 'inventory' else '' }}>كرت توليد فوري</option>
-              <option value="inventory" {{ 'selected' if (default_sale_mode or 'instant') == 'inventory' else '' }}>نظام حزم / مخزون</option>
+              <option value="instant" {{ 'selected' if (default_sale_mode or 'instant') != 'inventory' else '' }}>{{ _('كرت توليد فوري') }}</option>
+              <option value="inventory" {{ 'selected' if (default_sale_mode or 'instant') == 'inventory' else '' }}>{{ _('نظام حزم / مخزون') }}</option>
             </select>
           </div>
           <div class="mkc-field" data-mkc-field="card_color">
             <span class="mkc-label">
-              لون البطاقة
+              {{ _('لون البطاقة') }}
               <span class="hub-hint" tabindex="0" data-hint="لون شريط الباقة كما يظهر في معرض العروض وبوابة الزبون. اختر من الألوان الجاهزة أو حدّد لونًا مخصصًا بالقطّارة."><i class="fa-solid fa-info"></i></span>
             </span>
             <div class="mkc-swatches" data-market-swatches>
@@ -775,9 +775,9 @@
                 <button type="button" class="mkc-swatch{{ ' is-active' if loop.first else '' }}"
                         data-swatch="{{ sw }}" style="--sw:{{ sw }}" title="{{ sw }}" aria-label="اختيار لون البطاقة رقم {{ loop.index }}"></button>
               {% endfor %}
-              <label class="mkc-swatch mkc-swatch--custom" title="لون مخصص">
+              <label class="mkc-swatch mkc-swatch--custom" title="{{ _('لون مخصص') }}">
                 <i class="fa-solid fa-eye-dropper"></i>
-                <input name="card_color" type="color" value="#14b8a6" data-market-color aria-label="لون مخصص للبطاقة">
+                <input name="card_color" type="color" value="#14b8a6" data-market-color aria-label="{{ _('لون مخصص للبطاقة') }}">
               </label>
             </div>
           </div>
@@ -787,16 +787,16 @@
         <div class="mkc-callout">
           <i class="fa-solid fa-circle-info"></i>
           <div>
-            <strong>ماذا يحدث عند الشراء؟</strong>
-            <span>يُخصم السعر من محفظة الزبون، يُولَّد كرت جديد (أو يُسحب من المخزون حسب النمط)، تُنشأ حزمة إلكترونية مرتبطة بالعملية، ثم يظهر الكرت للزبون في «بطاقاتي».</span>
+            <strong>{{ _('ماذا يحدث عند الشراء؟') }}</strong>
+            <span>{{ _('يُخصم السعر من محفظة الزبون، يُولَّد كرت جديد (أو يُسحب من المخزون حسب النمط)، تُنشأ حزمة إلكترونية مرتبطة بالعملية، ثم يظهر الكرت للزبون في «بطاقاتي».') }}</span>
           </div>
         </div>
       </div>
       <div class="fcw-foot mkc-foot">
-        <span class="market-pill"><i class="fa-solid fa-eye"></i> تظهر مباشرة في بوابة الزبون</span>
+        <span class="market-pill"><i class="fa-solid fa-eye"></i> {{ _('تظهر مباشرة في بوابة الزبون') }}</span>
         <span style="flex:1"></span>
-        <button class="market-btn" type="button" data-market-create-close>إلغاء</button>
-        <button class="market-btn market-btn--primary" type="submit"><i class="fa-solid fa-plus"></i> إضافة الباقة</button>
+        <button class="market-btn" type="button" data-market-create-close>{{ _('إلغاء') }}</button>
+        <button class="market-btn market-btn--primary" type="submit"><i class="fa-solid fa-plus"></i> {{ _('إضافة الباقة') }}</button>
       </div>
     </form>
   </div>
@@ -810,25 +810,25 @@
   <section class="market-panel">
     <header class="market-panel-head">
       <div>
-        <h2><i class="fa-solid fa-store"></i> معرض العروض</h2>
-        <p>هذه الباقات تظهر للزبون في بوابته للشراء. اختر النظام لعرض عروضه فقط.</p>
+        <h2><i class="fa-solid fa-store"></i> {{ _('معرض العروض') }}</h2>
+        <p>{{ _('هذه الباقات تظهر للزبون في بوابته للشراء. اختر النظام لعرض عروضه فقط.') }}</p>
       </div>
       {# ── محدّد النمط الافتراضي للعروض الجديدة — نُقل هنا مدمجًا من القسم المحذوف ── #}
       <form method="post" action="{{ url_for('radius.card_marketplace_default_mode') }}" class="market-headtools">
         <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-        <span class="market-pill" style="background:#eef2ff;color:#4338ca;border-color:#e0e7ff">النمط الافتراضي للعروض الجديدة</span>
-        <select name="sale_mode" onchange="this.form.submit()" aria-label="النمط الافتراضي للعروض الجديدة">
-          <option value="instant" {{ 'selected' if (default_sale_mode or 'instant') != 'inventory' else '' }}>توليد فوري</option>
-          <option value="inventory" {{ 'selected' if (default_sale_mode or 'instant') == 'inventory' else '' }}>مخزون</option>
+        <span class="market-pill" style="background:#eef2ff;color:#4338ca;border-color:#e0e7ff">{{ _('النمط الافتراضي للعروض الجديدة') }}</span>
+        <select name="sale_mode" onchange="this.form.submit()" aria-label="{{ _('النمط الافتراضي للعروض الجديدة') }}">
+          <option value="instant" {{ 'selected' if (default_sale_mode or 'instant') != 'inventory' else '' }}>{{ _('توليد فوري') }}</option>
+          <option value="inventory" {{ 'selected' if (default_sale_mode or 'instant') == 'inventory' else '' }}>{{ _('مخزون') }}</option>
         </select>
       </form>
     </header>
     {# ── شريط النظام: مفتاح مقسّم بارز يقسم العروض إلى نظام واحد ظاهر في كل مرة ── #}
     <div class="market-systembar">
-      <div class="market-seg market-seg--lg" role="tablist" aria-label="نظام البيع" data-market-mode-seg>
-        <button type="button" class="is-active" data-mode-filter="all"><i class="fa-solid fa-layer-group"></i> الكل</button>
-        <button type="button" data-mode-filter="instant"><i class="fa-solid fa-bolt"></i> نظام التوليد</button>
-        <button type="button" data-mode-filter="inventory"><i class="fa-solid fa-boxes-stacked"></i> نظام المخزون</button>
+      <div class="market-seg market-seg--lg" role="tablist" aria-label="{{ _('نظام البيع') }}" data-market-mode-seg>
+        <button type="button" class="is-active" data-mode-filter="all"><i class="fa-solid fa-layer-group"></i> {{ _('الكل') }}</button>
+        <button type="button" data-mode-filter="instant"><i class="fa-solid fa-bolt"></i> {{ _('نظام التوليد') }}</button>
+        <button type="button" data-mode-filter="inventory"><i class="fa-solid fa-boxes-stacked"></i> {{ _('نظام المخزون') }}</button>
       </div>
       <span class="market-pill" data-market-offer-count>{{ num(packages|length) }} عرض</span>
     </div>
@@ -852,51 +852,51 @@
           <div class="market-signature">{{ duration_minutes_label(duration) }} / {{ speed_label(down) }}</div>
           <div style="display:flex;justify-content:center;gap:7px;flex-wrap:wrap;margin-top:2px">
             {% if _mode == 'inventory' %}
-              <span class="market-pill" style="background:#eff6ff;color:#1d4ed8;border-color:#bfdbfe"><i class="fa-solid fa-boxes-stacked"></i> بيع من المخزون</span>
+              <span class="market-pill" style="background:#eff6ff;color:#1d4ed8;border-color:#bfdbfe"><i class="fa-solid fa-boxes-stacked"></i> {{ _('بيع من المخزون') }}</span>
               {% if _rem <= 0 and _stock_total > 0 %}
-                <span class="market-lowstock market-lowstock--out"><i class="fa-solid fa-circle-exclamation"></i> نفد المخزون</span>
+                <span class="market-lowstock market-lowstock--out"><i class="fa-solid fa-circle-exclamation"></i> {{ _('نفد المخزون') }}</span>
               {% elif _low_stock %}
-                <span class="market-lowstock"><i class="fa-solid fa-triangle-exclamation"></i> مخزون منخفض</span>
+                <span class="market-lowstock"><i class="fa-solid fa-triangle-exclamation"></i> {{ _('مخزون منخفض') }}</span>
               {% endif %}
             {% else %}
-              <span class="market-pill" style="background:#f5f3ff;color:#6d28d9;border-color:#ddd6fe"><i class="fa-solid fa-bolt"></i> توليد فوري</span>
+              <span class="market-pill" style="background:#f5f3ff;color:#6d28d9;border-color:#ddd6fe"><i class="fa-solid fa-bolt"></i> {{ _('توليد فوري') }}</span>
             {% endif %}
           </div>
           <div class="market-stats">
-            <div class="market-stat"><small>السعر</small><strong>{{ money(package.price, package.currency) }}</strong></div>
-            <div class="market-stat"><small>رفع</small><strong>{{ speed_label(up) }}</strong></div>
-            <div class="market-stat"><small>الحالة</small><strong>{{ "فعال" if package.active else "متوقف" }}</strong></div>
+            <div class="market-stat"><small>{{ _('السعر') }}</small><strong>{{ money(package.price, package.currency) }}</strong></div>
+            <div class="market-stat"><small>{{ _('رفع') }}</small><strong>{{ speed_label(up) }}</strong></div>
+            <div class="market-stat"><small>{{ _('الحالة') }}</small><strong>{{ "فعال" if package.active else "متوقف" }}</strong></div>
           </div>
           {% if _mode == 'inventory' %}
             <div class="market-stats" style="margin-top:6px">
-              <div class="market-stat"><small>الكل</small><strong>{{ num(_stock_total) }}</strong></div>
-              <div class="market-stat"><small>المباع</small><strong>{{ num(_stock_sold) }}</strong></div>
-              <div class="market-stat"><small>المتبقي</small><strong>{{ num(_rem) }}</strong></div>
+              <div class="market-stat"><small>{{ _('الكل') }}</small><strong>{{ num(_stock_total) }}</strong></div>
+              <div class="market-stat"><small>{{ _('المباع') }}</small><strong>{{ num(_stock_sold) }}</strong></div>
+              <div class="market-stat"><small>{{ _('المتبقي') }}</small><strong>{{ num(_rem) }}</strong></div>
             </div>
           {% endif %}
           {# ── الإجراء الأساسي الواحد للبطاقة: فتح صفحة العرض ── #}
           <a class="market-btn market-btn--primary" style="margin-top:10px" href="{{ url_for('radius.card_marketplace_package_file', package_id=package.id) }}">
-            <i class="fa-solid fa-folder-open"></i> فتح العرض
+            <i class="fa-solid fa-folder-open"></i> {{ _('فتح العرض') }}
           </a>
           {# ── بقية الإجراءات (تغيير النمط + تعبئة المخزون) في تفاصيل تُفتح عند الطلب ── #}
           <details class="market-card-opts">
-            <summary><i class="fa-solid fa-sliders"></i> خيارات العرض <i class="fa-solid fa-chevron-down market-chevron"></i></summary>
+            <summary><i class="fa-solid fa-sliders"></i> {{ _('خيارات العرض') }} <i class="fa-solid fa-chevron-down market-chevron"></i></summary>
             <div class="market-card-opts-body">
               <form method="post" action="{{ url_for('radius.card_marketplace_package_mode', package_id=package.id) }}" class="market-opt-row" style="margin:0">
                 <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-                <select name="sale_mode" onchange="this.form.submit()" aria-label="نمط بيع العرض">
-                  <option value="instant" {{ 'selected' if _mode != 'inventory' else '' }}>توليد فوري</option>
-                  <option value="inventory" {{ 'selected' if _mode == 'inventory' else '' }}>مخزون</option>
+                <select name="sale_mode" onchange="this.form.submit()" aria-label="{{ _('نمط بيع العرض') }}">
+                  <option value="instant" {{ 'selected' if _mode != 'inventory' else '' }}>{{ _('توليد فوري') }}</option>
+                  <option value="inventory" {{ 'selected' if _mode == 'inventory' else '' }}>{{ _('مخزون') }}</option>
                 </select>
               </form>
               {% if _mode == 'inventory' %}
               {# ── إجراءا تعبئة المخزون: رفع ملف / توليد حزمة — صناديق fcw عائمة ── #}
               <div class="market-opt-row">
                 <button type="button" class="market-btn" data-fcw-open="stock-upload-{{ package.id }}">
-                  <i class="fa-solid fa-file-arrow-up"></i> رفع ملف
+                  <i class="fa-solid fa-file-arrow-up"></i> {{ _('رفع ملف') }}
                 </button>
                 <button type="button" class="market-btn market-btn--primary" data-fcw-open="stock-generate-{{ package.id }}">
-                  <i class="fa-solid fa-wand-magic-sparkles"></i> توليد حزمة
+                  <i class="fa-solid fa-wand-magic-sparkles"></i> {{ _('توليد حزمة') }}
                 </button>
               </div>
               {% endif %}
@@ -904,9 +904,9 @@
           </details>
         </article>
       {% else %}
-        <div class="market-empty">لا توجد عروض بيع حتى الآن. أضف أول باقة من النموذج بالأعلى.</div>
+        <div class="market-empty">{{ _('لا توجد عروض بيع حتى الآن. أضف أول باقة من النموذج بالأعلى.') }}</div>
       {% endfor %}
-      <div class="market-empty" data-market-mode-empty hidden>لا توجد عروض ضمن هذا النظام بعد.</div>
+      <div class="market-empty" data-market-mode-empty hidden>{{ _('لا توجد عروض ضمن هذا النظام بعد.') }}</div>
     </div>
   </section>
 
@@ -919,20 +919,20 @@
         <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
         <div class="fcw-head">
           <h3 id="fcw-stock-upload-{{ package.id }}-title"><i class="fa-solid fa-file-arrow-up"></i> رفع ملف بطاقات — {{ package.name }}</h3>
-          <button type="button" class="fcw-x" data-fcw-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
+          <button type="button" class="fcw-x" data-fcw-close aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button>
         </div>
         <div class="fcw-body">
           {# ملاحظة شرح — كانت تستعمل كلاس hub-hint (مخصّص لأيقونة 20px دائرية)
              فيُسحق النص في دائرة؛ استُبدلت بكلاس fcw-note الصحيح. #}
-          <p class="fcw-note">يقرأ المحرك ملفات Excel / CSV / PDF ويستخرج أزواج اسم المستخدم وكلمة المرور، ثم يضيفها إلى مخزون هذا العرض. الأسماء المكررة تُتخطى تلقائيًا. الحد الأقصى 12MB و5000 بطاقة بالدفعة.</p>
+          <p class="fcw-note">{{ _('يقرأ المحرك ملفات Excel / CSV / PDF ويستخرج أزواج اسم المستخدم وكلمة المرور، ثم يضيفها إلى مخزون هذا العرض. الأسماء المكررة تُتخطى تلقائيًا. الحد الأقصى 12MB و5000 بطاقة بالدفعة.') }}</p>
           <label class="market-field">
-            <span>ملف البطاقات</span>
+            <span>{{ _('ملف البطاقات') }}</span>
             <input type="file" name="file" accept=".csv,.tsv,.txt,.xlsx,.pdf" required>
           </label>
         </div>
         <div class="fcw-foot">
-          <button class="market-btn" type="button" data-fcw-close>إلغاء</button>
-          <button class="market-btn market-btn--primary" type="submit"><i class="fa-solid fa-boxes-stacked"></i> إضافة للمخزون</button>
+          <button class="market-btn" type="button" data-fcw-close>{{ _('إلغاء') }}</button>
+          <button class="market-btn market-btn--primary" type="submit"><i class="fa-solid fa-boxes-stacked"></i> {{ _('إضافة للمخزون') }}</button>
         </div>
       </form>
     </div>
@@ -943,22 +943,22 @@
         <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
         <div class="fcw-head">
           <h3 id="fcw-stock-generate-{{ package.id }}-title"><i class="fa-solid fa-wand-magic-sparkles"></i> توليد حزمة — {{ package.name }}</h3>
-          <button type="button" class="fcw-x" data-fcw-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
+          <button type="button" class="fcw-x" data-fcw-close aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button>
         </div>
         <div class="fcw-body">
-          <p class="fcw-note">يولّد محرك الدفعات المشترك بطاقات فريدة (اسم مستخدم + كلمة مرور) داخل حزمة مرتبطة بهذا العرض، وتدخل المخزون فورًا للبيع منها.</p>
+          <p class="fcw-note">{{ _('يولّد محرك الدفعات المشترك بطاقات فريدة (اسم مستخدم + كلمة مرور) داخل حزمة مرتبطة بهذا العرض، وتدخل المخزون فورًا للبيع منها.') }}</p>
           <label class="market-field">
-            <span>عدد البطاقات</span>
+            <span>{{ _('عدد البطاقات') }}</span>
             <input type="number" name="count" min="1" max="5000" value="100" required>
           </label>
           <label class="market-field">
-            <span>طول كلمة المرور</span>
+            <span>{{ _('طول كلمة المرور') }}</span>
             <input type="number" name="password_length" min="4" max="16" value="8">
           </label>
         </div>
         <div class="fcw-foot">
-          <button class="market-btn" type="button" data-fcw-close>إلغاء</button>
-          <button class="market-btn market-btn--primary" type="submit"><i class="fa-solid fa-wand-magic-sparkles"></i> توليد وإضافة</button>
+          <button class="market-btn" type="button" data-fcw-close>{{ _('إلغاء') }}</button>
+          <button class="market-btn market-btn--primary" type="submit"><i class="fa-solid fa-wand-magic-sparkles"></i> {{ _('توليد وإضافة') }}</button>
         </div>
       </form>
     </div>
@@ -968,8 +968,8 @@
   <details class="market-panel market-collapsible">
     <summary class="market-panel-head">
       <div>
-        <h2><i class="fa-solid fa-chevron-down market-chevron"></i> الحزم الإلكترونية المتولدة <span style="font-weight:700;color:var(--muted);font-size:12px">(سجل فني)</span></h2>
-        <p>كل عملية شراء تولّد كرتاً وتحفظه داخل حزمة قابلة للمراجعة. افتح هذا القسم لمراجعة الكروت المتولدة.</p>
+        <h2><i class="fa-solid fa-chevron-down market-chevron"></i> {{ _('الحزم الإلكترونية المتولدة') }} <span style="font-weight:700;color:var(--muted);font-size:12px">{{ _('(سجل فني)') }}</span></h2>
+        <p>{{ _('كل عملية شراء تولّد كرتاً وتحفظه داخل حزمة قابلة للمراجعة. افتح هذا القسم لمراجعة الكروت المتولدة.') }}</p>
       </div>
       {# العدّاد يعرض الإجمالي الحقيقي؛ القسم يستعرض آخر الحزم فقط #}
       <span class="market-pill">{{ num(electronic_batches_total) }} حزمة</span>
@@ -992,21 +992,21 @@
           <div class="market-code">{% if batch.batch_code %}<bdi dir="ltr">{{ batch.batch_code }}</bdi>{% else %}بدون كود{% endif %} · <bdi dir="ltr">#{{ batch.id }}</bdi></div>
           <div class="market-signature">{{ batch_duration_label(batch) }}</div>
           <div class="market-stats">
-            <div class="market-stat"><small>متاح</small><strong>{{ num(available) }}</strong></div>
-            <div class="market-stat"><small>مباع</small><strong>{{ num(sold) }}</strong></div>
-            <div class="market-stat"><small>إجمالي</small><strong>{{ num(total) }}</strong></div>
+            <div class="market-stat"><small>{{ _('متاح') }}</small><strong>{{ num(available) }}</strong></div>
+            <div class="market-stat"><small>{{ _('مباع') }}</small><strong>{{ num(sold) }}</strong></div>
+            <div class="market-stat"><small>{{ _('إجمالي') }}</small><strong>{{ num(total) }}</strong></div>
           </div>
           <div class="market-progress">
             <div class="market-progress-labels"><span>{{ "%.0f"|format(progress) }}% مباع</span><span>متبقي {{ num(available) }}</span></div>
             <div class="market-progress-bar"><span style="width:{{ progress_width }}%"></span></div>
           </div>
           <div class="market-card-foot">
-            <a class="market-btn market-btn--primary" href="{{ url_for('radius.cards_of_batch', batch_id=batch.id) }}"><i class="fa-solid fa-eye"></i> عرض الكروت</a>
-            <a class="market-btn" href="{{ url_for('radius.cards_batch_edit', batch_id=batch.id) }}"><i class="fa-solid fa-pen"></i> تعديل</a>
+            <a class="market-btn market-btn--primary" href="{{ url_for('radius.cards_of_batch', batch_id=batch.id) }}"><i class="fa-solid fa-eye"></i> {{ _('عرض الكروت') }}</a>
+            <a class="market-btn" href="{{ url_for('radius.cards_batch_edit', batch_id=batch.id) }}"><i class="fa-solid fa-pen"></i> {{ _('تعديل') }}</a>
           </div>
         </article>
       {% else %}
-        <div class="market-empty">لا توجد حزم متولدة من الشراء بعد.</div>
+        <div class="market-empty">{{ _('لا توجد حزم متولدة من الشراء بعد.') }}</div>
       {% endfor %}
     </div>
   </details>
@@ -1015,8 +1015,8 @@
   <details class="market-panel market-collapsible">
     <summary class="market-panel-head">
       <div>
-        <h2><i class="fa-solid fa-chevron-down market-chevron"></i> آخر عمليات الشراء</h2>
-        <p>نظرة سريعة على المبيعات عبر كل العروض. لكل عرض ملف مشتريات مفصّل.</p>
+        <h2><i class="fa-solid fa-chevron-down market-chevron"></i> {{ _('آخر عمليات الشراء') }}</h2>
+        <p>{{ _('نظرة سريعة على المبيعات عبر كل العروض. لكل عرض ملف مشتريات مفصّل.') }}</p>
       </div>
       <span class="market-pill">{{ num(recent_purchases.total if recent_purchases else 0) }} عملية</span>
     </summary>
@@ -1025,12 +1025,12 @@
       <table class="market-table">
         <thead>
           <tr>
-            <th>المشتري</th>
-            <th>العرض</th>
-            <th>الكرت</th>
-            <th>المبلغ</th>
-            <th>الحالة</th>
-            <th>التاريخ</th>
+            <th>{{ _('المشتري') }}</th>
+            <th>{{ _('العرض') }}</th>
+            <th>{{ _('الكرت') }}</th>
+            <th>{{ _('المبلغ') }}</th>
+            <th>{{ _('الحالة') }}</th>
+            <th>{{ _('التاريخ') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -1044,7 +1044,7 @@
               <td>{{ date_label(it.created_at) }}</td>
             </tr>
           {% else %}
-            <tr><td colspan="6">لا توجد عمليات شراء إلكترونية بعد.</td></tr>
+            <tr><td colspan="6">{{ _('لا توجد عمليات شراء إلكترونية بعد.') }}</td></tr>
           {% endfor %}
         </tbody>
       </table>
@@ -1052,11 +1052,11 @@
     {% if recent_purchases and recent_purchases.pages > 1 %}
     <nav style="display:flex;gap:10px;justify-content:center;align-items:center;margin-top:12px">
       {% if recent_purchases.page > 1 %}
-        <a class="market-btn market-btn--ghost" href="{{ url_for('radius.card_marketplace', rp_page=recent_purchases.page - 1) }}">السابق</a>
+        <a class="market-btn market-btn--ghost" href="{{ url_for('radius.card_marketplace', rp_page=recent_purchases.page - 1) }}">{{ _('السابق') }}</a>
       {% endif %}
       <span class="market-pill">{{ recent_purchases.page }} / {{ recent_purchases.pages }}</span>
       {% if recent_purchases.page < recent_purchases.pages %}
-        <a class="market-btn market-btn--ghost" href="{{ url_for('radius.card_marketplace', rp_page=recent_purchases.page + 1) }}">التالي</a>
+        <a class="market-btn market-btn--ghost" href="{{ url_for('radius.card_marketplace', rp_page=recent_purchases.page + 1) }}">{{ _('التالي') }}</a>
       {% endif %}
     </nav>
     {% endif %}

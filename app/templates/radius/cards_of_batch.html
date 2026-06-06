@@ -436,13 +436,13 @@
   {% if batch %}
     {% set hero_actions %}
       <a class="hub-btn hub-btn--primary" href="{{ url_for('radius.cards_batch_edit', batch_id=batch.id) }}">
-        <i class="fa-solid fa-pen"></i> تعديل الحزمة
+        <i class="fa-solid fa-pen"></i> {{ _('تعديل الحزمة') }}
       </a>
       <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.cards_checker', query=batch.batch_code) }}">
-        <i class="fa-solid fa-magnifying-glass-chart"></i> الفحص
+        <i class="fa-solid fa-magnifying-glass-chart"></i> {{ _('الفحص') }}
       </a>
       <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.cards_batches') }}">
-        <i class="fa-solid fa-table-cells-large"></i> كل الحزم
+        <i class="fa-solid fa-table-cells-large"></i> {{ _('كل الحزم') }}
       </a>
     {% endset %}
 
@@ -485,10 +485,10 @@
     {% call hub.section("جدول الكروت", icon="table-list", meta=summary.total|string ~ " كرت", flush=True) %}
       <div style="padding:14px 16px 0">
         <div class="bc-toolbar">
-          <input class="bc-search" type="search" placeholder="بحث باسم الكرت أو MAC أو IP..." data-card-search>
+          <input class="bc-search" type="search" placeholder="{{ _('بحث باسم الكرت أو MAC أو IP...') }}" data-card-search>
           <div class="bc-columns" data-columns-menu>
             <button class="hub-btn hub-btn--secondary hub-btn--sm" type="button" data-columns-toggle>
-              <i class="fa-solid fa-sliders"></i> الأعمدة
+              <i class="fa-solid fa-sliders"></i> {{ _('الأعمدة') }}
             </button>
             <div class="bc-columns-menu" data-columns-list></div>
           </div>
@@ -498,30 +498,30 @@
         </div>
 
         <div class="bc-bulk" data-bulk-bar>
-          <strong><span data-selected-count>0</span> كرت محدد</strong>
+          <strong><span data-selected-count>0</span> {{ _('كرت محدد') }}</strong>
           <form method="post" action="{{ url_for('radius.cards_batch_cards_actions', batch_id=batch.id) }}" data-bulk-form>
             <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
             <input type="hidden" name="return_to" value="{{ request.full_path }}">
             <div class="bc-selected-inputs" data-selected-inputs></div>
             <div class="bc-bulk-tools">
-              <button class="hub-btn hub-btn--secondary hub-btn--sm" name="bulk_action" value="disconnect" type="submit"><i class="fa-solid fa-plug-circle-xmark"></i> قطع الاتصال</button>
-              <button class="hub-btn hub-btn--secondary hub-btn--sm" name="bulk_action" value="enable" type="submit"><i class="fa-solid fa-circle-play"></i> تفعيل</button>
-              <button class="hub-btn hub-btn--secondary hub-btn--sm" name="bulk_action" value="disable" type="submit"><i class="fa-solid fa-circle-pause"></i> إيقاف</button>
-              <button class="hub-btn hub-btn--secondary hub-btn--sm" name="bulk_action" value="reset_usage" type="submit"><i class="fa-solid fa-rotate-left"></i> تصفير</button>
+              <button class="hub-btn hub-btn--secondary hub-btn--sm" name="bulk_action" value="disconnect" type="submit"><i class="fa-solid fa-plug-circle-xmark"></i> {{ _('قطع الاتصال') }}</button>
+              <button class="hub-btn hub-btn--secondary hub-btn--sm" name="bulk_action" value="enable" type="submit"><i class="fa-solid fa-circle-play"></i> {{ _('تفعيل') }}</button>
+              <button class="hub-btn hub-btn--secondary hub-btn--sm" name="bulk_action" value="disable" type="submit"><i class="fa-solid fa-circle-pause"></i> {{ _('إيقاف') }}</button>
+              <button class="hub-btn hub-btn--secondary hub-btn--sm" name="bulk_action" value="reset_usage" type="submit"><i class="fa-solid fa-rotate-left"></i> {{ _('تصفير') }}</button>
               {# خانة الوقت المعتمدة: رقم قصير + وحدة مدموجة بلون بارد خفيف #}
               <span class="bc-time-group">
                 <input name="time_amount" type="number" min="1" placeholder="0" inputmode="numeric">
                 {# hub-select: يلفّه hub_select.js كقائمة hbsel منسّقة (CSS .bc-time-group .hbsel-trigger جاهز) #}
-                <select class="hub-select" name="time_unit" aria-label="وحدة الوقت">
-                  <option value="minutes">دقائق</option>
-                  <option value="hours">ساعات</option>
-                  <option value="days">أيام</option>
+                <select class="hub-select" name="time_unit" aria-label="{{ _('وحدة الوقت') }}">
+                  <option value="minutes">{{ _('دقائق') }}</option>
+                  <option value="hours">{{ _('ساعات') }}</option>
+                  <option value="days">{{ _('أيام') }}</option>
                 </select>
               </span>
-              <button class="hub-btn hub-btn--secondary hub-btn--sm" name="bulk_action" value="add_time" type="submit"><i class="fa-solid fa-clock"></i> إضافة وقت</button>
-              <button class="hub-btn hub-btn--secondary hub-btn--sm" name="bulk_action" value="subtract_time" type="submit"><i class="fa-solid fa-clock-rotate-left"></i> خصم وقت</button>
-              <input name="reason" type="text" placeholder="سبب الإجراء">
-              <button class="hub-btn hub-btn--danger hub-btn--sm" name="bulk_action" value="soft_delete" type="submit"><i class="fa-solid fa-trash"></i> حذف</button>
+              <button class="hub-btn hub-btn--secondary hub-btn--sm" name="bulk_action" value="add_time" type="submit"><i class="fa-solid fa-clock"></i> {{ _('إضافة وقت') }}</button>
+              <button class="hub-btn hub-btn--secondary hub-btn--sm" name="bulk_action" value="subtract_time" type="submit"><i class="fa-solid fa-clock-rotate-left"></i> {{ _('خصم وقت') }}</button>
+              <input name="reason" type="text" placeholder="{{ _('سبب الإجراء') }}">
+              <button class="hub-btn hub-btn--danger hub-btn--sm" name="bulk_action" value="soft_delete" type="submit"><i class="fa-solid fa-trash"></i> {{ _('حذف') }}</button>
             </div>
           </form>
         </div>
@@ -532,23 +532,23 @@
         <table class="bc-table" data-cards-table data-storage-key="batch-cards-columns-v2-{{ batch.id }}">
           <thead>
             <tr>
-              <th data-col="select" data-lock-column><input class="bc-check" type="checkbox" data-select-all aria-label="تحديد الكل"></th>
-              <th data-col="actions" data-label="إجراءات" data-lock-column>إجراءات</th>
-              <th data-col="card" data-label="الكرت" data-sort-key="username" data-sort-type="text">الكرت</th>
-              <th data-col="password" data-label="كلمة المرور" data-sort-key="password" data-sort-type="text" data-default-hidden>كلمة المرور</th>
-              <th data-col="status" data-label="الحالة" data-sort-key="status" data-sort-type="number">الحالة</th>
-              <th data-col="remaining" data-label="المتبقي" data-sort-key="remaining" data-sort-type="number">المتبقي</th>
-              <th data-col="connect" data-label="آخر اتصال" data-sort-key="last_connect" data-sort-type="date">آخر اتصال</th>
-              <th data-col="disconnect" data-label="آخر فصل" data-sort-key="last_disconnect" data-sort-type="date">آخر فصل</th>
-              <th data-col="download" data-label="تحميل" data-sort-key="download" data-sort-type="number">تحميل</th>
-              <th data-col="upload" data-label="رفع" data-sort-key="upload" data-sort-type="number">رفع</th>
-              <th data-col="sessions" data-label="الجلسات" data-sort-key="sessions" data-sort-type="number">الجلسات</th>
+              <th data-col="select" data-lock-column><input class="bc-check" type="checkbox" data-select-all aria-label="{{ _('تحديد الكل') }}"></th>
+              <th data-col="actions" data-label="إجراءات" data-lock-column>{{ _('إجراءات') }}</th>
+              <th data-col="card" data-label="الكرت" data-sort-key="username" data-sort-type="text">{{ _('الكرت') }}</th>
+              <th data-col="password" data-label="كلمة المرور" data-sort-key="password" data-sort-type="text" data-default-hidden>{{ _('كلمة المرور') }}</th>
+              <th data-col="status" data-label="الحالة" data-sort-key="status" data-sort-type="number">{{ _('الحالة') }}</th>
+              <th data-col="remaining" data-label="المتبقي" data-sort-key="remaining" data-sort-type="number">{{ _('المتبقي') }}</th>
+              <th data-col="connect" data-label="آخر اتصال" data-sort-key="last_connect" data-sort-type="date">{{ _('آخر اتصال') }}</th>
+              <th data-col="disconnect" data-label="آخر فصل" data-sort-key="last_disconnect" data-sort-type="date">{{ _('آخر فصل') }}</th>
+              <th data-col="download" data-label="تحميل" data-sort-key="download" data-sort-type="number">{{ _('تحميل') }}</th>
+              <th data-col="upload" data-label="رفع" data-sort-key="upload" data-sort-type="number">{{ _('رفع') }}</th>
+              <th data-col="sessions" data-label="الجلسات" data-sort-key="sessions" data-sort-type="number">{{ _('الجلسات') }}</th>
               <th data-col="mac" data-label="MAC" data-sort-key="mac" data-sort-type="text" data-default-hidden>MAC</th>
-              <th data-col="ip" data-label="العنوان / الجهاز" data-sort-key="ip" data-sort-type="text" data-default-hidden>العنوان / الجهاز</th>
-              <th data-col="speed" data-label="السرعة" data-sort-key="speed" data-sort-type="text" data-default-hidden>السرعة</th>
-              <th data-col="first" data-label="أول استخدام" data-sort-key="first_used" data-sort-type="date" data-default-hidden>أول استخدام</th>
-              <th data-col="expire" data-label="ينتهي" data-sort-key="expire" data-sort-type="date" data-default-hidden>ينتهي</th>
-              <th data-col="created" data-label="الإنشاء" data-sort-key="created" data-sort-type="date" data-default-hidden>الإنشاء</th>
+              <th data-col="ip" data-label="العنوان / الجهاز" data-sort-key="ip" data-sort-type="text" data-default-hidden>{{ _('العنوان / الجهاز') }}</th>
+              <th data-col="speed" data-label="السرعة" data-sort-key="speed" data-sort-type="text" data-default-hidden>{{ _('السرعة') }}</th>
+              <th data-col="first" data-label="أول استخدام" data-sort-key="first_used" data-sort-type="date" data-default-hidden>{{ _('أول استخدام') }}</th>
+              <th data-col="expire" data-label="ينتهي" data-sort-key="expire" data-sort-type="date" data-default-hidden>{{ _('ينتهي') }}</th>
+              <th data-col="created" data-label="الإنشاء" data-sort-key="created" data-sort-type="date" data-default-hidden>{{ _('الإنشاء') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -579,18 +579,18 @@
               <td data-col="select"><input class="bc-check" type="checkbox" name="card_ids" value="{{ c.id }}" data-row-select aria-label="تحديد {{ c.username }}"></td>
               <td data-col="actions">
                 <div class="bc-row-actions">
-                  <button class="hub-btn hub-btn--secondary hub-btn--icon" type="button" title="تعديل سريع" data-edit-card><i class="fa-solid fa-pen"></i></button>
+                  <button class="hub-btn hub-btn--secondary hub-btn--icon" type="button" title="{{ _('تعديل سريع') }}" data-edit-card><i class="fa-solid fa-pen"></i></button>
                   <form method="post" action="{{ url_for('radius.cards_batch_cards_actions', batch_id=batch.id) }}">
                     <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
                     <input type="hidden" name="return_to" value="{{ request.full_path }}">
                     <input type="hidden" name="card_ids" value="{{ c.id }}">
-                    <button class="hub-btn hub-btn--secondary hub-btn--icon" name="bulk_action" value="disconnect" title="قطع الاتصال" type="submit"><i class="fa-solid fa-plug-circle-xmark"></i></button>
+                    <button class="hub-btn hub-btn--secondary hub-btn--icon" name="bulk_action" value="disconnect" title="{{ _('قطع الاتصال') }}" type="submit"><i class="fa-solid fa-plug-circle-xmark"></i></button>
                   </form>
                   <form method="post" action="{{ url_for('radius.cards_batch_cards_actions', batch_id=batch.id) }}">
                     <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
                     <input type="hidden" name="return_to" value="{{ request.full_path }}">
                     <input type="hidden" name="card_ids" value="{{ c.id }}">
-                    <button class="hub-btn hub-btn--danger hub-btn--icon" name="bulk_action" value="soft_delete" title="حذف" type="submit"><i class="fa-solid fa-trash"></i></button>
+                    <button class="hub-btn hub-btn--danger hub-btn--icon" name="bulk_action" value="soft_delete" title="{{ _('حذف') }}" type="submit"><i class="fa-solid fa-trash"></i></button>
                   </form>
                 </div>
               </td>
@@ -631,8 +631,8 @@
          الحالية فقط — التصدير CSV يشمل كل المطابقات لا الصفحة فقط. #}
       <div class="uds-table-pager bc-pager" data-cards-pager>
         <div class="uds-pager-size">
-          صفوف بالصفحة
-          <select data-page-size aria-label="عدد الصفوف بالصفحة">
+          {{ _('صفوف بالصفحة') }}
+          <select data-page-size aria-label="{{ _('عدد الصفوف بالصفحة') }}">
             <option value="10">10</option>
             <option value="25" selected>25</option>
             <option value="50">50</option>
@@ -643,7 +643,7 @@
         <div class="uds-pager-nav" data-pager-nav></div>
       </div>
       {% else %}
-        <div class="bc-empty">لا توجد كروت داخل هذه الحزمة.</div>
+        <div class="bc-empty">{{ _('لا توجد كروت داخل هذه الحزمة.') }}</div>
       {% endif %}
     {% endcall %}
     {% endcall %}
@@ -656,8 +656,8 @@
 <dialog class="bc-edit-dialog" data-edit-dialog>
   <div class="bc-dialog-body">
     <div class="bc-dialog-head">
-      <h3>تعديل سريع للكرت <span data-dialog-card-title></span></h3>
-      <button class="hub-btn hub-btn--secondary hub-btn--icon" type="button" data-dialog-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
+      <h3>{{ _('تعديل سريع للكرت') }} <span data-dialog-card-title></span></h3>
+      <button class="hub-btn hub-btn--secondary hub-btn--icon" type="button" data-dialog-close aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <form method="post" action="{{ url_for('radius.cards_batch_cards_actions', batch_id=batch.id) }}" data-dialog-form>
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
@@ -665,15 +665,15 @@
       <input type="hidden" name="card_ids" data-dialog-card-id>
       <div class="bc-form-grid">
         <div class="bc-field">
-          <label>المدة</label>
-          <input name="time_amount" type="number" min="1" placeholder="مثال: 30">
+          <label>{{ _('المدة') }}</label>
+          <input name="time_amount" type="number" min="1" placeholder="{{ _('مثال: 30') }}">
         </div>
         <div class="bc-field">
-          <label>وحدة الوقت</label>
+          <label>{{ _('وحدة الوقت') }}</label>
           <select name="time_unit">
-            <option value="minutes">دقائق</option>
-            <option value="hours">ساعات</option>
-            <option value="days">أيام</option>
+            <option value="minutes">{{ _('دقائق') }}</option>
+            <option value="hours">{{ _('ساعات') }}</option>
+            <option value="days">{{ _('أيام') }}</option>
           </select>
         </div>
         <div class="bc-field">
@@ -681,26 +681,26 @@
           <input name="mac" type="text" placeholder="AA:BB:CC:DD:EE:FF">
         </div>
         <div class="bc-field">
-          <label>تنزيل Kbps</label>
-          <input name="speed_down_kbps" type="number" min="0" placeholder="0 لإلغاء">
+          <label>{{ _('تنزيل Kbps') }}</label>
+          <input name="speed_down_kbps" type="number" min="0" placeholder="{{ _('0 لإلغاء') }}">
         </div>
         <div class="bc-field">
-          <label>رفع Kbps</label>
-          <input name="speed_up_kbps" type="number" min="0" placeholder="0 لإلغاء">
+          <label>{{ _('رفع Kbps') }}</label>
+          <input name="speed_up_kbps" type="number" min="0" placeholder="{{ _('0 لإلغاء') }}">
         </div>
         <div class="bc-field">
-          <label>سبب الإجراء</label>
-          <input name="reason" type="text" placeholder="اختياري">
+          <label>{{ _('سبب الإجراء') }}</label>
+          <input name="reason" type="text" placeholder="{{ _('اختياري') }}">
         </div>
       </div>
       <div class="bc-bulk-tools" style="margin-top:14px">
-        <button class="hub-btn hub-btn--secondary hub-btn--sm" name="bulk_action" value="add_time" type="submit"><i class="fa-solid fa-clock"></i> إضافة وقت</button>
-        <button class="hub-btn hub-btn--secondary hub-btn--sm" name="bulk_action" value="subtract_time" type="submit"><i class="fa-solid fa-clock-rotate-left"></i> خصم وقت</button>
-        <button class="hub-btn hub-btn--secondary hub-btn--sm" name="bulk_action" value="set_speed" type="submit"><i class="fa-solid fa-gauge-high"></i> حفظ السرعة</button>
-        <button class="hub-btn hub-btn--secondary hub-btn--sm" name="bulk_action" value="lock_mac" type="submit"><i class="fa-solid fa-lock"></i> تثبيت MAC</button>
-        <button class="hub-btn hub-btn--secondary hub-btn--sm" name="bulk_action" value="unlock_mac" type="submit"><i class="fa-solid fa-lock-open"></i> فك MAC</button>
-        <button class="hub-btn hub-btn--secondary hub-btn--sm" name="bulk_action" value="enable" type="submit"><i class="fa-solid fa-circle-play"></i> تفعيل</button>
-        <button class="hub-btn hub-btn--secondary hub-btn--sm" name="bulk_action" value="disable" type="submit"><i class="fa-solid fa-circle-pause"></i> إيقاف</button>
+        <button class="hub-btn hub-btn--secondary hub-btn--sm" name="bulk_action" value="add_time" type="submit"><i class="fa-solid fa-clock"></i> {{ _('إضافة وقت') }}</button>
+        <button class="hub-btn hub-btn--secondary hub-btn--sm" name="bulk_action" value="subtract_time" type="submit"><i class="fa-solid fa-clock-rotate-left"></i> {{ _('خصم وقت') }}</button>
+        <button class="hub-btn hub-btn--secondary hub-btn--sm" name="bulk_action" value="set_speed" type="submit"><i class="fa-solid fa-gauge-high"></i> {{ _('حفظ السرعة') }}</button>
+        <button class="hub-btn hub-btn--secondary hub-btn--sm" name="bulk_action" value="lock_mac" type="submit"><i class="fa-solid fa-lock"></i> {{ _('تثبيت MAC') }}</button>
+        <button class="hub-btn hub-btn--secondary hub-btn--sm" name="bulk_action" value="unlock_mac" type="submit"><i class="fa-solid fa-lock-open"></i> {{ _('فك MAC') }}</button>
+        <button class="hub-btn hub-btn--secondary hub-btn--sm" name="bulk_action" value="enable" type="submit"><i class="fa-solid fa-circle-play"></i> {{ _('تفعيل') }}</button>
+        <button class="hub-btn hub-btn--secondary hub-btn--sm" name="bulk_action" value="disable" type="submit"><i class="fa-solid fa-circle-pause"></i> {{ _('إيقاف') }}</button>
       </div>
     </form>
   </div>

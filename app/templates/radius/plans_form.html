@@ -290,18 +290,18 @@
 <div class="pl-layout">
 
   {# ───── Sticky nav ──────────────────────────── #}
-  <aside class="pl-side" aria-label="أقسام العرض">
-    <div class="pl-side-title"><i class="fa-solid fa-compass"></i> أقسام العرض</div>
+  <aside class="pl-side" aria-label="{{ _('أقسام العرض') }}">
+    <div class="pl-side-title"><i class="fa-solid fa-compass"></i> {{ _('أقسام العرض') }}</div>
     <nav class="pl-side-list">
-      <a href="#pl-general"><i class="fa-solid fa-gear"></i> إعدادات عامة</a>
-      <a href="#pl-speed"><i class="fa-solid fa-gauge-high"></i> السرعة</a>
-      <a href="#pl-quota"><i class="fa-solid fa-clock"></i> الكوتا والوقت</a>
-      <a href="#pl-subs"><i class="fa-solid fa-handshake"></i> الاشتراك والسلوك</a>
-      <a href="#pl-notif"><i class="fa-solid fa-bell"></i> التنبيهات</a>
-      <a href="#pl-adv"><i class="fa-solid fa-sliders"></i> سياسات التجديد</a>
-      <a href="#pl-mt"><i class="fa-solid fa-network-wired"></i> الشبكة والراوترات</a>
-      <a href="#pl-days"><i class="fa-solid fa-calendar-days"></i> أيام وساعات السماح</a>
-      <a href="#pl-biz"><i class="fa-solid fa-coins"></i> تجاري</a>
+      <a href="#pl-general"><i class="fa-solid fa-gear"></i> {{ _('إعدادات عامة') }}</a>
+      <a href="#pl-speed"><i class="fa-solid fa-gauge-high"></i> {{ _('السرعة') }}</a>
+      <a href="#pl-quota"><i class="fa-solid fa-clock"></i> {{ _('الكوتا والوقت') }}</a>
+      <a href="#pl-subs"><i class="fa-solid fa-handshake"></i> {{ _('الاشتراك والسلوك') }}</a>
+      <a href="#pl-notif"><i class="fa-solid fa-bell"></i> {{ _('التنبيهات') }}</a>
+      <a href="#pl-adv"><i class="fa-solid fa-sliders"></i> {{ _('سياسات التجديد') }}</a>
+      <a href="#pl-mt"><i class="fa-solid fa-network-wired"></i> {{ _('الشبكة والراوترات') }}</a>
+      <a href="#pl-days"><i class="fa-solid fa-calendar-days"></i> {{ _('أيام وساعات السماح') }}</a>
+      <a href="#pl-biz"><i class="fa-solid fa-coins"></i> {{ _('تجاري') }}</a>
     </nav>
   </aside>
 
@@ -313,7 +313,7 @@
     <section class="pl-section pl-section--gen" id="pl-general">
       <header class="pl-section-head">
         <span class="pl-section-icon"><i class="fa-solid fa-gear"></i></span>
-        <span class="pl-section-title">إعدادات عامة</span>
+        <span class="pl-section-title">{{ _('إعدادات عامة') }}</span>
       </header>
       <div class="pl-section-body">
         {# #34: Cisco policy fields + device-profile + session-limiter removed
@@ -325,13 +325,13 @@
         <input type="hidden" name="device_connection_file" value="{{ plan.device_connection_file or '' }}">
         <input type="hidden" name="working_hours_limit" value="{{ plan.working_hours_limit or 0 }}">
         <div class="pl-grid">
-          <div class="pl-field"><label>اسم العرض <span class="req">*</span></label>
+          <div class="pl-field"><label>{{ _('اسم العرض') }} <span class="req">*</span></label>
             <input class="hub-input" type="text" name="name" required value="{{ plan.name or '' }}" placeholder="Gold-1M">
-            <div class="help">الاسم الذي يظهر في قوائم العروض وعند المشترك.</div></div>
-          <div class="pl-field"><label>رمز الباقة</label>
+            <div class="help">{{ _('الاسم الذي يظهر في قوائم العروض وعند المشترك.') }}</div></div>
+          <div class="pl-field"><label>{{ _('رمز الباقة') }}</label>
             <input class="hub-input" type="text" name="code" value="{{ plan.code or '' }}" placeholder="OF-GOLD-1">
-            <div class="help">رمز داخلي مختصر للعرض (اختياري).</div></div>
-          <div class="pl-field"><label>النوع</label>
+            <div class="help">{{ _('رمز داخلي مختصر للعرض (اختياري).') }}</div></div>
+          <div class="pl-field"><label>{{ _('النوع') }}</label>
             <select class="hub-select" name="plan_type">
               {% for t in plan_types %}
                 <option value="{{ t }}" {% if plan.plan_type == t %}selected{% endif %}>
@@ -339,14 +339,14 @@
                 </option>
               {% endfor %}
             </select>
-            <div class="help">يحدد ما الذي يُحاسَب عليه العرض: وقت أم حصة أم الاثنان.</div></div>
+            <div class="help">{{ _('يحدد ما الذي يُحاسَب عليه العرض: وقت أم حصة أم الاثنان.') }}</div></div>
           {# #33/#41: نوع الخدمة — بطاقتان متعددتا الاختيار (checkbox) مثل
              نموذج المشترك تمامًا: يمكن اختيار «هوت سبوت» أو «برودباند» أو
              الاثنتين معًا. الراوت يجمع القيم المختارة إلى قيمة واحدة في
              نفس العمود service_type: "Hotspot" أو "PPPoE" أو "Both".
              أي قيمة قديمة محفوظة تُفسَّر: pppoe/broadband → برودباند،
              both → الاثنتان، وغير ذلك → هوت سبوت. #}
-          <div class="pl-field full"><label>نوع الخدمة</label>
+          <div class="pl-field full"><label>{{ _('نوع الخدمة') }}</label>
             {%- set _svc = (plan.service_type or '')|lower -%}
             {%- set _svc_pppoe = _svc in ('pppoe','broadband','both') -%}
             {%- set _svc_hs = (_svc not in ('pppoe','broadband')) -%}
@@ -356,8 +356,8 @@
                   {% if _svc_hs %}checked{% endif %}>
                 <span class="pl-svc-icon"><i class="fa-solid fa-wifi"></i></span>
                 <span class="pl-svc-body">
-                  <span class="pl-svc-title">هوت سبوت</span>
-                  <span class="pl-svc-sub">دخول عبر صفحة Captive Portal</span>
+                  <span class="pl-svc-title">{{ _('هوت سبوت') }}</span>
+                  <span class="pl-svc-sub">{{ _('دخول عبر صفحة Captive Portal') }}</span>
                 </span>
               </label>
               <label class="pl-svc-card {% if _svc_pppoe %}is-checked{% endif %}">
@@ -365,38 +365,38 @@
                   {% if _svc_pppoe %}checked{% endif %}>
                 <span class="pl-svc-icon"><i class="fa-solid fa-plug"></i></span>
                 <span class="pl-svc-body">
-                  <span class="pl-svc-title">برودباند</span>
-                  <span class="pl-svc-sub">اشتراك منزلي عبر PPPoE</span>
+                  <span class="pl-svc-title">{{ _('برودباند') }}</span>
+                  <span class="pl-svc-sub">{{ _('اشتراك منزلي عبر PPPoE') }}</span>
                 </span>
               </label>
             </div>
-            <div class="help">يمكنك اختيار خدمة واحدة أو الاثنتين معًا (هوت سبوت + برودباند).</div></div>
-          <div class="pl-field"><label>الحالة</label>
+            <div class="help">{{ _('يمكنك اختيار خدمة واحدة أو الاثنتين معًا (هوت سبوت + برودباند).') }}</div></div>
+          <div class="pl-field"><label>{{ _('الحالة') }}</label>
             <div class="pl-chk">
               {{ toggle_switch(name="enabled", checked=(plan.enabled or is_new), value="1", id="pl-en") }}
             </div>
-            <div class="help">عند الإيقاف لا يظهر العرض للبيع أو الإسناد.</div></div>
-          <div class="pl-field"><label>اللون</label>
+            <div class="help">{{ _('عند الإيقاف لا يظهر العرض للبيع أو الإسناد.') }}</div></div>
+          <div class="pl-field"><label>{{ _('اللون') }}</label>
             <input class="hub-input" type="color" name="color" value="{{ plan.color or '#6B5AED' }}">
-            <div class="help">لون تمييز العرض في القوائم.</div></div>
-          <div class="pl-field"><label>الأولوية</label>
+            <div class="help">{{ _('لون تمييز العرض في القوائم.') }}</div></div>
+          <div class="pl-field"><label>{{ _('الأولوية') }}</label>
             <input class="hub-input" type="number" name="priority" value="{{ plan.priority or 100 }}">
-            <div class="help">ترتيب ظهور العرض؛ الرقم الأصغر يظهر أولًا.</div></div>
-          <div class="pl-field"><label>DNS أولي (PPP)</label>
+            <div class="help">{{ _('ترتيب ظهور العرض؛ الرقم الأصغر يظهر أولًا.') }}</div></div>
+          <div class="pl-field"><label>{{ _('DNS أولي (PPP)') }}</label>
             <input class="hub-input" type="text" name="primary_dns_ppp" value="{{ plan.primary_dns_ppp or '' }}" placeholder="1.1.1.1">
-            <div class="help">خادم DNS الأساسي الذي يُسلَّم لجلسات البرودباند.</div></div>
-          <div class="pl-field"><label>DNS ثانوي (PPP)</label>
+            <div class="help">{{ _('خادم DNS الأساسي الذي يُسلَّم لجلسات البرودباند.') }}</div></div>
+          <div class="pl-field"><label>{{ _('DNS ثانوي (PPP)') }}</label>
             <input class="hub-input" type="text" name="secondary_dns_ppp" value="{{ plan.secondary_dns_ppp or '' }}" placeholder="8.8.8.8">
-            <div class="help">خادم DNS الاحتياطي عند تعذّر الأساسي.</div></div>
-          <div class="pl-field"><label>ساعات العرض — من</label>
+            <div class="help">{{ _('خادم DNS الاحتياطي عند تعذّر الأساسي.') }}</div></div>
+          <div class="pl-field"><label>{{ _('ساعات العرض — من') }}</label>
             {{ time_picker_circular(name="offer_hours_from", value=plan.offer_hours_from or "") }}
-            <div class="help">بداية الفترة اليومية التي يُسمح فيها باستخدام العرض.</div></div>
-          <div class="pl-field"><label>ساعات العرض — إلى</label>
+            <div class="help">{{ _('بداية الفترة اليومية التي يُسمح فيها باستخدام العرض.') }}</div></div>
+          <div class="pl-field"><label>{{ _('ساعات العرض — إلى') }}</label>
             {{ time_picker_circular(name="offer_hours_to", value=plan.offer_hours_to or "") }}
-            <div class="help">نهاية الفترة اليومية المسموح بها للاستخدام.</div></div>
-          <div class="pl-field full"><label>الوصف</label>
+            <div class="help">{{ _('نهاية الفترة اليومية المسموح بها للاستخدام.') }}</div></div>
+          <div class="pl-field full"><label>{{ _('الوصف') }}</label>
             <textarea class="hub-textarea" name="description">{{ plan.description or '' }}</textarea>
-            <div class="help">وصف مختصر للعرض يظهر للمشترك أو للمشغّل.</div></div>
+            <div class="help">{{ _('وصف مختصر للعرض يظهر للمشترك أو للمشغّل.') }}</div></div>
         </div>
       </div>
     </section>
@@ -405,7 +405,7 @@
     <section class="pl-section pl-section--speed" id="pl-speed">
       <header class="pl-section-head">
         <span class="pl-section-icon"><i class="fa-solid fa-gauge-high"></i></span>
-        <span class="pl-section-title">السرعة والسياسات</span>
+        <span class="pl-section-title">{{ _('السرعة والسياسات') }}</span>
       </header>
       <div class="pl-section-body">
         {# #29: Burst fields moved into a collapsed «متقدم» block (consistent
@@ -418,60 +418,60 @@
           {# #42: زوج التنزيل/الرفع في صف واحد دائمًا — كل حقل قيمة+وحدة
              مدموجة في خانة واحدة (unit_input بنمط bc-time-group). #}
           <div class="pl-speed-pair">
-            <div class="pl-field"><label>سرعة التنزيل</label>
+            <div class="pl-field"><label>{{ _('سرعة التنزيل') }}</label>
               {{ unit_input_picker(name="speed_down_kbps", value=plan.speed_down_kbps or 0, kind="speed", units=["kbps","Mbps"]) }}
-              <div class="help">أقصى سرعة تنزيل للمشترك.</div></div>
-            <div class="pl-field"><label>سرعة الرفع</label>
+              <div class="help">{{ _('أقصى سرعة تنزيل للمشترك.') }}</div></div>
+            <div class="pl-field"><label>{{ _('سرعة الرفع') }}</label>
               {{ unit_input_picker(name="speed_up_kbps", value=plan.speed_up_kbps or 0, kind="speed", units=["kbps","Mbps"]) }}
-              <div class="help">أقصى سرعة رفع للمشترك.</div></div>
+              <div class="help">{{ _('أقصى سرعة رفع للمشترك.') }}</div></div>
           </div>
           {# #42: زوج CIR كذلك في صف واحد. #}
           <div class="pl-speed-pair">
-            <div class="pl-field"><label>سرعة مضمونة CIR للتنزيل</label>
+            <div class="pl-field"><label>{{ _('سرعة مضمونة CIR للتنزيل') }}</label>
               {{ unit_input_picker(name="cir_down_kbps", value=plan.cir_down_kbps or 0, kind="speed", units=["kbps","Mbps"]) }}
-              <div class="help">الحد الأدنى المضمون للتنزيل عند الازدحام.</div></div>
-            <div class="pl-field"><label>سرعة مضمونة CIR للرفع</label>
+              <div class="help">{{ _('الحد الأدنى المضمون للتنزيل عند الازدحام.') }}</div></div>
+            <div class="pl-field"><label>{{ _('سرعة مضمونة CIR للرفع') }}</label>
               {{ unit_input_picker(name="cir_up_kbps", value=plan.cir_up_kbps or 0, kind="speed", units=["kbps","Mbps"]) }}
-              <div class="help">الحد الأدنى المضمون للرفع عند الازدحام.</div></div>
+              <div class="help">{{ _('الحد الأدنى المضمون للرفع عند الازدحام.') }}</div></div>
           </div>
           {# #42: المفاتيح الأربعة في صف واحد بخلايا متساوية الارتفاع. #}
-          <div class="pl-field"><label>تفعيل التحكم بالسرعة</label>
+          <div class="pl-field"><label>{{ _('تفعيل التحكم بالسرعة') }}</label>
             <div class="pl-chk">{{ toggle_switch(name="speed_control_enabled", checked=plan.speed_control_enabled, value="1", id="sc-en") }}</div>
-            <div class="help">يفعّل تطبيق حدود السرعة أدناه على المشترك.</div></div>
-          <div class="pl-field"><label>غير محدود ليلًا</label>
+            <div class="help">{{ _('يفعّل تطبيق حدود السرعة أدناه على المشترك.') }}</div></div>
+          <div class="pl-field"><label>{{ _('غير محدود ليلًا') }}</label>
             <div class="pl-chk">{{ toggle_switch(name="nightly_unlimited_enabled", checked=plan.nightly_unlimited_enabled, value="1", id="nu-en") }}</div>
-            <div class="help">رفع الحدود خلال الفترة الليلية.</div></div>
-          <div class="pl-field"><label>توزيع متساوٍ للتنزيل</label>
+            <div class="help">{{ _('رفع الحدود خلال الفترة الليلية.') }}</div></div>
+          <div class="pl-field"><label>{{ _('توزيع متساوٍ للتنزيل') }}</label>
             <div class="pl-chk">{{ toggle_switch(name="equal_download_speed", checked=(plan.equal_download_speed in [True,1,'1','t','true','on']), value="1", id="eds") }}</div>
-            <div class="help">يوزّع سرعة التنزيل بالتساوي بين الجلسات.</div></div>
-          <div class="pl-field"><label>توزيع متساوٍ للرفع</label>
+            <div class="help">{{ _('يوزّع سرعة التنزيل بالتساوي بين الجلسات.') }}</div></div>
+          <div class="pl-field"><label>{{ _('توزيع متساوٍ للرفع') }}</label>
             <div class="pl-chk">{{ toggle_switch(name="equal_upload_speed", checked=(plan.equal_upload_speed in [True,1,'1','t','true','on']), value="1", id="eus") }}</div>
-            <div class="help">يوزّع سرعة الرفع بالتساوي بين الجلسات.</div></div>
+            <div class="help">{{ _('يوزّع سرعة الرفع بالتساوي بين الجلسات.') }}</div></div>
 
           {# ── خيارات متقدمة (Burst) — مطوية، الحقول تبقى في DOM ── #}
           <div class="pl-adv-block" data-adv>
             <div class="pl-adv-head" data-adv-toggle>
               <i class="fa-solid fa-bolt"></i>
-              <span>متقدم — السرعة المؤقتة (Burst)</span>
+              <span>{{ _('متقدم — السرعة المؤقتة (Burst)') }}</span>
               <i class="fa-solid fa-chevron-down pl-adv-caret"></i>
             </div>
             <div class="pl-adv-body">
               <div class="pl-adv-grid">
-                <div class="pl-field"><label>السرعة المؤقتة (Burst)</label>
+                <div class="pl-field"><label>{{ _('السرعة المؤقتة (Burst)') }}</label>
                   <div class="pl-chk">{{ toggle_switch(name="burst_enabled", checked=plan.burst_enabled, value="1", id="b-en") }}</div>
-                  <div class="help">يسمح بتجاوز السرعة مؤقتًا فوق الحد (Burst).</div></div>
-                <div class="pl-field"><label>سرعة Burst التنزيل</label>
+                  <div class="help">{{ _('يسمح بتجاوز السرعة مؤقتًا فوق الحد (Burst).') }}</div></div>
+                <div class="pl-field"><label>{{ _('سرعة Burst التنزيل') }}</label>
                   <input class="hub-input" type="number" min="0" name="burst_down_kbps" value="{{ plan.burst_down_kbps or 0 }}">
-                  <div class="help">أقصى سرعة تنزيل أثناء فترة الـ Burst.</div></div>
-                <div class="pl-field"><label>سرعة Burst الرفع</label>
+                  <div class="help">{{ _('أقصى سرعة تنزيل أثناء فترة الـ Burst.') }}</div></div>
+                <div class="pl-field"><label>{{ _('سرعة Burst الرفع') }}</label>
                   <input class="hub-input" type="number" min="0" name="burst_up_kbps" value="{{ plan.burst_up_kbps or 0 }}">
-                  <div class="help">أقصى سرعة رفع أثناء فترة الـ Burst.</div></div>
-                <div class="pl-field"><label>حد Burst</label>
+                  <div class="help">{{ _('أقصى سرعة رفع أثناء فترة الـ Burst.') }}</div></div>
+                <div class="pl-field"><label>{{ _('حد Burst') }}</label>
                   <input class="hub-input" type="number" min="0" name="burst_threshold_kbps" value="{{ plan.burst_threshold_kbps or 0 }}">
-                  <div class="help">العتبة التي يبدأ بعدها الـ Burst بالتراجع.</div></div>
-                <div class="pl-field"><label>مدة Burst (ث)</label>
+                  <div class="help">{{ _('العتبة التي يبدأ بعدها الـ Burst بالتراجع.') }}</div></div>
+                <div class="pl-field"><label>{{ _('مدة Burst (ث)') }}</label>
                   <input class="hub-input" type="number" min="0" name="burst_time_sec" value="{{ plan.burst_time_sec or 0 }}">
-                  <div class="help">مدة استمرار سرعة الـ Burst بالثواني.</div></div>
+                  <div class="help">{{ _('مدة استمرار سرعة الـ Burst بالثواني.') }}</div></div>
               </div>
             </div>
           </div>
@@ -483,7 +483,7 @@
     <section class="pl-section pl-section--quota is-collapsible" data-sec="quota" id="pl-quota">
       <header class="pl-section-head">
         <span class="pl-section-icon"><i class="fa-solid fa-clock"></i></span>
-        <span class="pl-section-title">الكوتا والوقت</span>
+        <span class="pl-section-title">{{ _('الكوتا والوقت') }}</span>
         <i class="fa-solid fa-chevron-down pl-section-toggle"></i>
       </header>
       <div class="pl-section-body">
@@ -491,16 +491,16 @@
            «خيارات متقدمة» block below (collapsed by default). All inputs
            remain in the DOM so the POST body is unchanged. #}
         <div class="pl-grid">
-          <div class="pl-field"><label>كوتا إجمالية</label>
+          <div class="pl-field"><label>{{ _('كوتا إجمالية') }}</label>
             {{ unit_input_picker(name="quota_total_mb", value=plan.quota_total_mb or 0, kind="quota", units=["MB","GB"]) }}
-            <div class="help">إجمالي البيانات المسموحة للحساب. 0 = غير محدودة.</div></div>
-          <div class="pl-field"><label>صلاحية (أيام)</label>
+            <div class="help">{{ _('إجمالي البيانات المسموحة للحساب. 0 = غير محدودة.') }}</div></div>
+          <div class="pl-field"><label>{{ _('صلاحية (أيام)') }}</label>
             <input class="hub-input" type="number" min="0" name="validity_days" value="{{ plan.validity_days or 0 }}">
-            <div class="help">كم يوم يبقى الحساب صالحًا بعد التفعيل.</div></div>
-          <div class="pl-field"><label>مدة الجلسة</label>
+            <div class="help">{{ _('كم يوم يبقى الحساب صالحًا بعد التفعيل.') }}</div></div>
+          <div class="pl-field"><label>{{ _('مدة الجلسة') }}</label>
             {{ unit_input_picker(name="duration_minutes", value=plan.duration_minutes or 0, kind="time", units=["hr","day","month"]) }}
-            <div class="help">أقصى مدة للجلسة الواحدة.</div></div>
-          <div class="pl-field"><label>سياسة الإعادة</label>
+            <div class="help">{{ _('أقصى مدة للجلسة الواحدة.') }}</div></div>
+          <div class="pl-field"><label>{{ _('سياسة الإعادة') }}</label>
             <select class="hub-select" name="quota_reset_strategy">
               {% for s in ['rolling','monthly','never'] %}
                 <option value="{{ s }}" {% if (plan.quota_reset_strategy or 'rolling') == s %}selected{% endif %}>
@@ -508,65 +508,65 @@
                 </option>
               {% endfor %}
             </select>
-            <div class="help">متى تتجدّد الكوتا (دوريًا / بداية كل شهر / لا تتجدّد).</div></div>
-          <div class="pl-field"><label>إيقاف عند انتهاء الوقت</label>
+            <div class="help">{{ _('متى تتجدّد الكوتا (دوريًا / بداية كل شهر / لا تتجدّد).') }}</div></div>
+          <div class="pl-field"><label>{{ _('إيقاف عند انتهاء الوقت') }}</label>
             <div class="pl-chk">{{ toggle_switch(name="stop_user_when_time_expires", checked=(plan.stop_user_when_time_expires in [True,1,'1','t','true','on']), value="1", id="sut") }}</div>
-            <div class="help">يقطع الاتصال عند انتهاء صلاحية العرض.</div></div>
-          <div class="pl-field"><label>تنبيه عند نفاد الكوتا</label>
+            <div class="help">{{ _('يقطع الاتصال عند انتهاء صلاحية العرض.') }}</div></div>
+          <div class="pl-field"><label>{{ _('تنبيه عند نفاد الكوتا') }}</label>
             <div class="pl-chk">{{ toggle_switch(name="notify_when_quota_reaches_zero", checked=(plan.notify_when_quota_reaches_zero in [True,1,'1','t','true','on']), value="1", id="nwq") }}</div>
-            <div class="help">ينبّه المشترك قبل/عند نفاد الكوتا.</div></div>
+            <div class="help">{{ _('ينبّه المشترك قبل/عند نفاد الكوتا.') }}</div></div>
 
           {# ── خيارات متقدمة (كوتا/وقت) — مطوية افتراضيًا، الحقول تبقى في DOM ── #}
           <div class="pl-adv-block" data-adv>
             <div class="pl-adv-head" data-adv-toggle>
               <i class="fa-solid fa-sliders"></i>
-              <span>خيارات متقدمة</span>
+              <span>{{ _('خيارات متقدمة') }}</span>
               <i class="fa-solid fa-chevron-down pl-adv-caret"></i>
             </div>
             <div class="pl-adv-body">
               <div class="pl-adv-grid">
-                <div class="pl-field"><label>كوتا تنزيل شهرية</label>
+                <div class="pl-field"><label>{{ _('كوتا تنزيل شهرية') }}</label>
                   {{ unit_input_picker(name="monthly_download_quota_mb", value=plan.monthly_download_quota_mb or 0, kind="quota", units=["MB","GB"]) }}
-                  <div class="help">حد التنزيل الشهري المستقل.</div></div>
-                <div class="pl-field"><label>كوتا رفع شهرية</label>
+                  <div class="help">{{ _('حد التنزيل الشهري المستقل.') }}</div></div>
+                <div class="pl-field"><label>{{ _('كوتا رفع شهرية') }}</label>
                   {{ unit_input_picker(name="monthly_upload_quota_mb", value=plan.monthly_upload_quota_mb or 0, kind="quota", units=["MB","GB"]) }}
-                  <div class="help">حد الرفع الشهري المستقل.</div></div>
-                <div class="pl-field"><label>كوتا شهرية مدمجة</label>
+                  <div class="help">{{ _('حد الرفع الشهري المستقل.') }}</div></div>
+                <div class="pl-field"><label>{{ _('كوتا شهرية مدمجة') }}</label>
                   {{ unit_input_picker(name="monthly_combined_quota_mb", value=plan.monthly_combined_quota_mb or 0, kind="quota", units=["MB","GB"]) }}
-                  <div class="help">تحلّ محل التنزيل+الرفع الشهريين المنفصلين.</div></div>
-                <div class="pl-field"><label>كوتا تنزيل يومية</label>
+                  <div class="help">{{ _('تحلّ محل التنزيل+الرفع الشهريين المنفصلين.') }}</div></div>
+                <div class="pl-field"><label>{{ _('كوتا تنزيل يومية') }}</label>
                   {{ unit_input_picker(name="daily_download_quota_mb", value=plan.daily_download_quota_mb or 0, kind="quota", units=["MB","GB"]) }}
-                  <div class="help">حد التنزيل اليومي المستقل.</div></div>
-                <div class="pl-field"><label>كوتا رفع يومية</label>
+                  <div class="help">{{ _('حد التنزيل اليومي المستقل.') }}</div></div>
+                <div class="pl-field"><label>{{ _('كوتا رفع يومية') }}</label>
                   {{ unit_input_picker(name="daily_upload_quota_mb", value=plan.daily_upload_quota_mb or 0, kind="quota", units=["MB","GB"]) }}
-                  <div class="help">حد الرفع اليومي المستقل.</div></div>
-                <div class="pl-field"><label>كوتا يومية مدمجة</label>
+                  <div class="help">{{ _('حد الرفع اليومي المستقل.') }}</div></div>
+                <div class="pl-field"><label>{{ _('كوتا يومية مدمجة') }}</label>
                   {{ unit_input_picker(name="daily_combined_quota_mb", value=plan.daily_combined_quota_mb or 0, kind="quota", units=["MB","GB"]) }}
-                  <div class="help">تحلّ محل التنزيل+الرفع اليوميين المنفصلين.</div></div>
-                <div class="pl-field"><label>حد يومي</label>
+                  <div class="help">{{ _('تحلّ محل التنزيل+الرفع اليوميين المنفصلين.') }}</div></div>
+                <div class="pl-field"><label>{{ _('حد يومي') }}</label>
                   {{ unit_input_picker(name="max_daily_minutes", value=plan.max_daily_minutes or 0, kind="time", units=["min","hr"]) }}
-                  <div class="help">أقصى وقت اتصال مسموح في اليوم.</div></div>
-                <div class="pl-field"><label>حد أسبوعي</label>
+                  <div class="help">{{ _('أقصى وقت اتصال مسموح في اليوم.') }}</div></div>
+                <div class="pl-field"><label>{{ _('حد أسبوعي') }}</label>
                   {{ unit_input_picker(name="max_weekly_minutes", value=plan.max_weekly_minutes or 0, kind="time", units=["hr","day"]) }}
-                  <div class="help">أقصى وقت اتصال مسموح في الأسبوع.</div></div>
-                <div class="pl-field"><label>حد شهري</label>
+                  <div class="help">{{ _('أقصى وقت اتصال مسموح في الأسبوع.') }}</div></div>
+                <div class="pl-field"><label>{{ _('حد شهري') }}</label>
                   {{ unit_input_picker(name="max_monthly_minutes", value=plan.max_monthly_minutes or 0, kind="time", units=["hr","day","month"]) }}
-                  <div class="help">أقصى وقت اتصال مسموح في الشهر.</div></div>
-                <div class="pl-field"><label>مدة الجلسة (ث)</label>
+                  <div class="help">{{ _('أقصى وقت اتصال مسموح في الشهر.') }}</div></div>
+                <div class="pl-field"><label>{{ _('مدة الجلسة (ث)') }}</label>
                   <input class="hub-input" type="number" min="0" name="session_timeout_sec" value="{{ plan.session_timeout_sec or 0 }}">
-                  <div class="help">المهلة القصوى للجلسة بالثواني (Session-Timeout).</div></div>
-                <div class="pl-field"><label>مهلة الخمول (ث)</label>
+                  <div class="help">{{ _('المهلة القصوى للجلسة بالثواني (Session-Timeout).') }}</div></div>
+                <div class="pl-field"><label>{{ _('مهلة الخمول (ث)') }}</label>
                   <input class="hub-input" type="number" min="0" name="idle_timeout_sec" value="{{ plan.idle_timeout_sec or 0 }}">
-                  <div class="help">قطع الجلسة عند عدم وجود حركة لهذه المدة.</div></div>
-                <div class="pl-field"><label>استخدام مرة واحدة</label>
+                  <div class="help">{{ _('قطع الجلسة عند عدم وجود حركة لهذه المدة.') }}</div></div>
+                <div class="pl-field"><label>{{ _('استخدام مرة واحدة') }}</label>
                   <div class="pl-chk">{{ toggle_switch(name="single_use_once", checked=plan.single_use_once, value="1", id="suo") }}</div>
-                  <div class="help">يُستهلك العرض مرة واحدة فقط.</div></div>
-                <div class="pl-field"><label>عدد مرات الاستهلاك</label>
+                  <div class="help">{{ _('يُستهلك العرض مرة واحدة فقط.') }}</div></div>
+                <div class="pl-field"><label>{{ _('عدد مرات الاستهلاك') }}</label>
                   <input class="hub-input" type="number" min="0" name="max_consumption_times" value="{{ plan.max_consumption_times or 0 }}">
-                  <div class="help">كم مرة يُسمح باستهلاك العرض. 0 = بلا حد.</div></div>
-                <div class="pl-field"><label>توزيع متساوٍ للكوتا</label>
+                  <div class="help">{{ _('كم مرة يُسمح باستهلاك العرض. 0 = بلا حد.') }}</div></div>
+                <div class="pl-field"><label>{{ _('توزيع متساوٍ للكوتا') }}</label>
                   <div class="pl-chk">{{ toggle_switch(name="equal_quota_sharing", checked=(plan.equal_quota_sharing in [True,1,'1','t','true','on']), value="1", id="eqs") }}</div>
-                  <div class="help">يتقاسم المشتركون الكوتا بالتساوي عند المشاركة.</div></div>
+                  <div class="help">{{ _('يتقاسم المشتركون الكوتا بالتساوي عند المشاركة.') }}</div></div>
               </div>
             </div>
           </div>
@@ -578,7 +578,7 @@
     <section class="pl-section pl-section--subs is-collapsible is-collapsed" data-sec="subs" id="pl-subs">
       <header class="pl-section-head">
         <span class="pl-section-icon"><i class="fa-solid fa-handshake"></i></span>
-        <span class="pl-section-title">الاشتراك والسلوك العام</span>
+        <span class="pl-section-title">{{ _('الاشتراك والسلوك العام') }}</span>
         <i class="fa-solid fa-chevron-down pl-section-toggle"></i>
       </header>
       <div class="pl-section-body">
@@ -588,78 +588,78 @@
            billing_method kept as hidden so its stored value isn't wiped. #}
         <input type="hidden" name="billing_method" value="{{ plan.billing_method or '' }}">
         <div class="pl-grid">
-          <div class="pl-field"><label>طريقة التجديد</label>
+          <div class="pl-field"><label>{{ _('طريقة التجديد') }}</label>
             <select class="hub-select" name="renewal_method">
               {%- set _rm = (plan.renewal_method or '') -%}
-              <option value="" {% if not _rm %}selected{% endif %}>— غير محدّد —</option>
-              <option value="تلقائي" {% if _rm == 'تلقائي' %}selected{% endif %}>تلقائي</option>
-              <option value="يدوي" {% if _rm == 'يدوي' %}selected{% endif %}>يدوي</option>
+              <option value="" {% if not _rm %}selected{% endif %}>{{ _('— غير محدّد —') }}</option>
+              <option value="{{ _('تلقائي') }}" {% if _rm == 'تلقائي' %}selected{% endif %}>{{ _('تلقائي') }}</option>
+              <option value="{{ _('يدوي') }}" {% if _rm == 'يدوي' %}selected{% endif %}>{{ _('يدوي') }}</option>
               {%- if _rm and _rm not in ['تلقائي','يدوي'] %}
                 <option value="{{ _rm }}" selected>{{ _rm }}</option>
               {%- endif -%}
             </select>
-            <div class="help">كيف يُجدَّد الاشتراك عند انتهائه: تلقائيًا أو يدويًا.</div></div>
-          <div class="pl-field"><label>تاريخ انتهاء الاشتراك</label>
+            <div class="help">{{ _('كيف يُجدَّد الاشتراك عند انتهائه: تلقائيًا أو يدويًا.') }}</div></div>
+          <div class="pl-field"><label>{{ _('تاريخ انتهاء الاشتراك') }}</label>
             <input class="hub-input" type="date" name="subscription_expiry_date" value="{{ plan.subscription_expiry_date or '' }}">
-            <div class="help">تاريخ ثابت ينتهي عنده العرض (اختياري).</div></div>
-          <div class="pl-field"><label>إرسال تنبيهات</label>
+            <div class="help">{{ _('تاريخ ثابت ينتهي عنده العرض (اختياري).') }}</div></div>
+          <div class="pl-field"><label>{{ _('إرسال تنبيهات') }}</label>
             <div class="pl-chk">{{ toggle_switch(name="send_alerts", checked=(plan.send_alerts in [True,1,'1','t','true','on']), value="1") }}</div>
-            <div class="help">إرسال تنبيهات هذا العرض للمشترك (قرب الانتهاء…).</div></div>
-          <div class="pl-field"><label>مشاركة عادلة (FUP)</label>
+            <div class="help">{{ _('إرسال تنبيهات هذا العرض للمشترك (قرب الانتهاء…).') }}</div></div>
+          <div class="pl-field"><label>{{ _('مشاركة عادلة (FUP)') }}</label>
             <div class="pl-chk">{{ toggle_switch(name="shared_voucher_fup", checked=(plan.shared_voucher_fup in [True,1,'1','t','true','on']), value="1") }}</div>
-            <div class="help">تطبيق سياسة الاستخدام العادل عند تجاوز حد معيّن.</div></div>
+            <div class="help">{{ _('تطبيق سياسة الاستخدام العادل عند تجاوز حد معيّن.') }}</div></div>
 
           {# ── خيارات متقدمة (الاشتراك والسلوك) — مطوية، الحقول تبقى في DOM ── #}
           <div class="pl-adv-block" data-adv>
             <div class="pl-adv-head" data-adv-toggle>
               <i class="fa-solid fa-sliders"></i>
-              <span>خيارات متقدمة</span>
+              <span>{{ _('خيارات متقدمة') }}</span>
               <i class="fa-solid fa-chevron-down pl-adv-caret"></i>
             </div>
             <div class="pl-adv-body">
               <div class="pl-adv-grid">
-                <div class="pl-field"><label>صلاحية التذاكر (أيام)</label>
+                <div class="pl-field"><label>{{ _('صلاحية التذاكر (أيام)') }}</label>
                   <input class="hub-input" type="number" min="0" name="ticket_validity_days" value="{{ plan.ticket_validity_days or 0 }}">
-                  <div class="help">كم يوم تبقى تذاكر/قسائم هذا العرض صالحة.</div></div>
-                <div class="pl-field"><label>المشترك يقدر يغيّر العرض</label>
+                  <div class="help">{{ _('كم يوم تبقى تذاكر/قسائم هذا العرض صالحة.') }}</div></div>
+                <div class="pl-field"><label>{{ _('المشترك يقدر يغيّر العرض') }}</label>
                   <div class="pl-chk">{{ toggle_switch(name="user_can_change_offer", checked=(plan.user_can_change_offer in [True,1,'1','t','true','on']), value="1", on_label="مسموح", off_label="ممنوع") }}</div>
-                  <div class="help">يسمح للمشترك بتبديل عرضه بنفسه.</div></div>
-                <div class="pl-field"><label>المشترك يطلب تغيير</label>
+                  <div class="help">{{ _('يسمح للمشترك بتبديل عرضه بنفسه.') }}</div></div>
+                <div class="pl-field"><label>{{ _('المشترك يطلب تغيير') }}</label>
                   <div class="pl-chk">{{ toggle_switch(name="user_can_request_offer_change", checked=(plan.user_can_request_offer_change in [True,1,'1','t','true','on']), value="1", on_label="مسموح", off_label="ممنوع") }}</div>
-                  <div class="help">يسمح للمشترك بإرسال طلب تغيير عرض للمشغّل.</div></div>
-                <div class="pl-field"><label>منع تغيير الاشتراك (مستخدم)</label>
+                  <div class="help">{{ _('يسمح للمشترك بإرسال طلب تغيير عرض للمشغّل.') }}</div></div>
+                <div class="pl-field"><label>{{ _('منع تغيير الاشتراك (مستخدم)') }}</label>
                   <div class="pl-chk">{{ toggle_switch(name="prevent_user_from_changing_subscription", checked=(plan.prevent_user_from_changing_subscription in [True,1,'1','t','true','on']), value="1") }}</div>
-                  <div class="help">يمنع المشترك من تغيير اشتراكه نهائيًا.</div></div>
-                <div class="pl-field"><label>منع المدير من تغيير الاشتراك</label>
+                  <div class="help">{{ _('يمنع المشترك من تغيير اشتراكه نهائيًا.') }}</div></div>
+                <div class="pl-field"><label>{{ _('منع المدير من تغيير الاشتراك') }}</label>
                   <div class="pl-chk">{{ toggle_switch(name="prevent_admin_from_changing_user_subscription", checked=(plan.prevent_admin_from_changing_user_subscription in [True,1,'1','t','true','on']), value="1") }}</div>
-                  <div class="help">يمنع المدراء من تغيير اشتراك المشترك.</div></div>
-                <div class="pl-field"><label>لوحة تحكم المشترك</label>
+                  <div class="help">{{ _('يمنع المدراء من تغيير اشتراك المشترك.') }}</div></div>
+                <div class="pl-field"><label>{{ _('لوحة تحكم المشترك') }}</label>
                   <div class="pl-chk">{{ toggle_switch(name="subscriber_control_panel_enabled", checked=(plan.subscriber_control_panel_enabled in [True,1,'1','t','true','on']), value="1") }}</div>
-                  <div class="help">يفعّل لوحة تحكم ذاتية للمشترك.</div></div>
-                <div class="pl-field"><label>إخفاء الفاتورة</label>
+                  <div class="help">{{ _('يفعّل لوحة تحكم ذاتية للمشترك.') }}</div></div>
+                <div class="pl-field"><label>{{ _('إخفاء الفاتورة') }}</label>
                   <div class="pl-chk">{{ toggle_switch(name="hide_invoice", checked=(plan.hide_invoice in [True,1,'1','t','true','on']), value="1") }}</div>
-                  <div class="help">يخفي الفاتورة عن المشترك.</div></div>
-                <div class="pl-field"><label>إجبار شراء بطاقة</label>
+                  <div class="help">{{ _('يخفي الفاتورة عن المشترك.') }}</div></div>
+                <div class="pl-field"><label>{{ _('إجبار شراء بطاقة') }}</label>
                   <div class="pl-chk">{{ toggle_switch(name="force_subscriber_to_purchase_card", checked=(plan.force_subscriber_to_purchase_card in [True,1,'1','t','true','on']), value="1") }}</div>
-                  <div class="help">يُلزم المشترك بشراء بطاقة لتفعيل العرض.</div></div>
-                <div class="pl-field"><label>حفظ الكوتا عند التفعيل</label>
+                  <div class="help">{{ _('يُلزم المشترك بشراء بطاقة لتفعيل العرض.') }}</div></div>
+                <div class="pl-field"><label>{{ _('حفظ الكوتا عند التفعيل') }}</label>
                   <div class="pl-chk">{{ toggle_switch(name="save_remaining_quota_on_activation", checked=(plan.save_remaining_quota_on_activation in [True,1,'1','t','true','on']), value="1") }}</div>
-                  <div class="help">يحتفظ بالكوتا المتبقية عند إعادة التفعيل.</div></div>
-                <div class="pl-field"><label>وقت اتصال يومي (دقيقة)</label>
+                  <div class="help">{{ _('يحتفظ بالكوتا المتبقية عند إعادة التفعيل.') }}</div></div>
+                <div class="pl-field"><label>{{ _('وقت اتصال يومي (دقيقة)') }}</label>
                   <input class="hub-input" type="number" min="0" name="daily_connection_time" value="{{ plan.daily_connection_time or '' }}">
-                  <div class="help">أقصى دقائق اتصال يوميًا (مرجعي).</div></div>
-                <div class="pl-field"><label>وقت اتصال إنترنت (دقيقة)</label>
+                  <div class="help">{{ _('أقصى دقائق اتصال يوميًا (مرجعي).') }}</div></div>
+                <div class="pl-field"><label>{{ _('وقت اتصال إنترنت (دقيقة)') }}</label>
                   <input class="hub-input" type="number" min="0" name="internet_connection_time" value="{{ plan.internet_connection_time or '' }}">
-                  <div class="help">أقصى دقائق استخدام الإنترنت (مرجعي).</div></div>
-                <div class="pl-field"><label>استخدام الكوتا القديمة</label>
+                  <div class="help">{{ _('أقصى دقائق استخدام الإنترنت (مرجعي).') }}</div></div>
+                <div class="pl-field"><label>{{ _('استخدام الكوتا القديمة') }}</label>
                   <div class="pl-chk">{{ toggle_switch(name="use_old_quota_and_sessions_on_activation", checked=(plan.use_old_quota_and_sessions_on_activation in [True,1,'1','t','true','on']), value="1") }}</div>
-                  <div class="help">يُكمل على الكوتا والجلسات السابقة عند التفعيل.</div></div>
-                <div class="pl-field"><label>حذف الاستخدام القديم</label>
+                  <div class="help">{{ _('يُكمل على الكوتا والجلسات السابقة عند التفعيل.') }}</div></div>
+                <div class="pl-field"><label>{{ _('حذف الاستخدام القديم') }}</label>
                   <div class="pl-chk">{{ toggle_switch(name="delete_usage_data_and_sessions_on_activation", checked=(plan.delete_usage_data_and_sessions_on_activation in [True,1,'1','t','true','on']), value="1") }}</div>
-                  <div class="help">يمسح بيانات الاستخدام والجلسات عند التفعيل.</div></div>
-                <div class="pl-field"><label>ترحيل الوقت المتبقي</label>
+                  <div class="help">{{ _('يمسح بيانات الاستخدام والجلسات عند التفعيل.') }}</div></div>
+                <div class="pl-field"><label>{{ _('ترحيل الوقت المتبقي') }}</label>
                   <div class="pl-chk">{{ toggle_switch(name="carry_remaining_time_on_activation", checked=(plan.carry_remaining_time_on_activation in [True,1,'1','t','true','on']), value="1") }}</div>
-                  <div class="help">ينقل الوقت المتبقي إلى الاشتراك الجديد.</div></div>
+                  <div class="help">{{ _('ينقل الوقت المتبقي إلى الاشتراك الجديد.') }}</div></div>
               </div>
             </div>
           </div>
@@ -671,23 +671,23 @@
     <section class="pl-section pl-section--notif is-collapsible is-collapsed" data-sec="notif" id="pl-notif">
       <header class="pl-section-head">
         <span class="pl-section-icon"><i class="fa-solid fa-bell"></i></span>
-        <span class="pl-section-title">التنبيهات</span>
+        <span class="pl-section-title">{{ _('التنبيهات') }}</span>
         <i class="fa-solid fa-chevron-down pl-section-toggle"></i>
       </header>
       <div class="pl-section-body">
         <div class="pl-grid">
-          <div class="pl-field"><label>تنبيه قبل انتهاء الكوتا الشهرية</label>
-            <input class="hub-input" type="text" name="notify_before_quota_expiry" value="{{ plan.notify_before_quota_expiry or '' }}" placeholder="نسبة أو ميجا">
+          <div class="pl-field"><label>{{ _('تنبيه قبل انتهاء الكوتا الشهرية') }}</label>
+            <input class="hub-input" type="text" name="notify_before_quota_expiry" value="{{ plan.notify_before_quota_expiry or '' }}" placeholder="{{ _('نسبة أو ميجا') }}">
             <div class="help">عتبة التنبيه قبل نفاد الكوتا الشهرية (مثل %10 أو 500MB).</div></div>
-          <div class="pl-field"><label>تنبيه قبل انتهاء الكوتا اليومية</label>
+          <div class="pl-field"><label>{{ _('تنبيه قبل انتهاء الكوتا اليومية') }}</label>
             <input class="hub-input" type="text" name="notify_before_daily_quota_expiry" value="{{ plan.notify_before_daily_quota_expiry or '' }}">
-            <div class="help">عتبة التنبيه قبل نفاد الكوتا اليومية.</div></div>
+            <div class="help">{{ _('عتبة التنبيه قبل نفاد الكوتا اليومية.') }}</div></div>
           {# #38/39: free-text «قنوات التنبيه» → multi-select chips.
              القيم المُرسلة تبقى مفصولة بفواصل في نفس الحقل
              notification_channels. خيارات: sms / whatsapp / telegram.
              CHANNEL ROLE MODEL: هذا حدث موجَّه للمشترك → الافتراضي
              رسالة نصية + واتساب (تليجرام للأحداث الإدارية/المراقبة). #}
-          <div class="pl-field full"><label>قنوات التنبيه</label>
+          <div class="pl-field full"><label>{{ _('قنوات التنبيه') }}</label>
             {%- set _raw_ch = (plan.notification_channels or '') -%}
             {%- set _has_val = (_raw_ch|trim)|length > 0 -%}
             {# normalize stored value into a lowercased token list for matching #}
@@ -700,15 +700,15 @@
               {%- set _tg_on  = ('telegram' in _chl) or ('تيليجرام' in _raw_ch) or ('تلجرام' in _raw_ch) -%}
               <label class="pl-chan-chip {% if _sms_on %}is-sel{% endif %}">
                 <input type="checkbox" data-chan value="sms" {% if _sms_on %}checked{% endif %}>
-                <i class="fa-solid fa-comment-sms"></i> رسالة نصية</label>
+                <i class="fa-solid fa-comment-sms"></i> {{ _('رسالة نصية') }}</label>
               <label class="pl-chan-chip {% if _wa_on %}is-sel{% endif %}">
                 <input type="checkbox" data-chan value="whatsapp" {% if _wa_on %}checked{% endif %}>
-                <i class="fa-brands fa-whatsapp"></i> واتساب</label>
+                <i class="fa-brands fa-whatsapp"></i> {{ _('واتساب') }}</label>
               <label class="pl-chan-chip {% if _tg_on %}is-sel{% endif %}">
                 <input type="checkbox" data-chan value="telegram" {% if _tg_on %}checked{% endif %}>
-                <i class="fa-brands fa-telegram"></i> تيليجرام</label>
+                <i class="fa-brands fa-telegram"></i> {{ _('تيليجرام') }}</label>
             </div>
-            <div class="help">اختر قناة واحدة أو أكثر. الافتراضي لتنبيهات المشترك: رسالة نصية + واتساب.</div></div>
+            <div class="help">{{ _('اختر قناة واحدة أو أكثر. الافتراضي لتنبيهات المشترك: رسالة نصية + واتساب.') }}</div></div>
         </div>
       </div>
     </section>
@@ -717,51 +717,51 @@
     <section class="pl-section pl-section--adv is-collapsible is-collapsed" data-sec="adv" id="pl-adv">
       <header class="pl-section-head">
         <span class="pl-section-icon"><i class="fa-solid fa-sliders"></i></span>
-        <span class="pl-section-title">سياسات التجديد والتوفر</span>
+        <span class="pl-section-title">{{ _('سياسات التجديد والتوفر') }}</span>
         <i class="fa-solid fa-chevron-down pl-section-toggle"></i>
       </header>
       <div class="pl-section-body">
         <div class="pl-grid">
-          <div class="pl-field"><label>تجديد تلقائي عند انتهاء الكوتا</label>
+          <div class="pl-field"><label>{{ _('تجديد تلقائي عند انتهاء الكوتا') }}</label>
             <div class="pl-chk">{{ toggle_switch(name="auto_renew_when_quota_expires", checked=(plan.auto_renew_when_quota_expires in [True,1,'1','t','true','on']), value="1") }}</div>
-            <div class="help">يجدّد العرض تلقائيًا حين تنفد الكوتا.</div></div>
-          <div class="pl-field"><label>تجديد تلقائي عند انتهاء الوقت</label>
+            <div class="help">{{ _('يجدّد العرض تلقائيًا حين تنفد الكوتا.') }}</div></div>
+          <div class="pl-field"><label>{{ _('تجديد تلقائي عند انتهاء الوقت') }}</label>
             <div class="pl-chk">{{ toggle_switch(name="auto_renew_when_time_expires", checked=(plan.auto_renew_when_time_expires in [True,1,'1','t','true','on']), value="1") }}</div>
-            <div class="help">يجدّد العرض تلقائيًا حين تنتهي الصلاحية.</div></div>
+            <div class="help">{{ _('يجدّد العرض تلقائيًا حين تنتهي الصلاحية.') }}</div></div>
           {# #38/39: «سياسة انتهاء الوقت» free-text → select. #}
-          <div class="pl-field"><label>سياسة انتهاء الوقت</label>
+          <div class="pl-field"><label>{{ _('سياسة انتهاء الوقت') }}</label>
             <select class="hub-select" name="time_expiry_policy">
               {%- set _tep = (plan.time_expiry_policy or '') -%}
-              <option value="" {% if not _tep %}selected{% endif %}>— غير محدّد —</option>
-              <option value="حظر" {% if _tep == 'حظر' %}selected{% endif %}>حظر</option>
-              <option value="إضافة للطابور" {% if _tep == 'إضافة للطابور' %}selected{% endif %}>إضافة للطابور</option>
-              <option value="تنبيه فقط" {% if _tep == 'تنبيه فقط' %}selected{% endif %}>تنبيه فقط</option>
+              <option value="" {% if not _tep %}selected{% endif %}>{{ _('— غير محدّد —') }}</option>
+              <option value="{{ _('حظر') }}" {% if _tep == 'حظر' %}selected{% endif %}>{{ _('حظر') }}</option>
+              <option value="{{ _('إضافة للطابور') }}" {% if _tep == 'إضافة للطابور' %}selected{% endif %}>{{ _('إضافة للطابور') }}</option>
+              <option value="{{ _('تنبيه فقط') }}" {% if _tep == 'تنبيه فقط' %}selected{% endif %}>{{ _('تنبيه فقط') }}</option>
               {%- if _tep and _tep not in ['حظر','إضافة للطابور','تنبيه فقط'] %}
                 <option value="{{ _tep }}" selected>{{ _tep }}</option>
               {%- endif -%}
             </select>
-            <div class="help">ماذا يحدث عند انتهاء الوقت: حظر، أو إضافة للطابور، أو تنبيه فقط.</div></div>
+            <div class="help">{{ _('ماذا يحدث عند انتهاء الوقت: حظر، أو إضافة للطابور، أو تنبيه فقط.') }}</div></div>
           {# #38/39: «متاح لـ» → group/tag select. لا تتوفّر قائمة مجموعات في
              سياق هذا القالب، لذا نستخدم select بخيارات جاهزة مع الحفاظ على أي
              قيمة محفوظة سابقًا كخيار محدَّد. #}
-          <div class="pl-field"><label>متاح لـ</label>
+          <div class="pl-field"><label>{{ _('متاح لـ') }}</label>
             <select class="hub-select" name="only_available_for">
               {%- set _oaf = (plan.only_available_for or '') -%}
-              <option value="" {% if not _oaf %}selected{% endif %}>— الكل —</option>
+              <option value="" {% if not _oaf %}selected{% endif %}>{{ _('— الكل —') }}</option>
               <option value="vip" {% if _oaf == 'vip' %}selected{% endif %}>VIP</option>
-              <option value="staff" {% if _oaf == 'staff' %}selected{% endif %}>الموظفون</option>
-              <option value="trial" {% if _oaf == 'trial' %}selected{% endif %}>تجريبي</option>
+              <option value="staff" {% if _oaf == 'staff' %}selected{% endif %}>{{ _('الموظفون') }}</option>
+              <option value="trial" {% if _oaf == 'trial' %}selected{% endif %}>{{ _('تجريبي') }}</option>
               {%- if _oaf and _oaf not in ['vip','staff','trial'] %}
                 <option value="{{ _oaf }}" selected>{{ _oaf }}</option>
               {%- endif -%}
             </select>
-            <div class="help">قصر توفّر العرض على مجموعة أو وسم محدّد.</div></div>
-          <div class="pl-field"><label>متاح للكل</label>
+            <div class="help">{{ _('قصر توفّر العرض على مجموعة أو وسم محدّد.') }}</div></div>
+          <div class="pl-field"><label>{{ _('متاح للكل') }}</label>
             <div class="pl-chk">{{ toggle_switch(name="available_for_all", checked=(plan.available_for_all in [True,1,'1','t','true','on']), value="1") }}</div>
-            <div class="help">إتاحة العرض لكل المشتركين دون تقييد.</div></div>
-          <div class="pl-field"><label>كل الأيام</label>
+            <div class="help">{{ _('إتاحة العرض لكل المشتركين دون تقييد.') }}</div></div>
+          <div class="pl-field"><label>{{ _('كل الأيام') }}</label>
             <div class="pl-chk">{{ toggle_switch(name="all_days", checked=(plan.all_days in [True,1,'1','t','true','on']), value="1") }}</div>
-            <div class="help">السماح باستخدام العرض في جميع أيام الأسبوع.</div></div>
+            <div class="help">{{ _('السماح باستخدام العرض في جميع أيام الأسبوع.') }}</div></div>
         </div>
       </div>
     </section>
@@ -770,90 +770,90 @@
     <section class="pl-section pl-section--mt is-collapsible is-collapsed" data-sec="mt" id="pl-mt">
       <header class="pl-section-head">
         <span class="pl-section-icon"><i class="fa-solid fa-network-wired"></i></span>
-        <span class="pl-section-title">الشبكة والراوترات / خدمات الاتصال</span>
+        <span class="pl-section-title">{{ _('الشبكة والراوترات / خدمات الاتصال') }}</span>
         <i class="fa-solid fa-chevron-down pl-section-toggle"></i>
       </header>
       <div class="pl-section-body">
         {# #40: keep the six core fields visible; the rest move to
            «خيارات متقدمة» (collapsed). All inputs stay in the DOM. #}
         <div class="pl-grid">
-          <div class="pl-field"><label>جلسات متزامنة</label>
+          <div class="pl-field"><label>{{ _('جلسات متزامنة') }}</label>
             <input class="hub-input" type="number" min="1" name="concurrent_sessions" value="{{ plan.concurrent_sessions or 1 }}">
-            <div class="help">أقصى عدد أجهزة يتصل بها الحساب في نفس الوقت.</div></div>
-          <div class="pl-field"><label>بطاقة مشتركة — جلسة واحدة فعّالة</label>
+            <div class="help">{{ _('أقصى عدد أجهزة يتصل بها الحساب في نفس الوقت.') }}</div></div>
+          <div class="pl-field"><label>{{ _('بطاقة مشتركة — جلسة واحدة فعّالة') }}</label>
             <div class="pl-chk">{{ toggle_switch(name="shared_single_session", checked=plan.shared_single_session, value="1", on_label="مفعّل", off_label="معطّل") }}</div>
-            <div class="help hub-hint">جلسة واحدة فعّالة — الدخول الجديد يفصل القديم. مناسب لبطاقة يومية يتشاركها زبائن المحل واحدًا تلو الآخر: عند دخول مستخدم جديد بنفس البطاقة يُفصل المستخدم السابق تلقائيًا. (يُطبَّق عند بدء جلسة الجديد).</div></div>
-          <div class="pl-field"><label>ربط MAC</label>
+            <div class="help hub-hint">{{ _('جلسة واحدة فعّالة — الدخول الجديد يفصل القديم. مناسب لبطاقة يومية يتشاركها زبائن المحل واحدًا تلو الآخر: عند دخول مستخدم جديد بنفس البطاقة يُفصل المستخدم السابق تلقائيًا. (يُطبَّق عند بدء جلسة الجديد).') }}</div></div>
+          <div class="pl-field"><label>{{ _('ربط MAC') }}</label>
             <div class="pl-chk">{{ toggle_switch(name="bind_mac", checked=plan.bind_mac, value="1") }}</div>
-            <div class="help">يقيّد الحساب على عنوان MAC أول جهاز يدخل به.</div></div>
-          <div class="pl-field"><label>ربط IP</label>
+            <div class="help">{{ _('يقيّد الحساب على عنوان MAC أول جهاز يدخل به.') }}</div></div>
+          <div class="pl-field"><label>{{ _('ربط IP') }}</label>
             <div class="pl-chk">{{ toggle_switch(name="bind_ip", checked=plan.bind_ip, value="1") }}</div>
-            <div class="help">يقيّد الحساب على عنوان IP محدّد.</div></div>
-          <div class="pl-field"><label>بوابة الدخول مفعّلة</label>
+            <div class="help">{{ _('يقيّد الحساب على عنوان IP محدّد.') }}</div></div>
+          <div class="pl-field"><label>{{ _('بوابة الدخول مفعّلة') }}</label>
             <div class="pl-chk">{{ toggle_switch(name="hotspot_enabled", checked=plan.hotspot_enabled, value="1") }}</div>
-            <div class="help">يتيح استخدام العرض عبر صفحة بوابة الدخول (Hotspot).</div></div>
-          <div class="pl-field"><label>PPP مفعَّل</label>
+            <div class="help">{{ _('يتيح استخدام العرض عبر صفحة بوابة الدخول (Hotspot).') }}</div></div>
+          <div class="pl-field"><label>{{ _('PPP مفعَّل') }}</label>
             <div class="pl-chk">{{ toggle_switch(name="ppp_enabled", checked=plan.ppp_enabled, value="1") }}</div>
-            <div class="help">يتيح استخدام العرض عبر اتصال البرودباند (PPPoE).</div></div>
-          <div class="pl-field"><label>نطاق عناوين الجلسات (Pool)</label>
+            <div class="help">{{ _('يتيح استخدام العرض عبر اتصال البرودباند (PPPoE).') }}</div></div>
+          <div class="pl-field"><label>{{ _('نطاق عناوين الجلسات (Pool)') }}</label>
             <input class="hub-input" type="text" name="framed_pool" value="{{ plan.framed_pool or '' }}">
-            <div class="help">اسم مجمّع العناوين الذي تُمنح منه IP للجلسات.</div></div>
+            <div class="help">{{ _('اسم مجمّع العناوين الذي تُمنح منه IP للجلسات.') }}</div></div>
 
           {# ── خيارات متقدمة (الشبكة والراوترات) — مطوية، الحقول تبقى في DOM ── #}
           <div class="pl-adv-block" data-adv>
             <div class="pl-adv-head" data-adv-toggle>
               <i class="fa-solid fa-sliders"></i>
-              <span>خيارات متقدمة</span>
+              <span>{{ _('خيارات متقدمة') }}</span>
               <i class="fa-solid fa-chevron-down pl-adv-caret"></i>
             </div>
             <div class="pl-adv-body">
               <div class="pl-adv-grid">
                 <div class="pl-field"><label>VLAN</label>
                   <input class="hub-input" type="number" min="0" name="vlan_id" value="{{ plan.vlan_id or 0 }}">
-                  <div class="help">معرّف الشبكة الافتراضية VLAN. 0 = بلا VLAN.</div></div>
-                <div class="pl-field"><label>نطاق عناوين الشبكة</label>
+                  <div class="help">{{ _('معرّف الشبكة الافتراضية VLAN. 0 = بلا VLAN.') }}</div></div>
+                <div class="pl-field"><label>{{ _('نطاق عناوين الشبكة') }}</label>
                   <input class="hub-input" type="text" name="address_pool" value="{{ plan.address_pool or '' }}">
-                  <div class="help">اسم مجمّع عناوين الشبكة العام.</div></div>
-                <div class="pl-field"><label>نطاق الخدمة</label>
+                  <div class="help">{{ _('اسم مجمّع عناوين الشبكة العام.') }}</div></div>
+                <div class="pl-field"><label>{{ _('نطاق الخدمة') }}</label>
                   <select class="hub-select" name="service_scope">
-                    <option value="both" {% if (plan.service_scope or 'both') == 'both' %}selected{% endif %}>هوتسبوت وبرودباند</option>
-                    <option value="hotspot" {% if plan.service_scope == 'hotspot' %}selected{% endif %}>هوتسبوت فقط</option>
-                    <option value="broadband" {% if plan.service_scope == 'broadband' %}selected{% endif %}>برودباند فقط</option>
+                    <option value="both" {% if (plan.service_scope or 'both') == 'both' %}selected{% endif %}>{{ _('هوتسبوت وبرودباند') }}</option>
+                    <option value="hotspot" {% if plan.service_scope == 'hotspot' %}selected{% endif %}>{{ _('هوتسبوت فقط') }}</option>
+                    <option value="broadband" {% if plan.service_scope == 'broadband' %}selected{% endif %}>{{ _('برودباند فقط') }}</option>
                   </select>
-                  <div class="help">يحدد نوع الخدمة الذي ينطبق عليه العرض.</div></div>
-                <div class="pl-field"><label>السلفة مسموحة</label>
+                  <div class="help">{{ _('يحدد نوع الخدمة الذي ينطبق عليه العرض.') }}</div></div>
+                <div class="pl-field"><label>{{ _('السلفة مسموحة') }}</label>
                   <div class="pl-chk">{{ toggle_switch(name="loan_enabled", checked=plan.loan_enabled, value="1") }}</div>
-                  <div class="help">يسمح بإقراض وقت/كوتا مؤقتًا للمشترك.</div></div>
-                <div class="pl-field"><label>أقصى مدة سلفة (دقيقة)</label>
+                  <div class="help">{{ _('يسمح بإقراض وقت/كوتا مؤقتًا للمشترك.') }}</div></div>
+                <div class="pl-field"><label>{{ _('أقصى مدة سلفة (دقيقة)') }}</label>
                   <input class="hub-input" type="number" min="0" name="max_loan_minutes" value="{{ plan.max_loan_minutes or 0 }}">
-                  <div class="help">أقصى مدة يُسمح خلالها بالسلفة بالدقائق.</div></div>
-                <div class="pl-field"><label>تجاوز سرعة المستفيد</label>
+                  <div class="help">{{ _('أقصى مدة يُسمح خلالها بالسلفة بالدقائق.') }}</div></div>
+                <div class="pl-field"><label>{{ _('تجاوز سرعة المستفيد') }}</label>
                   <div class="pl-chk">{{ toggle_switch(name="speed_override_allowed", checked=plan.speed_override_allowed, value="1", on_label="مسموح", off_label="ممنوع") }}</div>
-                  <div class="help">يسمح لسرعة المشترك بتجاوز سرعة العرض.</div></div>
-                <div class="pl-field"><label>تفعيل MTU</label>
+                  <div class="help">{{ _('يسمح لسرعة المشترك بتجاوز سرعة العرض.') }}</div></div>
+                <div class="pl-field"><label>{{ _('تفعيل MTU') }}</label>
                   <div class="pl-chk">{{ toggle_switch(name="enable_mtu", checked=(plan.enable_mtu in [True,1,'1','t','true','on']), value="1") }}</div>
-                  <div class="help">تطبيق قيمة MTU مخصّصة على الجلسة.</div></div>
-                <div class="pl-field"><label>حد بأيام الانتهاء</label>
+                  <div class="help">{{ _('تطبيق قيمة MTU مخصّصة على الجلسة.') }}</div></div>
+                <div class="pl-field"><label>{{ _('حد بأيام الانتهاء') }}</label>
                   <div class="pl-chk">{{ toggle_switch(name="expiry_day_limit_toggle", checked=(plan.expiry_day_limit_toggle in [True,1,'1','t','true','on']), value="1") }}</div>
-                  <div class="help">احتساب الانتهاء بالأيام.</div></div>
-                <div class="pl-field"><label>حد بساعات الانتهاء</label>
+                  <div class="help">{{ _('احتساب الانتهاء بالأيام.') }}</div></div>
+                <div class="pl-field"><label>{{ _('حد بساعات الانتهاء') }}</label>
                   <div class="pl-chk">{{ toggle_switch(name="expiry_hour_limit_toggle", checked=(plan.expiry_hour_limit_toggle in [True,1,'1','t','true','on']), value="1") }}</div>
-                  <div class="help">احتساب الانتهاء بالساعات.</div></div>
-                <div class="pl-field"><label>قائمة عناوين الراوتر</label>
+                  <div class="help">{{ _('احتساب الانتهاء بالساعات.') }}</div></div>
+                <div class="pl-field"><label>{{ _('قائمة عناوين الراوتر') }}</label>
                   <input class="hub-input" type="text" name="mikrotik_address_list" value="{{ plan.mikrotik_address_list or '' }}">
-                  <div class="help">اسم Address-List على الراوتر لتطبيق سياسات عليه.</div></div>
-                <div class="pl-field"><label>سلسلة فلترة الراوتر</label>
+                  <div class="help">{{ _('اسم Address-List على الراوتر لتطبيق سياسات عليه.') }}</div></div>
+                <div class="pl-field"><label>{{ _('سلسلة فلترة الراوتر') }}</label>
                   <input class="hub-input" type="text" name="mikrotik_filter_chain_name" value="{{ plan.mikrotik_filter_chain_name or '' }}">
-                  <div class="help">اسم سلسلة الفلترة (Filter Chain) المستخدمة.</div></div>
-                <div class="pl-field"><label>مجموعة مستخدم الراوتر</label>
+                  <div class="help">{{ _('اسم سلسلة الفلترة (Filter Chain) المستخدمة.') }}</div></div>
+                <div class="pl-field"><label>{{ _('مجموعة مستخدم الراوتر') }}</label>
                   <input class="hub-input" type="text" name="mikrotik_user_group" value="{{ plan.mikrotik_user_group or '' }}">
-                  <div class="help">اسم مجموعة المستخدمين على الراوتر.</div></div>
-                <div class="pl-field"><label>أولوية طابور السرعة</label>
+                  <div class="help">{{ _('اسم مجموعة المستخدمين على الراوتر.') }}</div></div>
+                <div class="pl-field"><label>{{ _('أولوية طابور السرعة') }}</label>
                   <input class="hub-input" type="text" name="mikrotik_queue_priority_simple_queue" value="{{ plan.mikrotik_queue_priority_simple_queue or '' }}" placeholder="1..8">
-                  <div class="help">أولوية الطابور في Simple Queue من 1 إلى 8.</div></div>
-                <div class="pl-field"><label>نطاق IPv6</label>
+                  <div class="help">{{ _('أولوية الطابور في Simple Queue من 1 إلى 8.') }}</div></div>
+                <div class="pl-field"><label>{{ _('نطاق IPv6') }}</label>
                   <input class="hub-input" type="text" name="ipv6_pool" value="{{ plan.ipv6_pool or '' }}">
-                  <div class="help">اسم مجمّع عناوين IPv6 إن وُجد.</div></div>
+                  <div class="help">{{ _('اسم مجمّع عناوين IPv6 إن وُجد.') }}</div></div>
               </div>
             </div>
           </div>
@@ -865,7 +865,7 @@
     <section class="pl-section pl-section--days is-collapsible is-collapsed" data-sec="days" id="pl-days">
       <header class="pl-section-head">
         <span class="pl-section-icon"><i class="fa-solid fa-calendar-days"></i></span>
-        <span class="pl-section-title">أيام وساعات السماح</span>
+        <span class="pl-section-title">{{ _('أيام وساعات السماح') }}</span>
         <i class="fa-solid fa-chevron-down pl-section-toggle"></i>
       </header>
       <div class="pl-section-body">
@@ -885,17 +885,17 @@
     <section class="pl-section pl-section--biz is-collapsible is-collapsed" data-sec="biz" id="pl-biz">
       <header class="pl-section-head">
         <span class="pl-section-icon"><i class="fa-solid fa-coins"></i></span>
-        <span class="pl-section-title">تجاري (مرجعي)</span>
+        <span class="pl-section-title">{{ _('تجاري (مرجعي)') }}</span>
         <i class="fa-solid fa-chevron-down pl-section-toggle"></i>
       </header>
       <div class="pl-section-body">
         <div class="pl-grid" style="grid-template-columns:repeat(2,1fr);max-width:520px">
-          <div class="pl-field"><label>السعر</label>
+          <div class="pl-field"><label>{{ _('السعر') }}</label>
             <input class="hub-input" type="number" step="0.01" min="0" name="price" value="{{ plan.price or 0 }}">
-            <div class="help">سعر العرض بعملة النظام.</div></div>
-          <div class="pl-field"><label>العملة</label>
-            <input class="hub-input" type="text" name="currency" value="{{ cfg.currency }}" maxlength="8" readonly title="عملة النظام — تُضبط من الإعدادات">
-            <div class="help">عملة النظام، تُضبط من الإعدادات العامة.</div></div>
+            <div class="help">{{ _('سعر العرض بعملة النظام.') }}</div></div>
+          <div class="pl-field"><label>{{ _('العملة') }}</label>
+            <input class="hub-input" type="text" name="currency" value="{{ cfg.currency }}" maxlength="8" readonly title="{{ _('عملة النظام — تُضبط من الإعدادات') }}">
+            <div class="help">{{ _('عملة النظام، تُضبط من الإعدادات العامة.') }}</div></div>
         </div>
       </div>
     </section>
@@ -906,7 +906,7 @@
     {% endif %}
 
     <div style="display:flex;gap:10px;justify-content:flex-end;padding:6px 4px 0">
-      <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.plans_list') }}">إلغاء</a>
+      <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.plans_list') }}">{{ _('إلغاء') }}</a>
       <button class="hub-btn hub-btn--primary" type="submit">
         <i class="fa-solid fa-floppy-disk"></i> {{ "حفظ العرض" if is_new else "حفظ التعديلات" }}
       </button>

@@ -40,16 +40,16 @@
 {% call hub.section("البيانات الوصفية", icon="brackets-curly") %}
   <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" data-testid="event-metadata">
     <table class="hub-table">
-      <thead><tr><th>البند</th><th>القيمة</th></tr></thead>
+      <thead><tr><th>{{ _('البند') }}</th><th>{{ _('القيمة') }}</th></tr></thead>
       <tbody>
       {% if event.metadata is mapping %}
       {% for key, value in event.metadata.items() %}
       <tr><td>{{ key|string|replace('_', ' ') }}</td><td>{{ readable_value(value) }}</td></tr>
       {% else %}
-      <tr><td>الحالة</td><td>لا توجد بيانات وصفية لهذا الحدث.</td></tr>
+      <tr><td>{{ _('الحالة') }}</td><td>{{ _('لا توجد بيانات وصفية لهذا الحدث.') }}</td></tr>
       {% endfor %}
       {% else %}
-      <tr><td>التفاصيل</td><td>{{ readable_value(event.metadata) }}</td></tr>
+      <tr><td>{{ _('التفاصيل') }}</td><td>{{ readable_value(event.metadata) }}</td></tr>
       {% endif %}
       </tbody>
     </table>
@@ -59,12 +59,12 @@
 {% call hub.section("الخط الزمني للكيان", icon="timeline", flush=True) %}
   <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10">
     <table class="hub-table" data-testid="entity-timeline-table">
-      <thead><tr><th>الرقم</th><th>الخطورة</th><th>المفتاح</th><th>الرسالة</th></tr></thead>
+      <thead><tr><th>{{ _('الرقم') }}</th><th>{{ _('الخطورة') }}</th><th>{{ _('المفتاح') }}</th><th>{{ _('الرسالة') }}</th></tr></thead>
       <tbody>
         {% for item in timeline %}
           <tr><td>#{{ item.id }}</td><td>{{ item.severity }}</td><td>{{ item.event_key }}</td><td>{{ item.message }}</td></tr>
         {% else %}
-          <tr><td colspan="4">لا يوجد خط زمني مرتبط بهذا الكيان.</td></tr>
+          <tr><td colspan="4">{{ _('لا يوجد خط زمني مرتبط بهذا الكيان.') }}</td></tr>
         {% endfor %}
       </tbody>
     </table>

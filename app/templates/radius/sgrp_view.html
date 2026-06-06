@@ -34,9 +34,9 @@
           <thead>
             <tr>
               <th class="num">#</th>
-              <th>اليوزر</th>
-              <th>الاسم</th>
-              <th>الحالة</th>
+              <th>{{ _('اليوزر') }}</th>
+              <th>{{ _('الاسم') }}</th>
+              <th>{{ _('الحالة') }}</th>
               <th></th>
             </tr>
           </thead>
@@ -70,9 +70,9 @@
   {% call hub.section("إضافة عضو", icon="user-plus") %}
     <form method="post" action="{{ url_for('radius.sgrp_add_member', gid=grp.id) }}">
       <div class="hub-field">
-        <label class="hub-field-label">المشترك</label>
+        <label class="hub-field-label">{{ _('المشترك') }}</label>
         <select class="hub-select" name="subscriber_id" required>
-          <option value="">— اختر مشتركًا —</option>
+          <option value="">{{ _('— اختر مشتركًا —') }}</option>
           {% for s in candidates %}
             <option value="{{ s.id }}">{{ s.username }} — {{ s.full_name or '' }}</option>
           {% endfor %}

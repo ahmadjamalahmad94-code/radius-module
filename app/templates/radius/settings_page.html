@@ -4,7 +4,7 @@
 {% block title %}إعدادات النظام{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-gear"></i>{% endblock %}
 {% block page_title %}إعدادات النظام{% endblock %}
-{% block page_sub %}<span class="sub">عصب الموقع — هوية النظام والمالية والوقت والكروت والتكاملات في صفحة واحدة منظمة</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('عصب الموقع — هوية النظام والمالية والوقت والكروت والتكاملات في صفحة واحدة منظمة') }}</span>{% endblock %}
 
 {% block head_extra %}
 <style>
@@ -287,15 +287,15 @@
 ) }}
 
 {# تبويبات JS — لا تغادر الصفحة فلا تُفقد التعديلات غير المحفوظة #}
-<nav class="st-tabs" aria-label="مجموعات الإعدادات">
-  <button type="button" data-st-tab="identity" class="is-active"><i class="fa-solid fa-id-badge"></i> هوية النظام <span class="st-count">5</span><span class="st-dirty-dot"></span></button>
-  <button type="button" data-st-tab="finance"><i class="fa-solid fa-coins"></i> المالية <span class="st-count">2</span><span class="st-dirty-dot"></span></button>
-  <button type="button" data-st-tab="time"><i class="fa-solid fa-clock"></i> الوقت والمنطقة <span class="st-count">2</span><span class="st-dirty-dot"></span></button>
-  <button type="button" data-st-tab="subs"><i class="fa-solid fa-users"></i> المشتركون والوصول <span class="st-count">6</span><span class="st-dirty-dot"></span></button>
-  <button type="button" data-st-tab="portal"><i class="fa-solid fa-id-card-clip"></i> صفحة المشترك <span class="st-count">9</span><span class="st-dirty-dot"></span></button>
-  <button type="button" data-st-tab="cards"><i class="fa-solid fa-credit-card"></i> الكروت <span class="st-count">3</span><span class="st-dirty-dot"></span></button>
-  <button type="button" data-st-tab="notify"><i class="fa-solid fa-bell"></i> الرسائل والتنبيهات <span class="st-count">2</span><span class="st-dirty-dot"></span></button>
-  <button type="button" data-st-tab="advanced"><i class="fa-solid fa-screwdriver-wrench"></i> متقدم <span class="st-count">4</span><span class="st-dirty-dot"></span></button>
+<nav class="st-tabs" aria-label="{{ _('مجموعات الإعدادات') }}">
+  <button type="button" data-st-tab="identity" class="is-active"><i class="fa-solid fa-id-badge"></i> {{ _('هوية النظام') }} <span class="st-count">5</span><span class="st-dirty-dot"></span></button>
+  <button type="button" data-st-tab="finance"><i class="fa-solid fa-coins"></i> {{ _('المالية') }} <span class="st-count">2</span><span class="st-dirty-dot"></span></button>
+  <button type="button" data-st-tab="time"><i class="fa-solid fa-clock"></i> {{ _('الوقت والمنطقة') }} <span class="st-count">2</span><span class="st-dirty-dot"></span></button>
+  <button type="button" data-st-tab="subs"><i class="fa-solid fa-users"></i> {{ _('المشتركون والوصول') }} <span class="st-count">6</span><span class="st-dirty-dot"></span></button>
+  <button type="button" data-st-tab="portal"><i class="fa-solid fa-id-card-clip"></i> {{ _('صفحة المشترك') }} <span class="st-count">9</span><span class="st-dirty-dot"></span></button>
+  <button type="button" data-st-tab="cards"><i class="fa-solid fa-credit-card"></i> {{ _('الكروت') }} <span class="st-count">3</span><span class="st-dirty-dot"></span></button>
+  <button type="button" data-st-tab="notify"><i class="fa-solid fa-bell"></i> {{ _('الرسائل والتنبيهات') }} <span class="st-count">2</span><span class="st-dirty-dot"></span></button>
+  <button type="button" data-st-tab="advanced"><i class="fa-solid fa-screwdriver-wrench"></i> {{ _('متقدم') }} <span class="st-count">4</span><span class="st-dirty-dot"></span></button>
   {# أُزيل من لوحة العميل — يُعاد مركزياً عبر لوحة التراخيص (قرار معماري):
      تبويب «خادم الأنفاق CHR». بيانات اعتماد الـCHR مركزية للمالك. #}
 </nav>
@@ -311,23 +311,23 @@
   <section class="st-section st-section--identity">
     <header class="st-section-head">
       <span class="st-section-icon"><i class="fa-solid fa-id-badge"></i></span>
-      <span class="st-section-title">هوية النظام والعلامة</span>
-      <span class="st-section-meta">الاسم والشعار واللون تظهر في كل صفحات النظام</span>
+      <span class="st-section-title">{{ _('هوية النظام والعلامة') }}</span>
+      <span class="st-section-meta">{{ _('الاسم والشعار واللون تظهر في كل صفحات النظام') }}</span>
     </header>
     <div class="st-section-body">
       <div class="st-grid">
         <div class="st-field">
-          <label class="st-field-label">اسم النظام</label>
+          <label class="st-field-label">{{ _('اسم النظام') }}</label>
           <input class="hub-input" type="text" name="system.name" value="{{ vals.get('system.name','') }}" placeholder="HobeRadius">
-          <div class="help">يظهر في ترويسة الموقع وصفحات الطباعة والفواتير — هذا اسم شركتك أمام موظفيك وعملائك.</div>
+          <div class="help">{{ _('يظهر في ترويسة الموقع وصفحات الطباعة والفواتير — هذا اسم شركتك أمام موظفيك وعملائك.') }}</div>
           <bdi class="st-key">system.name</bdi>
         </div>
         <div class="st-field">
-          <label class="st-field-label">الدولة (موقع النظام)</label>
+          <label class="st-field-label">{{ _('الدولة (موقع النظام)') }}</label>
           {# select بكل دول العالم بالعربية — يترقّى تلقائيًا لقائمة hbsel مع
              بحث فوري. القيمة المخزّنة = الاسم العربي (متوافق مع القيم القديمة). #}
-          <select class="hub-select" name="radius.default_country" data-search-placeholder="ابحث عن الدولة...">
-            <option value="" {{ 'selected' if not cur_country else '' }}>— اختر الدولة —</option>
+          <select class="hub-select" name="radius.default_country" data-search-placeholder="{{ _('ابحث عن الدولة...') }}">
+            <option value="" {{ 'selected' if not cur_country else '' }}>{{ _('— اختر الدولة —') }}</option>
             {# قيمة قديمة مخزّنة خارج القائمة؟ نعرضها كخيار حتى لا تضيع #}
             {% if cur_country and cur_country not in countries %}
               <option value="{{ cur_country }}" selected>{{ cur_country }} (قيمة محفوظة)</option>
@@ -336,14 +336,14 @@
               <option value="{{ c }}" {{ 'selected' if cur_country == c else '' }}>{{ c }}</option>
             {% endfor %}
           </select>
-          <div class="help">دولة تشغيل النظام — تُستخدم كمرجع للموقع الافتراضي في الواجهات والتقارير وبيانات المشتركين الجدد.</div>
+          <div class="help">{{ _('دولة تشغيل النظام — تُستخدم كمرجع للموقع الافتراضي في الواجهات والتقارير وبيانات المشتركين الجدد.') }}</div>
           <bdi class="st-key">radius.default_country</bdi>
         </div>
         <div class="st-field">
-          <label class="st-field-label">مفتاح الدولة
+          <label class="st-field-label">{{ _('مفتاح الدولة') }}
             <span class="hub-hint" tabindex="0" data-hint="مفتاح الاتصال الدولي لدولتك (مثل ‎+970 أو ‎+962). عند إرسال رسالة لرقم محلي يبدأ بصفر (0599...) يستبدل النظام الصفر بهذا المفتاح تلقائيًا (‎+970599...)."><i class="fa-solid fa-info"></i></span>
           </label>
-          <select class="hub-select" name="comms.country_dial_code" data-search-placeholder="ابحث عن المفتاح...">
+          <select class="hub-select" name="comms.country_dial_code" data-search-placeholder="{{ _('ابحث عن المفتاح...') }}">
             {# مفتاح محفوظ غير موجود بالقائمة؟ نعرضه حتى لا يضيع #}
             {% if cur_dial and cur_dial not in dial_codes|map(attribute=0)|list %}
               <option value="{{ cur_dial }}" selected>{{ cur_dial }} (قيمة محفوظة)</option>
@@ -352,32 +352,32 @@
               <option value="{{ code }}" {{ 'selected' if cur_dial == code else '' }}>{{ label }}</option>
             {% endfor %}
           </select>
-          <div class="help">يُستخدم لتطبيع أرقام الجوال عند إرسال رسائل SMS/واتساب.</div>
+          <div class="help">{{ _('يُستخدم لتطبيع أرقام الجوال عند إرسال رسائل SMS/واتساب.') }}</div>
           <bdi class="st-key">comms.country_dial_code</bdi>
         </div>
         <div class="st-field">
-          <label class="st-field-label">اللون الأساسي
+          <label class="st-field-label">{{ _('اللون الأساسي') }}
             <span class="hub-hint" tabindex="0" data-hint="لون العلامة المعتمد للنظام. اختر اللون من العيّنة وسيُحفظ كقيمة سداسية (hex)."><i class="fa-solid fa-info"></i></span>
           </label>
           <div class="st-color-row">
             <input class="hub-input" type="color" name="branding.primary_color" value="{{ vals.get('branding.primary_color','#2BAACC') }}">
             <bdi class="st-key" data-st-color-code>{{ vals.get('branding.primary_color','#2BAACC') }}</bdi>
           </div>
-          <div class="help">لون هوية شركتك — يُعتمد في عناصر العلامة حيثما تستخدمه القوالب.</div>
+          <div class="help">{{ _('لون هوية شركتك — يُعتمد في عناصر العلامة حيثما تستخدمه القوالب.') }}</div>
           <bdi class="st-key">branding.primary_color</bdi>
         </div>
         <div class="st-field span2">
-          <label class="st-field-label">شعار النظام
+          <label class="st-field-label">{{ _('شعار النظام') }}
             <span class="hub-hint" tabindex="0" data-hint="ارفع صورة شعارك مباشرة (PNG / JPG / SVG / WEBP — حتى 2MB) وسيُحفظ على الخادم ويُستخدم في كل الواجهات وصفحات الطباعة. أو الصق رابطًا خارجيًا في الحقل الصغير أدناه."><i class="fa-solid fa-info"></i></span>
           </label>
           {# منطقة الرفع: اسحب الملف أو انقر للاختيار — مع معاينة حية #}
           <div class="st-logo-drop" id="st-logo-drop" tabindex="0" role="button"
-               aria-label="ارفع شعار النظام — اسحب الصورة هنا أو انقر للاختيار">
+               aria-label="{{ _('ارفع شعار النظام — اسحب الصورة هنا أو انقر للاختيار') }}">
             <input type="file" name="branding.logo_file" id="st-logo-file"
                    accept="image/png,image/jpeg,image/svg+xml,image/webp,.png,.jpg,.jpeg,.svg,.webp" hidden>
             <div class="st-logo-preview {{ '' if vals.get('branding.logo_url') else 'is-empty' }}" id="st-logo-preview">
               {% if vals.get('branding.logo_url') %}
-                <img src="{{ vals.get('branding.logo_url') }}" alt="الشعار الحالي" id="st-logo-img">
+                <img src="{{ vals.get('branding.logo_url') }}" alt="{{ _('الشعار الحالي') }}" id="st-logo-img">
               {% else %}
                 <img src="" alt="" id="st-logo-img" hidden>
               {% endif %}
@@ -385,16 +385,16 @@
             </div>
             <div class="st-logo-drop-text">
               <strong id="st-logo-drop-title">{{ 'الشعار الحالي — اسحب صورة جديدة أو انقر للاستبدال' if vals.get('branding.logo_url') else 'اسحب صورة الشعار هنا أو انقر للاختيار' }}</strong>
-              <span>PNG · JPG · SVG · WEBP — بحد أقصى 2MB</span>
+              <span>{{ _('PNG · JPG · SVG · WEBP — بحد أقصى 2MB') }}</span>
               <span class="st-logo-filename" id="st-logo-filename" hidden></span>
             </div>
-            <span class="hub-btn hub-btn--secondary hub-btn--sm st-logo-btn"><i class="fa-solid fa-upload"></i> اختيار ملف</span>
+            <span class="hub-btn hub-btn--secondary hub-btn--sm st-logo-btn"><i class="fa-solid fa-upload"></i> {{ _('اختيار ملف') }}</span>
           </div>
-          <div class="help">يُرفع الملف ويُحفظ على خادمك تحت <bdi dir="ltr">uploads/branding</bdi> — ويُحدَّث الرابط أدناه تلقائيًا عند الحفظ.</div>
+          <div class="help">{{ _('يُرفع الملف ويُحفظ على خادمك تحت') }} <bdi dir="ltr">uploads/branding</bdi> {{ _('— ويُحدَّث الرابط أدناه تلقائيًا عند الحفظ.') }}</div>
           {# الرابط الخارجي كبديل اختياري — نفس المفتاح المخزَّن تمامًا.
              ملف مرفوع + رابط معًا؟ الملف المرفوع يتقدّم عند الحفظ. #}
           <div class="st-logo-url-row">
-            <span class="st-logo-url-label">أو رابط خارجي:</span>
+            <span class="st-logo-url-label">{{ _('أو رابط خارجي:') }}</span>
             <input class="hub-input" type="text" name="branding.logo_url" value="{{ vals.get('branding.logo_url','') }}" placeholder="https://…/logo.png" dir="ltr">
           </div>
           <bdi class="st-key">branding.logo_url</bdi>
@@ -409,19 +409,19 @@
   <section class="st-section st-section--finance">
     <header class="st-section-head">
       <span class="st-section-icon"><i class="fa-solid fa-coins"></i></span>
-      <span class="st-section-title">العملة والضريبة</span>
-      <span class="st-section-meta">تؤثر على كل الفواتير والأسعار والتحصيلات</span>
+      <span class="st-section-title">{{ _('العملة والضريبة') }}</span>
+      <span class="st-section-meta">{{ _('تؤثر على كل الفواتير والأسعار والتحصيلات') }}</span>
     </header>
     <div class="st-section-body">
       <div class="st-grid">
         <div class="st-field">
-          <label class="st-field-label">عملة النظام</label>
+          <label class="st-field-label">{{ _('عملة النظام') }}</label>
           <select class="hub-select" name="billing.currency">
             {% for code, label in currencies %}
               <option value="{{ code }}" {{ 'selected' if cur_currency == code else '' }}>{{ label }} — {{ code }}</option>
             {% endfor %}
           </select>
-          <div class="help">العملة المعتمدة في كل النظام: أسعار الباقات، الفواتير، المحافظ، والتقارير المالية. غيّرها بحذر بعد بدء التشغيل.</div>
+          <div class="help">{{ _('العملة المعتمدة في كل النظام: أسعار الباقات، الفواتير، المحافظ، والتقارير المالية. غيّرها بحذر بعد بدء التشغيل.') }}</div>
           <bdi class="st-key">billing.currency</bdi>
         </div>
         <div class="st-field">
@@ -430,7 +430,7 @@
             <input class="hub-input" type="number" step="any" min="0" name="billing.tax_pct" value="{{ vals.get('billing.tax_pct','0') }}">
             <span class="st-suffix-tag">%</span>
           </div>
-          <div class="help">نسبة الضريبة المضافة على الفواتير. اتركها 0 إذا كانت أسعارك شاملة الضريبة أو لا تطبّق ضريبة.</div>
+          <div class="help">{{ _('نسبة الضريبة المضافة على الفواتير. اتركها 0 إذا كانت أسعارك شاملة الضريبة أو لا تطبّق ضريبة.') }}</div>
           <bdi class="st-key">billing.tax_pct</bdi>
         </div>
       </div>
@@ -443,13 +443,13 @@
   <section class="st-section st-section--time">
     <header class="st-section-head">
       <span class="st-section-icon"><i class="fa-solid fa-clock"></i></span>
-      <span class="st-section-title">التوقيت والجلسات</span>
-      <span class="st-section-meta">تحدد عرض الأوقات ومهلة جلسة الإدارة</span>
+      <span class="st-section-title">{{ _('التوقيت والجلسات') }}</span>
+      <span class="st-section-meta">{{ _('تحدد عرض الأوقات ومهلة جلسة الإدارة') }}</span>
     </header>
     <div class="st-section-body">
       <div class="st-grid">
         <div class="st-field">
-          <label class="st-field-label">توقيت النظام (فارق عن UTC)
+          <label class="st-field-label">{{ _('توقيت النظام (فارق عن UTC)') }}
             <span class="hub-hint" tabindex="0" data-hint="مثال: +3 تعني أن الساعة المحلية تسبق التوقيت العالمي بثلاث ساعات. كل أوقات الفواتير والباقات والجلسات تُعرض بهذا الفارق."><i class="fa-solid fa-info"></i></span>
           </label>
           <select class="hub-select" name="billing.timezone_offset">
@@ -457,16 +457,16 @@
               <option value="{{ off }}" {{ 'selected' if cur_off == off else '' }}>{{ label }}</option>
             {% endfor %}
           </select>
-          <div class="help">فارق التوقيت بالساعات — تُحسب عليه أوقات انتهاء الباقات وتواريخ الفواتير وسجلات الجلسات في كل الصفحات.</div>
+          <div class="help">{{ _('فارق التوقيت بالساعات — تُحسب عليه أوقات انتهاء الباقات وتواريخ الفواتير وسجلات الجلسات في كل الصفحات.') }}</div>
           <bdi class="st-key">billing.timezone_offset</bdi>
         </div>
         <div class="st-field">
-          <label class="st-field-label">مهلة جلسة الإدارة</label>
+          <label class="st-field-label">{{ _('مهلة جلسة الإدارة') }}</label>
           <div class="st-suffix">
             <input class="hub-input" type="number" min="1" name="session.timeout_minutes" value="{{ vals.get('session.timeout_minutes','60') }}">
-            <span class="st-suffix-tag">دقيقة</span>
+            <span class="st-suffix-tag">{{ _('دقيقة') }}</span>
           </div>
-          <div class="help">المدة قبل خروج المدير تلقائيًا عند عدم النشاط. قيمة أقصر = أمان أعلى، قيمة أطول = راحة أكثر.</div>
+          <div class="help">{{ _('المدة قبل خروج المدير تلقائيًا عند عدم النشاط. قيمة أقصر = أمان أعلى، قيمة أطول = راحة أكثر.') }}</div>
           <bdi class="st-key">session.timeout_minutes</bdi>
         </div>
       </div>
@@ -479,13 +479,13 @@
   <section class="st-section st-section--subs">
     <header class="st-section-head">
       <span class="st-section-icon"><i class="fa-solid fa-users"></i></span>
-      <span class="st-section-title">المشتركون والوصول والعرض</span>
-      <span class="st-section-meta">سلوك الحسابات وتنبيهات الاستهلاك وعرض الجداول</span>
+      <span class="st-section-title">{{ _('المشتركون والوصول والعرض') }}</span>
+      <span class="st-section-meta">{{ _('سلوك الحسابات وتنبيهات الاستهلاك وعرض الجداول') }}</span>
     </header>
     <div class="st-section-body">
       <div class="st-grid">
         <div class="st-field">
-          <label class="st-field-label">السماح بإعادة تعيين كلمة المرور</label>
+          <label class="st-field-label">{{ _('السماح بإعادة تعيين كلمة المرور') }}</label>
           {# المفتاح الحديث (toggle_switch) قبل الحقل المخفي «0»: المسار يقرأ
              أول قيمة للمفتاح — مفعّل يرسل ["1","0"] فتُحفظ «1»، ومعطّل لا يرسل
              إلا الحقل المخفي فتُحفظ «0». #}
@@ -493,24 +493,24 @@
                checked=(vals.get('auth.allow_password_reset','1') in ['1','true','t','on','True']),
                value="1", id="set-apr") }}
           <input type="hidden" name="auth.allow_password_reset" value="0">
-          <div class="help">عند التفعيل يستطيع المستخدمون طلب إعادة تعيين كلمة المرور. عطّله إذا أردت أن يمرّ كل تغيير عبر الإدارة فقط.</div>
+          <div class="help">{{ _('عند التفعيل يستطيع المستخدمون طلب إعادة تعيين كلمة المرور. عطّله إذا أردت أن يمرّ كل تغيير عبر الإدارة فقط.') }}</div>
           <bdi class="st-key">auth.allow_password_reset</bdi>
         </div>
         <div class="st-field">
           {% set cur_unauth_ui = vals.get('security.unauthorized_ui','freeze') %}
-          <label class="st-field-label">عرض الأقسام غير المصرّح بها
+          <label class="st-field-label">{{ _('عرض الأقسام غير المصرّح بها') }}
             <span class="hub-hint" tabindex="0" data-hint="كيف ترى الأدوار المحدودة الأقسام الخارجة عن صلاحياتها في القائمة الجانبية وأزرار العمليات؟ «تجميد بقفل»: يبقى البند ظاهرًا معطّلًا بأيقونة قفل (يعرف الموظف أن القسم موجود لكنه ليس ضمن صلاحياته). «إخفاء كلي»: يختفي البند تمامًا فلا يرى الموظف إلا أقسامه فقط. مدير النظام (super_admin) يرى كل شيء دائمًا."><i class="fa-solid fa-info"></i></span>
           </label>
           {# select يترقّى تلقائيًا إلى hbsel — نفس نمط بقية قوائم الصفحة #}
           <select class="hub-select" name="security.unauthorized_ui">
-            <option value="freeze" {{ 'selected' if cur_unauth_ui != 'hide' else '' }}>تجميد بقفل — يظهر البند معطّلًا</option>
-            <option value="hide" {{ 'selected' if cur_unauth_ui == 'hide' else '' }}>إخفاء كلي — لا يظهر البند إطلاقًا</option>
+            <option value="freeze" {{ 'selected' if cur_unauth_ui != 'hide' else '' }}>{{ _('تجميد بقفل — يظهر البند معطّلًا') }}</option>
+            <option value="hide" {{ 'selected' if cur_unauth_ui == 'hide' else '' }}>{{ _('إخفاء كلي — لا يظهر البند إطلاقًا') }}</option>
           </select>
-          <div class="help">قرار مالك الريدياس: الموظف ذو الدور المحدود إمّا يرى الأقسام الممنوعة مجمّدة بقفل، أو لا يراها أبدًا. لا يؤثر على مدير النظام.</div>
+          <div class="help">{{ _('قرار مالك الريدياس: الموظف ذو الدور المحدود إمّا يرى الأقسام الممنوعة مجمّدة بقفل، أو لا يراها أبدًا. لا يؤثر على مدير النظام.') }}</div>
           <bdi class="st-key">security.unauthorized_ui</bdi>
         </div>
         <div class="st-field">
-          <label class="st-field-label">نِسَب تنبيه الكوتا
+          <label class="st-field-label">{{ _('نِسَب تنبيه الكوتا') }}
             <span class="hub-hint" tabindex="0" data-hint="قائمة نسب مئوية مفصولة بفواصل لاتينية. عند بلوغ استهلاك المشترك إحدى هذه النسب يُسجَّل تنبيه. مثال: 80,95,100"><i class="fa-solid fa-info"></i></span>
           </label>
           <input class="hub-input" type="text" name="quota.threshold_alerts" value="{{ vals.get('quota.threshold_alerts','80,95,100') }}" placeholder="80,95,100" dir="ltr">
@@ -518,24 +518,24 @@
           <bdi class="st-key">quota.threshold_alerts</bdi>
         </div>
         <div class="st-field">
-          <label class="st-field-label">صفوف الصفحة الافتراضية</label>
+          <label class="st-field-label">{{ _('صفوف الصفحة الافتراضية') }}</label>
           <div class="st-suffix">
             <input class="hub-input" type="number" min="5" name="display.records_per_page" value="{{ vals.get('display.records_per_page','20') }}">
-            <span class="st-suffix-tag">صف</span>
+            <span class="st-suffix-tag">{{ _('صف') }}</span>
           </div>
-          <div class="help">عدد السجلات المعروضة في كل صفحة من جداول النظام افتراضيًا. عدد أكبر = تمرير أقل لكن تحميل أبطأ.</div>
+          <div class="help">{{ _('عدد السجلات المعروضة في كل صفحة من جداول النظام افتراضيًا. عدد أكبر = تمرير أقل لكن تحميل أبطأ.') }}</div>
           <bdi class="st-key">display.records_per_page</bdi>
         </div>
         {# ── منع MAC العشوائي للمشتركين — مفتاح مستقل عن البطاقات ── #}
         <div class="st-field">
-          <label class="st-field-label">منع MAC العشوائي في المشتركين
+          <label class="st-field-label">{{ _('منع MAC العشوائي في المشتركين') }}
             <span class="hub-hint" tabindex="0" data-hint="أجهزة iOS 14+ و Android 10+ تولّد عنوان MAC عشوائيًا (خاصًا) لكل شبكة حفاظًا على الخصوصية. علامته «بت الإدارة المحلية» — الخانة السداسية الثانية من أول بايت تكون 2 أو 6 أو A أو E (مثل 02:.. أو 6A:..). عند التفعيل يُرفض دخول المشترك من جهاز بعنوان عشوائي حتى يوقف «العنوان الخاص» في إعدادات الواي فاي — يثبّت العنوان فيعمل قفل الجهاز (MAC lock) بشكل صحيح."><i class="fa-solid fa-info"></i></span>
           </label>
           {{ toggle_switch(name="security.block_random_mac_subscribers",
                checked=(vals.get('security.block_random_mac_subscribers','0') in ['1','true','t','on','True']),
                value="1", id="set-rmac-subs") }}
           <input type="hidden" name="security.block_random_mac_subscribers" value="0">
-          <div class="help">مفتاح مستقل تمامًا عن البطاقات. عند التفعيل تُرفض مصادقة المشترك إذا كان جهازه يستخدم عنوان MAC عشوائي/خاص.</div>
+          <div class="help">{{ _('مفتاح مستقل تمامًا عن البطاقات. عند التفعيل تُرفض مصادقة المشترك إذا كان جهازه يستخدم عنوان MAC عشوائي/خاص.') }}</div>
           <bdi class="st-key">security.block_random_mac_subscribers</bdi>
         </div>
       </div>
@@ -548,8 +548,8 @@
   <section class="st-section st-section--subs">
     <header class="st-section-head">
       <span class="st-section-icon"><i class="fa-solid fa-id-card-clip"></i></span>
-      <span class="st-section-title">صفحة المشترك — ما يراه العميل ويفعله</span>
-      <span class="st-section-meta">تحكّم بأقسام وأزرار بوابة المشترك (portal)</span>
+      <span class="st-section-title">{{ _('صفحة المشترك — ما يراه العميل ويفعله') }}</span>
+      <span class="st-section-meta">{{ _('تحكّم بأقسام وأزرار بوابة المشترك (portal)') }}</span>
     </header>
     <div class="st-section-body">
       {# مولّد صفّ مفتاح بوابة: نفس نمط toggle_switch + حقل مخفي «0» #}
@@ -599,39 +599,39 @@
   <section class="st-section st-section--cards">
     <header class="st-section-head">
       <span class="st-section-icon"><i class="fa-solid fa-credit-card"></i></span>
-      <span class="st-section-title">إعدادات توليد الكروت</span>
-      <span class="st-section-meta">القيم الافتراضية عند توليد دفعات الكروت</span>
+      <span class="st-section-title">{{ _('إعدادات توليد الكروت') }}</span>
+      <span class="st-section-meta">{{ _('القيم الافتراضية عند توليد دفعات الكروت') }}</span>
     </header>
     <div class="st-section-body">
       <div class="st-grid">
         <div class="st-field">
-          <label class="st-field-label">طول اسم البطاقة الافتراضي</label>
+          <label class="st-field-label">{{ _('طول اسم البطاقة الافتراضي') }}</label>
           <div class="st-suffix">
             <input class="hub-input" type="number" min="4" max="32" name="cards.default_username_length" value="{{ vals.get('cards.default_username_length','8') }}">
-            <span class="st-suffix-tag">خانة</span>
+            <span class="st-suffix-tag">{{ _('خانة') }}</span>
           </div>
-          <div class="help">عدد الخانات الافتراضي لاسم المستخدم عند توليد كروت جديدة. طول أكبر = أمان أعلى وكتابة أصعب على العميل.</div>
+          <div class="help">{{ _('عدد الخانات الافتراضي لاسم المستخدم عند توليد كروت جديدة. طول أكبر = أمان أعلى وكتابة أصعب على العميل.') }}</div>
           <bdi class="st-key">cards.default_username_length</bdi>
         </div>
         <div class="st-field">
-          <label class="st-field-label">طول كلمة مرور البطاقة الافتراضي</label>
+          <label class="st-field-label">{{ _('طول كلمة مرور البطاقة الافتراضي') }}</label>
           <div class="st-suffix">
             <input class="hub-input" type="number" min="4" max="32" name="cards.default_password_length" value="{{ vals.get('cards.default_password_length','6') }}">
-            <span class="st-suffix-tag">خانة</span>
+            <span class="st-suffix-tag">{{ _('خانة') }}</span>
           </div>
-          <div class="help">عدد خانات كلمة المرور الافتراضي للكروت المولّدة. يمكن تجاوزه يدويًا في صفحة توليد الكروت.</div>
+          <div class="help">{{ _('عدد خانات كلمة المرور الافتراضي للكروت المولّدة. يمكن تجاوزه يدويًا في صفحة توليد الكروت.') }}</div>
           <bdi class="st-key">cards.default_password_length</bdi>
         </div>
         {# ── منع MAC العشوائي للبطاقات — مفتاح مستقل عن المشتركين ── #}
         <div class="st-field">
-          <label class="st-field-label">منع MAC العشوائي في البطاقات
+          <label class="st-field-label">{{ _('منع MAC العشوائي في البطاقات') }}
             <span class="hub-hint" tabindex="0" data-hint="أجهزة iOS 14+ و Android 10+ تولّد عنوان MAC عشوائيًا (خاصًا) لكل شبكة حفاظًا على الخصوصية. علامته «بت الإدارة المحلية» — الخانة السداسية الثانية من أول بايت تكون 2 أو 6 أو A أو E (مثل 02:.. أو 6A:..). عند التفعيل يُرفض دخول البطاقة من جهاز بعنوان عشوائي — مهمّ لأن البطاقة تُقفل على أول MAC يستخدمها، والعنوان العشوائي يكسر هذا القفل."><i class="fa-solid fa-info"></i></span>
           </label>
           {{ toggle_switch(name="security.block_random_mac_cards",
                checked=(vals.get('security.block_random_mac_cards','0') in ['1','true','t','on','True']),
                value="1", id="set-rmac-cards") }}
           <input type="hidden" name="security.block_random_mac_cards" value="0">
-          <div class="help">مفتاح مستقل تمامًا عن المشتركين. عند التفعيل تُرفض مصادقة البطاقة إذا كان جهازها يستخدم عنوان MAC عشوائي/خاص.</div>
+          <div class="help">{{ _('مفتاح مستقل تمامًا عن المشتركين. عند التفعيل تُرفض مصادقة البطاقة إذا كان جهازها يستخدم عنوان MAC عشوائي/خاص.') }}</div>
           <bdi class="st-key">security.block_random_mac_cards</bdi>
         </div>
       </div>
@@ -644,23 +644,23 @@
   <section class="st-section st-section--notify">
     <header class="st-section-head">
       <span class="st-section-icon"><i class="fa-solid fa-bell"></i></span>
-      <span class="st-section-title">إشعارات Webhook الخارجية</span>
-      <span class="st-section-meta">إرسال أحداث النظام إلى خدمة خارجية</span>
+      <span class="st-section-title">{{ _('إشعارات Webhook الخارجية') }}</span>
+      <span class="st-section-meta">{{ _('إرسال أحداث النظام إلى خدمة خارجية') }}</span>
     </header>
     <div class="st-section-body">
       <div class="st-grid">
         <div class="st-field">
-          <label class="st-field-label">رابط الـ Webhook (اختياري)
+          <label class="st-field-label">{{ _('رابط الـ Webhook (اختياري)') }}
             <span class="hub-hint" tabindex="0" data-hint="عنوان HTTPS تستقبل عليه خدمتك أحداث النظام (مثل تنبيهات الكوتا). اتركه فارغًا لتعطيل الإرسال الخارجي."><i class="fa-solid fa-info"></i></span>
           </label>
           <input class="hub-input" type="text" name="webhook.target_url" value="{{ vals.get('webhook.target_url','') }}" placeholder="https://example.com/hooks/hoberadius" dir="ltr">
-          <div class="help">يرسل النظام إشعارات الأحداث إلى هذا الرابط. اتركه فارغًا إذا لا تستخدم تكاملًا خارجيًا.</div>
+          <div class="help">{{ _('يرسل النظام إشعارات الأحداث إلى هذا الرابط. اتركه فارغًا إذا لا تستخدم تكاملًا خارجيًا.') }}</div>
           <bdi class="st-key">webhook.target_url</bdi>
         </div>
         <div class="st-field">
-          <label class="st-field-label">السر الموقِّع للـ Webhook</label>
+          <label class="st-field-label">{{ _('السر الموقِّع للـ Webhook') }}</label>
           <input class="hub-input" type="password" name="webhook.secret" value="{{ vals.get('webhook.secret','') }}" autocomplete="new-password" dir="ltr">
-          <div class="help">مفتاح سري يوقّع به النظام كل إشعار حتى تتحقق خدمتك أن الرسالة صادرة فعلًا من نظامك وليست مزوّرة.</div>
+          <div class="help">{{ _('مفتاح سري يوقّع به النظام كل إشعار حتى تتحقق خدمتك أن الرسالة صادرة فعلًا من نظامك وليست مزوّرة.') }}</div>
           <bdi class="st-key">webhook.secret</bdi>
         </div>
       </div>
@@ -673,24 +673,24 @@
   <section class="st-section st-section--advanced">
     <header class="st-section-head">
       <span class="st-section-icon"><i class="fa-solid fa-screwdriver-wrench"></i></span>
-      <span class="st-section-title">إعدادات متقدمة — API والبنية التحتية</span>
-      <span class="st-section-meta">لا تغيّرها إلا إذا كنت تعرف أثرها</span>
+      <span class="st-section-title">{{ _('إعدادات متقدمة — API والبنية التحتية') }}</span>
+      <span class="st-section-meta">{{ _('لا تغيّرها إلا إذا كنت تعرف أثرها') }}</span>
     </header>
     <div class="st-section-body">
       <div class="st-grid">
         <div class="st-field">
-          <label class="st-field-label">حد طلبات الـ API في الدقيقة</label>
+          <label class="st-field-label">{{ _('حد طلبات الـ API في الدقيقة') }}</label>
           <div class="st-suffix">
             <input class="hub-input" type="number" min="1" name="api.rate_limit_per_minute" value="{{ vals.get('api.rate_limit_per_minute','60') }}">
-            <span class="st-suffix-tag">طلب/دقيقة</span>
+            <span class="st-suffix-tag">{{ _('طلب/دقيقة') }}</span>
           </div>
-          <div class="help">الحد الأقصى لطلبات الـ API المسموحة في الدقيقة الواحدة — يحمي الخادم من الإغراق. القيمة المعتادة 60.</div>
+          <div class="help">{{ _('الحد الأقصى لطلبات الـ API المسموحة في الدقيقة الواحدة — يحمي الخادم من الإغراق. القيمة المعتادة 60.') }}</div>
           <bdi class="st-key">api.rate_limit_per_minute</bdi>
         </div>
         <div class="st-field">
-          <label class="st-field-label">رقم راوتر MikroTik الافتراضي</label>
-          <input class="hub-input" type="number" name="mikrotik.default_router_id" value="{{ vals.get('mikrotik.default_router_id','') }}" placeholder="مثال: 1">
-          <div class="help">معرّف الراوتر الذي تختاره الشاشات تلقائيًا عند وجود أكثر من راوتر. اتركه فارغًا للاختيار اليدوي في كل مرة.</div>
+          <label class="st-field-label">{{ _('رقم راوتر MikroTik الافتراضي') }}</label>
+          <input class="hub-input" type="number" name="mikrotik.default_router_id" value="{{ vals.get('mikrotik.default_router_id','') }}" placeholder="{{ _('مثال: 1') }}">
+          <div class="help">{{ _('معرّف الراوتر الذي تختاره الشاشات تلقائيًا عند وجود أكثر من راوتر. اتركه فارغًا للاختيار اليدوي في كل مرة.') }}</div>
           <bdi class="st-key">mikrotik.default_router_id</bdi>
         </div>
         {# ── عنوان IP سيرفر الراديوس — يشغّل روابط متجر البطاقات ──
@@ -698,11 +698,11 @@
            تلقائيًا رابط بوابة مستخدمي البطاقات /portal/card
            (محفظة + شحن + شراء) فلا يُكتب أي رابط يدويًا. #}
         <div class="st-field span2">
-          <label class="st-field-label">عنوان IP سيرفر الراديوس
+          <label class="st-field-label">{{ _('عنوان IP سيرفر الراديوس') }}
             <span class="hub-hint" tabindex="0" data-hint="العنوان الذي تصل إليه أجهزة المشتركين عبر الراوتر (عادةً عنوان WireGuard/VPN مثل 10.10.0.1). يبني منه النظام تلقائيًا رابط متجر البطاقات الإلكترونية http://<العنوان>/portal/card في كل تصاميم صفحات الهوت سبوت — لا تنسَ إضافته إلى walled-garden."><i class="fa-solid fa-info"></i></span>
           </label>
-          <input class="hub-input" type="text" name="network.radius_server_ip" value="{{ vals.get('network.radius_server_ip','') }}" placeholder="مثال: 10.10.0.1" dir="ltr">
-          <div class="help">يشغّل روابط متجر البطاقات الإلكترونية في صفحات الهوت سبوت — يُضبط مرة واحدة ويُستخدم في كل التصاميم تلقائيًا.</div>
+          <input class="hub-input" type="text" name="network.radius_server_ip" value="{{ vals.get('network.radius_server_ip','') }}" placeholder="{{ _('مثال: 10.10.0.1') }}" dir="ltr">
+          <div class="help">{{ _('يشغّل روابط متجر البطاقات الإلكترونية في صفحات الهوت سبوت — يُضبط مرة واحدة ويُستخدم في كل التصاميم تلقائيًا.') }}</div>
           <bdi class="st-key">network.radius_server_ip</bdi>
         </div>
         {# ── مفتاح متجر البطاقات (App Key) ──
@@ -713,7 +713,7 @@
            تدويره يتطلب إعادة نشر store.html. ليس حقل إعداد عادي فلا
            يحمل name= (لا يُحفظ مع النموذج). #}
         <div class="st-field span2">
-          <label class="st-field-label">مفتاح متجر البطاقات (App Key)
+          <label class="st-field-label">{{ _('مفتاح متجر البطاقات (App Key)') }}
             <span class="hub-hint" tabindex="0" data-hint="مفتاح سرّي يحمله متجرك المنشور (store.html) في ترويسة X-Store-Key مع كل نداء. يرفض الخادم أي طلب لا يحمل المفتاح الصحيح — فيمنع أي طرف خارجي من استدعاء واجهة المتجر. يُولَّد تلقائيًا عند أول نشر للمتجر. ملاحظة: المفتاح مرئي في مصدر الصفحة على الراوتر فهو يصدّ الاستدعاء العشوائي لا متطفّلًا يقرأ مصدر الصفحة؛ الحماية الكاملة للعمليات تبقى عبر تسجيل الدخول + walled-garden."><i class="fa-solid fa-info"></i></span>
           </label>
           <div class="st-suffix">
@@ -721,18 +721,18 @@
             <button type="submit" class="st-suffix-tag" style="cursor:pointer;border:0;font-weight:800"
                     formaction="{{ url_for('radius.settings_rotate_store_key') }}" formmethod="post" formnovalidate
                     onclick="return confirm('توليد مفتاح جديد سيُبطل المفتاح الحالي فورًا، ولن يعمل متجرك المنشور حتى تُعيد نشر store.html بالمفتاح الجديد من مصمّم صفحة الدخول. هل تريد المتابعة؟');">
-              <i class="fa-solid fa-rotate"></i> توليد مفتاح جديد
+              <i class="fa-solid fa-rotate"></i> {{ _('توليد مفتاح جديد') }}
             </button>
           </div>
-          <div class="help">يحمي واجهة المتجر من الاستدعاء الخارجي. <b>تدوير المفتاح يتطلب إعادة نشر store.html</b> من مصمّم صفحة الدخول، وإلا توقّف المتجر المنشور.</div>
+          <div class="help">{{ _('يحمي واجهة المتجر من الاستدعاء الخارجي.') }} <b>{{ _('تدوير المفتاح يتطلب إعادة نشر store.html') }}</b> {{ _('من مصمّم صفحة الدخول، وإلا توقّف المتجر المنشور.') }}</div>
           <bdi class="st-key">network.store_api_key</bdi>
         </div>
         <div class="st-field span2">
-          <label class="st-field-label">عنوان VPS العام (لروابط الاتصال عن بُعد)
+          <label class="st-field-label">{{ _('عنوان VPS العام (لروابط الاتصال عن بُعد)') }}
             <span class="hub-hint" tabindex="0" data-hint="يُستخدم في معالج «اتصال عن بُعد» لبناء روابط Winbox / SSH / WebFig / API من خارج الشبكة عبر المنافذ 51000-51199. اتركه فارغًا للرجوع إلى متغيّر البيئة HOBERADIUS_PUBLIC_HOST."><i class="fa-solid fa-info"></i></span>
           </label>
-          <input class="hub-input" type="text" name="infra.public_host" value="{{ vals.get('infra.public_host','') }}" placeholder="مثال: vps.example.com أو 203.0.113.10" dir="ltr">
-          <div class="help">العنوان العام لخادمك — تُبنى عليه روابط الوصول للراوترات من خارج الشبكة. فارغ = الرجوع إلى إعداد البيئة الافتراضي.</div>
+          <input class="hub-input" type="text" name="infra.public_host" value="{{ vals.get('infra.public_host','') }}" placeholder="{{ _('مثال: vps.example.com أو 203.0.113.10') }}" dir="ltr">
+          <div class="help">{{ _('العنوان العام لخادمك — تُبنى عليه روابط الوصول للراوترات من خارج الشبكة. فارغ = الرجوع إلى إعداد البيئة الافتراضي.') }}</div>
           <bdi class="st-key">infra.public_host</bdi>
         </div>
       </div>
@@ -750,7 +750,7 @@
 <div class="st-savebar" id="st-savebar">
   <span class="st-save-state" id="st-save-state">
     <i class="fa-solid fa-circle-check"></i>
-    <span data-st-state-text>لا تعديلات غير محفوظة — كل القيم مطابقة لآخر حفظ.</span>
+    <span data-st-state-text>{{ _('لا تعديلات غير محفوظة — كل القيم مطابقة لآخر حفظ.') }}</span>
   </span>
   {{ hub.btn("حفظ التغييرات", icon="floppy-disk", variant="primary", type="submit") }}
   {{ hub.btn("إلغاء والعودة", variant="ghost", href=url_for('radius.dashboard')) }}

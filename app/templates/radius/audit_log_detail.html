@@ -71,12 +71,12 @@
     <a class="audit-btn audit-btn--ghost"
        href="{{ url_for('radius.audit_log_index') }}">
       <i class="fa-solid fa-arrow-right"></i>
-      الرجوع للسجل
+      {{ _('الرجوع للسجل') }}
     </a>
     <div class="audit-detail-hero__main">
       <span class="audit-kicker">
         <i class="fa-solid fa-fingerprint"></i>
-        عملية موثقة
+        {{ _('عملية موثقة') }}
       </span>
       <h2>{{ entry.action_label }}</h2>
       <code dir="ltr">{{ entry.action }}</code>
@@ -95,38 +95,38 @@
     <article class="audit-detail-card audit-detail-card--wide">
       <header class="audit-section-head">
         <div>
-          <span class="audit-section-eyebrow">ملخص سريع</span>
-          <h3>هوية العملية</h3>
+          <span class="audit-section-eyebrow">{{ _('ملخص سريع') }}</span>
+          <h3>{{ _('هوية العملية') }}</h3>
         </div>
         <span class="audit-count">#{{ entry.id }}</span>
       </header>
 
       <dl class="audit-facts" data-audit-detail-meta>
         <div>
-          <dt>الفاعل</dt>
+          <dt>{{ _('الفاعل') }}</dt>
           <dd>{{ entry.actor or "غير محدد" }}</dd>
         </div>
         <div>
-          <dt>الهدف</dt>
+          <dt>{{ _('الهدف') }}</dt>
           <dd><code dir="ltr">{{ entry.target_label }}</code></dd>
         </div>
         <div>
-          <dt>الراوتر</dt>
+          <dt>{{ _('الراوتر') }}</dt>
           <dd>{% if entry.router_id %}<code>{{ entry.router_id }}</code>{% else %}—{% endif %}</dd>
         </div>
         <div>
-          <dt>الوقت</dt>
+          <dt>{{ _('الوقت') }}</dt>
           <dd><code dir="ltr">{{ entry.created_at|dt_local }}</code></dd>
         </div>
         {% if entry.ip_address %}
         <div>
-          <dt>العنوان الشبكي</dt>
+          <dt>{{ _('العنوان الشبكي') }}</dt>
           <dd><code dir="ltr">{{ entry.ip_address }}</code></dd>
         </div>
         {% endif %}
         {% if entry.user_agent %}
         <div class="audit-facts__full">
-          <dt>المتصفح</dt>
+          <dt>{{ _('المتصفح') }}</dt>
           <dd><code dir="ltr">{{ entry.user_agent }}</code></dd>
         </div>
         {% endif %}
@@ -137,10 +137,10 @@
       <div class="audit-guide__icon">
         <i class="fa-solid fa-lock"></i>
       </div>
-      <h3>ماذا تعني هذه الصفحة؟ — الأسرار مخفية</h3>
+      <h3>{{ _('ماذا تعني هذه الصفحة؟ — الأسرار مخفية') }}</h3>
       <p>
-        كلمات المرور والمفاتيح الحساسة تُحجب عند كتابة السجل وتظهر هنا كـ
-        <code>***</code>، لذلك يمكن مراجعة العملية بدون كشف بيانات حساسة.
+        {{ _('كلمات المرور والمفاتيح الحساسة تُحجب عند كتابة السجل وتظهر هنا كـ') }}
+        <code>***</code>{{ _('، لذلك يمكن مراجعة العملية بدون كشف بيانات حساسة.') }}
       </p>
     </aside>
   </section>
@@ -149,7 +149,7 @@
   <section class="audit-error-card" data-audit-detail-error>
     <i class="fa-solid fa-circle-exclamation"></i>
     <div>
-      <strong>رسالة الخطأ</strong>
+      <strong>{{ _('رسالة الخطأ') }}</strong>
       <p>{{ entry.error_message }}</p>
     </div>
   </section>
@@ -159,8 +159,8 @@
   <section class="audit-json-card" data-audit-detail-payload>
     <header class="audit-section-head">
       <div>
-        <span class="audit-section-eyebrow">بيانات التنفيذ</span>
-        <h3>تفاصيل البيانات</h3>
+        <span class="audit-section-eyebrow">{{ _('بيانات التنفيذ') }}</span>
+        <h3>{{ _('تفاصيل البيانات') }}</h3>
       </div>
       <i class="fa-solid fa-database"></i>
     </header>
@@ -173,8 +173,8 @@
     <article class="audit-json-card" data-audit-detail-before>
       <header class="audit-section-head">
         <div>
-          <span class="audit-section-eyebrow">قبل التنفيذ</span>
-          <h3>قبل التغيير</h3>
+          <span class="audit-section-eyebrow">{{ _('قبل التنفيذ') }}</span>
+          <h3>{{ _('قبل التغيير') }}</h3>
         </div>
         <i class="fa-solid fa-clock-rotate-left"></i>
       </header>
@@ -186,8 +186,8 @@
     <article class="audit-json-card" data-audit-detail-after>
       <header class="audit-section-head">
         <div>
-          <span class="audit-section-eyebrow">بعد التنفيذ</span>
-          <h3>بعد التغيير</h3>
+          <span class="audit-section-eyebrow">{{ _('بعد التنفيذ') }}</span>
+          <h3>{{ _('بعد التغيير') }}</h3>
         </div>
         <i class="fa-solid fa-arrow-right-long"></i>
       </header>

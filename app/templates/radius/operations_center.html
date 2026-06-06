@@ -4,7 +4,7 @@
 {% block title %}مركز العمليات{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-gauge-high"></i>{% endblock %}
 {% block page_title %}مركز العمليات{% endblock %}
-{% block page_sub %}<span class="sub">نظرة سريعة على من متصل الآن وصحة الشبكة، مع أدوات معاينة آمنة بدون تنفيذ.</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('نظرة سريعة على من متصل الآن وصحة الشبكة، مع أدوات معاينة آمنة بدون تنفيذ.') }}</span>{% endblock %}
 
 {% block head_extra %}
 {# نظام الجداول الموحد: أنماط uds-table (فرز + اختيار أعمدة + ترقيم صفحات) #}
@@ -88,7 +88,7 @@
     {% if snapshot.active_sessions %}
     <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
       <table class="hub-table" data-testid="active-sessions-table">
-        <thead><tr><th>المستخدم</th><th>جهاز الشبكة</th><th>العنوان الشبكي</th><th>العنوان الفيزيائي</th></tr></thead>
+        <thead><tr><th>{{ _('المستخدم') }}</th><th>{{ _('جهاز الشبكة') }}</th><th>{{ _('العنوان الشبكي') }}</th><th>{{ _('العنوان الفيزيائي') }}</th></tr></thead>
         <tbody>
           {% for session in snapshot.active_sessions %}
             <tr>
@@ -130,7 +130,7 @@
   {% call hub.section("مؤشرات إجراءات الطوارئ", icon="shield-halved", flush=True) %}
     <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
       <table class="hub-table" data-testid="emergency-indicators">
-        <thead><tr><th>الإجراء</th><th>الحالة</th><th data-uds-nosort>السبب</th></tr></thead>
+        <thead><tr><th>{{ _('الإجراء') }}</th><th>{{ _('الحالة') }}</th><th data-uds-nosort>{{ _('السبب') }}</th></tr></thead>
         <tbody>
           {% for action in snapshot.emergency_actions %}
             <tr>

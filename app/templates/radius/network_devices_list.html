@@ -55,14 +55,14 @@
         <thead>
           <tr>
             <th class="num" style="width:50px">#</th>
-            <th>الاسم</th>
-            <th>النوع</th>
+            <th>{{ _('الاسم') }}</th>
+            <th>{{ _('النوع') }}</th>
             <th>IP</th>
-            <th>الراوتر</th>
-            <th>الموقع</th>
-            <th>الحالة</th>
-            <th>آخر فحص</th>
-            <th style="width:280px" data-uds-nosort data-uds-nocol>إجراءات</th>
+            <th>{{ _('الراوتر') }}</th>
+            <th>{{ _('الموقع') }}</th>
+            <th>{{ _('الحالة') }}</th>
+            <th>{{ _('آخر فحص') }}</th>
+            <th style="width:280px" data-uds-nosort data-uds-nocol>{{ _('إجراءات') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -73,7 +73,7 @@
               <strong>{{ d.name }}</strong>
               {% if d.is_critical %}
                 <span class="hr-chip" style="background:#FEF3C7;color:#92400E;padding:1px 7px;border-radius:999px;font-size:10px;font-weight:800;margin-inline-start:4px">
-                  مهم
+                  {{ _('مهم') }}
                 </span>
               {% endif %}
             </td>
@@ -105,11 +105,11 @@
                 </span>
               {% elif d.last_status == 'down' %}
                 <span class="hr-chip" style="background:#FEE2E2;color:#991B1B;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700">
-                  <i class="fa-solid fa-circle-xmark" style="font-size:9px"></i> غير متّصل
+                  <i class="fa-solid fa-circle-xmark" style="font-size:9px"></i> {{ _('غير متّصل') }}
                 </span>
               {% else %}
                 <span class="hr-chip" style="background:#F1F5F9;color:#64748B;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700">
-                  <i class="fa-solid fa-circle-question" style="font-size:9px"></i> غير مفحوص
+                  <i class="fa-solid fa-circle-question" style="font-size:9px"></i> {{ _('غير مفحوص') }}
                 </span>
               {% endif %}
             </td>
@@ -123,26 +123,26 @@
                 <button type="submit"
                         class="hub-btn hub-btn--ghost"
                         style="padding:4px 10px;font-size:11.5px"
-                        title="فحص الاتصال الآن">
-                  <i class="fa-solid fa-stethoscope"></i> فحص
+                        title="{{ _('فحص الاتصال الآن') }}">
+                  <i class="fa-solid fa-stethoscope"></i> {{ _('فحص') }}
                 </button>
               </form>
               <a class="hub-btn hub-btn--ghost"
                  href="{{ url_for('radius.network_device_bypass_form', device_id=d.id) }}"
                  style="padding:4px 10px;font-size:11.5px"
                  title="DHCP lease + IP-binding + address-list">
-                <i class="fa-solid fa-link"></i> تجهيز
+                <i class="fa-solid fa-link"></i> {{ _('تجهيز') }}
               </a>
               <a class="hub-btn hub-btn--ghost"
                  href="{{ url_for('radius.remote_device_access_form', device_id=d.id) }}"
                  style="padding:4px 10px;font-size:11.5px"
-                 title="جلسة وصول مؤقّتة (TTL)">
-                <i class="fa-solid fa-key"></i> فتح عن بُعد
+                 title="{{ _('جلسة وصول مؤقّتة (TTL)') }}">
+                <i class="fa-solid fa-key"></i> {{ _('فتح عن بُعد') }}
               </a>
               <a class="hub-btn hub-btn--ghost"
                  href="{{ url_for('radius.network_devices_edit', device_id=d.id) }}"
                  style="padding:4px 10px;font-size:11.5px">
-                <i class="fa-solid fa-pen-to-square"></i> تعديل
+                <i class="fa-solid fa-pen-to-square"></i> {{ _('تعديل') }}
               </a>
               <form action="{{ url_for('radius.network_devices_delete', device_id=d.id) }}"
                     method="post" style="display:inline"
@@ -151,7 +151,7 @@
                 <button type="submit"
                         class="hub-btn hub-btn--danger"
                         style="padding:4px 10px;font-size:11.5px">
-                  <i class="fa-solid fa-trash"></i> حذف
+                  <i class="fa-solid fa-trash"></i> {{ _('حذف') }}
                 </button>
               </form>
             </td>

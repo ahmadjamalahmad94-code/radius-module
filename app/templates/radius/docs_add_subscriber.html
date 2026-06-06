@@ -290,14 +290,14 @@
 <div class="dg-layout">
 
   {# ───── الفهرس الجانبي اللاصق ───── #}
-  <nav class="dg-toc dg-noprint" aria-label="فهرس الدليل">
-    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> فهرس الخطوات</div>
-    <a href="#dg-s1" data-dg-toc><span class="n">1</span> افتح صفحة الإضافة</a>
-    <a href="#dg-s2" data-dg-toc><span class="n">2</span> اسم الدخول وكلمة المرور</a>
-    <a href="#dg-s3" data-dg-toc><span class="n">3</span> نوع الخدمة</a>
-    <a href="#dg-s4" data-dg-toc><span class="n">4</span> الباقة والمدير</a>
-    <a href="#dg-s5" data-dg-toc><span class="n">5</span> البيانات الإضافية</a>
-    <a href="#dg-s6" data-dg-toc><span class="n">6</span> الحفظ وما بعده</a>
+  <nav class="dg-toc dg-noprint" aria-label="{{ _('فهرس الدليل') }}">
+    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> {{ _('فهرس الخطوات') }}</div>
+    <a href="#dg-s1" data-dg-toc><span class="n">1</span> {{ _('افتح صفحة الإضافة') }}</a>
+    <a href="#dg-s2" data-dg-toc><span class="n">2</span> {{ _('اسم الدخول وكلمة المرور') }}</a>
+    <a href="#dg-s3" data-dg-toc><span class="n">3</span> {{ _('نوع الخدمة') }}</a>
+    <a href="#dg-s4" data-dg-toc><span class="n">4</span> {{ _('الباقة والمدير') }}</a>
+    <a href="#dg-s5" data-dg-toc><span class="n">5</span> {{ _('البيانات الإضافية') }}</a>
+    <a href="#dg-s6" data-dg-toc><span class="n">6</span> {{ _('الحفظ وما بعده') }}</a>
   </nav>
 
   {# ───── عمود المحتوى ───── #}
@@ -306,7 +306,7 @@
     <div class="dg-lead">
       <span class="ic"><i class="fa-solid fa-lightbulb"></i></span>
       <div>
-        <h3>قبل ما نبدأ — شو يعني «مشترك»؟</h3>
+        <h3>{{ _('قبل ما نبدأ — شو يعني «مشترك»؟') }}</h3>
         <p>
           المشترك هو الزبون اللي بيدخل على الإنترنت عندك باسم وكلمة مرور (هوت سبوت أو برودباند).
           في هذا الدليل رح نضيف مشتركًا جديدًا من الصفر: حقلين إجباريين فقط، والباقي اختياري
@@ -319,26 +319,26 @@
     <section class="dg-step" id="dg-s1">
       <div class="dg-badge">1</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-door-open"></i> افتح صفحة «إضافة مشترك»</h2>
+        <h2><i class="fa-solid fa-door-open"></i> {{ _('افتح صفحة «إضافة مشترك»') }}</h2>
         <p>
-          من القائمة الجانبية افتح قسم <strong>«المشتركون»</strong>، ثم اضغط على
-          <strong>«إضافة مشترك»</strong>. رح تفتح لك صفحة النموذج مقسّمة لأقسام واضحة،
+          {{ _('من القائمة الجانبية افتح قسم') }} <strong>{{ _('«المشتركون»') }}</strong>{{ _('، ثم اضغط على') }}
+          <strong>{{ _('«إضافة مشترك»') }}</strong>. رح تفتح لك صفحة النموذج مقسّمة لأقسام واضحة،
           وفيها فهرس جانبي اسمه «أقسام النموذج» يساعدك تتنقّل.
         </p>
 
         <div class="dg-sidemock" aria-hidden="true">
-          <div class="sec"><i class="fa-solid fa-users"></i> المشتركون <i class="fa-solid fa-chevron-down cv"></i></div>
-          <div class="sub">نظرة عامة</div>
-          <div class="sub">المشتركين 360</div>
-          <div class="sub on">إضافة مشترك</div>
-          <div class="sub">مجموعات المشتركين</div>
-          <div class="sub">المشتركون المتصلون</div>
+          <div class="sec"><i class="fa-solid fa-users"></i> {{ _('المشتركون') }} <i class="fa-solid fa-chevron-down cv"></i></div>
+          <div class="sub">{{ _('نظرة عامة') }}</div>
+          <div class="sub">{{ _('المشتركين 360') }}</div>
+          <div class="sub on">{{ _('إضافة مشترك') }}</div>
+          <div class="sub">{{ _('مجموعات المشتركين') }}</div>
+          <div class="sub">{{ _('المشتركون المتصلون') }}</div>
         </div>
-        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> هكذا تبدو القائمة — اضغط البند المظلّل بالبنفسجي.</div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> {{ _('هكذا تبدو القائمة — اضغط البند المظلّل بالبنفسجي.') }}</div>
 
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>نصيحة:</b> ما يلزمك تعبّي كل الأقسام. القسم الأول «حساب الإنترنت» هو المهم —
+          <span><b>{{ _('نصيحة:') }}</b> ما يلزمك تعبّي كل الأقسام. القسم الأول «حساب الإنترنت» هو المهم —
           الباقي (السرعة، الحصة، الشبكة، البرودباند) اختياري للتخصيص.</span>
         </div>
       </div>
@@ -348,46 +348,46 @@
     <section class="dg-step" id="dg-s2">
       <div class="dg-badge">2</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-key"></i> عبّي اسم الدخول وكلمة المرور</h2>
+        <h2><i class="fa-solid fa-key"></i> {{ _('عبّي اسم الدخول وكلمة المرور') }}</h2>
         <p>
-          في قسم <strong>«حساب الإنترنت»</strong> أول حقلين هما الإجباريان الوحيدان
+          {{ _('في قسم') }} <strong>{{ _('«حساب الإنترنت»') }}</strong> أول حقلين هما الإجباريان الوحيدان
           (المعلَّمان بنجمة حمراء <span style="color:#dc2626;font-weight:900">*</span>):
         </p>
         <ul>
-          <li><strong>اسم الدخول:</strong> الاسم الذي يكتبه المشترك ليدخل على الإنترنت — مثل <span class="dg-kbd">ahmad2026</span>.</li>
-          <li><strong>كلمة المرور:</strong> تستخدمها أجهزة الشبكة للتحقق من الحساب. زر العين بجانبها يُظهرها لك.</li>
+          <li><strong>{{ _('اسم الدخول:') }}</strong> {{ _('الاسم الذي يكتبه المشترك ليدخل على الإنترنت — مثل') }} <span class="dg-kbd">ahmad2026</span>.</li>
+          <li><strong>{{ _('كلمة المرور:') }}</strong> {{ _('تستخدمها أجهزة الشبكة للتحقق من الحساب. زر العين بجانبها يُظهرها لك.') }}</li>
         </ul>
 
         <div class="dg-mock" aria-hidden="true">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">إضافة مشترك › حساب الإنترنت</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('إضافة مشترك › حساب الإنترنت') }}</span></div>
           <div class="dg-mock-body">
-            <div class="dg-mock-sechead"><span class="ic"><i class="fa-solid fa-wifi"></i></span> حساب الإنترنت</div>
+            <div class="dg-mock-sechead"><span class="ic"><i class="fa-solid fa-wifi"></i></span> {{ _('حساب الإنترنت') }}</div>
             <div class="dg-mock-grid2">
               <div class="dg-mf">
-                <label>اسم الدخول <span class="req">*</span></label>
+                <label>{{ _('اسم الدخول') }} <span class="req">*</span></label>
                 <div class="dg-mf-input hl">ahmad2026</div>
-                <div class="dg-mf-help">الاسم الذي يستخدمه المشترك لتسجيل الدخول.</div>
+                <div class="dg-mf-help">{{ _('الاسم الذي يستخدمه المشترك لتسجيل الدخول.') }}</div>
               </div>
               <div class="dg-mf">
-                <label>كلمة المرور <span class="req">*</span></label>
+                <label>{{ _('كلمة المرور') }} <span class="req">*</span></label>
                 <div class="dg-mf-input hl">••••••••&nbsp;&nbsp;<i class="fa-solid fa-eye" style="color:#a78bfa"></i></div>
-                <div class="dg-mf-help">اضغط على العين لإظهارها أو على أيقونة النسخ لتعطيها للمشترك.</div>
+                <div class="dg-mf-help">{{ _('اضغط على العين لإظهارها أو على أيقونة النسخ لتعطيها للمشترك.') }}</div>
               </div>
             </div>
             <div class="dg-mock-grid2">
               <div class="dg-mf">
-                <label>الحالة</label>
-                <div class="dg-mf-select"><div class="dg-mf-input">مفعَّل</div></div>
-                <div class="dg-mf-help">عند التعطيل لن يستطيع المشترك الدخول.</div>
+                <label>{{ _('الحالة') }}</label>
+                <div class="dg-mf-select"><div class="dg-mf-input">{{ _('مفعَّل') }}</div></div>
+                <div class="dg-mf-help">{{ _('عند التعطيل لن يستطيع المشترك الدخول.') }}</div>
               </div>
               <div class="dg-mf">
-                <label>تجديد تلقائي</label>
+                <label>{{ _('تجديد تلقائي') }}</label>
                 <div style="display:flex;align-items:center;gap:8px;padding-top:3px">
                   <span style="position:relative;width:36px;height:20px;background:#e2e8f0;border-radius:99px;flex:none">
                     <span style="position:absolute;top:2.5px;inset-inline-start:3px;width:15px;height:15px;background:#fff;border-radius:50%;box-shadow:0 1px 2px rgba(0,0,0,.2)"></span></span>
-                  <span style="font-size:10px;font-weight:800;color:#64748b">معطَّل</span>
+                  <span style="font-size:10px;font-weight:800;color:#64748b">{{ _('معطَّل') }}</span>
                 </div>
-                <div class="dg-mf-help">يجدد الحساب تلقائيًا عند الانتهاء.</div>
+                <div class="dg-mf-help">{{ _('يجدد الحساب تلقائيًا عند الانتهاء.') }}</div>
               </div>
             </div>
           </div>
@@ -395,7 +395,7 @@
 
         <div class="dg-warn">
           <span class="ic">⚠️</span>
-          <span><b>انتبه:</b> اسم الدخول <b>لا يمكن تغييره بعد الحفظ</b> — اختره صح من أول مرة.
+          <span><b>{{ _('انتبه:') }}</b> {{ _('اسم الدخول') }} <b>{{ _('لا يمكن تغييره بعد الحفظ') }}</b> — اختره صح من أول مرة.
           الحالة اتركها «مفعَّل» حتى يقدر المشترك يدخل فورًا.</span>
         </div>
       </div>
@@ -405,38 +405,38 @@
     <section class="dg-step" id="dg-s3">
       <div class="dg-badge">3</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-toggle-on"></i> اختر نوع الخدمة</h2>
+        <h2><i class="fa-solid fa-toggle-on"></i> {{ _('اختر نوع الخدمة') }}</h2>
         <p>
           تحت الحقول رح تشوف بطاقتين كبيرتين — اضغط على اللي تناسب طريقة اتصال المشترك
           (وتقدر تختار الاثنتين معًا):
         </p>
         <ul>
-          <li><strong>هوت سبوت:</strong> دخول عبر صفحة Captive Portal — مناسب لكروت الواي فاي والزبائن المؤقتين.</li>
-          <li><strong>برودباند:</strong> اشتراك منزلي باسم وكلمة سرّ (PPPoE) — مناسب للزبائن الثابتين.</li>
+          <li><strong>{{ _('هوت سبوت:') }}</strong> {{ _('دخول عبر صفحة Captive Portal — مناسب لكروت الواي فاي والزبائن المؤقتين.') }}</li>
+          <li><strong>{{ _('برودباند:') }}</strong> {{ _('اشتراك منزلي باسم وكلمة سرّ (PPPoE) — مناسب للزبائن الثابتين.') }}</li>
         </ul>
 
         <div class="dg-mock" aria-hidden="true">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">إضافة مشترك › نوع الخدمة</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('إضافة مشترك › نوع الخدمة') }}</span></div>
           <div class="dg-mock-body">
             <div class="dg-svc">
               <div class="dg-svc-card on">
                 <span class="ic"><i class="fa-solid fa-wifi"></i></span>
-                <span><span class="t">هوت سبوت</span><div class="d">دخول عبر صفحة Captive Portal</div></span>
+                <span><span class="t">{{ _('هوت سبوت') }}</span><div class="d">{{ _('دخول عبر صفحة Captive Portal') }}</div></span>
                 <span class="ck"><i class="fa-solid fa-check"></i></span>
               </div>
               <div class="dg-svc-card">
                 <span class="ic"><i class="fa-solid fa-plug"></i></span>
-                <span><span class="t">برودباند</span><div class="d">اشتراك منزلي باسم وكلمة سرّ</div></span>
+                <span><span class="t">{{ _('برودباند') }}</span><div class="d">{{ _('اشتراك منزلي باسم وكلمة سرّ') }}</div></span>
                 <span class="ck"></span>
               </div>
             </div>
           </div>
         </div>
-        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> البطاقة المختارة تتلوّن بالبنفسجي مع علامة صح.</div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> {{ _('البطاقة المختارة تتلوّن بالبنفسجي مع علامة صح.') }}</div>
 
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>نصيحة:</b> مش متأكد؟ ابدأ بـ«هوت سبوت» — أغلب مزوّدي الخدمة يبدؤون فيها،
+          <span><b>{{ _('نصيحة:') }}</b> مش متأكد؟ ابدأ بـ«هوت سبوت» — أغلب مزوّدي الخدمة يبدؤون فيها،
           وتقدر تضيف «برودباند» لنفس المشترك لاحقًا بدون إعادة إنشاء.</span>
         </div>
       </div>
@@ -446,41 +446,41 @@
     <section class="dg-step" id="dg-s4">
       <div class="dg-badge">4</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-tags"></i> اختر الباقة (وحدّد المدير إن أردت)</h2>
+        <h2><i class="fa-solid fa-tags"></i> {{ _('اختر الباقة (وحدّد المدير إن أردت)') }}</h2>
         <p>
-          هون القرار الأهم: حقل <strong>«باقة الخدمة»</strong>. الباقة هي اللي تحدد
-          <strong>السرعة والحصة ومدة الاشتراك والسعر</strong> — يعني تاريخ انتهاء المشترك
+          {{ _('هون القرار الأهم: حقل') }} <strong>{{ _('«باقة الخدمة»') }}</strong>{{ _('. الباقة هي اللي تحدد') }}
+          <strong>{{ _('السرعة والحصة ومدة الاشتراك والسعر') }}</strong> — يعني تاريخ انتهاء المشترك
           يُحسب تلقائيًا من مدة الباقة، ما تحتاج تكتبه بيدك.
         </p>
         <ul>
-          <li><strong>المدير المسؤول:</strong> اختياري — اختر المدير أو الموزع الذي يتابع هذا الحساب.</li>
-          <li><strong>المجموعة:</strong> اختياري — لتصنيف المشتركين (حي، برج، نوع زبون...).</li>
-          <li><strong>السعر المخصّص:</strong> اتركه فارغًا ليُعتمد سعر الباقة؛ عبّيه فقط إذا اتفقت مع هذا المشترك على سعر مختلف.</li>
+          <li><strong>{{ _('المدير المسؤول:') }}</strong> {{ _('اختياري — اختر المدير أو الموزع الذي يتابع هذا الحساب.') }}</li>
+          <li><strong>{{ _('المجموعة:') }}</strong> {{ _('اختياري — لتصنيف المشتركين (حي، برج، نوع زبون...).') }}</li>
+          <li><strong>{{ _('السعر المخصّص:') }}</strong> {{ _('اتركه فارغًا ليُعتمد سعر الباقة؛ عبّيه فقط إذا اتفقت مع هذا المشترك على سعر مختلف.') }}</li>
         </ul>
 
         <div class="dg-mock" aria-hidden="true">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">إضافة مشترك › الباقة والإدارة</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('إضافة مشترك › الباقة والإدارة') }}</span></div>
           <div class="dg-mock-body">
             <div class="dg-mock-grid2">
               <div class="dg-mf">
-                <label>باقة الخدمة</label>
-                <div class="dg-mf-select"><div class="dg-mf-input hl">باقة 10 ميجا — شهري</div></div>
-                <div class="dg-mf-help">تحدد السرعة والحصة ومدة الاستخدام.</div>
+                <label>{{ _('باقة الخدمة') }}</label>
+                <div class="dg-mf-select"><div class="dg-mf-input hl">{{ _('باقة 10 ميجا — شهري') }}</div></div>
+                <div class="dg-mf-help">{{ _('تحدد السرعة والحصة ومدة الاستخدام.') }}</div>
               </div>
               <div class="dg-mf">
-                <label>المدير المسؤول</label>
-                <div class="dg-mf-select"><div class="dg-mf-input">— بدون —</div></div>
-                <div class="dg-mf-help">اختر المدير الذي يتابع هذا الحساب.</div>
+                <label>{{ _('المدير المسؤول') }}</label>
+                <div class="dg-mf-select"><div class="dg-mf-input">{{ _('— بدون —') }}</div></div>
+                <div class="dg-mf-help">{{ _('اختر المدير الذي يتابع هذا الحساب.') }}</div>
               </div>
             </div>
             <div class="dg-mock-grid2">
               <div class="dg-mf">
-                <label>المجموعة</label>
-                <div class="dg-mf-select"><div class="dg-mf-input">— بدون —</div></div>
+                <label>{{ _('المجموعة') }}</label>
+                <div class="dg-mf-select"><div class="dg-mf-input">{{ _('— بدون —') }}</div></div>
               </div>
               <div class="dg-mf">
-                <label>السعر المخصّص لهذا المشترك</label>
-                <div class="dg-mf-input ph">اتركه فارغًا لاستخدام سعر العرض</div>
+                <label>{{ _('السعر المخصّص لهذا المشترك') }}</label>
+                <div class="dg-mf-input ph">{{ _('اتركه فارغًا لاستخدام سعر العرض') }}</div>
               </div>
             </div>
           </div>
@@ -488,8 +488,8 @@
 
         <div class="dg-warn">
           <span class="ic">⚠️</span>
-          <span><b>انتبه:</b> إذا تركت الباقة على «— بدون —» رح ينحفظ المشترك لكن بلا سرعة ولا
-          مدة محددة. جهّز باقاتك أولًا من <b>العروض والسرعات ← إضافة عرض</b>، بعدين أضف المشتركين.</span>
+          <span><b>{{ _('انتبه:') }}</b> إذا تركت الباقة على «— بدون —» رح ينحفظ المشترك لكن بلا سرعة ولا
+          مدة محددة. جهّز باقاتك أولًا من <b>{{ _('العروض والسرعات ← إضافة عرض') }}</b>{{ _('، بعدين أضف المشتركين.') }}</span>
         </div>
       </div>
     </section>
@@ -498,22 +498,22 @@
     <section class="dg-step" id="dg-s5">
       <div class="dg-badge">5</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-id-card"></i> البيانات الإضافية — كلها اختيارية</h2>
+        <h2><i class="fa-solid fa-id-card"></i> {{ _('البيانات الإضافية — كلها اختيارية') }}</h2>
         <p>
-          باقي أقسام النموذج تخصيصات تعبّيها وقت الحاجة فقط. أكثرها فائدة قسم
-          <strong>«المعلومات الشخصية»</strong>: اكتب اسم المشترك ورقم <strong>الجوال</strong> —
+          {{ _('باقي أقسام النموذج تخصيصات تعبّيها وقت الحاجة فقط. أكثرها فائدة قسم') }}
+          <strong>{{ _('«المعلومات الشخصية»') }}</strong>{{ _(': اكتب اسم المشترك ورقم') }} <strong>{{ _('الجوال') }}</strong> —
           الجوال تحديدًا مهم لأنه يُستخدم لاحقًا في رسائل الواتساب والتنبيهات.
         </p>
         <ul>
-          <li><strong>المعلومات الشخصية:</strong> الاسم، الجوال، البريد، المدينة، ملاحظات.</li>
-          <li><strong>السرعة:</strong> سرعة مخصصة أو مؤقتة تتجاوز سرعة الباقة (اتركها 0 = قيمة الباقة).</li>
-          <li><strong>الحصة والوقت:</strong> كوتا تنزيل/رفع وحدود وقت الاتصال.</li>
-          <li><strong>الشبكة:</strong> قفل ماك أدرس، IP ثابت، عدد الأجهزة المسموحة.</li>
-          <li><strong>البرودباند:</strong> اسم دخول وكلمة مرور PPPoE منفصلان (إن اخترت خدمة البرودباند).</li>
+          <li><strong>{{ _('المعلومات الشخصية:') }}</strong> {{ _('الاسم، الجوال، البريد، المدينة، ملاحظات.') }}</li>
+          <li><strong>{{ _('السرعة:') }}</strong> {{ _('سرعة مخصصة أو مؤقتة تتجاوز سرعة الباقة (اتركها 0 = قيمة الباقة).') }}</li>
+          <li><strong>{{ _('الحصة والوقت:') }}</strong> {{ _('كوتا تنزيل/رفع وحدود وقت الاتصال.') }}</li>
+          <li><strong>{{ _('الشبكة:') }}</strong> {{ _('قفل ماك أدرس، IP ثابت، عدد الأجهزة المسموحة.') }}</li>
+          <li><strong>{{ _('البرودباند:') }}</strong> {{ _('اسم دخول وكلمة مرور PPPoE منفصلان (إن اخترت خدمة البرودباند).') }}</li>
         </ul>
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>نصيحة:</b> القاعدة الذهبية في كل حقول السرعة والحصة: <b>0 أو فارغ = استخدم قيمة الباقة</b>.
+          <span><b>{{ _('نصيحة:') }}</b> {{ _('القاعدة الذهبية في كل حقول السرعة والحصة:') }} <b>{{ _('0 أو فارغ = استخدم قيمة الباقة') }}</b>.
           لا تعبّي رقمًا إلا إذا كنت تريد فعلًا تجاوز ما تحدده الباقة لهذا المشترك بالذات.</span>
         </div>
       </div>
@@ -523,47 +523,47 @@
     <section class="dg-step" id="dg-s6">
       <div class="dg-badge">6</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-floppy-disk"></i> احفظ — وشوف وين راح المشترك</h2>
+        <h2><i class="fa-solid fa-floppy-disk"></i> {{ _('احفظ — وشوف وين راح المشترك') }}</h2>
         <p>
-          انزل لآخر الصفحة واضغط زر <strong>«حفظ المشترك»</strong> البنفسجي.
+          {{ _('انزل لآخر الصفحة واضغط زر') }} <strong>{{ _('«حفظ المشترك»') }}</strong> {{ _('البنفسجي.') }}
         </p>
 
         <div class="dg-mock" aria-hidden="true" style="max-width:420px">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">إضافة مشترك › أسفل الصفحة</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('إضافة مشترك › أسفل الصفحة') }}</span></div>
           <div class="dg-mock-body">
             <div class="dg-mock-actions">
-              <span class="dg-mock-btn ghost">إلغاء</span>
-              <span class="dg-mock-btn primary"><i class="fa-solid fa-floppy-disk"></i> حفظ المشترك</span>
+              <span class="dg-mock-btn ghost">{{ _('إلغاء') }}</span>
+              <span class="dg-mock-btn primary"><i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ المشترك') }}</span>
             </div>
           </div>
         </div>
 
-        <p style="margin-top:13px">بعد الحفظ يصير ثلاث أشياء تلقائيًا:</p>
+        <p style="margin-top:13px">{{ _('بعد الحفظ يصير ثلاث أشياء تلقائيًا:') }}</p>
         <ul>
-          <li>تظهر رسالة نجاح خضراء: <strong>«تم إنشاء المستخدم»</strong>.</li>
-          <li>ينقلك النظام مباشرة إلى <strong>قائمة المشتركين</strong> وفيها المشترك الجديد بحالة «مفعَّل».</li>
-          <li>يُحسب <strong>تاريخ الانتهاء</strong> من مدة الباقة، ويصير المشترك جاهزًا للدخول فورًا باسمه وكلمة مروره.</li>
+          <li>{{ _('تظهر رسالة نجاح خضراء:') }} <strong>{{ _('«تم إنشاء المستخدم»') }}</strong>.</li>
+          <li>{{ _('ينقلك النظام مباشرة إلى') }} <strong>{{ _('قائمة المشتركين') }}</strong> {{ _('وفيها المشترك الجديد بحالة «مفعَّل».') }}</li>
+          <li>{{ _('يُحسب') }} <strong>{{ _('تاريخ الانتهاء') }}</strong> {{ _('من مدة الباقة، ويصير المشترك جاهزًا للدخول فورًا باسمه وكلمة مروره.') }}</li>
         </ul>
 
         <div class="dg-flash" aria-hidden="true">
-          <i class="fa-solid fa-circle-check"></i> تم إنشاء المستخدم «ahmad2026».
+          <i class="fa-solid fa-circle-check"></i> {{ _('تم إنشاء المستخدم «ahmad2026».') }}
         </div>
 
         <div class="dg-rowmock" aria-hidden="true">
-          <div class="hd"><span>اسم الدخول</span><span>الباقة</span><span>الحالة</span><span>الانتهاء</span></div>
+          <div class="hd"><span>{{ _('اسم الدخول') }}</span><span>{{ _('الباقة') }}</span><span>{{ _('الحالة') }}</span><span>{{ _('الانتهاء') }}</span></div>
           <div class="rw new">
             <span style="font-weight:900;color:#241e4e">ahmad2026</span>
-            <span>باقة 10 ميجا</span>
-            <span><span class="dg-pill"><span class="dot"></span> مفعَّل</span></span>
-            <span>بعد 30 يومًا</span>
+            <span>{{ _('باقة 10 ميجا') }}</span>
+            <span><span class="dg-pill"><span class="dot"></span> {{ _('مفعَّل') }}</span></span>
+            <span>{{ _('بعد 30 يومًا') }}</span>
           </div>
-          <div class="rw"><span>sara_net</span><span>باقة 20 ميجا</span><span><span class="dg-pill"><span class="dot"></span> مفعَّل</span></span><span>بعد 12 يومًا</span></div>
+          <div class="rw"><span>sara_net</span><span>{{ _('باقة 20 ميجا') }}</span><span><span class="dg-pill"><span class="dot"></span> {{ _('مفعَّل') }}</span></span><span>{{ _('بعد 12 يومًا') }}</span></div>
         </div>
-        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> المشترك الجديد يظهر أعلى القائمة — اضغط على اسمه لفتح ملفه الكامل (360°).</div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> {{ _('المشترك الجديد يظهر أعلى القائمة — اضغط على اسمه لفتح ملفه الكامل (360°).') }}</div>
 
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>وبعدين؟</b> من ملف المشترك تقدر تمدّد الاشتراك، تغيّر الباقة، ترسل له رسالة،
+          <span><b>{{ _('وبعدين؟') }}</b> من ملف المشترك تقدر تمدّد الاشتراك، تغيّر الباقة، ترسل له رسالة،
           أو تشوف جلساته واستهلاكه — كل العمليات اليومية من مكان واحد.</span>
         </div>
       </div>

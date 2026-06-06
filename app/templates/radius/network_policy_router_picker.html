@@ -18,7 +18,7 @@
 {% block page_icon %}<i class="fa-solid fa-shield-halved"></i>{% endblock %}
 {% block page_title %}سياسات الشبكة{% endblock %}
 {% block page_sub %}
-  <span class="sub">اختر راوتراً لإدارة سياساته</span>
+  <span class="sub">{{ _('اختر راوتراً لإدارة سياساته') }}</span>
 {% endblock %}
 
 {% block head_extra %}
@@ -83,12 +83,12 @@
       <table class="hub-table">
         <thead>
           <tr>
-            <th>الراوتر</th>
-            <th>العنوان</th>
+            <th>{{ _('الراوتر') }}</th>
+            <th>{{ _('العنوان') }}</th>
             {% for s in services %}
               <th class="num">{{ s.label_ar }}</th>
             {% endfor %}
-            <th style="width:180px" data-uds-nosort data-uds-nocol>إجراءات</th>
+            <th style="width:180px" data-uds-nosort data-uds-nocol>{{ _('إجراءات') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -111,7 +111,7 @@
             <td>
               <a class="hub-btn hub-btn--primary hub-btn--sm"
                  href="{{ url_for('radius.npc_router_landing', nas_id=r.id) }}">
-                <i class="fa-solid fa-shield-halved"></i> إدارة السياسات
+                <i class="fa-solid fa-shield-halved"></i> {{ _('إدارة السياسات') }}
               </a>
             </td>
           </tr>

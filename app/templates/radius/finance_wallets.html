@@ -4,7 +4,7 @@
 {% block title %}المحافظ المالية — Hobe Hub{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-wallet"></i>{% endblock %}
 {% block page_title %}الخزائن والمحافظ{% endblock %}
-{% block page_sub %}<span class="sub">أرصدة قابلة للتتبع مع سجل حركات حديث</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('أرصدة قابلة للتتبع مع سجل حركات حديث') }}</span>{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
@@ -119,11 +119,11 @@
       <thead>
         <tr>
           <th>#</th>
-          <th>المالك</th>
-          <th>الرصيد</th>
-          <th>الحالة</th>
-          <th>آخر الحركات</th>
-          <th>إجراء</th>
+          <th>{{ _('المالك') }}</th>
+          <th>{{ _('الرصيد') }}</th>
+          <th>{{ _('الحالة') }}</th>
+          <th>{{ _('آخر الحركات') }}</th>
+          <th>{{ _('إجراء') }}</th>
         </tr>
       </thead>
       <tbody>
@@ -138,7 +138,7 @@
             {% for tx in tx_by_wallet.get(wallet.id, []) %}
               <div style="font-size:12px">{{ tx_label(tx.transaction_type) }} — {{ tx.amount|money }} — {{ tx.created_at|dt_local }}</div>
             {% else %}
-              <span class="muted">لا توجد حركات بعد.</span>
+              <span class="muted">{{ _('لا توجد حركات بعد.') }}</span>
             {% endfor %}
           </td>
           <td>
@@ -151,16 +151,16 @@
                   data-debit-url="{{ url_for('radius.business_finance_wallet_debit', wallet_id=wallet.id) }}">
               <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
               <span class="fw-act-group">
-                <select class="hub-select" name="wallet_action" aria-label="نوع الحركة">
-                  <option value="credit" {% if not can_wallet_credit %}disabled{% endif %}>شحن</option>
-                  <option value="debit" {% if not can_wallet_debit %}disabled{% endif %}>خصم</option>
+                <select class="hub-select" name="wallet_action" aria-label="{{ _('نوع الحركة') }}">
+                  <option value="credit" {% if not can_wallet_credit %}disabled{% endif %}>{{ _('شحن') }}</option>
+                  <option value="debit" {% if not can_wallet_debit %}disabled{% endif %}>{{ _('خصم') }}</option>
                 </select>
                 <input class="hub-input" name="amount" type="number" min="0" step="0.01" inputmode="decimal"
-                       placeholder="المبلغ" aria-label="المبلغ"
+                       placeholder="{{ _('المبلغ') }}" aria-label="{{ _('المبلغ') }}"
                        {% if not can_wallet_credit and not can_wallet_debit %}disabled{% endif %}>
               </span>
               <button class="hub-btn hub-btn--secondary" type="submit"
-                      {% if not can_wallet_credit and not can_wallet_debit %}disabled{% endif %}>تنفيذ</button>
+                      {% if not can_wallet_credit and not can_wallet_debit %}disabled{% endif %}>{{ _('تنفيذ') }}</button>
             </form>
           </td>
         </tr>

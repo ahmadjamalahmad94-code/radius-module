@@ -48,7 +48,7 @@
             border-radius:var(--hub-r-lg);border:1px solid var(--hub-blue-soft);
             background:var(--hub-blue-soft);color:var(--hub-blue-ink)">
   <i class="fa-solid fa-circle-info"></i>
-  هذه التقارير مبنية من السجل المالي. القيود العكسية والتصحيحات لا تحذف الأصل، لذلك قد تظهر القيم المعدّلة حسب القيد والـ void.
+  {{ _('هذه التقارير مبنية من السجل المالي. القيود العكسية والتصحيحات لا تحذف الأصل، لذلك قد تظهر القيم المعدّلة حسب القيد والـ void.') }}
 </div>
 
 {# نموذج حفظ اللقطة منفصل عن الهيرو لأنه POST ولا يصح تداخل النماذج؛
@@ -57,23 +57,23 @@
   <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
   <input type="hidden" name="report_type" value="{{ report_type }}">
   <div class="small muted grow">
-    اللقطة تحفظ نتيجة التقرير الحالية كما هي، حتى تبقى قابلة للمراجعة بعد أي تصحيح أو قيد عكسي.
+    {{ _('اللقطة تحفظ نتيجة التقرير الحالية كما هي، حتى تبقى قابلة للمراجعة بعد أي تصحيح أو قيد عكسي.') }}
   </div>
   {{ hub.btn("حفظ لقطة ثابتة", icon="lock", variant="secondary", type="submit", size="sm") }}
 </form>
 
 {% if snapshots %}
   {% call hub.section("آخر اللقطات الثابتة", icon="box-archive", meta=snapshots|length|string + " لقطة", flush=True) %}
-    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" data-uds-export-title="اللقطات الثابتة" style="border:none;border-radius:0">
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" data-uds-export-title="{{ _('اللقطات الثابتة') }}" style="border:none;border-radius:0">
       <table class="hub-table rep-table">
         <thead>
           <tr>
             <th>#</th>
-            <th>النوع</th>
-            <th>المصدر</th>
-            <th>عدد الصفوف</th>
-            <th>أنشئت بواسطة</th>
-            <th>الوقت</th>
+            <th>{{ _('النوع') }}</th>
+            <th>{{ _('المصدر') }}</th>
+            <th>{{ _('عدد الصفوف') }}</th>
+            <th>{{ _('أنشئت بواسطة') }}</th>
+            <th>{{ _('الوقت') }}</th>
           </tr>
         </thead>
         <tbody>

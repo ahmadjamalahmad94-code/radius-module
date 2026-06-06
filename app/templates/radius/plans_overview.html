@@ -22,7 +22,7 @@
 {% block title %}نظرة عامة — الباقات{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-chart-pie"></i>{% endblock %}
 {% block page_title %}نظرة عامة — الباقات{% endblock %}
-{% block page_sub %}<span class="sub"><bdi dir="ltr">{{ total_plans or 0 }}</bdi> باقة · <bdi dir="ltr">{{ enabled_plans or 0 }}</bdi> مفعَّلة</span>{% endblock %}
+{% block page_sub %}<span class="sub"><bdi dir="ltr">{{ total_plans or 0 }}</bdi> {{ _('باقة ·') }} <bdi dir="ltr">{{ enabled_plans or 0 }}</bdi> {{ _('مفعَّلة') }}</span>{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
@@ -137,12 +137,12 @@
         <span class="po-lane-icon"><i class="fa-solid fa-{{ TYPE_IC.get(r.plan_type, 'tag') }}"></i></span>
         <span class="po-lane-title">{{ TYPE_AR.get(r.plan_type, r.plan_type or '—') }}</span>
       </div>
-      <div class="po-lane-value">{{ r.plans_count }} <span style="font-size:12px;font-weight:700;color:var(--hub-text-mute)">باقة</span></div>
-      <div class="po-lane-sub"><bdi dir="ltr">{{ r.subscribers_count }}</bdi> مشترك على هذا النوع</div>
-      <div class="po-share-track" role="img" aria-label="حصة النوع من الباقات">
+      <div class="po-lane-value">{{ r.plans_count }} <span style="font-size:12px;font-weight:700;color:var(--hub-text-mute)">{{ _('باقة') }}</span></div>
+      <div class="po-lane-sub"><bdi dir="ltr">{{ r.subscribers_count }}</bdi> {{ _('مشترك على هذا النوع') }}</div>
+      <div class="po-share-track" role="img" aria-label="{{ _('حصة النوع من الباقات') }}">
         <span style="width:{{ '%.1f'|format(_pct) }}%"></span>
       </div>
-      <span class="po-share-pct mono"><bdi dir="ltr">{{ "%.0f"|format(_pct) }}%</bdi> من الباقات</span>
+      <span class="po-share-pct mono"><bdi dir="ltr">{{ "%.0f"|format(_pct) }}%</bdi> {{ _('من الباقات') }}</span>
     </div>
     {% endfor %}
   </div>
@@ -160,15 +160,15 @@
       <thead>
         <tr>
           <th class="num" style="width:54px">#</th>
-          <th>الباقة</th>
-          <th>النوع</th>
-          <th>الحالة</th>
-          <th>السرعة</th>
-          <th>الكوتا</th>
-          <th>الصلاحية</th>
-          <th class="num">السعر</th>
-          <th class="num">المشتركون</th>
-          <th data-uds-nosort>الحصّة</th>
+          <th>{{ _('الباقة') }}</th>
+          <th>{{ _('النوع') }}</th>
+          <th>{{ _('الحالة') }}</th>
+          <th>{{ _('السرعة') }}</th>
+          <th>{{ _('الكوتا') }}</th>
+          <th>{{ _('الصلاحية') }}</th>
+          <th class="num">{{ _('السعر') }}</th>
+          <th class="num">{{ _('المشتركون') }}</th>
+          <th data-uds-nosort>{{ _('الحصّة') }}</th>
           <th style="width:60px" data-uds-nosort data-uds-nocol></th>
         </tr>
       </thead>
@@ -195,7 +195,7 @@
           </td>
           <td class="mono small">
             {% if r.quota_total_mb %}<bdi dir="ltr">{{ "%.1f"|format(r.quota_total_mb/1024) }} GB</bdi>
-            {% else %}<span class="hub-text-mute">غير محدودة</span>{% endif %}
+            {% else %}<span class="hub-text-mute">{{ _('غير محدودة') }}</span>{% endif %}
           </td>
           <td class="mono small">
             {% if r.validity_days %}<bdi dir="ltr">{{ r.validity_days }}</bdi> يوم
@@ -204,12 +204,12 @@
           <td class="num"><strong><bdi dir="ltr">{{ r.price|money }}</bdi></strong></td>
           <td class="num mono">{{ r.subscribers_count }}</td>
           <td style="min-width:120px">
-            <div class="po-share-track" title="نسبة إلى الباقة الأكثر اشتراكًا">
+            <div class="po-share-track" title="{{ _('نسبة إلى الباقة الأكثر اشتراكًا') }}">
               <span style="width:{{ '%.1f'|format(_pct) }}%"></span>
             </div>
           </td>
           <td>
-            <a class="hub-btn hub-btn--ghost hub-btn--icon" title="تعديل الباقة"
+            <a class="hub-btn hub-btn--ghost hub-btn--icon" title="{{ _('تعديل الباقة') }}"
                href="{{ url_for('radius.plans_edit', plan_id=r.id) }}">
               <i class="fa-solid fa-pen"></i>
             </a>
@@ -261,9 +261,9 @@
     {% if unused_plans %}
     <div class="uds-help-note" style="margin-top:12px">
       <i class="fa-solid fa-circle-info"></i>
-      <span>لديك <bdi dir="ltr">{{ unused_plans }}</bdi> باقة بلا أي مشترك — راجعها من
-        <a href="{{ url_for('radius.plans_list') }}" style="font-weight:800">قائمة العروض</a>
-        وفكّر بأرشفة غير المستخدَم منها.</span>
+      <span>{{ _('لديك') }} <bdi dir="ltr">{{ unused_plans }}</bdi> {{ _('باقة بلا أي مشترك — راجعها من') }}
+        <a href="{{ url_for('radius.plans_list') }}" style="font-weight:800">{{ _('قائمة العروض') }}</a>
+        {{ _('وفكّر بأرشفة غير المستخدَم منها.') }}</span>
     </div>
     {% endif %}
   {% endcall %}

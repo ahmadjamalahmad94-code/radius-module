@@ -47,29 +47,29 @@
   {% call hub.section("الهوية والدور", icon="user-shield") %}
     <div class="hub-form-row">
       <div class="hub-field">
-        <label class="hub-field-label">اسم المستخدم <span class="req">*</span></label>
+        <label class="hub-field-label">{{ _('اسم المستخدم') }} <span class="req">*</span></label>
         <input class="hub-input" type="text" name="username" required {% if not is_new %}readonly{% endif %}
                value="{{ admin.username if admin else '' }}" placeholder="admin">
         <div class="hub-field-hint">{% if is_new %}لن يمكن تغييره بعد الإنشاء.{% else %}لا يمكن تعديله.{% endif %}</div>
       </div>
       <div class="hub-field">
-        <label class="hub-field-label">الاسم الكامل</label>
+        <label class="hub-field-label">{{ _('الاسم الكامل') }}</label>
         <input class="hub-input" type="text" name="full_name" value="{{ admin.full_name if admin else '' }}">
       </div>
       <div class="hub-field">
-        <label class="hub-field-label">الدور</label>
+        <label class="hub-field-label">{{ _('الدور') }}</label>
         <select class="hub-select" name="role_id">
-          <option value="">— بدون —</option>
+          <option value="">{{ _('— بدون —') }}</option>
           {% for r in roles %}
             <option value="{{ r.id }}" {% if admin and admin.role_id == r.id %}selected{% endif %}>
               {{ r.display_name or r.name }} ({{ r.name }})
             </option>
           {% endfor %}
         </select>
-        <div class="hub-field-hint">الدور يحدّد الصلاحيات الفعلية.</div>
+        <div class="hub-field-hint">{{ _('الدور يحدّد الصلاحيات الفعلية.') }}</div>
       </div>
       <div class="hub-field">
-        <label class="hub-field-label">الحالة</label>
+        <label class="hub-field-label">{{ _('الحالة') }}</label>
         {{ toggle_switch(name="enabled", checked=((not admin) or admin.enabled), value="1", id="ad-en") }}
       </div>
     </div>
@@ -82,16 +82,16 @@
         <label class="hub-field-label">كلمة المرور {% if is_new %}<span class="req">*</span>{% endif %}</label>
         <input class="hub-input" type="password" name="password" autocomplete="new-password" {% if is_new %}required{% endif %}
                placeholder="{{ 'اتركها فارغة لعدم التغيير' if not is_new else 'كلمة مرور قوية' }}">
-        <div class="hub-field-hint">تُحفظ مشفّرة. لا تظهر كنص واضح بعد الحفظ.</div>
+        <div class="hub-field-hint">{{ _('تُحفظ مشفّرة. لا تظهر كنص واضح بعد الحفظ.') }}</div>
       </div>
       {% if not is_new and admin and admin.last_login_at %}
       <div class="hub-field">
-        <label class="hub-field-label">آخر دخول</label>
+        <label class="hub-field-label">{{ _('آخر دخول') }}</label>
         <input class="hub-input" type="text" readonly value="{{ admin.last_login_at }}"
                style="background:var(--hub-bg-soft);color:var(--hub-text-soft);cursor:not-allowed">
       </div>
       <div class="hub-field">
-        <label class="hub-field-label">من IP</label>
+        <label class="hub-field-label">{{ _('من IP') }}</label>
         <input class="hub-input" type="text" readonly value="{{ admin.last_login_ip or '—' }}"
                style="background:var(--hub-bg-soft);color:var(--hub-text-soft);cursor:not-allowed">
       </div>
@@ -103,28 +103,28 @@
   {% call hub.section("معلومات الاتصال والملف الشخصي", icon="id-card") %}
     <div class="hub-form-row">
       <div class="hub-field">
-        <label class="hub-field-label">البريد الإلكتروني</label>
+        <label class="hub-field-label">{{ _('البريد الإلكتروني') }}</label>
         <input class="hub-input" type="email" name="email" value="{{ admin.email if admin else '' }}">
       </div>
       <div class="hub-field">
-        <label class="hub-field-label">الجوال</label>
+        <label class="hub-field-label">{{ _('الجوال') }}</label>
         <input class="hub-input" type="tel" name="mobile" value="{{ admin.mobile if admin else '' }}">
       </div>
       <div class="hub-field">
-        <label class="hub-field-label">هاتف آخر</label>
+        <label class="hub-field-label">{{ _('هاتف آخر') }}</label>
         <input class="hub-input" type="tel" name="phone" value="{{ admin.phone if admin else '' }}">
       </div>
       <div class="hub-field">
-        <label class="hub-field-label">رابط الصورة الشخصية</label>
+        <label class="hub-field-label">{{ _('رابط الصورة الشخصية') }}</label>
         <input class="hub-input" type="text" name="avatar_url" value="{{ admin.avatar_url if admin else '' }}" placeholder="https://...">
       </div>
       <div class="hub-field">
-        <label class="hub-field-label">وسوم (CSV)</label>
-        <input class="hub-input" type="text" name="tags" value="{{ admin.tags if admin else '' }}" placeholder="دعم، تحصيل">
-        <div class="hub-field-hint">تصنيف داخلي للمدراء.</div>
+        <label class="hub-field-label">{{ _('وسوم (CSV)') }}</label>
+        <input class="hub-input" type="text" name="tags" value="{{ admin.tags if admin else '' }}" placeholder="{{ _('دعم، تحصيل') }}">
+        <div class="hub-field-hint">{{ _('تصنيف داخلي للمدراء.') }}</div>
       </div>
       <div class="hub-field" style="grid-column:1/-1">
-        <label class="hub-field-label">ملاحظات على الملف الشخصي</label>
+        <label class="hub-field-label">{{ _('ملاحظات على الملف الشخصي') }}</label>
         <textarea class="hub-textarea" name="profile_notes">{{ admin.profile_notes if admin else '' }}</textarea>
       </div>
     </div>

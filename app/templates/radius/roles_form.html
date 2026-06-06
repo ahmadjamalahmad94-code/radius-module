@@ -27,7 +27,7 @@
 {% block title %}{{ title_ar }} — هوب ريديوس{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-key"></i>{% endblock %}
 {% block page_title %}{{ title_ar }}{% endblock %}
-{% block page_sub %}<span class="sub"><bdi dir="ltr">{{ perms|length }}</bdi> صلاحية متاحة للاختيار</span>{% endblock %}
+{% block page_sub %}<span class="sub"><bdi dir="ltr">{{ perms|length }}</bdi> {{ _('صلاحية متاحة للاختيار') }}</span>{% endblock %}
 
 {% block head_extra %}{{ super() }}
 <style>
@@ -213,7 +213,7 @@ input.hub-input[type=color]{ padding:3px; height:42px; cursor:pointer; }
 ) %}
   <span class="hub-text-soft" style="font-size:12.5px;font-weight:700">
     <i class="fa-solid fa-shield-halved" style="color:var(--hub-brand-ink)"></i>
-    زر «تحديد الكل» في رأس كل مجموعة يفعّل أو يلغي صلاحياتها دفعة واحدة.
+    {{ _('زر «تحديد الكل» في رأس كل مجموعة يفعّل أو يلغي صلاحياتها دفعة واحدة.') }}
   </span>
   <span class="hub-spacer"></span>
   <span class="hub-hint" tabindex="0"
@@ -229,27 +229,27 @@ input.hub-input[type=color]{ padding:3px; height:42px; cursor:pointer; }
   {% call hub.section("هوية الدور", icon="id-card") %}
     <div class="hub-form-row">
       <div class="hub-field">
-        <label class="hub-field-label">الاسم الداخلي <span style="color:var(--hub-red)">*</span></label>
+        <label class="hub-field-label">{{ _('الاسم الداخلي') }} <span style="color:var(--hub-red)">*</span></label>
         <input class="hub-input" type="text" name="name" required dir="ltr"
                {% if not is_new %}readonly style="background:var(--hub-bg-soft);color:var(--hub-text-soft);cursor:not-allowed"{% endif %}
                value="{{ role.name if role else '' }}" placeholder="branch_manager">
-        <div class="hub-field-hint">مفتاح تقني فريد بحروف لاتينية صغيرة وشرطة سفلية — لا يتغيّر بعد الإنشاء.</div>
+        <div class="hub-field-hint">{{ _('مفتاح تقني فريد بحروف لاتينية صغيرة وشرطة سفلية — لا يتغيّر بعد الإنشاء.') }}</div>
       </div>
       <div class="hub-field">
-        <label class="hub-field-label">الاسم الظاهر</label>
+        <label class="hub-field-label">{{ _('الاسم الظاهر') }}</label>
         <input class="hub-input" type="text" name="display_name"
-               value="{{ role.display_name if role else '' }}" placeholder="مدير الفرع">
-        <div class="hub-field-hint">هو ما يراه المستخدمون في الواجهة بدل المفتاح التقني.</div>
+               value="{{ role.display_name if role else '' }}" placeholder="{{ _('مدير الفرع') }}">
+        <div class="hub-field-hint">{{ _('هو ما يراه المستخدمون في الواجهة بدل المفتاح التقني.') }}</div>
       </div>
       <div class="hub-field">
-        <label class="hub-field-label">لون الدور</label>
+        <label class="hub-field-label">{{ _('لون الدور') }}</label>
         <input class="hub-input" type="color" name="color" value="{{ role.color if role else '#6B5AED' }}">
-        <div class="hub-field-hint">يميّز الدور بصريًا في القوائم والبطاقات.</div>
+        <div class="hub-field-hint">{{ _('يميّز الدور بصريًا في القوائم والبطاقات.') }}</div>
       </div>
       <div class="hub-field" style="grid-column:1/-1">
-        <label class="hub-field-label">الوصف</label>
+        <label class="hub-field-label">{{ _('الوصف') }}</label>
         <textarea class="hub-textarea" name="description"
-                  placeholder="وصف مختصر لنطاق هذا الدور ومسؤولياته…">{{ role.description if role else '' }}</textarea>
+                  placeholder="{{ _('وصف مختصر لنطاق هذا الدور ومسؤولياته…') }}">{{ role.description if role else '' }}</textarea>
       </div>
     </div>
   {% endcall %}
@@ -268,9 +268,9 @@ input.hub-input[type=color]{ padding:3px; height:42px; cursor:pointer; }
           <span class="pg-key"><bdi dir="ltr">{{ grp }}</bdi></span>
           {# عدّاد الممنوحة من المجموعة — يتحدّث حيًّا مع كل نقرة #}
           <span class="pg-count" data-group-count="{{ loop.index }}">
-            <bdi dir="ltr"><span data-on>0</span>/<span data-all>{{ plist|length }}</span></bdi> ممنوحة
+            <bdi dir="ltr"><span data-on>0</span>/<span data-all>{{ plist|length }}</span></bdi> {{ _('ممنوحة') }}
           </span>
-          <button type="button" class="pg-toggle" data-group="{{ loop.index }}">تحديد الكل</button>
+          <button type="button" class="pg-toggle" data-group="{{ loop.index }}">{{ _('تحديد الكل') }}</button>
         </div>
         {# شريط تقدّم رفيع بلون المجموعة — نسبة الممنوح #}
         <div class="pg-progress"><span data-group-bar="{{ loop.index }}"></span></div>

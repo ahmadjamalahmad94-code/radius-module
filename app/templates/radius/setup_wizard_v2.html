@@ -21,112 +21,112 @@
     ]
   ) }}
 
-  <section class="swv2-confidence-journey" data-swv2-confidence-journey aria-label="رحلة الثقة في معالج الإعداد">
+  <section class="swv2-confidence-journey" data-swv2-confidence-journey aria-label="{{ _('رحلة الثقة في معالج الإعداد') }}">
     <div class="is-current" data-confidence-state="started">
-      <strong>بدأنا</strong>
-      <span>كل خطوة تظهر وحدها وبوضوح.</span>
+      <strong>{{ _('بدأنا') }}</strong>
+      <span>{{ _('كل خطوة تظهر وحدها وبوضوح.') }}</span>
     </div>
     <div data-confidence-state="internet_ready">
-      <strong>تم تجهيز الإنترنت</strong>
-      <span>سكربت الإعداد وفحص الربط يثبتان أول اتصال.</span>
+      <strong>{{ _('تم تجهيز الإنترنت') }}</strong>
+      <span>{{ _('سكربت الإعداد وفحص الربط يثبتان أول اتصال.') }}</span>
     </div>
     <div data-confidence-state="router_linked">
-      <strong>تم ربط الراوتر</strong>
-      <span>الربط والمصادقة يصبحان جاهزين للتحقق.</span>
+      <strong>{{ _('تم ربط الراوتر') }}</strong>
+      <span>{{ _('الربط والمصادقة يصبحان جاهزين للتحقق.') }}</span>
     </div>
     <div data-confidence-state="network_ready">
-      <strong>الشبكة جاهزة</strong>
-      <span>الهوتسبوت أو البرودباند يجهزان بمعاينة آمنة.</span>
+      <strong>{{ _('الشبكة جاهزة') }}</strong>
+      <span>{{ _('الهوتسبوت أو البرودباند يجهزان بمعاينة آمنة.') }}</span>
     </div>
     <div data-confidence-state="added_services">
-      <strong>الخدمات الإضافية</strong>
-      <span>اختيارات إضافية بدون وعود غير مؤكدة.</span>
+      <strong>{{ _('الخدمات الإضافية') }}</strong>
+      <span>{{ _('اختيارات إضافية بدون وعود غير مؤكدة.') }}</span>
     </div>
     <div data-confidence-state="completed">
-      <strong>اكتمل الإعداد</strong>
-      <span>ملخص نظيف يوضح ما تم وما بقي بدون تفاصيل مربكة.</span>
+      <strong>{{ _('اكتمل الإعداد') }}</strong>
+      <span>{{ _('ملخص نظيف يوضح ما تم وما بقي بدون تفاصيل مربكة.') }}</span>
     </div>
   </section>
 
   <section class="swv2-recovery-panel" data-swv2-recovery-panel hidden>
     <div class="swv2-step-card">
-      <span class="swv2-eyebrow">استكمال أو إصلاح الإعداد</span>
-      <h2 data-swv2-recovery-title>يوجد مسار تعافٍ آمن عند الحاجة</h2>
-      <p data-swv2-recovery-summary>لن يتم تنفيذ أي إصلاح حي. هذه اللوحة تقترح الخطوة الآمنة التالية وتخفي التفاصيل الهندسية حتى تطلبها.</p>
+      <span class="swv2-eyebrow">{{ _('استكمال أو إصلاح الإعداد') }}</span>
+      <h2 data-swv2-recovery-title>{{ _('يوجد مسار تعافٍ آمن عند الحاجة') }}</h2>
+      <p data-swv2-recovery-summary>{{ _('لن يتم تنفيذ أي إصلاح حي. هذه اللوحة تقترح الخطوة الآمنة التالية وتخفي التفاصيل الهندسية حتى تطلبها.') }}</p>
       <div class="swv2-diagnostics" data-swv2-recovery-problems></div>
       <div class="swv2-action-row">
-        <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-recovery-check>فحص الاستكمال</button>
-        <button type="button" class="swv2-btn swv2-btn-primary" data-swv2-recovery-resume>استكمال آمن</button>
-        <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-recovery-retry>إعادة التحقق</button>
-        <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-recovery-regenerate>إعادة توليد السكربت</button>
-        <a class="swv2-btn swv2-btn-ghost" data-swv2-recovery-support href="#">حزمة الدعم</a>
+        <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-recovery-check>{{ _('فحص الاستكمال') }}</button>
+        <button type="button" class="swv2-btn swv2-btn-primary" data-swv2-recovery-resume>{{ _('استكمال آمن') }}</button>
+        <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-recovery-retry>{{ _('إعادة التحقق') }}</button>
+        <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-recovery-regenerate>{{ _('إعادة توليد السكربت') }}</button>
+        <a class="swv2-btn swv2-btn-ghost" data-swv2-recovery-support href="#">{{ _('حزمة الدعم') }}</a>
       </div>
       <details class="swv2-advanced" data-swv2-recovery-danger-zone>
-        <summary>منطقة متقدمة وخطرة</summary>
-        <label>سبب إيقاف الخطوة
-          <input type="text" data-swv2-recovery-abandon-reason placeholder="اكتب السبب قبل التسجيل">
+        <summary>{{ _('منطقة متقدمة وخطرة') }}</summary>
+        <label>{{ _('سبب إيقاف الخطوة') }}
+          <input type="text" data-swv2-recovery-abandon-reason placeholder="{{ _('اكتب السبب قبل التسجيل') }}">
         </label>
         <div class="swv2-action-row">
-          <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-recovery-abandon>تسجيل التخلي عن الخطوة</button>
-          <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-recovery-retire>إيقاف الراوتر من مسار الإعداد</button>
+          <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-recovery-abandon>{{ _('تسجيل التخلي عن الخطوة') }}</button>
+          <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-recovery-retire>{{ _('إيقاف الراوتر من مسار الإعداد') }}</button>
         </div>
-        <div class="swv2-summary-box" data-swv2-recovery-json>لم يتم تشغيل فحص الاستكمال بعد.</div>
+        <div class="swv2-summary-box" data-swv2-recovery-json>{{ _('لم يتم تشغيل فحص الاستكمال بعد.') }}</div>
       </details>
     </div>
   </section>
 
-  <nav class="swv2-stepper" aria-label="مراحل الإعداد" data-swv2-stepper>
+  <nav class="swv2-stepper" aria-label="{{ _('مراحل الإعداد') }}" data-swv2-stepper>
     <button type="button" class="swv2-stepper-item is-current" data-swv2-step-target="welcome">
       <span class="swv2-step-index">1</span>
-      <span>الترحيب</span>
+      <span>{{ _('الترحيب') }}</span>
     </button>
     <button type="button" class="swv2-stepper-item is-locked" data-swv2-step-target="source">
       <span class="swv2-step-index">2</span>
-      <span>مصدر الإنترنت</span>
+      <span>{{ _('مصدر الإنترنت') }}</span>
     </button>
     <button type="button" class="swv2-stepper-item is-locked" data-swv2-step-target="details">
       <span class="swv2-step-index">3</span>
-      <span>بيانات الإنترنت</span>
+      <span>{{ _('بيانات الإنترنت') }}</span>
     </button>
     <button type="button" class="swv2-stepper-item is-locked" data-swv2-step-target="internet-script">
       <span class="swv2-step-index">4</span>
-      <span>سكربت الإنترنت</span>
+      <span>{{ _('سكربت الإنترنت') }}</span>
     </button>
     <button type="button" class="swv2-stepper-item is-locked" data-swv2-step-target="internet-verify">
       <span class="swv2-step-index">5</span>
-      <span>تحقق الإنترنت</span>
+      <span>{{ _('تحقق الإنترنت') }}</span>
     </button>
     <button type="button" class="swv2-stepper-item is-locked" data-swv2-step-target="vpn-script">
       <span class="swv2-step-index">6</span>
-      <span>الربط والمصادقة</span>
+      <span>{{ _('الربط والمصادقة') }}</span>
     </button>
     <button type="button" class="swv2-stepper-item is-locked" data-swv2-step-target="vpn-verify">
       <span class="swv2-step-index">7</span>
-      <span>تحقق الربط</span>
+      <span>{{ _('تحقق الربط') }}</span>
     </button>
     <button type="button" class="swv2-stepper-item is-locked" data-swv2-step-target="service-path">
       <span class="swv2-step-index">8</span>
-      <span>الخدمات</span>
+      <span>{{ _('الخدمات') }}</span>
     </button>
     <button type="button" class="swv2-stepper-item is-locked" data-swv2-step-target="interface-picker">
       <span class="swv2-step-index">9</span>
-      <span>الواجهات</span>
+      <span>{{ _('الواجهات') }}</span>
     </button>
     <button type="button" class="swv2-stepper-item is-locked" data-swv2-step-target="hotspot-flow">
       <span class="swv2-step-index">10</span>
-      <span>هوتسبوت</span>
+      <span>{{ _('هوتسبوت') }}</span>
     </button>
     <button type="button" class="swv2-stepper-item is-locked" data-swv2-step-target="broadband-flow">
       <span class="swv2-step-index">11</span>
-      <span>برودباند</span>
+      <span>{{ _('برودباند') }}</span>
     </button>
     <button type="button" class="swv2-stepper-item is-locked" data-swv2-step-target="added-services">
       <span class="swv2-step-index">12</span>
-      <span>خدمات إضافية</span>
+      <span>{{ _('خدمات إضافية') }}</span>
     </button>
     <button type="button" class="swv2-stepper-item is-locked" data-swv2-step-target="final-summary">
       <span class="swv2-step-index">13</span>
-      <span>الملخص</span>
+      <span>{{ _('الملخص') }}</span>
     </button>
   </nav>
 
@@ -134,50 +134,50 @@
     <article class="swv2-step is-active" data-swv2-step="welcome">
       <div class="swv2-step-card swv2-welcome-card">
         <div class="swv2-card-icon"><i class="fa-solid fa-route"></i></div>
-        <span class="swv2-eyebrow">البداية الهادئة</span>
-        <h2>خلينا نجهز الراوتر بدون تعقيد.</h2>
-        <p>المعالج يسأل عن الضروري فقط، ثم يحجز العناوين والأسماء والربط تلقائيًا. لا يوجد تطبيق مباشر على الراوتر من هذه الصفحة.</p>
+        <span class="swv2-eyebrow">{{ _('البداية الهادئة') }}</span>
+        <h2>{{ _('خلينا نجهز الراوتر بدون تعقيد.') }}</h2>
+        <p>{{ _('المعالج يسأل عن الضروري فقط، ثم يحجز العناوين والأسماء والربط تلقائيًا. لا يوجد تطبيق مباشر على الراوتر من هذه الصفحة.') }}</p>
         <div class="swv2-check-grid">
-          <div><i class="fa-solid fa-check"></i><span>اسم واضح للراوتر أو الموقع</span></div>
-          <div><i class="fa-solid fa-check"></i><span>بيانات الإنترنت فقط عند الحاجة</span></div>
-          <div><i class="fa-solid fa-check"></i><span>كل مفاتيح الربط تعالج تلقائيًا</span></div>
+          <div><i class="fa-solid fa-check"></i><span>{{ _('اسم واضح للراوتر أو الموقع') }}</span></div>
+          <div><i class="fa-solid fa-check"></i><span>{{ _('بيانات الإنترنت فقط عند الحاجة') }}</span></div>
+          <div><i class="fa-solid fa-check"></i><span>{{ _('كل مفاتيح الربط تعالج تلقائيًا') }}</span></div>
         </div>
         <div class="swv2-empty-state" data-swv2-empty-state="no-run">
-          <strong>لا توجد جلسة إعداد نشطة بعد</strong>
-          <span>ابدأ من الخطوة الأولى، وسيحفظ المعالج التقدم والسكربتات حتى تبقى قابلة للمراجعة والرجوع.</span>
+          <strong>{{ _('لا توجد جلسة إعداد نشطة بعد') }}</strong>
+          <span>{{ _('ابدأ من الخطوة الأولى، وسيحفظ المعالج التقدم والسكربتات حتى تبقى قابلة للمراجعة والرجوع.') }}</span>
         </div>
       </div>
     </article>
 
     <article class="swv2-step" data-swv2-step="source">
       <div class="swv2-step-card">
-        <span class="swv2-eyebrow">اختيار المصدر</span>
-        <h2>كيف يصل الإنترنت إلى الراوتر؟</h2>
-        <p>اختر الطريقة الأقرب لتركيب العميل. سنعرض الحقول المناسبة فقط في الخطوة التالية.</p>
+        <span class="swv2-eyebrow">{{ _('اختيار المصدر') }}</span>
+        <h2>{{ _('كيف يصل الإنترنت إلى الراوتر؟') }}</h2>
+        <p>{{ _('اختر الطريقة الأقرب لتركيب العميل. سنعرض الحقول المناسبة فقط في الخطوة التالية.') }}</p>
         <div class="swv2-source-grid" data-swv2-source-grid>
           <button type="button" class="swv2-source-card is-selected" data-source-type="dhcp">
             <i class="fa-solid fa-network-wired"></i>
-            <strong>أخذ عنوان تلقائي</strong>
-            <span>الراوتر يأخذ IP تلقائيًا من المودم أو مزود الخدمة.</span>
-            <small>مثال: ether1 يحصل على الإنترنت مباشرة</small>
+            <strong>{{ _('أخذ عنوان تلقائي') }}</strong>
+            <span>{{ _('الراوتر يأخذ IP تلقائيًا من المودم أو مزود الخدمة.') }}</span>
+            <small>{{ _('مثال: ether1 يحصل على الإنترنت مباشرة') }}</small>
           </button>
           <button type="button" class="swv2-source-card" data-source-type="pppoe">
             <i class="fa-solid fa-key"></i>
-            <strong>اتصال مزود الإنترنت</strong>
-            <span>اسم مستخدم وكلمة مرور من مزود الإنترنت.</span>
-            <small>مثال: اشتراك ألياف أو خط مزود إنترنت</small>
+            <strong>{{ _('اتصال مزود الإنترنت') }}</strong>
+            <span>{{ _('اسم مستخدم وكلمة مرور من مزود الإنترنت.') }}</span>
+            <small>{{ _('مثال: اشتراك ألياف أو خط مزود إنترنت') }}</small>
           </button>
           <button type="button" class="swv2-source-card" data-source-type="static">
             <i class="fa-solid fa-location-crosshairs"></i>
-            <strong>عنوان ثابت</strong>
-            <span>عنوان ثابت، بوابة، و DNS معروف مسبقًا.</span>
-            <small>مثال: 192.0.2.10/30 مع gateway</small>
+            <strong>{{ _('عنوان ثابت') }}</strong>
+            <span>{{ _('عنوان ثابت، بوابة، و DNS معروف مسبقًا.') }}</span>
+            <small>{{ _('مثال: 192.0.2.10/30 مع gateway') }}</small>
           </button>
           <button type="button" class="swv2-source-card" data-source-type="vlan">
             <i class="fa-solid fa-layer-group"></i>
-            <strong>شبكة افتراضية</strong>
-            <span>الإنترنت يأتي عبر شبكة افتراضية فوق منفذ محدد.</span>
-            <small>مثال: رقم الشبكة 35 على ether1</small>
+            <strong>{{ _('شبكة افتراضية') }}</strong>
+            <span>{{ _('الإنترنت يأتي عبر شبكة افتراضية فوق منفذ محدد.') }}</span>
+            <small>{{ _('مثال: رقم الشبكة 35 على ether1') }}</small>
           </button>
         </div>
       </div>
@@ -185,112 +185,112 @@
 
     <article class="swv2-step" data-swv2-step="details">
       <div class="swv2-step-card">
-        <span class="swv2-eyebrow">بيانات المصدر</span>
-        <h2>أدخل الضروري فقط</h2>
-        <p>اكتب اسمًا واضحًا للراوتر، ثم البيانات التي يطلبها نوع الإنترنت المختار. الإعدادات المتقدمة تبقى مخفية.</p>
+        <span class="swv2-eyebrow">{{ _('بيانات المصدر') }}</span>
+        <h2>{{ _('أدخل الضروري فقط') }}</h2>
+        <p>{{ _('اكتب اسمًا واضحًا للراوتر، ثم البيانات التي يطلبها نوع الإنترنت المختار. الإعدادات المتقدمة تبقى مخفية.') }}</p>
 
         <form class="swv2-form" data-swv2-internet-form>
           <section class="swv2-identity-panel">
-            <label>اسم الراوتر أو الموقع
-              <input type="text" name="vpn_router_label" value="راوتر جديد" placeholder="مثال: فرع رام الله">
-              <span>هذا الاسم يظهر في التقارير والحجوزات. سننشئ باقي الأسماء والعناوين تلقائيًا.</span>
+            <label>{{ _('اسم الراوتر أو الموقع') }}
+              <input type="text" name="vpn_router_label" value="{{ _('راوتر جديد') }}" placeholder="{{ _('مثال: فرع رام الله') }}">
+              <span>{{ _('هذا الاسم يظهر في التقارير والحجوزات. سننشئ باقي الأسماء والعناوين تلقائيًا.') }}</span>
             </label>
           </section>
           <section class="swv2-form-panel is-active" data-source-form="dhcp">
-            <label>واجهة الإنترنت
+            <label>{{ _('واجهة الإنترنت') }}
               <input type="text" name="dhcp_interface" value="ether1" placeholder="ether1">
-              <span>اختر الواجهة المتصلة بالمودم أو مزود الخدمة.</span>
+              <span>{{ _('اختر الواجهة المتصلة بالمودم أو مزود الخدمة.') }}</span>
             </label>
             <details class="swv2-advanced swv2-form-advanced">
-              <summary>إعدادات تلقائية</summary>
+              <summary>{{ _('إعدادات تلقائية') }}</summary>
               <div class="swv2-toggle-line">
-                <label><input type="checkbox" name="dhcp_add_default_route" checked> إضافة المسار الافتراضي</label>
-                <label><input type="checkbox" name="dhcp_use_peer_dns" checked> استخدام DNS من المزود</label>
-                <label><input type="checkbox" name="dhcp_nat_enabled" checked> تفعيل NAT لهذه الواجهة</label>
+                <label><input type="checkbox" name="dhcp_add_default_route" checked> {{ _('إضافة المسار الافتراضي') }}</label>
+                <label><input type="checkbox" name="dhcp_use_peer_dns" checked> {{ _('استخدام DNS من المزود') }}</label>
+                <label><input type="checkbox" name="dhcp_nat_enabled" checked> {{ _('تفعيل NAT لهذه الواجهة') }}</label>
               </div>
             </details>
           </section>
 
           <section class="swv2-form-panel" data-source-form="pppoe">
-            <label>واجهة اتصال المزوّد
+            <label>{{ _('واجهة اتصال المزوّد') }}
               <input type="text" name="pppoe_interface" value="ether1" placeholder="ether1">
-              <span>الواجهة التي عليها خط المزود.</span>
+              <span>{{ _('الواجهة التي عليها خط المزود.') }}</span>
             </label>
-            <label>اسم المستخدم
+            <label>{{ _('اسم المستخدم') }}
               <input type="text" name="pppoe_username" placeholder="customer@example">
             </label>
-            <label>كلمة المرور
+            <label>{{ _('كلمة المرور') }}
               <input type="password" name="pppoe_password" placeholder="••••••••">
-              <span>تظهر داخل السكربت فقط عند التوليد لأن العميل سيقوم بلصقه يدويًا.</span>
+              <span>{{ _('تظهر داخل السكربت فقط عند التوليد لأن العميل سيقوم بلصقه يدويًا.') }}</span>
             </label>
-            <label>اسم الخدمة اختياري
-              <input type="text" name="pppoe_service_name" placeholder="اسم الخدمة لدى المزوّد">
+            <label>{{ _('اسم الخدمة اختياري') }}
+              <input type="text" name="pppoe_service_name" placeholder="{{ _('اسم الخدمة لدى المزوّد') }}">
             </label>
             <details class="swv2-advanced swv2-form-advanced">
-              <summary>إعدادات متقدمة اختيارية</summary>
-              <label>عنوان ثابت اختياري
+              <summary>{{ _('إعدادات متقدمة اختيارية') }}</summary>
+              <label>{{ _('عنوان ثابت اختياري') }}
               <input type="text" name="pppoe_fixed_ip" placeholder="203.0.113.20">
               </label>
               <div class="swv2-toggle-line">
-                <label><input type="checkbox" name="pppoe_add_default_route" checked> إضافة المسار الافتراضي</label>
-                <label><input type="checkbox" name="pppoe_use_peer_dns" checked> استخدام DNS من المزود</label>
-                <label><input type="checkbox" name="pppoe_nat_enabled" checked> ترجمة العناوين على اتصال المزوّد</label>
+                <label><input type="checkbox" name="pppoe_add_default_route" checked> {{ _('إضافة المسار الافتراضي') }}</label>
+                <label><input type="checkbox" name="pppoe_use_peer_dns" checked> {{ _('استخدام DNS من المزود') }}</label>
+                <label><input type="checkbox" name="pppoe_nat_enabled" checked> {{ _('ترجمة العناوين على اتصال المزوّد') }}</label>
               </div>
             </details>
           </section>
 
           <section class="swv2-form-panel" data-source-form="static">
-            <label>الواجهة
+            <label>{{ _('الواجهة') }}
               <input type="text" name="static_interface" value="ether1" placeholder="ether1">
             </label>
             <label>IP/CIDR
               <input type="text" name="static_cidr" placeholder="203.0.113.10/30">
             </label>
-            <label>البوّابة
+            <label>{{ _('البوّابة') }}
               <input type="text" name="static_gateway" placeholder="203.0.113.9">
             </label>
             <label>DNS
               <input type="text" name="static_dns" placeholder="1.1.1.1, 8.8.8.8">
             </label>
             <details class="swv2-advanced swv2-form-advanced">
-              <summary>إعدادات تلقائية</summary>
+              <summary>{{ _('إعدادات تلقائية') }}</summary>
               <div class="swv2-toggle-line">
-                <label><input type="checkbox" name="static_nat_enabled" checked> تفعيل NAT لهذه الواجهة</label>
+                <label><input type="checkbox" name="static_nat_enabled" checked> {{ _('تفعيل NAT لهذه الواجهة') }}</label>
               </div>
             </details>
           </section>
 
           <section class="swv2-form-panel" data-source-form="vlan">
-            <label>الواجهة الأب
+            <label>{{ _('الواجهة الأب') }}
               <input type="text" name="vlan_parent" value="ether1" placeholder="ether1">
             </label>
             <label>VLAN ID
               <input type="number" name="vlan_id" min="1" max="4094" placeholder="35">
             </label>
-            <label>اسم VLAN
+            <label>{{ _('اسم VLAN') }}
               <input type="text" name="vlan_name" placeholder="hobe-wan-vlan35">
             </label>
-            <label>وضع العنوان
+            <label>{{ _('وضع العنوان') }}
               <select name="vlan_mode">
                 <option value="dhcp">DHCP</option>
-                <option value="static">عنوان ثابت</option>
+                <option value="static">{{ _('عنوان ثابت') }}</option>
               </select>
             </label>
-            <label>IP/CIDR عند اختيار Static
+            <label>{{ _('IP/CIDR عند اختيار Static') }}
               <input type="text" name="vlan_static_cidr" placeholder="10.77.3.2/24">
             </label>
-            <label>البوّابة عند اختيار Static
+            <label>{{ _('البوّابة عند اختيار Static') }}
               <input type="text" name="vlan_gateway" placeholder="10.77.3.1">
             </label>
-            <label>DNS اختياري
+            <label>{{ _('DNS اختياري') }}
               <input type="text" name="vlan_dns" placeholder="1.1.1.1, 8.8.8.8">
             </label>
             <details class="swv2-advanced swv2-form-advanced">
-              <summary>إعدادات تلقائية</summary>
+              <summary>{{ _('إعدادات تلقائية') }}</summary>
               <div class="swv2-toggle-line">
-                <label><input type="checkbox" name="vlan_add_default_route" checked> إضافة default route</label>
-                <label><input type="checkbox" name="vlan_use_peer_dns" checked> استخدام DNS من المزود</label>
-                <label><input type="checkbox" name="vlan_nat_enabled" checked> تفعيل NAT للـVLAN</label>
+                <label><input type="checkbox" name="vlan_add_default_route" checked> {{ _('إضافة default route') }}</label>
+                <label><input type="checkbox" name="vlan_use_peer_dns" checked> {{ _('استخدام DNS من المزود') }}</label>
+                <label><input type="checkbox" name="vlan_nat_enabled" checked> {{ _('تفعيل NAT للـVLAN') }}</label>
               </div>
             </details>
           </section>
@@ -300,58 +300,58 @@
 
     <article class="swv2-step" data-swv2-step="internet-script">
       <div class="swv2-step-card">
-        <span class="swv2-eyebrow">سكربت الإنترنت</span>
-        <h2>تم تجهيز سكربت الإنترنت</h2>
-        <p>انسخ السكربت والصقه داخل شاشة أوامر الراوتر. بعد التنفيذ ارجع واضغط تحقق.</p>
+        <span class="swv2-eyebrow">{{ _('سكربت الإنترنت') }}</span>
+        <h2>{{ _('تم تجهيز سكربت الإنترنت') }}</h2>
+        <p>{{ _('انسخ السكربت والصقه داخل شاشة أوامر الراوتر. بعد التنفيذ ارجع واضغط تحقق.') }}</p>
         <div class="swv2-action-row">
-          <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-generate-internet>تجهيز السكربت من البيانات</button>
-          <button type="button" class="swv2-btn swv2-btn-primary" data-copy-target="internet-script-code">نسخ السكربت</button>
+          <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-generate-internet>{{ _('تجهيز السكربت من البيانات') }}</button>
+          <button type="button" class="swv2-btn swv2-btn-primary" data-copy-target="internet-script-code">{{ _('نسخ السكربت') }}</button>
           <details class="swv2-advanced">
-            <summary>عرض التفاصيل المتقدمة</summary>
-            <div class="swv2-summary-box" data-swv2-plan-json="internet">لم يتم توليد ملخص الإعداد بعد.</div>
+            <summary>{{ _('عرض التفاصيل المتقدمة') }}</summary>
+            <div class="swv2-summary-box" data-swv2-plan-json="internet">{{ _('لم يتم توليد ملخص الإعداد بعد.') }}</div>
           </details>
         </div>
         <div class="swv2-script-card" data-swv2-script-preview="internet">
           <div>
-            <strong>معاينة السكربت</strong>
-            <span data-swv2-script-status>اضغط تجهيز السكربت أو انتقل لهذه الخطوة بعد إدخال البيانات.</span>
-            <button type="button" class="swv2-copy-chip" data-copy-target="internet-script-code">نسخ</button>
+            <strong>{{ _('معاينة السكربت') }}</strong>
+            <span data-swv2-script-status>{{ _('اضغط تجهيز السكربت أو انتقل لهذه الخطوة بعد إدخال البيانات.') }}</span>
+            <button type="button" class="swv2-copy-chip" data-copy-target="internet-script-code">{{ _('نسخ') }}</button>
           </div>
-          <pre id="internet-script-code">-- لم يتم توليد السكربت بعد --</pre>
+          <pre id="internet-script-code">{{ _('-- لم يتم توليد السكربت بعد --') }}</pre>
         </div>
         <div class="swv2-instructions">
-          <div><b>1</b><span>افتح شاشة أوامر الراوتر.</span></div>
-          <div><b>2</b><span>الصق السكربت كما هو.</span></div>
-          <div><b>3</b><span>انسخ مخرجات التحقق للخطوة التالية.</span></div>
+          <div><b>1</b><span>{{ _('افتح شاشة أوامر الراوتر.') }}</span></div>
+          <div><b>2</b><span>{{ _('الصق السكربت كما هو.') }}</span></div>
+          <div><b>3</b><span>{{ _('انسخ مخرجات التحقق للخطوة التالية.') }}</span></div>
         </div>
       </div>
     </article>
 
     <article class="swv2-step" data-swv2-step="internet-verify">
       <div class="swv2-step-card">
-        <span class="swv2-eyebrow">تحقق الإنترنت</span>
-        <h2>هل أصبح الإنترنت جاهزًا؟</h2>
-        <p>الصق مخرجات شاشة الأوامر هنا. سنحللها بصريًا ونوضح النتيجة بدون إظهار تفاصيل مزعجة.</p>
+        <span class="swv2-eyebrow">{{ _('تحقق الإنترنت') }}</span>
+        <h2>{{ _('هل أصبح الإنترنت جاهزًا؟') }}</h2>
+        <p>{{ _('الصق مخرجات شاشة الأوامر هنا. سنحللها بصريًا ونوضح النتيجة بدون إظهار تفاصيل مزعجة.') }}</p>
         <div class="swv2-verification-panel" data-swv2-verification-panel="internet">
           <textarea data-swv2-verify-output="internet" placeholder="مثال: sent=5 received=5 packet-loss=0%"></textarea>
           <div class="swv2-action-row">
-            <button type="button" class="swv2-btn swv2-btn-primary" data-swv2-verify="internet">تحليل المخرجات</button>
-            <button type="button" class="swv2-btn swv2-btn-ghost">تحقق</button>
+            <button type="button" class="swv2-btn swv2-btn-primary" data-swv2-verify="internet">{{ _('تحليل المخرجات') }}</button>
+            <button type="button" class="swv2-btn swv2-btn-ghost">{{ _('تحقق') }}</button>
           </div>
           <div class="swv2-diagnostics" data-swv2-diagnostics="internet">
             <div class="swv2-diagnostic-card is-waiting">
-              <strong>بانتظار المخرجات</strong>
-              <span>بعد لصق نتيجة ping سنعرض النجاح أو سبب التعطل.</span>
+              <strong>{{ _('بانتظار المخرجات') }}</strong>
+              <span>{{ _('بعد لصق نتيجة ping سنعرض النجاح أو سبب التعطل.') }}</span>
             </div>
           </div>
         </div>
         <div class="swv2-success-state" hidden data-swv2-success="internet">
           <i class="fa-solid fa-circle-check"></i>
-          <strong>تم الاتصال بالإنترنت بنجاح</strong>
-          <span>يمكنك الآن تجهيز الربط والمصادقة.</span>
+          <strong>{{ _('تم الاتصال بالإنترنت بنجاح') }}</strong>
+          <span>{{ _('يمكنك الآن تجهيز الربط والمصادقة.') }}</span>
           <div class="swv2-success-card" data-swv2-success-card="internet">
-            <b>ما الذي تحقق؟</b>
-            <span>أثبت فحص الربط أن الراوتر وصل إلى الإنترنت. الخطوة التالية تربط الراوتر مع HobeRadius بأسماء وعناوين محجوزة.</span>
+            <b>{{ _('ما الذي تحقق؟') }}</b>
+            <span>{{ _('أثبت فحص الربط أن الراوتر وصل إلى الإنترنت. الخطوة التالية تربط الراوتر مع HobeRadius بأسماء وعناوين محجوزة.') }}</span>
           </div>
         </div>
       </div>
@@ -359,150 +359,150 @@
 
     <article class="swv2-step" data-swv2-step="vpn-script">
       <div class="swv2-step-card">
-        <span class="swv2-eyebrow">الربط والمصادقة</span>
+        <span class="swv2-eyebrow">{{ _('الربط والمصادقة') }}</span>
         <div class="swv2-auto-summary">
           <i class="fa-solid fa-robot"></i>
           <div>
-            <strong>سنجهز الربط تلقائيًا</strong>
-            <span>سيحجز المعالج عنوان الربط الخاص واسم الربط ومستخدم الواجهة البرمجية وسر المصادقة بدون أن تطلب من العميل مفاتيح أو أكواد.</span>
+            <strong>{{ _('سنجهز الربط تلقائيًا') }}</strong>
+            <span>{{ _('سيحجز المعالج عنوان الربط الخاص واسم الربط ومستخدم الواجهة البرمجية وسر المصادقة بدون أن تطلب من العميل مفاتيح أو أكواد.') }}</span>
           </div>
         </div>
-        <div class="swv2-provisioning-grid swv2-provisioning-grid-primary" aria-label="ملخص بيانات الربط">
-          <div><span>عنوان الراوتر</span><strong data-swv2-provisioning="router_vpn_ip">--</strong></div>
-          <div><span>عنوان السيرفر</span><strong data-swv2-provisioning="server_vpn_ip">--</strong></div>
-          <div><span>اسم الربط</span><strong data-swv2-provisioning="peer_name">--</strong></div>
-          <div><span>مستخدم الإدارة</span><strong data-swv2-provisioning="api_username">--</strong></div>
+        <div class="swv2-provisioning-grid swv2-provisioning-grid-primary" aria-label="{{ _('ملخص بيانات الربط') }}">
+          <div><span>{{ _('عنوان الراوتر') }}</span><strong data-swv2-provisioning="router_vpn_ip">--</strong></div>
+          <div><span>{{ _('عنوان السيرفر') }}</span><strong data-swv2-provisioning="server_vpn_ip">--</strong></div>
+          <div><span>{{ _('اسم الربط') }}</span><strong data-swv2-provisioning="peer_name">--</strong></div>
+          <div><span>{{ _('مستخدم الإدارة') }}</span><strong data-swv2-provisioning="api_username">--</strong></div>
         </div>
         <details class="swv2-advanced swv2-engineering-only">
-          <summary>تفاصيل الحجز الهندسية</summary>
+          <summary>{{ _('تفاصيل الحجز الهندسية') }}</summary>
           <form class="swv2-form swv2-provisioning-form" data-swv2-vpn-form>
-            <label>هوية الراوتر
+            <label>{{ _('هوية الراوتر') }}
               <input type="text" name="vpn_router_identity" placeholder="mikrotik-branch-01">
             </label>
-            <label>عنوان الخادم العام
+            <label>{{ _('عنوان الخادم العام') }}
               <input type="text" name="vpn_vps_endpoint" value="187.77.70.18" placeholder="187.77.70.18">
             </label>
-            <label>منفذ نفق الإدارة
+            <label>{{ _('منفذ نفق الإدارة') }}
               <input type="number" name="vpn_endpoint_port" value="51820" min="1" max="65535">
             </label>
           </form>
-          <div class="swv2-provisioning-grid" aria-label="بيانات حجز الراوتر">
-            <div><span>سر المصادقة</span><strong data-swv2-provisioning="radius_secret">***</strong></div>
-            <div><span>رقم الحجز</span><strong data-swv2-provisioning="registry_id">--</strong></div>
-            <div><span>مرحلة الراوتر</span><strong data-swv2-provisioning="lifecycle_state">reserved</strong></div>
-            <div><span>حالة الربط</span><strong data-swv2-provisioning="peer_status">--</strong></div>
+          <div class="swv2-provisioning-grid" aria-label="{{ _('بيانات حجز الراوتر') }}">
+            <div><span>{{ _('سر المصادقة') }}</span><strong data-swv2-provisioning="radius_secret">***</strong></div>
+            <div><span>{{ _('رقم الحجز') }}</span><strong data-swv2-provisioning="registry_id">--</strong></div>
+            <div><span>{{ _('مرحلة الراوتر') }}</span><strong data-swv2-provisioning="lifecycle_state">reserved</strong></div>
+            <div><span>{{ _('حالة الربط') }}</span><strong data-swv2-provisioning="peer_status">--</strong></div>
           </div>
         </details>
         <div class="swv2-key-exchange swv2-auto-key-card" data-swv2-auto-public-key>
           <div>
-            <strong>لا تحتاج لإدخال مفاتيح يدويًا</strong>
-            <span>بعد لصق مخرجات سكربت الربط في خطوة التحقق، سيحاول المعالج التقاط مفتاح الربط العام تلقائيًا وتجهيز الخطة بدون عرض الأكواد للمستخدم.</span>
+            <strong>{{ _('لا تحتاج لإدخال مفاتيح يدويًا') }}</strong>
+            <span>{{ _('بعد لصق مخرجات سكربت الربط في خطوة التحقق، سيحاول المعالج التقاط مفتاح الربط العام تلقائيًا وتجهيز الخطة بدون عرض الأكواد للمستخدم.') }}</span>
           </div>
           <div class="swv2-action-row">
-            <span data-swv2-router-key-status>بانتظار توليد سكربت الربط.</span>
+            <span data-swv2-router-key-status>{{ _('بانتظار توليد سكربت الربط.') }}</span>
           </div>
         </div>
         <details class="swv2-advanced swv2-engineering-only">
-          <summary>وضع المختبر الداخلي للسيرفر</summary>
+          <summary>{{ _('وضع المختبر الداخلي للسيرفر') }}</summary>
         <div class="swv2-server-peer-panel">
           <div>
-            <strong>تحضير Peer على السيرفر</strong>
-            <span>وضع المختبر الداخلي فقط. المراجعة الجافة متاحة، أما التطبيق والرجوع فمغلقان حتى تفعيل أعلام المختبر.</span>
+            <strong>{{ _('تحضير Peer على السيرفر') }}</strong>
+            <span>{{ _('وضع المختبر الداخلي فقط. المراجعة الجافة متاحة، أما التطبيق والرجوع فمغلقان حتى تفعيل أعلام المختبر.') }}</span>
           </div>
           <div class="swv2-readiness-panel" data-swv2-server-wg-readiness>
             <div class="swv2-readiness-head">
               <div>
-                <strong>جاهزية خادم نفق الإدارة</strong>
-                <span>فحص قراءة فقط يوضح هل خادم الربط جاهز لمعاينة ربط مخبرية عند الحاجة.</span>
+                <strong>{{ _('جاهزية خادم نفق الإدارة') }}</strong>
+                <span>{{ _('فحص قراءة فقط يوضح هل خادم الربط جاهز لمعاينة ربط مخبرية عند الحاجة.') }}</span>
               </div>
-              <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-server-wg-readiness-check>فحص الجاهزية</button>
+              <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-server-wg-readiness-check>{{ _('فحص الجاهزية') }}</button>
             </div>
             <div class="swv2-readiness-grid">
-              <div><span>أمر نفق الإدارة</span><strong data-swv2-readiness-item="wg_show_readable">معطل</strong></div>
-              <div><span>الواجهة</span><strong data-swv2-readiness-item="wg_interface_exists">غير مفحوص</strong></div>
-              <div><span>عنوان السيرفر</span><strong data-swv2-readiness-item="server_ip_assigned">غير مفحوص</strong></div>
-              <div><span>النسخة الاحتياطية</span><strong data-swv2-readiness-item="backup_dir_configured">غير مضبوط</strong></div>
-              <div><span>وصول قراءة فقط</span><strong data-swv2-readiness-item="runner_mode">معطل</strong></div>
-              <div><span>محول التطبيق</span><strong data-swv2-readiness-item="real_adapter_flag">محظور للأمان</strong></div>
+              <div><span>{{ _('أمر نفق الإدارة') }}</span><strong data-swv2-readiness-item="wg_show_readable">{{ _('معطل') }}</strong></div>
+              <div><span>{{ _('الواجهة') }}</span><strong data-swv2-readiness-item="wg_interface_exists">{{ _('غير مفحوص') }}</strong></div>
+              <div><span>{{ _('عنوان السيرفر') }}</span><strong data-swv2-readiness-item="server_ip_assigned">{{ _('غير مفحوص') }}</strong></div>
+              <div><span>{{ _('النسخة الاحتياطية') }}</span><strong data-swv2-readiness-item="backup_dir_configured">{{ _('غير مضبوط') }}</strong></div>
+              <div><span>{{ _('وصول قراءة فقط') }}</span><strong data-swv2-readiness-item="runner_mode">{{ _('معطل') }}</strong></div>
+              <div><span>{{ _('محول التطبيق') }}</span><strong data-swv2-readiness-item="real_adapter_flag">{{ _('محظور للأمان') }}</strong></div>
             </div>
             <details class="swv2-advanced">
-              <summary>تفاصيل الجاهزية</summary>
-              <div class="swv2-summary-box" data-swv2-server-wg-readiness-result>لم يتم فحص الجاهزية بعد.</div>
+              <summary>{{ _('تفاصيل الجاهزية') }}</summary>
+              <div class="swv2-summary-box" data-swv2-server-wg-readiness-result>{{ _('لم يتم فحص الجاهزية بعد.') }}</div>
             </details>
           </div>
           <div class="swv2-peer-health-panel" data-swv2-peer-health-panel>
             <div class="swv2-peer-health-head">
               <div>
-                <strong>صحة اتصال نفق الإدارة</strong>
-                <span>قراءة فقط لحالة المصافحة وحركة الاستقبال والإرسال بعد تطبيق الربط في المختبر.</span>
+                <strong>{{ _('صحة اتصال نفق الإدارة') }}</strong>
+                <span>{{ _('قراءة فقط لحالة المصافحة وحركة الاستقبال والإرسال بعد تطبيق الربط في المختبر.') }}</span>
               </div>
-              <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-server-peer-health>فحص صحة peer</button>
+              <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-server-peer-health>{{ _('فحص صحة peer') }}</button>
             </div>
             <div class="swv2-peer-health-grid">
-              <div><span>الحالة</span><strong data-swv2-peer-health="status">غير مفحوص</strong></div>
-              <div><span>النقاط</span><strong data-swv2-peer-health="score">--</strong></div>
-              <div><span>آخر مصافحة</span><strong data-swv2-peer-health="handshake">--</strong></div>
-              <div><span>استقبال</span><strong data-swv2-peer-health="rx">--</strong></div>
-              <div><span>إرسال</span><strong data-swv2-peer-health="tx">--</strong></div>
-              <div><span>التوصية</span><strong data-swv2-peer-health="recommendation">ألصق wg show ثم افحص.</strong></div>
+              <div><span>{{ _('الحالة') }}</span><strong data-swv2-peer-health="status">{{ _('غير مفحوص') }}</strong></div>
+              <div><span>{{ _('النقاط') }}</span><strong data-swv2-peer-health="score">--</strong></div>
+              <div><span>{{ _('آخر مصافحة') }}</span><strong data-swv2-peer-health="handshake">--</strong></div>
+              <div><span>{{ _('استقبال') }}</span><strong data-swv2-peer-health="rx">--</strong></div>
+              <div><span>{{ _('إرسال') }}</span><strong data-swv2-peer-health="tx">--</strong></div>
+              <div><span>{{ _('التوصية') }}</span><strong data-swv2-peer-health="recommendation">{{ _('ألصق wg show ثم افحص.') }}</strong></div>
             </div>
             <details class="swv2-advanced">
-              <summary>تفاصيل صحة peer</summary>
-              <div class="swv2-summary-box" data-swv2-peer-health-result>لم يتم فحص صحة الربط بعد.</div>
+              <summary>{{ _('تفاصيل صحة peer') }}</summary>
+              <div class="swv2-summary-box" data-swv2-peer-health-result>{{ _('لم يتم فحص صحة الربط بعد.') }}</div>
             </details>
           </div>
           <div class="swv2-action-row">
-            <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-server-peer-dry-run>مراجعة خطة الربط</button>
-            <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-server-peer-verify>فحص wg show</button>
-            <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-server-peer-apply disabled data-swv2-server-peer-simple-apply title="يتطلب كل شروط المختبر وجاهزية خادم الربط">تطبيق مختبري مغلق</button>
-            <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-server-peer-rollback disabled title="يتطلب تطبيقًا سابقًا وتأكيدًا واضحًا">تمرين رجوع مغلق</button>
+            <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-server-peer-dry-run>{{ _('مراجعة خطة الربط') }}</button>
+            <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-server-peer-verify>{{ _('فحص wg show') }}</button>
+            <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-server-peer-apply disabled data-swv2-server-peer-simple-apply title="{{ _('يتطلب كل شروط المختبر وجاهزية خادم الربط') }}">{{ _('تطبيق مختبري مغلق') }}</button>
+            <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-server-peer-rollback disabled title="{{ _('يتطلب تطبيقًا سابقًا وتأكيدًا واضحًا') }}">{{ _('تمرين رجوع مغلق') }}</button>
           </div>
-          <label class="swv2-lab-confirmation">تأكيد وضع المختبر الداخلي
-            <input type="text" data-swv2-server-peer-confirmation placeholder="APPLY SERVER PEER IN LAB أو ROLLBACK SERVER PEER IN LAB">
-            <span>مختبر داخلي فقط. لا تستخدمه على خادم إنتاجي أو راوتر عميل.</span>
+          <label class="swv2-lab-confirmation">{{ _('تأكيد وضع المختبر الداخلي') }}
+            <input type="text" data-swv2-server-peer-confirmation placeholder="{{ _('APPLY SERVER PEER IN LAB أو ROLLBACK SERVER PEER IN LAB') }}">
+            <span>{{ _('مختبر داخلي فقط. لا تستخدمه على خادم إنتاجي أو راوتر عميل.') }}</span>
           </label>
-          <textarea data-swv2-server-peer-output placeholder="اختياري: الصق مخرجات فحص النفق للتحقق من وجود الربط والمصافحة"></textarea>
-          <div class="swv2-summary-box" data-swv2-server-peer-result>لم يتم تشغيل معاينة التنفيذ بعد.</div>
+          <textarea data-swv2-server-peer-output placeholder="{{ _('اختياري: الصق مخرجات فحص النفق للتحقق من وجود الربط والمصافحة') }}"></textarea>
+          <div class="swv2-summary-box" data-swv2-server-peer-result>{{ _('لم يتم تشغيل معاينة التنفيذ بعد.') }}</div>
         </div>
         </details>
-        <h2>جهز سكربت ربط الراوتر</h2>
-        <p>انسخ السكربت إلى الراوتر. بعد التنفيذ الصق المخرجات في الخطوة التالية، وسيكمل المعالج قراءة الإشارات تلقائيًا.</p>
+        <h2>{{ _('جهز سكربت ربط الراوتر') }}</h2>
+        <p>{{ _('انسخ السكربت إلى الراوتر. بعد التنفيذ الصق المخرجات في الخطوة التالية، وسيكمل المعالج قراءة الإشارات تلقائيًا.') }}</p>
         <div class="swv2-action-row">
-          <button type="button" class="swv2-btn swv2-btn-primary" data-copy-target="vpn-script-code">نسخ سكربت الربط</button>
+          <button type="button" class="swv2-btn swv2-btn-primary" data-copy-target="vpn-script-code">{{ _('نسخ سكربت الربط') }}</button>
           <details class="swv2-advanced">
-            <summary>تفاصيل هندسية</summary>
-            <div class="swv2-summary-box" data-swv2-plan-json="vpn">لم يتم توليد ملخص الربط بعد.</div>
+            <summary>{{ _('تفاصيل هندسية') }}</summary>
+            <div class="swv2-summary-box" data-swv2-plan-json="vpn">{{ _('لم يتم توليد ملخص الربط بعد.') }}</div>
           </details>
         </div>
         <div class="swv2-action-row">
-          <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-generate-vpn>تجهيز الربط تلقائيًا</button>
+          <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-generate-vpn>{{ _('تجهيز الربط تلقائيًا') }}</button>
         </div>
         <div class="swv2-script-card" data-swv2-script-preview="vpn">
           <div>
-            <strong>معاينة سكربت الربط والمصادقة</strong>
-            <span data-swv2-vpn-script-status>السكربت جاهز للنسخ فقط. لا يوجد تطبيق حي من الصفحة.</span>
-            <button type="button" class="swv2-copy-chip" data-copy-target="vpn-script-code">نسخ</button>
+            <strong>{{ _('معاينة سكربت الربط والمصادقة') }}</strong>
+            <span data-swv2-vpn-script-status>{{ _('السكربت جاهز للنسخ فقط. لا يوجد تطبيق حي من الصفحة.') }}</span>
+            <button type="button" class="swv2-copy-chip" data-copy-target="vpn-script-code">{{ _('نسخ') }}</button>
           </div>
-          <pre id="vpn-script-code">-- لم يتم توليد سكربت الربط والمصادقة بعد --</pre>
+          <pre id="vpn-script-code">{{ _('-- لم يتم توليد سكربت الربط والمصادقة بعد --') }}</pre>
         </div>
       </div>
     </article>
 
     <article class="swv2-step" data-swv2-step="vpn-verify">
       <div class="swv2-step-card">
-        <span class="swv2-eyebrow">تحقق الربط</span>
-        <h2>تأكد من اتصال الراوتر بالخادم</h2>
-        <p>الصق مخرجات السكربت أو فحص الربط كما هي. سيبحث المعالج تلقائيًا عن ping و handshake ومفتاح الربط العام إن وجد.</p>
+        <span class="swv2-eyebrow">{{ _('تحقق الربط') }}</span>
+        <h2>{{ _('تأكد من اتصال الراوتر بالخادم') }}</h2>
+        <p>{{ _('الصق مخرجات السكربت أو فحص الربط كما هي. سيبحث المعالج تلقائيًا عن ping و handshake ومفتاح الربط العام إن وجد.') }}</p>
         <div class="swv2-verification-panel" data-swv2-verification-panel="vpn">
           <textarea data-swv2-verify-output="vpn" placeholder="latest handshake: 3s ago&#10;sent=5 received=5 packet-loss=0%"></textarea>
           <div class="swv2-action-row">
-            <button type="button" class="swv2-btn swv2-btn-primary" data-swv2-verify="vpn">تحليل المخرجات</button>
-            <button type="button" class="swv2-btn swv2-btn-ghost">إعادة التحقق</button>
+            <button type="button" class="swv2-btn swv2-btn-primary" data-swv2-verify="vpn">{{ _('تحليل المخرجات') }}</button>
+            <button type="button" class="swv2-btn swv2-btn-ghost">{{ _('إعادة التحقق') }}</button>
           </div>
           <div class="swv2-diagnostics" data-swv2-diagnostics="vpn">
             <div class="swv2-diagnostic-card is-waiting">
-              <strong>بانتظار فحص الربط</strong>
-              <span>سنبحث عن اتصال آمن ناجح، وفحص وصول ناجح، وإشارات المصادقة والربط.</span>
+              <strong>{{ _('بانتظار فحص الربط') }}</strong>
+              <span>{{ _('سنبحث عن اتصال آمن ناجح، وفحص وصول ناجح، وإشارات المصادقة والربط.') }}</span>
             </div>
           </div>
         </div>
@@ -523,8 +523,8 @@
         <div class="swv2-auto-finalize-card"
              data-swv2-auto-finalize>
           <div class="swv2-auto-finalize-head">
-            <span class="swv2-auto-finalize-badge">🚀 إنهاء تلقائي</span>
-            <h3>تجهيز الربط الكامل بضغطة واحدة</h3>
+            <span class="swv2-auto-finalize-badge">{{ _('🚀 إنهاء تلقائي') }}</span>
+            <h3>{{ _('تجهيز الربط الكامل بضغطة واحدة') }}</h3>
             <p>
               الراوتر خلف NAT أو الـ IP العامّ متغيّر؟ لا
               مشكلة. ألصق مخرجات نفق الإدارة من الراوتر هنا
@@ -538,12 +538,12 @@
             <button type="button"
                     class="swv2-mode-tab is-active"
                     data-swv2-mode-tab="paste">
-              لصق مخرجات نفق الإدارة (موصى به)
+              {{ _('لصق مخرجات نفق الإدارة (موصى به)') }}
             </button>
             <button type="button"
                     class="swv2-mode-tab"
                     data-swv2-mode-tab="api">
-              🔌 اتصال مباشر بالراوتر (يحتاج IP عام)
+              {{ _('🔌 اتصال مباشر بالراوتر (يحتاج IP عام)') }}
             </button>
           </div>
 
@@ -552,9 +552,9 @@
                data-swv2-mode-panel="paste">
             <label class="swv2-field swv2-field-full">
               <span>
-                مخرجات
+                {{ _('مخرجات') }}
                 <code>/interface wireguard print detail</code>
-                من الراوتر
+                {{ _('من الراوتر') }}
               </span>
               <textarea data-swv2-paste-output
                         rows="8"
@@ -577,14 +577,14 @@
                data-swv2-mode-panel="api" hidden>
             <div class="swv2-auto-finalize-grid">
               <label class="swv2-field">
-                <span>عنوان الراوتر على الإنترنت أو الدومين</span>
+                <span>{{ _('عنوان الراوتر على الإنترنت أو الدومين') }}</span>
                 <input type="text"
                        data-swv2-auto-router-address
-                       placeholder="مثال: 213.6.169.138"
+                       placeholder="{{ _('مثال: 213.6.169.138') }}"
                        autocomplete="off">
               </label>
               <label class="swv2-field">
-                <span>اسم مستخدم الربط على الراوتر</span>
+                <span>{{ _('اسم مستخدم الربط على الراوتر') }}</span>
                 <input type="text"
                        data-swv2-auto-api-user
                        placeholder="admin"
@@ -592,14 +592,14 @@
                        autocomplete="off">
               </label>
               <label class="swv2-field">
-                <span>كلمة مرور الربط</span>
+                <span>{{ _('كلمة مرور الربط') }}</span>
                 <input type="password"
                        data-swv2-auto-api-password
                        placeholder="••••••••"
                        autocomplete="off">
               </label>
               <label class="swv2-field swv2-field-narrow">
-                <span>منفذ الربط</span>
+                <span>{{ _('منفذ الربط') }}</span>
                 <input type="number"
                        data-swv2-auto-api-port
                        value="8728"
@@ -613,11 +613,11 @@
                     class="swv2-btn swv2-btn-primary swv2-btn-large"
                     data-swv2-auto-finalize-go>
               <span class="swv2-btn-icon">⚡</span>
-              تجهيز كامل تلقائياً
+              {{ _('تجهيز كامل تلقائياً') }}
             </button>
             <span class="swv2-auto-finalize-spinner"
                   data-swv2-auto-finalize-spinner hidden>
-              جارٍ التنفيذ...
+              {{ _('جارٍ التنفيذ...') }}
             </span>
           </div>
 
@@ -631,11 +631,11 @@
         </div>
         <div class="swv2-success-state" hidden data-swv2-success="vpn">
           <i class="fa-solid fa-party-horn"></i>
-          <strong>تم ربط الراوتر بنجاح</strong>
-          <span>يمكنك متابعة إعداد الهوتسبوت أو البرودباند في الخطوة التالية.</span>
+          <strong>{{ _('تم ربط الراوتر بنجاح') }}</strong>
+          <span>{{ _('يمكنك متابعة إعداد الهوتسبوت أو البرودباند في الخطوة التالية.') }}</span>
           <div class="swv2-success-card" data-swv2-success-card="vpn">
-            <b>الشبكة جاهزة للتوسع</b>
-            <span>تم اجتياز فحص الربط الأساسي. اختر الآن خدمة الشبكة المناسبة أو انتقل إلى ملخص الإعداد.</span>
+            <b>{{ _('الشبكة جاهزة للتوسع') }}</b>
+            <span>{{ _('تم اجتياز فحص الربط الأساسي. اختر الآن خدمة الشبكة المناسبة أو انتقل إلى ملخص الإعداد.') }}</span>
           </div>
         </div>
       </div>
@@ -643,99 +643,99 @@
 
     <article class="swv2-step" data-swv2-step="service-path" data-swv2-requires="vpn-verified">
       <div class="swv2-step-card">
-        <span class="swv2-eyebrow">اختيار الخدمات</span>
-        <h2>اختر ما تريد برمجته</h2>
-        <p>بعد نجاح الربط والمصادقة اختر خدمة واحدة أو جهز الاثنين بالتتابع. هذه المرحلة تولد سكربتات ومعاينات فقط ولا تطبق أي شيء على الراوتر.</p>
-        <div class="swv2-lock-note" data-swv2-service-lock>مقفلة حتى ينجح تحقق الربط والمصادقة.</div>
+        <span class="swv2-eyebrow">{{ _('اختيار الخدمات') }}</span>
+        <h2>{{ _('اختر ما تريد برمجته') }}</h2>
+        <p>{{ _('بعد نجاح الربط والمصادقة اختر خدمة واحدة أو جهز الاثنين بالتتابع. هذه المرحلة تولد سكربتات ومعاينات فقط ولا تطبق أي شيء على الراوتر.') }}</p>
+        <div class="swv2-lock-note" data-swv2-service-lock>{{ _('مقفلة حتى ينجح تحقق الربط والمصادقة.') }}</div>
         <div class="swv2-service-grid" data-swv2-service-path>
           <button type="button" class="swv2-service-card is-locked" data-service-path="hotspot" data-locked-until="vpn-radius">
             <i class="fa-solid fa-wifi"></i>
-            <strong>هوتسبوت</strong>
-            <span>بوابة تسجيل دخول لكروت الإنترنت المؤقتة.</span>
-            <small>موصى به للكافيهات والفنادق ومناطق الواي فاي.</small>
+            <strong>{{ _('هوتسبوت') }}</strong>
+            <span>{{ _('بوابة تسجيل دخول لكروت الإنترنت المؤقتة.') }}</span>
+            <small>{{ _('موصى به للكافيهات والفنادق ومناطق الواي فاي.') }}</small>
           </button>
           <button type="button" class="swv2-service-card is-locked" data-service-path="broadband" data-locked-until="vpn-radius">
             <i class="fa-solid fa-ethernet"></i>
-            <strong>برودباند عبر مزود الإنترنت</strong>
-            <span>خدمة مستخدمين عبر اتصال المزود مع المصادقة المركزية.</span>
-            <small>موصى به لشبكات ISP والسلكية.</small>
+            <strong>{{ _('برودباند عبر مزود الإنترنت') }}</strong>
+            <span>{{ _('خدمة مستخدمين عبر اتصال المزود مع المصادقة المركزية.') }}</span>
+            <small>{{ _('موصى به لشبكات ISP والسلكية.') }}</small>
           </button>
           <button type="button" class="swv2-service-card is-locked" data-service-path="both" data-locked-until="vpn-radius">
             <i class="fa-solid fa-layer-group"></i>
-            <strong>هوتسبوت + برودباند</strong>
-            <span>تجهيز الهوتسبوت ثم البرودباند خطوة بخطوة.</span>
-            <small>كل خدمة تبقى منفصلة ولها معاينة تنفيذ خاصة.</small>
+            <strong>{{ _('هوتسبوت + برودباند') }}</strong>
+            <span>{{ _('تجهيز الهوتسبوت ثم البرودباند خطوة بخطوة.') }}</span>
+            <small>{{ _('كل خدمة تبقى منفصلة ولها معاينة تنفيذ خاصة.') }}</small>
           </button>
           <button type="button" class="swv2-service-card is-locked" data-service-path="skip" data-locked-until="vpn-radius">
             <i class="fa-solid fa-forward"></i>
-            <strong>تخطي الآن</strong>
-            <span>انتقل للملخص بدون تجهيز خدمات إضافية.</span>
-            <small>يمكن الرجوع من الوضع الهندسي عند الحاجة.</small>
+            <strong>{{ _('تخطي الآن') }}</strong>
+            <span>{{ _('انتقل للملخص بدون تجهيز خدمات إضافية.') }}</span>
+            <small>{{ _('يمكن الرجوع من الوضع الهندسي عند الحاجة.') }}</small>
           </button>
         </div>
-        <div class="swv2-selected-path" data-swv2-selected-service>لم يتم اختيار مسار بعد.</div>
+        <div class="swv2-selected-path" data-swv2-selected-service>{{ _('لم يتم اختيار مسار بعد.') }}</div>
       </div>
     </article>
 
     <article class="swv2-step" data-swv2-step="interface-picker">
       <div class="swv2-step-card">
-        <span class="swv2-eyebrow">اختيار الواجهات</span>
-        <h2>اختر منافذ الشبكة الآمنة للخدمة</h2>
-        <p>سنحاول استبعاد واجهة الإنترنت ونفق الإدارة بصريًا. إذا لم تتوفر لقطة من الراوتر يمكنك استخدام القائمة اليدوية المؤقتة.</p>
+        <span class="swv2-eyebrow">{{ _('اختيار الواجهات') }}</span>
+        <h2>{{ _('اختر منافذ الشبكة الآمنة للخدمة') }}</h2>
+        <p>{{ _('سنحاول استبعاد واجهة الإنترنت ونفق الإدارة بصريًا. إذا لم تتوفر لقطة من الراوتر يمكنك استخدام القائمة اليدوية المؤقتة.') }}</p>
         <div class="swv2-action-row">
-          <button type="button" class="swv2-btn swv2-btn-primary" data-swv2-load-interfaces>عرض الواجهات المقترحة</button>
+          <button type="button" class="swv2-btn swv2-btn-primary" data-swv2-load-interfaces>{{ _('عرض الواجهات المقترحة') }}</button>
         </div>
-        <div class="swv2-selection-summary" data-swv2-interface-summary>اختر منفذًا واحدًا أو أكثر. يمكنك تحديد عدة منافذ LAN للخدمة نفسها.</div>
+        <div class="swv2-selection-summary" data-swv2-interface-summary>{{ _('اختر منفذًا واحدًا أو أكثر. يمكنك تحديد عدة منافذ LAN للخدمة نفسها.') }}</div>
         <div class="swv2-interface-grid" data-swv2-interface-picker>
           <button type="button" class="swv2-interface-card is-disabled" data-interface-name="ether1" disabled>
             <strong>ether1</strong>
-            <span>واجهة الإنترنت</span>
-            <small>مستبعد: واجهة الإنترنت</small>
+            <span>{{ _('واجهة الإنترنت') }}</span>
+            <small>{{ _('مستبعد: واجهة الإنترنت') }}</small>
           </button>
           <button type="button" class="swv2-interface-card is-recommended" data-interface-name="ether2">
             <strong>ether2</strong>
-            <span>منفذ محلي</span>
-            <small>موصى به</small>
+            <span>{{ _('منفذ محلي') }}</span>
+            <small>{{ _('موصى به') }}</small>
           </button>
           <button type="button" class="swv2-interface-card is-recommended" data-interface-name="ether3">
             <strong>ether3</strong>
-            <span>منفذ محلي</span>
-            <small>موصى به</small>
+            <span>{{ _('منفذ محلي') }}</span>
+            <small>{{ _('موصى به') }}</small>
           </button>
           <button type="button" class="swv2-interface-card is-recommended" data-interface-name="ether4">
             <strong>ether4</strong>
-            <span>منفذ محلي</span>
-            <small>موصى به</small>
+            <span>{{ _('منفذ محلي') }}</span>
+            <small>{{ _('موصى به') }}</small>
           </button>
           <button type="button" class="swv2-interface-card is-recommended" data-interface-name="ether5">
             <strong>ether5</strong>
-            <span>منفذ محلي</span>
-            <small>موصى به</small>
+            <span>{{ _('منفذ محلي') }}</span>
+            <small>{{ _('موصى به') }}</small>
           </button>
           <button type="button" class="swv2-interface-card is-recommended" data-interface-name="ether6">
             <strong>ether6</strong>
-            <span>منفذ محلي</span>
-            <small>موصى به</small>
+            <span>{{ _('منفذ محلي') }}</span>
+            <small>{{ _('موصى به') }}</small>
           </button>
           <button type="button" class="swv2-interface-card is-recommended" data-interface-name="ether7">
             <strong>ether7</strong>
-            <span>منفذ محلي</span>
-            <small>موصى به</small>
+            <span>{{ _('منفذ محلي') }}</span>
+            <small>{{ _('موصى به') }}</small>
           </button>
           <button type="button" class="swv2-interface-card is-recommended" data-interface-name="ether8">
             <strong>ether8</strong>
-            <span>منفذ محلي</span>
-            <small>موصى به</small>
+            <span>{{ _('منفذ محلي') }}</span>
+            <small>{{ _('موصى به') }}</small>
           </button>
           <button type="button" class="swv2-interface-card is-disabled" data-interface-name="hr-wg" disabled>
             <strong>hr-wg</strong>
-            <span>نفق الإدارة</span>
-            <small>مستبعد: نفق الإدارة</small>
+            <span>{{ _('نفق الإدارة') }}</span>
+            <small>{{ _('مستبعد: نفق الإدارة') }}</small>
           </button>
         </div>
         <details class="swv2-advanced">
-          <summary>تجاوز يدوي متقدم</summary>
-          <p>استخدم هذا فقط إذا كنت متأكدًا أن الواجهة ليست واجهة الإنترنت ولا نفق الإدارة. الاختيار الخاطئ قد يقطع إدارة الراوتر.</p>
+          <summary>{{ _('تجاوز يدوي متقدم') }}</summary>
+          <p>{{ _('استخدم هذا فقط إذا كنت متأكدًا أن الواجهة ليست واجهة الإنترنت ولا نفق الإدارة. الاختيار الخاطئ قد يقطع إدارة الراوتر.') }}</p>
           <input type="text" data-swv2-manual-interfaces placeholder="ether2,ether3">
         </details>
       </div>
@@ -743,195 +743,195 @@
 
     <article class="swv2-step" data-swv2-step="hotspot-flow">
       <div class="swv2-step-card">
-        <span class="swv2-eyebrow">هوتسبوت</span>
-        <h2>تجهيز الهوتسبوت بمعاينة آمنة</h2>
-        <p>اختر الوضع الذكي أو اليدوي، ثم ولّد السكربت من المحرك الحقيقي. التفاصيل الهندسية مخفية حتى تحتاجها.</p>
+        <span class="swv2-eyebrow">{{ _('هوتسبوت') }}</span>
+        <h2>{{ _('تجهيز الهوتسبوت بمعاينة آمنة') }}</h2>
+        <p>{{ _('اختر الوضع الذكي أو اليدوي، ثم ولّد السكربت من المحرك الحقيقي. التفاصيل الهندسية مخفية حتى تحتاجها.') }}</p>
         <div class="swv2-mode-toggle" data-swv2-mode-toggle="hotspot">
-          <button type="button" class="is-selected" data-mode-target="hotspot" data-mode-value="smart">الوضع الذكي</button>
-          <button type="button" data-mode-target="hotspot" data-mode-value="manual">إعداد يدوي</button>
+          <button type="button" class="is-selected" data-mode-target="hotspot" data-mode-value="smart">{{ _('الوضع الذكي') }}</button>
+          <button type="button" data-mode-target="hotspot" data-mode-value="manual">{{ _('إعداد يدوي') }}</button>
         </div>
         <div class="swv2-safe-proposal" data-swv2-hotspot-proposal>
-          <strong>مقترح آمن</strong>
-          <span>سيتم تجهيز كل منفذ مختار كشبكة هوتسبوت مستقلة بعناوين تلقائية، بدون bridge.</span>
+          <strong>{{ _('مقترح آمن') }}</strong>
+          <span>{{ _('سيتم تجهيز كل منفذ مختار كشبكة هوتسبوت مستقلة بعناوين تلقائية، بدون bridge.') }}</span>
         </div>
         <form class="swv2-form" data-swv2-service-form="hotspot">
-          <label>واجهات الخدمة
+          <label>{{ _('واجهات الخدمة') }}
             <input type="text" name="hotspot_interfaces" value="ether2" placeholder="ether2,ether3">
           </label>
-          <label>أساس العناوين التلقائي
+          <label>{{ _('أساس العناوين التلقائي') }}
             <input type="text" name="hotspot_subnet_base" value="10.20.0.0/16">
           </label>
-          <label>اسم صفحة الدخول
+          <label>{{ _('اسم صفحة الدخول') }}
             <input type="text" name="hotspot_dns_name" value="login.hoberadius.local">
           </label>
         </form>
         <div class="swv2-action-row">
-          <button type="button" class="swv2-btn swv2-btn-primary" data-swv2-generate-service="hotspot">توليد سكربت الهوتسبوت</button>
-          <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-service-dry-run="hotspot">مراجعة جافة</button>
-          <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-service-verify="hotspot">تحقق</button>
+          <button type="button" class="swv2-btn swv2-btn-primary" data-swv2-generate-service="hotspot">{{ _('توليد سكربت الهوتسبوت') }}</button>
+          <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-service-dry-run="hotspot">{{ _('مراجعة جافة') }}</button>
+          <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-service-verify="hotspot">{{ _('تحقق') }}</button>
         </div>
-        <textarea data-swv2-service-output="hotspot" placeholder="ألصق مخرجات فحص الهوتسبوت أو تحقق المصادقة هنا"></textarea>
+        <textarea data-swv2-service-output="hotspot" placeholder="{{ _('ألصق مخرجات فحص الهوتسبوت أو تحقق المصادقة هنا') }}"></textarea>
         <div class="swv2-script-card">
-          <div><strong>معاينة سكربت الهوتسبوت</strong><span data-swv2-service-status="hotspot">لم يتم توليد السكربت بعد.</span><button type="button" class="swv2-copy-chip" data-copy-target="hotspot-script-code">نسخ</button></div>
-          <pre id="hotspot-script-code">-- لم يتم توليد سكربت الهوتسبوت بعد --</pre>
+          <div><strong>{{ _('معاينة سكربت الهوتسبوت') }}</strong><span data-swv2-service-status="hotspot">{{ _('لم يتم توليد السكربت بعد.') }}</span><button type="button" class="swv2-copy-chip" data-copy-target="hotspot-script-code">{{ _('نسخ') }}</button></div>
+          <pre id="hotspot-script-code">{{ _('-- لم يتم توليد سكربت الهوتسبوت بعد --') }}</pre>
         </div>
         <div class="swv2-diagnostics" data-swv2-service-diagnostics="hotspot"></div>
         <details class="swv2-advanced">
-          <summary>تفاصيل الهوتسبوت الهندسية</summary>
-          <div class="swv2-summary-box" data-swv2-service-json="hotspot">لم يتم توليد ملخص الهوتسبوت بعد.</div>
+          <summary>{{ _('تفاصيل الهوتسبوت الهندسية') }}</summary>
+          <div class="swv2-summary-box" data-swv2-service-json="hotspot">{{ _('لم يتم توليد ملخص الهوتسبوت بعد.') }}</div>
         </details>
       </div>
     </article>
 
     <article class="swv2-step" data-swv2-step="broadband-flow">
       <div class="swv2-step-card">
-        <span class="swv2-eyebrow">برودباند</span>
-        <h2>تجهيز البرودباند بمعاينة آمنة</h2>
-        <p>سيتم توليد ملف التشغيل ومجموعة العناوين وخادم البرودباند مع ترجمة عناوين محدودة على مجموعة العملاء فقط. لا يوجد تطبيق مباشر.</p>
+        <span class="swv2-eyebrow">{{ _('برودباند') }}</span>
+        <h2>{{ _('تجهيز البرودباند بمعاينة آمنة') }}</h2>
+        <p>{{ _('سيتم توليد ملف التشغيل ومجموعة العناوين وخادم البرودباند مع ترجمة عناوين محدودة على مجموعة العملاء فقط. لا يوجد تطبيق مباشر.') }}</p>
         <div class="swv2-mode-toggle" data-swv2-mode-toggle="broadband">
-          <button type="button" class="is-selected" data-mode-target="broadband" data-mode-value="smart">الوضع الذكي</button>
-          <button type="button" data-mode-target="broadband" data-mode-value="manual">إعداد يدوي</button>
+          <button type="button" class="is-selected" data-mode-target="broadband" data-mode-value="smart">{{ _('الوضع الذكي') }}</button>
+          <button type="button" data-mode-target="broadband" data-mode-value="manual">{{ _('إعداد يدوي') }}</button>
         </div>
         <div class="swv2-safe-proposal" data-swv2-broadband-proposal>
-          <strong>مقترح آمن</strong>
-          <span>سيتم اختيار ملف البرودباند ومجموعة العناوين بعيدًا عن واجهة الإنترنت والربط الخاص والهوتسبوت.</span>
+          <strong>{{ _('مقترح آمن') }}</strong>
+          <span>{{ _('سيتم اختيار ملف البرودباند ومجموعة العناوين بعيدًا عن واجهة الإنترنت والربط الخاص والهوتسبوت.') }}</span>
         </div>
         <form class="swv2-form" data-swv2-service-form="broadband">
-          <label>واجهات الخدمة
+          <label>{{ _('واجهات الخدمة') }}
             <input type="text" name="broadband_interfaces" value="ether2" placeholder="ether2,ether3">
           </label>
-          <label>اسم خدمة البرودباند
+          <label>{{ _('اسم خدمة البرودباند') }}
             <input type="text" name="broadband_service_name" value="hoberadius-pppoe">
           </label>
-          <label>عنوان الراوتر المحلي
+          <label>{{ _('عنوان الراوتر المحلي') }}
             <input type="text" name="broadband_local_address" value="10.88.44.1">
           </label>
-          <label>شبكة عناوين العملاء CIDR
+          <label>{{ _('شبكة عناوين العملاء CIDR') }}
             <input type="text" name="broadband_remote_pool_cidr" value="10.88.44.0/24">
           </label>
-          <label>اسم البروفايل
+          <label>{{ _('اسم البروفايل') }}
             <input type="text" name="broadband_profile_name" value="hr-pppoe-profile">
           </label>
           <label>DNS
             <input type="text" name="broadband_dns" value="1.1.1.1,8.8.8.8">
           </label>
-          <label><input type="checkbox" name="broadband_nat_enabled" checked> NAT محدود على عناوين البرودباند فقط</label>
+          <label><input type="checkbox" name="broadband_nat_enabled" checked> {{ _('NAT محدود على عناوين البرودباند فقط') }}</label>
         </form>
         <div class="swv2-action-row">
-          <button type="button" class="swv2-btn swv2-btn-primary" data-swv2-generate-service="broadband">توليد سكربت البرودباند</button>
-          <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-service-dry-run="broadband">مراجعة جافة</button>
-          <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-service-verify="broadband">تحقق</button>
+          <button type="button" class="swv2-btn swv2-btn-primary" data-swv2-generate-service="broadband">{{ _('توليد سكربت البرودباند') }}</button>
+          <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-service-dry-run="broadband">{{ _('مراجعة جافة') }}</button>
+          <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-service-verify="broadband">{{ _('تحقق') }}</button>
         </div>
-        <textarea data-swv2-service-output="broadband" placeholder="ألصق مخرجات اتصال البرودباند أو تحقق المصادقة هنا"></textarea>
+        <textarea data-swv2-service-output="broadband" placeholder="{{ _('ألصق مخرجات اتصال البرودباند أو تحقق المصادقة هنا') }}"></textarea>
         <div class="swv2-script-card">
-          <div><strong>معاينة سكربت البرودباند</strong><span data-swv2-service-status="broadband">لم يتم توليد السكربت بعد.</span><button type="button" class="swv2-copy-chip" data-copy-target="broadband-script-code">نسخ</button></div>
-          <pre id="broadband-script-code">-- لم يتم توليد سكربت البرودباند بعد --</pre>
+          <div><strong>{{ _('معاينة سكربت البرودباند') }}</strong><span data-swv2-service-status="broadband">{{ _('لم يتم توليد السكربت بعد.') }}</span><button type="button" class="swv2-copy-chip" data-copy-target="broadband-script-code">{{ _('نسخ') }}</button></div>
+          <pre id="broadband-script-code">{{ _('-- لم يتم توليد سكربت البرودباند بعد --') }}</pre>
         </div>
         <div class="swv2-diagnostics" data-swv2-service-diagnostics="broadband"></div>
         <details class="swv2-advanced">
-          <summary>تفاصيل البرودباند الهندسية</summary>
-          <div class="swv2-summary-box" data-swv2-service-json="broadband">لم يتم توليد ملخص البرودباند بعد.</div>
+          <summary>{{ _('تفاصيل البرودباند الهندسية') }}</summary>
+          <div class="swv2-summary-box" data-swv2-service-json="broadband">{{ _('لم يتم توليد ملخص البرودباند بعد.') }}</div>
         </details>
       </div>
     </article>
 
     <article class="swv2-step" data-swv2-step="added-services">
       <div class="swv2-step-card">
-        <span class="swv2-eyebrow">خدمات إضافية</span>
-        <h2>اختر خدمات الشبكة الإضافية</h2>
-        <p>هذه المرحلة تعرض خططًا آمنة فقط وتعيد استخدام مركز سياسات الشبكة ومسار تغيير عنوان الخروج الموجودين. لا يوجد تطبيق مباشر من هنا.</p>
+        <span class="swv2-eyebrow">{{ _('خدمات إضافية') }}</span>
+        <h2>{{ _('اختر خدمات الشبكة الإضافية') }}</h2>
+        <p>{{ _('هذه المرحلة تعرض خططًا آمنة فقط وتعيد استخدام مركز سياسات الشبكة ومسار تغيير عنوان الخروج الموجودين. لا يوجد تطبيق مباشر من هنا.') }}</p>
         <div class="swv2-action-row">
-          <button type="button" class="swv2-btn swv2-btn-primary" data-swv2-load-added-services>تحميل كتالوج الخدمات</button>
+          <button type="button" class="swv2-btn swv2-btn-primary" data-swv2-load-added-services>{{ _('تحميل كتالوج الخدمات') }}</button>
         </div>
         <div class="swv2-service-grid" data-swv2-added-presets>
           <button type="button" class="swv2-service-card" data-added-preset="isp_basic">
             <i class="fa-solid fa-network-wired"></i>
-            <strong>مزود إنترنت أساسي</strong>
-            <span>حجب بسيط + مواقع مفتوحة قليلة.</span>
-            <small>قالب جاهز فقط ولا يطبق شيئًا.</small>
+            <strong>{{ _('مزود إنترنت أساسي') }}</strong>
+            <span>{{ _('حجب بسيط + مواقع مفتوحة قليلة.') }}</span>
+            <small>{{ _('قالب جاهز فقط ولا يطبق شيئًا.') }}</small>
           </button>
           <button type="button" class="swv2-service-card" data-added-preset="hotel_cafe">
             <i class="fa-solid fa-mug-hot"></i>
-            <strong>فندق أو مقهى</strong>
-            <span>مواقع مفتوحة للدفع والدعم + حجب محدود.</span>
-            <small>مناسب لخدمة الهوتسبوت.</small>
+            <strong>{{ _('فندق أو مقهى') }}</strong>
+            <span>{{ _('مواقع مفتوحة للدفع والدعم + حجب محدود.') }}</span>
+            <small>{{ _('مناسب لخدمة الهوتسبوت.') }}</small>
           </button>
           <button type="button" class="swv2-service-card" data-added-preset="school">
             <i class="fa-solid fa-school"></i>
-            <strong>مدرسة</strong>
-            <span>حجب أقوى مع مواقع تعليمية مفتوحة.</span>
-            <small>راجع القوائم قبل التنفيذ.</small>
+            <strong>{{ _('مدرسة') }}</strong>
+            <span>{{ _('حجب أقوى مع مواقع تعليمية مفتوحة.') }}</span>
+            <small>{{ _('راجع القوائم قبل التنفيذ.') }}</small>
           </button>
           <button type="button" class="swv2-service-card" data-added-preset="gaming_center">
             <i class="fa-solid fa-gamepad"></i>
-            <strong>مركز ألعاب</strong>
-            <span>تغيير عنوان الخروج عند توفر المسار المخصص + حجب محدود.</span>
-            <small>يحتاج إعداد خادم الربط مسبقًا.</small>
+            <strong>{{ _('مركز ألعاب') }}</strong>
+            <span>{{ _('تغيير عنوان الخروج عند توفر المسار المخصص + حجب محدود.') }}</span>
+            <small>{{ _('يحتاج إعداد خادم الربط مسبقًا.') }}</small>
           </button>
         </div>
         <div class="swv2-service-grid" data-swv2-added-services>
           <button type="button" class="swv2-service-card" data-added-service="walled_garden">
             <i class="fa-solid fa-door-open"></i>
-            <strong>مواقع مفتوحة بدون تسجيل</strong>
-            <span>سماح محدود قبل تسجيل الدخول عبر مركز السياسات.</span>
-            <small data-added-status="walled_garden">جزئية</small>
+            <strong>{{ _('مواقع مفتوحة بدون تسجيل') }}</strong>
+            <span>{{ _('سماح محدود قبل تسجيل الدخول عبر مركز السياسات.') }}</span>
+            <small data-added-status="walled_garden">{{ _('جزئية') }}</small>
           </button>
           <button type="button" class="swv2-service-card" data-added-service="block_sites">
             <i class="fa-solid fa-ban"></i>
-            <strong>حجب مواقع</strong>
-            <span>حجب الويب عبر مركز السياسات.</span>
-            <small data-added-status="block_sites">جزئية</small>
+            <strong>{{ _('حجب مواقع') }}</strong>
+            <span>{{ _('حجب الويب عبر مركز السياسات.') }}</span>
+            <small data-added-status="block_sites">{{ _('جزئية') }}</small>
           </button>
           <button type="button" class="swv2-service-card" data-added-service="site_exit_public_ip">
             <i class="fa-solid fa-route"></i>
-            <strong>تغيير عنوان الخروج العام</strong>
-            <span>مسار خروج مخصص.</span>
-            <small data-added-status="site_exit_public_ip">جزئية</small>
+            <strong>{{ _('تغيير عنوان الخروج العام') }}</strong>
+            <span>{{ _('مسار خروج مخصص.') }}</span>
+            <small data-added-status="site_exit_public_ip">{{ _('جزئية') }}</small>
           </button>
           <button type="button" class="swv2-service-card is-locked" data-added-service="anti_sharing">
             <i class="fa-solid fa-user-shield"></i>
-            <strong>منع مشاركة الاتصال</strong>
-            <span>تحتاج تفعيلًا من الوضع الهندسي قبل التشغيل.</span>
-            <small data-added-status="anti_sharing">غير مدعومة في هذا المسار حاليًا</small>
+            <strong>{{ _('منع مشاركة الاتصال') }}</strong>
+            <span>{{ _('تحتاج تفعيلًا من الوضع الهندسي قبل التشغيل.') }}</span>
+            <small data-added-status="anti_sharing">{{ _('غير مدعومة في هذا المسار حاليًا') }}</small>
           </button>
         </div>
         <form class="swv2-form" data-swv2-added-form>
-          <label>النطاقات أو الوجهات
+          <label>{{ _('النطاقات أو الوجهات') }}
             <textarea name="added_domains" placeholder="example.com&#10;payment.local"></textarea>
           </label>
-          <label>واجهة الربط لميزة تغيير عنوان الخروج
+          <label>{{ _('واجهة الربط لميزة تغيير عنوان الخروج') }}
             <input type="text" name="added_wg_interface" value="hr-wg">
           </label>
         </form>
         <div class="swv2-action-row">
-          <button type="button" class="swv2-btn swv2-btn-primary" data-swv2-plan-added-service>توليد خطة الخدمة</button>
-          <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-added-dry-run>مراجعة جافة</button>
-          <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-added-verify>إرشادات التحقق</button>
+          <button type="button" class="swv2-btn swv2-btn-primary" data-swv2-plan-added-service>{{ _('توليد خطة الخدمة') }}</button>
+          <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-added-dry-run>{{ _('مراجعة جافة') }}</button>
+          <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-added-verify>{{ _('إرشادات التحقق') }}</button>
         </div>
         <div class="swv2-script-card">
-          <div><strong>معاينة خطة الخدمة</strong><span data-swv2-added-status>اختر خدمة أو قالبًا جاهزًا.</span><button type="button" class="swv2-copy-chip" data-copy-target="added-service-plan-code">نسخ</button></div>
-          <pre id="added-service-plan-code" data-swv2-added-preview>-- لم يتم توليد خطة خدمة إضافية بعد --</pre>
+          <div><strong>{{ _('معاينة خطة الخدمة') }}</strong><span data-swv2-added-status>{{ _('اختر خدمة أو قالبًا جاهزًا.') }}</span><button type="button" class="swv2-copy-chip" data-copy-target="added-service-plan-code">{{ _('نسخ') }}</button></div>
+          <pre id="added-service-plan-code" data-swv2-added-preview>{{ _('-- لم يتم توليد خطة خدمة إضافية بعد --') }}</pre>
         </div>
         <div class="swv2-diagnostics" data-swv2-added-diagnostics></div>
         <details class="swv2-advanced">
-          <summary>تفاصيل الخدمات الإضافية الهندسية</summary>
-          <div class="swv2-summary-box" data-swv2-added-json>لم يتم توليد ملخص الخدمة الإضافية بعد.</div>
+          <summary>{{ _('تفاصيل الخدمات الإضافية الهندسية') }}</summary>
+          <div class="swv2-summary-box" data-swv2-added-json>{{ _('لم يتم توليد ملخص الخدمة الإضافية بعد.') }}</div>
         </details>
       </div>
     </article>
 
     <article class="swv2-step" data-swv2-step="final-summary">
       <div class="swv2-step-card">
-        <span class="swv2-eyebrow">الملخص</span>
-        <h2>جاهز للمراجعة النهائية</h2>
-        <p>تم تجهيز الخطوات المختارة كمعاينات وسكربتات آمنة. أي تطبيق مباشر يبقى محظورًا إلا من مسارات المختبر المحروسة.</p>
+        <span class="swv2-eyebrow">{{ _('الملخص') }}</span>
+        <h2>{{ _('جاهز للمراجعة النهائية') }}</h2>
+        <p>{{ _('تم تجهيز الخطوات المختارة كمعاينات وسكربتات آمنة. أي تطبيق مباشر يبقى محظورًا إلا من مسارات المختبر المحروسة.') }}</p>
         <div class="swv2-success-state">
           <i class="fa-solid fa-circle-check"></i>
-          <strong data-swv2-final-title>تم تجهيز مسار الإعداد</strong>
-          <span data-swv2-final-text>راجع السكربتات والتجربة الجافة قبل أي تنفيذ يدوي.</span>
+          <strong data-swv2-final-title>{{ _('تم تجهيز مسار الإعداد') }}</strong>
+          <span data-swv2-final-text>{{ _('راجع السكربتات والتجربة الجافة قبل أي تنفيذ يدوي.') }}</span>
           <div class="swv2-success-card" data-swv2-success-card="final">
-            <b>اكتمل الإعداد</b>
-            <span>الملخص يجمع ما تم توليده وما يحتاج مراجعة. التفاصيل الهندسية بقيت محفوظة في الوضع المتقدم فقط.</span>
+            <b>{{ _('اكتمل الإعداد') }}</b>
+            <span>{{ _('الملخص يجمع ما تم توليده وما يحتاج مراجعة. التفاصيل الهندسية بقيت محفوظة في الوضع المتقدم فقط.') }}</span>
           </div>
         </div>
       </div>
@@ -939,9 +939,9 @@
   </section>
 
   <footer class="swv2-footer">
-    <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-prev>السابق</button>
+    <button type="button" class="swv2-btn swv2-btn-ghost" data-swv2-prev>{{ _('السابق') }}</button>
     <span data-swv2-step-count>1 / 7</span>
-    <button type="button" class="swv2-btn swv2-btn-primary" data-swv2-next>التالي</button>
+    <button type="button" class="swv2-btn swv2-btn-primary" data-swv2-next>{{ _('التالي') }}</button>
   </footer>
 </main>
 

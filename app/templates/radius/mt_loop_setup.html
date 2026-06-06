@@ -12,7 +12,7 @@
 {% block title %}تتبّع اللوب على الراوتر{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-arrows-spin"></i>{% endblock %}
 {% block page_title %}تتبّع اللوب (الحلقات) على الراوتر{% endblock %}
-{% block page_sub %}<span class="sub">عميل DHCP سلبي على منافذ الزبائن — لو حصل على إيجار فهناك لوب. الكشف باستطلاع من اللوحة كل ٥ دقائق</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('عميل DHCP سلبي على منافذ الزبائن — لو حصل على إيجار فهناك لوب. الكشف باستطلاع من اللوحة كل ٥ دقائق') }}</span>{% endblock %}
 
 {% block content %}
 {% set _probe_routers = routers | selectattr('probes') | list %}
@@ -89,7 +89,7 @@
   {# ── Install / manage via port-services (per router) ── #}
   {% call hub.section("تركيب الخدمة وإزالتها", icon="screwdriver-wrench") %}
     <div class="hub-empty-sub" style="margin-bottom:12px">
-      اختر الراوتر لتفتح «خدمات المنافذ» — فعّل «تتبّع اللوب» باختيار منافذ الزبائن، فيُركَّب عميل DHCP الموسوم HR-LoopDetect تلقائيًا على كل منفذ عبر النفق. الإزالة من الصفحة نفسها.
+      {{ _('اختر الراوتر لتفتح «خدمات المنافذ» — فعّل «تتبّع اللوب» باختيار منافذ الزبائن، فيُركَّب عميل DHCP الموسوم HR-LoopDetect تلقائيًا على كل منفذ عبر النفق. الإزالة من الصفحة نفسها.') }}
     </div>
     {% if not routers %}
       {{ hub.empty("لا توجد راوترات مُسجّلة", sub="أضف راوترًا أولًا.", icon="router") }}
@@ -98,7 +98,7 @@
       <div class="hub-flex-row" style="justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;padding:9px 12px;border:1px solid var(--hub-border,#e2e8f0);border-radius:10px;margin-bottom:7px;background:var(--hub-bg-soft,#fafbfc)">
         <span style="font-weight:800;color:var(--hub-fg,#0f172a)"><i class="fa-solid fa-router hub-text-mute"></i> {{ r.name }} <span style="color:var(--hub-fg-mute,#64748b);font-weight:600">(#{{ r.id }})</span></span>
         <a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ url_for('radius.mt_port_services_form', nas_id=r.id) }}">
-          <i class="fa-solid fa-screwdriver-wrench"></i> خدمات المنافذ
+          <i class="fa-solid fa-screwdriver-wrench"></i> {{ _('خدمات المنافذ') }}
         </a>
       </div>
       {% endfor %}
@@ -108,7 +108,7 @@
   {# ── Cleanup of the OLD (removed) router-side fetch/scheduler ── #}
   {% call hub.section("تنظيف بقايا الآلية القديمة على الراوتر", icon="broom") %}
     <div class="hub-empty-sub" style="margin-bottom:10px">
-      لم تعد اللوحة تُنشئ أي scheduler يجلب (fetch) على الراوتر. إن كان راوترٌ يحمل المجدول القديم العالق (كان يلوب على خطأ 401)، نظّفه مرّة واحدة بهذه الأوامر عبر Winbox/WebFig Terminal:
+      {{ _('لم تعد اللوحة تُنشئ أي scheduler يجلب (fetch) على الراوتر. إن كان راوترٌ يحمل المجدول القديم العالق (كان يلوب على خطأ 401)، نظّفه مرّة واحدة بهذه الأوامر عبر Winbox/WebFig Terminal:') }}
     </div>
     <div class="hub-fix" style="margin:0">
 <pre dir="ltr" style="margin:0;padding:14px 16px;border-radius:12px;background:#0f172a;color:#e2e8f0;font-family:var(--hub-mono,ui-monospace,monospace);font-size:12.5px;line-height:1.7;overflow:auto;white-space:pre">/system scheduler remove [find name=hoberadius-loop-probe]
@@ -117,7 +117,7 @@
 :global HRloopFail; :set HRloopFail 0</pre>
     </div>
     <div class="hub-empty-sub" style="margin-top:10px">
-      ملاحظة: عملاء DHCP الحاليون لكشف اللوب يحملون الكومنت <code dir="ltr">HR-LoopDetect</code> ولا تمسّهم أوامر التنظيف أعلاه — أزِلهم عند الحاجة من «خدمات المنافذ».
+      {{ _('ملاحظة: عملاء DHCP الحاليون لكشف اللوب يحملون الكومنت') }} <code dir="ltr">HR-LoopDetect</code> {{ _('ولا تمسّهم أوامر التنظيف أعلاه — أزِلهم عند الحاجة من «خدمات المنافذ».') }}
     </div>
   {% endcall %}
 

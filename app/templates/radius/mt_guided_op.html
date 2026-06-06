@@ -63,7 +63,7 @@
     <form method="get" class="hub-form" data-mt-guided-op-form>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px">
         <div class="hub-field">
-          <label>العملية</label>
+          <label>{{ _('العملية') }}</label>
           <select class="hub-input" name="op" data-mt-guided-op-select>
             {% for op, op_label in operation_choices %}
             <option value="{{ op }}" {% if op == operation %}selected{% endif %}>
@@ -77,7 +77,7 @@
         <button type="submit" class="hub-btn hub-btn--secondary"
                 data-mt-guided-op-submit>
           <i class="fa-solid fa-arrows-rotate"></i>
-          أعد بناء القائمة
+          {{ _('أعد بناء القائمة') }}
         </button>
       </div>
     </form>
@@ -91,11 +91,11 @@
     <div style="margin-bottom:14px">
       {% if checklist.can_proceed %}
       <span class="hub-pill hub-pill--green" data-mt-guided-status>
-        <span class="dot"></span>جاهزة للتنفيذ
+        <span class="dot"></span>{{ _('جاهزة للتنفيذ') }}
       </span>
       {% else %}
       <span class="hub-pill hub-pill--red" data-mt-guided-status>
-        <span class="dot"></span>مُعطّلة بسبب مشكلة
+        <span class="dot"></span>{{ _('مُعطّلة بسبب مشكلة') }}
       </span>
       {% endif %}
     </div>
@@ -126,7 +126,7 @@
              data-mt-guided-step-link
              style="margin-top:8px">
             <i class="fa-solid fa-arrow-up-right-from-square"></i>
-            افتح
+            {{ _('افتح') }}
           </a>
           {% endif %}
         </div>
@@ -147,7 +147,7 @@
          href="{{ checklist.apply_href }}"
          data-mt-guided-proceed>
         <i class="fa-solid fa-circle-play"></i>
-        متابعة إلى تنفيذ العملية
+        {{ _('متابعة إلى تنفيذ العملية') }}
       </a>
       {% endif %}
     </div>

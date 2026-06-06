@@ -22,7 +22,7 @@ Steps:
 {% block page_icon %}<i class="fa-solid fa-wand-magic-sparkles"></i>{% endblock %}
 {% block page_title %}إضافة راوتر جديد{% endblock %}
 {% block page_sub %}
-  <span class="sub">خطوات واضحة — بدون أكواد أو تعقيدات</span>
+  <span class="sub">{{ _('خطوات واضحة — بدون أكواد أو تعقيدات') }}</span>
 {% endblock %}
 
 {% block head_extra %}
@@ -45,14 +45,14 @@ Steps:
   ) }}
 
   <div class="swz-shell">
-    <aside class="swz-guide" aria-label="شرح معالج الإعداد">
-      <div class="swz-guide-title"><i class="fa-solid fa-route"></i> مسار التنفيذ</div>
-      <p>اتبع الخطوات بالترتيب. المعالج يحفظ جلسة إعداد واحدة، ويستخدم نفس مسارات الخدمة الحالية بدون تغيير في منطق الخادم.</p>
+    <aside class="swz-guide" aria-label="{{ _('شرح معالج الإعداد') }}">
+      <div class="swz-guide-title"><i class="fa-solid fa-route"></i> {{ _('مسار التنفيذ') }}</div>
+      <p>{{ _('اتبع الخطوات بالترتيب. المعالج يحفظ جلسة إعداد واحدة، ويستخدم نفس مسارات الخدمة الحالية بدون تغيير في منطق الخادم.') }}</p>
       <ul>
-        <li><i class="fa-solid fa-router"></i><span>ابدأ باسم الراوتر ونوع الخدمة.</span></li>
-        <li><i class="fa-solid fa-globe"></i><span>حدد مصدر الإنترنت ثم ولّد السكربت.</span></li>
-        <li><i class="fa-solid fa-shield-halved"></i><span>اربط الراوتر بالخادم عبر نفق الإدارة وخدمة المصادقة.</span></li>
-        <li><i class="fa-solid fa-check-double"></i><span>تحقق، ثم سجل الراوتر نهائياً.</span></li>
+        <li><i class="fa-solid fa-router"></i><span>{{ _('ابدأ باسم الراوتر ونوع الخدمة.') }}</span></li>
+        <li><i class="fa-solid fa-globe"></i><span>{{ _('حدد مصدر الإنترنت ثم ولّد السكربت.') }}</span></li>
+        <li><i class="fa-solid fa-shield-halved"></i><span>{{ _('اربط الراوتر بالخادم عبر نفق الإدارة وخدمة المصادقة.') }}</span></li>
+        <li><i class="fa-solid fa-check-double"></i><span>{{ _('تحقق، ثم سجل الراوتر نهائياً.') }}</span></li>
       </ul>
     </aside>
 
@@ -62,19 +62,19 @@ Steps:
   <ol class="swz-rail" data-swz-rail style="--swz-progress-ratio: 0;">
     <li data-swz-rail-step="1" class="is-current">
       <span class="swz-rail-dot"><i class="fa-solid fa-server" aria-hidden="true"></i><b>1</b></span>
-      <span class="swz-rail-label">الراوتر</span>
+      <span class="swz-rail-label">{{ _('الراوتر') }}</span>
     </li>
     <li data-swz-rail-step="2">
       <span class="swz-rail-dot"><i class="fa-solid fa-globe" aria-hidden="true"></i><b>2</b></span>
-      <span class="swz-rail-label">الإنترنت</span>
+      <span class="swz-rail-label">{{ _('الإنترنت') }}</span>
     </li>
     <li data-swz-rail-step="3">
       <span class="swz-rail-dot"><i class="fa-solid fa-link" aria-hidden="true"></i><b>3</b></span>
-      <span class="swz-rail-label">الربط بالخادم</span>
+      <span class="swz-rail-label">{{ _('الربط بالخادم') }}</span>
     </li>
     <li data-swz-rail-step="4">
       <span class="swz-rail-dot"><i class="fa-solid fa-shield" aria-hidden="true"></i><b>4</b></span>
-      <span class="swz-rail-label">التحقّق</span>
+      <span class="swz-rail-label">{{ _('التحقّق') }}</span>
     </li>
   </ol>
 
@@ -84,40 +84,40 @@ Steps:
   {# ─── Step 1: Router info ────────────────────────── #}
   <section class="swz-step is-active" data-swz-step="1">
     <header>
-      <h2>عرّفنا على الراوتر</h2>
-      <p>ابدأ باسم وصفي وتحديد نوع الخدمة الأساسيّة.</p>
+      <h2>{{ _('عرّفنا على الراوتر') }}</h2>
+      <p>{{ _('ابدأ باسم وصفي وتحديد نوع الخدمة الأساسيّة.') }}</p>
     </header>
 
     <div class="swz-field">
-      <label>اسم الراوتر</label>
+      <label>{{ _('اسم الراوتر') }}</label>
       <input type="text" data-swz-router-name
-             placeholder="مثال: مقهى الزهراء — فرع 1"
+             placeholder="{{ _('مثال: مقهى الزهراء — فرع 1') }}"
              autocomplete="off" maxlength="64">
-      <small>اسم وصفي يظهر في القوائم عند الحفظ.</small>
+      <small>{{ _('اسم وصفي يظهر في القوائم عند الحفظ.') }}</small>
     </div>
 
     <div class="swz-field">
-      <label>نوع الخدمة الأساسيّة</label>
+      <label>{{ _('نوع الخدمة الأساسيّة') }}</label>
       <div class="swz-radio-grid">
         <label class="swz-radio">
           <input type="radio" name="router_type" value="hotspot" checked>
           <span class="swz-radio-card">
-            <strong>بوابة دخول المشتركين</strong>
-            <small>صفحة دخول للمستخدمين عبر WiFi/كابل</small>
+            <strong>{{ _('بوابة دخول المشتركين') }}</strong>
+            <small>{{ _('صفحة دخول للمستخدمين عبر WiFi/كابل') }}</small>
           </span>
         </label>
         <label class="swz-radio">
           <input type="radio" name="router_type" value="pppoe">
           <span class="swz-radio-card">
-            <strong>اشتراكات برودباند منزليّة</strong>
-            <small>عملاء يستخدمون اسم مستخدم وكلمة سرّ</small>
+            <strong>{{ _('اشتراكات برودباند منزليّة') }}</strong>
+            <small>{{ _('عملاء يستخدمون اسم مستخدم وكلمة سرّ') }}</small>
           </span>
         </label>
         <label class="swz-radio">
           <input type="radio" name="router_type" value="mixed">
           <span class="swz-radio-card">
-            <strong>الخدمتان معاً</strong>
-            <small>بوابة دخول المشتركين واشتراكات البرودباند على نفس الراوتر</small>
+            <strong>{{ _('الخدمتان معاً') }}</strong>
+            <small>{{ _('بوابة دخول المشتركين واشتراكات البرودباند على نفس الراوتر') }}</small>
           </span>
         </label>
       </div>
@@ -126,7 +126,7 @@ Steps:
     <footer class="swz-actions">
       <button type="button" class="swz-btn swz-btn-primary"
               data-swz-next="1">
-        التالي ←
+        {{ _('التالي ←') }}
       </button>
     </footer>
   </section>
@@ -134,43 +134,43 @@ Steps:
   {# ─── Step 2: Internet source ───────────────────── #}
   <section class="swz-step" data-swz-step="2">
     <header>
-      <h2>كيف يتصل الراوتر بالإنترنت؟</h2>
-      <p>اختر نوع الاتصال من مزوّد الخدمة، ثم املأ الحقول الظاهرة.</p>
+      <h2>{{ _('كيف يتصل الراوتر بالإنترنت؟') }}</h2>
+      <p>{{ _('اختر نوع الاتصال من مزوّد الخدمة، ثم املأ الحقول الظاهرة.') }}</p>
     </header>
 
     <div class="swz-field">
-      <label>نوع الاتصال</label>
+      <label>{{ _('نوع الاتصال') }}</label>
       <div class="swz-radio-grid">
         <label class="swz-radio">
           <input type="radio" name="net_source" value="dhcp" checked
                  data-swz-net-source>
           <span class="swz-radio-card">
-            <strong>عنوان تلقائي</strong>
-            <small>المزوّد يعطي عنوان الإنترنت تلقائياً</small>
+            <strong>{{ _('عنوان تلقائي') }}</strong>
+            <small>{{ _('المزوّد يعطي عنوان الإنترنت تلقائياً') }}</small>
           </span>
         </label>
         <label class="swz-radio">
           <input type="radio" name="net_source" value="static"
                  data-swz-net-source>
           <span class="swz-radio-card">
-            <strong>عنوان ثابت</strong>
-            <small>المزوّد أعطاك عنواناً وبوّابة محدّدة</small>
+            <strong>{{ _('عنوان ثابت') }}</strong>
+            <small>{{ _('المزوّد أعطاك عنواناً وبوّابة محدّدة') }}</small>
           </span>
         </label>
         <label class="swz-radio">
           <input type="radio" name="net_source" value="pppoe"
                  data-swz-net-source>
           <span class="swz-radio-card">
-            <strong>اتصال بحساب من المزوّد</strong>
-            <small>اسم مستخدم + كلمة مرور من المزوّد</small>
+            <strong>{{ _('اتصال بحساب من المزوّد') }}</strong>
+            <small>{{ _('اسم مستخدم + كلمة مرور من المزوّد') }}</small>
           </span>
         </label>
         <label class="swz-radio">
           <input type="radio" name="net_source" value="vlan"
                  data-swz-net-source>
           <span class="swz-radio-card">
-            <strong>شبكة افتراضية موسومة</strong>
-            <small>وصلة مخصصة برقم شبكة افتراضية</small>
+            <strong>{{ _('شبكة افتراضية موسومة') }}</strong>
+            <small>{{ _('وصلة مخصصة برقم شبكة افتراضية') }}</small>
           </span>
         </label>
       </div>
@@ -179,121 +179,121 @@ Steps:
     {# Dynamic per-source fields. JS toggles visibility. #}
     <div class="swz-source-fields" data-swz-source-fields="dhcp">
       <div class="swz-field">
-        <label>منفذ الإنترنت على الراوتر</label>
+        <label>{{ _('منفذ الإنترنت على الراوتر') }}</label>
         <input type="text" data-swz-iface placeholder="ether1"
                value="ether1" autocomplete="off">
-        <small>عادةً ether1 أو الواجهة المتّصلة بكابل المزوّد.</small>
+        <small>{{ _('عادةً ether1 أو الواجهة المتّصلة بكابل المزوّد.') }}</small>
       </div>
       <label class="swz-toggle">
         <input type="checkbox" data-swz-nat checked>
-        <span>تفعيل NAT (مطلوب لأغلب الاتصالات)</span>
+        <span>{{ _('تفعيل NAT (مطلوب لأغلب الاتصالات)') }}</span>
       </label>
     </div>
 
     <div class="swz-source-fields" data-swz-source-fields="static" hidden>
       <div class="swz-field">
-        <label>منفذ الإنترنت على الراوتر</label>
+        <label>{{ _('منفذ الإنترنت على الراوتر') }}</label>
         <input type="text" data-swz-static-iface placeholder="ether1"
                value="ether1" autocomplete="off">
       </div>
       <div class="swz-field">
-        <label>عنوانك الشبكي (مع القناع)</label>
+        <label>{{ _('عنوانك الشبكي (مع القناع)') }}</label>
         <input type="text" data-swz-static-cidr
-               placeholder="مثال: 203.0.113.10/24" dir="ltr"
+               placeholder="{{ _('مثال: 203.0.113.10/24') }}" dir="ltr"
                autocomplete="off">
-        <small>الصيغة: <span dir="ltr">x.x.x.x/24</span></small>
+        <small>{{ _('الصيغة:') }} <span dir="ltr">x.x.x.x/24</span></small>
       </div>
       <div class="swz-field">
-        <label>بوّابة المزوّد (Gateway)</label>
+        <label>{{ _('بوّابة المزوّد (Gateway)') }}</label>
         <input type="text" data-swz-static-gateway
-               placeholder="مثال: 203.0.113.1" dir="ltr"
+               placeholder="{{ _('مثال: 203.0.113.1') }}" dir="ltr"
                autocomplete="off">
       </div>
       <div class="swz-field">
-        <label>خوادم DNS (اختياري)</label>
+        <label>{{ _('خوادم DNS (اختياري)') }}</label>
         <input type="text" data-swz-static-dns
                placeholder="1.1.1.1, 8.8.8.8" dir="ltr"
                autocomplete="off">
       </div>
       <label class="swz-toggle">
         <input type="checkbox" data-swz-static-nat checked>
-        <span>تفعيل NAT</span>
+        <span>{{ _('تفعيل NAT') }}</span>
       </label>
     </div>
 
     <div class="swz-source-fields" data-swz-source-fields="pppoe" hidden>
       <div class="swz-field">
-        <label>منفذ الإنترنت على الراوتر</label>
+        <label>{{ _('منفذ الإنترنت على الراوتر') }}</label>
         <input type="text" data-swz-ppp-iface placeholder="ether1"
                value="ether1" autocomplete="off">
       </div>
       <div class="swz-field">
-        <label>اسم المستخدم (من المزوّد)</label>
+        <label>{{ _('اسم المستخدم (من المزوّد)') }}</label>
         <input type="text" data-swz-ppp-user dir="ltr"
                autocomplete="off">
       </div>
       <div class="swz-field">
-        <label>كلمة المرور (من المزوّد)</label>
+        <label>{{ _('كلمة المرور (من المزوّد)') }}</label>
         <input type="password" data-swz-ppp-pass dir="ltr"
                autocomplete="new-password">
       </div>
       <label class="swz-toggle">
         <input type="checkbox" data-swz-ppp-nat checked>
-        <span>تفعيل NAT</span>
+        <span>{{ _('تفعيل NAT') }}</span>
       </label>
     </div>
 
     <div class="swz-source-fields" data-swz-source-fields="vlan" hidden>
       <div class="swz-field">
-        <label>المنفذ الأساسي</label>
+        <label>{{ _('المنفذ الأساسي') }}</label>
         <input type="text" data-swz-vlan-parent placeholder="ether1"
                value="ether1" autocomplete="off">
       </div>
       <div class="swz-field">
-        <label>رقم الشبكة الافتراضية</label>
+        <label>{{ _('رقم الشبكة الافتراضية') }}</label>
         <input type="number" data-swz-vlan-id min="1" max="4094"
                placeholder="35" dir="ltr" autocomplete="off">
       </div>
       <div class="swz-field">
-        <label>وضع العنوان</label>
+        <label>{{ _('وضع العنوان') }}</label>
         <select data-swz-vlan-mode>
-          <option value="dhcp">عنوان تلقائي</option>
-          <option value="static">عنوان ثابت</option>
+          <option value="dhcp">{{ _('عنوان تلقائي') }}</option>
+          <option value="static">{{ _('عنوان ثابت') }}</option>
         </select>
       </div>
       <div class="swz-vlan-static" hidden>
         <div class="swz-field">
-          <label>العنوان الشبكي / القناع</label>
+          <label>{{ _('العنوان الشبكي / القناع') }}</label>
           <input type="text" data-swz-vlan-cidr dir="ltr"
                  placeholder="203.0.113.10/24">
         </div>
         <div class="swz-field">
-          <label>البوابة</label>
+          <label>{{ _('البوابة') }}</label>
           <input type="text" data-swz-vlan-gateway dir="ltr"
                  placeholder="203.0.113.1">
         </div>
       </div>
       <label class="swz-toggle">
         <input type="checkbox" data-swz-vlan-nat checked>
-        <span>تفعيل NAT</span>
+        <span>{{ _('تفعيل NAT') }}</span>
       </label>
     </div>
 
     {# Generated script — appears AFTER pressing the action. #}
     <div class="swz-script-card" data-swz-step2-script hidden>
       <header>
-        <strong>✅ تم توليد سكربت الإنترنت</strong>
+        <strong>{{ _('✅ تم توليد سكربت الإنترنت') }}</strong>
         <p>الصق هذا السكربت في شاشة أوامر الراوتر،
            ثم انتظر اكتمال أوامر <code dir="ltr">/tool ping</code>
-           قبل المتابعة.</p>
+           {{ _('قبل المتابعة.') }}</p>
       </header>
       <div class="swz-script-actions">
         <button type="button" class="swz-btn swz-btn-ghost"
-                data-swz-copy-script="step2">📋 نسخ السكربت</button>
+                data-swz-copy-script="step2">{{ _('📋 نسخ السكربت') }}</button>
         <details class="swz-tech-details">
           <summary>
-            <span class="swz-tech-badge">للفنّيين فقط</span>
-            عرض السكربت بصيغته الخام
+            <span class="swz-tech-badge">{{ _('للفنّيين فقط') }}</span>
+            {{ _('عرض السكربت بصيغته الخام') }}
           </summary>
           <pre data-swz-step2-script-body></pre>
         </details>
@@ -302,14 +302,14 @@ Steps:
 
     <footer class="swz-actions">
       <button type="button" class="swz-btn swz-btn-ghost"
-              data-swz-back="2">→ السابق</button>
+              data-swz-back="2">{{ _('→ السابق') }}</button>
       <button type="button" class="swz-btn swz-btn-primary"
               data-swz-action="generate-internet">
-        توليد سكربت الإنترنت
+        {{ _('توليد سكربت الإنترنت') }}
       </button>
       <button type="button" class="swz-btn swz-btn-success"
               data-swz-next="2" hidden>
-        نسخت السكربت — التالي ←
+        {{ _('نسخت السكربت — التالي ←') }}
       </button>
     </footer>
   </section>
@@ -317,7 +317,7 @@ Steps:
   {# ─── Step 3: VPN / RADIUS bootstrap ───────────── #}
   <section class="swz-step" data-swz-step="3">
     <header>
-      <h2>الربط بالخادم الآمن</h2>
+      <h2>{{ _('الربط بالخادم الآمن') }}</h2>
       <p>سيُولّد سكربت موحَّد يربط الراوتر بالخادم عبر نفق
          آمن ويُهيّئ المصادقة. لا تحتاج لكتابة أي شيء.</p>
     </header>
@@ -328,44 +328,44 @@ Steps:
        state and passed to the generate-script call; the VPN backend owns the
        actual option sets (we never change them here). #}
     <div class="swz-field" data-swz-ros-version-field>
-      <label>إصدار نظام الراوتر (RouterOS)</label>
-      <div class="swz-radio-grid" role="radiogroup" aria-label="إصدار RouterOS">
+      <label>{{ _('إصدار نظام الراوتر (RouterOS)') }}</label>
+      <div class="swz-radio-grid" role="radiogroup" aria-label="{{ _('إصدار RouterOS') }}">
         <label class="swz-radio">
           <input type="radio" name="ros_version" value="7" checked data-swz-ros-version>
           <span class="swz-radio-card">
-            <strong>الإصدار 7 (v7)</strong>
-            <small>الربط عبر WireGuard (موصى به)</small>
+            <strong>{{ _('الإصدار 7 (v7)') }}</strong>
+            <small>{{ _('الربط عبر WireGuard (موصى به)') }}</small>
           </span>
         </label>
         <label class="swz-radio">
           <input type="radio" name="ros_version" value="6" data-swz-ros-version>
           <span class="swz-radio-card">
-            <strong>الإصدار 6 (v6)</strong>
-            <small>الربط عبر SSTP</small>
+            <strong>{{ _('الإصدار 6 (v6)') }}</strong>
+            <small>{{ _('الربط عبر SSTP') }}</small>
           </span>
         </label>
       </div>
-      <small data-swz-binding-hint>سيُولّد سكربت WireGuard المناسب لإصدار 7.</small>
+      <small data-swz-binding-hint>{{ _('سيُولّد سكربت WireGuard المناسب لإصدار 7.') }}</small>
     </div>
 
     <div class="swz-script-card" data-swz-step3-script hidden>
       <header>
-        <strong>✅ سكربت الربط جاهز</strong>
+        <strong>{{ _('✅ سكربت الربط جاهز') }}</strong>
         <p>يحتوي السكربت على النفق الآمن ومستخدم الربط والمصادقة
-           بالكامل. <strong>تنبيه:</strong> شاشة أوامر الراوتر
+           بالكامل. <strong>{{ _('تنبيه:') }}</strong> شاشة أوامر الراوتر
            يفقد السطور الطويلة عند اللصق المباشر — استخدم
            طريقة الاستيراد أدناه (موصى بها).</p>
       </header>
 
       <div class="swz-fetch-import-card">
-        <strong>🚀 الطريقة الموصى بها — تحميل ثم استيراد</strong>
-        <p>انسخ السطر التالي والصقه في شاشة أوامر الراوتر:</p>
+        <strong>{{ _('🚀 الطريقة الموصى بها — تحميل ثم استيراد') }}</strong>
+        <p>{{ _('انسخ السطر التالي والصقه في شاشة أوامر الراوتر:') }}</p>
         <pre data-swz-fetch-import dir="ltr"></pre>
         <button type="button" class="swz-btn swz-btn-success"
                 data-swz-copy-script="fetch_import">
-          📋 نسخ السطر
+          {{ _('📋 نسخ السطر') }}
         </button>
-        <small>أمران مفصولان بفاصلة منقوطة <code dir="ltr">;</code>
+        <small>{{ _('أمران مفصولان بفاصلة منقوطة') }} <code dir="ltr">;</code>
           — الراوتر يحمّل الملفّ ثم ينفّذه تتابعياً. سطر واحد
           يضمن عدم فقد أمر الاستيراد أثناء
           عرض شريط تقدّم التنزيل.</small>
@@ -373,19 +373,19 @@ Steps:
 
       <details class="swz-script-fallback swz-tech-details">
         <summary>
-          <span class="swz-tech-badge">للفنّيين فقط</span>
-          طريقة قديمة — لصق السكربت كاملاً يدوياً
+          <span class="swz-tech-badge">{{ _('للفنّيين فقط') }}</span>
+          {{ _('طريقة قديمة — لصق السكربت كاملاً يدوياً') }}
         </summary>
         <p class="swz-fallback-warn">
           ⚠️ تنبيه: السطور الأطول من 200 حرف قد تنبتر أثناء
           اللصق. لو لاحظت أن
-          <code dir="ltr">/user add</code> أو
+          <code dir="ltr">/user add</code> {{ _('أو') }}
           <code dir="ltr">/radius add</code> لم يتنفّذا، عُد
           إلى طريقة التحميل ثم الاستيراد
           أعلاه.
         </p>
         <button type="button" class="swz-btn swz-btn-ghost"
-                data-swz-copy-script="step3">📋 نسخ السكربت الكامل</button>
+                data-swz-copy-script="step3">{{ _('📋 نسخ السكربت الكامل') }}</button>
         <pre data-swz-step3-script-body></pre>
       </details>
     </div>
@@ -396,7 +396,7 @@ Steps:
        operator sees them only if they explicitly look. #}
     <div class="swz-radius-secret-card" data-swz-radius-secret hidden>
       <header>
-        <strong>🔐 ربط المصادقة بالخادم</strong>
+        <strong>{{ _('🔐 ربط المصادقة بالخادم') }}</strong>
         <p>اضغط الزر لإكمال ربط الراوتر بخدمة المصادقة — سيتم
            إعداد كل شيء تلقائياً على الخادم بدون الحاجة للدخول
            اليدوي أو النسخ اليدوي.</p>
@@ -404,7 +404,7 @@ Steps:
       <div class="swz-radius-actions">
         <button type="button" class="swz-btn swz-btn-success"
                 data-swz-action="apply-server-radius">
-          🚀 تطبيق على الخادم تلقائياً
+          {{ _('🚀 تطبيق على الخادم تلقائياً') }}
         </button>
       </div>
       <p class="swz-radius-secret-hint" data-swz-radius-applied hidden>
@@ -413,36 +413,36 @@ Steps:
       </p>
 
       <details class="swz-radius-advanced">
-        <summary>⚙️ تفاصيل تقنيّة (لا حاجة لها عادةً)</summary>
+        <summary>{{ _('⚙️ تفاصيل تقنيّة (لا حاجة لها عادةً)') }}</summary>
         <p>إذا فشل الزر التلقائي أو احتجت لتطبيق يدوي:
           انسخ السطر التالي وأضفه إلى ملف عملاء خدمة المصادقة
           على الخادم، ثم أعد تشغيل الخدمة.
         </p>
         <pre data-swz-clients-conf dir="ltr"></pre>
         <button type="button" class="swz-btn swz-btn-ghost"
-                data-swz-copy-clients-conf>📋 نسخ السطر</button>
+                data-swz-copy-clients-conf>{{ _('📋 نسخ السطر') }}</button>
       </details>
     </div>
 
     <div class="swz-field" data-swz-step3-paste hidden>
-      <label>الصق مخرجات الراوتر هنا</label>
+      <label>{{ _('الصق مخرجات الراوتر هنا') }}</label>
       <textarea data-swz-step3-output rows="8" dir="ltr"
                 placeholder='Flags: X - disabled; R - running...
 0   name="hr-wg" listen-port=13231 ...
     public-key="abcd..."'></textarea>
-      <small>سنقرأ <code dir="ltr">public-key</code> تلقائياً ونُكمل.</small>
+      <small>{{ _('سنقرأ') }} <code dir="ltr">public-key</code> {{ _('تلقائياً ونُكمل.') }}</small>
     </div>
 
     <footer class="swz-actions">
       <button type="button" class="swz-btn swz-btn-ghost"
-              data-swz-back="3">→ السابق</button>
+              data-swz-back="3">{{ _('→ السابق') }}</button>
       <button type="button" class="swz-btn swz-btn-primary"
               data-swz-action="generate-vpn">
-        توليد سكربت الربط
+        {{ _('توليد سكربت الربط') }}
       </button>
       <button type="button" class="swz-btn swz-btn-primary"
               data-swz-action="submit-key" hidden>
-        قراءة المفتاح وتطبيقه
+        {{ _('قراءة المفتاح وتطبيقه') }}
       </button>
     </footer>
   </section>
@@ -450,25 +450,25 @@ Steps:
   {# ─── Step 4: Verify handshake ─────────────────── #}
   <section class="swz-step" data-swz-step="4">
     <header>
-      <h2>التحقّق من اتصال النفق الآمن</h2>
+      <h2>{{ _('التحقّق من اتصال النفق الآمن') }}</h2>
       <p>سنتأكّد أن الراوتر بدأ الاتصال الآمن مع الخادم.
          هذا قد يستغرق 10–30 ثانية.</p>
     </header>
 
     <div class="swz-verify-status" data-swz-verify-status>
       <div class="swz-verify-spinner">⏳</div>
-      <strong>بانتظار إشارة الاتصال من الراوتر...</strong>
+      <strong>{{ _('بانتظار إشارة الاتصال من الراوتر...') }}</strong>
       <p>تأكّد أن السكربت قد لُصق على الراوتر وأن منفذ الاتصال
          51820 مفتوح من جهة المزوّد.</p>
     </div>
 
     <footer class="swz-actions">
       <button type="button" class="swz-btn swz-btn-ghost"
-              data-swz-back="4">→ السابق</button>
+              data-swz-back="4">{{ _('→ السابق') }}</button>
       <button type="button" class="swz-btn swz-btn-success"
               data-swz-action="mark-handshake" hidden
-              title="يظهر بعد 60 ثانية من المحاولة. استخدمه فقط إذا كنت متأكّداً أن الاتصال يعمل لكن الفحص التلقائي لا يكتشفه.">
-        ⚠️ تخطّي الفحص يدوياً
+              title="{{ _('يظهر بعد 60 ثانية من المحاولة. استخدمه فقط إذا كنت متأكّداً أن الاتصال يعمل لكن الفحص التلقائي لا يكتشفه.') }}">
+        {{ _('⚠️ تخطّي الفحص يدوياً') }}
       </button>
     </footer>
   </section>
@@ -476,7 +476,7 @@ Steps:
   {# ─── Retired: optional services moved out of the wizard flow ───────── #}
   <section class="swz-step" data-swz-step="99" hidden>
     <header>
-      <h2>خدمات إضافيّة (اختياري)</h2>
+      <h2>{{ _('خدمات إضافيّة (اختياري)') }}</h2>
       <p>فعّل ما تريده وستجد سكربتاً جاهزاً للنسخ لكل خدمة.
          يمكنك تخطّي هذه الخطوة كلّها لو لم تحتجها.</p>
     </header>
@@ -488,12 +488,12 @@ Steps:
         <header>
           <label class="swz-toggle">
             <input type="checkbox" data-swz-service-toggle="hotspot">
-            <span><strong>بوابة دخول المشتركين</strong> — صفحة دخول للمستخدمين</span>
+            <span><strong>{{ _('بوابة دخول المشتركين') }}</strong> {{ _('— صفحة دخول للمستخدمين') }}</span>
           </label>
         </header>
         <div class="swz-service-body" hidden>
           <div class="swz-field">
-            <label>منفذ WAN (الإنترنت)</label>
+            <label>{{ _('منفذ WAN (الإنترنت)') }}</label>
             <input type="text" data-swz-hotspot-wan dir="ltr"
                    placeholder="ether1" value="ether1"
                    autocomplete="off">
@@ -502,7 +502,7 @@ Steps:
               قاعدة خروج تربط بوابة الدخول بالإنترنت.</small>
           </div>
           <div class="swz-field">
-            <label>منافذ بوابة الدخول (اختر واحداً أو أكثر)</label>
+            <label>{{ _('منافذ بوابة الدخول (اختر واحداً أو أكثر)') }}</label>
 
             {# Auto-discovery panel — shown before user picks #}
             <div class="swz-discover-panel" data-swz-discover-panel>
@@ -513,11 +513,11 @@ Steps:
               <div class="swz-discover-actions">
                 <button type="button" class="swz-btn swz-btn-ghost"
                         data-swz-action="discover-via-api">
-                  🔍 اكتشاف تلقائي (يحتاج بيانات الربط)
+                  {{ _('🔍 اكتشاف تلقائي (يحتاج بيانات الربط)') }}
                 </button>
                 <button type="button" class="swz-btn swz-btn-ghost"
                         data-swz-toggle-paste-discover>
-                  📋 لصق إخراج /interface print
+                  {{ _('📋 لصق إخراج /interface print') }}
                 </button>
               </div>
 
@@ -528,16 +528,16 @@ Steps:
                  here, the `!field.value` pre-fill check fails. #}
               <div class="swz-discover-api-form" data-swz-discover-api-form hidden>
                 <div class="swz-field">
-                  <label>اسم مستخدم الربط</label>
+                  <label>{{ _('اسم مستخدم الربط') }}</label>
                   <input type="text" data-swz-discover-api-user
                          dir="ltr" autocomplete="off"
-                         placeholder="سيُملأ تلقائياً من سكربت الخطوة 3">
+                         placeholder="{{ _('سيُملأ تلقائياً من سكربت الخطوة 3') }}">
                 </div>
                 <div class="swz-field">
-                  <label>كلمة مرور الربط</label>
+                  <label>{{ _('كلمة مرور الربط') }}</label>
                   <input type="password" data-swz-discover-api-pass
                          dir="ltr" autocomplete="new-password"
-                         placeholder="سيُملأ تلقائياً">
+                         placeholder="{{ _('سيُملأ تلقائياً') }}">
                   <small>اضغط Enter للاكتشاف. سيتم تعبئة الحقول
                     من بيانات الخطوة 3 تلقائياً.</small>
                 </div>
@@ -546,7 +546,7 @@ Steps:
               {# Paste-back form — collapsed by default #}
               <div class="swz-discover-paste-form" data-swz-discover-paste-form hidden>
                 <div class="swz-field">
-                  <label>الصق إخراج <code dir="ltr">/interface print</code></label>
+                  <label>{{ _('الصق إخراج') }} <code dir="ltr">/interface print</code></label>
                   <textarea data-swz-discover-paste dir="ltr" rows="6"
                             placeholder="Flags: D - dynamic; X - disabled; R - running
  0  R  name=ether1 default-name=ether1 type=ether ...
@@ -555,7 +555,7 @@ Steps:
                   <button type="button" class="swz-btn swz-btn-primary"
                           data-swz-action="discover-via-paste"
                           style="margin-top: 10px">
-                    تحليل واكتشاف
+                    {{ _('تحليل واكتشاف') }}
                   </button>
                 </div>
               </div>
@@ -592,35 +592,35 @@ Steps:
               + قاعدة NAT خاصّة. لو منفذك غير مدرج، أضفه:
             </small>
             <input type="text" data-swz-hotspot-iface-custom dir="ltr"
-                   placeholder="منافذ إضافيّة مفصولة بفاصلة، مثلاً: bridge1, vlan10"
+                   placeholder="{{ _('منافذ إضافيّة مفصولة بفاصلة، مثلاً: bridge1, vlan10') }}"
                    autocomplete="off">
           </div>
           <div class="swz-field">
-            <label>نطاق الشبكة الداخليّة</label>
+            <label>{{ _('نطاق الشبكة الداخليّة') }}</label>
             <input type="text" data-swz-hotspot-subnet dir="ltr"
                    placeholder="10.99.0.0/16" value="10.99.0.0/16">
-            <small>نطاق /16 يُقسَّم تلقائياً إلى /24 لكل منفذ.</small>
+            <small>{{ _('نطاق /16 يُقسَّم تلقائياً إلى /24 لكل منفذ.') }}</small>
           </div>
           <div class="swz-field">
-            <label>سرّ المصادقة</label>
+            <label>{{ _('سرّ المصادقة') }}</label>
             <input type="text" data-swz-hotspot-secret dir="ltr"
                    autocomplete="off"
-                   placeholder="سيتم توليده تلقائياً">
+                   placeholder="{{ _('سيتم توليده تلقائياً') }}">
             <small>⚠️ احفظ هذا السرّ — يجب إدخاله في
               ملف عملاء خدمة المصادقة على الخادم لقبول
               طلبات المصادقة من هذا الراوتر.</small>
           </div>
           <button type="button" class="swz-btn swz-btn-primary"
                   data-swz-action="generate-hotspot">
-            توليد سكربت بوابة الدخول
+            {{ _('توليد سكربت بوابة الدخول') }}
           </button>
           <div class="swz-script-card" data-swz-hotspot-script hidden>
             <button type="button" class="swz-btn swz-btn-ghost"
-                    data-swz-copy-script="hotspot">📋 نسخ</button>
+                    data-swz-copy-script="hotspot">{{ _('📋 نسخ') }}</button>
             <details class="swz-tech-details">
               <summary>
-                <span class="swz-tech-badge">للفنّيين فقط</span>
-                عرض السكربت بصيغته الخام
+                <span class="swz-tech-badge">{{ _('للفنّيين فقط') }}</span>
+                {{ _('عرض السكربت بصيغته الخام') }}
               </summary>
               <pre data-swz-hotspot-script-body></pre>
             </details>
@@ -633,12 +633,12 @@ Steps:
         <header>
           <label class="swz-toggle">
             <input type="checkbox" data-swz-service-toggle="broadband">
-            <span><strong>اشتراكات برودباند</strong> — اشتراكات بعيدة</span>
+            <span><strong>{{ _('اشتراكات برودباند') }}</strong> {{ _('— اشتراكات بعيدة') }}</span>
           </label>
         </header>
         <div class="swz-service-body" hidden>
           <div class="swz-field">
-            <label>منافذ اشتراكات البرودباند (اختر واحداً أو أكثر)</label>
+            <label>{{ _('منافذ اشتراكات البرودباند (اختر واحداً أو أكثر)') }}</label>
 
             <div class="swz-discover-mini" data-swz-bb-discover-mini>
               <p>
@@ -647,11 +647,11 @@ Steps:
               </p>
               <button type="button" class="swz-btn swz-btn-ghost"
                       data-swz-action="discover-via-api">
-                🔍 اكتشاف تلقائي
+                {{ _('🔍 اكتشاف تلقائي') }}
               </button>
               <button type="button" class="swz-btn swz-btn-ghost"
                       data-swz-toggle-paste-discover>
-                📋 لصق إخراج /interface print
+                {{ _('📋 لصق إخراج /interface print') }}
               </button>
             </div>
 
@@ -679,34 +679,34 @@ Steps:
               يمكن إعادة استخدام منفذ اكتُشف في بوابة الدخول.
             </small>
             <input type="text" data-swz-bb-iface-custom dir="ltr"
-                   placeholder="منافذ إضافيّة مفصولة بفاصلة"
+                   placeholder="{{ _('منافذ إضافيّة مفصولة بفاصلة') }}"
                    autocomplete="off">
           </div>
           <div class="swz-field">
-            <label>عنوان البوّابة المحليّة</label>
+            <label>{{ _('عنوان البوّابة المحليّة') }}</label>
             <input type="text" data-swz-bb-local dir="ltr"
                    placeholder="192.168.50.1" value="192.168.50.1">
             <small>عنوان الراوتر الخاص الذي يظهر لعملاء البرودباند
               كبوّابة افتراضيّة.</small>
           </div>
           <div class="swz-field">
-            <label>نطاق العملاء البعيدين</label>
+            <label>{{ _('نطاق العملاء البعيدين') }}</label>
             <input type="text" data-swz-bb-pool dir="ltr"
                    placeholder="192.168.50.0/24"
                    value="192.168.50.0/24">
-            <small>العناوين التي توزَّع تلقائياً للعملاء.</small>
+            <small>{{ _('العناوين التي توزَّع تلقائياً للعملاء.') }}</small>
           </div>
           <button type="button" class="swz-btn swz-btn-primary"
                   data-swz-action="generate-broadband">
-            توليد سكربت البرودباند
+            {{ _('توليد سكربت البرودباند') }}
           </button>
           <div class="swz-script-card" data-swz-broadband-script hidden>
             <button type="button" class="swz-btn swz-btn-ghost"
-                    data-swz-copy-script="broadband">📋 نسخ</button>
+                    data-swz-copy-script="broadband">{{ _('📋 نسخ') }}</button>
             <details class="swz-tech-details">
               <summary>
-                <span class="swz-tech-badge">للفنّيين فقط</span>
-                عرض السكربت بصيغته الخام
+                <span class="swz-tech-badge">{{ _('للفنّيين فقط') }}</span>
+                {{ _('عرض السكربت بصيغته الخام') }}
               </summary>
               <pre data-swz-broadband-script-body></pre>
             </details>
@@ -719,27 +719,27 @@ Steps:
         <header>
           <label class="swz-toggle">
             <input type="checkbox" data-swz-service-toggle="walled_garden">
-            <span><strong>مواقع مسموحة قبل الدخول</strong> — فتح وجهات محددة بدون تسجيل دخول</span>
+            <span><strong>{{ _('مواقع مسموحة قبل الدخول') }}</strong> {{ _('— فتح وجهات محددة بدون تسجيل دخول') }}</span>
           </label>
         </header>
         <div class="swz-service-body" hidden>
           <div class="swz-field">
-            <label>الدومينات المسموحة (دومين في كل سطر)</label>
+            <label>{{ _('الدومينات المسموحة (دومين في كل سطر)') }}</label>
             <textarea data-swz-wg-domains dir="ltr" rows="4"
                       placeholder="payment.local
 hotel.local"></textarea>
           </div>
           <button type="button" class="swz-btn swz-btn-primary"
                   data-swz-action="generate-walled-garden">
-            توليد السكربت
+            {{ _('توليد السكربت') }}
           </button>
           <div class="swz-script-card" data-swz-wg-script hidden>
             <button type="button" class="swz-btn swz-btn-ghost"
-                    data-swz-copy-script="walled_garden">📋 نسخ</button>
+                    data-swz-copy-script="walled_garden">{{ _('📋 نسخ') }}</button>
             <details class="swz-tech-details">
               <summary>
-                <span class="swz-tech-badge">للفنّيين فقط</span>
-                عرض السكربت بصيغته الخام
+                <span class="swz-tech-badge">{{ _('للفنّيين فقط') }}</span>
+                {{ _('عرض السكربت بصيغته الخام') }}
               </summary>
               <pre data-swz-wg-script-body></pre>
             </details>
@@ -752,27 +752,27 @@ hotel.local"></textarea>
         <header>
           <label class="swz-toggle">
             <input type="checkbox" data-swz-service-toggle="block_sites">
-            <span><strong>حجب مواقع</strong> — منع وجهات معيّنة</span>
+            <span><strong>{{ _('حجب مواقع') }}</strong> {{ _('— منع وجهات معيّنة') }}</span>
           </label>
         </header>
         <div class="swz-service-body" hidden>
           <div class="swz-field">
-            <label>الدومينات المحجوبة (دومين في كل سطر)</label>
+            <label>{{ _('الدومينات المحجوبة (دومين في كل سطر)') }}</label>
             <textarea data-swz-bs-domains dir="ltr" rows="4"
                       placeholder="malware.example
 ads.example"></textarea>
           </div>
           <button type="button" class="swz-btn swz-btn-primary"
                   data-swz-action="generate-block-sites">
-            توليد السكربت
+            {{ _('توليد السكربت') }}
           </button>
           <div class="swz-script-card" data-swz-bs-script hidden>
             <button type="button" class="swz-btn swz-btn-ghost"
-                    data-swz-copy-script="block_sites">📋 نسخ</button>
+                    data-swz-copy-script="block_sites">{{ _('📋 نسخ') }}</button>
             <details class="swz-tech-details">
               <summary>
-                <span class="swz-tech-badge">للفنّيين فقط</span>
-                عرض السكربت بصيغته الخام
+                <span class="swz-tech-badge">{{ _('للفنّيين فقط') }}</span>
+                {{ _('عرض السكربت بصيغته الخام') }}
               </summary>
               <pre data-swz-bs-script-body></pre>
             </details>
@@ -784,10 +784,10 @@ ads.example"></textarea>
 
     <footer class="swz-actions">
       <button type="button" class="swz-btn swz-btn-ghost"
-              data-swz-back="5">→ السابق</button>
+              data-swz-back="5">{{ _('→ السابق') }}</button>
       <button type="button" class="swz-btn swz-btn-primary"
               data-swz-next="5">
-        التالي ←
+        {{ _('التالي ←') }}
       </button>
     </footer>
   </section>
@@ -795,20 +795,20 @@ ads.example"></textarea>
   {# ─── Retired manual register step: registration is automatic after VPN verify ─── #}
   <section class="swz-step" data-swz-step="98" hidden>
     <header>
-      <h2>تسجيل الراوتر في القائمة</h2>
+      <h2>{{ _('تسجيل الراوتر في القائمة') }}</h2>
       <p>تم توليد مستخدم ربط مخصّص للراوتر في سكربت الخطوة 3.
          فقط اضغط (تسجيل وإنهاء) — لا حاجة لإدخال أي شيء.</p>
     </header>
 
     <div class="swz-field">
-      <label>اسم مستخدم الربط</label>
+      <label>{{ _('اسم مستخدم الربط') }}</label>
       <input type="text" data-swz-api-user dir="ltr" readonly
              value="" autocomplete="off">
-      <small>مُولَّد تلقائياً (يبدأ بـ <code>hr-api-</code>).</small>
+      <small>{{ _('مُولَّد تلقائياً (يبدأ بـ') }} <code>hr-api-</code>).</small>
     </div>
 
     <div class="swz-field">
-      <label>كلمة مرور الربط</label>
+      <label>{{ _('كلمة مرور الربط') }}</label>
       <input type="text" data-swz-api-pass dir="ltr" readonly
              value="" autocomplete="off">
       <small>مُولَّدة تلقائياً، آمنة، وموجودة على الراوتر
@@ -817,10 +817,10 @@ ads.example"></textarea>
 
     <footer class="swz-actions">
       <button type="button" class="swz-btn swz-btn-ghost"
-              data-swz-back="5">→ السابق</button>
+              data-swz-back="5">{{ _('→ السابق') }}</button>
       <button type="button" class="swz-btn swz-btn-success"
               data-swz-action="register">
-        ✅ تسجيل وإنهاء
+        {{ _('✅ تسجيل وإنهاء') }}
       </button>
     </footer>
   </section>
@@ -828,15 +828,15 @@ ads.example"></textarea>
   {# ─── Step 7: Done ──────────────────────────────── #}
   <section class="swz-step swz-final" data-swz-step="7">
     <div class="swz-final-icon">🎉</div>
-    <h2>تم تجهيز الراوتر بنجاح!</h2>
-    <p>الراوتر يعمل الآن ضمن الأسطول ويتلقّى مصادقة النظام.</p>
+    <h2>{{ _('تم تجهيز الراوتر بنجاح!') }}</h2>
+    <p>{{ _('الراوتر يعمل الآن ضمن الأسطول ويتلقّى مصادقة النظام.') }}</p>
     <footer class="swz-actions">
       <a class="swz-btn swz-btn-primary"
          href="{{ url_for('radius.mt_operations') }}">
-        إدارة الراوترات
+        {{ _('إدارة الراوترات') }}
       </a>
       <a class="swz-btn swz-btn-ghost" href="">
-        إضافة راوتر آخر
+        {{ _('إضافة راوتر آخر') }}
       </a>
     </footer>
   </section>

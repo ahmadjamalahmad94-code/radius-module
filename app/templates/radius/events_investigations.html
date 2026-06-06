@@ -4,7 +4,7 @@
 {% block title %}التحقيقات — Hobe Hub{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-magnifying-glass-chart"></i>{% endblock %}
 {% block page_title %}التحقيقات{% endblock %}
-{% block page_sub %}<span class="sub">مسار مراجعة بشرية لملاحظات المخاطر والاحتيال.</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('مسار مراجعة بشرية لملاحظات المخاطر والاحتيال.') }}</span>{% endblock %}
 {% block head_extra %}{{ super() }}<link rel="stylesheet" href="{{ url_for('static', filename='css/ops_risk_redesign.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">{% endblock %}
 
@@ -63,30 +63,30 @@
     </p>
     <form method="post" class="hub-form-grid" data-testid="investigation-form">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-      <label>العنوان
-        <input class="hub-input" name="title" required placeholder="مثال: محاولات دخول متكررة لمشترك واحد">
-        <span class="help" style="font-size:11px;color:var(--hub-text-mute)">جملة قصيرة تلخّص سبب فتح التحقيق.</span>
+      <label>{{ _('العنوان') }}
+        <input class="hub-input" name="title" required placeholder="{{ _('مثال: محاولات دخول متكررة لمشترك واحد') }}">
+        <span class="help" style="font-size:11px;color:var(--hub-text-mute)">{{ _('جملة قصيرة تلخّص سبب فتح التحقيق.') }}</span>
       </label>
-      <label>الخطورة
+      <label>{{ _('الخطورة') }}
         <select class="hub-input" name="severity">
-          <option value="info">معلومة</option>
-          <option value="warning">تحذير</option>
-          <option value="error">خطأ</option>
-          <option value="critical">حرج</option>
+          <option value="info">{{ _('معلومة') }}</option>
+          <option value="warning">{{ _('تحذير') }}</option>
+          <option value="error">{{ _('خطأ') }}</option>
+          <option value="critical">{{ _('حرج') }}</option>
         </select>
-        <span class="help" style="font-size:11px;color:var(--hub-text-mute)">«حرج» يعني راجِعه قبل كل شيء؛ «معلومة» للمتابعة فقط.</span>
+        <span class="help" style="font-size:11px;color:var(--hub-text-mute)">{{ _('«حرج» يعني راجِعه قبل كل شيء؛ «معلومة» للمتابعة فقط.') }}</span>
       </label>
-      <label>نوع الكيان
-        <input class="hub-input" name="entity_type" placeholder="مثال: subscriber أو card" dir="ltr" style="text-align:start">
-        <span class="help" style="font-size:11px;color:var(--hub-text-mute)">نوع العنصر المعني بالتحقيق — يُكتب بمعرّفه اللاتيني كما في النظام (مثل <bdi dir="ltr" class="mono">subscriber</bdi>).</span>
+      <label>{{ _('نوع الكيان') }}
+        <input class="hub-input" name="entity_type" placeholder="{{ _('مثال: subscriber أو card') }}" dir="ltr" style="text-align:start">
+        <span class="help" style="font-size:11px;color:var(--hub-text-mute)">{{ _('نوع العنصر المعني بالتحقيق — يُكتب بمعرّفه اللاتيني كما في النظام (مثل') }} <bdi dir="ltr" class="mono">subscriber</bdi>).</span>
       </label>
-      <label>رقم الكيان
+      <label>{{ _('رقم الكيان') }}
         <input class="hub-input" name="entity_id" type="number">
-        <span class="help" style="font-size:11px;color:var(--hub-text-mute)">الرقم التعريفي للعنصر نفسه (رقم المشترك أو البطاقة…).</span>
+        <span class="help" style="font-size:11px;color:var(--hub-text-mute)">{{ _('الرقم التعريفي للعنصر نفسه (رقم المشترك أو البطاقة…).') }}</span>
       </label>
-      <label class="hub-form-span">الملخص
-        <textarea class="hub-input" name="summary" rows="4" placeholder="ما الذي لاحظته؟ وما الخطوة التالية للمراجعة؟"></textarea>
-        <span class="help" style="font-size:11px;color:var(--hub-text-mute)">وصف حر لما لاحظته وما ينبغي على المراجع التالي فعله.</span>
+      <label class="hub-form-span">{{ _('الملخص') }}
+        <textarea class="hub-input" name="summary" rows="4" placeholder="{{ _('ما الذي لاحظته؟ وما الخطوة التالية للمراجعة؟') }}"></textarea>
+        <span class="help" style="font-size:11px;color:var(--hub-text-mute)">{{ _('وصف حر لما لاحظته وما ينبغي على المراجع التالي فعله.') }}</span>
       </label>
       {{ hub.btn("فتح التحقيق", icon="folder-plus", variant="primary", type="submit") }}
     </form>
@@ -101,19 +101,19 @@
       <table class="hub-table" data-testid="investigations-table">
         <thead>
           <tr>
-            <th class="num">الرقم
+            <th class="num">{{ _('الرقم') }}
               <span class="hub-hint" tabindex="0" data-hint="رقم تسلسلي يميز ملف التحقيق — استخدمه عند الإشارة إليه في الملاحظات."><i class="fa-solid fa-info"></i></span>
             </th>
-            <th>العنوان
+            <th>{{ _('العنوان') }}
               <span class="hub-hint" tabindex="0" data-hint="ملخص سبب فتح التحقيق كما كتبه المشغل."><i class="fa-solid fa-info"></i></span>
             </th>
-            <th>الحالة
+            <th>{{ _('الحالة') }}
               <span class="hub-hint" tabindex="0" data-hint="«مفتوح» = المراجعة لم تكتمل بعد؛ «مغلق» = انتهت المراجعة."><i class="fa-solid fa-info"></i></span>
             </th>
-            <th>الخطورة
+            <th>{{ _('الخطورة') }}
               <span class="hub-hint" tabindex="0" data-hint="ترتيب أولوية المراجعة: حرج ثم خطأ ثم تحذير ثم معلومة."><i class="fa-solid fa-info"></i></span>
             </th>
-            <th>الكيان
+            <th>{{ _('الكيان') }}
               <span class="hub-hint" tabindex="0" data-hint="العنصر المعني بالتحقيق (مشترك، بطاقة، جهاز…) ورقمه التعريفي في النظام."><i class="fa-solid fa-info"></i></span>
             </th>
           </tr>
@@ -137,7 +137,7 @@
               </td>
             </tr>
           {% else %}
-            <tr><td colspan="5">لا توجد تحقيقات بعد — افتح أول تحقيق من نموذج «فتح تحقيق».</td></tr>
+            <tr><td colspan="5">{{ _('لا توجد تحقيقات بعد — افتح أول تحقيق من نموذج «فتح تحقيق».') }}</td></tr>
           {% endfor %}
         </tbody>
       </table>

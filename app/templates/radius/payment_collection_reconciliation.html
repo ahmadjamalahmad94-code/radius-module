@@ -4,7 +4,7 @@
 {% block title %}مطابقة تحصيل الدفعات{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-scale-balanced"></i>{% endblock %}
 {% block page_title %}مطابقة تحصيل الدفعات{% endblock %}
-{% block page_sub %}<span class="sub">صحة التحصيل</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('صحة التحصيل') }}</span>{% endblock %}
 
 {# ───── قاموس تعريب حالات الدفع — يمنع ظهور قيم enum الإنجليزية الخام ───── #}
 {% set STATUS_AR = {
@@ -61,10 +61,10 @@
       <thead>
         <tr>
           <th class="num" style="width:56px">#</th>
-          <th>المرجع</th>
-          <th>الحالة</th>
-          <th class="num">المبلغ</th>
-          <th>معلومات</th>
+          <th>{{ _('المرجع') }}</th>
+          <th>{{ _('الحالة') }}</th>
+          <th class="num">{{ _('المبلغ') }}</th>
+          <th>{{ _('معلومات') }}</th>
         </tr>
       </thead>
       <tbody>

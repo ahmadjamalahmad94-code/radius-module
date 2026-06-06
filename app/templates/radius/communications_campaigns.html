@@ -9,7 +9,7 @@
 {% block title %}الحملات — Hobe Hub{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-bullhorn"></i>{% endblock %}
 {% block page_title %}الحملات{% endblock %}
-{% block page_sub %}<span class="sub">حضّر حملات بمعاينة آمنة مع خطط إجراءات اختيارية. لا يتم تطبيق أي إجراء من هذه الصفحة.</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('حضّر حملات بمعاينة آمنة مع خطط إجراءات اختيارية. لا يتم تطبيق أي إجراء من هذه الصفحة.') }}</span>{% endblock %}
 
 {% block content %}
 
@@ -46,50 +46,50 @@
   {% call hub.section("تجهيز معاينة حملة بدون إرسال", icon="clipboard-check") %}
     <form method="post" class="hub-form-grid" data-testid="campaign-dry-run-form">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-      <label>مفتاح الحملة <input name="campaign_key" required placeholder="renewal-may"></label>
-      <label>العنوان <input name="title" required></label>
-      <label>القالب
+      <label>{{ _('مفتاح الحملة') }} <input name="campaign_key" required placeholder="renewal-may"></label>
+      <label>{{ _('العنوان') }} <input name="title" required></label>
+      <label>{{ _('القالب') }}
         <select name="template_id" required>
           {% for template in templates %}
             <option value="{{ template.id }}">{{ template.title }} — {{ template.channel }}</option>
           {% endfor %}
         </select>
       </label>
-      <label>الهدف
+      <label>{{ _('الهدف') }}
         <select name="target">
-          <option value="subscriber">المشتركون</option>
-          <option value="card_user">مستخدمو البطاقات</option>
-          <option value="manager">المدراء</option>
-          <option value="company">الشركة</option>
+          <option value="subscriber">{{ _('المشتركون') }}</option>
+          <option value="card_user">{{ _('مستخدمو البطاقات') }}</option>
+          <option value="manager">{{ _('المدراء') }}</option>
+          <option value="company">{{ _('الشركة') }}</option>
         </select>
       </label>
-      <label>رقم المدير <input name="manager_id" type="number" min="1"></label>
-      <label>الحد <input name="limit" type="number" min="1" max="500" value="100"></label>
+      <label>{{ _('رقم المدير') }} <input name="manager_id" type="number" min="1"></label>
+      <label>{{ _('الحد') }} <input name="limit" type="number" min="1" max="500" value="100"></label>
 
       {# Optional action plans — each posts name="actions" via getlist (unchanged). #}
       <div class="hub-form-full">
         <div class="hub-text-mute" style="font-size:12px;font-weight:700;margin-bottom:8px">
-          <i class="fa-solid fa-list-check"></i> إجراءات اختيارية ترافق الإرسال (معاينة فقط)
+          <i class="fa-solid fa-list-check"></i> {{ _('إجراءات اختيارية ترافق الإرسال (معاينة فقط)') }}
         </div>
         <div class="cc-actions">
           <label class="cc-action">
             {{ toggle_switch(name="actions", value="record_event", show_label=False) }}
-            <span class="cc-action-txt">إرسال + تسجيل حدث</span>
+            <span class="cc-action-txt">{{ _('إرسال + تسجيل حدث') }}</span>
           </label>
           <label class="cc-action">
             {{ toggle_switch(name="actions", value="add_free_days", show_label=False) }}
-            <span class="cc-action-txt">إرسال + معاينة إضافة أيام مجانية بدون تنفيذ</span>
+            <span class="cc-action-txt">{{ _('إرسال + معاينة إضافة أيام مجانية بدون تنفيذ') }}</span>
           </label>
           <label class="cc-action">
             {{ toggle_switch(name="actions", value="wallet_credit", show_label=False) }}
-            <span class="cc-action-txt">إرسال + معاينة إضافة رصيد للمحفظة بدون تنفيذ</span>
+            <span class="cc-action-txt">{{ _('إرسال + معاينة إضافة رصيد للمحفظة بدون تنفيذ') }}</span>
           </label>
         </div>
       </div>
 
       <div class="hub-form-full">
         <button class="hub-btn hub-btn--primary" type="submit">
-          <i class="fa-solid fa-clipboard-check"></i> تجهيز المعاينة
+          <i class="fa-solid fa-clipboard-check"></i> {{ _('تجهيز المعاينة') }}
         </button>
       </div>
     </form>
@@ -105,13 +105,13 @@
         ]) }}
         <div class="hub-section-head" style="margin-top:14px">
           <span class="hub-section-head-icon"><i class="fa-solid fa-list-check"></i></span>
-          <span class="hub-section-head-title">الإجراءات المعاينة</span>
+          <span class="hub-section-head-title">{{ _('الإجراءات المعاينة') }}</span>
         </div>
         <ul class="cc-result-list">
           {% for action in campaign.dry_run.actions %}
             <li><i class="fa-solid fa-circle-check"></i> {{ action.type }} — <strong>{{ action.status }}</strong></li>
           {% else %}
-            <li class="hub-text-mute"><i class="fa-solid fa-minus"></i> لم تطلب أي إجراءات مرتبطة.</li>
+            <li class="hub-text-mute"><i class="fa-solid fa-minus"></i> {{ _('لم تطلب أي إجراءات مرتبطة.') }}</li>
           {% endfor %}
         </ul>
       </div>

@@ -200,33 +200,33 @@
   {# ── 1) Header / router identity ───────────────────────── #}
   <section class="mt-card">
     <header class="mt-card-head">
-      <h3><i class="fa-solid fa-server"></i> الراوتر</h3>
+      <h3><i class="fa-solid fa-server"></i> {{ _('الراوتر') }}</h3>
       <span class="mt-card-meta">
         <a href="{{ url_for('radius.mt_router_overview', nas_id=nas.id) }}">
-          <i class="fa-solid fa-clipboard-check"></i> نظرة عامة
+          <i class="fa-solid fa-clipboard-check"></i> {{ _('نظرة عامة') }}
         </a>
       </span>
     </header>
     <div class="mt-card-body">
       <div class="hub-kpi-row">
         <div class="hub-kpi">
-          <div class="hub-kpi-label">الاسم</div>
+          <div class="hub-kpi-label">{{ _('الاسم') }}</div>
           <div class="hub-kpi-value">{{ nas.name }}</div>
         </div>
         <div class="hub-kpi">
-          <div class="hub-kpi-label">العنوان</div>
+          <div class="hub-kpi-label">{{ _('العنوان') }}</div>
           <div class="hub-kpi-value"><code>{{ nas.address }}</code></div>
         </div>
         <div class="hub-kpi">
-          <div class="hub-kpi-label">الحالة</div>
+          <div class="hub-kpi-label">{{ _('الحالة') }}</div>
           <div class="hub-kpi-value">
-            {% if nas.enabled %}<span class="mt-iface-state mt-iface-state--up">مفعَّل</span>
-            {% else %}<span class="mt-iface-state mt-iface-state--off">معطَّل</span>{% endif %}
+            {% if nas.enabled %}<span class="mt-iface-state mt-iface-state--up">{{ _('مفعَّل') }}</span>
+            {% else %}<span class="mt-iface-state mt-iface-state--off">{{ _('معطَّل') }}</span>{% endif %}
           </div>
         </div>
         {% if deployment %}
         <div class="hub-kpi">
-          <div class="hub-kpi-label">حالة النشر</div>
+          <div class="hub-kpi-label">{{ _('حالة النشر') }}</div>
           <div class="hub-kpi-value"
                data-mt-site-exit-deployment-status="{{ deployment.status }}">
             {{ deployment.status }}
@@ -240,19 +240,19 @@
   {# ── 2) VPS exit node ──────────────────────────────────── #}
   <section class="mt-card" data-mt-site-exit-node-card>
     <header class="mt-card-head">
-      <h3><i class="fa-solid fa-shield-halved"></i> عقدة الخروج</h3>
+      <h3><i class="fa-solid fa-shield-halved"></i> {{ _('عقدة الخروج') }}</h3>
     </header>
     <div class="mt-card-body">
       {% if vps_nodes %}
       <table style="width:100%;border-collapse:collapse;font-size:13px">
         <thead>
           <tr style="text-align:start;background:var(--hub-surface-2,#f7f8fa)">
-            <th style="padding:6px 8px">الاسم</th>
-            <th style="padding:6px 8px">العنوان العام</th>
-            <th style="padding:6px 8px">واجهة النفق</th>
-            <th style="padding:6px 8px">البوابة</th>
-            <th style="padding:6px 8px">الصحة</th>
-            <th style="padding:6px 8px">الحالة</th>
+            <th style="padding:6px 8px">{{ _('الاسم') }}</th>
+            <th style="padding:6px 8px">{{ _('العنوان العام') }}</th>
+            <th style="padding:6px 8px">{{ _('واجهة النفق') }}</th>
+            <th style="padding:6px 8px">{{ _('البوابة') }}</th>
+            <th style="padding:6px 8px">{{ _('الصحة') }}</th>
+            <th style="padding:6px 8px">{{ _('الحالة') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -265,9 +265,9 @@
             <td style="padding:6px 8px">{{ n.last_health_status or '—' }}</td>
             <td style="padding:6px 8px">
               {% if n.enabled %}
-              <span class="mt-iface-state mt-iface-state--up">مفعَّل</span>
+              <span class="mt-iface-state mt-iface-state--up">{{ _('مفعَّل') }}</span>
               {% else %}
-              <span class="mt-iface-state mt-iface-state--off">معطَّل</span>
+              <span class="mt-iface-state mt-iface-state--off">{{ _('معطَّل') }}</span>
               {% endif %}
             </td>
           </tr>
@@ -276,7 +276,7 @@
       </table>
       {% else %}
       <p class="vx2-empty" data-mt-site-exit-no-nodes>
-        لا توجد عقد خروج بعد. أنشئ عقدة قبل توليد السياسة.
+        {{ _('لا توجد عقد خروج بعد. أنشئ عقدة قبل توليد السياسة.') }}
       </p>
       {% endif %}
     </div>
@@ -304,7 +304,7 @@
       <form method="get" style="display:inline">
         <input type="hidden" name="policy_id" value="">
         <button type="submit" class="mt-mini-btn">
-          <i class="fa-solid fa-plus"></i> سياسة جديدة
+          <i class="fa-solid fa-plus"></i> {{ _('سياسة جديدة') }}
         </button>
       </form>
       {% else %}
@@ -312,35 +312,35 @@
             action="{{ url_for('radius.site_exit_policy_create', nas_id=nas.id) }}"
             data-mt-site-exit-policy-form>
         <div class="vx2-policy-form-grid">
-          <label>اسم السياسة
+          <label>{{ _('اسم السياسة') }}
             <input type="text" name="name" required>
           </label>
-          <label>عقدة الخروج
+          <label>{{ _('عقدة الخروج') }}
             <select name="exit_node_id" required>
-              <option value="">— اختر —</option>
+              <option value="">{{ _('— اختر —') }}</option>
               {% for n in vps_nodes %}
               <option value="{{ n.id }}">{{ n.name }} · {{ n.public_ip or '?' }}</option>
               {% endfor %}
             </select>
           </label>
-          <label>وضع الفشل
+          <label>{{ _('وضع الفشل') }}
             <select name="fail_mode">
-              <option value="block_when_vps_down">block_when_vps_down — حظر الخروج عبر WAN عند سقوط النفق</option>
-              <option value="fallback_to_wan">fallback_to_wan — السماح بـ WAN كبديل (يكشف IP الأصلي)</option>
+              <option value="block_when_vps_down">{{ _('block_when_vps_down — حظر الخروج عبر WAN عند سقوط النفق') }}</option>
+              <option value="fallback_to_wan">{{ _('fallback_to_wan — السماح بـ WAN كبديل (يكشف IP الأصلي)') }}</option>
             </select>
           </label>
           <label style="grid-column: 1 / -1; flex-direction: row; gap:6px; align-items:center">
             <input type="checkbox" name="include_subdomains" checked>
-            تضمين النطاقات الفرعية (يتطلب DNS عبر الراوتر)
+            {{ _('تضمين النطاقات الفرعية (يتطلب DNS عبر الراوتر)') }}
           </label>
           <label style="grid-column: 1 / -1; flex-direction: row; gap:6px; align-items:center">
             <input type="checkbox" name="include_router_output">
-            تضمين الترافيك الصادر من الراوتر نفسه (للاختبارات)
+            {{ _('تضمين الترافيك الصادر من الراوتر نفسه (للاختبارات)') }}
           </label>
         </div>
         <div class="mt-program-actions" style="margin-top:10px">
           <button type="submit" class="mt-action-btn">
-            <i class="fa-solid fa-plus"></i> إنشاء السياسة
+            <i class="fa-solid fa-plus"></i> {{ _('إنشاء السياسة') }}
           </button>
         </div>
       </form>
@@ -353,7 +353,7 @@
   {# ── 4) Seed import ────────────────────────────────────── #}
   <section class="mt-card" data-mt-site-exit-import-card>
     <header class="mt-card-head">
-      <h3><i class="fa-solid fa-file-import"></i> استيراد قائمة عناوين الراوتر</h3>
+      <h3><i class="fa-solid fa-file-import"></i> {{ _('استيراد قائمة عناوين الراوتر') }}</h3>
     </header>
     <div class="mt-card-body">
       {# VX2.6f — preset quick-load row above the manual paste box. #}
@@ -362,7 +362,7 @@
            style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;
                   padding:8px;background:rgba(43,170,204,0.06);
                   border-radius:6px;margin-bottom:10px;font-size:13px">
-        <strong style="margin-inline-end:6px">قوائم جاهزة:</strong>
+        <strong style="margin-inline-end:6px">{{ _('قوائم جاهزة:') }}</strong>
         {% for preset in presets %}
         <form method="post" style="display:inline"
               action="{{ url_for('radius.site_exit_load_preset',
@@ -383,7 +383,7 @@
             action="{{ url_for('radius.site_exit_import',
                                nas_id=nas.id, policy_id=policy.id) }}">
         <p class="vx2-empty" style="font-size:12.5px">
-          الصق محتوى ملف بصيغة <code>/ip firewall address-list</code> —
+          {{ _('الصق محتوى ملف بصيغة') }} <code>/ip firewall address-list</code> —
           سنقوم بالتحقق والتصنيف بدون أي كتابة على الراوتر.
           أو اختر قائمة جاهزة من الأزرار أعلاه.
         </p>
@@ -394,7 +394,7 @@
         <div class="mt-program-actions" style="margin-top:8px">
           <button type="submit" class="mt-action-btn"
                   data-mt-site-exit-import-button>
-            <i class="fa-solid fa-magnifying-glass"></i> تحليل
+            <i class="fa-solid fa-magnifying-glass"></i> {{ _('تحليل') }}
           </button>
         </div>
       </form>
@@ -404,23 +404,23 @@
            style="margin-top:12px;font-size:13px">
         <div class="hub-kpi-row">
           <div class="hub-kpi">
-            <div class="hub-kpi-label">إجمالي الأسطر</div>
+            <div class="hub-kpi-label">{{ _('إجمالي الأسطر') }}</div>
             <div class="hub-kpi-value">{{ import_result.total_parsed }}</div>
           </div>
           <div class="hub-kpi">
-            <div class="hub-kpi-label">مقبولة</div>
+            <div class="hub-kpi-label">{{ _('مقبولة') }}</div>
             <div class="hub-kpi-value">{{ import_result.accepted | length }}</div>
           </div>
           <div class="hub-kpi">
-            <div class="hub-kpi-label">مكرّرة</div>
+            <div class="hub-kpi-label">{{ _('مكرّرة') }}</div>
             <div class="hub-kpi-value">{{ import_result.duplicates | length }}</div>
           </div>
           <div class="hub-kpi">
-            <div class="hub-kpi-label">غير صالحة</div>
+            <div class="hub-kpi-label">{{ _('غير صالحة') }}</div>
             <div class="hub-kpi-value">{{ import_result.invalid | length }}</div>
           </div>
           <div class="hub-kpi">
-            <div class="hub-kpi-label">للمراجعة اليدوية</div>
+            <div class="hub-kpi-label">{{ _('للمراجعة اليدوية') }}</div>
             <div class="hub-kpi-value">{{ import_result.manual_review | length }}</div>
           </div>
         </div>
@@ -468,7 +468,7 @@
                       {{ meta.risk_ar }}
                     </span>
                     {% if meta.risky %}
-                    · <em>تحتاج صلاحية خاصة (VX2.5)</em>
+                    · <em>{{ _('تحتاج صلاحية خاصة (VX2.5)') }}</em>
                     {% endif %}
                   </span>
                 </span>
@@ -479,7 +479,7 @@
           <div class="mt-program-actions" style="margin-top:8px">
             <button type="submit" class="mt-action-btn"
                     data-mt-site-exit-save-targets>
-              <i class="fa-solid fa-floppy-disk"></i> حفظ الأهداف المختارة
+              <i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ الأهداف المختارة') }}
             </button>
           </div>
         </form>
@@ -491,10 +491,10 @@
   {# ── 6) Preview ───────────────────────────────────────── #}
   <section class="mt-card" data-mt-site-exit-preview-card>
     <header class="mt-card-head">
-      <h3><i class="fa-solid fa-eye"></i> المعاينة</h3>
+      <h3><i class="fa-solid fa-eye"></i> {{ _('المعاينة') }}</h3>
       {% if group_counts %}
       <span class="mt-card-meta">
-        الإجمالي المُخزَّن: <strong>{{ group_counts.get('total', 0) }}</strong> هدف
+        {{ _('الإجمالي المُخزَّن:') }} <strong>{{ group_counts.get('total', 0) }}</strong> {{ _('هدف') }}
       </span>
       {% endif %}
     </header>
@@ -505,7 +505,7 @@
             data-mt-site-exit-preview-form
             style="margin-bottom:10px">
         <div class="vx2-policy-form-grid">
-          <label>WAN interface-list (للحماية في وضع block)
+          <label>{{ _('WAN interface-list (للحماية في وضع block)') }}
             <input type="text" name="wan_interface_list"
                    placeholder="WAN" data-mt-site-exit-wan-input>
           </label>
@@ -513,7 +513,7 @@
         <div class="mt-program-actions" style="margin-top:8px">
           <button type="submit" class="mt-action-btn"
                   data-mt-site-exit-preview-button>
-            <i class="fa-solid fa-bolt"></i> توليد معاينة
+            <i class="fa-solid fa-bolt"></i> {{ _('توليد معاينة') }}
           </button>
         </div>
       </form>
@@ -537,28 +537,28 @@
         {% if forward_script %}
         <div data-mt-site-exit-preview-summary>
           <p>
-            <strong>عدد الأوامر المُولَّدة:</strong>
+            <strong>{{ _('عدد الأوامر المُولَّدة:') }}</strong>
             {{ preview_summary.command_count }} ·
             <strong>address-list:</strong> {{ preview_summary.section_counts.address_list }} ·
             <strong>mangle:</strong> {{ preview_summary.section_counts.mangle }} ·
             <strong>firewall-filter:</strong> {{ preview_summary.section_counts.firewall_filter }}
           </p>
-          <h4>سكربت التطبيق (forward)</h4>
+          <h4>{{ _('سكربت التطبيق (forward)') }}</h4>
           <div class="vx2-pre-wrap">
             <button type="button" class="vx2-copy-btn"
                     data-vx2-copy-target="forward"
-                    title="نسخ إلى الحافظة">
-              <i class="fa-regular fa-clipboard"></i> نسخ
+                    title="{{ _('نسخ إلى الحافظة') }}">
+              <i class="fa-regular fa-clipboard"></i> {{ _('نسخ') }}
             </button>
             <pre class="vx2-script-pre"
                  data-mt-site-exit-forward-script>{{ forward_script }}</pre>
           </div>
-          <h4>سكربت التراجع (rollback)</h4>
+          <h4>{{ _('سكربت التراجع (rollback)') }}</h4>
           <div class="vx2-pre-wrap">
             <button type="button" class="vx2-copy-btn"
                     data-vx2-copy-target="rollback"
-                    title="نسخ إلى الحافظة">
-              <i class="fa-regular fa-clipboard"></i> نسخ
+                    title="{{ _('نسخ إلى الحافظة') }}">
+              <i class="fa-regular fa-clipboard"></i> {{ _('نسخ') }}
             </button>
             <pre class="vx2-script-pre"
                  data-mt-site-exit-rollback-script>{{ rollback_script }}</pre>
@@ -572,10 +572,10 @@
   {# ── 7) Apply (VX2.6a — guarded form with 5 confirmations) #}
   <section class="mt-card" data-mt-site-exit-apply-card>
     <header class="mt-card-head">
-      <h3><i class="fa-solid fa-circle-play"></i> التطبيق</h3>
+      <h3><i class="fa-solid fa-circle-play"></i> {{ _('التطبيق') }}</h3>
       <span class="mt-card-meta">
         <i class="fa-solid fa-shield-halved"></i>
-        تطبيق آمن خلف فحص السلامة + 5 تأكيدات صريحة
+        {{ _('تطبيق آمن خلف فحص السلامة + 5 تأكيدات صريحة') }}
       </span>
     </header>
     <div class="mt-card-body">
@@ -588,8 +588,8 @@
       </div>
       <button class="mt-action-btn" disabled
               data-mt-site-exit-apply-button
-              title="ولّد معاينة ناجحة أولاً">
-        <i class="fa-solid fa-circle-play"></i> تطبيق على الراوتر
+              title="{{ _('ولّد معاينة ناجحة أولاً') }}">
+        <i class="fa-solid fa-circle-play"></i> {{ _('تطبيق على الراوتر') }}
       </button>
       {% else %}
 
@@ -643,14 +643,14 @@
             <input type="checkbox"
                    name="confirm_selected_sites_only"
                    value="1" required>
-            <span>تأكّدتُ أنّ هذه السياسة <strong>لا</strong>
+            <span>{{ _('تأكّدتُ أنّ هذه السياسة') }} <strong>{{ _('لا') }}</strong>
               تُوجِّه كل ترافيك الإنترنت — فقط الوجهات
               الموجودة في address-list المُدارة.</span>
           </label>
         </div>
 
         <details style="margin:8px 0;font-size:12.5px">
-          <summary><strong>إعدادات إضافية</strong></summary>
+          <summary><strong>{{ _('إعدادات إضافية') }}</strong></summary>
           <div style="padding:8px 0">
             <label style="display:flex;gap:8px;align-items:flex-start">
               <input type="checkbox"
@@ -675,10 +675,10 @@
                   data-mt-site-exit-apply-button
                   style="background:#cc1f1f;color:#fff">
             <i class="fa-solid fa-circle-play"></i>
-            تطبيق على الراوتر الآن
+            {{ _('تطبيق على الراوتر الآن') }}
           </button>
           <span class="vx2-empty" style="margin-inline-start:8px">
-            سيُسجَّل في سجل العمليات + سجل النشر.
+            {{ _('سيُسجَّل في سجل العمليات + سجل النشر.') }}
           </span>
         </div>
       </form>
@@ -692,66 +692,66 @@
 
     {# ─── Side guide (sticky) ─────────────────────────── #}
     <aside class="vx2-side-guide" data-vx2-side-guide>
-      <h4><i class="fa-solid fa-list-check"></i> الخطوات بالترتيب</h4>
+      <h4><i class="fa-solid fa-list-check"></i> {{ _('الخطوات بالترتيب') }}</h4>
       <ol>
         <li>
           <span class="vx2-step-num">1</span>
-          <strong>تحقّق من عقدة الخروج</strong>
+          <strong>{{ _('تحقّق من عقدة الخروج') }}</strong>
           — لازم تكون مفعّلة + عنوان عام + اسم واجهة النفق
           interface مطابق للراوتر.
         </li>
         <li>
           <span class="vx2-step-num">2</span>
-          <strong>أنشئ سياسة</strong>
-          — اختر عقدة الخروج + وضع الفشل
-          <code>block_when_vps_down</code> الموصى به.
+          <strong>{{ _('أنشئ سياسة') }}</strong>
+          {{ _('— اختر عقدة الخروج + وضع الفشل') }}
+          <code>block_when_vps_down</code> {{ _('الموصى به.') }}
         </li>
         <li>
           <span class="vx2-step-num">3</span>
-          <strong>حمّل قائمة جاهزة</strong> (مثل karamspeed)
+          <strong>{{ _('حمّل قائمة جاهزة') }}</strong> (مثل karamspeed)
           أو الصق قائمتك في textarea الاستيراد، اضغط
-          <code>تحليل</code>.
+          <code>{{ _('تحليل') }}</code>.
         </li>
         <li>
           <span class="vx2-step-num">4</span>
-          <strong>اختر المجموعات</strong> — اترك الافتراضي
+          <strong>{{ _('اختر المجموعات') }}</strong> — اترك الافتراضي
           الآمن (speedtest + public-ip-checkers + raw-ips)،
-          ثم اضغط <code>حفظ الأهداف المختارة</code>.
+          ثم اضغط <code>{{ _('حفظ الأهداف المختارة') }}</code>.
         </li>
         <li>
           <span class="vx2-step-num">5</span>
-          <strong>اكتب اسم WAN interface-list</strong>
-          (افتراضياً <code>WAN</code>؛ تحقّق على الراوتر بـ
+          <strong>{{ _('اكتب اسم WAN interface-list') }}</strong>
+          {{ _('(افتراضياً') }} <code>WAN</code>{{ _('؛ تحقّق على الراوتر بـ') }}
           <code>/interface list print</code>).
         </li>
         <li>
           <span class="vx2-step-num">6</span>
-          <strong>ولّد المعاينة</strong>
-          — اقرأ السكربت + تحذير FastTrack بعناية.
+          <strong>{{ _('ولّد المعاينة') }}</strong>
+          {{ _('— اقرأ السكربت + تحذير FastTrack بعناية.') }}
         </li>
         <li>
           <span class="vx2-step-num">7</span>
-          <strong>علّم 5 خانات التأكيد</strong>
-          (إلزامية — تمنع تطبيق غير مقصود).
+          <strong>{{ _('علّم 5 خانات التأكيد') }}</strong>
+          {{ _('(إلزامية — تمنع تطبيق غير مقصود).') }}
         </li>
         <li>
           <span class="vx2-step-num">8</span>
-          <strong>اضغط الزر الأحمر</strong>
+          <strong>{{ _('اضغط الزر الأحمر') }}</strong>
           — التطبيق ينفّذ السكربت عبر واجهة ربط الراوتر
           (لا تحتاج وصولاً آمناً منفصلاً).
         </li>
       </ol>
 
       <div class="vx2-tip">
-        <strong>💡 نصيحة:</strong> أزرار <em>نسخ</em> على
+        <strong>{{ _('💡 نصيحة:') }}</strong> {{ _('أزرار') }} <em>{{ _('نسخ') }}</em> على
         السكربتات تنسخ الكل بنقرة. الصق في
-        <code>/file/edit</code> أو في terminal الراوتر.
+        <code>/file/edit</code> {{ _('أو في terminal الراوتر.') }}
       </div>
 
       <div class="vx2-tip" style="background:rgba(204,31,31,0.08);border-color:#cc1f1f">
-        <strong>⚠️ هام:</strong> خذ نسخة احتياطية من الراوتر
+        <strong>{{ _('⚠️ هام:') }}</strong> خذ نسخة احتياطية من الراوتر
         قبل التطبيق. ولو فشل التطبيق، افتح <code>سجل
-        العمليات</code> لمعرفة السبب.
+        العمليات</code> {{ _('لمعرفة السبب.') }}
       </div>
     </aside>
 

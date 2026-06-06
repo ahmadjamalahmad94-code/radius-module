@@ -254,15 +254,15 @@
 <div class="dg-layout">
 
   {# ───── الفهرس الجانبي اللاصق ───── #}
-  <nav class="dg-toc dg-noprint" aria-label="فهرس الدليل">
-    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> فهرس الخطوات</div>
-    <a href="#dg-s1" data-dg-toc><span class="n">1</span> افتح المركز المالي</a>
-    <a href="#dg-s2" data-dg-toc><span class="n">2</span> اقرأ شريط المؤشرات</a>
-    <a href="#dg-s3" data-dg-toc><span class="n">3</span> تبويب النظرة العامة</a>
-    <a href="#dg-s4" data-dg-toc><span class="n">4</span> الخزائن والمحافظ</a>
-    <a href="#dg-s5" data-dg-toc><span class="n">5</span> إنشاء محفظة</a>
-    <a href="#dg-s6" data-dg-toc><span class="n">6</span> الشحن والخصم</a>
-    <a href="#dg-s7" data-dg-toc><span class="n">7</span> الإيرادات والديون</a>
+  <nav class="dg-toc dg-noprint" aria-label="{{ _('فهرس الدليل') }}">
+    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> {{ _('فهرس الخطوات') }}</div>
+    <a href="#dg-s1" data-dg-toc><span class="n">1</span> {{ _('افتح المركز المالي') }}</a>
+    <a href="#dg-s2" data-dg-toc><span class="n">2</span> {{ _('اقرأ شريط المؤشرات') }}</a>
+    <a href="#dg-s3" data-dg-toc><span class="n">3</span> {{ _('تبويب النظرة العامة') }}</a>
+    <a href="#dg-s4" data-dg-toc><span class="n">4</span> {{ _('الخزائن والمحافظ') }}</a>
+    <a href="#dg-s5" data-dg-toc><span class="n">5</span> {{ _('إنشاء محفظة') }}</a>
+    <a href="#dg-s6" data-dg-toc><span class="n">6</span> {{ _('الشحن والخصم') }}</a>
+    <a href="#dg-s7" data-dg-toc><span class="n">7</span> {{ _('الإيرادات والديون') }}</a>
   </nav>
 
   {# ───── عمود المحتوى ───── #}
@@ -271,11 +271,11 @@
     <div class="dg-lead">
       <span class="ic"><i class="fa-solid fa-lightbulb"></i></span>
       <div>
-        <h3>قبل ما نبدأ — شو هو «المركز المالي»؟</h3>
+        <h3>{{ _('قبل ما نبدأ — شو هو «المركز المالي»؟') }}</h3>
         <p>
           المركز المالي هو لوحة المتابعة اليومية لكل ما يخص الفلوس في النظام: المحافظ وأرصدتها،
-          الإيرادات والأرباح، والديون والسلف. القاعدة الذهبية هنا: <strong>لا حذف مباشر إطلاقًا</strong> —
-          كل شحن أو خصم يمرّ عبر الخدمة المالية ويترك <strong>قيدًا قابلًا للتدقيق</strong>. فالصفحة
+          الإيرادات والأرباح، والديون والسلف. القاعدة الذهبية هنا: <strong>{{ _('لا حذف مباشر إطلاقًا') }}</strong> —
+          كل شحن أو خصم يمرّ عبر الخدمة المالية ويترك <strong>{{ _('قيدًا قابلًا للتدقيق') }}</strong>. فالصفحة
           للقراءة والتشغيل الآمن، وكل رقم تشوفه قابل للمراجعة.
         </p>
       </div>
@@ -285,36 +285,36 @@
     <section class="dg-step" id="dg-s1">
       <div class="dg-badge">1</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-door-open"></i> افتح المركز المالي واعرف تبويباته الأربعة</h2>
+        <h2><i class="fa-solid fa-door-open"></i> {{ _('افتح المركز المالي واعرف تبويباته الأربعة') }}</h2>
         <p>
-          من القائمة الجانبية افتح قسم <strong>«المحاسبة والمالية»</strong> ثم
-          <strong>«المركز المالي»</strong>. رح تفتح صفحة واحدة فيها أربعة تبويبات أعلى الشاشة،
-          وزر <strong>«السجل المحاسبي»</strong> في الأعلى ينقلك لدفتر القيود الكامل:
+          {{ _('من القائمة الجانبية افتح قسم') }} <strong>{{ _('«المحاسبة والمالية»') }}</strong> {{ _('ثم') }}
+          <strong>{{ _('«المركز المالي»') }}</strong>. رح تفتح صفحة واحدة فيها أربعة تبويبات أعلى الشاشة،
+          وزر <strong>{{ _('«السجل المحاسبي»') }}</strong> {{ _('في الأعلى ينقلك لدفتر القيود الكامل:') }}
         </p>
         <ul>
-          <li><strong>النظرة العامة:</strong> ملخّص الأرقام التشغيلية وقاعدة الأمان.</li>
-          <li><strong>الخزائن والمحافظ:</strong> قائمة المحافظ وأرصدتها، وهنا تشحن وتخصم.</li>
-          <li><strong>الإيرادات:</strong> سجلات البيع والربح الصافي لكل عملية.</li>
-          <li><strong>الديون والسلف:</strong> الذمم المستحقة والسلف المفتوحة وحالاتها.</li>
+          <li><strong>{{ _('النظرة العامة:') }}</strong> {{ _('ملخّص الأرقام التشغيلية وقاعدة الأمان.') }}</li>
+          <li><strong>{{ _('الخزائن والمحافظ:') }}</strong> {{ _('قائمة المحافظ وأرصدتها، وهنا تشحن وتخصم.') }}</li>
+          <li><strong>{{ _('الإيرادات:') }}</strong> {{ _('سجلات البيع والربح الصافي لكل عملية.') }}</li>
+          <li><strong>{{ _('الديون والسلف:') }}</strong> {{ _('الذمم المستحقة والسلف المفتوحة وحالاتها.') }}</li>
         </ul>
 
         <div class="dg-mock" aria-hidden="true">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">المركز المالي</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('المركز المالي') }}</span></div>
           <div class="dg-mock-body">
             <div class="dg-tabs">
-              <span class="on"><i class="fa-solid fa-chart-pie"></i> النظرة العامة</span>
-              <span><i class="fa-solid fa-wallet"></i> الخزائن والمحافظ</span>
-              <span><i class="fa-solid fa-coins"></i> الإيرادات</span>
-              <span><i class="fa-solid fa-file-invoice-dollar"></i> الديون والسلف</span>
+              <span class="on"><i class="fa-solid fa-chart-pie"></i> {{ _('النظرة العامة') }}</span>
+              <span><i class="fa-solid fa-wallet"></i> {{ _('الخزائن والمحافظ') }}</span>
+              <span><i class="fa-solid fa-coins"></i> {{ _('الإيرادات') }}</span>
+              <span><i class="fa-solid fa-file-invoice-dollar"></i> {{ _('الديون والسلف') }}</span>
             </div>
           </div>
         </div>
-        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> التبويب المختار يتلوّن بالبنفسجي — وكل تبويب يبدّل شريط المؤشرات بالأعلى.</div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> {{ _('التبويب المختار يتلوّن بالبنفسجي — وكل تبويب يبدّل شريط المؤشرات بالأعلى.') }}</div>
 
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>نصيحة:</b> لإدارة الفواتير والكوبونات افتح دليل <b>«الفواتير والكوبونات»</b>،
-          وللتقارير ودفتر القيود افتح دليل <b>«السجل والتقارير المحاسبية»</b> — كلها في نفس القسم.</span>
+          <span><b>{{ _('نصيحة:') }}</b> {{ _('لإدارة الفواتير والكوبونات افتح دليل') }} <b>{{ _('«الفواتير والكوبونات»') }}</b>،
+          وللتقارير ودفتر القيود افتح دليل <b>{{ _('«السجل والتقارير المحاسبية»') }}</b> {{ _('— كلها في نفس القسم.') }}</span>
         </div>
       </div>
     </section>
@@ -323,39 +323,39 @@
     <section class="dg-step" id="dg-s2">
       <div class="dg-badge">2</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-gauge-high"></i> اقرأ شريط المؤشرات — يتغيّر مع كل تبويب</h2>
+        <h2><i class="fa-solid fa-gauge-high"></i> {{ _('اقرأ شريط المؤشرات — يتغيّر مع كل تبويب') }}</h2>
         <p>
-          أعلى الصفحة شريط من أربعة مؤشرات (KPIs) كبيرة. المهم تنتبه: <strong>الأرقام تتبدّل حسب
-          التبويب المفتوح</strong>. مثلًا في تبويب «النظرة العامة» تشوف:
+          {{ _('أعلى الصفحة شريط من أربعة مؤشرات (KPIs) كبيرة. المهم تنتبه:') }} <strong>الأرقام تتبدّل حسب
+          التبويب المفتوح</strong>{{ _('. مثلًا في تبويب «النظرة العامة» تشوف:') }}
         </p>
 
         <div class="dg-mock" aria-hidden="true">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">المركز المالي › النظرة العامة</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('المركز المالي › النظرة العامة') }}</span></div>
           <div class="dg-mock-body">
             <div class="dg-kpis">
-              <div class="dg-kpi green"><span class="lab"><i class="fa-solid fa-sack-dollar"></i> إجمالي الإيرادات</span><span class="val">12,450.00</span></div>
-              <div class="dg-kpi brand"><span class="lab"><i class="fa-solid fa-cash-register"></i> التحصيلات</span><span class="val">9,800.00</span></div>
-              <div class="dg-kpi blue"><span class="lab"><i class="fa-solid fa-wallet"></i> أرصدة المحافظ</span><span class="val">3,120.00</span></div>
-              <div class="dg-kpi amber"><span class="lab"><i class="fa-solid fa-chart-line"></i> الربح الصافي</span><span class="val">4,260.00</span></div>
+              <div class="dg-kpi green"><span class="lab"><i class="fa-solid fa-sack-dollar"></i> {{ _('إجمالي الإيرادات') }}</span><span class="val">12,450.00</span></div>
+              <div class="dg-kpi brand"><span class="lab"><i class="fa-solid fa-cash-register"></i> {{ _('التحصيلات') }}</span><span class="val">9,800.00</span></div>
+              <div class="dg-kpi blue"><span class="lab"><i class="fa-solid fa-wallet"></i> {{ _('أرصدة المحافظ') }}</span><span class="val">3,120.00</span></div>
+              <div class="dg-kpi amber"><span class="lab"><i class="fa-solid fa-chart-line"></i> {{ _('الربح الصافي') }}</span><span class="val">4,260.00</span></div>
             </div>
           </div>
         </div>
 
         <ul>
-          <li><strong>إجمالي الإيرادات:</strong> كل ما دخل النظام من بيع وتحصيل.</li>
-          <li><strong>التحصيلات:</strong> ما تمّ قبضه فعلًا (الكاش الواصل).</li>
-          <li><strong>أرصدة المحافظ:</strong> مجموع ما في كل المحافظ من رصيد الآن.</li>
-          <li><strong>الربح الصافي:</strong> الإيراد بعد خصم تكلفة الجملة.</li>
+          <li><strong>{{ _('إجمالي الإيرادات:') }}</strong> {{ _('كل ما دخل النظام من بيع وتحصيل.') }}</li>
+          <li><strong>{{ _('التحصيلات:') }}</strong> {{ _('ما تمّ قبضه فعلًا (الكاش الواصل).') }}</li>
+          <li><strong>{{ _('أرصدة المحافظ:') }}</strong> {{ _('مجموع ما في كل المحافظ من رصيد الآن.') }}</li>
+          <li><strong>{{ _('الربح الصافي:') }}</strong> {{ _('الإيراد بعد خصم تكلفة الجملة.') }}</li>
         </ul>
         <p>
-          في تبويب <strong>«الخزائن والمحافظ»</strong> تصير المؤشرات: عدد المحافظ، أرصدتها، قيود
-          الأستاذ، وإجماليه. وفي <strong>«الإيرادات»</strong>: الإيراد، الربح، عدد السجلات، حصص
-          الموزعين. وفي <strong>«الديون والسلف»</strong>: إجمالي الديون، عدد الذمم، عدد السلف،
+          {{ _('في تبويب') }} <strong>{{ _('«الخزائن والمحافظ»') }}</strong> تصير المؤشرات: عدد المحافظ، أرصدتها، قيود
+          الأستاذ، وإجماليه. وفي <strong>{{ _('«الإيرادات»') }}</strong>: الإيراد، الربح، عدد السجلات، حصص
+          الموزعين. وفي <strong>{{ _('«الديون والسلف»') }}</strong>: إجمالي الديون، عدد الذمم، عدد السلف،
           والسلف المفتوحة.
         </p>
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>نصيحة:</b> إذا حسّيت رقمًا «تغيّر فجأة»، تأكد أي تبويب أنت فيه — على الأغلب
+          <span><b>{{ _('نصيحة:') }}</b> إذا حسّيت رقمًا «تغيّر فجأة»، تأكد أي تبويب أنت فيه — على الأغلب
           المؤشرات تبدّلت لأنك بدّلت التبويب، مش لأن البيانات تغيّرت.</span>
         </div>
       </div>
@@ -365,32 +365,32 @@
     <section class="dg-step" id="dg-s3">
       <div class="dg-badge">3</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-chart-pie"></i> تبويب «النظرة العامة» — نبض المالية بلمحة</h2>
+        <h2><i class="fa-solid fa-chart-pie"></i> {{ _('تبويب «النظرة العامة» — نبض المالية بلمحة') }}</h2>
         <p>
-          هذا التبويب للقراءة فقط، ومقسوم لثلاثة صناديق. أول صندوقين شبكتا أرقام، والثالث قاعدة أمان:
+          {{ _('هذا التبويب للقراءة فقط، ومقسوم لثلاثة صناديق. أول صندوقين شبكتا أرقام، والثالث قاعدة أمان:') }}
         </p>
         <ul>
-          <li><strong>مؤشرات التشغيل المالي:</strong> عدد المحافظ، قيود دفتر الأستاذ، سجلات الإيراد، السلف المفتوحة.</li>
-          <li><strong>المشاركة والتسويات:</strong> حصص الموزعين، قيمة السلف المفتوحة، إجمالي الديون، إجمالي دفتر الأستاذ.</li>
-          <li><strong>قاعدة الأمان المالي:</strong> تذكير بأنه <strong>لا يوجد حذف مباشر</strong> — أي شحن أو خصم يترك قيدًا للمراجعة.</li>
+          <li><strong>{{ _('مؤشرات التشغيل المالي:') }}</strong> {{ _('عدد المحافظ، قيود دفتر الأستاذ، سجلات الإيراد، السلف المفتوحة.') }}</li>
+          <li><strong>{{ _('المشاركة والتسويات:') }}</strong> {{ _('حصص الموزعين، قيمة السلف المفتوحة، إجمالي الديون، إجمالي دفتر الأستاذ.') }}</li>
+          <li><strong>{{ _('قاعدة الأمان المالي:') }}</strong> {{ _('تذكير بأنه') }} <strong>{{ _('لا يوجد حذف مباشر') }}</strong> {{ _('— أي شحن أو خصم يترك قيدًا للمراجعة.') }}</li>
         </ul>
 
         <div class="dg-mock" aria-hidden="true">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">النظرة العامة › مؤشرات التشغيل</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('النظرة العامة › مؤشرات التشغيل') }}</span></div>
           <div class="dg-mock-body">
-            <div class="dg-mock-sechead"><span class="ic"><i class="fa-solid fa-gauge-high"></i></span> مؤشرات التشغيل المالي</div>
+            <div class="dg-mock-sechead"><span class="ic"><i class="fa-solid fa-gauge-high"></i></span> {{ _('مؤشرات التشغيل المالي') }}</div>
             <div class="dg-kpis">
-              <div class="dg-kpi"><span class="lab"><i class="fa-solid fa-wallet"></i> عدد المحافظ</span><span class="val">14</span></div>
-              <div class="dg-kpi"><span class="lab"><i class="fa-solid fa-book"></i> قيود الأستاذ</span><span class="val">320</span></div>
-              <div class="dg-kpi"><span class="lab"><i class="fa-solid fa-receipt"></i> سجلات الإيراد</span><span class="val">86</span></div>
-              <div class="dg-kpi"><span class="lab"><i class="fa-solid fa-hand-holding-dollar"></i> سلف مفتوحة</span><span class="val">5</span></div>
+              <div class="dg-kpi"><span class="lab"><i class="fa-solid fa-wallet"></i> {{ _('عدد المحافظ') }}</span><span class="val">14</span></div>
+              <div class="dg-kpi"><span class="lab"><i class="fa-solid fa-book"></i> {{ _('قيود الأستاذ') }}</span><span class="val">320</span></div>
+              <div class="dg-kpi"><span class="lab"><i class="fa-solid fa-receipt"></i> {{ _('سجلات الإيراد') }}</span><span class="val">86</span></div>
+              <div class="dg-kpi"><span class="lab"><i class="fa-solid fa-hand-holding-dollar"></i> {{ _('سلف مفتوحة') }}</span><span class="val">5</span></div>
             </div>
           </div>
         </div>
 
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>نصيحة:</b> ابدأ يومك من هذا التبويب — يعطيك صورة سريعة قبل ما تغوص في تفاصيل
+          <span><b>{{ _('نصيحة:') }}</b> ابدأ يومك من هذا التبويب — يعطيك صورة سريعة قبل ما تغوص في تفاصيل
           المحافظ أو الديون.</span>
         </div>
       </div>
@@ -400,26 +400,26 @@
     <section class="dg-step" id="dg-s4">
       <div class="dg-badge">4</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-wallet"></i> تبويب «الخزائن والمحافظ» — اقرأ الجدول</h2>
+        <h2><i class="fa-solid fa-wallet"></i> {{ _('تبويب «الخزائن والمحافظ» — اقرأ الجدول') }}</h2>
         <p>
-          هنا قلب العمل المالي. الجدول يعرض كل محفظة بصف، وفيه الأعمدة:
+          {{ _('هنا قلب العمل المالي. الجدول يعرض كل محفظة بصف، وفيه الأعمدة:') }}
         </p>
         <ul>
-          <li><strong>المالك:</strong> الجهة التابعة لها المحفظة (الشركة، مدير، موزّع، مشترك، مستخدم بطاقات) ورقمها.</li>
-          <li><strong>الرصيد:</strong> الرصيد الحالي للمحفظة.</li>
-          <li><strong>الحالة:</strong> <span class="dg-pill"><span class="dot"></span> نشطة</span> أو معطّلة.</li>
-          <li><strong>آخر الحركات:</strong> أحدث 5 حركات (شحن/خصم/تحويل…) بمبالغها وأوقاتها.</li>
-          <li><strong>إجراء:</strong> الحقل المدمج للشحن والخصم (الخطوة التالية).</li>
+          <li><strong>{{ _('المالك:') }}</strong> {{ _('الجهة التابعة لها المحفظة (الشركة، مدير، موزّع، مشترك، مستخدم بطاقات) ورقمها.') }}</li>
+          <li><strong>{{ _('الرصيد:') }}</strong> {{ _('الرصيد الحالي للمحفظة.') }}</li>
+          <li><strong>{{ _('الحالة:') }}</strong> <span class="dg-pill"><span class="dot"></span> {{ _('نشطة') }}</span> {{ _('أو معطّلة.') }}</li>
+          <li><strong>{{ _('آخر الحركات:') }}</strong> {{ _('أحدث 5 حركات (شحن/خصم/تحويل…) بمبالغها وأوقاتها.') }}</li>
+          <li><strong>{{ _('إجراء:') }}</strong> {{ _('الحقل المدمج للشحن والخصم (الخطوة التالية).') }}</li>
         </ul>
 
         <div class="dg-mock" aria-hidden="true">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">الخزائن والمحافظ</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('الخزائن والمحافظ') }}</span></div>
           <div class="dg-mock-body">
             <table class="dg-tbl">
-              <thead><tr><th>#</th><th>المالك</th><th>الرصيد</th><th>الحالة</th><th>آخر الحركات</th></tr></thead>
+              <thead><tr><th>#</th><th>{{ _('المالك') }}</th><th>{{ _('الرصيد') }}</th><th>{{ _('الحالة') }}</th><th>{{ _('آخر الحركات') }}</th></tr></thead>
               <tbody>
-                <tr><td class="num">1</td><td>الشركة</td><td class="num">2,400.00</td><td><span class="dg-pill"><span class="dot"></span> نشطة</span></td><td>شحن — 500.00</td></tr>
-                <tr><td class="num">7</td><td>موزّع #7</td><td class="num">320.00</td><td><span class="dg-pill"><span class="dot"></span> نشطة</span></td><td>خصم — 80.00</td></tr>
+                <tr><td class="num">1</td><td>{{ _('الشركة') }}</td><td class="num">2,400.00</td><td><span class="dg-pill"><span class="dot"></span> {{ _('نشطة') }}</span></td><td>{{ _('شحن — 500.00') }}</td></tr>
+                <tr><td class="num">7</td><td>{{ _('موزّع #7') }}</td><td class="num">320.00</td><td><span class="dg-pill"><span class="dot"></span> {{ _('نشطة') }}</span></td><td>{{ _('خصم — 80.00') }}</td></tr>
               </tbody>
             </table>
           </div>
@@ -427,7 +427,7 @@
 
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>نصيحة:</b> الجدول يدعم الفرز واختيار الأعمدة والترقيم (نظام الجداول الموحّد) —
+          <span><b>{{ _('نصيحة:') }}</b> الجدول يدعم الفرز واختيار الأعمدة والترقيم (نظام الجداول الموحّد) —
           اضغط رأس العمود لترتيب المحافظ حسب الرصيد مثلًا.</span>
         </div>
       </div>
@@ -437,38 +437,38 @@
     <section class="dg-step" id="dg-s5">
       <div class="dg-badge">5</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-circle-plus"></i> إنشاء محفظة جديدة</h2>
+        <h2><i class="fa-solid fa-circle-plus"></i> {{ _('إنشاء محفظة جديدة') }}</h2>
         <p>
-          فوق قائمة المحافظ يوجد زر <strong>«إنشاء محفظة»</strong>؛ يفتح نافذة عائمة بثلاثة حقول:
+          {{ _('فوق قائمة المحافظ يوجد زر') }} <strong>{{ _('«إنشاء محفظة»') }}</strong>{{ _('؛ يفتح نافذة عائمة بثلاثة حقول:') }}
         </p>
         <ul>
-          <li><strong>نوع المالك:</strong> الشركة، مدير، موزّع، مشترك، أو مستخدم بطاقات.</li>
-          <li><strong>رقم المالك:</strong> اتركه فارغًا لمحفظة الشركة؛ وإلا اكتب رقم المدير/الموزّع/المشترك.</li>
-          <li><strong>العملة:</strong> الافتراضي <strong>ILS (شيكل)</strong> — تُستخدم في عرض الرصيد والحركات.</li>
+          <li><strong>{{ _('نوع المالك:') }}</strong> {{ _('الشركة، مدير، موزّع، مشترك، أو مستخدم بطاقات.') }}</li>
+          <li><strong>{{ _('رقم المالك:') }}</strong> {{ _('اتركه فارغًا لمحفظة الشركة؛ وإلا اكتب رقم المدير/الموزّع/المشترك.') }}</li>
+          <li><strong>{{ _('العملة:') }}</strong> {{ _('الافتراضي') }} <strong>{{ _('ILS (شيكل)') }}</strong> {{ _('— تُستخدم في عرض الرصيد والحركات.') }}</li>
         </ul>
 
         <div class="dg-mock" aria-hidden="true" style="max-width:460px">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">إنشاء محفظة</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('إنشاء محفظة') }}</span></div>
           <div class="dg-mock-body">
             <div class="dg-mf">
-              <label>نوع المالك</label>
-              <div class="dg-mf-select"><div class="dg-mf-input hl">الشركة</div></div>
+              <label>{{ _('نوع المالك') }}</label>
+              <div class="dg-mf-select"><div class="dg-mf-input hl">{{ _('الشركة') }}</div></div>
             </div>
             <div class="dg-mock-grid2">
-              <div class="dg-mf"><label>رقم المالك</label><div class="dg-mf-input ph">فارغ = محفظة الشركة</div></div>
-              <div class="dg-mf"><label>العملة</label><div class="dg-mf-select"><div class="dg-mf-input">ILS — شيكل</div></div></div>
+              <div class="dg-mf"><label>{{ _('رقم المالك') }}</label><div class="dg-mf-input ph">{{ _('فارغ = محفظة الشركة') }}</div></div>
+              <div class="dg-mf"><label>{{ _('العملة') }}</label><div class="dg-mf-select"><div class="dg-mf-input">{{ _('ILS — شيكل') }}</div></div></div>
             </div>
             <div class="dg-mock-actions">
-              <span class="dg-mock-btn ghost">إغلاق</span>
-              <span class="dg-mock-btn primary"><i class="fa-solid fa-plus"></i> إنشاء محفظة</span>
+              <span class="dg-mock-btn ghost">{{ _('إغلاق') }}</span>
+              <span class="dg-mock-btn primary"><i class="fa-solid fa-plus"></i> {{ _('إنشاء محفظة') }}</span>
             </div>
           </div>
         </div>
 
         <div class="dg-warn">
           <span class="ic">⚠️</span>
-          <span><b>انتبه:</b> محفظة الشركة عادةً واحدة فقط — اترك «رقم المالك» فارغًا لها. لمحفظة
-          موزّع أو مشترك تأكد من <b>رقم المالك الصحيح</b> حتى لا تربط الرصيد بالجهة الخطأ.</span>
+          <span><b>{{ _('انتبه:') }}</b> محفظة الشركة عادةً واحدة فقط — اترك «رقم المالك» فارغًا لها. لمحفظة
+          موزّع أو مشترك تأكد من <b>{{ _('رقم المالك الصحيح') }}</b> {{ _('حتى لا تربط الرصيد بالجهة الخطأ.') }}</span>
         </div>
       </div>
     </section>
@@ -477,37 +477,37 @@
     <section class="dg-step" id="dg-s6">
       <div class="dg-badge">6</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-right-left"></i> الشحن والخصم — الحقل المدمج وبوابة الأمان</h2>
+        <h2><i class="fa-solid fa-right-left"></i> {{ _('الشحن والخصم — الحقل المدمج وبوابة الأمان') }}</h2>
         <p>
-          في عمود <strong>«إجراء»</strong> بكل صف محفظة يوجد حقل واحد مدمج: قائمة
-          <strong>«شحن / خصم»</strong> ملتصقة بحقل <strong>المبلغ</strong> ثم زر <strong>«تنفيذ»</strong>.
+          {{ _('في عمود') }} <strong>{{ _('«إجراء»') }}</strong> {{ _('بكل صف محفظة يوجد حقل واحد مدمج: قائمة') }}
+          <strong>{{ _('«شحن / خصم»') }}</strong> {{ _('ملتصقة بحقل') }} <strong>{{ _('المبلغ') }}</strong> {{ _('ثم زر') }} <strong>{{ _('«تنفيذ»') }}</strong>.
           اختيار «شحن» يزيد الرصيد، و«خصم» ينقصه — والاثنان يُسجَّلان كقيد مالي.
         </p>
 
         <div class="dg-mock" aria-hidden="true" style="max-width:420px">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">إجراء على محفظة</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('إجراء على محفظة') }}</span></div>
           <div class="dg-mock-body">
             <div class="dg-mock-actions" style="justify-content:flex-start">
               <span class="dg-actgroup">
-                <span class="sel"><i class="fa-solid fa-arrow-down"></i> شحن</span>
-                <span class="amt">المبلغ</span>
+                <span class="sel"><i class="fa-solid fa-arrow-down"></i> {{ _('شحن') }}</span>
+                <span class="amt">{{ _('المبلغ') }}</span>
               </span>
-              <span class="dg-mock-btn blue">تنفيذ</span>
+              <span class="dg-mock-btn blue">{{ _('تنفيذ') }}</span>
             </div>
           </div>
         </div>
 
         <ul>
-          <li><strong>الشحن (credit):</strong> يضيف المبلغ للرصيد ويُنتج قيدًا. يحتاج صلاحية الشحن.</li>
-          <li><strong>الخصم (debit):</strong> يخصم المبلغ، ويمرّ عبر <strong>بوابة الأمان</strong> التي
-          تتحقق من صلاحيتك ومن <strong>حدود المبلغ</strong> — وقد يتطلّب <strong>اعتمادًا</strong> إن تجاوز الحد.</li>
+          <li><strong>{{ _('الشحن (credit):') }}</strong> {{ _('يضيف المبلغ للرصيد ويُنتج قيدًا. يحتاج صلاحية الشحن.') }}</li>
+          <li><strong>{{ _('الخصم (debit):') }}</strong> {{ _('يخصم المبلغ، ويمرّ عبر') }} <strong>{{ _('بوابة الأمان') }}</strong> التي
+          تتحقق من صلاحيتك ومن <strong>{{ _('حدود المبلغ') }}</strong> {{ _('— وقد يتطلّب') }} <strong>{{ _('اعتمادًا') }}</strong> {{ _('إن تجاوز الحد.') }}</li>
         </ul>
 
         <div class="dg-warn">
           <span class="ic">⚠️</span>
-          <span><b>انتبه:</b> إذا كان خيار «شحن» أو «خصم» <b>معطّلًا (رماديًا)</b> فهذا يعني أنك لا
-          تملك صلاحيته — راجع مدير النظام. ولا يوجد «تراجع بحذف»: تصحيح أي حركة يكون <b>بقيد معاكس</b>
-          من السجل المحاسبي.</span>
+          <span><b>{{ _('انتبه:') }}</b> {{ _('إذا كان خيار «شحن» أو «خصم»') }} <b>{{ _('معطّلًا (رماديًا)') }}</b> فهذا يعني أنك لا
+          تملك صلاحيته — راجع مدير النظام. ولا يوجد «تراجع بحذف»: تصحيح أي حركة يكون <b>{{ _('بقيد معاكس') }}</b>
+          {{ _('من السجل المحاسبي.') }}</span>
         </div>
       </div>
     </section>
@@ -516,42 +516,42 @@
     <section class="dg-step" id="dg-s7">
       <div class="dg-badge">7</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-coins"></i> تبويبا «الإيرادات» و«الديون والسلف»</h2>
+        <h2><i class="fa-solid fa-coins"></i> {{ _('تبويبا «الإيرادات» و«الديون والسلف»') }}</h2>
         <p>
-          <strong>تبويب الإيرادات:</strong> جدول بكل عملية بيع/تحصيل وأعمدته: المصدر (دفعة مشترك،
-          بيع بطاقات، فاتورة…)، السعر الأصلي، المحصّل، تكلفة الجملة، <strong>الربح الصافي</strong>،
+          <strong>{{ _('تبويب الإيرادات:') }}</strong> جدول بكل عملية بيع/تحصيل وأعمدته: المصدر (دفعة مشترك،
+          بيع بطاقات، فاتورة…)، السعر الأصلي، المحصّل، تكلفة الجملة، <strong>{{ _('الربح الصافي') }}</strong>،
           والتاريخ. تقرأ منه أين يأتي الربح بالضبط.
         </p>
 
         <div class="dg-mock" aria-hidden="true">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">الإيرادات</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('الإيرادات') }}</span></div>
           <div class="dg-mock-body">
             <table class="dg-tbl">
-              <thead><tr><th>المصدر</th><th>المحصّل</th><th>تكلفة الجملة</th><th>الربح الصافي</th></tr></thead>
+              <thead><tr><th>{{ _('المصدر') }}</th><th>{{ _('المحصّل') }}</th><th>{{ _('تكلفة الجملة') }}</th><th>{{ _('الربح الصافي') }}</th></tr></thead>
               <tbody>
-                <tr><td>بيع بطاقات #12</td><td class="num">300.00</td><td class="num">180.00</td><td class="num">120.00</td></tr>
-                <tr><td>دفعة مشترك #8</td><td class="num">50.00</td><td class="num">30.00</td><td class="num">20.00</td></tr>
+                <tr><td>{{ _('بيع بطاقات #12') }}</td><td class="num">300.00</td><td class="num">180.00</td><td class="num">120.00</td></tr>
+                <tr><td>{{ _('دفعة مشترك #8') }}</td><td class="num">50.00</td><td class="num">30.00</td><td class="num">20.00</td></tr>
               </tbody>
             </table>
           </div>
         </div>
 
         <p style="margin-top:13px">
-          <strong>تبويب الديون والسلف:</strong> فيه فلتر حالة بالأعلى (كل الحالات / مفتوحة / مسددة /
-          ملغاة) وجدولان: <strong>الذمم المفتوحة</strong> (الديون المستحقة على المشتركين باعتمادها وتواريخها)
-          و<strong>قائمة السلف</strong> (المدة والمبلغ والحالة لكل سلفة).
+          <strong>{{ _('تبويب الديون والسلف:') }}</strong> فيه فلتر حالة بالأعلى (كل الحالات / مفتوحة / مسددة /
+          ملغاة) وجدولان: <strong>{{ _('الذمم المفتوحة') }}</strong> (الديون المستحقة على المشتركين باعتمادها وتواريخها)
+          و<strong>{{ _('قائمة السلف') }}</strong> {{ _('(المدة والمبلغ والحالة لكل سلفة).') }}
         </p>
         <ul>
-          <li>حالة السلفة: <span class="dg-pill amber"><span class="dot"></span> مفتوحة</span> دين قائم،
-            <span class="dg-pill"><span class="dot"></span> مسددة</span> أُغلقت، <span class="dg-pill grey"><span class="dot"></span> ملغاة</span>.</li>
-          <li>اعتماد الذمة: <span class="dg-pill"><span class="dot"></span> معتمدة</span> /
-            <span class="dg-pill amber"><span class="dot"></span> بانتظار الاعتماد</span>.</li>
+          <li>{{ _('حالة السلفة:') }} <span class="dg-pill amber"><span class="dot"></span> {{ _('مفتوحة') }}</span> {{ _('دين قائم،') }}
+            <span class="dg-pill"><span class="dot"></span> {{ _('مسددة') }}</span> {{ _('أُغلقت،') }} <span class="dg-pill grey"><span class="dot"></span> {{ _('ملغاة') }}</span>.</li>
+          <li>{{ _('اعتماد الذمة:') }} <span class="dg-pill"><span class="dot"></span> {{ _('معتمدة') }}</span> /
+            <span class="dg-pill amber"><span class="dot"></span> {{ _('بانتظار الاعتماد') }}</span>.</li>
         </ul>
 
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>وبعدين؟</b> السلف تُنشأ من الصفحة المالية لكل مشترك، وتُسدَّد بقيد تسوية يظهر في
-          <b>السجل المحاسبي</b>. للتفاصيل افتح دليل «السجل والتقارير المحاسبية».</span>
+          <span><b>{{ _('وبعدين؟') }}</b> {{ _('السلف تُنشأ من الصفحة المالية لكل مشترك، وتُسدَّد بقيد تسوية يظهر في') }}
+          <b>{{ _('السجل المحاسبي') }}</b>{{ _('. للتفاصيل افتح دليل «السجل والتقارير المحاسبية».') }}</span>
         </div>
       </div>
     </section>

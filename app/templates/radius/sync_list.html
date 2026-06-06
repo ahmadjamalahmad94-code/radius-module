@@ -29,7 +29,7 @@
 {% block title %}طابور المزامنة — هوب ريديوس{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-arrows-rotate"></i>{% endblock %}
 {% block page_title %}طابور المزامنة{% endblock %}
-{% block page_sub %}<span class="sub"><bdi dir="ltr">{{ jobs|length }}</bdi> مهمة في النتائج</span>{% endblock %}
+{% block page_sub %}<span class="sub"><bdi dir="ltr">{{ jobs|length }}</bdi> {{ _('مهمة في النتائج') }}</span>{% endblock %}
 
 {% block head_extra %}{{ super() }}
 {# نظام الجداول الموحّد (uds): فرز + ترقيم + أزرار التصدير + المودال العائم #}
@@ -74,12 +74,12 @@
 ) %}
   {# عقد الفلترة كما هو: GET ?status=… إلى نفس المسار #}
   <select class="hub-select" name="status">
-    <option value="">كل الحالات</option>
-    <option value="queued"   {% if status == 'queued'   %}selected{% endif %}>في الانتظار</option>
-    <option value="syncing"  {% if status == 'syncing'  %}selected{% endif %}>جاري المزامنة</option>
-    <option value="retrying" {% if status == 'retrying' %}selected{% endif %}>تُعاد المحاولة</option>
-    <option value="done"     {% if status == 'done'     %}selected{% endif %}>مكتملة</option>
-    <option value="failed"   {% if status == 'failed'   %}selected{% endif %}>فاشلة</option>
+    <option value="">{{ _('كل الحالات') }}</option>
+    <option value="queued"   {% if status == 'queued'   %}selected{% endif %}>{{ _('في الانتظار') }}</option>
+    <option value="syncing"  {% if status == 'syncing'  %}selected{% endif %}>{{ _('جاري المزامنة') }}</option>
+    <option value="retrying" {% if status == 'retrying' %}selected{% endif %}>{{ _('تُعاد المحاولة') }}</option>
+    <option value="done"     {% if status == 'done'     %}selected{% endif %}>{{ _('مكتملة') }}</option>
+    <option value="failed"   {% if status == 'failed'   %}selected{% endif %}>{{ _('فاشلة') }}</option>
   </select>
   {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
   {% if status %}
@@ -97,21 +97,21 @@
 {% call hub.section("مهام المزامنة", icon="table-list",
                     meta=jobs|length|string ~ " مهمة", flush=True) %}
   <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25"
-       data-uds-export-title="طابور المزامنة" style="border:none;border-radius:0">
+       data-uds-export-title="{{ _('طابور المزامنة') }}" style="border:none;border-radius:0">
     <table class="hub-table">
       <thead>
         <tr>
           <th class="num" style="width:60px">#</th>
-          <th>نوع المهمة</th>
-          <th>العنصر</th>
+          <th>{{ _('نوع المهمة') }}</th>
+          <th>{{ _('العنصر') }}</th>
           {# الراوتر المستهدف: التصميم بثّي — المهمة تُدفع لكل راوترات
              المستأجر المفعّلة، وrouter_id مجرد تلميح توجيه نادر. #}
-          <th>الراوتر المستهدف</th>
-          <th>الحالة</th>
-          <th class="num">المحاولات</th>
-          <th>المحاولة التالية</th>
-          <th data-uds-nosort>آخر خطأ</th>
-          <th style="width:130px" data-uds-nosort data-uds-nocol data-uds-noexport>إجراء</th>
+          <th>{{ _('الراوتر المستهدف') }}</th>
+          <th>{{ _('الحالة') }}</th>
+          <th class="num">{{ _('المحاولات') }}</th>
+          <th>{{ _('المحاولة التالية') }}</th>
+          <th data-uds-nosort>{{ _('آخر خطأ') }}</th>
+          <th style="width:130px" data-uds-nosort data-uds-nocol data-uds-noexport>{{ _('إجراء') }}</th>
         </tr>
       </thead>
       <tbody>
@@ -133,7 +133,7 @@
             {% if j.router_id %}
               {{ hub.pill(router_names.get(j.router_id, 'راوتر #' ~ j.router_id), variant="blue", dot=False) }}
             {% else %}
-              <span class="small" style="font-weight:700">كل الراوترات المفعّلة</span>
+              <span class="small" style="font-weight:700">{{ _('كل الراوترات المفعّلة') }}</span>
               {% if routers_enabled %}<span class="hub-text-mute small"> (<bdi dir="ltr">{{ routers_enabled }}</bdi>)</span>{% endif %}
             {% endif %}
             {% if j.last_router_id and j.status in ['failed', 'retrying'] %}
@@ -163,15 +163,15 @@
               <form method="post" action="{{ url_for('radius.sync_retry', job_id=j.id) }}"
                     style="display:inline;margin:0">
                 <button class="hub-btn hub-btn--primary hub-btn--sm" type="submit"
-                        title="إعادة المحاولة الآن">
-                  <i class="fa-solid fa-rotate"></i> إعادة الآن
+                        title="{{ _('إعادة المحاولة الآن') }}">
+                  <i class="fa-solid fa-rotate"></i> {{ _('إعادة الآن') }}
                 </button>
               </form>
               {# الإلغاء متاح للمهام المنتظِرة/المعاد محاولتها فقط (شرط الخادم نفسه)
                  — عبر مودال تأكيد عائم بدل confirm() #}
               {% if j.status in ['queued', 'retrying'] %}
               <button type="button" class="hub-btn hub-btn--danger hub-btn--sm hub-btn--icon"
-                      title="إلغاء المهمة"
+                      title="{{ _('إلغاء المهمة') }}"
                       data-sync-cancel
                       data-sync-id="{{ j.id }}"
                       data-sync-kind="{{ kind_labels.get(j.kind, j.kind)|e }}"
@@ -207,7 +207,7 @@
      ~ '<button type="submit" class="hub-btn hub-btn--danger"><i class="fa-solid fa-ban"></i> إلغاء المهمة</button></form>') %}
   <div class="uds-modal-warn uds-modal-warn--amber">
     <i class="fa-solid fa-triangle-exclamation"></i>
-    <span>ستُلغى مهمة «<strong data-sync-cancel-kind></strong>» للعنصر
+    <span>{{ _('ستُلغى مهمة «') }}<strong data-sync-cancel-kind></strong>» للعنصر
       «<strong class="mono" data-sync-cancel-entity></strong>» نهائيًا —
       لن يُدفع هذا التغيير إلى الراوتر.</span>
   </div>

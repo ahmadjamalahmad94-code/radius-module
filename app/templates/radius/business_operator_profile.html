@@ -7,7 +7,7 @@
 {% block title %}{{ label }} — مشغل أعمال{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-id-card-clip"></i>{% endblock %}
 {% block page_title %}{{ label }}{% endblock %}
-{% block page_sub %}<span class="sub">المحفظة والصلاحيات والحدود والنطاق وتتبع الأرباح.</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('المحفظة والصلاحيات والحدود والنطاق وتتبع الأرباح.') }}</span>{% endblock %}
 
 {% macro op_status(value) -%}
   {%- if value in ['active','enabled','ok','completed','success'] -%}{{ hub.pill("مفعَّل", variant="green") }}
@@ -60,18 +60,18 @@
   {% call hub.section("شحن المحفظة", icon="wallet") %}
     <form method="post" action="{{ url_for('radius.business_operator_recharge', entity_type=profile.entity_type, entity_id=profile.entity_id) }}" class="op-form" data-testid="operator-recharge-form">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-      <label class="op-field"><span>المبلغ</span>
+      <label class="op-field"><span>{{ _('المبلغ') }}</span>
         <input class="hub-input" name="amount" type="number" step="0.01" min="0.01" required>
       </label>
-      <label class="op-field"><span>الطريقة</span>
+      <label class="op-field"><span>{{ _('الطريقة') }}</span>
         <select class="hub-select" name="method">
-          <option value="cash">نقدًا</option>
-          <option value="bank">بنك</option>
-          <option value="wallet">المحفظة</option>
-          <option value="manual">يدوي</option>
+          <option value="cash">{{ _('نقدًا') }}</option>
+          <option value="bank">{{ _('بنك') }}</option>
+          <option value="wallet">{{ _('المحفظة') }}</option>
+          <option value="manual">{{ _('يدوي') }}</option>
         </select>
       </label>
-      <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-wallet"></i> شحن</button>
+      <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-wallet"></i> {{ _('شحن') }}</button>
     </form>
   {% endcall %}
 
@@ -79,7 +79,7 @@
     <form method="post" action="{{ url_for('radius.business_operator_policy', entity_type=profile.entity_type, entity_id=profile.entity_id) }}" class="op-form" data-testid="operator-policy-form">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
       {% if profile.permissions %}
-      <div class="op-field"><span>الصلاحيات</span>
+      <div class="op-field"><span>{{ _('الصلاحيات') }}</span>
         <div class="op-checks">
           {% for key, value in profile.permissions.items() %}
             {{ toggle_switch(name=key, checked=value, value="1", on_label=key, off_label=key) }}
@@ -87,25 +87,25 @@
         </div>
       </div>
       {% endif %}
-      <label class="op-field"><span>أقصى أيام مجانية</span>
+      <label class="op-field"><span>{{ _('أقصى أيام مجانية') }}</span>
         <input class="hub-input" name="max_free_days" type="number" min="0" value="{{ profile.limits.max_free_days }}">
       </label>
-      <label class="op-field"><span>أقصى أيام تجربة</span>
+      <label class="op-field"><span>{{ _('أقصى أيام تجربة') }}</span>
         <input class="hub-input" name="max_trial_days" type="number" min="0" value="{{ profile.limits.max_trial_days }}">
       </label>
-      <label class="op-field"><span>حد الائتمان</span>
+      <label class="op-field"><span>{{ _('حد الائتمان') }}</span>
         <input class="hub-input" name="credit_limit" type="number" step="0.01" value="{{ profile.debt_credit.credit_limit }}">
       </label>
-      <label class="op-field"><span>موافقة فوق</span>
+      <label class="op-field"><span>{{ _('موافقة فوق') }}</span>
         <input class="hub-input" name="require_approval_above" type="number" step="0.01" value="{{ profile.policy.require_approval_above }}">
       </label>
       <label class="op-field"><span>نسبة مشاركة الربح %</span>
         <input class="hub-input" name="profit_share_percent" type="number" step="0.01" min="0" max="100" value="{{ profile.policy.profit_share_percent }}">
       </label>
-      <div class="op-field"><span>السلفة تخصم من المحفظة</span>
+      <div class="op-field"><span>{{ _('السلفة تخصم من المحفظة') }}</span>
         {{ toggle_switch(name="loan_wallet_deducted", checked=profile.limits.loan_wallet_deducted, value="1") }}
       </div>
-      <button class="hub-btn hub-btn--secondary" type="submit"><i class="fa-solid fa-floppy-disk"></i> حفظ السياسة</button>
+      <button class="hub-btn hub-btn--secondary" type="submit"><i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ السياسة') }}</button>
     </form>
   {% endcall %}
 </div>
@@ -125,7 +125,7 @@
     <div class="hub-table-wrap" style="border:none;border-radius:0">
       <table class="hub-table" data-testid="operator-subscribers"
              data-paginated="1" data-page-size="15" data-page-sizes="10,15,25,50" data-persist-key="op-subscribers">
-        <thead><tr><th class="num" style="width:64px">#</th><th>اسم المستخدم</th><th>الحالة</th><th>الباقة</th></tr></thead>
+        <thead><tr><th class="num" style="width:64px">#</th><th>{{ _('اسم المستخدم') }}</th><th>{{ _('الحالة') }}</th><th>{{ _('الباقة') }}</th></tr></thead>
         <tbody>
           {% for subscriber in profile.subscribers %}
             <tr><td class="num mono">{{ subscriber.id }}</td><td class="mono">{{ subscriber.username }}</td><td>{{ op_status(subscriber.status) }}</td><td>{{ subscriber.plan_id or "—" }}</td></tr>
@@ -143,7 +143,7 @@
     <div class="hub-table-wrap" style="border:none;border-radius:0">
       <table class="hub-table" data-testid="operator-batches"
              data-paginated="1" data-page-size="15" data-page-sizes="10,15,25,50" data-persist-key="op-batches">
-        <thead><tr><th class="num" style="width:64px">#</th><th>الحزمة</th><th class="num">العدد</th><th>الحالة</th></tr></thead>
+        <thead><tr><th class="num" style="width:64px">#</th><th>{{ _('الحزمة') }}</th><th class="num">{{ _('العدد') }}</th><th>{{ _('الحالة') }}</th></tr></thead>
         <tbody>
           {% for batch in profile.batches %}
             <tr><td class="num mono">{{ batch.id }}</td><td class="mono">{{ batch.batch_code }}</td><td class="num">{{ batch.count }}</td><td>{{ op_status(batch.status) }}</td></tr>
@@ -162,7 +162,7 @@
   <div class="hub-table-wrap" style="border:none;border-radius:0">
     <table class="hub-table" data-testid="operator-events"
            data-paginated="1" data-page-size="15" data-page-sizes="10,15,25,50" data-persist-key="op-events">
-      <thead><tr><th>النوع</th><th>المفتاح</th><th>الحالة</th><th>تاريخ الإنشاء</th></tr></thead>
+      <thead><tr><th>{{ _('النوع') }}</th><th>{{ _('المفتاح') }}</th><th>{{ _('الحالة') }}</th><th>{{ _('تاريخ الإنشاء') }}</th></tr></thead>
       <tbody>
         {% for op in profile.operations %}
           <tr><td>{{ hub.pill("عملية", variant="brand", dot=False) }}</td><td class="mono">{{ op.operation_key }}</td><td>{{ op_status(op.status) }}</td><td class="mono small">{{ op.created_at|dt_local }}</td></tr>

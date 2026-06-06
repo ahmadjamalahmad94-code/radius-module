@@ -82,19 +82,19 @@
 ) %}
   {# حزام الفلترة الخادمي — أسماء الحقول status/purpose/payer_type كما يتوقّعها الراوت.
      القيم مترجمة للعربية للعرض مع الحفاظ على القيمة الإنجليزية في value. #}
-  <select class="hub-select" name="status" aria-label="فلترة حسب الحالة">
-    <option value="">كل الحالات</option>
+  <select class="hub-select" name="status" aria-label="{{ _('فلترة حسب الحالة') }}">
+    <option value="">{{ _('كل الحالات') }}</option>
     {% for s in ['pending','proof_submitted','under_review','paid','rejected','expired','cancelled','failed'] %}
     <option value="{{ s }}" {% if status == s %}selected{% endif %}>{{ STATUS_AR.get(s, s) }}</option>
     {% endfor %}
   </select>
-  <select class="hub-select" name="purpose" aria-label="فلترة حسب الغرض">
-    <option value="">كل الأغراض</option>
+  <select class="hub-select" name="purpose" aria-label="{{ _('فلترة حسب الغرض') }}">
+    <option value="">{{ _('كل الأغراض') }}</option>
     {% for p in ['card_purchase','monthly_subscription','subscriber_renewal','quota_topup','time_extension','distributor_payment','loan_settlement'] %}
     <option value="{{ p }}" {% if purpose == p %}selected{% endif %}>{{ PURPOSE_AR.get(p, p) }}</option>
     {% endfor %}
   </select>
-  <input class="hub-input" name="payer_type" placeholder="نوع الدافع" value="{{ payer_type }}">
+  <input class="hub-input" name="payer_type" placeholder="{{ _('نوع الدافع') }}" value="{{ payer_type }}">
   <span class="hub-spacer" style="flex:1"></span>
   {{ hub.btn("فلترة", icon="filter", variant="primary", type="submit", size="sm") }}
 {% endcall %}
@@ -108,12 +108,12 @@
       <thead>
         <tr>
           <th class="num" style="width:56px">#</th>
-          <th>المرجع</th>
-          <th>الغرض</th>
-          <th>الدافع</th>
-          <th class="num">المبلغ</th>
-          <th>الحالة</th>
-          <th>تاريخ الإنشاء</th>
+          <th>{{ _('المرجع') }}</th>
+          <th>{{ _('الغرض') }}</th>
+          <th>{{ _('الدافع') }}</th>
+          <th class="num">{{ _('المبلغ') }}</th>
+          <th>{{ _('الحالة') }}</th>
+          <th>{{ _('تاريخ الإنشاء') }}</th>
           <th style="width:70px"></th>
         </tr>
       </thead>
@@ -129,7 +129,7 @@
           <td>{{ st_pill(item.status) }}</td>
           <td class="mono small">{{ item.created_at|dt_local }}</td>
           <td>
-            <a class="hub-btn hub-btn--primary hub-btn--icon" title="فتح" href="{{ url_for('radius.payment_collection_request_detail', request_id=item.id) }}">
+            <a class="hub-btn hub-btn--primary hub-btn--icon" title="{{ _('فتح') }}" href="{{ url_for('radius.payment_collection_request_detail', request_id=item.id) }}">
               <i class="fa-solid fa-eye"></i>
             </a>
           </td>

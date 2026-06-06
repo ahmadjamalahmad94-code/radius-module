@@ -50,7 +50,7 @@
 {% block title %}ملف المشترك 360 — Hobe Hub{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-user-shield"></i>{% endblock %}
 {% block page_title %}ملف المشترك 360{% endblock %}
-{% block page_sub %}<span class="sub">ملف مالي وتشغيلي موحد للمشترك بدون تغيير مباشر على نظام المصادقة</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('ملف مالي وتشغيلي موحد للمشترك بدون تغيير مباشر على نظام المصادقة') }}</span>{% endblock %}
 {% block head_extra %}{{ super() }}<link rel="stylesheet" href="{{ url_for('static', filename='css/subscribers_polish.css') }}">{% endblock %}
 
 {% block content %}
@@ -71,15 +71,15 @@
 </section>{# /hub-hero-shell #}
 
 <div class="hub-tabs" data-testid="subscriber-360-tabs">
-  <a href="#overview">نظرة عامة</a>
-  <a href="#financial">المالية</a>
-  <a href="#usage">الاستخدام والجلسات</a>
-  <a href="#services">الخدمات</a>
-  <a href="#devices">الأجهزة والعناوين</a>
-  <a href="#timeline">الخط الزمني</a>
-  <a href="#messages">الرسائل</a>
-  <a href="#notes">الملاحظات</a>
-  <a href="#login-events">محاولات الدخول</a>
+  <a href="#overview">{{ _('نظرة عامة') }}</a>
+  <a href="#financial">{{ _('المالية') }}</a>
+  <a href="#usage">{{ _('الاستخدام والجلسات') }}</a>
+  <a href="#services">{{ _('الخدمات') }}</a>
+  <a href="#devices">{{ _('الأجهزة والعناوين') }}</a>
+  <a href="#timeline">{{ _('الخط الزمني') }}</a>
+  <a href="#messages">{{ _('الرسائل') }}</a>
+  <a href="#notes">{{ _('الملاحظات') }}</a>
+  <a href="#login-events">{{ _('محاولات الدخول') }}</a>
 </div>
 
 <div class="hub-grid hub-grid--2">
@@ -96,20 +96,20 @@
   {% call hub.section("معاينة التجديد الآمن", icon="calendar-check") %}
     <form method="post" action="{{ url_for('radius.subscriber_renewal_preview', subscriber_id=sub.id) }}" class="hub-form-grid" data-testid="renewal-preview-form">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-      <label>المبلغ المدفوع
+      <label>{{ _('المبلغ المدفوع') }}
         <input name="amount_paid" type="number" step="0.01" min="0" value="0">
       </label>
-      <label>خصم
+      <label>{{ _('خصم') }}
         <input name="discount_amount" type="number" step="0.01" min="0" value="0">
       </label>
-      <label>دين جديد
+      <label>{{ _('دين جديد') }}
         <input name="debt_amount" type="number" step="0.01" min="0" value="0">
       </label>
-      <label>أيام سلفة تخصم
+      <label>{{ _('أيام سلفة تخصم') }}
         <input name="loan_days_to_settle" type="number" step="1" min="0" value="0">
       </label>
-      <button class="hub-btn hub-btn--primary" type="submit">احسب التجديد</button>
-      <p class="hub-muted">هذه معاينة فقط. لا يتم تطبيق أي وقت على نظام المصادقة من هذه الصفحة.</p>
+      <button class="hub-btn hub-btn--primary" type="submit">{{ _('احسب التجديد') }}</button>
+      <p class="hub-muted">{{ _('هذه معاينة فقط. لا يتم تطبيق أي وقت على نظام المصادقة من هذه الصفحة.') }}</p>
     </form>
   {% endcall %}
 </div>
@@ -124,7 +124,7 @@
   </div>
   <div class="hub-table-wrap">
     <table class="hub-table" data-testid="payments-table">
-      <thead><tr><th>التاريخ</th><th>المبلغ</th><th>الطريقة</th><th>الموظف</th></tr></thead>
+      <thead><tr><th>{{ _('التاريخ') }}</th><th>{{ _('المبلغ') }}</th><th>{{ _('الطريقة') }}</th><th>{{ _('الموظف') }}</th></tr></thead>
       <tbody>
         {% for p in financial.payments %}
           <tr>
@@ -134,7 +134,7 @@
             <td>{{ p.created_by or "—" }}</td>
           </tr>
         {% else %}
-          <tr><td colspan="4" class="hub-table-empty">لا توجد مدفوعات بعد.</td></tr>
+          <tr><td colspan="4" class="hub-table-empty">{{ _('لا توجد مدفوعات بعد.') }}</td></tr>
         {% endfor %}
       </tbody>
     </table>

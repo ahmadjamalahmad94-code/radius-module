@@ -112,32 +112,32 @@
 
   {% call hub.section("بيانات الحزمة", icon="box-archive") %}
     <div class="hub-field">
-      <label class="hub-field-label" for="package_name">اسم الحزمة <span class="req">*</span></label>
+      <label class="hub-field-label" for="package_name">{{ _('اسم الحزمة') }} <span class="req">*</span></label>
       <input class="hub-input" id="package_name" name="package_name" required maxlength="120"
-             placeholder="مثل: دفعة شحن شهر ٨"
+             placeholder="{{ _('مثل: دفعة شحن شهر ٨') }}"
              value="{{ form.get('package_name') or '' }}">
-      <div class="hub-field-hint">يظهر في القائمة وعلى تقارير المبيعات.</div>
+      <div class="hub-field-hint">{{ _('يظهر في القائمة وعلى تقارير المبيعات.') }}</div>
     </div>
 
     <div class="hub-field" style="margin-top:14px">
-      <label class="hub-field-label" for="notes">ملاحظات (اختياري)</label>
+      <label class="hub-field-label" for="notes">{{ _('ملاحظات (اختياري)') }}</label>
       <input class="hub-input" id="notes" name="notes" maxlength="500"
-             placeholder="مثل: للموزّع أحمد — منطقة الشمال"
+             placeholder="{{ _('مثل: للموزّع أحمد — منطقة الشمال') }}"
              value="{{ form.get('notes') or '' }}">
     </div>
   {% endcall %}
 
   {% call hub.section("الفئات والكميات", icon="layer-group", meta="اختر الفئات وعدد البطاقات") %}
     <p class="rc-tip">
-      كل صف يمثّل فئة من بطاقات الشحن. مثلاً: <strong>100 × 5</strong> +
-      <strong>50 × 10</strong> + <strong>20 × 20</strong> = 170 بطاقة بإجمالي قيمة <strong>1,100</strong>.
+      {{ _('كل صف يمثّل فئة من بطاقات الشحن. مثلاً:') }} <strong>100 × 5</strong> +
+      <strong>50 × 10</strong> + <strong>20 × 20</strong> {{ _('= 170 بطاقة بإجمالي قيمة') }} <strong>1,100</strong>.
     </p>
 
     <div class="rc-denoms" id="rc-denoms">
       {# First row pre-populated as a starter #}
       <div class="rc-denom-row" data-row>
         <div>
-          <label>القيمة</label>
+          <label>{{ _('القيمة') }}</label>
           <input type="number" name="denom_value" min="1" step="0.5" placeholder="5"
                  data-denom-value>
           <div class="rc-denom-quick" style="margin-top:6px">
@@ -147,18 +147,18 @@
           </div>
         </div>
         <div>
-          <label>عدد البطاقات</label>
+          <label>{{ _('عدد البطاقات') }}</label>
           <input type="number" name="denom_count" min="1" max="5000" placeholder="100"
                  data-denom-count>
         </div>
         <div>
-          <label>الإجمالي</label>
+          <label>{{ _('الإجمالي') }}</label>
           <input type="text" disabled placeholder="0.00" data-denom-total
                  style="background:#f8fafc;color:#0f172a;font-weight:800">
         </div>
         <div>
           <label style="visibility:hidden">.</label>
-          <button type="button" class="rc-denom-remove" aria-label="حذف الصف" data-remove>
+          <button type="button" class="rc-denom-remove" aria-label="{{ _('حذف الصف') }}" data-remove>
             <i class="fa-solid fa-xmark"></i>
           </button>
         </div>
@@ -166,20 +166,20 @@
     </div>
 
     <button type="button" class="rc-add-denom" id="rc-add-denom">
-      <i class="fa-solid fa-plus"></i> أضف فئة جديدة
+      <i class="fa-solid fa-plus"></i> {{ _('أضف فئة جديدة') }}
     </button>
 
     <div class="rc-summary">
-      <div class="item"><span class="k">إجمالي البطاقات</span><span class="v" id="sum-cards">0</span></div>
-      <div class="item"><span class="k">القيمة الكلية</span><span class="v" id="sum-value">0</span></div>
-      <div class="item"><span class="k">عدد الفئات</span><span class="v" id="sum-tiers">1</span></div>
+      <div class="item"><span class="k">{{ _('إجمالي البطاقات') }}</span><span class="v" id="sum-cards">0</span></div>
+      <div class="item"><span class="k">{{ _('القيمة الكلية') }}</span><span class="v" id="sum-value">0</span></div>
+      <div class="item"><span class="k">{{ _('عدد الفئات') }}</span><span class="v" id="sum-tiers">1</span></div>
     </div>
   {% endcall %}
 
   <div class="rc-actions">
     {{ hub.btn("إلغاء", icon="xmark", href=url_for('radius.cards_recharge_list'), variant="secondary") }}
     <button type="submit" class="hub-btn hub-btn--primary">
-      <i class="fa-solid fa-bolt" aria-hidden="true"></i> ولّد البطاقات
+      <i class="fa-solid fa-bolt" aria-hidden="true"></i> {{ _('ولّد البطاقات') }}
     </button>
   </div>
 </form>

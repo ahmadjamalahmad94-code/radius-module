@@ -111,10 +111,10 @@
    data-ff-open لأن JS المعاينة واختبار الويب يعتمدانها. #}
 <div class="ff-actions">
   <button class="hub-btn hub-btn--primary" type="button" data-ff-open="payment" data-uds-modal-open="ff-payment">
-    <i class="fa-solid fa-money-bill-wave"></i> تسجيل دفعة نقدية
+    <i class="fa-solid fa-money-bill-wave"></i> {{ _('تسجيل دفعة نقدية') }}
   </button>
   <button class="hub-btn hub-btn--secondary" type="button" data-ff-open="loan" data-uds-modal-open="ff-loan">
-    <i class="fa-solid fa-hand-holding-dollar"></i> منح سلفة
+    <i class="fa-solid fa-hand-holding-dollar"></i> {{ _('منح سلفة') }}
   </button>
 </div>
 
@@ -122,7 +122,7 @@
 {% call hub.section("آخر الدفعات", icon="receipt", meta=payments|length|string + " دفعة", flush=True) %}
   <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
     <table class="hub-table">
-      <thead><tr><th class="num" style="width:60px">#</th><th>المبلغ</th><th>المدة المستحقة</th><th>الخصم</th><th>الحالة</th><th>التاريخ</th></tr></thead>
+      <thead><tr><th class="num" style="width:60px">#</th><th>{{ _('المبلغ') }}</th><th>{{ _('المدة المستحقة') }}</th><th>{{ _('الخصم') }}</th><th>{{ _('الحالة') }}</th><th>{{ _('التاريخ') }}</th></tr></thead>
       <tbody>
         {% for p in payments %}
         <tr>
@@ -154,7 +154,7 @@
 {% call hub.section("السلف والتسويات", icon="handshake", meta=loans|length|string + " سلفة", flush=True) %}
   <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
     <table class="hub-table">
-      <thead><tr><th class="num" style="width:60px">#</th><th>المدة</th><th>القيمة</th><th>الحالة</th><th>السبب</th><th style="width:340px">تسوية</th></tr></thead>
+      <thead><tr><th class="num" style="width:60px">#</th><th>{{ _('المدة') }}</th><th>{{ _('القيمة') }}</th><th>{{ _('الحالة') }}</th><th>{{ _('السبب') }}</th><th style="width:340px">{{ _('تسوية') }}</th></tr></thead>
       <tbody>
         {% for loan in loans %}
         <tr>
@@ -174,8 +174,8 @@
               {# توكن CSRF: بدونه يرفض الخادم تسوية السلفة بـ 400. #}
               {{ csrf_token_input() | safe }}
               <input class="hub-input" name="amount" type="number" step="0.01" min="0" value="{{ loan.amount }}" style="width:100px">
-              <input class="hub-input" name="notes" placeholder="ملاحظة" style="width:160px;flex:1">
-              <button class="hub-btn hub-btn--secondary hub-btn--sm" type="submit">تسوية</button>
+              <input class="hub-input" name="notes" placeholder="{{ _('ملاحظة') }}" style="width:160px;flex:1">
+              <button class="hub-btn hub-btn--secondary hub-btn--sm" type="submit">{{ _('تسوية') }}</button>
             </form>
             {% else %}<span class="hub-text-mute small">—</span>{% endif %}
           </td>
@@ -193,7 +193,7 @@
 {% call hub.section("سجل القيود", icon="scale-balanced", meta=ledger|length|string + " قيد", flush=True) %}
   <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
     <table class="hub-table">
-      <thead><tr><th class="num" style="width:60px">#</th><th>النوع</th><th>الاتجاه</th><th>المبلغ</th><th>المصدر</th><th>ملاحظات</th><th>التاريخ</th></tr></thead>
+      <thead><tr><th class="num" style="width:60px">#</th><th>{{ _('النوع') }}</th><th>{{ _('الاتجاه') }}</th><th>{{ _('المبلغ') }}</th><th>{{ _('المصدر') }}</th><th>{{ _('ملاحظات') }}</th><th>{{ _('التاريخ') }}</th></tr></thead>
       <tbody>
         {% for entry in ledger %}
         <tr>
@@ -222,31 +222,31 @@
    تبنّينا بنية النافذة الموحّدة (uds-modal/uds-modal-dialog) بدل ff-modal،
    مع إبقاء سمة data-ff-modal لأن JS المعاينة واختبار الويب يعتمدانها. #}
 <div class="uds-modal" id="ff-payment" data-uds-modal data-ff-modal="payment" hidden>
-  <div class="uds-modal-dialog" role="dialog" aria-modal="true" aria-label="تسجيل دفعة نقدية">
+  <div class="uds-modal-dialog" role="dialog" aria-modal="true" aria-label="{{ _('تسجيل دفعة نقدية') }}">
     {# method="post" ضروري: حاقن الـ CSRF التلقائي يستهدف فقط <form method="post">. #}
     <form method="post" data-ff-form="payment" action="{{ url_for('radius.users_payment_create', username=sub.username) }}">
       {# توكن CSRF صريح حتى لا يُرفض الطلب بـ 400. #}
       {{ csrf_token_input() | safe }}
-      <div class="uds-modal-head"><h3><i class="fa-solid fa-money-bill-wave"></i> تسجيل دفعة نقدية</h3><button type="button" class="hub-btn hub-btn--ghost hub-btn--icon" data-uds-modal-close data-ff-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button></div>
+      <div class="uds-modal-head"><h3><i class="fa-solid fa-money-bill-wave"></i> {{ _('تسجيل دفعة نقدية') }}</h3><button type="button" class="hub-btn hub-btn--ghost hub-btn--icon" data-uds-modal-close data-ff-close aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button></div>
       <div class="uds-modal-body">
         <div class="ff-current">
-          <div><span>المشترك</span><strong>{{ sub.username }}</strong></div>
-          <div><span>سعر الباقة</span><strong>{{ eff_price|money }}</strong></div>
-          <div><span>الرصيد</span><strong>{{ (sub.balance or 0)|money }}</strong></div>
+          <div><span>{{ _('المشترك') }}</span><strong>{{ sub.username }}</strong></div>
+          <div><span>{{ _('سعر الباقة') }}</span><strong>{{ eff_price|money }}</strong></div>
+          <div><span>{{ _('الرصيد') }}</span><strong>{{ (sub.balance or 0)|money }}</strong></div>
         </div>
         <div class="ff-grid">
-          <label class="ff-field">المبلغ
+          <label class="ff-field">{{ _('المبلغ') }}
             <input class="hub-input" name="amount" type="number" step="0.01" min="0.01" required data-ff-pay-amount>
           </label>
-          <label class="ff-field">العملة
+          <label class="ff-field">{{ _('العملة') }}
             <input class="hub-input" name="currency" value="{{ cfg.currency }}" maxlength="8" readonly>
           </label>
-          <label class="ff-field">طريقة الدفع
+          <label class="ff-field">{{ _('طريقة الدفع') }}
             <select class="hub-select" name="method">
-              <option value="cash">نقدًا</option><option value="bank">تحويل بنكي</option><option value="manual">يدوي</option>
+              <option value="cash">{{ _('نقدًا') }}</option><option value="bank">{{ _('تحويل بنكي') }}</option><option value="manual">{{ _('يدوي') }}</option>
             </select>
           </label>
-          <label class="ff-field">ملاحظات
+          <label class="ff-field">{{ _('ملاحظات') }}
             <input class="hub-input" name="notes" maxlength="300">
           </label>
         </div>
@@ -260,9 +260,9 @@
               <span class="ff-chip ff-chip--amt"><i class="fa-solid fa-coins"></i> القيمة {{ (ln.amount or 0)|money }}</span>
             </div>
             <div class="ff-loan-acts">
-              <label><input type="radio" name="ffloan_{{ ln.id }}" value="settle"><span>خصم</span></label>
-              <label><input type="radio" name="ffloan_{{ ln.id }}" value="defer" checked><span>تأجيل</span></label>
-              <label><input type="radio" name="ffloan_{{ ln.id }}" value="writeoff"><span>مسامحة</span></label>
+              <label><input type="radio" name="ffloan_{{ ln.id }}" value="settle"><span>{{ _('خصم') }}</span></label>
+              <label><input type="radio" name="ffloan_{{ ln.id }}" value="defer" checked><span>{{ _('تأجيل') }}</span></label>
+              <label><input type="radio" name="ffloan_{{ ln.id }}" value="writeoff"><span>{{ _('مسامحة') }}</span></label>
             </div>
           </div>
           {% endfor %}
@@ -273,16 +273,16 @@
         {% if (sub.balance or 0) < 0 %}
         <label class="ff-debt">
           <input type="checkbox" name="settle_balance" value="1" checked data-ff-settle-balance>
-          <span>عليه دين بقيمة <strong>{{ (-(sub.balance or 0))|money }}</strong> — سدِّده من هذه الدفعة (يُخصم من المبلغ ويُقلّل الأيام المُضافة).</span>
+          <span>{{ _('عليه دين بقيمة') }} <strong>{{ (-(sub.balance or 0))|money }}</strong> {{ _('— سدِّده من هذه الدفعة (يُخصم من المبلغ ويُقلّل الأيام المُضافة).') }}</span>
         </label>
         {% endif %}
-        <div class="ff-hint" data-ff-pay-coverage>أدخل المبلغ لعرض عدد الأيام التي يغطّيها.</div>
+        <div class="ff-hint" data-ff-pay-coverage>{{ _('أدخل المبلغ لعرض عدد الأيام التي يغطّيها.') }}</div>
         <div class="ff-msg" data-ff-pay-msg hidden></div>
       </div>
       {# الأزرار داخل الـ form (لا footer_html) كي يبقى التقديم وحقن CSRF سليمين. #}
       <div class="uds-modal-foot">
-        <button class="hub-btn hub-btn--ghost" type="button" data-uds-modal-close data-ff-close>إلغاء</button>
-        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-plus"></i> تسجيل</button>
+        <button class="hub-btn hub-btn--ghost" type="button" data-uds-modal-close data-ff-close>{{ _('إلغاء') }}</button>
+        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-plus"></i> {{ _('تسجيل') }}</button>
       </div>
     </form>
   </div>
@@ -290,45 +290,45 @@
 
 {# ───────────── نافذة موحّدة (uds-modal): منح سلفة ───────────── #}
 <div class="uds-modal" id="ff-loan" data-uds-modal data-ff-modal="loan" hidden>
-  <div class="uds-modal-dialog" role="dialog" aria-modal="true" aria-label="منح سلفة">
+  <div class="uds-modal-dialog" role="dialog" aria-modal="true" aria-label="{{ _('منح سلفة') }}">
     <form method="post" data-ff-form="loan" action="{{ url_for('radius.users_loan_create', username=sub.username) }}">
       {# توكن CSRF صريح حتى لا يُرفض الطلب بـ 400. #}
       {{ csrf_token_input() | safe }}
-      <div class="uds-modal-head"><h3><i class="fa-solid fa-hand-holding-dollar"></i> منح سلفة</h3><button type="button" class="hub-btn hub-btn--ghost hub-btn--icon" data-uds-modal-close data-ff-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button></div>
+      <div class="uds-modal-head"><h3><i class="fa-solid fa-hand-holding-dollar"></i> {{ _('منح سلفة') }}</h3><button type="button" class="hub-btn hub-btn--ghost hub-btn--icon" data-uds-modal-close data-ff-close aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button></div>
       <div class="uds-modal-body">
         <div class="ff-current">
-          <div><span>المشترك</span><strong>{{ sub.username }}</strong></div>
-          <div><span>سعر الباقة</span><strong>{{ eff_price|money }}</strong></div>
-          <div><span>الرصيد</span><strong>{{ (sub.balance or 0)|money }}</strong></div>
+          <div><span>{{ _('المشترك') }}</span><strong>{{ sub.username }}</strong></div>
+          <div><span>{{ _('سعر الباقة') }}</span><strong>{{ eff_price|money }}</strong></div>
+          <div><span>{{ _('الرصيد') }}</span><strong>{{ (sub.balance or 0)|money }}</strong></div>
         </div>
-        <div class="ff-field wide">نوع السلفة
+        <div class="ff-field wide">{{ _('نوع السلفة') }}
           <div class="ff-seg">
             <label><input type="radio" name="_loan_kind" value="free" checked data-ff-loan-kind>
-              <span><strong>مجانية</strong><small>منح وقت فقط بدون قيمة مالية.</small></span></label>
+              <span><strong>{{ _('مجانية') }}</strong><small>{{ _('منح وقت فقط بدون قيمة مالية.') }}</small></span></label>
             <label><input type="radio" name="_loan_kind" value="debt" data-ff-loan-kind>
-              <span><strong>تسجيل دين (مدين)</strong><small>القيمة تُحتسب تلقائيًا من سعر الباقة.</small></span></label>
+              <span><strong>{{ _('تسجيل دين (مدين)') }}</strong><small>{{ _('القيمة تُحتسب تلقائيًا من سعر الباقة.') }}</small></span></label>
           </div>
         </div>
         <div class="ff-grid">
-          <label class="ff-field">عدد الأيام
+          <label class="ff-field">{{ _('عدد الأيام') }}
             <input class="hub-input" name="days" type="number" min="0" value="1" data-ff-loan-days>
           </label>
-          <label class="ff-field ff-reveal" data-ff-debt-only hidden>قيمة السلفة (تلقائي)
+          <label class="ff-field ff-reveal" data-ff-debt-only hidden>{{ _('قيمة السلفة (تلقائي)') }}
             <input class="hub-input" name="amount" type="number" step="0.01" min="0" value="0" readonly data-ff-loan-amount>
           </label>
         </div>
         <input type="hidden" name="price_from_days" value="0" data-ff-loan-pfd>
         <input type="hidden" name="currency" value="{{ cfg.currency }}">
         <input type="hidden" name="apply_to_radius" value="1">
-        <label class="ff-field wide">سبب السلفة
+        <label class="ff-field wide">{{ _('سبب السلفة') }}
           <textarea class="hub-textarea" name="reason" rows="2"></textarea>
         </label>
-        <div class="ff-hint" data-ff-loan-hint>سلفة وقت مجانية — تُمنح مدة فقط دون تسجيل دين.</div>
+        <div class="ff-hint" data-ff-loan-hint>{{ _('سلفة وقت مجانية — تُمنح مدة فقط دون تسجيل دين.') }}</div>
         <div class="ff-msg" data-ff-loan-msg hidden></div>
       </div>
       <div class="uds-modal-foot">
-        <button class="hub-btn hub-btn--ghost" type="button" data-uds-modal-close data-ff-close>إلغاء</button>
-        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-plus"></i> منح</button>
+        <button class="hub-btn hub-btn--ghost" type="button" data-uds-modal-close data-ff-close>{{ _('إلغاء') }}</button>
+        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-plus"></i> {{ _('منح') }}</button>
       </div>
     </form>
   </div>

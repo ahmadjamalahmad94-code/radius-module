@@ -5,7 +5,7 @@
 {% block title %}بوت واتساب — مركز التواصل{% endblock %}
 {% block page_icon %}<i class="fa-brands fa-whatsapp"></i>{% endblock %}
 {% block page_title %}بوت واتساب{% endblock %}
-{% block page_sub %}<span class="sub">ردود تلقائية على رسائل المشتركين: الرصيد، الباقة، تاريخ الانتهاء… يعمل بضغطة واحدة.</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('ردود تلقائية على رسائل المشتركين: الرصيد، الباقة، تاريخ الانتهاء… يعمل بضغطة واحدة.') }}</span>{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
@@ -87,15 +87,15 @@
   {# ── 1) Enable toggle ── #}
   {% call hub.section("تشغيل البوت", icon="power-off") %}
     <div class="hub-field">
-      <label class="hub-field-label">تفعيل الرد التلقائي على رسائل واتساب</label>
+      <label class="hub-field-label">{{ _('تفعيل الرد التلقائي على رسائل واتساب') }}</label>
       {{ toggle_switch(name="enabled", checked=config.enabled, value="1", id="cbot-enabled", on_label="مفعّل", off_label="متوقف") }}
-      <div class="hub-field-hint">عند الإيقاف لن يرد البوت على أي رسالة واردة (لا شيء يُرسَل). يمكنك تركه مفعّلًا دائمًا.</div>
+      <div class="hub-field-hint">{{ _('عند الإيقاف لن يرد البوت على أي رسالة واردة (لا شيء يُرسَل). يمكنك تركه مفعّلًا دائمًا.') }}</div>
     </div>
 
     {% if wa_ok %}
       <div class="cbot-note ok" style="margin-top:12px">
         <i class="fa-solid fa-circle-check"></i>
-        <div>قناة واتساب مهيأة للإرسال — البوت سيرسل ردوده عبرها مباشرة.</div>
+        <div>{{ _('قناة واتساب مهيأة للإرسال — البوت سيرسل ردوده عبرها مباشرة.') }}</div>
       </div>
     {% else %}
       <div class="cbot-note warn" style="margin-top:12px">
@@ -103,7 +103,7 @@
         <div>
           قناة واتساب غير مكتملة الضبط بعد. لكي يتمكّن البوت من إرسال الردود،
           اضبط رابط الإرسال وفعّل القناة من
-          <a href="{{ url_for('radius.communications_channels') }}">قنوات الإرسال</a>.
+          <a href="{{ url_for('radius.communications_channels') }}">{{ _('قنوات الإرسال') }}</a>.
         </div>
       </div>
     {% endif %}
@@ -112,11 +112,11 @@
   {# ── 2) Incoming messages URL (read-only + copy) ── #}
   {% call hub.section("رابط استقبال رسائل واتساب", icon="link", meta="انسخه وضعه عند مزوّد واتساب") %}
     <div class="hub-field">
-      <label class="hub-field-label">عنوان استقبال الرسائل الواردة</label>
+      <label class="hub-field-label">{{ _('عنوان استقبال الرسائل الواردة') }}</label>
       <div class="cbot-url">
         <input type="text" id="cbot-webhook" value="{{ webhook_url }}" readonly onfocus="this.select()">
         <button type="button" class="cbot-copy" id="cbot-copy" data-url="{{ webhook_url }}">
-          <i class="fa-solid fa-copy"></i> نسخ الرابط
+          <i class="fa-solid fa-copy"></i> {{ _('نسخ الرابط') }}
         </button>
       </div>
       <div class="hub-field-hint">
@@ -129,56 +129,56 @@
   {# ── 3) Greeting + fallback ── #}
   {% call hub.section("رسائل الترحيب والرد الافتراضي", icon="comment-dots") %}
     <div class="hub-field">
-      <label class="hub-field-label" for="cbot-greeting">رسالة الترحيب / القائمة</label>
+      <label class="hub-field-label" for="cbot-greeting">{{ _('رسالة الترحيب / القائمة') }}</label>
       <textarea class="hub-textarea" id="cbot-greeting" name="greeting" style="min-height:90px"
-                placeholder="تُرسَل عند بدء المحادثة أو كتابة «القائمة».">{{ config.greeting }}</textarea>
-      <div class="hub-field-hint">تظهر عند بدء المحادثة أو عند كلمات مثل «القائمة» / «ابدأ» / «مرحبا».</div>
+                placeholder="{{ _('تُرسَل عند بدء المحادثة أو كتابة «القائمة».') }}">{{ config.greeting }}</textarea>
+      <div class="hub-field-hint">{{ _('تظهر عند بدء المحادثة أو عند كلمات مثل «القائمة» / «ابدأ» / «مرحبا».') }}</div>
     </div>
     <div class="hub-field">
-      <label class="hub-field-label" for="cbot-fallback">الرد عند عدم فهم الطلب</label>
+      <label class="hub-field-label" for="cbot-fallback">{{ _('الرد عند عدم فهم الطلب') }}</label>
       <textarea class="hub-textarea" id="cbot-fallback" name="fallback" style="min-height:90px"
-                placeholder="يُرسَل عندما لا تطابق الرسالة أي أمر.">{{ config.fallback }}</textarea>
-      <div class="hub-field-hint">يُرسَل عندما لا تطابق رسالة المشترك أي كلمة مفتاحية في القائمة أدناه.</div>
+                placeholder="{{ _('يُرسَل عندما لا تطابق الرسالة أي أمر.') }}">{{ config.fallback }}</textarea>
+      <div class="hub-field-hint">{{ _('يُرسَل عندما لا تطابق رسالة المشترك أي كلمة مفتاحية في القائمة أدناه.') }}</div>
     </div>
   {% endcall %}
 
   {# ── 4) Commands list ── #}
   {% call hub.section("أوامر البوت (كلمة ← رد)", icon="list-check", meta="اكتب الكلمة التي يرسلها المشترك والرد المناسب") %}
     <div class="hub-field" style="margin-bottom:13px">
-      <label class="hub-field-label">المتغيّرات المتاحة في الردود</label>
+      <label class="hub-field-label">{{ _('المتغيّرات المتاحة في الردود') }}</label>
       <div class="cbot-vars">
         {% for v in ['{username}','{prof}','{balance}','{exp}','{status}','{down_speed}','{up_speed}','{remain_quota}'] %}
-          <span class="cbot-var" data-var="{{ v }}" title="انقر للنسخ">{{ v }}</span>
+          <span class="cbot-var" data-var="{{ v }}" title="{{ _('انقر للنسخ') }}">{{ v }}</span>
         {% endfor %}
       </div>
-      <div class="hub-field-hint">اكتب المتغيّر داخل الرد وسيُستبدل ببيانات المشترك عند الإرسال. مثال: «رصيدك: {balance}».</div>
+      <div class="hub-field-hint">{{ _('اكتب المتغيّر داخل الرد وسيُستبدل ببيانات المشترك عند الإرسال. مثال: «رصيدك: {balance}».') }}</div>
     </div>
 
     <div class="cbot-cmds" id="cbot-cmds">
       {% for cmd in config.commands %}
       <div class="cbot-cmd" data-row>
         <div class="kw">
-          <label>الكلمة المفتاحية</label>
-          <input class="hub-input" name="cmd_keyword" value="{{ cmd.keyword }}" placeholder="مثال: الرصيد">
+          <label>{{ _('الكلمة المفتاحية') }}</label>
+          <input class="hub-input" name="cmd_keyword" value="{{ cmd.keyword }}" placeholder="{{ _('مثال: الرصيد') }}">
         </div>
         <div class="rp">
-          <label>الرد</label>
+          <label>{{ _('الرد') }}</label>
           <textarea class="hub-textarea" name="cmd_reply" placeholder="نص الرد، ويمكن أن يحتوي متغيّرات مثل {balance}">{{ cmd.reply_template }}</textarea>
         </div>
         <div class="cbot-cmd-side">
           <label class="cbot-onoff">
             <input type="checkbox" data-enabled {{ 'checked' if cmd.enabled else '' }}>
-            مفعّل
+            {{ _('مفعّل') }}
           </label>
           <input type="hidden" name="cmd_enabled" value="{{ '1' if cmd.enabled else '0' }}">
-          <button type="button" class="cbot-del" data-del><i class="fa-solid fa-trash-can"></i> حذف</button>
+          <button type="button" class="cbot-del" data-del><i class="fa-solid fa-trash-can"></i> {{ _('حذف') }}</button>
         </div>
       </div>
       {% endfor %}
     </div>
 
     <div style="margin-top:13px">
-      <button type="button" class="cbot-add" id="cbot-add"><i class="fa-solid fa-plus"></i> إضافة أمر جديد</button>
+      <button type="button" class="cbot-add" id="cbot-add"><i class="fa-solid fa-plus"></i> {{ _('إضافة أمر جديد') }}</button>
     </div>
   {% endcall %}
 
@@ -194,20 +194,20 @@
 <template id="cbot-row-tpl">
   <div class="cbot-cmd" data-row>
     <div class="kw">
-      <label>الكلمة المفتاحية</label>
-      <input class="hub-input" name="cmd_keyword" value="" placeholder="مثال: الرصيد">
+      <label>{{ _('الكلمة المفتاحية') }}</label>
+      <input class="hub-input" name="cmd_keyword" value="" placeholder="{{ _('مثال: الرصيد') }}">
     </div>
     <div class="rp">
-      <label>الرد</label>
+      <label>{{ _('الرد') }}</label>
       <textarea class="hub-textarea" name="cmd_reply" placeholder="نص الرد، ويمكن أن يحتوي متغيّرات مثل {balance}"></textarea>
     </div>
     <div class="cbot-cmd-side">
       <label class="cbot-onoff">
         <input type="checkbox" data-enabled checked>
-        مفعّل
+        {{ _('مفعّل') }}
       </label>
       <input type="hidden" name="cmd_enabled" value="1">
-      <button type="button" class="cbot-del" data-del><i class="fa-solid fa-trash-can"></i> حذف</button>
+      <button type="button" class="cbot-del" data-del><i class="fa-solid fa-trash-can"></i> {{ _('حذف') }}</button>
     </div>
   </div>
 </template>

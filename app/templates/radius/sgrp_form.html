@@ -41,11 +41,11 @@
   {% call hub.section("المعطيات", icon="sliders") %}
     <div class="hub-form-row">
       <div class="hub-field">
-        <label class="hub-field-label">الاسم <span style="color:#dc2626">*</span></label>
+        <label class="hub-field-label">{{ _('الاسم') }} <span style="color:#dc2626">*</span></label>
         <input class="hub-input" type="text" name="name" required value="{{ item.name if item else '' }}">
       </div>
       <div class="hub-field" style="grid-column:1/-1">
-        <label class="hub-field-label">الوصف</label>
+        <label class="hub-field-label">{{ _('الوصف') }}</label>
         <textarea class="hub-textarea" name="description">{{ item.description if item else '' }}</textarea>
       </div>
     </div>
@@ -54,24 +54,24 @@
   {% call hub.section("الكوتا والسرعة المشتركة", icon="gauge-high") %}
     <div class="hub-form-row">
       <div class="hub-field">
-        <label class="hub-field-label">الكوتا المشتركة (0=غير محدود)</label>
+        <label class="hub-field-label">{{ _('الكوتا المشتركة (0=غير محدود)') }}</label>
         {{ unit_input_picker(name="shared_quota_mb", value=(item.shared_quota_mb if item else 0), kind="quota") }}
       </div>
       <div class="hub-field">
-        <label class="hub-field-label">حد الأعضاء (0=غير محدود)</label>
+        <label class="hub-field-label">{{ _('حد الأعضاء (0=غير محدود)') }}</label>
         <input class="hub-input" type="number" name="max_members" min="0"
                value="{{ item.max_members if item else 0 }}">
       </div>
       <div class="hub-field">
-        <label class="hub-field-label">سرعة تنزيل مشتركة</label>
+        <label class="hub-field-label">{{ _('سرعة تنزيل مشتركة') }}</label>
         {{ unit_input_picker(name="shared_speed_down_kbps", value=(item.shared_speed_down_kbps if item else 0), kind="speed") }}
       </div>
       <div class="hub-field">
-        <label class="hub-field-label">سرعة رفع مشتركة</label>
+        <label class="hub-field-label">{{ _('سرعة رفع مشتركة') }}</label>
         {{ unit_input_picker(name="shared_speed_up_kbps", value=(item.shared_speed_up_kbps if item else 0), kind="speed") }}
       </div>
       <div class="hub-field" style="grid-column:1/-1">
-        <label class="hub-field-label">الحالة</label>
+        <label class="hub-field-label">{{ _('الحالة') }}</label>
         {{ toggle_switch(name="enabled", checked=((not item) or item.enabled), value="1", on_label="نعم", off_label="لا") }}
       </div>
     </div>

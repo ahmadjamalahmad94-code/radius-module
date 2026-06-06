@@ -28,7 +28,7 @@ from flask_babel import Babel
 
 #: اللغات المدعومة. لإضافة لغة: أضف رمزها هنا + مجلد translations/<code> + سطر
 #: في LANGUAGES أدناه. لا شيء آخر في الكود يحتاج تعديلًا (انظر I18N.md).
-SUPPORTED_LOCALES: tuple[str, ...] = ("ar", "en")
+SUPPORTED_LOCALES: tuple[str, ...] = ("ar", "en", "fr", "tr", "es")
 
 #: لغة المصدر/السقوط — يجب أن تبقى أول عنصر منطقيًا في كل المسارات.
 DEFAULT_LOCALE = "ar"
@@ -40,6 +40,9 @@ RTL_LOCALES: frozenset[str] = frozenset({"ar", "he", "fa", "ur"})
 LANGUAGES: dict[str, dict[str, str]] = {
     "ar": {"name": "العربية", "flag": "🇸🇦", "dir": "rtl"},
     "en": {"name": "English", "flag": "🇬🇧", "dir": "ltr"},
+    "fr": {"name": "Français", "flag": "🇫🇷", "dir": "ltr"},
+    "tr": {"name": "Türkçe", "flag": "🇹🇷", "dir": "ltr"},
+    "es": {"name": "Español", "flag": "🇪🇸", "dir": "ltr"},
 }
 
 babel = Babel()

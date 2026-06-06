@@ -220,13 +220,13 @@
 <div class="dg-layout">
 
   {# ───── الفهرس الجانبي اللاصق ───── #}
-  <nav class="dg-toc dg-noprint" aria-label="فهرس الدليل">
-    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> فهرس الخطوات</div>
-    <a href="#dg-s1" data-dg-toc><span class="n">1</span> أنشئ دورًا جديدًا</a>
-    <a href="#dg-s2" data-dg-toc><span class="n">2</span> المصفوفة الملوّنة</a>
-    <a href="#dg-s3" data-dg-toc><span class="n">3</span> العدّادات وتحديد الكل</a>
-    <a href="#dg-s4" data-dg-toc><span class="n">4</span> إظهار أو إخفاء غير المصرّح</a>
-    <a href="#dg-s5" data-dg-toc><span class="n">5</span> مثال: دور موزّع</a>
+  <nav class="dg-toc dg-noprint" aria-label="{{ _('فهرس الدليل') }}">
+    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> {{ _('فهرس الخطوات') }}</div>
+    <a href="#dg-s1" data-dg-toc><span class="n">1</span> {{ _('أنشئ دورًا جديدًا') }}</a>
+    <a href="#dg-s2" data-dg-toc><span class="n">2</span> {{ _('المصفوفة الملوّنة') }}</a>
+    <a href="#dg-s3" data-dg-toc><span class="n">3</span> {{ _('العدّادات وتحديد الكل') }}</a>
+    <a href="#dg-s4" data-dg-toc><span class="n">4</span> {{ _('إظهار أو إخفاء غير المصرّح') }}</a>
+    <a href="#dg-s5" data-dg-toc><span class="n">5</span> {{ _('مثال: دور موزّع') }}</a>
   </nav>
 
   {# ───── عمود المحتوى ───── #}
@@ -235,7 +235,7 @@
     <div class="dg-lead">
       <span class="ic"><i class="fa-solid fa-lightbulb"></i></span>
       <div>
-        <h3>قبل ما نبدأ — شو يعني «دور»؟</h3>
+        <h3>{{ _('قبل ما نبدأ — شو يعني «دور»؟') }}</h3>
         <p>
           الدور حزمة صلاحيات تمنحها لموظفيك بدل أن تعطي كل واحد صلاحياته يدويًا. تنشئ الدور مرة،
           تختار ما يقدر يفعله، ثم تسنده لأي مدير. في هذا الدليل نبني دورًا من الصفر عبر مصفوفة
@@ -249,38 +249,38 @@
     <section class="dg-step" id="dg-s1">
       <div class="dg-badge">1</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-plus"></i> أنشئ دورًا جديدًا</h2>
+        <h2><i class="fa-solid fa-plus"></i> {{ _('أنشئ دورًا جديدًا') }}</h2>
         <p>
-          من <strong>«الأدوار والصلاحيات»</strong> اضغط <strong>«إضافة دور جديد»</strong>. يفتح
-          نموذج فيه قسم <strong>«هوية الدور»</strong> بأربعة حقول:
+          {{ _('من') }} <strong>{{ _('«الأدوار والصلاحيات»') }}</strong> {{ _('اضغط') }} <strong>{{ _('«إضافة دور جديد»') }}</strong>. يفتح
+          نموذج فيه قسم <strong>{{ _('«هوية الدور»') }}</strong> {{ _('بأربعة حقول:') }}
         </p>
         <ul>
-          <li><strong>الاسم الداخلي</strong> (إجباري): مفتاح تقني بحروف لاتينية صغيرة وشرطة سفلية
-          مثل <span class="dg-kbd">branch_manager</span> — <strong>لا يتغيّر بعد الإنشاء</strong>.</li>
-          <li><strong>الاسم الظاهر:</strong> ما يراه المستخدمون بدل المفتاح (مثل «مدير الفرع»).</li>
-          <li><strong>لون الدور:</strong> يميّزه بصريًا في القوائم والبطاقات.</li>
-          <li><strong>الوصف:</strong> سطر يلخّص نطاق الدور ومسؤولياته.</li>
+          <li><strong>{{ _('الاسم الداخلي') }}</strong> (إجباري): مفتاح تقني بحروف لاتينية صغيرة وشرطة سفلية
+          مثل <span class="dg-kbd">branch_manager</span> — <strong>{{ _('لا يتغيّر بعد الإنشاء') }}</strong>.</li>
+          <li><strong>{{ _('الاسم الظاهر:') }}</strong> {{ _('ما يراه المستخدمون بدل المفتاح (مثل «مدير الفرع»).') }}</li>
+          <li><strong>{{ _('لون الدور:') }}</strong> {{ _('يميّزه بصريًا في القوائم والبطاقات.') }}</li>
+          <li><strong>{{ _('الوصف:') }}</strong> {{ _('سطر يلخّص نطاق الدور ومسؤولياته.') }}</li>
         </ul>
 
         <div class="dg-mock" aria-hidden="true">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">إضافة دور جديد › هوية الدور</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('إضافة دور جديد › هوية الدور') }}</span></div>
           <div class="dg-mock-body">
             <div class="dg-mf">
-              <label>الاسم الداخلي <span style="color:#dc2626">*</span></label>
+              <label>{{ _('الاسم الداخلي') }} <span style="color:#dc2626">*</span></label>
               <div class="dg-mf-input hl" dir="ltr" style="font-family:ui-monospace,Consolas,monospace">branch_manager</div>
-              <div class="dg-mf-help">مفتاح تقني فريد بحروف لاتينية صغيرة وشرطة سفلية — لا يتغيّر بعد الإنشاء.</div>
+              <div class="dg-mf-help">{{ _('مفتاح تقني فريد بحروف لاتينية صغيرة وشرطة سفلية — لا يتغيّر بعد الإنشاء.') }}</div>
             </div>
             <div class="dg-mf">
-              <label>الاسم الظاهر</label>
-              <div class="dg-mf-input">مدير الفرع</div>
-              <div class="dg-mf-help">هو ما يراه المستخدمون في الواجهة بدل المفتاح التقني.</div>
+              <label>{{ _('الاسم الظاهر') }}</label>
+              <div class="dg-mf-input">{{ _('مدير الفرع') }}</div>
+              <div class="dg-mf-help">{{ _('هو ما يراه المستخدمون في الواجهة بدل المفتاح التقني.') }}</div>
             </div>
           </div>
         </div>
 
         <div class="dg-warn">
           <span class="ic">⚠️</span>
-          <span><b>انتبه:</b> الاسم الداخلي يُقفل بعد الإنشاء فلا يمكن تعديله — اختره بعناية. أما
+          <span><b>{{ _('انتبه:') }}</b> الاسم الداخلي يُقفل بعد الإنشاء فلا يمكن تعديله — اختره بعناية. أما
           أدوار النظام الجاهزة فمحميّة: تُعدَّل صلاحياتها لكن لا تُحذف.</span>
         </div>
       </div>
@@ -290,34 +290,34 @@
     <section class="dg-step" id="dg-s2">
       <div class="dg-badge">2</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-shield-halved"></i> مصفوفة الصلاحيات الملوّنة بالمجموعات</h2>
+        <h2><i class="fa-solid fa-shield-halved"></i> {{ _('مصفوفة الصلاحيات الملوّنة بالمجموعات') }}</h2>
         <p>
-          تحت الهوية يأتي قسم <strong>«الصلاحيات»</strong>: الصلاحيات مرتّبة في <strong>مجموعات</strong>
-          لكل واحدة أيقونة ولون وهوية بصرية، وبجوار كل صلاحية تسميتها العربية ومفتاحها التقني. المجموعات:
+          {{ _('تحت الهوية يأتي قسم') }} <strong>{{ _('«الصلاحيات»') }}</strong>{{ _(': الصلاحيات مرتّبة في') }} <strong>{{ _('مجموعات') }}</strong>
+          {{ _('لكل واحدة أيقونة ولون وهوية بصرية، وبجوار كل صلاحية تسميتها العربية ومفتاحها التقني. المجموعات:') }}
         </p>
         <ul>
-          <li><strong>صلاحيات الراوتر</strong> <span class="dg-kbd">core</span> — القراءة والتشخيص والتشغيل اليومي.</li>
-          <li><strong>خروج الإنترنت عبر VPS</strong> <span class="dg-kbd">exit</span> — تحويل مواقع مختارة عبر الخادم.</li>
-          <li><strong>سياسات الشبكة</strong> <span class="dg-kbd">npc</span> — الوصول والحظر والـ Walled Garden.</li>
+          <li><strong>{{ _('صلاحيات الراوتر') }}</strong> <span class="dg-kbd">core</span> {{ _('— القراءة والتشخيص والتشغيل اليومي.') }}</li>
+          <li><strong>{{ _('خروج الإنترنت عبر VPS') }}</strong> <span class="dg-kbd">exit</span> {{ _('— تحويل مواقع مختارة عبر الخادم.') }}</li>
+          <li><strong>{{ _('سياسات الشبكة') }}</strong> <span class="dg-kbd">npc</span> {{ _('— الوصول والحظر والـ Walled Garden.') }}</li>
           {# أُزيل من لوحة العميل — يُعاد مركزياً عبر لوحة التراخيص (قرار معماري):
              مجموعة «تراخيص أنفاق الراوترات» (نفق تغيير IP المدفوع). #}
         </ul>
 
         <div class="dg-mock" aria-hidden="true">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">إضافة دور › الصلاحيات</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('إضافة دور › الصلاحيات') }}</span></div>
           <div class="dg-mock-body">
             <div class="dg-pgrp core">
-              <div class="h"><span class="gi"><i class="fa-solid fa-router"></i></span> صلاحيات الراوتر <span class="key">core</span><span class="cnt">2/10 ممنوحة</span><span class="all">تحديد الكل</span></div>
+              <div class="h"><span class="gi"><i class="fa-solid fa-router"></i></span> {{ _('صلاحيات الراوتر') }} <span class="key">core</span><span class="cnt">{{ _('2/10 ممنوحة') }}</span><span class="all">{{ _('تحديد الكل') }}</span></div>
               <div class="bar"><i style="width:20%"></i></div>
               <div class="b">
-                <span class="dg-perm on"><span class="tk"><i class="fa-solid fa-check"></i></span> عرض <span class="k">mikrotik.view</span></span>
-                <span class="dg-perm on"><span class="tk"><i class="fa-solid fa-check"></i></span> تشخيص <span class="k">mikrotik.diagnostics</span></span>
-                <span class="dg-perm"><span class="tk"></span> إدارة <span class="k">mikrotik.manage</span></span>
+                <span class="dg-perm on"><span class="tk"><i class="fa-solid fa-check"></i></span> {{ _('عرض') }} <span class="k">mikrotik.view</span></span>
+                <span class="dg-perm on"><span class="tk"><i class="fa-solid fa-check"></i></span> {{ _('تشخيص') }} <span class="k">mikrotik.diagnostics</span></span>
+                <span class="dg-perm"><span class="tk"></span> {{ _('إدارة') }} <span class="k">mikrotik.manage</span></span>
               </div>
             </div>
           </div>
         </div>
-        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> كل صلاحية بطاقة بعلامة صح؛ المختارة تتلوّن بالبنفسجي. اضغط البطاقة لتبديلها.</div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> {{ _('كل صلاحية بطاقة بعلامة صح؛ المختارة تتلوّن بالبنفسجي. اضغط البطاقة لتبديلها.') }}</div>
       </div>
     </section>
 
@@ -325,35 +325,35 @@
     <section class="dg-step" id="dg-s3">
       <div class="dg-badge">3</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-list-check"></i> العدّادات وزر «تحديد الكل»</h2>
+        <h2><i class="fa-solid fa-list-check"></i> {{ _('العدّادات وزر «تحديد الكل»') }}</h2>
         <p>
-          أثناء اختيارك تتحدّث العدّادات حيًّا فتعرف أين أنت بلا حساب يدوي:
+          {{ _('أثناء اختيارك تتحدّث العدّادات حيًّا فتعرف أين أنت بلا حساب يدوي:') }}
         </p>
         <ul>
-          <li>في رأس قسم الصلاحيات عدّاد عام: «<strong>X / Y مختارة</strong>» (المختار من الإجمالي).</li>
-          <li>في رأس كل مجموعة عدّاد خاص: «<strong>X/Y ممنوحة</strong>» مع شريط تقدّم رفيع بلون المجموعة.</li>
-          <li>وفي حزام المؤشرات أعلى النموذج: «الصلاحيات المتاحة»، «المختارة الآن»، «المجموعات»، «نوع الدور».</li>
+          <li>{{ _('في رأس قسم الصلاحيات عدّاد عام: «') }}<strong>{{ _('X / Y مختارة') }}</strong>{{ _('» (المختار من الإجمالي).') }}</li>
+          <li>{{ _('في رأس كل مجموعة عدّاد خاص: «') }}<strong>{{ _('X/Y ممنوحة') }}</strong>{{ _('» مع شريط تقدّم رفيع بلون المجموعة.') }}</li>
+          <li>{{ _('وفي حزام المؤشرات أعلى النموذج: «الصلاحيات المتاحة»، «المختارة الآن»، «المجموعات»، «نوع الدور».') }}</li>
         </ul>
         <p>
-          وفي رأس كل مجموعة زر <strong>«تحديد الكل»</strong> يفعّل أو يلغي كل صلاحيات تلك المجموعة
+          {{ _('وفي رأس كل مجموعة زر') }} <strong>{{ _('«تحديد الكل»') }}</strong> يفعّل أو يلغي كل صلاحيات تلك المجموعة
           دفعة واحدة (يتحوّل نصه إلى «إلغاء التحديد» عند اكتمالها).
         </p>
 
         <div class="dg-mock" aria-hidden="true" style="max-width:520px">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">إضافة دور › العدّادات</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('إضافة دور › العدّادات') }}</span></div>
           <div class="dg-mock-body">
             <div class="dg-kpis">
-              <div class="dg-kpi"><span class="ic" style="background:#dbeafe;color:#2563eb"><i class="fa-solid fa-list-check"></i></span><div class="v">30</div><div class="l">الصلاحيات المتاحة</div></div>
-              <div class="dg-kpi"><span class="ic" style="background:#ede9fe;color:#6d28d9"><i class="fa-solid fa-square-check"></i></span><div class="v">7</div><div class="l">المختارة الآن</div></div>
-              <div class="dg-kpi"><span class="ic" style="background:#dcfce7;color:#16a34a"><i class="fa-solid fa-folder-tree"></i></span><div class="v">4</div><div class="l">المجموعات</div></div>
-              <div class="dg-kpi"><span class="ic" style="background:#f1f5f9;color:#64748b"><i class="fa-solid fa-user-pen"></i></span><div class="v">مخصّص</div><div class="l">نوع الدور</div></div>
+              <div class="dg-kpi"><span class="ic" style="background:#dbeafe;color:#2563eb"><i class="fa-solid fa-list-check"></i></span><div class="v">30</div><div class="l">{{ _('الصلاحيات المتاحة') }}</div></div>
+              <div class="dg-kpi"><span class="ic" style="background:#ede9fe;color:#6d28d9"><i class="fa-solid fa-square-check"></i></span><div class="v">7</div><div class="l">{{ _('المختارة الآن') }}</div></div>
+              <div class="dg-kpi"><span class="ic" style="background:#dcfce7;color:#16a34a"><i class="fa-solid fa-folder-tree"></i></span><div class="v">4</div><div class="l">{{ _('المجموعات') }}</div></div>
+              <div class="dg-kpi"><span class="ic" style="background:#f1f5f9;color:#64748b"><i class="fa-solid fa-user-pen"></i></span><div class="v">{{ _('مخصّص') }}</div><div class="l">{{ _('نوع الدور') }}</div></div>
             </div>
           </div>
         </div>
 
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>نصيحة:</b> ابدأ بـ«تحديد الكل» على المجموعة التي يحتاجها الدور بالكامل، ثم ألغِ
+          <span><b>{{ _('نصيحة:') }}</b> ابدأ بـ«تحديد الكل» على المجموعة التي يحتاجها الدور بالكامل، ثم ألغِ
           الصلاحيات الحسّاسة منها يدويًا — أسرع من اختيارها واحدة واحدة.</span>
         </div>
       </div>
@@ -363,32 +363,32 @@
     <section class="dg-step" id="dg-s4">
       <div class="dg-badge">4</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-eye-slash"></i> إظهار أو إخفاء الأقسام غير المصرّح بها</h2>
+        <h2><i class="fa-solid fa-eye-slash"></i> {{ _('إظهار أو إخفاء الأقسام غير المصرّح بها') }}</h2>
         <p>
           سؤال مهم: الموظف ذو الدور المحدود — كيف يرى الأقسام الخارجة عن صلاحياته في القائمة
           الجانبية وأزرار العمليات؟ القرار يُضبط مرة واحدة من <strong>«الإعدادات ← المشتركون
-          والوصول»</strong> في حقل <strong>«عرض الأقسام غير المصرّح بها»</strong>، وله خياران:
+          والوصول»</strong> {{ _('في حقل') }} <strong>{{ _('«عرض الأقسام غير المصرّح بها»') }}</strong>{{ _('، وله خياران:') }}
         </p>
         <ul>
-          <li><strong>تجميد بقفل — يظهر البند معطّلًا:</strong> يبقى القسم ظاهرًا لكن مجمّدًا بأيقونة
+          <li><strong>{{ _('تجميد بقفل — يظهر البند معطّلًا:') }}</strong> يبقى القسم ظاهرًا لكن مجمّدًا بأيقونة
           قفل، فيعرف الموظف أن القسم موجود لكنه ليس ضمن صلاحياته.</li>
-          <li><strong>إخفاء كلي — لا يظهر البند إطلاقًا:</strong> يختفي القسم تمامًا فلا يرى الموظف
+          <li><strong>{{ _('إخفاء كلي — لا يظهر البند إطلاقًا:') }}</strong> يختفي القسم تمامًا فلا يرى الموظف
           إلا أقسامه فقط.</li>
         </ul>
 
         <div class="dg-mock" aria-hidden="true" style="max-width:520px">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">الإعدادات › المشتركون والوصول</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('الإعدادات › المشتركون والوصول') }}</span></div>
           <div class="dg-mock-body">
-            <div class="dg-mf"><label>عرض الأقسام غير المصرّح بها</label></div>
-            <div class="dg-radio on"><span class="rd"></span><div><div class="t">تجميد بقفل — يظهر البند معطّلًا</div><div class="d">يرى الموظف القسم بقفل فيعرف أنه موجود خارج صلاحيته.</div></div></div>
-            <div class="dg-radio"><span class="rd"></span><div><div class="t">إخفاء كلي — لا يظهر البند إطلاقًا</div><div class="d">يختفي القسم تمامًا فلا يرى إلا أقسامه.</div></div></div>
+            <div class="dg-mf"><label>{{ _('عرض الأقسام غير المصرّح بها') }}</label></div>
+            <div class="dg-radio on"><span class="rd"></span><div><div class="t">{{ _('تجميد بقفل — يظهر البند معطّلًا') }}</div><div class="d">{{ _('يرى الموظف القسم بقفل فيعرف أنه موجود خارج صلاحيته.') }}</div></div></div>
+            <div class="dg-radio"><span class="rd"></span><div><div class="t">{{ _('إخفاء كلي — لا يظهر البند إطلاقًا') }}</div><div class="d">{{ _('يختفي القسم تمامًا فلا يرى إلا أقسامه.') }}</div></div></div>
           </div>
         </div>
 
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>نصيحة:</b> هذا قرار مالك الريديوس وينطبق على كل الأدوار المحدودة. ومدير النظام
-          (<b>super_admin</b>) يرى كل شيء دائمًا ولا يتأثر بهذا الخيار.</span>
+          <span><b>{{ _('نصيحة:') }}</b> هذا قرار مالك الريديوس وينطبق على كل الأدوار المحدودة. ومدير النظام
+          (<b>super_admin</b>{{ _(') يرى كل شيء دائمًا ولا يتأثر بهذا الخيار.') }}</span>
         </div>
       </div>
     </section>
@@ -397,31 +397,31 @@
     <section class="dg-step" id="dg-s5">
       <div class="dg-badge">5</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-user-tag"></i> مثال عملي: دور «موزّع»</h2>
+        <h2><i class="fa-solid fa-user-tag"></i> {{ _('مثال عملي: دور «موزّع»') }}</h2>
         <p>
           لنبنِ دورًا لموزّع تريده يفحص البطاقات ويشحنها فقط، دون لمس إعدادات الراوترات أو الأقسام
           الحسّاسة:
         </p>
         <ul>
-          <li>الاسم الداخلي: <span class="dg-kbd">distributor</span> · الاسم الظاهر: «موزّع».</li>
-          <li>امنحه صلاحيات العرض والفحص والشحن: <strong>عرض البطاقات</strong>، <strong>فحص البطاقات
-          وعملياتها</strong>، <strong>بطاقات الشحن</strong>، و<strong>عرض المستفيدين</strong>.</li>
-          <li>اترك مجموعة <strong>سياسات الشبكة</strong> فارغة تمامًا.</li>
-          <li>اضبط «عرض الأقسام غير المصرّح بها» على <strong>«إخفاء كلي»</strong> فلا يرى الموزّع إلا
+          <li>{{ _('الاسم الداخلي:') }} <span class="dg-kbd">distributor</span> {{ _('· الاسم الظاهر: «موزّع».') }}</li>
+          <li>{{ _('امنحه صلاحيات العرض والفحص والشحن:') }} <strong>{{ _('عرض البطاقات') }}</strong>{{ _('،') }} <strong>فحص البطاقات
+          وعملياتها</strong>{{ _('،') }} <strong>{{ _('بطاقات الشحن') }}</strong>{{ _('، و') }}<strong>{{ _('عرض المستفيدين') }}</strong>.</li>
+          <li>{{ _('اترك مجموعة') }} <strong>{{ _('سياسات الشبكة') }}</strong> {{ _('فارغة تمامًا.') }}</li>
+          <li>{{ _('اضبط «عرض الأقسام غير المصرّح بها» على') }} <strong>{{ _('«إخفاء كلي»') }}</strong> فلا يرى الموزّع إلا
           لوحة الشحن والفحص — واجهة نظيفة بلا تشويش.</li>
         </ul>
 
         <div class="dg-example" aria-hidden="true">
           <span class="ic"><i class="fa-solid fa-circle-check"></i></span>
           <div>
-            <div class="t">النتيجة: موزّع بصلاحيات الفحص والشحن فقط</div>
-            <p>يفتح <code>cards.verify</code> و<code>cards.recharge</code> ويرى <code>cards.view</code> — وكل ما عداها مخفيّ. لا وصول للراوترات ولا التراخيص.</p>
+            <div class="t">{{ _('النتيجة: موزّع بصلاحيات الفحص والشحن فقط') }}</div>
+            <p>{{ _('يفتح') }} <code>cards.verify</code> {{ _('و') }}<code>cards.recharge</code> {{ _('ويرى') }} <code>cards.view</code> {{ _('— وكل ما عداها مخفيّ. لا وصول للراوترات ولا التراخيص.') }}</p>
           </div>
         </div>
 
         <div class="dg-warn">
           <span class="ic">⚠️</span>
-          <span><b>انتبه:</b> الصلاحيات الحسّاسة (التطبيق، الاستعادة، الإدارة، إدارة التراخيص) تظهر
+          <span><b>{{ _('انتبه:') }}</b> الصلاحيات الحسّاسة (التطبيق، الاستعادة، الإدارة، إدارة التراخيص) تظهر
           في المصفوفة برأس عمود أحمر — راجِعها مرّتين قبل منحها لأي دور موزّع أو محدود.</span>
         </div>
       </div>

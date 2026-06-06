@@ -32,11 +32,11 @@
 
 <form method="get" class="hub-filterbar">
   <select class="hub-select" name="status">
-    <option value="">كل الحالات</option>
-    <option value="active"  {% if status=='active'  %}selected{% endif %}>نشطة</option>
-    <option value="used"    {% if status=='used'    %}selected{% endif %}>مستخدمة</option>
-    <option value="revoked" {% if status=='revoked' %}selected{% endif %}>ملغاة</option>
-    <option value="expired" {% if status=='expired' %}selected{% endif %}>منتهية</option>
+    <option value="">{{ _('كل الحالات') }}</option>
+    <option value="active"  {% if status=='active'  %}selected{% endif %}>{{ _('نشطة') }}</option>
+    <option value="used"    {% if status=='used'    %}selected{% endif %}>{{ _('مستخدمة') }}</option>
+    <option value="revoked" {% if status=='revoked' %}selected{% endif %}>{{ _('ملغاة') }}</option>
+    <option value="expired" {% if status=='expired' %}selected{% endif %}>{{ _('منتهية') }}</option>
   </select>
   {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
   <span class="hub-spacer"></span>
@@ -51,13 +51,13 @@
       <thead>
         <tr>
           <th class="num" style="width:60px">#</th>
-          <th>الكود</th>
-          <th class="num">القيمة</th>
-          <th>الباقة</th>
-          <th>الحالة</th>
-          <th>تنتهي</th>
-          <th>مولِّد</th>
-          <th style="width:80px">إجراء</th>
+          <th>{{ _('الكود') }}</th>
+          <th class="num">{{ _('القيمة') }}</th>
+          <th>{{ _('الباقة') }}</th>
+          <th>{{ _('الحالة') }}</th>
+          <th>{{ _('تنتهي') }}</th>
+          <th>{{ _('مولِّد') }}</th>
+          <th style="width:80px">{{ _('إجراء') }}</th>
         </tr>
       </thead>
       <tbody>
@@ -84,7 +84,7 @@
             {% if v.status == 'active' %}
             <form method="post" action="{{ url_for('radius.vch_revoke', vid=v.id) }}"
                   onsubmit="return confirm('إلغاء الكوبون {{ v.code|e }}؟');" style="display:inline">
-              <button type="submit" class="hub-btn hub-btn--danger hub-btn--icon" title="إلغاء">
+              <button type="submit" class="hub-btn hub-btn--danger hub-btn--icon" title="{{ _('إلغاء') }}">
                 <i class="fa-solid fa-ban"></i>
               </button>
             </form>

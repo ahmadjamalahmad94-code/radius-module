@@ -15,11 +15,11 @@
 
   {% call hub.section("قائمة المستخدمين", icon="users") %}
     <div class="hub-field">
-      <label class="hub-field-label">أسماء المستخدمين (سطر لكل واحد أو مفصولة بفواصل)</label>
+      <label class="hub-field-label">{{ _('أسماء المستخدمين (سطر لكل واحد أو مفصولة بفواصل)') }}</label>
       <textarea class="hub-textarea mono"
                 name="usernames" rows="8"
                 placeholder="user1&#10;user2&#10;user3"></textarea>
-      <div class="hub-field-hint">قم بلصق القائمة هنا.</div>
+      <div class="hub-field-hint">{{ _('قم بلصق القائمة هنا.') }}</div>
     </div>
   {% endcall %}
 
@@ -28,25 +28,25 @@
   {% call hub.section("العملية", icon="bolt") %}
     <div class="hub-form-row">
       <div class="hub-field">
-        <label class="hub-field-label">الإجراء</label>
+        <label class="hub-field-label">{{ _('الإجراء') }}</label>
         <select class="hub-select" name="action" id="action" onchange="
             var v=this.value;
             document.getElementById('row-minutes').style.display = (v==='extend')?'grid':'none';
             document.getElementById('row-password').style.display = (v==='reset_password')?'grid':'none';
           ">
-          <option value="disable">تعطيل</option>
-          <option value="enable">تفعيل</option>
-          <option value="extend">تمديد بالدقائق</option>
-          <option value="reset_password">إعادة تعيين كلمة المرور</option>
+          <option value="disable">{{ _('تعطيل') }}</option>
+          <option value="enable">{{ _('تفعيل') }}</option>
+          <option value="extend">{{ _('تمديد بالدقائق') }}</option>
+          <option value="reset_password">{{ _('إعادة تعيين كلمة المرور') }}</option>
         </select>
       </div>
       <div class="hub-field" id="row-minutes" style="display:none">
-        <label class="hub-field-label">عدد الدقائق</label>
+        <label class="hub-field-label">{{ _('عدد الدقائق') }}</label>
         <input class="hub-input" type="number" name="minutes" min="1" value="60">
       </div>
       <div class="hub-field" id="row-password" style="display:none">
-        <label class="hub-field-label">كلمة المرور الجديدة</label>
-        <input class="hub-input" type="text" name="new_password" placeholder="كلمة مرور جديدة...">
+        <label class="hub-field-label">{{ _('كلمة المرور الجديدة') }}</label>
+        <input class="hub-input" type="text" name="new_password" placeholder="{{ _('كلمة مرور جديدة...') }}">
       </div>
     </div>
   {% endcall %}
@@ -60,6 +60,6 @@
 
 <div class="hub-flash hub-flash--warning" style="margin-top:16px">
   <i class="fa-solid fa-triangle-exclamation"></i>
-  كل عملية تُسجَّل في سجل التدقيق وتُدفع إلى الراوترات تلقائيًا.
+  {{ _('كل عملية تُسجَّل في سجل التدقيق وتُدفع إلى الراوترات تلقائيًا.') }}
 </div>
 {% endblock %}

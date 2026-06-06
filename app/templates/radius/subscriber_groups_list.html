@@ -167,8 +167,8 @@
     <div class="sg-hero-id">
       <span class="sg-hero-icon"><i class="fa-solid fa-people-group"></i></span>
       <div>
-        <h1 class="sg-hero-title">مجموعات المشتركين</h1>
-        <div class="sg-hero-sub">إدارة مجموعة كاملة من مكان واحد: الأعضاء، المتصلون، السرعة، الكوتة، والاستهلاك.</div>
+        <h1 class="sg-hero-title">{{ _('مجموعات المشتركين') }}</h1>
+        <div class="sg-hero-sub">{{ _('إدارة مجموعة كاملة من مكان واحد: الأعضاء، المتصلون، السرعة، الكوتة، والاستهلاك.') }}</div>
       </div>
     </div>
     <div class="sg-hero-actions">
@@ -177,14 +177,14 @@
          groups table client-side by name/description. #}
       <div class="sg-search" data-sg-search>
         <button type="button" class="hub-btn hub-btn--secondary" data-sg-search-toggle
-                aria-expanded="false" aria-label="بحث في المجموعات" title="بحث">
+                aria-expanded="false" aria-label="{{ _('بحث في المجموعات') }}" title="{{ _('بحث') }}">
           <i class="fa-solid fa-magnifying-glass"></i>
         </button>
         <input type="search" class="hub-input sg-search-input" data-sg-search-input
-               placeholder="ابحث باسم أو وصف المجموعة…" autocomplete="off" hidden>
+               placeholder="{{ _('ابحث باسم أو وصف المجموعة…') }}" autocomplete="off" hidden>
       </div>
       <a class="hub-btn hub-btn--primary" href="{{ url_for('radius.subscriber_groups_new') }}">
-        <i class="fa-solid fa-plus"></i> إضافة مجموعة
+        <i class="fa-solid fa-plus"></i> {{ _('إضافة مجموعة') }}
       </a>
     </div>
   </div>
@@ -209,19 +209,19 @@
     {# جدول uds: فرز/تحكّم بالأعمدة/ترقيم/تصدير. حجم صفحة كبير حتى لا
        يتعارض ترقيم uds مع فلتر البحث (الذي يخفي الصفوف بـ display:none). #}
     <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="50"
-         data-uds-export-title="مجموعات المشتركين" style="border:none;border-radius:0">
+         data-uds-export-title="{{ _('مجموعات المشتركين') }}" style="border:none;border-radius:0">
       <table class="hub-table sg-table">
         <thead>
           <tr>
-            <th>المجموعة</th>
-            <th>الأعضاء</th>
-            <th>المتصلون</th>
-            <th>التحميل / الرفع</th>
-            <th>الحالة</th>
-            <th data-uds-nosort>الخدمات</th>
-            <th data-uds-nosort>السرعة</th>
-            <th>آخر نشاط</th>
-            <th data-uds-nosort data-uds-nocol>إجراءات المجموعة</th>
+            <th>{{ _('المجموعة') }}</th>
+            <th>{{ _('الأعضاء') }}</th>
+            <th>{{ _('المتصلون') }}</th>
+            <th>{{ _('التحميل / الرفع') }}</th>
+            <th>{{ _('الحالة') }}</th>
+            <th data-uds-nosort>{{ _('الخدمات') }}</th>
+            <th data-uds-nosort>{{ _('السرعة') }}</th>
+            <th>{{ _('آخر نشاط') }}</th>
+            <th data-uds-nosort data-uds-nocol>{{ _('إجراءات المجموعة') }}</th>
           </tr>
         </thead>
         <tbody data-sg-rows>
@@ -234,19 +234,19 @@
             <td>
               <div class="sg-stat">
                 <strong>{{ g.members }}</strong>
-                <span>مشترك</span>
+                <span>{{ _('مشترك') }}</span>
               </div>
             </td>
             <td>
               <div class="sg-stat">
                 <strong>{{ g.online_now }}</strong>
-                <span>جلسة نشطة</span>
+                <span>{{ _('جلسة نشطة') }}</span>
               </div>
             </td>
             <td>
               <div class="sg-usage">
-                <div class="sg-usage-line"><span>تحميل</span>{{ fmt_bytes(g.total_download_bytes) }}</div>
-                <div class="sg-usage-line"><span>رفع</span>{{ fmt_bytes(g.total_upload_bytes) }}</div>
+                <div class="sg-usage-line"><span>{{ _('تحميل') }}</span>{{ fmt_bytes(g.total_download_bytes) }}</div>
+                <div class="sg-usage-line"><span>{{ _('رفع') }}</span>{{ fmt_bytes(g.total_upload_bytes) }}</div>
               </div>
             </td>
             <td>
@@ -277,7 +277,7 @@
                 {% if g.temporary_speed_members %}{{ hub.pill("مؤقتة " ~ g.temporary_speed_members, variant="blue") }}{% endif %}
                 {% if g.custom_speed_members %}{{ hub.pill("خاصة " ~ g.custom_speed_members, variant="amber") }}{% endif %}
                 {% if not g.temporary_speed_members and not g.custom_speed_members %}
-                  <span class="hub-text-mute">العرض</span>
+                  <span class="hub-text-mute">{{ _('العرض') }}</span>
                 {% endif %}
               </div>
             </td>
@@ -286,41 +286,41 @@
               <div class="sg-actions">
                 <a class="hub-btn hub-btn--secondary hub-btn--sm"
                    href="{{ url_for('radius.users_list', group_id=g.id) }}"
-                   title="عرض أعضاء المجموعة">
-                  <i class="fa-solid fa-users"></i> الأعضاء
+                   title="{{ _('عرض أعضاء المجموعة') }}">
+                  <i class="fa-solid fa-users"></i> {{ _('الأعضاء') }}
                 </a>
                 <a class="hub-btn hub-btn--secondary hub-btn--sm"
                    href="{{ url_for('radius.online_list', group_id=g.id) }}"
-                   title="عرض المتصلين من المجموعة">
-                  <i class="fa-solid fa-wifi"></i> المتصلون
+                   title="{{ _('عرض المتصلين من المجموعة') }}">
+                  <i class="fa-solid fa-wifi"></i> {{ _('المتصلون') }}
                 </a>
                 <a class="hub-btn hub-btn--secondary hub-btn--sm"
                    href="{{ url_for('radius.subscriber_groups_edit', gid=g.id) }}"
-                   title="إدارة السرعة والخدمات">
-                  <i class="fa-solid fa-gauge-high"></i> السرعة
+                   title="{{ _('إدارة السرعة والخدمات') }}">
+                  <i class="fa-solid fa-gauge-high"></i> {{ _('السرعة') }}
                 </a>
                 <form method="post"
                       action="{{ url_for('radius.subscriber_groups_quota_reset_daily', gid=g.id) }}"
                       onsubmit="return confirm('استعادة الكوتة اليومية لكل أعضاء مجموعة «{{ g.name|e }}»؟');">
-                  <button type="submit" class="hub-btn hub-btn--secondary hub-btn--sm" title="استعادة الكوتة اليومية">
+                  <button type="submit" class="hub-btn hub-btn--secondary hub-btn--sm" title="{{ _('استعادة الكوتة اليومية') }}">
                     <i class="fa-solid fa-rotate-left"></i>
                   </button>
                 </form>
                 <form method="post"
                       action="{{ url_for('radius.subscriber_groups_disconnect_online', gid=g.id) }}"
                       onsubmit="return confirm('فصل كل الجلسات المتصلة لمجموعة «{{ g.name|e }}»؟');">
-                  <button type="submit" class="hub-btn hub-btn--danger hub-btn--sm" title="فصل المتصلين">
+                  <button type="submit" class="hub-btn hub-btn--danger hub-btn--sm" title="{{ _('فصل المتصلين') }}">
                     <i class="fa-solid fa-scissors"></i>
                   </button>
                 </form>
-                <a class="hub-btn hub-btn--ghost hub-btn--icon" title="تعديل"
+                <a class="hub-btn hub-btn--ghost hub-btn--icon" title="{{ _('تعديل') }}"
                    href="{{ url_for('radius.subscriber_groups_edit', gid=g.id) }}">
                   <i class="fa-solid fa-pen"></i>
                 </a>
                 <form method="post"
                       action="{{ url_for('radius.subscriber_groups_delete', gid=g.id) }}"
                       onsubmit="return confirm('حذف المجموعة «{{ g.name|e }}»؟ سيتم فصل {{ g.members }} مشترك عنها ولن يتم حذفهم.');">
-                  <button type="submit" class="hub-btn hub-btn--danger hub-btn--icon" title="حذف">
+                  <button type="submit" class="hub-btn hub-btn--danger hub-btn--icon" title="{{ _('حذف') }}">
                     <i class="fa-solid fa-trash"></i>
                   </button>
                 </form>

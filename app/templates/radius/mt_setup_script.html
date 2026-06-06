@@ -28,18 +28,18 @@
       <span>
         {% if is_vpn_row %}
           عنوان داخل نفق الربط: <code>{{ nas.address }}</code>
-          <span class="hub-pill hub-pill--purple" style="font-size:10px"><span class="dot"></span> نفق ربط</span>
+          <span class="hub-pill hub-pill--purple" style="font-size:10px"><span class="dot"></span> {{ _('نفق ربط') }}</span>
         {% else %}
           عنوان الراوتر: <code>{{ nas.address }}</code>
         {% endif %}
       </span>
-      <span>السيرفر: <code>{{ server_ip or '—' }}</code></span>
+      <span>{{ _('السيرفر:') }} <code>{{ server_ip or '—' }}</code></span>
     </div>
   </header>
 
   {% if is_vpn_row and not wg_priv_revealed %}
   <div class="hub-pill hub-pill--amber" style="display:block;padding:10px 14px">
-    <strong>⚠️ تنبيه:</strong> المفتاح الخاص للراوتر تم إصداره مرة واحدة فقط
+    <strong>{{ _('⚠️ تنبيه:') }}</strong> المفتاح الخاص للراوتر تم إصداره مرة واحدة فقط
     وحُذف من الجلسة. السكربت أدناه لا يحتوي على المفتاح — لو فقدته،
     احذف الراوتر وأعد المعالج لتدوير المفاتيح.
   </div>
@@ -54,34 +54,34 @@
   <div class="mt-setup-script-actions">
     <button type="button" class="hub-btn hub-btn--primary"
             data-mt-setup-copy>
-      <i class="fa-solid fa-copy"></i> نسخ السكربت
+      <i class="fa-solid fa-copy"></i> {{ _('نسخ السكربت') }}
     </button>
     <a href="{{ dashboard_url }}" class="hub-btn"
        data-mt-setup-test>
-      <i class="fa-solid fa-bolt"></i> اختبار الاتصال (لوحة التحكم)
+      <i class="fa-solid fa-bolt"></i> {{ _('اختبار الاتصال (لوحة التحكم)') }}
     </a>
     <a href="{{ url_for('radius.mt_setup_form') }}" class="hub-btn">
-      راوتر آخر
+      {{ _('راوتر آخر') }}
     </a>
   </div>
 
   <ol class="mt-setup-checklist">
-    <li>افتح شاشة أوامر الراوتر من أداة الإدارة المتاحة لديك.</li>
-    <li>اضغط <strong>نسخ السكربت</strong> فوق ثم الصقه في شاشة الأوامر واضغط تنفيذ.</li>
-    <li>تحقّق من السطر الأخير <code>HobeRadius provisioning done</code>.</li>
-    <li>ارجع هنا واضغط <strong>اختبار الاتصال</strong> — تفتح لوحة الراوتر.</li>
-    <li>لو ظهرت حالة ”الراوتر متصل” — كل شيء جاهز.</li>
+    <li>{{ _('افتح شاشة أوامر الراوتر من أداة الإدارة المتاحة لديك.') }}</li>
+    <li>{{ _('اضغط') }} <strong>{{ _('نسخ السكربت') }}</strong> {{ _('فوق ثم الصقه في شاشة الأوامر واضغط تنفيذ.') }}</li>
+    <li>{{ _('تحقّق من السطر الأخير') }} <code>HobeRadius provisioning done</code>.</li>
+    <li>{{ _('ارجع هنا واضغط') }} <strong>{{ _('اختبار الاتصال') }}</strong> {{ _('— تفتح لوحة الراوتر.') }}</li>
+    <li>{{ _('لو ظهرت حالة ”الراوتر متصل” — كل شيء جاهز.') }}</li>
   </ol>
 
   {# أُزيل من لوحة العميل — يُعاد مركزياً عبر لوحة التراخيص (قرار معماري):
      قسم «نفق تغيير IP (تمرير الترافيك)» المرخّص — خدمة مركزية للمالك. #}
 
   <details class="mt-setup-script-warning">
-    <summary>⚠️ تنبيه أمان — اقرأه مرة واحدة</summary>
+    <summary>{{ _('⚠️ تنبيه أمان — اقرأه مرة واحدة') }}</summary>
     <ul>
-      <li>السكربت يحتوي على <strong>كلمة سر واجهة الربط + سر المصادقة المشترك</strong>. لا تشارك هذه الصفحة.</li>
-      <li>المستخدم <code>{{ nas.api_user }}</code> له صلاحيات إدارية واسعة على الراوتر — لا تستعمله من جهاز غير موثوق.</li>
-      <li>لتدوير المفاتيح: احذف جهاز الشبكة وأعد المعالج. القديم يبقى محفوظًا لكنه لا يُستعمل.</li>
+      <li>{{ _('السكربت يحتوي على') }} <strong>{{ _('كلمة سر واجهة الربط + سر المصادقة المشترك') }}</strong>{{ _('. لا تشارك هذه الصفحة.') }}</li>
+      <li>{{ _('المستخدم') }} <code>{{ nas.api_user }}</code> {{ _('له صلاحيات إدارية واسعة على الراوتر — لا تستعمله من جهاز غير موثوق.') }}</li>
+      <li>{{ _('لتدوير المفاتيح: احذف جهاز الشبكة وأعد المعالج. القديم يبقى محفوظًا لكنه لا يُستعمل.') }}</li>
     </ul>
   </details>
 </section>

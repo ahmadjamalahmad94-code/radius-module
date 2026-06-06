@@ -40,7 +40,7 @@
   search_action=url_for('radius.inv_list')
 ) %}
   <select class="hub-select" name="status">
-    <option value="">كل الحالات</option>
+    <option value="">{{ _('كل الحالات') }}</option>
     {% for s in ['paid','pending','failed','refunded','canceled'] %}
       <option value="{{ s }}" {% if status==s %}selected{% endif %}>
         {% if s == 'paid' %}مدفوعة{% elif s == 'pending' %}معلَّقة{% elif s == 'failed' %}فشلت{% elif s == 'refunded' %}مسترجعة{% elif s == 'canceled' %}ملغاة{% else %}{{ s }}{% endif %}
@@ -74,16 +74,16 @@
         <thead>
           <tr>
             <th class="num" style="width:60px">#</th>
-            <th>الرقم</th>
-            <th>اسم الدخول</th>
-            <th>الباقة</th>
-            <th>الاتجاه</th>
-            <th class="num">المبلغ</th>
-            <th>الطريقة</th>
-            <th>التاريخ</th>
-            <th>الحالة</th>
+            <th>{{ _('الرقم') }}</th>
+            <th>{{ _('اسم الدخول') }}</th>
+            <th>{{ _('الباقة') }}</th>
+            <th>{{ _('الاتجاه') }}</th>
+            <th class="num">{{ _('المبلغ') }}</th>
+            <th>{{ _('الطريقة') }}</th>
+            <th>{{ _('التاريخ') }}</th>
+            <th>{{ _('الحالة') }}</th>
             {# عمود الإجراءات يُستبعد من التصدير أيضاً (ملاحظة #5) #}
-            <th style="width:150px" data-uds-nosort data-uds-nocol data-uds-noexport>تحديث الحالة</th>
+            <th style="width:150px" data-uds-nosort data-uds-nocol data-uds-noexport>{{ _('تحديث الحالة') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -130,7 +130,7 @@
                     </option>
                   {% endfor %}
                 </select>
-                <button type="submit" class="hub-btn hub-btn--primary hub-btn--icon" title="تحديث">
+                <button type="submit" class="hub-btn hub-btn--primary hub-btn--icon" title="{{ _('تحديث') }}">
                   <i class="fa-solid fa-check"></i>
                 </button>
               </form>

@@ -4,7 +4,7 @@
 {% block title %}بناء الجمهور — Hobe Hub{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-users-viewfinder"></i>{% endblock %}
 {% block page_title %}بناء الجمهور{% endblock %}
-{% block page_sub %}<span class="sub">أنشئ شرائح جمهور قابلة لإعادة الاستخدام بدون كشف SQL خام أو بيانات المزوّد.</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('أنشئ شرائح جمهور قابلة لإعادة الاستخدام بدون كشف SQL خام أو بيانات المزوّد.') }}</span>{% endblock %}
 
 {% block head_extra %}{{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
@@ -58,51 +58,51 @@
 
       <div class="caud-row">
         <div class="hub-field">
-          <label class="hub-field-label" for="caud-key">مفتاح الشريحة</label>
+          <label class="hub-field-label" for="caud-key">{{ _('مفتاح الشريحة') }}</label>
           <input id="caud-key" class="hub-input" name="segment_key" required placeholder="manager-1-subscribers" dir="ltr">
-          <div class="hub-field-hint">معرّف فريد للشريحة — يُستخدم لاحقًا للإشارة إليها.</div>
+          <div class="hub-field-hint">{{ _('معرّف فريد للشريحة — يُستخدم لاحقًا للإشارة إليها.') }}</div>
         </div>
         <div class="hub-field">
-          <label class="hub-field-label" for="caud-title">العنوان</label>
-          <input id="caud-title" class="hub-input" name="title" required placeholder="اسم وصفي للشريحة">
+          <label class="hub-field-label" for="caud-title">{{ _('العنوان') }}</label>
+          <input id="caud-title" class="hub-input" name="title" required placeholder="{{ _('اسم وصفي للشريحة') }}">
         </div>
       </div>
 
       <div class="caud-row">
         <div class="hub-field">
-          <label class="hub-field-label" for="caud-target">الهدف</label>
+          <label class="hub-field-label" for="caud-target">{{ _('الهدف') }}</label>
           <select id="caud-target" class="hub-select" name="target">
-            <option value="subscriber">المشتركون</option>
-            <option value="card_user">مستخدمو البطاقات</option>
-            <option value="manager">المدراء</option>
-            <option value="distributor">الموزعون</option>
-            <option value="company">الشركة</option>
+            <option value="subscriber">{{ _('المشتركون') }}</option>
+            <option value="card_user">{{ _('مستخدمو البطاقات') }}</option>
+            <option value="manager">{{ _('المدراء') }}</option>
+            <option value="distributor">{{ _('الموزعون') }}</option>
+            <option value="company">{{ _('الشركة') }}</option>
           </select>
-          <div class="hub-field-hint">فئة المستلمين التي تشملها الشريحة.</div>
+          <div class="hub-field-hint">{{ _('فئة المستلمين التي تشملها الشريحة.') }}</div>
         </div>
         <div class="hub-field">
-          <label class="hub-field-label" for="caud-manager">رقم المدير</label>
+          <label class="hub-field-label" for="caud-manager">{{ _('رقم المدير') }}</label>
           <input id="caud-manager" class="hub-input" name="manager_id" type="number" min="1" dir="ltr">
-          <div class="hub-field-hint">لاستهداف مدير محدّد عند الحاجة.</div>
+          <div class="hub-field-hint">{{ _('لاستهداف مدير محدّد عند الحاجة.') }}</div>
         </div>
       </div>
 
       <div class="caud-row">
         <div class="hub-field">
-          <label class="hub-field-label" for="caud-ids">أرقام المستلمين</label>
+          <label class="hub-field-label" for="caud-ids">{{ _('أرقام المستلمين') }}</label>
           <input id="caud-ids" class="hub-input" name="ids" placeholder="1,2,3" dir="ltr">
-          <div class="hub-field-hint">قصْر الشريحة على أرقام محدّدة — افصل بينها بفاصلة.</div>
+          <div class="hub-field-hint">{{ _('قصْر الشريحة على أرقام محدّدة — افصل بينها بفاصلة.') }}</div>
         </div>
         <div class="hub-field">
-          <label class="hub-field-label" for="caud-limit">الحد</label>
+          <label class="hub-field-label" for="caud-limit">{{ _('الحد') }}</label>
           <input id="caud-limit" class="hub-input" name="limit" type="number" min="1" max="500" value="100" dir="ltr">
-          <div class="hub-field-hint">أقصى عدد مستلمين يظهر في المعاينة.</div>
+          <div class="hub-field-hint">{{ _('أقصى عدد مستلمين يظهر في المعاينة.') }}</div>
         </div>
       </div>
 
       <div class="caud-foot">
-        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> حفظ ومعاينة</button>
-        <span class="caud-note">يحفظ الشريحة ثم يعرض جمهورها — لا يتم إرسال أي رسالة.</span>
+        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ ومعاينة') }}</button>
+        <span class="caud-note">{{ _('يحفظ الشريحة ثم يعرض جمهورها — لا يتم إرسال أي رسالة.') }}</span>
       </div>
     </form>
   {% endcall %}
@@ -112,7 +112,7 @@
     {% if segments %}
       <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
         <table class="hub-table" data-testid="audience-segments-table">
-          <thead><tr><th>المفتاح</th><th>العنوان</th><th>الحالة</th></tr></thead>
+          <thead><tr><th>{{ _('المفتاح') }}</th><th>{{ _('العنوان') }}</th><th>{{ _('الحالة') }}</th></tr></thead>
           <tbody>
             {% for item in segments %}
               <tr>
@@ -133,7 +133,7 @@
     {% if preview %}
       <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
         <table class="hub-table">
-          <thead><tr><th>النوع</th><th class="num">الرقم</th><th>الاسم</th></tr></thead>
+          <thead><tr><th>{{ _('النوع') }}</th><th class="num">{{ _('الرقم') }}</th><th>{{ _('الاسم') }}</th></tr></thead>
           <tbody>
             {% for item in preview %}
               <tr>

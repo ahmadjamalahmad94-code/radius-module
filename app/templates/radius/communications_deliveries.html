@@ -4,7 +4,7 @@
 {% block title %}سجل الإرسال — Hobe Hub{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-truck-fast"></i>{% endblock %}
 {% block page_title %}سجل الإرسال{% endblock %}
-{% block page_sub %}<span class="sub">حالات الرسائل من الطابور حتى الإرسال أو الفشل أو القراءة عند دعم المزوّد لذلك.</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('حالات الرسائل من الطابور حتى الإرسال أو الفشل أو القراءة عند دعم المزوّد لذلك.') }}</span>{% endblock %}
 
 {% macro ch_label(c) %}{{ {'sms':'الرسائل القصيرة','whatsapp':'واتساب','telegram':'تلجرام','internal':'داخلية','email':'البريد','push':'إشعار فوري'}.get(c|string, c|string if c else '—') }}{% endmacro %}
 {% macro st_pill(s) %}
@@ -59,11 +59,11 @@
 ) %}
   {%- if deliveries %}
   <div class="cdl-filter" id="cdl-filter">
-    <span class="lbl">تصفية:</span>
-    <button type="button" class="cdl-fchip is-active" data-filter="all">الكل</button>
-    <button type="button" class="cdl-fchip" data-filter="ok">الناجحة</button>
-    <button type="button" class="cdl-fchip" data-filter="failed">الفاشلة</button>
-    <button type="button" class="cdl-fchip" data-filter="queued">بالطابور</button>
+    <span class="lbl">{{ _('تصفية:') }}</span>
+    <button type="button" class="cdl-fchip is-active" data-filter="all">{{ _('الكل') }}</button>
+    <button type="button" class="cdl-fchip" data-filter="ok">{{ _('الناجحة') }}</button>
+    <button type="button" class="cdl-fchip" data-filter="failed">{{ _('الفاشلة') }}</button>
+    <button type="button" class="cdl-fchip" data-filter="queued">{{ _('بالطابور') }}</button>
   </div>
   {%- endif %}
 {% endcall %}
@@ -90,12 +90,12 @@
         <table class="hub-table" data-testid="delivery-log-table">
           <thead>
             <tr>
-              <th class="num">الرقم</th>
-              <th>القناة</th>
-              <th>الحالة</th>
-              <th>المزوّد</th>
-              <th>المستلم</th>
-              <th data-uds-nosort>الخطأ</th>
+              <th class="num">{{ _('الرقم') }}</th>
+              <th>{{ _('القناة') }}</th>
+              <th>{{ _('الحالة') }}</th>
+              <th>{{ _('المزوّد') }}</th>
+              <th>{{ _('المستلم') }}</th>
+              <th data-uds-nosort>{{ _('الخطأ') }}</th>
             </tr>
           </thead>
           <tbody id="cdl-rows">

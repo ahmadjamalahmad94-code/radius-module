@@ -12,7 +12,7 @@
 {% block title %}مركز عمليات البطاقة{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-id-card-clip"></i>{% endblock %}
 {% block page_title %}مركز عمليات البطاقة{% endblock %}
-{% block page_sub %}<span class="sub">فحص، تتبع، طرد جلسات، تثبيت MAC، وتعطيل أو إعادة تفعيل البطاقة من مكان واحد.</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('فحص، تتبع، طرد جلسات، تثبيت MAC، وتعطيل أو إعادة تفعيل البطاقة من مكان واحد.') }}</span>{% endblock %}
 
 {% macro dt(value) -%}
   {{ value|dt_local if value else '—' }}
@@ -137,14 +137,14 @@
   <section class="ops-hero">
     <div class="ops-hero-inner">
       <div>
-        <h2 class="ops-title">لوحة تحكم البطاقة</h2>
-        <p class="ops-sub">ابحث عن أي بطاقة وشاهد تاريخها التشغيلي، الأجهزة التي استخدمتها، الجلسات، وحالتها الحالية. الإجراءات الحساسة موجودة هنا حتى لا تضيع بين الصفحات.</p>
+        <h2 class="ops-title">{{ _('لوحة تحكم البطاقة') }}</h2>
+        <p class="ops-sub">{{ _('ابحث عن أي بطاقة وشاهد تاريخها التشغيلي، الأجهزة التي استخدمتها، الجلسات، وحالتها الحالية. الإجراءات الحساسة موجودة هنا حتى لا تضيع بين الصفحات.') }}</p>
       </div>
       <form method="get" class="ops-search">
         <input type="text" name="query" value="{{ query or '' }}" maxlength="128"
-               placeholder="رقم البطاقة أو اسم الدخول" autocomplete="off" autofocus>
+               placeholder="{{ _('رقم البطاقة أو اسم الدخول') }}" autocomplete="off" autofocus>
         <button class="hub-btn hub-btn--primary" type="submit">
-          <i class="fa-solid fa-magnifying-glass"></i> فحص البطاقة
+          <i class="fa-solid fa-magnifying-glass"></i> {{ _('فحص البطاقة') }}
         </button>
       </form>
     </div>
@@ -157,19 +157,19 @@
   {% if not query %}
     <div class="ops-empty">
       <i class="fa-solid fa-id-card"></i>
-      أدخل رقم البطاقة أو اسم الدخول لفتح مركز العمليات الخاص بها.
+      {{ _('أدخل رقم البطاقة أو اسم الدخول لفتح مركز العمليات الخاص بها.') }}
     </div>
   {% elif result and not result.exists %}
     <div class="ops-empty">
       <i class="fa-solid fa-circle-question"></i>
-      لا توجد بطاقة مطابقة لهذا البحث. تأكد من الرقم أو اسم الدخول ثم حاول مرة أخرى.
+      {{ _('لا توجد بطاقة مطابقة لهذا البحث. تأكد من الرقم أو اسم الدخول ثم حاول مرة أخرى.') }}
     </div>
   {% elif card %}
     <div class="ops-card">
       <div class="ops-card-body">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap">
           <div>
-            <div class="ops-muted">اسم الدخول</div>
+            <div class="ops-muted">{{ _('اسم الدخول') }}</div>
             <h3 style="margin:2px 0 0;font-size:30px" class="mono">{{ card.username }}</h3>
             <div class="ops-badges" style="margin-top:10px">
               <span class="ops-badge {{ status_class.get(card.status, '') }}"
@@ -177,13 +177,13 @@
                 <i class="fa-solid fa-circle"></i> {{ status_labels.get(card.status, card.status or 'غير معروف') }}
               </span>
               {% if card.locked_mac %}
-                <span class="ops-badge ok"><i class="fa-solid fa-lock"></i> مثبتة على MAC</span>
+                <span class="ops-badge ok"><i class="fa-solid fa-lock"></i> {{ _('مثبتة على MAC') }}</span>
               {% endif %}
               {% if card.active_session %}
-                <span class="ops-badge ok"><i class="fa-solid fa-wifi"></i> عليها جلسة متصلة</span>
+                <span class="ops-badge ok"><i class="fa-solid fa-wifi"></i> {{ _('عليها جلسة متصلة') }}</span>
               {% endif %}
               {% if card.revoked %}
-                <span class="ops-badge danger"><i class="fa-solid fa-ban"></i> الدخول موقوف</span>
+                <span class="ops-badge danger"><i class="fa-solid fa-ban"></i> {{ _('الدخول موقوف') }}</span>
               {% endif %}
             </div>
           </div>
@@ -203,7 +203,7 @@
     {% elif (summary.unique_macs or 0) > 1 %}
       <div class="ops-alert">
         <i class="fa-solid fa-triangle-exclamation"></i>
-        <div>تم رصد أكثر من MAC لهذه البطاقة. قد يكون تبديل جهاز طبيعيًا، أو مشاركة غير مرغوبة للبطاقة.</div>
+        <div>{{ _('تم رصد أكثر من MAC لهذه البطاقة. قد يكون تبديل جهاز طبيعيًا، أو مشاركة غير مرغوبة للبطاقة.') }}</div>
       </div>
     {% endif %}
 
@@ -211,46 +211,46 @@
       <section class="ops-card">
         <div class="ops-card-body">
           <h3 class="ops-card-title">
-            <span><i class="fa-solid fa-chart-line"></i> ملخص التشغيل</span>
-            <span class="ops-muted">من سجلات المصادقة المحفوظة</span>
+            <span><i class="fa-solid fa-chart-line"></i> {{ _('ملخص التشغيل') }}</span>
+            <span class="ops-muted">{{ _('من سجلات المصادقة المحفوظة') }}</span>
           </h3>
           <div class="ops-stat-grid">
-            <div class="ops-stat"><div class="label">عدد الجلسات</div><div class="value">{{ summary.sessions_count or 0 }}</div><div class="subvalue">كل محاولات الاتصال المسجلة</div></div>
-            <div class="ops-stat"><div class="label">جلسات متصلة الآن</div><div class="value">{{ summary.online_sessions or 0 }}</div><div class="subvalue">بدون وقت إغلاق</div></div>
-            <div class="ops-stat"><div class="label">عدد MAC مختلف</div><div class="value">{{ summary.unique_macs or 0 }}</div><div class="subvalue">مؤشر مشاركة البطاقة</div></div>
-            <div class="ops-stat"><div class="label">الوقت المتبقي</div><div class="value">{{ duration(card.remaining_seconds) if card.remaining_seconds is not none else 'غير محدد' }}</div><div class="subvalue">حسب تاريخ انتهاء البطاقة</div></div>
-            <div class="ops-stat"><div class="label">إجمالي مدة الاتصال</div><div class="value">{{ duration(summary.total_session_seconds) }}</div><div class="subvalue">مجموع الجلسات</div></div>
-            <div class="ops-stat"><div class="label">الرفع</div><div class="value">{{ bytes_size(summary.total_upload_bytes) }}</div><div class="subvalue">من radacct</div></div>
-            <div class="ops-stat"><div class="label">التنزيل</div><div class="value">{{ bytes_size(summary.total_download_bytes) }}</div><div class="subvalue">من radacct</div></div>
-            <div class="ops-stat"><div class="label">عدد أجهزة الشبكة</div><div class="value">{{ summary.unique_nas or 0 }}</div><div class="subvalue">أجهزة مختلفة</div></div>
+            <div class="ops-stat"><div class="label">{{ _('عدد الجلسات') }}</div><div class="value">{{ summary.sessions_count or 0 }}</div><div class="subvalue">{{ _('كل محاولات الاتصال المسجلة') }}</div></div>
+            <div class="ops-stat"><div class="label">{{ _('جلسات متصلة الآن') }}</div><div class="value">{{ summary.online_sessions or 0 }}</div><div class="subvalue">{{ _('بدون وقت إغلاق') }}</div></div>
+            <div class="ops-stat"><div class="label">{{ _('عدد MAC مختلف') }}</div><div class="value">{{ summary.unique_macs or 0 }}</div><div class="subvalue">{{ _('مؤشر مشاركة البطاقة') }}</div></div>
+            <div class="ops-stat"><div class="label">{{ _('الوقت المتبقي') }}</div><div class="value">{{ duration(card.remaining_seconds) if card.remaining_seconds is not none else 'غير محدد' }}</div><div class="subvalue">{{ _('حسب تاريخ انتهاء البطاقة') }}</div></div>
+            <div class="ops-stat"><div class="label">{{ _('إجمالي مدة الاتصال') }}</div><div class="value">{{ duration(summary.total_session_seconds) }}</div><div class="subvalue">{{ _('مجموع الجلسات') }}</div></div>
+            <div class="ops-stat"><div class="label">{{ _('الرفع') }}</div><div class="value">{{ bytes_size(summary.total_upload_bytes) }}</div><div class="subvalue">{{ _('من radacct') }}</div></div>
+            <div class="ops-stat"><div class="label">{{ _('التنزيل') }}</div><div class="value">{{ bytes_size(summary.total_download_bytes) }}</div><div class="subvalue">{{ _('من radacct') }}</div></div>
+            <div class="ops-stat"><div class="label">{{ _('عدد أجهزة الشبكة') }}</div><div class="value">{{ summary.unique_nas or 0 }}</div><div class="subvalue">{{ _('أجهزة مختلفة') }}</div></div>
           </div>
         </div>
       </section>
 
       <section class="ops-card">
         <div class="ops-card-body">
-          <h3 class="ops-card-title"><span><i class="fa-solid fa-screwdriver-wrench"></i> إجراءات البطاقة</span></h3>
+          <h3 class="ops-card-title"><span><i class="fa-solid fa-screwdriver-wrench"></i> {{ _('إجراءات البطاقة') }}</span></h3>
           <div class="ops-actions">
             <div class="ops-action">
-              <h4>تثبيت MAC أو إلغاء التثبيت</h4>
-              <p>عند التثبيت، البطاقة لن تقبل دخولًا من جهاز آخر حسب سياسة الدخول.</p>
+              <h4>{{ _('تثبيت MAC أو إلغاء التثبيت') }}</h4>
+              <p>{{ _('عند التثبيت، البطاقة لن تقبل دخولًا من جهاز آخر حسب سياسة الدخول.') }}</p>
               <form method="post" class="ops-inline">
                 {{ hidden_ops(card, query) }}
                 <input type="hidden" name="_card_action" value="lock_mac">
                 <input class="mono" type="text" name="mac" value="{{ card.locked_mac or card.mac_address or (macs[0].mac if macs else '') }}" placeholder="AA:BB:CC:DD:EE:FF">
-                <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-lock"></i> تثبيت</button>
+                <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-lock"></i> {{ _('تثبيت') }}</button>
               </form>
               <form method="post" class="ops-inline" style="margin-top:8px">
                 {{ hidden_ops(card, query) }}
                 <input type="hidden" name="_card_action" value="unlock_mac">
-                <button class="hub-btn hub-btn--ghost" type="submit"><i class="fa-solid fa-lock-open"></i> فك التثبيت</button>
-                <span class="ops-muted">الحالي: <span class="mono">{{ card.locked_mac or 'غير مثبتة' }}</span></span>
+                <button class="hub-btn hub-btn--ghost" type="submit"><i class="fa-solid fa-lock-open"></i> {{ _('فك التثبيت') }}</button>
+                <span class="ops-muted">{{ _('الحالي:') }} <span class="mono">{{ card.locked_mac or 'غير مثبتة' }}</span></span>
               </form>
             </div>
 
             <div class="ops-action">
-              <h4>طرد الجلسة المتصلة</h4>
-              <p>يرسل أمر فصل إلى خدمة المصادقة. إذا لم تكن الجلسة متصلة، لن يظهر زر مفيد هنا.</p>
+              <h4>{{ _('طرد الجلسة المتصلة') }}</h4>
+              <p>{{ _('يرسل أمر فصل إلى خدمة المصادقة. إذا لم تكن الجلسة متصلة، لن يظهر زر مفيد هنا.') }}</p>
               {% set has_online = false %}
               {% for session in sessions if session.online %}
                 {% set has_online = true %}
@@ -263,48 +263,48 @@
                 </form>
               {% endfor %}
               {% if (summary.online_sessions or 0) == 0 %}
-                <div class="ops-muted">لا توجد جلسة متصلة حاليًا لهذه البطاقة.</div>
+                <div class="ops-muted">{{ _('لا توجد جلسة متصلة حاليًا لهذه البطاقة.') }}</div>
               {% endif %}
             </div>
 
             <div class="ops-action">
-              <h4>تصفير الوقت والاستخدام</h4>
-              <p>يعيد البطاقة كغير مستخدمة ويمسح بداية الاستخدام والارتباط بالمستفيد، بدون حذف سجل الجلسات.</p>
+              <h4>{{ _('تصفير الوقت والاستخدام') }}</h4>
+              <p>{{ _('يعيد البطاقة كغير مستخدمة ويمسح بداية الاستخدام والارتباط بالمستفيد، بدون حذف سجل الجلسات.') }}</p>
               <form method="post" class="ops-inline">
                 {{ hidden_ops(card, query) }}
                 <input type="hidden" name="_card_action" value="reset_usage">
-                <button class="hub-btn hub-btn--secondary" type="submit"><i class="fa-solid fa-rotate-left"></i> تصفير الاستخدام</button>
+                <button class="hub-btn hub-btn--secondary" type="submit"><i class="fa-solid fa-rotate-left"></i> {{ _('تصفير الاستخدام') }}</button>
               </form>
             </div>
 
             <div class="ops-action">
-              <h4>تعطيل أو إعادة تفعيل</h4>
-              <p>التعطيل يمنع الدخول بدون حذف البطاقة. استخدم السبب حتى يبقى القرار مفهومًا عند المراجعة.</p>
+              <h4>{{ _('تعطيل أو إعادة تفعيل') }}</h4>
+              <p>{{ _('التعطيل يمنع الدخول بدون حذف البطاقة. استخدم السبب حتى يبقى القرار مفهومًا عند المراجعة.') }}</p>
               {% if card.revoked %}
                 <form method="post" class="ops-inline">
                   {{ hidden_ops(card, query) }}
                   <input type="hidden" name="_card_action" value="enable">
-                  <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-circle-check"></i> إعادة تفعيل</button>
+                  <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-circle-check"></i> {{ _('إعادة تفعيل') }}</button>
                   {% if card.disabled_reason %}<span class="ops-muted">سبب التعطيل: {{ card.disabled_reason }}</span>{% endif %}
                 </form>
               {% else %}
                 <form method="post" class="ops-inline">
                   {{ hidden_ops(card, query) }}
                   <input type="hidden" name="_card_action" value="disable">
-                  <input type="text" name="reason" placeholder="سبب التعطيل" maxlength="220">
-                  <button class="hub-btn hub-btn--danger" type="submit"><i class="fa-solid fa-ban"></i> تعطيل</button>
+                  <input type="text" name="reason" placeholder="{{ _('سبب التعطيل') }}" maxlength="220">
+                  <button class="hub-btn hub-btn--danger" type="submit"><i class="fa-solid fa-ban"></i> {{ _('تعطيل') }}</button>
                 </form>
               {% endif %}
             </div>
 
             <div class="ops-action">
-              <h4>حذف نهائي</h4>
-              <p>خيار خطر. يزيل البطاقة نفسها، ولا يحذف سجلات المصادقة السابقة المرتبطة باسم الدخول.</p>
+              <h4>{{ _('حذف نهائي') }}</h4>
+              <p>{{ _('خيار خطر. يزيل البطاقة نفسها، ولا يحذف سجلات المصادقة السابقة المرتبطة باسم الدخول.') }}</p>
               <form method="post" class="ops-inline">
                 {{ hidden_ops(card, query) }}
                 <input type="hidden" name="_card_action" value="delete_permanent">
-                <input type="text" name="confirm_delete" placeholder="اكتب: حذف البطاقة" maxlength="20">
-                <button class="hub-btn hub-btn--danger" type="submit"><i class="fa-solid fa-trash"></i> حذف نهائي</button>
+                <input type="text" name="confirm_delete" placeholder="{{ _('اكتب: حذف البطاقة') }}" maxlength="20">
+                <button class="hub-btn hub-btn--danger" type="submit"><i class="fa-solid fa-trash"></i> {{ _('حذف نهائي') }}</button>
               </form>
             </div>
           </div>
@@ -314,20 +314,20 @@
 
     <section class="ops-card">
       <div class="ops-card-body">
-        <h3 class="ops-card-title"><span><i class="fa-solid fa-circle-info"></i> بيانات البطاقة والباقات</span></h3>
+        <h3 class="ops-card-title"><span><i class="fa-solid fa-circle-info"></i> {{ _('بيانات البطاقة والباقات') }}</span></h3>
         <div class="ops-details">
-          <div class="ops-field"><div class="k">الدفعة</div><div class="v">{% if card.batch %}{{ card.batch.batch_code }}{% if card.batch.package_name %} · {{ card.batch.package_name }}{% endif %}{% else %}غير مرتبطة{% endif %}</div></div>
-          <div class="ops-field"><div class="k">حالة الدفعة</div><div class="v">{{ card.batch.status if card.batch else '—' }}</div></div>
-          <div class="ops-field"><div class="k">منشئ الدفعة</div><div class="v">{{ card.batch.created_by if card.batch else '—' }}</div></div>
-          <div class="ops-field"><div class="k">الباقة</div><div class="v">{{ card.profile.name if card.profile else 'غير مرتبطة' }}</div></div>
-          <div class="ops-field"><div class="k">سرعة التنزيل/الرفع</div><div class="v">{% if card.profile %}{{ card.profile.speed_down_kbps or 0 }} / {{ card.profile.speed_up_kbps or 0 }} Kbps{% else %}—{% endif %}</div></div>
-          <div class="ops-field"><div class="k">الحصة</div><div class="v">{% if card.profile %}إجمالي {{ card.profile.quota_total_mb or 0 }} MB · يومي {{ card.profile.quota_daily_mb or 0 }} MB{% else %}—{% endif %}</div></div>
-          <div class="ops-field"><div class="k">تاريخ الإنشاء</div><div class="v mono">{{ dt(card.created_at) }}</div></div>
-          <div class="ops-field"><div class="k">بداية الاستخدام</div><div class="v mono">{{ dt(card.started_at) }}</div></div>
-          <div class="ops-field"><div class="k">تاريخ الانتهاء</div><div class="v mono">{{ dt(card.expires_at) }}</div></div>
-          <div class="ops-field"><div class="k">آخر ظهور</div><div class="v mono">{{ dt(card.last_seen_at) }}</div></div>
-          <div class="ops-field"><div class="k">آخر MAC</div><div class="v mono">{{ card.mac_address or '—' }}</div></div>
-          <div class="ops-field"><div class="k">آخر عنوان / جهاز</div><div class="v mono">{{ card.ip_address or '—' }} · {{ card.nas_address or '—' }}</div></div>
+          <div class="ops-field"><div class="k">{{ _('الدفعة') }}</div><div class="v">{% if card.batch %}{{ card.batch.batch_code }}{% if card.batch.package_name %} · {{ card.batch.package_name }}{% endif %}{% else %}غير مرتبطة{% endif %}</div></div>
+          <div class="ops-field"><div class="k">{{ _('حالة الدفعة') }}</div><div class="v">{{ card.batch.status if card.batch else '—' }}</div></div>
+          <div class="ops-field"><div class="k">{{ _('منشئ الدفعة') }}</div><div class="v">{{ card.batch.created_by if card.batch else '—' }}</div></div>
+          <div class="ops-field"><div class="k">{{ _('الباقة') }}</div><div class="v">{{ card.profile.name if card.profile else 'غير مرتبطة' }}</div></div>
+          <div class="ops-field"><div class="k">{{ _('سرعة التنزيل/الرفع') }}</div><div class="v">{% if card.profile %}{{ card.profile.speed_down_kbps or 0 }} / {{ card.profile.speed_up_kbps or 0 }} Kbps{% else %}—{% endif %}</div></div>
+          <div class="ops-field"><div class="k">{{ _('الحصة') }}</div><div class="v">{% if card.profile %}إجمالي {{ card.profile.quota_total_mb or 0 }} MB · يومي {{ card.profile.quota_daily_mb or 0 }} MB{% else %}—{% endif %}</div></div>
+          <div class="ops-field"><div class="k">{{ _('تاريخ الإنشاء') }}</div><div class="v mono">{{ dt(card.created_at) }}</div></div>
+          <div class="ops-field"><div class="k">{{ _('بداية الاستخدام') }}</div><div class="v mono">{{ dt(card.started_at) }}</div></div>
+          <div class="ops-field"><div class="k">{{ _('تاريخ الانتهاء') }}</div><div class="v mono">{{ dt(card.expires_at) }}</div></div>
+          <div class="ops-field"><div class="k">{{ _('آخر ظهور') }}</div><div class="v mono">{{ dt(card.last_seen_at) }}</div></div>
+          <div class="ops-field"><div class="k">{{ _('آخر MAC') }}</div><div class="v mono">{{ card.mac_address or '—' }}</div></div>
+          <div class="ops-field"><div class="k">{{ _('آخر عنوان / جهاز') }}</div><div class="v mono">{{ card.ip_address or '—' }} · {{ card.nas_address or '—' }}</div></div>
         </div>
       </div>
     </section>
@@ -335,7 +335,7 @@
     <section class="ops-card">
       <div class="ops-card-body">
         <h3 class="ops-card-title">
-          <span><i class="fa-solid fa-network-wired"></i> الأجهزة التي استخدمت البطاقة</span>
+          <span><i class="fa-solid fa-network-wired"></i> {{ _('الأجهزة التي استخدمت البطاقة') }}</span>
           <span class="ops-muted">{{ macs|length }} MAC معروض</span>
         </h3>
         {% if macs %}
@@ -348,7 +348,7 @@
             {% endfor %}
           </div>
         {% else %}
-          <div class="ops-empty">لا توجد MACات مسجلة لهذه البطاقة بعد.</div>
+          <div class="ops-empty">{{ _('لا توجد MACات مسجلة لهذه البطاقة بعد.') }}</div>
         {% endif %}
       </div>
     </section>
@@ -356,7 +356,7 @@
     <section class="ops-card">
       <div class="ops-card-body">
         <h3 class="ops-card-title">
-          <span><i class="fa-solid fa-table-list"></i> جدول الجلسات التفصيلي</span>
+          <span><i class="fa-solid fa-table-list"></i> {{ _('جدول الجلسات التفصيلي') }}</span>
           <span class="ops-muted">آخر {{ sessions|length }} جلسة</span>
         </h3>
         {% if sessions %}
@@ -364,27 +364,27 @@
             <table class="ops-table">
               <thead>
                 <tr>
-                  <th>الحالة</th>
-                  <th>معرّف الجلسة</th>
+                  <th>{{ _('الحالة') }}</th>
+                  <th>{{ _('معرّف الجلسة') }}</th>
                   <th>MAC</th>
                   <th>IP</th>
-                  <th>جهاز الشبكة</th>
-                  <th>المنفذ</th>
-                  <th>بدأت</th>
-                  <th>آخر تحديث</th>
-                  <th>انتهت</th>
-                  <th>المدة</th>
-                  <th>رفع</th>
-                  <th>تنزيل</th>
-                  <th>نوع الخدمة</th>
-                  <th>نوع المنفذ/الجهاز</th>
-                  <th>سبب الإنهاء</th>
+                  <th>{{ _('جهاز الشبكة') }}</th>
+                  <th>{{ _('المنفذ') }}</th>
+                  <th>{{ _('بدأت') }}</th>
+                  <th>{{ _('آخر تحديث') }}</th>
+                  <th>{{ _('انتهت') }}</th>
+                  <th>{{ _('المدة') }}</th>
+                  <th>{{ _('رفع') }}</th>
+                  <th>{{ _('تنزيل') }}</th>
+                  <th>{{ _('نوع الخدمة') }}</th>
+                  <th>{{ _('نوع المنفذ/الجهاز') }}</th>
+                  <th>{{ _('سبب الإنهاء') }}</th>
                 </tr>
               </thead>
               <tbody>
                 {% for session in sessions %}
                   <tr>
-                    <td>{% if session.online %}<span class="ops-online">متصلة</span>{% else %}<span class="ops-offline">منتهية</span>{% endif %}</td>
+                    <td>{% if session.online %}<span class="ops-online">{{ _('متصلة') }}</span>{% else %}<span class="ops-offline">{{ _('منتهية') }}</span>{% endif %}</td>
                     <td class="mono">{{ session.session_id or session.id }}</td>
                     <td class="mono">{{ session.mac_address or '—' }}</td>
                     <td class="mono">{{ session.ip_address or session.ipv6_address or '—' }}</td>
@@ -405,17 +405,17 @@
             </table>
           </div>
         {% else %}
-          <div class="ops-empty">لا توجد جلسات محفوظة في radacct لهذه البطاقة بعد.</div>
+          <div class="ops-empty">{{ _('لا توجد جلسات محفوظة في radacct لهذه البطاقة بعد.') }}</div>
         {% endif %}
       </div>
     </section>
 
     <section class="ops-card">
       <div class="ops-card-body">
-        <h3 class="ops-card-title"><span><i class="fa-solid fa-eye-slash"></i> بيانات غير متاحة حاليًا</span></h3>
+        <h3 class="ops-card-title"><span><i class="fa-solid fa-eye-slash"></i> {{ _('بيانات غير متاحة حاليًا') }}</span></h3>
         <div class="ops-alert info">
           <i class="fa-solid fa-lightbulb"></i>
-          <div>النظام يعرض ما هو محفوظ فعليًا في الجداول. نوع نظام الجهاز أو الشركة المصنعة لا يتوفر عادة من خدمة المصادقة إلا إذا أرسله جهاز الشبكة داخل حقول الاتصال.</div>
+          <div>{{ _('النظام يعرض ما هو محفوظ فعليًا في الجداول. نوع نظام الجهاز أو الشركة المصنعة لا يتوفر عادة من خدمة المصادقة إلا إذا أرسله جهاز الشبكة داخل حقول الاتصال.') }}</div>
         </div>
         <div class="ops-badges" style="margin-top:10px">
           {% set labels = {
@@ -434,7 +434,7 @@
           {% for item in card.missing_fields or [] %}
             <span class="ops-badge">{{ labels.get(item, item) }}</span>
           {% else %}
-            <span class="ops-badge ok">كل البيانات الأساسية متوفرة</span>
+            <span class="ops-badge ok">{{ _('كل البيانات الأساسية متوفرة') }}</span>
           {% endfor %}
         </div>
       </div>

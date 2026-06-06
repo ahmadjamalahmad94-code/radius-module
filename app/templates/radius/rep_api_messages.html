@@ -29,11 +29,11 @@
 ) %}
   <input class="hub-input grow" type="text" name="q"
          value="{{ filters.q if filters else '' }}"
-         placeholder="بحث (إجراء / هدف)…">
+         placeholder="{{ _('بحث (إجراء / هدف)…') }}">
   <input class="hub-input" type="date" name="date_from"
-         value="{{ filters.date_from if filters else '' }}" title="من تاريخ">
+         value="{{ filters.date_from if filters else '' }}" title="{{ _('من تاريخ') }}">
   <input class="hub-input" type="date" name="date_to"
-         value="{{ filters.date_to if filters else '' }}" title="إلى تاريخ">
+         value="{{ filters.date_to if filters else '' }}" title="{{ _('إلى تاريخ') }}">
   {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
   {% if filters and (filters.q or filters.date_from or filters.date_to) %}
     {{ hub.btn("مسح", icon="rotate-left", variant="ghost", size="sm",
@@ -62,12 +62,12 @@
         <thead>
           <tr>
             <th class="num" style="width:70px" data-uds-nosort>#</th>
-            <th>مفتاح الربط</th>
-            <th>الفعل</th>
-            <th>الكيان</th>
-            <th>المعرّف</th>
-            <th>عنوان الشبكة</th>
-            <th>الوقت</th>
+            <th>{{ _('مفتاح الربط') }}</th>
+            <th>{{ _('الفعل') }}</th>
+            <th>{{ _('الكيان') }}</th>
+            <th>{{ _('المعرّف') }}</th>
+            <th>{{ _('عنوان الشبكة') }}</th>
+            <th>{{ _('الوقت') }}</th>
           </tr>
         </thead>
         <tbody>

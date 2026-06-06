@@ -4,7 +4,7 @@
 {% block title %}أحداث الأمان — Hobe Hub{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-lock"></i>{% endblock %}
 {% block page_title %}أحداث الأمان{% endblock %}
-{% block page_sub %}<span class="sub">أحداث الأمان ومحاولات الدخول والتنبيهات المفتوحة التي تحتاج مراجعة.</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('أحداث الأمان ومحاولات الدخول والتنبيهات المفتوحة التي تحتاج مراجعة.') }}</span>{% endblock %}
 {% block head_extra %}{{ super() }}<link rel="stylesheet" href="{{ url_for('static', filename='css/ops_risk_redesign.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">{% endblock %}
 
@@ -51,15 +51,15 @@
 )) %}
 
   {% call hub.section("أحداث الأمان", icon="lock", meta=events|length|string + " حدث", flush=True) %}
-    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="15" data-uds-export-title="أحداث الأمان" style="border:none;border-radius:0">
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="15" data-uds-export-title="{{ _('أحداث الأمان') }}" style="border:none;border-radius:0">
       <table class="hub-table" data-testid="security-events-table">
         <thead>
           <tr>
-            <th class="num">الرقم</th>
-            <th>الخطورة</th>
-            <th data-uds-nosort>المفتاح</th>
-            <th data-uds-nosort>الهدف</th>
-            <th data-uds-nosort>الرسالة</th>
+            <th class="num">{{ _('الرقم') }}</th>
+            <th>{{ _('الخطورة') }}</th>
+            <th data-uds-nosort>{{ _('المفتاح') }}</th>
+            <th data-uds-nosort>{{ _('الهدف') }}</th>
+            <th data-uds-nosort>{{ _('الرسالة') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -87,12 +87,12 @@
       <table class="hub-table" data-uds-table data-testid="security-flags-table">
         <thead>
           <tr>
-            <th class="num">الرقم</th>
-            <th data-uds-nosort>المفتاح</th>
-            <th>الخطورة</th>
-            <th class="num">النقاط</th>
-            <th data-uds-nosort>الكيان</th>
-            <th data-uds-nosort>الملخص</th>
+            <th class="num">{{ _('الرقم') }}</th>
+            <th data-uds-nosort>{{ _('المفتاح') }}</th>
+            <th>{{ _('الخطورة') }}</th>
+            <th class="num">{{ _('النقاط') }}</th>
+            <th data-uds-nosort>{{ _('الكيان') }}</th>
+            <th data-uds-nosort>{{ _('الملخص') }}</th>
           </tr>
         </thead>
         <tbody>

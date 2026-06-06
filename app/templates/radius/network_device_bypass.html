@@ -24,10 +24,10 @@
 {# ───── Merged hero: title + subtitle + icon + device-state KPIs + actions ───── #}
 {% set _actions %}
   <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.network_devices_list') }}">
-    <i class="fa-solid fa-arrow-right"></i> العودة للقائمة
+    <i class="fa-solid fa-arrow-right"></i> {{ _('العودة للقائمة') }}
   </a>
   <a class="hub-btn hub-btn--ghost" href="{{ url_for('radius.network_devices_edit', device_id=device.id) }}">
-    <i class="fa-solid fa-pen"></i> تعديل الجهاز
+    <i class="fa-solid fa-pen"></i> {{ _('تعديل الجهاز') }}
   </a>
 {% endset %}
 {{ hub.megahero(
@@ -63,19 +63,19 @@
   {# ── Device summary ── #}
   {% call hub.section("بيانات الجهاز", icon="wifi") %}
     <div class="ndb-summary-grid">
-      <div><strong>الاسم:</strong> {{ device.name }}</div>
-      <div><strong>النوع:</strong> {{ device.device_type }}</div>
+      <div><strong>{{ _('الاسم:') }}</strong> {{ device.name }}</div>
+      <div><strong>{{ _('النوع:') }}</strong> {{ device.device_type }}</div>
       <div><strong>IP:</strong> <code class="ndb-mono" dir="ltr">{{ device.ip_address or '— غير محدّد' }}</code></div>
       <div><strong>MAC:</strong> <code class="ndb-mono" dir="ltr">{{ device.mac_address or '— غير محدّد' }}</code></div>
-      <div><strong>الراوتر:</strong> {{ nas.name }} (<code class="ndb-mono" dir="ltr">{{ nas.address }}</code>)</div>
+      <div><strong>{{ _('الراوتر:') }}</strong> {{ nas.name }} (<code class="ndb-mono" dir="ltr">{{ nas.address }}</code>)</div>
     </div>
     {% if not _ready %}
     <div class="ndb-warn ndb-warn--amber" style="margin-top:12px">
       <i class="fa-solid fa-triangle-exclamation"></i>
       <span>
-        لا يمكن المتابعة — الجهاز يحتاج MAC + IP محفوظَين.
+        {{ _('لا يمكن المتابعة — الجهاز يحتاج MAC + IP محفوظَين.') }}
         <a href="{{ url_for('radius.network_devices_edit', device_id=device.id) }}"
-           class="ndb-warn-link">أضفها الآن →</a>
+           class="ndb-warn-link">{{ _('أضفها الآن →') }}</a>
       </span>
     </div>
     {% endif %}
@@ -94,7 +94,7 @@
       {% if dhcp_error %}
       <div class="ndb-warn ndb-warn--red" style="margin-bottom:14px">
         <i class="fa-solid fa-circle-xmark"></i>
-        <span>تعذّر قراءة قائمة DHCP servers من الراوتر:
+        <span>{{ _('تعذّر قراءة قائمة DHCP servers من الراوتر:') }}
           <code class="ndb-mono" dir="ltr">{{ dhcp_error }}</code></span>
       </div>
       {% endif %}
@@ -105,7 +105,7 @@
           DHCP Server <span style="color:var(--hub-danger, #DC2626)">*</span>
         </label>
         <select class="hub-input ndb-mono" name="dhcp_server_name" id="dhcp_server_name" required>
-          <option value="">-- اختر -- </option>
+          <option value="">{{ _('-- اختر --') }} </option>
           {% for s in dhcp_servers %}
             <option value="{{ s.name }}" {% if s.disabled %}disabled{% endif %}>
               {{ s.name }}
@@ -115,7 +115,7 @@
           {% endfor %}
         </select>
         <span class="hub-field-hint">
-          الـ static lease يُضاف على هذا الـ DHCP server. اختر اللي يخدم شبكة الجهاز.
+          {{ _('الـ static lease يُضاف على هذا الـ DHCP server. اختر اللي يخدم شبكة الجهاز.') }}
         </span>
       </div>
 
@@ -124,9 +124,9 @@
         <div class="uds-toggle-row-text">
           <span class="uds-toggle-row-label">
             <i class="fa-solid fa-circle-check" style="color:#10B981"></i>
-            تخطّي صفحة بوابة الدخول (ربط العنوان)
+            {{ _('تخطّي صفحة بوابة الدخول (ربط العنوان)') }}
           </span>
-          <span class="uds-toggle-row-meta">الجهاز يصبح متاحًا مباشرة بدون شاشة تسجيل دخول.</span>
+          <span class="uds-toggle-row-meta">{{ _('الجهاز يصبح متاحًا مباشرة بدون شاشة تسجيل دخول.') }}</span>
         </div>
         {{ toggle_switch(name="bypass_hotspot", id="bypass_hotspot", checked=True) }}
       </div>
@@ -135,20 +135,20 @@
         <div class="uds-toggle-row-text">
           <span class="uds-toggle-row-label">
             <i class="fa-solid fa-list" style="color:#2563EB"></i>
-            أضف العنوان لقائمة <code class="ndb-mono">HOBE_NETWORK_DEVICES</code>
+            {{ _('أضف العنوان لقائمة') }} <code class="ndb-mono">HOBE_NETWORK_DEVICES</code>
           </span>
-          <span class="uds-toggle-row-meta">قائمة موحّدة يمكنك استخدامها في firewall rules لتطبيق سياسات على كل أجهزة الإدارة دفعة واحدة.</span>
+          <span class="uds-toggle-row-meta">{{ _('قائمة موحّدة يمكنك استخدامها في firewall rules لتطبيق سياسات على كل أجهزة الإدارة دفعة واحدة.') }}</span>
         </div>
         {{ toggle_switch(name="add_to_address_list", id="add_to_address_list", checked=True) }}
       </div>
 
       <div style="display:flex;gap:10px;margin-top:20px;padding-top:18px;border-top:1px solid var(--hub-border)">
         <button type="submit" class="hub-btn hub-btn--primary">
-          <i class="fa-solid fa-play"></i> طبّق على الراوتر
+          <i class="fa-solid fa-play"></i> {{ _('طبّق على الراوتر') }}
         </button>
         <a href="{{ url_for('radius.network_devices_list') }}"
            class="hub-btn hub-btn--ghost">
-          إلغاء
+          {{ _('إلغاء') }}
         </a>
       </div>
     {% endcall %}
@@ -157,7 +157,7 @@
   {# ── Cleanup section ── #}
   {% call hub.section("إزالة التجهيز", icon="eraser") %}
     <p class="hub-text-mute" style="margin:0 0 12px;font-size:12.5px;line-height:1.7">
-      يحذف كل السطور على الراوتر اللي تحمل علامة
+      {{ _('يحذف كل السطور على الراوتر اللي تحمل علامة') }}
       <code class="ndb-mono" dir="ltr">HOBE_DEVICE_BYPASS:{{ device.id }}:</code> —
       آمن، لا يلمس أي إعدادات وضعتها يدويًا.
     </p>
@@ -166,7 +166,7 @@
           onsubmit="return confirm('تأكيد إزالة التجهيز من الراوتر؟');">
       {{ csrf_token_input() | safe }}
       <button type="submit" class="hub-btn hub-btn--danger">
-        <i class="fa-solid fa-trash"></i> إزالة من الراوتر
+        <i class="fa-solid fa-trash"></i> {{ _('إزالة من الراوتر') }}
       </button>
     </form>
   {% endcall %}

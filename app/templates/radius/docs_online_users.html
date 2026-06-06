@@ -224,15 +224,15 @@
 <div class="dg-layout">
 
   {# ───── الفهرس الجانبي اللاصق ───── #}
-  <nav class="dg-toc dg-noprint" aria-label="فهرس الدليل">
-    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> فهرس الأقسام</div>
-    <a href="#dg-s1" data-dg-toc><span class="n">1</span> افتح الصفحة واقرأ رأسها</a>
-    <a href="#dg-s2" data-dg-toc><span class="n">2</span> الفلاتر الأربعة</a>
-    <a href="#dg-s3" data-dg-toc><span class="n">3</span> أعمدة الجلسة بالتفصيل</a>
-    <a href="#dg-s4" data-dg-toc><span class="n">4</span> حالة السرعة والعدّاد الحي</a>
-    <a href="#dg-s5" data-dg-toc><span class="n">5</span> إجراءات الصف + السرعة المؤقتة</a>
-    <a href="#dg-s6" data-dg-toc><span class="n">6</span> التحديد المتعدد والفصل الجماعي</a>
-    <a href="#dg-s7" data-dg-toc><span class="n">7</span> مشترك مش ظاهر هون؟</a>
+  <nav class="dg-toc dg-noprint" aria-label="{{ _('فهرس الدليل') }}">
+    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> {{ _('فهرس الأقسام') }}</div>
+    <a href="#dg-s1" data-dg-toc><span class="n">1</span> {{ _('افتح الصفحة واقرأ رأسها') }}</a>
+    <a href="#dg-s2" data-dg-toc><span class="n">2</span> {{ _('الفلاتر الأربعة') }}</a>
+    <a href="#dg-s3" data-dg-toc><span class="n">3</span> {{ _('أعمدة الجلسة بالتفصيل') }}</a>
+    <a href="#dg-s4" data-dg-toc><span class="n">4</span> {{ _('حالة السرعة والعدّاد الحي') }}</a>
+    <a href="#dg-s5" data-dg-toc><span class="n">5</span> {{ _('إجراءات الصف + السرعة المؤقتة') }}</a>
+    <a href="#dg-s6" data-dg-toc><span class="n">6</span> {{ _('التحديد المتعدد والفصل الجماعي') }}</a>
+    <a href="#dg-s7" data-dg-toc><span class="n">7</span> {{ _('مشترك مش ظاهر هون؟') }}</a>
   </nav>
 
   {# ───── عمود المحتوى ───── #}
@@ -241,10 +241,10 @@
     <div class="dg-lead">
       <span class="ic"><i class="fa-solid fa-lightbulb"></i></span>
       <div>
-        <h3>قبل ما نبدأ — شو يعني «جلسة»؟</h3>
+        <h3>{{ _('قبل ما نبدأ — شو يعني «جلسة»؟') }}</h3>
         <p>
           كل ما يدخل مشترك على الإنترنت تنفتح له «جلسة» على الشبكة: عنوان IP، جهاز، سرعة،
-          واستهلاك يتراكم. هذه الصفحة تعرض <strong>الجلسات الحيّة فقط</strong> — مين متصل
+          واستهلاك يتراكم. هذه الصفحة تعرض <strong>{{ _('الجلسات الحيّة فقط') }}</strong> — مين متصل
           في هذه اللحظة — وتعطيك أدوات تحكم فورية: قطع، تثبيت، تحديد سرعة مؤقتة، ورسائل.
         </p>
       </div>
@@ -254,44 +254,44 @@
     <section class="dg-step" id="dg-s1">
       <div class="dg-badge">1</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-door-open"></i> افتح الصفحة واقرأ رأسها</h2>
+        <h2><i class="fa-solid fa-door-open"></i> {{ _('افتح الصفحة واقرأ رأسها') }}</h2>
         <p>
-          من القائمة الجانبية افتح <strong>«المشتركون»</strong> ثم
-          <strong>«المشتركون المتصلون»</strong>. في رأس الصفحة:
+          {{ _('من القائمة الجانبية افتح') }} <strong>{{ _('«المشتركون»') }}</strong> {{ _('ثم') }}
+          <strong>{{ _('«المشتركون المتصلون»') }}</strong>{{ _('. في رأس الصفحة:') }}
         </p>
         <ul>
-          <li>زرّا تبديل العرض: <strong>«المشتركون»</strong> و<strong>«الكروت»</strong> —
+          <li>{{ _('زرّا تبديل العرض:') }} <strong>{{ _('«المشتركون»') }}</strong> {{ _('و') }}<strong>{{ _('«الكروت»') }}</strong> —
               الصفحة تفصل بينهما: الافتراضي يعرض جلسات المشتركين فقط، واضغط «الكروت»
               لجلسات كروت الواي فاي فقط.</li>
-          <li>ثلاث بطاقات أرقام: <strong>جلسات نشطة</strong> (العدد الكلي)،
-              <strong>تنزيل (MB)</strong> و<strong>رفع (MB)</strong> — مجموع استهلاك
+          <li>{{ _('ثلاث بطاقات أرقام:') }} <strong>{{ _('جلسات نشطة') }}</strong> {{ _('(العدد الكلي)،') }}
+              <strong>{{ _('تنزيل (MB)') }}</strong> {{ _('و') }}<strong>{{ _('رفع (MB)') }}</strong> — مجموع استهلاك
               كل الجلسات الظاهرة.</li>
-          <li>سطر فرعي يبيّن <strong>وضع التشغيل</strong> (مايكروتك / يدوي...). لو كان
+          <li>{{ _('سطر فرعي يبيّن') }} <strong>{{ _('وضع التشغيل') }}</strong> (مايكروتك / يدوي...). لو كان
               «يدوي» يظهر تنبيه أصفر: لا جلسات حية حتى تفعّل وضع الربط الفعلي.</li>
         </ul>
         <p>
-          الأرقام والقائمة <strong>لقطة لحظة فتح الصفحة</strong> — اضغط تحديث المتصفح
+          {{ _('الأرقام والقائمة') }} <strong>{{ _('لقطة لحظة فتح الصفحة') }}</strong> — اضغط تحديث المتصفح
           (<span class="dg-kbd">F5</span>) لأحدث صورة، أما عدّادات «السرعة المؤقتة»
           (القسم 4) فهي تنبض حيّة كل ثانية بدون تحديث.
         </p>
 
         <div class="dg-mock" aria-hidden="true">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">المتصلون الآن › رأس الصفحة</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('المتصلون الآن › رأس الصفحة') }}</span></div>
           <div class="dg-mock-body">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
               <div style="display:flex;align-items:center;gap:9px">
                 <span style="width:32px;height:32px;border-radius:9px;display:grid;place-items:center;background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;font-size:13px"><i class="fa-solid fa-wifi"></i></span>
-                <span style="font-size:13px;font-weight:900;color:#0f172a">المتصلون الآن</span>
+                <span style="font-size:13px;font-weight:900;color:#0f172a">{{ _('المتصلون الآن') }}</span>
               </div>
               <div style="display:flex;gap:6px">
-                <span class="dg-fbtn primary"><i class="fa-solid fa-users"></i> المشتركون</span>
-                <span class="dg-fbtn ghost"><i class="fa-solid fa-id-card"></i> الكروت</span>
+                <span class="dg-fbtn primary"><i class="fa-solid fa-users"></i> {{ _('المشتركون') }}</span>
+                <span class="dg-fbtn ghost"><i class="fa-solid fa-id-card"></i> {{ _('الكروت') }}</span>
               </div>
             </div>
             <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
-              <div style="border:1px solid #bbf7d0;border-radius:10px;padding:8px;background:#f0fdf4"><div style="font-size:9px;font-weight:800;color:#15803d">جلسات نشطة</div><div style="font-size:15px;font-weight:900;color:#166534">42</div></div>
-              <div style="border:1px solid #bfdbfe;border-radius:10px;padding:8px;background:#eff6ff"><div style="font-size:9px;font-weight:800;color:#1d4ed8">تنزيل (MB)</div><div style="font-size:15px;font-weight:900;color:#1e40af">3,540.2</div></div>
-              <div style="border:1px solid #fde68a;border-radius:10px;padding:8px;background:#fffbeb"><div style="font-size:9px;font-weight:800;color:#b45309">رفع (MB)</div><div style="font-size:15px;font-weight:900;color:#92400e">612.8</div></div>
+              <div style="border:1px solid #bbf7d0;border-radius:10px;padding:8px;background:#f0fdf4"><div style="font-size:9px;font-weight:800;color:#15803d">{{ _('جلسات نشطة') }}</div><div style="font-size:15px;font-weight:900;color:#166534">42</div></div>
+              <div style="border:1px solid #bfdbfe;border-radius:10px;padding:8px;background:#eff6ff"><div style="font-size:9px;font-weight:800;color:#1d4ed8">{{ _('تنزيل (MB)') }}</div><div style="font-size:15px;font-weight:900;color:#1e40af">3,540.2</div></div>
+              <div style="border:1px solid #fde68a;border-radius:10px;padding:8px;background:#fffbeb"><div style="font-size:9px;font-weight:800;color:#b45309">{{ _('رفع (MB)') }}</div><div style="font-size:15px;font-weight:900;color:#92400e">612.8</div></div>
             </div>
           </div>
         </div>
@@ -302,37 +302,37 @@
     <section class="dg-step" id="dg-s2">
       <div class="dg-badge">2</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-filter"></i> ضيّق الرؤية بالفلاتر الأربعة</h2>
+        <h2><i class="fa-solid fa-filter"></i> {{ _('ضيّق الرؤية بالفلاتر الأربعة') }}</h2>
         <p>
-          تحت الأرقام أربع قوائم على شكل حبوب وبجانبها زر <strong>«عرض»</strong>
-          البنفسجي الذي يطبّقها:
+          {{ _('تحت الأرقام أربع قوائم على شكل حبوب وبجانبها زر') }} <strong>{{ _('«عرض»') }}</strong>
+          {{ _('البنفسجي الذي يطبّقها:') }}
         </p>
         <ul>
-          <li><strong>السيرفر:</strong> اعرض جلسات راوتر/سيرفر شبكة واحد فقط — مفيد لما
+          <li><strong>{{ _('السيرفر:') }}</strong> اعرض جلسات راوتر/سيرفر شبكة واحد فقط — مفيد لما
               تشك بمشكلة على جهاز معيّن.</li>
-          <li><strong>العرض:</strong> جلسات باقة واحدة (مثلًا: كل متصلي «باقة 10 ميجا»).</li>
-          <li><strong>المجموعة:</strong> جلسات أعضاء مجموعة مشتركين واحدة.</li>
-          <li><strong>نوع السرعة:</strong> كل السرعات / <strong>سرعة خاصة أو مؤقتة</strong> /
-              <strong>سرعة مؤقتة فقط</strong> / <strong>بدون سرعة خاصة</strong> — لتصطاد
+          <li><strong>{{ _('العرض:') }}</strong> {{ _('جلسات باقة واحدة (مثلًا: كل متصلي «باقة 10 ميجا»).') }}</li>
+          <li><strong>{{ _('المجموعة:') }}</strong> {{ _('جلسات أعضاء مجموعة مشتركين واحدة.') }}</li>
+          <li><strong>{{ _('نوع السرعة:') }}</strong> {{ _('كل السرعات /') }} <strong>{{ _('سرعة خاصة أو مؤقتة') }}</strong> /
+              <strong>{{ _('سرعة مؤقتة فقط') }}</strong> / <strong>{{ _('بدون سرعة خاصة') }}</strong> — لتصطاد
               بسرعة من عليه قيود سرعة غير سرعة العرض.</li>
         </ul>
 
         <div class="dg-mock" aria-hidden="true">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">المتصلون الآن › الفلاتر</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('المتصلون الآن › الفلاتر') }}</span></div>
           <div class="dg-mock-body">
             <div class="dg-fbar">
-              <span class="dg-fpill"><i class="fa-solid fa-server" style="color:#7c3aed;font-size:9px"></i> كل السيرفرات</span>
-              <span class="dg-fpill"><i class="fa-solid fa-cubes" style="color:#7c3aed;font-size:9px"></i> كل العروض</span>
-              <span class="dg-fpill"><i class="fa-solid fa-people-group" style="color:#7c3aed;font-size:9px"></i> كل المجموعات</span>
-              <span class="dg-fpill"><i class="fa-solid fa-gauge-high" style="color:#7c3aed;font-size:9px"></i> كل السرعات</span>
-              <span class="dg-fbtn primary pillr"><i class="fa-solid fa-filter"></i> عرض</span>
+              <span class="dg-fpill"><i class="fa-solid fa-server" style="color:#7c3aed;font-size:9px"></i> {{ _('كل السيرفرات') }}</span>
+              <span class="dg-fpill"><i class="fa-solid fa-cubes" style="color:#7c3aed;font-size:9px"></i> {{ _('كل العروض') }}</span>
+              <span class="dg-fpill"><i class="fa-solid fa-people-group" style="color:#7c3aed;font-size:9px"></i> {{ _('كل المجموعات') }}</span>
+              <span class="dg-fpill"><i class="fa-solid fa-gauge-high" style="color:#7c3aed;font-size:9px"></i> {{ _('كل السرعات') }}</span>
+              <span class="dg-fbtn primary pillr"><i class="fa-solid fa-filter"></i> {{ _('عرض') }}</span>
             </div>
           </div>
         </div>
 
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>نصيحة:</b> تبحث عن مشترك واحد بالاسم؟ هذه صفحة جلسات حيّة — الأسرع
+          <span><b>{{ _('نصيحة:') }}</b> تبحث عن مشترك واحد بالاسم؟ هذه صفحة جلسات حيّة — الأسرع
           تفتح «المشتركين 360»، تكتب اسمه في البحث الفوري، وتشوف عمود «الجلسات»: حبّة
           خضراء = متصل الآن.</span>
         </div>
@@ -343,37 +343,37 @@
     <section class="dg-step" id="dg-s3">
       <div class="dg-badge">3</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-table-columns"></i> اقرأ أعمدة الجلسة — كل عمود شو يعني</h2>
-        <p>جدول الجلسات 18 عمودًا، أهمها:</p>
+        <h2><i class="fa-solid fa-table-columns"></i> {{ _('اقرأ أعمدة الجلسة — كل عمود شو يعني') }}</h2>
+        <p>{{ _('جدول الجلسات 18 عمودًا، أهمها:') }}</p>
         <ul>
-          <li><strong>المستخدم:</strong> اسم المشترك (والاسم الكامل إن وُجد).</li>
-          <li><strong>العرض:</strong> الباقة التي يتصل عليها.</li>
-          <li><strong>IP:</strong> العنوان الذي أخذه جهازه في هذه الجلسة.</li>
-          <li><strong>جهاز الشبكة:</strong> عنوان الراوتر/السيرفر الذي مرّت منه الجلسة.</li>
-          <li><strong>نوع الجهاز:</strong> اسم جهاز المشترك ونظامه (أندرويد، آيفون، ويندوز...)
+          <li><strong>{{ _('المستخدم:') }}</strong> {{ _('اسم المشترك (والاسم الكامل إن وُجد).') }}</li>
+          <li><strong>{{ _('العرض:') }}</strong> {{ _('الباقة التي يتصل عليها.') }}</li>
+          <li><strong>IP:</strong> {{ _('العنوان الذي أخذه جهازه في هذه الجلسة.') }}</li>
+          <li><strong>{{ _('جهاز الشبكة:') }}</strong> {{ _('عنوان الراوتر/السيرفر الذي مرّت منه الجلسة.') }}</li>
+          <li><strong>{{ _('نوع الجهاز:') }}</strong> اسم جهاز المشترك ونظامه (أندرويد، آيفون، ويندوز...)
               كما تعرّف عليه الراوتر من DHCP.</li>
-          <li><strong>سرعة العرض / السرعة الحالية:</strong> الأولى سرعة الباقة الرسمية،
+          <li><strong>{{ _('سرعة العرض / السرعة الحالية:') }}</strong> الأولى سرعة الباقة الرسمية،
               والثانية المطبَّقة فعلًا الآن — تتلوّن إن كان عليه قيد (القسم التالي).</li>
-          <li><strong>وقت الجلسة:</strong> منذ متى متصل (مثل <span class="dg-kbd">2س 14د</span>).</li>
-          <li><strong>تحميل / رفع:</strong> استهلاك هذه الجلسة بالميجابايت.</li>
-          <li><strong>ماك ادرس:</strong> العنوان الفيزيائي لجهاز المشترك.</li>
-          <li><strong>المدير</strong>، <strong>معرف الخدمة</strong>،
-              و<strong>منفذ الاتصال</strong> (اسم الواجهة/الهوت سبوت على الراوتر).</li>
-          <li><strong>إجراءات:</strong> أربعة أزرار لكل صف — القسم 5.</li>
+          <li><strong>{{ _('وقت الجلسة:') }}</strong> {{ _('منذ متى متصل (مثل') }} <span class="dg-kbd">{{ _('2س 14د') }}</span>).</li>
+          <li><strong>{{ _('تحميل / رفع:') }}</strong> {{ _('استهلاك هذه الجلسة بالميجابايت.') }}</li>
+          <li><strong>{{ _('ماك ادرس:') }}</strong> {{ _('العنوان الفيزيائي لجهاز المشترك.') }}</li>
+          <li><strong>{{ _('المدير') }}</strong>{{ _('،') }} <strong>{{ _('معرف الخدمة') }}</strong>،
+              و<strong>{{ _('منفذ الاتصال') }}</strong> {{ _('(اسم الواجهة/الهوت سبوت على الراوتر).') }}</li>
+          <li><strong>{{ _('إجراءات:') }}</strong> {{ _('أربعة أزرار لكل صف — القسم 5.') }}</li>
         </ul>
         <p>
-          زر <strong>«عرض/إخفاء الأعمدة»</strong> فوق الجدول يفتح قائمة صناديق اختيار —
-          أخفِ ما لا يهمك واختيارك <strong>يُحفظ تلقائيًا</strong> للزيارات القادمة.
+          {{ _('زر') }} <strong>{{ _('«عرض/إخفاء الأعمدة»') }}</strong> فوق الجدول يفتح قائمة صناديق اختيار —
+          أخفِ ما لا يهمك واختيارك <strong>{{ _('يُحفظ تلقائيًا') }}</strong> للزيارات القادمة.
           وأسفل الجدول مرقّم صفحات (10/20/50/100 صف بالصفحة).
         </p>
 
         <div class="dg-mock" aria-hidden="true">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">المتصلون الآن › الجدول</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('المتصلون الآن › الجدول') }}</span></div>
           <div class="dg-mock-body" style="padding:0">
             <div class="dg-tbl" style="border:0;border-radius:0">
-              <div class="hd"><span></span><span>المستخدم</span><span>IP</span><span>وقت الجلسة</span><span>تحميل</span><span>رفع</span></div>
-              <div class="rw"><span class="dg-ck"></span><span style="font-weight:900;color:#241e4e">ahmad2026</span><span style="font-family:monospace">10.5.0.14</span><span>2س 14د</span><span>840.5 MB</span><span>96.1 MB</span></div>
-              <div class="rw"><span class="dg-ck"></span><span style="font-weight:900;color:#241e4e">sara_net</span><span style="font-family:monospace">10.5.0.27</span><span>41د</span><span>122.0 MB</span><span>18.4 MB</span></div>
+              <div class="hd"><span></span><span>{{ _('المستخدم') }}</span><span>IP</span><span>{{ _('وقت الجلسة') }}</span><span>{{ _('تحميل') }}</span><span>{{ _('رفع') }}</span></div>
+              <div class="rw"><span class="dg-ck"></span><span style="font-weight:900;color:#241e4e">ahmad2026</span><span style="font-family:monospace">10.5.0.14</span><span>{{ _('2س 14د') }}</span><span>840.5 MB</span><span>96.1 MB</span></div>
+              <div class="rw"><span class="dg-ck"></span><span style="font-weight:900;color:#241e4e">sara_net</span><span style="font-family:monospace">10.5.0.27</span><span>{{ _('41د') }}</span><span>122.0 MB</span><span>18.4 MB</span></div>
             </div>
           </div>
         </div>
@@ -384,25 +384,25 @@
     <section class="dg-step" id="dg-s4">
       <div class="dg-badge">4</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-gauge-high"></i> افهم «حالة السرعة» وعدّادها الحي</h2>
-        <p>عمود «حالة السرعة» يلخّص وضع كل جلسة بحبّة ملوّنة:</p>
+        <h2><i class="fa-solid fa-gauge-high"></i> {{ _('افهم «حالة السرعة» وعدّادها الحي') }}</h2>
+        <p>{{ _('عمود «حالة السرعة» يلخّص وضع كل جلسة بحبّة ملوّنة:') }}</p>
         <ul>
-          <li><span class="dg-pill n">العرض</span> — طبيعي: المشترك على سرعة باقته بلا أي قيد.</li>
-          <li><span class="dg-pill c"><i class="fa-solid fa-bolt"></i> خاصة</span> — عليه سرعة
+          <li><span class="dg-pill n">{{ _('العرض') }}</span> {{ _('— طبيعي: المشترك على سرعة باقته بلا أي قيد.') }}</li>
+          <li><span class="dg-pill c"><i class="fa-solid fa-bolt"></i> {{ _('خاصة') }}</span> — عليه سرعة
               مخصّصة دائمة تتجاوز سرعة الباقة (من ملفه).</li>
-          <li><span class="dg-pill t"><i class="fa-solid fa-clock"></i> مؤقتة · باقٍ 04:32</span> —
-              عليه سرعة مؤقتة <strong>والعدّاد ينقص أمامك كل ثانية</strong>؛ عند الصفر
+          <li><span class="dg-pill t"><i class="fa-solid fa-clock"></i> {{ _('مؤقتة · باقٍ 04:32') }}</span> —
+              عليه سرعة مؤقتة <strong>{{ _('والعدّاد ينقص أمامك كل ثانية') }}</strong>؛ عند الصفر
               ترجع سرعته الأصلية تلقائيًا وتتحول الحبّة لـ«العرض».</li>
         </ul>
         <p>
-          ولاحظ التفصيلة الذكية: الصف الذي عليه سرعة خاصة أو مؤقتة يُعلَّم بخط
-          <strong>برتقالي رفيع</strong> على حافته — تلتقطه بعينك من بعيد. وعمود
-          <strong>«السرعة الحالية»</strong> يتلوّن بالكهرماني عند القيد المؤقت ليؤكد لك
+          {{ _('ولاحظ التفصيلة الذكية: الصف الذي عليه سرعة خاصة أو مؤقتة يُعلَّم بخط') }}
+          <strong>{{ _('برتقالي رفيع') }}</strong> {{ _('على حافته — تلتقطه بعينك من بعيد. وعمود') }}
+          <strong>{{ _('«السرعة الحالية»') }}</strong> يتلوّن بالكهرماني عند القيد المؤقت ليؤكد لك
           أن المعروض هو المطبَّق فعلًا الآن، لا سرعة الباقة.
         </p>
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>نصيحة:</b> فلتر «نوع السرعة ← سرعة مؤقتة فقط» + هذا العمود = لوحة
+          <span><b>{{ _('نصيحة:') }}</b> فلتر «نوع السرعة ← سرعة مؤقتة فقط» + هذا العمود = لوحة
           مراقبة جاهزة لكل القيود المؤقتة الجارية ومتى ينتهي كل واحد منها.</span>
         </div>
       </div>
@@ -412,37 +412,37 @@
     <section class="dg-step" id="dg-s5">
       <div class="dg-badge">5</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-bolt"></i> إجراءات الصف — ومنها «السرعة المؤقتة»</h2>
-        <p>آخر عمود في كل جلسة أربعة أزرار صغيرة:</p>
+        <h2><i class="fa-solid fa-bolt"></i> {{ _('إجراءات الصف — ومنها «السرعة المؤقتة»') }}</h2>
+        <p>{{ _('آخر عمود في كل جلسة أربعة أزرار صغيرة:') }}</p>
         <ul>
-          <li><strong>عرض 360° 🎛:</strong> يفتح ملف المشترك الكامل (أو فاحص الكرت إن
+          <li><strong>{{ _('عرض 360° 🎛:') }}</strong> يفتح ملف المشترك الكامل (أو فاحص الكرت إن
               كانت الجلسة كرتًا).</li>
-          <li><strong>تعديل ✏:</strong> يفتح نموذج تعديل المشترك مباشرة.</li>
-          <li><strong>قطع 🔌 (أحمر):</strong> يقطع هذه الجلسة من الشبكة فورًا — مع
+          <li><strong>{{ _('تعديل ✏:') }}</strong> {{ _('يفتح نموذج تعديل المشترك مباشرة.') }}</li>
+          <li><strong>{{ _('قطع 🔌 (أحمر):') }}</strong> يقطع هذه الجلسة من الشبكة فورًا — مع
               رسالة تأكيد «قطع جلسة …؟» قبل التنفيذ.</li>
-          <li><strong>سرعة مؤقتة ⏱:</strong> يفتح نافذة عائمة تكتب فيها
-              <strong>التنزيل والرفع (كيلوبت/ث)</strong> و<strong>المدة (دقائق)</strong>
-              ثم <strong>«تطبيق فوري»</strong> — السرعة تتغيّر في نفس اللحظة وترجع
+          <li><strong>{{ _('سرعة مؤقتة ⏱:') }}</strong> {{ _('يفتح نافذة عائمة تكتب فيها') }}
+              <strong>{{ _('التنزيل والرفع (كيلوبت/ث)') }}</strong> {{ _('و') }}<strong>{{ _('المدة (دقائق)') }}</strong>
+              {{ _('ثم') }} <strong>{{ _('«تطبيق فوري»') }}</strong> — السرعة تتغيّر في نفس اللحظة وترجع
               تلقائيًا بعد انتهاء المدة. وإن كان عليه قيد جارٍ يظهر زر إضافي:
-              <strong>«إلغاء السرعة المؤقتة الآن»</strong>.</li>
+              <strong>{{ _('«إلغاء السرعة المؤقتة الآن»') }}</strong>.</li>
         </ul>
 
         <div class="dg-modal" aria-hidden="true">
-          <div class="hd"><span><i class="fa-solid fa-gauge-simple-high" style="color:#7c3aed"></i> سرعة مؤقتة</span><i class="fa-solid fa-xmark x"></i></div>
-          <div style="font-size:10px;color:#64748b;font-weight:700">لـ «ahmad2026»</div>
-          <label>التنزيل (كيلوبت/ث)</label>
+          <div class="hd"><span><i class="fa-solid fa-gauge-simple-high" style="color:#7c3aed"></i> {{ _('سرعة مؤقتة') }}</span><i class="fa-solid fa-xmark x"></i></div>
+          <div style="font-size:10px;color:#64748b;font-weight:700">{{ _('لـ «ahmad2026»') }}</div>
+          <label>{{ _('التنزيل (كيلوبت/ث)') }}</label>
           <div class="inp">1024</div>
-          <label>الرفع (كيلوبت/ث)</label>
+          <label>{{ _('الرفع (كيلوبت/ث)') }}</label>
           <div class="inp">1024</div>
-          <label>المدة (دقائق)</label>
+          <label>{{ _('المدة (دقائق)') }}</label>
           <div class="inp">5</div>
-          <span class="dg-fbtn primary" style="justify-content:center"><i class="fa-solid fa-bolt"></i> تطبيق فوري</span>
+          <span class="dg-fbtn primary" style="justify-content:center"><i class="fa-solid fa-bolt"></i> {{ _('تطبيق فوري') }}</span>
         </div>
-        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> نافذة السرعة المؤقتة — قيّد مشتركًا يستنزف الشبكة 5 دقائق وترجع سرعته وحدها.</div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> {{ _('نافذة السرعة المؤقتة — قيّد مشتركًا يستنزف الشبكة 5 دقائق وترجع سرعته وحدها.') }}</div>
 
         <div class="dg-warn">
           <span class="ic">⚠️</span>
-          <span><b>انتبه:</b> «قطع» يفصل <b>الجلسة الحالية فقط</b> — المشترك يقدر يتصل من
+          <span><b>{{ _('انتبه:') }}</b> {{ _('«قطع» يفصل') }} <b>{{ _('الجلسة الحالية فقط') }}</b> — المشترك يقدر يتصل من
           جديد فورًا لأن حسابه ما زال مفعَّلًا. إذا تريد منعه نهائيًا عطّل حسابه من
           صفحة المشتركين 360 (إدارية ← تعطيل المشترك) ثم اقطع جلسته.</span>
         </div>
@@ -453,49 +453,49 @@
     <section class="dg-step" id="dg-s6">
       <div class="dg-badge">6</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-check-double"></i> حدّد عدة جلسات ونفّذ دفعة واحدة</h2>
+        <h2><i class="fa-solid fa-check-double"></i> {{ _('حدّد عدة جلسات ونفّذ دفعة واحدة') }}</h2>
         <p>
-          علّم مربعات أول عمود — أو <strong>اضغط على أي صف نفسه</strong> فيتحدد
+          {{ _('علّم مربعات أول عمود — أو') }} <strong>{{ _('اضغط على أي صف نفسه') }}</strong> فيتحدد
           (ومربع رأس الجدول يحدد الكل). فوق الجدول شريط أزرار يتفعّل مع التحديد:
         </p>
         <ul>
-          <li><strong>«المحدد: N»:</strong> عدّاد يعرض كم جلسة محددة الآن.</li>
-          <li><strong>«فصل الاتصال» (أحمر):</strong> يقطع <strong>كل الجلسات المحددة</strong>
-              دفعة واحدة — التأكيد يعرض أسماءها قبل التنفيذ.</li>
-          <li><strong>«عرض 360°» و«تعديل»:</strong> يفتحان ملف/تعديل <strong>آخر جلسة
-              حدّدتها</strong> (إجراءان فرديان).</li>
-          <li><strong>«إغلاق بالماك»:</strong> يقفل حسابات المحدَّدين على ماك أجهزتهم
+          <li><strong>{{ _('«المحدد: N»:') }}</strong> {{ _('عدّاد يعرض كم جلسة محددة الآن.') }}</li>
+          <li><strong>{{ _('«فصل الاتصال» (أحمر):') }}</strong> {{ _('يقطع') }} <strong>{{ _('كل الجلسات المحددة') }}</strong>
+              {{ _('دفعة واحدة — التأكيد يعرض أسماءها قبل التنفيذ.') }}</li>
+          <li><strong>{{ _('«عرض 360°» و«تعديل»:') }}</strong> {{ _('يفتحان ملف/تعديل') }} <strong>آخر جلسة
+              حدّدتها</strong> {{ _('(إجراءان فرديان).') }}</li>
+          <li><strong>{{ _('«إغلاق بالماك»:') }}</strong> يقفل حسابات المحدَّدين على ماك أجهزتهم
               الحالية — ما عاد يدخل أحد بحسابهم من جهاز آخر.</li>
-          <li><strong>«تثبيت IP»:</strong> يثبّت للمحدَّدين عناوينهم الحالية كعناوين
+          <li><strong>{{ _('«تثبيت IP»:') }}</strong> يثبّت للمحدَّدين عناوينهم الحالية كعناوين
               ثابتة (متاح للمشتركين فقط — لا للكروت).</li>
-          <li><strong>«إرسال رسالة»:</strong> يرسل رسالة نصية لآخر جلسة محددة — يفتح
+          <li><strong>{{ _('«إرسال رسالة»:') }}</strong> يرسل رسالة نصية لآخر جلسة محددة — يفتح
               مربعًا تكتب فيه النص.</li>
         </ul>
 
         <div class="dg-mock" aria-hidden="true">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">المتصلون الآن › شريط الإجراءات</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('المتصلون الآن › شريط الإجراءات') }}</span></div>
           <div class="dg-mock-body">
             <div class="dg-fbar">
-              <span class="dg-fbtn count"><i class="fa-solid fa-check-double"></i> المحدد: 2</span>
-              <span class="dg-fbtn danger"><i class="fa-solid fa-scissors"></i> فصل الاتصال</span>
-              <span class="dg-fbtn ghost"><i class="fa-solid fa-gauge-high"></i> عرض 360°</span>
-              <span class="dg-fbtn ghost"><i class="fa-solid fa-lock"></i> إغلاق بالماك</span>
-              <span class="dg-fbtn ghost"><i class="fa-solid fa-lock"></i> تثبيت IP</span>
-              <span class="dg-fbtn muted"><i class="fa-solid fa-paper-plane"></i> إرسال رسالة</span>
+              <span class="dg-fbtn count"><i class="fa-solid fa-check-double"></i> {{ _('المحدد: 2') }}</span>
+              <span class="dg-fbtn danger"><i class="fa-solid fa-scissors"></i> {{ _('فصل الاتصال') }}</span>
+              <span class="dg-fbtn ghost"><i class="fa-solid fa-gauge-high"></i> {{ _('عرض 360°') }}</span>
+              <span class="dg-fbtn ghost"><i class="fa-solid fa-lock"></i> {{ _('إغلاق بالماك') }}</span>
+              <span class="dg-fbtn ghost"><i class="fa-solid fa-lock"></i> {{ _('تثبيت IP') }}</span>
+              <span class="dg-fbtn muted"><i class="fa-solid fa-paper-plane"></i> {{ _('إرسال رسالة') }}</span>
             </div>
             <div class="dg-tbl">
-              <div class="hd"><span></span><span>المستخدم</span><span>IP</span><span>وقت الجلسة</span><span>تحميل</span><span>رفع</span></div>
-              <div class="rw sel"><span class="dg-ck on"><i class="fa-solid fa-check"></i></span><span style="font-weight:900;color:#241e4e">ahmad2026</span><span style="font-family:monospace">10.5.0.14</span><span>2س 14د</span><span>840.5 MB</span><span>96.1 MB</span></div>
-              <div class="rw sel"><span class="dg-ck on"><i class="fa-solid fa-check"></i></span><span style="font-weight:900;color:#241e4e">sara_net</span><span style="font-family:monospace">10.5.0.27</span><span>41د</span><span>122.0 MB</span><span>18.4 MB</span></div>
-              <div class="rw"><span class="dg-ck"></span><span style="font-weight:900;color:#241e4e">omar99</span><span style="font-family:monospace">10.5.0.31</span><span>12د</span><span>33.7 MB</span><span>4.2 MB</span></div>
+              <div class="hd"><span></span><span>{{ _('المستخدم') }}</span><span>IP</span><span>{{ _('وقت الجلسة') }}</span><span>{{ _('تحميل') }}</span><span>{{ _('رفع') }}</span></div>
+              <div class="rw sel"><span class="dg-ck on"><i class="fa-solid fa-check"></i></span><span style="font-weight:900;color:#241e4e">ahmad2026</span><span style="font-family:monospace">10.5.0.14</span><span>{{ _('2س 14د') }}</span><span>840.5 MB</span><span>96.1 MB</span></div>
+              <div class="rw sel"><span class="dg-ck on"><i class="fa-solid fa-check"></i></span><span style="font-weight:900;color:#241e4e">sara_net</span><span style="font-family:monospace">10.5.0.27</span><span>{{ _('41د') }}</span><span>122.0 MB</span><span>18.4 MB</span></div>
+              <div class="rw"><span class="dg-ck"></span><span style="font-weight:900;color:#241e4e">omar99</span><span style="font-family:monospace">10.5.0.31</span><span>{{ _('12د') }}</span><span>33.7 MB</span><span>4.2 MB</span></div>
             </div>
           </div>
         </div>
-        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> الصفوف المحددة تتظلل بالأزرق الفاتح والأزرار فوقها تتفعّل.</div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> {{ _('الصفوف المحددة تتظلل بالأزرق الفاتح والأزرار فوقها تتفعّل.') }}</div>
 
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>نصيحة عملية:</b> قبل صيانة راوتر معيّن: فلتر «السيرفر» عليه، حدّد الكل،
+          <span><b>{{ _('نصيحة عملية:') }}</b> قبل صيانة راوتر معيّن: فلتر «السيرفر» عليه، حدّد الكل،
           «إرسال رسالة» بإشعار الصيانة لآخر المحددين أو رسالة جماعية من صفحة 360،
           ثم «فصل الاتصال» — صيانة نظيفة بلا اتصالات معلّقة.</span>
         </div>
@@ -506,33 +506,33 @@
     <section class="dg-step" id="dg-s7">
       <div class="dg-badge">7</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-user-slash"></i> مشترك مش ظاهر هون؟ يعني شو؟</h2>
+        <h2><i class="fa-solid fa-user-slash"></i> {{ _('مشترك مش ظاهر هون؟ يعني شو؟') }}</h2>
         <p>
           أكثر سؤال يوصلك من الزبائن: «النت مقطوع!» — وأول تشخيص لك هو هذه الصفحة.
           إذا ما لقيته فيها، امشِ على هذا التسلسل:
         </p>
         <ul>
-          <li><strong>ببساطة غير متصل:</strong> الصفحة تعرض الجلسات الحيّة فقط — جهازه مطفأ
+          <li><strong>{{ _('ببساطة غير متصل:') }}</strong> الصفحة تعرض الجلسات الحيّة فقط — جهازه مطفأ
               أو خارج التغطية أو ناسٍ كلمة المرور. اطلب منه إعادة الاتصال.</li>
-          <li><strong>تأكد إنك بالتبويب الصح:</strong> لو يدخل بكرت واي فاي فجلسته تحت
-              تبويب <strong>«الكروت»</strong> لا «المشتركون».</li>
-          <li><strong>شيّك فلاترك:</strong> فلتر سيرفر أو عرض أو مجموعة منسي ممكن يخفيه —
+          <li><strong>{{ _('تأكد إنك بالتبويب الصح:') }}</strong> لو يدخل بكرت واي فاي فجلسته تحت
+              تبويب <strong>{{ _('«الكروت»') }}</strong> {{ _('لا «المشتركون».') }}</li>
+          <li><strong>{{ _('شيّك فلاترك:') }}</strong> فلتر سيرفر أو عرض أو مجموعة منسي ممكن يخفيه —
               رجّع الكل على «كل ...» واضغط «عرض».</li>
-          <li><strong>افحص حالة حسابه:</strong> افتح «المشتركين 360» وابحث عنه — إذا حالته
-              <strong>«منتهٍ»</strong> جدّد له (تفعيل ← تجديد / إضافة وقت)، وإذا
-              <strong>«معطَّل»</strong> فعّله (إدارية ← تفعيل المشترك).</li>
-          <li><strong>شيّك قيود الشبكة في ملفه:</strong> قفل ماك على جهاز قديم، أو جدول
+          <li><strong>{{ _('افحص حالة حسابه:') }}</strong> {{ _('افتح «المشتركين 360» وابحث عنه — إذا حالته') }}
+              <strong>{{ _('«منتهٍ»') }}</strong> {{ _('جدّد له (تفعيل ← تجديد / إضافة وقت)، وإذا') }}
+              <strong>{{ _('«معطَّل»') }}</strong> {{ _('فعّله (إدارية ← تفعيل المشترك).') }}</li>
+          <li><strong>{{ _('شيّك قيود الشبكة في ملفه:') }}</strong> قفل ماك على جهاز قديم، أو جدول
               أوقات دخول (له أو لمجموعته) يمنع الاتصال في هذا الوقت.</li>
-          <li><strong>القائمة كلها فاضية؟</strong> المشكلة أكبر من مشترك: تنبيه «الوضع
+          <li><strong>{{ _('القائمة كلها فاضية؟') }}</strong> المشكلة أكبر من مشترك: تنبيه «الوضع
               اليدوي» يعني الربط الفعلي غير مفعَّل، أو شريط أحمر «تعذّر تحميل الجلسات»
               يعني انقطاع الاتصال بالراوتر — افحص أجهزة الشبكة أولًا.</li>
         </ul>
 
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>وبعدين؟</b> صرت تقرأ نبض شبكتك. كمّل مع دليل
-          <b>«صفحة المشتركين 360»</b> لإدارة الحسابات نفسها، ودليل
-          <b>«مجموعات المشتركين»</b> لتنفيذ العمليات على كتل كاملة.</span>
+          <span><b>{{ _('وبعدين؟') }}</b> {{ _('صرت تقرأ نبض شبكتك. كمّل مع دليل') }}
+          <b>{{ _('«صفحة المشتركين 360»') }}</b> {{ _('لإدارة الحسابات نفسها، ودليل') }}
+          <b>{{ _('«مجموعات المشتركين»') }}</b> {{ _('لتنفيذ العمليات على كتل كاملة.') }}</span>
         </div>
       </div>
     </section>

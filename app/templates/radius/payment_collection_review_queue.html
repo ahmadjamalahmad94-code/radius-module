@@ -55,7 +55,7 @@
             border-radius:var(--hub-r-lg);border:1px solid #bfdbfe;
             background:var(--hub-blue-soft);color:var(--hub-blue-ink)">
   <i class="fa-solid fa-circle-info"></i>
-  مراجعة يدوية فقط. اعتماد إثبات الدفع يعلّم الطلب كمدفوع ويسجل حركة يدوية. قيود المحاسبة وتفعيل الخدمة تبقى حسب خطوة الاعتماد التالية.
+  {{ _('مراجعة يدوية فقط. اعتماد إثبات الدفع يعلّم الطلب كمدفوع ويسجل حركة يدوية. قيود المحاسبة وتفعيل الخدمة تبقى حسب خطوة الاعتماد التالية.') }}
 </div>
 
 {% if items %}
@@ -66,10 +66,10 @@
       <thead>
         <tr>
           <th class="num" style="width:56px">#</th>
-          <th>المرجع</th>
-          <th>الغرض</th>
-          <th class="num">المبلغ</th>
-          <th>الحالة</th>
+          <th>{{ _('المرجع') }}</th>
+          <th>{{ _('الغرض') }}</th>
+          <th class="num">{{ _('المبلغ') }}</th>
+          <th>{{ _('الحالة') }}</th>
           <th style="width:90px"></th>
         </tr>
       </thead>
@@ -85,7 +85,7 @@
           <td>{{ st_pill(item.status) }}</td>
           <td>
             <a class="hub-btn hub-btn--primary hub-btn--sm" href="{{ url_for('radius.payment_collection_request_detail', request_id=item.id) }}">
-              <i class="fa-solid fa-magnifying-glass"></i> مراجعة
+              <i class="fa-solid fa-magnifying-glass"></i> {{ _('مراجعة') }}
             </a>
           </td>
         </tr>

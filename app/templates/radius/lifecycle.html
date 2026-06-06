@@ -3,7 +3,7 @@
 {% block title %}الأرشفة التلقائية{% endblock %}
 {% block page_title %}الأرشفة التلقائية{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-box-archive"></i>{% endblock %}
-{% block page_sub %}<span class="sub">سياسات احتفاظ آمنة للكروت والمشتركين بدون حذف نهائي</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('سياسات احتفاظ آمنة للكروت والمشتركين بدون حذف نهائي') }}</span>{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
@@ -78,7 +78,7 @@
       &nbsp;·&nbsp; مشتركين: <strong>{{ item.get('subscribers_count', 0) }}</strong>
       {% if not item.get('supported') %}
         <span class="hub-pill hub-pill--grey" style="margin-inline-start:8px">
-          محفوظة كسياسة، التنفيذ الآلي عند تفعيلها
+          {{ _('محفوظة كسياسة، التنفيذ الآلي عند تفعيلها') }}
         </span>
       {% endif %}
     </div>
@@ -94,12 +94,12 @@
         <thead>
           <tr>
             <th class="num">#</th>
-            <th>العنصر</th>
-            <th>الشرط</th>
-            <th>التأخير</th>
-            <th>الاحتفاظ</th>
-            <th>الحالة</th>
-            <th data-uds-nosort data-uds-nocol>إجراء</th>
+            <th>{{ _('العنصر') }}</th>
+            <th>{{ _('الشرط') }}</th>
+            <th>{{ _('التأخير') }}</th>
+            <th>{{ _('الاحتفاظ') }}</th>
+            <th>{{ _('الحالة') }}</th>
+            <th data-uds-nosort data-uds-nocol>{{ _('إجراء') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -112,9 +112,9 @@
             <td class="num">{{ policy.get('retention_value') }} {{ lc_unit.get(policy.get('retention_unit'), policy.get('retention_unit')) }}</td>
             <td>
               {% if policy.get('enabled') %}
-                <span class="hub-pill hub-pill--green"><span class="dot"></span>مفعلة</span>
+                <span class="hub-pill hub-pill--green"><span class="dot"></span>{{ _('مفعلة') }}</span>
               {% else %}
-                <span class="hub-pill hub-pill--grey"><span class="dot"></span>معطلة</span>
+                <span class="hub-pill hub-pill--grey"><span class="dot"></span>{{ _('معطلة') }}</span>
               {% endif %}
             </td>
             <td>
@@ -123,7 +123,7 @@
                       action="{{ url_for('radius.lifecycle_policy_disable', policy_id=policy.get('id')) }}"
                       style="margin:0">
                   <button class="hub-btn hub-btn--secondary hub-btn--sm" type="submit">
-                    <i class="fa-solid fa-pause"></i> تعطيل
+                    <i class="fa-solid fa-pause"></i> {{ _('تعطيل') }}
                   </button>
                 </form>
               {% else %}—{% endif %}
@@ -150,54 +150,54 @@
     {# method="post" ضروري: حاقن الـ CSRF التلقائي يستهدف فقط <form method="post">. #}
     <form method="post" action="{{ url_for('radius.lifecycle_policy_create') }}">
       <div class="fcw-head">
-        <h3 id="fcw-policy-create-title"><i class="fa-solid fa-circle-plus"></i> إضافة سياسة أرشفة</h3>
-        <button type="button" class="fcw-x" data-fcw-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
+        <h3 id="fcw-policy-create-title"><i class="fa-solid fa-circle-plus"></i> {{ _('إضافة سياسة أرشفة') }}</h3>
+        <button type="button" class="fcw-x" data-fcw-close aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="fcw-body">
         <div class="fcw-grid">
           <label class="hub-field">
-            <span class="hub-field-label">نوع العنصر</span>
+            <span class="hub-field-label">{{ _('نوع العنصر') }}</span>
             <select class="hub-select" name="entity_type">
               {% for value,label in entity_options %}
                 <option value="{{ value }}">{{ label }}</option>
               {% endfor %}
             </select>
-            <span class="hub-field-hint">ما الذي تشمله السياسة — بطاقات أو مشتركين أو حزمًا أو ملفات خارجية.</span>
+            <span class="hub-field-hint">{{ _('ما الذي تشمله السياسة — بطاقات أو مشتركين أو حزمًا أو ملفات خارجية.') }}</span>
           </label>
           <label class="hub-field">
-            <span class="hub-field-label">الشرط</span>
+            <span class="hub-field-label">{{ _('الشرط') }}</span>
             <select class="hub-select" name="trigger_type">
-              <option value="expired_at">بعد الانتهاء</option>
+              <option value="expired_at">{{ _('بعد الانتهاء') }}</option>
             </select>
-            <span class="hub-field-hint">متى يصبح العنصر مؤهلًا — حاليًا الشرط المدعوم هو انتهاء الصلاحية.</span>
+            <span class="hub-field-hint">{{ _('متى يصبح العنصر مؤهلًا — حاليًا الشرط المدعوم هو انتهاء الصلاحية.') }}</span>
           </label>
           <label class="hub-field">
-            <span class="hub-field-label">بعد مدة</span>
+            <span class="hub-field-label">{{ _('بعد مدة') }}</span>
             <input class="hub-input" name="delay_value" type="number" min="0" value="2" dir="ltr">
-            <span class="hub-field-hint">مهلة سماح بعد تحقق الشرط قبل النقل للسلة — 0 يعني فورًا.</span>
+            <span class="hub-field-hint">{{ _('مهلة سماح بعد تحقق الشرط قبل النقل للسلة — 0 يعني فورًا.') }}</span>
           </label>
           <label class="hub-field">
-            <span class="hub-field-label">وحدة المدة</span>
+            <span class="hub-field-label">{{ _('وحدة المدة') }}</span>
             <select class="hub-select" name="delay_unit">
               {% for value,label in unit_options %}
                 <option value="{{ value }}" {% if value == 'days' %}selected{% endif %}>{{ label }}</option>
               {% endfor %}
             </select>
-            <span class="hub-field-hint">وحدة قياس مهلة السماح أعلاه.</span>
+            <span class="hub-field-hint">{{ _('وحدة قياس مهلة السماح أعلاه.') }}</span>
           </label>
           <label class="hub-field">
-            <span class="hub-field-label">الاحتفاظ في السلة</span>
+            <span class="hub-field-label">{{ _('الاحتفاظ في السلة') }}</span>
             <input class="hub-input" name="retention_value" type="number" min="0" value="90" dir="ltr">
-            <span class="hub-field-hint">كم يبقى العنصر في سلة المحذوفات قابلًا للاستعادة قبل حذفه نهائيًا.</span>
+            <span class="hub-field-hint">{{ _('كم يبقى العنصر في سلة المحذوفات قابلًا للاستعادة قبل حذفه نهائيًا.') }}</span>
           </label>
           <label class="hub-field">
-            <span class="hub-field-label">وحدة الاحتفاظ</span>
+            <span class="hub-field-label">{{ _('وحدة الاحتفاظ') }}</span>
             <select class="hub-select" name="retention_unit">
               {% for value,label in unit_options %}
                 <option value="{{ value }}" {% if value == 'days' %}selected{% endif %}>{{ label }}</option>
               {% endfor %}
             </select>
-            <span class="hub-field-hint">وحدة قياس مدة الاحتفاظ أعلاه.</span>
+            <span class="hub-field-hint">{{ _('وحدة قياس مدة الاحتفاظ أعلاه.') }}</span>
           </label>
         </div>
         <input type="hidden" name="enabled" value="1">
@@ -208,8 +208,8 @@
         </div>
       </div>
       <div class="fcw-foot">
-        <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>إغلاق</button>
-        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> حفظ السياسة</button>
+        <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>{{ _('إغلاق') }}</button>
+        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ السياسة') }}</button>
       </div>
     </form>
   </div>
@@ -221,13 +221,13 @@
   <div class="fcw-dialog" role="dialog" aria-modal="true" aria-labelledby="fcw-lifecycle-run-title" style="width:min(460px,100%)">
     <form method="post" action="{{ url_for('radius.lifecycle_run') }}">
       <div class="fcw-head">
-        <h3 id="fcw-lifecycle-run-title"><i class="fa-solid fa-play"></i> تشغيل الأرشفة الآن</h3>
-        <button type="button" class="fcw-x" data-fcw-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
+        <h3 id="fcw-lifecycle-run-title"><i class="fa-solid fa-play"></i> {{ _('تشغيل الأرشفة الآن') }}</h3>
+        <button type="button" class="fcw-x" data-fcw-close aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="fcw-body">
         <div style="font-size:13.5px;line-height:1.9;color:var(--hub-text,#0f172a)">
-          ستُنقل العناصر المؤهلة حسب السياسات المفعّلة إلى
-          <strong>سلة المحذوفات فقط</strong> — لا حذف نهائي،
+          {{ _('ستُنقل العناصر المؤهلة حسب السياسات المفعّلة إلى') }}
+          <strong>{{ _('سلة المحذوفات فقط') }}</strong> — لا حذف نهائي،
           ويمكن استعادة أي عنصر منها لاحقًا.
         </div>
         <div class="hub-text-soft" style="font-size:12px;line-height:1.8">
@@ -238,8 +238,8 @@
         </div>
       </div>
       <div class="fcw-foot">
-        <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>إلغاء</button>
-        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-play"></i> نعم، شغّل الأرشفة</button>
+        <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>{{ _('إلغاء') }}</button>
+        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-play"></i> {{ _('نعم، شغّل الأرشفة') }}</button>
       </div>
     </form>
   </div>

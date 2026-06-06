@@ -63,7 +63,7 @@
 {% if _is_stock and remaining <= 0 and stock_total > 0 %}
 <p class="cm-note cm-note--danger">
   <i class="fa-solid fa-circle-exclamation"></i>
-  <span>نفد مخزون هذا العرض — يرى الزبائن «نفدت الكمية» الآن. أضف مخزونًا من زرّي «رفع ملف بطاقات» أو «توليد حزمة» بالأعلى.</span>
+  <span>{{ _('نفد مخزون هذا العرض — يرى الزبائن «نفدت الكمية» الآن. أضف مخزونًا من زرّي «رفع ملف بطاقات» أو «توليد حزمة» بالأعلى.') }}</span>
 </p>
 {% elif _low_stock %}
 <p class="cm-note cm-note--warn">
@@ -103,13 +103,13 @@
                       else "لم تُولَّد أي بطاقة لهذا العرض بعد — تُولَّد البطاقات تلقائيًا مع كل عملية شراء.")) }}
 
   {% if offer_cards and offer_cards.pages > 1 %}
-  <nav class="cm-cards-pager" role="navigation" aria-label="ترقيم بطاقات العرض">
+  <nav class="cm-cards-pager" role="navigation" aria-label="{{ _('ترقيم بطاقات العرض') }}">
     {% if offer_cards.page > 1 %}
-      <a class="hub-btn hub-btn--ghost" href="{{ url_for('radius.card_marketplace_package_file', package_id=package.id, cards_page=offer_cards.page - 1, page=page) }}">السابق</a>
+      <a class="hub-btn hub-btn--ghost" href="{{ url_for('radius.card_marketplace_package_file', package_id=package.id, cards_page=offer_cards.page - 1, page=page) }}">{{ _('السابق') }}</a>
     {% endif %}
     <span class="hub-pill">{{ offer_cards.page }} / {{ offer_cards.pages }}</span>
     {% if offer_cards.page < offer_cards.pages %}
-      <a class="hub-btn hub-btn--ghost" href="{{ url_for('radius.card_marketplace_package_file', package_id=package.id, cards_page=offer_cards.page + 1, page=page) }}">التالي</a>
+      <a class="hub-btn hub-btn--ghost" href="{{ url_for('radius.card_marketplace_package_file', package_id=package.id, cards_page=offer_cards.page + 1, page=page) }}">{{ _('التالي') }}</a>
     {% endif %}
   </nav>
   {% endif %}
@@ -184,19 +184,19 @@
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
       <input type="hidden" name="return_to" value="file">
       <div class="fcw-head">
-        <h3 id="fcw-stock-upload-title"><i class="fa-solid fa-file-arrow-up"></i> رفع ملف بطاقات</h3>
-        <button type="button" class="fcw-x" data-fcw-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
+        <h3 id="fcw-stock-upload-title"><i class="fa-solid fa-file-arrow-up"></i> {{ _('رفع ملف بطاقات') }}</h3>
+        <button type="button" class="fcw-x" data-fcw-close aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="fcw-body">
-        <p class="cm-note cm-note--inline"><i class="fa-solid fa-circle-info"></i><span>يقرأ المحرك ملفات Excel و CSV و PDF ويستخرج أزواج اسم المستخدم وكلمة المرور، ثم يضيفها إلى مخزون هذا العرض. الأسماء المكررة تُتخطّى تلقائيًا. الحدّ الأقصى <bdi dir="ltr">12MB</bdi> و<bdi dir="ltr">5000</bdi> بطاقة في الدفعة.</span></p>
+        <p class="cm-note cm-note--inline"><i class="fa-solid fa-circle-info"></i><span>{{ _('يقرأ المحرك ملفات Excel و CSV و PDF ويستخرج أزواج اسم المستخدم وكلمة المرور، ثم يضيفها إلى مخزون هذا العرض. الأسماء المكررة تُتخطّى تلقائيًا. الحدّ الأقصى') }} <bdi dir="ltr">12MB</bdi> {{ _('و') }}<bdi dir="ltr">5000</bdi> {{ _('بطاقة في الدفعة.') }}</span></p>
         <label>
-          <span>ملف البطاقات</span>
+          <span>{{ _('ملف البطاقات') }}</span>
           <input type="file" name="file" accept=".csv,.tsv,.txt,.xlsx,.pdf" required>
         </label>
       </div>
       <div class="fcw-foot">
-        <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>إلغاء</button>
-        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-boxes-stacked"></i> إضافة للمخزون</button>
+        <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>{{ _('إلغاء') }}</button>
+        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-boxes-stacked"></i> {{ _('إضافة للمخزون') }}</button>
       </div>
     </form>
   </div>
@@ -208,23 +208,23 @@
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
       <input type="hidden" name="return_to" value="file">
       <div class="fcw-head">
-        <h3 id="fcw-stock-generate-title"><i class="fa-solid fa-wand-magic-sparkles"></i> توليد حزمة مخزون</h3>
-        <button type="button" class="fcw-x" data-fcw-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
+        <h3 id="fcw-stock-generate-title"><i class="fa-solid fa-wand-magic-sparkles"></i> {{ _('توليد حزمة مخزون') }}</h3>
+        <button type="button" class="fcw-x" data-fcw-close aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="fcw-body">
-        <p class="cm-note cm-note--inline"><i class="fa-solid fa-circle-info"></i><span>يولّد محرك الدفعات المشترك بطاقات فريدة (اسم مستخدم وكلمة مرور) داخل حزمة مرتبطة بهذا العرض، وتدخل المخزون فورًا لتُباع منه.</span></p>
+        <p class="cm-note cm-note--inline"><i class="fa-solid fa-circle-info"></i><span>{{ _('يولّد محرك الدفعات المشترك بطاقات فريدة (اسم مستخدم وكلمة مرور) داخل حزمة مرتبطة بهذا العرض، وتدخل المخزون فورًا لتُباع منه.') }}</span></p>
         <label>
-          <span>عدد البطاقات</span>
+          <span>{{ _('عدد البطاقات') }}</span>
           <input type="number" name="count" min="1" max="5000" value="100" required>
         </label>
         <label>
-          <span>طول كلمة المرور</span>
+          <span>{{ _('طول كلمة المرور') }}</span>
           <input type="number" name="password_length" min="4" max="16" value="8">
         </label>
       </div>
       <div class="fcw-foot">
-        <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>إلغاء</button>
-        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-wand-magic-sparkles"></i> توليد وإضافة</button>
+        <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>{{ _('إلغاء') }}</button>
+        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-wand-magic-sparkles"></i> {{ _('توليد وإضافة') }}</button>
       </div>
     </form>
   </div>

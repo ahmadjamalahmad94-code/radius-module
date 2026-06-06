@@ -246,15 +246,15 @@
 <div class="dg-layout">
 
   {# ───── الفهرس الجانبي اللاصق ───── #}
-  <nav class="dg-toc dg-noprint" aria-label="فهرس الدليل">
-    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> فهرس الأقسام</div>
-    <a href="#dg-s1" data-dg-toc><span class="n">1</span> افتح الصفحة واقرأها</a>
-    <a href="#dg-s2" data-dg-toc><span class="n">2</span> البحث الفوري والفلاتر</a>
-    <a href="#dg-s3" data-dg-toc><span class="n">3</span> الجدول والأعمدة والفرز</a>
-    <a href="#dg-s4" data-dg-toc><span class="n">4</span> حالات المشترك (الألوان)</a>
-    <a href="#dg-s5" data-dg-toc><span class="n">5</span> إجراءات الصف الواحد</a>
-    <a href="#dg-s6" data-dg-toc><span class="n">6</span> التحديد والإجراءات الجماعية</a>
-    <a href="#dg-s7" data-dg-toc><span class="n">7</span> التصدير والطباعة</a>
+  <nav class="dg-toc dg-noprint" aria-label="{{ _('فهرس الدليل') }}">
+    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> {{ _('فهرس الأقسام') }}</div>
+    <a href="#dg-s1" data-dg-toc><span class="n">1</span> {{ _('افتح الصفحة واقرأها') }}</a>
+    <a href="#dg-s2" data-dg-toc><span class="n">2</span> {{ _('البحث الفوري والفلاتر') }}</a>
+    <a href="#dg-s3" data-dg-toc><span class="n">3</span> {{ _('الجدول والأعمدة والفرز') }}</a>
+    <a href="#dg-s4" data-dg-toc><span class="n">4</span> {{ _('حالات المشترك (الألوان)') }}</a>
+    <a href="#dg-s5" data-dg-toc><span class="n">5</span> {{ _('إجراءات الصف الواحد') }}</a>
+    <a href="#dg-s6" data-dg-toc><span class="n">6</span> {{ _('التحديد والإجراءات الجماعية') }}</a>
+    <a href="#dg-s7" data-dg-toc><span class="n">7</span> {{ _('التصدير والطباعة') }}</a>
   </nav>
 
   {# ───── عمود المحتوى ───── #}
@@ -263,7 +263,7 @@
     <div class="dg-lead">
       <span class="ic"><i class="fa-solid fa-lightbulb"></i></span>
       <div>
-        <h3>قبل ما نبدأ — ليش اسمها «360»؟</h3>
+        <h3>{{ _('قبل ما نبدأ — ليش اسمها «360»؟') }}</h3>
         <p>
           لأنها تعرض كل شيء عن مشتركيك بنظرة واحدة: مين مفعَّل ومين منتهٍ، مين متصل الآن،
           كم استهلك، متى ينتهي، وعلى أي باقة — ومن نفس الصفحة تجدّد وترسل رسائل وتفصل
@@ -276,44 +276,44 @@
     <section class="dg-step" id="dg-s1">
       <div class="dg-badge">1</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-door-open"></i> افتح الصفحة واقرأ رأسها</h2>
+        <h2><i class="fa-solid fa-door-open"></i> {{ _('افتح الصفحة واقرأ رأسها') }}</h2>
         <p>
-          من القائمة الجانبية افتح <strong>«المشتركون»</strong> ثم <strong>«المشتركين 360»</strong>.
+          {{ _('من القائمة الجانبية افتح') }} <strong>{{ _('«المشتركون»') }}</strong> {{ _('ثم') }} <strong>{{ _('«المشتركين 360»') }}</strong>.
           أعلى الصفحة رح تلاقي رأسًا موحّدًا فيه:
         </p>
         <ul>
-          <li>زر <strong>«إضافة مشترك»</strong> البنفسجي — ينقلك مباشرة لنموذج الإضافة.</li>
-          <li>زر <strong>«المتصلون الآن»</strong> — اختصار لصفحة الجلسات الحيّة.</li>
-          <li>أربع بطاقات أرقام سريعة: <strong>في النتائج</strong> (عدد الصفوف الظاهرة بعد الفلترة)،
-              <strong>نشطون</strong>، <strong>منتهون</strong>، <strong>معطَّلون</strong>.</li>
+          <li>{{ _('زر') }} <strong>{{ _('«إضافة مشترك»') }}</strong> {{ _('البنفسجي — ينقلك مباشرة لنموذج الإضافة.') }}</li>
+          <li>{{ _('زر') }} <strong>{{ _('«المتصلون الآن»') }}</strong> {{ _('— اختصار لصفحة الجلسات الحيّة.') }}</li>
+          <li>{{ _('أربع بطاقات أرقام سريعة:') }} <strong>{{ _('في النتائج') }}</strong> {{ _('(عدد الصفوف الظاهرة بعد الفلترة)،') }}
+              <strong>{{ _('نشطون') }}</strong>{{ _('،') }} <strong>{{ _('منتهون') }}</strong>{{ _('،') }} <strong>{{ _('معطَّلون') }}</strong>.</li>
         </ul>
 
         <div class="dg-mock" aria-hidden="true">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">المشتركون › رأس الصفحة</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('المشتركون › رأس الصفحة') }}</span></div>
           <div class="dg-mock-body">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
               <div style="display:flex;align-items:center;gap:9px">
                 <span style="width:32px;height:32px;border-radius:9px;display:grid;place-items:center;background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;font-size:13px"><i class="fa-solid fa-users"></i></span>
-                <span style="font-size:13px;font-weight:900;color:#0f172a">المشتركون</span>
+                <span style="font-size:13px;font-weight:900;color:#0f172a">{{ _('المشتركون') }}</span>
               </div>
               <div style="display:flex;gap:6px">
-                <span class="dg-fbtn primary"><i class="fa-solid fa-user-plus"></i> إضافة مشترك</span>
-                <span class="dg-fbtn ghost"><i class="fa-solid fa-wifi"></i> المتصلون الآن</span>
+                <span class="dg-fbtn primary"><i class="fa-solid fa-user-plus"></i> {{ _('إضافة مشترك') }}</span>
+                <span class="dg-fbtn ghost"><i class="fa-solid fa-wifi"></i> {{ _('المتصلون الآن') }}</span>
               </div>
             </div>
             <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
-              <div style="border:1px solid #e9e5fc;border-radius:10px;padding:8px;background:#faf8ff"><div style="font-size:9px;font-weight:800;color:#7c7a99">في النتائج</div><div style="font-size:15px;font-weight:900;color:#5b21b6">128</div></div>
-              <div style="border:1px solid #bbf7d0;border-radius:10px;padding:8px;background:#f0fdf4"><div style="font-size:9px;font-weight:800;color:#15803d">نشطون</div><div style="font-size:15px;font-weight:900;color:#166534">96</div></div>
-              <div style="border:1px solid #fde68a;border-radius:10px;padding:8px;background:#fffbeb"><div style="font-size:9px;font-weight:800;color:#b45309">منتهون</div><div style="font-size:15px;font-weight:900;color:#92400e">22</div></div>
-              <div style="border:1px solid #fecaca;border-radius:10px;padding:8px;background:#fef2f2"><div style="font-size:9px;font-weight:800;color:#b91c1c">معطَّلون</div><div style="font-size:15px;font-weight:900;color:#991b1b">10</div></div>
+              <div style="border:1px solid #e9e5fc;border-radius:10px;padding:8px;background:#faf8ff"><div style="font-size:9px;font-weight:800;color:#7c7a99">{{ _('في النتائج') }}</div><div style="font-size:15px;font-weight:900;color:#5b21b6">128</div></div>
+              <div style="border:1px solid #bbf7d0;border-radius:10px;padding:8px;background:#f0fdf4"><div style="font-size:9px;font-weight:800;color:#15803d">{{ _('نشطون') }}</div><div style="font-size:15px;font-weight:900;color:#166534">96</div></div>
+              <div style="border:1px solid #fde68a;border-radius:10px;padding:8px;background:#fffbeb"><div style="font-size:9px;font-weight:800;color:#b45309">{{ _('منتهون') }}</div><div style="font-size:15px;font-weight:900;color:#92400e">22</div></div>
+              <div style="border:1px solid #fecaca;border-radius:10px;padding:8px;background:#fef2f2"><div style="font-size:9px;font-weight:800;color:#b91c1c">{{ _('معطَّلون') }}</div><div style="font-size:15px;font-weight:900;color:#991b1b">10</div></div>
             </div>
           </div>
         </div>
 
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>نصيحة:</b> الأرقام الأربعة تتغيّر مع الفلترة — يعني إذا فلترت على باقة معيّنة
-          تشوف فورًا كم نشط وكم منتهٍ <b>داخل هذه الباقة بالذات</b>.</span>
+          <span><b>{{ _('نصيحة:') }}</b> الأرقام الأربعة تتغيّر مع الفلترة — يعني إذا فلترت على باقة معيّنة
+          تشوف فورًا كم نشط وكم منتهٍ <b>{{ _('داخل هذه الباقة بالذات') }}</b>.</span>
         </div>
       </div>
     </section>
@@ -322,43 +322,43 @@
     <section class="dg-step" id="dg-s2">
       <div class="dg-badge">2</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-magnifying-glass"></i> البحث الفوري والفلاتر</h2>
+        <h2><i class="fa-solid fa-magnifying-glass"></i> {{ _('البحث الفوري والفلاتر') }}</h2>
         <p>
-          تحت الرأس مباشرة شريط الفلترة. أهم ما فيه حقل البحث: <strong>اكتب وشوف النتائج
-          تتفلتر لحظيًا</strong> وأنت تكتب — بدون ضغط أي زر. وبجانبه:
+          {{ _('تحت الرأس مباشرة شريط الفلترة. أهم ما فيه حقل البحث:') }} <strong>اكتب وشوف النتائج
+          تتفلتر لحظيًا</strong> {{ _('وأنت تكتب — بدون ضغط أي زر. وبجانبه:') }}
         </p>
         <ul>
-          <li><strong>«البحث بواسطة»:</strong> يحدد نطاق البحث الفوري — كل الأعمدة، اليوزر،
-              الاسم، الجوال، أو <strong>تاريخ الإنشاء</strong> (عند اختياره يظهر حقلا
+          <li><strong>{{ _('«البحث بواسطة»:') }}</strong> يحدد نطاق البحث الفوري — كل الأعمدة، اليوزر،
+              الاسم، الجوال، أو <strong>{{ _('تاريخ الإنشاء') }}</strong> (عند اختياره يظهر حقلا
               «من / إلى» وتُفلتر النتائج على مدى التاريخ).</li>
-          <li><strong>زر ✕ داخل الحقل:</strong> يمسح البحث ويرجّع كل الصفوف فورًا.</li>
-          <li><strong>قائمة الحالات:</strong> كل الحالات / enabled / expired / disabled...</li>
-          <li><strong>قائمة الباقات:</strong> اعرض مشتركي باقة واحدة فقط.</li>
-          <li><strong>قائمة المجموعات:</strong> اعرض أعضاء مجموعة مشتركين واحدة.</li>
-          <li><strong>زر «تطبيق»:</strong> يرسل الفلاتر للخادم ويعيد تحميل القائمة بها
+          <li><strong>{{ _('زر ✕ داخل الحقل:') }}</strong> {{ _('يمسح البحث ويرجّع كل الصفوف فورًا.') }}</li>
+          <li><strong>{{ _('قائمة الحالات:') }}</strong> {{ _('كل الحالات / enabled / expired / disabled...') }}</li>
+          <li><strong>{{ _('قائمة الباقات:') }}</strong> {{ _('اعرض مشتركي باقة واحدة فقط.') }}</li>
+          <li><strong>{{ _('قائمة المجموعات:') }}</strong> {{ _('اعرض أعضاء مجموعة مشتركين واحدة.') }}</li>
+          <li><strong>{{ _('زر «تطبيق»:') }}</strong> يرسل الفلاتر للخادم ويعيد تحميل القائمة بها
               (البحث الفوري وحده ما يحتاجه — هو للحالة والباقة والمجموعة).</li>
         </ul>
 
         <div class="dg-mock" aria-hidden="true">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">المشتركون › شريط الفلترة</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('المشتركون › شريط الفلترة') }}</span></div>
           <div class="dg-mock-body">
             <div class="dg-fbar">
-              <span class="dg-fsel">البحث بواسطة: كل الأعمدة</span>
+              <span class="dg-fsel">{{ _('البحث بواسطة: كل الأعمدة') }}</span>
               <span class="dg-fsearch"><i class="fa-solid fa-magnifying-glass"></i> ahmad <i class="fa-solid fa-xmark" style="margin-inline-start:auto;color:#94a3b8"></i></span>
             </div>
             <div class="dg-fbar">
-              <span class="dg-fsel">كل الحالات</span>
-              <span class="dg-fsel">كل الباقات</span>
-              <span class="dg-fsel">كل المجموعات</span>
-              <span class="dg-fbtn primary"><i class="fa-solid fa-filter"></i> تطبيق</span>
+              <span class="dg-fsel">{{ _('كل الحالات') }}</span>
+              <span class="dg-fsel">{{ _('كل الباقات') }}</span>
+              <span class="dg-fsel">{{ _('كل المجموعات') }}</span>
+              <span class="dg-fbtn primary"><i class="fa-solid fa-filter"></i> {{ _('تطبيق') }}</span>
             </div>
           </div>
         </div>
-        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> اكتب في الحقل البنفسجي — الجدول يتفلتر مع كل حرف.</div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> {{ _('اكتب في الحقل البنفسجي — الجدول يتفلتر مع كل حرف.') }}</div>
 
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>نصيحة:</b> تبحث عن مشترك من رقم جواله؟ اختر «الجوال» من «البحث بواسطة»
+          <span><b>{{ _('نصيحة:') }}</b> تبحث عن مشترك من رقم جواله؟ اختر «الجوال» من «البحث بواسطة»
           والصق الرقم — أسرع طريقة لما يتصل عليك زبون ما تعرف اسم دخوله.</span>
         </div>
       </div>
@@ -368,39 +368,39 @@
     <section class="dg-step" id="dg-s3">
       <div class="dg-badge">3</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-table-columns"></i> الجدول: الأعمدة والفرز والترقيم</h2>
+        <h2><i class="fa-solid fa-table-columns"></i> {{ _('الجدول: الأعمدة والفرز والترقيم') }}</h2>
         <p>
-          الجدول غني جدًا — أكثر من 20 عمودًا: <strong>#</strong>، <strong>اليوزر</strong>
-          (اضغط عليه لفتح ملف المشترك)، <strong>كلمة المرور</strong> (مخفية بنقاط — زر العين
-          يظهرها وزر النسخ ينسخها)، <strong>الاسم</strong>، <strong>الجوال</strong>،
-          <strong>الباقة</strong>، <strong>الكرت</strong>، <strong>الجهاز / النظام</strong>،
-          <strong>الحالة</strong>، <strong>المتبقي</strong>، <strong>آخر اتصال</strong>،
-          <strong>آخر فصل</strong>، <strong>تحميل</strong>، <strong>رفع</strong>،
-          <strong>الجلسات</strong>، <strong>MAC</strong>، <strong>العنوان / الجهاز</strong>،
-          <strong>السرعة</strong>، <strong>أول استخدام</strong>، <strong>ينتهي</strong>،
-          <strong>الإنشاء</strong>، و<strong>إجراءات</strong>.
+          {{ _('الجدول غني جدًا — أكثر من 20 عمودًا:') }} <strong>#</strong>{{ _('،') }} <strong>{{ _('اليوزر') }}</strong>
+          {{ _('(اضغط عليه لفتح ملف المشترك)،') }} <strong>{{ _('كلمة المرور') }}</strong> (مخفية بنقاط — زر العين
+          يظهرها وزر النسخ ينسخها)، <strong>{{ _('الاسم') }}</strong>{{ _('،') }} <strong>{{ _('الجوال') }}</strong>{{ _('،') }}
+          <strong>{{ _('الباقة') }}</strong>{{ _('،') }} <strong>{{ _('الكرت') }}</strong>{{ _('،') }} <strong>{{ _('الجهاز / النظام') }}</strong>{{ _('،') }}
+          <strong>{{ _('الحالة') }}</strong>{{ _('،') }} <strong>{{ _('المتبقي') }}</strong>{{ _('،') }} <strong>{{ _('آخر اتصال') }}</strong>{{ _('،') }}
+          <strong>{{ _('آخر فصل') }}</strong>{{ _('،') }} <strong>{{ _('تحميل') }}</strong>{{ _('،') }} <strong>{{ _('رفع') }}</strong>{{ _('،') }}
+          <strong>{{ _('الجلسات') }}</strong>{{ _('،') }} <strong>MAC</strong>{{ _('،') }} <strong>{{ _('العنوان / الجهاز') }}</strong>{{ _('،') }}
+          <strong>{{ _('السرعة') }}</strong>{{ _('،') }} <strong>{{ _('أول استخدام') }}</strong>{{ _('،') }} <strong>{{ _('ينتهي') }}</strong>{{ _('،') }}
+          <strong>{{ _('الإنشاء') }}</strong>{{ _('، و') }}<strong>{{ _('إجراءات') }}</strong>.
         </p>
         <ul>
-          <li><strong>الفرز:</strong> اضغط على عنوان أي عمود لترتيب الجدول به تصاعديًا،
+          <li><strong>{{ _('الفرز:') }}</strong> اضغط على عنوان أي عمود لترتيب الجدول به تصاعديًا،
               واضغط مرة ثانية للعكس — السهم الصغير بجانب العنوان يبيّن الاتجاه.</li>
-          <li><strong>زر «أعمدة»:</strong> فوق الجدول — يفتح قائمة صناديق اختيار تُظهر/تُخفي
-              أي عمود. اختيارك <strong>يُحفظ تلقائيًا</strong> ويبقى بعد إغلاق الصفحة.</li>
-          <li><strong>الترقيم أسفل الجدول:</strong> «صفوف بالصفحة» (10/20/50/100) + أزرار
+          <li><strong>{{ _('زر «أعمدة»:') }}</strong> فوق الجدول — يفتح قائمة صناديق اختيار تُظهر/تُخفي
+              أي عمود. اختيارك <strong>{{ _('يُحفظ تلقائيًا') }}</strong> {{ _('ويبقى بعد إغلاق الصفحة.') }}</li>
+          <li><strong>{{ _('الترقيم أسفل الجدول:') }}</strong> «صفوف بالصفحة» (10/20/50/100) + أزرار
               التنقل بين الصفحات + عدّاد «X – Y من N».</li>
         </ul>
 
         <div class="dg-menu" aria-hidden="true">
-          <div class="it on"><i class="fa-solid fa-square-check"></i> اليوزر</div>
-          <div class="it on"><i class="fa-solid fa-square-check"></i> الاسم</div>
-          <div class="it on"><i class="fa-solid fa-square-check"></i> الحالة</div>
+          <div class="it on"><i class="fa-solid fa-square-check"></i> {{ _('اليوزر') }}</div>
+          <div class="it on"><i class="fa-solid fa-square-check"></i> {{ _('الاسم') }}</div>
+          <div class="it on"><i class="fa-solid fa-square-check"></i> {{ _('الحالة') }}</div>
           <div class="it"><i class="fa-regular fa-square"></i> MAC</div>
-          <div class="it"><i class="fa-regular fa-square"></i> أول استخدام</div>
+          <div class="it"><i class="fa-regular fa-square"></i> {{ _('أول استخدام') }}</div>
         </div>
-        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> قائمة «أعمدة» — علّم ما تريد رؤيته وأخفِ الباقي.</div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> {{ _('قائمة «أعمدة» — علّم ما تريد رؤيته وأخفِ الباقي.') }}</div>
 
         <div class="dg-warn">
           <span class="ic">⚠️</span>
-          <span><b>انتبه:</b> كلمة المرور تظهر بنص صريح عند ضغط العين — لا تكشفها وشاشتك
+          <span><b>{{ _('انتبه:') }}</b> كلمة المرور تظهر بنص صريح عند ضغط العين — لا تكشفها وشاشتك
           مرئية لغير الموظفين المخوّلين. زر النسخ يعطيك إياها بدون إظهارها على الشاشة.</span>
         </div>
       </div>
@@ -410,27 +410,27 @@
     <section class="dg-step" id="dg-s4">
       <div class="dg-badge">4</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-circle-half-stroke"></i> افهم ألوان حالة المشترك</h2>
-        <p>عمود «الحالة» يستخدم حبوبًا ملوّنة — كل لون له معنى ثابت في كل النظام:</p>
+        <h2><i class="fa-solid fa-circle-half-stroke"></i> {{ _('افهم ألوان حالة المشترك') }}</h2>
+        <p>{{ _('عمود «الحالة» يستخدم حبوبًا ملوّنة — كل لون له معنى ثابت في كل النظام:') }}</p>
         <ul>
-          <li><span class="dg-pill g"><span class="dot"></span> مفعَّل</span> — الحساب شغّال ويستطيع الدخول على الإنترنت.</li>
-          <li><span class="dg-pill a"><span class="dot"></span> منتهٍ</span> — خلصت مدة اشتراكه؛ جدّد له من قائمة «تفعيل» (القسم التالي).</li>
-          <li><span class="dg-pill r"><span class="dot"></span> معطَّل</span> — موقوف يدويًا من الإدارة؛ لن يدخل حتى تعيد تفعيله.</li>
+          <li><span class="dg-pill g"><span class="dot"></span> {{ _('مفعَّل') }}</span> {{ _('— الحساب شغّال ويستطيع الدخول على الإنترنت.') }}</li>
+          <li><span class="dg-pill a"><span class="dot"></span> {{ _('منتهٍ') }}</span> {{ _('— خلصت مدة اشتراكه؛ جدّد له من قائمة «تفعيل» (القسم التالي).') }}</li>
+          <li><span class="dg-pill r"><span class="dot"></span> {{ _('معطَّل') }}</span> {{ _('— موقوف يدويًا من الإدارة؛ لن يدخل حتى تعيد تفعيله.') }}</li>
         </ul>
         <p>
-          وعمود <strong>«الجلسات»</strong> يكمّل الصورة: حبّة خضراء برقم تعني أن المشترك
-          <strong>متصل الآن</strong> بهذا العدد من الجلسات، و<span class="dg-kbd">0</span> يعني غير متصل حاليًا.
-          أما عمود <strong>«المتبقي»</strong> فيعرض عدّادًا حيًّا للوقت الباقي حتى انتهاء الاشتراك.
+          {{ _('وعمود') }} <strong>{{ _('«الجلسات»') }}</strong> {{ _('يكمّل الصورة: حبّة خضراء برقم تعني أن المشترك') }}
+          <strong>{{ _('متصل الآن') }}</strong> {{ _('بهذا العدد من الجلسات، و') }}<span class="dg-kbd">0</span> يعني غير متصل حاليًا.
+          أما عمود <strong>{{ _('«المتبقي»') }}</strong> {{ _('فيعرض عدّادًا حيًّا للوقت الباقي حتى انتهاء الاشتراك.') }}
         </p>
 
         <div class="dg-mock" aria-hidden="true">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">المشتركون › عمودا الحالة والجلسات</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('المشتركون › عمودا الحالة والجلسات') }}</span></div>
           <div class="dg-mock-body" style="padding:0">
             <div class="dg-tbl" style="border:0;border-radius:0">
-              <div class="hd"><span></span><span>اليوزر</span><span>الباقة</span><span>الحالة</span><span>الجلسات</span><span>ينتهي</span></div>
-              <div class="rw"><span class="dg-ck"></span><span style="font-weight:900;color:#5b21b6">ahmad2026</span><span>10 ميجا</span><span><span class="dg-pill g"><span class="dot"></span> مفعَّل</span></span><span><span class="dg-pill g">1</span></span><span>2026-07-01</span></div>
-              <div class="rw"><span class="dg-ck"></span><span style="font-weight:900;color:#5b21b6">sara_net</span><span>20 ميجا</span><span><span class="dg-pill a"><span class="dot"></span> منتهٍ</span></span><span>0</span><span>2026-05-28</span></div>
-              <div class="rw"><span class="dg-ck"></span><span style="font-weight:900;color:#5b21b6">omar99</span><span>10 ميجا</span><span><span class="dg-pill r"><span class="dot"></span> معطَّل</span></span><span>0</span><span>—</span></div>
+              <div class="hd"><span></span><span>{{ _('اليوزر') }}</span><span>{{ _('الباقة') }}</span><span>{{ _('الحالة') }}</span><span>{{ _('الجلسات') }}</span><span>{{ _('ينتهي') }}</span></div>
+              <div class="rw"><span class="dg-ck"></span><span style="font-weight:900;color:#5b21b6">ahmad2026</span><span>{{ _('10 ميجا') }}</span><span><span class="dg-pill g"><span class="dot"></span> {{ _('مفعَّل') }}</span></span><span><span class="dg-pill g">1</span></span><span>2026-07-01</span></div>
+              <div class="rw"><span class="dg-ck"></span><span style="font-weight:900;color:#5b21b6">sara_net</span><span>{{ _('20 ميجا') }}</span><span><span class="dg-pill a"><span class="dot"></span> {{ _('منتهٍ') }}</span></span><span>0</span><span>2026-05-28</span></div>
+              <div class="rw"><span class="dg-ck"></span><span style="font-weight:900;color:#5b21b6">omar99</span><span>{{ _('10 ميجا') }}</span><span><span class="dg-pill r"><span class="dot"></span> {{ _('معطَّل') }}</span></span><span>0</span><span>—</span></div>
             </div>
           </div>
         </div>
@@ -441,44 +441,44 @@
     <section class="dg-step" id="dg-s5">
       <div class="dg-badge">5</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-bolt"></i> إجراءات الصف الواحد — قائمتا «تفعيل» و«إدارية»</h2>
+        <h2><i class="fa-solid fa-bolt"></i> {{ _('إجراءات الصف الواحد — قائمتا «تفعيل» و«إدارية»') }}</h2>
         <p>
-          آخر عمود في كل صف ثلاثة أزرار: أيقونة <strong>«ملف 360°»</strong> البنفسجية
+          {{ _('آخر عمود في كل صف ثلاثة أزرار: أيقونة') }} <strong>{{ _('«ملف 360°»') }}</strong> البنفسجية
           (تفتح الملف الكامل للمشترك)، وقائمتان منسدلتان:
         </p>
-        <p><strong>قائمة «تفعيل» ⚡ — كل ما يخص التجديد والرصيد:</strong></p>
+        <p><strong>{{ _('قائمة «تفعيل» ⚡ — كل ما يخص التجديد والرصيد:') }}</strong></p>
         <ul>
-          <li><strong>تجديد / إضافة وقت:</strong> أضف أيامًا للاشتراك — مجانًا، أو نقدًا، أو دينًا على المشترك، والسعر يُحتسب تلقائيًا من سعر باقته.</li>
-          <li><strong>إضافة رصيد نقدي:</strong> اشحن رصيد محفظة المشترك.</li>
-          <li><strong>إضافة كوتة / جيجا:</strong> زِد حصة التنزيل/الرفع (مشتركة أو تنزيل فقط أو رفع فقط).</li>
-          <li><strong>تسجيل دفعة نقدية:</strong> سجّل مبلغًا استلمته من المشترك.</li>
-          <li><strong>منح سلفة:</strong> فعّل له الآن وسجّل المبلغ دينًا.</li>
-          <li><strong>استعادة الكوتة اليومية:</strong> صفّر عدّاد اليوم ليرجع له كامل كوتته فورًا.</li>
+          <li><strong>{{ _('تجديد / إضافة وقت:') }}</strong> {{ _('أضف أيامًا للاشتراك — مجانًا، أو نقدًا، أو دينًا على المشترك، والسعر يُحتسب تلقائيًا من سعر باقته.') }}</li>
+          <li><strong>{{ _('إضافة رصيد نقدي:') }}</strong> {{ _('اشحن رصيد محفظة المشترك.') }}</li>
+          <li><strong>{{ _('إضافة كوتة / جيجا:') }}</strong> {{ _('زِد حصة التنزيل/الرفع (مشتركة أو تنزيل فقط أو رفع فقط).') }}</li>
+          <li><strong>{{ _('تسجيل دفعة نقدية:') }}</strong> {{ _('سجّل مبلغًا استلمته من المشترك.') }}</li>
+          <li><strong>{{ _('منح سلفة:') }}</strong> {{ _('فعّل له الآن وسجّل المبلغ دينًا.') }}</li>
+          <li><strong>{{ _('استعادة الكوتة اليومية:') }}</strong> {{ _('صفّر عدّاد اليوم ليرجع له كامل كوتته فورًا.') }}</li>
         </ul>
-        <p><strong>قائمة «إدارية» 🎛 — التحكم بالحساب نفسه:</strong></p>
+        <p><strong>{{ _('قائمة «إدارية» 🎛 — التحكم بالحساب نفسه:') }}</strong></p>
         <ul>
-          <li><strong>تعديل المشترك</strong> و<strong>الدفعات والسلف</strong> (سجلّه المالي).</li>
-          <li><strong>إرسال رسالة تفعيل:</strong> SMS أو واتساب مع قوالب جاهزة (ترحيب، تذكير انتهاء، تأكيد دفعة...).</li>
-          <li><strong>تغيير العرض / السرعة:</strong> بدّل الباقة مع خيارات ذكية لفرق السعر (تعويض أيام، تسجيل دين، أو تغيير مباشر).</li>
-          <li><strong>فصل الاتصال:</strong> اقطع جلسته الحالية من الشبكة فورًا.</li>
-          <li><strong>تعطيل / تفعيل المشترك:</strong> الزر يتبدّل حسب حالته الحالية.</li>
-          <li><strong>أرشفة المشترك:</strong> (بالأحمر) ينقله لسلة المحذوفات — مع رسالة تأكيد قبل التنفيذ.</li>
+          <li><strong>{{ _('تعديل المشترك') }}</strong> {{ _('و') }}<strong>{{ _('الدفعات والسلف') }}</strong> {{ _('(سجلّه المالي).') }}</li>
+          <li><strong>{{ _('إرسال رسالة تفعيل:') }}</strong> {{ _('SMS أو واتساب مع قوالب جاهزة (ترحيب، تذكير انتهاء، تأكيد دفعة...).') }}</li>
+          <li><strong>{{ _('تغيير العرض / السرعة:') }}</strong> {{ _('بدّل الباقة مع خيارات ذكية لفرق السعر (تعويض أيام، تسجيل دين، أو تغيير مباشر).') }}</li>
+          <li><strong>{{ _('فصل الاتصال:') }}</strong> {{ _('اقطع جلسته الحالية من الشبكة فورًا.') }}</li>
+          <li><strong>{{ _('تعطيل / تفعيل المشترك:') }}</strong> {{ _('الزر يتبدّل حسب حالته الحالية.') }}</li>
+          <li><strong>{{ _('أرشفة المشترك:') }}</strong> {{ _('(بالأحمر) ينقله لسلة المحذوفات — مع رسالة تأكيد قبل التنفيذ.') }}</li>
         </ul>
 
         <div class="dg-menu" aria-hidden="true">
-          <div class="it on"><i class="fa-solid fa-clock"></i> تجديد / إضافة وقت</div>
-          <div class="it"><i class="fa-solid fa-coins"></i> إضافة رصيد نقدي</div>
-          <div class="it"><i class="fa-solid fa-gauge-high"></i> إضافة كوتة / جيجا</div>
-          <div class="it"><i class="fa-solid fa-money-bill-wave"></i> تسجيل دفعة نقدية</div>
-          <div class="it"><i class="fa-solid fa-hand-holding-dollar"></i> منح سلفة</div>
+          <div class="it on"><i class="fa-solid fa-clock"></i> {{ _('تجديد / إضافة وقت') }}</div>
+          <div class="it"><i class="fa-solid fa-coins"></i> {{ _('إضافة رصيد نقدي') }}</div>
+          <div class="it"><i class="fa-solid fa-gauge-high"></i> {{ _('إضافة كوتة / جيجا') }}</div>
+          <div class="it"><i class="fa-solid fa-money-bill-wave"></i> {{ _('تسجيل دفعة نقدية') }}</div>
+          <div class="it"><i class="fa-solid fa-hand-holding-dollar"></i> {{ _('منح سلفة') }}</div>
           <div class="sep"></div>
-          <div class="it"><i class="fa-solid fa-rotate-left"></i> استعادة الكوتة اليومية</div>
+          <div class="it"><i class="fa-solid fa-rotate-left"></i> {{ _('استعادة الكوتة اليومية') }}</div>
         </div>
-        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> قائمة «تفعيل» كما تنفتح من صف المشترك.</div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> {{ _('قائمة «تفعيل» كما تنفتح من صف المشترك.') }}</div>
 
         <div class="dg-warn">
           <span class="ic">⚠️</span>
-          <span><b>انتبه:</b> «الأرشفة» ليست حذفًا نهائيًا — المشترك ينتقل لسلة المحذوفات ويمكن
+          <span><b>{{ _('انتبه:') }}</b> «الأرشفة» ليست حذفًا نهائيًا — المشترك ينتقل لسلة المحذوفات ويمكن
           استعادته. لكن «فصل الاتصال» فوري: المشترك ينقطع في نفس اللحظة، فاستخدمه بوعي.</span>
         </div>
       </div>
@@ -488,39 +488,39 @@
     <section class="dg-step" id="dg-s6">
       <div class="dg-badge">6</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-check-double"></i> حدّد عدة مشتركين ونفّذ دفعة واحدة</h2>
+        <h2><i class="fa-solid fa-check-double"></i> {{ _('حدّد عدة مشتركين ونفّذ دفعة واحدة') }}</h2>
         <p>
           أول عمود في الجدول مربعات تحديد — علّم مشتركًا أو أكثر (ومربع رأس الجدول يحدد
           الكل). بمجرد التحديد يصير شيئان:
         </p>
         <ul>
-          <li>يظهر <strong>شريط الإجراءات السريع</strong> أعلى الجدول وفيه: «الملف»، «تعديل»،
-              «الدفعات والسلف»، وقائمتا <strong>«التفعيل والرصيد»</strong>
-              و<strong>«إجراءات إدارية»</strong> — نفس إجراءات الصف لكن على المحدَّدين كلهم:
+          <li>{{ _('يظهر') }} <strong>{{ _('شريط الإجراءات السريع') }}</strong> أعلى الجدول وفيه: «الملف»، «تعديل»،
+              «الدفعات والسلف»، وقائمتا <strong>{{ _('«التفعيل والرصيد»') }}</strong>
+              {{ _('و') }}<strong>{{ _('«إجراءات إدارية»') }}</strong> — نفس إجراءات الصف لكن على المحدَّدين كلهم:
               إضافة وقت/كوتة/رصيد، إرسال رسالة قصيرة جماعية، فصل الاتصال،
               تغيير الحالة (تفعيل/تعطيل)، والأرشفة الجماعية.</li>
-          <li>يظهر أسفل الشاشة <strong>شريط لاصق</strong> يعرض عدد المحدَّدين، مع زر
+          <li>{{ _('يظهر أسفل الشاشة') }} <strong>{{ _('شريط لاصق') }}</strong> يعرض عدد المحدَّدين، مع زر
               «إلغاء التحديد» وزر «حذف المحدد» الأحمر (أرشفة جماعية بتأكيد قوي يعرض
               أسماء كل المحدَّدين قبل التنفيذ).</li>
         </ul>
         <p>
-          في النوافذ الجماعية (مثل «إضافة وقت») تشوف قائمة المحدَّدين بأسمائهم، والقيمة
-          <strong>تُطبَّق لكل مشترك على حدة</strong> — يعني «يوم واحد» = يوم لكل واحد منهم،
+          {{ _('في النوافذ الجماعية (مثل «إضافة وقت») تشوف قائمة المحدَّدين بأسمائهم، والقيمة') }}
+          <strong>{{ _('تُطبَّق لكل مشترك على حدة') }}</strong> — يعني «يوم واحد» = يوم لكل واحد منهم،
           لا يُقسَّم بينهم.
         </p>
 
         <div class="dg-bulkbar" aria-hidden="true">
-          <span class="lbl"><span class="cnt">3</span> مشترك محدَّد</span>
+          <span class="lbl"><span class="cnt">3</span> {{ _('مشترك محدَّد') }}</span>
           <span class="acts">
-            <span class="dg-fbtn ghost"><i class="fa-solid fa-xmark"></i> إلغاء التحديد</span>
-            <span class="dg-fbtn" style="background:#fee2e2;color:#b91c1c"><i class="fa-solid fa-trash-can"></i> حذف المحدد (3)</span>
+            <span class="dg-fbtn ghost"><i class="fa-solid fa-xmark"></i> {{ _('إلغاء التحديد') }}</span>
+            <span class="dg-fbtn" style="background:#fee2e2;color:#b91c1c"><i class="fa-solid fa-trash-can"></i> {{ _('حذف المحدد (3)') }}</span>
           </span>
         </div>
-        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> الشريط اللاصق يبقى ظاهرًا أسفل الشاشة ما دام في تحديد.</div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> {{ _('الشريط اللاصق يبقى ظاهرًا أسفل الشاشة ما دام في تحديد.') }}</div>
 
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>نصيحة عملية:</b> فلتر على الحالة «منتهٍ»، حدّد الكل، ثم «التفعيل والرصيد ←
+          <span><b>{{ _('نصيحة عملية:') }}</b> فلتر على الحالة «منتهٍ»، حدّد الكل، ثم «التفعيل والرصيد ←
           إضافة وقت» — جدّدت كل المنتهين بضغطتين. أو أرسل لهم رسالة «تذكير انتهاء» جماعية.</span>
         </div>
       </div>
@@ -530,35 +530,35 @@
     <section class="dg-step" id="dg-s7">
       <div class="dg-badge">7</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-file-export"></i> صدّر القائمة أو اطبعها</h2>
+        <h2><i class="fa-solid fa-file-export"></i> {{ _('صدّر القائمة أو اطبعها') }}</h2>
         <p>
           في نهاية شريط الفلترة أربعة أزرار تصدير — وكلها تحترم فلترتك الحالية
           والأعمدة الظاهرة فقط:
         </p>
         <ul>
-          <li><strong>أيقونة CSV:</strong> ملف نصي يفتح في أي برنامج جداول — الأخف والأسرع.</li>
-          <li><strong>أيقونة Excel:</strong> ملف <span class="dg-kbd">.xlsx</span> منسّق جاهز لإكسل.</li>
-          <li><strong>أيقونة PDF:</strong> ملف PDF أنيق مناسب للمشاركة أو الأرشفة.</li>
-          <li><strong>زر «طباعة»:</strong> يفتح نافذة الطباعة بنسخة نظيفة من الجدول.</li>
+          <li><strong>{{ _('أيقونة CSV:') }}</strong> {{ _('ملف نصي يفتح في أي برنامج جداول — الأخف والأسرع.') }}</li>
+          <li><strong>{{ _('أيقونة Excel:') }}</strong> {{ _('ملف') }} <span class="dg-kbd">.xlsx</span> {{ _('منسّق جاهز لإكسل.') }}</li>
+          <li><strong>{{ _('أيقونة PDF:') }}</strong> {{ _('ملف PDF أنيق مناسب للمشاركة أو الأرشفة.') }}</li>
+          <li><strong>{{ _('زر «طباعة»:') }}</strong> {{ _('يفتح نافذة الطباعة بنسخة نظيفة من الجدول.') }}</li>
         </ul>
 
         <div class="dg-mock" aria-hidden="true" style="max-width:430px">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">المشتركون › أزرار التصدير</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('المشتركون › أزرار التصدير') }}</span></div>
           <div class="dg-mock-body">
             <div class="dg-fbar" style="justify-content:flex-end">
               <span class="dg-fbtn icon" title="CSV"><i class="fa-solid fa-file-csv" style="color:#16a34a"></i></span>
               <span class="dg-fbtn icon" title="Excel"><i class="fa-solid fa-file-excel" style="color:#15803d"></i></span>
               <span class="dg-fbtn icon" title="PDF"><i class="fa-solid fa-file-pdf" style="color:#dc2626"></i></span>
-              <span class="dg-fbtn ghost"><i class="fa-solid fa-print"></i> طباعة</span>
+              <span class="dg-fbtn ghost"><i class="fa-solid fa-print"></i> {{ _('طباعة') }}</span>
             </div>
           </div>
         </div>
 
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>وبعدين؟</b> صرت تعرف الصفحة كلها. جرّب الآن دليل
-          <b>«مجموعات المشتركين»</b> لتنظّم مشتركيك أحياءً وأبراجًا، ودليل
-          <b>«المتصلون الآن»</b> لمراقبة الجلسات الحيّة لحظة بلحظة.</span>
+          <span><b>{{ _('وبعدين؟') }}</b> {{ _('صرت تعرف الصفحة كلها. جرّب الآن دليل') }}
+          <b>{{ _('«مجموعات المشتركين»') }}</b> {{ _('لتنظّم مشتركيك أحياءً وأبراجًا، ودليل') }}
+          <b>{{ _('«المتصلون الآن»') }}</b> {{ _('لمراقبة الجلسات الحيّة لحظة بلحظة.') }}</span>
         </div>
       </div>
     </section>

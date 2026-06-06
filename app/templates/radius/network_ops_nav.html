@@ -21,10 +21,10 @@
 .nnav a.nnav-ghost{font-weight:700;color:var(--hub-text-mute,#94a3b8);font-size:12px}
 </style>
 <nav class="nnav" data-testid="network-ops-nav">
-  <a class="{{ 'is-active' if _ops }}" href="{{ url_for('radius.mt_operations') }}"><i class="fa-solid fa-sliders"></i> إدارة الراوترات</a>
-  <a class="{{ 'is-active' if _topo }}" href="{{ url_for('radius.mt_topology') }}"><i class="fa-solid fa-diagram-project"></i> خريطة الشبكة</a>
-  <a class="{{ 'is-active' if _prob }}" href="{{ url_for('radius.mt_problems_index') }}"><i class="fa-solid fa-triangle-exclamation"></i> مركز المشاكل</a>
-  <a class="{{ 'is-active' if _diag }}" href="{{ url_for('radius.diagnostics') }}"><i class="fa-solid fa-stethoscope"></i> تشخيص الراوترات</a>
+  <a class="{{ 'is-active' if _ops }}" href="{{ url_for('radius.mt_operations') }}"><i class="fa-solid fa-sliders"></i> {{ _('إدارة الراوترات') }}</a>
+  <a class="{{ 'is-active' if _topo }}" href="{{ url_for('radius.mt_topology') }}"><i class="fa-solid fa-diagram-project"></i> {{ _('خريطة الشبكة') }}</a>
+  <a class="{{ 'is-active' if _prob }}" href="{{ url_for('radius.mt_problems_index') }}"><i class="fa-solid fa-triangle-exclamation"></i> {{ _('مركز المشاكل') }}</a>
+  <a class="{{ 'is-active' if _diag }}" href="{{ url_for('radius.diagnostics') }}"><i class="fa-solid fa-stethoscope"></i> {{ _('تشخيص الراوترات') }}</a>
   <span class="nnav-sep"></span>
   {# مخفي مؤقتاً بطلب المالك — رابط «الإعداد الهندسي» (setup_wizard_page).
      المسار يبقى حيًّا لكنه محروس super_admin فقط (انظر _PERM_GUARDED في

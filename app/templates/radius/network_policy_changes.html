@@ -35,11 +35,11 @@
 {% set _actions %}
   <a class="hub-btn hub-btn--secondary"
      href="{{ url_for('radius.npc_' ~ service.key ~ '_preview', policy_id=policy.id) }}">
-    <i class="fa-solid fa-arrow-right"></i> رجوع للمعاينة
+    <i class="fa-solid fa-arrow-right"></i> {{ _('رجوع للمعاينة') }}
   </a>
   <a class="hub-btn hub-btn--secondary"
      href="{{ url_for('radius.npc_' ~ service.key ~ '_list_scoped', nas_id=policy.router_id) }}">
-    <i class="fa-solid fa-router"></i> قائمة سياسات الراوتر
+    <i class="fa-solid fa-router"></i> {{ _('قائمة سياسات الراوتر') }}
   </a>
 {% endset %}
 {{ hub.megahero(
@@ -108,8 +108,8 @@
 
         <span class="npc-cs-meta" style="margin-inline-start:auto;">
           <span class="mono tnum" style="direction:ltr">{{ cs.created_at|dt_local }}</span>
-          · بواسطة <strong>{{ cs.created_by or '—' }}</strong>
-          · وضع: <code>{{ cs.execution_mode }}</code>
+          {{ _('· بواسطة') }} <strong>{{ cs.created_by or '—' }}</strong>
+          {{ _('· وضع:') }} <code>{{ cs.execution_mode }}</code>
         </span>
       </div>
 
@@ -131,8 +131,8 @@
                 'partially_succeeded': 'نجاح جزئي'
               } %}
               <i class="fa-solid fa-router"></i>
-              راوتر <span class="mono tnum" style="direction:ltr">#{{ t.router_id }}</span>
-              · حالة: <strong>{{ _t_status_ar.get(t.status, t.status) }}</strong>
+              {{ _('راوتر') }} <span class="mono tnum" style="direction:ltr">#{{ t.router_id }}</span>
+              {{ _('· حالة:') }} <strong>{{ _t_status_ar.get(t.status, t.status) }}</strong>
               {% if t.error_message %}
                 · <span style="font-family:ui-monospace,monospace; direction:ltr;">
                   {{ t.error_message[:120] }}
@@ -154,10 +154,10 @@
                   class="hub-btn hub-btn--secondary hub-btn--sm"
                   data-test="npc-cs-rollback-btn">
             <i class="fa-solid fa-rotate-left"></i>
-            تراجع عن هذا التنفيذ
+            {{ _('تراجع عن هذا التنفيذ') }}
           </button>
           <span class="hub-text-mute" style="font-size:12px;">
-            (يطابق فقط القواعد التي يحمل تعليقها <code>HOBE_NPC_…</code>)
+            {{ _('(يطابق فقط القواعد التي يحمل تعليقها') }} <code>HOBE_NPC_…</code>)
           </span>
         </form>
       {% endif %}

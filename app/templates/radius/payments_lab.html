@@ -8,7 +8,7 @@
 {% block title %}مختبر الدفع الإلكتروني — Hobe Hub{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-flask-vial"></i>{% endblock %}
 {% block page_title %}مختبر الدفع الإلكتروني{% endblock %}
-{% block page_sub %}<span class="sub">وضع تجريبي — محاكاة كاملة لتدفق الدفع قبل ربط البوابات الحقيقية</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('وضع تجريبي — محاكاة كاملة لتدفق الدفع قبل ربط البوابات الحقيقية') }}</span>{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
@@ -59,7 +59,7 @@
 <div class="pl-demo" role="status">
   <div class="pl-demo-icon"><i class="fa-solid fa-flask"></i></div>
   <div>
-    <p class="pl-demo-title"><i class="fa-solid fa-circle-exclamation"></i> وضع تجريبي — محاكاة</p>
+    <p class="pl-demo-title"><i class="fa-solid fa-circle-exclamation"></i> {{ _('وضع تجريبي — محاكاة') }}</p>
     <p class="pl-demo-text">
       هذا المختبر يحاكي تدفق الدفع الإلكتروني كاملًا (اختيار → محفظة → رمز تحقق → إيصال) بلا أي حركة مالية حقيقية
       وبلا ترحيل إلى دفتر القيود. عند توقيع اتفاقية مع مزوّد (جوال باي / إي-سداد / بنك فلسطين / بال باي / لحظة)
@@ -101,19 +101,19 @@
   {% call hub.section("جلسات الدفع التجريبية", icon="receipt", meta=(total ~ " جلسة")) %}
     {% if checkouts %}
     <div class="uds-table-wrap" data-uds-table data-uds-page-size="25"
-         data-uds-export-title="جلسات الدفع التجريبية">
+         data-uds-export-title="{{ _('جلسات الدفع التجريبية') }}">
       <table class="uds-table">
         <thead>
           <tr>
             <th>#</th>
-            <th>المرجع</th>
-            <th>العنصر</th>
-            <th>عبر</th>
-            <th>الهاتف</th>
-            <th>المبلغ</th>
-            <th>الحالة</th>
-            <th data-uds-noexport>رمز التحقق <span class="pl-lock-pill"><i class="fa-solid fa-flask"></i> تجريبي</span></th>
-            <th>أنشئت</th>
+            <th>{{ _('المرجع') }}</th>
+            <th>{{ _('العنصر') }}</th>
+            <th>{{ _('عبر') }}</th>
+            <th>{{ _('الهاتف') }}</th>
+            <th>{{ _('المبلغ') }}</th>
+            <th>{{ _('الحالة') }}</th>
+            <th data-uds-noexport>{{ _('رمز التحقق') }} <span class="pl-lock-pill"><i class="fa-solid fa-flask"></i> {{ _('تجريبي') }}</span></th>
+            <th>{{ _('أنشئت') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -129,9 +129,9 @@
               {% set ui = meta.get('ui_provider') or '' %}
               {% set ui_ar = {'jawwalpay': 'جوال باي', 'palpay': 'بال باي', 'esadad': 'إي-سداد'} %}
               {% if ui %}<span title="{{ ui }}">{{ ui_ar.get(ui, ui) }}</span>
-              {%- else %}<span class="pl-muted">غير محدد</span>{% endif %}
+              {%- else %}<span class="pl-muted">{{ _('غير محدد') }}</span>{% endif %}
             </td>
-            <td>{% if cust.get('phone') %}<bdi dir="ltr">{{ cust.get('phone') }}</bdi>{% else %}<span class="pl-muted">غير محدد</span>{% endif %}</td>
+            <td>{% if cust.get('phone') %}<bdi dir="ltr">{{ cust.get('phone') }}</bdi>{% else %}<span class="pl-muted">{{ _('غير محدد') }}</span>{% endif %}</td>
             {# العملة عبر فلتر money الموحّد (رمز العملة + تنسيق الآلاف) بدل خريطة رموز محلية #}
             <td><b>{{ (c.amount_minor / 100)|money(c.currency) }}</b></td>
             {# الحالة بالعربي مع إبقاء القيمة الخام في title (قاعدة عرض enums) #}
@@ -144,10 +144,10 @@
             </td>
             <td>
               {% if c.status in ('pending', 'otp_sent') and meta.get('demo_otp') %}
-                <span class="pl-otp">{{ meta.get('demo_otp') }} <small>تجريبي</small></span>
-              {% else %}<span class="pl-muted">غير محدد</span>{% endif %}
+                <span class="pl-otp">{{ meta.get('demo_otp') }} <small>{{ _('تجريبي') }}</small></span>
+              {% else %}<span class="pl-muted">{{ _('غير محدد') }}</span>{% endif %}
             </td>
-            <td>{% if c.created_at %}<bdi dir="ltr" class="pl-ts">{{ c.created_at[:16].replace('T', ' ') }}</bdi>{% else %}<span class="pl-muted">غير محدد</span>{% endif %}</td>
+            <td>{% if c.created_at %}<bdi dir="ltr" class="pl-ts">{{ c.created_at[:16].replace('T', ' ') }}</bdi>{% else %}<span class="pl-muted">{{ _('غير محدد') }}</span>{% endif %}</td>
           </tr>
           {% endfor %}
         </tbody>
@@ -168,8 +168,8 @@
     <form class="pl-webhook-form" method="post" action="{{ url_for('radius.payments_lab_webhook') }}">
       {# توكن CSRF: نموذج POST يفشل بخطأ 400 في before_request بدونه #}
       {{ csrf_token_input() | safe }}
-      <input type="text" name="reference" placeholder="مرجع الجلسة — مثال: CHK-1A2B3C4D5E" required
-             aria-label="مرجع جلسة الدفع" class="pl-mono">
+      <input type="text" name="reference" placeholder="{{ _('مرجع الجلسة — مثال: CHK-1A2B3C4D5E') }}" required
+             aria-label="{{ _('مرجع جلسة الدفع') }}" class="pl-mono">
       {{ hub.btn("محاكاة webhook", icon="bolt", variant="secondary", type="submit", size="sm") }}
     </form>
   {% endcall %}
@@ -179,14 +179,14 @@
                       meta="تُفعَّل بعد توقيع الاتفاقيات") %}
     <p class="pl-section-desc">
       عند توقيع اتفاقية مع أي مزوّد، تُدخَل مفاتيحه هنا ويُسجَّل المزوّد في طبقة الدفع
-      (<bdi dir="ltr">payment_providers</bdi>) — صفحة الدفع نفسها لا تتغيّر. حتى ذلك الحين تبقى الحقول معطّلة.
+      (<bdi dir="ltr">payment_providers</bdi>{{ _(') — صفحة الدفع نفسها لا تتغيّر. حتى ذلك الحين تبقى الحقول معطّلة.') }}
     </p>
     <div class="pl-cred-grid">
       {% for rp in real_providers %}
       <div class="pl-cred">
         <div class="pl-cred-head">
           <b><i class="fa-solid fa-building-columns pl-cred-ic"></i> {{ rp.title }}</b>
-          <span class="pl-lock-pill"><i class="fa-solid fa-lock"></i> بعد توقيع الاتفاقية</span>
+          <span class="pl-lock-pill"><i class="fa-solid fa-lock"></i> {{ _('بعد توقيع الاتفاقية') }}</span>
         </div>
         {# الحقول معطّلة دائمًا (عرض فقط). أزلنا dir=ltr لأن الـ placeholder عربي
            في معظمه؛ اسم الحقل اللاتيني القصير يُقرأ ضمن السياق العربي بلا كسر.

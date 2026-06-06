@@ -33,12 +33,12 @@
 {% call hub.section("تم إنشاء الرمز", icon="circle-check", meta="انسخه الآن") %}
   <div class="uds-modal-warn" style="margin-bottom:12px;background:#ecfdf5;color:#14532d;border-color:#bbf7d0">
     <i class="fa-solid fa-circle-check"></i>
-    <span>تم إنشاء الرمز — انسخه الآن، لن يُعرض مجددًا. ضعه في مكان آمن مثل مدير كلمات المرور؛ إن فُقد اطلب رمزًا جديدًا.</span>
+    <span>{{ _('تم إنشاء الرمز — انسخه الآن، لن يُعرض مجددًا. ضعه في مكان آمن مثل مدير كلمات المرور؛ إن فُقد اطلب رمزًا جديدًا.') }}</span>
   </div>
   <div class="hub-flex-row" style="gap:8px;flex-wrap:nowrap;direction:ltr;unicode-bidi:isolate">
     <code id="tk-new" class="mono" style="flex:1;min-width:0;padding:11px 14px;border:1px solid var(--hub-border-soft,#e2e8f0);border-radius:10px;background:var(--hub-bg-card,#fff);word-break:break-all">{{ new_plain }}</code>
     <button type="button" id="tk-copy" class="hub-btn hub-btn--secondary">
-      <i class="fa-solid fa-copy"></i> نسخ
+      <i class="fa-solid fa-copy"></i> {{ _('نسخ') }}
     </button>
   </div>
 {% endcall %}
@@ -51,11 +51,11 @@
     <i class="fa-solid {{ 'fa-shield-check' if enforcement_on else 'fa-triangle-exclamation' }}"></i>
     <span>
       {% if enforcement_on %}
-        الفرض <strong>مفعّل</strong>: كل نقطة في الواجهة البرمجية (حتى النقاط غير المُدرجة هنا) تتطلّب
+        الفرض <strong>{{ _('مفعّل') }}</strong>: كل نقطة في الواجهة البرمجية (حتى النقاط غير المُدرجة هنا) تتطلّب
         مفتاح API صحيح أو اعتماد أدمن، وإلا تُرفض بـ401.
       {% else %}
-        الفرض <strong>معطّل</strong> (الوضع الآمن للتدرّج): النقاط المحمية صراحةً تبقى محمية، لكن أي
-        نقطة أُضيفت دون حماية تبقى مفتوحة. <strong>قبل التفعيل</strong>: جهّز مفتاحًا، وحدّث تطبيقات
+        الفرض <strong>{{ _('معطّل') }}</strong> (الوضع الآمن للتدرّج): النقاط المحمية صراحةً تبقى محمية، لكن أي
+        نقطة أُضيفت دون حماية تبقى مفتوحة. <strong>{{ _('قبل التفعيل') }}</strong>: جهّز مفتاحًا، وحدّث تطبيقات
         Flutter لترسل الترويسة، ثم فعّل الفرض — وإلا ستنقطع التطبيقات التي لا ترسل اعتمادًا.
       {% endif %}
     </span>
@@ -65,13 +65,13 @@
         onsubmit="return confirm({{ ('تعطيل الفرض المركزي؟' if enforcement_on else 'تفعيل الفرض على كل النقاط؟ أي تطبيق لا يرسل مفتاحًا/اعتمادًا سيتوقف فورًا.')|tojson }});">
     <input type="hidden" name="enable" value="{{ '0' if enforcement_on else '1' }}">
     {% if enforcement_on %}
-      <button class="hub-btn hub-btn--secondary" type="submit"><i class="fa-solid fa-toggle-off"></i> تعطيل الفرض</button>
+      <button class="hub-btn hub-btn--secondary" type="submit"><i class="fa-solid fa-toggle-off"></i> {{ _('تعطيل الفرض') }}</button>
     {% else %}
-      <button class="hub-btn hub-btn--danger" type="submit"><i class="fa-solid fa-toggle-on"></i> تفعيل الفرض الآن</button>
+      <button class="hub-btn hub-btn--danger" type="submit"><i class="fa-solid fa-toggle-on"></i> {{ _('تفعيل الفرض الآن') }}</button>
     {% endif %}
   </form>
   {% else %}
-    <span class="hub-text-mute" style="font-size:12px">التبديل متاح لمدير النظام الأعلى فقط (أو عبر متغيّر البيئة <code>HOBERADIUS_API_AUTH_REQUIRED</code>).</span>
+    <span class="hub-text-mute" style="font-size:12px">{{ _('التبديل متاح لمدير النظام الأعلى فقط (أو عبر متغيّر البيئة') }} <code>HOBERADIUS_API_AUTH_REQUIRED</code>).</span>
   {% endif %}
 {% endcall %}
 
@@ -79,7 +79,7 @@
 {% call hub.section("إنشاء رمز جديد", icon="plus") %}
   <form method="post" class="hub-flex-row" style="gap:10px;align-items:center;flex-wrap:wrap">
     <input class="hub-input grow" type="text" name="name"
-           placeholder="اسم الرمز الجديد (مثال: integration-prod)" required style="flex:1;min-width:200px">
+           placeholder="{{ _('اسم الرمز الجديد (مثال: integration-prod)') }}" required style="flex:1;min-width:200px">
     {{ hub.btn("إنشاء رمز", icon="plus", variant="primary", type="submit") }}
   </form>
 {% endcall %}
@@ -104,12 +104,12 @@
         <thead>
           <tr>
             <th class="num" style="width:60px">#</th>
-            <th>الاسم</th>
-            <th>بصمة (آخر 12 خانة)</th>
-            <th>الحالة</th>
-            <th>آخر استخدام</th>
-            <th>تاريخ الإنشاء</th>
-            <th style="width:120px" data-uds-nosort data-uds-nocol>إجراءات</th>
+            <th>{{ _('الاسم') }}</th>
+            <th>{{ _('بصمة (آخر 12 خانة)') }}</th>
+            <th>{{ _('الحالة') }}</th>
+            <th>{{ _('آخر استخدام') }}</th>
+            <th>{{ _('تاريخ الإنشاء') }}</th>
+            <th style="width:120px" data-uds-nosort data-uds-nocol>{{ _('إجراءات') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -133,7 +133,7 @@
                       onsubmit="return confirm('إلغاء الرمز؟ لا يمكن استعادته.')"
                       style="display:inline; margin:0">
                   <button class="hub-btn hub-btn--danger hub-btn--sm" type="submit">
-                    <i class="fa-solid fa-ban"></i> إلغاء
+                    <i class="fa-solid fa-ban"></i> {{ _('إلغاء') }}
                   </button>
                 </form>
               {% else %}

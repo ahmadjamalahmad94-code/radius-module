@@ -28,7 +28,7 @@
 {% block title %}سلة المحذوفات — هوب ريديوس{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-box-archive"></i>{% endblock %}
 {% block page_title %}سلة المحذوفات{% endblock %}
-{% block page_sub %}<span class="sub"><bdi dir="ltr">{{ items|length }}</bdi> عنصرًا مؤرشفًا في النتائج</span>{% endblock %}
+{% block page_sub %}<span class="sub"><bdi dir="ltr">{{ items|length }}</bdi> {{ _('عنصرًا مؤرشفًا في النتائج') }}</span>{% endblock %}
 
 {% block head_extra %}{{ super() }}
 {# نظام الجداول الموحّد (uds): فرز + ترقيم + تصدير + المودال العائم #}
@@ -66,11 +66,11 @@
 ) %}
   {# حزام فلترة النوع — نفس العقد: GET ?entity_type=… إلى نفس المسار #}
   <span class="hub-text-mute" style="font-size:12.5px;font-weight:700;white-space:nowrap">
-    <i class="fa-solid fa-filter"></i> تصفية حسب النوع
+    <i class="fa-solid fa-filter"></i> {{ _('تصفية حسب النوع') }}
   </span>
   <a class="hub-btn hub-btn--{{ 'primary' if not selected else 'secondary' }} hub-btn--sm"
      href="{{ url_for('radius.recycle_bin') }}">
-    <i class="fa-solid fa-layer-group"></i> الكل
+    <i class="fa-solid fa-layer-group"></i> {{ _('الكل') }}
     <span class="rb-chip-count"
           style="background:{{ 'rgba(255,255,255,.18)' if not selected else 'var(--hub-bg-soft)' }}">
       <bdi dir="ltr">{{ _total }}</bdi>
@@ -97,19 +97,19 @@
 {% call hub.section("العناصر المؤرشفة", icon="table-list",
                     meta=items|length|string ~ " عنصر", flush=True) %}
   <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25"
-       data-uds-export-title="سلة المحذوفات" style="border:none;border-radius:0">
+       data-uds-export-title="{{ _('سلة المحذوفات') }}" style="border:none;border-radius:0">
     <table class="hub-table">
       <thead>
         <tr>
-          <th>النوع</th>
-          <th>العنصر</th>
-          <th>الحالة</th>
-          <th>وقت الأرشفة</th>
-          <th>مصدر الأرشفة</th>
-          <th>الاحتفاظ حتى</th>
-          <th>بواسطة</th>
-          <th data-uds-nosort>السبب</th>
-          <th style="width:120px" data-uds-nosort data-uds-nocol data-uds-noexport>إجراء</th>
+          <th>{{ _('النوع') }}</th>
+          <th>{{ _('العنصر') }}</th>
+          <th>{{ _('الحالة') }}</th>
+          <th>{{ _('وقت الأرشفة') }}</th>
+          <th>{{ _('مصدر الأرشفة') }}</th>
+          <th>{{ _('الاحتفاظ حتى') }}</th>
+          <th>{{ _('بواسطة') }}</th>
+          <th data-uds-nosort>{{ _('السبب') }}</th>
+          <th style="width:120px" data-uds-nosort data-uds-nocol data-uds-noexport>{{ _('إجراء') }}</th>
         </tr>
       </thead>
       <tbody>
@@ -138,12 +138,12 @@
               {{ hub.pill("يدوية", variant="grey") }}
             {% endif %}
             {% if item.archive_policy_id %}
-              <div class="mono small hub-text-mute">سياسة <bdi dir="ltr">#{{ item.archive_policy_id }}</bdi></div>
+              <div class="mono small hub-text-mute">{{ _('سياسة') }} <bdi dir="ltr">#{{ item.archive_policy_id }}</bdi></div>
             {% endif %}
           </td>
           <td class="mono small">
             {% if item.retention_expires_at %}<bdi dir="ltr">{{ item.retention_expires_at|date_local }}</bdi>
-            {% else %}<span class="hub-text-mute">غير محدد</span>{% endif %}
+            {% else %}<span class="hub-text-mute">{{ _('غير محدد') }}</span>{% endif %}
             {% if item.retention_expired %}
               <div>{{ hub.pill("انتهى الاحتفاظ", variant="amber", dot=False) }}</div>
             {% endif %}
@@ -160,12 +160,12 @@
                     data-rb-label="{{ item.label|e }}"
                     data-rb-type="{{ entity_labels.get(item.entity_type, item.entity_type)|e }}"
                     data-rb-action="{{ url_for('radius.recycle_bin_restore', entity_type=item.entity_type, entity_id=item.id) }}">
-              <i class="fa-solid fa-rotate-left"></i> استعادة
+              <i class="fa-solid fa-rotate-left"></i> {{ _('استعادة') }}
             </button>
             {% else %}
             <button type="button" class="hub-btn hub-btn--ghost hub-btn--sm" disabled
-                    title="انتهت مدة الاحتفاظ — الاستعادة غير متاحة">
-              <i class="fa-solid fa-ban"></i> غير متاحة
+                    title="{{ _('انتهت مدة الاحتفاظ — الاستعادة غير متاحة') }}">
+              <i class="fa-solid fa-ban"></i> {{ _('غير متاحة') }}
             </button>
             {% endif %}
           </td>
@@ -190,7 +190,7 @@
      ~ '<button type="submit" class="hub-btn hub-btn--primary"><i class="fa-solid fa-rotate-left"></i> استعادة العنصر</button></form>') %}
   <div class="uds-modal-warn uds-modal-warn--amber">
     <i class="fa-solid fa-circle-info"></i>
-    <span>سيُستعاد <span data-rb-restore-type></span> «<strong data-rb-restore-name></strong>» إلى وضعه قبل الأرشفة. راجعه قبل إعادة استخدامه تشغيليًا.</span>
+    <span>{{ _('سيُستعاد') }} <span data-rb-restore-type></span> «<strong data-rb-restore-name></strong>{{ _('» إلى وضعه قبل الأرشفة. راجعه قبل إعادة استخدامه تشغيليًا.') }}</span>
   </div>
 {% endcall %}
 

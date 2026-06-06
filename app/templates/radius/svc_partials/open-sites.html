@@ -2,9 +2,9 @@
    تتيح للمستخدمين الوصول إلى نطاقات محددة قبل تسجيل الدخول
    مثل صفحات الدفع أو صفحات معلومات الفنادق.
    تستخدم AddedServicesPhasePlanner مع service_key="walled_garden". #}
-<h2>فتح المواقع (قبل تسجيل الدخول)</h2>
+<h2>{{ _('فتح المواقع (قبل تسجيل الدخول)') }}</h2>
 <p class="swsvf-pane-sub">
-  المواقع التي تكتبها هنا ستكون متاحة للمستخدمين <strong>بدون</strong> الحاجة
+  {{ _('المواقع التي تكتبها هنا ستكون متاحة للمستخدمين') }} <strong>{{ _('بدون') }}</strong> الحاجة
   لتسجيل الدخول في بوابة الدخول. مفيد لصفحات الدفع، صفحات الفنادق، خوادم أسماء النطاقات
   محدّدة، أو خدمات داخليّة.
 </p>
@@ -36,28 +36,28 @@
 
 <div class="swop-hint">
   <i class="fa-solid fa-circle-info"></i>
-  يجب أن تكون <strong>بوابة الدخول مفعّلة</strong> على الراوتر أولاً حتى تظهر
+  {{ _('يجب أن تكون') }} <strong>{{ _('بوابة الدخول مفعّلة') }}</strong> على الراوتر أولاً حتى تظهر
   هذه القائمة. لو لم تكن قد فعّلتها بعد، ارجع لبطاقة «برمجة بوابة الدخول».
 </div>
 
 <div class="swop-section">
-  <div class="swop-section-title">قائمة المواقع المسموحة قبل الدخول</div>
+  <div class="swop-section-title">{{ _('قائمة المواقع المسموحة قبل الدخول') }}</div>
   <p class="swop-help">
-    اكتب اسم نطاق في كل سطر، مثل <code>payment.example.com</code>. لا تحتاج
-    <code>https://</code> أو <code>www.</code>.<br>
-    <strong>ملاحظة:</strong> هذه القائمة <strong>الكاملة</strong> — ما تُرسله
+    {{ _('اكتب اسم نطاق في كل سطر، مثل') }} <code>payment.example.com</code>{{ _('. لا تحتاج') }}
+    <code>https://</code> {{ _('أو') }} <code>www.</code>.<br>
+    <strong>{{ _('ملاحظة:') }}</strong> {{ _('هذه القائمة') }} <strong>{{ _('الكاملة') }}</strong> — ما تُرسله
     يحلّ محلّ ما كان موجوداً سابقاً.
   </p>
   <div class="swop-loading" data-swop-loading hidden style="color:var(--swsvf-mute);font-size:12px;margin-bottom:8px">
     <i class="fa-solid fa-spinner fa-spin"></i>
-    جارٍ تحميل القائمة الحاليّة من الراوتر…
+    {{ _('جارٍ تحميل القائمة الحاليّة من الراوتر…') }}
   </div>
   <textarea class="swop-textarea" data-swop-domains
             placeholder="payment.example.com
 hotel.local
 8.8.8.8"></textarea>
   <div class="swop-count">
-    عدد المواقع: <strong data-swop-count>0</strong>
+    {{ _('عدد المواقع:') }} <strong data-swop-count>0</strong>
   </div>
 </div>
 

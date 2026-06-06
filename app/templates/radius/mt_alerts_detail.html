@@ -21,7 +21,7 @@
 {% block title %}تنبيه #{{ alert.id }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-triangle-exclamation"></i>{% endblock %}
 {% block page_title %}تفاصيل التنبيه{% endblock %}
-{% block page_sub %}<span class="sub">تنبيه <bdi dir="ltr">#{{ alert.id }}</bdi> — {{ alert.rule }}</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('تنبيه') }} <bdi dir="ltr">#{{ alert.id }}</bdi> — {{ alert.rule }}</span>{% endblock %}
 
 {# ── خرائط الخطورة/الحالة (ألوان التوكنز: critical=#EF4444, warning=#F59E0B, info=#3D8DD6) ── #}
 {% if alert.severity == 'critical' %}
@@ -207,8 +207,8 @@
       <table class="hub-table">
         <thead>
           <tr>
-            <th>البند</th>
-            <th>القيمة</th>
+            <th>{{ _('البند') }}</th>
+            <th>{{ _('القيمة') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -228,7 +228,7 @@
         <thead>
           <tr>
             <th class="num" style="width:64px">#</th>
-            <th>القيمة</th>
+            <th>{{ _('القيمة') }}</th>
           </tr>
         </thead>
         <tbody>

@@ -19,7 +19,7 @@
 {% block title %}تذكرة جديدة{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-headset"></i>{% endblock %}
 {% block page_title %}تذكرة جديدة{% endblock %}
-{% block page_sub %}<span class="sub">فتح طلب دعم جديد لمشترك ومتابعته حتى الإغلاق.</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('فتح طلب دعم جديد لمشترك ومتابعته حتى الإغلاق.') }}</span>{% endblock %}
 
 {% block content %}
 
@@ -46,52 +46,52 @@
     <div class="hub-form-row">
 
       <div class="hub-field" style="grid-column:1/-1">
-        <label class="hub-field-label" for="tk-subscriber">المشترك <span style="color:#dc2626">*</span></label>
+        <label class="hub-field-label" for="tk-subscriber">{{ _('المشترك') }} <span style="color:#dc2626">*</span></label>
         <select class="hub-select" id="tk-subscriber" name="subscriber_id" required>
-          <option value="">— اختر مشتركًا —</option>
+          <option value="">{{ _('— اختر مشتركًا —') }}</option>
           {% for s in subs %}
             <option value="{{ s.id }}">{{ s.username }} — {{ s.full_name or '—' }}</option>
           {% endfor %}
         </select>
-        <div class="hub-field-hint">صاحب التذكرة — تظهر في سجلّه وتُحتسب ضمن متابعاته.</div>
+        <div class="hub-field-hint">{{ _('صاحب التذكرة — تظهر في سجلّه وتُحتسب ضمن متابعاته.') }}</div>
       </div>
 
       <div class="hub-field" style="grid-column:1/-1">
-        <label class="hub-field-label" for="tk-subject">الموضوع <span style="color:#dc2626">*</span></label>
+        <label class="hub-field-label" for="tk-subject">{{ _('الموضوع') }} <span style="color:#dc2626">*</span></label>
         <input class="hub-input" type="text" id="tk-subject" name="subject" required
-               placeholder="مثال: انقطاع متكرر في الخدمة منذ يومين">
-        <div class="hub-field-hint">سطر واحد يلخّص المشكلة — يظهر عنوانًا في قائمة التذاكر.</div>
+               placeholder="{{ _('مثال: انقطاع متكرر في الخدمة منذ يومين') }}">
+        <div class="hub-field-hint">{{ _('سطر واحد يلخّص المشكلة — يظهر عنوانًا في قائمة التذاكر.') }}</div>
       </div>
 
       <div class="hub-field">
-        <label class="hub-field-label" for="tk-category">الفئة</label>
+        <label class="hub-field-label" for="tk-category">{{ _('الفئة') }}</label>
         <select class="hub-select" id="tk-category" name="category">
-          <option value="general">عام</option>
-          <option value="billing">الفواتير والدفع</option>
-          <option value="connection">الاتصال والخدمة</option>
-          <option value="hardware">الأجهزة والمعدّات</option>
-          <option value="complaint">شكوى</option>
-          <option value="service_request">طلب خدمة</option>
+          <option value="general">{{ _('عام') }}</option>
+          <option value="billing">{{ _('الفواتير والدفع') }}</option>
+          <option value="connection">{{ _('الاتصال والخدمة') }}</option>
+          <option value="hardware">{{ _('الأجهزة والمعدّات') }}</option>
+          <option value="complaint">{{ _('شكوى') }}</option>
+          <option value="service_request">{{ _('طلب خدمة') }}</option>
         </select>
-        <div class="hub-field-hint">تسهّل الفرز وتوجيه التذكرة للفريق المختص.</div>
+        <div class="hub-field-hint">{{ _('تسهّل الفرز وتوجيه التذكرة للفريق المختص.') }}</div>
       </div>
 
       <div class="hub-field" style="grid-column:1/-1">
-        <label class="hub-field-label">الأولوية</label>
+        <label class="hub-field-label">{{ _('الأولوية') }}</label>
         {{ hub.cardselect("priority", [
             {"value": "low",    "title": "منخفضة", "icon": "angle-down"},
             {"value": "normal", "title": "عادية",  "icon": "minus"},
             {"value": "high",   "title": "مرتفعة", "icon": "angle-up"},
             {"value": "urgent", "title": "عاجلة",  "icon": "triangle-exclamation"}
         ], value="normal") }}
-        <div class="hub-field-hint">تحدّد ترتيب المعالجة — استخدم «عاجلة» للحالات الحرجة فقط.</div>
+        <div class="hub-field-hint">{{ _('تحدّد ترتيب المعالجة — استخدم «عاجلة» للحالات الحرجة فقط.') }}</div>
       </div>
 
       <div class="hub-field" style="grid-column:1/-1">
-        <label class="hub-field-label" for="tk-body">التفاصيل</label>
+        <label class="hub-field-label" for="tk-body">{{ _('التفاصيل') }}</label>
         <textarea class="hub-textarea" id="tk-body" name="body" rows="6"
-                  placeholder="اشرح المشكلة بوضوح: متى بدأت؟ ما الأعراض؟ ماذا جُرّب؟"></textarea>
-        <div class="hub-field-hint">تفاصيل أوضح = حلّ أسرع وأخذ وردّ أقل.</div>
+                  placeholder="{{ _('اشرح المشكلة بوضوح: متى بدأت؟ ما الأعراض؟ ماذا جُرّب؟') }}"></textarea>
+        <div class="hub-field-hint">{{ _('تفاصيل أوضح = حلّ أسرع وأخذ وردّ أقل.') }}</div>
       </div>
 
     </div>

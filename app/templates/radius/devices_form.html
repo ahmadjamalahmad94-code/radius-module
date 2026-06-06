@@ -47,31 +47,31 @@
   {% call hub.section("الهوية والشبكة", icon="network-wired") %}
     <div class="hub-form-row">
       <div class="hub-field">
-        <label class="hub-field-label">الاسم <span class="req">*</span></label>
-        <input class="hub-input" type="text" name="name" required value="{{ device.name or '' }}" placeholder="راوتر الشبكة الرئيسي">
-        <div class="hub-field-hint">يظهر في القائمة والسجلات.</div>
+        <label class="hub-field-label">{{ _('الاسم') }} <span class="req">*</span></label>
+        <input class="hub-input" type="text" name="name" required value="{{ device.name or '' }}" placeholder="{{ _('راوتر الشبكة الرئيسي') }}">
+        <div class="hub-field-hint">{{ _('يظهر في القائمة والسجلات.') }}</div>
       </div>
       <div class="hub-field">
-        <label class="hub-field-label">الاسم المختصر</label>
+        <label class="hub-field-label">{{ _('الاسم المختصر') }}</label>
         <input class="hub-input" type="text" name="shortname" value="{{ device.shortname or '' }}" placeholder="mt-main">
       </div>
       <div class="hub-field">
-        <label class="hub-field-label">العنوان <span class="req">*</span></label>
+        <label class="hub-field-label">{{ _('العنوان') }} <span class="req">*</span></label>
         <input class="hub-input" type="text" name="address" required value="{{ device.address or '' }}" placeholder="10.0.0.1">
       </div>
       <div class="hub-field">
-        <label class="hub-field-label">المفتاح المشترك <span class="req">*</span></label>
+        <label class="hub-field-label">{{ _('المفتاح المشترك') }} <span class="req">*</span></label>
         <input class="hub-input" type="text" name="secret" {% if is_new %}required{% endif %} value="{{ device.secret or '' }}">
-        <div class="hub-field-hint">يطابق المفتاح على جهاز الشبكة نفسه.</div>
+        <div class="hub-field-hint">{{ _('يطابق المفتاح على جهاز الشبكة نفسه.') }}</div>
       </div>
       <div class="hub-field">
-        <label class="hub-field-label">المُصنِّع</label>
+        <label class="hub-field-label">{{ _('المُصنِّع') }}</label>
         <select class="hub-select" name="vendor">
           {% for v in vendors %}<option value="{{ v }}" {% if device.vendor == v %}selected{% endif %}>{{ v }}</option>{% endfor %}
         </select>
       </div>
       <div class="hub-field">
-        <label class="hub-field-label">النوع</label>
+        <label class="hub-field-label">{{ _('النوع') }}</label>
         <select class="hub-select" name="nas_type">
           {% for t in ["hotspot","pppoe","dhcp","router","ap","switch","firewall","other"] %}
             <option value="{{ t }}" {% if device.nas_type == t %}selected{% endif %}>{{ t }}</option>
@@ -79,31 +79,31 @@
         </select>
       </div>
       <div class="hub-field">
-        <label class="hub-field-label">الموقع</label>
-        <input class="hub-input" type="text" name="location" value="{{ device.location or '' }}" placeholder="الطابق 1 - الإدارة">
+        <label class="hub-field-label">{{ _('الموقع') }}</label>
+        <input class="hub-input" type="text" name="location" value="{{ device.location or '' }}" placeholder="{{ _('الطابق 1 - الإدارة') }}">
       </div>
       <div class="hub-field">
-        <label class="hub-field-label">إحداثيات GPS</label>
+        <label class="hub-field-label">{{ _('إحداثيات GPS') }}</label>
         <input class="hub-input" type="text" name="coordinates" value="{{ device.coordinates or '' }}" placeholder="31.95, 35.93">
       </div>
       <div class="hub-field">
-        <label class="hub-field-label">وسوم (CSV)</label>
-        <input class="hub-input" type="text" name="tags" value="{{ device.tags or '' }}" placeholder="إنتاج، مبنى أ">
+        <label class="hub-field-label">{{ _('وسوم (CSV)') }}</label>
+        <input class="hub-input" type="text" name="tags" value="{{ device.tags or '' }}" placeholder="{{ _('إنتاج، مبنى أ') }}">
       </div>
       <div class="hub-field">
-        <label class="hub-field-label">الحالة</label>
+        <label class="hub-field-label">{{ _('الحالة') }}</label>
         {{ toggle_switch(name="enabled", checked=(device.enabled or is_new), value="1", id="nd-en") }}
       </div>
       <div class="hub-field">
-        <label class="hub-field-label">المراقبة الدورية</label>
+        <label class="hub-field-label">{{ _('المراقبة الدورية') }}</label>
         {{ toggle_switch(name="monitoring_enabled", checked=(device.monitoring_enabled or is_new), value="1", id="nd-mon", on_label="مفعَّلة", off_label="معطَّلة") }}
       </div>
       <div class="hub-field">
-        <label class="hub-field-label">إلزام رسالة التحقق</label>
+        <label class="hub-field-label">{{ _('إلزام رسالة التحقق') }}</label>
         {{ toggle_switch(name="require_message_authenticator", checked=device.require_message_authenticator, value="1", id="nd-ma", on_label="إلزامي", off_label="اختياري") }}
       </div>
       <div class="hub-field" style="grid-column:1/-1">
-        <label class="hub-field-label">الوصف</label>
+        <label class="hub-field-label">{{ _('الوصف') }}</label>
         <textarea class="hub-textarea" name="description">{{ device.description or '' }}</textarea>
       </div>
     </div>
@@ -113,31 +113,31 @@
   {% call hub.section("المنافذ", icon="plug") %}
     <div class="hub-form-row">
       <div class="hub-field">
-        <label class="hub-field-label">منفذ المصادقة</label>
+        <label class="hub-field-label">{{ _('منفذ المصادقة') }}</label>
         <input class="hub-input" type="number" min="0" max="65535" name="auth_port" value="{{ device.auth_port or 1812 }}">
-        <div class="hub-field-hint">قياسي: 1812.</div>
+        <div class="hub-field-hint">{{ _('قياسي: 1812.') }}</div>
       </div>
       <div class="hub-field">
-        <label class="hub-field-label">منفذ المحاسبة</label>
+        <label class="hub-field-label">{{ _('منفذ المحاسبة') }}</label>
         <input class="hub-input" type="number" min="0" max="65535" name="acct_port" value="{{ device.acct_port or 1813 }}">
-        <div class="hub-field-hint">قياسي: 1813.</div>
+        <div class="hub-field-hint">{{ _('قياسي: 1813.') }}</div>
       </div>
       <div class="hub-field">
-        <label class="hub-field-label">منفذ قطع الجلسة (CoA)</label>
+        <label class="hub-field-label">{{ _('منفذ قطع الجلسة (CoA)') }}</label>
         <input class="hub-input" type="number" min="0" max="65535" name="coa_port" value="{{ device.coa_port or 3799 }}">
         <div class="hub-field-hint">RFC 5176: 3799.</div>
       </div>
       <div class="hub-field">
-        <label class="hub-field-label">منفذ واجهة الربط</label>
+        <label class="hub-field-label">{{ _('منفذ واجهة الربط') }}</label>
         <input class="hub-input" type="number" min="0" max="65535" name="api_port" value="{{ device.api_port or 8728 }}">
-        <div class="hub-field-hint">8728 عادي، 8729 للاتصال المشفّر.</div>
+        <div class="hub-field-hint">{{ _('8728 عادي، 8729 للاتصال المشفّر.') }}</div>
       </div>
       <div class="hub-field">
-        <label class="hub-field-label">منفذ الدخول النصي</label>
+        <label class="hub-field-label">{{ _('منفذ الدخول النصي') }}</label>
         <input class="hub-input" type="number" min="0" max="65535" name="ssh_port" value="{{ device.ssh_port or 22 }}">
       </div>
       <div class="hub-field">
-        <label class="hub-field-label">عدد المنافذ الفيزيائية</label>
+        <label class="hub-field-label">{{ _('عدد المنافذ الفيزيائية') }}</label>
         <input class="hub-input" type="number" min="0" name="ports" value="{{ device.ports or 0 }}">
       </div>
     </div>
@@ -147,19 +147,19 @@
   {% call hub.section("وصول الراوتر والمراقبة", icon="key") %}
     <div class="hub-form-row">
       <div class="hub-field">
-        <label class="hub-field-label">اسم مستخدم الراوتر</label>
+        <label class="hub-field-label">{{ _('اسم مستخدم الراوتر') }}</label>
         <input class="hub-input" type="text" name="api_user" value="{{ device.api_user or '' }}" placeholder="admin">
       </div>
       <div class="hub-field">
-        <label class="hub-field-label">كلمة مرور الراوتر</label>
+        <label class="hub-field-label">{{ _('كلمة مرور الراوتر') }}</label>
         <input class="hub-input" type="text" name="api_password" value="{{ device.api_password or '' }}">
       </div>
       <div class="hub-field">
-        <label class="hub-field-label">اتصال مشفّر</label>
+        <label class="hub-field-label">{{ _('اتصال مشفّر') }}</label>
         {{ toggle_switch(name="api_use_tls", checked=device.api_use_tls, value="1", id="api-tls", on_label="8729 (TLS)", off_label="8728") }}
       </div>
       <div class="hub-field" style="grid-column:1/-1">
-        <label class="hub-field-label">مجتمع المراقبة</label>
+        <label class="hub-field-label">{{ _('مجتمع المراقبة') }}</label>
         <input class="hub-input" type="text" name="snmp_community" value="{{ device.snmp_community or '' }}" placeholder="public">
       </div>
     </div>
@@ -175,10 +175,10 @@
         {% if _ok %}{{ hub.pill("ناجح", variant="green") }}
         {% else %}{{ hub.pill(device.last_check_status or 'غير معروف', variant="amber") }}{% endif %}
       </span>
-      <span>الوقت: <span class="hub-text-mono">{{ device.last_check_at }}</span></span>
+      <span>{{ _('الوقت:') }} <span class="hub-text-mono">{{ device.last_check_at }}</span></span>
     </div>
     <div class="hub-field-hint" style="margin-top:8px">
-      يُحدَّث عند الضغط على زر «فحص» في صفحة القائمة.
+      {{ _('يُحدَّث عند الضغط على زر «فحص» في صفحة القائمة.') }}
     </div>
   {% endcall %}
   {% endif %}

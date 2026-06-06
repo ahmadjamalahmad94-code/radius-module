@@ -20,14 +20,14 @@
       <button type="button" class="hub-btn hub-btn--secondary" data-sw-action="refresh-summary"' + (' disabled' if not summary else '') + '>تحديث الحالة</button>'
   ) }}
 
-  <section class="sw-stepper" aria-label="مراحل المعالج">
-    <div class="sw-step">1. اختيار مصدر الإنترنت</div>
-    <div class="sw-step">2. معاينة سكربت الإنترنت</div>
-    <div class="sw-step">3. تحقق الإنترنت</div>
-    <div class="sw-step">4. معاينة الربط والمصادقة</div>
-    <div class="sw-step">5. تحقق الربط والمصادقة</div>
-    <div class="sw-step">6. بوابة الدخول / البرودباند</div>
-    <div class="sw-step">7. الملخص النهائي</div>
+  <section class="sw-stepper" aria-label="{{ _('مراحل المعالج') }}">
+    <div class="sw-step">{{ _('1. اختيار مصدر الإنترنت') }}</div>
+    <div class="sw-step">{{ _('2. معاينة سكربت الإنترنت') }}</div>
+    <div class="sw-step">{{ _('3. تحقق الإنترنت') }}</div>
+    <div class="sw-step">{{ _('4. معاينة الربط والمصادقة') }}</div>
+    <div class="sw-step">{{ _('5. تحقق الربط والمصادقة') }}</div>
+    <div class="sw-step">{{ _('6. بوابة الدخول / البرودباند') }}</div>
+    <div class="sw-step">{{ _('7. الملخص النهائي') }}</div>
   </section>
 
   <section class="sw-cards" data-sw-verification-cards>
@@ -41,78 +41,78 @@
       </article>
       {% endfor %}
     {% else %}
-      <article class="sw-status-card status-blocked"><h3>جاهزية التحقق</h3><div class="status-pill">بانتظار التشغيل</div><p>ابدأ تشغيل جديد لعرض بطاقات الحالة.</p></article>
+      <article class="sw-status-card status-blocked"><h3>{{ _('جاهزية التحقق') }}</h3><div class="status-pill">{{ _('بانتظار التشغيل') }}</div><p>{{ _('ابدأ تشغيل جديد لعرض بطاقات الحالة.') }}</p></article>
     {% endif %}
   </section>
 
   <div class="sw-grid">
     <section class="sw-panel">
-      <h2>1) إعداد الإنترنت</h2>
+      <h2>{{ _('1) إعداد الإنترنت') }}</h2>
       <form data-sw-form="internet-source">
         {{ csrf_token_input()|safe }}
         <div class="sw-field">
-          <label>نوع المصدر</label>
+          <label>{{ _('نوع المصدر') }}</label>
           <select name="source_type" required>
-            <option value="dhcp">عنوان تلقائي مباشر</option>
-            <option value="static">عنوان شبكي ثابت</option>
-            <option value="vlan">شبكة افتراضية</option>
-            <option value="pppoe">اتصال مزوّد الإنترنت</option>
+            <option value="dhcp">{{ _('عنوان تلقائي مباشر') }}</option>
+            <option value="static">{{ _('عنوان شبكي ثابت') }}</option>
+            <option value="vlan">{{ _('شبكة افتراضية') }}</option>
+            <option value="pppoe">{{ _('اتصال مزوّد الإنترنت') }}</option>
           </select>
         </div>
         <div class="sw-field">
-          <label>واجهة الإنترنت المختارة</label>
+          <label>{{ _('واجهة الإنترنت المختارة') }}</label>
           <input name="selected_wan_interface" placeholder="ether1" required>
         </div>
         <input type="hidden" name="payload_json" value="">
-        <div class="sw-field-grid" aria-label="خيارات مصدر الإنترنت">
+        <div class="sw-field-grid" aria-label="{{ _('خيارات مصدر الإنترنت') }}">
           <label class="sw-check sw-checkline">
             <input type="checkbox" name="add_default_route" value="1" checked>
-            <span>إضافة المسار الافتراضي تلقائيًا من هذا المصدر.</span>
+            <span>{{ _('إضافة المسار الافتراضي تلقائيًا من هذا المصدر.') }}</span>
           </label>
           <label class="sw-check sw-checkline">
             <input type="checkbox" name="use_peer_dns" value="1" checked>
-            <span>استخدام DNS القادم من مزود الإنترنت عند توفره.</span>
+            <span>{{ _('استخدام DNS القادم من مزود الإنترنت عند توفره.') }}</span>
           </label>
           <label class="sw-check sw-checkline">
             <input type="checkbox" name="nat_enabled" value="1" checked>
-            <span>تفعيل NAT لخروج المشتركين إلى الإنترنت.</span>
+            <span>{{ _('تفعيل NAT لخروج المشتركين إلى الإنترنت.') }}</span>
           </label>
         </div>
         <div class="sw-inline-actions">
-          <button class="hub-btn" type="button" data-sw-action="set-internet-source">حفظ بيانات المصدر</button>
-          <button class="hub-btn hub-btn--primary" type="button" data-sw-action="generate-internet-script">توليد سكربت الإنترنت</button>
-          <button class="hub-btn" type="button" data-sw-action="verify-internet">تحليل تحقق الإنترنت</button>
+          <button class="hub-btn" type="button" data-sw-action="set-internet-source">{{ _('حفظ بيانات المصدر') }}</button>
+          <button class="hub-btn hub-btn--primary" type="button" data-sw-action="generate-internet-script">{{ _('توليد سكربت الإنترنت') }}</button>
+          <button class="hub-btn" type="button" data-sw-action="verify-internet">{{ _('تحليل تحقق الإنترنت') }}</button>
         </div>
         <div class="sw-field">
-          <label>مخرجات التحقق (الصق نص شاشة الأوامر كما هو)</label>
+          <label>{{ _('مخرجات التحقق (الصق نص شاشة الأوامر كما هو)') }}</label>
           <textarea name="verify_output" rows="5" spellcheck="false" placeholder="/tool ping 8.8.8.8 count=5&#10;/ip route print detail where dst-address=0.0.0.0/0"></textarea>
         </div>
       </form>
     </section>
 
     <section class="sw-panel">
-      <h2>2) الربط والمصادقة</h2>
+      <h2>{{ _('2) الربط والمصادقة') }}</h2>
       <form data-sw-form="vpn-radius">
         {{ csrf_token_input()|safe }}
         <input type="hidden" name="payload_json" value="">
-        <div class="sw-field-grid" aria-label="بيانات الربط والمصادقة">
-          <label class="sw-field"><span>اسم نفق الإدارة</span><input name="wg_interface_name" value="hr-wg"></label>
-          <label class="sw-field"><span>اسم نظير الربط على الراوتر</span><input name="peer_name" value="vps-peer"></label>
-          <label class="sw-field"><span>عنوان الراوتر داخل النفق</span><input name="router_vpn_ip" value="10.10.0.3"></label>
-          <label class="sw-field"><span>عنوان الخادم داخل النفق</span><input name="vps_vpn_ip" value="10.10.0.1"></label>
-          <label class="sw-field"><span>العنوان المسموح للمرور</span><input name="allowed_address" value="10.10.0.1/32"></label>
-          <label class="sw-field"><span>عنوان الخادم العام</span><input name="vps_public_endpoint" value="187.77.70.18"></label>
-          <label class="sw-field"><span>منفذ نفق الإدارة</span><input name="endpoint_port" type="number" min="1" max="65535" value="51820"></label>
-          <label class="sw-field"><span>عنوان خادم المصادقة</span><input name="radius_server_ip" value="10.10.0.1"></label>
-          <label class="sw-field"><span>سر المصادقة</span><input name="radius_secret" value="CHANGE_ME"></label>
-          <label class="sw-field"><span>مستخدم الربط للراوتر</span><input name="api_username" value="hr_api_setup"></label>
+        <div class="sw-field-grid" aria-label="{{ _('بيانات الربط والمصادقة') }}">
+          <label class="sw-field"><span>{{ _('اسم نفق الإدارة') }}</span><input name="wg_interface_name" value="hr-wg"></label>
+          <label class="sw-field"><span>{{ _('اسم نظير الربط على الراوتر') }}</span><input name="peer_name" value="vps-peer"></label>
+          <label class="sw-field"><span>{{ _('عنوان الراوتر داخل النفق') }}</span><input name="router_vpn_ip" value="10.10.0.3"></label>
+          <label class="sw-field"><span>{{ _('عنوان الخادم داخل النفق') }}</span><input name="vps_vpn_ip" value="10.10.0.1"></label>
+          <label class="sw-field"><span>{{ _('العنوان المسموح للمرور') }}</span><input name="allowed_address" value="10.10.0.1/32"></label>
+          <label class="sw-field"><span>{{ _('عنوان الخادم العام') }}</span><input name="vps_public_endpoint" value="187.77.70.18"></label>
+          <label class="sw-field"><span>{{ _('منفذ نفق الإدارة') }}</span><input name="endpoint_port" type="number" min="1" max="65535" value="51820"></label>
+          <label class="sw-field"><span>{{ _('عنوان خادم المصادقة') }}</span><input name="radius_server_ip" value="10.10.0.1"></label>
+          <label class="sw-field"><span>{{ _('سر المصادقة') }}</span><input name="radius_secret" value="CHANGE_ME"></label>
+          <label class="sw-field"><span>{{ _('مستخدم الربط للراوتر') }}</span><input name="api_username" value="hr_api_setup"></label>
         </div>
         <div class="sw-inline-actions">
-          <button class="hub-btn hub-btn--primary" type="button" data-sw-action="generate-vpn-script">توليد سكربت الربط والمصادقة</button>
-          <button class="hub-btn" type="button" data-sw-action="verify-vpn">تحليل تحقق الربط والمصادقة</button>
+          <button class="hub-btn hub-btn--primary" type="button" data-sw-action="generate-vpn-script">{{ _('توليد سكربت الربط والمصادقة') }}</button>
+          <button class="hub-btn" type="button" data-sw-action="verify-vpn">{{ _('تحليل تحقق الربط والمصادقة') }}</button>
         </div>
         <div class="sw-field">
-          <label>مخرجات تحقق الربط والمصادقة</label>
+          <label>{{ _('مخرجات تحقق الربط والمصادقة') }}</label>
           <textarea name="verify_output" rows="5" spellcheck="false" placeholder="/interface wireguard peers print detail&#10;/radius print detail&#10;/tool ping 10.10.0.1 count=5"></textarea>
         </div>
       </form>
@@ -121,161 +121,161 @@
 
   <div class="sw-grid">
     <section class="sw-panel">
-      <h2>3) بوابة الدخول — الوصول العامّ</h2>
+      <h2>{{ _('3) بوابة الدخول — الوصول العامّ') }}</h2>
       <form data-sw-form="hotspot">
         {{ csrf_token_input()|safe }}
         <div class="sw-field">
-          <label>النمط</label>
+          <label>{{ _('النمط') }}</label>
           <select name="mode">
-            <option value="smart">ذكي (تلقائي)</option>
-            <option value="manual">يدوي</option>
+            <option value="smart">{{ _('ذكي (تلقائي)') }}</option>
+            <option value="manual">{{ _('يدوي') }}</option>
           </select>
         </div>
         <input type="hidden" name="payload_json" value="">
         <div class="sw-field">
-          <label>واجهات بوابة الدخول المختارة</label>
-          <input name="hotspot_interfaces" value="ether3" placeholder="مثال: ether3 أو ether3, ether5">
+          <label>{{ _('واجهات بوابة الدخول المختارة') }}</label>
+          <input name="hotspot_interfaces" value="ether3" placeholder="{{ _('مثال: ether3 أو ether3, ether5') }}">
         </div>
         <div class="sw-field">
-          <label>الشبكات التي يجب عدم استخدامها</label>
+          <label>{{ _('الشبكات التي يجب عدم استخدامها') }}</label>
           <textarea name="blocked_networks_text" rows="3" spellcheck="false">10.10.0.0/24
 10.20.30.0/24</textarea>
           <input type="hidden" name="blocked_json" value="">
         </div>
         <div class="sw-inline-actions">
-          <button class="hub-btn" type="button" data-sw-action="interfaces-candidates">جلب الواجهات المرشّحة</button>
-          <button class="hub-btn hub-btn--primary" type="button" data-sw-action="generate-hotspot-script">توليد سكربت بوابة الدخول</button>
-          <button class="hub-btn" type="button" data-sw-action="verify-hotspot">تحليل التحقّق</button>
+          <button class="hub-btn" type="button" data-sw-action="interfaces-candidates">{{ _('جلب الواجهات المرشّحة') }}</button>
+          <button class="hub-btn hub-btn--primary" type="button" data-sw-action="generate-hotspot-script">{{ _('توليد سكربت بوابة الدخول') }}</button>
+          <button class="hub-btn" type="button" data-sw-action="verify-hotspot">{{ _('تحليل التحقّق') }}</button>
         </div>
         <div class="sw-field">
-          <label>مخرجات تحقق بوابة الدخول</label>
-          <textarea name="verify_output" rows="4" spellcheck="false" placeholder="ألصق مخرجات فحص بوابة الدخول هنا"></textarea>
+          <label>{{ _('مخرجات تحقق بوابة الدخول') }}</label>
+          <textarea name="verify_output" rows="4" spellcheck="false" placeholder="{{ _('ألصق مخرجات فحص بوابة الدخول هنا') }}"></textarea>
         </div>
       </form>
     </section>
 
     <section class="sw-panel">
-      <h2>4) البرودباند — اتصال المشتركين</h2>
+      <h2>{{ _('4) البرودباند — اتصال المشتركين') }}</h2>
       <form data-sw-form="broadband">
         {{ csrf_token_input()|safe }}
         <div class="sw-field">
-          <label>النمط</label>
+          <label>{{ _('النمط') }}</label>
           <select name="mode">
-            <option value="smart">ذكي (تلقائي)</option>
-            <option value="manual">يدوي</option>
+            <option value="smart">{{ _('ذكي (تلقائي)') }}</option>
+            <option value="manual">{{ _('يدوي') }}</option>
           </select>
         </div>
         <input type="hidden" name="payload_json" value="">
-        <div class="sw-field-grid" aria-label="بيانات البرودباند">
-          <label class="sw-field"><span>واجهات البرودباند المختارة</span><input name="broadband_interfaces" value="ether4" placeholder="مثال: ether4 أو ether4, ether5"></label>
-          <label class="sw-field"><span>عنوان الخادم المحلي</span><input name="local_address" value="10.88.44.1"></label>
-          <label class="sw-field"><span>نطاق عناوين المشتركين</span><input name="remote_pool_cidr" value="10.88.44.0/24"></label>
+        <div class="sw-field-grid" aria-label="{{ _('بيانات البرودباند') }}">
+          <label class="sw-field"><span>{{ _('واجهات البرودباند المختارة') }}</span><input name="broadband_interfaces" value="ether4" placeholder="{{ _('مثال: ether4 أو ether4, ether5') }}"></label>
+          <label class="sw-field"><span>{{ _('عنوان الخادم المحلي') }}</span><input name="local_address" value="10.88.44.1"></label>
+          <label class="sw-field"><span>{{ _('نطاق عناوين المشتركين') }}</span><input name="remote_pool_cidr" value="10.88.44.0/24"></label>
         </div>
         <div class="sw-field">
-          <label>الشبكات التي يجب عدم استخدامها</label>
+          <label>{{ _('الشبكات التي يجب عدم استخدامها') }}</label>
           <textarea name="blocked_networks_text" rows="3" spellcheck="false">10.10.0.0/24
 10.20.30.0/24
 10.77.50.0/24</textarea>
           <input type="hidden" name="blocked_json" value="">
         </div>
         <div class="sw-inline-actions">
-          <button class="hub-btn hub-btn--primary" type="button" data-sw-action="generate-broadband-script">توليد سكربت البرودباند</button>
-          <button class="hub-btn" type="button" data-sw-action="verify-broadband">تحليل التحقّق</button>
+          <button class="hub-btn hub-btn--primary" type="button" data-sw-action="generate-broadband-script">{{ _('توليد سكربت البرودباند') }}</button>
+          <button class="hub-btn" type="button" data-sw-action="verify-broadband">{{ _('تحليل التحقّق') }}</button>
         </div>
         <div class="sw-field">
-          <label>مخرجات تحقق البرودباند</label>
-          <textarea name="verify_output" rows="4" spellcheck="false" placeholder="ألصق مخرجات فحص البرودباند هنا"></textarea>
+          <label>{{ _('مخرجات تحقق البرودباند') }}</label>
+          <textarea name="verify_output" rows="4" spellcheck="false" placeholder="{{ _('ألصق مخرجات فحص البرودباند هنا') }}"></textarea>
         </div>
       </form>
     </section>
   </div>
 
   <section class="sw-panel">
-    <h2>مخرجات السكربت / التشخيص</h2>
+    <h2>{{ _('مخرجات السكربت / التشخيص') }}</h2>
     <div class="sw-inline-actions">
-      <button class="hub-btn" type="button" data-sw-action="copy-script">نسخ آخر سكربت</button>
-      <a class="hub-btn" href="{{ url_for('radius.setup_wizard_page') }}">فتح صفحة نظيفة</a>
+      <button class="hub-btn" type="button" data-sw-action="copy-script">{{ _('نسخ آخر سكربت') }}</button>
+      <a class="hub-btn" href="{{ url_for('radius.setup_wizard_page') }}">{{ _('فتح صفحة نظيفة') }}</a>
     </div>
-    <pre class="sw-script" data-sw-script-preview>-- لا يوجد سكربت بعد --</pre>
-    <pre class="sw-output" data-sw-output-preview>-- لا توجد نتائج بعد --</pre>
+    <pre class="sw-script" data-sw-script-preview>{{ _('-- لا يوجد سكربت بعد --') }}</pre>
+    <pre class="sw-output" data-sw-output-preview>{{ _('-- لا توجد نتائج بعد --') }}</pre>
   </section>
   <section class="sw-panel">
-    <h2>عمليات محمية</h2>
-    <p class="sw-muted">المعاينة بدون تنفيذ آمنة. التطبيق والتراجع يبقيان محظورين ما لم تكن HOBERADIUS_SETUP_WIZARD_LIVE_APPLY=true و HOBERADIUS_SETUP_WIZARD_LAB_MODE=true مع جرد حديث ومعاينة تنفيذ ومعاينة تراجع وتأكيد.</p>
+    <h2>{{ _('عمليات محمية') }}</h2>
+    <p class="sw-muted">{{ _('المعاينة بدون تنفيذ آمنة. التطبيق والتراجع يبقيان محظورين ما لم تكن HOBERADIUS_SETUP_WIZARD_LIVE_APPLY=true و HOBERADIUS_SETUP_WIZARD_LAB_MODE=true مع جرد حديث ومعاينة تنفيذ ومعاينة تراجع وتأكيد.') }}</p>
     <div class="sw-inline-actions">
       <select data-sw-operation-step>
-        <option value="internet">الإنترنت</option>
-        <option value="vpn">الربط والمصادقة</option>
-        <option value="hotspot">بوابة الدخول</option>
-        <option value="broadband">البرودباند</option>
+        <option value="internet">{{ _('الإنترنت') }}</option>
+        <option value="vpn">{{ _('الربط والمصادقة') }}</option>
+        <option value="hotspot">{{ _('بوابة الدخول') }}</option>
+        <option value="broadband">{{ _('البرودباند') }}</option>
       </select>
-      <button class="hub-btn" type="button" data-sw-action="dry-run">معاينة التنفيذ</button>
-      <button class="hub-btn" type="button" data-sw-action="list-operations">العمليات</button>
-      <button class="hub-btn hub-btn--danger" type="button" data-sw-action="apply-step">تطبيق محمي</button>
-      <button class="hub-btn" type="button" data-sw-action="rollback-preview">معاينة التراجع</button>
+      <button class="hub-btn" type="button" data-sw-action="dry-run">{{ _('معاينة التنفيذ') }}</button>
+      <button class="hub-btn" type="button" data-sw-action="list-operations">{{ _('العمليات') }}</button>
+      <button class="hub-btn hub-btn--danger" type="button" data-sw-action="apply-step">{{ _('تطبيق محمي') }}</button>
+      <button class="hub-btn" type="button" data-sw-action="rollback-preview">{{ _('معاينة التراجع') }}</button>
     </div>
     <div class="sw-field">
-      <label>عبارة التأكيد</label>
-      <input data-sw-confirmation placeholder="اكتب عبارة التأكيد التي تظهر لك قبل التطبيق">
+      <label>{{ _('عبارة التأكيد') }}</label>
+      <input data-sw-confirmation placeholder="{{ _('اكتب عبارة التأكيد التي تظهر لك قبل التطبيق') }}">
     </div>
   </section>
 
   <section class="sw-panel" data-sw-lab-timeline-panel>
     <div class="sw-panel-head">
       <div>
-        <h2>خط سير تنفيذ المختبر</h2>
-        <p class="sw-muted">يعرض حالة التجربة الجافة والجرد والتطبيق والتراجع بشكل واضح للتجارب المخبرية فقط.</p>
+        <h2>{{ _('خط سير تنفيذ المختبر') }}</h2>
+        <p class="sw-muted">{{ _('يعرض حالة التجربة الجافة والجرد والتطبيق والتراجع بشكل واضح للتجارب المخبرية فقط.') }}</p>
       </div>
-      <button class="hub-btn" type="button" data-sw-action="lab-timeline">تحديث الخط الزمني</button>
+      <button class="hub-btn" type="button" data-sw-action="lab-timeline">{{ _('تحديث الخط الزمني') }}</button>
     </div>
     <ol class="sw-lab-timeline" data-sw-lab-timeline>
-      <li>التجربة الجافة: معلقة</li>
-      <li>الجرد: بانتظار التنفيذ</li>
-      <li>محاولة التطبيق: محظورة افتراضيًا</li>
-      <li>التحقق: بانتظار التنفيذ</li>
-      <li>التراجع: بانتظار التجهيز</li>
+      <li>{{ _('التجربة الجافة: معلقة') }}</li>
+      <li>{{ _('الجرد: بانتظار التنفيذ') }}</li>
+      <li>{{ _('محاولة التطبيق: محظورة افتراضيًا') }}</li>
+      <li>{{ _('التحقق: بانتظار التنفيذ') }}</li>
+      <li>{{ _('التراجع: بانتظار التجهيز') }}</li>
     </ol>
   </section>
 
   <section class="sw-panel">
-    <h2>جرد الراوتر</h2>
+    <h2>{{ _('جرد الراوتر') }}</h2>
     <div class="sw-field">
-      <label>ألصق مخرجات أوامر الراوتر</label>
+      <label>{{ _('ألصق مخرجات أوامر الراوتر') }}</label>
       <textarea data-sw-inventory-output rows="6" spellcheck="false" placeholder="/interface print detail&#10;/ip address print detail&#10;/ip route print detail"></textarea>
     </div>
     <div class="sw-inline-actions">
-      <button class="hub-btn" type="button" data-sw-action="save-inventory">حفظ لقطة الجرد</button>
-      <button class="hub-btn" type="button" data-sw-action="health">فحص الصحة</button>
-      <button class="hub-btn" type="button" data-sw-action="support-bundle">حزمة الدعم</button>
-      <button class="hub-btn" type="button" data-sw-action="added-catalog">كتالوج الخدمات المضافة</button>
+      <button class="hub-btn" type="button" data-sw-action="save-inventory">{{ _('حفظ لقطة الجرد') }}</button>
+      <button class="hub-btn" type="button" data-sw-action="health">{{ _('فحص الصحة') }}</button>
+      <button class="hub-btn" type="button" data-sw-action="support-bundle">{{ _('حزمة الدعم') }}</button>
+      <button class="hub-btn" type="button" data-sw-action="added-catalog">{{ _('كتالوج الخدمات المضافة') }}</button>
     </div>
   </section>
 
   <section class="sw-panel sw-pilot-panel" data-sw-pilot-panel>
     <div class="sw-panel-head">
       <div>
-        <h2>لوحة تدريب التشغيل الداخلي</h2>
-        <p class="sw-muted">هذه اللوحة لا تنفذ أي أمر على الراوتر. هدفها تجهيز قائمة فحص قبل تجربة تشغيل مضبوطة.</p>
+        <h2>{{ _('لوحة تدريب التشغيل الداخلي') }}</h2>
+        <p class="sw-muted">{{ _('هذه اللوحة لا تنفذ أي أمر على الراوتر. هدفها تجهيز قائمة فحص قبل تجربة تشغيل مضبوطة.') }}</p>
       </div>
-      <span class="status-pill status-blocked">تجربة فقط</span>
+      <span class="status-pill status-blocked">{{ _('تجربة فقط') }}</span>
     </div>
     <div class="sw-inline-actions">
-      <select data-sw-pilot-step aria-label="خطوة تدريب التشغيل">
-        <option value="internet">الإنترنت والخروج للشبكة</option>
-        <option value="vpn">النفق الآمن والريدياس</option>
-        <option value="hotspot">الهوتسبوت والكروت</option>
-        <option value="broadband">البرودباند وPPPoE</option>
+      <select data-sw-pilot-step aria-label="{{ _('خطوة تدريب التشغيل') }}">
+        <option value="internet">{{ _('الإنترنت والخروج للشبكة') }}</option>
+        <option value="vpn">{{ _('النفق الآمن والريدياس') }}</option>
+        <option value="hotspot">{{ _('الهوتسبوت والكروت') }}</option>
+        <option value="broadband">{{ _('البرودباند وPPPoE') }}</option>
       </select>
-      <button class="hub-btn hub-btn--primary" type="button" data-sw-action="pilot-drill">إنشاء قائمة فحص التجربة</button>
+      <button class="hub-btn hub-btn--primary" type="button" data-sw-action="pilot-drill">{{ _('إنشاء قائمة فحص التجربة') }}</button>
     </div>
     <div class="sw-pilot-grid">
-      <label class="sw-check"><input type="checkbox" disabled> تم أخذ نسخة احتياطية أو تصدير من الراوتر</label>
-      <label class="sw-check"><input type="checkbox" disabled> تم تأكيد قناة وصول بديلة خارج المسار الحالي</label>
-      <label class="sw-check"><input type="checkbox" disabled> تم التحقق من منفذ الإنترنت والواجهة الصحيحة</label>
-      <label class="sw-check"><input type="checkbox" disabled> تمت مراجعة خطة التراجع قبل التجربة</label>
-      <label class="sw-check"><input type="checkbox" disabled> ميزة التنفيذ ما زالت متوقفة إلا داخل تجربة مضبوطة</label>
+      <label class="sw-check"><input type="checkbox" disabled> {{ _('تم أخذ نسخة احتياطية أو تصدير من الراوتر') }}</label>
+      <label class="sw-check"><input type="checkbox" disabled> {{ _('تم تأكيد قناة وصول بديلة خارج المسار الحالي') }}</label>
+      <label class="sw-check"><input type="checkbox" disabled> {{ _('تم التحقق من منفذ الإنترنت والواجهة الصحيحة') }}</label>
+      <label class="sw-check"><input type="checkbox" disabled> {{ _('تمت مراجعة خطة التراجع قبل التجربة') }}</label>
+      <label class="sw-check"><input type="checkbox" disabled> {{ _('ميزة التنفيذ ما زالت متوقفة إلا داخل تجربة مضبوطة') }}</label>
     </div>
-    <pre class="sw-output sw-pilot-output" data-sw-pilot-output>ستظهر هنا قائمة فحص التجربة الداخلية.</pre>
+    <pre class="sw-output sw-pilot-output" data-sw-pilot-output>{{ _('ستظهر هنا قائمة فحص التجربة الداخلية.') }}</pre>
   </section>
 </div>
 

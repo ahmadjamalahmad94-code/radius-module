@@ -53,13 +53,13 @@
   search_action=url_for('radius.rep_login_status')
 ) %}
   <input class="hub-input grow" type="text" name="q"
-         value="{{ filters.q if filters else '' }}" placeholder="بحث باسم المشترك…">
+         value="{{ filters.q if filters else '' }}" placeholder="{{ _('بحث باسم المشترك…') }}">
   {# حالة الاشتراك — select عادي يحوّله hub_select.js تلقائيًا إلى hbsel #}
-  <select class="hub-input" name="status" title="حالة الاشتراك">
-    <option value="">كل الحالات</option>
-    <option value="enabled"  {% if status=='enabled' %}selected{% endif %}>مفعَّل</option>
-    <option value="expired"  {% if status=='expired' %}selected{% endif %}>منتهٍ</option>
-    <option value="disabled" {% if status=='disabled' %}selected{% endif %}>معطَّل</option>
+  <select class="hub-input" name="status" title="{{ _('حالة الاشتراك') }}">
+    <option value="">{{ _('كل الحالات') }}</option>
+    <option value="enabled"  {% if status=='enabled' %}selected{% endif %}>{{ _('مفعَّل') }}</option>
+    <option value="expired"  {% if status=='expired' %}selected{% endif %}>{{ _('منتهٍ') }}</option>
+    <option value="disabled" {% if status=='disabled' %}selected{% endif %}>{{ _('معطَّل') }}</option>
   </select>
   {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
   {% if (filters and filters.q) or status %}
@@ -80,12 +80,12 @@
     <table class="hub-table rep-table">
       <thead>
         <tr>
-          <th>المشترك</th>
-          <th data-uds-nosort>الحالة</th>
-          <th>آخر تسجيل دخول</th>
-          <th>آخر ظهور</th>
-          <th class="num">متصل الآن</th>
-          <th>ينتهي في</th>
+          <th>{{ _('المشترك') }}</th>
+          <th data-uds-nosort>{{ _('الحالة') }}</th>
+          <th>{{ _('آخر تسجيل دخول') }}</th>
+          <th>{{ _('آخر ظهور') }}</th>
+          <th class="num">{{ _('متصل الآن') }}</th>
+          <th>{{ _('ينتهي في') }}</th>
         </tr>
       </thead>
       <tbody>
@@ -105,18 +105,18 @@
           <td class="rep-mono"
               style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
             {% if _ll %}<span class="rep-primary">{{ _ll[:10] }}</span><span class="rep-sub">{{ _ll[11:16] }}</span>
-            {% else %}<span class="rep-sub">لم يدخل بعد</span>{% endif %}
+            {% else %}<span class="rep-sub">{{ _('لم يدخل بعد') }}</span>{% endif %}
           </td>
           {% set _ls = r.last_seen_at|dt_local if r.last_seen_at else '' %}
           <td class="rep-mono"
               style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
             {% if _ls %}<span class="rep-primary">{{ _ls[:10] }}</span><span class="rep-sub">{{ _ls[11:16] }}</span>
-            {% else %}<span class="rep-sub">لا نشاط بعد</span>{% endif %}
+            {% else %}<span class="rep-sub">{{ _('لا نشاط بعد') }}</span>{% endif %}
           </td>
           <td class="num">
             {% if r.online_count and r.online_count > 0 %}
-              <span title="عدد الجلسات النشطة حاليًا">{{ hub.pill((r.online_count|string) ~ ' جهاز', variant="green") }}</span>
-            {% else %}<span class="rep-muted">غير متصل</span>{% endif %}
+              <span title="{{ _('عدد الجلسات النشطة حاليًا') }}">{{ hub.pill((r.online_count|string) ~ ' جهاز', variant="green") }}</span>
+            {% else %}<span class="rep-muted">{{ _('غير متصل') }}</span>{% endif %}
           </td>
           <td class="rep-mono"
               style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">

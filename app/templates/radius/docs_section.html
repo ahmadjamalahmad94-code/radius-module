@@ -101,7 +101,7 @@
 <div class="ds-intro">
   <span class="ic"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
   <div>
-    <h3>دليل لكل صفحة — بدقة متناهية</h3>
+    <h3>{{ _('دليل لكل صفحة — بدقة متناهية') }}</h3>
     <p>
       كل دليل هنا يغطي صفحة واحدة من صفحات «{{ cat.title }}»: شو وظيفتها، شو يعني كل
       رقم وكل بطاقة فيها، شو بيعمل كل زر بالضبط، وكيف تنفّذ مهامك اليومية عليها خطوة بخطوة.
@@ -122,7 +122,7 @@
       <div class="ds-card-meta">
         <span><i class="fa-regular fa-clock"></i> {{ p.minutes }} دقائق</span>
         <span><i class="fa-solid fa-list-ol"></i> {{ p.steps }} خطوات</span>
-        <span class="ds-card-go">ابدأ الدليل <i class="fa-solid fa-arrow-left"></i></span>
+        <span class="ds-card-go">{{ _('ابدأ الدليل') }} <i class="fa-solid fa-arrow-left"></i></span>
       </div>
     </a>
     {% else %}
@@ -130,7 +130,7 @@
       <div class="ds-card-top">
         <span class="ds-card-ic"><i class="fa-solid fa-{{ p.icon }}"></i></span>
         <span class="ds-card-title">{{ p.title }}</span>
-        <span class="ds-soon-badge"><i class="fa-regular fa-hourglass-half"></i> قريبًا</span>
+        <span class="ds-soon-badge"><i class="fa-regular fa-hourglass-half"></i> {{ _('قريبًا') }}</span>
       </div>
       <div class="ds-card-sub">{{ p.desc }}</div>
     </div>

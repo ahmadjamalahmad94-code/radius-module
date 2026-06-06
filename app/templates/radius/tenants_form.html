@@ -123,7 +123,7 @@
     <div class="tnf-grid">
       <div class="hub-field">
         <div class="tnf-lab">
-          <label class="hub-field-label">المعرّف المختصر <span class="req">*</span></label>
+          <label class="hub-field-label">{{ _('المعرّف المختصر') }} <span class="req">*</span></label>
           {{ hint("معرّف لاتيني قصير يميّز المستأجر في الروابط والأنظمة الداخلية. حروف صغيرة بلا مسافات، مثل acme. لا يُعدَّل بعد الإنشاء حفاظًا على ثبات الروابط.") }}
         </div>
         <input class="hub-input mono" type="text" name="slug" required dir="ltr"
@@ -132,32 +132,32 @@
                style="background:var(--hub-bg-soft);color:var(--hub-text-soft);cursor:not-allowed"{% endif %}>
         <div class="tnf-slugpv">
           <i class="fa-solid fa-link"></i>
-          <span>الرابط:</span>
+          <span>{{ _('الرابط:') }}</span>
           <bdi dir="ltr">/t/{{ tenant.slug or 'acme' }}</bdi>
         </div>
       </div>
 
       <div class="hub-field">
         <div class="tnf-lab">
-          <label class="hub-field-label">اسم المستأجر <span class="req">*</span></label>
+          <label class="hub-field-label">{{ _('اسم المستأجر') }} <span class="req">*</span></label>
           {{ hint("الاسم الرسمي للشركة أو الجهة كما يُسجَّل في النظام، مثل: شركة أكمي للاتصالات.") }}
         </div>
         <input class="hub-input" type="text" name="name" required value="{{ tenant.name or '' }}"
-               placeholder="شركة أكمي للاتصالات">
+               placeholder="{{ _('شركة أكمي للاتصالات') }}">
       </div>
 
       <div class="hub-field">
         <div class="tnf-lab">
-          <label class="hub-field-label">اسم العرض</label>
+          <label class="hub-field-label">{{ _('اسم العرض') }}</label>
           {{ hint("اسم ودّي يظهر للمشغّلين بدل الاسم الرسمي. اتركه فارغًا لاستخدام اسم المستأجر نفسه.") }}
         </div>
         <input class="hub-input" type="text" name="display_name" value="{{ tenant.display_name or '' }}"
-               placeholder="أكمي">
+               placeholder="{{ _('أكمي') }}">
       </div>
 
       <div class="hub-field">
         <div class="tnf-lab">
-          <label class="hub-field-label">البريد الإلكتروني</label>
+          <label class="hub-field-label">{{ _('البريد الإلكتروني') }}</label>
           {{ hint("بريد جهة التواصل الأساسية للمستأجر — يُستخدم للإشعارات والتنبيهات الإدارية.") }}
         </div>
         <input class="hub-input" type="email" name="email" dir="ltr" value="{{ tenant.email or '' }}"
@@ -166,7 +166,7 @@
 
       <div class="hub-field">
         <div class="tnf-lab">
-          <label class="hub-field-label">رقم الجوال</label>
+          <label class="hub-field-label">{{ _('رقم الجوال') }}</label>
           {{ hint("رقم تواصل مباشر مع مسؤول المستأجر، بصيغة دولية مثل +962790000000.") }}
         </div>
         <input class="hub-input" type="tel" name="phone" dir="ltr" value="{{ tenant.phone or '' }}"
@@ -179,7 +179,7 @@
   {% call hub.section("فئة الاشتراك والحالة", icon="layer-group", meta="السعة والتشغيل") %}
     <div class="hub-field">
       <div class="tnf-lab">
-        <label class="hub-field-label">فئة الاشتراك <span class="req">*</span></label>
+        <label class="hub-field-label">{{ _('فئة الاشتراك') }} <span class="req">*</span></label>
         {{ hint("الباقة التي تحدّد السقوف الافتراضية للمستأجر (عدد المشتركين والأجهزة وطلبات الواجهة). تغييرها لاحقًا قد يعيد ضبط الحدود وفق الفئة الجديدة.") }}
       </div>
       {# بطاقات الفئات: التسمية العربية + سقف المشتركين من tier_limits،
@@ -200,7 +200,7 @@
 
     <div class="hub-field" style="margin-top:16px">
       <div class="tnf-lab">
-        <label class="hub-field-label">حالة المستأجر</label>
+        <label class="hub-field-label">{{ _('حالة المستأجر') }}</label>
         {{ hint("«مفعَّلة» تعمل بالكامل. «تجريبية» فترة اختبار. «موقوفة» تمنع الدخول دون حذف البيانات. «مغلقة» إنهاء نهائي للحساب.") }}
       </div>
       {% set _status_opts = [] %}
@@ -217,7 +217,7 @@
     <div class="tnf-grid tnf-grid--3">
       <div class="hub-field">
         <div class="tnf-lab">
-          <label class="hub-field-label">سقف المشتركين</label>
+          <label class="hub-field-label">{{ _('سقف المشتركين') }}</label>
           {{ hint("أقصى عدد مشتركين مسموح لهذا المستأجر. اتركه 0 ليتبع حدّ فئة الاشتراك المختارة.") }}
         </div>
         <input class="hub-input" type="number" name="max_subscribers" min="0" dir="ltr"
@@ -225,7 +225,7 @@
       </div>
       <div class="hub-field">
         <div class="tnf-lab">
-          <label class="hub-field-label">سقف أجهزة الشبكة</label>
+          <label class="hub-field-label">{{ _('سقف أجهزة الشبكة') }}</label>
           {{ hint("أقصى عدد أجهزة شبكة (NAS/راوترات) يمكن للمستأجر ربطها. اتركه 0 ليتبع حدّ الفئة.") }}
         </div>
         <input class="hub-input" type="number" name="max_nas" min="0" dir="ltr"
@@ -233,7 +233,7 @@
       </div>
       <div class="hub-field">
         <div class="tnf-lab">
-          <label class="hub-field-label">سقف طلبات الواجهة (بالدقيقة)</label>
+          <label class="hub-field-label">{{ _('سقف طلبات الواجهة (بالدقيقة)') }}</label>
           {{ hint("الحدّ الأقصى لطلبات الـ API في الدقيقة (rate limit) لحماية النظام من الإفراط. اتركه 0 ليتبع حدّ الفئة.") }}
         </div>
         <input class="hub-input" type="number" name="api_rpm" min="0" dir="ltr"
@@ -242,7 +242,7 @@
     </div>
     <div class="hub-field-hint" style="margin-top:10px">
       <i class="fa-solid fa-circle-info"></i>
-      اترك أي حد = <bdi dir="ltr">0</bdi> ليُستخدم الحدّ الافتراضي لفئة الاشتراك المختارة.
+      {{ _('اترك أي حد =') }} <bdi dir="ltr">0</bdi> {{ _('ليُستخدم الحدّ الافتراضي لفئة الاشتراك المختارة.') }}
     </div>
   {% endcall %}
 
@@ -251,7 +251,7 @@
     <div class="tnf-grid">
       <div class="hub-field">
         <div class="tnf-lab">
-          <label class="hub-field-label">العملة</label>
+          <label class="hub-field-label">{{ _('العملة') }}</label>
           {{ hint("رمز عملة المستأجر بصيغة ISO المكوّنة من ثلاثة أحرف، مثل JOD أو ILS أو USD. تُستخدم في الفواتير والأسعار.") }}
         </div>
         <input class="hub-input mono" type="text" name="currency" dir="ltr"
@@ -260,7 +260,7 @@
 
       <div class="hub-field">
         <div class="tnf-lab">
-          <label class="hub-field-label">لغة الواجهة</label>
+          <label class="hub-field-label">{{ _('لغة الواجهة') }}</label>
           {{ hint("اللغة الافتراضية لواجهة هذا المستأجر: العربية أو الإنجليزية.") }}
         </div>
         {{ hub.cardselect("locale",
@@ -273,7 +273,7 @@
 
       <div class="hub-field">
         <div class="tnf-lab">
-          <label class="hub-field-label">المنطقة الزمنية</label>
+          <label class="hub-field-label">{{ _('المنطقة الزمنية') }}</label>
           {{ hint("منطقة المستأجر الزمنية بصيغة IANA مثل Asia/Amman أو Asia/Hebron. تُحسب عليها التقارير والمواعيد.") }}
         </div>
         <input class="hub-input mono" type="text" name="timezone" dir="ltr"
@@ -282,7 +282,7 @@
 
       <div class="hub-field">
         <div class="tnf-lab">
-          <label class="hub-field-label">لون العلامة</label>
+          <label class="hub-field-label">{{ _('لون العلامة') }}</label>
           {{ hint("اللون الأساسي لعلامة المستأجر برمز سداسي، مثل #2BAACC. يظهر في بوابة مشتركيه.") }}
         </div>
         <input class="hub-input mono" type="text" name="primary_color" dir="ltr"
@@ -291,7 +291,7 @@
 
       <div class="hub-field" style="grid-column:1 / -1">
         <div class="tnf-lab">
-          <label class="hub-field-label">رابط الشعار</label>
+          <label class="hub-field-label">{{ _('رابط الشعار') }}</label>
           {{ hint("رابط مباشر لصورة شعار المستأجر (يبدأ بـ https://). يظهر في الواجهة وبوابة المشتركين.") }}
         </div>
         <input class="hub-input mono" type="text" name="logo_url" dir="ltr"
@@ -302,7 +302,7 @@
 
   {# أزرار الحفظ السفلية — نفس النموذج وزرّا الهيرو يكفيان معظم الحالات #}
   <div style="display:flex;gap:10px;justify-content:flex-end;padding:6px 4px 0">
-    <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.tenants_list') }}">إلغاء</a>
+    <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.tenants_list') }}">{{ _('إلغاء') }}</a>
     <button class="hub-btn hub-btn--primary" type="submit">
       <i class="fa-solid fa-floppy-disk"></i> {{ _save_label }}
     </button>

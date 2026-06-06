@@ -258,8 +258,8 @@
     <div class="rc-hero-id">
       <span class="rc-hero-icon"><i class="fa-solid fa-wallet"></i></span>
       <div>
-        <h1 class="rc-hero-title">بطاقات الشحن المسبق</h1>
-        <div class="rc-hero-sub">ولّد بطاقات بفئات متعدّدة للبيع. يدخلها العميل في بوابته (/portal/card) فتُضاف قيمتها إلى رصيد محفظته.</div>
+        <h1 class="rc-hero-title">{{ _('بطاقات الشحن المسبق') }}</h1>
+        <div class="rc-hero-sub">{{ _('ولّد بطاقات بفئات متعدّدة للبيع. يدخلها العميل في بوابته (/portal/card) فتُضاف قيمتها إلى رصيد محفظته.') }}</div>
       </div>
     </div>
     <div class="rc-hero-actions">
@@ -287,18 +287,18 @@
   {% else %}
 
   <div class="rc-toolbar">
-    <div class="rc-switch" id="rc-view-switcher" role="tablist" aria-label="عرض الحزم">
+    <div class="rc-switch" id="rc-view-switcher" role="tablist" aria-label="{{ _('عرض الحزم') }}">
       <span class="pill" aria-hidden="true"></span>
       <button type="button" data-view="chips" class="is-active" role="tab" aria-selected="true">
-        <i class="fa-solid fa-th-large" aria-hidden="true"></i> بطاقات
+        <i class="fa-solid fa-th-large" aria-hidden="true"></i> {{ _('بطاقات') }}
       </button>
       <button type="button" data-view="table" role="tab" aria-selected="false">
-        <i class="fa-solid fa-table-list" aria-hidden="true"></i> جدول
+        <i class="fa-solid fa-table-list" aria-hidden="true"></i> {{ _('جدول') }}
       </button>
     </div>
     <div class="rc-toolbar-hint">
       <i class="fa-solid fa-circle-info" style="color:#94a3b8" aria-hidden="true"></i>
-      اضغط أي حزمة لعرض البطاقات وقيمتها
+      {{ _('اضغط أي حزمة لعرض البطاقات وقيمتها') }}
     </div>
   </div>
 
@@ -314,19 +314,19 @@
           {{ hub.pill("شحن", variant="cyan", dot=False) }}
         </div>
         <div class="rc-card-stats">
-          <div class="stat"><div class="k">بطاقات</div><div class="v">{{ b.card_count or 0 }}</div></div>
-          <div class="stat"><div class="k">مستخدمة</div><div class="v">{{ b.used_count or 0 }}</div></div>
-          <div class="stat"><div class="k">القيمة</div><div class="v">{{ (b.price_bulk or 0)|money }}</div></div>
+          <div class="stat"><div class="k">{{ _('بطاقات') }}</div><div class="v">{{ b.card_count or 0 }}</div></div>
+          <div class="stat"><div class="k">{{ _('مستخدمة') }}</div><div class="v">{{ b.used_count or 0 }}</div></div>
+          <div class="stat"><div class="k">{{ _('القيمة') }}</div><div class="v">{{ (b.price_bulk or 0)|money }}</div></div>
         </div>
       </a>
       <div class="rc-card-actions">
         <span class="meta">{{ b.created_at|date_local if b.created_at else '' }}</span>
         <a href="{{ url_for('radius.cards_recharge_batch', batch_id=b.id) }}"
-           class="rc-act rc-act--preview" title="معاينة" aria-label="معاينة الحزمة">
+           class="rc-act rc-act--preview" title="{{ _('معاينة') }}" aria-label="{{ _('معاينة الحزمة') }}">
           <i class="fa-solid fa-eye" aria-hidden="true"></i>
         </a>
-        <button type="button" class="rc-act rc-act--print" title="طباعة"
-                aria-label="طباعة الحزمة"
+        <button type="button" class="rc-act rc-act--print" title="{{ _('طباعة') }}"
+                aria-label="{{ _('طباعة الحزمة') }}"
                 data-print-batch
                 data-batch-id="{{ b.id }}"
                 data-batch-code="{{ b.batch_code or '' }}"
@@ -337,11 +337,11 @@
         <form method="post" action="{{ url_for('radius.cards_recharge_batch_delete', batch_id=b.id) }}"
               style="display:inline-flex;margin:0"
               data-confirm-form
-              data-confirm-title="حذف حزمة الشحن"
+              data-confirm-title="{{ _('حذف حزمة الشحن') }}"
               data-confirm-msg="هل تريد حذف الحزمة «{{ (b.package_name or ('#' ~ b.id))|e }}»؟ سيتم حذف الحزمة وكل بطاقاتها — لا يمكن التراجع."
               data-confirm-ok="نعم، احذف">
           {{ csrf_token_input() | safe }}
-          <button type="submit" class="rc-act rc-act--delete" title="حذف" aria-label="حذف الحزمة">
+          <button type="submit" class="rc-act rc-act--delete" title="{{ _('حذف') }}" aria-label="{{ _('حذف الحزمة') }}">
             <i class="fa-solid fa-trash-can" aria-hidden="true"></i>
           </button>
         </form>
@@ -352,17 +352,17 @@
 
   <div data-view-panel="table" hidden style="overflow-x:auto">
     <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25"
-         data-uds-export-title="حزم الشحن المسبق" style="border:none;border-radius:0">
+         data-uds-export-title="{{ _('حزم الشحن المسبق') }}" style="border:none;border-radius:0">
     <table class="hub-table">
       <thead>
         <tr>
           <th style="width:60px">#</th>
-          <th>اسم الحزمة</th>
-          <th style="width:100px">العدد</th>
-          <th style="width:100px">المستخدمة</th>
-          <th style="width:120px">القيمة الكلية</th>
-          <th style="width:170px">التاريخ</th>
-          <th style="width:170px;text-align:end">إجراءات</th>
+          <th>{{ _('اسم الحزمة') }}</th>
+          <th style="width:100px">{{ _('العدد') }}</th>
+          <th style="width:100px">{{ _('المستخدمة') }}</th>
+          <th style="width:120px">{{ _('القيمة الكلية') }}</th>
+          <th style="width:170px">{{ _('التاريخ') }}</th>
+          <th style="width:170px;text-align:end">{{ _('إجراءات') }}</th>
         </tr>
       </thead>
       <tbody>
@@ -380,10 +380,10 @@
           <td>
             <div style="display:flex;gap:6px;justify-content:flex-end">
               <a href="{{ url_for('radius.cards_recharge_batch', batch_id=b.id) }}"
-                 class="rc-act rc-act--preview" title="معاينة" aria-label="معاينة">
+                 class="rc-act rc-act--preview" title="{{ _('معاينة') }}" aria-label="{{ _('معاينة') }}">
                 <i class="fa-solid fa-eye" aria-hidden="true"></i>
               </a>
-              <button type="button" class="rc-act rc-act--print" title="طباعة" aria-label="طباعة"
+              <button type="button" class="rc-act rc-act--print" title="{{ _('طباعة') }}" aria-label="{{ _('طباعة') }}"
                       data-print-batch data-batch-id="{{ b.id }}"
                       data-batch-code="{{ b.batch_code or '' }}"
                       data-batch-name="{{ (b.package_name or ('حزمة #' ~ b.id))|e }}"
@@ -393,11 +393,11 @@
               <form method="post" action="{{ url_for('radius.cards_recharge_batch_delete', batch_id=b.id) }}"
                     style="display:inline-flex;margin:0"
                     data-confirm-form
-                    data-confirm-title="حذف حزمة الشحن"
+                    data-confirm-title="{{ _('حذف حزمة الشحن') }}"
                     data-confirm-msg="سيتم حذف الحزمة وكل بطاقاتها — لا يمكن التراجع."
                     data-confirm-ok="نعم، احذف">
                 {{ csrf_token_input() | safe }}
-                <button type="submit" class="rc-act rc-act--delete" title="حذف" aria-label="حذف">
+                <button type="submit" class="rc-act rc-act--delete" title="{{ _('حذف') }}" aria-label="{{ _('حذف') }}">
                   <i class="fa-solid fa-trash-can" aria-hidden="true"></i>
                 </button>
               </form>
@@ -419,17 +419,17 @@
   <section class="batch-print-modal__panel" role="dialog" aria-modal="true" aria-labelledby="batchPrintTitle">
     <header class="batch-print-modal__header">
       <div>
-        <p>طباعة مباشرة للحزمة</p>
-        <h2 id="batchPrintTitle">تجهيز ملف البطاقات</h2>
-        <span data-print-batch-summary>اختر قالباً ثم ابدأ التصدير.</span>
+        <p>{{ _('طباعة مباشرة للحزمة') }}</p>
+        <h2 id="batchPrintTitle">{{ _('تجهيز ملف البطاقات') }}</h2>
+        <span data-print-batch-summary>{{ _('اختر قالباً ثم ابدأ التصدير.') }}</span>
       </div>
-      <button type="button" class="batch-print-modal__close" data-print-modal-close aria-label="إغلاق">
+      <button type="button" class="batch-print-modal__close" data-print-modal-close aria-label="{{ _('إغلاق') }}">
         <i class="fa-solid fa-xmark"></i>
       </button>
     </header>
     <div class="batch-print-modal__body">
       <div class="batch-print-modal__templates">
-        <h3>اختيار قالب محفوظ</h3>
+        <h3>{{ _('اختيار قالب محفوظ') }}</h3>
         {% if print_templates %}
           <div class="batch-template-picker" data-print-template-picker>
             {% for t in print_templates %}
@@ -445,38 +445,38 @@
             {% endfor %}
           </div>
         {% else %}
-          <div class="batch-print-warning">لا توجد قوالب محفوظة بعد.</div>
+          <div class="batch-print-warning">{{ _('لا توجد قوالب محفوظة بعد.') }}</div>
         {% endif %}
       </div>
       <form class="batch-print-form" data-batch-print-form>
         <input type="hidden" name="batch_id" data-print-batch-id>
-        <h3>إعدادات الطباعة</h3>
+        <h3>{{ _('إعدادات الطباعة') }}</h3>
         <div class="batch-print-grid">
-          <label>مقاس الورقة<select name="print_page_size"><option value="A4">A4</option><option value="Letter">ليتر</option></select></label>
-          <label>اتجاه الورقة<select name="print_orientation"><option value="portrait">طولي</option><option value="landscape">أفقي</option></select></label>
-          <label>عدد الأعمدة<input type="number" name="print_columns" min="1" max="8" value="3"></label>
-          <label>عدد الصفوف<input type="number" name="print_rows" min="1" max="12" value="5"></label>
-          <label>المسافة بين الأعمدة <span dir="ltr">(mm)</span><input type="number" name="print_column_gap_mm" min="0" max="30" step="0.5" value="3"></label>
-          <label>المسافة بين الصفوف <span dir="ltr">(mm)</span><input type="number" name="print_row_gap_mm" min="0" max="30" step="0.5" value="3"></label>
-          <label>الهامش العلوي <span dir="ltr">(mm)</span><input type="number" name="print_margin_top_mm" min="0" max="40" step="0.5" value="8"></label>
-          <label>الهامش الأيمن <span dir="ltr">(mm)</span><input type="number" name="print_margin_right_mm" min="0" max="40" step="0.5" value="8"></label>
-          <label>الهامش السفلي <span dir="ltr">(mm)</span><input type="number" name="print_margin_bottom_mm" min="0" max="40" step="0.5" value="8"></label>
-          <label>الهامش الأيسر <span dir="ltr">(mm)</span><input type="number" name="print_margin_left_mm" min="0" max="40" step="0.5" value="8"></label>
+          <label>{{ _('مقاس الورقة') }}<select name="print_page_size"><option value="A4">A4</option><option value="Letter">{{ _('ليتر') }}</option></select></label>
+          <label>{{ _('اتجاه الورقة') }}<select name="print_orientation"><option value="portrait">{{ _('طولي') }}</option><option value="landscape">{{ _('أفقي') }}</option></select></label>
+          <label>{{ _('عدد الأعمدة') }}<input type="number" name="print_columns" min="1" max="8" value="3"></label>
+          <label>{{ _('عدد الصفوف') }}<input type="number" name="print_rows" min="1" max="12" value="5"></label>
+          <label>{{ _('المسافة بين الأعمدة') }} <span dir="ltr">(mm)</span><input type="number" name="print_column_gap_mm" min="0" max="30" step="0.5" value="3"></label>
+          <label>{{ _('المسافة بين الصفوف') }} <span dir="ltr">(mm)</span><input type="number" name="print_row_gap_mm" min="0" max="30" step="0.5" value="3"></label>
+          <label>{{ _('الهامش العلوي') }} <span dir="ltr">(mm)</span><input type="number" name="print_margin_top_mm" min="0" max="40" step="0.5" value="8"></label>
+          <label>{{ _('الهامش الأيمن') }} <span dir="ltr">(mm)</span><input type="number" name="print_margin_right_mm" min="0" max="40" step="0.5" value="8"></label>
+          <label>{{ _('الهامش السفلي') }} <span dir="ltr">(mm)</span><input type="number" name="print_margin_bottom_mm" min="0" max="40" step="0.5" value="8"></label>
+          <label>{{ _('الهامش الأيسر') }} <span dir="ltr">(mm)</span><input type="number" name="print_margin_left_mm" min="0" max="40" step="0.5" value="8"></label>
         </div>
         <button class="batch-btn batch-btn--primary batch-print-submit" type="submit" {% if not print_templates %}disabled{% endif %}>
-          <i class="fa-solid fa-file-pdf"></i> إنشاء ملف PDF
+          <i class="fa-solid fa-file-pdf"></i> {{ _('إنشاء ملف PDF') }}
         </button>
       </form>
       <div class="batch-print-progress" data-print-progress hidden>
-        <div class="batch-print-progress__top"><strong data-print-progress-title>بدء تجهيز ملف PDF...</strong><span data-print-progress-percent>0%</span></div>
+        <div class="batch-print-progress__top"><strong data-print-progress-title>{{ _('بدء تجهيز ملف PDF...') }}</strong><span data-print-progress-percent>0%</span></div>
         <div class="batch-print-progress__bar"><span data-print-progress-bar></span></div>
         <ol>
-          <li data-print-stage="queued"><i class="fa-regular fa-circle"></i> إنشاء مهمة التصدير</li>
-          <li data-print-stage="rendering"><i class="fa-regular fa-circle"></i> رسم البطاقات بالقالب المختار</li>
-          <li data-print-stage="pdf"><i class="fa-regular fa-circle"></i> ترتيب الصفحات والهوامش</li>
-          <li data-print-stage="done"><i class="fa-regular fa-circle"></i> تجهيز رابط التحميل</li>
+          <li data-print-stage="queued"><i class="fa-regular fa-circle"></i> {{ _('إنشاء مهمة التصدير') }}</li>
+          <li data-print-stage="rendering"><i class="fa-regular fa-circle"></i> {{ _('رسم البطاقات بالقالب المختار') }}</li>
+          <li data-print-stage="pdf"><i class="fa-regular fa-circle"></i> {{ _('ترتيب الصفحات والهوامش') }}</li>
+          <li data-print-stage="done"><i class="fa-regular fa-circle"></i> {{ _('تجهيز رابط التحميل') }}</li>
         </ol>
-        <a class="batch-btn batch-btn--soft" data-print-download hidden href="#"><i class="fa-solid fa-download"></i> تحميل الملف</a>
+        <a class="batch-btn batch-btn--soft" data-print-download hidden href="#"><i class="fa-solid fa-download"></i> {{ _('تحميل الملف') }}</a>
         <p data-print-error class="batch-print-error" hidden></p>
       </div>
     </div>
@@ -489,13 +489,13 @@
     <div class="rc-confirm-head">
       <span class="rc-confirm-icon" aria-hidden="true"><i class="fa-solid fa-triangle-exclamation"></i></span>
       <div>
-        <h3 class="rc-confirm-title" id="rc-confirm-title">تأكيد العملية</h3>
-        <p class="rc-confirm-msg" id="rc-confirm-msg">هل أنت متأكد؟</p>
+        <h3 class="rc-confirm-title" id="rc-confirm-title">{{ _('تأكيد العملية') }}</h3>
+        <p class="rc-confirm-msg" id="rc-confirm-msg">{{ _('هل أنت متأكد؟') }}</p>
       </div>
     </div>
     <div class="rc-confirm-actions">
-      <button type="button" class="rc-confirm-btn rc-confirm-btn--cancel" id="rc-confirm-cancel">إلغاء</button>
-      <button type="button" class="rc-confirm-btn rc-confirm-btn--danger" id="rc-confirm-ok">نعم، احذف</button>
+      <button type="button" class="rc-confirm-btn rc-confirm-btn--cancel" id="rc-confirm-cancel">{{ _('إلغاء') }}</button>
+      <button type="button" class="rc-confirm-btn rc-confirm-btn--danger" id="rc-confirm-ok">{{ _('نعم، احذف') }}</button>
     </div>
   </div>
 </div>

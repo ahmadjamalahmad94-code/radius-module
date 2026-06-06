@@ -18,7 +18,7 @@
 {% block title %}كل الكروت{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-id-card"></i>{% endblock %}
 {% block page_title %}كل الكروت{% endblock %}
-{% block page_sub %}<span class="sub"><bdi dir="ltr">{{ total }}</bdi> بطاقة — صفحة <bdi dir="ltr">{{ page }}</bdi> من <bdi dir="ltr">{{ pages_count }}</bdi></span>{% endblock %}
+{% block page_sub %}<span class="sub"><bdi dir="ltr">{{ total }}</bdi> {{ _('بطاقة — صفحة') }} <bdi dir="ltr">{{ page }}</bdi> {{ _('من') }} <bdi dir="ltr">{{ pages_count }}</bdi></span>{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
@@ -71,21 +71,21 @@
   {% if used is not none and used != '' %}<input type="hidden" name="used" value="{{ used }}">{% endif %}
   {% if revoked is not none and revoked != '' %}<input type="hidden" name="revoked" value="{{ revoked }}">{% endif %}
   <input class="hub-input grow" type="search" name="q" value="{{ q or '' }}"
-         placeholder="بحث في اليوزر..." autocomplete="off">
-  <select class="hub-select" name="status" aria-label="فلتر الحالة">
-    <option value="">كل الحالات</option>
-    <option value="available" title="available" {% if status == 'available' %}selected{% endif %}>متاحة</option>
-    <option value="used"      title="used"      {% if status == 'used'      %}selected{% endif %}>مستخدمة</option>
-    <option value="expired"   title="expired"   {% if status == 'expired'   %}selected{% endif %}>منتهية</option>
-    <option value="revoked"   title="revoked"   {% if status == 'revoked'   %}selected{% endif %}>محظورة</option>
+         placeholder="{{ _('بحث في اليوزر...') }}" autocomplete="off">
+  <select class="hub-select" name="status" aria-label="{{ _('فلتر الحالة') }}">
+    <option value="">{{ _('كل الحالات') }}</option>
+    <option value="available" title="available" {% if status == 'available' %}selected{% endif %}>{{ _('متاحة') }}</option>
+    <option value="used"      title="used"      {% if status == 'used'      %}selected{% endif %}>{{ _('مستخدمة') }}</option>
+    <option value="expired"   title="expired"   {% if status == 'expired'   %}selected{% endif %}>{{ _('منتهية') }}</option>
+    <option value="revoked"   title="revoked"   {% if status == 'revoked'   %}selected{% endif %}>{{ _('محظورة') }}</option>
   </select>
-  <select class="hub-select" name="batch_id" aria-label="فلتر الدفعة">
-    <option value="">كل الدفعات</option>
+  <select class="hub-select" name="batch_id" aria-label="{{ _('فلتر الدفعة') }}">
+    <option value="">{{ _('كل الدفعات') }}</option>
     {% for bid, b in batches.items() %}
       <option value="{{ bid }}" {% if batch_id == bid %}selected{% endif %}>{{ b.batch_code or bid }}</option>
     {% endfor %}
   </select>
-  <select class="hub-select" name="per_page" aria-label="عدد النتائج بالصفحة">
+  <select class="hub-select" name="per_page" aria-label="{{ _('عدد النتائج بالصفحة') }}">
     {% for n in [25, 50, 100] %}
       <option value="{{ n }}" {% if per_page == n %}selected{% endif %}>{{ n }}/صفحة</option>
     {% endfor %}
@@ -120,15 +120,15 @@
       <thead>
         <tr>
           <th class="num" style="width:60px">#</th>
-          <th>اليوزر</th>
-          <th data-uds-nosort>الباسورد</th>
-          <th>الباقة</th>
-          <th>الدفعة</th>
-          <th>الحالة</th>
-          <th>أول استخدام</th>
+          <th>{{ _('اليوزر') }}</th>
+          <th data-uds-nosort>{{ _('الباسورد') }}</th>
+          <th>{{ _('الباقة') }}</th>
+          <th>{{ _('الدفعة') }}</th>
+          <th>{{ _('الحالة') }}</th>
+          <th>{{ _('أول استخدام') }}</th>
           <th>MAC</th>
-          <th>تنتهي</th>
-          <th style="width:80px" data-uds-nosort data-uds-nocol>إجراء</th>
+          <th>{{ _('تنتهي') }}</th>
+          <th style="width:80px" data-uds-nosort data-uds-nocol>{{ _('إجراء') }}</th>
         </tr>
       </thead>
       <tbody>
@@ -171,7 +171,7 @@
             {% if not c.revoked %}
             <form method="post" action="{{ url_for('radius.cards_revoke', card_id=c.id) }}"
                   onsubmit="return confirm('إلغاء البطاقة {{ c.username }}؟');" style="display:inline">
-              <button type="submit" class="hub-btn hub-btn--danger hub-btn--icon" title="إلغاء البطاقة">
+              <button type="submit" class="hub-btn hub-btn--danger hub-btn--icon" title="{{ _('إلغاء البطاقة') }}">
                 <i class="fa-solid fa-ban"></i>
               </button>
             </form>
@@ -185,7 +185,7 @@
 
   {# ───── ترقيم الصفحات (خادم) — يحافظ على البحث والفلاتر ───── #}
   {% if pages_count > 1 %}
-  <nav class="cl-pager" aria-label="تنقّل بين الصفحات">
+  <nav class="cl-pager" aria-label="{{ _('تنقّل بين الصفحات') }}">
     {% set prev = page - 1 %}
     {% set next = page + 1 %}
     {% macro page_link(p, label, disabled=false) -%}

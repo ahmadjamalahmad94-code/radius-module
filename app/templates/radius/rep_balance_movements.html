@@ -75,11 +75,11 @@
 ) %}
   <input class="hub-input grow" type="text" name="q"
          value="{{ filters.q if filters else '' }}"
-         placeholder="بحث (الطرف / المنفّذ / نوع الحركة)…">
+         placeholder="{{ _('بحث (الطرف / المنفّذ / نوع الحركة)…') }}">
   <input class="hub-input" type="date" name="date_from"
-         value="{{ filters.date_from if filters else '' }}" title="من تاريخ">
+         value="{{ filters.date_from if filters else '' }}" title="{{ _('من تاريخ') }}">
   <input class="hub-input" type="date" name="date_to"
-         value="{{ filters.date_to if filters else '' }}" title="إلى تاريخ">
+         value="{{ filters.date_to if filters else '' }}" title="{{ _('إلى تاريخ') }}">
   {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
   {% if filters and (filters.q or filters.date_from or filters.date_to) %}
     {{ hub.btn("إعادة ضبط", icon="rotate-left", variant="ghost", size="sm",
@@ -99,15 +99,15 @@
     <table class="hub-table rep-table">
       <thead>
         <tr>
-          <th>الوقت</th>
-          <th>نوع الحركة</th>
-          <th data-uds-nosort>الاتجاه</th>
-          <th class="num" style="white-space:nowrap">المبلغ</th>
-          <th>الطرف</th>
-          <th>المنفّذ</th>
-          <th data-uds-nosort>المصدر</th>
-          <th data-uds-nosort>الحالة</th>
-          <th data-uds-nosort data-uds-nocol>ملاحظات</th>
+          <th>{{ _('الوقت') }}</th>
+          <th>{{ _('نوع الحركة') }}</th>
+          <th data-uds-nosort>{{ _('الاتجاه') }}</th>
+          <th class="num" style="white-space:nowrap">{{ _('المبلغ') }}</th>
+          <th>{{ _('الطرف') }}</th>
+          <th>{{ _('المنفّذ') }}</th>
+          <th data-uds-nosort>{{ _('المصدر') }}</th>
+          <th data-uds-nosort>{{ _('الحالة') }}</th>
+          <th data-uds-nosort data-uds-nocol>{{ _('ملاحظات') }}</th>
         </tr>
       </thead>
       <tbody>

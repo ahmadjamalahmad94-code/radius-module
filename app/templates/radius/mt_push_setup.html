@@ -12,7 +12,7 @@
 {% block title %}إعداد دفع بيانات الأجهزة من الراوتر{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-arrow-up-from-bracket"></i>{% endblock %}
 {% block page_title %}إعداد دفع بيانات الأجهزة من الراوتر{% endblock %}
-{% block page_sub %}<span class="sub">حلّ شامل لمشكلة «الجهاز / النظام» عندما يكون الراوتر خلف ترجمة عناوين أو واجهة الربط مغلقة.</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('حلّ شامل لمشكلة «الجهاز / النظام» عندما يكون الراوتر خلف ترجمة عناوين أو واجهة الربط مغلقة.') }}</span>{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
@@ -94,15 +94,15 @@
   {% call hub.section("من أين تجلب رمز الربط؟", icon="key") %}
     <ol style="margin:0;padding-inline-start:22px;font-size:13.5px;line-height:1.9;color:var(--hub-text-soft,#1F2937)">
       <li>
-        افتح صفحة
+        {{ _('افتح صفحة') }}
         <a href="{{ url_for('radius.tok_list') }}"
            style="font-weight:800;color:var(--hub-brand-ink,#5B4BD6);text-decoration:underline"
-           target="_blank" rel="noopener">إدارة رموز الربط</a>
-        (تفتح في تبويب جديد).
+           target="_blank" rel="noopener">{{ _('إدارة رموز الربط') }}</a>
+        {{ _('(تفتح في تبويب جديد).') }}
       </li>
-      <li>اضغط <strong>«إنشاء رمز جديد»</strong> وسمّه «دفع بيانات الأجهزة» أو أي اسم واضح.</li>
-      <li>بعد الإنشاء يظهر رمز الربط كاملاً <strong>مرة واحدة فقط</strong> في بنر أصفر — انسخه فوراً.</li>
-      <li>ارجع لهذه الصفحة، الصق رمز الربط في الحقل أدناه.</li>
+      <li>{{ _('اضغط') }} <strong>{{ _('«إنشاء رمز جديد»') }}</strong> {{ _('وسمّه «دفع بيانات الأجهزة» أو أي اسم واضح.') }}</li>
+      <li>{{ _('بعد الإنشاء يظهر رمز الربط كاملاً') }} <strong>{{ _('مرة واحدة فقط') }}</strong> {{ _('في بنر أصفر — انسخه فوراً.') }}</li>
+      <li>{{ _('ارجع لهذه الصفحة، الصق رمز الربط في الحقل أدناه.') }}</li>
     </ol>
   {% endcall %}
 
@@ -117,19 +117,19 @@
   {# ── Settings (JS-driven script generator inputs) ── #}
   {% call hub.section("الإعدادات", icon="screwdriver-wrench") %}
     <div class="hub-field">
-      <label class="hub-field-label" for="pushp-url">عنوان الخادم</label>
+      <label class="hub-field-label" for="pushp-url">{{ _('عنوان الخادم') }}</label>
       <input class="hub-input" type="text" id="pushp-url" value="{{ base_url }}" dir="ltr"
              style="font-family:var(--hub-mono,ui-monospace,monospace)">
     </div>
     <div class="hub-field">
-      <label class="hub-field-label" for="pushp-token">رمز الربط</label>
+      <label class="hub-field-label" for="pushp-token">{{ _('رمز الربط') }}</label>
       <input class="hub-input" type="text" id="pushp-token" value="" autocomplete="off" dir="ltr"
-             placeholder="الصق قيمة رمز الربط من شاشة إدارة الرموز"
+             placeholder="{{ _('الصق قيمة رمز الربط من شاشة إدارة الرموز') }}"
              style="font-family:var(--hub-mono,ui-monospace,monospace)">
       <div class="hub-field-hint">
-        لديك حالياً <strong>{{ tokens|length }}</strong> رمز مفعّل. اسم أحدها:
+        {{ _('لديك حالياً') }} <strong>{{ tokens|length }}</strong> {{ _('رمز مفعّل. اسم أحدها:') }}
         <strong>{{ suggested_token_name or '—' }}</strong>.
-        <a href="{{ url_for('radius.tok_list') }}" style="font-weight:700;color:var(--hub-brand-ink,#5B4BD6)">إدارة الرموز ←</a>
+        <a href="{{ url_for('radius.tok_list') }}" style="font-weight:700;color:var(--hub-brand-ink,#5B4BD6)">{{ _('إدارة الرموز ←') }}</a>
       </div>
     </div>
   {% endcall %}
@@ -137,11 +137,11 @@
   {# ── Steps ── #}
   {% call hub.section("الخطوات (3 دقائق)", icon="list-ol") %}
     <div class="pushp-steps">
-      <div class="pushp-step">افتح برنامج إدارة الراوتر أو واجهة الويب، ثم افتح نافذة الأوامر.</div>
-      <div class="pushp-step">عبّئ عنوان الخادم ورمز الربط بالأعلى. السكربت سيتولّد تلقائيًا بالأسفل.</div>
-      <div class="pushp-step">اضغط زر <strong>نسخ</strong> بجوار السكربت.</div>
-      <div class="pushp-step">الصقه في نافذة أوامر الراوتر واضغط Enter. ستظهر مهمة مجدولة جديدة في الراوتر.</div>
-      <div class="pushp-step">انتظر ~3 دقائق ثم افتح أي بطاقة في الفحص — عمود الجهاز/النظام رح يمتلئ.</div>
+      <div class="pushp-step">{{ _('افتح برنامج إدارة الراوتر أو واجهة الويب، ثم افتح نافذة الأوامر.') }}</div>
+      <div class="pushp-step">{{ _('عبّئ عنوان الخادم ورمز الربط بالأعلى. السكربت سيتولّد تلقائيًا بالأسفل.') }}</div>
+      <div class="pushp-step">{{ _('اضغط زر') }} <strong>{{ _('نسخ') }}</strong> {{ _('بجوار السكربت.') }}</div>
+      <div class="pushp-step">{{ _('الصقه في نافذة أوامر الراوتر واضغط Enter. ستظهر مهمة مجدولة جديدة في الراوتر.') }}</div>
+      <div class="pushp-step">{{ _('انتظر ~3 دقائق ثم افتح أي بطاقة في الفحص — عمود الجهاز/النظام رح يمتلئ.') }}</div>
     </div>
   {% endcall %}
 
@@ -149,9 +149,9 @@
   {% call hub.section("سكربت الراوتر", icon="code") %}
     <div class="pushp-script">
       <button class="copy-btn" type="button" data-copy-script>
-        <i class="fa-solid fa-copy"></i> نسخ
+        <i class="fa-solid fa-copy"></i> {{ _('نسخ') }}
       </button>
-<pre id="pushp-script-body" dir="ltr">جارٍ توليد السكربت…</pre>
+<pre id="pushp-script-body" dir="ltr">{{ _('جارٍ توليد السكربت…') }}</pre>
     </div>
   {% endcall %}
 
@@ -163,16 +163,16 @@
     </p>
     <div class="pushp-script">
       <button class="copy-btn" type="button" data-copy-test>
-        <i class="fa-solid fa-copy"></i> نسخ
+        <i class="fa-solid fa-copy"></i> {{ _('نسخ') }}
       </button>
-<pre id="pushp-test-body" dir="ltr">جارٍ توليد الأمر…</pre>
+<pre id="pushp-test-body" dir="ltr">{{ _('جارٍ توليد الأمر…') }}</pre>
     </div>
   {% endcall %}
 
   {# ── Verify + troubleshoot ── #}
   {% call hub.section("التحقّق + استكشاف الأخطاء", icon="magnifying-glass-chart") %}
     <p style="font-size:13px;color:var(--hub-text-soft,#475569);margin:0 0 8px">
-      لو ركّبت المهمة المجدولة لكن البيانات لم تظهر، نفّذ الأوامر التالية على الراوتر للتحقّق:
+      {{ _('لو ركّبت المهمة المجدولة لكن البيانات لم تظهر، نفّذ الأوامر التالية على الراوتر للتحقّق:') }}
     </p>
     <div class="pushp-script">
 <pre dir="ltr"># 1) تحقق أن المهمة المجدولة موجودة وفعّالة
@@ -196,8 +196,8 @@
     <div class="hub-empty" style="text-align:initial;background:#fffbeb;border-color:#fcd34d;margin-top:10px;padding:10px 14px">
       <div class="hub-empty-sub" style="color:#92400e">
         <i class="fa-solid fa-triangle-exclamation"></i>
-        <strong>تنبيه شائع:</strong> لو عنوان الخادم يبدأ بـ <code>http://</code> (وليس https)
-        فلازم يكون <code>mode=http</code> في الـ fetch — وليس <code>mode=https</code>.
+        <strong>{{ _('تنبيه شائع:') }}</strong> {{ _('لو عنوان الخادم يبدأ بـ') }} <code>http://</code> (وليس https)
+        فلازم يكون <code>mode=http</code> {{ _('في الـ fetch — وليس') }} <code>mode=https</code>.
         السكربت أعلاه يضبط هذا تلقائيًا بناءً على عنوان الخادم.
       </div>
     </div>
@@ -206,7 +206,7 @@
   {# ── Removal ── #}
   {% call hub.section("إزالة المهمة المجدولة", icon="broom") %}
     <p style="font-size:13px;color:var(--hub-text-soft,#475569);margin:0 0 10px">
-      إذا تريد تعطيل الدفع (مثلاً بعد إصلاح واجهة الربط على الراوتر) نفّذ:
+      {{ _('إذا تريد تعطيل الدفع (مثلاً بعد إصلاح واجهة الربط على الراوتر) نفّذ:') }}
     </p>
     <div class="pushp-script">
 <pre dir="ltr">/system scheduler remove [find name=hoberadius-push-dhcp]</pre>

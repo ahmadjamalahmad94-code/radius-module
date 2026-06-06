@@ -60,15 +60,15 @@
         <thead>
           <tr>
             <th class="num" style="width:60px">#</th>
-            <th>الاسم</th>
-            <th>العنوان</th>
-            <th>المُصنِّع</th>
-            <th>النوع</th>
-            <th>الموقع</th>
-            <th>المنافذ</th>
-            <th>آخر فحص</th>
-            <th>الحالة</th>
-            <th style="width:170px" data-uds-nosort>إجراءات</th>
+            <th>{{ _('الاسم') }}</th>
+            <th>{{ _('العنوان') }}</th>
+            <th>{{ _('المُصنِّع') }}</th>
+            <th>{{ _('النوع') }}</th>
+            <th>{{ _('الموقع') }}</th>
+            <th>{{ _('المنافذ') }}</th>
+            <th>{{ _('آخر فحص') }}</th>
+            <th>{{ _('الحالة') }}</th>
+            <th style="width:170px" data-uds-nosort>{{ _('إجراءات') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -115,17 +115,17 @@
             <td>
               <div class="hub-flex-row" style="gap:4px;flex-wrap:nowrap">
                 <form method="post" action="{{ url_for('radius.devices_test', nas_id=d.id) }}" style="display:inline">
-                  <button type="submit" class="hub-btn hub-btn--secondary hub-btn--icon" title="فحص اتصال جهاز الشبكة">
+                  <button type="submit" class="hub-btn hub-btn--secondary hub-btn--icon" title="{{ _('فحص اتصال جهاز الشبكة') }}">
                     <i class="fa-solid fa-bolt"></i>
                   </button>
                 </form>
-                <a class="hub-btn hub-btn--ghost hub-btn--icon" title="تعديل"
+                <a class="hub-btn hub-btn--ghost hub-btn--icon" title="{{ _('تعديل') }}"
                    href="{{ url_for('radius.devices_edit', nas_id=d.id) }}">
                   <i class="fa-solid fa-pen"></i>
                 </a>
                 <form method="post" action="{{ url_for('radius.devices_delete', nas_id=d.id) }}"
                       onsubmit="return confirm('أرشفة «{{ d.name|e }}»؟ يمكن استعادته من سلة المحذوفات.');" style="display:inline">
-                  <button type="submit" class="hub-btn hub-btn--danger hub-btn--icon" title="أرشفة">
+                  <button type="submit" class="hub-btn hub-btn--danger hub-btn--icon" title="{{ _('أرشفة') }}">
                     <i class="fa-solid fa-box-archive"></i>
                   </button>
                 </form>

@@ -23,7 +23,7 @@
 {% block title %}{{ ttl }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-toolbox"></i>{% endblock %}
 {% block page_title %}{{ ttl }}{% endblock %}
-{% block page_sub %}<span class="sub">تسجيل معدّة مُسلَّمة لمشترك ومتابعة حالتها وإيجارها.</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('تسجيل معدّة مُسلَّمة لمشترك ومتابعة حالتها وإيجارها.') }}</span>{% endblock %}
 
 {% block content %}
 {# ── تعريب قيم النوع والحالة (القيم المُرسَلة للخادم تبقى إنجليزية) ── #}
@@ -66,47 +66,47 @@
     <div class="hub-form-row">
 
       <div class="hub-field" style="grid-column:1/-1">
-        <label class="hub-field-label" for="svc-subscriber">المشترك <span style="color:#dc2626">*</span></label>
+        <label class="hub-field-label" for="svc-subscriber">{{ _('المشترك') }} <span style="color:#dc2626">*</span></label>
         <select class="hub-select" id="svc-subscriber" name="subscriber_id" required>
-          <option value="">— اختر مشتركًا —</option>
+          <option value="">{{ _('— اختر مشتركًا —') }}</option>
           {% for s in subs %}
             <option value="{{ s.id }}" {% if item.subscriber_id == s.id %}selected{% endif %}>
               {{ s.username }} — {{ s.full_name or '—' }}
             </option>
           {% endfor %}
         </select>
-        <div class="hub-field-hint">المشترك الذي تسلَّم المعدّة — يُحتسب عليه إيجارها.</div>
+        <div class="hub-field-hint">{{ _('المشترك الذي تسلَّم المعدّة — يُحتسب عليه إيجارها.') }}</div>
       </div>
 
       <div class="hub-field">
-        <label class="hub-field-label" for="svc-name">الاسم <span style="color:#dc2626">*</span></label>
+        <label class="hub-field-label" for="svc-name">{{ _('الاسم') }} <span style="color:#dc2626">*</span></label>
         <input class="hub-input" type="text" id="svc-name" name="name" required value="{{ item.name }}"
-               placeholder="مثال: راوتر منزلي TP-Link">
-        <div class="hub-field-hint">اسم وصفي يميّز المعدّة في القوائم والتقارير.</div>
+               placeholder="{{ _('مثال: راوتر منزلي TP-Link') }}">
+        <div class="hub-field-hint">{{ _('اسم وصفي يميّز المعدّة في القوائم والتقارير.') }}</div>
       </div>
 
       <div class="hub-field">
-        <label class="hub-field-label" for="svc-type">النوع</label>
+        <label class="hub-field-label" for="svc-type">{{ _('النوع') }}</label>
         <select class="hub-select" id="svc-type" name="type">
           {% for t in ['router', 'onu', 'modem', 'cable', 'antenna', 'other'] %}
             <option value="{{ t }}" {% if item.type == t %}selected{% endif %}>{{ type_labels.get(t, t) }}</option>
           {% endfor %}
         </select>
-        <div class="hub-field-hint">تصنيف الجهاز — يسهّل الجرد والفلترة.</div>
+        <div class="hub-field-hint">{{ _('تصنيف الجهاز — يسهّل الجرد والفلترة.') }}</div>
       </div>
 
       <div class="hub-field">
-        <label class="hub-field-label" for="svc-serial">الرقم التسلسلي</label>
+        <label class="hub-field-label" for="svc-serial">{{ _('الرقم التسلسلي') }}</label>
         <input class="hub-input mono" type="text" id="svc-serial" name="serial"
                value="{{ item.serial }}" dir="ltr" placeholder="SN-XXXXXXXX">
-        <div class="hub-field-hint">يميّز القطعة بدقة عند الدعم أو الاسترجاع.</div>
+        <div class="hub-field-hint">{{ _('يميّز القطعة بدقة عند الدعم أو الاسترجاع.') }}</div>
       </div>
 
       <div class="hub-field">
-        <label class="hub-field-label" for="svc-mac">عنوان MAC</label>
+        <label class="hub-field-label" for="svc-mac">{{ _('عنوان MAC') }}</label>
         <input class="hub-input mono" type="text" id="svc-mac" name="mac"
                value="{{ item.mac }}" dir="ltr" placeholder="AA:BB:CC:DD:EE:FF">
-        <div class="hub-field-hint">العنوان الفيزيائي للجهاز إن وُجد — اختياري.</div>
+        <div class="hub-field-hint">{{ _('العنوان الفيزيائي للجهاز إن وُجد — اختياري.') }}</div>
       </div>
 
     </div>
@@ -116,41 +116,41 @@
     <div class="hub-form-row">
 
       <div class="hub-field">
-        <label class="hub-field-label" for="svc-rent">الإيجار / شهر</label>
+        <label class="hub-field-label" for="svc-rent">{{ _('الإيجار / شهر') }}</label>
         <input class="hub-input" type="number" step="0.01" min="0" id="svc-rent"
                name="rent_per_month" value="{{ item.rent_per_month }}" dir="ltr">
-        <div class="hub-field-hint">مبلغ مرجعي للفوترة الدورية بعملة النظام — اترك 0 إن كانت بلا إيجار.</div>
+        <div class="hub-field-hint">{{ _('مبلغ مرجعي للفوترة الدورية بعملة النظام — اترك 0 إن كانت بلا إيجار.') }}</div>
       </div>
 
       <div class="hub-field">
-        <label class="hub-field-label" for="svc-status">الحالة</label>
+        <label class="hub-field-label" for="svc-status">{{ _('الحالة') }}</label>
         <select class="hub-select" id="svc-status" name="status">
           {% for st in ['given', 'returned', 'lost', 'damaged'] %}
             <option value="{{ st }}" {% if item.status == st %}selected{% endif %}>{{ status_labels.get(st, st) }}</option>
           {% endfor %}
         </select>
-        <div class="hub-field-hint">تغيير الحالة لا يحذف السجل — يبقى للأرشفة والمحاسبة.</div>
+        <div class="hub-field-hint">{{ _('تغيير الحالة لا يحذف السجل — يبقى للأرشفة والمحاسبة.') }}</div>
       </div>
 
       <div class="hub-field">
-        <label class="hub-field-label" for="svc-given">تاريخ التسليم</label>
+        <label class="hub-field-label" for="svc-given">{{ _('تاريخ التسليم') }}</label>
         <input class="hub-input" type="date" id="svc-given" name="given_at" dir="ltr"
                value="{{ item.given_at.strftime('%Y-%m-%d') if item.given_at else '' }}">
-        <div class="hub-field-hint">يوم تسليم الجهاز للمشترك.</div>
+        <div class="hub-field-hint">{{ _('يوم تسليم الجهاز للمشترك.') }}</div>
       </div>
 
       <div class="hub-field">
-        <label class="hub-field-label" for="svc-returned">تاريخ الإرجاع</label>
+        <label class="hub-field-label" for="svc-returned">{{ _('تاريخ الإرجاع') }}</label>
         <input class="hub-input" type="date" id="svc-returned" name="returned_at" dir="ltr"
                value="{{ item.returned_at.strftime('%Y-%m-%d') if item.returned_at else '' }}">
-        <div class="hub-field-hint">يُملأ عند استعادة الجهاز — اتركه فارغًا إن كان لا يزال مُسلَّمًا.</div>
+        <div class="hub-field-hint">{{ _('يُملأ عند استعادة الجهاز — اتركه فارغًا إن كان لا يزال مُسلَّمًا.') }}</div>
       </div>
 
       <div class="hub-field" style="grid-column:1/-1">
-        <label class="hub-field-label" for="svc-notes">ملاحظات</label>
+        <label class="hub-field-label" for="svc-notes">{{ _('ملاحظات') }}</label>
         <textarea class="hub-textarea" id="svc-notes" name="notes" rows="3"
-                  placeholder="حالة الجهاز، ملحقاته، أي اتفاق خاص...">{{ item.notes }}</textarea>
-        <div class="hub-field-hint">أي تفاصيل إضافية تفيد عند الاسترجاع أو المحاسبة.</div>
+                  placeholder="{{ _('حالة الجهاز، ملحقاته، أي اتفاق خاص...') }}">{{ item.notes }}</textarea>
+        <div class="hub-field-hint">{{ _('أي تفاصيل إضافية تفيد عند الاسترجاع أو المحاسبة.') }}</div>
       </div>
 
     </div>

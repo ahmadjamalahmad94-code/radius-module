@@ -81,7 +81,7 @@
   {# زر فتح النافذة المنبثقة لإضافة جدول سرعة #}
   <div class="bsm-actions">
     <button type="button" class="hub-btn hub-btn--primary" data-bsm-open="schedule-create">
-      <i class="fa-solid fa-plus"></i> إضافة جدول سرعة
+      <i class="fa-solid fa-plus"></i> {{ _('إضافة جدول سرعة') }}
     </button>
   </div>
 
@@ -91,63 +91,63 @@
     {# method="post" ضروري: حاقن الـ CSRF التلقائي يستهدف فقط <form method="post">. #}
     <form method="post" action="{{ url_for('radius.bandwidth_schedules_create') }}">
       <div class="bsm-head">
-        <h3 id="bsm-schedule-create-title"><i class="fa-solid fa-plus"></i> إضافة جدول سرعة</h3>
-        <button type="button" class="bsm-x" data-bsm-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
+        <h3 id="bsm-schedule-create-title"><i class="fa-solid fa-plus"></i> {{ _('إضافة جدول سرعة') }}</h3>
+        <button type="button" class="bsm-x" data-bsm-close aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="bsm-body bs-form">
       <label class="fld">
-        اسم الجدول
-        <input class="hub-input" name="name" required placeholder="مثال: سرعة الليل">
-        <span class="bs-help">اسم واضح يساعدك تعرف متى ولماذا يتغير الحد.</span>
+        {{ _('اسم الجدول') }}
+        <input class="hub-input" name="name" required placeholder="{{ _('مثال: سرعة الليل') }}">
+        <span class="bs-help">{{ _('اسم واضح يساعدك تعرف متى ولماذا يتغير الحد.') }}</span>
       </label>
 
       <label class="fld">
-        نطاق القاعدة
+        {{ _('نطاق القاعدة') }}
         <select class="hub-select" name="target_type" id="bs-target-type">
-          <option value="plan">عرض / باقة خدمة</option>
-          <option value="subscriber">مشترك محدد</option>
-          <option value="card_batch">باقة كروت / دفعة</option>
+          <option value="plan">{{ _('عرض / باقة خدمة') }}</option>
+          <option value="subscriber">{{ _('مشترك محدد') }}</option>
+          <option value="card_batch">{{ _('باقة كروت / دفعة') }}</option>
         </select>
-        <span class="bs-help">إذا وُجدت قاعدة للمشترك أو باقة الكروت فهي تتقدم على قاعدة العرض.</span>
+        <span class="bs-help">{{ _('إذا وُجدت قاعدة للمشترك أو باقة الكروت فهي تتقدم على قاعدة العرض.') }}</span>
       </label>
 
       <label class="fld bs-target-field" data-target="plan">
-        الباقة
+        {{ _('الباقة') }}
         <select class="hub-select" name="plan_id" id="bs-plan-id">
-          <option value="">— اختر باقة —</option>
+          <option value="">{{ _('— اختر باقة —') }}</option>
           {% for plan in plans %}
             <option value="{{ plan.id }}">{{ plan.name }}</option>
           {% endfor %}
         </select>
-        <span class="bs-help">تُستخدم هذه القاعدة إذا لم توجد قاعدة خاصة بالمشترك أو باقة الكروت.</span>
+        <span class="bs-help">{{ _('تُستخدم هذه القاعدة إذا لم توجد قاعدة خاصة بالمشترك أو باقة الكروت.') }}</span>
       </label>
 
       <label class="fld bs-target-field" data-target="subscriber" hidden>
-        المشترك
+        {{ _('المشترك') }}
         <select class="hub-select" name="subscriber_username" id="bs-subscriber-username">
-          <option value="">— اختر مشتركًا —</option>
+          <option value="">{{ _('— اختر مشتركًا —') }}</option>
           {% for sub in subscribers %}
             <option value="{{ sub.username }}">{{ sub.username }}{% if sub.full_name %} — {{ sub.full_name }}{% endif %}</option>
           {% endfor %}
         </select>
-        <span class="bs-help">قاعدة المشترك لها أعلى أولوية عند تسجيل الدخول.</span>
+        <span class="bs-help">{{ _('قاعدة المشترك لها أعلى أولوية عند تسجيل الدخول.') }}</span>
       </label>
 
       <label class="fld bs-target-field" data-target="card_batch" hidden>
-        باقة الكروت / الدفعة
+        {{ _('باقة الكروت / الدفعة') }}
         <select class="hub-select" name="card_batch_id" id="bs-card-batch-id">
-          <option value="">— اختر دفعة كروت —</option>
+          <option value="">{{ _('— اختر دفعة كروت —') }}</option>
           {% for batch in batches %}
             <option value="{{ batch.id }}">{{ batch.batch_code }} — {{ batch.package_name or batch.service_name or 'بدون اسم' }}</option>
           {% endfor %}
         </select>
-        <span class="bs-help">تُطبّق على كل البطاقات التابعة لهذه الدفعة، وتتقدم على العرض.</span>
+        <span class="bs-help">{{ _('تُطبّق على كل البطاقات التابعة لهذه الدفعة، وتتقدم على العرض.') }}</span>
       </label>
 
       <label class="fld">
-        الأولوية داخل نفس النطاق (1-10)
+        {{ _('الأولوية داخل نفس النطاق (1-10)') }}
         <input class="hub-input" type="number" name="priority" min="1" max="10" step="1" value="5">
-        <span class="bs-help">الرقم الأصغر يُفحص أولًا إذا تداخلت أكثر من قاعدة داخل نفس النطاق.</span>
+        <span class="bs-help">{{ _('الرقم الأصغر يُفحص أولًا إذا تداخلت أكثر من قاعدة داخل نفس النطاق.') }}</span>
       </label>
 
       <div class="bs-row">
@@ -184,17 +184,17 @@
       </div>
 
       <label class="fld">
-        طريقة الرجوع بعد الوقت
+        {{ _('طريقة الرجوع بعد الوقت') }}
         <select class="hub-select" name="restore_mode">
-          <option value="profile_default">الرجوع للسرعة الأساسية</option>
-          <option value="keep_current">إبقاء آخر سرعة</option>
-          <option value="disconnect">فصل الجلسة</option>
+          <option value="profile_default">{{ _('الرجوع للسرعة الأساسية') }}</option>
+          <option value="keep_current">{{ _('إبقاء آخر سرعة') }}</option>
+          <option value="disconnect">{{ _('فصل الجلسة') }}</option>
         </select>
       </label>
 
       <label class="fld">
-        ملاحظات
-        <textarea class="hub-textarea" name="notes" rows="2" placeholder="سبب الجدول أو ملاحظات التشغيل"></textarea>
+        {{ _('ملاحظات') }}
+        <textarea class="hub-textarea" name="notes" rows="2" placeholder="{{ _('سبب الجدول أو ملاحظات التشغيل') }}"></textarea>
       </label>
 
       <div class="bs-check">
@@ -203,9 +203,9 @@
       </div>{# /bsm-body #}
 
       <div class="bsm-foot">
-        <button class="hub-btn hub-btn--ghost" type="button" data-bsm-close>إغلاق</button>
+        <button class="hub-btn hub-btn--ghost" type="button" data-bsm-close>{{ _('إغلاق') }}</button>
         <button class="hub-btn hub-btn--primary" type="submit">
-          <i class="fa-solid fa-floppy-disk"></i> حفظ الجدول
+          <i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ الجدول') }}
         </button>
       </div>
     </form>
@@ -219,13 +219,13 @@
         <table class="hub-table">
           <thead>
             <tr>
-              <th>الاسم</th>
-              <th>النطاق</th>
-              <th>الباقة</th>
-              <th data-uds-nosort>الوقت</th>
-              <th data-uds-nosort>السرعة</th>
-              <th>الحالة</th>
-              <th style="width:180px" data-uds-nosort data-uds-nocol>تطبيق</th>
+              <th>{{ _('الاسم') }}</th>
+              <th>{{ _('النطاق') }}</th>
+              <th>{{ _('الباقة') }}</th>
+              <th data-uds-nosort>{{ _('الوقت') }}</th>
+              <th data-uds-nosort>{{ _('السرعة') }}</th>
+              <th>{{ _('الحالة') }}</th>
+              <th style="width:180px" data-uds-nosort data-uds-nocol>{{ _('تطبيق') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -268,7 +268,7 @@
               <td>
                 <form method="post" action="{{ url_for('radius.bandwidth_schedules_apply', schedule_id=item.get('id')) }}">
                   <button class="hub-btn hub-btn--secondary hub-btn--sm" type="submit">
-                    <i class="fa-solid fa-shield-halved"></i> فحص الجاهزية
+                    <i class="fa-solid fa-shield-halved"></i> {{ _('فحص الجاهزية') }}
                   </button>
                   <div class="small" style="margin-top:4px">
                     {{ hub.pill("لا يطبق على خدمة المصادقة", variant="amber", dot=False) }}

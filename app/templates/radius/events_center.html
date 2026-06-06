@@ -4,7 +4,7 @@
 {% block title %}مركز الأحداث — Hobe Hub{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-timeline"></i>{% endblock %}
 {% block page_title %}مركز الأحداث{% endblock %}
-{% block page_sub %}<span class="sub">أحداث أعمال محفوظة كسجل إضافي مع فلاتر ومعرفات ترابط وخطوط زمنية للكيانات.</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('أحداث أعمال محفوظة كسجل إضافي مع فلاتر ومعرفات ترابط وخطوط زمنية للكيانات.') }}</span>{% endblock %}
 {% block head_extra %}{{ super() }}<link rel="stylesheet" href="{{ url_for('static', filename='css/ops_risk_redesign.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">{% endblock %}
 
@@ -30,13 +30,13 @@
   ],
   search_action=url_for('radius.events_center')
 ) %}
-  <input class="hub-input" name="category"       placeholder="الفئة"        value="{{ request.args.get('category', '') }}">
-  <input class="hub-input" name="severity"       placeholder="الخطورة"      value="{{ request.args.get('severity', '') }}">
-  <input class="hub-input" name="actor_type"     placeholder="نوع الفاعل"   value="{{ request.args.get('actor_type', '') }}">
-  <input class="hub-input" name="actor_id"  type="number" placeholder="رقم الفاعل" value="{{ request.args.get('actor_id', '') }}">
-  <input class="hub-input" name="target_type"    placeholder="نوع الهدف"    value="{{ request.args.get('target_type', '') }}">
-  <input class="hub-input" name="target_id" type="number" placeholder="رقم الهدف"  value="{{ request.args.get('target_id', '') }}">
-  <input class="hub-input grow" name="correlation_id" placeholder="معرّف الترابط" value="{{ request.args.get('correlation_id', '') }}">
+  <input class="hub-input" name="category"       placeholder="{{ _('الفئة') }}"        value="{{ request.args.get('category', '') }}">
+  <input class="hub-input" name="severity"       placeholder="{{ _('الخطورة') }}"      value="{{ request.args.get('severity', '') }}">
+  <input class="hub-input" name="actor_type"     placeholder="{{ _('نوع الفاعل') }}"   value="{{ request.args.get('actor_type', '') }}">
+  <input class="hub-input" name="actor_id"  type="number" placeholder="{{ _('رقم الفاعل') }}" value="{{ request.args.get('actor_id', '') }}">
+  <input class="hub-input" name="target_type"    placeholder="{{ _('نوع الهدف') }}"    value="{{ request.args.get('target_type', '') }}">
+  <input class="hub-input" name="target_id" type="number" placeholder="{{ _('رقم الهدف') }}"  value="{{ request.args.get('target_id', '') }}">
+  <input class="hub-input grow" name="correlation_id" placeholder="{{ _('معرّف الترابط') }}" value="{{ request.args.get('correlation_id', '') }}">
   {{ hub.btn("فلترة", icon="filter", variant="primary", type="submit", size="sm") }}
 {% endcall %}
 </section>{# /hub-hero-shell #}
@@ -71,13 +71,13 @@
       <table class="hub-table" data-testid="events-table">
         <thead>
           <tr>
-            <th class="num">الرقم</th>
-            <th>الفئة</th>
-            <th>الخطورة</th>
-            <th>المفتاح</th>
-            <th>الفاعل</th>
-            <th>الهدف</th>
-            <th>الترابط</th>
+            <th class="num">{{ _('الرقم') }}</th>
+            <th>{{ _('الفئة') }}</th>
+            <th>{{ _('الخطورة') }}</th>
+            <th>{{ _('المفتاح') }}</th>
+            <th>{{ _('الفاعل') }}</th>
+            <th>{{ _('الهدف') }}</th>
+            <th>{{ _('الترابط') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -97,7 +97,7 @@
               <td class="mono small">{{ event.correlation_id }}</td>
             </tr>
           {% else %}
-            <tr><td colspan="7">لا توجد أحداث مطابقة لهذا الفلتر.</td></tr>
+            <tr><td colspan="7">{{ _('لا توجد أحداث مطابقة لهذا الفلتر.') }}</td></tr>
           {% endfor %}
         </tbody>
       </table>

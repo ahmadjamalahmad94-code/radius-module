@@ -10,7 +10,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>الدفع الإلكتروني — وضع تجريبي</title>
+  <title>{{ _('الدفع الإلكتروني — وضع تجريبي') }}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap">
@@ -222,8 +222,8 @@
   <div class="demo-ribbon">
     <i class="fa-solid fa-flask"></i>
     <div>
-      وضع تجريبي — محاكاة
-      <small>لا يتم خصم أي مبلغ حقيقي. هذه معاينة لتجربة الدفع قبل ربط البوابات الفعلية.</small>
+      {{ _('وضع تجريبي — محاكاة') }}
+      <small>{{ _('لا يتم خصم أي مبلغ حقيقي. هذه معاينة لتجربة الدفع قبل ربط البوابات الفعلية.') }}</small>
     </div>
   </div>
 
@@ -231,8 +231,8 @@
     <div class="brandbar">
       <div class="logo"><i class="fa-solid fa-bolt"></i></div>
       <div>
-        <h1>الدفع الإلكتروني</h1>
-        <p>ادفع اشتراكك أو اشترِ بطاقتك خلال ثوانٍ</p>
+        <h1>{{ _('الدفع الإلكتروني') }}</h1>
+        <p>{{ _('ادفع اشتراكك أو اشترِ بطاقتك خلال ثوانٍ') }}</p>
       </div>
     </div>
 
@@ -244,12 +244,12 @@
       {%- if checkout.status in ('pending', 'otp_sent') -%}{%- set step = 2 -%}
       {%- else -%}{%- set step = 3 -%}{%- endif -%}
     {%- endif -%}
-    <div class="steps" role="list" aria-label="مراحل عملية الدفع">
-      <div class="st {{ 'is-done' if step > 1 else 'is-on' }}" role="listitem"><span class="dot" aria-hidden="true">{% if step > 1 %}<i class="fa-solid fa-check"></i>{% else %}1{% endif %}</span>الاختيار والدفع</div>
+    <div class="steps" role="list" aria-label="{{ _('مراحل عملية الدفع') }}">
+      <div class="st {{ 'is-done' if step > 1 else 'is-on' }}" role="listitem"><span class="dot" aria-hidden="true">{% if step > 1 %}<i class="fa-solid fa-check"></i>{% else %}1{% endif %}</span>{{ _('الاختيار والدفع') }}</div>
       <span class="bar" aria-hidden="true"></span>
-      <div class="st {{ 'is-done' if step > 2 else ('is-on' if step == 2 else '') }}" role="listitem"><span class="dot" aria-hidden="true">{% if step > 2 %}<i class="fa-solid fa-check"></i>{% else %}2{% endif %}</span>رمز التحقق</div>
+      <div class="st {{ 'is-done' if step > 2 else ('is-on' if step == 2 else '') }}" role="listitem"><span class="dot" aria-hidden="true">{% if step > 2 %}<i class="fa-solid fa-check"></i>{% else %}2{% endif %}</span>{{ _('رمز التحقق') }}</div>
       <span class="bar" aria-hidden="true"></span>
-      <div class="st {{ 'is-on' if step == 3 else '' }}" role="listitem"><span class="dot" aria-hidden="true">{% if step == 3 and checkout.status == 'paid' %}<i class="fa-solid fa-check"></i>{% else %}3{% endif %}</span>الإيصال</div>
+      <div class="st {{ 'is-on' if step == 3 else '' }}" role="listitem"><span class="dot" aria-hidden="true">{% if step == 3 and checkout.status == 'paid' %}<i class="fa-solid fa-check"></i>{% else %}3{% endif %}</span>{{ _('الإيصال') }}</div>
     </div>
 
     {# ── الرسائل ── #}
@@ -262,8 +262,8 @@
     {% if not checkout %}
     {# ═══════════ الخطوتان 1 + 2: اختيار العنصر ثم وسيلة الدفع ═══════════ #}
     <form class="card" method="post" action="{{ url_for('radius.pay_demo_start') }}">
-      <h2><i class="fa-solid fa-cart-shopping"></i> ماذا تريد أن تدفع؟</h2>
-      <p class="lead">اختر العنصر، ثم وسيلة الدفع، وأدخل رقم محفظتك.</p>
+      <h2><i class="fa-solid fa-cart-shopping"></i> {{ _('ماذا تريد أن تدفع؟') }}</h2>
+      <p class="lead">{{ _('اختر العنصر، ثم وسيلة الدفع، وأدخل رقم محفظتك.') }}</p>
 
       <div class="items">
         {% for it in items %}
@@ -278,18 +278,18 @@
 
       {# اسم المشترك — يظهر فقط عند اختيار فاتورة الاشتراك (CSS :has) #}
       <div class="uname fld">
-        <label><i class="fa-solid fa-user"></i> اسم المستخدم (للفاتورة)</label>
-        <input type="text" name="username" placeholder="مثال: ahmad99" autocomplete="off">
-        <div class="hint">اختياري في الوضع التجريبي — في الوضع الحقيقي يُربط بفاتورة المشترك مباشرة.</div>
+        <label><i class="fa-solid fa-user"></i> {{ _('اسم المستخدم (للفاتورة)') }}</label>
+        <input type="text" name="username" placeholder="{{ _('مثال: ahmad99') }}" autocomplete="off">
+        <div class="hint">{{ _('اختياري في الوضع التجريبي — في الوضع الحقيقي يُربط بفاتورة المشترك مباشرة.') }}</div>
       </div>
 
-      <h2 style="margin-top:4px"><i class="fa-solid fa-wallet"></i> ادفع عبر</h2>
-      <p class="lead">كل الوسائل تعمل بالمحاكاة حاليًا — نفس التجربة، بلا خصم حقيقي.</p>
+      <h2 style="margin-top:4px"><i class="fa-solid fa-wallet"></i> {{ _('ادفع عبر') }}</h2>
+      <p class="lead">{{ _('كل الوسائل تعمل بالمحاكاة حاليًا — نفس التجربة، بلا خصم حقيقي.') }}</p>
 
       <div class="provs">
         {% for p in providers %}
         <label class="prov">
-          <span class="demo-tag">تجريبي</span>
+          <span class="demo-tag">{{ _('تجريبي') }}</span>
           <input type="radio" name="provider" value="{{ p.key }}" {% if loop.first %}checked{% endif %} required>
           <span class="pic" style="background:{{ p.tone }}"><i class="fa-solid fa-{{ p.icon }}"></i></span>
           <b>{{ p.title }}</b>
@@ -299,14 +299,14 @@
       </div>
 
       <div class="fld">
-        <label><i class="fa-solid fa-mobile-screen"></i> رقم هاتف المحفظة</label>
+        <label><i class="fa-solid fa-mobile-screen"></i> {{ _('رقم هاتف المحفظة') }}</label>
         <input type="tel" name="phone" inputmode="numeric" placeholder="0599000000"
                pattern="[0-9+ ]{9,15}" required>
-        <div class="hint">سيصلك رمز تحقق على هذا الرقم — في الوضع التجريبي يظهر الرمز في «مختبر الدفع» بدل SMS.</div>
+        <div class="hint">{{ _('سيصلك رمز تحقق على هذا الرقم — في الوضع التجريبي يظهر الرمز في «مختبر الدفع» بدل SMS.') }}</div>
       </div>
 
       <button class="pay-btn" type="submit">
-        <i class="fa-solid fa-lock"></i> متابعة الدفع الآمن
+        <i class="fa-solid fa-lock"></i> {{ _('متابعة الدفع الآمن') }}
       </button>
     </form>
 
@@ -315,12 +315,12 @@
     <div class="card">
       <div class="otp-head">
         <span class="phone-ic"><i class="fa-solid fa-comment-sms"></i></span>
-        <b>أدخل رمز التحقق</b>
+        <b>{{ _('أدخل رمز التحقق') }}</b>
         <p>
-          أرسلنا رمزًا من 6 أرقام إلى <bdi dir="ltr">{{ checkout.phone or 'محفظتك' }}</bdi>
-          عبر <b style="color:{{ checkout.ui_provider.tone }}">{{ checkout.ui_provider.title }}</b>
+          {{ _('أرسلنا رمزًا من 6 أرقام إلى') }} <bdi dir="ltr">{{ checkout.phone or 'محفظتك' }}</bdi>
+          {{ _('عبر') }} <b style="color:{{ checkout.ui_provider.tone }}">{{ checkout.ui_provider.title }}</b>
           <br><span style="color:var(--demo-amber-deep);font-size:11px"><i class="fa-solid fa-flask" aria-hidden="true"></i>
-          وضع تجريبي: الرمز يظهر في «مختبر الدفع الإلكتروني» في لوحة الإدارة.</span>
+          {{ _('وضع تجريبي: الرمز يظهر في «مختبر الدفع الإلكتروني» في لوحة الإدارة.') }}</span>
         </p>
       </div>
 
@@ -331,7 +331,7 @@
 
       <form method="post" action="{{ url_for('radius.pay_demo_otp') }}" id="otp-form">
         <input type="hidden" name="checkout_id" value="{{ checkout.id }}">
-        <div class="otp-boxes" id="otp-boxes" role="group" aria-label="رمز التحقق المكوّن من ستة أرقام">
+        <div class="otp-boxes" id="otp-boxes" role="group" aria-label="{{ _('رمز التحقق المكوّن من ستة أرقام') }}">
           {% for i in range(1, 7) %}
           <input type="text" name="d{{ i }}" maxlength="1" inputmode="numeric"
                  autocomplete="{{ 'one-time-code' if loop.first else 'off' }}"
@@ -343,17 +343,17 @@
         <div class="otp-meta">
           <span class="otp-timer" id="otp-timer">
             <i class="fa-solid fa-hourglass-half"></i>
-            ينتهي خلال <span class="tt" id="otp-countdown">05:00</span>
+            {{ _('ينتهي خلال') }} <span class="tt" id="otp-countdown">05:00</span>
           </span>
           <button class="resend-btn" type="submit" id="resend-btn"
                   form="resend-form" disabled>
             <i class="fa-solid fa-rotate-right"></i>
-            <span id="resend-label">إعادة الإرسال (30)</span>
+            <span id="resend-label">{{ _('إعادة الإرسال (30)') }}</span>
           </button>
         </div>
 
         <button class="pay-btn" type="submit" id="otp-submit">
-          <i class="fa-solid fa-circle-check"></i> تأكيد الدفع
+          <i class="fa-solid fa-circle-check"></i> {{ _('تأكيد الدفع') }}
         </button>
       </form>
       <form method="post" action="{{ url_for('radius.pay_demo_resend') }}" id="resend-form">
@@ -446,18 +446,18 @@
             <path class="tick" d="M30 52 L44 66 L72 38"/>
           </svg>
         </div>
-        <h3>تم الدفع بنجاح</h3>
-        <div class="sub">شكرًا لك! هذا ملخص عمليتك (تجريبي — لا خصم حقيقي).</div>
+        <h3>{{ _('تم الدفع بنجاح') }}</h3>
+        <div class="sub">{{ _('شكرًا لك! هذا ملخص عمليتك (تجريبي — لا خصم حقيقي).') }}</div>
 
         <div class="receipt">
-          <div class="rrow"><span>العنصر</span><b>{{ checkout.item_title }}</b></div>
-          <div class="rrow"><span>المبلغ</span><b>{{ checkout.amount_display }} {{ checkout.currency }}</b></div>
-          <div class="rrow"><span>وسيلة الدفع</span><b>{{ checkout.ui_provider.title }} <span style="color:var(--demo-amber);font-size:10px">(محاكاة)</span></b></div>
+          <div class="rrow"><span>{{ _('العنصر') }}</span><b>{{ checkout.item_title }}</b></div>
+          <div class="rrow"><span>{{ _('المبلغ') }}</span><b>{{ checkout.amount_display }} {{ checkout.currency }}</b></div>
+          <div class="rrow"><span>{{ _('وسيلة الدفع') }}</span><b>{{ checkout.ui_provider.title }} <span style="color:var(--demo-amber);font-size:10px">{{ _('(محاكاة)') }}</span></b></div>
           {% if checkout.subscriber_username %}
-          <div class="rrow"><span>المشترك</span><b>{{ checkout.subscriber_username }}</b></div>
+          <div class="rrow"><span>{{ _('المشترك') }}</span><b>{{ checkout.subscriber_username }}</b></div>
           {% endif %}
-          <div class="rrow"><span>مرجع العملية</span><b class="mono">{{ checkout.reference }}</b></div>
-          <div class="rrow"><span>التاريخ</span><b class="mono">{{ (checkout.paid_at or '')[:16].replace('T', ' ') }}</b></div>
+          <div class="rrow"><span>{{ _('مرجع العملية') }}</span><b class="mono">{{ checkout.reference }}</b></div>
+          <div class="rrow"><span>{{ _('التاريخ') }}</span><b class="mono">{{ (checkout.paid_at or '')[:16].replace('T', ' ') }}</b></div>
         </div>
 
         <div class="note-real">
@@ -467,7 +467,7 @@
         </div>
 
         <a class="ghost-btn" href="{{ url_for('radius.pay_demo') }}">
-          <i class="fa-solid fa-rotate-left"></i> تجربة عملية دفع جديدة
+          <i class="fa-solid fa-rotate-left"></i> {{ _('تجربة عملية دفع جديدة') }}
         </a>
       </div>
     </div>
@@ -478,23 +478,23 @@
       <div class="done-wrap">
         {% if checkout.status == 'expired' %}
         <span class="fail-ic warn"><i class="fa-solid fa-hourglass-end"></i></span>
-        <h3 style="color:var(--warn)">انتهت صلاحية الجلسة</h3>
-        <div class="sub">مرّت أكثر من 5 دقائق دون تأكيد الرمز — ابدأ عملية جديدة.</div>
+        <h3 style="color:var(--warn)">{{ _('انتهت صلاحية الجلسة') }}</h3>
+        <div class="sub">{{ _('مرّت أكثر من 5 دقائق دون تأكيد الرمز — ابدأ عملية جديدة.') }}</div>
         {% else %}
         <span class="fail-ic"><i class="fa-solid fa-circle-xmark"></i></span>
-        <h3 style="color:var(--bad)">فشلت عملية الدفع</h3>
-        <div class="sub">تجاوزت عدد محاولات رمز التحقق المسموح بها. لا تقلق — لا خصم في الوضع التجريبي.</div>
+        <h3 style="color:var(--bad)">{{ _('فشلت عملية الدفع') }}</h3>
+        <div class="sub">{{ _('تجاوزت عدد محاولات رمز التحقق المسموح بها. لا تقلق — لا خصم في الوضع التجريبي.') }}</div>
         {% endif %}
         <a class="ghost-btn" href="{{ url_for('radius.pay_demo') }}" style="margin-top:8px">
-          <i class="fa-solid fa-rotate-left"></i> البدء من جديد
+          <i class="fa-solid fa-rotate-left"></i> {{ _('البدء من جديد') }}
         </a>
       </div>
     </div>
     {% endif %}
 
     <div class="foot">
-      <i class="fa-solid fa-shield-halved"></i> صفحة تجريبية آمنة — لا تُجمع بيانات بطاقات ولا تُجرى أي حركة مالية حقيقية.<br>
-      HobeRadius · مختبر الدفع الإلكتروني
+      <i class="fa-solid fa-shield-halved"></i> {{ _('صفحة تجريبية آمنة — لا تُجمع بيانات بطاقات ولا تُجرى أي حركة مالية حقيقية.') }}<br>
+      {{ _('HobeRadius · مختبر الدفع الإلكتروني') }}
     </div>
   </div>
 </body>

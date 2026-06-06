@@ -413,29 +413,29 @@
    تظهر عارية أسفل النموذج (شارات أرقام بنفسجية + خط رابط + سطح
    بطاقة يطابق نظام التصميم). #}
 {% set _pc_help %}
-<aside class="pc-help" aria-label="كيف تعمل هذه الصفحة">
+<aside class="pc-help" aria-label="{{ _('كيف تعمل هذه الصفحة') }}">
   <div class="pc-help-head">
     <span class="ic"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
     <span>
-      <span class="t">كيف تعمل هذه الصفحة؟</span>
-      <span class="s">ثلاث خطوات لحزمة طباعة جاهزة</span>
+      <span class="t">{{ _('كيف تعمل هذه الصفحة؟') }}</span>
+      <span class="s">{{ _('ثلاث خطوات لحزمة طباعة جاهزة') }}</span>
     </span>
   </div>
   <div class="pc-help-body">
     <ol class="pc-help-steps">
       <li>
         <span class="n" aria-hidden="true"></span>
-        <span class="tx"><b>عرّف الحزمة:</b> اكتب اسم الحزمة وسعرها
+        <span class="tx"><b>{{ _('عرّف الحزمة:') }}</b> اكتب اسم الحزمة وسعرها
           (السعر اختياري — يظهر على ملف الطباعة).</span>
       </li>
       <li>
         <span class="n" aria-hidden="true"></span>
-        <span class="tx"><b>حلّل الملف:</b> ارفع ملف الكروت ثم اضغط
+        <span class="tx"><b>{{ _('حلّل الملف:') }}</b> ارفع ملف الكروت ثم اضغط
           «حلّل» — المحرّك يكتشف أعمدة اليوزر والباسورد تلقائيًا.</span>
       </li>
       <li>
         <span class="n" aria-hidden="true"></span>
-        <span class="tx"><b>راجع واحفظ:</b> دقّق النص المستخرج، عدّله
+        <span class="tx"><b>{{ _('راجع واحفظ:') }}</b> دقّق النص المستخرج، عدّله
           إن لزم، ثم احفظ دفعة الطباعة.</span>
       </li>
     </ol>
@@ -476,7 +476,7 @@
 
     <div style="margin-top:10px;font-size:12px;color:#64748b;line-height:1.7">
       <i class="fa-solid fa-shield-halved" style="color:#15803d"></i>
-      الأسعار اختيارية. هذه البطاقات للطباعة فقط ولن تظهر في خدمة المصادقة أو تسمح بتسجيل الدخول.
+      {{ _('الأسعار اختيارية. هذه البطاقات للطباعة فقط ولن تظهر في خدمة المصادقة أو تسمح بتسجيل الدخول.') }}
     </div>
   {% endcall %}
 
@@ -487,10 +487,10 @@
          data-preview-url="{{ url_for('radius.cards_print_new_preview') }}">
 
       <div class="pc-smart-head">
-        <span class="title">ارفع الملف ثم اضغط «حلّل»</span>
+        <span class="title">{{ _('ارفع الملف ثم اضغط «حلّل»') }}</span>
         {% if engine_version %}
-        <span class="build-chip" title="نسخة المحرّك">
-          <i class="fa-solid fa-microchip" aria-hidden="true"></i> إصدار <span dir="ltr"><bdi>{{ engine_version }}</bdi></span>
+        <span class="build-chip" title="{{ _('نسخة المحرّك') }}">
+          <i class="fa-solid fa-microchip" aria-hidden="true"></i> {{ _('إصدار') }} <span dir="ltr"><bdi>{{ engine_version }}</bdi></span>
         </span>
         {% endif %}
       </div>
@@ -498,13 +498,13 @@
       <label class="pc-dz" id="pc-dropzone" for="ci-smart-file">
         <input type="file" id="ci-smart-file" class="pc-dz-input"
                accept=".csv,.tsv,.txt,.xlsx,.pdf,text/csv,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-               aria-label="اختر ملف الكروت">
+               aria-label="{{ _('اختر ملف الكروت') }}">
 
         <div class="pc-dz-empty" id="pc-dz-empty">
           <div class="pc-dz-icon" aria-hidden="true">
             <i class="fa-solid fa-cloud-arrow-up"></i>
           </div>
-          <p class="pc-dz-title">اسحب الملف هنا أو اضغط للاختيار</p>
+          <p class="pc-dz-title">{{ _('اسحب الملف هنا أو اضغط للاختيار') }}</p>
           <p class="pc-dz-sub">
             <kbd>CSV</kbd> · <kbd>XLSX</kbd> · <kbd>PDF</kbd> &nbsp;حتى 12MB
           </p>
@@ -523,7 +523,7 @@
             </span>
           </div>
           <button type="button" class="pc-dz-remove" id="pc-dz-remove"
-                  aria-label="إزالة الملف">
+                  aria-label="{{ _('إزالة الملف') }}">
             <i class="fa-solid fa-xmark" aria-hidden="true"></i>
           </button>
         </div>
@@ -533,7 +533,7 @@
         <button type="button" id="ci-smart-btn" class="pc-smart-btn">
           <i class="fa-solid fa-wand-magic-sparkles static icon-leading" aria-hidden="true"></i>
           <i class="fa-solid fa-circle-notch spin icon-leading" aria-hidden="true"></i>
-          <span>حلّل الملف</span>
+          <span>{{ _('حلّل الملف') }}</span>
         </button>
       </div>
 
@@ -543,11 +543,11 @@
           <span id="pc-progress-fill"></span>
         </div>
         <ol class="pc-stages" id="pc-stages">
-          <li data-stage="receive"><span class="dot">1</span><span>استلام الملف</span></li>
-          <li data-stage="sniff">  <span class="dot">2</span><span>كشف الصيغة</span></li>
-          <li data-stage="extract"><span class="dot">3</span><span>استخراج الجدول</span></li>
-          <li data-stage="detect"> <span class="dot">4</span><span>تحليل الأعمدة</span></li>
-          <li data-stage="build">  <span class="dot">5</span><span>اكتمال</span></li>
+          <li data-stage="receive"><span class="dot">1</span><span>{{ _('استلام الملف') }}</span></li>
+          <li data-stage="sniff">  <span class="dot">2</span><span>{{ _('كشف الصيغة') }}</span></li>
+          <li data-stage="extract"><span class="dot">3</span><span>{{ _('استخراج الجدول') }}</span></li>
+          <li data-stage="detect"> <span class="dot">4</span><span>{{ _('تحليل الأعمدة') }}</span></li>
+          <li data-stage="build">  <span class="dot">5</span><span>{{ _('اكتمال') }}</span></li>
         </ol>
       </div>
 
@@ -555,7 +555,7 @@
 
       <div class="pc-counter" id="ci-counter" hidden>
         <span class="num" id="ci-counter-num">0</span>
-        <span class="lbl">بطاقة جاهزة للحفظ</span>
+        <span class="lbl">{{ _('بطاقة جاهزة للحفظ') }}</span>
       </div>
     </div>
   {% endcall %}
@@ -564,12 +564,12 @@
   {% call hub.section("راجع البطاقات قبل الحفظ", icon="list-check") %}
     <div class="hub-field">
       <label class="hub-field-label" for="csv_text">
-        نص الكروت <span class="req">*</span>
+        {{ _('نص الكروت') }} <span class="req">*</span>
       </label>
       <textarea class="pc-textarea" id="csv_text" name="csv_text" required
                 placeholder="username,password&#10;card001,pass001&#10;card002,pass002"></textarea>
       <div class="hub-field-hint">
-        إذا استخدمت المحرّك بالأعلى، هذا الحقل يتعبّأ تلقائياً — يمكنك تعديله قبل الحفظ.
+        {{ _('إذا استخدمت المحرّك بالأعلى، هذا الحقل يتعبّأ تلقائياً — يمكنك تعديله قبل الحفظ.') }}
       </div>
     </div>
 

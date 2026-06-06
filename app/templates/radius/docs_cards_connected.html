@@ -239,14 +239,14 @@
 <div class="dg-layout">
 
   {# ───── الفهرس الجانبي اللاصق ───── #}
-  <nav class="dg-toc dg-noprint" aria-label="فهرس الدليل">
-    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> فهرس الخطوات</div>
-    <a href="#dg-s1" data-dg-toc><span class="n">1</span> افتح صفحة البطاقات المتصلة</a>
-    <a href="#dg-s2" data-dg-toc><span class="n">2</span> اقرأ المؤشرات والفلاتر</a>
-    <a href="#dg-s3" data-dg-toc><span class="n">3</span> افهم أعمدة الجدول</a>
-    <a href="#dg-s4" data-dg-toc><span class="n">4</span> إجراءات الصف السريعة</a>
-    <a href="#dg-s5" data-dg-toc><span class="n">5</span> التحديد المتعدد والإجراءات الجماعية</a>
-    <a href="#dg-s6" data-dg-toc><span class="n">6</span> بطاقة مش ظاهرة؟ — التشخيص</a>
+  <nav class="dg-toc dg-noprint" aria-label="{{ _('فهرس الدليل') }}">
+    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> {{ _('فهرس الخطوات') }}</div>
+    <a href="#dg-s1" data-dg-toc><span class="n">1</span> {{ _('افتح صفحة البطاقات المتصلة') }}</a>
+    <a href="#dg-s2" data-dg-toc><span class="n">2</span> {{ _('اقرأ المؤشرات والفلاتر') }}</a>
+    <a href="#dg-s3" data-dg-toc><span class="n">3</span> {{ _('افهم أعمدة الجدول') }}</a>
+    <a href="#dg-s4" data-dg-toc><span class="n">4</span> {{ _('إجراءات الصف السريعة') }}</a>
+    <a href="#dg-s5" data-dg-toc><span class="n">5</span> {{ _('التحديد المتعدد والإجراءات الجماعية') }}</a>
+    <a href="#dg-s6" data-dg-toc><span class="n">6</span> {{ _('بطاقة مش ظاهرة؟ — التشخيص') }}</a>
   </nav>
 
   {# ───── عمود المحتوى ───── #}
@@ -255,10 +255,10 @@
     <div class="dg-lead">
       <span class="ic"><i class="fa-solid fa-lightbulb"></i></span>
       <div>
-        <h3>قبل ما نبدأ — شو يعني «بطاقة متصلة»؟</h3>
+        <h3>{{ _('قبل ما نبدأ — شو يعني «بطاقة متصلة»؟') }}</h3>
         <p>
-          كل كرت واي فاي يسجّل دخوله الآن يفتح <strong>جلسة حية</strong> على الشبكة. هذه الصفحة هي
-          نفس صفحة «المتصلون الآن» لكن مفلترة على <strong>الكروت فقط</strong> — مفصولة عن المشتركين
+          {{ _('كل كرت واي فاي يسجّل دخوله الآن يفتح') }} <strong>{{ _('جلسة حية') }}</strong> على الشبكة. هذه الصفحة هي
+          نفس صفحة «المتصلون الآن» لكن مفلترة على <strong>{{ _('الكروت فقط') }}</strong> — مفصولة عن المشتركين
           حتى ما يختلط الجمهوران. منها تراقب مين متصل، من أي جهاز، كم استهلك، وتقطع الجلسة أو تقفلها
           بالماك بضغطة واحدة.
         </p>
@@ -269,32 +269,32 @@
     <section class="dg-step" id="dg-s1">
       <div class="dg-badge">1</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-door-open"></i> افتح صفحة «البطاقات المتصلة»</h2>
+        <h2><i class="fa-solid fa-door-open"></i> {{ _('افتح صفحة «البطاقات المتصلة»') }}</h2>
         <p>
-          من القائمة الجانبية افتح قسم <strong>«البطاقات»</strong> ثم اضغط
-          <strong>«البطاقات المتصلة»</strong>. تفتح لك صفحة «المتصلون الآن» وفي أعلاها زران
+          {{ _('من القائمة الجانبية افتح قسم') }} <strong>{{ _('«البطاقات»') }}</strong> {{ _('ثم اضغط') }}
+          <strong>{{ _('«البطاقات المتصلة»') }}</strong>. تفتح لك صفحة «المتصلون الآن» وفي أعلاها زران
           للتبديل بين الجمهورين:
         </p>
         <ul>
-          <li><strong>«المشتركون»:</strong> جلسات المشتركين (الهوت سبوت والبرودباند بأسماء دائمة).</li>
-          <li><strong>«الكروت»:</strong> جلسات البطاقات فقط — هذا الزر يكون مضاءً بالبنفسجي لما تدخل من بند «البطاقات المتصلة».</li>
+          <li><strong>{{ _('«المشتركون»:') }}</strong> {{ _('جلسات المشتركين (الهوت سبوت والبرودباند بأسماء دائمة).') }}</li>
+          <li><strong>{{ _('«الكروت»:') }}</strong> {{ _('جلسات البطاقات فقط — هذا الزر يكون مضاءً بالبنفسجي لما تدخل من بند «البطاقات المتصلة».') }}</li>
         </ul>
         <div class="dg-mock" aria-hidden="true" style="max-width:440px">
           <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">/admin/radius/online?type=card</span></div>
           <div class="dg-mock-body">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
               <div>
-                <div style="font-size:13px;font-weight:900;color:#0f172a">المتصلون الآن</div>
-                <div style="font-size:9.5px;color:#64748b;margin-top:2px">الجلسات الحيّة على الشبكة — كروت</div>
+                <div style="font-size:13px;font-weight:900;color:#0f172a">{{ _('المتصلون الآن') }}</div>
+                <div style="font-size:9.5px;color:#64748b;margin-top:2px">{{ _('الجلسات الحيّة على الشبكة — كروت') }}</div>
               </div>
               <div style="display:flex;gap:6px">
-                <span class="dg-mock-btn ghost"><i class="fa-solid fa-users"></i> المشتركون</span>
-                <span class="dg-mock-btn primary"><i class="fa-solid fa-id-card"></i> الكروت</span>
+                <span class="dg-mock-btn ghost"><i class="fa-solid fa-users"></i> {{ _('المشتركون') }}</span>
+                <span class="dg-mock-btn primary"><i class="fa-solid fa-id-card"></i> {{ _('الكروت') }}</span>
               </div>
             </div>
           </div>
         </div>
-        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> الزر المضاء بالبنفسجي هو العرض الحالي — «الكروت» يعني بطاقات فقط، بلا مشتركين.</div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> {{ _('الزر المضاء بالبنفسجي هو العرض الحالي — «الكروت» يعني بطاقات فقط، بلا مشتركين.') }}</div>
       </div>
     </section>
 
@@ -302,35 +302,35 @@
     <section class="dg-step" id="dg-s2">
       <div class="dg-badge">2</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-filter"></i> اقرأ المؤشرات الثلاثة واستخدم الفلاتر</h2>
-        <p>تحت العنوان ثلاثة مؤشرات حيّة تلخّص الوضع فورًا:</p>
+        <h2><i class="fa-solid fa-filter"></i> {{ _('اقرأ المؤشرات الثلاثة واستخدم الفلاتر') }}</h2>
+        <p>{{ _('تحت العنوان ثلاثة مؤشرات حيّة تلخّص الوضع فورًا:') }}</p>
         <ul>
-          <li><strong>جلسات نشطة:</strong> عدد الكروت المتصلة الآن.</li>
-          <li><strong>تنزيل (MB)</strong> و<strong>رفع (MB):</strong> إجمالي الاستهلاك لكل الجلسات الظاهرة.</li>
+          <li><strong>{{ _('جلسات نشطة:') }}</strong> {{ _('عدد الكروت المتصلة الآن.') }}</li>
+          <li><strong>{{ _('تنزيل (MB)') }}</strong> {{ _('و') }}<strong>{{ _('رفع (MB):') }}</strong> {{ _('إجمالي الاستهلاك لكل الجلسات الظاهرة.') }}</li>
         </ul>
         <p>
-          وتحتها صف فلاتر بشكل حبّات منسدلة، اختر ما يلزمك ثم اضغط زر <strong>«عرض»</strong>:
+          {{ _('وتحتها صف فلاتر بشكل حبّات منسدلة، اختر ما يلزمك ثم اضغط زر') }} <strong>{{ _('«عرض»') }}</strong>:
         </p>
         <ul>
-          <li><strong>السيرفر:</strong> فلترة بجهاز الشبكة (NAS) — مفيد إذا عندك أكثر من راوتر/برج.</li>
-          <li><strong>العرض:</strong> فلترة بباقة الكرت (مثل: كرت 4 ساعات).</li>
-          <li><strong>المجموعة:</strong> فلترة بمجموعة مشتركين معرّفة عندك.</li>
-          <li><strong>نوع السرعة:</strong> «كل السرعات» / «سرعة خاصة أو مؤقتة» / «سرعة مؤقتة فقط» / «بدون سرعة خاصة».</li>
+          <li><strong>{{ _('السيرفر:') }}</strong> {{ _('فلترة بجهاز الشبكة (NAS) — مفيد إذا عندك أكثر من راوتر/برج.') }}</li>
+          <li><strong>{{ _('العرض:') }}</strong> {{ _('فلترة بباقة الكرت (مثل: كرت 4 ساعات).') }}</li>
+          <li><strong>{{ _('المجموعة:') }}</strong> {{ _('فلترة بمجموعة مشتركين معرّفة عندك.') }}</li>
+          <li><strong>{{ _('نوع السرعة:') }}</strong> {{ _('«كل السرعات» / «سرعة خاصة أو مؤقتة» / «سرعة مؤقتة فقط» / «بدون سرعة خاصة».') }}</li>
         </ul>
         <div class="dg-mock" aria-hidden="true">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">المتصلون الآن › الفلاتر</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('المتصلون الآن › الفلاتر') }}</span></div>
           <div class="dg-mock-body">
             <div class="dg-filters">
-              <div class="dg-pillsel"><span class="l"><i class="fa-solid fa-server"></i> السيرفر</span><span class="v">كل السيرفرات <i class="fa-solid fa-chevron-down"></i></span></div>
-              <div class="dg-pillsel"><span class="l"><i class="fa-solid fa-cubes"></i> العرض</span><span class="v">كرت 4 ساعات <i class="fa-solid fa-chevron-down"></i></span></div>
-              <div class="dg-pillsel"><span class="l"><i class="fa-solid fa-gauge-high"></i> نوع السرعة</span><span class="v">كل السرعات <i class="fa-solid fa-chevron-down"></i></span></div>
-              <span class="dg-mock-btn primary" style="align-self:end"><i class="fa-solid fa-filter"></i> عرض</span>
+              <div class="dg-pillsel"><span class="l"><i class="fa-solid fa-server"></i> {{ _('السيرفر') }}</span><span class="v">{{ _('كل السيرفرات') }} <i class="fa-solid fa-chevron-down"></i></span></div>
+              <div class="dg-pillsel"><span class="l"><i class="fa-solid fa-cubes"></i> {{ _('العرض') }}</span><span class="v">{{ _('كرت 4 ساعات') }} <i class="fa-solid fa-chevron-down"></i></span></div>
+              <div class="dg-pillsel"><span class="l"><i class="fa-solid fa-gauge-high"></i> {{ _('نوع السرعة') }}</span><span class="v">{{ _('كل السرعات') }} <i class="fa-solid fa-chevron-down"></i></span></div>
+              <span class="dg-mock-btn primary" style="align-self:end"><i class="fa-solid fa-filter"></i> {{ _('عرض') }}</span>
             </div>
           </div>
         </div>
         <div class="dg-warn">
           <span class="ic">⚠️</span>
-          <span><b>انتبه:</b> إذا ظهر شريط أصفر «الوضع اليدوي — لا توجد جلسات حية» فالنظام مش مربوط
+          <span><b>{{ _('انتبه:') }}</b> إذا ظهر شريط أصفر «الوضع اليدوي — لا توجد جلسات حية» فالنظام مش مربوط
           فعليًا بالراوتر بعد — فعّل وضع الربط الفعلي من إعدادات التشغيل أولًا.</span>
         </div>
       </div>
@@ -340,31 +340,31 @@
     <section class="dg-step" id="dg-s3">
       <div class="dg-badge">3</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-table-columns"></i> افهم أعمدة الجدول — وأظهر/أخفِ ما تريد</h2>
+        <h2><i class="fa-solid fa-table-columns"></i> {{ _('افهم أعمدة الجدول — وأظهر/أخفِ ما تريد') }}</h2>
         <p>
-          جدول الجلسات يعرض لكل كرت متصل صفًا كاملًا. الأعمدة كما هي بالترتيب:
-          <strong>تحديد</strong>، <strong>#</strong>، <strong>المستخدم</strong> (كود الكرت)،
-          <strong>العرض</strong>، <strong>IP</strong>، <strong>جهاز الشبكة</strong>،
-          <strong>نوع الجهاز</strong> (اسم جهاز الزبون من DHCP مع أيقونة نظام التشغيل)،
-          <strong>سرعة العرض</strong> (سرعة الباقة)، <strong>السرعة الحالية</strong> (المطبَّقة فعلًا الآن)،
-          <strong>حالة السرعة</strong> («العرض» / «خاصة» / «مؤقتة» مع عدّاد «باقٍ»)،
-          <strong>وقت الجلسة</strong>، <strong>تحميل</strong> و<strong>رفع</strong> بالميجابايت،
-          <strong>ماك ادرس</strong>، <strong>المدير</strong>، <strong>معرف الخدمة</strong>،
-          <strong>منفذ الاتصال</strong> (اسم واجهة الهوت سبوت على الراوتر)، و<strong>إجراءات</strong>.
+          {{ _('جدول الجلسات يعرض لكل كرت متصل صفًا كاملًا. الأعمدة كما هي بالترتيب:') }}
+          <strong>{{ _('تحديد') }}</strong>{{ _('،') }} <strong>#</strong>{{ _('،') }} <strong>{{ _('المستخدم') }}</strong> {{ _('(كود الكرت)،') }}
+          <strong>{{ _('العرض') }}</strong>{{ _('،') }} <strong>IP</strong>{{ _('،') }} <strong>{{ _('جهاز الشبكة') }}</strong>{{ _('،') }}
+          <strong>{{ _('نوع الجهاز') }}</strong> {{ _('(اسم جهاز الزبون من DHCP مع أيقونة نظام التشغيل)،') }}
+          <strong>{{ _('سرعة العرض') }}</strong> {{ _('(سرعة الباقة)،') }} <strong>{{ _('السرعة الحالية') }}</strong> {{ _('(المطبَّقة فعلًا الآن)،') }}
+          <strong>{{ _('حالة السرعة') }}</strong> {{ _('(«العرض» / «خاصة» / «مؤقتة» مع عدّاد «باقٍ»)،') }}
+          <strong>{{ _('وقت الجلسة') }}</strong>{{ _('،') }} <strong>{{ _('تحميل') }}</strong> {{ _('و') }}<strong>{{ _('رفع') }}</strong> {{ _('بالميجابايت،') }}
+          <strong>{{ _('ماك ادرس') }}</strong>{{ _('،') }} <strong>{{ _('المدير') }}</strong>{{ _('،') }} <strong>{{ _('معرف الخدمة') }}</strong>{{ _('،') }}
+          <strong>{{ _('منفذ الاتصال') }}</strong> {{ _('(اسم واجهة الهوت سبوت على الراوتر)، و') }}<strong>{{ _('إجراءات') }}</strong>.
         </p>
         <p>
-          الأعمدة كثيرة؟ زر <strong>«عرض/إخفاء الأعمدة»</strong> في شريط الأدوات يفتح قائمة
+          {{ _('الأعمدة كثيرة؟ زر') }} <strong>{{ _('«عرض/إخفاء الأعمدة»') }}</strong> في شريط الأدوات يفتح قائمة
           بمربعات اختيار لكل عمود — أزل ما لا يهمك واختيارك يُحفظ تلقائيًا في متصفحك للزيارات القادمة.
         </p>
         <div class="dg-tbl" aria-hidden="true">
-          <div class="hd"><span></span><span>المستخدم</span><span>العرض</span><span>وقت الجلسة</span><span>تحميل</span><span>ماك ادرس</span></div>
-          <div class="rw"><span><span class="dg-ck"></span></span><span class="mono" style="font-weight:900;color:#241e4e">2044</span><span>كرت 4 ساعات</span><span class="mono">1س 22د</span><span class="mono">218.4 MB</span><span class="mono">A4:5E:…</span></div>
-          <div class="rw sel"><span><span class="dg-ck on"><i class="fa-solid fa-check"></i></span></span><span class="mono" style="font-weight:900;color:#241e4e">7731</span><span>كرت يوم كامل</span><span class="mono">3س 05د</span><span class="mono">1,204 MB</span><span class="mono">F0:9B:…</span></div>
+          <div class="hd"><span></span><span>{{ _('المستخدم') }}</span><span>{{ _('العرض') }}</span><span>{{ _('وقت الجلسة') }}</span><span>{{ _('تحميل') }}</span><span>{{ _('ماك ادرس') }}</span></div>
+          <div class="rw"><span><span class="dg-ck"></span></span><span class="mono" style="font-weight:900;color:#241e4e">2044</span><span>{{ _('كرت 4 ساعات') }}</span><span class="mono">{{ _('1س 22د') }}</span><span class="mono">218.4 MB</span><span class="mono">A4:5E:…</span></div>
+          <div class="rw sel"><span><span class="dg-ck on"><i class="fa-solid fa-check"></i></span></span><span class="mono" style="font-weight:900;color:#241e4e">7731</span><span>{{ _('كرت يوم كامل') }}</span><span class="mono">{{ _('3س 05د') }}</span><span class="mono">1,204 MB</span><span class="mono">F0:9B:…</span></div>
         </div>
-        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> الصف المظلّل بالأزرق الفاتح = جلسة محددة. عمود «المستخدم» للكروت هو كود الكرت نفسه.</div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> {{ _('الصف المظلّل بالأزرق الفاتح = جلسة محددة. عمود «المستخدم» للكروت هو كود الكرت نفسه.') }}</div>
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>نصيحة:</b> قارن <b>«سرعة العرض»</b> بـ<b>«السرعة الحالية»</b> — إذا اختلفتا
+          <span><b>{{ _('نصيحة:') }}</b> {{ _('قارن') }} <b>{{ _('«سرعة العرض»') }}</b> {{ _('بـ') }}<b>{{ _('«السرعة الحالية»') }}</b> — إذا اختلفتا
           فهناك تقييد فعّال: الكهرماني = سرعة مؤقتة، والمميّز = سرعة خاصة دائمة.</span>
         </div>
       </div>
@@ -374,16 +374,16 @@
     <section class="dg-step" id="dg-s4">
       <div class="dg-badge">4</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-bolt"></i> إجراءات الصف السريعة — أربعة أزرار لكل جلسة</h2>
-        <p>في عمود «إجراءات» آخر كل صف أربعة أزرار مصغّرة:</p>
+        <h2><i class="fa-solid fa-bolt"></i> {{ _('إجراءات الصف السريعة — أربعة أزرار لكل جلسة') }}</h2>
+        <p>{{ _('في عمود «إجراءات» آخر كل صف أربعة أزرار مصغّرة:') }}</p>
         <ul>
-          <li><i class="fa-solid fa-gauge-high" style="color:#475569"></i> <strong>عرض 360°:</strong> للكروت يفتح <strong>«فحص بطاقة»</strong> على هذا الكود — تشوف حالته وجلساته واستهلاكه كاملًا.</li>
-          <li><i class="fa-solid fa-pen-to-square" style="color:#475569"></i> <strong>تعديل:</strong> للكروت يوديك أيضًا لمركز فحص البطاقة (التعديل اليومي للكرت كله من هناك).</li>
-          <li><i class="fa-solid fa-plug-circle-xmark" style="color:#b91c1c"></i> <strong>قطع:</strong> يرسل أمر فصل فوري للجلسة بعد نافذة تأكيد «قطع جلسة …؟» — الكرت ينفصل لكنه يقدر يسجّل دخولًا من جديد ما دامت صلاحيته سارية.</li>
-          <li><i class="fa-solid fa-gauge-simple-high" style="color:#475569"></i> <strong>سرعة مؤقتة:</strong> يفتح نافذة عائمة — لكنها <strong>للمشتركين فقط</strong>؛ على الكروت رح ترجع لك رسالة «السرعة المؤقتة متاحة للمشتركين فقط».</li>
+          <li><i class="fa-solid fa-gauge-high" style="color:#475569"></i> <strong>{{ _('عرض 360°:') }}</strong> {{ _('للكروت يفتح') }} <strong>{{ _('«فحص بطاقة»') }}</strong> {{ _('على هذا الكود — تشوف حالته وجلساته واستهلاكه كاملًا.') }}</li>
+          <li><i class="fa-solid fa-pen-to-square" style="color:#475569"></i> <strong>{{ _('تعديل:') }}</strong> {{ _('للكروت يوديك أيضًا لمركز فحص البطاقة (التعديل اليومي للكرت كله من هناك).') }}</li>
+          <li><i class="fa-solid fa-plug-circle-xmark" style="color:#b91c1c"></i> <strong>{{ _('قطع:') }}</strong> {{ _('يرسل أمر فصل فوري للجلسة بعد نافذة تأكيد «قطع جلسة …؟» — الكرت ينفصل لكنه يقدر يسجّل دخولًا من جديد ما دامت صلاحيته سارية.') }}</li>
+          <li><i class="fa-solid fa-gauge-simple-high" style="color:#475569"></i> <strong>{{ _('سرعة مؤقتة:') }}</strong> {{ _('يفتح نافذة عائمة — لكنها') }} <strong>{{ _('للمشتركين فقط') }}</strong>{{ _('؛ على الكروت رح ترجع لك رسالة «السرعة المؤقتة متاحة للمشتركين فقط».') }}</li>
         </ul>
         <div class="dg-mock" aria-hidden="true" style="max-width:380px">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">صف الجلسة › إجراءات</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('صف الجلسة › إجراءات') }}</span></div>
           <div class="dg-mock-body">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
               <span style="font-size:11px;font-weight:900;color:#241e4e;font-family:ui-monospace,Consolas,monospace">7731</span>
@@ -397,11 +397,11 @@
           </div>
         </div>
         <div class="dg-flash" aria-hidden="true">
-          <i class="fa-solid fa-circle-check"></i> تم إرسال أمر قطع الجلسة لـ 7731.
+          <i class="fa-solid fa-circle-check"></i> {{ _('تم إرسال أمر قطع الجلسة لـ 7731.') }}
         </div>
         <div class="dg-warn">
           <span class="ic">⚠️</span>
-          <span><b>انتبه:</b> «قطع» يفصل <b>الجلسة الحالية فقط</b> — ما يلغي الكرت. إذا بدّك توقف
+          <span><b>{{ _('انتبه:') }}</b> {{ _('«قطع» يفصل') }} <b>{{ _('الجلسة الحالية فقط') }}</b> — ما يلغي الكرت. إذا بدّك توقف
           الكرت نهائيًا، الإجراء الصحيح هو إلغاؤه من مركز «فحص بطاقة».</span>
         </div>
       </div>
@@ -411,34 +411,34 @@
     <section class="dg-step" id="dg-s5">
       <div class="dg-badge">5</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-check-double"></i> التحديد المتعدد وشريط الإجراءات الجماعي</h2>
+        <h2><i class="fa-solid fa-check-double"></i> {{ _('التحديد المتعدد وشريط الإجراءات الجماعي') }}</h2>
         <p>
-          فوق الجدول شريط أدوات يبدأ بعدّاد <strong>«المحدد: 0»</strong>. حدّد جلسة بالضغط على صفّها
+          {{ _('فوق الجدول شريط أدوات يبدأ بعدّاد') }} <strong>{{ _('«المحدد: 0»') }}</strong>. حدّد جلسة بالضغط على صفّها
           (أو مربع الاختيار)، وحدّد الكل دفعة واحدة من مربع رأس الجدول. أول ما تحدد شيئًا تتفعّل الأزرار:
         </p>
         <ul>
-          <li><strong>«فصل الاتصال»</strong> (الأحمر): يقطع <strong>كل الجلسات المحددة</strong> دفعة واحدة بعد تأكيد — أقوى استخدام للتحديد المتعدد.</li>
-          <li><strong>«عرض 360°»</strong> و<strong>«تعديل»:</strong> يعملان على آخر جلسة حددتها (إجراء فردي).</li>
-          <li><strong>«إغلاق بالماك»:</strong> يثبّت ماك أدرس الجهاز الحالي على كل كرت محدد — بعدها الكرت يشتغل من <strong>هذا الجهاز فقط</strong>. سلاحك ضد مشاركة الكروت.</li>
-          <li><strong>«تثبيت IP»</strong> و<strong>«إرسال رسالة»:</strong> للمشتركين فقط — على الكروت يظهران معطّلين أو يرفضان برسالة واضحة.</li>
+          <li><strong>{{ _('«فصل الاتصال»') }}</strong> {{ _('(الأحمر): يقطع') }} <strong>{{ _('كل الجلسات المحددة') }}</strong> {{ _('دفعة واحدة بعد تأكيد — أقوى استخدام للتحديد المتعدد.') }}</li>
+          <li><strong>{{ _('«عرض 360°»') }}</strong> {{ _('و') }}<strong>{{ _('«تعديل»:') }}</strong> {{ _('يعملان على آخر جلسة حددتها (إجراء فردي).') }}</li>
+          <li><strong>{{ _('«إغلاق بالماك»:') }}</strong> {{ _('يثبّت ماك أدرس الجهاز الحالي على كل كرت محدد — بعدها الكرت يشتغل من') }} <strong>{{ _('هذا الجهاز فقط') }}</strong>{{ _('. سلاحك ضد مشاركة الكروت.') }}</li>
+          <li><strong>{{ _('«تثبيت IP»') }}</strong> {{ _('و') }}<strong>{{ _('«إرسال رسالة»:') }}</strong> {{ _('للمشتركين فقط — على الكروت يظهران معطّلين أو يرفضان برسالة واضحة.') }}</li>
         </ul>
         <div class="dg-mock" aria-hidden="true">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">المتصلون الآن › شريط الإجراءات</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('المتصلون الآن › شريط الإجراءات') }}</span></div>
           <div class="dg-mock-body">
             <div class="dg-actbar">
-              <span class="cnt"><i class="fa-solid fa-check-double"></i> المحدد: 2</span>
-              <span class="dg-mock-btn danger"><i class="fa-solid fa-scissors"></i> فصل الاتصال</span>
-              <span class="dg-mock-btn ghost"><i class="fa-solid fa-gauge-high"></i> عرض 360°</span>
-              <span class="dg-mock-btn ghost"><i class="fa-solid fa-lock"></i> إغلاق بالماك</span>
-              <span class="dg-mock-btn ghost dim"><i class="fa-solid fa-lock"></i> تثبيت IP</span>
-              <span class="dg-mock-btn ghost"><i class="fa-solid fa-table-columns"></i> عرض/إخفاء الأعمدة</span>
+              <span class="cnt"><i class="fa-solid fa-check-double"></i> {{ _('المحدد: 2') }}</span>
+              <span class="dg-mock-btn danger"><i class="fa-solid fa-scissors"></i> {{ _('فصل الاتصال') }}</span>
+              <span class="dg-mock-btn ghost"><i class="fa-solid fa-gauge-high"></i> {{ _('عرض 360°') }}</span>
+              <span class="dg-mock-btn ghost"><i class="fa-solid fa-lock"></i> {{ _('إغلاق بالماك') }}</span>
+              <span class="dg-mock-btn ghost dim"><i class="fa-solid fa-lock"></i> {{ _('تثبيت IP') }}</span>
+              <span class="dg-mock-btn ghost"><i class="fa-solid fa-table-columns"></i> {{ _('عرض/إخفاء الأعمدة') }}</span>
             </div>
           </div>
         </div>
-        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> الأزرار الباهتة معطّلة — إما ما في تحديد، أو الإجراء غير متاح للكروت.</div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> {{ _('الأزرار الباهتة معطّلة — إما ما في تحديد، أو الإجراء غير متاح للكروت.') }}</div>
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>نصيحة:</b> زبون اشتكى أن كرته «مسروق»؟ حدّد جلسته واضغط <b>«إغلاق بالماك»</b> وهو
+          <span><b>{{ _('نصيحة:') }}</b> {{ _('زبون اشتكى أن كرته «مسروق»؟ حدّد جلسته واضغط') }} <b>{{ _('«إغلاق بالماك»') }}</b> وهو
           متصل من جهازه — من اللحظة هذه ما يشتغل الكرت إلا من جهازه، وأي متطفّل ينقطع تلقائيًا.</span>
         </div>
       </div>
@@ -448,22 +448,22 @@
     <section class="dg-step" id="dg-s6">
       <div class="dg-badge">6</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-stethoscope"></i> «بطاقة مش ظاهرة؟» — تشخيص سريع</h2>
-        <p>الزبون يقول إنه متصل لكن كرته مش بالقائمة؟ افحص بهذا الترتيب:</p>
+        <h2><i class="fa-solid fa-stethoscope"></i> {{ _('«بطاقة مش ظاهرة؟» — تشخيص سريع') }}</h2>
+        <p>{{ _('الزبون يقول إنه متصل لكن كرته مش بالقائمة؟ افحص بهذا الترتيب:') }}</p>
         <ul>
-          <li><strong>أنت في التبويب الصح؟</strong> تأكد أن زر <strong>«الكروت»</strong> هو المضاء — الكروت لا تظهر أبدًا في تبويب «المشتركون» (الفصل صارم بين الشاشتين).</li>
-          <li><strong>في فلتر شغّال نسيته؟</strong> رجّع «السيرفر» و«العرض» و«المجموعة» و«نوع السرعة» لقيمها الافتراضية واضغط «عرض» من جديد.</li>
-          <li><strong>الجلسة فعلًا قائمة؟</strong> ربما الزبون موصول بالواي فاي لكنه ما سجّل دخوله بعد على صفحة الهوت سبوت — بلا تسجيل دخول لا توجد جلسة.</li>
-          <li><strong>وضع الربط:</strong> إذا الصفحة كلها فاضية مع شريط «الوضع اليدوي»، فالنظام غير مربوط بالراوتر — لن تظهر أي جلسات حية حتى تفعّل الربط الفعلي.</li>
-          <li><strong>افحص الكرت نفسه:</strong> افتح <strong>«فحص بطاقة»</strong> وابحث بكود الكرت — تشوف فورًا إذا كان منتهي الصلاحية، ملغى، مقفولًا على ماك جهاز آخر، أو استنفد رصيده.</li>
+          <li><strong>{{ _('أنت في التبويب الصح؟') }}</strong> {{ _('تأكد أن زر') }} <strong>{{ _('«الكروت»') }}</strong> {{ _('هو المضاء — الكروت لا تظهر أبدًا في تبويب «المشتركون» (الفصل صارم بين الشاشتين).') }}</li>
+          <li><strong>{{ _('في فلتر شغّال نسيته؟') }}</strong> {{ _('رجّع «السيرفر» و«العرض» و«المجموعة» و«نوع السرعة» لقيمها الافتراضية واضغط «عرض» من جديد.') }}</li>
+          <li><strong>{{ _('الجلسة فعلًا قائمة؟') }}</strong> {{ _('ربما الزبون موصول بالواي فاي لكنه ما سجّل دخوله بعد على صفحة الهوت سبوت — بلا تسجيل دخول لا توجد جلسة.') }}</li>
+          <li><strong>{{ _('وضع الربط:') }}</strong> {{ _('إذا الصفحة كلها فاضية مع شريط «الوضع اليدوي»، فالنظام غير مربوط بالراوتر — لن تظهر أي جلسات حية حتى تفعّل الربط الفعلي.') }}</li>
+          <li><strong>{{ _('افحص الكرت نفسه:') }}</strong> {{ _('افتح') }} <strong>{{ _('«فحص بطاقة»') }}</strong> {{ _('وابحث بكود الكرت — تشوف فورًا إذا كان منتهي الصلاحية، ملغى، مقفولًا على ماك جهاز آخر، أو استنفد رصيده.') }}</li>
         </ul>
         <p>
-          وإذا ظهر شريط أحمر <strong>«تعذّر تحميل الجلسات»</strong> فالمشكلة في الاتصال بجهاز الشبكة
+          {{ _('وإذا ظهر شريط أحمر') }} <strong>{{ _('«تعذّر تحميل الجلسات»') }}</strong> فالمشكلة في الاتصال بجهاز الشبكة
           نفسه — راجع إعدادات الراوتر في النظام وحدّث الصفحة.
         </p>
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>وبعدين؟</b> هذه الصفحة لقطة لحظية — حدّثها (F5) كل ما احتجت أحدث صورة. وللتاريخ
+          <span><b>{{ _('وبعدين؟') }}</b> هذه الصفحة لقطة لحظية — حدّثها (F5) كل ما احتجت أحدث صورة. وللتاريخ
           الكامل لجلسات كرت معيّن (متى دخل وكم استهلك بكل جلسة) استخدم «فحص بطاقة» — له دليل خاص.</span>
         </div>
       </div>

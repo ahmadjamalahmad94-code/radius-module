@@ -84,14 +84,14 @@
         <thead>
           <tr>
             <th class="num" style="width:60px">#</th>
-            <th>اليوزر</th>
-            <th>الاسم</th>
-            <th>الدور</th>
-            <th>البريد</th>
-            <th>الجوال</th>
-            <th>آخر دخول</th>
-            <th>الحالة</th>
-            <th style="width:110px" data-uds-nosort data-uds-nocol>إجراءات</th>
+            <th>{{ _('اليوزر') }}</th>
+            <th>{{ _('الاسم') }}</th>
+            <th>{{ _('الدور') }}</th>
+            <th>{{ _('البريد') }}</th>
+            <th>{{ _('الجوال') }}</th>
+            <th>{{ _('آخر دخول') }}</th>
+            <th>{{ _('الحالة') }}</th>
+            <th style="width:110px" data-uds-nosort data-uds-nocol>{{ _('إجراءات') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -122,13 +122,13 @@
             </td>
             <td>
               <div class="hub-flex-row" style="gap:4px;flex-wrap:nowrap">
-                <a class="hub-btn hub-btn--ghost hub-btn--icon" title="تعديل"
+                <a class="hub-btn hub-btn--ghost hub-btn--icon" title="{{ _('تعديل') }}"
                    href="{{ url_for('radius.admins_edit', admin_id=a.id) }}">
                   <i class="fa-solid fa-pen"></i>
                 </a>
                 <form method="post" action="{{ url_for('radius.admins_delete', admin_id=a.id) }}"
                       onsubmit="return confirm('أرشفة {{ a.username|e }}؟ يمكن استعادته من سلة المحذوفات.');" style="display:inline">
-                  <button type="submit" class="hub-btn hub-btn--danger hub-btn--icon" title="أرشفة">
+                  <button type="submit" class="hub-btn hub-btn--danger hub-btn--icon" title="{{ _('أرشفة') }}">
                     <i class="fa-solid fa-box-archive"></i>
                   </button>
                 </form>
@@ -161,93 +161,93 @@
     {# method="post" ضروري: حاقن الـ CSRF التلقائي يستهدف فقط <form method="post">. #}
     <form method="post" action="{{ url_for('radius.admins_create') }}">
       <div class="fcw-head">
-        <h3 id="fcw-admin-create-title"><i class="fa-solid fa-user-plus"></i> إضافة مدير</h3>
-        <button type="button" class="fcw-x" data-fcw-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
+        <h3 id="fcw-admin-create-title"><i class="fa-solid fa-user-plus"></i> {{ _('إضافة مدير') }}</h3>
+        <button type="button" class="fcw-x" data-fcw-close aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="fcw-body">
 
         {# ── 1) الهوية والدور ── #}
-        <div class="fcw-group"><i class="fa-solid fa-user-shield"></i> الهوية والدور</div>
+        <div class="fcw-group"><i class="fa-solid fa-user-shield"></i> {{ _('الهوية والدور') }}</div>
         <div class="fcw-grid">
           <label class="hub-field">
-            <span class="hub-field-label">اسم المستخدم <span style="color:#dc2626">*</span></span>
+            <span class="hub-field-label">{{ _('اسم المستخدم') }} <span style="color:#dc2626">*</span></span>
             <input class="hub-input" type="text" name="username" required maxlength="80"
                    placeholder="admin" dir="ltr" autocomplete="off">
-            <span class="hub-field-hint">معرّف الدخول للوحة — يُثبَّت عند الإنشاء ولا يمكن تغييره لاحقًا، فاختره بعناية.</span>
+            <span class="hub-field-hint">{{ _('معرّف الدخول للوحة — يُثبَّت عند الإنشاء ولا يمكن تغييره لاحقًا، فاختره بعناية.') }}</span>
           </label>
           <label class="hub-field">
-            <span class="hub-field-label">الاسم الكامل</span>
-            <input class="hub-input" type="text" name="full_name" maxlength="120" placeholder="أحمد العلي">
-            <span class="hub-field-hint">الاسم الودّي الذي يظهر في القوائم والسجلات — اختياري لكنه يسهّل التمييز.</span>
+            <span class="hub-field-label">{{ _('الاسم الكامل') }}</span>
+            <input class="hub-input" type="text" name="full_name" maxlength="120" placeholder="{{ _('أحمد العلي') }}">
+            <span class="hub-field-hint">{{ _('الاسم الودّي الذي يظهر في القوائم والسجلات — اختياري لكنه يسهّل التمييز.') }}</span>
           </label>
           <label class="hub-field">
-            <span class="hub-field-label">الدور</span>
+            <span class="hub-field-label">{{ _('الدور') }}</span>
             <select class="hub-select" name="role_id">
-              <option value="">— بدون —</option>
+              <option value="">{{ _('— بدون —') }}</option>
               {% for r in roles_all %}
                 <option value="{{ r.id }}">{{ r.display_name or r.name }} ({{ r.name }})</option>
               {% endfor %}
             </select>
-            <span class="hub-field-hint">الدور يحدّد الصلاحيات الفعلية للمدير — «بدون» يعني حسابًا بلا أذونات محدّدة.</span>
+            <span class="hub-field-hint">{{ _('الدور يحدّد الصلاحيات الفعلية للمدير — «بدون» يعني حسابًا بلا أذونات محدّدة.') }}</span>
           </label>
           <div class="hub-field">
-            <span class="hub-field-label">الحالة</span>
+            <span class="hub-field-label">{{ _('الحالة') }}</span>
             {{ toggle_switch(name="enabled", checked=True, value="1", id="fcw-ad-en") }}
-            <span class="hub-field-hint">المدير المعطَّل يبقى محفوظًا لكنه لا يستطيع تسجيل الدخول.</span>
+            <span class="hub-field-hint">{{ _('المدير المعطَّل يبقى محفوظًا لكنه لا يستطيع تسجيل الدخول.') }}</span>
           </div>
         </div>
 
         {# ── 2) التحقق من الدخول ── #}
-        <div class="fcw-group"><i class="fa-solid fa-key"></i> التحقق من الدخول</div>
+        <div class="fcw-group"><i class="fa-solid fa-key"></i> {{ _('التحقق من الدخول') }}</div>
         <div class="fcw-grid">
           <label class="hub-field full">
-            <span class="hub-field-label">كلمة المرور <span style="color:#dc2626">*</span></span>
+            <span class="hub-field-label">{{ _('كلمة المرور') }} <span style="color:#dc2626">*</span></span>
             <input class="hub-input" type="password" name="password" required
-                   autocomplete="new-password" placeholder="كلمة مرور قوية" dir="ltr">
-            <span class="hub-field-hint">تُحفظ مشفّرة ولا تظهر كنص واضح بعد الحفظ — استخدم كلمة قوية يصعب تخمينها.</span>
+                   autocomplete="new-password" placeholder="{{ _('كلمة مرور قوية') }}" dir="ltr">
+            <span class="hub-field-hint">{{ _('تُحفظ مشفّرة ولا تظهر كنص واضح بعد الحفظ — استخدم كلمة قوية يصعب تخمينها.') }}</span>
           </label>
         </div>
 
         {# ── 3) معلومات الاتصال والملف الشخصي ── #}
-        <div class="fcw-group"><i class="fa-solid fa-id-card"></i> معلومات الاتصال والملف الشخصي</div>
+        <div class="fcw-group"><i class="fa-solid fa-id-card"></i> {{ _('معلومات الاتصال والملف الشخصي') }}</div>
         <div class="fcw-grid">
           <label class="hub-field">
-            <span class="hub-field-label">البريد الإلكتروني</span>
+            <span class="hub-field-label">{{ _('البريد الإلكتروني') }}</span>
             <input class="hub-input" type="email" name="email" maxlength="160" dir="ltr" placeholder="admin@example.com">
-            <span class="hub-field-hint">يُستخدم في المراسلات والتنبيهات — اختياري.</span>
+            <span class="hub-field-hint">{{ _('يُستخدم في المراسلات والتنبيهات — اختياري.') }}</span>
           </label>
           <label class="hub-field">
-            <span class="hub-field-label">الجوال</span>
+            <span class="hub-field-label">{{ _('الجوال') }}</span>
             <input class="hub-input" type="tel" name="mobile" maxlength="40" dir="ltr" placeholder="05XXXXXXXX">
-            <span class="hub-field-hint">رقم الجوال الأساسي للتواصل — اختياري.</span>
+            <span class="hub-field-hint">{{ _('رقم الجوال الأساسي للتواصل — اختياري.') }}</span>
           </label>
           <label class="hub-field">
-            <span class="hub-field-label">هاتف آخر</span>
-            <input class="hub-input" type="tel" name="phone" maxlength="40" dir="ltr" placeholder="هاتف بديل">
-            <span class="hub-field-hint">رقم احتياطي إن وجد — اختياري.</span>
+            <span class="hub-field-label">{{ _('هاتف آخر') }}</span>
+            <input class="hub-input" type="tel" name="phone" maxlength="40" dir="ltr" placeholder="{{ _('هاتف بديل') }}">
+            <span class="hub-field-hint">{{ _('رقم احتياطي إن وجد — اختياري.') }}</span>
           </label>
           <label class="hub-field">
-            <span class="hub-field-label">رابط الصورة الشخصية</span>
+            <span class="hub-field-label">{{ _('رابط الصورة الشخصية') }}</span>
             <input class="hub-input" type="text" name="avatar_url" dir="ltr" placeholder="https://...">
-            <span class="hub-field-hint">رابط صورة تظهر بجانب اسم المدير — اختياري.</span>
+            <span class="hub-field-hint">{{ _('رابط صورة تظهر بجانب اسم المدير — اختياري.') }}</span>
           </label>
           <label class="hub-field">
-            <span class="hub-field-label">وسوم (CSV)</span>
-            <input class="hub-input" type="text" name="tags" placeholder="دعم، تحصيل">
-            <span class="hub-field-hint">تصنيف داخلي للمدراء مفصول بفواصل — يسهّل البحث والتجميع.</span>
+            <span class="hub-field-label">{{ _('وسوم (CSV)') }}</span>
+            <input class="hub-input" type="text" name="tags" placeholder="{{ _('دعم، تحصيل') }}">
+            <span class="hub-field-hint">{{ _('تصنيف داخلي للمدراء مفصول بفواصل — يسهّل البحث والتجميع.') }}</span>
           </label>
           <label class="hub-field full">
-            <span class="hub-field-label">ملاحظات على الملف الشخصي</span>
+            <span class="hub-field-label">{{ _('ملاحظات على الملف الشخصي') }}</span>
             <textarea class="hub-textarea" name="profile_notes" rows="2"
-                      placeholder="مهام المدير، نطاق عمله، أي شروط خاصة..."></textarea>
-            <span class="hub-field-hint">تظهر للإدارة فقط — لا تؤثر على الصلاحيات.</span>
+                      placeholder="{{ _('مهام المدير، نطاق عمله، أي شروط خاصة...') }}"></textarea>
+            <span class="hub-field-hint">{{ _('تظهر للإدارة فقط — لا تؤثر على الصلاحيات.') }}</span>
           </label>
         </div>
 
       </div>
       <div class="fcw-foot">
-        <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>إغلاق</button>
-        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-user-plus"></i> إنشاء المدير</button>
+        <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>{{ _('إغلاق') }}</button>
+        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-user-plus"></i> {{ _('إنشاء المدير') }}</button>
       </div>
     </form>
   </div>

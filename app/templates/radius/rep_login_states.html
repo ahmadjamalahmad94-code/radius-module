@@ -81,12 +81,12 @@
     </div>
     <div class="ls-card-sub">{{ m.subtitle }}</div>
     <div class="ls-card-kpis">
-      <div class="ls-mini"><b>{{ c.total }}</b><span>الإجمالي</span></div>
-      <div class="ls-mini ls-mini--ok"><b>{{ c.ok }}</b><span>ناجحة</span></div>
-      <div class="ls-mini ls-mini--fail"><b>{{ c.fail }}</b><span>فاشلة</span></div>
-      <div class="ls-mini"><b>{{ c.today }}</b><span>اليوم</span></div>
+      <div class="ls-mini"><b>{{ c.total }}</b><span>{{ _('الإجمالي') }}</span></div>
+      <div class="ls-mini ls-mini--ok"><b>{{ c.ok }}</b><span>{{ _('ناجحة') }}</span></div>
+      <div class="ls-mini ls-mini--fail"><b>{{ c.fail }}</b><span>{{ _('فاشلة') }}</span></div>
+      <div class="ls-mini"><b>{{ c.today }}</b><span>{{ _('اليوم') }}</span></div>
     </div>
-    <span class="ls-card-go">فتح السجل المفصّل <i class="fa-solid fa-arrow-left"></i></span>
+    <span class="ls-card-go">{{ _('فتح السجل المفصّل') }} <i class="fa-solid fa-arrow-left"></i></span>
   </a>
   {% endfor %}
 </div>

@@ -75,7 +75,7 @@
 
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px">
         <div class="hub-field">
-          <label>الواجهة</label>
+          <label>{{ _('الواجهة') }}</label>
           <input class="hub-input" type="text" name="interface" required
                  value="{{ form.interface or '' }}"
                  placeholder="ether2"
@@ -83,7 +83,7 @@
         </div>
 
         <div class="hub-field">
-          <label>نطاق العنوان (CIDR)</label>
+          <label>{{ _('نطاق العنوان (CIDR)') }}</label>
           <input class="hub-input" type="text" name="cidr" required
                  value="{{ form.cidr or '' }}"
                  placeholder="192.168.10.0/24"
@@ -92,47 +92,47 @@
 
         {% if _kind == 'pppoe' %}
         <div class="hub-field">
-          <label>اسم الملف التشغيلي</label>
+          <label>{{ _('اسم الملف التشغيلي') }}</label>
           <input class="hub-input" type="text" name="profile_name" required
                  value="{{ form.profile_name or '' }}"
                  placeholder="pppoe-prof"
                  data-mt-program-profile>
         </div>
         <div class="hub-field">
-          <label>اسم الخدمة</label>
+          <label>{{ _('اسم الخدمة') }}</label>
           <input class="hub-input" type="text" name="service_name" required
                  value="{{ form.service_name or '' }}"
                  placeholder="hoberadius-pppoe"
                  data-mt-program-service>
         </div>
         <div class="hub-field">
-          <label>العنوان المحلي (اختياري)</label>
+          <label>{{ _('العنوان المحلي (اختياري)') }}</label>
           <input class="hub-input" type="text" name="local_address"
                  value="{{ form.local_address or '' }}"
-                 placeholder="افتراضيًا أول عنوان">
+                 placeholder="{{ _('افتراضيًا أول عنوان') }}">
         </div>
         {% else %}
         <div class="hub-field">
-          <label>اسم بوابة الدخول</label>
+          <label>{{ _('اسم بوابة الدخول') }}</label>
           <input class="hub-input" type="text" name="hotspot_name" required
                  value="{{ form.hotspot_name or '' }}"
                  placeholder="hs"
                  data-mt-program-name>
         </div>
         <div class="hub-field">
-          <label>البوابة (اختياري)</label>
+          <label>{{ _('البوابة (اختياري)') }}</label>
           <input class="hub-input" type="text" name="gateway"
                  value="{{ form.gateway or '' }}"
-                 placeholder="افتراضيًا أول عنوان">
+                 placeholder="{{ _('افتراضيًا أول عنوان') }}">
         </div>
         <div class="hub-field">
-          <label>مدة الإيجار</label>
+          <label>{{ _('مدة الإيجار') }}</label>
           <input class="hub-input" type="text" name="lease_time"
                  value="{{ form.lease_time or '1h' }}"
                  placeholder="1h">
         </div>
         <div class="hub-field">
-          <label>حد السرعة الافتراضي (اختياري)</label>
+          <label>{{ _('حد السرعة الافتراضي (اختياري)') }}</label>
           <input class="hub-input" type="text" name="rate_limit"
                  value="{{ form.rate_limit or '' }}"
                  placeholder="10M/10M">
@@ -140,24 +140,24 @@
         {% endif %}
 
         <div class="hub-field">
-          <label>خوادم DNS (مفصولة بفواصل)</label>
+          <label>{{ _('خوادم DNS (مفصولة بفواصل)') }}</label>
           <input class="hub-input" type="text" name="dns_servers"
                  value="{{ form.dns_servers or '8.8.8.8,1.1.1.1' }}"
                  data-mt-program-dns>
         </div>
 
         <div class="hub-field">
-          <label>بداية نطاق العناوين (اختياري)</label>
+          <label>{{ _('بداية نطاق العناوين (اختياري)') }}</label>
           <input class="hub-input" type="text" name="pool_start"
                  value="{{ form.pool_start or '' }}"
-                 placeholder="مثلًا 192.168.10.10">
+                 placeholder="{{ _('مثلًا 192.168.10.10') }}">
         </div>
 
         <div class="hub-field">
-          <label>نهاية نطاق العناوين (اختياري)</label>
+          <label>{{ _('نهاية نطاق العناوين (اختياري)') }}</label>
           <input class="hub-input" type="text" name="pool_end"
                  value="{{ form.pool_end or '' }}"
-                 placeholder="مثلًا 192.168.10.254">
+                 placeholder="{{ _('مثلًا 192.168.10.254') }}">
         </div>
       </div>
 
@@ -165,7 +165,7 @@
         <button type="submit" class="hub-btn hub-btn--primary"
                 data-mt-program-submit>
           <i class="fa-solid fa-rotate-right"></i>
-          توليد السكربت
+          {{ _('توليد السكربت') }}
         </button>
       </div>
     </form>
@@ -180,7 +180,7 @@
       <a href="{{ url_for('radius.mt_backups_list', nas_id=nas.id) }}"
          class="hub-btn hub-btn--secondary hub-btn--sm"
          data-mt-program-backup-link>
-        <i class="fa-solid fa-arrow-right"></i> اذهب لصفحة النسخ
+        <i class="fa-solid fa-arrow-right"></i> {{ _('اذهب لصفحة النسخ') }}
       </a>
     </div>
   {% endcall %}
@@ -280,9 +280,9 @@
                   class="hub-btn hub-btn--danger"
                   data-mt-program-apply
                   {% if plan.risks %}disabled{% endif %}
-                  {% if plan.risks %}title="عالج المخاطر أولاً"{% endif %}>
+                  {% if plan.risks %}title="{{ _('عالج المخاطر أولاً') }}"{% endif %}>
             <i class="fa-solid fa-bolt"></i>
-            تطبيق على الراوتر
+            {{ _('تطبيق على الراوتر') }}
           </button>
         </div>
       </form>
@@ -314,7 +314,7 @@
                   class="hub-btn hub-btn--danger"
                   data-mt-program-unprogram-submit>
             <i class="fa-solid fa-eraser"></i>
-            تراجع وإزالة
+            {{ _('تراجع وإزالة') }}
           </button>
         </div>
       </form>
@@ -329,7 +329,7 @@
       <span hidden data-mt-unprogram-failed>{{ unprogram_result.summary().failed }}</span>
       {% if unprogram_result.skipped_paths %}
       <p class="hub-text-mute" style="margin:0 0 12px">
-        لم نجد كائنات مطابقة في:
+        {{ _('لم نجد كائنات مطابقة في:') }}
         <code>{{ unprogram_result.skipped_paths|join(', ') }}</code>
       </p>
       {% endif %}
@@ -338,7 +338,7 @@
         <li>
           <code>{{ step.path }} .id={{ step.id }}</code> ·
           {% if step.ok %}
-            <span style="color:#166534">تمت الإزالة</span>
+            <span style="color:#166534">{{ _('تمت الإزالة') }}</span>
           {% else %}
             <span style="color:#991B1B">فشل — {{ step.error }}</span>
           {% endif %}
@@ -376,7 +376,7 @@
           {% if step.skipped %}
             <span style="color:#92400E">متجاهَل ({{ step.skipped }})</span>
           {% elif step.ok %}
-            <span style="color:#166534">تم</span>
+            <span style="color:#166534">{{ _('تم') }}</span>
           {% else %}
             <span style="color:#991B1B">فشل — {{ step.error }}</span>
           {% endif %}

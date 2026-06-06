@@ -238,15 +238,15 @@
 <div class="dg-layout">
 
   {# ───── الفهرس الجانبي اللاصق ───── #}
-  <nav class="dg-toc dg-noprint" aria-label="فهرس الدليل">
-    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> فهرس الخطوات</div>
-    <a href="#dg-s1" data-dg-toc><span class="n">1</span> الصفحة وما هو القيد</a>
-    <a href="#dg-s2" data-dg-toc><span class="n">2</span> تبويب السجل المالي</a>
-    <a href="#dg-s3" data-dg-toc><span class="n">3</span> قراءة جدول القيود</a>
-    <a href="#dg-s4" data-dg-toc><span class="n">4</span> أنواع القيود وأثرها</a>
-    <a href="#dg-s5" data-dg-toc><span class="n">5</span> عكس قيد</a>
-    <a href="#dg-s6" data-dg-toc><span class="n">6</span> تبويب التقارير</a>
-    <a href="#dg-s7" data-dg-toc><span class="n">7</span> حفظ لقطة ثابتة</a>
+  <nav class="dg-toc dg-noprint" aria-label="{{ _('فهرس الدليل') }}">
+    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> {{ _('فهرس الخطوات') }}</div>
+    <a href="#dg-s1" data-dg-toc><span class="n">1</span> {{ _('الصفحة وما هو القيد') }}</a>
+    <a href="#dg-s2" data-dg-toc><span class="n">2</span> {{ _('تبويب السجل المالي') }}</a>
+    <a href="#dg-s3" data-dg-toc><span class="n">3</span> {{ _('قراءة جدول القيود') }}</a>
+    <a href="#dg-s4" data-dg-toc><span class="n">4</span> {{ _('أنواع القيود وأثرها') }}</a>
+    <a href="#dg-s5" data-dg-toc><span class="n">5</span> {{ _('عكس قيد') }}</a>
+    <a href="#dg-s6" data-dg-toc><span class="n">6</span> {{ _('تبويب التقارير') }}</a>
+    <a href="#dg-s7" data-dg-toc><span class="n">7</span> {{ _('حفظ لقطة ثابتة') }}</a>
   </nav>
 
   {# ───── عمود المحتوى ───── #}
@@ -255,11 +255,11 @@
     <div class="dg-lead">
       <span class="ic"><i class="fa-solid fa-lightbulb"></i></span>
       <div>
-        <h3>قبل ما نبدأ — شو هو «القيد»؟</h3>
+        <h3>{{ _('قبل ما نبدأ — شو هو «القيد»؟') }}</h3>
         <p>
-          القيد ببساطة = <strong>سطر تسجيل لأي حركة فلوس</strong>. كل ما صار شي بالمال (دفعة، سلفة،
-          تسوية…) ينكتب سطر جديد هنا — و<strong>لا شيء يُحذف أبدًا</strong>. الدفتر تراكمي
-          (append-only): التصحيح دائمًا <strong>بقيد جديد معاكس</strong>، لا بحذف أو تعديل قيد قديم.
+          {{ _('القيد ببساطة =') }} <strong>{{ _('سطر تسجيل لأي حركة فلوس') }}</strong>. كل ما صار شي بالمال (دفعة، سلفة،
+          تسوية…) ينكتب سطر جديد هنا — و<strong>{{ _('لا شيء يُحذف أبدًا') }}</strong>. الدفتر تراكمي
+          (append-only): التصحيح دائمًا <strong>{{ _('بقيد جديد معاكس') }}</strong>، لا بحذف أو تعديل قيد قديم.
           هيك تبقى الأرقام قابلة للتدقيق دائمًا، وكل التقارير مبنية من هذه القيود نفسها.
         </p>
       </div>
@@ -269,26 +269,26 @@
     <section class="dg-step" id="dg-s1">
       <div class="dg-badge">1</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-door-open"></i> افتح الصفحة واعرف التبويبين</h2>
+        <h2><i class="fa-solid fa-door-open"></i> {{ _('افتح الصفحة واعرف التبويبين') }}</h2>
         <p>
-          من قسم <strong>«المحاسبة والمالية»</strong> افتح <strong>«السجل والتقارير المحاسبية»</strong>.
+          {{ _('من قسم') }} <strong>{{ _('«المحاسبة والمالية»') }}</strong> {{ _('افتح') }} <strong>{{ _('«السجل والتقارير المحاسبية»') }}</strong>.
           فيها تبويبان:
         </p>
         <ul>
-          <li><strong>السجل المالي:</strong> دفتر القيود — كل حركة مالية بصف.</li>
-          <li><strong>التقارير المالية:</strong> تقارير مبنية من نفس القيود (يومية، شهرية، أرباح…).</li>
+          <li><strong>{{ _('السجل المالي:') }}</strong> {{ _('دفتر القيود — كل حركة مالية بصف.') }}</li>
+          <li><strong>{{ _('التقارير المالية:') }}</strong> {{ _('تقارير مبنية من نفس القيود (يومية، شهرية، أرباح…).') }}</li>
         </ul>
 
         <div class="dg-mock" aria-hidden="true">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">السجل والتقارير المحاسبية</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('السجل والتقارير المحاسبية') }}</span></div>
           <div class="dg-mock-body">
             <div class="dg-tabs">
-              <span class="on"><i class="fa-solid fa-table-list"></i> السجل المالي</span>
-              <span><i class="fa-solid fa-chart-line"></i> التقارير المالية</span>
+              <span class="on"><i class="fa-solid fa-table-list"></i> {{ _('السجل المالي') }}</span>
+              <span><i class="fa-solid fa-chart-line"></i> {{ _('التقارير المالية') }}</span>
             </div>
           </div>
         </div>
-        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> التبويبان يتشاركان نفس القيود — التقارير مجرد تجميعات لها.</div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> {{ _('التبويبان يتشاركان نفس القيود — التقارير مجرد تجميعات لها.') }}</div>
       </div>
     </section>
 
@@ -296,30 +296,30 @@
     <section class="dg-step" id="dg-s2">
       <div class="dg-badge">2</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-table-list"></i> تبويب «السجل المالي» — المؤشرات والفلاتر</h2>
-        <p>شريط مؤشرات السجل أربعة أرقام محسوبة من القيود المعروضة:</p>
+        <h2><i class="fa-solid fa-table-list"></i> {{ _('تبويب «السجل المالي» — المؤشرات والفلاتر') }}</h2>
+        <p>{{ _('شريط مؤشرات السجل أربعة أرقام محسوبة من القيود المعروضة:') }}</p>
 
         <div class="dg-mock" aria-hidden="true">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">السجل المالي › المؤشرات</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('السجل المالي › المؤشرات') }}</span></div>
           <div class="dg-mock-body">
             <div class="dg-kpis">
-              <div class="dg-kpi brand"><span class="lab"><i class="fa-solid fa-table-list"></i> عدد القيود</span><span class="val">300</span></div>
-              <div class="dg-kpi green"><span class="lab"><i class="fa-solid fa-hand-holding-dollar"></i> دفعات</span><span class="val">210</span></div>
-              <div class="dg-kpi amber"><span class="lab"><i class="fa-solid fa-clock-rotate-left"></i> سلف</span><span class="val">42</span></div>
-              <div class="dg-kpi red"><span class="lab"><i class="fa-solid fa-rotate-left"></i> قيود تصحيحية</span><span class="val">8</span></div>
+              <div class="dg-kpi brand"><span class="lab"><i class="fa-solid fa-table-list"></i> {{ _('عدد القيود') }}</span><span class="val">300</span></div>
+              <div class="dg-kpi green"><span class="lab"><i class="fa-solid fa-hand-holding-dollar"></i> {{ _('دفعات') }}</span><span class="val">210</span></div>
+              <div class="dg-kpi amber"><span class="lab"><i class="fa-solid fa-clock-rotate-left"></i> {{ _('سلف') }}</span><span class="val">42</span></div>
+              <div class="dg-kpi red"><span class="lab"><i class="fa-solid fa-rotate-left"></i> {{ _('قيود تصحيحية') }}</span><span class="val">8</span></div>
             </div>
             <div class="dg-mock-grid2" style="margin-top:6px">
-              <div class="dg-mf"><label>نوع القيد</label><div class="dg-mf-select"><div class="dg-mf-input">كل أنواع القيود</div></div></div>
-              <div class="dg-mf"><label>رقم المستفيد</label><div class="dg-mf-input ph">رقم المستفيد…</div></div>
+              <div class="dg-mf"><label>{{ _('نوع القيد') }}</label><div class="dg-mf-select"><div class="dg-mf-input">{{ _('كل أنواع القيود') }}</div></div></div>
+              <div class="dg-mf"><label>{{ _('رقم المستفيد') }}</label><div class="dg-mf-input ph">{{ _('رقم المستفيد…') }}</div></div>
             </div>
           </div>
         </div>
 
         <ul>
-          <li><strong>عدد القيود:</strong> كل القيود المعروضة بعد الفلترة.</li>
-          <li><strong>دفعات / سلف:</strong> عدد قيود الدفع وعدد قيود السلف.</li>
-          <li><strong>قيود تصحيحية:</strong> الإلغاء والعكس والتصحيح.</li>
-          <li><strong>الفلاتر:</strong> نوع القيد (دفعة/سلفة/تسوية/إلغاء/عكسي/تصحيح) + رقم المستفيد.</li>
+          <li><strong>{{ _('عدد القيود:') }}</strong> {{ _('كل القيود المعروضة بعد الفلترة.') }}</li>
+          <li><strong>{{ _('دفعات / سلف:') }}</strong> {{ _('عدد قيود الدفع وعدد قيود السلف.') }}</li>
+          <li><strong>{{ _('قيود تصحيحية:') }}</strong> {{ _('الإلغاء والعكس والتصحيح.') }}</li>
+          <li><strong>{{ _('الفلاتر:') }}</strong> {{ _('نوع القيد (دفعة/سلفة/تسوية/إلغاء/عكسي/تصحيح) + رقم المستفيد.') }}</li>
         </ul>
       </div>
     </section>
@@ -328,31 +328,31 @@
     <section class="dg-step" id="dg-s3">
       <div class="dg-badge">3</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-list-ul"></i> اقرأ جدول القيود — كل عمود شو يعني</h2>
-        <p>كل صف قيد، وأعمدته:</p>
+        <h2><i class="fa-solid fa-list-ul"></i> {{ _('اقرأ جدول القيود — كل عمود شو يعني') }}</h2>
+        <p>{{ _('كل صف قيد، وأعمدته:') }}</p>
         <ul>
-          <li><strong>النوع:</strong> دفعة، سلفة، تسوية… (الوقوف عليه يُظهر أثره).</li>
-          <li><strong>المستفيد:</strong> اسم المشترك ورقمه.</li>
-          <li><strong>الاتجاه:</strong> <span class="dg-pill green"><span class="dot"></span> دائن</span> يزيد الرصيد،
-            <span class="dg-pill red"><span class="dot"></span> مدين</span> ينقصه.</li>
-          <li><strong>المبلغ</strong> و<strong>الحالة:</strong> <span class="dg-pill green"><span class="dot"></span> مرحَّل</span> أو <span class="dg-pill grey"><span class="dot"></span> ملغى</span>.</li>
-          <li><strong>المصدر</strong> (دفعة/سلفة/بيع بطاقة…)، <strong>ملاحظات</strong>، و<strong>التاريخ</strong>.</li>
-          <li><strong>عكس القيد:</strong> حقل سبب + زر (الخطوة 5).</li>
+          <li><strong>{{ _('النوع:') }}</strong> {{ _('دفعة، سلفة، تسوية… (الوقوف عليه يُظهر أثره).') }}</li>
+          <li><strong>{{ _('المستفيد:') }}</strong> {{ _('اسم المشترك ورقمه.') }}</li>
+          <li><strong>{{ _('الاتجاه:') }}</strong> <span class="dg-pill green"><span class="dot"></span> {{ _('دائن') }}</span> {{ _('يزيد الرصيد،') }}
+            <span class="dg-pill red"><span class="dot"></span> {{ _('مدين') }}</span> {{ _('ينقصه.') }}</li>
+          <li><strong>{{ _('المبلغ') }}</strong> {{ _('و') }}<strong>{{ _('الحالة:') }}</strong> <span class="dg-pill green"><span class="dot"></span> {{ _('مرحَّل') }}</span> {{ _('أو') }} <span class="dg-pill grey"><span class="dot"></span> {{ _('ملغى') }}</span>.</li>
+          <li><strong>{{ _('المصدر') }}</strong> {{ _('(دفعة/سلفة/بيع بطاقة…)،') }} <strong>{{ _('ملاحظات') }}</strong>{{ _('، و') }}<strong>{{ _('التاريخ') }}</strong>.</li>
+          <li><strong>{{ _('عكس القيد:') }}</strong> {{ _('حقل سبب + زر (الخطوة 5).') }}</li>
         </ul>
 
         <div class="dg-mock" aria-hidden="true">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">السجل المالي › القيود</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('السجل المالي › القيود') }}</span></div>
           <div class="dg-mock-body">
             <table class="dg-tbl">
-              <thead><tr><th>#</th><th>النوع</th><th>المستفيد</th><th>الاتجاه</th><th>المبلغ</th><th>الحالة</th></tr></thead>
+              <thead><tr><th>#</th><th>{{ _('النوع') }}</th><th>{{ _('المستفيد') }}</th><th>{{ _('الاتجاه') }}</th><th>{{ _('المبلغ') }}</th><th>{{ _('الحالة') }}</th></tr></thead>
               <tbody>
-                <tr><td class="num">312</td><td><span class="dg-pill brand"><span class="dot"></span> دفعة</span></td><td>ahmad2026</td><td><span class="dg-pill green"><span class="dot"></span> دائن</span></td><td class="num">50.00</td><td><span class="dg-pill green"><span class="dot"></span> مرحَّل</span></td></tr>
-                <tr><td class="num">311</td><td><span class="dg-pill brand"><span class="dot"></span> سلفة</span></td><td>sara_net</td><td><span class="dg-pill red"><span class="dot"></span> مدين</span></td><td class="num">20.00</td><td><span class="dg-pill green"><span class="dot"></span> مرحَّل</span></td></tr>
+                <tr><td class="num">312</td><td><span class="dg-pill brand"><span class="dot"></span> {{ _('دفعة') }}</span></td><td>ahmad2026</td><td><span class="dg-pill green"><span class="dot"></span> {{ _('دائن') }}</span></td><td class="num">50.00</td><td><span class="dg-pill green"><span class="dot"></span> {{ _('مرحَّل') }}</span></td></tr>
+                <tr><td class="num">311</td><td><span class="dg-pill brand"><span class="dot"></span> {{ _('سلفة') }}</span></td><td>sara_net</td><td><span class="dg-pill red"><span class="dot"></span> {{ _('مدين') }}</span></td><td class="num">20.00</td><td><span class="dg-pill green"><span class="dot"></span> {{ _('مرحَّل') }}</span></td></tr>
               </tbody>
             </table>
           </div>
         </div>
-        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> الجدول يدعم الفرز واختيار الأعمدة والترقيم (نظام الجداول الموحّد).</div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> {{ _('الجدول يدعم الفرز واختيار الأعمدة والترقيم (نظام الجداول الموحّد).') }}</div>
       </div>
     </section>
 
@@ -360,31 +360,31 @@
     <section class="dg-step" id="dg-s4">
       <div class="dg-badge">4</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-diagram-project"></i> أنواع القيود وأثر كل حركة</h2>
-        <p>كل نوع قيد يؤثر على الأرقام بشكل مختلف — هذه أكثر الأنواع شيوعًا:</p>
+        <h2><i class="fa-solid fa-diagram-project"></i> {{ _('أنواع القيود وأثر كل حركة') }}</h2>
+        <p>{{ _('كل نوع قيد يؤثر على الأرقام بشكل مختلف — هذه أكثر الأنواع شيوعًا:') }}</p>
 
         <div class="dg-effects" aria-hidden="true">
           <div class="dg-effect">
-            <div class="t"><i class="fa-solid fa-hand-holding-dollar"></i> دفعة</div>
-            <div class="d">المشترك دفع — قيد <b>دائن</b> يزيد رصيده/مدته. أكثر قيد رح تشوفه.</div>
+            <div class="t"><i class="fa-solid fa-hand-holding-dollar"></i> {{ _('دفعة') }}</div>
+            <div class="d">{{ _('المشترك دفع — قيد') }} <b>{{ _('دائن') }}</b> {{ _('يزيد رصيده/مدته. أكثر قيد رح تشوفه.') }}</div>
           </div>
           <div class="dg-effect">
-            <div class="t"><i class="fa-solid fa-clock-rotate-left"></i> سلفة</div>
-            <div class="d">مدة مُنحت قبل الدفع — <b>دين</b> مسجَّل على المشترك حتى يسدده.</div>
+            <div class="t"><i class="fa-solid fa-clock-rotate-left"></i> {{ _('سلفة') }}</div>
+            <div class="d">{{ _('مدة مُنحت قبل الدفع —') }} <b>{{ _('دين') }}</b> {{ _('مسجَّل على المشترك حتى يسدده.') }}</div>
           </div>
           <div class="dg-effect">
-            <div class="t"><i class="fa-solid fa-scale-balanced"></i> تسوية</div>
-            <div class="d">سداد يقفل سلفة مفتوحة ويصفّر دينها — السلفة الأصلية تبقى ظاهرة بالسجل.</div>
+            <div class="t"><i class="fa-solid fa-scale-balanced"></i> {{ _('تسوية') }}</div>
+            <div class="d">{{ _('سداد يقفل سلفة مفتوحة ويصفّر دينها — السلفة الأصلية تبقى ظاهرة بالسجل.') }}</div>
           </div>
           <div class="dg-effect">
-            <div class="t"><i class="fa-solid fa-rotate-left"></i> إلغاء / عكسي / تصحيح</div>
-            <div class="d">قيد معاكس يصفّر أثر قيد سابق — الأصل <b>لا يُحذف</b> ويبقى للمراجعة.</div>
+            <div class="t"><i class="fa-solid fa-rotate-left"></i> {{ _('إلغاء / عكسي / تصحيح') }}</div>
+            <div class="d">{{ _('قيد معاكس يصفّر أثر قيد سابق — الأصل') }} <b>{{ _('لا يُحذف') }}</b> {{ _('ويبقى للمراجعة.') }}</div>
           </div>
         </div>
 
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>نصيحة:</b> في الصفحة نفسها، <b>قف بالماوس على شارة النوع</b> في أي صف لتظهر لك
+          <span><b>{{ _('نصيحة:') }}</b> {{ _('في الصفحة نفسها،') }} <b>{{ _('قف بالماوس على شارة النوع') }}</b> في أي صف لتظهر لك
           جملة تشرح أثر هذه الحركة بالضبط — دون مغادرة الجدول.</span>
         </div>
       </div>
@@ -394,19 +394,19 @@
     <section class="dg-step" id="dg-s5">
       <div class="dg-badge">5</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-rotate-left"></i> عكس قيد — التصحيح بقيد معاكس لا بالحذف</h2>
+        <h2><i class="fa-solid fa-rotate-left"></i> {{ _('عكس قيد — التصحيح بقيد معاكس لا بالحذف') }}</h2>
         <p>
-          غلطت بقيد؟ ما منحذفه. في آخر كل صف (للقيود غير التصحيحية) حقل
-          <strong>«سبب التصحيح»</strong> وزر عكس. اكتب السبب ثم اضغط الزر، فيُنشئ النظام
-          <strong>قيدًا جديدًا معاكسًا</strong> يصفّر أثر القيد الأصلي على الأرقام، ويبقى الاثنان
+          {{ _('غلطت بقيد؟ ما منحذفه. في آخر كل صف (للقيود غير التصحيحية) حقل') }}
+          <strong>{{ _('«سبب التصحيح»') }}</strong> {{ _('وزر عكس. اكتب السبب ثم اضغط الزر، فيُنشئ النظام') }}
+          <strong>{{ _('قيدًا جديدًا معاكسًا') }}</strong> يصفّر أثر القيد الأصلي على الأرقام، ويبقى الاثنان
           ظاهرين في السجل للمراجعة.
         </p>
 
         <div class="dg-mock" aria-hidden="true" style="max-width:440px">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">عكس القيد</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('عكس القيد') }}</span></div>
           <div class="dg-mock-body">
             <div class="dg-mock-actions" style="justify-content:flex-start">
-              <span class="dg-mf-input ph" style="min-width:150px">سبب التصحيح</span>
+              <span class="dg-mf-input ph" style="min-width:150px">{{ _('سبب التصحيح') }}</span>
               <span class="dg-mock-btn amber"><i class="fa-solid fa-rotate-left"></i></span>
             </div>
           </div>
@@ -414,7 +414,7 @@
 
         <div class="dg-warn">
           <span class="ic">⚠️</span>
-          <span><b>انتبه:</b> <b>سبب التصحيح إجباري</b> — لن يقبل النظام العكس بدونه. والقيود التصحيحية
+          <span><b>{{ _('انتبه:') }}</b> <b>{{ _('سبب التصحيح إجباري') }}</b> — لن يقبل النظام العكس بدونه. والقيود التصحيحية
           نفسها (إلغاء/عكسي/تصحيح) لا تُعكس مجددًا؛ تظهر بدل الزر عبارة «قيد تصحيحي».</span>
         </div>
       </div>
@@ -424,40 +424,40 @@
     <section class="dg-step" id="dg-s6">
       <div class="dg-badge">6</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-chart-line"></i> تبويب «التقارير» — اختر النوع واقرأ الأعمدة وصدّر</h2>
+        <h2><i class="fa-solid fa-chart-line"></i> {{ _('تبويب «التقارير» — اختر النوع واقرأ الأعمدة وصدّر') }}</h2>
         <p>
           بدّل لتبويب «التقارير المالية». من القائمة المنسدلة اختر نوع التقرير، فيُعرض جدوله مع
           إيضاح أعمدته أسفله. الأنواع المتاحة:
         </p>
         <ul>
-          <li><strong>مبيعات يومية / شهرية / سنوية:</strong> الدفعات المرحَّلة مجمّعة بالفترة.</li>
-          <li><strong>دفعات المستفيدين:</strong> كم دفع كل مستفيد.</li>
-          <li><strong>السلف / التفعيلات / مبيعات الكروت.</strong></li>
-          <li><strong>ربح / خسارة:</strong> صف ملخّص (إيرادات/مصروفات/صافي).</li>
-          <li><strong>ديون الموزعين:</strong> رصيد الدين والرصيد لكل موزّع.</li>
+          <li><strong>{{ _('مبيعات يومية / شهرية / سنوية:') }}</strong> {{ _('الدفعات المرحَّلة مجمّعة بالفترة.') }}</li>
+          <li><strong>{{ _('دفعات المستفيدين:') }}</strong> {{ _('كم دفع كل مستفيد.') }}</li>
+          <li><strong>{{ _('السلف / التفعيلات / مبيعات الكروت.') }}</strong></li>
+          <li><strong>{{ _('ربح / خسارة:') }}</strong> {{ _('صف ملخّص (إيرادات/مصروفات/صافي).') }}</li>
+          <li><strong>{{ _('ديون الموزعين:') }}</strong> {{ _('رصيد الدين والرصيد لكل موزّع.') }}</li>
         </ul>
 
         <div class="dg-mock" aria-hidden="true">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">التقارير المالية › مبيعات يومية</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('التقارير المالية › مبيعات يومية') }}</span></div>
           <div class="dg-mock-body">
             <div class="dg-kpis">
-              <div class="dg-kpi brand"><span class="lab"><i class="fa-solid fa-chart-line"></i> نوع التقرير</span><span class="val" style="font-size:11px">مبيعات يومية</span></div>
-              <div class="dg-kpi blue"><span class="lab"><i class="fa-solid fa-table-list"></i> صفوف التقرير</span><span class="val">14</span></div>
-              <div class="dg-kpi green"><span class="lab"><i class="fa-solid fa-coins"></i> إجمالي العمود</span><span class="val">9,800.00</span></div>
-              <div class="dg-kpi amber"><span class="lab"><i class="fa-solid fa-box-archive"></i> لقطات محفوظة</span><span class="val">3</span></div>
+              <div class="dg-kpi brand"><span class="lab"><i class="fa-solid fa-chart-line"></i> {{ _('نوع التقرير') }}</span><span class="val" style="font-size:11px">{{ _('مبيعات يومية') }}</span></div>
+              <div class="dg-kpi blue"><span class="lab"><i class="fa-solid fa-table-list"></i> {{ _('صفوف التقرير') }}</span><span class="val">14</span></div>
+              <div class="dg-kpi green"><span class="lab"><i class="fa-solid fa-coins"></i> {{ _('إجمالي العمود') }}</span><span class="val">9,800.00</span></div>
+              <div class="dg-kpi amber"><span class="lab"><i class="fa-solid fa-box-archive"></i> {{ _('لقطات محفوظة') }}</span><span class="val">3</span></div>
             </div>
             <div class="dg-mock-actions" style="justify-content:flex-start">
               <span class="dg-mock-btn csv"><i class="fa-solid fa-file-csv"></i> CSV</span>
               <span class="dg-mock-btn csv"><i class="fa-solid fa-file-excel"></i> Excel</span>
               <span class="dg-mock-btn csv"><i class="fa-solid fa-file-pdf"></i> PDF</span>
-              <span class="dg-mock-btn primary"><i class="fa-solid fa-lock"></i> حفظ لقطة ثابتة</span>
+              <span class="dg-mock-btn primary"><i class="fa-solid fa-lock"></i> {{ _('حفظ لقطة ثابتة') }}</span>
             </div>
           </div>
         </div>
 
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>نصيحة:</b> تحت الجدول دائمًا سطر <b>«دليل قراءة أعمدة»</b> يشرح ما يعنيه كل عمود
+          <span><b>{{ _('نصيحة:') }}</b> {{ _('تحت الجدول دائمًا سطر') }} <b>{{ _('«دليل قراءة أعمدة»') }}</b> يشرح ما يعنيه كل عمود
           في التقرير المختار بالضبط — اقرأه إذا حيّرك عمود.</span>
         </div>
       </div>
@@ -467,36 +467,36 @@
     <section class="dg-step" id="dg-s7">
       <div class="dg-badge">7</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-lock"></i> احفظ لقطة ثابتة — واعرضها لاحقًا</h2>
+        <h2><i class="fa-solid fa-lock"></i> {{ _('احفظ لقطة ثابتة — واعرضها لاحقًا') }}</h2>
         <p>
-          زر <strong>«حفظ لقطة ثابتة»</strong> يفتح نافذة تحدّد فيها <strong>من تاريخ</strong> و<strong>إلى تاريخ</strong>
-          و<strong>ملاحظة</strong> اختيارية. يُفلتر التقرير بالنطاق ثم <strong>يُجمَّد كما هو</strong> — لا
+          {{ _('زر') }} <strong>{{ _('«حفظ لقطة ثابتة»') }}</strong> {{ _('يفتح نافذة تحدّد فيها') }} <strong>{{ _('من تاريخ') }}</strong> {{ _('و') }}<strong>{{ _('إلى تاريخ') }}</strong>
+          {{ _('و') }}<strong>{{ _('ملاحظة') }}</strong> {{ _('اختيارية. يُفلتر التقرير بالنطاق ثم') }} <strong>{{ _('يُجمَّد كما هو') }}</strong> — لا
           يتأثر بأي حركة لاحقة. (ترك التاريخين فارغين يحفظ التقرير كاملًا.)
         </p>
 
         <div class="dg-mock" aria-hidden="true">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">حفظ لقطة ثابتة</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('حفظ لقطة ثابتة') }}</span></div>
           <div class="dg-mock-body">
             <div class="dg-mock-grid2">
-              <div class="dg-mf"><label>من تاريخ</label><div class="dg-mf-input ph">بداية مفتوحة</div></div>
-              <div class="dg-mf"><label>إلى تاريخ</label><div class="dg-mf-input ph">نهاية مفتوحة</div></div>
+              <div class="dg-mf"><label>{{ _('من تاريخ') }}</label><div class="dg-mf-input ph">{{ _('بداية مفتوحة') }}</div></div>
+              <div class="dg-mf"><label>{{ _('إلى تاريخ') }}</label><div class="dg-mf-input ph">{{ _('نهاية مفتوحة') }}</div></div>
             </div>
-            <div class="dg-mf"><label>ملاحظة (اختياري)</label><div class="dg-mf-input hl">جرد نهاية الشهر</div></div>
+            <div class="dg-mf"><label>{{ _('ملاحظة (اختياري)') }}</label><div class="dg-mf-input hl">{{ _('جرد نهاية الشهر') }}</div></div>
             <div class="dg-mock-actions">
-              <span class="dg-mock-btn ghost">إغلاق</span>
-              <span class="dg-mock-btn primary"><i class="fa-solid fa-lock"></i> حفظ اللقطة</span>
+              <span class="dg-mock-btn ghost">{{ _('إغلاق') }}</span>
+              <span class="dg-mock-btn primary"><i class="fa-solid fa-lock"></i> {{ _('حفظ اللقطة') }}</span>
             </div>
           </div>
         </div>
 
         <p style="margin-top:13px">
-          تظهر اللقطات المحفوظة في جدول <strong>«آخر اللقطات الثابتة»</strong> (الفترة، عدد الصفوف،
-          الإجمالي، الملاحظة، من أنشأها). زر <strong>«عرض»</strong> يفتح صفوفها المجمّدة في نافذة.
+          {{ _('تظهر اللقطات المحفوظة في جدول') }} <strong>{{ _('«آخر اللقطات الثابتة»') }}</strong> (الفترة، عدد الصفوف،
+          الإجمالي، الملاحظة، من أنشأها). زر <strong>{{ _('«عرض»') }}</strong> {{ _('يفتح صفوفها المجمّدة في نافذة.') }}
         </p>
 
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>وبعدين؟</b> اللقطة مفيدة للجرد الدوري: تحفظ صورة رسمية للأرقام في لحظة معيّنة
+          <span><b>{{ _('وبعدين؟') }}</b> اللقطة مفيدة للجرد الدوري: تحفظ صورة رسمية للأرقام في لحظة معيّنة
           (نهاية شهر مثلًا) وتبقى ثابتة للرجوع إليها مهما تغيّرت الحركات بعدها.</span>
         </div>
       </div>

@@ -21,7 +21,7 @@
 {% block title %}قنوات الإرسال — مركز التواصل{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-tower-broadcast"></i>{% endblock %}
 {% block page_title %}قنوات الإرسال{% endblock %}
-{% block page_sub %}<span class="sub">تفعيل وضبط الإرسال الفعلي عبر الرسائل القصيرة وواتساب من خلال رابط مزوّد خارجي.</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('تفعيل وضبط الإرسال الفعلي عبر الرسائل القصيرة وواتساب من خلال رابط مزوّد خارجي.') }}</span>{% endblock %}
 
 {# ── تسميات عربية للقناة ونمط التشغيل ── #}
 {% macro ch_label(ch) %}{{ {'sms':'الرسائل القصيرة','whatsapp':'واتساب'}.get(ch, 'قناة غير معروفة') }}{% endmacro %}
@@ -127,14 +127,14 @@
       {# صف شارات الحالة: التفعيل + النمط + الرصيد (إن وجد) #}
       <div class="cch-status" style="margin-bottom:14px">
         {% if st.enabled %}
-          <span class="cch-badge on"><span class="dot"></span> مفعّلة</span>
+          <span class="cch-badge on"><span class="dot"></span> {{ _('مفعّلة') }}</span>
         {% else %}
-          <span class="cch-badge off"><span class="dot"></span> متوقفة</span>
+          <span class="cch-badge off"><span class="dot"></span> {{ _('متوقفة') }}</span>
         {% endif %}
         <span class="cch-badge mode"><span class="dot"></span> {{ mode_label(st.mode) }}</span>
         {% if _q and _q.is_quota_mode %}
           <a class="cch-badge quota {{ 'zero' if _q.balance == 0 else '' }}" href="{{ url_for('radius.communications_quota') }}"
-             title="الرصيد المتبقّي لهذه القناة — اضغط لإدارة الرصيد والحِزم">
+             title="{{ _('الرصيد المتبقّي لهذه القناة — اضغط لإدارة الرصيد والحِزم') }}">
             <span class="dot"></span> الرصيد: {{ _q.balance }}
           </a>
         {% endif %}
@@ -145,15 +145,15 @@
         <input type="hidden" name="channel" value="{{ ch }}">
 
         <div class="hub-field">
-          <label>تفعيل الإرسال الفعلي عبر هذه القناة</label>
+          <label>{{ _('تفعيل الإرسال الفعلي عبر هذه القناة') }}</label>
           {{ toggle_switch(name="enabled", checked=st.enabled, value="1", id="enabled-" ~ ch,
                            on_label="مفعّل — إرسال خارجي فعلي", off_label="متوقف — يبقى بالطابور") }}
-          <div class="hub-field-hint">عند الإيقاف تبقى الرسائل في الطابور دون إرسال خارجي.</div>
+          <div class="hub-field-hint">{{ _('عند الإيقاف تبقى الرسائل في الطابور دون إرسال خارجي.') }}</div>
         </div>
 
         <div class="hub-grid hub-grid--2">
           <div class="hub-field">
-            <label for="mode-{{ ch }}">نمط التشغيل
+            <label for="mode-{{ ch }}">{{ _('نمط التشغيل') }}
               <span class="hub-hint" tabindex="0" data-hint="«ربط مباشر من العميل»: تستخدم رابط مزوّدك الخاص بلا حدود. «رصيد مخصص من الإدارة»: يُخصم من رصيد رسائل تمنحه الإدارة لكل قناة."><i class="fa-solid fa-info"></i></span>
             </label>
             <select class="hub-select" id="mode-{{ ch }}" name="mode">
@@ -163,39 +163,39 @@
             </select>
           </div>
           <div class="hub-field">
-            <label for="method-{{ ch }}">طريقة الطلب
+            <label for="method-{{ ch }}">{{ _('طريقة الطلب') }}
               <span class="hub-hint" tabindex="0" data-hint="«تمرير البيانات داخل الرابط»: يضع الرقم والنص في الرابط نفسه. «إرسال البيانات كنموذج»: يرسلها في جسم الطلب — اختر ما يطلبه مزوّدك."><i class="fa-solid fa-info"></i></span>
             </label>
             <select class="hub-select" id="method-{{ ch }}" name="http_method">
-              <option value="GET" {{ 'selected' if cfg.http_method == 'GET' else '' }}>تمرير البيانات داخل الرابط</option>
-              <option value="POST" {{ 'selected' if cfg.http_method == 'POST' else '' }}>إرسال البيانات كنموذج</option>
+              <option value="GET" {{ 'selected' if cfg.http_method == 'GET' else '' }}>{{ _('تمرير البيانات داخل الرابط') }}</option>
+              <option value="POST" {{ 'selected' if cfg.http_method == 'POST' else '' }}>{{ _('إرسال البيانات كنموذج') }}</option>
             </select>
           </div>
         </div>
 
         <div class="hub-field">
-          <label for="url-{{ ch }}">قالب رابط الإرسال
+          <label for="url-{{ ch }}">{{ _('قالب رابط الإرسال') }}
             <span class="hub-hint" tabindex="0" data-hint="الصق رابط الإرسال من مزوّدك، وضع {phone} مكان رقم الهاتف و{msg} مكان نص الرسالة. النظام يستبدلهما ويرمّزهما تلقائيًا عند كل إرسال."><i class="fa-solid fa-info"></i></span>
           </label>
           <input class="hub-input mono" id="url-{{ ch }}" name="send_url_template" dir="ltr"
                  value="{{ cfg.send_url_template }}"
-                 placeholder="ضع رابط الإرسال من المزوّد هنا">
+                 placeholder="{{ _('ضع رابط الإرسال من المزوّد هنا') }}">
           <div class="hub-field-hint cch-hint">
-            استخدم <code>{phone}</code> لموضع رقم الهاتف و <code>{msg}</code> لموضع نص الرسالة. يتم ترميزهما تلقائيًا.
+            {{ _('استخدم') }} <code>{phone}</code> {{ _('لموضع رقم الهاتف و') }} <code>{msg}</code> لموضع نص الرسالة. يتم ترميزهما تلقائيًا.
             يمكن أن يحتوي الرابط على مفتاح المزوّد ضمنه إذا كان المزوّد يطلب ذلك.
           </div>
         </div>
 
         <div class="hub-field">
-          <label for="bal-{{ ch }}">رابط الرصيد (اختياري)</label>
+          <label for="bal-{{ ch }}">{{ _('رابط الرصيد (اختياري)') }}</label>
           <input class="hub-input mono" id="bal-{{ ch }}" name="balance_url" dir="ltr"
                  value="{{ cfg.balance_url }}"
-                 placeholder="ضع رابط فحص الرصيد من المزوّد هنا">
-          <div class="hub-field-hint">رابط لاستعلام رصيد المزوّد — يُحفظ مع إعدادات القناة لاستخدامه عند فحص الرصيد.</div>
+                 placeholder="{{ _('ضع رابط فحص الرصيد من المزوّد هنا') }}">
+          <div class="hub-field-hint">{{ _('رابط لاستعلام رصيد المزوّد — يُحفظ مع إعدادات القناة لاستخدامه عند فحص الرصيد.') }}</div>
         </div>
 
         <div>
-          <button type="submit" class="hub-btn hub-btn--primary"><i class="fa-solid fa-floppy-disk"></i> حفظ إعدادات القناة</button>
+          <button type="submit" class="hub-btn hub-btn--primary"><i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ إعدادات القناة') }}</button>
         </div>
       </form>
 
@@ -204,17 +204,17 @@
            data-url="{{ url_for('radius.communications_channels_test') }}"
            data-csrf="{{ csrf_token() }}"
            style="margin-top:16px">
-        <div class="cch-test-title"><i class="fa-solid fa-flask" style="color:#7c3aed"></i> إرسال اختبار</div>
+        <div class="cch-test-title"><i class="fa-solid fa-flask" style="color:#7c3aed"></i> {{ _('إرسال اختبار') }}</div>
         <div class="cch-test-row">
           <div class="hub-field grow">
-            <label for="testphone-{{ ch }}">رقم الهاتف للاختبار</label>
+            <label for="testphone-{{ ch }}">{{ _('رقم الهاتف للاختبار') }}</label>
             <input class="hub-input mono" id="testphone-{{ ch }}" data-test-phone dir="ltr" placeholder="07XXXXXXXX">
           </div>
           <button type="button" class="hub-btn hub-btn--secondary" data-test-btn>
-            <i class="fa-solid fa-paper-plane"></i> إرسال اختبار
+            <i class="fa-solid fa-paper-plane"></i> {{ _('إرسال اختبار') }}
           </button>
         </div>
-        <div class="hub-field-hint">يستخدم الإعدادات المحفوظة لهذه القناة. احفظ التغييرات أولًا قبل الاختبار.</div>
+        <div class="hub-field-hint">{{ _('يستخدم الإعدادات المحفوظة لهذه القناة. احفظ التغييرات أولًا قبل الاختبار.') }}</div>
         <div class="cch-result" data-test-result role="status" aria-live="polite"></div>
       </div>
     </div>

@@ -312,14 +312,14 @@
 <div class="dg-layout">
 
   {# ───── الفهرس الجانبي اللاصق ───── #}
-  <nav class="dg-toc dg-noprint" aria-label="فهرس الدليل">
-    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> فهرس الخطوات</div>
-    <a href="#dg-s1" data-dg-toc><span class="n">1</span> افتح غرفة بطاقات الطباعة</a>
-    <a href="#dg-s2" data-dg-toc><span class="n">2</span> استورد دفعة جديدة</a>
-    <a href="#dg-s3" data-dg-toc><span class="n">3</span> راجع واحفظ الحزمة</a>
-    <a href="#dg-s4" data-dg-toc><span class="n">4</span> تعرّف على قائمة الحزم</a>
-    <a href="#dg-s5" data-dg-toc><span class="n">5</span> القالب وإعدادات الورقة</a>
-    <a href="#dg-s6" data-dg-toc><span class="n">6</span> PDF: التجهيز والتحميل</a>
+  <nav class="dg-toc dg-noprint" aria-label="{{ _('فهرس الدليل') }}">
+    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> {{ _('فهرس الخطوات') }}</div>
+    <a href="#dg-s1" data-dg-toc><span class="n">1</span> {{ _('افتح غرفة بطاقات الطباعة') }}</a>
+    <a href="#dg-s2" data-dg-toc><span class="n">2</span> {{ _('استورد دفعة جديدة') }}</a>
+    <a href="#dg-s3" data-dg-toc><span class="n">3</span> {{ _('راجع واحفظ الحزمة') }}</a>
+    <a href="#dg-s4" data-dg-toc><span class="n">4</span> {{ _('تعرّف على قائمة الحزم') }}</a>
+    <a href="#dg-s5" data-dg-toc><span class="n">5</span> {{ _('القالب وإعدادات الورقة') }}</a>
+    <a href="#dg-s6" data-dg-toc><span class="n">6</span> {{ _('PDF: التجهيز والتحميل') }}</a>
   </nav>
 
   {# ───── عمود المحتوى ───── #}
@@ -328,11 +328,11 @@
     <div class="dg-lead">
       <span class="ic"><i class="fa-solid fa-lightbulb"></i></span>
       <div>
-        <h3>قبل ما نبدأ — شو يعني «بطاقات الطباعة»؟</h3>
+        <h3>{{ _('قبل ما نبدأ — شو يعني «بطاقات الطباعة»؟') }}</h3>
         <p>
           هذه غرفة مستقلة للكروت اللي بتجيك جاهزة من مزوّد أعلى منك (ملف Excel أو CSV أو حتى PDF):
           بترفع الملف، النظام يستخرج اليوزرات والباسوردات تلقائيًا، وتطلع بملف PDF مرتّب على ورق A4
-          جاهز للقص والبيع. <strong>هذه البطاقات للطباعة فقط</strong> — لا تُرحَّل إلى خدمة المصادقة
+          جاهز للقص والبيع. <strong>{{ _('هذه البطاقات للطباعة فقط') }}</strong> — لا تُرحَّل إلى خدمة المصادقة
           ولا تسمح بتسجيل الدخول، فهي ما بتظهر في الجلسات ولا التقارير.
         </p>
       </div>
@@ -342,32 +342,32 @@
     <section class="dg-step" id="dg-s1">
       <div class="dg-badge">1</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-door-open"></i> افتح غرفة «بطاقات الطباعة»</h2>
+        <h2><i class="fa-solid fa-door-open"></i> {{ _('افتح غرفة «بطاقات الطباعة»') }}</h2>
         <p>
-          من القائمة الجانبية افتح قسم <strong>«البطاقات»</strong> ثم اضغط
-          <strong>«🖨️ بطاقات الطباعة»</strong>. رح تستقبلك صفحة فيها:
+          {{ _('من القائمة الجانبية افتح قسم') }} <strong>{{ _('«البطاقات»') }}</strong> {{ _('ثم اضغط') }}
+          <strong>{{ _('«🖨️ بطاقات الطباعة»') }}</strong>{{ _('. رح تستقبلك صفحة فيها:') }}
         </p>
         <ul>
-          <li><strong>الهيرو العلوي</strong> مع زر <strong>«استيراد دفعة جديدة»</strong> البنفسجي — هو بوابة كل شي.</li>
-          <li>ثلاث مؤشرات سريعة: <strong>إجمالي الحزم</strong>، <strong>معروضة في الصفحة</strong>، و<strong>حالة النظام</strong>.</li>
-          <li>قسم <strong>«الحزم المحفوظة»</strong> — كل حزمة طباعة استوردتها سابقًا.</li>
+          <li><strong>{{ _('الهيرو العلوي') }}</strong> {{ _('مع زر') }} <strong>{{ _('«استيراد دفعة جديدة»') }}</strong> {{ _('البنفسجي — هو بوابة كل شي.') }}</li>
+          <li>{{ _('ثلاث مؤشرات سريعة:') }} <strong>{{ _('إجمالي الحزم') }}</strong>{{ _('،') }} <strong>{{ _('معروضة في الصفحة') }}</strong>{{ _('، و') }}<strong>{{ _('حالة النظام') }}</strong>.</li>
+          <li>{{ _('قسم') }} <strong>{{ _('«الحزم المحفوظة»') }}</strong> {{ _('— كل حزمة طباعة استوردتها سابقًا.') }}</li>
         </ul>
         <div class="dg-mock" aria-hidden="true" style="max-width:440px">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">البطاقات › بطاقات الطباعة</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('البطاقات › بطاقات الطباعة') }}</span></div>
           <div class="dg-mock-body">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
               <div>
-                <div style="font-size:13px;font-weight:900;color:#0f172a">بطاقات الطباعة</div>
-                <div style="font-size:9.5px;color:#64748b;margin-top:2px">استورد ملفات الكروت الجاهزة وحوّلها إلى ملفات طباعة احترافية</div>
+                <div style="font-size:13px;font-weight:900;color:#0f172a">{{ _('بطاقات الطباعة') }}</div>
+                <div style="font-size:9.5px;color:#64748b;margin-top:2px">{{ _('استورد ملفات الكروت الجاهزة وحوّلها إلى ملفات طباعة احترافية') }}</div>
               </div>
-              <span class="dg-mock-btn primary"><i class="fa-solid fa-file-import"></i> استيراد دفعة جديدة</span>
+              <span class="dg-mock-btn primary"><i class="fa-solid fa-file-import"></i> {{ _('استيراد دفعة جديدة') }}</span>
             </div>
           </div>
         </div>
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>نصيحة:</b> إذا كروتك مولَّدة من داخل النظام نفسه (من «إضافة حزمة») فما تحتاج هذه الغرفة —
-          اطبعها مباشرة من «حزم البطاقات». غرفة بطاقات الطباعة مخصصة للكروت <b>الخارجية</b> الجاهزة.</span>
+          <span><b>{{ _('نصيحة:') }}</b> إذا كروتك مولَّدة من داخل النظام نفسه (من «إضافة حزمة») فما تحتاج هذه الغرفة —
+          اطبعها مباشرة من «حزم البطاقات». غرفة بطاقات الطباعة مخصصة للكروت <b>{{ _('الخارجية') }}</b> {{ _('الجاهزة.') }}</span>
         </div>
       </div>
     </section>
@@ -376,48 +376,48 @@
     <section class="dg-step" id="dg-s2">
       <div class="dg-badge">2</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-file-import"></i> استورد دفعة جديدة — وخلّي المحرّك الذكي يشتغل</h2>
+        <h2><i class="fa-solid fa-file-import"></i> {{ _('استورد دفعة جديدة — وخلّي المحرّك الذكي يشتغل') }}</h2>
         <p>
-          اضغط <strong>«استيراد دفعة جديدة»</strong> لتفتح صفحة الاستيراد. أول قسم هو
-          <strong>«بيانات الحزمة»</strong> وفيه ثلاثة حقول:
+          {{ _('اضغط') }} <strong>{{ _('«استيراد دفعة جديدة»') }}</strong> {{ _('لتفتح صفحة الاستيراد. أول قسم هو') }}
+          <strong>{{ _('«بيانات الحزمة»') }}</strong> {{ _('وفيه ثلاثة حقول:') }}
         </p>
         <ul>
-          <li><strong>اسم الحزمة</strong> (إجباري): اسم تميّزها به — مثل <span class="dg-kbd">دفعة شهر ٧ — للطباعة</span>. يظهر في القائمة وعلى ملف الطباعة.</li>
-          <li><strong>سعر البيع للبطاقة</strong> (اختياري): سعر القطعة الواحدة — للعرض الداخلي فقط.</li>
-          <li><strong>سعر الجملة (إجمالي)</strong> (اختياري): التكلفة الكلية للدفعة.</li>
+          <li><strong>{{ _('اسم الحزمة') }}</strong> {{ _('(إجباري): اسم تميّزها به — مثل') }} <span class="dg-kbd">{{ _('دفعة شهر ٧ — للطباعة') }}</span>{{ _('. يظهر في القائمة وعلى ملف الطباعة.') }}</li>
+          <li><strong>{{ _('سعر البيع للبطاقة') }}</strong> {{ _('(اختياري): سعر القطعة الواحدة — للعرض الداخلي فقط.') }}</li>
+          <li><strong>{{ _('سعر الجملة (إجمالي)') }}</strong> {{ _('(اختياري): التكلفة الكلية للدفعة.') }}</li>
         </ul>
         <p>
-          بعدها قسم <strong>«المحرّك الذكي — تحليل ملف الكروت»</strong>: اسحب ملفك إلى المنطقة المنقّطة
-          أو اضغط للاختيار (CSV · XLSX · PDF — حتى 12MB)، ثم اضغط زر <strong>«حلّل الملف»</strong>.
+          {{ _('بعدها قسم') }} <strong>{{ _('«المحرّك الذكي — تحليل ملف الكروت»') }}</strong>: اسحب ملفك إلى المنطقة المنقّطة
+          أو اضغط للاختيار (CSV · XLSX · PDF — حتى 12MB)، ثم اضغط زر <strong>{{ _('«حلّل الملف»') }}</strong>.
           المحرّك يمرّ بخمس مراحل تشوفها مباشرة:
         </p>
 
         <div class="dg-mock" aria-hidden="true">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">بطاقات الطباعة › دفعة طباعة جديدة</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('بطاقات الطباعة › دفعة طباعة جديدة') }}</span></div>
           <div class="dg-mock-body">
             <div class="dg-dz">
               <span class="ic"><i class="fa-solid fa-cloud-arrow-up"></i></span>
-              <span class="t">اسحب الملف هنا أو اضغط للاختيار</span>
-              <span class="s">CSV · XLSX · PDF — حتى 12MB</span>
+              <span class="t">{{ _('اسحب الملف هنا أو اضغط للاختيار') }}</span>
+              <span class="s">{{ _('CSV · XLSX · PDF — حتى 12MB') }}</span>
             </div>
             <div style="display:flex;justify-content:center">
-              <span class="dg-mock-btn indigo"><i class="fa-solid fa-wand-magic-sparkles"></i> حلّل الملف</span>
+              <span class="dg-mock-btn indigo"><i class="fa-solid fa-wand-magic-sparkles"></i> {{ _('حلّل الملف') }}</span>
             </div>
             <ol class="dg-stages">
-              <li class="ok"><span class="dot">1</span><span>استلام الملف</span></li>
-              <li class="ok"><span class="dot">2</span><span>كشف الصيغة</span></li>
-              <li class="ok"><span class="dot">3</span><span>استخراج الجدول</span></li>
-              <li class="on"><span class="dot">4</span><span>تحليل الأعمدة</span></li>
-              <li><span class="dot">5</span><span>اكتمال</span></li>
+              <li class="ok"><span class="dot">1</span><span>{{ _('استلام الملف') }}</span></li>
+              <li class="ok"><span class="dot">2</span><span>{{ _('كشف الصيغة') }}</span></li>
+              <li class="ok"><span class="dot">3</span><span>{{ _('استخراج الجدول') }}</span></li>
+              <li class="on"><span class="dot">4</span><span>{{ _('تحليل الأعمدة') }}</span></li>
+              <li><span class="dot">5</span><span>{{ _('اكتمال') }}</span></li>
             </ol>
-            <div class="dg-counter"><span class="num">٥٠٠</span><span class="lbl">بطاقة جاهزة للحفظ</span></div>
+            <div class="dg-counter"><span class="num">{{ _('٥٠٠') }}</span><span class="lbl">{{ _('بطاقة جاهزة للحفظ') }}</span></div>
           </div>
         </div>
-        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> المحرّك يكتشف عمود اليوزر وعمود الباسورد تلقائيًا — حتى لو الأعمدة بترتيب غريب.</div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> {{ _('المحرّك يكتشف عمود اليوزر وعمود الباسورد تلقائيًا — حتى لو الأعمدة بترتيب غريب.') }}</div>
 
         <div class="dg-warn">
           <span class="ic">⚠️</span>
-          <span><b>انتبه:</b> الحد الأقصى لحجم الملف <b>12MB</b> — إذا أكبر، قسّمه لدفعات أصغر.
+          <span><b>{{ _('انتبه:') }}</b> {{ _('الحد الأقصى لحجم الملف') }} <b>12MB</b> — إذا أكبر، قسّمه لدفعات أصغر.
           وإذا فشلت مرحلة «تحليل الأعمدة» رح تشوف رسالة حمراء تشرح المشكلة (مثل: تعذّر تحديد عمود المستخدم).</span>
         </div>
       </div>
@@ -427,24 +427,24 @@
     <section class="dg-step" id="dg-s3">
       <div class="dg-badge">3</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-list-check"></i> راجع البطاقات قبل الحفظ — ثم احفظ</h2>
+        <h2><i class="fa-solid fa-list-check"></i> {{ _('راجع البطاقات قبل الحفظ — ثم احفظ') }}</h2>
         <p>
-          بعد نجاح التحليل، حقل <strong>«نص الكروت»</strong> في قسم
-          <strong>«راجع البطاقات قبل الحفظ»</strong> يتعبّأ تلقائيًا بصيغة
+          {{ _('بعد نجاح التحليل، حقل') }} <strong>{{ _('«نص الكروت»') }}</strong> {{ _('في قسم') }}
+          <strong>{{ _('«راجع البطاقات قبل الحفظ»') }}</strong> {{ _('يتعبّأ تلقائيًا بصيغة') }}
           <span class="dg-kbd">username,password</span> — سطر لكل بطاقة. تقدر تعدّل عليه يدويًا:
           تحذف سطرًا، تصحّح باسوردًا، أو حتى تلصق كروتك مباشرة بدون رفع ملف أصلًا.
         </p>
         <p>
-          لما تخلص اضغط <strong>«احفظ دفعة الطباعة»</strong> (أو <strong>«إلغاء»</strong> للرجوع بدون حفظ).
+          {{ _('لما تخلص اضغط') }} <strong>{{ _('«احفظ دفعة الطباعة»') }}</strong> {{ _('(أو') }} <strong>{{ _('«إلغاء»') }}</strong> للرجوع بدون حفظ).
           النظام يتخطّى المكرر وغير الصالح تلقائيًا ويخبرك بعددها، ثم ينقلك مباشرة لصفحة الحزمة الجديدة.
         </p>
         <div class="dg-flash" aria-hidden="true">
-          <i class="fa-solid fa-circle-check"></i> تم استيراد 500 بطاقة طباعة داخل الحزمة «دفعة شهر ٧ — للطباعة».
+          <i class="fa-solid fa-circle-check"></i> {{ _('تم استيراد 500 بطاقة طباعة داخل الحزمة «دفعة شهر ٧ — للطباعة».') }}
         </div>
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>نصيحة:</b> عندك الكروت بالنص مباشرة (واتساب/إيميل)؟ تجاوز المحرّك الذكي كليًا:
-          الصق النص في حقل «نص الكروت» بصيغة <b>username,password</b> واحفظ فورًا.</span>
+          <span><b>{{ _('نصيحة:') }}</b> عندك الكروت بالنص مباشرة (واتساب/إيميل)؟ تجاوز المحرّك الذكي كليًا:
+          الصق النص في حقل «نص الكروت» بصيغة <b>username,password</b> {{ _('واحفظ فورًا.') }}</span>
         </div>
       </div>
     </section>
@@ -453,27 +453,27 @@
     <section class="dg-step" id="dg-s4">
       <div class="dg-badge">4</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-layer-group"></i> تعرّف على قائمة الحزم وأزرار كل حزمة</h2>
+        <h2><i class="fa-solid fa-layer-group"></i> {{ _('تعرّف على قائمة الحزم وأزرار كل حزمة') }}</h2>
         <p>
-          ارجع لصفحة بطاقات الطباعة وشوف حزمتك في قسم <strong>«الحزم المحفوظة»</strong>.
-          فوق القائمة مبدّل عرض: <strong>«بطاقات»</strong> (شبكة chips أنيقة) أو
-          <strong>«جدول»</strong> (أعمدة: #، اسم الحزمة، العدد، سعر البيع، سعر الجملة، التاريخ، إجراءات).
-          كل حزمة تعرض ثلاثة أرقام: <strong>عدد</strong> البطاقات، سعر <strong>بيع</strong> القطعة،
-          وسعر <strong>الجملة</strong> — ومعها ثلاثة أزرار:
+          {{ _('ارجع لصفحة بطاقات الطباعة وشوف حزمتك في قسم') }} <strong>{{ _('«الحزم المحفوظة»') }}</strong>.
+          فوق القائمة مبدّل عرض: <strong>{{ _('«بطاقات»') }}</strong> {{ _('(شبكة chips أنيقة) أو') }}
+          <strong>{{ _('«جدول»') }}</strong> (أعمدة: #، اسم الحزمة، العدد، سعر البيع، سعر الجملة، التاريخ، إجراءات).
+          كل حزمة تعرض ثلاثة أرقام: <strong>{{ _('عدد') }}</strong> {{ _('البطاقات، سعر') }} <strong>{{ _('بيع') }}</strong> القطعة،
+          وسعر <strong>{{ _('الجملة') }}</strong> {{ _('— ومعها ثلاثة أزرار:') }}
         </p>
         <ul>
-          <li><i class="fa-solid fa-eye" style="color:#1d4ed8"></i> <strong>معاينة:</strong> يفتح صفحة الحزمة بجدول بطاقاتها الكامل.</li>
-          <li><i class="fa-solid fa-print" style="color:#4338ca"></i> <strong>طباعة:</strong> يفتح نافذة الطباعة مباشرة (الخطوة التالية).</li>
-          <li><i class="fa-solid fa-trash-can" style="color:#b91c1c"></i> <strong>حذف:</strong> يحذف الحزمة وكل بطاقاتها بعد نافذة تأكيد — <strong>لا يمكن التراجع</strong>.</li>
+          <li><i class="fa-solid fa-eye" style="color:#1d4ed8"></i> <strong>{{ _('معاينة:') }}</strong> {{ _('يفتح صفحة الحزمة بجدول بطاقاتها الكامل.') }}</li>
+          <li><i class="fa-solid fa-print" style="color:#4338ca"></i> <strong>{{ _('طباعة:') }}</strong> {{ _('يفتح نافذة الطباعة مباشرة (الخطوة التالية).') }}</li>
+          <li><i class="fa-solid fa-trash-can" style="color:#b91c1c"></i> <strong>{{ _('حذف:') }}</strong> {{ _('يحذف الحزمة وكل بطاقاتها بعد نافذة تأكيد —') }} <strong>{{ _('لا يمكن التراجع') }}</strong>.</li>
         </ul>
 
         <div class="dg-chip" aria-hidden="true">
           <span class="num">#12</span>
-          <span class="ttl">دفعة شهر ٧ — للطباعة</span>
+          <span class="ttl">{{ _('دفعة شهر ٧ — للطباعة') }}</span>
           <div class="stats">
-            <div><div class="k">عدد</div><div class="v">500</div></div>
-            <div><div class="k">بيع</div><div class="v">1.00</div></div>
-            <div><div class="k">جملة</div><div class="v">400</div></div>
+            <div><div class="k">{{ _('عدد') }}</div><div class="v">500</div></div>
+            <div><div class="k">{{ _('بيع') }}</div><div class="v">1.00</div></div>
+            <div><div class="k">{{ _('جملة') }}</div><div class="v">400</div></div>
           </div>
           <div class="acts">
             <span class="meta">2026-07-01</span>
@@ -482,16 +482,16 @@
             <span class="dg-act del"><i class="fa-solid fa-trash-can"></i></span>
           </div>
         </div>
-        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> اضغط جسم الحزمة نفسه لفتح بطاقاتها — والأزرار الثلاثة بالأسفل للإجراءات السريعة.</div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> {{ _('اضغط جسم الحزمة نفسه لفتح بطاقاتها — والأزرار الثلاثة بالأسفل للإجراءات السريعة.') }}</div>
 
         <p style="margin-top:10px">
-          داخل صفحة الحزمة تجد جدول البطاقات (أعمدة: <strong>#</strong>، <strong>اسم الدخول</strong>،
-          <strong>كلمة المرور</strong>، <strong>أُنشئت</strong>) مع منسدلة <strong>«عدد الصفوف»</strong>
-          (10/20/50/100) وترقيم صفحات للحزم الكبيرة — وفوقها زر
-          <strong>«اطبع هذه الحزمة»</strong> البنفسجي وزر <strong>«الرجوع لقائمة الحزم»</strong>.
+          {{ _('داخل صفحة الحزمة تجد جدول البطاقات (أعمدة:') }} <strong>#</strong>{{ _('،') }} <strong>{{ _('اسم الدخول') }}</strong>{{ _('،') }}
+          <strong>{{ _('كلمة المرور') }}</strong>{{ _('،') }} <strong>{{ _('أُنشئت') }}</strong>{{ _(') مع منسدلة') }} <strong>{{ _('«عدد الصفوف»') }}</strong>
+          {{ _('(10/20/50/100) وترقيم صفحات للحزم الكبيرة — وفوقها زر') }}
+          <strong>{{ _('«اطبع هذه الحزمة»') }}</strong> {{ _('البنفسجي وزر') }} <strong>{{ _('«الرجوع لقائمة الحزم»') }}</strong>.
         </p>
         <div class="dg-tbl" aria-hidden="true">
-          <div class="hd"><span>#</span><span>اسم الدخول</span><span>كلمة المرور</span><span>أُنشئت</span></div>
+          <div class="hd"><span>#</span><span>{{ _('اسم الدخول') }}</span><span>{{ _('كلمة المرور') }}</span><span>{{ _('أُنشئت') }}</span></div>
           <div class="rw"><span class="mono">1</span><span class="mono" style="font-weight:900;color:#241e4e">card7001</span><span class="mono">8842</span><span style="color:#94a3b8">2026-07-01</span></div>
           <div class="rw"><span class="mono">2</span><span class="mono" style="font-weight:900;color:#241e4e">card7002</span><span class="mono">5519</span><span style="color:#94a3b8">2026-07-01</span></div>
         </div>
@@ -502,64 +502,64 @@
     <section class="dg-step" id="dg-s5">
       <div class="dg-badge">5</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-table-cells-large"></i> نافذة الطباعة: اختر القالب واضبط الورقة</h2>
+        <h2><i class="fa-solid fa-table-cells-large"></i> {{ _('نافذة الطباعة: اختر القالب واضبط الورقة') }}</h2>
         <p>
-          اضغط زر الطباعة (من القائمة أو <strong>«اطبع هذه الحزمة»</strong> من صفحة الحزمة) لتفتح
-          نافذة <strong>«تجهيز ملف البطاقات»</strong>. فيها قسمان:
+          {{ _('اضغط زر الطباعة (من القائمة أو') }} <strong>{{ _('«اطبع هذه الحزمة»') }}</strong> من صفحة الحزمة) لتفتح
+          نافذة <strong>{{ _('«تجهيز ملف البطاقات»') }}</strong>{{ _('. فيها قسمان:') }}
         </p>
         <p>
-          <strong>أولًا — «اختيار قالب محفوظ»:</strong> شبكة بمصغّرات حقيقية لكل قوالبك المصممة.
+          <strong>{{ _('أولًا — «اختيار قالب محفوظ»:') }}</strong> شبكة بمصغّرات حقيقية لكل قوالبك المصممة.
           اضغط القالب اللي يعجبك (القالب الافتراضي يكون مختارًا مسبقًا). شكل البطاقة — الألوان والنصوص
           والـQR — كله يجي من القالب.
         </p>
         <p>
-          <strong>ثانيًا — «إعدادات الطباعة»:</strong> هذه تتحكم برصّ البطاقات على الورقة فقط
+          <strong>{{ _('ثانيًا — «إعدادات الطباعة»:') }}</strong> هذه تتحكم برصّ البطاقات على الورقة فقط
           (ما تغيّر تصميم القالب):
         </p>
         <ul>
-          <li><strong>مقاس الورقة:</strong> A4 أو Letter — و<strong>اتجاه الورقة:</strong> طولي أو أفقي.</li>
-          <li><strong>عدد الأعمدة</strong> (1–8) و<strong>عدد الصفوف</strong> (1–12): الافتراضي 3×5 = 15 بطاقة في الصفحة.</li>
-          <li><strong>المسافة بين الأعمدة / الصفوف (mm):</strong> فراغ القص بين البطاقات — الافتراضي 3mm.</li>
-          <li><strong>الهوامش الأربعة (mm):</strong> علوي/أيمن/سفلي/أيسر — الافتراضي 8mm، زِدها إذا طابعتك تقص الأطراف.</li>
+          <li><strong>{{ _('مقاس الورقة:') }}</strong> {{ _('A4 أو Letter — و') }}<strong>{{ _('اتجاه الورقة:') }}</strong> {{ _('طولي أو أفقي.') }}</li>
+          <li><strong>{{ _('عدد الأعمدة') }}</strong> {{ _('(1–8) و') }}<strong>{{ _('عدد الصفوف') }}</strong> {{ _('(1–12): الافتراضي 3×5 = 15 بطاقة في الصفحة.') }}</li>
+          <li><strong>{{ _('المسافة بين الأعمدة / الصفوف (mm):') }}</strong> {{ _('فراغ القص بين البطاقات — الافتراضي 3mm.') }}</li>
+          <li><strong>{{ _('الهوامش الأربعة (mm):') }}</strong> {{ _('علوي/أيمن/سفلي/أيسر — الافتراضي 8mm، زِدها إذا طابعتك تقص الأطراف.') }}</li>
         </ul>
 
         <div class="dg-modal" aria-hidden="true">
           <div class="mhead">
-            <div class="k">طباعة مباشرة للحزمة</div>
-            <div class="t">تجهيز ملف البطاقات</div>
+            <div class="k">{{ _('طباعة مباشرة للحزمة') }}</div>
+            <div class="t">{{ _('تجهيز ملف البطاقات') }}</div>
           </div>
           <div class="mbody">
-            <div style="font-size:10.5px;font-weight:900;color:#241e4e">اختيار قالب محفوظ</div>
+            <div style="font-size:10.5px;font-weight:900;color:#241e4e">{{ _('اختيار قالب محفوظ') }}</div>
             <div class="dg-tplpick">
-              <div class="dg-tplopt on"><div class="thumb"></div><div class="nm">قالب رمضان</div><div class="mt">modern</div></div>
-              <div class="dg-tplopt"><div class="thumb" style="background:linear-gradient(135deg,#5b21b6,#ec4899)"></div><div class="nm">بطاقة ذهبية</div><div class="mt">قالب محفوظ</div></div>
-              <div class="dg-tplopt"><div class="thumb" style="background:linear-gradient(135deg,#065f46,#22d3ee)"></div><div class="nm">فايبر أخضر</div><div class="mt">قالب محفوظ</div></div>
+              <div class="dg-tplopt on"><div class="thumb"></div><div class="nm">{{ _('قالب رمضان') }}</div><div class="mt">modern</div></div>
+              <div class="dg-tplopt"><div class="thumb" style="background:linear-gradient(135deg,#5b21b6,#ec4899)"></div><div class="nm">{{ _('بطاقة ذهبية') }}</div><div class="mt">{{ _('قالب محفوظ') }}</div></div>
+              <div class="dg-tplopt"><div class="thumb" style="background:linear-gradient(135deg,#065f46,#22d3ee)"></div><div class="nm">{{ _('فايبر أخضر') }}</div><div class="mt">{{ _('قالب محفوظ') }}</div></div>
             </div>
-            <div style="font-size:10.5px;font-weight:900;color:#241e4e">إعدادات الطباعة</div>
+            <div style="font-size:10.5px;font-weight:900;color:#241e4e">{{ _('إعدادات الطباعة') }}</div>
             <div class="dg-mock-grid3">
-              <div class="dg-mf"><label>مقاس الورقة</label><div class="dg-mf-input">A4</div></div>
-              <div class="dg-mf"><label>عدد الأعمدة</label><div class="dg-mf-input hl">3</div></div>
-              <div class="dg-mf"><label>عدد الصفوف</label><div class="dg-mf-input hl">5</div></div>
+              <div class="dg-mf"><label>{{ _('مقاس الورقة') }}</label><div class="dg-mf-input">A4</div></div>
+              <div class="dg-mf"><label>{{ _('عدد الأعمدة') }}</label><div class="dg-mf-input hl">3</div></div>
+              <div class="dg-mf"><label>{{ _('عدد الصفوف') }}</label><div class="dg-mf-input hl">5</div></div>
             </div>
             <div class="dg-mock-grid3">
-              <div class="dg-mf"><label>المسافة بين الأعمدة (mm)</label><div class="dg-mf-input">3</div></div>
-              <div class="dg-mf"><label>المسافة بين الصفوف (mm)</label><div class="dg-mf-input">3</div></div>
-              <div class="dg-mf"><label>الهامش العلوي (mm)</label><div class="dg-mf-input">8</div></div>
+              <div class="dg-mf"><label>{{ _('المسافة بين الأعمدة (mm)') }}</label><div class="dg-mf-input">3</div></div>
+              <div class="dg-mf"><label>{{ _('المسافة بين الصفوف (mm)') }}</label><div class="dg-mf-input">3</div></div>
+              <div class="dg-mf"><label>{{ _('الهامش العلوي (mm)') }}</label><div class="dg-mf-input">8</div></div>
             </div>
             <div style="display:flex;justify-content:flex-end">
-              <span class="dg-mock-btn primary"><i class="fa-solid fa-file-pdf"></i> إنشاء ملف PDF</span>
+              <span class="dg-mock-btn primary"><i class="fa-solid fa-file-pdf"></i> {{ _('إنشاء ملف PDF') }}</span>
             </div>
           </div>
         </div>
 
         <div class="dg-warn">
           <span class="ic">⚠️</span>
-          <span><b>انتبه:</b> إذا ظهرت رسالة <b>«لا توجد قوالب محفوظة بعد»</b> فزر «إنشاء ملف PDF» يكون
-          معطّلًا — روح أولًا لـ<b>«قوالب الطباعة»</b> وصمّم قالبًا واحدًا على الأقل (له دليل خاص).</span>
+          <span><b>{{ _('انتبه:') }}</b> {{ _('إذا ظهرت رسالة') }} <b>{{ _('«لا توجد قوالب محفوظة بعد»') }}</b> فزر «إنشاء ملف PDF» يكون
+          معطّلًا — روح أولًا لـ<b>{{ _('«قوالب الطباعة»') }}</b> {{ _('وصمّم قالبًا واحدًا على الأقل (له دليل خاص).') }}</span>
         </div>
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>نصيحة:</b> بدّك تطبع السعر أو الصلاحية أو رمز QR للدخول التلقائي على البطاقة؟
+          <span><b>{{ _('نصيحة:') }}</b> بدّك تطبع السعر أو الصلاحية أو رمز QR للدخول التلقائي على البطاقة؟
           هذي خصائص القالب نفسه — تضبطها مرة واحدة في غرفة «قوالب الطباعة» (حقول «السعر الظاهر»،
           «الصلاحية الظاهرة»، «رابط دخول الهوت سبوت») وتنطبق على كل حزمة تطبعها بهذا القالب.</span>
         </div>
@@ -570,38 +570,38 @@
     <section class="dg-step" id="dg-s6">
       <div class="dg-badge">6</div>
       <div class="dg-card">
-        <h2><i class="fa-solid fa-file-pdf"></i> «إنشاء ملف PDF» — التقدم والتحميل والطباعة</h2>
+        <h2><i class="fa-solid fa-file-pdf"></i> {{ _('«إنشاء ملف PDF» — التقدم والتحميل والطباعة') }}</h2>
         <p>
-          اضغط <strong>«إنشاء ملف PDF»</strong>. التصدير يشتغل في الخلفية وتتابعه بشريط تقدم
+          {{ _('اضغط') }} <strong>{{ _('«إنشاء ملف PDF»') }}</strong>. التصدير يشتغل في الخلفية وتتابعه بشريط تقدم
           ونسبة مئوية وأربع مراحل واضحة:
         </p>
 
         <div class="dg-mock" aria-hidden="true" style="max-width:440px">
-          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">تجهيز ملف البطاقات › التقدم</span></div>
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">{{ _('تجهيز ملف البطاقات › التقدم') }}</span></div>
           <div class="dg-mock-body">
             <div style="display:flex;justify-content:space-between;font-size:10.5px;font-weight:900;color:#241e4e">
-              <span>بدء تجهيز ملف PDF...</span><span style="color:#7c3aed">72%</span>
+              <span>{{ _('بدء تجهيز ملف PDF...') }}</span><span style="color:#7c3aed">72%</span>
             </div>
             <div class="dg-progressbar"><span></span></div>
             <ol class="dg-pdfsteps">
-              <li><i class="fa-solid fa-circle-check"></i> إنشاء مهمة التصدير</li>
-              <li><i class="fa-solid fa-circle-check"></i> رسم البطاقات بالقالب المختار</li>
-              <li><i class="fa-solid fa-circle-check"></i> ترتيب الصفحات والهوامش</li>
-              <li class="wait"><i class="fa-regular fa-circle"></i> تجهيز رابط التحميل</li>
+              <li><i class="fa-solid fa-circle-check"></i> {{ _('إنشاء مهمة التصدير') }}</li>
+              <li><i class="fa-solid fa-circle-check"></i> {{ _('رسم البطاقات بالقالب المختار') }}</li>
+              <li><i class="fa-solid fa-circle-check"></i> {{ _('ترتيب الصفحات والهوامش') }}</li>
+              <li class="wait"><i class="fa-regular fa-circle"></i> {{ _('تجهيز رابط التحميل') }}</li>
             </ol>
-            <span class="dg-mock-btn ghost" style="justify-self:start"><i class="fa-solid fa-download"></i> تحميل الملف</span>
+            <span class="dg-mock-btn ghost" style="justify-self:start"><i class="fa-solid fa-download"></i> {{ _('تحميل الملف') }}</span>
           </div>
         </div>
 
-        <p style="margin-top:13px">لما تكتمل المرحلة الأخيرة يظهر زر <strong>«تحميل الملف»</strong> — اضغطه وينزل ملف PDF متعدد الصفحات:</p>
+        <p style="margin-top:13px">{{ _('لما تكتمل المرحلة الأخيرة يظهر زر') }} <strong>{{ _('«تحميل الملف»') }}</strong> {{ _('— اضغطه وينزل ملف PDF متعدد الصفحات:') }}</p>
         <ul>
-          <li>كل صفحة فيها البطاقات مرصوصة حسب الأعمدة والصفوف اللي اخترتها.</li>
-          <li>كل بطاقة مرسومة بالقالب المختار: اسم الدخول وكلمة المرور كما في الجدول، والـQR إذا كان مفعّلًا في القالب.</li>
-          <li>افتح الملف واطبعه على طابعتك بمقياس <span class="dg-kbd">100%</span> (بدون «ملاءمة للصفحة») حتى تطلع الأبعاد المليمترية مضبوطة، ثم قص على الفراغات.</li>
+          <li>{{ _('كل صفحة فيها البطاقات مرصوصة حسب الأعمدة والصفوف اللي اخترتها.') }}</li>
+          <li>{{ _('كل بطاقة مرسومة بالقالب المختار: اسم الدخول وكلمة المرور كما في الجدول، والـQR إذا كان مفعّلًا في القالب.') }}</li>
+          <li>{{ _('افتح الملف واطبعه على طابعتك بمقياس') }} <span class="dg-kbd">100%</span> {{ _('(بدون «ملاءمة للصفحة») حتى تطلع الأبعاد المليمترية مضبوطة، ثم قص على الفراغات.') }}</li>
         </ul>
         <div class="dg-tip">
           <span class="ic">💡</span>
-          <span><b>وبعدين؟</b> جرّب صفحة واحدة أولًا قبل ما تطبع 500 بطاقة — إذا القص طلع مزبوطًا،
+          <span><b>{{ _('وبعدين؟') }}</b> جرّب صفحة واحدة أولًا قبل ما تطبع 500 بطاقة — إذا القص طلع مزبوطًا،
           كمّل الباقي. وتقدر ترجع تطبع نفس الحزمة بأي قالب آخر متى ما شئت؛ الحزمة محفوظة دائمًا.</span>
         </div>
       </div>

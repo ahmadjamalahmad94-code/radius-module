@@ -74,15 +74,15 @@
 
 {% macro status_inline(card) -%}
   {%- if card.revoked -%}
-    <span class="cc-pill cc-pill-red"><span class="dot"></span>ملغاة</span>
+    <span class="cc-pill cc-pill-red"><span class="dot"></span>{{ _('ملغاة') }}</span>
   {%- elif card.disabled_reason -%}
-    <span class="cc-pill cc-pill-yellow"><span class="dot"></span>معطّلة</span>
+    <span class="cc-pill cc-pill-yellow"><span class="dot"></span>{{ _('معطّلة') }}</span>
   {%- elif card.active_session -%}
-    <span class="cc-pill cc-pill-green"><span class="dot"></span>نشطة الآن</span>
+    <span class="cc-pill cc-pill-green"><span class="dot"></span>{{ _('نشطة الآن') }}</span>
   {%- elif card.used -%}
-    <span class="cc-pill cc-pill-blue"><span class="dot"></span>استُعملت</span>
+    <span class="cc-pill cc-pill-blue"><span class="dot"></span>{{ _('استُعملت') }}</span>
   {%- else -%}
-    <span class="cc-pill cc-pill-grey"><span class="dot"></span>جاهزة</span>
+    <span class="cc-pill cc-pill-grey"><span class="dot"></span>{{ _('جاهزة') }}</span>
   {%- endif -%}
 {%- endmacro %}
 
@@ -90,9 +90,9 @@
   {%- if card.revoked or card.disabled_reason -%}
     <span class="cc-card-status warn"><span class="dot"></span>{{ 'ملغاة' if card.revoked else 'معطّلة' }}</span>
   {%- elif card.active_session -%}
-    <span class="cc-card-status"><span class="dot"></span>نشطة الآن</span>
+    <span class="cc-card-status"><span class="dot"></span>{{ _('نشطة الآن') }}</span>
   {%- else -%}
-    <span class="cc-card-status dim"><span class="dot"></span>غير متّصلة</span>
+    <span class="cc-card-status dim"><span class="dot"></span>{{ _('غير متّصلة') }}</span>
   {%- endif -%}
 {%- endmacro %}
 
@@ -239,14 +239,14 @@
         <span class="cc-card-password-value mono"
               data-cc-pwd-display>••••••••</span>
         <button type="button" class="cc-card-password-eye"
-                title="إظهار كلمة المرور"
-                aria-label="إظهار كلمة المرور"
+                title="{{ _('إظهار كلمة المرور') }}"
+                aria-label="{{ _('إظهار كلمة المرور') }}"
                 data-cc-pwd-toggle>
           <i class="fa-solid fa-eye"></i>
         </button>
         <button type="button" class="cc-card-password-copy"
-                title="نسخ كلمة المرور"
-                aria-label="نسخ كلمة المرور"
+                title="{{ _('نسخ كلمة المرور') }}"
+                aria-label="{{ _('نسخ كلمة المرور') }}"
                 data-cc-pwd-copy>
           <i class="fa-solid fa-copy"></i>
         </button>
@@ -259,13 +259,13 @@
       <div class="cc-card-side-info">
         {% if card.batch and (card.batch.package_name or card.batch.batch_code) %}
         <div class="cc-card-side-row" data-cc-field="package_name">
-          <span class="cc-card-side-label">الحزمة</span>
+          <span class="cc-card-side-label">{{ _('الحزمة') }}</span>
           <span class="cc-card-side-value">{{ card.batch.package_name or card.batch.batch_code }}</span>
         </div>
         {% endif %}
         {% if card.profile and card.profile.name %}
         <div class="cc-card-side-row" data-cc-field="profile">
-          <span class="cc-card-side-label">الاشتراك</span>
+          <span class="cc-card-side-label">{{ _('الاشتراك') }}</span>
           <span class="cc-card-side-value">
             <i class="fa-solid fa-crown" style="font-size:11px;color:#FBBF24"></i>
             {{ card.profile.name }}
@@ -283,28 +283,28 @@
          the row, so the admin always sees the pricing slot even
          when empty. #}
       <div class="cc-card-side-row" data-cc-field="price">
-        <span class="cc-card-side-label">سعر البيع</span>
+        <span class="cc-card-side-label">{{ _('سعر البيع') }}</span>
         <span class="cc-card-side-value">
           {% if card.batch and (card.batch.unit_price or 0) > 0 %}
             {{ card.batch.unit_price|money }}
           {% else %}
-            <span class="cc-card-side-empty">غير محدد</span>
+            <span class="cc-card-side-empty">{{ _('غير محدد') }}</span>
           {% endif %}
         </span>
       </div>
       <div class="cc-card-side-row" data-cc-field="price_bulk">
-        <span class="cc-card-side-label">سعر الجملة</span>
+        <span class="cc-card-side-label">{{ _('سعر الجملة') }}</span>
         <span class="cc-card-side-value">
           {% if card.batch and (card.batch.price_bulk or 0) > 0 %}
             {{ card.batch.price_bulk|money }}
           {% else %}
-            <span class="cc-card-side-empty">غير محدد</span>
+            <span class="cc-card-side-empty">{{ _('غير محدد') }}</span>
           {% endif %}
         </span>
       </div>
       {% if card.batch and card.batch.created_by_name %}
       <div class="cc-card-side-row" data-cc-field="created_by_name">
-        <span class="cc-card-side-label">المُنشئ</span>
+        <span class="cc-card-side-label">{{ _('المُنشئ') }}</span>
         <span class="cc-card-side-value">
           <i class="fa-solid fa-user-pen" style="font-size:11px;opacity:.85"></i>
           {{ card.batch.created_by_name }}
@@ -313,7 +313,7 @@
       {% endif %}
       {% if card.batch and card.batch.manager_name %}
       <div class="cc-card-side-row" data-cc-field="manager_name">
-        <span class="cc-card-side-label">المالك</span>
+        <span class="cc-card-side-label">{{ _('المالك') }}</span>
         <span class="cc-card-side-value">
           <i class="fa-solid fa-user-shield" style="font-size:11px;opacity:.85"></i>
           {{ card.batch.manager_name }}
@@ -324,13 +324,13 @@
       {# Distributor / seller — ALWAYS rendered (per user request) in
          the same frosted pill style as the rest. #}
       <div class="cc-card-side-row" data-cc-field="distributor">
-        <span class="cc-card-side-label">الموزّع</span>
+        <span class="cc-card-side-label">{{ _('الموزّع') }}</span>
         <span class="cc-card-side-value">
           <i class="fa-solid fa-people-arrows" style="font-size:11px;opacity:.85"></i>
           {% if card.batch and card.batch.distributor_name %}
             {{ card.batch.distributor_name }}
           {% else %}
-            <span class="cc-card-side-empty">غير محدد</span>
+            <span class="cc-card-side-empty">{{ _('غير محدد') }}</span>
           {% endif %}
         </span>
       </div>
@@ -428,14 +428,14 @@
     <div class="cc-hero-row">
       {# Class .cc-mode-toggle + button[data-mode] kept verbatim
          for cards_checker_v2.js compatibility. #}
-      <div class="cc-mode-toggle cc-hero-modes" role="tablist" aria-label="مستوى الفحص">
+      <div class="cc-mode-toggle cc-hero-modes" role="tablist" aria-label="{{ _('مستوى الفحص') }}">
         <button type="button" data-mode="advanced" class="active" role="tab" aria-selected="true">
           <i class="fa-solid fa-layer-group"></i>
-          <span>متقدّم</span>
+          <span>{{ _('متقدّم') }}</span>
         </button>
         <button type="button" data-mode="simple" role="tab" aria-selected="false">
           <i class="fa-solid fa-bolt"></i>
-          <span>بسيط</span>
+          <span>{{ _('بسيط') }}</span>
         </button>
       </div>
 
@@ -446,11 +446,11 @@
         <i class="fa-solid fa-magnifying-glass cc-hero-search-icon"></i>
         <input type="search" name="query"
                autocomplete="off" spellcheck="false"
-               placeholder="ابحث برقم البطاقة أو MAC أو اسم العميل…"
+               placeholder="{{ _('ابحث برقم البطاقة أو MAC أو اسم العميل…') }}"
                value="{{ query or '' }}"
                id="cc-search-input"
                dir="ltr">
-        <button class="cc-hero-search-btn" type="submit">بحث</button>
+        <button class="cc-hero-search-btn" type="submit">{{ _('بحث') }}</button>
       </form>
     </div>
 
@@ -465,8 +465,8 @@
   {% if not query and not error %}
     <div class="cc-state cc-state-empty">
       <div class="cc-state-icon"><i class="fa-solid fa-satellite-dish"></i></div>
-      <h2>مركز فحص البطاقات جاهز</h2>
-      <div class="cc-state-hint">أدخل رقم البطاقة أو اسم الدخول أعلاه لبدء الفحص.</div>
+      <h2>{{ _('مركز فحص البطاقات جاهز') }}</h2>
+      <div class="cc-state-hint">{{ _('أدخل رقم البطاقة أو اسم الدخول أعلاه لبدء الفحص.') }}</div>
     </div>
 
   {# ───────────────── ERROR STATE ───────────────── #}
@@ -481,7 +481,7 @@
     <div class="cc-state cc-state-empty">
       <div class="cc-state-icon"><i class="fa-solid fa-magnifying-glass-minus"></i></div>
       <h2>لم نَجد بطاقة باسم «{{ query }}»</h2>
-      <div class="cc-state-hint">تأكّد من الرقم أو الاسم.</div>
+      <div class="cc-state-hint">{{ _('تأكّد من الرقم أو الاسم.') }}</div>
     </div>
 
   {# ───────────────── FOUND ───────────────── #}
@@ -521,15 +521,15 @@
            Bigger, more readable text (see .cc-info-row size bump below). #}
         <div class="cc-info-panel cc-info-panel-lg" data-cc-section="identity">
           <div class="cc-info-row">
-            <span class="cc-info-label">حالة البطاقة</span>
+            <span class="cc-info-label">{{ _('حالة البطاقة') }}</span>
             <span class="cc-info-value txt" data-cc-field="status_pill">{{ status_inline(card) }}</span>
           </div>
           <div class="cc-info-row">
-            <span class="cc-info-label">أوّل اتصال</span>
+            <span class="cc-info-label">{{ _('أوّل اتصال') }}</span>
             <span class="cc-info-value txt" data-cc-field="first_used_at">{{ dt(card.started_at) }}</span>
           </div>
           <div class="cc-info-row">
-            <span class="cc-info-label">آخر اتصال</span>
+            <span class="cc-info-label">{{ _('آخر اتصال') }}</span>
             <span class="cc-info-value txt" data-cc-field="last_seen_at">{{ dt(card.last_seen_at) }}</span>
           </div>
           <div class="cc-info-row">
@@ -537,11 +537,11 @@
             <span class="cc-info-value" data-cc-field="ip_address">{{ card.ip_address or '—' }}</span>
           </div>
           <div class="cc-info-row">
-            <span class="cc-info-label">جهاز الشبكة</span>
+            <span class="cc-info-label">{{ _('جهاز الشبكة') }}</span>
             <span class="cc-info-value" data-cc-field="nas_address">{{ card.nas_address or '—' }}</span>
           </div>
           <div class="cc-info-row">
-            <span class="cc-info-label">MAC الحالي</span>
+            <span class="cc-info-label">{{ _('MAC الحالي') }}</span>
             <span class="cc-info-value" data-cc-field="mac_address">{{ card.mac_address or '—' }}</span>
           </div>
         </div>
@@ -640,7 +640,7 @@
         <section class="cc-section" data-cc-section="current_device">
           <header class="cc-section-head">
             <span class="cc-section-head-icon"><i class="fa-solid fa-microchip"></i></span>
-            <span class="cc-section-head-title">الجهاز المستخدم حاليًا</span>
+            <span class="cc-section-head-title">{{ _('الجهاز المستخدم حاليًا') }}</span>
           </header>
           <div class="cc-section-body">
             {% set d = card.current_device or {} %}
@@ -651,9 +651,9 @@
                 </div>
                 <div class="cc-device-card-tags">
                   {% if card.active_session %}
-                    <span class="cc-pill cc-pill-green"><span class="dot"></span>نشط الآن</span>
+                    <span class="cc-pill cc-pill-green"><span class="dot"></span>{{ _('نشط الآن') }}</span>
                   {% else %}
-                    <span class="cc-pill cc-pill-grey"><span class="dot"></span>غير متّصل</span>
+                    <span class="cc-pill cc-pill-grey"><span class="dot"></span>{{ _('غير متّصل') }}</span>
                   {% endif %}
                   {% if d.vendor and d.vendor != 'غير معروف' %}
                     <span class="cc-pill cc-pill-purple" data-cc-field="device.vendor">
@@ -672,7 +672,7 @@
                   <dt><i class="fa-solid fa-globe"></i> IP</dt>
                   <dd data-cc-field="device.ip">{{ card.ip_address or '—' }}</dd>
                   {% if card.nas_address %}
-                  <dt><i class="fa-solid fa-server"></i> جهاز الشبكة</dt>
+                  <dt><i class="fa-solid fa-server"></i> {{ _('جهاز الشبكة') }}</dt>
                   <dd data-cc-field="device.nas">{{ card.nas_address }}</dd>
                   {% endif %}
                 </dl>
@@ -685,10 +685,10 @@
         <section class="cc-section" data-cc-section="timeline">
           <header class="cc-section-head">
             <span class="cc-section-head-icon"><i class="fa-solid fa-timeline"></i></span>
-            <span class="cc-section-head-title">النشاط الأخير للبطاقة</span>
+            <span class="cc-section-head-title">{{ _('النشاط الأخير للبطاقة') }}</span>
             {% if s.latest_sessions and s.latest_sessions|length > 3 %}
             <a class="cc-section-head-link" href="#cc-sessions-section">
-              عرض الكل <i class="fa-solid fa-angle-left"></i>
+              {{ _('عرض الكل') }} <i class="fa-solid fa-angle-left"></i>
             </a>
             {% endif %}
           </header>
@@ -700,8 +700,8 @@
                   <span class="cc-tl-dot green"></span>
                   <div class="cc-tl-body">
                     <div class="cc-tl-title">
-                      <span class="cc-pill cc-pill-green"><span class="dot"></span>نشط</span>
-                      جلسة نشطة الآن
+                      <span class="cc-pill cc-pill-green"><span class="dot"></span>{{ _('نشط') }}</span>
+                      {{ _('جلسة نشطة الآن') }}
                     </div>
                     <div class="cc-tl-desc">
                       الاتصال عبر {{ (card.current_device or {}).connection or '—' }}
@@ -718,10 +718,10 @@
                   <span class="cc-tl-dot blue"></span>
                   <div class="cc-tl-body">
                     <div class="cc-tl-title">
-                      <span class="cc-pill cc-pill-blue"><span class="dot"></span>اتصال</span>
-                      بداية الجلسة الأولى
+                      <span class="cc-pill cc-pill-blue"><span class="dot"></span>{{ _('اتصال') }}</span>
+                      {{ _('بداية الجلسة الأولى') }}
                     </div>
-                    <div class="cc-tl-desc">تم الاتصال لأول مرّة باستخدام هذه البطاقة</div>
+                    <div class="cc-tl-desc">{{ _('تم الاتصال لأول مرّة باستخدام هذه البطاقة') }}</div>
                   </div>
                 </div>
                 <div class="cc-tl-time">{{ dt_split(card.started_at) }}</div>
@@ -732,8 +732,8 @@
                   <span class="cc-tl-dot"></span>
                   <div class="cc-tl-body">
                     <div class="cc-tl-title">
-                      <span class="cc-pill cc-pill-purple"><span class="dot"></span>إنشاء</span>
-                      تم إنشاء البطاقة
+                      <span class="cc-pill cc-pill-purple"><span class="dot"></span>{{ _('إنشاء') }}</span>
+                      {{ _('تم إنشاء البطاقة') }}
                     </div>
                     <div class="cc-tl-desc">
                       تم إصدار البطاقة ضمن الحزمة {{ (card.batch or {}).batch_code or '—' }}
@@ -753,7 +753,7 @@
       <section class="cc-section" data-cc-section="sessions" id="cc-sessions-section">
         <header class="cc-section-head">
           <span class="cc-section-head-icon"><i class="fa-solid fa-clock-rotate-left"></i></span>
-          <span class="cc-section-head-title">آخر الجلسات</span>
+          <span class="cc-section-head-title">{{ _('آخر الجلسات') }}</span>
           <span class="cc-section-head-link" style="cursor:default">
             {{ s.latest_sessions|length if s.latest_sessions else 0 }} جلسة
           </span>
@@ -765,9 +765,9 @@
                 style="display:inline-flex;margin-inline-start:auto">
             <input type="hidden" name="op" value="sync_dhcp">
             {{ hidden_ops(card, query) }}
-            <button type="submit" class="cc-mini-action" title="تحديث بيانات DHCP الآن من المايكروتيك">
+            <button type="submit" class="cc-mini-action" title="{{ _('تحديث بيانات DHCP الآن من المايكروتيك') }}">
               <i class="fa-solid fa-arrows-rotate"></i>
-              <span>تحديث DHCP</span>
+              <span>{{ _('تحديث DHCP') }}</span>
             </button>
           </form>
         </header>
@@ -779,20 +779,20 @@
             <table class="cc-sessions-table">
               <thead>
                 <tr>
-                  <th>الحالة</th>
+                  <th>{{ _('الحالة') }}</th>
                   <th>IP</th>
                   <th>MAC</th>
-                  <th>الجهاز / النظام</th>
-                  <th class="num">تحميل</th>
-                  <th class="num">رفع</th>
-                  <th class="num">تحميل مجاني</th>
-                  <th class="num">رفع مجاني</th>
-                  <th class="num">المحصّلة</th>
-                  <th>تاريخ البدء</th>
-                  <th>تاريخ الإنتهاء</th>
-                  <th class="num">الوقت</th>
-                  <th>معرّف الخدمة</th>
-                  <th>منفذ الاتصال</th>
+                  <th>{{ _('الجهاز / النظام') }}</th>
+                  <th class="num">{{ _('تحميل') }}</th>
+                  <th class="num">{{ _('رفع') }}</th>
+                  <th class="num">{{ _('تحميل مجاني') }}</th>
+                  <th class="num">{{ _('رفع مجاني') }}</th>
+                  <th class="num">{{ _('المحصّلة') }}</th>
+                  <th>{{ _('تاريخ البدء') }}</th>
+                  <th>{{ _('تاريخ الإنتهاء') }}</th>
+                  <th class="num">{{ _('الوقت') }}</th>
+                  <th>{{ _('معرّف الخدمة') }}</th>
+                  <th>{{ _('منفذ الاتصال') }}</th>
                 </tr>
               </thead>
               <tbody>
@@ -808,9 +808,9 @@
                 <tr data-cc-session="{{ ses.session_id or ses.id }}" class="{% if ses.online %}is-live{% endif %}">
                   <td>
                     {% if ses.online %}
-                      <span class="cc-pill cc-pill-green"><span class="dot"></span>حيّة</span>
+                      <span class="cc-pill cc-pill-green"><span class="dot"></span>{{ _('حيّة') }}</span>
                     {% else %}
-                      <span class="cc-pill cc-pill-grey"><span class="dot"></span>منتهية</span>
+                      <span class="cc-pill cc-pill-grey"><span class="dot"></span>{{ _('منتهية') }}</span>
                     {% endif %}
                   </td>
                   <td class="mono">{{ ses.ip_address or '—' }}</td>
@@ -890,27 +890,27 @@
                     <option value="25">25</option>
                     <option value="50">50</option>
                     <option value="100">100</option>
-                    <option value="0">الكل</option>
+                    <option value="0">{{ _('الكل') }}</option>
                   </select>
                 </label>
                 <span class="cc-sessions-foot-info" data-cc-page-info>—</span>
               </div>
               <div class="cc-sessions-foot-mid">
                 <button type="button" class="cc-sessions-foot-nav"
-                        data-cc-page-prev title="السابقة">
+                        data-cc-page-prev title="{{ _('السابقة') }}">
                   <i class="fa-solid fa-chevron-right"></i>
                 </button>
                 <span class="cc-sessions-foot-page" data-cc-page-current>1 / 1</span>
                 <button type="button" class="cc-sessions-foot-nav"
-                        data-cc-page-next title="التالية">
+                        data-cc-page-next title="{{ _('التالية') }}">
                   <i class="fa-solid fa-chevron-left"></i>
                 </button>
               </div>
               <div class="cc-sessions-foot-right">
-                <span class="cc-sessions-foot-stale" data-cc-refresh-stale>الآن</span>
+                <span class="cc-sessions-foot-stale" data-cc-refresh-stale>{{ _('الآن') }}</span>
                 <label class="cc-sessions-foot-label cc-sessions-foot-toggle">
                   <input type="checkbox" data-cc-autorefresh checked>
-                  <span>تحديث تلقائي</span>
+                  <span>{{ _('تحديث تلقائي') }}</span>
                 </label>
               </div>
             </div>
@@ -926,8 +926,8 @@
       <section class="cc-section" data-cc-section="operations">
         <header class="cc-section-head">
           <span class="cc-section-head-icon"><i class="fa-solid fa-bolt"></i></span>
-          <span class="cc-section-head-title">إجراءات ذكية</span>
-          <span class="cc-section-head-link" style="cursor:default;color:var(--hr-text-muted)">تحكّم كامل في بطاقة العميل</span>
+          <span class="cc-section-head-title">{{ _('إجراءات ذكية') }}</span>
+          <span class="cc-section-head-link" style="cursor:default;color:var(--hr-text-muted)">{{ _('تحكّم كامل في بطاقة العميل') }}</span>
         </header>
         <div class="cc-section-body">
           {# All inline `confirm()` / `prompt()` calls have been replaced
@@ -954,7 +954,7 @@
                       data-cc-active-sessions="{{ _active_sessions | tojson }}">
                 <span class="cc-action-icon amber"><i class="fa-solid fa-plug-circle-xmark"></i></span>
                 <div class="cc-action-body">
-                  <div class="cc-action-title">قطع الجلسة</div>
+                  <div class="cc-action-title">{{ _('قطع الجلسة') }}</div>
                   <div class="cc-action-sub">
                     {% if _active_sessions %}{{ _active_sessions|length }} جهاز متّصل الآن{% else %}لا أجهزة الآن{% endif %}
                   </div>
@@ -976,8 +976,8 @@
                       });">
                 <span class="cc-action-icon cyan"><i class="fa-solid fa-rotate-right"></i></span>
                 <div class="cc-action-body">
-                  <div class="cc-action-title">إعادة الاستخدام</div>
-                  <div class="cc-action-sub">احتساب الوقت من الصفر</div>
+                  <div class="cc-action-title">{{ _('إعادة الاستخدام') }}</div>
+                  <div class="cc-action-sub">{{ _('احتساب الوقت من الصفر') }}</div>
                 </div>
               </button>
             </form>
@@ -1033,7 +1033,7 @@
                     data-cc-recent-macs-meta="{{ _mac_meta | tojson }}">
               <span class="cc-action-icon purple"><i class="fa-solid fa-lock-open"></i></span>
               <div class="cc-action-body">
-                <div class="cc-action-title">إدارة قفل MAC</div>
+                <div class="cc-action-title">{{ _('إدارة قفل MAC') }}</div>
                 <div class="cc-action-sub">{{ card.locked_mac }}</div>
               </div>
             </button>
@@ -1071,8 +1071,8 @@
                       data-cc-recent-macs-meta="{{ _mac_meta | tojson }}">
                 <span class="cc-action-icon purple"><i class="fa-solid fa-lock"></i></span>
                 <div class="cc-action-body">
-                  <div class="cc-action-title">قفل MAC</div>
-                  <div class="cc-action-sub">تثبيت على عنوان واحد</div>
+                  <div class="cc-action-title">{{ _('قفل MAC') }}</div>
+                  <div class="cc-action-sub">{{ _('تثبيت على عنوان واحد') }}</div>
                 </div>
               </button>
             </form>
@@ -1096,8 +1096,8 @@
                       onclick="window.__ccOpenTimeModal && window.__ccOpenTimeModal();">
                 <span class="cc-action-icon amber"><i class="fa-solid fa-clock-rotate-left"></i></span>
                 <div class="cc-action-body">
-                  <div class="cc-action-title">تغيير الوقت</div>
-                  <div class="cc-action-sub">للبطاقة فقط</div>
+                  <div class="cc-action-title">{{ _('تغيير الوقت') }}</div>
+                  <div class="cc-action-sub">{{ _('للبطاقة فقط') }}</div>
                 </div>
               </button>
             </form>
@@ -1122,8 +1122,8 @@
                       });">
                 <span class="cc-action-icon teal"><i class="fa-solid fa-gauge-high"></i></span>
                 <div class="cc-action-body">
-                  <div class="cc-action-title">تغيير السرعة</div>
-                  <div class="cc-action-sub">للبطاقة فقط</div>
+                  <div class="cc-action-title">{{ _('تغيير السرعة') }}</div>
+                  <div class="cc-action-sub">{{ _('للبطاقة فقط') }}</div>
                 </div>
               </button>
             </form>
@@ -1142,8 +1142,8 @@
                       });">
                 <span class="cc-action-icon green"><i class="fa-solid fa-circle-check"></i></span>
                 <div class="cc-action-body">
-                  <div class="cc-action-title">إعادة التفعيل</div>
-                  <div class="cc-action-sub">يستعيد الوقت المتبقي</div>
+                  <div class="cc-action-title">{{ _('إعادة التفعيل') }}</div>
+                  <div class="cc-action-sub">{{ _('يستعيد الوقت المتبقي') }}</div>
                 </div>
               </button>
             </form>
@@ -1157,7 +1157,7 @@
                       onclick="window.ccModal && window.ccModal.reasonForm({
                         icon:'warn', title:'تعطيل البطاقة',
                         body:'سيتم إيقاف البطاقة <strong>{{ card.username }}</strong> مؤقتاً. ' +
-                             '<strong>سيتم تجميد الوقت المتبقي</strong> ' +
+                             '<strong>{{ _('سيتم تجميد الوقت المتبقي') }}</strong> ' +
                              'بحيث لا ينقص أثناء التعطيل ويعود نفسه عند إعادة التفعيل.',
                         label:'سبب التعطيل (اختياري)',
                         confirmText:'تعطيل',
@@ -1169,8 +1169,8 @@
                       });">
                 <span class="cc-action-icon blue"><i class="fa-solid fa-pause"></i></span>
                 <div class="cc-action-body">
-                  <div class="cc-action-title">تعطيل البطاقة</div>
-                  <div class="cc-action-sub">يجمّد الوقت المتبقي</div>
+                  <div class="cc-action-title">{{ _('تعطيل البطاقة') }}</div>
+                  <div class="cc-action-sub">{{ _('يجمّد الوقت المتبقي') }}</div>
                 </div>
               </button>
             </form>
@@ -1190,7 +1190,7 @@
                       onclick="window.ccModal && window.ccModal.softDelete({
                         title:'نقل البطاقة إلى المحذوفات',
                         body:'البطاقة <strong>{{ card.username }}</strong> سيتم نقلها إلى ' +
-                             '<strong>سلة المحذوفات</strong> ولن تستطيع الاتصال. ' +
+                             '<strong>{{ _('سلة المحذوفات') }}</strong> ولن تستطيع الاتصال. ' +
                              'يمكنك استعادتها عند الحاجة من شاشة سلة المحذوفات.',
                         label:'سبب الحذف (اختياري)',
                         onConfirm: (reason) => {
@@ -1201,8 +1201,8 @@
                       });">
                 <span class="cc-action-icon red"><i class="fa-solid fa-trash"></i></span>
                 <div class="cc-action-body">
-                  <div class="cc-action-title">نقل للمحذوفات</div>
-                  <div class="cc-action-sub">يمكن الاستعادة</div>
+                  <div class="cc-action-title">{{ _('نقل للمحذوفات') }}</div>
+                  <div class="cc-action-sub">{{ _('يمكن الاستعادة') }}</div>
                 </div>
               </button>
             </form>
@@ -1233,7 +1233,7 @@
         <section class="cc-section" data-cc-section="last_activity">
           <header class="cc-section-head">
             <span class="cc-section-head-icon"><i class="fa-solid fa-clock-rotate-left"></i></span>
-            <span class="cc-section-head-title">آخر نشاط</span>
+            <span class="cc-section-head-title">{{ _('آخر نشاط') }}</span>
           </header>
           <div class="cc-section-body">
             <div style="display:flex;flex-direction:column;gap:8px">
@@ -1251,7 +1251,7 @@
         <section class="cc-section" data-cc-section="current_device_simple">
           <header class="cc-section-head">
             <span class="cc-section-head-icon"><i class="fa-solid fa-desktop"></i></span>
-            <span class="cc-section-head-title">الجهاز الحالي</span>
+            <span class="cc-section-head-title">{{ _('الجهاز الحالي') }}</span>
           </header>
           <div class="cc-section-body">
             {% set d = card.current_device or {} %}
@@ -1259,7 +1259,7 @@
               <div class="cc-device-card-body">
                 <div class="cc-device-card-title">
                   {{ d.label or (d.connection or 'غير معروف') }}
-                  {% if card.active_session %}<span class="cc-pill cc-pill-green"><span class="dot"></span>نشطة الآن</span>{% endif %}
+                  {% if card.active_session %}<span class="cc-pill cc-pill-green"><span class="dot"></span>{{ _('نشطة الآن') }}</span>{% endif %}
                 </div>
                 <dl class="cc-device-card-attrs">
                   <dt>MAC</dt><dd>{{ card.mac_address or '—' }}</dd>
@@ -1278,7 +1278,7 @@
       <section class="cc-section" data-cc-section="operations_simple">
         <header class="cc-section-head">
           <span class="cc-section-head-icon"><i class="fa-solid fa-bolt"></i></span>
-          <span class="cc-section-head-title">إجراءات سريعة</span>
+          <span class="cc-section-head-title">{{ _('إجراءات سريعة') }}</span>
         </header>
         <div class="cc-section-body">
           {# Order matches Reference B (RTL: first child = rightmost):
@@ -1288,8 +1288,8 @@
                data-cc-op="refresh">
               <span class="cc-action-icon blue"><i class="fa-solid fa-arrows-rotate"></i></span>
               <div class="cc-action-body">
-                <div class="cc-action-title">تحديث</div>
-                <div class="cc-action-sub">تحديث بيانات البطاقة</div>
+                <div class="cc-action-title">{{ _('تحديث') }}</div>
+                <div class="cc-action-sub">{{ _('تحديث بيانات البطاقة') }}</div>
               </div>
             </a>
 
@@ -1306,8 +1306,8 @@
                       });">
                 <span class="cc-action-icon grey"><i class="fa-solid fa-rotate-right"></i></span>
                 <div class="cc-action-body">
-                  <div class="cc-action-title">إعادة ضبط</div>
-                  <div class="cc-action-sub">إعادة تشغيل البطاقة</div>
+                  <div class="cc-action-title">{{ _('إعادة ضبط') }}</div>
+                  <div class="cc-action-sub">{{ _('إعادة تشغيل البطاقة') }}</div>
                 </div>
               </button>
             </form>
@@ -1331,7 +1331,7 @@
                       data-cc-active-sessions="{{ _active_sessions | tojson }}">
                 <span class="cc-action-icon red"><i class="fa-solid fa-plug-circle-xmark"></i></span>
                 <div class="cc-action-body">
-                  <div class="cc-action-title">فصل الجلسة</div>
+                  <div class="cc-action-title">{{ _('فصل الجلسة') }}</div>
                   <div class="cc-action-sub">
                     {% if _active_sessions %}{{ _active_sessions|length }} جهاز متّصل الآن{% else %}لا أجهزة الآن{% endif %}
                   </div>
@@ -1352,7 +1352,7 @@
                       onclick="window.ccModal && window.ccModal.softDelete({
                         title:'نقل البطاقة إلى المحذوفات',
                         body:'البطاقة <strong>{{ card.username }}</strong> سيتم نقلها إلى ' +
-                             '<strong>سلة المحذوفات</strong> ويمكنك استعادتها عند الحاجة.',
+                             '<strong>{{ _('سلة المحذوفات') }}</strong> ويمكنك استعادتها عند الحاجة.',
                         label:'سبب الحذف (اختياري)',
                         onConfirm: (reason) => {
                           var f = this.closest('form');
@@ -1362,8 +1362,8 @@
                       });">
                 <span class="cc-action-icon red"><i class="fa-solid fa-trash"></i></span>
                 <div class="cc-action-body">
-                  <div class="cc-action-title">نقل للمحذوفات</div>
-                  <div class="cc-action-sub">يمكنك استعادتها من السلة</div>
+                  <div class="cc-action-title">{{ _('نقل للمحذوفات') }}</div>
+                  <div class="cc-action-sub">{{ _('يمكنك استعادتها من السلة') }}</div>
                 </div>
               </button>
             </form>
@@ -1797,44 +1797,44 @@
   <div class="cc-modal" role="document">
     <div class="cc-modal-head">
       <span class="cc-modal-head-icon"><i class="fa-solid fa-clock-rotate-left"></i></span>
-      <span class="cc-modal-head-title">تعديل وقت البطاقة</span>
+      <span class="cc-modal-head-title">{{ _('تعديل وقت البطاقة') }}</span>
       <button type="button" class="cc-modal-close" data-cc-modal-close
-              aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
+              aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <div class="cc-modal-sub">
       التعديل يُطبَّق على هذه البطاقة فقط (ليس على الحزمة).
       إذا كانت هناك جلسة حيّة، يُحاول النظام تحديث الراوتر فوراً عبر أمر فصل الجلسة.
     </div>
 
-    <div class="cc-modal-section-label">العملية</div>
+    <div class="cc-modal-section-label">{{ _('العملية') }}</div>
     <div class="cc-pills" data-cc-pill-group="op">
       <button type="button" class="cc-pill-btn is-active" data-cc-op-value="add">
-        <i class="fa-solid fa-plus"></i> إضافة
+        <i class="fa-solid fa-plus"></i> {{ _('إضافة') }}
       </button>
       <button type="button" class="cc-pill-btn" data-cc-op-value="subtract">
-        <i class="fa-solid fa-minus"></i> خصم
+        <i class="fa-solid fa-minus"></i> {{ _('خصم') }}
       </button>
     </div>
 
-    <div class="cc-modal-section-label">الوحدة</div>
+    <div class="cc-modal-section-label">{{ _('الوحدة') }}</div>
     <div class="cc-pills" data-cc-pill-group="unit">
-      <button type="button" class="cc-pill-btn" data-cc-unit-value="minutes">دقائق</button>
-      <button type="button" class="cc-pill-btn is-active" data-cc-unit-value="hours">ساعات</button>
-      <button type="button" class="cc-pill-btn" data-cc-unit-value="days">أيام</button>
+      <button type="button" class="cc-pill-btn" data-cc-unit-value="minutes">{{ _('دقائق') }}</button>
+      <button type="button" class="cc-pill-btn is-active" data-cc-unit-value="hours">{{ _('ساعات') }}</button>
+      <button type="button" class="cc-pill-btn" data-cc-unit-value="days">{{ _('أيام') }}</button>
     </div>
 
-    <div class="cc-modal-section-label">المقدار</div>
+    <div class="cc-modal-section-label">{{ _('المقدار') }}</div>
     <input type="number" class="cc-modal-number" id="cc-time-amount-input"
-           min="1" step="1" placeholder="مثال: 30" value="1">
+           min="1" step="1" placeholder="{{ _('مثال: 30') }}" value="1">
 
     <div class="cc-modal-preview" id="cc-time-preview">
-      سيتم <strong>إضافة</strong> <span data-cc-prev-amount>1</span> <span data-cc-prev-unit>ساعة</span> إلى وقت البطاقة.
+      {{ _('سيتم') }} <strong>{{ _('إضافة') }}</strong> <span data-cc-prev-amount>1</span> <span data-cc-prev-unit>{{ _('ساعة') }}</span> {{ _('إلى وقت البطاقة.') }}
     </div>
 
     <div class="cc-modal-actions">
-      <button type="button" class="cc-modal-btn cc-modal-btn-cancel" data-cc-modal-close>إلغاء</button>
+      <button type="button" class="cc-modal-btn cc-modal-btn-cancel" data-cc-modal-close>{{ _('إلغاء') }}</button>
       <button type="button" class="cc-modal-btn cc-modal-btn-confirm" id="cc-time-apply">
-        <i class="fa-solid fa-check"></i> تطبيق
+        <i class="fa-solid fa-check"></i> {{ _('تطبيق') }}
       </button>
     </div>
   </div>

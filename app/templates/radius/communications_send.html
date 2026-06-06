@@ -4,7 +4,7 @@
 {% block title %}إرسال رسالة — Hobe Hub{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-paper-plane"></i>{% endblock %}
 {% block page_title %}إرسال رسالة{% endblock %}
-{% block page_sub %}<span class="sub">إنشاء رسالة يدوية وحفظها في طابور الإرسال بشكل آمن.</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('إنشاء رسالة يدوية وحفظها في طابور الإرسال بشكل آمن.') }}</span>{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
@@ -57,70 +57,70 @@
 
       <div class="csnd-row">
         <div class="hub-field">
-          <label class="hub-field-label" for="snd-target">الهدف</label>
+          <label class="hub-field-label" for="snd-target">{{ _('الهدف') }}</label>
           <select id="snd-target" class="hub-select" name="target">
-            <option value="subscriber">المشتركون</option>
-            <option value="selected_subscribers">مشتركون محددون</option>
-            <option value="card_user">مستخدمو الكروت</option>
-            <option value="manager">المدراء</option>
-            <option value="distributor">الموزعون</option>
-            <option value="company">الشركة</option>
+            <option value="subscriber">{{ _('المشتركون') }}</option>
+            <option value="selected_subscribers">{{ _('مشتركون محددون') }}</option>
+            <option value="card_user">{{ _('مستخدمو الكروت') }}</option>
+            <option value="manager">{{ _('المدراء') }}</option>
+            <option value="distributor">{{ _('الموزعون') }}</option>
+            <option value="company">{{ _('الشركة') }}</option>
           </select>
-          <div class="hub-field-hint">اختر فئة المستلمين. «مشتركون محددون» يستخدم حقل الأرقام.</div>
+          <div class="hub-field-hint">{{ _('اختر فئة المستلمين. «مشتركون محددون» يستخدم حقل الأرقام.') }}</div>
         </div>
         <div class="hub-field">
-          <label class="hub-field-label" for="snd-channel">القناة</label>
+          <label class="hub-field-label" for="snd-channel">{{ _('القناة') }}</label>
           <select id="snd-channel" class="hub-select" name="channel">
-            <option value="internal">رسالة داخلية</option>
-            <option value="sms">الرسائل القصيرة</option>
-            <option value="whatsapp">واتساب</option>
-            <option value="telegram">تلجرام</option>
-            <option value="email">البريد الإلكتروني</option>
-            <option value="push">إشعار فوري</option>
+            <option value="internal">{{ _('رسالة داخلية') }}</option>
+            <option value="sms">{{ _('الرسائل القصيرة') }}</option>
+            <option value="whatsapp">{{ _('واتساب') }}</option>
+            <option value="telegram">{{ _('تلجرام') }}</option>
+            <option value="email">{{ _('البريد الإلكتروني') }}</option>
+            <option value="push">{{ _('إشعار فوري') }}</option>
           </select>
-          <div class="hub-field-hint">«رسالة داخلية» تُحفظ بالطابور دون مزوّد خارجي.</div>
+          <div class="hub-field-hint">{{ _('«رسالة داخلية» تُحفظ بالطابور دون مزوّد خارجي.') }}</div>
         </div>
       </div>
 
       <div class="csnd-row">
         <div class="hub-field">
-          <label class="hub-field-label" for="snd-ids">أرقام المستلمين</label>
+          <label class="hub-field-label" for="snd-ids">{{ _('أرقام المستلمين') }}</label>
           <input id="snd-ids" class="hub-input" name="ids" placeholder="1,2,3" dir="ltr">
-          <div class="hub-field-hint">عند اختيار «مشتركون محددون» — افصل بينها بفاصلة.</div>
+          <div class="hub-field-hint">{{ _('عند اختيار «مشتركون محددون» — افصل بينها بفاصلة.') }}</div>
         </div>
         <div class="hub-field">
-          <label class="hub-field-label" for="snd-manager">رقم المدير</label>
+          <label class="hub-field-label" for="snd-manager">{{ _('رقم المدير') }}</label>
           <input id="snd-manager" class="hub-input" name="manager_id" type="number" min="1" dir="ltr">
-          <div class="hub-field-hint">لاستهداف مدير محدّد عند الحاجة.</div>
+          <div class="hub-field-hint">{{ _('لاستهداف مدير محدّد عند الحاجة.') }}</div>
         </div>
         <div class="hub-field">
-          <label class="hub-field-label" for="snd-limit">حد المعاينة</label>
+          <label class="hub-field-label" for="snd-limit">{{ _('حد المعاينة') }}</label>
           <input id="snd-limit" class="hub-input" name="limit" type="number" min="1" max="500" value="100" dir="ltr">
-          <div class="hub-field-hint">أقصى عدد مستلمين يظهر في المعاينة.</div>
+          <div class="hub-field-hint">{{ _('أقصى عدد مستلمين يظهر في المعاينة.') }}</div>
         </div>
       </div>
 
       <div class="hub-field">
-        <label class="hub-field-label" for="snd-subject">العنوان <span style="font-weight:600;color:var(--hub-text-mute,#94a3b8)">(اختياري)</span></label>
-        <input id="snd-subject" class="hub-input" name="subject" placeholder="عنوان مختصر للرسالة">
+        <label class="hub-field-label" for="snd-subject">{{ _('العنوان') }} <span style="font-weight:600;color:var(--hub-text-mute,#94a3b8)">{{ _('(اختياري)') }}</span></label>
+        <input id="snd-subject" class="hub-input" name="subject" placeholder="{{ _('عنوان مختصر للرسالة') }}">
       </div>
 
       <div class="hub-field">
-        <label class="hub-field-label" for="snd-message">نص الرسالة</label>
+        <label class="hub-field-label" for="snd-message">{{ _('نص الرسالة') }}</label>
         <textarea id="snd-message" class="hub-textarea" name="message" rows="5" required
-                  placeholder="اكتب رسالتك هنا… يمكنك إدراج متغيّرات تُستبدل ببيانات المشترك."></textarea>
+                  placeholder="{{ _('اكتب رسالتك هنا… يمكنك إدراج متغيّرات تُستبدل ببيانات المشترك.') }}"></textarea>
         <div class="csnd-vars" data-vars-for="snd-message">
           {% for v in ['{username}','{name}','{prof}','{exp}','{balance}','{status}'] %}
-            <span class="csnd-var" data-var="{{ v }}" title="انقر لإدراجه في النص">{{ v }}</span>
+            <span class="csnd-var" data-var="{{ v }}" title="{{ _('انقر لإدراجه في النص') }}">{{ v }}</span>
           {% endfor %}
         </div>
-        <div class="hub-field-hint">المتغيّرات تُملأ ببيانات كل مستلم عند الإرسال للمشتركين (تبقى كما هي مع الجماهير الأخرى).</div>
+        <div class="hub-field-hint">{{ _('المتغيّرات تُملأ ببيانات كل مستلم عند الإرسال للمشتركين (تبقى كما هي مع الجماهير الأخرى).') }}</div>
       </div>
 
       <div class="csnd-foot">
-        <button class="hub-btn hub-btn--secondary" type="submit" name="preview" value="1"><i class="fa-solid fa-users"></i> معاينة الجمهور</button>
-        <button class="hub-btn hub-btn--primary" type="submit" name="send_now" value="1"><i class="fa-solid fa-paper-plane"></i> إضافة الرسالة للطابور</button>
-        <span class="csnd-note">المعاينة لا ترسل شيئًا — تعرض من سيستلم فقط.</span>
+        <button class="hub-btn hub-btn--secondary" type="submit" name="preview" value="1"><i class="fa-solid fa-users"></i> {{ _('معاينة الجمهور') }}</button>
+        <button class="hub-btn hub-btn--primary" type="submit" name="send_now" value="1"><i class="fa-solid fa-paper-plane"></i> {{ _('إضافة الرسالة للطابور') }}</button>
+        <span class="csnd-note">{{ _('المعاينة لا ترسل شيئًا — تعرض من سيستلم فقط.') }}</span>
       </div>
     </form>
   {% endcall %}
@@ -129,7 +129,7 @@
     {% call hub.section("معاينة الجمهور", icon="users", meta=(preview|length ~ " مستلم"), flush=True) %}
       <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25">
         <table class="hub-table" data-testid="audience-preview-table">
-          <thead><tr><th>النوع</th><th>الرقم</th><th>الاسم</th><th>العنوان</th></tr></thead>
+          <thead><tr><th>{{ _('النوع') }}</th><th>{{ _('الرقم') }}</th><th>{{ _('الاسم') }}</th><th>{{ _('العنوان') }}</th></tr></thead>
           <tbody>
             {% for item in preview %}
               <tr><td>{{ item.recipient_type }}</td><td>#{{ item.recipient_id }}</td><td>{{ item.display_name }}</td><td dir="ltr" style="text-align:start">{{ item.address }}</td></tr>

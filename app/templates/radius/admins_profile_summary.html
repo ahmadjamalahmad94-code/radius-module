@@ -84,14 +84,14 @@
     <table class="hub-table">
       <thead>
         <tr>
-          <th>المدير</th>
-          <th>الدور</th>
-          <th>البريد</th>
-          <th>الجوال</th>
-          <th>وسوم</th>
-          <th>الحالة</th>
-          <th>آخر دخول</th>
-          <th>من IP</th>
+          <th>{{ _('المدير') }}</th>
+          <th>{{ _('الدور') }}</th>
+          <th>{{ _('البريد') }}</th>
+          <th>{{ _('الجوال') }}</th>
+          <th>{{ _('وسوم') }}</th>
+          <th>{{ _('الحالة') }}</th>
+          <th>{{ _('آخر دخول') }}</th>
+          <th>{{ _('من IP') }}</th>
         </tr>
       </thead>
       <tbody>
@@ -113,7 +113,7 @@
                 <i class="fa-solid fa-key"></i> {{ r.display_name or r.name }}
               </span>
             {% else %}
-              <span class="hub-text-mute">— بدون —</span>
+              <span class="hub-text-mute">{{ _('— بدون —') }}</span>
             {% endif %}
           </td>
           <td class="mono small">{{ a.email or '—' }}</td>
