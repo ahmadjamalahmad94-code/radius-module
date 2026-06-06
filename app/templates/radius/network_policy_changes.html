@@ -168,45 +168,31 @@
 {% endcall %}
 
 <style>
-  /* Change-set card internals — retained from the bespoke layout,
-     re-homed inside the unified hub.section cards. */
+  /* داخليّات بطاقة الـchange-set — على متغيّرات hub، بلا hex خام. */
   .npc-cs-head {
-    display:flex; align-items:center; gap:10px;
+    display:flex; align-items:center; gap:var(--hub-gap-md);
     flex-wrap:wrap;
     padding-bottom:10px;
-    border-bottom:1px solid var(--hub-border, #EEEDF3);
+    border-bottom:1px solid var(--hub-border);
   }
-  .npc-cs-num {
-    font-weight:800; color:var(--hub-brand-ink, #4036A6); font-size:14px;
-  }
-  .npc-cs-meta {
-    color:var(--hub-text-soft, #6b7280); font-size:12px;
-  }
-  .npc-cs-targets {
-    margin-top:10px;
-    display:grid; gap:6px;
-  }
+  .npc-cs-num { font-weight:800; color:var(--hub-brand-deep); font-size:14px; }
+  .npc-cs-meta { color:var(--hub-text-soft); font-size:12px; }
+  .npc-cs-targets { margin-top:10px; display:grid; gap:var(--hub-gap-sm); }
   .npc-cs-target {
-    display:flex; align-items:center; gap:8px;
-    font-size:12.5px; color:#374151;
+    display:flex; align-items:center; gap:var(--hub-gap-sm);
+    font-size:12.5px; color:var(--hub-text);
     padding:6px 10px;
-    background:#fafbfd;
-    border:1px solid var(--hub-border, #EEEDF3);
-    border-radius:8px;
+    background:var(--hub-bg-soft);
+    border:1px solid var(--hub-border);
+    border-radius:var(--hub-r-md);
   }
-  .npc-cs-target.is-success {
-    background:#ecfdf5; border-color:#a7f3d0; color:#047857;
-  }
-  .npc-cs-target.is-failed {
-    background:#fef2f2; border-color:#fecaca; color:#b91c1c;
-  }
-  .npc-cs-target.is-rolledback {
-    background:#eef2ff; border-color:#c7d2fe; color:#4338ca;
-  }
-  .npc-cs-target.is-skipped {
-    background:#f3f4f6; border-color:#e5e7eb; color:#6b7280;
-  }
-  .mono, .hub-mono { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; }
+  .npc-cs-target.is-success    { background:var(--hub-green-soft); border-color:var(--hub-green); color:var(--hub-green-ink); }
+  .npc-cs-target.is-failed     { background:var(--hub-red-soft);   border-color:var(--hub-red);   color:var(--hub-red-ink); }
+  .npc-cs-target.is-rolledback { background:var(--hub-blue-soft);  border-color:var(--hub-blue);  color:var(--hub-blue-ink); }
+  .npc-cs-target.is-skipped    { background:var(--hub-bg-soft);    border-color:var(--hub-border); color:var(--hub-text-soft); }
+  /* mono/small خارج الجداول (بطاقات السجل) — العالميّة محصورة بـ.hub-table */
+  .npc-cs-head .mono, .npc-cs-target .mono { font-family: var(--hub-mono); }
+  .npc-cs-head .small, .npc-cs-meta.small { font-size: 12px; }
   .tnum { font-variant-numeric: tabular-nums; }
 </style>
 {% endblock %}

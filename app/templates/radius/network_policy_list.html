@@ -1,10 +1,13 @@
-{# NPC list page — one card per policy. Same template covers
-   all three sub-services; the route hands in `service`. #}
+{# قائمة سياسات الشبكة — قالب واحد يغطّي الخدمات الثلاث (يُمرَّر `service`).
+   النظام الموحّد: هيرو megahero مدموج + شريط تبويبات بين الخدمات + جدول uds
+   (فرز/تصدير) بدل البطاقات + لوحة مساعدة + حالة فارغة أنيقة.
+   بدون أي تغيير في المسارات أو أسماء الحقول أو المنطق. #}
 
 {% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
 {% import "radius/_network_policy_shell.html" as npc %}
 
-{% block title %}{{ page_title }} — مركز سياسات الشبكة{% endblock %}
+{% block title %}{{ page_title }} — سياسات الشبكة{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-{{ service.icon }}"></i>{% endblock %}
 {% block page_title %}
   {% if scoped_to_nas %}سياسات الراوتر — {{ scoped_to_nas.name }}
@@ -12,97 +15,62 @@
 {% endblock %}
 {% block page_sub %}
   <span class="sub">
-    {% if scoped_to_nas %}
-      {{ service.label_ar }} · جهاز شبكة #{{ scoped_to_nas.id }}
-      · {{ scoped_to_nas.address }}
-    {% else %}
-      معاينة فقط — مركز سياسات الشبكة
-    {% endif %}
+    {% if scoped_to_nas %}{{ service.label_ar }} · {{ scoped_to_nas.address }}
+    {% else %}مركز سياسات الشبكة{% endif %}
   </span>
 {% endblock %}
 
 {% block head_extra %}
   {{ super() }}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
   {% include "radius/_network_policy_shell.html" %}
 {% endblock %}
 
 {% block content %}
 
-<style>
-  /* QA fix — page-scoped spacing + card normalization. */
-  /* The .npc-card grid had no gap between cards. */
-  .npc-grid{ gap:var(--hub-gap-section, 18px); }
-  /* Router-context strip — was an inline-styled div with ad-hoc
-     margins; normalize into a styled section with equal padding. */
-  .npc-context-strip{
-    display:flex; gap:8px; align-items:center; flex-wrap:wrap;
-    padding:12px 16px;
-    background:var(--hub-surface-2, #fafbfd);
-    border:1px solid var(--hub-border, #EEEDF3);
-    border-radius:12px;
-    margin:0 0 var(--hub-gap-section, 18px);
-  }
-  /* Toolbar (heading + count + new button). */
-  .npc-toolbar{
-    display:flex; align-items:center; gap:12px;
-    margin:0 0 var(--hub-gap-section, 18px);
-  }
-  .npc-toolbar h2{ margin:0; font-size:18px; }
-  .npc-toolbar .npc-toolbar-count{ color:var(--hub-text-muted, #6b7280); font-size:13px; }
-  /* Empty state — .npc-empty already carries the dashed card look from
-     the shell; just neutralize stray margin so it sits flush in the
-     page flow with the toolbar/footer spacing above and below. */
-  .npc-empty-card{ margin:0; }
-  /* Footer note — normalize the inline-styled info line into a
-     styled section so it doesn't float as an unstyled orphan. */
-  .npc-footer-note{
-    margin:var(--hub-gap-section, 18px) 0 0;
-    padding:12px 16px;
-    background:var(--hub-surface-2, #fafbfd);
-    border:1px solid var(--hub-border, #EEEDF3);
-    border-radius:12px;
-    color:var(--hub-text-muted, #6b7280);
-    font-size:12.5px;
-  }
-</style>
+{# ───── عدّادات الهيرو ───── #}
+{% set _ns = namespace(enabled=0, previewed=0) %}
+{% for c in cards %}
+  {% if c.row.enabled %}{% set _ns.enabled = _ns.enabled + 1 %}{% endif %}
+  {% if c.last_preview_at %}{% set _ns.previewed = _ns.previewed + 1 %}{% endif %}
+{% endfor %}
+
+{# ───── أزرار الهيرو ───── #}
+{% set _new_href = url_for('radius.npc_' ~ service.key ~ '_new')
+                   ~ ('?router_id=' ~ scoped_to_nas.id if scoped_to_nas else '') %}
+{% set _actions %}
+  {% if scoped_to_nas %}
+    <a class="hub-btn hub-btn--ghost" href="{{ url_for('radius.mt_dashboard', nas_id=scoped_to_nas.id) }}">
+      <i class="fa-solid fa-arrow-right"></i> لوحة الراوتر
+    </a>
+  {% endif %}
+  <a class="hub-btn hub-btn--primary" href="{{ _new_href }}">
+    <i class="fa-solid fa-plus"></i> سياسة جديدة
+  </a>
+{% endset %}
+
+{{ hub.megahero(
+  (("سياسات الراوتر — " ~ scoped_to_nas.name) if scoped_to_nas else service.label_ar),
+  subtitle="عرّف السياسات هنا وعاينها قبل أي تطبيق — هذه الصفحة لا تُصدر أوامر إلى الراوتر.",
+  icon=service.icon,
+  actions_html=_actions,
+  kpis=[
+    {'label': 'إجمالي السياسات', 'value': cards|length,        'icon': service.icon, 'variant': 'brand'},
+    {'label': 'مُفعَّلة',        'value': _ns.enabled,          'icon': 'toggle-on',  'variant': 'green'},
+    {'label': 'عوينت',          'value': _ns.previewed,         'icon': 'eye',        'variant': 'blue'},
+  ]
+) }}
 
 {{ npc.npc_dry_run_banner() }}
 
+{# ───── شريط التبويبات بين الخدمات (يحمل nas_id في الوضع المُجزّأ) ───── #}
 {% if scoped_to_nas %}
-  {# Router-context strip — same visual language as the
-     dashboard's quicknav so the operator knows they're
-     still "inside" the router. #}
-  <div class="npc-context-strip">
-    <a class="npc-btn"
-       href="{{ url_for('radius.mt_dashboard',
-                        nas_id=scoped_to_nas.id) }}">
-      <i class="fa-solid fa-arrow-right"></i>
-      العودة إلى لوحة الراوتر
-    </a>
-    <span style="color:#374151; font-size:13.5px;
-                 font-weight:700;">
-      <i class="fa-solid fa-router"
-         style="color:#6B5AED;"></i>
-      {{ scoped_to_nas.name }}
-    </span>
-    <span style="color:#6b7280; font-size:12.5px;">
-      ({{ scoped_to_nas.address }})
-    </span>
-  </div>
-
-  {# Per-router NPC tabs — three sub-services scoped to this
-     router. Same visual language as `npc_tabs` but the URLs
-     carry the nas_id. #}
-  <nav class="npc-tabs"
-       aria-label="سياسات الراوتر">
+  <nav class="npc-tabs" aria-label="سياسات الراوتر">
     {% for s in services %}
       <a class="npc-tab{% if s.url_slug == service.url_slug %} is-active{% endif %}"
-         href="{{ url_for('radius.npc_' ~ s.key ~ '_list_scoped',
-                          nas_id=scoped_to_nas.id) }}">
-        <span class="npc-tab-icon">
-          <i class="fa-solid fa-{{ s.icon }}"></i>
-        </span>
-        <span class="npc-tab-label">{{ s.label_ar }}</span>
+         href="{{ url_for('radius.npc_' ~ s.key ~ '_list_scoped', nas_id=scoped_to_nas.id) }}">
+        <span class="npc-tab-ic"><i class="fa-solid fa-{{ s.icon }}"></i></span>
+        <span>{{ s.label_ar }}</span>
       </a>
     {% endfor %}
   </nav>
@@ -110,132 +78,93 @@
   {{ npc.npc_tabs(service.url_slug, services) }}
 {% endif %}
 
-<div class="npc-toolbar">
-  <h2>
-    {% if scoped_to_nas %}
-      سياسات {{ service.label_ar }} لهذا الراوتر
-    {% else %}
-      قائمة سياسات {{ service.label_ar }}
-    {% endif %}
-  </h2>
-  <span class="npc-toolbar-count">
-    ({{ cards|length }} عنصر)
-  </span>
-  <a class="npc-btn is-primary"
-     style="margin-inline-start:auto;"
-     href="{{ url_for('radius.npc_' ~ service.key ~ '_new')
-              ~ ('?router_id=' ~ scoped_to_nas.id
-                 if scoped_to_nas else '') }}">
-    <i class="fa-solid fa-plus"></i>
-    سياسة جديدة
-  </a>
-</div>
-
 {% if not cards %}
-  <div class="npc-empty npc-empty-card">
-    <i class="fa-regular fa-folder-open"></i>
-    <div class="npc-empty-title">
-      لا توجد سياسات بعد لـ {{ service.label_ar }}.
-    </div>
-    <div>ابدأ بإنشاء سياسة جديدة لمعاينة السكربت قبل أي تطبيق.</div>
-  </div>
+  {{ hub.empty(
+    "لا توجد سياسات بعد لـ " ~ service.label_ar,
+    sub="ابدأ بإنشاء سياسة جديدة لمعاينة السكربت بالكامل قبل أي تطبيق على الراوتر.",
+    icon="folder-open"
+  ) }}
 {% else %}
-  <div class="npc-grid">
-    {% for c in cards %}
-      {% set p = c.row %}
-      <div class="npc-card">
-        <div class="npc-card-head">
-          <div>
-            <div class="npc-card-title">
-              <i class="fa-solid fa-{{ service.icon }}"
-                 style="color:#6B5AED;"></i>
-              {{ p.name }}
-            </div>
-            <div class="npc-card-sub">
-              <span style="color:#6b7280;">المُعرّف:</span>
-              <code>{{ p.slug }}</code>
-              · الراوتر:
-              <strong>{{ c.router_name or '—' }}</strong>
-            </div>
-          </div>
-          <div class="npc-card-actions">
-            <a class="npc-btn is-primary"
-               href="{{ url_for('radius.npc_' ~ service.key ~ '_preview', policy_id=p.id) }}">
-              <i class="fa-solid fa-eye"></i> معاينة
-            </a>
-            <a class="npc-btn"
-               href="{{ url_for('radius.npc_' ~ service.key ~ '_edit', policy_id=p.id) }}">
-              <i class="fa-regular fa-pen-to-square"></i> تحرير
-            </a>
-            <form class="npc-inline-form"
-                  method="POST"
-                  action="{{ url_for('radius.npc_' ~ service.key ~ '_duplicate', policy_id=p.id) }}">
-              {{ csrf_token_input() | safe }}
-              <button class="npc-btn" type="submit"
-                      title="إنشاء نسخة">
-                <i class="fa-regular fa-copy"></i> نسخ
-              </button>
-            </form>
-            <form class="npc-inline-form"
-                  method="POST"
-                  action="{{ url_for('radius.npc_' ~ service.key ~ '_delete', policy_id=p.id) }}"
-                  onsubmit="return confirm('حذف هذه السياسة؟ (محلياً فقط — لا يطبَّق على الراوتر)');">
-              {{ csrf_token_input() | safe }}
-              <button class="npc-btn is-danger" type="submit">
-                <i class="fa-regular fa-trash-can"></i> حذف
-              </button>
-            </form>
-          </div>
-        </div>
-
-        <div class="npc-meta-row">
-          {{ npc.npc_status_pill(c.deployment_status) }}
-          {{ npc.npc_risk_pill(c.risk) }}
-
-          {% if p.enabled %}
-            <span class="npc-pill npc-pill-status-app">
-              <i class="fa-solid fa-toggle-on"></i> مُفعَّلة
-            </span>
-          {% else %}
-            <span class="npc-pill npc-pill-status-off">
-              <i class="fa-solid fa-toggle-off"></i> موقوفة
-            </span>
-          {% endif %}
-
-          {% if c.child_count %}
-            <span>
-              <i class="fa-regular fa-rectangle-list"></i>
-              {{ c.child_count }} عنصراً
-            </span>
-          {% endif %}
-
-          {% if c.last_preview_at %}
-            <span>
-              <i class="fa-regular fa-clock"></i>
-              آخر معاينة: {{ c.last_preview_at }}
-            </span>
-          {% else %}
-            <span style="color:#9ca3af;">
-              <i class="fa-regular fa-clock"></i>
-              لم تُعاين بعد
-            </span>
-          {% endif %}
-
-          {% if p.created_at %}
-            <span>
-              <i class="fa-regular fa-calendar-plus"></i>
-              أنشئت: {{ p.created_at|dt_local }}
-            </span>
-          {% endif %}
-        </div>
-      </div>
-    {% endfor %}
-  </div>
+{# ───── الجدول الرئيسي + لوحة المساعدة على اليسار ───── #}
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "كيف تقرأ هذه القائمة؟",
+  intro="كل صف سياسة محفوظة محليًا. المعاينة تولّد السكربت الكامل وتقييم الخطر دون لمس الراوتر.",
+  items=[
+    {'icon': 'eye',              'text': '«معاينة» تعرض ما سيُنفَّذ بالضبط + تقييم الخطر + سكربت التراجع.'},
+    {'icon': 'pen-to-square',    'text': '«تحرير» يغيّر بيانات السياسة؛ «نسخ» ينشئ نسخة مستقلّة منها.'},
+    {'icon': 'toggle-on',        'text': 'حالة السياسة (مُفعَّلة/موقوفة) لا تُطبَّق على الراوتر إلا بصلاحية التطبيق.'},
+  ],
+  note="الحذف محلّي فقط — لا يُطبَّق على الراوتر ولا يلمس قواعده."
+)) %}
+  {% call hub.section("السياسات", icon="table-list", meta=cards|length|string + " سياسة", flush=True) %}
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="15"
+         data-uds-export-title="سياسات {{ service.label_ar }}" style="border:none;border-radius:0">
+      <table class="hub-table">
+        <thead>
+          <tr>
+            <th>الاسم</th>
+            <th>الراوتر</th>
+            <th>الحالة</th>
+            <th>الخطر</th>
+            <th class="num">عناصر</th>
+            <th data-uds-nosort>آخر معاينة</th>
+            <th style="width:300px" data-uds-nosort data-uds-nocol data-uds-noexport>إجراءات</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in cards %}
+          {% set p = c.row %}
+          <tr>
+            <td>
+              <strong>{{ p.name }}</strong>
+              <div class="small hub-text-mute mono" dir="ltr">{{ p.slug }}</div>
+            </td>
+            <td class="small">{{ c.router_name or '—' }}</td>
+            <td>
+              {{ npc.npc_status_pill(c.deployment_status) }}
+              {% if p.enabled %}{{ hub.pill("مُفعَّلة", variant="green", dot=False) }}
+              {% else %}{{ hub.pill("موقوفة", variant="grey", dot=False) }}{% endif %}
+            </td>
+            <td>{{ npc.npc_risk_pill(c.risk) }}</td>
+            <td class="num mono">{{ c.child_count or 0 }}</td>
+            <td class="small mono" dir="ltr" style="white-space:nowrap">
+              {{ c.last_preview_at or '—' }}
+            </td>
+            <td>
+              <div class="hub-flex-row" style="gap:4px;flex-wrap:nowrap">
+                <a class="hub-btn hub-btn--secondary hub-btn--sm" title="معاينة"
+                   href="{{ url_for('radius.npc_' ~ service.key ~ '_preview', policy_id=p.id) }}">
+                  <i class="fa-solid fa-eye"></i> معاينة
+                </a>
+                <a class="hub-btn hub-btn--ghost hub-btn--icon" title="تحرير"
+                   href="{{ url_for('radius.npc_' ~ service.key ~ '_edit', policy_id=p.id) }}">
+                  <i class="fa-regular fa-pen-to-square"></i>
+                </a>
+                <form class="npc-inline-form" method="POST"
+                      action="{{ url_for('radius.npc_' ~ service.key ~ '_duplicate', policy_id=p.id) }}">
+                  {{ csrf_token_input() | safe }}
+                  <button class="hub-btn hub-btn--ghost hub-btn--icon" type="submit" title="إنشاء نسخة">
+                    <i class="fa-regular fa-copy"></i>
+                  </button>
+                </form>
+                <form class="npc-inline-form" method="POST"
+                      action="{{ url_for('radius.npc_' ~ service.key ~ '_delete', policy_id=p.id) }}"
+                      onsubmit="return confirm('حذف هذه السياسة؟ (محلياً فقط — لا يطبَّق على الراوتر)');">
+                  {{ csrf_token_input() | safe }}
+                  <button class="hub-btn hub-btn--danger hub-btn--icon" type="submit" title="حذف">
+                    <i class="fa-regular fa-trash-can"></i>
+                  </button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endcall %}
+{% endcall %}
 {% endif %}
 
-<div class="npc-footer-note">
-  <i class="fa-solid fa-circle-info" style="color:#6B5AED;"></i>
-  هذه الصفحة لا تصدر أي أوامر إلى الراوتر — فقط تنشئ سكربتات
-  للمعاينة. التطبيق المباشر يتطلب صلاحية تطبيق منفصلة.
-</div>
+<script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
 {% endblock %}

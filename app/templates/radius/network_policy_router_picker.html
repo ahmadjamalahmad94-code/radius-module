@@ -23,18 +23,18 @@
 
 {% block head_extra %}
   {{ super() }}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
   {% include "radius/_network_policy_shell.html" %}
   <style>
-    .npc-rp-count {
-      display: inline-flex; align-items: center; gap: 4px;
-      padding: 3px 9px;
-      background: #F4F1FE; color: #4036A6;
-      border-radius: 999px;
-      font-weight: 700; font-size: 12px;
+    /* شارة عدّاد السياسات لكل خدمة — على متغيّرات hub، بلا hex خام. */
+    .npc-rp-count{
+      display:inline-flex; align-items:center; gap:var(--hub-gap-xs);
+      padding:3px 10px; border-radius:var(--hub-r-pill);
+      background:var(--hub-brand-soft); color:var(--hub-brand-deep);
+      font-weight:700; font-size:12px;
     }
-    .npc-rp-count[data-zero="1"] {
-      background: #f3f4f6; color: #6b7280;
-      font-weight: 500;
+    .npc-rp-count[data-zero="1"]{
+      background:var(--hub-bg-soft); color:var(--hub-text-mute); font-weight:500;
     }
   </style>
 {% endblock %}
@@ -95,10 +95,10 @@
           {% for r in routers %}
           <tr>
             <td>
-              <i class="fa-solid fa-router" style="color:#6B5AED;margin-inline-end:6px"></i>
+              <i class="fa-solid fa-router" style="color:var(--hub-brand);margin-inline-end:6px"></i>
               <strong>{{ r.name }}</strong>
             </td>
-            <td style="font-family:ui-monospace,monospace;color:#6b7280;font-size:12px">{{ r.address }}</td>
+            <td class="small mono hub-text-mute" dir="ltr">{{ r.address }}</td>
             {% for s in services %}
               <td class="num">
                 <span class="npc-rp-count"
