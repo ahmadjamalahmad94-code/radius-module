@@ -161,6 +161,13 @@
   .pm-card h4{margin:0;font-size:14px;font-weight:900;display:flex;gap:8px;align-items:center}
   .pm-meta{display:grid;gap:4px;font-size:12.5px;color:#475569;font-weight:700}
   .pm-meta b{color:var(--ink)}
+  .pm-logo{width:26px;height:26px;border-radius:7px;object-fit:cover;border:1px solid var(--line);background:var(--soft)}
+  .pm-edit{border:1px dashed var(--line);border-radius:10px;background:var(--soft)}
+  .pm-edit>summary{cursor:pointer;padding:9px 12px;font-size:12.5px;font-weight:800;color:var(--violet-deep);list-style:none}
+  .pm-edit>summary::-webkit-details-marker{display:none}
+  .pm-edit[open]>summary{border-bottom:1px dashed var(--line)}
+  .pm-edit form{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:12px}
+  .pm-edit .full{grid-column:1/-1}
   .pm-create-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:16px}
   .pm-create-grid .full{grid-column:1/-1}
   @media(max-width:760px){
@@ -421,7 +428,7 @@
         {% for m in payment_methods %}
         <article class="pm-card">
           <h4>
-            <i class="fa-solid fa-wallet" style="color:var(--violet)"></i> {{ m.label }}
+            {% if m.logo_image_url %}<img class="pm-logo" src="{{ m.logo_image_url }}" alt="">{% else %}<i class="fa-solid fa-wallet" style="color:var(--violet)"></i>{% endif %} {{ m.label }}
             <span class="market-pill {{ 'market-pill--ok' if m.active else 'market-pill--bad' }}" style="margin-inline-start:auto">{{ _('فعّالة') if m.active else _('متوقفة') }}</span>
           </h4>
           <div class="pm-meta">
@@ -431,6 +438,39 @@
             {% if m.instructions %}<span style="color:var(--muted)">{{ m.instructions }}</span>{% endif %}
           </div>
           {% if m.qr_image_url %}<a class="ssp-thumb" href="{{ m.qr_image_url }}" target="_blank" rel="noopener"><img src="{{ m.qr_image_url }}" alt="QR"></a>{% endif %}
+          {# تعديل كامل للقناة (طيّ/فرد) — CRUD حقيقي من نفس البطاقة #}
+          <details class="pm-edit">
+            <summary><i class="fa-solid fa-pen"></i> {{ _('تعديل القناة') }}</summary>
+            <form method="post" enctype="multipart/form-data" action="{{ url_for('radius.store_support_payment_method_update', method_id=m.id) }}">
+              <input type="hidden" name="_csrf_token" value="{{ CSRF }}">
+              <label class="market-field">
+                <span>{{ _('نوع القناة') }}</span>
+                <select name="method">
+                  <option value="jawaly_pay" {{ 'selected' if m.method == 'jawaly_pay' else '' }}>{{ _('جوالي باي') }}</option>
+                  <option value="bank" {{ 'selected' if m.method == 'bank' else '' }}>{{ _('تحويل بنكي') }}</option>
+                  <option value="palpay" {{ 'selected' if m.method == 'palpay' else '' }}>PalPay</option>
+                  <option value="other" {{ 'selected' if m.method == 'other' else '' }}>{{ _('أخرى') }}</option>
+                </select>
+              </label>
+              <label class="market-field"><span>{{ _('اسم القناة') }}</span>
+                <input type="text" name="label" value="{{ m.label }}"></label>
+              <label class="market-field"><span>{{ _('اسم صاحب الحساب') }}</span>
+                <input type="text" name="account_name" value="{{ m.account_name }}"></label>
+              <label class="market-field"><span>{{ _('رقم الحساب / الجوال') }}</span>
+                <input type="text" name="account_number" dir="ltr" value="{{ m.account_number }}"></label>
+              <label class="market-field"><span>{{ _('ترتيب العرض') }}</span>
+                <input type="number" name="sort_order" min="0" value="{{ m.sort_order }}"></label>
+              <label class="market-field full"><span>{{ _('تعليمات للزبون') }}</span>
+                <textarea name="instructions">{{ m.instructions }}</textarea></label>
+              <label class="market-field"><span>{{ _('تغيير الشعار (اختياري)') }}</span>
+                <input type="file" name="logo_image" accept="image/*"></label>
+              <label class="market-field"><span>{{ _('تغيير الـQR (اختياري)') }}</span>
+                <input type="file" name="qr_image" accept="image/*"></label>
+              <div class="full" style="display:flex;justify-content:flex-end">
+                <button class="market-btn market-btn--primary market-btn--sm" type="submit"><i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ التعديلات') }}</button>
+              </div>
+            </form>
+          </details>
           <div class="ssp-actions" style="justify-content:flex-start">
             <form method="post" action="{{ url_for('radius.store_support_payment_method_update', method_id=m.id) }}">
               <input type="hidden" name="_csrf_token" value="{{ CSRF }}">
@@ -485,6 +525,10 @@
           <label class="market-field">
             <span>{{ _('ترتيب العرض') }}</span>
             <input type="number" name="sort_order" min="0" value="0">
+          </label>
+          <label class="market-field">
+            <span>{{ _('شعار/أيقونة القناة (اختياري)') }}</span>
+            <input type="file" name="logo_image" accept="image/*">
           </label>
           <label class="market-field">
             <span>{{ _('صورة QR (اختياري)') }}</span>

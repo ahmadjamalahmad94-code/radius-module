@@ -67,6 +67,7 @@ class DepositRequestService:
         out["method_ar"] = _METHOD_AR.get(str(out.get("method") or "other"),
                                           out.get("method"))
         out["qr_image_url"] = store_image_url(out.get("qr_image_path") or "")
+        out["logo_image_url"] = store_image_url(out.get("logo_image_path") or "")
         return out
 
     def list_payment_methods(self, *, active_only: bool = False) -> list[dict[str, Any]]:
@@ -90,6 +91,7 @@ class DepositRequestService:
                 "account_number": str(m.get("account_number") or ""),
                 "instructions": str(m.get("instructions") or ""),
                 "qr_image_url": m.get("qr_image_url") or "",
+                "logo_image_url": m.get("logo_image_url") or "",
             })
         return out
 
@@ -105,7 +107,7 @@ class DepositRequestService:
     def create_payment_method(
         self, *, method: str, label: str, account_name: str = "",
         account_number: str = "", instructions: str = "",
-        qr_image_path: str = "", sort_order: int = 0,
+        qr_image_path: str = "", logo_image_path: str = "", sort_order: int = 0,
     ) -> dict[str, Any]:
         m = str(method or "other").strip().lower()
         if m not in VALID_METHODS:
@@ -117,20 +119,22 @@ class DepositRequestService:
             """
             INSERT INTO store_payment_methods(
                 tenant_id, method, label, account_name, account_number,
-                instructions, qr_image_path, active, sort_order,
-                created_at, updated_at
-            ) VALUES(?,?,?,?,?,?,?,?,?,?,?)
+                instructions, qr_image_path, logo_image_path, active,
+                sort_order, created_at, updated_at
+            ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)
             """,
             (self.tenant_id, m, str(label).strip(), str(account_name or ""),
              str(account_number or ""), str(instructions or ""),
-             str(qr_image_path or ""), 1, int(sort_order or 0), now, now),
+             str(qr_image_path or ""), str(logo_image_path or ""), 1,
+             int(sort_order or 0), now, now),
         )
         return self.get_payment_method(int(cur.lastrowid))
 
     def update_payment_method(self, method_id: int, **fields: Any) -> dict[str, Any]:
         self.get_payment_method(method_id)  # وجود + نطاق المستأجر
         allowed = ("method", "label", "account_name", "account_number",
-                   "instructions", "qr_image_path", "active", "sort_order")
+                   "instructions", "qr_image_path", "logo_image_path",
+                   "active", "sort_order")
         sets, params = [], []
         for key in allowed:
             if key in fields and fields[key] is not None:

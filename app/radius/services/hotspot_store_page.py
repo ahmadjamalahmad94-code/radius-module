@@ -654,6 +654,38 @@ body{min-height:100vh;background:
   border-radius:10px;border:1px solid var(--line)}
 .paym .pm-hint{font-size:10.5px;color:var(--mut);margin-top:6px;line-height:1.7}
 
+/* ───── قنوات الدفع كبطاقات قابلة للاختيار ───── */
+.pmgrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px}
+.pmcard{display:flex;flex-direction:column;align-items:center;gap:5px;
+  background:#fff;border:1.5px solid var(--line);border-radius:14px;
+  padding:12px 6px;cursor:pointer;position:relative;text-align:center;
+  font-family:inherit;transition:border-color .15s,box-shadow .15s,transform .1s}
+.pmcard:active{transform:scale(.97)}
+.pmcard.sel{border-color:var(--accent);box-shadow:0 0 0 3px rgba(79,70,229,.12)}
+.pmcard .pmc-logo{width:34px;height:34px;border-radius:9px;object-fit:cover;
+  border:1px solid var(--line)}
+.pmcard .pmc-ico{font-size:25px;line-height:1.1}
+.pmcard .pmc-name{font-size:11px;font-weight:800;color:var(--ink);line-height:1.3;
+  word-break:break-word}
+.pmcard .pmc-tick{position:absolute;top:5px;inset-inline-start:5px;width:18px;
+  height:18px;border-radius:50%;background:var(--accent);color:#fff;font-size:11px;
+  display:none;align-items:center;justify-content:center}
+.pmcard.sel .pmc-tick{display:flex}
+.pay-selected{background:#f8fafc;border:1px solid var(--line);border-radius:14px;
+  padding:12px;margin-bottom:12px}
+.pay-selected .ps-label{font-size:11px;font-weight:800;color:var(--mut);margin-bottom:6px}
+.pay-selected .pm-num{display:flex;align-items:center;gap:8px;background:#fff;
+  border:1.5px dashed var(--accent);border-radius:10px;padding:9px 11px}
+.pay-selected .pm-num b{flex:1;font-size:15px;font-weight:800;direction:ltr;
+  text-align:left;word-break:break-all;color:var(--ink)}
+.pay-selected .pm-num .cp{background:var(--accent);color:#fff;border:0;
+  border-radius:10px;padding:8px 14px;font-size:11.5px;font-weight:800;
+  cursor:pointer;white-space:nowrap;flex-shrink:0}
+.pay-selected .pm-name{font-size:11px;color:var(--mut);margin-top:7px}
+.pay-selected .pm-qr{display:block;max-width:130px;max-height:130px;
+  margin:9px auto 0;border-radius:10px;border:1px solid var(--line)}
+.pay-selected .pm-hint{font-size:11px;color:var(--mut);margin-top:7px;line-height:1.7}
+
 /* ───── شات الدعم ───── */
 .fab-chat{position:fixed;bottom:78px;left:14px;z-index:7000;width:54px;height:54px;
   border-radius:50%;background:linear-gradient(135deg,var(--accent),#312e81);
@@ -893,12 +925,14 @@ body{min-height:100vh;background:
     <p style="font-size:11.5px;color:#64748b;line-height:1.8;margin-bottom:12px">
       حوّل المبلغ إلى إحدى المحافظ التالية، ثم عبّئ بيانات التحويل وارفع
       صورة الوصل. يُضاف الرصيد بعد تأكيد المزوّد.</p>
-    <div id="payMethods">
-      <div class="skel" style="height:80px;margin-bottom:10px"></div>
+    <div class="f"><label>اختر قناة الدفع التي حوّلت إليها</label></div>
+    <div id="payMethods" class="pmgrid">
+      <div class="skel" style="height:66px"></div>
+      <div class="skel" style="height:66px"></div>
     </div>
+    <!-- تفاصيل القناة المختارة: الرقم بارزًا + نسخ + QR + تعليمات -->
+    <div id="paySelected" class="pay-selected hide"></div>
     <div class="inline-err" id="depErr" style="position:static;margin:6px 0"></div>
-    <div class="f"><label>طريقة الدفع المستخدمة</label>
-      <select id="depMethod"></select></div>
     <div class="f"><label>المبلغ المحوَّل</label>
       <input id="depAmount" type="number" inputmode="decimal" min="0"
              step="0.01" placeholder="0.00"></div>
@@ -1703,45 +1737,89 @@ body{min-height:100vh;background:
   }
 
   /* ── الإيداع: محافظ الاستلام + الإرسال ── */
+  /* القنوات تُعرض كبطاقات قابلة للاختيار؛ اختيار بطاقة يُبرز رقم
+     التحويل + زر نسخ + QR + التعليمات. «قناة أخرى» احتياطية دائمًا. */
+  var payMethodsCache = [];
+  var depSel = { id: '', method: '' };  // القناة المختارة حاليًا
+
   function openDeposit() { openSheet('depositSheet'); loadPaymentMethods(); }
   function loadPaymentMethods() {
-    var box = $('payMethods'), sel = $('depMethod');
+    var box = $('payMethods');
+    clearMethodSelection();
     api('/payment-methods').then(function (data) {
-      var methods = data.items || [];
-      if (!methods.length) {
-        box.innerHTML = '<div class="empty">لم يضف المزوّد محافظ استلام ' +
-          'بعد — تواصل معه.</div>';
-        sel.innerHTML = '<option value="other">قناة أخرى</option>';
-        return;
-      }
-      box.innerHTML = methods.map(function (m) {
-        var qr = m.qr_image_url ? '<img class="pm-qr" src="' +
-          esc(API + m.qr_image_url) + '" alt="QR">' : '';
-        var hint = m.instructions ? '<div class="pm-hint">' +
-          esc(m.instructions) + '</div>' : '';
-        var name = m.account_name ? '<div class="pm-name">صاحب الحساب: ' +
-          esc(m.account_name) + '</div>' : '';
-        return '<div class="paym"><div class="pm-top"><b>' +
-          esc(m.label || m.method_ar) + '</b><span class="chip chip-unused">' +
-          esc(m.method_ar || '') + '</span></div>' +
-          '<div class="pm-num"><b>' + esc(m.account_number || '') + '</b>' +
-          '<button type="button" class="cp" data-copy="' +
-          esc(m.account_number || '') + '">📋</button></div>' +
-          name + qr + hint + '</div>';
-      }).join('');
-      sel.innerHTML = methods.map(function (m) {
-        return '<option value="' + esc(m.method) + '" data-id="' + m.id +
-          '">' + esc(m.label || m.method_ar) + '</option>';
-      }).join('') + '<option value="other">قناة أخرى</option>';
-      Array.prototype.forEach.call(box.querySelectorAll('[data-copy]'),
-        function (b) {
-          b.addEventListener('click', function () {
-            copyText(b.getAttribute('data-copy') || '');
-          });
-        });
+      payMethodsCache = data.items || [];
+      box.innerHTML = '';
+      payMethodsCache.forEach(function (m) { box.appendChild(methodCard(m)); });
+      // بطاقة احتياطية «قناة أخرى» — دائمًا في النهاية.
+      box.appendChild(methodCard(null));
     }).catch(function (e) {
       box.innerHTML = '<div class="empty">' + esc(e.message) + '</div>';
     });
+  }
+  function methodCard(m) {
+    var el = document.createElement('button');
+    el.type = 'button';
+    el.className = 'pmcard';
+    el.setAttribute('data-id', m ? m.id : '');
+    var inner;
+    if (m) {
+      inner = (m.logo_image_url
+        ? '<img class="pmc-logo" src="' + esc(API + m.logo_image_url) + '" alt="">'
+        : '<span class="pmc-ico">🏦</span>') +
+        '<span class="pmc-name">' + esc(m.label || m.method_ar || '') + '</span>';
+    } else {
+      inner = '<span class="pmc-ico">➕</span>' +
+        '<span class="pmc-name">قناة أخرى</span>';
+    }
+    el.innerHTML = inner + '<span class="pmc-tick">✓</span>';
+    el.addEventListener('click', function () {
+      selectMethod(m ? String(m.id) : '');
+    });
+    return el;
+  }
+  function selectMethod(id) {
+    Array.prototype.forEach.call(
+      $('payMethods').querySelectorAll('.pmcard'), function (c) {
+        c.classList.toggle('sel', c.getAttribute('data-id') === String(id));
+      });
+    var detail = $('paySelected');
+    if (!id) {  // قناة أخرى (احتياطية)
+      depSel = { id: '', method: 'other' };
+      detail.className = 'pay-selected';
+      detail.innerHTML = '<div class="pm-hint">حوّل عبر القناة المتّفق ' +
+        'عليها مع المزوّد ثم أكمل البيانات أدناه.</div>';
+      return;
+    }
+    var m = null;
+    payMethodsCache.forEach(function (x) {
+      if (String(x.id) === String(id)) m = x;
+    });
+    if (!m) return;
+    depSel = { id: m.id, method: m.method || 'other' };
+    var qr = m.qr_image_url ? '<img class="pm-qr" src="' +
+      esc(API + m.qr_image_url) + '" alt="QR">' : '';
+    var hint = m.instructions ? '<div class="pm-hint">' +
+      esc(m.instructions) + '</div>' : '';
+    var name = m.account_name ? '<div class="pm-name">صاحب الحساب: ' +
+      esc(m.account_name) + '</div>' : '';
+    detail.className = 'pay-selected';
+    detail.innerHTML = '<div class="ps-label">حوّل إلى هذا الرقم:</div>' +
+      '<div class="pm-num"><b>' + esc(m.account_number || '—') + '</b>' +
+      '<button type="button" class="cp" id="psCopy">📋 نسخ</button></div>' +
+      name + qr + hint;
+    var cp = detail.querySelector('#psCopy');
+    if (cp) cp.addEventListener('click', function () {
+      copyText(m.account_number || '');
+    });
+  }
+  function clearMethodSelection() {
+    depSel = { id: '', method: '' };
+    var detail = $('paySelected');
+    detail.className = 'pay-selected hide';
+    detail.innerHTML = '';
+    Array.prototype.forEach.call(
+      $('payMethods').querySelectorAll('.pmcard'),
+      function (c) { c.classList.remove('sel'); });
   }
   function resetDeposit() {
     ['depAmount', 'depPhone', 'depRef', 'depPayer'].forEach(
@@ -1749,21 +1827,23 @@ body{min-height:100vh;background:
     $('depReceipt').value = '';
     $('depFileName').textContent = 'اضغط لإرفاق صورة الوصل';
     $('depFileRow').classList.remove('has');
+    clearMethodSelection();
   }
   function submitDeposit() {
     var err = $('depErr'); err.style.display = 'none';
     var amount = $('depAmount').value.trim();
-    var sel = $('depMethod');
-    var opt = sel.options[sel.selectedIndex];
-    var pmId = opt ? opt.getAttribute('data-id') : '';
+    if (!depSel.method) {
+      err.textContent = 'اختر قناة الدفع التي حوّلت إليها أولًا.';
+      err.style.display = 'block'; return;
+    }
     if (!amount || parseFloat(amount) <= 0) {
       err.textContent = 'أدخل المبلغ المحوَّل.'; err.style.display = 'block';
       return;
     }
     var fd = new FormData();
     fd.append('amount_claimed', amount);
-    fd.append('method', sel.value || 'other');
-    if (pmId) fd.append('payment_method_id', pmId);
+    fd.append('method', depSel.method || 'other');
+    if (depSel.id) fd.append('payment_method_id', depSel.id);
     fd.append('payer_phone', $('depPhone').value.trim());
     fd.append('reference', $('depRef').value.trim());
     fd.append('payer_name', $('depPayer').value.trim());

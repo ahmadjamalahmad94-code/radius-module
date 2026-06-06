@@ -213,6 +213,10 @@ def store_support_payment_method_create():
         upload = request.files.get("qr_image")
         if upload is not None and getattr(upload, "filename", ""):
             qr_path = save_store_image(upload, subdir="qr")["path"]
+        logo_path = ""
+        logo_upload = request.files.get("logo_image")
+        if logo_upload is not None and getattr(logo_upload, "filename", ""):
+            logo_path = save_store_image(logo_upload, subdir="logo")["path"]
         _deposits().create_payment_method(
             method=request.form.get("method") or "other",
             label=request.form.get("label") or "",
@@ -220,6 +224,7 @@ def store_support_payment_method_create():
             account_number=request.form.get("account_number") or "",
             instructions=request.form.get("instructions") or "",
             qr_image_path=qr_path,
+            logo_image_path=logo_path,
             sort_order=int(request.form.get("sort_order") or 0),
         )
         flash("تمت إضافة قناة استلام جديدة.", "success")
@@ -251,6 +256,10 @@ def store_support_payment_method_update(method_id: int):
         upload = request.files.get("qr_image")
         if upload is not None and getattr(upload, "filename", ""):
             fields["qr_image_path"] = save_store_image(upload, subdir="qr")["path"]
+        logo_upload = request.files.get("logo_image")
+        if logo_upload is not None and getattr(logo_upload, "filename", ""):
+            fields["logo_image_path"] = save_store_image(
+                logo_upload, subdir="logo")["path"]
         svc.update_payment_method(method_id, **fields)
         flash("تم تحديث قناة الاستلام.", "success")
     except (StoreDepositError, StoreUploadError, ValueError) as exc:
