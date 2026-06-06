@@ -690,6 +690,7 @@ def _iter_deploy(nas_id: int, nas: dict, design: dict, *, confirmed: bool):
                 tenant_name=safe.get("TENANT_NAME", ""),
                 accent_color=safe.get("ACCENT_COLOR", ""),
                 logo_url=safe.get("TENANT_LOGO_URL", ""),
+                support_whatsapp=safe.get("SUPPORT_WHATSAPP", ""),
                 store_key=get_or_create_store_key(
                     _tid(), by=int(getattr(g, "admin_id", 0) or 0)),
             )
@@ -1047,6 +1048,7 @@ def mt_login_designer_download_zip(nas_id: int):
                 tenant_name=tolerant.get("TENANT_NAME", ""),
                 accent_color=tolerant.get("ACCENT_COLOR", ""),
                 logo_url=tolerant.get("TENANT_LOGO_URL", ""),
+                support_whatsapp=tolerant.get("SUPPORT_WHATSAPP", ""),
                 # الحزمة اليدوية تحمل المفتاح أيضًا (يُولَّد إن لزم) —
                 # ينشط الفرض بمجرد رفعها للراوتر واستخدامها.
                 store_key=get_or_create_store_key(
@@ -1357,6 +1359,7 @@ def mt_login_designer_store_preview(nas_id: int):
             tenant_name=_val("TENANT_NAME"),
             accent_color=_val("ACCENT_COLOR"),
             logo_url=_val("TENANT_LOGO_URL"),
+            support_whatsapp=_val("SUPPORT_WHATSAPP"),
             store_key=get_store_key(_tid()),
             strict=False,
         )

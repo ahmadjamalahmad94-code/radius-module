@@ -448,6 +448,19 @@ _PERM_GUARDED: dict[str, str] = {
     "finance_reports_export_csv": "reports.finance",
     "finance_reports_export_xlsx": "reports.finance",
     "finance_reports_export_pdf": "reports.finance",
+
+    # ═══ لوحة دعم المتجر المتقدّم (routes/store_support.py) ═══
+    # «المدير يشيك»: تأكيد الإيداع يضيف الرصيد وتأكيد السحب يخصمه —
+    # حركة مال حقيقية. تُقصر كل اللوحة (العرض + التأكيد/الرفض + القنوات
+    # + الشات) على من يملك store.review؛ super_admin يتجاوز دائمًا.
+    "store_support": "store.review",
+    "store_support_deposit_confirm": "store.review",
+    "store_support_deposit_reject": "store.review",
+    "store_support_withdrawal_confirm": "store.review",
+    "store_support_withdrawal_reject": "store.review",
+    "store_support_payment_method_create": "store.review",
+    "store_support_payment_method_update": "store.review",
+    "store_support_chat_post": "store.review",
 }
 
 # مسارات GET+POST معًا: نحرس الكتابة (POST) فقط ونترك العرض —

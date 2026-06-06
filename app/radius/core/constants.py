@@ -233,6 +233,12 @@ PERM_ADMINS_POLICY = "admins.policy"               # ضبط صلاحيات/حد�
 PERM_REPORTS_VIEW = "reports.view"                 # كل صفحات /reports (الجلسات، MAC، أحداث المدراء…)
 PERM_REPORTS_FINANCE = "reports.finance"           # دفتر القيود والتقارير المالية (finance_ledger/finance_reports)
 
+# ─── المتجر الإلكتروني المتقدّم — لوحة دعم المدير (store_support) ───
+# مراجعة وتأكيد/رفض طلبات الشحن (الإيداع) والسحب، وإدارة قنوات
+# الاستلام والشات. حركة المال تتم عند التأكيد فقط — لذا تُقصر على
+# المدير/السوبر أدمن (السوبر يتجاوز دائمًا)، لا أي مسؤول مسجَّل.
+PERM_STORE_REVIEW = "store.review"                 # لوحة دعم المتجر: تأكيد/رفض الإيداع والسحب + القنوات + الشات
+
 # ─── النطاق والإشراف (scope.*) — مفاتيح معرَّفة للتوسع المرحلي ───
 # تنبيه: لا يوجد بعدُ فحص مِلكية (manager_id) في طبقة المسارات؛ هذه
 # المفاتيح مسجَّلة الآن في الكتالوج وتُمنح/تُحجب من الأدوار، وسيُفعَّل
@@ -262,6 +268,7 @@ ALL_PERMISSIONS: tuple[str, ...] = (
     PERM_ADMINS_DEPOSIT, PERM_ADMINS_POLICY,
     PERM_ADMIN_PRICING_VIEW, PERM_ADMIN_PRICING_EDIT, PERM_ADMIN_PRICING_RESET,
     PERM_REPORTS_VIEW, PERM_REPORTS_FINANCE,
+    PERM_STORE_REVIEW,
     PERM_SCOPE_ACT_NON_OWNED, PERM_SCOPE_VIEW_ALL_SUBSCRIBERS, PERM_SCOPE_VIEW_ALL_MANAGERS,
     PERM_SCOPE_VIEW_ALL_CARDS, PERM_SCOPE_VIEW_ALL_REPORTS, PERM_SCOPE_VIEW_PASSWORDS,
     PERM_SETTINGS_VIEW, PERM_SETTINGS_EDIT, PERM_AUDIT_VIEW,
@@ -296,7 +303,8 @@ DEFAULT_ROLE_PERMISSIONS = {
         PERM_CARDS_VIEW, PERM_PLANS_VIEW, PERM_NAS_VIEW,
         PERM_SESSIONS_VIEW, PERM_SESSIONS_DISCONNECT,
     ),
-    ROLE_BILLING: (PERM_DASHBOARD_VIEW, PERM_USERS_VIEW, PERM_CARDS_VIEW, PERM_PLANS_VIEW),
+    ROLE_BILLING: (PERM_DASHBOARD_VIEW, PERM_USERS_VIEW, PERM_CARDS_VIEW, PERM_PLANS_VIEW,
+                   PERM_STORE_REVIEW),
     ROLE_VIEWER: (PERM_DASHBOARD_VIEW,),
 }
 
