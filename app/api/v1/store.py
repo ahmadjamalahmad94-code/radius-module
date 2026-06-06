@@ -59,6 +59,9 @@ from ...radius.services.store_token import (
     token_ttl_seconds,
     verify_store_token,
 )
+from ...radius.services.store_deposits import DepositRequestService
+from ...radius.services.store_withdrawals import WithdrawalRequestService
+from ...radius.services.store_chat import StoreChatService
 from ..responses import fail, ok
 
 _LOG = logging.getLogger(__name__)
@@ -133,6 +136,21 @@ def register(bp: Blueprint) -> None:
          _require_store_token(store_redeem), ["POST"]),
         ("/store/purchase", "store_purchase",
          _require_store_token(store_purchase), ["POST"]),
+        # ── المتجر المتقدّم: إيداع / سحب / شات ──
+        ("/store/payment-methods", "store_payment_methods",
+         _require_store_token(store_payment_methods), ["GET"]),
+        ("/store/deposits", "store_deposits_list",
+         _require_store_token(store_deposits_list), ["GET"]),
+        ("/store/deposits", "store_deposit_create",
+         _require_store_token(store_deposit_create), ["POST"]),
+        ("/store/withdrawals", "store_withdrawals_list",
+         _require_store_token(store_withdrawals_list), ["GET"]),
+        ("/store/withdrawals", "store_withdrawal_create",
+         _require_store_token(store_withdrawal_create), ["POST"]),
+        ("/store/chat", "store_chat_poll",
+         _require_store_token(store_chat_poll), ["GET"]),
+        ("/store/chat", "store_chat_post",
+         _require_store_token(store_chat_post), ["POST"]),
     ]
     for rule, endpoint, view, methods in routes:
         bp.add_url_rule(rule, endpoint, view, methods=methods)
@@ -820,3 +838,162 @@ def store_purchases():
         "page": page, "per_page": per_page, "total": total,
         "pages": max(1, (total + per_page - 1) // per_page),
     })
+
+
+# ═══════════════ المتجر المتقدّم: إيداع / سحب / شات ═══════════════
+# نقاط الزبون (محمية بتوكنه) للدفع شبه الآلي وسحب الرصيد والشات.
+# المال لا يتحرّك من هنا أبدًا — الزبون يُنشئ طلبات فقط؛ الإضافة/الخصم
+# يحدثان حصرًا عند تأكيد المدير من لوحته (services/store_deposits،
+# store_withdrawals). الصور تُحفظ بأمان عبر services/store_uploads.
+
+
+def _public_deposit(req: dict[str, Any]) -> dict[str, Any]:
+    """طلب إيداع كما يراه الزبون — بلا حقول إدارية داخلية."""
+    return {
+        "id": int(req.get("id") or 0),
+        "amount_claimed": req.get("amount_claimed"),
+        "confirmed_amount": req.get("confirmed_amount"),
+        "currency": str(req.get("currency") or ""),
+        "method": str(req.get("method") or ""),
+        "method_ar": req.get("method_ar"),
+        "reference": str(req.get("reference") or ""),
+        "payer_name": str(req.get("payer_name") or ""),
+        "status": str(req.get("status") or ""),
+        "status_ar": req.get("status_ar"),
+        "admin_note": str(req.get("admin_note") or ""),
+        "receipt_image_url": req.get("receipt_image_url") or "",
+        "created_at": str(req.get("created_at") or ""),
+        "resolved_at": str(req.get("resolved_at") or ""),
+    }
+
+
+def _public_withdrawal(req: dict[str, Any]) -> dict[str, Any]:
+    """طلب سحب كما يراه الزبون."""
+    return {
+        "id": int(req.get("id") or 0),
+        "amount": req.get("amount"),
+        "currency": str(req.get("currency") or ""),
+        "payee_name": str(req.get("payee_name") or ""),
+        "payee_account": str(req.get("payee_account") or ""),
+        "status": str(req.get("status") or ""),
+        "status_ar": req.get("status_ar"),
+        "admin_note": str(req.get("admin_note") or ""),
+        "created_at": str(req.get("created_at") or ""),
+        "resolved_at": str(req.get("resolved_at") or ""),
+    }
+
+
+def _save_store_upload(field: str, *, subdir: str):
+    """يحفظ صورة مرفوعة من حقل multipart إن وُجدت — يعيد (path, error).
+    error = رد fail جاهز عند فشل التحقق، أو None."""
+    upload = request.files.get(field)
+    if not upload or not getattr(upload, "filename", ""):
+        return "", None
+    from ...radius.services.store_uploads import (
+        StoreUploadError, save_store_image,
+    )
+    try:
+        saved = save_store_image(upload, subdir=subdir)
+        return saved["path"], None
+    except StoreUploadError as exc:
+        return "", fail("upload_failed", str(exc), status=422)
+
+
+def store_payment_methods():
+    """قنوات/محافظ الاستلام النشطة التي يحوّل إليها الزبون (جوالي باي /
+    بنك / PalPay) مع الأرقام وQR — كلها بيانات المدير المركزية."""
+    methods = DepositRequestService(tenant_id=_tid()).public_payment_methods()
+    return ok({"items": methods, "count": len(methods)})
+
+
+def store_deposits_list():
+    """طلبات إيداع الزبون بحالتها (الزبون يرى طلباته هو فقط)."""
+    reqs = DepositRequestService(tenant_id=_tid()).list_for_customer(
+        card_user_id=_cuid(), limit=50)
+    return ok({"items": [_public_deposit(r) for r in reqs]})
+
+
+def store_deposit_create():
+    """ينشئ طلب إيداع (دفع شبه آلي) — multipart: المبلغ المدّعى + طريقة
+    الدفع + جوال المحوِّل + الرقم المرجعي + اسم المحوِّل + صورة الوصل.
+    لا يضيف رصيدًا (يُضاف عند تأكيد المدير فقط)."""
+    f = request.form
+    receipt_path, err = _save_store_upload("receipt", subdir="receipts")
+    if err is not None:
+        return err
+    pm_id = f.get("payment_method_id")
+    try:
+        req = DepositRequestService(tenant_id=_tid()).create_request(
+            card_user_id=_cuid(),
+            amount_claimed=f.get("amount_claimed") or f.get("amount") or "0",
+            method=f.get("method") or "other",
+            payer_phone=f.get("payer_phone") or "",
+            reference=f.get("reference") or "",
+            payer_name=f.get("payer_name") or "",
+            receipt_image_path=receipt_path,
+            payment_method_id=(int(pm_id) if (pm_id and str(pm_id).isdigit())
+                               else None),
+        )
+    except ValueError as exc:  # StoreDepositError/BusinessOSValidationError
+        return fail("deposit_failed",
+                    str(exc) or "تعذّر إنشاء طلب الإيداع.", status=422)
+    return ok({"request": _public_deposit(req)}, status=201)
+
+
+def store_withdrawals_list():
+    """طلبات سحب الزبون بحالتها."""
+    reqs = WithdrawalRequestService(tenant_id=_tid()).list_for_customer(
+        card_user_id=_cuid(), limit=50)
+    return ok({"items": [_public_withdrawal(r) for r in reqs]})
+
+
+def store_withdrawal_create():
+    """ينشئ طلب سحب — JSON: المبلغ + اسم صاحب الحساب + رقم الحساب. لا
+    يخصم رصيدًا (يُخصم عند تأكيد المدير فقط)."""
+    body = _payload()
+    try:
+        req = WithdrawalRequestService(tenant_id=_tid()).create_request(
+            card_user_id=_cuid(),
+            amount=body.get("amount") or "0",
+            payee_name=str(body.get("payee_name") or ""),
+            payee_account=str(body.get("payee_account") or ""),
+            method=str(body.get("method") or ""),
+        )
+    except ValueError as exc:  # StoreWithdrawalError/BusinessOSValidationError
+        return fail("withdrawal_failed",
+                    str(exc) or "تعذّر إنشاء طلب السحب.", status=422)
+    return ok({"request": _public_withdrawal(req)}, status=201)
+
+
+def store_chat_poll():
+    """شات الزبون مع الدعم — استطلاع خفيف بمعرّف آخر رسالة (?after_id=).
+    يعلّم رسائل المدير مقروءةً للزبون عند تحميل الدفعة الأولى."""
+    try:
+        after_id = int(request.args.get("after_id") or 0)
+    except (TypeError, ValueError):
+        after_id = 0
+    svc = StoreChatService(tenant_id=_tid())
+    thread = svc.list_thread(card_user_id=_cuid(), after_id=after_id, limit=100)
+    if after_id == 0:
+        try:
+            svc.mark_read(card_user_id=_cuid(), reader="customer")
+        except Exception:  # noqa: BLE001
+            pass
+    return ok(thread)
+
+
+def store_chat_post():
+    """الزبون يرسل رسالة للدعم — multipart: body + صورة اختيارية."""
+    image_path, err = _save_store_upload("image", subdir="chat")
+    if err is not None:
+        return err
+    body_text = (request.form.get("body") if (request.form or request.files)
+                 else _payload().get("body")) or ""
+    try:
+        msg = StoreChatService(tenant_id=_tid()).post_message(
+            card_user_id=_cuid(), sender="customer",
+            body=str(body_text), image_path=image_path)
+    except ValueError as exc:  # StoreChatError
+        return fail("chat_failed", str(exc) or "تعذّر إرسال الرسالة.",
+                    status=422)
+    return ok({"message": msg}, status=201)

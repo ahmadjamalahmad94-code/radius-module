@@ -220,6 +220,7 @@ def render_store_page(
     accent_color: str = "#4F46E5",
     logo_url: str = "",
     store_key: str = "",
+    support_whatsapp: str = "",
     strict: bool = True,
 ) -> str:
     """يبني store.html النهائي بحقن المتغيّرات المفحوصة.
@@ -257,12 +258,16 @@ def render_store_page(
     # المفتاح يُعقَّم إلى [A-Za-z0-9_-] فقط — آمن للحقن في سلسلة JS
     # بلا أي هروب (token_urlsafe أصلًا ضمن هذا النطاق).
     key = re.sub(r"[^A-Za-z0-9_\-]", "", str(store_key or ""))
+    # رقم واتساب الدعم: أرقام فقط (wa.me لا يقبل + أو فراغات) — آمن
+    # للحقن في سلسلة JS. فارغ = يخفي زر التحويل للواتساب.
+    whatsapp = re.sub(r"\D", "", str(support_whatsapp or ""))
     out = STORE_PAGE_HTML
     out = out.replace("{{API_BASE}}", base)
     out = out.replace("{{TENANT_NAME}}", name)
     out = out.replace("{{ACCENT_COLOR}}", color)
     out = out.replace("{{TENANT_LOGO_URL}}", logo)
     out = out.replace("{{STORE_KEY}}", key)
+    out = out.replace("{{SUPPORT_WHATSAPP}}", whatsapp)
     # حذف غطاء «جاري التحميل» — نفس strip_splash لصفحات الدخول.
     # المتجر لا يعرض غطاء تحميل كامل الشاشة حاليًا، لكن نمرّره
     # اتساقًا ووقايةً لأي تصميم متجر مستقبلي يضيف غطاءً (الدالة لا
@@ -291,6 +296,7 @@ def deploy_store(
     accent_color: str = "#4F46E5",
     logo_url: str = "",
     store_key: str = "",
+    support_whatsapp: str = "",
     target_path: str = DEFAULT_STORE_PATH,
 ) -> StoreDeployResult:
     """يرفع store.html إلى الراوتر — نفس خطوات deploy_login حرفيًا:
@@ -314,6 +320,7 @@ def deploy_store(
             accent_color=accent_color,
             logo_url=logo_url,
             store_key=store_key,
+            support_whatsapp=support_whatsapp,
         )
     except StorePageError as e:
         return StoreDeployResult(ok=False, path=target_path, bytes=0,
@@ -579,6 +586,94 @@ body{min-height:100vh;background:
 .modal .m-close{background:var(--accent);color:#fff;border:0;border-radius:999px;
   font-size:13px;font-weight:800;padding:12px 36px;cursor:pointer;width:100%}
 
+/* ───── المتجر المتقدّم: أزرار إجراءات المحفظة ───── */
+.wact{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.wact button{display:flex;flex-direction:column;align-items:center;gap:4px;
+  background:#fff;border:1px solid var(--line);border-radius:16px;
+  padding:14px 8px;cursor:pointer;box-shadow:0 8px 18px rgba(15,23,42,.05);
+  font-size:12px;font-weight:800;color:var(--ink);transition:transform .15s}
+.wact button:active{transform:scale(.97)}
+.wact button .wi{font-size:22px}
+.wact button.dep .wi{color:var(--ok)}
+.wact button.wd .wi{color:var(--accent)}
+
+/* ───── قائمة طلباتي (إيداع/سحب) ───── */
+.reqs .rq{display:flex;align-items:center;gap:10px;padding:11px 4px;
+  border-bottom:1px solid #f1f5f9}
+.reqs .rq:last-child{border-bottom:0}
+.reqs .rq-ico{width:34px;height:34px;border-radius:10px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:15px;
+  background:rgba(79,70,229,.1);color:var(--accent)}
+.reqs .rq-ico.dep{background:rgba(16,185,129,.12);color:#047857}
+.reqs .rq-txt{flex:1;min-width:0}
+.reqs .rq-txt b{display:block;font-size:12px}
+.reqs .rq-txt span{font-size:10px;color:var(--mut)}
+.reqs .rq-amt{font-size:12.5px;font-weight:800;direction:ltr;text-align:left}
+
+/* ───── ورقة منزلقة (modal طويلة قابلة للتمرير) ───── */
+.sheet{position:fixed;inset:0;z-index:9500;background:rgba(15,23,42,.55);
+  display:none;align-items:flex-end;justify-content:center}
+.sheet.show{display:flex}
+.sheet .sh-card{background:#fff;border-radius:22px 22px 0 0;width:100%;
+  max-width:430px;max-height:92vh;overflow-y:auto;padding:18px 16px
+  calc(18px + env(safe-area-inset-bottom,0));box-shadow:0 -16px 40px rgba(0,0,0,.3)}
+.sheet .sh-head{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.sheet .sh-head h3{font-size:15px;font-weight:800;flex:1}
+.sheet .sh-x{background:#f1f5f9;border:0;width:32px;height:32px;border-radius:50%;
+  font-size:15px;cursor:pointer;color:var(--mut)}
+.sheet .f label{color:var(--ink)}
+.sheet .f input,.sheet .f select,.sheet .f textarea{width:100%;
+  border:1.5px solid var(--line);border-radius:12px;font-size:14px;
+  font-weight:600;padding:11px 13px;outline:0;background:#fff;color:var(--ink)}
+.sheet .f input:focus,.sheet .f select:focus{border-color:var(--accent)}
+.sheet .f textarea{min-height:64px;resize:vertical;font-weight:500}
+.file-row{display:flex;align-items:center;gap:8px;border:1.5px dashed var(--line);
+  border-radius:12px;padding:10px 12px;font-size:12px;color:var(--mut);cursor:pointer}
+.file-row.has{border-color:var(--ok);color:#047857;font-weight:700}
+
+/* ───── محافظ الاستلام (للنسخ + QR) ───── */
+.paym{border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:10px}
+.paym .pm-top{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.paym .pm-top b{font-size:13px;font-weight:800;flex:1}
+.paym .pm-num{display:flex;align-items:center;gap:8px;background:#f8fafc;
+  border:1.5px dashed var(--accent);border-radius:10px;padding:8px 10px}
+.paym .pm-num b{flex:1;font-size:13.5px;direction:ltr;text-align:left;word-break:break-all}
+.paym .pm-num .cp{background:#fff;border:1.5px solid var(--line);border-radius:10px;
+  width:34px;height:34px;cursor:pointer;font-size:13px;color:var(--accent);flex-shrink:0}
+.paym .pm-name{font-size:10.5px;color:var(--mut);margin-top:5px}
+.paym .pm-qr{display:block;max-width:120px;max-height:120px;margin:8px auto 0;
+  border-radius:10px;border:1px solid var(--line)}
+.paym .pm-hint{font-size:10.5px;color:var(--mut);margin-top:6px;line-height:1.7}
+
+/* ───── شات الدعم ───── */
+.fab-chat{position:fixed;bottom:78px;left:14px;z-index:7000;width:54px;height:54px;
+  border-radius:50%;background:linear-gradient(135deg,var(--accent),#312e81);
+  color:#fff;border:0;font-size:23px;cursor:pointer;
+  box-shadow:0 10px 26px rgba(49,46,129,.4);display:none}
+.fab-chat .badge{position:absolute;top:-3px;right:-3px;background:var(--bad);
+  color:#fff;font-size:10px;font-weight:800;min-width:18px;height:18px;
+  border-radius:9px;padding:0 4px;display:none;align-items:center;justify-content:center}
+.fab-chat .badge.show{display:flex}
+.chat-body{max-height:54vh;overflow-y:auto;padding:6px 2px;display:flex;
+  flex-direction:column;gap:8px}
+.msg{max-width:80%;padding:9px 12px;border-radius:14px;font-size:12.5px;
+  line-height:1.7;word-break:break-word}
+.msg small{display:block;font-size:9px;opacity:.6;margin-top:3px}
+.msg.me{align-self:flex-start;background:var(--accent);color:#fff;border-bottom-right-radius:4px}
+.msg.them{align-self:flex-end;background:#f1f5f9;color:var(--ink);border-bottom-left-radius:4px}
+.msg img{display:block;max-width:100%;border-radius:10px;margin-top:6px}
+.chat-bar{display:flex;align-items:center;gap:6px;margin-top:10px;
+  border-top:1px solid var(--line);padding-top:10px}
+.chat-bar input[type=text]{flex:1;border:1.5px solid var(--line);border-radius:999px;
+  padding:10px 14px;font-size:13px;outline:0}
+.chat-bar input[type=text]:focus{border-color:var(--accent)}
+.chat-bar .cb{background:#f1f5f9;border:0;width:40px;height:40px;border-radius:50%;
+  font-size:16px;cursor:pointer;color:var(--accent);flex-shrink:0}
+.chat-bar .cb.send{background:var(--accent);color:#fff}
+.wa-btn{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;
+  background:#25d366;color:#fff;border:0;border-radius:12px;font-size:12.5px;
+  font-weight:800;padding:11px;cursor:pointer;margin-bottom:10px}
+
 /* ───── سبينر ───── */
 .spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.4);
   border-top-color:#fff;border-radius:50%;animation:hrSpin .7s linear infinite;
@@ -681,6 +776,20 @@ body{min-height:100vh;background:
           <button class="btn-acc" id="btnRedeem" type="button">⚡ شحن الرصيد</button>
         </div>
       </div>
+
+      <!-- إجراءات: شحن بتحويل (إيداع) + سحب رصيد -->
+      <div class="wact">
+        <button type="button" class="dep" id="btnOpenDeposit">
+          <span class="wi">💰</span>شحن بتحويل</button>
+        <button type="button" class="wd" id="btnOpenWithdraw">
+          <span class="wi">💸</span>سحب رصيد</button>
+      </div>
+
+      <!-- طلباتي (إيداع/سحب) بحالتها -->
+      <div class="sec-title">طلباتي <small id="reqCount"></small></div>
+      <div class="card reqs" id="reqList">
+        <div class="empty">لا توجد طلبات بعد.</div>
+      </div>
     </div>
 
     <!-- ── تبويب ٢: المعرض ── -->
@@ -765,6 +874,90 @@ body{min-height:100vh;background:
   </div>
 </div>
 
+<!-- ═══ ورقة شحن المحفظة بتحويل (طلب إيداع) ═══ -->
+<div class="sheet" id="depositSheet">
+  <div class="sh-card">
+    <div class="sh-head">
+      <h3>💰 شحن المحفظة بتحويل</h3>
+      <button class="sh-x" type="button" data-close-sheet="depositSheet">✕</button>
+    </div>
+    <p style="font-size:11.5px;color:#64748b;line-height:1.8;margin-bottom:12px">
+      حوّل المبلغ إلى إحدى المحافظ التالية، ثم عبّئ بيانات التحويل وارفع
+      صورة الوصل. يُضاف الرصيد بعد تأكيد المزوّد.</p>
+    <div id="payMethods">
+      <div class="skel" style="height:80px;margin-bottom:10px"></div>
+    </div>
+    <div class="inline-err" id="depErr" style="position:static;margin:6px 0"></div>
+    <div class="f"><label>طريقة الدفع المستخدمة</label>
+      <select id="depMethod"></select></div>
+    <div class="f"><label>المبلغ المحوَّل</label>
+      <input id="depAmount" type="number" inputmode="decimal" min="0"
+             step="0.01" placeholder="0.00"></div>
+    <div class="f"><label>رقم الجوال الذي حوّلت منه</label>
+      <input id="depPhone" type="tel" inputmode="tel" placeholder="05xxxxxxxx"></div>
+    <div class="f"><label>الرقم المرجعي للدفعة</label>
+      <input id="depRef" type="text" placeholder="رقم العملية / المرجع"></div>
+    <div class="f"><label>اسم صاحب الحساب المحوِّل</label>
+      <input id="depPayer" type="text" placeholder="الاسم كما في حسابك"></div>
+    <div class="f"><label>صورة الوصل</label>
+      <label class="file-row" id="depFileRow" for="depReceipt">
+        <span>📎</span><span id="depFileName">اضغط لإرفاق صورة الوصل</span></label>
+      <input id="depReceipt" type="file" accept="image/*" style="display:none"></div>
+    <button class="btn-acc" id="btnDepositSubmit" type="button"
+            style="margin-top:6px">إرسال طلب الشحن</button>
+  </div>
+</div>
+
+<!-- ═══ ورقة سحب الرصيد ═══ -->
+<div class="sheet" id="withdrawSheet">
+  <div class="sh-card">
+    <div class="sh-head">
+      <h3>💸 سحب رصيد</h3>
+      <button class="sh-x" type="button" data-close-sheet="withdrawSheet">✕</button>
+    </div>
+    <p style="font-size:11.5px;color:#64748b;line-height:1.8;margin-bottom:12px">
+      اطلب تحويل رصيدك (كله أو جزء) إلى حسابك. يُنفّذ التحويل يدويًا
+      ويُخصم الرصيد بعد تأكيد المزوّد.</p>
+    <div class="inline-err" id="wdErr" style="position:static;margin:6px 0"></div>
+    <div class="f"><label>المبلغ المطلوب سحبه</label>
+      <input id="wdAmount" type="number" inputmode="decimal" min="0"
+             step="0.01" placeholder="0.00">
+      <div style="font-size:10.5px;color:#64748b;margin-top:5px">
+        رصيدك الحالي: <b id="wdBalance" style="direction:ltr">—</b></div></div>
+    <div class="f"><label>اسم صاحب الحساب</label>
+      <input id="wdName" type="text" placeholder="الاسم المستلِم للتحويل"></div>
+    <div class="f"><label>رقم الحساب الذي نحوّل إليه</label>
+      <input id="wdAccount" type="text" placeholder="رقم الحساب / الجوال"></div>
+    <button class="btn-acc" id="btnWithdrawSubmit" type="button"
+            style="margin-top:6px">إرسال طلب السحب</button>
+  </div>
+</div>
+
+<!-- ═══ ورقة شات الدعم ═══ -->
+<div class="sheet" id="chatSheet">
+  <div class="sh-card">
+    <div class="sh-head">
+      <h3>💬 الدعم</h3>
+      <button class="sh-x" type="button" data-close-sheet="chatSheet">✕</button>
+    </div>
+    <button class="wa-btn" id="btnWhatsapp" type="button" style="display:none">
+      <span>📱</span> تحويل المحادثة إلى واتساب</button>
+    <div class="chat-body" id="chatBody">
+      <div class="empty">ابدأ المحادثة — نحن هنا للمساعدة.</div>
+    </div>
+    <div class="chat-bar">
+      <button class="cb" id="btnChatAttach" type="button" title="إرفاق صورة">📎</button>
+      <input id="chatImage" type="file" accept="image/*" style="display:none">
+      <input id="chatText" type="text" placeholder="اكتب رسالتك…">
+      <button class="cb send" id="btnChatSend" type="button" title="إرسال">➤</button>
+    </div>
+  </div>
+</div>
+
+<!-- زر الشات العائم -->
+<button class="fab-chat" id="fabChat" type="button" title="الدعم">💬
+  <span class="badge" id="chatBadge">0</span></button>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -783,6 +976,9 @@ body{min-height:100vh;background:
      في ترويسة X-Store-Key مع كل نداء. يرفض الـ API أي طلب لا يحمل
      المفتاح الصحيح، فلا يستدعي النقاطَ إلا هذا المتجر المنشور. */
   var SKEY = '{{STORE_KEY}}';
+  /* رقم واتساب الدعم — يُحقن عند النشر (أرقام فقط، صيغة دولية). فارغ
+     يخفي زر «تحويل للواتساب». */
+  var WA = '{{SUPPORT_WHATSAPP}}';
 
   var $ = function (id) { return document.getElementById(id); };
 
@@ -952,6 +1148,39 @@ body{min-height:100vh;background:
     });
   }
 
+  /* نداء multipart (FormData) للرفع (وصل/صورة شات) — لا نضبط
+     Content-Type يدويًا فيضيف المتصفح boundary. نفس التوكن والمفتاح
+     ومعالجة الأخطاء العربية في api(). */
+  function apiForm(path, formData) {
+    if (apiUnusable()) {
+      guardApi();
+      var ce = new Error('لم يُضبط عنوان الخادم.');
+      ce.code = 'api_unconfigured';
+      return Promise.reject(ce);
+    }
+    var headers = {};
+    if (SKEY) headers['X-Store-Key'] = SKEY;
+    var token = sessionStorage.getItem(TKEY);
+    if (token) headers['Authorization'] = 'Bearer ' + token;
+    return fetch(API + '/api/v1/store' + path, {
+      method: 'POST', headers: headers, body: formData
+    }).then(function (res) {
+      return res.json().catch(function () { return {}; }).then(function (j) {
+        if (res.ok && j && j.ok) return j.data || {};
+        var err = (j && j.error) || {};
+        if (res.status === 401 && token) { doLogout(true); }
+        var e = new Error(err.message || 'تعذر الاتصال بالخادم.');
+        e.code = err.code || 'request_failed';
+        throw e;
+      });
+    }, function () {
+      setConn('network');
+      var e = new Error('تعذّر الوصول إلى الخادم — راجع شريط الحالة أعلى الصفحة.');
+      e.code = 'network_error';
+      throw e;
+    });
+  }
+
   /* ───── تبديل الشاشات ───── */
   function show(screen) {
     $('scrLogin').classList.toggle('hide', screen !== 'login');
@@ -959,6 +1188,9 @@ body{min-height:100vh;background:
     $('scrHome').classList.toggle('hide', screen !== 'home');
     $('tabBar').classList.toggle('hide', screen !== 'home');
     $('btnLogout').style.display = screen === 'home' ? 'inline-block' : 'none';
+    // زر الشات العائم يظهر داخل الرئيسية فقط؛ مغادرتها توقف الاستطلاع.
+    $('fabChat').style.display = screen === 'home' ? 'block' : 'none';
+    if (screen !== 'home' && typeof closeChat === 'function') closeChat();
   }
 
   /* ───── شريط التبويبات السفلي ─────
@@ -1287,6 +1519,7 @@ body{min-height:100vh;background:
   function loadHome(silent) {
     return api('/me').then(function (data) {
       renderHome(data);
+      loadMyRequests();  // طلبات الإيداع/السحب بحالتها في تبويب رصيدي
       loadedTabs = {};
       if (!$('tabCards').classList.contains('hide')) loadMyCards(1);
       if (!$('tabHistory').classList.contains('hide')) loadHistory(1);
@@ -1421,6 +1654,229 @@ body{min-height:100vh;background:
       });
   }
 
+  /* ═════════ المتجر المتقدّم: إيداع / سحب / شات ═════════ */
+
+  function openSheet(id) { $(id).classList.add('show'); }
+  function closeSheet(id) { $(id).classList.remove('show'); }
+
+  /* ── طلباتي (إيداع + سحب مدموجين زمنيًا) ── */
+  function loadMyRequests() {
+    Promise.all([
+      api('/deposits').catch(function () { return { items: [] }; }),
+      api('/withdrawals').catch(function () { return { items: [] }; })
+    ]).then(function (res) {
+      var deps = (res[0].items || []).map(function (d) { d._k = 'dep'; return d; });
+      var wds = (res[1].items || []).map(function (w) { w._k = 'wd'; return w; });
+      var all = deps.concat(wds).sort(function (a, b) {
+        return String(b.created_at).localeCompare(String(a.created_at));
+      });
+      renderRequests(all);
+    });
+  }
+  function renderRequests(items) {
+    var box = $('reqList');
+    $('reqCount').textContent = items.length ? items.length + ' طلب' : '';
+    if (!items.length) {
+      box.innerHTML = '<div class="empty">لا توجد طلبات بعد.</div>';
+      return;
+    }
+    box.innerHTML = items.map(function (r) {
+      var dep = r._k === 'dep';
+      var amt = dep ? (r.confirmed_amount || r.amount_claimed) : r.amount;
+      return '<div class="rq"><span class="rq-ico ' + (dep ? 'dep' : '') +
+        '">' + (dep ? '💰' : '💸') + '</span>' +
+        '<span class="rq-txt"><b>' + (dep ? 'شحن بتحويل' : 'سحب رصيد') +
+          ' · ' + esc(r.status_ar || '') + '</b>' +
+          '<span>' + fmtWhen(r.created_at) + '</span></span>' +
+        '<span class="rq-amt">' + esc(amt || '') +
+          ' <small>' + esc(r.currency || '') + '</small></span></div>';
+    }).join('');
+  }
+
+  /* ── الإيداع: محافظ الاستلام + الإرسال ── */
+  function openDeposit() { openSheet('depositSheet'); loadPaymentMethods(); }
+  function loadPaymentMethods() {
+    var box = $('payMethods'), sel = $('depMethod');
+    api('/payment-methods').then(function (data) {
+      var methods = data.items || [];
+      if (!methods.length) {
+        box.innerHTML = '<div class="empty">لم يضف المزوّد محافظ استلام ' +
+          'بعد — تواصل معه.</div>';
+        sel.innerHTML = '<option value="other">قناة أخرى</option>';
+        return;
+      }
+      box.innerHTML = methods.map(function (m) {
+        var qr = m.qr_image_url ? '<img class="pm-qr" src="' +
+          esc(API + m.qr_image_url) + '" alt="QR">' : '';
+        var hint = m.instructions ? '<div class="pm-hint">' +
+          esc(m.instructions) + '</div>' : '';
+        var name = m.account_name ? '<div class="pm-name">صاحب الحساب: ' +
+          esc(m.account_name) + '</div>' : '';
+        return '<div class="paym"><div class="pm-top"><b>' +
+          esc(m.label || m.method_ar) + '</b><span class="chip chip-unused">' +
+          esc(m.method_ar || '') + '</span></div>' +
+          '<div class="pm-num"><b>' + esc(m.account_number || '') + '</b>' +
+          '<button type="button" class="cp" data-copy="' +
+          esc(m.account_number || '') + '">📋</button></div>' +
+          name + qr + hint + '</div>';
+      }).join('');
+      sel.innerHTML = methods.map(function (m) {
+        return '<option value="' + esc(m.method) + '" data-id="' + m.id +
+          '">' + esc(m.label || m.method_ar) + '</option>';
+      }).join('') + '<option value="other">قناة أخرى</option>';
+      Array.prototype.forEach.call(box.querySelectorAll('[data-copy]'),
+        function (b) {
+          b.addEventListener('click', function () {
+            copyText(b.getAttribute('data-copy') || '');
+          });
+        });
+    }).catch(function (e) {
+      box.innerHTML = '<div class="empty">' + esc(e.message) + '</div>';
+    });
+  }
+  function resetDeposit() {
+    ['depAmount', 'depPhone', 'depRef', 'depPayer'].forEach(
+      function (id) { $(id).value = ''; });
+    $('depReceipt').value = '';
+    $('depFileName').textContent = 'اضغط لإرفاق صورة الوصل';
+    $('depFileRow').classList.remove('has');
+  }
+  function submitDeposit() {
+    var err = $('depErr'); err.style.display = 'none';
+    var amount = $('depAmount').value.trim();
+    var sel = $('depMethod');
+    var opt = sel.options[sel.selectedIndex];
+    var pmId = opt ? opt.getAttribute('data-id') : '';
+    if (!amount || parseFloat(amount) <= 0) {
+      err.textContent = 'أدخل المبلغ المحوَّل.'; err.style.display = 'block';
+      return;
+    }
+    var fd = new FormData();
+    fd.append('amount_claimed', amount);
+    fd.append('method', sel.value || 'other');
+    if (pmId) fd.append('payment_method_id', pmId);
+    fd.append('payer_phone', $('depPhone').value.trim());
+    fd.append('reference', $('depRef').value.trim());
+    fd.append('payer_name', $('depPayer').value.trim());
+    var file = $('depReceipt').files[0];
+    if (file) fd.append('receipt', file);
+    var btn = $('btnDepositSubmit'); btn.disabled = true;
+    btn.innerHTML = '<span class="spin"></span> جارٍ الإرسال…';
+    apiForm('/deposits', fd).then(function () {
+      closeSheet('depositSheet');
+      toast('تم إرسال طلب الشحن — بانتظار تأكيد المزوّد.', 'ok');
+      resetDeposit(); loadMyRequests();
+    }).catch(function (e) {
+      err.textContent = e.message; err.style.display = 'block';
+    }).then(function () {
+      btn.disabled = false; btn.textContent = 'إرسال طلب الشحن';
+    });
+  }
+
+  /* ── السحب ── */
+  function openWithdraw() {
+    $('wdErr').style.display = 'none';
+    $('wdBalance').textContent = ($('wBalance').textContent || '—') + ' ' +
+      ($('wCurrency').textContent || '');
+    openSheet('withdrawSheet');
+  }
+  function submitWithdrawal() {
+    var err = $('wdErr'); err.style.display = 'none';
+    var amount = $('wdAmount').value.trim();
+    var name = $('wdName').value.trim(), acc = $('wdAccount').value.trim();
+    if (!amount || parseFloat(amount) <= 0) {
+      err.textContent = 'أدخل المبلغ المطلوب سحبه.'; err.style.display = 'block';
+      return;
+    }
+    if (!name || !acc) {
+      err.textContent = 'أدخل اسم صاحب الحساب ورقم الحساب.';
+      err.style.display = 'block'; return;
+    }
+    var btn = $('btnWithdrawSubmit'); btn.disabled = true;
+    btn.innerHTML = '<span class="spin"></span> جارٍ الإرسال…';
+    api('/withdrawals', { method: 'POST', body: {
+      amount: amount, payee_name: name, payee_account: acc } })
+      .then(function () {
+        closeSheet('withdrawSheet');
+        toast('تم إرسال طلب السحب — بانتظار تنفيذ المزوّد.', 'ok');
+        $('wdAmount').value = ''; $('wdName').value = ''; $('wdAccount').value = '';
+        loadMyRequests();
+      }).catch(function (e) {
+        err.textContent = e.message; err.style.display = 'block';
+      }).then(function () {
+        btn.disabled = false; btn.textContent = 'إرسال طلب السحب';
+      });
+  }
+
+  /* ── شات الدعم (استطلاع خفيف) ── */
+  var chatLastId = 0, chatPollTimer = null;
+  function openChat() {
+    openSheet('chatSheet'); setupWhatsapp();
+    chatLastId = 0; $('chatBody').innerHTML = '';
+    loadChat(true);
+    if (chatPollTimer) clearInterval(chatPollTimer);
+    chatPollTimer = setInterval(function () { loadChat(false); }, 5000);
+  }
+  function closeChat() {
+    closeSheet('chatSheet');
+    if (chatPollTimer) { clearInterval(chatPollTimer); chatPollTimer = null; }
+  }
+  function loadChat(first) {
+    api('/chat?after_id=' + chatLastId).then(function (data) {
+      var items = data.items || [];
+      if (items.length) {
+        chatLastId = data.last_id || chatLastId;
+        appendChat(items, first);
+      } else if (first) {
+        $('chatBody').innerHTML =
+          '<div class="empty">ابدأ المحادثة — نحن هنا للمساعدة.</div>';
+      }
+    }).catch(function () {});
+  }
+  function appendChat(items, first) {
+    var body = $('chatBody');
+    if (first) body.innerHTML = '';
+    var em = body.querySelector('.empty'); if (em) em.parentNode.removeChild(em);
+    items.forEach(function (m) {
+      var me = m.sender === 'customer';
+      var div = document.createElement('div');
+      div.className = 'msg ' + (me ? 'me' : 'them');
+      var html = m.body ? esc(m.body) : '';
+      if (m.image_url) html += '<img src="' + esc(API + m.image_url) + '" alt="">';
+      html += '<small>' + fmtWhen(m.created_at) + '</small>';
+      div.innerHTML = html;
+      body.appendChild(div);
+    });
+    body.scrollTop = body.scrollHeight;
+  }
+  function sendChat() {
+    var txt = $('chatText').value.trim();
+    var file = $('chatImage').files[0];
+    if (!txt && !file) return;
+    var fd = new FormData();
+    if (txt) fd.append('body', txt);
+    if (file) fd.append('image', file);
+    $('chatText').value = ''; $('chatImage').value = '';
+    apiForm('/chat', fd).then(function (data) {
+      if (data.message) {
+        appendChat([data.message], false);
+        chatLastId = Math.max(chatLastId, data.message.id || 0);
+      }
+    }).catch(function (e) { toast(e.message, 'bad'); });
+  }
+  function setupWhatsapp() {
+    var btn = $('btnWhatsapp');
+    /* '$'+'{' لا يلتقطها محلّل القوالب — وWA المحقون أرقام فقط. */
+    if (!WA || WA.indexOf('{' + '{') !== -1) { btn.style.display = 'none'; return; }
+    btn.style.display = 'flex';
+    btn.onclick = function () {
+      var name = $('wName').textContent || '';
+      var msg = encodeURIComponent('مرحبًا، أنا ' + name +
+        ' من متجر البطاقات وأحتاج مساعدة.');
+      window.open('https://wa.me/' + WA + '?text=' + msg, '_blank');
+    };
+  }
+
   /* ───── ربط الأحداث ───── */
   $('btnLogin').addEventListener('click', doLogin);
   $('inPass').addEventListener('keydown', function (e) {
@@ -1449,6 +1905,32 @@ body{min-height:100vh;background:
   $('btnModalLogin').addEventListener('click', function () {
     var u = $('mUser').textContent, p = $('mPass').textContent;
     if (u && u !== '—') hotspotLogin(u, p === '—' ? '' : p);
+  });
+  /* المتجر المتقدّم: إيداع / سحب / شات */
+  $('btnOpenDeposit').addEventListener('click', openDeposit);
+  $('btnOpenWithdraw').addEventListener('click', openWithdraw);
+  $('btnDepositSubmit').addEventListener('click', submitDeposit);
+  $('btnWithdrawSubmit').addEventListener('click', submitWithdrawal);
+  $('depReceipt').addEventListener('change', function () {
+    var f = this.files[0];
+    $('depFileName').textContent = f ? ('✓ ' + f.name) : 'اضغط لإرفاق صورة الوصل';
+    $('depFileRow').classList.toggle('has', !!f);
+  });
+  Array.prototype.forEach.call(
+    document.querySelectorAll('[data-close-sheet]'), function (b) {
+      b.addEventListener('click', function () {
+        var id = b.getAttribute('data-close-sheet');
+        if (id === 'chatSheet') closeChat(); else closeSheet(id);
+      });
+    });
+  $('fabChat').addEventListener('click', openChat);
+  $('btnChatSend').addEventListener('click', sendChat);
+  $('chatText').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') sendChat();
+  });
+  $('btnChatAttach').addEventListener('click', function () { $('chatImage').click(); });
+  $('chatImage').addEventListener('change', function () {
+    if (this.files[0]) sendChat();
   });
   /* شريط التبويبات */
   Array.prototype.forEach.call(
