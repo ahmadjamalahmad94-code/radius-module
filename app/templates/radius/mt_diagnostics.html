@@ -127,6 +127,46 @@
         {% if r.hint %}<div class="hub-empty-sub">{{ r.hint }}</div>{% endif %}
       </div>
 
+      {# Ranked probable causes — replaces the dead-end «فشل الاتصال»:
+         قائمة أسباب مرتّبة مع حلول قابلة للتنفيذ، وعلى رأسها (لنفق الإدارة)
+         سبب ساعة الراوتر الذي يكسر مصافحة WireGuard بعد الإطفاء. #}
+      {% if r.probable_causes %}
+      <div class="hub-fix" style="margin-top:14px;border-inline-start:3px solid var(--hub-danger,#dc2626)">
+        <div class="hub-flex-row" style="gap:8px;align-items:center;margin-bottom:10px">
+          <i class="fa-solid fa-list-check hub-text-mute"></i>
+          <strong>الأسباب الأرجح وحلولها (مرتّبة حسب الاحتمال)</strong>
+        </div>
+        <ol style="margin:0;padding-inline-start:18px;display:flex;flex-direction:column;gap:12px">
+          {% for c in r.probable_causes %}
+          <li>
+            <div class="hub-flex-row" style="gap:8px;align-items:flex-start">
+              <i class="fa-solid fa-{{ c.icon }} hub-text-mute" style="margin-top:3px"></i>
+              <div>
+                <div style="font-weight:600">{{ c.title }}</div>
+                <div class="hub-text-mute" style="font-size:12.5px;margin-top:2px">{{ c.fix }}</div>
+              </div>
+            </div>
+          </li>
+          {% endfor %}
+        </ol>
+      </div>
+      {% endif %}
+
+      {# Preventive NTP warning — clock skew silently breaks WireGuard.
+         يظهر فقط عندما يكون الراوتر متصلاً لكن عميل NTP لديه معطّل. #}
+      {% if r.ntp and r.ntp.checked and r.ntp.enabled is false %}
+      <div class="hub-fix" style="margin-top:14px;border-inline-start:3px solid var(--hub-warn,#d97706)">
+        <div class="hub-flex-row" style="gap:8px;align-items:flex-start">
+          <i class="fa-solid fa-clock hub-text-mute" style="margin-top:3px"></i>
+          <div>
+            <strong>تزامن وقت الراوتر / NTP غير مفعّل</strong>
+            <div class="hub-text-mute" style="font-size:12.5px;margin-top:4px">{{ r.ntp.warning }}</div>
+            {% if r.ntp.clock %}<div class="hub-text-mute" style="font-size:12px;margin-top:4px">ساعة الراوتر الآن: {{ r.ntp.clock }}</div>{% endif %}
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
       {# Copyable repair scripts — heavy clipboard JS preserved verbatim #}
       {% if r.status == 'tcp_failed' %}
         {% if r.connection_mode == 'vpn' %}
