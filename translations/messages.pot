@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-06-06 00:28+0300\n"
+"POT-Creation-Date: 2026-06-06 14:45+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -477,6 +477,9 @@ msgstr ""
 msgid "تحويلات الرصيد"
 msgstr ""
 
+msgid "ترخيص النظام"
+msgstr ""
+
 msgid "تسجيل الخروج"
 msgstr ""
 
@@ -783,9 +786,6 @@ msgstr ""
 msgid "لوحة التحكم"
 msgstr ""
 
-msgid "لوحة التراخيص"
-msgstr ""
-
 msgid "لون العلامة المستخدم في أجزاء من الواجهة."
 msgstr ""
 
@@ -910,9 +910,6 @@ msgid "ملخص تشغيلي"
 msgstr ""
 
 msgid "ملخص خادم الربط"
-msgstr ""
-
-msgid "ملف التراخيص"
 msgstr ""
 
 msgid "من يدفع الخدمة ومن هو متصل ومن يحتاج متابعة قبل انتهاء الاشتراك."
