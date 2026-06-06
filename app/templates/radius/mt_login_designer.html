@@ -223,6 +223,7 @@
     .mtld-step.is-running .mtld-step-ico i { animation: mtld-spin 1s linear infinite; }
   }
   @keyframes mtld-spin { to { transform: rotate(360deg); } }
+  .mtld-retry-btn { margin-top: 12px; }
   /* لوحة تشخيص لوب الجلب 401 */
   .mtld-loop-note { margin-top: 14px; }
   .mtld-loop-note > summary {
@@ -1551,6 +1552,7 @@
   }
 
   function resetPanel() {
+    removeRetry();
     stepsEl.textContent = "";
     Object.keys(stepNodes).forEach(k => delete stepNodes[k]);
     totalSteps = 0;
@@ -1602,9 +1604,28 @@
     pctEl.textContent = pct + "%";
   }
 
+  let retryBtn = null;
+  function removeRetry() {
+    if (retryBtn && retryBtn.parentNode) {
+      retryBtn.parentNode.removeChild(retryBtn);
+    }
+    retryBtn = null;
+  }
+  function addRetry() {
+    removeRetry();
+    retryBtn = document.createElement("button");
+    retryBtn.type = "button";
+    retryBtn.className = "hub-btn hub-btn--primary mtld-retry-btn";
+    retryBtn.innerHTML =
+      '<i class="fa-solid fa-rotate-right"></i> إعادة المحاولة';
+    retryBtn.addEventListener("click", function () { streamDeploy(); });
+    panel.appendChild(retryBtn);
+  }
+
   function finish(ev) {
     fillEl.style.width = "100%";
     pctEl.textContent = "100%";
+    removeRetry();
     if (ev && ev.ok) {
       panel.classList.add("is-done");
       titleEl.innerHTML =
@@ -1615,6 +1636,9 @@
       titleEl.innerHTML =
         '<i class="fa-solid fa-circle-exclamation"></i> فشل النشر'
         + (ev && ev.error ? ' — ' + escapeHtml(ev.error) : '');
+      // الانقطاع العابر (Errno 104) أو خطأ مؤقت كثيرًا ما ينجح بإعادة
+      // فورية بلا إعادة تحميل الصفحة → نعرض زر «إعادة المحاولة».
+      addRetry();
     }
   }
 
@@ -1673,11 +1697,12 @@
       }
       return pump();
     }).catch(function (e) {
-      // انقطع البثّ — أظهر فشلًا واضحًا بدل تعليق صامت.
+      // انقطع البثّ — أظهر فشلًا واضحًا + زر إعادة بدل تعليق صامت.
       panel.classList.add("is-fail");
       titleEl.innerHTML =
         '<i class="fa-solid fa-circle-exclamation"></i> انقطع الاتصال أثناء النشر — '
         + escapeHtml(e && e.message ? e.message : "حاول مجددًا");
+      addRetry();
       disableSubmit(false);
     });
   }

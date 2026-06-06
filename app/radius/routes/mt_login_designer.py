@@ -185,7 +185,9 @@ def _connect_client(nas_id: int):
         username=row["api_user"] or "admin",
         password=row["api_password"] or "",
         use_tls=bool(row["api_use_tls"]),
-        verify_tls=True, timeout=15.0,
+        # مهلة أوسع للنشر: login.html قد يحمل شعارًا/خطًا مضمّنًا (عشرات
+        # الكيلوبايت) ويمرّ عبر نفق إدارة بطيء — 15s كانت تقطع الرفع.
+        verify_tls=True, timeout=30.0,
     )
 
 
@@ -584,15 +586,22 @@ def _iter_deploy(nas_id: int, nas: dict, design: dict, *, confirmed: bool):
         client.connect()
         yield _deploy_step("connect", "ok", "تم الاتصال بالراوتر.")
 
-        # ── رفع login.html ──
+        # ── رفع login.html (مع إعادة محاولة آلية عند الانقطاع العابر) ──
         current = "login"
         yield _deploy_step("login", "running", "جارٍ رفع صفحة الدخول…")
+        # on_retry يجمع محاولات الانقطاع العابر؛ deploy_login يحجب أثناء
+        # إعادة المحاولة (متزامن) فنُثري التفاصيل بعد عودته بعدد المحاولات.
+        _login_retries: list = []
         deploy_result = ht.deploy_login(
-            client, design["template_slug"], login_vars, tenant_id=_tid())
+            client, design["template_slug"], login_vars, tenant_id=_tid(),
+            on_retry=lambda att, reason: _login_retries.append((att, reason)))
         if deploy_result and deploy_result.ok:
+            _retry_note = (f" (نجح بعد {len(_login_retries)} إعادة محاولة)"
+                           if _login_retries else "")
             yield _deploy_step(
                 "login", "ok",
-                f"رُفع {deploy_result.bytes} بايت إلى {deploy_result.path}")
+                f"رُفع {deploy_result.bytes} بايت إلى {deploy_result.path}"
+                + _retry_note)
 
             # ── errors.txt (فشله لا يُفشل النشر) ──
             current = "errors"
@@ -632,6 +641,8 @@ def _iter_deploy(nas_id: int, nas: dict, design: dict, *, confirmed: bool):
                 done_n = 0
                 yield _deploy_step("companions", "running", f"0/{total}")
                 for fname, fhtml in pages.items():
+                    # deploy_hotspot_file يُعيد المحاولة آليًا عند الانقطاع
+                    # العابر داخليًا (_put_file)؛ فشل ملف لا يُفشل البقية.
                     try:
                         r = ht.deploy_hotspot_file(client, fname, fhtml)
                     except Exception:  # noqa: BLE001
@@ -708,9 +719,11 @@ def _iter_deploy(nas_id: int, nas: dict, design: dict, *, confirmed: bool):
                         (wg_result.error if wg_result else "")
                         + " — انسخ أمر walled-garden يدويًا من الصفحة.")
     except Exception as e:  # noqa: BLE001
-        # السبب الحقيقي لفشل الاتصال/الرفع — يُعرض على الخطوة الجارية.
-        error = "تعذّر الاتصال بالراوتر: " + str(e)
-        yield _deploy_step(current, "failed", error)
+        # السبب الحقيقي لفشل الاتصال/الرفع — يُصنَّف لرسالة عربية واضحة
+        # (مصادقة/انقطاع/مهلة/مرفوض) ويُعرض على الخطوة الجارية.
+        _kind, _reason = ht.classify_deploy_error(e)
+        error = _reason
+        yield _deploy_step(current, "failed", _reason)
     finally:
         try:
             client.close()
