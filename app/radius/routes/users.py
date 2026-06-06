@@ -553,6 +553,35 @@ def _sub_with_meta_for_template(sub: Subscriber) -> dict:
             flat.setdefault(k, v)
     for f in _META_FIELDS:
         d.setdefault(f, flat.get(f, ""))
+    # Single source of truth for the temp-speed DISPLAY. The shared service
+    # (services/temp_speed.py) writes the window at the TOP level of metadata
+    # and the live throttle into the speed columns. Older profile saves also
+    # mirrored copies into the `advanced` group; those must NEVER shadow the
+    # authoritative values (a stale `advanced.temporary_speed_to` used to leak
+    # onto the edit page after a cancel/expire, because the old reader took the
+    # `advanced` copy first). We override the five temp fields here, reading
+    # TOP-LEVEL FIRST and only falling back to the `advanced` mirror for very
+    # old rows that never had a top-level window:
+    #   • window  ← temporary_speed_from / _to / _duration_minutes
+    #   • speeds  ← the speed columns, but ONLY while a window is actually set
+    #               (so a reverted/orphan row shows empty, not a stale throttle).
+    _adv = grouped.get("advanced") if isinstance(grouped.get("advanced"), dict) else {}
+
+    def _auth(key):
+        return grouped.get(key) or _adv.get(key) or ""
+
+    top_from = _auth("temporary_speed_from")
+    top_to = _auth("temporary_speed_to")
+    d["temporary_speed_from"] = top_from
+    d["temporary_speed_to"] = top_to
+    d["temporary_speed_duration_minutes"] = _auth("temporary_speed_duration_minutes")
+    has_window = bool(getattr(sub, "temporary_speed", False)) and bool(top_from or top_to)
+    if has_window:
+        d["temporary_download_speed_kbps"] = int(getattr(sub, "download_speed_kbps", 0) or 0)
+        d["temporary_upload_speed_kbps"] = int(getattr(sub, "upload_speed_kbps", 0) or 0)
+    else:
+        d["temporary_download_speed_kbps"] = ""
+        d["temporary_upload_speed_kbps"] = ""
     return d
 
 

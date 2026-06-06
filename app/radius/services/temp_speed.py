@@ -332,6 +332,15 @@ def _revert_one(tenant_id: int, row: Any, now: datetime, *, actor: str) -> bool:
 
     for key in _TEMP_META_KEYS:
         meta.pop(key, None)
+    # Purge any stale copies the profile form's metadata grouper left under
+    # `advanced` (older saves mirrored the window/speeds there). They are NOT
+    # the source of truth — the top-level keys + speed columns are — but if left
+    # behind they shadow the authoritative values on the edit page. Clear both.
+    adv = meta.get("advanced")
+    if isinstance(adv, dict):
+        for key in (*_TEMP_META_KEYS,
+                    "temporary_download_speed_kbps", "temporary_upload_speed_kbps"):
+            adv.pop(key, None)
 
     db().execute(
         """
@@ -387,7 +396,14 @@ def expire_due_temp_speeds(
     reverted = 0
     for row in rows:
         ends = _ends_at(_parse_meta(row["metadata"]), row["updated_at"])
-        if ends and ends <= now:
+        # Revert when the window has ended OR when the row is an ORPHAN: flagged
+        # temporary_speed=1 but with NO computable window (``ends is None``).
+        # Orphans come from legacy rows set before this service existed, a
+        # half-written state, or metadata wiped by an unrelated path. They would
+        # otherwise stay throttled forever and render the broken edit-page UI
+        # ("لا يوجد وقت انتهاء محفوظ" / 00:00 / empty speeds), so we treat
+        # "flagged but no end" as expired and restore the normal rate now.
+        if ends is None or ends <= now:
             try:
                 if _revert_one(tenant_id, row, now, actor=actor):
                     reverted += 1
