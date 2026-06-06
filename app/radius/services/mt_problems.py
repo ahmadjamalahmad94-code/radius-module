@@ -123,8 +123,11 @@ def _problems_for_router(ov) -> list[Problem]:
             router_id=rid, router_name=rname,
             type=PROBLEM_SNAPSHOT_FAILED, severity=SEV_CRITICAL,
             title_ar=f"{rname} لا يستجيب",
-            explanation_ar="آخر محاولة لقراءة بيانات الراوتر فشلت.",
-            suggested_action_ar="شغّل تشخيصًا أو افحص الـ uplink.",
+            explanation_ar="آخر محاولة لقراءة بيانات الراوتر فشلت. "
+                            "السبب الأشيع بعد إطفاء طويل: ساعة الراوتر "
+                            "رجعت للماضي فرفض WireGuard المصافحة القديمة.",
+            suggested_action_ar="افتح التشخيص لقائمة الأسباب المرتّبة وحلولها "
+                                "(تصحيح الوقت/NTP، تغيّر الآي بي، النفق، الإطفاء).",
             suggested_href=(
                 f"/admin/radius/jobs/diagnostics/{rid}"),
             last_seen=ov.snapshot_last_success_at or "",
