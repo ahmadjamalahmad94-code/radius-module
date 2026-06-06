@@ -1,0 +1,138 @@
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}الأنفاق — Hobe Hub{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-network-wired"></i>{% endblock %}
+{% block page_title %}الأنفاق{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<style>
+  .tn-cred{
+    margin-top:4px; display:grid; gap:10px;
+    padding:16px; border-radius:12px;
+    background:#ecfdf5; border:1px solid #a7f3d0;
+  }
+  .tn-cred-row{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .tn-cred-row label{ min-width:120px; font-weight:800; color:#065f46; font-size:13px; }
+  .tn-cred-row code{
+    direction:ltr; unicode-bidi:isolate; font-size:13.5px;
+    background:#fff; border:1px solid #a7f3d0; border-radius:8px;
+    padding:6px 10px; user-select:all;
+  }
+  .tn-cred-note{ font-size:12.5px; color:#92400e; }
+  .tn-table{ width:100%; border-collapse:collapse; font-size:13.5px; }
+  .tn-table th, .tn-table td{
+    padding:10px 12px; text-align:start;
+    border-bottom:1px solid var(--hub-border-soft, #e2e8f0);
+  }
+  .tn-table th{ color:var(--hub-text-mute, #64748b); font-weight:700; font-size:12.5px; }
+  .tn-mono{ direction:ltr; unicode-bidi:isolate; font-family:ui-monospace, Consolas, monospace; font-size:12.5px; }
+</style>
+{% endblock %}
+
+{% set help_aside %}
+{{ hub.helppanel(
+  "كيف تعمل الأنفاق؟",
+  intro="لوحة التراخيص هي مصدر الحقيقة لأنفاق CHR. من هنا تطلب نفقًا أو تستعرض الأنفاق فقط.",
+  items=[
+    "طلب النفق يستلم اسم مستخدم وكلمة مرور SSTP تُعرض مرة واحدة للحقن المحلي ولا تُخزَّن.",
+    "المزامنة تلتقط الأنفاق (حتى اليدوية PPTP/L2TP/IPsec) وتؤكّدها للوحة.",
+    "النفق الملغى يُحذف محليًا، والموقوف يُعطَّل محليًا.",
+    "لا تُولَّد بيانات اعتماد CHR في لوحة العميل ولا تُحفظ أي أسرار نفق خام.",
+  ],
+  icon="circle-info",
+) }}
+{% endset %}
+
+{% block content %}
+{% call hub.worklayout(aside_html=help_aside) %}
+
+  {% if revealed %}
+    {% call hub.section("بيانات دخول النفق — تُعرض مرة واحدة", icon="key") %}
+      <p style="margin:0 0 8px; color:var(--hub-text-soft); font-size:13.5px;">
+        انسخ هذه البيانات الآن واحقنها في إعداد النفق على الراوتر. لن تُعرض مجددًا ولا تُخزَّن في اللوحة.
+      </p>
+      <div class="tn-cred">
+        <div class="tn-cred-row"><label>اسم النفق</label><code>{{ revealed.remote_name }}</code></div>
+        {% if revealed.remote_address %}<div class="tn-cred-row"><label>عنوان الخادم</label><code>{{ revealed.remote_address }}</code></div>{% endif %}
+        <div class="tn-cred-row"><label>اسم المستخدم</label><code>{{ revealed.username }}</code></div>
+        <div class="tn-cred-row"><label>كلمة المرور</label><code>{{ revealed.password }}</code></div>
+        <div class="tn-cred-note"><i class="fa-solid fa-triangle-exclamation"></i> هذه آخر مرة تظهر فيها كلمة المرور.</div>
+      </div>
+    {% endcall %}
+  {% endif %}
+
+  {% call hub.section("طلب نفق جديد", icon="circle-plus") %}
+    {% if not bridge_ready %}
+      <p style="margin:0; color:#92400e; background:#fef3c7; border:1px solid #fde68a; border-radius:10px; padding:12px; font-size:13.5px;">
+        الجسر مع لوحة التراخيص غير جاهز. فعّل الجسر وأدخل رابط HTTPS ومفتاح الترخيص وسر الربط من
+        <a href="{{ url_for('radius.license_file') }}">صفحة ترخيص النظام</a>.
+      </p>
+    {% else %}
+      <form method="post" action="{{ url_for('radius.tunnels_request') }}" class="hub-form-grid">
+        {{ csrf_token_input() }}
+        <div class="hub-field">
+          <label>نوع النفق</label>
+          <select class="hub-input" name="tunnel_type">
+            <option value="sstp">SSTP (نفق إدارة)</option>
+            <option value="pptp">PPTP</option>
+            <option value="l2tp">L2TP</option>
+            <option value="ipsec">IPsec</option>
+          </select>
+        </div>
+        <div class="hub-field">
+          <label>وصف (اختياري)</label>
+          <input class="hub-input" name="label" maxlength="160" placeholder="مثل: راوتر الفرع الرئيسي">
+        </div>
+        <div class="hub-field">
+          <label>معرّف الراوتر (اختياري)</label>
+          <input class="hub-input ltr" name="router_id" maxlength="40" placeholder="nas id">
+        </div>
+        <div class="full" style="display:flex; gap:8px; flex-wrap:wrap;">
+          {{ hub.btn("طلب النفق", variant="primary", icon="paper-plane", type="submit") }}
+        </div>
+      </form>
+    {% endif %}
+  {% endcall %}
+
+  {% call hub.section("الأنفاق الحالية", icon="list", meta=(tunnels|length ~ ' نفق') if tunnels else '') %}
+    <form method="post" action="{{ url_for('radius.tunnels_sync') }}" style="margin:0 0 12px;">
+      {{ csrf_token_input() }}
+      {{ hub.btn("مزامنة الآن", variant="ghost", icon="rotate", type="submit", attrs=("disabled" if not bridge_ready else "")) }}
+    </form>
+    {% if tunnels %}
+      <div style="overflow-x:auto;">
+        <table class="tn-table">
+          <thead>
+            <tr>
+              <th>الاسم</th><th>النوع</th><th>الحالة</th><th>المستخدم</th>
+              <th>العنوان</th><th>التأكيد</th><th>مرجع السر</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for t in tunnels %}
+              <tr>
+                <td class="tn-mono">{{ t.remote_name }}</td>
+                <td class="tn-mono">{{ t.tunnel_type|upper }}</td>
+                <td>
+                  {% if t.status == 'active' %}{{ hub.pill("فعّال", variant="green") }}
+                  {% elif t.status == 'suspended' %}{{ hub.pill("موقوف", variant="amber") }}
+                  {% else %}{{ hub.pill(t.status, variant="grey") }}{% endif %}
+                </td>
+                <td class="tn-mono">{{ t.username or '—' }}</td>
+                <td class="tn-mono">{{ t.remote_address or '—' }}</td>
+                <td>{% if t.acked %}{{ hub.pill("مؤكَّد", variant="blue", dot=False) }}{% else %}{{ hub.pill("بانتظار", variant="grey", dot=False) }}{% endif %}</td>
+                <td class="tn-mono">{{ t.secret_ref or '—' }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      {{ hub.empty("لا توجد أنفاق بعد", sub="اطلب نفقًا جديدًا أو اضغط مزامنة لالتقاط الأنفاق من لوحة التراخيص.", icon="network-wired") }}
+    {% endif %}
+  {% endcall %}
+
+{% endcall %}
+{% endblock %}

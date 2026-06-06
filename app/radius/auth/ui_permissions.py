@@ -122,6 +122,7 @@ _NAV_PERM: dict[str, str] = {
     # ── التكامل والجسر ──
     "admin_bridge": "api.use",
     "license_file": "api.use",
+    "tunnels_list": "api.use",
     "wh_settings": "api.use",
     "tok_list": "api.use",
 }
