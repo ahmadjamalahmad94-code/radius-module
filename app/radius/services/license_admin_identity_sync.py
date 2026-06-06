@@ -74,6 +74,7 @@ class LicenseAdminIdentitySyncService:
         disabled_missing = 0
         if disable_missing:
             disabled_missing = admins_repo.disable_missing_license_admin_users(active_external_ids)
+        super_overrides = apply_super_admin_overrides(payload.get("admin_super_overrides"))
         return {
             "ok": True,
             "status": "ok",
@@ -82,6 +83,7 @@ class LicenseAdminIdentitySyncService:
             "version": payload.get("version"),
             "synced_count": len(synced),
             "disabled_missing_count": disabled_missing,
+            "super_overrides": super_overrides,
             "users": synced,
         }
 
@@ -119,6 +121,33 @@ class LicenseAdminIdentitySyncService:
             "panel_response": result.get("response") or {},
             "sync": sync_result,
         }
+
+
+def apply_super_admin_overrides(overrides: Any) -> dict[str, int]:
+    """Enforce the panel's super-admin decisions on local admins.
+
+    ``overrides`` is the ``admin_super_overrides`` list returned by the panel in
+    the identity-sync response, each item shaped like
+    ``{"radius_admin_id": 5, "username": "owner", "is_super_admin": true}``.
+
+    For each entry we match the local admin by ``radius_admin_id`` first then
+    ``username`` and set ONLY the is_super_admin flag (idempotent; password,
+    identity provider, role and enabled state are never touched).
+    """
+    summary = {"changed": 0, "unchanged": 0, "not_found": 0}
+    if not isinstance(overrides, list):
+        return summary
+    for entry in overrides:
+        if not isinstance(entry, dict):
+            continue
+        outcome = admins_repo.apply_super_admin_override(
+            radius_admin_id=entry.get("radius_admin_id"),
+            username=str(entry.get("username") or ""),
+            is_super_admin=bool(entry.get("is_super_admin")),
+        )
+        if outcome in summary:
+            summary[outcome] += 1
+    return summary
 
 
 def validate_identity_payload(payload: dict[str, Any]) -> list[str]:

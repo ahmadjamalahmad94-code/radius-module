@@ -245,6 +245,41 @@ def is_managed_by_license_admin(admin_id: int) -> bool:
     return bool(row and _g(row, "managed_by_license_admin", 0))
 
 
+def apply_super_admin_override(
+    *,
+    radius_admin_id: int | str | None = None,
+    username: str = "",
+    is_super_admin: bool,
+) -> str:
+    """Set ONLY the is_super_admin flag from a license-panel override.
+
+    Matches the local admin by ``radius_admin_id`` first, then by ``username``.
+    Idempotent: no write (and no updated_at bump) when the flag already matches.
+    Never touches the password, identity provider, role, or enabled state.
+
+    Returns one of: "changed" | "unchanged" | "not_found".
+    """
+    admin = None
+    try:
+        if radius_admin_id not in (None, ""):
+            admin = get_admin(int(radius_admin_id))
+    except (TypeError, ValueError):
+        admin = None
+    if admin is None and str(username or "").strip():
+        admin = get_by_username(str(username).strip())
+    if admin is None:
+        return "not_found"
+    target = 1 if is_super_admin else 0
+    if int(bool(admin.is_super_admin)) == target:
+        return "unchanged"
+    with transaction() as conn:
+        conn.execute(
+            "UPDATE admins SET is_super_admin = ?, updated_at = ? WHERE id = ?",
+            (target, now_iso(), admin.id),
+        )
+    return "changed"
+
+
 def upsert_license_admin_user(
     *,
     external_user_id: int | str,

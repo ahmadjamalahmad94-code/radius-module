@@ -145,6 +145,7 @@ def _register_all(bp: Blueprint) -> None:
     from .operations_center import register_operations_center_routes
     from .customer_portals import register_customer_portal_routes
     from .admin_bridge import register_admin_bridge_routes
+    from .tunnels import register_tunnels_routes
     from .recycle_bin import register_recycle_bin_routes
     from .backups import register_backup_routes
     from .lifecycle import register_lifecycle_routes
@@ -194,6 +195,7 @@ def _register_all(bp: Blueprint) -> None:
     register_operations_center_routes(bp)
     register_customer_portal_routes(bp)
     register_admin_bridge_routes(bp)
+    register_tunnels_routes(bp)
     register_recycle_bin_routes(bp)
     register_backup_routes(bp)
     register_lifecycle_routes(bp)
@@ -350,6 +352,9 @@ _PERM_GUARDED: dict[str, str] = {
     "setup_wizard_page": _PERM_SUPER,
     # حفظ إعدادات النظام — تتطلّب صلاحية settings.edit (تُفحص على الكتابة فقط)
     "settings_page": "settings.edit",
+    # الأنفاق — طلب/مزامنة نفق عبر الجسر (كتابة) تتطلّب api.use
+    "tunnels_request": "api.use",
+    "tunnels_sync": "api.use",
 
     # ═══ أسعار العروض للمدراء — مفاتيح دقيقة بدل super_admin (توسعة 2026-06) ═══
     "admin_pricing_page": "admin_pricing.view",
