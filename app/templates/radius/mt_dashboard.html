@@ -2380,7 +2380,7 @@ body.mt-modal-open{overflow:hidden}
          endpoint الحذف القديم (/inventory/remove). يتغذّى من نفس
          جلب النقاط الملوّنة فوق (طلب واحد). الفلاتر حبوب صغيرة. #}
       <div class="rh-svc-group rh-svc-group--added">
-        <span>{{ _('الخدمات المضافة على الراوتر') }}</span>
+        <span>{{ _('الخدمات المضافة على الراوتر') }} (<span data-rh-added-total>0</span>)</span>
         <div class="rh-added-bar" role="tablist" aria-label="{{ _('تصفية الخدمات المضافة') }}">
           <button type="button" class="rh-added-chip is-active"
                   data-rh-added-filter="all" role="tab" aria-selected="true">
@@ -2696,38 +2696,59 @@ body.mt-modal-open{overflow:hidden}
 .rh-added-loading[hidden],.rh-added-empty[hidden]{display:none}
 .rh-added-loading i{color:#7C3AED}
 .rh-added-empty i{color:#CBD5E1;font-size:16px}
-.rh-added-list{display:flex;flex-direction:column;gap:8px}
+/* شبكة بطاقات مدمجة متجاوبة (auto-fill) بدل صفّ كامل العرض لكل
+   واجهة — تستوعب 20+ عنصرًا في جزء صغير من الارتفاع السابق. كل
+   بطاقة: أيقونة + اسم الواجهة + (النوع/المصدر/التاريخ) + زر حذف
+   بالزاوية. نفس الأصناف وخطافات JS (rh-added-row/data-src/
+   rh-added-del) فيبقى الفلتر والحذف يعملان بلا تغيير. */
+.rh-added-list{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(208px,1fr));
+  gap:8px;
+}
 .rh-added-row{
-  display:flex;align-items:center;gap:10px;padding:9px 12px;
+  position:relative;
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr);
+  grid-template-areas:"icon name" "icon meta";
+  align-items:center;column-gap:9px;row-gap:2px;
+  padding:8px 10px;padding-inline-end:34px;
   background:#fff;border:1px solid #EAECF0;border-radius:11px;
   transition:border-color .14s;
 }
 .rh-added-row:hover{border-color:#CBD5E1}
 .rh-added-row[hidden]{display:none}
 .rh-added-row-icon{
-  width:26px;height:26px;border-radius:7px;flex-shrink:0;color:#fff;
+  grid-area:icon;
+  width:28px;height:28px;border-radius:7px;flex-shrink:0;color:#fff;
   display:inline-flex;align-items:center;justify-content:center;font-size:11px;
 }
-.rh-added-main{display:flex;flex-direction:column;min-width:0;flex:1;gap:1px}
 .rh-added-name{
+  grid-area:name;
   font-size:12.5px;font-weight:800;color:#0F172A;font-family:monospace;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
-.rh-added-type{font-size:10.5px;color:#94A3B8;font-weight:700}
+.rh-added-meta{
+  grid-area:meta;display:flex;align-items:center;gap:6px;
+  flex-wrap:wrap;min-width:0;
+}
+.rh-added-type{font-size:10.5px;color:#94A3B8;font-weight:700;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;}
 .rh-added-src{
-  font-size:10px;font-weight:900;padding:2px 9px;border-radius:999px;
+  font-size:9.5px;font-weight:900;padding:1px 7px;border-radius:999px;
   white-space:nowrap;flex-shrink:0;
 }
 .rh-added-src--auto{background:#EDE9FE;color:#5B21B6}
 .rh-added-src--man{background:#FEF3C7;color:#92400E}
 .rh-added-date{
-  font-size:10.5px;color:#94A3B8;font-family:monospace;
+  font-size:10px;color:#94A3B8;font-family:monospace;
   white-space:nowrap;flex-shrink:0;direction:ltr;
 }
 .rh-added-del{
-  flex-shrink:0;width:30px;height:30px;border-radius:8px;
+  position:absolute;inset-inline-end:6px;top:6px;
+  flex-shrink:0;width:26px;height:26px;border-radius:7px;
   border:1px solid #FCA5A5;background:#FEF2F2;color:#B91C1C;
-  cursor:pointer;font-size:11px;transition:all .12s;
+  cursor:pointer;font-size:10.5px;transition:all .12s;
   display:inline-flex;align-items:center;justify-content:center;
 }
 .rh-added-del:hover{background:#FECACA;border-color:#F87171}
@@ -3207,21 +3228,21 @@ body.mt-modal-open{overflow:hidden}
         const date = it.expires_at ? ("ينتهي " + esc(it.expires_at)) : "";
         rows.push(
           '<div class="rh-added-row" data-src="' + (isMan ? "operator" : "hoberadius") + '">' +
-            '<span class="rh-added-row-icon ' + meta.color + '">' +
-              '<i class="fa-solid fa-' + meta.icon + '"></i></span>' +
-            '<div class="rh-added-main">' +
-              '<span class="rh-added-name" title="' + esc(it.label) + '">' + esc(it.label || "—") + '</span>' +
-              '<span class="rh-added-type">' + esc(meta.ar) + '</span>' +
-            '</div>' +
-            '<span class="rh-added-src ' + (isMan ? "rh-added-src--man" : "rh-added-src--auto") + '">' +
-              (isMan ? "يدويّة" : "تلقائيّة") + '</span>' +
-            (date ? '<span class="rh-added-date">' + date + '</span>' : '') +
             '<button type="button" class="rh-added-del" title="حذف هذه الخدمة"' +
               ' data-svc="' + esc(g.service_type) + '"' +
               ' data-target="' + esc(it.target) + '"' +
               ' data-label="' + esc(it.label) + '"' +
               ' data-type="' + esc(meta.ar) + '">' +
               '<i class="fa-solid fa-trash"></i></button>' +
+            '<span class="rh-added-row-icon ' + meta.color + '">' +
+              '<i class="fa-solid fa-' + meta.icon + '"></i></span>' +
+            '<span class="rh-added-name" title="' + esc(it.label) + '">' + esc(it.label || "—") + '</span>' +
+            '<span class="rh-added-meta">' +
+              '<span class="rh-added-type">' + esc(meta.ar) + '</span>' +
+              '<span class="rh-added-src ' + (isMan ? "rh-added-src--man" : "rh-added-src--auto") + '">' +
+                (isMan ? "يدويّة" : "تلقائيّة") + '</span>' +
+              (date ? '<span class="rh-added-date">' + date + '</span>' : '') +
+            '</span>' +
           '</div>'
         );
       });
@@ -3234,6 +3255,8 @@ body.mt-modal-open{overflow:hidden}
     setCount("all", cAuto + cMan);
     setCount("hoberadius", cAuto);
     setCount("operator", cMan);
+    const totalEl = panel.querySelector("[data-rh-added-total]");
+    if (totalEl) totalEl.textContent = String(cAuto + cMan);
     if (addedEmpty) addedEmpty.hidden = rows.length > 0;
     applyAddedFilter();
   }
