@@ -828,6 +828,11 @@ body{min-height:100vh;background:
           <span class="wi">💸</span>سحب رصيد</button>
       </div>
 
+      <!-- زر واتساب بارز للتواصل مع الدعم (يظهر إن ضُبط رقم الدعم) -->
+      <button class="wa-btn wa-trigger" id="btnWaHome" type="button"
+              style="display:none;margin-top:12px">
+        <span>📱</span> تواصل عبر واتساب للدعم</button>
+
       <!-- طلباتي (إيداع/سحب) بحالتها -->
       <div class="sec-title">طلباتي <small id="reqCount"></small></div>
       <div class="card reqs" id="reqList">
@@ -887,19 +892,9 @@ body{min-height:100vh;background:
     <span class="ti">🧾</span>السجل</button>
 </nav>
 
-<!-- نموذج الدخول التلقائي بالبطاقة — يرسل بيانات الكرت إلى مدخل
-     الهوت سبوت. $(link-login-only) و $(link-orig) يملؤهما الراوتر
-     عند تقديم الصفحة (نفس قيم نموذج sendin في قوالب الدخول؛
-     dst في قيمة نموذج = $(link-orig) بلا esc). إن لم تُستبدل
-     (الصفحة فُتحت خارج خادم الهوت سبوت) يسقط JS إلى
-     login.html?u=..&p=.. حيث يلتقطها سكربت الدخول التلقائي R4. -->
-<form id="hsLogin" name="hslogin" method="post"
-      action="$(link-login-only)" style="display:none">
-  <input type="hidden" name="username" value="">
-  <input type="hidden" name="password" value="">
-  <input type="hidden" name="dst" value="$(link-orig)">
-  <input type="hidden" name="popup" value="false">
-</form>
+<!-- الدخول الفعلي للهوت سبوت يتمّ في login.html (CHAP عبر doLogin) —
+     hotspotLogin يوجّه إليها بـ?u=&p=، فلا نموذج إرسال مباشر هنا
+     يتفادى ارتداد CHAP. (أُزيل نموذج hsLogin القديم.) -->
 
 <!-- نافذة نجاح الشراء -->
 <div class="modal" id="buyModal">
@@ -985,7 +980,7 @@ body{min-height:100vh;background:
       <h3>💬 الدعم</h3>
       <button class="sh-x" type="button" data-close-sheet="chatSheet">✕</button>
     </div>
-    <button class="wa-btn" id="btnWhatsapp" type="button" style="display:none">
+    <button class="wa-btn wa-trigger" id="btnWhatsapp" type="button" style="display:none">
       <span>📱</span> تحويل المحادثة إلى واتساب</button>
     <div class="chat-body" id="chatBody">
       <div class="empty">ابدأ المحادثة — نحن هنا للمساعدة.</div>
@@ -1486,27 +1481,22 @@ body{min-height:100vh;background:
   }
 
   /* ───── دخول الهوت سبوت ببطاقة ─────
-     النموذج المخفي hsLogin وجهته $(link-login-only) — يملؤها
-     الراوتر عند تقديم الصفحة من خادم الهوت سبوت فيتم الدخول
-     مباشرة (PAP عادي، نفس ما تفعله بوابة الويب portal_card).
-     إن بقي الـ placeholder حرفيًا (الصفحة فُتحت من خارج خادم
-     الهوت سبوت) نسقط إلى login.html?u=..&p=.. — سكربت الدخول
-     التلقائي R4 المحقون في كل صفحات الدخول المنشورة يلتقطها
-     ويُرسل النموذج (وهو الآمن مع CHAP لأنه يمر عبر doLogin). */
+     ⚠️ إصلاح حلقة إعادة التحميل: المايكروتيك الافتراضي يستخدم CHAP
+     (تحدٍّ يُهشَّر: md5(chap-id + password + chap-challenge)). الإرسال
+     المباشر من هنا إلى $(link-login-only) بكلمة مرور خام (PAP) يفشل
+     تحت CHAP فترتدّ البوابة لصفحة الدخول مرارًا (حلقة لا تنتهي).
+
+     لذا **لا** نرسل من المتجر مباشرةً؛ بل نمرّر الاعتماد إلى صفحة
+     الدخول login.html?u=..&p=.. (بجوار store.html في مجلد الهوت سبوت).
+     سكربت الدخول التلقائي R4 المحقون هناك يملأ نموذج الدخول ويستدعيه
+     عبر requestSubmit() فتعمل دالة doLogin (CHAP أو PAP حسب الراوتر)
+     ويمنح الراوتر الجلسة فعليًا ثم يوجّه إلى $(link-orig). مسار واحد
+     صحيح للدخول، بلا ارتداد. */
   function hotspotLogin(username, password) {
     if (!username) return;
-    var f = $('hsLogin');
-    var action = f.getAttribute('action') || '';
-    /* '$' + '(' مفصولة حتى لا يلتقطها محلّل متغيّرات الراوتر */
-    if (!action || action.indexOf('$' + '(') !== -1) {
-      location.href = 'login.html?u=' + encodeURIComponent(username) +
-        '&p=' + encodeURIComponent(password || '');
-      return;
-    }
-    f.elements['username'].value = username;
-    f.elements['password'].value = password || '';
     toast('جارٍ تسجيل دخولك للشبكة…', 'ok');
-    f.submit();
+    location.href = 'login.html?u=' + encodeURIComponent(username) +
+      '&p=' + encodeURIComponent(password || '');
   }
 
   /* ───── السجل: /store/purchases (مصفّح) ───── */
@@ -1570,6 +1560,7 @@ body{min-height:100vh;background:
     return api('/me').then(function (data) {
       renderHome(data);
       loadMyRequests();  // طلبات الإيداع/السحب بحالتها في تبويب رصيدي
+      setupWhatsapp();   // إظهار زر واتساب البارز إن ضُبط رقم الدعم
       loadedTabs = {};
       if (!$('tabCards').classList.contains('hide')) loadMyCards(1);
       if (!$('tabHistory').classList.contains('hide')) loadHistory(1);
@@ -1988,17 +1979,26 @@ body{min-height:100vh;background:
       }
     }).catch(function (e) { toast(e.message, 'bad'); });
   }
+  /* رقم واتساب صالح للعرض؟ ('$'+'{' لا يلتقطها محلّل القوالب — وWA
+     المحقون أرقام فقط). */
+  function waReady() { return !!WA && WA.indexOf('{' + '{') === -1; }
+  function openWhatsapp() {
+    if (!waReady()) return;
+    var name = ($('wName') && $('wName').textContent) || '';
+    var msg = encodeURIComponent('مرحبًا، أنا ' + name +
+      ' من متجر البطاقات وأحتاج مساعدة.');
+    window.open('https://wa.me/' + WA + '?text=' + msg, '_blank');
+  }
+  /* يُظهر/يخفي كل أزرار واتساب (الشات + الرئيسية البارز) ويربط النقر.
+     يُستدعى عند تحميل الرئيسية وعند فتح الشات. فارغ ⇒ تختفي الأزرار،
+     ويظهر للمدير تلميحٌ في لوحة «دعم وطلبات المتجر» لضبط الرقم. */
   function setupWhatsapp() {
-    var btn = $('btnWhatsapp');
-    /* '$'+'{' لا يلتقطها محلّل القوالب — وWA المحقون أرقام فقط. */
-    if (!WA || WA.indexOf('{' + '{') !== -1) { btn.style.display = 'none'; return; }
-    btn.style.display = 'flex';
-    btn.onclick = function () {
-      var name = $('wName').textContent || '';
-      var msg = encodeURIComponent('مرحبًا، أنا ' + name +
-        ' من متجر البطاقات وأحتاج مساعدة.');
-      window.open('https://wa.me/' + WA + '?text=' + msg, '_blank');
-    };
+    var ready = waReady();
+    var btns = document.querySelectorAll('.wa-trigger, #btnWhatsapp');
+    Array.prototype.forEach.call(btns, function (b) {
+      b.style.display = ready ? 'flex' : 'none';
+      if (ready) b.onclick = openWhatsapp;
+    });
   }
 
   /* ───── ربط الأحداث ───── */
