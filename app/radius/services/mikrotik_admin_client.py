@@ -559,6 +559,22 @@ def ip_neighbors(nas: Mapping[str, Any]) -> MtResult:
     )
 
 
+def dhcp_client_list(nas: Mapping[str, Any]) -> MtResult:
+    """`/ip/dhcp-client/print` — كل عملاء DHCP على الراوتر مع حالتهم.
+
+    تستخدمه خدمة كشف اللوب (port_script_services): العملاء الموسومون
+    HR-LoopDetect يُقرأ منهم `status` (bound = استلم عنوانًا = لوب /
+    searching = لا لوب)، و`address` / `gateway` / `dhcp-server` الراجعة.
+    مهلة تخزين قصيرة (≈5s) لأن الحالة يجب أن تبقى حيّة عند الضغط على زر
+    «فحص اللوب» دون أن نهاجم الراوتر عند نقرتين متتاليتين."""
+    return fetch_cached(
+        nas=nas,
+        operation="ip/dhcp-client",
+        ttl_sec=5.0,
+        work=lambda c: list(c.print_("/ip/dhcp-client/print")),
+    )
+
+
 # ─── K5: hotspot + PPP active users ──────────────────────────────
 
 
@@ -1261,6 +1277,7 @@ __all__ = [
     "ip_addresses",
     "ip_routes",
     "ip_neighbors",
+    "dhcp_client_list",
     "hotspot_active",
     "ppp_active",
     "disconnect_hotspot_session",
