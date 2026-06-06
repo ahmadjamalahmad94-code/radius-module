@@ -1,64 +1,81 @@
+{# ═══════════════════════════════════════════════════════════════════════
+   تذكرة جديدة — إعادة تصميم على نظام hub-hero-shell الموحّد (2026-06-05)
+
+   بيانات المسار (radius.tk_new):
+     subs (قائمة المشتركين لاختيار صاحب التذكرة)
+   ملاحظة (2026-06-05): الإنشاء انتقل إلى صندوق عائم منبثق داخل صفحة
+   القائمة (tickets_list)، و/tickets/new يعيد التوجيه إليها بـ ?new=1.
+   يُحتفظ بهذا القالب احتياطًا فقط — لا مسار يعرضه حاليًا.
+
+   النموذج يرسل POST إلى radius.tk_create بنفس أسماء الحقول القائمة:
+     subscriber_id / subject / category / priority / body
+
+   البنية المبسّطة: صدفة هيرو واحدة (عنوان + أزرار) ثم نموذج بقسم واحد
+   مع سطر مساعدة (hub-field-hint) تحت كل حقل — بلا لوحات جانبية مكدّسة.
+   ═══════════════════════════════════════════════════════════════════════ #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
+
 {% block title %}تذكرة جديدة{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-headset"></i>{% endblock %}
 {% block page_title %}تذكرة جديدة{% endblock %}
+{% block page_sub %}<span class="sub">فتح طلب دعم جديد لمشترك ومتابعته حتى الإغلاق.</span>{% endblock %}
 
 {% block content %}
-{{ hub.hero(
+
+{# ───── صدفة الهيرو الموحّدة: عنوان + أزرار الإجراء ───── #}
+<section class="hub-hero-shell">
+{{ hub.megahero(
   "تذكرة جديدة",
-  subtitle="افتح تذكرة دعم جديدة لمشترك.",
+  subtitle="افتح تذكرة دعم باسم مشترك — اربطها بصاحبها، صنّفها، وحدّد أولويتها لتُعالَج بالترتيب الصحيح.",
   icon="headset",
   actions_html='
-    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.tk_list') + '">
+    <a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.tk_list') ~ '">
       <i class="fa-solid fa-arrow-right"></i> العودة للقائمة
     </a>
     <button class="hub-btn hub-btn--primary" type="submit" form="tk-form">
-      <i class="fa-solid fa-floppy-disk"></i> إنشاء
-    </button>
-  '
+      <i class="fa-solid fa-floppy-disk"></i> إنشاء التذكرة
+    </button>'
 ) }}
+</section>{# /hub-hero-shell #}
 
-{% call hub.worklayout(aside_html=hub.helppanel(
-    "عن نموذج التذكرة",
-    intro="تُفتح هنا تذكرة دعم جديدة لمشترك لمتابعة طلبه أو شكواه حتى الإغلاق.",
-    icon="headset",
-    items=[
-      {"icon": "user", "text": "المشترك والموضوع حقلان إلزاميان — يربطان التذكرة بصاحبها ويلخّصان المطلوب."},
-      {"icon": "tags", "text": "اختر الفئة المناسبة لتسهيل الفرز والتوجيه إلى الفريق المختص."},
-      {"icon": "flag", "text": "الأولوية تحدّد ترتيب المعالجة — استخدم «عاجلة» للحالات الحرجة فقط."},
-      {"icon": "align-left", "text": "اكتب التفاصيل بوضوح لتسريع الحل وتقليل الأخذ والرد."}
-    ]
-)) %}
-
-<form method="post" id="tk-form">
+{# ───── نموذج الإنشاء — POST إلى radius.tk_create بنفس أسماء الحقول ───── #}
+<form method="post" id="tk-form" action="{{ url_for('radius.tk_create') }}">
 
   {% call hub.section("معلومات التذكرة", icon="circle-info") %}
     <div class="hub-form-row">
+
       <div class="hub-field" style="grid-column:1/-1">
-        <label class="hub-field-label">المشترك <span style="color:#dc2626">*</span></label>
-        <select class="hub-select" name="subscriber_id" required>
-          <option value="">— اختر —</option>
+        <label class="hub-field-label" for="tk-subscriber">المشترك <span style="color:#dc2626">*</span></label>
+        <select class="hub-select" id="tk-subscriber" name="subscriber_id" required>
+          <option value="">— اختر مشتركًا —</option>
           {% for s in subs %}
             <option value="{{ s.id }}">{{ s.username }} — {{ s.full_name or '—' }}</option>
           {% endfor %}
         </select>
+        <div class="hub-field-hint">صاحب التذكرة — تظهر في سجلّه وتُحتسب ضمن متابعاته.</div>
       </div>
+
       <div class="hub-field" style="grid-column:1/-1">
-        <label class="hub-field-label">الموضوع <span style="color:#dc2626">*</span></label>
-        <input class="hub-input" type="text" name="subject" required>
+        <label class="hub-field-label" for="tk-subject">الموضوع <span style="color:#dc2626">*</span></label>
+        <input class="hub-input" type="text" id="tk-subject" name="subject" required
+               placeholder="مثال: انقطاع متكرر في الخدمة منذ يومين">
+        <div class="hub-field-hint">سطر واحد يلخّص المشكلة — يظهر عنوانًا في قائمة التذاكر.</div>
       </div>
+
       <div class="hub-field">
-        <label class="hub-field-label">الفئة</label>
-        <select class="hub-select" name="category">
+        <label class="hub-field-label" for="tk-category">الفئة</label>
+        <select class="hub-select" id="tk-category" name="category">
           <option value="general">عام</option>
           <option value="billing">الفواتير والدفع</option>
           <option value="connection">الاتصال والخدمة</option>
-          <option value="hardware">الأجهزة والمعدات</option>
+          <option value="hardware">الأجهزة والمعدّات</option>
           <option value="complaint">شكوى</option>
           <option value="service_request">طلب خدمة</option>
         </select>
+        <div class="hub-field-hint">تسهّل الفرز وتوجيه التذكرة للفريق المختص.</div>
       </div>
+
       <div class="hub-field" style="grid-column:1/-1">
         <label class="hub-field-label">الأولوية</label>
         {{ hub.cardselect("priority", [
@@ -67,19 +84,23 @@
             {"value": "high",   "title": "مرتفعة", "icon": "angle-up"},
             {"value": "urgent", "title": "عاجلة",  "icon": "triangle-exclamation"}
         ], value="normal") }}
+        <div class="hub-field-hint">تحدّد ترتيب المعالجة — استخدم «عاجلة» للحالات الحرجة فقط.</div>
       </div>
+
       <div class="hub-field" style="grid-column:1/-1">
-        <label class="hub-field-label">التفاصيل</label>
-        <textarea class="hub-textarea" name="body" rows="6"></textarea>
+        <label class="hub-field-label" for="tk-body">التفاصيل</label>
+        <textarea class="hub-textarea" id="tk-body" name="body" rows="6"
+                  placeholder="اشرح المشكلة بوضوح: متى بدأت؟ ما الأعراض؟ ماذا جُرّب؟"></textarea>
+        <div class="hub-field-hint">تفاصيل أوضح = حلّ أسرع وأخذ وردّ أقل.</div>
       </div>
+
     </div>
   {% endcall %}
 
   <div class="hub-flex-row" style="margin-top:16px">
-    {{ hub.btn("إنشاء", icon="floppy-disk", variant="primary", type="submit") }}
+    {{ hub.btn("إنشاء التذكرة", icon="floppy-disk", variant="primary", type="submit") }}
     {{ hub.btn("إلغاء", variant="ghost", href=url_for('radius.tk_list')) }}
   </div>
 </form>
 
-{% endcall %}
 {% endblock %}

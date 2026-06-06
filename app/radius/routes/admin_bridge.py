@@ -292,7 +292,7 @@ def license_file_service_request():
     result = AdminPanelClient().post_customer_service_request(
         service_key=service_key,
         request_type="activation",
-        notes=note or f"طلب تفعيل من صفحة ملف التراخيص في الريدياس: {service_name}",
+        notes=note or f"طلب تفعيل من صفحة ترخيص النظام في الريدياس: {service_name}",
     )
     if result.get("ok"):
         response = result.get("response") or {}

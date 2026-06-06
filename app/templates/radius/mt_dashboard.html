@@ -19,8 +19,9 @@
    spacing, soft shadows, and a calmer color palette so the body
    feels like part of the same Router Hub above.
    ────────────────────────────────────────────────────────────── */
+/* إيقاع موحّد: فجوة واحدة (16px) بين كل أقسام «نظرة عامة». */
 .rh-overview{padding:0 !important}
-.rh-overview > * + *{margin-top:14px}
+.rh-overview > * + *{margin-top:16px}
 
 /* ─── Status bar ─── */
 .rh-overview-status{
@@ -41,21 +42,15 @@
   color:#64748B;font-size:12.5px;font-family:monospace;
 }
 
-/* ─── Premium overview command cards ─── */
+/* ─── شريط مؤشرات هادئ ───
+   كان إطارًا متوهّجًا (radial gradients + blur + ظل ضخم) فوق
+   بطاقات لامعة — هدّأناه: شبكة مسطّحة بلا إطار خارجي، تلتحم
+   بصريًا مع هيرو الراوتر أعلاه كحزام KPI واحد. */
 .rh-overview .hub-kpi-grid{
   display:grid;
   grid-template-columns:repeat(4,minmax(0,1fr));
   gap:12px;
-  margin:0 0 18px;
-  padding:14px;
-  border:1px solid rgba(226,232,240,.78);
-  border-radius:20px;
-  background:
-    radial-gradient(circle at 10% 0%, rgba(124,58,237,.10), transparent 30%),
-    radial-gradient(circle at 92% 12%, rgba(37,99,235,.10), transparent 28%),
-    linear-gradient(135deg, rgba(255,255,255,.86), rgba(245,247,255,.74));
-  box-shadow:0 14px 44px rgba(65,73,118,.08);
-  backdrop-filter:blur(18px);
+  margin:0 0 16px;
 }
 /* Clean KPI card — operator's redesign brief:
    «عيد تصميمهم لانه مش مرتبين خالص». Simple 3-row stack:
@@ -69,23 +64,17 @@
   --kpi-progress:0%;
   position:relative;
   overflow:hidden;
-  min-height:120px;
+  min-height:112px;
   display:block;
   padding:12px 14px 16px;
-  border:1px solid rgba(226,232,240,.82);
+  border:1px solid #EAECF0;
   border-radius:14px;
-  background:linear-gradient(145deg, #FFFFFF, #FAFAFE);
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.9),
-    0 4px 12px rgba(38,51,90,.04);
-  transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease;
+  background:#fff;
+  box-shadow:0 1px 2px rgba(15,23,42,.03);
+  transition:border-color .2s ease;
 }
 .rh-overview .hub-kpi:hover{
-  transform:translateY(-2px);
-  border-color:var(--kpi-accent);
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.96),
-    0 8px 22px rgba(38,51,90,.08);
+  border-color:#CBD5E1;
 }
 /* Slim accent bar at the bottom — full width when no progress
    is set, fills to var(--kpi-progress) when JS hands a percent. */
@@ -116,14 +105,15 @@
   gap:10px;
   margin:0 0 8px;
 }
+/* أيقونة هادئة: خلفية فاتحة من لون البطاقة + أيقونة ملوّنة —
+   بدل المربع المتدرّج اللامع بظل ملوّن. */
 .rh-overview .hub-kpi-icon{
   width:34px;height:34px;border-radius:10px;
   flex-shrink:0;
   display:inline-flex;align-items:center;justify-content:center;
-  color:#fff;
+  color:var(--kpi-accent);
   font-size:14px;
-  background:linear-gradient(135deg,var(--kpi-accent),color-mix(in srgb,var(--kpi-accent) 70%, #000 14%));
-  box-shadow:0 6px 14px var(--kpi-soft);
+  background:var(--kpi-soft);
 }
 .rh-overview .hub-kpi-titles{
   display:flex;
@@ -140,12 +130,14 @@
   letter-spacing:0;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
 }
+/* الوسم الصغير (CPU/RAM/…) صار رماديًا صامتًا — اللون محصور
+   في أيقونة البطاقة وشريط التقدّم السفلي فقط. */
 .rh-overview .hub-kpi-status{
   align-self:flex-start;
   padding:1px 8px;
   border-radius:999px;
-  color:var(--kpi-accent);
-  background:var(--kpi-soft);
+  color:#94A3B8;
+  background:#F4F6F9;
   font-size:9.5px;
   font-weight:800;
   letter-spacing:.03em;
@@ -174,6 +166,34 @@
   font-weight:600;
   text-align:start;
 }
+/* ─── حالة التحميل: وميض هيكلي هادئ بدل «—» العارية ───
+   ما دام السكربت أعلاه واضعًا data-kpi-loading على البطاقة،
+   تختفي الشرطة ويظهر مكانها شريط رمادي يتنفّس بهدوء. */
+.rh-overview .hub-kpi[data-kpi-loading] .hub-kpi-value{
+  color:transparent;
+  position:relative;
+  user-select:none;
+}
+.rh-overview .hub-kpi[data-kpi-loading] .hub-kpi-value::before{
+  content:"";
+  position:absolute;
+  inset-inline-start:0;
+  top:3px;
+  width:72px;
+  height:18px;
+  border-radius:6px;
+  background:linear-gradient(90deg,#EEF1F5 25%,#F7F9FC 50%,#EEF1F5 75%);
+  background-size:200% 100%;
+  animation:kpi-skel 1.4s ease-in-out infinite;
+}
+@keyframes kpi-skel{
+  0%{background-position:200% 0}
+  100%{background-position:-200% 0}
+}
+@media (prefers-reduced-motion: reduce){
+  .rh-overview .hub-kpi[data-kpi-loading] .hub-kpi-value::before{animation:none}
+}
+
 .rh-overview .hub-kpi--brand{--kpi-accent:#6B5AED;--kpi-soft:rgba(107,90,237,.14)}
 .rh-overview .hub-kpi--blue{--kpi-accent:#2563EB;--kpi-soft:rgba(37,99,235,.13)}
 .rh-overview .hub-kpi--green{--kpi-accent:#10B981;--kpi-soft:rgba(16,185,129,.13)}
@@ -184,17 +204,17 @@
 .rh-overview .hub-kpi--teal{--kpi-accent:#14B8A6;--kpi-soft:rgba(20,184,166,.14)}
 @media (max-width:1200px){
   .rh-overview .hub-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .rh-overview .hub-kpi{min-height:110px}
+  .rh-overview .hub-kpi{min-height:104px}
 }
 @media (max-width:640px){
-  .rh-overview .hub-kpi-grid{grid-template-columns:1fr;padding:10px;border-radius:14px}
-  .rh-overview .hub-kpi{min-height:110px}
+  .rh-overview .hub-kpi-grid{grid-template-columns:1fr}
+  .rh-overview .hub-kpi{min-height:104px}
 }
 
 /* ─── 2-column grid (Traffic + Active users) ─── */
 .rh-overview .mt-grid{
   display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));
-  gap:16px;margin:0 0 22px;
+  gap:16px;margin:0 0 16px;
   align-items:start !important;
   align-content:start !important;
   place-items:start stretch !important;
@@ -210,7 +230,7 @@
   display:flex;flex-direction:column;
 }
 .rh-overview .mt-card-body{flex:1 1 auto;min-height:0}
-.rh-overview .mt-card--actions{margin-top:6px}
+.rh-overview .mt-card--actions{margin-top:16px}
 
 /* ─── Live grid cards: fixed height + body scrolls ────────────
    Operator: «بدي الصندوقين نفس الارتفاع وما يزيد. لو زادت
@@ -293,41 +313,26 @@
      danger  → red (destructive: reboot, identity change)
      info    → teal (read-only: ping, dns flush)
    Active state (form open) glows. */
-/* Premium live overview pair: traffic + connected users only. */
+/* بطاقتا البيانات الحيّة (الحركة + المتصلون) — مهدّأتان:
+   سطح أبيض واحد بلا تدرجات شعاعية ولا شبكة خلفية ولا blur. */
 .rh-overview .mt-live-card{
   --live-accent:#6B5AED;
   --live-accent-2:#14B8A6;
   position:relative;
   isolation:isolate;
-  border:1px solid rgba(226,232,240,.82);
-  border-radius:22px;
+  border:1px solid #EAECF0;
+  border-radius:16px;
   overflow:hidden;
-  background:
-    radial-gradient(circle at 12% 8%, color-mix(in srgb,var(--live-accent) 14%, transparent), transparent 30%),
-    radial-gradient(circle at 92% 12%, color-mix(in srgb,var(--live-accent-2) 12%, transparent), transparent 28%),
-    linear-gradient(145deg, rgba(255,255,255,.94), rgba(248,250,255,.86));
-  box-shadow:0 18px 46px rgba(49,58,115,.10), inset 0 1px 0 rgba(255,255,255,.9);
+  background:#fff;
+  box-shadow:0 1px 2px rgba(15,23,42,.03);
 }
-.rh-overview .mt-live-card::before{
-  content:"";
-  position:absolute;
-  inset:0;
-  pointer-events:none;
-  background:
-    linear-gradient(90deg, rgba(148,163,184,.06) 1px, transparent 1px),
-    linear-gradient(180deg, rgba(148,163,184,.055) 1px, transparent 1px);
-  background-size:42px 42px;
-  mask-image:linear-gradient(180deg, rgba(0,0,0,.72), transparent 74%);
-  z-index:-1;
-}
-.rh-overview .mt-live-card--traffic{--live-accent:#7C3AED;--live-accent-2:#14B8A6}
+.rh-overview .mt-live-card--traffic{--live-accent:#6B5AED;--live-accent-2:#14B8A6}
 .rh-overview .mt-live-card--users{--live-accent:#2563EB;--live-accent-2:#8B5CF6}
 .rh-overview .mt-live-card .mt-card-head{
   position:relative;
-  padding:16px 18px 13px;
-  border-bottom:1px solid rgba(226,232,240,.66);
-  background:rgba(255,255,255,.55);
-  backdrop-filter:blur(14px);
+  padding:14px 18px 12px;
+  border-bottom:1px solid #F1F5F9;
+  background:#FAFAFC;
 }
 .rh-overview .mt-live-title{
   display:flex;
@@ -336,15 +341,14 @@
   min-width:0;
 }
 .rh-overview .mt-live-icon{
-  width:40px;
-  height:40px;
-  border-radius:14px;
+  width:36px;
+  height:36px;
+  border-radius:11px;
   display:inline-flex;
   align-items:center;
   justify-content:center;
-  color:#fff;
-  background:linear-gradient(135deg,var(--live-accent),color-mix(in srgb,var(--live-accent) 70%, #111827 12%));
-  box-shadow:0 14px 28px color-mix(in srgb,var(--live-accent) 24%, transparent);
+  color:var(--live-accent);
+  background:color-mix(in srgb,var(--live-accent) 11%, #fff);
 }
 .rh-overview .mt-live-title h3{
   margin:0;
@@ -382,20 +386,19 @@
 }
 .rh-overview .mt-iface-select{
   min-width:210px;
-  height:40px;
-  border-radius:13px;
-  padding:0 13px;
+  height:38px;
+  border-radius:10px;
+  padding:0 12px;
   color:#0F172A;
   font-size:13px;
-  font-weight:800;
-  background:rgba(255,255,255,.88);
-  border:1px solid rgba(203,213,225,.9);
-  box-shadow:0 10px 24px rgba(15,23,42,.05);
+  font-weight:700;
+  background:#fff;
+  border:1px solid #E2E8F0;
 }
 .rh-overview .mt-iface-select:focus{
   outline:0;
   border-color:var(--live-accent);
-  box-shadow:0 0 0 4px color-mix(in srgb,var(--live-accent) 16%, transparent);
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--live-accent) 14%, transparent);
 }
 .rh-overview .mt-traffic-readout{
   display:grid;
@@ -406,22 +409,11 @@
 .rh-overview .mt-traffic-stat{
   position:relative;
   overflow:hidden;
-  min-height:92px;
-  padding:15px 15px 14px;
-  border-radius:18px;
-  background:rgba(255,255,255,.72);
-  border:1px solid rgba(226,232,240,.86);
-  box-shadow:0 12px 30px rgba(15,23,42,.05), inset 0 1px 0 rgba(255,255,255,.86);
-}
-.rh-overview .mt-traffic-stat::after{
-  content:"";
-  position:absolute;
-  inset-inline-end:-20px;
-  bottom:-26px;
-  width:86px;
-  height:86px;
-  border-radius:50%;
-  background:radial-gradient(circle, color-mix(in srgb,var(--stat-color,#2563EB) 24%, transparent), transparent 68%);
+  min-height:84px;
+  padding:14px 15px 13px;
+  border-radius:12px;
+  background:#FAFBFD;
+  border:1px solid #EAECF0;
 }
 .rh-overview .mt-traffic-stat--rx{--stat-color:#2563EB}
 .rh-overview .mt-traffic-stat--tx{--stat-color:#14B8A6}
@@ -456,29 +448,19 @@
   position:relative;
   overflow:hidden;
   min-height:132px;
-  border-radius:20px;
-  border:1px solid rgba(226,232,240,.78);
+  border-radius:12px;
+  border:1px solid #EAECF0;
   background:
-    linear-gradient(90deg, rgba(148,163,184,.10) 1px, transparent 1px),
-    linear-gradient(180deg, rgba(148,163,184,.10) 1px, transparent 1px),
-    linear-gradient(145deg, rgba(255,255,255,.72), rgba(241,245,255,.78));
+    linear-gradient(90deg, rgba(148,163,184,.08) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(148,163,184,.08) 1px, transparent 1px),
+    #FAFBFD;
   background-size:38px 38px,38px 38px,auto;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.9);
-}
-.rh-overview .mt-live-graph::before{
-  content:"";
-  position:absolute;
-  inset:0;
-  background:linear-gradient(90deg, transparent, rgba(124,58,237,.10), transparent);
-  transform:translateX(70%);
-  animation:mt-live-scan 3.6s ease-in-out infinite;
 }
 .rh-overview .mt-live-graph .mt-spark{
   position:absolute;
   inset:12px 12px 10px;
   width:calc(100% - 24px);
   height:calc(100% - 22px);
-  filter:drop-shadow(0 8px 12px rgba(37,99,235,.12));
 }
 .rh-overview .mt-spark-rx,
 .rh-overview .mt-spark-tx{
@@ -505,10 +487,9 @@
 }
 .rh-overview .mt-users-total,
 .rh-overview .mt-users-pill{
-  border:1px solid rgba(226,232,240,.82);
-  border-radius:18px;
-  background:rgba(255,255,255,.72);
-  box-shadow:0 12px 30px rgba(15,23,42,.045), inset 0 1px 0 rgba(255,255,255,.84);
+  border:1px solid #EAECF0;
+  border-radius:12px;
+  background:#FAFBFD;
 }
 .rh-overview .mt-users-total{
   display:flex;
@@ -517,15 +498,14 @@
   padding:15px;
 }
 .rh-overview .mt-users-total-icon{
-  width:44px;
-  height:44px;
-  border-radius:15px;
+  width:38px;
+  height:38px;
+  border-radius:11px;
   display:inline-flex;
   align-items:center;
   justify-content:center;
-  color:#fff;
-  background:linear-gradient(135deg,#2563EB,#7C3AED);
-  box-shadow:0 14px 28px rgba(37,99,235,.22);
+  color:#2563EB;
+  background:rgba(37,99,235,.10);
 }
 .rh-overview .mt-users-total small,
 .rh-overview .mt-users-pill span{
@@ -555,12 +535,8 @@
   font-weight:950;
   line-height:1;
 }
-.rh-overview .mt-users-pill--hotspot{
-  background:linear-gradient(145deg, rgba(239,246,255,.86), rgba(255,255,255,.72));
-}
-.rh-overview .mt-users-pill--ppp{
-  background:linear-gradient(145deg, rgba(245,243,255,.9), rgba(255,255,255,.72));
-}
+.rh-overview .mt-users-pill--hotspot{background:#FAFBFD}
+.rh-overview .mt-users-pill--ppp{background:#FAFBFD}
 .rh-overview .mt-users-list{
   position:relative;
   overflow:hidden;
@@ -622,15 +598,11 @@
   display:flex;
   align-items:center;
   justify-content:center;
-  border:1px dashed rgba(124,58,237,.28);
-  border-radius:18px;
-  background:rgba(245,243,255,.56);
-  color:#7C8AA3;
-  font-weight:850;
-}
-@keyframes mt-live-scan{
-  0%,100%{transform:translateX(72%);opacity:.25}
-  50%{transform:translateX(-72%);opacity:1}
+  border:1px dashed #DCE1E8;
+  border-radius:12px;
+  background:#FAFBFD;
+  color:#94A3B8;
+  font-weight:700;
 }
 @media (max-width:760px){
   .rh-overview .mt-live-card .mt-card-head,
@@ -643,67 +615,53 @@
   .rh-overview .mt-traffic-readout{grid-template-columns:1fr}
 }
 
-.rh-overview .mt-card--actions .mt-actions-grid{
-  display:grid;
-  grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
-  gap:12px;
-  align-items:stretch;
-}
+/* ─── إجراءات سريعة — بلاطات هادئة بعرض كامل ──────────────
+   تهدئة (يونيو 2026): كانت البلاطات كبيرة بمربعات أيقونات
+   متدرّجة ملوّنة (قوس قزح ثانٍ) وتملأ ~40% من عرض البطاقة
+   تاركةً فراغًا ضخمًا. الآن:
+   - بلاطة مدمجة: أيقونة 32px بصبغة فاتحة + سطرا نص فقط؛
+   - اللون يُستخدم فقط كصبغة أيقونة + حدّ بداية رفيع لكل مجموعة
+     (تشخيص=أزرق، صيانة=كهرماني، حسّاسة=أحمر) — الأسطح بيضاء؛
+   - شبكة auto-fill تملأ كامل العرض بلا مناطق فارغة. */
 .rh-overview .mt-action-btn{
-  display:flex;align-items:center;gap:12px;
-  background:#fff;border:1px solid #EAECF0;border-radius:14px;
-  padding:14px 16px;text-align:start;cursor:pointer;
-  transition:all .18s ease;
-  min-height:64px;
+  --act-accent:#2563EB;
+  --act-soft:rgba(37,99,235,.10);
+  display:flex;align-items:center;gap:10px;
+  background:#fff;border:1px solid #EAECF0;border-radius:10px;
+  padding:9px 11px;text-align:start;cursor:pointer;
+  transition:border-color .15s,background .15s;
+  min-height:54px;
 }
 .rh-overview .mt-action-btn:hover{
-  border-color:#A5B4FC;transform:translateY(-2px);
-  box-shadow:0 12px 26px rgba(99,102,241,.14);
+  border-color:color-mix(in srgb,var(--act-accent) 38%, #fff);
+  background:color-mix(in srgb,var(--act-accent) 3%, #fff);
 }
 .rh-overview .mt-action-btn.is-active{
-  border-color:#6366F1;background:#EEF2FF;
-  box-shadow:0 0 0 3px rgba(99,102,241,.20);
+  border-color:var(--act-accent);
+  background:color-mix(in srgb,var(--act-accent) 6%, #fff);
 }
 .rh-overview .mt-action-btn > i{
   flex-shrink:0;
-  width:42px;height:42px;border-radius:12px;
+  width:32px;height:32px;border-radius:9px;
   display:inline-flex;align-items:center;justify-content:center;
-  font-size:16px;color:#fff;
-  background:linear-gradient(135deg,#6366F1,#4F46E5);
-  box-shadow:0 4px 12px rgba(99,102,241,.32);
+  font-size:13px;
+  color:var(--act-accent);
+  background:var(--act-soft);
   margin-top:0;
 }
-.rh-overview .mt-action-btn--danger > i{
-  background:linear-gradient(135deg,#F87171,#DC2626);
-  box-shadow:0 4px 12px rgba(220,38,38,.32);
-}
-.rh-overview .mt-action-btn--info > i{
-  background:linear-gradient(135deg,#2DD4BF,#0D9488);
-  box-shadow:0 4px 12px rgba(20,184,166,.32);
-}
-.rh-overview .mt-action-btn--warn > i{
-  background:linear-gradient(135deg,#FBBF24,#D97706);
-  box-shadow:0 4px 12px rgba(217,119,6,.32);
-}
-.rh-overview .mt-action-btn--danger:hover{
-  border-color:#F87171;box-shadow:0 12px 26px rgba(239,68,68,.18);
-}
-.rh-overview .mt-action-btn--info:hover{
-  border-color:#2DD4BF;box-shadow:0 12px 26px rgba(20,184,166,.18);
-}
-.rh-overview .mt-action-btn--warn:hover{
-  border-color:#FBBF24;box-shadow:0 12px 26px rgba(217,119,6,.18);
-}
+.rh-overview .mt-action-btn--danger{--act-accent:#DC2626;--act-soft:rgba(220,38,38,.09)}
+.rh-overview .mt-action-btn--info  {--act-accent:#2563EB;--act-soft:rgba(37,99,235,.09)}
+.rh-overview .mt-action-btn--warn  {--act-accent:#D97706;--act-soft:rgba(217,119,6,.10)}
 .rh-overview .mt-action-btn-body{
   display:flex;flex-direction:column;min-width:0;flex:1;
 }
 .rh-overview .mt-action-label{
-  display:block;font-size:14px;font-weight:800;color:#0F172A;line-height:1.3;
+  display:block;font-size:13px;font-weight:800;color:#0F172A;line-height:1.3;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
 .rh-overview .mt-action-sub{
-  display:block;font-size:11.5px;color:#64748B;
-  margin-top:3px;font-weight:600;
+  display:block;font-size:11px;color:#64748B;
+  margin-top:2px;font-weight:600;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
 
@@ -903,12 +861,12 @@
    coherent header instead of four loose bars.
    ────────────────────────────────────────────────────────────── */
 .mt-router-hero{
-  background:linear-gradient(145deg,#FFFFFF,#F7F9FF);
-  border:1px solid #E2E8F0;
-  border-radius:18px;
-  padding:18px 20px 14px;
-  margin:0 0 18px;
-  box-shadow:0 10px 30px rgba(38,51,90,.06);
+  background:#fff;
+  border:1px solid #EAECF0;
+  border-radius:16px;
+  padding:18px 20px 16px;
+  margin:0 0 16px;
+  box-shadow:0 1px 2px rgba(15,23,42,.03);
 }
 .mt-router-hero-top{
   display:flex;align-items:flex-start;justify-content:space-between;
@@ -918,10 +876,10 @@
 .mt-router-hero-kicker{
   display:inline-flex;align-items:center;gap:7px;
   padding:4px 12px;border-radius:999px;
-  background:rgba(43,170,204,.12);
-  color:#1B7C97;
+  background:rgba(107,90,237,.08);
+  color:#5B4BD1;
   font-size:12px;font-weight:800;
-  border:1px solid rgba(43,170,204,.22);
+  border:1px solid rgba(107,90,237,.18);
 }
 .mt-router-hero-kicker i{font-size:12px}
 .mt-router-hero-name{
@@ -935,65 +893,26 @@
 .mt-router-hero .mt-tabs-status--hero{
   padding-bottom:0;flex-shrink:0;
 }
-/* The tab strip + quicknav sit flush inside the hero card. */
+/* مؤشّر الحالة الهادئ: «جارِ التحديث…» كان حبّة كهرمانية صارخة
+   تخطف العين كل 10 ثوانٍ. صار سطرًا صغيرًا صامتًا — نقطة ملوّنة
+   + نص باهت بلا خلفية. ألوان الحالات تبقى عبر النقطة فقط. */
+.mt-router-hero .mt-tabs-status--hero .mt-tabs-status-pill{
+  background:transparent !important;
+  padding:0;
+  font-size:12px;
+  font-weight:700;
+  color:#64748B !important;
+}
+.mt-router-hero .mt-tabs-status--hero[data-mt-status-state="ok"] .mt-tabs-status-pill{color:#047857 !important}
+.mt-router-hero .mt-tabs-status--hero[data-mt-status-state="error"] .mt-tabs-status-pill{color:#B91C1C !important}
+.mt-router-hero .mt-tabs-status--hero[data-mt-status-state="pending"] .mt-tabs-status-pill{color:#92400E !important}
+.mt-router-hero .mt-tabs-status--hero .mt-tabs-status-pill .dot{
+  width:7px;height:7px;
+}
+/* The tab strip sits flush inside the hero card. (شبكة الروابط
+   السريعة أُزيلت — تبويب «خدماتي» هو بيت الخدمات الوحيد الآن.) */
 .mt-router-hero .mt-tabs-row{
-  margin:0 0 14px;
-}
-.mt-router-hero .mt-router-quicknav{
   margin:0;
-}
-
-/* ──────────────────────────────────────────────────────────────
-   #46b — Quick-action links as proper chips/buttons
-   These <a.mt-mini-btn> links live in the .mt-router-quicknav grid
-   but previously rendered as faint table-style mini buttons. Style
-   them as full design-system chips with a coloured FontAwesome icon
-   tablet, consistent with .hub-btn / chip conventions. Scoped to the
-   quicknav so the small .mt-mini-btn used on table toolbars is
-   untouched. Hrefs / data hooks unchanged.
-   ────────────────────────────────────────────────────────────── */
-.mt-router-hero .mt-router-quicknav,
-.mt-router-quicknav{
-  display:flex;flex-wrap:wrap;gap:10px;
-}
-.mt-router-quicknav .mt-mini-btn{
-  display:inline-flex;align-items:center;gap:9px;
-  background:#fff;
-  border:1px solid #E2E8F0;
-  border-radius:12px;
-  padding:9px 14px 9px 11px;
-  font-size:13px;font-weight:700;
-  color:#0F172A;
-  text-decoration:none;
-  transition:border-color .15s,box-shadow .15s,transform .15s,background .15s;
-}
-.mt-router-quicknav .mt-mini-btn i{
-  width:30px;height:30px;border-radius:9px;
-  display:inline-flex;align-items:center;justify-content:center;
-  font-size:14px;color:#fff;
-  background:linear-gradient(135deg,#2BAACC,#1B7C97);
-  box-shadow:0 4px 10px rgba(43,170,204,.30);
-}
-.mt-router-quicknav .mt-mini-btn:hover{
-  border-color:#2BAACC;
-  background:#F4FBFD;
-  transform:translateY(-2px);
-  box-shadow:0 10px 22px rgba(43,170,204,.16);
-}
-/* Per-action accent tints so destructive / sensitive links read
-   differently from neutral navigation. */
-.mt-router-quicknav .mt-mini-btn[data-mt-router-link="npc-web-block"] i{
-  background:linear-gradient(135deg,#F87171,#DC2626);
-  box-shadow:0 4px 10px rgba(220,38,38,.30);
-}
-.mt-router-quicknav .mt-mini-btn[data-mt-router-link="npc-remote-access"] i,
-.mt-router-quicknav .mt-mini-btn[data-mt-router-link="network-policies"] i{
-  background:linear-gradient(135deg,#A78BFA,#7C3AED);
-  box-shadow:0 4px 10px rgba(124,58,237,.30);
-}
-.mt-router-quicknav .mt-mini-btn[data-mt-router-link="npc-walled-garden"] i{
-  background:linear-gradient(135deg,#34D399,#10B981);
-  box-shadow:0 4px 10px rgba(16,185,129,.30);
 }
 
 /* ──────────────────────────────────────────────────────────────
@@ -1004,21 +923,45 @@
        (data-mt-action-form) is physically MOVED into the modal body
        by JS, so all existing field/submit logic keeps working.
    ────────────────────────────────────────────────────────────── */
+/* شبكة البلاطات تملأ كامل عرض المجموعة — auto-fit (لا auto-fill)
+   حتى تنطوي المسارات الفارغة وتتمدّد البلاطات الموجودة على كامل
+   العرض بلا فراغ ميّت على الجانب (كانت تعبّي ~40% فقط). */
 .rh-overview .np-cmd-actions{
   display:grid;
-  grid-template-columns:repeat(auto-fill,minmax(190px,1fr));
-  gap:10px;
+  grid-template-columns:repeat(auto-fit,minmax(170px,1fr));
+  gap:8px;
 }
-.rh-overview .mt-card--actions .mt-action-btn{
-  min-height:auto;
-  padding:11px 13px;
-  gap:10px;
+/* المجموعات الثلاث: سطح أبيض مسطّح + حدّ بداية رفيع بلون
+   المجموعة فقط (لا خلفيات زجاجية ولا ظلال hover). نلغي أنماط
+   dashboard_premium.css الزجاجية ضمن نطاق هذه البطاقة فقط. */
+.rh-overview .mt-card--actions .np-cmd-panel{gap:10px}
+.rh-overview .mt-card--actions .np-cmd-group{
+  background:#fff;
+  border:1px solid #F1F5F9;
+  border-inline-start:3px solid var(--np-cmd-accent,#6B5AED);
+  border-radius:10px;
+  padding:12px 14px;
+  box-shadow:none;
 }
-.rh-overview .mt-card--actions .mt-action-btn > i{
-  width:36px;height:36px;font-size:14px;border-radius:10px;
+.rh-overview .mt-card--actions .np-cmd-group:hover{box-shadow:none}
+.rh-overview .mt-card--actions .np-cmd-group::before{display:none}
+/* ترويسة المجموعة في سطر واحد: أيقونة صغيرة + عنوان + شرح باهت. */
+.rh-overview .mt-card--actions .np-cmd-group-head{
+  margin:0 0 10px;
+  padding-inline-start:0;
+  gap:9px;
 }
-.rh-overview .mt-card--actions .mt-action-label{font-size:13px}
-.rh-overview .mt-card--actions .mt-action-sub{font-size:11px}
+.rh-overview .mt-card--actions .np-cmd-group-icon{
+  width:28px;height:28px;border-radius:8px;font-size:12px;
+}
+.rh-overview .mt-card--actions .np-cmd-group-text{
+  flex-direction:row;
+  align-items:baseline;
+  gap:8px;
+  flex-wrap:wrap;
+}
+.rh-overview .mt-card--actions .np-cmd-group-title{font-size:13.5px}
+.rh-overview .mt-card--actions .np-cmd-group-sub{font-size:11.5px;color:#94A3B8}
 
 /* Modal shell */
 .mt-action-modal{
@@ -1051,7 +994,7 @@ body.mt-modal-open{overflow:hidden}
   flex:1;margin:0;font-size:16px;font-weight:900;color:#0F172A;
   display:inline-flex;align-items:center;gap:9px;
 }
-.mt-action-modal-title i{color:#2BAACC}
+.mt-action-modal-title i{color:#6B5AED}
 .mt-action-modal-close{
   width:34px;height:34px;border-radius:10px;flex-shrink:0;
   display:inline-flex;align-items:center;justify-content:center;
@@ -1221,50 +1164,10 @@ body.mt-modal-open{overflow:hidden}
   </nav>
 
   </div>{# /.mt-tabs-row #}
-
-  <nav class="mt-router-quicknav" data-mt-router-quicknav aria-label="روابط الراوتر السريعة">
-    <a class="mt-mini-btn"
-       data-mt-router-link="program"
-       href="{{ url_for('radius.mt_program_form', nas_id=nas.id) }}">
-      <i class="fa-solid fa-network-wired"></i> برمجة الشبكة
-    </a>
-    <a class="mt-mini-btn"
-       data-mt-router-link="login-designer"
-       href="{{ url_for('radius.mt_login_designer', nas_id=nas.id) }}">
-      <i class="fa-solid fa-palette"></i> مصمّم صفحة الدخول
-    </a>
-    <a class="mt-mini-btn"
-       data-mt-router-link="diagnostics"
-       href="{{ url_for('radius.diagnostics') }}">
-      <i class="fa-solid fa-stethoscope"></i> تشخيص الشبكة
-    </a>
-    <a class="mt-mini-btn"
-       data-mt-router-link="backups"
-       href="{{ url_for('radius.mt_backups_list', nas_id=nas.id) }}">
-      <i class="fa-solid fa-box-archive"></i> النسخ الاحتياطية
-    </a>
-    <a class="mt-mini-btn"
-       data-test="mt-dashboard-npc-link"
-       data-mt-router-link="network-policies"
-       href="{{ url_for('radius.npc_router_landing', nas_id=nas.id) }}">
-      <i class="fa-solid fa-shield-halved"></i> سياسات الشبكة
-    </a>
-    <a class="mt-mini-btn"
-       data-mt-router-link="npc-remote-access"
-       href="{{ url_for('radius.npc_remote_access_list_scoped', nas_id=nas.id) }}">
-      <i class="fa-solid fa-key"></i> الوصول البعيد
-    </a>
-    <a class="mt-mini-btn"
-       data-mt-router-link="npc-web-block"
-       href="{{ url_for('radius.npc_web_block_list_scoped', nas_id=nas.id) }}">
-      <i class="fa-solid fa-ban"></i> حجب المواقع
-    </a>
-    <a class="mt-mini-btn"
-       data-mt-router-link="npc-walled-garden"
-       href="{{ url_for('radius.npc_walled_garden_list_scoped', nas_id=nas.id) }}">
-      <i class="fa-solid fa-door-open"></i> المواقع المسموحة
-    </a>
-  </nav>
+  {# شبكة «روابط الراوتر السريعة» أُزيلت من الهيرو (يونيو 2026):
+     كانت 8 بلاطات تكرّر محتوى تبويب «خدماتي» — صار التبويب هو
+     البيت الوحيد لكل خدمات الراوتر، وانتقلت إليه خطافات الاختبار
+     data-mt-router-link / data-test="mt-dashboard-npc-link". #}
   </section>{# /.mt-router-hero — unified header (#46c) #}
 
   {# ─── Overview panel (live K9 dashboard) ─────────────────────
@@ -1276,28 +1179,15 @@ body.mt-modal-open{overflow:hidden}
            data-mt-tab-panel="overview" role="tabpanel">
     <div class="rh-overview">
 
-  {# Status bar moved into the tabs row above so it's tab-agnostic.
-     The old in-panel pill was duplicated work + ate vertical space.
-     Hero for the overview tab comes next. #}
-
-  {# Overview hero — same shell as «خدماتي» / «النسخ الاحتياطية»
-     for visual consistency across tabs. Operator: «الهيرو الي
-     عملته لخدماتي عجبني — طبعه ع باقي الصفحات». #}
-  <div class="mt-page-hero mt-page-hero--blue">
-          <span class="mt-page-hero-kicker">
-        <i class="fa-solid fa-gauge-high"></i>
-        لوحة الراوتر — مباشرة
-      </span>
-      <h3>نظرة عامّة وقصص النشاط</h3>
-      <p>
-        صحّة الراوتر اللحظيّة، حركة الواجهات، المتصلون الآن،
-        وإجراءات سريعة للتنفيذ على الراوتر.
-      </p>
-    
-  </div>
+  {# إعادة تصميم هادئة (يونيو 2026): الهيرو الثاني «نظرة عامّة
+     وقصص النشاط» أُزيل — كان هيرو فوق هيرو ويوتّر الصفحة.
+     شريط الـ KPI أصبح أول عنصر داخل التبويب، متكاملًا بصريًا
+     مع هيرو الراوتر أعلاه (نفس الحاوية الهادئة). #}
 
   {# KPI strip. Initial values are em-dashes (NOT zeros) so the page
-     never reads as 'CPU=0%' when in fact we haven't fetched yet. #}
+     never reads as 'CPU=0%' when in fact we haven't fetched yet.
+     حالة التحميل: وميض هيكلي (skeleton) هادئ بدل الشرطة العارية —
+     سكربت صغير أدناه يضيف data-kpi-loading ويزيلها عند وصول قيمة. #}
   <div class="hub-kpi-grid" data-mt-kpi-strip>
     <div class="hub-kpi hub-kpi--brand" data-mt-kpi="uptime">
       <header class="hub-kpi-head">
@@ -1388,6 +1278,39 @@ body.mt-modal-open{overflow:hidden}
       <div class="hub-kpi-sub" data-mt-kpi-sub data-mt-kpi-mode>—</div>
     </div>
   </div>
+
+  {# وميض هيكلي هادئ أثناء انتظار أول جلب حي: نعلّم كل بطاقة KPI
+     بـ data-kpi-loading ما دامت قيمتها «—»، ونزيلها فور أن يكتب
+     mt_dashboard.js قيمة فعلية. إضافة بحتة — لا نلمس منطق الجلب. #}
+  <script>
+    (function(){
+      const cards = document.querySelectorAll('[data-mt-kpi-strip] [data-mt-kpi]');
+      if (!cards.length) return;
+      cards.forEach((card) => {
+        const val = card.querySelector('[data-mt-kpi-value]');
+        if (!val) return;
+        const isPlaceholder = () => {
+          const t = (val.textContent || '').trim();
+          return t === '' || t === '—';
+        };
+        if (!isPlaceholder()) return;
+        card.setAttribute('data-kpi-loading', '');
+        const obs = new MutationObserver(() => {
+          if (!isPlaceholder()) {
+            card.removeAttribute('data-kpi-loading');
+            obs.disconnect();
+          }
+        });
+        obs.observe(val, {characterData: true, childList: true, subtree: true});
+        /* مهلة أمان: بعد 25 ثانية بلا قيمة نوقف الوميض ونعرض الشرطة
+           بهدوء — الراوتر غير قابل للوصول والشيمر الدائم يوتّر. */
+        setTimeout(() => {
+          card.removeAttribute('data-kpi-loading');
+          obs.disconnect();
+        }, 25000);
+      });
+    })();
+  </script>
 
   {# K9.2 + K9.3 placeholders (filled in subsequent commits). The
      div elements are kept here so the test markers exist from
@@ -1519,7 +1442,7 @@ body.mt-modal-open{overflow:hidden}
           <i class="fa-solid fa-floppy-disk"></i>
           <span class="mt-action-btn-body">
             <span class="mt-action-label">حفظ نسخة احتياطية</span>
-            <span class="mt-action-sub">ينشئ ملف backup على الراوتر</span>
+            <span class="mt-action-sub">ينشئ ملف نسخة احتياطية على الراوتر</span>
           </span>
         </button>
 
@@ -1722,7 +1645,7 @@ body.mt-modal-open{overflow:hidden}
         <h3>عناوين IP المُخصَّصة على الراوتر</h3>
         <p>
           كل عنوان شبكي مربوط بواجهة — ثابت أو متغيّر، مع
-          subnet والـ comment. مفيد لتتبّع البرمجة قبل أيّ تغيير.
+          نطاق الشبكة والتعليق. مفيد لتتبّع البرمجة قبل أيّ تغيير.
         </p>
       
     </div>
@@ -1787,7 +1710,7 @@ body.mt-modal-open{overflow:hidden}
         </span>
         <h3>جدول التوجيه — أين تذهب الحزم</h3>
         <p>
-          كل route مع الـ destination والـ gateway والـ routing-table.
+          كل مسار مع الوجهة والبوابة وجدول التوجيه.
           هنا تشوف مسارات «تغيير IP الخروج» وأي مسار يدوي.
         </p>
       
@@ -1935,7 +1858,7 @@ body.mt-modal-open{overflow:hidden}
         <h3>سجلّ أحداث الراوتر الحيّ</h3>
         <p>
           آخر 250 سطر من سجلّ الراوتر، يتحدّث كل 5 ثوانٍ. صفِّ
-          حسب الموضوع (firewall, hotspot, ppp, …) لتركّز نظرك.
+          حسب الموضوع باستخدام الأزرار أدناه لتركّز نظرك.
         </p>
       
     </div>
@@ -2273,608 +2196,653 @@ body.mt-modal-open{overflow:hidden}
   <section class="mt-tab-panel rh-inventory"
            data-mt-tab-panel="my-services" role="tabpanel" hidden>
 
-    {# ── Premium hero (mt-page-hero matches the rest of the
-         dashboard now — single visual language) ───────────── #}
-    <div class="mt-page-hero rh-inv-hero">
-              <span class="mt-page-hero-kicker rh-inv-kicker">
-          <i class="fa-solid fa-bolt"></i>
-          مركز خدمات الراوتر
-        </span>
-        <h3>مركز خدمات الراوتر</h3>
-        <p>إدارة جميع خدمات الراوتر من مكان واحد — إضافة، ضبط، فحص ومراقبة الحالة.</p>
-        <div class="mt-page-hero-chips rh-inv-hero-chips">
-          <span><i class="fa-solid fa-satellite-dish"></i> قراءة مباشرة</span>
-          <span><i class="fa-solid fa-shield-halved"></i> حذف بتأكيد</span>
-          <span><i class="fa-solid fa-route"></i> عبر نفق الإدارة</span>
-        
+    {# ─────────────────────────────────────────────────────────────
+       تبويب «خدماتي» — نظام خدمات موحّد (يونيو 2026، إعادة بناء)
+       ──────────────────────────────────────────────────────────────
+       حُذفت الأنظمة الثلاثة المكدّسة القديمة (هيدر «مركز خدمات
+       الراوتر» + قسم «حالة الخدمات» المنفصل + شبكة «الأدوات» +
+       قسم «نفق تغيير العنوان» السفلي) واستُبدلت بشبكة بطاقات
+       واحدة متماثلة. كل خدمة تظهر مرّة واحدة فقط، والحالة نقطة
+       ملوّنة على كل بطاقة (تُضاء من نفس نقطة نهاية الجرد)، وزر
+       تحديث صغير واحد بزاوية القسم، ونفق تغيير IP صار بطاقة عادية
+       تفتح نافذة عائمة. لا تكرار: «حجب المواقع» و«المواقع المسموحة»
+       و«الوصول البعيد» مرّة واحدة (دُمجت بطاقات معالج الإعداد مع
+       قوائم سياسات الشبكة)، و«نظرة عامة» أُزيلت (نحن داخل اللوحة).
+       خطافات الاختبار محفوظة ومنقولة للعناصر الجديدة:
+       data-mt-router-quicknav، data-mt-router-link (program/
+       login-designer/backups/network-policies/npc-*/diagnostics)،
+       data-test="mt-dashboard-npc-link"، روابط network-policies
+       الثلاثة المُجزّأة، data-rh-loop-tile + وصف اللوب. #}
+    <div class="np-status-panel rh-svc-panel" data-mt-router-quicknav
+         aria-label="خدمات الراوتر وأدواته">
+      <div class="rh-svc-head">
+        <div class="rh-svc-head-text">
+          <h4>خدمات الراوتر وأدواته</h4>
+          <p>كل خدمات الراوتر وصفحاته في مكان واحد — اضغط أي بطاقة لإدارتها.
+             النقطة الملوّنة على البطاقة تبيّن إن كانت الخدمة مفعّلة على الراوتر.</p>
+        </div>
+        {# زر تحديث صغير واحد بزاوية القسم — يعيد فحص حالة الخدمات. #}
+        <button type="button" class="rh-svc-refresh" data-rh-inv-refresh
+                title="تحديث حالة الخدمات" aria-label="تحديث حالة الخدمات">
+          <i class="fa-solid fa-rotate"></i>
+        </button>
       </div>
-      <div class="rh-inv-hero-stats" data-rh-inv-stats hidden>
-        <div class="rh-inv-stat">
-          <span class="rh-inv-stat-num" data-rh-inv-stat-total>0</span>
-          <span class="rh-inv-stat-lbl">إجمالي</span>
-        </div>
-        <div class="rh-inv-stat rh-inv-stat--hr">
-          <span class="rh-inv-stat-num" data-rh-inv-stat-hr>0</span>
-          <span class="rh-inv-stat-lbl">من البرمجة</span>
-        </div>
-        <div class="rh-inv-stat rh-inv-stat--op">
-          <span class="rh-inv-stat-num" data-rh-inv-stat-op>0</span>
-          <span class="rh-inv-stat-lbl">يدوي</span>
-        </div>
+      <div class="rh-svc-error" data-rh-inv-error hidden></div>
+
+      {# ── مجموعة 1: برمجة وتشغيل ───────────────────────────── #}
+      <h5 class="rh-svc-group">برمجة وتشغيل</h5>
+      <div class="np-svc-grid">
+        {# برمجة الشبكة الكاملة (أداة — لا حالة جرد). #}
+        <a class="np-svc-card np-svc-card--tool"
+           data-mt-router-link="program"
+           href="{{ url_for('radius.mt_program_form', nas_id=nas.id) }}">
+          <span class="np-svc-icon np-svc-icon--slate"><i class="fa-solid fa-network-wired"></i></span>
+          <h5 class="np-svc-title">برمجة الشبكة</h5>
+          <span class="np-svc-status-dot is-tool" title="أداة"></span>
+        </a>
+        {# بوابة الدخول — خدمة، نقطة الحالة من جرد hotspot. #}
+        <a class="np-svc-card"
+           data-rh-svc-card="hotspot"
+           href="{{ url_for('radius.setup_wizard_v3_router_service_flow',
+                            router_id=nas.id, service_key='hotspot') }}">
+          <span class="np-svc-icon np-svc-icon--blue"><i class="fa-solid fa-wifi"></i></span>
+          <h5 class="np-svc-title">بوابة الدخول</h5>
+          <span class="np-svc-status-dot is-inactive" data-rh-svc-status title="غير مفعّلة"></span>
+        </a>
+        {# البرودباند — خدمة، نقطة الحالة من جرد broadband. #}
+        <a class="np-svc-card"
+           data-rh-svc-card="broadband"
+           href="{{ url_for('radius.setup_wizard_v3_router_service_flow',
+                            router_id=nas.id, service_key='broadband') }}">
+          <span class="np-svc-icon np-svc-icon--green"><i class="fa-solid fa-ethernet"></i></span>
+          <h5 class="np-svc-title">البرودباند</h5>
+          <span class="np-svc-status-dot is-inactive" data-rh-svc-status title="غير مفعّلة"></span>
+        </a>
+        {# مصمّم صفحة الدخول (أداة). #}
+        <a class="np-svc-card np-svc-card--tool"
+           data-mt-router-link="login-designer"
+           href="{{ url_for('radius.mt_login_designer', nas_id=nas.id) }}">
+          <span class="np-svc-icon np-svc-icon--purple"><i class="fa-solid fa-palette"></i></span>
+          <h5 class="np-svc-title">مصمّم صفحة الدخول</h5>
+          <span class="np-svc-status-dot is-tool" title="أداة"></span>
+        </a>
+        {# أُزيل من لوحة العميل — يُعاد مركزياً عبر لوحة التراخيص (قرار معماري):
+           بطاقة «نفق تغيير IP» المدفوعة (تفتح نافذة طلب الخدمة/الترخيص).
+           خدمة مركزية للمالك، لا تخص لوحة العميل المباعة. #}
       </div>
-    </div>
 
-    {# ── A) Service management grid — 6 service cards ──────
-         These link to the existing setup_wizard_v3 service flows.
-         The old Router Hub above this tab was removed because its
-         service cards duplicated this list; the 4 tools that used
-         to live there now sit in section C below. #}
-    <div class="np-section-head">
-      <div>
-        <h4>
-          إدارة الخدمات
-          <span class="np-section-badge">7</span>
-        </h4>
-        <p>إضافة وضبط وإدارة جميع الخدمات على الراوتر — 4 مراحل لكل خدمة.</p>
+      {# ── مجموعة 2: الحماية والمواقع ───────────────────────── #}
+      <h5 class="rh-svc-group">الحماية والمواقع</h5>
+      <div class="np-svc-grid">
+        {# سياسات الشبكة — صفحة الهبوط المُجزّأة لكل راوتر (أداة).
+           تحمل data-test="mt-dashboard-npc-link" لاختبار NPC. #}
+        <a class="np-svc-card np-svc-card--tool"
+           data-test="mt-dashboard-npc-link"
+           data-mt-router-link="network-policies"
+           href="{{ url_for('radius.npc_router_landing', nas_id=nas.id) }}">
+          <span class="np-svc-icon np-svc-icon--slate"><i class="fa-solid fa-shield-halved"></i></span>
+          <h5 class="np-svc-title">سياسات الشبكة</h5>
+          <span class="np-svc-status-dot is-tool" title="أداة"></span>
+        </a>
+        {# الوصول البعيد — القائمة المُجزّأة لهذا الراوتر، ونقطة
+           الحالة من جرد remote-access (دمج بطاقة «اتصال عن بُعد»
+           القديمة هنا — مرّة واحدة). #}
+        <a class="np-svc-card"
+           data-mt-router-link="npc-remote-access"
+           data-rh-svc-card="remote-access"
+           href="{{ url_for('radius.npc_remote_access_list_scoped', nas_id=nas.id) }}">
+          <span class="np-svc-icon np-svc-icon--purple"><i class="fa-solid fa-key"></i></span>
+          <h5 class="np-svc-title">الوصول البعيد</h5>
+          <span class="np-svc-status-dot is-inactive" data-rh-svc-status title="غير مفعّلة"></span>
+        </a>
+        {# حجب المواقع — مرّة واحدة فقط (دُمجت خدمة block-sites مع
+           قائمة قواعد الحجب). نقطة الحالة من جرد block-sites. #}
+        <a class="np-svc-card"
+           data-mt-router-link="npc-web-block"
+           data-rh-svc-card="block-sites"
+           href="{{ url_for('radius.npc_web_block_list_scoped', nas_id=nas.id) }}">
+          <span class="np-svc-icon np-svc-icon--red"><i class="fa-solid fa-ban"></i></span>
+          <h5 class="np-svc-title">حجب المواقع</h5>
+          <span class="np-svc-status-dot is-inactive" data-rh-svc-status title="غير مفعّلة"></span>
+        </a>
+        {# المواقع المسموحة — مرّة واحدة (دُمجت خدمة open-sites مع
+           قائمة walled-garden). نقطة الحالة من جرد open-sites. #}
+        <a class="np-svc-card"
+           data-mt-router-link="npc-walled-garden"
+           data-rh-svc-card="open-sites"
+           href="{{ url_for('radius.npc_walled_garden_list_scoped', nas_id=nas.id) }}">
+          <span class="np-svc-icon np-svc-icon--teal"><i class="fa-solid fa-door-open"></i></span>
+          <h5 class="np-svc-title">المواقع المسموحة</h5>
+          <span class="np-svc-status-dot is-inactive" data-rh-svc-status title="غير مفعّلة"></span>
+        </a>
+        {# منع بث البلوتوث والواي فاي — خدمة سكربت منافذ. كانت في صفحة
+           «خدمات المنافذ» المنفصلة؛ صارت بطاقة موحّدة تفتح نافذة عائمة
+           بنفس تدفّق المنافذ (اكتشاف الواجهات + اختيار + معاينة +
+           تطبيق/إزالة) عبر نفس endpoints. الحالة + شارة «بانتظار
+           السكربت» من جهة الخادم (pss_services). #}
+        {% set _btw = (pss_services or {}).get('bt_wifi_block', {}) %}
+        <button type="button" class="np-svc-card np-svc-card--pss"
+                data-pss-open="bt_wifi_block"
+                data-pss-title="منع بث البلوتوث والواي فاي">
+          <span class="np-svc-icon np-svc-icon--slate"><i class="fa-solid fa-tower-broadcast"></i></span>
+          <h5 class="np-svc-title">
+            منع البث (بلوتوث/واي فاي)
+            {% if _btw.get('placeholder') %}<span class="rh-svc-await">بانتظار السكربت</span>{% endif %}
+          </h5>
+          <span class="np-svc-status-dot {{ 'is-active' if _btw.get('enabled') else 'is-inactive' }}"
+                title="{{ 'مفعّلة على المنافذ: ' ~ (_btw.get('ports') | join(', ')) if _btw.get('enabled') else 'غير مفعّلة' }}"></span>
+        </button>
+        {# توحيد اللوب (يونيو 2026): أُزيلت بطاقة «كشف اللوب على المنافذ»
+           (خدمة المنافذ loop_detect — قالب فارغ placeholder، التطبيق
+           معطّل). الإبقاء على بطاقة «تتبّع اللوب» الوظيفية الوحيدة في
+           «أدوات وصفحات» (mt_loop_setup: مجس DHCP حقيقي + حالة فحص حية)
+           — بطاقة لوب واحدة عاملة بلا تكرار. #}
       </div>
-    </div>
-    <div class="np-svc-grid">
-      {% for svc in [
-        {'key': 'public-ip',     'title': 'تغيير IP الخروج',   'sub': 'توجيه المشتركين عبر IP عام جديد',     'icon': 'globe',           'color': 'amber'},
-        {'key': 'remote-access', 'title': 'اتصال عن بُعد',       'sub': 'نفذ نفق إدارة آمن للراوتر',          'icon': 'key',             'color': 'purple'},
-        {'key': 'hotspot',       'title': 'برمجة بوابة الدخول', 'sub': 'بوابة دخول عامّة مع صفحة تسجيل',      'icon': 'wifi',            'color': 'blue'},
-        {'key': 'broadband',     'title': 'برمجة البرودباند',   'sub': 'اشتراك ثابت لكل مستخدم',             'icon': 'ethernet',        'color': 'green'},
-        {'key': 'block-sites',   'title': 'حجب المواقع',        'sub': 'منع الوصول لمواقع محدّدة',             'icon': 'ban',             'color': 'red'},
-        {'key': 'open-sites',    'title': 'فتح المواقع',         'sub': 'السماح بمواقع بدون تسجيل دخول',        'icon': 'circle-check',    'color': 'teal'},
-      ] %}
-      {# Reuse `data-rh-svc-card` + `data-rh-svc-status` so the
-         existing probeStatus() loop fills the dot — no JS changes
-         needed. #}
-      <a class="np-svc-card"
-         data-rh-svc-card="{{ svc.key }}"
-         href="{{ url_for('radius.setup_wizard_v3_router_service_flow',
-                          router_id=nas.id, service_key=svc.key) }}">
-        <span class="np-svc-status-dot" data-rh-svc-status
-              title="جارٍ الفحص…"></span>
-        <span class="np-svc-icon np-svc-icon--{{ svc.color }}">
-          <i class="fa-solid fa-{{ svc.icon }}"></i>
-        </span>
-        <h5 class="np-svc-title">{{ svc.title }}</h5>
-        <p class="np-svc-desc">{{ svc.sub }}</p>
-        <span class="np-svc-arrow">
-          <i class="fa-solid fa-arrow-left"></i>
-        </span>
-      </a>
-      {% endfor %}
 
-      {# «تتبّع اللوب» — يفتح صفحة التتبّع المخصّصة (ليست خدمة معالج v3).
-         بطاقة ثابتة مع شارة الحالة من loop_active (قراءة فقط). #}
-      <a class="np-svc-card"
-         href="{{ url_for('radius.mt_loop_setup') }}"
-         data-rh-loop-tile>
-        <span class="np-svc-icon np-svc-icon--purple">
-          <i class="fa-solid fa-arrows-spin"></i>
-        </span>
-        <h5 class="np-svc-title">
-          تتبّع اللوب
-          <span style="display:inline-block;margin-inline-start:6px;padding:1px 9px;border-radius:999px;font-size:10.5px;font-weight:800;{% if loop_active %}background:#dcfce7;color:#15803d{% else %}background:#f1f5f9;color:#64748b{% endif %}">{{ 'مفعّل' if loop_active else 'غير مفعّل' }}</span>
-        </h5>
-        <p class="np-svc-desc">كشف اللوب عبر مجس DHCP على منافذ الزبائن</p>
-        <span class="np-svc-arrow">
-          <i class="fa-solid fa-arrow-left"></i>
-        </span>
-      </a>
-    </div>
+      {# ── مجموعة 3: أدوات وصفحات ───────────────────────────── #}
+      <h5 class="rh-svc-group">أدوات وصفحات</h5>
+      <div class="np-svc-grid">
+        {# النسخ الاحتياطية (أداة). #}
+        <a class="np-svc-card np-svc-card--tool"
+           data-mt-router-link="backups"
+           href="{{ url_for('radius.mt_backups_list', nas_id=nas.id) }}">
+          <span class="np-svc-icon np-svc-icon--slate"><i class="fa-solid fa-floppy-disk"></i></span>
+          <h5 class="np-svc-title">النسخ الاحتياطية</h5>
+          <span class="np-svc-status-dot is-tool" title="أداة"></span>
+        </a>
+        {# تتبّع اللوب — يفتح صفحة التتبّع، نقطة الحالة من loop_active
+           (قراءة فقط، server-side). #}
+        <a class="np-svc-card" data-rh-loop-tile
+           href="{{ url_for('radius.mt_loop_setup') }}"
+           title="كشف اللوب عبر مجس DHCP على منافذ الزبائن">
+          <span class="np-svc-icon np-svc-icon--purple"><i class="fa-solid fa-arrows-spin"></i></span>
+          <h5 class="np-svc-title">
+            تتبّع اللوب
+            <span class="rh-svc-loop {{ 'is-on' if loop_active else 'is-off' }}">{{ 'مفعّل' if loop_active else 'غير مفعّل' }}</span>
+          </h5>
+          <span class="np-svc-status-dot {{ 'is-active' if loop_active else 'is-inactive' }}" title="كشف اللوب عبر مجس DHCP على منافذ الزبائن"></span>
+        </a>
+        {# تشخيص الفلِيت (أداة — لكل المستأجر، لا nas_id). #}
+        <a class="np-svc-card np-svc-card--tool"
+           data-mt-router-link="diagnostics"
+           href="{{ url_for('radius.diagnostics') }}">
+          <span class="np-svc-icon np-svc-icon--slate"><i class="fa-solid fa-stethoscope"></i></span>
+          <h5 class="np-svc-title">تشخيص الفلِيت</h5>
+          <span class="np-svc-status-dot is-tool" title="أداة"></span>
+        </a>
+      </div>
 
-    {# ── B) Added services status area — filter + groups ────
-         Wrapped in .np-status-panel so it reads as a single card
-         surface (like the hero / cards above) instead of sitting
-         flat on the page background. Operator: «اعملو خلفية زي
-         باقي الاقسام». #}
-    <div class="np-status-panel">
-      <div class="np-section-head">
-        <div>
-          <h4>
-            حالة الخدمات
-            <span class="np-section-badge" data-rh-inv-stat-total>0</span>
-          </h4>
-          <p>عرض حالة الخدمات المضافة يدوياً وتلقائياً، مع مصدر كل خدمة وزر حذف آمن.</p>
-        </div>
-        <div class="np-svc-actions" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-          <div class="np-filter-bar" role="tablist" aria-label="تصفية الخدمات">
-            <button type="button" class="np-filter-chip is-active"
-                    data-np-filter="all" role="tab" aria-selected="true">
-              الكل
-              <span class="np-filter-chip-count" data-rh-inv-stat-total>0</span>
-            </button>
-            <button type="button" class="np-filter-chip"
-                    data-np-filter="hoberadius" role="tab" aria-selected="false">
-              تلقائيّة
-              <span class="np-filter-chip-count" data-rh-inv-stat-hr>0</span>
-            </button>
-            <button type="button" class="np-filter-chip"
-                    data-np-filter="operator" role="tab" aria-selected="false">
-              يدويّة
-              <span class="np-filter-chip-count" data-rh-inv-stat-op>0</span>
-            </button>
-          </div>
-          <button type="button" class="np-btn rh-inv-refresh"
-                  data-rh-inv-refresh title="تحديث القائمة">
-            <i class="fa-solid fa-rotate"></i>
-            <span>تحديث</span>
+      {# ── قسم «الخدمات المضافة على الراوتر» ───────────────────
+         رجوع القسم الوظيفي المهم (يونيو 2026): قائمة مدمجة من نفس
+         جرد /inventory تعرض كل خدمة مُضافة فعليًا — الاسم + النوع +
+         مصدر الإضافة (يدوي / تلقائي عبر الراديوس) بشارة ملوّنة +
+         التاريخ إن وُجد + زر حذف بنافذة تأكيد fcw تستدعي نفس
+         endpoint الحذف القديم (/inventory/remove). يتغذّى من نفس
+         جلب النقاط الملوّنة فوق (طلب واحد). الفلاتر حبوب صغيرة. #}
+      <div class="rh-svc-group rh-svc-group--added">
+        <span>الخدمات المضافة على الراوتر</span>
+        <div class="rh-added-bar" role="tablist" aria-label="تصفية الخدمات المضافة">
+          <button type="button" class="rh-added-chip is-active"
+                  data-rh-added-filter="all" role="tab" aria-selected="true">
+            الكل <span data-rh-added-count="all">0</span>
+          </button>
+          <button type="button" class="rh-added-chip"
+                  data-rh-added-filter="hoberadius" role="tab" aria-selected="false">
+            تلقائيّة <span data-rh-added-count="hoberadius">0</span>
+          </button>
+          <button type="button" class="rh-added-chip"
+                  data-rh-added-filter="operator" role="tab" aria-selected="false">
+            يدويّة <span data-rh-added-count="operator">0</span>
           </button>
         </div>
       </div>
-      <div class="rh-inv-loading" data-rh-inv-loading hidden>
-        <i class="fa-solid fa-spinner fa-spin"></i>
-        <span data-rh-inv-loading-text>جارٍ الاتصال بالراوتر…</span>
-        <small class="rh-inv-loading-hint">
-          نقرأ 6 خدمات عبر نفق الإدارة، وقد يستغرق ذلك حتى ثانيتَين.
-        </small>
-      </div>
-      <div class="rh-inv-empty" data-rh-inv-empty hidden>
-        <i class="fa-solid fa-circle-info"></i>
-        لا توجد خدمات مفعَّلة حالياً. ارجع لـ«إدارة الراوترات» وأضف خدمة من
-        بطاقات الـ Hub أعلى الصفحة.
-      </div>
-      <div class="rh-inv-error" data-rh-inv-error hidden></div>
-      <div class="rh-inv-groups" data-rh-inv-groups></div>
-    </div>
-
-    {# ── C) Tools — moved here from the old Router Hub, which was
-         removed because its service cards duplicated section A.
-         These 4 tools are unique to this page and link out to
-         standalone pages (overview / login designer / backups /
-         fleet diagnostics). #}
-    <div class="np-section-head">
-      <div>
-        <h4>
-          الأدوات
-          <span class="np-section-badge">4</span>
-        </h4>
-        <p>أدوات مهمّتها محدّدة — لا تتبع نموذج 4 مراحل.</p>
-      </div>
-    </div>
-    <div class="np-svc-grid">
-      <a class="np-svc-card np-svc-card--tool"
-         href="{{ url_for('radius.mt_router_overview', nas_id=nas.id) }}">
-        <span class="np-svc-icon np-svc-icon--slate">
-          <i class="fa-solid fa-clipboard-check"></i>
-        </span>
-        <h5 class="np-svc-title">نظرة عامة</h5>
-        <p class="np-svc-desc">حالة + أمان + إجراءات</p>
-        <span class="np-svc-arrow">
-          <i class="fa-solid fa-arrow-left"></i>
-        </span>
-      </a>
-      <a class="np-svc-card np-svc-card--tool"
-         href="{{ url_for('radius.mt_login_designer', nas_id=nas.id) }}">
-        <span class="np-svc-icon np-svc-icon--slate">
-          <i class="fa-solid fa-palette"></i>
-        </span>
-        <h5 class="np-svc-title">مصمّم صفحة الدخول</h5>
-        <p class="np-svc-desc">قوالب + نشر</p>
-        <span class="np-svc-arrow">
-          <i class="fa-solid fa-arrow-left"></i>
-        </span>
-      </a>
-      <a class="np-svc-card np-svc-card--tool"
-         href="{{ url_for('radius.mt_backups_list', nas_id=nas.id) }}">
-        <span class="np-svc-icon np-svc-icon--slate">
-          <i class="fa-solid fa-floppy-disk"></i>
-        </span>
-        <h5 class="np-svc-title">النسخ الاحتياطية</h5>
-        <p class="np-svc-desc">حفظ + فحص</p>
-        <span class="np-svc-arrow">
-          <i class="fa-solid fa-arrow-left"></i>
-        </span>
-      </a>
-      <a class="np-svc-card np-svc-card--tool"
-         href="{{ url_for('radius.diagnostics') }}">
-        <span class="np-svc-icon np-svc-icon--slate">
-          <i class="fa-solid fa-stethoscope"></i>
-        </span>
-        <h5 class="np-svc-title">تشخيص الفلِيت</h5>
-        <p class="np-svc-desc">سكربتات الإصلاح</p>
-        <span class="np-svc-arrow">
-          <i class="fa-solid fa-arrow-left"></i>
-        </span>
-      </a>
-    </div>
-  </section>
-
-  {# Delete confirmation modal — shared across all rh-inv cards. #}
-  <div class="rh-inv-modal" data-rh-inv-modal hidden role="dialog"
-       aria-modal="true" aria-labelledby="rh-inv-modal-title">
-    <div class="rh-inv-modal-card">
-      <button type="button" class="rh-inv-modal-close"
-              data-rh-inv-modal-close aria-label="إغلاق">×</button>
-      <h3 id="rh-inv-modal-title">
-        <i class="fa-solid fa-triangle-exclamation"></i>
-        تأكيد الحذف
-      </h3>
-      <p>هل تريد بالتأكيد حذف هذه البرمجة؟</p>
-      <div class="rh-inv-modal-target" data-rh-inv-modal-target></div>
-      <div class="rh-inv-progress" data-rh-inv-progress hidden>
-        <div class="rh-inv-progress-track">
-          <div class="rh-inv-progress-bar" data-rh-inv-progress-bar></div>
+      <div class="rh-added">
+        <div class="rh-added-loading" data-rh-added-loading hidden>
+          <i class="fa-solid fa-spinner fa-spin"></i>
+          <span>جارٍ قراءة الخدمات المضافة من الراوتر…</span>
         </div>
-        <p class="rh-inv-progress-msg" data-rh-inv-progress-msg>
-          جارٍ الاتصال بالراوتر…
-        </p>
+        <div class="rh-added-empty" data-rh-added-empty hidden>
+          <i class="fa-solid fa-circle-info"></i>
+          <span>لا توجد خدمات مُضافة على هذا الراوتر بعد.</span>
+        </div>
+        <div class="rh-added-list" data-rh-added-list></div>
       </div>
-      <div class="rh-inv-modal-result" data-rh-inv-modal-result hidden></div>
-      <div class="rh-inv-modal-actions">
-        <button type="button" class="rh-inv-btn-ghost"
-                data-rh-inv-modal-cancel>إلغاء</button>
-        <button type="button" class="rh-inv-btn-danger"
-                data-rh-inv-modal-confirm>
+    </div>{# /.rh-svc-panel #}
+
+  </section>{# /my-services panel #}
+
+  {# ── نافذة تأكيد حذف خدمة مُضافة (fcw) — تستدعي نفس endpoint
+       الحذف القديم. المحتوى يُملأ بـJS عند فتحها من زر الحذف. #}
+  <div class="fcw-modal" data-fcw-modal="svc-del" hidden>
+    <div class="fcw-dialog" role="dialog" aria-modal="true" aria-labelledby="fcw-svcdel-title">
+      <div class="fcw-head">
+        <h3 id="fcw-svcdel-title"><i class="fa-solid fa-triangle-exclamation" style="color:#dc2626"></i> تأكيد حذف الخدمة</h3>
+        <button type="button" class="fcw-x" data-fcw-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="fcw-body">
+        <p style="margin:0;font-size:13px;color:#475569">سيُحذف هذا العنصر من الراوتر نهائيًا — لا يمكن التراجع:</p>
+        <div class="rh-added-del-target" data-rh-del-target></div>
+        <div class="rh-added-del-result" data-rh-del-result hidden></div>
+      </div>
+      <div class="fcw-foot">
+        <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>إلغاء</button>
+        <button class="hub-btn hub-btn--danger" type="button" data-rh-del-confirm>
           <i class="fa-solid fa-trash"></i> نعم، احذف
         </button>
       </div>
     </div>
   </div>
 
+  {# ── نافذة «خدمات المنافذ» العائمة (fcw) ─────────────────────
+       بطاقة «منع البث» تفتح هذه النافذة (خدمة سكربت منافذ). كان
+       اللوب يفتحها أيضاً ثم وُحّد اللوب في بطاقة «تتبّع اللوب» الوظيفية.
+       المحتوى (اكتشاف الواجهات + اختيار + معاينة السكربت + تطبيق/
+       إزالة) يُجلَب من نفس صفحة «خدمات المنافذ» ويُحقَن هنا، ونماذجه
+       تُرسَل عبر fetch لنفس endpoints (plan/apply/remove) بلا تكرار
+       منطق. الصفحة المستقلة تبقى تعمل لمن يزورها مباشرةً. #}
+  <div class="fcw-modal" data-fcw-modal="pss" hidden>
+    <div class="fcw-dialog fcw-dialog--wide" role="dialog" aria-modal="true"
+         aria-labelledby="fcw-pss-title">
+      <div class="fcw-head">
+        <h3 id="fcw-pss-title"><i class="fa-solid fa-diagram-project" style="color:#475569"></i>
+          <span data-pss-modal-title>خدمات المنافذ</span></h3>
+        <button type="button" class="fcw-x" data-fcw-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="fcw-body">
+        <div class="rh-pss-loading" data-pss-loading hidden>
+          <i class="fa-solid fa-spinner fa-spin"></i>
+          <span>جارٍ تحميل تدفّق المنافذ…</span>
+        </div>
+        <div class="rh-pss-error" data-pss-error hidden></div>
+        {# يُحقَن هنا جزء [data-mt-port-services] من صفحة «خدمات المنافذ». #}
+        <div data-pss-modal-body></div>
+      </div>
+    </div>
+  </div>
+
+  {# أُزيل من لوحة العميل — يُعاد مركزياً عبر لوحة التراخيص (قرار معماري):
+       نافذة «نفق تغيير IP» العائمة (حالة الترخيص + شرائح الأسعار + نموذج
+       طلب الخدمة router_ip_tunnel_request). خدمة مركزية للمالك. نافذة حذف
+       الخدمة (svc-del) أعلاه ونظام fcw أدناه يبقيان كما هما. #}
+  <script>
+  // فتح/إغلاق نوافذ fcw العائمة (نافذة حذف الخدمة svc-del). نفس السلوك السابق.
+  (() => {
+    "use strict";
+    const root = document;
+    function open(key){ const m = root.querySelector(`[data-fcw-modal='${key}']`); if(m){ m.hidden=false; m.classList.add("is-open"); m.querySelector("input,select,button")?.focus(); } }
+    function closeAll(){ root.querySelectorAll("[data-fcw-modal]").forEach(m=>{ m.classList.remove("is-open"); m.hidden=true; }); }
+    root.querySelectorAll("[data-fcw-open]").forEach(b=> b.addEventListener("click", ()=> open(b.dataset.fcwOpen)));
+    root.querySelectorAll("[data-fcw-close]").forEach(b=> b.addEventListener("click", closeAll));
+    root.querySelectorAll("[data-fcw-modal]").forEach(m=> m.addEventListener("click", e=>{ if(e.target===m) closeAll(); }));
+    root.addEventListener("keydown", e=>{ if(e.key==="Escape") closeAll(); });
+  })();
+  </script>
+
+  <script>
+  /* «خدمات المنافذ» داخل نافذة عائمة (يونيو 2026)
+     ──────────────────────────────────────────────────────────────
+     بطاقة «منع البث» في تبويب «خدماتي» تفتح النافذة،
+     فنجلب جزء [data-mt-port-services] من نفس صفحة
+     «خدمات المنافذ» ونحقنه (بعد إزالة الهيرو/بطاقات اختيار الخدمة/
+     لوحة المساعدة)، ثم نعترض إرسال نماذجه (اختيار المنافذ + معاينة +
+     تطبيق/إزالة) ونرسلها عبر fetch لنفس endpoints. لا تكرار للمنطق،
+     والصفحة المستقلة تبقى تعمل لمن يزورها مباشرةً. */
+  (function () {
+    "use strict";
+    const root = document.querySelector("[data-mt-dashboard]");
+    if (!root) return;
+    const routerId = root.dataset.mtRouterId;
+    if (!routerId) return;
+    const modal = root.querySelector('[data-fcw-modal="pss"]');
+    if (!modal) return;
+    const body    = modal.querySelector("[data-pss-modal-body]");
+    const titleEl = modal.querySelector("[data-pss-modal-title]");
+    const loading = modal.querySelector("[data-pss-loading]");
+    const errorEl = modal.querySelector("[data-pss-error]");
+
+    // يستخلص جزء التدفّق من صفحة «خدمات المنافذ» وينظّفه من القشرة.
+    function extractFlow(htmlText) {
+      const doc = new DOMParser().parseFromString(htmlText, "text/html");
+      const sec = doc.querySelector("[data-mt-port-services]");
+      if (!sec) return null;
+      sec.querySelectorAll(".hub-hero, [data-pss-service-cards], .uds-help")
+         .forEach((el) => el.remove());
+      return sec.innerHTML;
+    }
+
+    function showError(msg) {
+      if (errorEl) { errorEl.textContent = msg; errorEl.hidden = false; }
+    }
+
+    async function load(url, opts) {
+      if (loading) loading.hidden = false;
+      if (errorEl) { errorEl.hidden = true; errorEl.textContent = ""; }
+      try {
+        const res = await fetch(url, Object.assign(
+          { headers: { "X-Requested-With": "fetch" }, credentials: "same-origin" },
+          opts || {}
+        ));
+        const txt = await res.text();
+        const frag = extractFlow(txt);
+        if (frag == null) {
+          showError("تعذّر تحميل تدفّق المنافذ. جرّب فتح الصفحة مباشرةً.");
+          return false;
+        }
+        if (body) body.innerHTML = frag;
+        return true;
+      } catch (err) {
+        showError("خطأ في الاتصال: " + String(err && err.message || err));
+        if (window.console) console.error("[خدمات المنافذ] خطأ:", err);
+        return false;
+      } finally {
+        if (loading) loading.hidden = true;
+      }
+    }
+
+    function openPss(slug, title) {
+      if (titleEl && title) titleEl.textContent = title;
+      if (body) body.innerHTML = "";
+      modal.hidden = false;
+      modal.classList.add("is-open");
+      load(`/admin/radius/mt/${routerId}/port-services?slug=${encodeURIComponent(slug)}`);
+    }
+
+    // فتح النافذة من بطاقات الخدمة.
+    root.querySelectorAll("[data-pss-open]").forEach((card) => {
+      card.addEventListener("click", () => {
+        openPss(card.getAttribute("data-pss-open"),
+                card.getAttribute("data-pss-title") || "خدمات المنافذ");
+      });
+    });
+
+    // اعتراض إرسال نماذج التدفّق المُحقَنة → fetch لنفس endpoint ثم
+    // إعادة حقن الجزء المُحدَّث (معاينة/نتيجة التطبيق/الإزالة).
+    if (body) {
+      body.addEventListener("submit", (e) => {
+        const form = e.target.closest("form");
+        if (!form) return;
+        e.preventDefault();
+        const fd = new FormData(form);
+        // FormData لا تتضمّن زر الإرسال؛ نضيف اسم/قيمة الزر الذي ضُغط
+        // (mode=apply/remove) ليصل للخادم كما في الإرسال العادي.
+        if (e.submitter && e.submitter.name) {
+          fd.append(e.submitter.name, e.submitter.value);
+        }
+        load(form.action, { method: (form.method || "POST").toUpperCase(), body: fd });
+      });
+    }
+  })();
+  </script>
+
 </section>
 
 <style>
-/* ─── «خدماتي» tab layout ─── */
+/* ─── «خدماتي» tab — نظام خدمات موحّد (يونيو 2026) ───────────
+   حُذف كل CSS الأنظمة الملغاة (rh-inv-hero / rh-inv-group /
+   rh-inv-card / rh-inv-modal / conn-banner / filter / الجرد
+   القديم) فعليًا — لم يَعُد له ماركأب. الباقي: بطاقات الخدمات
+   المدمجة الموحّدة + لوحة القسم + نافذة نفق تغيير IP. */
 .rh-inventory{padding:0 !important}
-/* .rh-inv-hero parent styles are inherited from .mt-page-hero in
-   dashboard_premium.css (the «خدماتي» hero uses BOTH classes:
-   `class="mt-page-hero rh-inv-hero"`). We used to redefine the
-   whole rule here with display:flex which fought the new clean
-   build — removed. */
-/* Decorative glow that drifts — gives the page a "premium" feel
-   without distracting the operator. Disabled when the user has
-   prefers-reduced-motion. */
-.rh-inv-hero-glow{
-  position:absolute;top:-40%;left:-10%;
-  width:520px;height:520px;border-radius:50%;
-  background:radial-gradient(circle, rgba(196,181,253,.28), transparent 60%);
-  filter:blur(14px);pointer-events:none;
-  animation:rh-inv-hero-drift 12s ease-in-out infinite;
-}
-@keyframes rh-inv-hero-drift{
-  0%,100%{transform:translate(0,0) scale(1);}
-  50%    {transform:translate(40px,30px) scale(1.08);}
-}
-@media (prefers-reduced-motion: reduce){
-  .rh-inv-hero-glow{animation:none}
-}
-.rh-inv-hero-copy{min-width:0;position:relative;z-index:1;flex:1 1 280px}
-.rh-inv-kicker{
-  display:inline-flex;align-items:center;gap:7px;margin-bottom:9px;
-  padding:5px 12px;border-radius:999px;
-  background:rgba(255,255,255,.7);border:1px solid rgba(124,58,237,.18);
-  color:#6D28D9;font-size:11.5px;font-weight:900;letter-spacing:.01em;
-  backdrop-filter:blur(6px);
-}
-.rh-inv-kicker i{font-size:12px}
-.rh-inv-hero h3{
-  margin:0;color:#0F172A;font-size:26px;font-weight:950;letter-spacing:-.01em;
-  line-height:1.2;
-}
-.rh-inv-hero p{
-  margin:8px 0 0;color:#475569;font-size:13.5px;font-weight:600;
-  line-height:1.6;max-width:520px;
-}
-.rh-inv-hero-chips{
-  display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:14px;
-}
-.rh-inv-hero-chips span{
-  display:inline-flex;align-items:center;gap:6px;min-height:30px;
-  padding:0 12px;border:1px solid rgba(124,58,237,.22);border-radius:999px;
-  background:rgba(255,255,255,.82);color:#1F2937;
-  font-size:11.5px;font-weight:800;backdrop-filter:blur(6px);
-}
-.rh-inv-hero-chips i{color:#7C3AED}
-/* Hero stats — total / from-wizard / manual — populated by JS
-   once inventory loads. Hidden by default. */
-.rh-inv-hero-stats{
-  display:flex;align-items:stretch;gap:8px;position:relative;z-index:1;
-  flex-wrap:wrap;
-}
-.rh-inv-hero-stats[hidden]{display:none}
-.rh-inv-stat{
-  min-width:78px;padding:10px 14px;
-  background:rgba(255,255,255,.85);
-  border:1px solid rgba(124,58,237,.18);border-radius:14px;
-  display:flex;flex-direction:column;align-items:center;gap:2px;
-  backdrop-filter:blur(8px);
-  transition:transform .15s, box-shadow .15s;
-}
-.rh-inv-stat:hover{
-  transform:translateY(-2px);
-  box-shadow:0 6px 18px rgba(124,58,237,.14);
-}
-.rh-inv-stat-num{
-  font-size:24px;font-weight:950;color:#5B21B6;line-height:1;
-  font-variant-numeric:tabular-nums;
-}
-.rh-inv-stat-lbl{
-  font-size:10.5px;font-weight:800;color:#64748B;letter-spacing:.02em;
-}
-.rh-inv-stat--hr .rh-inv-stat-num{color:#5B21B6}
-.rh-inv-stat--op .rh-inv-stat-num{color:#B45309}
-.rh-inv-head{
-  display:flex;align-items:center;justify-content:space-between;
-  margin:0 0 6px;flex-wrap:wrap;gap:10px;
-}
-.rh-inv-head h3{
-  margin:0;font-size:16px;font-weight:800;color:#0F172A;
-  display:inline-flex;align-items:center;gap:8px;
-}
-.rh-inv-head h3 i{color:#6B5AED;font-size:14px}
-.rh-inv-refresh{
-  position:relative;z-index:1;
-  display:inline-flex;align-items:center;gap:8px;
-  min-height:42px;padding:0 18px;border-radius:14px;
-  border:1px solid rgba(124,58,237,.30);
-  background:linear-gradient(135deg,#FFF,#F5F3FF);
-  color:#5B21B6;font-size:13px;font-weight:900;
-  cursor:pointer;transition:all .15s;
-  box-shadow:0 8px 20px rgba(124,58,237,.10);
-}
-.rh-inv-refresh i{font-size:13px;transition:transform .4s}
-.rh-inv-refresh:hover{
-  border-color:rgba(124,58,237,.55);
-  background:linear-gradient(135deg,#F5F3FF,#EDE9FE);
-  transform:translateY(-1px);
-  box-shadow:0 12px 26px rgba(124,58,237,.18);
-}
-.rh-inv-refresh:hover i{transform:rotate(180deg)}
-.rh-inv-refresh.is-spinning i{
-  animation:rh-inv-refresh-spin .8s linear infinite;
-}
-@keyframes rh-inv-refresh-spin{
-  to{transform:rotate(360deg)}
-}
-.rh-inv-help{color:#64748B;font-size:12.5px;line-height:1.7;margin:0 0 14px}
-.rh-inv-loading{
-  color:#475569;font-size:13.5px;padding:24px 18px;text-align:center;
-  display:flex;flex-direction:column;align-items:center;gap:6px;
-}
-.rh-inv-loading > i{font-size:18px;color:#7C3AED}
-.rh-inv-loading-hint{color:#94A3B8;font-size:11.5px;margin-top:4px}
-.rh-inv-empty{
-  background:#F8FAFC;border:1px dashed #CBD5E1;border-radius:12px;
-  padding:24px;text-align:center;color:#64748B;font-size:13px;
-  display:flex;align-items:center;justify-content:center;gap:8px;
-}
-.rh-inv-empty i{font-size:20px;color:#CBD5E1}
-.rh-inv-empty[hidden]{display:none}
-.rh-inv-error{
-  background:#FEF2F2;border:1px solid #FCA5A5;border-radius:8px;
-  padding:10px 14px;color:#7F1D1D;font-size:13px;margin-bottom:12px;
-}
-.rh-inv-error[hidden]{display:none}
-.rh-inv-groups{display:flex;flex-direction:column;gap:22px;margin-top:6px}
 
-.rh-inv-group{
-  background:#fff;border:1px solid #EAECF0;border-radius:16px;
-  padding:18px 20px;
-  box-shadow:0 1px 2px rgba(15,23,42,.03);
+/* ─── بطاقات الخدمات المدمجة الموحّدة ────────────────────────
+   بطاقة واحدة لكل خدمة: أيقونة 20px + اسم + نقطة حالة على سطر
+   واحد. شبكة auto-fit تملأ كامل العرض بلا فراغ ميّت. الأحجام
+   والستايل متماثلة للجميع (خدمات وأدوات). */
+.rh-inventory .np-svc-grid{
+  grid-template-columns:repeat(auto-fit,minmax(180px,1fr)) !important;
+  gap:10px !important;
+  margin:0 0 8px;
 }
-.rh-inv-group-head{
-  display:flex;align-items:center;gap:10px;margin-bottom:10px;
+.rh-inventory .np-svc-card{
+  display:inline-flex;
+  align-items:center;
+  gap:9px;
+  padding:9px 13px;
+  min-height:44px;
+  border-radius:11px;
+  box-shadow:none;
+  /* إعادة ضبط أي بطاقة <button> لتطابق بطاقات <a> تمامًا. */
+  width:100%;
+  font:inherit;
+  text-align:start;
+  cursor:pointer;
+  background:#fff;
+  border:1px solid #EAECF0;
 }
-.rh-inv-group-icon{
-  width:36px;height:36px;border-radius:10px;color:#fff;flex-shrink:0;
-  display:inline-flex;align-items:center;justify-content:center;
-  font-size:15px;
+.rh-inventory .np-svc-card::before{display:none}
+.rh-inventory .np-svc-card:hover{
+  transform:none;
+  border-color:#CBD5E1;
+  box-shadow:0 1px 4px rgba(15,23,42,.06);
 }
-.rh-inv-icon-blue  {background:linear-gradient(135deg,#3B82F6,#1D4ED8)}
-.rh-inv-icon-green {background:linear-gradient(135deg,#10B981,#047857)}
-.rh-inv-icon-red   {background:linear-gradient(135deg,#EF4444,#B91C1C)}
-.rh-inv-icon-teal  {background:linear-gradient(135deg,#14B8A6,#0F766E)}
-.rh-inv-icon-amber {background:linear-gradient(135deg,#F59E0B,#B45309)}
-.rh-inv-icon-purple{background:linear-gradient(135deg,#8B5CF6,#6D28D9)}
-.rh-inv-group-title{
-  margin:0;font-size:14px;font-weight:800;color:#0F172A;
-}
-.rh-inv-group-count{
-  font-size:11px;color:#94A3B8;font-weight:600;
-  margin-inline-start:auto;background:#F1F5F9;border-radius:999px;
-  padding:3px 10px;
-}
-.rh-inv-cards{
-  display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
-  gap:12px;
-  /* Equal-height cards regardless of detail count. */
-  align-items:stretch;
-}
-.rh-inv-card{
-  background:#FAFAFC;border:1px solid #EAECF0;border-radius:11px;
-  padding:12px 14px;position:relative;
-  transition:all .15s;
-  /* Make the card itself a column flex container so the delete
-     button always sits at the bottom regardless of how many
-     details rows are above it — kills the "ragged bottom edges"
-     look the operator pointed out. */
-  display:flex;flex-direction:column;
-}
-.rh-inv-card:hover{
-  background:#fff;border-color:#CBD5E1;
-  box-shadow:0 2px 8px rgba(15,23,42,.05);
-  transform:translateY(-1px);
-}
-.rh-inv-card-head{
-  display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;
-}
-.rh-inv-card-label{
-  font-family:monospace;font-size:14px;font-weight:800;color:#0F172A;
-  flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-}
-.rh-inv-source{
-  font-size:10px;font-weight:800;padding:2px 8px;border-radius:999px;
-  white-space:nowrap;letter-spacing:.02em;
-}
-.rh-inv-source-hr{background:#EDE9FE;color:#5B21B6}
-.rh-inv-source-op{background:#FEF3C7;color:#92400E}
-.rh-inv-details{
-  display:grid;grid-template-columns:auto 1fr;gap:3px 8px;
-  font-size:11.5px;color:#475569;margin-bottom:10px;
-  /* Take all remaining vertical space inside the flex card so
-     short cards align their delete button with tall cards. */
-  flex:1 1 auto;align-content:start;
-}
-.rh-inv-details dt{color:#94A3B8;font-weight:700}
-.rh-inv-details dd{margin:0;font-family:monospace;color:#0F172A;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.rh-inv-del{
-  width:100%;padding:6px 10px;border-radius:7px;
-  border:1px solid #FCA5A5;background:#FEF2F2;color:#B91C1C;
-  font-size:12px;font-weight:700;cursor:pointer;transition:all .12s;
-  display:inline-flex;align-items:center;justify-content:center;gap:6px;
-}
-.rh-inv-del:hover{background:#FECACA;border-color:#F87171}
-
-/* ─── Remote-access per-grant badges + URL row ─── */
-.rh-inv-badge{
-  display:inline-flex;align-items:center;gap:5px;
-  padding:2px 9px;border-radius:999px;font-size:10.5px;
-  font-weight:800;white-space:nowrap;letter-spacing:.02em;
-}
-.rh-inv-badge i{font-size:10px}
-.rh-inv-badge-perm{background:#D1FAE5;color:#065F46;border:1px solid #6EE7B7}
-.rh-inv-badge-tmp{background:#FEF3C7;color:#92400E;border:1px solid #FCD34D}
-.rh-inv-badge-tmp.is-expired{background:#FEE2E2;color:#7F1D1D;border-color:#FCA5A5}
-/* Permission tier badges — visual risk gradient. */
-.rh-inv-badge-perm-r{background:#DBEAFE;color:#1E40AF;border:1px solid #93C5FD}
-.rh-inv-badge-perm-w{background:#FEF3C7;color:#92400E;border:1px solid #FCD34D}
-.rh-inv-badge-perm-f{background:#FEE2E2;color:#7F1D1D;border:1px solid #FCA5A5}
-.rh-inv-url-row{
-  display:flex;align-items:center;gap:6px;margin-bottom:8px;
-  background:#F5F3FF;border:1px solid #DDD6FE;border-radius:7px;
-  padding:4px 7px;
-}
-.rh-inv-url-value{
-  flex:1;min-width:0;font-family:monospace;font-size:12.5px;
-  color:#1F2937;direction:ltr;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-  background:transparent;border:none;padding:2px 4px;
-}
-.rh-inv-url-row .rh-inv-copy-btn{
-  width:26px;height:26px;flex-shrink:0;
-}
-
-/* ─── Remote-access connection banner ─── */
-.rh-inv-conn-banner{
-  background:linear-gradient(135deg,#EDE9FE 0%,#DDD6FE 100%);
-  border:1px solid #C4B5FD;border-radius:10px;
-  padding:10px 14px;margin-bottom:10px;
-}
-.rh-inv-conn-head{
-  display:flex;align-items:center;gap:8px;
-  color:#5B21B6;font-size:12.5px;font-weight:800;margin-bottom:6px;
-}
-.rh-inv-conn-head i{font-size:13px}
-.rh-inv-conn-row{
-  display:flex;align-items:center;gap:8px;flex-wrap:wrap;
-  margin-top:5px;
-}
-.rh-inv-conn-label{
-  font-size:11.5px;color:#5B21B6;font-weight:700;min-width:120px;
-}
-.rh-inv-conn-value{
-  background:#fff;border:1px solid #DDD6FE;border-radius:5px;
-  padding:3px 9px;font-family:monospace;font-size:12.5px;
-  color:#1F2937;direction:ltr;flex:1;min-width:0;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-}
-.rh-inv-conn-hint{
-  font-size:10.5px;color:#7C3AED;font-style:italic;flex-basis:100%;
-  margin-inline-start:128px;
-}
-.rh-inv-conn-empty{
-  font-size:12px;color:#5B21B6;line-height:1.7;
-}
-.rh-inv-conn-empty code{
-  background:#fff;border-radius:4px;padding:1px 6px;
-  font-size:11.5px;direction:ltr;
-}
-.rh-inv-conn-link{
-  display:inline-flex;align-items:center;gap:6px;
-  margin:4px 0;padding:5px 11px;
-  background:#7C3AED;color:#fff;border-radius:7px;
-  font-size:12px;font-weight:600;text-decoration:none;
-  transition:background .15s;
-}
-.rh-inv-conn-link:hover{background:#6D28D9;color:#fff;}
-.rh-inv-copy-btn{
-  width:28px;height:28px;border-radius:7px;
-  border:1px solid #C4B5FD;background:#fff;color:#7C3AED;
-  font-size:11px;cursor:pointer;transition:all .12s;
-  display:inline-flex;align-items:center;justify-content:center;
+.rh-inventory .np-svc-icon{
+  width:20px;height:20px;
   flex-shrink:0;
+  border-radius:6px;
+  font-size:10px;
+  margin-bottom:0;
+  box-shadow:none;
 }
-.rh-inv-copy-btn:hover{background:#EDE9FE;border-color:#7C3AED}
-.rh-inv-copy-btn.is-ok{background:#10B981;color:#fff;border-color:#10B981}
+.rh-inventory .np-svc-title{
+  margin:0;
+  font-size:12.5px;
+  line-height:1.3;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  min-width:0;
+  flex:1;
+  color:#0F172A;
+  font-weight:800;
+}
+/* الوصف والسهم يختفيان في الوضع المدمج — البطاقة سطر واحد فقط. */
+.rh-inventory .np-svc-desc{display:none}
+.rh-inventory .np-svc-arrow{display:none}
+/* نقطة الحالة: عنصر مضمّن بنهاية السطر (لا زاوية مطلقة). الألوان
+   (is-active/is-inactive/is-unknown) تأتي من dashboard_premium.css.
+   is-tool نقطة محايدة للأدوات (لا حالة تشغيل حقيقية لها). */
+.rh-inventory .np-svc-status-dot{
+  position:static;
+  flex-shrink:0;
+  order:3;
+  margin-inline-start:auto;
+}
+.rh-inventory .np-svc-status-dot.is-tool{
+  background:#CBD5E1;box-shadow:none;
+}
+/* بطاقة خدمة مفعّلة: خلفية خضراء فاتحة خفيفة تُرى بلمحة. */
+.rh-inventory .np-svc-card.is-on{
+  background:#F0FDF4;border-color:#BBF7D0;
+}
+.rh-inventory .np-svc-card.is-on:hover{border-color:#86EFAC}
+/* أيقونة تلميح «كيف تفعّلت» — تُحقَن بـJS للبطاقات المفعّلة، بجانب
+   النقطة. تُصغّر دائرة hub-hint لتناسب البطاقة المدمجة. */
+.rh-inventory .np-svc-hint{
+  order:2;margin-inline-start:auto;
+  width:16px;height:16px;font-size:8.5px;flex-shrink:0;
+}
+.rh-inventory .np-svc-hint ~ .np-svc-status-dot{
+  margin-inline-start:6px;
+}
 
-/* ─── Delete confirmation modal ─── */
-.rh-inv-modal{
-  position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.6);
-  display:flex;align-items:center;justify-content:center;padding:20px;
+/* ─── قسم «الخدمات المضافة على الراوتر» ──────────────────────
+   قائمة مدمجة وظيفية (اسم + نوع + مصدر + تاريخ + حذف) تحت شبكة
+   البطاقات، بترويسة تحمل حبوب الفلترة الصغيرة. */
+.rh-svc-group--added{justify-content:space-between;flex-wrap:wrap;gap:10px}
+.rh-svc-group--added::after{display:none}
+.rh-added-bar{
+  display:inline-flex;gap:4px;padding:3px;flex-wrap:wrap;
+  background:#fff;border:1px solid #E2E8F0;border-radius:999px;
 }
-.rh-inv-modal[hidden]{display:none !important}
-.rh-inv-modal-card{
-  background:#fff;border-radius:14px;padding:24px 26px;max-width:460px;
-  width:100%;box-shadow:0 20px 60px rgba(15,23,42,.25);position:relative;
+.rh-added-chip{
+  border:0;background:transparent;color:#475569;
+  font-size:11px;font-weight:800;padding:5px 12px;border-radius:999px;
+  cursor:pointer;display:inline-flex;align-items:center;gap:6px;
+  transition:background .14s,color .14s;
 }
-.rh-inv-modal-close{
-  position:absolute;top:10px;inset-inline-start:10px;
-  background:none;border:none;font-size:22px;color:#94A3B8;
-  cursor:pointer;padding:4px 10px;border-radius:6px;
+.rh-added-chip:hover{background:#F1F5F9}
+.rh-added-chip.is-active{background:#0F172A;color:#fff}
+.rh-added-chip span{
+  font-size:10px;border-radius:999px;padding:0 6px;min-width:16px;
+  text-align:center;background:#E2E8F0;color:#475569;
 }
-.rh-inv-modal-close:hover{background:#F1F5F9}
-.rh-inv-modal-card h3{
-  margin:0 0 10px;font-size:17px;color:#B91C1C;font-weight:800;
+.rh-added-chip.is-active span{background:rgba(255,255,255,.22);color:#fff}
+.rh-added-loading,.rh-added-empty{
+  display:flex;align-items:center;gap:8px;justify-content:center;
+  padding:18px;color:#64748B;font-size:12.5px;
+  background:#F8FAFC;border:1px dashed #E2E8F0;border-radius:12px;
+}
+.rh-added-loading[hidden],.rh-added-empty[hidden]{display:none}
+.rh-added-loading i{color:#7C3AED}
+.rh-added-empty i{color:#CBD5E1;font-size:16px}
+.rh-added-list{display:flex;flex-direction:column;gap:8px}
+.rh-added-row{
+  display:flex;align-items:center;gap:10px;padding:9px 12px;
+  background:#fff;border:1px solid #EAECF0;border-radius:11px;
+  transition:border-color .14s;
+}
+.rh-added-row:hover{border-color:#CBD5E1}
+.rh-added-row[hidden]{display:none}
+.rh-added-row-icon{
+  width:26px;height:26px;border-radius:7px;flex-shrink:0;color:#fff;
+  display:inline-flex;align-items:center;justify-content:center;font-size:11px;
+}
+.rh-added-main{display:flex;flex-direction:column;min-width:0;flex:1;gap:1px}
+.rh-added-name{
+  font-size:12.5px;font-weight:800;color:#0F172A;font-family:monospace;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.rh-added-type{font-size:10.5px;color:#94A3B8;font-weight:700}
+.rh-added-src{
+  font-size:10px;font-weight:900;padding:2px 9px;border-radius:999px;
+  white-space:nowrap;flex-shrink:0;
+}
+.rh-added-src--auto{background:#EDE9FE;color:#5B21B6}
+.rh-added-src--man{background:#FEF3C7;color:#92400E}
+.rh-added-date{
+  font-size:10.5px;color:#94A3B8;font-family:monospace;
+  white-space:nowrap;flex-shrink:0;direction:ltr;
+}
+.rh-added-del{
+  flex-shrink:0;width:30px;height:30px;border-radius:8px;
+  border:1px solid #FCA5A5;background:#FEF2F2;color:#B91C1C;
+  cursor:pointer;font-size:11px;transition:all .12s;
+  display:inline-flex;align-items:center;justify-content:center;
+}
+.rh-added-del:hover{background:#FECACA;border-color:#F87171}
+.rh-added-del-target{
+  background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;
+  padding:10px 12px;font-family:monospace;font-size:12.5px;color:#0F172A;
+}
+.rh-added-del-result{padding:8px 12px;border-radius:8px;font-size:12.5px}
+.rh-added-del-result[hidden]{display:none}
+.rh-added-del-result.is-ok{background:#ECFDF5;color:#065F46}
+.rh-added-del-result.is-fail{background:#FEF2F2;color:#7F1D1D}
+/* تذييل نوافذ fcw (أزرار) — أُعيد لقاعدة حذف الخدمة. */
+.fcw-foot{
+  display:flex;justify-content:flex-end;gap:8px;
+  padding:13px 18px;border-top:1px solid #E2E8F0;background:#fbfdff;
+}
+/* شارة «تتبّع اللوب» داخل العنوان تبقى مقروءة. */
+.rh-inventory .np-svc-card[data-rh-loop-tile] .np-svc-title{
+  display:inline-flex;align-items:center;gap:6px;
+}
+/* أُزيل: .rh-svc-paid (شارة «مدفوعة» لبطاقة نفق تغيير IP) — خدمة مركزية للمالك. */
+.rh-svc-loop{
+  flex-shrink:0;font-size:10px;font-weight:800;
+  border-radius:999px;padding:1px 9px;
+}
+.rh-svc-loop.is-on{background:#dcfce7;color:#15803d}
+.rh-svc-loop.is-off{background:#f1f5f9;color:#64748b}
+/* شارة «بانتظار السكربت» لبطاقات خدمات المنافذ (قالب مبدئي). */
+.rh-svc-await{
+  flex-shrink:0;font-size:9.5px;font-weight:900;letter-spacing:.02em;
+  color:#b45309;background:#fffbeb;border:1px solid #fde68a;
+  border-radius:999px;padding:1px 8px;
+}
+/* عنوان بطاقة خدمة المنافذ يتّسع لشارة «بانتظار السكربت» على سطر. */
+.rh-inventory .np-svc-card--pss .np-svc-title{
+  display:inline-flex;align-items:center;gap:6px;
+}
+
+/* ─── نافذة «خدمات المنافذ» العائمة ──────────────────────────
+   نافذة أعرض لتدفّق المنافذ (شبكة الواجهات + معاينة السكربت)؛
+   نُسطّح worklayout المُحقَن (نُزيل عمود المساعدة الجانبي) ونُهدّئ
+   هيرو الصفحة الأصلي المُحقَن إن بقي. */
+.fcw-dialog--wide{width:min(760px,100%)}
+.rh-pss-loading{
+  display:flex;align-items:center;gap:8px;justify-content:center;
+  padding:26px;color:#64748B;font-size:13px;
+}
+.rh-pss-loading i{color:#7C3AED}
+.rh-pss-loading[hidden]{display:none}
+.rh-pss-error{
+  background:#FEF2F2;border:1px solid #FCA5A5;border-radius:10px;
+  padding:10px 14px;color:#7F1D1D;font-size:12.5px;margin-bottom:10px;
+}
+.rh-pss-error[hidden]{display:none}
+/* المحتوى المُحقَن: نُسطّح التخطيط ثنائي العمود ونخفي بقايا الهيرو/
+   لوحة المساعدة إن لم تُزَل أثناء الاستخلاص. */
+[data-pss-modal-body] .uds-worklayout{display:block}
+[data-pss-modal-body] .uds-main{padding:0}
+[data-pss-modal-body] .hub-hero,
+[data-pss-modal-body] [data-pss-service-cards],
+[data-pss-modal-body] .uds-help{display:none}
+
+/* ─── لوحة القسم الموحّدة + عناوين المجموعات السطرية ──────────
+   .np-status-panel (سطح زجاجي من premium.css) يحوي الترويسة +
+   زر التحديث الصغير + المجموعات الثلاث المعنونة سطريًا. */
+.rh-svc-head{
+  display:flex;align-items:flex-start;justify-content:space-between;
+  gap:12px;margin-bottom:16px;
+}
+.rh-svc-head-text{min-width:0}
+.rh-svc-head-text h4{
+  margin:0 0 4px;font-size:16px;font-weight:900;color:#0F172A;
+}
+.rh-svc-head-text p{
+  margin:0;font-size:12.5px;color:#64748B;line-height:1.6;max-width:640px;
+}
+/* زر تحديث صغير واحد بزاوية القسم (أيقونة فقط). */
+.rh-svc-refresh{
+  flex-shrink:0;width:34px;height:34px;border-radius:9px;
+  display:inline-flex;align-items:center;justify-content:center;
+  border:1px solid #E2E8F0;background:#fff;color:#64748B;
+  font-size:13px;cursor:pointer;transition:all .14s;
+}
+.rh-svc-refresh:hover{border-color:#CBD5E1;background:#F8FAFC;color:#334155}
+.rh-svc-refresh i{transition:transform .4s}
+.rh-svc-refresh:hover i{transform:rotate(180deg)}
+.rh-svc-refresh.is-spinning i{animation:rh-svc-spin .8s linear infinite}
+@keyframes rh-svc-spin{to{transform:rotate(360deg)}}
+/* عنوان المجموعة السطري الصغير — فاصل خفيف بين المجموعات. */
+.rh-svc-group{
+  margin:18px 0 9px;font-size:11.5px;font-weight:900;
+  letter-spacing:.02em;color:#94A3B8;text-transform:none;
   display:flex;align-items:center;gap:8px;
 }
-.rh-inv-modal-card > p{
-  margin:0 0 10px;color:#0F172A;font-size:14px;line-height:1.7;
+.rh-svc-group::after{
+  content:"";flex:1;height:1px;background:#EEF2F7;
 }
-.rh-inv-modal-target{
-  background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;
-  padding:10px 12px;font-family:monospace;font-size:12.5px;
-  color:#0F172A;margin:10px 0;
+.rh-svc-group:first-of-type{margin-top:0}
+.rh-svc-error{
+  background:#FEF2F2;border:1px solid #FCA5A5;border-radius:10px;
+  padding:9px 13px;color:#7F1D1D;font-size:12.5px;margin-bottom:12px;
 }
-.rh-inv-progress{margin:12px 0}
-.rh-inv-progress[hidden]{display:none}
-.rh-inv-progress-track{
-  height:6px;background:#E2E8F0;border-radius:999px;overflow:hidden;
-}
-.rh-inv-progress-bar{
-  height:100%;width:0%;background:linear-gradient(90deg,#6B5AED,#3B82F6);
-  border-radius:999px;transition:width .3s ease;
-}
-.rh-inv-progress-msg{
-  text-align:center;color:#475569;font-size:12px;margin:6px 0 0;
-}
-.rh-inv-modal-result{
-  padding:8px 12px;border-radius:8px;font-size:13px;margin-top:10px;
-}
-.rh-inv-modal-result[hidden]{display:none}
-.rh-inv-modal-result.is-ok{background:#ECFDF5;color:#065F46}
-.rh-inv-modal-result.is-fail{background:#FEF2F2;color:#7F1D1D}
-.rh-inv-modal-actions{
-  display:flex;justify-content:flex-end;gap:8px;margin-top:14px;
-}
-.rh-inv-btn-ghost,.rh-inv-btn-danger{
-  display:inline-flex;align-items:center;gap:6px;
-  padding:8px 14px;border-radius:8px;font-size:13px;font-weight:700;
-  cursor:pointer;transition:all .12s;border:1px solid;
-}
-.rh-inv-btn-ghost{background:#fff;color:#475569;border-color:#CBD5E1}
-.rh-inv-btn-ghost:hover{background:#F8FAFC}
-.rh-inv-btn-danger{background:#EF4444;color:#fff;border-color:#EF4444}
-.rh-inv-btn-danger:hover{background:#DC2626;border-color:#DC2626}
-.rh-inv-btn-danger[disabled]{background:#94A3B8;border-color:#94A3B8;cursor:not-allowed}
+.rh-svc-error[hidden]{display:none}
+
+/* أُزيل من لوحة العميل — يُعاد مركزياً عبر لوحة التراخيص (قرار معماري):
+   أنماط نافذة «نفق تغيير IP» (.iptun-desc/.iptun-status/.iptun-tier).
+   أنماط .fcw-* أدناه مشتركة مع نافذة حذف الخدمة (svc-del) فتبقى. */
+.fcw-modal{position:fixed;inset:0;z-index:1200;display:none;place-items:center;padding:24px;background:rgba(15,23,42,.52)}
+.fcw-modal.is-open{display:grid}
+.fcw-dialog{width:min(560px,100%);max-height:min(90vh,860px);overflow:auto;border-radius:16px;background:#fff;box-shadow:0 28px 80px rgba(15,23,42,.32)}
+.fcw-head{position:sticky;top:0;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 18px;border-bottom:1px solid #E2E8F0;background:#fff;z-index:1}
+.fcw-head h3{margin:0;font-size:16px;font-weight:900}
+.fcw-x{border:0;background:transparent;color:#94a3b8;font-size:18px;cursor:pointer}
+.fcw-body{padding:16px 18px;display:grid;gap:12px}
 @media (max-width: 760px){
-  .rh-inv-hero{align-items:stretch;flex-direction:column;padding:16px}
-  .rh-inv-refresh{justify-content:center;width:100%}
-  .rh-inv-hero h3{font-size:21px}
+  .rh-svc-head{flex-wrap:wrap}
 }
 
 </style>
@@ -3087,98 +3055,200 @@ body.mt-modal-open{overflow:hidden}
 </style>
 
 <script>
-/* «خدماتي» tab — fetch the inventory, render groups + cards, and
-   wire up the per-item delete modal with a fake progress bar.
-   Lives on the unified router page so it has access to the dashboard
-   wrapper's router id. */
+/* «خدماتي» — فحص حالة الخدمات (يونيو 2026، إعادة بناء)
+   ──────────────────────────────────────────────────────────────
+   حُذف محمّل الجرد القديم (القوائم + بطاقات الحذف + نافذة التأكيد
+   + شرائح التصفية) بالكامل. بدله: نقرأ نفس نقطة النهاية /inventory
+   مرّة واحدة عند فتح التبويب (أو الضغط على «تحديث»)، ونضيء نقطة
+   الحالة على كل بطاقة خدمة حسب service_type — أخضر إن كانت الخدمة
+   مفعّلة (لها عناصر) ورمادي إن لا. بطاقات الأدوات ونفق تغيير IP
+   لها نقاطها الثابتة (لا تُفحَص هنا). */
 (function () {
   "use strict";
-  const root  = document.querySelector("[data-mt-dashboard]");
+  const root = document.querySelector("[data-mt-dashboard]");
   if (!root) return;
   const routerId = root.dataset.mtRouterId;
   if (!routerId) return;
 
-  const panel    = root.querySelector('[data-mt-tab-panel="my-services"]');
+  const panel = root.querySelector('[data-mt-tab-panel="my-services"]');
   if (!panel) return;
   const tabBtn   = root.querySelector('[data-mt-tab="my-services"]');
-  const loadingEl= panel.querySelector("[data-rh-inv-loading]");
-  const emptyEl  = panel.querySelector("[data-rh-inv-empty]");
   const errorEl  = panel.querySelector("[data-rh-inv-error]");
-  const groupsEl = panel.querySelector("[data-rh-inv-groups]");
   const refreshBtn = panel.querySelector("[data-rh-inv-refresh]");
 
-  const modal    = root.querySelector("[data-rh-inv-modal]");
-  const modalTarget = modal.querySelector("[data-rh-inv-modal-target]");
-  const modalProg = modal.querySelector("[data-rh-inv-progress]");
-  const modalProgBar = modal.querySelector("[data-rh-inv-progress-bar]");
-  const modalProgMsg = modal.querySelector("[data-rh-inv-progress-msg]");
-  const modalResult = modal.querySelector("[data-rh-inv-modal-result]");
-  const modalConfirm = modal.querySelector("[data-rh-inv-modal-confirm]");
-  const modalCancel = modal.querySelector("[data-rh-inv-modal-cancel]");
-  const modalClose = modal.querySelector("[data-rh-inv-modal-close]");
+  // خريطة: service_type → { dot, card } لكل بطاقة خدمة قابلة للفحص.
+  const byKey = {};
+  panel.querySelectorAll("[data-rh-svc-card]").forEach((card) => {
+    const key = card.getAttribute("data-rh-svc-card");
+    const dot = card.querySelector("[data-rh-svc-status]");
+    if (key && dot) byKey[key] = { dot: dot, card: card };
+  });
+  // لا بطاقات حالة حيّة — لا داعي لأي جلب.
+  if (!Object.keys(byKey).length) return;
 
-  function token() {
-    const el = document.querySelector('input[name="_csrf_token"]');
-    return (el && el.value) || "";
-  }
-  function safe(s) {
-    return String(s == null ? "" : s)
-      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  // المصدر «operator» = تفعيل يدوي، وأي شيء آخر = تلقائي من البرمجة.
+  const SRC_AR = { operator: "يدويّة", hoberadius: "تلقائيّة (من البرمجة)" };
+
+  function setDot(dot, state) {
+    dot.classList.remove("is-active", "is-inactive", "is-unknown");
+    dot.classList.add(state);
+    dot.title = state === "is-active" ? "مفعّلة على الراوتر"
+              : state === "is-unknown" ? "تعذّر فحص الحالة"
+              : "غير مفعّلة";
   }
 
-  let loaded = false;
-  // Animated loading hint that walks through the read stages so the
-  // user has something to watch (and feels less «stuck») while the
-  // backend cycles through 6 MikroTik API calls over the VPN tunnel.
-  // Each step is an approximate label; the actual stage timings come
-  // back in `data.timings` and are logged to the console.
-  const LOADING_STEPS = [
-    "جارٍ الاتصال بالراوتر…",
-    "قراءة بوابة الدخول…",
-    "قراءة البرودباند…",
-    "قراءة قوائم المواقع…",
-    "قراءة قواعد الـ NAT…",
-    "قراءة قواعد الاتصال عن بُعد…",
-    "تجهيز النتائج…",
-  ];
-  let loadingStepTimer = 0;
-  function startLoadingStepAnimation() {
-    const txt = panel.querySelector("[data-rh-inv-loading-text]");
-    if (!txt) return;
-    let i = 0;
-    txt.textContent = LOADING_STEPS[0];
-    if (loadingStepTimer) clearInterval(loadingStepTimer);
-    loadingStepTimer = setInterval(() => {
-      i = Math.min(i + 1, LOADING_STEPS.length - 1);
-      txt.textContent = LOADING_STEPS[i];
-    }, 350);
+  // تركيب نص تلميح «كيف تفعّلت الخدمة» من نفس عناصر الجرد التي
+  // أضاءت النقطة (يُعيد ما كان يعرضه قسم «حالة الخدمات» القديم):
+  // طريقة التفعيل (يدويّة/تلقائيّة) + عدد العناصر + سطر مختصر لكل
+  // عنصر (الاسم + المصدر + أبرز تفاصيله كاسم القاعدة/القائمة/
+  // الواجهة + تاريخ الانتهاء للوصول البعيد إن وُجد).
+  function buildHint(items) {
+    const auto = items.filter((it) => it.source !== "operator").length;
+    const man = items.length - auto;
+    let method;
+    if (auto && man) method = "طريقة التفعيل: تلقائيّة (" + auto + ") ويدويّة (" + man + ")";
+    else if (man) method = "طريقة التفعيل: يدويّة";
+    else method = "طريقة التفعيل: تلقائيّة (من البرمجة)";
+    const head = method + " • عدد العناصر المفعّلة: " + items.length;
+    const lines = items.slice(0, 5).map((it) => {
+      const bits = [it.label || "—", SRC_AR[it.source] || "يدويّة"];
+      const d = it.details || {};
+      Object.keys(d).slice(0, 2).forEach((k) => { if (d[k]) bits.push(k + ": " + d[k]); });
+      if (it.expires_at) bits.push("ينتهي: " + it.expires_at);
+      return "• " + bits.join(" — ");
+    });
+    if (items.length > 5) lines.push("… و" + (items.length - 5) + " عنصرًا آخر");
+    return head + "\n" + lines.join("\n");
   }
-  function stopLoadingStepAnimation() {
-    if (loadingStepTimer) {
-      clearInterval(loadingStepTimer);
-      loadingStepTimer = 0;
+
+  // إظهار/إخفاء أيقونة التلميح + الخلفية الخضراء حسب وجود عناصر.
+  function setDetails(entry, items) {
+    let hint = entry.card.querySelector(".np-svc-hint");
+    if (items && items.length) {
+      entry.card.classList.add("is-on");
+      if (!hint) {
+        hint = document.createElement("span");
+        hint.className = "hub-hint np-svc-hint";
+        hint.setAttribute("tabindex", "0");
+        hint.innerHTML = '<i class="fa-solid fa-info"></i>';
+        entry.dot.insertAdjacentElement("beforebegin", hint);
+      }
+      hint.setAttribute("data-hint", buildHint(items));
+    } else {
+      entry.card.classList.remove("is-on");
+      if (hint) hint.remove();
     }
   }
 
-  async function loadInventory() {
-    loadingEl.hidden = false;
-    emptyEl.hidden   = true;
-    errorEl.hidden   = true;
-    errorEl.textContent = "";
-    groupsEl.innerHTML = "";
-    startLoadingStepAnimation();
-    // Spin the refresh icon for the duration of the fetch.
-    const refreshBtnEl = panel.querySelector("[data-rh-inv-refresh]");
-    if (refreshBtnEl) refreshBtnEl.classList.add("is-spinning");
-    // Hide stats until we have fresh numbers.
-    const statsEl = panel.querySelector("[data-rh-inv-stats]");
-    if (statsEl) statsEl.hidden = true;
-    const t0 = performance.now();
-    // 20s hard ceiling so a dead VPN / unreachable router surfaces as
-    // a visible error instead of a spinner that runs forever. The
-    // backend reads 6 endpoints sequentially over the tunnel, so
-    // healthy connections finish in 1-3 s; anything past ~15 s means
-    // we're stuck on a TCP retry.
+  function setAll(state) {
+    Object.keys(byKey).forEach((k) => {
+      setDot(byKey[k].dot, state);
+      setDetails(byKey[k], null);
+    });
+  }
+
+  // ── قسم «الخدمات المضافة» — قائمة وظيفية + حذف من نفس جرد /inventory ──
+  const addedList    = panel.querySelector("[data-rh-added-list]");
+  const addedLoading = panel.querySelector("[data-rh-added-loading]");
+  const addedEmpty   = panel.querySelector("[data-rh-added-empty]");
+  const addedChips   = panel.querySelectorAll("[data-rh-added-filter]");
+  const delModal     = root.querySelector('[data-fcw-modal="svc-del"]');
+  const delTargetEl  = delModal && delModal.querySelector("[data-rh-del-target]");
+  const delResultEl  = delModal && delModal.querySelector("[data-rh-del-result]");
+  const delConfirmBtn= delModal && delModal.querySelector("[data-rh-del-confirm]");
+  let addedFilter = "all";
+  let pendingDel = null;  // { service_type, target, label, type }
+
+  // نوع الخدمة → أيقونة/لون/اسم لصفّ القائمة (يطابق بطاقات الشبكة فوق).
+  const SVC_META = {
+    "hotspot":       { ar: "بوابة الدخول",     icon: "wifi",      color: "np-svc-icon--blue" },
+    "broadband":     { ar: "البرودباند",        icon: "ethernet",  color: "np-svc-icon--green" },
+    "block-sites":   { ar: "حجب المواقع",       icon: "ban",       color: "np-svc-icon--red" },
+    "open-sites":    { ar: "المواقع المسموحة",  icon: "door-open", color: "np-svc-icon--teal" },
+    "public-ip":     { ar: "تغيير IP الخروج",   icon: "globe",     color: "np-svc-icon--amber" },
+    "remote-access": { ar: "الوصول البعيد",     icon: "key",       color: "np-svc-icon--purple" },
+  };
+
+  function esc(s) {
+    return String(s == null ? "" : s)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+  // رمز الحماية CSRF لطلب الحذف (POST). نقرأ حقل النموذج إن وُجد،
+  // وإلا نرجع لوسم <meta name="csrf-token"> الذي يُحقَن دائمًا في
+  // الـlayout — فلا يعتمد الحذف على وجود نموذج POST عَرَضي بالصفحة.
+  function token() {
+    const el = document.querySelector('input[name="_csrf_token"]');
+    if (el && el.value) return el.value;
+    const m = document.querySelector('meta[name="csrf-token"]');
+    return (m && m.getAttribute("content")) || "";
+  }
+
+  function applyAddedFilter() {
+    if (!addedList) return;
+    addedList.querySelectorAll(".rh-added-row").forEach((row) => {
+      const src = row.getAttribute("data-src") || "hoberadius";
+      row.hidden = !(addedFilter === "all" || src === addedFilter);
+    });
+  }
+
+  // يبني صفوف القائمة من مجموعات الجرد + يحدّث عدّادات الفلاتر.
+  function renderAdded(groups) {
+    if (!addedList) return;
+    const rows = [];
+    let cAuto = 0, cMan = 0;
+    (groups || []).forEach((g) => {
+      const meta = SVC_META[g.service_type]
+        || { ar: g.title || g.service_type, icon: "circle-dot", color: "np-svc-icon--slate" };
+      (g.items || []).forEach((it) => {
+        const isMan = it.source === "operator";
+        if (isMan) cMan++; else cAuto++;
+        const date = it.expires_at ? ("ينتهي " + esc(it.expires_at)) : "";
+        rows.push(
+          '<div class="rh-added-row" data-src="' + (isMan ? "operator" : "hoberadius") + '">' +
+            '<span class="rh-added-row-icon ' + meta.color + '">' +
+              '<i class="fa-solid fa-' + meta.icon + '"></i></span>' +
+            '<div class="rh-added-main">' +
+              '<span class="rh-added-name" title="' + esc(it.label) + '">' + esc(it.label || "—") + '</span>' +
+              '<span class="rh-added-type">' + esc(meta.ar) + '</span>' +
+            '</div>' +
+            '<span class="rh-added-src ' + (isMan ? "rh-added-src--man" : "rh-added-src--auto") + '">' +
+              (isMan ? "يدويّة" : "تلقائيّة") + '</span>' +
+            (date ? '<span class="rh-added-date">' + date + '</span>' : '') +
+            '<button type="button" class="rh-added-del" title="حذف هذه الخدمة"' +
+              ' data-svc="' + esc(g.service_type) + '"' +
+              ' data-target="' + esc(it.target) + '"' +
+              ' data-label="' + esc(it.label) + '"' +
+              ' data-type="' + esc(meta.ar) + '">' +
+              '<i class="fa-solid fa-trash"></i></button>' +
+          '</div>'
+        );
+      });
+    });
+    addedList.innerHTML = rows.join("");
+    const setCount = (k, n) => {
+      const e = panel.querySelector('[data-rh-added-count="' + k + '"]');
+      if (e) e.textContent = String(n);
+    };
+    setCount("all", cAuto + cMan);
+    setCount("hoberadius", cAuto);
+    setCount("operator", cMan);
+    if (addedEmpty) addedEmpty.hidden = rows.length > 0;
+    applyAddedFilter();
+  }
+
+  let loaded = false;
+  let inflight = false;
+  async function probe() {
+    if (inflight) return;
+    inflight = true;
+    if (errorEl) { errorEl.hidden = true; errorEl.textContent = ""; }
+    if (refreshBtn) refreshBtn.classList.add("is-spinning");
+    setAll("is-unknown");
+    if (addedLoading) addedLoading.hidden = false;
+    if (addedEmpty) addedEmpty.hidden = true;
+    if (addedList) addedList.innerHTML = "";
+    // 20s ceiling — نفق إدارة ميّت يظهر كخطأ بدل دوران أبدي.
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 20000);
     try {
@@ -3188,504 +3258,151 @@ body.mt-modal-open{overflow:hidden}
       );
       clearTimeout(timeoutId);
       const data = await res.json().catch(() => ({ ok: false }));
-      const elapsed = Math.round(performance.now() - t0);
-      // Log per-stage timings so the operator can find the slow read
-      // if the page is sluggish on their setup. Visible in DevTools
-      // → Console.
-      if (window.console && data.timings) {
-        console.log("[خدماتي] فحص الـ inventory:", elapsed + "ms total —", data.timings);
-      }
-      if (window.console) {
-        console.log("[خدماتي] HTTP", res.status, "—", data);
-      }
+      if (window.console) console.log("[خدماتي] حالة:", res.status, data);
       if (!res.ok || data.ok === false) {
-        errorEl.textContent = (data.error
-          || `فشل الجلب — رمز ${res.status}. افتح سجل المتصفح للتفاصيل.`);
-        errorEl.hidden = false;
+        if (errorEl) {
+          errorEl.textContent = data.error || "تعذّر قراءة حالة الخدمات.";
+          errorEl.hidden = false;
+        }
+        setAll("is-unknown");
         return;
       }
-      const groups = data.groups || [];
-      if (!groups.length) { emptyEl.hidden = false; return; }
-      const routerInfo = data.router_info || {};
-      // ── Populate hero stats (total / HobeRadius-managed / manual)
-      let total = 0, hr = 0, op = 0;
-      groups.forEach((g) => (g.items || []).forEach((it) => {
-        total++;
-        if (it.source === "operator") op++;
-        else hr++;
-      }));
-      const setStat = (sel, n) => {
-        const el = panel.querySelector(sel);
-        if (el) el.textContent = String(n);
-      };
-      setStat("[data-rh-inv-stat-total]", total);
-      setStat("[data-rh-inv-stat-hr]",    hr);
-      setStat("[data-rh-inv-stat-op]",    op);
-      if (statsEl) statsEl.hidden = false;
-      groupsEl.innerHTML = groups.map(
-        (g) => renderGroup(g, routerInfo)
-      ).join("");
-      wireDeleteButtons();
-      wireCopyButtons();
-      startCountdowns();
-      applyFilter();
+      // اجمع عناصر كل service_type لإضاءة النقطة + تركيب التلميح.
+      const itemsByKey = {};
+      (data.groups || []).forEach((g) => {
+        itemsByKey[g.service_type] = g.items || [];
+      });
+      Object.keys(byKey).forEach((key) => {
+        const items = itemsByKey[key] || [];
+        setDot(byKey[key].dot, items.length ? "is-active" : "is-inactive");
+        setDetails(byKey[key], items);
+      });
+      renderAdded(data.groups);
+      loaded = true;
     } catch (err) {
       clearTimeout(timeoutId);
-      if (err && err.name === "AbortError") {
-        errorEl.textContent = "انتهت مهلة الاتصال بالراوتر (20 ثانية). "
-          + "تأكد من اتصال نفق الإدارة، ثم اضغط «تحديث».";
-      } else {
-        errorEl.textContent = "خطأ في الاتصال: "
-          + String(err && err.message || err);
+      setAll("is-unknown");
+      if (errorEl) {
+        errorEl.textContent = (err && err.name === "AbortError")
+          ? "انتهت مهلة قراءة الحالة. تأكّد من نفق الإدارة ثم اضغط «تحديث»."
+          : "تعذّر قراءة حالة الخدمات.";
+        errorEl.hidden = false;
       }
-      errorEl.hidden = false;
-      if (window.console) console.error("[خدماتي] fetch error:", err);
+      if (window.console) console.error("[خدماتي] خطأ الفحص:", err);
     } finally {
-      stopLoadingStepAnimation();
-      loadingEl.hidden = true;
-      if (refreshBtnEl) refreshBtnEl.classList.remove("is-spinning");
-      loaded = true;
+      if (refreshBtn) refreshBtn.classList.remove("is-spinning");
+      if (addedLoading) addedLoading.hidden = true;
+      inflight = false;
     }
   }
 
-  function renderGroup(g, routerInfo) {
-    const cards = (g.items || []).map((it) => renderCard(g, it)).join("");
-    // For remote-access, prepend a banner with the router's
-    // connect-here address(es) — operator was confused about
-    // where to point Winbox.
-    let banner = "";
-    if (g.service_type === "remote-access") {
-      banner = renderRemoteAccessBanner(routerInfo || {});
-    }
-    return `
-      <div class="rh-inv-group">
-        <div class="rh-inv-group-head">
-          <span class="rh-inv-group-icon rh-inv-icon-${safe(g.color)}">
-            <i class="fa-solid fa-${safe(g.icon)}"></i>
-          </span>
-          <h4 class="rh-inv-group-title">${safe(g.title)}</h4>
-          <span class="rh-inv-group-count">${(g.items||[]).length}</span>
-        </div>
-        ${banner}
-        <div class="rh-inv-cards">${cards}</div>
-      </div>`;
-  }
+  if (refreshBtn) refreshBtn.addEventListener("click", probe);
 
-  function renderRemoteAccessBanner(info) {
-    // The customer's own public IP is intentionally NOT used here:
-    // most ISPs rotate it (DHCP / CGNAT) so any URL based on it
-    // becomes stale within hours. Instead we surface the VPS IP +
-    // the per-router port allocated in npc_remote_port_mappings —
-    // that combo is stable for the lifetime of the deployment.
-    const urls = Array.isArray(info.remote_urls) ? info.remote_urls : [];
-    const pubHost = (info.public_host || "").trim();
-    const vpn = (info.vpn_address || "").trim();
-    const rows = [];
-
-    // ── Per-service URL row — what the operator actually copies ──
-    urls.forEach((u) => {
-      const label = u.service_ar || u.service || "—";
-      const display = u.url || `${u.host || pubHost}:${u.port || ""}`;
-      const clip = u.clipboard || display;
-      rows.push(`
-        <div class="rh-inv-conn-row">
-          <span class="rh-inv-conn-label">${safe(label)}</span>
-          <code class="rh-inv-conn-value">${safe(display)}</code>
-          <button type="button" class="rh-inv-copy-btn"
-                  data-rh-inv-copy="${safe(clip)}" title="نسخ">
-            <i class="fa-solid fa-copy"></i>
-          </button>
-        </div>`);
-    });
-
-    // ── VPS host (informational — useful when no URLs are wired
-    // yet so the operator still knows the base host name). ──────
-    if (pubHost && !urls.length) {
-      rows.push(`
-        <div class="rh-inv-conn-row">
-          <span class="rh-inv-conn-label">عنوان خادم الربط</span>
-          <code class="rh-inv-conn-value">${safe(pubHost)}</code>
-          <button type="button" class="rh-inv-copy-btn"
-                  data-rh-inv-copy="${safe(pubHost)}" title="نسخ">
-            <i class="fa-solid fa-copy"></i>
-          </button>
-          <small class="rh-inv-conn-hint">
-            فعّل خدمة عبر «اتصال عن بُعد» لتوليد رابط مع منفذ.
-          </small>
-        </div>`);
-    }
-
-    // ── Internal-VPN address (for techs on the same WireGuard
-    // mesh — bypasses nginx, faster + no port-allocation needed).
-    if (vpn) {
-      rows.push(`
-        <div class="rh-inv-conn-row">
-          <span class="rh-inv-conn-label">عنوان شبكة نفق الإدارة الداخلي</span>
-          <code class="rh-inv-conn-value">${safe(vpn)}</code>
-          <button type="button" class="rh-inv-copy-btn"
-                  data-rh-inv-copy="${safe(vpn)}" title="نسخ">
-            <i class="fa-solid fa-copy"></i>
-          </button>
-          <small class="rh-inv-conn-hint">للفنّي على نفس نفق الإدارة</small>
-        </div>`);
-    }
-
-    if (!rows.length) {
-      // No VPS host configured yet — point the operator straight at
-      // the settings page so they don't have to know about env vars
-      // or SSH. The link goes to «إعدادات النظام» where
-      // `infra.public_host` is the canonical setting.
-      rows.push(`
-        <div class="rh-inv-conn-row">
-          <span class="rh-inv-conn-empty">
-            <i class="fa-solid fa-circle-info"></i>
-            لم يتمّ ضبط <strong>عنوان خادم الربط العام</strong> بعد.
-            <a href="{{ url_for('radius.settings_page') }}"
-               class="rh-inv-conn-link">
-              <i class="fa-solid fa-arrow-up-right-from-square"></i>
-              افتح «إعدادات النظام» وأضف العنوان
-            </a>
-            ليبدأ المعالج بتوليد روابط الاتصال عن بُعد.
-          </span>
-        </div>`);
-    }
-    return `
-      <div class="rh-inv-conn-banner">
-        <div class="rh-inv-conn-head">
-          <i class="fa-solid fa-network-wired"></i>
-          <strong>عناوين الاتصال عبر خادم الربط</strong>
-        </div>
-        ${rows.join("")}
-      </div>`;
-  }
-
-  function wireCopyButtons() {
-    // Delegate to the shared HobeCopy helper which has an HTTP
-    // fallback via document.execCommand('copy') — needed because
-    // the production VPS runs on plain HTTP and navigator.clipboard
-    // is undefined there. Without the fallback, all copy buttons
-    // silently failed.
-    if (window.HobeCopy && typeof window.HobeCopy.wireAll === "function") {
-      window.HobeCopy.wireAll(groupsEl);
-    }
-  }
-
-  function renderCard(g, it) {
-    const sourceTag = it.source === "operator"
-      ? '<span class="rh-inv-source rh-inv-source-op">إعداد يدوي</span>'
-      : '<span class="rh-inv-source rh-inv-source-hr">من البرمجة</span>';
-
-    // Remote-access cards get extra chrome: prominent VPS URL,
-    // permanent/temporary badge, permission badge, dedicated copy
-    // button for the temp username, and (when temporary) a live
-    // countdown until auto-revoke. Other service types stay plain.
-    let urlBlock = "";
-    let userBlock = "";
-    let badgeBlock = "";
-    let permBlock = "";
-    if (g.service_type === "remote-access") {
-      if (it.vps_url) {
-        urlBlock = `
-          <div class="rh-inv-url-row">
-            <code class="rh-inv-url-value">${safe(it.vps_url)}</code>
-            <button type="button" class="rh-inv-copy-btn"
-                    data-rh-inv-copy="${safe(it.vps_url)}" title="نسخ العنوان">
-              <i class="fa-solid fa-copy"></i>
-            </button>
-          </div>`;
-      }
-      if (it.tech_user) {
-        // Username row — no password (we never stored it; tech must
-        // get it from the original apply success card). Still useful
-        // to see WHICH user account this grant created on the
-        // router so the operator can cross-reference /user/print.
-        userBlock = `
-          <div class="rh-inv-url-row" style="background:#FEFCE8;border-color:#FDE68A">
-            <span class="rh-inv-url-icon"
-                  style="color:#854D0E;font-size:11px">
-              <i class="fa-solid fa-user-shield"></i>
-            </span>
-            <code class="rh-inv-url-value"
-                  style="color:#854D0E">${safe(it.tech_user)}</code>
-            <button type="button" class="rh-inv-copy-btn"
-                    data-rh-inv-copy="${safe(it.tech_user)}"
-                    title="نسخ اسم المستخدم"
-                    style="border-color:#FCD34D;color:#B45309">
-              <i class="fa-solid fa-copy"></i>
-            </button>
-          </div>`;
-      }
-      if (it.permanent) {
-        badgeBlock =
-          '<span class="rh-inv-badge rh-inv-badge-perm">' +
-          '<i class="fa-solid fa-infinity"></i> دائم' +
-          '</span>';
-      } else if (it.expires_at) {
-        badgeBlock =
-          '<span class="rh-inv-badge rh-inv-badge-tmp"' +
-          ` data-rh-expires="${safe(it.expires_at)}">` +
-          '<i class="fa-solid fa-hourglass-half"></i> ' +
-          `<span data-rh-countdown>${safe(it.expires_at)}</span>` +
-          '</span>';
-      }
-      // Permission tier badge — green / amber / red for the visual
-      // risk gradient (read=safe, write=normal, full=dangerous).
-      if (it.permission) {
-        const permMap = {
-          read:  { ar: "قراءة",  cls: "rh-inv-badge-perm-r" },
-          write: { ar: "تعديل",  cls: "rh-inv-badge-perm-w" },
-          full:  { ar: "كامل",   cls: "rh-inv-badge-perm-f" },
-        };
-        const p = permMap[it.permission];
-        if (p) {
-          permBlock =
-            `<span class="rh-inv-badge ${p.cls}">` +
-            '<i class="fa-solid fa-shield-halved"></i> ' +
-            safe(p.ar) +
-            '</span>';
-        }
-      }
-    }
-
-    const details = Object.entries(it.details || {})
-      .map(([k, v]) => `<dt>${safe(k)}</dt><dd>${safe(v)}</dd>`)
-      .join("");
-    return `
-      <div class="rh-inv-card"
-           data-rh-inv-svc="${safe(g.service_type)}"
-           data-rh-inv-target="${safe(it.target)}"
-           data-rh-inv-label="${safe(it.label)}"
-           data-rh-inv-group-title="${safe(g.title)}"
-           data-rh-source="${safe(it.source || 'hoberadius')}">
-        <div class="rh-inv-card-head">
-          <span class="rh-inv-card-label" title="${safe(it.label)}">${safe(it.label)}</span>
-          ${permBlock}
-          ${badgeBlock}
-          ${sourceTag}
-        </div>
-        ${urlBlock}
-        ${userBlock}
-        <dl class="rh-inv-details">${details}</dl>
-        <button type="button" class="rh-inv-del">
-          <i class="fa-solid fa-trash"></i> حذف
-        </button>
-      </div>`;
-  }
-
-  // ── Live countdown for temporary remote-access grants ──────
-  //
-  // RouterOS gives next-run as "May/27/2026 18:42:17" or similar.
-  // We parse it to a Date once on render, then refresh the badge
-  // every 30s with the human-readable remaining time. When the
-  // countdown hits zero the badge flips to «منتهٍ» so the operator
-  // knows to refresh the list (RouterOS may take up to 1 min to
-  // actually fire the scheduler and reap the rule).
-  function startCountdowns() {
-    const badges = document.querySelectorAll("[data-rh-expires]");
-    if (!badges.length) return;
-    function tick() {
-      const now = Date.now();
-      badges.forEach((b) => {
-        const raw = b.dataset.rhExpires || "";
-        const span = b.querySelector("[data-rh-countdown]");
-        if (!span) return;
-        // RouterOS format: "mon/dd/yyyy hh:mm:ss" — JS Date can parse
-        // many variants but not this one reliably. Try ISO first,
-        // then a manual fallback. If both fail, show the raw value.
-        let when = Date.parse(raw);
-        if (Number.isNaN(when)) {
-          // "May/27/2026 18:42:17" → "May 27 2026 18:42:17"
-          when = Date.parse(raw.replace(/\//g, " "));
-        }
-        if (Number.isNaN(when)) {
-          span.textContent = raw;
-          return;
-        }
-        let diffSec = Math.floor((when - now) / 1000);
-        if (diffSec <= 0) {
-          span.textContent = "منتهٍ — حدِّث القائمة";
-          b.classList.add("is-expired");
-          return;
-        }
-        const d = Math.floor(diffSec / 86400);
-        diffSec -= d * 86400;
-        const h = Math.floor(diffSec / 3600);
-        diffSec -= h * 3600;
-        const m = Math.floor(diffSec / 60);
-        const parts = [];
-        if (d) parts.push(`${d}ي`);
-        if (h) parts.push(`${h}س`);
-        if (!d) parts.push(`${m}د`);
-        span.textContent = `متبقّي ${parts.join(" ")}`;
-      });
-    }
-    tick();
-    if (window._rhCountdownTimer) clearInterval(window._rhCountdownTimer);
-    window._rhCountdownTimer = setInterval(tick, 30000);
-  }
-
-  let currentCard = null;
-  function openModalFor(card) {
-    currentCard = card;
-    const groupTitle = card.dataset.rhInvGroupTitle;
-    const label      = card.dataset.rhInvLabel;
-    modalTarget.innerHTML =
-      `<strong>${safe(groupTitle)}</strong> · <code>${safe(label)}</code>`;
-    modalProg.hidden = true;
-    modalProgBar.style.width = "0%";
-    modalProgMsg.textContent = "جارٍ الاتصال بالراوتر…";
-    modalResult.hidden = true;
-    modalResult.className = "rh-inv-modal-result";
-    modalResult.textContent = "";
-    modalConfirm.disabled = false;
-    modalConfirm.innerHTML = '<i class="fa-solid fa-trash"></i> نعم، احذف';
-    modal.hidden = false;
-  }
-  function closeModal() {
-    modal.hidden = true;
-    currentCard = null;
-  }
-  function wireDeleteButtons() {
-    groupsEl.querySelectorAll(".rh-inv-del").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const card = btn.closest(".rh-inv-card");
-        if (card) openModalFor(card);
-      });
-    });
-  }
-
-  // Smooth fake progress bar — slides 0→90% over ~1.5s while the
-  // request is in-flight, then jumps to 100% on success.
-  let progressTimer = null;
-  function startProgress() {
-    modalProg.hidden = false;
-    modalProgBar.style.width = "0%";
-    modalProgMsg.textContent = "جارٍ الاتصال بالراوتر…";
-    let val = 5;
-    if (progressTimer) clearInterval(progressTimer);
-    progressTimer = setInterval(() => {
-      val = Math.min(90, val + Math.random() * 8 + 3);
-      modalProgBar.style.width = val + "%";
-      if (val > 40 && val < 60) modalProgMsg.textContent = "جارٍ إرسال أمر الحذف…";
-      if (val > 60 && val < 85) modalProgMsg.textContent = "تأكيد التنفيذ على الراوتر…";
-    }, 180);
-  }
-  function finishProgress(ok, msg) {
-    if (progressTimer) { clearInterval(progressTimer); progressTimer = null; }
-    modalProgBar.style.width = "100%";
-    modalProgBar.style.background = ok
-      ? "linear-gradient(90deg,#10B981,#047857)"
-      : "linear-gradient(90deg,#EF4444,#B91C1C)";
-    modalProgMsg.textContent = ok ? "تم الحذف ✓" : "فشل الحذف";
-    modalResult.hidden = false;
-    modalResult.className = "rh-inv-modal-result " + (ok ? "is-ok" : "is-fail");
-    modalResult.textContent = msg || "";
-  }
-
-  modalConfirm.addEventListener("click", async () => {
-    if (!currentCard) return;
-    const svc = currentCard.dataset.rhInvSvc;
-    const target = currentCard.dataset.rhInvTarget;
-    modalConfirm.disabled = true;
-    modalConfirm.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جارٍ الحذف…';
-    startProgress();
-    try {
-      const res = await fetch(
-        `/admin/radius/setup-wizard-v3/routers/${routerId}/inventory/remove`,
-        { method: "POST",
-          headers: { "Content-Type": "application/json", "X-CSRFToken": token() },
-          body: JSON.stringify({ service_type: svc, target: target }) }
-      );
-      const data = await res.json().catch(() => ({ ok: false }));
-      if (!res.ok || data.ok === false) {
-        finishProgress(false, data.error || data.stderr || `رمز ${res.status}`);
-        modalConfirm.disabled = false;
-        modalConfirm.innerHTML = '<i class="fa-solid fa-rotate-right"></i> إعادة المحاولة';
-        return;
-      }
-      finishProgress(true, "تم حذف العنصر من الراوتر.");
-      // Remove the card from the DOM after a short pause + reload
-      // groups list to reflect new counts.
-      setTimeout(() => {
-        currentCard.style.transition = "opacity .3s, transform .3s";
-        currentCard.style.opacity = "0";
-        currentCard.style.transform = "scale(.92)";
-        setTimeout(() => {
-          closeModal();
-          loadInventory();
-        }, 320);
-      }, 600);
-    } catch (err) {
-      finishProgress(false, String(err && err.message || err));
-      modalConfirm.disabled = false;
-      modalConfirm.innerHTML = '<i class="fa-solid fa-rotate-right"></i> إعادة المحاولة';
-    }
-  });
-  modalCancel.addEventListener("click", closeModal);
-  modalClose.addEventListener("click", closeModal);
-  modal.addEventListener("click", (e) => { if (e.target === modal) closeModal(); });
-
-  if (refreshBtn) refreshBtn.addEventListener("click", loadInventory);
-
-  // ── Filter chips (الكل / تلقائيّة / يدويّة) ─────────────
-  // Hide/show inventory cards whose .rh-inv-card[data-rh-inv-svc]
-  // → looked up via the card's `data-rh-source` attribute (which
-  // renderCard sets from the inventory item's source field).
-  // Empty groups (all cards filtered out) get hidden too so the
-  // operator doesn't see a header with no rows under it.
-  let currentFilter = "all";
-  const filterChips = panel.querySelectorAll("[data-np-filter]");
-  function applyFilter() {
-    panel.querySelectorAll(".rh-inv-card").forEach((card) => {
-      const src = card.dataset.rhSource || "hoberadius";
-      const ok = currentFilter === "all" || src === currentFilter;
-      card.style.display = ok ? "" : "none";
-    });
-    // Hide groups that have no visible cards.
-    panel.querySelectorAll(".rh-inv-group").forEach((g) => {
-      const visible = g.querySelectorAll(
-        ".rh-inv-card:not([style*=\"display: none\"])"
-      ).length;
-      g.style.display = visible ? "" : "none";
-    });
-  }
-  filterChips.forEach((btn) => {
-    btn.addEventListener("click", () => {
-      currentFilter = btn.dataset.npFilter;
-      filterChips.forEach((c) => {
-        const on = c === btn;
+  // ── حبوب الفلترة (الكل/تلقائيّة/يدويّة) — تصفية محليّة للصفوف ──
+  addedChips.forEach((chip) => {
+    chip.addEventListener("click", () => {
+      addedFilter = chip.getAttribute("data-rh-added-filter") || "all";
+      addedChips.forEach((c) => {
+        const on = c === chip;
         c.classList.toggle("is-active", on);
         c.setAttribute("aria-selected", on ? "true" : "false");
       });
-      applyFilter();
+      applyAddedFilter();
     });
   });
 
-  // Lazy-load: don't hit the router unless the operator opens the
-  // tab. Two triggers — direct click on the tab button, OR a
-  // hash-based activation (e.g. coming back from a service flow
-  // page with #tab-my-services). Both fire only once; subsequent
-  // activations are no-ops because `loaded` flips true after the
-  // first successful (or failed) fetch.
-  if (tabBtn) {
-    tabBtn.addEventListener("click", () => {
-      if (!loaded) loadInventory();
+  // ── فتح نافذة تأكيد الحذف من زر أي صفّ ──
+  if (addedList) {
+    addedList.addEventListener("click", (e) => {
+      const btn = e.target.closest(".rh-added-del");
+      if (!btn) return;
+      pendingDel = {
+        service_type: btn.getAttribute("data-svc"),
+        target: btn.getAttribute("data-target"),
+        label: btn.getAttribute("data-label"),
+        type: btn.getAttribute("data-type"),
+      };
+      if (delTargetEl) {
+        delTargetEl.innerHTML = "<strong>" + esc(pendingDel.type) + "</strong> · <code>"
+          + esc(pendingDel.label) + "</code>";
+      }
+      if (delResultEl) {
+        delResultEl.hidden = true;
+        delResultEl.className = "rh-added-del-result";
+        delResultEl.textContent = "";
+      }
+      if (delConfirmBtn) {
+        delConfirmBtn.disabled = false;
+        delConfirmBtn.innerHTML = '<i class="fa-solid fa-trash"></i> نعم، احذف';
+      }
+      if (delModal) { delModal.hidden = false; delModal.classList.add("is-open"); }
     });
   }
+
+  // ── تنفيذ الحذف عبر نفس endpoint القديم (/inventory/remove) ──
+  if (delConfirmBtn) {
+    delConfirmBtn.addEventListener("click", async () => {
+      if (!pendingDel) return;
+      delConfirmBtn.disabled = true;
+      delConfirmBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جارٍ الحذف…';
+      try {
+        const res = await fetch(
+          `/admin/radius/setup-wizard-v3/routers/${routerId}/inventory/remove`,
+          { method: "POST",
+            headers: { "Content-Type": "application/json", "X-CSRFToken": token() },
+            body: JSON.stringify({
+              service_type: pendingDel.service_type, target: pendingDel.target,
+            }) }
+        );
+        const data = await res.json().catch(() => ({ ok: false }));
+        if (!res.ok || data.ok === false) {
+          if (delResultEl) {
+            delResultEl.hidden = false;
+            delResultEl.className = "rh-added-del-result is-fail";
+            delResultEl.textContent = data.error || data.stderr
+              || ("تعذّر الحذف — رمز " + res.status);
+          }
+          delConfirmBtn.disabled = false;
+          delConfirmBtn.innerHTML = '<i class="fa-solid fa-rotate-right"></i> إعادة المحاولة';
+          return;
+        }
+        if (delResultEl) {
+          delResultEl.hidden = false;
+          delResultEl.className = "rh-added-del-result is-ok";
+          delResultEl.textContent = "تم حذف العنصر من الراوتر.";
+        }
+        // أعد الفحص بعد لحظة: يحدّث القائمة + النقاط الملوّنة معًا.
+        loaded = false;
+        setTimeout(() => {
+          if (delModal) { delModal.hidden = true; delModal.classList.remove("is-open"); }
+          pendingDel = null;
+          probe();
+        }, 700);
+      } catch (err) {
+        if (delResultEl) {
+          delResultEl.hidden = false;
+          delResultEl.className = "rh-added-del-result is-fail";
+          delResultEl.textContent = String(err && err.message || err);
+        }
+        delConfirmBtn.disabled = false;
+        delConfirmBtn.innerHTML = '<i class="fa-solid fa-rotate-right"></i> إعادة المحاولة';
+      }
+    });
+  }
+
+  // كسول: لا نفحص حتى يفتح المستخدم التبويب. ثلاثة محفّزات:
+  // النقر على الزر، حدث mt:tab-change، وشبكة أمان إن فُتح التبويب
+  // مباشرة عبر hash. كلها تفحص مرّة واحدة (loaded).
+  if (tabBtn) {
+    tabBtn.addEventListener("click", () => { if (!loaded) probe(); });
+  }
   root.addEventListener("mt:tab-change", (e) => {
-    if (e.detail && e.detail.slug === "my-services" && !loaded) {
-      loadInventory();
-    }
+    if (e.detail && e.detail.slug === "my-services" && !loaded) probe();
   });
-  // Safety net — if the page loaded already on the my-services
-  // tab (hash navigation), the mt:tab-change event may have
-  // fired before this listener was attached. Check the panel
-  // visibility once on next tick and load if appropriate.
   setTimeout(() => {
-    if (!loaded && !panel.hasAttribute("hidden")) loadInventory();
+    if (!loaded && !panel.hasAttribute("hidden")) probe();
   }, 0);
 })();
-
 </script>
 
 <script src="{{ url_for('static', filename='js/copy_helper.js') }}"></script>

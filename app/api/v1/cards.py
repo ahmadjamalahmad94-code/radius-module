@@ -564,35 +564,13 @@ def cards_batches_export_xlsx():
 
 
 def cards_batches_export_pdf():
-    from reportlab.lib import colors
-    from reportlab.lib.pagesizes import A4, landscape
-    from reportlab.platypus import SimpleDocTemplate, Spacer, Table, TableStyle
+    # تصدير PDF فاخر موحّد مع نسخة الويب — البيانات الكاملة تبقى متاحة
+    # عبر CSV/XLSX، أما PDF فيعرض الأعمدة التشغيلية المهمة بشكل أنيق.
+    from ...radius.services.pdf_theme import build_batches_pdf
 
-    rows = _batch_export_table(_batch_export_rows())
-    # Keep the operational PDF compact; full data remains available via CSV/XLSX.
-    pdf_columns = [0, 1, 2, 3, 5, 8, 10, 11, 19, 20, 23]
-    pdf_rows = [[row[i] for i in pdf_columns] for row in rows[:101]]
-    out = io.BytesIO()
-    doc = SimpleDocTemplate(
-        out,
-        pagesize=landscape(A4),
-        leftMargin=18,
-        rightMargin=18,
-        topMargin=18,
-        bottomMargin=18,
-    )
-    table = Table(pdf_rows, repeatRows=1)
-    table.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#123056")),
-        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-        ("FONTSIZE", (0, 0), (-1, -1), 7),
-        ("GRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#d8dee8")),
-        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f4f7fb")]),
-    ]))
-    doc.build([table, Spacer(1, 6)])
+    payload = build_batches_pdf(_batch_export_rows())
     return Response(
-        out.getvalue(),
+        payload,
         mimetype="application/pdf",
         headers={"Content-Disposition": "attachment; filename=card-batches.pdf"},
     )

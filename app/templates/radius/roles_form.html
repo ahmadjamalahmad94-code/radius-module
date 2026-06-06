@@ -1,215 +1,382 @@
-{# Role form — UDS pass. Same backend route + field names — zero backend touched. #}
+{# ═══════════════════════════════════════════════════════════════════════
+   نموذج الدور (إنشاء/تعديل) — نظام hub-hero-shell الموحّد (2026-06-05)
+
+   بيانات المسار (radius.roles_new / radius.roles_edit — بدون تغيير):
+     role    كائن Role أو None عند الإنشاء
+     perms   كل مفاتيح الصلاحيات (ALL_PERMISSIONS)
+     groups  dict[prefix → قائمة مفاتيح] من _permission_groups
+     is_new  هل النموذج للإنشاء؟
+
+   عقد الحفظ كما هو تمامًا:
+     POST roles_create أو roles_save بنفس أسماء الحقول:
+     name / display_name / color / description / permissions (checkboxes)
+
+   البنية المبسّطة:
+     1. صدفة هيرو واحدة: عنوان + سطر تعريفي + مؤشرات (عدد الصلاحيات
+        المختارة حيّ) + سطر إرشادي — بلا هيروات مكدّسة.
+     2. قسم «الهوية» ثم قسم «الصلاحيات»: كل صلاحية بتسميتها العربية
+        والمفتاح التقني داخل <bdi> mono، ومجموعات بعناوين عربية.
+   ═══════════════════════════════════════════════════════════════════════ #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
+{% import "radius/_perm_labels.html" as pl %}
 
-{% set title_ar = "إضافة دور" if is_new else "تعديل دور: " + (role.name or '') %}
-{% block title %}{{ title_ar }}{% endblock %}
+{% set title_ar = "إضافة دور جديد" if is_new else "تعديل الدور: " ~ (role.display_name or role.name or '') %}
+{% set selected = (role.permissions if role else ())|list %}
+
+{% block title %}{{ title_ar }} — هوب ريديوس{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-key"></i>{% endblock %}
 {% block page_title %}{{ title_ar }}{% endblock %}
+{% block page_sub %}<span class="sub"><bdi dir="ltr">{{ perms|length }}</bdi> صلاحية متاحة للاختيار</span>{% endblock %}
 
-{% block head_extra %}
-{{ super() }}
+{% block head_extra %}{{ super() }}
 <style>
-  /* Permissions matrix — styled inside a hub.section card */
-  .perm-group{ margin-bottom: var(--hub-gap-lg); }
-  .perm-group:last-child{ margin-bottom: 0; }
-  .perm-group-title{
-    display:flex; align-items:center; gap:8px;
-    font-size: 13px; font-weight: 800; color: var(--hub-text);
-    margin-bottom: 10px;
-    padding-bottom: 8px;
-    border-bottom: 1px dashed var(--hub-border);
-  }
-  .perm-group-title i.folder{ color: var(--hub-brand-ink); font-size: 12px; }
-  .perm-group-title .pg-toggle{
-    margin-inline-start: auto;
-    background: var(--hub-bg-card);
-    border: 1px solid var(--hub-border-strong);
-    border-radius: var(--hub-r-md);
-    padding: 4px 12px;
-    font-size: 11.5px;
-    font-weight: 700;
-    cursor: pointer;
-    color: var(--hub-brand-ink);
-    transition: all var(--hub-anim-fast) var(--hub-ease);
-  }
-  .perm-group-title .pg-toggle:hover{ background: var(--hub-brand-soft); border-color: var(--hub-brand-line); }
-  .perm-grid{
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 6px;
-  }
-  .perm-item{
-    display: flex; align-items: center; gap: 8px;
-    padding: 8px 12px;
-    border-radius: var(--hub-r-md);
-    background: var(--hub-bg-soft);
-    border: 1px solid transparent;
-    cursor: pointer;
-    font-size: 12.5px;
-    color: var(--hub-text);
-    user-select: none;
-    transition: all var(--hub-anim-fast) var(--hub-ease);
-  }
-  .perm-item:hover{
-    background: var(--hub-bg-card);
-    border-color: var(--hub-border);
-  }
-  .perm-item input{
-    width: 15px; height: 15px;
-    cursor: pointer;
-    flex-shrink: 0;
-    accent-color: var(--hub-brand);
-  }
-  .perm-item.is-checked{
-    background: var(--hub-brand-soft);
-    border-color: var(--hub-brand-line);
-    color: var(--hub-brand-ink);
-    font-weight: 700;
-  }
-  .perm-item code{
-    font-family: var(--hub-mono);
-    font-size: 11px;
-    color: var(--hub-text-mute);
-  }
-  .perm-item.is-checked code{ color: var(--hub-brand-ink); }
-  /* Color input parity with hub-input sizing */
-  input.hub-input[type=color]{ padding: 3px; height: 42px; cursor: pointer; }
+/* ═══ مصفوفة الصلاحيات — بطاقات مجموعات ملوّنة بهوية كل مجموعة ═══
+   كل مجموعة بطاقة كاملة: شريط لون بادئ + أيقونة FontAwesome خاصة +
+   عدّاد حيّ «الممنوحة/الكل» + شريط تقدّم رفيع — الألوان تصل من
+   GROUP_META في _perm_labels.html عبر متغيّرات --pg-*. */
+.perm-group{
+  margin-bottom: var(--hub-gap-lg);
+  background:var(--hub-bg-card,#fff);
+  border:1px solid var(--hub-border-soft);
+  border-inline-start:3px solid var(--pg-accent, var(--hub-brand));
+  border-radius:var(--hub-r-lg,14px);
+  overflow:hidden;
+  box-shadow:0 1px 3px rgba(15,23,42,.04);
+  transition:box-shadow var(--hub-anim-fast) var(--hub-ease);
+}
+.perm-group:hover{ box-shadow:0 4px 14px color-mix(in srgb, var(--pg-accent, #94A3B8) 14%, rgba(15,23,42,.06)); }
+.perm-group:last-child{ margin-bottom: 0; }
+
+/* رأس المجموعة: أيقونة ملوّنة + التسمية + المفتاح + عدّاد + زر تحديد الكل */
+.perm-group-title{
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  padding:11px 16px;
+  background:color-mix(in srgb, var(--pg-soft, var(--hub-bg-soft)) 55%, #fff);
+  border-bottom:1px solid var(--hub-border-soft);
+  font-size:13px; font-weight:800; color:var(--hub-text);
+}
+.perm-group-title .pg-ico{
+  width:30px; height:30px; border-radius:9px; flex:0 0 auto;
+  display:grid; place-items:center; font-size:13px;
+  background:var(--pg-soft, var(--hub-brand-soft));
+  color:var(--pg-ink, var(--hub-brand-ink));
+  transition:transform var(--hub-anim-fast) var(--hub-ease);
+}
+.perm-group:hover .pg-ico{ transform:scale(1.08) rotate(-4deg); }
+.perm-group-title .pg-key{
+  font-family:var(--hub-mono); font-weight:400;
+  font-size:10.5px; color:var(--hub-text-mute);
+}
+/* عدّاد الممنوحة داخل المجموعة (يتحدّث حيًّا من recount) */
+.perm-group-title .pg-count{
+  font-size:10.5px; font-weight:800; line-height:1;
+  padding:4px 9px; border-radius:999px;
+  background:var(--pg-soft, var(--hub-bg-soft));
+  color:var(--pg-ink, var(--hub-text-mute));
+  border:1px solid color-mix(in srgb, var(--pg-accent, #94A3B8) 25%, transparent);
+  transition:all var(--hub-anim-fast) var(--hub-ease);
+}
+.perm-group.has-all .pg-count{
+  background:var(--pg-accent); color:#fff; border-color:var(--pg-accent);
+}
+.perm-group-title .pg-toggle{
+  margin-inline-start:auto;
+  background:var(--hub-bg-card);
+  border:1px solid color-mix(in srgb, var(--pg-accent, var(--hub-border-strong)) 35%, transparent);
+  border-radius:var(--hub-r-md);
+  padding:5px 12px;
+  font-size:11.5px; font-weight:700; font-family:inherit;
+  cursor:pointer; color:var(--pg-ink, var(--hub-brand-ink));
+  transition:all var(--hub-anim-fast) var(--hub-ease);
+}
+.perm-group-title .pg-toggle:hover{
+  background:var(--pg-soft, var(--hub-brand-soft));
+  border-color:var(--pg-accent, var(--hub-brand-line));
+  transform:translateY(-1px);
+}
+/* شريط تقدّم رفيع أسفل الرأس: نسبة الممنوح من المجموعة */
+.pg-progress{ height:3px; background:var(--hub-bg-soft); overflow:hidden; }
+.pg-progress > span{
+  display:block; height:100%; width:0;
+  background:var(--pg-accent, var(--hub-brand));
+  border-end-end-radius:999px;
+  transition:width .35s var(--hub-ease, ease);
+}
+
+.perm-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill, minmax(230px, 1fr));
+  gap:7px;
+  padding:13px 16px;
+}
+/* بطاقة الصلاحية: أيقونة المجموعة الصغيرة + التسمية + علامة صح متحركة */
+.perm-item{
+  display:flex; align-items:center; gap:9px;
+  padding:9px 12px;
+  border-radius:var(--hub-r-md);
+  background:var(--hub-bg-soft);
+  border:1px solid transparent;
+  cursor:pointer;
+  font-size:12.5px; color:var(--hub-text);
+  user-select:none;
+  position:relative;
+  transition:all var(--hub-anim-fast) var(--hub-ease);
+}
+.perm-item:hover{
+  background:var(--hub-bg-card);
+  border-color:color-mix(in srgb, var(--pg-accent, var(--hub-border)) 45%, transparent);
+  transform:translateY(-1px);
+  box-shadow:0 2px 8px color-mix(in srgb, var(--pg-accent, #94A3B8) 16%, transparent);
+}
+/* الـ checkbox الأصلي يبقى (عقد النموذج) لكنه مخفي بصريًا —
+   مكانه دائرة صح مرسومة تتلوّن بلون المجموعة عند الاختيار */
+.perm-item input{
+  position:absolute; opacity:0; pointer-events:none;
+  width:1px; height:1px;
+}
+/* حلقة تركيز للوحة المفاتيح — الـ checkbox مخفي بصريًا لكنه قابل للتركيز */
+.perm-item:has(input:focus-visible){
+  outline:2px solid var(--pg-accent, var(--hub-brand));
+  outline-offset:2px;
+}
+.perm-item .perm-tick{
+  width:19px; height:19px; flex:0 0 auto;
+  border-radius:6px;
+  border:2px solid color-mix(in srgb, var(--pg-accent, #94A3B8) 45%, var(--hub-border));
+  background:#fff;
+  display:grid; place-items:center;
+  font-size:10px; color:#fff;
+  transition:all .18s var(--hub-ease, ease);
+}
+.perm-item .perm-tick i{ transform:scale(0); transition:transform .18s cubic-bezier(.34,1.56,.64,1); }
+.perm-item.is-checked{
+  background:var(--pg-soft, var(--hub-brand-soft));
+  border-color:color-mix(in srgb, var(--pg-accent, var(--hub-brand-line)) 55%, transparent);
+  color:var(--pg-ink, var(--hub-brand-ink));
+  font-weight:700;
+}
+.perm-item.is-checked .perm-tick{
+  background:var(--pg-accent, var(--hub-brand));
+  border-color:var(--pg-accent, var(--hub-brand));
+  box-shadow:0 1px 5px color-mix(in srgb, var(--pg-accent, var(--hub-brand)) 40%, transparent);
+}
+.perm-item.is-checked .perm-tick i{ transform:scale(1); }
+/* نبضة قصيرة عند الاختيار — متعة بصرية خفيفة */
+@keyframes perm-pop{ 0%{ transform:scale(.97) } 55%{ transform:scale(1.015) } 100%{ transform:scale(1) } }
+.perm-item.just-toggled{ animation:perm-pop .22s var(--hub-ease, ease); }
+.perm-item .perm-ar{ line-height:1.4; min-width:0; }
+/* المفتاح التقني تحت التسمية العربية — mono صغير داخل <bdi> */
+.perm-item .perm-key{
+  display:block;
+  font-family:var(--hub-mono); font-weight:400;
+  font-size:10px; color:var(--hub-text-mute);
+}
+.perm-item.is-checked .perm-key{ color:var(--pg-ink, var(--hub-brand-ink)); opacity:.7; }
+/* احترام تفضيل تقليل الحركة */
+@media (prefers-reduced-motion: reduce){
+  .perm-item, .perm-group, .pg-ico, .pg-progress > span, .perm-tick, .perm-tick i{ transition:none!important; animation:none!important; }
+}
+/* حقل اللون بنفس ارتفاع hub-input */
+input.hub-input[type=color]{ padding:3px; height:42px; cursor:pointer; }
 </style>
 {% endblock %}
 
 {% block content %}
-{% set selected = (role.permissions if role else ())|list %}
+{# شريط التنقّل المشترك لقسم الأدوار والصلاحيات #}
+{% include "radius/roles_permissions_nav.html" %}
 
-{{ hub.hero(
+{# ───── صدفة الهيرو الموحّدة: عنوان + مؤشرات + سطر إرشادي ───── #}
+<section class="hub-hero-shell" data-testid="roles-form-hero">
+{% call hub.megahero(
   title_ar,
-  subtitle="دور وصلاحيات لاستخدامه في تعيينات المدراء — الاسم التقني، الاسم الظاهر، الصلاحيات",
+  subtitle=("عرّف اسم الدور ولونه ثم اختر صلاحياته — يُمنح الدور للمشرفين لاحقًا من شاشة المدراء." if is_new
+            else "عدّل الاسم الظاهر واللون والصلاحيات — الاسم الداخلي مفتاح ثابت لا يتغيّر بعد الإنشاء."),
   icon="key",
   actions_html='
-    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.roles_list') + '">
-      <i class="fa-solid fa-arrow-right"></i> العودة للقائمة
-    </a>
     <button class="hub-btn hub-btn--primary" type="submit" form="role-form">
-      <i class="fa-solid fa-floppy-disk"></i> ' + ("إنشاء الدور" if is_new else "حفظ التعديلات") + '
+      <i class="fa-solid fa-floppy-disk"></i> ' ~ ("إنشاء الدور" if is_new else "حفظ التعديلات") ~ '
     </button>
-  '
-) }}
+    <a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.roles_list') ~ '">
+      <i class="fa-solid fa-arrow-right"></i> العودة للقائمة
+    </a>',
+  kpis=[
+    {'label': 'الصلاحيات المتاحة', 'value': perms|length,    'icon': 'list-check',    'variant': 'blue'},
+    {'label': 'المختارة الآن',     'value': ('<span id="perm-count-kpi">' ~ selected|length|string ~ '</span>')|safe,
+                                   'icon': 'square-check',   'variant': 'brand'},
+    {'label': 'المجموعات',         'value': groups|length if groups else 1,
+                                   'icon': 'folder-tree',    'variant': 'green'},
+    {'label': 'نوع الدور',         'value': ('نظام' if (role and role.is_system) else 'مخصّص'),
+                                   'icon': ('lock' if (role and role.is_system) else 'user-pen'),
+                                   'variant': ('amber' if (role and role.is_system) else 'grey')},
+  ]
+) %}
+  <span class="hub-text-soft" style="font-size:12.5px;font-weight:700">
+    <i class="fa-solid fa-shield-halved" style="color:var(--hub-brand-ink)"></i>
+    زر «تحديد الكل» في رأس كل مجموعة يفعّل أو يلغي صلاحياتها دفعة واحدة.
+  </span>
+  <span class="hub-spacer"></span>
+  <span class="hub-hint" tabindex="0"
+        data-hint="كل صلاحية مفتاح تقني ثابت في الخادم (مثل users.view) معروض هنا بتسميته العربية. الاسم الداخلي للدور بحروف لاتينية صغيرة وشرطة سفلية، ولا يتغيّر بعد الإنشاء."><i class="fa-solid fa-info"></i></span>
+{% endcall %}
+</section>{# /hub-hero-shell #}
 
-{% set help_aside %}
-{% call hub.helppanel(
-  "عن الأدوار والصلاحيات",
-  intro="الدور حزمة صلاحيات تُسند للمدراء، فتحدّد ما يمكنهم الوصول إليه داخل اللوحة.",
-  icon="shield-halved",
-  items=[
-    {"icon": "key", "text": "الاسم الداخلي مفتاح تقني فريد لا يتغيّر بعد الإنشاء — يُفضّل حروف لاتينية صغيرة وشرطة سفلية."},
-    {"icon": "tag", "text": "الاسم الظاهر هو ما يُعرض في الواجهة، واللون يساعد على تمييز الدور بصريًا."},
-    {"icon": "shield-halved", "text": "اختر الصلاحيات من المجموعات؛ كل صلاحية مفتاح تقني يُمنح للمدير."},
-    {"icon": "list-check", "text": "زر «حدّد الكل» يفعّل أو يلغي كل صلاحيات المجموعة دفعة واحدة."}
-  ],
-  note="لا يغيّر هذا النموذج أي سلوك في الخادم؛ يحفظ نفس الحقول تمامًا كما كانت."
-) %}{% endcall %}
-{% endset %}
-
-{% call hub.worklayout(aside_html=help_aside) %}
+{# عقد الحفظ كما هو: roles_create عند الإنشاء، roles_save عند التعديل #}
 <form method="post" id="role-form"
-      action="{{ url_for('radius.roles_save', role_id=role.id) if not is_new else url_for('radius.roles_create') }}">
+      action="{{ url_for('radius.roles_create') if is_new else url_for('radius.roles_save', role_id=role.id) }}">
 
-  {# ── Identity ───────────────────────────── #}
-  {% call hub.section("الهوية", icon="key") %}
+  {# ───── قسم الهوية: الاسم الداخلي / الظاهر / اللون / الوصف ───── #}
+  {% call hub.section("هوية الدور", icon="id-card") %}
     <div class="hub-form-row">
       <div class="hub-field">
-        <label class="hub-field-label">اسم الدور الداخلي <span style="color:var(--hub-red)">*</span></label>
-        <input class="hub-input" type="text" name="name" {% if not is_new %}readonly style="background:var(--hub-bg-soft);color:var(--hub-text-soft);cursor:not-allowed"{% endif %} required
-               value="{{ role.name if role else '' }}" placeholder="اكتب مفتاحًا تقنيًا فريدًا">
-        <div class="hub-field-hint">هذا المفتاح داخلي ويُفضّل أن يكون بحروف لاتينية صغيرة وشرطة سفلية، مثل دور مدير الفرع.</div>
+        <label class="hub-field-label">الاسم الداخلي <span style="color:var(--hub-red)">*</span></label>
+        <input class="hub-input" type="text" name="name" required dir="ltr"
+               {% if not is_new %}readonly style="background:var(--hub-bg-soft);color:var(--hub-text-soft);cursor:not-allowed"{% endif %}
+               value="{{ role.name if role else '' }}" placeholder="branch_manager">
+        <div class="hub-field-hint">مفتاح تقني فريد بحروف لاتينية صغيرة وشرطة سفلية — لا يتغيّر بعد الإنشاء.</div>
       </div>
       <div class="hub-field">
         <label class="hub-field-label">الاسم الظاهر</label>
-        <input class="hub-input" type="text" name="display_name" value="{{ role.display_name if role else '' }}">
+        <input class="hub-input" type="text" name="display_name"
+               value="{{ role.display_name if role else '' }}" placeholder="مدير الفرع">
+        <div class="hub-field-hint">هو ما يراه المستخدمون في الواجهة بدل المفتاح التقني.</div>
       </div>
       <div class="hub-field">
-        <label class="hub-field-label">اللون</label>
+        <label class="hub-field-label">لون الدور</label>
         <input class="hub-input" type="color" name="color" value="{{ role.color if role else '#6B5AED' }}">
+        <div class="hub-field-hint">يميّز الدور بصريًا في القوائم والبطاقات.</div>
       </div>
       <div class="hub-field" style="grid-column:1/-1">
         <label class="hub-field-label">الوصف</label>
-        <textarea class="hub-textarea" name="description">{{ role.description if role else '' }}</textarea>
+        <textarea class="hub-textarea" name="description"
+                  placeholder="وصف مختصر لنطاق هذا الدور ومسؤولياته…">{{ role.description if role else '' }}</textarea>
       </div>
     </div>
   {% endcall %}
 
-  {# ── Permissions (matrix — kept as checkboxes, styled in a hub.section card) ── #}
+  {# ───── قسم الصلاحيات: مجموعات بعناوين عربية + مفاتيح mono ───── #}
   {% call hub.section("الصلاحيات", icon="shield-halved",
-       meta='<span id="perm-count">0</span> / ' + (perms|length)|string + ' مختارة') %}
+       meta=('<span id="perm-count">' ~ selected|length|string ~ '</span> / ' ~ perms|length|string ~ ' مختارة')|safe) %}
     {% if groups %}
       {% for grp, plist in groups.items() %}
-      <div class="perm-group">
+      {# هوية المجموعة البصرية (أيقونة + ألوان) من GROUP_META المشترك #}
+      <div class="perm-group"
+           style="--pg-accent:{{ pl.group_accent(grp) }};--pg-soft:{{ pl.group_soft(grp) }};--pg-ink:{{ pl.group_ink(grp) }}">
         <div class="perm-group-title">
-          <i class="fa-solid fa-folder-open folder"></i>
-          <span>{{ grp }}</span>
-          <button type="button" class="pg-toggle" data-group="{{ loop.index }}">حدّد الكل</button>
+          <span class="pg-ico"><i class="fa-solid fa-{{ pl.group_icon(grp) }}"></i></span>
+          <span>{{ pl.group_label(grp) }}</span>
+          <span class="pg-key"><bdi dir="ltr">{{ grp }}</bdi></span>
+          {# عدّاد الممنوحة من المجموعة — يتحدّث حيًّا مع كل نقرة #}
+          <span class="pg-count" data-group-count="{{ loop.index }}">
+            <bdi dir="ltr"><span data-on>0</span>/<span data-all>{{ plist|length }}</span></bdi> ممنوحة
+          </span>
+          <button type="button" class="pg-toggle" data-group="{{ loop.index }}">تحديد الكل</button>
         </div>
+        {# شريط تقدّم رفيع بلون المجموعة — نسبة الممنوح #}
+        <div class="pg-progress"><span data-group-bar="{{ loop.index }}"></span></div>
         <div class="perm-grid" data-group-grid="{{ loop.index }}">
           {% for p in plist %}
-          <label class="perm-item {% if p in selected %}is-checked{% endif %}">
+          <label class="perm-item {% if p in selected %}is-checked{% endif %}" title="{{ p }}">
             <input type="checkbox" name="permissions" value="{{ p }}" {% if p in selected %}checked{% endif %}>
-            <code>{{ p }}</code>
+            {# علامة الصح المرسومة — الـ checkbox الحقيقي مخفي بصريًا فقط #}
+            <span class="perm-tick" aria-hidden="true"><i class="fa-solid fa-check"></i></span>
+            <span class="perm-ar">
+              {{ pl.perm_label(p) }}
+              <bdi dir="ltr" class="perm-key">{{ p }}</bdi>
+            </span>
           </label>
           {% endfor %}
         </div>
       </div>
       {% endfor %}
     {% else %}
+      {# احتواء: لو لم تصل المجموعات نعرض القائمة المسطّحة بنفس العقد #}
       <div class="perm-grid">
         {% for p in perms %}
-        <label class="perm-item {% if p in selected %}is-checked{% endif %}">
+        <label class="perm-item {% if p in selected %}is-checked{% endif %}" title="{{ p }}">
           <input type="checkbox" name="permissions" value="{{ p }}" {% if p in selected %}checked{% endif %}>
-          <code>{{ p }}</code>
+          <span class="perm-tick" aria-hidden="true"><i class="fa-solid fa-check"></i></span>
+          <span class="perm-ar">
+            {{ pl.perm_label(p) }}
+            <bdi dir="ltr" class="perm-key">{{ p }}</bdi>
+          </span>
         </label>
         {% endfor %}
       </div>
     {% endif %}
   {% endcall %}
 
+  {# أزرار الحفظ السفلية — نفس الإجراء، تكرار مريح أسفل النموذج الطويل #}
   <div class="hub-flex-row" style="justify-content:flex-end;margin-top:16px">
     {{ hub.btn("إلغاء", variant="secondary", href=url_for('radius.roles_list')) }}
     {{ hub.btn(("إنشاء الدور" if is_new else "حفظ التعديلات"), icon="floppy-disk", variant="primary", type="submit") }}
   </div>
 </form>
-{% endcall %}
 
 <script>
 (function(){
   'use strict';
-  var items = document.querySelectorAll('.perm-item');
-  var counter = document.getElementById('perm-count');
+  // عدّ الصلاحيات المختارة حيًّا: المؤشر العام + عدّاد كل مجموعة + شريط
+  // تقدّمها. التبديل نفسه أصبح أصليًا بالكامل (label يقلب checkbox مخفيًا
+  // بصريًا) فلا قلب يدوي — نستمع لحدث change فقط، أأمن ضد التكرار.
+  var items    = document.querySelectorAll('.perm-item');
+  var counter  = document.getElementById('perm-count');
+  var kpiCount = document.getElementById('perm-count-kpi');
+
   function recount(){
-    var n = 0;
+    var total = 0;
     items.forEach(function(it){
       var cb = it.querySelector('input[type=checkbox]');
       var on = cb && cb.checked;
       it.classList.toggle('is-checked', !!on);
-      if (on) n++;
+      if (on) total++;
     });
-    if (counter) counter.textContent = n;
+    if (counter)  counter.textContent  = total;
+    if (kpiCount) kpiCount.textContent = total;
+
+    // عدّاد + شريط تقدّم كل مجموعة على حدة (بلون المجموعة نفسها)
+    document.querySelectorAll('[data-group-grid]').forEach(function(grid){
+      var gid   = grid.getAttribute('data-group-grid');
+      var cbs   = grid.querySelectorAll('input[type=checkbox]');
+      var on    = 0;
+      cbs.forEach(function(c){ if (c.checked) on++; });
+      var badge = document.querySelector('[data-group-count="' + gid + '"]');
+      if (badge){
+        var onEl = badge.querySelector('[data-on]');
+        if (onEl) onEl.textContent = on;
+      }
+      var bar = document.querySelector('[data-group-bar="' + gid + '"]');
+      if (bar) bar.style.width = (cbs.length ? Math.round(on * 100 / cbs.length) : 0) + '%';
+      var card = grid.closest('.perm-group');
+      if (card) card.classList.toggle('has-all', cbs.length > 0 && on === cbs.length);
+      // نص زر «تحديد الكل» يعكس الحالة الفعلية للمجموعة دائمًا
+      var tog = document.querySelector('.pg-toggle[data-group="' + gid + '"]');
+      if (tog) tog.textContent = (cbs.length > 0 && on === cbs.length) ? 'إلغاء التحديد' : 'تحديد الكل';
+    });
   }
+
+  // التبديل أصلي عبر label — نلتقط change فقط ونضيف نبضة بصرية قصيرة
   items.forEach(function(it){
     var cb = it.querySelector('input[type=checkbox]');
-    it.addEventListener('click', function(e){
-      if (e.target !== cb) cb.checked = !cb.checked;
+    if (!cb) return;
+    cb.addEventListener('change', function(){
+      it.classList.remove('just-toggled');
+      void it.offsetWidth; // إعادة تشغيل الحركة
+      it.classList.add('just-toggled');
       recount();
     });
   });
+
+  // «تحديد الكل» لكل مجموعة: تفعيل/إلغاء كل صلاحياتها دفعة واحدة
   document.querySelectorAll('.pg-toggle').forEach(function(btn){
     btn.addEventListener('click', function(e){
       e.preventDefault();
-      var gid = btn.dataset.group;
+      var gid  = btn.dataset.group;
       var grid = document.querySelector('[data-group-grid="' + gid + '"]');
       if (!grid) return;
-      var cbs = grid.querySelectorAll('input[type=checkbox]');
-      var allOn = Array.from(cbs).every(function(c){ return c.checked; });
+      var cbs   = grid.querySelectorAll('input[type=checkbox]');
+      var allOn = Array.prototype.every.call(cbs, function(c){ return c.checked; });
       cbs.forEach(function(c){ c.checked = !allOn; });
-      btn.textContent = allOn ? 'حدّد الكل' : 'ألغِ التحديد';
       recount();
     });
   });

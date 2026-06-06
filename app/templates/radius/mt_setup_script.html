@@ -45,15 +45,8 @@
   </div>
   {% endif %}
 
-  {% if tunnel_warnings %}
-  <div class="hub-pill hub-pill--amber" data-mt-tunnel-warnings
-       style="display:block;padding:10px 14px">
-    <strong><i class="fa-solid fa-shield-halved"></i> ملاحظات أنفاق الإدارة والحركة:</strong>
-    <ul style="margin:6px 0 0;padding-inline-start:18px">
-      {% for w in tunnel_warnings %}<li>{{ w }}</li>{% endfor %}
-    </ul>
-  </div>
-  {% endif %}
+  {# أُزيل من لوحة العميل — يُعاد مركزياً عبر لوحة التراخيص (قرار معماري):
+     كتلة «ملاحظات أنفاق الإدارة والحركة» (tunnel_warnings). #}
 
   <pre class="mt-setup-script-block"
        data-mt-setup-script-text>{{ script }}</pre>
@@ -79,6 +72,9 @@
     <li>ارجع هنا واضغط <strong>اختبار الاتصال</strong> — تفتح لوحة الراوتر.</li>
     <li>لو ظهرت حالة ”الراوتر متصل” — كل شيء جاهز.</li>
   </ol>
+
+  {# أُزيل من لوحة العميل — يُعاد مركزياً عبر لوحة التراخيص (قرار معماري):
+     قسم «نفق تغيير IP (تمرير الترافيك)» المرخّص — خدمة مركزية للمالك. #}
 
   <details class="mt-setup-script-warning">
     <summary>⚠️ تنبيه أمان — اقرأه مرة واحدة</summary>

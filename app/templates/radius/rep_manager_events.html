@@ -1,95 +1,114 @@
 {# ═══════════════════════════════════════════════════════════════════════
-   أحداث المدراء — UNIFIED DESIGN SYSTEM (megahero + worklayout + help).
-
-   نفس بيانات الـ backend: `items` (صفوف audit_log لمدير بشري)، `total`، `filters`.
-   صفر تغيير في المسار/السلوك.
+   أحداث المدراء — إعادة تصميم من الصفر على نظام hub_v2:
+     • صدفة هيرو واحدة (hub-hero-shell): عنوان + سطر تعريفي + مؤشرات بصف
+       واحد + حزام الفلترة — بلا أي هيروات/لافتات مكدّسة.
+     • جدول uds موحّد (فرز + ترقيم + تصدير) مع تعريب كل القيم الظاهرة
+       (الفعل والكيان معرَّبان في المسار، والقيمة الخام تبقى في title).
+     • نفس معطيات المسار: `items` (صفوف audit_log لمدير بشري — مزخرفة
+       بـ actor_label/action_label/target_type_label/payload_summary)،
+       `total`، `filters` — صفر تغيير على المسار أو عقد الفلاتر
+       (q/date_from/date_to).
    ═══════════════════════════════════════════════════════════════════════ #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
 {% block title %}أحداث المدراء{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-user-shield"></i>{% endblock %}
-{% block page_title %}أحداث النظام (المدراء){% endblock %}
-{% block page_sub %}<span class="sub">{{ items|length }} حدث</span>{% endblock %}
+{% block page_title %}أحداث المدراء{% endblock %}
+{% block page_sub %}<span class="sub">{{ total }} حدث</span>{% endblock %}
+
+{% block head_extra %}{{ super() }}
+{# نظام الجداول الموحد (uds): فرز + ترقيم صفحات + تصدير لجدول الأحداث #}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
+{% endblock %}
 
 {% block content %}
-{% include "radius/reports_nav.html" %}
+{# متحكّم «انتقال سريع» المضغوط — يُحقن في صف عنوان الهيرو بدل الشريطين الكبيرين #}
+{% set _report_jump %}{% include "radius/reports_nav.html" %}{% endset %}
 
-{# ───── Merged hero: title + subtitle + KPI strip + integrated filters ───── #}
+{# ── مؤشرات مشتقة من نفس `items` (بلا أي استعلام إضافي) ── #}
+{% set _admins  = items|map(attribute='actor')|unique|list|length %}
+{% set _deletes = items|selectattr('action', 'equalto', 'delete')|list|length %}
+
+{# ───── صدفة الهيرو الواحدة: عنوان + سطر تعريفي + مؤشرات بصف واحد + حزام الفلترة ───── #}
+<section class="hub-hero-shell" data-testid="manager-events-hero">
 {% call hub.megahero(
   "أحداث المدراء",
-  subtitle="سجل التدقيق لكل عملية نفّذها مدير — مع عرض عربي للفعل والكيان.",
+  subtitle="سجل التدقيق لكل عملية نفّذها مدير بشري — الفعل والكيان والوقت وعنوان الشبكة.",
   icon="user-shield",
+  actions_html=_report_jump,
   kpis=[
-    {'label': 'إجمالي الأحداث', 'value': items|length, 'icon': 'user-shield', 'variant': 'brand'},
+    {'label': 'إجمالي المطابق', 'value': total,        'icon': 'list-check',  'variant': 'brand'},
+    {'label': 'المعروض',        'value': items|length, 'icon': 'table-list',  'variant': 'blue'},
+    {'label': 'مدراء مختلفون',  'value': _admins,      'icon': 'users-gear',  'variant': 'green'},
+    {'label': 'عمليات حذف',     'value': _deletes,     'icon': 'trash-can',   'variant': 'red'},
   ],
   search_action=url_for('radius.rep_manager_events')
 ) %}
   <input class="hub-input grow" type="text" name="q"
          value="{{ filters.q if filters else '' }}"
-         placeholder="بحث (مدير / إجراء / هدف)…">
+         placeholder="بحث (مدير / إجراء / معرّف الهدف)…">
   <input class="hub-input" type="date" name="date_from"
          value="{{ filters.date_from if filters else '' }}" title="من تاريخ">
   <input class="hub-input" type="date" name="date_to"
          value="{{ filters.date_to if filters else '' }}" title="إلى تاريخ">
   {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
   {% if filters and (filters.q or filters.date_from or filters.date_to) %}
-    {{ hub.btn("مسح", icon="rotate-left", variant="ghost", size="sm",
+    {{ hub.btn("إعادة ضبط", icon="rotate-left", variant="ghost", size="sm",
                attrs='onclick="window.location=' + "'" + url_for('radius.rep_manager_events') + "'" + '"') }}
   {% endif %}
+  <span class="hub-hint" tabindex="0"
+        data-hint="البحث يطابق اسم المدير أو الإجراء أو معرّف الهدف، ونطاق التاريخ يعمل على وقت تسجيل الحدث. يُعرض حتى 500 حدث من الأحدث للأقدم، والبيانات من سجل التدقيق audit_log للقراءة فقط."><i class="fa-solid fa-info"></i></span>
 {% endcall %}
+</section>{# /hub-hero-shell #}
 
 {% if items %}
-{# ───── Main (carded table) + help panel on the LEFT ───── #}
-{% call hub.worklayout(aside_html=hub.helppanel(
-  "كيف تقرأ هذا التقرير؟",
-  intro="كل صف هو عملية نفّذها مدير بشري — مرتبة من الأحدث للأقدم.",
-  items=[
-    {'icon': 'user-shield',   'text': '«المدير» هو الحساب الذي نفّذ العملية.'},
-    {'icon': 'bolt',          'text': '«الفعل» هو نوع العملية (إضافة / تعديل / حذف …) معروضًا بالعربية.'},
-    {'icon': 'cube',          'text': '«الكيان» هو نوع العنصر الذي تأثّر بالعملية.'},
-    {'icon': 'network-wired', 'text': '«عنوان الشبكة» هو الـ IP الذي نُفّذت منه العملية.'},
-  ],
-  note="هذا التقرير للقراءة فقط — البيانات تأتي مباشرة من سجل التدقيق audit_log."
-)) %}
-  {% call hub.section("سجل الأحداث", icon="table-list",
-                      meta=items|length|string + " صف", flush=True) %}
-    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25"
-         style="border:none;border-radius:0">
-      <table class="hub-table">
-        <thead>
-          <tr>
-            <th class="num" style="width:70px" data-uds-nosort>#</th>
-            <th>المدير</th>
-            <th data-uds-nosort>الفعل</th>
-            <th>الكيان</th>
-            <th>المعرّف</th>
-            <th>عنوان الشبكة</th>
-            <th>الوقت</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for r in items %}
-          <tr>
-            <td class="num mono">{{ r.id }}</td>
-            <td><strong>{{ r.actor_label }}</strong></td>
-            <td>{{ hub.pill(r.action_label, variant="blue", dot=False) }}</td>
-            <td>{{ r.target_type_label or '—' }}</td>
-            <td class="mono small">{{ r.target_id or '—' }}</td>
-            <td class="mono small">{{ r.ip_address or '—' }}</td>
-            <td class="mono"
-                style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
-              {{ r.created_at[:16] if r.created_at else '—' }}
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  {% endcall %}
+{# ───── جدول الأحداث — uds موحّد (فرز + ترقيم + تصدير) ───── #}
+{% call hub.section("سجل الأحداث", icon="table-list",
+                    meta=items|length|string + " حدث", flush=True) %}
+  <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25"
+       style="border:none;border-radius:0">
+    <table class="hub-table rep-table">
+      <thead>
+        <tr>
+          <th class="num" style="width:70px" data-uds-nosort>الرقم</th>
+          <th>الوقت</th>
+          <th>المدير</th>
+          <th data-uds-nosort>الفعل</th>
+          <th>الكيان</th>
+          <th>معرّف الهدف</th>
+          <th>عنوان الشبكة</th>
+          <th data-uds-nosort data-uds-nocol>التفاصيل</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in items %}
+        <tr>
+          <td class="num mono"><bdi>#{{ r.id }}</bdi></td>
+          {% set _dl = r.created_at|dt_local if r.created_at else '' %}
+          <td class="mono"
+              style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
+            <span class="rep-primary">{{ _dl[:10] or '—' }}</span>
+            <span class="rep-sub">{{ _dl[11:16] }}</span>
+          </td>
+          <td><strong><bdi>{{ r.actor_label }}</bdi></strong></td>
+          {# الفعل معرَّب في المسار — والقيمة الخام تبقى في title #}
+          <td title="{{ r.action or '' }}">{{ hub.pill(r.action_label, variant=("red" if r.action == "delete" else "blue"), dot=False) }}</td>
+          <td title="{{ r.target_type or '' }}">{{ r.target_type_label or '—' }}</td>
+          <td class="mono small"><bdi>{{ r.target_id or '—' }}</bdi></td>
+          <td class="mono small"><bdi>{{ r.ip_address or '—' }}</bdi></td>
+          <td class="rep-sub" style="max-width:240px">{{ r.payload_summary or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 {% endcall %}
 {% else %}
-{{ hub.empty("لا أحداث بعد",
-   sub="غيّر الفلاتر أو لا توجد أحداث مسجّلة بعد.", icon="user-shield") }}
+{{ hub.empty("لا أحداث مدراء مطابقة",
+   sub="غيّر الفلاتر أو لم يسجّل المدراء أي عملية بعد.", icon="user-shield") }}
 {% endif %}
+
+{# نظام الجداول الموحد: فرز + ترقيم صفحات + تصدير #}
+<script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
 {% endblock %}

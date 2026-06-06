@@ -92,6 +92,10 @@ PERM_NPC_WALLED_GARDEN_MANAGE  = "npc.walled_garden.manage"
 PERM_NPC_WALLED_GARDEN_PREVIEW = "npc.walled_garden.preview"
 PERM_NPC_WALLED_GARDEN_APPLY   = "npc.walled_garden.apply"
 
+# أُزيل من لوحة العميل — يُعاد مركزياً عبر لوحة التراخيص (قرار معماري):
+# كانت هنا صلاحيات «لوحة التراخيص — نفق تغيير IP المدفوع»
+# (PERM_LICENSING_VIEW/MANAGE). حوكمة مركزية للمالك، لا تخص لوحة العميل.
+
 
 ALL_PERMISSIONS: tuple[str, ...] = (
     PERM_VIEW, PERM_DIAGNOSTICS, PERM_MANAGE,
@@ -111,6 +115,7 @@ ALL_PERMISSIONS: tuple[str, ...] = (
     PERM_NPC_WEB_BLOCK_PREVIEW, PERM_NPC_WEB_BLOCK_APPLY,
     PERM_NPC_WALLED_GARDEN_VIEW, PERM_NPC_WALLED_GARDEN_MANAGE,
     PERM_NPC_WALLED_GARDEN_PREVIEW, PERM_NPC_WALLED_GARDEN_APPLY,
+    # أُزيل: صلاحيات لوحة التراخيص (نفق تغيير IP) — حوكمة مركزية للمالك.
 )
 
 
@@ -140,6 +145,7 @@ _IMPLIED_BY_ADMIN: frozenset[str] = frozenset({
     PERM_NPC_WALLED_GARDEN_VIEW,
     PERM_NPC_WALLED_GARDEN_MANAGE,
     PERM_NPC_WALLED_GARDEN_PREVIEW,
+    # أُزيل: PERM_LICENSING_VIEW — لوحة التراخيص حوكمة مركزية للمالك.
 })
 
 
@@ -316,6 +322,7 @@ __all__ = [
     "PERM_NPC_WALLED_GARDEN_MANAGE",
     "PERM_NPC_WALLED_GARDEN_PREVIEW",
     "PERM_NPC_WALLED_GARDEN_APPLY",
+    # أُزيل: PERM_LICENSING_* — لوحة التراخيص حوكمة مركزية للمالك.
     "PERM_AUDIT_VIEW", "PERM_ADMIN",
     "ALL_PERMISSIONS",
     "admin_permissions",

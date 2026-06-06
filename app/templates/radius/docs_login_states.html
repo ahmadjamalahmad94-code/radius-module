@@ -1,0 +1,445 @@
+{# ══════════════════════════════════════════════════════════════════════
+   دليل «حالات تسجيل الدخول» — قسم التقارير.
+
+   يشرح الصفحة الحقيقية rep_login_states.html (الرئيسية: 4 مؤشرات + 3 بطاقات)
+   وصفحاتها الثلاث المفروزة rep_login_states_detail.html
+   (?actor=admin|subscriber|card)، الراوت routes/reports.py::rep_login_states،
+   وقاموس الأسباب REASON_LABELS في services/login_events.py.
+   نسخنا بنية الدليل الذهبي docs_add_subscriber.html:
+     • hero + شريط أدوات (حفظ كـ PDF / كل الأدلة → قسم التقارير).
+     • فهرس جانبي لاصق (order:2) + scrollspy خفيف.
+     • خطوات مرقّمة ببطاقات وشارات بنفسجية متدرّجة.
+     • محاكاة HTML/CSS للبطاقات الثلاث وصف المحاولة وجدول الأسباب.
+     • تلميحات 💡/⚠️ وحفظ PDF عبر window.print().
+
+   المحتوى مطابق للصفحة الفعلية: أسماء الأعمدة والأسباب منسوخة حرفيًا
+   (الوقت/الجهة/النتيجة/المصدر/الشبكة/الجهاز، كلمة مرور خاطئة/اشتراك منتهٍ/
+   عنوان الجهاز غير مطابق...) — حدّث الدليل عند تغيير الصفحة.
+   ══════════════════════════════════════════════════════════════════════ #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}دليل: حالات تسجيل الدخول — كيف تستخدمني{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<style>
+  /* ── التخطيط: فهرس جانبي لاصق + عمود المحتوى (مطابق للدليل الذهبي) ── */
+  .dg-layout{ display:grid; grid-template-columns:minmax(0,1fr) 230px; gap:20px; align-items:start; }
+  .dg-toc{ order:2; }
+  .dg-main{ order:1; }
+  @media (max-width:980px){ .dg-layout{ grid-template-columns:1fr; } .dg-toc{ order:1; } .dg-main{ order:2; } }
+
+  .dg-toc{
+    position:sticky; top:84px;
+    background:#fff; border:1px solid #e8edf3; border-radius:14px;
+    padding:14px 13px; display:grid; gap:3px;
+  }
+  @media (max-width:980px){ .dg-toc{ position:static; } }
+  .dg-toc-title{
+    display:flex; align-items:center; gap:8px; font-size:12px; font-weight:900;
+    color:#7c7a99; margin-bottom:7px; padding-inline:6px;
+  }
+  .dg-toc a{
+    display:flex; align-items:center; gap:9px;
+    padding:8px 10px; border-radius:9px; text-decoration:none;
+    font-size:12.5px; font-weight:700; color:#475569;
+    transition:background .14s, color .14s;
+  }
+  .dg-toc a .n{
+    width:21px; height:21px; border-radius:50%; flex:none;
+    display:grid; place-items:center; font-size:10.5px; font-weight:900;
+    background:#f1f5f9; color:#94a3b8;
+  }
+  .dg-toc a:hover{ background:#f5f3ff; color:#5b21b6; }
+  .dg-toc a.is-active{ background:#ede9fe; color:#5b21b6; }
+  .dg-toc a.is-active .n{ background:linear-gradient(135deg,#7c3aed,#5b21b6); color:#fff; }
+
+  /* ── عمود الخطوات ── */
+  .dg-main{ min-width:0; display:grid; gap:18px; }
+  .dg-lead{
+    display:flex; gap:13px; align-items:flex-start;
+    background:linear-gradient(135deg,#f5f3ff,#fdfcff);
+    border:1px solid #e9e5fc; border-radius:14px; padding:15px 17px;
+  }
+  .dg-lead .ic{ width:40px;height:40px;border-radius:12px;flex:none;display:grid;place-items:center;
+    font-size:17px;background:#ede9fe;color:#6d28d9; }
+  .dg-lead h3{ margin:0 0 4px; font-size:13.5px; font-weight:800; color:#241e4e; }
+  .dg-lead p{ margin:0; font-size:12.5px; line-height:1.9; color:#5b5a78; }
+
+  .dg-step{ display:grid; grid-template-columns:auto 1fr; gap:15px; align-items:start; scroll-margin-top:90px; }
+  @media (max-width:560px){ .dg-step{ grid-template-columns:1fr; } }
+  .dg-badge{
+    width:42px; height:42px; border-radius:50%; flex:none;
+    display:grid; place-items:center; font-size:17px; font-weight:900; color:#fff;
+    background:linear-gradient(135deg,#7c3aed,#5b21b6);
+    box-shadow:0 8px 18px rgba(124,58,237,.3);
+  }
+  .dg-card{
+    min-width:0; background:#fff; border:1px solid #e8edf3; border-radius:15px;
+    padding:16px 18px;
+  }
+  .dg-card h2{
+    margin:0 0 8px; font-size:15.5px; font-weight:800; color:#0f172a;
+    display:flex; align-items:center; gap:9px; flex-wrap:wrap;
+  }
+  .dg-card h2 i{ color:#7c3aed; }
+  .dg-card p{ margin:0 0 7px; font-size:13px; line-height:1.95; color:#475569; }
+  .dg-card p:last-child{ margin-bottom:0; }
+  .dg-card ul{ margin:4px 0 8px; padding-inline-start:22px; font-size:13px; line-height:2; color:#475569; }
+  .dg-card strong{ color:#241e4e; }
+  .dg-kbd{
+    font-family:ui-monospace,Consolas,monospace; font-size:11.5px;
+    background:#f1f5f9; border:1px solid #e2e8f0; border-radius:5px;
+    padding:1px 7px; color:#5b21b6;
+  }
+
+  .dg-tip, .dg-warn{
+    display:flex; gap:11px; align-items:flex-start;
+    border-radius:12px; padding:11px 14px; margin-top:11px;
+    font-size:12.5px; line-height:1.9;
+  }
+  .dg-tip{ background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; }
+  .dg-warn{ background:#fffbeb; border:1px solid #fde68a; color:#92400e; }
+  .dg-tip .ic, .dg-warn .ic{ flex:none; font-size:15px; line-height:1.6; }
+  .dg-tip b, .dg-warn b{ font-weight:900; }
+
+  /* ════ الرسوم العامة ════ */
+  .dg-mock{
+    border:1px solid #e2e8f0; border-radius:14px; overflow:hidden;
+    background:#fff; box-shadow:0 8px 20px rgba(15,23,42,.07); margin-top:13px; max-width:560px;
+  }
+  .dg-mock-bar{
+    display:flex; align-items:center; gap:7px; padding:8px 12px;
+    background:#f1f5f9; border-bottom:1px solid #e2e8f0;
+  }
+  .dg-mock-bar .dots{ display:flex; gap:5px; }
+  .dg-mock-bar .dots i{ width:9px; height:9px; border-radius:50%; }
+  .dg-mock-bar .dots i:nth-child(1){ background:#f87171; }
+  .dg-mock-bar .dots i:nth-child(2){ background:#fbbf24; }
+  .dg-mock-bar .dots i:nth-child(3){ background:#34d399; }
+  .dg-mock-bar .crumb{
+    flex:1; background:#fff; border:1px solid #e2e8f0; border-radius:7px;
+    padding:4px 10px; font-size:10.5px; font-weight:700; color:#64748b;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .dg-mock-body{ padding:14px; display:grid; gap:11px; }
+  .dg-cap{ font-size:11px; color:#94a3b8; margin-top:8px; line-height:1.7; }
+  .dg-cap i{ color:#c4b5fd; }
+
+  /* المؤشرات الأربعة */
+  .dg-kpis{ display:grid; grid-template-columns:repeat(4,1fr); gap:9px; margin-top:13px; }
+  @media (max-width:560px){ .dg-kpis{ grid-template-columns:repeat(2,1fr); } }
+  .dg-kpi{
+    border:1px solid #eef2f7; border-radius:12px; padding:11px; background:#fff;
+    display:grid; gap:5px; justify-items:start;
+  }
+  .dg-kpi .ic{ width:28px;height:28px;border-radius:8px;display:grid;place-items:center;font-size:12px; }
+  .dg-kpi small{ font-size:9.5px; font-weight:800; color:#94a3b8; }
+  .dg-kpi strong{ font-size:15px; font-weight:900; color:#241e4e; }
+
+  /* البطاقات الثلاث (مدراء/مشتركين/كروت) */
+  .dg-actors{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:13px; }
+  @media (max-width:600px){ .dg-actors{ grid-template-columns:1fr; } }
+  .dg-actor{
+    border:1px solid #e8edf3; border-radius:13px; padding:13px; background:#fff;
+    display:grid; gap:7px; justify-items:center; text-align:center;
+  }
+  .dg-actor .ic{ width:38px;height:38px;border-radius:11px;display:grid;place-items:center;font-size:15px;color:#fff; }
+  .dg-actor .t{ font-size:12px; font-weight:900; color:#241e4e; }
+  .dg-actor .d{ font-size:10px; color:#94a3b8; line-height:1.7; }
+
+  /* تبويبات الصفحات الثلاث */
+  .dg-pgtabs{ display:inline-flex; gap:4px; background:#f1f5f9; border:1px solid #e2e8f0; border-radius:11px; padding:4px; margin-top:13px; flex-wrap:wrap; }
+  .dg-pgtabs span{ display:inline-flex; align-items:center; gap:6px; border-radius:8px; padding:7px 12px; font-size:10.5px; font-weight:800; color:#64748b; }
+  .dg-pgtabs span.on{ background:#fff; color:#5b21b6; box-shadow:0 2px 6px rgba(15,23,42,.08); }
+
+  /* جدول محاكاة المحاولات */
+  .dg-rowmock{ max-width:560px; margin-top:13px; border:1px solid #e2e8f0; border-radius:12px; overflow:hidden; box-shadow:0 6px 16px rgba(15,23,42,.06); }
+  .dg-rowmock .hd, .dg-rowmock .rw{ display:grid; grid-template-columns:1fr 1fr .9fr 1.1fr; gap:8px; padding:9px 13px; font-size:10.5px; align-items:center; }
+  .dg-rowmock .hd{ background:#f5f3ff; color:#5b21b6; font-weight:900; }
+  .dg-rowmock .rw{ background:#fff; color:#334155; font-weight:700; border-top:1px solid #f1f5f9; }
+  .dg-rowmock .rw.fail{ background:#fef2f2; }
+  .dg-ok{ display:inline-flex; align-items:center; gap:5px; border-radius:999px; padding:2px 9px; font-size:9.5px; font-weight:900; background:#dcfce7; color:#15803d; }
+  .dg-bad{ display:inline-flex; align-items:center; gap:5px; border-radius:999px; padding:2px 9px; font-size:9.5px; font-weight:900; background:#fee2e2; color:#b91c1c; }
+  .dg-reason{ display:block; font-size:9px; color:#b91c1c; margin-top:2px; font-weight:700; }
+
+  /* جدول الأسباب */
+  .dg-reasons{ display:grid; gap:6px; margin-top:13px; }
+  .dg-reasonrow{
+    display:grid; grid-template-columns:1fr 1.4fr; gap:10px; align-items:center;
+    border:1px solid #eef2f7; border-radius:10px; padding:8px 12px; background:#fff;
+  }
+  .dg-reasonrow .code{ font-family:ui-monospace,Consolas,monospace; font-size:10.5px; color:#64748b; direction:ltr; text-align:left; }
+  .dg-reasonrow .ar{ font-size:12px; font-weight:800; color:#241e4e; }
+  .dg-reasonrow .ar i{ color:#ef4444; margin-inline-end:6px; font-size:10px; }
+
+  /* ════ الطباعة ════ */
+  @media print{
+    .hb-side, .hb-side-overlay, .hb-topbar, header.hb-top,
+    .dg-toc, .dg-noprint, .hub-hero-actions{ display:none !important; }
+    .dg-layout{ grid-template-columns:1fr; }
+    .dg-card, .dg-mock, .dg-actor, .dg-rowmock, .dg-reasonrow{ box-shadow:none !important; break-inside:avoid; }
+    .dg-step{ break-inside:avoid; }
+    body{ background:#fff !important; }
+    .dg-badge, .dg-tip, .dg-warn, .dg-actor .ic, .dg-ok, .dg-bad,
+    .dg-rowmock .hd, .dg-rowmock .rw.fail, .dg-pgtabs span.on{
+      -webkit-print-color-adjust:exact; print-color-adjust:exact;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{{ hub.hero(
+  "دليل: حالات تسجيل الدخول",
+  subtitle="اقرأ محاولات الدخول الناجحة والفاشلة وأسبابها لتشخيص مشاكل اتصال المشتركين — صفحة رئيسية وثلاث صفحات في 6 خطوات.",
+  icon="right-to-bracket",
+  actions_html='
+    <button type="button" class="hub-btn hub-btn--secondary" onclick="window.print()">
+      <i class="fa-solid fa-file-pdf"></i> حفظ كـ PDF
+    </button>
+    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.docs_section', cat_slug='reports') + '">
+      <i class="fa-solid fa-arrow-right"></i> كل الأدلة
+    </a>
+  '
+) }}
+
+<div class="dg-layout">
+
+  {# ───── الفهرس الجانبي اللاصق ───── #}
+  <nav class="dg-toc dg-noprint" aria-label="فهرس الدليل">
+    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> فهرس الخطوات</div>
+    <a href="#dg-s1" data-dg-toc><span class="n">1</span> الصفحة الرئيسية</a>
+    <a href="#dg-s2" data-dg-toc><span class="n">2</span> الصفحات الثلاث</a>
+    <a href="#dg-s3" data-dg-toc><span class="n">3</span> قراءة صف المحاولة</a>
+    <a href="#dg-s4" data-dg-toc><span class="n">4</span> قراءة الأسباب</a>
+    <a href="#dg-s5" data-dg-toc><span class="n">5</span> الفلاتر</a>
+    <a href="#dg-s6" data-dg-toc><span class="n">6</span> مهمة عملية</a>
+  </nav>
+
+  {# ───── عمود المحتوى ───── #}
+  <div class="dg-main">
+
+    <div class="dg-lead">
+      <span class="ic"><i class="fa-solid fa-right-to-bracket"></i></span>
+      <div>
+        <h3>قبل ما نبدأ — شو يعني «حالات تسجيل الدخول»؟</h3>
+        <p>
+          هي سجل كل محاولة دخول على نظامك — <strong>نجحت أم فشلت ولماذا</strong> — موزّعة على
+          ثلاث جهات: المدراء (لوحة الإدارة)، المشتركون، والكروت. أداتك الأولى لتشخيص «ليش هذا
+          الزبون ما بيقدر يدخل؟». في هذا الدليل رح نتعلّم نقرأ الصفحة الرئيسية، ننتقل بين
+          الصفحات الثلاث، نفهم كل عمود وكل سبب فشل، ونجاوب سؤالًا عمليًا في النهاية.
+        </p>
+      </div>
+    </div>
+
+    {# ════ الخطوة 1 ════ #}
+    <section class="dg-step" id="dg-s1">
+      <div class="dg-badge">1</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-gauge"></i> الصفحة الرئيسية — ملخّص وثلاث بوابات</h2>
+        <p>
+          تفتحها من <strong>التقارير ← الدخول والأمان ← حالات تسجيل الدخول</strong>. أعلاها
+          <strong>أربعة مؤشرات</strong> تلخّص الوضع: إجمالي المحاولات، الناجحة، الفاشلة،
+          ومحاولات اليوم.
+        </p>
+
+        <div class="dg-kpis" aria-hidden="true">
+          <div class="dg-kpi"><span class="ic" style="background:#ede9fe;color:#6d28d9"><i class="fa-solid fa-right-to-bracket"></i></span><small>إجمالي المحاولات</small><strong>1,820</strong></div>
+          <div class="dg-kpi"><span class="ic" style="background:#dcfce7;color:#15803d"><i class="fa-solid fa-circle-check"></i></span><small>ناجحة</small><strong>1,602</strong></div>
+          <div class="dg-kpi"><span class="ic" style="background:#fee2e2;color:#b91c1c"><i class="fa-solid fa-circle-xmark"></i></span><small>فاشلة</small><strong>218</strong></div>
+          <div class="dg-kpi"><span class="ic" style="background:#dbeafe;color:#1d4ed8"><i class="fa-solid fa-calendar-day"></i></span><small>اليوم</small><strong>96</strong></div>
+        </div>
+
+        <p style="margin-top:13px">وتحتها <strong>ثلاث بطاقات كبيرة</strong> — كل واحدة تفتح صفحة الجهة الخاصة بها:</p>
+        <div class="dg-actors" aria-hidden="true">
+          <div class="dg-actor"><span class="ic" style="background:#7c3aed"><i class="fa-solid fa-user-shield"></i></span><span class="t">دخول المدراء</span><span class="d">محاولات دخول لوحة الإدارة</span></div>
+          <div class="dg-actor"><span class="ic" style="background:#0ea5e9"><i class="fa-solid fa-user"></i></span><span class="t">دخول المشتركين</span><span class="d">عبر البوابة وشبكة المصادقة</span></div>
+          <div class="dg-actor"><span class="ic" style="background:#f59e0b"><i class="fa-solid fa-ticket"></i></span><span class="t">دخول الكروت</span><span class="d">عبر الشبكة والبوابة</span></div>
+        </div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> الصفحة الرئيسية لمحة فقط — التفاصيل والفلاتر داخل كل بطاقة.</div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 2 ════ #}
+    <section class="dg-step" id="dg-s2">
+      <div class="dg-badge">2</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-layer-group"></i> الصفحات الثلاث — شو يسجّل كلٌّ منها</h2>
+        <p>
+          البطاقات الثلاث تفتح نفس القالب لكن مفروزًا حسب الجهة، وفي أعلى كل صفحة
+          <strong>شريط تبويبات</strong> يتيح القفز بين الجهات الثلاث بسرعة:
+        </p>
+        <ul>
+          <li><strong>دخول المدراء:</strong> محاولات دخول المدراء إلى لوحة الإدارة فقط (من الويب).
+              لا يظهر عمود «المصدر» لأنهم يدخلون من مكان واحد.</li>
+          <li><strong>دخول المشتركين:</strong> محاولات المشتركين من <strong>البوابة</strong>
+              ومن <strong>شبكة المصادقة</strong> معًا — مع جهاز الشبكة وسبب الفشل.</li>
+          <li><strong>دخول الكروت:</strong> محاولات الكروت من الشبكة والبوابة — مع عنوان جهاز
+              الزبون (الماك) وجهاز الشبكة وسبب الفشل.</li>
+        </ul>
+
+        <div class="dg-pgtabs" aria-hidden="true">
+          <span class="on"><i class="fa-solid fa-user-shield"></i> حالات دخول المدراء</span>
+          <span><i class="fa-solid fa-user"></i> حالات دخول المشتركين</span>
+          <span><i class="fa-solid fa-ticket"></i> حالات دخول الكروت</span>
+        </div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> شريط التبويبات ثابت أعلى الصفحات الثلاث — رابط «كل الأقسام» يرجعك للرئيسية.</div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 3 ════ #}
+    <section class="dg-step" id="dg-s3">
+      <div class="dg-badge">3</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-table-list"></i> اقرأ صف المحاولة — عمودًا عمودًا</h2>
+        <p>
+          جدول كل صفحة موحّد (فرز + ترقيم + تصدير)، والصفوف الفاشلة تتلوّن بخلفية حمراء خفيفة.
+          أعمدته:
+        </p>
+        <ul>
+          <li><strong>الوقت:</strong> تاريخ وساعة المحاولة (<span class="dg-kbd">YYYY-MM-DD HH:MM</span>).</li>
+          <li><strong>الجهة:</strong> اسم الدخول (المدير/المشترك/الكرت).</li>
+          <li><strong>النتيجة:</strong> «نجاح» (أخضر) أو «فشل» (أحمر) — وتحت الفشل يظهر السبب.</li>
+          <li><strong>المصدر:</strong> «البوابة» أو «شبكة المصادقة» (للمشتركين والكروت فقط).</li>
+          <li><strong>الشبكة:</strong> عنوان الشبكة (IP) + جهاز الشبكة (NAS).</li>
+          <li><strong>الجهاز:</strong> نظام التشغيل والمتصفح + عنوان الجهاز (الماك).</li>
+        </ul>
+
+        <div class="dg-rowmock" aria-hidden="true">
+          <div class="hd"><span>الوقت</span><span>الجهة</span><span>النتيجة</span><span>الشبكة / الجهاز</span></div>
+          <div class="rw"><span style="font-family:monospace;direction:ltr">06-06 14:20</span><span style="font-weight:900;color:#241e4e">ahmad2026</span><span><span class="dg-ok"><i class="fa-solid fa-check"></i> نجاح</span></span><span style="font-family:monospace;direction:ltr">10.0.0.14 · Android</span></div>
+          <div class="rw fail"><span style="font-family:monospace;direction:ltr">06-06 14:18</span><span style="font-weight:900;color:#241e4e">sara_net</span><span><span class="dg-bad"><i class="fa-solid fa-xmark"></i> فشل</span><span class="dg-reason">كلمة مرور خاطئة</span></span><span style="font-family:monospace;direction:ltr">10.0.0.31 · iPhone</span></div>
+        </div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> أيقونة نوع الجهاز (موبايل/لوحي/حاسوب) تظهر بجانب نظام التشغيل والمتصفح.</div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 4 ════ #}
+    <section class="dg-step" id="dg-s4">
+      <div class="dg-badge">4</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-circle-question"></i> اقرأ الأسباب — قاموس الفشل</h2>
+        <p>
+          أهم عمود للتشخيص هو <strong>سبب الفشل</strong> الذي يظهر تحت نتيجة «فشل». هذه قائمة
+          الأسباب الكاملة كما تظهر بالعربي وما يعنيه كلٌّ منها:
+        </p>
+
+        <div class="dg-reasons" aria-hidden="true">
+          <div class="dg-reasonrow"><span class="ar"><i class="fa-solid fa-circle-xmark"></i> كلمة مرور خاطئة</span><span class="code">bad_password — كلمة المرور لا تطابق الحساب</span></div>
+          <div class="dg-reasonrow"><span class="ar"><i class="fa-solid fa-circle-xmark"></i> اشتراك منتهٍ</span><span class="code">expired — انتهت صلاحية الاشتراك</span></div>
+          <div class="dg-reasonrow"><span class="ar"><i class="fa-solid fa-circle-xmark"></i> حساب معطّل</span><span class="code">disabled — الحساب موقوف يدويًا</span></div>
+          <div class="dg-reasonrow"><span class="ar"><i class="fa-solid fa-circle-xmark"></i> عنوان الجهاز غير مطابق</span><span class="code">mac_locked / mac_mismatch — الماك يخالف المسجّل</span></div>
+          <div class="dg-reasonrow"><span class="ar"><i class="fa-solid fa-circle-xmark"></i> عنوان MAC عشوائي/خاص ممنوع</span><span class="code">random_mac_blocked — الجهاز يستخدم ماك خاصًّا</span></div>
+          <div class="dg-reasonrow"><span class="ar"><i class="fa-solid fa-circle-xmark"></i> تجاوز عدد الأجهزة</span><span class="code">concurrency — أجهزة أكثر من المسموح</span></div>
+          <div class="dg-reasonrow"><span class="ar"><i class="fa-solid fa-circle-xmark"></i> تجاوز الحصة</span><span class="code">quota_exceeded — استنفد حصة البيانات</span></div>
+          <div class="dg-reasonrow"><span class="ar"><i class="fa-solid fa-circle-xmark"></i> خارج وقت السماح</span><span class="code">out_of_schedule — محاولة خارج أوقات الباقة</span></div>
+          <div class="dg-reasonrow"><span class="ar"><i class="fa-solid fa-circle-xmark"></i> بدون باقة</span><span class="code">no_plan — الحساب بلا باقة فعّالة</span></div>
+          <div class="dg-reasonrow"><span class="ar"><i class="fa-solid fa-circle-xmark"></i> مستخدم غير معروف</span><span class="code">unknown_user — اسم الدخول غير موجود</span></div>
+        </div>
+
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة:</b> النص العربي يظهر فقط للمحاولات الفاشلة (يُمسح للناجحة). والرمز
+          الخام (مثل <span class="dg-kbd">bad_password</span>) محفوظ في خاصية <b>title</b> الصف —
+          مرّر الفأرة فوق السبب لتراه عند الحاجة للمراجعة الفنية.</span>
+        </div>
+
+        <div class="dg-warn">
+          <span class="ic">⚠️</span>
+          <span><b>انتبه:</b> «عنوان الجهاز غير مطابق» سببه غالبًا أن المشترك بدّل جهازه أو
+          فعّل <b>الماك الخاص/العشوائي</b> في إعدادات الواي فاي بجواله — أكثر سبب يُربك الزبائن
+          ولا علاقة له بكلمة المرور.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 5 ════ #}
+    <section class="dg-step" id="dg-s5">
+      <div class="dg-badge">5</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-filter"></i> الفلاتر — ضيّق على ما تبحث عنه</h2>
+        <p>
+          في حزام الفلترة أعلى كل صفحة:
+        </p>
+        <ul>
+          <li><strong>بحث:</strong> يبحث في اسم الدخول وعنوان الشبكة وعنوان الجهاز وجهاز الشبكة معًا.</li>
+          <li><strong>الحالة:</strong> «كل الحالات» / «نجاح» / «فشل» (مخفي في صفحة المدراء).</li>
+          <li><strong>المصدر:</strong> «كل المصادر» / «البوابة» / «شبكة المصادقة» (للمشتركين والكروت).</li>
+          <li><strong>من تاريخ / إلى تاريخ:</strong> نطاق زمني يُطبّق على مستوى قاعدة البيانات.</li>
+        </ul>
+
+        <div class="dg-mock" aria-hidden="true" style="max-width:480px">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">دخول المشتركين › الفلاتر</span></div>
+          <div class="dg-mock-body">
+            <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center">
+              <span style="flex:1;min-width:120px;border:1.5px solid #c4b5fd;background:#faf5ff;border-radius:8px;padding:7px 10px;font-size:10.5px;color:#94a3b8">🔎 ابحث باسم/عنوان…</span>
+              <span style="border:1.5px solid #e2e8f0;border-radius:8px;padding:7px 10px;font-size:10.5px;font-weight:800;color:#b91c1c">فشل ▾</span>
+              <span style="border:1.5px solid #e2e8f0;border-radius:8px;padding:7px 10px;font-size:10.5px;font-weight:800;color:#475569">شبكة المصادقة ▾</span>
+              <span style="font-size:10.5px;font-weight:900;color:#fff;background:linear-gradient(135deg,#7c3aed,#5b21b6);border-radius:8px;padding:7px 12px"><i class="fa-solid fa-filter"></i> تطبيق</span>
+            </div>
+          </div>
+        </div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> يظهر رابط «إعادة ضبط» متى كان هناك فلتر نشط — يمسح الكل بنقرة.</div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 6 ════ #}
+    <section class="dg-step" id="dg-s6">
+      <div class="dg-badge">6</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-magnifying-glass-chart"></i> مهمة عملية: مين حاول يدخل وفشل اليوم؟</h2>
+        <p>
+          خلّينا نطبّق كل ما سبق في سيناريو يومي شائع — جواب سريع في ثلاث نقرات:
+        </p>
+        <ul>
+          <li><strong>افتح</strong> «حالات دخول المشتركين» (أو الكروت حسب زبونك).</li>
+          <li><strong>اضبط الحالة</strong> على «فشل»، و«من/إلى تاريخ» على <strong>اليوم</strong>، ثم «تطبيق».</li>
+          <li><strong>اقرأ عمود السبب:</strong> «كلمة مرور خاطئة» = الزبون يكتب خطأ؛ «اشتراك منتهٍ»
+              = جدّد له؛ «عنوان الجهاز غير مطابق» = حدّث الماك أو اطلب منه إيقاف الماك العشوائي.</li>
+          <li><strong>صدّر</strong> النتيجة (CSV/Excel/PDF) إن أردت مشاركتها أو حفظها.</li>
+        </ul>
+
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة احترافية:</b> لو نفس الجهة تتكرر بفشل «كلمة مرور خاطئة» عشرات المرات
+          من عنوان غريب — فهذه محاولة تخمين، لا زبون ناسٍ لكلمته. راقب عمودي الشبكة والجهاز.</span>
+        </div>
+
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>وبعدين؟</b> لمتابعة الجلسات الناجحة والاستهلاك انتقل إلى «تقارير الجلسات»،
+          ولأعطال السرعة والفصل إلى عائلة «الشبكة والجلسات» — كلها في نفس مركز التقارير.</span>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+{# ── scrollspy خفيف: يبرز بند الفهرس المقابل للخطوة الظاهرة ── #}
+<script>
+(function(){
+  'use strict';
+  var links = Array.prototype.slice.call(document.querySelectorAll('[data-dg-toc]'));
+  if (!links.length || !('IntersectionObserver' in window)) return;
+  var map = {};
+  links.forEach(function(a){ map[a.getAttribute('href').slice(1)] = a; });
+  var obs = new IntersectionObserver(function(entries){
+    entries.forEach(function(en){
+      if (!en.isIntersecting) return;
+      links.forEach(function(a){ a.classList.remove('is-active'); });
+      var a = map[en.target.id];
+      if (a) a.classList.add('is-active');
+    });
+  }, { rootMargin: '-35% 0px -55% 0px' });
+  Object.keys(map).forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) obs.observe(el);
+  });
+})();
+</script>
+
+{% endblock %}

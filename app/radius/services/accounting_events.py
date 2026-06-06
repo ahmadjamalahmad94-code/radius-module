@@ -135,6 +135,12 @@ class AccountingEventsService:
         existing = self._open_session(event)
         if existing:
             return {"status": "idempotent", "session": existing}
+        # ميزة «بطاقة مشتركة / يومية»: قبل تسجيل الجلسة الجديدة نفصل أي
+        # جلسة سابقة فعّالة لنفس الاسم إن كانت بطاقته تنتمي لعرض عليه علم
+        # shared_single_session=1 (جلسة واحدة فعّالة — الدخول الجديد يفصل
+        # القديم). نعيد استخدام disconnect_user (نفس مسار CoA الذي يستخدمه
+        # زر «قطع اتصال» في صفحة المتصلين) — لا نُعيد تنفيذ منطق الفصل.
+        kick_summary = self._maybe_kick_previous_shared_session(event)
         now = _utcnow()
         cur = db().execute(
             """
@@ -160,7 +166,93 @@ class AccountingEventsService:
                 event["session_time"],
             ),
         )
-        return {"status": "started", "session": dict(db().execute("SELECT * FROM radacct WHERE radacctid = ?", (cur.lastrowid,)).fetchone())}
+        result = {"status": "started", "session": dict(db().execute("SELECT * FROM radacct WHERE radacctid = ?", (cur.lastrowid,)).fetchone())}
+        if kick_summary is not None:
+            result["shared_session_kick"] = kick_summary
+        return result
+
+    def _plan_requires_single_session(self, *, tenant_id: int, username: str) -> bool:
+        """True عندما يكون اسم المستخدم بطاقةً تنتمي لعرض عليه علم
+        shared_single_session=1 (بطاقة مشتركة/يومية — مقعد واحد).
+
+        نطابق الكرت باسم المستخدم داخل نفس المستأجِر (كما يفعل
+        _selected_online_row في صفحة المتصلين)، ثم نقرأ علم العرض. أي
+        خطأ/غياب جدول يُعامَل كـ «لا إنفاذ» (نُرجع False) حتى لا يكسر
+        مسار المحاسبة الحرِج أبدًا."""
+        if not username:
+            return False
+        try:
+            row = db().execute(
+                """
+                SELECT p.shared_single_session AS flag
+                  FROM cards c
+                  JOIN access_plans p ON p.id = c.plan_id
+                 WHERE c.tenant_id = ? AND c.username = ?
+                 ORDER BY c.id DESC
+                 LIMIT 1
+                """,
+                (int(tenant_id), username),
+            ).fetchone()
+        except Exception:  # noqa: BLE001 — never break accounting on a lookup error
+            return False
+        return bool(row and row["flag"])
+
+    def _maybe_kick_previous_shared_session(
+        self, event: dict[str, Any]
+    ) -> dict[str, Any] | None:
+        """يفصل الجلسات السابقة الفعّالة لاسم مستخدم بطاقة مشتركة قبل بدء
+        الجلسة الجديدة.
+
+        يُرجع None عندما لا ينطبق الإنفاذ (ليس بطاقة مشتركة، أو لا اسم
+        مستخدم). وإلا يُرجع ملخّص بالنتيجة. آمن: أي استثناء يُبتلَع — لا
+        يُسمح له بكسر تسجيل الجلسة.
+
+        التوقيت: الإنفاذ يحدث عند Accounting-Start، أي بعد أن يكون NAS قد
+        قبِل المصادقة وبدأ الجلسة الجديدة فعليًا. لذلك «الدخول الجديد يفصل
+        القديم» وليس «يمنع الدخول الجديد» — وهو ما يطابق سلوك البطاقة
+        المشتركة المطلوب (طرد المستخدم السابق ليُكمل الجديد)."""
+        tenant_id = int(event["tenant_id"])
+        username = event["username"]
+        new_session_id = event["acct_session_id"]
+        if not self._plan_requires_single_session(
+            tenant_id=tenant_id, username=username
+        ):
+            return None
+        try:
+            from ..integration.radius_coa import (
+                disconnect_user,
+                find_all_nas_for_sessions,
+            )
+
+            # كل جلسات هذا الاسم الفعّالة الآن (قبل INSERT للجلسة الجديدة).
+            # نستثني الجلسة الجديدة نفسها بالمعرّف احتياطًا لو سبق NAS
+            # وكتب صفًّا لها (مسارنا يكتب لاحقًا، لكن FreeRADIUS الإنتاجي
+            # قد يكون كتب الصف قبل وصول هذا الحدث).
+            sessions = find_all_nas_for_sessions(tenant_id, username)
+            stale_ids = [
+                s["session_id"]
+                for s in sessions
+                if s.get("session_id") and s["session_id"] != new_session_id
+            ]
+            if not stale_ids:
+                return {"kicked": 0, "reason": "no_previous_session"}
+            res = disconnect_user(tenant_id, username, session_ids=stale_ids)
+            return {
+                "kicked": len(stale_ids),
+                "coa_ok": bool(getattr(res, "ok", False)),
+                "coa_code": getattr(res, "code_name", ""),
+                "session_ids": stale_ids,
+            }
+        except Exception as exc:  # noqa: BLE001
+            try:
+                import logging
+
+                logging.getLogger("app.radius.accounting").warning(
+                    "shared-session kick failed for %s: %s", username, exc
+                )
+            except Exception:  # noqa: BLE001
+                pass
+            return {"kicked": 0, "error": str(exc)}
 
     def _interim(self, event: dict[str, Any]) -> dict[str, Any]:
         now = _utcnow()

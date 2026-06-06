@@ -64,11 +64,17 @@ def test_business_os_sidebar_contains_existing_get_html_routes(app):
         "التواصل والحملات": "/admin/radius/communications",
         "الأحداث والمخاطر": "/admin/radius/events",
         "مركز العمليات": "/admin/radius/operations",
-        "إدارة السرعات": "/admin/radius/operations/speed-control",
+        # قسم «التحكم بالسرعة» المستقل (بلا طبقة فرعية مزدوجة):
+        # صفحتان شقيقتان — «مجدول» و«يدوي».
+        "التحكم بالسرعة": "/admin/radius/operations/speed-control",
+        "مجدول": "/admin/radius/operations/speed-control",
+        "يدوي": "/admin/radius/operations/speed-control/manual",
         # Reports are consolidated into 5 hubs; the per-report links live in
         # each report page's two-level in-section nav, not the sidebar.
         "التقارير التنفيذية": "/admin/radius/reports",
-        "الدخول والأمان": "/admin/radius/reports/login_states",
+        # Login states hub: sidebar entry renamed to the landing page title;
+        # the actor sub-pages share the same path via ?actor=… query params.
+        "حالات تسجيل الدخول": "/admin/radius/reports/login_states",
         "الشبكة والجلسات": "/admin/radius/reports/sessions",
         "النشاط والأحداث": "/admin/radius/reports/manager_events",
         "المالية والموازنات": "/admin/radius/reports/used_cards",
@@ -135,6 +141,7 @@ def test_business_os_sidebar_referenced_routes_render_html(app):
         "/admin/radius/events/investigations",
         "/admin/radius/operations",
         "/admin/radius/operations/speed-control",
+        "/admin/radius/operations/speed-control/manual",
         "/admin/radius/reports",
         "/admin/radius/reports/financial",
         "/admin/radius/reports/login_states",

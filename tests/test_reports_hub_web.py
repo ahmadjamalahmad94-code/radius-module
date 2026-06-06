@@ -1,9 +1,9 @@
-"""Reports hubs consolidation (R1–R5).
+"""Reports hubs consolidation (R1–R5) — updated 2026-06.
 
-UI-only: the ~21 report sidebar entries collapse into 5 hub entries
-(تنفيذية / دخول وأمان / شبكة وجلسات / نشاط وأحداث / مالية). Every report
-page gains a shared two-level in-section nav (reports_nav.html): the 5
-hubs on top, the active hub's reports below — no 19-pill overload. All
+UI-only: navigation lives in the sidebar (5 families × per-report
+entries), and every report page carries ONE compact «انتقال سريع»
+switcher (reports_nav.html → _partials/report_jump.html) injected in
+the hero title row instead of the old two stacked pill bars. All
 report queries/filters/exports are untouched, and تقارير المحاسبة
 (finance_reports) stays a cross-link to the accounting hub.
 """
@@ -91,24 +91,29 @@ def test_active_group_shows_its_report_pills(app):
     with app.test_client() as client:
         _auth(client)
         html = client.get("/admin/radius/reports/sessions").get_data(as_text=True)
-    # the network hub's reports appear as second-row pills
+    # the network family's sibling reports appear as options in the
+    # compact «انتقال سريع» switcher (and as sidebar entries)
     for label in ("تقارير الجلسات", "سجل تغييرات الماك", "فشل الفصل/التحديث"):
         assert label in html, label
 
 
-def test_sidebar_collapsed_to_five_report_hubs(app):
+def test_sidebar_groups_reports_into_five_families(app):
+    """قرار المشغّل (2026-06): شريطا التبويب الكبيران أُزيلا من رأس صفحات
+    التقارير، والتنقّل الكامل انتقل إلى الشريط الجانبي — 5 عوائل بعناوين
+    فرعية وكل تقرير بند ظاهر تحت عائلته."""
     with app.test_client() as client:
         _auth(client)
         html = client.get("/admin/radius/").get_data(as_text=True)
+    # عناوين العوائل الخمس
     for label in ("التقارير التنفيذية", "الدخول والأمان", "الشبكة والجلسات",
                   "النشاط والأحداث", "المالية والموازنات"):
         assert label in html, label
     # cross-link to the accounting hub stays
     assert "تقارير المحاسبة" in html
-    # individual report sub-labels are no longer in the sidebar (they live
-    # in the in-section nav on report pages, which the dashboard does not show)
-    assert "سجل تغييرات الماك" not in html
-    assert "كروت الشحن المستخدمة" not in html
+    # individual report sub-labels now LIVE in the sidebar (one entry each)
+    for label in ("حالات تسجيل الدخول", "سجل تغييرات الماك", "كروت الشحن المستخدمة",
+                  "معاملات الكاش", "تحويلات الرصيد", "أحداث المدراء"):
+        assert label in html, label
 
 
 def test_exports_and_archive_post_stay_standalone(app):

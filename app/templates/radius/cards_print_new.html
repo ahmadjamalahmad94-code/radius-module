@@ -331,6 +331,68 @@
     border-color:#f59e0b;
     box-shadow:0 0 0 3px rgba(245,158,11,.18);
   }
+
+  /* ── بطاقة «كيف تعمل هذه الصفحة» — خطوات مرقّمة أنيقة ──
+     بديل لوحة المساعدة العامة التي كانت تظهر بشكل عارٍ أسفل
+     النموذج على الشاشات الضيقة: بطاقة بسطح واضح، شارات أرقام
+     بنفسجية، وخط رابط عمودي بين الخطوات. */
+  .pc-help{
+    background:#fff;
+    border:1px solid #e2e8f0;
+    border-radius:14px;
+    box-shadow:0 1px 2px rgba(15,23,42,.04);
+    overflow:hidden;
+    align-self:start;
+  }
+  .pc-help-head{
+    display:flex; align-items:center; gap:10px;
+    padding:14px 16px;
+    background:linear-gradient(135deg,#eef2ff,#faf5ff);
+    border-bottom:1px solid #e9e5ff;
+  }
+  .pc-help-head .ic{
+    width:34px; height:34px; border-radius:10px; flex:0 0 auto;
+    background:linear-gradient(135deg,#4f46e5,#7c3aed);
+    color:#fff; display:grid; place-items:center; font-size:14px;
+    box-shadow:0 4px 10px rgba(79,70,229,.28);
+  }
+  .pc-help-head .t{ font-size:13.5px; font-weight:900; color:#1e1b4b }
+  .pc-help-head .s{ font-size:11px; font-weight:700; color:#6d28d9; display:block; margin-top:1px }
+  .pc-help-body{ padding:16px }
+  .pc-help-steps{ list-style:none; margin:0; padding:0; counter-reset:pcstep }
+  .pc-help-steps li{
+    position:relative;
+    display:flex; align-items:flex-start; gap:12px;
+    padding:0 0 18px;
+  }
+  .pc-help-steps li:last-child{ padding-bottom:0 }
+  /* الخط الرابط بين شارات الأرقام */
+  .pc-help-steps li:not(:last-child)::before{
+    content:'';
+    position:absolute; top:28px; bottom:0;
+    inset-inline-start:13px;
+    width:2px; border-radius:2px;
+    background:linear-gradient(180deg,#c7d2fe,#ede9fe);
+  }
+  .pc-help-steps .n{
+    counter-increment:pcstep;
+    width:28px; height:28px; border-radius:50%; flex:0 0 auto;
+    background:#eef2ff; color:#4338ca;
+    border:1.5px solid #c7d2fe;
+    display:grid; place-items:center;
+    font-size:12px; font-weight:900;
+    position:relative; z-index:1;
+  }
+  .pc-help-steps .n::after{ content:counter(pcstep) }
+  .pc-help-steps .tx{ font-size:12.5px; color:#334155; line-height:1.75; padding-top:4px }
+  .pc-help-steps .tx b{ color:#0f172a; font-weight:800 }
+  .pc-help-note{
+    display:flex; align-items:flex-start; gap:9px;
+    margin-top:14px; padding:11px 13px;
+    background:#fffbeb; border:1px solid #fde68a; border-radius:10px;
+    font-size:11.5px; font-weight:700; color:#92400e; line-height:1.7;
+  }
+  .pc-help-note i{ margin-top:2px; color:#d97706; flex:0 0 auto }
 </style>
 {% endblock %}
 
@@ -347,17 +409,45 @@
   '
 ) }}
 
-{% call hub.worklayout(aside_html=hub.helppanel(
-  "كيف تعمل هذه الصفحة",
-  intro="ثلاث خطوات سريعة لتحويل ملف كروت جاهز إلى حزمة طباعة احترافية.",
-  icon="circle-question",
-  items=[
-    {"icon": "box-archive", "text": "اكتب اسم الحزمة وسعرها (السعر اختياري)."},
-    {"icon": "wand-magic-sparkles", "text": "ارفع الملف ثم اضغط «حلّل» — المحرّك يكتشف الأعمدة تلقائياً."},
-    {"icon": "list-check", "text": "راجع النص المستخرج، عدّله إن لزم، ثم احفظ الحزمة."},
-  ],
-  note="بطاقات الطباعة لا تُرحَّل إلى خدمة المصادقة ولا تسمح بتسجيل الدخول — هي للطباعة فقط."
-)) %}
+{# بطاقة خطوات مرقّمة مخصصة — بدل لوحة المساعدة العامة التي كانت
+   تظهر عارية أسفل النموذج (شارات أرقام بنفسجية + خط رابط + سطح
+   بطاقة يطابق نظام التصميم). #}
+{% set _pc_help %}
+<aside class="pc-help" aria-label="كيف تعمل هذه الصفحة">
+  <div class="pc-help-head">
+    <span class="ic"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
+    <span>
+      <span class="t">كيف تعمل هذه الصفحة؟</span>
+      <span class="s">ثلاث خطوات لحزمة طباعة جاهزة</span>
+    </span>
+  </div>
+  <div class="pc-help-body">
+    <ol class="pc-help-steps">
+      <li>
+        <span class="n" aria-hidden="true"></span>
+        <span class="tx"><b>عرّف الحزمة:</b> اكتب اسم الحزمة وسعرها
+          (السعر اختياري — يظهر على ملف الطباعة).</span>
+      </li>
+      <li>
+        <span class="n" aria-hidden="true"></span>
+        <span class="tx"><b>حلّل الملف:</b> ارفع ملف الكروت ثم اضغط
+          «حلّل» — المحرّك يكتشف أعمدة اليوزر والباسورد تلقائيًا.</span>
+      </li>
+      <li>
+        <span class="n" aria-hidden="true"></span>
+        <span class="tx"><b>راجع واحفظ:</b> دقّق النص المستخرج، عدّله
+          إن لزم، ثم احفظ دفعة الطباعة.</span>
+      </li>
+    </ol>
+    <div class="pc-help-note">
+      <i class="fa-solid fa-circle-info"></i>
+      <span>بطاقات الطباعة لا تُرحَّل إلى خدمة المصادقة ولا تسمح
+        بتسجيل الدخول — هي للطباعة فقط.</span>
+    </div>
+  </div>
+</aside>
+{% endset %}
+{% call hub.worklayout(aside_html=_pc_help) %}
 
 <form method="post" action="{{ url_for('radius.cards_print_new') }}">
   {{ csrf_token_input() | safe }}
@@ -386,7 +476,7 @@
 
     <div style="margin-top:10px;font-size:12px;color:#64748b;line-height:1.7">
       <i class="fa-solid fa-shield-halved" style="color:#15803d"></i>
-      الأسعار اختيارية. البطاقات هذي للطباعة فقط ولن تظهر في خدمة المصادقة أو تسمح بتسجيل الدخول.
+      الأسعار اختيارية. هذه البطاقات للطباعة فقط ولن تظهر في خدمة المصادقة أو تسمح بتسجيل الدخول.
     </div>
   {% endcall %}
 
@@ -400,7 +490,7 @@
         <span class="title">ارفع الملف ثم اضغط «حلّل»</span>
         {% if engine_version %}
         <span class="build-chip" title="نسخة المحرّك">
-          <i class="fa-solid fa-microchip" aria-hidden="true"></i> اصدار <span dir="ltr">{{ engine_version }}</span>
+          <i class="fa-solid fa-microchip" aria-hidden="true"></i> إصدار <span dir="ltr"><bdi>{{ engine_version }}</bdi></span>
         </span>
         {% endif %}
       </div>

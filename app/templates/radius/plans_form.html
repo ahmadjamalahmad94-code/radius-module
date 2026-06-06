@@ -26,7 +26,12 @@
     gap: var(--hub-gap-section);
     align-items: start;
   }
-  .pl-side{ grid-column: 2; }
+  .pl-side{ grid-column: 2; grid-row: 1; }
+  /* إصلاح الصفحة الفارغة: الـ aside يأتي أولًا في الـ DOM ومثبَّت على
+     العمود 2، فمؤشر التوزيع التلقائي في Grid لا يرجع للخلف — كان النموذج
+     يُرمى للصف الثاني تاركًا مساحة بيضاء بارتفاع لوحة الأقسام كاملة.
+     تثبيت النموذج صراحةً في (الصف 1، العمود 1) يعيده بجانب اللوحة. */
+  .pl-layout > form{ grid-column: 1; grid-row: 1; min-width: 0; }
   @media (max-width: 980px){
     .pl-layout{ display:block; }
     .pl-side{ position: static !important; margin-bottom: var(--hub-gap-section); }
@@ -203,9 +208,9 @@
     color: var(--hub-brand-ink);
   }
 
-  /* ── Service-type card selector (#33) — same pattern as the subscriber
-     form's uf-svc-cards, but single-choice (radio) since the plans backend
-     expects ONE service_type value. ── */
+  /* ── Service-type card selector (#33/#41) — same pattern as the subscriber
+     form's uf-svc-cards. أصبح متعدد الاختيار (checkbox): خدمة واحدة أو
+     الاثنتان معًا — الراوت يجمع الاختيارات إلى Hotspot / PPPoE / Both. ── */
   .pl-svc-cards{
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -238,6 +243,33 @@
   .pl-svc-body{ display: flex; flex-direction: column; gap: 2px; min-width: 0; }
   .pl-svc-title{ font-weight: 800; color: var(--hub-text); font-size: 14px; }
   .pl-svc-sub  { font-size: 11.5px; color: var(--hub-text-mute); }
+
+  /* ── قسم السرعة (#42) ──
+     1) زوج «التنزيل + الرفع» (وكذلك زوج CIR) في صف واحد دائمًا —
+        كل حقل قيمة+وحدة مدموجة بنمط .bc-time-group / unit_input.
+     2) ارتفاع موحَّد لكل خلايا القسم (إدخال / قائمة / بطاقة تبديل)
+        حتى تصطف الشبكة على خط واحد. */
+  .pl-speed-pair{
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  /* يبقى الزوج جنبًا إلى جنب حتى على الشاشات الضيقة — هذا هو المطلوب. */
+  .pl-section--speed .pl-grid .hub-input,
+  .pl-section--speed .pl-grid .hub-select,
+  .pl-section--speed .pl-grid .ui-wrap,
+  .pl-section--speed .pl-grid .pl-chk{
+    height: 42px;
+    box-sizing: border-box;
+  }
+  .pl-section--speed .pl-grid .ui-wrap .ui-value{ padding-top:0; padding-bottom:0; }
+  .pl-section--speed .pl-grid .pl-chk{ padding-top:0; padding-bottom:0; align-items:center; }
+  /* المفتاح (tsw) له صندوقه الخاص — داخل خلية موحَّدة الارتفاع نلغي
+     صندوقه الداخلي حتى لا يتجاوز 42px ولا تتكرر الحدود. */
+  .pl-section--speed .pl-grid .pl-chk .tsw{
+    min-height:0; padding:0; border:0; background:transparent;
+  }
 </style>
 {% endblock %}
 
@@ -308,18 +340,20 @@
               {% endfor %}
             </select>
             <div class="help">يحدد ما الذي يُحاسَب عليه العرض: وقت أم حصة أم الاثنان.</div></div>
-          {# #33: نوع الخدمة becomes a two-card single-choice selector (هوت سبوت /
-             برودباند) reusing the subscriber form's service-type card pattern.
-             رصيد/قسيمة/أخرى dropped from this form. Backend still receives the
-             exact same string values it expects: "Hotspot" or "PPPoE".
-             Mapping of any legacy stored value → Hotspot unless it's PPPoE. #}
+          {# #33/#41: نوع الخدمة — بطاقتان متعددتا الاختيار (checkbox) مثل
+             نموذج المشترك تمامًا: يمكن اختيار «هوت سبوت» أو «برودباند» أو
+             الاثنتين معًا. الراوت يجمع القيم المختارة إلى قيمة واحدة في
+             نفس العمود service_type: "Hotspot" أو "PPPoE" أو "Both".
+             أي قيمة قديمة محفوظة تُفسَّر: pppoe/broadband → برودباند،
+             both → الاثنتان، وغير ذلك → هوت سبوت. #}
           <div class="pl-field full"><label>نوع الخدمة</label>
             {%- set _svc = (plan.service_type or '')|lower -%}
-            {%- set _svc_pppoe = _svc in ('pppoe','broadband') -%}
+            {%- set _svc_pppoe = _svc in ('pppoe','broadband','both') -%}
+            {%- set _svc_hs = (_svc not in ('pppoe','broadband')) -%}
             <div class="pl-svc-cards">
-              <label class="pl-svc-card {% if not _svc_pppoe %}is-checked{% endif %}">
-                <input type="radio" name="service_type" value="Hotspot"
-                  {% if not _svc_pppoe %}checked{% endif %}>
+              <label class="pl-svc-card {% if _svc_hs %}is-checked{% endif %}">
+                <input type="checkbox" name="service_type" value="Hotspot"
+                  {% if _svc_hs %}checked{% endif %}>
                 <span class="pl-svc-icon"><i class="fa-solid fa-wifi"></i></span>
                 <span class="pl-svc-body">
                   <span class="pl-svc-title">هوت سبوت</span>
@@ -327,7 +361,7 @@
                 </span>
               </label>
               <label class="pl-svc-card {% if _svc_pppoe %}is-checked{% endif %}">
-                <input type="radio" name="service_type" value="PPPoE"
+                <input type="checkbox" name="service_type" value="PPPoE"
                   {% if _svc_pppoe %}checked{% endif %}>
                 <span class="pl-svc-icon"><i class="fa-solid fa-plug"></i></span>
                 <span class="pl-svc-body">
@@ -336,7 +370,7 @@
                 </span>
               </label>
             </div>
-            <div class="help">طريقة تقديم الخدمة للمشترك: هوت سبوت (بوابة دخول) أو برودباند.</div></div>
+            <div class="help">يمكنك اختيار خدمة واحدة أو الاثنتين معًا (هوت سبوت + برودباند).</div></div>
           <div class="pl-field"><label>الحالة</label>
             <div class="pl-chk">
               {{ toggle_switch(name="enabled", checked=(plan.enabled or is_new), value="1", id="pl-en") }}
@@ -381,24 +415,32 @@
            Non-burst speed fields (CIR + توزيع متساوٍ + غير محدود ليلًا) stay
            visible. #}
         <div class="pl-grid">
+          {# #42: زوج التنزيل/الرفع في صف واحد دائمًا — كل حقل قيمة+وحدة
+             مدموجة في خانة واحدة (unit_input بنمط bc-time-group). #}
+          <div class="pl-speed-pair">
+            <div class="pl-field"><label>سرعة التنزيل</label>
+              {{ unit_input_picker(name="speed_down_kbps", value=plan.speed_down_kbps or 0, kind="speed", units=["kbps","Mbps"]) }}
+              <div class="help">أقصى سرعة تنزيل للمشترك.</div></div>
+            <div class="pl-field"><label>سرعة الرفع</label>
+              {{ unit_input_picker(name="speed_up_kbps", value=plan.speed_up_kbps or 0, kind="speed", units=["kbps","Mbps"]) }}
+              <div class="help">أقصى سرعة رفع للمشترك.</div></div>
+          </div>
+          {# #42: زوج CIR كذلك في صف واحد. #}
+          <div class="pl-speed-pair">
+            <div class="pl-field"><label>سرعة مضمونة CIR للتنزيل</label>
+              {{ unit_input_picker(name="cir_down_kbps", value=plan.cir_down_kbps or 0, kind="speed", units=["kbps","Mbps"]) }}
+              <div class="help">الحد الأدنى المضمون للتنزيل عند الازدحام.</div></div>
+            <div class="pl-field"><label>سرعة مضمونة CIR للرفع</label>
+              {{ unit_input_picker(name="cir_up_kbps", value=plan.cir_up_kbps or 0, kind="speed", units=["kbps","Mbps"]) }}
+              <div class="help">الحد الأدنى المضمون للرفع عند الازدحام.</div></div>
+          </div>
+          {# #42: المفاتيح الأربعة في صف واحد بخلايا متساوية الارتفاع. #}
           <div class="pl-field"><label>تفعيل التحكم بالسرعة</label>
             <div class="pl-chk">{{ toggle_switch(name="speed_control_enabled", checked=plan.speed_control_enabled, value="1", id="sc-en") }}</div>
             <div class="help">يفعّل تطبيق حدود السرعة أدناه على المشترك.</div></div>
-          <div class="pl-field"><label>سرعة التنزيل</label>
-            {{ unit_input_picker(name="speed_down_kbps", value=plan.speed_down_kbps or 0, kind="speed", units=["kbps","Mbps"]) }}
-            <div class="help">أقصى سرعة تنزيل للمشترك.</div></div>
-          <div class="pl-field"><label>سرعة الرفع</label>
-            {{ unit_input_picker(name="speed_up_kbps", value=plan.speed_up_kbps or 0, kind="speed", units=["kbps","Mbps"]) }}
-            <div class="help">أقصى سرعة رفع للمشترك.</div></div>
           <div class="pl-field"><label>غير محدود ليلًا</label>
             <div class="pl-chk">{{ toggle_switch(name="nightly_unlimited_enabled", checked=plan.nightly_unlimited_enabled, value="1", id="nu-en") }}</div>
             <div class="help">رفع الحدود خلال الفترة الليلية.</div></div>
-          <div class="pl-field"><label>سرعة مضمونة CIR للتنزيل</label>
-            {{ unit_input_picker(name="cir_down_kbps", value=plan.cir_down_kbps or 0, kind="speed", units=["kbps","Mbps"]) }}
-            <div class="help">الحد الأدنى المضمون للتنزيل عند الازدحام.</div></div>
-          <div class="pl-field"><label>سرعة مضمونة CIR للرفع</label>
-            {{ unit_input_picker(name="cir_up_kbps", value=plan.cir_up_kbps or 0, kind="speed", units=["kbps","Mbps"]) }}
-            <div class="help">الحد الأدنى المضمون للرفع عند الازدحام.</div></div>
           <div class="pl-field"><label>توزيع متساوٍ للتنزيل</label>
             <div class="pl-chk">{{ toggle_switch(name="equal_download_speed", checked=(plan.equal_download_speed in [True,1,'1','t','true','on']), value="1", id="eds") }}</div>
             <div class="help">يوزّع سرعة التنزيل بالتساوي بين الجلسات.</div></div>
@@ -738,6 +780,9 @@
           <div class="pl-field"><label>جلسات متزامنة</label>
             <input class="hub-input" type="number" min="1" name="concurrent_sessions" value="{{ plan.concurrent_sessions or 1 }}">
             <div class="help">أقصى عدد أجهزة يتصل بها الحساب في نفس الوقت.</div></div>
+          <div class="pl-field"><label>بطاقة مشتركة — جلسة واحدة فعّالة</label>
+            <div class="pl-chk">{{ toggle_switch(name="shared_single_session", checked=plan.shared_single_session, value="1", on_label="مفعّل", off_label="معطّل") }}</div>
+            <div class="help hub-hint">جلسة واحدة فعّالة — الدخول الجديد يفصل القديم. مناسب لبطاقة يومية يتشاركها زبائن المحل واحدًا تلو الآخر: عند دخول مستخدم جديد بنفس البطاقة يُفصل المستخدم السابق تلقائيًا. (يُطبَّق عند بدء جلسة الجديد).</div></div>
           <div class="pl-field"><label>ربط MAC</label>
             <div class="pl-chk">{{ toggle_switch(name="bind_mac", checked=plan.bind_mac, value="1") }}</div>
             <div class="help">يقيّد الحساب على عنوان MAC أول جهاز يدخل به.</div></div>
@@ -921,18 +966,24 @@
     sync();   // normalize hidden value on load (esp. for the SMS+WhatsApp default)
   });
 
-  // #33: service-type cards — keep .is-checked in sync (single-choice radios)
-  // so the visual selected-state works even without :has() support.
+  // #33/#41: بطاقات نوع الخدمة (checkbox — خدمة أو الاثنتان) — مزامنة
+  // .is-checked بصريًا، ومنع إلغاء آخر اختيار حتى لا تُرسل قيمة فارغة.
   (function(){
     var cards = Array.prototype.slice.call(
-      document.querySelectorAll('.pl-svc-card input[type=radio][name="service_type"]'));
+      document.querySelectorAll('.pl-svc-card input[type=checkbox][name="service_type"]'));
     function refresh(){
       cards.forEach(function(r){
         var card = r.closest('.pl-svc-card');
         if (card) card.classList.toggle('is-checked', r.checked);
       });
     }
-    cards.forEach(function(r){ r.addEventListener('change', refresh); });
+    cards.forEach(function(r){
+      r.addEventListener('change', function(){
+        // لا تسمح بإلغاء كل الاختيارات — أعد تفعيل البطاقة الأخيرة.
+        if (!cards.some(function(c){ return c.checked; })) r.checked = true;
+        refresh();
+      });
+    });
     refresh();
   })();
 

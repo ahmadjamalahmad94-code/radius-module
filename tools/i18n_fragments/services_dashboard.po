@@ -1,0 +1,29 @@
+msgid "تعذّر الاتصال بقاعدة البيانات."
+msgstr "Could not connect to the database."
+
+msgid "RADIUS adapter غير جاهز — افحص الإعدادات."
+msgstr "RADIUS adapter not ready — check the settings."
+
+msgid "استخدام %(label)s مرتفع جدًا (%(v)s%%)."
+msgstr "%(label)s usage is very high (%(v)s%%)."
+
+msgid "استخدام %(label)s مرتفع (%(v)s%%)."
+msgstr "%(label)s usage is high (%(v)s%%)."
+
+msgid "%(n)s مشترك ينتهي اشتراكه خلال 3 أيام."
+msgstr "%(n)s subscriber(s) expiring within 3 days."
+
+msgid "%(n)s مشترك انتهى اشتراكه — جدّد أو احذف."
+msgstr "%(n)s subscriber(s) expired — renew or delete."
+
+msgid "لا توجد كروت متاحة — وَلِّد دفعة جديدة."
+msgstr "No cards available — generate a new batch."
+
+msgid "الكروت المتاحة منخفضة (%(n)s) — جدّد المخزون."
+msgstr "Available cards are low (%(n)s) — replenish stock."
+
+msgid "لا توجد باقات بعد — أنشئ أول باقة."
+msgstr "No plans yet — create your first plan."
+
+msgid "لا توجد أجهزة NAS مُسجَّلة — أضِف router/AP."
+msgstr "No NAS devices registered — add a router/AP."

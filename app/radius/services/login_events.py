@@ -34,6 +34,8 @@ REASON_LABELS = {
     "no_plan": "بدون باقة",
     "out_of_schedule": "خارج وقت السماح",
     "mac_locked": "عنوان الجهاز غير مطابق",
+    "mac_mismatch": "عنوان الجهاز غير مطابق",
+    "random_mac_blocked": "عنوان MAC عشوائي/خاص ممنوع",
     "quota_exceeded": "تجاوز الحصة",
     "concurrency": "تجاوز عدد الأجهزة",
     "bad_password": "كلمة مرور خاطئة",
@@ -148,14 +150,21 @@ def _bound(dt_from: str, dt_to: str) -> tuple[str, str]:
     return (f"{df} 00:00:00" if df else ""), (f"{dt} 23:59:59" if dt else "")
 
 
-def fetch_login_events(tenant_id: int, *, actor: str = "", result: str = "",
-                       source: str = "", q: str = "",
-                       date_from: str = "", date_to: str = "",
-                       limit: int = 600) -> dict:
-    """يبني خط زمني موحّد لحالات الدخول + إحصاءات. يرجّع dict فيه rows + stats."""
+def _collect_rows(tenant_id: int, *, actor: str = "", source: str = "",
+                  date_from: str = "", date_to: str = "") -> list[dict]:
+    """يجمع الصفوف الخام من المصدرين مع دفع فلتر «الفاعل» إلى مستوى الاستعلام:
+
+      • actor=admin     → استعلام الويب فقط مقيّدًا بـ target_type='admin'
+                          (شبكة المصادقة لا تنتج مدراء أصلًا فتُتخطّى كليًا).
+      • actor=subscriber → الويب مقيّد بـ target_type='subscriber'، والشبكة
+                          مقيّدة بـ username NOT IN (أسماء الكروت).
+      • actor=card      → الويب مقيّد بـ target_type='card'، والشبكة مقيّدة
+                          بـ username IN (أسماء الكروت).
+
+    هكذا الفرز دقيق من قاعدة البيانات نفسها — لا اعتماد على غربلة لاحقة.
+    """
     conn = db()
     lo, hi = _bound(date_from, date_to)
-    ql = f"%{q.strip()}%" if q.strip() else ""
     rows: list[dict] = []
 
     # 1) دخول الويب (لوحة + بوابة) من audit_log
@@ -166,6 +175,9 @@ def fetch_login_events(tenant_id: int, *, actor: str = "", result: str = "",
             "WHERE tenant_id = ? AND action IN ('auth_login','auth_login_failed')"
         )
         vals: list = [tenant_id]
+        # فلتر الفاعل على مستوى SQL — target_type يحمل نوع الفاعل عند التسجيل
+        if actor in ("admin", "subscriber", "card"):
+            sql += " AND target_type = ?"; vals.append(actor)
         if lo:
             sql += " AND created_at >= ?"; vals.append(lo)
         if hi:
@@ -183,6 +195,7 @@ def fetch_login_events(tenant_id: int, *, actor: str = "", result: str = "",
                 "username": r["actor"] or r["target_id"] or "—",
                 "success": (r["result_status"] == "success"),
                 "reason": REASON_LABELS.get(reason_code, reason_code),
+                "reason_code": reason_code,
                 "ip": r["ip_address"] or "",
                 "mac": "",
                 "nas": "",
@@ -190,11 +203,18 @@ def fetch_login_events(tenant_id: int, *, actor: str = "", result: str = "",
                 "source": src,
             })
 
-    # 2) مصادقة الشبكة (RADIUS) من radpostauth
-    if source in ("", "network"):
+    # 2) مصادقة الشبكة (RADIUS) من radpostauth — لا تنتج مدراء فتُتخطّى عند actor=admin
+    if source in ("", "network") and actor != "admin":
         sql = ("SELECT id, username, reply, class, nas, authdate FROM radpostauth "
                "WHERE tenant_id = ?")
         vals = [tenant_id]
+        # فلتر الفاعل على مستوى SQL — التصنيف مشترك/كرت عبر جدول الكروت نفسه
+        if actor == "card":
+            sql += " AND username IN (SELECT username FROM cards WHERE tenant_id = ?)"
+            vals.append(tenant_id)
+        elif actor == "subscriber":
+            sql += " AND username NOT IN (SELECT username FROM cards WHERE tenant_id = ?)"
+            vals.append(tenant_id)
         if lo:
             sql += " AND authdate >= ?"; vals.append(lo)
         if hi:
@@ -214,6 +234,7 @@ def fetch_login_events(tenant_id: int, *, actor: str = "", result: str = "",
                     "username": uname or "—",
                     "success": (r["reply"] == "Access-Accept"),
                     "reason": REASON_LABELS.get(reason_code, reason_code),
+                    "reason_code": reason_code,
                     "ip": "",
                     "mac": card_mac.get(uname, ""),
                     "nas": r["nas"] or "",
@@ -221,30 +242,49 @@ def fetch_login_events(tenant_id: int, *, actor: str = "", result: str = "",
                     "source": "network",
                 })
 
-    # فلاتر بايثون (الفاعل / النتيجة / البحث)
+    # السبب يعني فقط للمحاولات الفاشلة
+    for r in rows:
+        if r["success"]:
+            r["reason"] = ""
+            r["reason_code"] = ""
+    return rows
+
+
+def _today_prefix() -> str:
+    """بادئة تاريخ اليوم (UTC) لمطابقة الطوابع الزمنية المخزّنة نصيًا."""
+    from datetime import datetime, timezone
+    return datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+
+def fetch_login_events(tenant_id: int, *, actor: str = "", result: str = "",
+                       source: str = "", q: str = "",
+                       date_from: str = "", date_to: str = "",
+                       limit: int = 600) -> dict:
+    """يبني خط زمني موحّد لحالات الدخول + إحصاءات. يرجّع dict فيه rows + stats."""
+    rows = _collect_rows(tenant_id, actor=actor, source=source,
+                         date_from=date_from, date_to=date_to)
+    ql = q.strip().lower()
+
+    # فلاتر بايثون المتبقية (النتيجة / البحث) — الفاعل صار على مستوى SQL
     def _keep(row: dict) -> bool:
         if actor in ("admin", "subscriber", "card") and row["actor_type"] != actor:
-            return False
+            return False  # صمّام أمان إضافي فوق فلتر SQL
         if result == "success" and not row["success"]:
             return False
         if result == "fail" and row["success"]:
             return False
         if ql:
             blob = f"{row['username']} {row['ip']} {row['mac']} {row['nas']}".lower()
-            if q.strip().lower() not in blob:
+            if ql not in blob:
                 return False
         return True
-
-    # السبب يعني فقط للمحاولات الفاشلة
-    for r in rows:
-        if r["success"]:
-            r["reason"] = ""
 
     rows = [r for r in rows if _keep(r)]
     rows.sort(key=lambda r: r["when"], reverse=True)
     total_matched = len(rows)
-    rows = rows[:limit]
 
+    # الإحصاءات تُحسب على كامل المطابق (قبل القصّ) — أرقام دقيقة لا «أرقام المعروض»
+    today = _today_prefix()
     stats = {
         "total": total_matched,
         "ok": sum(1 for r in rows if r["success"]),
@@ -253,5 +293,33 @@ def fetch_login_events(tenant_id: int, *, actor: str = "", result: str = "",
         "subs": sum(1 for r in rows if r["actor_type"] == "subscriber"),
         "cards": sum(1 for r in rows if r["actor_type"] == "card"),
         "ips": len({r["ip"] for r in rows if r["ip"]}),
+        "today": sum(1 for r in rows if (r["when"] or "").startswith(today)),
+        "today_ok": sum(1 for r in rows if r["success"] and (r["when"] or "").startswith(today)),
+        "today_fail": sum(1 for r in rows if (not r["success"]) and (r["when"] or "").startswith(today)),
+        "uniq_users": len({r["username"] for r in rows if r["username"] and r["username"] != "—"}),
     }
+    rows = rows[:limit]
     return {"rows": rows, "stats": stats, "shown": len(rows), "matched": total_matched}
+
+
+def login_states_overview(tenant_id: int) -> dict:
+    """ملخّص الصفحة الرئيسية لحالات الدخول: عدّادات مصغّرة لكل نوع فاعل.
+
+    يرجّع dict بالشكل:
+        {'admin': {'total':…, 'ok':…, 'fail':…, 'today':…}, 'subscriber': {…}, 'card': {…}}
+    """
+    rows = _collect_rows(tenant_id)
+    today = _today_prefix()
+    out = {k: {"total": 0, "ok": 0, "fail": 0, "today": 0} for k in ("admin", "subscriber", "card")}
+    for r in rows:
+        bucket = out.get(r["actor_type"])
+        if bucket is None:
+            continue
+        bucket["total"] += 1
+        if r["success"]:
+            bucket["ok"] += 1
+        else:
+            bucket["fail"] += 1
+        if (r["when"] or "").startswith(today):
+            bucket["today"] += 1
+    return out

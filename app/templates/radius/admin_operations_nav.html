@@ -16,5 +16,7 @@
   <a class="{{ 'is-active' if url_for('radius.business_operators') == p }}" href="{{ url_for('radius.business_operators') }}"><i class="fa-solid fa-user-tie"></i> المدراء والموزعون</a>
   <a class="{{ 'is-active' if url_for('radius.admins_list') == p }}" href="{{ url_for('radius.admins_list') }}"><i class="fa-solid fa-user-shield"></i> المدراء</a>
   <a class="{{ 'is-active' if url_for('radius.admins_profile_summary') == p }}" href="{{ url_for('radius.admins_profile_summary') }}"><i class="fa-solid fa-id-card"></i> ملخص المدراء</a>
+  {# أسعار العروض للمدراء — سعر خاص لكل (مدير × عرض) حسب الاتفاق #}
+  <a class="{{ 'is-active' if url_for('radius.admin_pricing_page') == p }}" href="{{ url_for('radius.admin_pricing_page') }}"><i class="fa-solid fa-tags"></i> أسعار العروض للمدراء</a>
   <a class="{{ 'is-active' if url_for('radius.distributors_list') == p }}" href="{{ url_for('radius.distributors_list') }}"><i class="fa-solid fa-people-carry-box"></i> الموزعون</a>
 </nav>

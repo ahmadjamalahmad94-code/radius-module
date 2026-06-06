@@ -1,10 +1,14 @@
-{# Network Device — add/edit form (Sprint 1).
+{# Network Device — add/edit form (Sprint 1) — UNIFIED DESIGN SYSTEM.
    Backend data:
      device  — None for create, dict for edit
      routers — [{id, name, address}, …]
-#}
+   UDS pass: bespoke inline-styled grid → hub.hero + hub.worklayout +
+   hub.section/hub-field; the three checkboxes become the canonical
+   toggle_switch. Every field name=, the form action, CSRF token and the
+   router-side Netwatch block are preserved verbatim. Zero behaviour change. #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
+{% from "_partials/toggle_switch.html" import toggle_switch %}
 
 {% set is_edit = device is not none %}
 
@@ -16,190 +20,178 @@
 {% block page_sub %}
   <span class="sub">
     <a href="{{ url_for('radius.network_devices_list') }}"
-       style="color:#6D28D9;text-decoration:none">
+       style="color:var(--hub-brand-ink);text-decoration:none">
       <i class="fa-solid fa-arrow-right"></i> العودة للقائمة
     </a>
   </span>
 {% endblock %}
 
 {% block content %}
-<div class="hr-page-shell" data-admin-rhythm>
 
+{% set _actions %}
+  <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.network_devices_list') }}">
+    <i class="fa-solid fa-arrow-right"></i> العودة للقائمة
+  </a>
+  <button class="hub-btn hub-btn--primary" type="submit" form="nd-form">
+    <i class="fa-solid fa-{{ 'floppy-disk' if is_edit else 'plus' }}"></i>
+    {{ "حفظ التعديلات" if is_edit else "إضافة الجهاز" }}
+  </button>
+{% endset %}
 {{ hub.hero(
   ("تعديل جهاز: " + device.name) if is_edit else "إضافة جهاز شبكة",
-  subtitle=("حدّث بيانات الجهاز أو أعد ربطه بـ راوتر آخر."
+  subtitle=("حدّث بيانات الجهاز أو أعد ربطه براوتر آخر."
             if is_edit else
             "سجّل جهازًا (راوتر فرعي / أكسس بوينت / سويتش / كاميرا / NVR / سيرفر) "
             "ليصبح متاحًا للمراقبة من هنا. لا يلزم أن يكون متّصلًا الآن."),
-  icon="wifi"
+  icon="wifi",
+  actions_html=_actions
 ) }}
 
-<form method="post"
+{% set help_aside = hub.helppanel(
+  "عن أجهزة الشبكة",
+  intro="جهاز الشبكة هو أي عتاد داخل شبكة الراوتر تريد متابعته وإدارته من لوحة الراديوس.",
+  icon="wifi",
+  items=[
+    {"icon": "server",   "text": "اختر الراوتر الذي يقع الجهاز في شبكته الداخلية (LAN)."},
+    {"icon": "ethernet", "text": "احفظ IP و MAC لتفعيل «تجهيز الجهاز للإدارة» و«الفتح عن بُعد»."},
+    {"icon": "eye",      "text": "فعِّل المراقبة الدوريّة ليفحص النظام حالة الجهاز ويحدّثها."},
+    {"icon": "bell",     "text": "فعِّل تنبيه الانقطاع ليصلك إشعار تلجرام عند توقّف الجهاز."}
+  ],
+  note="الجهاز المُعلَّم «مهم» يظهر في لوحة المتابعة وتُفعَّل تنبيهاته."
+) %}
+
+{% call hub.worklayout(aside_html=help_aside) %}
+<form id="nd-form" method="post"
       action="{{ url_for('radius.network_devices_update', device_id=device.id)
                  if is_edit else
-                 url_for('radius.network_devices_create') }}"
-      class="hr-form-card"
-      style="background:#fff;border:1px solid #E5E7EB;border-radius:14px;padding:24px;margin-top:18px">
-
+                 url_for('radius.network_devices_create') }}">
   {{ csrf_token_input() | safe }}
 
-  <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px">
-
-    {# ── الراوتر ── #}
-    <div class="hr-field">
-      <label for="router_id" style="display:block;font-weight:700;font-size:13px;color:#374151;margin-bottom:6px">
-        الراوتر <span style="color:#DC2626">*</span>
-      </label>
-      <select name="router_id" id="router_id" required
-              style="width:100%;padding:9px 12px;border:1px solid #D1D5DB;border-radius:8px;font-size:13px">
-        <option value="">-- اختر الراوتر الذي يتبع له هذا الجهاز --</option>
-        {% for r in routers %}
-          <option value="{{ r.id }}"
-                  {% if device and device.router_id == r.id %}selected{% endif %}>
-            {{ r.name }} ({{ r.address }})
-          </option>
-        {% endfor %}
-      </select>
-      <small style="color:#6B7280;font-size:11.5px;display:block;margin-top:4px">
-        الراوتر الذي يقع الجهاز في شبكته الداخلية (LAN).
-      </small>
-    </div>
-
-    {# ── الاسم ── #}
-    <div class="hr-field">
-      <label for="name" style="display:block;font-weight:700;font-size:13px;color:#374151;margin-bottom:6px">
-        الاسم <span style="color:#DC2626">*</span>
-      </label>
-      <input type="text" name="name" id="name" required
-             value="{{ device.name if device else '' }}"
-             placeholder="مثل: AP الطابق الأول"
-             style="width:100%;padding:9px 12px;border:1px solid #D1D5DB;border-radius:8px;font-size:13px">
-      <small style="color:#6B7280;font-size:11.5px;display:block;margin-top:4px">
-        اسم وصفي يساعدك على تمييز الجهاز.
-      </small>
-    </div>
-
-    {# ── النوع ── #}
-    <div class="hr-field">
-      <label for="device_type" style="display:block;font-weight:700;font-size:13px;color:#374151;margin-bottom:6px">
-        النوع
-      </label>
-      {% set _t = device.device_type if device else 'ap' %}
-      <select name="device_type" id="device_type"
-              style="width:100%;padding:9px 12px;border:1px solid #D1D5DB;border-radius:8px;font-size:13px">
-        <option value="ap"     {% if _t=='ap'     %}selected{% endif %}>أكسس بوينت</option>
-        <option value="router" {% if _t=='router' %}selected{% endif %}>راوتر</option>
-        <option value="switch" {% if _t=='switch' %}selected{% endif %}>سويتش</option>
-        <option value="camera" {% if _t=='camera' %}selected{% endif %}>كاميرا</option>
-        <option value="nvr"    {% if _t=='nvr'    %}selected{% endif %}>NVR</option>
-        <option value="server" {% if _t=='server' %}selected{% endif %}>سيرفر</option>
-        <option value="other"  {% if _t=='other'  %}selected{% endif %}>أخرى</option>
-      </select>
-    </div>
-
-    {# ── IP ── #}
-    <div class="hr-field">
-      <label for="ip_address" style="display:block;font-weight:700;font-size:13px;color:#374151;margin-bottom:6px">
-        IP الجهاز
-      </label>
-      <input type="text" name="ip_address" id="ip_address"
-             value="{{ device.ip_address if device else '' }}"
-             placeholder="192.168.1.10"
-             dir="ltr"
-             style="width:100%;padding:9px 12px;border:1px solid #D1D5DB;border-radius:8px;font-size:13px;font-family:monospace">
-      <small style="color:#6B7280;font-size:11.5px;display:block;margin-top:4px">
-        العنوان الداخلي في الشبكة. اتركه فارغًا إن لم يكن مثبّتًا بعد.
-      </small>
-    </div>
-
-    {# ── MAC ── #}
-    <div class="hr-field">
-      <label for="mac_address" style="display:block;font-weight:700;font-size:13px;color:#374151;margin-bottom:6px">
-        MAC (اختياري)
-      </label>
-      <input type="text" name="mac_address" id="mac_address"
-             value="{{ device.mac_address if device else '' }}"
-             placeholder="AA:BB:CC:DD:EE:FF"
-             dir="ltr"
-             style="width:100%;padding:9px 12px;border:1px solid #D1D5DB;border-radius:8px;font-size:13px;font-family:monospace">
-      <small style="color:#6B7280;font-size:11.5px;display:block;margin-top:4px">
-        مطلوب لخدمة «تجهيز الجهاز للإدارة» (DHCP + IP Binding).
-      </small>
-    </div>
-
-    {# ── الموقع ── #}
-    <div class="hr-field">
-      <label for="location" style="display:block;font-weight:700;font-size:13px;color:#374151;margin-bottom:6px">
-        الموقع
-      </label>
-      <input type="text" name="location" id="location"
-             value="{{ device.location if device else '' }}"
-             placeholder="السطح / المكتب الرئيسي / ..."
-             style="width:100%;padding:9px 12px;border:1px solid #D1D5DB;border-radius:8px;font-size:13px">
-    </div>
-
-    {# ── منفذ الإدارة ── #}
-    <div class="hr-field">
-      <label for="management_port" style="display:block;font-weight:700;font-size:13px;color:#374151;margin-bottom:6px">
-        منفذ الإدارة
-      </label>
-      <input type="number" name="management_port" id="management_port"
-             value="{{ device.management_port if device else 80 }}"
-             min="1" max="65535"
-             style="width:100%;padding:9px 12px;border:1px solid #D1D5DB;border-radius:8px;font-size:13px">
-      <small style="color:#6B7280;font-size:11.5px;display:block;margin-top:4px">
-        80 لواجهة الويب / 443 للاتصال الآمن / 8291 لبرنامج الإدارة. يُستخدم في «فتح جهاز عن بُعد».
-      </small>
-    </div>
-
-    {# ── ملاحظات ── #}
-    <div class="hr-field" style="grid-column:1 / -1">
-      <label for="notes" style="display:block;font-weight:700;font-size:13px;color:#374151;margin-bottom:6px">
-        ملاحظات
-      </label>
-      <textarea name="notes" id="notes" rows="2"
-                placeholder="أي ملاحظة تساعدك عند المراجعة — اسم الزبون، رقم تيكت، ..."
-                style="width:100%;padding:9px 12px;border:1px solid #D1D5DB;border-radius:8px;font-size:13px;resize:vertical">{{ device.notes if device else '' }}</textarea>
-    </div>
-
-    {# ── Toggles ── #}
-    <div class="hr-field" style="grid-column:1 / -1">
-      <div style="display:flex;flex-wrap:wrap;gap:18px;padding:14px 16px;background:#F9FAFB;border-radius:10px;border:1px solid #E5E7EB">
-        <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600;color:#374151">
-          <input type="checkbox" name="is_critical" value="1"
-                 {% if device and device.is_critical %}checked{% endif %}>
-          <span><i class="fa-solid fa-star" style="color:#F59E0B;font-size:12px"></i> جهاز مهم</span>
-        </label>
-        <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600;color:#374151">
-          <input type="checkbox" name="watch_enabled" value="1"
-                 {% if device and device.watch_enabled %}checked{% endif %}>
-          <span><i class="fa-solid fa-eye" style="color:#2563EB;font-size:12px"></i> فعِّل المراقبة الدوريّة</span>
-        </label>
-        <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600;color:#374151">
-          <input type="checkbox" name="alert_enabled" value="1"
-                 {% if device and device.alert_enabled %}checked{% endif %}>
-          <span><i class="fa-solid fa-bell" style="color:#DC2626;font-size:12px"></i> ارسل تنبيه عند الانقطاع</span>
-        </label>
+  {# ── 1. الهوية والربط ─────────────────────── #}
+  {% call hub.section("الهوية والربط", icon="network-wired") %}
+    <div class="hub-form-row">
+      <div class="hub-field">
+        <label class="hub-field-label" for="router_id">الراوتر <span class="req">*</span></label>
+        <select class="hub-select" name="router_id" id="router_id" required>
+          <option value="">-- اختر الراوتر الذي يتبع له هذا الجهاز --</option>
+          {% for r in routers %}
+            <option value="{{ r.id }}"
+                    {% if device and device.router_id == r.id %}selected{% endif %}>
+              {{ r.name }} ({{ r.address }})
+            </option>
+          {% endfor %}
+        </select>
+        <div class="hub-field-hint">الراوتر الذي يقع الجهاز في شبكته الداخلية (LAN).</div>
       </div>
-      <small style="color:#6B7280;font-size:11.5px;display:block;margin-top:6px">
-        عند تفعيل المراقبة والتنبيهات يحفظ النظام هذه الخيارات ويستخدمها في فحص الحالة وإشعارات الانقطاع عند توفر بيانات الاتصال.
-      </small>
+
+      <div class="hub-field">
+        <label class="hub-field-label" for="name">الاسم <span class="req">*</span></label>
+        <input class="hub-input" type="text" name="name" id="name" required
+               value="{{ device.name if device else '' }}"
+               placeholder="أكسس بوينت الطابق الأول">
+        <div class="hub-field-hint">اسم وصفي يساعدك على تمييز الجهاز.</div>
+      </div>
+
+      <div class="hub-field">
+        <label class="hub-field-label" for="device_type">النوع</label>
+        {% set _t = device.device_type if device else 'ap' %}
+        <select class="hub-select" name="device_type" id="device_type">
+          <option value="ap"     {% if _t=='ap'     %}selected{% endif %}>أكسس بوينت</option>
+          <option value="router" {% if _t=='router' %}selected{% endif %}>راوتر</option>
+          <option value="switch" {% if _t=='switch' %}selected{% endif %}>سويتش</option>
+          <option value="camera" {% if _t=='camera' %}selected{% endif %}>كاميرا</option>
+          <option value="nvr"    {% if _t=='nvr'    %}selected{% endif %}>NVR</option>
+          <option value="server" {% if _t=='server' %}selected{% endif %}>سيرفر</option>
+          <option value="other"  {% if _t=='other'  %}selected{% endif %}>أخرى</option>
+        </select>
+      </div>
+
+      <div class="hub-field">
+        <label class="hub-field-label" for="location">الموقع</label>
+        <input class="hub-input" type="text" name="location" id="location"
+               value="{{ device.location if device else '' }}"
+               placeholder="السطح / المكتب الرئيسي / ...">
+      </div>
+    </div>
+  {% endcall %}
+
+  {# ── 2. الشبكة ───────────────────────────────── #}
+  {% call hub.section("الشبكة", icon="ethernet") %}
+    <div class="hub-form-row">
+      <div class="hub-field">
+        <label class="hub-field-label" for="ip_address">IP الجهاز</label>
+        <input class="hub-input mono" type="text" name="ip_address" id="ip_address" dir="ltr"
+               value="{{ device.ip_address if device else '' }}"
+               placeholder="192.168.1.10">
+        <div class="hub-field-hint">العنوان الداخلي في الشبكة. اتركه فارغًا إن لم يكن مثبّتًا بعد.</div>
+      </div>
+
+      <div class="hub-field">
+        <label class="hub-field-label" for="mac_address">MAC (اختياري)</label>
+        <input class="hub-input mono" type="text" name="mac_address" id="mac_address" dir="ltr"
+               value="{{ device.mac_address if device else '' }}"
+               placeholder="AA:BB:CC:DD:EE:FF">
+        <div class="hub-field-hint">مطلوب لخدمة «تجهيز الجهاز للإدارة» (DHCP + IP Binding).</div>
+      </div>
+
+      <div class="hub-field">
+        <label class="hub-field-label" for="management_port">منفذ الإدارة</label>
+        <input class="hub-input" type="number" name="management_port" id="management_port"
+               min="1" max="65535"
+               value="{{ device.management_port if device else 80 }}">
+        <div class="hub-field-hint">80 لواجهة الويب · 443 للاتصال الآمن · 8291 لبرنامج الإدارة. يُستخدم في «الفتح عن بُعد».</div>
+      </div>
+    </div>
+  {% endcall %}
+
+  {# ── 3. الملاحظات والمراقبة ───────────────────── #}
+  {% call hub.section("الملاحظات والمراقبة", icon="eye") %}
+    <div class="hub-field" style="margin-bottom:14px">
+      <label class="hub-field-label" for="notes">ملاحظات</label>
+      <textarea class="hub-textarea" name="notes" id="notes" rows="2"
+                placeholder="أي ملاحظة تساعدك عند المراجعة — اسم الزبون، رقم تذكرة، ...">{{ device.notes if device else '' }}</textarea>
     </div>
 
-  </div>
+    <div class="ndf-toggle-row">
+      <div class="ndf-toggle-text">
+        <span class="ndf-toggle-label">
+          <i class="fa-solid fa-star" style="color:#F59E0B"></i> جهاز مهم
+        </span>
+        <span class="ndf-toggle-meta">يظهر في لوحة المتابعة وتُفعَّل تنبيهاته تلقائيًا.</span>
+      </div>
+      {{ toggle_switch(name="is_critical", id="is_critical", checked=(device.is_critical if device else False)) }}
+    </div>
 
-  {# ── Action buttons ── #}
-  <div style="display:flex;gap:10px;margin-top:24px;padding-top:18px;border-top:1px solid #F3F4F6">
-    <button type="submit" class="hub-btn hub-btn--primary">
-      <i class="fa-solid fa-{{ 'save' if is_edit else 'plus' }}"></i>
-      {{ "حفظ التعديلات" if is_edit else "إضافة الجهاز" }}
-    </button>
-    <a href="{{ url_for('radius.network_devices_list') }}"
-       class="hub-btn hub-btn--ghost">
-      إلغاء
-    </a>
-  </div>
+    <div class="ndf-toggle-row">
+      <div class="ndf-toggle-text">
+        <span class="ndf-toggle-label">
+          <i class="fa-solid fa-eye" style="color:#2563EB"></i> فعِّل المراقبة الدوريّة
+        </span>
+        <span class="ndf-toggle-meta">يفحص النظام اتصال الجهاز دوريًّا ويحدّث حالته في القائمة.</span>
+      </div>
+      {{ toggle_switch(name="watch_enabled", id="watch_enabled", checked=(device.watch_enabled if device else False)) }}
+    </div>
 
+    <div class="ndf-toggle-row">
+      <div class="ndf-toggle-text">
+        <span class="ndf-toggle-label">
+          <i class="fa-solid fa-bell" style="color:#DC2626"></i> أرسل تنبيهًا عند الانقطاع
+        </span>
+        <span class="ndf-toggle-meta">يُرسَل إشعار تلجرام عند توقّف الجهاز (يحتاج إعداد تلجرام مفعّلًا).</span>
+      </div>
+      {{ toggle_switch(name="alert_enabled", id="alert_enabled", checked=(device.alert_enabled if device else False)) }}
+    </div>
+
+    <div class="hub-field-hint" style="margin-top:10px">
+      عند تفعيل المراقبة والتنبيهات يحفظ النظام هذه الخيارات ويستخدمها في فحص الحالة وإشعارات الانقطاع عند توفّر بيانات الاتصال.
+    </div>
+  {% endcall %}
+
+  <div class="hub-flex-row" style="justify-content:flex-end;gap:10px;margin-top:16px">
+    {{ hub.btn("إلغاء", variant="secondary", href=url_for('radius.network_devices_list')) }}
+    {{ hub.btn(("حفظ التعديلات" if is_edit else "إضافة الجهاز"),
+               icon=("floppy-disk" if is_edit else "plus"), variant="primary", type="submit") }}
+  </div>
 </form>
 
 {% if is_edit and device.ip_address %}
@@ -208,23 +200,19 @@
    router itself pings the device every minute and webhooks
    HobeRadius on every flip. Useful when the VPS-side cron
    can't reach the LAN (no hr-wg → LAN route configured). #}
-<section style="background:#F0F9FF;border:1px solid #BAE6FD;border-radius:14px;padding:18px 22px;margin-top:18px">
-  <h3 style="margin:0 0 8px;color:#0C4A6E;font-size:14px;font-weight:800">
-    <i class="fa-solid fa-tower-broadcast"></i> مراقبة من الراوتر (Netwatch)
-  </h3>
-  <p style="margin:0 0 14px;color:#075985;font-size:12.5px;line-height:1.7">
+{% call hub.section("مراقبة من الراوتر (Netwatch)", icon="tower-broadcast") %}
+  <p class="hub-text-mute" style="margin:0 0 14px;font-size:12.5px;line-height:1.8">
     خيار متقدّم: يُفعِّل <code>/tool netwatch</code> على الراوتر بنفسه ليرسل
     تنبيهًا لـ HobeRadius فور تغيُّر حالة الجهاز (انقطاع/عودة). مفيد عندما
     لا يصل خادم الربط مباشرة للشبكة الداخلية. يعمل بالتوازي مع المراقبة الدوريّة من خادم الربط —
     أيّهما يأتي أولًا يُسجَّل، وتنبيه تلجرام يُرسل مرة واحدة خلال فترة التهدئة.
   </p>
-  <div style="display:flex;gap:10px">
+  <div class="hub-flex-row" style="gap:10px">
     <form method="post"
           action="{{ url_for('radius.router_events_netwatch_install', device_id=device.id) }}"
           style="display:inline">
       {{ csrf_token_input() | safe }}
-      <button type="submit" class="hub-btn hub-btn--primary"
-              style="padding:6px 14px;font-size:12.5px">
+      <button type="submit" class="hub-btn hub-btn--primary" style="padding:6px 14px;font-size:12.5px">
         <i class="fa-solid fa-play"></i> فعِّل على الراوتر
       </button>
     </form>
@@ -233,20 +221,31 @@
           onsubmit="return confirm('إزالة netwatch من الراوتر؟');"
           style="display:inline">
       {{ csrf_token_input() | safe }}
-      <button type="submit" class="hub-btn hub-btn--ghost"
-              style="padding:6px 14px;font-size:12.5px">
+      <button type="submit" class="hub-btn hub-btn--ghost" style="padding:6px 14px;font-size:12.5px">
         <i class="fa-solid fa-stop"></i> ألغِ من الراوتر
       </button>
     </form>
   </div>
-  <p style="margin:14px 0 0;color:#0369A1;font-size:11.5px;line-height:1.7">
+  <p class="hub-text-mute" style="margin:14px 0 0;font-size:11.5px;line-height:1.8">
     <i class="fa-solid fa-circle-info"></i>
     يحتاج المتغيّر <code>HOBERADIUS_PUBLIC_URL</code> مضبوطًا في الخادم
     (مثل <code dir="ltr">https://radius.example.com</code>) ليصل الـ webhook
     من الراوتر بنجاح.
   </p>
-</section>
+{% endcall %}
 {% endif %}
+{% endcall %}
 
-</div>
+<style>
+  /* صف مفتاح التبديل: العنوان والوصف في جهة والمفتاح في الجهة المقابلة. */
+  .ndf-toggle-row{
+    display:flex; align-items:center; gap:12px;
+    padding:12px 0; border-bottom:1px dashed var(--hub-border);
+  }
+  .ndf-toggle-row:last-of-type{ border-bottom:0; }
+  .ndf-toggle-text{ display:flex; flex-direction:column; gap:2px; min-width:0; }
+  .ndf-toggle-label{ font-size:13px; font-weight:700; color:var(--hub-text); }
+  .ndf-toggle-meta{ font-size:11.5px; color:var(--hub-text-soft, #6b7280); line-height:1.6; }
+  .ndf-toggle-row .tsw{ margin-inline-start:auto; flex-shrink:0; }
+</style>
 {% endblock %}

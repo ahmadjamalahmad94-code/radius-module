@@ -1,8 +1,10 @@
 {# ═══════════════════════════════════════════════════════════════════════
-   كروت الشحن المستخدمة — UNIFIED DESIGN SYSTEM (megahero + worklayout + help).
-
-   نفس بيانات الـ backend: `items` (صفوف cards used=1), `total`, `filters`.
-   صفر تغيير في المسار/السلوك.
+   كروت الشحن المستخدمة — إعادة تصميم من الصفر على نظام hub_v2:
+     • صدفة هيرو واحدة (hub-hero-shell): عنوان + سطر تعريفي + مؤشرات بصف
+       واحد + حزام الفلترة — بلا أي هيروات/لافتات مكدّسة.
+     • جدول uds موحّد (فرز + ترقيم + تصدير) مع تعريب كل القيم الظاهرة.
+     • نفس معطيات المسار: `items` (صفوف cards used=1)، `total`، `filters`
+       — صفر تغيير على المسار أو السلوك أو عقد الفلاتر (q/date_from/date_to).
    ═══════════════════════════════════════════════════════════════════════ #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
@@ -12,16 +14,32 @@
 {% block page_title %}كروت الشحن المستخدمة{% endblock %}
 {% block page_sub %}<span class="sub">{{ total }} كرت</span>{% endblock %}
 
-{% block content %}
-{% include "radius/reports_nav.html" %}
+{% block head_extra %}{{ super() }}
+{# نظام الجداول الموحد (uds): فرز + ترقيم صفحات + تصدير لجدول الكروت #}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
+{% endblock %}
 
-{# ───── Merged hero: title + subtitle + KPI strip + integrated filters ───── #}
+{% block content %}
+{# متحكّم «انتقال سريع» المضغوط — يُحقن في صف عنوان الهيرو بدل الشريطين الكبيرين #}
+{% set _report_jump %}{% include "radius/reports_nav.html" %}{% endset %}
+
+{# ── مؤشرات مشتقة من نفس `items` (بلا أي استعلام إضافي) ── #}
+{% set _revoked = items|selectattr('revoked')|list|length %}
+{% set _active  = items|length - _revoked %}
+{% set _plans   = items|map(attribute='plan_id')|reject('none')|unique|list|length %}
+
+{# ───── صدفة الهيرو الواحدة: عنوان + سطر تعريفي + مؤشرات بصف واحد + حزام الفلترة ───── #}
+<section class="hub-hero-shell" data-testid="used-cards-hero">
 {% call hub.megahero(
   "كروت الشحن المستخدمة",
-  subtitle="الكروت التي تم استخدامها — تاريخ أول استخدام والجهاز والباقة وتاريخ الانتهاء.",
+  subtitle="كل كرت شحن استُخدم فعليًا — متى فُعّل ومن أي جهاز وعلى أي باقة ومتى ينتهي.",
   icon="ticket",
+  actions_html=_report_jump,
   kpis=[
-    {'label': 'إجمالي المستخدمة', 'value': total, 'icon': 'ticket', 'variant': 'brand'},
+    {'label': 'إجمالي المطابق', 'value': total,        'icon': 'ticket',       'variant': 'brand'},
+    {'label': 'سارية',          'value': _active,       'icon': 'circle-check', 'variant': 'green'},
+    {'label': 'ملغاة',          'value': _revoked,      'icon': 'ban',          'variant': 'red'},
+    {'label': 'باقات مختلفة',   'value': _plans,        'icon': 'tags',         'variant': 'blue'},
   ],
   search_action=url_for('radius.rep_used_cards')
 ) %}
@@ -34,70 +52,64 @@
          value="{{ filters.date_to if filters else '' }}" title="إلى تاريخ">
   {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
   {% if filters and (filters.q or filters.date_from or filters.date_to) %}
-    {{ hub.btn("مسح", icon="rotate-left", variant="ghost", size="sm",
+    {{ hub.btn("إعادة ضبط", icon="rotate-left", variant="ghost", size="sm",
                attrs='onclick="window.location=' + "'" + url_for('radius.rep_used_cards') + "'" + '"') }}
   {% endif %}
+  <span class="hub-hint" tabindex="0"
+        data-hint="البحث يطابق اسم الكرت أو عنوان الجهاز (MAC)، ونطاق التاريخ يعمل على تاريخ أول استخدام. يُعرض حتى 500 كرت."><i class="fa-solid fa-info"></i></span>
 {% endcall %}
+</section>{# /hub-hero-shell #}
 
 {% if items %}
-{# ───── Main (carded table) + help panel on the LEFT ───── #}
-{% call hub.worklayout(aside_html=hub.helppanel(
-  "كيف تقرأ هذا التقرير؟",
-  intro="كل صف هو كرت شحن استُخدم فعليًا — مرتبًا حسب تاريخ أول استخدام.",
-  items=[
-    {'icon': 'circle-play',        'text': '«أول استخدام» هو أول مرة فُعّل فيها الكرت على الشبكة.'},
-    {'icon': 'network-wired',      'text': '«عنوان الجهاز» هو الـ MAC الذي استُخدم الكرت منه.'},
-    {'icon': 'hourglass-end',      'text': '«ينتهي» هو تاريخ انتهاء صلاحية الكرت/الاشتراك.'},
-    {'icon': 'ban',                'text': 'الحالة «محظور» تعني أن الكرت أُلغي بعد استخدامه.'},
-  ],
-  note="هذا التقرير للقراءة فقط — البيانات تأتي مباشرة من جدول الكروت cards."
-)) %}
-  {% call hub.section("الكروت المستخدمة", icon="table-list",
-                      meta=items|length|string + " كرت", flush=True) %}
-    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25"
-         style="border:none;border-radius:0">
-      <table class="hub-table">
-        <thead>
-          <tr>
-            <th class="num" style="width:70px" data-uds-nosort>#</th>
-            <th>اسم الكرت</th>
-            <th>الباقة</th>
-            <th>أول استخدام</th>
-            <th>عنوان الجهاز</th>
-            <th>ينتهي</th>
-            <th data-uds-nosort>الحالة</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for r in items %}
-          <tr>
-            <td class="num mono">{{ r.id }}</td>
-            <td><strong>{{ r.username }}</strong></td>
-            <td>{{ r.plan_name or r.plan_id or '—' }}</td>
-            {% set _fu = r.first_used_at|dt_local if r.first_used_at else '' %}
-            <td class="mono"
-                style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
-              <span class="rep-primary">{{ _fu[:10] or '—' }}</span>
-              <span class="rep-sub">{{ _fu[11:16] }}</span>
-            </td>
-            <td class="mono small">{{ r.used_by_mac or '—' }}</td>
-            <td class="mono"
-                style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
-              {{ r.expire_at|date_local if r.expire_at else '—' }}
-            </td>
-            <td>
-              {% if r.revoked %}{{ hub.pill("محظور", variant="red") }}
-              {% else %}{{ hub.pill("مستخدم", variant="green") }}{% endif %}
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  {% endcall %}
+{# ───── جدول الكروت — uds موحّد (فرز + ترقيم + تصدير) ───── #}
+{% call hub.section("الكروت المستخدمة", icon="table-list",
+                    meta=items|length|string + " كرت", flush=True) %}
+  <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25"
+       style="border:none;border-radius:0">
+    <table class="hub-table rep-table">
+      <thead>
+        <tr>
+          <th class="num" style="width:70px" data-uds-nosort>الرقم</th>
+          <th>اسم الكرت</th>
+          <th>الباقة</th>
+          <th>أول استخدام</th>
+          <th>عنوان الجهاز</th>
+          <th>ينتهي</th>
+          <th data-uds-nosort>الحالة</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in items %}
+        <tr class="{{ 'is-fail' if r.revoked else '' }}">
+          <td class="num mono"><bdi>#{{ r.id }}</bdi></td>
+          <td><strong><bdi>{{ r.username }}</bdi></strong></td>
+          <td>{{ r.plan_name or (('باقة #' ~ r.plan_id) if r.plan_id else '—') }}</td>
+          {% set _fu = r.first_used_at|dt_local if r.first_used_at else '' %}
+          <td class="mono"
+              style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
+            <span class="rep-primary">{{ _fu[:10] or '—' }}</span>
+            <span class="rep-sub">{{ _fu[11:16] }}</span>
+          </td>
+          <td class="mono small"><bdi>{{ r.used_by_mac or '—' }}</bdi></td>
+          <td class="mono"
+              style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
+            {{ r.expire_at|date_local if r.expire_at else '—' }}
+          </td>
+          <td>
+            {% if r.revoked %}{{ hub.pill("ملغى", variant="red") }}
+            {% else %}{{ hub.pill("مستخدم", variant="green") }}{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 {% endcall %}
 {% else %}
 {{ hub.empty("لا كروت مستخدمة مطابقة",
    sub="غيّر الفلاتر أو لا توجد كروت مستخدمة بعد.", icon="ticket") }}
 {% endif %}
+
+{# نظام الجداول الموحد: فرز + ترقيم صفحات + تصدير #}
+<script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
 {% endblock %}

@@ -6,12 +6,13 @@
 {% block page_sub %}<span class="sub">(مجموعة مشاركة #{{ grp.id }} · {{ members|length }} عضو)</span>{% endblock %}
 
 {% block content %}
+{# ───── الصدفة الموحّدة: هيرو + شريط KPI بفاصل ناعم ───── #}
+<section class="hub-hero-shell">
 {{ hub.hero(
   grp.name,
   subtitle="تفاصيل المجموعة وقائمة الأعضاء.",
   icon="people-arrows"
 ) }}
-
 <div class="hub-kpi-grid">
   {{ hub.kpi("الأعضاء", members|length, icon="users", variant="brand") }}
   {{ hub.kpi("الكوتا المشتركة",
@@ -22,6 +23,7 @@
              icon="gauge", variant="blue") }}
   {{ hub.kpi("حد الأعضاء", grp.max_members or '∞', icon="user-plus", variant="grey") }}
 </div>
+</section>{# /hub-hero-shell #}
 
 <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-top:14px">
 

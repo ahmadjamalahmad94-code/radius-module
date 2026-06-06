@@ -270,3 +270,92 @@ def test_portal_pages_do_not_render_admin_navigation_or_routes(app):
     assert "admin-sidebar" not in body
     assert "/admin/radius/users" not in body
     assert "بوابة المشترك" in body
+
+
+# ─── ربط مفاتيح «صفحة المشترك» (portal.*) بالبوابة ───────────────
+
+
+def _set_portal(key: str, value: str) -> None:
+    from app.radius.db.repos import tenants_repo
+    tenants_repo.set_setting(1, key, value)
+
+
+def _login_subscriber(client):
+    token = _csrf(client)
+    return client.post(
+        "/admin/radius/portal/subscriber/login",
+        data={"_csrf_token": token, "username": "portal-user", "password": "portal-pass"},
+        follow_redirects=True,
+    )
+
+
+def test_portal_flags_default_show_all_sections(app):
+    with app.app_context():
+        _subscriber()
+    with app.test_client() as client:
+        body = _login_subscriber(client).get_data(as_text=True)
+    # افتراضيًا كل التبويبات/النماذج ظاهرة
+    assert 'data-tab="usage"' in body
+    assert 'data-tab="billing"' in body
+    assert 'data-tab="requests"' in body
+    assert "subscriber-loan-request-form" in body
+    assert "subscriber-renewal-request-form" in body
+
+
+def test_portal_flag_off_hides_usage_and_invoices_tabs(app):
+    with app.app_context():
+        _subscriber()
+        _set_portal("portal.show_usage", "0")
+        _set_portal("portal.show_invoices", "0")
+    with app.test_client() as client:
+        body = _login_subscriber(client).get_data(as_text=True)
+    assert 'data-tab="usage"' not in body
+    assert 'data-tab="billing"' not in body
+    # تبويب الطلبات ما زال ظاهرًا (مفاتيحه مفعّلة)
+    assert 'data-tab="requests"' in body
+
+
+def test_portal_flag_off_hides_request_forms(app):
+    with app.app_context():
+        _subscriber()
+        _set_portal("portal.allow_loan_request", "0")
+        _set_portal("portal.allow_renewal_request", "0")
+        _set_portal("portal.show_support", "0")
+    with app.test_client() as client:
+        body = _login_subscriber(client).get_data(as_text=True)
+    assert "subscriber-loan-request-form" not in body
+    assert "subscriber-renewal-request-form" not in body
+    # كل النماذج مُعطّلة → تبويب الطلبات يختفي كاملًا
+    assert 'data-tab="requests"' not in body
+
+
+def test_loan_request_post_rejected_with_403_when_disabled(app):
+    with app.app_context():
+        _subscriber()
+        _set_portal("portal.allow_loan_request", "0")
+    with app.test_client() as client:
+        _login_subscriber(client)
+        token = _csrf(client)
+        res = client.post(
+            "/portal/subscriber/loan-request",
+            data={"_csrf_token": token, "requested_minutes": "60", "reason": "x"},
+        )
+    assert res.status_code == 403
+    assert "غير مُفعَّل" in res.get_data(as_text=True)
+
+
+def test_support_post_rejected_with_403_when_support_disabled(app):
+    with app.app_context():
+        _subscriber()
+        _set_portal("portal.show_support", "0")
+        # التجديد مفعّل — للتأكّد أنّ الرفض خاصّ بقناة الدعم ([شكوى]).
+        _set_portal("portal.allow_renewal_request", "1")
+    with app.test_client() as client:
+        _login_subscriber(client)
+        token = _csrf(client)
+        res = client.post(
+            "/portal/subscriber/renewal-request",
+            data={"_csrf_token": token, "reason": "[شكوى] بطء شديد"},
+        )
+    assert res.status_code == 403
+    assert "الدعم" in res.get_data(as_text=True)

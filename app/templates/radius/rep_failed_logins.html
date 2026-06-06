@@ -1,96 +1,146 @@
 {# ═══════════════════════════════════════════════════════════════════════
-   محاولات الدخول الفاشلة — UNIFIED DESIGN SYSTEM (megahero + worklayout + help).
-
-   نفس بيانات الـ backend: `items` (صفوف radpostauth حيث reply != 'Access-Accept')،
-   `total`، `filters`، `limit`. صفر تغيير في المسار/السلوك.
+   فشل دخول الشبكة — إعادة تصميم قوية من الصفر على نظام hub_v2:
+     • صدفة هيرو واحدة (hub-hero-shell): عنوان + سطر تعريفي إنساني +
+       4 مؤشرات بصف واحد + حزام الفلترة 42px — بلا أي هيروات مكدّسة.
+     • جدول uds موحّد (فرز + ترقيم + تصدير) بأعمدة موسّطة تحت رؤوسها،
+       وكل القيم الظاهرة معرّبة (الردّ، السبب) والخام في title / <bdi>.
+     • معطيات المسار: `items` (صفوف radpostauth حيث reply != 'Access-Accept')،
+       `total`، `last24` (فاشلة آخر 24 ساعة)، `filters` (q/date_from/date_to)،
+       `limit=500` — عقد الفلاتر GET كما هو بلا أي تغيير.
    ═══════════════════════════════════════════════════════════════════════ #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}محاولات الدخول الفاشلة{% endblock %}
+{% block title %}فشل دخول الشبكة{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-triangle-exclamation"></i>{% endblock %}
-{% block page_title %}محاولات الدخول الفاشلة{% endblock %}
-{% block page_sub %}<span class="sub">{{ items|length }} محاولة</span>{% endblock %}
+{% block page_title %}فشل دخول الشبكة{% endblock %}
+{% block page_sub %}<span class="sub">{{ total }} محاولة فاشلة</span>{% endblock %}
+
+{% block head_extra %}{{ super() }}
+{# نظام الجداول الموحد (uds): فرز + ترقيم صفحات + تصدير لجدول المحاولات #}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
+{% endblock %}
 
 {% block content %}
-{% include "radius/reports_nav.html" %}
+{# متحكّم «انتقال سريع» المضغوط — يُحقن في صف عنوان الهيرو بدل الشريطين الكبيرين #}
+{% set _report_jump %}{% include "radius/reports_nav.html" %}{% endset %}
 
-{# ───── Merged hero: title + subtitle + KPI strip + integrated filters ───── #}
+{# ── تعريب ردود المصادقة وأسباب الرفض — القيمة الخام تبقى في title ── #}
+{% set REPLY_AR = {
+  'Access-Reject':    'رفض',
+  'Access-Challenge': 'تحقّق إضافي',
+  'Accounting-Response': 'ردّ محاسبة',
+} %}
+{% set REASON_AR = {
+  'expired':         'اشتراك منتهٍ',
+  'disabled':        'حساب معطّل',
+  'no_plan':         'بدون باقة',
+  'out_of_schedule': 'خارج وقت السماح',
+  'mac_locked':      'عنوان الجهاز غير مطابق',
+  'quota_exceeded':  'تجاوز الحصة',
+  'concurrency':     'تجاوز عدد الأجهزة',
+  'bad_password':    'كلمة مرور خاطئة',
+  'unknown_user':    'مستخدم غير معروف',
+  'not_found':       'غير موجود',
+} %}
+
+{# ── مؤشرات مشتقة من نفس المعطيات (بلا أي استعلام إضافي في القالب) ── #}
+{% set _uniq_users = items|map(attribute='username')|unique|list|length %}
+{% set _uniq_nas   = items|map(attribute='nas')|select|unique|list|length %}
+
+{# ── توسيط موحّد لجدول المحاولات: الرؤوس والخلايا تحت أسمائها تمامًا ── #}
+<style>
+.hub-table.rep-table thead th,
+.hub-table.rep-table tbody td{ text-align:center !important; }
+</style>
+
+{# ───── صدفة الهيرو الواحدة: عنوان + سطر تعريفي + مؤشرات بصف واحد + حزام الفلترة ───── #}
+<section class="hub-hero-shell" data-testid="failed-logins-hero">
 {% call hub.megahero(
-  "محاولات الدخول الفاشلة",
-  subtitle="سجل من radpostauth — كل ردّ بخلاف Access-Accept (رفض، خطأ، ضبط).",
+  "فشل دخول الشبكة",
+  subtitle="كل محاولة اتصال بالشبكة رُفضت — من رفضها (جهاز الشبكة)، ولماذا، ومتى. تُجمع مباشرة من سجل المصادقة.",
   icon="triangle-exclamation",
+  actions_html=_report_jump,
   kpis=[
-    {'label': 'إجمالي المحاولات الفاشلة', 'value': total, 'icon': 'triangle-exclamation', 'variant': 'brand'},
+    {'label': 'إجمالي المطابق',     'value': total,       'icon': 'triangle-exclamation', 'variant': 'brand',
+     'sub': 'يُعرض حتى ' ~ limit ~ ' من الأحدث'},
+    {'label': 'آخر 24 ساعة',        'value': last24,      'icon': 'clock',        'variant': 'red'},
+    {'label': 'مستخدمون متأثرون',   'value': _uniq_users, 'icon': 'users',        'variant': 'amber'},
+    {'label': 'أجهزة شبكة',         'value': _uniq_nas,   'icon': 'network-wired','variant': 'blue'},
   ],
   search_action=url_for('radius.rep_failed_logins')
 ) %}
   <input class="hub-input grow" type="text" name="q"
          value="{{ filters.q if filters else '' }}"
-         placeholder="بحث (مستخدم / جهاز الشبكة)…">
+         placeholder="بحث (المستخدم / جهاز الشبكة / السبب)…">
   <input class="hub-input" type="date" name="date_from"
          value="{{ filters.date_from if filters else '' }}" title="من تاريخ">
   <input class="hub-input" type="date" name="date_to"
          value="{{ filters.date_to if filters else '' }}" title="إلى تاريخ">
   {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
   {% if filters and (filters.q or filters.date_from or filters.date_to) %}
-    {{ hub.btn("مسح", icon="rotate-left", variant="ghost", size="sm",
+    {{ hub.btn("إعادة ضبط", icon="rotate-left", variant="ghost", size="sm",
                attrs='onclick="window.location=' + "'" + url_for('radius.rep_failed_logins') + "'" + '"') }}
   {% endif %}
+  <span class="hub-hint" tabindex="0"
+        data-hint="البحث يطابق اسم المستخدم أو جهاز الشبكة أو رمز السبب، ونطاق التاريخ يعمل على وقت المحاولة. تُعرض حتى {{ limit }} محاولة من الأحدث للأقدم، والبيانات للقراءة فقط من جدول radpostauth."><i class="fa-solid fa-info"></i></span>
 {% endcall %}
+</section>{# /hub-hero-shell #}
 
 {% if items %}
-{# ───── Main (carded table) + help panel on the LEFT ───── #}
-{% call hub.worklayout(aside_html=hub.helppanel(
-  "كيف تقرأ هذا التقرير؟",
-  intro="كل صف هو محاولة دخول رُفضت — مأخوذة من سجل radpostauth ومرتّبة من الأحدث.",
-  items=[
-    {'icon': 'reply',          'text': '«الرد» هو ردّ المصادقة بخلاف Access-Accept (رفض / خطأ / ضبط).'},
-    {'icon': 'network-wired',  'text': '«جهاز الشبكة» هو جهاز الـ NAS الذي وردت منه المحاولة.'},
-    {'icon': 'clock',          'text': '«الوقت» هو توقيت المحاولة كما سُجّل في radpostauth.'},
-    {'icon': 'tag',            'text': '«الفئة / السبب» تحمل سياق الرفض إن توفّر (class).'},
-  ],
-  note="هذا التقرير للقراءة فقط — البيانات تأتي مباشرة من جدول radpostauth."
-)) %}
-  {% call hub.section("الردود السلبية", icon="table-list",
-                      meta=items|length|string + " صف", flush=True) %}
-    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25"
-         style="border:none;border-radius:0">
-      <table class="hub-table">
-        <thead>
-          <tr>
-            <th class="num" style="width:70px" data-uds-nosort>#</th>
-            <th>المستخدم</th>
-            <th data-uds-nosort>الرد</th>
-            <th>جهاز الشبكة</th>
-            <th>الوقت</th>
-            <th>الفئة / السبب</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for r in items %}
-          <tr>
-            <td class="num mono">{{ r.id }}</td>
-            <td><strong>{{ r.username }}</strong></td>
-            <td>{{ hub.pill(r.reply, variant="red") }}</td>
-            <td class="mono small">{{ r.nas or '—' }}</td>
-            <td class="mono"
-                style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
-              {{ r.authdate[:16] if r.authdate else '—' }}
-            </td>
-            <td class="mono small">{{ r.class or '—' }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  {% endcall %}
+{# ───── جدول المحاولات الفاشلة — uds موحّد (فرز + ترقيم + تصدير) ───── #}
+{% call hub.section("سجل المحاولات الفاشلة", icon="table-list",
+                    meta=(items|length|string) ~ (" من " ~ total if total > items|length else " محاولة"), flush=True) %}
+  <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25"
+       style="border:none;border-radius:0">
+    <table class="hub-table rep-table">
+      <thead>
+        <tr>
+          <th class="num" style="width:70px" data-uds-nosort>الرقم</th>
+          <th>الوقت</th>
+          <th>المستخدم</th>
+          <th data-uds-nosort>الردّ</th>
+          <th>السبب</th>
+          <th>جهاز الشبكة</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in items %}
+        <tr class="is-fail">
+          <td class="num mono"><bdi>#{{ r.id }}</bdi></td>
+          {% set _ad = r.authdate|dt_local if r.authdate else '' %}
+          <td class="rep-mono"
+              style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
+            <span class="rep-primary">{{ _ad[:10] or '—' }}</span>
+            <span class="rep-sub">{{ _ad[11:16] }}</span>
+          </td>
+          <td><strong><bdi>{{ r.username or '—' }}</bdi></strong></td>
+          {# الردّ معرّب — والقيمة الخام (Access-Reject…) تبقى في title للمراجعة الفنية #}
+          <td><span title="{{ r.reply }}">{{ hub.pill(REPLY_AR.get(r.reply, r.reply or '—'), variant="red") }}</span></td>
+          {# السبب من عمود class معرّب — والرمز الخام في title #}
+          <td>
+            {% if r['class'] %}
+              <span class="rep-reason" title="{{ r['class'] }}">{{ REASON_AR.get(r['class'], r['class']) }}</span>
+            {% else %}<span class="rep-muted">—</span>{% endif %}
+          </td>
+          <td class="rep-mono small">
+            {% if r.nas %}<i class="fa-solid fa-network-wired" style="color:#64748b;margin-inline-end:5px"></i><bdi>{{ r.nas }}</bdi>
+            {% else %}<span class="rep-muted">—</span>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 {% endcall %}
 {% else %}
 {{ hub.empty(
-  "لا محاولات فاشلة",
-  sub="يُملأ هذا الجدول من حدث رفض الدخول في خدمة المصادقة — لا شيء حتى الآن.",
+  "لا محاولات فاشلة مطابقة",
+  sub="إمّا أن الشبكة هادئة ولم يُرفض أحد بعد، أو أن الفلاتر ضيّقة — جرّب توسيعها.",
   icon="shield-halved"
 ) }}
 {% endif %}
+
+{# نظام الجداول الموحد: فرز + ترقيم صفحات + تصدير #}
+<script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
 {% endblock %}

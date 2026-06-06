@@ -1,223 +1,1373 @@
-{# مرحلة التصميم — مصمم صفحة دخول المشترك.
+{# ═══════════════════════════════════════════════════════════════
+   مصمّم صفحة الدخول — إعادة بناء كاملة على نظام HOB v2.
 
-   Two-column layout:
-     - Left: template picker (4 cards) + variables form.
-     - Right: live preview <iframe> that points at the
-       /login-designer/preview endpoint.
+   البنية:
+     1) صدفة الهيرو الموحّدة (hub-hero-shell): العنوان + اسم الراوتر
+        + سطر الغرض + مؤشرات KPI بصف واحد + زر الرجوع لصفحة الراوتر.
+     2) معرض التصاميم: بطاقات بمصغّرات معاينة حيّة (iframe بمقياس
+        ثابت داخل صندوق بنسبة أبعاد محددة — لا تشوّه ولا فيضان).
+     3) مساحة العمل: نموذج الحقول (تسميات عربية + سطور مساعدة +
+        منتقي ألوان) بجانب معاينة حيّة كبيرة بإطار جوال مثبّت.
+     4) شريط النشر: زر أساسي واضح + تلميح hub-hint يشرح أثر النشر.
 
-   The iframe is reloaded by a tiny inline script every time a
-   form input changes — keeps the JS surface minimal.
-#}
+   عقود الخلفية المحفوظة كما هي:
+     - data-mt-designer / data-mt-preview-url / data-mt-designer-frame
+     - data-mt-designer-template (راديو القالب)
+     - data-mt-designer-var (حقول المتغيرات)
+     - data-mt-designer-active-slug
+     - نماذج save / deploy بنفس المسارات والأسماء (template_slug،
+       متغيرات TEMPLATE_VARIABLES، confirm=1).
+   ═══════════════════════════════════════════════════════════════ #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
 {% block title %}مصمّم صفحة الدخول — {{ nas.name }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-palette"></i>{% endblock %}
 {% block page_title %}مصمّم صفحة الدخول {{ nas.name }}{% endblock %}
-{% block page_sub %}<span class="sub">جهاز شبكة #{{ nas.id }} · {{ nas.address }} · مرحلة التصميم</span>{% endblock %}
+{% block page_sub %}<span class="sub">جهاز شبكة #{{ nas.id }} · {{ nas.address }} · تصميم صفحة دخول المشتركين</span>{% endblock %}
 
 {% block head_extra %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/mt_dashboard.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/mt_login_designer.css') }}">
+{# أنماط محليّة بالتوكنات فقط (صفر hex عارٍ) — تحلّ محلّ الأنماط
+   السطرية التي كانت على شارة «خاص» وصندوق المتجر التلقائي وأوامر
+   walled-garden وصفوف القوالب المحفوظة، التزامًا بقواعد التصميم. #}
+<style>
+  /* شارة «خاص» على بطاقة التصميم المرفوع */
+  .mtld-custom-badge {
+    font-size: 10px;
+    font-weight: 800;
+    color: var(--hub-brand-ink, #2E1F8C);
+    background: var(--hub-brand-soft, #EDE9FE);
+    border: 1px solid var(--hub-brand-line, #ddd6fe);
+    border-radius: var(--hub-r-pill, 999px);
+    padding: 1px 8px;
+    margin-inline-start: 6px;
+    vertical-align: middle;
+  }
+  /* صندوق «الزر يفتح المتجر المستقل» — معلومة تلقائية */
+  .mtld-store-auto {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    border: 1px solid var(--hub-border, #E2E8F0);
+    border-radius: var(--hub-r-md, 10px);
+    padding: 10px 12px;
+    background: var(--hub-bg-soft, #F8FAFC);
+  }
+  .mtld-store-auto-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .mtld-store-auto-row i { color: var(--hub-brand, #6B5AED); }
+  .mtld-store-auto-row .mtld-store-auto-lead {
+    font-size: 12px;
+    font-weight: 800;
+  }
+  .mtld-store-auto-row .mtld-store-auto-cap {
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .mtld-store-auto bdi,
+  .mtld-mono { font-family: var(--hub-mono, ui-monospace, monospace); }
+  .mtld-store-auto-api { font-size: 12px; }
+  .mtld-store-auto details > summary {
+    font-size: 11.5px;
+    cursor: pointer;
+    color: var(--hub-text-mute, #94A3B8);
+  }
+  .mtld-store-auto-hint {
+    font-size: 11px;
+    color: var(--hub-text-mute, #94A3B8);
+    margin-top: 6px;
+  }
+  /* نتيجة زر «اختبار الاتصال» — لون حسب الحالة */
+  .mtld-store-test-result {
+    font-size: 11px;
+    font-weight: 700;
+    margin-inline-start: 8px;
+  }
+  .mtld-store-test-result[data-state="ok"]   { color: var(--hub-ok, #047857); }
+  .mtld-store-test-result[data-state="bad"]  { color: var(--hub-err, #B91C1C); }
+  .mtld-store-test-result[data-state="wait"] { color: var(--hub-text-mute, #64748B); }
+  /* كتلة أمر الطرفية (walled-garden) — قابلة للنسخ */
+  .mtld-cmd {
+    margin: 6px 0 0;
+    padding: 8px 10px;
+    background: var(--hub-text, #1F2937);
+    color: var(--hub-bg-soft, #F8FAFC);
+    border-radius: var(--hub-r-sm, 8px);
+    font-size: 11px;
+    white-space: pre-wrap;
+    word-break: break-all;
+    user-select: all;
+  }
+  /* شريط تحذير «حدد IP الراديوس» */
+  .mtld-store-warn {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-top: 6px;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--hub-amber-ink, #7A4F02);
+    background: var(--hub-amber-soft, #FCEFC9);
+    border: 1px solid var(--hub-amber, #F59E0B);
+    border-radius: var(--hub-r-sm, 8px);
+    padding: 6px 10px;
+  }
+  .mtld-store-warn a { color: inherit; text-decoration: underline; }
+  .mtld-store-override { margin-top: 6px; }
+  .mtld-store-override > summary {
+    font-size: 11.5px;
+    cursor: pointer;
+    color: var(--hub-text-mute, #94A3B8);
+  }
+  .mtld-store-override input { margin-top: 6px; }
+  /* صف القالب المحفوظ */
+  .mtld-preset-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid var(--hub-border, #E2E8F0);
+    border-radius: var(--hub-r-card, 12px);
+    margin-bottom: 8px;
+  }
+  .mtld-preset-row > i { opacity: .6; }
+  .mtld-preset-row-main { flex: 1; min-width: 0; }
+  .mtld-preset-note-block { display: block; }
+  .mtld-deploy-hint-sm { font-size: 11.5px; }
+  /* صف حفظ القالب المسمّى — بلا حدّ علوي (داخل قسم لا أسفل النموذج) */
+  .mtld-save-row.mtld-preset-save-row {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .mtld-preset-name-input { max-width: 260px; }
+  .mtld-custom-name-input { min-width: 220px; }
+  /* حقل مساعدة بفاصل علوي صغير */
+  .mtld-field-help--gap { margin-top: 8px; }
+</style>
 {% endblock %}
 
 {% block content %}
 
-<section class="mt-designer"
+{# ── تسمية عربية مختصرة لحالة آخر نشر (من سجل الأحداث) ── #}
+{% if last_deploy %}
+  {% set _dep_label = 'ناجح' if last_deploy.result_status == 'success' else 'فشل' %}
+  {% set _dep_variant = 'green' if last_deploy.result_status == 'success' else 'red' %}
+{% else %}
+  {% set _dep_label = 'لم يُنشر بعد' %}
+  {% set _dep_variant = 'amber' %}
+{% endif %}
+{# القالب النشط من المكتبة — وقيمة slug آمنة (من الكتالوج فقط، لا من النموذج) #}
+{% set _active_tmpl = (library | selectattr('slug', 'equalto', design.template_slug) | list | first) %}
+{% set _active_slug = _active_tmpl.slug if _active_tmpl else 'classic' %}
+
+<section class="mtld" id="mtld"
          data-mt-designer
          data-mt-nas-id="{{ nas.id }}"
          data-mt-preview-url="{{ url_for('radius.mt_login_designer_preview', nas_id=nas.id) }}">
 
-  {{ hub.hero(
+  {# ───── صدفة الهيرو الموحّدة: عنوان + غرض + KPI بصف واحد + زر الرجوع ───── #}
+  <section class="hub-hero-shell" data-testid="login-designer-hero">
+  {{ hub.megahero(
     "مصمّم صفحة الدخول — " ~ nas.name,
-    subtitle="اختر قالبًا، خصّص الحقول، ثم احفظ. النشر إلى الراوتر يتمّ من خطوة النشر.",
+    subtitle="اختر تصميمًا من المعرض، خصّص الاسم والشعار والألوان مع معاينة حيّة فورية، ثم احفظ وانشر صفحة الدخول إلى الراوتر.",
     icon="palette",
+    actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.mt_dashboard', nas_id=nas.id) ~ '"><i class="fa-solid fa-arrow-right"></i> رجوع لصفحة الراوتر</a>',
+    kpis=[
+      {'label': 'عدد التصاميم', 'value': library|length, 'icon': 'table-cells-large', 'variant': 'blue'},
+      {'label': 'التصميم المعتمد حاليًا', 'value': (_active_tmpl.name_ar if _active_tmpl else design.template_slug), 'icon': 'circle-check', 'variant': 'brand'},
+      {'label': 'حالة النشر الأخيرة', 'value': _dep_label, 'icon': 'cloud-arrow-up', 'variant': _dep_variant,
+       'sub': (last_deploy.created_at[:16]|replace('T',' ') if last_deploy and last_deploy.created_at else '')}
+    ]
   ) }}
+  </section>{# /hub-hero-shell #}
 
+  {# ───── رسائل الحالة (حفظ / خطأ) ───── #}
   {% if saved %}
-  <div class="mt-program-banner mt-program-banner--warn" role="status"
-       style="background:#DCFCE7;border-color:#86EFAC;color:#166534">
-    <li><i class="fa-solid fa-circle-check"></i> تم حفظ التصميم.</li>
+  <div class="mtld-flash mtld-flash--ok" role="status">
+    <i class="fa-solid fa-circle-check"></i> تم حفظ التصميم بنجاح — يمكنك الآن نشره على الراوتر من شريط النشر بالأسفل.
+  </div>
+  {% endif %}
+  {% if flash_ok %}
+  <div class="mtld-flash mtld-flash--ok" role="status">
+    <i class="fa-solid fa-circle-check"></i> {{ flash_ok }}
   </div>
   {% endif %}
   {% if error %}
-  <div class="mt-program-error" role="alert">
+  <div class="mtld-flash mtld-flash--err" role="alert">
     <i class="fa-solid fa-triangle-exclamation"></i> {{ error }}
   </div>
   {% endif %}
 
-  <div class="mt-designer-grid">
+  {# ════ نموذج الحفظ: يلفّ المعرض + حقول التخصيص (القالب والمتغيرات تُحفظ معًا) ════ #}
+  <form method="post"
+        action="{{ url_for('radius.mt_login_designer_save', nas_id=nas.id) }}"
+        data-mt-designer-form>
 
-    {# ─── Left column: picker + form ─── #}
-    <form method="post"
-          action="{{ url_for('radius.mt_login_designer_save', nas_id=nas.id) }}"
-          class="mt-designer-form"
-          data-mt-designer-form>
-
-      <section class="mt-card">
-        <header class="mt-card-head">
-          <h3><i class="fa-solid fa-table-cells-large"></i> اختر القالب</h3>
-        </header>
-        <div class="mt-card-body">
-          <div class="mt-designer-picker" data-mt-designer-picker>
-            {% for tmpl in library %}
-            <label class="mt-designer-card
-                   {% if tmpl.slug == design.template_slug %}is-active{% endif %}">
-              <input type="radio" name="template_slug"
-                     value="{{ tmpl.slug }}"
-                     data-mt-designer-template
-                     {% if tmpl.slug == design.template_slug %}checked{% endif %}>
-              <div class="mt-designer-card-body">
-                <span class="mt-designer-card-title">{{ tmpl.name_ar }}</span>
-                <span class="mt-designer-card-desc">{{ tmpl.description_ar }}</span>
-                <code class="mt-designer-card-slug">{{ tmpl.slug }}</code>
-              </div>
-            </label>
-            {% endfor %}
-          </div>
-        </div>
-      </section>
-
-      <section class="mt-card">
-        <header class="mt-card-head">
-          <h3><i class="fa-solid fa-sliders"></i> الحقول</h3>
-        </header>
-        <div class="mt-card-body">
-          <div class="mt-program-grid">
-            {% for v in variables %}
-            <label class="mt-program-field">
-              <span>{{ v.label_ar }}</span>
-              <input type="text" name="{{ v.slug }}"
-                     value="{{ design.variables.get(v.slug, v.default) }}"
-                     data-mt-designer-var="{{ v.slug }}">
-            </label>
-            {% endfor %}
-          </div>
-
-          <div class="mt-program-actions">
-            <button type="submit" class="mt-action-btn">
-              <i class="fa-solid fa-floppy-disk"></i> حفظ التصميم
+    {# ───── معرض التصاميم: بطاقات بمصغّرات معاينة حيّة موحّدة الأبعاد ───── #}
+    {% call hub.section("معرض التصاميم", icon="table-cells-large",
+                        meta=(library|length|string) ~ " تصميمًا") %}
+      <p class="mtld-lead">
+        كل بطاقة تعرض مصغّرة حيّة للتصميم بقيمك الافتراضية. انقر أي بطاقة لاختيارها —
+        المعاينة الكبيرة بالأسفل تتحدّث فورًا.
+        <span class="hub-hint" tabindex="0" data-hint="المصغّرات تُحمَّل من نقطة المعاينة نفسها التي يستخدمها الراوتر، فما تراه هنا هو ما سيراه المشترك فعلًا."><i class="fa-solid fa-info"></i></span>
+      </p>
+      <div class="mtld-gallery" data-mt-designer-picker>
+        {% for tmpl in library %}
+        <label class="mtld-card{% if tmpl.slug == _active_slug %} is-active{% endif %}">
+          <input type="radio" name="template_slug"
+                 value="{{ tmpl.slug }}"
+                 data-mt-designer-template
+                 {% if tmpl.slug == _active_slug %}checked{% endif %}>
+          {# صندوق المصغّرة: نسبة أبعاد ثابتة 9/13 — الـ iframe يعرض
+             390px جوال ويُصغَّر بمقياس محسوب في CSS، فلا تشوّه أبدًا. #}
+          {# المصغّرة كسولة: لا src مبدئيًا — الرابط في data-src
+             ويُحمَّل فقط عندما تدخل البطاقة نافذة العرض
+             (IntersectionObserver)، ويُفرَّغ عندما تبتعد كثيرًا.
+             هكذا لا تعمل ~10 صفحات كاملة (بسبلاش JS) دفعة واحدة. #}
+          <span class="mtld-thumb" aria-hidden="true">
+            <iframe class="mtld-thumb-frame"
+                    loading="lazy"
+                    tabindex="-1"
+                    sandbox="allow-same-origin allow-scripts"
+                    title="مصغّرة {{ tmpl.name_ar }}"
+                    data-mtld-thumb-src="{{ url_for('radius.mt_login_designer_preview',
+                                     nas_id=nas.id,
+                                     template_slug=tmpl.slug) }}"></iframe>
+            <span class="mtld-thumb-spin" aria-hidden="true"></span>
+            <span class="mtld-check"><i class="fa-solid fa-check"></i></span>
+          </span>
+          <span class="mtld-card-meta">
+            <span class="mtld-card-title">
+              {{ tmpl.name_ar }}
+              {%- if tmpl.is_custom %}
+              <span class="mtld-custom-badge">
+                <i class="fa-solid fa-upload"></i> خاص
+              </span>
+              {%- endif %}
+            </span>
+            <span class="mtld-card-desc">{{ tmpl.description_ar }}</span>
+            {% if tmpl.is_custom %}
+            {# زر حذف التصميم الخاص — إجراء مدمّر يفتح نافذة ccModal
+               العائمة (لا confirm). يُرسل عبر النموذج الخارجي
+               mtld-custom-del-form (سمة form=) لأن البطاقة داخل
+               نموذج الحفظ الكبير ولا يصح تداخل النماذج؛ عند التأكيد
+               نحقن custom_id في النموذج الخارجي ونرسله. #}
+            <button type="button" class="hub-btn hub-btn--secondary mtld-custom-del-btn"
+                    data-mtld-custom-del
+                    data-mtld-custom-id="{{ tmpl.custom_id }}"
+                    data-mtld-custom-name="{{ tmpl.name_ar }}">
+              <i class="fa-solid fa-trash"></i> حذف التصميم الخاص
             </button>
-          </div>
-        </div>
-      </section>
-    </form>
-
-    {# خطوة النشر — separate form so save and deploy
-       don't accidentally share a single submit). #}
-    <form method="post"
-          action="{{ url_for('radius.mt_login_designer_deploy', nas_id=nas.id) }}"
-          class="mt-card mt-program-apply-form"
-          data-mt-designer-deploy-form>
-      <header class="mt-card-head">
-        <h3><i class="fa-solid fa-cloud-arrow-up"></i> نشر إلى الراوتر</h3>
-      </header>
-      <div class="mt-card-body">
-        <p class="mt-tab-hint">
-          يرفع ملف صفحة الدخول إلى الراوتر باستخدام التصميم المحفوظ حاليًا.
-          يتطلّب نجاح برمجة بوابة الدخول أولًا من صفحة برمجة الشبكة.
-        </p>
-        <label class="mt-program-confirm">
-          <input type="checkbox" name="confirm" value="1"
-                 data-mt-designer-deploy-confirm>
-          أُؤكّد رفع ملف صفحة الدخول إلى هذا الراوتر.
+            {% endif %}
+          </span>
         </label>
-        <div class="mt-program-actions">
-          <button type="submit"
-                  class="mt-action-btn mt-action-btn--danger"
-                  data-mt-designer-deploy-submit>
-            <i class="fa-solid fa-rocket"></i> نشر
+        {% endfor %}
+      </div>
+    {% endcall %}
+
+    {# ───── مساحة العمل: حقول التخصيص (يمين) + معاينة كبيرة مثبّتة (يسار) ───── #}
+    <div class="mtld-work">
+
+      {# عمود الحقول #}
+      {% call hub.section("تخصيص التصميم", icon="sliders",
+                          meta="معاينة فورية مع كل تعديل") %}
+
+        {# ── شريط الأقسام (تبويبات): قسم واحد ظاهر في كل مرة.
+           الإخفاء عرضي فقط (display) — كل الحقول تبقى في DOM
+           وتُرسل مع النموذج كاملة عند الحفظ. ── #}
+        {% set _var_sections = {
+          'TENANT_NAME': 'identity', 'TENANT_LOGO_URL': 'identity',
+          'WELCOME_TEXT': 'identity', 'ACCENT_COLOR': 'identity',
+          'BG_COLOR': 'identity',
+          'PASSWORD_FIELD': 'login', 'TRIAL_ENABLED': 'login',
+          'TRIAL_TEXT': 'login', 'SUPPORT_PHONE': 'login',
+          'SAVED_SESSIONS_ENABLED': 'login',
+          'STORE_ENABLED': 'store', 'STORE_URL': 'store',
+          'DISTRIBUTORS_JSON': 'distributors',
+          'OFFERS_JSON': 'offers'
+        } %}
+        <div class="mtld-tabs" role="tablist" aria-label="أقسام التخصيص"
+             data-mtld-tabs>
+          <button type="button" class="mtld-tab is-active" role="tab"
+                  aria-selected="true" data-mtld-tab="identity">
+            <i class="fa-solid fa-id-badge"></i> الهوية
+          </button>
+          <button type="button" class="mtld-tab" role="tab"
+                  aria-selected="false" data-mtld-tab="login">
+            <i class="fa-solid fa-right-to-bracket"></i> الدخول
+          </button>
+          <button type="button" class="mtld-tab" role="tab"
+                  aria-selected="false" data-mtld-tab="store">
+            <i class="fa-solid fa-cart-shopping"></i> المتجر
+          </button>
+          <button type="button" class="mtld-tab" role="tab"
+                  aria-selected="false" data-mtld-tab="distributors">
+            <i class="fa-solid fa-store"></i> الموزعون
+          </button>
+          <button type="button" class="mtld-tab" role="tab"
+                  aria-selected="false" data-mtld-tab="offers">
+            <i class="fa-solid fa-tags"></i> العروض
+          </button>
+          <button type="button" class="mtld-tab" role="tab"
+                  aria-selected="false" data-mtld-tab="presets">
+            <i class="fa-solid fa-bookmark"></i> قوالب محفوظة
           </button>
         </div>
 
-        {% if deploy_result %}
-        <section class="mt-card" data-mt-designer-deploy-result
-                 style="margin-top:16px">
-          <header class="mt-card-head">
-            <h3>
-              <i class="fa-solid fa-{{ 'circle-check' if deploy_result.ok else 'circle-exclamation' }}"></i>
-              نتيجة النشر
-            </h3>
-            <span class="mt-card-meta">
-              {% if deploy_result.ok %}
-              <span class="mt-iface-state mt-iface-state--up">
-                {{ deploy_result.bytes }} بايت رُفعت
+        <div class="mtld-fields">
+          {% for v in variables %}
+          {% set _val = design.variables.get(v.slug, v.default) %}
+          <div class="mtld-field" data-mtld-sec="{{ _var_sections.get(v.slug, 'identity') }}">
+            <label class="mtld-field-label" for="mtld-var-{{ v.slug }}">{{ v.label_ar }}</label>
+            {% if v.slug in ('ACCENT_COLOR', 'BG_COLOR') %}
+            {# حقل لون: منتقي ألوان + نص hex متزامنان — النص هو
+               الذي يُرسَل (نفس الاسم القديم)، المنتقي مساعد فقط. #}
+            <div class="mtld-color-row">
+              <input type="color"
+                     class="mtld-color-swatch"
+                     value="{{ _val }}"
+                     data-mtld-color-for="{{ v.slug }}"
+                     aria-label="منتقي {{ v.label_ar }}">
+              <input type="text" class="hub-input mtld-color-text"
+                     id="mtld-var-{{ v.slug }}"
+                     name="{{ v.slug }}"
+                     value="{{ _val }}"
+                     dir="ltr"
+                     data-mt-designer-var="{{ v.slug }}">
+            </div>
+            {% elif v.slug == 'TENANT_LOGO_URL' %}
+            {# الشعار: رفع صورة من الجهاز (تُحوَّل في المتصفح إلى
+               data URL مصغّر ~256px) — القيمة تُخزَّن في نفس حقل
+               TENANT_LOGO_URL المخفي فيبقى مسار الحفظ/النشر كما هو.
+               رابط نصي اختياري يبقى متاحًا تحت تفاصيل قابلة للطي. #}
+            <div class="mtld-logo-row">
+              <input type="file"
+                     id="mtld-logo-file"
+                     accept="image/*"
+                     class="mtld-logo-file"
+                     data-mtld-logo-file
+                     aria-label="رفع صورة الشعار">
+              <label for="mtld-logo-file" class="hub-btn hub-btn--secondary mtld-logo-btn">
+                <i class="fa-solid fa-image"></i> رفع شعار من الجهاز
+              </label>
+              <img class="mtld-logo-preview"
+                   data-mtld-logo-preview
+                   alt="معاينة الشعار"
+                   src="{{ _val if _val.startswith('data:') or _val.startswith('http') or _val.startswith('/') else '' }}">
+              <span class="mtld-logo-clear" data-mtld-logo-clear
+                    title="إزالة الشعار المرفوع" role="button" tabindex="0">
+                <i class="fa-solid fa-xmark"></i>
               </span>
-              {% else %}
-              <span class="mt-iface-state mt-iface-state--off">
-                فشل
-              </span>
+            </div>
+            {# القيمة الفعلية المُرسَلة — data URL أو رابط #}
+            <input type="hidden"
+                   id="mtld-var-{{ v.slug }}"
+                   name="{{ v.slug }}"
+                   value="{{ _val }}"
+                   data-mt-designer-var="{{ v.slug }}">
+            <details class="mtld-logo-url-alt">
+              <summary>أو ضع رابط صورة بدلًا من الرفع</summary>
+              <input type="text" class="hub-input"
+                     dir="ltr"
+                     placeholder="https://example.com/logo.png"
+                     value="{{ _val if not _val.startswith('data:') else '' }}"
+                     data-mtld-logo-url-input>
+            </details>
+            {% elif v.kind == 'bool' %}
+            {# مفاتيح منطقية (kind="bool"): المتجر / التجربة المجانية /
+               إظهار كلمة المرور / حفظ الجلسات — تُرسم كمفتاح تشغيل/إيقاف
+               بدل حقل نص. نفس الاسم/القيمة (yes/no) في مسار الحفظ فتمرّ
+               عبر validate_vars كالمعتاد. تسميات الخيارات لكل مفتاح: #}
+            {% if v.slug == 'STORE_ENABLED' %}
+              {% set _opt_no, _opt_yes = 'إيقاف — بدون زر المتجر', 'تفعيل — أظهر زر المتجر' %}
+            {% elif v.slug == 'TRIAL_ENABLED' %}
+              {% set _opt_no, _opt_yes = 'إيقاف — بدون زر التجربة', 'تفعيل — أظهر زر التجربة المجانية' %}
+            {% elif v.slug == 'PASSWORD_FIELD' %}
+              {% set _opt_no, _opt_yes = 'إخفاء — دخول باسم المستخدم فقط', 'إظهار — اسم مستخدم وكلمة مرور' %}
+            {% elif v.slug == 'SAVED_SESSIONS_ENABLED' %}
+              {% set _opt_no, _opt_yes = 'إيقاف — لا تُحفظ الجلسات', 'تفعيل — احفظ آخر 5 بطاقات' %}
+            {% else %}
+              {% set _opt_no, _opt_yes = 'إيقاف', 'تفعيل' %}
+            {% endif %}
+            <select class="hub-input"
+                    id="mtld-var-{{ v.slug }}"
+                    name="{{ v.slug }}"
+                    data-mt-designer-var="{{ v.slug }}">
+              <option value="no"  {% if _val != 'yes' %}selected{% endif %}>{{ _opt_no }}</option>
+              <option value="yes" {% if _val == 'yes' %}selected{% endif %}>{{ _opt_yes }}</option>
+            </select>
+            {% elif v.slug == 'STORE_URL' %}
+            {# ── زر المتجر صار يفتح صفحة المتجر المستقلة المرفوعة
+               على الراوتر نفسه (store.html) — لا حاجة لأي رابط.
+               ما يلزم فقط هو IP سيرفر الراديوس (قاعدة API يتصل بها
+               تصميم المتجر عبر /api/v1/store/*)، ويُحتسب تلقائيًا
+               من network.radius_server_ip في الإعدادات. #}
+            <div class="mtld-store-auto">
+              <div class="mtld-store-auto-row">
+                <i class="fa-solid fa-store"></i>
+                <span class="mtld-store-auto-lead">
+                  الزر يفتح صفحة المتجر المستقلة على الراوتر
+                  <bdi dir="ltr">store.html</bdi>
+                  — الرابط ما عاد يلزم.
+                </span>
+              </div>
+              <div class="mtld-store-auto-row">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                <span class="mtld-store-auto-cap">عنوان API الراديوس (تلقائي):</span>
+                <bdi dir="ltr" class="mtld-store-auto-api">{{ store_api_base_auto or '—' }}</bdi>
+              </div>
+              {# زر «اختبار الاتصال» — ينفّذ من متصفح الأدمن نداءً فعليًا
+                 لـ <عنوان API>/api/v1/store/ping (نفس ما يفعله جهاز الزبون)
+                 قبل النشر، فيعرف المشغّل فورًا إن كان العنوان+المنفذ
+                 صحيحين وقابلين للوصول. النتيجة تظهر بجواره. #}
+              {% if store_api_base_auto %}
+              <div class="mtld-store-auto-row">
+                <button type="button" class="hub-btn hub-btn--secondary mtld-store-test-btn"
+                        data-mt-store-ping-base="{{ store_api_base_auto }}">
+                  <i class="fa-solid fa-plug-circle-bolt"></i> اختبار الاتصال بالخادم
+                </button>
+                <span class="mtld-store-test-result" role="status"
+                      data-mt-store-ping-result></span>
+              </div>
               {% endif %}
-            </span>
-          </header>
-          <div class="mt-card-body">
-            <p>
-              المسار على الراوتر: <code>{{ deploy_result.path }}</code>
-              {% if deploy_result.error %}
-              <br><span style="color:#991B1B">{{ deploy_result.error }}</span>
+              {% if wg_command %}
+              <details>
+                <summary>
+                  <i class="fa-solid fa-shield-halved"></i>
+                  قائمة السماح (walled-garden) — النشر المباشر يضيفها
+                  تلقائيًا؛ مع الرفع اليدوي (ZIP) انسخ الأمر
+                </summary>
+                <div class="mtld-store-auto-hint">
+                  حتى يتصل المتجر بسيرفر الراديوس قبل تسجيل دخول
+                  الزبائن، الصق هذا الأمر في طرفيّة الراوتر (نفس
+                  الصيغة في RouterOS v6 و v7):
+                </div>
+                <pre dir="ltr" class="mtld-cmd">{{ wg_command }}</pre>
+              </details>
               {% endif %}
-            </p>
+            </div>
+            {% if not radius_ip_configured %}
+            <div class="mtld-store-warn">
+              <i class="fa-solid fa-triangle-exclamation"></i>
+              حدد «عنوان IP سيرفر الراديوس» في الإعدادات (تبويب متقدم)
+              حتى يعرف تصميم المتجر المستقل أين يجد الـ API —
+              <a href="{{ url_for('radius.settings_page') }}#tab=advanced">فتح الإعدادات</a>
+            </div>
+            {% endif %}
+            <details class="mtld-store-override">
+              <summary>
+                خيارات متقدمة — رابط مخصص بدل التلقائي
+              </summary>
+              {# قيمة فارغة = استخدم الرابط التلقائي (يُحقن عند
+                 الحفظ/المعاينة/النشر من جهة الخادم). #}
+              <input type="text" class="hub-input"
+                     id="mtld-var-{{ v.slug }}"
+                     name="{{ v.slug }}"
+                     value="{{ '' if _val == store_url_auto else _val }}"
+                     placeholder="اتركه فارغًا لاستخدام الرابط التلقائي"
+                     dir="ltr"
+                     data-mt-designer-var="{{ v.slug }}">
+            </details>
+            {% elif v.kind == 'json' %}
+            {# قوائم قابلة للتكرار (الموزعون / العروض): القيمة
+               الحقيقية JSON في حقل مخفي بنفس اسم المتغيّر — صفوف
+               الإدخال الديناميكية بالأسفل تبني JSON وتزامنه. #}
+            <input type="hidden"
+                   id="mtld-var-{{ v.slug }}"
+                   name="{{ v.slug }}"
+                   value="{{ _val }}"
+                   data-mt-designer-var="{{ v.slug }}"
+                   data-mtld-json="{{ v.slug }}">
+            <div class="mtld-json-rows" data-mtld-json-rows="{{ v.slug }}"></div>
+            <button type="button" class="hub-btn hub-btn--secondary mtld-json-add"
+                    data-mtld-json-add="{{ v.slug }}">
+              <i class="fa-solid fa-plus"></i>
+              {{ 'أضف موزعًا' if v.slug == 'DISTRIBUTORS_JSON' else 'أضف عرضًا' }}
+            </button>
+            {% else %}
+            <input type="text" class="hub-input"
+                   id="mtld-var-{{ v.slug }}"
+                   name="{{ v.slug }}"
+                   value="{{ _val }}"
+                   {% if v.slug in ('TENANT_LOGO_URL', 'SUPPORT_PHONE', 'STORE_URL') %}dir="ltr"{% endif %}
+                   data-mt-designer-var="{{ v.slug }}">
+            {% endif %}
+            <div class="mtld-field-help">
+              {%- if v.slug == 'TENANT_NAME' -%}
+                اسم شبكتك كما سيظهر بأعلى صفحة الدخول.
+              {%- elif v.slug == 'TENANT_LOGO_URL' -%}
+                ارفع صورة الشعار من جهازك — تُصغَّر تلقائيًا (~256px) وتُضمَّن
+                داخل الصفحة نفسها فلا تحتاج رفع ملف إضافي للراوتر.
+              {%- elif v.slug == 'WELCOME_TEXT' -%}
+                جملة ترحيبية قصيرة تظهر تحت الاسم (حتى 160 حرفًا).
+              {%- elif v.slug == 'ACCENT_COLOR' -%}
+                لون الأزرار والعناوين — صيغة hex مثل ‎#2563EB.
+              {%- elif v.slug == 'BG_COLOR' -%}
+                لون خلفية الصفحة — صيغة hex مثل ‎#F8FAFC.
+              {%- elif v.slug == 'SUPPORT_PHONE' -%}
+                رقم الدعم الفني — تستخدمه التصاميم الاحترافية في زر الاتصال.
+              {%- elif v.slug == 'STORE_ENABLED' -%}
+                عند التفعيل يظهر زر «متجر البطاقات الإلكتروني» في صفحة
+                الدخول، وعند <strong>النشر</strong> تُرفع صفحة متجر كاملة
+                (store.html) إلى الراوتر بجانب صفحة الدخول تلقائيًا —
+                المتجر يعمل من الراوتر نفسه (دخول بالجوال وكلمة المرور،
+                محفظة، شحن بطاقة، وشراء باقات) ويتصل بسيرفر الراديوس عبر
+                الـ API فقط. <strong>مهم:</strong> أضف عنوان IP سيرفر
+                الراديوس إلى walled-garden في الهوت سبوت حتى يعمل المتجر
+                قبل تسجيل الدخول.
+              {%- elif v.slug == 'STORE_URL' -%}
+                زر المتجر يفتح <strong>التصميم المستقل</strong> المرفوع
+                على الراوتر (store.html) — صفحة كاملة بأربعة تبويبات
+                تستدعي API الراديوس فقط. العنوان أعلاه ليس رابط الزر؛
+                هو قاعدة الـ API التي تُحقن داخل store.html ويُبنى من
+                «عنوان IP سيرفر الراديوس» في الإعدادات. لا تكتب شيئًا
+                في «خيارات متقدمة» إلا إذا أردت توجيه الزر لرابط مختلف
+                كليًا. تذكّر إضافة عنوان السيرفر إلى walled-garden في
+                الهوت سبوت حتى يتصل المتجر بالـ API.
+              {%- elif v.slug == 'PASSWORD_FIELD' -%}
+                عند الإخفاء يدخل المشترك باسم المستخدم فقط — مناسب
+                لبطاقات «يوزر فقط». يعمل على كل التصاميم.
+              {%- elif v.slug == 'TRIAL_ENABLED' -%}
+                يضيف زر تجربة مجانية أسفل نموذج الدخول في أي تصميم —
+                يستخدم آلية MikroTik القياسية (مستخدم T-‏MAC).
+                <strong>مهم:</strong> فعّل Trial في بروفايل سيرفر
+                الهوت سبوت على الراوتر وإلا سيرفض الدخول.
+              {%- elif v.slug == 'TRIAL_TEXT' -%}
+                النص الظاهر على زر التجربة — مثال: «تجربة مجانية 10
+                دقائق» (حتى 60 حرفًا، بلا وسوم).
+              {%- elif v.slug == 'SAVED_SESSIONS_ENABLED' -%}
+                عند التفعيل يحفظ المتصفح آخر 5 بطاقات (اسم المستخدم وكلمة
+                المرور) على جهاز الزبون ويعرض قسم «الجلسات الأخيرة» بنقرة
+                واحدة لإعادة الاتصال. يعمل على كل التصاميم.
+              {%- elif v.slug == 'DISTRIBUTORS_JSON' -%}
+                نقاط بيع البطاقات — تظهر في تبويب «الموزعون» بتصاميم
+                عائلة التدرج الاحترافي. أضف اسم المحل ورقم الهاتف
+                والمنطقة لكل موزع.
+              {%- elif v.slug == 'OFFERS_JSON' -%}
+                باقاتك وأسعارك — تظهر في قسم الباقات/الأسعار بالتصاميم
+                الداعمة. الفئة تحدد شكل البطاقة: ⭐ باقة النخبة (بطاقة
+                كبيرة بارزة)، 💎 الباقة الذهبية (متوسطة)، 🚀 باقة
+                الانطلاق (صغيرة).
+              {%- endif -%}
+            </div>
           </div>
-        </section>
-        {% endif %}
-      </div>
-    </form>
+          {% endfor %}
+        </div>
 
-    {# ─── Right column: live preview iframe ─── #}
-    <section class="mt-card mt-designer-preview-card">
-      <header class="mt-card-head">
-        <h3><i class="fa-solid fa-eye"></i> معاينة حيّة</h3>
-        <span class="mt-card-meta">
-          <code data-mt-designer-active-slug>{{ design.template_slug }}</code>
+        {# ── قسم «قوالب محفوظة» داخل شريط الأقسام: حفظ مجموعة
+           القيم الحالية باسم — زر بـ formaction داخل نفس النموذج
+           فتُرسل كل الحقول (بما فيها قوائم JSON المخفية في الأقسام
+           الأخرى — الإخفاء عرضي فقط) إلى مسار حفظ القالب المسمّى. ── #}
+        <div class="mtld-field mtld-presets-field" data-mtld-sec="presets">
+          <label class="mtld-field-label" for="mtld-preset-name">اسم القالب المحفوظ</label>
+          <div class="mtld-save-row mtld-preset-save-row">
+            <input type="text" class="hub-input mtld-preset-name-input" name="preset_name"
+                   id="mtld-preset-name"
+                   placeholder="اسم القالب المحفوظ — مثل: تصميم رمضان"
+                   maxlength="40">
+            <button type="submit" class="hub-btn hub-btn--secondary"
+                    formaction="{{ url_for('radius.mt_login_designer_preset_save', nas_id=nas.id) }}">
+              <i class="fa-solid fa-bookmark"></i> حفظ كقالب باسم
+            </button>
+          </div>
+          <div class="mtld-field-help">
+            يحفظ كل القيم الحالية (بما فيها الموزعون والعروض) في
+            «قوالب محفوظة» لإعادة استخدامها لاحقًا — قائمة القوالب
+            المحفوظة وأزرار التطبيق/الحذف أسفل الصفحة.
+          </div>
+        </div>
+
+        <div class="mtld-save-row">
+          <button type="submit" class="hub-btn hub-btn--primary">
+            <i class="fa-solid fa-floppy-disk"></i> حفظ التصميم
+          </button>
+          {# تحميل الحزمة (ZIP): زر داخل نفس نموذج الحفظ بـ
+             formaction لمسار download.zip — تُرسل كل القيم الحالية
+             على الشاشة (POST، نفس حلّ المعاينة لحدود طول الطلب)
+             ويعيد الخادم ملف ZIP مرفقًا فلا تغادر الصفحة. #}
+          <button type="submit" class="hub-btn hub-btn--secondary"
+                  formaction="{{ url_for('radius.mt_login_designer_download_zip', nas_id=nas.id) }}">
+            <i class="fa-solid fa-file-zipper"></i> تحميل الحزمة (ZIP)
+          </button>
+          <span class="mtld-save-note">
+            الحفظ يخزّن اختيارك لهذا الراوتر فقط — لا يلمس الراوتر حتى تنشر.
+            تحميل الحزمة يعطيك login.html (ومتجر store.html والخط إن لزم)
+            جاهزة للرفع اليدوي عبر Winbox → Files.
+          </span>
+        </div>
+      {% endcall %}
+
+      {# عمود المعاينة الكبيرة — إطار جوال مثبّت يتحدّث مع كل تعديل #}
+      <aside class="mtld-preview-col">
+        {% call hub.section("معاينة حيّة", icon="eye",
+                            meta=('<code class="mtld-slug" data-mt-designer-active-slug>' ~ _active_slug ~ '</code>')|safe) %}
+          <div class="mtld-phone">
+            <span class="mtld-phone-notch"></span>
+            {# allow-scripts ضروري: القوالب الاحترافية تخفي الشاشة
+               الافتتاحية وتشغّل التبويبات عبر JS — بدونه تبقى
+               المعاينة عالقة على «جاري التحميل...» للأبد.
+
+               التحميل الأولي برابط بلا متغيّرات (الخادم يعرض التصميم
+               المحفوظ): تمرير كل المتغيّرات في الرابط كان يتجاوز حدّ
+               سطر الطلب في gunicorn (~4KB) بعد إضافة قوائم JSON
+               وشعار data-URL فترفض كل طلبات المعاينة (414) — لذلك
+               التحديثات الحيّة تمرّ الآن عبر POST + srcdoc من السكربت. #}
+            <iframe class="mtld-frame"
+                    data-mt-designer-frame
+                    title="معاينة صفحة الدخول"
+                    sandbox="allow-same-origin allow-scripts"
+                    src="{{ url_for('radius.mt_login_designer_preview', nas_id=nas.id) }}"></iframe>
+          </div>
+          <p class="mtld-preview-hint">
+            هكذا تظهر الصفحة على جوال المشترك بعرض 390 بكسل.
+          </p>
+        {% endcall %}
+      </aside>
+    </div>
+  </form>
+
+  {# ════ قوالب محفوظة: مكتبة مصغّرة لهذا الراوتر — تطبيق/حذف ════ #}
+  {% if presets %}
+  {% call hub.section("قوالب محفوظة", icon="bookmark",
+                      meta=(presets|length|string) ~ " قالبًا") %}
+    <p class="mtld-lead">
+      مجموعات قيم حفظتها سابقًا لهذا الراوتر — «تطبيق» يجعلها التصميم
+      الحالي فورًا (يُحفظ مباشرة) ويملأ النموذج بقيمها.
+    </p>
+    <div class="mtld-presets">
+      {% for p in presets %}
+      <div class="mtld-preset-row">
+        <i class="fa-solid fa-bookmark"></i>
+        <div class="mtld-preset-row-main">
+          <strong>{{ p.name }}</strong>
+          <span class="mtld-save-note mtld-preset-note-block">
+            تصميم: {{ (library | selectattr('slug', 'equalto', p.template_slug) | map(attribute='name_ar') | first) or p.template_slug }}
+            · آخر تحديث {{ p.updated_at[:16]|replace('T',' ') }}
+          </span>
+        </div>
+        <form method="post" action="{{ url_for('radius.mt_login_designer_preset_apply', nas_id=nas.id) }}">
+          <input type="hidden" name="preset_id" value="{{ p.id }}">
+          <button type="submit" class="hub-btn hub-btn--secondary">
+            <i class="fa-solid fa-wand-magic-sparkles"></i> تطبيق
+          </button>
+        </form>
+        {# حذف القالب المحفوظ — إجراء مدمّر يفتح نافذة ccModal العائمة
+           (لا confirm) ثم يُرسل النموذج عند التأكيد. #}
+        <form method="post" action="{{ url_for('radius.mt_login_designer_preset_delete', nas_id=nas.id) }}">
+          <input type="hidden" name="preset_id" value="{{ p.id }}">
+          <button type="button" class="hub-btn hub-btn--secondary"
+                  title="حذف القالب المحفوظ" aria-label="حذف القالب المحفوظ «{{ p.name }}»"
+                  data-mtld-preset-del data-mtld-preset-name="{{ p.name }}">
+            <i class="fa-solid fa-trash"></i>
+          </button>
+        </form>
+      </div>
+      {% endfor %}
+    </div>
+  {% endcall %}
+  {% endif %}
+
+  {# ════ رفع تصميم خاص: HTML أو ZIP يحوي login.html — يُفحص ويُضاف للمعرض ════ #}
+  {% call hub.section("رفع تصميم خاص", icon="upload") %}
+    <p class="mtld-lead">
+      عندك صفحة هوت سبوت جاهزة من مصمّم خارجي؟ ارفعها هنا (ملف
+      <code dir="ltr">.html</code> مباشرة أو حزمة <code dir="ltr">.zip</code>
+      تحوي <code dir="ltr">login.html</code>) وستظهر في معرض التصاميم
+      بالأعلى — تختارها وتحفظها وتنشرها أو تحمّلها كحزمة مثل أي تصميم آخر.
+      <span class="hub-hint" tabindex="0" data-hint="يُفحص الملف قبل القبول: يجب أن يحوي placeholders ميكروتك الإجبارية $(link-login-only) و$(chap-id) و$(chap-challenge) و$(error) ووسم &lt;/body&gt;، وألا يتجاوز 2 ميجابايت. متغيّرات التخصيص {{ '{{TENANT_NAME}}' }} وأخواتها اختيارية — إن وُجدت في الملف تُستبدل بقيمك، وإلا تُنشر الصفحة كما هي."><i class="fa-solid fa-info"></i></span>
+    </p>
+    <form method="post" enctype="multipart/form-data"
+          action="{{ url_for('radius.mt_login_designer_custom_upload', nas_id=nas.id) }}"
+          class="mtld-custom-form">
+      <label class="mtld-custom-name-label">
+        اسم التصميم في المعرض
+        <input type="text" class="hub-input mtld-custom-name-input" name="custom_name"
+               maxlength="40" placeholder="مثل: تصميم شركتي">
+      </label>
+      {# منطقة رفع الملف: اسحب أو انقر — نفس نمط رفع الشعار في الإعدادات.
+         الحقل الحقيقي مخفي بداخلها ويحتفظ بالاسم custom_file حتى يبقى
+         مسار الرفع على الخادم كما هو دون أي تغيير. #}
+      <div class="mtld-custom-drop" data-mtld-custom-drop tabindex="0" role="button"
+           aria-label="ارفع ملف التصميم — اسحب الملف هنا أو انقر للاختيار">
+        <input type="file" name="custom_file" id="mtld-custom-file"
+               accept=".html,.htm,.zip" required hidden
+               data-mtld-custom-file>
+        <span class="mtld-custom-drop-icon" aria-hidden="true">
+          <i class="fa-solid fa-file-arrow-up"></i>
         </span>
-      </header>
-      <div class="mt-card-body mt-designer-preview-body">
-        <iframe class="mt-designer-frame"
-                data-mt-designer-frame
-                title="معاينة صفحة الدخول"
-                sandbox="allow-same-origin"
-                src="{{ url_for('radius.mt_login_designer_preview',
-                                 nas_id=nas.id,
-                                 template_slug=design.template_slug,
-                                 **design.variables) }}">
-        </iframe>
+        <div class="mtld-custom-drop-text">
+          <strong data-mtld-custom-drop-title>اسحب ملف التصميم هنا أو انقر للاختيار</strong>
+          <span>ملف <bdi dir="ltr">.html</bdi> أو حزمة <bdi dir="ltr">.zip</bdi> تحوي <bdi dir="ltr">login.html</bdi> — بحد أقصى 2 ميجابايت</span>
+          <span class="mtld-custom-filename" data-mtld-custom-filename hidden></span>
+        </div>
+        <span class="hub-btn hub-btn--secondary hub-btn--sm mtld-custom-pick-btn">
+          <i class="fa-solid fa-upload"></i> اختيار ملف
+        </span>
       </div>
-    </section>
+      <button type="submit" class="hub-btn hub-btn--primary mtld-custom-submit">
+        <i class="fa-solid fa-cloud-arrow-up"></i> رفع للتصاميم
+      </button>
+    </form>
+    <div class="mtld-field-help mtld-field-help--gap">
+      شروط القبول: وجود placeholders ميكروتك الإجبارية
+      (<code dir="ltr">$(link-login-only)</code>،
+      <code dir="ltr">$(chap-id)</code>،
+      <code dir="ltr">$(chap-challenge)</code>،
+      <code dir="ltr">$(error)</code>) ووسم
+      <code dir="ltr">&lt;/body&gt;</code>، وحجم حتى 2 ميجابايت.
+      الرفع بنفس الاسم يحدّث التصميم الموجود. التصميم متاح لكل
+      راوترات حسابك.
+    </div>
+  {% endcall %}
 
-  </div>
+  {# نموذج حذف التصميم الخاص — خارج نموذج الحفظ الكبير؛ أزرار الحذف
+     في بطاقات المعرض ترتبط به عبر سمة form= وترسل custom_id. #}
+  <form method="post" id="mtld-custom-del-form"
+        action="{{ url_for('radius.mt_login_designer_custom_delete', nas_id=nas.id) }}">
+    {# custom_id يُملأ من زر الحذف عند تأكيد نافذة ccModal العائمة #}
+    <input type="hidden" name="custom_id" value="" data-mtld-custom-del-id>
+  </form>
+
+  {# ════ شريط النشر: نموذج مستقل حتى لا يتشارك الحفظ والنشر زر إرسال واحدًا ════ #}
+  <form method="post"
+        action="{{ url_for('radius.mt_login_designer_deploy', nas_id=nas.id) }}"
+        data-mt-designer-deploy-form>
+    {% call hub.section("النشر على الراوتر", icon="cloud-arrow-up") %}
+      <div class="mtld-deploy">
+        <div class="mtld-deploy-text">
+          <p class="mtld-lead">
+            النشر يرفع ملف صفحة الدخول <code dir="ltr">login.html</code> بالتصميم
+            <strong>المحفوظ</strong> حاليًا إلى مجلد البوابة على الراوتر.
+            <span class="hub-hint" tabindex="0" data-hint="يتطلّب نجاح برمجة بوابة الدخول أولًا من صفحة برمجة الشبكة. التعديلات غير المحفوظة لا تُنشر — احفظ أولًا. كل محاولة نشر تُسجَّل في سجل الأحداث."><i class="fa-solid fa-info"></i></span>
+          </p>
+          <label class="mtld-confirm">
+            <input type="checkbox" name="confirm" value="1"
+                   data-mt-designer-deploy-confirm>
+            <span>أُؤكّد رفع ملف صفحة الدخول إلى هذا الراوتر.</span>
+          </label>
+        </div>
+        <button type="submit" class="hub-btn hub-btn--primary mtld-deploy-btn"
+                data-mt-designer-deploy-submit>
+          <i class="fa-solid fa-rocket"></i> نشر على الراوتر
+        </button>
+      </div>
+
+      {# نتيجة آخر محاولة نشر ضمن نفس الطلب #}
+      {% if deploy_result %}
+      <div class="mtld-deploy-result {{ 'is-ok' if deploy_result.ok else 'is-err' }}"
+           data-mt-designer-deploy-result role="status">
+        <i class="fa-solid fa-{{ 'circle-check' if deploy_result.ok else 'circle-exclamation' }}"></i>
+        <div>
+          {% if deploy_result.ok %}
+          <strong>تم النشر بنجاح</strong> — رُفع {{ deploy_result.bytes }} بايت إلى
+          <code dir="ltr">{{ deploy_result.path }}</code>
+          {% else %}
+          <strong>فشل النشر</strong> — المسار <code dir="ltr">{{ deploy_result.path }}</code>
+          {% if deploy_result.error %}<br><span class="mtld-err-msg">{{ deploy_result.error }}</span>{% endif %}
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+
+      {# نتيجة رفع متجر الراوتر — يظهر فقط عندما يكون المتجر مفعّلًا
+         وجرت محاولة رفع store.html ضمن نفس عملية النشر. #}
+      {% if store_result %}
+      <div class="mtld-deploy-result {{ 'is-ok' if store_result.ok else 'is-err' }}"
+           data-mt-designer-store-result role="status">
+        <i class="fa-solid fa-{{ 'store' if store_result.ok else 'circle-exclamation' }}"></i>
+        <div>
+          {% if store_result.ok %}
+          <strong>رُفع متجر الراوتر</strong> — {{ store_result.bytes }} بايت إلى
+          <code dir="ltr">{{ store_result.path }}</code>
+          — زر المتجر في صفحة الدخول يفتح الآن <code dir="ltr">store.html</code> من الراوتر مباشرة.
+          {% else %}
+          <strong>فشل رفع متجر الراوتر</strong> — المسار <code dir="ltr">{{ store_result.path }}</code>
+          {% if store_result.error %}<br><span class="mtld-err-msg">{{ store_result.error }}</span>{% endif %}
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+
+      {# نتيجة تجهيز walled-garden — تُجهَّز آليًا مع نشر المتجر حتى
+         تصل أجهزة الزبائن لسيرفر الراديوس قبل تسجيل دخول الإنترنت.
+         عند الفشل (صلاحيات API ناقصة مثلًا) نعرض أمر النسخ اليدوي. #}
+      {% if wg_result %}
+      <div class="mtld-deploy-result {{ 'is-ok' if wg_result.ok else 'is-err' }}"
+           data-mt-designer-wg-result role="status">
+        <i class="fa-solid fa-{{ 'shield-halved' if wg_result.ok else 'circle-exclamation' }}"></i>
+        <div>
+          {% if wg_result.ok %}
+          <strong>قائمة السماح (walled-garden) جاهزة</strong> —
+          {% if wg_result.added %}أُضيفت {{ wg_result.added }} قاعدة جديدة
+          باتجاه سيرفر الراديوس{% else %}القواعد موجودة مسبقًا — لم
+          يتغير شيء{% endif %}. أجهزة الزبائن تستطيع الآن فتح المتجر
+          قبل تسجيل دخول الإنترنت.
+          {% else %}
+          <strong>تعذّر تجهيز walled-garden آليًا</strong>
+          {% if wg_result.error %}<br><span class="mtld-err-msg">{{ wg_result.error }}</span>{% endif %}
+          <br><span class="mtld-deploy-hint-sm">بدون هذه القاعدة لن يصل المتجر
+          لسيرفر الراديوس قبل تسجيل الدخول. انسخ الأمر التالي والصقه في
+          طرفيّة الراوتر (نفس الصيغة في RouterOS v6 و v7):</span>
+          <pre dir="ltr" class="mtld-cmd">{{ wg_result.command or wg_command }}</pre>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+    {% endcall %}
+  </form>
+
 </section>
 
 <script>
 (function () {
   "use strict";
+  // محرك المعاينة الحيّة — نفس العقود القديمة:
+  //   data-mt-designer / data-mt-preview-url / data-mt-designer-frame
+  //   data-mt-designer-template / data-mt-designer-var / active-slug
   const root = document.querySelector("[data-mt-designer]");
   if (!root) return;
   const previewUrl = root.dataset.mtPreviewUrl;
   const frame = root.querySelector("[data-mt-designer-frame]");
   const slugCode = root.querySelector("[data-mt-designer-active-slug]");
+  const saveForm = root.querySelector("[data-mt-designer-form]");
   if (!frame) return;
 
-  function refresh() {
+  // ── المعاينة الحيّة عبر POST + srcdoc ─────────────────────────
+  // لماذا POST؟ بعد إضافة قوائم JSON (الموزعون/العروض) وشعار
+  // data-URL صار رابط GET يتجاوز حدّ سطر الطلب في الخادم
+  // (gunicorn limit_request_line ≈ 4094 بايت) فتُرفض كل طلبات
+  // المعاينة بـ 414 وتتجمّد المعاينة كليًا. الآن نرسل القيم في
+  // جسم POST (بلا حدود طول) ونعرض الـ HTML المُعاد عبر
+  // iframe.srcdoc — الخادم يحقن <base> فتبقى مسارات الخطوط
+  // النسبية (fonts/Tajawal...) سليمة.
+
+  // آخر حالة عُرضت فعلًا — تمنع إعادة التحميل لنفس القيم (مثلًا
+  // عندما يتبع change حدثَ input لنفس القيمة).
+  let lastState = null;
+  // رقم تسلسلي للطلب: لو تسابق طلبان (كتابة سريعة) نعرض الأحدث فقط.
+  let reqSeq = 0;
+
+  function buildState() {
+    // تمثيل نصّي لكل قيم النموذج المؤثرة في المعاينة.
     const params = new URLSearchParams();
-    const slug = root.querySelector(
-      "[data-mt-designer-template]:checked");
-    if (slug) {
-      params.set("template_slug", slug.value);
-      if (slugCode) slugCode.textContent = slug.value;
-    }
+    const slug = root.querySelector("[data-mt-designer-template]:checked");
+    if (slug) params.set("template_slug", slug.value);
     root.querySelectorAll("[data-mt-designer-var]").forEach(el => {
       params.set(el.dataset.mtDesignerVar, el.value);
     });
-    frame.src = previewUrl + "?" + params.toString();
-    // Toggle the .is-active highlight on the picker card.
-    root.querySelectorAll(".mt-designer-card").forEach(card => {
+    return params;
+  }
+
+  function refresh() {
+    const slug = root.querySelector("[data-mt-designer-template]:checked");
+    if (slug && slugCode) slugCode.textContent = slug.value;
+    // إبراز البطاقة المختارة في المعرض (رخيص — يُنفَّذ دائمًا).
+    root.querySelectorAll(".mtld-card").forEach(card => {
       const radio = card.querySelector("input[type=radio]");
       card.classList.toggle("is-active", radio && radio.checked);
     });
+    // تحميل المعاينة فقط إن تغيّرت القيم فعلًا.
+    const params = buildState();
+    const state = params.toString();
+    if (state === lastState) return;
+    lastState = state;
+    // FormData (وليس query string): القيم تذهب في جسم الطلب فلا
+    // يصطدم الطلب بحدود طول الرابط مهما كبر الشعار أو القوائم.
+    const fd = new FormData();
+    params.forEach(function (v, k) { fd.append(k, v); });
+    // رمز CSRF من الحقل المحقون تلقائيًا في نموذج الحفظ.
+    const tok = saveForm && saveForm.querySelector('input[name="_csrf_token"]');
+    if (tok) fd.append("_csrf_token", tok.value);
+    const seq = ++reqSeq;
+    fetch(previewUrl, {
+      method: "POST",
+      body: fd,
+      credentials: "same-origin",
+      headers: tok ? { "X-CSRFToken": tok.value } : {},
+    }).then(function (res) {
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      return res.text();
+    }).then(function (html) {
+      if (seq !== reqSeq) return; // وصل طلب أحدث — تجاهل هذا
+      frame.removeAttribute("src");
+      frame.srcdoc = html;
+    }).catch(function () {
+      // فشل الجلب (انقطاع مؤقت؟) — أعد المحاولة عند التعديل التالي.
+      if (seq === reqSeq) lastState = null;
+    });
   }
 
-  root.addEventListener("input", refresh);
-  root.addEventListener("change", refresh);
+  // مزامنة منتقي الألوان ↔ حقل النص (النص هو الذي يُرسَل للخادم).
+  root.querySelectorAll("[data-mtld-color-for]").forEach(picker => {
+    const text = root.querySelector(
+      '[data-mt-designer-var="' + picker.dataset.mtldColorFor + '"]');
+    if (!text) return;
+    picker.addEventListener("input", () => { text.value = picker.value; });
+    text.addEventListener("input", () => {
+      if (/^#[0-9A-Fa-f]{6}$/.test(text.value)) picker.value = text.value;
+    });
+  });
+
+  // ── الشعار: رفع صورة → تصغير عبر canvas (~256px) → data URL ──
+  // القيمة تُكتب في الحقل المخفي TENANT_LOGO_URL فتمرّ في نفس
+  // مسار الحفظ/المعاينة دون أي تغيير في الخلفية.
+  const logoFile   = root.querySelector("[data-mtld-logo-file]");
+  const logoHidden = root.querySelector('[data-mt-designer-var="TENANT_LOGO_URL"]');
+  const logoImg    = root.querySelector("[data-mtld-logo-preview]");
+  const logoClear  = root.querySelector("[data-mtld-logo-clear]");
+  const logoUrlAlt = root.querySelector("[data-mtld-logo-url-input]");
+
+  // skipRefresh=true أثناء الكتابة الحيّة في حقل الرابط البديل —
+  // التحديث يأتي من مؤقّت input العام بدل إعادة تحميل لكل حرف.
+  function setLogoValue(v, skipRefresh) {
+    if (!logoHidden) return;
+    logoHidden.value = v;
+    if (logoImg) {
+      logoImg.src = v || "";
+      logoImg.style.display = v ? "" : "none";
+    }
+    if (!skipRefresh) refresh();
+  }
+
+  if (logoFile && logoHidden) {
+    logoFile.addEventListener("change", () => {
+      const file = logoFile.files && logoFile.files[0];
+      if (!file || !/^image\//.test(file.type)) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          // تصغير لأقصى بعد 256px — يبقي حجم data URL معقولًا حتى
+          // لا يتضخم login.html المنشور ولا يطول رابط المعاينة.
+          function encode(maxDim) {
+            const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+            const w = Math.max(1, Math.round(img.width * scale));
+            const h = Math.max(1, Math.round(img.height * scale));
+            const canvas = document.createElement("canvas");
+            canvas.width = w; canvas.height = h;
+            canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+            // PNG يحافظ على الشفافية (شائعة في الشعارات)؛ إن كان
+            // الأصل JPEG نستخدم JPEG مضغوطًا لحجم أصغر.
+            return /jpe?g/.test(file.type)
+              ? canvas.toDataURL("image/jpeg", 0.82)
+              : canvas.toDataURL("image/png");
+          }
+          // سقف ~32KB: لو تجاوزه PNG كبير ننزل تدريجيًا بالأبعاد —
+          // المعاينة تمرّ الآن عبر POST (بلا حدود طول)، لكن السقف
+          // يبقي حجم login.html المنشور للراوتر معقولًا.
+          let dataUrl = encode(256);
+          const LIMIT = 32000;
+          for (const dim of [192, 128, 96]) {
+            if (dataUrl.length <= LIMIT) break;
+            dataUrl = encode(dim);
+          }
+          setLogoValue(dataUrl);
+        };
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+  if (logoClear) {
+    logoClear.addEventListener("click", () => {
+      if (logoFile) logoFile.value = "";
+      if (logoUrlAlt) logoUrlAlt.value = "";
+      setLogoValue("");
+    });
+  }
+  if (logoUrlAlt && logoHidden) {
+    // الرابط البديل: يُنسخ إلى الحقل المخفي فقط إن بدا رابطًا صالحًا.
+    // أثناء الكتابة لا نعيد تحميل المعاينة (skipRefresh) — حدث input
+    // يصعد للجذر ويتكفّل المؤقّت العام (600مث) بالتحديث بعد التوقّف.
+    logoUrlAlt.addEventListener("input", () => {
+      const v = logoUrlAlt.value.trim();
+      if (v === "" || /^(https?:\/\/|\/)/.test(v)) setLogoValue(v, true);
+    });
+  }
+  // حالة أولية: أخفِ صورة المعاينة إن لم يكن للشعار قيمة معروضة.
+  if (logoImg && !logoImg.getAttribute("src")) logoImg.style.display = "none";
+  // صورة شعار لا تُحمَّل (مثل المسار الافتراضي /img/logo.png الذي
+  // يوجد على الراوتر لا هنا) — أخفِها بدل أيقونة الصورة المكسورة.
+  if (logoImg) {
+    logoImg.addEventListener("error", function () {
+      logoImg.style.display = "none";
+    });
+  }
+
+  // ── سياسة تحديث المعاينة (إصلاح ثقل الصفحة) ──────────────────
+  //   • change (إكمال الحقل / blur / اختيار قالب أو لون): تحديث فوري.
+  //   • input (كتابة حيّة): مؤقّت احتياطي 600مث بعد توقّف الكتابة —
+  //     لا إعادة تحميل مع كل حرف كما كان سابقًا (debounce قصير 200مث
+  //     كان عمليًا يعيد التحميل على كل ضغطة لأن الفاصل بين الحروف
+  //     أطول من المهلة).
+  //   refresh() نفسها تتجاهل الرابط المتطابق فلا ازدواج بين
+  //   input ثم change لنفس القيمة.
+  let timer = null;
+  root.addEventListener("input", () => {
+    clearTimeout(timer);
+    timer = setTimeout(refresh, 600);
+  });
+  root.addEventListener("change", () => {
+    clearTimeout(timer);   // أُكمل الحقل — ألغِ مؤقّت الكتابة وحدّث فورًا
+    refresh();
+  });
+
+  // ── محرّر القوائم القابلة للتكرار (الموزعون / العروض) ──────────
+  // القيمة الحقيقية JSON في حقل مخفي [data-mtld-json]; هنا نبني
+  // صفوف إدخال عربية لطيفة من JSON ونزامن أي تعديل عائدًا إلى
+  // الحقل المخفي — فيمرّ في نفس مسارات الحفظ/المعاينة/القوالب
+  // المحفوظة دون أي تغيير في الخلفية.
+  var JSON_SCHEMAS = {
+    DISTRIBUTORS_JSON: {
+      fields: [
+        { key: "name",  label: "اسم المحل",  ph: "محل الاتصالات" },
+        { key: "phone", label: "رقم الهاتف", ph: "0599000000", ltr: true },
+        { key: "area",  label: "المنطقة",    ph: "الشارع الرئيسي" }
+      ],
+      maxItems: 20
+    },
+    OFFERS_JSON: {
+      // العرض مقسّم لفئات بأسماء تسويقية جذابة — المفاتيح في JSON
+      // ثابتة (featured/high/normal) فلا تتأثر التصاميم المحفوظة:
+      //   باقة النخبة (بطاقة كبيرة) / الباقة الذهبية (متوسطة)
+      //   / باقة الانطلاق (صغيرة) — مع عنوان وسعر ووصف لكل عرض.
+      tier: [
+        { v: "featured", t: "⭐ باقة النخبة" },
+        { v: "high",     t: "💎 الباقة الذهبية" },
+        { v: "normal",   t: "🚀 باقة الانطلاق" }
+      ],
+      fields: [
+        { key: "title", label: "اسم الباقة", ph: "باقة الألعاب Pro" },
+        { key: "price", label: "السعر",      ph: "2 وحدة" },
+        { key: "desc",  label: "الوصف",      ph: "ساعتان — 5 ميجا" }
+      ],
+      maxItems: 20
+    }
+  };
+
+  function jsonEditor(slug) {
+    var hidden = root.querySelector('[data-mtld-json="' + slug + '"]');
+    var rowsBox = root.querySelector('[data-mtld-json-rows="' + slug + '"]');
+    var addBtn = root.querySelector('[data-mtld-json-add="' + slug + '"]');
+    var schema = JSON_SCHEMAS[slug];
+    if (!hidden || !rowsBox || !addBtn || !schema) return;
+
+    var items = [];
+    try { items = JSON.parse(hidden.value || "[]"); } catch (e) {}
+    if (!Array.isArray(items)) items = [];
+
+    function sync() {
+      hidden.value = JSON.stringify(items);
+      // أبلغ محرك المعاينة (المستمع العام على الجذر) بالتغيير.
+      hidden.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+
+    function buildRow(item, idx) {
+      var row = document.createElement("div");
+      row.className = "mtld-json-row";
+      row.style.cssText = "display:flex;flex-wrap:wrap;gap:6px;align-items:flex-end;" +
+        "border:1px dashed var(--hub-border,#cbd5e1);border-radius:10px;" +
+        "padding:8px;margin-bottom:8px;";
+      if (schema.tier) {
+        var selWrap = document.createElement("label");
+        selWrap.style.cssText = "display:flex;flex-direction:column;font-size:11px;gap:3px;flex:1 1 100px;";
+        selWrap.textContent = "الفئة";
+        var sel = document.createElement("select");
+        sel.className = "hub-input";
+        schema.tier.forEach(function (t) {
+          var o = document.createElement("option");
+          o.value = t.v; o.textContent = t.t;
+          if ((item.tier || "normal") === t.v) o.selected = true;
+          sel.appendChild(o);
+        });
+        sel.addEventListener("input", function () {
+          item.tier = sel.value; sync();
+        });
+        selWrap.appendChild(sel);
+        row.appendChild(selWrap);
+      }
+      schema.fields.forEach(function (f) {
+        var wrap = document.createElement("label");
+        wrap.style.cssText = "display:flex;flex-direction:column;font-size:11px;gap:3px;flex:1 1 120px;";
+        wrap.textContent = f.label;
+        var inp = document.createElement("input");
+        inp.type = "text";
+        inp.className = "hub-input";
+        inp.placeholder = f.ph || "";
+        inp.maxLength = 80;
+        if (f.ltr) inp.dir = "ltr";
+        inp.value = item[f.key] || "";
+        inp.addEventListener("input", function () {
+          item[f.key] = inp.value; sync();
+        });
+        wrap.appendChild(inp);
+        row.appendChild(wrap);
+      });
+      var del = document.createElement("button");
+      del.type = "button";
+      del.className = "hub-btn hub-btn--secondary";
+      del.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+      del.title = "حذف الصف";
+      del.addEventListener("click", function () {
+        items.splice(items.indexOf(item), 1);
+        sync(); renderRows();
+      });
+      row.appendChild(del);
+      return row;
+    }
+
+    function renderRows() {
+      rowsBox.innerHTML = "";
+      items.forEach(function (it, i) {
+        rowsBox.appendChild(buildRow(it, i));
+      });
+    }
+
+    addBtn.addEventListener("click", function () {
+      if (items.length >= schema.maxItems) return;
+      var fresh = {};
+      if (schema.tier) fresh.tier = "normal";
+      schema.fields.forEach(function (f) { fresh[f.key] = ""; });
+      items.push(fresh);
+      sync(); renderRows();
+    });
+
+    renderRows();
+  }
+  jsonEditor("DISTRIBUTORS_JSON");
+  jsonEditor("OFFERS_JSON");
+
+  // ── شريط الأقسام (تبويبات نموذج التخصيص) ─────────────────────
+  // إظهار قسم واحد في كل مرة — الإخفاء عرضي فقط (صنف CSS يضبط
+  // display:none) فتبقى كل الحقول، بما فيها المخفية، تُرسل مع
+  // النموذج كاملة عند الحفظ أو حفظ القالب المسمّى.
+  var tabsBar = root.querySelector("[data-mtld-tabs]");
+  if (tabsBar) {
+    var tabBtns = tabsBar.querySelectorAll("[data-mtld-tab]");
+    var secFields = root.querySelectorAll("[data-mtld-sec]");
+    function showSection(name) {
+      tabBtns.forEach(function (b) {
+        var on = b.dataset.mtldTab === name;
+        b.classList.toggle("is-active", on);
+        b.setAttribute("aria-selected", on ? "true" : "false");
+      });
+      secFields.forEach(function (f) {
+        f.classList.toggle("mtld-sec-hidden", f.dataset.mtldSec !== name);
+      });
+    }
+    tabBtns.forEach(function (b) {
+      b.addEventListener("click", function () {
+        showSection(b.dataset.mtldTab);
+      });
+    });
+    showSection("identity"); // القسم الافتراضي: الهوية
+  }
+
+  // ── معرض كسول: مصغّرات تُحمَّل عند الظهور وتُفرَّغ عند الابتعاد ──
+  // كل مصغّرة صفحة كاملة بسكربتات السبلاش؛ تشغيلها كلها معًا هو
+  // سبب ثقل الصفحة الرئيسي. نُبقي المعاينة الكبيرة وحدها حيّة دائمًا.
+  const thumbs = Array.prototype.slice.call(
+    root.querySelectorAll("[data-mtld-thumb-src]"));
+  function loadThumb(f) {
+    if (!f.getAttribute("src")) f.src = f.dataset.mtldThumbSrc;
+  }
+  function unloadThumb(f) {
+    if (!f.getAttribute("src")) return;
+    // التنقّل إلى about:blank هو ما يوقف سكربتات السبلاش فعلًا
+    // (إزالة السمة وحدها لا تفرّغ المستند)، ثم نزيل السمة حتى
+    // يظهر مؤشّر الانتظار مجددًا (قاعدة CSS تعتمد على [src]).
+    f.src = "about:blank";
+    f.removeAttribute("src");
+  }
+  if ("IntersectionObserver" in window && thumbs.length) {
+    // نراقب صندوق المصغّرة (الأب) لا الـ iframe المُصغَّر بالتحويل —
+    // أدقّ في حساب الظهور لأن الإطار يفيض عن صندوقه المقصوص.
+    const io = new IntersectionObserver(entries => {
+      entries.forEach(en => {
+        const f = en.target.querySelector("[data-mtld-thumb-src]");
+        if (!f) return;
+        if (en.isIntersecting) loadThumb(f);
+        else unloadThumb(f);
+      });
+    }, {
+      // هامش سخي: حمّل قبل الوصول بقليل، وفرّغ فقط بعد ابتعاد واضح
+      // حتى لا يحدث تحميل/تفريغ متكرر أثناء تمرير بسيط.
+      rootMargin: "300px 0px 300px 0px",
+      threshold: 0,
+    });
+    thumbs.forEach(f => {
+      const box = f.closest(".mtld-thumb") || f;
+      io.observe(box);
+    });
+  } else {
+    // متصفح قديم بلا IntersectionObserver: حمّل الكل (السلوك السابق).
+    thumbs.forEach(loadThumb);
+  }
+
+  // ── إجراءات الحذف المدمّرة عبر نافذة ccModal العائمة ──────────
+  // قاعدة التصميم: كل إجراء مدمّر يفتح window.ccModal (لا confirm).
+  // احتياط: إن غاب ccModal (تحميل جزئي) نرسل النموذج مباشرة حتى لا
+  // يتعطّل الحذف نهائيًا.
+  function dangerConfirm(opts, onYes) {
+    if (window.ccModal && window.ccModal.confirm) {
+      window.ccModal.confirm({
+        icon: "danger", dangerous: true,
+        title: opts.title, body: opts.body,
+        confirmText: opts.confirmText || "حذف",
+        cancelText: "إلغاء",
+        onConfirm: onYes,
+      });
+    } else {
+      onYes();
+    }
+  }
+
+  // حذف تصميم خاص — يحقن custom_id في النموذج الخارجي ثم يرسله.
+  var customDelHidden = document.querySelector("[data-mtld-custom-del-id]");
+  var customDelForm = document.getElementById("mtld-custom-del-form");
+  root.querySelectorAll("[data-mtld-custom-del]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var name = btn.dataset.mtldCustomName || "";
+      var id = btn.dataset.mtldCustomId || "";
+      dangerConfirm({
+        title: "حذف التصميم الخاص",
+        body: "حذف التصميم الخاص <strong>«" + name + "»</strong>؟ "
+            + "التصاميم المحفوظة التي تستخدمه ستعود للتصميم الكلاسيكي.",
+        confirmText: "حذف التصميم",
+      }, function () {
+        if (customDelHidden) customDelHidden.value = id;
+        if (customDelForm) customDelForm.submit();
+      });
+    });
+  });
+
+  // حذف قالب محفوظ — يرسل النموذج المجاور للزر عند التأكيد.
+  document.querySelectorAll("[data-mtld-preset-del]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var name = btn.dataset.mtldPresetName || "";
+      var form = btn.closest("form");
+      dangerConfirm({
+        title: "حذف القالب المحفوظ",
+        body: "حذف القالب المحفوظ <strong>«" + name + "»</strong>؟",
+      }, function () { if (form) form.submit(); });
+    });
+  });
+})();
+
+/* ═══ رفع تصميم خاص: منطقة اسحب/انقر بدل حقل الملف التقليدي ═══
+   نفس نمط رفع الشعار في صفحة الإعدادات — الحقل الحقيقي مخفي
+   داخل المنطقة ويحتفظ باسمه custom_file فيُرسل مع النموذج كالعادة. */
+(function () {
+  "use strict";
+  const drop    = document.querySelector("[data-mtld-custom-drop]");
+  const fileInp = document.querySelector("[data-mtld-custom-file]");
+  if (!drop || !fileInp) return;
+  const titleEl = drop.querySelector("[data-mtld-custom-drop-title]");
+  const fnameEl = drop.querySelector("[data-mtld-custom-filename]");
+  const MAX = 2 * 1024 * 1024; // 2MB — نفس حد الفحص على الخادم
+  const OK_EXT = /\.(html?|zip)$/i;
+
+  // تنبيه عائم بدل alert() — يستخدم ccModal إن توفّر، وإلا يعرض
+  // الرسالة في شارة اسم الملف بلون تحذير حتى لا يصمت الخطأ.
+  function warn(msg) {
+    if (window.ccModal && window.ccModal.confirm) {
+      window.ccModal.confirm({
+        icon: "warn", title: "ملف غير مقبول", body: msg,
+        confirmText: "حسنًا", cancelText: "",
+      });
+    } else if (fnameEl) {
+      fnameEl.textContent = msg;
+      fnameEl.hidden = false;
+    }
+  }
+
+  function showFile(f) {
+    if (!f) return;
+    if (!OK_EXT.test(f.name || "")) {
+      warn("نوع الملف غير مدعوم — المسموح: ‎.html أو ‎.zip فقط.");
+      fileInp.value = ""; return;
+    }
+    if (f.size > MAX) {
+      warn("حجم الملف يتجاوز 2 ميجابايت — صغّر الملف وأعد المحاولة.");
+      fileInp.value = ""; return;
+    }
+    fnameEl.textContent = f.name + " (" + Math.round(f.size / 1024) + " KB)";
+    fnameEl.hidden = false;
+    titleEl.textContent = "جاهز للرفع — اضغط «رفع للتصاميم»";
+  }
+
+  // النقر أو Enter/Space على المنطقة يفتح منتقي الملفات
+  drop.addEventListener("click", () => fileInp.click());
+  drop.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fileInp.click(); }
+  });
+  fileInp.addEventListener("change", () => showFile(fileInp.files && fileInp.files[0]));
+
+  // سحب وإفلات: تمييز بصري أثناء السحب + إسناد الملف للحقل المخفي
+  ["dragenter", "dragover"].forEach(ev => drop.addEventListener(ev, (e) => {
+    e.preventDefault(); drop.classList.add("is-dragover");
+  }));
+  ["dragleave", "drop"].forEach(ev => drop.addEventListener(ev, (e) => {
+    e.preventDefault(); drop.classList.remove("is-dragover");
+  }));
+  drop.addEventListener("drop", (e) => {
+    const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (!f) return;
+    try {
+      const dt = new DataTransfer();
+      dt.items.add(f);
+      fileInp.files = dt.files; // إسناد الملف للحقل حتى يُرسل مع النموذج
+    } catch (_) { /* متصفح قديم — يبقى النقر للاختيار */ }
+    showFile(f);
+  });
+
+  // ── زر «اختبار الاتصال بالخادم» ───────────────────────────────
+  // ينفّذ نداءً فعليًا من متصفح الأدمن إلى <عنوان API>/api/v1/store/ping
+  // (نفس المسار الذي يستدعيه الفحص الذاتي في store.html من جهاز
+  // الزبون). نجاحه قبل النشر يؤكّد أن العنوان+المنفذ صحيحان وقابلان
+  // للوصول وأن CORS مفتوح — ففشل الدخول لاحقًا لن يُنسب للشبكة.
+  // مع AbortController لمهلة قصوى حتى لا يتعلّق على عنوان لا يستجيب.
+  const pingBtn = root.querySelector("[data-mt-store-ping-base]");
+  const pingOut = root.querySelector("[data-mt-store-ping-result]");
+  if (pingBtn && pingOut) {
+    const setOut = (state, text) => {
+      pingOut.textContent = text;
+      pingOut.dataset.state = state; // ok | bad | wait (للتنسيق)
+    };
+    pingBtn.addEventListener("click", () => {
+      const base = (pingBtn.dataset.mtStorePingBase || "").replace(/\/+$/, "");
+      if (!base) { setOut("bad", "لا يوجد عنوان API مضبوط."); return; }
+      setOut("wait", "جارٍ الاختبار…");
+      pingBtn.disabled = true;
+      const ctrl = ("AbortController" in window) ? new AbortController() : null;
+      const timer = ctrl ? setTimeout(() => ctrl.abort(), 7000) : null;
+      fetch(base + "/api/v1/store/ping", ctrl ? { signal: ctrl.signal } : {})
+        .then((res) => {
+          if (timer) clearTimeout(timer);
+          if (res.ok) {
+            setOut("ok", "✓ متصل — العنوان صحيح وقابل للوصول.");
+          } else {
+            setOut("bad", "وصل الطلب لكن ردّ بخطأ HTTP " + res.status +
+                          " — راجع الخادم.");
+          }
+        })
+        .catch(() => {
+          if (timer) clearTimeout(timer);
+          setOut("bad", "تعذّر الوصول إلى " + base + " — تأكد أن " +
+                        "العنوان والمنفذ صحيحان والخادم يعمل (ومسموح به " +
+                        "في walled-garden على شبكة الزبائن).");
+        })
+        .then(() => { pingBtn.disabled = false; });
+    });
+  }
 })();
 </script>
 

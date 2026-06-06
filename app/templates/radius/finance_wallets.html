@@ -6,6 +6,64 @@
 {% block page_title %}الخزائن والمحافظ{% endblock %}
 {% block page_sub %}<span class="sub">أرصدة قابلة للتتبع مع سجل حركات حديث</span>{% endblock %}
 
+{% block head_extra %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
+<style>
+  /* ── عمود «إجراء»: حقل واحد مدمج (نوع الحركة + المبلغ) — نمط unit_input ──
+     الغلاف يحمل الإطار والزوايا وحلقة التركيز (مثل .ui-wrap تمامًا)،
+     والعناصر الداخلية بلا إطار ولا زوايا — فيبدو الاثنان قطعة واحدة
+     سواء بقيت <select> أصلية أو حوّلها hub_select.js إلى زر .hbsel. */
+  .fw-act{ display:inline-flex; align-items:stretch; gap:6px; justify-content:center; }
+  .fw-act-group{
+    display:inline-flex; align-items:stretch;
+    border: 1px solid var(--hub-border);
+    border-radius: var(--hub-r-md);
+    overflow: hidden;
+    background: var(--hub-bg-card);
+    transition: border-color .15s ease, box-shadow .15s ease;
+  }
+  .fw-act-group:focus-within{
+    border-color: var(--hub-brand);
+    box-shadow: 0 0 0 3px rgba(107,90,237,.15);
+  }
+  .fw-act-group input[name="amount"]{
+    width: 96px;
+    text-align: center;
+    border: 0; border-radius: 0;
+    box-shadow: none;
+    background: transparent;
+    font-variant-numeric: tabular-nums;
+  }
+  .fw-act-group input[name="amount"]:focus{ box-shadow:none; }
+  /* الـ<select> الأصلية (قبل تحويل hub_select.js): بلا إطار ولا زوايا داخلية،
+     مع فاصل ناعم على الحافة الداخلية فقط — كقائمة الوحدات في unit_input. */
+  .fw-act-group select[name="wallet_action"]{
+    border: 0; border-radius: 0;
+    border-inline-end: 1px solid var(--hub-border);
+    box-shadow: none;
+    background-color: #f1edff;
+    color: var(--hub-brand-ink, #5B4BD8);
+    font-weight: 800;
+  }
+  /* بعد تحويل hub_select.js: الزر .hbsel-trigger يرث الدمج نفسه —
+     بلا زوايا خاصة ولا إطار مزدوج داخل المجموعة الملتحمة. */
+  .fw-act-group .hbsel{ display:inline-flex; align-items:stretch; }
+  .fw-act-group .hbsel-trigger{
+    border: 0; border-radius: 0;
+    border-inline-end: 1px solid var(--hub-border);
+    box-shadow: none !important;
+    height: 100%;
+  }
+  .fw-act .hub-btn{ white-space: nowrap; }
+
+  /* ── توسيط أعمدة جدول المحافظ: الرؤوس والخلايا تحت أسمائها تمامًا ──
+     التخصيص أعلى من .hub-table thead th العام (الذي يحاذي للبداية). */
+  .fw-table thead th,
+  .fw-table tbody td{ text-align: center; vertical-align: middle; }
+</style>
+{% endblock %}
+
 {% macro owner_label(owner_type) -%}
   {{ {
     'company': 'الشركة',
@@ -27,14 +85,27 @@
   }.get(transaction_type, 'حركة مالية') }}
 {%- endmacro %}
 
+{# تعريب حالة المحفظة: القيم الخام (active/inactive…) لا يجب أن تظهر للمستخدم بالإنجليزية #}
+{% macro status_label(status) -%}
+  {{ {
+    'active': 'نشط',
+    'inactive': 'معطّل',
+    'frozen': 'مجمّد',
+    'closed': 'مغلق',
+    'suspended': 'موقوف'
+  }.get(status, status) }}
+{%- endmacro %}
+
 {% block content %}
-{{ hub.hero("الخزائن والمحافظ", subtitle="إنشاء ومراجعة المحافظ المالية بدون حذف السجلات.", icon="wallet") }}
+{# الهيرو الموحّد المدموج megahero بدل hero القديم — قاعدة التصميم: هيرو واحد فقط #}
+{{ hub.megahero("الخزائن والمحافظ", subtitle="إنشاء ومراجعة المحافظ المالية بدون حذف السجلات.", icon="wallet") }}
 {% include "radius/_finance_nav.html" %}
 
 {% call hub.section("إنشاء محفظة", icon="circle-plus") %}
   <form method="post" action="{{ url_for('radius.business_finance_wallets_create') }}" class="hub-form-grid">
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-    {{ hub.field("نوع المالك", "owner_type", "company", hint="company / manager / distributor / subscriber / card_user") }}
+    {# تلميح معرّب لقيم owner_type: القيمة المُرسَلة تبقى company افتراضيًا، والتلميح بالعربية للمستخدم #}
+    {{ hub.field("نوع المالك", "owner_type", "company", hint="الشركة / مدير / موزع / مشترك / مستخدم بطاقات") }}
     {{ hub.field("رقم المالك", "owner_id", "", type="number", hint="اتركه فارغا لمحفظة الشركة") }}
     {{ hub.field("العملة", "currency", cfg.currency) }}
     {{ hub.btn("إنشاء محفظة", variant="primary", icon="plus", type="submit") }}
@@ -43,8 +114,8 @@
 
 {% call hub.section("قائمة المحافظ", icon="wallet", flush=True) %}
   {% if wallets %}
-  <div class="table-responsive">
-    <table class="table hub-table">
+  <div class="table-responsive hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25">
+    <table class="table hub-table fw-table">
       <thead>
         <tr>
           <th>#</th>
@@ -61,7 +132,8 @@
           <td>{{ wallet.id }}</td>
           <td>{{ owner_label(wallet.owner_type) }}{% if wallet.owner_id %} #{{ wallet.owner_id }}{% endif %}</td>
           <td><strong>{{ wallet.balance|money }}</strong></td>
-          <td>{{ hub.pill(wallet.status, "green" if wallet.status == "active" else "grey") }}</td>
+          {# تعريب الحالة المعروضة عبر status_label؛ المقارنة تبقى على القيمة الخام active #}
+          <td>{{ hub.pill(status_label(wallet.status), "green" if wallet.status == "active" else "grey") }}</td>
           <td>
             {% for tx in tx_by_wallet.get(wallet.id, []) %}
               <div style="font-size:12px">{{ tx_label(tx.transaction_type) }} — {{ tx.amount|money }} — {{ tx.created_at|dt_local }}</div>
@@ -70,15 +142,25 @@
             {% endfor %}
           </td>
           <td>
-            <form method="post" action="{{ url_for('radius.business_finance_wallet_credit', wallet_id=wallet.id) }}" style="display:flex;gap:6px;margin-bottom:6px">
+            {# حقل واحد مدمج: نوع الحركة (شحن/خصم) + المبلغ — نصف عرض الحقلين السابقين.
+               الحركة تبدّل وجهة النموذج بين مسارَي الشحن والخصم، واسم الحقل المُرسَل يبقى amount. #}
+            <form method="post" class="fw-act"
+                  action="{{ url_for('radius.business_finance_wallet_credit', wallet_id=wallet.id) }}"
+                  data-fw-act
+                  data-credit-url="{{ url_for('radius.business_finance_wallet_credit', wallet_id=wallet.id) }}"
+                  data-debit-url="{{ url_for('radius.business_finance_wallet_debit', wallet_id=wallet.id) }}">
               <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-              <input class="hub-input" name="amount" placeholder="مبلغ الشحن" {% if not can_wallet_credit %}disabled{% endif %}>
-              <button class="hub-btn hub-btn--secondary" type="submit" {% if not can_wallet_credit %}disabled{% endif %}>شحن</button>
-            </form>
-            <form method="post" action="{{ url_for('radius.business_finance_wallet_debit', wallet_id=wallet.id) }}" style="display:flex;gap:6px">
-              <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-              <input class="hub-input" name="amount" placeholder="مبلغ الخصم" {% if not can_wallet_debit %}disabled{% endif %}>
-              <button class="hub-btn hub-btn--ghost" type="submit" {% if not can_wallet_debit %}disabled{% endif %}>خصم</button>
+              <span class="fw-act-group">
+                <select class="hub-select" name="wallet_action" aria-label="نوع الحركة">
+                  <option value="credit" {% if not can_wallet_credit %}disabled{% endif %}>شحن</option>
+                  <option value="debit" {% if not can_wallet_debit %}disabled{% endif %}>خصم</option>
+                </select>
+                <input class="hub-input" name="amount" type="number" min="0" step="0.01" inputmode="decimal"
+                       placeholder="المبلغ" aria-label="المبلغ"
+                       {% if not can_wallet_credit and not can_wallet_debit %}disabled{% endif %}>
+              </span>
+              <button class="hub-btn hub-btn--secondary" type="submit"
+                      {% if not can_wallet_credit and not can_wallet_debit %}disabled{% endif %}>تنفيذ</button>
             </form>
           </td>
         </tr>
@@ -90,4 +172,19 @@
     {{ hub.empty("لا توجد محافظ بعد.", sub="ابدأ بمحفظة الشركة أو محفظة مدير/موزع.", icon="wallet") }}
   {% endif %}
 {% endcall %}
+<script>
+(function(){
+  // حقل الإجراء المدمج: اختيار «شحن/خصم» يبدّل وجهة النموذج بين مسارَي الشحن والخصم.
+  document.querySelectorAll('[data-fw-act]').forEach(function(form){
+    var choice = form.querySelector('select[name="wallet_action"]');
+    if(!choice) return;
+    function sync(){
+      form.action = (choice.value === 'debit') ? form.dataset.debitUrl : form.dataset.creditUrl;
+    }
+    choice.addEventListener('change', sync);
+    sync();
+  });
+})();
+</script>
+<script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
 {% endblock %}

@@ -50,6 +50,8 @@ def billing_hub():
         plans=plans,
         plans_map={p.id: p for p in plans},
         # Subscribers are only needed to populate the "new invoice"
-        # modal's picker; cap the list for the dropdown.
-        subs=subscribers_repo.list_subscribers(tid, limit=500),
+        # modal's picker (hbsel search filters client-side). The previous
+        # limit=500 silently dropped half the base with ~1000 subscribers,
+        # so the picker looked incomplete — raise the cap to cover it.
+        subs=subscribers_repo.list_subscribers(tid, limit=2000),
     )

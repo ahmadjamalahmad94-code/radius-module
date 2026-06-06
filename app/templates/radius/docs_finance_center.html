@@ -1,0 +1,585 @@
+{# ══════════════════════════════════════════════════════════════════════
+   دليل «المركز المالي» — قسم المحاسبة والمالية في «كيف تستخدمني».
+
+   يشرح صفحة المركز المالي الحقيقية (finance_center_hub.html ←
+   /admin/radius/finance-center): التبويبات الأربعة، شريط المؤشرات
+   المتغيّر لكل تبويب، إنشاء المحافظ والشحن والخصم عبر بوابة الأمان،
+   وقراءة الإيرادات والديون والسلف.
+
+   البنية منسوخة من النمط الذهبي docs_add_subscriber.html: فهرس جانبي
+   لاصق order:2 + scrollspy، خطوات بشارات بنفسجية، رسوم HTML/CSS مصغّرة،
+   تنبيهات 💡/⚠️، وزر «حفظ كـ PDF» عبر window.print(). القالب ثابت
+   بالكامل (يُرندَر بلا سياق) — أسماء التبويبات والمؤشرات والحقول منسوخة
+   حرفيًا من الصفحة الحقيقية؛ عند تغييرها حدّث الدليل معها.
+   ══════════════════════════════════════════════════════════════════════ #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}دليل: المركز المالي — كيف تستخدمني{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<style>
+  /* ── التخطيط: فهرس جانبي لاصق + عمود المحتوى (نفس النمط الذهبي) ── */
+  .dg-layout{ display:grid; grid-template-columns:minmax(0,1fr) 230px; gap:20px; align-items:start; }
+  .dg-toc{ order:2; }
+  .dg-main{ order:1; }
+  @media (max-width:980px){ .dg-layout{ grid-template-columns:1fr; } .dg-toc{ order:1; } .dg-main{ order:2; } }
+
+  .dg-toc{
+    position:sticky; top:84px;
+    background:#fff; border:1px solid #e8edf3; border-radius:14px;
+    padding:14px 13px; display:grid; gap:3px;
+  }
+  @media (max-width:980px){ .dg-toc{ position:static; } }
+  .dg-toc-title{
+    display:flex; align-items:center; gap:8px; font-size:12px; font-weight:900;
+    color:#7c7a99; margin-bottom:7px; padding-inline:6px;
+  }
+  .dg-toc a{
+    display:flex; align-items:center; gap:9px;
+    padding:8px 10px; border-radius:9px; text-decoration:none;
+    font-size:12.5px; font-weight:700; color:#475569;
+    transition:background .14s, color .14s;
+  }
+  .dg-toc a .n{
+    width:21px; height:21px; border-radius:50%; flex:none;
+    display:grid; place-items:center; font-size:10.5px; font-weight:900;
+    background:#f1f5f9; color:#94a3b8;
+  }
+  .dg-toc a:hover{ background:#f5f3ff; color:#5b21b6; }
+  .dg-toc a.is-active{ background:#ede9fe; color:#5b21b6; }
+  .dg-toc a.is-active .n{ background:linear-gradient(135deg,#7c3aed,#5b21b6); color:#fff; }
+
+  /* ── عمود الخطوات ── */
+  .dg-main{ min-width:0; display:grid; gap:18px; }
+  .dg-lead{
+    display:flex; gap:13px; align-items:flex-start;
+    background:linear-gradient(135deg,#f5f3ff,#fdfcff);
+    border:1px solid #e9e5fc; border-radius:14px; padding:15px 17px;
+  }
+  .dg-lead .ic{ width:40px;height:40px;border-radius:12px;flex:none;display:grid;place-items:center;
+    font-size:17px;background:#ede9fe;color:#6d28d9; }
+  .dg-lead h3{ margin:0 0 4px; font-size:13.5px; font-weight:800; color:#241e4e; }
+  .dg-lead p{ margin:0; font-size:12.5px; line-height:1.9; color:#5b5a78; }
+
+  .dg-step{ display:grid; grid-template-columns:auto 1fr; gap:15px; align-items:start; scroll-margin-top:90px; }
+  @media (max-width:560px){ .dg-step{ grid-template-columns:1fr; } }
+  .dg-badge{
+    width:42px; height:42px; border-radius:50%; flex:none;
+    display:grid; place-items:center; font-size:17px; font-weight:900; color:#fff;
+    background:linear-gradient(135deg,#7c3aed,#5b21b6);
+    box-shadow:0 8px 18px rgba(124,58,237,.3);
+  }
+  .dg-card{
+    min-width:0; background:#fff; border:1px solid #e8edf3; border-radius:15px;
+    padding:16px 18px;
+  }
+  .dg-card h2{
+    margin:0 0 8px; font-size:15.5px; font-weight:800; color:#0f172a;
+    display:flex; align-items:center; gap:9px; flex-wrap:wrap;
+  }
+  .dg-card h2 i{ color:#7c3aed; }
+  .dg-card p{ margin:0 0 7px; font-size:13px; line-height:1.95; color:#475569; }
+  .dg-card p:last-child{ margin-bottom:0; }
+  .dg-card ul{ margin:4px 0 8px; padding-inline-start:22px; font-size:13px; line-height:2; color:#475569; }
+  .dg-card strong{ color:#241e4e; }
+  .dg-kbd{
+    font-family:ui-monospace,Consolas,monospace; font-size:11.5px;
+    background:#f1f5f9; border:1px solid #e2e8f0; border-radius:5px;
+    padding:1px 7px; color:#5b21b6;
+  }
+
+  /* صناديق التلميح */
+  .dg-tip, .dg-warn{
+    display:flex; gap:11px; align-items:flex-start;
+    border-radius:12px; padding:11px 14px; margin-top:11px;
+    font-size:12.5px; line-height:1.9;
+  }
+  .dg-tip{ background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; }
+  .dg-warn{ background:#fffbeb; border:1px solid #fde68a; color:#92400e; }
+  .dg-tip .ic, .dg-warn .ic{ flex:none; font-size:15px; line-height:1.6; }
+  .dg-tip b, .dg-warn b{ font-weight:900; }
+
+  /* ════ الرسوم: محاكاة مصغّرة للصفحة الحقيقية ════ */
+  .dg-mock{
+    border:1px solid #e2e8f0; border-radius:14px; overflow:hidden;
+    background:#fff; box-shadow:0 8px 20px rgba(15,23,42,.07);
+    margin-top:13px; max-width:560px;
+  }
+  .dg-mock-bar{
+    display:flex; align-items:center; gap:7px; padding:8px 12px;
+    background:#f1f5f9; border-bottom:1px solid #e2e8f0;
+  }
+  .dg-mock-bar .dots{ display:flex; gap:5px; }
+  .dg-mock-bar .dots i{ width:9px; height:9px; border-radius:50%; }
+  .dg-mock-bar .dots i:nth-child(1){ background:#f87171; }
+  .dg-mock-bar .dots i:nth-child(2){ background:#fbbf24; }
+  .dg-mock-bar .dots i:nth-child(3){ background:#34d399; }
+  .dg-mock-bar .crumb{
+    flex:1; background:#fff; border:1px solid #e2e8f0; border-radius:7px;
+    padding:4px 10px; font-size:10.5px; font-weight:700; color:#64748b;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .dg-mock-body{ padding:14px; display:grid; gap:11px; }
+  .dg-mock-sechead{
+    display:flex; align-items:center; gap:9px; font-size:12px; font-weight:800; color:#241e4e;
+    padding-bottom:9px; border-bottom:1px dashed #eef2f7;
+  }
+  .dg-mock-sechead .ic{
+    width:26px; height:26px; border-radius:8px; display:grid; place-items:center;
+    font-size:11px; background:#ede9fe; color:#6d28d9; flex:none;
+  }
+  .dg-mock-grid2{ display:grid; grid-template-columns:1fr 1fr; gap:11px; }
+  @media (max-width:480px){ .dg-mock-grid2{ grid-template-columns:1fr; } }
+  .dg-mf{ display:grid; gap:5px; min-width:0; }
+  .dg-mf label{ font-size:10.5px; font-weight:800; color:#475569; }
+  .dg-mf label .req{ color:#dc2626; }
+  .dg-mf-input{
+    border:1.5px solid #e2e8f0; border-radius:8px; padding:8px 10px;
+    font-size:11.5px; color:#0f172a; background:#fff;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .dg-mf-input.hl{ border-color:#c4b5fd; background:#faf5ff; }
+  .dg-mf-input.ph{ color:#a3aec2; }
+  .dg-mf-select{ position:relative; }
+  .dg-mf-select::after{
+    content:"\f078"; font-family:"Font Awesome 6 Free"; font-weight:900;
+    position:absolute; inset-inline-end:10px; top:50%; transform:translateY(-50%);
+    font-size:9px; color:#94a3b8; pointer-events:none;
+  }
+  .dg-mf-help{ font-size:9.5px; color:#94a3b8; line-height:1.6; }
+
+  /* ════ إضافات المالية: شريط مؤشرات + تبويبات + جدول مصغّر ════ */
+  /* شريط المؤشرات (KPI strip) — يحاكي megahero kpis */
+  .dg-kpis{ display:grid; grid-template-columns:repeat(4,1fr); gap:9px; }
+  @media (max-width:520px){ .dg-kpis{ grid-template-columns:1fr 1fr; } }
+  .dg-kpi{ border:1px solid #e8edf3; border-radius:11px; padding:10px 11px; background:#fff; display:grid; gap:5px; }
+  .dg-kpi .lab{ font-size:9.5px; font-weight:800; color:#94a3b8; display:flex; align-items:center; gap:5px; }
+  .dg-kpi .lab i{ color:#a78bfa; }
+  .dg-kpi .val{ font-size:14px; font-weight:900; color:#0f172a; font-variant-numeric:tabular-nums; direction:ltr; text-align:start; }
+  .dg-kpi.green .val{ color:#15803d; }
+  .dg-kpi.amber .val{ color:#b45309; }
+  .dg-kpi.blue  .val{ color:#1e5c9f; }
+  .dg-kpi.brand .val{ color:#5b21b6; }
+
+  /* تبويبات مصغّرة */
+  .dg-tabs{ display:flex; gap:6px; flex-wrap:wrap; }
+  .dg-tabs span{
+    display:inline-flex; align-items:center; gap:6px; padding:6px 11px; border-radius:999px;
+    border:1px solid #e2e8f0; background:#fff; font-size:10.5px; font-weight:800; color:#64748b;
+  }
+  .dg-tabs span.on{ background:#5b21b6; color:#fff; border-color:#5b21b6; }
+
+  /* جدول مصغّر عام */
+  .dg-tbl{ width:100%; border-collapse:collapse; font-size:10.5px; }
+  .dg-tbl th{ text-align:start; padding:6px 8px; background:#f5f3ff; color:#5b21b6; font-weight:900; white-space:nowrap; }
+  .dg-tbl td{ padding:6px 8px; border-top:1px solid #f1f5f9; color:#334155; font-weight:700; }
+  .dg-tbl td.num{ text-align:start; font-variant-numeric:tabular-nums; direction:ltr; }
+
+  /* شارات الحالة بألوان متعددة */
+  .dg-pill{
+    display:inline-flex; align-items:center; gap:5px; border-radius:999px;
+    padding:2px 9px; font-size:9.5px; font-weight:900; background:#dcfce7; color:#15803d;
+  }
+  .dg-pill .dot{ width:6px; height:6px; border-radius:50%; background:#16a34a; }
+  .dg-pill.amber{ background:#fef3c7; color:#b45309; } .dg-pill.amber .dot{ background:#d97706; }
+  .dg-pill.red{ background:#fee2e2; color:#b91c1c; } .dg-pill.red .dot{ background:#dc2626; }
+  .dg-pill.blue{ background:#dbeafe; color:#1e5c9f; } .dg-pill.blue .dot{ background:#2563eb; }
+  .dg-pill.grey{ background:#f1f5f9; color:#64748b; } .dg-pill.grey .dot{ background:#94a3b8; }
+
+  /* زر مصغّر (محاكاة) */
+  .dg-mock-actions{ display:flex; justify-content:flex-end; gap:9px; padding-top:4px; flex-wrap:wrap; }
+  .dg-mock-btn{
+    display:inline-flex; align-items:center; gap:7px; border:0; border-radius:9px;
+    padding:8px 14px; font:inherit; font-size:11px; font-weight:800; cursor:default;
+  }
+  .dg-mock-btn.primary{
+    background:linear-gradient(135deg,#7c3aed,#5b21b6); color:#fff;
+    box-shadow:0 6px 14px rgba(124,58,237,.28);
+  }
+  .dg-mock-btn.ghost{ background:#f1f5f9; color:#475569; }
+  .dg-mock-btn.blue{ background:#eff6ff; color:#1e5c9f; border:1px solid #bfdbfe; }
+
+  /* حقل الإجراء المدمج (شحن/خصم + المبلغ) */
+  .dg-actgroup{ display:inline-flex; align-items:stretch; }
+  .dg-actgroup .sel{
+    background:#eff6ff; border:1.5px solid #bfdbfe; color:#1e5c9f; font-weight:800;
+    border-start-end-radius:0; border-end-end-radius:0; padding:7px 9px; font-size:11px;
+    display:flex; align-items:center; gap:5px;
+  }
+  .dg-actgroup .amt{
+    border:1.5px solid #e2e8f0; border-start-start-radius:0; border-end-start-radius:0;
+    margin-inline-start:-1px; padding:7px 10px; font-size:11px; color:#a3aec2; width:96px; text-align:center;
+  }
+
+  .dg-cap{ font-size:11px; color:#94a3b8; margin-top:8px; line-height:1.7; }
+  .dg-cap i{ color:#c4b5fd; }
+
+  /* ════ الطباعة: «حفظ كـ PDF» = window.print() ════ */
+  @media print{
+    .hb-side, .hb-side-overlay, .hb-topbar, header.hb-top,
+    .dg-toc, .dg-noprint, .hub-hero-actions{ display:none !important; }
+    .dg-layout{ grid-template-columns:1fr; }
+    .dg-card, .dg-mock{ box-shadow:none !important; break-inside:avoid; }
+    .dg-step{ break-inside:avoid; }
+    body{ background:#fff !important; }
+    .dg-badge, .dg-mock-btn.primary, .dg-tip, .dg-warn, .dg-pill,
+    .dg-tbl th, .dg-tabs span.on, .dg-kpi{
+      -webkit-print-color-adjust:exact; print-color-adjust:exact;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{{ hub.hero(
+  "دليل: المركز المالي",
+  subtitle="الخزائن والمحافظ والإيرادات والديون والسلف في صفحة واحدة — 7 خطوات تشرح كل مؤشر وكل إجراء.",
+  icon="coins",
+  actions_html='
+    <button type="button" class="hub-btn hub-btn--secondary" onclick="window.print()">
+      <i class="fa-solid fa-file-pdf"></i> حفظ كـ PDF
+    </button>
+    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.finance_center_hub') + '">
+      <i class="fa-solid fa-up-right-from-square"></i> افتح الصفحة
+    </a>
+    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.docs_center') + '">
+      <i class="fa-solid fa-arrow-right"></i> كل الأدلة
+    </a>
+  '
+) }}
+
+<div class="dg-layout">
+
+  {# ───── الفهرس الجانبي اللاصق ───── #}
+  <nav class="dg-toc dg-noprint" aria-label="فهرس الدليل">
+    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> فهرس الخطوات</div>
+    <a href="#dg-s1" data-dg-toc><span class="n">1</span> افتح المركز المالي</a>
+    <a href="#dg-s2" data-dg-toc><span class="n">2</span> اقرأ شريط المؤشرات</a>
+    <a href="#dg-s3" data-dg-toc><span class="n">3</span> تبويب النظرة العامة</a>
+    <a href="#dg-s4" data-dg-toc><span class="n">4</span> الخزائن والمحافظ</a>
+    <a href="#dg-s5" data-dg-toc><span class="n">5</span> إنشاء محفظة</a>
+    <a href="#dg-s6" data-dg-toc><span class="n">6</span> الشحن والخصم</a>
+    <a href="#dg-s7" data-dg-toc><span class="n">7</span> الإيرادات والديون</a>
+  </nav>
+
+  {# ───── عمود المحتوى ───── #}
+  <div class="dg-main">
+
+    <div class="dg-lead">
+      <span class="ic"><i class="fa-solid fa-lightbulb"></i></span>
+      <div>
+        <h3>قبل ما نبدأ — شو هو «المركز المالي»؟</h3>
+        <p>
+          المركز المالي هو لوحة المتابعة اليومية لكل ما يخص الفلوس في النظام: المحافظ وأرصدتها،
+          الإيرادات والأرباح، والديون والسلف. القاعدة الذهبية هنا: <strong>لا حذف مباشر إطلاقًا</strong> —
+          كل شحن أو خصم يمرّ عبر الخدمة المالية ويترك <strong>قيدًا قابلًا للتدقيق</strong>. فالصفحة
+          للقراءة والتشغيل الآمن، وكل رقم تشوفه قابل للمراجعة.
+        </p>
+      </div>
+    </div>
+
+    {# ════ الخطوة 1 ════ #}
+    <section class="dg-step" id="dg-s1">
+      <div class="dg-badge">1</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-door-open"></i> افتح المركز المالي واعرف تبويباته الأربعة</h2>
+        <p>
+          من القائمة الجانبية افتح قسم <strong>«المحاسبة والمالية»</strong> ثم
+          <strong>«المركز المالي»</strong>. رح تفتح صفحة واحدة فيها أربعة تبويبات أعلى الشاشة،
+          وزر <strong>«السجل المحاسبي»</strong> في الأعلى ينقلك لدفتر القيود الكامل:
+        </p>
+        <ul>
+          <li><strong>النظرة العامة:</strong> ملخّص الأرقام التشغيلية وقاعدة الأمان.</li>
+          <li><strong>الخزائن والمحافظ:</strong> قائمة المحافظ وأرصدتها، وهنا تشحن وتخصم.</li>
+          <li><strong>الإيرادات:</strong> سجلات البيع والربح الصافي لكل عملية.</li>
+          <li><strong>الديون والسلف:</strong> الذمم المستحقة والسلف المفتوحة وحالاتها.</li>
+        </ul>
+
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">المركز المالي</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-tabs">
+              <span class="on"><i class="fa-solid fa-chart-pie"></i> النظرة العامة</span>
+              <span><i class="fa-solid fa-wallet"></i> الخزائن والمحافظ</span>
+              <span><i class="fa-solid fa-coins"></i> الإيرادات</span>
+              <span><i class="fa-solid fa-file-invoice-dollar"></i> الديون والسلف</span>
+            </div>
+          </div>
+        </div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> التبويب المختار يتلوّن بالبنفسجي — وكل تبويب يبدّل شريط المؤشرات بالأعلى.</div>
+
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة:</b> لإدارة الفواتير والكوبونات افتح دليل <b>«الفواتير والكوبونات»</b>،
+          وللتقارير ودفتر القيود افتح دليل <b>«السجل والتقارير المحاسبية»</b> — كلها في نفس القسم.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 2 ════ #}
+    <section class="dg-step" id="dg-s2">
+      <div class="dg-badge">2</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-gauge-high"></i> اقرأ شريط المؤشرات — يتغيّر مع كل تبويب</h2>
+        <p>
+          أعلى الصفحة شريط من أربعة مؤشرات (KPIs) كبيرة. المهم تنتبه: <strong>الأرقام تتبدّل حسب
+          التبويب المفتوح</strong>. مثلًا في تبويب «النظرة العامة» تشوف:
+        </p>
+
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">المركز المالي › النظرة العامة</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-kpis">
+              <div class="dg-kpi green"><span class="lab"><i class="fa-solid fa-sack-dollar"></i> إجمالي الإيرادات</span><span class="val">12,450.00</span></div>
+              <div class="dg-kpi brand"><span class="lab"><i class="fa-solid fa-cash-register"></i> التحصيلات</span><span class="val">9,800.00</span></div>
+              <div class="dg-kpi blue"><span class="lab"><i class="fa-solid fa-wallet"></i> أرصدة المحافظ</span><span class="val">3,120.00</span></div>
+              <div class="dg-kpi amber"><span class="lab"><i class="fa-solid fa-chart-line"></i> الربح الصافي</span><span class="val">4,260.00</span></div>
+            </div>
+          </div>
+        </div>
+
+        <ul>
+          <li><strong>إجمالي الإيرادات:</strong> كل ما دخل النظام من بيع وتحصيل.</li>
+          <li><strong>التحصيلات:</strong> ما تمّ قبضه فعلًا (الكاش الواصل).</li>
+          <li><strong>أرصدة المحافظ:</strong> مجموع ما في كل المحافظ من رصيد الآن.</li>
+          <li><strong>الربح الصافي:</strong> الإيراد بعد خصم تكلفة الجملة.</li>
+        </ul>
+        <p>
+          في تبويب <strong>«الخزائن والمحافظ»</strong> تصير المؤشرات: عدد المحافظ، أرصدتها، قيود
+          الأستاذ، وإجماليه. وفي <strong>«الإيرادات»</strong>: الإيراد، الربح، عدد السجلات، حصص
+          الموزعين. وفي <strong>«الديون والسلف»</strong>: إجمالي الديون، عدد الذمم، عدد السلف،
+          والسلف المفتوحة.
+        </p>
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة:</b> إذا حسّيت رقمًا «تغيّر فجأة»، تأكد أي تبويب أنت فيه — على الأغلب
+          المؤشرات تبدّلت لأنك بدّلت التبويب، مش لأن البيانات تغيّرت.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 3 ════ #}
+    <section class="dg-step" id="dg-s3">
+      <div class="dg-badge">3</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-chart-pie"></i> تبويب «النظرة العامة» — نبض المالية بلمحة</h2>
+        <p>
+          هذا التبويب للقراءة فقط، ومقسوم لثلاثة صناديق. أول صندوقين شبكتا أرقام، والثالث قاعدة أمان:
+        </p>
+        <ul>
+          <li><strong>مؤشرات التشغيل المالي:</strong> عدد المحافظ، قيود دفتر الأستاذ، سجلات الإيراد، السلف المفتوحة.</li>
+          <li><strong>المشاركة والتسويات:</strong> حصص الموزعين، قيمة السلف المفتوحة، إجمالي الديون، إجمالي دفتر الأستاذ.</li>
+          <li><strong>قاعدة الأمان المالي:</strong> تذكير بأنه <strong>لا يوجد حذف مباشر</strong> — أي شحن أو خصم يترك قيدًا للمراجعة.</li>
+        </ul>
+
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">النظرة العامة › مؤشرات التشغيل</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-mock-sechead"><span class="ic"><i class="fa-solid fa-gauge-high"></i></span> مؤشرات التشغيل المالي</div>
+            <div class="dg-kpis">
+              <div class="dg-kpi"><span class="lab"><i class="fa-solid fa-wallet"></i> عدد المحافظ</span><span class="val">14</span></div>
+              <div class="dg-kpi"><span class="lab"><i class="fa-solid fa-book"></i> قيود الأستاذ</span><span class="val">320</span></div>
+              <div class="dg-kpi"><span class="lab"><i class="fa-solid fa-receipt"></i> سجلات الإيراد</span><span class="val">86</span></div>
+              <div class="dg-kpi"><span class="lab"><i class="fa-solid fa-hand-holding-dollar"></i> سلف مفتوحة</span><span class="val">5</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة:</b> ابدأ يومك من هذا التبويب — يعطيك صورة سريعة قبل ما تغوص في تفاصيل
+          المحافظ أو الديون.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 4 ════ #}
+    <section class="dg-step" id="dg-s4">
+      <div class="dg-badge">4</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-wallet"></i> تبويب «الخزائن والمحافظ» — اقرأ الجدول</h2>
+        <p>
+          هنا قلب العمل المالي. الجدول يعرض كل محفظة بصف، وفيه الأعمدة:
+        </p>
+        <ul>
+          <li><strong>المالك:</strong> الجهة التابعة لها المحفظة (الشركة، مدير، موزّع، مشترك، مستخدم بطاقات) ورقمها.</li>
+          <li><strong>الرصيد:</strong> الرصيد الحالي للمحفظة.</li>
+          <li><strong>الحالة:</strong> <span class="dg-pill"><span class="dot"></span> نشطة</span> أو معطّلة.</li>
+          <li><strong>آخر الحركات:</strong> أحدث 5 حركات (شحن/خصم/تحويل…) بمبالغها وأوقاتها.</li>
+          <li><strong>إجراء:</strong> الحقل المدمج للشحن والخصم (الخطوة التالية).</li>
+        </ul>
+
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">الخزائن والمحافظ</span></div>
+          <div class="dg-mock-body">
+            <table class="dg-tbl">
+              <thead><tr><th>#</th><th>المالك</th><th>الرصيد</th><th>الحالة</th><th>آخر الحركات</th></tr></thead>
+              <tbody>
+                <tr><td class="num">1</td><td>الشركة</td><td class="num">2,400.00</td><td><span class="dg-pill"><span class="dot"></span> نشطة</span></td><td>شحن — 500.00</td></tr>
+                <tr><td class="num">7</td><td>موزّع #7</td><td class="num">320.00</td><td><span class="dg-pill"><span class="dot"></span> نشطة</span></td><td>خصم — 80.00</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة:</b> الجدول يدعم الفرز واختيار الأعمدة والترقيم (نظام الجداول الموحّد) —
+          اضغط رأس العمود لترتيب المحافظ حسب الرصيد مثلًا.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 5 ════ #}
+    <section class="dg-step" id="dg-s5">
+      <div class="dg-badge">5</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-circle-plus"></i> إنشاء محفظة جديدة</h2>
+        <p>
+          فوق قائمة المحافظ يوجد زر <strong>«إنشاء محفظة»</strong>؛ يفتح نافذة عائمة بثلاثة حقول:
+        </p>
+        <ul>
+          <li><strong>نوع المالك:</strong> الشركة، مدير، موزّع، مشترك، أو مستخدم بطاقات.</li>
+          <li><strong>رقم المالك:</strong> اتركه فارغًا لمحفظة الشركة؛ وإلا اكتب رقم المدير/الموزّع/المشترك.</li>
+          <li><strong>العملة:</strong> الافتراضي <strong>ILS (شيكل)</strong> — تُستخدم في عرض الرصيد والحركات.</li>
+        </ul>
+
+        <div class="dg-mock" aria-hidden="true" style="max-width:460px">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">إنشاء محفظة</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-mf">
+              <label>نوع المالك</label>
+              <div class="dg-mf-select"><div class="dg-mf-input hl">الشركة</div></div>
+            </div>
+            <div class="dg-mock-grid2">
+              <div class="dg-mf"><label>رقم المالك</label><div class="dg-mf-input ph">فارغ = محفظة الشركة</div></div>
+              <div class="dg-mf"><label>العملة</label><div class="dg-mf-select"><div class="dg-mf-input">ILS — شيكل</div></div></div>
+            </div>
+            <div class="dg-mock-actions">
+              <span class="dg-mock-btn ghost">إغلاق</span>
+              <span class="dg-mock-btn primary"><i class="fa-solid fa-plus"></i> إنشاء محفظة</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="dg-warn">
+          <span class="ic">⚠️</span>
+          <span><b>انتبه:</b> محفظة الشركة عادةً واحدة فقط — اترك «رقم المالك» فارغًا لها. لمحفظة
+          موزّع أو مشترك تأكد من <b>رقم المالك الصحيح</b> حتى لا تربط الرصيد بالجهة الخطأ.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 6 ════ #}
+    <section class="dg-step" id="dg-s6">
+      <div class="dg-badge">6</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-right-left"></i> الشحن والخصم — الحقل المدمج وبوابة الأمان</h2>
+        <p>
+          في عمود <strong>«إجراء»</strong> بكل صف محفظة يوجد حقل واحد مدمج: قائمة
+          <strong>«شحن / خصم»</strong> ملتصقة بحقل <strong>المبلغ</strong> ثم زر <strong>«تنفيذ»</strong>.
+          اختيار «شحن» يزيد الرصيد، و«خصم» ينقصه — والاثنان يُسجَّلان كقيد مالي.
+        </p>
+
+        <div class="dg-mock" aria-hidden="true" style="max-width:420px">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">إجراء على محفظة</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-mock-actions" style="justify-content:flex-start">
+              <span class="dg-actgroup">
+                <span class="sel"><i class="fa-solid fa-arrow-down"></i> شحن</span>
+                <span class="amt">المبلغ</span>
+              </span>
+              <span class="dg-mock-btn blue">تنفيذ</span>
+            </div>
+          </div>
+        </div>
+
+        <ul>
+          <li><strong>الشحن (credit):</strong> يضيف المبلغ للرصيد ويُنتج قيدًا. يحتاج صلاحية الشحن.</li>
+          <li><strong>الخصم (debit):</strong> يخصم المبلغ، ويمرّ عبر <strong>بوابة الأمان</strong> التي
+          تتحقق من صلاحيتك ومن <strong>حدود المبلغ</strong> — وقد يتطلّب <strong>اعتمادًا</strong> إن تجاوز الحد.</li>
+        </ul>
+
+        <div class="dg-warn">
+          <span class="ic">⚠️</span>
+          <span><b>انتبه:</b> إذا كان خيار «شحن» أو «خصم» <b>معطّلًا (رماديًا)</b> فهذا يعني أنك لا
+          تملك صلاحيته — راجع مدير النظام. ولا يوجد «تراجع بحذف»: تصحيح أي حركة يكون <b>بقيد معاكس</b>
+          من السجل المحاسبي.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 7 ════ #}
+    <section class="dg-step" id="dg-s7">
+      <div class="dg-badge">7</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-coins"></i> تبويبا «الإيرادات» و«الديون والسلف»</h2>
+        <p>
+          <strong>تبويب الإيرادات:</strong> جدول بكل عملية بيع/تحصيل وأعمدته: المصدر (دفعة مشترك،
+          بيع بطاقات، فاتورة…)، السعر الأصلي، المحصّل، تكلفة الجملة، <strong>الربح الصافي</strong>،
+          والتاريخ. تقرأ منه أين يأتي الربح بالضبط.
+        </p>
+
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">الإيرادات</span></div>
+          <div class="dg-mock-body">
+            <table class="dg-tbl">
+              <thead><tr><th>المصدر</th><th>المحصّل</th><th>تكلفة الجملة</th><th>الربح الصافي</th></tr></thead>
+              <tbody>
+                <tr><td>بيع بطاقات #12</td><td class="num">300.00</td><td class="num">180.00</td><td class="num">120.00</td></tr>
+                <tr><td>دفعة مشترك #8</td><td class="num">50.00</td><td class="num">30.00</td><td class="num">20.00</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <p style="margin-top:13px">
+          <strong>تبويب الديون والسلف:</strong> فيه فلتر حالة بالأعلى (كل الحالات / مفتوحة / مسددة /
+          ملغاة) وجدولان: <strong>الذمم المفتوحة</strong> (الديون المستحقة على المشتركين باعتمادها وتواريخها)
+          و<strong>قائمة السلف</strong> (المدة والمبلغ والحالة لكل سلفة).
+        </p>
+        <ul>
+          <li>حالة السلفة: <span class="dg-pill amber"><span class="dot"></span> مفتوحة</span> دين قائم،
+            <span class="dg-pill"><span class="dot"></span> مسددة</span> أُغلقت، <span class="dg-pill grey"><span class="dot"></span> ملغاة</span>.</li>
+          <li>اعتماد الذمة: <span class="dg-pill"><span class="dot"></span> معتمدة</span> /
+            <span class="dg-pill amber"><span class="dot"></span> بانتظار الاعتماد</span>.</li>
+        </ul>
+
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>وبعدين؟</b> السلف تُنشأ من الصفحة المالية لكل مشترك، وتُسدَّد بقيد تسوية يظهر في
+          <b>السجل المحاسبي</b>. للتفاصيل افتح دليل «السجل والتقارير المحاسبية».</span>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+{# ── scrollspy خفيف: يبرز بند الفهرس المقابل للخطوة الظاهرة (منسوخ من النمط الذهبي) ── #}
+<script>
+(function(){
+  'use strict';
+  var links = Array.prototype.slice.call(document.querySelectorAll('[data-dg-toc]'));
+  if (!links.length || !('IntersectionObserver' in window)) return;
+  var map = {};
+  links.forEach(function(a){ map[a.getAttribute('href').slice(1)] = a; });
+  var obs = new IntersectionObserver(function(entries){
+    entries.forEach(function(en){
+      if (!en.isIntersecting) return;
+      links.forEach(function(a){ a.classList.remove('is-active'); });
+      var a = map[en.target.id];
+      if (a) a.classList.add('is-active');
+    });
+  }, { rootMargin: '-35% 0px -55% 0px' });
+  Object.keys(map).forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) obs.observe(el);
+  });
+})();
+</script>
+
+{% endblock %}

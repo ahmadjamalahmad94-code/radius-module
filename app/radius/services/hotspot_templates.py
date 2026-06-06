@@ -20,6 +20,7 @@ designer UI can list everything with one import.
 from __future__ import annotations
 
 import html as _html
+import json as _json
 import re
 from dataclasses import dataclass, field
 
@@ -51,13 +52,252 @@ class TemplateVariable:
     label_ar: str
     default: str
     pattern: re.Pattern[str]
+    # نوع المتغيّر:
+    #   "text" — قيمة نصية تُفحص بالـ regex وتُستبدل كما هي.
+    #   "bool" — قيمة منطقية ("yes"/"no") تُفحص بـ _YESNO_RE وتُحقن
+    #            كنص عادي (مثل "text" تمامًا في الفحص والحقن)، لكن
+    #            المصمّم يرسمها كمفتاح تشغيل/إيقاف بدل حقل نص.
+    #   "json" — قائمة JSON (موزعون/عروض) تُفحص بمدقّق مخصص
+    #            (validator) ثم تُحوَّل في render() إلى HTML آمن
+    #            (كل النصوص تُهرَّب) يحلّ محل placeholder مشتق.
+    kind: str = "text"
+    # مدقّق مخصص لمتغيّرات JSON — يستقبل النص الخام ويعيد النص
+    # المُطبَّع (canonical JSON) أو يرفع ValueError برسالة عربية.
+    validator: object = None
 
 
 _HEX_COLOR_RE = re.compile(r"^#[0-9A-Fa-f]{6}$")
 _BRAND_NAME_RE = re.compile(r"^[\w\s\-\.؀-ۿ]{1,40}$")
+# رابط الشعار — يقبل http(s) أو مسارًا يبدأ بـ / أو data URL لصورة
+# (الرفع من جهاز المشغّل يُحوَّل في المتصفح إلى data:image/...;base64).
+# محارف base64 فقط بعد الفاصلة فلا يمكن حقن علامات HTML.
 _URL_RE = re.compile(
-    r"^(https?://[A-Za-z0-9\.\-_/:%?=&]+|/[A-Za-z0-9\.\-_/]*)$")
+    r"^(https?://[A-Za-z0-9\.\-_/:%?=&]+"
+    r"|/[A-Za-z0-9\.\-_/]*"
+    r"|data:image/(png|jpe?g|gif|webp|svg\+xml);base64,"
+    r"[A-Za-z0-9+/=]+)$")
 _WELCOME_RE = re.compile(r"^[^<>{}]{0,160}$")
+# رقم هاتف الدعم — أرقام مع + و مسافات وشرطات فقط (آمن داخل tel:).
+_PHONE_RE = re.compile(r"^[+]?[0-9][0-9\s\-]{2,19}$")
+# مفتاح تفعيل المتجر — قيمتان فقط (yes/no) فلا حقن ممكن.
+_YESNO_RE = re.compile(r"^(yes|no)$")
+# نص زر التجربة المجانية — نفس قيود نص الترحيب (لا وسوم ولا أقواس).
+_TRIAL_TEXT_RE = re.compile(r"^[^<>{}]{1,60}$")
+# regex شكلي لمتغيّرات JSON — الفحص الحقيقي في المدقّق المخصص؛
+# هذا النمط يقبل أي شيء لأن validate_vars يحوّل لمسار المدقّق
+# عندما يكون kind == "json".
+_ANY_RE = re.compile(r"^[\s\S]*$")
+
+
+# ─── مدقّقات قوائم JSON (الموزعون / العروض) ─────────────────────
+#
+# بلا regex على المحتوى: نفكّ JSON، نتحقق من الشكل (قائمة قواميس
+# بحقول معروفة وأطوال محدودة)، ونعيد JSON مُطبَّعًا. الأمان لا
+# يعتمد على المدقّق وحده — render() يهرّب كل النصوص قبل توليد
+# الـ HTML، فالمدقّق هنا يضبط الشكل والحدود فقط.
+
+# أقصى عدد عناصر وأقصى طول حقل — حدود سخية لكنها تمنع التضخم.
+_JSON_MAX_ITEMS = 20
+_JSON_MAX_FIELD = 80
+
+
+def _parse_json_list(raw: str, label: str) -> list[dict]:
+    """يفكّ JSON ويتأكد أنه قائمة قواميس ضمن الحد الأقصى."""
+    try:
+        data = _json.loads(raw)
+    except (TypeError, ValueError):
+        raise ValueError(f"قائمة «{label}» ليست JSON صالحًا.")
+    if not isinstance(data, list):
+        raise ValueError(f"قائمة «{label}» يجب أن تكون مصفوفة.")
+    if len(data) > _JSON_MAX_ITEMS:
+        raise ValueError(
+            f"قائمة «{label}» تتجاوز الحد ({_JSON_MAX_ITEMS} عنصرًا).")
+    for it in data:
+        if not isinstance(it, dict):
+            raise ValueError(f"عناصر «{label}» يجب أن تكون كائنات.")
+    return data
+
+
+def _clean_field(it: dict, key: str, label: str) -> str:
+    """يستخرج حقلًا نصيًا ويقصّه للحد الأقصى — القيمة تُهرَّب لاحقًا
+    في توليد الـ HTML فلا حاجة لرفض المحارف هنا."""
+    v = it.get(key, "")
+    if not isinstance(v, str):
+        raise ValueError(f"حقل «{key}» في «{label}» يجب أن يكون نصًا.")
+    return v.strip()[:_JSON_MAX_FIELD]
+
+
+def validate_distributors_json(raw: str) -> str:
+    """الموزعون: قائمة {name, phone, area} — يعيد JSON مُطبَّعًا."""
+    items = _parse_json_list(raw, "الموزعون")
+    out = []
+    for it in items:
+        name = _clean_field(it, "name", "الموزعون")
+        if not name:
+            continue  # صف فارغ من المصمّم — يُتجاهل بصمت
+        out.append({
+            "name": name,
+            "phone": _clean_field(it, "phone", "الموزعون"),
+            "area": _clean_field(it, "area", "الموزعون"),
+        })
+    return _json.dumps(out, ensure_ascii=False)
+
+
+_OFFER_TIERS = ("featured", "high", "normal")
+
+
+def validate_offers_json(raw: str) -> str:
+    """العروض: قائمة {tier, title, price, desc} حيث tier من
+    (featured/high/normal) — باقة النخبة / الباقة الذهبية /
+    باقة الانطلاق. مفاتيح الفئات (tier) ثابتة في JSON — فقط
+    التسميات العربية في الواجهة تغيّرت."""
+    items = _parse_json_list(raw, "العروض")
+    out = []
+    for it in items:
+        title = _clean_field(it, "title", "العروض")
+        if not title:
+            continue
+        tier = _clean_field(it, "tier", "العروض") or "normal"
+        if tier not in _OFFER_TIERS:
+            raise ValueError(
+                "فئة العرض يجب أن تكون: باقة النخبة (featured) أو "
+                "الباقة الذهبية (high) أو باقة الانطلاق (normal).")
+        out.append({
+            "tier": tier,
+            "title": title,
+            "price": _clean_field(it, "price", "العروض"),
+            "desc": _clean_field(it, "desc", "العروض"),
+        })
+    return _json.dumps(out, ensure_ascii=False)
+
+
+# ─── رابط متجر البطاقات الإلكترونية (بوابة /portal/card) ────────
+#
+# المتجر الحقيقي هو بوابة «مستخدمي البطاقات»: دخول بالجوال وكلمة
+# المرور، محفظة وشحن وشراء بطاقات — وليس بوابة حساب الإدارة.
+# المسار ثابت على السيرفر، والمتغيّر الوحيد هو عنوان IP سيرفر
+# الراديوس الذي يضبطه المشغّل مرة واحدة في الإعدادات
+# (network.radius_server_ip) — فلا حاجة لكتابة الرابط يدويًا
+# في كل تصميم.
+
+STORE_PORTAL_PATH = "/portal/card"
+
+# اسم ملف متجر الراوتر — عند تفعيل المتجر يُرفع store.html بجانب
+# login.html في مجلد الهوت سبوت، فيصبح رابط الزر نسبيًا (نفس
+# المجلد) ويعمل حتى قبل فتح الإنترنت. القيمة الحرفية الوحيدة
+# المسموح بها كـ STORE_URL غير المطلقة — انظر validate_vars().
+STORE_ONROUTER_FILENAME = "store.html"
+
+
+# ─── خط المراعي (Almarai) — الخط المعتمد لصفحات الهوت سبوت ──────
+#
+# وزنان فقط (عادي + عريض) بصيغة woff2 الخفيفة (~100KB للاثنين معًا)
+# يشحنان مع المشروع في app/static/hotspot/fonts/ ويُضمّنان في حزمة
+# ZIP عند الإشارة إليهما. المسار نسبي fonts/... — على الراوتر يعمل
+# عندما يرفع المشغّل مجلد fonts/ بجانب login.html، وفي معاينة
+# المصمّم يُحلّ عبر نقطة mt_login_designer_font (حقن <base>).
+# font-display:swap + سقوط آمن لخطوط النظام إن غاب الملف.
+
+ALMARAI_FONT_FILES = (
+    "fonts/Almarai-Regular.woff2",
+    "fonts/Almarai-Bold.woff2",
+)
+
+ALMARAI_FONT_FACE_CSS = (
+    "@font-face{font-family:'Almarai';"
+    "src:url('fonts/Almarai-Regular.woff2') format('woff2');"
+    "font-weight:400;font-style:normal;font-display:swap}\n"
+    "@font-face{font-family:'Almarai';"
+    "src:url('fonts/Almarai-Bold.woff2') format('woff2');"
+    "font-weight:700;font-style:normal;font-display:swap}\n"
+)
+
+
+def inject_almarai_fontface(html: str) -> str:
+    """يحقن @font-face لخط المراعي بعد أول <style> في الصفحة.
+
+    يُستدعى من render() (ومن باني صفحة المتجر) على أي صفحة تذكر
+    'Almarai' في font-family ولا تملك الـ @font-face بعد — فتبقى
+    القوالب نفسها نظيفة بلا تكرار للكتلة في كل قالب. التصاميم
+    الخاصة المرفوعة التي لا تستخدم المراعي لا تتأثر إطلاقًا."""
+    if "Almarai" not in html:
+        return html
+    if "@font-face{font-family:'Almarai'" in html:
+        return html
+    if "<style>" not in html:
+        return html
+    return html.replace("<style>",
+                        "<style>\n" + ALMARAI_FONT_FACE_CSS, 1)
+
+
+def resolve_store_url(tenant_id: int = 1) -> str:
+    """يبني رابط متجر البطاقات تلقائيًا من إعدادات النظام.
+
+    الأولوية:
+      1. إعداد النظام network.radius_server_ip (يضبط مرة واحدة).
+      2. متغيّر البيئة HOBERADIUS_PUBLIC_IP (نفس مصدر معالج MT).
+      3. سلسلة فارغة — المستدعي يقرر البديل (مثلًا host الطلب
+         الحالي في المصمّم، أو القيمة الافتراضية الثابتة).
+
+    يعيد رابطًا كاملًا مثل http://10.10.0.1/portal/card أو ""
+    عندما لا يوجد عنوان مضبوط — فيستطيع المصمّم إظهار تنبيه
+    «حدد IP الراديوس في الإعدادات».
+    """
+    import os
+
+    host = ""
+    try:
+        # استيراد متأخر يتفادى الدورة (repos تستورد services أحيانًا)
+        # ويُبقي الوحدة قابلة للاستيراد خارج سياق Flask (الاختبارات).
+        from ..db.repos import tenants_repo
+        host = (tenants_repo.get_setting(
+            int(tenant_id), "network.radius_server_ip", "") or "").strip()
+    except Exception:  # noqa: BLE001 — بلا قاعدة بيانات (اختبارات وحدات)
+        host = ""
+    if not host:
+        host = (os.environ.get("HOBERADIUS_PUBLIC_IP") or "").strip()
+    if not host:
+        return ""
+    # تطبيع ودّي: المشغّل يكتب IP مجردًا — نضيف البروتوكول والمسار.
+    if not re.match(r"^https?://", host):
+        host = "http://" + host
+    return host.rstrip("/") + STORE_PORTAL_PATH
+
+
+def resolve_store_api_base(tenant_id: int = 1) -> str:
+    """عنوان سيرفر الراديوس الأساسي (بلا مسار) لمتجر الراوتر.
+
+    نفس مصادر resolve_store_url (إعداد network.radius_server_ip ثم
+    HOBERADIUS_PUBLIC_IP) لكن يعيد http://<host> فقط — يُحقن في
+    store.html مكان {{API_BASE}} وتُلصق به الصفحة /api/v1/store/*.
+    يعيد "" عندما لا يوجد عنوان مضبوط.
+    """
+    url = resolve_store_url(tenant_id)
+    if not url:
+        return ""
+    return url[: -len(STORE_PORTAL_PATH)] if url.endswith(
+        STORE_PORTAL_PATH) else url
+
+
+# القيم الافتراضية للقوائم — تعيد إنتاج المحتوى التجريبي الذي كان
+# مكتوبًا يدويًا داخل القوالب، فلا يتغير شكل المعاينة الافتراضية.
+_DISTRIBUTORS_DEFAULT = _json.dumps([
+    {"name": "محل الاتصالات المركزي", "phone": "0599000001",
+     "area": "الشارع الرئيسي"},
+    {"name": "ماركت النور", "phone": "0599000002",
+     "area": "حي الجامعة"},
+], ensure_ascii=False)
+
+_OFFERS_DEFAULT = _json.dumps([
+    {"tier": "featured", "title": "باقة الألعاب Pro", "price": "2 وحدة",
+     "desc": "ساعتان متواصلتان — سرعة 5 ميجا"},
+    {"tier": "high", "title": "الباقة الأساسية", "price": "1 وحدة",
+     "desc": "8 ساعات — 2 ميجا"},
+    {"tier": "normal", "title": "الباقة القياسية", "price": "2 وحدة",
+     "desc": "10 ساعات — 3 ميجا"},
+    {"tier": "normal", "title": "الباقة الكاملة", "price": "3 وحدة",
+     "desc": "24 ساعة — 2 ميجا"},
+], ensure_ascii=False)
 
 
 TEMPLATE_VARIABLES: list[TemplateVariable] = [
@@ -72,6 +312,55 @@ TEMPLATE_VARIABLES: list[TemplateVariable] = [
                      "#2563EB", _HEX_COLOR_RE),
     TemplateVariable("BG_COLOR",        "لون الخلفية",
                      "#F8FAFC", _HEX_COLOR_RE),
+    # رقم هاتف الدعم الفني — تستخدمه القوالب الاحترافية (عائلة
+    # «التدرج الاحترافي») في بطاقة الدعم وزر الاتصال المباشر.
+    # القوالب القديمة لا تحتويه فلا يتأثر استبدالها.
+    TemplateVariable("SUPPORT_PHONE",   "رقم الدعم الفني",
+                     "0599000000", _PHONE_RE),
+    # متجرك الإلكتروني — بوابة مستخدمي البطاقات (/portal/card):
+    # دخول بالجوال وكلمة المرور، محفظة، شحن، وشراء بطاقات. عند
+    # التفعيل تُظهر القوالب الداعمة زر «متجر البطاقات الإلكتروني»
+    # يفتح STORE_URL من صفحة الهوت سبوت.
+    TemplateVariable("STORE_ENABLED",   "إضافة متجرك الإلكتروني",
+                     "no", _YESNO_RE, kind="bool"),
+    # STORE_URL يُحتسب تلقائيًا من إعداد network.radius_server_ip
+    # عبر resolve_store_url() — المصمّم يحقن الرابط المحسوب كقيمة
+    # افتراضية فلا يكتب المشغّل أي رابط يدويًا؛ الحقل يبقى متاحًا
+    # كتجاوز يدوي اختياري (قسم متقدم مطوي في الواجهة).
+    TemplateVariable("STORE_URL",       "رابط المتجر (تجاوز يدوي اختياري)",
+                     "http://192.168.88.2" + STORE_PORTAL_PATH, _URL_RE),
+    # إظهار حقل كلمة المرور — عند "no" يُخفى الحقل ويُرسل النموذج
+    # باسم المستخدم فقط (دخول MikroTik «يوزر فقط»). يعمل على كل
+    # التصاميم عبر كتلة الإضافات المحقونة في render().
+    TemplateVariable("PASSWORD_FIELD",  "إظهار حقل كلمة المرور",
+                     "yes", _YESNO_RE, kind="bool"),
+    # زر التجربة المجانية — رابط RouterOS القياسي:
+    #   $(link-login-only)?dst=$(link-orig-esc)&username=T-$(mac-esc)
+    # (مستخدم التجربة = "T-" + عنوان MAC، حسب login.html الرسمي).
+    # يتطلب تفعيل Trial في بروفايل سيرفر الهوت سبوت على الراوتر.
+    TemplateVariable("TRIAL_ENABLED",   "زر التجربة المجانية",
+                     "no", _YESNO_RE, kind="bool"),
+    TemplateVariable("TRIAL_TEXT",      "نص زر التجربة المجانية",
+                     "تجربة مجانية 10 دقائق", _TRIAL_TEXT_RE),
+    # «الجلسات المحفوظة» — خدمة تسهيل إعادة الاتصال (قرار المالك):
+    # تحفظ آخر 5 بطاقات (اسم المستخدم + كلمة المرور) في localStorage
+    # على جهاز الزبون، وتعرض قسم «الجلسات الأخيرة» بنقرة-واحدة-للدخول.
+    # مفعّلة افتراضيًا؛ تُعطَّل من المصمّم بضبطها على "no". تُحقن في
+    # كل تصاميم المكتبة والاحترافية عبر كتلة الإضافات في render()
+    # (التصاميم التي لها قسم جلسات أصلي مثل fiber_glow تُكشف بصنف
+    # التفعيل hr-saved-on فلا يتكرّر الحقن).
+    TemplateVariable("SAVED_SESSIONS_ENABLED", "حفظ الجلسات (آخر 5 بطاقات)",
+                     "yes", _YESNO_RE, kind="bool"),
+    # القوائم القابلة للتكرار — الموزعون والعروض. تُخزَّن كنص JSON
+    # وتُحوَّل في render() إلى HTML آمن يحلّ محل
+    # {{DISTRIBUTORS_HTML}} و {{OFFERS_HTML}} (وأشكاله) في القوالب
+    # الداعمة. القوالب التي لا تحوي الـ placeholder لا تتأثر.
+    TemplateVariable("DISTRIBUTORS_JSON", "قائمة الموزعين",
+                     _DISTRIBUTORS_DEFAULT, _ANY_RE,
+                     kind="json", validator=validate_distributors_json),
+    TemplateVariable("OFFERS_JSON",       "قائمة العروض",
+                     _OFFERS_DEFAULT, _ANY_RE,
+                     kind="json", validator=validate_offers_json),
 ]
 VARIABLES_BY_SLUG = {v.slug: v for v in TEMPLATE_VARIABLES}
 
@@ -96,7 +385,8 @@ _CLASSIC_HTML = """<!DOCTYPE html>
 <meta charset="UTF-8">
 <title>{{TENANT_NAME}}</title>
 <style>
-body { background: {{BG_COLOR}}; font-family: Tahoma, Arial, sans-serif;
+body { background: {{BG_COLOR}};
+       font-family: 'Almarai', Tahoma, Arial, sans-serif;
        margin: 0; padding: 0; min-height: 100vh;
        display: flex; align-items: center; justify-content: center; }
 .box { background: #fff; padding: 32px 28px; border-radius: 12px;
@@ -143,7 +433,7 @@ _CARD_HTML = """<!DOCTYPE html>
 <style>
 * { box-sizing: border-box; }
 body { background: linear-gradient(135deg, {{ACCENT_COLOR}}, {{BG_COLOR}});
-       font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+       font-family: 'Almarai', 'Segoe UI', Tahoma, Arial, sans-serif;
        min-height: 100vh; margin: 0; display: flex;
        align-items: center; justify-content: center; padding: 16px; }
 .card { background: #fff; width: 100%; max-width: 420px;
@@ -191,7 +481,7 @@ _DARK_HTML = """<!DOCTYPE html>
 <title>{{TENANT_NAME}}</title>
 <style>
 body { background: #0F172A; color: #E2E8F0;
-       font-family: 'Cairo', Tahoma, Arial, sans-serif;
+       font-family: 'Almarai', 'Cairo', Tahoma, Arial, sans-serif;
        min-height: 100vh; margin: 0; display: flex;
        align-items: center; justify-content: center; }
 .panel { background: #1E293B; width: 380px; padding: 32px;
@@ -241,7 +531,7 @@ _MINIMAL_HTML = """<!DOCTYPE html>
 <title>{{TENANT_NAME}}</title>
 <style>
 body { background: {{BG_COLOR}}; color: #0F172A;
-       font-family: Tahoma, Arial, sans-serif;
+       font-family: 'Almarai', Tahoma, Arial, sans-serif;
        min-height: 100vh; margin: 0; display: flex;
        align-items: center; justify-content: center; padding: 24px; }
 main { max-width: 320px; width: 100%; text-align: center; }
@@ -302,7 +592,7 @@ _MIKROTIK_HTML = """<!DOCTYPE html>
 <title>{{TENANT_NAME}}</title>
 <style>
 a,body,div,form,html,img,input,label,p,span,h1{margin:0;padding:0;border:0;
-  font-family:'Cairo','Segoe UI',sans-serif,Arial}
+  font-family:'Almarai','Cairo','Segoe UI',sans-serif,Arial}
 body,html{min-height:100%;overflow-x:hidden}
 body{
   background:{{BG_COLOR}};
@@ -436,7 +726,63 @@ $(if error)$(error)$(endif)
 </html>"""
 
 
+# عائلة «التدرج الاحترافي» — ثلاث نسخ من تصميم تطبيق-جوال كامل
+# (شاشة افتتاحية + تبويبات + وضع ليلي + فاحص شبكة). السلاسل تُبنى
+# في hotspot_templates_pro وقت الاستيراد وتبقى ثابتة هنا.
+from .hotspot_templates_pro import (  # noqa: E402
+    AURORA_STORE_HTML, EMERALD_HTML, FIBER_GLOW_HTML,
+    GRADIENT_PRO_HTML, ROYAL_NIGHT_HTML, SWIFT_LOGIN_HTML,
+)
+
+
 LIBRARY: list[LoginTemplate] = [
+    LoginTemplate(
+        slug="gradient_pro", name_ar="التدرج الاحترافي",
+        description_ar=("تطبيق جوال كامل في صفحة واحدة: شاشة افتتاحية "
+                        "بالشعار، تبويبات (الباقات/الموزعون/الدعم)، وضع "
+                        "ليلي، فاحص شبكة، ودعم CHAP — تدرّج سماوي بنفسجي."),
+        html=GRADIENT_PRO_HTML,
+        starter_vars={"ACCENT_COLOR": "#4F46E5", "BG_COLOR": "#F0F9FF"},
+    ),
+    LoginTemplate(
+        slug="royal_night", name_ar="ليلي ملكي",
+        description_ar=("نفس هيكل «التدرج الاحترافي» بثيم نيلي ملكي داكن "
+                        "افتراضيًا مع لمسات ذهبية — مثالي لشبكات المساء."),
+        html=ROYAL_NIGHT_HTML,
+        starter_vars={"ACCENT_COLOR": "#6D28D9", "BG_COLOR": "#F5F3FF"},
+    ),
+    LoginTemplate(
+        slug="emerald", name_ar="زمردي",
+        description_ar=("نفس هيكل «التدرج الاحترافي» بتدرّجات زمردية "
+                        "وفيروزية هادئة — مظهر طبيعي منعش."),
+        html=EMERALD_HTML,
+        starter_vars={"ACCENT_COLOR": "#0D9488", "BG_COLOR": "#ECFDF5"},
+    ),
+    LoginTemplate(
+        slug="aurora_store", name_ar="بوابة المتجر",
+        description_ar=("شريط أخبار متحرك، بطاقة دخول بأشكال زخرفية، "
+                        "عرض باقات أفقي، زر متجر إلكتروني بارز وبطاقة "
+                        "دعم — مستوحى من صفحات الشبكات المميزة."),
+        html=AURORA_STORE_HTML,
+        starter_vars={"STORE_ENABLED": "yes"},
+    ),
+    LoginTemplate(
+        slug="fiber_glow", name_ar="توهّج الألياف",
+        description_ar=("قشرة تطبيق جوال بهيدر داكن منحنٍ وخلفية جسيمات "
+                        "حيّة وشريط أخبار، تعلوه بطاقة بيضاء طافية: ساعة "
+                        "حيّة، كشف الجهاز، «آخر البطاقات» باسم المستخدم فقط، "
+                        "نسخ رقم الدعم، ومتجر/تجربة اختياريان — مستوحى "
+                        "بهوية نظيفة من صفحات الألياف المميزة، ودعم CHAP."),
+        html=FIBER_GLOW_HTML,
+        starter_vars={"ACCENT_COLOR": "#0891B2", "BG_COLOR": "#F6F8F8"},
+    ),
+    LoginTemplate(
+        slug="swift_login", name_ar="الدخول السريع",
+        description_ar=("بطاقة واحدة بحقول ضخمة وزر دخول مركزي مع "
+                        "شرائح سريعة (متجر / أسعار / دعم) وقائمة أسعار "
+                        "منبثقة — تجربة دخول خاطفة للجوال."),
+        html=SWIFT_LOGIN_HTML,
+    ),
     LoginTemplate(
         slug="classic", name_ar="الكلاسيكي",
         description_ar="صفحة بسيطة بصندوق مركزي وخلفية فاتحة.",
@@ -480,6 +826,84 @@ def validate_routeros_placeholders(html: str) -> list[str]:
     return [p for p in ROUTEROS_REQUIRED if p not in html]
 
 
+# ─── «تصاميم خاصة» مرفوعة — slugs بالشكل custom:<id> ────────────
+#
+# المدير يرفع HTML خاصًا به (مباشرة أو داخل ZIP يحوي login.html)
+# فيُخزَّن في جدول hotspot_custom_templates (migration 097) ويظهر
+# في المعرض بجانب المكتبة. كل مسارات render/preview/deploy تقبل
+# slug بالشكل custom:<id> وتحلّه من قاعدة البيانات — متغيّرات
+# {{VARS}} اختيارية في الـ HTML المرفوع: إن وُجدت تُستبدل، وإلا
+# فاستبدال str.replace لا يغيّر شيئًا.
+
+CUSTOM_SLUG_PREFIX = "custom:"
+
+# حد حجم التصميم المرفوع — 2MB تكفي لصفحة بصور data-URL مضمّنة
+# وتبقى ضمن ما يقبله RouterOS في contents= عمليًا.
+CUSTOM_TEMPLATE_MAX_BYTES = 2 * 1024 * 1024
+
+
+def is_custom_slug(slug: str) -> bool:
+    return isinstance(slug, str) and slug.startswith(CUSTOM_SLUG_PREFIX)
+
+
+def custom_slug_id(slug: str) -> int:
+    """يستخرج id من slug بالشكل custom:<id> — 0 إن لم يكن رقمًا."""
+    try:
+        return int(slug[len(CUSTOM_SLUG_PREFIX):])
+    except (TypeError, ValueError):
+        return 0
+
+
+def validate_custom_template_html(html: str) -> None:
+    """فحص HTML تصميم مرفوع قبل تخزينه — يرفع ValueError برسالة
+    عربية واضحة عند أي خلل:
+
+      • الحجم ≤ 2MB.
+      • placeholders راوتر أو إس الإجبارية الأربعة موجودة
+        (بدونها لن تقبل الصفحة أي تسجيل دخول على الراوتر).
+      • وجود </body> — مسار العرض يحقن قبله كتلة الإضافات
+        وسكربت الدخول التلقائي بالـ QR.
+    """
+    raw = html or ""
+    if not raw.strip():
+        raise ValueError("الملف فارغ — ارفع صفحة HTML صالحة.")
+    if len(raw.encode("utf-8")) > CUSTOM_TEMPLATE_MAX_BYTES:
+        raise ValueError(
+            "حجم التصميم يتجاوز الحد المسموح (2 ميجابايت) — "
+            "صغّر الصور المضمّنة وأعد المحاولة.")
+    missing = validate_routeros_placeholders(raw)
+    if missing:
+        raise ValueError(
+            "التصميم لا يصلح كصفحة هوت سبوت — تنقصه placeholders "
+            "ميكروتك الإجبارية: " + "، ".join(missing) + ". "
+            "بدونها لن يستطيع أي مشترك تسجيل الدخول.")
+    if "</body>" not in raw:
+        raise ValueError(
+            "التصميم بلا وسم ‎</body>‎ — أضِفه حتى يستطيع النظام "
+            "حقن إضافات الصفحة (الدخول التلقائي بالـ QR وغيرها).")
+
+
+def resolve_template_html(slug: str, *,
+                          tenant_id: int = 1) -> tuple[str, str]:
+    """يحلّ slug (مكتبة أو custom:<id>) إلى (الاسم العربي، HTML).
+
+    يرفع ValueError برسالة عربية عندما لا يوجد التصميم — نفس
+    الرسالة التي كانت تظهر للـ slug المجهول سابقًا."""
+    if is_custom_slug(slug):
+        # استيراد متأخر مثل resolve_store_url — يتفادى دورة الاستيراد
+        # ويبقي الوحدة قابلة للاستيراد خارج سياق Flask (الاختبارات).
+        from ..db.repos import hotspot_designs_repo
+        row = hotspot_designs_repo.get_custom_template(
+            int(tenant_id), custom_slug_id(slug))
+        if not row:
+            raise ValueError(f"تصميم خاص غير موجود: {slug!r}")
+        return (row.get("name") or "تصميم خاص", row.get("html") or "")
+    tmpl = TEMPLATES_BY_SLUG.get(slug)
+    if tmpl is None:
+        raise ValueError(f"قالب غير معروف: {slug!r}")
+    return (tmpl.name_ar, tmpl.html)
+
+
 def validate_vars(values: dict[str, str]) -> dict[str, str]:
     """Validate operator-supplied variable values against each
     variable's regex. Returns a sanitised copy with defaults filled
@@ -492,14 +916,541 @@ def validate_vars(values: dict[str, str]) -> dict[str, str]:
         if not raw:
             out[v.slug] = v.default
             continue
+        if v.kind == "json":
+            # متغيّر JSON — المدقّق المخصص يفحص الشكل والحدود
+            # ويعيد JSON مُطبَّعًا (أو يرفع ValueError بالعربية).
+            out[v.slug] = v.validator(raw)  # type: ignore[operator]
+            continue
+        if v.slug == "STORE_URL" and raw == STORE_ONROUTER_FILENAME:
+            # الاستثناء الوحيد لرابط نسبي: ملف المتجر المرفوع على
+            # الراوتر نفسه (يحقنه مسار النشر عند تفعيل المتجر —
+            # ليس إدخالًا حرًّا من المشغّل).
+            out[v.slug] = raw
+            continue
+        if v.slug == "STORE_URL" and not re.match(
+                r"^(https?://|/)", raw):
+            # تطبيع ودّي: المشغّلون يكتبون IP السيرفر مجردًا
+            # («187.77.70.18») كما تقترح نصيحة الحقل نفسها — نضيف
+            # http:// تلقائيًا بدل رفض القيمة (وكانت القيمة المرفوضة
+            # تُسقط كل المعاينة إلى الافتراضيات). الـ regex بعدها
+            # يفحص النتيجة كالمعتاد فلا يتغير نموذج الأمان.
+            raw = "http://" + raw
         if not v.pattern.match(raw):
             raise ValueError(f"قيمة غير صالحة للحقل «{v.label_ar}».")
         out[v.slug] = raw
     return out
 
 
+# ─── توليد HTML للقوائم (الموزعون / العروض) من JSON ────────────
+#
+# كل النصوص تمرّ على _esc() قبل دخول الـ HTML: تهريب HTML قياسي
+# ثم تحييد محرف $ حتى لا يستطيع نص مُدخل تزوير placeholder راوتر
+# مثل $(error)، وتحييد {{ حتى لا يلتقطه استبدال متغيّر لاحق.
+
+
+def _esc(s: str) -> str:
+    """تهريب آمن لنص مُدخل قبل وضعه داخل HTML الصفحة."""
+    return (_html.escape(s, quote=True)
+            .replace("$", "&#36;")
+            .replace("{", "&#123;"))
+
+
+def _distributors_html(items: list[dict]) -> str:
+    """صفوف الموزعين بصنف .distributor-card (عائلة التدرج
+    الاحترافي) — اسم + منطقة + زر اتصال إن وُجد رقم."""
+    if not items:
+        return ('<p style="font-size:11px;text-align:center;'
+                'opacity:.7;padding:10px;">لا يوجد موزعون بعد</p>')
+    rows = []
+    for it in items:
+        phone = _esc(it.get("phone", ""))
+        call = ""
+        if phone:
+            call = (
+                '<a href="tel:' + phone + '" style="text-decoration:none;'
+                'font-size:11px;font-weight:700;padding:6px 12px;'
+                'border-radius:999px;background:var(--pill-bg,#eef2ff);'
+                'color:var(--primary-accent,#4f46e5);direction:ltr">'
+                + phone + '</a>')
+        rows.append(
+            '<div class="distributor-card">'
+            '<div class="dist-info">'
+            '<div class="dist-icon"><span class="ico ico-store"></span></div>'
+            '<div class="dist-text">'
+            "<h4>" + _esc(it.get("name", "")) + "</h4>"
+            "<p>" + _esc(it.get("area", "")) + "</p>"
+            "</div></div>" + call + "</div>")
+    return "\n".join(rows)
+
+
+def _offers_html(items: list[dict]) -> str:
+    """بطاقات العروض لعائلة «التدرج الاحترافي»: باقة النخبة
+    (featured) بطاقة كبيرة متدرّجة، الباقة الذهبية (high) بطاقة
+    متوسطة، باقة الانطلاق (normal) بطاقة صغيرة — نفس أصناف
+    CSS الموجودة أصلًا في القالب."""
+    big, med, small = [], [], []
+    for it in items:
+        title = _esc(it.get("title", ""))
+        price = _esc(it.get("price", ""))
+        desc = _esc(it.get("desc", ""))
+        tier = it.get("tier", "normal")
+        if tier == "featured":
+            big.append(
+                '<div class="pkg-card-big">'
+                '<div class="glow-blob gb-1"></div>'
+                '<div class="glow-blob gb-2"></div>'
+                '<div class="pkg-badge-top">⭐ النخبة</div>'
+                '<div class="pkg-header-row"><div>'
+                '<h2 style="font-size:20px;font-weight:800;'
+                'margin-bottom:2px;">' + title + "</h2>"
+                '<p style="font-size:12px;opacity:0.9;">' + desc + "</p>"
+                "</div>"
+                '<div class="pkg-icon-circle">'
+                '<span class="ico ico-bolt"></span></div></div>'
+                '<div class="pkg-price-row">'
+                '<span class="pkg-big-price">' + price + "</span></div>"
+                "</div>")
+        elif tier == "high":
+            med.append(
+                '<div class="pkg-card-medium">'
+                '<div class="medium-blob"></div>'
+                '<div class="medium-top"><div>'
+                '<h3 style="font-size:16px;font-weight:700;">'
+                + title + "</h3>"
+                '<div class="medium-tags"><span class="m-tag">'
+                + desc + "</span></div></div>"
+                '<div style="font-size:22px;opacity:0.8;">'
+                '<span class="ico ico-leaf"></span></div></div>'
+                '<div class="medium-bottom"><div>'
+                '<span style="font-size:24px;font-weight:800;">'
+                + price + "</span></div></div></div>")
+        else:
+            small.append(
+                '<div class="pkg-card-small">'
+                '<div class="small-info"><h4>' + title + "</h4>"
+                '<div class="small-details"><span>' + desc
+                + "</span></div></div>"
+                '<div class="small-price">'
+                '<div class="s-price-val">' + price + "</div>"
+                "</div></div>")
+    return "\n".join(big + med + small) or (
+        '<p style="font-size:11px;text-align:center;opacity:.7;'
+        'padding:10px;">لا توجد عروض بعد</p>')
+
+
+def _offers_row_html(items: list[dict]) -> str:
+    """بطاقات العروض الأفقية لقالب «بوابة المتجر» (صنف .pkg)."""
+    rows = []
+    for it in items:
+        rows.append(
+            '<div class="pkg">'
+            '<div class="p-amt">' + _esc(it.get("price", "")) + "</div>"
+            '<div class="p-name">' + _esc(it.get("title", "")) + "</div>"
+            '<div class="p-meta">' + _esc(it.get("desc", "")) + "</div>"
+            "</div>")
+    return "\n".join(rows) or (
+        '<div class="pkg"><div class="p-name">لا توجد عروض</div></div>')
+
+
+def _offers_prices_html(items: list[dict]) -> str:
+    """صفوف الأسعار لقالب «الدخول السريع» (صنف .pr-row)."""
+    rows = []
+    for it in items:
+        label = _esc(it.get("title", ""))
+        desc = _esc(it.get("desc", ""))
+        if desc:
+            label += " — " + desc
+        rows.append('<div class="pr-row"><span>' + label + "</span><b>"
+                    + _esc(it.get("price", "")) + "</b></div>")
+    return "\n".join(rows) or (
+        '<div class="pr-row"><span>لا توجد أسعار بعد</span></div>')
+
+
+# الـ placeholders المشتقة من قوائم JSON — تُولَّد في render() ولا
+# يكتبها المشغّل مباشرة.
+_JSON_HTML_BUILDERS = {
+    "{{DISTRIBUTORS_HTML}}": ("DISTRIBUTORS_JSON", _distributors_html),
+    "{{OFFERS_HTML}}":       ("OFFERS_JSON", _offers_html),
+    "{{OFFERS_ROW_HTML}}":   ("OFFERS_JSON", _offers_row_html),
+    "{{OFFERS_PRICES_HTML}}": ("OFFERS_JSON", _offers_prices_html),
+}
+
+
+# ─── كتلة الإضافات الموحّدة (زر المتجر / التجربة / إخفاء كلمة المرور)
+#
+# بدل تكرار CSS وJS في كل قالب من العشرة، تُحقن كتلة واحدة مكتفية
+# ذاتيًا قبل </body> في render() — فتعمل الإضافات على *كل* تصميم
+# في المعرض بما فيها القوالب القديمة الخمسة:
+#
+#   • زر المتجر: يُحقن فقط إن كان STORE_ENABLED=yes والقالب لا
+#     يملك زر متجر أصليًا (عائلة التدرج/بوابة المتجر/الدخول السريع
+#     تملك أزرارها — تُكتفى بتفعيلها عبر صنف hr-store-on).
+#   • زر التجربة المجانية: رابط RouterOS القياسي
+#       $(link-login-only)?dst=$(link-orig-esc)&username=T-$(mac-esc)
+#     يُدرج عبر JS بعد نموذج الدخول مباشرة في أي تصميم.
+#   • إخفاء كلمة المرور: JS يخفي حاوية حقل password ويزيل required
+#     فيُرسل النموذج باسم المستخدم فقط (دخول MikroTik «يوزر فقط»؛
+#     مع CHAP يُهشَّر النص الفارغ بشكل صحيح فلا يتعطل doLogin).
+
+
+def _store_button_html(store_url: str) -> str:
+    """زر متجر عائم سفلي — تصميم محايد يعمل فوق أي قالب."""
+    return (
+        "\n<!-- HR add-on: زر المتجر الإلكتروني (يُحقن من render) -->\n"
+        "<style>\n"
+        ".hr-addon-store{position:fixed;bottom:14px;left:50%;"
+        "transform:translateX(-50%);z-index:9000;display:flex;"
+        "align-items:center;gap:10px;background:#ffffff;color:#0f172a;"
+        "border:1.5px solid {{ACCENT_COLOR}};border-radius:999px;"
+        "padding:10px 22px;font-family:'Almarai',Tahoma,Arial,sans-serif;"
+        "font-size:13px;font-weight:700;text-decoration:none;"
+        "box-shadow:0 10px 28px rgba(15,23,42,.25)}\n"
+        ".hr-addon-store .hr-as-ico{width:28px;height:28px;"
+        "border-radius:50%;background:{{ACCENT_COLOR}};color:#fff;"
+        "display:flex;align-items:center;justify-content:center;"
+        "font-size:14px}\n"
+        "</style>\n"
+        '<a class="hr-addon-store" href="' + store_url + '">'
+        '<span class="hr-as-ico">🛒</span>'
+        "<span>متجر البطاقات الإلكتروني</span></a>\n"
+    )
+
+
+# زر التجربة + إخفاء كلمة المرور — JS واحد لأنه يحتاج العثور على
+# نموذج الدخول في أي قالب (document.forms.login موجود في كل
+# قوالب المكتبة). placeholders راوتر أو إس تبقى حرفية في الـ href.
+_TRIAL_LINK_HREF = (
+    "$(link-login-only)?dst=$(link-orig-esc)&username=T-$(mac-esc)")
+
+
+def _addons_js(*, hide_password: bool, trial: bool,
+               trial_text: str) -> str:
+    parts = [
+        "\n<!-- HR add-ons: تجربة مجانية / إخفاء كلمة المرور -->\n",
+        "<style>\n"
+        # زر بارز بخلفية متدرجة خضراء وظل — كان شفافًا بإطار منقّط
+        # فلا يكاد يُرى فوق الخلفيات المتدرجة (ملاحظة المستخدم).
+        ".hr-addon-trial{display:block;margin:12px auto 0;width:100%;"
+        "max-width:320px;text-align:center;"
+        "background:linear-gradient(135deg,#22C55E,#10B981);"
+        "color:#fff;border:0;"
+        "border-radius:999px;padding:12px 18px;font-size:13.5px;"
+        "font-weight:800;text-decoration:none;cursor:pointer;"
+        "font-family:inherit;box-sizing:border-box;"
+        "box-shadow:0 6px 16px rgba(16,185,129,.38)}\n"
+        ".hr-addon-trial:hover{filter:brightness(1.06);"
+        "transform:translateY(-1px)}\n"
+        ".hr-addon-trial:before{content:'\\2728  '}\n"
+        "</style>\n",
+        "<script>\n(function(){\n"
+        '  var f=document.forms["login"];\n',
+    ]
+    if hide_password:
+        parts.append(
+            "  // إخفاء حقل كلمة المرور — دخول «يوزر فقط»:\n"
+            "  // نخفي الحاوية (label/.field/.f/.qf/.field-group)\n"
+            "  // ونزيل required ونفرّغ القيمة. مع CHAP يُهشَّر\n"
+            "  // النص الفارغ بشكل صحيح فلا يتعطل doLogin().\n"
+            "  if(f){var pi=f.elements['password'];\n"
+            "    if(pi){pi.removeAttribute('required');pi.value='';\n"
+            "      var box=pi.closest('label,.field,.f,.qf,.field-group')||pi;\n"
+            "      box.style.display='none';}}\n")
+    if trial:
+        parts.append(
+            "  // زر التجربة المجانية — رابط RouterOS القياسي\n"
+            "  // (يتطلب تفعيل Trial في بروفايل سيرفر الهوت سبوت).\n"
+            "  if(f){var a=document.createElement('a');\n"
+            "    a.className='hr-addon-trial';\n"
+            "    a.href='" + _TRIAL_LINK_HREF + "';\n"
+            "    a.textContent='" + trial_text + "';\n"
+            "    f.insertAdjacentElement('afterend',a);}\n")
+    parts.append("})();\n</script>\n")
+    return "".join(parts)
+
+
+# ─── «الجلسات المحفوظة» — حفظ آخر 5 بطاقات (قرار المالك) ─────────
+#
+# خدمة تسهيل إعادة الاتصال: تحفظ آخر 5 بطاقات (اسم المستخدم +
+# كلمة المرور) في localStorage على جهاز الزبون، وتعرض قسم «الجلسات
+# الأخيرة» أسفل نموذج الدخول؛ نقرة على أي بطاقة تعبّئ الحقلين وترسل
+# النموذج فورًا (فيمرّ عبر onsubmit/hrSubmit الموجود فيعمل CHAP).
+#
+# تخزين كلمة المرور قرارٌ صريح من المالك (بطاقات منخفضة القيمة).
+# البناء عبر DOM/textContent بالكامل — لا innerHTML لبيانات المستخدم
+# فلا حقن HTML. الكتلة لا تحوي غطاء تحميل أو position:fixed، فتمرّ
+# عبر strip_splash (المُستدعى بعد هذا الحقن في render) بلا أثر.
+def _saved_sessions_js() -> str:
+    return (
+        "\n<!-- HR add-on: الجلسات المحفوظة (آخر 5 بطاقات) -->\n"
+        "<style>\n"
+        ".hr-sessions{max-width:340px;margin:14px auto 0;"
+        "font-family:inherit;text-align:right;direction:rtl}\n"
+        ".hr-ss-h{display:flex;justify-content:space-between;"
+        "align-items:center;font-size:12px;font-weight:800;"
+        "color:#475569;margin-bottom:8px;padding:0 2px}\n"
+        ".hr-ss-clear{font-size:11px;color:#ef4444;cursor:pointer;"
+        "font-weight:700;background:0;border:0;font-family:inherit}\n"
+        ".hr-ss-item{display:flex;align-items:center;gap:10px;"
+        "background:#fff;border:1px solid #e2e8f0;border-radius:14px;"
+        "padding:8px 11px;margin-bottom:8px;cursor:pointer;"
+        "transition:.15s;box-shadow:0 4px 12px rgba(15,23,42,.05)}\n"
+        ".hr-ss-item:active{transform:scale(.99)}\n"
+        ".hr-ss-av{width:34px;height:34px;border-radius:50%;"
+        "background:{{ACCENT_COLOR}};color:#fff;display:flex;"
+        "align-items:center;justify-content:center;font-weight:800;"
+        "font-size:14px;flex-shrink:0}\n"
+        ".hr-ss-tx{flex:1;min-width:0}\n"
+        ".hr-ss-u{display:block;font-size:13px;font-weight:800;"
+        "color:#0f172a;font-family:'Courier New',monospace;"
+        "direction:ltr;text-align:right;overflow:hidden;"
+        "text-overflow:ellipsis;white-space:nowrap}\n"
+        ".hr-ss-t{display:block;font-size:10.5px;color:#94a3b8}\n"
+        ".hr-ss-go{color:{{ACCENT_COLOR}};font-weight:800;"
+        "font-size:16px}\n"
+        ".hr-ss-del{border:0;background:#f1f5f9;color:#64748b;"
+        "width:26px;height:26px;border-radius:50%;cursor:pointer;"
+        "font-size:15px;font-weight:800;line-height:1;flex-shrink:0}\n"
+        ".hr-ss-del:hover{background:#fee2e2;color:#ef4444}\n"
+        "</style>\n"
+        "<script>\n(function(){\n"
+        "  var f=document.forms['login']; if(!f) return;\n"
+        "  var K='hr_sessions', MAX=5;\n"
+        "  // القسم يُدرَج تحت نموذج الدخول مباشرة، مخفيًا حتى يمتلئ.\n"
+        "  var box=document.createElement('div');\n"
+        "  box.className='hr-sessions'; box.style.display='none';\n"
+        "  f.insertAdjacentElement('afterend', box);\n"
+        "  function load(){try{return JSON.parse("
+        "localStorage.getItem(K))||[];}catch(e){return [];}}\n"
+        "  function store(a){try{localStorage.setItem(K,"
+        "JSON.stringify(a));}catch(e){}}\n"
+        "  // قرار المالك: نحفظ اسم المستخدم + كلمة المرور معًا.\n"
+        "  function save(u,p){u=(u||'').trim(); if(!u) return;\n"
+        "    var a=load().filter(function(x){return x.u!==u;});\n"
+        "    a.unshift({u:u,p:p||'',t:Date.now()});\n"
+        "    if(a.length>MAX) a=a.slice(0,MAX); store(a); render();}\n"
+        "  function delOne(u){store(load().filter("
+        "function(x){return x.u!==u;})); render();}\n"
+        "  function rel(t){var s=Math.floor((Date.now()-t)/1000);\n"
+        "    if(s<60) return 'الآن';\n"
+        "    var m=Math.floor(s/60); if(m<60) return 'قبل '+m+' دقيقة';\n"
+        "    var h=Math.floor(m/60); if(h<24) return 'قبل '+h+' ساعة';\n"
+        "    var d=Math.floor(h/24); if(d===1) return 'أمس';\n"
+        "    return 'قبل '+d+' يوم';}\n"
+        "  // نقرة البطاقة: تعبئة الحقلين ثم إرسال النموذج (يشغّل\n"
+        "  // onsubmit/hrSubmit فيعمل CHAP إن كان مفعّلًا).\n"
+        "  function use(it){var ui=f.elements['username'],"
+        "pi=f.elements['password'];\n"
+        "    if(ui) ui.value=it.u; if(pi) pi.value=it.p||'';\n"
+        "    var b=f.querySelector('button[type=submit],"
+        "input[type=submit],button');\n"
+        "    if(b){b.click();} else if(f.requestSubmit){"
+        "f.requestSubmit();} else {f.submit();}}\n"
+        "  function item(it){var row=document.createElement('div');\n"
+        "    row.className='hr-ss-item';\n"
+        "    var av=document.createElement('span');\n"
+        "    av.className='hr-ss-av';\n"
+        "    av.textContent=(it.u[0]||'?').toUpperCase();\n"
+        "    var tx=document.createElement('span');\n"
+        "    tx.className='hr-ss-tx';\n"
+        "    var u=document.createElement('span'); u.className='hr-ss-u';\n"
+        "    u.textContent=it.u;\n"
+        "    var tm=document.createElement('span'); tm.className='hr-ss-t';\n"
+        "    tm.textContent='آخر استخدام '+rel(it.t);\n"
+        "    tx.appendChild(u); tx.appendChild(tm);\n"
+        "    var del=document.createElement('button'); del.type='button';\n"
+        "    del.className='hr-ss-del'; del.textContent='×';\n"
+        "    del.title='حذف';\n"
+        "    del.onclick=function(ev){ev.stopPropagation();"
+        "delOne(it.u);};\n"
+        "    var go=document.createElement('span'); go.className='hr-ss-go';\n"
+        "    go.textContent='‹';\n"
+        "    row.appendChild(av); row.appendChild(tx);\n"
+        "    row.appendChild(del); row.appendChild(go);\n"
+        "    row.onclick=function(){use(it);};\n"
+        "    return row;}\n"
+        "  function render(){var a=load(); box.innerHTML='';\n"
+        "    if(!a.length){box.style.display='none'; return;}\n"
+        "    box.style.display='block';\n"
+        "    var head=document.createElement('div');\n"
+        "    head.className='hr-ss-h';\n"
+        "    var b=document.createElement('b');\n"
+        "    b.textContent='⏱ الجلسات الأخيرة';\n"
+        "    var clr=document.createElement('button'); clr.type='button';\n"
+        "    clr.className='hr-ss-clear'; clr.textContent='مسح الكل';\n"
+        "    clr.onclick=function(){store([]); render();};\n"
+        "    head.appendChild(b); head.appendChild(clr);\n"
+        "    box.appendChild(head);\n"
+        "    a.forEach(function(it){box.appendChild(item(it));});}\n"
+        "  // نلتقط البيانات لحظة الإرسال — الحدث يُطلَق في CHAP وPAP.\n"
+        "  f.addEventListener('submit',function(){try{"
+        "var ui=f.elements['username'],pi=f.elements['password'];\n"
+        "    save(ui?ui.value:'', pi?pi.value:'');}catch(e){}});\n"
+        "  render();\n"
+        "})();\n</script>\n"
+    )
+
+
+def _inject_addons(html: str, safe: dict[str, str]) -> str:
+    """يحقن كتلة الإضافات قبل </body> حسب القيم المفحوصة.
+
+    زر المتجر العائم وقسم «الجلسات المحفوظة» يُتخطيان للقوالب التي
+    تملك نسخة أصلية منهما (تُكشف بصنف التفعيل hr-store-on /
+    hr-saved-on في القالب) فلا يتكرّر الحقن."""
+    blocks = ""
+    if (safe.get("STORE_ENABLED") == "yes"
+            and "hr-store-on" not in html):
+        blocks += _store_button_html(safe.get("STORE_URL", "#"))
+    hide_pw = safe.get("PASSWORD_FIELD") == "no"
+    trial = safe.get("TRIAL_ENABLED") == "yes"
+    if hide_pw or trial:
+        # نص الزر فُحص بـ _TRIAL_TEXT_RE (بلا < > { }) ويُهرَّب
+        # إضافيًا هنا لأنه يدخل سلسلة JS بين علامتي اقتباس مفردتين.
+        t = (safe.get("TRIAL_TEXT", "")
+             .replace("\\", "\\\\").replace("'", "\\'"))
+        blocks += _addons_js(hide_password=hide_pw, trial=trial,
+                             trial_text=t)
+    # «الجلسات المحفوظة» — مفعّلة افتراضيًا؛ تُتخطى إن كان للقالب
+    # قسم جلسات أصلي (fiber_glow) المعلَّم بصنف hr-saved-on.
+    if (safe.get("SAVED_SESSIONS_ENABLED", "yes") == "yes"
+            and "hr-saved-on" not in html):
+        blocks += _saved_sessions_js()
+    if not blocks:
+        return html
+    if "</body>" not in html:
+        raise ValueError(
+            "template missing </body> — cannot inject add-ons")
+    # كتل الإضافات تحوي {{ACCENT_COLOR}} — تُستبدل هنا مباشرة
+    # لأن استبدال المتغيّرات في render() يسبق هذا الحقن.
+    blocks = blocks.replace("{{ACCENT_COLOR}}",
+                            safe.get("ACCENT_COLOR", "#2563EB"))
+    return html.replace("</body>", blocks + "</body>", 1)
+
+
+# ─── حذف شاشة «جاري التحميل» نهائيًا — strip_splash ─────────────
+#
+# المشكلة الواقعية: صفحات الدخول التي تعرض غطاء تحميل كامل الشاشة
+# (#splash-screen في عائلة «التدرج الاحترافي» والتصاميم الخاصة
+# المشتقة منها) تخفيه من داخل سكربت الصفحة الكبير نفسه — أي خطأ
+# تشغيل/تحليل في ذلك السكربت (عنصر ناقص في تصميم خاص، نص يملؤه
+# RouterOS داخل سلسلة JS، WebView قديم بلا ميزة ES حديثة...) يمنع
+# تسجيل مؤقّت الإخفاء فيعلق الزبون على «جاري التحميل...» للأبد —
+# خاصة قبل تسجيل الدخول حيث لا إنترنت يساعد على أي تحميل خارجي.
+#
+# القرار (طلب المستخدم): لا غطاء تحميل إطلاقًا. بدل محاولة إخفائه
+# fail-open (التي تبقى رهينة JS/CSS)، نحذف عنصر الغطاء من الـ HTML
+# قبل النشر فتظهر الصفحة ونموذج الدخول مباشرة. الحذف مركزي: دالة
+# strip_splash تُستدعى في render() (فتشمل المكتبة + الاحترافية +
+# المخصصة لأن كلها تمرّ بـ render عند المعاينة والنشر) وفي بُناة
+# صفحات المتجر/المرافقة. القوالب التي لا تملك غطاءً لا تتأثر.
+
+# معرّفات أغطية التحميل الشائعة — الغطاء في عائلة «التدرج
+# الاحترافي» معرّفه splash-screen؛ الباقي يغطّي تصاميم مخصصة
+# محتملة بمعرّفات أخرى (نفس قائمة المقتطف القديم).
+_SPLASH_IDS = (
+    "splash-screen", "splash", "preloader", "loader",
+    "loading-overlay", "page-loader", "page-preloader",
+)
+
+# نص التحميل الذي نستهدفه في الأغطية مجهولة المعرّف بالتصاميم
+# المخصصة — لا يُلمَس إلا داخل عنصر يبدو غطاءً كامل الشاشة، فلا
+# تتأثر نصوص المحتوى العادي مثل «جاري التحليل…»/«جاري الاتصال…».
+_SPLASH_TEXT = "جاري التحميل"
+
+
+def _find_matching_close(html: str, open_start: int,
+                         tag: str = "div") -> int:
+    """يعيد فهرس ما بعد </tag> المطابق لوسم <tag> يبدأ عند
+    open_start، مع احتساب التداخل. يعيد -1 إن لم يُغلق — فلا
+    نخاطر بحذف نصف عنصر."""
+    open_re = re.compile(r"<" + tag + r"\b", re.I)
+    close_re = re.compile(r"</" + tag + r"\s*>", re.I)
+    gt = html.find(">", open_start)
+    if gt == -1:
+        return -1
+    depth = 1
+    i = gt + 1
+    while i < len(html) and depth > 0:
+        om = open_re.search(html, i)
+        cm = close_re.search(html, i)
+        if cm is None:
+            return -1  # وسم غير مغلق
+        if om is not None and om.start() < cm.start():
+            depth += 1
+            nxt = html.find(">", om.start())
+            if nxt == -1:
+                return -1
+            i = nxt + 1
+        else:
+            depth -= 1
+            i = cm.end()
+    return i if depth == 0 else -1
+
+
+def _remove_elements_by_id(html: str, ids: tuple[str, ...]) -> str:
+    """يحذف كل عنصر <div> يحمل أحد المعرّفات (مع محتواه المتداخل)."""
+    for _id in ids:
+        pat = re.compile(
+            r'<div\b[^>]*\bid\s*=\s*["\']' + re.escape(_id)
+            + r'["\'][^>]*>', re.I)
+        while True:
+            m = pat.search(html)
+            if not m:
+                break
+            end = _find_matching_close(html, m.start(), "div")
+            if end == -1:
+                break  # وسم غير مغلق — نتركه بدل حذف ناقص
+            html = html[:m.start()] + html[end:]
+    return html
+
+
+def _remove_loading_overlays_by_text(html: str) -> str:
+    """احتياط للتصاميم المخصصة: يحذف أي <div> يبدو غطاءً كامل
+    الشاشة (position:fixed أو صنفه يحوي splash/preloader/loader/
+    overlay) ويحتوي نص «جاري التحميل». لا يلمس النصوص داخل
+    المحتوى العادي."""
+    if _SPLASH_TEXT not in html:
+        return html
+    open_re = re.compile(r"<div\b[^>]*>", re.I)
+    i = 0
+    while True:
+        m = open_re.search(html, i)
+        if not m:
+            break
+        tag = m.group(0)
+        looks_overlay = (
+            "position:fixed" in tag.replace(" ", "").lower()
+            or re.search(
+                r'class\s*=\s*["\'][^"\']*'
+                r"(splash|preloader|loader|overlay)", tag, re.I))
+        if not looks_overlay:
+            i = m.end()
+            continue
+        end = _find_matching_close(html, m.start(), "div")
+        if end == -1:
+            i = m.end()
+            continue
+        if _SPLASH_TEXT in html[m.start():end]:
+            html = html[:m.start()] + html[end:]
+            i = m.start()
+        else:
+            i = m.end()
+    return html
+
+
+def strip_splash(html: str) -> str:
+    """يحذف غطاء «جاري التحميل» نهائيًا من صفحة منشورة.
+
+    مركزي: يُستدعى من render() (مكتبة + احترافية + مخصصة) ومن
+    بُناة صفحات المتجر/المرافقة. آمن على الصفحات بلا غطاء — لا
+    يغيّر شيئًا. لا يلمس $(…) راوتر أو إس ولا نموذج الدخول."""
+    out = html or ""
+    out = _remove_elements_by_id(out, _SPLASH_IDS)
+    out = _remove_loading_overlays_by_text(out)
+    return out
+
+
 def render(slug: str, values: dict[str, str],
-           *, with_autologin: bool = True) -> str:
+           *, with_autologin: bool = True, tenant_id: int = 1) -> str:
     """Substitute Hoberadius variables in the chosen template.
 
     RouterOS `$(...)` placeholders are left untouched — the
@@ -510,24 +1461,53 @@ def render(slug: str, values: dict[str, str],
     R3 should accept QR scans; set False only when the caller is
     composing the page for some other purpose (designer preview
     keeps it on so the operator sees the final form).
+
+    `slug` يقبل أيضًا تصميمًا خاصًا مرفوعًا بالشكل custom:<id> —
+    يُحلّ من قاعدة البيانات عبر resolve_template_html؛ متغيّرات
+    {{VARS}} فيه اختيارية (إن غابت فالاستبدال لا يغيّر شيئًا).
     """
-    tmpl = TEMPLATES_BY_SLUG.get(slug)
-    if tmpl is None:
-        raise ValueError(f"قالب غير معروف: {slug!r}")
+    _, src = resolve_template_html(slug, tenant_id=tenant_id)
     safe = validate_vars(values)
-    out = tmpl.html
-    for k, v in safe.items():
-        out = out.replace("{{" + k + "}}", v)
+    out = src
+    for v in TEMPLATE_VARIABLES:
+        if v.kind == "json":
+            # قوائم JSON لا تُستبدل كنص خام أبدًا — تتحول إلى HTML
+            # عبر الـ placeholders المشتقة أدناه.
+            continue
+        out = out.replace("{{" + v.slug + "}}", safe[v.slug])
+    # الـ placeholders المشتقة من JSON — تُولَّد بعد استبدال
+    # المتغيّرات النصية حتى لا يلتقط الاستبدال نصوصًا من إدخال
+    # المستخدم (وكل النصوص مُهرَّبة في البناة على أي حال).
+    for ph, (src_slug, builder) in _JSON_HTML_BUILDERS.items():
+        if ph not in out:
+            continue
+        try:
+            items = _json.loads(safe.get(src_slug) or "[]")
+        except (TypeError, ValueError):
+            items = []
+        out = out.replace(ph, builder(items))
+    # كتلة الإضافات الموحّدة (متجر/تجربة/إخفاء كلمة المرور) — تعمل
+    # على كل قوالب المكتبة بما فيها القديمة.
+    out = _inject_addons(out, safe)
+    # خط المراعي المعتمد — @font-face واحد يُحقن لأي صفحة تذكره
+    # في font-family (كل قوالب المكتبة والعائلة الاحترافية).
+    out = inject_almarai_fontface(out)
+    # حذف غطاء «جاري التحميل» نهائيًا من كل صفحة منشورة (مكتبة +
+    # احترافية + مخصصة) — الصفحة ونموذج الدخول يظهران مباشرة بلا
+    # أي غشاء قد يعلق إن فشل سكربت القالب. مركزي هنا قبل حقن
+    # الدخول التلقائي بالـ QR.
+    out = strip_splash(out)
     if with_autologin:
         out = _inject_autologin_js(out)
     return out
 
 
-def preview(slug: str, values: dict[str, str]) -> str:
+def preview(slug: str, values: dict[str, str],
+            *, tenant_id: int = 1) -> str:
     """Like `render` but strips RouterOS `$(...)` placeholders so
     the designer iframe doesn't render literal `$(link-login-only)`
     strings. The deploy path uses `render`, not this."""
-    out = render(slug, values)
+    out = render(slug, values, tenant_id=tenant_id)
     # Hide the `$(if error)...$(endif)` block in the preview —
     # it would otherwise render the conditional markup as text.
     out = re.sub(r"\$\(if error\).*?\$\(endif\)", "", out, flags=re.S)
@@ -558,7 +1538,7 @@ class DeployResult:
 
 def deploy_login(
     client: object, slug: str, values: dict[str, str],
-    *, target_path: str = DEFAULT_LOGIN_PATH,
+    *, target_path: str = DEFAULT_LOGIN_PATH, tenant_id: int = 1,
 ) -> DeployResult:
     """Render the chosen template + upload it to the router.
 
@@ -577,21 +1557,24 @@ def deploy_login(
     # RouterOS placeholder *before* render() — render() may inject
     # JS or otherwise transform the body and we want the error
     # message to point at the static template, not the rendered
-    # output.
-    tmpl = TEMPLATES_BY_SLUG.get(slug)
-    if tmpl is None:
+    # output. يشمل التصاميم الخاصة custom:<id> (تُحلّ من قاعدة
+    # البيانات) — فُحصت عند الرفع لكن الفحص هنا يحمي من تعديل
+    # مباشر في الجدول أو سجل قديم قبل تشديد القواعد.
+    try:
+        _, src = resolve_template_html(slug, tenant_id=tenant_id)
+    except ValueError as e:
         return DeployResult(
             ok=False, path=target_path, bytes=0,
-            error=f"قالب غير معروف: {slug!r}",
+            error=str(e),
         )
-    missing = validate_routeros_placeholders(tmpl.html)
+    missing = validate_routeros_placeholders(src)
     if missing:
         return DeployResult(
             ok=False, path=target_path, bytes=0,
             error=f"قالب ناقص placeholders: {', '.join(missing)}",
         )
     try:
-        html = render(slug, values)
+        html = render(slug, values, tenant_id=tenant_id)
     except ValueError as e:
         return DeployResult(
             ok=False, path=target_path, bytes=0,
@@ -629,6 +1612,103 @@ def deploy_login(
         )
 
     return DeployResult(ok=True, path=target_path, bytes=len(html))
+
+
+# ─── errors.txt — رسائل أخطاء الهوت سبوت ───────────────────────
+#
+# الراوتر يولّد ملف hotspot/errors.txt يربط مفاتيح الأخطاء برسائل
+# تُعرض مكان $(error). نبنيه من رسائل المشغّل (لوحة «رسائل أخطاء
+# الهوتسبوت») ونرفعه بنفس آلية رفع login.html — /file/print ثم
+# /file/set أو /file/add. الملف يعيش بجانب login.html في نفس مجلد
+# html-directory=hotspot، فيلتقطه الراوتر تلقائيًا عند عرض الأخطاء.
+
+
+def deploy_errors_txt(
+    client: object, errors_txt: str,
+    *, target_path: str | None = None,
+) -> DeployResult:
+    """يرفع نص errors.txt إلى الراوتر (نفس آلية deploy_login).
+
+    `errors_txt` نصّ مبني عبر
+    services.hotspot_error_messages.build_errors_txt. `client` أي
+    كائن له ‎.run(path, attrs=...)‎. يعيد DeployResult موحّدًا."""
+    from .hotspot_error_messages import DEFAULT_ERRORS_PATH
+    path = target_path or DEFAULT_ERRORS_PATH
+    try:
+        existing = client.run("/file/print",
+                              attrs={"where": "name=" + path})
+    except Exception as e:  # noqa: BLE001
+        return DeployResult(
+            ok=False, path=path, bytes=0,
+            error=f"/file/print فشل: {e}")
+
+    found_id = None
+    for row in (existing or []):
+        if (row.get("name") or "") == path:
+            found_id = row.get(".id") or row.get("id")
+            break
+
+    try:
+        if found_id:
+            client.run("/file/set", attrs={
+                ".id": found_id, "contents": errors_txt})
+        else:
+            client.run("/file/add", attrs={
+                "name": path, "contents": errors_txt})
+    except Exception as e:  # noqa: BLE001
+        return DeployResult(
+            ok=False, path=path, bytes=len(errors_txt),
+            error=f"رفع الملف فشل: {e}")
+
+    return DeployResult(ok=True, path=path, bytes=len(errors_txt))
+
+
+# ─── رفع ملف عام بنفس آلية login.html (print → set أو add) ──────
+#
+# الصفحات المرافقة (alogin/status/logout/...) تُرفع كملفات HTML
+# جاهزة (لا render — بُنيت كاملة في hotspot_companion_pages) في نفس
+# مجلد html-directory=hotspot. نفس آلية deploy_login/deploy_errors_txt
+# مستخرجة هنا حتى لا تتكرر في مسار النشر.
+
+
+def deploy_hotspot_file(
+    client: object, filename: str, contents: str,
+    *, directory: str = "hotspot",
+) -> DeployResult:
+    """يرفع ملفًا واحدًا إلى مجلد الهوت سبوت على الراوتر.
+
+    `filename` اسم الملف فقط (مثل 'status.html')؛ المسار النهائي
+    <directory>/<filename>. `contents` HTML/نص نهائي. نفس آلية
+    /file/print ثم /file/set أو /file/add. يعيد DeployResult موحّدًا
+    فيستطيع المستدعي تجميع ملخص نجاح/فشل لكل ملف على حدة."""
+    target_path = directory.rstrip("/") + "/" + filename
+    try:
+        existing = client.run("/file/print",
+                              attrs={"where": "name=" + target_path})
+    except Exception as e:  # noqa: BLE001
+        return DeployResult(
+            ok=False, path=target_path, bytes=0,
+            error=f"/file/print فشل: {e}")
+
+    found_id = None
+    for row in (existing or []):
+        if (row.get("name") or "") == target_path:
+            found_id = row.get(".id") or row.get("id")
+            break
+
+    try:
+        if found_id:
+            client.run("/file/set", attrs={
+                ".id": found_id, "contents": contents})
+        else:
+            client.run("/file/add", attrs={
+                "name": target_path, "contents": contents})
+    except Exception as e:  # noqa: BLE001
+        return DeployResult(
+            ok=False, path=target_path, bytes=len(contents),
+            error=f"رفع الملف فشل: {e}")
+
+    return DeployResult(ok=True, path=target_path, bytes=len(contents))
 
 
 # ─── R4 — QR auto-login URL ────────────────────────────────────
@@ -727,14 +1807,35 @@ __all__ = [
     "VARIABLES_BY_SLUG",
     "LIBRARY",
     "TEMPLATES_BY_SLUG",
+    "STORE_PORTAL_PATH",
+    "STORE_ONROUTER_FILENAME",
+    "ALMARAI_FONT_FILES",
+    "ALMARAI_FONT_FACE_CSS",
+    "inject_almarai_fontface",
+    "strip_splash",
+    "resolve_store_url",
+    "resolve_store_api_base",
     "validate_routeros_placeholders",
+    "CUSTOM_SLUG_PREFIX",
+    "CUSTOM_TEMPLATE_MAX_BYTES",
+    "is_custom_slug",
+    "custom_slug_id",
+    "validate_custom_template_html",
+    "resolve_template_html",
     "validate_vars",
+    "validate_distributors_json",
+    "validate_offers_json",
     "render",
     "preview",
     "DEFAULT_LOGIN_PATH",
     "DeployResult",
     "deploy_login",
+    "deploy_errors_txt",
+    "deploy_hotspot_file",
     "QR_AUTOLOGIN_USER_KEY",
     "QR_AUTOLOGIN_PASS_KEY",
     "card_autologin_url",
 ]
+# ملاحظة (تحديث): قوالب «التدرج الاحترافي» (gradient_pro / royal_night /
+# emerald) تُستورد أعلاه من hotspot_templates_pro وتُسجَّل في
+# LIBRARY مثل بقية القوالب — نفس مسار المعاينة والنشر بلا تغيير.

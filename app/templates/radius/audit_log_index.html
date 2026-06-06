@@ -1,311 +1,169 @@
-{# S2.2 — Operation audit log center. #}
-{% extends "admin/_admin_layout.html" %}
+{# ═══════════════════════════════════════════════════════════════════════
+   S2.2 — سجل التدقيق (/admin/radius/audit) — أعيد بناؤه من الصفر على
+   النظام البصري المعتمد (hub_v2 + unified_design) بعد أن انهار التنسيق
+   القديم: قالب الفهرس كان يعتمد كلاسات .audit-hero/.audit-stats/.audit-
+   filter-*/.audit-timeline التي حُذفت من audit_log_redesign.css (أُبقي
+   فيها على كلاسات صفحة التفاصيل فقط) فظهرت الصفحة عارية بلا تنسيق.
 
-{% block title %}سجل العمليات{% endblock %}
+   البنية الجديدة:
+     • صدفة هيرو واحدة (hub-hero-shell): عنوان + سطر تعريفي + 4 مؤشرات
+       بصف واحد + حزام فلترة 42px (قوائم hbsel تلقائيًا + بحث + تلميح).
+     • جدول uds موحّد (فرز + ترقيم + تصدير) بأعمدة عربية، تعريب الفعل
+       والهدف من المسار (الخام يبقى في title)، <bdi> mono للقيم الفنية،
+       وحبوب hub-pill للشدة والنتيجة.
+     • عقد الفلاتر GET كما هو بلا أي تغيير:
+       router_id / action / severity / result_status / q.
+   ═══════════════════════════════════════════════════════════════════════ #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}سجل التدقيق{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-shield-halved"></i>{% endblock %}
-{% block page_title %}سجل العمليات{% endblock %}
+{% block page_title %}سجل التدقيق{% endblock %}
 {% block page_sub %}<span class="sub">من فعل ماذا، على أي هدف، وما نتيجة العملية</span>{% endblock %}
 
-{% block head_extra %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/mt_dashboard.css') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/audit_log_redesign.css') }}">
+{% block head_extra %}{{ super() }}
+{# نظام الجداول الموحد (uds): فرز + ترقيم صفحات + تصدير لجدول السجل #}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
 {% endblock %}
 
 {% block content %}
+{# ── تحويل نغمة المسار (severity_tone / result_tone) إلى ألوان hub-pill ── #}
+{% set TONE_PILL = {
+  'danger':  'red',
+  'warning': 'amber',
+  'success': 'green',
+  'info':    'blue',
+  'muted':   'grey',
+} %}
 
+{# ── توسيط موحّد لجدول السجل: الرؤوس والخلايا تحت أسمائها تمامًا ── #}
 <style>
-  /* QA fix — the .audit-* blocks stacked with no vertical gap, so the
-     hero/stats/board/results touched each other. Give the shell a
-     consistent inter-block rhythm (~var(--hub-gap-section)). */
-  [data-audit-log-page]{
-    display:flex;
-    flex-direction:column;
-    gap:var(--hub-gap-section, 18px);
-  }
-  [data-audit-log-page] > .audit-hero,
-  [data-audit-log-page] > .audit-stats,
-  [data-audit-log-page] > .audit-board,
-  [data-audit-log-page] > .audit-results{ margin:0; }
-  /* QA fix — the pager was an orphan with no wrapper. Give it a proper
-     styled footer area with balanced padding on all sides. */
-  .audit-results__footer{
-    margin-top:var(--hub-gap-section, 18px);
-    padding:14px 16px;
-    border-top:1px solid var(--hub-border, #e2e8f0);
-  }
-  .audit-results__footer .bkx-pager{ margin-top:0; }
-  .audit-results__footer:has(.bkx-pager:empty){ display:none; }
+.hub-table.audit-table thead th,
+.hub-table.audit-table tbody td{ text-align:center !important; }
+.audit-table .audit-action{ font-weight:800; color:var(--hub-text); }
+.audit-table .audit-summary{
+  max-width:280px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  color:var(--hub-text-soft); font-size:12px; margin-inline:auto;
+}
 </style>
 
-<section class="mt-dashboard audit-shell" data-admin-rhythm data-audit-log-page>
+{# ───── صدفة الهيرو الواحدة: عنوان + مؤشرات بصف واحد + حزام الفلترة ───── #}
+<section class="hub-hero-shell" data-testid="audit-log-hero" data-audit-log-page>
+{% call hub.megahero(
+  "سجل التدقيق",
+  subtitle="سجلّ كامل لكل العمليات الحساسة — مَن نفّذها، على أي هدف، وما نتيجتها. ابدأ بالحرج والفاشل، وافتح «التفاصيل» لترى ما الذي تغيّر بالضبط.",
+  icon="shield-halved",
+  kpis=[
+    {'label': 'إجمالي السجل',  'value': summary.total,    'icon': 'list-check',           'variant': 'brand',
+     'sub': 'يُعرض حتى 200 من الأحدث'},
+    {'label': 'عمليات حرجة',   'value': summary.critical, 'icon': 'triangle-exclamation', 'variant': 'red'},
+    {'label': 'تحذيرات',       'value': summary.warnings, 'icon': 'circle-exclamation',   'variant': 'amber'},
+    {'label': 'نجحت',          'value': summary.success,  'icon': 'circle-check',         'variant': 'green'},
+  ],
+  search_action=url_for('radius.audit_log_index')
+) %}
+  <input class="hub-input grow" type="text" name="q" data-audit-filter-search
+         value="{{ filters.search or '' }}"
+         placeholder="بحث (المنفّذ / الهدف / جزء من الإجراء)…">
+  <input class="hub-input" type="text" name="router_id" inputmode="numeric" data-audit-filter-router
+         value="{{ filters.router_id or '' }}" placeholder="رقم الراوتر"
+         title="رقم الراوتر" style="max-width:130px">
+  <input class="hub-input" type="text" name="action" data-audit-filter-action
+         value="{{ filters.action or '' }}" placeholder="رمز الإجراء (اختياري)"
+         title="رمز الإجراء" style="max-width:190px">
+  <select class="hub-select" name="severity" data-audit-filter-severity title="الشدة" style="max-width:150px">
+    <option value="">كل الشدّات</option>
+    {% for s in severities %}
+      <option value="{{ s }}" {% if filters.severity == s %}selected{% endif %}>{{ severity_labels.get(s, s) }}</option>
+    {% endfor %}
+  </select>
+  <select class="hub-select" name="result_status" data-audit-filter-result title="النتيجة" style="max-width:150px">
+    <option value="">كل النتائج</option>
+    {% for r in result_statuses %}
+      <option value="{{ r }}" {% if filters.result_status == r %}selected{% endif %}>{{ result_labels.get(r, r) }}</option>
+    {% endfor %}
+  </select>
+  {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
+  {% if summary.active_filters %}
+    {{ hub.btn("إعادة ضبط", icon="rotate-left", variant="ghost", size="sm",
+               attrs='onclick="window.location=' + "'" + url_for('radius.audit_log_index') + "'" + '"') }}
+  {% endif %}
+  <span class="hub-hint" tabindex="0"
+        data-hint="البحث يطابق اسم المنفّذ أو الهدف أو رمز الإجراء، و«رمز الإجراء» يقبل جزءًا من الكود الفني (مثل mt.backup). تُعرض حتى 200 عملية من الأحدث للأقدم، والأسرار تُحجب تلقائيًا عند الكتابة."><i class="fa-solid fa-info"></i></span>
+{% endcall %}
+</section>{# /hub-hero-shell #}
 
-  <section class="audit-hero" aria-labelledby="audit-title">
-    <div class="audit-hero__copy">
-      <span class="audit-kicker">
-        <i class="fa-solid fa-fingerprint"></i>
-        مركز التدقيق
-      </span>
-      <h2 id="audit-title">سجل عمليات مفهوم للمراجعة والتتبع</h2>
-      <p>
-        كل عملية حساسة تظهر هنا مع الفاعل، الهدف، الراوتر، النتيجة، والتفاصيل
-        الخام عند الحاجة. استخدم الفلاتر للوصول للحادث أو التغيير المطلوب بسرعة.
-      </p>
-    </div>
-    <div class="audit-hero__meter" aria-label="ملخص السجل الحالي">
-      <div class="audit-hero__orb">
-        <i class="fa-solid fa-clipboard-check"></i>
-      </div>
-      <strong>{{ summary.total }}</strong>
-      <span>عملية ضمن النتيجة الحالية</span>
-    </div>
-  </section>
+{% if rows %}
+{# ───── جدول السجل — uds موحّد (فرز + ترقيم + تصدير) ───── #}
+{% call hub.section("العمليات الأخيرة", icon="clock-rotate-left",
+                    meta=(rows|length|string) ~ " عملية" ~ ((" — " ~ summary.active_filters ~ " فلتر نشط") if summary.active_filters else ""),
+                    flush=True) %}
+  <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25"
+       style="border:none;border-radius:0">
+    <table class="hub-table audit-table">
+      <thead>
+        <tr>
+          <th class="num" style="width:70px" data-uds-nosort>الرقم</th>
+          <th>الوقت</th>
+          <th>المنفّذ</th>
+          <th>الإجراء</th>
+          <th>الهدف</th>
+          <th data-uds-nosort>الشدة</th>
+          <th data-uds-nosort>النتيجة</th>
+          <th>الراوتر</th>
+          <th data-uds-nosort>التفاصيل</th>
+        </tr>
+      </thead>
+      <tbody data-audit-log-rows>
+        {% for r in rows %}
+        <tr data-audit-row="{{ r.id }}">
+          <td class="num mono"><bdi>#{{ r.id }}</bdi></td>
+          {% set _ts = r.created_at|dt_local if r.created_at else '' %}
+          <td class="mono" style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
+            {% if _ts %}{{ _ts[:10] }} <span style="color:var(--hub-text-mute)">{{ _ts[11:16] }}</span>{% else %}—{% endif %}
+          </td>
+          <td><strong><bdi>{{ r.actor or 'غير محدد' }}</bdi></strong></td>
+          {# الإجراء معرّب من المسار — الكود الفني الخام يبقى في title للمراجعة #}
+          <td><span class="audit-action" title="{{ r.action or '' }}">{{ r.action_label }}</span></td>
+          {# الهدف معرّب «مشترك (user1034)» — النوع والمعرّف الخام في title #}
+          <td>
+            <span title="{{ (r.target_type or '') ~ (('#' ~ r.target_id) if r.target_id else '') }}">
+              <bdi>{{ r.target_label }}</bdi>
+            </span>
+          </td>
+          <td><span title="{{ r.severity or 'info' }}">{{ hub.pill(r.severity_label, variant=TONE_PILL.get(r.severity_tone, 'grey')) }}</span></td>
+          <td><span title="{{ r.result_status or '' }}">{{ hub.pill(r.result_label, variant=TONE_PILL.get(r.result_tone, 'grey')) }}</span></td>
+          <td class="mono">{% if r.router_id %}<bdi>#{{ r.router_id }}</bdi>{% else %}<span style="color:var(--hub-text-mute)">—</span>{% endif %}</td>
+          <td>
+            {# ملخص الحمولة (أهم 4 مفاتيح من المسار) بسطر مختصر + الكامل في title #}
+            {% if r.preview_keys %}
+              {% set _sum = [] %}
+              {% for k in r.preview_keys %}{% set _ = _sum.append(k ~ ': ' ~ (r.payload.get(k)|string)) %}{% endfor %}
+              {% set _sum_text = _sum|join(' · ') %}
+              <div class="audit-summary" title="{{ _sum_text }}"><bdi>{{ _sum_text }}</bdi></div>
+            {% endif %}
+            {{ hub.btn("التفاصيل", href=url_for('radius.audit_log_detail', audit_id=r.id),
+                       variant="ghost", icon="eye", size="sm") }}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endcall %}
+{% else %}
+{# data-audit-empty: خطّاف اختبار الحالة الفارغة (S2.2) — سمة إضافية لا تمسّ التصميم #}
+<div data-audit-empty>
+{{ hub.empty(
+  "لا توجد عمليات تطابق الفلاتر الحالية",
+  sub="خفّف شروط البحث أو امسح الفلاتر لعرض السجل الكامل — وإن كان النظام جديدًا فالسجل يمتلئ مع أول العمليات الحساسة.",
+  icon="clock-rotate-left"
+) }}
+</div>
+{% endif %}
 
-  <section class="audit-stats" aria-label="ملخص العمليات">
-    <article class="audit-stat audit-stat--brand">
-      <i class="fa-solid fa-list-check"></i>
-      <span>إجمالي السجل</span>
-      <strong>{{ summary.total }}</strong>
-    </article>
-    <article class="audit-stat audit-stat--danger">
-      <i class="fa-solid fa-triangle-exclamation"></i>
-      <span>عمليات حرجة</span>
-      <strong>{{ summary.critical }}</strong>
-    </article>
-    <article class="audit-stat audit-stat--amber">
-      <i class="fa-solid fa-circle-exclamation"></i>
-      <span>تحذيرات</span>
-      <strong>{{ summary.warnings }}</strong>
-    </article>
-    <article class="audit-stat audit-stat--green">
-      <i class="fa-solid fa-circle-check"></i>
-      <span>نجحت</span>
-      <strong>{{ summary.success }}</strong>
-    </article>
-    <article class="audit-stat audit-stat--blue">
-      <i class="fa-solid fa-router"></i>
-      <span>راوترات ظهرت</span>
-      <strong>{{ summary.routers }}</strong>
-    </article>
-  </section>
-
-  <section class="audit-board">
-    <aside class="audit-guide" aria-label="توضيح قراءة سجل العمليات">
-      <div class="audit-guide__icon">
-        <i class="fa-solid fa-compass"></i>
-      </div>
-      <h3>كيف تقرأ السجل؟</h3>
-      <p>
-        كل سطر = إجراء واحد: مَن نفّذه، على مَن، ونتيجته. ابدأ بالأحمر
-        (فشل / حرج)، واضغط «التفاصيل» لترى ما الذي تغيّر بالضبط.
-      </p>
-      <div class="audit-guide__chips">
-        <span><i class="fa-solid fa-circle"></i> حرجة</span>
-        <span><i class="fa-solid fa-circle"></i> نجحت</span>
-        <span><i class="fa-solid fa-circle"></i> جزئية</span>
-      </div>
-    </aside>
-
-    <section class="audit-filter-card">
-      <header class="audit-section-head">
-        <div>
-          <span class="audit-section-eyebrow">تصفية ذكية</span>
-          <h3>ضيّق السجل حسب العملية أو الراوتر</h3>
-        </div>
-        {% if summary.active_filters %}
-        <span class="audit-filter-count">
-          {{ summary.active_filters }} فلتر نشط
-        </span>
-        {% endif %}
-      </header>
-
-      <form method="get" class="audit-filter-form" data-audit-log-filters>
-        <label class="audit-field audit-field--compact">
-          <span>الراوتر</span>
-          <input type="text" name="router_id"
-                 value="{{ filters.router_id or '' }}"
-                 placeholder="رقم الراوتر"
-                 inputmode="numeric"
-                 data-audit-filter-router>
-        </label>
-        <label class="audit-field audit-field--wide">
-          <span>نوع الإجراء (اختياري)</span>
-          <input type="text" name="action"
-                 value="{{ filters.action or '' }}"
-                 placeholder="اتركه فارغًا لعرض الكل"
-                 data-audit-filter-action>
-        </label>
-        <label class="audit-field">
-          <span>الشدة</span>
-          <select name="severity" data-audit-filter-severity>
-            <option value="">كل الشدّات</option>
-            {% for s in severities %}
-            <option value="{{ s }}"
-              {% if filters.severity == s %}selected{% endif %}>
-              {{ severity_labels.get(s, s) }}
-            </option>
-            {% endfor %}
-          </select>
-        </label>
-        <label class="audit-field">
-          <span>النتيجة</span>
-          <select name="result_status" data-audit-filter-result>
-            <option value="">كل النتائج</option>
-            {% for r in result_statuses %}
-            <option value="{{ r }}"
-              {% if filters.result_status == r %}selected{% endif %}>
-              {{ result_labels.get(r, r) }}
-            </option>
-            {% endfor %}
-          </select>
-        </label>
-        <label class="audit-field audit-field--wide">
-          <span>بحث</span>
-          <input type="text" name="q"
-                 value="{{ filters.search or '' }}"
-                 placeholder="اسم مستخدم، هدف، أو جزء من الإجراء"
-                 data-audit-filter-search>
-        </label>
-        <div class="audit-filter-actions">
-          <button type="submit" class="audit-btn audit-btn--primary"
-                  data-audit-filter-submit>
-            <i class="fa-solid fa-magnifying-glass"></i>
-            تطبيق
-          </button>
-          <a class="audit-btn audit-btn--ghost"
-             href="{{ url_for('radius.audit_log_index') }}"
-             data-audit-filter-clear>
-            <i class="fa-solid fa-rotate-left"></i>
-            مسح
-          </a>
-        </div>
-      </form>
-    </section>
-  </section>
-
-  <section class="audit-results">
-    <header class="audit-section-head">
-      <div>
-        <span class="audit-section-eyebrow">آخر 200 عملية كحد أقصى</span>
-        <h3>العمليات الأخيرة</h3>
-      </div>
-      <span class="audit-count">
-        <span data-audit-count>{{ rows|length }}</span>
-        نتيجة
-      </span>
-    </header>
-
-    {% if not rows %}
-    <div class="audit-empty" data-audit-empty>
-      <i class="fa-solid fa-magnifying-glass-chart"></i>
-      <strong>لا توجد عمليات تطابق الفلاتر الحالية</strong>
-      <span>خفف شروط البحث أو امسح الفلاتر لعرض السجل الكامل.</span>
-    </div>
-    {% else %}
-    <div class="audit-timeline" id="audit-log-rows" data-audit-log-rows>
-      {% for r in rows %}
-      <article class="audit-event audit-event--{{ r.severity_tone }}"
-               data-audit-row="{{ r.id }}">
-        <div class="audit-event__rail">
-          <span class="audit-event__dot"></span>
-        </div>
-        <div class="audit-event__body">
-          <div class="audit-event__top">
-            <div class="audit-event__title">
-              <span class="audit-event__icon">
-                <i class="fa-solid fa-bolt"></i>
-              </span>
-              <div>
-                <h4>{{ r.action_label }}</h4>
-              </div>
-            </div>
-            <div class="audit-event__badges">
-              <span class="audit-badge audit-badge--{{ r.severity_tone }}">
-                {{ r.severity_label }}
-              </span>
-              <span class="audit-badge audit-badge--{{ r.result_tone }}">
-                {{ r.result_label }}
-              </span>
-            </div>
-          </div>
-
-          <dl class="audit-event__meta">
-            <div>
-              <dt>الوقت</dt>
-              <dd><code dir="ltr">{{ r.created_at|dt_local }}</code></dd>
-            </div>
-            <div>
-              <dt>الفاعل</dt>
-              <dd>{{ r.actor or "غير محدد" }}</dd>
-            </div>
-            <div>
-              <dt>الهدف</dt>
-              <dd><code dir="ltr">{{ r.target_label }}</code></dd>
-            </div>
-            <div>
-              <dt>الراوتر</dt>
-              <dd>{% if r.router_id %}<code>{{ r.router_id }}</code>{% else %}—{% endif %}</dd>
-            </div>
-          </dl>
-
-        </div>
-        <a class="audit-detail-link"
-           href="{{ url_for('radius.audit_log_detail', audit_id=r.id) }}"
-           data-audit-detail-link="{{ r.id }}">
-          <i class="fa-solid fa-eye"></i>
-          التفاصيل
-        </a>
-      </article>
-      {% endfor %}
-    </div>
-    <div class="audit-results__footer">
-      <div class="bkx-pager" id="audit-log-rows-pager"></div>
-    </div>
-    {% endif %}
-  </section>
-
-</section>
-
-{# ── Client-side pagination (25 rows/page) — pattern from backups.html ── #}
-<style>
-  .bkx-pager{ display:flex; gap:6px; justify-content:center; align-items:center; margin-top:13px; flex-wrap:wrap; }
-  .bkx-pager:empty{ display:none; }
-  .bkx-pg{ min-width:33px; height:33px; padding:0 9px; border-radius:9px; border:1px solid #e2e8f0; background:#fff;
-    color:#475569; cursor:pointer; font:inherit; font-size:12.5px; font-weight:700; transition:.13s; }
-  .bkx-pg:hover:not([disabled]):not(.is-active){ background:#f5f3ff; color:#5b21b6; border-color:#c4b5fd; }
-  .bkx-pg.is-active{ background:#7c3aed; color:#fff; border-color:#7c3aed; }
-  .bkx-pg[disabled]{ opacity:.4; cursor:default; }
-</style>
-<script>
-(function(){
-  function paginate(listId, pagerId, size){
-    var list = document.getElementById(listId);
-    var pager = document.getElementById(pagerId);
-    if(!list || !pager) return;
-    var items = Array.prototype.slice.call(list.children);
-    var pages = Math.ceil(items.length / size);
-    if(pages <= 1){ items.forEach(function(it){ it.style.display=''; }); pager.innerHTML=''; return; }
-    var current = 1;
-    function render(){
-      items.forEach(function(it,i){
-        it.style.display = (i >= (current-1)*size && i < current*size) ? '' : 'none';
-      });
-      var html = '<button type="button" class="bkx-pg" data-pg="prev"'+(current===1?' disabled':'')+'>‹</button>';
-      for(var p=1; p<=pages; p++){ html += '<button type="button" class="bkx-pg'+(p===current?' is-active':'')+'" data-pg="'+p+'">'+p+'</button>'; }
-      html += '<button type="button" class="bkx-pg" data-pg="next"'+(current===pages?' disabled':'')+'>›</button>';
-      pager.innerHTML = html;
-    }
-    pager.addEventListener('click', function(e){
-      var b = e.target.closest('[data-pg]'); if(!b) return;
-      var v = b.getAttribute('data-pg');
-      if(v==='prev' && current>1) current--;
-      else if(v==='next' && current<pages) current++;
-      else if(v!=='prev' && v!=='next') current = parseInt(v,10);
-      render();
-    });
-    render();
-  }
-  paginate('audit-log-rows','audit-log-rows-pager',25);
-})();
-</script>
-
+{# نظام الجداول الموحد: فرز + ترقيم صفحات + تصدير #}
+<script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
 {% endblock %}
+

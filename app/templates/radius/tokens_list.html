@@ -44,6 +44,37 @@
 {% endcall %}
 {% endif %}
 
+{# ───── فرض المصادقة المركزي (تشغيل تدريجي) ───── #}
+{% call hub.section("فرض المصادقة على الواجهة البرمجية", icon="shield-halved",
+                    meta=("مفعّل" if enforcement_on else "معطّل")) %}
+  <div class="uds-modal-warn" style="margin-bottom:12px;{{ 'background:#ecfdf5;color:#14532d;border-color:#bbf7d0' if enforcement_on else 'background:#fffbeb;color:#92400e;border-color:#fde68a' }}">
+    <i class="fa-solid {{ 'fa-shield-check' if enforcement_on else 'fa-triangle-exclamation' }}"></i>
+    <span>
+      {% if enforcement_on %}
+        الفرض <strong>مفعّل</strong>: كل نقطة في الواجهة البرمجية (حتى النقاط غير المُدرجة هنا) تتطلّب
+        مفتاح API صحيح أو اعتماد أدمن، وإلا تُرفض بـ401.
+      {% else %}
+        الفرض <strong>معطّل</strong> (الوضع الآمن للتدرّج): النقاط المحمية صراحةً تبقى محمية، لكن أي
+        نقطة أُضيفت دون حماية تبقى مفتوحة. <strong>قبل التفعيل</strong>: جهّز مفتاحًا، وحدّث تطبيقات
+        Flutter لترسل الترويسة، ثم فعّل الفرض — وإلا ستنقطع التطبيقات التي لا ترسل اعتمادًا.
+      {% endif %}
+    </span>
+  </div>
+  {% if can_toggle_enforcement %}
+  <form method="post" action="{{ url_for('radius.tok_enforcement') }}" style="display:inline;margin:0"
+        onsubmit="return confirm({{ ('تعطيل الفرض المركزي؟' if enforcement_on else 'تفعيل الفرض على كل النقاط؟ أي تطبيق لا يرسل مفتاحًا/اعتمادًا سيتوقف فورًا.')|tojson }});">
+    <input type="hidden" name="enable" value="{{ '0' if enforcement_on else '1' }}">
+    {% if enforcement_on %}
+      <button class="hub-btn hub-btn--secondary" type="submit"><i class="fa-solid fa-toggle-off"></i> تعطيل الفرض</button>
+    {% else %}
+      <button class="hub-btn hub-btn--danger" type="submit"><i class="fa-solid fa-toggle-on"></i> تفعيل الفرض الآن</button>
+    {% endif %}
+  </form>
+  {% else %}
+    <span class="hub-text-mute" style="font-size:12px">التبديل متاح لمدير النظام الأعلى فقط (أو عبر متغيّر البيئة <code>HOBERADIUS_API_AUTH_REQUIRED</code>).</span>
+  {% endif %}
+{% endcall %}
+
 {# ───── Create-token form ───── #}
 {% call hub.section("إنشاء رمز جديد", icon="plus") %}
   <form method="post" class="hub-flex-row" style="gap:10px;align-items:center;flex-wrap:wrap">
@@ -63,8 +94,9 @@
     {'icon': 'circle-check', 'text': 'الرمز «النشط» صالح للمصادقة؛ «الملغى» يُرفض فورًا ولا يمكن استعادته.'},
     {'icon': 'clock',        'text': 'عمود «آخر استخدام» يساعدك على رصد الرموز الخاملة لإلغائها.'},
     {'icon': 'ban',          'text': 'الإلغاء فوري ونهائي — إن احتجت الوصول مجددًا أنشئ رمزًا جديدًا.'},
+    {'icon': 'user-lock',    'text': 'بديل للرمز: يمكن المصادقة على الواجهة البرمجية باسم مستخدم وكلمة مرور الأدمن مباشرةً (HTTP Basic) — استخدمه فوق HTTPS فقط.'},
   ],
-  note="احتفظ بأقل عدد ممكن من الرموز النشطة، وألغِ أي رمز لم يَعُد مستخدمًا لتقليل سطح الخطر."
+  note="احتفظ بأقل عدد ممكن من الرموز النشطة، وألغِ أي رمز لم يَعُد مستخدمًا لتقليل سطح الخطر. كل طلب بلا رمز صحيح أو اعتماد أدمن صحيح يُرفض بـ401."
 )) %}
   {% call hub.section("الرموز الموجودة", icon="table-list", meta=_total|string + " رمز", flush=True) %}
     <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">

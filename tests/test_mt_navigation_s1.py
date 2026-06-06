@@ -128,12 +128,16 @@ def test_dashboard_quicknav_uses_real_router_id(app, client):
 # ─── Operations Center fleet rows ─────────────────────────────
 
 
-def test_operations_row_links_to_program(app, client):
+def test_operations_row_drops_program_link(app, client):
+    """قرار التصميم: صف العمليات يُبقي فقط (خدمات/تعديل/مصمم/الطاقة)؛
+    «برمجة الشبكة» انتقلت إلى تبويب «خدماتي» بلوحة الراوتر، فلا تظهر
+    كأيقونة في الصف بعد الآن. اللوحة نفسها ما زالت تربط للبرمجة."""
     _seed(app, nas_id=13)
     _login(client)
     html = client.get("/admin/radius/mt/operations").get_data(as_text=True)
-    assert 'data-mt-row-link="program"' in html
-    assert "/admin/radius/mt/13/program" in html
+    assert 'data-mt-row-link="program"' not in html
+    # مصمّم صفحة الدخول يبقى أحد الإجراءات الأربعة المعتمدة.
+    assert 'data-mt-row-link="login-designer"' in html
 
 
 def test_operations_row_links_to_login_designer(app, client):
@@ -145,12 +149,12 @@ def test_operations_row_links_to_login_designer(app, client):
 
 
 def test_operations_row_links_use_each_routers_id(app, client):
-    """Two routers in the fleet must each get their own pair of
-    Q/R links — a templating bug could easily hard-code one id."""
+    """كل راوتر في الأسطول يجب أن يحصل على رابط مصمّمه الخاص — خطأ في
+    القوالب قد يثبّت id واحدًا. (رابط «برمجة» أُزيل من الصف بقرار
+    التصميم، فبقي مصمّم الدخول وحده مرجعًا لفحص تفرّد المعرّف.)"""
     _seed(app, nas_id=11)
     _seed(app, nas_id=22)
     _login(client)
     html = client.get("/admin/radius/mt/operations").get_data(as_text=True)
     for nas_id in (11, 22):
-        assert f"/admin/radius/mt/{nas_id}/program" in html
         assert f"/admin/radius/mt/{nas_id}/login-designer" in html

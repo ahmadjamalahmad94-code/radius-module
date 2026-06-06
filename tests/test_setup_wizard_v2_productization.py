@@ -29,6 +29,8 @@ def _auth_session(client):
         sess["admin_name"] = "QA Admin"
         sess["tenant_id"] = 1
         sess["_csrf_token"] = "test-csrf"
+        # «الإعداد الهندسي» super_admin فقط (مخفي مؤقتاً بطلب المالك)
+        sess["is_super_admin"] = True
 
 
 def _template_source() -> str:

@@ -9,12 +9,18 @@ import pytest
 
 
 def test_library_carries_the_full_catalogue():
-    """R1 shipped 4 templates; R5 added the MikroTik-derived one.
-    Adding a new template = update this set + add a dedicated
-    test file (see test_hotspot_template_mikrotik_r5.py)."""
+    """R1 shipped 4 templates; R5 added the MikroTik-derived one;
+    the «احترافية» family (gradient_pro/royal_night/emerald/
+    aurora_store/swift_login) and the Fiber-Net-inspired «توهّج
+    الألياف» (fiber_glow) followed. Adding a new template = update
+    this set (the catalogue contract)."""
     from app.radius.services import hotspot_templates as ht
     slugs = {t.slug for t in ht.LIBRARY}
-    assert slugs == {"classic", "card", "dark", "minimal", "mikrotik"}
+    assert slugs == {
+        "gradient_pro", "royal_night", "emerald", "aurora_store",
+        "swift_login", "fiber_glow",
+        "classic", "card", "dark", "minimal", "mikrotik",
+    }
 
 
 def test_every_template_carries_required_routeros_placeholders():

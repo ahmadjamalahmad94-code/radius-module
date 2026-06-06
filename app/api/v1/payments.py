@@ -18,6 +18,7 @@ from ...radius.db.repos.payments_repo import (
     PaymentTransactionRepository,
     PaymentWebhookEventRepository,
 )
+from ...radius.routes.finance_collection import collection_frozen
 from ...radius.services.accounting import service_from_context
 from ..access_control import current_distributor, deny_out_of_scope, subscriber_in_scope
 from ..auth import require_api_token
@@ -45,6 +46,23 @@ def _payment_error_message(message: object) -> str:
 
 def _actor() -> str:
     return f"api-token:{getattr(g, 'api_token_id', 'env')}"
+
+
+def _collection_frozen_fail():
+    """صد إجراءات التحصيل عندما يكون القسم مجمّدًا.
+
+    سياسة التجميد (انظر collection_frozen في finance_collection): لا
+    إنشاء طلبات دفع ولا إثباتات ولا اعتماد/رفض/تطبيق خدمة حتى ربط بوابة
+    دفع حقيقية. مسارات القراءة وحفظ الإعدادات تبقى متاحة للتحضير.
+    تُرجع استجابة الفشل عند التجميد، أو None إذا كان القسم مفتوحًا.
+    """
+    if collection_frozen(PaymentSettingsRepository().get(_tid())):
+        return fail(
+            "collection_frozen",
+            "قسم التحصيل مجمّد — اربط بوابة دفع أولًا.",
+            status=423,
+        )
+    return None
 
 
 def register(bp: Blueprint) -> None:
@@ -260,6 +278,10 @@ def payment_collection_settings_patch():
 
 
 def payment_collection_requests_create():
+    # تجميد القسم: لا إنشاء طلبات دفع قبل ربط بوابة دفع.
+    frozen = _collection_frozen_fail()
+    if frozen:
+        return frozen
     body = request.get_json(silent=True) or {}
     settings = PaymentSettingsRepository().get(_tid())
     if not settings or not settings.enabled:
@@ -358,6 +380,10 @@ def _proof_payload(row: dict) -> dict:
 
 
 def payment_collection_submit_proof(request_id: int):
+    # تجميد القسم: لا إرسال إثباتات دفع قبل ربط بوابة دفع.
+    frozen = _collection_frozen_fail()
+    if frozen:
+        return frozen
     request_row = PaymentRequestRepository().get(_tid(), request_id)
     if not request_row:
         return fail("not_found", "طلب الدفع غير موجود.", status=404)
@@ -399,6 +425,10 @@ def _reviewable_request(request_id: int):
 
 
 def payment_collection_approve(request_id: int):
+    # تجميد القسم: لا اعتماد دفعات قبل ربط بوابة دفع.
+    frozen = _collection_frozen_fail()
+    if frozen:
+        return frozen
     pair, error = _reviewable_request(request_id)
     if error:
         return error
@@ -433,6 +463,10 @@ def payment_collection_approve(request_id: int):
 
 
 def payment_collection_reject(request_id: int):
+    # تجميد القسم: لا رفض/مراجعة قبل ربط بوابة دفع.
+    frozen = _collection_frozen_fail()
+    if frozen:
+        return frozen
     pair, error = _reviewable_request(request_id)
     if error:
         return error
@@ -465,6 +499,10 @@ def _apply_attempt_payload(row: dict) -> dict:
 
 
 def payment_collection_apply_service(request_id: int):
+    # تجميد القسم: لا تطبيق خدمة قبل ربط بوابة دفع.
+    frozen = _collection_frozen_fail()
+    if frozen:
+        return frozen
     body = request.get_json(silent=True) or {}
     try:
         attempt = PaymentServiceApplyRepository().apply_paid_request(

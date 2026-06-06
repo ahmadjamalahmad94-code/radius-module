@@ -22,9 +22,45 @@
   .bf-field label{ font-size:12.5px; font-weight:700; color:var(--hub-text-soft); }
   .bf-field label .req{ color:var(--hub-red); margin-inline-start:2px; }
   .bf-field .help{ font-size:11px; color:var(--hub-text-mute); margin-top:2px; line-height:1.6; }
-  .bf-rate-row{ display:flex; gap:6px; }
-  .bf-rate-row > input{ flex:1; min-width:0; }
-  .bf-rate-row > select{ width:100px; flex-shrink:0; }
+  /* خانة «رقم + وحدة» مدمجة — نفس مظهر مكوّن unit_input (.ui-wrap)
+     المعتمد في باقي النماذج (الرقم والوحدة جسم واحد)، مع الإبقاء على
+     نفس أسماء الحقول للباك إند. الوحدة قد تكون select أصلي أو زر
+     .hbsel-trigger بعد ترقية hub_select.js — الحالتان مغطّاتان. */
+  .bf-rate-row{ display:inline-flex; align-items:stretch; width:100%; }
+  .bf-rate-row > input{
+    flex:1; min-width:0;
+    border-start-start-radius:var(--hub-r-md);
+    border-end-start-radius:var(--hub-r-md);
+    border-start-end-radius:0;
+    border-end-end-radius:0;
+    font-variant-numeric:tabular-nums;
+  }
+  /* غلاف hub_select داخل صف «رقم + وحدة»: hub_select.js يثبّت inline
+     min-width بقياس الـ select الأصلي لحظة الترقية — وبما أن
+     .hub-select عرضه 100% عالميًا فقد يُقاس وهو متمدد على كامل الصف
+     فيتضخم الزر ويسحق خانة الرقم (ظهر فعليًا في حقل سرعة التنزيل).
+     نقفل عرض الوحدة هنا بقياس ثابت يتغلب على الـ inline style. */
+  .bf-rate-row .hbsel{
+    flex:0 0 auto; margin-inline-start:-1px;
+    width:96px !important;
+    min-width:96px !important;
+    max-width:96px !important;
+    align-self:stretch; display:flex;
+  }
+  .bf-rate-row .hbsel-trigger,
+  .bf-rate-row > select{
+    height:100%;
+    width:100%;
+    min-width:92px;
+    border-start-start-radius:0;
+    border-end-start-radius:0;
+    border-start-end-radius:var(--hub-r-md);
+    border-end-end-radius:var(--hub-r-md);
+  }
+  /* الـ select الأصلي قبل الترقية (أو مع data-native): width:100%
+     العالمي يجعله يتمدد على الصف ويسحق خانة الرقم — نقفله بنفس قياس
+     الوحدة الثابت حتى يُقاس صحيحًا لحظة ترقية hub_select أيضًا. */
+  .bf-rate-row > select{ flex:0 0 96px; width:96px; }
 
   /* ── «متقدم» disclosure ─────────────────────────────────────── */
   .bf-adv-toggle{

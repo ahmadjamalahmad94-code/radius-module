@@ -6,20 +6,53 @@
 {% block page_title %}الإيرادات{% endblock %}
 {% block page_sub %}<span class="sub">سجلات السعر والتحصيل والتكلفة والربح</span>{% endblock %}
 
-{% block content %}
-{{ hub.hero("الإيرادات", subtitle="عرض سجلات الإيراد الناتجة عن العمليات المالية بدون تعديل مباشر.", icon="coins") }}
-{% include "radius/_finance_nav.html" %}
+{% block head_extra %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
+{% endblock %}
 
-<div class="hub-kpi-grid">
-  {{ hub.kpi("إجمالي الإيرادات", summary.total_revenue|money, icon="sack-dollar", variant="green") }}
-  {{ hub.kpi("الربح الصافي", summary.total_profit|money, icon="chart-line", variant="amber") }}
-  {{ hub.kpi("سجلات الإيراد", summary.revenue_records, icon="receipt", variant="blue") }}
-  {{ hub.kpi("حصص الموزعين", summary.distributor_shares, icon="people-arrows", variant="brand") }}
-</div>
+{# ── تعريب مصدر الإيراد (source_type القادم من قاعدة البيانات) ──
+   القيم الفعلية من خدمة الإيرادات: card_batch (إصدار حزمة بطاقات) و
+   card_user_purchase (شراء مستخدم من سوق البطاقات). نضيف بقية مصادر
+   الدفتر المالي احتياطًا، ونرجع القيمة الخام إن لم تُعرَّف بدل إخفائها. #}
+{% macro revenue_source_label(source_type) -%}
+  {{ {
+    'card_batch':          'حزمة بطاقات',
+    'card_user_purchase':  'شراء مستخدم',
+    'card_sale':           'بيع بطاقات',
+    'subscriber_payment':  'دفعة مشترك',
+    'invoice':             'فاتورة',
+    'voucher':             'كوبون',
+    'manual':              'تسجيل يدوي'
+  }.get(source_type, source_type or 'مصدر مالي') }}
+{%- endmacro %}
+
+{% block content %}
+{# ───── الهيرو الموحّد (megahero): عنوان + KPIs + حزام بحث فوري في كتلة .uds-hero واحدة ───── #}
+<section class="hub-hero-shell">
+{% call hub.megahero(
+  "الإيرادات",
+  subtitle="عرض سجلات الإيراد الناتجة عن العمليات المالية بدون تعديل مباشر.",
+  icon="coins",
+  kpis=[
+    {'label': 'إجمالي الإيرادات', 'value': summary.total_revenue|money,   'icon': 'sack-dollar',   'variant': 'green'},
+    {'label': 'الربح الصافي',     'value': summary.total_profit|money,    'icon': 'chart-line',    'variant': 'amber'},
+    {'label': 'سجلات الإيراد',    'value': summary.revenue_records,       'icon': 'receipt',       'variant': 'blue'},
+    {'label': 'حصص الموزعين',     'value': summary.distributor_shares,    'icon': 'people-arrows', 'variant': 'brand'},
+  ]
+) %}
+  {# بحث فوري في المتصفح (المصدر/المعرّف/التاريخ) — يفلتر الجدول مباشرة دون إرسال للخادم #}
+  <input class="hub-input grow" type="search" id="rev-q" autocomplete="off"
+         placeholder="بحث فوري في سجلات الإيراد بالمصدر أو المعرّف...">
+{% endcall %}
+</section>{# /hub-hero-shell #}
+{% include "radius/_finance_nav.html" %}
 
 {% call hub.section("سجلات الإيرادات", icon="receipt", flush=True) %}
   {% if revenue %}
-  <div class="table-responsive">
+  {# جدول uds موحّد: فرز + ترقيم + تصدير — مع عنوان تصدير صريح لملفات CSV/XLSX/PDF #}
+  <div class="table-responsive hub-table-wrap uds-table-wrap" id="rev-table" data-uds-table
+       data-uds-page-size="25" data-uds-export-title="سجلات الإيرادات">
     <table class="table hub-table">
       <thead>
         <tr>
@@ -36,7 +69,8 @@
         {% for item in revenue %}
         <tr>
           <td>{{ item.id }}</td>
-          <td>{{ item.source_type }}{% if item.source_id %} #{{ item.source_id }}{% endif %}</td>
+          {# تعريب المصدر بدل عرض القيمة الإنجليزية الخام #}
+          <td>{{ revenue_source_label(item.source_type) }}{% if item.source_id %} #{{ item.source_id }}{% endif %}</td>
           <td>{{ item.original_price|money }}</td>
           <td>{{ item.collected|money }}</td>
           <td>{{ item.wholesale_cost|money }}</td>
@@ -51,4 +85,23 @@
     {{ hub.empty("لا توجد سجلات إيراد بعد.", sub="سيتم عرض سجلات البيع والربح هنا عند ربط العمليات المالية.", icon="receipt") }}
   {% endif %}
 {% endcall %}
+<script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
+<script>
+/* البحث الفوري: يربط حقل بحث الهيرو بمرشّح جدول uds (نصّ الصف كاملًا) — صفر تغيير خلفي */
+(function () {
+  var q = document.getElementById("rev-q");
+  var wrap = document.getElementById("rev-table");
+  if (!q || !wrap) return;
+  /* الحقل داخل نموذج الهيرو — نمنع الإرسال بالضغط على Enter */
+  q.addEventListener("keydown", function (e) { if (e.key === "Enter") e.preventDefault(); });
+  q.addEventListener("input", function () {
+    var api = wrap.__udsApi;
+    if (!api || !api.setFilter) return;
+    var needle = q.value.trim().toLowerCase();
+    api.setFilter(needle ? function (tr) {
+      return (tr.textContent || "").toLowerCase().indexOf(needle) !== -1;
+    } : null);
+  });
+})();
+</script>
 {% endblock %}

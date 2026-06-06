@@ -39,13 +39,21 @@ def _actor() -> str:
 def admins_list():
     svc = get_admins_service()
     admins = svc.list_admins()
-    roles = {r.id: r for r in svc.list_roles()}
-    return render_template("radius/admins_list.html", admins=admins, roles=roles)
+    roles_seq = svc.list_roles()
+    roles = {r.id: r for r in roles_seq}
+    return render_template(
+        "radius/admins_list.html", admins=admins, roles=roles,
+        # قائمة الأدوار كما هي (ترتيبًا) لقائمة «الدور» داخل صندوق «إضافة مدير» العائم
+        roles_all=roles_seq,
+        # ?new=1 يفتح الصندوق العائم «إضافة مدير» تلقائيًا (الرابط القديم /admins/new يبقى حيًّا)
+        open_new_modal=(request.args.get("new") == "1"),
+    )
 
 
 def admins_new():
-    roles = get_admins_service().list_roles()
-    return render_template("radius/admins_form.html", admin=None, roles=roles, is_new=True)
+    # نموذج الإنشاء أصبح صندوقًا عائمًا داخل صفحة القائمة —
+    # الرابط القديم يبقى حيًّا ويفتح النافذة تلقائيًا عبر ?new=1.
+    return redirect(url_for("radius.admins_list", new=1))
 
 
 def _s(name: str) -> str:

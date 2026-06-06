@@ -10,7 +10,10 @@ from ..services.operations_speed_center import OperationsSpeedCenterService, Ope
 
 def register_operations_center_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/operations", "operations_center", operations_center, methods=["GET"])
+    # «التحكم المجدول»: بطاقات الأوضاع + المعاينة + السياسات المحفوظة
     bp.add_url_rule("/operations/speed-control", "operations_speed_control", operations_speed_control, methods=["GET", "POST"])
+    # «التحكم اليدوي»: محرّك السلايدر والحلقة — نفس عقد الحفظ/المعاينة في الخادم
+    bp.add_url_rule("/operations/speed-control/manual", "operations_speed_control_manual", operations_speed_control_manual, methods=["GET", "POST"])
 
 
 def _tid() -> int:
@@ -29,7 +32,12 @@ def operations_center():
     return render_template("radius/operations_center.html", snapshot=_svc().operations_snapshot())
 
 
-def operations_speed_control():
+def _speed_control_page(template: str, redirect_endpoint: str):
+    """منطق مشترك لصفحتَي التحكم بالسرعة (المجدول واليدوي).
+
+    نفس عقد POST تمامًا (preset / multiplier / profile_ids / settings_json /
+    save_policy / policy_key / title) — يختلف فقط القالب المعروض ووجهة
+    إعادة التوجيه بعد الحفظ، فيبقى كل مسار على صفحته."""
     svc = _svc()
     preview = None
     if request.method == "POST":
@@ -48,19 +56,29 @@ def operations_speed_control():
                     actor=_actor(),
                 )
                 flash("تم حفظ سياسة السرعة كمعاينة بدون تنفيذ. لم يتم تطبيق أي تغيير مباشر على RADIUS أو CoA.", "success")
-                return redirect(url_for("radius.operations_speed_control", policy_id=policy["id"]))
+                return redirect(url_for(redirect_endpoint, policy_id=policy["id"]))
             preview = svc.speed_preview(
                 preset=preset, multiplier=multiplier, profile_ids=profile_ids, overrides=overrides
             )
         except (OperationsSpeedError, ValueError) as exc:
             flash(str(exc), "error")
     return render_template(
-        "radius/operations_speed_control.html",
+        template,
         presets=SPEED_PRESETS,
         preview=preview,
         policies=svc.list_policies(),
         control_profiles=svc.control_profiles(),
     )
+
+
+def operations_speed_control():
+    """التحكم المجدول: بطاقات الأوضاع + المعاينة + السياسات المحفوظة."""
+    return _speed_control_page("radius/operations_speed_control.html", "radius.operations_speed_control")
+
+
+def operations_speed_control_manual():
+    """التحكم اليدوي: محرّك السلايدر/الحلقة — يعيد استخدام نفس منطق POST."""
+    return _speed_control_page("radius/operations_speed_control_manual.html", "radius.operations_speed_control_manual")
 
 
 def _parse_control_payload(form, preset: str):

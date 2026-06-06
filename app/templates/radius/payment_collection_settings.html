@@ -6,8 +6,12 @@
 {% block page_title %}مركز تحصيل الدفعات{% endblock %}
 {% block page_sub %}<span class="sub">إعدادات المحفظة اليدوية</span>{% endblock %}
 
+{# تضمين صريح لورقة التصميم الموحّد كما في بقية صفحات UDS #}
+{% block head_extra %}{{ super() }}<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">{% endblock %}
+
 {% block content %}
-{{ hub.hero(
+{# الهيرو الموحّد megahero بدل hub.hero القديم — نفس العنوان والوصف والأزرار #}
+{{ hub.megahero(
   "مركز تحصيل الدفعات",
   subtitle="إعدادات استقبال الدفعات عبر محفظة يدوية — مع مراجعة بشرية قبل اعتبار أي طلب مدفوعًا.",
   icon="wallet",
@@ -16,6 +20,9 @@
     <a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.payment_collection_review_queue_web') ~ '"><i class="fa-solid fa-clipboard-check"></i> طابور المراجعة</a>
   '
 ) }}
+
+{# قائمة العملات بأسماء عربية — مطابقة لنمط settings_page.html #}
+{% set currencies = [('JOD','دينار أردني'),('ILS','شيكل ₪'),('USD','دولار $'),('IQD','دينار عراقي'),('SAR','ريال سعودي'),('EGP','جنيه مصري'),('AED','درهم إماراتي'),('EUR','يورو €'),('TRY','ليرة تركية')] %}
 
 <div style="margin-bottom:var(--hub-gap-section);padding:11px 16px;font-size:13px;font-weight:600;
             border-radius:var(--hub-r-lg);border:1px solid #bfdbfe;
@@ -26,6 +33,8 @@
 </div>
 
 <form method="post">
+  {# توكن CSRF لحماية النموذج عند الإرسال POST #}
+  {{ csrf_token_input() | safe }}
   {% call hub.section("إعدادات المزوّد والمحفظة", icon="gear") %}
     <label class="hub-field" style="margin-bottom:14px;display:flex;flex-direction:row;align-items:center;gap:9px">
       <input type="checkbox" name="enabled" value="1" style="width:17px;height:17px;accent-color:var(--hub-brand)" {% if settings and settings.enabled %}checked{% endif %}>
@@ -37,14 +46,15 @@
         <span class="hub-field-label">المزوّد</span>
         <select class="hub-select" name="provider">
           <option value="manual_wallet" {% if not settings or settings.provider == 'manual_wallet' %}selected{% endif %}>محفظة يدوية</option>
-          <option value="jawwal_pay" {% if settings and settings.provider == 'jawwal_pay' %}selected{% endif %}>Jawwal Pay - غير مفعل حاليًا</option>
+          <option value="jawwal_pay" {% if settings and settings.provider == 'jawwal_pay' %}selected{% endif %}>خدمة جوّال باي - غير مفعلة حاليًا</option>
         </select>
       </label>
       <label class="hub-field">
         <span class="hub-field-label">العملة</span>
         <select class="hub-select" name="currency">
-          {% for c in ['JOD','ILS','USD','IQD','SAR','EGP','AED','EUR','TRY'] %}
-          <option value="{{ c }}" {% if (settings.currency if settings else cfg.currency) == c %}selected{% endif %}>{{ c }}</option>
+          {# عرض كل عملة باسمها العربي مع الرمز، والافتراضي JOD بدل cfg.currency غير المعرّف #}
+          {% for code, label in currencies %}
+          <option value="{{ code }}" {% if (settings.currency if settings else 'JOD') == code %}selected{% endif %}>{{ label }} — {{ code }}</option>
           {% endfor %}
         </select>
       </label>

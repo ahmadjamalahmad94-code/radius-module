@@ -1,0 +1,350 @@
+msgid "فتح القائمة"
+msgstr "Open menu"
+
+msgid "إعدادات الراديوس"
+msgstr "RADIUS settings"
+
+msgid "مركز التنبيهات"
+msgstr "Alerts center"
+
+msgid "التنبيهات المفتوحة"
+msgstr "Open alerts"
+
+msgid "لا توجد تنبيهات مفتوحة الآن."
+msgstr "No open alerts right now."
+
+msgid "عرض كل التنبيهات"
+msgstr "View all alerts"
+
+msgid "رسائل لوحة التراخيص"
+msgstr "Licensing panel messages"
+
+msgid "تغيير اللغة"
+msgstr "Change language"
+
+msgid "اللغة"
+msgstr "Language"
+
+msgid "تبديل الجهة"
+msgstr "Switch tenant"
+
+msgid "إدارة الجهات"
+msgstr "Manage tenants"
+
+msgid "الملف الشخصي"
+msgstr "Profile"
+
+msgid "تسجيل الخروج"
+msgstr "Sign out"
+
+msgid "%(count)s راوتر مايكروتيك غير متاح حالياً — لن تعمل عمليات DHCP / reconciliation / CoA حتى يعود."
+msgstr "%(count)s MikroTik router(s) currently unreachable — DHCP / reconciliation / CoA operations will not run until it returns."
+
+msgid "تشخيص الآن"
+msgstr "Diagnose now"
+
+msgid "إغلاق"
+msgstr "Close"
+
+msgid "الإصدار %(v)s"
+msgstr "Version %(v)s"
+
+msgid "حقوق النشر"
+msgstr "Copyright"
+
+msgid "أقسام الصفحة"
+msgstr "Page sections"
+
+msgid "ابدأ من القسم الأقرب لعملك. عند الانتقال لقسم مغلق سأفتحه لك تلقائيًا."
+msgstr "Start from the section closest to your task. When you jump to a collapsed section I'll open it for you automatically."
+
+msgid "القسم"
+msgstr "Section"
+
+msgid "اسم الدخول الذي يستخدمه الشخص عند الاتصال أو تسجيل الدخول."
+msgstr "The login name the person uses when connecting or signing in."
+
+msgid "اكتب كلمة مرور آمنة، واتركها فارغة إذا لم تكن تريد تغييرها."
+msgstr "Enter a secure password, or leave it blank if you don't want to change it."
+
+msgid "اكتب اسمًا واضحًا يظهر في القوائم ويسهّل البحث."
+msgstr "Enter a clear name that appears in lists and makes searching easier."
+
+msgid "رمز داخلي قصير يساعدك في الترتيب والبحث."
+msgstr "A short internal code that helps with sorting and searching."
+
+msgid "الاسم الظاهر للمستخدم داخل الواجهة."
+msgstr "The display name shown to the user in the interface."
+
+msgid "الاسم الحقيقي أو الوصفي لصاحب الحساب."
+msgstr "The real or descriptive name of the account holder."
+
+msgid "بريد للتواصل أو استلام التنبيهات عند الحاجة."
+msgstr "An email for contact or receiving alerts when needed."
+
+msgid "رقم جوال واضح للتواصل السريع."
+msgstr "A clear mobile number for quick contact."
+
+msgid "رقم بديل إن وجد."
+msgstr "An alternate number, if any."
+
+msgid "ملاحظات داخلية تساعدك عند المراجعة ولا تظهر عادة للمستفيد."
+msgstr "Internal notes that help during review and are usually not shown to the subscriber."
+
+msgid "وصف قصير يوضّح الهدف من هذا العنصر."
+msgstr "A short description explaining the purpose of this item."
+
+msgid "عند التعطيل يبقى العنصر محفوظًا لكنه لا يعمل في الاستخدام الجديد."
+msgstr "When disabled, the item stays saved but is not used for new activity."
+
+msgid "اختر الحالة الحالية لهذا العنصر."
+msgstr "Choose the current status for this item."
+
+msgid "اختر باقة الخدمة التي تحدد السرعة والحصة ومدة الاستخدام."
+msgstr "Choose the service plan that sets the speed, quota, and usage period."
+
+msgid "اختر نوع الخدمة التي سيستخدمها الحساب على الشبكة."
+msgstr "Choose the service type the account will use on the network."
+
+msgid "اختر نوع الحساب حسب طريقة استخدامه."
+msgstr "Choose the account type based on how it is used."
+
+msgid "طريقة الدخول التي سيستخدمها المستفيد على الشبكة."
+msgstr "The authentication method the subscriber will use on the network."
+
+msgid "اسم مجموعة اختياري لتنظيم الحسابات المتشابهة."
+msgstr "An optional group name to organize similar accounts."
+
+msgid "رقم المدير المسؤول إن كنت تستخدم توزيعًا إداريًا."
+msgstr "The responsible manager's ID if you use administrative distribution."
+
+msgid "مرجع اختياري يربط الحساب بسجل داخلي آخر."
+msgstr "An optional reference linking the account to another internal record."
+
+msgid "اسم واضح لهذه الدفعة حتى تميّزها عند المراجعة."
+msgstr "A clear name for this batch so you can identify it during review."
+
+msgid "عدد العناصر التي سيتم إنشاؤها في هذه العملية."
+msgstr "The number of items to be created in this operation."
+
+msgid "عدد خانات اسم الدخول الذي سيتم توليده."
+msgstr "The number of characters in the generated login name."
+
+msgid "عدد خانات كلمة المرور التي سيتم توليدها."
+msgstr "The number of characters in the generated password."
+
+msgid "اختر نمط كلمة المرور حسب مستوى الأمان المطلوب."
+msgstr "Choose the password style based on the required security level."
+
+msgid "نص اختياري يُضاف قبل أو بعد الاسم المولّد."
+msgstr "Optional text added before or after the generated name."
+
+msgid "استخدم 0 عندما تريد الاعتماد على قيمة الباقة الأساسية."
+msgstr "Use 0 when you want to rely on the plan's base value."
+
+msgid "الوحدة التي سيتم احتساب مدة البطاقة أو الحساب بها."
+msgstr "The unit used to calculate the card or account duration."
+
+msgid "أقصى عدد أجهزة يمكنها استخدام نفس الحساب في نفس الوقت."
+msgstr "The maximum number of devices that can use the same account simultaneously."
+
+msgid "إجمالي الحصة بالميجابايت، و0 يعني بلا حد خاص."
+msgstr "Total quota in megabytes; 0 means no specific limit."
+
+msgid "كمية التنزيل المتاحة يوميًا لهذا الحساب أو الباقة."
+msgstr "Daily download quota available for this account or plan."
+
+msgid "كمية الرفع المتاحة يوميًا لهذا الحساب أو الباقة."
+msgstr "Daily upload quota available for this account or plan."
+
+msgid "كمية التنزيل المتاحة خلال الشهر."
+msgstr "Download quota available during the month."
+
+msgid "كمية الرفع المتاحة خلال الشهر."
+msgstr "Upload quota available during the month."
+
+msgid "سرعة التنزيل بالكيلوبت، 1024 تعني تقريبًا 1 ميجابت."
+msgstr "Download speed in kbps; 1024 is roughly 1 Mbps."
+
+msgid "سرعة الرفع بالكيلوبت، 1024 تعني تقريبًا 1 ميجابت."
+msgstr "Upload speed in kbps; 1024 is roughly 1 Mbps."
+
+msgid "عنوان الجهاز أو الخادم داخل الشبكة."
+msgstr "The device or server address within the network."
+
+msgid "اسم مختصر يظهر في السجلات والقوائم."
+msgstr "A short name shown in logs and lists."
+
+msgid "المفتاح المشترك يجب أن يطابق إعداد جهاز الشبكة."
+msgstr "The shared secret must match the network device's configuration."
+
+msgid "منفذ المصادقة القياسي غالبًا 1812."
+msgstr "The standard authentication port, usually 1812."
+
+msgid "منفذ المحاسبة القياسي غالبًا 1813."
+msgstr "The standard accounting port, usually 1813."
+
+msgid "منفذ قطع الجلسة أو تحديثها غالبًا 3799."
+msgstr "The session disconnect or update (CoA) port, usually 3799."
+
+msgid "منفذ واجهة الربط، غالبًا 8728 أو 8729 للاتصال الآمن."
+msgstr "The API port, usually 8728, or 8729 for a secure connection."
+
+msgid "اسم مستخدم الراوتر المسموح له بإدارة الإعدادات."
+msgstr "The router username allowed to manage the configuration."
+
+msgid "كلمة مرور الراوتر، احفظها بعناية."
+msgstr "The router password; keep it safe."
+
+msgid "نص يستخدمه النظام لقراءة بيانات المراقبة من الجهاز."
+msgstr "A string the system uses to read monitoring data from the device."
+
+msgid "الدور يحدد الصلاحيات التي يحصل عليها هذا المدير."
+msgstr "The role defines the permissions this manager receives."
+
+msgid "اختر الصلاحيات المناسبة فقط لهذا الدور."
+msgstr "Select only the permissions appropriate for this role."
+
+msgid "رمز العملة المستخدم في العرض والتقارير."
+msgstr "The currency code used in display and reports."
+
+msgid "السعر المرجعي أو التجاري لهذا العنصر."
+msgstr "The reference or commercial price for this item."
+
+msgid "وسوم قصيرة للتنظيم، افصل بينها بفاصلة عند الحاجة."
+msgstr "Short tags for organization; separate them with a comma when needed."
+
+msgid "معرّف قصير مناسب للرابط، ويفضّل تثبيته بعد استخدامه."
+msgstr "A short URL-friendly identifier; best kept fixed once in use."
+
+msgid "فئة الاشتراك تحدد الحدود الافتراضية لهذه الجهة."
+msgstr "The subscription tier sets the default limits for this tenant."
+
+msgid "أقصى عدد مستفيدين مسموح، و0 يعني استخدام حد الفئة."
+msgstr "Maximum allowed subscribers; 0 means use the tier limit."
+
+msgid "أقصى عدد أجهزة شبكة مسموح لهذه الجهة."
+msgstr "Maximum number of network devices allowed for this tenant."
+
+msgid "عدد طلبات واجهة الربط المسموح بها في الدقيقة."
+msgstr "The number of API requests allowed per minute."
+
+msgid "لغة الواجهة الافتراضية لهذه الجهة."
+msgstr "The default interface language for this tenant."
+
+msgid "المنطقة الزمنية المستخدمة في التواريخ والتقارير."
+msgstr "The time zone used in dates and reports."
+
+msgid "لون العلامة المستخدم في أجزاء من الواجهة."
+msgstr "The brand color used in parts of the interface."
+
+msgid "رابط الشعار إن كنت تريد إظهاره للجهة."
+msgstr "The logo URL if you want to display it for the tenant."
+
+msgid "اسم نطاق العناوين كما سيظهر في القوائم."
+msgstr "The IP pool name as it will appear in lists."
+
+msgid "مدى العناوين الذي سيوزّع منه جهاز الشبكة."
+msgstr "The address range the network device will assign from."
+
+msgid "عنوان البوابة المحلية المرتبطة بهذا النطاق."
+msgstr "The local gateway address associated with this pool."
+
+msgid "اختر جهاز الشبكة المسؤول عن هذا النطاق."
+msgstr "Choose the network device responsible for this pool."
+
+msgid "سرعة التنزيل لهذا الملف."
+msgstr "The download speed for this profile."
+
+msgid "سرعة الرفع لهذا الملف."
+msgstr "The upload speed for this profile."
+
+msgid "إعداد اختياري للسرعة المؤقتة على الراوتر."
+msgstr "An optional burst speed setting on the router."
+
+msgid "عنوان الراوتر أو اسم المضيف."
+msgstr "The router address or hostname."
+
+msgid "منفذ الاتصال مع الجهاز."
+msgstr "The connection port to the device."
+
+msgid "مدة الانتظار قبل اعتبار الاتصال غير ناجح."
+msgstr "The wait time before the connection is considered failed."
+
+msgid "الرابط الذي ستُرسل له إشعارات الربط."
+msgstr "The URL where webhook notifications will be sent."
+
+msgid "رقم المستفيد المرتبط بهذا السجل."
+msgstr "The subscriber ID linked to this record."
+
+msgid "المبلغ المالي المطلوب أو المسجل."
+msgstr "The amount requested or recorded."
+
+msgid "طريقة الدفع المستخدمة أو المرجعية."
+msgstr "The payment method used or referenced."
+
+msgid "تاريخ انتهاء صلاحية هذا السجل."
+msgstr "The expiration date of this record."
+
+msgid "عنوان مختصر يوضح سبب التذكرة."
+msgstr "A brief title explaining the reason for the ticket."
+
+msgid "الفئة تساعد فريق الدعم على فرز الطلب."
+msgstr "The category helps the support team triage the request."
+
+msgid "اكتب التفاصيل المطلوبة بوضوح."
+msgstr "Write the required details clearly."
+
+msgid "الأولوية تحدد ترتيب المعالجة."
+msgstr "The priority determines the processing order."
+
+msgid "الرقم التسلسلي للجهاز أو المعدة إن وجد."
+msgstr "The serial number of the device or equipment, if any."
+
+msgid "عنوان الجهاز الفيزيائي عند الحاجة للربط."
+msgstr "The device's physical (MAC) address when binding is needed."
+
+msgid "قيمة الإيجار الشهري إن كانت الخدمة مؤجرة."
+msgstr "The monthly rent amount if the service is rented."
+
+msgid "تاريخ تسليم المعدة أو بدء الخدمة."
+msgstr "The date the equipment was handed over or service started."
+
+msgid "تاريخ الإرجاع إن وجد."
+msgstr "The return date, if any."
+
+msgid "اكتب كل اسم دخول في سطر مستقل."
+msgstr "Enter each login name on its own line."
+
+msgid "اختر العملية التي تريد تنفيذها."
+msgstr "Choose the operation you want to perform."
+
+msgid "عدد الدقائق التي ستضاف أو تعدل."
+msgstr "The number of minutes to add or adjust."
+
+msgid "كلمة المرور الجديدة للحسابات المحددة."
+msgstr "The new password for the selected accounts."
+
+msgid "مضاعف سرعة التنزيل، مثل 0.5 للتنصيف."
+msgstr "Download speed multiplier, e.g. 0.5 to halve it."
+
+msgid "مضاعف سرعة الرفع، مثل 2 للمضاعفة."
+msgstr "Upload speed multiplier, e.g. 2 to double it."
+
+msgid "قيمة تنزيل ثابتة تتجاوز المضاعف عند تعبئتها."
+msgstr "A fixed download value that overrides the multiplier when filled in."
+
+msgid "قيمة رفع ثابتة تتجاوز المضاعف عند تعبئتها."
+msgstr "A fixed upload value that overrides the multiplier when filled in."
+
+msgid "عنوان جهاز المستفيد المستخدم في الاختبار."
+msgstr "The subscriber device address used in the test."
+
+msgid "معرّف نقطة الاتصال أو الجهاز المستقبل."
+msgstr "The identifier of the access point or receiving device."
+
+msgid "عنوان جهاز الشبكة الذي سترسل منه تجربة المصادقة."
+msgstr "The network device address the authentication test is sent from."
+
+msgid "نوع منفذ الاتصال المستخدم في الاختبار."
+msgstr "The connection port type used in the test."

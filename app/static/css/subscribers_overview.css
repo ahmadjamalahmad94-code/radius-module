@@ -4,7 +4,8 @@
    sparklines are CSS bars; everything RTL-safe via logical properties.
    ════════════════════════════════════════════════════════════════════ */
 
-.subs-overview{ display:grid; gap:14px; }
+/* مسافة موحّدة بين الكتل (الهيرو والأقسام) مطابقة لنظام التصميم الموحّد ≈20px */
+.subs-overview{ display:grid; gap:var(--uds-block-gap, 20px); }
 
 /* ── Mega-hero ── */
 .so-hero{
@@ -39,6 +40,16 @@
   border:1px solid #ddd6fe; border-radius:999px;
   background:#f5f3ff; color:#5b21b6; font-size:12px; font-weight:800;
 }
+/* منتقي الفترة (سنة/شهر) داخل الـ chip */
+.so-period-pick{
+  border:0; background:transparent; color:#5b21b6;
+  font:inherit; font-weight:800; cursor:pointer;
+  padding-inline-end:2px; outline:none;
+}
+.so-period-pick:focus-visible{
+  border-radius:6px;
+  box-shadow:0 0 0 2px rgba(124,58,237,.35);
+}
 
 /* ── Period toggle (monthly / yearly only) ── */
 .so-hero-toggle{
@@ -70,21 +81,27 @@
   width:40px; height:40px; flex:0 0 auto; display:grid; place-items:center;
   border-radius:10px; font-size:17px;
 }
-.so-flow-item--in .so-flow-icon{ background:#ecfdf5; color:#15803d; }
-.so-flow-item--out .so-flow-icon{ background:#fff7ed; color:#b45309; }
+/* الدخل بخلفية خضراء فاتحة والصرف بحمراء فاتحة (طلب التصميم) */
+.so-flow-item--in{ background:#F0FDF4; border-color:#BBF7D0; }
+.so-flow-item--out{ background:#FEF2F2; border-color:#FECACA; }
+.so-flow-item--in .so-flow-icon{ background:#DCFCE7; color:#15803d; }
+.so-flow-item--out .so-flow-icon{ background:#FEE2E2; color:#B91C1C; }
+.so-flow-item--in .so-flow-value{ color:#15803D; }
+.so-flow-item--out .so-flow-value{ color:#B91C1C; }
 .so-flow-label{ color:#64748b; font-size:12px; font-weight:800; }
 .so-flow-value{ direction:ltr; color:#0f172a; font-size:22px; font-weight:950; white-space:nowrap; }
 
 /* ── KPI strip ── */
 .so-hero-kpis{
   display:grid;
-  /* Balanced rows (4 per row per design system) instead of auto-fit, which
-     packed ~6 cards then stretched a lone orphan full-width (the 6+1 look). */
-  grid-template-columns:repeat(4, minmax(0, 1fr));
+  /* صف واحد إجباري مهما كان عدد البطاقات (طلب التصميم الموحد). */
+  grid-auto-flow:column;
+  grid-auto-columns:minmax(0, 1fr);
   gap:10px;
   padding-top:16px;
   border-top:1px solid var(--hub-border-soft, #e2e8f0);
 }
+.so-hero-kpis > *{ min-width:0; }
 @media (max-width: 1080px){
   .so-hero-kpis{ grid-template-columns:repeat(2, minmax(0, 1fr)); }
 }
@@ -194,6 +211,13 @@
 .so-census{
   display:grid; grid-template-columns:repeat(auto-fit, minmax(150px,1fr)); gap:10px;
 }
+/* حالة المشتركين داخل الهيرو: فاصل علوي ناعم + صف واحد */
+.so-census--hero{
+  margin-top:14px; padding-top:14px;
+  border-top:1px solid var(--hub-border-soft, #eef2f7);
+  grid-template-columns:repeat(auto-fit, minmax(0,1fr));
+}
+.so-census--hero > *{ min-width:0; }
 
 /* ── responsive ── */
 @media (max-width: 1080px){

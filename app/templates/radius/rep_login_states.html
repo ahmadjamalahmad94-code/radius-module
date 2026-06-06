@@ -1,8 +1,10 @@
 {# ═══════════════════════════════════════════════════════════════════════
-   حالات تسجيل الدخول — UNIFIED DESIGN SYSTEM (megahero + worklayout + help).
-
-   نفس بيانات الـ backend: `rows` + `stats` + `matched`/`shown` + `filters`
-   + `actor_labels`/`source_labels`. صفر تغيير في المسار/السلوك.
+   حالات تسجيل الدخول — الصفحة الرئيسية (إعادة بناء من الصفر على hub_v2):
+     • صدفة هيرو واحدة (hub-hero-shell): عنوان + سطر تعريفي + مؤشرات
+       إجمالية بصف واحد — بلا فلاتر هنا (البساطة أولًا).
+     • ثلاث بطاقات كبيرة — مدراء / مشتركون / كروت — كل بطاقة بوابة
+       لصفحتها الفرعية المفروزة بدقة (?actor=…) مع عدّادات مصغّرة.
+     • معطيات المسار: `overview` (عدّادات لكل فاعل) + `totals` + `kinds`.
    ═══════════════════════════════════════════════════════════════════════ #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
@@ -10,147 +12,91 @@
 {% block title %}حالات تسجيل الدخول{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-right-to-bracket"></i>{% endblock %}
 {% block page_title %}حالات تسجيل الدخول{% endblock %}
-{% block page_sub %}<span class="sub">{{ matched }} محاولة</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ totals.total }} محاولة</span>{% endblock %}
 
 {% block content %}
-{% include "radius/reports_nav.html" %}
+{# متحكّم «انتقال سريع» المضغوط — يُحقن في صف عنوان الهيرو بدل الشريطين الكبيرين #}
+{% set _report_jump %}{% include "radius/reports_nav.html" %}{% endset %}
 
-{# ───── Merged hero: title + subtitle + KPI strip + integrated filters ───── #}
-{% call hub.megahero(
+{# ───── صدفة الهيرو الواحدة: عنوان + سطر تعريفي + مؤشرات بصف واحد ───── #}
+<section class="hub-hero-shell ls-hero" data-testid="login-states-hero">
+{{ hub.megahero(
   "حالات تسجيل الدخول",
-  subtitle="سجل موحّد لكل محاولات الدخول — مدراء، مشتركون، كروت — نجاحًا وفشلًا، مع عنوان الشبكة والجهاز والمتصفح وعنوان الجهاز وجهاز الشبكة وسبب الفشل.",
+  subtitle="فصل كامل لحالات الدخول حسب الفاعل — مدراء، مشتركون، كروت. اختر القسم لترى سجلًا مفروزًا بدقة مع عنوان الشبكة وعنوان الجهاز وجهاز الشبكة وسبب الفشل.",
   icon="right-to-bracket",
+  actions_html=_report_jump,
   kpis=[
-    {'label': 'إجمالي المحاولات', 'value': matched, 'icon': 'right-to-bracket', 'variant': 'brand',
-     'sub': 'مدراء ' ~ stats.admins ~ ' · مشتركون ' ~ stats.subs ~ ' · كروت ' ~ stats.cards},
-    {'label': 'ناجحة', 'value': stats.ok, 'icon': 'circle-check', 'variant': 'green'},
-    {'label': 'فاشلة', 'value': stats.fail, 'icon': 'circle-xmark', 'variant': 'red'},
-    {'label': 'عناوين شبكة مميّزة', 'value': stats.ips, 'icon': 'network-wired', 'variant': 'blue'},
-  ],
-  search_action=url_for('radius.rep_login_states')
-) %}
-  <select class="hub-input" name="actor" title="الفاعل">
-    <option value="">كل الفاعلين</option>
-    <option value="admin"      {% if filters.actor=='admin' %}selected{% endif %}>المدراء</option>
-    <option value="subscriber" {% if filters.actor=='subscriber' %}selected{% endif %}>المشتركون</option>
-    <option value="card"       {% if filters.actor=='card' %}selected{% endif %}>الكروت</option>
-  </select>
-  <select class="hub-input" name="result" title="النتيجة">
-    <option value="">كل النتائج</option>
-    <option value="success" {% if filters.result=='success' %}selected{% endif %}>ناجحة</option>
-    <option value="fail"    {% if filters.result=='fail' %}selected{% endif %}>فاشلة</option>
-  </select>
-  <select class="hub-input" name="source" title="المصدر">
-    <option value="">كل المصادر</option>
-    <option value="panel"   {% if filters.source=='panel' %}selected{% endif %}>لوحة الإدارة</option>
-    <option value="portal"  {% if filters.source=='portal' %}selected{% endif %}>البوابة</option>
-    <option value="network" {% if filters.source=='network' %}selected{% endif %}>شبكة المصادقة</option>
-  </select>
-  <input class="hub-input grow" type="text" name="q"
-         value="{{ filters.q }}"
-         placeholder="بحث (مستخدم / عنوان الشبكة / عنوان الجهاز / جهاز الشبكة)…">
-  <input class="hub-input" type="date" name="date_from"
-         value="{{ filters.date_from }}" title="من تاريخ">
-  <input class="hub-input" type="date" name="date_to"
-         value="{{ filters.date_to }}" title="إلى تاريخ">
-  {{ hub.btn("تطبيق", icon="magnifying-glass", variant="primary", type="submit", size="sm") }}
-  {% if filters and (filters.actor or filters.result or filters.source or filters.q or filters.date_from or filters.date_to) %}
-    {{ hub.btn("مسح", icon="eraser", variant="ghost", size="sm",
-               attrs='onclick="window.location=' + "'" + url_for('radius.rep_login_states') + "'" + '"') }}
-  {% endif %}
-{% endcall %}
+    {'label': 'إجمالي المحاولات', 'value': totals.total, 'icon': 'right-to-bracket', 'variant': 'brand'},
+    {'label': 'ناجحة',            'value': totals.ok,    'icon': 'circle-check',     'variant': 'green'},
+    {'label': 'فاشلة',            'value': totals.fail,  'icon': 'circle-xmark',     'variant': 'red'},
+    {'label': 'محاولات اليوم',    'value': totals.today, 'icon': 'calendar-day',     'variant': 'blue'},
+  ]
+) }}
+</section>{# /hub-hero-shell #}
 
-{% if rows %}
-{# ───── Main (carded table) + help panel on the LEFT ───── #}
-{% call hub.worklayout(aside_html=hub.helppanel(
-  "كيف تقرأ هذا التقرير؟",
-  intro="كل صف هو محاولة دخول واحدة — ناجحة أو فاشلة — مرتبة من الأحدث.",
-  items=[
-    {'icon': 'user-shield',   'text': '«الفاعل» يوضّح من حاول الدخول: مدير، مشترك، أو كرت.'},
-    {'icon': 'globe',         'text': '«المصدر» هو المكان: لوحة الإدارة، البوابة، أو شبكة المصادقة.'},
-    {'icon': 'network-wired', 'text': '«الشبكة» تعرض عنوان الشبكة (IP) وجهاز الشبكة (NAS).'},
-    {'icon': 'desktop',       'text': '«الجهاز» يعرض المتصفح/النظام وعنوان الجهاز (MAC).'},
-    {'icon': 'circle-xmark',  'text': 'عند الفشل يظهر سبب الرفض بجوار الحالة «فشل».'},
-  ],
-  note="هذا التقرير للقراءة فقط — البيانات تأتي من سجل أحداث الدخول."
-)) %}
-  {% call hub.section("سجل المحاولات", icon="table-list",
-                      meta=(shown|string) ~ (" من " ~ matched|string if matched > shown else ""), flush=True) %}
-    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25"
-         style="border:none;border-radius:0">
-      <table class="hub-table rep-table">
-        <thead>
-          <tr>
-            <th>الوقت</th>
-            <th>الفاعل</th>
-            <th>المستخدم</th>
-            <th data-uds-nosort>النتيجة</th>
-            <th>المصدر</th>
-            <th data-uds-nosort>الشبكة (عنوان الشبكة / جهاز الشبكة)</th>
-            <th data-uds-nosort>الجهاز (المتصفح / عنوان الجهاز)</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for r in rows %}
-          <tr class="{{ 'is-fail' if not r.success else '' }}">
-            {% set _dl = r.when|dt_local if r.when else '' %}
-            <td class="rep-mono"
-                style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
-              <span class="rep-primary">{{ _dl[:10] or '—' }}</span>
-              <span class="rep-sub">{{ _dl[11:16] }}</span>
-            </td>
-            <td>
-              <span class="rep-actor {{ r.actor_type }}">
-                {% if r.actor_type=='admin' %}<i class="fa-solid fa-user-shield"></i>
-                {% elif r.actor_type=='card' %}<i class="fa-solid fa-ticket"></i>
-                {% else %}<i class="fa-solid fa-user"></i>{% endif %}
-                {{ actor_labels.get(r.actor_type, r.actor_type) }}
-              </span>
-            </td>
-            <td><span class="rep-primary">{{ r.username }}</span></td>
-            <td>
-              {% if r.success %}{{ hub.pill("نجاح", variant="green") }}
-              {% else %}{{ hub.pill("فشل", variant="red") }}
-                {% if r.reason %}<span class="rep-reason">{{ r.reason }}</span>{% endif %}
-              {% endif %}
-            </td>
-            <td>
-              <span class="rep-src src-{{ r.source }}">
-                {% if r.source=='panel' %}<i class="fa-solid fa-shield-halved"></i>
-                {% elif r.source=='network' %}<i class="fa-solid fa-network-wired"></i>
-                {% else %}<i class="fa-solid fa-globe"></i>{% endif %}
-                {{ source_labels.get(r.source, r.source) }}
-              </span>
-            </td>
-            <td class="rep-mono">
-              {% if r.ip or r.nas %}
-                <span class="rep-primary">{{ r.ip or '—' }}</span>
-                {% if r.nas %}<span class="rep-sub">جهاز الشبكة: {{ r.nas }}</span>{% endif %}
-              {% else %}<span class="rep-muted">—</span>{% endif %}
-            </td>
-            <td>
-              {% if r.os or r.browser or r.mac %}
-              <div class="rep-cell-dev">
-                {% if r.device=='موبايل' %}<i class="fa-solid fa-mobile-screen"></i>
-                {% elif r.device=='جهاز لوحي' %}<i class="fa-solid fa-tablet-screen-button"></i>
-                {% elif r.os or r.browser %}<i class="fa-solid fa-desktop"></i>
-                {% else %}<i class="fa-solid fa-wifi"></i>{% endif %}
-                <div>
-                  <span class="rep-primary">{{ r.os or 'جهاز شبكة' }}{% if r.browser %} · {{ r.browser }}{% endif %}</span>
-                  {% if r.mac %}<span class="rep-sub rep-mono">عنوان الجهاز: {{ r.mac }}</span>{% endif %}
-                </div>
-              </div>
-              {% else %}<span class="rep-muted">—</span>{% endif %}
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+{# ───── البطاقات الثلاث الكبيرة: كل بطاقة بوابة لصفحة فرعية مفروزة ─────
+   تنسيق محلي بسيط فوق نظام hub: شبكة من ثلاث بطاقات، كل بطاقة فيها
+   أيقونة + عنوان + سطر تعريفي + عدّادات مصغّرة (الإجمالي/ناجحة/فاشلة/اليوم). #}
+<style>
+/* إيقاع رأسي موحّد للصفحة: ~22px بين الأقسام الكبيرة (الهيرو/البطاقات/
+   صندوق المعلومات) و14px بين بطاقات الشبكة — لا أقسام متلاصقة. */
+.hub-hero-shell.ls-hero{margin-bottom:22px}
+.ls-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;
+  align-items:stretch;          /* البطاقات الثلاث بارتفاع متساوٍ دائمًا */
+  margin:0 0 22px}              /* نَفَس موحّد قبل صندوق «من أين تأتي البيانات؟» */
+@media (max-width:980px){.ls-grid{grid-template-columns:1fr}}
+.ls-card{display:flex;flex-direction:column;gap:12px;padding:18px;border-radius:18px;
+  background:var(--hub-surface,#fff);border:1px solid var(--hub-border-soft,#e2e8f0);
+  text-decoration:none;color:inherit;transition:box-shadow .14s,transform .14s}
+.ls-card:hover{box-shadow:0 10px 26px rgba(15,23,42,.10);transform:translateY(-2px)}
+.ls-card-head{display:flex;align-items:center;gap:12px}
+.ls-card-ic{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;
+  border-radius:13px;font-size:18px;flex:none}
+.ls-card--admin .ls-card-ic{background:#1e293b;color:#fbbf24}
+.ls-card--subscriber .ls-card-ic{background:#e0ecff;color:#1d4ed8}
+.ls-card--card .ls-card-ic{background:#fef3c7;color:#92400e}
+.ls-card-title{font-size:15.5px;font-weight:900;color:var(--hub-text,#0f172a)}
+.ls-card-sub{font-size:12.5px;line-height:1.7;color:var(--hub-text-soft,#64748b)}
+.ls-card-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:auto}
+.ls-mini{padding:8px 6px;border-radius:11px;background:var(--hub-bg-soft,#f8fafc);
+  border:1px solid var(--hub-border-soft,#eef2f7);text-align:center}
+.ls-mini b{display:block;font-size:16px;font-weight:900;font-variant-numeric:tabular-nums;color:var(--hub-text,#0f172a)}
+.ls-mini span{display:block;font-size:10.5px;font-weight:700;color:var(--hub-text-mute,#94a3b8);margin-top:2px}
+.ls-mini--ok b{color:#047857}
+.ls-mini--fail b{color:#b91c1c}
+.ls-card-go{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:800;
+  color:var(--hub-brand,#2563eb)}
+.ls-card-go i{font-size:11px;transition:transform .14s}
+.ls-card:hover .ls-card-go i{transform:translateX(-3px)}
+</style>
+
+<div class="ls-grid" data-testid="login-states-cards">
+  {% for kind, m in kinds.items() %}
+  {% set c = overview[kind] %}
+  <a class="ls-card ls-card--{{ kind }}" href="{{ url_for('radius.rep_login_states', actor=kind) }}"
+     data-testid="login-states-card-{{ kind }}">
+    <div class="ls-card-head">
+      <span class="ls-card-ic"><i class="fa-solid fa-{{ m.icon }}"></i></span>
+      <span class="ls-card-title">{{ m.title }}</span>
     </div>
-  {% endcall %}
+    <div class="ls-card-sub">{{ m.subtitle }}</div>
+    <div class="ls-card-kpis">
+      <div class="ls-mini"><b>{{ c.total }}</b><span>الإجمالي</span></div>
+      <div class="ls-mini ls-mini--ok"><b>{{ c.ok }}</b><span>ناجحة</span></div>
+      <div class="ls-mini ls-mini--fail"><b>{{ c.fail }}</b><span>فاشلة</span></div>
+      <div class="ls-mini"><b>{{ c.today }}</b><span>اليوم</span></div>
+    </div>
+    <span class="ls-card-go">فتح السجل المفصّل <i class="fa-solid fa-arrow-left"></i></span>
+  </a>
+  {% endfor %}
+</div>
+
+{# سطر توضيحي بسيط أسفل البطاقات — يشرح مصادر البيانات بلا تعقيد #}
+{% call hub.section("من أين تأتي البيانات؟", icon="circle-info") %}
+  <div class="ls-card-sub" style="font-size:13px">
+    دخول المدراء يُلتقط من لوحة الإدارة، ودخول المشتركين من بوابة المشتركين ومن
+    شبكة المصادقة، ودخول الكروت من شبكة المصادقة والبوابة. كل سجل يحفظ عنوان الشبكة
+    وعنوان الجهاز وجهاز الشبكة حيثما توفّرت — والبيانات للقراءة فقط.
+  </div>
 {% endcall %}
-{% else %}
-{{ hub.empty("لا توجد محاولات دخول مطابقة",
-   sub="غيّر الفلاتر أو انتظر أول محاولة دخول لتظهر هنا.", icon="shield-halved") }}
-{% endif %}
 {% endblock %}

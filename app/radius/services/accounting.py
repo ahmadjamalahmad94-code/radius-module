@@ -97,6 +97,12 @@ def effective_subscriber_price(subscriber: Any, plan: Any) -> float:
     Accepts either a mapping (sqlite row dict) or a dataclass/object for both
     ``subscriber`` and ``plan`` so every call site — repo dicts in accounting,
     ``Subscriber`` dataclasses in routes — can share the exact same rule.
+
+    أسعار المدراء (migration 098): إن كان المشترك تابعًا لمدير
+    (subscribers.manager_id) وللمدير سعر خاص متفق عليه على هذا العرض
+    (admin_plan_prices)، يُستخدم سعر المدير بدل سعر العرض الرسمي —
+    هكذا «يدفع المدير سعره» عند تفعيل/تجديد مشتركيه بهذا العرض.
+    الأولوية الكاملة: custom_price للمشترك (الأخصّ) > سعر المدير > سعر العرض.
     """
     def _get(obj: Any, key: str) -> Any:
         if obj is None:
@@ -108,6 +114,17 @@ def effective_subscriber_price(subscriber: Any, plan: Any) -> float:
     custom = _coerce_price(_get(subscriber, "custom_price"))
     if custom > 0:
         return custom
+    # نقطة ربط أسعار المدراء: تجاوز (مدير × عرض) قبل السقوط لسعر العرض.
+    # القراءة آمنة تمامًا — أي فشل يرجع 0.0 فنكمل بالسعر الافتراضي.
+    manager_id = _get(subscriber, "manager_id")
+    plan_id = _get(plan, "id") or _get(subscriber, "plan_id")
+    if manager_id and plan_id:
+        from .admin_pricing import manager_plan_price_override
+
+        tenant_id = _get(subscriber, "tenant_id") or _get(plan, "tenant_id") or 1
+        override = manager_plan_price_override(tenant_id, manager_id, plan_id)
+        if override > 0:
+            return override
     return _coerce_price(_get(plan, "price"))
 
 
@@ -612,52 +629,133 @@ class AccountingService:
         wb.save(out)
         return out.getvalue()
 
+    # ── أسماء التقارير وعناوين أعمدتها بالعربية لتصدير PDF الفاخر ──
+    # المفاتيح هنا تطابق مفاتيح أعمدة repos/accounting_repo بالضبط؛
+    # أي عمود غير معرّف يظهر بمفتاحه الخام كاحتياط (لن يكسر التصدير).
+    _PDF_REPORT_TITLES = {
+        "daily": "تقرير المبيعات اليومية",
+        "monthly": "تقرير المبيعات الشهرية",
+        "yearly": "تقرير المبيعات السنوية",
+        "subscriber_payments": "تقرير دفعات المستفيدين",
+        "loans": "تقرير السلف",
+        "activations": "تقرير التفعيلات",
+        "card_sales": "تقرير مبيعات الكروت",
+        "profit_loss": "تقرير الربح والخسارة",
+        "distributor_debts": "تقرير ديون الموزعين",
+    }
+    _PDF_COLUMN_LABELS = {
+        "period": "الفترة",
+        "count": "عدد العمليات",
+        "total": "الإجمالي",
+        "subscriber_id": "رقم المستفيد",
+        "username": "اسم المستخدم",
+        "last_entry_at": "آخر حركة",
+        "status": "الحالة",
+        "duration_minutes": "الدقائق",
+        "activation_count": "عدد التفعيلات",
+        "earned_minutes": "الدقائق المكتسبة",
+        "batch_id": "رقم الحزمة",
+        "credits": "الإيرادات (دائن)",
+        "debits": "المصروفات (مدين)",
+        "net": "الصافي",
+        "entries": "عدد القيود",
+        "source": "المصدر",
+        "distributor_id": "رقم الموزع",
+        "name": "اسم الموزع",
+        "display_name": "الاسم المعروض",
+        "debt_balance": "رصيد الدين",
+        "balance": "الرصيد",
+        "credit_limit": "سقف الائتمان",
+    }
+    # الأعمدة المالية تُنسَّق كمبالغ (فواصل آلاف + منزلتان عشريتان)
+    _PDF_MONEY_COLUMNS = {
+        "total", "credits", "debits", "net",
+        "debt_balance", "balance", "credit_limit",
+    }
+    # الأعمدة العددية تُنسَّق بفواصل آلاف بدون كسور
+    _PDF_COUNT_COLUMNS = {
+        "count", "entries", "activation_count",
+        "earned_minutes", "duration_minutes",
+    }
+
     def report_pdf(self, *, report_type: str) -> bytes:
-        from reportlab.lib import colors
-        from reportlab.lib.pagesizes import A4, landscape
-        from reportlab.lib.styles import getSampleStyleSheet
-        from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+        """تصدير PDF فاخر بهوية HobeRadius — خط Cairo عربي، جدول RTL
+        بصفوف زيبرا ورأس بنفسجي، صف إجماليات مميّز، ورأس/تذييل موحّد.
+        """
+        from .pdf_theme import (
+            ar, build_premium_pdf, empty_state, fmt_int, fmt_money,
+            kpi_row, content_width, styled_table,
+        )
+        from reportlab.platypus import Spacer
 
         items, columns = self._report_export_rows(report_type=report_type)
-        out = io.BytesIO()
-        doc = SimpleDocTemplate(
-            out,
-            pagesize=landscape(A4),
-            rightMargin=18,
-            leftMargin=18,
-            topMargin=18,
-            bottomMargin=18,
-        )
-        styles = getSampleStyleSheet()
-        story = [
-            Paragraph(f"HobeRadius financial report: {report_type}", styles["Title"]),
-            Spacer(1, 10),
-        ]
+        title = self._PDF_REPORT_TITLES.get(report_type, f"تقرير {report_type}")
+        subtitle = f"عدد السجلات: {len(items)}"
+
+        story: list = []
         if not items:
-            data = [["No data"]]
+            story.append(empty_state())
         else:
-            data = [columns]
-            data.extend(
-                [str(self._export_value(item.get(column))) for column in columns]
+            headers = [self._PDF_COLUMN_LABELS.get(c, c) for c in columns]
+
+            def _cell(column: str, value) -> str:
+                if value is None or value == "":
+                    return "—"
+                if column in self._PDF_MONEY_COLUMNS:
+                    return fmt_money(value)
+                if column in self._PDF_COUNT_COLUMNS:
+                    return fmt_int(value)
+                return str(self._export_value(value))
+
+            rows = [
+                [_cell(column, item.get(column)) for column in columns]
                 for item in items
-            )
-        table = Table(data, repeatRows=1)
-        table.setStyle(
-            TableStyle(
-                [
-                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0f172a")),
-                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-                    ("GRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#cbd5e1")),
-                    ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-                    ("FONTSIZE", (0, 0), (-1, -1), 7),
-                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                    ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f8fafc")]),
-                ]
-            )
+            ]
+
+            # صف الإجماليات: نجمع الأعمدة المالية/العددية فقط، وأول
+            # عمود يحمل وسم «الإجمالي». تقرير الربح/الخسارة صف واحد
+            # أصلًا فلا يحتاج صف إجماليات.
+            totals_row = None
+            summable = [
+                c for c in columns
+                if c in self._PDF_MONEY_COLUMNS or c in self._PDF_COUNT_COLUMNS
+            ]
+            if summable and len(items) > 1:
+                sums: dict[str, float] = {}
+                for column in summable:
+                    sums[column] = sum(
+                        float(item.get(column) or 0) for item in items
+                    )
+                totals_row = []
+                for index, column in enumerate(columns):
+                    if index == 0 and column not in sums:
+                        totals_row.append("الإجمالي")
+                    elif column in self._PDF_MONEY_COLUMNS:
+                        totals_row.append(fmt_money(sums[column]))
+                    elif column in self._PDF_COUNT_COLUMNS:
+                        totals_row.append(fmt_int(sums[column]))
+                    else:
+                        totals_row.append("")
+
+            # بطاقات KPI خفيفة أعلى الجدول (الإجمالي المالي + عدد السجلات)
+            kpis: list[tuple[str, str]] = [("عدد السجلات", fmt_int(len(items)))]
+            money_cols = [c for c in columns if c in self._PDF_MONEY_COLUMNS]
+            for column in money_cols[:3]:
+                kpis.append((
+                    self._PDF_COLUMN_LABELS.get(column, column),
+                    fmt_money(sum(float(item.get(column) or 0) for item in items)),
+                ))
+            story.append(kpi_row(kpis, page_width=content_width(landscape_mode=True)))
+            story.append(Spacer(1, 14))
+            story.append(styled_table(headers, rows, totals_row=totals_row))
+
+        return build_premium_pdf(
+            title=title,
+            subtitle=subtitle,
+            story=story,
+            landscape_mode=True,
+            footer_note="HobeRadius • التقارير المالية",
         )
-        story.append(table)
-        doc.build(story)
-        return out.getvalue()
 
     def _report_export_rows(self, *, report_type: str) -> tuple[list[dict], list[str]]:
         items = self.reports(report_type=report_type)
@@ -678,15 +776,87 @@ class AccountingService:
             return json.dumps(value, ensure_ascii=False)
         return value
 
+    # ── أعمدة التاريخ المرشّحة لفلترة نطاق اللقطة — بترتيب الأفضلية ──
+    # «period» في تقارير المبيعات (يوم/شهر/سنة)، و«last_entry_at» في دفعات
+    # المستفيدين، و«created_at/day» احتياطًا لأي تقرير مستقبلي. التقارير التي
+    # لا تحمل أي عمود تاريخ (السلف بالحالات، الربح/الخسارة، ديون الموزعين…)
+    # تُحفَظ كما هي مع تسجيل النطاق المطلوب في سجل اللقطة فقط.
+    _SNAPSHOT_DATE_COLUMNS = ("period", "day", "last_entry_at", "created_at")
+
+    @classmethod
+    def _filter_rows_by_range(cls, items: list[dict], date_from: str,
+                              date_to: str) -> tuple[list[dict], bool]:
+        """فلترة صفوف التقرير بنطاق من/إلى قبل تجميد اللقطة.
+
+        المقارنة نصّية على بادئة ISO (YYYY[-MM[-DD]]) فتصلح للفترات الشهرية
+        («2026-06» مقابل «2026-06-01») وللطوابع الكاملة معًا: نقصّ القيمتين
+        لأقصر طول مشترك ثم نقارن. يعيد (الصفوف المفلترة، هل طُبّق الفلتر؟).
+        """
+        if not items or (not date_from and not date_to):
+            return items, False
+        column = next(
+            (c for c in cls._SNAPSHOT_DATE_COLUMNS if c in items[0]), None
+        )
+        if not column:
+            # لا عمود تاريخ في هذا التقرير — نحفظ الصفوف كلها كما هي.
+            return items, False
+
+        def _in_range(value) -> bool:
+            raw = str(value or "").strip()
+            if not raw:
+                return False
+            if date_from:
+                n = min(len(raw), len(date_from))
+                if raw[:n] < date_from[:n]:
+                    return False
+            if date_to:
+                n = min(len(raw), len(date_to))
+                if raw[:n] > date_to[:n]:
+                    return False
+            return True
+
+        return [row for row in items if _in_range(row.get(column))], True
+
+    # الأعمدة المالية التي يجمعها «إجمالي اللقطة» (أول عمود متوفر منها)
+    _SNAPSHOT_TOTAL_COLUMNS = ("total", "amount", "net", "debt_balance")
+
+    @classmethod
+    def _snapshot_total(cls, items: list[dict]) -> float | None:
+        """مجموع العمود المالي الرئيسي لصفوف اللقطة — None إذا لا عمود مالي."""
+        if not items:
+            return 0.0
+        column = next(
+            (c for c in cls._SNAPSHOT_TOTAL_COLUMNS if c in items[0]), None
+        )
+        if not column:
+            return None
+        try:
+            return round(sum(float(row.get(column) or 0) for row in items), 2)
+        except (TypeError, ValueError):
+            return None
+
     def create_report_snapshot(self, *, report_type: str, actor: str = "",
                                date_from: str = "", date_to: str = "",
+                               note: str = "",
                                parameters: dict | None = None) -> dict:
         items = self.reports(report_type=report_type)
+        # فلترة الصفوف بالنطاق المختار قبل التجميد — اللقطة تحفظ ما طُلب فقط.
+        items, range_applied = self._filter_rows_by_range(items, date_from, date_to)
         payload = {
             "items": items,
             "count": len(items),
             "report_type": report_type,
+            # نخزّن النطاق والملاحظة والإجمالي داخل النتيجة نفسها حتى تعرضها
+            # جداول اللقطات مباشرة (اللقطات القديمة بدونها تعرض «—»).
+            "date_from": date_from,
+            "date_to": date_to,
+            "note": note,
+            "total": self._snapshot_total(items),
+            "range_applied": range_applied,
         }
+        params = dict(parameters or {})
+        if note:
+            params["note"] = note
         return accounting_repo.create_report_snapshot(
             self.tenant_id,
             report_type=report_type,
@@ -694,7 +864,7 @@ class AccountingService:
             created_by=actor,
             date_from=date_from,
             date_to=date_to,
-            parameters=parameters or {},
+            parameters=params,
         )
 
     def list_report_snapshots(self, *, report_type: str = "",

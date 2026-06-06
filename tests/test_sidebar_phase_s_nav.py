@@ -132,9 +132,11 @@ def test_dashboard_quicknav_links_to_backups(app, client):
 # ─── Operations Center row action ─────────────────────────────
 
 
-def test_operations_row_links_to_backups(app, client):
+def test_operations_row_drops_backups_link(app, client):
+    """قرار التصميم: «النسخ الاحتياطية» انتقلت إلى تبويب «خدماتي» بلوحة
+    الراوتر، فلم تعد تظهر كأيقونة في صف العمليات. اللوحة (اختبار
+    test_dashboard_quicknav_links_to_backups) ما زالت تربط للنسخ."""
     _seed_nas(app, nas_id=13)
     _login(client)
     html = client.get("/admin/radius/mt/operations").get_data(as_text=True)
-    assert 'data-mt-row-link="backups"' in html
-    assert "/admin/radius/mt/13/backups" in html
+    assert 'data-mt-row-link="backups"' not in html

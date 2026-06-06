@@ -6,23 +6,44 @@
 {% block page_title %}مطابقة تحصيل الدفعات{% endblock %}
 {% block page_sub %}<span class="sub">صحة التحصيل</span>{% endblock %}
 
+{# ───── قاموس تعريب حالات الدفع — يمنع ظهور قيم enum الإنجليزية الخام ───── #}
+{% set STATUS_AR = {
+  'pending': 'معلقة',
+  'proof_submitted': 'إثبات مُرسل',
+  'under_review': 'تحت المراجعة',
+  'paid': 'مدفوعة',
+  'rejected': 'مرفوضة',
+  'expired': 'منتهية',
+  'cancelled': 'ملغاة',
+  'failed': 'فشلت'
+} %}
+
+{# ───── رسائل الفراغ المخصصة لكل قسم — تعكس نوع الفجوة بدل رسالة عامة ───── #}
+{% set EMPTY_AR = {
+  'paid_without_ledger': 'لا توجد دفعات مدفوعة بلا قيد مالي.',
+  'paid_not_applied': 'لا توجد دفعات مدفوعة غير مطبّقة.',
+  'expired_pending': 'لا توجد دفعات منتهية ومعلّقة.',
+  'duplicate_provider_transactions': 'لا توجد مخاطر تكرار لدى المزوّد.'
+} %}
+
 {% block content %}
-{{ hub.hero(
+{# ───── الهيرو الموحّد (megahero): يدمج العنوان + الإجراءات + شريط KPIs
+       في كتلة .uds-hero واحدة بدل hub.hero القديم + hub-kpi-grid منفصل ───── #}
+{% call hub.megahero(
   "مطابقة تحصيل الدفعات",
   subtitle="فحص صحة التحصيل — اكتشاف الدفعات بلا قيد مالي، أو المدفوعة غير المطبقة، أو المنتهية والمعلّقة، أو تكرار المزوّد.",
   icon="scale-balanced",
   actions_html='
     <a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.payment_collection_requests') ~ '"><i class="fa-solid fa-list"></i> كل الطلبات</a>
     <a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.payment_collection_review_queue_web') ~ '"><i class="fa-solid fa-clipboard-check"></i> طابور المراجعة</a>
-  '
-) }}
-
-<div class="hub-kpi-grid">
-  {{ hub.kpi("مدفوع بلا قيد مالي", report.counts.paid_without_ledger, icon="file-circle-xmark", variant="red") }}
-  {{ hub.kpi("مدفوع غير مطبق", report.counts.paid_not_applied, icon="bolt", variant="amber") }}
-  {{ hub.kpi("منتهي ومعلق", report.counts.expired_pending, icon="hourglass-end", variant="blue") }}
-  {{ hub.kpi("مخاطر تكرار لدى المزوّد", report.counts.duplicate_provider_transactions, icon="clone", variant="brand") }}
-</div>
+  ',
+  kpis=[
+    {'label': 'مدفوع بلا قيد مالي',        'value': report.counts.paid_without_ledger,            'icon': 'file-circle-xmark', 'variant': 'red'},
+    {'label': 'مدفوع غير مطبّق',           'value': report.counts.paid_not_applied,               'icon': 'bolt',              'variant': 'amber'},
+    {'label': 'منتهٍ ومعلّق',              'value': report.counts.expired_pending,                'icon': 'hourglass-end',     'variant': 'blue'},
+    {'label': 'مخاطر تكرار لدى المزوّد',   'value': report.counts.duplicate_provider_transactions,'icon': 'clone',             'variant': 'brand'}
+  ]
+) %}{% endcall %}
 
 {% for key, title, icon in [
   ('paid_without_ledger', 'مدفوع بلا قيد مالي', 'file-circle-xmark'),
@@ -33,7 +54,9 @@
 {% set rows = report[key] %}
 {% call hub.section(title, icon=icon, meta=(rows|length|string + " صف") if rows else "", flush=True) %}
   {% if rows %}
-  <div class="hub-table-wrap" style="border:none;border-radius:0">
+  {# ───── جدول موحّد uds-table: يفعّل تلقائيًا شريط الأعمدة + الفرز + الترقيم
+         + أزرار التصدير الثلاثة (CSV/XLSX/PDF) عبر hub_v2.css و uds_table.js ───── #}
+  <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="15" style="border:none;border-radius:0">
     <table class="hub-table">
       <thead>
         <tr>
@@ -49,7 +72,8 @@
         <tr>
           <td class="num mono">{{ row.id or row.provider_transaction_id }}</td>
           <td class="mono">{{ row.reference_code or '—' }}</td>
-          <td>{{ row.status or '—' }}</td>
+          {# تعريب الحالة مع الاحتفاظ بالقيمة الخام في title عند اللزوم #}
+          <td>{% if row.status %}<span title="{{ row.status }}">{{ STATUS_AR.get(row.status, row.status) }}</span>{% else %}—{% endif %}</td>
           <td class="num mono">{% if row.amount %}{{ row.amount|money }}{% else %}—{% endif %}</td>
           <td class="small">{{ row.expires_at or row.service_apply_status or row.payment_request_ids or '—' }}</td>
         </tr>
@@ -58,7 +82,8 @@
     </table>
   </div>
   {% else %}
-  <div style="padding:6px 4px">{{ hub.empty("لا توجد ملاحظات.", icon="circle-check") }}</div>
+  {# رسالة الفراغ ديناميكية تعكس نوع الفجوة لكل قسم بدل رسالة عامة #}
+  <div style="padding:6px 4px">{{ hub.empty(EMPTY_AR.get(key, "لا توجد فجوات في هذا القسم."), icon="circle-check") }}</div>
   {% endif %}
 {% endcall %}
 {% endfor %}

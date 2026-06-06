@@ -6,7 +6,19 @@
 
 {% block title %}تفاصيل الدفعة المالية — Hobe Hub{% endblock %}
 
+{% block head_extra %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
+{% endblock %}
+
 {% block content %}
+{# تعريب حالة القيد المالي — القيمة الخام (posted/settled…) تبقى في title #}
+{% set _raw_status = cost.status or batch.status %}
+{% set _status_map = {
+  'posted': 'مُقيَّد', 'settled': 'مُسوّى', 'pending': 'قيد الانتظار',
+  'draft': 'مسودة', 'voided': 'ملغى', 'cancelled': 'ملغى'
+} %}
+{% set _status_ar = _status_map.get((_raw_status|string|lower), _raw_status) if _raw_status else 'غير محدد' %}
 {{ hub.megahero(
   batch.batch_code,
   subtitle="تفاصيل الدفعة المالية بدون حذف أو تعديل مباشر — لقطة مالية للدفعة والكروت المرتبطة بها.",
@@ -14,9 +26,9 @@
   actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.card_pricing') ~ '"><i class="fa-solid fa-arrow-right"></i> التسعير</a>',
   kpis=[
     {'label': 'العدد', 'value': cost.count or batch.count, 'icon': 'ticket'},
-    {'label': 'إجمالي البيع', 'value': (cost.total_retail_minor or 0) / 100, 'icon': 'tag', 'variant': 'green'},
-    {'label': 'إجمالي التكلفة', 'value': (cost.total_wholesale_minor or 0) / 100, 'icon': 'calculator', 'variant': 'amber'},
-    {'label': 'الحالة', 'value': cost.status or batch.status, 'icon': 'signal', 'variant': 'blue'},
+    {'label': 'إجمالي البيع', 'value': ((cost.total_retail_minor or 0) / 100)|money, 'icon': 'tag', 'variant': 'green'},
+    {'label': 'إجمالي التكلفة', 'value': ((cost.total_wholesale_minor or 0) / 100)|money, 'icon': 'calculator', 'variant': 'amber'},
+    {'label': 'الحالة', 'value': _status_ar, 'icon': 'signal', 'variant': 'blue'},
   ]
 ) }}
 
@@ -44,8 +56,9 @@
   {% endcall %}
 
   {% call hub.section("الكروت", icon="ticket", flush=True) %}
-    <div class="uds-table-wrap" data-uds-table>
-      <table class="uds-table" data-testid="batch-cards-table">
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25"
+         data-uds-export-title="كروت الدفعة المالية">
+      <table class="hub-table" data-testid="batch-cards-table">
         <thead><tr><th>اسم المستخدم</th><th>الحالة</th><th>تاريخ الإنشاء</th></tr></thead>
         <tbody>
           {% for card in result.cards %}
@@ -59,4 +72,5 @@
   {% endcall %}
 
 {% endcall %}
+<script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
 {% endblock %}

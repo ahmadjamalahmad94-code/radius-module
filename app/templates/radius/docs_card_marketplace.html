@@ -1,0 +1,584 @@
+{# ══════════════════════════════════════════════════════════════════════
+   دليل «سوق البطاقات الإلكترونية» — قسم البطاقات الإلكترونية.
+
+   يشرح الصفحة الحقيقية card_marketplace.html (مسارها /card-marketplace،
+   الراوت card_users_marketplace.py::card_marketplace). نسخنا نفس بنية
+   الدليل الذهبي docs_add_subscriber.html حرفيًا:
+     • hero + شريط أدوات (حفظ كـ PDF / كل الأدلة → قسم البطاقات الإلكترونية).
+     • فهرس جانبي لاصق على يسار الصفحة (order:2) + scrollspy خفيف بلا مكتبات.
+     • خطوات مرقّمة ببطاقات وشارات بنفسجية متدرّجة.
+     • رسوم محاكاة HTML/CSS مصغّرة للصفحة الحقيقية (المفتاح، النافذة،
+       عدّادات المخزون، الجداول) بألوان منظومة التصميم — لا لقطات شاشة.
+     • تلميحات 💡/⚠️ وصناديق ملوّنة، وحفظ PDF عبر window.print().
+
+   المحتوى مطابق للصفحة الفعلية: أسماء الحقول والأزرار منسوخة حرفيًا
+   (نمط البيع، إضافة باقة بيع، رفع ملف بطاقات، توليد حزمة، المباع/المتبقي،
+   نفد المخزون، فتح العرض...) — عند تغيير الصفحة حدّث الدليل معها.
+   ══════════════════════════════════════════════════════════════════════ #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}دليل: سوق البطاقات الإلكترونية — كيف تستخدمني{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<style>
+  /* ── التخطيط: فهرس جانبي لاصق + عمود المحتوى (مطابق للدليل الذهبي) ── */
+  .dg-layout{ display:grid; grid-template-columns:minmax(0,1fr) 230px; gap:20px; align-items:start; }
+  .dg-toc{ order:2; }
+  .dg-main{ order:1; }
+  @media (max-width:980px){ .dg-layout{ grid-template-columns:1fr; } .dg-toc{ order:1; } .dg-main{ order:2; } }
+
+  .dg-toc{
+    position:sticky; top:84px;
+    background:#fff; border:1px solid #e8edf3; border-radius:14px;
+    padding:14px 13px; display:grid; gap:3px;
+  }
+  @media (max-width:980px){ .dg-toc{ position:static; } }
+  .dg-toc-title{
+    display:flex; align-items:center; gap:8px; font-size:12px; font-weight:900;
+    color:#7c7a99; margin-bottom:7px; padding-inline:6px;
+  }
+  .dg-toc a{
+    display:flex; align-items:center; gap:9px;
+    padding:8px 10px; border-radius:9px; text-decoration:none;
+    font-size:12.5px; font-weight:700; color:#475569;
+    transition:background .14s, color .14s;
+  }
+  .dg-toc a .n{
+    width:21px; height:21px; border-radius:50%; flex:none;
+    display:grid; place-items:center; font-size:10.5px; font-weight:900;
+    background:#f1f5f9; color:#94a3b8;
+  }
+  .dg-toc a:hover{ background:#f5f3ff; color:#5b21b6; }
+  .dg-toc a.is-active{ background:#ede9fe; color:#5b21b6; }
+  .dg-toc a.is-active .n{ background:linear-gradient(135deg,#7c3aed,#5b21b6); color:#fff; }
+
+  /* ── عمود الخطوات ── */
+  .dg-main{ min-width:0; display:grid; gap:18px; }
+  .dg-lead{
+    display:flex; gap:13px; align-items:flex-start;
+    background:linear-gradient(135deg,#f5f3ff,#fdfcff);
+    border:1px solid #e9e5fc; border-radius:14px; padding:15px 17px;
+  }
+  .dg-lead .ic{ width:40px;height:40px;border-radius:12px;flex:none;display:grid;place-items:center;
+    font-size:17px;background:#ede9fe;color:#6d28d9; }
+  .dg-lead h3{ margin:0 0 4px; font-size:13.5px; font-weight:800; color:#241e4e; }
+  .dg-lead p{ margin:0; font-size:12.5px; line-height:1.9; color:#5b5a78; }
+
+  .dg-step{ display:grid; grid-template-columns:auto 1fr; gap:15px; align-items:start; scroll-margin-top:90px; }
+  @media (max-width:560px){ .dg-step{ grid-template-columns:1fr; } }
+  .dg-badge{
+    width:42px; height:42px; border-radius:50%; flex:none;
+    display:grid; place-items:center; font-size:17px; font-weight:900; color:#fff;
+    background:linear-gradient(135deg,#7c3aed,#5b21b6);
+    box-shadow:0 8px 18px rgba(124,58,237,.3);
+  }
+  .dg-card{
+    min-width:0; background:#fff; border:1px solid #e8edf3; border-radius:15px;
+    padding:16px 18px;
+  }
+  .dg-card h2{
+    margin:0 0 8px; font-size:15.5px; font-weight:800; color:#0f172a;
+    display:flex; align-items:center; gap:9px; flex-wrap:wrap;
+  }
+  .dg-card h2 i{ color:#7c3aed; }
+  .dg-card p{ margin:0 0 7px; font-size:13px; line-height:1.95; color:#475569; }
+  .dg-card p:last-child{ margin-bottom:0; }
+  .dg-card ul{ margin:4px 0 8px; padding-inline-start:22px; font-size:13px; line-height:2; color:#475569; }
+  .dg-card strong{ color:#241e4e; }
+  .dg-kbd{
+    font-family:ui-monospace,Consolas,monospace; font-size:11.5px;
+    background:#f1f5f9; border:1px solid #e2e8f0; border-radius:5px;
+    padding:1px 7px; color:#5b21b6;
+  }
+
+  .dg-tip, .dg-warn{
+    display:flex; gap:11px; align-items:flex-start;
+    border-radius:12px; padding:11px 14px; margin-top:11px;
+    font-size:12.5px; line-height:1.9;
+  }
+  .dg-tip{ background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; }
+  .dg-warn{ background:#fffbeb; border:1px solid #fde68a; color:#92400e; }
+  .dg-tip .ic, .dg-warn .ic{ flex:none; font-size:15px; line-height:1.6; }
+  .dg-tip b, .dg-warn b{ font-weight:900; }
+
+  /* ════ الرسوم: محاكاة مصغّرة للصفحة الحقيقية ════ */
+  .dg-mock{
+    border:1px solid #e2e8f0; border-radius:14px; overflow:hidden;
+    background:#fff; box-shadow:0 8px 20px rgba(15,23,42,.07);
+    margin-top:13px; max-width:540px;
+  }
+  .dg-mock-bar{
+    display:flex; align-items:center; gap:7px; padding:8px 12px;
+    background:#f1f5f9; border-bottom:1px solid #e2e8f0;
+  }
+  .dg-mock-bar .dots{ display:flex; gap:5px; }
+  .dg-mock-bar .dots i{ width:9px; height:9px; border-radius:50%; }
+  .dg-mock-bar .dots i:nth-child(1){ background:#f87171; }
+  .dg-mock-bar .dots i:nth-child(2){ background:#fbbf24; }
+  .dg-mock-bar .dots i:nth-child(3){ background:#34d399; }
+  .dg-mock-bar .crumb{
+    flex:1; background:#fff; border:1px solid #e2e8f0; border-radius:7px;
+    padding:4px 10px; font-size:10.5px; font-weight:700; color:#64748b;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .dg-mock-body{ padding:14px; display:grid; gap:11px; }
+  .dg-mock-sechead{
+    display:flex; align-items:center; gap:9px; font-size:12px; font-weight:800; color:#241e4e;
+    padding-bottom:9px; border-bottom:1px dashed #eef2f7;
+  }
+  .dg-mock-sechead .ic{
+    width:26px; height:26px; border-radius:8px; display:grid; place-items:center;
+    font-size:11px; background:#ede9fe; color:#6d28d9; flex:none;
+  }
+  .dg-mock-grid2{ display:grid; grid-template-columns:1fr 1fr; gap:11px; }
+  @media (max-width:480px){ .dg-mock-grid2{ grid-template-columns:1fr; } }
+  .dg-mf{ display:grid; gap:5px; min-width:0; }
+  .dg-mf label{ font-size:10.5px; font-weight:800; color:#475569; }
+  .dg-mf label .req{ color:#dc2626; }
+  .dg-mf-input{
+    border:1.5px solid #e2e8f0; border-radius:8px; padding:8px 10px;
+    font-size:11.5px; color:#0f172a; background:#fff;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .dg-mf-input.hl{ border-color:#c4b5fd; background:#faf5ff; }
+  .dg-mf-input.ph{ color:#a3aec2; }
+  .dg-mf-select{ position:relative; }
+  .dg-mf-select::after{
+    content:"\f078"; font-family:"Font Awesome 6 Free"; font-weight:900;
+    position:absolute; inset-inline-end:10px; top:50%; transform:translateY(-50%);
+    font-size:9px; color:#94a3b8; pointer-events:none;
+  }
+  .dg-mf-help{ font-size:9.5px; color:#94a3b8; line-height:1.6; }
+
+  .dg-mock-actions{ display:flex; justify-content:flex-end; gap:9px; padding-top:4px; }
+  .dg-mock-btn{
+    display:inline-flex; align-items:center; gap:7px; border:0; border-radius:9px;
+    padding:8px 16px; font:inherit; font-size:11.5px; font-weight:800; cursor:default;
+  }
+  .dg-mock-btn.primary{
+    background:linear-gradient(135deg,#7c3aed,#5b21b6); color:#fff;
+    box-shadow:0 6px 14px rgba(124,58,237,.28);
+  }
+  .dg-mock-btn.ghost{ background:#f1f5f9; color:#475569; }
+
+  /* جدول محاكاة عام (بطاقات العرض / سجل المبيعات) */
+  .dg-rowmock{
+    max-width:540px; margin-top:11px; border:1px solid #e2e8f0; border-radius:12px;
+    overflow:hidden; box-shadow:0 6px 16px rgba(15,23,42,.06);
+  }
+  .dg-rowmock .hd, .dg-rowmock .rw{
+    display:grid; gap:8px; padding:9px 13px; font-size:10.5px; align-items:center;
+  }
+  .dg-rowmock .hd{ background:#f5f3ff; color:#5b21b6; font-weight:900; }
+  .dg-rowmock .rw{ background:#fff; color:#334155; font-weight:700; border-top:1px solid #f1f5f9; }
+  .dg-pill{
+    display:inline-flex; align-items:center; gap:5px; border-radius:999px;
+    padding:2px 9px; font-size:9.5px; font-weight:900; background:#dcfce7; color:#15803d;
+  }
+  .dg-pill .dot{ width:6px; height:6px; border-radius:50%; background:#16a34a; }
+
+  .dg-cap{ font-size:11px; color:#94a3b8; margin-top:8px; line-height:1.7; }
+  .dg-cap i{ color:#c4b5fd; }
+
+  /* ════ محاكاة خاصة بسوق البطاقات ════ */
+  /* مفتاح التصفية (Segmented Control) */
+  .dg-seg{
+    display:inline-flex; gap:4px; background:#f1f5f9; border:1px solid #e2e8f0;
+    border-radius:11px; padding:4px; margin-top:13px;
+  }
+  .dg-seg span{
+    display:inline-flex; align-items:center; gap:6px; border-radius:8px;
+    padding:7px 13px; font-size:11px; font-weight:800; color:#64748b;
+  }
+  .dg-seg span.on{ background:#fff; color:#5b21b6; box-shadow:0 2px 6px rgba(15,23,42,.08); }
+  .dg-segcount{
+    display:inline-flex; align-items:center; gap:6px; border-radius:999px;
+    padding:5px 12px; font-size:10.5px; font-weight:900;
+    background:#ede9fe; color:#5b21b6; margin-inline-start:9px;
+  }
+  /* شارات النظام (توليد فوري / مخزون) */
+  .dg-mode{
+    display:inline-flex; align-items:center; gap:6px; border-radius:999px;
+    padding:3px 11px; font-size:10.5px; font-weight:900; border:1px solid;
+  }
+  .dg-mode.instant{ background:#f5f3ff; color:#6d28d9; border-color:#ddd6fe; }
+  .dg-mode.stock{ background:#eff6ff; color:#1d4ed8; border-color:#bfdbfe; }
+  /* عدّادات المخزون */
+  .dg-stats{ display:flex; gap:9px; margin-top:11px; flex-wrap:wrap; }
+  .dg-stat{
+    flex:1; min-width:90px; background:#f8fafc; border:1px solid #eef2f7;
+    border-radius:11px; padding:9px 11px; text-align:center;
+  }
+  .dg-stat small{ display:block; font-size:9.5px; font-weight:800; color:#94a3b8; margin-bottom:3px; }
+  .dg-stat strong{ font-size:16px; font-weight:900; color:#241e4e; }
+  .dg-lowstock{
+    display:inline-flex; align-items:center; gap:6px; border-radius:999px;
+    padding:3px 11px; font-size:10.5px; font-weight:900; margin-top:9px;
+  }
+  .dg-lowstock.low{ background:#fffbeb; color:#b45309; }
+  .dg-lowstock.out{ background:#fef2f2; color:#b91c1c; }
+
+  /* ════ الطباعة: «حفظ كـ PDF» = window.print() ════ */
+  @media print{
+    .hb-side, .hb-side-overlay, .hb-topbar, header.hb-top,
+    .dg-toc, .dg-noprint, .hub-hero-actions{ display:none !important; }
+    .dg-layout{ grid-template-columns:1fr; }
+    .dg-card, .dg-mock, .dg-rowmock{ box-shadow:none !important; break-inside:avoid; }
+    .dg-step{ break-inside:avoid; }
+    body{ background:#fff !important; }
+    .dg-badge, .dg-mock-btn.primary, .dg-tip, .dg-warn, .dg-pill,
+    .dg-rowmock .hd, .dg-seg span.on, .dg-mode, .dg-lowstock, .dg-segcount{
+      -webkit-print-color-adjust:exact; print-color-adjust:exact;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{{ hub.hero(
+  "دليل: سوق البطاقات الإلكترونية",
+  subtitle="بيع بطاقات الإنترنت رقميًا للزبون النهائي — نظامان للبيع، إنشاء باقة، تعبئة مخزون، ومتابعة المبيعات في 6 خطوات.",
+  icon="store",
+  actions_html='
+    <button type="button" class="hub-btn hub-btn--secondary" onclick="window.print()">
+      <i class="fa-solid fa-file-pdf"></i> حفظ كـ PDF
+    </button>
+    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.docs_section', cat_slug='e-cards') + '">
+      <i class="fa-solid fa-arrow-right"></i> كل الأدلة
+    </a>
+  '
+) }}
+
+<div class="dg-layout">
+
+  {# ───── الفهرس الجانبي اللاصق ───── #}
+  <nav class="dg-toc dg-noprint" aria-label="فهرس الدليل">
+    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> فهرس الخطوات</div>
+    <a href="#dg-s1" data-dg-toc><span class="n">1</span> النظامان: فوري ومخزون</a>
+    <a href="#dg-s2" data-dg-toc><span class="n">2</span> مفتاح التصفية</a>
+    <a href="#dg-s3" data-dg-toc><span class="n">3</span> إنشاء باقة بيع</a>
+    <a href="#dg-s4" data-dg-toc><span class="n">4</span> تعبئة المخزون</a>
+    <a href="#dg-s5" data-dg-toc><span class="n">5</span> العدّادات وفتح العرض</a>
+    <a href="#dg-s6" data-dg-toc><span class="n">6</span> سجل المبيعات</a>
+  </nav>
+
+  {# ───── عمود المحتوى ───── #}
+  <div class="dg-main">
+
+    <div class="dg-lead">
+      <span class="ic"><i class="fa-solid fa-store"></i></span>
+      <div>
+        <h3>قبل ما نبدأ — شو يعني «سوق البطاقات الإلكترونية»؟</h3>
+        <p>
+          هذه صفحة بيع البطاقات <strong>رقميًا</strong> للزبون النهائي: تجهّز فيها «باقات بيع»
+          (مثل «8 ساعات / 2 ميجا» بسعر معيّن)، وكل باقة تظهر في بوابة الزبون فيشتريها بنفسه
+          من رصيد محفظته. تفتحها من القائمة الجانبية تحت <strong>البطاقات الإلكترونية ← سوق
+          البطاقات</strong> (المسار <span class="dg-kbd">/card-marketplace</span>). خلّينا نمشي
+          خطوة خطوة: أول شي نفهم النظامين، بعدين نُنشئ باقة ونعبّي مخزونها ونتابع مبيعاتها.
+        </p>
+      </div>
+    </div>
+
+    {# ════ الخطوة 1 ════ #}
+    <section class="dg-step" id="dg-s1">
+      <div class="dg-badge">1</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-layer-group"></i> النظامان: «توليد فوري» مقابل «مخزون»</h2>
+        <p>
+          كل باقة بيع تعمل بواحد من نظامين — تختاره وقت الإنشاء وتقدر تعرفه من شارة ملوّنة
+          على البطاقة:
+        </p>
+        <ul>
+          <li><strong>كرت توليد فوري:</strong> النظام يُنشئ كرتًا جديدًا <strong>لحظة كل عملية شراء</strong>
+              ويسلّمه للزبون فورًا. مناسب للبيع الرقمي اللحظي — بلا مخزون مُسبق.</li>
+          <li><strong>نظام حزم / مخزون:</strong> تُحمّل كروتًا جاهزة مسبقًا (توليد عدد أو رفع ملف)،
+              ويُباع منها كرت واحد لكل عملية. مناسب للكروت المطبوعة والمعارض — ويعرض <strong>«المباع / المتبقّي»</strong>.</li>
+        </ul>
+
+        <div class="dg-mock" aria-hidden="true" style="max-width:440px">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">سوق البطاقات › بطاقات العروض</span></div>
+          <div class="dg-mock-body">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+              <strong style="font-size:12px;color:#241e4e">8 ساعات / 2 ميجا</strong>
+              <span class="dg-mode instant"><i class="fa-solid fa-bolt"></i> توليد فوري</span>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+              <strong style="font-size:12px;color:#241e4e">كرت يومي مطبوع</strong>
+              <span class="dg-mode stock"><i class="fa-solid fa-boxes-stacked"></i> بيع من المخزون</span>
+            </div>
+          </div>
+        </div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> الشارة البنفسجية = توليد فوري، والزرقاء = مخزون.</div>
+
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة:</b> فوق الصفحة يوجد حقل <b>«النمط الافتراضي»</b> — اختياره يجعل كل
+          باقة جديدة ترث هذا النظام تلقائيًا، فلا تعيد ضبطه كل مرة. تقدر دائمًا تغيّره لباقة بعينها.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 2 ════ #}
+    <section class="dg-step" id="dg-s2">
+      <div class="dg-badge">2</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-filter"></i> مفتاح التصفية — اعرض ما يهمّك فقط</h2>
+        <p>
+          فوق قائمة العروض يوجد مفتاح من ثلاثة أزرار يصفّي البطاقات حسب نظامها، وبجانبه
+          <strong>عدّاد العروض</strong> يتحدّث مع كل ضغطة:
+        </p>
+        <ul>
+          <li><strong>الكل:</strong> يعرض جميع الباقات (هو المختار افتراضيًا).</li>
+          <li><strong>نظام التوليد:</strong> يُظهر باقات «التوليد الفوري» فقط.</li>
+          <li><strong>نظام المخزون:</strong> يُظهر باقات «المخزون» فقط.</li>
+        </ul>
+
+        <div aria-hidden="true">
+          <span class="dg-seg">
+            <span class="on"><i class="fa-solid fa-layer-group"></i> الكل</span>
+            <span><i class="fa-solid fa-bolt"></i> نظام التوليد</span>
+            <span><i class="fa-solid fa-boxes-stacked"></i> نظام المخزون</span>
+          </span>
+          <span class="dg-segcount">12 عرض</span>
+        </div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> التصفية تتم في المتصفح فورًا — لا تُعيد تحميل الصفحة.</div>
+
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة:</b> لو صار عندك عروض كثيرة، استخدم «نظام المخزون» لتراجع بسرعة أي
+          باقة قارب مخزونها على النفاد وتعبّيها قبل أن تتوقف عن البيع.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 3 ════ #}
+    <section class="dg-step" id="dg-s3">
+      <div class="dg-badge">3</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-plus"></i> أنشئ باقة بيع — النافذة الجديدة</h2>
+        <p>
+          اضغط زر <strong>«إضافة باقة بيع»</strong> البنفسجي أعلى الصفحة فتفتح نافذة فيها
+          الحقول التالية بالترتيب:
+        </p>
+        <ul>
+          <li><strong>العرض الأساسي <span style="color:#dc2626;font-weight:900">*</span>:</strong>
+              البروفايل الذي يرث منه الكرت المدة والسرعة والسعر المقترح — <strong>اختياره يملأ بقية الحقول تلقائيًا</strong> وتقدر تعدّلها.</li>
+          <li><strong>اسم الباقة في السوق <span style="color:#dc2626;font-weight:900">*</span>:</strong> الاسم الذي يراه الزبون في بوابته (مثال: <span class="dg-kbd">8 ساعات / 2 ميجا</span>).</li>
+          <li><strong>السعر <span style="color:#dc2626;font-weight:900">*</span>:</strong> المبلغ الذي يُخصم من محفظة الزبون عند الشراء.</li>
+          <li><strong>مدة البطاقة / سرعة التنزيل / سرعة الرفع:</strong> اتركها <strong>صفرًا</strong> لاعتماد قيم العرض الأساسي كما هي.</li>
+          <li><strong>نمط البيع:</strong> «توليد فوري» أو «نظام حزم / مخزون».</li>
+          <li><strong>لون البطاقة:</strong> لون شريط الباقة في المعرض وبوابة الزبون — من ألوان جاهزة أو لون مخصّص.</li>
+        </ul>
+
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">إضافة باقة بيع</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-mock-sechead"><span class="ic"><i class="fa-solid fa-store"></i></span> باقة بيع جديدة</div>
+            <div class="dg-mf">
+              <label>العرض الأساسي <span class="req">*</span></label>
+              <div class="dg-mf-select"><div class="dg-mf-input hl">باقة 2 ميجا — 8 ساعات</div></div>
+              <div class="dg-mf-help">يملأ بقية الحقول تلقائيًا — ويمكنك تعديلها.</div>
+            </div>
+            <div class="dg-mock-grid2">
+              <div class="dg-mf">
+                <label>اسم الباقة في السوق <span class="req">*</span></label>
+                <div class="dg-mf-input hl">8 ساعات / 2 ميجا</div>
+              </div>
+              <div class="dg-mf">
+                <label>السعر <span class="req">*</span></label>
+                <div class="dg-mf-input hl">5.00</div>
+              </div>
+            </div>
+            <div class="dg-mock-grid2">
+              <div class="dg-mf">
+                <label>نمط البيع</label>
+                <div class="dg-mf-select"><div class="dg-mf-input">كرت توليد فوري</div></div>
+              </div>
+              <div class="dg-mf">
+                <label>مدة البطاقة</label>
+                <div class="dg-mf-input ph">0 = مدة العرض الأساسي</div>
+              </div>
+            </div>
+            <div class="dg-mock-actions">
+              <span class="dg-mock-btn ghost">إلغاء</span>
+              <span class="dg-mock-btn primary"><i class="fa-solid fa-plus"></i> إضافة الباقة</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>ماذا يحدث عند الشراء؟</b> يُخصم السعر من محفظة الزبون، يُولَّد كرت جديد
+          (أو يُسحب من المخزون حسب النمط)، ثم يظهر الكرت للزبون في تبويب «بطاقاتي».</span>
+        </div>
+
+        <div class="dg-warn">
+          <span class="ic">⚠️</span>
+          <span><b>انتبه:</b> لازم تجهّز <b>العرض الأساسي</b> أولًا من قسم البطاقات/العروض —
+          بدونه لن تستطيع إنشاء باقة بيع، لأن الكرت يرث منه المدة والسرعة والسعر.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 4 ════ #}
+    <section class="dg-step" id="dg-s4">
+      <div class="dg-badge">4</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-boxes-stacked"></i> عبّئ المخزون — رفع ملف أو توليد حزمة</h2>
+        <p>
+          هذه الخطوة <strong>لباقات نظام المخزون فقط</strong>. على بطاقة العرض يظهر زرّان لتغذية
+          المخزون بالكروت:
+        </p>
+        <ul>
+          <li><strong>رفع ملف بطاقات:</strong> ارفع ملف <span class="dg-kbd">Excel / CSV / PDF</span>
+              وفيه أزواج (اسم المستخدم + كلمة المرور). المحرك يستخرجها ويضيفها للمخزون،
+              <strong>والأسماء المكررة تُتخطى تلقائيًا</strong>. الحد: 12MB و5000 بطاقة بالدفعة.</li>
+          <li><strong>توليد حزمة:</strong> يولّد النظام بطاقات فريدة جاهزة. تحدّد فيها:
+            <strong>عدد البطاقات</strong> (1–5000) و<strong>طول كلمة المرور</strong> (4–16).</li>
+        </ul>
+
+        <div class="dg-mock" aria-hidden="true" style="max-width:460px">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">توليد حزمة — 8 ساعات / 2 ميجا</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-mock-grid2">
+              <div class="dg-mf">
+                <label>عدد البطاقات</label>
+                <div class="dg-mf-input hl">100</div>
+                <div class="dg-mf-help">من 1 إلى 5000.</div>
+              </div>
+              <div class="dg-mf">
+                <label>طول كلمة المرور</label>
+                <div class="dg-mf-input">8</div>
+                <div class="dg-mf-help">من 4 إلى 16 حرفًا.</div>
+              </div>
+            </div>
+            <div class="dg-mock-actions">
+              <span class="dg-mock-btn ghost">إلغاء</span>
+              <span class="dg-mock-btn primary"><i class="fa-solid fa-wand-magic-sparkles"></i> توليد وإضافة</span>
+            </div>
+          </div>
+        </div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> الكروت المولّدة/المرفوعة تدخل المخزون فورًا وتصبح جاهزة للبيع.</div>
+
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة:</b> «توليد حزمة» أسرع طريقة للبدء — يصنع لك كروتًا فريدة بنقرة.
+          استخدم «رفع ملف» فقط إذا عندك كروت جاهزة من نظام قديم أو مطبعة خارجية.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 5 ════ #}
+    <section class="dg-step" id="dg-s5">
+      <div class="dg-badge">5</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-chart-simple"></i> اقرأ العدّادات وافتح العرض</h2>
+        <p>
+          كل باقة مخزون تعرض ثلاثة عدّادات: <strong>الكل</strong> (إجمالي ما حُمِّل)،
+          <strong>المباع</strong>، و<strong>المتبقي</strong>. وعند نقص المخزون يظهر تنبيه ملوّن:
+        </p>
+        <ul>
+          <li><strong>مخزون منخفض</strong> (مثلث أصفر): المتبقّي أقل من 10% من الإجمالي.</li>
+          <li><strong>نفد المخزون</strong> (دائرة حمراء): لم يبقَ أي كرت — توقّف البيع حتى تعبّي.</li>
+        </ul>
+
+        <div class="dg-stats" aria-hidden="true" style="max-width:380px">
+          <div class="dg-stat"><small>الكل</small><strong>100</strong></div>
+          <div class="dg-stat"><small>المباع</small><strong>92</strong></div>
+          <div class="dg-stat"><small>المتبقي</small><strong>8</strong></div>
+        </div>
+        <div aria-hidden="true">
+          <span class="dg-lowstock low"><i class="fa-solid fa-triangle-exclamation"></i> مخزون منخفض</span>
+          <span class="dg-lowstock out"><i class="fa-solid fa-circle-exclamation"></i> نفد المخزون</span>
+        </div>
+
+        <p style="margin-top:13px">
+          زر <strong>«فتح العرض»</strong> يأخذك لصفحة بطاقات العرض — جدول بكل كرت داخله:
+        </p>
+        <div class="dg-rowmock" aria-hidden="true">
+          <div class="hd" style="grid-template-columns:1fr 1fr .8fr 1fr">
+            <span>الكود</span><span>كلمة المرور</span><span>الحالة</span><span>المشتري</span>
+          </div>
+          <div class="rw" style="grid-template-columns:1fr 1fr .8fr 1fr">
+            <span style="font-family:monospace;font-weight:900;color:#241e4e">a8f3k2</span>
+            <span style="font-family:monospace">7g9q1m</span>
+            <span><span class="dg-pill" style="background:#dbeafe;color:#1d4ed8"><span class="dot" style="background:#2563eb"></span> مباعة</span></span>
+            <span>0599…123</span>
+          </div>
+          <div class="rw" style="grid-template-columns:1fr 1fr .8fr 1fr">
+            <span style="font-family:monospace;font-weight:900;color:#241e4e">b2m7x5</span>
+            <span style="font-family:monospace">4t6w8e</span>
+            <span><span class="dg-pill"><span class="dot"></span> بالمخزون</span></span>
+            <span>—</span>
+          </div>
+        </div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> الأعمدة: الكود، كلمة المرور، الحالة (بالمخزون/مباعة/مستخدمة/منتهية/ملغاة)، تاريخ التوليد، المشتري، السعر، الحزمة.</div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 6 ════ #}
+    <section class="dg-step" id="dg-s6">
+      <div class="dg-badge">6</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-receipt"></i> تابع سجل المبيعات</h2>
+        <p>
+          أسفل الصفحة يوجد <strong>سجل آخر العمليات</strong> — جدول مصفّح يعرض كل عملية بيع
+          تمّت من السوق، بأعمدته الستة:
+        </p>
+
+        <div class="dg-rowmock" aria-hidden="true">
+          <div class="hd" style="grid-template-columns:1fr 1fr .9fr .7fr .7fr .9fr">
+            <span>المشتري</span><span>العرض</span><span>الكرت</span><span>المبلغ</span><span>الحالة</span><span>التاريخ</span>
+          </div>
+          <div class="rw" style="grid-template-columns:1fr 1fr .9fr .7fr .7fr .9fr">
+            <span>0599…123</span><span>8 ساعات / 2 ميجا</span>
+            <span style="font-family:monospace">a8f3k2</span><span>5.00</span>
+            <span><span class="dg-pill"><span class="dot"></span> مكتملة</span></span><span>اليوم 14:20</span>
+          </div>
+          <div class="rw" style="grid-template-columns:1fr 1fr .9fr .7fr .7fr .9fr">
+            <span>0567…998</span><span>يوم كامل</span>
+            <span style="font-family:monospace">c4n1p7</span><span>8.00</span>
+            <span><span class="dg-pill"><span class="dot"></span> مكتملة</span></span><span>اليوم 13:05</span>
+          </div>
+        </div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> الأعمدة: المشتري، العرض، الكرت، المبلغ، الحالة، التاريخ — مع ترقيم صفحات للعمليات الأقدم.</div>
+
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>وبعدين؟</b> قسم <b>«الحزم الإلكترونية المتولدة»</b> (سجل فني قابل للطي) أسفل
+          الصفحة يجمع كل كرت مولّد داخل حزم قابلة للمراجعة — افتحه إذا أردت تدقيق ما بيع
+          وما تبقّى على مستوى كل حزمة.</span>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+{# ── scrollspy خفيف: يبرز بند الفهرس المقابل للخطوة الظاهرة ── #}
+<script>
+(function(){
+  'use strict';
+  var links = Array.prototype.slice.call(document.querySelectorAll('[data-dg-toc]'));
+  if (!links.length || !('IntersectionObserver' in window)) return;
+  var map = {};
+  links.forEach(function(a){ map[a.getAttribute('href').slice(1)] = a; });
+  var obs = new IntersectionObserver(function(entries){
+    entries.forEach(function(en){
+      if (!en.isIntersecting) return;
+      links.forEach(function(a){ a.classList.remove('is-active'); });
+      var a = map[en.target.id];
+      if (a) a.classList.add('is-active');
+    });
+  }, { rootMargin: '-35% 0px -55% 0px' });
+  Object.keys(map).forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) obs.observe(el);
+  });
+})();
+</script>
+
+{% endblock %}

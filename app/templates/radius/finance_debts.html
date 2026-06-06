@@ -7,20 +7,29 @@
 {% block page_sub %}<span class="sub">{{ debts.count or 0 }} ذمّة مفتوحة</span>{% endblock %}
 
 {% block content %}
-{{ hub.hero("الديون", subtitle="الذمم المفتوحة المستحقة على المشتركين — مشتقّة من السلف غير المسدَّدة (loan_entries, status=open).", icon="file-invoice-dollar") }}
+{# ───── الميجاهيرو الموحّد: يدمج العنوان + شريط KPIs في كتلة .uds-hero واحدة
+   بدل الهيرو القديم المنفصل (hub.hero + hub-kpi-grid). والعنوان الفرعي مُعرَّب
+   بالكامل دون أي نص تقني إنجليزي. ───── #}
+{{ hub.megahero(
+  "الديون",
+  subtitle="الذمم المفتوحة المستحقة على المشتركين — مشتقّة من السلف غير المسدَّدة (من جدول السلف، الحالة: مفتوحة).",
+  icon="file-invoice-dollar",
+  kpis=[
+    {'label': 'إجمالي الديون', 'value': debts.total|money,             'icon': 'file-invoice-dollar', 'variant': 'amber'},
+    {'label': 'عدد الذمم',     'value': debts.count or 0,              'icon': 'list-ol',             'variant': 'blue'},
+    {'label': 'التحصيلات',     'value': summary.total_collections|money,'icon': 'cash-register',       'variant': 'brand'},
+    {'label': 'الربح الصافي',  'value': summary.total_profit|money,    'icon': 'chart-line',          'variant': 'green'},
+  ]
+) }}
 {% include "radius/_finance_nav.html" %}
-
-<div class="hub-kpi-grid">
-  {{ hub.kpi("إجمالي الديون", debts.total|money, icon="file-invoice-dollar", variant="amber") }}
-  {{ hub.kpi("عدد الذمم", debts.count or 0, icon="list-ol", variant="blue") }}
-  {{ hub.kpi("التحصيلات", summary.total_collections|money, icon="cash-register", variant="brand") }}
-  {{ hub.kpi("الربح الصافي", summary.total_profit|money, icon="chart-line", variant="green") }}
-</div>
 
 {% if debts['items'] %}
 {% call hub.section("الذمم المفتوحة", icon="table-list", meta=debts.count|string + " ذمّة", flush=True) %}
-  <div class="hub-table-wrap" style="border:none;border-radius:0">
-    <table class="hub-table" data-paginated="1" data-page-size="20" data-page-sizes="10,20,50,100" data-persist-key="finance-debts">
+  {# جدول البيانات الموحّد UDS: الـ wrap بـ data-uds-table يُفعّل تلقائياً
+     شريط الأعمدة + الفرز + الترقيم + أزرار التصدير الثلاثة (CSV/XLSX/PDF).
+     أُزيلت معاملات النظام القديم (data-paginated/data-page-sizes/data-persist-key). #}
+  <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="20" style="border:none;border-radius:0">
+    <table class="hub-table">
       <thead>
         <tr>
           <th class="num" style="width:60px">#</th>
@@ -62,4 +71,6 @@
   icon="file-invoice-dollar"
 ) }}
 {% endif %}
+{# سكربت الجدول الموحّد — يفعّل الفرز/الترقيم/أزرار التصدير على data-uds-table #}
+<script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
 {% endblock %}

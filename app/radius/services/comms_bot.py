@@ -559,7 +559,10 @@ def _send_whatsapp(tenant_id: int, phone: str, message: str) -> tuple[bool, str]
         outcome = comms_providers.http_send(
             template=cfg["send_url_template"],
             method=cfg.get("http_method") or comms_providers.DEFAULT_METHOD,
-            phone=phone,
+            # تطبيع الرقم بمفتاح الدولة (0599... → +970599...) قبل المزوّد
+            phone=comms_providers.normalize_msisdn(
+                phone, comms_providers.tenant_dial_code(tenant_id)
+            ),
             message=message,
         )
         return bool(outcome.ok), ("" if outcome.ok else (outcome.error or "فشل الإرسال."))

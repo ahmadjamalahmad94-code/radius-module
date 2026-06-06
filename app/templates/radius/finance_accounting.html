@@ -7,25 +7,112 @@
 {% block page_sub %}<span class="sub">دفتر القيود والتقارير المالية في صفحة واحدة</span>{% endblock %}
 
 {% block head_extra %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
 <style>
-/* ── Retained: tab switcher pills (kept inside the unified hero) ── */
-.fa-tabs{display:flex;flex-wrap:wrap;gap:8px}
+/* ── تبويبات السجل/التقارير — تعيش الآن داخل hub-hero-shell كحزام سفلي
+   للهيرو: فاصل علوي ناعم بدل أن تكون شريطًا عائمًا منفصلًا. ── */
+.hub-hero-shell > .fa-tabs{
+  display:flex;flex-wrap:wrap;gap:8px;
+  padding:12px 22px;
+  border-top:1px solid var(--hub-border-soft);
+  background:rgba(255,255,255,.55);
+  /* الزوايا السفلية تتبع زوايا الشل (آخر عنصر داخله) */
+  border-end-start-radius:var(--hub-r-xl);
+  border-end-end-radius:var(--hub-r-xl);
+}
 .fa-tabs a{display:inline-flex;align-items:center;gap:8px;padding:9px 15px;border-radius:999px;
-  background:var(--hub-bg-soft);color:var(--hub-text-soft);font-weight:800;text-decoration:none;border:1px solid var(--hub-border-soft);font-size:13px}
+  background:#fff;color:var(--hub-text-soft);font-weight:800;text-decoration:none;border:1px solid var(--hub-border-soft);font-size:13px}
 .fa-tabs a:hover{border-color:var(--hub-brand-soft);color:var(--hub-brand-ink)}
 .fa-tabs a.is-active{background:var(--hub-brand);color:#fff;border-color:var(--hub-brand)}
+@media(max-width:640px){.fa-tabs a{width:100%;justify-content:center}}
+
+/* ── الصناديق العائمة (نفس نمط fcw في finance_center_hub):
+   نافذة «حفظ لقطة ثابتة» بنطاق من/إلى + ملاحظة، ونافذة «عرض لقطة». ── */
+.fcw-modal{ position:fixed; inset:0; z-index:1200; display:none; place-items:center; padding:24px; background:rgba(15,23,42,.52); }
+.fcw-modal.is-open{ display:grid; }
+.fcw-dialog{ width:min(560px,100%); max-height:min(88vh,760px); overflow:auto; border-radius:16px; background:#fff;
+  box-shadow:0 28px 80px rgba(15,23,42,.32); }
+.fcw-dialog--wide{ width:min(860px,100%); }
+.fcw-head{ position:sticky; top:0; z-index:2; display:flex; align-items:center; justify-content:space-between; gap:12px;
+  padding:15px 18px; border-bottom:1px solid var(--hub-border-soft,#e2e8f0); background:#fff; }
+.fcw-head h3{ margin:0; font-size:17px; font-weight:900; color:var(--hub-text,#0f172a); }
+.fcw-x{ border:0; background:transparent; color:#94a3b8; font-size:18px; cursor:pointer; }
+.fcw-body{ padding:16px 18px; display:grid; gap:12px; }
+.fcw-foot{ display:flex; justify-content:flex-end; gap:8px; padding:13px 18px; border-top:1px solid var(--hub-border-soft,#e2e8f0); background:#fbfdff; }
+/* حقلا «من/إلى» جنبًا إلى جنب داخل نافذة اللقطة */
+.fcw-range{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+@media(max-width:520px){ .fcw-range{ grid-template-columns:1fr; } }
+/* ملخص رأس نافذة عرض اللقطة (الفترة/الصفوف/الإجمالي/الملاحظة) */
+.fcw-snap-meta{ display:flex; flex-wrap:wrap; gap:8px 16px; font-size:12.5px; color:var(--hub-text-soft,#475569); }
+.fcw-snap-meta b{ color:var(--hub-text,#0f172a); }
+/* جدول صفوف اللقطة داخل النافذة */
+.fcw-snap-table{ width:100%; border-collapse:collapse; font-size:12.5px; }
+.fcw-snap-table th{ text-align:start; padding:8px 10px; background:var(--hub-bg-soft,#f1f5f9);
+  color:var(--hub-text-soft,#475569); font-weight:800; border-bottom:1px solid var(--hub-border-soft,#e2e8f0); }
+.fcw-snap-table td{ padding:7px 10px; border-bottom:1px solid var(--hub-border-soft,#e2e8f0);
+  font-variant-numeric:tabular-nums; }
+.fcw-snap-table tr:last-child td{ border-bottom:0; }
 </style>
 {% endblock %}
 
 {% block content %}
 
 {# ═══════════ Unified hero: title + subtitle + icon + per-tab KPIs ═══════════
-   The ledger/reports tab switcher is integrated as the hero's actions, and the
+   The ledger/reports tab switcher renders as the shell's bottom band, and the
    per-tab filter (entry-type + subscriber id, or report-type) lives in the
    hero's integrated search row. No backend/route change — the same `tab`,
    `entry_type`, `subscriber_id`, `type` query args drive it. #}
 {% if tab == 'reports' %}
-  {% set _kpis = [] %}
+  {# ── ماذا يعني «الصف» وماذا يجمع «الإجمالي» لكل نوع تقرير؟ ──
+     خرائط إيضاح ثابتة بمفاتيح كتالوج _REPORTS نفسها (routes/accounting.py)
+     حتى لا تبقى مؤشرات التبويب غامضة («عدد الصفوف» عدد شو؟):
+       _row_unit   وحدة الصف (يوم/شهر/مستفيد/…) — تُركّب في تسمية المؤشر
+       _row_hint   سطر يشرح ما يعدّه مؤشر الصفوف بالضبط
+       _total_hint سطر يشرح ما يجمعه مؤشر الإجمالي بالضبط #}
+  {% set _row_unit = {
+    'daily': 'أيام', 'monthly': 'أشهر', 'yearly': 'سنوات',
+    'subscriber_payments': 'مستفيدون', 'loans': 'حالات سلف',
+    'activations': 'مستخدمون', 'card_sales': 'حزم بطاقات',
+    'profit_loss': 'ملخص واحد', 'distributor_debts': 'موزعون',
+  } %}
+  {% set _row_hint = {
+    'daily': 'كل صف = يوم له دفعات مرحَّلة (آخر 60 يومًا بحركة)',
+    'monthly': 'كل صف = شهر له دفعات مرحَّلة',
+    'yearly': 'كل صف = سنة لها دفعات مرحَّلة',
+    'subscriber_payments': 'كل صف = مستفيد دفع ولو مرة واحدة',
+    'loans': 'كل صف = حالة سلفة (مفتوحة/مسددة/معدومة…)',
+    'activations': 'كل صف = مستخدم فعّل وقتًا عبر الدفع',
+    'card_sales': 'كل صف = حزمة بطاقات بيعت منها بطاقات',
+    'profit_loss': 'صف واحد يلخّص كامل دفتر القيود',
+    'distributor_debts': 'كل صف = موزع نشِط وأرصدته',
+  } %}
+  {% set _total_hint = {
+    'daily': 'مجموع مبالغ الدفعات (مخصومًا منها قيود الإلغاء/العكس)',
+    'monthly': 'مجموع مبالغ الدفعات (مخصومًا منها قيود الإلغاء/العكس)',
+    'yearly': 'مجموع مبالغ الدفعات (مخصومًا منها قيود الإلغاء/العكس)',
+    'subscriber_payments': 'مجموع ما دفعه كل المستفيدين معًا',
+    'loans': 'مجموع مبالغ السلف بكل حالاتها',
+    'activations': 'لا عمود مبالغ هنا — التقرير يَعُدّ التفعيلات والدقائق',
+    'card_sales': 'مجموع مبيعات البطاقات المرحَّلة لكل الحزم',
+    'profit_loss': 'لا إجمالي مفرد — راجع أعمدة الإيرادات/المصروفات/الصافي',
+    'distributor_debts': 'لا إجمالي مفرد — راجع أعمدة رصيد الدين والرصيد',
+  } %}
+  {# KPIs خاصة بتبويب التقارير — تسميات محدّدة + سطر إيضاح لكل مؤشر
+     يشرح بالضبط ما يَعُدّه للتقرير المختار (طلب المستخدم: «عدد شو؟ شو تفاصيلهم؟») #}
+  {% set _rep_total = report_items|sum(attribute='total') if (report_items and 'total' in report_items[0]) else none %}
+  {% set _kpis = [
+    {'label': 'نوع التقرير',   'value': report_label,              'icon': 'chart-line',  'variant': 'brand',
+     'sub': 'يُبنى من نفس قيود السجل المالي'},
+    {'label': 'صفوف التقرير (' ~ _row_unit.get(report_type, 'صفوف') ~ ')',
+     'value': report_items|length, 'icon': 'table-list', 'variant': 'blue',
+     'sub': _row_hint.get(report_type, '')},
+    {'label': 'إجمالي عمود «الإجمالي»',
+     'value': (_rep_total|money if _rep_total is not none else '—'), 'icon': 'coins', 'variant': 'green',
+     'sub': _total_hint.get(report_type, '')},
+    {'label': 'لقطات محفوظة لهذا النوع',  'value': snapshots|length if snapshots else 0, 'icon': 'box-archive', 'variant': 'amber',
+     'sub': 'نسخ مجمّدة بزر «حفظ لقطة ثابتة» (آخر 10)'},
+  ] %}
 {% else %}
   {% set _kpis = [
     {'label': 'عدد القيود',    'value': ledger_kpis.count,       'icon': 'table-list',          'variant': 'brand'},
@@ -35,23 +122,19 @@
   ] %}
 {% endif %}
 
-{% set _tabs_html %}
-<nav class="fa-tabs" aria-label="تبويبات المحاسبة">
-  <a href="?tab=ledger" class="{{ 'is-active' if tab == 'ledger' }}"><i class="fa-solid fa-table-list"></i> السجل المالي</a>
-  <a href="?tab=reports" class="{{ 'is-active' if tab == 'reports' }}"><i class="fa-solid fa-chart-line"></i> التقارير المالية</a>
-</nav>
-{% endset %}
-
+{# ───── الهيرو + شريط الـ KPI + صف الفلترة + التبويبات داخل صدفة واحدة
+        (hub-hero-shell) بفواصل داخلية ناعمة بدل كروت متفرقة. ───── #}
+<section class="hub-hero-shell">
 {% call hub.megahero(
   "السجل والتقارير المحاسبية",
   subtitle="تابع دفتر القيود المالية والتقارير من مكان واحد. واجهة موحّدة — السجل تراكمي (لا حذف) والتقارير تُبنى من نفس القيود.",
   icon="scale-balanced",
-  actions_html=_tabs_html,
   kpis=_kpis
 ) %}
   {% if tab == 'reports' %}
   <input type="hidden" name="tab" value="reports">
-  <select class="hub-input grow" name="type" onchange="this.form.submit()" aria-label="نوع التقرير">
+  {# hub-select يفعّل منتقي القوائم الموحّد hbsel (hub_select.js) مع دعم العربية #}
+  <select class="hub-input hub-select grow" name="type" onchange="this.form.submit()" aria-label="نوع التقرير">
     {% for key, label in reports.items() %}
       <option value="{{ key }}" {% if report_type == key %}selected{% endif %}>{{ label }}</option>
     {% endfor %}
@@ -59,7 +142,8 @@
   {{ hub.btn("عرض التقرير", icon="chart-line", variant="primary", type="submit", size="sm") }}
   {% else %}
   <input type="hidden" name="tab" value="ledger">
-  <select class="hub-input" name="entry_type" onchange="this.form.submit()" aria-label="نوع القيد">
+  {# hub-select يفعّل منتقي القوائم الموحّد hbsel (hub_select.js) #}
+  <select class="hub-input hub-select" name="entry_type" onchange="this.form.submit()" aria-label="نوع القيد">
     <option value="">كل أنواع القيود</option>
     {% for t in entry_types %}
       <option value="{{ t }}" {% if entry_type == t %}selected{% endif %}>
@@ -75,23 +159,36 @@
   {% endif %}
 {% endcall %}
 
+<nav class="fa-tabs" aria-label="تبويبات المحاسبة">
+  <a href="?tab=ledger" class="{{ 'is-active' if tab == 'ledger' }}"><i class="fa-solid fa-table-list"></i> السجل المالي</a>
+  <a href="?tab=reports" class="{{ 'is-active' if tab == 'reports' }}"><i class="fa-solid fa-chart-line"></i> التقارير المالية</a>
+</nav>
+</section>{# /hub-hero-shell #}
+
 {# ═══════════════ TAB: LEDGER ═══════════════ #}
 {% if tab == 'ledger' %}
-{% call hub.worklayout(aside_html=hub.helppanel(
-  "كيف تقرأ السجل المالي؟",
-  intro="كل صف قيد مالي تراكمي لا يُحذف. التصحيح يتم بقيد عكسي يحافظ على الأصل لأغراض المراجعة والتقارير.",
-  items=[
-    {'icon': 'right-left',   'text': 'الاتجاه: «مدين» يخصم من الحساب و«دائن» يضيف إليه.'},
-    {'icon': 'circle-check', 'text': '«مرحَّل» قيد فعّال، و«ملغى» قيد أُبطل بقيد عكسي.'},
-    {'icon': 'filter',       'text': 'استخدم فلتر نوع القيد ورقم المستفيد بالأعلى لتضييق العرض.'},
-    {'icon': 'rotate-left',  'text': 'زر «عكس القيد» ينشئ قيدًا عكسيًا — لا يحذف الأصل أبدًا.'},
-  ],
-  note="السجل المالي تراكمي. لا يتم حذف القيود؛ التصحيح يتم بقيد عكسي يحافظ على الأصل."
-)) %}
+  {# ── «ما هي القيود؟» — شرح مبسّط قابل للطي على الجنب (نمط uds-help):
+     مطوي افتراضيًا كعمود نحيف بجانب الجدول، وينفتح بالضغط عند الحاجة.
+     بطلب المستخدم: «بدي توضيح شو هما القيود، لشو بنستخدمهم، كل حركة شو بتأثر». #}
+  {% call hub.worklayout(aside_html=hub.helppanel(
+    "ما هي القيود؟ (شرح مبسّط)",
+    icon="circle-question",
+    intro="القيد ببساطة = سطر تسجيل لأي حركة فلوس. كل ما صار شي بالمال (دفعة، سلفة، تسوية…) ينكتب سطر جديد هون — ولا شي ينحذف أبدًا.",
+    items=[
+      {'icon': 'hand-holding-dollar', 'text': 'دفعة: المشترك دفع مصاري → قيد «دائن» يزيد رصيده/مدته. هذا أكثر قيد رح تشوفه.'},
+      {'icon': 'clock-rotate-left',   'text': 'سلفة: أعطينا المشترك مدة قبل ما يدفع → صار عليه دين مسجَّل بقيد.'},
+      {'icon': 'scale-balanced',      'text': 'تسوية: المشترك سدّد سلفته → قيد يقفل الدين ويصفّيه. السلفة الأصلية تبقى ظاهرة بالسجل.'},
+      {'icon': 'rotate-left',         'text': 'إلغاء / عكسي: غلطنا بقيد؟ ما منحذفه — منعمل قيد معاكس يصفّر أثره، والأصل يبقى موجود للمراجعة.'},
+      {'icon': 'chart-line',          'text': 'كل التقارير المالية (يومية/شهرية/سنوية…) مبنية من هالقيود نفسها — فإذا فهمت القيود فهمت كل الأرقام.'},
+    ],
+    note="القاعدة الذهبية: السجل تراكمي — التصحيح دائمًا بقيد جديد معاكس، وليس بحذف أو تعديل قيد قديم. هيك تبقى الأرقام قابلة للتدقيق دائمًا."
+  )) %}
   {% call hub.section("القيود", icon="table-list", meta=(ledger_items|length|string + " قيد") if ledger_items else "", flush=True) %}
     {% if ledger_items %}
-    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25" style="border:none;border-radius:0">
-      <table class="hub-table">
+    {# uds-table-wrap فقط (بلا hub-table-wrap) فلا حدود/زوايا مزدوجة داخل القسم
+       flush — استغنينا عن أنماط style المضمّنة بإسقاط فئة hub-table-wrap. #}
+    <div class="uds-table-wrap" data-uds-table data-uds-page-size="25" data-uds-export-title="السجل المالي — القيود">
+      <table class="uds-table">
         <thead>
           <tr>
             <th class="num" style="width:56px">#</th>
@@ -103,14 +200,43 @@
             <th>المصدر</th>
             <th data-uds-nosort>ملاحظات</th>
             <th>التاريخ</th>
-            <th data-uds-nosort data-uds-nocol style="width:230px">عكس القيد</th>
+            <th data-uds-nosort data-uds-nocol style="width:230px">عكس القيد
+              <span class="hub-hint" tabindex="0" data-hint="عكس القيد لا يحذف القيد الأصلي — يُنشئ قيدًا جديدًا معاكسًا له يصفّر أثره على الأرقام، ويبقى الاثنان ظاهرين في السجل للمراجعة. اكتب سبب التصحيح ثم اضغط زر السهم."><i class="fa-solid fa-info"></i></span>
+            </th>
           </tr>
         </thead>
         <tbody>
+          {# تعريب أنواع القيود ومصادرها — كانت تظهر كمعرّفات إنجليزية خام
+             (payment / loan / settlement ...). القيم تغطي entry_type
+             وsource_type معًا (راجع accounting_repo: payment_void،
+             loan_writeoff، ledger_void، card_sale). #}
+          {% set _type_labels = {
+            'payment': 'دفعة', 'loan': 'سلفة', 'settlement': 'تسوية',
+            'void': 'إلغاء', 'reversal': 'عكسي', 'correction': 'تصحيح',
+            'payment_void': 'إلغاء دفعة', 'loan_writeoff': 'إعدام سلفة',
+            'ledger_void': 'عكس قيد', 'card_sale': 'بيع بطاقة',
+            'invoice': 'فاتورة', 'refund': 'استرداد', 'discount': 'خصم',
+            'adjustment': 'تعديل', 'topup': 'شحن رصيد',
+          } %}
+          {# تلميح لكل نوع قيد يشرح أثره على الرصيد — يظهر بالوقوف على الشارة
+             (title) فيفهم الموظف «هالحركة شو بتأثر» دون مغادرة الجدول. #}
+          {% set _type_effects = {
+            'payment': 'دفعة: المشترك دفع — قيد دائن يزيد رصيده/مدته.',
+            'loan': 'سلفة: مدة مُنحت قبل الدفع — دين مسجَّل على المشترك حتى يسدده.',
+            'settlement': 'تسوية: سداد يقفل سلفة مفتوحة ويصفّر دينها — السلفة الأصلية تبقى بالسجل.',
+            'void': 'إلغاء: قيد معاكس يصفّر أثر قيد سابق — الأصل لا يُحذف ويبقى ظاهرًا.',
+            'reversal': 'عكسي: قيد بعكس اتجاه قيد سابق يلغي أثره على الأرقام دون حذفه.',
+            'correction': 'تصحيح: قيد جديد يعدّل خطأ سابقًا — التعديل بالإضافة لا بالمحو.',
+            'refund': 'استرداد: إرجاع مبلغ للمشترك — ينقص ما حصّلناه منه.',
+            'discount': 'خصم: تخفيض على المبلغ المستحق — ينقص ما يدفعه المشترك.',
+            'adjustment': 'تعديل: تصويب يدوي للرصيد بقيد موثّق.',
+            'topup': 'شحن رصيد: إضافة مبلغ لرصيد المشترك.',
+            'invoice': 'فاتورة: مبلغ مستحق على المشترك حتى يُدفع.',
+          } %}
           {% for entry in ledger_items %}
           <tr>
             <td class="num mono">{{ entry.id }}</td>
-            <td>{{ hub.pill(entry.entry_type, variant="brand", dot=False) }}</td>
+            <td><span title="{{ _type_effects.get(entry.entry_type, 'قيد مالي مسجَّل في الدفتر التراكمي.') }}">{{ hub.pill(_type_labels.get(entry.entry_type, entry.entry_type), variant="brand", dot=False) }}</span></td>
             <td>
               <div>{{ entry.username or '—' }}</div>
               {% if entry.subscriber_id %}<div class="hub-text-mute mono small">#{{ entry.subscriber_id }}</div>{% endif %}
@@ -126,7 +252,8 @@
               {% elif entry.status == 'void' %}{{ hub.pill("ملغى", variant="grey") }}
               {% else %}{{ hub.pill(entry.status, variant="amber") }}{% endif %}
             </td>
-            <td class="small">{{ entry.source_type or '—' }}{% if entry.source_id %} <span class="hub-text-mute mono">#{{ entry.source_id }}</span>{% endif %}</td>
+            {# المصدر بالعربية + المعرّف التقني رقمي أحادي المسافة داخل <bdi> #}
+            <td class="small">{{ _type_labels.get(entry.source_type, entry.source_type) or '—' }}{% if entry.source_id %} <span class="hub-text-mute mono"><bdi dir="ltr">#{{ entry.source_id }}</bdi></span>{% endif %}</td>
             <td class="small">{{ entry.notes or '—' }}</td>
             <td class="num mono small" style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">{{ entry.created_at|dt_local }}</td>
             <td>
@@ -151,49 +278,80 @@
     {{ hub.empty("لا قيود بهذه الفلترة", sub="جرّب تغيير نوع القيد أو رقم المستفيد، أو امسح الفلتر.", icon="scale-balanced") }}
     {% endif %}
   {% endcall %}
-{% endcall %}
+  {% endcall %}{# /worklayout — جدول القيود + لوحة «ما هي القيود؟» الجانبية #}
 {% endif %}
 
 {# ═══════════════ TAB: REPORTS ═══════════════ #}
 {% if tab == 'reports' %}
-{% call hub.worklayout(aside_html=hub.helppanel(
-  "كيف تقرأ التقارير المالية؟",
-  intro="هذه التقارير مبنية من السجل المالي. القيود العكسية والتصحيحات لا تحذف الأصل، لذلك تظهر القيم المعدّلة حسب القيد والـ void.",
-  items=[
-    {'icon': 'chart-line',  'text': 'اختر نوع التقرير من القائمة بالأعلى لإعادة بناء البيانات.'},
-    {'icon': 'file-export', 'text': 'صدّر التقرير الحالي بصيغة CSV أو Excel أو PDF.'},
-    {'icon': 'lock',        'text': '«حفظ لقطة ثابتة» يجمّد التقرير الحالي للرجوع إليه لاحقًا.'},
-    {'icon': 'box-archive', 'text': 'آخر اللقطات الثابتة تظهر أسفل التقرير للمراجعة.'},
-  ],
-  note="هذه التقارير مبنية من السجل المالي، لذلك تعكس القيود العكسية والتصحيحات دون حذف الأصل."
-)) %}
-  {% call hub.section(report_label, icon="chart-line", flush=False) %}
-    {# Exports + snapshot stay on their original standalone endpoints. #}
-    <div class="hub-flex-row" style="gap:8px;flex-wrap:wrap;margin-bottom:4px;align-items:center">
+{# لوحة المساعدة الجانبية أُزيلت — كانت تظهر كنص خام مشوّه أسفل الجدول #}
+  {# قسم واحد: شريط أدوات مدمج (تصدير + لقطة) فوق الجدول بدل قسم مستقل فاضي #}
+  {% call hub.section(report_label, icon="chart-pie", meta=(report_items|length|string + " صف") if report_items else "", flush=True) %}
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;
+                padding:10px 16px;border-bottom:1px solid var(--hub-border-soft)">
       <a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ url_for('radius.finance_reports_export_csv', type=report_type) }}"><i class="fa-solid fa-file-csv"></i> CSV</a>
       <a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ url_for('radius.finance_reports_export_xlsx', type=report_type) }}"><i class="fa-solid fa-file-excel"></i> Excel</a>
       <a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ url_for('radius.finance_reports_export_pdf', type=report_type) }}"><i class="fa-solid fa-file-pdf"></i> PDF</a>
-      <span class="hub-spacer" style="flex:1"></span>
-      <form method="post" action="{{ url_for('radius.finance_reports_snapshot') }}" style="display:flex;gap:8px;align-items:center">
-        <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
-        <input type="hidden" name="report_type" value="{{ report_type }}">
-        <button class="hub-btn hub-btn--primary hub-btn--sm" type="submit"><i class="fa-solid fa-lock"></i> حفظ لقطة ثابتة</button>
-      </form>
+      <span style="flex:1"></span>
+      {# الزر يفتح نافذة عائمة لتحديد الفترة من/إلى وملاحظة اختيارية —
+         بدل الحفظ الأعمى للتقرير كاملًا (طلب المستخدم: «شو استفدت من اللقطة؟») #}
+      <button type="button" class="hub-btn hub-btn--primary hub-btn--sm" data-fcw-open="snapshot-create">
+        <i class="fa-solid fa-lock"></i> حفظ لقطة ثابتة
+      </button>
     </div>
-  {% endcall %}
-
-  {% call hub.section(report_label, icon="chart-pie", meta=(report_items|length|string + " صف") if report_items else "", flush=True) %}
     {% if report_items %}
+      {# تعريب رؤوس الأعمدة + تنسيق القيم المالية — بدل أسماء الحقول الخام #}
+      {% set col_labels = {
+        'period': 'الفترة', 'day': 'اليوم', 'count': 'العدد', 'total': 'الإجمالي',
+        'amount': 'المبلغ', 'minutes': 'الدقائق', 'still_open': 'سلف مفتوحة',
+        'username': 'المستخدم', 'subscriber_id': 'رقم المستفيد', 'balance': 'الرصيد',
+        'entry_type': 'النوع', 'direction': 'الاتجاه', 'status': 'الحالة',
+        'currency': 'العملة', 'created_at': 'التاريخ', 'notes': 'ملاحظات',
+        'bytes_in': 'تنزيل (بايت)', 'bytes_out': 'رفع (بايت)', 'sessions': 'الجلسات',
+        'gb': 'جيجابايت', 'plan': 'الباقة', 'plan_name': 'الباقة',
+        'earned_minutes': 'الدقائق المكتسبة', 'method': 'طريقة الدفع',
+        'outstanding': 'المتبقي', 'paid': 'المدفوع', 'discount_amount': 'الخصم',
+      } %}
+      {% set money_cols = ['total', 'amount', 'balance', 'outstanding', 'paid', 'discount_amount'] %}
       {% set columns = report_items[0].keys()|list %}
-      <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25" style="border:none;border-radius:0">
-        <table class="hub-table">
-          <thead><tr>{% for column in columns %}<th>{{ column }}</th>{% endfor %}</tr></thead>
+      {# uds-table-wrap فقط (بلا hub-table-wrap وبلا أنماط مضمّنة) #}
+      <div class="uds-table-wrap" data-uds-table data-uds-page-size="25" data-uds-export-title="{{ report_label }}">
+        <table class="uds-table">
+          <thead><tr>{% for column in columns %}<th{% if column in money_cols or column == 'count' %} class="num"{% endif %}>{{ col_labels.get(column, column) }}</th>{% endfor %}</tr></thead>
           <tbody>
             {% for row in report_items %}
-            <tr>{% for column in columns %}<td class="mono small">{{ row.get(column, '—') }}</td>{% endfor %}</tr>
+            <tr>
+              {% for column in columns %}
+                {% set v = row.get(column) %}
+                <td class="mono small{% if column in money_cols or column == 'count' %} num{% endif %}">
+                  {%- if v is none or v == '' -%}—
+                  {%- elif column in money_cols -%}{{ v|money }}
+                  {%- else -%}{{ v }}
+                  {%- endif -%}
+                </td>
+              {% endfor %}
+            </tr>
             {% endfor %}
           </tbody>
         </table>
+      </div>
+      {# ── حاشية إيضاح أعمدة التقرير المختار ──
+         سطر واحد لكل نوع (بمفاتيح كتالوج _REPORTS نفسها) يشرح ما يعنيه
+         كل عمود في هذا التقرير تحديدًا — بدل ترك القارئ يخمّن. #}
+      {% set _col_notes = {
+        'daily': '«الفترة» = اليوم (سنة-شهر-يوم) • «العدد» = عدد عمليات الدفع المرحَّلة في ذلك اليوم • «الإجمالي» = مجموع مبالغها بعد خصم قيود الإلغاء/العكس.',
+        'monthly': '«الفترة» = الشهر (سنة-شهر) • «العدد» = عدد عمليات الدفع المرحَّلة في ذلك الشهر • «الإجمالي» = مجموع مبالغها بعد خصم قيود الإلغاء/العكس.',
+        'yearly': '«الفترة» = السنة • «العدد» = عدد عمليات الدفع المرحَّلة في تلك السنة • «الإجمالي» = مجموع مبالغها بعد خصم قيود الإلغاء/العكس.',
+        'subscriber_payments': '«رقم المستفيد/المستخدم» = هوية الدافع • «العدد» = كم عملية دفع سجّلها • «الإجمالي» = مجموع ما دفعه • «آخر حركة» = تاريخ آخر دفعة له.',
+        'loans': 'كل صف حالة سلف: «الحالة» (مفتوحة/مسددة/معدومة…) • «العدد» = عدد السلف بتلك الحالة • «الإجمالي» = مجموع مبالغها • «الدقائق» = مجموع دقائق الاستخدام الممنوحة بها.',
+        'activations': '«المستخدم/رقم المستفيد» = صاحب التفعيل • «عدد التفعيلات» = كم مرة فعّل عبر دفعة مرحَّلة • «الدقائق المكتسبة» = صافي الدقائق بعد خصم الإلغاءات.',
+        'card_sales': '«رقم الحزمة» = حزمة البطاقات المصدر • «العدد» = عدد البطاقات المبيعة منها (دفعات مرحَّلة) • «الإجمالي» = مجموع قيمتها.',
+        'profit_loss': 'صف ملخّص واحد لكل الدفتر: «الإيرادات (دائن)» مجموع القيود الدائنة • «المصروفات (مدين)» مجموع المدينة • «الصافي» = الفرق بينهما • «عدد القيود» = كل قيود الدفتر • «المصدر» = جدول القيود.',
+        'distributor_debts': 'كل صف موزع نشِط: «رصيد الدين» = ما عليه للشركة • «الرصيد» = رصيده المتاح • «سقف الائتمان» = الحد المسموح به للدين.',
+      } %}
+      <div class="hub-text-soft" style="padding:10px 16px;border-top:1px solid var(--hub-border-soft);font-size:12px;line-height:1.9">
+        <i class="fa-solid fa-circle-info" style="color:var(--hub-brand-ink)"></i>
+        <strong>دليل قراءة أعمدة «{{ report_label }}»:</strong>
+        {{ _col_notes.get(report_type, 'كل عمود يحمل تسميته العربية في رأس الجدول.') }}
       </div>
     {% else %}
       {{ hub.empty("لا توجد بيانات لهذا التقرير بعد", sub="جرّب نوع تقرير آخر، أو تأكد من وجود قيود في السجل المالي.", icon="chart-simple") }}
@@ -202,25 +360,51 @@
 
   {% if snapshots %}
   {% call hub.section("آخر اللقطات الثابتة", icon="box-archive", meta=snapshots|length|string + " لقطة", flush=True) %}
-    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25" style="border:none;border-radius:0">
-      <table class="hub-table">
+    {# uds-table-wrap فقط (بلا hub-table-wrap وبلا أنماط مضمّنة) #}
+    <div class="uds-table-wrap" data-uds-table data-uds-page-size="25" data-uds-export-title="اللقطات الثابتة">
+      <table class="uds-table">
         <thead><tr>
           <th class="num">#</th>
           <th>النوع</th>
-          <th>المصدر</th>
+          <th>الفترة (من–إلى)
+            <span class="hub-hint" tabindex="0" data-hint="النطاق الذي اختير في نافذة حفظ اللقطة. اللقطات القديمة المحفوظة بلا نطاق تظهر «كامل التقرير»."><i class="fa-solid fa-info"></i></span>
+          </th>
           <th class="num">عدد الصفوف</th>
+          <th class="num">الإجمالي</th>
+          <th>ملاحظة</th>
           <th>أنشئت بواسطة</th>
           <th>الوقت</th>
+          <th data-uds-nosort data-uds-nocol>عرض</th>
         </tr></thead>
         <tbody>
           {% for snap in snapshots %}
+          {# الفترة والإجمالي مخزّنان داخل result_json منذ هذا التحديث —
+             اللقطات الأقدم بدونهما تعرض «—» / «كامل التقرير» بدل قيم مضلِّلة. #}
+          {% set _res = snap.result or {} %}
+          {% set _from = snap.date_from or _res.get('date_from') or '' %}
+          {% set _to = snap.date_to or _res.get('date_to') or '' %}
+          {% set _total = _res.get('total') %}
+          {% set _note = _res.get('note') or (snap.parameters or {}).get('note') or '' %}
           <tr>
             <td class="num mono small">{{ snap.id }}</td>
             <td>{{ reports.get(snap.report_type, snap.report_type) }}</td>
-            <td>{{ snap.source }}</td>
-            <td class="num mono small" style="font-variant-numeric:tabular-nums;direction:ltr">{{ (snap.result or {}).get('count', 0) }}</td>
+            <td class="mono small" style="white-space:nowrap;direction:ltr;text-align:end">
+              {%- if _from or _to -%}{{ _from or '…' }} ← {{ _to or '…' }}
+              {%- else -%}<span class="hub-text-mute">كامل التقرير</span>{%- endif -%}
+            </td>
+            <td class="num mono small" style="font-variant-numeric:tabular-nums;direction:ltr">{{ _res.get('count', 0) }}</td>
+            <td class="num mono small" style="font-variant-numeric:tabular-nums;direction:ltr">
+              {%- if _total is not none -%}<strong>{{ _total|money }}</strong>{%- else -%}—{%- endif -%}
+            </td>
+            <td class="small">{{ _note or '—' }}</td>
             <td class="small">{{ snap.created_by or "—" }}</td>
             <td class="num mono small" style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">{{ snap.created_at|dt_local }}</td>
+            <td>
+              <button type="button" class="hub-btn hub-btn--secondary hub-btn--sm" data-snap-view="{{ snap.id }}"
+                      data-snap-url="{{ url_for('radius.finance_reports_snapshot_json', snapshot_id=snap.id) }}">
+                <i class="fa-solid fa-eye"></i> عرض
+              </button>
+            </td>
           </tr>
           {% endfor %}
         </tbody>
@@ -228,6 +412,150 @@
     </div>
   {% endcall %}
   {% endif %}
-{% endcall %}
+
+{# ───────────── صندوق عائم: حفظ لقطة ثابتة بنطاق من/إلى ───────────── #}
+<div class="fcw-modal" data-fcw-modal="snapshot-create" hidden>
+  <div class="fcw-dialog" role="dialog" aria-modal="true" aria-labelledby="fcw-snapshot-title">
+    {# method="post" ضروري: حاقن الـ CSRF التلقائي يستهدف <form method="post"> فقط. #}
+    <form method="post" action="{{ url_for('radius.finance_reports_snapshot') }}">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+      <input type="hidden" name="report_type" value="{{ report_type }}">
+      <div class="fcw-head">
+        <h3 id="fcw-snapshot-title"><i class="fa-solid fa-lock"></i> حفظ لقطة ثابتة — {{ report_label }}</h3>
+        <button type="button" class="fcw-x" data-fcw-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="fcw-body">
+        <div class="fcw-range">
+          <label class="hub-field">
+            <span class="hub-field-label">من تاريخ</span>
+            <input class="hub-input" type="date" name="date_from">
+            <span class="hub-field-hint">اتركه فارغًا لبداية مفتوحة.</span>
+          </label>
+          <label class="hub-field">
+            <span class="hub-field-label">إلى تاريخ</span>
+            <input class="hub-input" type="date" name="date_to">
+            <span class="hub-field-hint">اتركه فارغًا لنهاية مفتوحة.</span>
+          </label>
+        </div>
+        <label class="hub-field">
+          <span class="hub-field-label">ملاحظة (اختياري)</span>
+          <input class="hub-input" type="text" name="note" maxlength="200" placeholder="مثال: جرد نهاية الشهر">
+          <span class="hub-field-hint">تظهر في جدول اللقطات لتعرف لماذا حُفظت هذه اللقطة.</span>
+        </label>
+        <div class="hub-text-soft" style="font-size:12px;line-height:1.8">
+          <i class="fa-solid fa-circle-info" style="color:var(--hub-brand-ink)"></i>
+          تُفلتر صفوف «{{ report_label }}» بالنطاق المختار ثم تُجمَّد كما هي — لا تتأثر بأي حركة لاحقة.
+          ترك الحقلين فارغين يحفظ التقرير كاملًا (السلوك السابق نفسه).
+        </div>
+      </div>
+      <div class="fcw-foot">
+        <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>إغلاق</button>
+        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-lock"></i> حفظ اللقطة</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# ───────────── صندوق عائم: عرض صفوف لقطة محفوظة ───────────── #}
+<div class="fcw-modal" data-fcw-modal="snapshot-view" hidden>
+  <div class="fcw-dialog fcw-dialog--wide" role="dialog" aria-modal="true" aria-labelledby="fcw-snapview-title">
+    <div class="fcw-head">
+      <h3 id="fcw-snapview-title"><i class="fa-solid fa-eye"></i> <span data-snapview-title>عرض اللقطة</span></h3>
+      <button type="button" class="fcw-x" data-fcw-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="fcw-body">
+      <div class="fcw-snap-meta" data-snapview-meta></div>
+      <div style="overflow:auto;border:1px solid var(--hub-border-soft);border-radius:12px" data-snapview-table-wrap>
+        <table class="fcw-snap-table"><thead data-snapview-head></thead><tbody data-snapview-body></tbody></table>
+      </div>
+    </div>
+    <div class="fcw-foot">
+      <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>إغلاق</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  "use strict";
+  // ── فتح/إغلاق الصناديق العائمة (نفس نمط fcw في finance_center_hub) ──
+  const root = document;
+  function open(key){ const m = root.querySelector(`[data-fcw-modal='${key}']`); if(m){ m.hidden=false; m.classList.add("is-open"); m.querySelector("input,select,textarea,button")?.focus(); } }
+  function closeAll(){ root.querySelectorAll("[data-fcw-modal]").forEach(m=>{ m.classList.remove("is-open"); m.hidden=true; }); }
+  root.querySelectorAll("[data-fcw-open]").forEach(b=> b.addEventListener("click", ()=> open(b.dataset.fcwOpen)));
+  root.querySelectorAll("[data-fcw-close]").forEach(b=> b.addEventListener("click", closeAll));
+  root.querySelectorAll("[data-fcw-modal]").forEach(m=> m.addEventListener("click", e=>{ if(e.target===m) closeAll(); }));
+  root.addEventListener("keydown", e=>{ if(e.key==="Escape") closeAll(); });
+
+  // ── نافذة عرض اللقطة: جلب الصفوف المجمّدة من نقطة JSON ورسمها كجدول صغير ──
+  // التسميات العربية تطابق خريطة أعمدة التقارير نفسها في أعلى الصفحة.
+  const COL_LABELS = {
+    period:'الفترة', day:'اليوم', count:'العدد', total:'الإجمالي', amount:'المبلغ',
+    minutes:'الدقائق', still_open:'سلف مفتوحة', username:'المستخدم',
+    subscriber_id:'رقم المستفيد', balance:'الرصيد', status:'الحالة',
+    last_entry_at:'آخر حركة', duration_minutes:'الدقائق',
+    activation_count:'عدد التفعيلات', earned_minutes:'الدقائق المكتسبة',
+    batch_id:'رقم الحزمة', credits:'الإيرادات (دائن)', debits:'المصروفات (مدين)',
+    net:'الصافي', entries:'عدد القيود', source:'المصدر',
+    distributor_id:'رقم الموزع', name:'اسم الموزع', display_name:'الاسم المعروض',
+    debt_balance:'رصيد الدين', credit_limit:'سقف الائتمان',
+  };
+  const MONEY_COLS = new Set(['total','amount','balance','credits','debits','net','debt_balance','credit_limit']);
+  const fmtMoney = (v) => Number(v || 0).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+
+  root.querySelectorAll("[data-snap-view]").forEach(btn => btn.addEventListener("click", async () => {
+    const head = root.querySelector("[data-snapview-head]");
+    const body = root.querySelector("[data-snapview-body]");
+    const meta = root.querySelector("[data-snapview-meta]");
+    const title = root.querySelector("[data-snapview-title]");
+    title.textContent = "عرض اللقطة #" + btn.dataset.snapView;
+    meta.innerHTML = "جارٍ التحميل…"; head.innerHTML = ""; body.innerHTML = "";
+    open("snapshot-view");
+    let data;
+    try {
+      const res = await fetch(btn.dataset.snapUrl, {headers: {"Accept": "application/json"}});
+      data = await res.json();
+      if (!data.ok) throw new Error(data.error || "تعذّر التحميل");
+    } catch (err) {
+      meta.innerHTML = "تعذّر تحميل اللقطة: " + (err.message || err);
+      return;
+    }
+    title.textContent = `لقطة #${data.id} — ${data.report_label || data.report_type}`;
+    const range = (data.date_from || data.date_to)
+      ? `${data.date_from || "…"} ← ${data.date_to || "…"}` : "كامل التقرير";
+    const bits = [
+      `<span>الفترة: <b dir="ltr">${range}</b></span>`,
+      `<span>عدد الصفوف: <b>${data.count}</b></span>`,
+    ];
+    if (data.total !== null && data.total !== undefined) bits.push(`<span>الإجمالي: <b dir="ltr">${fmtMoney(data.total)}</b></span>`);
+    if (data.note) bits.push(`<span>ملاحظة: <b></b></span>`);
+    meta.innerHTML = bits.join("");
+    if (data.note) meta.querySelector("span:last-child b").textContent = data.note; // إدراج نصّي آمن
+    const items = data.items || [];
+    if (!items.length) { body.innerHTML = `<tr><td style="padding:14px;text-align:center;color:#94a3b8">لا صفوف داخل هذه اللقطة.</td></tr>`; return; }
+    // الأعمدة = اتحاد مفاتيح كل الصفوف (نفس منطق جدول التقرير الحي)
+    const cols = [];
+    items.forEach(row => Object.keys(row).forEach(k => { if (!cols.includes(k)) cols.push(k); }));
+    const tr = document.createElement("tr");
+    cols.forEach(c => { const th = document.createElement("th"); th.textContent = COL_LABELS[c] || c; tr.appendChild(th); });
+    head.appendChild(tr);
+    items.forEach(row => {
+      const r = document.createElement("tr");
+      cols.forEach(c => {
+        const td = document.createElement("td");
+        const v = row[c];
+        td.textContent = (v === null || v === undefined || v === "") ? "—"
+          : (MONEY_COLS.has(c) ? fmtMoney(v) : String(v));
+        if (MONEY_COLS.has(c) || c === "count") td.style.direction = "ltr";
+        r.appendChild(td);
+      });
+      body.appendChild(r);
+    });
+  }));
+})();
+</script>
 {% endif %}
+
+{# الجداول الموحدة: فرز + اختيار أعمدة + ترقيم صفحات وعدد صفوف #}
+<script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
 {% endblock %}

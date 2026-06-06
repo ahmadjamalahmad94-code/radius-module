@@ -1,0 +1,548 @@
+{# ══════════════════════════════════════════════════════════════════════
+   دليل «مجموعات المشتركين» — من سلسلة «كيف تستخدمني».
+
+   مستنسخ حرفيًا من بنية docs_add_subscriber.html (النموذج الذهبي):
+     • hero + شريط أدوات (كل الأدلة / حفظ كـ PDF).
+     • فهرس جانبي لاصق على يسار الصفحة (order:2) + scrollspy خفيف.
+     • خطوات مرقّمة بشارات بنفسجية متدرّجة ورسوم محاكاة HTML/CSS.
+     • تلميحات 💡 نصيحة / ⚠️ انتبه.
+
+   المحتوى مطابق للصفحات الفعلية:
+     • subscriber_groups_list.html (مسار radius.subscriber_groups_list)
+       — أعمدة الجدول وأزرار «الأعضاء / المتصلون / السرعة / استعادة
+       الكوتة / فصل المتصلين / تعديل / حذف» منسوخة حرفيًا.
+     • subscriber_groups_form.html — أقسام «الهويّة» و«الخدمات المُطبَّقة
+       على أعضاء المجموعة» وأسماء الحقول كما هي.
+     • إسناد العضوية يتم من حقل «المجموعة» في نموذج المشترك (users_form).
+   عند تغيير الصفحات حدّث الدليل معها.
+   ══════════════════════════════════════════════════════════════════════ #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}دليل: مجموعات المشتركين — كيف تستخدمني{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<style>
+  /* ── التخطيط: فهرس جانبي لاصق + عمود المحتوى ── */
+  .dg-layout{ display:grid; grid-template-columns:minmax(0,1fr) 230px; gap:20px; align-items:start; }
+  .dg-toc{ order:2; }
+  .dg-main{ order:1; }
+  @media (max-width:980px){ .dg-layout{ grid-template-columns:1fr; } .dg-toc{ order:1; } .dg-main{ order:2; } }
+
+  .dg-toc{
+    position:sticky; top:84px;
+    background:#fff; border:1px solid #e8edf3; border-radius:14px;
+    padding:14px 13px; display:grid; gap:3px;
+  }
+  @media (max-width:980px){ .dg-toc{ position:static; } }
+  .dg-toc-title{
+    display:flex; align-items:center; gap:8px; font-size:12px; font-weight:900;
+    color:#7c7a99; margin-bottom:7px; padding-inline:6px;
+  }
+  .dg-toc a{
+    display:flex; align-items:center; gap:9px;
+    padding:8px 10px; border-radius:9px; text-decoration:none;
+    font-size:12.5px; font-weight:700; color:#475569;
+    transition:background .14s, color .14s;
+  }
+  .dg-toc a .n{
+    width:21px; height:21px; border-radius:50%; flex:none;
+    display:grid; place-items:center; font-size:10.5px; font-weight:900;
+    background:#f1f5f9; color:#94a3b8;
+  }
+  .dg-toc a:hover{ background:#f5f3ff; color:#5b21b6; }
+  .dg-toc a.is-active{ background:#ede9fe; color:#5b21b6; }
+  .dg-toc a.is-active .n{ background:linear-gradient(135deg,#7c3aed,#5b21b6); color:#fff; }
+
+  /* ── عمود الخطوات ── */
+  .dg-main{ min-width:0; display:grid; gap:18px; }
+
+  .dg-lead{
+    display:flex; gap:13px; align-items:flex-start;
+    background:linear-gradient(135deg,#f5f3ff,#fdfcff);
+    border:1px solid #e9e5fc; border-radius:14px; padding:15px 17px;
+  }
+  .dg-lead .ic{ width:40px;height:40px;border-radius:12px;flex:none;display:grid;place-items:center;
+    font-size:17px;background:#ede9fe;color:#6d28d9; }
+  .dg-lead h3{ margin:0 0 4px; font-size:13.5px; font-weight:800; color:#241e4e; }
+  .dg-lead p{ margin:0; font-size:12.5px; line-height:1.9; color:#5b5a78; }
+
+  .dg-step{ display:grid; grid-template-columns:auto 1fr; gap:15px; align-items:start; scroll-margin-top:90px; }
+  @media (max-width:560px){ .dg-step{ grid-template-columns:1fr; } }
+  .dg-badge{
+    width:42px; height:42px; border-radius:50%; flex:none;
+    display:grid; place-items:center; font-size:17px; font-weight:900; color:#fff;
+    background:linear-gradient(135deg,#7c3aed,#5b21b6);
+    box-shadow:0 8px 18px rgba(124,58,237,.3);
+  }
+  .dg-card{
+    min-width:0; background:#fff; border:1px solid #e8edf3; border-radius:15px;
+    padding:16px 18px;
+  }
+  .dg-card h2{
+    margin:0 0 8px; font-size:15.5px; font-weight:800; color:#0f172a;
+    display:flex; align-items:center; gap:9px; flex-wrap:wrap;
+  }
+  .dg-card h2 i{ color:#7c3aed; }
+  .dg-card p{ margin:0 0 7px; font-size:13px; line-height:1.95; color:#475569; }
+  .dg-card p:last-child{ margin-bottom:0; }
+  .dg-card ul{ margin:4px 0 8px; padding-inline-start:22px; font-size:13px; line-height:2; color:#475569; }
+  .dg-card strong{ color:#241e4e; }
+  .dg-kbd{
+    font-family:ui-monospace,Consolas,monospace; font-size:11.5px;
+    background:#f1f5f9; border:1px solid #e2e8f0; border-radius:5px;
+    padding:1px 7px; color:#5b21b6;
+  }
+
+  .dg-tip, .dg-warn{
+    display:flex; gap:11px; align-items:flex-start;
+    border-radius:12px; padding:11px 14px; margin-top:11px;
+    font-size:12.5px; line-height:1.9;
+  }
+  .dg-tip{ background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; }
+  .dg-warn{ background:#fffbeb; border:1px solid #fde68a; color:#92400e; }
+  .dg-tip .ic, .dg-warn .ic{ flex:none; font-size:15px; line-height:1.6; }
+  .dg-tip b, .dg-warn b{ font-weight:900; }
+
+  /* ════ الرسوم: محاكاة مصغّرة للصفحات الحقيقية ════ */
+  .dg-mock{
+    border:1px solid #e2e8f0; border-radius:14px; overflow:hidden;
+    background:#fff; box-shadow:0 8px 20px rgba(15,23,42,.07);
+    margin-top:13px; max-width:560px;
+  }
+  .dg-mock-bar{
+    display:flex; align-items:center; gap:7px; padding:8px 12px;
+    background:#f1f5f9; border-bottom:1px solid #e2e8f0;
+  }
+  .dg-mock-bar .dots{ display:flex; gap:5px; }
+  .dg-mock-bar .dots i{ width:9px; height:9px; border-radius:50%; }
+  .dg-mock-bar .dots i:nth-child(1){ background:#f87171; }
+  .dg-mock-bar .dots i:nth-child(2){ background:#fbbf24; }
+  .dg-mock-bar .dots i:nth-child(3){ background:#34d399; }
+  .dg-mock-bar .crumb{
+    flex:1; background:#fff; border:1px solid #e2e8f0; border-radius:7px;
+    padding:4px 10px; font-size:10.5px; font-weight:700; color:#64748b;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .dg-mock-body{ padding:14px; display:grid; gap:11px; }
+  .dg-mock-sechead{
+    display:flex; align-items:center; gap:9px; font-size:12px; font-weight:800; color:#241e4e;
+    padding-bottom:9px; border-bottom:1px dashed #eef2f7;
+  }
+  .dg-mock-sechead .ic{
+    width:26px; height:26px; border-radius:8px; display:grid; place-items:center;
+    font-size:11px; background:#ede9fe; color:#6d28d9; flex:none;
+  }
+  .dg-mock-grid2{ display:grid; grid-template-columns:1fr 1fr; gap:11px; }
+  @media (max-width:480px){ .dg-mock-grid2{ grid-template-columns:1fr; } }
+  .dg-mf{ display:grid; gap:5px; min-width:0; }
+  .dg-mf label{ font-size:10.5px; font-weight:800; color:#475569; }
+  .dg-mf label .req{ color:#dc2626; }
+  .dg-mf-input{
+    border:1.5px solid #e2e8f0; border-radius:8px; padding:8px 10px;
+    font-size:11.5px; color:#0f172a; background:#fff;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .dg-mf-input.hl{ border-color:#c4b5fd; background:#faf5ff; }
+  .dg-mf-input.ph{ color:#a3aec2; }
+  .dg-mf-select{ position:relative; }
+  .dg-mf-select::after{
+    content:"\f078"; font-family:"Font Awesome 6 Free"; font-weight:900;
+    position:absolute; inset-inline-end:10px; top:50%; transform:translateY(-50%);
+    font-size:9px; color:#94a3b8; pointer-events:none;
+  }
+  .dg-mf-help{ font-size:9.5px; color:#94a3b8; line-height:1.6; }
+
+  /* أزرار محاكاة */
+  .dg-fbtn{
+    display:inline-flex; align-items:center; gap:6px; border-radius:8px;
+    padding:7px 12px; font-size:11px; font-weight:800; white-space:nowrap;
+  }
+  .dg-fbtn.primary{ background:linear-gradient(135deg,#7c3aed,#5b21b6); color:#fff;
+    box-shadow:0 5px 12px rgba(124,58,237,.25); }
+  .dg-fbtn.ghost{ background:#fff; border:1.5px solid #e2e8f0; color:#475569; }
+  .dg-fbtn.danger{ background:#fee2e2; color:#b91c1c; }
+  .dg-mock-actions{ display:flex; justify-content:flex-end; gap:9px; padding-top:4px; }
+
+  /* محاكاة جدول المجموعات */
+  .dg-tbl{ border:1px solid #e2e8f0; border-radius:11px; overflow:hidden; }
+  .dg-tbl .hd, .dg-tbl .rw{
+    display:grid; grid-template-columns:1.3fr .7fr .7fr 1fr 1.1fr; gap:7px;
+    padding:8px 11px; font-size:10px; align-items:center; text-align:center;
+  }
+  .dg-tbl .hd{ background:#f5f3ff; color:#5b21b6; font-weight:900; }
+  .dg-tbl .rw{ background:#fff; color:#334155; font-weight:700; border-top:1px solid #f1f5f9; }
+  .dg-pill{
+    display:inline-flex; align-items:center; gap:4px; border-radius:999px;
+    padding:2px 8px; font-size:9px; font-weight:900;
+  }
+  .dg-pill.g{ background:#dcfce7; color:#15803d; }
+  .dg-pill.a{ background:#fef3c7; color:#b45309; }
+  .dg-pill.r{ background:#fee2e2; color:#b91c1c; }
+  .dg-pill.b{ background:#dbeafe; color:#1d4ed8; }
+  .dg-pill.v{ background:#ede9fe; color:#5b21b6; }
+
+  /* محاكاة شريط أزرار صف المجموعة */
+  .dg-rowacts{ display:flex; gap:5px; flex-wrap:wrap; justify-content:center; margin-top:12px;
+    max-width:560px; border:1px solid #e2e8f0; border-radius:12px; padding:11px;
+    background:#fff; box-shadow:0 6px 16px rgba(15,23,42,.06); }
+  .dg-rowacts .b{
+    display:inline-flex; align-items:center; gap:5px; border-radius:8px;
+    padding:6px 10px; font-size:10px; font-weight:800;
+    background:#f1f5f9; color:#475569;
+  }
+  .dg-rowacts .b.danger{ background:#fee2e2; color:#b91c1c; }
+
+  .dg-cap{ font-size:11px; color:#94a3b8; margin-top:8px; line-height:1.7; }
+  .dg-cap i{ color:#c4b5fd; }
+
+  /* ════ الطباعة: «حفظ كـ PDF» = window.print() ════ */
+  @media print{
+    .hb-side, .hb-side-overlay, .hb-topbar, header.hb-top,
+    .dg-toc, .dg-noprint, .hub-hero-actions{ display:none !important; }
+    .dg-layout{ grid-template-columns:1fr; }
+    .dg-card, .dg-mock, .dg-rowacts{ box-shadow:none !important; break-inside:avoid; }
+    .dg-step{ break-inside:avoid; }
+    body{ background:#fff !important; }
+    .dg-badge, .dg-fbtn.primary, .dg-tip, .dg-warn, .dg-pill, .dg-tbl .hd{
+      -webkit-print-color-adjust:exact; print-color-adjust:exact;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{{ hub.hero(
+  "دليل: مجموعات المشتركين",
+  subtitle="نظّم مشتركيك أحياءً وأبراجًا وفئات — وأدِر المجموعة كاملة بضغطة واحدة. 6 خطوات بسيطة.",
+  icon="people-group",
+  actions_html='
+    <button type="button" class="hub-btn hub-btn--secondary" onclick="window.print()">
+      <i class="fa-solid fa-file-pdf"></i> حفظ كـ PDF
+    </button>
+    <a class="hub-btn hub-btn--secondary" href="/admin/radius/docs/section/subscribers">
+      <i class="fa-solid fa-arrow-right"></i> كل الأدلة
+    </a>
+  '
+) }}
+
+<div class="dg-layout">
+
+  {# ───── الفهرس الجانبي اللاصق ───── #}
+  <nav class="dg-toc dg-noprint" aria-label="فهرس الدليل">
+    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> فهرس الخطوات</div>
+    <a href="#dg-s1" data-dg-toc><span class="n">1</span> شو فايدة المجموعات؟</a>
+    <a href="#dg-s2" data-dg-toc><span class="n">2</span> أنشئ مجموعة جديدة</a>
+    <a href="#dg-s3" data-dg-toc><span class="n">3</span> خدمات المجموعة</a>
+    <a href="#dg-s4" data-dg-toc><span class="n">4</span> أضف وأزل الأعضاء</a>
+    <a href="#dg-s5" data-dg-toc><span class="n">5</span> اقرأ جدول المجموعات</a>
+    <a href="#dg-s6" data-dg-toc><span class="n">6</span> إجراءات المجموعة</a>
+  </nav>
+
+  {# ───── عمود المحتوى ───── #}
+  <div class="dg-main">
+
+    <div class="dg-lead">
+      <span class="ic"><i class="fa-solid fa-lightbulb"></i></span>
+      <div>
+        <h3>قبل ما نبدأ — شو يعني «مجموعة مشتركين»؟</h3>
+        <p>
+          المجموعة سلّة تجمع فيها مشتركين بينهم شيء مشترك: سكان حي واحد، زبائن برج، فئة
+          VIP... وبدل ما تكرر العملية لكل واحد، تنفّذها على المجموعة كلها مرة واحدة:
+          استعادة كوتة، فصل اتصال، جدولة سرعة، فلترة وعرض. خلّينا نمشي خطوة خطوة.
+        </p>
+      </div>
+    </div>
+
+    {# ════ الخطوة 1 ════ #}
+    <section class="dg-step" id="dg-s1">
+      <div class="dg-badge">1</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-door-open"></i> افتح الصفحة وافهم فكرتها</h2>
+        <p>
+          من القائمة الجانبية افتح <strong>«المشتركون»</strong> ثم
+          <strong>«مجموعات المشتركين»</strong>. أعلى الصفحة:
+        </p>
+        <ul>
+          <li>زر <strong>«إضافة مجموعة»</strong> البنفسجي — لإنشاء مجموعة جديدة.</li>
+          <li>أيقونة <strong>المكبّرة 🔍</strong> — اضغطها يتمدد حقل بحث يفلتر المجموعات
+              فوريًا بالاسم أو الوصف وأنت تكتب.</li>
+          <li>أربع بطاقات أرقام: <strong>عدد المجموعات</strong>، <strong>إجمالي الأعضاء</strong>،
+              <strong>متصلون الآن</strong>، <strong>إجمالي الاستهلاك</strong> (تحميل + رفع لكل المجموعات).</li>
+        </ul>
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة:</b> فكّر بالمجموعات كتقسيم جغرافي أو تجاري: «برج السلام»، «حي الجامعة»،
+          «زبائن VIP» — أي تقسيم رح تحتاج تتعامل معه ككتلة واحدة لاحقًا.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 2 ════ #}
+    <section class="dg-step" id="dg-s2">
+      <div class="dg-badge">2</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-plus"></i> أنشئ مجموعة — اسم ووصف وخلصت</h2>
+        <p>
+          اضغط <strong>«إضافة مجموعة»</strong>. أول قسم في النموذج اسمه
+          <strong>«الهويّة»</strong> وفيه حقلان فقط:
+        </p>
+        <ul>
+          <li><strong>اسم المجموعة</strong> (إجباري — بنجمة حمراء): يجب أن يكون فريدًا،
+              مثل <span class="dg-kbd">VIP — Office Hours</span> أو «برج السلام».</li>
+          <li><strong>الوصف:</strong> ملاحظة اختيارية تذكّرك لماذا أنشأتها.</li>
+        </ul>
+        <p>وفي آخر الصفحة زر <strong>«إنشاء المجموعة»</strong> البنفسجي وبجانبه «إلغاء».</p>
+
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">إضافة مجموعة مشتركين › الهويّة</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-mock-sechead"><span class="ic"><i class="fa-solid fa-id-card"></i></span> الهويّة</div>
+            <div class="dg-mock-grid2">
+              <div class="dg-mf">
+                <label>اسم المجموعة <span class="req">*</span></label>
+                <div class="dg-mf-input hl">برج السلام</div>
+                <div class="dg-mf-help">يجب أن يكون فريدًا.</div>
+              </div>
+              <div class="dg-mf">
+                <label>الوصف</label>
+                <div class="dg-mf-input ph">ملاحظة اختيارية عن المجموعة</div>
+              </div>
+            </div>
+            <div class="dg-mock-actions">
+              <span class="dg-fbtn ghost">إلغاء</span>
+              <span class="dg-fbtn primary"><i class="fa-solid fa-floppy-disk"></i> إنشاء المجموعة</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 3 ════ #}
+    <section class="dg-step" id="dg-s3">
+      <div class="dg-badge">3</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-layer-group"></i> اضبط الخدمات المُطبَّقة على الأعضاء</h2>
+        <p>
+          القسم الثاني في النموذج: <strong>«الخدمات المُطبَّقة على أعضاء المجموعة»</strong> —
+          هنا قوة المجموعات الحقيقية. كل ما تختاره هنا يسري على كل عضو تلقائيًا:
+        </p>
+        <ul>
+          <li><strong>جدولة سرعة (Bandwidth schedule):</strong> جدول سرعات (مثلًا: تخفيض ليلي)
+              يُطبَّق على كل أعضاء المجموعة دفعة واحدة.</li>
+          <li><strong>الباقة الافتراضية:</strong> عند إضافة عضو جديد للمجموعة تُسنَد له
+              هذه الباقة تلقائيًا.</li>
+          <li><strong>التجديد التلقائي:</strong> مفتاح يجعل التجديد التلقائي مفعَّلًا
+              افتراضيًا لأعضاء المجموعة.</li>
+          <li><strong>الأيام والأوقات المسموحة:</strong> منتقي جدول دخول — حدد متى يُسمح
+              لأعضاء المجموعة بالاتصال (مفيد للمكاتب وساعات الدوام).</li>
+        </ul>
+        <p>
+          وعند <strong>تعديل</strong> مجموعة قائمة تظهر أيضًا لوحة <strong>جداول السرعة</strong>
+          الخاصة بها وجدول <strong>«الأعضاء»</strong> (اسم المستخدم، الاسم، الجوّال، الحالة) —
+          اضغط على أي اسم لفتح ملفه.
+        </p>
+
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">تعديل المجموعة › الخدمات</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-mock-sechead"><span class="ic"><i class="fa-solid fa-layer-group"></i></span> الخدمات المُطبَّقة على أعضاء المجموعة</div>
+            <div class="dg-mock-grid2">
+              <div class="dg-mf">
+                <label>جدولة سرعة (Bandwidth schedule)</label>
+                <div class="dg-mf-select"><div class="dg-mf-input">— بدون —</div></div>
+                <div class="dg-mf-help">جدول السرعات يطبَّق على كل عضو في المجموعة.</div>
+              </div>
+              <div class="dg-mf">
+                <label>الباقة الافتراضية</label>
+                <div class="dg-mf-select"><div class="dg-mf-input hl">باقة 10 ميجا — شهري</div></div>
+                <div class="dg-mf-help">تُسنَد تلقائيًا لكل عضو جديد.</div>
+              </div>
+            </div>
+            <div class="dg-mock-grid2">
+              <div class="dg-mf">
+                <label>التجديد التلقائي</label>
+                <div style="display:flex;align-items:center;gap:8px;padding-top:3px">
+                  <span style="position:relative;width:36px;height:20px;background:#7c3aed;border-radius:99px;flex:none">
+                    <span style="position:absolute;top:2.5px;inset-inline-end:3px;width:15px;height:15px;background:#fff;border-radius:50%;box-shadow:0 1px 2px rgba(0,0,0,.2)"></span></span>
+                  <span style="font-size:10px;font-weight:800;color:#5b21b6">مفعَّل افتراضيًا للأعضاء</span>
+                </div>
+              </div>
+              <div class="dg-mf">
+                <label>الأيام والأوقات المسموحة</label>
+                <div class="dg-mf-input ph">كل الأيام — 24 ساعة</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="dg-warn">
+          <span class="ic">⚠️</span>
+          <span><b>انتبه:</b> «جدولة السرعة» تسري على <b>كل</b> أعضاء المجموعة — لو حطيت
+          تخفيضًا ليليًا رح يتأثر الجميع. تأكد أن كل أعضاء المجموعة فعلًا يستحقون نفس السياسة.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 4 ════ #}
+    <section class="dg-step" id="dg-s4">
+      <div class="dg-badge">4</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-user-plus"></i> أضف وأزل الأعضاء — من ملف المشترك</h2>
+        <p>
+          العضوية تُسنَد من <strong>نموذج المشترك نفسه</strong>، لا من صفحة المجموعات:
+        </p>
+        <ul>
+          <li><strong>للإضافة:</strong> افتح المشترك (تعديل أو إضافة جديد)، وفي حقل
+              <strong>«المجموعة»</strong> اختر اسم المجموعة ثم احفظ — صار عضوًا فيها.</li>
+          <li><strong>للإزالة:</strong> نفس الحقل — رجّعه إلى <strong>«— بدون —»</strong>
+              أو بدّله لمجموعة أخرى ثم احفظ.</li>
+          <li><strong>لرؤية الأعضاء:</strong> من جدول المجموعات اضغط زر
+              <strong>«الأعضاء»</strong> في صف المجموعة — يفتح لك قائمة المشتركين 360
+              مفلترة على هذه المجموعة، أو افتح «تعديل» المجموعة لقسم الأعضاء.</li>
+        </ul>
+
+        <div class="dg-mock" aria-hidden="true" style="max-width:430px">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">تعديل المشترك › الباقة والإدارة</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-mf">
+              <label>المجموعة</label>
+              <div class="dg-mf-select"><div class="dg-mf-input hl">برج السلام</div></div>
+              <div class="dg-mf-help">اختر المجموعة من القائمة ثم احفظ المشترك — صار عضوًا فيها.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة:</b> المشترك ينتمي لمجموعة واحدة في كل لحظة — لو نقل سكنه من برج
+          لآخر، مجرد تبديل قيمة «المجموعة» في ملفه يكفي.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 5 ════ #}
+    <section class="dg-step" id="dg-s5">
+      <div class="dg-badge">5</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-table-list"></i> اقرأ جدول المجموعات صح</h2>
+        <p>كل صف في الجدول لوحة معلومات مصغّرة عن المجموعة — الأعمدة بالترتيب:</p>
+        <ul>
+          <li><strong>المجموعة:</strong> الاسم (اضغطه لفتح التعديل) وتحته الوصف.</li>
+          <li><strong>الأعضاء:</strong> كم مشتركًا فيها.</li>
+          <li><strong>المتصلون:</strong> كم جلسة نشطة الآن من أعضائها.</li>
+          <li><strong>التحميل / الرفع:</strong> الاستهلاك التراكمي لكل الأعضاء.</li>
+          <li><strong>الحالة:</strong> حبوب ملوّنة — <span class="dg-pill g">نشط 12</span>
+              <span class="dg-pill r">معطل 2</span> <span class="dg-pill a">منتهي 3</span>
+              تلخّص أوضاع الأعضاء.</li>
+          <li><strong>الخدمات:</strong> حبوب تبيّن ما هو مفعَّل على المجموعة —
+              <span class="dg-pill a">جدولة سرعة</span> <span class="dg-pill v">باقة افتراضية</span>
+              <span class="dg-pill g">تجديد تلقائي</span>، أو «—» إن لم يُضبط شيء.</li>
+          <li><strong>السرعة:</strong> <span class="dg-pill b">مؤقتة N</span> /
+              <span class="dg-pill a">خاصة N</span> لعدد الأعضاء بسرعات غير سرعة العرض،
+              أو «العرض» إن كان الجميع على السرعة الافتراضية.</li>
+          <li><strong>آخر نشاط:</strong> تاريخ آخر حركة لأي عضو.</li>
+          <li><strong>إجراءات المجموعة:</strong> أزرار التنفيذ — نشرحها في الخطوة الأخيرة.</li>
+        </ul>
+
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">مجموعات المشتركين › الجدول</span></div>
+          <div class="dg-mock-body" style="padding:0">
+            <div class="dg-tbl" style="border:0;border-radius:0">
+              <div class="hd"><span>المجموعة</span><span>الأعضاء</span><span>المتصلون</span><span>الحالة</span><span>الخدمات</span></div>
+              <div class="rw">
+                <span style="text-align:start"><b style="color:#5b21b6">برج السلام</b><br><small style="color:#94a3b8">سكان البرج الشمالي</small></span>
+                <span><b>17</b></span><span><b>5</b></span>
+                <span><span class="dg-pill g">نشط 14</span> <span class="dg-pill a">منتهي 3</span></span>
+                <span><span class="dg-pill v">باقة افتراضية</span></span>
+              </div>
+              <div class="rw">
+                <span style="text-align:start"><b style="color:#5b21b6">VIP</b><br><small style="color:#94a3b8">زبائن مميزون</small></span>
+                <span><b>6</b></span><span><b>4</b></span>
+                <span><span class="dg-pill g">نشط 6</span></span>
+                <span><span class="dg-pill a">جدولة سرعة</span> <span class="dg-pill g">تجديد تلقائي</span></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 6 ════ #}
+    <section class="dg-step" id="dg-s6">
+      <div class="dg-badge">6</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-bolt"></i> إجراءات المجموعة — كل زر شو بيعمل</h2>
+        <p>آخر عمود في كل صف سبعة أزرار، من اليمين لليسار:</p>
+        <ul>
+          <li><strong>«الأعضاء» 👥:</strong> يفتح قائمة المشتركين 360 مفلترة على أعضاء
+              هذه المجموعة — ومنها تنفّذ عليهم كل إجراءات القائمة الجماعية.</li>
+          <li><strong>«المتصلون» 📶:</strong> يفتح صفحة «المتصلون الآن» مفلترة على
+              جلسات أعضاء المجموعة فقط.</li>
+          <li><strong>«السرعة» 🎚:</strong> يفتح صفحة تعديل المجموعة حيث تدير جدولة
+              السرعة والخدمات.</li>
+          <li><strong>زر الاستعادة ↺:</strong> <strong>استعادة الكوتة اليومية</strong> لكل
+              أعضاء المجموعة دفعة واحدة (بتأكيد قبل التنفيذ).</li>
+          <li><strong>زر المقص ✂ (أحمر):</strong> <strong>فصل كل الجلسات المتصلة</strong>
+              لأعضاء المجموعة فورًا (بتأكيد).</li>
+          <li><strong>زر القلم ✏:</strong> تعديل بيانات وخدمات المجموعة.</li>
+          <li><strong>زر السلة 🗑 (أحمر):</strong> <strong>حذف المجموعة</strong> — رسالة
+              التأكيد تخبرك بعدد المشتركين الذين سيُفصلون عنها.</li>
+        </ul>
+
+        <div class="dg-rowacts" aria-hidden="true">
+          <span class="b"><i class="fa-solid fa-users"></i> الأعضاء</span>
+          <span class="b"><i class="fa-solid fa-wifi"></i> المتصلون</span>
+          <span class="b"><i class="fa-solid fa-gauge-high"></i> السرعة</span>
+          <span class="b"><i class="fa-solid fa-rotate-left"></i></span>
+          <span class="b danger"><i class="fa-solid fa-scissors"></i></span>
+          <span class="b"><i class="fa-solid fa-pen"></i></span>
+          <span class="b danger"><i class="fa-solid fa-trash"></i></span>
+        </div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> شريط «إجراءات المجموعة» كما يظهر في كل صف.</div>
+
+        <div class="dg-warn">
+          <span class="ic">⚠️</span>
+          <span><b>انتبه:</b> حذف المجموعة <b>لا يحذف المشتركين</b> — يفصلهم عنها فقط
+          ويبقون بحساباتهم كما هي. لكن «فصل المتصلين» يقطع إنترنت كل الأعضاء المتصلين
+          في نفس اللحظة — استخدمه للصيانة أو الحالات الطارئة.</span>
+        </div>
+
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>وبعدين؟</b> جرّب: أنشئ مجموعة «تجربة»، أسند لها مشتركَين من ملفيهما،
+          ثم اضغط «الأعضاء» وشوف كيف تتفلتر القائمة. ولمراقبة جلساتهم الحيّة اقرأ دليل
+          <b>«المتصلون الآن»</b>.</span>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+{# ── scrollspy خفيف: يبرز بند الفهرس المقابل للخطوة الظاهرة ── #}
+<script>
+(function(){
+  'use strict';
+  var links = Array.prototype.slice.call(document.querySelectorAll('[data-dg-toc]'));
+  if (!links.length || !('IntersectionObserver' in window)) return;
+  var map = {};
+  links.forEach(function(a){ map[a.getAttribute('href').slice(1)] = a; });
+  var obs = new IntersectionObserver(function(entries){
+    entries.forEach(function(en){
+      if (!en.isIntersecting) return;
+      links.forEach(function(a){ a.classList.remove('is-active'); });
+      var a = map[en.target.id];
+      if (a) a.classList.add('is-active');
+    });
+  }, { rootMargin: '-35% 0px -55% 0px' });
+  Object.keys(map).forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) obs.observe(el);
+  });
+})();
+</script>
+
+{% endblock %}

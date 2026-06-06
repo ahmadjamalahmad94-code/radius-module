@@ -45,6 +45,11 @@ class CardsService:
         """R10.4: عدّ الكروت — للـ pagination في cards_list."""
         return self._store.count_cards(**kw)
 
+    def cards_status_counts(self, **kw) -> dict:
+        """عدّادات الحالات (الإجمالي/متاح/مستخدم/منتهي/محظور) لشريط KPI
+        في صفحة «كل الكروت» — استعلام تجميعي واحد ضمن نطاق البحث/الدفعة."""
+        return self._store.cards_status_counts(**kw)
+
     def stats(self) -> dict:
         return self._store.stats()
 

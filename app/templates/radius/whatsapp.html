@@ -1,45 +1,149 @@
+{# ═══════════════════════════════════════════════════════════════════════
+   رسائل واتساب للمشتركين — إعادة بناء كاملة على النظام الموحّد (2026-06-04)
+
+   بيانات الراوت (radius.whatsapp — بدون أي تغيير في السلوك):
+     status (ok / status / enabled / connected / onboarding / phone /
+             business / usage) / events / toggles / panel_portal_url
+
+   البنية:
+     1. صدفة هيرو موحّدة (hub-hero-shell): سطر عربي واحد يشرح الصفحة +
+        شريط KPI لحالة الربط بصف واحد إجباري — بلا صف بحث.
+     2. تخطيط عمل بأقسام عربية واضحة:
+        أ. حالة الربط (حبة حالة ملوّنة + تفاصيل الرقم والنشاط والاستخدام).
+        ب. أنواع الرسائل المسموح بها — جدول موحّد (uds) بصف لكل نوع مع
+           شرح عربي قصير ومُعرّف الإعداد التقني بخط لاتيني أحادي المسافة.
+        ج. رسالة اختبار (نموذجا الاختبار الأصليان كما هما).
+        د. إدارة الربط من بوابة لوحة التراخيص.
+     • مبدأ العميل الخفيف محفوظ: لا يُخزَّن هنا أي مفتاح أو رمز من ميتا،
+       وكل إرسال يمر حصريًا عبر جسر لوحة التراخيص الموقّع.
+     • كل النماذج والمسارات وأسماء الحقول محفوظة حرفيًا
+       (send_<event> / recipient_phone / مسارا الاختبار).
+   ═══════════════════════════════════════════════════════════════════════ #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 {% from "_partials/toggle_switch.html" import toggle_switch %}
 
 {% block title %}رسائل واتساب للمشتركين — Hobe Hub{% endblock %}
+{% block page_icon %}<i class="fa-brands fa-whatsapp"></i>{% endblock %}
+{% block page_title %}رسائل واتساب للمشتركين{% endblock %}
+{% block page_sub %}<span class="sub">التحكم بأنواع رسائل واتساب الرسمية المسموح إرسالها للمشتركين عبر لوحة التراخيص.</span>{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+{# نظام الجداول الموحد: أنماط uds-table (فرز + اختيار أعمدة + ترقيم صفحات) #}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
+<style>
+  /* ── مقياس الخط المعتمد: عنوان الهيرو 20px/800، السطر التعريفي 13px،
+       عناوين الأقسام 14px/800، نص الجسم 12.5–13px ── */
+  .hub-hero-shell > .uds-hero .uds-hero-title{ font-size:20px; font-weight:800; }
+  .hub-hero-shell > .uds-hero .uds-hero-sub{ font-size:13px; }
+  .hub-hero-shell > .uds-hero .uds-hero-icon{ width:44px; height:44px; font-size:18px;
+    background:linear-gradient(135deg,#25d366,#128c7e); box-shadow:0 8px 18px rgba(18,140,126,.30); }
+  .hub-section-head-title{ font-size:14px; font-weight:800; }
+  .hub-field label{ font-size:12.5px; }
+  .hub-field-hint{ font-size:12px; }
+  .hub-hero-shell .hub-kpi-label{ font-size:11.5px; }
+  .hub-hero-shell .hub-kpi-value{ font-size:15px; }
+  .hub-hero-shell .hub-kpi-sub{ font-size:10.5px; }
+
+  /* ── ملاحظة إرشادية زرقاء (سياسة الإرسال والموافقة المسبقة) ── */
+  .hub-note{ display:flex; gap:10px; align-items:flex-start; font-size:12.5px; line-height:1.8;
+    border-radius:12px; padding:12px 15px; }
+  .hub-note i{ flex:none; font-size:15px; margin-top:1px; }
+  .hub-note--info{ background:#eff6ff; color:#1e40af; border:1px solid #bfdbfe; }
+  .hub-note--info i{ color:#1d4ed8; }
+  .hub-form-actions{ display:flex; align-items:center; gap:12px; }
+
+  /* ── بطاقة حالة الربط: شريط جانبي ملوّن + حبة حالة + وسوم تفاصيل ── */
+  .wa-status{ position:relative; background:var(--hub-bg-card,#fff); border:1px solid var(--hub-border,#e8edf3);
+    border-radius:16px; padding:16px 18px; overflow:hidden; }
+  .wa-status::before{ content:""; position:absolute; inset-block:0; inset-inline-start:0; width:4px; background:#cbd5e1; }
+  .wa-status.on::before{ background:linear-gradient(180deg,#22c55e,#16a34a); }
+  .wa-status.off::before{ background:linear-gradient(180deg,#f59e0b,#d97706); }
+  .wa-status.dead::before{ background:linear-gradient(180deg,#ef4444,#dc2626); }
+  .wa-status-top{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+  .wa-status-ic{ width:42px;height:42px;border-radius:12px;display:grid;place-items:center;font-size:18px;flex:none;
+    background:linear-gradient(135deg,#dcfce7,#f0fdf4); color:#16a34a; }
+  .wa-status-name{ font-size:13px; font-weight:800; color:#0f172a; line-height:1.3; }
+  .wa-status-name small{ display:block; font-size:11px; font-weight:600; color:#94a3b8; margin-top:2px; }
+  /* حبة الحالة (متصل / غير متصل / بحاجة إلى الإعداد) */
+  .wa-pill{ margin-inline-start:auto; display:inline-flex; align-items:center; gap:7px; font-size:12px; font-weight:800;
+    border-radius:999px; padding:5px 12px; white-space:nowrap; }
+  .wa-pill .dot{ width:7px;height:7px;border-radius:50%; }
+  .wa-pill.on{ background:#dcfce7; color:#15803d; } .wa-pill.on .dot{ background:#22c55e; }
+  .wa-pill.off{ background:#fef3c7; color:#92400e; } .wa-pill.off .dot{ background:#f59e0b; }
+  .wa-pill.dead{ background:#fee2e2; color:#b91c1c; } .wa-pill.dead .dot{ background:#ef4444; }
+  .wa-status-meta{ display:flex; flex-wrap:wrap; gap:8px; margin-top:13px; }
+  .wa-tag{ font-size:11.5px; font-weight:700; color:#475569; background:#f1f5f9; border-radius:999px; padding:5px 12px; }
+  .wa-tag b{ color:#0f172a; }
+  .wa-tag .num{ direction:ltr; unicode-bidi:isolate; font-variant-numeric:tabular-nums; font-family:ui-monospace,Consolas,monospace; }
+
+  /* ── بطاقة «تعذّر جلب الحالة» عند تعطل الجسر ── */
+  .wa-pending{ display:flex; gap:12px; align-items:flex-start; background:#fffbeb; border:1px solid #fde68a; border-radius:14px; padding:14px 16px; }
+  .wa-pending .ic{ width:36px;height:36px;border-radius:10px;background:#fef3c7;color:#b45309;display:grid;place-items:center;font-size:16px;flex:none; }
+  .wa-pending .tx{ font-size:12.5px; line-height:1.85; color:#92400e; }
+  .wa-pending .tx b{ display:block; font-size:13px; margin-bottom:3px; }
+
+  /* ── جدول أنواع الرسائل: شرح تحت الاسم + مُعرّف تقني لاتيني ── */
+  .wa-ev-name{ font-size:12.5px; font-weight:800; color:#0f172a; }
+  .wa-ev-help{ font-size:12px; color:#64748b; line-height:1.7; margin-top:3px; max-width:46ch; }
+  .wa-ev-key{ font-family:ui-monospace,Consolas,monospace; font-size:11px; color:#5b21b6;
+    background:#f5f3ff; border:1px solid #ede9fe; border-radius:6px; padding:2px 7px; white-space:nowrap; }
+</style>
+{% endblock %}
 
 {% block content %}
-{# ───── ONE unified hero: title + actions + panel-reported status KPIs ───── #}
+{# ── تسميات الحالة المشتقة من ردّ لوحة التراخيص ── #}
 {% set _on = (status.ok and status.onboarding == 'connected') %}
 {% set _pending = (status.ok and status.onboarding == 'not_connected') %}
-{% call hub.megahero(
+
+{# ── شرح عربي قصير لكل نوع رسالة (يظهر تحت الاسم داخل الجدول) ── #}
+{% set _event_help = {
+  'otp': 'إرسال رمز تحقق للمشترك عند تسجيل الدخول للتأكد من هويته.',
+  'expiry': 'تذكير المشترك قبل انتهاء اشتراكه ليجدّد في الوقت المناسب.',
+  'quota': 'تنبيه المشترك عندما تقترب باقته من النفاد.',
+  'maintenance': 'إبلاغ المشتركين بأعمال الصيانة أو الانقطاع المجدول.',
+  'password': 'إشعار المشترك فور تغيير كلمة مروره حمايةً لحسابه.',
+  'portal': 'إرسال روابط الدخول والدعوات إلى بوابة المشترك.'
+} %}
+
+{# ───── الصدفة الموحّدة: سطر تعريفي عربي واحد + شريط KPI بصف واحد ─────
+   نستدعي megahero كتعبير مباشر (وليس call block) حتى لا يُرسم صف البحث. #}
+<section class="hub-hero-shell">
+{{ hub.megahero(
   "رسائل واتساب للمشتركين",
-  subtitle="إشعارات واتساب الرسمية تُدار من لوحة التراخيص. هنا تختار أنواع الرسائل المسموح بها وتُرسل رسالة اختبار — لا يُخزَّن أي مفتاح أو رمز Meta في هذا النظام.",
+  subtitle="اختر أنواع الرسائل المسموح إرسالها للمشتركين عبر واتساب الرسمي — الربط والإرسال تتولاهما لوحة التراخيص.",
   icon="whatsapp",
   actions_html=(
     ('<a class="hub-btn hub-btn--secondary" href="' ~ panel_portal_url ~ '" target="_blank" rel="noopener"><i class="fa-solid fa-up-right-from-square"></i> إدارة الربط من لوحة التراخيص</a>') if panel_portal_url else ''
   ),
   kpis=[
-    {'label': 'حالة الربط', 'value': ('متصل' if _on else ('غير متصل' if _pending else 'بحاجة إلى الإعداد')) if status.ok else 'غير متوفّرة', 'icon': 'whatsapp', 'variant': ('green' if _on else ('amber' if (_pending or not status.ok) else 'red')), 'sub': 'كما تردّها لوحة التراخيص'},
-    {'label': 'النشاط', 'value': (status.business or '—') if status.ok else '—', 'icon': 'briefcase', 'variant': 'brand', 'sub': 'الاسم التجاري المربوط'},
-    {'label': 'الرقم', 'value': (status.phone or '—') if status.ok else '—', 'icon': 'phone', 'variant': 'blue', 'sub': 'رقم واتساب الرسمي'},
-    {'label': 'المُرسَل', 'value': (status.usage.sent if (status.usage and status.usage.sent is defined) else '—'), 'icon': 'paper-plane', 'variant': 'green', 'sub': 'إجمالي المُرسَل'},
-    {'label': 'المتبقّي', 'value': (status.usage.remaining if (status.usage and status.usage.remaining is defined) else '—'), 'icon': 'gauge', 'variant': 'amber', 'sub': 'ضمن الحد المتاح'}
+    {'label': 'حالة الربط', 'value': ('متصل' if _on else ('غير متصل' if _pending else 'بحاجة إلى الإعداد')) if status.ok else 'غير متوفّرة',
+     'icon': 'wave-square', 'variant': ('green' if _on else ('amber' if (_pending or not status.ok) else 'red')),
+     'sub': 'كما تردّها لوحة التراخيص'},
+    {'label': 'النشاط التجاري', 'value': (status.business or '—') if status.ok else '—', 'icon': 'briefcase', 'variant': 'brand', 'sub': 'الاسم المربوط بالحساب'},
+    {'label': 'رقم واتساب', 'value': (status.phone or '—') if status.ok else '—', 'icon': 'phone', 'variant': 'blue', 'sub': 'الرقم الرسمي للإرسال'},
+    {'label': 'الرسائل المُرسَلة', 'value': (status.usage.sent if (status.usage and status.usage.sent is defined) else '—'), 'icon': 'paper-plane', 'variant': 'green', 'sub': 'إجمالي ما أُرسل'},
+    {'label': 'الرصيد المتبقّي', 'value': (status.usage.remaining if (status.usage and status.usage.remaining is defined) else '—'), 'icon': 'gauge', 'variant': 'amber', 'sub': 'ضمن الحد المتاح'}
   ]
-) %}
-{% endcall %}
+) }}
+</section>{# /hub-hero-shell #}
 
-{# ───── Full-width work layout: main content + help panel on the LEFT ───── #}
+{# ───── تخطيط العمل: الأقسام + لوحة مساعدة قابلة للطي على اليسار ───── #}
 {% call hub.worklayout(aside_html=hub.helppanel(
   "ما هذه الصفحة؟",
-  intro="رسائل واتساب الرسمية تمر عبر لوحة التراخيص فقط. هنا تتحكم بأنواع الرسائل المسموح بإرسالها للمشتركين، وتُجرّب الإرسال — دون تخزين أي بيانات Meta.",
+  intro="رسائل واتساب الرسمية تمر عبر لوحة التراخيص فقط. هنا تتحكم بأنواع الرسائل المسموح بإرسالها للمشتركين وتُجرّب الإرسال — دون تخزين أي بيانات ربط في هذا النظام.",
   icon="circle-info",
   items=[
-    {'icon': 'shield-halved', 'text': 'لا يُخزَّن أي مفتاح أو رمز Meta في هذا النظام — الربط الرسمي يتولّاه مزوّد الخدمة عبر اللوحة.'},
-    {'icon': 'sliders', 'text': 'مفاتيح أنواع الرسائل إعدادات محلية فقط، تتحكم بما يُسمح بإرساله للمشتركين.'},
-    {'icon': 'user-check', 'text': 'لا تُرسل أي رسالة إلا للمشتركين الذين وافقوا على الاستلام (opt-in) وبما يتوافق مع سياسات واتساب.'},
-    {'icon': 'paper-plane', 'text': 'رسالة الاختبار تُرسل عبر لوحة التراخيص للتأكد من سلامة الربط.'}
+    {'icon': 'shield-halved', 'text': 'لا يُخزَّن هنا أي مفتاح أو رمز ربط — الاتصال الرسمي يتولّاه مزوّد الخدمة عبر لوحة التراخيص.'},
+    {'icon': 'sliders', 'text': 'مفاتيح أنواع الرسائل إعدادات محلية فقط، تقرر ما يُسمح بإرساله للمشتركين.'},
+    {'icon': 'user-check', 'text': 'لا تُرسل أي رسالة إلا للمشتركين الذين وافقوا مسبقًا على الاستلام وبما يتوافق مع سياسات واتساب.'},
+    {'icon': 'paper-plane', 'text': 'رسالة الاختبار تُرسل عبر لوحة التراخيص للتأكد من سلامة الربط من طرف لطرف.'}
   ],
-  note="إدارة الربط الرسمي بـ Meta وإعداد القوالب تتمّ في بوابة لوحة التراخيص."
+  note="إدارة الربط الرسمي واعتماد القوالب يتمّان في بوابة لوحة التراخيص — حالتهما تنعكس هنا تلقائيًا."
 )) %}
 
-  {# ════════ CONNECTION STATUS (from the panel) — widget kept verbatim ════════ #}
+  {# ════════ (أ) حالة الربط — كما تردّها لوحة التراخيص ════════ #}
   {% call hub.section("حالة الربط", icon="wave-square", meta="كما تردّها لوحة التراخيص") %}
     {% if status.ok %}
       {% set cls = 'on' if status.onboarding == 'connected' else ('off' if status.onboarding == 'not_connected' else 'dead') %}
@@ -48,6 +152,7 @@
           <span class="wa-status-ic"><i class="fa-brands fa-whatsapp"></i></span>
           <div class="wa-status-name">واتساب للأعمال
             <small>تُدار عبر لوحة التراخيص</small></div>
+          {# حبة الحالة الملوّنة — تعكس حالة الربط الحية #}
           {% if status.onboarding == 'connected' %}
             <span class="wa-pill on"><span class="dot"></span> متصل</span>
           {% elif status.onboarding == 'not_connected' %}
@@ -67,12 +172,13 @@
             <span class="wa-tag">النشاط: <b>{{ status.business }}</b></span>
           {% endif %}
           {% if status.phone %}
-            <span class="wa-tag">الرقم: <b class="num">{{ status.phone }}</b></span>
+            {# الرقم مُعرّف تقني: يبقى لاتينيًا بخط أحادي المسافة وباتجاه يسار-يمين #}
+            <span class="wa-tag">الرقم: <b class="num"><bdi dir="ltr">{{ status.phone }}</bdi></b></span>
           {% endif %}
           {% if status.usage %}
             {% if status.usage.sent is defined %}<span class="wa-tag">المُرسَل: <b class="num">{{ status.usage.sent }}</b></span>{% endif %}
             {% if status.usage.remaining is defined %}<span class="wa-tag">المتبقّي: <b class="num">{{ status.usage.remaining }}</b></span>{% endif %}
-            {% if status.usage.limit is defined %}<span class="wa-tag">الحد: <b class="num">{{ status.usage.limit }}</b></span>{% endif %}
+            {% if status.usage.limit is defined %}<span class="wa-tag">الحد الأقصى: <b class="num">{{ status.usage.limit }}</b></span>{% endif %}
           {% endif %}
           {% if not status.phone and not status.usage %}
             <span class="wa-tag">لا توجد تفاصيل استخدام بعد.</span>
@@ -80,35 +186,55 @@
         </div>
       </div>
     {% else %}
+      {# تعطل الجسر لا يكسر الصفحة: بطاقة تنبيه مع خطوات الإصلاح #}
       <div class="wa-pending" data-testid="wa-status-pending">
         <span class="ic"><i class="fa-solid fa-triangle-exclamation"></i></span>
         <div class="tx">
           <b>تعذّر جلب الحالة من لوحة التراخيص</b>
-          تأكد من تفعيل الجسر ورابط لوحة التراخيص الآمن (HTTPS) وسر الربط في صفحة «ملف التراخيص»، ثم حدّث الصفحة.
+          تأكد من تفعيل الجسر ورابط لوحة التراخيص الآمن (HTTPS) وسر الربط في صفحة «ترخيص النظام»، ثم حدّث الصفحة.
           يمكنك ضبط أنواع الرسائل بالأسفل الآن — ستُطبَّق فور توفّر الربط.
         </div>
       </div>
     {% endif %}
   {% endcall %}
 
-  {# ════════ EVENT TOGGLES (local radius-side gates) ════════ #}
-  {% call hub.section("أنواع الرسائل المسموح بها", icon="sliders", meta="تتحكم بما يُسمح بإرساله للمشتركين عبر واتساب") %}
+  {# ════════ (ب) أنواع الرسائل المسموح بها — جدول موحّد uds ════════ #}
+  {% call hub.section("أنواع الرسائل المسموح بها", icon="sliders", meta="مفاتيح محلية تتحكم بما يُرسل للمشتركين") %}
     <form method="post" action="{{ url_for('radius.whatsapp_settings') }}" class="hub-form" data-testid="wa-settings-form">
       {{ csrf_token_input() | safe }}
 
       <div class="hub-note hub-note--info">
         <i class="fa-solid fa-shield-halved"></i>
-        <span>هذه المفاتيح إعدادات محلية فقط (لا تحتوي على أي بيانات Meta). لا تُرسل أي رسالة إلا للمشتركين الذين وافقوا على استلام
-          رسائل واتساب (opt-in)، وبما يتوافق مع سياسات واتساب الرسمية.</span>
+        <span>هذه المفاتيح إعدادات محلية فقط ولا تحتوي على أي بيانات ربط. لا تُرسل أي رسالة إلا للمشتركين الذين وافقوا
+          مسبقًا على استلام رسائل واتساب، وبما يتوافق مع سياسات واتساب الرسمية.</span>
       </div>
 
-      <div class="hub-grid hub-grid--3" style="margin-top:14px">
-        {% for key, label in events %}
-          <div class="hub-field" data-testid="wa-event-{{ key }}">
-            <label>{{ label }}<span class="hub-field-hint mono" style="font-weight:600">whatsapp.send.{{ key }}</span></label>
-            {{ toggle_switch(name="send_" ~ key, checked=toggles.get(key), value="1") }}
-          </div>
-        {% endfor %}
+      {# جدول موحّد: اسم النوع + شرح قصير، مُعرّف الإعداد التقني، مفتاح التفعيل #}
+      <div class="hub-table-wrap uds-table-wrap" data-uds-table style="margin-top:14px">
+        <table class="hub-table">
+          <thead>
+            <tr>
+              <th>نوع الرسالة وشرحه</th>
+              <th data-uds-nosort>مُعرّف الإعداد</th>
+              <th data-uds-nosort data-uds-nocol>السماح بالإرسال</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for key, label in events %}
+            <tr data-testid="wa-event-{{ key }}">
+              <td>
+                <div class="wa-ev-name">{{ label }}</div>
+                {# شرح عربي قصير تحت كل نوع — ماذا يصل للمشترك ومتى #}
+                <div class="wa-ev-help">{{ _event_help.get(key, '') }}</div>
+              </td>
+              {# المُعرّف التقني يبقى لاتينيًا بخط أحادي المسافة وباتجاه يسار-يمين #}
+              <td><span class="wa-ev-key"><bdi dir="ltr">whatsapp.send.{{ key }}</bdi></span></td>
+              <td>{{ toggle_switch(name="send_" ~ key, checked=toggles.get(key), value="1",
+                                   on_label="مسموح", off_label="متوقف", size="sm") }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
       </div>
 
       <div class="hub-form-actions" style="margin-top:16px">
@@ -118,19 +244,22 @@
     </form>
   {% endcall %}
 
-  {# ════════ TEST MESSAGE (through the bridge only) ════════ #}
+  {# ════════ (ج) رسالة اختبار — تمر عبر جسر لوحة التراخيص فقط ════════ #}
   {% call hub.section("رسالة اختبار", icon="paper-plane", meta="تُرسل عبر لوحة التراخيص للتأكد من الربط") %}
     <form method="post" action="{{ url_for('radius.whatsapp_test') }}" class="hub-form" data-testid="wa-test-form">
       {{ csrf_token_input() | safe }}
 
       <div class="hub-field" style="max-width:360px">
-        <label for="wa-phone">رقم هاتف المستلم</label>
+        <label for="wa-phone">رقم هاتف المستلم
+          <span class="hub-hint" tabindex="0" data-hint="أدخل الرقم بالصيغة الدولية الكاملة (رمز الدولة ثم الرقم بلا صفر بادئ ولا رموز). تُرسل رسالة قالب اختبار واحدة فقط."><i class="fa-solid fa-info"></i></span>
+        </label>
         <input id="wa-phone" class="hub-input mono" type="tel" name="recipient_phone" inputmode="tel" placeholder="9627xxxxxxxx" autocomplete="off" dir="ltr">
         <div class="hub-field-hint">أدخل الرقم بصيغة دولية. تُرسل رسالة قالب اختبار واحدة عبر مزوّد لوحة التراخيص.</div>
       </div>
 
       <div class="hub-form-actions" style="margin-top:16px;flex-wrap:wrap">
         <button type="submit" class="hub-btn hub-btn--primary"><i class="fa-brands fa-whatsapp"></i> إرسال اختبار</button>
+        {# اختبار ثانٍ عبر بيانات الربط السحابي المُدارة في اللوحة — نفس النموذج بوجهة مختلفة #}
         <button type="submit" class="hub-btn hub-btn--secondary" formaction="{{ url_for('radius.whatsapp_cloud_test') }}"
                 title="عبر بيانات الربط السحابي المُدارة في لوحة التراخيص">
           <i class="fa-solid fa-cloud"></i> إرسال اختبار عبر الربط السحابي
@@ -140,12 +269,12 @@
     </form>
   {% endcall %}
 
-  {# ════════ MANAGE CONNECTION ON PANEL PORTAL ════════ #}
+  {# ════════ (د) إدارة الربط من بوابة لوحة التراخيص ════════ #}
   {% if panel_portal_url %}
-    {% call hub.section("إدارة ربط واتساب", icon="plug-circle-bolt") %}
+    {% call hub.section("إدارة ربط واتساب", icon="plug-circle-bolt", meta="من بوابة لوحة التراخيص") %}
       <div class="hub-empty" data-testid="wa-portal-link" style="text-align:initial">
-        <div class="hub-empty-msg">الاتصال الرسمي بـ Meta وإعداد القوالب يتمّان في بوابة لوحة التراخيص</div>
-        <div class="hub-empty-sub" style="margin-bottom:14px">من هناك تربط الحساب الرسمي وتعتمد القوالب، وتعود حالتها لتظهر بالأعلى.</div>
+        <div class="hub-empty-msg">الربط الرسمي للحساب واعتماد القوالب يتمّان في بوابة لوحة التراخيص</div>
+        <div class="hub-empty-sub" style="margin-bottom:14px">من هناك تربط الحساب الرسمي وتعتمد القوالب، وتعود حالتها لتظهر بالأعلى تلقائيًا.</div>
         <a class="hub-btn hub-btn--secondary" href="{{ panel_portal_url }}" target="_blank" rel="noopener" data-testid="wa-manage-link">
           <i class="fa-solid fa-up-right-from-square"></i> إدارة ربط واتساب</a>
       </div>
@@ -153,47 +282,6 @@
   {% endif %}
 
 {% endcall %}
-{% endblock %}
-
-{% block head_extra %}
-{{ super() }}
-<style>
-  /* ── local UDS helpers (note box, toggle grid, form actions) ── */
-  .hub-note{ display:flex; gap:10px; align-items:flex-start; font-size:12.5px; line-height:1.8;
-    border-radius:12px; padding:12px 15px; }
-  .hub-note i{ flex:none; font-size:15px; margin-top:1px; }
-  .hub-note--info{ background:#eff6ff; color:#1e40af; border:1px solid #bfdbfe; }
-  .hub-note--info i{ color:#1d4ed8; }
-  .hub-grid--3{ display:grid; grid-template-columns:repeat(auto-fill,minmax(248px,1fr)); gap:12px; }
-  .hub-form-actions{ display:flex; align-items:center; gap:12px; }
-
-  /* ── connection-status widget (retained verbatim from the bespoke page) ── */
-  .wa-status{ position:relative; background:var(--hub-bg-card,#fff); border:1px solid var(--hub-border,#e8edf3);
-    border-radius:16px; padding:18px; overflow:hidden; }
-  .wa-status::before{ content:""; position:absolute; inset-block:0; inset-inline-start:0; width:4px; background:#cbd5e1; }
-  .wa-status.on::before{ background:linear-gradient(180deg,#22c55e,#16a34a); }
-  .wa-status.off::before{ background:linear-gradient(180deg,#f59e0b,#d97706); }
-  .wa-status.dead::before{ background:linear-gradient(180deg,#ef4444,#dc2626); }
-  .wa-status-top{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
-  .wa-status-ic{ width:46px;height:46px;border-radius:13px;display:grid;place-items:center;font-size:20px;flex:none;
-    background:linear-gradient(135deg,#dcfce7,#f0fdf4); color:#16a34a; }
-  .wa-status-name{ font-size:15px; font-weight:800; color:#0f172a; line-height:1.3; }
-  .wa-status-name small{ display:block; font-size:11px; font-weight:600; color:#94a3b8; margin-top:2px; }
-  .wa-pill{ margin-inline-start:auto; display:inline-flex; align-items:center; gap:7px; font-size:12px; font-weight:800;
-    border-radius:999px; padding:5px 12px; white-space:nowrap; }
-  .wa-pill .dot{ width:7px;height:7px;border-radius:50%; }
-  .wa-pill.on{ background:#dcfce7; color:#15803d; } .wa-pill.on .dot{ background:#22c55e; }
-  .wa-pill.off{ background:#fef3c7; color:#92400e; } .wa-pill.off .dot{ background:#f59e0b; }
-  .wa-pill.dead{ background:#fee2e2; color:#b91c1c; } .wa-pill.dead .dot{ background:#ef4444; }
-  .wa-status-meta{ display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
-  .wa-tag{ font-size:11.5px; font-weight:700; color:#475569; background:#f1f5f9; border-radius:999px; padding:5px 12px; }
-  .wa-tag b{ color:#0f172a; }
-  .wa-tag .num{ direction:ltr; unicode-bidi:isolate; font-variant-numeric:tabular-nums; }
-
-  /* ── pending / unavailable card (retained) ── */
-  .wa-pending{ display:flex; gap:12px; align-items:flex-start; background:#fffbeb; border:1px solid #fde68a; border-radius:14px; padding:14px 16px; }
-  .wa-pending .ic{ width:36px;height:36px;border-radius:10px;background:#fef3c7;color:#b45309;display:grid;place-items:center;font-size:16px;flex:none; }
-  .wa-pending .tx{ font-size:12.5px; line-height:1.85; color:#92400e; }
-  .wa-pending .tx b{ display:block; font-size:13.5px; margin-bottom:3px; }
-</style>
+{# نظام الجداول الموحد (فرز + أعمدة + ترقيم صفحات) لجدول أنواع الرسائل #}
+<script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
 {% endblock %}

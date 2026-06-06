@@ -8,6 +8,7 @@
 
 {% block head_extra %}
 {{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
 <style>
   /* variable chips (insert at cursor) — retained custom element */
   .csnd-vars{ display:flex; gap:6px; flex-wrap:wrap; margin-top:6px; }
@@ -126,7 +127,7 @@
 
   {% if preview %}
     {% call hub.section("معاينة الجمهور", icon="users", meta=(preview|length ~ " مستلم"), flush=True) %}
-      <div class="hub-table-wrap">
+      <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25">
         <table class="hub-table" data-testid="audience-preview-table">
           <thead><tr><th>النوع</th><th>الرقم</th><th>الاسم</th><th>العنوان</th></tr></thead>
           <tbody>
@@ -160,4 +161,5 @@
   });
 })();
 </script>
+<script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
 {% endblock %}

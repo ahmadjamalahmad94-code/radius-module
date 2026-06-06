@@ -15,6 +15,12 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/cards_batches_view.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/cards_generate_progress.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/cards_batches_polish.css') }}">
+{# نظام الجداول الموحد (uds): كروم المُرقِّم uds-pager-* وأدوات الجدول.
+   ملاحظة مهمة: لا نضيف data-uds-table على جدول الحزم — جافاسكربت
+   smart-table الخاص بالصفحة (فرز + أعمدة محفوظة + مزامنة تحديد الحزم
+   بين عرضي الجدول والبطاقات) سيتعارض مع uds_table.js لو فُعِّلا معًا،
+   والترقيم هنا على الخادم أصلًا. نستعير المظهر فقط. #}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
 <script defer src="{{ url_for('static', filename='js/cards_batches_view.js') }}"></script>
 <script defer src="{{ url_for('static', filename='js/cards_generate_progress.js') }}"></script>
 <style>
@@ -130,6 +136,25 @@
     border-top: 1px solid var(--hub-border-soft, #eef2f7);
     padding-block-start: 14px;
   }
+
+  /* ─── مُرقِّم الصفحات الموحّد (مظهر uds فوق ترقيم الخادم) ────────────
+     روابط <a> بنفس كروم أزرار uds-pager-btn، وتذييل أسفل الجدول يضم
+     «صفوف بالصفحة» + معلومات النطاق + أزرار التنقل — مطابق بصريًا
+     لجداول uds مع بقاء الترقيم على الخادم (يحافظ على الفلاتر). */
+  .batches-ops .uds-table-pager{ margin: 0; }
+  .batches-ops a.uds-pager-btn{ text-decoration: none; }
+  .batches-ops .uds-pager-btn.is-disabled{
+    opacity: .45; pointer-events: none; cursor: default;
+  }
+  .batches-ops span.uds-pager-btn.is-active{ cursor: default; }
+  /* مُرقِّم عرض البطاقات: نفس الكروم لكن داخل سطح خفيف خاص به */
+  .batches-ops .uds-table-pager--cards{
+    margin-top: 16px;
+    border: 1px solid var(--hub-border, #e2e8f0);
+    border-radius: var(--hub-r-lg, 14px);
+    border-top: 1px solid var(--hub-border, #e2e8f0);
+    background: rgba(255, 255, 255, .9);
+  }
 </style>
 {% endblock %}
 
@@ -165,8 +190,13 @@
     <span class="batch-status batch-status--expired"><i class="fa-solid fa-circle"></i> منتهية</span>
   {%- elif st in ['pending','draft'] -%}
     <span class="batch-status batch-status--pending"><i class="fa-solid fa-circle"></i> معلقة</span>
+  {%- elif st in ['available','ready'] -%}
+    <span class="batch-status batch-status--active" title="{{ st }}"><i class="fa-solid fa-circle"></i> متاحة</span>
+  {%- elif st in ['used'] -%}
+    <span class="batch-status batch-status--active" title="{{ st }}"><i class="fa-solid fa-circle"></i> مستخدمة</span>
   {%- else -%}
-    <span class="batch-status batch-status--pending"><i class="fa-solid fa-circle"></i> {{ st }}</span>
+    {# عرّب أي حالة غير معروفة كـ«معلقة» وأبقِ القيمة الخام في title فقط (لا نص إنجليزي مرئي) #}
+    <span class="batch-status batch-status--pending" title="{{ st }}"><i class="fa-solid fa-circle"></i> معلقة</span>
   {%- endif -%}
 {%- endmacro %}
 
@@ -289,30 +319,34 @@
     </article>
   </div>
 
-  <form method="get" action="{{ url_for('radius.cards_batches') }}" class="batches-toolbar" data-batches-filter-form>
+  <form method="get" action="{{ url_for('radius.cards_batches') }}" class="batches-toolbar" id="batches-filter-form" data-batches-filter-form>
     <label class="batches-search">
       <i class="fa-solid fa-magnifying-glass"></i>
       <input type="search" name="q" value="{{ filters.q or '' }}"
              placeholder="بحث عن حزمة أو كود..." autocomplete="off">
     </label>
-    <select name="status" aria-label="فلتر الحالة">
+    {# hbsel: كل select فلترة يحمل hub-select ليُنسَّق كقائمة hbsel موحّدة #}
+    <select class="hub-select" name="status" aria-label="فلتر الحالة">
       {% for value, label in status_options %}
         <option value="{{ value }}" {% if filters.status == value %}selected{% endif %}>{{ label }}</option>
       {% endfor %}
     </select>
-    <select name="plan_id" aria-label="فلتر الباقة">
+    <select class="hub-select" name="plan_id" aria-label="فلتر الباقة">
       <option value="">كل الباقات</option>
       {% for p in plans %}
         <option value="{{ p.id }}" {% if filters.plan_id == p.id %}selected{% endif %}>{{ p.name }}</option>
       {% endfor %}
     </select>
-    <select name="distributor_id" aria-label="فلتر الموزع">
+    <select class="hub-select" name="distributor_id" aria-label="فلتر الموزع">
       <option value="">كل الموزعين</option>
       {% for d in distributors %}
         <option value="{{ d.id }}" {% if filters.distributor_id == d.id %}selected{% endif %}>{{ d.display_name or d.name }}</option>
       {% endfor %}
     </select>
-    <select name="per_page" aria-label="عدد النتائج">
+    {# حقل per_page يبقى داخل نموذج الفلترة (حتى لا يضيع عند «تطبيق»)
+       لكنه مخفي — التحكم به الآن من «صفوف بالصفحة» في تذييل المُرقِّم
+       الموحّد أسفل الجدول/البطاقات (نفس قاعدة جداول uds). #}
+    <select name="per_page" aria-label="عدد النتائج" hidden style="display:none">
       {% for n in [10, 20, 50, 100] %}
         <option value="{{ n }}" {% if per_page == n %}selected{% endif %}>{{ n }}/صفحة</option>
       {% endfor %}
@@ -331,7 +365,7 @@
     <input type="hidden" name="return_to" value="{{ request.full_path }}">
     <div data-bulk-selected-inputs></div>
     <strong><span data-bulk-count>0</span> محددة</strong>
-    <select name="bulk_action" required aria-label="إجراء على الحزم المحددة">
+    <select class="hub-select" name="bulk_action" required aria-label="إجراء على الحزم المحددة">
       <option value="">اختر إجراء</option>
       <option value="refresh">تحديث الإحصاءات</option>
       <option value="archive">حذف / أرشفة آمنة</option>
@@ -372,7 +406,7 @@
                   {% if is_featured %}<span class="batch-featured">مميزة</span>{% endif %}
                 </div>
                 <p class="batch-card__code">
-                  <span class="mono">{{ b.batch_code or '—' }}</span>
+                  <span class="mono"><bdi>{{ b.batch_code or '—' }}</bdi></span>
                   <span class="batch-id">#{{ b.id }}</span>
                 </p>
               </div>
@@ -445,30 +479,45 @@
           </article>
         {% endfor %}
       </div>
-      {% if pages_count > 1 %}
-      <nav class="batch-pagination batch-pagination--cards" aria-label="تنقل الصفحات">
-        {% set base_args_cards = {'q': filters.q, 'status': filters.status, 'plan_id': filters.plan_id or '',
-                                  'manager': filters.manager, 'distributor_id': filters.distributor_id or '',
-                                  'per_page': per_page} %}
-        {% macro card_pglink(p, label, disabled=false) -%}
-          {% if disabled %}
-            <span class="batch-page batch-page--disabled">{{ label }}</span>
-          {% else %}
-            {% set qs = base_args_cards.copy() %}{% set _ = qs.update({'page': p}) %}
-            <a class="batch-page" href="{{ url_for('radius.cards_batches', **qs) }}">{{ label }}</a>
-          {% endif %}
-        {%- endmacro %}
-        {{ card_pglink(1, '«', disabled=(page == 1)) }}
-        {{ card_pglink(page - 1, '‹', disabled=(page == 1)) }}
-        {% set lo = [page - 2, 1] | max %}
-        {% set hi = [page + 2, pages_count] | min %}
-        {% for p in range(lo, hi + 1) %}
-          {% if p == page %}<span class="batch-page batch-page--active">{{ p }}</span>{% else %}{{ card_pglink(p, p) }}{% endif %}
-        {% endfor %}
-        {{ card_pglink(page + 1, '›', disabled=(page == pages_count)) }}
-        {{ card_pglink(pages_count, '»', disabled=(page == pages_count)) }}
-      </nav>
-      {% endif %}
+      {# ───── مُرقِّم عرض البطاقات — نفس كروم uds-pager (ترقيم خادم) ───── #}
+      <nav class="uds-table-pager uds-table-pager--cards" aria-label="تنقل الصفحات">
+        <div class="uds-pager-size">
+          صفوف بالصفحة
+          <select aria-label="عدد الصفوف بالصفحة"
+                  onchange="var s=document.querySelector('#batches-filter-form select[name=per_page]'); if(s){ s.value=this.value; s.form.submit(); }">
+            {% for n in [10, 20, 50, 100] %}
+              <option value="{{ n }}" {% if per_page == n %}selected{% endif %}>{{ n }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        {% set _cstart = (page - 1) * per_page + 1 %}
+        {% set _cend = [page * per_page, total] | min %}
+        <div class="uds-pager-info">{% if total %}{{ _cstart }}–{{ _cend }} من {{ total }}{% else %}0{% endif %}</div>
+        <div class="uds-pager-nav">
+          {% set base_args_cards = {'q': filters.q, 'status': filters.status, 'plan_id': filters.plan_id or '',
+                                    'manager': filters.manager, 'distributor_id': filters.distributor_id or '',
+                                    'per_page': per_page} %}
+          {% macro card_pglink(p, label, disabled=false, active=false) -%}
+            {% if disabled %}
+              <span class="uds-pager-btn is-disabled">{{ label|safe }}</span>
+            {% elif active %}
+              <span class="uds-pager-btn is-active">{{ label|safe }}</span>
+            {% else %}
+              {% set qs = base_args_cards.copy() %}{% set _ = qs.update({'page': p}) %}
+              <a class="uds-pager-btn" href="{{ url_for('radius.cards_batches', **qs) }}">{{ label|safe }}</a>
+            {% endif %}
+          {%- endmacro %}
+          {{ card_pglink(page - 1, '<i class="fa-solid fa-chevron-right"></i>', disabled=(page == 1)) }}
+          {% set lo = [page - 2, 1] | max %}
+          {% set hi = [page + 2, pages_count] | min %}
+          {% if lo > 1 %}{{ card_pglink(1, '1') }}{% if lo > 2 %}<span class="uds-pager-dots">…</span>{% endif %}{% endif %}
+          {% for p in range(lo, hi + 1) %}
+            {{ card_pglink(p, p|string, active=(p == page)) }}
+          {% endfor %}
+          {% if hi < pages_count %}{% if hi < pages_count - 1 %}<span class="uds-pager-dots">…</span>{% endif %}{{ card_pglink(pages_count, pages_count|string) }}{% endif %}
+          {{ card_pglink(page + 1, '<i class="fa-solid fa-chevron-left"></i>', disabled=(page == pages_count)) }}
+        </div>
+      </nav>{# /uds-table-pager--cards #}
     {% else %}
       <div class="batch-empty">
         <i class="fa-solid fa-box-open"></i>
@@ -496,9 +545,11 @@
               <i class="fa-solid fa-arrow-up-wide-short"></i>
             </span>
             <div class="bops-column-menu" data-column-menu>
-              <button type="button" class="batch-btn batch-btn--soft bops-column-menu__trigger" data-column-menu-toggle aria-expanded="false">
+              {# نفس زر «أعمدة» في جداول uds (hub-btn ثانوي صغير) —
+                 hooks جافاسكربت smart-table (data-column-menu-toggle) كما هي #}
+              <button type="button" class="hub-btn hub-btn--secondary hub-btn--sm bops-column-menu__trigger" data-column-menu-toggle aria-expanded="false">
                 <i class="fa-solid fa-table-columns"></i>
-                الأعمدة
+                أعمدة
               </button>
               <div class="bops-column-menu__panel" data-column-menu-panel hidden></div>
             </div>
@@ -544,7 +595,7 @@
                 <td data-column-key="batch" data-sort-value="{{ (b.batch_code or '') ~ ' ' ~ (b.package_name or b.service_name or '') }}">
                   <div class="bops-main-cell">
                     <a class="mono bops-code" href="{{ url_for('radius.cards_of_batch', batch_id=b.id) }}">
-                      {{ b.batch_code }}
+                      <bdi>{{ b.batch_code }}</bdi>
                     </a>
                     <span>{{ b.package_name or b.service_name or 'بدون اسم مخصص' }}</span>
                   </div>
@@ -622,30 +673,50 @@
           </table>
         </div>
 
-        {% if pages_count > 1 %}
-        <nav class="batch-pagination" aria-label="تنقل الصفحات">
-          {% set base_args = {'q': filters.q, 'status': filters.status, 'plan_id': filters.plan_id or '',
-                              'manager': filters.manager, 'distributor_id': filters.distributor_id or '',
-                              'per_page': per_page} %}
-          {% macro pglink(p, label, disabled=false) -%}
-            {% if disabled %}
-              <span class="batch-page batch-page--disabled">{{ label }}</span>
-            {% else %}
-              {% set qs = base_args.copy() %}{% set _ = qs.update({'page': p}) %}
-              <a class="batch-page" href="{{ url_for('radius.cards_batches', **qs) }}">{{ label }}</a>
-            {% endif %}
-          {%- endmacro %}
-          {{ pglink(1, '«', disabled=(page == 1)) }}
-          {{ pglink(page - 1, '‹', disabled=(page == 1)) }}
-          {% set lo = [page - 2, 1] | max %}
-          {% set hi = [page + 2, pages_count] | min %}
-          {% for p in range(lo, hi + 1) %}
-            {% if p == page %}<span class="batch-page batch-page--active">{{ p }}</span>{% else %}{{ pglink(p, p) }}{% endif %}
-          {% endfor %}
-          {{ pglink(page + 1, '›', disabled=(page == pages_count)) }}
-          {{ pglink(pages_count, '»', disabled=(page == pages_count)) }}
+        {# ───── تذييل المُرقِّم الموحّد (مظهر uds، ترقيم خادم) ─────
+           «صفوف بالصفحة» يكتب القيمة في select الفلاتر (per_page) ثم يرسل
+           نموذج الفلترة — فيحافظ على البحث وكل الفلاتر. الأحجام مطابقة
+           لما يقبله الخادم (10/20/50/100). أزرار التنقل روابط خادم بنفس
+           كروم uds-pager-btn. #}
+        <nav class="uds-table-pager" aria-label="تنقل الصفحات">
+          <div class="uds-pager-size">
+            صفوف بالصفحة
+            <select aria-label="عدد الصفوف بالصفحة"
+                    onchange="var s=document.querySelector('#batches-filter-form select[name=per_page]'); if(s){ s.value=this.value; s.form.submit(); }">
+              {% for n in [10, 20, 50, 100] %}
+                <option value="{{ n }}" {% if per_page == n %}selected{% endif %}>{{ n }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          {% set _start = (page - 1) * per_page + 1 %}
+          {% set _end = [page * per_page, total] | min %}
+          <div class="uds-pager-info">{% if total %}{{ _start }}–{{ _end }} من {{ total }}{% else %}0{% endif %}</div>
+          <div class="uds-pager-nav">
+            {% set base_args = {'q': filters.q, 'status': filters.status, 'plan_id': filters.plan_id or '',
+                                'manager': filters.manager, 'distributor_id': filters.distributor_id or '',
+                                'per_page': per_page} %}
+            {% macro pglink(p, label, disabled=false, active=false) -%}
+              {% if disabled %}
+                <span class="uds-pager-btn is-disabled">{{ label|safe }}</span>
+              {% elif active %}
+                <span class="uds-pager-btn is-active">{{ label|safe }}</span>
+              {% else %}
+                {% set qs = base_args.copy() %}{% set _ = qs.update({'page': p}) %}
+                <a class="uds-pager-btn" href="{{ url_for('radius.cards_batches', **qs) }}">{{ label|safe }}</a>
+              {% endif %}
+            {%- endmacro %}
+            {# RTL: «السابق» سهم لليمين و«التالي» سهم لليسار — نفس مُرقِّم uds #}
+            {{ pglink(page - 1, '<i class="fa-solid fa-chevron-right"></i>', disabled=(page == 1)) }}
+            {% set lo = [page - 2, 1] | max %}
+            {% set hi = [page + 2, pages_count] | min %}
+            {% if lo > 1 %}{{ pglink(1, '1') }}{% if lo > 2 %}<span class="uds-pager-dots">…</span>{% endif %}{% endif %}
+            {% for p in range(lo, hi + 1) %}
+              {{ pglink(p, p|string, active=(p == page)) }}
+            {% endfor %}
+            {% if hi < pages_count %}{% if hi < pages_count - 1 %}<span class="uds-pager-dots">…</span>{% endif %}{{ pglink(pages_count, pages_count|string) }}{% endif %}
+            {{ pglink(page + 1, '<i class="fa-solid fa-chevron-left"></i>', disabled=(page == pages_count)) }}
+          </div>
         </nav>
-        {% endif %}
         </div>
       </section>
       {% else %}
@@ -857,13 +928,13 @@
         <h3>إعدادات الطباعة</h3>
         <div class="batch-print-grid">
           <label>حجم الورق
-            <select name="print_page_size">
+            <select class="hub-select" name="print_page_size">
               <option value="A4">A4</option>
               <option value="Letter">ليتر</option>
             </select>
           </label>
           <label>اتجاه الورقة
-            <select name="print_orientation">
+            <select class="hub-select" name="print_orientation">
               <option value="portrait">طولي</option>
               <option value="landscape">أفقي</option>
             </select>
@@ -874,22 +945,22 @@
           <label>عدد الصفوف
             <input type="number" name="print_rows" min="1" max="12" value="5">
           </label>
-          <label>المسافة بين الأعمدة mm
+          <label>المسافة بين الأعمدة (مم)
             <input type="number" name="print_column_gap_mm" min="0" max="30" step="0.5" value="3">
           </label>
-          <label>المسافة بين الصفوف mm
+          <label>المسافة بين الصفوف (مم)
             <input type="number" name="print_row_gap_mm" min="0" max="30" step="0.5" value="3">
           </label>
-          <label>الهامش العلوي mm
+          <label>الهامش العلوي (مم)
             <input type="number" name="print_margin_top_mm" min="0" max="40" step="0.5" value="8">
           </label>
-          <label>الهامش الأيمن mm
+          <label>الهامش الأيمن (مم)
             <input type="number" name="print_margin_right_mm" min="0" max="40" step="0.5" value="8">
           </label>
-          <label>الهامش السفلي mm
+          <label>الهامش السفلي (مم)
             <input type="number" name="print_margin_bottom_mm" min="0" max="40" step="0.5" value="8">
           </label>
-          <label>الهامش الأيسر mm
+          <label>الهامش الأيسر (مم)
             <input type="number" name="print_margin_left_mm" min="0" max="40" step="0.5" value="8">
           </label>
         </div>

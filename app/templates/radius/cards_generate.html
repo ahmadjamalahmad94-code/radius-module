@@ -15,6 +15,9 @@
 
 {% block head_extra %}
 {{ super() }}
+{# uds-cardselect (نوع الحزمة) يعيش في unified_design.css — بدونها كانت
+   خيارات «مطبوعة / إلكترونية» تظهر كأزرار راديو خام بلا تنسيق. #}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/cards_generate_progress.css') }}">
 <script defer src="{{ url_for('static', filename='js/cards_generate_progress.js') }}"></script>
 <style>
@@ -148,7 +151,8 @@
             ], value=bt) }}
         </div>
         <div class="cg-field"><label>اسم الحزمة</label>
-          <input class="hub-input" type="text" name="package_name" value="{{ form.get('package_name') or '' }}" placeholder="GZA-Card-Sep25"></div>
+          <input class="hub-input" type="text" name="package_name" value="{{ form.get('package_name') or '' }}" placeholder="GZA-Card-Sep25">
+          <div class="help">اسم وصفي يميّز الحزمة في القوائم والتقارير.</div></div>
         <div class="cg-field"><label>الباقة المرتبطة <span class="req">*</span></label>
           <select class="hub-select" name="plan_id" required>
             <option value="">— اختر —</option>
@@ -170,7 +174,8 @@
                 {{ m.full_name or m.username }}
               </option>
             {% endfor %}
-          </select></div>
+          </select>
+          <div class="help">تُنسب الحزمة لهذا المدير في الحسابات والتقارير.</div></div>
         <div class="cg-field"><label>الموزع / نقطة البيع</label>
           <select class="hub-select" name="distributor_id">
             <option value="">— بدون موزع —</option>
@@ -179,11 +184,14 @@
                 {{ d.display_name or d.name }}
               </option>
             {% endfor %}
-          </select></div>
+          </select>
+          <div class="help">اختر الموزع الذي ستُسلَّم له البطاقات للبيع.</div></div>
         <div class="cg-field"><label>سعر البيع (مرجعي)</label>
-          <input class="hub-input" type="number" step="0.01" min="0" name="price_per_card" value="{{ form.get('price_per_card') or 0 }}"></div>
+          <input class="hub-input" type="number" step="0.01" min="0" name="price_per_card" value="{{ form.get('price_per_card') or 0 }}">
+          <div class="help">سعر بيع البطاقة الواحدة للمشترك النهائي.</div></div>
         <div class="cg-field"><label>سعر الجملة (مرجعي)</label>
-          <input class="hub-input" type="number" step="0.01" min="0" name="price_bulk" value="{{ form.get('price_bulk') or 0 }}"></div>
+          <input class="hub-input" type="number" step="0.01" min="0" name="price_bulk" value="{{ form.get('price_bulk') or 0 }}">
+          <div class="help">سعر البطاقة عند البيع للموزعين بالجملة.</div></div>
         <div class="cg-field"><label>السعر الإجمالي (مرجعي)</label>
           <input class="hub-input" type="number" step="0.01" min="0" name="total_price" value="{{ form.get('total_price') or 0 }}">
           <div class="help">حقول مرجعية فقط.</div></div>
@@ -191,7 +199,8 @@
           {{ unit_input_picker(name="total_quota_mb", value=form.get('total_quota_mb') or 0, kind="quota", units=["MB","GB"]) }}
           <div class="help">0 = بلا كوتا خاصة.</div></div>
         <div class="cg-field"><label>اسم الخدمة</label>
-          <input class="hub-input" type="text" name="service_name" value="{{ form.get('service_name') or '' }}"></div>
+          <input class="hub-input" type="text" name="service_name" value="{{ form.get('service_name') or '' }}">
+          <div class="help">اختياري — للمطابقة مع اسم الخدمة في جهاز الشبكة.</div></div>
       </div>
     </div>
   </section>
@@ -205,9 +214,11 @@
     <div class="cg-section-body">
       <div class="cg-grid">
         <div class="cg-field"><label>طول اسم المستخدم</label>
-          <input class="hub-input" type="number" name="username_length" min="4" max="16" value="{{ form.get('username_length') or 8 }}"></div>
+          <input class="hub-input" type="number" name="username_length" min="4" max="16" value="{{ form.get('username_length') or 8 }}">
+          <div class="help">عدد خانات اسم المستخدم المولَّد (4–16).</div></div>
         <div class="cg-field"><label>طول كلمة المرور</label>
-          <input class="hub-input" type="number" name="password_length" min="4" max="20" value="{{ form.get('password_length') or 6 }}"></div>
+          <input class="hub-input" type="number" name="password_length" min="4" max="20" value="{{ form.get('password_length') or 6 }}">
+          <div class="help">عدد خانات كلمة المرور المولَّدة (4–20).</div></div>
         <div class="cg-field"><label>نمط توليد كلمة المرور</label>
           {% set pgt = form.get('password_generation_type') or 'medium' %}
           <select class="hub-select" name="password_generation_type">
@@ -215,27 +226,32 @@
             <option value="medium" {% if pgt == 'medium' %}selected{% endif %}>متوسط</option>
             <option value="strong" {% if pgt == 'strong' %}selected{% endif %}>قوي (حروف+أرقام+رموز)</option>
             <option value="digits" {% if pgt == 'digits' %}selected{% endif %}>أرقام فقط</option>
-          </select></div>
+          </select>
+          <div class="help">«أرقام فقط» أسهل بالكتابة للمشترك، و«قوي» أصعب بالتخمين.</div></div>
         <div class="cg-field"><label>إضافة قبل أو بعد الاسم</label>
           {% set side = form.get('starts_with_or_ends_with') or '' %}
           <select class="hub-select" name="starts_with_or_ends_with">
             <option value=""       {% if not side %}selected{% endif %}>— لا شيء —</option>
             <option value="prefix" {% if side == 'prefix' %}selected{% endif %}>قبل الاسم</option>
             <option value="suffix" {% if side == 'suffix' %}selected{% endif %}>بعد الاسم</option>
-          </select></div>
+          </select>
+          <div class="help">يضيف نصًا ثابتًا لكل أسماء البطاقات لتمييز الحزمة.</div></div>
         <div class="cg-field"><label>النص المضاف</label>
-          <input class="hub-input" type="text" name="prefix_or_suffix_value" value="{{ form.get('prefix_or_suffix_value') or '' }}" placeholder="مثال: GZA-"></div>
+          <input class="hub-input" type="text" name="prefix_or_suffix_value" value="{{ form.get('prefix_or_suffix_value') or '' }}" placeholder="مثال: GZA-">
+          <div class="help">النص الذي يُلحق قبل/بعد الاسم حسب الخيار السابق.</div></div>
         <div class="cg-field"><label>بادئة قديمة للتوافق</label>
           <input class="hub-input" type="text" name="username_prefix" value="{{ form.get('username_prefix') or '' }}" placeholder="c-">
           <div class="help">للتوافق مع الإعداد القديم.</div></div>
         <div class="cg-field"><label>تضمين رقم الحزمة</label>
           <div class="cg-chk">
             {{ toggle_switch(name="include_batch_number", checked=form.get('include_batch_number'), value="1", id="ibn", on_label="B{id}-... قبل الاسم", off_label="B{id}-... قبل الاسم") }}
-          </div></div>
+          </div>
+          <div class="help">يضيف رقم الحزمة لبداية الاسم لتعرف مصدر أي بطاقة فورًا.</div></div>
         <div class="cg-field"><label>توليد عشوائي</label>
           <div class="cg-chk">
             {{ toggle_switch(name="random_generation_enabled", checked=(form.get('random_generation_enabled') or not form), value="1", id="rge") }}
-          </div></div>
+          </div>
+          <div class="help">أسماء وكلمات مرور عشوائية — عطّله للترقيم المتسلسل.</div></div>
       </div>
     </div>
   </section>
@@ -266,7 +282,8 @@
         <input type="hidden" name="duration_mode"
                value="{{ form.get('duration_mode') or 'time_unit' }}" data-duration-mode>
         <div class="cg-field"><label>صلاحية بعد أول دخول (أيام)</label>
-          <input class="hub-input" type="number" min="0" name="validity_after_first_login_days" value="{{ form.get('validity_after_first_login_days') or 0 }}"></div>
+          <input class="hub-input" type="number" min="0" name="validity_after_first_login_days" value="{{ form.get('validity_after_first_login_days') or 0 }}">
+          <div class="help">تنتهي البطاقة بعد هذا العدد من الأيام من أول دخول. 0 = بلا حد.</div></div>
         <div class="cg-field"><label>العدّ من أول اتصال</label>
           <div class="cg-chk">
             {{ toggle_switch(name="count_from_first_connect", checked=(form.get('count_from_first_connect') or not form), value="1", id="cfc", on_label="مفعَّل: المدة تبدأ من أول دخول (نمط B)", off_label="معطّل: رصيد وقت استخدام يُستهلك أثناء الاتصال فقط (نمط A)") }}
@@ -275,7 +292,8 @@
         <div class="cg-field"><label>العدّ بالثواني</label>
           <div class="cg-chk">
             {{ toggle_switch(name="count_by_seconds", checked=form.get('count_by_seconds'), value="1", id="cbs") }}
-          </div></div>
+          </div>
+          <div class="help">حساب الاستهلاك بدقة الثانية بدل تقريبه للدقيقة.</div></div>
       </div>
     </div>
   </section>
@@ -311,34 +329,41 @@
             <option value="stop"         {% if oqe == 'stop' %}selected{% endif %}>إيقاف الكرت</option>
             <option value="reduce_speed" {% if oqe == 'reduce_speed' %}selected{% endif %}>تخفيض السرعة</option>
             <option value="notify"       {% if oqe == 'notify' %}selected{% endif %}>إبقاء مع تنبيه</option>
-          </select></div>
+          </select>
+          <div class="help">ماذا يحدث للبطاقة عند استهلاك كامل الكوتا.</div></div>
         <div class="cg-field"><label>تجديد تلقائي بعد أول استخدام</label>
           <div class="cg-chk">
             {{ toggle_switch(name="auto_renew_after_first_use", checked=form.get('auto_renew_after_first_use'), value="1", id="arfu") }}
-          </div></div>
+          </div>
+          <div class="help">يجدّد البطاقة تلقائيًا عند انتهائها بعد أول استخدام.</div></div>
         <div class="cg-field"><label>تحويل إلى حالة طالب</label>
           <div class="cg-chk">
             {{ toggle_switch(name="transfer_to_student_status_on_connect", checked=form.get('transfer_to_student_status_on_connect'), value="1", id="ts", on_label="عند الاتصال", off_label="معطَّل") }}
-          </div></div>
+          </div>
+          <div class="help">يحوّل البطاقة لحالة «طالب» تلقائيًا عند أول اتصال.</div></div>
         <div class="cg-field"><label>إغلاق جلسة المستخدم</label>
           <div class="cg-chk">
             {{ toggle_switch(name="close_user_session_on_disconnect", checked=form.get('close_user_session_on_disconnect'), value="1", id="cus", on_label="عند الفصل", off_label="معطَّل") }}
-          </div></div>
+          </div>
+          <div class="help">ينهي جلسة المستخدم نهائيًا عند انقطاع الاتصال.</div></div>
         <div class="cg-field"><label>ربط MAC عند الاتصال</label>
           <div class="cg-chk">
             {{ toggle_switch(name="switch_to_mac_on_connect", checked=form.get('switch_to_mac_on_connect'), value="1", id="smc") }}
-          </div></div>
+          </div>
+          <div class="help">يحفظ MAC أول جهاز يتصل ويربط البطاقة عليه.</div></div>
         <div class="cg-field"><label>قفل MAC عند الإغلاق</label>
           <div class="cg-chk">
             {{ toggle_switch(name="lock_to_mac_on_close", checked=form.get('lock_to_mac_on_close'), value="1", id="lmc") }}
-          </div></div>
+          </div>
+          <div class="help">عند انتهاء البطاقة تبقى مقفولة على آخر جهاز فلا تُعاد على جهاز آخر.</div></div>
         {# #21: «دخول برقم الجوال فقط» (phone_only_login) and «السماح بالدخول
            ببطاقة سابقة (فلسطين فقط)» (allow_entry_by_previous_card_palestine)
            toggles removed per request. These are checkbox toggles that only
            submit when checked, so the backend (which reads them via form.get)
            safely defaults them to off when absent. #}
         <div class="cg-field full"><label>ملاحظات</label>
-          <textarea class="hub-textarea" name="notes">{{ form.get('notes') or '' }}</textarea></div>
+          <textarea class="hub-textarea" name="notes">{{ form.get('notes') or '' }}</textarea>
+          <div class="help">ملاحظات داخلية تظهر للإدارة فقط — لا تُطبع على البطاقات.</div></div>
       </div>
     </div>
   </section>

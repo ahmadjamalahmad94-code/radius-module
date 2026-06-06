@@ -141,17 +141,19 @@
     <div class="mt-program-banner mt-program-banner--warn"
          data-mt-overview-safe-banner="safe"
          style="background:#DCFCE7;border-color:#86EFAC;color:#166534">
-      <li><i class="fa-solid fa-circle-check"></i>
-        الراوتر آمن للتعديل حاليًا.</li>
+      <i class="fa-solid fa-circle-check"></i>
+      <strong>الراوتر آمن للتعديل حاليًا.</strong>
     </div>
     {% else %}
     <div class="mt-program-banner mt-program-banner--risk"
          data-mt-overview-safe-banner="unsafe">
       <i class="fa-solid fa-shield-halved"></i>
       <strong>الراوتر غير آمن للتعديل الآن — راجع الأسباب:</strong>
+      <ul style="margin:6px 0 0;list-style:disc;padding-inline-start:24px">
       {% for r in ov.safety_reasons %}
-      <li>{{ r }}</li>
+        <li>{{ r }}</li>
       {% endfor %}
+      </ul>
     </div>
     {% endif %}
 

@@ -8,7 +8,16 @@
 {% block page_title %}الفواتير{% endblock %}
 {% block page_sub %}<span class="sub">{{ items|length }} فاتورة في النتائج</span>{% endblock %}
 
+{% block head_extra %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
+{% endblock %}
+
 {% block content %}
+
+{# تعيين التبويب النشط لشريط التنقل المالي ثم تضمينه (ملاحظة #9) #}
+{% set active = 'invoices' %}
+{% include "radius/_finance_nav.html" %}
 
 {# ───── Merged hero: title + actions + KPI strip + integrated filter ───── #}
 {% call hub.megahero(
@@ -40,8 +49,10 @@
   </select>
   {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
   <span class="hub-spacer"></span>
-  {{ hub.btn("CSV", icon="file-csv", variant="secondary", size="sm") }}
-  {{ hub.btn("طباعة", icon="print", variant="ghost", size="sm") }}
+  {# أزرار التصدير الثلاثة الموحّدة (أيقونات فقط مع tooltips) موصولة بـ window.hubTableExport عبر معالج أسفل الملف (ملاحظات #1 #2 #4 #8) #}
+  {{ hub.btn("", icon="file-csv",   variant="secondary", size="sm", attrs='data-inv-export="csv"  title="CSV"   aria-label="CSV"') }}
+  {{ hub.btn("", icon="file-excel", variant="secondary", size="sm", attrs='data-inv-export="xlsx" title="Excel" aria-label="Excel"') }}
+  {{ hub.btn("", icon="file-pdf",   variant="secondary", size="sm", attrs='data-inv-export="pdf"  title="PDF"   aria-label="PDF"') }}
 {% endcall %}
 
 {% if items %}
@@ -71,7 +82,8 @@
             <th>الطريقة</th>
             <th>التاريخ</th>
             <th>الحالة</th>
-            <th style="width:150px" data-uds-nosort data-uds-nocol>تحديث الحالة</th>
+            {# عمود الإجراءات يُستبعد من التصدير أيضاً (ملاحظة #5) #}
+            <th style="width:150px" data-uds-nosort data-uds-nocol data-uds-noexport>تحديث الحالة</th>
           </tr>
         </thead>
         <tbody>
@@ -109,6 +121,8 @@
             </td>
             <td>
               <form method="post" action="{{ url_for('radius.inv_status', iid=i.id) }}" class="hub-flex-row" style="gap:4px;flex-wrap:nowrap">
+                {# توكن CSRF مطلوب لطلبات POST (ملاحظة #7) #}
+                {{ csrf_token_input() }}
                 <select class="hub-select" name="status" style="font-size:11.5px;padding:4px 6px;min-width:auto">
                   {% for s in ['paid','pending','failed','refunded','canceled'] %}
                     <option value="{{ s }}" {% if i.status==s %}selected{% endif %}>
@@ -136,4 +150,19 @@
 ) }}
 {% endif %}
 
+<script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
+<script>
+/* ربط أزرار التصدير (CSV/Excel/PDF) بمحرّك التصدير الموحّد window.hubTableExport (ملاحظات #2 #4 #6) */
+(function () {
+  var wrap = document.querySelector("[data-uds-table]");
+  var table = wrap ? wrap.querySelector("table") : null;
+  if (!table) return;
+  document.querySelectorAll("[data-inv-export]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      if (!window.hubTableExport) return;
+      window.hubTableExport(table, "الفواتير", btn.getAttribute("data-inv-export"));
+    });
+  });
+})();
+</script>
 {% endblock %}

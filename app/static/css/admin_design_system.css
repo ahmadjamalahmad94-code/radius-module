@@ -189,6 +189,13 @@
   margin-top: var(--hr-section-gap);
 }
 
+/* الهيرو لازق بالي تحته (site-wide): أي عنصر يلي hub-hero مباشرة —
+   forms / shells / أقسام من عائلات أخرى لم تكن مغطاة بالقائمة أعلاه —
+   يأخذ نفس مسافة الأقسام. لا يشمل script/style لأنها بلا layout. */
+.hub-hero + *:not(script):not(style):not(template):not(.hub-hero) {
+  margin-top: var(--hr-section-gap);
+}
+
 .hr-page-shell > .hub-hero,
 .hr-page-shell > .hub-filterbar,
 .hr-page-shell > .hub-kpi-grid,

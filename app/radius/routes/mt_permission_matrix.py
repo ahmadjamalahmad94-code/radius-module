@@ -45,6 +45,7 @@ _PERM_LABELS_AR: dict[str, str] = {
     "npc.walled_garden.manage": "إدارة Walled Garden",
     "npc.walled_garden.preview": "معاينة Walled Garden",
     "npc.walled_garden.apply": "تطبيق Walled Garden",
+    # أُزيل: licensing.view/manage — لوحة التراخيص حوكمة مركزية للمالك.
 }
 
 _RISKY_PERMS = {
@@ -113,6 +114,8 @@ _PERM_GROUPS = (
             "npc.walled_garden.apply",
         ),
     ),
+    # أُزيل من لوحة العميل — يُعاد مركزياً عبر لوحة التراخيص (قرار معماري):
+    # كانت هنا مجموعة صلاحيات «تراخيص أنفاق الراوترات» (licensing.*).
 )
 
 

@@ -5,6 +5,28 @@
 {% block page_icon %}<i class="fa-solid fa-box-archive"></i>{% endblock %}
 {% block page_sub %}<span class="sub">سياسات احتفاظ آمنة للكروت والمشتركين بدون حذف نهائي</span>{% endblock %}
 
+{% block head_extra %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
+<style>
+/* ── الصناديق العائمة المنبثقة (نفس نمط fcw في finance_center_hub):
+     1) إضافة سياسة أرشفة  2) تأكيد تشغيل الأرشفة (بديل confirm المتصفح) ── */
+.fcw-modal{ position:fixed; inset:0; z-index:1200; display:none; place-items:center; padding:24px; background:rgba(15,23,42,.52); }
+.fcw-modal.is-open{ display:grid; }
+.fcw-dialog{ width:min(620px,100%); max-height:min(90vh,820px); overflow:auto; border-radius:16px; background:#fff;
+  box-shadow:0 28px 80px rgba(15,23,42,.32); }
+.fcw-head{ position:sticky; top:0; z-index:2; display:flex; align-items:center; justify-content:space-between; gap:12px;
+  padding:15px 18px; border-bottom:1px solid var(--hub-border-soft,#e2e8f0); background:#fff; }
+.fcw-head h3{ margin:0; font-size:17px; font-weight:900; color:var(--hub-text,#0f172a); }
+.fcw-x{ border:0; background:transparent; color:#94a3b8; font-size:18px; cursor:pointer; }
+.fcw-body{ padding:16px 18px; display:grid; gap:12px; }
+.fcw-foot{ display:flex; justify-content:flex-end; gap:8px; padding:13px 18px; border-top:1px solid var(--hub-border-soft,#e2e8f0); background:#fbfdff; }
+.fcw-grid{ display:grid; gap:12px; grid-template-columns:repeat(2,minmax(0,1fr)); }
+.fcw-grid .full{ grid-column:1/-1; }
+@media (max-width:640px){ .fcw-grid{ grid-template-columns:1fr; } }
+</style>
+{% endblock %}
+
 {% block content %}
 {% set lc_entity = {'card':'بطاقة','subscriber':'مشترك','card_batch':'حزمة بطاقات','external_file':'ملف خارجي'} %}
 {% set lc_trigger = {'expired_at':'بعد الانتهاء','disabled_at':'بعد التعطيل','created_at':'بعد الإنشاء'} %}
@@ -19,13 +41,12 @@
   subtitle="نقل المنتهي إلى سلة المحذوفات مع بقاء العدد الأصلي للحزم ثابتًا للمحاسبة. لا حذف نهائي — أرشفة آمنة مع تسجيل الحدث والسياسة.",
   icon="box-archive",
   actions_html='
-    <form method="post" action="' + url_for('radius.lifecycle_run') + '"
-          onsubmit="return confirm(\'سيتم نقل العناصر المؤهلة إلى سلة المحذوفات فقط. هل تريد المتابعة؟\')"
-          style="margin:0">
-      <button class="hub-btn hub-btn--primary" type="submit">
-        <i class="fa-solid fa-play"></i> تشغيل الأرشفة الآن
-      </button>
-    </form>',
+    <button type="button" class="hub-btn hub-btn--secondary" data-fcw-open="policy-create">
+      <i class="fa-solid fa-circle-plus"></i> إضافة سياسة أرشفة
+    </button>
+    <button type="button" class="hub-btn hub-btn--primary" data-fcw-open="lifecycle-run">
+      <i class="fa-solid fa-play"></i> تشغيل الأرشفة الآن
+    </button>',
   kpis=[
     {'label': 'كروت جاهزة للأرشفة',     'value': totals.get('cards', 0),            'icon': 'id-card',        'variant': 'brand', 'sub': 'حسب السياسات المفعّلة للكروت المنتهية.'},
     {'label': 'مشتركين جاهزين للأرشفة', 'value': totals.get('subscribers', 0),      'icon': 'users',          'variant': 'blue',  'sub': 'حسب سياسات انتهاء الاشتراك وعدم التجديد.'},
@@ -46,55 +67,6 @@
   ],
   note="«تشغيل الأرشفة الآن» ينقل العناصر المؤهلة إلى سلة المحذوفات فقط — يمكن استعادتها لاحقًا."
 )) %}
-
-{% call hub.section("إضافة سياسة أرشفة", icon="circle-plus") %}
-  <form method="post" action="{{ url_for('radius.lifecycle_policy_create') }}">
-    <div class="hub-form-row">
-      <div class="hub-field">
-        <label class="hub-field-label">نوع العنصر</label>
-        <select class="hub-select" name="entity_type">
-          {% for value,label in entity_options %}
-            <option value="{{ value }}">{{ label }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="hub-field">
-        <label class="hub-field-label">الشرط</label>
-        <select class="hub-select" name="trigger_type">
-          <option value="expired_at">بعد الانتهاء</option>
-        </select>
-      </div>
-      <div class="hub-field">
-        <label class="hub-field-label">بعد مدة</label>
-        <input class="hub-input" name="delay_value" type="number" min="0" value="2">
-      </div>
-      <div class="hub-field">
-        <label class="hub-field-label">وحدة المدة</label>
-        <select class="hub-select" name="delay_unit">
-          {% for value,label in unit_options %}
-            <option value="{{ value }}" {% if value == 'days' %}selected{% endif %}>{{ label }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="hub-field">
-        <label class="hub-field-label">الاحتفاظ في السلة</label>
-        <input class="hub-input" name="retention_value" type="number" min="0" value="90">
-      </div>
-      <div class="hub-field">
-        <label class="hub-field-label">وحدة الاحتفاظ</label>
-        <select class="hub-select" name="retention_unit">
-          {% for value,label in unit_options %}
-            <option value="{{ value }}" {% if value == 'days' %}selected{% endif %}>{{ label }}</option>
-          {% endfor %}
-        </select>
-      </div>
-    </div>
-    <input type="hidden" name="enabled" value="1">
-    <div class="hub-flex-row" style="margin-top:14px">
-      {{ hub.btn("حفظ السياسة", icon="floppy-disk", variant="primary", type="submit") }}
-    </div>
-  </form>
-{% endcall %}
 
 {% call hub.section("معاينة التنفيذ", icon="eye") %}
   {% for item in preview.get('policies') or [] %}
@@ -167,6 +139,126 @@
 {% endcall %}
 
 {% endcall %}
+
+{# ───────────── صندوق عائم منبثق: إضافة سياسة أرشفة ─────────────
+   كان نموذجًا مدمجًا في الصفحة — أصبح نافذة عائمة تُفتح من زر الهيرو.
+   نفس عقد الإنشاء حرفيًا: POST → radius.lifecycle_policy_create بأسماء
+   الحقول: entity_type / trigger_type / delay_value / delay_unit /
+   retention_value / retention_unit / enabled — صفر تغيير خلفي. #}
+<div class="fcw-modal" data-fcw-modal="policy-create" hidden>
+  <div class="fcw-dialog" role="dialog" aria-modal="true" aria-labelledby="fcw-policy-create-title">
+    {# method="post" ضروري: حاقن الـ CSRF التلقائي يستهدف فقط <form method="post">. #}
+    <form method="post" action="{{ url_for('radius.lifecycle_policy_create') }}">
+      <div class="fcw-head">
+        <h3 id="fcw-policy-create-title"><i class="fa-solid fa-circle-plus"></i> إضافة سياسة أرشفة</h3>
+        <button type="button" class="fcw-x" data-fcw-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="fcw-body">
+        <div class="fcw-grid">
+          <label class="hub-field">
+            <span class="hub-field-label">نوع العنصر</span>
+            <select class="hub-select" name="entity_type">
+              {% for value,label in entity_options %}
+                <option value="{{ value }}">{{ label }}</option>
+              {% endfor %}
+            </select>
+            <span class="hub-field-hint">ما الذي تشمله السياسة — بطاقات أو مشتركين أو حزمًا أو ملفات خارجية.</span>
+          </label>
+          <label class="hub-field">
+            <span class="hub-field-label">الشرط</span>
+            <select class="hub-select" name="trigger_type">
+              <option value="expired_at">بعد الانتهاء</option>
+            </select>
+            <span class="hub-field-hint">متى يصبح العنصر مؤهلًا — حاليًا الشرط المدعوم هو انتهاء الصلاحية.</span>
+          </label>
+          <label class="hub-field">
+            <span class="hub-field-label">بعد مدة</span>
+            <input class="hub-input" name="delay_value" type="number" min="0" value="2" dir="ltr">
+            <span class="hub-field-hint">مهلة سماح بعد تحقق الشرط قبل النقل للسلة — 0 يعني فورًا.</span>
+          </label>
+          <label class="hub-field">
+            <span class="hub-field-label">وحدة المدة</span>
+            <select class="hub-select" name="delay_unit">
+              {% for value,label in unit_options %}
+                <option value="{{ value }}" {% if value == 'days' %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+            <span class="hub-field-hint">وحدة قياس مهلة السماح أعلاه.</span>
+          </label>
+          <label class="hub-field">
+            <span class="hub-field-label">الاحتفاظ في السلة</span>
+            <input class="hub-input" name="retention_value" type="number" min="0" value="90" dir="ltr">
+            <span class="hub-field-hint">كم يبقى العنصر في سلة المحذوفات قابلًا للاستعادة قبل حذفه نهائيًا.</span>
+          </label>
+          <label class="hub-field">
+            <span class="hub-field-label">وحدة الاحتفاظ</span>
+            <select class="hub-select" name="retention_unit">
+              {% for value,label in unit_options %}
+                <option value="{{ value }}" {% if value == 'days' %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+            <span class="hub-field-hint">وحدة قياس مدة الاحتفاظ أعلاه.</span>
+          </label>
+        </div>
+        <input type="hidden" name="enabled" value="1">
+        <div class="hub-text-soft" style="font-size:12px;line-height:1.8">
+          <i class="fa-solid fa-shield-halved" style="color:var(--hub-brand-ink,#4338ca)"></i>
+          السياسة تُحفظ مفعَّلة وتعمل أرشفةً آمنة فقط — نقل إلى سلة المحذوفات بلا حذف نهائي،
+          ويمكنك تعطيلها لاحقًا من جدول «السياسات الحالية».
+        </div>
+      </div>
+      <div class="fcw-foot">
+        <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>إغلاق</button>
+        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> حفظ السياسة</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# ───────────── صندوق عائم: تأكيد تشغيل الأرشفة (بديل confirm المتصفح) ─────────────
+   نفس عقد التشغيل: POST → radius.lifecycle_run بلا حقول إضافية. #}
+<div class="fcw-modal" data-fcw-modal="lifecycle-run" hidden>
+  <div class="fcw-dialog" role="dialog" aria-modal="true" aria-labelledby="fcw-lifecycle-run-title" style="width:min(460px,100%)">
+    <form method="post" action="{{ url_for('radius.lifecycle_run') }}">
+      <div class="fcw-head">
+        <h3 id="fcw-lifecycle-run-title"><i class="fa-solid fa-play"></i> تشغيل الأرشفة الآن</h3>
+        <button type="button" class="fcw-x" data-fcw-close aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="fcw-body">
+        <div style="font-size:13.5px;line-height:1.9;color:var(--hub-text,#0f172a)">
+          ستُنقل العناصر المؤهلة حسب السياسات المفعّلة إلى
+          <strong>سلة المحذوفات فقط</strong> — لا حذف نهائي،
+          ويمكن استعادة أي عنصر منها لاحقًا.
+        </div>
+        <div class="hub-text-soft" style="font-size:12px;line-height:1.8">
+          <i class="fa-solid fa-circle-info" style="color:var(--hub-brand-ink,#4338ca)"></i>
+          المؤهل الآن حسب المعاينة: {{ totals.get('cards', 0) }} كرت
+          و{{ totals.get('subscribers', 0) }} مشترك
+          في {{ totals.get('batches_impacted', 0) }} حزمة متأثرة.
+        </div>
+      </div>
+      <div class="fcw-foot">
+        <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>إلغاء</button>
+        <button class="hub-btn hub-btn--primary" type="submit"><i class="fa-solid fa-play"></i> نعم، شغّل الأرشفة</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+(() => {
+  "use strict";
+  // فتح وإغلاق الصناديق العائمة (نفس نمط fcw في finance_center_hub).
+  const root = document;
+  function open(key){ const m = root.querySelector(`[data-fcw-modal='${key}']`); if(m){ m.hidden=false; m.classList.add("is-open"); m.querySelector("input,select,textarea,button")?.focus(); } }
+  function closeAll(){ root.querySelectorAll("[data-fcw-modal]").forEach(m=>{ m.classList.remove("is-open"); m.hidden=true; }); }
+  root.querySelectorAll("[data-fcw-open]").forEach(b=> b.addEventListener("click", ()=> open(b.dataset.fcwOpen)));
+  root.querySelectorAll("[data-fcw-close]").forEach(b=> b.addEventListener("click", closeAll));
+  // النقر على الخلفية المعتمة يغلق النافذة.
+  root.querySelectorAll("[data-fcw-modal]").forEach(m=> m.addEventListener("click", e=>{ if(e.target===m) closeAll(); }));
+  root.addEventListener("keydown", e=>{ if(e.key==="Escape") closeAll(); });
+})();
+</script>
+
+<script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
 {% endblock %}
-</content>
-</invoke>

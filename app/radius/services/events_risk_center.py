@@ -238,6 +238,16 @@ class EventsRiskCenterService:
         ).fetchone()["c"]
         return {"events": int(event_count or 0), "open_flags": int(open_flags or 0), "critical_events": int(critical or 0)}
 
+    # تعريب نوع مالك المحفظة في ملخص التنبيه (القيمة التقنية تبقى في entity_type)
+    _OWNER_LABELS = {
+        "subscriber": "مشترك",
+        "user": "مشترك",
+        "distributor": "موزّع",
+        "manager": "مدير",
+        "admin": "مدير",
+        "tenant": "مستأجر",
+    }
+
     def _detect_negative_wallets(self) -> list[dict[str, Any]]:
         rows = db().execute(
             "SELECT * FROM wallets WHERE tenant_id=? AND balance_minor<0",
@@ -250,7 +260,11 @@ class EventsRiskCenterService:
                 "entity_type": row["owner_type"],
                 "entity_id": row["owner_id"],
                 "risk_score": 90,
-                "summary": f"Wallet {row['owner_type']} #{row['owner_id']} has a negative balance.",
+                # ملخص عربي للتنبيه — يظهر مباشرة في جدول مركز المخاطر
+                "summary": (
+                    f"محفظة {self._OWNER_LABELS.get(row['owner_type'], row['owner_type'])}"
+                    f" ‎#{row['owner_id']} برصيد سالب."
+                ),
                 "evidence": {"wallet_id": row["id"], "balance_minor": row["balance_minor"]},
             }
             for row in rows
@@ -274,7 +288,8 @@ class EventsRiskCenterService:
                 "entity_type": row["target_type"] or row["actor_type"],
                 "entity_id": row["target_id"] or row["actor_id"],
                 "risk_score": min(95, 40 + int(row["c"]) * 10),
-                "summary": f"Repeated failed login attempts detected ({row['c']}).",
+                # ملخص عربي للتنبيه
+                "summary": f"رُصدت محاولات دخول فاشلة متكررة (العدد: {row['c']}).",
                 "evidence": {"count": int(row["c"] or 0)},
             }
             for row in rows
@@ -298,7 +313,8 @@ class EventsRiskCenterService:
                 "entity_type": row["target_type"] or "subscriber",
                 "entity_id": row["target_id"],
                 "risk_score": min(90, 35 + int(row["c"]) * 10),
-                "summary": f"Repeated loans detected ({row['c']}).",
+                # ملخص عربي للتنبيه
+                "summary": f"رُصدت سلف متكررة لنفس المستفيد (العدد: {row['c']}).",
                 "evidence": {"count": int(row["c"] or 0)},
             }
             for row in rows
@@ -320,7 +336,8 @@ class EventsRiskCenterService:
                 "entity_type": row["reference_type"],
                 "entity_id": row["reference_id"],
                 "risk_score": 60,
-                "summary": "Discount recorded on a price snapshot.",
+                # ملخص عربي للتنبيه
+                "summary": "خصم مسجّل على لقطة سعر يستوجب المراجعة.",
                 "evidence": {"discount_amount_minor": row["discount_amount_minor"], "snapshot_id": row["id"]},
             }
             for row in rows
@@ -344,7 +361,8 @@ class EventsRiskCenterService:
                 "entity_type": row["source_type"],
                 "entity_id": row["source_id"],
                 "risk_score": 80,
-                "summary": "Revenue record has collected amount without matching ledger reference.",
+                # ملخص عربي للتنبيه
+                "summary": "سجل إيراد بمبلغ محصّل بلا قيد مطابق في الدفتر.",
                 "evidence": {"revenue_record_id": row["id"], "collected_amount_minor": row["collected_amount_minor"]},
             }
             for row in rows

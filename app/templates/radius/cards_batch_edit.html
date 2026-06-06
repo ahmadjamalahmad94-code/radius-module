@@ -1,21 +1,101 @@
-{# Cards batch edit — REBUILT N8 (hub-v2). Backend data: batch, plans, form, speed_rules_panel. #}
+{# Cards batch edit — unified with cards_generate (2026-06-04).
+   نفس تصميم «إنشاء حزمة بطاقات» حرفيًا: بطاقات cg-section الملوّنة،
+   نفس شبكة الحقول cg-grid، نفس ترتيب الأقسام — حتى لا يختلف شكل
+   التعديل عن شكل الإنشاء. نفس المسار الخلفي (radius.cards_batch_edit)
+   ونفس أسماء الحقول بلا أي تغيير وظيفي.
+   Backend data: batch, plans, form, speed_rules_panel. #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 {% from "_partials/toggle_switch.html" import toggle_switch %}
 
+{# يبقى عنوان التبويب «تعديل باقة كروت» — اختبار
+   test_card_batch_edit_web_route_shows_speed_rules_entry يتحقق من وجوده. #}
 {% block title %}تعديل باقة كروت{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-pen-to-square"></i>{% endblock %}
-{% block page_title %}تعديل باقة كروت {{ batch.batch_code }}{% endblock %}
+{% block page_title %}تعديل حزمة بطاقات {{ batch.batch_code }}{% endblock %}
 {% block page_sub %}<span class="sub">لا يتم إعادة توليد أسماء الدخول أو كلمات المرور عند الحفظ.</span>{% endblock %}
 
 {% macro checked(name) -%}
   {%- if form.get(name) in [true, 1, '1', 'true', 'on', 'yes'] -%}checked{%- endif -%}
 {%- endmacro %}
 
+{% block head_extra %}
+{{ super() }}
+<style>
+  /* نفس أنماط أقسام «إنشاء حزمة بطاقات» (cards_generate) — منسوخة
+     كما هي حتى تتطابق الصفحتان بصريًا قسماً بقسم. */
+  .cg-form{ max-width: 1180px; margin: 0 auto; }
+
+  .cg-section{
+    background: var(--hub-bg-card);
+    border: 1px solid var(--hub-border);
+    border-radius: var(--hub-r-card);
+    box-shadow: var(--hub-sh-card);
+    margin-bottom: var(--hub-gap-section);
+    overflow: hidden;
+    scroll-margin-top: 96px;
+  }
+  .cg-section-head{
+    display:flex; align-items:center; gap:10px;
+    padding: 13px 18px;
+    border-bottom: 1px solid var(--hub-border-soft);
+    background: linear-gradient(180deg, #fafbff, #fff);
+  }
+  .cg-section.is-collapsible .cg-section-head{ cursor:pointer; user-select:none; }
+  .cg-section.is-collapsed .cg-section-head{ border-bottom: none; }
+  .cg-section-icon{
+    width:30px; height:30px;
+    border-radius: var(--hub-r-md);
+    display: inline-flex; align-items:center; justify-content:center;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+  .cg-section-title{ flex:1; font-size: 14px; font-weight: 800; color: var(--hub-text); }
+  .cg-section-toggle{
+    color: var(--hub-text-mute);
+    transition: transform var(--hub-anim-fast) var(--hub-ease);
+  }
+  .cg-section.is-collapsed .cg-section-toggle{ transform: rotate(-90deg); }
+  .cg-section-body{ padding: 18px; }
+  .cg-section.is-collapsed .cg-section-body{ display:none; }
+
+  .cg-section--batch  { border-inline-start: 3px solid var(--hub-brand); }
+  .cg-section--batch  .cg-section-icon{ background: var(--hub-brand-soft); color: var(--hub-brand-ink); }
+  .cg-section--gen    { border-inline-start: 3px solid var(--hub-green); }
+  .cg-section--gen    .cg-section-icon{ background: var(--hub-green-soft); color: var(--hub-green-ink); }
+  .cg-section--time   { border-inline-start: 3px solid var(--hub-amber); }
+  .cg-section--time   .cg-section-icon{ background: var(--hub-amber-soft); color: var(--hub-amber-ink); }
+  .cg-section--speed  { border-inline-start: 3px solid #8B5CF6; }
+  .cg-section--speed  .cg-section-icon{ background: #EDE9FE; color: #6D28D9; }
+  .cg-section--behave { border-inline-start: 3px solid #8B5CF6; }
+  .cg-section--behave .cg-section-icon{ background: #EDE9FE; color: #6D28D9; }
+
+  .cg-grid{ display:grid; gap:12px; grid-template-columns: repeat(4, 1fr); }
+  @media (max-width:920px){ .cg-grid{ grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width:560px){ .cg-grid{ grid-template-columns: 1fr; } }
+  .cg-field{ display:flex; flex-direction:column; gap:5px; min-width:0; }
+  .cg-field.full{ grid-column: 1 / -1; }
+  .cg-field label{ font-size:12.5px; font-weight:700; color:var(--hub-text-soft); }
+  .cg-field label .req{ color:var(--hub-red); margin-inline-start:2px; }
+  .cg-field .help{ font-size:11px; color:var(--hub-text-mute); margin-top:2px; }
+
+  .cg-chk{
+    display:flex; align-items:center; gap:8px;
+    padding:9px 12px;
+    min-height:45px;
+    background:var(--hub-bg-soft);
+    border:1px solid var(--hub-border-soft);
+    border-radius:var(--hub-r-md);
+    font-size:12.5px; font-weight:700; color:var(--hub-text);
+  }
+  .cg-chk input{ width:16px; height:16px; accent-color: var(--hub-brand); cursor:pointer; }
+</style>
+{% endblock %}
+
 {% block content %}
 
 {{ hub.hero(
-  "تعديل باقة كروت — " + batch.batch_code,
+  "تعديل حزمة بطاقات — " + batch.batch_code,
   subtitle="عدّل ربط الباقة، السعر، نمط التوليد، الصلاحية وقواعد السرعة — بدون إعادة توليد البطاقات",
   icon="pen-to-square",
   actions_html='
@@ -28,168 +108,138 @@
   '
 ) }}
 
-<form method="post" action="{{ url_for('radius.cards_batch_edit', batch_id=batch.id) }}" class="hub-form">
+<div class="cg-form">
+<form method="post" action="{{ url_for('radius.cards_batch_edit', batch_id=batch.id) }}">
 
-  {# ───── Plan & pricing ──────────────────────────────────── #}
-  {% call hub.section("بيانات الباقة", icon="box") %}
-    {% call hub.fieldset("الباقة والسعر", icon="tags") %}
-      <div class="hub-form-row">
-        <div class="hub-field">
-          <label class="hub-field-label">اسم الباقة</label>
-          <input class="hub-input" name="package_name" value="{{ form.get('package_name') or '' }}">
-        </div>
-
-        <div class="hub-field">
-          <label class="hub-field-label">العرض المرتبط<span class="req">*</span></label>
+  {# ── 1. بيانات الحزمة (نفس قسم الإنشاء) ─────────────────── #}
+  <section class="cg-section cg-section--batch" id="cg-batch">
+    <header class="cg-section-head">
+      <span class="cg-section-icon"><i class="fa-solid fa-box"></i></span>
+      <span class="cg-section-title">بيانات الحزمة</span>
+    </header>
+    <div class="cg-section-body">
+      <div class="cg-grid">
+        <div class="cg-field"><label>اسم الحزمة</label>
+          <input class="hub-input" name="package_name" value="{{ form.get('package_name') or '' }}"></div>
+        <div class="cg-field"><label>الباقة المرتبطة <span class="req">*</span></label>
           <select class="hub-select" name="plan_id" required>
             {% for p in plans %}
               <option value="{{ p.id }}" {% if form.get('plan_id')|string == p.id|string %}selected{% endif %}>{{ p.name }}</option>
             {% endfor %}
           </select>
-          <div class="hub-field-hint">تغيير العرض يُطبَّق على الكروت المتاحة فقط — الكروت المستخدمة تبقى كسجل سابق.</div>
-        </div>
-
-        <div class="hub-field">
-          <label class="hub-field-label">عدد الباقة</label>
+          <div class="help">تغيير العرض يُطبَّق على الكروت المتاحة فقط — الكروت المستخدمة تبقى كسجل سابق.</div></div>
+        <div class="cg-field"><label>عدد البطاقات</label>
           <input class="hub-input" type="number" name="count"
                  min="{{ batch.generated or 1 }}" max="2000"
                  value="{{ form.get('count') or batch.count }}">
-          <div class="hub-field-hint">لا يمكن تقليل العدد تحت عدد الكروت المُولَّدة.</div>
-        </div>
-
-        <div class="hub-field">
-          <label class="hub-field-label">الحالة</label>
+          <div class="help">لا يمكن تقليل العدد تحت عدد الكروت المُولَّدة.</div></div>
+        <div class="cg-field"><label>الحالة</label>
           {% set st = form.get('status') or batch.status %}
           <select class="hub-select" name="status">
             <option value="active"    {% if st == 'active' %}selected{% endif %}>نشطة</option>
             <option value="exhausted" {% if st == 'exhausted' %}selected{% endif %}>مستهلكة</option>
             <option value="revoked"   {% if st == 'revoked' %}selected{% endif %}>ملغاة</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="hub-form-row">
-        <div class="hub-field">
-          <label class="hub-field-label">سعر البطاقة</label>
+          </select></div>
+        <div class="cg-field"><label>سعر البيع (مرجعي)</label>
           <input class="hub-input" type="number" step="0.01" min="0" name="price_per_card"
-                 value="{{ form.get('price_per_card') or 0 }}">
-        </div>
-        <div class="hub-field">
-          <label class="hub-field-label">سعر الجملة</label>
+                 value="{{ form.get('price_per_card') or 0 }}"></div>
+        <div class="cg-field"><label>سعر الجملة (مرجعي)</label>
           <input class="hub-input" type="number" step="0.01" min="0" name="price_bulk"
-                 value="{{ form.get('price_bulk') or 0 }}">
-        </div>
-        <div class="hub-field">
-          <label class="hub-field-label">السعر الإجمالي</label>
+                 value="{{ form.get('price_bulk') or 0 }}"></div>
+        <div class="cg-field"><label>السعر الإجمالي (مرجعي)</label>
           <input class="hub-input" type="number" step="0.01" min="0" name="total_price"
                  value="{{ form.get('total_price') or 0 }}">
-        </div>
-        <div class="hub-field">
-          <label class="hub-field-label">الحصة الكلية (MB)</label>
+          <div class="help">حقول مرجعية فقط.</div></div>
+        <div class="cg-field"><label>الحصة الكلية (MB)</label>
           <input class="hub-input" type="number" min="0" name="total_quota_mb"
                  value="{{ form.get('total_quota_mb') or 0 }}">
-        </div>
+          <div class="help">0 = بلا كوتا خاصة.</div></div>
+        <div class="cg-field"><label>اسم الخدمة</label>
+          <input class="hub-input" name="service_name" value="{{ form.get('service_name') or '' }}"></div>
+        <div class="cg-field"><label>المدير المسؤول</label>
+          <input class="hub-input" type="number" name="manager_id" value="{{ form.get('manager_id') or 0 }}"></div>
       </div>
+    </div>
+  </section>
 
-      <div class="hub-form-row">
-        <div class="hub-field">
-          <label class="hub-field-label">اسم الخدمة</label>
-          <input class="hub-input" name="service_name" value="{{ form.get('service_name') or '' }}">
-        </div>
-        <div class="hub-field">
-          <label class="hub-field-label">المدير المسؤول</label>
-          <input class="hub-input" type="number" name="manager_id" value="{{ form.get('manager_id') or 0 }}">
-        </div>
-      </div>
-    {% endcall %}
-  {% endcall %}
+  {# ── 2. السرعة المجدولة — نفس لوحة قواعد السرعة المضمّنة ── #}
+  <section class="cg-section cg-section--speed" id="speed-rules">
+    <header class="cg-section-head">
+      <span class="cg-section-icon"><i class="fa-solid fa-gauge-high"></i></span>
+      <span class="cg-section-title">السرعة المجدولة</span>
+    </header>
+    <div class="cg-section-body">
+      {% include "radius/_speed_rules_panel.html" %}
+    </div>
+  </section>
 
-  {# ───── Embedded speed rules panel — backend-provided ───── #}
-  <div id="speed-rules">
-    {% include "radius/_speed_rules_panel.html" %}
-  </div>
-
-  {# ───── Generation pattern ─────────────────────────────── #}
-  {% call hub.section("إعدادات التوليد", icon="dice") %}
-    {% call hub.fieldset("اسم الدخول وكلمة المرور", icon="user-lock") %}
-      <div class="hub-form-row">
-        <div class="hub-field">
-          <label class="hub-field-label">طول اسم الدخول</label>
+  {# ── 3. توليد البطاقات (نفس قسم الإنشاء) ────────────────── #}
+  <section class="cg-section cg-section--gen" id="cg-generation">
+    <header class="cg-section-head">
+      <span class="cg-section-icon"><i class="fa-solid fa-dice"></i></span>
+      <span class="cg-section-title">توليد البطاقات</span>
+    </header>
+    <div class="cg-section-body">
+      <div class="cg-grid">
+        <div class="cg-field"><label>طول اسم المستخدم</label>
           <input class="hub-input" type="number" min="4" max="32" name="username_length"
-                 value="{{ form.get('username_length') or 8 }}">
-        </div>
-        <div class="hub-field">
-          <label class="hub-field-label">طول كلمة المرور</label>
+                 value="{{ form.get('username_length') or 8 }}"></div>
+        <div class="cg-field"><label>طول كلمة المرور</label>
           <input class="hub-input" type="number" min="4" max="64" name="password_length"
-                 value="{{ form.get('password_length') or 6 }}">
-        </div>
-        <div class="hub-field">
-          <label class="hub-field-label">نمط كلمة المرور</label>
+                 value="{{ form.get('password_length') or 6 }}"></div>
+        <div class="cg-field"><label>نمط توليد كلمة المرور</label>
           {% set pgt = form.get('password_generation_type') or 'medium' %}
           <select class="hub-select" name="password_generation_type">
             <option value="digits" {% if pgt == 'digits' %}selected{% endif %}>أرقام فقط</option>
-            <option value="weak"   {% if pgt == 'weak' %}selected{% endif %}>حروف</option>
+            <option value="weak"   {% if pgt == 'weak' %}selected{% endif %}>سيئ (حروف)</option>
             <option value="medium" {% if pgt == 'medium' %}selected{% endif %}>متوسط</option>
-            <option value="strong" {% if pgt == 'strong' %}selected{% endif %}>قوي</option>
-          </select>
-        </div>
-        <div class="hub-field">
-          <label class="hub-field-label">موضع الإضافة</label>
+            <option value="strong" {% if pgt == 'strong' %}selected{% endif %}>قوي (حروف+أرقام+رموز)</option>
+          </select></div>
+        <div class="cg-field"><label>إضافة قبل أو بعد الاسم</label>
           {% set side = form.get('starts_with_or_ends_with') or '' %}
           <select class="hub-select" name="starts_with_or_ends_with">
-            <option value=""       {% if not side %}selected{% endif %}>بدون</option>
+            <option value=""       {% if not side %}selected{% endif %}>— لا شيء —</option>
             <option value="prefix" {% if side == 'prefix' %}selected{% endif %}>قبل الاسم</option>
             <option value="suffix" {% if side == 'suffix' %}selected{% endif %}>بعد الاسم</option>
-          </select>
-        </div>
+          </select></div>
+        <div class="cg-field"><label>النص المضاف</label>
+          <input class="hub-input" name="prefix_or_suffix_value" value="{{ form.get('prefix_or_suffix_value') or '' }}" placeholder="مثال: GZA-"></div>
+        <div class="cg-field"><label>بادئة قديمة للتوافق</label>
+          <input class="hub-input" name="username_prefix" value="{{ form.get('username_prefix') or '' }}" placeholder="c-">
+          <div class="help">للتوافق مع الإعداد القديم.</div></div>
+        <div class="cg-field"><label>لاحقة قديمة</label>
+          <input class="hub-input" name="username_suffix" value="{{ form.get('username_suffix') or '' }}"></div>
+        <div class="cg-field"><label>تضمين رقم الحزمة</label>
+          <div class="cg-chk">
+            {{ toggle_switch(name="include_batch_number", checked=(form.get('include_batch_number') in [true, 1, '1', 'true', 'on', 'yes']), value="1", id="ibn", on_label="B{id}-... قبل الاسم", off_label="B{id}-... قبل الاسم") }}
+          </div></div>
       </div>
+    </div>
+  </section>
 
-      <div class="hub-form-row">
-        <div class="hub-field">
-          <label class="hub-field-label">النص المضاف</label>
-          <input class="hub-input" name="prefix_or_suffix_value" value="{{ form.get('prefix_or_suffix_value') or '' }}">
-        </div>
-        <div class="hub-field">
-          <label class="hub-field-label">بادئة قديمة</label>
-          <input class="hub-input" name="username_prefix" value="{{ form.get('username_prefix') or '' }}">
-        </div>
-        <div class="hub-field">
-          <label class="hub-field-label">لاحقة قديمة</label>
-          <input class="hub-input" name="username_suffix" value="{{ form.get('username_suffix') or '' }}">
-        </div>
-        <div class="hub-field">
-          <label class="hub-field-label">تضمين رقم الباقة</label>
-          <div style="padding:5px 0">
-            {{ toggle_switch(name="include_batch_number", checked=(form.get('include_batch_number') in [true, 1, '1', 'true', 'on', 'yes']), value="1") }}
-          </div>
-        </div>
-      </div>
-    {% endcall %}
-  {% endcall %}
-
-  {# ───── Validity & behaviour ───────────────────────────── #}
-  {% call hub.section("الصلاحية والسلوك", icon="clock") %}
-    {% call hub.fieldset("المدة والصلاحية", icon="hourglass-half") %}
-      <div class="hub-form-row">
-        <div class="hub-field">
-          <label class="hub-field-label">قيمة الوقت</label>
+  {# ── 4. الصلاحية والوقت (نفس قسم الإنشاء) ───────────────── #}
+  <section class="cg-section cg-section--time" id="cg-time">
+    <header class="cg-section-head">
+      <span class="cg-section-icon"><i class="fa-solid fa-clock"></i></span>
+      <span class="cg-section-title">الصلاحية والوقت</span>
+    </header>
+    <div class="cg-section-body">
+      <div class="cg-grid">
+        <div class="cg-field"><label>قيمة الوقت</label>
           <input class="hub-input" type="number" min="0" name="time_value"
                  value="{{ form.get('time_value') or 0 }}">
-        </div>
-        <div class="hub-field">
-          <label class="hub-field-label">وحدة الوقت</label>
+          <div class="help">0 = استخدم صلاحية الباقة.</div></div>
+        <div class="cg-field"><label>وحدة الوقت</label>
           {% set tu = form.get('time_unit') or 'days' %}
           <select class="hub-select" name="time_unit">
             <option value="minutes" {% if tu == 'minutes' %}selected{% endif %}>دقائق</option>
             <option value="hours"   {% if tu == 'hours' %}selected{% endif %}>ساعات</option>
             <option value="days"    {% if tu == 'days' %}selected{% endif %}>أيام</option>
-          </select>
-        </div>
-        <div class="hub-field">
-          <label class="hub-field-label">عدد الأجهزة</label>
+          </select></div>
+        <div class="cg-field"><label>عدد الأجهزة</label>
           <input class="hub-input" type="number" min="1" max="50" name="device_count"
                  value="{{ form.get('device_count') or 1 }}">
-        </div>
+          <div class="help">عدد الجلسات المتزامنة المسموحة.</div></div>
         {# #20: «وضع المدة» dropdown removed — the duration mode is now driven
            purely by «العد من أول اتصال» below:
              • ON  → Mode B: wall-clock countdown from first login.
@@ -198,60 +248,65 @@
            legacy backend reads still receive a consistent value. #}
         <input type="hidden" name="duration_mode"
                value="{{ form.get('duration_mode') or 'time_unit' }}" data-duration-mode>
-      </div>
-
-      <div class="hub-form-row">
-        <div class="hub-field">
-          <label class="hub-field-label">صلاحية بعد أول دخول (أيام)</label>
+        <div class="cg-field"><label>صلاحية بعد أول دخول (أيام)</label>
           <input class="hub-input" type="number" min="0" name="validity_after_first_login_days"
-                 value="{{ form.get('validity_after_first_login_days') or 0 }}">
-        </div>
-        <div class="hub-field">
-          <label class="hub-field-label">عند انتهاء الحصة</label>
+                 value="{{ form.get('validity_after_first_login_days') or 0 }}"></div>
+        <div class="cg-field"><label>العدّ من أول اتصال</label>
+          <div class="cg-chk">
+            {{ toggle_switch(name="count_from_first_connect", checked=(form.get('count_from_first_connect') in [true, 1, '1', 'true', 'on', 'yes']), value="1", id="cfc", on_label="مفعَّل: المدة تبدأ من أول دخول (نمط B)", off_label="معطّل: رصيد وقت استخدام يُستهلك أثناء الاتصال فقط (نمط A)") }}
+          </div>
+          <div class="help">يحدّد نمط المدة: عند التفعيل تُحسب المدة كعدّ تنازلي من أول دخول؛ وعند التعطيل تكون رصيد ثوانٍ استخدام يُستهلك فقط أثناء الاتصال.</div></div>
+        <div class="cg-field"><label>العدّ بالثواني</label>
+          <div class="cg-chk">
+            {{ toggle_switch(name="count_by_seconds", checked=(form.get('count_by_seconds') in [true, 1, '1', 'true', 'on', 'yes']), value="1", id="cbs") }}
+          </div></div>
+      </div>
+    </div>
+  </section>
+
+  {# ── 5. سلوك الكوتا وخيارات إضافية (نفس قسم الإنشاء) ────── #}
+  <section class="cg-section cg-section--behave" id="cg-behavior">
+    <header class="cg-section-head">
+      <span class="cg-section-icon"><i class="fa-solid fa-sliders"></i></span>
+      <span class="cg-section-title">سلوك انتهاء الكوتا وخيارات إضافية</span>
+    </header>
+    <div class="cg-section-body">
+      <div class="cg-grid">
+        <div class="cg-field"><label>عند انتهاء الكوتا</label>
           {% set oqe = form.get('on_quota_exhaust') or 'stop' %}
           <select class="hub-select" name="on_quota_exhaust">
-            <option value="stop"         {% if oqe == 'stop' %}selected{% endif %}>إيقاف</option>
+            <option value="stop"         {% if oqe == 'stop' %}selected{% endif %}>إيقاف الكرت</option>
             <option value="reduce_speed" {% if oqe == 'reduce_speed' %}selected{% endif %}>تخفيض السرعة</option>
-            <option value="notify"       {% if oqe == 'notify' %}selected{% endif %}>تنبيه فقط</option>
-          </select>
-        </div>
+            <option value="notify"       {% if oqe == 'notify' %}selected{% endif %}>إبقاء مع تنبيه</option>
+          </select></div>
+        <div class="cg-field"><label>تجديد تلقائي بعد أول استخدام</label>
+          <div class="cg-chk">
+            {{ toggle_switch(name="auto_renew_after_first_use", checked=(form.get('auto_renew_after_first_use') in [true, 1, '1', 'true', 'on', 'yes']), value="1", id="arfu") }}
+          </div></div>
+        <div class="cg-field"><label>ربط MAC عند الاتصال</label>
+          <div class="cg-chk">
+            {{ toggle_switch(name="switch_to_mac_on_connect", checked=(form.get('switch_to_mac_on_connect') in [true, 1, '1', 'true', 'on', 'yes']), value="1", id="smc") }}
+          </div></div>
+        <div class="cg-field"><label>قفل MAC عند الإغلاق</label>
+          <div class="cg-chk">
+            {{ toggle_switch(name="lock_to_mac_on_close", checked=(form.get('lock_to_mac_on_close') in [true, 1, '1', 'true', 'on', 'yes']), value="1", id="lmc") }}
+          </div></div>
+        <div class="cg-field full"><label>ملاحظات</label>
+          <textarea class="hub-textarea" name="notes" rows="3"
+                    placeholder="ملاحظات داخلية تظهر للمدير فقط...">{{ form.get('notes') or '' }}</textarea></div>
       </div>
-    {% endcall %}
+    </div>
+  </section>
 
-    {% call hub.fieldset("خيارات تشغيل", icon="sliders") %}
-      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(240px,1fr));gap:10px;padding:6px 0">
-        {# #21: «دخول برقم الجوال فقط» (phone_only_login) removed from the UI.
-           Backend reads it via _form_bool → defaults to off when absent. #}
-        {% set opts = [
-          ('count_from_first_connect',    'العد من أول اتصال'),
-          ('count_by_seconds',            'العد بالثواني'),
-          ('auto_renew_after_first_use',  'تجديد تلقائي بعد أول استخدام'),
-          ('switch_to_mac_on_connect',    'ربط MAC عند الاتصال'),
-          ('lock_to_mac_on_close',        'قفل MAC عند الإغلاق'),
-        ] %}
-        {% for nm, lbl in opts %}
-          <div style="display:flex;align-items:center;gap:10px;padding:4px 0">
-            {{ toggle_switch(name=nm, checked=(form.get(nm) in [true, 1, '1', 'true', 'on', 'yes']), value="1", on_label=lbl, off_label=lbl) }}
-          </div>
-        {% endfor %}
-      </div>
-    {% endcall %}
-
-    {% call hub.fieldset("ملاحظات", icon="note-sticky") %}
-      <div class="hub-field">
-        <textarea class="hub-textarea" name="notes" rows="3"
-                  placeholder="ملاحظات داخلية تظهر للمدير فقط...">{{ form.get('notes') or '' }}</textarea>
-      </div>
-    {% endcall %}
-  {% endcall %}
-
-  {# ───── Save bar ───────────────────────────────────────── #}
-  <div class="hub-actions" style="justify-content:flex-end;gap:10px;margin-top:14px">
-    {{ hub.btn("إلغاء", icon="xmark", variant="ghost",
-               href=url_for('radius.cards_of_batch', batch_id=batch.id)) }}
-    {{ hub.btn("حفظ التعديلات", icon="floppy-disk", variant="primary", type="submit") }}
+  {# ── شريط الحفظ (نفس مكان أزرار الإنشاء) ────────────────── #}
+  <div style="display:flex;gap:10px;justify-content:flex-end;padding:6px 4px 0">
+    <a class="hub-btn hub-btn--secondary" href="{{ url_for('radius.cards_of_batch', batch_id=batch.id) }}">إلغاء</a>
+    <button class="hub-btn hub-btn--primary" type="submit">
+      <i class="fa-solid fa-floppy-disk"></i> حفظ التعديلات
+    </button>
   </div>
 </form>
+</div>{# /.cg-form #}
 
 <script>
 // #20: keep the hidden duration_mode in sync with the «العد من أول اتصال»

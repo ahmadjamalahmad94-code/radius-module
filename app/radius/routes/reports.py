@@ -299,7 +299,14 @@ def rep_failed_logins():
     rows = [dict(r) for r in db().execute(
         f"SELECT * FROM radpostauth WHERE {where_sql} ORDER BY id DESC LIMIT 500", params
     ).fetchall()]
-    return render_template("radius/rep_failed_logins.html", items=rows, total=total, filters=f, limit=500)
+    # مؤشّر «آخر 24 ساعة» — عدّ بسيط مستقل عن الفلاتر (نفس الجدول والشرط الأساسي)
+    last24 = db().execute(
+        "SELECT COUNT(*) AS c FROM radpostauth "
+        "WHERE tenant_id = ? AND reply != 'Access-Accept' "
+        "AND authdate >= datetime('now', '-1 day')", [_tid()]
+    ).fetchone()["c"]
+    return render_template("radius/rep_failed_logins.html",
+                           items=rows, total=total, last24=last24, filters=f, limit=500)
 
 
 # ─────────────── 3. Login status (last login per user) ───────────────
@@ -323,23 +330,69 @@ def rep_login_status():
 
 
 # ─────────────── 3b. Login states (unified: panel + portal + RADIUS) ───────────────
+# الصفحة الرئيسية لحالات تسجيل الدخول + ثلاث صفحات فرعية مفروزة بدقة حسب الفاعل.
+# نمط المسار: نفس العنوان /reports/login_states مع ?actor=admin|subscriber|card —
+# يحافظ على الروابط القديمة (?actor=…) كما هي ويُبقي تفعيل الشريط الجانبي تلقائيًا.
+
+# تعريف ثابت للصفحات الفرعية الثلاث — عنوان وأيقونة وسطر تعريفي لكل فاعل
+_LOGIN_STATES_KINDS = {
+    "admin": {
+        "title": "حالات دخول المدراء",
+        "icon": "user-shield",
+        "subtitle": "كل محاولات دخول المدراء إلى لوحة الإدارة — نجاحًا وفشلًا، مع عنوان الشبكة والمتصفح والجهاز.",
+        "search_ph": "بحث (اسم المدير / عنوان الشبكة)…",
+    },
+    "subscriber": {
+        "title": "حالات دخول المشتركين",
+        "icon": "user",
+        "subtitle": "محاولات دخول المشتركين عبر بوابة المشتركين وشبكة المصادقة — مع جهاز الشبكة وسبب الفشل.",
+        "search_ph": "بحث (اسم المشترك / عنوان الشبكة / جهاز الشبكة)…",
+    },
+    "card": {
+        "title": "حالات دخول الكروت",
+        "icon": "ticket",
+        "subtitle": "محاولات دخول الكروت عبر شبكة المصادقة والبوابة — مع عنوان الجهاز وجهاز الشبكة وسبب الفشل.",
+        "search_ph": "بحث (اسم الكرت / عنوان الجهاز / جهاز الشبكة)…",
+    },
+}
+
 
 def rep_login_states():
-    from ..services.login_events import fetch_login_events, ACTOR_LABELS, SOURCE_LABELS
-    filters = {
-        "actor":     (request.args.get("actor") or "").strip(),
-        "result":    (request.args.get("result") or "").strip(),
-        "source":    (request.args.get("source") or "").strip(),
-        "q":         (request.args.get("q") or "").strip(),
-        "date_from": (request.args.get("date_from") or "").strip(),
-        "date_to":   (request.args.get("date_to") or "").strip(),
+    from ..services.login_events import (
+        fetch_login_events, login_states_overview, ACTOR_LABELS, SOURCE_LABELS,
+    )
+    actor = (request.args.get("actor") or "").strip()
+
+    # ── الصفحات الفرعية الثلاث: فرز دقيق على مستوى الاستعلام حسب الفاعل ──
+    if actor in _LOGIN_STATES_KINDS:
+        filters = {
+            "actor":     actor,
+            "result":    (request.args.get("result") or "").strip(),
+            "source":    (request.args.get("source") or "").strip(),
+            "q":         (request.args.get("q") or "").strip(),
+            "date_from": (request.args.get("date_from") or "").strip(),
+            "date_to":   (request.args.get("date_to") or "").strip(),
+        }
+        data = fetch_login_events(_tid(), **filters)
+        return render_template(
+            "radius/rep_login_states_detail.html",
+            kind=actor, meta=_LOGIN_STATES_KINDS[actor], kinds=_LOGIN_STATES_KINDS,
+            rows=data["rows"], stats=data["stats"],
+            shown=data["shown"], matched=data["matched"],
+            filters=filters, actor_labels=ACTOR_LABELS, source_labels=SOURCE_LABELS,
+        )
+
+    # ── الصفحة الرئيسية: ثلاث بطاقات كبيرة بعدّادات مصغّرة لكل نوع فاعل ──
+    overview = login_states_overview(_tid())
+    totals = {
+        "total": sum(v["total"] for v in overview.values()),
+        "ok":    sum(v["ok"] for v in overview.values()),
+        "fail":  sum(v["fail"] for v in overview.values()),
+        "today": sum(v["today"] for v in overview.values()),
     }
-    data = fetch_login_events(_tid(), **filters)
     return render_template(
         "radius/rep_login_states.html",
-        rows=data["rows"], stats=data["stats"],
-        shown=data["shown"], matched=data["matched"],
-        filters=filters, actor_labels=ACTOR_LABELS, source_labels=SOURCE_LABELS,
+        overview=overview, totals=totals, kinds=_LOGIN_STATES_KINDS,
     )
 
 
@@ -419,9 +472,13 @@ def rep_manager_login_status():
         where.append("(username LIKE ? OR full_name LIKE ? OR email LIKE ?)")
         params += [f"%{f['q']}%"] * 3
     where_sql = (" WHERE " + " AND ".join(where)) if where else ""
+    # ضمّ اسم الدور العربي (roles.display_name / name) ليُعرض بدل role_id الرقمي
     rows = [dict(r) for r in db().execute(f"""
-        SELECT id, username, full_name, email, role_id, enabled, last_login_at, created_at
-        FROM admins{where_sql} ORDER BY last_login_at DESC NULLS LAST
+        SELECT a.id, a.username, a.full_name, a.email, a.role_id,
+               a.is_super_admin, a.enabled, a.last_login_at, a.created_at,
+               COALESCE(NULLIF(r.display_name, ''), r.name) AS role_name
+        FROM admins a LEFT JOIN roles r ON r.id = a.role_id
+        {where_sql} ORDER BY a.last_login_at DESC NULLS LAST
     """, params).fetchall()]
     return render_template("radius/rep_manager_login_status.html", items=rows, filters=f)
 

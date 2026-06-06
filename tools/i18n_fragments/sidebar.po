@@ -1,0 +1,317 @@
+msgid "ليست ضمن صلاحياتك"
+msgstr "Not within your permissions"
+
+msgid "مركز الإدارة"
+msgstr "Admin Center"
+
+msgid "طيّ القائمة"
+msgstr "Collapse menu"
+
+msgid "إغلاق"
+msgstr "Close"
+
+msgid "القائمة الرئيسية"
+msgstr "Main menu"
+
+msgid "لوحة التحكم"
+msgstr "Dashboard"
+
+msgid "المشتركون"
+msgstr "Subscribers"
+
+msgid "نظرة عامة"
+msgstr "Overview"
+
+msgid "المشتركين 360"
+msgstr "Subscribers 360"
+
+msgid "إضافة مشترك"
+msgstr "Add subscriber"
+
+msgid "مجموعات المشتركين"
+msgstr "Subscriber groups"
+
+msgid "المشتركون المتصلون"
+msgstr "Online subscribers"
+
+msgid "البطاقات"
+msgstr "Cards"
+
+msgid "فحص بطاقة"
+msgstr "Check card"
+
+msgid "حزم البطاقات"
+msgstr "Card batches"
+
+msgid "إضافة حزمة"
+msgstr "Add batch"
+
+msgid "🖨️ بطاقات الطباعة"
+msgstr "🖨️ Printable cards"
+
+msgid "البطاقات المتصلة"
+msgstr "Online cards"
+
+msgid "قوالب الطباعة"
+msgstr "Print templates"
+
+msgid "البطاقات الإلكترونية"
+msgstr "E-cards"
+
+msgid "سوق البطاقات"
+msgstr "Card marketplace"
+
+msgid "مستخدمو البطاقات"
+msgstr "Card users"
+
+msgid "⚡ بطاقات الشحن المسبق"
+msgstr "⚡ Prepaid recharge cards"
+
+msgid "العروض والسرعات"
+msgstr "Plans & speeds"
+
+msgid "قائمة العروض"
+msgstr "Plans list"
+
+msgid "إضافة عرض"
+msgstr "Add plan"
+
+msgid "السرعات"
+msgstr "Bandwidth profiles"
+
+msgid "جدولة السرعات"
+msgstr "Bandwidth schedules"
+
+msgid "الشبكة"
+msgstr "Network"
+
+msgid "إدارة الراوترات"
+msgstr "Router management"
+
+msgid "🛜 غرفة عمليات الراوترات"
+msgstr "🛜 Router operations room"
+
+msgid "أجهزة الشبكة"
+msgstr "Network devices"
+
+msgid "نطاقات العناوين"
+msgstr "IP pools"
+
+msgid "رسائل أخطاء الهوتسبوت"
+msgstr "Hotspot error messages"
+
+msgid "إضافة وإعداد"
+msgstr "Add & configure"
+
+msgid "إضافة راوتر (سريع)"
+msgstr "Add router (quick)"
+
+msgid "إعداد راوتر متقدم"
+msgstr "Advanced router setup"
+
+msgid "التحكم بالسرعة"
+msgstr "Speed control"
+
+msgid "مجدول"
+msgstr "Scheduled"
+
+msgid "يدوي"
+msgstr "Manual"
+
+msgid "المراقبة والسجلات"
+msgstr "Monitoring & logs"
+
+msgid "التنبيهات الذكيّة"
+msgstr "Smart alerts"
+
+msgid "سجل العمليات"
+msgstr "Audit log"
+
+msgid "دفع بيانات التوزيع"
+msgstr "Distribution data push"
+
+msgid "المال والتحصيل"
+msgstr "Finance & collection"
+
+msgid "⚡ لوحة الشحن"
+msgstr "⚡ Recharge panel"
+
+msgid "المركز المالي"
+msgstr "Finance center"
+
+msgid "السجل والتقارير المحاسبية"
+msgstr "Ledger & accounting reports"
+
+msgid "الفواتير والكوبونات"
+msgstr "Invoices & vouchers"
+
+msgid "التحصيل والمدفوعات"
+msgstr "Collection & payments"
+
+msgid "مجمّد"
+msgstr "Frozen"
+
+msgid "مختبر الدفع الإلكتروني"
+msgstr "Payments lab"
+
+msgid "تجريبي"
+msgstr "Demo"
+
+msgid "مخزون ومصروفات الشركة"
+msgstr "Company inventory & expenses"
+
+msgid "التشغيل والمخاطر"
+msgstr "Operations & risk"
+
+msgid "التواصل والحملات"
+msgstr "Communications & campaigns"
+
+msgid "رسائل واتساب للمشتركين"
+msgstr "WhatsApp to subscribers"
+
+msgid "الأحداث والمخاطر"
+msgstr "Events & risk"
+
+msgid "مركز العمليات"
+msgstr "Operations center"
+
+msgid "التقارير"
+msgstr "Reports"
+
+msgid "التقارير التنفيذية"
+msgstr "Executive reports"
+
+msgid "التقرير المالي"
+msgstr "Financial report"
+
+msgid "تقارير البطاقات"
+msgstr "Card reports"
+
+msgid "تقارير الموزعين"
+msgstr "Distributor reports"
+
+msgid "الأرشيف"
+msgstr "Archive"
+
+msgid "الدخول والأمان"
+msgstr "Login & security"
+
+msgid "حالات تسجيل الدخول"
+msgstr "Login states"
+
+msgid "فشل دخول الشبكة"
+msgstr "Network login failures"
+
+msgid "حالة دخول المشتركين"
+msgstr "Subscriber login status"
+
+msgid "حالة دخول المدراء"
+msgstr "Manager login status"
+
+msgid "الشبكة والجلسات"
+msgstr "Network & sessions"
+
+msgid "تقارير الجلسات"
+msgstr "Session reports"
+
+msgid "سجل تغييرات الماك"
+msgstr "MAC change history"
+
+msgid "فشل الفصل/التحديث"
+msgstr "CoA/disconnect failures"
+
+msgid "فشل تحديث السرعة"
+msgstr "Speed update failures"
+
+msgid "النشاط والأحداث"
+msgstr "Activity & events"
+
+msgid "أحداث المدراء"
+msgstr "Manager events"
+
+msgid "أحداث المشتركين"
+msgstr "Subscriber events"
+
+msgid "تغيير العروض"
+msgstr "Plan changes"
+
+msgid "سجل رسائل الربط"
+msgstr "API message log"
+
+msgid "المالية والموازنات"
+msgstr "Finance & balances"
+
+msgid "كروت الشحن المستخدمة"
+msgstr "Used recharge cards"
+
+msgid "معاملات الكاش"
+msgstr "Cash transactions"
+
+msgid "تحويلات الرصيد"
+msgstr "Balance movements"
+
+msgid "تقارير المحاسبة"
+msgstr "Accounting reports"
+
+msgid "الدعم"
+msgstr "Support"
+
+msgid "التذاكر"
+msgstr "Tickets"
+
+msgid "الخدمات / المعدّات"
+msgstr "Services / Equipment"
+
+msgid "بوابات العملاء"
+msgstr "Customer portals"
+
+msgid "الإدارة"
+msgstr "Administration"
+
+msgid "المدراء والموزعون"
+msgstr "Managers & distributors"
+
+msgid "أسعار العروض للمدراء"
+msgstr "Manager plan pricing"
+
+msgid "الأدوار والصلاحيات"
+msgstr "Roles & permissions"
+
+msgid "لوحة التراخيص"
+msgstr "Licensing panel"
+
+msgid "البيانات والحفظ والأرشفة"
+msgstr "Data, backups & archiving"
+
+msgid "إعدادات النظام"
+msgstr "System settings"
+
+msgid "طابور المزامنة"
+msgstr "Sync queue"
+
+msgid "المستأجرون"
+msgstr "Tenants"
+
+msgid "التكامل والجسر"
+msgstr "Integration & bridge"
+
+msgid "جسر الإدارة"
+msgstr "Admin bridge"
+
+msgid "ملف التراخيص"
+msgstr "License file"
+
+msgid "إشعارات الربط"
+msgstr "Webhooks"
+
+msgid "مفاتيح الواجهة"
+msgstr "API keys"
+
+msgid "توثيق الواجهة"
+msgstr "API documentation"
+
+msgid "كيف تستخدمني"
+msgstr "How to use me"
+
+msgid "مدير النظام"
+msgstr "System administrator"

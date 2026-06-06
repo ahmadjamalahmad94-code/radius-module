@@ -14,6 +14,7 @@
 {{ super() }}
 {# Reuse the floating print modal from cards_batches_view. #}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/cards_batches_view.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
 <script defer src="{{ url_for('static', filename='js/cards_batches_view.js') }}"></script>
 <style>
   /* Required — the chip grid uses display:grid which overrides
@@ -350,6 +351,8 @@
   </div>
 
   <div data-view-panel="table" hidden style="overflow-x:auto">
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25"
+         data-uds-export-title="حزم الشحن المسبق" style="border:none;border-radius:0">
     <table class="hub-table">
       <thead>
         <tr>
@@ -404,6 +407,7 @@
         {% endfor %}
       </tbody>
     </table>
+    </div>
   </div>
 
   {% endif %}
@@ -577,4 +581,5 @@
 </script>
 
 </div>
+<script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
 {% endblock %}

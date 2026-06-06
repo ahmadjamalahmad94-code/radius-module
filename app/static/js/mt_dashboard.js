@@ -185,12 +185,13 @@
     setKpi("uptime", resourceRow["uptime"] || "—",
            resourceRow["build-time"] ? "بُني " + resourceRow["build-time"] : null);
 
+    // CPU — set value + progress bar in a single call. (A previous
+    // unconditional second call wiped the progress the first set, so
+    // the CPU accent bar never filled.)
     const cpu = resourceRow["cpu-load"];
-    if (cpu != null) {
-      setKpi("cpu", cpu + "%", resourceRow["cpu"] ? resourceRow["cpu"] : null, { progress: cpu });
-    }
     setKpi("cpu", cpu != null ? cpu + "%" : "—",
-           resourceRow["cpu"] ? resourceRow["cpu"] : null);
+           resourceRow["cpu"] ? resourceRow["cpu"] : null,
+           cpu != null ? { progress: cpu } : undefined);
 
     const memFreeRaw = resourceRow["free-memory"];
     const memTotalRaw = resourceRow["total-memory"];
@@ -261,10 +262,13 @@
     try {
       const { res, body } = await api("/mikrotik/" + CFG.routerId + "/system/overview");
       if (!res.ok || !body || body.ok === false) {
+        // مؤشّر هادئ: نعرض عبارة عربية لطيفة في الـ meta بدل «HTTP 0»
+        // الصارخة. الرمز التقني يبقى في الـ console للتشخيص فقط.
         const msg = body && body.error && body.error.message
           ? body.error.message
-          : ("HTTP " + res.status);
-        setStatus("error", "تعذّر الاتصال بواجهة الربط", msg);
+          : (res.status ? ("رمز " + res.status) : "تحقّق من نفق الإدارة");
+        if (window.console) console.warn("[mt-status] overview HTTP", res.status, body);
+        setStatus("error", "غير متصل", msg);
         return;
       }
       const data = body.data || {};

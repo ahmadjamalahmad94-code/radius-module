@@ -6,35 +6,48 @@
 {% block page_title %}السلف{% endblock %}
 {% block page_sub %}<span class="sub">سلف المشتركين الحالية من سجل المحاسبة</span>{% endblock %}
 
+{% block head_extra %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
+{% endblock %}
+
+{# ───── ماكرو ترجمة حالة السلفة: يحوّل القيمة الخام من قاعدة البيانات إلى عربية ───── #}
+{% macro loan_status_label(s) -%}
+{%- if s == "open" -%}مفتوحة
+{%- elif s == "settled" -%}مسددة
+{%- elif s == "voided" -%}ملغاة
+{%- else -%}{{ s }}
+{%- endif -%}
+{%- endmacro %}
+
 {% block content %}
-{{ hub.hero("السلف", subtitle="عرض السلف المفتوحة والمغلقة دون تطبيق أي تغيير مباشر على خدمة المصادقة.", icon="hand-holding-dollar") }}
-{% include "radius/_finance_nav.html" %}
-
-<div class="hub-kpi-grid">
-  {{ hub.kpi("عدد السلف", summary.loan_count, icon="list", variant="blue") }}
-  {{ hub.kpi("سلف مفتوحة", summary.open_loan_count, icon="hourglass-half", variant="amber") }}
-  {{ hub.kpi("قيمة السلف المفتوحة", summary.total_loans|money, icon="hand-holding-dollar", variant="brand") }}
-  {{ hub.kpi("التحصيلات", summary.total_collections|money, icon="cash-register", variant="green") }}
-</div>
-
-{% call hub.section("فلترة السلف", icon="filter") %}
-  <form method="get" class="hub-form-grid">
-    <label class="hub-field">
-      <span class="hub-field-label">الحالة</span>
-      <select class="hub-input" name="status">
-        <option value="" {% if not status %}selected{% endif %}>كل الحالات</option>
-        <option value="open" {% if status == "open" %}selected{% endif %}>مفتوحة</option>
-        <option value="settled" {% if status == "settled" %}selected{% endif %}>مسددة</option>
-        <option value="voided" {% if status == "voided" %}selected{% endif %}>ملغاة</option>
-      </select>
-    </label>
-    {{ hub.btn("تطبيق الفلتر", variant="secondary", icon="filter", type="submit") }}
-  </form>
+{# ───── الميجاهيرو الموحّد: يدمج العنوان + KPIs + حزام الفلترة في كتلة واحدة بدل ثلاث كتل ───── #}
+{% call hub.megahero(
+  "السلف",
+  subtitle="عرض السلف المفتوحة والمغلقة دون تطبيق أي تغيير مباشر على خدمة المصادقة.",
+  icon="hand-holding-dollar",
+  kpis=[
+    {'label': 'عدد السلف',            'value': summary.loan_count,                 'icon': 'list',                'variant': 'blue'},
+    {'label': 'سلف مفتوحة',           'value': summary.open_loan_count,            'icon': 'hourglass-half',      'variant': 'amber'},
+    {'label': 'قيمة السلف المفتوحة',  'value': summary.total_loans|money,          'icon': 'hand-holding-dollar', 'variant': 'brand'},
+    {'label': 'التحصيلات',            'value': summary.total_collections|money,    'icon': 'cash-register',       'variant': 'green'},
+  ],
+  search_action=url_for('radius.business_finance_loans')
+) %}
+  {# حزام الفلترة داخل الميجاهيرو — يطبَّق ارتفاع 42px الموحّد تلقائياً #}
+  <select class="hub-select" name="status" aria-label="الحالة">
+    <option value="" {% if not status %}selected{% endif %}>كل الحالات</option>
+    <option value="open" {% if status == "open" %}selected{% endif %}>مفتوحة</option>
+    <option value="settled" {% if status == "settled" %}selected{% endif %}>مسددة</option>
+    <option value="voided" {% if status == "voided" %}selected{% endif %}>ملغاة</option>
+  </select>
+  {{ hub.btn("تطبيق الفلتر", variant="primary", icon="filter", type="submit", size="sm") }}
 {% endcall %}
+{% include "radius/_finance_nav.html" %}
 
 {% call hub.section("قائمة السلف", icon="list", flush=True) %}
   {% if loans %}
-  <div class="table-responsive">
+  <div class="table-responsive hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25">
     <table class="table hub-table">
       <thead>
         <tr>
@@ -52,9 +65,11 @@
         <tr>
           <td>{{ loan.id }}</td>
           <td>{{ loan.username or loan.subscriber_id }}</td>
-          <td>{{ loan.duration_minutes }} دقيقة</td>
+          {# المدة بصيغة إنسانية (أيام/ساعات) بدل عدد الدقائق الخام — عبر فلتر dur_days #}
+          <td data-sort-value="{{ loan.duration_minutes or 0 }}">{{ loan.duration_minutes|dur_days }}</td>
           <td>{{ loan.amount|money }}</td>
-          <td>{{ hub.pill(loan.status, "amber" if loan.status == "open" else "green") }}</td>
+          {# الحالة مترجمة للعربية عبر ماكرو loan_status_label بدل القيمة الخام الإنجليزية #}
+          <td>{{ hub.pill(loan_status_label(loan.status), "amber" if loan.status == "open" else "green") }}</td>
           <td>{{ loan.starts_at|dt_local }}</td>
           <td>{{ loan.ends_at|dt_local }}</td>
         </tr>
@@ -66,4 +81,5 @@
     {{ hub.empty("لا توجد سلف ضمن هذا الفلتر.", sub="ستظهر السلف المسجلة من صفحة المشترك المالية هنا.", icon="hand-holding-dollar") }}
   {% endif %}
 {% endcall %}
+<script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
 {% endblock %}

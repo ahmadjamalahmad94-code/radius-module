@@ -9,6 +9,9 @@
 
 {% block content %}
 
+{# ───── الصدفة الموحّدة (hub-hero-shell): هيرو + KPI + حزام الفلترة في
+   كتلة واحدة بفواصل ناعمة بدل ثلاث كتل مكدّسة — نفس العقد والأسماء. #}
+<section class="hub-hero-shell">
 {{ hub.hero(
   "الكوبونات",
   subtitle="إدارة كوبونات الشحن — توليد، فلترة، إلغاء، متابعة الحالة",
@@ -19,6 +22,13 @@
     </a>
   '
 ) }}
+
+<div class="hub-kpi-grid">
+  {{ hub.kpi("نشطة",          stats.active or 0,  icon="circle-check", variant="green") }}
+  {{ hub.kpi("مستخدمة",       stats.used or 0,    icon="handshake",     variant="blue") }}
+  {{ hub.kpi("ملغاة",         stats.revoked or 0, icon="ban",           variant="red") }}
+  {{ hub.kpi("القيمة الإجمالية", "%.2f"|format(stats.total_amount or 0), icon="coins", variant="amber") }}
+</div>
 
 <form method="get" class="hub-filterbar">
   <select class="hub-select" name="status">
@@ -32,13 +42,7 @@
   <span class="hub-spacer"></span>
   {{ hub.btn("CSV", icon="file-csv", variant="secondary", size="sm") }}
 </form>
-
-<div class="hub-kpi-grid">
-  {{ hub.kpi("نشطة",          stats.active or 0,  icon="circle-check", variant="green") }}
-  {{ hub.kpi("مستخدمة",       stats.used or 0,    icon="handshake",     variant="blue") }}
-  {{ hub.kpi("ملغاة",         stats.revoked or 0, icon="ban",           variant="red") }}
-  {{ hub.kpi("القيمة الإجمالية", "%.2f"|format(stats.total_amount or 0), icon="coins", variant="amber") }}
-</div>
+</section>{# /hub-hero-shell #}
 
 {% if items %}
 {% call hub.section("قائمة الكوبونات", icon="table-list", meta=items|length|string + " كوبون", flush=True) %}

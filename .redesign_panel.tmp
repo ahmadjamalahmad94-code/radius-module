@@ -1,0 +1,311 @@
+  {# ─── «خدماتي» — نظام موحّد واحد (يونيو 2026) ──────────────────
+       دُمجت الأنظمة الثلاثة القديمة في شبكة بطاقات خدمات مدمجة
+       واحدة: أُزيل هيدر «مركز خدمات الراوتر» الداخلي، وقسم «حالة
+       الخدمات» المنفصل (الحالة الآن نقطة على كل بطاقة + زر تحديث
+       واحد صغير)، وسكشن «نفق تغيير العنوان» السفلي (صار بطاقة).
+       كل خدمة مرّة واحدة بلا تكرار، بتجميع خفيف بعناوين سطرية. #}
+  <section class="mt-tab-panel rh-inventory"
+           data-mt-tab-panel="my-services" role="tabpanel" hidden>
+
+    {# شريط علوي رفيع: عنوان + زر تحديث واحد صغير يعيد فحص نقاط
+       الحالة عبر probeStatus() — بلا هيدر داخلي ضخم. #}
+    <div class="rh-svc-bar">
+      <div class="rh-svc-bar-title">
+        <i class="fa-solid fa-screwdriver-wrench"></i>
+        <span>خدمات الراوتر وأدواته</span>
+      </div>
+      <button type="button" class="rh-svc-refresh" data-rh-svc-refresh
+              title="تحديث حالة الخدمات">
+        <i class="fa-solid fa-rotate"></i><span>تحديث</span>
+      </button>
+    </div>
+
+    {# كل البطاقات داخل حاوية واحدة تحمل data-mt-router-quicknav
+       (خطاف اختبارات الملاحة test_mt_navigation_s1). #}
+    <div class="rh-svc-wrap" data-mt-router-quicknav
+         aria-label="خدمات الراوتر وروابطه السريعة">
+
+      {# ── مجموعة 1: برمجة وتشغيل ── #}
+      <h4 class="rh-svc-group-title">
+        <i class="fa-solid fa-sliders"></i> برمجة وتشغيل
+      </h4>
+      <div class="np-svc-grid">
+        {% for svc in [
+          {'key': 'public-ip',     'title': 'تغيير IP الخروج',   'icon': 'globe',    'color': 'amber'},
+          {'key': 'remote-access', 'title': 'اتصال عن بُعد',       'icon': 'key',      'color': 'purple'},
+          {'key': 'hotspot',       'title': 'برمجة بوابة الدخول', 'icon': 'wifi',     'color': 'blue'},
+          {'key': 'broadband',     'title': 'برمجة البرودباند',   'icon': 'ethernet', 'color': 'green'},
+        ] %}
+        {# data-rh-svc-card + data-rh-svc-status: تملؤها probeStatus()
+           بنقطة الحالة الحيّة — بلا تغيير في الـJS. #}
+        <a class="np-svc-card" data-rh-svc-card="{{ svc.key }}"
+           href="{{ url_for('radius.setup_wizard_v3_router_service_flow',
+                            router_id=nas.id, service_key=svc.key) }}">
+          <span class="np-svc-icon np-svc-icon--{{ svc.color }}">
+            <i class="fa-solid fa-{{ svc.icon }}"></i>
+          </span>
+          <h5 class="np-svc-title">{{ svc.title }}</h5>
+          <span class="np-svc-status-dot" data-rh-svc-status
+                title="جارٍ الفحص…"></span>
+        </a>
+        {% endfor %}
+
+        {# برمجة الشبكة الكاملة — أداة (خطاف data-mt-router-link). #}
+        <a class="np-svc-card np-svc-card--tool"
+           data-mt-router-link="program"
+           href="{{ url_for('radius.mt_program_form', nas_id=nas.id) }}">
+          <span class="np-svc-icon np-svc-icon--slate">
+            <i class="fa-solid fa-network-wired"></i>
+          </span>
+          <h5 class="np-svc-title">برمجة الشبكة</h5>
+          <span class="np-svc-arrow"><i class="fa-solid fa-arrow-left"></i></span>
+        </a>
+
+        {# نفق تغيير IP — خدمة مدفوعة مرخّصة: بطاقة عادية بالشبكة مع
+           شارة «مدفوعة» ونقطة حالة الترخيص، تفتح نافذة fcw (أدناه)
+           فيها حالة الترخيص الحالية أو نموذج طلب الخدمة. نفس
+           الـendpoints (router_ip_tunnel_request / licensing_index). #}
+        {% set _ipst = ip_license.status if ip_license else '' %}
+        {% set _ipdot = 'is-active' if _ipst == 'active'
+                        else ('is-pending' if _ipst == 'requested'
+                        else ('is-suspended' if _ipst == 'suspended'
+                        else 'is-inactive')) %}
+        {% set _iptip = 'الخدمة فعّالة' if _ipst == 'active'
+                        else ('طلب بانتظار التفعيل' if _ipst == 'requested'
+                        else ('الخدمة معلّقة' if _ipst == 'suspended'
+                        else 'غير مفعّلة — اطلب الخدمة')) %}
+        <button type="button" class="np-svc-card np-svc-card--paid"
+                data-fcw-open="ip-req" data-rh-iptun-card>
+          <span class="np-svc-icon np-svc-icon--purple">
+            <i class="fa-solid fa-route"></i>
+          </span>
+          <h5 class="np-svc-title">نفق تغيير IP</h5>
+          <span class="iptun-paid-mini">مدفوعة</span>
+          <span class="np-svc-status-dot {{ _ipdot }}" title="{{ _iptip }}"></span>
+        </button>
+      </div>
+
+      {# ── مجموعة 2: الحماية والمواقع ── #}
+      <h4 class="rh-svc-group-title">
+        <i class="fa-solid fa-shield-halved"></i> الحماية والمواقع
+      </h4>
+      <div class="np-svc-grid">
+        {% for svc in [
+          {'key': 'block-sites', 'title': 'حجب المواقع', 'icon': 'ban',          'color': 'red'},
+          {'key': 'open-sites',  'title': 'فتح المواقع', 'icon': 'circle-check', 'color': 'teal'},
+        ] %}
+        <a class="np-svc-card" data-rh-svc-card="{{ svc.key }}"
+           href="{{ url_for('radius.setup_wizard_v3_router_service_flow',
+                            router_id=nas.id, service_key=svc.key) }}">
+          <span class="np-svc-icon np-svc-icon--{{ svc.color }}">
+            <i class="fa-solid fa-{{ svc.icon }}"></i>
+          </span>
+          <h5 class="np-svc-title">{{ svc.title }}</h5>
+          <span class="np-svc-status-dot" data-rh-svc-status
+                title="جارٍ الفحص…"></span>
+        </a>
+        {% endfor %}
+
+        {# سياسات الشبكة — البوابة الموحّدة لقوائم (وصول بعيد / حجب /
+           سماح). أزلنا البلاطات الثلاث المنفصلة (كانت تكرّر هذه
+           البوابة وتكرّر «حجب المواقع»). خطاف test_npc_router_scoped:
+           data-test="mt-dashboard-npc-link" + العنوان «سياسات الشبكة». #}
+        <a class="np-svc-card np-svc-card--tool"
+           data-test="mt-dashboard-npc-link"
+           data-mt-router-link="network-policies"
+           href="{{ url_for('radius.npc_router_landing', nas_id=nas.id) }}">
+          <span class="np-svc-icon np-svc-icon--slate">
+            <i class="fa-solid fa-shield-halved"></i>
+          </span>
+          <h5 class="np-svc-title">سياسات الشبكة</h5>
+          <span class="np-svc-arrow"><i class="fa-solid fa-arrow-left"></i></span>
+        </a>
+      </div>
+
+      {# ── مجموعة 3: أدوات وصفحات ── #}
+      <h4 class="rh-svc-group-title">
+        <i class="fa-solid fa-toolbox"></i> أدوات وصفحات
+      </h4>
+      <div class="np-svc-grid">
+        <a class="np-svc-card np-svc-card--tool"
+           data-mt-router-link="login-designer"
+           href="{{ url_for('radius.mt_login_designer', nas_id=nas.id) }}">
+          <span class="np-svc-icon np-svc-icon--slate">
+            <i class="fa-solid fa-palette"></i>
+          </span>
+          <h5 class="np-svc-title">مصمّم صفحة الدخول</h5>
+          <span class="np-svc-arrow"><i class="fa-solid fa-arrow-left"></i></span>
+        </a>
+        <a class="np-svc-card np-svc-card--tool"
+           data-mt-router-link="backups"
+           href="{{ url_for('radius.mt_backups_list', nas_id=nas.id) }}">
+          <span class="np-svc-icon np-svc-icon--slate">
+            <i class="fa-solid fa-floppy-disk"></i>
+          </span>
+          <h5 class="np-svc-title">النسخ الاحتياطية</h5>
+          <span class="np-svc-arrow"><i class="fa-solid fa-arrow-left"></i></span>
+        </a>
+        {# تتبّع اللوب — حالة (مفعّل/غير مفعّل) كنقطة على البطاقة.
+           الوصف يبقى في الماركأب (خطاف test_smart_alerts_loop). #}
+        <a class="np-svc-card np-svc-card--tool"
+           href="{{ url_for('radius.mt_loop_setup') }}"
+           data-rh-loop-tile>
+          <span class="np-svc-icon np-svc-icon--purple">
+            <i class="fa-solid fa-arrows-spin"></i>
+          </span>
+          <h5 class="np-svc-title">تتبّع اللوب</h5>
+          <span class="np-svc-desc">كشف اللوب عبر مجس DHCP على منافذ الزبائن</span>
+          <span class="np-svc-status-dot {{ 'is-active' if loop_active else 'is-inactive' }}"
+                title="{{ 'مفعّل' if loop_active else 'غير مفعّل' }}"></span>
+        </a>
+        <a class="np-svc-card np-svc-card--tool"
+           data-mt-router-link="diagnostics"
+           href="{{ url_for('radius.diagnostics') }}">
+          <span class="np-svc-icon np-svc-icon--slate">
+            <i class="fa-solid fa-stethoscope"></i>
+          </span>
+          <h5 class="np-svc-title">تشخيص الفلِيت</h5>
+          <span class="np-svc-arrow"><i class="fa-solid fa-arrow-left"></i></span>
+        </a>
+      </div>
+
+    </div>{# /.rh-svc-wrap #}
+
+    {# ── نافذة fcw لخدمة «نفق تغيير IP» — تعرض حالة الترخيص الحالية
+         أو نموذج طلب الخدمة. نفس مسار router_ip_tunnel_request
+         وحقول speed_kbps/notes (لا تغيير في الـbackend). تُرندر
+         دائمًا كي تفتحها بطاقة النفق في أي حالة. #}
+    <div class="fcw-modal" data-fcw-modal="ip-req" hidden>
+      <div class="fcw-dialog" role="dialog" aria-modal="true"
+           aria-labelledby="fcw-ip-req-title">
+        <div class="fcw-head">
+          <h3 id="fcw-ip-req-title">
+            <i class="fa-solid fa-route" style="color:#7c3aed"></i>
+            نفق تغيير IP وتمرير الحركة
+          </h3>
+          <button type="button" class="fcw-x" data-fcw-close aria-label="إغلاق">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        {% if ip_license and ip_license.status == 'active' %}
+        <div class="fcw-body">
+          <div class="iptun-status">
+            <div style="display:flex;align-items:center;gap:8px">
+              {{ hub.pill("الخدمة فعّالة", variant="green") }}
+              <span style="font-weight:800;color:#0f172a">ترخيص #{{ ip_license.id }}</span>
+            </div>
+            {{ hub.kv([
+              {'label': 'السرعة',      'value': (ip_license.speed_mbps ~ ' Mbps'), 'mono': True},
+              {'label': 'السعر',       'value': ('%.2f'|format(ip_license.price_display)), 'mono': True},
+              {'label': 'فُعّل بواسطة', 'value': (ip_license.granted_by or '—')},
+              {'label': 'الانتهاء',    'value': (ip_license.expires_at or 'بلا انتهاء'), 'mono': True},
+            ]) }}
+            <div style="font-size:12px;color:#475569">
+              <i class="fa-solid fa-gauge-high" style="color:#7c3aed"></i>
+              الإدارة والتعديل من لوحة التراخيص.
+            </div>
+          </div>
+        </div>
+        <div class="fcw-foot">
+          <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>إغلاق</button>
+          <a class="hub-btn hub-btn--primary" href="{{ url_for('radius.licensing_index') }}">
+            <i class="fa-solid fa-gauge-high"></i> لوحة التراخيص
+          </a>
+        </div>
+
+        {% elif ip_license and ip_license.status == 'requested' %}
+        <div class="fcw-body">
+          <div class="iptun-status">
+            {{ hub.pill("طلب بانتظار التفعيل", variant="amber") }}
+            {{ hub.kv([
+              {'label': 'السرعة المطلوبة', 'value': (ip_license.speed_mbps ~ ' Mbps'), 'mono': True},
+              {'label': 'السعر',           'value': ('%.2f'|format(ip_license.price_display)), 'mono': True},
+              {'label': 'طلب بواسطة',      'value': (ip_license.requested_by or '—')},
+            ]) }}
+            <div style="font-size:12px;color:#475569">سيُفعَّل من لوحة التراخيص بعد المراجعة.</div>
+          </div>
+        </div>
+        <div class="fcw-foot">
+          <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>إغلاق</button>
+          <a class="hub-btn hub-btn--primary" href="{{ url_for('radius.licensing_index') }}">لوحة التراخيص</a>
+        </div>
+
+        {% elif ip_license and ip_license.status == 'suspended' %}
+        <div class="fcw-body">
+          <div class="iptun-status">
+            {{ hub.pill("الخدمة معلّقة", variant="blue") }}
+            <div style="font-size:12px;color:#475569">
+              هذا الراوتر لديه ترخيص معلّق — إعادة التفعيل من لوحة التراخيص.
+            </div>
+          </div>
+        </div>
+        <div class="fcw-foot">
+          <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>إغلاق</button>
+          <a class="hub-btn hub-btn--primary" href="{{ url_for('radius.licensing_index') }}">لوحة التراخيص</a>
+        </div>
+
+        {% elif ip_tiers %}
+        <form method="post" action="{{ url_for('radius.router_ip_tunnel_request', nas_id=nas.id) }}">
+          <div class="fcw-body">
+            <div class="hub-field-hint" style="display:flex;align-items:flex-start;gap:6px">
+              <i class="fa-solid fa-circle-info" style="color:#7c3aed;margin-top:2px"></i>
+              خدمة مدفوعة محدودة السرعة — ليست مجانية ولا بيد المشترك. اختر السرعة المستهدفة، يُثبَّت سعرها وقت الطلب. الإرسال يسجّل طلبًا فقط؛ التفعيل من لوحة التراخيص. تعمل لإصدارَي RouterOS 6 و7.
+            </div>
+            <div style="display:grid;gap:9px">
+              {% for t in ip_tiers %}
+              <label class="iptun-tier">
+                <input type="radio" name="speed_kbps" value="{{ t.speed_kbps }}" {% if loop.first %}checked{% endif %} required>
+                <span>
+                  <span style="font-weight:900">{{ t.label or (t.speed_mbps ~ ' ميجابت') }}</span>
+                  <span style="display:block;font-size:11.5px;color:#94a3b8">السرعة: {{ t.speed_mbps }} Mbps</span>
+                </span>
+                <span class="price">{{ '%.2f'|format(t.price_display) }}</span>
+              </label>
+              {% endfor %}
+            </div>
+            <label class="hub-field">
+              <span class="hub-field-label">ملاحظات (اختياري)</span>
+              <input class="hub-input" type="text" name="notes" maxlength="200" placeholder="سبب الطلب أو تفاصيل الاتفاق" style="min-height:42px">
+            </label>
+          </div>
+          <div class="fcw-foot">
+            <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>إلغاء</button>
+            <button class="hub-btn hub-btn--primary" type="submit">
+              <i class="fa-solid fa-paper-plane"></i> إرسال الطلب
+            </button>
+          </div>
+        </form>
+
+        {% else %}
+        <div class="fcw-body">
+          <div class="iptun-status">
+            {{ hub.pill("غير مفعّلة", variant="grey") }}
+            <p style="margin:0;font-size:12.5px;color:#475569">
+              لا توجد شرائح سرعة مسعّرة بعد لهذا المستأجر — راجع لوحة التراخيص لإضافة الأسعار ثم اطلب الخدمة.
+            </p>
+          </div>
+        </div>
+        <div class="fcw-foot">
+          <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>إغلاق</button>
+          <a class="hub-btn hub-btn--primary" href="{{ url_for('radius.licensing_index') }}">لوحة التراخيص</a>
+        </div>
+        {% endif %}
+
+      </div>
+    </div>
+    <script>
+    // فتح/إغلاق نافذة «طلب الخدمة» (fcw) لبطاقة نفق تغيير IP.
+    (() => {
+      "use strict";
+      const root = document;
+      function open(key){ const m = root.querySelector(`[data-fcw-modal='${key}']`); if(m){ m.hidden=false; m.classList.add("is-open"); m.querySelector("input,select,button,a")?.focus(); } }
+      function closeAll(){ root.querySelectorAll("[data-fcw-modal]").forEach(m=>{ m.classList.remove("is-open"); m.hidden=true; }); }
+      root.querySelectorAll("[data-fcw-open]").forEach(b=> b.addEventListener("click", ()=> open(b.dataset.fcwOpen)));
+      root.querySelectorAll("[data-fcw-close]").forEach(b=> b.addEventListener("click", closeAll));
+      root.querySelectorAll("[data-fcw-modal]").forEach(m=> m.addEventListener("click", e=>{ if(e.target===m) closeAll(); }));
+      root.addEventListener("keydown", e=>{ if(e.key==="Escape") closeAll(); });
+    })();
+    </script>
+
+  </section>

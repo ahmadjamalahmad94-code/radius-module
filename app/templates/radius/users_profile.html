@@ -514,16 +514,82 @@
     .p360-bar-row{grid-template-columns:1fr}
     .p360-bar-total{text-align:start}
   }
+
+  /* ── شريط «السرعة المؤقتة» في الهيرو — مطابق لمخطط «باقي» المطلوب:
+       إطار أخضر + أيقونة ساعة + عدّاد حيّ بالعربية + زر X أحمر للإلغاء.
+       العدّاد يحسب المتبقي كل ثانية من data-expires-at (epoch بالثواني)
+       فيستمر من وقت النهاية المخزَّن بعد أي إعادة فتح للصفحة. ── */
+  .p360-temp-speed{
+    display:flex; align-items:stretch; gap:0;
+    margin-top:10px;
+    direction:rtl;
+  }
+  .p360-temp-speed .ts-clock{
+    display:inline-flex; align-items:center; justify-content:center;
+    min-width:40px;
+    background:#f3f1fb;
+    border:1px solid #2e9e5b;
+    border-inline-end:0;
+    border-radius:0 8px 8px 0;   /* RTL: الزاوية المدوّرة تبدأ من اليمين */
+    color:#2e9e5b;
+  }
+  .p360-temp-speed .ts-body{
+    flex:1; min-width:0;
+    display:flex; align-items:center; justify-content:center; gap:10px;
+    flex-wrap:wrap;
+    padding:8px 14px;
+    background:#fff;
+    border:1px solid #2e9e5b;
+    color:#1f7a45;
+    font-size:13.5px;
+    font-weight:700;
+  }
+  .p360-temp-speed .ts-label{ color:#2e9e5b; font-weight:800; }
+  .p360-temp-speed .ts-remaining{
+    font-weight:900; font-size:14.5px; color:#1f7a45;
+    font-variant-numeric:tabular-nums;
+  }
+  .p360-temp-speed .ts-rate{
+    color:var(--hub-text-mute); font-weight:600; font-size:12px;
+    direction:ltr;
+  }
+  .p360-temp-speed .ts-cancel{
+    display:inline-flex; align-items:center; justify-content:center;
+    min-width:44px;
+    background:#e05252;
+    border:1px solid #c94444;
+    border-inline-start:0;
+    border-radius:8px 0 0 8px;   /* RTL: زر X في أقصى اليسار كما في المخطط */
+    color:#fff; cursor:pointer; font-size:15px;
+    transition:background .15s ease;
+  }
+  .p360-temp-speed .ts-cancel:hover{ background:#c94444; }
+  .p360-temp-speed.is-expired .ts-clock,
+  .p360-temp-speed.is-expired .ts-body{
+    border-color:#d7a13b; color:#a06a0f;
+  }
+  .p360-temp-speed.is-expired .ts-label,
+  .p360-temp-speed.is-expired .ts-remaining{ color:#a06a0f; }
+  /* شارة السرعة المؤقتة في صف «الباقة + الشبكة» داخل تبويب المعلومات */
+  .p360-kv .temp-pill{
+    display:inline-flex; align-items:center; gap:6px;
+    padding:1px 9px; border-radius:999px;
+    background:#fff6e8; border:1px solid #f0ce96; color:#a06a0f;
+    font-size:12px; font-weight:800;
+  }
+  .p360-kv .temp-pill .v-count{ font-variant-numeric:tabular-nums; font-weight:900; }
 </style>
 {% endblock %}
 
 {# ── helper macros (formatting) ─────────────────────────── #}
 {% macro fmt_bytes_mb(mb) -%}
   {%- set mb = mb|float -%}
+  <bdi dir="ltr">
   {%- if mb >= 1024 * 1024 -%}{{ "%.2f TB"|format(mb / 1024 / 1024) }}
   {%- elif mb >= 1024 -%}{{ "%.2f GB"|format(mb / 1024) }}
   {%- else -%}{{ "%.0f MB"|format(mb) }}
   {%- endif -%}
+  </bdi>
 {%- endmacro %}
 
 {% macro fmt_bytes_raw(bytes) -%}
@@ -569,7 +635,7 @@
 {%- endmacro %}
 
 {% macro status_pill(s) -%}
-  {%- if s == "enabled" -%}{{ hub.pill("مفعَّل", variant="green") }}
+  {%- if s == "enabled" or s == "active" -%}{{ hub.pill("مفعَّل", variant="green") }}
   {%- elif s == "disabled" -%}{{ hub.pill("معطَّل", variant="red") }}
   {%- elif s == "expired" -%}{{ hub.pill("منتهٍ", variant="amber") }}
   {%- elif s == "suspended" -%}{{ hub.pill("مجمَّد", variant="amber") }}
@@ -578,11 +644,34 @@
   {%- else -%}{{ hub.pill(s or "—", variant="grey") }}{%- endif -%}
 {%- endmacro %}
 
+{# ── تعريب قيم enum الخام للعرض (نوع الخدمة/المستخدم/الحساب) ──
+   القيمة الخام تبقى في title لمن يحتاج المرجع التقني. #}
+{% macro fmt_service_type(v) -%}
+  {%- set m = {"hotspot":"هوت سبوت","pppoe":"PPPoE","both":"هوت سبوت + PPPoE","dhcp":"DHCP","other":"أخرى"} -%}
+  {%- if v -%}<bdi title="{{ v }}">{{ m.get(v|lower, v) }}</bdi>{%- else -%}—{%- endif -%}
+{%- endmacro %}
+
+{% macro fmt_user_type(v) -%}
+  {%- set m = {"subscriber":"مشترك","card":"كرت","trial":"تجريبي"} -%}
+  {%- if v -%}<bdi title="{{ v }}">{{ m.get(v|lower, v) }}</bdi>{%- else -%}—{%- endif -%}
+{%- endmacro %}
+
+{% macro fmt_account_type(v) -%}
+  {%- set m = {"personal":"شخصي","business":"تجاري","company":"شركة","prepaid":"مدفوع مسبقاً","postpaid":"آجل الدفع"} -%}
+  {%- if v -%}<bdi title="{{ v }}">{{ m.get(v|lower, v) }}</bdi>{%- else -%}—{%- endif -%}
+{%- endmacro %}
+
 
 {% block content %}
 
-{# ═══ 1. HERO ═════════════════════════════════════════════════ #}
+{# ── helper: تاريخ/وقت نظيف بلا ميكروثوانٍ ─────────────────── #}
+{%- macro fmt_dt(s) -%}
+  {%- if not s -%}—{%- else -%}<bdi dir="ltr">{{ ((s|string)|replace("T", " "))[:16] }}</bdi>{%- endif -%}
+{%- endmacro -%}
+
+{# ═══ 1. HERO SHELL — هيرو + KPI + تبويبات في كتلة واحدة ═════ #}
 {%- set initials = (sub.full_name or sub.username)[:2]|upper -%}
+<section class="hub-hero-shell">
 <div class="p360-hero">
   <div class="p360-avatar">{{ initials }}</div>
   <div class="p360-id">
@@ -597,8 +686,40 @@
       {% if sub.email %}<span><i class="fa-solid fa-envelope"></i>{{ sub.email }}</span>{% endif %}
       {% if plan %}<span><i class="fa-solid fa-box-open"></i>{{ plan.name }}</span>{% endif %}
       {% if sub.city or sub.address %}<span><i class="fa-solid fa-location-dot"></i>{{ sub.city }}{% if sub.address %} — {{ sub.address }}{% endif %}</span>{% endif %}
-      {% if sub.expire_at %}<span><i class="fa-solid fa-hourglass-half"></i>ينتهي: {{ sub.expire_at }}</span>{% endif %}
+      {% if sub.expire_at %}<span><i class="fa-solid fa-hourglass-half"></i>ينتهي: {{ fmt_dt(sub.expire_at) }}</span>{% endif %}
     </div>
+
+    {# ── السرعة المؤقتة: شريط «باقي» الحيّ (مطابق للمخطط المطلوب) ──
+       يظهر فقط عند وجود نافذة سرعة مؤقتة. العدّاد يُحسب في المتصفح كل
+       ثانية من data-expires-at (epoch ثوانٍ UTC من الخادم) — فهو يستمر
+       من وقت النهاية المخزَّن بعد الحفظ وإعادة فتح الصفحة، لا يُعاد
+       تشغيله ولا يتجمّد. عند الانتهاء يعرض «انتهت» (الاسترجاع الفعلي
+       يقوم به العامل الخلفي temp_speed_expiry تلقائياً). #}
+    {% if temp_speed_state and temp_speed_state.has_flag %}
+    <div class="p360-temp-speed" data-temp-speed-bar
+         data-expires-at="{{ temp_speed_state.ends_at_epoch or 0 }}"
+         {% if temp_speed_state.ends_at %}title="ينتهي: {{ temp_speed_state.ends_at|replace('T', ' ') }}"{% endif %}>
+      <span class="ts-clock"><i class="fa-regular fa-clock"></i></span>
+      <span class="ts-body">
+        <span class="ts-label">سرعة مؤقتة — باقي</span>
+        <span class="ts-remaining" data-temp-speed-remaining>
+          {%- if temp_speed_state.unknown -%}مفتوحة (بدون وقت نهاية){%- else -%}…{%- endif -%}
+        </span>
+        {% if temp_speed_state.down_kbps or temp_speed_state.up_kbps %}
+          <span class="ts-rate">{{ temp_speed_state.down_kbps }}k / {{ temp_speed_state.up_kbps }}k</span>
+        {% endif %}
+      </span>
+      {# زر X الأحمر — إلغاء فوري عبر الخدمة المشتركة (CoA استرجاع حيّ) #}
+      <form method="post"
+            action="{{ url_for('radius.users_temp_speed_cancel', username=sub.username) }}"
+            style="display:contents"
+            onsubmit="return confirm('إلغاء السرعة المؤقتة الآن وإرجاع السرعة الطبيعية؟');">
+        <button type="submit" class="ts-cancel" title="إلغاء السرعة المؤقتة الآن">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </form>
+    </div>
+    {% endif %}
   </div>
   <div class="p360-actions">
     {{ hub.btn("تعديل", href=url_for("radius.users_edit", username=sub.username), variant="primary", icon="pen-to-square") }}
@@ -617,7 +738,7 @@
   {{ hub.kpi("المستخدم",      fmt_bytes_mb(profile.used_mb),        icon="gauge",    variant="green",
              sub=(profile.n_sessions|string + " جلسة")) }}
   {{ hub.kpi("المتبقّي",      fmt_bytes_mb(profile.remaining_mb),   icon="hourglass-half", variant="red") }}
-  {{ hub.kpi("الرصيد",        "%.2f"|format(profile.balance|float), icon="coins",    variant="green") }}
+  {{ hub.kpi("الرصيد",        (profile.balance or 0)|money, icon="coins",    variant="green") }}
 </div>
 
 
@@ -660,6 +781,7 @@
     <i class="fa-solid fa-book"></i> كشف الحساب
   </button>
 </div>
+</section>
 
 
 {# ═══ 4. TAB PANES ════════════════════════════════════════════ #}
@@ -693,7 +815,7 @@
         <div class="row"><span class="k">المدينة</span><span class="v">{{ sub.city or "—" }}</span></div>
         <div class="row"><span class="k">المنطقة</span><span class="v">{{ sub.district or "—" }}</span></div>
         <div class="row"><span class="k">العنوان</span><span class="v">{{ sub.address or "—" }}</span></div>
-        <div class="row"><span class="k">نوع الحساب</span><span class="v">{{ sub.account_type or "—" }}</span></div>
+        <div class="row"><span class="k">نوع الحساب</span><span class="v">{{ fmt_account_type(sub.account_type) }}</span></div>
         <div class="row"><span class="k">المجموعة</span><span class="v">{{ sub.group or "—" }}</span></div>
       </div>
     {% endcall %}
@@ -711,12 +833,26 @@
             {%- else -%}—{%- endif -%}
           </span>
         </div>
-        <div class="row"><span class="k">نوع الخدمة</span><span class="v">{{ sub.service_type or "—" }}</span></div>
-        <div class="row"><span class="k">نوع المستخدم</span><span class="v">{{ sub.user_type or "—" }}</span></div>
+        <div class="row"><span class="k">نوع الخدمة</span><span class="v">{{ fmt_service_type(sub.service_type) }}</span></div>
+        <div class="row"><span class="k">نوع المستخدم</span><span class="v">{{ fmt_user_type(sub.user_type) }}</span></div>
         <div class="row"><span class="k">سرعة التنزيل</span><span class="v">{{ fmt_speed(profile.speed_dn) }}</span></div>
         <div class="row"><span class="k">سرعة الرفع</span><span class="v">{{ fmt_speed(profile.speed_up) }}</span></div>
         <div class="row"><span class="k">سرعة مخصّصة</span><span class="v">{{ "نعم" if sub.custom_speed else "لا" }}</span></div>
-        <div class="row"><span class="k">سرعة مؤقّتة</span><span class="v">{{ "نعم" if sub.temporary_speed else "لا" }}</span></div>
+        {# سرعة مؤقّتة — بدل «نعم/لا» الثابتة: شارة حيّة بنفس عدّاد الهيرو
+           (data-temp-speed-remaining يُحدَّث كل ثانية من نفس الـ epoch). #}
+        <div class="row"><span class="k">سرعة مؤقّتة</span><span class="v">
+          {%- if temp_speed_state and temp_speed_state.has_flag -%}
+            <span class="temp-pill" data-temp-speed-bar
+                  data-expires-at="{{ temp_speed_state.ends_at_epoch or 0 }}">
+              <i class="fa-regular fa-clock"></i>
+              <span>{{ temp_speed_state.down_kbps }}k/{{ temp_speed_state.up_kbps }}k</span>
+              <span>· باقي</span>
+              <span class="v-count" data-temp-speed-remaining>
+                {%- if temp_speed_state.unknown -%}مفتوحة{%- else -%}…{%- endif -%}
+              </span>
+            </span>
+          {%- else -%}لا{%- endif -%}
+        </span></div>
         <div class="row"><span class="k">MAC مقفل</span><span class="v mono">{{ sub.mac_lock or "—" }}</span></div>
         <div class="row"><span class="k">IP ثابت</span><span class="v mono">{{ sub.static_ip or "—" }}</span></div>
         <div class="row"><span class="k">VLAN</span><span class="v">{{ sub.vlan_id or "—" }}</span></div>
@@ -732,13 +868,13 @@
     {% call hub.section("الحالة + الوقت", icon="clock") %}
       <div class="p360-kv">
         <div class="row"><span class="k">الحالة</span><span class="v">{{ status_pill(sub.status) }}</span></div>
-        <div class="row"><span class="k">التجديد التلقائي</span><span class="v">{{ "مُفعَّل" if sub.auto_renewal else "لا" }}</span></div>
-        <div class="row"><span class="k">أوّل دخول</span><span class="v muted">{{ sub.first_login_at or "—" }}</span></div>
-        <div class="row"><span class="k">آخر دخول</span><span class="v muted">{{ sub.last_login_at or "—" }}</span></div>
-        <div class="row"><span class="k">آخر ظهور</span><span class="v muted">{{ sub.last_seen_at or "—" }}</span></div>
-        <div class="row"><span class="k">تاريخ الانتهاء</span><span class="v muted">{{ sub.expire_at or "—" }}</span></div>
-        <div class="row"><span class="k">تاريخ الإنشاء</span><span class="v muted">{{ sub.created_at or "—" }}</span></div>
-        <div class="row"><span class="k">آخر تعديل</span><span class="v muted">{{ sub.updated_at or "—" }}</span></div>
+        <div class="row"><span class="k">التجديد التلقائي</span><span class="v">{{ "مفعَّل" if sub.auto_renewal else "معطَّل" }}</span></div>
+        <div class="row"><span class="k">أوّل دخول</span><span class="v muted">{{ fmt_dt(sub.first_login_at) }}</span></div>
+        <div class="row"><span class="k">آخر دخول</span><span class="v muted">{{ fmt_dt(sub.last_login_at) }}</span></div>
+        <div class="row"><span class="k">آخر ظهور</span><span class="v muted">{{ fmt_dt(sub.last_seen_at) }}</span></div>
+        <div class="row"><span class="k">تاريخ الانتهاء</span><span class="v muted">{{ fmt_dt(sub.expire_at) }}</span></div>
+        <div class="row"><span class="k">تاريخ الإنشاء</span><span class="v muted">{{ fmt_dt(sub.created_at) }}</span></div>
+        <div class="row"><span class="k">آخر تعديل</span><span class="v muted">{{ fmt_dt(sub.updated_at) }}</span></div>
       </div>
     {% endcall %}
 
@@ -751,9 +887,12 @@
         <div class="row"><span class="k">حد الاتصال اليومي</span><span class="v">{{ sub.daily_connection_time_min|dur_days }}</span></div>
         <div class="row"><span class="k">أيام العمل</span><span class="v">{{ sub.working_days or "—" }}</span></div>
         <div class="row"><span class="k">MACs المسموحة</span><span class="v mono">{{ sub.allowed_macs or "—" }}</span></div>
-        <div class="row"><span class="k">الرصيد</span><span class="v">{{ "%.2f"|format(sub.balance|float) }}</span></div>
+        <div class="row"><span class="k">الرصيد</span><span class="v">{{ (sub.balance or 0)|money }}</span></div>
         <div class="row"><span class="k">المرجع المالي</span><span class="v">{{ sub.payment_reference or "—" }}</span></div>
-        <div class="row"><span class="k">طريقة الدفع</span><span class="v">{{ sub.payment_method or "—" }}</span></div>
+        <div class="row"><span class="k">طريقة الدفع</span><span class="v">
+          {%- set _spm = {"cash":"نقداً","card":"بطاقة","bank":"حوالة بنكية","bank_transfer":"حوالة بنكية","wallet":"محفظة","voucher":"قسيمة","online":"دفع إلكتروني","credit":"رصيد"} -%}
+          {%- if sub.payment_method -%}<bdi title="{{ sub.payment_method }}">{{ _spm.get((sub.payment_method|string)|lower, sub.payment_method) }}</bdi>{%- else -%}—{%- endif -%}
+        </span></div>
       </div>
     {% endcall %}
   </div>
@@ -819,13 +958,16 @@
             {% for inv in invoices %}
             <tr>
               <td class="mono">{{ inv.id or inv.invoice_number or "—" }}</td>
-              <td class="small muted">{{ inv.created_at or inv.issued_at or "—" }}</td>
+              <td class="small muted">{{ fmt_dt(inv.created_at or inv.issued_at) }}</td>
               <td>{{ inv.description or inv.plan_name or "—" }}</td>
               <td class="num">{{ "%.2f"|format((inv.amount or 0)|float) }}</td>
               <td>
                 {%- set st = inv.status or "pending" -%}
                 {%- if st == "paid" -%}{{ hub.pill("مدفوعة", variant="green") }}
                 {%- elif st == "overdue" -%}{{ hub.pill("متأخّرة", variant="red") }}
+                {%- elif st == "cancelled" or st == "canceled" or st == "void" -%}{{ hub.pill("ملغاة", variant="grey") }}
+                {%- elif st == "partial" -%}{{ hub.pill("مدفوعة جزئياً", variant="amber") }}
+                {%- elif st == "pending" or st == "unpaid" -%}{{ hub.pill("غير مدفوعة", variant="amber") }}
                 {%- else -%}{{ hub.pill(st, variant="grey") }}{%- endif -%}
               </td>
             </tr>
@@ -854,8 +996,10 @@
           <tbody>
             {% for p in payments %}
             <tr>
-              <td class="small muted">{{ p.created_at or p.paid_at or "—" }}</td>
-              <td>{{ p.method or "—" }}</td>
+              <td class="small muted">{{ fmt_dt(p.created_at or p.paid_at) }}</td>
+              {# تعريب طريقة الدفع — القيمة الخام في title #}
+              {%- set _pm = {"cash":"نقداً","card":"بطاقة","bank":"حوالة بنكية","bank_transfer":"حوالة بنكية","wallet":"محفظة","voucher":"قسيمة","online":"دفع إلكتروني","credit":"رصيد"} -%}
+              <td>{% if p.method %}<bdi title="{{ p.method }}">{{ _pm.get((p.method|string)|lower, p.method) }}</bdi>{% else %}—{% endif %}</td>
               <td class="mono small">{{ p.reference or p.txn_id or "—" }}</td>
               <td class="num">{{ "%.2f"|format((p.amount or 0)|float) }}</td>
               <td class="small">{{ p.note or "—" }}</td>
@@ -962,8 +1106,8 @@
                 <td class="num muted">—</td>
                 <td class="num muted">—</td>
                 <td class="num"><strong>{{ fmt_bytes_raw(total) }}</strong></td>
-                <td class="mono small">{{ ses.started_at or '—' }}</td>
-                <td class="mono small">{{ ses.stopped_at if ses.stopped_at else '—' }}</td>
+                <td class="mono small">{{ fmt_dt(ses.started_at) }}</td>
+                <td class="mono small">{{ fmt_dt(ses.stopped_at) }}</td>
                 <td class="num">{{ fmt_dur(ses.duration_seconds or 0) }}</td>
                 <td class="mono small" title="{{ ses.session_id or '' }}{% if ses.service_type %} · {{ ses.service_type }}{% endif %}{% if ses.framed_protocol %} · {{ ses.framed_protocol }}{% endif %}">
                   {% set _svc = ses.service_type or ses.framed_protocol %}
@@ -1058,11 +1202,22 @@
             <th>الوقت</th><th>المنفِّذ</th><th>الإجراء</th><th>تفاصيل</th>
           </tr></thead>
           <tbody>
+            {# تعريب أكواد الإجراءات (كانت تظهر إنجليزي خام: update, create...) #}
+            {% set action_labels = {
+              'update': 'تعديل', 'create': 'إنشاء', 'delete': 'حذف/أرشفة',
+              'archive': 'أرشفة', 'restore': 'استعادة', 'enable': 'تفعيل',
+              'disable': 'تعطيل', 'toggle': 'تغيير الحالة', 'extend': 'إضافة وقت',
+              'payment': 'دفعة', 'loan': 'سلفة', 'settle': 'تسوية',
+              'disconnect': 'فصل الاتصال', 'sms': 'إرسال رسالة',
+              'quota_topup': 'إضافة كوتة', 'quota_reset': 'استعادة كوتة',
+              'balance_add': 'إضافة رصيد', 'login': 'دخول', 'logout': 'خروج',
+            } %}
             {% for e in manager_events %}
+            {% set _act = (e.action or e.event or '')|lower %}
             <tr>
-              <td class="small muted">{{ e.created_at or e.ts or "—" }}</td>
+              <td class="small muted">{{ fmt_dt(e.created_at or e.ts) }}</td>
               <td><strong>{{ e.actor or "—" }}</strong></td>
-              <td>{{ e.action or e.event or "—" }}</td>
+              <td>{{ action_labels.get(_act, e.action or e.event or "—") }}</td>
               <td class="small mono">{{ e.payload_display or "—" }}</td>
             </tr>
             {% endfor %}
@@ -1144,9 +1299,9 @@
               <td class="mono">{{ c.username }}</td>
               <td class="mono small">{{ c.password }}</td>
               <td class="small">#{{ c.batch_id or "—" }}</td>
-              <td class="small muted">{{ c.first_used_at or "—" }}</td>
+              <td class="small muted">{{ fmt_dt(c.first_used_at) }}</td>
               <td class="mono small">{{ c.used_by_mac or "—" }}</td>
-              <td class="small muted">{{ c.expire_at or "—" }}</td>
+              <td class="small muted">{{ fmt_dt(c.expire_at) }}</td>
               <td>
                 {%- if c.revoked -%}{{ hub.pill("ملغى", variant="red") }}
                 {%- elif c.used -%}{{ hub.pill("مستخدَم", variant="amber") }}
@@ -1164,9 +1319,8 @@
 </div>
 
 
-{# ─── pane: LEDGER (loans + ledger overview) ─── #}
+{# ─── pane: LEDGER (loans only) ─── #}
 <div class="p360-pane" data-pane="ledger">
-  <div class="hub-grid-1-1">
     {% call hub.section("القروض / الديون", icon="hand-holding-dollar", flush=True) %}
       {% if loans %}
         <div class="hub-table-wrap" style="border:none;border-radius:0">
@@ -1177,10 +1331,16 @@
             <tbody>
               {% for l in loans %}
               <tr>
-                <td class="small muted">{{ l.created_at or "—" }}</td>
+                <td class="small muted">{{ fmt_dt(l.created_at) }}</td>
                 <td class="num">{{ "%.2f"|format((l.amount or 0)|float) }}</td>
                 <td class="num">{{ "%.2f"|format((l.remaining or 0)|float) }}</td>
-                <td>{{ hub.pill(l.status or "نشط", variant="amber") }}</td>
+                <td>
+                  {%- set lst = (l.status or "open")|lower -%}
+                  {%- if lst == "settled" or lst == "paid" or lst == "closed" -%}{{ hub.pill("مسدَّد", variant="green") }}
+                  {%- elif lst == "writeoff" or lst == "written_off" -%}{{ hub.pill("شُطب", variant="grey") }}
+                  {%- elif lst == "overdue" -%}{{ hub.pill("متأخّر", variant="red") }}
+                  {%- else -%}{{ hub.pill("نشط", variant="amber") }}{%- endif -%}
+                </td>
               </tr>
               {% endfor %}
             </tbody>
@@ -1190,22 +1350,6 @@
         {{ hub.empty("لا قروض", icon="hand-holding-dollar") }}
       {% endif %}
     {% endcall %}
-
-    {% call hub.section("ملخّص الحساب", icon="book") %}
-      <div class="p360-kv">
-        <div class="row"><span class="k">الرصيد الحالي</span><span class="v">{{ "%.2f"|format(profile.balance|float) }}</span></div>
-        <div class="row"><span class="k">إجمالي عمليات الشحن</span><span class="v">{{ payments|length }}</span></div>
-        <div class="row"><span class="k">إجمالي الفواتير</span><span class="v">{{ invoices|length }}</span></div>
-        <div class="row"><span class="k">إجمالي القروض</span><span class="v">{{ loans|length }}</span></div>
-        <div class="row"><span class="k">إجمالي الجلسات</span><span class="v">{{ profile.n_sessions }}</span></div>
-        <div class="row"><span class="k">إجمالي وقت الاتصال</span><span class="v">{{ fmt_dur(profile.total_secs) }}</span></div>
-      </div>
-      <div style="margin-top:12px; text-align:start;">
-        {{ hub.btn("فتح صفحة الماليّة الكاملة", href=url_for("radius.users_finance", username=sub.username),
-                   variant="primary", icon="arrow-up-right-from-square") }}
-      </div>
-    {% endcall %}
-  </div>
 </div>
 
 
@@ -1231,6 +1375,49 @@
       activate(name);
     }
   });
+})();
+
+// ── عدّاد «السرعة المؤقتة» الحيّ ─────────────────────────────────
+// المتبقي يُحسب كل ثانية من data-expires-at (epoch ثوانٍ UTC يرسله
+// الخادم من وقت النهاية المخزَّن) مقابل Date.now() — وليس من لقطة
+// تنازلية — فالعدّاد:
+//   * يستمر من وقت النهاية الصحيح بعد الحفظ وإعادة فتح الصفحة
+//   * لا ينحرف إذا نام التبويب (يُعاد الحساب من ساعة الحائط)
+//   * عند الوصول للصفر يعرض «انتهت» (الاسترجاع الفعلي يتولاه العامل
+//     الخلفي temp_speed_expiry تلقائياً خلال ثوانٍ).
+(function(){
+  var bars = Array.prototype.slice.call(document.querySelectorAll('[data-temp-speed-bar]'));
+  if (!bars.length) return;
+  function fmtArabic(totalSeconds){
+    // صياغة عربية مطابقة للمخطط: «29 دقائق, 52 ثوان» (+ ساعات عند الحاجة)
+    var sec = Math.max(0, totalSeconds|0);
+    var h = Math.floor(sec / 3600);
+    var m = Math.floor((sec % 3600) / 60);
+    var s = sec % 60;
+    var parts = [];
+    if (h > 0) parts.push(h + ' ' + (h === 1 ? 'ساعة' : (h === 2 ? 'ساعتان' : 'ساعات')));
+    parts.push(m + ' ' + (m === 1 ? 'دقيقة' : 'دقائق'));
+    parts.push(s + ' ' + (s === 1 ? 'ثانية' : 'ثوان'));
+    return parts.join(', ');
+  }
+  function tick(){
+    bars.forEach(function(bar){
+      var out = bar.querySelector('[data-temp-speed-remaining]');
+      if (!out) return;
+      var endEpoch = parseInt(bar.getAttribute('data-expires-at') || '0', 10) || 0;
+      if (endEpoch <= 0) return; // نافذة مفتوحة بدون وقت نهاية — اترك النص الثابت
+      var remaining = Math.floor(endEpoch - (Date.now() / 1000));
+      if (remaining <= 0) {
+        bar.classList.add('is-expired');
+        out.textContent = 'انتهت';
+        return;
+      }
+      bar.classList.remove('is-expired');
+      out.textContent = fmtArabic(remaining);
+    });
+  }
+  tick();
+  window.setInterval(tick, 1000);
 })();
 </script>
 

@@ -20,8 +20,24 @@ from ..auth.session_helpers import current_admin_id
 from ..core.tenant import DEFAULT_TENANT_ID
 from ..db.repos import admins_repo
 from ..services.mt_guided_op import (
-    ALL_OPERATIONS, OP_PROGRAMMING_HOTSPOT, build_checklist,
+    ALL_OPERATIONS, OP_BACKUP_SAVE, OP_PROGRAMMING_HOTSPOT,
+    OP_PROGRAMMING_PPPOE, OP_RESTORE, OP_UNPROGRAMMING,
+    build_checklist,
 )
+
+
+# Operator-facing Arabic labels for the operation picker. We
+# intentionally don't reuse the service's internal label map so
+# the dropdown copy matches the rest of the router windows
+# ("بوابة الدخول" / "البرودباند") instead of leaking raw enum
+# keys like "programming_hotspot" into the visible UI.
+_OP_PICKER_LABELS_AR: dict[str, str] = {
+    OP_PROGRAMMING_HOTSPOT: "برمجة بوابة الدخول",
+    OP_PROGRAMMING_PPPOE:   "برمجة البرودباند",
+    OP_UNPROGRAMMING:       "تراجع وإزالة برمجة",
+    OP_RESTORE:             "استعادة من نسخة احتياطية",
+    OP_BACKUP_SAVE:         "حفظ نسخة احتياطية",
+}
 from ..services.mt_permissions import PERM_VIEW, requires_perm
 
 
@@ -59,10 +75,15 @@ def mt_guided_op(nas_id: int):
     )
     if checklist is None:
         abort(404)
+    operation_choices = [
+        (op, _OP_PICKER_LABELS_AR.get(op, op))
+        for op in ALL_OPERATIONS
+    ]
     return render_template(
         "radius/mt_guided_op.html",
         checklist=checklist,
         nas_id=int(nas_id),
         operation=operation,
         all_operations=ALL_OPERATIONS,
+        operation_choices=operation_choices,
     )

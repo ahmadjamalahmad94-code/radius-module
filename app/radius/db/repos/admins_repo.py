@@ -133,6 +133,8 @@ def _row_to_admin(row) -> Admin:
         role_id=row["role_id"], is_super_admin=bool(row["is_super_admin"]),
         enabled=bool(row["enabled"]),
         last_login_at=parse_dt(row["last_login_at"]),
+        # لغة الواجهة (i18n, migration 104) — افتراضي '' للقطات ما قبل 104.
+        locale=_g(row, "locale", "") or "",
         # RM-H6 fields — safe defaults for pre-015 snapshots
         phone=_g(row, "phone", "") or "",
         last_login_ip=_g(row, "last_login_ip", "") or "",
@@ -215,7 +217,7 @@ def update_admin(admin_id: int, **changes) -> Optional[Admin]:
             changes["password_hash"] = hash_password(str(password))
     # RM-H6: add profile fields to allowed set
     allowed = ("password_hash", "full_name", "email", "mobile", "role_id",
-               "is_super_admin", "enabled",
+               "is_super_admin", "enabled", "locale",
                "phone", "profile_notes", "avatar_url", "tags",
                "external_identity_provider", "external_subject",
                "external_password_hash_scheme", "external_password_version",

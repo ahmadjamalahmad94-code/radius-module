@@ -179,7 +179,13 @@ class UsersService:
             "debt_amount": debt_amount,
         }
 
-    def send_sms(self, *, actor: str, username: str, message: str) -> dict:
+    def send_sms(self, *, actor: str, username: str, message: str,
+                 channel: str = "sms") -> dict:
+        # القناة: «sms» أو «whatsapp» — كلاهما قنوات HTTP مفعّلة في محرك
+        # الإشعارات (comms_providers.HTTP_CHANNELS)؛ أي قيمة أخرى مرفوضة.
+        ch = (channel or "sms").strip().lower()
+        if ch not in {"sms", "whatsapp"}:
+            raise RadiusValidationError("unsupported message channel")
         body = (message or "").strip()
         if not body:
             raise RadiusValidationError("message required")
@@ -189,12 +195,16 @@ class UsersService:
         if not (sub.mobile or "").strip():
             raise RadiusValidationError("subscriber mobile is empty")
 
+        # تعويض {username} بالاسم الفعلي — مفيد في الإرسال الجماعي حيث
+        # تُرسل نفس الرسالة لعدة مشتركين (الواجهة تُبقي المتغيّر كما هو).
+        body = body.replace("{username}", username)
+
         from .notification_campaigns import NotificationCampaignError, NotificationCampaignService
 
         try:
             result = NotificationCampaignService(tenant_id=sub.tenant_id).send_manual(
                 audience={"target": "selected_subscribers", "ids": [int(sub.id)], "limit": 1},
-                channel="sms",
+                channel=ch,
                 message=body,
                 actor=actor,
             )
@@ -205,7 +215,7 @@ class UsersService:
             action="subscriber.sms_queue",
             target_type="user",
             target_id=username,
-            payload={"queued_count": result.get("queued_count", 0)},
+            payload={"queued_count": result.get("queued_count", 0), "channel": ch},
         )
         return result
 

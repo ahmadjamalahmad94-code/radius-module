@@ -1,56 +1,79 @@
-{# Plans list — REBUILT N6 (hub-v2). Same backend data: items list. #}
+{# ═══════════════════════════════════════════════════════════════════════
+   العروض والخطط — إعادة تصميم كاملة على نظام hub-hero-shell الموحّد (2026-06)
+
+   بيانات الراوت (radius.plans_list — بدون تغيير سلوك):
+     items      : قائمة AccessPlan (حتى 500)
+     sub_counts : {plan_id: عدد المشتركين} — استعلام رخيص واحد
+
+   البنية:
+     1. صدفة هيرو موحّدة (hub-hero-shell): عنوان + أزرار + شريط KPI
+        صف واحد (الباقات / المفعَّلة / متوسط السعر / المشتركون الموزَّعون)
+        + شريط فلترة مدمج (بحث حي + نوع + حالة + تبديل جدول/بطاقات).
+     2. جدول uds موحّد (فرز + اختيار أعمدة + ترقيم) يعرض كل إمكانيات
+        الباقة كأعمدة، وزر «تفاصيل» يفتح نافذة uds-modal بكامل المواصفات
+        (سرعات/CIR/Burst/كوتا يومية وشهرية/صلاحية/شبكة/خدمات/قيود).
+     3. عرض «بطاقات» بديل (نفس البيانات) محفوظ من النسخة السابقة (#31).
+   كل النقاط النهائية محفوظة: plans_new / plans_edit / plans_delete.
+   ═══════════════════════════════════════════════════════════════════════ #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
 {% block title %}قائمة العروض{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-tags"></i>{% endblock %}
 {% block page_title %}العروض والخطط{% endblock %}
-{% block page_sub %}<span class="sub">{{ items|length }} عرض في النتائج</span>{% endblock %}
+{% block page_sub %}<span class="sub"><bdi dir="ltr">{{ items|length }}</bdi> عرض</span>{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
+{# نظام الجداول الموحد + النوافذ المنبثقة الموحّدة #}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
 <style>
-  /* #31: cards / table view toggle — same look as the card-packages
-     (cards_batches) hero toggle. Self-contained page-scoped styles. */
+  /* تبديل جدول/بطاقات — نفس مظهر مبدّل دفعات البطاقات */
   .pl-view-toggle{
-    display:inline-flex; gap:4px;
-    padding:4px;
+    display:inline-flex; gap:4px; padding:4px;
     background:var(--hub-bg-soft, #f5f4fb);
     border:1px solid var(--hub-border, #e2e8f0);
-    border-radius:999px;
+    border-radius:999px; flex:0 0 auto;
   }
   .pl-view-toggle button{
     display:inline-flex; align-items:center; gap:7px;
     border:0; background:transparent; cursor:pointer;
-    font:inherit; font-size:12.5px; font-weight:800;
+    font:inherit; font-size:12px; font-weight:800;
     color:var(--hub-text-soft, #475569);
-    padding:7px 14px; border-radius:999px;
+    padding:6px 13px; border-radius:999px;
     transition:all var(--hub-anim-fast, .15s) var(--hub-ease, ease);
   }
   .pl-view-toggle button[aria-pressed="true"]{
-    background:var(--hub-brand, #2BAACC);
-    color:#fff;
-    box-shadow:0 2px 8px rgba(43,170,204,.28);
+    background:var(--hub-brand, #6B5AED); color:#fff;
+    box-shadow:0 2px 8px rgba(107,90,237,.28);
   }
   .pl-view-toggle button:not([aria-pressed="true"]):hover{
-    color:var(--hub-brand-ink, #1d7a93);
+    color:var(--hub-brand-ink, #4c3fd1);
   }
 
-  /* Cards view */
+  /* شارة لون الباقة بجانب الاسم */
+  .pl-color-dot{
+    display:inline-block; width:6px; height:22px; border-radius:3px;
+    flex:0 0 auto;
+  }
+
+  /* صف الإجراءات: صف واحد مرتّب لا يلتف */
+  .pl-actions{ display:inline-flex; gap:4px; flex-wrap:nowrap; align-items:center; }
+  .pl-actions form{ display:inline-flex; margin:0; }
+
+  /* عرض البطاقات (نفس بيانات الجدول) */
   .pl-cards-grid{
-    display:grid;
-    grid-template-columns:repeat(auto-fill, minmax(260px, 1fr));
+    display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr));
     gap:14px;
   }
   .pl-card{
-    position:relative;
-    display:flex; flex-direction:column; gap:12px;
+    position:relative; display:flex; flex-direction:column; gap:12px;
     padding:16px;
     background:var(--hub-bg-card, #fff);
     border:1px solid var(--hub-border, #e2e8f0);
     border-radius:var(--hub-r-card, 14px);
     box-shadow:var(--hub-sh-card, 0 1px 3px rgba(15,23,42,.06));
-    border-inline-start:4px solid var(--pl-accent, #2BAACC);
+    border-inline-start:4px solid var(--pl-accent, #6B5AED);
     transition:box-shadow var(--hub-anim-fast, .15s) var(--hub-ease, ease),
                transform var(--hub-anim-fast, .15s) var(--hub-ease, ease);
   }
@@ -59,7 +82,7 @@
   .pl-card__name{ flex:1; min-width:0; }
   .pl-card__name strong{ display:block; font-size:15px; font-weight:800; color:var(--hub-text); }
   .pl-card__name .pl-card__code{ font-size:11.5px; color:var(--hub-text-mute); font-family:ui-monospace, monospace; }
-  .pl-card__price{ font-size:16px; font-weight:900; color:var(--hub-brand-ink, #1d7a93); white-space:nowrap; }
+  .pl-card__price{ font-size:16px; font-weight:900; color:var(--hub-brand-ink, #4c3fd1); white-space:nowrap; }
   .pl-card__chips{ display:flex; flex-wrap:wrap; gap:6px; }
   .pl-card__specs{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
   .pl-card__spec{
@@ -73,33 +96,80 @@
   .pl-card__actions .hub-btn{ flex:1; justify-content:center; }
   .pl-card__actions form{ display:inline-flex; flex:0 0 auto; margin:0; }
 
-  /* View state — JS flips data-view on the wrapper. */
+  /* حالة العرض — JS يقلب data-view على الغلاف */
   [data-plans-view="cards"] .pl-table-view{ display:none; }
   [data-plans-view="table"] .pl-cards-view{ display:none; }
+
+  /* نافذة تفاصيل الباقة: شبكة مجموعات مواصفات */
+  .pl-detail-grid{
+    display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr));
+    gap:14px;
+  }
+  .pl-detail-group{
+    border:1px solid var(--hub-border-soft, #eef0f6);
+    border-radius:12px; padding:12px 14px;
+    background:var(--hub-bg-soft, #fafafe);
+  }
+  .pl-detail-group h4{
+    margin:0 0 8px; font-size:12.5px; font-weight:900;
+    color:var(--hub-brand-ink, #4c3fd1);
+    display:flex; align-items:center; gap:7px;
+  }
+  .pl-detail-group .uds-kv{ margin:0; }
 </style>
 {% endblock %}
 
 {% block content %}
 
-{{ hub.hero(
+{# ───── حسابات KPI من بيانات الراوت (رخيصة — items محمَّلة أصلًا) ───── #}
+{% set _enabled = items|selectattr('enabled')|list|length %}
+{% set _priced  = items|selectattr('price', 'gt', 0)|list %}
+{% set _avg_price = (_priced|map(attribute='price')|sum / _priced|length) if _priced else 0 %}
+{% set _assigned = sub_counts.values()|sum if sub_counts else 0 %}
+
+{# تسميات عربية لأنواع الباقات #}
+{% set TYPE_AR = {'time':'وقت','quota':'كوتا','hybrid':'مدمج','unlimited':'غير محدود','recurring':'متكرر'} %}
+{% set SCOPE_AR = {'hotspot':'هوتسبوت','broadband':'برودباند','both':'الكل'} %}
+{% set DAY_AR = {'mon':'الاثنين','tue':'الثلاثاء','wed':'الأربعاء','thu':'الخميس','fri':'الجمعة','sat':'السبت','sun':'الأحد'} %}
+
+{# ───── الصدفة الموحّدة: هيرو + KPI صف واحد + فلترة مدمجة ───── #}
+<section class="hub-hero-shell">
+{% call hub.megahero(
   "العروض والخطط",
-  subtitle="إدارة الباقات: السعر، السرعة، الكوتا، المدة، الأولوية",
+  subtitle="إدارة باقات الإنترنت بكل إمكانياتها: السعر، السرعات والـ Burst، الكوتا اليومية والشهرية، الصلاحية، الجلسات، نطاق الخدمة والقيود — مع تفاصيل كاملة لكل باقة بنقرة واحدة.",
   icon="tags",
   actions_html='
     <a class="hub-btn hub-btn--primary" href="' + url_for('radius.plans_new') + '">
       <i class="fa-solid fa-circle-plus"></i> إضافة عرض
     </a>
     <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.plans_overview') + '">
-      <i class="fa-solid fa-chart-pie"></i> النظرة العامة
-    </a>
-  '
-) }}
-
-<form method="get" class="hub-filterbar">
-  <input class="hub-input grow" type="text" name="q" placeholder="بحث باسم/كود العرض...">
-  {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
-  <span class="hub-spacer"></span>
-  {# #31: cards / table view toggle (reuses the card-packages toggle pattern) #}
+      <i class="fa-solid fa-chart-pie"></i> نظرة عامة
+    </a>',
+  kpis=[
+    {'label': 'عدد الباقات',          'value': items|length,        'icon': 'layer-group',  'variant': 'brand'},
+    {'label': 'المفعَّلة',             'value': _enabled,            'icon': 'toggle-on',    'variant': 'green',
+     'sub': (items|length - _enabled)|string + ' معطَّلة'},
+    {'label': 'متوسط السعر',          'value': _avg_price|money,    'icon': 'coins',        'variant': 'amber',
+     'sub': _priced|length|string + ' باقة مسعَّرة'},
+    {'label': 'المشتركون الموزَّعون', 'value': _assigned,           'icon': 'users',        'variant': 'blue',
+     'sub': 'على ' + (sub_counts|length|string) + ' باقة'},
+  ]
+) %}
+  {# فلترة حيّة (عميل) — لا يوجد فلتر خادم لهذا الراوت، فالبحث فوري على الصفوف #}
+  <input class="hub-input grow" type="search" data-pl-search
+         placeholder="بحث باسم / كود الباقة..." autocomplete="off">
+  <select class="hub-select" data-pl-filter-type aria-label="فلترة حسب النوع">
+    <option value="">كل الأنواع</option>
+    {% for t in items|map(attribute='plan_type')|unique|sort %}
+      <option value="{{ t }}">{{ TYPE_AR.get(t, t) }}</option>
+    {% endfor %}
+  </select>
+  <select class="hub-select" data-pl-filter-status aria-label="فلترة حسب الحالة">
+    <option value="">كل الحالات</option>
+    <option value="1">مفعَّلة</option>
+    <option value="0">معطَّلة</option>
+  </select>
+  <span class="hub-spacer" style="flex:1"></span>
   <div class="pl-view-toggle" role="group" aria-label="طريقة العرض" data-plans-view-toggle>
     <button type="button" data-plans-view-btn="table" aria-pressed="true">
       <i class="fa-solid fa-table"></i> جدول
@@ -108,70 +178,104 @@
       <i class="fa-solid fa-grip"></i> بطاقات
     </button>
   </div>
-  {{ hub.btn("CSV", icon="file-csv", variant="secondary", size="sm") }}
-</form>
+{% endcall %}
+</section>{# /hub-hero-shell #}
 
 {% if items %}
 <div data-plans-view="table">
-{% set _enabled = items|selectattr('enabled')|list|length %}
-<div class="hub-kpi-grid">
-  {{ hub.kpi("الإجمالي", items|length, icon="layer-group", variant="brand") }}
-  {{ hub.kpi("مفعَّلة",  _enabled,      icon="toggle-on",  variant="green") }}
-  {{ hub.kpi("معطَّلة",  items|length - _enabled, icon="toggle-off", variant="amber") }}
-</div>
 
+{# ═════════ عرض الجدول الموحّد (uds): كل الإمكانيات كأعمدة ═════════ #}
 <div class="pl-table-view">
 {% call hub.section("الباقات", icon="table-list", meta=items|length|string + " عرض", flush=True) %}
-  <div class="hub-table-wrap" style="border:none;border-radius:0">
-    <table class="hub-table" data-paginated="1" data-page-size="20" data-page-sizes="10,20,50,100" data-persist-key="plans-list">
+  <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25" style="border:none;border-radius:0">
+    <table class="hub-table">
       <thead>
         <tr>
-          <th style="width:36px"><input type="checkbox"></th>
-          <th class="num" style="width:60px">#</th>
+          <th class="num" style="width:54px">#</th>
           <th>الاسم</th>
           <th>الكود</th>
           <th>النوع</th>
-          <th>المدة</th>
-          <th>الكوتا</th>
+          <th>الخدمة</th>
           <th>السرعة</th>
+          <th>الكوتا</th>
+          <th>المدة / الصلاحية</th>
+          <th class="num">الجلسات</th>
           <th class="num">السعر</th>
-          <th style="width:120px">إجراءات</th>
+          <th class="num">المشتركون</th>
+          <th>الحالة</th>
+          <th class="num">الأولوية</th>
+          <th style="width:140px" data-uds-nosort data-uds-nocol>إجراءات</th>
         </tr>
       </thead>
       <tbody>
         {% for p in items %}
-        <tr>
-          <td><input type="checkbox"></td>
+        {% set _subs = sub_counts.get(p.id, 0) if sub_counts else 0 %}
+        <tr data-pl-row
+            data-pl-name="{{ (p.name ~ ' ' ~ (p.code or ''))|lower }}"
+            data-pl-type="{{ p.plan_type or '' }}"
+            data-pl-enabled="{{ '1' if p.enabled else '0' }}">
           <td class="num mono">{{ p.id }}</td>
           <td>
             <div class="hub-flex-row" style="gap:8px;flex-wrap:nowrap">
-              <span style="display:inline-block;width:6px;height:22px;border-radius:3px;background:{{ p.color or '#6B5AED' }};flex-shrink:0"></span>
+              <span class="pl-color-dot" style="background:{{ p.color or '#6B5AED' }}"></span>
               <strong style="color:var(--hub-text)">{{ p.name }}</strong>
             </div>
           </td>
-          <td class="mono small">{{ p.code or '—' }}</td>
-          <td>{{ hub.pill(p.plan_type or '—', variant="brand", dot=False) }}</td>
-          <td class="mono small">
-            {% if p.duration_minutes %}{{ p.duration_minutes }} د{% endif %}
-            {% if p.validity_days %}{% if p.duration_minutes %} · {% endif %}{{ p.validity_days }} يوم{% endif %}
-            {% if not p.duration_minutes and not p.validity_days %}<span class="hub-text-mute">غير محدود</span>{% endif %}
+          <td class="mono small">{% if p.code %}<bdi dir="ltr">{{ p.code }}</bdi>{% else %}<span class="hub-text-mute">—</span>{% endif %}</td>
+          <td>{{ hub.pill(TYPE_AR.get(p.plan_type, p.plan_type or '—'), variant="brand", dot=False) }}</td>
+          <td class="small">
+            {# «Both» = هوت سبوت + برودباند معًا (نوع خدمة متعدد) #}
+            {%- set _pst = (p.service_type or '')|lower -%}
+            {{ 'Hotspot + PPPoE' if _pst == 'both' else (p.service_type or '—') }}
+            {% if p.service_scope and p.service_scope != 'both' %}
+              <span class="hub-text-mute">· {{ SCOPE_AR.get(p.service_scope, p.service_scope) }}</span>
+            {% endif %}
           </td>
           <td class="mono small">
-            {% if p.quota_total_mb %}{{ "%.1f"|format(p.quota_total_mb/1024) }} GB
-            {% else %}<span class="hub-text-mute">غير محدود</span>{% endif %}
+            {% if p.speed_down_kbps or p.speed_up_kbps %}
+              <bdi dir="ltr">{{ (p.speed_down_kbps or 0) // 1024 if (p.speed_down_kbps or 0) >= 1024 else (p.speed_down_kbps or 0) }}{{ 'M' if (p.speed_down_kbps or 0) >= 1024 else 'K' }}↓ / {{ (p.speed_up_kbps or 0) // 1024 if (p.speed_up_kbps or 0) >= 1024 else (p.speed_up_kbps or 0) }}{{ 'M' if (p.speed_up_kbps or 0) >= 1024 else 'K' }}↑</bdi>
+              {% if p.burst_enabled or p.burst_down_kbps %}<span class="hub-text-mute" title="Burst مفعَّل"> ⚡</span>{% endif %}
+            {% else %}<span class="hub-text-mute">غير محدّدة</span>{% endif %}
           </td>
-          <td class="mono small">{{ p.speed_down_kbps or 0 }} ↓ / {{ p.speed_up_kbps or 0 }} ↑ Kbps</td>
-          <td class="num">
-            <strong>{{ p.price|money }}</strong>
+          <td class="mono small">
+            {% if p.quota_total_mb %}
+              <bdi dir="ltr">{{ "%.1f"|format(p.quota_total_mb/1024) }} GB</bdi>
+              {% if p.quota_daily_mb %}<span class="hub-text-mute" title="كوتا يومية"> · <bdi dir="ltr">{{ "%.1f"|format(p.quota_daily_mb/1024) }}/يوم</bdi></span>{% endif %}
+            {% elif p.quota_daily_mb or p.quota_monthly_mb or p.daily_combined_quota_mb or p.monthly_combined_quota_mb %}
+              {% if p.quota_daily_mb or p.daily_combined_quota_mb %}<bdi dir="ltr">{{ "%.1f"|format(((p.quota_daily_mb or p.daily_combined_quota_mb))/1024) }} GB</bdi>/يوم{% endif %}
+              {% if p.quota_monthly_mb or p.monthly_combined_quota_mb %}{% if p.quota_daily_mb or p.daily_combined_quota_mb %} · {% endif %}<bdi dir="ltr">{{ "%.1f"|format(((p.quota_monthly_mb or p.monthly_combined_quota_mb))/1024) }} GB</bdi>/شهر{% endif %}
+            {% else %}<span class="hub-text-mute">غير محدودة</span>{% endif %}
           </td>
+          <td class="mono small">
+            {% if p.duration_minutes %}
+              {% if p.duration_minutes >= 1440 %}<bdi dir="ltr">{{ p.duration_minutes // 1440 }}</bdi> يوم
+              {% elif p.duration_minutes >= 60 %}<bdi dir="ltr">{{ p.duration_minutes // 60 }}</bdi> ساعة
+              {% else %}<bdi dir="ltr">{{ p.duration_minutes }}</bdi> د{% endif %}
+            {% endif %}
+            {% if p.validity_days %}{% if p.duration_minutes %} · {% endif %}صلاحية <bdi dir="ltr">{{ p.validity_days }}</bdi> يوم{% endif %}
+            {% if not p.duration_minutes and not p.validity_days %}<span class="hub-text-mute">غير محدودة</span>{% endif %}
+          </td>
+          <td class="num mono">{{ p.concurrent_sessions or 1 }}</td>
+          <td class="num"><strong><bdi dir="ltr">{{ p.price|money }}</bdi></strong></td>
+          <td class="num mono">{{ _subs }}</td>
           <td>
-            <div class="hub-flex-row" style="gap:4px;flex-wrap:nowrap">
+            {% if p.enabled %}{{ hub.pill("مفعَّلة", variant="green") }}
+            {% else %}{{ hub.pill("معطَّلة", variant="amber") }}{% endif %}
+          </td>
+          <td class="num mono">{{ p.priority or '—' }}</td>
+          <td>
+            {# صف إجراءات واحد مرتّب: تفاصيل / تعديل / أرشفة — كل النقاط النهائية محفوظة #}
+            <div class="pl-actions">
+              <button type="button" class="hub-btn hub-btn--ghost hub-btn--icon" title="كل التفاصيل"
+                      data-uds-modal-open="pl-detail-modal" data-pl-detail-for="{{ p.id }}">
+                <i class="fa-solid fa-circle-info"></i>
+              </button>
               <a class="hub-btn hub-btn--ghost hub-btn--icon" title="تعديل"
                  href="{{ url_for('radius.plans_edit', plan_id=p.id) }}">
                 <i class="fa-solid fa-pen"></i>
               </a>
               <form method="post" action="{{ url_for('radius.plans_delete', plan_id=p.id) }}"
-                    onsubmit="return confirm('أرشفة «{{ p.name|e }}»؟ يمكن استعادتها من سلة المحذوفات.');" style="display:inline">
+                    onsubmit="return confirm('أرشفة «{{ p.name|e }}»؟ يمكن استعادتها من سلة المحذوفات.');">
                 <button type="submit" class="hub-btn hub-btn--danger hub-btn--icon" title="أرشفة">
                   <i class="fa-solid fa-box-archive"></i>
                 </button>
@@ -186,47 +290,57 @@
 {% endcall %}
 </div>{# /.pl-table-view #}
 
-{# ── Cards view (#31) — same data, premium card layout ── #}
+{# ═════════ عرض البطاقات (#31) — نفس البيانات بتنسيق بطاقات ═════════ #}
 <div class="pl-cards-view">
   {% call hub.section("الباقات", icon="grip", meta=items|length|string + " عرض") %}
     <div class="pl-cards-grid">
       {% for p in items %}
-      <article class="pl-card" style="--pl-accent: {{ p.color or '#2BAACC' }}">
+      {% set _subs = sub_counts.get(p.id, 0) if sub_counts else 0 %}
+      <article class="pl-card" style="--pl-accent: {{ p.color or '#6B5AED' }}"
+               data-pl-row
+               data-pl-name="{{ (p.name ~ ' ' ~ (p.code or ''))|lower }}"
+               data-pl-type="{{ p.plan_type or '' }}"
+               data-pl-enabled="{{ '1' if p.enabled else '0' }}">
         <div class="pl-card__head">
           <div class="pl-card__name">
             <strong>{{ p.name }}</strong>
-            <span class="pl-card__code">{{ p.code or '—' }}</span>
+            <span class="pl-card__code">{% if p.code %}<bdi dir="ltr">{{ p.code }}</bdi>{% else %}—{% endif %}</span>
           </div>
-          <span class="pl-card__price">{{ p.price|money }}</span>
+          <span class="pl-card__price"><bdi dir="ltr">{{ p.price|money }}</bdi></span>
         </div>
         <div class="pl-card__chips">
-          {{ hub.pill(p.plan_type or '—', variant="brand", dot=False) }}
-          {% if p.enabled %}{{ hub.pill("مفعَّل", variant="green", dot=False) }}
-          {% else %}{{ hub.pill("معطَّل", variant="amber", dot=False) }}{% endif %}
+          {{ hub.pill(TYPE_AR.get(p.plan_type, p.plan_type or '—'), variant="brand", dot=False) }}
+          {% if p.enabled %}{{ hub.pill("مفعَّلة", variant="green", dot=False) }}
+          {% else %}{{ hub.pill("معطَّلة", variant="amber", dot=False) }}{% endif %}
+          {% if _subs %}{{ hub.pill(_subs|string + " مشترك", variant="blue", dot=False) }}{% endif %}
         </div>
         <div class="pl-card__specs">
           <div class="pl-card__spec">
-            <span>المدة</span>
-            <strong>
-              {% if p.duration_minutes %}{{ p.duration_minutes }} د{% endif %}
-              {% if p.validity_days %}{% if p.duration_minutes %} · {% endif %}{{ p.validity_days }} يوم{% endif %}
-              {% if not p.duration_minutes and not p.validity_days %}غير محدود{% endif %}
-            </strong>
+            <span>السرعة</span>
+            <strong><bdi dir="ltr">{{ p.speed_down_kbps or 0 }}↓ / {{ p.speed_up_kbps or 0 }}↑ K</bdi></strong>
           </div>
           <div class="pl-card__spec">
             <span>الكوتا</span>
-            <strong>{% if p.quota_total_mb %}{{ "%.1f"|format(p.quota_total_mb/1024) }} GB{% else %}غير محدود{% endif %}</strong>
+            <strong>{% if p.quota_total_mb %}<bdi dir="ltr">{{ "%.1f"|format(p.quota_total_mb/1024) }} GB</bdi>{% else %}غير محدودة{% endif %}</strong>
           </div>
           <div class="pl-card__spec">
-            <span>السرعة</span>
-            <strong>{{ p.speed_down_kbps or 0 }}↓ / {{ p.speed_up_kbps or 0 }}↑</strong>
+            <span>المدة / الصلاحية</span>
+            <strong>
+              {% if p.duration_minutes %}<bdi dir="ltr">{{ p.duration_minutes }}</bdi> د{% endif %}
+              {% if p.validity_days %}{% if p.duration_minutes %} · {% endif %}<bdi dir="ltr">{{ p.validity_days }}</bdi> يوم{% endif %}
+              {% if not p.duration_minutes and not p.validity_days %}غير محدودة{% endif %}
+            </strong>
           </div>
           <div class="pl-card__spec">
-            <span>الأولوية</span>
-            <strong>{{ p.priority or '—' }}</strong>
+            <span>الجلسات / الأولوية</span>
+            <strong><bdi dir="ltr">{{ p.concurrent_sessions or 1 }}</bdi> · {{ p.priority or '—' }}</strong>
           </div>
         </div>
         <div class="pl-card__actions">
+          <button type="button" class="hub-btn hub-btn--ghost hub-btn--sm" title="كل التفاصيل"
+                  data-uds-modal-open="pl-detail-modal" data-pl-detail-for="{{ p.id }}">
+            <i class="fa-solid fa-circle-info"></i> تفاصيل
+          </button>
           <a class="hub-btn hub-btn--secondary hub-btn--sm" title="تعديل"
              href="{{ url_for('radius.plans_edit', plan_id=p.id) }}">
             <i class="fa-solid fa-pen"></i> تعديل
@@ -244,6 +358,137 @@
   {% endcall %}
 </div>{# /.pl-cards-view #}
 </div>{# /[data-plans-view] #}
+
+{# ═════════ كتل تفاصيل الباقات (مخفية) + نافذة موحّدة واحدة ═════════
+   كل إمكانيات الباقة التي يكشفها الخادم تظهر هنا منظَّمة بمجموعات. #}
+<div hidden>
+  {% for p in items %}
+  {# أيام السماح بالعربية — «كل الأيام» إن كانت السبعة كلها مسموحة #}
+  {% if not p.allowed_days or p.allowed_days|length == 7 %}
+    {% set _days_label = 'كل الأيام' %}
+  {% else %}
+    {% set _days = [] %}
+    {% for d in p.allowed_days %}{% set _ = _days.append(DAY_AR.get(d, d)) %}{% endfor %}
+    {% set _days_label = _days|join('، ') %}
+  {% endif %}
+  <div id="pl-detail-{{ p.id }}" data-pl-detail data-pl-detail-name="{{ p.name }}">
+    <div class="pl-detail-grid">
+
+      {# ── أساسيات وتجاري ── #}
+      <div class="pl-detail-group">
+        <h4><i class="fa-solid fa-circle-info"></i> أساسيات</h4>
+        {{ hub.kv([
+          {'label':'الاسم',    'value': p.name},
+          {'label':'الكود',    'value': p.code or '—', 'mono': True},
+          {'label':'النوع',    'value': TYPE_AR.get(p.plan_type, p.plan_type or '—')},
+          {'label':'الخدمة',   'value': 'Hotspot + PPPoE' if (p.service_type or '')|lower == 'both' else (p.service_type or '—')},
+          {'label':'النطاق',   'value': SCOPE_AR.get(p.service_scope, p.service_scope or 'الكل')},
+          {'label':'الحالة',   'value': 'مفعَّلة' if p.enabled else 'معطَّلة'},
+          {'label':'الأولوية', 'value': p.priority or '—', 'mono': True},
+          {'label':'الوصف',    'value': p.description or '—'},
+        ]) }}
+      </div>
+
+      <div class="pl-detail-group">
+        <h4><i class="fa-solid fa-coins"></i> التسعير</h4>
+        {{ hub.kv([
+          {'label':'السعر',        'value': p.price|money, 'mono': True},
+          {'label':'العملة',       'value': p.currency or 'عملة النظام'},
+          {'label':'مسبق الدفع',   'value': 'نعم' if p.prepaid else 'لا'},
+          {'label':'فئة الباقة',   'value': p.plan_tier or '—'},
+        ]) }}
+      </div>
+
+      {# ── السرعات و Burst و CIR ── #}
+      <div class="pl-detail-group">
+        <h4><i class="fa-solid fa-gauge-high"></i> السرعات</h4>
+        {{ hub.kv([
+          {'label':'تنزيل',          'value': ((p.speed_down_kbps|string) + ' Kbps') if p.speed_down_kbps else 'غير محدّدة', 'mono': True},
+          {'label':'رفع',            'value': ((p.speed_up_kbps|string) + ' Kbps') if p.speed_up_kbps else 'غير محدّدة', 'mono': True},
+          {'label':'تحكم بالسرعة',   'value': 'مفعَّل' if p.speed_control_enabled else 'معطَّل'},
+          {'label':'CIR تنزيل',      'value': ((p.cir_down_kbps|string) + ' Kbps') if p.cir_down_kbps else '—', 'mono': True},
+          {'label':'CIR رفع',        'value': ((p.cir_up_kbps|string) + ' Kbps') if p.cir_up_kbps else '—', 'mono': True},
+          {'label':'Burst',          'value': 'مفعَّل' if (p.burst_enabled or p.burst_down_kbps or p.burst_up_kbps) else 'معطَّل'},
+          {'label':'Burst تنزيل/رفع','value': ((p.burst_down_kbps|string) + ' / ' + (p.burst_up_kbps|string) + ' K') if (p.burst_down_kbps or p.burst_up_kbps) else '—', 'mono': True},
+          {'label':'عتبة / زمن Burst','value': ((p.burst_threshold_kbps|string) + ' K · ' + (p.burst_time_sec|string) + ' ث') if (p.burst_threshold_kbps or p.burst_time_sec) else '—', 'mono': True},
+          {'label':'ليلي غير محدود', 'value': 'مفعَّل' if p.nightly_unlimited_enabled else 'معطَّل'},
+          {'label':'تجاوز السرعة مسموح', 'value': 'نعم' if p.speed_override_allowed else 'لا'},
+        ]) }}
+      </div>
+
+      {# ── الكوتا التفصيلية ── #}
+      <div class="pl-detail-group">
+        <h4><i class="fa-solid fa-database"></i> الكوتا</h4>
+        {{ hub.kv([
+          {'label':'إجمالية',        'value': ("%.1f GB"|format(p.quota_total_mb/1024)) if p.quota_total_mb else 'غير محدودة', 'mono': True},
+          {'label':'يومية',          'value': ("%.1f GB"|format(p.quota_daily_mb/1024)) if p.quota_daily_mb else '—', 'mono': True},
+          {'label':'شهرية',          'value': ("%.1f GB"|format(p.quota_monthly_mb/1024)) if p.quota_monthly_mb else '—', 'mono': True},
+          {'label':'يومية ↓/↑/مجمَّعة', 'value': ((p.daily_download_quota_mb|string) + ' / ' + (p.daily_upload_quota_mb|string) + ' / ' + (p.daily_combined_quota_mb|string) + ' MB') if (p.daily_download_quota_mb or p.daily_upload_quota_mb or p.daily_combined_quota_mb) else '—', 'mono': True},
+          {'label':'شهرية ↓/↑/مجمَّعة', 'value': ((p.monthly_download_quota_mb|string) + ' / ' + (p.monthly_upload_quota_mb|string) + ' / ' + (p.monthly_combined_quota_mb|string) + ' MB') if (p.monthly_download_quota_mb or p.monthly_upload_quota_mb or p.monthly_combined_quota_mb) else '—', 'mono': True},
+          {'label':'إستراتيجية التصفير', 'value': p.quota_reset_strategy or '—'},
+        ]) }}
+      </div>
+
+      {# ── الوقت والصلاحية ── #}
+      <div class="pl-detail-group">
+        <h4><i class="fa-solid fa-hourglass-half"></i> الوقت والصلاحية</h4>
+        {{ hub.kv([
+          {'label':'المدة',             'value': ((p.duration_minutes|string) + ' دقيقة') if p.duration_minutes else 'غير محدودة', 'mono': True},
+          {'label':'الصلاحية',          'value': ((p.validity_days|string) + ' يوم') if p.validity_days else '—', 'mono': True},
+          {'label':'حد يومي',           'value': ((p.max_daily_minutes|string) + ' دقيقة') if p.max_daily_minutes else '—', 'mono': True},
+          {'label':'حد أسبوعي',         'value': ((p.max_weekly_minutes|string) + ' دقيقة') if p.max_weekly_minutes else '—', 'mono': True},
+          {'label':'حد شهري',           'value': ((p.max_monthly_minutes|string) + ' دقيقة') if p.max_monthly_minutes else '—', 'mono': True},
+          {'label':'مهلة الجلسة',       'value': ((p.session_timeout_sec|string) + ' ث') if p.session_timeout_sec else '—', 'mono': True},
+          {'label':'مهلة الخمول',       'value': ((p.idle_timeout_sec|string) + ' ث') if p.idle_timeout_sec else '—', 'mono': True},
+          {'label':'صلاحية التذكرة',    'value': ((p.ticket_validity_days|string) + ' يوم') if p.ticket_validity_days else '—', 'mono': True},
+          {'label':'حد ساعات العمل',    'value': p.working_hours_limit or '—', 'mono': True},
+        ]) }}
+      </div>
+
+      {# ── الشبكة والجلسات ── #}
+      <div class="pl-detail-group">
+        <h4><i class="fa-solid fa-network-wired"></i> الشبكة والجلسات</h4>
+        {{ hub.kv([
+          {'label':'جلسات متزامنة', 'value': p.concurrent_sessions or 1, 'mono': True},
+          {'label':'Address Pool',  'value': p.address_pool or '—', 'mono': True},
+          {'label':'Framed Pool',   'value': p.framed_pool or '—', 'mono': True},
+          {'label':'IPv6 Pool',     'value': p.ipv6_pool or '—', 'mono': True},
+          {'label':'VLAN',          'value': p.vlan_id or '—', 'mono': True},
+          {'label':'ربط MAC',       'value': 'نعم' if p.bind_mac else 'لا'},
+          {'label':'ربط IP',        'value': 'نعم' if p.bind_ip else 'لا'},
+        ]) }}
+      </div>
+
+      {# ── الخدمات والقيود ── #}
+      <div class="pl-detail-group">
+        <h4><i class="fa-solid fa-sliders"></i> الخدمات والقيود</h4>
+        {{ hub.kv([
+          {'label':'هوتسبوت',          'value': 'مفعَّل' if p.hotspot_enabled else 'معطَّل'},
+          {'label':'PPP',              'value': 'مفعَّل' if p.ppp_enabled else 'معطَّل'},
+          {'label':'السلف (الديون)',   'value': ('حتى ' + (p.max_loan_minutes|string) + ' دقيقة') if (p.loan_enabled and p.max_loan_minutes) else ('مفعَّلة' if p.loan_enabled else 'معطَّلة')},
+          {'label':'استخدام لمرة واحدة','value': 'نعم' if p.single_use_once else 'لا'},
+          {'label':'أقصى مرات استهلاك', 'value': p.max_consumption_times or '—', 'mono': True},
+          {'label':'أيام السماح',       'value': _days_label},
+          {'label':'ساعات السماح',      'value': (p.allowed_hours_from + ' → ' + p.allowed_hours_to) if (p.allowed_hours_from or p.allowed_hours_to) else 'كل اليوم', 'mono': True},
+          {'label':'ساعات العرض',       'value': (p.offer_hours_from + ' → ' + p.offer_hours_to) if (p.offer_hours_from or p.offer_hours_to) else '—', 'mono': True},
+        ]) }}
+      </div>
+
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
+      <a class="hub-btn hub-btn--primary hub-btn--sm" href="{{ url_for('radius.plans_edit', plan_id=p.id) }}">
+        <i class="fa-solid fa-pen"></i> تعديل الباقة
+      </a>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{# النافذة الموحّدة الواحدة — يملؤها JS من كتلة الباقة المطلوبة #}
+{% call hub.modal("pl-detail-modal", "تفاصيل الباقة", icon="tags", size="lg") %}
+  <div data-pl-modal-body></div>
+{% endcall %}
+
 {% else %}
 {{ hub.empty(
   "لا عروض بعد",
@@ -252,26 +497,81 @@
 ) }}
 {% endif %}
 
+{# نظام الجداول الموحد (فرز + أعمدة + ترقيم) + سلوك النوافذ المنبثقة #}
+<script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
+<script src="{{ url_for('static', filename='js/unified_design.js') }}"></script>
 <script>
 (function(){
   'use strict';
+
+  /* ── تبديل جدول/بطاقات (محفوظ من #31) ── */
   var LS = 'hr:plans-list:view';
   var wrap = document.querySelector('[data-plans-view]');
   var toggle = document.querySelector('[data-plans-view-toggle]');
-  if (!wrap || !toggle) return;
-  var btns = Array.prototype.slice.call(toggle.querySelectorAll('[data-plans-view-btn]'));
-  function apply(mode){
-    wrap.setAttribute('data-plans-view', mode);
+  if (wrap && toggle) {
+    var btns = Array.prototype.slice.call(toggle.querySelectorAll('[data-plans-view-btn]'));
+    var apply = function(mode){
+      wrap.setAttribute('data-plans-view', mode);
+      btns.forEach(function(b){
+        b.setAttribute('aria-pressed', b.getAttribute('data-plans-view-btn') === mode ? 'true' : 'false');
+      });
+      try { localStorage.setItem(LS, mode); } catch(_){}
+    };
+    var saved = null;
+    try { saved = localStorage.getItem(LS); } catch(_){}
+    apply(saved === 'cards' ? 'cards' : 'table');
     btns.forEach(function(b){
-      b.setAttribute('aria-pressed', b.getAttribute('data-plans-view-btn') === mode ? 'true' : 'false');
+      b.addEventListener('click', function(){ apply(b.getAttribute('data-plans-view-btn')); });
     });
-    try { localStorage.setItem(LS, mode); } catch(_){}
   }
-  var saved = null;
-  try { saved = localStorage.getItem(LS); } catch(_){}
-  apply(saved === 'cards' ? 'cards' : 'table');
-  btns.forEach(function(b){
-    b.addEventListener('click', function(){ apply(b.getAttribute('data-plans-view-btn')); });
+
+  /* ── فلترة حيّة: بحث + نوع + حالة — تعمل على الجدول والبطاقات معًا ── */
+  var qEl = document.querySelector('[data-pl-search]');
+  var tEl = document.querySelector('[data-pl-filter-type]');
+  var sEl = document.querySelector('[data-pl-filter-status]');
+  function rowMatches(row, q, t, s){
+    if (q && (row.getAttribute('data-pl-name') || '').indexOf(q) < 0) return false;
+    if (t && row.getAttribute('data-pl-type') !== t) return false;
+    if (s && row.getAttribute('data-pl-enabled') !== s) return false;
+    return true;
+  }
+  function applyFilter(){
+    var q = (qEl && qEl.value || '').trim().toLowerCase();
+    var t = tEl && tEl.value || '';
+    var s = sEl && sEl.value || '';
+    var active = !!(q || t || s);
+
+    /* الجدول: عبر واجهة uds حتى يبقى الترقيم/الفرز متّسقَين */
+    var udsWrap = document.querySelector('.pl-table-view [data-uds-table]');
+    if (udsWrap && udsWrap.__udsApi) {
+      udsWrap.__udsApi.setFilter(active ? function(row){ return rowMatches(row, q, t, s); } : null);
+    }
+    /* البطاقات: إظهار/إخفاء مباشر (لا ترقيم هناك) */
+    document.querySelectorAll('.pl-cards-view [data-pl-row]').forEach(function(row){
+      row.style.display = rowMatches(row, q, t, s) ? '' : 'none';
+    });
+  }
+  [qEl, tEl, sEl].forEach(function(el){
+    if (!el) return;
+    el.addEventListener('input', applyFilter);
+    el.addEventListener('change', applyFilter);
+  });
+  /* صف البحث المدمج بالهيرو هو <form> — نمنع الإرسال (الفلترة فورية) */
+  var heroForm = qEl && qEl.closest('form');
+  if (heroForm) heroForm.addEventListener('submit', function(e){ e.preventDefault(); applyFilter(); });
+
+  /* ── نافذة تفاصيل الباقة: نافذة واحدة + كتل مخفية لكل باقة ── */
+  var modal = document.getElementById('pl-detail-modal');
+  var modalBody = modal && modal.querySelector('[data-pl-modal-body]');
+  var modalTitle = modal && modal.querySelector('.uds-modal-head h3');
+  document.addEventListener('click', function(e){
+    var btn = e.target.closest('[data-pl-detail-for]');
+    if (!btn || !modalBody) return;
+    var src = document.getElementById('pl-detail-' + btn.getAttribute('data-pl-detail-for'));
+    if (!src) return;
+    modalBody.innerHTML = src.innerHTML;
+    if (modalTitle) modalTitle.innerHTML =
+      '<i class="fa-solid fa-tags"></i> تفاصيل الباقة — ' + (src.getAttribute('data-pl-detail-name') || '');
   });
 })();
 </script>

@@ -16,6 +16,9 @@ def set_current_admin(admin: Admin, tenant_id: int) -> None:
     session["admin_name"] = admin.full_name or admin.username
     session["is_super_admin"] = bool(getattr(admin, "is_super_admin", False))
     session["tenant_id"] = tenant_id
+    # لغة الواجهة المفضّلة للمسؤول (i18n) — يقرأها منتقي اللغة في الأولوية 2.
+    # '' = لا تفضيل، فيسقط المنتقي للإعداد العام ثم العربية.
+    session["admin_locale"] = getattr(admin, "locale", "") or ""
     # حمّل صلاحيات الدور في الجلسة حتى تعمل فحوصات RBAC (الحارس + SafetyGate).
     try:
         from ..services.admins import get_admins_service
@@ -26,7 +29,7 @@ def set_current_admin(admin: Admin, tenant_id: int) -> None:
 
 
 def clear_current_admin() -> None:
-    for k in ("admin_id", "admin_user", "admin_name", "is_super_admin", "tenant_id", "permissions"):
+    for k in ("admin_id", "admin_user", "admin_name", "is_super_admin", "tenant_id", "permissions", "admin_locale"):
         session.pop(k, None)
 
 

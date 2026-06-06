@@ -1,0 +1,456 @@
+{# ══════════════════════════════════════════════════════════════════════
+   دليل «الأدوار والصلاحيات» — ضمن قسم «الإعدادات».
+
+   نفس بنية النمط الذهبي docs_add_subscriber.html: hero + شريط أدوات،
+   فهرس لاصق order:2 + scrollspy، شارات خطوات بنفسجية، رسوم HTML/CSS،
+   تلميحات 💡/⚠️، حفظ PDF بـwindow.print.
+
+   المحتوى مطابق للصفحات الفعلية:
+     • roles_form.html — إنشاء دور + مصفوفة الصلاحيات بالمجموعات،
+       العدّادات الحيّة، وزر «تحديد الكل» لكل مجموعة.
+     • settings_page.html (تبويب «المشتركون والوصول») — خيار «عرض
+       الأقسام غير المصرّح بها» (تجميد بقفل / إخفاء كلي) الذي يحكم
+       كيف يرى الدور المحدود الأقسام الخارجة عن صلاحياته.
+   النصوص ومفاتيح الصلاحيات منسوخة حرفيًا.
+   ══════════════════════════════════════════════════════════════════════ #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}دليل: الأدوار والصلاحيات — كيف تستخدمني{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<style>
+  /* ── التخطيط: فهرس جانبي لاصق + عمود المحتوى ── */
+  .dg-layout{ display:grid; grid-template-columns:minmax(0,1fr) 230px; gap:20px; align-items:start; }
+  .dg-toc{ order:2; }
+  .dg-main{ order:1; }
+  @media (max-width:980px){ .dg-layout{ grid-template-columns:1fr; } .dg-toc{ order:1; } .dg-main{ order:2; } }
+
+  .dg-toc{
+    position:sticky; top:84px;
+    background:#fff; border:1px solid #e8edf3; border-radius:14px;
+    padding:14px 13px; display:grid; gap:3px;
+  }
+  @media (max-width:980px){ .dg-toc{ position:static; } }
+  .dg-toc-title{
+    display:flex; align-items:center; gap:8px; font-size:12px; font-weight:900;
+    color:#7c7a99; margin-bottom:7px; padding-inline:6px;
+  }
+  .dg-toc a{
+    display:flex; align-items:center; gap:9px;
+    padding:8px 10px; border-radius:9px; text-decoration:none;
+    font-size:12.5px; font-weight:700; color:#475569;
+    transition:background .14s, color .14s;
+  }
+  .dg-toc a .n{
+    width:21px; height:21px; border-radius:50%; flex:none;
+    display:grid; place-items:center; font-size:10.5px; font-weight:900;
+    background:#f1f5f9; color:#94a3b8;
+  }
+  .dg-toc a:hover{ background:#f5f3ff; color:#5b21b6; }
+  .dg-toc a.is-active{ background:#ede9fe; color:#5b21b6; }
+  .dg-toc a.is-active .n{ background:linear-gradient(135deg,#7c3aed,#5b21b6); color:#fff; }
+
+  /* ── عمود الخطوات ── */
+  .dg-main{ min-width:0; display:grid; gap:18px; }
+
+  /* تمهيد «ماذا ستتعلم» */
+  .dg-lead{
+    display:flex; gap:13px; align-items:flex-start;
+    background:linear-gradient(135deg,#f5f3ff,#fdfcff);
+    border:1px solid #e9e5fc; border-radius:14px; padding:15px 17px;
+  }
+  .dg-lead .ic{ width:40px;height:40px;border-radius:12px;flex:none;display:grid;place-items:center;
+    font-size:17px;background:#ede9fe;color:#6d28d9; }
+  .dg-lead h3{ margin:0 0 4px; font-size:13.5px; font-weight:800; color:#241e4e; }
+  .dg-lead p{ margin:0; font-size:12.5px; line-height:1.9; color:#5b5a78; }
+
+  /* بطاقة الخطوة */
+  .dg-step{ display:grid; grid-template-columns:auto 1fr; gap:15px; align-items:start; scroll-margin-top:90px; }
+  @media (max-width:560px){ .dg-step{ grid-template-columns:1fr; } }
+  .dg-badge{
+    width:42px; height:42px; border-radius:50%; flex:none;
+    display:grid; place-items:center; font-size:17px; font-weight:900; color:#fff;
+    background:linear-gradient(135deg,#7c3aed,#5b21b6);
+    box-shadow:0 8px 18px rgba(124,58,237,.3);
+  }
+  .dg-card{
+    min-width:0; background:#fff; border:1px solid #e8edf3; border-radius:15px;
+    padding:16px 18px;
+  }
+  .dg-card h2{
+    margin:0 0 8px; font-size:15.5px; font-weight:800; color:#0f172a;
+    display:flex; align-items:center; gap:9px; flex-wrap:wrap;
+  }
+  .dg-card h2 i{ color:#7c3aed; }
+  .dg-card p{ margin:0 0 7px; font-size:13px; line-height:1.95; color:#475569; }
+  .dg-card p:last-child{ margin-bottom:0; }
+  .dg-card ul{ margin:4px 0 8px; padding-inline-start:22px; font-size:13px; line-height:2; color:#475569; }
+  .dg-card strong{ color:#241e4e; }
+  .dg-kbd{
+    font-family:ui-monospace,Consolas,monospace; font-size:11.5px;
+    background:#f1f5f9; border:1px solid #e2e8f0; border-radius:5px;
+    padding:1px 7px; color:#5b21b6;
+  }
+
+  /* صناديق التلميح */
+  .dg-tip, .dg-warn{
+    display:flex; gap:11px; align-items:flex-start;
+    border-radius:12px; padding:11px 14px; margin-top:11px;
+    font-size:12.5px; line-height:1.9;
+  }
+  .dg-tip{ background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; }
+  .dg-warn{ background:#fffbeb; border:1px solid #fde68a; color:#92400e; }
+  .dg-tip .ic, .dg-warn .ic{ flex:none; font-size:15px; line-height:1.6; }
+  .dg-tip b, .dg-warn b{ font-weight:900; }
+
+  /* ════ الرسوم: محاكاة مصغّرة للصفحة الحقيقية ════ */
+  .dg-mock{
+    border:1px solid #e2e8f0; border-radius:14px; overflow:hidden;
+    background:#fff; box-shadow:0 8px 20px rgba(15,23,42,.07);
+    margin-top:13px; max-width:560px;
+  }
+  .dg-mock-bar{
+    display:flex; align-items:center; gap:7px; padding:8px 12px;
+    background:#f1f5f9; border-bottom:1px solid #e2e8f0;
+  }
+  .dg-mock-bar .dots{ display:flex; gap:5px; }
+  .dg-mock-bar .dots i{ width:9px; height:9px; border-radius:50%; }
+  .dg-mock-bar .dots i:nth-child(1){ background:#f87171; }
+  .dg-mock-bar .dots i:nth-child(2){ background:#fbbf24; }
+  .dg-mock-bar .dots i:nth-child(3){ background:#34d399; }
+  .dg-mock-bar .crumb{
+    flex:1; background:#fff; border:1px solid #e2e8f0; border-radius:7px;
+    padding:4px 10px; font-size:10.5px; font-weight:700; color:#64748b;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .dg-mock-body{ padding:14px; display:grid; gap:11px; }
+  .dg-mf{ display:grid; gap:5px; min-width:0; }
+  .dg-mf label{ font-size:10.5px; font-weight:800; color:#475569; }
+  .dg-mf-input{
+    border:1.5px solid #e2e8f0; border-radius:8px; padding:8px 10px;
+    font-size:11.5px; color:#0f172a; background:#fff;
+  }
+  .dg-mf-input.hl{ border-color:#c4b5fd; background:#faf5ff; }
+  .dg-mf-help{ font-size:9.5px; color:#94a3b8; line-height:1.6; }
+
+  .dg-cap{ font-size:11px; color:#94a3b8; margin-top:8px; line-height:1.7; }
+  .dg-cap i{ color:#c4b5fd; }
+
+  /* ════ محاكاة خاصة بهذا الدليل ════ */
+  /* مجموعة صلاحيات ملوّنة */
+  .dg-pgrp{ border:1px solid #e2e8f0; border-radius:12px; overflow:hidden; }
+  .dg-pgrp .h{ display:flex; align-items:center; gap:8px; padding:8px 11px; font-size:11.5px; font-weight:900; border-bottom:1px solid #f1f5f9; }
+  .dg-pgrp .h .gi{ width:24px; height:24px; border-radius:7px; display:grid; place-items:center; font-size:11px; flex:none; }
+  .dg-pgrp .h .key{ font-family:ui-monospace,Consolas,monospace; font-size:9px; opacity:.7; }
+  .dg-pgrp .h .cnt{ margin-inline-start:auto; font-size:9px; font-weight:800; color:#64748b; }
+  .dg-pgrp .h .all{ border-radius:7px; padding:4px 9px; font-size:9px; font-weight:800; background:#f1f5f9; color:#475569; }
+  .dg-pgrp .bar{ height:4px; background:#f1f5f9; }
+  .dg-pgrp .bar i{ display:block; height:100%; }
+  .dg-pgrp .b{ display:flex; flex-wrap:wrap; gap:6px; padding:10px 11px; background:#fff; }
+  /* ألوان المجموعات */
+  .dg-pgrp.core .gi{ background:#dbeafe; color:#1d4ed8; } .dg-pgrp.core .bar i{ background:#1d4ed8; }
+  .dg-pgrp.exit .gi{ background:#ede9fe; color:#6d28d9; } .dg-pgrp.exit .bar i{ background:#6d28d9; }
+  .dg-pgrp.npc .gi{ background:#dcfce7; color:#15803d; } .dg-pgrp.npc .bar i{ background:#15803d; }
+  .dg-pgrp.lic .gi{ background:#fef3c7; color:#b45309; } .dg-pgrp.lic .bar i{ background:#b45309; }
+
+  .dg-perm{ display:inline-flex; align-items:center; gap:6px; border:1.5px solid #e2e8f0; border-radius:8px; padding:6px 10px; font-size:10px; font-weight:800; color:#475569; background:#fff; }
+  .dg-perm .tk{ width:14px; height:14px; border-radius:4px; border:1.5px solid #cbd5e1; display:grid; place-items:center; font-size:8px; color:#fff; }
+  .dg-perm.on{ border-color:#c4b5fd; background:#faf5ff; color:#5b21b6; }
+  .dg-perm.on .tk{ background:#7c3aed; border-color:#7c3aed; }
+  .dg-perm .k{ font-family:ui-monospace,Consolas,monospace; font-size:8.5px; opacity:.65; }
+
+  /* عدّادات KPI صغيرة */
+  .dg-kpis{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+  @media (max-width:480px){ .dg-kpis{ grid-template-columns:repeat(2,1fr); } }
+  .dg-kpi{ border:1px solid #e2e8f0; border-radius:11px; padding:9px 10px; background:#fff; }
+  .dg-kpi .ic{ width:26px; height:26px; border-radius:8px; display:grid; place-items:center; font-size:11px; }
+  .dg-kpi .v{ font-size:14px; font-weight:900; color:#0f172a; margin-top:6px; line-height:1; }
+  .dg-kpi .l{ font-size:9px; font-weight:800; color:#94a3b8; margin-top:3px; }
+
+  /* خيار عرض/إخفاء غير المصرّح */
+  .dg-radio{ display:flex; gap:9px; align-items:flex-start; border:1.5px solid #e2e8f0; border-radius:10px; padding:10px 12px; background:#fff; }
+  .dg-radio.on{ border-color:#c4b5fd; background:#faf5ff; }
+  .dg-radio .rd{ width:16px; height:16px; border-radius:50%; border:1.5px solid #cbd5e1; flex:none; margin-top:1px; display:grid; place-items:center; }
+  .dg-radio.on .rd{ border-color:#7c3aed; } .dg-radio.on .rd::after{ content:""; width:8px; height:8px; border-radius:50%; background:#7c3aed; }
+  .dg-radio .t{ font-size:11.5px; font-weight:800; color:#0f172a; }
+  .dg-radio .d{ font-size:9.5px; color:#94a3b8; margin-top:2px; line-height:1.5; }
+
+  /* مثال عملي */
+  .dg-example{ display:flex; gap:11px; align-items:flex-start; margin-top:13px; max-width:560px;
+    background:#f0fdf4; border:1px solid #bbf7d0; border-radius:13px; padding:13px 15px; }
+  .dg-example .ic{ width:34px; height:34px; border-radius:10px; background:#dcfce7; color:#15803d; display:grid; place-items:center; font-size:14px; flex:none; }
+  .dg-example .t{ font-size:12.5px; font-weight:900; color:#14532d; }
+  .dg-example p{ margin:5px 0 0; font-size:11.5px; color:#475569; line-height:1.85; }
+  .dg-example code{ font-family:ui-monospace,Consolas,monospace; font-size:10px; background:#fff; border:1px solid #bbf7d0; border-radius:5px; padding:1px 6px; color:#15803d; }
+
+  /* ════ الطباعة ════ */
+  @media print{
+    .hb-side, .hb-side-overlay, .hb-topbar, header.hb-top,
+    .dg-toc, .dg-noprint, .hub-hero-actions{ display:none !important; }
+    .dg-layout{ grid-template-columns:1fr; }
+    .dg-card, .dg-mock, .dg-example{ box-shadow:none !important; break-inside:avoid; }
+    .dg-step{ break-inside:avoid; }
+    body{ background:#fff !important; }
+    .dg-badge, .dg-tip, .dg-warn, .dg-pgrp .h .gi, .dg-pgrp .bar i, .dg-perm.on,
+    .dg-perm.on .tk, .dg-kpi .ic, .dg-radio.on, .dg-example, .dg-example .ic{
+      -webkit-print-color-adjust:exact; print-color-adjust:exact;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{{ hub.hero(
+  "دليل: الأدوار والصلاحيات",
+  subtitle="ابنِ أدوارًا بصلاحيات دقيقة: مصفوفة ملوّنة بالمجموعات، عدّادات حيّة، تحديد الكل، وقرار إظهار أو إخفاء الأقسام غير المصرّح بها.",
+  icon="user-shield",
+  actions_html='
+    <button type="button" class="hub-btn hub-btn--secondary" onclick="window.print()">
+      <i class="fa-solid fa-file-pdf"></i> حفظ كـ PDF
+    </button>
+    <a class="hub-btn hub-btn--secondary" href="/admin/radius/docs/section/settings">
+      <i class="fa-solid fa-arrow-right"></i> كل الأدلة
+    </a>
+  '
+) }}
+
+<div class="dg-layout">
+
+  {# ───── الفهرس الجانبي اللاصق ───── #}
+  <nav class="dg-toc dg-noprint" aria-label="فهرس الدليل">
+    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> فهرس الخطوات</div>
+    <a href="#dg-s1" data-dg-toc><span class="n">1</span> أنشئ دورًا جديدًا</a>
+    <a href="#dg-s2" data-dg-toc><span class="n">2</span> المصفوفة الملوّنة</a>
+    <a href="#dg-s3" data-dg-toc><span class="n">3</span> العدّادات وتحديد الكل</a>
+    <a href="#dg-s4" data-dg-toc><span class="n">4</span> إظهار أو إخفاء غير المصرّح</a>
+    <a href="#dg-s5" data-dg-toc><span class="n">5</span> مثال: دور موزّع</a>
+  </nav>
+
+  {# ───── عمود المحتوى ───── #}
+  <div class="dg-main">
+
+    <div class="dg-lead">
+      <span class="ic"><i class="fa-solid fa-lightbulb"></i></span>
+      <div>
+        <h3>قبل ما نبدأ — شو يعني «دور»؟</h3>
+        <p>
+          الدور حزمة صلاحيات تمنحها لموظفيك بدل أن تعطي كل واحد صلاحياته يدويًا. تنشئ الدور مرة،
+          تختار ما يقدر يفعله، ثم تسنده لأي مدير. في هذا الدليل نبني دورًا من الصفر عبر مصفوفة
+          الصلاحيات الملوّنة، ونتعلّم العدّادات وزر «تحديد الكل»، ونضبط كيف يرى صاحب الدور المحدود
+          الأقسام الممنوعة، وننهي بمثال عملي لدور موزّع.
+        </p>
+      </div>
+    </div>
+
+    {# ════ الخطوة 1 ════ #}
+    <section class="dg-step" id="dg-s1">
+      <div class="dg-badge">1</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-plus"></i> أنشئ دورًا جديدًا</h2>
+        <p>
+          من <strong>«الأدوار والصلاحيات»</strong> اضغط <strong>«إضافة دور جديد»</strong>. يفتح
+          نموذج فيه قسم <strong>«هوية الدور»</strong> بأربعة حقول:
+        </p>
+        <ul>
+          <li><strong>الاسم الداخلي</strong> (إجباري): مفتاح تقني بحروف لاتينية صغيرة وشرطة سفلية
+          مثل <span class="dg-kbd">branch_manager</span> — <strong>لا يتغيّر بعد الإنشاء</strong>.</li>
+          <li><strong>الاسم الظاهر:</strong> ما يراه المستخدمون بدل المفتاح (مثل «مدير الفرع»).</li>
+          <li><strong>لون الدور:</strong> يميّزه بصريًا في القوائم والبطاقات.</li>
+          <li><strong>الوصف:</strong> سطر يلخّص نطاق الدور ومسؤولياته.</li>
+        </ul>
+
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">إضافة دور جديد › هوية الدور</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-mf">
+              <label>الاسم الداخلي <span style="color:#dc2626">*</span></label>
+              <div class="dg-mf-input hl" dir="ltr" style="font-family:ui-monospace,Consolas,monospace">branch_manager</div>
+              <div class="dg-mf-help">مفتاح تقني فريد بحروف لاتينية صغيرة وشرطة سفلية — لا يتغيّر بعد الإنشاء.</div>
+            </div>
+            <div class="dg-mf">
+              <label>الاسم الظاهر</label>
+              <div class="dg-mf-input">مدير الفرع</div>
+              <div class="dg-mf-help">هو ما يراه المستخدمون في الواجهة بدل المفتاح التقني.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="dg-warn">
+          <span class="ic">⚠️</span>
+          <span><b>انتبه:</b> الاسم الداخلي يُقفل بعد الإنشاء فلا يمكن تعديله — اختره بعناية. أما
+          أدوار النظام الجاهزة فمحميّة: تُعدَّل صلاحياتها لكن لا تُحذف.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 2 ════ #}
+    <section class="dg-step" id="dg-s2">
+      <div class="dg-badge">2</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-shield-halved"></i> مصفوفة الصلاحيات الملوّنة بالمجموعات</h2>
+        <p>
+          تحت الهوية يأتي قسم <strong>«الصلاحيات»</strong>: الصلاحيات مرتّبة في <strong>مجموعات</strong>
+          لكل واحدة أيقونة ولون وهوية بصرية، وبجوار كل صلاحية تسميتها العربية ومفتاحها التقني. المجموعات:
+        </p>
+        <ul>
+          <li><strong>صلاحيات الراوتر</strong> <span class="dg-kbd">core</span> — القراءة والتشخيص والتشغيل اليومي.</li>
+          <li><strong>خروج الإنترنت عبر VPS</strong> <span class="dg-kbd">exit</span> — تحويل مواقع مختارة عبر الخادم.</li>
+          <li><strong>سياسات الشبكة</strong> <span class="dg-kbd">npc</span> — الوصول والحظر والـ Walled Garden.</li>
+          {# أُزيل من لوحة العميل — يُعاد مركزياً عبر لوحة التراخيص (قرار معماري):
+             مجموعة «تراخيص أنفاق الراوترات» (نفق تغيير IP المدفوع). #}
+        </ul>
+
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">إضافة دور › الصلاحيات</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-pgrp core">
+              <div class="h"><span class="gi"><i class="fa-solid fa-router"></i></span> صلاحيات الراوتر <span class="key">core</span><span class="cnt">2/10 ممنوحة</span><span class="all">تحديد الكل</span></div>
+              <div class="bar"><i style="width:20%"></i></div>
+              <div class="b">
+                <span class="dg-perm on"><span class="tk"><i class="fa-solid fa-check"></i></span> عرض <span class="k">mikrotik.view</span></span>
+                <span class="dg-perm on"><span class="tk"><i class="fa-solid fa-check"></i></span> تشخيص <span class="k">mikrotik.diagnostics</span></span>
+                <span class="dg-perm"><span class="tk"></span> إدارة <span class="k">mikrotik.manage</span></span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="dg-cap"><i class="fa-solid fa-circle-info"></i> كل صلاحية بطاقة بعلامة صح؛ المختارة تتلوّن بالبنفسجي. اضغط البطاقة لتبديلها.</div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 3 ════ #}
+    <section class="dg-step" id="dg-s3">
+      <div class="dg-badge">3</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-list-check"></i> العدّادات وزر «تحديد الكل»</h2>
+        <p>
+          أثناء اختيارك تتحدّث العدّادات حيًّا فتعرف أين أنت بلا حساب يدوي:
+        </p>
+        <ul>
+          <li>في رأس قسم الصلاحيات عدّاد عام: «<strong>X / Y مختارة</strong>» (المختار من الإجمالي).</li>
+          <li>في رأس كل مجموعة عدّاد خاص: «<strong>X/Y ممنوحة</strong>» مع شريط تقدّم رفيع بلون المجموعة.</li>
+          <li>وفي حزام المؤشرات أعلى النموذج: «الصلاحيات المتاحة»، «المختارة الآن»، «المجموعات»، «نوع الدور».</li>
+        </ul>
+        <p>
+          وفي رأس كل مجموعة زر <strong>«تحديد الكل»</strong> يفعّل أو يلغي كل صلاحيات تلك المجموعة
+          دفعة واحدة (يتحوّل نصه إلى «إلغاء التحديد» عند اكتمالها).
+        </p>
+
+        <div class="dg-mock" aria-hidden="true" style="max-width:520px">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">إضافة دور › العدّادات</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-kpis">
+              <div class="dg-kpi"><span class="ic" style="background:#dbeafe;color:#2563eb"><i class="fa-solid fa-list-check"></i></span><div class="v">30</div><div class="l">الصلاحيات المتاحة</div></div>
+              <div class="dg-kpi"><span class="ic" style="background:#ede9fe;color:#6d28d9"><i class="fa-solid fa-square-check"></i></span><div class="v">7</div><div class="l">المختارة الآن</div></div>
+              <div class="dg-kpi"><span class="ic" style="background:#dcfce7;color:#16a34a"><i class="fa-solid fa-folder-tree"></i></span><div class="v">4</div><div class="l">المجموعات</div></div>
+              <div class="dg-kpi"><span class="ic" style="background:#f1f5f9;color:#64748b"><i class="fa-solid fa-user-pen"></i></span><div class="v">مخصّص</div><div class="l">نوع الدور</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة:</b> ابدأ بـ«تحديد الكل» على المجموعة التي يحتاجها الدور بالكامل، ثم ألغِ
+          الصلاحيات الحسّاسة منها يدويًا — أسرع من اختيارها واحدة واحدة.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 4 ════ #}
+    <section class="dg-step" id="dg-s4">
+      <div class="dg-badge">4</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-eye-slash"></i> إظهار أو إخفاء الأقسام غير المصرّح بها</h2>
+        <p>
+          سؤال مهم: الموظف ذو الدور المحدود — كيف يرى الأقسام الخارجة عن صلاحياته في القائمة
+          الجانبية وأزرار العمليات؟ القرار يُضبط مرة واحدة من <strong>«الإعدادات ← المشتركون
+          والوصول»</strong> في حقل <strong>«عرض الأقسام غير المصرّح بها»</strong>، وله خياران:
+        </p>
+        <ul>
+          <li><strong>تجميد بقفل — يظهر البند معطّلًا:</strong> يبقى القسم ظاهرًا لكن مجمّدًا بأيقونة
+          قفل، فيعرف الموظف أن القسم موجود لكنه ليس ضمن صلاحياته.</li>
+          <li><strong>إخفاء كلي — لا يظهر البند إطلاقًا:</strong> يختفي القسم تمامًا فلا يرى الموظف
+          إلا أقسامه فقط.</li>
+        </ul>
+
+        <div class="dg-mock" aria-hidden="true" style="max-width:520px">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">الإعدادات › المشتركون والوصول</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-mf"><label>عرض الأقسام غير المصرّح بها</label></div>
+            <div class="dg-radio on"><span class="rd"></span><div><div class="t">تجميد بقفل — يظهر البند معطّلًا</div><div class="d">يرى الموظف القسم بقفل فيعرف أنه موجود خارج صلاحيته.</div></div></div>
+            <div class="dg-radio"><span class="rd"></span><div><div class="t">إخفاء كلي — لا يظهر البند إطلاقًا</div><div class="d">يختفي القسم تمامًا فلا يرى إلا أقسامه.</div></div></div>
+          </div>
+        </div>
+
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة:</b> هذا قرار مالك الريديوس وينطبق على كل الأدوار المحدودة. ومدير النظام
+          (<b>super_admin</b>) يرى كل شيء دائمًا ولا يتأثر بهذا الخيار.</span>
+        </div>
+      </div>
+    </section>
+
+    {# ════ الخطوة 5 ════ #}
+    <section class="dg-step" id="dg-s5">
+      <div class="dg-badge">5</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-user-tag"></i> مثال عملي: دور «موزّع»</h2>
+        <p>
+          لنبنِ دورًا لموزّع تريده يفحص البطاقات ويشحنها فقط، دون لمس إعدادات الراوترات أو الأقسام
+          الحسّاسة:
+        </p>
+        <ul>
+          <li>الاسم الداخلي: <span class="dg-kbd">distributor</span> · الاسم الظاهر: «موزّع».</li>
+          <li>امنحه صلاحيات العرض والفحص والشحن: <strong>عرض البطاقات</strong>، <strong>فحص البطاقات
+          وعملياتها</strong>، <strong>بطاقات الشحن</strong>، و<strong>عرض المستفيدين</strong>.</li>
+          <li>اترك مجموعة <strong>سياسات الشبكة</strong> فارغة تمامًا.</li>
+          <li>اضبط «عرض الأقسام غير المصرّح بها» على <strong>«إخفاء كلي»</strong> فلا يرى الموزّع إلا
+          لوحة الشحن والفحص — واجهة نظيفة بلا تشويش.</li>
+        </ul>
+
+        <div class="dg-example" aria-hidden="true">
+          <span class="ic"><i class="fa-solid fa-circle-check"></i></span>
+          <div>
+            <div class="t">النتيجة: موزّع بصلاحيات الفحص والشحن فقط</div>
+            <p>يفتح <code>cards.verify</code> و<code>cards.recharge</code> ويرى <code>cards.view</code> — وكل ما عداها مخفيّ. لا وصول للراوترات ولا التراخيص.</p>
+          </div>
+        </div>
+
+        <div class="dg-warn">
+          <span class="ic">⚠️</span>
+          <span><b>انتبه:</b> الصلاحيات الحسّاسة (التطبيق، الاستعادة، الإدارة، إدارة التراخيص) تظهر
+          في المصفوفة برأس عمود أحمر — راجِعها مرّتين قبل منحها لأي دور موزّع أو محدود.</span>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+{# ── scrollspy خفيف: يبرز بند الفهرس المقابل للخطوة الظاهرة ── #}
+<script>
+(function(){
+  'use strict';
+  var links = Array.prototype.slice.call(document.querySelectorAll('[data-dg-toc]'));
+  if (!links.length || !('IntersectionObserver' in window)) return;
+  var map = {};
+  links.forEach(function(a){ map[a.getAttribute('href').slice(1)] = a; });
+  var obs = new IntersectionObserver(function(entries){
+    entries.forEach(function(en){
+      if (!en.isIntersecting) return;
+      links.forEach(function(a){ a.classList.remove('is-active'); });
+      var a = map[en.target.id];
+      if (a) a.classList.add('is-active');
+    });
+  }, { rootMargin: '-35% 0px -55% 0px' });
+  Object.keys(map).forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) obs.observe(el);
+  });
+})();
+</script>
+
+{% endblock %}

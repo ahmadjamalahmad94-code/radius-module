@@ -13,6 +13,11 @@
   </span>
 {% endblock %}
 
+{% block head_extra %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
+{% endblock %}
+
 {% block content %}
 
 {% set _enabled   = items|selectattr('enabled')|list|length %}
@@ -141,4 +146,5 @@
 ) }}
 {% endif %}
 
+<script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
 {% endblock %}

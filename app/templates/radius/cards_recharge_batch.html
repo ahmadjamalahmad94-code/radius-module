@@ -12,6 +12,7 @@
 
 {% block head_extra %}
 {{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
 <style>
   /* Denomination chips — the only bespoke piece left on this page. */
   .rc-denom-chips{ display:flex; flex-wrap:wrap; gap:6px; }
@@ -139,6 +140,7 @@
        truth, so the uds page-size is large enough to keep the loaded slice
        (≤100) on one client page — sort + column-picker only. #}
     <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="100"
+         data-uds-export-title="بطاقات حزمة الشحن"
          style="border:none;border-radius:0">
       <table class="hub-table">
         <thead>
@@ -203,4 +205,5 @@
 
 {% endcall %}
 
+<script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
 {% endblock %}

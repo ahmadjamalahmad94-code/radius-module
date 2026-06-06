@@ -13,6 +13,11 @@
 {% block page_title %}مستخدمو البطاقات{% endblock %}
 {% block page_sub %}<span class="sub">{{ card_users|length }} مستخدم · {{ users_summary.users or 0 }} حساب نشط</span>{% endblock %}
 
+{% block head_extra %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
+{% endblock %}
+
 {% block content %}
 
 {# ───── Merged hero: title + actions + KPI strip ───── #}
@@ -129,4 +134,5 @@
   </form>
 {% endcall %}
 
+<script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
 {% endblock %}

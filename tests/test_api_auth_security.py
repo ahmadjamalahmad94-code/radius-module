@@ -198,6 +198,165 @@ def test_missing_token_rejected(client):
     assert res.status_code == 401
 
 
+# ─────────────── D. اعتماد أدمن (HTTP Basic) كبديل للمفتاح ───────────────
+
+def test_admin_basic_credentials_authenticate(client):
+    """يوزر/باس الأدمن الصحيحان عبر Basic يُصادِقان أي نقطة إدارية — بديل المفتاح."""
+    res = client.get("/api/v1/accounts", auth=("admin", "admin"))
+    assert res.status_code == 200, res.get_json()
+
+
+def test_admin_basic_wrong_password_rejected(client):
+    res = client.get("/api/v1/accounts", auth=("admin", "wrong-password"))
+    assert res.status_code == 401
+    assert res.get_json()["error"]["code"] == "unauthorized"
+
+
+def test_admin_basic_unknown_user_rejected(client):
+    res = client.get("/api/v1/accounts", auth=("ghost-admin", "whatever"))
+    assert res.status_code == 401
+
+
+def test_x_api_key_header_authenticates(client, monkeypatch):
+    """ترويسة X-API-Key تُعامَل كمفتاح API تمامًا مثل Authorization Bearer."""
+    monkeypatch.setenv("HOBERADIUS_API_TOKENS", "xapikey-token-9876")
+    res = client.get(
+        "/api/v1/accounts",
+        headers={"X-API-Key": "xapikey-token-9876"},
+    )
+    assert res.status_code == 200, res.get_json()
+
+
+def test_options_preflight_not_blocked_by_auth(client):
+    """طلب OPTIONS (preflight) لا يُحجب بـ401 — يحسمه Flask قبل الديكوريتر."""
+    res = client.options("/api/v1/accounts")
+    assert res.status_code != 401
+
+
+# ─────────────── E. الفرض المركزي التدريجي (يغطّي نقاط VPS/Flutter) ───────────────
+
+_VPS_LIKE_PATH = "/api/v1/some-vps-endpoint-not-in-repo"
+
+
+def test_unknown_api_path_open_when_enforcement_off(client, monkeypatch):
+    """الفرض معطّل (الافتراضي): نقطة /api غير معرّفة هنا (تحاكي نقطة Flutter
+    على الـVPS) لا يحرسها الحارس المركزي — تصل للتوجيه فتعطي 404 لا 401."""
+    monkeypatch.delenv("HOBERADIUS_API_AUTH_REQUIRED", raising=False)
+    res = client.get(_VPS_LIKE_PATH)
+    # يصل للتوجيه (هنا 405 لارتطامه بـ catch-all الـOPTIONS العام) — المهم
+    # أنه ليس 401: الحارس المركزي لم يحجبه.
+    assert res.status_code != 401
+    assert res.status_code in (404, 405)
+
+
+def test_unknown_api_path_blocked_when_enforcement_on(client, monkeypatch):
+    """الفرض مفعّل: أي نقطة /api بلا اعتماد → 401 قبل التوجيه، فيشمل نقاط
+    Flutter غير المزخرفة تلقائيًا (مركزية بلا تعديل كل دالة)."""
+    monkeypatch.setenv("HOBERADIUS_API_AUTH_REQUIRED", "1")
+    res = client.get(_VPS_LIKE_PATH)
+    assert res.status_code == 401
+
+
+def test_enforcement_on_passes_with_valid_key(client, monkeypatch):
+    """مع الفرض: مفتاح صحيح يمرّ. النقطة المعرّفة → 200، وغير المعرّفة →
+    404 (مُصادَق لكن لا توجد) — أي أن المصادقة نجحت قبل التوجيه."""
+    monkeypatch.setenv("HOBERADIUS_API_AUTH_REQUIRED", "1")
+    monkeypatch.delenv("HOBERADIUS_ENV", raising=False)
+    monkeypatch.delenv("FLASK_ENV", raising=False)
+    monkeypatch.delenv("HOBERADIUS_API_TOKENS", raising=False)
+    hdr = {"Authorization": "Bearer dev-token-please-change"}
+    assert client.get("/api/v1/accounts", headers=hdr).status_code == 200
+    # مُصادَق بمفتاح صحيح → يمرّ الحارس ويصل للتوجيه (404/405) لا 401.
+    assert client.get(_VPS_LIKE_PATH, headers=hdr).status_code != 401
+
+
+def test_enforcement_on_passes_with_admin_basic(client, monkeypatch):
+    monkeypatch.setenv("HOBERADIUS_API_AUTH_REQUIRED", "1")
+    res = client.get("/api/v1/accounts", auth=("admin", "admin"))
+    assert res.status_code == 200
+
+
+def test_enforcement_on_keeps_public_paths_open(client, monkeypatch):
+    """version/store تبقى مفتوحة حتى مع تفعيل الفرض (لها مصادقتها/عامة)."""
+    monkeypatch.setenv("HOBERADIUS_API_AUTH_REQUIRED", "1")
+    assert client.get("/api/v1/version").status_code == 200
+    assert client.get("/api/v1/store/ping").status_code != 401
+
+
+# ─────────────── F. تغطية مستقبلية: نقاط qa/phase-b-fixes تُحمى تلقائيًا ───────────────
+#
+# هذه مسارات **تمثيلية** لعائلات النقاط التي ستُدمج لاحقًا من فرع المستخدم
+# وتستهلكها تطبيقات Flutter. الغرض إثبات أن الحارس المركزي يطابق بالمسار
+# (/api/v1/*) لا باسم الدالة — فأي نقطة جديدة تحت /api تُحمى تلقائيًا بلا
+# ديكوريتر يدوي. لا يهمّ أن المسار غير موجود الآن (404/405)؛ المهم سلوك
+# الحارس: مفتوح عند التعطيل، يُحجب 401 عند التفعيل بلا اعتماد، يمرّ باعتماد.
+# لاحقة فريدة `__phaseb_probe` تضمن ألا يصطدم المسار بأي نقطة موجودة الآن
+# (لو اصطدم بنقطة مزخرفة لأعطى 401 من الديكوريتر بدل اختبار الحارس وحده).
+_PROBE = "__phaseb_probe"
+_FUTURE_API_PATHS = [
+    f"/api/v1/communications/channels/quota/{_PROBE}",   # communications channel quota api
+    f"/api/v1/subscriber-portal/me/{_PROBE}",            # subscriber portal api
+    f"/api/v1/routers/service-status/{_PROBE}",          # router service status api
+    f"/api/v1/setup-wizard/lifecycle/{_PROBE}",          # setup wizard lifecycle api
+    f"/api/v1/setup-wizard/phase-planning/{_PROBE}",     # setup wizard phase planning api
+    f"/api/v1/network-policy/runtime/{_PROBE}",          # network policy runtime api
+    f"/api/v1/sessions/control/{_PROBE}",                # session control api
+    f"/api/v1/payments/request-details/{_PROBE}",        # payment request details api
+    f"/api/v1/operational-reports/summary/{_PROBE}",     # operational report api
+    f"/api/v1/recharge-cards/{_PROBE}",                  # recharge cards api
+]
+
+
+@pytest.mark.parametrize("path", _FUTURE_API_PATHS)
+def test_future_endpoint_open_when_enforcement_off(client, monkeypatch, path):
+    monkeypatch.delenv("HOBERADIUS_API_AUTH_REQUIRED", raising=False)
+    for call in (client.get, client.post):
+        assert call(path).status_code != 401, path
+
+
+@pytest.mark.parametrize("path", _FUTURE_API_PATHS)
+def test_future_endpoint_blocked_when_enforcement_on(client, monkeypatch, path):
+    """التغطية التلقائية: مع تفعيل الفرض، كل عائلة (GET وPOST) تُحجب 401 بلا
+    اعتماد — حتى قبل أن توجد فعليًا في هذا الريبو."""
+    monkeypatch.setenv("HOBERADIUS_API_AUTH_REQUIRED", "1")
+    assert client.get(path).status_code == 401, path
+    assert client.post(path).status_code == 401, path
+
+
+@pytest.mark.parametrize("path", _FUTURE_API_PATHS)
+def test_future_endpoint_passes_auth_with_admin_basic(client, monkeypatch, path):
+    """مع الفرض واعتماد أدمن صحيح: يمرّ الحارس (النتيجة 404/405 لعدم وجود
+    المسار بعد, لا 401) — أي أن المصادقة المركزية لا تعيق النقاط الشرعية."""
+    monkeypatch.setenv("HOBERADIUS_API_AUTH_REQUIRED", "1")
+    assert client.get(path, auth=("admin", "admin")).status_code != 401, path
+
+
+# ─────────────── G. توكن Flutter (من /api/admin/login) يجتاز الفرض ───────────────
+
+def test_flutter_login_token_passes_central_enforcement(client, monkeypatch):
+    """العميل الحقيقي: يسجّل دخولًا عبر /api/admin/login بالاعتماد فيستلم
+    token، ثم يرسله Bearer على كل نداء. هذا الاختبار يثبت أن نفس التوكن
+    يجتاز الفرض المركزي **المفعّل** — فلن ينكسر تطبيق Flutter."""
+    monkeypatch.setenv("HOBERADIUS_API_AUTH_REQUIRED", "1")
+    # 1. /api/admin/login مستثنى من الحارس فيعمل رغم تفعيل الفرض
+    login = client.post("/api/admin/login",
+                        json={"username": "admin", "password": "admin"})
+    assert login.status_code == 200, login.get_json()
+    token = login.get_json()["data"]["token"]
+    hdr = {"Authorization": f"Bearer {token}"}
+    # 2. نقطة محمية موجودة → 200 بالتوكن نفسه
+    assert client.get("/api/v1/accounts", headers=hdr).status_code == 200
+    # 3. نقطة /api مجهولة (تحاكي نقطة Flutter ستُدمج لاحقًا) → يجتاز الحارس (ليس 401)
+    assert client.get("/api/v1/a-future-flutter-endpoint",
+                      headers=hdr).status_code != 401
+
+
+def test_flutter_login_token_blocked_without_header_when_enforced(client, monkeypatch):
+    """للتباين: نفس النقطة بلا ترويسة Bearer → 401 عند تفعيل الفرض."""
+    monkeypatch.setenv("HOBERADIUS_API_AUTH_REQUIRED", "1")
+    assert client.get("/api/v1/accounts").status_code == 401
+
+
 # ─────────────── C. login mints a token with TTL ───────────────
 
 def test_login_returns_expires_at(client, monkeypatch):

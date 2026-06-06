@@ -10,6 +10,7 @@
 
 {% block head_extra %}
 {{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
 <style>
   /* ready-made suggestion chips (retained custom element) */
   .ctpl-seed{ display:flex; gap:8px; flex-wrap:wrap; }
@@ -226,4 +227,5 @@
   });
 })();
 </script>
+<script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
 {% endblock %}

@@ -42,15 +42,19 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 18px;                 /* comfortable rhythm between hero bands */
-  padding: 22px 22px;
+  /* تنحيف الهيرو عالميًا (طلب المستخدم): إيقاع 14px بدل 18px وحشوة
+     أخف — كتلة رأس أرشق في كل الصفحات دون المساس بالبنية */
+  gap: 14px;
+  padding: 17px 20px;
   border-radius: var(--hub-r-card);
   background:
     radial-gradient(680px 320px at 100% 0%, rgba(107,90,237,.10) 0%, transparent 60%),
     linear-gradient(180deg, #FBFAFF 0%, var(--hub-bg-card) 100%);
   border: 1px solid var(--hub-border-strong);
   box-shadow: var(--hub-sh-card);
-  overflow: hidden;
+  /* visible كما في hub-hero-shell: حتى لا تُقص القوائم المنسدلة (hbsel)
+     ولوحات الفلترة المنبثقة داخل حزام البحث المدمج */
+  overflow: visible;
 }
 
 .uds-hero-top{
@@ -88,8 +92,8 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
   gap: 10px;
-  /* clear, consistent separation from the hero header band above */
-  padding-top: 18px;
+  /* فاصل أنحف ينسجم مع الإيقاع الجديد 14px */
+  padding-top: 14px;
   border-top: 1px solid var(--hub-border-soft);
 }
 /* If the hero has no actions/KPIs divider is undesirable, keep it only when KPIs follow a header */
@@ -105,12 +109,14 @@
 .uds-hero-search{
   display: flex; align-items: center; flex-wrap: wrap;
   gap: var(--hub-gap-sm);
-  padding-top: 18px;            /* matches the header→KPI separation for consistency */
+  padding-top: 14px;            /* نفس فاصل الرأس→KPI للاتساق */
   border-top: 1px solid var(--hub-border-soft);
 }
 .uds-search-ic{
   display: inline-grid; place-items: center; flex: 0 0 auto;
-  width: 34px; height: 34px;
+  /* 42px — نفس الارتفاع الموحّد لعناصر حزام الفلترة (hub_v2 القسم 18)
+     حتى لا تظهر الأيقونة أقصر من الحقول المجاورة في الهيرو المستقل */
+  width: 42px; height: 42px;
   border-radius: var(--hub-r-md);
   color: var(--hub-brand-ink); background: var(--hub-brand-soft);
 }
@@ -154,6 +160,25 @@
   box-shadow: var(--hub-sh-sm);
   overflow: hidden;
 }
+/* ── طيّ جانبي: لوحة «كيف تقرأ» المطوية تنكمش لعمود نحيف
+   والجدول يتمدد ويأخذ راحته. تنفتح بالضغط عليها. ── */
+.uds-worklayout:has(> details.uds-help:not([open])){
+  grid-template-columns: minmax(0, 1fr) 56px;
+}
+details.uds-help:not([open]){ align-self: start; }
+details.uds-help:not([open]) > summary.uds-help-head{
+  border-bottom: 0;
+  padding: 12px 8px;
+  flex-direction: column;
+  gap: 8px;
+}
+details.uds-help:not([open]) .uds-help-title{
+  writing-mode: vertical-rl;
+  font-size: 12px;
+  white-space: nowrap;
+}
+details.uds-help:not([open]) summary .fa-chevron-down{ transform: rotate(90deg); }
+details.uds-help > summary::-webkit-details-marker{ display: none; }
 .uds-help-head{
   display: flex; align-items: center; gap: 9px;
   padding: 13px 16px;
@@ -433,7 +458,8 @@
   border-bottom: 1px solid var(--hub-border-soft);
 }
 .uds-table-meta{ font-size: 12px; color: var(--hub-text-mute); font-weight: 800; }
-.uds-table-cols{ display: inline-flex; }
+/* gap بين زر «أعمدة» وأزرار التصدير الثلاثة (CSV/Excel/PDF) */
+.uds-table-cols{ display: inline-flex; gap: 6px; align-items: center; }
 
 /* bottom pager */
 .uds-table-pager{

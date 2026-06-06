@@ -1,0 +1,141 @@
+{# ══════════════════════════════════════════════════════════════════════
+   «كيف تستخدمني» — صفحة قسم: أدلة كل صفحة تحت القسم.
+
+   تعرض hero بعنوان القسم ووصفه (مع زر عودة لفهرس الأقسام) ثم شبكة
+   بطاقات الأدلة بنفس روح صفحة الهبوط القديمة: زمن القراءة + عدد
+   الخطوات + «ابدأ الدليل»، والأدلة غير الجاهزة بطاقات معتمة «قريبًا».
+
+   المتغيّرات من routes/docs_center.py::docs_section:
+     cat_slug — معرّف القسم، cat — قاموسه من سجل CATEGORIES،
+     pages — قائمة أدلة صفحاته.
+   ══════════════════════════════════════════════════════════════════════ #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}{{ cat.title }} — كيف تستخدمني{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<style>
+  /* ── شبكة بطاقات الأدلة — نفس أسلوب فهرس الأدلة القديم ── */
+  .ds-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:16px; }
+
+  .ds-card{
+    position:relative; display:flex; flex-direction:column; gap:12px;
+    background:#fff; border:1px solid #e8edf3; border-radius:16px;
+    padding:18px 18px 16px; text-decoration:none; color:inherit;
+    transition:transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+    overflow:hidden;
+  }
+  /* خيط علوي بلون القسم (متغيّر --ds-accent يُحقن من السجل) */
+  .ds-card.is-ready::before{
+    content:""; position:absolute; inset-inline:0; top:0; height:4px;
+    background:linear-gradient(90deg, var(--ds-accent,#7c3aed), color-mix(in srgb, var(--ds-accent,#7c3aed) 45%, #fff));
+  }
+  .ds-card.is-ready:hover{
+    transform:translateY(-3px);
+    box-shadow:0 14px 30px rgba(107,90,237,.16);
+    border-color:color-mix(in srgb, var(--ds-accent,#7c3aed) 40%, #fff);
+  }
+  .ds-card-top{ display:flex; align-items:center; gap:13px; }
+  .ds-card-ic{
+    width:46px; height:46px; border-radius:13px; flex:none;
+    display:grid; place-items:center; font-size:19px; color:#fff;
+    background:linear-gradient(135deg, var(--ds-accent,#7c3aed), color-mix(in srgb, var(--ds-accent,#7c3aed) 70%, #000));
+    box-shadow:0 8px 18px color-mix(in srgb, var(--ds-accent,#7c3aed) 30%, transparent);
+  }
+  .ds-card-title{ font-size:15px; font-weight:800; color:#0f172a; line-height:1.4; }
+  .ds-card-sub{ font-size:12.5px; line-height:1.85; color:#64748b; flex:1; }
+  .ds-card-meta{
+    display:flex; align-items:center; gap:14px; padding-top:11px;
+    border-top:1px dashed #eef2f7; font-size:11.5px; font-weight:700; color:#7c7a99;
+  }
+  .ds-card-meta i{ color:#a78bfa; margin-inline-end:4px; }
+  .ds-card-go{
+    margin-inline-start:auto; display:inline-flex; align-items:center; gap:6px;
+    color:#6b5aed; font-size:12px; font-weight:800;
+  }
+  .ds-card.is-ready:hover .ds-card-go{ text-decoration:underline; }
+
+  /* ── بطاقات «قريبًا» المعتمة ── */
+  .ds-card.is-soon{ cursor:default; background:#fbfcfe; }
+  .ds-card.is-soon .ds-card-ic{ background:#eef0f5; color:#a3aec2; box-shadow:none; }
+  .ds-card.is-soon .ds-card-title{ color:#94a3b8; }
+  .ds-card.is-soon .ds-card-sub{ color:#a8b3c5; }
+  .ds-soon-badge{
+    margin-inline-start:auto; font-size:10.5px; font-weight:900;
+    background:#f1f5f9; color:#94a3b8; border:1px dashed #cbd5e1;
+    border-radius:999px; padding:3px 11px; white-space:nowrap;
+  }
+
+  /* ── شريط تمهيدي تحت الـ hero ── */
+  .ds-intro{
+    display:flex; gap:13px; align-items:flex-start;
+    background:linear-gradient(135deg,#f5f3ff,#fdfcff);
+    border:1px solid #e9e5fc; border-radius:14px; padding:15px 17px;
+    margin-bottom:18px;
+  }
+  .ds-intro .ic{
+    width:40px; height:40px; border-radius:12px; flex:none;
+    display:grid; place-items:center; font-size:17px;
+    background:#ede9fe; color:#6d28d9;
+  }
+  .ds-intro h3{ margin:0 0 4px; font-size:13.5px; font-weight:800; color:#241e4e; }
+  .ds-intro p{ margin:0; font-size:12.5px; line-height:1.9; color:#5b5a78; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{{ hub.hero(
+  "أدلة قسم «" ~ cat.title ~ "»",
+  subtitle=cat.desc,
+  icon=cat.icon,
+  actions_html='
+    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.docs_center') + '">
+      <i class="fa-solid fa-arrow-right"></i> كل الأقسام
+    </a>
+  '
+) }}
+
+<div class="ds-intro">
+  <span class="ic"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
+  <div>
+    <h3>دليل لكل صفحة — بدقة متناهية</h3>
+    <p>
+      كل دليل هنا يغطي صفحة واحدة من صفحات «{{ cat.title }}»: شو وظيفتها، شو يعني كل
+      رقم وكل بطاقة فيها، شو بيعمل كل زر بالضبط، وكيف تنفّذ مهامك اليومية عليها خطوة بخطوة.
+    </p>
+  </div>
+</div>
+
+<div class="ds-grid">
+  {% for p in pages %}
+    {% if p.ready %}
+    <a class="ds-card is-ready" style="--ds-accent: {{ cat.color }};"
+       href="{{ url_for('radius.docs_guide', guide_slug=p.slug) }}">
+      <div class="ds-card-top">
+        <span class="ds-card-ic"><i class="fa-solid fa-{{ p.icon }}"></i></span>
+        <span class="ds-card-title">{{ p.title }}</span>
+      </div>
+      <div class="ds-card-sub">{{ p.desc }}</div>
+      <div class="ds-card-meta">
+        <span><i class="fa-regular fa-clock"></i> {{ p.minutes }} دقائق</span>
+        <span><i class="fa-solid fa-list-ol"></i> {{ p.steps }} خطوات</span>
+        <span class="ds-card-go">ابدأ الدليل <i class="fa-solid fa-arrow-left"></i></span>
+      </div>
+    </a>
+    {% else %}
+    <div class="ds-card is-soon" aria-disabled="true">
+      <div class="ds-card-top">
+        <span class="ds-card-ic"><i class="fa-solid fa-{{ p.icon }}"></i></span>
+        <span class="ds-card-title">{{ p.title }}</span>
+        <span class="ds-soon-badge"><i class="fa-regular fa-hourglass-half"></i> قريبًا</span>
+      </div>
+      <div class="ds-card-sub">{{ p.desc }}</div>
+    </div>
+    {% endif %}
+  {% endfor %}
+</div>
+
+{% endblock %}

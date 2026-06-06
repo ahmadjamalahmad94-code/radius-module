@@ -1,107 +1,158 @@
+{# ═══════════════════════════════════════════════════════════════════════
+   المدراء والموزعون — إعادة تصميم على نظام hub-hero-shell الموحّد (2026-06-05)
+
+   بيانات المسار (radius.business_operators — بدون أي تغيير في السلوك):
+     managers      قائمة قواميس {id, username, full_name, status}
+     distributors  قائمة قواميس {id, username, full_name, status}
+
+   البنية المبسّطة:
+     1. شريط تنقّل قسم «المدراء والموزعون» المشترك (عقد اختبار قائم).
+     2. صدفة هيرو واحدة (hub-hero-shell): عنوان + سطر تعريفي + مؤشرات بصف
+        واحد — بلا أي هيروات أو شرائط مكدّسة.
+     3. جدولا uds موحّدان (فرز + ترقيم + تصدير CSV/Excel/PDF تلقائيًا):
+        المدراء ثم الموزعون، والحالات كحبوب ملوّنة مع احتواء أي قيمة مجهولة.
+   عقود ثابتة (تحرسها الاختبارات):
+     • data-testid="manager-operators-table" على جدول المدراء.
+     • روابط الملفات إلى radius.business_operator_profile كما هي.
+   ملاحظة الجداول: تحوّلت من ترقيم dashboard_table (data-paginated) إلى
+   نظام uds — لا تعارض لأن dashboard_table يلتقط [data-paginated] فقط.
+   ═══════════════════════════════════════════════════════════════════════ #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}مشغلو الأعمال — Hobe Hub{% endblock %}
+{% block title %}المدراء والموزعون — هوب ريديوس{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-user-tie"></i>{% endblock %}
 {% block page_title %}المدراء والموزعون{% endblock %}
-{% block page_sub %}<span class="sub">المحافظ والحدود والصلاحيات والمساءلة المالية لمشغلي النظام.</span>{% endblock %}
+{% block page_sub %}<span class="sub"><bdi dir="ltr">{{ managers|length + distributors|length }}</bdi> مشغّلًا ضمن نطاق الجهة</span>{% endblock %}
 
-{% macro op_status(value, enabled=None) -%}
-  {%- set v = value if value is not none else ('active' if enabled else 'disabled') -%}
-  {%- if v in ['active','enabled'] -%}{{ hub.pill("مفعَّل", variant="green") }}
-  {%- elif v in ['blocked','suspended'] -%}{{ hub.pill("محظور", variant="red") }}
-  {%- elif v in ['inactive','disabled'] -%}{{ hub.pill("متوقّف", variant="grey") }}
-  {%- else -%}{{ hub.pill(v, variant="amber") }}{%- endif -%}
+{% block head_extra %}{{ super() }}
+{# نظام الجداول الموحّد (uds): فرز + ترقيم + أزرار التصدير #}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
+{% endblock %}
+
+{# ── حبّة حالة المشغّل: تعريب القيم المعروفة واحتواء أي قيمة مجهولة ── #}
+{% macro op_status(value) -%}
+  {%- set v = (value or '')|string|lower -%}
+  {%- if v in ['active', 'enabled'] -%}{{ hub.pill("مفعَّل", variant="green") }}
+  {%- elif v in ['blocked', 'suspended'] -%}{{ hub.pill("محظور", variant="red") }}
+  {%- elif v in ['inactive', 'disabled'] -%}{{ hub.pill("متوقّف", variant="grey") }}
+  {%- elif v -%}{{ hub.pill(v, variant="amber") }}
+  {%- else -%}<span class="hub-text-mute">—</span>
+  {%- endif -%}
 {%- endmacro %}
 
 {% block content %}
+{# شريط التنقّل المشترك بين صفحات قسم المدراء والموزعين (عقد اختبار قائم) #}
 {% include "radius/admin_operations_nav.html" %}
 
-{# ───── Merged hero: title + action + KPI strip ───── #}
-{{ hub.megahero(
+{# عدّادات الحالة من النتائج الحالية (بلا استعلامات إضافية) #}
+{% set _all = managers + distributors %}
+{% set _active = _all|selectattr('status', 'in', ['active', 'enabled'])|list|length %}
+
+{# ───── صدفة الهيرو الموحّدة: عنوان + سطر تعريفي + مؤشرات بصف واحد ───── #}
+<section class="hub-hero-shell" data-testid="business-operators-hero">
+{% call hub.megahero(
   "المدراء والموزعون",
-  subtitle="عرض منظم لنظام الأعمال يغطي محافظ المدراء والموزعين والصلاحيات ونطاق المشتركين والبطاقات وتتبع الأرباح.",
+  subtitle="محافظ المشغّلين وصلاحياتهم وحدودهم — افتح ملف أي مشغّل لضبط السياسة وشحن المحفظة ومتابعة الأرباح.",
   icon="user-tie",
   actions_html='<a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.business_finance_wallets') ~ '"><i class="fa-solid fa-wallet"></i> المحافظ المالية</a>',
   kpis=[
-    {'label': 'المدراء',        'value': managers|length,     'icon': 'users-gear',        'variant': 'blue'},
-    {'label': 'الموزعون',       'value': distributors|length, 'icon': 'people-carry-box',  'variant': 'green'},
-    {'label': 'التطبيق المباشر', 'value': 'متوقف',             'icon': 'shield-halved',     'variant': 'amber',
-     'sub': 'السياسات محفوظة كأساس قابل للتوسعة.'},
+    {'label': 'المدراء',        'value': managers|length,           'icon': 'users-gear',       'variant': 'blue'},
+    {'label': 'الموزعون',       'value': distributors|length,       'icon': 'people-carry-box', 'variant': 'green'},
+    {'label': 'مفعَّل الآن',     'value': _active,                   'icon': 'circle-check',     'variant': 'brand'},
+    {'label': 'غير مفعَّل',      'value': _all|length - _active,     'icon': 'circle-pause',     'variant': 'amber'},
   ]
-) }}
-
-{# ───── Main: two EQUAL-HEIGHT carded tables side by side · help on the LEFT ───── #}
-{% call hub.worklayout(aside_html=hub.helppanel(
-  "دليل المشغّلين",
-  intro="المدراء يديرون النظام ضمن صلاحياتهم؛ الموزّعون يبيعون ويشحنون ضمن محافظهم ونطاقهم.",
-  items=[
-    {'icon': 'users-gear',       'text': 'افتح ملف أي مدير لمراجعة صلاحياته ومحفظته.'},
-    {'icon': 'people-carry-box', 'text': 'افتح ملف الموزّع لضبط الحدود والنطاق والشحن.'},
-    {'icon': 'circle-check',     'text': 'الحالة «مفعَّل» تعني أن الحساب يعمل الآن.'},
-  ],
-  note="التطبيق المباشر متوقف حاليًا — السياسات محفوظة كأساس قابل للتوسعة لاحقًا."
-)) %}
-  <div class="uds-cols">
-    {% call hub.section("المدراء", icon="users-gear", meta=(managers|length|string ~ " مدير") if managers else "", flush=True) %}
-      {% if managers %}
-      <div class="hub-table-wrap" style="border:none;border-radius:0">
-        <table class="hub-table" data-testid="manager-operators-table"
-               data-paginated="1" data-page-size="15" data-page-sizes="10,15,25,50" data-persist-key="biz-managers">
-          <thead>
-            <tr><th class="num" style="width:64px">#</th><th>الاسم</th><th>الحالة</th><th style="width:88px">الملف</th></tr>
-          </thead>
-          <tbody>
-            {% for manager in managers %}
-              <tr>
-                <td class="num mono">{{ manager.id }}</td>
-                <td>{{ manager.full_name or manager.username }}</td>
-                <td>{{ op_status(manager.status if manager.status is defined else none, manager.enabled) }}</td>
-                <td>
-                  <a class="hub-btn hub-btn--secondary hub-btn--icon" title="فتح الملف"
-                     href="{{ url_for('radius.business_operator_profile', entity_type='manager', entity_id=manager.id) }}">
-                    <i class="fa-solid fa-arrow-up-right-from-square"></i>
-                  </a>
-                </td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-      {% else %}
-        {{ hub.empty("لا يوجد مدراء بعد", icon="users-gear") }}
-      {% endif %}
-    {% endcall %}
-
-    {% call hub.section("الموزعون", icon="people-carry-box", meta=(distributors|length|string ~ " موزع") if distributors else "", flush=True) %}
-      {% if distributors %}
-      <div class="hub-table-wrap" style="border:none;border-radius:0">
-        <table class="hub-table" data-testid="distributor-operators-table"
-               data-paginated="1" data-page-size="15" data-page-sizes="10,15,25,50" data-persist-key="biz-distributors">
-          <thead>
-            <tr><th class="num" style="width:64px">#</th><th>الاسم</th><th>الحالة</th><th style="width:88px">الملف</th></tr>
-          </thead>
-          <tbody>
-            {% for distributor in distributors %}
-              <tr>
-                <td class="num mono">{{ distributor.id }}</td>
-                <td>{{ distributor.full_name or distributor.username }}</td>
-                <td>{{ op_status(distributor.status) }}</td>
-                <td>
-                  <a class="hub-btn hub-btn--secondary hub-btn--icon" title="فتح الملف"
-                     href="{{ url_for('radius.business_operator_profile', entity_type='distributor', entity_id=distributor.id) }}">
-                    <i class="fa-solid fa-arrow-up-right-from-square"></i>
-                  </a>
-                </td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-      {% else %}
-        {{ hub.empty("لا يوجد موزعون بعد", icon="people-carry-box") }}
-      {% endif %}
-    {% endcall %}
-  </div>
+) %}
+  {# لا فلاتر خادمية في هذا المسار — الفرز والترقيم والتصدير من الجدولين مباشرة #}
+  <span class="hub-text-soft" style="font-size:12.5px;font-weight:700">
+    <i class="fa-solid fa-shield-halved" style="color:var(--hub-brand-ink)"></i>
+    التطبيق المباشر للسياسات متوقف حاليًا — تُحفظ كأساس قابل للتوسعة لاحقًا.
+  </span>
+  <span class="hub-hint" tabindex="0"
+        data-hint="المدراء يديرون النظام ضمن صلاحياتهم؛ الموزّعون يبيعون ويشحنون ضمن محافظهم ونطاقهم. من ملف المشغّل تضبط الصلاحيات والحدود وتشحن المحفظة."><i class="fa-solid fa-info"></i></span>
 {% endcall %}
+</section>{# /hub-hero-shell #}
+
+{# ───── جدول المدراء — uds موحّد (فرز + ترقيم + تصدير) ───── #}
+{% call hub.section("المدراء", icon="users-gear",
+                    meta=(managers|length|string ~ " مدير") if managers else "", flush=True) %}
+  {% if managers %}
+  <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10"
+       data-uds-export-title="المدراء" style="border:none;border-radius:0">
+    <table class="hub-table" data-testid="manager-operators-table">
+      <thead>
+        <tr>
+          <th class="num" style="width:64px">#</th>
+          <th>الاسم</th>
+          <th>اسم الدخول</th>
+          <th>الحالة</th>
+          <th style="width:88px" data-uds-nosort data-uds-nocol data-uds-noexport>الملف</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for manager in managers %}
+        <tr>
+          <td class="num mono"><bdi dir="ltr">{{ manager.id }}</bdi></td>
+          <td style="font-weight:700">{{ manager.full_name or manager.username }}</td>
+          <td class="mono small"><bdi dir="ltr">{{ manager.username }}</bdi></td>
+          <td>{{ op_status(manager.status) }}</td>
+          <td>
+            <a class="hub-btn hub-btn--primary hub-btn--icon" title="فتح ملف المدير"
+               href="{{ url_for('radius.business_operator_profile', entity_type='manager', entity_id=manager.id) }}">
+              <i class="fa-solid fa-arrow-up-right-from-square"></i>
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    {{ hub.empty("لا يوجد مدراء بعد",
+                 sub="أنشئ المدراء من تبويب «المدراء» في شريط القسم أعلاه.",
+                 icon="users-gear") }}
+  {% endif %}
+{% endcall %}
+
+{# ───── جدول الموزعين — uds موحّد (فرز + ترقيم + تصدير) ───── #}
+{% call hub.section("الموزعون", icon="people-carry-box",
+                    meta=(distributors|length|string ~ " موزع") if distributors else "", flush=True) %}
+  {% if distributors %}
+  <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10"
+       data-uds-export-title="الموزعون" style="border:none;border-radius:0">
+    <table class="hub-table" data-testid="distributor-operators-table">
+      <thead>
+        <tr>
+          <th class="num" style="width:64px">#</th>
+          <th>الاسم</th>
+          <th>الحالة</th>
+          <th style="width:88px" data-uds-nosort data-uds-nocol data-uds-noexport>الملف</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for distributor in distributors %}
+        <tr>
+          <td class="num mono"><bdi dir="ltr">{{ distributor.id }}</bdi></td>
+          <td style="font-weight:700">{{ distributor.full_name or distributor.username or '—' }}</td>
+          <td>{{ op_status(distributor.status) }}</td>
+          <td>
+            <a class="hub-btn hub-btn--primary hub-btn--icon" title="فتح ملف الموزّع"
+               href="{{ url_for('radius.business_operator_profile', entity_type='distributor', entity_id=distributor.id) }}">
+              <i class="fa-solid fa-arrow-up-right-from-square"></i>
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    {{ hub.empty("لا يوجد موزعون بعد",
+                 sub="أنشئ الموزعين من تبويب «الموزعون» في شريط القسم أعلاه.",
+                 icon="people-carry-box") }}
+  {% endif %}
+{% endcall %}
+
+{# نظام الجداول الموحّد: فرز + ترقيم + تصدير #}
+<script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
 {% endblock %}

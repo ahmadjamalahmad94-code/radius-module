@@ -9,6 +9,7 @@
 
 {% block head_extra %}
 {{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
 <style>
   /* Avatar circle for each admin row */
   .ps-avatar{
@@ -46,6 +47,8 @@
 {% block content %}
 {% include "radius/admin_operations_nav.html" %}
 
+{# ───── الصدفة الموحّدة: هيرو + شريط KPI بفاصل ناعم ───── #}
+<section class="hub-hero-shell">
 {{ hub.hero(
   "ملخّص المدراء",
   subtitle="جدول تفصيلي بكل المدراء، أدوارهم، حالاتهم، وآخر دخول",
@@ -59,8 +62,6 @@
     </a>
   '
 ) }}
-
-{# ───── KPIs ─────────────────────────────────────────────── #}
 <div class="hub-kpi-grid">
   {{ hub.kpi("إجمالي المدراء", stats.total,     icon="users-gear",       variant="brand") }}
   {{ hub.kpi("مفعَّلون",        stats.active,    icon="circle-check",     variant="green") }}
@@ -68,6 +69,7 @@
   {{ hub.kpi("سجّلوا دخولًا",   stats.with_login, icon="right-to-bracket", variant="amber") }}
   {{ hub.kpi("صلاحيات النظام",  perms_count,     icon="shield-halved",    variant="red")   }}
 </div>
+</section>{# /hub-hero-shell #}
 
 {# ───── Table ───────────────────────────────────────────── #}
 {% if not admins %}
@@ -78,7 +80,7 @@
   ) }}
 {% else %}
 {% call hub.section("المدراء", icon="table-list", meta=(admins|length)|string + " مدير", flush=True) %}
-  <div class="hub-table-wrap" style="border:none;border-radius:0">
+  <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25" style="border:none;border-radius:0">
     <table class="hub-table">
       <thead>
         <tr>
@@ -131,4 +133,5 @@
 {% endcall %}
 {% endif %}
 
+<script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
 {% endblock %}

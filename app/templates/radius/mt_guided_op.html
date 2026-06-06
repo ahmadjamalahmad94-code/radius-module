@@ -65,9 +65,9 @@
         <div class="hub-field">
           <label>العملية</label>
           <select class="hub-input" name="op" data-mt-guided-op-select>
-            {% for op in all_operations %}
+            {% for op, op_label in operation_choices %}
             <option value="{{ op }}" {% if op == operation %}selected{% endif %}>
-              {{ op }}
+              {{ op_label }}
             </option>
             {% endfor %}
           </select>

@@ -43,6 +43,10 @@
   // don't ship a second <script>. Always wire even when allRows
   // is empty (the page still renders an empty bulk bar in that
   // case).
+  //
+  // إعادة التصميم: الشريط صار عائمًا لاصقًا أسفل الشاشة ويظهر فقط
+  // عندما يُختار صف واحد على الأقل (صنف is-active) — لا مساحة ميتة
+  // أعلى الجدول بعد اليوم.
   (function wireBulk() {
     const bulkForm = document.getElementById("mt-bulk-form");
     if (!bulkForm) return;
@@ -50,6 +54,7 @@
     const actionBtns = Array.from(
       bulkForm.querySelectorAll("[data-mt-bulk-action]")
     );
+    const clearBtn  = bulkForm.querySelector("[data-mt-bulk-clear]");
     const rowSelects = Array.from(
       table.querySelectorAll("[data-mt-row-select]")
     );
@@ -60,6 +65,8 @@
       if (countEl) countEl.textContent = String(selected);
       const disabled = selected === 0;
       actionBtns.forEach(b => { b.disabled = disabled; });
+      // إظهار/إخفاء الشريط العائم حسب الاختيار.
+      bulkForm.classList.toggle("is-active", selected > 0);
       // Header checkbox tri-state for clarity.
       if (selectAll) {
         if (selected === 0) {
@@ -79,6 +86,12 @@
     if (selectAll) {
       selectAll.addEventListener("change", () => {
         rowSelects.forEach(cb => { cb.checked = selectAll.checked; });
+        refreshState();
+      });
+    }
+    if (clearBtn) {
+      clearBtn.addEventListener("click", () => {
+        rowSelects.forEach(cb => { cb.checked = false; });
         refreshState();
       });
     }
@@ -115,23 +128,34 @@
   async function refreshRow(row) {
     const id = row.dataset.mtRouterId;
     let res, body;
+    // مهلة قصوى للطلب نفسه: بدونها يبقى الصف عالقًا على «جارٍ الفحص…»
+    // إلى الأبد إذا علّق الطلب (راوتر لا يرد + خادم ينتظر) — الآن
+    // ينقلب الصف إلى «غير متصل» بعد 12 ثانية كحد أقصى.
+    const ctl = (typeof AbortController !== "undefined")
+      ? new AbortController() : null;
+    const timer = ctl
+      ? window.setTimeout(() => ctl.abort(), 12_000) : null;
     try {
       res = await fetch(`${CFG.apiBase}/mikrotik/${id}/counters`, {
         headers: { "Authorization": "Bearer " + CFG.apiToken },
+        signal: ctl ? ctl.signal : undefined,
       });
       try { body = await res.json(); } catch (_) { body = null; }
     } catch (e) {
-      setStatus(row, "error", "خطأ شبكة");
+      const timedOut = e && e.name === "AbortError";
+      setStatus(row, "error", timedOut ? "غير متصل" : "خطأ شبكة");
       const pill = row.querySelector("[data-mt-row-status]");
-      if (pill) pill.title = String(e);
+      if (pill) pill.title = timedOut ? "انتهت مهلة الفحص (12 ثانية)" : String(e);
       return;
+    } finally {
+      if (timer) window.clearTimeout(timer);
     }
 
     if (!res.ok || !body || body.ok === false) {
       const msg = (body && body.error && body.error.message)
         ? body.error.message
         : ("HTTP " + res.status);
-      setStatus(row, "error", "تعذّر");
+      setStatus(row, "error", "غير متصل");
       const pill = row.querySelector("[data-mt-row-status]");
       if (pill) pill.title = msg;
       return;
@@ -185,11 +209,20 @@
     }
   }
 
+  let inFlight = false;
   async function refreshAll() {
-    // Fan-out — each row is independent, so we don't await in
-    // series. A slow router doesn't block the others.
-    await Promise.all(rows.map(refreshRow));
-    updateFleetSummary();
+    // حارس تداخل: لا نطلق دورة جديدة بينما السابقة ما تزال تنتظر
+    // راوترات بطيئة — يمنع تراكم الطلبات على الخادم.
+    if (inFlight) return;
+    inFlight = true;
+    try {
+      // Fan-out — each row is independent, so we don't await in
+      // series. A slow router doesn't block the others.
+      await Promise.all(rows.map(refreshRow));
+      updateFleetSummary();
+    } finally {
+      inFlight = false;
+    }
   }
 
   refreshAll();

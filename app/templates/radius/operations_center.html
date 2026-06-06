@@ -4,9 +4,24 @@
 {% block title %}مركز العمليات{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-gauge-high"></i>{% endblock %}
 {% block page_title %}مركز العمليات{% endblock %}
-{% block page_sub %}<span class="sub">المستخدمون المتصلون، صحة أجهزة الشبكة وخدمة المصادقة، إشارات المحاسبة، وإجراءات طوارئ آمنة.</span>{% endblock %}
+{% block page_sub %}<span class="sub">نظرة سريعة على من متصل الآن وصحة الشبكة، مع أدوات معاينة آمنة بدون تنفيذ.</span>{% endblock %}
+
+{% block head_extra %}
+{# نظام الجداول الموحد: أنماط uds-table (فرز + اختيار أعمدة + ترقيم صفحات) #}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
+<style>
+/* شبكة بلاطات قسم التحكم بالسرعة — صف موحّد الفجوات */
+.ops-tiles{ display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:10px; }
+.ops-tiles > *{ min-width:0; }
+@media(max-width:760px){ .ops-tiles{ grid-template-columns:1fr; } }
+/* سطر تعريفي بسيط أعلى البلاطات + زر الانتقال */
+.ops-lead{ display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:12px; }
+.ops-lead p{ margin:0; color:var(--hub-text-soft,#475569); font-size:13.5px; line-height:1.9; flex:1 1 320px; }
+</style>
+{% endblock %}
 
 {% block content %}
+{# ── تسميات عربية مبسطة لحالات وإجراءات اللقطة (snapshot) ── #}
 {% set _state_labels = {
   'ok': 'سليم',
   'degraded': 'متأثر',
@@ -18,66 +33,112 @@
   'global_speed_cut': 'خفض السرعة العام'
 } %}
 
-{# ───── ONE unified hero: title + subtitle + live KPI strip ───── #}
-<div data-testid="operations-summary">
+{# ───── صدفة الهيرو الموحّدة: عنوان + سطر تعريفي + شريط KPI بصف واحد + زر الانتقال ───── #}
+<section class="hub-hero-shell" data-testid="operations-summary">
 {{ hub.megahero(
   "مركز العمليات",
-  subtitle="تعرض هذه الصفحة حالة التشغيل وتوفر إجراءات معاينة آمنة بدون تنفيذ. إجراءات الطوارئ غير الآمنة تبقى محظورة.",
+  subtitle="شاشة متابعة سريعة: من متصل الآن، وحالة أجهزة الشبكة والمصادقة — كل ما هنا للعرض الآمن، بلا أي تنفيذ مباشر.",
   icon="gauge-high",
+  actions_html='<a class="hub-btn hub-btn--primary" href="' ~ url_for('radius.operations_speed_control') ~ '"><i class="fa-solid fa-sliders"></i> مركز التحكم بالسرعة</a>',
   kpis=[
     {'label': 'المستخدمون المتصلون', 'value': snapshot.online_users, 'icon': 'wifi', 'variant': 'green'},
     {'label': 'أجهزة الشبكة', 'value': snapshot.nas_health.total, 'icon': 'server', 'variant': 'blue'},
     {'label': 'الأجهزة المفعلة', 'value': snapshot.nas_health.enabled, 'icon': 'circle-check', 'variant': 'brand'},
-    {'label': 'فشل المصادقة', 'value': snapshot.accounting_failures.recent_radius_event_failures, 'icon': 'triangle-exclamation', 'variant': 'amber'}
+    {'label': 'إنذارات المصادقة', 'value': snapshot.accounting_failures.recent_radius_event_failures, 'icon': 'triangle-exclamation', 'variant': 'amber'}
   ]
 ) }}
-</div>
+</section>{# /hub-hero-shell #}
 
 {% include "radius/operations_nav.html" %}
 
-{# ───── Full-width work layout: main content + help panel on the LEFT ───── #}
+{# ───── تخطيط العمل: المحتوى + لوحة مساعدة قابلة للطي على اليسار ───── #}
 {% call hub.worklayout(aside_html=hub.helppanel(
   "ما هذه الصفحة؟",
-  intro="مركز العمليات يجمع حالة التشغيل في مكان واحد: الجلسات النشطة، صحة الشبكة والمصادقة، ومؤشرات إجراءات الطوارئ.",
+  intro="مركز العمليات يجمع حالة التشغيل في مكان واحد: الجلسات النشطة، صحة الشبكة والمصادقة، ومركز التحكم بالسرعة.",
   icon="circle-info",
   items=[
     {'icon': 'wifi', 'text': 'الجلسات النشطة تعرض المشتركين المتصلين الآن وأجهزة الشبكة التي يمرّون عبرها.'},
-    {'icon': 'heart-pulse', 'text': 'إشارات الصحة تكشف حالة مسار المصادقة وأجهزة الربط والفحص المباشر.'},
-    {'icon': 'shield-halved', 'text': 'إجراءات الطوارئ تبقى محظورة أو بمعاينة بدون تنفيذ حفاظًا على سلامة الشبكة.'}
+    {'icon': 'sliders', 'text': 'التحكم بالسرعة الجماعي يجهّز سياسات سرعة (أوضاع جاهزة أو نسب مخصصة) ويعاين أثرها على الباقات والمشتركين قبل أي تطبيق.'},
+    {'icon': 'shield-halved', 'text': 'إجراءات الطوارئ تبقى محظورة أو بمعاينة فقط حفاظًا على سلامة الشبكة.'}
   ],
   note="هذه الشاشة للعرض الآمن فقط؛ لا تنفّذ أي إجراء مباشر على RADIUS أو CoA."
 )) %}
 
-  {% call hub.section("الجلسات النشطة", icon="wifi", flush=True) %}
+  {# ── قسم التحكم بالسرعة الجماعي: شرح بسيط + بلاطات الأوضاع + زر الانتقال ── #}
+  {% call hub.section("التحكم بالسرعة الجماعي", icon="sliders",
+                      meta="معاينة بدون تنفيذ") %}
+    <div class="ops-lead" data-testid="speed-control-intro">
+      <p>
+        من هنا تجهّز سياسة سرعة لعدة باقات دفعة واحدة: تختار وضعًا جاهزًا أو نسبة مخصصة لكل باقة،
+        تشاهد كم مشتركًا سيتأثر وما السرعة الجديدة، ثم تحفظها كمسودة جاهزة.
+        <span class="hub-hint" tabindex="0" data-hint="السياسة المحفوظة تبقى معاينة فقط (dry-run): لا يُرسل أي أمر مباشر إلى RADIUS أو CoA، وتسجَّل الحركة في سجل الأحداث للمراجعة."><i class="fa-solid fa-info"></i></span>
+      </p>
+      {{ hub.btn("فتح مركز التحكم بالسرعة", href=url_for('radius.operations_speed_control'), icon="arrow-left", variant="secondary") }}
+    </div>
+    <div class="ops-tiles">
+      {{ hub.tile("أوضاع جاهزة", "5", icon="wand-magic-sparkles", sub="طبيعي · ضغط · ليل · طوارئ · حماية المهم") }}
+      {{ hub.tile("نسب مخصصة", "0% – 300%", icon="percent", sub="تخفيض أو رفع لكل باقة على حدة") }}
+      {{ hub.tile("النتيجة", "سياسة محفوظة", icon="floppy-disk", sub="معاينة أثر فقط — بلا تطبيق مباشر") }}
+    </div>
+  {% endcall %}
+
+  {# ── الجلسات النشطة: جدول موحّد uds (فرز + ترقيم صفحات) ── #}
+  {% call hub.section("الجلسات النشطة", icon="wifi",
+                      meta=(snapshot.active_sessions|length|string + " جلسة"), flush=True) %}
+    {% if snapshot.active_sessions %}
     <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
       <table class="hub-table" data-testid="active-sessions-table">
         <thead><tr><th>المستخدم</th><th>جهاز الشبكة</th><th>العنوان الشبكي</th><th>العنوان الفيزيائي</th></tr></thead>
         <tbody>
           {% for session in snapshot.active_sessions %}
-            <tr><td>{{ session.username }}</td><td>{{ session.nasipaddress }}</td><td>{{ session.framedipaddress }}</td><td>{{ session.callingstationid }}</td></tr>
-          {% else %}
-            <tr><td colspan="4">لا توجد جلسات نشطة حالياً.</td></tr>
+            <tr>
+              <td class="mono">{{ session.username }}</td>
+              <td class="mono">{{ session.nasipaddress }}</td>
+              <td class="mono">{{ session.framedipaddress }}</td>
+              <td class="mono">{{ session.callingstationid }}</td>
+            </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
+    {% else %}
+      {{ hub.empty("لا توجد جلسات نشطة حالياً.", sub="عند اتصال المشتركين ستظهر جلساتهم هنا مباشرة.", icon="wifi") }}
+    {% endif %}
   {% endcall %}
 
+  {# ── إشارات الصحة: بلاطات واضحة بدل قائمة نصية ── #}
   {% call hub.section("إشارات الصحة", icon="heart-pulse") %}
-    <ul class="hub-list" data-testid="operations-health">
-      <li>مسار قاعدة المصادقة: {{ _state_labels.get(snapshot.radius_health.status, 'حالة غير معروفة') }}</li>
-      <li>أجهزة مضبوطة عبر واجهة الربط: {{ snapshot.vpn_api_health.configured_api_devices }}</li>
-      <li>فحص مباشر: {{ "مفعل" if snapshot.vpn_api_health.live_probe else "غير مفعل" }}</li>
-    </ul>
+    <div class="ops-tiles" data-testid="operations-health">
+      {{ hub.tile("مسار قاعدة المصادقة",
+                  _state_labels.get(snapshot.radius_health.status, 'حالة غير معروفة'),
+                  icon="database",
+                  variant=("green" if snapshot.radius_health.status == "ok" else "amber"),
+                  sub="هل سجلات الجلسات قابلة للقراءة الآن؟") }}
+      {{ hub.tile("أجهزة مضبوطة عبر واجهة الربط",
+                  snapshot.vpn_api_health.configured_api_devices,
+                  icon="plug",
+                  sub="أجهزة شبكة لديها منفذ ربط مُعرّف") }}
+      {{ hub.tile("الفحص المباشر",
+                  "مفعل" if snapshot.vpn_api_health.live_probe else "غير مفعل",
+                  icon="satellite-dish",
+                  variant=("green" if snapshot.vpn_api_health.live_probe else ""),
+                  sub="اختبار حيّ لاتصال الأجهزة — معطل افتراضيًا للأمان") }}
+    </div>
   {% endcall %}
 
+  {# ── مؤشرات إجراءات الطوارئ: جدول موحّد uds ── #}
   {% call hub.section("مؤشرات إجراءات الطوارئ", icon="shield-halved", flush=True) %}
     <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
       <table class="hub-table" data-testid="emergency-indicators">
-        <thead><tr><th>الإجراء</th><th>الحالة</th><th>السبب</th></tr></thead>
+        <thead><tr><th>الإجراء</th><th>الحالة</th><th data-uds-nosort>السبب</th></tr></thead>
         <tbody>
           {% for action in snapshot.emergency_actions %}
-            <tr><td>{{ _action_labels.get(action.key, 'إجراء طوارئ') }}</td><td>{{ _state_labels.get(action.status, 'حالة غير معروفة') }}</td><td>{{ action.reason }}</td></tr>
+            <tr>
+              <td>{{ _action_labels.get(action.key, 'إجراء طوارئ') }}</td>
+              <td>{{ hub.pill(_state_labels.get(action.status, 'حالة غير معروفة'),
+                              variant=("amber" if action.status == "blocked_until_live_approval" else "blue")) }}</td>
+              <td class="small">{{ action.reason }}</td>
+            </tr>
           {% endfor %}
         </tbody>
       </table>
@@ -85,4 +146,7 @@
   {% endcall %}
 
 {% endcall %}
+
+{# نظام الجداول الموحد (فرز + أعمدة + ترقيم صفحات) لجداول مركز العمليات #}
+<script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
 {% endblock %}

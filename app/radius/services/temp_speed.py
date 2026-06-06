@@ -193,8 +193,11 @@ def apply_temp_speed(
         raise ValueError("اسم المستخدم مطلوب")
     down_kbps, up_kbps = int(down_kbps or 0), int(up_kbps or 0)
     duration_minutes = int(duration_minutes or 0)
-    if down_kbps < _MIN_KBPS or up_kbps < _MIN_KBPS:
-        raise ValueError(f"السرعة يجب ألا تقل عن {_MIN_KBPS} كيلوبت")
+    # «0 = غير محدود» على أي اتجاه (يطابق المرجع): MikroTik يعامل 0 كـ unlimited
+    # في الـ simple queue. أي قيمة موجبة أقل من الحد الأدنى تُرفض (أقل من 64k
+    # يساوي عمليًا قطع الخدمة). قيمة سالبة تُرفض أيضًا عبر الشرط نفسه.
+    if (down_kbps and down_kbps < _MIN_KBPS) or (up_kbps and up_kbps < _MIN_KBPS):
+        raise ValueError(f"السرعة يجب أن تكون 0 (غير محدود) أو {_MIN_KBPS} كيلوبت فأكثر")
     if down_kbps > _MAX_KBPS or up_kbps > _MAX_KBPS:
         raise ValueError("السرعة المدخلة كبيرة جدًا")
     if duration_minutes < _MIN_MINUTES or duration_minutes > _MAX_MINUTES:

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import base64
 import binascii
+import re
 from io import BytesIO
 from pathlib import PurePath
 
@@ -22,6 +23,14 @@ def register_print_template_routes(bp: Blueprint) -> None:
         "/print-templates/export",
         "print_templates_export_center",
         print_templates_export_center,
+        methods=["GET"],
+    )
+    # صفحة الإحصائيات المنفصلة: جداول القوالب المحفوظة + سجل التصدير
+    # خرجت من الصفحة الرئيسية حتى تبقى غرفتا الطباعة والتصميم نظيفتين.
+    bp.add_url_rule(
+        "/print-templates/stats",
+        "print_templates_stats",
+        print_templates_stats,
         methods=["GET"],
     )
     bp.add_url_rule(
@@ -124,6 +133,25 @@ def _checked(name: str, default: bool = False) -> bool:
     if name not in request.form:
         return default
     return request.form.get(name) in {"1", "true", "on", "yes"}
+
+
+_URL_SCHEME_RE = re.compile(r"^[a-zA-Z][a-zA-Z0-9+.-]*://")
+
+
+def _normalize_login_url(value: str) -> str:
+    """يطبّع رابط الدخول التلقائي قبل حفظه في القالب.
+
+    المستخدم غالبًا يكتب عنوان IP مجرّدًا (مثل 10.10.10.10) بدون
+    http:// — نضيف البروتوكول هنا حتى يُخزَّن الرابط في القالب بصيغة
+    قياسية، فتتطابق المعاينة الحية مع التصدير حرفيًا. الروابط التي
+    تحمل بروتوكولًا بالفعل تمر كما هي.
+    """
+    value = (value or "").strip()
+    if not value:
+        return ""
+    if not _URL_SCHEME_RE.match(value):
+        value = "http://" + value
+    return value
 
 
 _BACKGROUND_INPUT_MAX_BYTES = 8_000_000
@@ -345,6 +373,11 @@ def _payload(*, allow_data_url_background: bool = True) -> dict:
         "card_title": request.form.get("card_title") or "بطاقة إنترنت",
         "footer_text": request.form.get("footer_text") or "",
         "hotspot_address": request.form.get("hotspot_address") or "",
+        # رابط الدخول التلقائي للهوت سبوت — عند تعبئته يصبح رمز QR
+        # رابط /login?username=&password= فيدخل الزبون فور المسح.
+        # فارغ = سلوك القوالب القديمة بلا تغيير. يُطبَّع هنا (إضافة
+        # http:// لعناوين IP المجرّدة) حتى يُحفَظ في القالب بصيغة قياسية.
+        "hotspot_login_url": _normalize_login_url(request.form.get("hotspot_login_url") or ""),
         "price_text": request.form.get("price_text") or "",
         "validity_text": request.form.get("validity_text") or "",
         "instructions_text": request.form.get("instructions_text") or "",
@@ -443,11 +476,18 @@ def _export_layout_overrides_from_request() -> dict:
             "card_title",
             "footer_text",
             "hotspot_address",
+            # رابط الدخول التلقائي: يُمرَّر كاستبدال أيضًا حتى يستطيع
+            # مشغّل غرفة الطباعة تفعيل QR الدخول التلقائي وقت التصدير
+            # دون الرجوع لتعديل القالب المحفوظ.
+            "hotspot_login_url",
             "price_text",
             "validity_text",
         )
     }
-    return {key: value for key, value in layout_overrides.items() if value}
+    overrides = {key: value for key, value in layout_overrides.items() if value}
+    if overrides.get("hotspot_login_url"):
+        overrides["hotspot_login_url"] = _normalize_login_url(overrides["hotspot_login_url"])
+    return overrides
 
 
 def _batch_id_from_request() -> int | None:
@@ -512,6 +552,68 @@ def _preview_rows(preview: dict | None) -> list[dict]:
     ]
 
 
+def _effective_field_layout(form_state: dict | None) -> dict:
+    """القيم «الفعلية» لمكان وحجم اليوزر/الباس/QR كما يرسمها المحرك فعلًا.
+
+    حقول المصمم (المكان أفقيًا/عموديًا، حجم الخط، حجم QR) كانت تبدأ بصفر
+    لأن 0 يعني «الافتراضي» — بينما العنصر مرسوم فعليًا في مكانه الافتراضي.
+    هنا نبني نفس نموذج العرض الذي يستخدمه المحرك الموحّد ونستخرج منه
+    الإحداثيات الحقيقية (مم) والأحجام الحقيقية، فتُعبّأ الحقول من البداية
+    بقيم مطابقة تمامًا لما يظهر على البطاقة.
+
+    التحويل عكس `card_renderer._resolve_positions` نفسه:
+    mm = (الإحداثي على الكانفس / عرض الكانفس) × card_width_mm — لذا إعادة
+    إرسال هذه القيم للمحرك تعيد إنتاج نفس الموضع حرفيًا (لا انجراف).
+    """
+    fs = form_state or {}
+    layout = dict(fs.get("layout") or {})
+    template_for_render = {
+        "id": 0,
+        "username_x": fs.get("username_x") or 0,
+        "username_y": fs.get("username_y") or 0,
+        "password_x": fs.get("password_x") or 0,
+        "password_y": fs.get("password_y") or 0,
+        "qr_x": fs.get("qr_x") or 0,
+        "qr_y": fs.get("qr_y") or 0,
+        "layout_json": layout,
+    }
+    sample = {"id": "", "username": "SAMPLE", "password": "********"}
+    try:
+        model = build_card_render_model(template_for_render, sample)
+    except Exception:
+        return {}
+    canvas_w = float(model["canvas"]["width"]) or 1.0
+    canvas_h = float(model["canvas"]["height"]) or 1.0
+    try:
+        card_w_mm = max(float(layout.get("card_width_mm") or 85), 1.0)
+        card_h_mm = max(float(layout.get("card_height_mm") or 54), 1.0)
+    except (TypeError, ValueError):
+        card_w_mm, card_h_mm = 85.0, 54.0
+
+    def _round_step(value: float, step: float) -> float:
+        return round(round(value / step) * step, 1)
+
+    effective: dict[str, float] = {}
+    by_id = {str(el.get("id") or ""): el for el in model.get("elements") or []}
+    for element_id, prefix in (("user", "username"), ("pass", "password"), ("qr", "qr")):
+        el = by_id.get(element_id)
+        if not el:
+            continue
+        effective[f"{prefix}_x"] = _round_step((float(el["x"]) / canvas_w) * card_w_mm, 0.1)
+        effective[f"{prefix}_y"] = _round_step((float(el["y"]) / canvas_h) * card_h_mm, 0.1)
+    user_el = by_id.get("user")
+    if user_el:
+        effective["username_font_size"] = _round_step(float(user_el.get("value_font_size") or 0), 0.5)
+        effective["credential_label_font_size"] = _round_step(float(user_el.get("label_font_size") or 0), 0.5)
+    pass_el = by_id.get("pass")
+    if pass_el:
+        effective["password_font_size"] = _round_step(float(pass_el.get("value_font_size") or 0), 0.5)
+    qr_el = by_id.get("qr")
+    if qr_el:
+        effective["qr_size_pct"] = _round_step((float(qr_el.get("size") or 0) / canvas_w) * 100.0, 0.5)
+    return effective
+
+
 def _page_context(
     *,
     preview: dict | None = None,
@@ -550,6 +652,10 @@ def _page_context(
         "preview": preview,
         "preview_rows": _preview_rows(preview),
         "form_state": form_state or {},
+        # القيم الفعلية لمكان/حجم اليوزر والباس وQR كما يرسمها المحرك —
+        # تُستخدم لتعبئة حقول «الحقول» من البداية بدل الأصفار (راجع
+        # _effective_field_layout). تُحسب لقالب التعديل أو للافتراضي.
+        "effective_fields": _effective_field_layout(form_state),
         "form_error": form_error,
         "edit_template_id": selected_edit_id if form_state else None,
         # Commit 4: id of the tenant's default template (or None) so the
@@ -579,7 +685,10 @@ def print_templates_thumbnail(template_id: int):
         sample = {"id": "", "username": "CARD1234", "password": "********", "qr_payload": "CARD1234"}
         layout = tpl.get("layout_json") or {}
         model = build_card_render_model({**tpl, "layout_json": layout}, sample)
-        svg = render_card_svg(model, mask_password=True)
+        # embed_fonts=True: المصغّرة تُعرض داخل <img> حيث لا تصل خطوط
+        # الصفحة (Almarai) إلى الـSVG — يجب تضمين الخط داخل الملف نفسه
+        # كـdata: URI وإلا سقط النص إلى Tahoma/خط النظام.
+        svg = render_card_svg(model, mask_password=True, embed_fonts=True)
     except Exception:
         abort(404)
     resp = Response(svg, mimetype="image/svg+xml")
@@ -590,6 +699,37 @@ def print_templates_thumbnail(template_id: int):
 
 def print_templates():
     return render_template("radius/print_templates.html", **_page_context())
+
+
+def print_templates_stats():
+    """صفحة الإحصائيات المنفصلة لقوالب الطباعة.
+
+    تعرض كل الجداول التي كانت تزاحم غرفتي الطباعة والتصميم في الصفحة
+    الرئيسية: جدول القوالب المحفوظة (مع إجراءاتها الأصلية) + سجل
+    عمليات التصدير، إضافة إلى مؤشرات سريعة محسوبة من نفس البيانات.
+    لا منطق جديد هنا — نفس مصادر البيانات المستخدمة في الصفحة الرئيسية.
+    """
+    ops = get_operations_service()
+    tenant_id = _tid()
+    templates = [dict(t) for t in ops.list_print_templates(tenant_id=tenant_id, limit=500)]
+    jobs = ops.list_print_jobs(tenant_id=tenant_id, limit=200)
+    # مؤشرات بسيطة محسوبة من السجل نفسه (لا استعلامات إضافية)
+    success_jobs = sum(1 for j in jobs if (j.get("status") or "") == "success")
+    failed_jobs = sum(1 for j in jobs if (j.get("status") or "") == "failed")
+    exported_cards = sum(int(j.get("card_count") or 0) for j in jobs if (j.get("status") or "") == "success")
+    return render_template(
+        "radius/print_templates_stats.html",
+        templates=templates,
+        jobs=jobs,
+        default_template_id=ops.get_default_print_template_id(tenant_id=tenant_id),
+        stats={
+            "templates": len(templates),
+            "jobs": len(jobs),
+            "success_jobs": success_jobs,
+            "failed_jobs": failed_jobs,
+            "exported_cards": exported_cards,
+        },
+    )
 
 
 def print_templates_export_center():
@@ -665,6 +805,9 @@ _PREVIEW_FRAGMENT_OVERRIDE_KEYS = (
     "card_title",
     "footer_text",
     "hotspot_address",
+    # رابط الدخول التلقائي: تمريره للمعاينة الحية في غرفة الطباعة حتى
+    # يعكس رمز QR في المعاينة نفس ما سيخرج في ملف PDF المصدَّر.
+    "hotspot_login_url",
     "price_text",
     "validity_text",
 )
@@ -787,6 +930,9 @@ def print_templates_preview_fragment(template_id: int):
         for key in _PREVIEW_FRAGMENT_OVERRIDE_KEYS
     }
     overrides = {k: v for k, v in overrides.items() if v}
+    if overrides.get("hotspot_login_url"):
+        # نفس تطبيع التصدير: 10.10.10.10 ← http://10.10.10.10
+        overrides["hotspot_login_url"] = _normalize_login_url(overrides["hotspot_login_url"])
 
     # Build SVG strings via the unified renderer — single source of truth
     # shared with the PDF adapter. The route does this server-side so the

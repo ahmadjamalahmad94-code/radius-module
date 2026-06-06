@@ -218,6 +218,21 @@ def _safe_hex(value: Any, default: str) -> str:
     return default
 
 
+def _normalize_autologin_url(value: str) -> str:
+    """يطبّع رابط دخول الهوت سبوت قبل تخزينه داخل layout_json.
+
+    المستخدم يكتب غالبًا عنوان IP مجرّدًا (10.10.10.10) — نضيف
+    http:// حتى يُخزَّن الرابط بصيغة قياسية واحدة يعتمد عليها مولّد
+    QR في كل مسارات التصيير. الفارغ يبقى فارغًا (سلوك القوالب القديمة).
+    """
+    value = (value or "").strip()
+    if not value:
+        return ""
+    if not re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*://", value):
+        value = "http://" + value
+    return value
+
+
 def _boolish(value: Any, default: bool = False) -> bool:
     if value in (None, ""):
         return default
@@ -287,6 +302,12 @@ def _template_layout(data: dict) -> dict:
         "card_title": _text("card_title", preset["card_title"], 80),
         "footer_text": _text("footer_text", preset["footer_text"], 180),
         "hotspot_address": _text("hotspot_address", "hotspot.local", 120),
+        # رابط الدخول التلقائي للهوت سبوت (DNS) — فارغ افتراضيًا حتى
+        # لا يتغير سلوك القوالب القديمة. يُطبَّع عند الحفظ: عنوان IP
+        # مجرّد (10.10.10.10) يُحفَظ http://10.10.10.10 حتى يقرأه كل
+        # مسارات التصيير (معاينة غرفة الطباعة / PDF العينة / مهام
+        # التصدير) بنفس الصيغة التي تعرضها معاينة غرفة التصميم.
+        "hotspot_login_url": _normalize_autologin_url(_text("hotspot_login_url", "", 200)),
         "price_text": _text("price_text", "", 60),
         "validity_text": _text("validity_text", "", 60),
         "instructions_text": _text(
@@ -1269,6 +1290,10 @@ class OperationsService:
             "card_title",
             "footer_text",
             "hotspot_address",
+            # رابط الدخول التلقائي من غرفة الطباعة: يجب أن يصل إلى مولّد
+            # QR في المحرك الموحّد وإلا عملت معاينة غرفة التصميم وفشل
+            # التصدير (نفس الخلل الذي أبلغ عنه المستخدم مع 10.10.10.10).
+            "hotspot_login_url",
             "price_text",
             "validity_text",
         }

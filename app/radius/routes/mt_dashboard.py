@@ -73,10 +73,32 @@ def mt_dashboard(nas_id: int):
         )
     except Exception:  # noqa: BLE001 — never break the dashboard over a badge
         loop_active = False
+    # خدمات سكربت المنافذ (منع بث البلوتوث/الواي فاي + كشف اللوب على
+    # المنافذ) صارت بطاقتين في تبويب «خدماتي» تفتحان نافذة عائمة بنفس
+    # تدفّق صفحة «خدمات المنافذ» بدل صفحة مستقلة. نمرّر لكل خدمة حالتها
+    # (قالب مبدئي؟ + مفعّلة؟ + المنافذ) لرسم النقطة والشارة من الخادم —
+    # قراءة رخيصة من tenant_settings بلا أي اتصال بالراوتر.
+    pss_services: dict = {}
+    try:
+        from . import port_script_services as _pss_routes
+        from ..services import port_script_services as _pss
+        for _svc in _pss.list_services():
+            _st = _pss_routes._get_state(nas_id, _svc.slug)
+            pss_services[_svc.slug] = {
+                "placeholder": bool(_svc.is_placeholder),
+                "enabled": bool(_st.get("enabled")),
+                "ports": _st.get("ports") or [],
+            }
+    except Exception:  # noqa: BLE001 — لا نكسر اللوحة بسبب شارة خدمة
+        pss_services = {}
+    # أُزيل من لوحة العميل — يُعاد مركزياً عبر لوحة التراخيص (قرار معماري):
+    # كانت هنا بطاقة «نفق تغيير IP» المدفوعة (حالة الترخيص + شرائح الأسعار +
+    # نافذة طلب الخدمة). حُذفت من تبويب «خدماتي»؛ خدمة مركزية للمالك.
     return render_template(
         "radius/mt_dashboard.html",
         nas=nas,
         api_base="/api/v1",
         api_token=_ui_api_token(),
         loop_active=loop_active,
+        pss_services=pss_services,
     )

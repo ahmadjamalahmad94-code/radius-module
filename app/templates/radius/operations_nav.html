@@ -1,7 +1,6 @@
-{# ── Operations Center in-section tab bar (shared by the operations pages) ──
-   Active tab derived from request.path; no route change needed. Gives the
-   operations landing + speed-control a single, consistent hub navigation. #}
-{% set _speed = '/operations/speed-control' in request.path %}
+{# ── Operations Center in-section tab bar ──
+   صفحة التحكم الجماعي بالسرعة انتقلت إلى قسم «التحكم بالسرعة» في الشريط
+   الجانبي، لذا لم يعد لها تبويب هنا — يبقى مركز العمليات وحده في هذا الشريط. #}
 <style>
 .onav{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:16px;padding:8px;
   border-radius:16px;background:var(--hub-bg-soft,#f1f5f9);border:1px solid var(--hub-border-soft,#e2e8f0)}
@@ -13,6 +12,5 @@
 .onav a i{font-size:12px}
 </style>
 <nav class="onav" data-testid="operations-nav">
-  <a class="{{ 'is-active' if not _speed }}" href="{{ url_for('radius.operations_center') }}"><i class="fa-solid fa-gauge-high"></i> العمليات</a>
-  <a class="{{ 'is-active' if _speed }}" href="{{ url_for('radius.operations_speed_control') }}"><i class="fa-solid fa-sliders"></i> التحكم بالسرعة</a>
+  <a class="is-active" href="{{ url_for('radius.operations_center') }}"><i class="fa-solid fa-gauge-high"></i> العمليات</a>
 </nav>

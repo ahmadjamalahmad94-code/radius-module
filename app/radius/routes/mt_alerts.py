@@ -231,8 +231,38 @@ def mt_loop_setup():
     )
 
 
+# تسميات عربية مفهومة لقواعد التنبيه الآلية (auto.<type>)
+_RULE_LABELS_AR = {
+    "auto.router.disabled":  "الراوتر معطَّل",
+    "auto.snapshot.stale":   "اللقطة التشغيلية قديمة",
+    "auto.snapshot.failed":  "فشل أخذ اللقطة التشغيلية",
+    "auto.backup.missing":   "لا توجد نسخة احتياطية",
+    "auto.backup.stale":     "النسخة الاحتياطية قديمة",
+    "auto.alert.critical":   "إنذار حرج من الراوتر",
+    "auto.alert.warning":    "تحذير من الراوتر",
+    "auto.audit.failure":    "فشل عملية حديثة على الراوتر",
+    "auto.audit.partial":    "تطبيق جزئي لعملية على الراوتر",
+}
+
+
 def mt_alerts_detail(alert_id: int):
     row = alerts_repo.get_by_id(_tid(), int(alert_id))
     if not row:
         abort(404)
-    return render_template("radius/mt_alerts_detail.html", alert=row)
+    # اسم الراوتر بدل "#id" حتى يعرف المشغّل أي جهاز مقصود
+    router_name = ""
+    if row.get("router_id"):
+        try:
+            from ..db.repos import nas_repo
+            device = nas_repo.get_nas(_tid(), int(row["router_id"]))
+            if device:
+                router_name = device.name or device.shortname or ""
+        except Exception:  # noqa: BLE001 — الاسم تحسين عرض، لا يكسر الصفحة
+            router_name = ""
+    rule_label = _RULE_LABELS_AR.get((row.get("rule") or "").strip(), "")
+    return render_template(
+        "radius/mt_alerts_detail.html",
+        alert=row,
+        router_name=router_name,
+        rule_label=rule_label,
+    )

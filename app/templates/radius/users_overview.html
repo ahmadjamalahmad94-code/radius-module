@@ -9,6 +9,8 @@
 
 {% block content %}
 
+{# ───── الصدفة الموحّدة: هيرو + شريطا KPI بفواصل ناعمة بدل ثلاث كتل ───── #}
+<section class="hub-hero-shell">
 {{ hub.hero(
   "نظرة عامة — المشتركين",
   subtitle="إحصاءات سريعة عن قاعدة المشتركين — الحالات، الأنواع، والاستهلاك الإجمالي",
@@ -27,12 +29,13 @@
   {{ hub.kpi("معطَّل",            by_status.get('disabled', 0),        icon="ban",           variant="red") }}
 </div>
 
-<div class="hub-kpi-grid" style="margin-top:var(--hub-gap-section)">
+<div class="hub-kpi-grid">
   {{ hub.kpi("تنزيل إجمالي", "%.1f GB"|format(bytes_in/1073741824),  icon="download",      variant="blue") }}
   {{ hub.kpi("رفع إجمالي",   "%.1f GB"|format(bytes_out/1073741824), icon="upload",        variant="blue") }}
   {{ hub.kpi("مستفيد",       by_type.get('subscriber', 0),           icon="user",          variant="green") }}
   {{ hub.kpi("بطاقة دخول",   by_type.get('card', 0),                 icon="id-card",       variant="brand") }}
 </div>
+</section>{# /hub-hero-shell #}
 
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:var(--hub-gap-section)">
   <div>
@@ -44,7 +47,7 @@
             <thead>
               <tr>
                 <th class="num" style="width:55px">#</th>
-                <th>اليوزر</th>
+                <th>اسم المستخدم</th>
                 <th>الاسم</th>
                 <th>الحالة</th>
                 <th>أُنشئ</th>
@@ -84,7 +87,7 @@
           <table class="hub-table">
             <thead>
               <tr>
-                <th>اليوزر</th>
+                <th>اسم المستخدم</th>
                 <th>الاسم</th>
                 <th>تنتهي</th>
               </tr>

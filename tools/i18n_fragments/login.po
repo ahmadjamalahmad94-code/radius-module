@@ -1,0 +1,44 @@
+msgid "تسجيل الدخول — لوحة Hobe Hub"
+msgstr "Sign In — Hobe Hub Console"
+
+msgid "أهلًا بعودتك إلى Hobe Hub"
+msgstr "Welcome back to Hobe Hub"
+
+msgid "إدارة كاملة لخدمات المصادقة والمشتركين والكروت والشبكة من مكان واحد. كل عملية تُسجَّل في سجل التدقيق وتتم بأمان."
+msgstr "Full management of authentication, subscribers, cards, and network from one place. Every action is recorded in the audit log and carried out securely."
+
+msgid "إدارة المشتركين والكروت"
+msgstr "Subscriber and card management"
+
+msgid "تحكّم الراوترات والشبكة"
+msgstr "Router and network control"
+
+msgid "ضوابط أمان وسجلّات تدقيق"
+msgstr "Security controls and audit logs"
+
+msgid "تقارير ومتابعة لحظية"
+msgstr "Real-time reports and monitoring"
+
+msgid "تسجيل الدخول"
+msgstr "Sign In"
+
+msgid "أدخل بيانات حساب الإدارة للوصول إلى لوحة التحكم."
+msgstr "Enter your admin account credentials to access the dashboard."
+
+msgid "اسم المستخدم"
+msgstr "Username"
+
+msgid "مثال: admin"
+msgstr "e.g. admin"
+
+msgid "كلمة المرور"
+msgstr "Password"
+
+msgid "إظهار كلمة المرور"
+msgstr "Show password"
+
+msgid "دخول"
+msgstr "Sign in"
+
+msgid "استخدم بيانات المدير التي أنشأتها عند التثبيت."
+msgstr "Use the administrator credentials you created during setup."

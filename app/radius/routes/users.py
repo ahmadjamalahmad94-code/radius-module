@@ -9,7 +9,7 @@ Hybrid storage:
 from __future__ import annotations
 
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from flask import Blueprint, abort, flash, redirect, render_template, request, session, url_for
 
@@ -135,6 +135,63 @@ def _resolve_temp_speed_window(flat_meta: dict, *, enabled: bool, now: datetime)
         flat_meta.pop("temporary_speed_to", None)
 
 
+def _profile_temp_speed_state(sub, now: datetime) -> dict:
+    """حالة «السرعة المؤقتة» لصفحة ملف المشترك (عرض فقط).
+
+    تُحسب نهاية النافذة حصراً من temporary_speed_to (أو from + duration) —
+    نفس منطق صفحة «المتصلون الآن» (#50a): لا fallback على updated_at إطلاقاً
+    حتى لا يقفز العدّاد عند أي تعديل غير متعلّق على السجل.
+
+    يعيد dict جاهزاً للقالب:
+      active / expired / unknown  — أعلام الحالة
+      ends_at        — ISO نصّي للعرض («ينتهي: ...»)
+      ends_at_epoch  — ثوانٍ Unix (UTC) يستهلكها عدّاد JS الحيّ، فالعدّاد
+                       يستمر من وقت النهاية المخزَّن بعد أي إعادة فتح للصفحة
+                       (لا يُعاد تشغيله ولا يتجمّد)
+      remaining_seconds — لقطة أولية للعرض قبل أول tick
+      down_kbps / up_kbps / duration_minutes — قيم النافذة الحالية
+    """
+    meta = _parse_metadata(getattr(sub, "metadata", None))
+    flat = _grouped_to_flat(meta)
+    # خدمة temp_speed المشتركة تكتب مفاتيح النافذة في المستوى الأعلى للـ
+    # metadata (وليس داخل advanced) — التقط الاثنين.
+    for k, v in meta.items():
+        if not isinstance(v, dict):
+            flat.setdefault(k, v)
+
+    def _i(key) -> int:
+        try:
+            return int(float(str(flat.get(key) or "0").strip() or 0))
+        except (TypeError, ValueError):
+            return 0
+
+    has_flag = bool(getattr(sub, "temporary_speed", False))
+    started_at = _parse_iso_naive(flat.get("temporary_speed_from"))
+    ends_at = _parse_iso_naive(flat.get("temporary_speed_to"))
+    duration_min = _i("temporary_speed_duration_minutes")
+    if not ends_at and started_at and duration_min > 0:
+        ends_at = started_at + timedelta(minutes=duration_min)
+
+    unknown = bool(has_flag and not ends_at)
+    remaining = int((ends_at - now).total_seconds()) if ends_at else None
+    active = bool(has_flag and (unknown or (remaining is not None and remaining > 0)))
+    # epoch بالـ UTC — القيم المخزّنة naive-UTC، والعدّاد في المتصفح يقارن
+    # بـ Date.now() (UTC ضمنياً) فلا يتأثر بالمنطقة الزمنية للجهاز.
+    ends_at_epoch = int(ends_at.replace(tzinfo=timezone.utc).timestamp()) if ends_at else 0
+    return {
+        "has_flag": has_flag,
+        "active": active,
+        "unknown": unknown,
+        "expired": bool(has_flag and ends_at and not active),
+        "ends_at": ends_at.isoformat(timespec="seconds") if ends_at else "",
+        "ends_at_epoch": ends_at_epoch,
+        "remaining_seconds": max(0, remaining) if remaining is not None else None,
+        "down_kbps": _i("temporary_download_speed_kbps") or int(getattr(sub, "download_speed_kbps", 0) or 0),
+        "up_kbps": _i("temporary_upload_speed_kbps") or int(getattr(sub, "upload_speed_kbps", 0) or 0),
+        "duration_minutes": duration_min,
+    }
+
+
 def register_users_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/users", "users_list", users_list, methods=["GET"])
     bp.add_url_rule("/subscribers", "subscribers_list", users_list, methods=["GET"])
@@ -154,17 +211,36 @@ def register_users_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/users/<username>/delete", "users_delete", users_delete, methods=["POST"])
     bp.add_url_rule("/users/bulk-delete", "users_bulk_delete", users_bulk_delete, methods=["POST"])
     bp.add_url_rule("/users/<username>/toggle", "users_toggle", users_toggle, methods=["POST"])
+    bp.add_url_rule("/users/toggle-bulk", "users_toggle_bulk", users_toggle_bulk, methods=["POST"])
     bp.add_url_rule("/users/<username>/extend", "users_extend", users_extend, methods=["POST"])
+    bp.add_url_rule("/users/extend-bulk", "users_extend_bulk", users_extend_bulk, methods=["POST"])
     bp.add_url_rule("/users/<username>/change-plan", "users_change_plan", users_change_plan, methods=["POST"])
     bp.add_url_rule("/users/<username>/sms", "users_send_sms", users_send_sms, methods=["POST"])
+    bp.add_url_rule("/users/sms-bulk", "users_send_sms_bulk", users_send_sms_bulk, methods=["POST"])
     bp.add_url_rule(
         "/users/<username>/quota/reset-daily",
         "users_quota_reset_daily",
         users_quota_reset_daily,
         methods=["POST"],
     )
+    bp.add_url_rule(
+        "/users/quota/reset-daily-bulk",
+        "users_quota_reset_daily_bulk",
+        users_quota_reset_daily_bulk,
+        methods=["POST"],
+    )
     bp.add_url_rule("/users/<username>/quota/topup", "users_quota_topup", users_quota_topup, methods=["POST"])
+    bp.add_url_rule("/users/quota/topup-bulk", "users_quota_topup_bulk", users_quota_topup_bulk, methods=["POST"])
     bp.add_url_rule("/users/<username>/balance/add", "users_balance_add", users_balance_add, methods=["POST"])
+    bp.add_url_rule("/users/balance/add-bulk", "users_balance_add_bulk", users_balance_add_bulk, methods=["POST"])
+    # إلغاء السرعة المؤقتة من صفحة ملف المشترك — نفس الخدمة المشتركة التي
+    # تستخدمها شاشة «المتصلون الآن» وصفحة التعديل (CoA استرجاع فوري).
+    bp.add_url_rule(
+        "/users/<username>/temp-speed/cancel",
+        "users_temp_speed_cancel",
+        users_temp_speed_cancel,
+        methods=["POST"],
+    )
 
 
 def _actor() -> str:
@@ -180,6 +256,25 @@ def _form_float(name: str, default: float = 0.0) -> float:
     if not raw:
         return default
     return float(raw)
+
+
+def _bulk_usernames() -> list[str]:
+    """قراءة أسماء المشتركين المحدَّدين من حقل `usernames` المتكرر.
+
+    نفس نمط الحذف/التبديل/الرسائل الجماعية: يتسامح مع قيمة واحدة مفصولة
+    بفواصل، ويزيل الفراغات والتكرار مع الحفاظ على الترتيب.
+    """
+    raw = request.form.getlist("usernames")
+    if len(raw) == 1 and "," in raw[0]:
+        raw = raw[0].split(",")
+    seen: set[str] = set()
+    usernames: list[str] = []
+    for name in raw:
+        name = (name or "").strip()
+        if name and name not in seen:
+            seen.add(name)
+            usernames.append(name)
+    return usernames
 
 
 def _parse_loan_actions() -> list[dict]:
@@ -608,6 +703,27 @@ def _delegate_temp_speed(username: str, before) -> None:
             "temp-speed delegation failed for %s", username)
 
 
+def users_temp_speed_cancel(username: str):
+    """إلغاء السرعة المؤقتة فوراً من صفحة ملف المشترك (زر X بجانب العدّاد).
+
+    يمرّ عبر الخدمة المشتركة services/temp_speed.cancel_temp_speed — نفس
+    الإلغاء المستخدم في شاشة «المتصلون الآن» وصفحة التعديل: CoA استرجاع فوري
+    للجلسة الحيّة + مسح أعلام النافذة. محمي بصلاحية users.edit (انظر
+    _PERM_GUARDED في blueprint.py) ومقيّد بالـ tenant داخل الخدمة."""
+    try:
+        from ..services.temp_speed import cancel_temp_speed
+        result = cancel_temp_speed(tenant_id=_tid(), actor=_actor(), username=username)
+        if result.get("reverted"):
+            flash(f"تم إلغاء السرعة المؤقتة لـ «{username}» وأُعيدت السرعة الطبيعية.", "success")
+        else:
+            flash("لا توجد سرعة مؤقتة فعّالة لهذا المشترك.", "warning")
+    except Exception:  # noqa: BLE001 — الإلغاء يجب ألا يكسر الصفحة
+        import logging
+        logging.getLogger(__name__).exception("profile temp-speed cancel failed for %s", username)
+        flash("تعذّر إلغاء السرعة المؤقتة — حاول مرة أخرى.", "error")
+    return redirect(url_for("radius.users_profile", username=username))
+
+
 def users_create():
     dto = _form_dto()
     try:
@@ -696,11 +812,26 @@ def users_profile(username: str):
     )
 
     tid = _tid()
+
+    # كنس نوافذ السرعة المؤقتة المنتهية قبل العرض — نفس مسار صفحة «المتصلون
+    # الآن» والعامل الخلفي (CoA استرجاع + مسح الأعلام)، فلا تعرض الصفحة
+    # «مؤقتة» لنافذة انتهت قبل ثوانٍ. آمن وidempotent، ولا يكسر العرض أبداً.
+    try:
+        from ..services.temp_speed import expire_due_temp_speeds
+        expire_due_temp_speeds(tenant_id=tid)
+    except Exception:  # noqa: BLE001 — العرض للقراءة فقط؛ الكنس اختياري
+        pass
+
     sub_obj = subscribers_repo.get_subscriber(tid, username)
     if not sub_obj:
         abort(404)
 
     plan = plans_repo.get_plan(tid, sub_obj.plan_id) if sub_obj.plan_id else None
+
+    # حالة السرعة المؤقتة (للهيرو + تبويب المعلومات): العدّاد الحيّ في القالب
+    # يحسب المتبقي كل ثانية من ends_at_epoch المخزَّن، فيستمر العدّ من وقت
+    # النهاية المحفوظ بعد كل إعادة فتح للصفحة (لا يُعاد تشغيله ولا يتجمّد).
+    temp_speed_state = _profile_temp_speed_state(sub_obj, datetime.utcnow())
 
     # ── 1. Sessions — same query the Card Checker uses for cards;
     #    callingstationid + nasporttype + bytes give us the full row.
@@ -998,6 +1129,7 @@ def users_profile(username: str):
         "radius/users_profile.html",
         sub=sub_obj,
         plan=plan,
+        temp_speed_state=temp_speed_state,
         profile=profile,
         session_rows=session_rows,
         session_views=session_views,
@@ -1326,6 +1458,60 @@ def users_toggle(username: str):
     return redirect(url_for("radius.users_list"))
 
 
+def users_toggle_bulk():
+    """تغيير الحالة (تفعيل/تعطيل) لعدة مشتركين محدَّدين في POST واحد.
+
+    يعيد استخدام نفس منطق التبديل الفردي — get(...) ثم enable/disable
+    حسب حالة كل مشترك على حدة، فالمعطَّل يُفعَّل والمفعَّل يُعطَّل.
+    الأسماء الفاشلة تُتخطّى وتُعرض في الملخص دون إيقاف الدفعة.
+    يستقبل الأسماء من حقل `usernames` المتكرر (نفس نمط الحذف الجماعي).
+    """
+    raw = request.form.getlist("usernames")
+    if len(raw) == 1 and "," in raw[0]:
+        raw = raw[0].split(",")
+    seen: set[str] = set()
+    usernames: list[str] = []
+    for name in raw:
+        name = (name or "").strip()
+        if name and name not in seen:
+            seen.add(name)
+            usernames.append(name)
+
+    if not usernames:
+        flash("لم يتم تحديد أي مشترك لتغيير الحالة.", "warning")
+        return redirect(url_for("radius.users_list"))
+
+    svc = get_users_service()
+    actor = _actor()
+    enabled_names: list[str] = []
+    disabled_names: list[str] = []
+    failed: list[str] = []
+    for name in usernames:
+        try:
+            u = svc.get(name)
+            if u.status == "enabled":
+                svc.disable(actor=actor, username=name)
+                disabled_names.append(name)
+            else:
+                svc.enable(actor=actor, username=name)
+                enabled_names.append(name)
+        except RadiusError:
+            failed.append(name)
+        except Exception:  # noqa: BLE001 — لا نوقف الدفعة بسبب مشترك واحد
+            failed.append(name)
+
+    if disabled_names:
+        preview = "، ".join(disabled_names[:10]) + ("…" if len(disabled_names) > 10 else "")
+        flash(f"تم تعطيل {len(disabled_names)} مشترك: {preview}", "warning")
+    if enabled_names:
+        preview = "، ".join(enabled_names[:10]) + ("…" if len(enabled_names) > 10 else "")
+        flash(f"تم تفعيل {len(enabled_names)} مشترك: {preview}", "success")
+    if failed:
+        preview = "، ".join(failed[:10]) + ("…" if len(failed) > 10 else "")
+        flash(f"تعذّر تغيير حالة {len(failed)} مشترك: {preview}", "error")
+    return redirect(url_for("radius.users_list"))
+
+
 def users_extend(username: str):
     try:
         m = int(request.form.get("minutes"))
@@ -1343,6 +1529,64 @@ def users_extend(username: str):
         flash("قيمة دقائق غير صحيحة", "error")
     except RadiusError as e:
         flash(e.message, "error")
+    return redirect(url_for("radius.users_list"))
+
+
+def users_extend_bulk():
+    """إضافة وقت لعدة مشتركين محدَّدين في POST واحد — المدة لكل مشترك على حدة.
+
+    يعيد استخدام نفس مسار التمديد الفردي — get_users_service().extend_time()
+    — لكل اسم. في الوضع المدفوع/الدين تُحتسب القيمة لكل مشترك من سعره
+    الفعلي (العرض/المخصّص) بنفس معادلة الواجهة الفردية، لأن الأسعار تختلف
+    بين المشتركين. الأسماء الفاشلة تُتخطّى وتُعرض دون إيقاف الدفعة.
+    """
+    usernames = _bulk_usernames()
+    if not usernames:
+        flash("لم يتم تحديد أي مشترك لإضافة الوقت.", "warning")
+        return redirect(url_for("radius.users_list"))
+    try:
+        minutes = int(request.form.get("minutes"))
+        if minutes <= 0:
+            raise ValueError
+    except (TypeError, ValueError):
+        flash("قيمة دقائق غير صحيحة", "error")
+        return redirect(url_for("radius.users_list"))
+
+    charge_mode = (request.form.get("charge_mode") or "free").strip()
+    currency = (request.form.get("currency") or default_currency()).strip()
+    notes = (request.form.get("notes") or "").strip()
+    svc = get_users_service()
+    acc = service_from_context()
+    actor = _actor()
+    done = 0
+    failed: list[str] = []
+    for name in usernames:
+        try:
+            amount = 0.0
+            if charge_mode in {"paid", "debt"}:
+                # تسعير لكل مشترك: سعره الفعلي × (المدة المضافة ÷ مدة باقته).
+                basis = acc.price_basis(svc.get(name))
+                price = float(basis.get("price") or 0)
+                plan_min = int(basis.get("minutes") or 0)
+                if price > 0 and plan_min > 0:
+                    amount = round(price * (minutes / plan_min), 2)
+            svc.extend_time(
+                actor=actor, username=name, minutes=minutes,
+                charge_mode=charge_mode, amount=amount,
+                currency=currency, notes=notes,
+            )
+            done += 1
+        except RadiusError:
+            failed.append(name)
+        except Exception:  # noqa: BLE001 — لا نوقف الدفعة بسبب مشترك واحد
+            failed.append(name)
+
+    mode_label = {"free": "مجانية", "paid": "مدفوعة", "debt": "على الدين"}.get(charge_mode, charge_mode)
+    if done:
+        flash(f"تم تمديد {done} مشترك بمقدار {minutes} دقيقة لكلٍّ منهم ({mode_label}).", "success")
+    if failed:
+        preview = "، ".join(failed[:10]) + ("…" if len(failed) > 10 else "")
+        flash(f"تعذّر تمديد {len(failed)} مشترك: {preview}", "warning")
     return redirect(url_for("radius.users_list"))
 
 
@@ -1375,14 +1619,64 @@ def users_change_plan(username: str):
 
 def users_send_sms(username: str):
     try:
+        channel = (request.form.get("channel") or "sms").strip().lower()
         result = get_users_service().send_sms(
             actor=_actor(),
             username=username,
             message=request.form.get("message") or "",
+            channel=channel,
         )
-        flash(f"تمت إضافة رسالة SMS إلى قائمة الإرسال ({result.get('queued_count', 0)}).", "success")
+        label = "واتساب" if channel == "whatsapp" else "SMS"
+        flash(f"تمت إضافة رسالة {label} إلى قائمة الإرسال ({result.get('queued_count', 0)}).", "success")
     except RadiusError as e:
         flash(e.message, "error")
+    return redirect(url_for("radius.users_list"))
+
+
+def users_send_sms_bulk():
+    """إرسال رسالة واحدة لعدة مشتركين محدَّدين في POST واحد.
+
+    يعيد استخدام نفس مسار الإرسال الفردي — get_users_service().send_sms()
+    — لكل اسم على حدة (تدقيق + فحص رقم الجوال لكل مشترك)، فالأسماء
+    الفاشلة (بدون جوال مثلًا) تُتخطّى وتُعرض في الملخص دون إيقاف الدفعة.
+    يستقبل الأسماء من حقل `usernames` المتكرر (نفس نمط الحذف الجماعي).
+    """
+    raw = request.form.getlist("usernames")
+    if len(raw) == 1 and "," in raw[0]:
+        raw = raw[0].split(",")
+    seen: set[str] = set()
+    usernames: list[str] = []
+    for name in raw:
+        name = (name or "").strip()
+        if name and name not in seen:
+            seen.add(name)
+            usernames.append(name)
+
+    if not usernames:
+        flash("لم يتم تحديد أي مشترك للإرسال.", "warning")
+        return redirect(url_for("radius.users_list"))
+
+    channel = (request.form.get("channel") or "sms").strip().lower()
+    message = request.form.get("message") or ""
+    svc = get_users_service()
+    actor = _actor()
+    sent = 0
+    failed: list[str] = []
+    for name in usernames:
+        try:
+            svc.send_sms(actor=actor, username=name, message=message, channel=channel)
+            sent += 1
+        except RadiusError:
+            failed.append(name)
+        except Exception:  # noqa: BLE001 — لا نوقف الدفعة بسبب مشترك واحد
+            failed.append(name)
+
+    label = "واتساب" if channel == "whatsapp" else "SMS"
+    if sent:
+        flash(f"تمت إضافة رسالة {label} إلى قائمة الإرسال لـ {sent} مشترك.", "success")
+    if failed:
+        preview = "، ".join(failed[:10]) + ("…" if len(failed) > 10 else "")
+        flash(f"تعذّر الإرسال لـ {len(failed)} مشترك (غالبًا بلا رقم جوال): {preview}", "warning")
     return redirect(url_for("radius.users_list"))
 
 
@@ -1411,6 +1705,50 @@ def users_quota_reset_daily(username: str):
     return redirect(url_for("radius.users_list"))
 
 
+def users_quota_reset_daily_bulk():
+    """استعادة الكوتة اليومية لعدة مشتركين محدَّدين في POST واحد.
+
+    يعيد استخدام نفس مسار الاستعادة الفردي — reset_daily_quota() — لكل اسم.
+    في الوضع المدفوع/الدين تُسجَّل القيمة المُدخلة لكل مشترك على حدة.
+    الأسماء الفاشلة تُتخطّى وتُعرض في الملخص دون إيقاف الدفعة.
+    """
+    usernames = _bulk_usernames()
+    if not usernames:
+        flash("لم يتم تحديد أي مشترك لاستعادة الكوتة.", "warning")
+        return redirect(url_for("radius.users_list"))
+    charge_mode = (request.form.get("charge_mode") or "free").strip()
+    try:
+        amount = _form_float("amount", 0.0)
+    except (TypeError, ValueError):
+        flash("قيمة المبلغ غير صحيحة.", "error")
+        return redirect(url_for("radius.users_list"))
+    currency = (request.form.get("currency") or default_currency()).strip()
+    notes = (request.form.get("notes") or "").strip()
+    svc = get_users_service()
+    actor = _actor()
+    done = 0
+    failed: list[str] = []
+    for name in usernames:
+        try:
+            svc.reset_daily_quota(
+                actor=actor, username=name, charge_mode=charge_mode,
+                amount=amount, currency=currency, notes=notes,
+            )
+            done += 1
+        except RadiusError:
+            failed.append(name)
+        except Exception:  # noqa: BLE001 — لا نوقف الدفعة بسبب مشترك واحد
+            failed.append(name)
+
+    mode_label = {"free": "مجانية", "paid": "مدفوعة", "debt": "على الدين"}.get(charge_mode, charge_mode)
+    if done:
+        flash(f"تمت استعادة الكوتة اليومية ({mode_label}) لـ {done} مشترك.", "success")
+    if failed:
+        preview = "، ".join(failed[:10]) + ("…" if len(failed) > 10 else "")
+        flash(f"تعذّرت الاستعادة لـ {len(failed)} مشترك: {preview}", "warning")
+    return redirect(url_for("radius.users_list"))
+
+
 def users_quota_topup(username: str):
     try:
         quota_mb = int(request.form.get("quota_mb") or 0)
@@ -1432,6 +1770,53 @@ def users_quota_topup(username: str):
         flash("قيمة الكوتة أو المبلغ غير صحيحة.", "error")
     except RadiusError as e:
         flash(e.message, "error")
+    return redirect(url_for("radius.users_list"))
+
+
+def users_quota_topup_bulk():
+    """إضافة كوتة لعدة مشتركين محدَّدين في POST واحد — الحجم لكل مشترك.
+
+    يعيد استخدام نفس مسار الإضافة الفردي — add_quota() — لكل اسم.
+    الحجم والمبلغ (إن وُجد) يُطبَّقان لكل مشترك على حدة.
+    الأسماء الفاشلة تُتخطّى وتُعرض في الملخص دون إيقاف الدفعة.
+    """
+    usernames = _bulk_usernames()
+    if not usernames:
+        flash("لم يتم تحديد أي مشترك لإضافة الكوتة.", "warning")
+        return redirect(url_for("radius.users_list"))
+    try:
+        quota_mb = int(request.form.get("quota_mb") or 0)
+        amount = _form_float("amount", 0.0)
+    except (TypeError, ValueError):
+        flash("قيمة الكوتة أو المبلغ غير صحيحة.", "error")
+        return redirect(url_for("radius.users_list"))
+    quota_target = (request.form.get("quota_target") or "combined").strip()
+    charge_mode = (request.form.get("charge_mode") or "free").strip()
+    currency = (request.form.get("currency") or default_currency()).strip()
+    notes = (request.form.get("notes") or "").strip()
+    svc = get_users_service()
+    actor = _actor()
+    done = 0
+    failed: list[str] = []
+    for name in usernames:
+        try:
+            svc.add_quota(
+                actor=actor, username=name, quota_mb=quota_mb,
+                quota_target=quota_target, charge_mode=charge_mode,
+                amount=amount, currency=currency, notes=notes,
+            )
+            done += 1
+        except RadiusError:
+            failed.append(name)
+        except Exception:  # noqa: BLE001 — لا نوقف الدفعة بسبب مشترك واحد
+            failed.append(name)
+
+    mode_label = {"free": "مجانية", "paid": "مدفوعة", "debt": "على الدين"}.get(charge_mode, charge_mode)
+    if done:
+        flash(f"تمت إضافة {quota_mb} MB كوتة {mode_label} لـ {done} مشترك (لكلٍّ منهم).", "success")
+    if failed:
+        preview = "، ".join(failed[:10]) + ("…" if len(failed) > 10 else "")
+        flash(f"تعذّرت إضافة الكوتة لـ {len(failed)} مشترك: {preview}", "warning")
     return redirect(url_for("radius.users_list"))
 
 
@@ -1476,4 +1861,49 @@ def users_balance_add(username: str):
         f"تمت إضافة رصيد نقدي: {credited:.2f}{note}. الرصيد الحالي {float(saved.balance or 0):.2f}.",
         "success",
     )
+    return redirect(url_for("radius.users_list"))
+
+
+def users_balance_add_bulk():
+    """إضافة رصيد نقدي لعدة مشتركين محدَّدين في POST واحد — المبلغ لكل مشترك.
+
+    يعيد استخدام نفس مسار الإضافة الفردي — add_cash_balance() — لكل اسم.
+    تسوية السلف المفتوحة (loan_actions) ميزة فردية لمشترك واحد فتُتجاهل
+    هنا — يُضاف المبلغ كاملًا لمحفظة كل مشترك. الأسماء الفاشلة تُتخطّى
+    وتُعرض في الملخص دون إيقاف الدفعة.
+    """
+    usernames = _bulk_usernames()
+    if not usernames:
+        flash("لم يتم تحديد أي مشترك لإضافة الرصيد.", "warning")
+        return redirect(url_for("radius.users_list"))
+    try:
+        amount = _form_float("amount")
+        if amount <= 0:
+            raise ValueError
+    except (TypeError, ValueError):
+        flash("قيمة الرصيد النقدي غير صحيحة.", "error")
+        return redirect(url_for("radius.users_list"))
+    currency = (request.form.get("currency") or default_currency()).strip()
+    notes = (request.form.get("notes") or "").strip()
+    svc = get_users_service()
+    actor = _actor()
+    done = 0
+    failed: list[str] = []
+    for name in usernames:
+        try:
+            svc.add_cash_balance(
+                actor=actor, username=name, amount=amount,
+                currency=currency, notes=notes, settled_deduction=0.0,
+            )
+            done += 1
+        except RadiusError:
+            failed.append(name)
+        except Exception:  # noqa: BLE001 — لا نوقف الدفعة بسبب مشترك واحد
+            failed.append(name)
+
+    if done:
+        flash(f"تمت إضافة رصيد نقدي {amount:.2f} لكل مشترك من {done} مشترك.", "success")
+    if failed:
+        preview = "، ".join(failed[:10]) + ("…" if len(failed) > 10 else "")
+        flash(f"تعذّرت إضافة الرصيد لـ {len(failed)} مشترك: {preview}", "warning")
     return redirect(url_for("radius.users_list"))

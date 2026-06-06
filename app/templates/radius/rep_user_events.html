@@ -13,13 +13,15 @@
 {% block page_sub %}<span class="sub">{{ items|length }} حدث</span>{% endblock %}
 
 {% block content %}
-{% include "radius/reports_nav.html" %}
+{# متحكّم «انتقال سريع» المضغوط — يُحقن في صف عنوان الهيرو بدل الشريطين الكبيرين #}
+{% set _report_jump %}{% include "radius/reports_nav.html" %}{% endset %}
 
 {# ───── Merged hero: title + subtitle + KPI strip + integrated filters ───── #}
 {% call hub.megahero(
   "أحداث المستخدمين",
   subtitle="كل حدث يخصّ مشتركًا — إنشاء، تعديل، تعطيل، تمديد، أو حذف — مع ملخص مفهوم.",
   icon="users-rectangle",
+  actions_html=_report_jump,
   kpis=[
     {'label': 'إجمالي الأحداث', 'value': total, 'icon': 'users-rectangle', 'variant': 'brand'},
   ],

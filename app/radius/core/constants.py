@@ -190,14 +190,80 @@ PERM_SETTINGS_EDIT = "settings.edit"
 PERM_AUDIT_VIEW = "audit.view"
 PERM_API_USE = "api.use"
 
+# ─── صلاحيات تشغيلية دقيقة للمشتركين (توسعة 2026-06) ───
+# كل مفتاح هنا يطابق endpoints فعلية في routes/users.py + accounting.py —
+# لا مفاتيح لميزات غير موجودة. التحكّم الدقيق بكل حركة على المشترك.
+PERM_USERS_CHANGE_STATUS = "users.change_status"   # تفعيل/تعطيل (users_toggle/_bulk)
+PERM_USERS_EXTEND = "users.extend"                 # تجديد/تمديد فردي وجماعي (users_extend/_bulk)
+PERM_USERS_CHANGE_PLAN = "users.change_plan"       # تغيير الباقة (users_change_plan)
+PERM_USERS_QUOTA = "users.quota"                   # إضافة كوتا + تصفير يومي (quota_topup/reset_daily ±bulk)
+PERM_USERS_BALANCE_ADD = "users.balance_add"       # إضافة رصيد للمشترك (users_balance_add/_bulk)
+PERM_USERS_PAYMENTS = "users.payments"             # شحن نقدي/دفعات (users_payment_create/_bulk)
+PERM_USERS_LOANS = "users.loans"                   # سلفة/تفعيل بالدَّين + تسوية (users_loan_*)
+PERM_USERS_SEND_MESSAGE = "users.send_message"     # إرسال رسالة/SMS (users_send_sms/_bulk)
+PERM_USERS_TEMP_SPEED = "users.temp_speed"         # السرعة المؤقتة (online_temp_speed + cancel)
+PERM_USERS_EXPORT = "users.export"                 # تصدير الجداول (export_table)
+
+# ─── المتصلون الآن (شاشة /online) — مفاتيح مستقلة عن sessions.* القديمة ───
+PERM_ONLINE_VIEW = "online.view"                   # عرض شاشة المتصلين (online_list)
+PERM_ONLINE_DISCONNECT = "online.disconnect"       # قطع اتصال (online_disconnect)
+PERM_ONLINE_LOCK_MAC = "online.lock_mac"           # إغلاق على MAC (online_lock_mac)
+PERM_ONLINE_LOCK_IP = "online.lock_ip"             # تثبيت IP (online_lock_ip)
+
+# ─── عمليات البطاقات الدقيقة (routes/cards.py + recharge + print) ───
+PERM_CARDS_EDIT_BATCH = "cards.edit_batch"         # تعديل حزمة (cards_batch_edit)
+PERM_CARDS_BATCH_OPS = "cards.batch_ops"           # عمليات جماعية: أرشفة/استعادة/تفعيل/تعطيل (cards_batches_bulk + cards_batch_cards_actions)
+PERM_CARDS_IMPORT = "cards.import"                 # استيراد بطاقات (cards_batches_import)
+PERM_CARDS_VERIFY = "cards.verify"                 # فاحص البطاقات: كل عمليات الفحص والتعديل على بطاقة مفردة
+                                                   # (cards_checker POST: تفعيل/تعطيل/تثبيت MAC/تعديل وقت/سرعة/حذف ناعم)
+PERM_CARDS_RESTORE = "cards.restore"               # استعادة من سلة المحذوفات (recycle_bin_restore)
+PERM_CARDS_RECHARGE = "cards.recharge"             # حزم بطاقات الشحن (cards_recharge_*)
+PERM_CARDS_PRINT = "cards.print"                   # حزم الطباعة (cards_print_*)
+
+# ─── أسعار العروض للمدراء (/admins/pricing — migration 098) ───
+PERM_ADMIN_PRICING_VIEW = "admin_pricing.view"     # عرض صفحة الأسعار (admin_pricing_page)
+PERM_ADMIN_PRICING_EDIT = "admin_pricing.edit"     # حفظ سعر خاص (admin_pricing_save)
+PERM_ADMIN_PRICING_RESET = "admin_pricing.reset"   # إعادة للسعر الرسمي (admin_pricing_reset/_all)
+
+# ─── محافظ المدراء/الموزعين (business operators) ───
+PERM_ADMINS_DEPOSIT = "admins.deposit_balance"     # شحن محفظة مشغّل (business_operator_recharge)
+PERM_ADMINS_POLICY = "admins.policy"               # ضبط صلاحيات/حدود المشغّل (business_operator_policy)
+
+# ─── التقارير ───
+PERM_REPORTS_VIEW = "reports.view"                 # كل صفحات /reports (الجلسات، MAC، أحداث المدراء…)
+PERM_REPORTS_FINANCE = "reports.finance"           # دفتر القيود والتقارير المالية (finance_ledger/finance_reports)
+
+# ─── النطاق والإشراف (scope.*) — مفاتيح معرَّفة للتوسع المرحلي ───
+# تنبيه: لا يوجد بعدُ فحص مِلكية (manager_id) في طبقة المسارات؛ هذه
+# المفاتيح مسجَّلة الآن في الكتالوج وتُمنح/تُحجب من الأدوار، وسيُفعَّل
+# فرضها في الخدمات عند بناء فلترة المِلكية — لا تخترع فحوصًا هنا.
+PERM_SCOPE_ACT_NON_OWNED = "scope.act_non_owned"           # التصرّف بمشترك غير تابع للمدير
+PERM_SCOPE_VIEW_ALL_SUBSCRIBERS = "scope.view_all_subscribers"  # رؤية كل المشتركين لا مشتركيه فقط
+PERM_SCOPE_VIEW_ALL_MANAGERS = "scope.view_all_managers"   # رؤية كل المدراء
+PERM_SCOPE_VIEW_ALL_CARDS = "scope.view_all_cards"         # رؤية كل البطاقات
+PERM_SCOPE_VIEW_ALL_REPORTS = "scope.view_all_reports"     # رؤية تقارير كل المدراء
+PERM_SCOPE_VIEW_PASSWORDS = "scope.view_passwords"         # كشف كلمات سر المشتركين/البطاقات
+                                                           # (cards_checker_api_reveal_password)
+
 ALL_PERMISSIONS: tuple[str, ...] = (
     PERM_DASHBOARD_VIEW,
     PERM_USERS_VIEW, PERM_USERS_CREATE, PERM_USERS_EDIT, PERM_USERS_DELETE, PERM_USERS_DISCONNECT,
+    PERM_USERS_CHANGE_STATUS, PERM_USERS_EXTEND, PERM_USERS_CHANGE_PLAN,
+    PERM_USERS_QUOTA, PERM_USERS_BALANCE_ADD, PERM_USERS_PAYMENTS, PERM_USERS_LOANS,
+    PERM_USERS_SEND_MESSAGE, PERM_USERS_TEMP_SPEED, PERM_USERS_EXPORT,
+    PERM_ONLINE_VIEW, PERM_ONLINE_DISCONNECT, PERM_ONLINE_LOCK_MAC, PERM_ONLINE_LOCK_IP,
     PERM_CARDS_VIEW, PERM_CARDS_GENERATE, PERM_CARDS_REVOKE,
+    PERM_CARDS_EDIT_BATCH, PERM_CARDS_BATCH_OPS, PERM_CARDS_IMPORT, PERM_CARDS_VERIFY,
+    PERM_CARDS_RESTORE, PERM_CARDS_RECHARGE, PERM_CARDS_PRINT,
     PERM_PLANS_VIEW, PERM_PLANS_CREATE, PERM_PLANS_EDIT, PERM_PLANS_DELETE,
     PERM_NAS_VIEW, PERM_NAS_CREATE, PERM_NAS_EDIT, PERM_NAS_DELETE,
     PERM_SESSIONS_VIEW, PERM_SESSIONS_DISCONNECT,
     PERM_ADMINS_VIEW, PERM_ADMINS_CREATE, PERM_ADMINS_EDIT, PERM_ADMINS_DELETE,
+    PERM_ADMINS_DEPOSIT, PERM_ADMINS_POLICY,
+    PERM_ADMIN_PRICING_VIEW, PERM_ADMIN_PRICING_EDIT, PERM_ADMIN_PRICING_RESET,
+    PERM_REPORTS_VIEW, PERM_REPORTS_FINANCE,
+    PERM_SCOPE_ACT_NON_OWNED, PERM_SCOPE_VIEW_ALL_SUBSCRIBERS, PERM_SCOPE_VIEW_ALL_MANAGERS,
+    PERM_SCOPE_VIEW_ALL_CARDS, PERM_SCOPE_VIEW_ALL_REPORTS, PERM_SCOPE_VIEW_PASSWORDS,
     PERM_SETTINGS_VIEW, PERM_SETTINGS_EDIT, PERM_AUDIT_VIEW,
     PERM_API_USE,
 )
@@ -213,14 +279,20 @@ DEFAULT_ROLE_PERMISSIONS = {
     ROLE_OPERATOR: (
         PERM_DASHBOARD_VIEW,
         PERM_USERS_VIEW, PERM_USERS_CREATE, PERM_USERS_EDIT, PERM_USERS_DISCONNECT,
-        PERM_CARDS_VIEW, PERM_CARDS_GENERATE,
+        # المفاتيح التشغيلية الدقيقة — المشغّل اليومي يحتاجها كلها
+        PERM_USERS_CHANGE_STATUS, PERM_USERS_EXTEND, PERM_USERS_CHANGE_PLAN,
+        PERM_USERS_QUOTA, PERM_USERS_SEND_MESSAGE, PERM_USERS_TEMP_SPEED, PERM_USERS_EXPORT,
+        PERM_ONLINE_VIEW, PERM_ONLINE_DISCONNECT, PERM_ONLINE_LOCK_MAC, PERM_ONLINE_LOCK_IP,
+        PERM_CARDS_VIEW, PERM_CARDS_GENERATE, PERM_CARDS_VERIFY,
         PERM_PLANS_VIEW, PERM_NAS_VIEW,
         PERM_SESSIONS_VIEW, PERM_SESSIONS_DISCONNECT,
+        PERM_REPORTS_VIEW,
         PERM_AUDIT_VIEW,
     ),
     ROLE_SUPPORT: (
         PERM_DASHBOARD_VIEW,
         PERM_USERS_VIEW, PERM_USERS_DISCONNECT,
+        PERM_ONLINE_VIEW, PERM_ONLINE_DISCONNECT,
         PERM_CARDS_VIEW, PERM_PLANS_VIEW, PERM_NAS_VIEW,
         PERM_SESSIONS_VIEW, PERM_SESSIONS_DISCONNECT,
     ),

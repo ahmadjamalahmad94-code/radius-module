@@ -5,6 +5,11 @@
 {% block page_title %}سجل التدقيق{% endblock %}
 {% block page_sub %}<span class="sub">(آخر 300 عملية)</span>{% endblock %}
 
+{% block head_extra %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
+{% endblock %}
+
 {% block content %}
 {{ hub.hero(
   "سجل التدقيق",
@@ -14,7 +19,7 @@
 
 {% call hub.section("الأحداث الأخيرة", icon="list-check", meta=(items|length ~ ' حدث') if items else '', flush=True) %}
   {% if items %}
-    <div class="hub-table-wrap" style="border:none">
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25" style="border:none">
       <table class="hub-table">
         <thead>
           <tr>
@@ -52,4 +57,5 @@
     {{ hub.empty("لا توجد سجلات بعد.", icon="clock-rotate-left") }}
   {% endif %}
 {% endcall %}
+<script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
 {% endblock %}

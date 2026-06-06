@@ -1,28 +1,51 @@
-{# Roles list — UNIFIED DESIGN SYSTEM (merged hero + help panel).
-   Same backend data: roles, perms. Zero route/behaviour change.
-   Card grid kept (role data is card-shaped, not row-shaped). #}
+{# ═══════════════════════════════════════════════════════════════════════
+   الأدوار والصلاحيات — إعادة تصميم على نظام hub-hero-shell الموحّد (2026-06-05)
+
+   بيانات المسار (radius.roles_list — بدون أي تغيير في السلوك):
+     roles  قائمة Role {id, name, display_name, description, permissions,
+                        is_system, color}
+     perms  كل مفاتيح الصلاحيات المتاحة (ALL_PERMISSIONS)
+
+   البنية المبسّطة:
+     1. شريط تنقّل قسم «الأدوار والصلاحيات» المشترك (عقد اختبار قائم:
+        data-testid="roles-permissions-nav").
+     2. صدفة هيرو واحدة (hub-hero-shell): عنوان + سطر تعريفي + مؤشرات بصف
+        واحد + سطر إرشادي مع hub-hint — بلا هيروات مكدّسة.
+     3. شبكة بطاقات الأدوار (بيانات الدور بطاقية لا صفّية): التسمية العربية
+        لكل صلاحية مع المفتاح التقني داخل <bdi> mono.
+     4. مودال أرشفة عائم موحّد (uds-modal) بدل confirm() — نفس مسار
+        radius.roles_delete تمامًا.
+   عقود ثابتة: roles_new / roles_edit / roles_delete + admins_list كما هي.
+   ═══════════════════════════════════════════════════════════════════════ #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
+{% import "radius/_perm_labels.html" as pl %}
 
-{% block title %}الأدوار والصلاحيات{% endblock %}
+{% block title %}الأدوار والصلاحيات — هوب ريديوس{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-key"></i>{% endblock %}
 {% block page_title %}الأدوار والصلاحيات{% endblock %}
-{% block page_sub %}<span class="sub">{{ roles|length }} دور · {{ perms|length }} صلاحية</span>{% endblock %}
+{% block page_sub %}<span class="sub"><bdi dir="ltr">{{ roles|length }}</bdi> دور · <bdi dir="ltr">{{ perms|length }}</bdi> صلاحية متاحة</span>{% endblock %}
 
-{% block head_extra %}
-{{ super() }}
+{% block head_extra %}{{ super() }}
+{# نظام التصميم الموحّد (uds): المودال العائم + تلوينات الحبوب #}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
 <style>
-/* Roles card grid */
+/* ── شبكة بطاقات الأدوار ───────────────────────────────────────────── */
 .rl-grid{
   display:grid;
-  grid-template-columns:repeat(auto-fit, minmax(290px, 1fr));
+  grid-template-columns:repeat(auto-fill, minmax(300px, 1fr));
   gap:14px;
 }
+/* بطاقات موحّدة الشكل واللون: نفس الحدود ونفس الشريط البنفسجي ونفس الارتفاع
+   داخل صف الشبكة — لا ألوان مخصّصة لكل دور (طلب 2026-06-05: «كل البطاقات
+   نفس الشكل واللون»). لون الدور المخزّن يبقى محفوظًا في البيانات ويُستخدم
+   في أماكن أخرى (شارة الدور في قائمة المدراء). */
 .rl-card{
-  background:#fff;
+  background:var(--hub-bg-card, #fff);
   border:1px solid var(--hub-border-soft);
   border-radius:var(--hub-r-lg);
-  padding:18px 20px;
+  padding:16px 18px;
+  height:100%;
   display:flex; flex-direction:column; gap:10px;
   position:relative; overflow:hidden;
   box-shadow:var(--hub-shadow-sm, 0 1px 2px rgba(0,0,0,.04));
@@ -30,143 +53,154 @@
              box-shadow var(--hub-anim-fast) var(--hub-ease);
 }
 .rl-card:hover{ transform:translateY(-1px); box-shadow:0 4px 14px rgba(0,0,0,.08); }
+/* شريط الحافة البادئة (RTL-safe) — بنفسجي العلامة لكل البطاقات بلا استثناء */
 .rl-card::before{
   content:""; position:absolute; top:0; inset-inline-start:0;
   width:3px; height:100%;
-  background:var(--c, var(--hub-brand));
+  background:var(--hub-brand, #6B5AED);
 }
-.rl-head{ display:flex; align-items:center; gap:10px; }
-.rl-name{ font-size:15px; font-weight:800; color:var(--hub-text); }
+.rl-head{ display:flex; align-items:flex-start; gap:10px; }
+.rl-name{ font-size:14px; font-weight:800; color:var(--hub-text); line-height:1.3; }
 .rl-tech{ font-family:var(--hub-mono); font-size:11px; color:var(--hub-text-mute); }
-.rl-perms-count{
-  margin-inline-start:auto;
-  background:var(--hub-brand-soft);
-  color:var(--hub-brand-ink);
-  padding:2px 10px; border-radius:999px;
-  font-size:11px; font-weight:800;
-}
-.rl-sys{
-  margin-inline-start:auto;
-  background:var(--hub-amber-soft);
-  color:var(--hub-amber-ink);
-  padding:2px 8px; border-radius:999px;
-  font-size:10.5px; font-weight:800;
-}
+.rl-badges{ margin-inline-start:auto; display:flex; gap:6px; align-items:center; flex-shrink:0; }
 .rl-desc{
   font-size:12.5px; color:var(--hub-text-soft);
-  min-height:32px; line-height:1.5;
+  line-height:1.6; min-height:20px;
 }
-.rl-chips{ display:flex; flex-wrap:wrap; gap:4px; margin-top:auto; }
-.rl-chip{
-  background:var(--hub-bg-soft);
-  color:var(--hub-text-soft);
-  padding:2px 8px; border-radius:999px;
-  font-size:10.5px; font-family:var(--hub-mono);
+/* حبوب الصلاحيات بنمط واحد موحّد لكل المجموعات: خلفية بنفسجية فاتحة
+   #F4F1FE + نص بحبر العلامة — تتجاهل عمدًا متغيّرات --pp-* اللونية التي
+   يحقنها perm_chip لكل مجموعة (التلوين المجموعاتي بقي معتمدًا في مصفوفة
+   roles_form فقط؛ هنا المطلوب شبكة هادئة موحّدة). الأيقونة الصغيرة تبقى
+   للتمييز السريع لكنها بلون موحّد أيضًا. */
+.rl-chips{ display:flex; flex-wrap:wrap; gap:5px; margin-top:auto; }
+.perm-pill{
+  display:inline-flex; align-items:center; gap:6px;
+  background:#F4F1FE;
+  border:1px solid color-mix(in srgb, var(--hub-brand, #6B5AED) 22%, transparent);
+  padding:3px 9px; border-radius:999px;
+  font-size:11px; color:var(--hub-brand-ink, #4F46B8); font-weight:700;
+  max-width:100%;
+  transition:transform var(--hub-anim-fast, .15s) var(--hub-ease, ease),
+             box-shadow var(--hub-anim-fast, .15s) var(--hub-ease, ease);
+}
+.perm-pill:hover{
+  transform:translateY(-1px);
+  box-shadow:0 2px 8px color-mix(in srgb, var(--hub-brand, #6B5AED) 25%, transparent);
+}
+.perm-pill-ico{ font-size:9.5px; color:var(--hub-brand, #6B5AED); flex-shrink:0; }
+.perm-pill-key{
+  font-family:var(--hub-mono); font-weight:400;
+  font-size:10px; color:var(--hub-brand-ink, #4F46B8); opacity:.7;
 }
 .rl-chip-more{
-  background:var(--hub-brand);
-  color:#fff;
-  padding:2px 8px; border-radius:999px;
-  font-size:10.5px; font-weight:700;
+  display:inline-flex; align-items:center;
+  background:#F4F1FE;
+  color:var(--hub-brand-ink, #4F46B8);
+  padding:3px 9px; border-radius:999px;
+  font-size:11px; font-weight:800;
 }
 .rl-actions{
-  display:flex; gap:6px; margin-top:6px;
+  display:flex; gap:6px; margin-top:4px;
   padding-top:10px;
   border-top:1px dashed var(--hub-border-soft);
 }
-.rl-actions > * { flex:1; }
-.rl-actions form{ margin:0; }
+.rl-actions > *{ flex:1; }
+.rl-actions form{ margin:0; display:flex; }
 .rl-actions form button{ width:100%; }
 </style>
 {% endblock %}
 
 {% block content %}
+{# شريط التنقّل المشترك بين صفحتي الأدوار ومركز الصلاحيات (عقد اختبار قائم) #}
 {% include "radius/roles_permissions_nav.html" %}
 
+{# عدّادات من النتائج الحالية (بلا استعلامات إضافية) #}
 {% set _sys = roles|selectattr('is_system')|list|length %}
 
-{# ───── Merged hero: title + actions + KPI strip (no filter bar) ───── #}
-{{ hub.megahero(
+{# ───── صدفة الهيرو الموحّدة: عنوان + سطر تعريفي + مؤشرات بصف واحد ───── #}
+<section class="hub-hero-shell" data-testid="roles-hero">
+{% call hub.megahero(
   "الأدوار والصلاحيات",
-  subtitle="تعريف أدوار المدراء بألوان وصلاحيات مخصّصة — كل دور يجمع مجموعة صلاحيات تُمنح للمشرفين.",
+  subtitle="كل دور حزمة صلاحيات تُسند للمدراء فتحدّد ما يصلون إليه — أنشئ الأدوار وعدّلها وامنحها من شاشة المدراء.",
   icon="key",
   actions_html='
-    <a class="hub-btn hub-btn--primary" href="' + url_for('radius.roles_new') + '">
+    <a class="hub-btn hub-btn--primary" href="' ~ url_for('radius.roles_new') ~ '">
       <i class="fa-solid fa-plus"></i> إضافة دور جديد
     </a>
-    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.admins_list') + '">
+    <a class="hub-btn hub-btn--secondary" href="' ~ url_for('radius.admins_list') ~ '">
       <i class="fa-solid fa-user-shield"></i> المدراء
     </a>',
   kpis=[
     {'label': 'إجمالي الأدوار',    'value': roles|length,        'icon': 'key',        'variant': 'brand'},
     {'label': 'أدوار النظام',      'value': _sys,                'icon': 'lock',       'variant': 'amber'},
-    {'label': 'أدوار مخصصة',       'value': roles|length - _sys, 'icon': 'user-pen',   'variant': 'green'},
+    {'label': 'أدوار مخصّصة',      'value': roles|length - _sys, 'icon': 'user-pen',   'variant': 'green'},
     {'label': 'الصلاحيات المتاحة', 'value': perms|length,        'icon': 'list-check', 'variant': 'blue'},
   ]
-) }}
+) %}
+  {# لا فلاتر خادمية في هذا المسار — سطر إرشادي بسيط بدلًا منها #}
+  <span class="hub-text-soft" style="font-size:12.5px;font-weight:700">
+    <i class="fa-solid fa-shield-halved" style="color:var(--hub-brand-ink)"></i>
+    امنح كل مشرف أقل صلاحيات تكفي لعمله — هذا أأمن لمنظومتك.
+  </span>
+  <span class="hub-spacer"></span>
+  <span class="hub-hint" tabindex="0"
+        data-hint="أدوار النظام محميّة: تُعدَّل صلاحياتها لكن لا تُحذف. أرشفة دور مخصّص لا تحذفه نهائيًا — يُستعاد من سلة المحذوفات. كل صلاحية تظهر بتسميتها العربية ومفتاحها التقني."><i class="fa-solid fa-info"></i></span>
+{% endcall %}
+</section>{# /hub-hero-shell #}
 
 {% if roles %}
-{# ───── Main (card grid) + help panel on the LEFT ───── #}
-{% call hub.worklayout(aside_html=hub.helppanel(
-  "كيف تقرأ هذه الصفحة؟",
-  intro="كل بطاقة هي دور إداري يجمع مجموعة من الصلاحيات. اللون يميّز الدور بصريًا، ويُمنح للمشرفين من شاشة المدراء.",
-  items=[
-    {'icon': 'key',         'text': 'العدّاد بجوار اسم الدور يوضّح كم صلاحية يضمّها هذا الدور.'},
-    {'icon': 'lock',        'text': 'أدوار النظام «SYS» محميّة — يمكن تعديلها لكن لا يمكن حذفها.'},
-    {'icon': 'user-shield', 'text': 'الأدوار المخصّصة تُنشأ وتُحذف بحرّية حسب احتياج فريقك.'},
-    {'icon': 'box-archive', 'text': 'أرشفة دور لا تحذفه نهائيًا — يمكن استعادته من سلة المحذوفات.'},
-  ],
-  note="امنح كل مشرف أقل صلاحيات تكفي لعمله — هذا أأمن لمنظومتك."
-)) %}
-  {% call hub.section("الأدوار المعرَّفة", icon="grip", meta=roles|length|string + " دور") %}
-    <div class="rl-grid">
-      {% for r in roles %}
-      <div class="rl-card" style="--c: {{ r.color or '#6B5AED' }}">
-        <div class="rl-head">
-          <i class="fa-solid fa-key" style="color: {{ r.color or '#6B5AED' }};font-size:18px"></i>
-          <div>
-            <div class="rl-name">{{ r.display_name or r.name }}</div>
-            <div class="rl-tech">{{ r.name }}</div>
-          </div>
-          {% if r.is_system %}
-            <span class="rl-sys" title="دور نظام — لا يمكن حذفه">SYS</span>
-          {% endif %}
-          <span class="rl-perms-count">{{ r.permissions|length }} صلاحية</span>
+{# ───── شبكة بطاقات الأدوار ───── #}
+{% call hub.section("الأدوار المعرَّفة", icon="grip",
+                    meta=roles|length|string ~ " دور") %}
+  <div class="rl-grid">
+    {% for r in roles %}
+    {# لا تلوين مخصّصًا لكل دور هنا — كل البطاقات بكسوة العلامة الموحّدة #}
+    <div class="rl-card">
+      <div class="rl-head">
+        <i class="fa-solid fa-key" style="color:var(--hub-brand, #6B5AED);font-size:17px;margin-top:2px"></i>
+        <div style="min-width:0">
+          <div class="rl-name">{{ r.display_name or r.name }}</div>
+          <div class="rl-tech"><bdi dir="ltr">{{ r.name }}</bdi></div>
         </div>
-        <div class="rl-desc">{{ r.description or 'بدون وصف' }}</div>
-        <div class="rl-chips">
-          {% set shown = r.permissions[:6] %}
-          {% for p in shown %}<span class="rl-chip">{{ p }}</span>{% endfor %}
-          {% if r.permissions|length > 6 %}
-            <span class="rl-chip-more">+{{ r.permissions|length - 6 }}</span>
-          {% elif not r.permissions %}
-            <span class="rl-chip" style="color:var(--hub-text-mute)">بدون صلاحيات</span>
-          {% endif %}
-        </div>
-        <div class="rl-actions">
-          <a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ url_for('radius.roles_edit', role_id=r.id) }}">
-            <i class="fa-solid fa-pen"></i> تعديل
-          </a>
+        <div class="rl-badges">
+          {# شارات بنمط محايد موحّد — لا تباين لوني بين البطاقات #}
           {% if r.is_system %}
-          <form method="post" action="{{ url_for('radius.roles_delete', role_id=r.id) }}">
-            <button type="submit" class="hub-btn hub-btn--danger hub-btn--sm" disabled title="دور نظام محمي">
-              <i class="fa-solid fa-box-archive"></i> محمي
-            </button>
-          </form>
-          {% else %}
-          <form method="post" action="{{ url_for('radius.roles_delete', role_id=r.id) }}" style="display:contents;margin:0">
-            <button type="submit" class="hub-btn hub-btn--danger hub-btn--sm"
-                    data-role-archive data-role-name="{{ (r.display_name or r.name)|e }}"
-                    data-role-action="{{ url_for('radius.roles_delete', role_id=r.id) }}">
-              <i class="fa-solid fa-box-archive"></i> أرشفة
-            </button>
-          </form>
+            {{ hub.pill("دور نظام", variant="grey", dot=False) }}
           {% endif %}
+          {{ hub.pill(r.permissions|length|string ~ " صلاحية", variant="grey", dot=False) }}
         </div>
       </div>
-      {% endfor %}
+      <div class="rl-desc">{{ r.description or 'بدون وصف.' }}</div>
+      <div class="rl-chips">
+        {# أول 4 صلاحيات بالتسمية العربية + المفتاح، والبقية كعدّاد #}
+        {% for p in r.permissions[:4] %}{{ pl.perm_chip(p) }}{% endfor %}
+        {% if r.permissions|length > 4 %}
+          <span class="rl-chip-more" title="افتح «تعديل» لرؤية كل الصلاحيات">+{{ r.permissions|length - 4 }}</span>
+        {% elif not r.permissions %}
+          <span class="perm-pill" style="color:var(--hub-text-mute)">بدون صلاحيات</span>
+        {% endif %}
+      </div>
+      <div class="rl-actions">
+        <a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ url_for('radius.roles_edit', role_id=r.id) }}">
+          <i class="fa-solid fa-pen"></i> تعديل
+        </a>
+        {% if r.is_system %}
+        <button type="button" class="hub-btn hub-btn--ghost hub-btn--sm" disabled
+                title="دور نظام محمي — لا يمكن أرشفته">
+          <i class="fa-solid fa-lock"></i> محمي
+        </button>
+        {% else %}
+        <button type="button" class="hub-btn hub-btn--danger hub-btn--sm"
+                data-role-archive
+                data-role-name="{{ (r.display_name or r.name)|e }}"
+                data-role-action="{{ url_for('radius.roles_delete', role_id=r.id) }}">
+          <i class="fa-solid fa-box-archive"></i> أرشفة
+        </button>
+        {% endif %}
+      </div>
     </div>
-  {% endcall %}
+    {% endfor %}
+  </div>
 {% endcall %}
 {% else %}
 {{ hub.empty(
@@ -176,18 +210,24 @@
 ) }}
 {% endif %}
 
-{# ───── Shared floating modal for archive confirmation (replaces inline confirm()) ───── #}
+{# ───── مودال تأكيد الأرشفة العائم الموحّد (بدل confirm) ───── #}
+{# يرسل POST إلى radius.roles_delete لنفس الدور — عقد الخادم كما هو. #}
 {% call hub.modal("roleArchiveModal", "تأكيد أرشفة الدور", icon="box-archive", size="sm",
    footer_html='<button type="button" class="hub-btn hub-btn--ghost" data-uds-modal-close>إلغاء</button>'
      ~ '<form method="post" data-role-archive-form style="display:inline;margin:0">'
-     ~ '<button type="submit" class="hub-btn hub-btn--danger"><i class="fa-solid fa-box-archive"></i> أرشفة</button></form>') %}
+     ~ '<button type="submit" class="hub-btn hub-btn--danger"><i class="fa-solid fa-box-archive"></i> أرشفة الدور</button></form>') %}
   <div class="uds-modal-warn uds-modal-warn--amber">
     <i class="fa-solid fa-circle-info"></i>
-    <span>سيتم أرشفة الدور «<strong data-role-archive-name></strong>». يمكن استعادته لاحقًا من سلة المحذوفات.</span>
+    <span>سيتم أرشفة الدور «<strong data-role-archive-name></strong>». الأرشفة قابلة للعكس — يُستعاد الدور لاحقًا من سلة المحذوفات.</span>
   </div>
 {% endcall %}
+
+{# سلوك المودال الموحّد (فتح/إغلاق/ESC) #}
+<script src="{{ url_for('static', filename='js/unified_design.js') }}"></script>
 <script>
 (function(){
+  "use strict";
+  // ربط أزرار «أرشفة» بالمودال: تعبئة اسم الدور وتوجيه النموذج لمساره
   var modal = document.getElementById("roleArchiveModal");
   if (!modal) return;
   var nameEl = modal.querySelector("[data-role-archive-name]");
@@ -202,5 +242,4 @@
   });
 })();
 </script>
-
 {% endblock %}

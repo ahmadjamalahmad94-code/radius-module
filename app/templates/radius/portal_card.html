@@ -59,6 +59,7 @@
     .nav-brand{
       display:flex;align-items:center;gap:10px;
       font-weight:900;font-size:15px;color:var(--ink-1);
+      text-decoration:none;
     }
     .nav-brand .logo{
       width:36px;height:36px;border-radius:10px;
@@ -477,7 +478,8 @@
 <body>
 
 <nav class="nav">
-  <a href="#" class="nav-brand" style="text-decoration:none">
+  {# الشعار يعيد للوحة المحفظة بدل رابط ميت href="#" #}
+  <a href="{{ url_for('portal.card_home') }}" class="nav-brand">
     <span class="logo"><i class="fa-solid fa-wallet"></i></span>
     <span>HobeRadius</span>
   </a>
@@ -520,6 +522,8 @@
       <div class="label">رصيد المحفظة</div>
       <div class="amount">
         <span>{{ wallet_balance|money }}</span>
+        {# عرض وحدة العملة (كان wallet_currency يُحسب ولا يُستخدم) #}
+        <span class="currency">{{ wallet_currency }}</span>
       </div>
       <div class="greeting">
         مرحباً <strong>{{ user_name }}</strong>
@@ -584,7 +588,8 @@
         {% set recent = (dashboard.purchases or [])[:5] %}
         {% if recent %}
           {% for p in recent %}
-          <div class="history-item">
+          {# المشتريات عمليات خصم — نطبّق is-debit ليأخذ اللون المخصص (كان معرّفاً بلا استخدام) #}
+          <div class="history-item is-debit">
             <span class="ico"><i class="fa-solid fa-cart-shopping"></i></span>
             <div class="body">
               <div class="title">{{ p.package_name or 'عملية شراء' }}</div>
@@ -632,11 +637,13 @@
             </span>
           {% endif %}
           {% if pkg.quota_total_mb %}
-            <span class="item"><i class="fa-solid fa-database"></i> {{ pkg.quota_total_mb }} MB</span>
+            <span class="item"><i class="fa-solid fa-database"></i> {{ pkg.quota_total_mb }} م.ب</span>
           {% endif %}
         </div>
         <div class="market-price">
           <span class="val">{{ _price|money }}</span>
+          {# وحدة العملة (كلاس .ccy كان معرّفاً بلا استخدام) #}
+          <span class="ccy">{{ wallet_currency }}</span>
         </div>
         <button type="button" class="market-buy"
                 {% if not _affordable %}disabled{% endif %}
@@ -734,12 +741,12 @@
 </main>
 
 {# ── Buy confirmation modal ─────────────────────── #}
-<div class="modal" id="buy-modal" hidden role="dialog" aria-modal="true">
+<div class="modal" id="buy-modal" hidden role="dialog" aria-modal="true" aria-labelledby="buy-title">
   <div class="modal-panel">
     <div class="modal-head">
-      <span class="modal-icon"><i class="fa-solid fa-cart-shopping"></i></span>
+      <span class="modal-icon"><i class="fa-solid fa-cart-shopping" aria-hidden="true"></i></span>
       <div>
-        <h3 class="modal-title">تأكيد الشراء</h3>
+        <h3 class="modal-title" id="buy-title">تأكيد الشراء</h3>
         <p class="modal-msg" id="buy-msg">سيتم خصم القيمة من رصيد محفظتك.</p>
       </div>
     </div>
@@ -757,10 +764,10 @@
 </div>
 
 {# ── Card detail modal ──────────────────────────── #}
-<div class="modal" id="detail-modal" hidden role="dialog" aria-modal="true">
+<div class="modal" id="detail-modal" hidden role="dialog" aria-modal="true" aria-labelledby="detail-title">
   <div class="modal-panel">
     <div class="modal-head">
-      <span class="modal-icon"><i class="fa-solid fa-credit-card"></i></span>
+      <span class="modal-icon"><i class="fa-solid fa-credit-card" aria-hidden="true"></i></span>
       <div>
         <h3 class="modal-title" id="detail-title">تفاصيل البطاقة</h3>
         <p class="modal-msg" id="detail-sub">معلومات كاملة عن هذه البطاقة.</p>
@@ -785,6 +792,14 @@
 <script>
 (function(){
   function $(id){ return document.getElementById(id); }
+  /* تهريب نصوص المستخدم قبل حقنها عبر innerHTML (حماية من XSS) */
+  function esc(s){
+    return String(s == null ? '' : s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+  /* وحدة العملة لعرضها في رسالة تأكيد الشراء */
+  var CCY = {{ (wallet_currency or '')|tojson }};
   function showModal(m){ m.hidden = false; document.body.style.overflow = 'hidden'; }
   function hideModal(m){ m.hidden = true;  document.body.style.overflow = ''; }
 
@@ -807,7 +822,7 @@
     btn.addEventListener('click', () => {
       if (btn.disabled) return;
       $('buy-package-id').value = btn.dataset.buyId;
-      $('buy-msg').innerHTML = `سيتم خصم <strong>${parseFloat(btn.dataset.buyPrice).toFixed(2)}</strong> من محفظتك مقابل <strong>${btn.dataset.buyName}</strong>.`;
+      $('buy-msg').innerHTML = `سيتم خصم <strong>${parseFloat(btn.dataset.buyPrice).toFixed(2)} ${esc(CCY)}</strong> من محفظتك مقابل <strong>${esc(btn.dataset.buyName)}</strong>.`;
       showModal(buyModal);
     });
   });
@@ -826,7 +841,7 @@
       ];
       if (btn.dataset.cardExpire) rows.push(['تنتهي', btn.dataset.cardExpire]);
       $('detail-rows').innerHTML = rows.map(r =>
-        `<div class="row"><span class="k">${r[0]}</span><span class="v">${r[1]}</span></div>`
+        `<div class="row"><span class="k">${esc(r[0])}</span><span class="v">${esc(r[1])}</span></div>`
       ).join('');
       showModal(detailModal);
     });
