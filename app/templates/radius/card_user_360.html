@@ -1,8 +1,10 @@
 {# Card user 360 — full profile (wallet, recharge, password reset,
-   marketplace purchase, owned cards, purchases history, usage).
-   Unified Design System: one megahero + worklayout + help panel,
-   hub.section cards, hub.kv detail rows, unified data-tables.
-   No email shown anywhere. No route/backend change.
+   marketplace purchase, owned cards, purchases history, sessions, timeline).
+   Unified Design System redesign: one megahero with an action bar, clearly
+   separated sections with comfortable spacing, fcw floating modals for the
+   quick actions (recharge / portal password), and uds data-tables (sort +
+   export are wired automatically by uds_table.js). No email shown anywhere.
+   No route/backend/field change — pure presentation.
 #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
@@ -10,17 +12,43 @@
 {% set user    = card360.card_user %}
 {% set wallet  = card360.wallet %}
 {% set balance = (wallet.balance_minor or 0) / 100 %}
+{% set pending = (wallet.pending_balance_minor or 0) / 100 %}
 {% set currency= wallet.currency or cfg.currency %}
 {% set st = (user.status or 'active')|lower %}
-{% set status_ar = ('حساب نشط' if st == 'active' else ('موقوف' if st == 'suspended' else st)) %}
+{% set status_ar = (_('حساب نشط') if st == 'active' else (_('موقوف') if st == 'suspended' else st)) %}
+{% set sessions = card360.usage.sessions or [] %}
+{% set usage_seconds = card360.usage.total_seconds or 0 %}
 
-{% block title %}{{ user.display_name or 'مستخدم البطاقة' }} · ملف الكروت 360{% endblock %}
+{% block title %}{{ user.display_name or _('مستخدم البطاقة') }} · {{ _('ملف الكروت 360') }}{% endblock %}
 
 {% block head_extra %}
 {{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
 <style>
   [hidden]{ display:none !important }
+
+  /* ── Wallet spotlight (dedicated balance panel) ── */
+  .u360-wallet{
+    display:flex;align-items:center;gap:18px;flex-wrap:wrap;
+    padding:18px 20px;border-radius:14px;
+    background:linear-gradient(135deg,var(--hub-bg-soft),#fff 70%);
+    border:1px solid var(--hub-brand-soft);
+  }
+  .u360-wallet-ic{
+    width:52px;height:52px;border-radius:14px;flex:none;
+    display:grid;place-items:center;font-size:22px;color:#fff;
+    background:linear-gradient(135deg,#10b981,#059669);
+    box-shadow:0 8px 18px rgba(16,185,129,.28);
+  }
+  .u360-wallet-main{display:flex;flex-direction:column;gap:2px}
+  .u360-wallet-label{font-size:12px;font-weight:800;color:var(--hub-text-mute)}
+  .u360-wallet-amt{
+    font-size:30px;font-weight:900;color:var(--hub-brand-ink);
+    line-height:1.1;font-variant-numeric:tabular-nums;
+  }
+  .u360-wallet-amt .ccy{font-size:13px;font-weight:800;color:var(--hub-text-mute);margin-inline-start:4px}
+  .u360-wallet-pending{font-size:11.5px;font-weight:700;color:#92400e}
+  .u360-wallet-cta{margin-inline-start:auto;display:flex;gap:8px;flex-wrap:wrap}
 
   /* ── Retained: marketplace package picker (no UDS equivalent) ── */
   .u360-pack-grid{
@@ -62,11 +90,7 @@
   }
   .u360-pack-actions .info strong{color:var(--hub-text)}
 
-  /* ── Quick-action input rows (recharge / password) ── */
-  .u360-action-row{display:flex;gap:8px;align-items:stretch}
-  .u360-action-row .hub-input{flex:1;min-width:0}
-
-  /* ── Status pills inside the cards table ── */
+  /* ── Status pills inside the cards/sessions tables ── */
   .u360-status{
     display:inline-flex;align-items:center;gap:5px;
     padding:3px 9px;border-radius:999px;
@@ -75,6 +99,8 @@
   .u360-status--fresh   {background:var(--hub-bg-soft);color:var(--hub-brand-ink);border:1px solid var(--hub-brand-soft)}
   .u360-status--used    {background:#dcfce7;color:#15803d;border:1px solid #bbf7d0}
   .u360-status--revoked {background:#fee2e2;color:#b91c1c;border:1px solid #fecaca}
+  .u360-status--online  {background:#dcfce7;color:#15803d;border:1px solid #bbf7d0}
+  .u360-status--closed  {background:#f1f5f9;color:#475569;border:1px solid #cbd5e1}
 
   /* ── Timeline type pills ── */
   .u360-tl-type{
@@ -93,96 +119,105 @@
   .u360-tl-amt--credit{color:#15803d}
   .u360-tl-amt--debit {color:#b91c1c}
   .u360-tl-amt--purchase{color:var(--hub-brand-ink)}
+
+  /* ── fcw floating modals (the approved floating-window pattern) ── */
+  .fcw-modal{position:fixed;inset:0;z-index:4100;display:none;place-items:center;padding:24px;background:rgba(15,23,42,.52);backdrop-filter:blur(4px)}
+  .fcw-modal.is-open{display:grid}
+  .fcw-dialog{width:min(440px,100%);max-height:min(90vh,720px);overflow:auto;border-radius:16px;background:#fff;border:1px solid var(--hub-border-soft);box-shadow:0 24px 60px rgba(15,23,42,.28);animation:fcwIn .22s ease-out both}
+  @keyframes fcwIn{from{opacity:0;transform:translateY(16px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+  .fcw-head{position:sticky;top:0;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 18px;border-bottom:1px solid var(--hub-border-soft);background:#fff}
+  .fcw-head h3{margin:0;font-size:16px;font-weight:900;color:var(--hub-text);display:flex;align-items:center;gap:9px}
+  .fcw-x{border:0;background:transparent;color:#94a3b8;font-size:18px;cursor:pointer;line-height:1}
+  .fcw-x:hover{color:var(--hub-text)}
+  .fcw-body{padding:18px;display:grid;gap:12px}
+  .fcw-note{margin:0;color:var(--hub-text-mute);font-size:12.5px;font-weight:600;line-height:1.8}
+  .fcw-foot{display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:13px 18px;border-top:1px solid var(--hub-border-soft);background:var(--hub-bg-soft)}
 </style>
 {% endblock %}
 
 {% block content %}
 
-{# ═══════════ Unified hero: subscriber identity + KPI strip ═══════════
-   Title = subscriber name; subtitle carries status + id + created date.
-   The old stacked identity hero + KPI section collapse into one megahero.
-   Back-to-list link sits in the hero actions. No backend change.        #}
+{# ═══════════ Unified hero: customer identity + action bar + KPI strip ═══
+   Title = customer name; subtitle carries id + status + mobile + created.
+   Quick actions (recharge / portal password) live as hero buttons that open
+   floating fcw modals; the marketplace purchase keeps its own rich section. #}
 {% call hub.megahero(
-  user.display_name or 'مستخدم بدون اسم',
-  subtitle="ملف العميل #" ~ user.id ~ " · " ~ status_ar
+  user.display_name or _('مستخدم بدون اسم'),
+  subtitle=_("ملف العميل #") ~ user.id ~ " · " ~ status_ar
            ~ ((" · " ~ user.mobile) if user.mobile else "")
-           ~ (" · أُنشئ " ~ (user.created_at|date_local) if user.created_at else ""),
+           ~ ((" · " ~ _("أُنشئ") ~ " " ~ (user.created_at|date_local)) if user.created_at else ""),
   icon="user-tag",
   actions_html='
-    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.card_users_list') + '">
-      <i class="fa-solid fa-arrow-right"></i> العودة لقائمة المستخدمين
+    <button type="button" class="hub-btn hub-btn--primary" data-fcw-open="u360-recharge">
+      <i class="fa-solid fa-wallet"></i> ' + _('شحن الرصيد') + '
+    </button>
+    <button type="button" class="hub-btn hub-btn--secondary" data-fcw-open="u360-password">
+      <i class="fa-solid fa-key"></i> ' + _('كلمة مرور البوابة') + '
+    </button>
+    <a class="hub-btn hub-btn--ghost" href="' + url_for('radius.card_users_list') + '">
+      <i class="fa-solid fa-arrow-right"></i> ' + _('القائمة') + '
     </a>',
   kpis=[
-    {'label': 'رصيد المحفظة', 'value': balance|money,                    'icon': 'wallet',        'variant': 'green'},
-    {'label': 'بطاقاتي',      'value': card360.cards|length,             'icon': 'id-card',       'variant': 'brand', 'sub': 'بطاقة مملوكة'},
-    {'label': 'المشتريات',    'value': card360.purchases|length,         'icon': 'cart-shopping', 'variant': 'blue',  'sub': 'عملية شراء'},
-    {'label': 'ثواني الاستخدام','value': card360.usage.total_seconds or 0,'icon': 'clock',         'variant': 'amber', 'sub': 'من جلسات النت'},
+    {'label': _('رصيد المحفظة'), 'value': balance|money,                'icon': 'wallet',        'variant': 'green'},
+    {'label': _('إجمالي المشتريات'),'value': card360.purchases|length,   'icon': 'cart-shopping', 'variant': 'blue',  'sub': _('عملية شراء')},
+    {'label': _('البطاقات'),     'value': card360.cards|length,          'icon': 'id-card',       'variant': 'brand', 'sub': _('بطاقة مملوكة')},
+    {'label': _('الجلسات'),      'value': sessions|length,               'icon': 'wifi',          'variant': 'amber', 'sub': (((usage_seconds // 3600)|string ~ ' ' ~ _('ساعة استخدام')) if usage_seconds else _('لا اتصالات'))},
   ]
 ) %}{% endcall %}
 
 {# ───── Main column + help panel on the LEFT ───── #}
 {% call hub.worklayout(aside_html=hub.helppanel(
-  "كيف تقرأ هذا الملف؟",
-  intro="هذه صفحة 360° لمستخدم الكروت: محفظته، بطاقاته، مشترياته وسجل أحداثه في مكان واحد.",
+  _("كيف تقرأ هذا الملف؟"),
+  intro=_("هذه صفحة 360° لمستخدم الكروت: محفظته، بطاقاته، مشترياته، جلساته وسجل أحداثه في مكان واحد."),
   items=[
-    {'icon': 'wallet',        'text': 'رصيد المحفظة يُشحن يدويًا (إداريًا) أو يستهلكه المستخدم عند شراء بطاقة من السوق.'},
-    {'icon': 'key',           'text': 'كلمة مرور البوابة تتيح للعميل الدخول إلى /portal/card وشحن محفظته بنفسه.'},
-    {'icon': 'id-card',       'text': 'كل بطاقة مملوكة تقابل عملية شراء؛ الحالة تبيّن إن كانت جاهزة أو مستخدمة أو ملغاة.'},
-    {'icon': 'timeline',      'text': 'سجل الأحداث يجمع المشتريات وحركات المحفظة وأحداث النظام مرتبة زمنيًا.'},
+    {'icon': 'wallet',   'text': _('رصيد المحفظة يُشحن يدويًا (إداريًا) بزر «شحن الرصيد» أو يشحنه العميل بنفسه من بوابته، ويُستهلك عند شراء بطاقة.')},
+    {'icon': 'key',      'text': _('كلمة مرور البوابة تتيح للعميل الدخول إلى /portal/card وشحن محفظته بنفسه.')},
+    {'icon': 'id-card',  'text': _('كل بطاقة مملوكة تقابل عملية شراء؛ الحالة تبيّن إن كانت جاهزة أو مستخدمة أو ملغاة.')},
+    {'icon': 'wifi',     'text': _('جلسات الاتصال تأتي من سجلّ المحاسبة (RADIUS) لبطاقات العميل — وقتًا وبيانات.')},
+    {'icon': 'timeline', 'text': _('سجل الأحداث يجمع المشتريات وحركات المحفظة وأحداث النظام مرتبة زمنيًا.')},
   ],
-  note="هذه واجهة عرض موحّدة — كل شحن أو شراء أو تعيين كلمة مرور يمر بالمنطق الأصلي دون تغيير."
+  note=_("هذه واجهة عرض موحّدة — كل شحن أو شراء أو تعيين كلمة مرور يمر بالمنطق الأصلي دون تغيير.")
 )) %}
 
-  {# ── Identity details ── #}
-  {% call hub.section("بيانات العميل", icon="id-card") %}
+  {# ── 1) Identity details ── #}
+  {% call hub.section(_("المعلومات الأساسية"), icon="id-card") %}
     {{ hub.kv([
-      {'label': 'معرّف العميل', 'value': user.id, 'mono': True},
-      {'label': 'الاسم', 'value': user.display_name or '—'},
-      {'label': 'الحالة', 'value': status_ar},
-      {'label': 'الجوال', 'value': user.mobile or '—', 'mono': True},
-      {'label': 'رصيد المحفظة', 'value': balance|money, 'mono': True},
-      {'label': 'تاريخ الإنشاء', 'value': (user.created_at|date_local) if user.created_at else '—'},
+      {'label': _('معرّف العميل'), 'value': user.id, 'mono': True},
+      {'label': _('الاسم'), 'value': user.display_name or '—'},
+      {'label': _('الحالة'), 'value': status_ar},
+      {'label': _('الجوال'), 'value': user.mobile or '—', 'mono': True},
+      {'label': _('تاريخ التسجيل'), 'value': (user.created_at|date_local) if user.created_at else '—'},
     ]) }}
   {% endcall %}
 
-  {# ── Quick actions: recharge + reset password (forms kept exactly) ── #}
-  {% call hub.section("إجراءات سريعة", icon="bolt") %}
-    <div class="hub-grid hub-grid--2">
-      <div class="hub-field">
-        <label>شحن المحفظة يدوياً</label>
-        <div class="hub-field-hint">يُضاف المبلغ مباشرة لرصيد المحفظة (شحن إداري — ليس من بطاقة).</div>
-        <form method="post" action="{{ url_for('radius.card_user_recharge', card_user_id=user.id) }}">
-          {{ csrf_token_input() | safe }}
-          <div class="u360-action-row" style="margin-top:8px">
-            <input class="hub-input" name="amount" type="number" step="0.01" min="0.01" required
-                   placeholder="0.00" inputmode="decimal">
-            <button type="submit" class="hub-btn hub-btn--primary">
-              <i class="fa-solid fa-plus" aria-hidden="true"></i> شحن
-            </button>
-          </div>
-        </form>
+  {# ── 2) Wallet spotlight + recharge entry (recharge form lives in fcw) ── #}
+  {% call hub.section(_("المحفظة"), icon="wallet") %}
+    <div class="u360-wallet">
+      <span class="u360-wallet-ic"><i class="fa-solid fa-wallet" aria-hidden="true"></i></span>
+      <div class="u360-wallet-main">
+        <span class="u360-wallet-label">{{ _('الرصيد المتاح') }}</span>
+        <span class="u360-wallet-amt">{{ balance|money }}<span class="ccy">{{ currency }}</span></span>
+        {% if pending and pending > 0 %}
+          <span class="u360-wallet-pending">
+            <i class="fa-solid fa-hourglass-half" aria-hidden="true"></i>
+            {{ _('قيد التعليق:') }} {{ pending|money }}
+          </span>
+        {% endif %}
       </div>
-
-      <div class="hub-field">
-        <label>تعيين كلمة مرور البوابة</label>
-        <div class="hub-field-hint">يستعملها العميل للدخول إلى <code>/portal/card</code> وشحن محفظته.</div>
-        <form method="post" action="{{ url_for('radius.card_user_password', card_user_id=user.id) }}">
-          {{ csrf_token_input() | safe }}
-          <div class="u360-action-row" style="margin-top:8px">
-            <input class="hub-input" name="password" type="text" minlength="4" maxlength="64" required
-                   placeholder="كلمة مرور جديدة (4 أحرف على الأقل)" autocomplete="off">
-            <button type="submit" class="hub-btn hub-btn--secondary">
-              <i class="fa-solid fa-rotate" aria-hidden="true"></i> حفظ
-            </button>
-          </div>
-        </form>
+      <div class="u360-wallet-cta">
+        <button type="button" class="hub-btn hub-btn--primary" data-fcw-open="u360-recharge">
+          <i class="fa-solid fa-plus" aria-hidden="true"></i> {{ _('شحن الرصيد') }}
+        </button>
       </div>
+    </div>
+    <div class="hub-field-hint" style="margin-top:10px">
+      {{ _('الشحن إداري (يُضاف مباشرة للرصيد)؛ كما يستطيع العميل شحن محفظته بنفسه من بوابته بعد تعيين كلمة مرور البوابة.') }}
     </div>
   {% endcall %}
 
-  {# ── Buy a card from the marketplace (form + JS kept exactly) ── #}
-  {% call hub.section("شراء بطاقة من السوق", icon="store",
-                     meta=(packages|length|string ~ " عرض متاح") if packages else "") %}
+  {# ── 3) Buy a card from the marketplace (form + JS kept exactly) ── #}
+  {% call hub.section(_("شراء بطاقة من السوق"), icon="store",
+                     meta=(packages|length|string ~ " " ~ _("عرض متاح")) if packages else "") %}
     {% if packages %}
     <form method="post" action="{{ url_for('radius.card_user_purchase', card_user_id=user.id) }}"
           id="u360-purchase-form" data-testid="card-user-purchase-form">
@@ -193,24 +228,24 @@
         {% for pack in packages[:12] %}
         {% set _pp = (pack.suggested_price or pack.price or 0)|float %}
         <button type="button" class="u360-pack" data-pack="{{ pack.id }}" data-price="{{ _pp }}">
-          <div class="u360-pack-name">{{ pack.display_name or pack.name or 'عرض' }}</div>
+          <div class="u360-pack-name">{{ pack.display_name or pack.name or _('عرض') }}</div>
           <div class="u360-pack-meta">
             {% if pack.duration_minutes %}
             <span class="item"><i class="fa-regular fa-clock"></i>
               {% set d = (pack.duration_minutes or 0)|int %}
-              {% if d >= 1440 and d % 1440 == 0 %}{{ d // 1440 }} يوم
-              {% elif d >= 60 %}{{ (d / 60)|round(1) }} ساعة
-              {% else %}{{ d }} دقيقة{% endif %}
+              {% if d >= 1440 and d % 1440 == 0 %}{{ d // 1440 }} {{ _('يوم') }}
+              {% elif d >= 60 %}{{ (d / 60)|round(1) }} {{ _('ساعة') }}
+              {% else %}{{ d }} {{ _('دقيقة') }}{% endif %}
             </span>
             {% endif %}
             {% if pack.speed_down_kbps %}
             <span class="item"><i class="fa-solid fa-gauge-high"></i>
               {% set s = (pack.speed_down_kbps or 0)|int %}
-              {% if s >= 1024 %}{{ (s / 1024)|round(1) }} ميجا{% else %}{{ s }} كيلو{% endif %}
+              {% if s >= 1024 %}{{ (s / 1024)|round(1) }} {{ _('ميجا') }}{% else %}{{ s }} {{ _('كيلو') }}{% endif %}
             </span>
             {% endif %}
             {% if pack.quota_total_mb %}
-            <span class="item"><i class="fa-solid fa-database"></i> {{ pack.quota_total_mb }} ميجا</span>
+            <span class="item"><i class="fa-solid fa-database"></i> {{ pack.quota_total_mb }} {{ _('ميجا') }}</span>
             {% endif %}
           </div>
           <div class="u360-pack-price">
@@ -223,23 +258,23 @@
       <div class="u360-pack-actions">
         <div class="info">
           <i class="fa-solid fa-wallet" style="color:var(--hub-brand-ink)" aria-hidden="true"></i>
-          رصيد المحفظة: <strong>{{ balance|money }}</strong>
+          {{ _('رصيد المحفظة:') }} <strong>{{ balance|money }}</strong>
           <span id="u360-purchase-summary" style="margin-inline-start:12px"></span>
         </div>
         <button type="submit" class="hub-btn hub-btn--primary" id="u360-purchase-submit" disabled>
           <i class="fa-solid fa-cart-shopping" aria-hidden="true"></i>
-          شراء البطاقة
+          {{ _('شراء البطاقة') }}
         </button>
       </div>
     </form>
     {% else %}
-      {{ hub.empty("لا توجد عروض متاحة",
-                   sub="أنشئ عرضاً من سوق البطاقات أو من قسم الباقات حتى يستطيع المستخدم الشراء.",
+      {{ hub.empty(_("لا توجد عروض متاحة"),
+                   sub=_("أنشئ عرضاً من سوق البطاقات أو من قسم الباقات حتى يستطيع المستخدم الشراء."),
                    icon="store") }}
     {% endif %}
   {% endcall %}
 
-  {# ── Unified cards + purchases table (each card = one purchase) ── #}
+  {# ── 4) Unified cards + purchases table (each card = one purchase) ── #}
   {% set purchase_by_card = {} %}
   {% for p in card360.purchases %}
     {% if p.card_id %}
@@ -247,20 +282,21 @@
     {% endif %}
   {% endfor %}
 
-  {% call hub.section("بطاقات العميل والمشتريات", icon="id-card",
-                     meta=(card360.cards|length|string ~ " بطاقة") if card360.cards else "", flush=True) %}
+  {% call hub.section(_("بطاقات العميل والمشتريات"), icon="id-card",
+                     meta=(card360.cards|length|string ~ " " ~ _("بطاقة")) if card360.cards else "", flush=True) %}
     {% if card360.cards %}
-    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="15" style="border:none;border-radius:0">
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="15"
+         data-uds-export-title="{{ _('بطاقات العميل') }}" style="border:none;border-radius:0">
       <table class="hub-table">
         <thead>
           <tr>
             <th class="num" style="width:50px">#</th>
-            <th>الرمز</th>
-            <th>الباقة</th>
-            <th class="num">المبلغ</th>
-            <th>الحالة</th>
-            <th>تاريخ الشراء</th>
-            <th>أول استخدام</th>
+            <th>{{ _('الرمز') }}</th>
+            <th>{{ _('الباقة') }}</th>
+            <th class="num">{{ _('المبلغ') }}</th>
+            <th>{{ _('الحالة') }}</th>
+            <th>{{ _('تاريخ الشراء') }}</th>
+            <th>{{ _('أول استخدام') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -279,11 +315,11 @@
             </td>
             <td>
               {% if c.revoked %}
-                <span class="u360-status u360-status--revoked">ملغاة</span>
+                <span class="u360-status u360-status--revoked">{{ _('ملغاة') }}</span>
               {% elif c.used %}
-                <span class="u360-status u360-status--used">مستخدمة</span>
+                <span class="u360-status u360-status--used">{{ _('مستخدمة') }}</span>
               {% else %}
-                <span class="u360-status u360-status--fresh">جاهزة</span>
+                <span class="u360-status u360-status--fresh">{{ _('جاهزة') }}</span>
               {% endif %}
             </td>
             <td class="small mono hub-text-mute">{{ c.created_at|date_local if c.created_at else '—' }}</td>
@@ -294,30 +330,88 @@
       </table>
     </div>
     {% else %}
-      {{ hub.empty("لا توجد بطاقات مملوكة بعد",
-                   sub="استعمل قسم «شراء بطاقة من السوق» بالأعلى لشراء أول بطاقة.",
+      {{ hub.empty(_("لا توجد بطاقات مملوكة بعد"),
+                   sub=_("استعمل قسم «شراء بطاقة من السوق» بالأعلى لشراء أول بطاقة."),
                    icon="credit-card") }}
     {% endif %}
   {% endcall %}
 
-  {# ── Activity timeline (unified data-table, 15/page) ── #}
-  {% if card360.timeline %}
-  {% set CAT_LABEL = {
-    'manager':'إدارة','subscriber':'مشترك','card':'بطاقة',
-    'financial':'مالية','system':'نظام','security':'أمان',
-    'radius':'خدمة المصادقة','notification':'إشعار'
-  } %}
-  {% call hub.section("سجل الأحداث", icon="timeline",
-                     meta=(card360.timeline|length|string ~ " حدث"), flush=True) %}
-    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="15" style="border:none;border-radius:0">
+  {# ── 5) Sessions / connections (surfaces card360.usage.sessions) ── #}
+  {% call hub.section(_("الجلسات والاتصالات"), icon="wifi",
+                     meta=(sessions|length|string ~ " " ~ _("جلسة")) if sessions else "", flush=True) %}
+    {% if sessions %}
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="15"
+         data-uds-export-title="{{ _('جلسات العميل') }}" style="border:none;border-radius:0">
       <table class="hub-table">
         <thead>
           <tr>
             <th class="num" style="width:50px">#</th>
-            <th>النوع</th>
-            <th>الوصف</th>
-            <th class="num">المبلغ</th>
-            <th>التاريخ</th>
+            <th>{{ _('البطاقة') }}</th>
+            <th>{{ _('البداية') }}</th>
+            <th>{{ _('المدة') }}</th>
+            <th class="num">{{ _('البيانات') }}</th>
+            <th>{{ _('عنوان IP') }}</th>
+            <th>{{ _('الحالة') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in sessions %}
+          {% set secs = (s.acctsessiontime or 0)|int %}
+          {% set total_bytes = ((s.acctinputoctets or 0)|int) + ((s.acctoutputoctets or 0)|int) %}
+          <tr>
+            <td class="num mono">{{ loop.index }}</td>
+            <td class="mono"><strong>{{ s.username or '—' }}</strong></td>
+            <td class="small mono hub-text-mute">{{ s.acctstarttime|dt_local if s.acctstarttime else '—' }}</td>
+            <td class="mono">
+              {% if secs >= 3600 %}{{ (secs / 3600)|round(1) }} {{ _('ساعة') }}
+              {% elif secs >= 60 %}{{ (secs / 60)|round(0)|int }} {{ _('دقيقة') }}
+              {% else %}{{ secs }} {{ _('ثانية') }}{% endif %}
+            </td>
+            <td class="num mono">
+              {% if total_bytes >= 1073741824 %}{{ (total_bytes / 1073741824)|round(2) }} {{ _('غيغا') }}
+              {% elif total_bytes >= 1048576 %}{{ (total_bytes / 1048576)|round(1) }} {{ _('ميجا') }}
+              {% elif total_bytes > 0 %}{{ (total_bytes / 1024)|round(0)|int }} {{ _('كيلو') }}
+              {% else %}<span class="hub-text-mute">—</span>{% endif %}
+            </td>
+            <td class="small mono hub-text-mute">{{ s.framedipaddress or s.nasipaddress or '—' }}</td>
+            <td>
+              {% if s.acctstoptime %}
+                <span class="u360-status u360-status--closed">{{ _('منتهية') }}</span>
+              {% else %}
+                <span class="u360-status u360-status--online">{{ _('متصلة') }}</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+      {{ hub.empty(_("لا توجد جلسات اتصال بعد"),
+                   sub=_("تظهر هنا جلسات الإنترنت لبطاقات العميل بمجرد استخدامها على الشبكة."),
+                   icon="wifi") }}
+    {% endif %}
+  {% endcall %}
+
+  {# ── 6) Activity timeline (unified data-table, 15/page) ── #}
+  {% if card360.timeline %}
+  {% set CAT_LABEL = {
+    'manager':_('إدارة'),'subscriber':_('مشترك'),'card':_('بطاقة'),
+    'financial':_('مالية'),'system':_('نظام'),'security':_('أمان'),
+    'radius':_('خدمة المصادقة'),'notification':_('إشعار')
+  } %}
+  {% call hub.section(_("سجل الأحداث"), icon="timeline",
+                     meta=(card360.timeline|length|string ~ " " ~ _("حدث")), flush=True) %}
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="15"
+         data-uds-export-title="{{ _('سجل أحداث العميل') }}" style="border:none;border-radius:0">
+      <table class="hub-table">
+        <thead>
+          <tr>
+            <th class="num" style="width:50px">#</th>
+            <th>{{ _('النوع') }}</th>
+            <th>{{ _('الوصف') }}</th>
+            <th class="num">{{ _('المبلغ') }}</th>
+            <th>{{ _('التاريخ') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -330,17 +424,17 @@
             {% set amount = (row.amount_minor or 0) / 100 %}
             {% set ps = (row.status or '')|lower %}
             {% set status_ar2 =
-                ('مكتملة' if ps == 'completed'
-                 else ('قيد المعالجة' if ps == 'pending'
-                       else ('فشلت' if ps == 'failed' else (row.status or '—')))) %}
+                (_('مكتملة') if ps == 'completed'
+                 else (_('قيد المعالجة') if ps == 'pending'
+                       else (_('فشلت') if ps == 'failed' else (row.status or '—')))) %}
             <tr>
               <td class="num mono">{{ loop.index }}</td>
               <td>
                 <span class="u360-tl-type u360-tl-type--purchase">
-                  <i class="fa-solid fa-cart-shopping"></i> شراء
+                  <i class="fa-solid fa-cart-shopping"></i> {{ _('شراء') }}
                 </span>
               </td>
-              <td>شراء «{{ row.package_name }}» — <small class="hub-text-mute">{{ status_ar2 }}</small></td>
+              <td>{{ _('شراء «%(name)s»', name=row.package_name) }} — <small class="hub-text-mute">{{ status_ar2 }}</small></td>
               <td class="num mono"><span class="u360-tl-amt--purchase">−{{ amount|money }}</span></td>
               <td class="small mono hub-text-mute">{{ when }}</td>
             </tr>
@@ -355,11 +449,11 @@
               <td>
                 <span class="u360-tl-type u360-tl-type--{{ 'credit' if is_credit else 'debit' }}">
                   <i class="fa-solid fa-{{ 'plus' if is_credit else 'minus' }}"></i>
-                  {{ 'إيداع' if is_credit else 'خصم' }}
+                  {{ _('إيداع') if is_credit else _('خصم') }}
                 </span>
               </td>
               <td>
-                {{ 'إيداع للمحفظة' if is_credit else 'خصم من المحفظة' }}
+                {{ _('إيداع للمحفظة') if is_credit else _('خصم من المحفظة') }}
                 {% if row.description or row.notes or row.memo %}
                   — <small class="hub-text-mute">{{ row.description or row.notes or row.memo }}</small>
                 {% endif %}
@@ -378,7 +472,7 @@
             {% set msg = row.message or row.description or row.summary or '' %}
             {% set sev = (row.severity or 'info')|lower %}
             {% set cat = (row.category or '')|lower %}
-            {% set cat_ar = CAT_LABEL.get(cat, cat or 'حدث') %}
+            {% set cat_ar = CAT_LABEL.get(cat, cat or _('حدث')) %}
             {% set type_cls = ('error' if sev in ('error','critical') else
                               ('warning' if sev == 'warning' else
                               ('system' if cat in ('system','radius','security') else 'event'))) %}
@@ -398,7 +492,7 @@
               <td>
                 {% if ekey %}<strong>{{ ekey|replace('_', ' ')|replace('.', ' ') }}</strong>{% endif %}
                 {% if msg %}{% if ekey %} — {% endif %}<small class="hub-text-mute">{{ msg }}</small>
-                {% elif not ekey %}<small class="hub-text-mute">حدث بلا تفاصيل</small>{% endif %}
+                {% elif not ekey %}<small class="hub-text-mute">{{ _('حدث بلا تفاصيل') }}</small>{% endif %}
               </td>
               <td class="num"><span class="hub-text-mute">—</span></td>
               <td class="small mono hub-text-mute">{{ when }}</td>
@@ -412,6 +506,60 @@
   {% endif %}
 
 {% endcall %}
+
+{# ═══════════ fcw floating modals: recharge + portal password ═══════════
+   Forms keep their exact action / field names — only the chrome moved. #}
+<div class="fcw-modal" data-fcw-modal="u360-recharge" hidden>
+  <div class="fcw-dialog" role="dialog" aria-modal="true" aria-labelledby="u360-recharge-title">
+    <form method="post" action="{{ url_for('radius.card_user_recharge', card_user_id=user.id) }}">
+      {{ csrf_token_input() | safe }}
+      <div class="fcw-head">
+        <h3 id="u360-recharge-title"><i class="fa-solid fa-wallet"></i> {{ _('شحن المحفظة يدوياً') }}</h3>
+        <button type="button" class="fcw-x" data-fcw-close aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="fcw-body">
+        <p class="fcw-note">{{ _('يُضاف المبلغ مباشرة لرصيد المحفظة (شحن إداري — ليس من بطاقة).') }}</p>
+        <div class="hub-field">
+          <label for="u360-recharge-amount">{{ _('المبلغ') }} ({{ currency }})</label>
+          <input class="hub-input" id="u360-recharge-amount" name="amount" type="number" step="0.01" min="0.01" required
+                 placeholder="0.00" inputmode="decimal" autocomplete="off">
+        </div>
+      </div>
+      <div class="fcw-foot">
+        <button type="button" class="hub-btn hub-btn--ghost" data-fcw-close>{{ _('إلغاء') }}</button>
+        <button type="submit" class="hub-btn hub-btn--primary">
+          <i class="fa-solid fa-plus" aria-hidden="true"></i> {{ _('شحن') }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="fcw-modal" data-fcw-modal="u360-password" hidden>
+  <div class="fcw-dialog" role="dialog" aria-modal="true" aria-labelledby="u360-password-title">
+    <form method="post" action="{{ url_for('radius.card_user_password', card_user_id=user.id) }}">
+      {{ csrf_token_input() | safe }}
+      <div class="fcw-head">
+        <h3 id="u360-password-title"><i class="fa-solid fa-key"></i> {{ _('تعيين كلمة مرور البوابة') }}</h3>
+        <button type="button" class="fcw-x" data-fcw-close aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="fcw-body">
+        <p class="fcw-note">{{ _('يستعملها العميل للدخول إلى') }} <code>/portal/card</code> {{ _('وشحن محفظته بنفسه.') }}</p>
+        <div class="hub-field">
+          <label for="u360-password-input">{{ _('كلمة المرور الجديدة') }}</label>
+          <input class="hub-input" id="u360-password-input" name="password" type="text" minlength="4" maxlength="64" required
+                 placeholder="{{ _('4 أحرف على الأقل') }}" autocomplete="off">
+        </div>
+      </div>
+      <div class="fcw-foot">
+        <button type="button" class="hub-btn hub-btn--ghost" data-fcw-close>{{ _('إلغاء') }}</button>
+        <button type="submit" class="hub-btn hub-btn--secondary">
+          <i class="fa-solid fa-rotate" aria-hidden="true"></i> {{ _('حفظ') }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
 
 {# ── Retained JS: marketplace package picker selection + affordability ── #}
 <script>
@@ -435,10 +583,27 @@
     if (sum){
       const ok = wallet >= price;
       sum.innerHTML = ok
-        ? `<i class="fa-solid fa-circle-check" style="color:#15803d"></i> الرصيد كافٍ — سيُخصم <strong>${price.toFixed(2)}</strong>`
-        : `<i class="fa-solid fa-triangle-exclamation" style="color:#dc2626"></i> الرصيد غير كافٍ (تحتاج <strong>${price.toFixed(2)}</strong>)`;
+        ? `<i class="fa-solid fa-circle-check" style="color:#15803d"></i> ${ {{ _('الرصيد كافٍ — سيُخصم')|tojson }} } <strong>${price.toFixed(2)}</strong>`
+        : `<i class="fa-solid fa-triangle-exclamation" style="color:#dc2626"></i> ${ {{ _('الرصيد غير كافٍ (تحتاج')|tojson }} } <strong>${price.toFixed(2)}</strong>)`;
     }
   });
+})();
+</script>
+
+{# ── fcw floating-modal open/close (approved pattern) ── #}
+<script>
+(function(){
+  function open(key){
+    const m = document.querySelector("[data-fcw-modal='" + key + "']");
+    if (m){ m.hidden = false; m.classList.add('is-open'); (m.querySelector('input,select,textarea,button')||{}).focus?.(); }
+  }
+  function closeAll(){
+    document.querySelectorAll('[data-fcw-modal]').forEach(m => { m.classList.remove('is-open'); m.hidden = true; });
+  }
+  document.querySelectorAll('[data-fcw-open]').forEach(b => b.addEventListener('click', () => open(b.dataset.fcwOpen)));
+  document.querySelectorAll('[data-fcw-close]').forEach(b => b.addEventListener('click', closeAll));
+  document.querySelectorAll('[data-fcw-modal]').forEach(m => m.addEventListener('click', e => { if (e.target === m) closeAll(); }));
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeAll(); });
 })();
 </script>
 <script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>

@@ -1,0 +1,82 @@
+from __future__ import annotations
+
+# Render verification for the redesigned card_user_360.html — exercises the
+# new sessions section, pending-balance branch, and timeline rows so any Jinja
+# error in the new branches surfaces. Reuses the marketplace test fixtures.
+from tests.test_card_users_marketplace import (  # noqa: F401
+    app,
+    _auth_session,
+    _bind_test_db,
+    _market,
+    _marketplace_service,
+)
+
+
+def test_redesigned_detail_renders_new_sections(app):
+    user, package = _market(app)
+
+    rich = {
+        "card_user": {
+            "id": user["id"],
+            "display_name": "Walk-in Buyer",
+            "mobile": "0590000000",
+            "status": "active",
+            "created_at": "2026-06-01T10:00:00",
+        },
+        "wallet": {"balance_minor": 1234, "pending_balance_minor": 500, "currency": "JOD"},
+        "purchases": [
+            {"id": 1, "card_id": 7, "amount_minor": 500, "package_name": "8h", "status": "completed",
+             "created_at": "2026-06-02T12:00:00"},
+        ],
+        "cards": [
+            {"id": 7, "username": "mp000007", "package_name": "8h", "used": 1, "revoked": 0,
+             "created_at": "2026-06-02T12:00:00", "first_used_at": "2026-06-02T13:00:00"},
+        ],
+        "usage": {
+            "sessions": [
+                {"username": "mp000007", "acctsessiontime": 5400, "acctinputoctets": 2_000_000,
+                 "acctoutputoctets": 1_200_000_000, "framedipaddress": "10.0.0.5",
+                 "nasipaddress": "10.0.0.1", "acctstarttime": "2026-06-02T13:00:00",
+                 "acctstoptime": "2026-06-02T14:30:00"},
+                {"username": "mp000007", "acctsessiontime": 30, "acctinputoctets": 0,
+                 "acctoutputoctets": 0, "framedipaddress": None, "nasipaddress": "10.0.0.1",
+                 "acctstarttime": "2026-06-02T15:00:00", "acctstoptime": None},
+            ],
+            "total_seconds": 5430, "bytes_in": 2_000_000, "bytes_out": 1_200_000_000,
+        },
+        "timeline": [
+            {"package_name": "8h", "amount_minor": 500, "status": "completed", "created_at": "2026-06-02T12:00:00"},
+            {"amount_minor": 1000, "direction": "credit", "description": "شحن", "created_at": "2026-06-02T11:00:00"},
+            {"category": "card", "event_key": "card_user.card_purchased", "message": "شراء", "created_at": "2026-06-02T12:00:01"},
+        ],
+        "messages": [{"status": "event_recorded", "message": "تم تسجيل"}],
+        "events": [],
+    }
+
+    service_cls = _marketplace_service()
+    orig = service_cls.card_user_360
+    service_cls.card_user_360 = lambda self, cid: rich
+    try:
+        with app.test_client() as client:
+            _bind_test_db(app)
+            _auth_session(client)
+            res = client.get(f"/admin/radius/card-users/{user['id']}")
+    finally:
+        service_cls.card_user_360 = orig
+
+    body = res.get_data(as_text=True)
+    assert res.status_code == 200, res.status_code
+    # new + retained sections present
+    assert "card-user-purchase-form" in body
+    assert "الجلسات والاتصالات" in body
+    assert "المحفظة" in body
+    assert "قيد التعليق" in body            # pending-balance branch
+    assert "متصلة" in body and "منتهية" in body   # session status pills
+    assert "غيغا" in body                   # GB byte formatting branch
+    assert "data-fcw-modal=\"u360-recharge\"" in body
+    assert "data-fcw-modal=\"u360-password\"" in body
+    # field/endpoint preservation
+    assert f"/admin/radius/card-users/{user['id']}/recharge" in body
+    assert f"/admin/radius/card-users/{user['id']}/password" in body
+    assert f"/admin/radius/card-users/{user['id']}/purchase" in body
+    assert 'name="amount"' in body and 'name="password"' in body and 'name="package_id"' in body

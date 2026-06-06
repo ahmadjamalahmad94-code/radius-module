@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import re
+import sqlite3
 from typing import Any
 
 from werkzeug.security import generate_password_hash
@@ -80,29 +81,37 @@ class CardUsersMarketplaceService:
         if str(password or "").strip():
             password_hash = generate_password_hash(str(password))
             password_set_at = now
-        with transaction() as conn:
-            cur = conn.execute(
-                """
-                INSERT INTO card_users(
-                    tenant_id, display_name, mobile, email, status,
-                    metadata_json, password_hash, password_set_at,
-                    created_at, updated_at
-                ) VALUES(?,?,?,?,?,?,?,?,?,?)
-                """,
-                (
-                    self.tenant_id,
-                    name,
-                    str(mobile or ""),
-                    str(email or ""),
-                    "active",
-                    _json(metadata),
-                    password_hash,
-                    password_set_at,
-                    now,
-                    now,
-                ),
-            )
-            card_user_id = int(cur.lastrowid)
+        try:
+            with transaction() as conn:
+                cur = conn.execute(
+                    """
+                    INSERT INTO card_users(
+                        tenant_id, display_name, mobile, email, status,
+                        metadata_json, password_hash, password_set_at,
+                        created_at, updated_at
+                    ) VALUES(?,?,?,?,?,?,?,?,?,?)
+                    """,
+                    (
+                        self.tenant_id,
+                        name,
+                        str(mobile or ""),
+                        str(email or ""),
+                        "active",
+                        _json(metadata),
+                        password_hash,
+                        password_set_at,
+                        now,
+                        now,
+                    ),
+                )
+                card_user_id = int(cur.lastrowid)
+        except sqlite3.IntegrityError as exc:
+            # قيد الفرادة الوحيد على هذا الإدراج هو رقم الجوال النشط
+            # (ux_card_users_active_mobile، الترحيل 110) — يلتقط سباق
+            # التسجيل المتزامن ذرّيًا. رسالة عربية ودّية بدل خطأ خام.
+            raise CardMarketplaceError(
+                "رقم الجوال مسجّل مسبقًا — سجّل الدخول أو استخدم رقمًا آخر."
+            ) from exc
         self.wallets.create_wallet(
             tenant_id=self.tenant_id,
             owner_type="card_user",
@@ -161,9 +170,11 @@ class CardUsersMarketplaceService:
         يضبط البيانات الوصفية وحدث السجلّ بصدق، مع توحيد منطق التحقّق
         وإنشاء الحساب بين المسارَين (لا تكرار).
 
-        ملاحظة تزامن: فحص التكرار ثم الإدراج ليسا ذرّيين (لا قيد فرادة
-        على mobile في المخطط) — احتمال سباق ضعيف (نفس الزبون يرسل مرتين)
-        ويصدّه كبح المعدّل في نقطة الـAPI؛ مقبول لهذا النطاق."""
+        ملاحظة تزامن: فحص التكرار أدناه ودّي (يعطي رسالة واضحة في الحالة
+        الشائعة)، لكن الإغلاق الذرّي للسباق هو فهرس الفرادة الجزئي
+        ux_card_users_active_mobile (الترحيل 110): طلبان متزامنان بنفس
+        الرقم — يمرّ الأول، ويرفع الثاني IntegrityError يلتقطه
+        create_card_user ويحوّله لرسالة «الرقم مسجّل مسبقًا»."""
         name = str(display_name or "").strip()
         if len(name.split()) < 2:
             raise CardMarketplaceError(

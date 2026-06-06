@@ -50,6 +50,17 @@ WHATSAPP_TEST_PATH = "/api/integration/hoberadius/whatsapp/messages/test"
 WHATSAPP_CLOUD_TEST_PATH = "/api/integration/hoberadius/whatsapp/cloud-test"
 WHATSAPP_PREFERENCES_SYNC_PATH = "/api/integration/hoberadius/whatsapp/subscriber-preferences/sync"
 WHATSAPP_MESSAGE_STATUS_PATH = "/api/integration/hoberadius/whatsapp/messages/status"
+# CHR tunnels — the radius module is a THIN CONSUMER: it asks the panel to
+# provision/list tunnels and acknowledges what it stored locally. It never
+# generates CHR credentials and never stores raw tunnel secrets (see
+# services/license_tunnel_bridge.py + migration 110).
+VPN_TUNNEL_REQUEST_PATH = "/api/integration/hoberadius/vpn/tunnels/request"
+VPN_TUNNELS_PATH = "/api/integration/hoberadius/vpn/tunnels"
+VPN_TUNNELS_ACK_PATH = "/api/integration/hoberadius/vpn/tunnels/ack"
+# Super-admin enforcement — the panel is the source of truth for which local
+# admins may be super. This module reports its admin inventory and applies the
+# overrides the panel returns in the identity-sync response.
+ADMINS_REPORT_PATH = "/api/integration/hoberadius/admins/report"
 RESTORE_POLL_PATH = "/api/integration/hoberadius/backup-restore/poll"
 RESTORE_STATUS_PATH_TEMPLATE = "/api/integration/hoberadius/backup-restore/{reference}/status"
 SERVICE_ACTIVATION_POLL_PATH = "/api/integration/hoberadius/service-activations/poll"
@@ -734,6 +745,75 @@ class AdminPanelClient:
         payload = self._license_check_payload()
         return self._post_bridge_payload(path=PORTAL_SSO_PATH, payload=payload)
 
+    # ── CHR tunnels (thin consumer) ─────────────────────────────────────────
+    # All three are signed bridge POSTs mirroring the WhatsApp/SSO helpers. The
+    # panel owns the CHR; this module only requests, lists, and acks. Each
+    # returns the parsed JSON dict and never raises.
+    def request_vpn_tunnel(
+        self,
+        *,
+        tunnel_type: str = "sstp",
+        router_id: int | str = "",
+        label: str = "",
+        notes: str = "",
+    ) -> dict[str, Any]:
+        """Ask the panel to provision a tunnel and return its SSTP user/pass.
+
+        The credentials in the response are for one-time local injection only —
+        the caller MUST NOT persist the raw password (see migration 110).
+        """
+        if not str(self.config.base_url or "").lower().startswith("https://"):
+            return {"ok": False, "status": "https_required",
+                    "error": {"code": "https_required", "message": "طلب النفق يتطلب رابط لوحة آمن HTTPS."}}
+        return self._post_bridge_payload(
+            path=VPN_TUNNEL_REQUEST_PATH,
+            payload=self._license_check_payload({
+                "tunnel_type": str(tunnel_type or "sstp").strip(),
+                "router_id": str(router_id or "").strip(),
+                "label": str(label or "").strip(),
+                "notes": str(notes or "").strip(),
+            }),
+            sanitize=False,  # service needs the one-time SSTP password (never persisted)
+        )
+
+    def fetch_vpn_tunnels(self) -> dict[str, Any]:
+        """List the customer's tunnels from the panel (incl. manual PPTP/L2TP/IPsec)."""
+        if not str(self.config.base_url or "").lower().startswith("https://"):
+            return {"ok": False, "status": "https_required"}
+        return self._post_bridge_payload(
+            path=VPN_TUNNELS_PATH,
+            payload=self._license_check_payload(),
+            sanitize=False,  # passwords for un-acked tunnels arrive here for one-time injection
+        )
+
+    def ack_vpn_tunnels(self, names: list[str]) -> dict[str, Any]:
+        """Tell the panel which tunnel names were stored locally.
+
+        After ack the panel stops re-sending the tunnel passwords.
+        """
+        if not str(self.config.base_url or "").lower().startswith("https://"):
+            return {"ok": False, "status": "https_required"}
+        return self._post_bridge_payload(
+            path=VPN_TUNNELS_ACK_PATH,
+            payload=self._license_check_payload({
+                "tunnel_names": [str(n).strip() for n in (names or []) if str(n).strip()],
+            }),
+        )
+
+    def post_admins_report(self, *, admins: list[dict[str, Any]]) -> dict[str, Any]:
+        """Report the local admin inventory so the panel can decide super-admins.
+
+        Carries only non-secret identity fields (id/username/role/flags). Never
+        sends password hashes.
+        """
+        if not str(self.config.base_url or "").lower().startswith("https://"):
+            return {"ok": False, "status": "https_required",
+                    "error": {"code": "https_required", "message": "تقرير المدراء يتطلب رابط لوحة آمن HTTPS."}}
+        return self._post_bridge_payload(
+            path=ADMINS_REPORT_PATH,
+            payload=self._license_check_payload({"admins": list(admins or [])}),
+        )
+
     def poll_restore_requests(self, *, payload: dict[str, Any]) -> dict[str, Any]:
         return self._post_bridge_payload(path=RESTORE_POLL_PATH, payload=payload)
 
@@ -750,7 +830,15 @@ class AdminPanelClient:
         path = SERVICE_ACTIVATION_STATUS_PATH_TEMPLATE.format(reference=safe_reference)
         return self._post_bridge_payload(path=path, payload=payload)
 
-    def _post_bridge_payload(self, *, path: str, payload: dict[str, Any]) -> dict[str, Any]:
+    def _post_bridge_payload(
+        self, *, path: str, payload: dict[str, Any], sanitize: bool = True
+    ) -> dict[str, Any]:
+        """POST a signed payload and return the parsed response. Never raises.
+
+        ``sanitize`` masks sensitive keys (the default, safe for snapshots/UI).
+        Tunnel request/sync set it to False so the service can read the
+        one-time SSTP credential — that caller must NOT persist the raw secret.
+        """
         source_url = f"{self.config.base_url}{path}" if self.config.base_url else path
         if not self.config.enabled:
             return {
@@ -788,7 +876,7 @@ class AdminPanelClient:
         return {
             "ok": True,
             "status": _normalize_status(response),
-            "response": sanitize_bridge_payload(response),
+            "response": response if not sanitize else sanitize_bridge_payload(response),
         }
 
     def _fetch_snapshot(

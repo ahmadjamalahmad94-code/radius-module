@@ -127,8 +127,11 @@ def test_stream_emits_plan_and_done_on_success(app, client, monkeypatch):
 
     plan = next(e for e in evs if e["type"] == "plan")
     keys = [s["key"] for s in plan["steps"]]
-    # الخطوات الأساسية موجودة بالترتيب.
-    assert keys[:5] == ["prepare", "connect", "login", "errors", "companions"]
+    # الخطوات الأساسية حاضرة بهذا الترتيب (قد تتخلّلها خطوة «assets»
+    # عند توفّر اعتماد FTP — الـnas في الاختبار له api_user).
+    core = ["prepare", "connect", "login", "errors", "companions"]
+    positions = [keys.index(k) for k in core]
+    assert positions == sorted(positions), f"core steps out of order: {keys}"
 
     # خطوة login انتهت بنجاح، والخلاصة ok.
     login_oks = [e for e in evs
