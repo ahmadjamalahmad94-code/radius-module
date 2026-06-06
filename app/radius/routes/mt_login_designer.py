@@ -19,13 +19,14 @@ WYSIWYG view without ever calling the router.
 from __future__ import annotations
 
 import io
+import json
 import os
 import re
 import zipfile
 
 from flask import (
     Blueprint, Response, abort, current_app, g, render_template,
-    request, send_from_directory, url_for,
+    request, send_from_directory, stream_with_context, url_for,
 )
 
 from ..core.tenant import DEFAULT_TENANT_ID
@@ -95,6 +96,18 @@ def register_mt_login_designer_routes(bp: Blueprint) -> None:
         "/mt/<int:nas_id>/login-designer/deploy",
         "mt_login_designer_deploy",
         requires_perm(PERM_DEPLOY_LOGIN)(mt_login_designer_deploy),
+        methods=["POST"],
+    )
+    # شريط التقدّم: نفس عملية النشر بالضبط لكن تبثّ حالة كل مرحلة حيًّا
+    # (NDJSON سطر لكل حدث) فيرى المشغّل أين وصلت العملية وما نجح وما
+    # فشل ورسالة السبب الحقيقية — بدل طلب أصمّ ينتظر حتى ينتهي كله.
+    # POST مثل النشر العادي (CSRF + تأكيد)؛ الواجهة تقرأ التدفّق عبر
+    # fetch + ReadableStream. النقطة المتزامنة أعلاه تبقى مسار التراجع
+    # (بلا JavaScript) — كلاهما يشترك في نفس مولّد الخطوات _iter_deploy.
+    bp.add_url_rule(
+        "/mt/<int:nas_id>/login-designer/deploy/stream",
+        "mt_login_designer_deploy_stream",
+        requires_perm(PERM_DEPLOY_LOGIN)(mt_login_designer_deploy_stream),
         methods=["POST"],
     )
     # «قوالب محفوظة» — مكتبة مصغّرة لكل راوتر: حفظ مجموعة
@@ -453,222 +466,373 @@ def _companion_summary(ok_names: list[str], fail_names: list[str]) -> str:
     return " | ".join(parts)
 
 
+# ─── R3 — نشر صفحة الدخول كخطوات تبثّ تقدّمها ───────────────────
+#
+# جوهر عملية النشر صار مولّدًا واحدًا (_iter_deploy) يُنتج حدث تقدّم
+# لكل مرحلة (plan/step/done) ثم يُرجع الحصيلة النهائية عبر `return`
+# (PEP 380). يستهلكه مساران:
+#   • mt_login_designer_deploy        — يستنزف الأحداث ويعرض النتيجة
+#     النهائية في الصفحة (مسار التراجع بلا JavaScript، عقد قديم).
+#   • mt_login_designer_deploy_stream — يبثّ كل حدث NDJSON للمتصفّح
+#     فيُبنى شريط التقدّم الحيّ.
+# مصدر واحد للحقيقة فلا تتباعد المنطقيتان.
+
+
+def _deploy_step(key: str, status: str, detail: str = "") -> dict:
+    """حدث «خطوة» موحّد لشريط التقدّم. status: running|ok|failed|skip."""
+    return {"type": "step", "key": key, "status": status, "detail": detail}
+
+
+def _iter_deploy(nas_id: int, nas: dict, design: dict, *, confirmed: bool):
+    """مولّد خطوات النشر — نفس عملية mt_login_designer_deploy حرفيًا
+    لكن تبثّ حالة كل مرحلة.
+
+    يُنتج قواميس أحداث:
+      {"type":"plan","steps":[{"key","label"}...]}  — هيكل الخطوات.
+      {"type":"step","key","status","detail"}       — تحديث خطوة.
+      {"type":"done","ok","error","summary"}        — الخلاصة النهائية.
+    ويُرجع عبر `return` حصيلة للمسار المتزامن:
+      {"deploy_result","store_result","wg_result",
+       "companion_summary","error"}.
+
+    التأكيد + التحقّق + الاتصال + الرفع + التدقيق كلّها هنا، فالمساران
+    المتزامن والمتدفّق يسلكان نفس المسار تمامًا."""
+    bundle = {
+        "deploy_result": None, "store_result": None, "wg_result": None,
+        "companion_summary": "", "error": "",
+    }
+
+    # ── التأكيد ──
+    if not confirmed:
+        msg = "يجب تأكيد عملية النشر قبل تنفيذها."
+        yield {"type": "plan",
+               "steps": [{"key": "prepare", "label": "التحقّق والتأكيد"}]}
+        yield _deploy_step("prepare", "failed", msg)
+        bundle["error"] = msg
+        yield {"type": "done", "ok": False, "error": msg, "summary": ""}
+        return bundle
+
+    # ── التحقّق من المتغيّرات ──
+    try:
+        safe = ht.validate_vars(design["variables"])
+    except ValueError as e:
+        msg = str(e)
+        yield {"type": "plan",
+               "steps": [{"key": "prepare", "label": "تجهيز ملفات التصميم والتحقّق"}]}
+        yield _deploy_step("prepare", "failed", msg)
+        bundle["error"] = msg
+        yield {"type": "done", "ok": False, "error": msg, "summary": ""}
+        return bundle
+
+    store_enabled = safe.get("STORE_ENABLED") == "yes"
+    store_api_base = _auto_api_base() if store_enabled else ""
+
+    # هيكل الخطوات المعروف مسبقًا — تعرضه الواجهة هيكلًا ساكنًا ثم
+    # تحدّث كل خطوة عند وصول حدثها. خطوتا المتجر تظهران فقط عند تفعيله.
+    steps = [
+        {"key": "prepare", "label": "تجهيز ملفات التصميم والتحقّق"},
+        {"key": "connect", "label": "الاتصال بالراوتر"},
+        {"key": "login", "label": "رفع صفحة الدخول login.html"},
+        {"key": "errors", "label": "رفع رسائل الأخطاء errors.txt"},
+        {"key": "companions",
+         "label": "رفع الصفحات المرافقة (الحالة/الخروج/إعادة التوجيه)"},
+    ]
+    if store_enabled and store_api_base:
+        steps.append({"key": "store", "label": "رفع متجر الراوتر store.html"})
+        steps.append({"key": "walled_garden",
+                      "label": "تجهيز قائمة السماح (walled-garden)"})
+    yield {"type": "plan", "steps": steps}
+    yield _deploy_step("prepare", "ok", "التصميم صالح والملفات جاهزة.")
+
+    # ── حارس عنوان المتجر: عنوان راديوس فارغ/محلي لا تصله أجهزة
+    # الزبائن — نرفض نشر المتجر برسالة واضحة بدل صفحة لا تعمل. لا
+    # تدقيق هنا (لم تبدأ عملية الراوتر بعد) كما في السلوك الأصلي. ──
+    if store_enabled:
+        from ..services.hotspot_store_page import (
+            API_BASE_LOOPBACK_MSG, api_base_unusable,
+        )
+        if api_base_unusable(store_api_base):
+            yield _deploy_step("store", "failed", API_BASE_LOOPBACK_MSG)
+            bundle["error"] = API_BASE_LOOPBACK_MSG
+            yield {"type": "done", "ok": False,
+                   "error": API_BASE_LOOPBACK_MSG, "summary": ""}
+            return bundle
+
+    # ── الاتصال بالراوتر ──
+    yield _deploy_step("connect", "running", "جارٍ فتح اتصال API بالراوتر…")
+    client = _connect_client(nas_id)
+    if client is None:
+        msg = "الراوتر غير موجود."
+        yield _deploy_step("connect", "failed", msg)
+        bundle["error"] = msg
+        yield {"type": "done", "ok": False, "error": msg, "summary": ""}
+        return bundle
+
+    login_vars = dict(safe)
+    if (store_enabled and store_api_base
+            and not _is_manual_store_url(safe.get("STORE_URL", ""))):
+        login_vars["STORE_URL"] = ht.STORE_ONROUTER_FILENAME
+
+    deploy_result = None
+    store_result = None
+    wg_result = None
+    companion_summary = ""
+    error = ""
+    # الخطوة الجارية — لو رمى الراوتر استثناءً نعرف أي خطوة نُعلّمها فاشلة.
+    current = "connect"
+    try:
+        client.connect()
+        yield _deploy_step("connect", "ok", "تم الاتصال بالراوتر.")
+
+        # ── رفع login.html ──
+        current = "login"
+        yield _deploy_step("login", "running", "جارٍ رفع صفحة الدخول…")
+        deploy_result = ht.deploy_login(
+            client, design["template_slug"], login_vars, tenant_id=_tid())
+        if deploy_result and deploy_result.ok:
+            yield _deploy_step(
+                "login", "ok",
+                f"رُفع {deploy_result.bytes} بايت إلى {deploy_result.path}")
+
+            # ── errors.txt (فشله لا يُفشل النشر) ──
+            current = "errors"
+            yield _deploy_step("errors", "running", "جارٍ رفع رسائل الأخطاء…")
+            try:
+                from ..db.repos import (
+                    hotspot_error_messages_repo as _err_repo,
+                )
+                from ..services.hotspot_error_messages import (
+                    build_errors_txt,
+                )
+                _msgs, _en = _err_repo.resolved_messages(_tid())
+                _er = ht.deploy_errors_txt(
+                    client, build_errors_txt(_msgs, enabled=_en))
+                if _er and _er.ok:
+                    yield _deploy_step("errors", "ok", "رُفع errors.txt.")
+                else:
+                    yield _deploy_step(
+                        "errors", "failed",
+                        "تعذّر رفع errors.txt — لا يُفشل النشر.")
+            except Exception:  # noqa: BLE001
+                yield _deploy_step(
+                    "errors", "failed",
+                    "تعذّر رفع errors.txt — لا يُفشل النشر.")
+
+            # ── الصفحات القياسية المرافقة (ملف بملف مع عدّاد) ──
+            current = "companions"
+            try:
+                from ..services.hotspot_companion_pages import (
+                    build_all_companions,
+                )
+                comp_store = (ht.STORE_ONROUTER_FILENAME
+                              if (store_enabled and store_api_base) else "")
+                pages = build_all_companions(safe, store_url=comp_store)
+                total = len(pages)
+                ok_names, fail_names = [], []
+                done_n = 0
+                yield _deploy_step("companions", "running", f"0/{total}")
+                for fname, fhtml in pages.items():
+                    try:
+                        r = ht.deploy_hotspot_file(client, fname, fhtml)
+                    except Exception:  # noqa: BLE001
+                        r = None
+                    done_n += 1
+                    if r and r.ok:
+                        ok_names.append(fname)
+                    else:
+                        fail_names.append(fname)
+                    yield _deploy_step(
+                        "companions", "running",
+                        f"{done_n}/{total} — {fname.replace('.html', '')}")
+                companion_summary = _companion_summary(ok_names, fail_names)
+                # أي ملف فشل = الخطوة فشلت جزئيًا (لا يُفشل النشر كله).
+                _cstatus = "ok" if not fail_names else "failed"
+                yield _deploy_step(
+                    "companions", _cstatus,
+                    companion_summary or f"تم رفع {len(ok_names)}/{total}.")
+            except Exception:  # noqa: BLE001
+                companion_summary = ""
+                yield _deploy_step(
+                    "companions", "failed",
+                    "تعذّر بناء الصفحات المرافقة — لا يُفشل نشر صفحة الدخول.")
+        else:
+            # فشل رفع login.html — السبب الحقيقي من الراوتر (مثلًا صلاحية
+            # ناقصة أو القرص ممتلئ). نُعلّم الخطوة فاشلة ونتخطّى الباقي.
+            err = (deploy_result.error if deploy_result
+                   else "فشل رفع صفحة الدخول.")
+            yield _deploy_step("login", "failed", err)
+            for k in ("errors", "companions"):
+                yield _deploy_step(k, "skip", "تُخطّيت — فشل رفع صفحة الدخول.")
+
+        # ── متجر الراوتر store.html + walled-garden ──
+        if (store_enabled and store_api_base
+                and deploy_result and deploy_result.ok):
+            from ..services.hotspot_store_page import (
+                deploy_store, ensure_walled_garden,
+            )
+            from ..services.store_key import get_or_create_store_key
+            current = "store"
+            yield _deploy_step("store", "running", "جارٍ رفع متجر الراوتر…")
+            store_result = deploy_store(
+                client,
+                api_base=store_api_base,
+                tenant_name=safe.get("TENANT_NAME", ""),
+                accent_color=safe.get("ACCENT_COLOR", ""),
+                logo_url=safe.get("TENANT_LOGO_URL", ""),
+                store_key=get_or_create_store_key(
+                    _tid(), by=int(getattr(g, "admin_id", 0) or 0)),
+            )
+            if not store_result.ok:
+                error = ("نُشرت صفحة الدخول لكن رفع متجر الراوتر فشل: "
+                         + store_result.error)
+                yield _deploy_step("store", "failed", store_result.error)
+                yield _deploy_step(
+                    "walled_garden", "skip", "تُخطّيت — فشل رفع المتجر.")
+            else:
+                yield _deploy_step(
+                    "store", "ok",
+                    f"رُفع {store_result.bytes} بايت إلى {store_result.path}")
+                current = "walled_garden"
+                yield _deploy_step(
+                    "walled_garden", "running", "جارٍ تجهيز قائمة السماح…")
+                wg_result = ensure_walled_garden(
+                    client, api_base=store_api_base)
+                if wg_result and wg_result.ok:
+                    yield _deploy_step(
+                        "walled_garden", "ok",
+                        (f"أُضيفت {wg_result.added} قاعدة."
+                         if wg_result.added else "القواعد موجودة مسبقًا."))
+                else:
+                    yield _deploy_step(
+                        "walled_garden", "failed",
+                        (wg_result.error if wg_result else "")
+                        + " — انسخ أمر walled-garden يدويًا من الصفحة.")
+    except Exception as e:  # noqa: BLE001
+        # السبب الحقيقي لفشل الاتصال/الرفع — يُعرض على الخطوة الجارية.
+        error = "تعذّر الاتصال بالراوتر: " + str(e)
+        yield _deploy_step(current, "failed", error)
+    finally:
+        try:
+            client.close()
+        except Exception:  # noqa: BLE001
+            pass
+
+    # ── التدقيق (سجل الأحداث) — مطابق للسلوك الأصلي تمامًا ──
+    actor = str(getattr(g, "admin_id", None) or "ui")
+    if not deploy_result:
+        _result, _sev = "failed", "critical"
+    elif deploy_result.ok:
+        _result, _sev = "success", "warning"
+    else:
+        _result, _sev = "failed", "critical"
+    get_audit_service().record(
+        actor=actor,
+        action="mt.login_designer.deploy",
+        target_type="mikrotik_nas",
+        target_id=str(nas_id),
+        severity=_sev,
+        result_status=_result,
+        router_id=int(nas_id),
+        error_message=(deploy_result.error if deploy_result else error),
+        payload={
+            "template_slug": design["template_slug"],
+            "path": (deploy_result.path if deploy_result else ""),
+            "bytes": (deploy_result.bytes if deploy_result else 0),
+            "ok": bool(deploy_result and deploy_result.ok),
+            "error": (deploy_result.error if deploy_result else error),
+            "store_enabled": store_enabled,
+            "store_api_base": store_api_base,
+            "store_ok": bool(store_result and store_result.ok),
+            "store_path": (store_result.path if store_result else ""),
+            "store_bytes": (store_result.bytes if store_result else 0),
+            "store_error": (store_result.error if store_result else ""),
+            "wg_ok": bool(wg_result and wg_result.ok),
+            "wg_added": (wg_result.added if wg_result else 0),
+            "wg_error": (wg_result.error if wg_result else ""),
+        },
+    )
+
+    bundle.update(
+        deploy_result=deploy_result, store_result=store_result,
+        wg_result=wg_result, companion_summary=companion_summary,
+        error=error,
+    )
+    overall_ok = bool(deploy_result and deploy_result.ok)
+    summary = companion_summary if overall_ok else ""
+    yield {"type": "done", "ok": overall_ok, "error": error,
+           "summary": summary}
+    return bundle
+
+
+def _drain_deploy(gen) -> dict:
+    """يستنزف مولّد _iter_deploy (يتجاهل أحداث التقدّم) ويُرجع الحصيلة
+    النهائية (قيمة `return` عبر StopIteration.value)."""
+    try:
+        while True:
+            next(gen)
+    except StopIteration as stop:
+        return stop.value or {
+            "deploy_result": None, "store_result": None, "wg_result": None,
+            "companion_summary": "", "error": "",
+        }
+
+
 def mt_login_designer_deploy(nas_id: int):
     """R3 — Render the saved design + upload login.html to the
-    router. Requires the confirm checkbox; refuses on validation
-    failure; writes one audit-log entry per attempt.
+    router (مسار التراجع بلا JavaScript). يشترك مع شريط التقدّم في
+    نفس مولّد الخطوات _iter_deploy — هنا نستنزفه ونعرض النتيجة فقط.
 
     بعد رفع login.html ينجح، تُرفع أيضًا الصفحات القياسية المرافقة
-    (alogin/status/logout/error/rlogin/redirect/radvert) بنفس ثيم
-    التصميم + errors.txt + (store.html عند تفعيل المتجر) — كل ملف
-    على حدة، وفشل ملف لا يُفشل البقية. ملخص النجاح/الفشل يُلحق
-    برسالة النشر."""
+    + errors.txt + (store.html عند تفعيل المتجر) — كل ملف على حدة،
+    وفشل ملف لا يُفشل البقية. كل محاولة تُسجَّل في سجل الأحداث."""
     nas = _load_nas(nas_id)
     if not nas:
         abort(404)
     confirmed = request.form.get("confirm") == "1"
-    error = ""
-    deploy_result = None
-    store_result = None  # نتيجة رفع متجر الراوتر (إن فُعّل المتجر)
-    wg_result = None  # نتيجة تجهيز walled-garden (مع المتجر فقط)
-    companion_summary = ""  # ملخص رفع الصفحات المرافقة (نجاح/فشل)
+    design = _current_design(nas_id)
+    bundle = _drain_deploy(
+        _iter_deploy(nas_id, nas, design, confirmed=confirmed))
+    deploy_result = bundle["deploy_result"]
+    flash_ok = (bundle["companion_summary"]
+                if (deploy_result and deploy_result.ok) else "")
+    return _render_designer(
+        nas_id, nas, design,
+        error=bundle["error"], deploy_result=deploy_result,
+        store_result=bundle["store_result"],
+        wg_result=bundle["wg_result"], flash_ok=flash_ok)
+
+
+def mt_login_designer_deploy_stream(nas_id: int):
+    """شريط التقدّم: نفس النشر لكن يبثّ حالة كل مرحلة حيًّا (NDJSON
+    سطر لكل حدث). الواجهة تقرؤه عبر fetch + ReadableStream فترسم
+    الخطوات وتُحدّث حالتها لحظيًّا، وعند الفشل تُظهر الخطوة الفاشلة
+    ورسالة السبب الحقيقية بدل رسالة عامة.
+
+    stream_with_context يبقي سياق الطلب (g/db/المستأجر) حيًّا أثناء
+    البثّ — نفس الخيط، فاتصال SQLite وlogin الجلسة سليمان. لا توجد
+    أي إعادة جدولة عند الفشل: الطلب ينتهي بعد done، فلا لوب."""
+    nas = _load_nas(nas_id)
+    if not nas:
+        abort(404)
+    confirmed = request.form.get("confirm") == "1"
     design = _current_design(nas_id)
 
-    if not confirmed:
-        error = "يجب تأكيد عملية النشر قبل تنفيذها."
-    else:
-        try:
-            safe = ht.validate_vars(design["variables"])
-        except ValueError as e:
-            error = str(e)
-            safe = None
-        if safe is not None:
-            client = _connect_client(nas_id)
-            if client is None:
-                error = "الراوتر غير موجود."
-            else:
-                # متجر المايكروتيك: عند تفعيل المتجر يُرفع store.html
-                # بجانب login.html ويُحوَّل زر المتجر لرابط نسبي
-                # «store.html» — فيعمل المتجر من الراوتر نفسه ويتخاطب
-                # مع الراديوس عبر /api/v1/store/* فقط.
-                store_enabled = safe.get("STORE_ENABLED") == "yes"
-                store_api_base = _auto_api_base() if store_enabled else ""
-                # حارس النشر: عنوان راديوس فارغ أو محلي (127.x /
-                # localhost) لا تصل إليه أجهزة الزبائن أبدًا — نرفض
-                # نشر المتجر برسالة عربية واضحة بدل صفحة لا تعمل.
-                if store_enabled:
-                    from ..services.hotspot_store_page import (
-                        API_BASE_LOOPBACK_MSG, api_base_unusable,
-                    )
-                    if api_base_unusable(store_api_base):
-                        return _render_designer(
-                            nas_id, nas, design,
-                            error=API_BASE_LOOPBACK_MSG)
-                login_vars = dict(safe)
-                # زر المتجر يفتح التصميم المستقل المرفوع على الراوتر
-                # نفسه (رابط نسبي store.html — يعمل على أي راوتر).
-                # التجاوز اليدوي المقصود فقط يحتفظ برابطه المخصص.
-                if (store_enabled and store_api_base
-                        and not _is_manual_store_url(
-                            safe.get("STORE_URL", ""))):
-                    login_vars["STORE_URL"] = ht.STORE_ONROUTER_FILENAME
-                try:
-                    client.connect()
-                    deploy_result = ht.deploy_login(
-                        client, design["template_slug"], login_vars,
-                        tenant_id=_tid(),
-                    )
-                    # رسائل أخطاء الهوت سبوت — يُرفع errors.txt بجانب
-                    # login.html من رسائل المشغّل (لوحة «رسائل أخطاء
-                    # الهوتسبوت»). فشله لا يُفشل نشر صفحة الدخول.
-                    if deploy_result and deploy_result.ok:
-                        try:
-                            from ..db.repos import (
-                                hotspot_error_messages_repo as _err_repo,
-                            )
-                            from ..services.hotspot_error_messages import (
-                                build_errors_txt,
-                            )
-                            _msgs, _en = _err_repo.resolved_messages(_tid())
-                            ht.deploy_errors_txt(
-                                client,
-                                build_errors_txt(_msgs, enabled=_en))
-                        except Exception:  # noqa: BLE001
-                            pass
-                        # ── الصفحات القياسية المرافقة ──
-                        # مجلد هوت سبوت كامل يحتاج alogin/status/
-                        # logout/error/rlogin/redirect/radvert بجانب
-                        # login.html — نبنيها بنفس ثيم التصميم ونرفع
-                        # كل ملف على حدة. فشل ملف لا يُفشل البقية ولا
-                        # نشر صفحة الدخول؛ نجمع ملخصًا للرسالة.
-                        try:
-                            from ..services.hotspot_companion_pages import (
-                                build_all_companions,
-                            )
-                            # زر متجر البطاقات في status.html يفتح
-                            # store.html المرفوع بجانبها (نفس قرار زر
-                            # المتجر في login.html) عند تفعيل المتجر.
-                            comp_store = (
-                                ht.STORE_ONROUTER_FILENAME
-                                if (store_enabled and store_api_base)
-                                else "")
-                            pages = build_all_companions(
-                                safe, store_url=comp_store)
-                            ok_names, fail_names = [], []
-                            for fname, fhtml in pages.items():
-                                try:
-                                    r = ht.deploy_hotspot_file(
-                                        client, fname, fhtml)
-                                except Exception:  # noqa: BLE001
-                                    r = None
-                                if r and r.ok:
-                                    ok_names.append(fname)
-                                else:
-                                    fail_names.append(fname)
-                            companion_summary = _companion_summary(
-                                ok_names, fail_names)
-                        except Exception:  # noqa: BLE001
-                            # بناء الصفحات نفسه فشل (لن يحدث عمليًا) —
-                            # لا نُفشل نشر صفحة الدخول.
-                            companion_summary = ""
-                    if (store_enabled and store_api_base
-                            and deploy_result and deploy_result.ok):
-                        from ..services.hotspot_store_page import (
-                            deploy_store, ensure_walled_garden,
-                        )
-                        from ..services.store_key import (
-                            get_or_create_store_key,
-                        )
-                        # توليد/جلب مفتاح المتجر وحقنه في الصفحة المنشورة
-                        # — يصبح الفرض على الـ API فعّالًا فور هذا النشر.
-                        store_result = deploy_store(
-                            client,
-                            api_base=store_api_base,
-                            tenant_name=safe.get("TENANT_NAME", ""),
-                            accent_color=safe.get("ACCENT_COLOR", ""),
-                            logo_url=safe.get("TENANT_LOGO_URL", ""),
-                            store_key=get_or_create_store_key(
-                                _tid(),
-                                by=int(getattr(g, "admin_id", 0) or 0)),
-                        )
-                        if not store_result.ok:
-                            # صفحة الدخول نُشرت لكن المتجر فشل —
-                            # نُظهر السبب دون اعتبار النشر كله فاشلًا.
-                            error = ("نُشرت صفحة الدخول لكن رفع متجر "
-                                     "الراوتر فشل: " + store_result.error)
-                        else:
-                            # تجهيز walled-garden تلقائيًا — بدون هذه
-                            # القواعد لا يصل المتجر للراديوس قبل تسجيل
-                            # دخول الإنترنت. فشلها لا يُفشل النشر:
-                            # يعرض المصمّم أمر النسخ اليدوي بدلًا.
-                            wg_result = ensure_walled_garden(
-                                client, api_base=store_api_base)
-                except Exception as e:  # noqa: BLE001
-                    error = "تعذّر الاتصال بالراوتر: " + str(e)
-                finally:
-                    try:
-                        client.close()
-                    except Exception:  # noqa: BLE001
-                        pass
+    @stream_with_context
+    def generate():
+        # تلميح أوّلي يُجبر بعض الوسطاء على عدم تجميع البثّ، ويبدأ العدّاد.
+        yield json.dumps({"type": "begin"}, ensure_ascii=False) + "\n"
+        for ev in _iter_deploy(nas_id, nas, design, confirmed=confirmed):
+            yield json.dumps(ev, ensure_ascii=False) + "\n"
 
-                actor = str(getattr(g, "admin_id", None) or "ui")
-                # S2.3 — enrich audit; deploy writes a file on
-                # the router so success is `warning`, failure is
-                # `critical`.
-                if not deploy_result:
-                    _result = "failed"
-                    _sev = "critical"
-                elif deploy_result.ok:
-                    _result = "success"
-                    _sev = "warning"
-                else:
-                    _result = "failed"
-                    _sev = "critical"
-                get_audit_service().record(
-                    actor=actor,
-                    action="mt.login_designer.deploy",
-                    target_type="mikrotik_nas",
-                    target_id=str(nas_id),
-                    severity=_sev,
-                    result_status=_result,
-                    router_id=int(nas_id),
-                    error_message=(deploy_result.error
-                                   if deploy_result else error),
-                    payload={
-                        "template_slug": design["template_slug"],
-                        "path": (deploy_result.path
-                                 if deploy_result else ""),
-                        "bytes": (deploy_result.bytes
-                                  if deploy_result else 0),
-                        "ok": bool(deploy_result and deploy_result.ok),
-                        "error": (deploy_result.error
-                                  if deploy_result else error),
-                        # متجر الراوتر — يُرفع تلقائيًا مع التصميم
-                        # عند تفعيل المتجر (store.html + API base).
-                        "store_enabled": store_enabled,
-                        "store_api_base": store_api_base,
-                        "store_ok": bool(store_result and store_result.ok),
-                        "store_path": (store_result.path
-                                       if store_result else ""),
-                        "store_bytes": (store_result.bytes
-                                        if store_result else 0),
-                        "store_error": (store_result.error
-                                        if store_result else ""),
-                        # walled-garden — يُجهَّز آليًا مع المتجر.
-                        "wg_ok": bool(wg_result and wg_result.ok),
-                        "wg_added": (wg_result.added if wg_result else 0),
-                        "wg_error": (wg_result.error if wg_result else ""),
-                    },
-                )
-
-    # ملخص رفع الصفحات المرافقة يُعرض كرسالة نجاح إضافية (فقط عند
-    # نجاح نشر صفحة الدخول — الملخص لا يُبنى أصلًا قبل ذلك).
-    flash_ok = (companion_summary
-                if (deploy_result and deploy_result.ok) else "")
-    return _render_designer(nas_id, nas, design,
-                            error=error, deploy_result=deploy_result,
-                            store_result=store_result,
-                            wg_result=wg_result, flash_ok=flash_ok)
+    return Response(
+        generate(),
+        mimetype="application/x-ndjson",
+        headers={
+            # عطّل تجميع nginx حتى تصل الأحداث لحظيًّا لا دفعة واحدة.
+            "X-Accel-Buffering": "no",
+            "Cache-Control": "no-cache",
+        },
+    )
 
 
 # ─── «قوالب محفوظة» — حفظ/تطبيق/حذف مجموعة المتغيّرات باسم ──────
