@@ -667,6 +667,24 @@ def users_new():
         **_form_select_options())
 
 
+def _existing_temp_duration(before) -> int:
+    """المدة (دقائق) للنافذة المخزّنة سابقًا على المشترك، أو 0 إن لا شيء.
+
+    تُقرأ من metadata (المستوى الأعلى أو مجموعة advanced) — تُستخدم كقيمة
+    احتياطية عند إعادة حفظ سرعة مؤقتة فعّالة دون إعادة إدخال المدة."""
+    if not before:
+        return 0
+    meta = _parse_metadata(getattr(before, "metadata", None))
+    flat = _grouped_to_flat(meta)
+    for k, v in meta.items():
+        if not isinstance(v, dict):
+            flat.setdefault(k, v)
+    try:
+        return int(float(flat.get("temporary_speed_duration_minutes") or 0))
+    except (TypeError, ValueError):
+        return 0
+
+
 def _delegate_temp_speed(username: str, before) -> None:
     """Route the profile form's temp-speed intent through the SHARED service
     (services/temp_speed.py) — the exact same apply/cancel the «المتصلون الآن»
@@ -685,18 +703,28 @@ def _delegate_temp_speed(username: str, before) -> None:
     try:
         from ..services import temp_speed
         if temp_enabled:
+            # ⛔ الجذر السابق لـ«لا يوجد وقت انتهاء محفوظ»: لو وصلت المدة 0/فارغة
+            # (حقل المدة أُفرِغ، أو unit-picker لم يُزامَن، أو بيانات قديمة)، كان
+            # apply_temp_speed يرمي ValueError (المدة < 1) فيُبتلع أدناه كتحذير،
+            # ولا تُكتب النافذة إطلاقًا (temporary_speed=0، بلا temporary_speed_to).
+            # الآن: عند تفعيل المفتاح نضمن مدة صالحة دائمًا — المخزَّنة سابقًا إن
+            # وُجدت، وإلا 30 دقيقة (نفس افتراضي الواجهة) — فتُثبَّت النافذة دومًا.
+            duration = _i("temporary_speed_duration_minutes")
+            if duration <= 0:
+                duration = _existing_temp_duration(before) or 30
             temp_speed.apply_temp_speed(
                 tenant_id=_tid(), actor=_actor(), username=username,
                 down_kbps=_i("temporary_download_speed_kbps"),
                 up_kbps=_i("temporary_upload_speed_kbps"),
-                duration_minutes=_i("temporary_speed_duration_minutes"),
+                duration_minutes=duration,
                 reset_window=not prev_temp,   # don't restart a running countdown
             )
         elif prev_temp:
             temp_speed.cancel_temp_speed(
                 tenant_id=_tid(), actor=_actor(), username=username)
     except ValueError as exc:
-        flash(f"تعذّر تطبيق السرعة المؤقتة: {exc}", "warning")
+        # نُظهرها كـ«خطأ» صريح (لا «تحذير» خافت) حتى لا يمرّ فشل التثبيت بصمت.
+        flash(f"تعذّر تطبيق السرعة المؤقتة: {exc}", "error")
     except Exception:  # noqa: BLE001 — temp-speed must never break the save
         import logging
         logging.getLogger(__name__).exception(
