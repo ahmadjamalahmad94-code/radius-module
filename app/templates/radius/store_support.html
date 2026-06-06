@@ -149,7 +149,11 @@
   .ssp-msgs{flex:1;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:10px;background:#f8fafc}
   .ssp-msg{max-width:74%;padding:10px 12px;border-radius:13px;font-weight:700;font-size:13px;line-height:1.7}
   .ssp-msg .m-meta{display:block;margin-top:5px;font-size:10.5px;font-weight:700;opacity:.7}
-  .ssp-msg img{max-width:180px;border-radius:9px;margin-top:6px;display:block}
+  .ssp-msg img{max-width:180px;border-radius:9px;margin-top:6px;display:block;cursor:pointer}
+  /* رابط احتياطي يظهر فقط إن تعذّر تحميل الصورة المصغّرة (onerror). */
+  .ssp-att{display:inline-block;margin-top:6px}
+  .ssp-att .att-fb{display:none;font-weight:800;text-decoration:underline;cursor:pointer}
+  .ssp-att.att-fail .att-fb{display:inline-block}
   .ssp-msg.from-customer{align-self:flex-start;background:#fff;border:1px solid var(--line)}
   .ssp-msg.from-admin{align-self:flex-end;background:linear-gradient(135deg,var(--violet),var(--violet-deep));color:#fff}
   .ssp-msg.from-admin .m-meta{opacity:.85}
@@ -241,7 +245,7 @@
               <td style="direction:ltr">{{ money(d.amount_claimed) }} {{ d.currency or '' }}</td>
               <td>
                 {% if d.receipt_image_url %}
-                  <a class="ssp-thumb" href="{{ d.receipt_image_url }}" target="_blank" rel="noopener"><img src="{{ d.receipt_image_url }}" alt="{{ _('وصل') }}"></a>
+                  <a class="ssp-thumb ssp-att" href="{{ d.receipt_image_url }}" target="_blank" rel="noopener"><img src="{{ d.receipt_image_url }}" alt="{{ _('وصل') }}" onerror="this.style.display='none';this.parentNode.classList.add('att-fail')"><span class="att-fb">📎 {{ _('عرض الوصل') }}</span></a>
                 {% else %}<small style="color:var(--muted)">{{ _('لا وصل') }}</small>{% endif %}
               </td>
               <td><small>{{ date_label(d.created_at) }}</small></td>
@@ -399,7 +403,7 @@
               {% for m in open_thread['items'] %}
               <div class="ssp-msg {{ 'from-admin' if m.sender == 'admin' else 'from-customer' }}">
                 {% if m.body %}{{ m.body }}{% endif %}
-                {% if m.image_url %}<a href="{{ m.image_url }}" target="_blank" rel="noopener"><img src="{{ m.image_url }}" alt="{{ _('مرفق') }}"></a>{% endif %}
+                {% if m.image_url %}<a class="ssp-att" href="{{ m.image_url }}" target="_blank" rel="noopener"><img src="{{ m.image_url }}" alt="{{ _('مرفق') }}" onerror="this.style.display='none';this.parentNode.classList.add('att-fail')"><span class="att-fb">📎 {{ _('عرض المرفق') }}</span></a>{% endif %}
                 <span class="m-meta">{{ (m.admin_actor if m.sender == 'admin' else _('الزبون')) }} · {{ date_label(m.created_at) }}</span>
               </div>
               {% else %}
