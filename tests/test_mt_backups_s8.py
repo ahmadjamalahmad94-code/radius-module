@@ -155,15 +155,22 @@ def test_save_route_writes_record_and_audit(app, client, monkeypatch):
         def connect(self): pass
         def close(self): pass
     monkeypatch.setattr(routes_pkg, "MikrotikClient", _FakeClient)
-    monkeypatch.setattr(
-        mac, "backup_save",
-        lambda nas, filename: MtResult(ok=True, data=[]),
-    )
+    # نلتقط الوسيط name= للتأكد أن المسار يستدعي الخدمة بالتوقيع الصحيح
+    # (name بلا امتداد) بدل filename الخاطئ.
+    seen = {}
+
+    def _fake_save(nas, *, name):
+        seen["name"] = name
+        return MtResult(ok=True, data=[])
+    monkeypatch.setattr(mac, "backup_save", _fake_save)
     token = _csrf(client)
     res = client.post("/admin/radius/mt/2/backups/save",
                       data={"_csrf_token": token},
                       follow_redirects=False)
     assert res.status_code in {302, 303}
+    # بلا اسم من المستخدم → اسم تلقائي بلا امتداد .backup
+    assert seen["name"].startswith("nas-2-")
+    assert not seen["name"].endswith(".backup")
     with app.app_context():
         from app.radius.db.repos import router_backups_repo as r
         from app.radius.db.repos import audit_repo
@@ -191,17 +198,101 @@ def test_save_records_failure_when_wire_fails(app, client, monkeypatch):
     monkeypatch.setattr(routes_pkg, "MikrotikClient", _FakeClient)
     monkeypatch.setattr(
         mac, "backup_save",
-        lambda nas, filename: MtResult(ok=True, data=[]),
+        lambda nas, *, name: MtResult(ok=True, data=[]),
     )
     token = _csrf(client)
-    client.post("/admin/radius/mt/3/backups/save",
-                data={"_csrf_token": token})
+    res = client.post("/admin/radius/mt/3/backups/save",
+                      data={"_csrf_token": token},
+                      follow_redirects=True)
     with app.app_context():
         from app.radius.db.repos import router_backups_repo as r
         rows = r.list_for_router(1, 3)
         assert rows
         assert rows[0]["status"] == "failed"
+        # النص الخام (الاستثناء) يُحفظ في سجل التدقيق/السجل المحلي…
         assert "unreachable" in rows[0]["error_message"]
+    # …لكن المستخدم يرى رسالة عربية ودودة لا نص الاستثناء الخام.
+    html = res.get_data(as_text=True)
+    assert "تعذّر الاتصال بالراوتر" in html
+    # نص الاستثناء الخام لا يُسرَّب للمستخدم.
+    assert "router unreachable" not in html
+
+
+def test_save_uses_user_supplied_name(app, client, monkeypatch):
+    """اسم اختياري من المستخدم → يُمرَّر إلى الخدمة بـname= بعد التنظيف
+    (بلا امتداد .backup) ويُخزَّن في السجل مع الامتداد."""
+    _seed_nas(app, nas_id=7)
+    _login(client)
+    from app.radius.routes import mt_backups as routes_pkg
+    from app.radius.services import mikrotik_admin_client as mac
+    from app.radius.services.mikrotik_admin_client import MtResult
+
+    class _FakeClient:
+        def __init__(self, **kw): pass
+        def connect(self): pass
+        def close(self): pass
+    monkeypatch.setattr(routes_pkg, "MikrotikClient", _FakeClient)
+    seen = {}
+
+    def _fake_save(nas, *, name):
+        seen["name"] = name
+        return MtResult(ok=True, data=[])
+    monkeypatch.setattr(mac, "backup_save", _fake_save)
+    token = _csrf(client)
+    res = client.post(
+        "/admin/radius/mt/7/backups/save",
+        data={"_csrf_token": token, "backup_name": "pre-upgrade"},
+        follow_redirects=False,
+    )
+    assert res.status_code in {302, 303}
+    # الاسم وصل للراوتر كما هو بلا امتداد.
+    assert seen["name"] == "pre-upgrade"
+    with app.app_context():
+        from app.radius.db.repos import router_backups_repo as r
+        rows = r.list_for_router(1, 7)
+        assert rows
+        # السجل المحلي يحمل الامتداد .backup.
+        assert rows[0]["filename"] == "pre-upgrade.backup"
+
+
+def test_save_rejects_bad_name_with_arabic_message(app, client, monkeypatch):
+    """اسم بحروف عربية/رموز يرفضه _sanitize_backup_name → رسالة عربية
+    ودودة بدل خطأ بايثون خام، ولا نسخة ناجحة."""
+    _seed_nas(app, nas_id=8)
+    _login(client)
+    from app.radius.routes import mt_backups as routes_pkg
+
+    class _FakeClient:
+        def __init__(self, **kw): pass
+        def connect(self): pass
+        def close(self): pass
+    monkeypatch.setattr(routes_pkg, "MikrotikClient", _FakeClient)
+    # نترك backup_save الحقيقية تعمل: تُنظّف الاسم وترجع خطأ عربي.
+    token = _csrf(client)
+    res = client.post(
+        "/admin/radius/mt/8/backups/save",
+        data={"_csrf_token": token, "backup_name": "نسخة..خطيرة"},
+        follow_redirects=True,
+    )
+    assert res.status_code == 200
+    html = res.get_data(as_text=True)
+    assert "فشل حفظ النسخة الاحتياطية" in html
+    with app.app_context():
+        from app.radius.db.repos import router_backups_repo as r
+        rows = r.list_for_router(1, 8)
+        assert rows
+        assert rows[0]["status"] == "failed"
+
+
+def test_list_renders_optional_name_field(app, client):
+    """خانة اسم النسخة الاختيارية ظاهرة في بطاقة الحفظ."""
+    _seed_nas(app, nas_id=9)
+    _login(client)
+    res = client.get("/admin/radius/mt/9/backups")
+    assert res.status_code == 200
+    html = res.get_data(as_text=True)
+    assert 'name="backup_name"' in html
+    assert "data-mt-backups-save-name" in html
 
 
 def test_save_refuses_disabled_router(app, client):
