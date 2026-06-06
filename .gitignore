@@ -9,11 +9,16 @@ venv/
 *.sqlite
 *.log
 New Text Document.txt
-????/
-/????/
 
-# Keep customer-roadmap source files trackable. The broad legacy 4-character
-# folder ignore above catches docs/ and core/ unintentionally.
+# ⚠️ لا تُضِف نمط «????/» (أو أي نمط فضفاض يطابق مجلدًا بطوله وحده).
+# سابقًا كان «????/» يطابق أي مجلد من 4 أحرف في أي عمق، فابتلع مجلدات مصدر
+# حقيقية (app/radius/auth وcore وdocs) ومنع ملفًا جديدًا مثل
+# app/radius/auth/ui_permissions.py من الالتزام إطلاقًا → اختفى من بناء
+# الإنتاج وجمّد كل أقسام السايدبار حتى للمدير الرئيسي. أُزيل النمط نهائيًا؛
+# مجلدات المصدر تُتعقَّب الآن طبيعيًا بلا حاجة لأي نفي يدوي.
+
+# سياسة docs/ المنسّقة: تجاهل كل ما تحت docs/ عدا ملفات الـmarkdown المنتقاة
+# يدويًا التي نتعقّبها عمدًا (مستقلة تمامًا عن النمط المحذوف أعلاه).
 !docs/
 docs/*
 !docs/roadmap/
@@ -42,8 +47,6 @@ docs/*
 !docs/router_vpn/*.md
 !docs/ecards/
 !docs/ecards/*.md
-!app/radius/core/
-!app/radius/core/customer_roadmap.py
 
 # Sibling-automation working dirs (not part of this repo)
 .codex-recovery/

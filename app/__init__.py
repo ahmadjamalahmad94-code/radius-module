@@ -474,6 +474,11 @@ def _install_stubs(app: Flask) -> None:
             "can": _ui_can,
             "ui_unauth_mode": _ui_unauth_mode,
             "perm_for_endpoint": _ui_perm_for_endpoint,
+            # is_super_admin: علم صريح يُقرأ من الجلسة مباشرةً — مصدر حقيقة
+            # مستقل عن can()/طبقة الـRBAC. الـ sidebar يعتمد عليه ليفتح كل
+            # الأقسام للمدير الرئيسي دائمًا (fail-open) حتى لو فشل حقن أو
+            # تحليل الصلاحيات بصمت. قراءة قاموس واحدة، لا تكسر أي صفحة.
+            "is_super_admin": bool(flask_session.get("is_super_admin")),
         }
 
     # Unified system config (currency / timezone / branding) + money & local-time
