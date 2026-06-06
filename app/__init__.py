@@ -414,34 +414,42 @@ def _install_stubs(app: Flask) -> None:
         except Exception:  # noqa: BLE001 — الشارة لا تكسر أي صفحة أبدًا
             return True
 
-    # ── صلاحيات الواجهة (RBAC UI) — أغلفة آمنة حول auth/ui_permissions ──
-    # المنطق الكامل (التخزين لكل طلب + خريطة endpoint→صلاحية) يعيش في
-    # app/radius/auth/ui_permissions.py؛ هنا فقط أغلفة لا تكسر أي صفحة.
-    def _ui_can(perm_key: str) -> bool:
+    # ── صلاحيات الواجهة (RBAC UI) — حقن مشروط بطبقة auth/ui_permissions ──
+    # المنطق الكامل (can/perm_for_endpoint/ui_unauth_mode + التخزين لكل طلب
+    # + خريطة endpoint→صلاحية) يعيش في app/radius/auth/ui_permissions.py.
+    #
+    # عقد fail-open الحاسم: نحقن can/perm_for_endpoint **فقط** عندما تُستورَد
+    # الطبقة بنجاح. إن غاب الملف أو فشل الاستيراد لأي سبب، نُسقط المفتاحين
+    # عمدًا — فيقرأ السايدبار `_rbac_ui = (can is defined and
+    # perm_for_endpoint is defined)` كـFalse ويرتدّ لـ«عرض الكل» (fail-open).
+    #
+    # هذا يعالج جذر عطل الإنتاج: الأغلفة القديمة كانت محقونة **دائمًا** لكنها
+    # تبتلع ImportError وتُرجِع False لكل مفتاح — فيبقى _rbac_ui=True بينما
+    # can() يفشل بصمت ⇒ تجميد كل الأقسام حتى للسوبر. الآن: استيراد فاشل =
+    # لا حقن = عرض الكل، بدل التجميد الكارثي.
+    def _rbac_ui_context() -> dict:
         try:
-            from app.radius.auth.ui_permissions import can as _can
-            return _can(perm_key)
-        except Exception:  # noqa: BLE001 — فشل الفحص = لا صلاحية (الوضع الآمن)
-            return False
-
-    def _ui_unauth_mode() -> str:
-        try:
-            from app.radius.auth.ui_permissions import ui_unauth_mode as _m
-            return _m()
-        except Exception:  # noqa: BLE001 — الافتراضي: تجميد بقفل
-            return "freeze"
-
-    def _ui_perm_for_endpoint(endpoint: str):
-        try:
-            from app.radius.auth.ui_permissions import perm_for_endpoint as _p
-            return _p(endpoint)
-        except Exception:  # noqa: BLE001 — endpoint مجهول = بند مفتوح
-            return None
+            from app.radius.auth import ui_permissions as _uip
+        except Exception:  # noqa: BLE001 — الطبقة غائبة/معطوبة → fail-open
+            app.logger.exception(
+                "RBAC-UI layer unavailable — sidebar fails OPEN "
+                "(all sections visible). Check app/radius/auth/ui_permissions.py "
+                "is present in the build (was historically eaten by the '????/' "
+                ".gitignore rule on the 4-char 'auth/' dir)."
+            )
+            return {}
+        # الدوال نفسها تبتلع أخطاءها الداخلية وتُرجِع قيمًا آمنة، فحقنها مباشرةً
+        # آمن — can() يُرجِع True للسوبر دائمًا (يفحص session['is_super_admin']).
+        return {
+            "can": _uip.can,
+            "ui_unauth_mode": _uip.ui_unauth_mode,
+            "perm_for_endpoint": _uip.perm_for_endpoint,
+        }
 
     @app.context_processor
     def _inject():
         from flask import session as flask_session
-        return {
+        ctx = {
             "csrf_token": csrf_token,
             "csrf_token_input": csrf_token_input,
             "session": flask_session,
@@ -465,21 +473,20 @@ def _install_stubs(app: Flask) -> None:
             # المهام المنتظرة بجانب رابط «طابور المزامنة». استعلام عدّ واحد،
             # ولا تكسر أي صفحة عند الخطأ (تُرجع صفرًا).
             "sync_pending_count": _sync_pending_count,
-            # ── صلاحيات الواجهة (RBAC UI) ──
-            # can(perm): هل يملك المسؤول الحالي الصلاحية؟ (super_admin دائمًا نعم)
-            # ui_unauth_mode(): "freeze" تجميد بقفل أو "hide" إخفاء كلي —
-            #   يضبطه مالك الريدياس من إعدادات النظام (security.unauthorized_ui).
-            # perm_for_endpoint(ep): مفتاح الصلاحية لبند sidebar حسب endpoint.
-            # كلها مخزّنة لكل طلب ولا تكسر أي صفحة عند الخطأ.
-            "can": _ui_can,
-            "ui_unauth_mode": _ui_unauth_mode,
-            "perm_for_endpoint": _ui_perm_for_endpoint,
             # is_super_admin: علم صريح يُقرأ من الجلسة مباشرةً — مصدر حقيقة
             # مستقل عن can()/طبقة الـRBAC. الـ sidebar يعتمد عليه ليفتح كل
             # الأقسام للمدير الرئيسي دائمًا (fail-open) حتى لو فشل حقن أو
             # تحليل الصلاحيات بصمت. قراءة قاموس واحدة، لا تكسر أي صفحة.
             "is_super_admin": bool(flask_session.get("is_super_admin")),
         }
+        # ── صلاحيات الواجهة (RBAC UI) — حقن مشروط (fail-open عند الغياب) ──
+        # can(perm): هل يملك المسؤول الحالي الصلاحية؟ (super_admin دائمًا نعم)
+        # ui_unauth_mode(): "freeze" تجميد بقفل أو "hide" إخفاء كلي.
+        # perm_for_endpoint(ep): مفتاح الصلاحية لبند sidebar حسب endpoint.
+        # تُحقن فقط إن استُورِدت الطبقة؛ وإلا تُترك غير معرّفة → السايدبار
+        # يرتدّ لعرض الكل بدل التجميد. راجع _rbac_ui_context أعلاه.
+        ctx.update(_rbac_ui_context())
+        return ctx
 
     # Unified system config (currency / timezone / branding) + money & local-time
     # filters — single source of truth read from tenant_settings.
