@@ -431,7 +431,8 @@
               {% if store_api_base_auto %}
               <div class="mtld-store-auto-row">
                 <button type="button" class="hub-btn hub-btn--secondary mtld-store-test-btn"
-                        data-mt-store-ping-base="{{ store_api_base_auto }}">
+                        data-mt-store-ping-base="{{ store_api_base_auto }}"
+                        data-mt-store-ping-key="{{ store_ping_key|default('', true) }}">
                   <i class="fa-solid fa-plug-circle-bolt"></i> اختبار الاتصال بالخادم
                 </button>
                 <span class="mtld-store-test-result" role="status"
@@ -1349,11 +1350,23 @@
       pingBtn.disabled = true;
       const ctrl = ("AbortController" in window) ? new AbortController() : null;
       const timer = ctrl ? setTimeout(() => ctrl.abort(), 7000) : null;
-      fetch(base + "/api/v1/store/ping", ctrl ? { signal: ctrl.signal } : {})
+      // نرسل مفتاح المتجر في X-Store-Key تمامًا كما تفعل store.html
+      // المنشورة — نقطة /store/ping محمية ببوّابة المفتاح بعد أول نشر،
+      // فبلا الترويسة يرتدّ الفحص بـ403. قبل النشر لا مفتاح والبوّابة
+      // fail-open فينجح أيضًا.
+      const opts = { method: "GET", headers: {} };
+      if (ctrl) opts.signal = ctrl.signal;
+      const skey = pingBtn.dataset.mtStorePingKey || "";
+      if (skey) opts.headers["X-Store-Key"] = skey;
+      fetch(base + "/api/v1/store/ping", opts)
         .then((res) => {
           if (timer) clearTimeout(timer);
           if (res.ok) {
             setOut("ok", "✓ متصل — العنوان صحيح وقابل للوصول.");
+          } else if (res.status === 403) {
+            setOut("bad", "وصل الطلب لكن رُفض (403) — مفتاح المتجر غير " +
+                          "مطابق. أعد نشر المتجر على الراوتر بعد أي تدوير " +
+                          "للمفتاح ثم أعد الاختبار.");
           } else {
             setOut("bad", "وصل الطلب لكن ردّ بخطأ HTTP " + res.status +
                           " — راجع الخادم.");
@@ -1363,7 +1376,9 @@
           if (timer) clearTimeout(timer);
           setOut("bad", "تعذّر الوصول إلى " + base + " — تأكد أن " +
                         "العنوان والمنفذ صحيحان والخادم يعمل (ومسموح به " +
-                        "في walled-garden على شبكة الزبائن).");
+                        "في walled-garden على شبكة الزبائن). إن كانت اللوحة " +
+                        "على https والعنوان http فقد يحجب المتصفح الطلب " +
+                        "(محتوى مختلط).");
         })
         .then(() => { pingBtn.disabled = false; });
     });

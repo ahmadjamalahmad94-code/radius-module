@@ -118,8 +118,12 @@ def _apply_store_cors(resp):
     يستدعيه كل من preflight (before_request) وردود النقاط (after_request)
     فلا تتفرّق الترويسات."""
     resp.headers["Access-Control-Allow-Origin"] = "*"
+    # X-Store-Key ترويسة مخصّصة (ليست من القائمة الآمنة) فيرسل المتصفح
+    # preflight قبل أي نداء يحملها؛ لا بدّ من إدراجها هنا وإلا حجب
+    # المتصفح الطلب الفعلي — يطال ذلك كل نداءات store.html وزر «اختبار
+    # الاتصال» في المصمّم بعد توليد المفتاح عند أول نشر.
     resp.headers["Access-Control-Allow-Headers"] = (
-        "Authorization, Content-Type"
+        "Authorization, Content-Type, X-Store-Key"
     )
     resp.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
     resp.headers["Access-Control-Max-Age"] = "3600"

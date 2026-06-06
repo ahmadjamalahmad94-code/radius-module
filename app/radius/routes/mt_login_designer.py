@@ -341,6 +341,13 @@ def _render_designer(nas_id: int, nas: dict, design: dict, *,
     # (للرفع اليدوي عبر ZIP) وفي نتيجة النشر عند فشل الإضافة الآلية.
     from ..services.hotspot_store_page import walled_garden_command
     wg_command = walled_garden_command(_auto_api_base())
+    # مفتاح المتجر المخزَّن (قراءة فقط — لا يولّد) ليرسله زر «اختبار
+    # الاتصال» في ترويسة X-Store-Key تمامًا كما تفعل store.html المنشورة؛
+    # نقطة /store/ping محمية ببوّابة المفتاح، فبلا هذه الترويسة يرتدّ
+    # الفحص بـ403 بعد أول نشر. قبل النشر لا يوجد مفتاح ("") والبوّابة
+    # تكون fail-open فينجح الفحص أيضًا.
+    from ..services.store_key import get_store_key
+    store_ping_key = get_store_key(_tid())
     return render_template(
         "radius/mt_login_designer.html",
         nas=nas,
@@ -361,6 +368,7 @@ def _render_designer(nas_id: int, nas: dict, design: dict, *,
         # فعلًا في store.html؛ زر المتجر نفسه صار رابطًا نسبيًا
         # store.html على الراوتر فلا يحتاج المشغّل كتابة أي رابط.
         store_api_base_auto=_auto_api_base(),
+        store_ping_key=store_ping_key,
         radius_ip_configured=radius_ip_configured,
     )
 

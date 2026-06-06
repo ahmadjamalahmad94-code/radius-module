@@ -176,6 +176,21 @@ def test_store_preflight_succeeds_on_all_endpoints(app, client):
         assert "OPTIONS" in allow_m and "POST" in allow_m, path
 
 
+def test_store_preflight_allows_store_key_header(app, client):
+    """preflight يسمح بترويسة X-Store-Key المخصّصة — وإلا حجب المتصفح
+    كل نداء يحملها (نداءات store.html المنشورة وزر «اختبار الاتصال» في
+    المصمّم بعد توليد المفتاح). الترويسة ليست من القائمة الآمنة فيُلزم
+    المتصفح بـ preflight قبل إرسالها."""
+    pre = client.options("/api/v1/store/ping", headers={
+        "Origin": "http://192.168.88.1",
+        "Access-Control-Request-Method": "GET",
+        "Access-Control-Request-Headers": "x-store-key",
+    })
+    assert pre.status_code in (200, 204)
+    allow_h = pre.headers.get("Access-Control-Allow-Headers", "")
+    assert "X-Store-Key" in allow_h, allow_h
+
+
 def test_store_post_login_without_preflight_works(app, client):
     """POST /login مباشرة (بلا OPTIONS سابق) يعمل ويحمل ACAO:* — أي
     عميل لا يرسل preflight (curl/راوتر) يصل للنقطة دون عائق CORS."""
