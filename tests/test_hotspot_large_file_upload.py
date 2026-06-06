@@ -218,3 +218,39 @@ def test_deploy_login_externalizes_large_logo(monkeypatch):
     # login.html نفسه صغُر فمرّ عبر API (لا data URL ضخم فيه).
     add = next((a for a in api.calls if a == "/file/add"), None)
     assert add == "/file/add"
+
+
+# ─── store.html يمرّ عبر نفس مسار الملفات الكبيرة ───────────────
+
+
+def test_deploy_store_routes_through_large_file_path(monkeypatch):
+    """store.html كان يرسل نداء /file/add ضخمًا واحدًا (EOF reset).
+    الآن يمرّ عبر _put_file_smart + نزع الأصول مثل صفحة الدخول."""
+    uploaded = []
+    monkeypatch.setattr(
+        hft, "ftp_upload",
+        lambda host, user, pw, path, data, **kw: (
+            uploaded.append((path, len(data))) or len(data)))
+    from app.radius.services.hotspot_store_page import deploy_store
+    api = _ApiRouter()
+    ftp = {"host": "10.0.0.1", "user": "admin", "password": "pw"}
+    # شعار كبير مضمّن (~6KB) → يُنزع لملف منفصل عبر FTP.
+    res = deploy_store(api, api_base="http://10.0.0.5",
+                       logo_url=_data_url(6000), ftp=ftp)
+    assert res.ok is True
+    assert res.assets == 1
+    # الأصل رُفع بجانب store.html (مجلد hotspot/) عبر FTP.
+    assert any(p.startswith("hotspot/hr-asset-") for p, _ in uploaded)
+
+
+def test_deploy_store_big_no_ftp_gives_clear_message(monkeypatch):
+    # store.html كبير صناعيًا + API يفشل reset + بلا FTP → رسالة حجم صريحة.
+    import app.radius.services.hotspot_store_page as sp
+    monkeypatch.setattr(
+        sp, "render_store_page",
+        lambda **kw: "<html>" + "x" * (hft.API_SAFE_BYTES + 5000) + "</html>")
+    api = _ApiRouter(exc=_reset())
+    res = sp.deploy_store(api, api_base="http://10.0.0.5", ftp=None)
+    assert res.ok is False
+    assert "رفع متجر الراوتر فشل" in res.error
+    assert "كبير على API" in res.error

@@ -752,6 +752,8 @@ def _iter_deploy(nas_id: int, nas: dict, design: dict, *, confirmed: bool):
             from ..services.store_key import get_or_create_store_key
             current = "store"
             yield _deploy_step("store", "running", "جارٍ رفع متجر الراوتر…")
+            # store.html كبير أيضًا — يمرّ عبر نفس مسار الملفات الكبيرة
+            # الآمن (نزع الأصول + API/FTP مجزّأ) فلا نداء ضخم يقطعه الراوتر.
             store_result = deploy_store(
                 client,
                 api_base=store_api_base,
@@ -761,6 +763,7 @@ def _iter_deploy(nas_id: int, nas: dict, design: dict, *, confirmed: bool):
                 support_whatsapp=safe.get("SUPPORT_WHATSAPP", ""),
                 store_key=get_or_create_store_key(
                     _tid(), by=int(getattr(g, "admin_id", 0) or 0)),
+                ftp=ftp_cfg,
             )
             if not store_result.ok:
                 error = ("نُشرت صفحة الدخول لكن رفع متجر الراوتر فشل: "
@@ -769,9 +772,16 @@ def _iter_deploy(nas_id: int, nas: dict, design: dict, *, confirmed: bool):
                 yield _deploy_step(
                     "walled_garden", "skip", "تُخطّيت — فشل رفع المتجر.")
             else:
+                _svia = ("FTP (رفع مجزّأ)" if store_result.via == "ftp"
+                         else "API")
+                _sparts = (f"، {store_result.chunks} جزء"
+                           if store_result.chunks else "")
+                _sasset = (f"، {store_result.assets} أصل منفصل"
+                           if store_result.assets else "")
                 yield _deploy_step(
                     "store", "ok",
-                    f"رُفع {store_result.bytes} بايت إلى {store_result.path}")
+                    f"رُفع {store_result.bytes} بايت عبر {_svia}{_sparts}"
+                    f"{_sasset} إلى {store_result.path}")
                 current = "walled_garden"
                 yield _deploy_step(
                     "walled_garden", "running", "جارٍ تجهيز قائمة السماح…")

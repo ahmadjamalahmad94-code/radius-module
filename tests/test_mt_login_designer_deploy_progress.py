@@ -113,6 +113,31 @@ def _events(client, *, nas_id, confirm=True):
     return out
 
 
+def test_designer_page_renders_progress_ui_and_binds_submit(app, client):
+    """شريط التقدّم لا بدّ أن يُصيَّر في صفحة المصمّم ويكون مربوطًا بزر
+    «نشر على الراوتر»: حاوية التقدّم + رابط البثّ + سكربت يعترض الإرسال،
+    وكتلة <script> مستقلّة فلا يمنعها خطأ سكربت آخر."""
+    _seed(app, nas_id=1)
+    _login(client)
+    res = client.get("/admin/radius/mt/1/login-designer")
+    assert res.status_code == 200
+    html = res.get_data(as_text=True)
+    # عناصر شريط التقدّم حاضرة.
+    assert "data-mt-deploy-progress" in html
+    assert "data-mt-deploy-steps" in html
+    assert 'data-mt-designer-deploy-form' in html
+    # رابط البثّ يشير لنقطة deploy/stream الصحيحة.
+    assert "/login-designer/deploy/stream" in html
+    assert "data-mt-deploy-stream-url" in html
+    # السكربت يعترض الإرسال ويبثّ.
+    assert 'addEventListener("submit"' in html
+    assert "streamDeploy" in html
+    # كتلة شريط التقدّم معزولة في <script> مستقلّ: نتأكد أن streamDeploy
+    # تأتي بعد </script> تُغلق الكتلة السابقة (فلا يمنعها خطأ سكربت آخر).
+    head = html[:html.index("function streamDeploy")]
+    assert "</script>" in head, "deploy script not isolated in its own block"
+
+
 def test_stream_emits_plan_and_done_on_success(app, client, monkeypatch):
     _seed(app, nas_id=1)
     _login(client)
