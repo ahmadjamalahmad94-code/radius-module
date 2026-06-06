@@ -1536,9 +1536,180 @@ class DeployResult:
     error: str = ""
 
 
+# ─── رفع الملفات: إعادة محاولة + مهلة + تصنيف الأخطاء ───────────
+#
+# الرفع للراوتر يمرّ كثيرًا عبر نفق إدارة متقطّع، ويحمل أحيانًا
+# login.html ضخمًا (شعار/خط مضمّنان base64). نتيجتان شائعتان:
+#   • «Connection reset by peer [Errno 104]» — الراوتر/النفق يقطع
+#     الاتصال أثناء كتابة الـcontents الكبيرة. عابر → نُعيد المحاولة.
+#   • مصادقة (AuthError) أو 401 — ليست عابرة، لا نُعيد المحاولة.
+# لذا: رفعة واحدة ترفع _TransientWire على الانقطاع العابر فقط، وغلاف
+# يُعيد المحاولة بإعادة اتصال + backoff بسيط، مع رسالة سبب واضحة.
+
+import socket as _socket  # noqa: E402
+import time as _time  # noqa: E402
+
+from ..integration.mikrotik.errors import (  # noqa: E402
+    AuthError as _AuthError,
+    ConnectError as _ConnectError,
+    MikrotikTrap,
+    ProtocolError as _ProtocolError,
+)
+
+# عدد محاولات رفع الملف الواحد + مهل backoff التصاعدية (ثوانٍ).
+DEPLOY_MAX_ATTEMPTS = 3
+_RETRY_BACKOFF_SEC = (0.0, 0.6, 1.4)
+
+
+class _TransientWire(Exception):
+    """انقطاع شبكي عابر أثناء الرفع (reset/timeout/EOF) — قابل لإعادة
+    المحاولة بعد إعادة الاتصال. يحمل الطور (print/write) والأصل."""
+
+    def __init__(self, phase: str, original: BaseException) -> None:
+        super().__init__(str(original))
+        self.phase = phase
+        self.original = original
+
+
+def _is_transient_wire(e: BaseException) -> bool:
+    """هل الخطأ انقطاع شبكي عابر يستحق إعادة المحاولة؟ المصادقة وtrap
+    المنطقي (صلاحية/قرص ممتلئ) ليست عابرة — نفشل فيها فورًا."""
+    if isinstance(e, _AuthError) or isinstance(e, MikrotikTrap):
+        return False
+    if isinstance(e, (ConnectionError, ConnectionResetError, BrokenPipeError,
+                      _socket.timeout, TimeoutError)):
+        return True
+    # أخطاء العميل التي تلفّ انقطاعًا (فشل إرسال/EOF/قطع TCP-TLS).
+    if isinstance(e, (_ConnectError, _ProtocolError)):
+        return True
+    low = str(e).lower()
+    needles = (
+        "reset by peer", "errno 104", "connection reset", "connection aborted",
+        "broken pipe", "timed out", "timeout", "eof",
+        "أغلق الاتصال", "الاتصال مغلق", "فشل الإرسال",
+    )
+    return any(n in low for n in needles)
+
+
+def classify_deploy_error(e) -> tuple[str, str]:
+    """يصنّف خطأ النشر إلى (kind, رسالة عربية واضحة) ليعرضها شريط
+    التقدّم على الخطوة الفاشلة. kind: auth|reset|timeout|refused|generic."""
+    exc = None if isinstance(e, str) else e
+    msg = e if isinstance(e, str) else str(e)
+    low = msg.lower()
+    if isinstance(exc, _AuthError) or "login:" in low or "/login" in low:
+        return ("auth", "فشل تسجيل الدخول إلى API الراوتر (مصادقة) — "
+                "تحقّق من اسم مستخدم/كلمة مرور API وصلاحياته.")
+    if "401" in low or "www-authenticate" in low or "unauthorized" in low:
+        return ("auth", "رُفض الطلب بمصادقة (401) — نقطة تتطلّب اعتمادًا "
+                "لا يرسله الراوتر؛ راجع لوحة «تشخيص لوب الجلب».")
+    if any(n in low for n in ("reset by peer", "errno 104", "connection reset",
+                              "connection aborted", "broken pipe")):
+        return ("reset", "انقطع الاتصال بالراوتر أثناء الرفع "
+                "(Connection reset) — غالبًا نفق إدارة متقطّع أو ملف كبير؛ "
+                "تأكّد من ثبات الاتصال وأعد المحاولة.")
+    if "timed out" in low or "timeout" in low or isinstance(exc, _socket.timeout):
+        return ("timeout", "انتهت مهلة الاتصال بالراوتر أثناء الرفع — "
+                "الراوتر بطيء أو النفق مزدحم؛ أعد المحاولة.")
+    if "refused" in low or "تعذّر الاتصال" in msg or "غير متاح" in msg:
+        return ("refused", "تعذّر الوصول إلى الراوتر (الاتصال مرفوض/غير "
+                "متاح) — تأكّد أن API مفعّل والعنوان/المنفذ صحيحان والنفق قائم.")
+    if "eof" in low or "أغلق الاتصال" in msg or "الاتصال مغلق" in msg:
+        return ("reset", "أغلق الراوتر الاتصال أثناء الرفع — أعد المحاولة؛ "
+                "إن تكرّر فقد يرفض الراوتر حجم الملف عبر API.")
+    return ("generic", msg)
+
+
+def _reconnect(client) -> None:
+    """يُغلق الاتصال الميت ويفتح جديدًا قبل إعادة المحاولة (الـsocket
+    لا يصلح بعد reset)."""
+    try:
+        client.close()
+    except Exception:  # noqa: BLE001
+        pass
+    client.connect()
+
+
+def _put_file_once(client, target_path: str, contents: str) -> DeployResult:
+    """رفعة واحدة: /file/print ثم /file/set أو /file/add. تُعيد
+    DeployResult على الفشل المنطقي (صلاحية/قرص)، وترفع _TransientWire
+    على الانقطاع العابر فقط (ليُعيد المحاولة الغلافُ الخارجي)."""
+    try:
+        existing = client.run("/file/print",
+                              attrs={"where": "name=" + target_path})
+    except Exception as e:  # noqa: BLE001
+        if _is_transient_wire(e):
+            raise _TransientWire("print", e)
+        return DeployResult(ok=False, path=target_path, bytes=0,
+                            error=f"/file/print فشل: {e}")
+
+    found_id = None
+    for row in (existing or []):
+        if (row.get("name") or "") == target_path:
+            found_id = row.get(".id") or row.get("id")
+            break
+
+    try:
+        if found_id:
+            client.run("/file/set",
+                       attrs={".id": found_id, "contents": contents})
+        else:
+            client.run("/file/add",
+                       attrs={"name": target_path, "contents": contents})
+    except Exception as e:  # noqa: BLE001
+        if _is_transient_wire(e):
+            raise _TransientWire("write", e)
+        return DeployResult(ok=False, path=target_path, bytes=len(contents),
+                            error=f"رفع الملف فشل: {e}")
+
+    return DeployResult(ok=True, path=target_path, bytes=len(contents))
+
+
+def _put_file(client, target_path: str, contents: str, *,
+              max_attempts: int = DEPLOY_MAX_ATTEMPTS,
+              on_retry=None) -> DeployResult:
+    """رفع ملف مع إعادة محاولة + إعادة اتصال عند الانقطاع العابر فقط.
+
+    `on_retry(attempt:int, reason:str)` callback اختياري يُستدعى قبل كل
+    إعادة محاولة (يغذّي شريط التقدّم). الفشل المنطقي (صلاحية/قرص/قالب)
+    يعود فورًا بلا إعادة محاولة. عند استنفاد المحاولات نُعيد رسالة
+    «بعد N محاولات: <سبب واضح>»."""
+    last: _TransientWire | None = None
+    for attempt in range(1, max_attempts + 1):
+        try:
+            return _put_file_once(client, target_path, contents)
+        except _TransientWire as tw:
+            last = tw
+            if attempt >= max_attempts:
+                break
+            _kind, reason = classify_deploy_error(tw.original)
+            if on_retry:
+                try:
+                    on_retry(attempt, reason)
+                except Exception:  # noqa: BLE001
+                    pass
+            try:
+                _time.sleep(
+                    _RETRY_BACKOFF_SEC[min(attempt, len(_RETRY_BACKOFF_SEC) - 1)])
+            except Exception:  # noqa: BLE001
+                pass
+            try:
+                _reconnect(client)
+            except Exception as rce:  # noqa: BLE001
+                _k, rmsg = classify_deploy_error(rce)
+                return DeployResult(
+                    ok=False, path=target_path, bytes=len(contents),
+                    error="انقطع الاتصال وتعذّرت إعادة الاتصال: " + rmsg)
+    _kind, reason = classify_deploy_error(last.original if last else "")
+    return DeployResult(
+        ok=False, path=target_path, bytes=len(contents),
+        error=f"رفع الملف فشل بعد {max_attempts} محاولات: {reason}")
+
+
 def deploy_login(
     client: object, slug: str, values: dict[str, str],
     *, target_path: str = DEFAULT_LOGIN_PATH, tenant_id: int = 1,
+    on_retry=None,
 ) -> DeployResult:
     """Render the chosen template + upload it to the router.
 
@@ -1548,6 +1719,10 @@ def deploy_login(
       1. /file/print to check whether the file already exists.
       2a. If yes — /file/set [.id=X] contents=<html>.
       2b. If no  — /file/add name=<path> contents=<html>.
+
+    الرفع يمرّ عبر `_put_file` فيُعيد المحاولة آليًا عند الانقطاع
+    العابر (Connection reset / timeout) بإعادة اتصال + backoff؛
+    `on_retry(attempt, reason)` يُبلّغ شريط التقدّم بكل إعادة محاولة.
 
     `client` is anything with a `.run(path, attrs=...)` method.
     Returns a structured DeployResult so the route + audit log can
@@ -1581,37 +1756,7 @@ def deploy_login(
             error=str(e),
         )
 
-    try:
-        existing = client.run("/file/print",
-                              attrs={"where": "name=" + target_path})
-    except Exception as e:  # noqa: BLE001
-        return DeployResult(
-            ok=False, path=target_path, bytes=0,
-            error=f"/file/print فشل: {e}",
-        )
-
-    found_id = None
-    for row in (existing or []):
-        if (row.get("name") or "") == target_path:
-            found_id = row.get(".id") or row.get("id")
-            break
-
-    try:
-        if found_id:
-            client.run("/file/set", attrs={
-                ".id": found_id, "contents": html,
-            })
-        else:
-            client.run("/file/add", attrs={
-                "name": target_path, "contents": html,
-            })
-    except Exception as e:  # noqa: BLE001
-        return DeployResult(
-            ok=False, path=target_path, bytes=len(html),
-            error=f"رفع الملف فشل: {e}",
-        )
-
-    return DeployResult(ok=True, path=target_path, bytes=len(html))
+    return _put_file(client, target_path, html, on_retry=on_retry)
 
 
 # ─── errors.txt — رسائل أخطاء الهوت سبوت ───────────────────────
@@ -1625,42 +1770,17 @@ def deploy_login(
 
 def deploy_errors_txt(
     client: object, errors_txt: str,
-    *, target_path: str | None = None,
+    *, target_path: str | None = None, on_retry=None,
 ) -> DeployResult:
-    """يرفع نص errors.txt إلى الراوتر (نفس آلية deploy_login).
+    """يرفع نص errors.txt إلى الراوتر (نفس آلية deploy_login، بما فيها
+    إعادة المحاولة عند الانقطاع العابر).
 
     `errors_txt` نصّ مبني عبر
     services.hotspot_error_messages.build_errors_txt. `client` أي
     كائن له ‎.run(path, attrs=...)‎. يعيد DeployResult موحّدًا."""
     from .hotspot_error_messages import DEFAULT_ERRORS_PATH
     path = target_path or DEFAULT_ERRORS_PATH
-    try:
-        existing = client.run("/file/print",
-                              attrs={"where": "name=" + path})
-    except Exception as e:  # noqa: BLE001
-        return DeployResult(
-            ok=False, path=path, bytes=0,
-            error=f"/file/print فشل: {e}")
-
-    found_id = None
-    for row in (existing or []):
-        if (row.get("name") or "") == path:
-            found_id = row.get(".id") or row.get("id")
-            break
-
-    try:
-        if found_id:
-            client.run("/file/set", attrs={
-                ".id": found_id, "contents": errors_txt})
-        else:
-            client.run("/file/add", attrs={
-                "name": path, "contents": errors_txt})
-    except Exception as e:  # noqa: BLE001
-        return DeployResult(
-            ok=False, path=path, bytes=len(errors_txt),
-            error=f"رفع الملف فشل: {e}")
-
-    return DeployResult(ok=True, path=path, bytes=len(errors_txt))
+    return _put_file(client, path, errors_txt, on_retry=on_retry)
 
 
 # ─── رفع ملف عام بنفس آلية login.html (print → set أو add) ──────
@@ -1673,42 +1793,17 @@ def deploy_errors_txt(
 
 def deploy_hotspot_file(
     client: object, filename: str, contents: str,
-    *, directory: str = "hotspot",
+    *, directory: str = "hotspot", on_retry=None,
 ) -> DeployResult:
     """يرفع ملفًا واحدًا إلى مجلد الهوت سبوت على الراوتر.
 
     `filename` اسم الملف فقط (مثل 'status.html')؛ المسار النهائي
     <directory>/<filename>. `contents` HTML/نص نهائي. نفس آلية
-    /file/print ثم /file/set أو /file/add. يعيد DeployResult موحّدًا
-    فيستطيع المستدعي تجميع ملخص نجاح/فشل لكل ملف على حدة."""
+    `_put_file` (print → set/add) مع إعادة المحاولة عند الانقطاع
+    العابر. يعيد DeployResult موحّدًا فيستطيع المستدعي تجميع ملخص
+    نجاح/فشل لكل ملف على حدة."""
     target_path = directory.rstrip("/") + "/" + filename
-    try:
-        existing = client.run("/file/print",
-                              attrs={"where": "name=" + target_path})
-    except Exception as e:  # noqa: BLE001
-        return DeployResult(
-            ok=False, path=target_path, bytes=0,
-            error=f"/file/print فشل: {e}")
-
-    found_id = None
-    for row in (existing or []):
-        if (row.get("name") or "") == target_path:
-            found_id = row.get(".id") or row.get("id")
-            break
-
-    try:
-        if found_id:
-            client.run("/file/set", attrs={
-                ".id": found_id, "contents": contents})
-        else:
-            client.run("/file/add", attrs={
-                "name": target_path, "contents": contents})
-    except Exception as e:  # noqa: BLE001
-        return DeployResult(
-            ok=False, path=target_path, bytes=len(contents),
-            error=f"رفع الملف فشل: {e}")
-
-    return DeployResult(ok=True, path=target_path, bytes=len(contents))
+    return _put_file(client, target_path, contents, on_retry=on_retry)
 
 
 # ─── R4 — QR auto-login URL ────────────────────────────────────
