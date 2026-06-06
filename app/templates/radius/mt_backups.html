@@ -36,8 +36,12 @@
   icon="floppy-disk",
   actions_html=(
     '<form method="post" action="' ~ url_for('radius.mt_backups_save', nas_id=nas.id) ~ '"'
-      ~ ' class="mt-program-apply-form" data-mt-backups-save-form data-mt-backups-save-card style="display:inline;margin:0">'
+      ~ ' class="mt-program-apply-form" data-mt-backups-save-form data-mt-backups-save-card'
+      ~ ' style="display:inline-flex;gap:8px;align-items:center;margin:0;flex-wrap:wrap">'
     ~ '<input type="hidden" name="_csrf_token" value="' ~ (csrf_token() if csrf_token is defined else '') ~ '">'
+    ~ '<input type="text" name="backup_name" class="hub-input" maxlength="64"'
+      ~ ' placeholder="اسم النسخة (اختياري)" aria-label="اسم النسخة (اختياري)"'
+      ~ ' data-mt-backups-save-name style="height:42px;width:200px;max-width:100%">'
     ~ '<button type="submit" class="hub-btn hub-btn--primary" data-mt-backups-save-submit>'
       ~ '<i class="fa-solid fa-floppy-disk"></i> حفظ نسخة جديدة</button></form>'
   ),

@@ -109,10 +109,19 @@ def mt_backups_save(nas_id: int):
 
     actor = getattr(g, "admin_id", None)
     ts = datetime.utcnow().strftime("%Y%m%d-%H%M%S")
-    filename = f"nas-{nas_id}-{ts}.backup"
+
+    # اسم النسخة: نبني اسماً «نظيفاً بلا امتداد» للراوتر (هو يضيف
+    # .backup تلقائياً)، ونحتفظ بـfilename (مع .backup) للسجل/التخزين
+    # المحلي فقط. لو أعطى المستخدم اسماً اختيارياً نستعمله بعد التنظيف،
+    # وإلا نرجع للاسم التلقائي. التنظيف الفعلي + الرفض العربي يجريان
+    # داخل mac.backup_save عبر _sanitize_backup_name.
+    user_name = (request.form.get("backup_name") or "").strip()
+    backup_name = user_name or f"nas-{nas_id}-{ts}"   # للراوتر (بلا امتداد)
+    filename = f"{backup_name}.backup"                 # للسجل/التخزين المحلي
     storage_path = os.path.join(_storage_root(), filename)
 
-    error = ""
+    error = ""            # النص الخام (يُسجَّل في التدقيق فقط)
+    user_error = ""       # رسالة عربية ودودة تُعرض للمستخدم
     status = "success"
     size = 0
     checksum = ""
@@ -133,13 +142,19 @@ def mt_backups_save(nas_id: int):
         # filesystem; for now we record the metadata + leave
         # downloading the bytes for a follow-up (file-stream
         # endpoint already exists at K8.1b).
-        result = mac.backup_save(_nas_for_mac(nas), filename=filename)
+        result = mac.backup_save(_nas_for_mac(nas), name=backup_name)
         if not getattr(result, "ok", False):
             status = "failed"
-            error = getattr(result, "error", "") or "backup_save فشل"
+            # رسالة الخدمة عربية أصلاً (تشمل رفض الاسم من
+            # _sanitize_backup_name)، فنعرضها كما هي للمستخدم.
+            error = getattr(result, "error", "") or "تعذّر إنشاء النسخة على الراوتر."
+            user_error = error
     except Exception as e:  # noqa: BLE001
         status = "failed"
+        # نص الاستثناء خام (إنجليزي/تقني) → نسجّله للتدقيق فقط
+        # ونعرض للمستخدم رسالة عربية عامة بدل الخطأ الخام.
         error = str(e)
+        user_error = "تعذّر الاتصال بالراوتر أو حفظ النسخة. تأكد من توفّر الجهاز وحاول مجددًا."
     finally:
         try:
             client.close()
@@ -174,7 +189,7 @@ def mt_backups_save(nas_id: int):
     if status == "success":
         flash("تم حفظ النسخة الاحتياطية على الراوتر.", "success")
     else:
-        flash(f"فشل حفظ النسخة الاحتياطية: {error}", "error")
+        flash(f"فشل حفظ النسخة الاحتياطية: {user_error or error}", "error")
     return redirect(url_for("radius.mt_backups_list", nas_id=nas_id))
 
 
