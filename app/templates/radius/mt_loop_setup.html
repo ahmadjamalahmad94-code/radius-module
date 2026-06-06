@@ -165,6 +165,23 @@
     var modeAndCert=isHttps?"mode=https check-certificate=no":"mode=http";
     var ifaces=(ifInp.value||"").split(/[,\s]+/).map(function(s){return s.trim();}).filter(Boolean);
 
+    // ── Guard: a blank token produces `Authorization: Bearer ` which the
+    // server rejects with 401 on EVERY run — the classic infinite scheduler
+    // loop (executing script from scheduler … failed: 401). Refuse to emit a
+    // scheduler without a token; show the cleanup commands instead so a stuck
+    // router can be cleared safely.
+    if(!tok){
+      scriptEl.textContent=[
+        '# ⚠️ الصق «رمز الربط» (Bearer token) في الحقل أعلاه أولاً.',
+        '# بدون رمز صالح يرفض الخادم كل طلب (401) ويتكرر الفشل بلا نهاية.',
+        '#',
+        '# للتنظيف فقط — إزالة أي مجسّ/مجدول قديم عالق على الراوتر:',
+        '/system scheduler remove [find name=hoberadius-loop-probe]',
+        '/ip dhcp-client remove [find comment="hoberadius-loop"]'
+      ].join("\n");
+      return;
+    }
+
     var lines=[];
     lines.push('/ip dhcp-client remove [find comment="hoberadius-loop"]');
     lines.push('/system scheduler remove [find name=hoberadius-loop-probe]');
@@ -175,9 +192,11 @@
     lines.push("");
     // Scheduler: read every hoberadius-loop dhcp-client + POST its status.
     var ev=
-      '/system scheduler add name="hoberadius-loop-probe" interval=1m \\\n'+
+      '/system scheduler add name="hoberadius-loop-probe" interval=5m \\\n'+
       '    start-time=startup comment="HobeRadius loop probe" \\\n'+
       '    on-event="\n'+
+      ':global HRloopFail;\n'+
+      ':if ([:typeof \\$HRloopFail]=\\"nothing\\") do={ :set HRloopFail 0 };\n'+
       ':local body \\"{\\\\\\"probes\\\\\\":[\\";\n'+
       ':local first true;\n'+
       ':foreach c in=[/ip dhcp-client find comment=\\"hoberadius-loop\\"] do={\n'+
@@ -192,10 +211,24 @@
       '  :set first false;\n'+
       '};\n'+
       ':set body (\\$body . \\"]}\\");\n'+
+      // Wrap the POST: on a persistent error (401 bad token, wrong URL,
+      // server down) count the failures and DISABLE the scheduler after 5
+      // strikes so it can never hammer the endpoint forever. A successful
+      // post resets the counter. This is the real \"no scheduler loops on a
+      // constant error\" safeguard for already-installed routers.
+      ':do {\n'+
       '/tool fetch url=\\"'+endpoint+'\\" \\\\\n'+
       '    http-method=post '+modeAndCert+' \\\\\n'+
       '    http-header-field=\\"Content-Type: application/json,Authorization: Bearer '+tok+'\\" \\\\\n'+
       '    http-data=\\$body output=none;\n'+
+      ':set HRloopFail 0;\n'+
+      '} on-error={\n'+
+      ':set HRloopFail (\\$HRloopFail + 1);\n'+
+      ':if (\\$HRloopFail>=5) do={\n'+
+      '  /system scheduler set [find name=hoberadius-loop-probe] disabled=yes;\n'+
+      '  :log warning \\"HobeRadius loop-probe disabled after 5 failed posts — check the link token / server URL\\";\n'+
+      '};\n'+
+      '};\n'+
       '"';
     lines.push(ev);
     scriptEl.textContent=lines.join("\n");
