@@ -1,10 +1,9 @@
 {# ═══════════════════════════════════════════════════════════════════════
-   حالات تسجيل الدخول — الصفحة الرئيسية (إعادة بناء من الصفر على hub_v2):
-     • صدفة هيرو واحدة (hub-hero-shell): عنوان + سطر تعريفي + مؤشرات
-       إجمالية بصف واحد — بلا فلاتر هنا (البساطة أولًا).
-     • ثلاث بطاقات كبيرة — مدراء / مشتركون / كروت — كل بطاقة بوابة
-       لصفحتها الفرعية المفروزة بدقة (?actor=…) مع عدّادات مصغّرة.
-     • معطيات المسار: `overview` (عدّادات لكل فاعل) + `totals` + `kinds`.
+   حالات تسجيل الدخول — الصفحة الرئيسية (hub_v2):
+     • صدفة هيرو واحدة: عنوان + سطر تعريفي + مؤشرات إجمالية.
+     • خمس بطاقات كبيرة — RADIUS مشتركون / RADIUS بطاقات / بوابة مشتركين /
+       متجر بطاقات / مدراء — كل بطاقة تفتح صفحتها المخصّصة المفروزة بدقة.
+     • معطيات المسار: `overview` + `totals` + `kinds`.
    ═══════════════════════════════════════════════════════════════════════ #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
@@ -15,14 +14,12 @@
 {% block page_sub %}<span class="sub">{{ totals.total }} محاولة</span>{% endblock %}
 
 {% block content %}
-{# متحكّم «انتقال سريع» المضغوط — يُحقن في صف عنوان الهيرو بدل الشريطين الكبيرين #}
 {% set _report_jump %}{% include "radius/reports_nav.html" %}{% endset %}
 
-{# ───── صدفة الهيرو الواحدة: عنوان + سطر تعريفي + مؤشرات بصف واحد ───── #}
 <section class="hub-hero-shell ls-hero" data-testid="login-states-hero">
 {{ hub.megahero(
   "حالات تسجيل الدخول",
-  subtitle="فصل كامل لحالات الدخول حسب الفاعل — مدراء، مشتركون، كروت. اختر القسم لترى سجلًا مفروزًا بدقة مع عنوان الشبكة وعنوان الجهاز وجهاز الشبكة وسبب الفشل.",
+  subtitle="خمسة أقسام مفروزة بدقة: RADIUS للمشتركين والبطاقات، بوابة المشتركين، متجر البطاقات، ولوحة الإدارة. اختر القسم لترى سجلًا مفروزًا بدقة.",
   icon="right-to-bracket",
   actions_html=_report_jump,
   kpis=[
@@ -32,19 +29,15 @@
     {'label': 'محاولات اليوم',    'value': totals.today, 'icon': 'calendar-day',     'variant': 'blue'},
   ]
 ) }}
-</section>{# /hub-hero-shell #}
+</section>
 
-{# ───── البطاقات الثلاث الكبيرة: كل بطاقة بوابة لصفحة فرعية مفروزة ─────
-   تنسيق محلي بسيط فوق نظام hub: شبكة من ثلاث بطاقات، كل بطاقة فيها
-   أيقونة + عنوان + سطر تعريفي + عدّادات مصغّرة (الإجمالي/ناجحة/فاشلة/اليوم). #}
 <style>
-/* إيقاع رأسي موحّد للصفحة: ~22px بين الأقسام الكبيرة (الهيرو/البطاقات/
-   صندوق المعلومات) و14px بين بطاقات الشبكة — لا أقسام متلاصقة. */
 .hub-hero-shell.ls-hero{margin-bottom:22px}
+/* شبكة مرنة: 3 بطاقات في الصف الأول، 2 في الثاني (auto-fill) */
 .ls-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;
-  align-items:stretch;          /* البطاقات الثلاث بارتفاع متساوٍ دائمًا */
-  margin:0 0 22px}              /* نَفَس موحّد قبل صندوق «من أين تأتي البيانات؟» */
-@media (max-width:980px){.ls-grid{grid-template-columns:1fr}}
+  align-items:stretch;margin:0 0 22px}
+@media (max-width:1100px){.ls-grid{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:640px){.ls-grid{grid-template-columns:1fr}}
 .ls-card{display:flex;flex-direction:column;gap:12px;padding:18px;border-radius:18px;
   background:var(--hub-surface,#fff);border:1px solid var(--hub-border-soft,#e2e8f0);
   text-decoration:none;color:inherit;transition:box-shadow .14s,transform .14s}
@@ -55,6 +48,8 @@
 .ls-card--admin .ls-card-ic{background:#1e293b;color:#fbbf24}
 .ls-card--subscriber .ls-card-ic{background:#e0ecff;color:#1d4ed8}
 .ls-card--card .ls-card-ic{background:#fef3c7;color:#92400e}
+.ls-card--subscriber-portal .ls-card-ic{background:#d1fae5;color:#065f46}
+.ls-card--card-store .ls-card-ic{background:#ede9fe;color:#5b21b6}
 .ls-card-title{font-size:15.5px;font-weight:900;color:var(--hub-text,#0f172a)}
 .ls-card-sub{font-size:12.5px;line-height:1.7;color:var(--hub-text-soft,#64748b)}
 .ls-card-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:auto}
@@ -73,7 +68,7 @@
 <div class="ls-grid" data-testid="login-states-cards">
   {% for kind, m in kinds.items() %}
   {% set c = overview[kind] %}
-  <a class="ls-card ls-card--{{ kind }}" href="{{ url_for('radius.rep_login_states', actor=kind) }}"
+  <a class="ls-card ls-card--{{ m.css_class }}" href="{{ url_for(m.detail_endpoint) }}"
      data-testid="login-states-card-{{ kind }}">
     <div class="ls-card-head">
       <span class="ls-card-ic"><i class="fa-solid fa-{{ m.icon }}"></i></span>
@@ -91,12 +86,13 @@
   {% endfor %}
 </div>
 
-{# سطر توضيحي بسيط أسفل البطاقات — يشرح مصادر البيانات بلا تعقيد #}
 {% call hub.section("من أين تأتي البيانات؟", icon="circle-info") %}
   <div class="ls-card-sub" style="font-size:13px">
-    دخول المدراء يُلتقط من لوحة الإدارة، ودخول المشتركين من بوابة المشتركين ومن
-    شبكة المصادقة، ودخول الكروت من شبكة المصادقة والبوابة. كل سجل يحفظ عنوان الشبكة
-    وعنوان الجهاز وجهاز الشبكة حيثما توفّرت — والبيانات للقراءة فقط.
+    <strong>RADIUS (مشتركون/بطاقات):</strong> من جدول radpostauth — Access-Accept/Reject مع جهاز NAS وسبب الرفض.
+    <strong>بوابة المشتركين:</strong> من audit_log عند دخول المشترك عبر الويب.
+    <strong>متجر البطاقات:</strong> من audit_log عند دخول/تسجيل عميل المتجر (store API).
+    <strong>لوحة الإدارة:</strong> من audit_log عند دخول المدراء.
+    كل سجل يحفظ عنوان الشبكة والمتصفح والجهاز حيثما توفّرت — والبيانات للقراءة فقط.
   </div>
 {% endcall %}
 {% endblock %}
