@@ -53,6 +53,60 @@ EVENT_KEY_LABELS: dict[str, str] = {
     # الأمان
     "login.failed": "محاولة دخول فاشلة",
     "login.success": "تسجيل دخول ناجح",
+    # البطاقات — عمليات إدارية
+    "card.password_reveal": "كشف كلمة مرور البطاقة",
+    "card.enable": "تفعيل بطاقة",
+    "card.disable": "تعطيل بطاقة",
+    "card.lock_mac": "قفل عنوان الجهاز",
+    "card.unlock_mac": "فكّ قفل عنوان الجهاز",
+    "card.reset_usage": "تصفير الاستخدام",
+    "card.set_speed": "ضبط سرعة البطاقة",
+    "card.adjust_time": "تعديل الوقت المتبقّي",
+    "card.disconnect": "قطع جلسة البطاقة",
+    "card.soft_delete": "حذف بطاقة",
+    "card.delete_permanent": "حذف نهائي للبطاقة",
+    # السرعة المؤقتة
+    "temporary_speed.apply": "تطبيق سرعة مؤقتة",
+    "temporary_speed.revert": "إرجاع السرعة المؤقتة",
+    # قوالب طباعة البطاقات
+    "card_print_template.create": "إنشاء قالب طباعة بطاقات",
+    "card_print_template.update": "تعديل قالب طباعة بطاقات",
+    "card_print_template.delete": "حذف قالب طباعة بطاقات",
+    "card_print_template.set_default": "تعيين قالب الطباعة الافتراضي",
+    "card_print_template.export_pdf": "تصدير قالب PDF",
+    # دفعات البطاقات
+    "batch_generate": "توليد دفعة بطاقات",
+    "batch_archive": "أرشفة دفعة بطاقات",
+    "batch_restore": "استعادة دفعة بطاقات",
+    "card_batch.import": "استيراد دفعة بطاقات",
+    "card_batch.restore": "استعادة دفعة محذوفة",
+    # عمليات المشتركين
+    "create": "إنشاء",
+    "update": "تعديل",
+    "delete": "حذف",
+    "disable": "تعطيل",
+    "enable": "تفعيل",
+    "extend_time": "تمديد الوقت",
+    "reset_password": "إعادة تعيين كلمة المرور",
+    "bulk_set_speeds": "تحديث جماعي للسرعات",
+    "change_plan": "تغيير باقة المشترك",
+    "revoke": "سحب البطاقة",
+    # إجراءات API / النظام
+    "payment_collection.settings_saved": "حفظ إعدادات التحصيل",
+    "payment_collection.request_approved": "اعتماد طلب دفع",
+    "payment_collection.request_rejected": "رفض طلب دفع",
+    "notification.manual_queued": "إرسال إشعار يدوي",
+    # السرعة والجلسة
+    "bulk_set_speeds": "تحديث جماعي للسرعات",
+    "temporary_speed.apply": "تطبيق سرعة مؤقتة",
+    "temporary_speed.revert": "إرجاع السرعة المؤقتة",
+    # RADIUS
+    "radius.apply": "تطبيق سياسة RADIUS",
+    # المدراء والأدوار
+    "role_permissions": "تعديل صلاحيات الدور",
+    "settings_update": "تحديث إعدادات النظام",
+    "auth_login": "تسجيل دخول",
+    "auth_login_failed": "محاولة دخول فاشلة",
 }
 
 # ── 2) مفردات المُركِّب التلقائي للمفاتيح غير المعرّفة ──

@@ -65,7 +65,7 @@
             <th>{{ _('المنفّذ') }}</th>
             <th data-uds-nosort>{{ _('الفعل') }}</th>
             <th>{{ _('المستخدم') }}</th>
-            <th data-uds-nosort>{{ _('التفاصيل') }}</th>
+            <th data-uds-nosort>{{ _('ما تغيّر') }}</th>
             <th>{{ _('الوقت') }}</th>
           </tr>
         </thead>
@@ -74,11 +74,27 @@
           <tr>
             <td class="num mono">{{ r.id }}</td>
             <td>{{ r.actor_label }}</td>
-            <td>{{ hub.pill(r.action_label, variant="blue", dot=False) }}</td>
+            {# الفعل معرّب — الكود الخام في title #}
+            <td title="{{ r.action or '' }}">{{ hub.pill(r.action_label, variant="blue", dot=False) }}</td>
             <td class="mono"><strong>{{ r.target_id or '—' }}</strong></td>
-            <td class="small" title="{{ r.payload_summary or '' }}"
-                style="max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
-              {{ r.payload_summary or '—' }}
+            {# ما تغيّر: إذا وُجد diff قبل/بعد يُعرض مختصرًا، وإلا ملخّص الـpayload #}
+            <td class="small"
+                title="{{ r.payload_summary or '' }}"
+                style="max-width:360px">
+              {% if r.diff %}
+                <span class="rep-diff-list">
+                {% for label, bv, av in r.diff %}
+                  <span class="rep-diff-item">
+                    <span class="rep-diff-label">{{ label }}:</span>
+                    <span class="rep-diff-before">{{ bv }}</span>
+                    <i class="fa-solid fa-arrow-left rep-diff-arrow"></i>
+                    <span class="rep-diff-after">{{ av }}</span>
+                  </span>
+                {% endfor %}
+                </span>
+              {% else %}
+                <span style="color:var(--hub-text-soft)">{{ r.payload_summary or '—' }}</span>
+              {% endif %}
             </td>
             <td class="mono small"
                 style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">

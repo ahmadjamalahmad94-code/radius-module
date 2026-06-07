@@ -61,3 +61,16 @@ html[dir="rtl"] .hub-table.rep-table tbody tr.is-warn td:first-child{ box-shadow
 .rep-f select, .rep-f input{ min-width:135px; }
 .rep-f.grow{ flex:1; min-width:160px; }
 .rep-f-actions{ display:flex; gap:8px; }
+
+/* ── عرض قبل/بعد (diff) في تقارير الأحداث ── */
+.rep-diff-list{ display:flex; flex-direction:column; gap:4px; }
+.rep-diff-item{ display:inline-flex; align-items:center; flex-wrap:wrap; gap:4px;
+  font-size:11.5px; line-height:1.4; }
+.rep-diff-label{ font-weight:700; color:#475569; white-space:nowrap; }
+.rep-diff-before{ background:#fee2e2; color:#991b1b;
+  padding:1px 6px; border-radius:5px; font-family:ui-monospace,Menlo,Consolas,monospace;
+  white-space:nowrap; max-width:120px; overflow:hidden; text-overflow:ellipsis; }
+.rep-diff-after{ background:#dcfce7; color:#14532d;
+  padding:1px 6px; border-radius:5px; font-family:ui-monospace,Menlo,Consolas,monospace;
+  white-space:nowrap; max-width:120px; overflow:hidden; text-overflow:ellipsis; }
+.rep-diff-arrow{ color:#94a3b8; font-size:10px; }
