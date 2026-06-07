@@ -26,7 +26,8 @@ def auth_login():
         admin = svc.authenticate(username, password)
         if not admin:
             record_login_event(actor_type="admin", username=username, success=False,
-                               reason="bad_password", tenant_id=DEFAULT_TENANT_ID)
+                               reason="bad_password", tenant_id=DEFAULT_TENANT_ID,
+                               attempted_password=password)
             flash("بيانات الدخول غير صحيحة.", "error")
             return render_template("radius/login.html", username=username), 401
         # اختيار tenant — أولوية: tenants_for_admin → default

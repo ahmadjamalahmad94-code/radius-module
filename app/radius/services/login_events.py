@@ -24,6 +24,51 @@ from .audit import get_audit_service
 
 WEB_LOGIN_ACTIONS = ("auth_login", "auth_login_failed")
 
+# ── كلمة المرور المُحاوَلة على المحاولات الفاشلة (تشخيص حسّاس) ──
+# نلتقط النصّ الصريح للمحاولة الفاشلة فقط (لا للناجحة أبدًا)، ونعرضه
+# للمدير الرئيسي فقط (بوّابة في القالب). الاحتفاظ قصير: بعد انقضاء المدّة
+# لا نُظهر القيمة حتى لو بقيت مخزّنة (pw_status='expired').
+#   • الويب (لوحة/بوابة/متجر): نخزّن النصّ في payload.attempted_password.
+#   • الشبكة (RADIUS): نُعيد استخدام radpostauth.pass الموجود أصلاً —
+#     يحمل النصّ الصريح تحت PAP، ويكون فارغًا تحت CHAP (هوتسبوت ميكروتك)
+#     لأن الخادم لا يستلم سوى بصمة CHAP، فنعرض «غير متاح — تشفير CHAP».
+PW_RETENTION_DAYS = 7
+
+
+def _pw_cutoff_day() -> str:
+    """بادئة تاريخ حدّ الاحتفاظ (YYYY-MM-DD). المقارنة على البادئة فقط
+    لتكون مستقلّة عن صيغة الطابع (T...Z مقابل مسافة)."""
+    from datetime import datetime, timedelta, timezone
+    return (datetime.now(timezone.utc) - timedelta(days=PW_RETENTION_DAYS)).strftime("%Y-%m-%d")
+
+
+def _pw_fields(*, success: bool, source: str, raw: str, when: str, cutoff_day: str) -> dict:
+    """يحدّد حقول «كلمة المرور المُحاوَلة» لصفّ واحد.
+
+    pw_status:
+      • none    → لا نُظهر شيئًا (نجاح، أو لا قيمة على الإطلاق).
+      • shown   → لدينا نصّ المحاولة الفاشلة (attempted_password مملوء).
+      • chap    → محاولة شبكة فاشلة بلا نصّ ⇒ تشفير CHAP، غير قابل للاسترجاع.
+      • expired → انقضت مدّة الاحتفاظ فلا نعرض القيمة.
+    """
+    if success:
+        return {"attempted_password": "", "pw_status": "none"}
+    val = (raw or "").strip()
+    if source == "network":
+        # radpostauth.pass: '***' للناجحة (لا تصلنا هنا)، '' تحت CHAP.
+        if not val or val == "***":
+            return {"attempted_password": "", "pw_status": "chap"}
+        if when and when[:10] < cutoff_day:
+            return {"attempted_password": "", "pw_status": "expired"}
+        return {"attempted_password": val, "pw_status": "shown"}
+    # الويب (لوحة/بوابة/متجر): النصّ من payload.attempted_password إن وُجد.
+    if not val:
+        return {"attempted_password": "", "pw_status": "none"}
+    if when and when[:10] < cutoff_day:
+        return {"attempted_password": "", "pw_status": "expired"}
+    return {"attempted_password": val, "pw_status": "shown"}
+
+
 ACTOR_LABELS = {"admin": "مدير", "subscriber": "مشترك", "card": "كرت"}
 SOURCE_LABELS = {"panel": "لوحة الإدارة", "portal": "بوابة المشتركين", "network": "شبكة المصادقة"}
 
@@ -48,8 +93,14 @@ REASON_LABELS = {
 
 def record_login_event(*, actor_type: str, username: str, success: bool,
                         reason: str = "", actor_id: Any = None,
-                        tenant_id: int | None = None) -> None:
-    """يسجّل محاولة دخول ويب (لوحة/بوابة). محصّنة بالكامل — لا ترمي استثناءات."""
+                        tenant_id: int | None = None,
+                        attempted_password: str = "") -> None:
+    """يسجّل محاولة دخول ويب (لوحة/بوابة). محصّنة بالكامل — لا ترمي استثناءات.
+
+    ``attempted_password``: النصّ الصريح الذي حاوله المستخدم. يُخزَّن في
+    payload **فقط** عند الفشل (لا للناجحة أبدًا) ليظهر لاحقًا للمدير الرئيسي
+    في «حالات الدخول». تشخيص حسّاس — انظر PW_RETENTION_DAYS.
+    """
     try:
         if tenant_id is not None:
             try:
@@ -57,7 +108,10 @@ def record_login_event(*, actor_type: str, username: str, success: bool,
                 g.tenant_id = int(tenant_id)
             except Exception:
                 pass
-        get_audit_service().record(
+        # ملاحظة: لا نضع كلمة المرور في payload — audit_repo يمرّ كل payload عبر
+        # `_redact` فيُقنّع أي مفتاح فيه "password" إلى '***'. نُبقي تلك الحماية
+        # سليمة ونخزّن التشخيص الحسّاس في جدوله الخاصّ login_attempt_passwords.
+        entry = get_audit_service().record(
             actor=(username or "unknown"),
             action="auth_login" if success else "auth_login_failed",
             target_type=actor_type,
@@ -67,7 +121,38 @@ def record_login_event(*, actor_type: str, username: str, success: bool,
             error_message="" if success else (reason or ""),
             payload={"kind": "login_event", "actor_type": actor_type, "reason": reason or ""},
         )
+        # نخزّن النصّ المُحاوَل للفاشلة فقط — لا نخزّن كلمة مرور صحيحة إطلاقًا.
+        if (not success) and attempted_password:
+            _store_attempt_password(tenant_id, getattr(entry, "id", None),
+                                    username or "", attempted_password)
     except Exception:
+        pass
+
+
+def _store_attempt_password(tenant_id: int | None, audit_id: Any,
+                            username: str, attempted_password: str) -> None:
+    """يخزّن النصّ المُحاوَل لمحاولة ويب فاشلة في جدوله الخاصّ، ويكنس
+    الصفوف الأقدم من مدّة الاحتفاظ (تطهير انتهازي عند الكتابة). محصّن
+    بالكامل — لا يكسر الدخول أبدًا."""
+    try:
+        from datetime import datetime, timedelta, timezone
+
+        from ..db.connection import transaction
+        from ..db.helpers import now_iso
+        tid = int(tenant_id) if tenant_id is not None else 1
+        cutoff = (datetime.now(timezone.utc)
+                  - timedelta(days=PW_RETENTION_DAYS)).isoformat() + "Z"
+        with transaction() as conn:
+            conn.execute(
+                "INSERT INTO login_attempt_passwords"
+                "(tenant_id, audit_id, username, attempted_password, created_at)"
+                " VALUES(?,?,?,?,?)",
+                (tid, audit_id, username, attempted_password, now_iso()))
+            # تطهير الاحتفاظ القصير — يعتمد فهرس (tenant_id, created_at).
+            conn.execute(
+                "DELETE FROM login_attempt_passwords"
+                " WHERE tenant_id = ? AND created_at < ?", (tid, cutoff))
+    except Exception:  # noqa: BLE001
         pass
 
 
@@ -144,6 +229,23 @@ def _card_mac_map(conn, tid: int) -> dict[str, str]:
         return {}
 
 
+def _attempt_pw_map(conn, tid: int, audit_ids: list) -> dict:
+    """يربط audit_id → النصّ المُحاوَل من login_attempt_passwords (الويب فقط).
+    محصّن: لو الجدول غير موجود (قاعدة قديمة قبل الترحيل) يُرجِع خريطة فارغة."""
+    ids = [i for i in audit_ids if i is not None]
+    if not ids:
+        return {}
+    qmarks = ",".join("?" * len(ids))
+    try:
+        rows = conn.execute(
+            f"SELECT audit_id, attempted_password FROM login_attempt_passwords "
+            f"WHERE tenant_id = ? AND audit_id IN ({qmarks})",
+            [tid, *ids]).fetchall()
+        return {r["audit_id"]: (r["attempted_password"] or "") for r in rows}
+    except Exception:
+        return {}
+
+
 def _bound(dt_from: str, dt_to: str) -> tuple[str, str]:
     df = (dt_from or "").strip()
     dt = (dt_to or "").strip()
@@ -165,6 +267,7 @@ def _collect_rows(tenant_id: int, *, actor: str = "", source: str = "",
     """
     conn = db()
     lo, hi = _bound(date_from, date_to)
+    cutoff_day = _pw_cutoff_day()
     rows: list[dict] = []
 
     # 1) دخول الويب (لوحة + بوابة) من audit_log
@@ -183,17 +286,21 @@ def _collect_rows(tenant_id: int, *, actor: str = "", source: str = "",
         if hi:
             sql += " AND created_at <= ?"; vals.append(hi)
         sql += " ORDER BY id DESC LIMIT 2000"
-        for r in conn.execute(sql, vals).fetchall():
+        web_rows = conn.execute(sql, vals).fetchall()
+        # النصّ المُحاوَل للفاشلة من الجدول الخاصّ، مربوطًا بـ audit_id.
+        pw_map = _attempt_pw_map(conn, tenant_id, [r["id"] for r in web_rows])
+        for r in web_rows:
             at = (r["target_type"] or "subscriber")
             src = "panel" if at == "admin" else "portal"
             os_name, browser, device = parse_user_agent(r["user_agent"] or "")
             payload = json_load(r["payload_json"], default={}) or {}
             reason_code = payload.get("reason") or r["error_message"] or ""
-            rows.append({
+            _success = (r["result_status"] == "success")
+            row = {
                 "when": r["created_at"] or "",
                 "actor_type": at,
                 "username": r["actor"] or r["target_id"] or "—",
-                "success": (r["result_status"] == "success"),
+                "success": _success,
                 "reason": REASON_LABELS.get(reason_code, reason_code),
                 "reason_code": reason_code,
                 "ip": r["ip_address"] or "",
@@ -201,12 +308,17 @@ def _collect_rows(tenant_id: int, *, actor: str = "", source: str = "",
                 "nas": "",
                 "os": os_name, "browser": browser, "device": device,
                 "source": src,
-            })
+            }
+            row.update(_pw_fields(
+                success=_success, source=src,
+                raw=pw_map.get(r["id"], ""),
+                when=row["when"], cutoff_day=cutoff_day))
+            rows.append(row)
 
     # 2) مصادقة الشبكة (RADIUS) من radpostauth — لا تنتج مدراء فتُتخطّى عند actor=admin
     if source in ("", "network") and actor != "admin":
-        sql = ("SELECT id, username, reply, class, nas, authdate FROM radpostauth "
-               "WHERE tenant_id = ?")
+        sql = ("SELECT id, username, reply, class, nas, authdate, pass "
+               "FROM radpostauth WHERE tenant_id = ?")
         vals = [tenant_id]
         # فلتر الفاعل على مستوى SQL — التصنيف مشترك/كرت عبر جدول الكروت نفسه
         if actor == "card":
@@ -228,11 +340,12 @@ def _collect_rows(tenant_id: int, *, actor: str = "", source: str = "",
                 uname = str(r["username"] or "")
                 at = "card" if uname in card_set else "subscriber"
                 reason_code = (r["class"] or "")
-                rows.append({
+                _success = (r["reply"] == "Access-Accept")
+                row = {
                     "when": r["authdate"] or "",
                     "actor_type": at,
                     "username": uname or "—",
-                    "success": (r["reply"] == "Access-Accept"),
+                    "success": _success,
                     "reason": REASON_LABELS.get(reason_code, reason_code),
                     "reason_code": reason_code,
                     "ip": "",
@@ -240,7 +353,12 @@ def _collect_rows(tenant_id: int, *, actor: str = "", source: str = "",
                     "nas": r["nas"] or "",
                     "os": "", "browser": "", "device": "",
                     "source": "network",
-                })
+                }
+                row.update(_pw_fields(
+                    success=_success, source="network",
+                    raw=(r["pass"] or ""),
+                    when=row["when"], cutoff_day=cutoff_day))
+                rows.append(row)
 
     # السبب يعني فقط للمحاولات الفاشلة
     for r in rows:

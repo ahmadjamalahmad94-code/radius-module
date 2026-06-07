@@ -42,6 +42,20 @@
 .ls-tabs a:hover{background:#fff;color:var(--hub-text,#0f172a)}
 .ls-tabs a.is-active{background:linear-gradient(135deg,#475569,#1e293b);color:#fff;border-color:transparent}
 .ls-tabs a i{font-size:11.5px}
+/* ── كلمة المرور المُحاوَلة (خاطئة) — للمدير الرئيسي فقط، وللفاشلة فقط ── */
+.rep-pw{display:inline-flex;align-items:center;gap:5px;margin-top:4px;padding:2px 8px;
+  border-radius:7px;font-size:11.5px;font-weight:800;line-height:1.6;white-space:nowrap;max-width:100%}
+.rep-pw--shown{background:#fff1f2;color:#9f1239;border:1px dashed #fda4af}
+.rep-pw--na{background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0}
+.rep-pw .rep-pw-label{font-weight:700;opacity:.85}
+.rep-pw .rep-pw-val{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-weight:900;letter-spacing:.3px;direction:ltr;unicode-bidi:plaintext;
+  background:#fff;padding:1px 6px;border-radius:5px;border:1px solid #fecdd3}
+.rep-pw i{font-size:10.5px}
+.ls-pw-note{display:flex;align-items:flex-start;gap:8px;margin:0 0 12px;padding:9px 13px;
+  border-radius:10px;font-size:12px;font-weight:700;line-height:1.7;
+  background:#fff7ed;color:#9a3412;border:1px solid #fed7aa}
+.ls-pw-note i{margin-top:2px}
 </style>
 <nav class="ls-tabs" data-testid="login-states-tabs">
   <a href="{{ url_for('radius.rep_login_states') }}">
@@ -105,6 +119,13 @@
 {# ───── جدول المحاولات — uds موحّد (فرز + ترقيم + تصدير) ───── #}
 {% call hub.section("سجل المحاولات", icon="table-list",
                     meta=(shown|string) ~ (" من " ~ matched|string if matched > shown else " محاولة"), flush=True) %}
+  {% if session.get('is_super_admin') %}
+  {# تنويه السياسة — يظهر للمدير الرئيسي فقط بجانب عمود «النتيجة» #}
+  <div class="ls-pw-note" data-testid="attempted-pw-note">
+    <i class="fa-solid fa-shield-halved"></i>
+    <span>{{ _('عمود «النتيجة» يعرض «كلمة المرور المُحاوَلة (خاطئة)» للمحاولات الفاشلة فقط، وللمدير الرئيسي فقط. لا تُسجَّل كلمة مرور صحيحة أبدًا، ومدّة الاحتفاظ %(d)s أيام. دخول هوتسبوت ميكروتك (CHAP) لا يُمكن استرجاع نصّه — يظهر «غير متاح — تشفير CHAP».', d=pw_retention_days) }}</span>
+  </div>
+  {% endif %}
   <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25"
        style="border:none;border-radius:0">
     <table class="hub-table rep-table">
@@ -133,6 +154,28 @@
             {% else %}{{ hub.pill("فشل", variant="red") }}
               {# السبب معرّب — والقيمة الخام تبقى في title للمراجعة الفنية #}
               {% if r.reason %}<span class="rep-reason" title="{{ r.reason_code or r.reason }}">{{ r.reason }}</span>{% endif %}
+              {# ── كلمة المرور المُحاوَلة (خاطئة) — للمدير الرئيسي فقط ──
+                 تشخيص حسّاس: تظهر للفاشلة فقط، ولا تُخزَّن قيمة صحيحة أبدًا. #}
+              {% if session.get('is_super_admin') %}
+                {% if r.pw_status == 'shown' %}
+                  <span class="rep-pw rep-pw--shown" data-testid="attempted-pw"
+                        title="{{ _('كلمة المرور المُحاوَلة (خاطئة) — تُعرض للمدير الرئيسي فقط وللمحاولات الفاشلة فقط') }}">
+                    <i class="fa-solid fa-key"></i>
+                    <span class="rep-pw-label">{{ _('كلمة المرور المُحاوَلة (خاطئة):') }}</span>
+                    <bdi class="rep-pw-val">{{ r.attempted_password }}</bdi>
+                  </span>
+                {% elif r.pw_status == 'chap' %}
+                  <span class="rep-pw rep-pw--na" data-testid="attempted-pw-chap"
+                        title="{{ _('هوتسبوت ميكروتك يرسل بصمة CHAP فقط؛ النصّ الصريح لا يصل الخادم. لالتقاطه: حوّل دخول الهوتسبوت إلى PAP عبر HTTPS، أو اعتمد على نموذج البوابة/المتجر.') }}">
+                    <i class="fa-solid fa-lock"></i> {{ _('غير متاح — تشفير CHAP') }}
+                  </span>
+                {% elif r.pw_status == 'expired' %}
+                  <span class="rep-pw rep-pw--na" data-testid="attempted-pw-expired"
+                        title="{{ _('انقضت مدّة الاحتفاظ بكلمة المرور المُحاوَلة') }}">
+                    <i class="fa-solid fa-clock-rotate-left"></i> {{ _('انتهت مدّة الاحتفاظ') }}
+                  </span>
+                {% endif %}
+              {% endif %}
             {% endif %}
           </td>
           {% if kind != 'admin' %}

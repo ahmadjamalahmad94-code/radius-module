@@ -360,6 +360,7 @@ _LOGIN_STATES_KINDS = {
 def rep_login_states():
     from ..services.login_events import (
         fetch_login_events, login_states_overview, ACTOR_LABELS, SOURCE_LABELS,
+        PW_RETENTION_DAYS,
     )
     actor = (request.args.get("actor") or "").strip()
 
@@ -380,6 +381,7 @@ def rep_login_states():
             rows=data["rows"], stats=data["stats"],
             shown=data["shown"], matched=data["matched"],
             filters=filters, actor_labels=ACTOR_LABELS, source_labels=SOURCE_LABELS,
+            pw_retention_days=PW_RETENTION_DAYS,
         )
 
     # ── الصفحة الرئيسية: ثلاث بطاقات كبيرة بعدّادات مصغّرة لكل نوع فاعل ──
