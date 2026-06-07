@@ -102,6 +102,24 @@ def register(bp: Blueprint) -> None:
         require_api_token(network_devices_bypass_remove),
         methods=["POST"],
     )
+    bp.add_url_rule(
+        "/network-devices/<int:device_id>/remote-access",
+        "network_devices_remote_access_state",
+        require_api_token(network_devices_remote_access_state),
+        methods=["GET"],
+    )
+    bp.add_url_rule(
+        "/network-devices/<int:device_id>/remote-access/open",
+        "network_devices_remote_access_open",
+        require_api_token(network_devices_remote_access_open),
+        methods=["POST"],
+    )
+    bp.add_url_rule(
+        "/network-devices/<int:device_id>/remote-access/<int:session_id>/close",
+        "network_devices_remote_access_close",
+        require_api_token(network_devices_remote_access_close),
+        methods=["POST"],
+    )
 
 
 def _tid() -> int:
@@ -165,6 +183,16 @@ def _nas_to_runtime_dict(nas_dc) -> dict:
     }
 
 
+def _actor() -> str:
+    admin_id = getattr(g, "admin_id", 0) or 0
+    token_id = getattr(g, "api_token_id", None)
+    if admin_id:
+        return f"admin:{admin_id}"
+    if token_id:
+        return f"api-token:{token_id}"
+    return "api-token:env"
+
+
 def _load_router(tenant_id: int, router_id: int):
     from ...radius.db.repos import nas_repo
 
@@ -226,6 +254,108 @@ def _summary(items: list[dict]) -> dict:
         "watched": sum(1 for item in items if item.get("watch_enabled")),
         "critical": sum(1 for item in items if item.get("is_critical")),
         "alerts": sum(1 for item in items if item.get("alert_enabled")),
+    }
+
+
+_REMOTE_PROTOCOL_LABELS = {
+    "http": "واجهة الويب العادية",
+    "https": "واجهة الويب الآمنة",
+    "winbox": "Winbox",
+    "ssh": "SSH",
+}
+
+_REMOTE_STATUS_LABELS = {
+    "active": "نشطة",
+    "expired": "منتهية",
+    "closed": "مغلقة",
+    "failed": "فشلت",
+}
+
+
+def _remote_session_payload(session: dict, public_host: str = "") -> dict:
+    protocol = str(session.get("protocol") or "http")
+    external_port = int(session.get("external_port") or 0)
+    public_endpoint = (
+        f"{public_host}:{external_port}" if public_host and external_port else ""
+    )
+    public_url = ""
+    if (
+        public_endpoint
+        and str(session.get("status") or "") == "active"
+        and protocol in {"http", "https"}
+    ):
+        scheme = "https" if protocol == "https" else "http"
+        public_url = f"{scheme}://{public_endpoint}/"
+    status = str(session.get("status") or "")
+    return {
+        "id": int(session.get("id") or 0),
+        "device_id": int(session.get("device_id") or 0),
+        "router_id": int(session.get("router_id") or 0),
+        "requested_by": session.get("requested_by") or "",
+        "protocol": protocol,
+        "protocol_label": _REMOTE_PROTOCOL_LABELS.get(protocol, protocol),
+        "internal_ip": session.get("internal_ip") or "",
+        "internal_port": int(session.get("internal_port") or 0),
+        "external_port": external_port,
+        "public_endpoint": public_endpoint,
+        "public_url": public_url,
+        "status": status,
+        "status_label": _REMOTE_STATUS_LABELS.get(status, "غير محددة"),
+        "created_at": session.get("created_at") or "",
+        "expires_at": session.get("expires_at") or "",
+        "closed_at": session.get("closed_at") or "",
+        "notes": session.get("notes") or "",
+    }
+
+
+def _remote_access_payload(
+    *,
+    tenant_id: int,
+    device: dict,
+    nas_dc,
+    sessions: list[dict] | None = None,
+    message: str = "",
+    warning: str = "",
+) -> dict:
+    from ...radius.db.repos import remote_access_sessions_repo
+    from ...radius.services.remote_device_access import vps_public_host
+
+    public_host = vps_public_host()
+    rows = sessions
+    if rows is None:
+        rows = remote_access_sessions_repo.list_for_device(
+            tenant_id,
+            int(device["id"]),
+            limit=15,
+        )
+    payload_sessions = [
+        _remote_session_payload(session, public_host) for session in rows
+    ]
+    active = [
+        session for session in payload_sessions if session.get("status") == "active"
+    ]
+    return {
+        "device": _serialize(device, _router_map(tenant_id)),
+        "router": _router_payload(nas_dc),
+        "sessions": payload_sessions,
+        "active_sessions": active,
+        "count": len(payload_sessions),
+        "active_count": len(active),
+        "public_host": public_host,
+        "config_ready": bool(public_host),
+        "allowed_protocols": [
+            {"key": key, "label": _REMOTE_PROTOCOL_LABELS[key]}
+            for key in ("http", "https", "winbox", "ssh")
+        ],
+        "ttl_options": [
+            {"minutes": 15, "label": "15 دقيقة"},
+            {"minutes": 30, "label": "30 دقيقة"},
+            {"minutes": 60, "label": "ساعة"},
+            {"minutes": 120, "label": "ساعتان"},
+            {"minutes": 240, "label": "4 ساعات"},
+        ],
+        "message": message,
+        "warning": warning,
     }
 
 
@@ -597,6 +727,120 @@ def network_devices_bypass_remove(device_id: int):
             "message": f"تمت إزالة {total} قاعدة من الراوتر.",
         }
     )
+
+
+def network_devices_remote_access_state(device_id: int):
+    tenant_id = _tid()
+    device, nas_dc = _load_device_router(tenant_id, device_id)
+    if not device:
+        return fail("not_found", "جهاز الشبكة غير موجود.", status=404)
+    if not nas_dc:
+        return fail("not_found", "راوتر الجهاز غير موجود.", status=404)
+    return ok(_remote_access_payload(
+        tenant_id=tenant_id,
+        device=device,
+        nas_dc=nas_dc,
+    ))
+
+
+def network_devices_remote_access_open(device_id: int):
+    from ...radius.db.repos import remote_access_sessions_repo
+    from ...radius.services import remote_device_access
+
+    tenant_id = _tid()
+    device, nas_dc = _load_device_router(tenant_id, device_id)
+    if not device:
+        return fail("not_found", "جهاز الشبكة غير موجود.", status=404)
+    if not nas_dc:
+        return fail("not_found", "راوتر الجهاز غير موجود.", status=404)
+    if not str(device.get("ip_address") or "").strip():
+        return fail(
+            "validation_error",
+            "احفظ عنوان IP للجهاز قبل فتح جلسة وصول بعيدة.",
+            status=422,
+        )
+
+    body = _body()
+    protocol = str(body.get("protocol") or "http").strip().lower()
+    if protocol not in remote_access_sessions_repo.ALLOWED_PROTOCOLS:
+        return fail(
+            "validation_error",
+            "البروتوكول المطلوب غير مدعوم.",
+            status=422,
+        )
+    try:
+        ttl_minutes = int(body.get("ttl_minutes") or 30)
+    except (TypeError, ValueError):
+        return fail(
+            "validation_error",
+            "مدة الجلسة يجب أن تكون رقمًا بالدقائق.",
+            status=422,
+        )
+    ttl_minutes = max(5, min(ttl_minutes, 240))
+    notes = str(body.get("notes") or "").strip()[:500]
+
+    opened, error, session = remote_device_access.open_session(
+        nas=_nas_to_runtime_dict(nas_dc),
+        device=device,
+        requested_by=_actor(),
+        ttl_minutes=ttl_minutes,
+        protocol=protocol,
+        audit_ip=(request.remote_addr or "")[:64],
+        notes=notes,
+    )
+    if not opened or not session:
+        return fail(
+            "remote_access_failed",
+            error or "تعذر فتح جلسة الوصول البعيد.",
+            status=502,
+        )
+
+    payload = _remote_access_payload(
+        tenant_id=tenant_id,
+        device=device,
+        nas_dc=nas_dc,
+        message="تم فتح جلسة الوصول البعيد.",
+    )
+    payload["session"] = _remote_session_payload(
+        session,
+        str(payload.get("public_host") or ""),
+    )
+    return ok(payload, status=201)
+
+
+def network_devices_remote_access_close(device_id: int, session_id: int):
+    from ...radius.db.repos import remote_access_sessions_repo
+    from ...radius.services import remote_device_access
+
+    tenant_id = _tid()
+    device, nas_dc = _load_device_router(tenant_id, device_id)
+    if not device:
+        return fail("not_found", "جهاز الشبكة غير موجود.", status=404)
+    if not nas_dc:
+        return fail("not_found", "راوتر الجهاز غير موجود.", status=404)
+    session = remote_access_sessions_repo.get(tenant_id, session_id)
+    if not session or int(session.get("device_id") or 0) != int(device_id):
+        return fail("not_found", "جلسة الوصول البعيد غير موجودة.", status=404)
+    if session.get("status") != "active":
+        return ok(_remote_access_payload(
+            tenant_id=tenant_id,
+            device=device,
+            nas_dc=nas_dc,
+            message="الجلسة مغلقة بالفعل.",
+        ))
+
+    _ok, warning = remote_device_access.close_session(
+        nas=_nas_to_runtime_dict(nas_dc),
+        session=session,
+        status="closed",
+    )
+    return ok(_remote_access_payload(
+        tenant_id=tenant_id,
+        device=device,
+        nas_dc=nas_dc,
+        message="تم إغلاق جلسة الوصول البعيد.",
+        warning=warning or "",
+    ))
 
 
 def _tcp_probe(host: str, port: int, timeout_sec: float = 2.0) -> tuple[str, float | None]:

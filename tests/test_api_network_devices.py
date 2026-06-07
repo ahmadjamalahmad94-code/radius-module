@@ -64,6 +64,12 @@ def test_network_devices_routes_are_registered(client):
     assert "/api/v1/network-devices/<int:device_id>/bypass" in routes
     assert "/api/v1/network-devices/<int:device_id>/bypass/apply" in routes
     assert "/api/v1/network-devices/<int:device_id>/bypass/remove" in routes
+    assert "/api/v1/network-devices/<int:device_id>/remote-access" in routes
+    assert "/api/v1/network-devices/<int:device_id>/remote-access/open" in routes
+    assert (
+        "/api/v1/network-devices/<int:device_id>/remote-access/"
+        "<int:session_id>/close"
+    ) in routes
 
 
 def test_network_device_can_be_created_edited_checked_and_deleted(app, client):
@@ -282,6 +288,117 @@ def test_network_device_bypass_api_uses_planner_without_exposing_router_secret(
     assert remove.get_json()["data"]["total_removed"] == 3
     assert calls["remove"]["device_id"] == device_id
     assert "api_password" not in str(remove.get_json()["data"])
+
+
+def test_network_device_remote_access_api_opens_and_closes_ttl_sessions(
+    app,
+    client,
+    monkeypatch,
+):
+    monkeypatch.setenv("HOBERADIUS_VPS_PUBLIC_IP", "203.0.113.10")
+    _seed_router(app)
+    with app.app_context():
+        from app.radius.db.repos import (
+            network_devices_repo,
+            remote_access_sessions_repo,
+        )
+
+        device_id = network_devices_repo.create(
+            tenant_id=1,
+            router_id=11,
+            name="camera",
+            device_type="camera",
+            ip_address="10.0.0.88",
+            mac_address="AA:BB:CC:DD:EE:88",
+            management_port=8080,
+            watch_enabled=True,
+        )
+
+    from app.radius.services import remote_device_access
+
+    calls = {}
+
+    def fake_open(**kwargs):
+        calls["open"] = kwargs
+        return True, "", {
+            "id": 44,
+            "tenant_id": 1,
+            "device_id": device_id,
+            "router_id": 11,
+            "requested_by": kwargs["requested_by"],
+            "protocol": kwargs["protocol"],
+            "internal_ip": kwargs["device"]["ip_address"],
+            "internal_port": 8080,
+            "external_port": 40044,
+            "status": "active",
+            "created_at": "2026-06-07T12:00:00Z",
+            "expires_at": "2026-06-07T12:30:00Z",
+            "closed_at": "",
+            "audit_ip": kwargs["audit_ip"],
+            "notes": kwargs["notes"],
+        }
+
+    def fake_close(**kwargs):
+        calls["close"] = kwargs
+        with app.app_context():
+            remote_access_sessions_repo.mark_closed(
+                int(kwargs["session"]["id"]),
+                status="closed",
+            )
+        return True, ""
+
+    monkeypatch.setattr(remote_device_access, "open_session", fake_open)
+    monkeypatch.setattr(remote_device_access, "close_session", fake_close)
+
+    state = client.get(
+        f"/api/v1/network-devices/{device_id}/remote-access",
+        headers=AUTH,
+    )
+    assert state.status_code == 200, state.get_json()
+    assert state.get_json()["data"]["config_ready"] is True
+    assert state.get_json()["data"]["public_host"] == "203.0.113.10"
+    assert "api_password" not in str(state.get_json()["data"])
+
+    opened = client.post(
+        f"/api/v1/network-devices/{device_id}/remote-access/open",
+        headers=AUTH,
+        json={
+            "protocol": "http",
+            "ttl_minutes": 30,
+            "notes": "maintenance",
+        },
+    )
+    assert opened.status_code == 201, opened.get_json()
+    open_data = opened.get_json()["data"]
+    assert open_data["session"]["public_url"] == "http://203.0.113.10:40044/"
+    assert calls["open"]["nas"]["api_password"] == "pw"
+    assert calls["open"]["device"]["id"] == device_id
+    assert calls["open"]["ttl_minutes"] == 30
+    assert calls["open"]["notes"] == "maintenance"
+    assert "api_password" not in str(open_data)
+
+    with app.app_context():
+        session_id = remote_access_sessions_repo.create(
+            tenant_id=1,
+            device_id=device_id,
+            router_id=11,
+            requested_by="test",
+            protocol="http",
+            internal_ip="10.0.0.88",
+            internal_port=8080,
+            external_port=40088,
+            ttl_minutes=30,
+        )
+
+    closed = client.post(
+        f"/api/v1/network-devices/{device_id}/remote-access/"
+        f"{session_id}/close",
+        headers=AUTH,
+    )
+    assert closed.status_code == 200, closed.get_json()
+    assert calls["close"]["session"]["id"] == session_id
+    assert closed.get_json()["data"]["active_count"] == 0
+    assert "api_password" not in str(closed.get_json()["data"])
 
 
 def test_network_device_validation_messages_are_arabic(app, client):
