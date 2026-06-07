@@ -11,6 +11,10 @@ from flask import Blueprint, flash, g, jsonify, redirect, render_template, reque
 from ..core.tenant import DEFAULT_TENANT_ID
 from ..db.connection import db
 from ..services.dashboard_reports import DashboardReportsService
+from ..services.event_labels import (
+    event_key_label as _ev_label,
+    target_type_label as _tt_label,
+)
 
 
 def _tid() -> int:
@@ -105,13 +109,83 @@ def _payload_summary(raw: object) -> str:
     return "، ".join(bits) if bits else "تفاصيل محفوظة في السجل"
 
 
+# تعريب مفاتيح before_json / after_json المعروفة (حقول المشترك المخزّنة)
+_FIELD_AR: dict[str, str] = {
+    "plan_id": "رقم الباقة", "plan": "الباقة", "plan_name": "الباقة",
+    "status": "الحالة", "enabled": "مفعَّل", "disabled": "معطَّل",
+    "expire_at": "انتهاء الاشتراك", "expire_days": "أيام متبقّية",
+    "speed_down": "سرعة التنزيل", "speed_up": "سرعة الرفع",
+    "speed_profile": "ملف السرعة", "bandwidth_profile": "ملف عرض النطاق",
+    "quota": "الحصة", "quota_mb": "الحصة (MB)",
+    "amount": "المبلغ", "balance": "الرصيد",
+    "time_added": "وقت أضيف (دقيقة)", "minutes_added": "دقائق أضيفت",
+    "password": "كلمة المرور",
+    "mac": "عنوان الجهاز", "mac_address": "عنوان الجهاز",
+    "ip": "عنوان IP", "ip_address": "عنوان IP",
+    "username": "المستخدم", "email": "البريد",
+    "note": "ملاحظة", "notes": "ملاحظات",
+    "role": "الدور", "role_id": "رقم الدور",
+    "is_super_admin": "سوبر أدمن",
+    "distributor_id": "الموزّع", "distributor": "الموزّع",
+}
+
+_STATUS_AR: dict[str, str] = {
+    "enabled": "مفعَّل", "disabled": "معطَّل",
+    "active": "نشط", "expired": "منتهٍ",
+    "suspended": "موقوف", "archived": "مؤرشَف",
+    "1": "نعم", "0": "لا", "true": "نعم", "false": "لا",
+}
+
+
+def _fmt_val(key: str, val: object) -> str:
+    """تنسيق قيمة حقل واحد بالعربية."""
+    s = str(val) if val is not None else ""
+    if not s or s in ("{}", "[]", "null"):
+        return "—"
+    if key in ("enabled", "disabled", "is_super_admin") or s in _STATUS_AR:
+        return _STATUS_AR.get(s.lower(), s)
+    return s
+
+
+def _diff_summary(before_raw: object, after_raw: object) -> list[tuple[str, str, str]]:
+    """يُرجع قائمة (label_ar, قبل, بعد) للحقول التي تغيّرت (حتى 4 تغييرات)."""
+    try:
+        before = json.loads(str(before_raw or "{}") or "{}") if not isinstance(before_raw, dict) else before_raw
+        after  = json.loads(str(after_raw  or "{}") or "{}") if not isinstance(after_raw,  dict) else after_raw
+    except (TypeError, ValueError):
+        return []
+    if not isinstance(before, dict) or not isinstance(after, dict):
+        return []
+    changes: list[tuple[str, str, str]] = []
+    all_keys = dict.fromkeys(list(before.keys()) + list(after.keys()))
+    for k in all_keys:
+        bv = before.get(k)
+        av = after.get(k)
+        if bv != av:
+            label = _FIELD_AR.get(k, k.replace("_", " "))
+            changes.append((label, _fmt_val(k, bv), _fmt_val(k, av)))
+            if len(changes) >= 4:
+                break
+    return changes
+
+
 def _decorate_audit_rows(rows: list[dict]) -> list[dict]:
     for row in rows:
         row["actor_label"] = _display_actor(str(row.get("actor") or ""))
-        row["action_label"] = _display_action(str(row.get("action") or ""))
-        row["target_type_label"] = _TARGET_LABELS.get(str(row.get("target_type") or ""), "كيان")
-        row["target_display"] = _display_target(str(row.get("target_type") or ""), row.get("target_id"))
+        # الفعل: يأخذ من audit_log.action عبر event_key_label (مصدر موحّد)
+        action_raw = str(row.get("action") or "")
+        row["action_label"] = _ev_label(action_raw) if action_raw else "عملية"
+        # الهدف: نوع + معرّف بالعربية
+        tt = str(row.get("target_type") or "")
+        row["target_type_label"] = _tt_label(tt) if tt else "كيان"
+        row["target_display"] = (
+            f"{_tt_label(tt)} #{row.get('target_id')}"
+            if row.get("target_id") not in (None, "")
+            else _tt_label(tt)
+        )
         row["payload_summary"] = _payload_summary(row.get("payload_json"))
+        # قبل/بعد: قائمة تغييرات مقروءة
+        row["diff"] = _diff_summary(row.get("before_json"), row.get("after_json"))
     return rows
 
 
@@ -310,6 +384,20 @@ def rep_failed_logins():
     rows = [dict(r) for r in db().execute(
         f"SELECT * FROM radpostauth WHERE {where_sql} ORDER BY id DESC LIMIT 500", params
     ).fetchall()]
+    # جلب أسماء/أنواع/موردي أجهزة الشبكة (nas_devices) دفعةً واحدة ثم دمج في الصفوف
+    try:
+        nas_rows = db().execute(
+            "SELECT address, name, vendor, nas_type FROM nas_devices WHERE tenant_id=? AND deleted_at IS NULL",
+            [_tid()]
+        ).fetchall()
+        nas_map: dict[str, dict] = {r["address"]: dict(r) for r in nas_rows}
+    except Exception:
+        nas_map = {}
+    for row in rows:
+        info = nas_map.get(row.get("nas") or "")
+        row["nas_name"]   = (info or {}).get("name", "")
+        row["nas_vendor"] = (info or {}).get("vendor", "")
+        row["nas_type"]   = (info or {}).get("nas_type", "")
     # مؤشّر «آخر 24 ساعة» — عدّ بسيط مستقل عن الفلاتر (نفس الجدول والشرط الأساسي)
     last24 = db().execute(
         "SELECT COUNT(*) AS c FROM radpostauth "

@@ -66,7 +66,7 @@
             <th>{{ _('المنفّذ') }}</th>
             <th data-uds-nosort>{{ _('الفعل') }}</th>
             <th>{{ _('المستخدم') }}</th>
-            <th data-uds-nosort>{{ _('التفاصيل') }}</th>
+            <th data-uds-nosort>{{ _('ما تغيّر') }}</th>
             <th>{{ _('التاريخ') }}</th>
           </tr>
         </thead>
@@ -75,14 +75,30 @@
           <tr>
             <td class="num mono">{{ r.id }}</td>
             <td><strong>{{ r.actor_label }}</strong></td>
-            <td>
-              {% if r.action == 'extend_time' %}{{ hub.pill("تمديد", variant="blue", dot=False) }}
+            {# الفعل معرّب — الكود الخام في title #}
+            <td title="{{ r.action or '' }}">
+              {% if r.action == 'extend_time' %}{{ hub.pill("تمديد الوقت", variant="blue", dot=False) }}
               {% else %}{{ hub.pill(r.action_label, variant="brand", dot=False) }}{% endif %}
             </td>
             <td class="mono">{{ r.target_id or '—' }}</td>
-            <td class="small" title="{{ r.payload_summary or '' }}"
-                style="max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
-              {{ r.payload_summary or '—' }}
+            {# ما تغيّر: diff قبل/بعد إن وُجد، وإلا ملخّص payload #}
+            <td class="small"
+                title="{{ r.payload_summary or '' }}"
+                style="max-width:360px">
+              {% if r.diff %}
+                <span class="rep-diff-list">
+                {% for label, bv, av in r.diff %}
+                  <span class="rep-diff-item">
+                    <span class="rep-diff-label">{{ label }}:</span>
+                    <span class="rep-diff-before">{{ bv }}</span>
+                    <i class="fa-solid fa-arrow-left rep-diff-arrow"></i>
+                    <span class="rep-diff-after">{{ av }}</span>
+                  </span>
+                {% endfor %}
+                </span>
+              {% else %}
+                <span style="color:var(--hub-text-soft)">{{ r.payload_summary or '—' }}</span>
+              {% endif %}
             </td>
             <td class="mono small"
                 style="white-space:nowrap;direction:ltr">

@@ -84,16 +84,19 @@
           {% for event in events %}
             <tr>
               <td class="num"><a href="{{ url_for('radius.events_detail', event_id=event.id) }}">#{{ event.id }}</a></td>
-              <td>{{ event.category }}</td>
+              {# الفئة معرّبة — القيمة التقنية الخام في title #}
+              <td title="{{ event.category or '' }}">{{ event.category_label }}</td>
               <td>
                 {%- if event.severity == 'critical' -%}{{ hub.pill("حرج", variant="red") }}
                 {%- elif event.severity == 'warning' -%}{{ hub.pill("تحذير", variant="amber") }}
                 {%- elif event.severity == 'info' -%}{{ hub.pill("معلومة", variant="blue") }}
                 {%- else -%}{{ hub.pill(event.severity or '—', variant="grey") }}{%- endif -%}
               </td>
-              <td class="mono small">{{ event.event_key }}</td>
-              <td>{{ event.actor_type }} #{{ event.actor_id or '' }}</td>
-              <td>{{ event.target_type }} #{{ event.target_id or '' }}</td>
+              {# المفتاح معرّب — الكود الفني الخام يبقى في title للمرجع #}
+              <td title="{{ event.event_key or '' }}">{{ event.event_key_label }}</td>
+              <td title="{{ event.actor_type or '' }}">{{ event.actor_type_label }} #{{ event.actor_id or '' }}</td>
+              {# الهدف معرّب — النوع الخام في title #}
+              <td title="{{ event.target_type or '' }}">{{ event.target_type_label }} #{{ event.target_id or '' }}</td>
               <td class="mono small">{{ event.correlation_id }}</td>
             </tr>
           {% else %}
