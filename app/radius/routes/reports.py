@@ -127,6 +127,13 @@ def register_reports_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/reports/failed_logins", "rep_failed_logins", rep_failed_logins, methods=["GET"])
     bp.add_url_rule("/reports/login_status", "rep_login_status", rep_login_status, methods=["GET"])
     bp.add_url_rule("/reports/login_states", "rep_login_states", rep_login_states, methods=["GET"])
+    # R12.3: صفحتان مخصّصتان مفصولتان — لكل نوع حساب رابطه ومساره الخاص،
+    # تُربطان من قسمَي «البطاقات» و«المشتركون» في الشريط الجانبي (لا من التقارير).
+    # فتح صفحة الكروت يعرض الكروت فقط، وصفحة المشتركين تعرض المشتركين فقط.
+    bp.add_url_rule("/reports/login_states/cards", "rep_login_states_cards",
+                    rep_login_states_cards, methods=["GET"])
+    bp.add_url_rule("/reports/login_states/subscribers", "rep_login_states_subscribers",
+                    rep_login_states_subscribers, methods=["GET"])
     bp.add_url_rule("/reports/mac_history", "rep_mac_history", rep_mac_history, methods=["GET"])
     bp.add_url_rule("/reports/profile_changes", "rep_profile_changes", rep_profile_changes, methods=["GET"])
     bp.add_url_rule("/reports/api_messages", "rep_api_messages", rep_api_messages, methods=["GET"])
@@ -357,30 +364,57 @@ _LOGIN_STATES_KINDS = {
 }
 
 
-def rep_login_states():
+def _render_login_states_detail(actor: str, *, self_endpoint: str):
+    """يعرض صفحة حالات الدخول المفروزة لنوع فاعل واحد (مشترك/كرت/مدير).
+
+    ``self_endpoint`` هو الراوت الذي تعود إليه فلاتر الصفحة ونموذج البحث
+    وزرّ «إعادة الضبط». على المسار المشترك (?actor=…) يبقى
+    ``radius.rep_login_states``، وعلى الصفحتين المخصّصتين يصير راوتهما الخاص
+    حتى تبقى الصفحة قائمة بذاتها على رابطها دون قفزة لرابط التجميع.
+
+    الفرز دقيق على مستوى الاستعلام في الخدمة: الويب يُقيَّد بـ target_type
+    والشبكة بعضوية جدول الكروت — لا تخمين بصيغة الاسم.
+    """
     from ..services.login_events import (
-        fetch_login_events, login_states_overview, ACTOR_LABELS, SOURCE_LABELS,
+        fetch_login_events, ACTOR_LABELS, SOURCE_LABELS,
     )
+    filters = {
+        "actor":     actor,
+        "result":    (request.args.get("result") or "").strip(),
+        "source":    (request.args.get("source") or "").strip(),
+        "q":         (request.args.get("q") or "").strip(),
+        "date_from": (request.args.get("date_from") or "").strip(),
+        "date_to":   (request.args.get("date_to") or "").strip(),
+    }
+    data = fetch_login_events(_tid(), **filters)
+    return render_template(
+        "radius/rep_login_states_detail.html",
+        kind=actor, meta=_LOGIN_STATES_KINDS[actor], kinds=_LOGIN_STATES_KINDS,
+        rows=data["rows"], stats=data["stats"],
+        shown=data["shown"], matched=data["matched"],
+        filters=filters, actor_labels=ACTOR_LABELS, source_labels=SOURCE_LABELS,
+        self_endpoint=self_endpoint,
+    )
+
+
+def rep_login_states_cards():
+    """«حالات البطاقات» — صفحة مخصّصة تعرض دخول الكروت فقط (قسم البطاقات)."""
+    return _render_login_states_detail("card", self_endpoint="radius.rep_login_states_cards")
+
+
+def rep_login_states_subscribers():
+    """«حالات دخول المشتركين/البوابة» — صفحة مخصّصة للمشتركين فقط (قسم المشتركون)."""
+    return _render_login_states_detail(
+        "subscriber", self_endpoint="radius.rep_login_states_subscribers")
+
+
+def rep_login_states():
+    from ..services.login_events import login_states_overview
     actor = (request.args.get("actor") or "").strip()
 
     # ── الصفحات الفرعية الثلاث: فرز دقيق على مستوى الاستعلام حسب الفاعل ──
     if actor in _LOGIN_STATES_KINDS:
-        filters = {
-            "actor":     actor,
-            "result":    (request.args.get("result") or "").strip(),
-            "source":    (request.args.get("source") or "").strip(),
-            "q":         (request.args.get("q") or "").strip(),
-            "date_from": (request.args.get("date_from") or "").strip(),
-            "date_to":   (request.args.get("date_to") or "").strip(),
-        }
-        data = fetch_login_events(_tid(), **filters)
-        return render_template(
-            "radius/rep_login_states_detail.html",
-            kind=actor, meta=_LOGIN_STATES_KINDS[actor], kinds=_LOGIN_STATES_KINDS,
-            rows=data["rows"], stats=data["stats"],
-            shown=data["shown"], matched=data["matched"],
-            filters=filters, actor_labels=ACTOR_LABELS, source_labels=SOURCE_LABELS,
-        )
+        return _render_login_states_detail(actor, self_endpoint="radius.rep_login_states")
 
     # ── الصفحة الرئيسية: ثلاث بطاقات كبيرة بعدّادات مصغّرة لكل نوع فاعل ──
     overview = login_states_overview(_tid())
