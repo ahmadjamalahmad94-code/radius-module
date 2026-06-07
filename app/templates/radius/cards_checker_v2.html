@@ -382,7 +382,7 @@
   {% set _hero_kpis = [] %}
   {% if result and result.exists %}
     {% set _hs = result.accounting_summary or {} %}
-    {% set _ = _hero_kpis.extend([
+    {% set _x = _hero_kpis.extend([
       {'label': 'الجلسات',          'value': _hs.sessions_count or 0,
        'icon': 'wave-square',       'variant': 'brand'},
       {'label': 'أجهزة متّصلة الآن', 'value': _hs.online_sessions or 0,
@@ -496,7 +496,7 @@
        result-shell level instead of inside each mode's button. #}
     {% set _active_sessions = [] %}
     {% for ses in (s.latest_sessions or []) if ses.online %}
-      {% set _ = _active_sessions.append({
+      {% set _x = _active_sessions.append({
         'id':       ses.session_id or (ses.id|string),
         'mac':      ses.mac_address or '',
         'ip':       ses.ip_address or '',
@@ -999,7 +999,7 @@
             {% set _mac_meta = {} %}
             {% for _m in (s.macs or []) %}
               {% if _m.mac and _m.dhcp_device and _m.dhcp_device.label %}
-                {% set _ = _mac_meta.update({_m.mac.upper(): _m.dhcp_device.label}) %}
+                {% set _x = _mac_meta.update({_m.mac.upper(): _m.dhcp_device.label}) %}
               {% endif %}
             {% endfor %}
             {% set _locked_macs_raw = (card.locked_mac or '')|trim
@@ -1007,7 +1007,7 @@
             {% set _locked_macs = _locked_macs_raw.split(',') %}
             {% set _locked_macs_clean = [] %}
             {% for _lm in _locked_macs %}
-              {% if _lm %}{% set _ = _locked_macs_clean.append(_lm.upper()) %}{% endif %}
+              {% if _lm %}{% set _x = _locked_macs_clean.append(_lm.upper()) %}{% endif %}
             {% endfor %}
             {% set _recent_session_macs = (s.macs or []) | map(attribute='mac') | select | list %}
             {% set _picker_macs = (_locked_macs_clean + _recent_session_macs) | unique | list %}
@@ -1057,7 +1057,7 @@
             {% set _mac_meta = {} %}
             {% for _m in (s.macs or []) %}
               {% if _m.mac and _m.dhcp_device and _m.dhcp_device.label %}
-                {% set _ = _mac_meta.update({_m.mac.upper(): _m.dhcp_device.label}) %}
+                {% set _x = _mac_meta.update({_m.mac.upper(): _m.dhcp_device.label}) %}
               {% endif %}
             {% endfor %}
             <form method="post" action="{{ url_for('radius.cards_checker') }}" data-cc-form="lock-mac">
