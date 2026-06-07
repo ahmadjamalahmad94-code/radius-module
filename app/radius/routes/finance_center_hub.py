@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from flask import Blueprint, flash, render_template, request, session
 
+from ..db.connection import db
 from ..services.business_os_access import PERM_WALLET_CREDIT, PERM_WALLET_DEBIT, SafetyGateService
 from ..services.business_os_finance_center import FinanceCenterService
 
@@ -42,6 +43,59 @@ def _can_wallet_debit(amount: str = "1.00") -> bool:
     ).allowed
 
 
+def _enrich_wallets_names(wallets: list[dict]) -> list[dict]:
+    """Attach owner_name (real full_name/display_name) to each wallet dict."""
+    conn = db()
+
+    mgr_ids = list({w["owner_id"] for w in wallets
+                    if w.get("owner_type") in ("manager", "distributor") and w.get("owner_id")})
+    sub_ids = list({w["owner_id"] for w in wallets
+                    if w.get("owner_type") == "subscriber" and w.get("owner_id")})
+    cu_ids  = list({w["owner_id"] for w in wallets
+                    if w.get("owner_type") == "card_user" and w.get("owner_id")})
+
+    def _ph(ids: list) -> str:
+        return ",".join("?" * len(ids))
+
+    mgr_names: dict[int, str] = {}
+    sub_names: dict[int, str] = {}
+    cu_names:  dict[int, str] = {}
+
+    if mgr_ids:
+        for r in conn.execute(
+            f"SELECT id, full_name, username FROM admins WHERE id IN ({_ph(mgr_ids)})",
+            mgr_ids,
+        ).fetchall():
+            mgr_names[r["id"]] = r["full_name"] or r["username"] or ""
+
+    if sub_ids:
+        for r in conn.execute(
+            f"SELECT id, full_name, username FROM subscribers WHERE id IN ({_ph(sub_ids)})",
+            sub_ids,
+        ).fetchall():
+            sub_names[r["id"]] = r["full_name"] or r["username"] or ""
+
+    if cu_ids:
+        for r in conn.execute(
+            f"SELECT id, display_name FROM card_users WHERE id IN ({_ph(cu_ids)})",
+            cu_ids,
+        ).fetchall():
+            cu_names[r["id"]] = r["display_name"] or ""
+
+    for w in wallets:
+        ot  = w.get("owner_type", "")
+        oid = w.get("owner_id")
+        if ot in ("manager", "distributor") and oid:
+            w["owner_name"] = mgr_names.get(oid, "")
+        elif ot == "subscriber" and oid:
+            w["owner_name"] = sub_names.get(oid, "")
+        elif ot == "card_user" and oid:
+            w["owner_name"] = cu_names.get(oid, "")
+        else:
+            w["owner_name"] = ""
+    return wallets
+
+
 def finance_center_hub():
     svc = FinanceCenterService()
     tab = (request.args.get("tab") or "dashboard").strip()
@@ -55,7 +109,7 @@ def finance_center_hub():
         loan_status = ""
 
     tenant_id = _tid()
-    wallets = svc.wallets(tenant_id=tenant_id, limit=150)
+    wallets = _enrich_wallets_names(svc.wallets(tenant_id=tenant_id, limit=150))
     tx_by_wallet = {
         wallet["id"]: svc.wallet_transactions(
             tenant_id=tenant_id,
