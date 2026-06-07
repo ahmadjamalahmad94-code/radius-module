@@ -240,8 +240,9 @@
         </div>
         {% if _bell['items'] %}
           {% for n in _bell['items'] %}
-          {# كل تنبيه قابل للنقر → صفحة تفاصيل التنبيه نفسه #}
-          <a href="{{ url_for('radius.mt_alerts_detail', alert_id=n.id) if endpoint_exists('radius.mt_alerts_detail') else _alerts_url }}"
+          {# كل تنبيه قابل للنقر → مورده/إجراؤه المباشر (لوحة الراوتر، شات/إيداع/
+             سحب الدعم، صفحة المشترك) عبر alert_target_url، لا صفحة التفاصيل العامّة. #}
+          <a href="{{ alert_target_url(n) if alert_target_url is defined else (url_for('radius.mt_alerts_detail', alert_id=n.id) if endpoint_exists('radius.mt_alerts_detail') else _alerts_url) }}"
              style="display:flex;align-items:flex-start;gap:9px;padding:9px 10px;text-decoration:none;
                     color:#1F2937;font-size:12.5px;line-height:1.6;border-radius:9px"
              onmouseover="this.style.background='#F4F1FE'"
