@@ -70,7 +70,12 @@ def _pw_fields(*, success: bool, source: str, raw: str, when: str, cutoff_day: s
 
 
 ACTOR_LABELS = {"admin": "مدير", "subscriber": "مشترك", "card": "كرت"}
-SOURCE_LABELS = {"panel": "لوحة الإدارة", "portal": "بوابة المشتركين", "network": "شبكة المصادقة"}
+SOURCE_LABELS = {
+    "panel": "لوحة الإدارة",
+    "portal": "بوابة المشتركين",
+    "store": "متجر البطاقات",
+    "network": "شبكة المصادقة",
+}
 
 # ترجمة أسباب رفض RADIUS الشائعة (من policy_engine._MSG)
 REASON_LABELS = {
@@ -94,12 +99,17 @@ REASON_LABELS = {
 def record_login_event(*, actor_type: str, username: str, success: bool,
                         reason: str = "", actor_id: Any = None,
                         tenant_id: int | None = None,
-                        attempted_password: str = "") -> None:
+                        attempted_password: str = "",
+                        source: str = "") -> None:
     """يسجّل محاولة دخول ويب (لوحة/بوابة). محصّنة بالكامل — لا ترمي استثناءات.
 
     ``attempted_password``: النصّ الصريح الذي حاوله المستخدم. يُخزَّن في
     payload **فقط** عند الفشل (لا للناجحة أبدًا) ليظهر لاحقًا للمدير الرئيسي
     في «حالات الدخول». تشخيص حسّاس — انظر PW_RETENTION_DAYS.
+
+    ``source``: تمييز قناة الدخول (panel / portal / store). يُخزَّن في
+    payload ليُشتق لاحقًا عند القراءة — يُفرَّق به متجر البطاقات عن بوابة
+    المشتركين في تقرير حالات الدخول.
     """
     try:
         if tenant_id is not None:
@@ -111,6 +121,9 @@ def record_login_event(*, actor_type: str, username: str, success: bool,
         # ملاحظة: لا نضع كلمة المرور في payload — audit_repo يمرّ كل payload عبر
         # `_redact` فيُقنّع أي مفتاح فيه "password" إلى '***'. نُبقي تلك الحماية
         # سليمة ونخزّن التشخيص الحسّاس في جدوله الخاصّ login_attempt_passwords.
+        _payload: dict = {"kind": "login_event", "actor_type": actor_type, "reason": reason or ""}
+        if source:
+            _payload["source"] = source
         entry = get_audit_service().record(
             actor=(username or "unknown"),
             action="auth_login" if success else "auth_login_failed",
@@ -119,7 +132,7 @@ def record_login_event(*, actor_type: str, username: str, success: bool,
             result_status="success" if success else "failed",
             severity="info" if success else "warning",
             error_message="" if success else (reason or ""),
-            payload={"kind": "login_event", "actor_type": actor_type, "reason": reason or ""},
+            payload=_payload,
         )
         # نخزّن النصّ المُحاوَل للفاشلة فقط — لا نخزّن كلمة مرور صحيحة إطلاقًا.
         if (not success) and attempted_password:
@@ -270,8 +283,9 @@ def _collect_rows(tenant_id: int, *, actor: str = "", source: str = "",
     cutoff_day = _pw_cutoff_day()
     rows: list[dict] = []
 
-    # 1) دخول الويب (لوحة + بوابة) من audit_log
-    if source in ("", "panel", "portal"):
+    # 1) دخول الويب (لوحة + بوابة + متجر) من audit_log.
+    # source="web" = كل مصادر audit_log (بوابة + متجر) بلا شبكة RADIUS.
+    if source in ("", "panel", "portal", "store", "web"):
         sql = (
             "SELECT id, actor, target_type, target_id, result_status, error_message, "
             "ip_address, user_agent, created_at, payload_json FROM audit_log "
@@ -291,9 +305,14 @@ def _collect_rows(tenant_id: int, *, actor: str = "", source: str = "",
         pw_map = _attempt_pw_map(conn, tenant_id, [r["id"] for r in web_rows])
         for r in web_rows:
             at = (r["target_type"] or "subscriber")
-            src = "panel" if at == "admin" else "portal"
-            os_name, browser, device = parse_user_agent(r["user_agent"] or "")
             payload = json_load(r["payload_json"], default={}) or {}
+            # القناة: مخزّنة في payload.source من record_login_event (جديد)؛
+            # السجلات القديمة بلا payload.source تُصنَّف بالاحتياط:
+            # المدراء → panel، الباقي → portal.
+            src_hint = payload.get("source") or ""
+            src = src_hint if src_hint in ("panel", "portal", "store") \
+                else ("panel" if at == "admin" else "portal")
+            os_name, browser, device = parse_user_agent(r["user_agent"] or "")
             reason_code = payload.get("reason") or r["error_message"] or ""
             _success = (r["result_status"] == "success")
             row = {
@@ -383,10 +402,15 @@ def fetch_login_events(tenant_id: int, *, actor: str = "", result: str = "",
                          date_from=date_from, date_to=date_to)
     ql = q.strip().lower()
 
-    # فلاتر بايثون المتبقية (النتيجة / البحث) — الفاعل صار على مستوى SQL
+    # فلاتر بايثون المتبقية (المصدر / النتيجة / البحث) — الفاعل صار على مستوى SQL
     def _keep(row: dict) -> bool:
         if actor in ("admin", "subscriber", "card") and row["actor_type"] != actor:
             return False  # صمّام أمان إضافي فوق فلتر SQL
+        # فلتر المصدر الدقيق — يُفرَّق به متجر البطاقات عن بوابة المشتركين
+        if source in ("panel", "portal", "store") and row["source"] != source:
+            return False
+        if source == "web" and row["source"] == "network":
+            return False
         if result == "success" and not row["success"]:
             return False
         if result == "fail" and row["success"]:
@@ -421,18 +445,40 @@ def fetch_login_events(tenant_id: int, *, actor: str = "", result: str = "",
 
 
 def login_states_overview(tenant_id: int) -> dict:
-    """ملخّص الصفحة الرئيسية لحالات الدخول: عدّادات مصغّرة لكل نوع فاعل.
+    """ملخّص الصفحة الرئيسية لحالات الدخول: عدّادات مصغّرة للأقسام الخمسة.
 
     يرجّع dict بالشكل:
-        {'admin': {'total':…, 'ok':…, 'fail':…, 'today':…}, 'subscriber': {…}, 'card': {…}}
+        {
+            'subscriber_net':    {'total':…, 'ok':…, 'fail':…, 'today':…},
+            'card_net':          {…},
+            'subscriber_portal': {…},
+            'card_store':        {…},
+            'admin':             {…},
+        }
+    المنطق: subscriber_net = شبكة RADIUS للمشتركين؛ card_net = شبكة RADIUS
+    للكروت؛ subscriber_portal = بوابة الويب للمشتركين؛ card_store = متجر/بوابة
+    الكروت (source portal أو store)؛ admin = لوحة الإدارة.
     """
     rows = _collect_rows(tenant_id)
     today = _today_prefix()
-    out = {k: {"total": 0, "ok": 0, "fail": 0, "today": 0} for k in ("admin", "subscriber", "card")}
+    out = {k: {"total": 0, "ok": 0, "fail": 0, "today": 0}
+           for k in ("subscriber_net", "card_net", "subscriber_portal", "card_store", "admin")}
     for r in rows:
-        bucket = out.get(r["actor_type"])
-        if bucket is None:
+        at = r["actor_type"]
+        src = r["source"]
+        if at == "admin":
+            k = "admin"
+        elif at == "subscriber" and src == "network":
+            k = "subscriber_net"
+        elif at == "subscriber":
+            k = "subscriber_portal"
+        elif at == "card" and src == "network":
+            k = "card_net"
+        elif at == "card":
+            k = "card_store"
+        else:
             continue
+        bucket = out[k]
         bucket["total"] += 1
         if r["success"]:
             bucket["ok"] += 1

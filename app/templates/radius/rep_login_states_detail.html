@@ -67,7 +67,7 @@
     <i class="fa-solid fa-arrow-right"></i> {{ _('كل الأقسام') }}
   </a>
   {% for k, m in kinds.items() %}
-  <a class="{{ 'is-active' if k == kind else '' }}" href="{{ url_for('radius.rep_login_states', actor=k) }}">
+  <a class="{{ 'is-active' if k == kind else '' }}" href="{{ url_for(m.detail_endpoint) }}">
     <i class="fa-solid fa-{{ m.icon }}"></i> {{ m.title }}
   </a>
   {% endfor %}
@@ -89,8 +89,6 @@
   ],
   search_action=url_for(self_endpoint)
 ) %}
-  {# الفاعل ثابت لهذه الصفحة — يُمرَّر مخفيًا ليبقى الفرز دقيقًا عبر الفلاتر #}
-  <input type="hidden" name="actor" value="{{ kind }}">
   <input class="hub-input grow" type="text" name="q"
          value="{{ filters.q }}" placeholder="{{ meta.search_ph }}">
   <select class="hub-input" name="result" title="{{ _('الحالة') }}">
@@ -98,11 +96,15 @@
     <option value="success" {% if filters.result=='success' %}selected{% endif %}>{{ _('نجاح') }}</option>
     <option value="fail"    {% if filters.result=='fail' %}selected{% endif %}>{{ _('فشل') }}</option>
   </select>
-  {% if kind != 'admin' %}
-  {# المدراء يدخلون من لوحة الإدارة فقط — فلتر المصدر يظهر للمشتركين والكروت #}
+  {# فلتر المصدر: مخفيّ على الصفحات المخصّصة (المصدر مثبَّت من الراوت)
+     وعلى صفحة المدراء (مصدر وحيد دائمًا). #}
+  {% if not source_locked and kind == 'admin' %}
+  {# صفحة المدراء المخصّصة: source_locked=False لكن مصدر وحيد → لا قيمة من الفلتر #}
+  {% elif not source_locked %}
   <select class="hub-input" name="source" title="{{ _('المصدر') }}">
     <option value="">{{ _('كل المصادر') }}</option>
     <option value="portal"  {% if filters.source=='portal' %}selected{% endif %}>{{ _('البوابة') }}</option>
+    <option value="store"   {% if filters.source=='store' %}selected{% endif %}>{{ _('المتجر') }}</option>
     <option value="network" {% if filters.source=='network' %}selected{% endif %}>{{ _('شبكة المصادقة') }}</option>
   </select>
   {% endif %}
@@ -139,7 +141,7 @@
           <th>{{ _('الوقت') }}</th>
           <th>{{ _('الجهة') }}</th>
           <th data-uds-nosort>{{ _('النتيجة') }}</th>
-          {% if kind != 'admin' %}<th>{{ _('المصدر') }}</th>{% endif %}
+          {% if not source_locked and kind != 'admin' %}<th>{{ _('المصدر') }}</th>{% endif %}
           <th data-uds-nosort>{{ _('الشبكة (عنوان الشبكة / جهاز الشبكة)') }}</th>
           <th data-uds-nosort>{{ _('الجهاز (المتصفح / عنوان الجهاز)') }}</th>
         </tr>
@@ -183,10 +185,11 @@
               {% endif %}
             {% endif %}
           </td>
-          {% if kind != 'admin' %}
+          {% if not source_locked and kind != 'admin' %}
           <td>
             <span class="rep-src src-{{ r.source }}">
               {% if r.source=='network' %}<i class="fa-solid fa-network-wired"></i>
+              {% elif r.source=='store' %}<i class="fa-solid fa-store"></i>
               {% elif r.source=='panel' %}<i class="fa-solid fa-shield-halved"></i>
               {% else %}<i class="fa-solid fa-globe"></i>{% endif %}
               {{ source_labels.get(r.source, r.source) }}
