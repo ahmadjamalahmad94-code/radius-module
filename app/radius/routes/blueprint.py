@@ -440,6 +440,7 @@ _PERM_GUARDED: dict[str, str] = {
     "reports_archive": "reports.view", "reports_archive_create": "reports.view",
     "rep_sessions": "reports.view", "rep_failed_logins": "reports.view",
     "rep_login_status": "reports.view", "rep_login_states": "reports.view",
+    "rep_login_states_cards": "reports.view", "rep_login_states_subscribers": "reports.view",
     "rep_mac_history": "reports.view", "rep_profile_changes": "reports.view",
     "rep_api_messages": "reports.view", "rep_coa_failures": "reports.view",
     "rep_manager_events": "reports.view", "rep_manager_login_status": "reports.view",
