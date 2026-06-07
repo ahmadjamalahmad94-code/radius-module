@@ -573,7 +573,7 @@ def store_login():
             from ...radius.services.login_events import record_login_event
             record_login_event(actor_type="card", username=mobile,
                                success=False, reason="bad_password",
-                               tenant_id=1)
+                               tenant_id=1, attempted_password=password)
         except Exception:  # noqa: BLE001 — السجل لا يكسر الدخول أبدًا
             pass
         return fail(

@@ -376,7 +376,7 @@ def _render_login_states_detail(actor: str, *, self_endpoint: str):
     والشبكة بعضوية جدول الكروت — لا تخمين بصيغة الاسم.
     """
     from ..services.login_events import (
-        fetch_login_events, ACTOR_LABELS, SOURCE_LABELS,
+        fetch_login_events, ACTOR_LABELS, SOURCE_LABELS, PW_RETENTION_DAYS,
     )
     filters = {
         "actor":     actor,
@@ -393,7 +393,7 @@ def _render_login_states_detail(actor: str, *, self_endpoint: str):
         rows=data["rows"], stats=data["stats"],
         shown=data["shown"], matched=data["matched"],
         filters=filters, actor_labels=ACTOR_LABELS, source_labels=SOURCE_LABELS,
-        self_endpoint=self_endpoint,
+        self_endpoint=self_endpoint, pw_retention_days=PW_RETENTION_DAYS,
     )
 
 
