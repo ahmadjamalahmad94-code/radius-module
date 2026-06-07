@@ -4,6 +4,7 @@ import os
 import sys
 import tempfile
 from datetime import datetime
+from types import SimpleNamespace
 
 import pytest
 
@@ -58,6 +59,11 @@ def test_network_devices_routes_are_registered(client):
     routes = {item["rule"] for item in res.get_json()["data"]["routes"]}
     assert "/api/v1/network-devices" in routes
     assert "/api/v1/network-devices/<int:device_id>/check" in routes
+    assert "/api/v1/network-devices/scan" in routes
+    assert "/api/v1/network-devices/scan/add" in routes
+    assert "/api/v1/network-devices/<int:device_id>/bypass" in routes
+    assert "/api/v1/network-devices/<int:device_id>/bypass/apply" in routes
+    assert "/api/v1/network-devices/<int:device_id>/bypass/remove" in routes
 
 
 def test_network_device_can_be_created_edited_checked_and_deleted(app, client):
@@ -110,6 +116,172 @@ def test_network_device_can_be_created_edited_checked_and_deleted(app, client):
     deleted = client.delete(f"/api/v1/network-devices/{device_id}", headers=AUTH)
     assert deleted.status_code == 200, deleted.get_json()
     assert deleted.get_json()["data"]["removed"] is True
+
+
+def test_network_scan_api_returns_router_discoveries_and_known_flags(app, client, monkeypatch):
+    _seed_router(app)
+    with app.app_context():
+        from app.radius.db.repos import network_devices_repo
+
+        network_devices_repo.create(
+            tenant_id=1,
+            router_id=11,
+            name="known camera",
+            device_type="camera",
+            ip_address="10.0.0.50",
+            mac_address="AA:BB:CC:DD:EE:50",
+            watch_enabled=True,
+        )
+
+    from app.radius.services import network_ip_scan
+
+    captured = {}
+
+    def fake_scan(nas):
+        captured["nas"] = nas
+        return SimpleNamespace(
+            ok=True,
+            error="",
+            data=[
+                {
+                    "ip": "10.0.0.50",
+                    "mac": "AA:BB:CC:DD:EE:50",
+                    "hostname": "known-camera",
+                    "interface": "ether2",
+                    "vendor": "camera",
+                    "sources": ["arp", "dhcp"],
+                },
+                {
+                    "ip": "10.0.0.77",
+                    "mac": "AA:BB:CC:DD:EE:77",
+                    "hostname": "new-ap",
+                    "interface": "ether3",
+                    "vendor": "ap",
+                    "sources": ["neighbor"],
+                },
+            ],
+        )
+
+    monkeypatch.setattr(network_ip_scan, "scan_router", fake_scan)
+
+    res = client.post(
+        "/api/v1/network-devices/scan",
+        headers=AUTH,
+        json={"router_id": 11},
+    )
+    assert res.status_code == 200, res.get_json()
+    data = res.get_json()["data"]
+    assert data["router"]["id"] == 11
+    assert data["count"] == 2
+    assert data["items"][0]["known"] is True
+    assert data["items"][1]["known"] is False
+    assert data["known_ips"] == ["10.0.0.50"]
+    assert captured["nas"]["api_password"] == "pw"
+    assert "api_password" not in str(data)
+
+
+def test_network_scan_add_registers_discovered_device(app, client):
+    _seed_router(app)
+
+    res = client.post(
+        "/api/v1/network-devices/scan/add",
+        headers=AUTH,
+        json={
+            "router_id": 11,
+            "ip": "10.0.0.77",
+            "mac": "AA:BB:CC:DD:EE:77",
+            "hostname": "new-ap",
+        },
+    )
+    assert res.status_code == 201, res.get_json()
+    device = res.get_json()["data"]["device"]
+    assert device["name"] == "new-ap"
+    assert device["ip_address"] == "10.0.0.77"
+    assert device["mac_address"] == "aa:bb:cc:dd:ee:77"
+    assert device["watch_enabled"] is True
+
+
+def test_network_device_bypass_api_uses_planner_without_exposing_router_secret(
+    app,
+    client,
+    monkeypatch,
+):
+    _seed_router(app)
+    with app.app_context():
+        from app.radius.db.repos import network_devices_repo
+
+        device_id = network_devices_repo.create(
+            tenant_id=1,
+            router_id=11,
+            name="trusted ap",
+            device_type="ap",
+            ip_address="10.0.0.88",
+            mac_address="AA:BB:CC:DD:EE:88",
+            watch_enabled=True,
+        )
+
+    from app.radius.services import network_device_bypass_planner as planner
+
+    calls = {}
+
+    def fake_list(nas):
+        calls["list_nas"] = nas
+        return SimpleNamespace(
+            ok=True,
+            error="",
+            data=[{"name": "dhcp-main", "interface": "bridge", "disabled": False}],
+        )
+
+    def fake_apply(**kwargs):
+        calls["apply"] = kwargs
+        return SimpleNamespace(
+            ok=True,
+            error="",
+            data={"dhcp_lease": "ok", "ip_binding": "ok", "address_list": "ok"},
+        )
+
+    def fake_remove(**kwargs):
+        calls["remove"] = kwargs
+        return SimpleNamespace(
+            ok=True,
+            error="",
+            data={"dhcp_lease": 1, "ip_binding": 1, "address_list": 1},
+        )
+
+    monkeypatch.setattr(planner, "list_dhcp_servers", fake_list)
+    monkeypatch.setattr(planner, "apply_bypass", fake_apply)
+    monkeypatch.setattr(planner, "remove_bypass", fake_remove)
+
+    state = client.get(f"/api/v1/network-devices/{device_id}/bypass", headers=AUTH)
+    assert state.status_code == 200, state.get_json()
+    state_data = state.get_json()["data"]
+    assert state_data["ready"] is True
+    assert state_data["dhcp_servers"][0]["name"] == "dhcp-main"
+    assert "api_password" not in str(state_data)
+
+    apply = client.post(
+        f"/api/v1/network-devices/{device_id}/bypass/apply",
+        headers=AUTH,
+        json={
+            "dhcp_server_name": "dhcp-main",
+            "bypass_hotspot": True,
+            "add_to_address_list": True,
+        },
+    )
+    assert apply.status_code == 200, apply.get_json()
+    assert apply.get_json()["data"]["steps"]["ip_binding"] == "ok"
+    assert calls["apply"]["dhcp_server_name"] == "dhcp-main"
+    assert calls["apply"]["device"]["id"] == device_id
+    assert calls["apply"]["nas"]["api_password"] == "pw"
+
+    remove = client.post(
+        f"/api/v1/network-devices/{device_id}/bypass/remove",
+        headers=AUTH,
+    )
+    assert remove.status_code == 200, remove.get_json()
+    assert remove.get_json()["data"]["total_removed"] == 3
+    assert calls["remove"]["device_id"] == device_id
+    assert "api_password" not in str(remove.get_json()["data"])
 
 
 def test_network_device_validation_messages_are_arabic(app, client):

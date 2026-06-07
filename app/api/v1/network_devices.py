@@ -2,9 +2,9 @@
 
 Mirrors the existing web registry for devices behind managed routers:
 access points, switches, cameras, servers, and similar LAN devices.
-This API is intentionally router-safe: it stores inventory rows and can
-run the same manual TCP reachability check as the web page, but it does
-not create bypass rules or open remote-access forwards.
+It stores inventory rows, runs the same manual TCP reachability check as
+the web page, and exposes the same guarded operator workflows for LAN
+discovery and trusted-device bypass setup.
 """
 from __future__ import annotations
 
@@ -72,6 +72,36 @@ def register(bp: Blueprint) -> None:
         require_api_token(network_devices_check),
         methods=["POST"],
     )
+    bp.add_url_rule(
+        "/network-devices/scan",
+        "network_devices_scan_router",
+        require_api_token(network_devices_scan_router),
+        methods=["POST"],
+    )
+    bp.add_url_rule(
+        "/network-devices/scan/add",
+        "network_devices_scan_add",
+        require_api_token(network_devices_scan_add),
+        methods=["POST"],
+    )
+    bp.add_url_rule(
+        "/network-devices/<int:device_id>/bypass",
+        "network_devices_bypass_state",
+        require_api_token(network_devices_bypass_state),
+        methods=["GET"],
+    )
+    bp.add_url_rule(
+        "/network-devices/<int:device_id>/bypass/apply",
+        "network_devices_bypass_apply",
+        require_api_token(network_devices_bypass_apply),
+        methods=["POST"],
+    )
+    bp.add_url_rule(
+        "/network-devices/<int:device_id>/bypass/remove",
+        "network_devices_bypass_remove",
+        require_api_token(network_devices_bypass_remove),
+        methods=["POST"],
+    )
 
 
 def _tid() -> int:
@@ -111,6 +141,48 @@ def _router_exists(tenant_id: int, router_id: int) -> bool:
     from ...radius.db.repos import nas_repo
 
     return nas_repo.get_nas(tenant_id, router_id) is not None
+
+
+def _router_payload(nas_dc) -> dict:
+    return {
+        "id": int(nas_dc.id or 0),
+        "name": nas_dc.name or "",
+        "address": nas_dc.address or "",
+    }
+
+
+def _nas_to_runtime_dict(nas_dc) -> dict:
+    return {
+        "id": nas_dc.id,
+        "tenant_id": nas_dc.tenant_id,
+        "name": nas_dc.name,
+        "address": nas_dc.address,
+        "api_port": nas_dc.api_port,
+        "api_user": nas_dc.api_user,
+        "api_password": nas_dc.api_password,
+        "api_use_tls": nas_dc.api_use_tls,
+        "api_timeout_sec": getattr(nas_dc, "api_timeout_sec", 3) or 3,
+    }
+
+
+def _load_router(tenant_id: int, router_id: int):
+    from ...radius.db.repos import nas_repo
+
+    if router_id <= 0:
+        return None
+    return nas_repo.get_nas(tenant_id, router_id)
+
+
+def _load_device_router(tenant_id: int, device_id: int):
+    from ...radius.db.repos import nas_repo, network_devices_repo
+
+    device = network_devices_repo.get_by_id(tenant_id, device_id)
+    if not device:
+        return None, None
+    nas_dc = nas_repo.get_nas(tenant_id, int(device.get("router_id") or 0))
+    if not nas_dc:
+        return device, None
+    return device, nas_dc
 
 
 def _serialize(row: dict, routers: dict[int, dict] | None = None) -> dict:
@@ -338,6 +410,191 @@ def network_devices_check(device_id: int):
             "latency_ms": latency_ms,
             "message": message,
             "device": _serialize(updated, _router_map(tenant_id)),
+        }
+    )
+
+
+def network_devices_scan_router():
+    from ...radius.db.repos import network_devices_repo
+    from ...radius.services import network_ip_scan
+
+    tenant_id = _tid()
+    router_id = _int_or_none(_body().get("router_id")) or 0
+    nas_dc = _load_router(tenant_id, router_id)
+    if not nas_dc:
+        return fail("validation_error", "اختر راوترًا موجودًا قبل فحص الشبكة.", status=422)
+
+    result = network_ip_scan.scan_router(_nas_to_runtime_dict(nas_dc))
+    if not result.ok:
+        return fail(
+            "router_scan_failed",
+            result.error or "تعذر فحص الشبكة من الراوتر المحدد.",
+            status=502,
+        )
+
+    known_ips = {
+        item["ip_address"]
+        for item in network_devices_repo.list_for_tenant(
+            tenant_id,
+            router_id=router_id,
+        )
+        if item.get("ip_address")
+    }
+    rows = []
+    for row in result.data or []:
+        ip = str(row.get("ip") or "").strip()
+        if not ip:
+            continue
+        rows.append(
+            {
+                "ip": ip,
+                "mac": str(row.get("mac") or "").strip(),
+                "hostname": str(row.get("hostname") or "").strip(),
+                "interface": str(row.get("interface") or "").strip(),
+                "vendor": str(row.get("vendor") or "").strip(),
+                "sources": [
+                    str(source)
+                    for source in (row.get("sources") or [])
+                    if str(source).strip()
+                ],
+                "known": ip in known_ips,
+            }
+        )
+
+    return ok(
+        {
+            "router": _router_payload(nas_dc),
+            "items": rows,
+            "count": len(rows),
+            "known_ips": sorted(known_ips),
+        }
+    )
+
+
+def network_devices_scan_add():
+    from ...radius.db.repos import network_devices_repo
+
+    tenant_id = _tid()
+    body = _body()
+    router_id = _int_or_none(body.get("router_id")) or 0
+    nas_dc = _load_router(tenant_id, router_id)
+    if not nas_dc:
+        return fail("validation_error", "اختر راوترًا موجودًا قبل إضافة الجهاز.", status=422)
+
+    ip = str(body.get("ip") or "").strip()
+    if not ip:
+        return fail("validation_error", "عنوان الجهاز مطلوب.", status=422)
+    hostname = str(body.get("hostname") or "").strip()
+    name = str(body.get("name") or "").strip() or hostname or f"جهاز {ip}"
+
+    new_id = network_devices_repo.create(
+        tenant_id=tenant_id,
+        router_id=router_id,
+        name=name,
+        device_type=str(body.get("device_type") or "other"),
+        ip_address=ip,
+        mac_address=str(body.get("mac") or body.get("mac_address") or ""),
+        watch_enabled=True,
+    )
+    item = network_devices_repo.get_by_id(tenant_id, new_id)
+    return ok({"device": _serialize(item, _router_map(tenant_id))}, status=201)
+
+
+def network_devices_bypass_state(device_id: int):
+    from ...radius.services import network_device_bypass_planner as bypass
+
+    tenant_id = _tid()
+    device, nas_dc = _load_device_router(tenant_id, device_id)
+    if not device:
+        return fail("not_found", "جهاز الشبكة غير موجود.", status=404)
+    if not nas_dc:
+        return fail("not_found", "راوتر الجهاز غير موجود.", status=404)
+
+    result = bypass.list_dhcp_servers(_nas_to_runtime_dict(nas_dc))
+    dhcp_servers = result.data if result.ok and isinstance(result.data, list) else []
+    return ok(
+        {
+            "device": _serialize(device, _router_map(tenant_id)),
+            "router": _router_payload(nas_dc),
+            "dhcp_servers": dhcp_servers,
+            "ready": bool(device.get("mac_address") and device.get("ip_address")),
+            "dhcp_error": "" if result.ok else (result.error or "تعذر قراءة خوادم DHCP من الراوتر."),
+            "address_list_name": bypass.ADDRESS_LIST_NAME,
+        }
+    )
+
+
+def network_devices_bypass_apply(device_id: int):
+    from ...radius.services import network_device_bypass_planner as bypass
+
+    tenant_id = _tid()
+    device, nas_dc = _load_device_router(tenant_id, device_id)
+    if not device:
+        return fail("not_found", "جهاز الشبكة غير موجود.", status=404)
+    if not nas_dc:
+        return fail("not_found", "راوتر الجهاز غير موجود.", status=404)
+    if not device.get("mac_address") or not device.get("ip_address"):
+        return fail(
+            "validation_error",
+            "احفظ عنوان IP والعنوان الفيزيائي للجهاز قبل تجهيز التجاوز.",
+            status=422,
+        )
+
+    body = _body()
+    dhcp_server_name = str(body.get("dhcp_server_name") or "").strip()
+    if not dhcp_server_name:
+        return fail("validation_error", "اختر خادم DHCP من الراوتر.", status=422)
+
+    result = bypass.apply_bypass(
+        nas=_nas_to_runtime_dict(nas_dc),
+        device=device,
+        dhcp_server_name=dhcp_server_name,
+        bypass_hotspot=bool(body.get("bypass_hotspot", True)),
+        add_to_address_list=bool(body.get("add_to_address_list", True)),
+    )
+    if not result.ok:
+        return fail(
+            "device_bypass_failed",
+            result.error or "تعذر تجهيز الجهاز على الراوتر.",
+            status=502,
+        )
+    return ok(
+        {
+            "device": _serialize(device, _router_map(tenant_id)),
+            "steps": result.data or {},
+            "message": "تم تجهيز الجهاز على الراوتر.",
+        }
+    )
+
+
+def network_devices_bypass_remove(device_id: int):
+    from ...radius.services import network_device_bypass_planner as bypass
+
+    tenant_id = _tid()
+    device, nas_dc = _load_device_router(tenant_id, device_id)
+    if not device:
+        return fail("not_found", "جهاز الشبكة غير موجود.", status=404)
+    if not nas_dc:
+        return fail("not_found", "راوتر الجهاز غير موجود.", status=404)
+
+    result = bypass.remove_bypass(
+        nas=_nas_to_runtime_dict(nas_dc),
+        device_id=device_id,
+    )
+    if not result.ok:
+        return fail(
+            "device_bypass_remove_failed",
+            result.error or "تعذر إزالة تجهيز الجهاز من الراوتر.",
+            status=502,
+        )
+    removed = result.data if isinstance(result.data, dict) else {}
+    total = sum(int(value or 0) for value in removed.values())
+    return ok(
+        {
+            "device": _serialize(device, _router_map(tenant_id)),
+            "removed": removed,
+            "total_removed": total,
+            "message": f"تمت إزالة {total} قاعدة من الراوتر.",
         }
     )
 
