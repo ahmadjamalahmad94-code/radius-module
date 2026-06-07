@@ -7,6 +7,12 @@ from typing import Any
 from ..db.connection import db
 from ..db.helpers import now_iso, row_to_dict
 from .business_os_finance import EventService
+from .event_labels import (
+    actor_type_label,
+    category_label,
+    event_key_label,
+    target_type_label,
+)
 
 
 class EventsRiskError(ValueError):
@@ -370,6 +376,12 @@ class EventsRiskCenterService:
 
     def _event_row(self, row: dict[str, Any]) -> dict[str, Any]:
         row["metadata"] = _load(row.get("metadata_json"), {})
+        # تعريب القيم المخزّنة خامًا — القيمة الأصلية تبقى في الأعمدة نفسها
+        # للفلترة/الفرز، والعربية تُعرض في القالب (والخام في title).
+        row["event_key_label"] = event_key_label(row.get("event_key"))
+        row["target_type_label"] = target_type_label(row.get("target_type"))
+        row["category_label"] = category_label(row.get("category"))
+        row["actor_type_label"] = actor_type_label(row.get("actor_type"))
         return row
 
     def _flag_row(self, row: dict[str, Any]) -> dict[str, Any]:
