@@ -331,6 +331,108 @@ def _install_cli(app: Flask) -> None:
         for key in sorted(summary):
             click.echo(f"- {key}: {summary[key]}")
 
+    @app.cli.command("sync-license")
+    @click.option("--tenant-id", default=1, type=int, help="Tenant ID (default: 1)")
+    def _sync_license_command(tenant_id: int = 1) -> None:
+        """يزامن الترخيص والتخصيصات من لوحة التراخيص. شغّله كل 5 دقائق عبر cron."""
+        from app.radius.services.license_sync_service import sync
+
+        result = sync(tenant_id)
+        if result.get("ok"):
+            click.echo(
+                f"sync-license OK: "
+                f"allocations_synced={result.get('allocations_synced', 0)} "
+                f"status={result.get('license_status', '?')}"
+            )
+        else:
+            click.echo(
+                f"sync-license FAIL: reason={result.get('reason', '?')} "
+                f"detail={result.get('detail', '')}",
+                err=True,
+            )
+
+    @app.cli.command("run-radius-auth")
+    @click.option("--host", default=None, help="Listen host (env: HOBERADIUS_RADIUS_LISTEN_HOST)")
+    @click.option("--auth-port", default=None, type=int, help="Auth UDP port (env: HOBERADIUS_RADIUS_AUTH_PORT)")
+    @click.option("--acct-port", default=None, type=int, help="Acct UDP port (env: HOBERADIUS_RADIUS_ACCT_PORT)")
+    @click.option("--tenant-id", default=None, type=int, help="Tenant ID (env: HOBERADIUS_TENANT_ID)")
+    def _run_radius_auth_command(
+        host=None, auth_port=None, acct_port=None, tenant_id=None
+    ) -> None:
+        """يشغّل خادم RADIUS للمصادقة على حسابات VPN (PAP + MS-CHAPv2).
+
+        يستمع على UDP 1812 (auth) و 1813 (acct) بشكل افتراضي.
+        ضبط HOBERADIUS_RADIUS_SECRET مطلوب.
+        """
+        import asyncio
+        from app.radius.services.radius_auth_server import run_server
+
+        asyncio.run(run_server(
+            host=host,
+            auth_port=auth_port,
+            acct_port=acct_port,
+            tenant_id=tenant_id,
+        ))
+
+    @app.cli.command("sync-wg-quota")
+    @click.option("--tenant-id", default=1, type=int, help="Tenant ID (default: 1)")
+    def _sync_wg_quota_command(tenant_id: int = 1) -> None:
+        """يقرأ `wg show <iface> transfer` ويُحدِّث quota_bytes_used لكل peer.
+
+        شغّله دوريًا عبر systemd timer (كل 5 دقائق).
+        """
+        from app.radius.services.wg_data_manager import sync_quota
+
+        result = sync_quota(tenant_id)
+        if result.get("ok"):
+            click.echo(
+                f"sync-wg-quota OK: "
+                f"peers_updated={result.get('peers_updated', 0)} "
+                f"total_bytes={result.get('total_bytes', 0)}"
+            )
+        else:
+            click.echo(
+                f"sync-wg-quota FAIL: {result.get('error', '?')}",
+                err=True,
+            )
+
+    @app.cli.command("enforce-expiry")
+    @click.option("--tenant-id", default=1, type=int, help="Tenant ID (default: 1)")
+    @click.option(
+        "--dry-run/--apply",
+        default=True,
+        help=(
+            "--dry-run (default): اقرأ فقط — اعرض ما سيتغيّر دون كتابة أي شيء. "
+            "--apply: طبِّق التغييرات فعليًا (اكتب DB واستدعِ wg)."
+        ),
+    )
+    def _enforce_expiry_command(tenant_id: int = 1, dry_run: bool = True) -> None:
+        """يُطبّق انتهاء الصلاحية والكوتا تلقائيًا:
+        - يُعطّل التخصيصات المنتهية ويُتبِعها بتعطيل VPN accounts
+        - يُعطّل WireGuard peers تجاوزت transfer_limit_bytes
+        - يُعطّل خدمة wg-data عند تجاوز كوتا الخدمة
+        - يُعيد تفعيل الكوتا عند بدء شهر جديد
+
+        الافتراضي: dry-run (لا يكتب شيئًا).
+        شغّله مع --apply عبر systemd timer كل 15 دقيقة.
+        """
+        from app.radius.services.expiry_enforcer import run
+
+        result = run(tenant_id, dry_run=dry_run)
+        mode = "DRY-RUN" if dry_run else "APPLY"
+        parts = []
+        for k, v in sorted(result.items()):
+            if k not in ("error", "dry_run"):
+                parts.append(f"{k}={v}")
+        summary = " ".join(parts)
+        if "error" in result:
+            click.echo(
+                f"enforce-expiry [{mode}] ERROR: {result['error']} | {summary}",
+                err=True,
+            )
+        else:
+            click.echo(f"enforce-expiry [{mode}]: {summary}")
+
 
 # ─────────────── stubs (تحاكي HobeHub) ───────────────
 
