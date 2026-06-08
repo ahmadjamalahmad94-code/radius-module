@@ -4,7 +4,7 @@ from __future__ import annotations
 import os
 from typing import Any, Callable
 
-from flask import Blueprint, flash, redirect, render_template, request, session, url_for
+from flask import Blueprint, flash, jsonify, redirect, render_template, request, session, url_for
 
 
 LICENSE_PANEL_BASE_URL = "https://hoberadius.com"
@@ -17,6 +17,9 @@ def register_admin_bridge_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/license-file/sync", "license_file_sync", license_file_sync, methods=["POST"])
     bp.add_url_rule("/license-file/service-request", "license_file_service_request", license_file_service_request, methods=["POST"])
     bp.add_url_rule("/license-file/portal-sso", "license_file_portal_sso", license_file_portal_sso, methods=["GET"])
+    # Admin Bridge activation — zero-terminal SaaS onboarding.
+    bp.add_url_rule("/bridge/activate", "bridge_activate", bridge_activate, methods=["POST"])
+    bp.add_url_rule("/bridge/test", "bridge_test", bridge_test, methods=["POST"])
 
 
 def license_file_portal_sso():
@@ -370,3 +373,61 @@ def _sync_status_label(status: Any) -> str:
     if raw in labels:
         return labels[raw]
     return "حالة غير معروفة من لوحة التراخيص"
+
+
+# ── Admin Bridge activation routes ───────────────────────────────────────────
+
+def bridge_activate():
+    """POST /bridge/activate — activate the Admin Bridge using a one-time code.
+
+    Body (JSON or form): activation_code, base_url (optional).
+    Response: JSON ``{ok, message_ar, license_key, base_url, customer_name}``
+    The shared_secret is stored in tenant_settings and NEVER returned to the UI.
+    """
+    from ..services.bridge_activation import activate_bridge, BridgeActivationError
+
+    tenant_id = _tid()
+    admin_id = int(session.get("admin_id") or 0)
+
+    if request.is_json:
+        body = request.get_json(silent=True) or {}
+    else:
+        body = request.form
+
+    base_url = str(body.get("base_url") or LICENSE_PANEL_BASE_URL).strip().rstrip("/")
+    activation_code = str(body.get("activation_code") or "").strip()
+
+    try:
+        result = activate_bridge(
+            base_url=base_url,
+            activation_code=activation_code,
+            tenant_id=tenant_id,
+            admin_id=admin_id,
+        )
+    except BridgeActivationError as exc:
+        return jsonify({
+            "ok": False,
+            "status": exc.status,
+            "message_ar": exc.message_ar,
+        }), exc.http_status
+
+    return jsonify({
+        "ok": True,
+        "status": "activated",
+        "message_ar": f"تم تفعيل الجسر بنجاح. مرحباً {result['customer_name']}!",
+        "license_key": result["license_key"],
+        "base_url": result["base_url"],
+        "customer_name": result["customer_name"],
+    })
+
+
+def bridge_test():
+    """POST /bridge/test — check bridge connectivity without modifying settings.
+
+    Response: JSON ``{ok, configured, reachable, status, message_ar}``.
+    """
+    from ..services.bridge_activation import test_bridge_connection
+
+    tenant_id = _tid()
+    result = test_bridge_connection(tenant_id=tenant_id)
+    return jsonify(result)

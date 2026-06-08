@@ -366,6 +366,93 @@
     {% endcall %}
   {% endif %}
 
+  {# ── Activation card — zero-terminal SaaS onboarding ── #}
+  {% call hub.section("تفعيل الجسر — ربط تلقائي", icon="plug") %}
+    <p style="margin:0 0 10px; color:var(--hub-text-soft); font-size:13.5px; line-height:1.8">
+      اطلب من الأدمن في لوحة التراخيص إنشاء <strong>كود تفعيل</strong> لنسختك، ثم الصقه هنا
+      وسيتم ربط الجسر تلقائياً — دون الحاجة لنسخ المفاتيح يدوياً.
+      الكود صالح للاستخدام <strong>مرة واحدة فقط</strong> لمدة 30 دقيقة.
+    </p>
+    <div style="display:flex; flex-wrap:wrap; gap:.6rem; align-items:flex-end; margin-bottom:1rem">
+      <div style="flex:1; min-width:220px">
+        <label class="hub-label" for="act-base-url">رابط لوحة التراخيص</label>
+        <input id="act-base-url" class="hub-input ltr" type="url"
+               value="{{ config_form.base_url or 'https://hoberadius.com' }}"
+               placeholder="https://hoberadius.com" style="direction:ltr">
+      </div>
+      <div style="flex:2; min-width:260px">
+        <label class="hub-label" for="act-code">كود التفعيل</label>
+        <input id="act-code" class="hub-input ltr" type="text"
+               placeholder="XXXXXXXX-XXXXXXXX-XXXXXXXX"
+               autocomplete="off" spellcheck="false" style="letter-spacing:.08em; direction:ltr">
+      </div>
+    </div>
+    <div style="display:flex; gap:.5rem; flex-wrap:wrap">
+      <button type="button" class="hub-btn hub-btn--primary" onclick="doActivate()">
+        <i class="fa-solid fa-plug-circle-bolt"></i> ربط النسخة
+      </button>
+      <button type="button" class="hub-btn hub-btn--secondary" onclick="doTestBridge()">
+        <i class="fa-solid fa-wifi"></i> اختبار الاتصال
+      </button>
+    </div>
+    <div id="act-result" style="display:none; margin-top:.8rem"></div>
+    <script>
+    (function () {
+      function getCsrf() {
+        return (document.cookie.match(/csrf_token=([^;]+)/) || ['', ''])[1];
+      }
+      function showResult(ok, text) {
+        var el = document.getElementById('act-result');
+        el.style.display = 'block';
+        el.innerHTML = '<div class="hub-alert hub-alert--' + (ok ? 'success' : 'error') + '">' +
+          '<i class="fa-solid fa-' + (ok ? 'circle-check' : 'circle-xmark') + '"></i> ' +
+          text + '</div>';
+      }
+      function doActivate() {
+        var baseUrl = document.getElementById('act-base-url').value.trim();
+        var code = document.getElementById('act-code').value.trim();
+        if (!code) { showResult(false, 'أدخل كود التفعيل أولاً.'); return; }
+        showResult(null, '<i class="fa-solid fa-spinner fa-spin"></i> جارٍ التفعيل…');
+        document.getElementById('act-result').querySelector('div').className = 'hub-alert';
+        fetch('{{ url_for("radius.bridge_activate") }}', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrf()},
+          body: JSON.stringify({base_url: baseUrl, activation_code: code}),
+          credentials: 'same-origin',
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          if (d.ok) {
+            showResult(true, d.message_ar || 'تم تفعيل الجسر بنجاح!');
+            document.getElementById('act-code').value = '';
+            setTimeout(function() { window.location.reload(); }, 1800);
+          } else {
+            showResult(false, d.message_ar || 'فشل التفعيل.');
+          }
+        })
+        .catch(function() { showResult(false, 'تعذّر الاتصال بالخادم.'); });
+      }
+      function doTestBridge() {
+        showResult(null, '<i class="fa-solid fa-spinner fa-spin"></i> جارٍ الاختبار…');
+        document.getElementById('act-result').style.display = 'block';
+        document.getElementById('act-result').querySelector && (document.getElementById('act-result').innerHTML =
+          '<div class="hub-alert"><i class="fa-solid fa-spinner fa-spin"></i> جارٍ الاختبار…</div>');
+        document.getElementById('act-result').style.display = 'block';
+        fetch('{{ url_for("radius.bridge_test") }}', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrf()},
+          credentials: 'same-origin',
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(d) { showResult(d.ok, d.message_ar || d.status); })
+        .catch(function() { showResult(false, 'تعذّر الاتصال بالخادم.'); });
+      }
+      window.doActivate = doActivate;
+      window.doTestBridge = doTestBridge;
+    })();
+    </script>
+  {% endcall %}
+
   {% call hub.section("ربط الترخيص من صفحة العميل", icon="link") %}
     <p style="margin:0 0 12px; color:var(--hub-text-soft); font-size:13.5px; line-height:1.8">
       نعم، الريدياس يأخذ الترخيص والصلاحيات من لوحة التراخيص. افتح صفحة العميل في لوحة التراخيص،
