@@ -1,0 +1,21 @@
+[Unit]
+Description=HobeRadius — Expiry & Quota Enforcer
+After=network.target
+
+[Service]
+Type=oneshot
+User=hoberadius
+WorkingDirectory=/opt/hoberadius
+EnvironmentFile=/opt/hoberadius/.env
+ExecStart=/opt/hoberadius/venv/bin/flask enforce-expiry --tenant-id 1 --apply
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=hobe-enforce-expiry
+
+# الحماية: لا حاجة لصلاحيات خاصة — قراءة/كتابة DB + wg فقط
+ProtectSystem=strict
+ReadWritePaths=/var/lib/hoberadius /etc/wireguard /etc/hoberadius
+PrivateTmp=true
+NoNewPrivileges=true
+CapabilityBoundingSet=CAP_NET_ADMIN
+AmbientCapabilities=CAP_NET_ADMIN

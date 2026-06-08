@@ -1,0 +1,12 @@
+[Unit]
+Description=HobeRadius — تشغيل تحديث كوتا WireGuard كل 5 دقائق
+Requires=hobe-sync-wg-quota.service
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=5min
+Unit=hobe-sync-wg-quota.service
+Persistent=true
+
+[Install]
+WantedBy=timers.target

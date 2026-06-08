@@ -1,0 +1,281 @@
+{% extends "admin/_admin_layout.html" %}
+{% block title %}WireGuard بيانات{% endblock %}
+{% block page_title %}واجهة WireGuard البيانات (wg-data){% endblock %}
+{% block crumbs %}
+  <span>الإدارة</span>
+  <i class="fa-solid fa-chevron-left"></i>
+  <span>WireGuard البيانات</span>
+{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<style>
+  .wg-badge{display:inline-block;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:600}
+  .wg-badge.active{background:#d1fae5;color:#065f46}
+  .wg-badge.suspended{background:#fef3c7;color:#92400e}
+  .wg-badge.quota_exceeded{background:#fee2e2;color:#991b1b}
+  .wg-badge.revoked{background:#f3f4f6;color:#6b7280}
+  .info-card{background:var(--d-surface);border:1px solid var(--d-border);border-radius:10px;padding:16px 20px;margin-bottom:18px}
+  .kpi-row{display:flex;gap:24px;flex-wrap:wrap}
+  .kpi{flex:1;min-width:100px}
+  .kpi-label{font-size:11px;color:var(--d-text-muted);margin-bottom:2px}
+  .kpi-value{font-size:18px;font-weight:700}
+  .peer-table td{vertical-align:middle;font-size:13px}
+  .config-box{background:#0f172a;color:#e2e8f0;border-radius:8px;padding:16px;
+               font-family:monospace;font-size:12px;white-space:pre;overflow-x:auto;
+               border:1px solid #334155;margin-top:12px}
+  .one-time-alert{background:#fef3c7;border:1px solid #fbbf24;border-radius:8px;
+                  padding:14px 16px;margin-bottom:18px}
+  .copy-btn{font-size:11px;padding:3px 8px;cursor:pointer}
+</style>
+{% endblock %}
+
+{% block content %}
+
+{# ─────────────── تنبيه one-time: config الـ peer الجديد ─────────────── #}
+{% if new_peer and client_config %}
+<div class="one-time-alert">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+    <i class="fa-solid fa-triangle-exclamation" style="color:#b45309;font-size:18px"></i>
+    <strong style="color:#92400e">احفظ هذا الإعداد الآن — لن يظهر مرةً أخرى!</strong>
+    <button class="btn btn-sm btn-warning copy-btn" style="margin-right:auto"
+            onclick="navigator.clipboard.writeText(document.getElementById('cfg-text').textContent)
+                     .then(()=>{this.textContent='✓ تم النسخ'})">
+      نسخ الإعداد
+    </button>
+  </div>
+  <div style="font-size:13px;color:#78350f;margin-bottom:4px">
+    Peer: <strong>{{ new_peer.display_name or new_peer.peer_address }}</strong>
+    — IP: <code>{{ new_peer.peer_address }}</code>
+  </div>
+  <div class="config-box" id="cfg-text">{{ client_config }}</div>
+</div>
+{% endif %}
+
+{# ─────────────── حالة الخدمة أو نموذج التهيئة ─────────────── #}
+{% if svc %}
+<div class="info-card">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+    <h2 style="margin:0;font-size:15px">
+      <i class="fa-brands fa-linux" style="margin-left:6px"></i>
+      {{ svc.interface_name }}
+      <span class="wg-badge {% if svc.status == 'active' %}active{% elif svc.status == 'suspended' %}suspended{% else %}quota_exceeded{% endif %}"
+            style="margin-right:8px">{{ svc.status }}</span>
+    </h2>
+    <form method="post" action="{{ url_for('radius.wg_data_sync_quota') }}" style="display:inline">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="btn btn-sm btn-outline-secondary">
+        <i class="fa-solid fa-arrow-rotate-right"></i> تحديث الكوتا
+      </button>
+    </form>
+  </div>
+  <div class="kpi-row">
+    <div class="kpi">
+      <div class="kpi-label">المنفذ</div>
+      <div class="kpi-value">{{ svc.listen_port }}</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">الشبكة</div>
+      <div class="kpi-value" style="font-size:14px">{{ svc.address_range }}</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Public Key</div>
+      <div class="kpi-value" style="font-size:11px;font-family:monospace;word-break:break-all">
+        {{ svc.public_key[:24] }}…
+      </div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">الـ Peers</div>
+      <div class="kpi-value">
+        {{ peers|length }}
+        {% if svc.max_peers > 0 %}<span style="font-size:13px;font-weight:400"> / {{ svc.max_peers }}</span>{% endif %}
+      </div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">الكوتا المستخدمة</div>
+      <div class="kpi-value" style="font-size:14px">
+        {{ '%.1f'|format(svc.quota_bytes_used / 1048576) }} MB
+      </div>
+    </div>
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 340px;gap:20px;align-items:start">
+
+{# ─────────────── قائمة الـ peers ─────────────── #}
+<div>
+  <h3 style="font-size:15px;margin-bottom:12px">
+    الـ Peers
+    <span style="font-weight:400;color:var(--d-text-muted)">({{ peers|length }})</span>
+  </h3>
+
+  {% if not peers %}
+  <div style="padding:40px;text-align:center;color:var(--d-text-muted);font-size:14px">
+    <i class="fa-solid fa-network-wired" style="font-size:28px;margin-bottom:10px;display:block"></i>
+    لا يوجد peers بعد. أضف أول peer من النموذج على اليمين.
+  </div>
+  {% else %}
+  <div style="overflow-x:auto">
+    <table class="table table-hover peer-table">
+      <thead>
+        <tr>
+          <th>الاسم / IP</th>
+          <th>Public Key</th>
+          <th>السرعة</th>
+          <th>الكوتا</th>
+          <th>آخر اتصال</th>
+          <th>الحالة</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for peer in peers %}
+      <tr>
+        <td>
+          <strong>{{ peer.display_name or '—' }}</strong><br>
+          <code style="font-size:11px">{{ peer.peer_address }}</code>
+        </td>
+        <td style="font-family:monospace;font-size:11px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+          {{ peer.public_key[:20] }}…
+        </td>
+        <td>{{ peer.speed_limit_mbps or '—' }}{% if peer.speed_limit_mbps %} Mbps{% endif %}</td>
+        <td>{{ '%.1f'|format(peer.quota_bytes_used / 1048576) }} MB</td>
+        <td style="font-size:11px">{{ peer.last_handshake_at or '—' }}</td>
+        <td>
+          <span class="wg-badge {{ peer.status }}">
+            {% if peer.status == 'active' %}نشط
+            {% elif peer.status == 'suspended' %}موقوف
+            {% elif peer.status == 'quota_exceeded' %}كوتا منتهية
+            {% else %}{{ peer.status }}{% endif %}
+          </span>
+        </td>
+        <td>
+          <div class="btn-group btn-group-sm">
+            {% if peer.status == 'active' %}
+            <form method="post"
+                  action="{{ url_for('radius.wg_data_suspend_peer', peer_id=peer.id) }}"
+                  style="display:inline">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn btn-sm btn-outline-warning" title="تعطيل">
+                <i class="fa-solid fa-pause"></i>
+              </button>
+            </form>
+            {% elif peer.status == 'suspended' %}
+            <form method="post"
+                  action="{{ url_for('radius.wg_data_activate_peer', peer_id=peer.id) }}"
+                  style="display:inline">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn btn-sm btn-outline-success" title="تفعيل">
+                <i class="fa-solid fa-play"></i>
+              </button>
+            </form>
+            {% endif %}
+            <form method="post"
+                  action="{{ url_for('radius.wg_data_remove_peer', peer_id=peer.id) }}"
+                  style="display:inline"
+                  onsubmit="return confirm('إلغاء peer «{{ peer.display_name or peer.peer_address }}» نهائيًا؟')">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn btn-sm btn-outline-danger" title="حذف">
+                <i class="fa-solid fa-trash"></i>
+              </button>
+            </form>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</div>
+
+{# ─────────────── نموذج إضافة peer ─────────────── #}
+<div>
+  <div class="info-card">
+    <h3 style="font-size:15px;margin:0 0 16px">إضافة peer جديد</h3>
+    <form method="post" action="{{ url_for('radius.wg_data_add_peer') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="mb-3">
+        <label class="form-label" style="font-size:13px">الاسم للعرض</label>
+        <input type="text" name="display_name" class="form-control form-control-sm"
+               placeholder="مثال: هاتف أحمد">
+      </div>
+      <div class="mb-3">
+        <label class="form-label" style="font-size:13px">ملاحظات</label>
+        <input type="text" name="notes" class="form-control form-control-sm"
+               placeholder="اختياري">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="mb-3">
+          <label class="form-label" style="font-size:13px">حد السرعة (Mbps)</label>
+          <input type="number" name="speed_limit_mbps" class="form-control form-control-sm"
+                 placeholder="بلا حد" min="1">
+        </div>
+        <div class="mb-3">
+          <label class="form-label" style="font-size:13px">حد التراسل (MB)</label>
+          <input type="number" name="transfer_limit_bytes" class="form-control form-control-sm"
+                 placeholder="بلا حد" min="1">
+          <div style="font-size:10px;color:var(--d-text-muted);margin-top:2px">أدخل بالميغابايت</div>
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary btn-sm w-100">
+        <i class="fa-solid fa-plus"></i> إضافة peer وتوليد الإعداد
+      </button>
+    </form>
+    <div style="margin-top:12px;font-size:11px;color:var(--d-text-muted)">
+      <i class="fa-solid fa-circle-info"></i>
+      سيُوَلَّد keypair جديد — احفظ إعداد الـ client فور ظهوره.
+    </div>
+  </div>
+</div>
+</div>
+
+{% else %}
+{# ─────────────── نموذج التهيئة الأولى ─────────────── #}
+<div style="max-width:540px;margin:40px auto">
+  <div class="info-card">
+    <h2 style="font-size:17px;margin:0 0 6px">تهيئة خدمة WireGuard البيانات</h2>
+    <p style="font-size:13px;color:var(--d-text-muted);margin-bottom:20px">
+      سيُوَلَّد keypair جديد. Private key يُكتب إلى الملف المحدد ولا يُحفظ في قاعدة البيانات.
+    </p>
+    <form method="post" action="{{ url_for('radius.wg_data_init') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      {% if allocations %}
+      <div class="mb-3">
+        <label class="form-label" style="font-size:13px">التخصيص المرتبط</label>
+        <select name="allocation_mirror_id" class="form-select form-select-sm">
+          <option value="">بدون تخصيص (يدوي)</option>
+          {% for a in allocations %}
+          <option value="{{ a.id }}">{{ a.service_type }} — {{ a.chr_node_name or 'VPS محلي' }} ({{ a.max_peers }} peers)</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% endif %}
+
+      <div class="mb-3">
+        <label class="form-label" style="font-size:13px">اسم الواجهة</label>
+        <input type="text" name="interface_name" class="form-control form-control-sm"
+               value="wg-data" style="direction:ltr">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="mb-3">
+          <label class="form-label" style="font-size:13px">المنفذ</label>
+          <input type="number" name="listen_port" class="form-control form-control-sm"
+                 value="51821" min="1024" max="65535">
+        </div>
+        <div class="mb-3">
+          <label class="form-label" style="font-size:13px">نطاق العناوين</label>
+          <input type="text" name="address_range" class="form-control form-control-sm"
+                 value="10.100.0.0/24" style="direction:ltr">
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary w-100">
+        <i class="fa-solid fa-key"></i> تهيئة وتوليد المفاتيح
+      </button>
+    </form>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

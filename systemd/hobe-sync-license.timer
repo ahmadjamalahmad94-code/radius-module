@@ -1,0 +1,12 @@
+[Unit]
+Description=HobeRadius — تشغيل مزامنة الترخيص كل 5 دقائق
+Requires=hobe-sync-license.service
+
+[Timer]
+OnBootSec=90sec
+OnUnitActiveSec=5min
+Unit=hobe-sync-license.service
+Persistent=true
+
+[Install]
+WantedBy=timers.target

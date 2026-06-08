@@ -62,12 +62,31 @@ from datetime import datetime, timezone
 from flask import Blueprint, Response, g, request
 
 from ...radius.db.connection import db
+from ...radius.db.repos import admins_repo
 from ...radius.services import mikrotik_admin_client as mac
 from ...radius.services import mt_counters as counters_svc
 from ...radius.services.audit import get_audit_service
+from ...radius.services.mt_guided_op import (
+    ALL_OPERATIONS,
+    OP_BACKUP_SAVE,
+    OP_PROGRAMMING_HOTSPOT,
+    OP_PROGRAMMING_PPPOE,
+    OP_RESTORE,
+    OP_UNPROGRAMMING,
+    build_checklist,
+)
 from ...radius.services.nas_connection import resolve_connection_address, resolve_connection_descriptor
 from ..auth import require_api_token
 from ..responses import fail, ok
+
+
+_OP_PICKER_LABELS_AR: dict[str, str] = {
+    OP_PROGRAMMING_HOTSPOT: "برمجة بوابة الدخول",
+    OP_PROGRAMMING_PPPOE: "برمجة البرودباند",
+    OP_UNPROGRAMMING: "تراجع وإزالة برمجة",
+    OP_RESTORE: "استعادة من نسخة احتياطية",
+    OP_BACKUP_SAVE: "حفظ نسخة احتياطية",
+}
 
 
 def register(bp: Blueprint) -> None:
@@ -323,6 +342,13 @@ def register(bp: Blueprint) -> None:
         require_api_token(mt_counters),
         methods=["GET"],
     )
+    # O12 — Guided operation assistant. Read-only checklist, no router contact.
+    bp.add_url_rule(
+        "/mikrotik/<int:nas_id>/assistant",
+        "mt_guided_assistant",
+        require_api_token(mt_guided_assistant),
+        methods=["GET"],
+    )
 
 
 # ─── helpers ─────────────────────────────────────────────────────
@@ -344,11 +370,31 @@ def _load_nas(nas_id: int) -> dict | None:
     return dict(row) if row else None
 
 
+def _current_api_admin():
+    admin_id = int(getattr(g, "admin_id", 0) or 0)
+    if admin_id <= 0:
+        return None
+    try:
+        return admins_repo.get_admin(admin_id)
+    except Exception:  # noqa: BLE001
+        return None
+
+
 def _envelope(result: mac.MtResult, *, router_id: int) -> dict:
     """Adds router_id + a name hint to the standard MtResult dict."""
     payload = result.to_dict()
     payload["router_id"] = router_id
     return payload
+
+
+def _guided_operation_choices() -> list[dict]:
+    return [
+        {
+            "code": op,
+            "label_ar": _OP_PICKER_LABELS_AR.get(op, op),
+        }
+        for op in ALL_OPERATIONS
+    ]
 
 
 # ─── endpoints ───────────────────────────────────────────────────
@@ -955,6 +1001,30 @@ def mt_counters(nas_id: int):
         return fail("not_found", "الراوتر غير موجود", status=404)
     result = counters_svc.counters_for_nas(nas)
     return ok(_envelope(result, router_id=nas_id))
+
+
+def mt_guided_assistant(nas_id: int):
+    """Return the web assistant checklist as a mobile/desktop JSON contract.
+
+    This is intentionally read-only: it delegates to the existing O12
+    checklist composer and never contacts or mutates the router.
+    """
+    operation = (request.args.get("op") or OP_PROGRAMMING_HOTSPOT).strip()
+    if operation not in ALL_OPERATIONS:
+        operation = OP_PROGRAMMING_HOTSPOT
+    checklist = build_checklist(
+        tenant_id=_tid(),
+        nas_id=int(nas_id),
+        admin=_current_api_admin(),
+        operation=operation,
+    )
+    if checklist is None:
+        return fail("not_found", "الراوتر غير موجود", status=404)
+    payload = checklist.to_dict()
+    payload["operation_choices"] = _guided_operation_choices()
+    payload["blocking_count"] = len(checklist.blocking_steps())
+    payload["warning_count"] = len(checklist.warning_steps())
+    return ok(payload)
 
 
 def mt_system_identity_set(nas_id: int):

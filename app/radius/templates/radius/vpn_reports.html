@@ -1,0 +1,371 @@
+{% extends "radius/layout.html" %}
+{% block title %}تقارير الخدمات — VPN & WireGuard{% endblock %}
+{% block page_title %}تقارير الخدمات{% endblock %}
+{% block page_subtitle %}حسابات VPN • WireGuard Peers • سجل التدقيق — مع تصدير CSV{% endblock %}
+
+{% block head_extra %}
+<style>
+  .rep-tabs{display:flex;gap:0;border-bottom:2px solid var(--hub-border);margin-bottom:20px}
+  .rep-tab{padding:9px 20px;cursor:pointer;font-size:13px;font-weight:600;
+           color:var(--hub-muted);border-bottom:2px solid transparent;margin-bottom:-2px;
+           transition:color .15s,border-color .15s}
+  .rep-tab.active{color:var(--hub-accent);border-bottom-color:var(--hub-accent)}
+  .rep-pane{display:none}.rep-pane.active{display:block}
+
+  .stat-chips{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+  .stat-chip{background:var(--hub-card-bg);border:1px solid var(--hub-border);
+             border-radius:8px;padding:8px 16px;font-size:12px;min-width:100px;text-align:center}
+  .stat-chip .sv{font-size:22px;font-weight:700;display:block}
+  .stat-chip.ok   .sv{color:#16a34a}
+  .stat-chip.warn .sv{color:#d97706}
+  .stat-chip.err  .sv{color:#dc2626}
+  .stat-chip.info .sv{color:var(--hub-accent)}
+
+  .filter-bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;
+              margin-bottom:14px;padding:10px 14px;
+              background:var(--hub-card-bg);border:1px solid var(--hub-border);border-radius:8px}
+  .filter-bar label{font-size:12px;color:var(--hub-muted)}
+  .filter-bar .hub-input{font-size:12px;padding:4px 8px;min-width:110px}
+
+  .export-btn{display:inline-flex;align-items:center;gap:6px;
+              padding:6px 14px;border-radius:6px;font-size:12px;font-weight:600;
+              background:#f0fdf4;color:#16a34a;border:1px solid #86efac;
+              text-decoration:none;transition:background .15s}
+  .export-btn:hover{background:#dcfce7}
+
+  /* dot colors for status */
+  .dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-left:4px;vertical-align:middle}
+  .dot.active{background:#22c55e}
+  .dot.expired,.dot.quota_exceeded{background:#ef4444}
+  .dot.suspended,.dot.revoked{background:#f59e0b}
+  .dot.inactive{background:#9ca3af}
+</style>
+{% endblock %}
+
+{% block content %}
+
+{# ── فلاتر مشتركة ── #}
+<form method="get" class="filter-bar">
+  <label>الحالة</label>
+  <select name="status" class="hub-input">
+    <option value="">— الكل —</option>
+    <option value="active"   {% if status_filter=='active'   %}selected{% endif %}>نشط</option>
+    <option value="expired"  {% if status_filter=='expired'  %}selected{% endif %}>منتهي</option>
+    <option value="suspended"{% if status_filter=='suspended'%}selected{% endif %}>معلق</option>
+    <option value="revoked"  {% if status_filter=='revoked'  %}selected{% endif %}>ملغي</option>
+    <option value="quota_exceeded" {% if status_filter=='quota_exceeded'%}selected{% endif %}>تجاوز الكوتا</option>
+  </select>
+
+  <label>التخصيص</label>
+  <select name="allocation_id" class="hub-input">
+    <option value="">— الكل —</option>
+    {% for a in allocations %}
+      <option value="{{ a.id }}" {% if allocation_filter == a.id %}selected{% endif %}>
+        #{{ a.id }} — {{ a.service_type }}
+      </option>
+    {% endfor %}
+  </select>
+
+  <label>نوع الحدث (سجل)</label>
+  <select name="entity_type" class="hub-input">
+    <option value="">— الكل —</option>
+    {% for et in ['allocation_mirror','vpn_account','wireguard_peer','wireguard_data_service'] %}
+      <option value="{{ et }}" {% if audit_type_filter==et %}selected{% endif %}>{{ et }}</option>
+    {% endfor %}
+  </select>
+
+  <label>الحد</label>
+  <input type="number" name="limit" class="hub-input" value="{{ limit }}" min="50" max="1000" style="width:80px">
+
+  <button class="hub-btn hub-btn--primary hub-btn--sm" type="submit">
+    <i class="fa-solid fa-filter"></i> تطبيق
+  </button>
+  <a href="{{ url_for('radius.vpn_service_reports') }}" class="hub-btn hub-btn--secondary hub-btn--sm">
+    <i class="fa-solid fa-rotate"></i> إعادة تعيين
+  </a>
+</form>
+
+{# ── تبويبات ── #}
+<div class="rep-tabs" id="repTabs">
+  <div class="rep-tab active" data-pane="pane-vpn">
+    <i class="fa-solid fa-shield-halved"></i> حسابات VPN
+    <span class="badge badge-blue" style="font-size:11px">{{ vpn_accounts|length }}</span>
+  </div>
+  <div class="rep-tab" data-pane="pane-wg">
+    <i class="fa-solid fa-network-wired"></i> WireGuard Peers
+    <span class="badge badge-blue" style="font-size:11px">{{ wg_peers|length }}</span>
+  </div>
+  <div class="rep-tab" data-pane="pane-audit">
+    <i class="fa-solid fa-scroll"></i> سجل التدقيق
+    <span class="badge badge-blue" style="font-size:11px">{{ audit_log|length }}</span>
+  </div>
+</div>
+
+{# ══════════════════ تبويب 1: VPN Accounts ══════════════════ #}
+<div class="rep-pane active" id="pane-vpn">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+    <div class="stat-chips">
+      <div class="stat-chip info">
+        <span class="sv">{{ vpn_totals.total }}</span>
+        إجمالي
+      </div>
+      <div class="stat-chip ok">
+        <span class="sv">{{ vpn_totals.active }}</span>
+        نشط
+      </div>
+      <div class="stat-chip err">
+        <span class="sv">{{ vpn_totals.expired }}</span>
+        منتهي
+      </div>
+    </div>
+    <a href="{{ url_for('radius.vpn_reports_export_accounts') }}{% if status_filter or allocation_filter %}?status={{ status_filter }}&allocation_id={{ allocation_filter or '' }}{% endif %}"
+       class="export-btn">
+      <i class="fa-solid fa-download"></i> تحميل CSV
+    </a>
+  </div>
+
+  {% if not vpn_accounts %}
+    <p class="hub-empty">لا توجد حسابات VPN مطابقة للفلتر الحالي.</p>
+  {% else %}
+  <div style="overflow-x:auto">
+    <table class="hub-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>المستخدم</th>
+          <th>Realm</th>
+          <th>الحالة</th>
+          <th>نوع الخدمة</th>
+          <th>تاريخ الانتهاء</th>
+          <th>تاريخ الإنشاء</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for r in vpn_accounts %}
+      <tr>
+        <td class="mono" style="font-size:11px">{{ r.id }}</td>
+        <td class="mono ltr"><strong>{{ r.username }}</strong></td>
+        <td class="mono ltr" style="font-size:11px">{{ r.realm or '—' }}</td>
+        <td>
+          <span class="dot {{ r.status }}"></span>
+          {% if r.status == 'active' %}<span class="badge badge-green">نشط</span>
+          {% elif r.status == 'expired' %}<span class="badge badge-red">منتهي</span>
+          {% elif r.status == 'suspended' %}<span class="badge badge-yellow">معلق</span>
+          {% elif r.status == 'revoked' %}<span class="badge badge-gray">ملغي</span>
+          {% else %}<span class="badge badge-gray">{{ r.status }}</span>{% endif %}
+        </td>
+        <td>
+          {% if r.service_type %}
+            <span class="badge badge-blue mono" style="font-size:10px">{{ r.service_type }}</span>
+          {% else %}—{% endif %}
+        </td>
+        <td style="font-size:12px">
+          {% if r.expires_at %}
+            <span {% if r.expires_at < now %}style="color:#dc2626"{% endif %}>
+              {{ r.expires_at[:16] }}
+            </span>
+          {% else %}—{% endif %}
+        </td>
+        <td style="font-size:11px;color:var(--hub-muted)">
+          {{ r.created_at[:16] if r.created_at else '—' }}
+        </td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</div>
+
+{# ══════════════════ تبويب 2: WireGuard Peers ══════════════════ #}
+<div class="rep-pane" id="pane-wg">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+    <div class="stat-chips">
+      <div class="stat-chip info">
+        <span class="sv">{{ wg_totals.total }}</span>
+        إجمالي
+      </div>
+      <div class="stat-chip ok">
+        <span class="sv">{{ wg_totals.active }}</span>
+        نشط
+      </div>
+      <div class="stat-chip err">
+        <span class="sv">{{ wg_totals.quota_exceeded }}</span>
+        تجاوز الكوتا
+      </div>
+    </div>
+    <a href="{{ url_for('radius.vpn_reports_export_wg_peers') }}{% if status_filter %}?status={{ status_filter }}{% endif %}"
+       class="export-btn">
+      <i class="fa-solid fa-download"></i> تحميل CSV
+    </a>
+  </div>
+
+  {% if wg_svc %}
+  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;
+              padding:10px 14px;background:var(--hub-card-bg);
+              border:1px solid var(--hub-border);border-radius:8px;font-size:12px">
+    <span><i class="fa-solid fa-network-wired" style="color:var(--hub-accent)"></i>
+      الواجهة: <strong class="mono ltr">{{ wg_svc.interface_name }}</strong></span>
+    <span>الحالة: <strong>{{ wg_svc.status }}</strong></span>
+    {% if wg_svc.transfer_limit_bytes %}
+    <span>كوتا الخدمة:
+      <strong>{{ (wg_svc.quota_bytes_used or 0) // (1024**2) }} MB</strong>
+      / {{ wg_svc.transfer_limit_bytes // (1024**3) }} GB
+    </span>
+    {% endif %}
+    <span>Max Peers: <strong>{{ wg_svc.max_peers }}</strong></span>
+  </div>
+  {% endif %}
+
+  {% if not wg_peers %}
+    <p class="hub-empty">لا توجد WireGuard peers مطابقة للفلتر الحالي.</p>
+  {% else %}
+  <div style="overflow-x:auto">
+    <table class="hub-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>الاسم</th>
+          <th>IP</th>
+          <th>الحالة</th>
+          <th>السرعة</th>
+          <th>الكوتا (استخدام / حد)</th>
+          <th>الفترة</th>
+          <th>آخر اتصال</th>
+          <th>تاريخ الإنشاء</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for r in wg_peers %}
+      {% set used_mb = (r.quota_bytes_used or 0) // (1024**2) %}
+      {% set limit_mb = (r.transfer_limit_bytes // (1024**2)) if r.transfer_limit_bytes else 0 %}
+      <tr>
+        <td class="mono" style="font-size:11px">{{ r.id }}</td>
+        <td><strong>{{ r.display_name or '—' }}</strong></td>
+        <td class="mono ltr" style="font-size:11px">{{ r.peer_address or '—' }}</td>
+        <td>
+          <span class="dot {{ r.status }}"></span>
+          {% if r.status == 'active' %}<span class="badge badge-green">نشط</span>
+          {% elif r.status == 'suspended' %}<span class="badge badge-yellow">معلق</span>
+          {% elif r.status == 'revoked' %}<span class="badge badge-gray">ملغي</span>
+          {% elif r.status == 'quota_exceeded' %}<span class="badge badge-red">تجاوز الكوتا</span>
+          {% else %}<span class="badge badge-gray">{{ r.status }}</span>{% endif %}
+        </td>
+        <td style="font-size:12px">
+          {% if r.speed_limit_mbps %}{{ r.speed_limit_mbps }} Mbps{% else %}—{% endif %}
+        </td>
+        <td style="font-size:12px">
+          {% if limit_mb > 0 %}
+            {% set pct = [(used_mb / limit_mb * 100)|round|int, 100]|min %}
+            <div style="font-size:11px;margin-bottom:3px">
+              {{ used_mb }} MB / {{ limit_mb }} MB
+            </div>
+            <div style="height:4px;border-radius:2px;background:#e5e7eb;width:80px">
+              <div style="height:100%;border-radius:2px;width:{{ pct }}%;
+                          background:{% if pct>=85 %}#ef4444{% elif pct>=70 %}#f59e0b{% else %}#22c55e{% endif %}">
+              </div>
+            </div>
+          {% elif used_mb %}
+            {{ used_mb }} MB
+          {% else %}—{% endif %}
+        </td>
+        <td style="font-size:11px;color:var(--hub-muted)">
+          {{ r.quota_period or '—' }}
+        </td>
+        <td style="font-size:11px;color:var(--hub-muted)">
+          {{ r.last_handshake_at[:16] if r.last_handshake_at else '—' }}
+        </td>
+        <td style="font-size:11px;color:var(--hub-muted)">
+          {{ r.created_at[:16] if r.created_at else '—' }}
+        </td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</div>
+
+{# ══════════════════ تبويب 3: سجل التدقيق ══════════════════ #}
+<div class="rep-pane" id="pane-audit">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+    <div class="stat-chips">
+      <div class="stat-chip info">
+        <span class="sv">{{ audit_log|length }}</span>
+        سجل
+      </div>
+    </div>
+    <a href="{{ url_for('radius.vpn_reports_export_audit') }}{% if audit_type_filter %}?entity_type={{ audit_type_filter }}{% endif %}"
+       class="export-btn">
+      <i class="fa-solid fa-download"></i> تحميل CSV
+    </a>
+  </div>
+
+  {% if not audit_log %}
+    <p class="hub-empty">لا توجد سجلات تدقيق مطابقة للفلتر الحالي.</p>
+  {% else %}
+  <div style="overflow-x:auto">
+    <table class="hub-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>نوع الكيان</th>
+          <th>ID الكيان</th>
+          <th>الحدث</th>
+          <th>المنفّذ</th>
+          <th>الوصف</th>
+          <th>التوقيت</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for r in audit_log %}
+      <tr>
+        <td class="mono" style="font-size:11px">{{ r.id }}</td>
+        <td>
+          <span class="badge badge-blue mono" style="font-size:10px">{{ r.entity_type }}</span>
+        </td>
+        <td class="mono" style="font-size:11px">{{ r.entity_id or '—' }}</td>
+        <td>
+          {% set ac = r.action %}
+          {% if ac in ['expire','expired','cascade_expire','quota_exceeded'] %}
+            <span class="badge badge-red">{{ ac }}</span>
+          {% elif ac in ['activate','create','add_peer'] %}
+            <span class="badge badge-green">{{ ac }}</span>
+          {% elif ac in ['suspend','revoke','remove_peer'] %}
+            <span class="badge badge-yellow">{{ ac }}</span>
+          {% else %}
+            <span class="badge badge-gray">{{ ac }}</span>
+          {% endif %}
+        </td>
+        <td style="font-size:12px">{{ r.actor or '—' }}</td>
+        <td style="font-size:11px;max-width:260px;white-space:normal;line-height:1.4">
+          {{ r.description or '—' }}
+        </td>
+        <td style="font-size:11px;color:var(--hub-muted);white-space:nowrap">
+          {{ r.created_at[:16] if r.created_at else '—' }}
+        </td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</div>
+
+{# ── تبديل التبويبات ── #}
+<script>
+(function(){
+  var tabs=document.querySelectorAll('#repTabs .rep-tab');
+  tabs.forEach(function(t){
+    t.addEventListener('click',function(){
+      tabs.forEach(function(x){x.classList.remove('active')});
+      document.querySelectorAll('.rep-pane').forEach(function(p){p.classList.remove('active')});
+      t.classList.add('active');
+      var pane=document.getElementById(t.dataset.pane);
+      if(pane) pane.classList.add('active');
+    });
+  });
+})();
+</script>
+
+{% endblock %}

@@ -17,7 +17,7 @@ def register_v1(parent: Blueprint) -> None:
         hotspot_cards, invoices, ledger, lifecycle, loans, mikrotik, mikrotik_control, nas, network_devices, network_policy,
         operational_reports,
         payments, pools, print_templates, profiles, recycle_bin, reports, router_alerts, router_metrics, service_requests, services, sessions,
-        settings, share_groups, store, system, tenants, tickets, tokens, tools, vouchers, webhooks,
+        settings, share_groups, store, system, tenants, tickets, tokens, tools, vouchers, webhooks, whatsapp,
         setup_wizard, subscriber_portal,
     )
     health.register(v1)
@@ -28,6 +28,7 @@ def register_v1(parent: Blueprint) -> None:
     subscriber_portal.register(v1)
     card_checker.register(v1)
     communications.register(v1)
+    whatsapp.register(v1)
     customer_portals.register(v1)
     # متجر المايكروتيك — نقاط عامة لمستخدمي البطاقات (توكن موقّع
     # خاص بها، ليست خلف require_api_token الإداري).

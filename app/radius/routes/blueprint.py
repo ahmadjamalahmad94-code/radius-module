@@ -303,6 +303,22 @@ def _register_all(bp: Blueprint) -> None:
     from .docs_center import register_docs_center_routes
     register_docs_center_routes(bp)
 
+    # حسابات VPN — Phase 6: تفعيل SSTP/L2TP ضمن حدود التخصيصات
+    from .vpn_accounts import register_vpn_accounts_routes
+    register_vpn_accounts_routes(bp)
+
+    # WireGuard بيانات — Phase 7: إدارة wg-data (مستقل عن wg-mgmt)
+    from .wg_data import register_wg_data_routes
+    register_wg_data_routes(bp)
+
+    # لوحة المتابعة — Phase 8: مقاييس الصحة وتنبيهات السعة
+    from .monitoring import register_monitoring_routes
+    register_monitoring_routes(bp)
+
+    # تقارير VPN + WireGuard + سجل التدقيق — Phase 10: تصدير CSV
+    from .vpn_reports import register_vpn_reports_routes
+    register_vpn_reports_routes(bp)
+
     # أُزيل من لوحة العميل — يُعاد مركزياً عبر لوحة التراخيص (قرار معماري):
     # كانت هنا «لوحة التراخيص — خدمة نفق تغيير IP المدفوعة» (licensing.py).
     # حوكمة مركزية للمالك، لا تخص لوحة العميل المباعة.

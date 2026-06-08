@@ -1,0 +1,35 @@
+[Unit]
+Description=HobeRadius — خادم RADIUS للمصادقة على حسابات VPN
+Documentation=https://github.com/hoberadius/radius-module
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=hoberadius
+Group=hoberadius
+WorkingDirectory=/opt/hobe-radius
+ExecStart=/opt/hobe-radius/venv/bin/flask run-radius-auth
+EnvironmentFile=/etc/hobe-radius/env
+Restart=on-failure
+RestartSec=5
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+# منفذا RADIUS (1812 auth + 1813 acct) يحتاجان CAP_NET_BIND_SERVICE
+# لأنهما أقل من 1024 — أو يمكن تغييرهما لمنافذ أعلى في env
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/opt/hobe-radius/instance /var/log/hobe-radius
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=hobe-radius-auth
+
+[Install]
+WantedBy=multi-user.target
