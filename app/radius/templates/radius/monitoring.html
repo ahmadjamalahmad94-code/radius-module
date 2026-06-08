@@ -1,0 +1,279 @@
+{% extends "admin/_admin_layout.html" %}
+{% block title %}لوحة المتابعة{% endblock %}
+{% block page_title %}لوحة المتابعة والصحة{% endblock %}
+{% block crumbs %}
+  <span>الإدارة</span>
+  <i class="fa-solid fa-chevron-left"></i>
+  <span>المتابعة</span>
+{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<style>
+  /* ── بطاقات الـ KPI ── */
+  .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:22px}
+  .kpi-card{background:var(--d-surface);border:1px solid var(--d-border);border-radius:10px;padding:16px 18px}
+  .kpi-label{font-size:11px;color:var(--d-text-muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px}
+  .kpi-value{font-size:26px;font-weight:700;line-height:1.1}
+  .kpi-sub{font-size:11px;color:var(--d-text-muted);margin-top:3px}
+
+  /* ── شرائط السعة ── */
+  .cap-bar-bg{height:8px;border-radius:4px;background:var(--d-border);overflow:hidden;margin-top:6px}
+  .cap-bar-fill{height:100%;border-radius:4px;transition:width .4s ease}
+  .cap-bar-fill.ok{background:#22c55e}
+  .cap-bar-fill.warning{background:#f59e0b}
+  .cap-bar-fill.critical{background:#ef4444}
+  .cap-bar-fill.unknown{background:#9ca3af}
+
+  /* ── بطاقات الصحة ── */
+  .health-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:22px}
+  .health-card{background:var(--d-surface);border-radius:10px;padding:14px 16px;
+               border-right:4px solid transparent;border:1px solid var(--d-border)}
+  .health-card.ok   {border-right-color:#22c55e}
+  .health-card.warning{border-right-color:#f59e0b}
+  .health-card.critical{border-right-color:#ef4444}
+  .health-card.unknown{border-right-color:#9ca3af}
+  .health-title{font-size:13px;font-weight:600;margin-bottom:4px}
+  .health-detail{font-size:11px;color:var(--d-text-muted)}
+
+  /* ── الحالة العامة ── */
+  .overall-badge{display:inline-flex;align-items:center;gap:7px;
+                 padding:6px 14px;border-radius:20px;font-size:13px;font-weight:600}
+  .overall-badge.ok      {background:#dcfce7;color:#166534}
+  .overall-badge.warning {background:#fef9c3;color:#854d0e}
+  .overall-badge.critical{background:#fee2e2;color:#991b1b}
+  .overall-badge.unknown {background:#f3f4f6;color:#6b7280}
+  .overall-dot{width:8px;height:8px;border-radius:50%;animation:pulse 2s infinite}
+  .overall-badge.ok .overall-dot     {background:#22c55e}
+  .overall-badge.warning .overall-dot{background:#f59e0b}
+  .overall-badge.critical .overall-dot{background:#ef4444;animation:pulse-red 1s infinite}
+  .overall-badge.unknown .overall-dot {background:#9ca3af;animation:none}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+  @keyframes pulse-red{0%,100%{opacity:1}50%{opacity:.3}}
+
+  /* ── جدول التخصيصات ── */
+  .alloc-table td{vertical-align:middle;font-size:13px}
+  .svc-badge{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;
+             font-weight:600;background:#dbeafe;color:#1e40af}
+  .status-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-left:5px}
+  .status-dot.ok{background:#22c55e}
+  .status-dot.warning{background:#f59e0b}
+  .status-dot.critical{background:#ef4444}
+  .status-dot.unknown{background:#9ca3af}
+
+  /* ── رأس الصفحة ── */
+  .page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px}
+  .refresh-meta{font-size:11px;color:var(--d-text-muted)}
+  .section-title{font-size:14px;font-weight:600;margin:0 0 12px;color:var(--d-text)}
+</style>
+{% endblock %}
+
+{% block content %}
+
+{# ─── رأس: الصحة الإجمالية + وقت التوليد ─── #}
+<div class="page-header">
+  <span class="overall-badge {{ stats.overall_health }}">
+    <span class="overall-dot"></span>
+    {% if stats.overall_health == 'ok' %}النظام سليم
+    {% elif stats.overall_health == 'warning' %}تحذير
+    {% elif stats.overall_health == 'critical' %}حرج — يلزم التدخل
+    {% else %}غير معروف{% endif %}
+  </span>
+  <span class="refresh-meta">
+    <i class="fa-solid fa-clock"></i>
+    آخر تحديث: {{ stats.generated_at }}
+    &nbsp;·&nbsp;
+    <a href="#" onclick="location.reload();return false" style="color:inherit;text-decoration:underline">تحديث</a>
+  </span>
+</div>
+
+{# ─── KPI الرئيسية ─── #}
+<div class="kpi-grid">
+  {# حالة الترخيص #}
+  <div class="kpi-card">
+    <div class="kpi-label">الترخيص</div>
+    <div class="kpi-value" style="font-size:16px">
+      {% if stats.license %}
+        {{ stats.license.plan_name or '—' }}
+      {% else %}—{% endif %}
+    </div>
+    <div class="kpi-sub">
+      {% if stats.license %}
+        <span style="color:{% if stats.license.license_status == 'active' %}#16a34a{% else %}#dc2626{% endif %}">
+          ● {{ stats.license.license_status }}
+        </span>
+      {% else %}
+        <span style="color:#9ca3af">لا توجد بيانات</span>
+      {% endif %}
+    </div>
+  </div>
+
+  {# إجمالي حسابات VPN #}
+  <div class="kpi-card">
+    <div class="kpi-label">حسابات VPN النشطة</div>
+    <div class="kpi-value">{{ stats.totals.total_accounts }}</div>
+    <div class="kpi-sub">
+      {% set total_max = stats.vpn_allocations | sum(attribute='max_accounts') %}
+      {% if total_max > 0 %}حد: {{ total_max }}{% else %}بلا حد مُحدَّد{% endif %}
+    </div>
+  </div>
+
+  {# WireGuard peers #}
+  <div class="kpi-card">
+    <div class="kpi-label">WireGuard Peers</div>
+    <div class="kpi-value">{{ stats.totals.total_peers }}</div>
+    <div class="kpi-sub">
+      {% if stats.wg_service and stats.wg_service.max_peers > 0 %}
+        حد: {{ stats.wg_service.max_peers }}
+      {% else %}بلا حد مُحدَّد{% endif %}
+    </div>
+  </div>
+
+  {# كوتا WireGuard #}
+  <div class="kpi-card">
+    <div class="kpi-label">كوتا WireGuard</div>
+    <div class="kpi-value" style="font-size:20px">{{ '%.1f'|format(stats.totals.total_quota_mb) }}</div>
+    <div class="kpi-sub">ميغابايت مستخدم هذا الشهر</div>
+  </div>
+</div>
+
+{# ─── فحوصات الصحة ─── #}
+<div class="section-title">
+  <i class="fa-solid fa-stethoscope" style="margin-left:6px"></i>
+  فحوصات الصحة
+</div>
+<div class="health-grid" style="margin-bottom:24px">
+  {% for check in stats.health_checks %}
+  <div class="health-card {{ check.status }}">
+    <div class="health-title">
+      <span class="status-dot {{ check.status }}"></span>
+      {{ check.title }}
+    </div>
+    <div class="health-detail">{{ check.detail }}</div>
+  </div>
+  {% endfor %}
+  {% if not stats.health_checks %}
+  <div class="health-card unknown" style="grid-column:1/-1;text-align:center;color:var(--d-text-muted)">
+    لا توجد فحوصات صحة متاحة بعد.
+  </div>
+  {% endif %}
+</div>
+
+{# ─── تخصيصات VPN مع شرائط السعة ─── #}
+{% if stats.vpn_allocations %}
+<div class="section-title">
+  <i class="fa-solid fa-gauge-high" style="margin-left:6px"></i>
+  سعة تخصيصات VPN
+</div>
+<div style="background:var(--d-surface);border:1px solid var(--d-border);border-radius:10px;overflow:hidden;margin-bottom:22px">
+  <table class="table table-hover alloc-table" style="margin:0">
+    <thead>
+      <tr>
+        <th>الخدمة</th>
+        <th>CHR / VPS</th>
+        <th>الحالة</th>
+        <th style="min-width:180px">السعة</th>
+        <th>حسابات نشطة</th>
+        <th>الصحة</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for a in stats.vpn_allocations %}
+    <tr>
+      <td><span class="svc-badge">{{ a.service_type }}</span></td>
+      <td style="font-size:12px">{{ a.chr_node_name or 'VPS محلي' }}</td>
+      <td>
+        <span class="status-dot {{ 'ok' if a.status == 'active' else 'warning' if a.status == 'pending' else 'critical' }}"></span>
+        {{ a.status }}
+      </td>
+      <td>
+        {% if a.max_accounts > 0 %}
+          <div style="display:flex;align-items:center;gap:8px;font-size:11px">
+            <div class="cap-bar-bg" style="flex:1">
+              <div class="cap-bar-fill {{ a.health_status }}"
+                   style="width:{{ [a.capacity_pct or 0, 100] | min }}%"></div>
+            </div>
+            <span style="white-space:nowrap">{{ a.capacity_pct or 0 }}%</span>
+          </div>
+        {% else %}
+          <span style="font-size:11px;color:var(--d-text-muted)">بلا حد</span>
+        {% endif %}
+      </td>
+      <td>
+        {{ a.active_accounts }}
+        {% if a.max_accounts > 0 %}
+          <span style="color:var(--d-text-muted);font-size:11px"> / {{ a.max_accounts }}</span>
+        {% endif %}
+      </td>
+      <td>
+        <span class="status-dot {{ a.health_status }}"></span>
+        {% if a.health_status == 'ok' %}سليم
+        {% elif a.health_status == 'warning' %}تحذير
+        {% elif a.health_status == 'critical' %}حرج
+        {% else %}غير معروف{% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{# ─── خدمة WireGuard البيانات ─── #}
+{% if stats.wg_service %}
+{% set wg = stats.wg_service %}
+<div class="section-title">
+  <i class="fa-solid fa-shield-halved" style="margin-left:6px"></i>
+  خدمة WireGuard البيانات
+</div>
+<div style="background:var(--d-surface);border:1px solid var(--d-border);border-radius:10px;padding:16px 20px;margin-bottom:22px">
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px">
+    <div>
+      <div class="kpi-label">الواجهة</div>
+      <code>{{ wg.interface_name }}</code>
+    </div>
+    <div>
+      <div class="kpi-label">الـ Peers</div>
+      <strong>{{ wg.active_peers }}</strong>
+      {% if wg.max_peers > 0 %}
+        <span style="color:var(--d-text-muted);font-size:12px"> / {{ wg.max_peers }}</span>
+      {% endif %}
+    </div>
+    <div>
+      <div class="kpi-label">سعة الـ Peers</div>
+      {% if wg.max_peers > 0 %}
+        <div class="cap-bar-bg" style="margin-top:4px">
+          <div class="cap-bar-fill {{ wg.health_status }}"
+               style="width:{{ [wg.capacity_pct or 0, 100] | min }}%"></div>
+        </div>
+        <div style="font-size:11px;margin-top:3px">{{ wg.capacity_pct or 0 }}%</div>
+      {% else %}
+        <span style="font-size:11px;color:var(--d-text-muted)">بلا حد</span>
+      {% endif %}
+    </div>
+    <div>
+      <div class="kpi-label">الكوتا المستخدمة</div>
+      <strong>{{ '%.1f'|format((wg.quota_bytes_used or 0) / 1048576) }}</strong> MB
+    </div>
+    <div>
+      <div class="kpi-label">الصحة</div>
+      <span class="status-dot {{ wg.health_status }}"></span>
+      {% if wg.health_status == 'ok' %}سليم
+      {% elif wg.health_status == 'warning' %}تحذير
+      {% elif wg.health_status == 'critical' %}حرج
+      {% else %}غير معروف{% endif %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{# ─── مفتاح السياسة ─── #}
+<div style="background:var(--d-surface);border:1px solid var(--d-border);border-radius:10px;padding:14px 18px;font-size:12px;color:var(--d-text-muted)">
+  <strong style="color:var(--d-text)">سياسة السعة:</strong>
+  &nbsp;
+  <span style="color:#22c55e">● أقل من 70%</span> — مفتوح &nbsp;|&nbsp;
+  <span style="color:#f59e0b">● 70–85%</span> — تحذير، التخصيصات مقيَّدة &nbsp;|&nbsp;
+  <span style="color:#ef4444">● أكثر من 85%</span> — مغلق، لا تخصيصات جديدة
+</div>
+
+{% endblock %}

@@ -1,0 +1,22 @@
+[Unit]
+Description=HobeRadius — تحديث كوتا WireGuard البيانات (wg-data)
+Documentation=https://github.com/hoberadius/radius-module
+After=network.target
+
+[Service]
+Type=oneshot
+User=hoberadius
+Group=hoberadius
+WorkingDirectory=/opt/hobe-radius
+ExecStart=/opt/hobe-radius/venv/bin/flask sync-wg-quota
+EnvironmentFile=/etc/hobe-radius/env
+
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/opt/hobe-radius/instance /var/log/hobe-radius
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=hobe-sync-wg-quota

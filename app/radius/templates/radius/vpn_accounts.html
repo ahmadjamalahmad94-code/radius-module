@@ -1,0 +1,237 @@
+{% extends "admin/_admin_layout.html" %}
+{% block title %}حسابات VPN{% endblock %}
+{% block page_title %}حسابات VPN{% endblock %}
+{% block crumbs %}
+  <span>الإدارة</span>
+  <i class="fa-solid fa-chevron-left"></i>
+  <span>حسابات VPN</span>
+{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<style>
+  .vpn-badge{display:inline-block;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:600}
+  .vpn-badge.active{background:#d1fae5;color:#065f46}
+  .vpn-badge.suspended{background:#fef3c7;color:#92400e}
+  .vpn-badge.expired{background:#fee2e2;color:#991b1b}
+  .vpn-table td{vertical-align:middle;font-size:13px}
+  .snap-card{background:var(--d-surface);border:1px solid var(--d-border);border-radius:10px;padding:14px 18px;margin-bottom:18px}
+</style>
+{% endblock %}
+
+{% block content %}
+
+{# ── لقطة الترخيص ── #}
+{% if snapshot %}
+<div class="snap-card" style="display:flex;gap:20px;flex-wrap:wrap;align-items:center">
+  <div><span style="color:var(--d-text-muted);font-size:12px">الترخيص</span><br>
+    <strong>{{ snapshot.plan_name or '—' }}</strong>
+    <span class="vpn-badge {% if snapshot.license_status == 'active' %}active{% else %}expired{% endif %}" style="margin-right:6px">
+      {{ snapshot.license_status }}
+    </span>
+  </div>
+  <div><span style="color:var(--d-text-muted);font-size:12px">آخر مزامنة</span><br>
+    <span style="font-size:13px">{{ snapshot.synced_at or '—' }}</span>
+  </div>
+  <div style="margin-right:auto">
+    <form method="post" action="{{ url_for('radius.vpn_accounts_sync') }}" style="display:inline">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="btn btn-sm btn-outline-secondary">
+        <i class="fa-solid fa-rotate"></i> مزامنة الآن
+      </button>
+    </form>
+  </div>
+</div>
+{% else %}
+<div class="alert alert-warning" style="margin-bottom:16px">
+  <i class="fa-solid fa-circle-exclamation"></i>
+  لم تتم مزامنة الترخيص بعد.
+  <form method="post" action="{{ url_for('radius.vpn_accounts_sync') }}" style="display:inline;margin-right:10px">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="btn btn-sm btn-primary">مزامنة الآن</button>
+  </form>
+</div>
+{% endif %}
+
+<div style="display:grid;grid-template-columns:1fr 360px;gap:20px;align-items:start">
+
+{# ── قائمة الحسابات ── #}
+<div>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+    <h2 style="margin:0;font-size:16px">
+      الحسابات النشطة
+      {% if include_inactive %}(+ المُعطَّلة){% endif %}
+      <span style="font-weight:400;color:var(--d-text-muted)">({{ accounts|length }})</span>
+    </h2>
+    <div style="display:flex;gap:8px;align-items:center">
+      {# فلتر التخصيص #}
+      <select id="allocFilter" class="form-select form-select-sm" style="width:auto"
+              onchange="location.href='{{ url_for('radius.vpn_accounts_list') }}?alloc_id='+this.value+(this.value?'':'')">
+        <option value="">كل التخصيصات</option>
+        {% for a in allocations %}
+        <option value="{{ a.id }}" {% if selected_alloc_id == a.id %}selected{% endif %}>
+          {{ a.service_type }} — {{ a.chr_node_name or 'VPS' }} ({{ a.id }})
+        </option>
+        {% endfor %}
+      </select>
+      <a href="{{ url_for('radius.vpn_accounts_list') }}?all={{ '0' if include_inactive else '1' }}{% if selected_alloc_id %}&alloc_id={{ selected_alloc_id }}{% endif %}"
+         class="btn btn-sm btn-outline-secondary">
+        {{ 'إخفاء المُعطَّلة' if include_inactive else 'عرض الكل' }}
+      </a>
+    </div>
+  </div>
+
+  {% if not accounts %}
+  <div style="padding:40px;text-align:center;color:var(--d-text-muted);font-size:14px">
+    <i class="fa-solid fa-user-slash" style="font-size:28px;margin-bottom:10px;display:block"></i>
+    لا توجد حسابات VPN بعد. أنشئ أول حساب من النموذج على اليمين.
+  </div>
+  {% else %}
+  <div style="overflow-x:auto">
+    <table class="table table-hover vpn-table">
+      <thead>
+        <tr>
+          <th>اسم المستخدم</th>
+          <th>الخدمة</th>
+          <th>CHR</th>
+          <th>السرعة</th>
+          <th>تزامن</th>
+          <th>الحالة</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for acc in accounts %}
+      <tr>
+        <td><code>{{ acc.username }}</code><br>
+          <span style="font-size:11px;color:var(--d-text-muted)">{{ acc.display_name or '—' }}</span>
+        </td>
+        <td><span class="vpn-badge active" style="background:#dbeafe;color:#1e40af">{{ acc.service_type }}</span></td>
+        <td style="font-size:12px">{{ acc.chr_node_name or '—' }}</td>
+        <td>{{ acc.speed_limit_mbps or '—' }} {% if acc.speed_limit_mbps %}Mbps{% endif %}</td>
+        <td>{{ acc.max_concurrent }}</td>
+        <td>
+          {% if acc.status == 'active' %}
+            <span class="vpn-badge active">نشط</span>
+          {% elif acc.status == 'suspended' %}
+            <span class="vpn-badge suspended">موقوف</span>
+          {% else %}
+            <span class="vpn-badge expired">{{ acc.status }}</span>
+          {% endif %}
+        </td>
+        <td>
+          <div class="btn-group btn-group-sm">
+            {% if acc.status == 'active' %}
+            <form method="post" action="{{ url_for('radius.vpn_accounts_suspend', account_id=acc.id) }}" style="display:inline">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="btn btn-sm btn-outline-warning" title="تعطيل">
+                <i class="fa-solid fa-pause"></i>
+              </button>
+            </form>
+            {% elif acc.status == 'suspended' %}
+            <form method="post" action="{{ url_for('radius.vpn_accounts_activate', account_id=acc.id) }}" style="display:inline">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="btn btn-sm btn-outline-success" title="تفعيل">
+                <i class="fa-solid fa-play"></i>
+              </button>
+            </form>
+            {% endif %}
+            <form method="post" action="{{ url_for('radius.vpn_accounts_delete', account_id=acc.id) }}"
+                  style="display:inline"
+                  onsubmit="return confirm('حذف الحساب «{{ acc.username }}» نهائيًا؟')">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="btn btn-sm btn-outline-danger" title="حذف">
+                <i class="fa-solid fa-trash"></i>
+              </button>
+            </form>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</div>
+
+{# ── نموذج الإنشاء ── #}
+<div>
+  <div style="background:var(--d-surface);border:1px solid var(--d-border);border-radius:10px;padding:18px">
+    <h3 style="font-size:15px;margin:0 0 16px">إنشاء حساب VPN جديد</h3>
+    <form method="post" action="{{ url_for('radius.vpn_accounts_create') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="mb-3">
+        <label class="form-label" style="font-size:13px">التخصيص <span style="color:#dc2626">*</span></label>
+        <select name="allocation_mirror_id" class="form-select form-select-sm" required>
+          <option value="">اختر التخصيص...</option>
+          {% for a in allocations %}
+          {% if a.status in ('active', 'pending') %}
+          <option value="{{ a.id }}" {% if selected_alloc_id == a.id %}selected{% endif %}>
+            {{ a.service_type }} — {{ a.chr_node_name or 'VPS محلي' }}
+            ({{ a.max_accounts }} حساب max)
+          </option>
+          {% endif %}
+          {% endfor %}
+        </select>
+      </div>
+      <div class="mb-3">
+        <label class="form-label" style="font-size:13px">اسم المستخدم <span style="color:#dc2626">*</span></label>
+        <input type="text" name="username" class="form-control form-control-sm"
+               placeholder="user01" style="direction:ltr" required>
+        <div style="font-size:11px;color:var(--d-text-muted);margin-top:4px">
+          سيتصل المستخدم بصيغة <code>username@realm</code>
+        </div>
+      </div>
+      <div class="mb-3">
+        <label class="form-label" style="font-size:13px">كلمة المرور <span style="color:#dc2626">*</span></label>
+        <input type="password" name="password" class="form-control form-control-sm"
+               autocomplete="new-password" required minlength="8">
+      </div>
+      <div class="mb-3">
+        <label class="form-label" style="font-size:13px">الاسم للعرض</label>
+        <input type="text" name="display_name" class="form-control form-control-sm" placeholder="اسم العميل">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="mb-3">
+          <label class="form-label" style="font-size:13px">أقصى اتصالات متزامنة</label>
+          <input type="number" name="max_concurrent" class="form-control form-control-sm" value="1" min="1" max="99">
+        </div>
+        <div class="mb-3">
+          <label class="form-label" style="font-size:13px">حد السرعة (Mbps)</label>
+          <input type="number" name="speed_limit_mbps" class="form-control form-control-sm" placeholder="يرث التخصيص">
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary btn-sm w-100">
+        <i class="fa-solid fa-plus"></i> إنشاء الحساب
+      </button>
+    </form>
+  </div>
+
+  {# ملخص التخصيصات #}
+  {% if allocations %}
+  <div style="margin-top:14px;background:var(--d-surface);border:1px solid var(--d-border);border-radius:10px;padding:14px">
+    <div style="font-size:12px;font-weight:600;color:var(--d-text-muted);margin-bottom:8px">التخصيصات المتاحة</div>
+    {% for a in allocations %}
+    <div style="padding:8px 0;border-bottom:1px solid var(--d-border);font-size:12px;display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <span style="font-family:monospace;background:#f1f5f9;padding:1px 5px;border-radius:4px">{{ a.service_type }}</span>
+        {{ a.chr_node_name or 'VPS محلي' }}
+      </div>
+      <div style="color:var(--d-text-muted)">
+        {% if a.status == 'active' %}
+          <span style="color:#16a34a">●</span>
+        {% elif a.status == 'pending' %}
+          <span style="color:#ca8a04">●</span>
+        {% else %}
+          <span style="color:#dc2626">●</span>
+        {% endif %}
+        {{ a.max_accounts }} حساب
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+</div>
+
+{% endblock %}
