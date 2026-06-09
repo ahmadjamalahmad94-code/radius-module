@@ -65,3 +65,11 @@ tools/i18n_translations/_tmp*.json
 # Runtime user uploads (receipts, QR, chat images, branding logos) — never
 # in git; written at runtime by store/settings under static/uploads.
 app/static/uploads/
+
+# Local verification scripts & artifacts, agent scratch, and backup patches
+# (not project source). NOTE: .backups/ is already tracked from earlier history;
+# this entry only prevents future re-staging of new files under it.
+_verify_*.py
+_verify_shots/
+.claude/
+.backups/

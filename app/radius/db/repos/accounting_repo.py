@@ -427,7 +427,11 @@ def sales_summary(tenant_id: int, *, grain: str = "daily") -> list[dict]:
         expr = "substr(l.created_at, 1, 10)"
     rows = db().execute(
         f"""
-        SELECT {expr} AS period, COUNT(*) AS count, COALESCE(SUM(l.amount), 0) AS total
+        SELECT {expr} AS period,
+               COUNT(*) AS transactions,
+               COUNT(DISTINCT l.username) AS subscribers,
+               COALESCE(SUM(l.amount), 0) AS total,
+               ROUND(CAST(COALESCE(SUM(l.amount), 0) AS REAL) / NULLIF(COUNT(*), 0), 2) AS avg_amount
         FROM accounting_ledger_entries l
         LEFT JOIN accounting_ledger_entries orig
           ON orig.tenant_id = l.tenant_id AND orig.id = l.reversal_of_entry_id
