@@ -112,3 +112,33 @@ def test_poll_endpoint_runs_sweep(app, client, monkeypatch):
     assert res.status_code == 200
     summary = res.get_json()["summary"]
     assert summary["scanned"] == 1
+
+
+def test_poll_stream_route_emits_ndjson(app, client, monkeypatch):
+    import json
+    from types import SimpleNamespace
+    _seed_router(app)
+    _login(client)
+    client.post(
+        "/admin/radius/device-health/api/devices",
+        headers={"X-CSRFToken": "csrf", "Content-Type": "application/json"},
+        json={"router_id": 11, "name": "AP", "interface_name": "ether2",
+              "ip_address": "192.168.15.10"})
+    # Make the router reads instant (offline) so the stream is fast + deterministic.
+    with app.app_context():
+        from app.radius.services import device_health_mikrotik as dhmt
+        monkeypatch.setattr(dhmt, "read_netwatch",
+                            lambda nas: SimpleNamespace(ok=False, data=[], error="x"))
+        monkeypatch.setattr(dhmt, "ping",
+                            lambda nas, target, count=4: SimpleNamespace(ok=False, data=[], error="x"))
+        res = client.post("/admin/radius/device-health/api/poll/stream",
+                          headers={"X-CSRFToken": "csrf"})
+    assert res.status_code == 200
+    assert "application/x-ndjson" in res.content_type
+    lines = [json.loads(ln) for ln in res.get_data(as_text=True).splitlines() if ln.strip()]
+    types = [e["type"] for e in lines]
+    assert types[0] == "start" and types[-1] == "done"
+    progs = [e for e in lines if e["type"] == "progress"]
+    assert len(progs) == 1 and progs[0]["total"] == 1
+    assert progs[0]["device_id"] and progs[0]["status"] == "unknown"
+    assert lines[-1]["summary"]["scanned"] == 1

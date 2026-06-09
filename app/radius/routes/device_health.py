@@ -17,9 +17,11 @@ CSRF on every POST/PATCH — the page JS sends the X-CSRFToken header.
 """
 from __future__ import annotations
 
+import json
 from typing import Any
 
-from flask import Blueprint, g, jsonify, render_template, request, session
+from flask import (Blueprint, Response, g, jsonify, render_template, request,
+                   session, stream_with_context)
 
 from ..core.tenant import DEFAULT_TENANT_ID
 from ..db.repos import device_health_repo as repo
@@ -57,6 +59,9 @@ def register_device_health_routes(bp: Blueprint) -> None:
                     device_health_api_test_ping, methods=["POST"])
     bp.add_url_rule("/device-health/api/poll", "device_health_api_poll",
                     device_health_api_poll, methods=["POST"])
+    bp.add_url_rule("/device-health/api/poll/stream",
+                    "device_health_api_poll_stream",
+                    device_health_api_poll_stream, methods=["POST"])
     bp.add_url_rule("/device-health/api/devices/<int:device_id>/events",
                     "device_health_api_events",
                     device_health_api_events, methods=["GET"])
@@ -66,6 +71,9 @@ def register_device_health_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/device-health/api/router-interfaces",
                     "device_health_api_router_interfaces",
                     device_health_api_router_interfaces, methods=["GET"])
+    bp.add_url_rule("/device-health/api/live-apply",
+                    "device_health_api_live_apply",
+                    device_health_api_live_apply, methods=["GET", "POST"])
     bp.add_url_rule("/device-health/api/plan", "device_health_api_plan",
                     device_health_api_plan, methods=["GET"])
 
@@ -104,6 +112,7 @@ def device_health_page():
         counts=counts,
         device_types=sorted(repo.ALLOWED_DEVICE_TYPES),
         alert_channels=["", "telegram", "sms", "whatsapp"],
+        live_apply=svc.live_apply_state(tenant_id),
     )
 
 
@@ -150,6 +159,22 @@ def device_health_api_update(device_id: int):
         "device": repo.get_device(tenant_id, device_id),
         "warnings": result["warnings"],
     })
+
+
+def device_health_api_live_apply():
+    """Read (GET) or set (POST {enabled}) the panel live-apply toggle.
+    Owner rule: live-apply is controlled from the panel, not the terminal."""
+    tenant_id = _tid()
+    if request.method == "GET":
+        return jsonify({"ok": True, **svc.live_apply_state(tenant_id)})
+    body = _payload()
+    enabled = _to_bool(body.get("enabled"))
+    try:
+        by = int(session.get("admin_id") or 0)
+    except (TypeError, ValueError):
+        by = 0
+    state = svc.set_live_apply(tenant_id, enabled, by=by)
+    return jsonify({"ok": True, **state})
 
 
 def device_health_api_enable(device_id: int):
@@ -220,6 +245,28 @@ def device_health_api_poll():
     return jsonify({"ok": True, "summary": summary})
 
 
+def device_health_api_poll_stream():
+    """Streaming «فحص الكل» — emits one NDJSON line per device as it is checked
+    (start → progress×N → done) so the UI shows a live progress bar. Router
+    reads only; no mutation. stream_with_context keeps g.tenant_id + the DB
+    connection alive for the duration of the sweep."""
+    tenant_id = _tid()
+    from ..services import device_health_poller as poller
+
+    @stream_with_context
+    def generate():
+        try:
+            for ev in poller.iter_tick(tenant_id=tenant_id):
+                yield json.dumps(ev, ensure_ascii=False) + "\n"
+        except Exception as exc:  # noqa: BLE001 — surface as a stream event
+            yield json.dumps({"type": "error", "error": str(exc)},
+                             ensure_ascii=False) + "\n"
+
+    return Response(generate(), mimetype="application/x-ndjson",
+                    headers={"Cache-Control": "no-cache",
+                             "X-Accel-Buffering": "no"})
+
+
 def device_health_api_events(device_id: int):
     """Phase 6 — recent status-change history for one device."""
     tenant_id = _tid()
@@ -270,3 +317,9 @@ def _int(value, default: int = 0) -> int:
         return int(value)
     except (TypeError, ValueError):
         return default
+
+
+def _to_bool(value) -> bool:
+    if isinstance(value, bool):
+        return value
+    return str(value).strip().lower() in ("1", "true", "yes", "on")

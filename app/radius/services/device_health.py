@@ -99,13 +99,24 @@ def create_device(tenant_id: int, params: dict) -> dict:
     except planner.NetworkCalcError as exc:
         raise DeviceHealthError(str(exc)) from exc
 
-    # Duplicate prevention: same router + same IP among the living.
+    # Duplicate prevention (1): same MikroTik/server + same device IP.
     dup = repo.find_device_by_router_ip(tid, router_id, ip_address)
     if dup:
         raise DeviceHealthError(
-            "هذا الجهاز موجود مسبقًا على نفس الراوتر بنفس الـIP "
+            "هذا الجهاز موجود مسبقًا على نفس المايكروتيك / السيرفر بنفس الـIP "
             f"«{dup['name']}» (رقم {dup['id']})."
         )
+
+    # Duplicate prevention (2): same network range on the SAME (router +
+    # interface) → HARD BLOCK (true duplicate scope). The same range on a
+    # DIFFERENT interface is allowed below (separate scope + amber warning).
+    scope_dup = repo.find_device_by_scope(
+        tid, router_id, interface_name, net["network_cidr"])
+    if scope_dup:
+        raise DeviceHealthError(
+            "هذا الرينج (%s) مُضاف على نفس المدخل (%s) مسبقاً عبر «%s» (رقم %s)."
+            % (net["network_cidr"], interface_name,
+               scope_dup["name"], scope_dup["id"]))
 
     monitoring_enabled = _to_bool(params.get("monitoring_enabled"), True)
     device_id = repo.create_device(
@@ -208,8 +219,17 @@ def update_device(tenant_id: int, device_id: int, params: dict) -> dict:
         dup = repo.find_device_by_router_ip(tid, target_router, net["ip_address"])
         if dup and dup["id"] != device["id"]:
             raise DeviceHealthError(
-                "جهاز آخر على نفس الراوتر يستخدم هذا الـIP "
+                "جهاز آخر على نفس المايكروتيك / السيرفر يستخدم هذا الـIP "
                 f"«{dup['name']}» (رقم {dup['id']}).")
+        # Same range on the SAME (router + interface) as ANOTHER device → block.
+        scope_dup = repo.find_device_by_scope(
+            tid, target_router, interface_name, net["network_cidr"],
+            exclude_id=device["id"])
+        if scope_dup:
+            raise DeviceHealthError(
+                "هذا الرينج (%s) مُضاف على نفس المدخل (%s) مسبقاً عبر «%s» (رقم %s)."
+                % (net["network_cidr"], interface_name,
+                   scope_dup["name"], scope_dup["id"]))
         fields.update({
             "ip_address": net["ip_address"],
             "interface_name": interface_name,
@@ -342,9 +362,83 @@ def _resolve_wan_iface(tenant_id: int, router_id: int) -> str:
     return str(dict(row).get("selected_wan_interface") or "").strip() if row else ""
 
 
+# ── shared reachability (one source of truth for «فحص بنج» + «فحص الكل») ──
+
+# Used by BOTH the manual ping button and the Sync-All poller so their results
+# can NEVER contradict each other.
+PROBE_PING_COUNT = 4
+
+
+def _netwatch_verdict(device: dict, netwatch_rows) -> str:
+    """Status of an APPLIED netwatch row for this device, or '' when there is no
+    row (netwatch not applied / no data) or its status is ambiguous."""
+    ip = (device.get("ip_address") or "").strip()
+    if not ip or not netwatch_rows:
+        return ""
+    for row in netwatch_rows:
+        if planner._addr_ip(row.get("host", "")) == ip:
+            s = str(row.get("status") or "").strip().lower()
+            if s in ("up", "ok"):
+                return "up"
+            if s in ("down", "timeout", "unreachable"):
+                return "timeout" if s == "timeout" else "down"
+            return ""
+    return ""
+
+
+def _resolve_netwatch_verdict(device, netwatch_rows, nas_dict, mt,
+                              read_netwatch: bool) -> str:
+    """Netwatch verdict from rows already in hand, or fetched on demand (only
+    when needed — i.e. the ping was down or couldn't run)."""
+    rows = netwatch_rows
+    if rows is None and read_netwatch:
+        nw = mt.read_netwatch(nas_dict)
+        rows = nw.data if getattr(nw, "ok", False) else None
+    return _netwatch_verdict(device, rows)
+
+
+def probe_reachability(device: dict, nas_dict: dict, *, mt=None,
+                       netwatch_rows=None, read_netwatch: bool = True) -> dict:
+    """THE single reachability source of truth shared by «فحص بنج» (manual) and
+    «فحص الكل» / مزامنة (Sync-All) — so the two never disagree.
+
+    Logic (owner-confirmed):
+      • Direct router ping is the PRIMARY positive signal. If the device answers
+        the ping it is up/high_latency — exactly what the manual button reports.
+      • A ping with no replies is only «مفصول» when applied netwatch does NOT
+        say up (a netwatch=up overrides an ICMP-filtered ping → up).
+      • If the ping can't run at all (router unreachable): applied netwatch
+        decides (up/down); with no netwatch data the result is «unknown» (grey)
+        — NEVER a false «مفصول».
+    Returns {status, latency_ms, ping_ok, error}.
+    """
+    if mt is None:
+        from . import device_health_mikrotik as mt
+    ping = mt.ping(nas_dict, target=device["ip_address"], count=PROBE_PING_COUNT)
+    if ping.ok:
+        status, latency = planner.summarize_ping(
+            ping.data or [], device.get("ping_threshold_ms") or 80)
+        if status in ("up", "high_latency"):
+            return {"status": status, "latency_ms": latency,
+                    "ping_ok": True, "error": ""}
+        # Ping ran but got no replies → down, UNLESS applied netwatch says up.
+        nw = _resolve_netwatch_verdict(device, netwatch_rows, nas_dict, mt, read_netwatch)
+        if nw == "up":
+            return {"status": "up", "latency_ms": None, "ping_ok": True, "error": ""}
+        return {"status": "down", "latency_ms": None, "ping_ok": True, "error": ""}
+    # Ping could not run (router unreachable) → applied netwatch, else unknown.
+    nw = _resolve_netwatch_verdict(device, netwatch_rows, nas_dict, mt, read_netwatch)
+    if nw == "up":
+        return {"status": "up", "latency_ms": None, "ping_ok": False, "error": ping.error}
+    if nw in ("down", "timeout"):
+        return {"status": nw, "latency_ms": None, "ping_ok": False, "error": ping.error}
+    return {"status": "unknown", "latency_ms": None, "ping_ok": False, "error": ping.error}
+
+
 def test_ping(tenant_id: int, device_id: int) -> dict:
-    """Diagnostic ping from the router to the device. Read-only.
-    Returns {ok, status, latency_ms, error}. Persists the observed status."""
+    """Manual «فحص بنج» from a table row. Uses the SHARED probe_reachability so
+    it always agrees with «فحص الكل» (Sync-All). Persists the observed status.
+    Returns {ok, status, latency_ms, error}."""
     tid = int(tenant_id)
     device = repo.get_device(tid, int(device_id))
     if not device:
@@ -355,18 +449,40 @@ def test_ping(tenant_id: int, device_id: int) -> dict:
     if not nas:
         raise DeviceHealthError("الراوتر المرتبط بالجهاز غير موجود.")
     from . import device_health_mikrotik as mt
-    res = mt.ping(_nas_to_dict(nas), target=device["ip_address"], count=4)
-    if not res.ok:
-        return {"ok": False, "status": "", "latency_ms": None, "error": res.error}
-
-    status, latency = planner.summarize_ping(res.data or [], device["ping_threshold_ms"])
+    probe = probe_reachability(device, _nas_to_dict(nas), mt=mt)
+    status, latency = probe["status"], probe["latency_ms"]
     repo.set_status(tenant_id=tid, device_id=int(device_id),
                     status=status, latency_ms=latency)
     repo.add_event(
         tenant_id=tid, device_id=int(device_id), event_type=status,
         previous_status=device["status"], new_status=status,
         latency_ms=latency, message="فحص ping يدوي.")
-    return {"ok": True, "status": status, "latency_ms": latency, "error": ""}
+    return {"ok": True, "status": status, "latency_ms": latency,
+            "error": probe["error"]}
+
+
+# ── live-apply panel toggle (owner: «كله من اللوحة مش التيرمنال») ──
+
+def live_apply_state(tenant_id: int) -> dict:
+    """Current state of the live-apply gate for the page/JS.
+      enabled        — the panel toggle's stored value (what the switch shows)
+      effective      — the real gate after the env hard-override
+      env_forced_off — True when the server env is force-disabling it
+    """
+    from . import device_health_mikrotik as mt
+    tid = int(tenant_id)
+    return {
+        "enabled": mt.live_apply_db_enabled(tid),
+        "effective": mt.live_apply_enabled(tid),
+        "env_forced_off": mt.env_force_disabled(),
+    }
+
+
+def set_live_apply(tenant_id: int, enabled: bool, *, by: int = 0) -> dict:
+    """Persist the panel toggle and return the new state."""
+    from . import device_health_mikrotik as mt
+    mt.set_live_apply(int(tenant_id), bool(enabled), by=by)
+    return live_apply_state(int(tenant_id))
 
 
 # ── Phase 3: controlled live apply ─────────────────────────────
@@ -392,10 +508,14 @@ def apply_device(tenant_id: int, device_id: int,
     tid = int(tenant_id)
     from . import device_health_mikrotik as mt
 
-    if not mt.live_apply_enabled():
-        return {"ok": False, "gated": True,
-                "error": ("التطبيق الحيّ على الراوتر معطّل — اضبط متغيّر البيئة "
-                          "HOBERADIUS_DEVICE_HEALTH_LIVE_APPLY=1 لتفعيله."),
+    if not mt.live_apply_enabled(tid):
+        if mt.env_force_disabled():
+            msg = ("التطبيق الحيّ مُعطَّل قسريًّا من إعداد الخادم "
+                   "(HOBERADIUS_DEVICE_HEALTH_LIVE_APPLY).")
+        else:
+            msg = ("التطبيق الحيّ على الراوترات معطّل — فعّل المفتاح من اللوحة "
+                   "«تفعيل التطبيق الحي على الراوترات».")
+        return {"ok": False, "gated": True, "error": msg,
                 "applied": [], "already_present": [], "failed": []}
 
     device = repo.get_device(tid, int(device_id))

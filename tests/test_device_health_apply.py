@@ -79,7 +79,11 @@ def test_apply_gated_off_by_default_does_no_io(app, monkeypatch):
 def test_apply_creates_missing_items_and_records(app, monkeypatch):
     _seed_router(app)
     did = _make_device(app)
-    monkeypatch.setenv("HOBERADIUS_DEVICE_HEALTH_LIVE_APPLY", "1")
+    # Enable live-apply via the panel toggle (env no longer enables; it can
+    # only force-disable). Set it in its own context, then run the test.
+    with app.app_context():
+        from app.radius.services import device_health as _svc
+        _svc.set_live_apply(1, True)
     with app.app_context():
         from app.radius.services import device_health as svc
         from app.radius.services import device_health_mikrotik as dhmt
@@ -111,7 +115,11 @@ def test_apply_creates_missing_items_and_records(app, monkeypatch):
 def test_apply_is_idempotent_when_present(app, monkeypatch):
     _seed_router(app)
     did = _make_device(app)
-    monkeypatch.setenv("HOBERADIUS_DEVICE_HEALTH_LIVE_APPLY", "1")
+    # Enable live-apply via the panel toggle (env no longer enables; it can
+    # only force-disable). Set it in its own context, then run the test.
+    with app.app_context():
+        from app.radius.services import device_health as _svc
+        _svc.set_live_apply(1, True)
     with app.app_context():
         from app.radius.services import device_health as svc
         from app.radius.services import device_health_mikrotik as dhmt
@@ -137,7 +145,11 @@ def test_apply_is_idempotent_when_present(app, monkeypatch):
 def test_apply_partial_failure_marks_apply_failed(app, monkeypatch):
     _seed_router(app)
     did = _make_device(app)
-    monkeypatch.setenv("HOBERADIUS_DEVICE_HEALTH_LIVE_APPLY", "1")
+    # Enable live-apply via the panel toggle (env no longer enables; it can
+    # only force-disable). Set it in its own context, then run the test.
+    with app.app_context():
+        from app.radius.services import device_health as _svc
+        _svc.set_live_apply(1, True)
     with app.app_context():
         from app.radius.services import device_health as svc
         from app.radius.services import device_health_mikrotik as dhmt
@@ -160,7 +172,11 @@ def test_apply_partial_failure_marks_apply_failed(app, monkeypatch):
 def test_apply_actions_filter_restricts_kinds(app, monkeypatch):
     _seed_router(app)
     did = _make_device(app)
-    monkeypatch.setenv("HOBERADIUS_DEVICE_HEALTH_LIVE_APPLY", "1")
+    # Enable live-apply via the panel toggle (env no longer enables; it can
+    # only force-disable). Set it in its own context, then run the test.
+    with app.app_context():
+        from app.radius.services import device_health as _svc
+        _svc.set_live_apply(1, True)
     with app.app_context():
         from app.radius.services import device_health as svc
         from app.radius.services import device_health_mikrotik as dhmt
