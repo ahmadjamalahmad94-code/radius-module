@@ -400,10 +400,35 @@
 
   {# ── 6) Activity timeline (unified data-table, 15/page) ── #}
   {% if card360.timeline %}
+  {# خريطة الفئات (category → عربي) — محلّية بالكامل، لا تعدّل الملف المشترك. #}
   {% set CAT_LABEL = {
     'manager':_('إدارة'),'subscriber':_('مشترك'),'card':_('بطاقة'),
-    'financial':_('مالية'),'system':_('نظام'),'security':_('أمان'),
-    'radius':_('خدمة المصادقة'),'notification':_('إشعار')
+    'card_user':_('مستخدم بطاقة'),'financial':_('مالية'),'wallet':_('محفظة'),
+    'store':_('متجر'),'system':_('نظام'),'security':_('أمان'),
+    'radius':_('خدمة المصادقة'),'service_request':_('طلب خدمة'),
+    'notification':_('إشعار')
+  } %}
+  {# خريطة مفاتيح الأحداث (event_key الخام → عربي واضح) — محلّية. أي مفتاح
+     مجهول يسقط على فئته العربية، فلا يظهر مفتاح إنجليزي خام في العمود أبدًا. #}
+  {% set EVENT_LABEL = {
+    'card_user.created':_('إنشاء حساب العميل'),
+    'card_user.self_registered':_('تسجيل ذاتي للعميل'),
+    'card_user.password_updated':_('تحديث كلمة مرور البوابة'),
+    'card_user.card_purchased':_('شراء بطاقة'),
+    'wallet.created':_('إنشاء المحفظة'),
+    'wallet.credit':_('إضافة للمحفظة'),'wallet.debit':_('خصم من المحفظة'),
+    'business_os.wallet.credit':_('إضافة للمحفظة'),
+    'business_os.wallet.debit':_('خصم من المحفظة'),
+    'store.deposit_requested':_('طلب إيداع'),
+    'store.deposit_confirmed':_('تأكيد إيداع'),
+    'store.deposit_rejected':_('رفض إيداع'),
+    'hotspot_cards_portal.purchase':_('شراء عبر بوابة الكروت'),
+    'card.password_reveal':_('كشف كلمة مرور البطاقة'),
+    'card.enable':_('تفعيل بطاقة'),'card.disable':_('تعطيل بطاقة'),
+    'card.lock_mac':_('قفل جهاز البطاقة'),'card.unlock_mac':_('فكّ قفل الجهاز'),
+    'card.reset_usage':_('تصفير الاستخدام'),'card.set_speed':_('ضبط السرعة'),
+    'card.adjust_time':_('تعديل الوقت المتبقّي'),'card.disconnect':_('قطع الجلسة'),
+    'card.soft_delete':_('حذف بطاقة'),'card.delete_permanent':_('حذف نهائي للبطاقة')
   } %}
   {% call hub.section(_("سجل الأحداث"), icon="timeline",
                      meta=(card360.timeline|length|string ~ " " ~ _("حدث")), flush=True) %}
@@ -428,10 +453,12 @@
           {% if row.package_name and row.amount_minor is defined %}
             {% set amount = (row.amount_minor or 0) / 100 %}
             {% set ps = (row.status or '')|lower %}
-            {% set status_ar2 =
-                (_('مكتملة') if ps == 'completed'
-                 else (_('قيد المعالجة') if ps == 'pending'
-                       else (_('فشلت') if ps == 'failed' else (row.status or '—')))) %}
+            {# حالة الشراء معرّبة بالكامل؛ المجهول يسقط على «—» لا على القيمة الإنجليزية الخام. #}
+            {% set PUR_STATUS = {
+              'completed':_('مكتملة'),'pending':_('قيد المعالجة'),'failed':_('فشلت'),
+              'refunded':_('مُستردّة'),'cancelled':_('ملغاة'),'canceled':_('ملغاة')
+            } %}
+            {% set status_ar2 = PUR_STATUS.get(ps) or '—' %}
             <tr>
               <td class="num mono">{{ loop.index }}</td>
               <td>
@@ -459,8 +486,12 @@
               </td>
               <td>
                 {{ _('إيداع للمحفظة') if is_credit else _('خصم من المحفظة') }}
-                {% if row.description or row.notes or row.memo %}
-                  — <small class="hub-text-mute">{{ row.description or row.notes or row.memo }}</small>
+                {# الوصف يُعرض فقط إن كان عربيًا — لا نعرض وصفًا إنجليزيًا خامًا في العمود. #}
+                {% set _desc = row.description or row.notes or row.memo or '' %}
+                {% set ns_l = namespace(ar=false) %}
+                {% for ch in _desc %}{% if ch >= 'ء' and ch <= 'ۿ' %}{% set ns_l.ar = true %}{% endif %}{% endfor %}
+                {% if _desc and ns_l.ar %}
+                  — <small class="hub-text-mute">{{ _desc }}</small>
                 {% endif %}
               </td>
               <td class="num mono">
@@ -477,7 +508,8 @@
             {% set msg = row.message or row.description or row.summary or '' %}
             {% set sev = (row.severity or 'info')|lower %}
             {% set cat = (row.category or '')|lower %}
-            {% set cat_ar = CAT_LABEL.get(cat, cat or _('حدث')) %}
+            {# المجهول → «حدث» العربية، لا الفئة الإنجليزية الخام. #}
+            {% set cat_ar = CAT_LABEL.get(cat, _('حدث')) %}
             {% set type_cls = ('error' if sev in ('error','critical') else
                               ('warning' if sev == 'warning' else
                               ('system' if cat in ('system','radius','security') else 'event'))) %}
@@ -495,8 +527,15 @@
                 </span>
               </td>
               <td>
-                {% if ekey %}<strong>{{ ekey|replace('_', ' ')|replace('.', ' ') }}</strong>{% endif %}
-                {% if msg %}{% if ekey %} — {% endif %}<small class="hub-text-mute">{{ msg }}</small>
+                {# المفتاح المعروف → عربي؛ المجهول → الفئة العربية؛ لا يُعرض مفتاح إنجليزي خام.
+                   الرسالة تُعرض فقط إن احتوت حروفًا عربية — كثير من رسائل النظام بويلربليت
+                   إنجليزي (مثل «Wallet credit recorded») والتسمية العربية تغني عنه. #}
+                {% set ev_ar = EVENT_LABEL.get(ekey) %}
+                {% set ns_e = namespace(ar=false) %}
+                {% for ch in (msg or '') %}{% if ch >= 'ء' and ch <= 'ۿ' %}{% set ns_e.ar = true %}{% endif %}{% endfor %}
+                {% if ev_ar %}<strong>{{ ev_ar }}</strong>
+                {% elif ekey %}<strong>{{ cat_ar }}</strong>{% endif %}
+                {% if msg and ns_e.ar %}{% if ev_ar or ekey %} — {% endif %}<small class="hub-text-mute">{{ msg }}</small>
                 {% elif not ekey %}<small class="hub-text-mute">{{ _('حدث بلا تفاصيل') }}</small>{% endif %}
               </td>
               <td class="num"><span class="hub-text-mute">—</span></td>
