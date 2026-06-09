@@ -85,8 +85,10 @@
   .wa-pending .tx b{ display:block; font-size:13px; margin-bottom:3px; }
 
   /* ── جدول أنواع الرسائل: شرح تحت الاسم + مُعرّف تقني لاتيني ── */
-  .wa-ev-name{ font-size:12.5px; font-weight:800; color:#0f172a; }
-  .wa-ev-help{ font-size:12px; color:#64748b; line-height:1.7; margin-top:3px; max-width:46ch; }
+  /* td inherits text-align:center from hub-table; override to start so title+desc
+     align to the inline-start (right) edge, matching the rest of the RTL panel */
+  .wa-ev-name{ font-size:12.5px; font-weight:800; color:#0f172a; text-align:start; }
+  .wa-ev-help{ font-size:12px; color:#64748b; line-height:1.7; margin-top:3px; max-width:46ch; text-align:start; }
   .wa-ev-key{ font-family:ui-monospace,Consolas,monospace; font-size:11px; color:#5b21b6;
     background:#f5f3ff; border:1px solid #ede9fe; border-radius:6px; padding:2px 7px; white-space:nowrap; }
 </style>
