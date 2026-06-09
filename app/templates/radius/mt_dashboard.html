@@ -2479,18 +2479,29 @@ body.mt-modal-open{overflow:hidden}
         </a>
         {# منع بث البلوتوث والواي فاي — بطاقة خدمة مستقلّة بمستواها
            الأعلى (لم تَعُد تحت عنوان «خدمات المنافذ»). نفس endpoints
-           والـslug=bt_wifi_block. #}
+           والـslug=bt_wifi_block.
+
+           «الحالة الحيّة» (يونيو 2026): النقطة تبدأ is-unknown دائمًا.
+           السطر الخادمي data-pss-saved-enabled يحمل آخر حالة معروفة من
+           tenant_settings (= هل ضُغط «تطبيق» سابقًا؟)، لكن لا تُلوَّن
+           البطاقة خضراء قبل أن يؤكّد فحص الجرد الحيّ /inventory أن
+           الراوتر متّصل فعلًا. حين يفشل الفحص (نفق إدارة معطّل) تبقى
+           النقطة رماديّة — منعًا من إيهام المشغّل بحالة «فعّال» مزيّفة. #}
         {% set _btw = (pss_services or {}).get('bt_wifi_block', {}) %}
         <a class="np-svc-card"
            data-mt-router-link="bt-wifi-block"
+           data-rh-svc-card="bt_wifi_block"
+           data-pss-saved-enabled="{{ '1' if _btw.get('enabled') else '0' }}"
+           data-pss-saved-ports="{{ (_btw.get('ports') or []) | join(',') }}"
            href="{{ url_for('radius.mt_port_services_form', nas_id=nas.id, slug='bt_wifi_block') }}">
           <span class="np-svc-icon np-svc-icon--slate"><i class="fa-solid fa-tower-broadcast"></i></span>
           <h5 class="np-svc-title">
             منع البث (بلوتوث/واي فاي)
             {% if _btw.get('placeholder') %}<span class="rh-svc-await">{{ _('بانتظار السكربت') }}</span>{% endif %}
           </h5>
-          <span class="np-svc-status-dot {{ 'is-active' if _btw.get('enabled') else 'is-inactive' }}"
-                title="{{ 'مفعّلة على المنافذ: ' ~ (_btw.get('ports') | join(', ')) if _btw.get('enabled') else 'غير مفعّلة' }}"></span>
+          <span class="np-svc-status-dot is-unknown"
+                data-rh-svc-status
+                title="{{ _('في انتظار تأكيد الحالة من الراوتر') }}"></span>
         </a>
         {# النسخ الاحتياطية (أداة). #}
         <a class="np-svc-card np-svc-card--tool"
@@ -2502,17 +2513,51 @@ body.mt-modal-open{overflow:hidden}
         </a>
         {# تتبّع اللوب — بطاقة خدمة مستقلّة بمستواها الأعلى (لم تَعُد
            تحت عنوان «خدمات المنافذ»). نفس endpoints والـslug=
-           loop_detect. نقطة الحالة من loop_active (قراءة فقط). #}
+           loop_detect.
+
+           «الحالة الحيّة» (يونيو 2026): النقطة والشارة تبدآن is-unknown
+           دائمًا. السطر الخادمي data-pss-saved-enabled يحمل آخر حالة
+           من tenant_settings + قاعدة router_loop_probes، لكن لا تظهر
+           «مفعّل» بأي لون قبل أن يؤكّد جرد /inventory أنّ الراوتر
+           متّصل فعلًا. حين يفشل الفحص (انقطاع نفق الإدارة) تبقى الشارة
+           «—» — لا «فعّال» مزيّف للمشغّل. #}
+        {% set _loop_known = loop_active or
+            ((pss_services or {}).get('loop_detect', {}) or {}).get('enabled') %}
         <a class="np-svc-card" data-rh-loop-tile
+           data-rh-svc-card="loop_detect"
+           data-pss-saved-enabled="{{ '1' if _loop_known else '0' }}"
            href="{{ url_for('radius.mt_port_services_form', nas_id=nas.id, slug='loop_detect') }}"
            title="{{ _('كشف اللوب عبر مجس DHCP على منافذ الزبائن') }}">
           <span class="np-svc-icon np-svc-icon--purple"><i class="fa-solid fa-arrows-spin"></i></span>
           <h5 class="np-svc-title">
             {{ _('تتبّع اللوب') }}
-            <span class="rh-svc-loop {{ 'is-on' if loop_active else 'is-off' }}">{{ 'مفعّل' if loop_active else 'غير مفعّل' }}</span>
+            <span class="rh-svc-loop is-unknown" data-rh-loop-badge
+                  data-saved-label="{{ 'مفعّل' if _loop_known else 'غير مفعّل' }}">—</span>
           </h5>
-          <span class="np-svc-status-dot {{ 'is-active' if loop_active else 'is-inactive' }}" title="{{ _('كشف اللوب عبر مجس DHCP على منافذ الزبائن') }}"></span>
+          <span class="np-svc-status-dot is-unknown"
+                data-rh-svc-status
+                title="{{ _('في انتظار تأكيد الحالة من الراوتر') }}"></span>
         </a>
+        {# تغيير IP الخروج (خدمة مدفوعة) — بطاقة مستقلّة بمستواها الأعلى
+           لا تختفي. الخدمة مركزيّة عند المالك (نفق VPS) فلا نملك تفعيلها
+           محلّيًا، لكن نعرضها دائمًا بشكل واضح؛ النقرة تفتح نافذة
+           «طلب تفعيل خدمة مدفوعة» مع حقل الكمّيّة (ميغابايت) ورسالة
+           التوضيح — يُحفظ الطلب في tenant_settings ويُسجَّل في الأحداث
+           ليراجعه المالك (تدفّق طلب ذكيّ، جانب الزبون). #}
+        <button type="button" class="np-svc-card np-svc-card--paid"
+                data-rh-svc-card="public-ip"
+                data-pss-paid="public-ip"
+                data-pss-paid-title="{{ _('تغيير IP الخروج') }}"
+                title="{{ _('خدمة مدفوعة — اضغط لطلب التفعيل') }}">
+          <span class="np-svc-icon np-svc-icon--amber"><i class="fa-solid fa-globe"></i></span>
+          <h5 class="np-svc-title">
+            {{ _('تغيير IP الخروج') }}
+            <span class="rh-svc-paid">{{ _('مدفوعة') }}</span>
+          </h5>
+          <span class="np-svc-status-dot is-unknown"
+                data-rh-svc-status
+                title="{{ _('خدمة مدفوعة — اضغط لطلب التفعيل') }}"></span>
+        </button>
         {# «تشخيص الراوترات» — أداة على مستوى المستأجر (لا nas_id).
            اسم أوضح بدل «الفلِيت» (مصطلح أعجمي مُعرَّب). الصفحة
            فعلًا تفحص اتصال + تسجيل API + هويّة كل راوترات المستأجر
@@ -2604,6 +2649,52 @@ body.mt-modal-open{overflow:hidden}
      منافذ صارت لها صفحتها الواحدة المخصّصة عبر رابط <a> مباشر (slug)،
      فلا حاجة لنافذة تجمع خدمتين أو تختلف عن شكل بقية البطاقات. #}
 
+  {# ── نافذة «طلب تفعيل خدمة مدفوعة» (fcw) ────────────────────
+       تنفتح من أي بطاقة تحمل data-pss-paid (مثل «تغيير IP الخروج»).
+       تطلب الكمّيّة (ميغابايت) ورسالة موجزة ثم تُرسل POST إلى
+       /admin/radius/mt/<nas>/service-request (نفس بلَمبَة الإعدادات
+       والأحداث الموجودة)؛ لا نظام طلبات جديد. توست الـUDS فقط — لا
+       alert/confirm أصيل. #}
+  <div class="fcw-modal" data-fcw-modal="paid-req" hidden>
+    <div class="fcw-dialog" role="dialog" aria-modal="true" aria-labelledby="fcw-paidreq-title">
+      <div class="fcw-head">
+        <h3 id="fcw-paidreq-title"><i class="fa-solid fa-circle-info" style="color:#b45309"></i> {{ _('هذه خدمة مدفوعة — طلب تفعيل') }}</h3>
+        <button type="button" class="fcw-x" data-fcw-close aria-label="{{ _('إغلاق') }}"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="fcw-body">
+        <p style="margin:0 0 10px;font-size:13px;color:#475569" data-paid-req-intro>
+          {{ _('هذه الخدمة مدفوعة ومُدارة مركزيًّا عند المالك. حدّد الكمّيّة المطلوبة (ميغابايت) ورسالة موجزة، فيُرسَل الطلب للمراجعة.') }}
+        </p>
+        <div data-paid-req-target style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12.5px;color:#0F172A"></div>
+        <form data-paid-req-form>
+          <label style="display:block;margin-bottom:10px;font-size:12.5px;color:#0F172A;font-weight:700">
+            {{ _('الكمّيّة المطلوبة (ميغابايت)') }}
+            <input type="number" inputmode="numeric" min="1" max="1048576" step="1"
+                   name="mb" data-paid-req-mb required
+                   placeholder="{{ _('مثل: 1024') }}"
+                   style="margin-top:6px;width:100%;padding:9px 12px;border:1px solid #E2E8F0;border-radius:9px;font:inherit;direction:ltr;text-align:start">
+          </label>
+          <label style="display:block;margin-bottom:6px;font-size:12.5px;color:#0F172A;font-weight:700">
+            {{ _('ملاحظات (اختياري)') }}
+            <textarea name="message" data-paid-req-msg rows="3" maxlength="1000"
+                      placeholder="{{ _('سبب الطلب أو متطلّبات إضافيّة…') }}"
+                      style="margin-top:6px;width:100%;padding:9px 12px;border:1px solid #E2E8F0;border-radius:9px;font:inherit;resize:vertical"></textarea>
+          </label>
+        </form>
+        <div class="rh-added-del-result" data-paid-req-result hidden></div>
+      </div>
+      <div class="fcw-foot">
+        <button class="hub-btn hub-btn--ghost" type="button" data-fcw-close>{{ _('إلغاء') }}</button>
+        <button class="hub-btn hub-btn--primary" type="button" data-paid-req-submit>
+          <i class="fa-solid fa-paper-plane"></i> {{ _('إرسال الطلب') }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  {# توست بسيط داخل اللوحة — لا alert/confirm أصيل (قاعدة المالك). #}
+  <div class="rh-toast" data-rh-toast hidden role="status" aria-live="polite"></div>
+
   {# أُزيل من لوحة العميل — يُعاد مركزياً عبر لوحة التراخيص (قرار معماري):
        نافذة «نفق تغيير IP» العائمة (حالة الترخيص + شرائح الأسعار + نموذج
        طلب الخدمة router_ip_tunnel_request). خدمة مركزية للمالك. نافذة حذف
@@ -2619,6 +2710,148 @@ body.mt-modal-open{overflow:hidden}
     root.querySelectorAll("[data-fcw-close]").forEach(b=> b.addEventListener("click", closeAll));
     root.querySelectorAll("[data-fcw-modal]").forEach(m=> m.addEventListener("click", e=>{ if(e.target===m) closeAll(); }));
     root.addEventListener("keydown", e=>{ if(e.key==="Escape") closeAll(); });
+  })();
+  </script>
+
+  {# ── طلب تفعيل خدمة مدفوعة — تدفّق ذكيّ موحّد ─────────────
+     أيّ بطاقة تحمل data-pss-paid (مثل «تغيير IP الخروج») تفتح
+     النافذة العائمة paid-req بدل التنقّل. النموذج يُرسل POST إلى
+     /admin/radius/mt/<nas_id>/service-request مع slug + mb + رسالة،
+     فيُحفظ الطلب في tenant_settings + يُسجَّل حدثاً في الأحداث.
+     قاعدة المالك: لا alert/confirm أصيلَين — توست داخل اللوحة فقط. #}
+  <script>
+  (() => {
+    "use strict";
+    const root = document.querySelector("[data-mt-router-dashboard]");
+    if (!root) return;
+    const routerId = root.dataset.mtRouterId;
+    if (!routerId) return;
+
+    const modal = document.querySelector('[data-fcw-modal="paid-req"]');
+    if (!modal) return;
+    const titleEl = modal.querySelector("#fcw-paidreq-title");
+    const targetEl = modal.querySelector("[data-paid-req-target]");
+    const mbEl = modal.querySelector("[data-paid-req-mb]");
+    const msgEl = modal.querySelector("[data-paid-req-msg]");
+    const resultEl = modal.querySelector("[data-paid-req-result]");
+    const submitBtn = modal.querySelector("[data-paid-req-submit]");
+
+    const toastEl = document.querySelector("[data-rh-toast]");
+    let toastTimer = null;
+    function toast(msg, kind) {
+      if (!toastEl) return;
+      toastEl.textContent = String(msg || "");
+      toastEl.className = "rh-toast is-" + (kind || "info");
+      toastEl.hidden = false;
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => { toastEl.hidden = true; }, 3600);
+    }
+
+    function esc(s) {
+      return String(s == null ? "" : s)
+        .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+    function token() {
+      const el = document.querySelector('input[name="_csrf_token"]');
+      if (el && el.value) return el.value;
+      const m = document.querySelector('meta[name="csrf-token"]');
+      return (m && m.getAttribute("content")) || "";
+    }
+
+    function open(slug, title) {
+      if (titleEl) {
+        titleEl.innerHTML =
+          '<i class="fa-solid fa-circle-info" style="color:#b45309"></i> ' +
+          'هذه خدمة مدفوعة — طلب تفعيل: <span style="color:#b45309">' +
+          esc(title) + '</span>';
+      }
+      if (targetEl) {
+        targetEl.innerHTML =
+          '<strong>' + esc(title) + '</strong> · معرّف الخدمة: <code>' +
+          esc(slug) + '</code>';
+      }
+      if (mbEl) mbEl.value = "";
+      if (msgEl) msgEl.value = "";
+      if (resultEl) { resultEl.hidden = true; resultEl.textContent = ""; resultEl.className = "rh-added-del-result"; }
+      modal.dataset.slug = slug;
+      modal.hidden = false;
+      modal.classList.add("is-open");
+      setTimeout(() => { if (mbEl) mbEl.focus(); }, 30);
+    }
+    function close() {
+      modal.classList.remove("is-open");
+      modal.hidden = true;
+    }
+
+    document.querySelectorAll("[data-pss-paid]").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        const slug = btn.getAttribute("data-pss-paid") || "";
+        const title = btn.getAttribute("data-pss-paid-title") ||
+                      (btn.querySelector(".np-svc-title") &&
+                       btn.querySelector(".np-svc-title").textContent.trim()) || slug;
+        open(slug, title);
+      });
+    });
+
+    if (submitBtn) {
+      submitBtn.addEventListener("click", async () => {
+        const slug = modal.dataset.slug || "";
+        const mb = parseInt((mbEl && mbEl.value) || "", 10);
+        const message = (msgEl && msgEl.value || "").trim();
+        if (!slug) return;
+        if (!Number.isFinite(mb) || mb <= 0) {
+          if (resultEl) {
+            resultEl.hidden = false;
+            resultEl.className = "rh-added-del-result is-fail";
+            resultEl.textContent = "أدخل كمّيّة ميغابايت صالحة (>0).";
+          }
+          if (mbEl) mbEl.focus();
+          return;
+        }
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جارٍ الإرسال…';
+        try {
+          const res = await fetch(
+            `/admin/radius/mt/${routerId}/service-request`,
+            { method: "POST",
+              headers: { "Content-Type": "application/json", "X-CSRFToken": token() },
+              body: JSON.stringify({ slug: slug, mb: mb, message: message }) }
+          );
+          const data = await res.json().catch(() => ({ ok: false }));
+          if (!res.ok || data.ok === false) {
+            if (resultEl) {
+              resultEl.hidden = false;
+              resultEl.className = "rh-added-del-result is-fail";
+              resultEl.textContent = data.error || ("تعذّر إرسال الطلب — رمز " + res.status);
+            }
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fa-solid fa-rotate-right"></i> إعادة المحاولة';
+            return;
+          }
+          if (resultEl) {
+            resultEl.hidden = false;
+            resultEl.className = "rh-added-del-result is-ok";
+            resultEl.textContent = "تم تسجيل الطلب — سيراجَع قريبًا.";
+          }
+          toast("تم إرسال طلب التفعيل بنجاح.", "success");
+          setTimeout(() => {
+            close();
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> إرسال الطلب';
+          }, 1100);
+        } catch (err) {
+          if (resultEl) {
+            resultEl.hidden = false;
+            resultEl.className = "rh-added-del-result is-fail";
+            resultEl.textContent = String((err && err.message) || err);
+          }
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = '<i class="fa-solid fa-rotate-right"></i> إعادة المحاولة';
+        }
+      });
+    }
   })();
   </script>
 
@@ -2867,13 +3100,47 @@ body.mt-modal-open{overflow:hidden}
 .rh-inventory .np-svc-card[data-rh-loop-tile] .np-svc-title{
   display:inline-flex;align-items:center;gap:6px;
 }
-/* أُزيل: .rh-svc-paid (شارة «مدفوعة» لبطاقة نفق تغيير IP) — خدمة مركزية للمالك. */
+/* شارة «مدفوعة» — تُعرض على بطاقات الخدمات المدفوعة (تغيير IP الخروج).
+   تنبيه واضح بأنّ الخدمة مركزيّة عند المالك ولا تُفعَّل محلّيًا. */
+.rh-svc-paid{
+  flex-shrink:0;font-size:9.5px;font-weight:900;letter-spacing:.02em;
+  color:#92400e;background:#fef3c7;border:1px solid #fde68a;
+  border-radius:999px;padding:1px 8px;
+}
+.rh-inventory .np-svc-card--paid{
+  cursor:pointer;border:1px dashed #FDE68A;background:#FFFBEB;
+}
+.rh-inventory .np-svc-card--paid:hover{border-color:#F59E0B;background:#FEF3C7}
+.rh-inventory [data-pss-paid] .np-svc-title{
+  display:inline-flex;align-items:center;gap:6px;
+}
 .rh-svc-loop{
   flex-shrink:0;font-size:10px;font-weight:800;
   border-radius:999px;padding:1px 9px;
 }
 .rh-svc-loop.is-on{background:#dcfce7;color:#15803d}
 .rh-svc-loop.is-off{background:#f1f5f9;color:#64748b}
+/* شارة اللوب الرماديّة عند انعدام التأكيد الحيّ — لا «مفعّل» مزيّف
+   ما لم يُؤكَّد من /inventory. */
+.rh-svc-loop.is-unknown{background:#f1f5f9;color:#94a3b8}
+/* نقطة الحالة الرماديّة (is-unknown) عند فشل الفحص الحيّ — تُورَث من
+   dashboard_premium.css؛ نضمن لونها هنا احترازًا في حال لم يُحمَّل
+   ذلك الـCSS على هذه الصفحة (بيئات منفصلة). */
+.rh-inventory .np-svc-status-dot.is-unknown{
+  background:#CBD5E1;box-shadow:none;
+}
+
+/* توست داخل اللوحة — لا alert/confirm أصيل، تظهر/تختفي بـhidden. */
+.rh-toast{
+  position:fixed;inset-inline-end:24px;bottom:24px;z-index:9999;
+  max-width:340px;padding:11px 16px;border-radius:11px;
+  font-size:13px;font-weight:700;color:#0F172A;
+  background:#fff;border:1px solid #E2E8F0;
+  box-shadow:0 8px 24px rgba(15,23,42,.12);
+}
+.rh-toast.is-success{border-color:#A7F3D0;background:#ECFDF5;color:#065F46}
+.rh-toast.is-error{border-color:#FCA5A5;background:#FEF2F2;color:#7F1D1D}
+.rh-toast[hidden]{display:none}
 /* شارة «بانتظار السكربت» لبطاقات خدمات المنافذ (قالب مبدئي). */
 .rh-svc-await{
   flex-shrink:0;font-size:9.5px;font-weight:900;letter-spacing:.02em;
@@ -3243,6 +3510,15 @@ body.mt-modal-open{overflow:hidden}
     Object.keys(byKey).forEach((k) => {
       setDot(byKey[k].dot, state);
       setDetails(byKey[k], null);
+      // أعِد شارة اللوب (إن وُجدت) إلى «—» الرمادي عند is-unknown.
+      // عند فشل الفحص الحيّ لا نعرض «مفعّل» بأي لون — احترامًا لقاعدة
+      // «لا حالة فعّال بلا تأكيد حيّ من الراوتر».
+      const loopBadge = byKey[k].card.querySelector("[data-rh-loop-badge]");
+      if (loopBadge && state === "is-unknown") {
+        loopBadge.textContent = "—";
+        loopBadge.classList.remove("is-on", "is-off");
+        loopBadge.classList.add("is-unknown");
+      }
     });
   }
 
@@ -3417,9 +3693,39 @@ body.mt-modal-open{overflow:hidden}
         itemsByKey[g.service_type] = g.items || [];
       });
       Object.keys(byKey).forEach((key) => {
+        const card = byKey[key].card;
         const items = itemsByKey[key] || [];
-        setDot(byKey[key].dot, items.length ? "is-active" : "is-inactive");
+        // البطاقات المدفوعة (data-pss-paid) لا تُلوَّن خضراء من الجرد
+        // — حالتها مدارة عبر المالك. تبقى is-unknown دلالةً على
+        // «خدمة مدفوعة، طلب التفعيل بنقرة».
+        if (card.hasAttribute("data-pss-paid")) {
+          setDot(byKey[key].dot, "is-unknown");
+          setDetails(byKey[key], null);
+          return;
+        }
+        // الفحص الحيّ نجح (status=200, ok=true) فالراوتر متّصل ولديه نفق
+        // إدارة قائم. الآن نعتمد:
+        //   (1) عناصر جرد /inventory للنوع، إن وُجدت → is-active.
+        //   (2) خلاف ذلك، حالة «معروفة» محفوظة جانب الخادم
+        //       (data-pss-saved-enabled="1") → is-active كذلك،
+        //       لأنّ المشغّل ضغط «تطبيق» سابقًا والجرد لا يُغطّي بعد
+        //       خدمات سكربت المنافذ (bt_wifi_block/loop_detect).
+        //   (3) وإلا is-inactive.
+        // النتيجة: لا «فعّال» مزيّف عند فشل الجرد — يبقى is-unknown.
+        const savedEnabled = card.getAttribute("data-pss-saved-enabled") === "1";
+        const state = items.length || savedEnabled ? "is-active" : "is-inactive";
+        setDot(byKey[key].dot, state);
         setDetails(byKey[key], items);
+        // شارة «تتبّع اللوب»: حدّث النصّ واللون من نتيجة الفحص الحيّ.
+        const loopBadge = card.querySelector("[data-rh-loop-badge]");
+        if (loopBadge) {
+          const label = state === "is-active"
+            ? (loopBadge.getAttribute("data-saved-label") || "مفعّل")
+            : "غير مفعّل";
+          loopBadge.textContent = label;
+          loopBadge.classList.remove("is-unknown", "is-on", "is-off");
+          loopBadge.classList.add(state === "is-active" ? "is-on" : "is-off");
+        }
       });
       renderAdded(data.groups);
       loaded = true;

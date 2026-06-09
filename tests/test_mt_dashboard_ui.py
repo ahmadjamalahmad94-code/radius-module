@@ -60,6 +60,13 @@ def _login(client) -> None:
     assert res.status_code in {302, 303}
 
 
+def _csrf(client) -> str:
+    """Surfaces the session CSRF token — required for JSON POSTs in tests."""
+    client.get("/admin/radius/mt/operations")
+    with client.session_transaction() as sess:
+        return sess["_csrf_token"]
+
+
 def _seed_router(app, *, nas_id: int, name: str = "rtr-test",
                  address: str = "203.0.113.50") -> None:
     with app.app_context():
@@ -181,3 +188,149 @@ def test_dashboard_does_NOT_require_live_mikrotik_to_render(app, client):
     # JS will report the error to the operator; the shell still
     # shows the pending status pill.
     assert "جارٍ الاتصال" in html
+
+
+# ──────────────────────────────────────────────────────────────
+# يونيو 2026 — قاعدة المالك: حالة الخدمات تنبع من قراءة الراوتر
+# الحيّة فقط، لا من DB، ولا من «آخر apply سابق». هذه الاختبارات
+# تُثبّت السلوك:
+#   (A) النقطة الخضراء «فعّال» تتطلّب probe ناجحًا من /inventory
+#       — وإلا تبقى is-unknown (رماديّة).
+#   (B) كل الخدمات تظهر دائمًا كبطاقات: bt_wifi_block, loop_detect,
+#       public-ip (المدفوعة) — لا واحدة منها يختفي عند تعطّل الراوتر.
+#   (C) بطاقة الخدمة المدفوعة (public-ip) تحمل data-pss-paid
+#       وعنوان «مدفوعة» وتفتح نافذة طلب التفعيل (paid-req).
+# ──────────────────────────────────────────────────────────────
+
+
+def test_dashboard_status_dots_start_unknown_not_active(app, client):
+    """قاعدة (A): حتى لو حُفِظت حالة «مفعّلة» سابقًا في tenant_settings
+    أو وُجدت probes للوب، البطاقات تُرسَم بنقطة is-unknown أوّلاً —
+    لا يُسمح بـis-active بلا تأكيد حيّ من الراوتر عبر /inventory."""
+    _seed_router(app, nas_id=11, name="offline-rtr", address="10.0.0.11")
+    with app.app_context():
+        from app.radius.db.repos import (
+            router_loop_probes_repo, tenants_repo,
+        )
+        # حالة «مفعّلة» مزيّفة لو اعتمدنا DB فقط (قاعدة المالك ترفض).
+        router_loop_probes_repo.upsert_reading(
+            tenant_id=1, router_id=11, interface="ether2",
+            status="bound", lease_ip="10.0.0.8/24", server_ip="10.0.0.1",
+        )
+        tenants_repo.set_setting(1, "pss.11.bt_wifi_block.enabled", "1", by=0)
+        tenants_repo.set_setting(1, "pss.11.bt_wifi_block.ports", "ether2", by=0)
+        tenants_repo.set_setting(1, "pss.11.loop_detect.enabled", "1", by=0)
+    _login(client)
+
+    res = client.get("/admin/radius/mt/11/dashboard")
+    assert res.status_code == 200
+    html = res.get_data(as_text=True)
+
+    # كل بطاقات الخدمات بـdata-rh-svc-card تبدأ بنقطة is-unknown، لا is-active.
+    for slug in ("bt_wifi_block", "loop_detect", "public-ip",
+                 "hotspot", "broadband"):
+        assert f'data-rh-svc-card="{slug}"' in html, (
+            f"بطاقة الخدمة {slug} مفقودة من شبكة «خدماتي»"
+        )
+    # baseline ينبغي أن يكون is-unknown — لا is-active قبل تأكيد حيّ.
+    # نفتّش حول بطاقة bt_wifi_block ولوب لنتحقّق.
+    btw_idx = html.find('data-rh-svc-card="bt_wifi_block"')
+    btw_block = html[btw_idx:btw_idx + 1400]
+    assert "is-unknown" in btw_block
+    assert "np-svc-status-dot is-active" not in btw_block
+    loop_idx = html.find('data-rh-svc-card="loop_detect"')
+    loop_block = html[loop_idx:loop_idx + 1400]
+    assert "is-unknown" in loop_block
+    assert "np-svc-status-dot is-active" not in loop_block
+
+
+def test_dashboard_shows_all_services_including_paid_public_ip(app, client):
+    """قاعدة (B): الخدمات الثلاث «منع البث» + «تتبّع اللوب» +
+    «تغيير IP الخروج» (المدفوعة) تظهر كلّها كبطاقات دائمًا — حتى لو
+    الراوتر مفصول (لا اتصال أصلًا)."""
+    _seed_router(app, nas_id=12, name="all-svc", address="203.0.113.12")
+    _login(client)
+
+    res = client.get("/admin/radius/mt/12/dashboard")
+    assert res.status_code == 200
+    html = res.get_data(as_text=True)
+    # «منع البث (بلوتوث/واي فاي)» — بطاقة bt_wifi_block ظاهرة.
+    assert 'data-rh-svc-card="bt_wifi_block"' in html
+    assert "منع البث" in html
+    # «تتبّع اللوب» — بطاقة loop_detect ظاهرة.
+    assert 'data-rh-svc-card="loop_detect"' in html
+    assert "تتبّع اللوب" in html
+    # «تغيير IP الخروج» — بطاقة مدفوعة جديدة (public-ip).
+    assert 'data-rh-svc-card="public-ip"' in html
+    assert 'data-pss-paid="public-ip"' in html
+    assert "تغيير IP الخروج" in html
+    assert "مدفوعة" in html
+    # نافذة الطلب موجودة وفيها حقل الكمّيّة (ميغابايت).
+    assert 'data-fcw-modal="paid-req"' in html
+    assert "data-paid-req-mb" in html
+    assert "الكمّيّة المطلوبة (ميغابايت)" in html
+
+
+def test_service_request_route_persists_and_audits(app, client):
+    """قاعدة (C): POST /admin/radius/mt/<id>/service-request يحفظ
+    الطلب في tenant_settings + يسجّل حدث mt.service_request.create
+    لمراجعة المالك."""
+    _seed_router(app, nas_id=13, name="paid-target", address="203.0.113.13")
+    _login(client)
+    token = _csrf(client)
+
+    res = client.post(
+        "/admin/radius/mt/13/service-request",
+        json={"slug": "public-ip", "mb": 2048, "message": "أحتاج هذه الخدمة"},
+        headers={"X-CSRFToken": token},
+    )
+    assert res.status_code == 200, res.get_data(as_text=True)
+    data = res.get_json()
+    assert data and data.get("ok") is True
+    assert data.get("service_label") == "تغيير IP الخروج"
+
+    with app.app_context():
+        from app.radius.db.repos import audit_repo, tenants_repo
+        # الإعداد المُخزَّن: مفتاح يبدأ بـpss.request.public-ip.13.
+        prefix = "pss.request.public-ip.13."
+        # ابحث في tenant_settings عبر استعلام مباشر.
+        from app.radius.db.connection import db
+        rows = db().execute(
+            "SELECT key, value FROM tenant_settings "
+            "WHERE tenant_id=1 AND key LIKE ?",
+            (prefix + "%",),
+        ).fetchall()
+        assert rows, "طلب التفعيل لم يُخزَّن في tenant_settings"
+        import json as _json
+        payload = _json.loads(dict(rows[0])["value"])
+        assert payload["slug"] == "public-ip"
+        assert payload["mb"] == 2048
+        assert payload["status"] == "pending"
+        assert payload["nas_id"] == 13
+        # حدث في audit_log يحمل الإجراء الصحيح.
+        events = audit_repo.recent(1, limit=20)
+        actions = [r["action"] for r in events]
+        assert "mt.service_request.create" in actions
+
+
+def test_service_request_rejects_bad_inputs(app, client):
+    """تحقّق المدخلات: slug غير صالح، أو mb<=0، أو راوتر مفقود."""
+    _seed_router(app, nas_id=14, name="paid-target", address="203.0.113.14")
+    _login(client)
+    token = _csrf(client)
+    hdrs = {"X-CSRFToken": token}
+
+    # mb=0 ⇒ 400
+    r1 = client.post("/admin/radius/mt/14/service-request",
+                     json={"slug": "public-ip", "mb": 0}, headers=hdrs)
+    assert r1.status_code == 400
+
+    # slug فارغ ⇒ 400
+    r2 = client.post("/admin/radius/mt/14/service-request",
+                     json={"slug": "", "mb": 1024}, headers=hdrs)
+    assert r2.status_code == 400
+
+    # راوتر غير موجود ⇒ 404
+    r3 = client.post("/admin/radius/mt/9999/service-request",
+                     json={"slug": "public-ip", "mb": 1024}, headers=hdrs)
+    assert r3.status_code == 404
