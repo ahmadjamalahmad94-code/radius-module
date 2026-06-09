@@ -173,6 +173,7 @@
 
 {# Network #}
 {%- set m_devices     = '/devices' in path -%}
+{%- set m_device_health = ('/device-health' in path) -%}
 {%- set m_pools       = '/pools' in path -%}
 {%- set m_mt          = '/mt' in path -%}
 {%- set m_diag        = '/diagnostics' in path -%}
@@ -499,6 +500,7 @@
                                (يضرب طوابير الراوترات مباشرة): مجدول/يدوي.
          • المراقبة والسجلات — أدوات عابرة لكل الراوترات: تنبيهات/تدقيق/دفع. #}
     {%- set _eps_network = ['mt_setup_form','setup_wizard_v3_page','devices_list','mt_operations','pool_list',
+                            'device_health_page',
                             'operations_speed_control','operations_speed_control_manual',
                             'mt_alerts_index','audit_log_index','mt_push_setup'] -%}
     {% if section_can(_eps_network)|trim %}
@@ -514,13 +516,13 @@
 
         {# أعلام تفعيل كل عائلة — لفتح عائلة الصفحة النشطة تلقائيًا #}
         {%- set fam_routers_active = ('/mt/operations' in path) or m_topology or m_problems or m_diag
-                                       or m_devices or m_pools -%}
+                                       or m_devices or m_pools or m_device_health -%}
         {%- set fam_setup_active   = m_mt_setup or m_setup_wizard_v3 -%}
         {%- set fam_speed_active   = m_operations_speed or m_operations_speed_manual -%}
         {%- set fam_watch_active   = m_alerts or m_audit_log or m_push -%}
 
         {# ── إدارة الراوترات — التشغيل اليومي وما يتبعه مباشرة ── #}
-        {%- set _eps_net_routers = ['mt_operations','devices_list','pool_list','hotspot_errors_page'] -%}
+        {%- set _eps_net_routers = ['mt_operations','devices_list','pool_list','hotspot_errors_page','device_health_page'] -%}
         {% if section_can(_eps_net_routers)|trim or _ui_mode == 'freeze' %}
         <div class="hb-side-subgroup{% if fam_routers_active %} is-open has-active{% endif %}"
              data-hb-subgroup="network-routers">
@@ -541,6 +543,8 @@
             {# رسائل أخطاء الهوتسبوت — نصوص errors.txt تُرفع للراوترات
                عند نشر صفحة الدخول. عام على مستوى المستأجر. #}
             {{ sub_item('radius.hotspot_errors_page', _('رسائل أخطاء الهوتسبوت'), '/hotspot-errors' in path) }}
+            {# تتبع حالة الأجهزة — مراقبة APs/روابط/UniFi/LiteBeam عبر MikroTik Netwatch #}
+            {{ sub_item('radius.device_health_page', _('تتبع حالة الأجهزة'), m_device_health) }}
             {# ────────────────────────────────────────────────────
                Network Operations family (Sprints 1-6, 2026-05-28).
                HIDDEN until next release — operator decision:

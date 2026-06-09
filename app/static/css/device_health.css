@@ -1,0 +1,75 @@
+/* تتبع حالة الأجهزة — device_health.css
+   Page-specific polish only; layout/cards/table/modal come from
+   hub_v2.css + unified_design.css (loaded globally). RTL-safe. */
+
+.dh-table-wrap { overflow-x: auto; }
+.dh-table { width: 100%; }
+.dh-table .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; }
+
+.dh-name { font-weight: 600; }
+.dh-name .dh-router {
+  display: block; font-weight: 400; font-size: 11px;
+  color: var(--hub-text-mute, #94A3B8); margin-top: 2px;
+}
+
+.dh-actions { white-space: nowrap; display: flex; gap: 4px; }
+.dh-actions .hub-btn { padding-inline: 8px; }
+.dh-danger { color: #DC2626; }
+
+.dh-empty-filtered { padding: 8px 0; }
+
+/* Add/edit form */
+.dh-form-grid {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 18px; margin-top: 6px;
+}
+@media (max-width: 640px) { .dh-form-grid { grid-template-columns: 1fr; } }
+
+.dh-form .hub-field { display: flex; flex-direction: column; gap: 6px; }
+.dh-form .hub-field-label { font-size: 12.5px; font-weight: 600; }
+.dh-form .req { color: #DC2626; margin-inline-start: 3px; }
+
+.dh-check { flex-direction: row !important; align-items: center; gap: 8px; }
+.dh-check input { width: 16px; height: 16px; }
+
+.dh-advanced { margin-top: 14px; border-top: 1px dashed var(--hub-border, #E2E8F0); padding-top: 10px; }
+.dh-advanced > summary { cursor: pointer; font-weight: 600; font-size: 13px; color: var(--hub-accent, #6366F1); }
+
+.dh-form-error {
+  margin-top: 12px; padding: 10px 12px; border-radius: 10px;
+  background: #FEF2F2; color: #991B1B; font-size: 13px;
+  border: 1px solid #FECACA;
+}
+
+/* Plan preview / sync result */
+.dh-plan-preview:empty { display: none; }
+.dh-plan-preview { margin-top: 14px; }
+
+.dh-plan-item {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 10px 12px; border-radius: 10px; margin-bottom: 8px;
+  background: var(--hub-surface-2, #F8FAFC); border: 1px solid var(--hub-border, #E2E8F0);
+}
+.dh-plan-item .dh-plan-ic { font-size: 15px; margin-top: 2px; }
+.dh-plan-item.is-create   { border-inline-start: 3px solid #6366F1; }
+.dh-plan-item.is-present  { border-inline-start: 3px solid #16A34A; }
+.dh-plan-item.is-planned  { border-inline-start: 3px solid #94A3B8; }
+.dh-plan-title { font-weight: 600; font-size: 13px; }
+.dh-plan-cmd {
+  display: block; margin-top: 4px; font-size: 11.5px; direction: ltr; text-align: left;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--hub-text-mute, #64748B); word-break: break-all;
+}
+.dh-plan-badge { margin-inline-start: auto; font-size: 11px; }
+
+.dh-plan-warn {
+  margin-top: 10px; padding: 9px 12px; border-radius: 10px;
+  background: #FFFBEB; color: #92400E; border: 1px solid #FDE68A; font-size: 12.5px;
+}
+.dh-plan-net {
+  margin-bottom: 12px; padding: 10px 12px; border-radius: 10px;
+  background: #EEF2FF; border: 1px solid #C7D2FE; font-size: 12.5px;
+}
+.dh-plan-net code { direction: ltr; display: inline-block; }
+
+.dh-row.is-hidden { display: none; }

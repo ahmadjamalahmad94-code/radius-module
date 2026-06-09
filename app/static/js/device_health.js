@@ -1,0 +1,286 @@
+/* تتبع حالة الأجهزة — device_health.js
+ * Client-side filtering + CRUD over the JSON API. CSRF via X-CSRFToken header
+ * (these routes live under /admin/… so the global guard enforces it).
+ * NO live MikroTik mutation: «معاينة الخطة»/«مزامنة»/«فحص» are read-only. */
+(function () {
+  "use strict";
+
+  var CFG = window.__DH__ || {};
+  var API = CFG.api || "";          // …/device-health/api/devices
+  var PLAN = CFG.planUrl || "";     // …/device-health/api/plan
+
+  function $(sel, root) { return (root || document).querySelector(sel); }
+  function $all(sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+
+  function api(path) { return API + path; }
+
+  function request(url, method, body) {
+    var opts = {
+      method: method,
+      headers: { "X-CSRFToken": CFG.csrf || "" },
+      credentials: "same-origin"
+    };
+    if (body !== undefined) {
+      opts.headers["Content-Type"] = "application/json";
+      opts.body = JSON.stringify(body);
+    }
+    return fetch(url, opts).then(function (r) {
+      return r.json().catch(function () { return { ok: false, error: "استجابة غير صالحة" }; })
+        .then(function (data) { return { status: r.status, data: data }; });
+    });
+  }
+
+  function toast(msg, kind) {
+    var el = document.createElement("div");
+    el.className = "dh-toast dh-toast--" + (kind || "info");
+    el.textContent = msg;
+    el.style.cssText = "position:fixed;inset-block-end:20px;inset-inline-start:50%;" +
+      "transform:translateX(-50%);z-index:9999;padding:10px 16px;border-radius:10px;" +
+      "font-size:13px;color:#fff;box-shadow:0 6px 20px rgba(0,0,0,.18);background:" +
+      (kind === "error" ? "#DC2626" : kind === "success" ? "#16A34A" : "#334155");
+    document.body.appendChild(el);
+    setTimeout(function () { el.remove(); }, 3200);
+  }
+
+  /* ── filtering ── */
+  function applyFilters() {
+    var q = ($("#dh-search") && $("#dh-search").value || "").trim().toLowerCase();
+    var router = $("#dh-filter-router") && $("#dh-filter-router").value || "";
+    var type = $("#dh-filter-type") && $("#dh-filter-type").value || "";
+    var status = $("#dh-filter-status") && $("#dh-filter-status").value || "";
+    var visible = 0;
+    $all("[data-dh-row]").forEach(function (row) {
+      var ok = true;
+      if (q && (row.getAttribute("data-search") || "").indexOf(q) === -1) ok = false;
+      if (router && row.getAttribute("data-router") !== router) ok = false;
+      if (type && row.getAttribute("data-type") !== type) ok = false;
+      if (status && row.getAttribute("data-status") !== status) ok = false;
+      row.classList.toggle("is-hidden", !ok);
+      if (ok) visible++;
+    });
+    var emptyEl = $(".dh-empty-filtered");
+    if (emptyEl) emptyEl.hidden = !($all("[data-dh-row]").length > 0 && visible === 0);
+  }
+
+  ["dh-search", "dh-filter-router", "dh-filter-type", "dh-filter-status"].forEach(function (id) {
+    var el = document.getElementById(id);
+    if (el) el.addEventListener("input", applyFilters);
+    if (el) el.addEventListener("change", applyFilters);
+  });
+
+  /* ── add / edit modal ── */
+  var form = $("#dh-device-form");
+  var modalTitle = function () {
+    var m = $("#dh-device-modal");
+    return m && m.querySelector(".uds-modal-head h3");
+  };
+
+  function resetForm() {
+    if (!form) return;
+    form.reset();
+    form.querySelector("[name=device_id]").value = "";
+    var err = $("#dh-form-error"); if (err) { err.hidden = true; err.textContent = ""; }
+    var prev = $("#dh-plan-preview"); if (prev) prev.innerHTML = "";
+    var t = modalTitle(); if (t) t.innerHTML = '<i class="fa-solid fa-tower-broadcast"></i> إضافة جهاز';
+  }
+
+  function fillForm(d) {
+    if (!form) return;
+    resetForm();
+    var t = modalTitle(); if (t) t.innerHTML = '<i class="fa-solid fa-pen"></i> تعديل: ' + (d.name || "");
+    var map = ["device_id:id", "name", "device_type", "router_id", "interface_name",
+      "ip_address", "location", "subnet_prefix", "gateway_last_octet",
+      "ping_threshold_ms", "netwatch_interval_sec", "netwatch_timeout_sec", "alert_channel"];
+    map.forEach(function (pair) {
+      var parts = pair.split(":");
+      var field = parts[0], key = parts[1] || parts[0];
+      var input = form.querySelector("[name=" + field + "]");
+      if (input) input.value = d[key] != null ? d[key] : "";
+    });
+    var chk = form.querySelector("[name=monitoring_enabled]");
+    if (chk) chk.checked = !!d.monitoring_enabled;
+    // Make advanced section visible when it holds edited values.
+    var adv = form.querySelector(".dh-advanced"); if (adv) adv.open = true;
+  }
+
+  $all("[data-dh-add]").forEach(function (b) { b.addEventListener("click", resetForm); });
+
+  function collectForm() {
+    var fd = new FormData(form);
+    var obj = {};
+    fd.forEach(function (v, k) { obj[k] = v; });
+    obj.monitoring_enabled = !!form.querySelector("[name=monitoring_enabled]").checked;
+    return obj;
+  }
+
+  if (form) {
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var data = collectForm();
+      var id = (data.device_id || "").trim();
+      delete data.device_id;
+      var url = id ? api("/" + id) : API;
+      var method = id ? "PATCH" : "POST";
+      request(url, method, data).then(function (res) {
+        if (res.data && res.data.ok) {
+          if (res.data.warnings && res.data.warnings.length) toast(res.data.warnings[0], "info");
+          toast(id ? "تم حفظ التعديلات." : "أُضيف الجهاز.", "success");
+          setTimeout(function () { location.reload(); }, 500);
+        } else {
+          var err = $("#dh-form-error");
+          if (err) { err.hidden = false; err.textContent = (res.data && res.data.error) || "تعذّر الحفظ."; }
+        }
+      });
+    });
+  }
+
+  /* ── live plan preview inside the add/edit modal ── */
+  var planTimer = null;
+  function previewPlan() {
+    if (!form) return;
+    var iface = (form.querySelector("[name=interface_name]").value || "").trim();
+    var ip = (form.querySelector("[name=ip_address]").value || "").trim();
+    var box = $("#dh-plan-preview");
+    if (!box) return;
+    if (!iface || !ip) { box.innerHTML = ""; return; }
+    var qs = "?interface=" + encodeURIComponent(iface) + "&ip=" + encodeURIComponent(ip) +
+      "&subnet_prefix=" + encodeURIComponent(form.querySelector("[name=subnet_prefix]").value || 24) +
+      "&gateway_last_octet=" + encodeURIComponent(form.querySelector("[name=gateway_last_octet]").value || 254);
+    fetch(PLAN + qs, { credentials: "same-origin" })
+      .then(function (r) { return r.json(); })
+      .then(function (res) { box.innerHTML = renderPlan(res.plan, true); })
+      .catch(function () { box.innerHTML = ""; });
+  }
+  if (form) {
+    ["interface_name", "ip_address", "subnet_prefix", "gateway_last_octet"].forEach(function (n) {
+      var el = form.querySelector("[name=" + n + "]");
+      if (el) el.addEventListener("input", function () {
+        clearTimeout(planTimer); planTimer = setTimeout(previewPlan, 350);
+      });
+    });
+  }
+
+  /* ── plan rendering ── */
+  function actionMeta(action) {
+    if (action === "already_present") return { cls: "is-present", ic: "fa-circle-check", color: "#16A34A", label: "موجود مسبقًا", variant: "green" };
+    if (action === "create") return { cls: "is-create", ic: "fa-circle-plus", color: "#6366F1", label: "سيُضاف", variant: "brand" };
+    return { cls: "is-planned", ic: "fa-circle-dot", color: "#94A3B8", label: "مُخطّط", variant: "grey" };
+  }
+
+  function esc(s) { var d = document.createElement("div"); d.textContent = s == null ? "" : s; return d.innerHTML; }
+
+  function renderPlan(plan, compact) {
+    if (!plan) return "";
+    if (!plan.valid) return '<div class="dh-plan-warn">' + esc(plan.error || "خطة غير صالحة") + '</div>';
+    var html = "";
+    if (plan.network && !compact) {
+      var n = plan.network;
+      html += '<div class="dh-plan-net">الشبكة: <code>' + esc(n.network_cidr) +
+        '</code> · البوابة: <code>' + esc(n.gateway_address) + '</code></div>';
+    } else if (plan.network) {
+      html += '<div class="dh-plan-net">الشبكة <code>' + esc(plan.network.network_cidr) +
+        '</code> · البوابة <code>' + esc(plan.network.gateway_address) + '</code></div>';
+    }
+    (plan.items || []).forEach(function (it) {
+      var m = actionMeta(it.action);
+      html += '<div class="dh-plan-item ' + m.cls + '">' +
+        '<i class="fa-solid ' + m.ic + ' dh-plan-ic" style="color:' + m.color + '"></i>' +
+        '<div style="flex:1"><span class="dh-plan-title">' + esc(it.title) + '</span>' +
+        '<code class="dh-plan-cmd">' + esc(it.command) + '</code></div>' +
+        '<span class="dh-plan-badge" style="color:' + m.color + '">' + m.label + '</span></div>';
+    });
+    (plan.warnings || []).forEach(function (w) {
+      html += '<div class="dh-plan-warn"><i class="fa-solid fa-triangle-exclamation"></i> ' + esc(w) + '</div>';
+    });
+    if (!plan.live) {
+      html += '<div class="dh-plan-warn" style="background:#F1F5F9;color:#475569;border-color:#E2E8F0">' +
+        'معاينة محسوبة — اضغط «مزامنة» للتحقق من حالة الراوتر الفعلية.</div>';
+    }
+    return html;
+  }
+
+  function openPlanModal(html) {
+    var body = $("#dh-plan-body");
+    if (body) body.innerHTML = html;
+    var modal = $("#dh-plan-modal");
+    if (modal) { modal.hidden = false; modal.classList.add("is-open"); }
+  }
+
+  /* ── row actions ── */
+  function rowData(btn) {
+    var row = btn.closest("[data-dh-row]");
+    try { return { row: row, d: JSON.parse(row.getAttribute("data-json")) }; }
+    catch (e) { return { row: row, d: {} }; }
+  }
+
+  document.addEventListener("click", function (e) {
+    var btn = e.target.closest("button");
+    if (!btn) return;
+
+    if (btn.hasAttribute("data-dh-edit")) { fillForm(rowData(btn).d); return; }
+
+    if (btn.hasAttribute("data-dh-plan")) {
+      var d = rowData(btn).d;
+      var qs = "?interface=" + encodeURIComponent(d.interface_name) + "&ip=" + encodeURIComponent(d.ip_address) +
+        "&subnet_prefix=" + encodeURIComponent(d.subnet_prefix) +
+        "&gateway_last_octet=" + encodeURIComponent(d.gateway_last_octet);
+      openPlanModal('<div class="dh-plan-net">جارٍ الحساب…</div>');
+      fetch(PLAN + qs, { credentials: "same-origin" }).then(function (r) { return r.json(); })
+        .then(function (res) { openPlanModal(renderPlan(res.plan, false)); });
+      return;
+    }
+
+    if (btn.hasAttribute("data-dh-sync")) {
+      var id = rowData(btn).d.id;
+      openPlanModal('<div class="dh-plan-net">جارٍ قراءة الراوتر…</div>');
+      request(api("/" + id + "/sync"), "POST").then(function (res) {
+        if (res.data && res.data.ok) {
+          var extra = res.data.router_state_ok ? "" :
+            '<div class="dh-plan-warn">تعذّر قراءة بعض موارد الراوتر — الخطة تقديرية.</div>';
+          openPlanModal(extra + renderPlan(res.data.plan, false));
+        } else {
+          openPlanModal('<div class="dh-plan-warn">' + esc((res.data && res.data.error) || "تعذّرت المزامنة") + '</div>');
+        }
+      });
+      return;
+    }
+
+    if (btn.hasAttribute("data-dh-ping")) {
+      var pid = rowData(btn).d.id;
+      btn.disabled = true;
+      request(api("/" + pid + "/test-ping"), "POST").then(function (res) {
+        btn.disabled = false;
+        if (res.data && res.data.ok) {
+          var lat = res.data.latency_ms != null ? res.data.latency_ms + " ms" : "—";
+          toast("النتيجة: " + res.data.status + " · " + lat, res.data.status === "up" ? "success" : "info");
+          setTimeout(function () { location.reload(); }, 700);
+        } else {
+          toast((res.data && res.data.error) || "تعذّر الفحص", "error");
+        }
+      });
+      return;
+    }
+
+    if (btn.hasAttribute("data-dh-toggle")) {
+      var tid = rowData(btn).d.id;
+      var enabled = btn.getAttribute("data-enabled") === "1";
+      request(api("/" + tid + (enabled ? "/disable" : "/enable")), "POST").then(function (res) {
+        if (res.data && res.data.ok) location.reload();
+        else toast((res.data && res.data.error) || "تعذّر التغيير", "error");
+      });
+      return;
+    }
+
+    if (btn.hasAttribute("data-dh-delete")) {
+      var info = rowData(btn);
+      if (!window.confirm("حذف الجهاز «" + (info.d.name || "") + "»؟")) return;
+      request(api("/" + info.d.id + "/delete"), "POST").then(function (res) {
+        if (res.data && res.data.ok) { info.row.remove(); toast("حُذف الجهاز.", "success"); applyFilters(); }
+        else toast((res.data && res.data.error) || "تعذّر الحذف", "error");
+      });
+      return;
+    }
+  });
+
+  applyFilters();
+})();

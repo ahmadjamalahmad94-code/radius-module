@@ -111,6 +111,7 @@ def _register_all(bp: Blueprint) -> None:
     from .account import register_account_routes
     from .devices import register_devices_routes
     from .network_devices import register_network_devices_routes
+    from .device_health import register_device_health_routes
     from .network_device_bypass import register_network_device_bypass_routes
     from .network_ip_scan import register_network_ip_scan_routes
     from .remote_device_access import register_remote_device_access_routes
@@ -163,6 +164,7 @@ def _register_all(bp: Blueprint) -> None:
     register_account_routes(bp)
     register_devices_routes(bp)
     register_network_devices_routes(bp)
+    register_device_health_routes(bp)
     register_network_device_bypass_routes(bp)
     register_network_ip_scan_routes(bp)
     register_remote_device_access_routes(bp)

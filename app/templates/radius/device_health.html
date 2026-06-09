@@ -1,0 +1,218 @@
+{# تتبع حالة الأجهزة — Network Device Health Monitor (Phase 1/2).
+   Backend data:
+     devices        — list of dicts (device_health_repo._device_row + router_name)
+     routers        — [{id, name, address}, …]
+     counts         — {total, up, down, high_latency, disabled}
+     device_types   — sorted list of allowed type slugs
+     alert_channels — ['', 'telegram', 'sms', 'whatsapp']
+   No live MikroTik mutation: «المزامنة» and «فحص» are read-only. #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}{{ _('تتبع حالة الأجهزة') }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-tower-broadcast"></i>{% endblock %}
+{% block page_title %}{{ _('تتبع حالة الأجهزة') }}{% endblock %}
+{% block page_sub %}<span class="sub">{{ devices|length }} {{ _('جهاز في النتائج') }}</span>{% endblock %}
+
+{% block head_extra %}{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/device_health.css') }}">
+{% endblock %}
+
+{% block content %}
+
+{% set _type_labels = {
+  'ap':'نقطة وصول','router':'راوتر','link':'وصلة','unifi':'UniFi',
+  'litebeam':'LiteBeam','switch':'سويتش','server':'خادم','camera':'كاميرا','other':'أخرى'} %}
+
+{%- set _kpis = [
+  {'label': _('إجمالي الأجهزة'), 'value': counts.total,        'icon':'tower-broadcast','variant':'brand'},
+  {'label': _('المتصلة'),        'value': counts.up,           'icon':'circle-check',  'variant':'green'},
+  {'label': _('المفصولة'),       'value': counts.down,         'icon':'circle-xmark',  'variant':'red'},
+  {'label': _('بنج عالٍ'),       'value': counts.high_latency, 'icon':'gauge-high',    'variant':'amber'},
+  {'label': _('المعطّلة'),       'value': counts.disabled,     'icon':'circle-pause',  'variant':'grey'}
+] -%}
+
+{%- set _add_btn = hub.btn(_('إضافة جهاز'), variant='primary', icon='plus', size='sm',
+                           attrs='data-uds-modal-open="dh-device-modal" data-dh-add') -%}
+
+<section class="hub-hero-shell">
+{% call hub.megahero(_('تتبع حالة الأجهزة'),
+        subtitle=_('مراقبة الراوترات ونقاط الوصول والروابط وUniFi/LiteBeam عبر MikroTik Netwatch'),
+        icon='tower-broadcast', actions_html=_add_btn, kpis=_kpis,
+        search_action='', search_method='get') %}
+  <input class="hub-input grow" type="search" id="dh-search"
+         placeholder="{{ _('ابحث بالاسم أو الـIP أو المكان…') }}">
+  <select class="hub-input" id="dh-filter-router">
+    <option value="">{{ _('كل الراوترات') }}</option>
+    {% for r in routers %}<option value="{{ r.id }}">{{ r.name }}</option>{% endfor %}
+  </select>
+  <select class="hub-input" id="dh-filter-type">
+    <option value="">{{ _('كل الأنواع') }}</option>
+    {% for t in device_types %}<option value="{{ t }}">{{ _type_labels.get(t, t) }}</option>{% endfor %}
+  </select>
+  <select class="hub-input" id="dh-filter-status">
+    <option value="">{{ _('كل الحالات') }}</option>
+    <option value="up">{{ _('متصل') }}</option>
+    <option value="down">{{ _('مفصول') }}</option>
+    <option value="high_latency">{{ _('بنج عالٍ') }}</option>
+    <option value="unknown">{{ _('غير معروف') }}</option>
+    <option value="disabled">{{ _('معطّل') }}</option>
+  </select>
+{% endcall %}
+</section>
+
+{%- set _help = hub.helppanel(_('كيف تقرأ هذه الصفحة'),
+      intro=_('تُسجَّل الأجهزة هنا ثم تُجهَّز خطة وصول الراوتر (عنوان/بوابة + تجاوز Hotspot + Netwatch). لا يُطبَّق أي تغيير على الراوتر تلقائيًا في هذه المرحلة.'),
+      items=[
+        {'icon':'circle-check','text': _('أخضر = متصل · أحمر = مفصول · كهرماني = بنج عالٍ.')},
+        {'icon':'diagram-project','text': _('المدخل إلزامي — مفتاح النطاق هو الراوتر + المدخل + الشبكة.')},
+        {'icon':'flask','text': _('«معاينة الخطة» و«مزامنة» تعرضان ما سيُضاف للراوتر دون أي طفرة حيّة.')}
+      ],
+      note=_('منع التكرار فعّال: نفس الراوتر بنفس الـIP لا يُضاف مرتين.')) -%}
+
+{% call hub.worklayout(aside_html=_help) %}
+  {% call hub.section(_('الأجهزة المُسجّلة'), icon='list', meta=(devices|length ~ ' ' ~ _('جهاز')), flush=True) %}
+  <div class="dh-table-wrap">
+    <table class="hub-table dh-table" id="dh-table">
+      <thead>
+        <tr>
+          <th>{{ _('الاسم') }}</th>
+          <th>{{ _('النوع') }}</th>
+          <th>{{ _('المدخل') }}</th>
+          <th>IP</th>
+          <th>{{ _('المكان') }}</th>
+          <th>{{ _('آخر فحص') }}</th>
+          <th>{{ _('الحالة') }}</th>
+          <th>{{ _('البنج') }}</th>
+          <th>{{ _('إجراءات') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in devices %}
+        <tr class="dh-row" data-dh-row data-id="{{ d.id }}"
+            data-router="{{ d.router_id }}" data-type="{{ d.device_type }}"
+            data-status="{{ d.status }}"
+            data-search="{{ (d.name ~ ' ' ~ d.ip_address ~ ' ' ~ d.location)|lower }}"
+            data-json='{{ d|tojson }}'>
+          <td class="dh-name">{{ d.name }}<span class="dh-router">{{ d.router_name }}</span></td>
+          <td>{{ _type_labels.get(d.device_type, d.device_type) }}</td>
+          <td class="mono">{{ d.interface_name }}</td>
+          <td class="mono">{{ d.ip_address }}</td>
+          <td>{{ d.location or '—' }}</td>
+          <td class="dh-checked">{{ d.last_checked_at or '—' }}</td>
+          <td>
+            {% set _v = {'up':'green','down':'red','timeout':'red','high_latency':'amber',
+                         'disabled':'grey','apply_failed':'red'}.get(d.status,'grey') %}
+            {% set _l = {'up':'متصل','down':'مفصول','timeout':'انتهت المهلة',
+                         'high_latency':'بنج عالٍ','disabled':'معطّل',
+                         'apply_failed':'فشل التطبيق','unknown':'غير معروف'}.get(d.status, d.status) %}
+            {{ hub.pill(_(_l), variant=_v) }}
+          </td>
+          <td class="mono dh-latency">{{ '%.1f ms'|format(d.last_latency_ms) if d.last_latency_ms is not none else '—' }}</td>
+          <td class="dh-actions">
+            <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-dh-edit
+                    title="{{ _('تعديل') }}"><i class="fa-solid fa-pen"></i></button>
+            <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-dh-plan
+                    title="{{ _('معاينة الخطة') }}"><i class="fa-solid fa-diagram-project"></i></button>
+            <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-dh-sync
+                    title="{{ _('مزامنة مع الراوتر') }}"><i class="fa-solid fa-rotate"></i></button>
+            <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-dh-ping
+                    title="{{ _('فحص ping') }}"><i class="fa-solid fa-satellite-dish"></i></button>
+            {% if d.monitoring_enabled %}
+            <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-dh-toggle data-enabled="1"
+                    title="{{ _('إيقاف المراقبة') }}"><i class="fa-solid fa-pause"></i></button>
+            {% else %}
+            <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-dh-toggle data-enabled="0"
+                    title="{{ _('تفعيل المراقبة') }}"><i class="fa-solid fa-play"></i></button>
+            {% endif %}
+            <button class="hub-btn hub-btn--ghost hub-btn--sm dh-danger" type="button" data-dh-delete
+                    title="{{ _('حذف') }}"><i class="fa-solid fa-trash"></i></button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% if not devices %}
+      {{ hub.empty(_('لا توجد أجهزة مُسجّلة بعد'),
+                   sub=_('اضغط «إضافة جهاز» لتسجيل أول جهاز.'), icon='tower-broadcast') }}
+    {% endif %}
+    <div class="dh-empty-filtered" hidden>{{ hub.empty(_('لا نتائج مطابقة للفلاتر')) }}</div>
+  </div>
+  {% endcall %}
+{% endcall %}
+
+{# ── Add / Edit modal ── #}
+{% set _modal_foot %}
+  <button type="button" class="hub-btn hub-btn--ghost" data-uds-modal-close>{{ _('إلغاء') }}</button>
+  <button type="submit" form="dh-device-form" class="hub-btn hub-btn--primary">
+    <i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ') }}</button>
+{% endset %}
+{% call hub.modal('dh-device-modal', _('إضافة جهاز'), icon='tower-broadcast',
+                  size='lg', footer_html=_modal_foot) %}
+<form id="dh-device-form" class="dh-form">
+  <input type="hidden" name="device_id" value="">
+  <div class="dh-form-grid">
+    <label class="hub-field"><span class="hub-field-label">{{ _('اسم الجهاز') }}<span class="req">*</span></span>
+      <input class="hub-input" name="name" required></label>
+    <label class="hub-field"><span class="hub-field-label">{{ _('النوع') }}<span class="req">*</span></span>
+      <select class="hub-input" name="device_type">
+        {% for t in device_types %}<option value="{{ t }}">{{ _type_labels.get(t, t) }}</option>{% endfor %}
+      </select></label>
+    <label class="hub-field"><span class="hub-field-label">{{ _('الراوتر') }}<span class="req">*</span></span>
+      <select class="hub-input" name="router_id" required>
+        <option value="">{{ _('اختر الراوتر…') }}</option>
+        {% for r in routers %}<option value="{{ r.id }}">{{ r.name }}</option>{% endfor %}
+      </select></label>
+    <label class="hub-field"><span class="hub-field-label">{{ _('المدخل') }}<span class="req">*</span></span>
+      <input class="hub-input mono" name="interface_name" placeholder="ether2" required></label>
+    <label class="hub-field"><span class="hub-field-label">{{ _('عنوان IP للجهاز') }}<span class="req">*</span></span>
+      <input class="hub-input mono" name="ip_address" placeholder="192.168.15.10" required></label>
+    <label class="hub-field"><span class="hub-field-label">{{ _('المكان') }}</span>
+      <input class="hub-input" name="location" placeholder="{{ _('برج/موقع') }}"></label>
+  </div>
+
+  <details class="dh-advanced">
+    <summary>{{ _('إعدادات متقدّمة') }}</summary>
+    <div class="dh-form-grid">
+      <label class="hub-field"><span class="hub-field-label">{{ _('بادئة الشبكة') }}</span>
+        <input class="hub-input mono" name="subnet_prefix" type="number" min="1" max="32" value="24"></label>
+      <label class="hub-field"><span class="hub-field-label">{{ _('آخر أوكتت للبوابة') }}</span>
+        <input class="hub-input mono" name="gateway_last_octet" type="number" min="1" max="254" value="254"></label>
+      <label class="hub-field"><span class="hub-field-label">{{ _('حد البنج (ms)') }}</span>
+        <input class="hub-input mono" name="ping_threshold_ms" type="number" min="1" value="80"></label>
+      <label class="hub-field"><span class="hub-field-label">{{ _('فترة Netwatch (ث)') }}</span>
+        <input class="hub-input mono" name="netwatch_interval_sec" type="number" min="1" value="60"></label>
+      <label class="hub-field"><span class="hub-field-label">{{ _('مهلة Netwatch (ث)') }}</span>
+        <input class="hub-input mono" name="netwatch_timeout_sec" type="number" min="1" value="3"></label>
+      <label class="hub-field"><span class="hub-field-label">{{ _('قناة التنبيه') }}</span>
+        <select class="hub-input" name="alert_channel">
+          <option value="">{{ _('افتراضي المستأجر') }}</option>
+          <option value="telegram">Telegram</option>
+          <option value="sms">SMS</option>
+          <option value="whatsapp">WhatsApp</option>
+        </select></label>
+      <label class="hub-field dh-check"><input type="checkbox" name="monitoring_enabled" checked>
+        <span>{{ _('تفعيل المراقبة') }}</span></label>
+    </div>
+  </details>
+
+  <div class="dh-plan-preview" id="dh-plan-preview" aria-live="polite"></div>
+  <div class="dh-form-error" id="dh-form-error" hidden></div>
+</form>
+{% endcall %}
+
+{# ── Plan / sync result modal ── #}
+{% call hub.modal('dh-plan-modal', _('خطة وصول الراوتر'), icon='diagram-project', size='lg') %}
+<div id="dh-plan-body" aria-live="polite"></div>
+{% endcall %}
+
+<script>
+window.__DH__ = {
+  csrf: (document.querySelector('meta[name="csrf-token"]')||{}).content || '',
+  base: "{{ url_for('radius.device_health_page') }}",
+  api: "{{ url_for('radius.device_health_api_list') }}",
+  planUrl: "{{ url_for('radius.device_health_api_plan') }}"
+};
+</script>
+<script src="{{ url_for('static', filename='js/device_health.js') }}"></script>
+{% endblock %}
