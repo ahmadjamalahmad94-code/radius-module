@@ -14,6 +14,23 @@
   <span class="cdl-pill {{ pair[1] }}"><span class="dot"></span>{{ pair[0] }}</span>
 {% endmacro %}
 
+{% macro prov_label(p) -%}
+{%- set _pm = {
+  'null':           'طابور داخلي',
+  'generic_http':   'بوابة HTTP عامة',
+  'recording':      'مزوّد تسجيل',
+  'smtp':           'بريد SMTP',
+  'twilio':         'تويليو SMS',
+  'meta':           'ميتا واتساب',
+  'whatsapp_cloud': 'واتساب الرسمي',
+  'smpp':           'بوابة SMPP',
+  'telegram':       'تلجرام',
+  'push_fcm':       'إشعارات FCM',
+  'internal':       'داخلي',
+} -%}
+{{- _pm.get(p|string, 'مزوّد غير معروف') if p and p|string else '—' -}}
+{%- endmacro %}
+
 {% block head_extra %}
 {{ super() }}
 <style>
@@ -86,7 +103,7 @@
 
   {% call hub.section("عمليات الإرسال", icon="truck-fast", meta=deliveries|length|string + " عملية", flush=True) %}
     {% if deliveries %}
-      <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25" style="border:none;border-radius:0">
+      <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25" data-uds-export-title="سجل الإرسال" style="border:none;border-radius:0">
         <table class="hub-table" data-testid="delivery-log-table">
           <thead>
             <tr>
@@ -106,7 +123,7 @@
                 <td class="num mono">#{{ item.id }}</td>
                 <td>{{ ch_label(item.channel) }}</td>
                 <td>{{ st_pill(item.status) }}</td>
-                <td class="mono small" style="direction:ltr;text-align:start;white-space:nowrap">{{ item.provider_key or '—' }}</td>
+                <td>{{ prov_label(item.provider_key) }}</td>
                 <td>{{ item.recipient_display }}</td>
                 <td><span class="cdl-err">{{ item.error_message or '' }}</span></td>
               </tr>
@@ -122,19 +139,19 @@
 {% endcall %}
 
 {% if deliveries %}
+<script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
 <script>
 (function(){
   var bar = document.getElementById('cdl-filter');
-  var rows = document.getElementById('cdl-rows');
-  if(!bar || !rows) return;
+  var wrap = document.querySelector('[data-uds-table]');
+  if(!bar || !wrap) return;
   bar.addEventListener('click', function(e){
     var b = e.target.closest('[data-filter]'); if(!b) return;
     bar.querySelectorAll('[data-filter]').forEach(function(x){ x.classList.toggle('is-active', x === b); });
     var f = b.getAttribute('data-filter');
-    Array.prototype.forEach.call(rows.children, function(tr){
-      var g = tr.getAttribute('data-grp');
-      tr.style.display = (f === 'all' || g === f) ? '' : 'none';
-    });
+    if(wrap.__udsApi){
+      wrap.__udsApi.setFilter(f === 'all' ? null : function(r){ return r.getAttribute('data-grp') === f; });
+    }
   });
 })();
 </script>
