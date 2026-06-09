@@ -782,7 +782,7 @@
             <div class="help">{{ _('أقصى عدد أجهزة يتصل بها الحساب في نفس الوقت.') }}</div></div>
           <div class="pl-field"><label>{{ _('بطاقة مشتركة — جلسة واحدة فعّالة') }}</label>
             <div class="pl-chk">{{ toggle_switch(name="shared_single_session", checked=plan.shared_single_session, value="1", on_label="مفعّل", off_label="معطّل") }}</div>
-            <div class="help hub-hint">{{ _('جلسة واحدة فعّالة — الدخول الجديد يفصل القديم. مناسب لبطاقة يومية يتشاركها زبائن المحل واحدًا تلو الآخر: عند دخول مستخدم جديد بنفس البطاقة يُفصل المستخدم السابق تلقائيًا. (يُطبَّق عند بدء جلسة الجديد).') }}</div></div>
+            <div class="help">{{ _('جلسة واحدة فعّالة — الدخول الجديد يفصل القديم. مناسب لبطاقة يومية يتشاركها زبائن المحل واحدًا تلو الآخر: عند دخول مستخدم جديد بنفس البطاقة يُفصل المستخدم السابق تلقائيًا. (يُطبَّق عند بدء جلسة الجديد).') }}</div></div>
           <div class="pl-field"><label>{{ _('ربط MAC') }}</label>
             <div class="pl-chk">{{ toggle_switch(name="bind_mac", checked=plan.bind_mac, value="1") }}</div>
             <div class="help">{{ _('يقيّد الحساب على عنوان MAC أول جهاز يدخل به.') }}</div></div>
@@ -814,13 +814,9 @@
                 <div class="pl-field"><label>{{ _('نطاق عناوين الشبكة') }}</label>
                   <input class="hub-input" type="text" name="address_pool" value="{{ plan.address_pool or '' }}">
                   <div class="help">{{ _('اسم مجمّع عناوين الشبكة العام.') }}</div></div>
-                <div class="pl-field"><label>{{ _('نطاق الخدمة') }}</label>
-                  <select class="hub-select" name="service_scope">
-                    <option value="both" {% if (plan.service_scope or 'both') == 'both' %}selected{% endif %}>{{ _('هوتسبوت وبرودباند') }}</option>
-                    <option value="hotspot" {% if plan.service_scope == 'hotspot' %}selected{% endif %}>{{ _('هوتسبوت فقط') }}</option>
-                    <option value="broadband" {% if plan.service_scope == 'broadband' %}selected{% endif %}>{{ _('برودباند فقط') }}</option>
-                  </select>
-                  <div class="help">{{ _('يحدد نوع الخدمة الذي ينطبق عليه العرض.') }}</div></div>
+                {# «نطاق الخدمة» أُزيل — كان يكرّر بطاقات «نوع الخدمة» أعلى
+                   النموذج. النطاق يُشتقّ خادميًا من نوع الخدمة المختار
+                   (Hotspot→hotspot، PPPoE→broadband، Both→both). #}
                 <div class="pl-field"><label>{{ _('السلفة مسموحة') }}</label>
                   <div class="pl-chk">{{ toggle_switch(name="loan_enabled", checked=plan.loan_enabled, value="1") }}</div>
                   <div class="help">{{ _('يسمح بإقراض وقت/كوتا مؤقتًا للمشترك.') }}</div></div>

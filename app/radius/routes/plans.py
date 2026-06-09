@@ -158,6 +158,19 @@ def _service_type_from_form() -> str:
     return "Hotspot"
 
 
+def _scope_from_service_type(service_type: str) -> str:
+    """نطاق الخدمة (hotspot/broadband/both) مشتقّ من «نوع الخدمة» بدل حقل
+    منفصل مكرّر: حُذف حقل «نطاق الخدمة» من النموذج لأنه يكرّر بطاقات نوع
+    الخدمة، ونشتقّه هنا حتى يحفظ العرض بقابلية الخدمة الصحيحة.
+        Hotspot → hotspot، PPPoE → broadband، Both → both."""
+    t = (service_type or "").strip().lower()
+    if t == "both":
+        return "both"
+    if t in ("pppoe", "broadband"):
+        return "broadband"
+    return "hotspot"
+
+
 def _form_to_dto(*, plan_id: int | None = None) -> AccessPlan:
     days_raw = request.form.getlist("allowed_days") or ["mon","tue","wed","thu","fri","sat","sun"]
 
@@ -169,12 +182,14 @@ def _form_to_dto(*, plan_id: int | None = None) -> AccessPlan:
             flat_meta[mf] = v
     meta_json = json.dumps(_flat_to_grouped(flat_meta), ensure_ascii=False)
 
+    service_type = _service_type_from_form()
+
     return AccessPlan(
         id=plan_id,
         name=_s("name"),
         code=_s("code"),
         plan_type=_s("plan_type").lower() or "time",
-        service_type=_service_type_from_form(),
+        service_type=service_type,
         duration_minutes=_i("duration_minutes"),
         validity_days=_i("validity_days"),
         max_daily_minutes=_i("max_daily_minutes"),
@@ -226,7 +241,8 @@ def _form_to_dto(*, plan_id: int | None = None) -> AccessPlan:
         working_hours_limit=_i("working_hours_limit"),
         hotspot_enabled=_b("hotspot_enabled"),
         ppp_enabled=_b("ppp_enabled"),
-        service_scope=_s("service_scope") or "both",
+        # نطاق الخدمة مشتقّ من «نوع الخدمة» (حُذف الحقل المكرّر من النموذج)
+        service_scope=_scope_from_service_type(service_type),
         loan_enabled=_b("loan_enabled"),
         max_loan_minutes=_i("max_loan_minutes"),
         speed_override_allowed=_b("speed_override_allowed"),
