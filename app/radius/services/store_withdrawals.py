@@ -48,8 +48,9 @@ class WithdrawalRequestService:
     def _row(self, row) -> dict[str, Any]:
         out = row_to_dict(row)
         out["amount"] = minor_to_money(out.get("amount_minor"))
+        # fallback عربي محسوم — لا يتسرّب مفتاح الحالة الخام للعمود
         out["status_ar"] = _STATUS_AR.get(str(out.get("status") or ""),
-                                          out.get("status"))
+                                          "غير محدّدة")
         # العملة المعروضة = المضبوطة حاليًا (مصدر واحد) لا المخزّنة وقت
         # الطلب — فلا تختلط JOD/ILS عبر اللوحة وصفحة الزبون.
         out["currency"] = default_currency()
