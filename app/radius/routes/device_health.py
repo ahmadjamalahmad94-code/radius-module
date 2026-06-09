@@ -57,6 +57,12 @@ def register_device_health_routes(bp: Blueprint) -> None:
                     device_health_api_test_ping, methods=["POST"])
     bp.add_url_rule("/device-health/api/poll", "device_health_api_poll",
                     device_health_api_poll, methods=["POST"])
+    bp.add_url_rule("/device-health/api/devices/<int:device_id>/events",
+                    "device_health_api_events",
+                    device_health_api_events, methods=["GET"])
+    bp.add_url_rule("/device-health/api/devices/<int:device_id>/alerts",
+                    "device_health_api_alerts",
+                    device_health_api_alerts, methods=["GET"])
     bp.add_url_rule("/device-health/api/plan", "device_health_api_plan",
                     device_health_api_plan, methods=["GET"])
 
@@ -209,6 +215,20 @@ def device_health_api_poll():
     from ..services import device_health_poller as poller
     summary = poller.tick(tenant_id=tenant_id)
     return jsonify({"ok": True, "summary": summary})
+
+
+def device_health_api_events(device_id: int):
+    """Phase 6 — recent status-change history for one device."""
+    tenant_id = _tid()
+    events = repo.list_events(tenant_id, device_id=device_id, limit=100)
+    return jsonify({"ok": True, "events": events})
+
+
+def device_health_api_alerts(device_id: int):
+    """Phase 6 — recent alert decisions (sent/skipped/failed) for one device."""
+    tenant_id = _tid()
+    return jsonify({"ok": True,
+                    "alerts": repo.list_alerts(tenant_id, device_id=device_id)})
 
 
 def device_health_api_plan():

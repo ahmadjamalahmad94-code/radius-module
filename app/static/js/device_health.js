@@ -317,6 +317,19 @@
       return;
     }
 
+    if (btn.hasAttribute("data-dh-events")) {
+      var ed = rowData(btn).d;
+      openEventsModal(ed);
+      return;
+    }
+
+    if (btn.hasAttribute("data-dh-tab")) {
+      var modal = $("#dh-events-modal");
+      $all(".dh-tab", modal).forEach(function (t) { t.classList.toggle("is-active", t === btn); });
+      loadEventsTab(modal.getAttribute("data-device-id"), btn.getAttribute("data-dh-tab"));
+      return;
+    }
+
     if (btn.hasAttribute("data-dh-delete")) {
       var info = rowData(btn);
       if (!window.confirm("حذف الجهاز «" + (info.d.name || "") + "»؟")) return;
@@ -327,6 +340,70 @@
       return;
     }
   });
+
+  /* ── event history + alerts modal ── */
+  var EVENT_LABELS = {
+    up: "متصل", down: "مفصول", timeout: "انتهت المهلة", high_latency: "بنج عالٍ",
+    unknown: "غير معروف", disabled: "معطّل", apply_failed: "فشل التطبيق",
+    created: "تسجيل", updated: "تحديث", recovered: "تعافى", recovery: "تعافى"
+  };
+  var EVENT_COLOR = {
+    up: "#16A34A", recovery: "#16A34A", down: "#DC2626", timeout: "#DC2626",
+    high_latency: "#D97706", apply_failed: "#DC2626", created: "#6366F1", updated: "#6366F1"
+  };
+  var ALERT_STATUS = { sent: "أُرسل", skipped: "مُتجاوز (تهدئة)", failed: "فشل الإرسال" };
+
+  function openEventsModal(d) {
+    var modal = $("#dh-events-modal");
+    if (!modal) return;
+    modal.setAttribute("data-device-id", d.id);
+    $all(".dh-tab", modal).forEach(function (t) { t.classList.toggle("is-active", t.getAttribute("data-dh-tab") === "events"); });
+    var head = modal.querySelector(".uds-modal-head h3");
+    if (head) head.innerHTML = '<i class="fa-solid fa-clock-rotate-left"></i> سجل «' + esc(d.name || "") + '»';
+    modal.hidden = false; modal.classList.add("is-open");
+    loadEventsTab(d.id, "events");
+  }
+
+  function loadEventsTab(deviceId, tab) {
+    var body = $("#dh-events-body");
+    if (!body) return;
+    body.innerHTML = '<div class="dh-plan-net">جارٍ التحميل…</div>';
+    var url = api("/" + deviceId + "/" + (tab === "alerts" ? "alerts" : "events"));
+    fetch(url, { credentials: "same-origin" }).then(function (r) { return r.json(); })
+      .then(function (res) {
+        if (tab === "alerts") body.innerHTML = renderAlerts(res.alerts || []);
+        else body.innerHTML = renderEvents(res.events || []);
+      }).catch(function () { body.innerHTML = '<div class="dh-plan-warn">تعذّر التحميل</div>'; });
+  }
+
+  function renderEvents(events) {
+    if (!events.length) return '<div class="dh-empty-mini">لا أحداث بعد.</div>';
+    var html = '<ul class="dh-timeline">';
+    events.forEach(function (e) {
+      var color = EVENT_COLOR[e.event_type] || "#94A3B8";
+      var lbl = EVENT_LABELS[e.new_status] || EVENT_LABELS[e.event_type] || e.event_type;
+      var lat = e.latency_ms != null ? ' · ' + e.latency_ms + ' ms' : '';
+      html += '<li class="dh-tl-item"><span class="dh-tl-dot" style="background:' + color + '"></span>' +
+        '<div class="dh-tl-body"><span class="dh-tl-title" style="color:' + color + '">' + esc(lbl) + lat + '</span>' +
+        '<span class="dh-tl-msg">' + esc(e.message || "") + '</span>' +
+        '<span class="dh-tl-time">' + esc(e.created_at || "") + '</span></div></li>';
+    });
+    return html + '</ul>';
+  }
+
+  function renderAlerts(alerts) {
+    if (!alerts.length) return '<div class="dh-empty-mini">لا تنبيهات بعد.</div>';
+    var html = '<ul class="dh-timeline">';
+    alerts.forEach(function (a) {
+      var color = a.status === "sent" ? "#16A34A" : a.status === "failed" ? "#DC2626" : "#94A3B8";
+      var atype = EVENT_LABELS[a.alert_type] || a.alert_type;
+      html += '<li class="dh-tl-item"><span class="dh-tl-dot" style="background:' + color + '"></span>' +
+        '<div class="dh-tl-body"><span class="dh-tl-title" style="color:' + color + '">' + esc(atype) +
+        ' · ' + esc(ALERT_STATUS[a.status] || a.status) + ' · ' + esc(a.channel || "") + '</span>' +
+        '<span class="dh-tl-time">' + esc(a.created_at || "") + '</span></div></li>';
+    });
+    return html + '</ul>';
+  }
 
   applyFilters();
 })();

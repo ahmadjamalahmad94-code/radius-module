@@ -597,6 +597,18 @@ def add_alert(
         return int(cur.lastrowid)
 
 
+def list_alerts(tenant_id: int, *, device_id: Optional[int] = None,
+                limit: int = 100) -> list[dict]:
+    sql = "SELECT * FROM network_device_monitor_alerts WHERE tenant_id = ?"
+    args: list = [int(tenant_id)]
+    if device_id is not None:
+        sql += " AND device_id = ?"
+        args.append(int(device_id))
+    sql += " ORDER BY id DESC LIMIT ?"
+    args.append(max(1, min(int(limit), 1000)))
+    return [dict(r) for r in db().execute(sql, args).fetchall()]
+
+
 def last_alert_at(tenant_id: int, dedup_key: str) -> Optional[str]:
     """Newest created_at for a dedup bucket (any status) — the cooldown gate."""
     cur = db().execute(

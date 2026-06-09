@@ -77,3 +77,25 @@
 /* Phase 3 apply button inside the plan/sync modal */
 .dh-plan-apply { margin-top: 14px; display: flex; flex-direction: column; gap: 6px; }
 .dh-apply-hint { font-size: 11.5px; color: var(--hub-text-mute, #94A3B8); }
+
+/* Phase 6 — event/alert history modal */
+.dh-events-tabs { display: flex; gap: 6px; margin-bottom: 12px; border-bottom: 1px solid var(--hub-border, #E2E8F0); }
+.dh-tab {
+  border: 0; background: none; cursor: pointer; padding: 8px 14px;
+  font-size: 13px; font-weight: 600; color: var(--hub-text-mute, #94A3B8);
+  border-bottom: 2px solid transparent; margin-bottom: -1px;
+}
+.dh-tab.is-active { color: var(--hub-accent, #6366F1); border-bottom-color: var(--hub-accent, #6366F1); }
+
+.dh-empty-mini { padding: 20px; text-align: center; color: var(--hub-text-mute, #94A3B8); font-size: 13px; }
+
+.dh-timeline { list-style: none; margin: 0; padding: 0; }
+.dh-tl-item { display: flex; gap: 10px; padding: 8px 2px; align-items: flex-start; }
+.dh-tl-dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 5px; flex: 0 0 auto; }
+.dh-tl-body { display: flex; flex-direction: column; gap: 2px; }
+.dh-tl-title { font-weight: 600; font-size: 13px; }
+.dh-tl-msg { font-size: 12.5px; color: var(--hub-text, #334155); }
+.dh-tl-time {
+  font-size: 11px; color: var(--hub-text-mute, #94A3B8); direction: ltr;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}

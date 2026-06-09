@@ -120,6 +120,8 @@
                     title="{{ _('مزامنة مع الراوتر') }}"><i class="fa-solid fa-rotate"></i></button>
             <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-dh-ping
                     title="{{ _('فحص ping') }}"><i class="fa-solid fa-satellite-dish"></i></button>
+            <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-dh-events
+                    title="{{ _('سجل الأحداث') }}"><i class="fa-solid fa-clock-rotate-left"></i></button>
             {% if d.monitoring_enabled %}
             <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-dh-toggle data-enabled="1"
                     title="{{ _('إيقاف المراقبة') }}"><i class="fa-solid fa-pause"></i></button>
@@ -206,6 +208,15 @@
 {# ── Plan / sync result modal ── #}
 {% call hub.modal('dh-plan-modal', _('خطة وصول الراوتر'), icon='diagram-project', size='lg') %}
 <div id="dh-plan-body" aria-live="polite"></div>
+{% endcall %}
+
+{# ── Event history + alerts modal ── #}
+{% call hub.modal('dh-events-modal', _('سجل الأحداث والتنبيهات'), icon='clock-rotate-left', size='lg') %}
+<div class="dh-events-tabs">
+  <button type="button" class="dh-tab is-active" data-dh-tab="events">{{ _('الأحداث') }}</button>
+  <button type="button" class="dh-tab" data-dh-tab="alerts">{{ _('التنبيهات') }}</button>
+</div>
+<div id="dh-events-body" aria-live="polite"></div>
 {% endcall %}
 
 <script>
