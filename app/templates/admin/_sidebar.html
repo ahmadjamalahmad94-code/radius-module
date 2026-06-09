@@ -188,7 +188,6 @@
 {%- set m_perms       = (path == url_for('radius.mt_permission_matrix')) -%}
 {# NPC — Network Policy Center #}
 {%- set m_npc            = ('/network-policy/' in path) -%}
-{%- set m_npc_remote     = ('/network-policy/remote-access' in path) -%}
 {%- set m_npc_block      = ('/network-policy/web-block' in path) -%}
 {%- set m_npc_walled     = ('/network-policy/walled-garden' in path) -%}
 

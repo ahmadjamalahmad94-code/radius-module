@@ -2457,17 +2457,6 @@ body.mt-modal-open{overflow:hidden}
           <h5 class="np-svc-title">{{ _('سياسات الشبكة') }}</h5>
           <span class="np-svc-status-dot is-tool" title="{{ _('أداة') }}"></span>
         </a>
-        {# الوصول البعيد — القائمة المُجزّأة لهذا الراوتر، ونقطة
-           الحالة من جرد remote-access (دمج بطاقة «اتصال عن بُعد»
-           القديمة هنا — مرّة واحدة). #}
-        <a class="np-svc-card"
-           data-mt-router-link="npc-remote-access"
-           data-rh-svc-card="remote-access"
-           href="{{ url_for('radius.npc_remote_access_list_scoped', nas_id=nas.id) }}">
-          <span class="np-svc-icon np-svc-icon--purple"><i class="fa-solid fa-key"></i></span>
-          <h5 class="np-svc-title">{{ _('الوصول البعيد') }}</h5>
-          <span class="np-svc-status-dot is-inactive" data-rh-svc-status title="{{ _('غير مفعّلة') }}"></span>
-        </a>
         {# حجب المواقع — مرّة واحدة فقط (دُمجت خدمة block-sites مع
            قائمة قواعد الحجب). نقطة الحالة من جرد block-sites. #}
         <a class="np-svc-card"

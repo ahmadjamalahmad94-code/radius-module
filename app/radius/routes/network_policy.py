@@ -9,14 +9,15 @@ action that touches MikroTik state is gated behind Phase 5
 (policies / targets / entries / script_versions) and renders
 the resulting plan for human review.
 
-Three sub-services share one URL tree and one template
-family. A small `_SERVICE_REGISTRY` dispatches per-service
-behaviour (repo handle, planner, audit event labels,
-permissions, view-model builders) so route bodies stay small.
+The two sub-services here (حظر المواقع، المواقع المسموحة)
+share one URL tree and one template family. A small
+`_SERVICE_REGISTRY` dispatches per-service behaviour (repo
+handle, planner, audit event labels, permissions, view-model
+builders) so route bodies stay small.
 
-Sidebar entry: «الشبكة → سياسات الشبكة → [الوصول البعيد /
-حظر المواقع / المواقع المسموحة]». The list page is the
-landing for each sub-service.
+Sidebar entry: «الشبكة → سياسات الشبكة → [حظر المواقع /
+المواقع المسموحة]». The list page is the landing for each
+sub-service.
 """
 from __future__ import annotations
 
@@ -34,7 +35,6 @@ from ..db.repos import (
     npc_change_sets_repo as cs_repo,
     npc_common as nc,
     npc_deployments_repo as dep_repo,
-    npc_remote_access_repo as ra_repo,
     npc_scripts_repo as scripts_repo,
     npc_walled_garden_repo as wg_repo,
     npc_web_block_repo as wb_repo,
@@ -52,8 +52,6 @@ from ..services import (
     npc_impact_analyzer as impact_svc,
     npc_policy_health as health_svc,
     npc_recommendations as rec_svc,
-    npc_remote_access as ra_svc,
-    npc_remote_access_planner as ra_planner,
     npc_rollback_service as rollback_svc,
     npc_script_renderer as renderer,
     npc_snapshot_capture_service as snapshot_capture_svc,
@@ -62,9 +60,6 @@ from ..services import (
 )
 from ..services.audit import get_audit_service
 from ..services.mt_permissions import (
-    PERM_NPC_REMOTE_ACCESS_MANAGE,
-    PERM_NPC_REMOTE_ACCESS_PREVIEW,
-    PERM_NPC_REMOTE_ACCESS_VIEW,
     PERM_NPC_WALLED_GARDEN_MANAGE,
     PERM_NPC_WALLED_GARDEN_PREVIEW,
     PERM_NPC_WALLED_GARDEN_VIEW,
@@ -91,24 +86,6 @@ class _ServiceDef:
 
 
 _REGISTRY: dict[str, _ServiceDef] = {
-    "remote-access": _ServiceDef(
-        key=nc.SERVICE_REMOTE_ACCESS,
-        url_slug="remote-access",
-        label_ar="الوصول البعيد",
-        icon="user-shield",
-        perms={
-            "view":    PERM_NPC_REMOTE_ACCESS_VIEW,
-            "manage":  PERM_NPC_REMOTE_ACCESS_MANAGE,
-            "preview": PERM_NPC_REMOTE_ACCESS_PREVIEW,
-        },
-        audit_actions={
-            "created":  ev.EVT_RA_POLICY_CREATED,
-            "updated":  ev.EVT_RA_POLICY_UPDATED,
-            "deleted":  ev.EVT_RA_POLICY_DELETED,
-            "preview":  ev.EVT_RA_PREVIEW_GENERATED,
-        },
-        target_type=ev.TARGET_REMOTE_ACCESS,
-    ),
     "web-block": _ServiceDef(
         key=nc.SERVICE_WEB_BLOCK,
         url_slug="web-block",
@@ -241,15 +218,14 @@ def _nas_name(router_id: Optional[int]) -> str:
 
 @dataclass
 class _PolicyAdapter:
-    """Uniform shape over the three per-service repos so the
-    route bodies don't have to switch on `service` constantly."""
+    """Uniform shape over the per-service repos so the route
+    bodies don't have to switch on `service` constantly."""
     list_for_tenant: Callable[[int], list[dict]]
     get: Callable[[int, int], Optional[dict]]
     create: Callable[..., int]
     update: Callable[..., Optional[dict]]
     delete: Callable[[int, int], bool]
     plan: Callable[..., renderer.ScriptPlan]
-    # Targets/entries surface — None for remote_access.
     list_children: Optional[Callable[[int], list[dict]]] = None
     add_child: Optional[Callable[..., int]] = None
     get_child: Optional[Callable[[int], Optional[dict]]] = None
@@ -259,15 +235,6 @@ class _PolicyAdapter:
 
 
 def _adapter(svc: _ServiceDef) -> _PolicyAdapter:
-    if svc.key == nc.SERVICE_REMOTE_ACCESS:
-        return _PolicyAdapter(
-            list_for_tenant=ra_repo.list_for_tenant,
-            get=ra_repo.get_by_id,
-            create=ra_repo.create,
-            update=ra_repo.update,
-            delete=ra_repo.delete,
-            plan=lambda policy, **_kw: ra_planner.plan(policy),
-        )
     if svc.key == nc.SERVICE_WEB_BLOCK:
         return _PolicyAdapter(
             list_for_tenant=wb_repo.list_policies_for_tenant,
@@ -308,26 +275,9 @@ def _adapter(svc: _ServiceDef) -> _PolicyAdapter:
 
 def _risk_for(svc: _ServiceDef, policy: dict) -> str:
     """Compact risk label for a policy. Pure data — no
-    network. Mirrors the planner's risk model so the list
-    card matches the preview screen."""
-    if svc.key == nc.SERVICE_REMOTE_ACCESS:
-        assess = ra_svc.assess_policy(
-            allow_winbox=bool(policy.get("allow_winbox")),
-            allow_ssh=bool(policy.get("allow_ssh")),
-            allow_api=bool(policy.get("allow_api")),
-            allow_api_ssl=bool(policy.get("allow_api_ssl")),
-            allow_webfig_http=bool(
-                policy.get("allow_webfig_http")),
-            allow_webfig_https=bool(
-                policy.get("allow_webfig_https")),
-            source_address_list=str(
-                policy.get("source_address_list") or ""),
-            expires_at=str(policy.get("expires_at") or ""),
-        )
-        return assess.risk
-    # web_block / walled_garden risk is bounded by what the
-    # operator asked for; we mark them low/medium without a
-    # heavy assessor since they don't open ports.
+    network. web_block / walled_garden risk is bounded by what
+    the operator asked for; we mark them low without a heavy
+    assessor since they don't open ports."""
     return "low"
 
 
@@ -335,17 +285,16 @@ def _risk_for(svc: _ServiceDef, policy: dict) -> str:
 
 
 def register_network_policy_routes(bp: Blueprint) -> None:
-    # Landing — now a router-picker (was: redirect to
-    # remote-access list). The intent: the operator picks a
-    # router first, then sees that router's policies — which
-    # matches how MikroTik state actually scopes anyway.
+    # Landing — a router-picker. The operator picks a router
+    # first, then sees that router's policies — which matches
+    # how MikroTik state actually scopes anyway.
     bp.add_url_rule(
         "/network-policy/",
         "network_policy_index",
         npc_index,
         methods=["GET"],
     )
-    # Per-router landing — redirects to the remote-access
+    # Per-router landing — redirects to the web-block
     # tab of the picked router. Linked as a dashboard tab.
     bp.add_url_rule(
         "/mt/<int:nas_id>/network-policies/",
@@ -478,7 +427,6 @@ def npc_index():
     for router in routers:
         rid = int(router["id"])
         router["counts"] = {
-            nc.SERVICE_REMOTE_ACCESS: len(ra_repo.list_for_router(_tid(), rid)),
             nc.SERVICE_WEB_BLOCK: len(
                 wb_repo.list_policies_for_router(_tid(), rid)
             ),
@@ -495,10 +443,10 @@ def npc_index():
 
 
 def _npc_router_landing(nas_id: int):
-    """Per-router NPC landing — redirects to the
-    remote-access tab of the picked router."""
+    """Per-router NPC landing — redirects to the web-block tab
+    of the picked router."""
     return redirect(url_for(
-        f"radius.npc_{nc.SERVICE_REMOTE_ACCESS}_list_scoped",
+        f"radius.npc_{nc.SERVICE_WEB_BLOCK}_list_scoped",
         nas_id=int(nas_id),
     ))
 
@@ -536,9 +484,7 @@ def _make_list_view(svc: _ServiceDef, *, scoped: bool = False):
         ad = _adapter(svc)
         if scoped_to_nas is not None:
             rid = int(scoped_to_nas["id"])
-            if svc.key == nc.SERVICE_REMOTE_ACCESS:
-                rows = ra_repo.list_for_router(_tid(), rid)
-            elif svc.key == nc.SERVICE_WEB_BLOCK:
+            if svc.key == nc.SERVICE_WEB_BLOCK:
                 rows = wb_repo.list_policies_for_router(
                     _tid(), rid,
                 )
@@ -584,30 +530,6 @@ def _make_list_view(svc: _ServiceDef, *, scoped: bool = False):
 # ─── Create / edit view ──────────────────────────────────────
 
 
-def _form_kwargs_remote(form) -> dict[str, Any]:
-    """Pull the create_remote_access kwargs out of a form dict
-    in a way that defaults checkboxes to False (HTML doesn't
-    submit unchecked boxes)."""
-    return {
-        "name": (form.get("name") or "").strip(),
-        "router_id": int(form.get("router_id") or 0),
-        "allow_winbox": _bool_from_form(form.get("allow_winbox")),
-        "allow_ssh": _bool_from_form(form.get("allow_ssh")),
-        "allow_api": _bool_from_form(form.get("allow_api")),
-        "allow_api_ssl": _bool_from_form(
-            form.get("allow_api_ssl")),
-        "allow_webfig_http": _bool_from_form(
-            form.get("allow_webfig_http")),
-        "allow_webfig_https": _bool_from_form(
-            form.get("allow_webfig_https")),
-        "source_address_list": (
-            form.get("source_address_list") or "").strip(),
-        "expires_at": (form.get("expires_at") or "").strip(),
-        "reason": (form.get("reason") or "").strip(),
-        "enabled": _bool_from_form(form.get("enabled", "1")),
-    }
-
-
 def _form_kwargs_web(form) -> dict[str, Any]:
     return {
         "name": (form.get("name") or "").strip(),
@@ -631,8 +553,6 @@ def _form_kwargs_garden(form) -> dict[str, Any]:
 
 
 def _extract_form(svc: _ServiceDef, form) -> dict[str, Any]:
-    if svc.key == nc.SERVICE_REMOTE_ACCESS:
-        return _form_kwargs_remote(form)
     if svc.key == nc.SERVICE_WEB_BLOCK:
         return _form_kwargs_web(form)
     return _form_kwargs_garden(form)
@@ -863,15 +783,6 @@ def _peer_policies_for_route(svc: _ServiceDef) -> list[
     current tenant. Read-only — no MikroTik contact."""
     out: list[conflict_svc.PeerPolicy] = []
     tid = _tid()
-    for row in ra_repo.list_for_tenant(tid):
-        out.append(conflict_svc.PeerPolicy(
-            service=nc.SERVICE_REMOTE_ACCESS,
-            id=int(row["id"]), name=str(row["name"]),
-            slug=str(row["slug"]),
-            router_id=int(row["router_id"]),
-            enabled=bool(row["enabled"]),
-            children=(),
-        ))
     for row in wb_repo.list_policies_for_tenant(tid):
         targets = wb_repo.list_targets(int(row["id"]))
         out.append(conflict_svc.PeerPolicy(
@@ -993,49 +904,6 @@ def _build_intelligence(
         readiness_obj.decision.required_confirmations
     )
 
-    # For remote-access policies, compute the IP+port endpoints
-    # the operator will use once the policy is applied. Pure
-    # function — no router contact.
-    access_urls: list[dict] = []
-    remote_access_urls: list[dict] = []
-    if svc.key == nc.SERVICE_REMOTE_ACCESS:
-        try:
-            from ..services.npc_remote_access_urls import (
-                compute_access_urls,
-                compute_remote_access_urls,
-            )
-            from ..services import npc_remote_tunnel
-            from ..db.repos import (
-                nas_repo,
-                npc_remote_port_mappings_repo as ports_repo,
-            )
-            nas_obj = nas_repo.get_nas(
-                _tid(), int(policy["router_id"]),
-            )
-            if nas_obj is not None:
-                nas_dict = {
-                    "address":  nas_obj.address,
-                    "ssh_port": nas_obj.ssh_port,
-                }
-                access_urls = compute_access_urls(
-                    policy, nas_dict,
-                )
-            # VPS-public URLs come from the saved port mappings.
-            # If the operator hasn't applied yet, the list is
-            # empty and the section quietly hides itself.
-            host = (npc_remote_tunnel.public_host()
-                    or (request.host.split(":", 1)[0]
-                        if request else ""))
-            mappings = ports_repo.list_for_router(
-                int(policy["router_id"]),
-            )
-            remote_access_urls = compute_remote_access_urls(
-                policy, host, mappings,
-            )
-        except Exception:  # noqa: BLE001
-            access_urls = []
-            remote_access_urls = []
-
     return {
         "impact":              impact,
         "conflicts":           conflicts,
@@ -1046,8 +914,8 @@ def _build_intelligence(
         "health":              health,
         "recommendations":     recommendations,
         "readiness":           readiness,
-        "access_urls":         access_urls,
-        "remote_access_urls":  remote_access_urls,
+        "access_urls":         [],
+        "remote_access_urls":  [],
     }
 
 
@@ -1301,44 +1169,6 @@ def _make_apply_view(svc: _ServiceDef):
             canary=intelligence["canary"],
         )
 
-        # For successful remote-access applies, allocate VPS
-        # public ports for the enabled services + regenerate
-        # nginx stream config. This is what makes Winbox / SSH
-        # / WebFig reachable from outside the network via the
-        # VPS tunnel.
-        if (result.ok
-                and svc.key == nc.SERVICE_REMOTE_ACCESS):
-            try:
-                from ..services import npc_remote_tunnel as _tun
-                _tun.ensure_tunnels_for_policy(
-                    tenant_id=_tid(), policy=policy,
-                )
-                _tun.regenerate_and_reload()
-            except Exception:  # noqa: BLE001
-                # Don't break the apply success path because of
-                # an nginx wiring issue — operator can retry.
-                # We use a module-local logger here, not Flask's
-                # current_app, so the exception handler itself
-                # cannot raise.
-                import logging as _lg
-                _lg.getLogger(__name__).exception(
-                    "npc remote-tunnel wiring failed for "
-                    "router=%d policy=%d — apply itself was "
-                    "successful; the VPS-public URLs will "
-                    "appear once the operator retries (or "
-                    "after fixing /etc/hoberadius/"
-                    "nginx-streams.d permissions).",
-                    int(policy["router_id"]),
-                    int(policy["id"]),
-                )
-                flash(
-                    "تم التطبيق على الراوتر بنجاح، لكن تعذّر "
-                    "كتابة إعدادات nginx — تحقّق من صلاحيات "
-                    "/etc/hoberadius/nginx-streams.d. روابط "
-                    "VPS لن تظهر حتى يُحلّ هذا.",
-                    "warning",
-                )
-
         # Surface the result via flash + redirect back to the
         # preview page. Phase 6 will render a dedicated result
         # template; for Phase 4 we keep the UI minimal so the
@@ -1561,23 +1391,6 @@ def _row_to_form_dict(svc: _ServiceDef, row: dict) -> dict:
     """Project a stored row down to the kwargs each repo's
     `create` accepts. Mirror of the form-kwargs extractors but
     populated from a row instead of an HTTP form."""
-    if svc.key == nc.SERVICE_REMOTE_ACCESS:
-        return {
-            "name": row["name"], "slug": None,
-            "router_id": row["router_id"],
-            "allow_winbox": bool(row.get("allow_winbox")),
-            "allow_ssh": bool(row.get("allow_ssh")),
-            "allow_api": bool(row.get("allow_api")),
-            "allow_api_ssl": bool(row.get("allow_api_ssl")),
-            "allow_webfig_http": bool(row.get("allow_webfig_http")),
-            "allow_webfig_https": bool(
-                row.get("allow_webfig_https")),
-            "source_address_list":
-                row.get("source_address_list") or "",
-            "expires_at": row.get("expires_at") or "",
-            "reason": row.get("reason") or "",
-            "enabled": bool(row.get("enabled")),
-        }
     if svc.key == nc.SERVICE_WEB_BLOCK:
         return {
             "name": row["name"], "slug": None,
@@ -1749,26 +1562,7 @@ def _explain_plan(
     will_block: list[str] = []
     will_allow: list[str] = []
 
-    if svc.key == nc.SERVICE_REMOTE_ACCESS:
-        n_filter = len(plan.filter_ops)
-        n_sched = len(plan.scheduler_ops)
-        if n_filter:
-            will_do.append(
-                f"سيتم فتح {n_filter} منفذ إداري على سلسلة "
-                "input مع علامة managed."
-            )
-        if n_sched:
-            will_do.append(
-                "سيتم إنشاء مهمّة /system scheduler "
-                "تُحذف القواعد تلقائياً عند تاريخ الانتهاء."
-            )
-        will_skip.extend([
-            "إعدادات /ip service الأصلية لا تُلمس.",
-            "حسابات المستخدمين على الراوتر لا تُعدَّل.",
-            "حركة العملاء (forward chain) لا تتأثّر.",
-        ])
-
-    elif svc.key == nc.SERVICE_WEB_BLOCK:
+    if svc.key == nc.SERVICE_WEB_BLOCK:
         for c in children:
             if c.get("status") == "active":
                 will_block.append(c.get("normalized_value")
