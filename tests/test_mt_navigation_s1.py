@@ -86,13 +86,16 @@ def test_dashboard_has_quicknav_strip(app, client):
     assert "data-mt-router-quicknav" in html
 
 
-def test_dashboard_quicknav_links_to_program_page(app, client):
+def test_dashboard_quicknav_no_longer_shows_program_card(app, client):
+    """يونيو 2026 — طلب المالك: أُزيلت بطاقة «برمجة الشبكة» من شبكة
+    خدمات لوحة الراوتر. الوظيفة تُغطّيها بطاقات الخدمات المستقلّة
+    (الهوت سبوت/البرودباند/خدمات المنافذ). الـroute mt_program_form
+    يبقى مُسجَّلًا لمن يصل لها مباشرةً — لكن سطح المستخدم لا يَعرضها."""
     _seed(app, nas_id=42)
     _login(client)
     html = client.get("/admin/radius/mt/42/dashboard").get_data(as_text=True)
-    assert 'data-mt-router-link="program"' in html
-    assert 'href="/admin/radius/mt/42/program"' in html
-    assert "برمجة الشبكة" in html
+    assert 'data-mt-router-link="program"' not in html
+    assert "برمجة الشبكة" not in html
 
 
 def test_dashboard_quicknav_links_to_login_designer(app, client):
@@ -117,12 +120,16 @@ def test_dashboard_quicknav_links_to_fleet_diagnostics(app, client):
 
 def test_dashboard_quicknav_uses_real_router_id(app, client):
     """Regression: it'd be easy to hard-code nas_id=1 in the
-    template. Verify the link carries the actual id."""
+    template. Verify the surviving cards carry the actual id.
+
+    تحديث يونيو 2026: بطاقة «برمجة الشبكة» أُزيلت، لذا نتحقّق من
+    بطاقتَين باقيتَين تحملان nas_id في الرابط: «مصمّم صفحة الدخول»
+    و«النسخ الاحتياطية»."""
     _seed(app, nas_id=777)
     _login(client)
     html = client.get("/admin/radius/mt/777/dashboard").get_data(as_text=True)
-    assert "/admin/radius/mt/777/program" in html
     assert "/admin/radius/mt/777/login-designer" in html
+    assert "/admin/radius/mt/777/backups" in html
 
 
 # ─── Operations Center fleet rows ─────────────────────────────

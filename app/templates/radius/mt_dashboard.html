@@ -2408,14 +2408,15 @@ body.mt-modal-open{overflow:hidden}
          "mt-dashboard-npc-link" / data-rh-loop-tile) محفوظة كما
          هي على نفس البطاقات. #}
       <div class="np-svc-grid">
-        {# برمجة الشبكة الكاملة (أداة — لا حالة جرد). #}
-        <a class="np-svc-card np-svc-card--tool"
-           data-mt-router-link="program"
-           href="{{ url_for('radius.mt_program_form', nas_id=nas.id) }}">
-          <span class="np-svc-icon np-svc-icon--slate"><i class="fa-solid fa-network-wired"></i></span>
-          <h5 class="np-svc-title">{{ _('برمجة الشبكة') }}</h5>
-          <span class="np-svc-status-dot is-tool" title="{{ _('أداة') }}"></span>
-        </a>
+        {# «برمجة الشبكة» الكاملة وبطاقة «سياسات الشبكة» (NPC) أُزيلتا
+           من هذه الشبكة بطلب المالك (يونيو 2026):
+             • «برمجة الشبكة» — تنفّذها الآن خدمات الراوتر المستقلّة
+               بشكل أوضح للمشغّل (الهوت سبوت/البرودباند/المنافذ…).
+             • «سياسات الشبكة» — أُلغيت غلاف NPC، وأُعيدت «حظر المواقع»
+               و«المواقع المسموحة» كبطاقتَين مستقلّتَين تحت بنفس
+               الـrouting المُجزّأ npc_*_list_scoped — لكن سطح
+               المستخدم لم يَعُد يمرّ عبر صفحة هبوط NPC.
+           الـroutes تبقى مُسجَّلة لمن يصل لها مباشرة. #}
         {# الهوت سبوت — خدمة، نقطة الحالة من جرد hotspot.
            الاسم العرضي في هذه الشبكة فقط = «الهوت سبوت» (طلب
            المالك). المُعرّف/الـservice_key ومسار المعالج
@@ -2447,28 +2448,21 @@ body.mt-modal-open{overflow:hidden}
           <h5 class="np-svc-title">{{ _('مصمّم صفحة الدخول') }}</h5>
           <span class="np-svc-status-dot is-tool" title="{{ _('أداة') }}"></span>
         </a>
-        {# سياسات الشبكة — صفحة الهبوط المُجزّأة لكل راوتر (أداة).
-           تحمل data-test="mt-dashboard-npc-link" لاختبار NPC. #}
-        <a class="np-svc-card np-svc-card--tool"
-           data-test="mt-dashboard-npc-link"
-           data-mt-router-link="network-policies"
-           href="{{ url_for('radius.npc_router_landing', nas_id=nas.id) }}">
-          <span class="np-svc-icon np-svc-icon--slate"><i class="fa-solid fa-shield-halved"></i></span>
-          <h5 class="np-svc-title">{{ _('سياسات الشبكة') }}</h5>
-          <span class="np-svc-status-dot is-tool" title="{{ _('أداة') }}"></span>
-        </a>
-        {# حجب المواقع — مرّة واحدة فقط (دُمجت خدمة block-sites مع
-           قائمة قواعد الحجب). نقطة الحالة من جرد block-sites. #}
+        {# «حظر المواقع» — بطاقة مباشرة على صفحة الخدمة (لا تمرّ عبر
+           صفحة هبوط NPC). الـendpoint npc_web_block_list_scoped هو
+           الـrouting المُجزّأ الموجود فعلًا للراوتر — نَستخدمه مباشرةً
+           كرابط الخدمة كما طلب المالك بعد إزالة غلاف NPC. الاسم
+           العرضي «حظر المواقع» (طلب المالك). #}
         <a class="np-svc-card"
            data-mt-router-link="npc-web-block"
            data-rh-svc-card="block-sites"
            href="{{ url_for('radius.npc_web_block_list_scoped', nas_id=nas.id) }}">
           <span class="np-svc-icon np-svc-icon--red"><i class="fa-solid fa-ban"></i></span>
-          <h5 class="np-svc-title">{{ _('حجب المواقع') }}</h5>
+          <h5 class="np-svc-title">{{ _('حظر المواقع') }}</h5>
           <span class="np-svc-status-dot is-inactive" data-rh-svc-status title="{{ _('غير مفعّلة') }}"></span>
         </a>
-        {# المواقع المسموحة — مرّة واحدة (دُمجت خدمة open-sites مع
-           قائمة walled-garden). نقطة الحالة من جرد open-sites. #}
+        {# «المواقع المسموحة» — بطاقة مباشرة. نفس فكرة «حظر المواقع»:
+           رابط مباشر إلى npc_walled_garden_list_scoped بلا غلاف NPC. #}
         <a class="np-svc-card"
            data-mt-router-link="npc-walled-garden"
            data-rh-svc-card="open-sites"
@@ -2572,6 +2566,25 @@ body.mt-modal-open{overflow:hidden}
           <span class="rh-inv-card-text">
             <h5 class="np-svc-title">{{ _('تشخيص الراوترات') }}</h5>
             <span class="rh-inv-card-desc">{{ _('فحص الاتصال والصحّة لكل راوترات الأسطول مع أسباب الأعطال') }}</span>
+          </span>
+          <span class="np-svc-status-dot is-tool" title="{{ _('أداة') }}"></span>
+        </a>
+        {# «تتبع حالة الأجهزة» — أداة مراقبة مستمرّة على مستوى
+           المستأجر (لا nas_id). تختلف عن «تشخيص الراوترات»:
+           هذه تتتبّع حالة كل أجهزة الشبكة (راوترات، نقاط وصول،
+           محوّلات، …) بشكل دوريّ وتُشعِر عند العطل، بينما التشخيص
+           فحص لحظيّ بطلب. تُسجَّل عبر register_device_health_routes
+           في app/radius/routes/device_health.py باسم endpoint
+           «device_health_page». رمز الـqrcode-network ليعكس فكرة
+           «شبكة من الأجهزة المُراقَبة». #}
+        <a class="np-svc-card np-svc-card--tool rh-inv-card--diag"
+           data-mt-router-link="device-health"
+           href="{{ url_for('radius.device_health_page') }}"
+           title="{{ _('مراقبة مستمرة لحالة كل أجهزة الشبكة مع إشعار عند العطل') }}">
+          <span class="np-svc-icon np-svc-icon--teal"><i class="fa-solid fa-heart-pulse"></i></span>
+          <span class="rh-inv-card-text">
+            <h5 class="np-svc-title">{{ _('تتبع حالة الأجهزة') }}</h5>
+            <span class="rh-inv-card-desc">{{ _('مراقبة دوريّة لكل أجهزة الشبكة مع تنبيه فوريّ عند العطل') }}</span>
           </span>
           <span class="np-svc-status-dot is-tool" title="{{ _('أداة') }}"></span>
         </a>
