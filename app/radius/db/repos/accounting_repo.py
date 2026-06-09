@@ -84,6 +84,28 @@ def list_ledger_entries(tenant_id: int, *, entry_type: str = "",
     return [dict(r) for r in db().execute(sql, vals).fetchall()]
 
 
+def subscriber_names(tenant_id: int, ids) -> dict[int, str]:
+    """أسماء العرض الحقيقية للمستفيدين دفعة واحدة: {المعرّف: الاسم}.
+
+    تُستخدم لإظهار اسم حقيقي في عمود «المستفيد» بالسجل المالي بدل «#رقم»
+    خام: الاسم الكامل إن وُجد، وإلا اسم المستخدم. استعلام واحد لكل الصفحة.
+    """
+    uniq = sorted({int(i) for i in ids if i})
+    if not uniq:
+        return {}
+    placeholders = ",".join("?" for _ in uniq)
+    rows = db().execute(
+        "SELECT id, full_name, username FROM subscribers "
+        f"WHERE tenant_id = ? AND id IN ({placeholders})",
+        [tenant_id, *uniq],
+    ).fetchall()
+    out: dict[int, str] = {}
+    for r in rows:
+        full = (r["full_name"] or "").strip()
+        out[int(r["id"])] = full or (r["username"] or "").strip()
+    return out
+
+
 def get_ledger_entry(tenant_id: int, entry_id: int) -> Optional[dict]:
     row = db().execute(
         "SELECT * FROM accounting_ledger_entries WHERE tenant_id = ? AND id = ?",
