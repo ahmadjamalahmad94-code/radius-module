@@ -155,6 +155,46 @@ def test_loop_detect_form_shows_loop_check_button(app, client, monkeypatch):
     assert "فحص اللوب" in body
 
 
+def test_page_title_reflects_active_service(app, client, monkeypatch):
+    """تصحيح المالك (يونيو 2026): العنوان عند فتح صفحة خدمة بعينها يجب
+    أن يحمل اسم الخدمة الفعلي (مثلاً «منع بث البلوتوث والواي فاي»)، لا
+    العنوان الجامع «خدمات المنافذ». نتحقّق من ظهور اسم الخدمة في <title>
+    وفي الهيدر القابل للقراءة على الصفحة. الزيارة العامّة (بلا slug)
+    تبقى بالعنوان الجامع كما هو."""
+    _seed(app)
+    from app.radius.routes import port_script_services as route
+    monkeypatch.setattr(route, "_discover", lambda nas: [])
+    _login(client)
+
+    # 1) خدمة محدّدة: bt_wifi_block — العنوان يعكس اسم الخدمة الحقيقي
+    # في كلٍّ من <title> والـhub-hero-title الظاهر للمشغّل.
+    body = client.get(
+        "/admin/radius/mt/1/port-services?slug=bt_wifi_block"
+    ).get_data(as_text=True)
+    assert "<title>منع بث البلوتوث والواي فاي" in body
+    assert ('<h1 class="hub-hero-title">'
+            'منع بث البلوتوث والواي فاي — pss-rtr</h1>') in body
+    # العنوان الجامع لا يظهر منفردًا في الـ<title> أو الـhero
+    assert "<title>خدمات المنافذ" not in body
+    assert '"hub-hero-title">خدمات المنافذ' not in body
+
+    # 2) خدمة loop_detect — نفس الشيء بـ«تتبّع اللوب»
+    body2 = client.get(
+        "/admin/radius/mt/1/port-services?slug=loop_detect"
+    ).get_data(as_text=True)
+    assert "<title>تتبّع اللوب" in body2
+    assert ('<h1 class="hub-hero-title">'
+            'تتبّع اللوب — pss-rtr</h1>') in body2
+
+    # 3) الزيارة العامّة (بلا slug) — العنوان الجامع لا يزال صحيحًا
+    body3 = client.get(
+        "/admin/radius/mt/1/port-services"
+    ).get_data(as_text=True)
+    assert "<title>خدمات المنافذ" in body3
+    assert ('<h1 class="hub-hero-title">'
+            'خدمات المنافذ — pss-rtr</h1>') in body3
+
+
 def test_apply_blocked_while_placeholder(app, client, monkeypatch):
     """حارس القالب المبدئي ما زال يمنع الدفع — نُثبّت خدمة مبدئية مؤقتة
     لإثباته (الخدمتان الحقيقيتان مفعّلتان الآن)."""

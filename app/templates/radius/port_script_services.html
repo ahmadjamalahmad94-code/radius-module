@@ -46,21 +46,39 @@
 </style>
 {% endblock %}
 
-{% block title %}خدمات المنافذ — {{ nas.name }}{% endblock %}
-{% block page_icon %}<i class="fa-solid fa-diagram-project"></i>{% endblock %}
-{% block page_title %}خدمات المنافذ على {{ nas.name }}{% endblock %}
-{% block page_sub %}<span class="sub">جهاز شبكة #{{ nas.id }} · {{ nas.address }} · توليد سكربت حسب المنافذ</span>{% endblock %}
+{# عنوان الصفحة ديناميكي — حين تكون الزيارة لصفحة خدمة بعينها (slug
+   موجود → service غير None) يُستخدم اسم الخدمة الحقيقي (مثلاً «منع بث
+   البلوتوث والواي فاي» أو «تتبّع اللوب») في العنوان والأيقونة والـhero.
+   عند الزيارة العامّة (بلا slug) نُبقي العنوان الجامع «خدمات المنافذ».
+   تصحيح المالك (يونيو 2026): العنوان السابق كان جامعًا دائمًا فيظنّ
+   المشغّل أنه في صفحة عامّة بينما هو يُفعّل خدمة محدّدة. #}
+{% set _hdr_title = service.title if service else "خدمات المنافذ" %}
+{% set _hdr_icon  = service.icon  if service else "diagram-project" %}
+
+{% block title %}{{ _hdr_title }} — {{ nas.name }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-{{ _hdr_icon }}"></i>{% endblock %}
+{% block page_title %}{{ _hdr_title }} على {{ nas.name }}{% endblock %}
+{% block page_sub %}<span class="sub">جهاز شبكة #{{ nas.id }} · {{ nas.address }}{% if service %} · {{ service.description|truncate(120, true) }}{% else %} · توليد سكربت حسب المنافذ{% endif %}</span>{% endblock %}
 
 {% block content %}
 
 <section data-mt-port-services>
 
-  {# ───── Hero + بطاقات الخدمات كإجراءات ───── #}
+  {# Hero — اسم الخدمة الحقيقي + وصفها حين نكون على صفحة خدمة بعينها،
+     وإلا نعرض العنوان الجامع وشرح الأداة العامّ. #}
+  {% if service %}
+  {{ hub.hero(
+    service.title ~ " — " ~ nas.name,
+    subtitle="جهاز شبكة #" ~ nas.id ~ " · " ~ nas.address ~ " — " ~ service.description,
+    icon=service.icon
+  ) }}
+  {% else %}
   {{ hub.hero(
     "خدمات المنافذ — " ~ nas.name,
     subtitle="جهاز شبكة #" ~ nas.id ~ " · " ~ nas.address ~ " — اختر خدمة، حدّد المنافذ، فيولّد النظام سكربت الراوتر للمراجعة. التطبيق يبقى معطّلًا للقوالب المبدئية.",
     icon="diagram-project"
   ) }}
+  {% endif %}
 
   {% if error %}
   <div role="alert" style="display:flex;align-items:center;gap:8px;margin-bottom:16px;background:#FEF2F2;border:1px solid #FCA5A5;color:#991B1B;padding:12px 14px;border-radius:var(--hub-r-md);font-size:14px">
