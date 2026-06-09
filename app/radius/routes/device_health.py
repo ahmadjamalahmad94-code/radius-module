@@ -17,9 +17,11 @@ CSRF on every POST/PATCH — the page JS sends the X-CSRFToken header.
 """
 from __future__ import annotations
 
+import json
 from typing import Any
 
-from flask import Blueprint, g, jsonify, render_template, request, session
+from flask import (Blueprint, Response, g, jsonify, render_template, request,
+                   session, stream_with_context)
 
 from ..core.tenant import DEFAULT_TENANT_ID
 from ..db.repos import device_health_repo as repo
@@ -57,6 +59,9 @@ def register_device_health_routes(bp: Blueprint) -> None:
                     device_health_api_test_ping, methods=["POST"])
     bp.add_url_rule("/device-health/api/poll", "device_health_api_poll",
                     device_health_api_poll, methods=["POST"])
+    bp.add_url_rule("/device-health/api/poll/stream",
+                    "device_health_api_poll_stream",
+                    device_health_api_poll_stream, methods=["POST"])
     bp.add_url_rule("/device-health/api/devices/<int:device_id>/events",
                     "device_health_api_events",
                     device_health_api_events, methods=["GET"])
@@ -238,6 +243,28 @@ def device_health_api_poll():
     from ..services import device_health_poller as poller
     summary = poller.tick(tenant_id=tenant_id)
     return jsonify({"ok": True, "summary": summary})
+
+
+def device_health_api_poll_stream():
+    """Streaming «فحص الكل» — emits one NDJSON line per device as it is checked
+    (start → progress×N → done) so the UI shows a live progress bar. Router
+    reads only; no mutation. stream_with_context keeps g.tenant_id + the DB
+    connection alive for the duration of the sweep."""
+    tenant_id = _tid()
+    from ..services import device_health_poller as poller
+
+    @stream_with_context
+    def generate():
+        try:
+            for ev in poller.iter_tick(tenant_id=tenant_id):
+                yield json.dumps(ev, ensure_ascii=False) + "\n"
+        except Exception as exc:  # noqa: BLE001 — surface as a stream event
+            yield json.dumps({"type": "error", "error": str(exc)},
+                             ensure_ascii=False) + "\n"
+
+    return Response(generate(), mimetype="application/x-ndjson",
+                    headers={"Cache-Control": "no-cache",
+                             "X-Accel-Buffering": "no"})
 
 
 def device_health_api_events(device_id: int):

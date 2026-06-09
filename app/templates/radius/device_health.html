@@ -89,6 +89,18 @@
   {% endif %}
 </section>
 
+{# ── Check-All live progress bar (shown by JS while «فحص الكل» streams) ── #}
+<div class="dh-progress-wrap" id="dh-progress" hidden aria-live="polite">
+  <div class="dh-progress-head">
+    <span class="dh-progress-label" id="dh-progress-label">
+      <i class="fa-solid fa-satellite-dish fa-fade"></i> {{ _('جارٍ فحص الكل…') }}</span>
+    <span class="dh-progress-count" id="dh-progress-count"></span>
+  </div>
+  <div class="hub-progress hub-progress--green" id="dh-progress-track">
+    <span id="dh-progress-bar" style="width:0%"></span>
+  </div>
+</div>
+
 {%- set _help = hub.helppanel(_('كيف تقرأ هذه الصفحة'),
       intro=_('تُسجَّل الأجهزة هنا ثم تُجهَّز خطة وصول المايكروتيك / السيرفر (عنوان/بوابة + تجاوز Hotspot + Netwatch). لا يُطبَّق أي تغيير على المايكروتيك / السيرفر تلقائيًا في هذه المرحلة.'),
       items=[
@@ -128,7 +140,7 @@
           <td class="mono">{{ d.ip_address }}</td>
           <td>{{ d.location or '—' }}</td>
           <td class="dh-checked">{{ d.last_checked_at or '—' }}</td>
-          <td>
+          <td class="dh-status">
             {% set _v = {'up':'green','down':'red','timeout':'red','high_latency':'amber',
                          'disabled':'grey','apply_failed':'red'}.get(d.status,'grey') %}
             {% set _l = {'up':'متصل','down':'مفصول','timeout':'انتهت المهلة',
@@ -269,7 +281,9 @@ window.__DH__ = {
   api: "{{ url_for('radius.device_health_api_list') }}",
   planUrl: "{{ url_for('radius.device_health_api_plan') }}",
   ifacesUrl: "{{ url_for('radius.device_health_api_router_interfaces') }}",
-  liveApplyUrl: "{{ url_for('radius.device_health_api_live_apply') }}"
+  liveApplyUrl: "{{ url_for('radius.device_health_api_live_apply') }}",
+  pollUrl: "{{ url_for('radius.device_health_api_poll') }}",
+  pollStreamUrl: "{{ url_for('radius.device_health_api_poll_stream') }}"
 };
 </script>
 <script src="{{ url_for('static', filename='js/device_health.js') }}"></script>

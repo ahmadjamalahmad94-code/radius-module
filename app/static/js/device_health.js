@@ -42,6 +42,141 @@
     setTimeout(function () { el.remove(); }, 3200);
   }
 
+  /* ── status pill + live row update (shared by per-row check + Check-All) ── */
+  var STATUS_META = {
+    up: { v: "green", label: "متصل" }, down: { v: "red", label: "مفصول" },
+    timeout: { v: "red", label: "انتهت المهلة" }, high_latency: { v: "amber", label: "بنج عالٍ" },
+    disabled: { v: "grey", label: "معطّل" }, apply_failed: { v: "red", label: "فشل التطبيق" },
+    unknown: { v: "grey", label: "غير معروف" }
+  };
+  function statusPillHTML(status) {
+    var m = STATUS_META[status] || STATUS_META.unknown;
+    return '<span class="hub-pill hub-pill--' + m.v + '"><span class="dot"></span>' + m.label + '</span>';
+  }
+  function rowById(id) { return document.querySelector('[data-dh-row][data-id="' + id + '"]'); }
+
+  function setRowChecking(row) {
+    if (!row) return;
+    row.classList.add("is-checking");
+    var st = row.querySelector(".dh-status");
+    if (st) st.innerHTML = '<span class="dh-checking"><i class="fa-solid fa-spinner fa-spin"></i> يفحص…</span>';
+    var lat = row.querySelector(".dh-latency");
+    if (lat) lat.classList.add("dh-checking");
+  }
+
+  function updateRowStatus(row, status, latency) {
+    if (!row) return;
+    row.classList.remove("is-checking");
+    var st = row.querySelector(".dh-status");
+    if (st) st.innerHTML = statusPillHTML(status);
+    var lat = row.querySelector(".dh-latency");
+    if (lat) { lat.classList.remove("dh-checking"); lat.textContent = (latency != null) ? (latency + " ms") : "—"; }
+    var chk = row.querySelector(".dh-checked");
+    if (chk) chk.textContent = "الآن";
+    row.setAttribute("data-status", status);
+    try {
+      var d = JSON.parse(row.getAttribute("data-json"));
+      d.status = status; d.last_latency_ms = latency;
+      row.setAttribute("data-json", JSON.stringify(d));
+    } catch (e) {}
+    row.classList.add("dh-flash");
+    setTimeout(function () { row.classList.remove("dh-flash"); }, 1000);
+    applyFilters();
+  }
+
+  /* ── Check-All progress bar ── */
+  var progEl = document.getElementById("dh-progress");
+  var progBar = document.getElementById("dh-progress-bar");
+  var progLabel = document.getElementById("dh-progress-label");
+  var progCount = document.getElementById("dh-progress-count");
+
+  function progShow(indeterminate) {
+    if (!progEl) return;
+    progEl.hidden = false;
+    progEl.classList.remove("is-done");
+    progEl.classList.toggle("is-indeterminate", !!indeterminate);
+    if (progBar) progBar.style.width = indeterminate ? "" : "0%";
+    if (progLabel) progLabel.innerHTML = '<i class="fa-solid fa-satellite-dish fa-fade"></i> جارٍ فحص الكل…';
+    if (progCount) progCount.textContent = "";
+  }
+  function progUpdate(index, total, deviceName) {
+    if (!progEl) return;
+    progEl.classList.remove("is-indeterminate");
+    var pct = total ? Math.round(index / total * 100) : 0;
+    if (progBar) progBar.style.width = pct + "%";
+    if (progLabel) progLabel.innerHTML = '<i class="fa-solid fa-satellite-dish fa-fade"></i> يفحص: ' + esc(deviceName || "");
+    if (progCount) progCount.textContent = index + " / " + total;
+  }
+  function progDone(summary) {
+    if (!progEl) return;
+    progEl.classList.remove("is-indeterminate");
+    progEl.classList.add("is-done");
+    if (progBar) progBar.style.width = "100%";
+    var s = summary || {};
+    if (progLabel) progLabel.innerHTML = '<i class="fa-solid fa-circle-check"></i> اكتمل';
+    if (progCount) progCount.textContent = "متصل " + (s.up || 0) + " · مفصول " + (s.down || 0) +
+      (s.high_latency ? (" · بنج عالٍ " + s.high_latency) : "") +
+      (s.unknown ? (" · غير معروف " + s.unknown) : "");
+    setTimeout(function () { if (progEl) progEl.hidden = true; }, 6000);
+  }
+
+  function handlePollEvent(ev) {
+    if (ev.type === "start") {
+      progUpdate(0, ev.total || 0, "");
+      if ((ev.total || 0) === 0) progDone({});
+    } else if (ev.type === "progress") {
+      progUpdate(ev.index, ev.total, ev.device);
+      updateRowStatus(rowById(ev.device_id), ev.status, ev.latency_ms);
+    } else if (ev.type === "done") {
+      progDone(ev.summary);
+      toast("اكتمل الفحص.", "success");
+    } else if (ev.type === "error") {
+      if (progEl) progEl.hidden = true;
+      toast(ev.error || "تعذّر الفحص", "error");
+    }
+  }
+
+  function streamPollAll(btn) {
+    var orig = btn ? btn.innerHTML : "";
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جارٍ الفحص…'; }
+    progShow(true);
+    fetch(CFG.pollStreamUrl, {
+      method: "POST", credentials: "same-origin",
+      headers: { "X-CSRFToken": CFG.csrf || "" }
+    }).then(function (resp) {
+      if (!resp.ok || !resp.body || !window.ReadableStream) throw new Error("no-stream");
+      var reader = resp.body.getReader();
+      var dec = new TextDecoder();
+      var buf = "";
+      function pump() {
+        return reader.read().then(function (r) {
+          if (r.done) return;
+          buf += dec.decode(r.value, { stream: true });
+          var lines = buf.split("\n");
+          buf = lines.pop();
+          lines.forEach(function (line) {
+            line = line.trim(); if (!line) return;
+            var ev; try { ev = JSON.parse(line); } catch (e) { return; }
+            handlePollEvent(ev);
+          });
+          return pump();
+        });
+      }
+      return pump();
+    }).then(function () {
+      if (btn) { btn.disabled = false; btn.innerHTML = orig; }
+    }).catch(function () {
+      // Fallback: single-request poll with an indeterminate bar + reload.
+      progShow(true);
+      request(CFG.pollUrl || ((CFG.base || "") + "/api/poll"), "POST", {}).then(function (res) {
+        if (btn) { btn.disabled = false; btn.innerHTML = orig; }
+        var d = res.data || {};
+        if (d.ok) { progDone(d.summary); toast("اكتمل الفحص.", "success"); setTimeout(function () { location.reload(); }, 1200); }
+        else { if (progEl) progEl.hidden = true; toast("تعذّر الفحص", "error"); }
+      });
+    });
+  }
+
   /* ── filtering ── */
   function applyFilters() {
     var q = ($("#dh-search") && $("#dh-search").value || "").trim().toLowerCase();
@@ -317,19 +452,7 @@
     if (!btn) return;
 
     if (btn.hasAttribute("data-dh-poll")) {
-      btn.disabled = true;
-      var orig = btn.innerHTML;
-      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جارٍ الفحص…';
-      request((CFG.base || "") + "/api/poll", "POST", {}).then(function (res) {
-        btn.disabled = false; btn.innerHTML = orig;
-        if (res.data && res.data.ok) {
-          var s = res.data.summary || {};
-          toast("فُحص " + (s.scanned || 0) + " · متصل " + (s.up || 0) + " · مفصول " + (s.down || 0), "success");
-          setTimeout(function () { location.reload(); }, 900);
-        } else {
-          toast("تعذّر الفحص", "error");
-        }
-      });
+      streamPollAll(btn);  // live progress bar + per-row updates
       return;
     }
 
@@ -391,17 +514,27 @@
     }
 
     if (btn.hasAttribute("data-dh-ping")) {
-      var pid = rowData(btn).d.id;
+      var pinfo = rowData(btn);
+      var pid = pinfo.d.id, prow = pinfo.row;
       btn.disabled = true;
+      var pico = btn.innerHTML; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+      setRowChecking(prow);  // inline «يفحص…» on the row
       request(api("/" + pid + "/test-ping"), "POST").then(function (res) {
-        btn.disabled = false;
-        if (res.data && res.data.ok) {
-          var lat = res.data.latency_ms != null ? res.data.latency_ms + " ms" : "—";
-          toast("النتيجة: " + res.data.status + " · " + lat, res.data.status === "up" ? "success" : "info");
-          setTimeout(function () { location.reload(); }, 700);
+        btn.disabled = false; btn.innerHTML = pico;
+        var d = res.data || {};
+        if (d.ok) {
+          updateRowStatus(prow, d.status, d.latency_ms);  // live row update, no reload
+          var lab = (STATUS_META[d.status] || {}).label || d.status;
+          var lat = d.latency_ms != null ? (d.latency_ms + " ms") : "—";
+          toast("النتيجة: " + lab + " · " + lat, d.status === "up" ? "success" : "info");
         } else {
-          toast((res.data && res.data.error) || "تعذّر الفحص", "error");
+          updateRowStatus(prow, pinfo.d.status, pinfo.d.last_latency_ms);  // restore
+          toast(d.error || "تعذّر الفحص", "error");
         }
+      }).catch(function () {
+        btn.disabled = false; btn.innerHTML = pico;
+        updateRowStatus(prow, pinfo.d.status, pinfo.d.last_latency_ms);
+        toast("تعذّر الفحص", "error");
       });
       return;
     }

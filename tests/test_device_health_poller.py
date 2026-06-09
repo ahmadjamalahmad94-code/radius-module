@@ -199,6 +199,32 @@ def test_ping_fallback_when_no_netwatch_row(app):
         assert repo.get_device(1, did)["status"] == "up"
 
 
+def test_iter_tick_streams_progress_then_done(app):
+    # The streaming sweep yields start → progress×N → done, with a live count.
+    _seed_router(app)
+    d1 = _device(app)
+    with app.app_context():
+        from app.radius.services import device_health as svc
+        from app.radius.services import device_health_poller as poller
+        # Second monitored device on a different interface/IP.
+        svc.create_device(1, {"router_id": 11, "name": "AP2",
+                              "interface_name": "ether3", "ip_address": "10.0.9.10"})
+
+        mt = _FakeMt(netwatch=[], nw_ok=True, ping_rows=[{"time": "5ms"}])
+        events = list(poller.iter_tick(tenant_id=1, mt=mt, alert_fn=_no_alerts))
+        types = [e["type"] for e in events]
+        assert types[0] == "start" and types[-1] == "done"
+        progs = [e for e in events if e["type"] == "progress"]
+        assert len(progs) == 2
+        assert progs[0]["total"] == 2
+        assert progs[-1]["index"] == 2
+        # Every progress event carries the device id so the row can update live.
+        assert all("device_id" in p and "status" in p for p in progs)
+        assert events[-1]["summary"]["up"] == 2
+        # tick() still returns the same final summary.
+        assert poller.tick(tenant_id=1, mt=mt, alert_fn=_no_alerts)["up"] == 2
+
+
 def test_bugfix_sync_all_matches_manual_ping_when_netwatch_absent(app, monkeypatch):
     """Owner bug: live-apply OFF → netwatch never pushed (no data). The device is
     reachable, so the manual «فحص بنج» says «متصل». Sync-All must AGREE (up) and
