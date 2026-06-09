@@ -1936,10 +1936,11 @@ def cards_list():
         status_counts=status_counts,
         page=page, per_page=per_page, total=total,
         pages_count=pages_count, preserve=preserve,
-        # «الآن» بتوقيت UTC كنص ISO — expire_at مخزّن نصًا، والمقارنة
-        # النصية بين ISO strings صحيحة زمنيًا (مقارنة datetime بنص كانت
-        # ترمي TypeError وتسبب 500 مع فلتر الحالة).
-        now=datetime.utcnow().isoformat(sep=" ", timespec="seconds"),
+        # «الآن» ككائن datetime ساذج (naive UTC) — لأن `c.expire_at` على
+        # كائن البطاقة مُحلّل عبر parse_dt إلى datetime (لا نص). تمرير now
+        # كنص كان يجعل القالب يقارن `datetime < str` فيرمي TypeError ويسبب
+        # 500 على صفحة «كل الكروت». parse_dt يُسقط لاحقة Z فالطرفان naive.
+        now=datetime.utcnow(),
     )
 
 
