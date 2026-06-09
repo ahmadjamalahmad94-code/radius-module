@@ -73,3 +73,5 @@ _verify_*.py
 _verify_shots/
 .claude/
 .backups/
+Text Document*.txt
+*.local.txt
