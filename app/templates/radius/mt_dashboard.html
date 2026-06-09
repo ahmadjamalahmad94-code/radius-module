@@ -2382,11 +2382,17 @@ body.mt-modal-open{overflow:hidden}
        login-designer/backups/network-policies/npc-*/diagnostics)،
        data-test="mt-dashboard-npc-link"، روابط network-policies
        الثلاثة المُجزّأة، data-rh-loop-tile + وصف اللوب. #}
-    <div class="np-status-panel rh-svc-panel" data-mt-router-quicknav
-         aria-label="{{ _('خدمات الراوتر وأدواته') }}">
+    {# قسم «كل الخدمات» (Section A) — بطاقة مستقلّة بإطارها وحدها.
+       تَفصلها مسافة generous + سطح بصري واضح عن قسم «الخدمات المضافة»
+       أدناه. كانا في نفس .np-status-panel فيظهران كقطعة واحدة؛ صار
+       لكلٍّ منهما .np-status-panel خاصّ به (نفس قالب الـsurface) لكي
+       يَقرأهما المشغّل كقسمَين مستقلّين. */ #}
+    <div class="np-status-panel rh-svc-panel rh-svc-panel--all"
+         data-mt-router-quicknav
+         aria-label="{{ _('كل الخدمات') }}">
       <div class="rh-svc-head">
         <div class="rh-svc-head-text">
-          <h4>{{ _('خدمات الراوتر وأدواته') }}</h4>
+          <h4>{{ _('كل الخدمات') }}</h4>
           <p>كل خدمات الراوتر وصفحاته في مكان واحد — اضغط أي بطاقة لإدارتها.
              النقطة الملوّنة على البطاقة تبيّن إن كانت الخدمة مفعّلة على الراوتر.</p>
         </div>
@@ -2408,14 +2414,15 @@ body.mt-modal-open{overflow:hidden}
          "mt-dashboard-npc-link" / data-rh-loop-tile) محفوظة كما
          هي على نفس البطاقات. #}
       <div class="np-svc-grid">
-        {# برمجة الشبكة الكاملة (أداة — لا حالة جرد). #}
-        <a class="np-svc-card np-svc-card--tool"
-           data-mt-router-link="program"
-           href="{{ url_for('radius.mt_program_form', nas_id=nas.id) }}">
-          <span class="np-svc-icon np-svc-icon--slate"><i class="fa-solid fa-network-wired"></i></span>
-          <h5 class="np-svc-title">{{ _('برمجة الشبكة') }}</h5>
-          <span class="np-svc-status-dot is-tool" title="{{ _('أداة') }}"></span>
-        </a>
+        {# «برمجة الشبكة» الكاملة وبطاقة «سياسات الشبكة» (NPC) أُزيلتا
+           من هذه الشبكة بطلب المالك (يونيو 2026):
+             • «برمجة الشبكة» — تنفّذها الآن خدمات الراوتر المستقلّة
+               بشكل أوضح للمشغّل (الهوت سبوت/البرودباند/المنافذ…).
+             • «سياسات الشبكة» — أُلغيت غلاف NPC، وأُعيدت «حظر المواقع»
+               و«المواقع المسموحة» كبطاقتَين مستقلّتَين تحت بنفس
+               الـrouting المُجزّأ npc_*_list_scoped — لكن سطح
+               المستخدم لم يَعُد يمرّ عبر صفحة هبوط NPC.
+           الـroutes تبقى مُسجَّلة لمن يصل لها مباشرة. #}
         {# الهوت سبوت — خدمة، نقطة الحالة من جرد hotspot.
            الاسم العرضي في هذه الشبكة فقط = «الهوت سبوت» (طلب
            المالك). المُعرّف/الـservice_key ومسار المعالج
@@ -2447,28 +2454,21 @@ body.mt-modal-open{overflow:hidden}
           <h5 class="np-svc-title">{{ _('مصمّم صفحة الدخول') }}</h5>
           <span class="np-svc-status-dot is-tool" title="{{ _('أداة') }}"></span>
         </a>
-        {# سياسات الشبكة — صفحة الهبوط المُجزّأة لكل راوتر (أداة).
-           تحمل data-test="mt-dashboard-npc-link" لاختبار NPC. #}
-        <a class="np-svc-card np-svc-card--tool"
-           data-test="mt-dashboard-npc-link"
-           data-mt-router-link="network-policies"
-           href="{{ url_for('radius.npc_router_landing', nas_id=nas.id) }}">
-          <span class="np-svc-icon np-svc-icon--slate"><i class="fa-solid fa-shield-halved"></i></span>
-          <h5 class="np-svc-title">{{ _('سياسات الشبكة') }}</h5>
-          <span class="np-svc-status-dot is-tool" title="{{ _('أداة') }}"></span>
-        </a>
-        {# حجب المواقع — مرّة واحدة فقط (دُمجت خدمة block-sites مع
-           قائمة قواعد الحجب). نقطة الحالة من جرد block-sites. #}
+        {# «حظر المواقع» — بطاقة مباشرة على صفحة الخدمة (لا تمرّ عبر
+           صفحة هبوط NPC). الـendpoint npc_web_block_list_scoped هو
+           الـrouting المُجزّأ الموجود فعلًا للراوتر — نَستخدمه مباشرةً
+           كرابط الخدمة كما طلب المالك بعد إزالة غلاف NPC. الاسم
+           العرضي «حظر المواقع» (طلب المالك). #}
         <a class="np-svc-card"
            data-mt-router-link="npc-web-block"
            data-rh-svc-card="block-sites"
            href="{{ url_for('radius.npc_web_block_list_scoped', nas_id=nas.id) }}">
           <span class="np-svc-icon np-svc-icon--red"><i class="fa-solid fa-ban"></i></span>
-          <h5 class="np-svc-title">{{ _('حجب المواقع') }}</h5>
+          <h5 class="np-svc-title">{{ _('حظر المواقع') }}</h5>
           <span class="np-svc-status-dot is-inactive" data-rh-svc-status title="{{ _('غير مفعّلة') }}"></span>
         </a>
-        {# المواقع المسموحة — مرّة واحدة (دُمجت خدمة open-sites مع
-           قائمة walled-garden). نقطة الحالة من جرد open-sites. #}
+        {# «المواقع المسموحة» — بطاقة مباشرة. نفس فكرة «حظر المواقع»:
+           رابط مباشر إلى npc_walled_garden_list_scoped بلا غلاف NPC. #}
         <a class="np-svc-card"
            data-mt-router-link="npc-walled-garden"
            data-rh-svc-card="open-sites"
@@ -2575,17 +2575,46 @@ body.mt-modal-open{overflow:hidden}
           </span>
           <span class="np-svc-status-dot is-tool" title="{{ _('أداة') }}"></span>
         </a>
+        {# «تتبع حالة الأجهزة» — أداة مراقبة مستمرّة على مستوى
+           المستأجر (لا nas_id). تختلف عن «تشخيص الراوترات»:
+           هذه تتتبّع حالة كل أجهزة الشبكة (راوترات، نقاط وصول،
+           محوّلات، …) بشكل دوريّ وتُشعِر عند العطل، بينما التشخيص
+           فحص لحظيّ بطلب. تُسجَّل عبر register_device_health_routes
+           في app/radius/routes/device_health.py باسم endpoint
+           «device_health_page». رمز الـqrcode-network ليعكس فكرة
+           «شبكة من الأجهزة المُراقَبة». #}
+        <a class="np-svc-card np-svc-card--tool rh-inv-card--diag"
+           data-mt-router-link="device-health"
+           href="{{ url_for('radius.device_health_page') }}"
+           title="{{ _('مراقبة مستمرة لحالة كل أجهزة الشبكة مع إشعار عند العطل') }}">
+          <span class="np-svc-icon np-svc-icon--teal"><i class="fa-solid fa-heart-pulse"></i></span>
+          <span class="rh-inv-card-text">
+            <h5 class="np-svc-title">{{ _('تتبع حالة الأجهزة') }}</h5>
+            <span class="rh-inv-card-desc">{{ _('مراقبة دوريّة لكل أجهزة الشبكة مع تنبيه فوريّ عند العطل') }}</span>
+          </span>
+          <span class="np-svc-status-dot is-tool" title="{{ _('أداة') }}"></span>
+        </a>
       </div>
 
-      {# ── قسم «الخدمات المضافة على الراوتر» ───────────────────
-         رجوع القسم الوظيفي المهم (يونيو 2026): قائمة مدمجة من نفس
-         جرد /inventory تعرض كل خدمة مُضافة فعليًا — الاسم + النوع +
-         مصدر الإضافة (يدوي / تلقائي عبر الراديوس) بشارة ملوّنة +
-         التاريخ إن وُجد + زر حذف بنافذة تأكيد fcw تستدعي نفس
-         endpoint الحذف القديم (/inventory/remove). يتغذّى من نفس
-         جلب النقاط الملوّنة فوق (طلب واحد). الفلاتر حبوب صغيرة. #}
-      <div class="rh-svc-group rh-svc-group--added">
-        <span>{{ _('الخدمات المضافة على الراوتر') }} (<span data-rh-added-total>0</span>)</span>
+    </div>{# /.rh-svc-panel--all — نهاية قسم «كل الخدمات» #}
+
+    {# ── قسم «الخدمات المضافة على الراوتر» (Section B) — بطاقة
+       مستقلّة بإطارها وحدها، مفصولة عن قسم «كل الخدمات» أعلاه بمسافة
+       generous وسطح بصريّ خاصّ. قائمة مدمجة من جرد /inventory + صفوف
+       اصطناعيّة من PSS_STATE (منع البث/تتبّع اللوب) — تَعرض كل خدمة
+       مُضافة فعليًا: الاسم + النوع + مصدر الإضافة (يدوي / تلقائي عبر
+       الراديوس) بشارة ملوّنة + التاريخ إن وُجد + زر حذف بنافذة تأكيد
+       fcw تستدعي نفس endpoint الحذف القديم (/inventory/remove). #}
+    <div class="np-status-panel rh-svc-panel rh-svc-panel--added"
+         aria-label="{{ _('الخدمات المضافة على الراوتر') }}">
+      <div class="rh-svc-head">
+        <div class="rh-svc-head-text">
+          <h4>
+            {{ _('الخدمات المضافة على الراوتر') }}
+            <span class="rh-svc-head-count">(<span data-rh-added-total>0</span>)</span>
+          </h4>
+          <p>{{ _('قائمة الخدمات الفعّالة على هذا الراوتر — مصنّفة حسب نوع الخدمة وكلّ صفّ يَحمل اسم الواجهة ومصدر الإضافة.') }}</p>
+        </div>
         <div class="rh-added-bar" role="tablist" aria-label="{{ _('تصفية الخدمات المضافة') }}">
           <button type="button" class="rh-added-chip is-active"
                   data-rh-added-filter="all" role="tab" aria-selected="true">
@@ -2612,7 +2641,25 @@ body.mt-modal-open{overflow:hidden}
         </div>
         <div class="rh-added-list" data-rh-added-list></div>
       </div>
-    </div>{# /.rh-svc-panel #}
+    </div>{# /.rh-svc-panel--added — نهاية قسم «الخدمات المضافة» #}
+
+    {# حالة خدمتَي السكربت على المنافذ (محفوظة جانب الخادم في
+       tenant_settings) — يُحقَنها سكربت my-services أدناه كصفوف
+       اصطناعيّة في «الخدمات المضافة» حتى تظهر «منع البث» و«تتبّع
+       اللوب» حين تكونان مفعّلتَين. حُمولة JSON صغيرة (لا تُؤثّر على
+       حجم الصفحة) — معطّاة فاضية على أيّ خطأ في الـlookup. #}
+    <script type="application/json" data-pss-svc-state>
+{
+  "bt_wifi_block": {
+    "enabled": {{ (((pss_services or {}).get('bt_wifi_block', {}) or {}).get('enabled')) | tojson }},
+    "ports":   {{ (((pss_services or {}).get('bt_wifi_block', {}) or {}).get('ports')   or []) | tojson }}
+  },
+  "loop_detect": {
+    "enabled": {{ (((pss_services or {}).get('loop_detect', {}) or {}).get('enabled')) | tojson }},
+    "ports":   {{ (((pss_services or {}).get('loop_detect', {}) or {}).get('ports')   or []) | tojson }}
+  }
+}
+    </script>
 
   </section>{# /my-services panel #}
 
@@ -2870,22 +2917,28 @@ body.mt-modal-open{overflow:hidden}
 .rh-inventory{padding:0 !important}
 
 /* ─── بطاقات الخدمات المدمجة الموحّدة ────────────────────────
-   بطاقة واحدة لكل خدمة: أيقونة 20px + اسم + نقطة حالة على سطر
-   واحد. شبكة auto-fit تملأ كامل العرض بلا فراغ ميّت. الأحجام
-   والستايل متماثلة للجميع (خدمات وأدوات). */
+   تصحيح المالك (يونيو 2026): الشبكة كانت auto-fit تتسبّب بحشو
+   حتى 5 بطاقات في الصفّ على سطح المكتب، فتصير عيّنات النصّ
+   الطويلة (منع البث/تشخيص الراوترات…) مقصوصة بـellipsis. صار
+   اللاي-آوت قسمَين (column-2) بمسافات أوسع — كل بطاقة بعرض
+   مريح يستوعب العنوان كاملاً بلا قصّ، ومسافة عاموديّة واضحة
+   تفصل الشبكة عن قائمة «الخدمات المضافة» أسفلها. */
 .rh-inventory .np-svc-grid{
   display:grid !important;
-  grid-template-columns:repeat(auto-fit,minmax(180px,1fr)) !important;
-  gap:10px !important;
-  margin:0 0 8px;
+  grid-template-columns:repeat(2, minmax(0, 1fr)) !important;
+  gap:14px !important;
+  /* لا حاجة لـmargin-bottom على الشبكة — قسم «الخدمات المضافة» في
+     .np-status-panel آخر مستقلّ، والفاصل بينهما من margin-bottom
+     على القسم الأوّل (انظر .rh-svc-panel--all أدناه). */
+  margin:0;
 }
 .rh-inventory .np-svc-card{
   display:inline-flex;
   align-items:center;
-  gap:9px;
-  padding:9px 13px;
-  min-height:44px;
-  border-radius:11px;
+  gap:12px;
+  padding:14px 18px;
+  min-height:56px;
+  border-radius:12px;
   box-shadow:none;
   /* إعادة ضبط أي بطاقة <button> لتطابق بطاقات <a> تمامًا. */
   width:100%;
@@ -2895,6 +2948,13 @@ body.mt-modal-open{overflow:hidden}
   background:#fff;
   border:1px solid #EAECF0;
 }
+/* جوال: عمود واحد فقط — كل بطاقة سطر كامل. */
+@media (max-width: 640px){
+  .rh-inventory .np-svc-grid{
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+}
 .rh-inventory .np-svc-card::before{display:none}
 .rh-inventory .np-svc-card:hover{
   transform:none;
@@ -2902,24 +2962,30 @@ body.mt-modal-open{overflow:hidden}
   box-shadow:0 1px 4px rgba(15,23,42,.06);
 }
 .rh-inventory .np-svc-icon{
-  width:20px;height:20px;
+  width:28px;height:28px;
   flex-shrink:0;
-  border-radius:6px;
-  font-size:10px;
+  border-radius:8px;
+  font-size:13px;
   margin-bottom:0;
   box-shadow:none;
 }
+/* العنوان يلتفّ بدل القصّ بـellipsis (طلب المالك: «كلام مقصوص»). البطاقة
+   الأعرض في تخطيط القسمَين تستوعب أيّ عنوان من الخدمات الحاليّة على
+   سطر واحد، لكن إن طال يأخذ سطرَين بلا قصّ. */
 .rh-inventory .np-svc-title{
   margin:0;
-  font-size:12.5px;
-  line-height:1.3;
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
+  font-size:13.5px;
+  line-height:1.4;
+  white-space:normal;
+  overflow:visible;
+  text-overflow:clip;
   min-width:0;
   flex:1;
   color:#0F172A;
   font-weight:800;
+  /* يضمن أنّ كلمات RTL الطويلة لا تكسر التخطيط بدل أن تَلِف. */
+  word-break:break-word;
+  overflow-wrap:anywhere;
 }
 /* الوصف والسهم يختفيان في الوضع المدمج — البطاقة سطر واحد فقط. */
 .rh-inventory .np-svc-desc{display:none}
@@ -2951,43 +3017,76 @@ body.mt-modal-open{overflow:hidden}
   margin-inline-start:6px;
 }
 
-/* ─── بطاقة «تشخيص الراوترات» — الوحيدة في الشبكة التي تعرض
-   سطرَين (عنوان + وصف موجز) لأنها أداة على مستوى المستأجر
-   أوسع نطاقاً من الخدمات المرتبطة بهذا الراوتر. باقي البطاقات
-   تبقى سطراً واحداً مدمجاً كما هي. */
+/* ─── بطاقات سطرَين (عنوان + وصف موجز) — لأدوات على مستوى المستأجر
+   أوسع نطاقًا من خدمات راوتر بعينه (تشخيص الراوترات / تتبع حالة
+   الأجهزة). تتساوى أبعادها مع بقيّة بطاقات الشبكة بعد تكبير الحشو
+   ليصير القَسمَان متناسقَين بصرياً. */
 .rh-inventory .np-svc-card.rh-inv-card--diag{
   align-items:center;
-  padding:9px 13px;
-  min-height:54px;
+  padding:14px 18px;
+  min-height:64px;
 }
 .rh-inventory .np-svc-card.rh-inv-card--diag .rh-inv-card-text{
   display:flex;
   flex-direction:column;
-  gap:2px;
+  gap:3px;
   flex:1;
   min-width:0;
 }
 .rh-inventory .np-svc-card.rh-inv-card--diag .np-svc-title{
   flex:initial;
   margin:0;
-  /* داخل غلاف النصّ الجديد، العنوان يحجز سطره الخاصّ. */
 }
 .rh-inventory .np-svc-card.rh-inv-card--diag .rh-inv-card-desc{
   display:block;
-  font-size:10.5px;
-  line-height:1.35;
+  font-size:12px;
+  line-height:1.45;
   color:#64748B;
   font-weight:600;
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
+  /* السماح بالالتفاف بدل قصّ ellipsis — نفس فلسفة العنوان أعلاه. */
+  white-space:normal;
+  overflow:visible;
+  text-overflow:clip;
+  word-break:break-word;
+  overflow-wrap:anywhere;
 }
 
 /* ─── قسم «الخدمات المضافة على الراوتر» ──────────────────────
    قائمة مدمجة وظيفية (اسم + نوع + مصدر + تاريخ + حذف) تحت شبكة
    البطاقات، بترويسة تحمل حبوب الفلترة الصغيرة. */
-.rh-svc-group--added{justify-content:space-between;flex-wrap:wrap;gap:10px}
-.rh-svc-group--added::after{display:none}
+/* ─── قسمَان مستقلّان (يونيو 2026): «كل الخدمات» (أعلى) و«الخدمات
+   المضافة على الراوتر» (أسفل) — كلٌّ منهما .np-status-panel خاصّ به،
+   فيَقرأهما المشغّل كقسمَين مستقلّين بصريًا لا كقطعة واحدة. القواعد
+   القديمة (.rh-svc-group--added مع border-top داخلي) لم تَعُد مطلوبة
+   لأنّ كلّ قسم يَملك سطحه وحدوده. */
+.rh-inventory .rh-svc-panel{margin-bottom:24px}
+/* فجوة generous بين القسمَين: 28px من margin-bottom على القسم الأوّل
+   (موروثة من .np-status-panel في dashboard_premium.css) + 4-8px
+   إضافيّة من margin-top على القسم الثاني — ليَشعر المشغّل أنّ هذين
+   قسمَين، لا قطعة واحدة. */
+.rh-inventory .rh-svc-panel--all{margin-bottom:28px}
+.rh-inventory .rh-svc-panel--added{margin-top:8px}
+/* عدّاد «(N)» بجانب العنوان: بنفس لون النصّ المساعد، أصغر قليلاً. */
+.rh-svc-head-count{
+  display:inline-block;
+  margin-inline-start:6px;
+  font-size:13px;
+  font-weight:700;
+  color:#64748B;
+}
+/* داخل قسم «الخدمات المضافة»: شريط الفلترة يَطفو إلى نهاية الـhead
+   لتوازن الترويسة بصريّاً (عنوان+شرح يسار، فلاتر يمين في RTL). */
+.rh-svc-panel--added .rh-svc-head{
+  align-items:center;
+  gap:14px;
+  flex-wrap:wrap;
+}
+.rh-svc-panel--added .rh-svc-head .rh-added-bar{
+  flex-shrink:0;
+  margin-inline-start:auto;
+}
+/* مسافة تنفّس بين ترويسة القسم وقائمة الصفوف نفسها. */
+.rh-svc-panel--added .rh-added{margin-top:14px}
 .rh-added-bar{
   display:inline-flex;gap:4px;padding:3px;flex-wrap:wrap;
   background:#fff;border:1px solid #E2E8F0;border-radius:999px;
@@ -3536,18 +3635,64 @@ body.mt-modal-open{overflow:hidden}
 
   // نوع الخدمة → أيقونة/لون/اسم لصفّ القائمة (يطابق بطاقات الشبكة فوق).
   const SVC_META = {
-    "hotspot":       { ar: "بوابة الدخول",     icon: "wifi",      color: "np-svc-icon--blue" },
-    "broadband":     { ar: "البرودباند",        icon: "ethernet",  color: "np-svc-icon--green" },
-    "block-sites":   { ar: "حجب المواقع",       icon: "ban",       color: "np-svc-icon--red" },
-    "open-sites":    { ar: "المواقع المسموحة",  icon: "door-open", color: "np-svc-icon--teal" },
-    "public-ip":     { ar: "تغيير IP الخروج",   icon: "globe",     color: "np-svc-icon--amber" },
-    "remote-access": { ar: "الوصول البعيد",     icon: "key",       color: "np-svc-icon--purple" },
+    "hotspot":        { ar: "بوابة الدخول",                icon: "wifi",            color: "np-svc-icon--blue" },
+    "broadband":      { ar: "البرودباند",                   icon: "ethernet",        color: "np-svc-icon--green" },
+    "block-sites":    { ar: "حظر المواقع",                  icon: "ban",             color: "np-svc-icon--red" },
+    "open-sites":     { ar: "المواقع المسموحة",             icon: "door-open",       color: "np-svc-icon--teal" },
+    "public-ip":      { ar: "تغيير IP الخروج",              icon: "globe",           color: "np-svc-icon--amber" },
+    "remote-access":  { ar: "الوصول البعيد",                icon: "key",             color: "np-svc-icon--purple" },
+    // خدمتا السكربت على المنافذ — لا يجلبها /inventory (مُدارة جانب
+    // الخادم في tenant_settings)، فنُولّد لها صفوفًا اصطناعيّة من
+    // PSS_STATE أدناه ونُدمجها في نفس القائمة لتُبيِّن للمشغّل أنّها
+    // مفعّلة فعلًا (طلب المالك: «أضفها لقائمة الخدمات الفعّالة»).
+    "bt_wifi_block":  { ar: "منع مشاركة البلوتوث/الواي فاي", icon: "tower-broadcast", color: "np-svc-icon--slate" },
+    "loop_detect":    { ar: "تتبّع اللوب",                  icon: "arrows-spin",     color: "np-svc-icon--purple" },
   };
 
   function esc(s) {
     return String(s == null ? "" : s)
       .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;");
+  }
+
+  // ── حالة خدمات المنافذ على هذا الراوتر (من tenant_settings جانب الخادم) ──
+  // نقرأ data-pss-svc-state ونحوّله إلى صفوف اصطناعيّة بنفس بنية
+  // groups القادمة من /inventory، ثم نُدمج الاثنين قبل العرض. هذا يجعل
+  // «منع البث» و«تتبّع اللوب» تظهران في «الخدمات المضافة» إن كانتا
+  // مفعّلتَين، حتى لو لم يَدعمهما جرد /inventory.
+  const PSS_STATE = (() => {
+    const el = panel.querySelector("[data-pss-svc-state]");
+    if (!el) return {};
+    try { return JSON.parse(el.textContent || "{}"); }
+    catch (_) { return {}; }
+  })();
+  function buildPssGroups() {
+    const out = [];
+    const TITLES = {
+      bt_wifi_block: "منع مشاركة البلوتوث/الواي فاي",
+      loop_detect:   "تتبّع اللوب",
+    };
+    Object.keys(TITLES).forEach((slug) => {
+      const st = PSS_STATE[slug];
+      if (!st || !st.enabled) return;
+      const ports = Array.isArray(st.ports) ? st.ports.filter(Boolean) : [];
+      if (!ports.length) return;
+      out.push({
+        service_type: slug,
+        title: TITLES[slug],
+        items: ports.map((p) => ({
+          // target فريد لكل (خدمة، منفذ) — لا يُستخدم للحذف عبر
+          // inventory/remove، لكن نُبقيه ليبقى DOM فريدًا.
+          target: slug + ":" + p,
+          label: p,
+          source: "hoberadius",
+          // علم خاصّ يُعطّل زر الحذف في addedCardHtml — هذه الخدمات
+          // تُدار من صفحة «خدمات المنافذ» المخصّصة لا من inventory.
+          _synthetic: true,
+        })),
+      });
+    });
+    return out;
   }
   // رمز الحماية CSRF لطلب الحذف (POST). نقرأ حقل النموذج إن وُجد،
   // وإلا نرجع لوسم <meta name="csrf-token"> الذي يُحقَن دائمًا في
@@ -3584,18 +3729,27 @@ body.mt-modal-open{overflow:hidden}
   }
 
   // بطاقة عنصر واحد (تحمل data-group لمنطق إخفاء ترويسة المجموعة عند الفلترة).
+  // الصفوف الاصطناعيّة (خدمات السكربت على المنافذ) لا تَحمل زر حذف
+  // داخل القائمة لأنّ إزالتها تَمرّ عبر صفحة «خدمات المنافذ» المخصّصة
+  // (نفس مسار تركيبها — apply/remove) — لو فعّلنا inventory/remove
+  // عليها لفشل الطلب لأنّ /inventory لا يَعرف عن tenant_settings.
   function addedCardHtml(e) {
     const it = e.it, meta = e.meta, isMan = e.isMan;
+    const isSyn = !!(it && it._synthetic);
     const date = it.expires_at ? ("ينتهي " + esc(it.expires_at)) : "";
+    const delBtn = isSyn ? "" : (
+      '<button type="button" class="rh-added-del" title="حذف هذه الخدمة"' +
+        ' data-svc="' + esc(e.g.service_type) + '"' +
+        ' data-target="' + esc(it.target) + '"' +
+        ' data-label="' + esc(it.label) + '"' +
+        ' data-type="' + esc(meta.ar) + '">' +
+        '<i class="fa-solid fa-trash"></i></button>'
+    );
     return (
       '<div class="rh-added-row" data-src="' + (isMan ? "operator" : "hoberadius") +
-        '" data-group="' + esc(e.svcKey) + '">' +
-        '<button type="button" class="rh-added-del" title="حذف هذه الخدمة"' +
-          ' data-svc="' + esc(e.g.service_type) + '"' +
-          ' data-target="' + esc(it.target) + '"' +
-          ' data-label="' + esc(it.label) + '"' +
-          ' data-type="' + esc(meta.ar) + '">' +
-          '<i class="fa-solid fa-trash"></i></button>' +
+        '" data-group="' + esc(e.svcKey) + '"' +
+        (isSyn ? ' data-pss-row="1"' : '') + '>' +
+        delBtn +
         '<span class="rh-added-row-icon ' + meta.color + '">' +
           '<i class="fa-solid fa-' + meta.icon + '"></i></span>' +
         '<span class="rh-added-name" title="' + esc(it.label) + '">' + esc(it.label || "—") + '</span>' +
@@ -3727,7 +3881,10 @@ body.mt-modal-open{overflow:hidden}
           loopBadge.classList.add(state === "is-active" ? "is-on" : "is-off");
         }
       });
-      renderAdded(data.groups);
+      // ندمج صفوف PSS الاصطناعيّة مع جرد /inventory قبل العرض. الصفوف
+      // الاصطناعيّة تَجلس في قسمها الخاصّ (bt_wifi_block / loop_detect)
+      // ولا تَتعارض مع أيّ نوع خدمة من الجرد لأنّ مفاتيحها مختلفة.
+      renderAdded((data.groups || []).concat(buildPssGroups()));
       loaded = true;
     } catch (err) {
       clearTimeout(timeoutId);
@@ -3739,6 +3896,10 @@ body.mt-modal-open{overflow:hidden}
         errorEl.hidden = false;
       }
       if (window.console) console.error("[خدماتي] خطأ الفحص:", err);
+      // حتى مع تعذّر الجرد الحيّ، نَعرض صفوف PSS الاصطناعيّة (تأتي
+      // من tenant_settings جانب الخادم، لا تَعتمد على الراوتر) — حتى
+      // يَرى المشغّل أنّ منع البث/تتبع اللوب مفعّلتان رغم انقطاع الجرد.
+      try { renderAdded(buildPssGroups()); } catch (_) {}
     } finally {
       if (refreshBtn) refreshBtn.classList.remove("is-spinning");
       if (addedLoading) addedLoading.hidden = true;
@@ -3840,9 +4001,15 @@ body.mt-modal-open{overflow:hidden}
     });
   }
 
-  // كسول: لا نفحص حتى يفتح المستخدم التبويب. ثلاثة محفّزات:
-  // النقر على الزر، حدث mt:tab-change، وشبكة أمان إن فُتح التبويب
-  // مباشرة عبر hash. كلها تفحص مرّة واحدة (loaded).
+  // اعرض صفوف PSS الاصطناعيّة فورًا (قبل أيّ probe). تأتي من
+  // tenant_settings جانب الخادم، فلا تَعتمد على اتصال الراوتر —
+  // فتظهر «منع البث» و«تتبّع اللوب» في «الخدمات المضافة» مباشرةً
+  // عند فتح التبويب، ثم تُدمج مع جرد /inventory حين يكتمل.
+  try { renderAdded(buildPssGroups()); } catch (_) {}
+
+  // كسول: لا نفحص الجرد الحيّ حتى يفتح المستخدم التبويب. ثلاثة
+  // محفّزات: النقر على الزر، حدث mt:tab-change، وشبكة أمان إن فُتح
+  // التبويب مباشرة عبر hash. كلها تفحص مرّة واحدة (loaded).
   if (tabBtn) {
     tabBtn.addEventListener("click", () => { if (!loaded) probe(); });
   }

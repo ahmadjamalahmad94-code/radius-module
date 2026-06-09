@@ -89,22 +89,45 @@ def _seed_router(app, *, name="rt", address="10.0.0.1"):
 # ─── Dashboard quicknav card ────────────────────────────────
 
 
-def test_router_dashboard_has_npc_quicknav_card(
+def test_router_dashboard_surfaces_web_block_and_walled_garden_directly(
     app, client, monkeypatch,
 ):
-    """Operator's daily entry point: the router dashboard now
-    has a card linking to that router's NPC tabs."""
+    """يونيو 2026 — طلب المالك: حُذف غلاف «سياسات الشبكة» (NPC) من
+    شبكة خدمات لوحة الراوتر، وأُعيدت «حظر المواقع» و«المواقع
+    المسموحة» كبطاقتَين مستقلّتَين تربطان مباشرةً إلى صفحاتهما
+    المُجزّأة (npc_*_list_scoped) بلا المرور بصفحة هبوط NPC.
+    الـroutes تحت /network-policies/ تبقى مُسجَّلة فمن يصلها
+    مباشرةً يصل، فقط سطح الـUI لم يَعُد يَعرض الغلاف."""
     rid = _seed_router(app)
     _login_super(client, monkeypatch)
     r = client.get(f"/admin/radius/mt/{rid}/dashboard")
     assert r.status_code == 200
     html = r.data.decode("utf-8")
-    assert 'data-test="mt-dashboard-npc-link"' in html
-    assert "سياسات الشبكة" in html
-    # The card links to the per-router landing.
-    assert (
-        f"/admin/radius/mt/{rid}/network-policies/" in html
-    )
+    # «سياسات الشبكة» (الغلاف القديم) لم تَعُد على الصفحة
+    assert 'data-test="mt-dashboard-npc-link"' not in html
+    assert "سياسات الشبكة" not in html
+    # حظر المواقع + المواقع المسموحة بطاقتان مباشرتان (نفس الـURLs
+    # المُجزّأة، لكن دون عبور صفحة NPC).
+    assert "حظر المواقع" in html
+    assert "المواقع المسموحة" in html
+    assert f"/admin/radius/mt/{rid}/network-policies/web-block/" in html
+    assert f"/admin/radius/mt/{rid}/network-policies/walled-garden/" in html
+
+
+def test_router_dashboard_has_device_health_card(
+    app, client, monkeypatch,
+):
+    """يونيو 2026 — طلب المالك: أُضيفت بطاقة «تتبع حالة الأجهزة»
+    إلى شبكة خدمات لوحة الراوتر. تربط مباشرةً بصفحة المراقبة
+    على مستوى المستأجر (/admin/radius/device-health)."""
+    rid = _seed_router(app)
+    _login_super(client, monkeypatch)
+    r = client.get(f"/admin/radius/mt/{rid}/dashboard")
+    assert r.status_code == 200
+    html = r.data.decode("utf-8")
+    assert 'data-mt-router-link="device-health"' in html
+    assert "تتبع حالة الأجهزة" in html
+    assert "/admin/radius/device-health" in html
 
 
 # ─── Router-scoped routes ───────────────────────────────────
