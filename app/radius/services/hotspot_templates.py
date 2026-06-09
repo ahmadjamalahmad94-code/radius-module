@@ -1085,54 +1085,23 @@ _JSON_HTML_BUILDERS = {
 }
 
 
-# ─── كتلة الإضافات الموحّدة (زر المتجر / التجربة / إخفاء كلمة المرور)
+# ─── كتلة الإضافات الموحّدة (التجربة / إخفاء كلمة المرور)
 #
 # بدل تكرار CSS وJS في كل قالب من العشرة، تُحقن كتلة واحدة مكتفية
 # ذاتيًا قبل </body> في render() — فتعمل الإضافات على *كل* تصميم
 # في المعرض بما فيها القوالب القديمة الخمسة:
 #
-#   • زر المتجر: يُحقن فقط إن كان STORE_ENABLED=yes والقالب لا
-#     يملك زر متجر أصليًا (عائلة التدرج/بوابة المتجر/الدخول السريع
-#     تملك أزرارها — تُكتفى بتفعيلها عبر صنف hr-store-on).
 #   • زر التجربة المجانية: رابط RouterOS القياسي
 #       $(link-login-only)?dst=$(link-orig-esc)&username=T-$(mac-esc)
 #     يُدرج عبر JS بعد نموذج الدخول مباشرة في أي تصميم.
 #   • إخفاء كلمة المرور: JS يخفي حاوية حقل password ويزيل required
 #     فيُرسل النموذج باسم المستخدم فقط (دخول MikroTik «يوزر فقط»؛
 #     مع CHAP يُهشَّر النص الفارغ بشكل صحيح فلا يتعطل doLogin).
-
-
-def _store_button_html(store_url: str) -> str:
-    """زر متجر عائم سفلي — تصميم محايد يعمل فوق أي قالب.
-
-    مدخل البوابة (login.html) إلى المتجر/المحفظة: المتجر (store.html)
-    يحوي التدفّق الكامل — تسجيل ذاتي فوري (اسم ثلاثي + جوال + كلمة
-    مرور)، دخول، شحن المحفظة، الإيداع بتحويل، السحب، طلباتي والشات.
-    لذا نوضّح في الزر أنه طريق «التسجيل والشحن» لا مجرد متجر."""
-    return (
-        "\n<!-- HR add-on: زر المتجر الإلكتروني (يُحقن من render) -->\n"
-        "<style>\n"
-        ".hr-addon-store{position:fixed;bottom:14px;left:50%;"
-        "transform:translateX(-50%);z-index:9000;display:flex;"
-        "align-items:center;gap:10px;background:#ffffff;color:#0f172a;"
-        "border:1.5px solid {{ACCENT_COLOR}};border-radius:999px;"
-        "padding:9px 20px;font-family:'Almarai',Tahoma,Arial,sans-serif;"
-        "text-decoration:none;box-shadow:0 10px 28px rgba(15,23,42,.25)}\n"
-        ".hr-addon-store .hr-as-ico{width:30px;height:30px;flex-shrink:0;"
-        "border-radius:50%;background:{{ACCENT_COLOR}};color:#fff;"
-        "display:flex;align-items:center;justify-content:center;"
-        "font-size:15px}\n"
-        ".hr-addon-store .hr-as-txt{display:flex;flex-direction:column;"
-        "line-height:1.3;text-align:start}\n"
-        ".hr-addon-store .hr-as-txt b{font-size:13px;font-weight:800}\n"
-        ".hr-addon-store .hr-as-txt small{font-size:10px;color:#64748b;"
-        "font-weight:700}\n"
-        "</style>\n"
-        '<a class="hr-addon-store" href="' + store_url + '">'
-        '<span class="hr-as-ico">🛒</span>'
-        '<span class="hr-as-txt"><b>متجر البطاقات</b>'
-        "<small>سجّل · اشحن رصيدك · طلباتي</small></span></a>\n"
-    )
+#
+# ‏ملحوظة: «زر المتجر العائم» أُزيل (قرار المالك: مدخل واحد فقط).
+# البطاقة الخضراء الأصلية في القالب هي المدخل الوحيد للمتجر — تُكشف
+# بصنف hr-store-on الذي يضيفه سكربت STORE_ENABLED المعزول في رأس
+# كل قالب من عائلة «التدرج الاحترافي». مدخل واحد واضح أفضل من اثنين.
 
 
 # زر التجربة + إخفاء كلمة المرور — JS واحد لأنه يحتاج العثور على
@@ -1312,20 +1281,17 @@ def _saved_sessions_js() -> str:
 def _inject_addons(html: str, safe: dict[str, str]) -> str:
     """يحقن كتلة الإضافات قبل </body> حسب القيم المفحوصة.
 
-    زر المتجر العائم وقسم «الجلسات المحفوظة» يُتخطيان للقوالب التي
-    تملك نسخة أصلية منهما (تُكشف بصنف التفعيل hr-store-on /
-    hr-saved-on في القالب) فلا يتكرّر الحقن."""
+    الإضافات حاليًا: زر التجربة المجانية، إخفاء كلمة المرور، وقسم
+    «الجلسات المحفوظة». لم يعد يُحقن «زر المتجر العائم» — البطاقة
+    الخضراء الأصلية في القالب هي مدخل المتجر الوحيد (تُكشف بصنف
+    hr-store-on). قسم الجلسات يُتخطى للقوالب التي تملك نسخة أصلية
+    منه (fiber_glow) المعلَّمة بصنف hr-saved-on."""
     blocks = ""
-    if safe.get("STORE_ENABLED") == "yes":
-        # ⚠️ إصلاح «زر المتجر يختفي على الراوتر»: نحقن زرًّا ثابتًا
-        # (HTML خالص بلا اعتماد على JS القالب) دائمًا عند تفعيل المتجر —
-        # حتى للقوالب ذات الزر الأصلي (hr-store-on). سبب الاختفاء أن
-        # الزر الأصلي مرتبط بـJS القالب، فإن تعطّل سكربت القالب على
-        # الراوتر (لأي سبب) اختفى الزر؛ الزر الثابت المحقون لا يعتمد على
-        # أي سكربت فيظهر دائمًا. في القوالب السليمة قد يظهر مدخلان
-        # للمتجر (أعلى + عائم سفلي) وكلاهما يعمل — وجودٌ مضمون أهمّ من
-        # تكرار نادر.
-        blocks += _store_button_html(safe.get("STORE_URL", "#"))
+    # ‏قرار المالك: مدخل متجر واحد فقط — البطاقة الخضراء الأصلية في
+    # القالب (تظهر بصنف body.hr-store-on الذي يضيفه سكربت
+    # STORE_ENABLED المعزول في عائلة «التدرج الاحترافي»). أُزيل الزر
+    # العائم الأزرق الذي كان يُحقن هنا كـfallback في حقبة ما قبل
+    # إعادة الكتابة ES5 — لم يعد ضروريًا بعد أن صار السكربت موثوقًا.
     hide_pw = safe.get("PASSWORD_FIELD") == "no"
     trial = safe.get("TRIAL_ENABLED") == "yes"
     if hide_pw or trial:
