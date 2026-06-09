@@ -30,6 +30,9 @@ def _logged_in(app):
         s["admin_id"] = 1
         s["admin_user"] = "test"
         s["tenant_id"] = 1
+        # صفحة المجموعات محروسة خادميًا الآن (users.view) — كانت مفتوحة
+        # قبل تفعيل حارس العرض. هذا اختبار ميزة لا تفويض، فنُصادق كسوبر.
+        s["is_super_admin"] = True
     return client
 
 
