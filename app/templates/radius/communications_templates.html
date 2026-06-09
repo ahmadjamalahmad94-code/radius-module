@@ -18,16 +18,23 @@
     border-radius:11px; padding:8px 13px; font:inherit; font-size:12px; font-weight:800; cursor:pointer; transition:.14s; }
   .ctpl-seed-chip:hover{ background:#ede9fe; border-color:#a78bfa; transform:translateY(-1px); }
   .ctpl-seed-chip i{ color:#7c3aed; }
-  /* form (retained custom element) */
-  .ctpl-form{ display:grid; gap:14px; }
-  .ctpl-row{ display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:13px; }
-  .ctpl-fld{ display:grid; gap:6px; }
-  .ctpl-fld label{ font-size:12.5px; font-weight:800; color:#0f172a; }
-  .ctpl-fld .hint{ font-size:11px; color:#94a3b8; line-height:1.6; }
-  .ctpl-input,.ctpl-select,.ctpl-area{ width:100%; border:1px solid #cbd5e1; border-radius:10px; padding:9px 11px; font:inherit; font-size:13px; background:#fff; color:#0f172a; }
+  /* form — even vertical rhythm, controls share the same baseline across columns */
+  .ctpl-form{ display:flex; flex-direction:column; gap:18px; }
+  .ctpl-row{ display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:13px; align-items:start; }
+  .ctpl-fld{ display:flex; flex-direction:column; }
+  /* label zone: fixed min-height so every field in a row pins its input at the same Y regardless
+     of whether the label is 1 or 2 lines; text gravity to flex-end keeps it close to the control */
+  .ctpl-fld label{ font-size:12.5px; font-weight:800; color:#0f172a;
+    min-height:2.6em; line-height:1.3; display:flex; align-items:flex-end; padding-bottom:5px; }
+  .ctpl-fld .hint{ font-size:11px; color:#94a3b8; line-height:1.6; margin-top:5px; }
+  /* inputs and selects: explicit uniform height so browser native differences don't misalign them */
+  .ctpl-input,.ctpl-select{ width:100%; box-sizing:border-box; border:1px solid #cbd5e1;
+    border-radius:10px; padding:0 11px; height:38px; font:inherit; font-size:13px; background:#fff; color:#0f172a; }
   .ctpl-input:focus,.ctpl-select:focus,.ctpl-area:focus{ outline:0; border-color:#7c3aed; box-shadow:0 0 0 3px rgba(124,58,237,.15); }
   .ctpl-input.mono{ font-family:ui-monospace,Consolas,monospace; font-size:12px; direction:ltr; unicode-bidi:isolate; }
-  .ctpl-area{ min-height:110px; resize:vertical; line-height:1.85; }
+  .ctpl-area{ width:100%; box-sizing:border-box; border:1px solid #cbd5e1; border-radius:10px;
+    padding:9px 11px; font:inherit; font-size:13px; background:#fff; color:#0f172a;
+    min-height:110px; resize:vertical; line-height:1.85; }
   .ctpl-vars{ display:flex; gap:6px; flex-wrap:wrap; }
   .ctpl-var{ font-family:ui-monospace,Consolas,monospace; font-size:11px; background:#f1f5f9; border:1px solid #e2e8f0; border-radius:6px;
     padding:3px 8px; color:#5b21b6; direction:ltr; unicode-bidi:isolate; cursor:pointer; transition:.12s; }
