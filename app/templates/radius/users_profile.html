@@ -13,6 +13,8 @@
    ═══════════════════════════════════════════════════════════════════ #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
+{# ماكروهات التعريب المحلّية لقطاع المشتركين — تُؤنسن أي قيمة مجهولة ولا تُظهر كوداً خاماً #}
+{% import "radius/_subs_labels.html" as L %}
 
 {# Durations are stored in MINUTES; the `dur_days` filter (app/__init__.py)
    humanizes them to a friendly Arabic days string — e.g. 5400 → «3 أيام و18 ساعة». #}
@@ -634,31 +636,14 @@
   {%- endif -%}
 {%- endmacro %}
 
+{# شارة الحالة: نص عربي من L.status (لا يسقط للخام أبداً) + لون الشارة حسب الحالة #}
 {% macro status_pill(s) -%}
-  {%- if s == "enabled" or s == "active" -%}{{ hub.pill("مفعَّل", variant="green") }}
-  {%- elif s == "disabled" -%}{{ hub.pill("معطَّل", variant="red") }}
-  {%- elif s == "expired" -%}{{ hub.pill("منتهٍ", variant="amber") }}
-  {%- elif s == "suspended" -%}{{ hub.pill("مجمَّد", variant="amber") }}
-  {%- elif s == "pending" -%}{{ hub.pill("معلَّق", variant="grey") }}
-  {%- elif s == "banned" -%}{{ hub.pill("محظور", variant="red") }}
-  {%- else -%}{{ hub.pill(s or "—", variant="grey") }}{%- endif -%}
-{%- endmacro %}
-
-{# ── تعريب قيم enum الخام للعرض (نوع الخدمة/المستخدم/الحساب) ──
-   القيمة الخام تبقى في title لمن يحتاج المرجع التقني. #}
-{% macro fmt_service_type(v) -%}
-  {%- set m = {"hotspot":"هوت سبوت","pppoe":"PPPoE","both":"هوت سبوت + PPPoE","dhcp":"DHCP","other":"أخرى"} -%}
-  {%- if v -%}<bdi title="{{ v }}">{{ m.get(v|lower, v) }}</bdi>{%- else -%}—{%- endif -%}
-{%- endmacro %}
-
-{% macro fmt_user_type(v) -%}
-  {%- set m = {"subscriber":"مشترك","card":"كرت","trial":"تجريبي"} -%}
-  {%- if v -%}<bdi title="{{ v }}">{{ m.get(v|lower, v) }}</bdi>{%- else -%}—{%- endif -%}
-{%- endmacro %}
-
-{% macro fmt_account_type(v) -%}
-  {%- set m = {"personal":"شخصي","business":"تجاري","company":"شركة","prepaid":"مدفوع مسبقاً","postpaid":"آجل الدفع"} -%}
-  {%- if v -%}<bdi title="{{ v }}">{{ m.get(v|lower, v) }}</bdi>{%- else -%}—{%- endif -%}
+  {%- set k = (s|string|lower|trim) -%}
+  {%- if k == "enabled" or k == "active" or k == "online" -%}{{ hub.pill(L.status(s), variant="green") }}
+  {%- elif k == "disabled" or k == "banned" -%}{{ hub.pill(L.status(s), variant="red") }}
+  {%- elif k == "expired" or k == "suspended" -%}{{ hub.pill(L.status(s), variant="amber") }}
+  {%- elif k == "pending" -%}{{ hub.pill(L.status(s), variant="grey") }}
+  {%- else -%}{{ hub.pill(L.status(s) if s else "—", variant="grey") }}{%- endif -%}
 {%- endmacro %}
 
 
@@ -815,7 +800,7 @@
         <div class="row"><span class="k">{{ _('المدينة') }}</span><span class="v">{{ sub.city or "—" }}</span></div>
         <div class="row"><span class="k">{{ _('المنطقة') }}</span><span class="v">{{ sub.district or "—" }}</span></div>
         <div class="row"><span class="k">{{ _('العنوان') }}</span><span class="v">{{ sub.address or "—" }}</span></div>
-        <div class="row"><span class="k">{{ _('نوع الحساب') }}</span><span class="v">{{ fmt_account_type(sub.account_type) }}</span></div>
+        <div class="row"><span class="k">{{ _('نوع الحساب') }}</span><span class="v">{{ L.ident(L.account_type(sub.account_type), sub.account_type) if sub.account_type else "—" }}</span></div>
         <div class="row"><span class="k">{{ _('المجموعة') }}</span><span class="v">{{ sub.group or "—" }}</span></div>
       </div>
     {% endcall %}
@@ -833,8 +818,8 @@
             {%- else -%}—{%- endif -%}
           </span>
         </div>
-        <div class="row"><span class="k">{{ _('نوع الخدمة') }}</span><span class="v">{{ fmt_service_type(sub.service_type) }}</span></div>
-        <div class="row"><span class="k">{{ _('نوع المستخدم') }}</span><span class="v">{{ fmt_user_type(sub.user_type) }}</span></div>
+        <div class="row"><span class="k">{{ _('نوع الخدمة') }}</span><span class="v">{{ L.ident(L.service_type(sub.service_type), sub.service_type) if sub.service_type else "—" }}</span></div>
+        <div class="row"><span class="k">{{ _('نوع المستخدم') }}</span><span class="v">{{ L.ident(L.user_type(sub.user_type), sub.user_type) if sub.user_type else "—" }}</span></div>
         <div class="row"><span class="k">{{ _('سرعة التنزيل') }}</span><span class="v">{{ fmt_speed(profile.speed_dn) }}</span></div>
         <div class="row"><span class="k">{{ _('سرعة الرفع') }}</span><span class="v">{{ fmt_speed(profile.speed_up) }}</span></div>
         <div class="row"><span class="k">{{ _('سرعة مخصّصة') }}</span><span class="v">{{ "نعم" if sub.custom_speed else "لا" }}</span></div>
@@ -890,8 +875,7 @@
         <div class="row"><span class="k">{{ _('الرصيد') }}</span><span class="v">{{ (sub.balance or 0)|money }}</span></div>
         <div class="row"><span class="k">{{ _('المرجع المالي') }}</span><span class="v">{{ sub.payment_reference or "—" }}</span></div>
         <div class="row"><span class="k">{{ _('طريقة الدفع') }}</span><span class="v">
-          {%- set _spm = {"cash":"نقداً","card":"بطاقة","bank":"حوالة بنكية","bank_transfer":"حوالة بنكية","wallet":"محفظة","voucher":"قسيمة","online":"دفع إلكتروني","credit":"رصيد"} -%}
-          {%- if sub.payment_method -%}<bdi title="{{ sub.payment_method }}">{{ _spm.get((sub.payment_method|string)|lower, sub.payment_method) }}</bdi>{%- else -%}—{%- endif -%}
+          {%- if sub.payment_method -%}{{ L.ident(L.pay_method(sub.payment_method), sub.payment_method) }}{%- else -%}—{%- endif -%}
         </span></div>
       </div>
     {% endcall %}
@@ -927,7 +911,7 @@
                 </div>
                 <div class="cc-tl-desc">
                   {{ e.desc or '—' }}
-                  {% if e.actor %}<span class="hub-text-mute"> · {{ e.actor }}</span>{% endif %}
+                  {% if e.actor %}<span class="hub-text-mute"> · {{ L.who(e.actor) }}</span>{% endif %}
                 </div>
               </div>
             </div>
@@ -962,13 +946,14 @@
               <td>{{ inv.description or inv.plan_name or "—" }}</td>
               <td class="num">{{ "%.2f"|format((inv.amount or 0)|float) }}</td>
               <td>
-                {%- set st = inv.status or "pending" -%}
-                {%- if st == "paid" -%}{{ hub.pill("مدفوعة", variant="green") }}
-                {%- elif st == "overdue" -%}{{ hub.pill("متأخّرة", variant="red") }}
-                {%- elif st == "cancelled" or st == "canceled" or st == "void" -%}{{ hub.pill("ملغاة", variant="grey") }}
-                {%- elif st == "partial" -%}{{ hub.pill("مدفوعة جزئياً", variant="amber") }}
-                {%- elif st == "pending" or st == "unpaid" -%}{{ hub.pill("غير مدفوعة", variant="amber") }}
-                {%- else -%}{{ hub.pill(st, variant="grey") }}{%- endif -%}
+                {# النص دائماً من L.pay_status (لا سقوط للخام)؛ لون الشارة حسب الحالة #}
+                {%- set st = (inv.status or "pending")|lower -%}
+                {%- if st == "paid" -%}{{ hub.pill(L.pay_status(inv.status), variant="green") }}
+                {%- elif st == "overdue" -%}{{ hub.pill(L.pay_status(inv.status), variant="red") }}
+                {%- elif st in ["cancelled","canceled","void","voided"] -%}{{ hub.pill(L.pay_status(inv.status), variant="grey") }}
+                {%- elif st == "partial" -%}{{ hub.pill(L.pay_status(inv.status), variant="amber") }}
+                {%- elif st in ["pending","unpaid","due"] -%}{{ hub.pill(L.pay_status(inv.status), variant="amber") }}
+                {%- else -%}{{ hub.pill(L.pay_status(inv.status), variant="grey") }}{%- endif -%}
               </td>
             </tr>
             {% endfor %}
@@ -997,9 +982,8 @@
             {% for p in payments %}
             <tr>
               <td class="small muted">{{ fmt_dt(p.created_at or p.paid_at) }}</td>
-              {# تعريب طريقة الدفع — القيمة الخام في title #}
-              {%- set _pm = {"cash":"نقداً","card":"بطاقة","bank":"حوالة بنكية","bank_transfer":"حوالة بنكية","wallet":"محفظة","voucher":"قسيمة","online":"دفع إلكتروني","credit":"رصيد"} -%}
-              <td>{% if p.method %}<bdi title="{{ p.method }}">{{ _pm.get((p.method|string)|lower, p.method) }}</bdi>{% else %}—{% endif %}</td>
+              {# تعريب طريقة الدفع عبر L.pay_method — القيمة الخام في title #}
+              <td>{% if p.method %}{{ L.ident(L.pay_method(p.method), p.method) }}{% else %}—{% endif %}</td>
               <td class="mono small">{{ p.reference or p.txn_id or "—" }}</td>
               <td class="num">{{ "%.2f"|format((p.amount or 0)|float) }}</td>
               <td class="small">{{ p.note or "—" }}</td>
@@ -1109,19 +1093,23 @@
                 <td class="mono small">{{ fmt_dt(ses.started_at) }}</td>
                 <td class="mono small">{{ fmt_dt(ses.stopped_at) }}</td>
                 <td class="num">{{ fmt_dur(ses.duration_seconds or 0) }}</td>
-                <td class="mono small" title="{{ ses.session_id or '' }}{% if ses.service_type %} · {{ ses.service_type }}{% endif %}{% if ses.framed_protocol %} · {{ ses.framed_protocol }}{% endif %}">
+                {# معرّف الخدمة: نوع خدمة معرَّب عبر L.service_type (يؤنسن المجهول)؛
+                   إن غاب نعرض معرّف الجلسة التقني داخل bdi mono. الخام في title. #}
+                <td class="small" title="{{ ses.session_id or '' }}{% if ses.service_type %} · {{ ses.service_type }}{% endif %}{% if ses.framed_protocol %} · {{ ses.framed_protocol }}{% endif %}">
                   {% set _svc = ses.service_type or ses.framed_protocol %}
                   {% if _svc %}
-                    {{ _svc }}
+                    {{ L.service_type(_svc) }}
                   {% elif ses.session_id %}
-                    {{ ses.session_id[:14] + '…' if ses.session_id|length > 14 else ses.session_id }}
+                    <bdi dir="ltr" class="mono">{{ ses.session_id[:14] + '…' if ses.session_id|length > 14 else ses.session_id }}</bdi>
                   {% else %}—{% endif %}
                 </td>
-                <td class="mono small" title="{% if ses.nas_port_type %}{{ ses.nas_port_type }}{% endif %}{% if ses.nas_port %} · {{ ses.nas_port }}{% endif %}">
+                {# منفذ الاتصال: نوع المنفذ معرَّب (Ethernet/Wireless...) عبر humanize؛
+                   إن كان نصاً تقنياً نعرضه mono، والرقمي «غير محدد». الخام في title. #}
+                <td class="small" title="{% if ses.nas_port_type %}{{ ses.nas_port_type }}{% endif %}{% if ses.nas_port %} · {{ ses.nas_port }}{% endif %}">
                   {% if ses.nas_port_type %}
-                    {{ ses.nas_port_type }}
+                    {{ L.humanize(ses.nas_port_type) }}
                   {% elif ses.nas_port and not (ses.nas_port|string).isdigit() %}
-                    {{ ses.nas_port[:14] + '…' if ses.nas_port and ses.nas_port|length > 14 else ses.nas_port }}
+                    <bdi dir="ltr" class="mono">{{ ses.nas_port[:14] + '…' if ses.nas_port and ses.nas_port|length > 14 else ses.nas_port }}</bdi>
                   {% elif ses.nas_port %}
                     غير محدد
                   {% else %}—{% endif %}
@@ -1216,8 +1204,10 @@
             {% set _act = (e.action or e.event or '')|lower %}
             <tr>
               <td class="small muted">{{ fmt_dt(e.created_at or e.ts) }}</td>
-              <td><strong>{{ e.actor or "—" }}</strong></td>
-              <td>{{ action_labels.get(_act, e.action or e.event or "—") }}</td>
+              {# المنفِّذ عبر L.who: اسم حقيقي أو «النظام» (لا «admin #id») #}
+              <td><strong>{{ L.who(e.actor) }}</strong></td>
+              {# الإجراء معرَّب؛ المجهول يُؤنسَن (لا كود snake_case)، الخام في title #}
+              <td>{{ L.ident(action_labels.get(_act, L.humanize(e.action or e.event)), e.action or e.event or "") }}</td>
               <td class="small mono">{{ e.payload_display or "—" }}</td>
             </tr>
             {% endfor %}
@@ -1298,7 +1288,8 @@
             <tr>
               <td class="mono">{{ c.username }}</td>
               <td class="mono small">{{ c.password }}</td>
-              <td class="small">#{{ c.batch_id or "—" }}</td>
+              {# الباتش: تسمية عربية واضحة بدل «#id» الخام؛ المعرّف في title #}
+              <td class="small">{% if c.batch_id %}<span title="batch #{{ c.batch_id }}">دفعة رقم {{ c.batch_id }}</span>{% else %}—{% endif %}</td>
               <td class="small muted">{{ fmt_dt(c.first_used_at) }}</td>
               <td class="mono small">{{ c.used_by_mac or "—" }}</td>
               <td class="small muted">{{ fmt_dt(c.expire_at) }}</td>
@@ -1335,11 +1326,12 @@
                 <td class="num">{{ "%.2f"|format((l.amount or 0)|float) }}</td>
                 <td class="num">{{ "%.2f"|format((l.remaining or 0)|float) }}</td>
                 <td>
+                  {# النص من L.loan_status (لا سقوط للخام)؛ لون الشارة حسب الحالة #}
                   {%- set lst = (l.status or "open")|lower -%}
-                  {%- if lst == "settled" or lst == "paid" or lst == "closed" -%}{{ hub.pill("مسدَّد", variant="green") }}
-                  {%- elif lst == "writeoff" or lst == "written_off" -%}{{ hub.pill("شُطب", variant="grey") }}
-                  {%- elif lst == "overdue" -%}{{ hub.pill("متأخّر", variant="red") }}
-                  {%- else -%}{{ hub.pill("نشط", variant="amber") }}{%- endif -%}
+                  {%- if lst in ["settled","paid","closed"] -%}{{ hub.pill(L.loan_status(l.status or "settled"), variant="green") }}
+                  {%- elif lst in ["writeoff","written_off"] -%}{{ hub.pill(L.loan_status("writeoff"), variant="grey") }}
+                  {%- elif lst == "overdue" -%}{{ hub.pill(L.loan_status("overdue"), variant="red") }}
+                  {%- else -%}{{ hub.pill(L.loan_status(l.status or "open"), variant="amber") }}{%- endif -%}
                 </td>
               </tr>
               {% endfor %}

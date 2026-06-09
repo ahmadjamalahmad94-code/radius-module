@@ -1014,16 +1014,34 @@ def users_profile(username: str):
     # ── 2. Audit events targeting this subscriber.
     #    audit_repo doesn't have a per-target filter yet — pull recent and
     #    filter in-memory (cheap for the typical 200-row window).
+    # تعريب مفاتيح حمولة الحدث (تظهر في عمود «تفاصيل» بأحداث المدراء) —
+    # خريطة محلّية لهذا القطاع فقط حتى لا يظهر مفتاح إنجليزي خام مثل
+    # «plan_id=5 · amount=100». المجهول يُؤنسَن (شرطة سفليّة → مسافة).
+    _payload_key_ar = {
+        "plan_id": "الباقة", "plan": "الباقة", "quota_mb": "الكوتة (م.بايت)",
+        "quota_target": "الكوتة المستهدفة", "amount": "المبلغ", "currency": "العملة",
+        "policy": "السياسة", "note": "ملاحظة", "notes": "ملاحظات", "reason": "السبب",
+        "status": "الحالة", "speed": "السرعة", "balance": "الرصيد",
+        "before": "قبل", "after": "بعد", "username": "المستخدم", "hours": "الساعات",
+        "days": "الأيام", "mac": "عنوان MAC", "ip": "عنوان IP",
+    }
+
+    def _ar_payload_pairs(payload: dict) -> str:
+        parts = []
+        for key, value in payload.items():
+            if key == "demo_profile_events":
+                continue
+            label = _payload_key_ar.get(key, str(key).replace("_", " "))
+            parts.append(f"{label}: {value}")
+        return " · ".join(parts)
+
     try:
         all_events = audit_repo.recent(tid, limit=500)
         events = []
         for e in all_events:
             payload = _audit_payload(e)
             e["_payload"] = payload
-            e["payload_display"] = " · ".join(
-                f"{key}={value}" for key, value in payload.items()
-                if key != "demo_profile_events"
-            )
+            e["payload_display"] = _ar_payload_pairs(payload)
             if (
                 (e.get("target_type") == "subscriber" and e.get("target_id") == username)
                 or (e.get("target_type") == "card" and payload.get("username") == username)
@@ -1088,7 +1106,8 @@ def users_profile(username: str):
             preview = []
             for key in ("plan_id", "quota_mb", "quota_target", "amount", "currency", "policy"):
                 if key in payload:
-                    preview.append(f"{key}={payload.get(key)}")
+                    # تسمية عربية للمفتاح بدل المفتاح الإنجليزي الخام
+                    preview.append(f"{_payload_key_ar.get(key, key)}: {payload.get(key)}")
             details = " · ".join(preview)
         activity_events.append({
             "kind": "audit",
@@ -1096,7 +1115,7 @@ def users_profile(username: str):
             "pill_class": "cc-pill-purple",
             "dot_class": "amber" if (e.get("severity") == "warning") else "",
             "title": _audit_event_title(action),
-            "desc": details or f"نفّذها {e.get('actor') or 'system'}",
+            "desc": details or ("نفّذها " + (e.get("actor") or "النظام")),
             "at": e.get("created_at") or e.get("ts"),
             "actor": e.get("actor") or "",
         })
