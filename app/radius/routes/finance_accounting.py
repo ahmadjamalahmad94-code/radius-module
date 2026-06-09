@@ -12,6 +12,7 @@ from __future__ import annotations
 from flask import Blueprint, flash, render_template, request
 
 from ..core.errors import RadiusValidationError
+from ..db.repos import accounting_repo
 from ..services.accounting import service_from_context
 
 # Single source of truth for the report catalogue lives on the legacy
@@ -48,6 +49,18 @@ def accounting_hub():
     except (ValueError, RadiusValidationError) as exc:
         flash(getattr(exc, "message", str(exc)), "error")
         ledger_items = []
+
+    # إثراء كل صف باسم العرض الحقيقي للمستفيد (الاسم الكامل إن وُجد، وإلا اسم
+    # المستخدم) — حتى يظهر اسم واضح في عمود «المستفيد» بدل «#رقم» خام.
+    # استعلام واحد لكل الصفحة، ولا يمسّ منطق الدفتر ولا واجهة الـAPI.
+    _names = accounting_repo.subscriber_names(
+        svc.tenant_id, [e.get("subscriber_id") for e in ledger_items]
+    )
+    for e in ledger_items:
+        e["display_name"] = (
+            _names.get(e.get("subscriber_id"))
+            or (e.get("username") or "").strip()
+        )
 
     # KPIs are a pure aggregation over the rows the legacy page already
     # fetched — no new query, no business logic.

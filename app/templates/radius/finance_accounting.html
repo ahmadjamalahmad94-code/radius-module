@@ -210,6 +210,9 @@
              (payment / loan / settlement ...). القيم تغطي entry_type
              وsource_type معًا (راجع accounting_repo: payment_void،
              loan_writeoff، ledger_void، card_sale). #}
+          {# خريطة «النوع» (entry_type) — معرّبة بالكامل لكل القيم المكتوبة
+             في الدفتر (راجع accounting_repo/users/payments/cards). أي مفتاح
+             غير معروف يسقط لعبارة عربية عامة لا للمعرّف الإنجليزي الخام. #}
           {% set _type_labels = {
             'payment': 'دفعة', 'loan': 'سلفة', 'settlement': 'تسوية',
             'void': 'إلغاء', 'reversal': 'عكسي', 'correction': 'تصحيح',
@@ -217,6 +220,28 @@
             'ledger_void': 'عكس قيد', 'card_sale': 'بيع بطاقة',
             'invoice': 'فاتورة', 'refund': 'استرداد', 'discount': 'خصم',
             'adjustment': 'تعديل', 'topup': 'شحن رصيد',
+            'debt': 'دين', 'debt_settlement': 'تسوية دين',
+            'cash_balance': 'رصيد نقدي', 'quota_topup': 'شحن كوتة',
+            'time_extension': 'تمديد وقت', 'wallet_recharge': 'شحن محفظة',
+            'writeoff': 'إعدام دين', 'batch_creation': 'إنشاء دفعة بطاقات',
+          } %}
+          {# خريطة «المصدر» (source_type) — مستقلّة تمامًا عن النوع لأن مفاتيحها
+             مختلفة (subscriber_time_extension, subscriber_quota_topup, ...).
+             كانت تُعرَّب خطأً بخريطة النوع فتتسرّب إنجليزية خام. كاملة لكل
+             القيم المكتوبة كمصدر، وأي مفتاح مجهول يسقط لعبارة عربية عامة. #}
+          {% set _source_labels = {
+            'payment': 'دفعة', 'payment_void': 'إلغاء دفعة',
+            'payment_balance_settlement': 'تسوية رصيد دفعة',
+            'payment_collection_request': 'طلب تحصيل دفعة',
+            'loan': 'سلفة', 'loan_writeoff': 'إعدام سلفة',
+            'settlement': 'تسوية', 'ledger_void': 'عكس قيد',
+            'card_sale': 'بيع بطاقة',
+            'subscriber_time_extension': 'تمديد وقت المشترك',
+            'subscriber_quota_topup': 'شحن كوتة المشترك',
+            'subscriber_plan_change': 'تغيير عرض المشترك',
+            'subscriber_daily_quota_reset': 'تصفير الكوتة اليومية',
+            'subscriber_cash_balance': 'رصيد نقدي للمشترك',
+            'external': 'مصدر خارجي',
           } %}
           {# تلميح لكل نوع قيد يشرح أثره على الرصيد — يظهر بالوقوف على الشارة
              (title) فيفهم الموظف «هالحركة شو بتأثر» دون مغادرة الجدول. #}
@@ -236,24 +261,25 @@
           {% for entry in ledger_items %}
           <tr>
             <td class="num mono">{{ entry.id }}</td>
-            <td><span title="{{ _type_effects.get(entry.entry_type, 'قيد مالي مسجَّل في الدفتر التراكمي.') }}">{{ hub.pill(_type_labels.get(entry.entry_type, entry.entry_type), variant="brand", dot=False) }}</span></td>
-            <td>
-              <div>{{ entry.username or '—' }}</div>
-              {% if entry.subscriber_id %}<div class="hub-text-mute mono small">#{{ entry.subscriber_id }}</div>{% endif %}
-            </td>
+            {# النوع: شارة عربية دائمًا — المفاتيح المجهولة تسقط لـ«قيد مالي» لا للخام #}
+            <td><span title="{{ _type_effects.get(entry.entry_type, 'قيد مالي مسجَّل في الدفتر التراكمي.') }}">{{ hub.pill(_type_labels.get(entry.entry_type, 'قيد مالي'), variant="brand", dot=False) }}</span></td>
+            {# المستفيد: الاسم الحقيقي فقط (الاسم الكامل أو اسم المستخدم) — بلا «#رقم» خام #}
+            <td>{{ entry.display_name or '—' }}</td>
             <td>
               {% if entry.direction == 'debit' %}{{ hub.pill("مدين", variant="red") }}
               {% elif entry.direction == 'credit' %}{{ hub.pill("دائن", variant="green") }}
-              {% else %}{{ hub.pill(entry.direction, variant="grey") }}{% endif %}
+              {% else %}{{ hub.pill("غير محدّد", variant="grey") }}{% endif %}
             </td>
             <td class="num mono" style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr"><strong>{{ entry.amount|money }}</strong></td>
             <td>
               {% if entry.status == 'posted' %}{{ hub.pill("مرحَّل", variant="green") }}
-              {% elif entry.status == 'void' %}{{ hub.pill("ملغى", variant="grey") }}
-              {% else %}{{ hub.pill(entry.status, variant="amber") }}{% endif %}
+              {% elif entry.status in ['void','voided'] %}{{ hub.pill("ملغى", variant="grey") }}
+              {% elif entry.status == 'pending' %}{{ hub.pill("معلّق", variant="amber") }}
+              {% else %}{{ hub.pill("غير محدّد", variant="amber") }}{% endif %}
             </td>
-            {# المصدر بالعربية + المعرّف التقني رقمي أحادي المسافة داخل <bdi> #}
-            <td class="small">{{ _type_labels.get(entry.source_type, entry.source_type) or '—' }}{% if entry.source_id %} <span class="hub-text-mute mono"><bdi dir="ltr">#{{ entry.source_id }}</bdi></span>{% endif %}</td>
+            {# المصدر: عبارة عربية واضحة من خريطة المصادر المستقلّة — بلا معرّف
+               تقني خام ولا «#رقم». المفتاح المجهول يسقط لـ«مصدر آخر». #}
+            <td class="small">{% if entry.source_type %}{{ _source_labels.get(entry.source_type, 'مصدر آخر') }}{% else %}—{% endif %}</td>
             <td class="small">{{ entry.notes or '—' }}</td>
             <td class="num mono small" style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">{{ entry.created_at|dt_local }}</td>
             <td>
