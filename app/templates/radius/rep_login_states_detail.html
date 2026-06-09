@@ -141,7 +141,7 @@
               {% if r.source=='network' %}<i class="fa-solid fa-network-wired"></i>
               {% elif r.source=='panel' %}<i class="fa-solid fa-shield-halved"></i>
               {% else %}<i class="fa-solid fa-globe"></i>{% endif %}
-              {{ source_labels.get(r.source, r.source) }}
+              {{ source_labels.get(r.source, 'غير محدد') if r.source else '—' }}
             </span>
           </td>
           {% endif %}

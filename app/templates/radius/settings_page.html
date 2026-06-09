@@ -720,7 +720,7 @@
             <input class="hub-input" type="text" value="{{ store_key or '— لم يُولَّد بعد (يُنشأ تلقائيًا عند أول نشر للمتجر) —' }}" dir="ltr" readonly onclick="this.select()">
             <button type="submit" class="st-suffix-tag" style="cursor:pointer;border:0;font-weight:800"
                     formaction="{{ url_for('radius.settings_rotate_store_key') }}" formmethod="post" formnovalidate
-                    onclick="return confirm('توليد مفتاح جديد سيُبطل المفتاح الحالي فورًا، ولن يعمل متجرك المنشور حتى تُعيد نشر store.html بالمفتاح الجديد من مصمّم صفحة الدخول. هل تريد المتابعة؟');">
+                    data-confirm="توليد مفتاح جديد سيُبطل المفتاح الحالي فورًا، ولن يعمل متجرك المنشور حتى تُعيد نشر store.html بالمفتاح الجديد من مصمّم صفحة الدخول. هل تريد المتابعة؟">
               <i class="fa-solid fa-rotate"></i> {{ _('توليد مفتاح جديد') }}
             </button>
           </div>
@@ -898,5 +898,8 @@
   }
 })();
 </script>
+
+{# مودال تأكيد موحّد بديل عن confirm() المتصفّح (توليد مفتاح المتجر) #}
+{% include "radius/_confirm_modal.html" %}
 {% endblock %}
 

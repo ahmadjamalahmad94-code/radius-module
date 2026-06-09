@@ -25,6 +25,7 @@
 """
 from __future__ import annotations
 
+import re
 from typing import Any, Iterable, Mapping, Sequence
 
 
@@ -380,10 +381,54 @@ _PAYLOAD_KEY_AR: dict[str, str] = {
     "count": "العدد", "duration": "المدة",
     "before_plan": "العرض السابق", "after_plan": "العرض الجديد",
     "card_id": "البطاقة", "ip": "العنوان", "mac": "MAC",
+    # مفاتيح حمولة شائعة كانت تتسرّب خامًا في عمود «التفاصيل»
+    "kind": "النوع", "actor_type": "نوع المنفّذ", "entity_type": "نوع الكيان",
+    "event": "الحدث", "event_type": "نوع الحدث", "source": "المصدر",
+    "direction": "الاتجاه", "scope": "النطاق", "field": "الحقل",
+    "value": "القيمة", "old": "السابق", "new": "الجديد",
+    "from": "من", "to": "إلى", "name": "الاسم", "plan": "العرض",
+    "plan_id": "العرض", "method": "الطريقة", "type": "النوع",
 }
 
 # قيم منطقية → عربي.
 _BOOL_AR = {True: "نعم", False: "لا"}
+
+# مفاتيح قيمتها enum إنجليزية تُترجم (دون لمس القيم التقنية كـ slug/currency).
+_ENUM_KEYS = {"kind", "actor_type", "entity_type", "event", "event_type",
+              "source", "direction", "scope", "type", "method"}
+
+# قيم enum شائعة → عربي. أي قيمة snake_case غير مُدرَجة تُؤنَّس (بلا شرطة سفلية)
+# فلا يظهر كود إنجليزي خام في العمود.
+_ENUM_VALUE_AR: dict[str, str] = {
+    "login_event": "حدث دخول", "login": "دخول", "logout": "خروج",
+    "first_login": "أول دخول", "active": "نشط", "created": "إنشاء",
+    "updated": "تحديث", "deleted": "حذف", "audit": "تدقيق",
+    "admin": "مدير", "manager": "مدير", "subscriber": "مشترك",
+    "distributor": "موزّع", "card": "بطاقة", "card_user": "مستخدم بطاقة",
+    "system": "النظام", "network": "الشبكة", "panel": "اللوحة", "web": "الويب",
+    "disconnect": "قطع اتصال", "reset_password": "تغيير كلمة المرور",
+    "subscriber_upsert": "تحديث مشترك", "subscriber_delete": "حذف مشترك",
+    "plan_upsert": "تحديث عرض", "plan_delete": "حذف عرض",
+    "pool_upsert": "تحديث مجمّع", "credit": "إضافة", "debit": "خصم",
+    "success": "نجاح", "failed": "فشل", "pending": "قيد الانتظار",
+}
+
+
+def _key_ar(key: str, label: str | None = None) -> str:
+    """تسمية المفتاح بالعربية؛ المفتاح المجهول يُؤنَّس (بلا snake_case)."""
+    return label or _PAYLOAD_KEY_AR.get(key, _humanize(key))
+
+
+def _val_ar(key: str, raw: Any) -> str:
+    """قيمة المفتاح: مفاتيح الـenum تُترجم؛ snake_case المجهول يُؤنَّس؛
+    القيم التقنية (slug/currency/أرقام/قوائم) تبقى عبر `_fmt_value`."""
+    if key.lower() in _ENUM_KEYS and isinstance(raw, str):
+        lv = raw.strip().lower()
+        if lv in _ENUM_VALUE_AR:
+            return _ENUM_VALUE_AR[lv]
+        if re.fullmatch(r"[a-z]+(?:_[a-z0-9]+)+", lv):
+            return lv.replace("_", " ")
+    return _fmt_value(raw)
 
 
 def _fmt_value(value: Any) -> str:
@@ -444,10 +489,11 @@ def format_payload(action: str | None,
     def _push(key: str, label: str | None = None):
         if key not in p:
             return
-        v = _fmt_value(p.pop(key))
+        raw = p.pop(key)
+        v = _val_ar(key, raw)
         if v in ("", "—"):
             return
-        parts.append(f"{label or _PAYLOAD_KEY_AR.get(key, key)}: {v}")
+        parts.append(f"{_key_ar(key, label)}: {v}")
 
     act = (action or "").lower()
 
@@ -481,10 +527,10 @@ def format_payload(action: str | None,
     for k, v in list(p.items()):
         if rem >= 4:
             break
-        val = _fmt_value(v)
+        val = _val_ar(k, v)
         if val in ("", "—"):
             continue
-        parts.append(f"{_PAYLOAD_KEY_AR.get(k, k)}: {val}")
+        parts.append(f"{_key_ar(k)}: {val}")
         rem += 1
     return " · ".join(parts)
 

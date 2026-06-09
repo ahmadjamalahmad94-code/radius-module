@@ -126,9 +126,9 @@
                    href="{{ url_for('radius.admins_edit', admin_id=a.id) }}">
                   <i class="fa-solid fa-pen"></i>
                 </a>
-                <form method="post" action="{{ url_for('radius.admins_delete', admin_id=a.id) }}"
-                      onsubmit="return confirm('أرشفة {{ a.username|e }}؟ يمكن استعادته من سلة المحذوفات.');" style="display:inline">
-                  <button type="submit" class="hub-btn hub-btn--danger hub-btn--icon" title="{{ _('أرشفة') }}">
+                <form method="post" action="{{ url_for('radius.admins_delete', admin_id=a.id) }}" style="display:inline">
+                  <button type="submit" class="hub-btn hub-btn--danger hub-btn--icon" title="{{ _('أرشفة') }}"
+                          data-confirm="أرشفة {{ a.username|e }}؟ يمكن استعادته من سلة المحذوفات.">
                     <i class="fa-solid fa-box-archive"></i>
                   </button>
                 </form>
@@ -273,4 +273,7 @@
 </script>
 
 <script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
+
+{# ── مودال تأكيد موحّد بديل عن confirm() المتصفّح — بلا نوافذ متصفّح أصلية ── #}
+{% include "radius/_confirm_modal.html" %}
 {% endblock %}

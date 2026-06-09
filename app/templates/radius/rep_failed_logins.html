@@ -116,7 +116,7 @@
           </td>
           <td><strong><bdi>{{ r.username or '—' }}</bdi></strong></td>
           {# الردّ معرّب — والقيمة الخام (Access-Reject…) تبقى في title للمراجعة الفنية #}
-          <td><span title="{{ r.reply }}">{{ hub.pill(REPLY_AR.get(r.reply, r.reply or '—'), variant="red") }}</span></td>
+          <td><span title="{{ r.reply }}">{{ hub.pill(REPLY_AR.get(r.reply, 'رفض غير معروف') if r.reply else '—', variant="red") }}</span></td>
           {# السبب من عمود class معرّب — والرمز الخام في title #}
           <td>
             {% if r['class'] %}
