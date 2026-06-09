@@ -16,212 +16,356 @@
 from __future__ import annotations
 
 # ── 1) خريطة دقيقة لمفاتيح الأحداث المعروفة (event_key → عربي) ──
-# تُغطّي ما يظهر فعليًا في الجدول + الشائع المنبعث عبر الخدمات.
 EVENT_KEY_LABELS: dict[str, str] = {
-    # المتجر — إيداع/سحب/شات
-    "store.deposit_requested": "طلب إيداع في المتجر",
-    "store.deposit_confirmed": "تأكيد إيداع في المتجر",
-    "store.deposit_rejected": "رفض إيداع في المتجر",
-    "store.withdrawal_requested": "طلب سحب من المتجر",
-    "store.withdrawal_confirmed": "تأكيد سحب من المتجر",
-    "store.withdrawal_rejected": "رفض سحب من المتجر",
-    "store_chat.customer_message": "رسالة عميل في شات المتجر",
     # المحفظة
-    "wallet.created": "إنشاء محفظة",
-    "wallet.credit": "إضافة للمحفظة",
-    "wallet.debit": "خصم من المحفظة",
+    "wallet.created":    "إنشاء محفظة",
+    "wallet.credit":     "إضافة للمحفظة",
+    "wallet.debit":      "خصم من المحفظة",
+    "wallet.frozen":     "تجميد المحفظة",
+    "wallet.unfrozen":   "إلغاء تجميد المحفظة",
+    "wallet.closed":     "إغلاق المحفظة",
     "business_os.wallet.credit": "إضافة للمحفظة",
-    "business_os.wallet.debit": "خصم من المحفظة",
-    # تحكّم السرعة
-    "speed_control.dry_run_saved": "حفظ تجربة تحكّم السرعة",
-    # مستخدمو البطاقات
-    "card_user.created": "إنشاء مستخدم بطاقة",
-    "card_user.self_registered": "تسجيل ذاتي لمستخدم بطاقة",
-    "card_user.password_updated": "تحديث كلمة مرور مستخدم بطاقة",
-    "card_user.card_purchased": "شراء بطاقة",
-    # البطاقات والتسعير
-    "card_batch.costed": "تسعير دفعة بطاقات",
-    "price_snapshot.captured": "التقاط لقطة سعر",
-    # بوابة كروت الهوتسبوت
-    "hotspot_cards_portal.login": "دخول بوابة كروت الهوتسبوت",
-    "hotspot_cards_portal.purchase": "شراء عبر بوابة كروت الهوتسبوت",
-    "hotspot_cards_portal.sms_failed": "فشل إرسال SMS لبوابة الكروت",
-    # الإشعارات وبوابة العميل والمشترك
-    "notification.manual_queued": "جدولة إشعار يدوي",
-    "customer_portal.request_created": "إنشاء طلب من بوابة العميل",
+    "business_os.wallet.debit":  "خصم من المحفظة",
+    # المتجر — إيداع / سحب / شات / تسجيل / حزمة
+    "store.deposit_requested":   "طلب إيداع",
+    "store.deposit_confirmed":   "تأكيد إيداع",
+    "store.deposit_rejected":    "رفض إيداع",
+    "store.withdrawal_requested": "طلب سحب",
+    "store.withdrawal_confirmed": "تأكيد سحب",
+    "store.withdrawal_rejected":  "رفض سحب",
+    "store.chat.customer_message": "رسالة عميل في المتجر",
+    "store.chat.admin_message":    "رد المتجر على العميل",
+    "store.registration":          "تسجيل في المتجر",
+    "store.package_purchased":     "شراء حزمة من المتجر",
+    "store_chat.customer_message": "رسالة عميل في شات المتجر",
+    # المشتركون
+    "subscriber.created":   "إنشاء مشترك",
+    "subscriber.updated":   "تحديث مشترك",
+    "subscriber.deleted":   "حذف مشترك",
+    "subscriber.activated": "تفعيل مشترك",
+    "subscriber.disabled":  "تعطيل مشترك",
+    "subscriber.renewed":   "تجديد اشتراك",
+    "subscriber.expired":   "انتهاء اشتراك",
     "subscriber.renewal.previewed": "معاينة تجديد المشترك",
-    # الأمان
-    "login.failed": "محاولة دخول فاشلة",
-    "login.success": "تسجيل دخول ناجح",
-    # البطاقات — عمليات إدارية
+    # البطاقات — دورة الحياة
+    "card.created":       "إنشاء بطاقة",
+    "card.sold":          "بيع بطاقة",
+    "card.revoked":       "سحب بطاقة",
+    "card.used":          "استخدام بطاقة",
+    "card.batch_created": "إنشاء حزمة بطاقات",
     "card.password_reveal": "كشف كلمة مرور البطاقة",
-    "card.enable": "تفعيل بطاقة",
-    "card.disable": "تعطيل بطاقة",
-    "card.lock_mac": "قفل عنوان الجهاز",
-    "card.unlock_mac": "فكّ قفل عنوان الجهاز",
-    "card.reset_usage": "تصفير الاستخدام",
-    "card.set_speed": "ضبط سرعة البطاقة",
-    "card.adjust_time": "تعديل الوقت المتبقّي",
-    "card.disconnect": "قطع جلسة البطاقة",
-    "card.soft_delete": "حذف بطاقة",
+    "card.enable":        "تفعيل بطاقة",
+    "card.disable":       "تعطيل بطاقة",
+    "card.lock_mac":      "قفل عنوان الجهاز",
+    "card.unlock_mac":    "فكّ قفل عنوان الجهاز",
+    "card.reset_usage":   "تصفير الاستخدام",
+    "card.set_speed":     "ضبط سرعة البطاقة",
+    "card.adjust_time":   "تعديل الوقت المتبقّي",
+    "card.disconnect":    "قطع جلسة البطاقة",
+    "card.soft_delete":   "حذف بطاقة",
     "card.delete_permanent": "حذف نهائي للبطاقة",
-    # السرعة المؤقتة
-    "temporary_speed.apply": "تطبيق سرعة مؤقتة",
-    "temporary_speed.revert": "إرجاع السرعة المؤقتة",
-    # قوالب طباعة البطاقات
-    "card_print_template.create": "إنشاء قالب طباعة بطاقات",
-    "card_print_template.update": "تعديل قالب طباعة بطاقات",
-    "card_print_template.delete": "حذف قالب طباعة بطاقات",
-    "card_print_template.set_default": "تعيين قالب الطباعة الافتراضي",
-    "card_print_template.export_pdf": "تصدير قالب PDF",
-    # دفعات البطاقات
-    "batch_generate": "توليد دفعة بطاقات",
-    "batch_archive": "أرشفة دفعة بطاقات",
-    "batch_restore": "استعادة دفعة بطاقات",
-    "card_batch.import": "استيراد دفعة بطاقات",
+    # السلف والدفعات
+    "loan.created":    "منح سلفة",
+    "loan.settled":    "تسوية سلفة",
+    "payment.received": "استلام دفعة",
+    "payment.voided":   "إلغاء دفعة",
+    # مستخدمو البطاقات
+    "card_user.created":          "إنشاء مستخدم بطاقة",
+    "card_user.self_registered":  "تسجيل ذاتي لمستخدم بطاقة",
+    "card_user.password_updated": "تحديث كلمة مرور مستخدم بطاقة",
+    "card_user.card_purchased":   "شراء بطاقة",
+    # البطاقات والتسعير — دفعات
+    "card_batch.costed":  "تسعير دفعة بطاقات",
+    "card_batch.import":  "استيراد دفعة بطاقات",
     "card_batch.restore": "استعادة دفعة محذوفة",
-    # عمليات المشتركين
-    "create": "إنشاء",
-    "update": "تعديل",
-    "delete": "حذف",
-    "disable": "تعطيل",
-    "enable": "تفعيل",
-    "extend_time": "تمديد الوقت",
-    "reset_password": "إعادة تعيين كلمة المرور",
-    "bulk_set_speeds": "تحديث جماعي للسرعات",
-    "change_plan": "تغيير باقة المشترك",
-    "revoke": "سحب البطاقة",
-    # إجراءات API / النظام
-    "payment_collection.settings_saved": "حفظ إعدادات التحصيل",
-    "payment_collection.request_approved": "اعتماد طلب دفع",
-    "payment_collection.request_rejected": "رفض طلب دفع",
-    "notification.manual_queued": "إرسال إشعار يدوي",
-    # السرعة والجلسة
-    "bulk_set_speeds": "تحديث جماعي للسرعات",
-    "temporary_speed.apply": "تطبيق سرعة مؤقتة",
+    "batch_generate":     "توليد دفعة بطاقات",
+    "batch_archive":      "أرشفة دفعة بطاقات",
+    "batch_restore":      "استعادة دفعة بطاقات",
+    "price_snapshot.captured": "التقاط لقطة سعر",
+    # قوالب طباعة البطاقات
+    "card_print_template.create":      "إنشاء قالب طباعة بطاقات",
+    "card_print_template.update":      "تعديل قالب طباعة بطاقات",
+    "card_print_template.delete":      "حذف قالب طباعة بطاقات",
+    "card_print_template.set_default": "تعيين قالب الطباعة الافتراضي",
+    "card_print_template.export_pdf":  "تصدير قالب PDF",
+    # بوابة كروت الهوتسبوت
+    "hotspot_cards_portal.login":       "دخول بوابة كروت الهوتسبوت",
+    "hotspot_cards_portal.purchase":    "شراء عبر بوابة كروت الهوتسبوت",
+    "hotspot_cards_portal.sms_failed":  "فشل إرسال SMS لبوابة الكروت",
+    # الإشعارات وبوابة العميل
+    "notification.manual_queued":       "جدولة إشعار يدوي",
+    "customer_portal.request_created":  "إنشاء طلب من بوابة العميل",
+    # الأمان
+    "login.failed":       "محاولة دخول فاشلة",
+    "login.success":      "تسجيل دخول ناجح",
+    "auth_login":         "تسجيل دخول",
+    "auth_login_failed":  "محاولة دخول فاشلة",
+    # السرعة المؤقتة
+    "temporary_speed.apply":  "تطبيق سرعة مؤقتة",
     "temporary_speed.revert": "إرجاع السرعة المؤقتة",
+    "speed_control.dry_run_saved": "حفظ تجربة تحكّم السرعة",
     # RADIUS
     "radius.apply": "تطبيق سياسة RADIUS",
     # المدراء والأدوار
-    "role_permissions": "تعديل صلاحيات الدور",
-    "settings_update": "تحديث إعدادات النظام",
-    "auth_login": "تسجيل دخول",
-    "auth_login_failed": "محاولة دخول فاشلة",
+    "role_permissions":  "تعديل صلاحيات الدور",
+    "settings_update":   "تحديث إعدادات النظام",
+    # التحصيل المالي
+    "payment_collection.settings_saved":   "حفظ إعدادات التحصيل",
+    "payment_collection.request_approved": "اعتماد طلب دفع",
+    "payment_collection.request_rejected": "رفض طلب دفع",
+    # الأحداث الدفترية (ledger)
+    "ledger.payment":        "قيد دفعة",
+    "ledger.renewal":        "قيد تجديد",
+    "ledger.debt":           "قيد دين",
+    "ledger.loan":           "قيد سلفة",
+    "ledger.discount":       "قيد خصم",
+    "ledger.wallet_recharge": "قيد شحن محفظة",
+    "ledger.card_sale":      "قيد بيع بطاقة",
+    "ledger.batch_creation": "قيد إنشاء دفعة",
+    "ledger.profit_share":   "قيد توزيع أرباح",
+    "ledger.reversal":       "قيد عكس",
+    "ledger.correction":     "قيد تصحيح",
+    # الجسر الإداري
+    "license.snapshot_refreshed":      "تحديث حالة الترخيص",
+    "capacity.contract_refreshed":     "تحديث عقد السعة",
+    "usage.report_sent":               "إرسال تقرير الاستخدام",
+    "heartbeat.sent":                  "إرسال نبض الحالة",
+    "backup.upload_succeeded":         "رفع النسخة الاحتياطية",
+    "backup.upload_failed":            "تعذر رفع النسخة الاحتياطية",
+    "restore.request_received":        "استلام طلب استعادة",
+    "restore.status_changed":          "تغيّر حالة الاستعادة",
+    "service_activation.received":     "استلام تفعيل خدمة",
+    "service_activation.executed":     "تنفيذ تفعيل خدمة",
+    "service_activation.failed":       "فشل تفعيل خدمة",
+    "accounting.degraded":             "تدهور مسار المحاسبة",
+    # عمليات عامة
+    "create":          "إنشاء",
+    "update":          "تعديل",
+    "delete":          "حذف",
+    "disable":         "تعطيل",
+    "enable":          "تفعيل",
+    "extend_time":     "تمديد الوقت",
+    "reset_password":  "إعادة تعيين كلمة المرور",
+    "bulk_set_speeds": "تحديث جماعي للسرعات",
+    "change_plan":     "تغيير باقة المشترك",
+    "revoke":          "سحب البطاقة",
 }
 
 # ── 2) مفردات المُركِّب التلقائي للمفاتيح غير المعرّفة ──
-# اسم القسم يؤخذ من المقطع الأول (prefix) قبل أول «.».
 _KEY_PREFIX_NOUNS: dict[str, str] = {
-    "store": "المتجر",
-    "store_chat": "شات المتجر",
-    "wallet": "المحفظة",
-    "business_os": "نظام الأعمال",
-    "speed_control": "تحكّم السرعة",
-    "card_user": "مستخدم البطاقة",
-    "card_batch": "دفعة البطاقات",
-    "card": "البطاقة",
-    "price_snapshot": "لقطة السعر",
+    "store":                "المتجر",
+    "store_chat":           "شات المتجر",
+    "wallet":               "المحفظة",
+    "business_os":          "نظام الأعمال",
+    "speed_control":        "تحكّم السرعة",
+    "card_user":            "مستخدم البطاقة",
+    "card_batch":           "دفعة البطاقات",
+    "card_print_template":  "قالب طباعة البطاقات",
+    "card":                 "البطاقة",
+    "price_snapshot":       "لقطة السعر",
     "hotspot_cards_portal": "بوابة كروت الهوتسبوت",
-    "notification": "الإشعار",
-    "customer_portal": "بوابة العميل",
-    "subscriber": "المشترك",
-    "session": "الجلسة",
-    "backup": "النسخة الاحتياطية",
-    "distributor": "الموزّع",
-    "admin": "المدير",
-    "device": "الجهاز",
-    "nas": "الراوتر",
-    "plan": "العرض",
-    "role": "الدور",
-    "login": "الدخول",
+    "notification":         "الإشعار",
+    "customer_portal":      "بوابة العميل",
+    "subscriber":           "المشترك",
+    "session":              "الجلسة",
+    "backup":               "النسخة الاحتياطية",
+    "restore":              "الاستعادة",
+    "distributor":          "الموزّع",
+    "admin":                "المدير",
+    "manager":              "المدير",
+    "device":               "الجهاز",
+    "nas":                  "الراوتر",
+    "plan":                 "الباقة",
+    "role":                 "الدور",
+    "login":                "الدخول",
+    "ledger":               "القيد المالي",
+    "payment":              "الدفعة",
+    "loan":                 "السلفة",
+    "batch":                "دفعة البطاقات",
+    "system":               "النظام",
+    "license":              "الترخيص",
+    "capacity":             "السعة",
+    "usage":                "الاستخدام",
+    "heartbeat":            "نبض الحالة",
+    "accounting":           "المحاسبة",
+    "service_activation":   "تفعيل الخدمة",
+    "temporary_speed":      "السرعة المؤقتة",
+    "radius":               "RADIUS",
+    "payment_collection":   "التحصيل المالي",
 }
-# الفِعل يؤخذ من رموز المقطع الأخير (tail tokens) بعد آخر «.».
+
 _KEY_VERBS: dict[str, str] = {
-    "created": "إنشاء", "create": "إنشاء", "new": "إنشاء",
-    "updated": "تحديث", "update": "تحديث", "edited": "تعديل",
-    "confirmed": "تأكيد", "approved": "اعتماد",
-    "rejected": "رفض", "declined": "رفض",
-    "requested": "طلب", "request": "طلب",
-    "credit": "إضافة", "credited": "إضافة",
-    "debit": "خصم", "debited": "خصم",
-    "saved": "حفظ", "deleted": "حذف", "removed": "حذف",
-    "previewed": "معاينة", "captured": "التقاط",
-    "queued": "جدولة", "scheduled": "جدولة",
-    "failed": "فشل", "success": "نجاح",
-    "login": "دخول", "logout": "خروج",
-    "purchase": "شراء", "purchased": "شراء",
-    "registered": "تسجيل", "self_registered": "تسجيل ذاتي",
-    "message": "رسالة", "costed": "تسعير",
-    "applied": "تطبيق", "enabled": "تفعيل", "disabled": "تعطيل",
-    "sent": "إرسال", "revert": "تراجع", "reverted": "تراجع",
+    "created":        "إنشاء",
+    "create":         "إنشاء",
+    "new":            "إنشاء",
+    "updated":        "تحديث",
+    "update":         "تحديث",
+    "edited":         "تعديل",
+    "confirmed":      "تأكيد",
+    "approved":       "اعتماد",
+    "rejected":       "رفض",
+    "declined":       "رفض",
+    "requested":      "طلب",
+    "request":        "طلب",
+    "credit":         "إضافة",
+    "credited":       "إضافة",
+    "debit":          "خصم",
+    "debited":        "خصم",
+    "saved":          "حفظ",
+    "deleted":        "حذف",
+    "removed":        "حذف",
+    "previewed":      "معاينة",
+    "captured":       "التقاط",
+    "queued":         "جدولة",
+    "scheduled":      "جدولة",
+    "failed":         "فشل",
+    "success":        "نجاح",
+    "succeeded":      "نجاح",
+    "login":          "دخول",
+    "logout":         "خروج",
+    "purchase":       "شراء",
+    "purchased":      "شراء",
+    "registered":     "تسجيل",
+    "self_registered": "تسجيل ذاتي",
+    "message":        "رسالة",
+    "costed":         "تسعير",
+    "applied":        "تطبيق",
+    "apply":          "تطبيق",
+    "enabled":        "تفعيل",
+    "disabled":       "تعطيل",
+    "sent":           "إرسال",
+    "revert":         "تراجع",
+    "reverted":       "تراجع",
+    "received":       "استلام",
+    "executed":       "تنفيذ",
+    "settled":        "تسوية",
+    "voided":         "إلغاء",
+    "expired":        "انتهاء",
+    "renewed":        "تجديد",
+    "activated":      "تفعيل",
+    "frozen":         "تجميد",
+    "unfrozen":       "إلغاء تجميد",
+    "closed":         "إغلاق",
+    "degraded":       "تدهور",
+    "refreshed":      "تحديث",
+    "changed":        "تغيير",
 }
 
 # ── خريطة أنواع الأهداف (target_type → عربي) ──
 TARGET_TYPE_LABELS: dict[str, str] = {
-    "card_user": "مستخدم بطاقة",
-    "speed_control_policy": "سياسة تحكّم السرعة",
-    "subscriber": "مشترك",
-    "user": "مشترك",
-    "card": "بطاقة",
-    "card_batch": "دفعة بطاقات",
-    "card_print_template": "قالب طباعة بطاقات",
-    "hotspot_card_purchase": "شراء كرت هوتسبوت",
-    "plan": "عرض",
-    "wallet": "محفظة",
-    "price_snapshot": "لقطة سعر",
-    "distributor": "موزّع",
-    "manager": "مدير",
-    "admin": "مدير",
-    "role": "دور",
-    "tenant": "مستأجر",
-    "router": "راوتر",
-    "nas": "راوتر",
-    "nas_device": "جهاز راوتر",
-    "device": "جهاز",
-    "session": "جلسة",
-    "backup_job": "مهمة نسخ احتياطي",
-    "backup_file": "ملف نسخة احتياطية",
-    "backup_retention": "سياسة احتفاظ النسخ",
-    "bandwidth_schedule": "جدولة عرض النطاق",
-    "company_inventory_item": "صنف مخزون الشركة",
-    "company_expense": "مصروف الشركة",
-    "notification_campaign": "حملة إشعارات",
-    "subscriber_group": "مجموعة مشتركين",
-    "ledger": "قيد مالي",
-    "loan": "سلفة",
-    "payment": "دفعة",
-    "ticket": "تذكرة",
-    "system": "النظام",
-    "setup_wizard_fleet": "أسطول معالج الإعداد",
-    "router_provisioning_registry": "سجل تجهيز الراوترات",
-    "wizard_clients_conf": "إعداد عملاء المعالج",
+    "card_user":                      "مستخدم بطاقة",
+    "speed_control_policy":           "سياسة تحكّم السرعة",
+    "subscriber":                     "مشترك",
+    "user":                           "مشترك",
+    "card":                           "بطاقة",
+    "card_batch":                     "دفعة بطاقات",
+    "card_print_template":            "قالب طباعة بطاقات",
+    "hotspot_card_purchase":          "شراء كرت هوتسبوت",
+    "plan":                           "باقة",
+    "wallet":                         "محفظة",
+    "price_snapshot":                 "لقطة سعر",
+    "distributor":                    "موزّع",
+    "manager":                        "مدير",
+    "admin":                          "مدير",
+    "role":                           "دور",
+    "tenant":                         "مستأجر",
+    "router":                         "راوتر",
+    "nas":                            "راوتر",
+    "nas_device":                     "جهاز راوتر",
+    "device":                         "جهاز",
+    "session":                        "جلسة",
+    "backup_job":                     "مهمة نسخ احتياطي",
+    "backup_file":                    "ملف نسخة احتياطية",
+    "backup_retention":               "سياسة احتفاظ النسخ",
+    "bandwidth_schedule":             "جدولة عرض النطاق",
+    "company_inventory_item":         "صنف مخزون الشركة",
+    "company_expense":                "مصروف الشركة",
+    "notification_campaign":          "حملة إشعارات",
+    "subscriber_group":               "مجموعة مشتركين",
+    "ledger":                         "قيد مالي",
+    "loan":                           "سلفة",
+    "payment":                        "دفعة",
+    "ticket":                         "تذكرة",
+    "system":                         "النظام",
+    "setup_wizard_fleet":             "أسطول معالج الإعداد",
+    "router_provisioning_registry":   "سجل تجهيز الراوترات",
+    "wizard_clients_conf":            "إعداد عملاء المعالج",
 }
 
 # ── خريطة الفئات (category → عربي) ──
 CATEGORY_LABELS: dict[str, str] = {
-    "financial": "مالية",
-    "system": "النظام",
-    "card": "البطاقات",
-    "security": "الأمان",
-    "subscriber": "المشتركون",
-    "notification": "الإشعارات",
-    "radius": "RADIUS",
+    "financial":       "مالية",
+    "system":          "النظام",
+    "card":            "البطاقات",
+    "security":        "الأمان",
+    "subscriber":      "المشتركون",
+    "notification":    "الإشعارات",
+    "radius":          "RADIUS",
     "service_request": "طلبات الخدمة",
-    "unknown": "غير مصنّفة",
+    "manager":         "المدراء",
+    "unknown":         "غير مصنّفة",
+}
+
+# ── خريطة مستوى الخطورة (severity → عربي) ──
+SEVERITY_LABELS: dict[str, str] = {
+    "info":     "معلومة",
+    "warning":  "تحذير",
+    "critical": "حرِج",
+    "error":    "خطأ",
+    "debug":    "تشخيص",
 }
 
 # ── خريطة نوع الفاعل (actor_type → عربي) ──
 ACTOR_TYPE_LABELS: dict[str, str] = {
-    "admin": "مدير",
-    "manager": "مدير",
+    "admin":        "مدير",
+    "manager":      "مدير",
+    "subscriber":   "مشترك",
+    "user":         "مشترك",
+    "card_user":    "مستخدم بطاقة",
+    "distributor":  "موزّع",
+    "system":       "النظام",
+    "api_token":    "واجهة برمجية",
+    "api":          "واجهة برمجية",
+    "risk_engine":  "محرّك المخاطر",
+    "operator":     "مشغّل",
+    "anonymous":    "غير معروف",
+}
+
+# ── قواميس الأسماء للمُركِّب (fallback) ──
+_FALLBACK_PREFIX_NOUNS: dict[str, str] = {
+    "wallet":    "محفظة",
+    "store":     "متجر",
     "subscriber": "مشترك",
-    "user": "مشترك",
-    "card_user": "مستخدم بطاقة",
-    "distributor": "موزّع",
-    "system": "النظام",
-    "risk_engine": "محرّك المخاطر",
-    "operator": "مشغّل",
-    "anonymous": "غير معروف",
+    "card":      "بطاقة",
+    "loan":      "سلفة",
+    "payment":   "دفعة",
+    "batch":     "دفعة بطاقات",
+    "system":    "النظام",
+}
+
+_FALLBACK_ACTION_VERBS: dict[str, str] = {
+    "created":    "إنشاء",
+    "create":     "إنشاء",
+    "updated":    "تحديث",
+    "update":     "تحديث",
+    "deleted":    "حذف",
+    "delete":     "حذف",
+    "activated":  "تفعيل",
+    "activate":   "تفعيل",
+    "disabled":   "تعطيل",
+    "disable":    "تعطيل",
+    "confirmed":  "تأكيد",
+    "confirm":    "تأكيد",
+    "rejected":   "رفض",
+    "reject":     "رفض",
+    "requested":  "طلب",
+    "request":    "طلب",
+    "sold":       "بيع",
+    "sell":       "بيع",
+    "revoked":    "سحب",
+    "revoke":     "سحب",
+    "credit":     "إضافة",
+    "debit":      "خصم",
 }
 
 
@@ -236,8 +380,10 @@ def event_key_label(key: str | None) -> str:
     raw = (key or "").strip()
     if not raw:
         return "حدث"
+    # 1) خريطة دقيقة
     if raw in EVENT_KEY_LABELS:
         return EVENT_KEY_LABELS[raw]
+    # 2) مُركِّب: فِعل + اسم القسم
     parts = raw.split(".")
     prefix = parts[0]
     noun = _KEY_PREFIX_NOUNS.get(prefix)
@@ -251,6 +397,17 @@ def event_key_label(key: str | None) -> str:
         return noun
     if verb:
         return verb
+    # 3) fallback بالتجزئة: prefix_noun + action_verb
+    fallback_noun = _FALLBACK_PREFIX_NOUNS.get(prefix)
+    last_part = parts[-1] if parts else raw
+    fallback_verb = _FALLBACK_ACTION_VERBS.get(last_part)
+    if fallback_verb and fallback_noun:
+        return f"{fallback_verb} {fallback_noun}"
+    if fallback_noun:
+        return fallback_noun
+    if fallback_verb:
+        return fallback_verb
+    # 4) تأنيس أخير
     return _humanize(raw)
 
 
@@ -268,6 +425,14 @@ def category_label(category: str | None) -> str:
     if not raw:
         return "—"
     return CATEGORY_LABELS.get(raw.lower(), _humanize(raw))
+
+
+def severity_label(severity: str | None) -> str:
+    """مستوى الخطورة بالعربية."""
+    raw = (severity or "").strip()
+    if not raw:
+        return "—"
+    return SEVERITY_LABELS.get(raw.lower(), raw)
 
 
 def actor_type_label(actor_type: str | None) -> str:
