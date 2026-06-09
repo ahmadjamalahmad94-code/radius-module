@@ -177,7 +177,11 @@
 {%- set m_pools       = '/pools' in path -%}
 {%- set m_mt          = '/mt' in path -%}
 {%- set m_diag        = '/diagnostics' in path -%}
-{%- set m_push        = '/mt-push-setup' in path -%}
+{# أُزيلت «دفع بيانات التوزيع» من الشريط الجانبي (طلب المالك، يونيو 2026):
+   النفق المركزي (WireGuard) يَستبدل آليّة DHCP-push الاحتياطيّة فأصبحت
+   مكرَّرة. الـroute radius.mt_push_setup يبقى مُسجَّلًا فلا BuildError
+   على الإشارات المرجعيّة في القوالب الأخرى أو الإشارات المحفوظة. #}
+{# {%- set m_push        = '/mt-push-setup' in path -%} (مُلغاة من القائمة) #}
 {# Phase S — new network surfaces #}
 {%- set m_topology    = ('/topology' in path) -%}
 {%- set m_alerts      = ('/alerts' in path) -%}
@@ -498,10 +502,13 @@
          • التحكم بالسرعة    — كان قسمًا مستقلًا؛ مكانه الطبيعي تحت الشبكة
                                (يضرب طوابير الراوترات مباشرة): مجدول/يدوي.
          • المراقبة والسجلات — أدوات عابرة لكل الراوترات: تنبيهات/تدقيق/دفع. #}
+    {# أُزيل 'mt_push_setup' من قائمة صلاحيات قسم «الشبكة» — البطاقة
+       لم تَعُد في الشريط الجانبي. الـroute نفسه ما زال يَعمل لمن يَصل
+       لـ/mt-push-setup مباشرةً، فقط لم يَعد له مدخل في القائمة. #}
     {%- set _eps_network = ['mt_setup_form','setup_wizard_v3_page','devices_list','mt_operations','pool_list',
                             'device_health_page',
                             'operations_speed_control','operations_speed_control_manual',
-                            'mt_alerts_index','audit_log_index','mt_push_setup'] -%}
+                            'mt_alerts_index','audit_log_index'] -%}
     {% if section_can(_eps_network)|trim %}
     <div class="hb-side-section{% if sec_network_active or sec_setup_ops_active %} is-open has-active{% endif %}"
          data-hb-section="network" data-hb-tone="emerald">
@@ -518,7 +525,8 @@
                                        or m_devices or m_pools or m_device_health -%}
         {%- set fam_setup_active   = m_mt_setup or m_setup_wizard_v3 -%}
         {%- set fam_speed_active   = m_operations_speed or m_operations_speed_manual -%}
-        {%- set fam_watch_active   = m_alerts or m_audit_log or m_push -%}
+        {# m_push أُزيل من تَفعيل العائلة — البطاقة محذوفة من القائمة. #}
+        {%- set fam_watch_active   = m_alerts or m_audit_log -%}
 
         {# ── إدارة الراوترات — التشغيل اليومي وما يتبعه مباشرة ── #}
         {%- set _eps_net_routers = ['mt_operations','devices_list','pool_list','hotspot_errors_page','device_health_page'] -%}
@@ -599,8 +607,13 @@
         </div>
         {% endif %}
 
-        {# ── المراقبة والسجلات — أدوات حوكمة عابرة لكل الراوترات ── #}
-        {%- set _eps_net_watch = ['mt_alerts_index','audit_log_index','mt_push_setup'] -%}
+        {# ── المراقبة والسجلات — أدوات حوكمة عابرة لكل الراوترات ──
+           أُزيلت بطاقة «دفع بيانات التوزيع» (mt_push_setup) من القائمة
+           بطلب المالك (يونيو 2026): النفق المركزي WireGuard يَستبدل
+           آليّة DHCP-push الاحتياطيّة فصار مدخلها مُكرَّرًا. الـroute نفسه
+           يَبقى مُسجَّلًا فلا BuildError على url_for('radius.mt_push_setup')
+           من قوالب أخرى أو إشارات مرجعيّة محفوظة. #}
+        {%- set _eps_net_watch = ['mt_alerts_index','audit_log_index'] -%}
         {% if section_can(_eps_net_watch)|trim or _ui_mode == 'freeze' %}
         <div class="hb-side-subgroup{% if fam_watch_active %} is-open has-active{% endif %}"
              data-hb-subgroup="network-watch">
@@ -611,7 +624,7 @@
           <div class="hb-side-subgroup-body"><div class="hb-side-subgroup-body-inner">
             {{ sub_item('radius.mt_alerts_index', _('التنبيهات الذكيّة'),   m_alerts) }}
             {{ sub_item('radius.audit_log_index', _('سجل العمليات'),       m_audit_log) }}
-            {{ sub_item('radius.mt_push_setup',   _('دفع بيانات التوزيع'), m_push) }}
+            {# {{ sub_item('radius.mt_push_setup',   _('دفع بيانات التوزيع'), m_push) }} (مُلغاة) #}
           </div></div>
         </div>
         {% endif %}
