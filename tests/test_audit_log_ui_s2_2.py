@@ -202,3 +202,107 @@ def test_detail_shows_before_and_after_blocks_when_present(app, client):
     assert "data-audit-detail-after" in html
     assert "قبل التغيير" in html
     assert "بعد التغيير" in html
+
+
+# ─── تعريب أعمدة السجل (تصحيح يونيو 2026) ────────────────────
+
+
+def _seed_nas(app, *, nas_id: int, name: str) -> None:
+    """ينشئ صفّ راوتر في nas_devices حتى يتمكّن audit_format من حلّ
+    اسم الراوتر/الهدف عبر join. الأعمدة الإلزامية بحدّ أدنى."""
+    from datetime import datetime
+    from app.radius.db.connection import transaction
+    now = datetime.utcnow().isoformat() + "Z"
+    with app.app_context(), transaction() as c:
+        c.execute(
+            "INSERT INTO nas_devices (id, tenant_id, name, address, secret, "
+            "vendor, nas_type, enabled, created_at, connection_mode, "
+            "api_user, api_password) "
+            "VALUES (?, 1, ?, '203.0.113.20', 's', 'mikrotik', 'hotspot', "
+            "1, ?, 'direct', 'u', 'p')",
+            (nas_id, name, now),
+        )
+
+
+def test_audit_index_router_column_shows_nas_name_not_raw_id(app, client):
+    """تصحيح المالك: عمود «الراوتر» كان «#17» الخام؛ صار يعرض اسم
+    nas_devices الفعلي. الـID يبقى في title للمراجعة."""
+    _seed_nas(app, nas_id=17, name="MT-HQ-Core")
+    with app.app_context():
+        _record(action="mt.deploy", router_id=17,
+                target_id="17", severity="info",
+                result_status="success")
+    _login(client)
+    html = client.get("/admin/radius/audit").get_data(as_text=True)
+    # الاسم ظاهر، والـID الخام لم يَعُد منفردًا
+    assert "MT-HQ-Core" in html
+    # ما يهمّ أنّ النصّ الخام «#17» لم يَعُد ظاهرًا في خلية العمود.
+    # نتأكّد بتعليم العمود بسمة data-audit-router ووجود الاسم فيه.
+    assert "data-audit-router" in html
+
+
+def test_audit_index_target_column_resolves_router_name(app, client):
+    """تصحيح المالك: «هدف (17)» الخام يصبح «MT-HQ-Core». مفتاح الـtarget
+    يُحلّ عبر nas_devices للأنواع mikrotik_nas/router/nas/nas_device."""
+    _seed_nas(app, nas_id=17, name="MT-HQ-Core")
+    with app.app_context():
+        _record(action="mt.deploy", router_id=17,
+                target_id="17", severity="info",
+                result_status="success")
+    _login(client)
+    html = client.get("/admin/radius/audit").get_data(as_text=True)
+    # «هدف» (label الخام) لم يَعُد يظهر منفردًا قبل اسم الراوتر — اسم
+    # الراوتر يظهر مباشرة بدلاً من «هدف (17)».
+    assert "هدف (17)" not in html
+    assert "هدف #17" not in html
+    # الاسم الفعلي يظهر في عمود الهدف (كما يظهر أيضاً في عمود الراوتر).
+    assert html.count("MT-HQ-Core") >= 2
+
+
+def test_audit_index_target_falls_back_to_arabic_type_plus_id(app, client):
+    """راوتر غير موجود في nas_devices — لا يجب أن يظهر «هدف 17»؛ بل
+    «المايكروتيك #17» (نوع عربي + معرّف)."""
+    with app.app_context():
+        # نُسجّل بـtarget_id=99 بلا nas_devices.id=99 → لا تحليل اسم
+        _record(action="mt.x", router_id=99,
+                target_id="99", severity="info", result_status="")
+    _login(client)
+    html = client.get("/admin/radius/audit").get_data(as_text=True)
+    assert "هدف (99)" not in html
+    assert "هدف #99" not in html
+    assert "المايكروتيك #99" in html
+
+
+def test_audit_index_action_not_raw_key_and_not_vague(app, client):
+    """تصحيح المالك: «الإجراء» يجب ألّا يكون المفتاح الخام، ولا يكون
+    «عملية على راوتر» الغامضة. (مفتاح غير معرّف عمومًا)."""
+    with app.app_context():
+        _record(action="mt.unknown_thing",  # غير معرّف في الخريطة
+                router_id=1, target_id="1", severity="info")
+    _login(client)
+    html = client.get("/admin/radius/audit").get_data(as_text=True)
+    # المفتاح الخام لا يظهر كنصّ ظاهر (يبقى في title)
+    # لا يظهر «عملية على راوتر» الغامضة.
+    assert "عملية على راوتر" not in html
+    assert "عملية على النظام" not in html
+
+
+def test_audit_index_details_column_renders_arabic_sentence(app, client):
+    """تصحيح المالك: عمود «التفاصيل» كان JSON خامًا؛ صار جملة عربية
+    موجزة عبر format_payload."""
+    _seed_nas(app, nas_id=17, name="MT-HQ-Core")
+    with app.app_context():
+        _record(
+            action="mt.port_services.loop_detect.apply",
+            router_id=17, target_id="17",
+            payload={"ports": ["ether2", "ether3"],
+                     "slug": "loop_detect", "ok": True},
+            severity="info", result_status="success",
+        )
+    _login(client)
+    html = client.get("/admin/radius/audit").get_data(as_text=True)
+    # عمود التفاصيل يحمل علامة لاختبار + نصّ عربي مقروء
+    assert "data-audit-details" in html
+    assert "المنافذ: ether2, ether3" in html
+    # عنوان الإجراء يستخدم الخريطة الدقيقة الموسّعة
+    assert "تفعيل تتبّع اللوب" in html

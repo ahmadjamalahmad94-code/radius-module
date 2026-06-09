@@ -134,14 +134,23 @@
           </td>
           <td><span title="{{ r.severity or 'info' }}">{{ hub.pill(r.severity_label, variant=TONE_PILL.get(r.severity_tone, 'grey')) }}</span></td>
           <td><span title="{{ r.result_status or '' }}">{{ hub.pill(r.result_label, variant=TONE_PILL.get(r.result_tone, 'grey')) }}</span></td>
-          <td class="mono">{% if r.router_id %}<bdi>#{{ r.router_id }}</bdi>{% else %}<span style="color:var(--hub-text-mute)">—</span>{% endif %}</td>
+          {# عمود «الراوتر» — اسم الجهاز الفعلي من nas_devices (المايكروتيك
+             الموحَّد). الـID الخام يبقى في title للمراجعة الفنّية. #}
           <td>
-            {# ملخص الحمولة (أهم 4 مفاتيح من المسار) بسطر مختصر + الكامل في title #}
-            {% if r.preview_keys %}
-              {% set _sum = [] %}
-              {% for k in r.preview_keys %}{% set _ = _sum.append(k ~ ': ' ~ (r.payload.get(k)|string)) %}{% endfor %}
-              {% set _sum_text = _sum|join(' · ') %}
-              <div class="audit-summary" title="{{ _sum_text }}"><bdi>{{ _sum_text }}</bdi></div>
+            {% if r.router_label %}
+              <span title="#{{ r.router_id }}" data-audit-router>
+                <bdi>{{ r.router_label }}</bdi>
+              </span>
+            {% else %}
+              <span style="color:var(--hub-text-mute)">—</span>
+            {% endif %}
+          </td>
+          <td>
+            {# عمود «التفاصيل» — جملة عربية موجزة من format_payload بدل
+               الـkey:value الخام. لو الحمولة فارغة لا نعرض شيئًا. #}
+            {% if r.details_label %}
+              <div class="audit-summary" title="{{ r.details_label }}"
+                   data-audit-details><bdi>{{ r.details_label }}</bdi></div>
             {% endif %}
             {{ hub.btn("التفاصيل", href=url_for('radius.audit_log_detail', audit_id=r.id),
                        variant="ghost", icon="eye", size="sm") }}

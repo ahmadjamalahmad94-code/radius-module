@@ -16,7 +16,9 @@ import json
 from flask import Blueprint, abort, g, render_template, request
 
 from ..core.tenant import DEFAULT_TENANT_ID
+from ..db.connection import db
 from ..db.repos import audit_repo
+from ..services import audit_format as af
 from ..services.mt_permissions import (
     PERM_AUDIT_VIEW, requires_perm,
 )
@@ -138,49 +140,48 @@ def _tone_for_result(value: str | None) -> str:
 
 
 def _action_label(action: str | None) -> str:
-    raw = (action or "").strip()
-    if not raw:
-        return "عملية"
-    if raw in _ACTION_LABELS:
-        return _ACTION_LABELS[raw]
-    parts = raw.replace("-", "_").split(".")
-    last_tokens = parts[-1].split("_") if parts else []
-    verb = next((_VERB_LABELS[t] for t in last_tokens if t in _VERB_LABELS), None)
-    # noun: prefer a token from the last segment, then fall back to the prefix
-    noun = next((_NOUN_LABELS[t] for t in last_tokens if t in _NOUN_LABELS), None)
-    if not noun:
-        noun = next((_NOUN_LABELS[p] for p in parts if p in _NOUN_LABELS), None)
-    if verb and noun:
-        return f"{verb} {noun}"
-    if verb:
-        return verb
-    if noun:
-        return f"عملية على {noun}"
-    return "عملية على النظام"
+    """يستدعي خدمة `audit_format.action_label` كي تبقى الخريطة الموسّعة
+    والمُركِّب الذكي بمصدر واحد قابل للاختبار. لا منطق هنا — مجرّد جسر
+    للحفاظ على الاسم القديم لأيّ مكان يستخدمه."""
+    return af.action_label(action)
 
 
-def _target_label(target_type: str | None, target_id) -> str:
-    """Human Arabic target, e.g. «مشترك (user1034)» / «راوتر #42»."""
-    t = (target_type or "").strip().lower()
-    name = _TARGET_TYPE_LABELS.get(t, "هدف")
-    tid = str(target_id).strip() if target_id not in (None, "") else ""
-    if not tid:
-        return name
-    return f"{name} ({tid})"
+def _target_label(target_type: str | None, target_id,
+                  names: dict | None = None) -> str:
+    """يستدعي خدمة `audit_format.target_label_for` التي تُرجع الاسم
+    الفعلي للهدف إن وُجد في خريطة `names` المحلولة دفعةً واحدة، وإلّا
+    «النوع العربي #المعرّف» (لا «هدف (17)» الخام)."""
+    return af.target_label_for(target_type, target_id, names=names)
 
 
-def _decorate_row(row: dict) -> dict:
+def _decorate_row(row: dict, *,
+                  target_names: dict | None = None,
+                  router_names: dict | None = None) -> dict:
     try:
         payload = json.loads(row.get("payload_json") or "{}")
     except (TypeError, ValueError):
         payload = {}
-    preview_keys = [k for k in payload.keys() if k not in ("ok",)][:4]
     severity = row.get("severity") or "info"
     result_status = row.get("result_status") or ""
+    rid_raw = row.get("router_id")
+    try:
+        rid_int = int(rid_raw) if rid_raw not in (None, "") else None
+    except (TypeError, ValueError):
+        rid_int = None
+    router_name = (router_names or {}).get(rid_int) if rid_int is not None else None
+    # عنوان «الراوتر» الظاهر: الاسم إن وُجد، وإلّا «المايكروتيك #ID»
+    # — لا «#17» الخام. الـtitle (في القالب) يحمل المعرّف الأصلي للمراجعة.
+    if router_name:
+        router_label = router_name
+    elif rid_int is not None:
+        router_label = f"المايكروتيك #{rid_int}"
+    else:
+        router_label = ""
     return {
         **row,
         "payload": payload,
-        "preview_keys": preview_keys,
+        # نُبقي preview_keys لمستهلكي الـAPI القدامى إن وُجدوا.
+        "preview_keys": [k for k in payload.keys() if k != "ok"][:4],
         "action_label": _action_label(row.get("action")),
         "severity_label": _SEVERITY_LABELS.get(severity, severity),
         "severity_tone": _tone_for_severity(severity),
@@ -188,7 +189,14 @@ def _decorate_row(row: dict) -> dict:
             result_status, result_status or "غير محددة"),
         "result_tone": _tone_for_result(result_status),
         "target_label": _target_label(
-            row.get("target_type"), row.get("target_id")),
+            row.get("target_type"), row.get("target_id"),
+            names=target_names),
+        # عمود «الراوتر» الجديد بالاسم.
+        "router_label": router_label,
+        # عمود «التفاصيل» الجديد بجملة عربية موجزة.
+        "details_label": af.format_payload(
+            row.get("action"), payload,
+            target_type=row.get("target_type")),
     }
 
 
@@ -201,7 +209,16 @@ def audit_log_index():
         "search": _str_arg("q"),
     }
     rows = audit_repo.recent(_tid(), limit=200, **filters)
-    decorated = [_decorate_row(r) for r in rows]
+    # حلّ أسماء الراوترات/الأهداف في استعلامين مجمّعَين على الأكثر،
+    # ثم زيِّن كل صفّ. كان السلوك السابق يمرّ على r["router_id"] خامًا
+    # فيُظهر «#17» للمشغّل و«هدف (17)» للأهداف الـ mikrotik_nas.
+    conn = db()
+    router_names = af.resolve_router_names(
+        rows, tenant_id=_tid(), db_conn=conn)
+    target_names = af.resolve_target_names(
+        rows, tenant_id=_tid(), db_conn=conn)
+    decorated = [_decorate_row(r, router_names=router_names,
+                               target_names=target_names) for r in rows]
     summary = {
         "total": len(decorated),
         "critical": sum(
@@ -240,6 +257,13 @@ def audit_log_detail(audit_id: int):
                 json.loads(row.get(col) or "{}")
         except (TypeError, ValueError):
             row[col.replace("_json", "")] = {}
-    row = _decorate_row(row)
+    # حلّ اسم الراوتر/الهدف لصفّ واحد (نفس الـAPI، صفّ منفرد في list).
+    conn = db()
+    router_names = af.resolve_router_names(
+        [row], tenant_id=_tid(), db_conn=conn)
+    target_names = af.resolve_target_names(
+        [row], tenant_id=_tid(), db_conn=conn)
+    row = _decorate_row(row, router_names=router_names,
+                       target_names=target_names)
     return render_template("radius/audit_log_detail.html",
                            entry=row)
