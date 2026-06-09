@@ -164,6 +164,18 @@ def list_admins(*, include_deleted: bool = False) -> list[Admin]:
     return [_row_to_admin(r) for r in cur.fetchall()]
 
 
+def primary_admin_id() -> Optional[int]:
+    """أصغر معرّف admin غير محذوف = «المدير الرئيسي» (المالك).
+
+    يُعامَل هذا المسؤول دائمًا كـ super — عقد «المدير الرئيسي = وصول
+    كامل دائماً» — فلا يُحجب عن أي قسم حتى لو أُلغي علم is_super_admin
+    سهوًا. يرجع None إن لم يوجد أي admin بعد (قاعدة جديدة قبل البذر)."""
+    row = db().execute(
+        "SELECT MIN(id) AS mid FROM admins WHERE deleted_at IS NULL"
+    ).fetchone()
+    return int(row["mid"]) if row and row["mid"] is not None else None
+
+
 def get_admin(admin_id: int, *, include_deleted: bool = False) -> Optional[Admin]:
     sql = "SELECT * FROM admins WHERE id = ?"
     if not include_deleted:
