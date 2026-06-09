@@ -18,6 +18,9 @@
 {% block head_extra %}
 {{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
+{# نظام الجداول المشترك (تصدير + «أعمدة» + فرز + ترقيم) لجداول السجل القراءة-فقط #}
+<script src="{{ url_for('static', filename='js/unified_design.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/uds_table.js') }}" defer></script>
 {% endblock %}
 
 {% block content %}
@@ -180,6 +183,13 @@
     .pm-create-grid{grid-template-columns:1fr}
   }
   .fcw-note{margin:0;color:var(--muted);font-size:12.5px;font-weight:600;line-height:1.8}
+  /* نافذة تأكيد محلية (بديل confirm الأصلي — لا حوارات متصفّح أصلية) */
+  .ssp-confirm-backdrop{position:fixed;inset:0;background:rgba(15,23,42,.45);display:grid;place-items:center;z-index:9999;padding:16px}
+  .ssp-confirm-backdrop[hidden]{display:none}
+  .ssp-confirm-box{background:#fff;border-radius:16px;padding:20px;max-width:380px;width:100%;box-shadow:0 12px 40px rgba(15,23,42,.25);display:grid;gap:16px;text-align:center}
+  .ssp-confirm-ic{width:46px;height:46px;border-radius:13px;display:grid;place-items:center;margin:0 auto;background:#fef2f2;color:#b91c1c;font-size:19px}
+  .ssp-confirm-msg{font-weight:800;font-size:14px;color:var(--ink);line-height:1.7}
+  .ssp-confirm-actions{display:flex;gap:8px;justify-content:center}
 </style>
 
 <div class="market-page" data-store-support>
@@ -240,7 +250,7 @@
           <tbody>
             {% for d in deposit_pending %}
             <tr>
-              <td>{{ d.payer_name or '—' }}<br><small style="color:var(--muted);direction:ltr">{{ d.payer_phone or '' }}</small></td>
+              <td>{{ d.payer_name or _('غير معروف') }}<br><small style="color:var(--muted);direction:ltr">{{ d.payer_phone or '' }}</small></td>
               <td>{{ d.method_ar }}<br><small style="color:var(--muted);direction:ltr">{{ d.reference or '' }}</small></td>
               <td style="direction:ltr">{{ money(d.amount_claimed) }} {{ d.currency or '' }}</td>
               <td>
@@ -277,26 +287,29 @@
         <div><h2><i class="fa-solid fa-clock-rotate-left"></i> {{ _('طلبات الشحن المحسومة') }}</h2></div>
         <span class="market-pill">{{ deposit_resolved|length }}</span>
       </header>
-      <div class="market-table-wrap">
-        <table class="market-table">
+      {# سجل قراءة-فقط ⇒ نظام الجداول المشترك: تصدير + «أعمدة» + فرز + ترقيم #}
+      {% if deposit_resolved %}
+      <div class="uds-table-wrap" data-uds-table data-uds-page-size="10">
+        <table class="hub-table">
           <thead>
             <tr><th>{{ _('المُحوِّل') }}</th><th>{{ _('القناة') }}</th><th>{{ _('المبلغ المعتمد') }}</th><th>{{ _('الحالة') }}</th><th>{{ _('التاريخ') }}</th></tr>
           </thead>
           <tbody>
             {% for d in deposit_resolved %}
             <tr>
-              <td>{{ d.payer_name or '—' }}</td>
+              <td>{{ d.payer_name or _('غير معروف') }}</td>
               <td>{{ d.method_ar }}</td>
               <td style="direction:ltr">{{ money(d.confirmed_amount if d.confirmed_amount is not none else d.amount_claimed) }} {{ d.currency or '' }}</td>
               <td><span class="market-pill {{ 'market-pill--ok' if d.status in ['confirmed','adjusted'] else 'market-pill--bad' }}">{{ d.status_ar }}</span>{% if d.status == 'rejected' and d.admin_note %}<br><small style="color:#dc2626">{{ _('السبب') }}: {{ d.admin_note }}</small>{% endif %}</td>
               <td><small>{{ date_label(d.resolved_at or d.created_at) }}</small></td>
             </tr>
-            {% else %}
-            <tr><td colspan="5" class="market-empty">{{ _('لا يوجد سجل بعد.') }}</td></tr>
             {% endfor %}
           </tbody>
         </table>
       </div>
+      {% else %}
+      <div class="market-empty">{{ _('لا يوجد سجل بعد.') }}</div>
+      {% endif %}
     </section>
   </div>
 
@@ -318,8 +331,8 @@
           <tbody>
             {% for w in withdrawal_pending %}
             <tr>
-              <td>{{ w.payee_name or '—' }}</td>
-              <td style="direction:ltr">{{ w.payee_account or '—' }}</td>
+              <td>{{ w.payee_name or _('غير معروف') }}</td>
+              <td style="direction:ltr">{{ w.payee_account or _('غير محدّد') }}</td>
               <td style="direction:ltr">{{ money(w.amount) }} {{ w.currency or '' }}</td>
               <td><small>{{ date_label(w.created_at) }}</small></td>
               <td>
@@ -350,26 +363,29 @@
         <div><h2><i class="fa-solid fa-clock-rotate-left"></i> {{ _('طلبات السحب المحسومة') }}</h2></div>
         <span class="market-pill">{{ withdrawal_resolved|length }}</span>
       </header>
-      <div class="market-table-wrap">
-        <table class="market-table">
+      {# سجل قراءة-فقط ⇒ نظام الجداول المشترك: تصدير + «أعمدة» + فرز + ترقيم #}
+      {% if withdrawal_resolved %}
+      <div class="uds-table-wrap" data-uds-table data-uds-page-size="10">
+        <table class="hub-table">
           <thead>
             <tr><th>{{ _('صاحب الحساب') }}</th><th>{{ _('رقم الحساب') }}</th><th>{{ _('المبلغ') }}</th><th>{{ _('الحالة') }}</th><th>{{ _('التاريخ') }}</th></tr>
           </thead>
           <tbody>
             {% for w in withdrawal_resolved %}
             <tr>
-              <td>{{ w.payee_name or '—' }}</td>
-              <td style="direction:ltr">{{ w.payee_account or '—' }}</td>
+              <td>{{ w.payee_name or _('غير معروف') }}</td>
+              <td style="direction:ltr">{{ w.payee_account or _('غير محدّد') }}</td>
               <td style="direction:ltr">{{ money(w.amount) }} {{ w.currency or '' }}</td>
               <td><span class="market-pill {{ 'market-pill--ok' if w.status == 'confirmed' else 'market-pill--bad' }}">{{ w.status_ar }}</span>{% if w.status == 'rejected' and w.admin_note %}<br><small style="color:#dc2626">{{ _('السبب') }}: {{ w.admin_note }}</small>{% endif %}</td>
               <td><small>{{ date_label(w.resolved_at or w.created_at) }}</small></td>
             </tr>
-            {% else %}
-            <tr><td colspan="5" class="market-empty">{{ _('لا يوجد سجل بعد.') }}</td></tr>
             {% endfor %}
           </tbody>
         </table>
       </div>
+      {% else %}
+      <div class="market-empty">{{ _('لا يوجد سجل بعد.') }}</div>
+      {% endif %}
     </section>
   </div>
 
@@ -387,7 +403,8 @@
           {% for t in chat_threads %}
           <a class="ssp-thread {{ 'is-open' if open_chat_id == t.card_user_id else '' }}" href="{{ url_for('radius.store_support', chat=t.card_user_id) }}#chat">
             <div class="t-body">
-              <span class="t-name">{{ t.display_name or t.mobile or ('#' ~ t.card_user_id) }}</span>
+              {# اسم حقيقي فقط: الاسم العربي إن وُجد، وإلا الجوال (LTR)، وإلا نص عربي صريح — لا «#معرّف» #}
+              <span class="t-name">{% if t.display_name %}{{ t.display_name }}{% elif t.mobile %}<bdi dir="ltr">{{ t.mobile }}</bdi>{% else %}{{ _('زبون غير مُسمّى') }}{% endif %}</span>
               <span class="t-last">{{ t.last_body or '' }}</span>
             </div>
             {% if t.unread_admin_count %}<span class="ssp-unread">{{ t.unread_admin_count }}</span>{% endif %}
@@ -398,7 +415,9 @@
         </div>
         <div class="ssp-conv">
           {% if open_chat_id and open_thread %}
-            <div class="ssp-conv-head"><i class="fa-solid fa-user"></i> {{ _('محادثة الزبون') }} #{{ open_chat_id }}</div>
+            {# اسم الزبون الحقيقي في ترويسة المحادثة بدل «#معرّف» — نستخرجه من قائمة الخيوط #}
+            {% set _ot = (chat_threads | selectattr('card_user_id', 'equalto', open_chat_id) | list | first) %}
+            <div class="ssp-conv-head"><i class="fa-solid fa-user"></i> {{ _('محادثة الزبون') }}: {% if _ot and _ot.display_name %}{{ _ot.display_name }}{% elif _ot and _ot.mobile %}<bdi dir="ltr">{{ _ot.mobile }}</bdi>{% else %}{{ _('زبون غير مُسمّى') }}{% endif %}</div>
             <div class="ssp-msgs">
               {% for m in open_thread['items'] %}
               <div class="ssp-msg {{ 'from-admin' if m.sender == 'admin' else 'from-customer' }}">
@@ -502,7 +521,7 @@
               <input type="hidden" name="active" value="{{ 0 if m.active else 1 }}">
               <button class="market-btn market-btn--sm" type="submit"><i class="fa-solid fa-power-off"></i> {{ _('تعطيل') if m.active else _('تفعيل') }}</button>
             </form>
-            <form method="post" action="{{ url_for('radius.store_support_payment_method_update', method_id=m.id) }}" onsubmit="return confirm('{{ _('حذف هذه القناة؟') }}')">
+            <form method="post" action="{{ url_for('radius.store_support_payment_method_update', method_id=m.id) }}" data-ssp-confirm="{{ _('حذف قناة الاستلام هذه؟ لن تظهر للزبائن بعد الآن.') }}">
               <input type="hidden" name="_csrf_token" value="{{ CSRF }}">
               <input type="hidden" name="action" value="delete">
               <button class="market-btn market-btn--bad market-btn--sm" type="submit"><i class="fa-solid fa-trash"></i> {{ _('حذف') }}</button>
@@ -576,6 +595,18 @@
       </form>
     </section>
   </div>
+
+  {# نافذة تأكيد محلية للإجراءات المدمّرة — بديل confirm() الأصلي #}
+  <div class="ssp-confirm-backdrop" id="sspConfirm" hidden>
+    <div class="ssp-confirm-box" role="dialog" aria-modal="true" aria-labelledby="sspConfirmMsg">
+      <div class="ssp-confirm-ic"><i class="fa-solid fa-triangle-exclamation"></i></div>
+      <div class="ssp-confirm-msg" id="sspConfirmMsg"></div>
+      <div class="ssp-confirm-actions">
+        <button type="button" class="market-btn market-btn--sm" data-ssp-cancel>{{ _('إلغاء') }}</button>
+        <button type="button" class="market-btn market-btn--bad market-btn--sm" data-ssp-ok><i class="fa-solid fa-trash"></i> {{ _('تأكيد الحذف') }}</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -591,6 +622,29 @@
   tabs.forEach(function(t){
     t.addEventListener('click', function(){ show(t.getAttribute('data-ssp-tab')); });
   });
+
+  // نافذة تأكيد محلية بدل confirm() الأصلي — تعترض إرسال أي نموذج يحمل data-ssp-confirm
+  var cdlg = document.getElementById('sspConfirm');
+  var pendingForm = null;
+  if(cdlg){
+    root.querySelectorAll('form[data-ssp-confirm]').forEach(function(f){
+      f.addEventListener('submit', function(e){
+        if(f.dataset.sspConfirmed){ return; }   // مرّ التأكيد — اترك الإرسال
+        e.preventDefault();
+        pendingForm = f;
+        cdlg.querySelector('#sspConfirmMsg').textContent = f.getAttribute('data-ssp-confirm') || '';
+        cdlg.hidden = false;
+      });
+    });
+    function closeDlg(){ cdlg.hidden = true; pendingForm = null; }
+    cdlg.querySelector('[data-ssp-ok]').addEventListener('click', function(){
+      if(pendingForm){ pendingForm.dataset.sspConfirmed = '1'; pendingForm.submit(); }
+      cdlg.hidden = true;
+    });
+    cdlg.querySelector('[data-ssp-cancel]').addEventListener('click', closeDlg);
+    cdlg.addEventListener('click', function(e){ if(e.target === cdlg){ closeDlg(); } });
+    document.addEventListener('keydown', function(e){ if(e.key === 'Escape' && !cdlg.hidden){ closeDlg(); } });
+  }
   // إن فُتح الشات عبر ?chat= أو وسم #chat، اعرض تبويب المحادثات تلقائيًا.
   if(location.hash === '#chat' || /[?&]chat=/.test(location.search)){
     show('chat');

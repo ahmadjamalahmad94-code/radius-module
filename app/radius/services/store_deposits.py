@@ -64,8 +64,9 @@ class DepositRequestService:
 
     def _method_row(self, row) -> dict[str, Any]:
         out = row_to_dict(row)
+        # fallback عربي محسوم — لا يتسرّب المفتاح الخام للعمود مهما كانت القيمة
         out["method_ar"] = _METHOD_AR.get(str(out.get("method") or "other"),
-                                          out.get("method"))
+                                          "قناة أخرى")
         out["qr_image_url"] = store_image_url(out.get("qr_image_path") or "")
         out["logo_image_url"] = store_image_url(out.get("logo_image_path") or "")
         return out
@@ -176,10 +177,11 @@ class DepositRequestService:
             out["confirmed_amount"] = minor_to_money(out.get("confirmed_amount_minor"))
         else:
             out["confirmed_amount"] = None
+        # fallback عربي محسوم لكليهما — لا قيمة خام إنجليزية في العمود أبدًا
         out["status_ar"] = _STATUS_AR.get(str(out.get("status") or ""),
-                                          out.get("status"))
+                                          "غير محدّدة")
         out["method_ar"] = _METHOD_AR.get(str(out.get("method") or "other"),
-                                          out.get("method"))
+                                          "قناة أخرى")
         out["receipt_image_url"] = store_image_url(out.get("receipt_image_path") or "")
         # العملة المعروضة = المضبوطة حاليًا (مصدر واحد) لا المخزّنة وقت
         # الطلب — فلا تختلط JOD/ILS عبر اللوحة وصفحة الزبون.
