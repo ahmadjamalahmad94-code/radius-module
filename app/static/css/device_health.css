@@ -2,6 +2,27 @@
    Page-specific polish only; layout/cards/table/modal come from
    hub_v2.css + unified_design.css (loaded globally). RTL-safe. */
 
+/* Live-apply panel toggle strip */
+.dh-liveapply {
+  margin: 0 0 16px; padding: 14px 18px; border-radius: 14px;
+  background: #FFFBEB; border: 1px solid #FDE68A;
+  transition: background .2s, border-color .2s;
+}
+.dh-liveapply.is-on { background: #ECFDF5; border-color: #A7F3D0; }
+.dh-liveapply-main {
+  display: flex; align-items: center; gap: 18px; justify-content: space-between;
+  flex-wrap: wrap;
+}
+.dh-liveapply-text { flex: 1; min-width: 240px; }
+.dh-liveapply-title { font-weight: 700; font-size: 14px; color: #92400E; display: flex; align-items: center; gap: 8px; }
+.dh-liveapply.is-on .dh-liveapply-title { color: #047857; }
+.dh-liveapply-warn { font-size: 12px; color: #78716C; margin-top: 4px; line-height: 1.6; }
+.dh-liveapply-forced {
+  margin-top: 10px; padding: 8px 12px; border-radius: 10px;
+  background: #FEF2F2; border: 1px solid #FECACA; color: #991B1B;
+  font-size: 12px; display: flex; align-items: center; gap: 8px;
+}
+
 .dh-table-wrap { overflow-x: auto; }
 .dh-table { width: 100%; }
 .dh-table .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; }

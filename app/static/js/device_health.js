@@ -68,6 +68,36 @@
     if (el) el.addEventListener("change", applyFilters);
   });
 
+  /* ── live-apply panel toggle (controls real router writes) ── */
+  var liveToggle = document.getElementById("dh-live-apply-toggle");
+  if (liveToggle && CFG.liveApplyUrl) {
+    liveToggle.addEventListener("change", function () {
+      var on = liveToggle.checked;
+      liveToggle.disabled = true;
+      request(CFG.liveApplyUrl, "POST", { enabled: on }).then(function (res) {
+        liveToggle.disabled = false;
+        var d = res.data || {};
+        if (d.ok) {
+          var strip = document.getElementById("dh-liveapply");
+          if (strip) strip.classList.toggle("is-on", !!d.enabled);
+          if (d.enabled && d.effective === false) {
+            toast("حُفظ التفعيل، لكنه مُعطَّل قسريًّا من إعداد الخادم.", "info");
+          } else if (d.enabled) {
+            toast("⚠️ التطبيق الحي مُفعّل — سيكتب النظام على الراوترات الحقيقية عند الضغط «تطبيق».", "info");
+          } else {
+            toast("أُطفئ التطبيق الحي — وضع المعاينة (dry-run) فقط.", "success");
+          }
+        } else {
+          liveToggle.checked = !on;
+          toast((d && d.error) || "تعذّر حفظ الإعداد", "error");
+        }
+      }).catch(function () {
+        liveToggle.disabled = false; liveToggle.checked = !on;
+        toast("تعذّر حفظ الإعداد", "error");
+      });
+    });
+  }
+
   /* ── add / edit modal ── */
   var form = $("#dh-device-form");
   var modalTitle = function () {

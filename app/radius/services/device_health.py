@@ -389,6 +389,30 @@ def test_ping(tenant_id: int, device_id: int) -> dict:
     return {"ok": True, "status": status, "latency_ms": latency, "error": ""}
 
 
+# ── live-apply panel toggle (owner: «كله من اللوحة مش التيرمنال») ──
+
+def live_apply_state(tenant_id: int) -> dict:
+    """Current state of the live-apply gate for the page/JS.
+      enabled        — the panel toggle's stored value (what the switch shows)
+      effective      — the real gate after the env hard-override
+      env_forced_off — True when the server env is force-disabling it
+    """
+    from . import device_health_mikrotik as mt
+    tid = int(tenant_id)
+    return {
+        "enabled": mt.live_apply_db_enabled(tid),
+        "effective": mt.live_apply_enabled(tid),
+        "env_forced_off": mt.env_force_disabled(),
+    }
+
+
+def set_live_apply(tenant_id: int, enabled: bool, *, by: int = 0) -> dict:
+    """Persist the panel toggle and return the new state."""
+    from . import device_health_mikrotik as mt
+    mt.set_live_apply(int(tenant_id), bool(enabled), by=by)
+    return live_apply_state(int(tenant_id))
+
+
 # ── Phase 3: controlled live apply ─────────────────────────────
 
 # MikroTik item-kind → (write fn name, repo bookkeeping). Only items the live
@@ -412,10 +436,14 @@ def apply_device(tenant_id: int, device_id: int,
     tid = int(tenant_id)
     from . import device_health_mikrotik as mt
 
-    if not mt.live_apply_enabled():
-        return {"ok": False, "gated": True,
-                "error": ("التطبيق الحيّ على الراوتر معطّل — اضبط متغيّر البيئة "
-                          "HOBERADIUS_DEVICE_HEALTH_LIVE_APPLY=1 لتفعيله."),
+    if not mt.live_apply_enabled(tid):
+        if mt.env_force_disabled():
+            msg = ("التطبيق الحيّ مُعطَّل قسريًّا من إعداد الخادم "
+                   "(HOBERADIUS_DEVICE_HEALTH_LIVE_APPLY).")
+        else:
+            msg = ("التطبيق الحيّ على الراوترات معطّل — فعّل المفتاح من اللوحة "
+                   "«تفعيل التطبيق الحي على الراوترات».")
+        return {"ok": False, "gated": True, "error": msg,
                 "applied": [], "already_present": [], "failed": []}
 
     device = repo.get_device(tid, int(device_id))

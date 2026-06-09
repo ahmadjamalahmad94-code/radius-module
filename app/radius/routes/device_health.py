@@ -66,6 +66,9 @@ def register_device_health_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/device-health/api/router-interfaces",
                     "device_health_api_router_interfaces",
                     device_health_api_router_interfaces, methods=["GET"])
+    bp.add_url_rule("/device-health/api/live-apply",
+                    "device_health_api_live_apply",
+                    device_health_api_live_apply, methods=["GET", "POST"])
     bp.add_url_rule("/device-health/api/plan", "device_health_api_plan",
                     device_health_api_plan, methods=["GET"])
 
@@ -104,6 +107,7 @@ def device_health_page():
         counts=counts,
         device_types=sorted(repo.ALLOWED_DEVICE_TYPES),
         alert_channels=["", "telegram", "sms", "whatsapp"],
+        live_apply=svc.live_apply_state(tenant_id),
     )
 
 
@@ -150,6 +154,22 @@ def device_health_api_update(device_id: int):
         "device": repo.get_device(tenant_id, device_id),
         "warnings": result["warnings"],
     })
+
+
+def device_health_api_live_apply():
+    """Read (GET) or set (POST {enabled}) the panel live-apply toggle.
+    Owner rule: live-apply is controlled from the panel, not the terminal."""
+    tenant_id = _tid()
+    if request.method == "GET":
+        return jsonify({"ok": True, **svc.live_apply_state(tenant_id)})
+    body = _payload()
+    enabled = _to_bool(body.get("enabled"))
+    try:
+        by = int(session.get("admin_id") or 0)
+    except (TypeError, ValueError):
+        by = 0
+    state = svc.set_live_apply(tenant_id, enabled, by=by)
+    return jsonify({"ok": True, **state})
 
 
 def device_health_api_enable(device_id: int):
@@ -270,3 +290,9 @@ def _int(value, default: int = 0) -> int:
         return int(value)
     except (TypeError, ValueError):
         return default
+
+
+def _to_bool(value) -> bool:
+    if isinstance(value, bool):
+        return value
+    return str(value).strip().lower() in ("1", "true", "yes", "on")

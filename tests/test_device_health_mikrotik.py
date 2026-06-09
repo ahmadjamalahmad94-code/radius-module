@@ -167,17 +167,20 @@ def test_test_ping_high_latency_status(app, monkeypatch):
         assert out["status"] == "high_latency"
 
 
-def test_live_apply_gate_blocks_without_flag(app):
-    """Safety: write helpers refuse unless explicitly enabled — proves no
-    accidental live mutation is possible in this delivery."""
+def test_live_apply_gate_blocks_without_toggle(app):
+    """Safety: write helpers refuse unless the panel toggle is ON — proves no
+    accidental live mutation while the default-OFF gate is closed."""
     with app.app_context():
         from app.radius.services import device_health_mikrotik as dhmt
 
         # live=False → refused
-        r1 = dhmt.add_ip_address({"id": 11}, address="192.168.15.254/24",
+        r1 = dhmt.add_ip_address({"id": 11, "tenant_id": 1},
+                                 address="192.168.15.254/24",
                                  interface="ether2", live=False)
         assert r1.ok is False
-        # live=True but env flag unset → still refused
-        r2 = dhmt.add_netwatch({"id": 11}, host="192.168.15.10", live=True)
+        # live=True but panel toggle OFF (default) → still refused, and the
+        # message points to the panel switch (not the terminal/env var).
+        r2 = dhmt.add_netwatch({"id": 11, "tenant_id": 1},
+                               host="192.168.15.10", live=True)
         assert r2.ok is False
-        assert "HOBERADIUS_DEVICE_HEALTH_LIVE_APPLY" in r2.error
+        assert "معطّل" in r2.error and "اللوحة" in r2.error

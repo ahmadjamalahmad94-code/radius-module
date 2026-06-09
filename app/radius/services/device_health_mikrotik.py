@@ -98,19 +98,57 @@ def ping(nas: Mapping[str, Any], *, target: str, count: int = 4) -> mac.MtResult
 
 # ── writes (Phase 3 — gated, NOT wired to any route in this delivery) ──
 
-def live_apply_enabled() -> bool:
-    """Master deployment gate for live MikroTik writes. Default OFF so the
-    feature ships safe; the operator sets the env var to allow apply."""
-    flag = (os.environ.get("HOBERADIUS_DEVICE_HEALTH_LIVE_APPLY") or "").strip().lower()
-    return flag in ("1", "true", "yes", "on")
+# Panel-controlled gate (owner: «كله من اللوحة مش التيرمنال»). Stored per-tenant
+# in tenant settings; default OFF. The env var is kept ONLY as a hard safety
+# override that can FORCE-DISABLE (e.g. on a shared/staging box) regardless of
+# the panel toggle — it can no longer enable on its own.
+LIVE_APPLY_SETTING_KEY = "device_health.live_apply_enabled"
+_TRUE = ("1", "true", "yes", "on")
+_FALSE = ("0", "false", "no", "off")
 
 
-def _live_apply_allowed(live: bool) -> tuple[bool, str]:
+def env_force_disabled() -> bool:
+    """True when the env var is explicitly set to a falsey value → hard off."""
+    raw = os.environ.get("HOBERADIUS_DEVICE_HEALTH_LIVE_APPLY")
+    return raw is not None and raw.strip().lower() in _FALSE
+
+
+def live_apply_db_enabled(tenant_id: Optional[int] = None) -> bool:
+    """The panel toggle value (DB setting only, ignoring the env override)."""
+    try:
+        from ..core.tenant import DEFAULT_TENANT_ID
+        from ..db.repos import tenants_repo
+        tid = int(tenant_id) if tenant_id is not None else DEFAULT_TENANT_ID
+        val = (tenants_repo.get_setting(tid, LIVE_APPLY_SETTING_KEY, "0") or "0")
+        return val.strip().lower() in _TRUE
+    except Exception:  # noqa: BLE001 — never break apply on a settings read
+        return False
+
+
+def set_live_apply(tenant_id: int, enabled: bool, *, by: int = 0) -> None:
+    """Persist the panel toggle (one-click control from the UI)."""
+    from ..db.repos import tenants_repo
+    tenants_repo.set_setting(int(tenant_id), LIVE_APPLY_SETTING_KEY,
+                             "1" if enabled else "0", by=int(by or 0))
+
+
+def live_apply_enabled(tenant_id: Optional[int] = None) -> bool:
+    """Effective gate for live MikroTik writes: the panel toggle, unless the
+    env override force-disables it. Default OFF so the feature ships safe."""
+    if env_force_disabled():
+        return False
+    return live_apply_db_enabled(tenant_id)
+
+
+def _live_apply_allowed(live: bool, tenant_id: Optional[int] = None) -> tuple[bool, str]:
     if not live:
         return False, "التطبيق الحيّ غير مُفعّل لهذا الطلب (dry-run)."
-    if not live_apply_enabled():
-        return False, ("التطبيق الحيّ على الراوتر معطّل — "
-                       "اضبط HOBERADIUS_DEVICE_HEALTH_LIVE_APPLY لتفعيله (Phase 3).")
+    if not live_apply_enabled(tenant_id):
+        if env_force_disabled():
+            return False, ("التطبيق الحيّ مُعطَّل قسريًّا من إعداد الخادم "
+                           "(HOBERADIUS_DEVICE_HEALTH_LIVE_APPLY).")
+        return False, ("التطبيق الحيّ على الراوترات معطّل — فعّل المفتاح من "
+                       "اللوحة «تفعيل التطبيق الحي على الراوترات».")
     return True, ""
 
 
@@ -134,7 +172,7 @@ def add_ip_address(
     nas: Mapping[str, Any], *, address: str, interface: str,
     device_id: Optional[int] = None, live: bool = False,
 ) -> mac.MtResult:
-    ok, why = _live_apply_allowed(live)
+    ok, why = _live_apply_allowed(live, tenant_id=nas.get("tenant_id"))
     if not ok:
         return mac.MtResult(ok=False, error=why)
     attrs = {"address": str(address), "interface": str(interface),
@@ -151,7 +189,7 @@ def add_ip_binding(
     nas: Mapping[str, Any], *, address: str, binding_type: str = "bypassed",
     device_id: Optional[int] = None, live: bool = False,
 ) -> mac.MtResult:
-    ok, why = _live_apply_allowed(live)
+    ok, why = _live_apply_allowed(live, tenant_id=nas.get("tenant_id"))
     if not ok:
         return mac.MtResult(ok=False, error=why)
     attrs = {"address": str(address), "type": str(binding_type),
@@ -168,7 +206,7 @@ def add_netwatch(
     nas: Mapping[str, Any], *, host: str, interval_sec: int = 60,
     timeout_sec: int = 3, device_id: Optional[int] = None, live: bool = False,
 ) -> mac.MtResult:
-    ok, why = _live_apply_allowed(live)
+    ok, why = _live_apply_allowed(live, tenant_id=nas.get("tenant_id"))
     if not ok:
         return mac.MtResult(ok=False, error=why)
     attrs = {"host": str(host), "type": "simple",
