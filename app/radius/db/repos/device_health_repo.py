@@ -162,6 +162,32 @@ def find_device_by_router_ip(
     return _device_row(r) if r else None
 
 
+def find_device_by_scope(
+    tenant_id: int, router_id: int, interface_name: str, network_cidr: str,
+    *, exclude_id: Optional[int] = None,
+) -> Optional[dict]:
+    """Network-scope dedup lookup — an existing living device that already
+    occupies the SAME (router + interface + network_cidr). The owner-confirmed
+    key: same range on the SAME interface is a true duplicate (hard block);
+    same range on a DIFFERENT interface is allowed (separate scope + warning),
+    so the interface_name is part of the match.
+    """
+    cidr = str(network_cidr or "").strip()
+    iface = str(interface_name or "").strip()
+    if not cidr or not iface:
+        return None
+    sql = ("SELECT * FROM network_device_monitor_devices "
+           "WHERE tenant_id = ? AND router_id = ? AND interface_name = ? "
+           "AND network_cidr = ? AND deleted_at IS NULL")
+    args: list = [int(tenant_id), int(router_id), iface, cidr]
+    if exclude_id is not None:
+        sql += " AND id != ?"
+        args.append(int(exclude_id))
+    sql += " LIMIT 1"
+    r = db().execute(sql, args).fetchone()
+    return _device_row(r) if r else None
+
+
 # ── devices: mutations ─────────────────────────────────────────
 
 def create_device(

@@ -127,6 +127,48 @@ def test_same_subnet_other_interface_allowed_with_warning(app):
         assert ifaces == {"ether2", "ether5"}
 
 
+def test_same_range_same_interface_hard_blocked(app):
+    # Owner-confirmed dedup key: (router_id, interface, network_cidr).
+    # Same range on the SAME interface = true duplicate → hard block, even with
+    # a different device IP (no second scope/binding created).
+    _seed_router(app)
+    with app.app_context():
+        from app.radius.services import device_health as svc
+        from app.radius.db.repos import device_health_repo as repo
+
+        svc.create_device(1, {
+            "router_id": 11, "name": "AP1", "interface_name": "ether2",
+            "ip_address": "192.168.15.10"})
+        with pytest.raises(svc.DeviceHealthError) as ei:
+            svc.create_device(1, {
+                "router_id": 11, "name": "AP2", "interface_name": "ether2",
+                "ip_address": "192.168.15.20"})  # same /24, same ether2
+        msg = str(ei.value)
+        assert "نفس المدخل" in msg and "192.168.15.0/24" in msg
+        # No second scope row for that (router, interface, network).
+        scopes = [s for s in repo.scopes_for_network(1, 11, "192.168.15.0/24")
+                  if s["interface_name"] == "ether2"]
+        assert len(scopes) == 1
+
+
+def test_update_into_same_interface_range_blocked(app):
+    # Moving device B onto an interface+range already owned by device A → block.
+    _seed_router(app)
+    with app.app_context():
+        from app.radius.services import device_health as svc
+
+        svc.create_device(1, {
+            "router_id": 11, "name": "A", "interface_name": "ether2",
+            "ip_address": "192.168.15.10"})
+        b = svc.create_device(1, {
+            "router_id": 11, "name": "B", "interface_name": "ether3",
+            "ip_address": "10.0.9.10"})["device_id"]
+        with pytest.raises(svc.DeviceHealthError):
+            # B → ether2 + 192.168.15.0/24 (A's scope)
+            svc.update_device(1, b, {
+                "interface_name": "ether2", "ip_address": "192.168.15.50"})
+
+
 def test_soft_delete_frees_duplicate_slot(app):
     _seed_router(app)
     with app.app_context():

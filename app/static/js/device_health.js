@@ -130,8 +130,12 @@
           toast(id ? "تم حفظ التعديلات." : "أُضيف الجهاز.", "success");
           setTimeout(function () { location.reload(); }, 500);
         } else {
+          var emsg = (res.data && res.data.error) || "تعذّر الحفظ.";
+          // Design-system toast for the block (e.g. duplicate range on the same
+          // interface) + keep the inline error box. Never a native alert.
+          toast(emsg, "error");
           var err = $("#dh-form-error");
-          if (err) { err.hidden = false; err.textContent = (res.data && res.data.error) || "تعذّر الحفظ."; }
+          if (err) { err.hidden = false; err.textContent = emsg; }
         }
       });
     });

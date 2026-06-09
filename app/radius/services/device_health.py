@@ -99,13 +99,24 @@ def create_device(tenant_id: int, params: dict) -> dict:
     except planner.NetworkCalcError as exc:
         raise DeviceHealthError(str(exc)) from exc
 
-    # Duplicate prevention: same router + same IP among the living.
+    # Duplicate prevention (1): same MikroTik/server + same device IP.
     dup = repo.find_device_by_router_ip(tid, router_id, ip_address)
     if dup:
         raise DeviceHealthError(
-            "هذا الجهاز موجود مسبقًا على نفس الراوتر بنفس الـIP "
+            "هذا الجهاز موجود مسبقًا على نفس المايكروتيك / السيرفر بنفس الـIP "
             f"«{dup['name']}» (رقم {dup['id']})."
         )
+
+    # Duplicate prevention (2): same network range on the SAME (router +
+    # interface) → HARD BLOCK (true duplicate scope). The same range on a
+    # DIFFERENT interface is allowed below (separate scope + amber warning).
+    scope_dup = repo.find_device_by_scope(
+        tid, router_id, interface_name, net["network_cidr"])
+    if scope_dup:
+        raise DeviceHealthError(
+            "هذا الرينج (%s) مُضاف على نفس المدخل (%s) مسبقاً عبر «%s» (رقم %s)."
+            % (net["network_cidr"], interface_name,
+               scope_dup["name"], scope_dup["id"]))
 
     monitoring_enabled = _to_bool(params.get("monitoring_enabled"), True)
     device_id = repo.create_device(
@@ -208,8 +219,17 @@ def update_device(tenant_id: int, device_id: int, params: dict) -> dict:
         dup = repo.find_device_by_router_ip(tid, target_router, net["ip_address"])
         if dup and dup["id"] != device["id"]:
             raise DeviceHealthError(
-                "جهاز آخر على نفس الراوتر يستخدم هذا الـIP "
+                "جهاز آخر على نفس المايكروتيك / السيرفر يستخدم هذا الـIP "
                 f"«{dup['name']}» (رقم {dup['id']}).")
+        # Same range on the SAME (router + interface) as ANOTHER device → block.
+        scope_dup = repo.find_device_by_scope(
+            tid, target_router, interface_name, net["network_cidr"],
+            exclude_id=device["id"])
+        if scope_dup:
+            raise DeviceHealthError(
+                "هذا الرينج (%s) مُضاف على نفس المدخل (%s) مسبقاً عبر «%s» (رقم %s)."
+                % (net["network_cidr"], interface_name,
+                   scope_dup["name"], scope_dup["id"]))
         fields.update({
             "ip_address": net["ip_address"],
             "interface_name": interface_name,
