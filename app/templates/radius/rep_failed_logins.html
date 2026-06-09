@@ -32,30 +32,16 @@
   'Accounting-Response': 'ردّ محاسبة',
 } %}
 {% set REASON_AR = {
-  'expired':          'اشتراك منتهٍ',
-  'disabled':         'حساب معطّل',
-  'no_plan':          'بدون باقة',
-  'out_of_schedule':  'خارج وقت السماح',
-  'mac_locked':       'عنوان الجهاز غير مطابق',
-  'mac_mismatch':     'تعارض عنوان الجهاز',
-  'quota_exceeded':   'تجاوز الحصة',
-  'concurrency':      'تجاوز عدد الأجهزة',
-  'concurrent_limit': 'تجاوز الحدّ المتزامن',
-  'bad_password':     'كلمة مرور خاطئة',
-  'password_wrong':   'كلمة مرور خاطئة',
-  'unknown_user':     'مستخدم غير معروف',
-  'not_found':        'غير موجود',
-  'frozen':           'حساب مجمَّد',
-  'revoked':          'بطاقة مسحوبة',
-  'mac_limit':        'حدّ عناوين الأجهزة',
-} %}
-{% set VENDOR_AR = {
-  'mikrotik': 'ميكروتيك', 'cisco': 'سيسكو', 'ubiquiti': 'يوبيكيتي',
-  'huawei': 'هواوي', 'juniper': 'جونيبر', 'other': 'آخر',
-} %}
-{% set TYPE_AR = {
-  'hotspot': 'هوتسبوت', 'pppoe': 'PPPoE', 'wireless': 'واي‑فاي',
-  'wired': 'سلكي', 'vpn': 'VPN', 'other': 'آخر',
+  'expired':         'اشتراك منتهٍ',
+  'disabled':        'حساب معطّل',
+  'no_plan':         'بدون باقة',
+  'out_of_schedule': 'خارج وقت السماح',
+  'mac_locked':      'عنوان الجهاز غير مطابق',
+  'quota_exceeded':  'تجاوز الحصة',
+  'concurrency':     'تجاوز عدد الأجهزة',
+  'bad_password':    'كلمة مرور خاطئة',
+  'unknown_user':    'مستخدم غير معروف',
+  'not_found':       'غير موجود',
 } %}
 
 {# ── مؤشرات مشتقة من نفس المعطيات (بلا أي استعلام إضافي في القالب) ── #}
@@ -116,7 +102,6 @@
           <th data-uds-nosort>{{ _('الردّ') }}</th>
           <th>{{ _('السبب') }}</th>
           <th>{{ _('جهاز الشبكة') }}</th>
-          <th>{{ _('المورّد / النوع') }}</th>
         </tr>
       </thead>
       <tbody>
@@ -130,41 +115,17 @@
             <span class="rep-sub">{{ _ad[11:16] }}</span>
           </td>
           <td><strong><bdi>{{ r.username or '—' }}</bdi></strong></td>
-          {# الردّ معرّب — والقيمة الخام (Access-Reject…) تبقى في title #}
+          {# الردّ معرّب — والقيمة الخام (Access-Reject…) تبقى في title للمراجعة الفنية #}
           <td><span title="{{ r.reply }}">{{ hub.pill(REPLY_AR.get(r.reply, r.reply or '—'), variant="red") }}</span></td>
-          {# السبب من عمود class معرّب — الرمز الخام في title #}
+          {# السبب من عمود class معرّب — والرمز الخام في title #}
           <td>
             {% if r['class'] %}
-              <span class="rep-reason" title="{{ r['class'] }}">{{ REASON_AR.get(r['class'], r['class']|replace('_',' ')) }}</span>
+              <span class="rep-reason" title="{{ r['class'] }}">{{ REASON_AR.get(r['class'], r['class']) }}</span>
             {% else %}<span class="rep-muted">—</span>{% endif %}
           </td>
-          {# جهاز الشبكة: اسم الجهاز إن عُرف وإلا عنوان IP الخام #}
-          <td class="rep-mono small" title="{{ r.nas or '' }}">
-            {% if r.nas_name %}
-              <i class="fa-solid fa-network-wired" style="color:#64748b;margin-inline-end:4px"></i>
-              <strong>{{ r.nas_name }}</strong>
-              {% if r.nas and r.nas != r.nas_name %}
-                <span class="rep-sub" style="display:block;direction:ltr">{{ r.nas }}</span>
-              {% endif %}
-            {% elif r.nas %}
-              <i class="fa-solid fa-network-wired" style="color:#64748b;margin-inline-end:4px"></i>
-              <bdi>{{ r.nas }}</bdi>
-            {% else %}
-              <span class="rep-muted">—</span>
-            {% endif %}
-          </td>
-          {# المورّد والنوع من nas_devices — يُساعد تحديد من رفض #}
-          <td class="small">
-            {% if r.nas_vendor or r.nas_type %}
-              {% if r.nas_vendor %}
-                <span>{{ VENDOR_AR.get(r.nas_vendor|lower, r.nas_vendor) }}</span>
-              {% endif %}
-              {% if r.nas_type %}
-                <span class="rep-sub" style="display:block">{{ TYPE_AR.get(r.nas_type|lower, r.nas_type) }}</span>
-              {% endif %}
-            {% else %}
-              <span class="rep-muted">—</span>
-            {% endif %}
+          <td class="rep-mono small">
+            {% if r.nas %}<i class="fa-solid fa-network-wired" style="color:#64748b;margin-inline-end:5px"></i><bdi>{{ r.nas }}</bdi>
+            {% else %}<span class="rep-muted">—</span>{% endif %}
           </td>
         </tr>
         {% endfor %}

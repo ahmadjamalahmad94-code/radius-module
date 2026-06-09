@@ -466,31 +466,15 @@ def _install_stubs(app: Flask) -> None:
             from app.radius.db.repos import alerts_repo
             tid = int(getattr(_g, "tenant_id", DEFAULT_TENANT_ID))
             rows = alerts_repo.list_open(tid, limit=50)
-            # نمرّر الحقول التي يحتاجها alert_target_url للتعميق (rule/router_id/
-            # dedup_key/evidence) إضافةً لحقول العرض، فيحسب القالب الوجهة بنفسه.
             items = [{
                 "id": int(r["id"]),
                 "title": r.get("title_ar") or "",
                 "severity": r.get("severity") or "info",
                 "last_seen": r.get("last_seen") or "",
-                "rule": r.get("rule") or "",
-                "router_id": r.get("router_id"),
-                "dedup_key": r.get("dedup_key") or "",
-                "evidence": r.get("evidence") or {},
             } for r in rows[: max(1, int(limit))]]
             return {"count": len(rows), "items": items}
         except Exception:  # noqa: BLE001 — الجرس لا يكسر أي صفحة أبدًا
             return {"count": 0, "items": []}
-
-    def _alert_target_url(alert) -> str:
-        """وجهة التعميق لتنبيه واحد (الجرس + صفحة كل التنبيهات): رابط المورد/
-        الإجراء المناسب حسب نوع التنبيه ومرجعه، بدل صفحة التفاصيل العامّة.
-        غلاف آمن حول services.alert_links — أي خطأ يُرجِع «#» ولا يكسر الصفحة."""
-        try:
-            from app.radius.services.alert_links import alert_target_url as _f
-            return _f(alert)
-        except Exception:  # noqa: BLE001
-            return "#"
 
     def _sync_pending_count() -> int:
         """عدد مهام المزامنة المنتظرة/المعاد محاولتها (شارة الـ sidebar فقط).
@@ -597,10 +581,6 @@ def _install_stubs(app: Flask) -> None:
             # تُرجع أحدث التنبيهات المفتوحة للمستأجر الحالي — كل عنصر يحمل id
             # للانتقال لصفحة تفاصيله. لا تكسر الصفحة أبدًا عند أي خطأ.
             "topbar_alerts": _topbar_alerts,
-            # تعميق رابط التنبيه: يستدعيه الجرس وصفحة «كل التنبيهات» ليوجّه كل
-            # تنبيه لمورده/إجرائه (لوحة الراوتر، شات/إيداع/سحب الدعم، صفحة
-            # المشترك) بدل صفحة التفاصيل العامّة. آمن: يُرجِع «#» عند أي خطأ.
-            "alert_target_url": _alert_target_url,
             # تجميد قسم التحصيل: دالة كسولة تستدعيها الـ sidebar فقط لعرض
             # شارة «مجمّد» بجانب رابط التحصيل. استعلام واحد خفيف، ولا تكسر
             # أي صفحة عند الخطأ (تعتبر القسم مجمّدًا افتراضيًا — الوضع الآمن).

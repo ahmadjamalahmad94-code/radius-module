@@ -4,7 +4,7 @@
 {% block title %}حدث #{{ event.id }} — Hobe Hub{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-circle-info"></i>{% endblock %}
 {% block page_title %}حدث #{{ event.id }}{% endblock %}
-{% block page_sub %}<span class="sub" title="{{ event.category }} / {{ event.event_key }}">{{ event.category_label }} / {{ event.severity }} / {{ event.event_key_label }}</span>{% endblock %}
+{% block page_sub %}<span class="sub">{{ event.category }} / {{ event.severity }} / {{ event.event_key }}</span>{% endblock %}
 {% block head_extra %}{{ super() }}<link rel="stylesheet" href="{{ url_for('static', filename='css/ops_risk_redesign.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">{% endblock %}
 
@@ -30,10 +30,10 @@
 <section class="hub-hero-shell">
 {{ hub.hero("حدث #" ~ event.id, subtitle=event.message or event.event_key, icon="circle-info", actions_html=_events_jump) }}
 <div class="hub-kpi-grid" data-testid="event-detail-summary">
-  {{ hub.kpi("الفئة", event.category_label, icon="folder") }}
+  {{ hub.kpi("الفئة", event.category, icon="folder") }}
   {{ hub.kpi("الخطورة", event.severity, icon="signal") }}
-  {{ hub.kpi("الفاعل", event.actor_type_label ~ " #" ~ (event.actor_id or ""), icon="user") }}
-  {{ hub.kpi("الهدف", event.target_type_label ~ " #" ~ (event.target_id or ""), icon="bullseye") }}
+  {{ hub.kpi("الفاعل", event.actor_type ~ " #" ~ (event.actor_id or ""), icon="user") }}
+  {{ hub.kpi("الهدف", event.target_type ~ " #" ~ (event.target_id or ""), icon="bullseye") }}
 </div>
 </section>{# /hub-hero-shell #}
 
@@ -62,7 +62,7 @@
       <thead><tr><th>{{ _('الرقم') }}</th><th>{{ _('الخطورة') }}</th><th>{{ _('المفتاح') }}</th><th>{{ _('الرسالة') }}</th></tr></thead>
       <tbody>
         {% for item in timeline %}
-          <tr><td>#{{ item.id }}</td><td>{{ item.severity }}</td><td title="{{ item.event_key }}">{{ item.event_key_label }}</td><td>{{ item.message }}</td></tr>
+          <tr><td>#{{ item.id }}</td><td>{{ item.severity }}</td><td>{{ item.event_key }}</td><td>{{ item.message }}</td></tr>
         {% else %}
           <tr><td colspan="4">{{ _('لا يوجد خط زمني مرتبط بهذا الكيان.') }}</td></tr>
         {% endfor %}

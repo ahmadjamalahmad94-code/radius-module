@@ -152,8 +152,6 @@
 {%- set m_users_list   = ('/users' in path and '/users/new' not in path and '/overview' not in path and '/subscriber-groups' not in path) -%}
 {%- set m_users_new    = (path == url_for('radius.users_new')) -%}
 {%- set m_online_users = (path == url_for('radius.online_list') and request.args.get('type') != 'card') -%}
-{%- set m_subs_login_states = (endpoint == 'radius.rep_login_states_subscribers') -%}
-{%- set m_subs_portal_states = (endpoint == 'radius.rep_login_states_sub_portal') -%}
 {%- set m_subscriber_groups = ('/subscriber-groups' in path) -%}
 {%- set m_subscribers_overview = (endpoint_exists is defined and endpoint_exists('radius.subscribers_overview') and path == url_for('radius.subscribers_overview')) -%}
 
@@ -164,8 +162,6 @@
 {%- set m_cards_batches    = '/cards/batches' in path -%}
 {%- set m_cards_generate   = '/cards/generate' in path -%}
 {%- set m_cards_online     = (path == url_for('radius.online_list') and request.args.get('type') == 'card') -%}
-{%- set m_cards_login_states = (endpoint == 'radius.rep_login_states_cards') -%}
-{%- set m_cards_store_states = (endpoint == 'radius.rep_login_states_card_store') -%}
 {%- set m_print_templates  = '/print-templates' in path -%}
 
 {# Plans & Bandwidth #}
@@ -340,7 +336,6 @@
                                or m_reports_user_events or m_reports_speed_failures or m_reports_used_cards
                                or m_reports_balance_moves or m_reports_cash_tx -%}
 {%- set sec_support_active  = m_tickets or m_services or m_customer_portals -%}
-{%- set m_admin_login_states = (endpoint == 'radius.rep_login_states_admin') -%}
 {%- set sec_admin_active    = m_admins or m_admin_profile or m_admin_pricing or m_distributors or m_roles or m_recycle or m_backups
                                 or m_settings or m_sync or m_tenants
                                 or m_lifecycle or m_business_operators or m_perms -%}
@@ -718,9 +713,7 @@
         {%- set fam_exec_active = m_reports_home or m_reports_financial or m_reports_cards
                                     or m_reports_distributors or m_reports_archive -%}
         {%- set fam_auth_active = m_reports_login_states or m_reports_failed_logins
-                                    or m_subs_login_states or m_subs_portal_states
-                                    or m_cards_login_states or m_cards_store_states
-                                    or m_admin_login_states -%}
+                                    or m_reports_login_status or m_reports_manager_login -%}
         {%- set fam_net_active  = m_reports_sessions or m_reports_mac_history
                                     or m_reports_coa_failures or m_reports_speed_failures -%}
         {%- set fam_act_active  = m_reports_manager_events or m_reports_user_events
@@ -744,12 +737,8 @@
           </div></div>
         </div>
 
-        {# ── الدخول والأمان — مركز حالات الدخول الموحّد: الصفحة الرئيسية (الـhub)
-           في الأعلى ثم الأقسام الخمسة المفروزة (مشتركون/بطاقات/بوابة المشتركين/
-           بوابة متجر البطاقات/مدراء)، يليها «فشل دخول الشبكة» (تقرير رفض RADIUS
-           المستقل radpostauth). كل البنود محروسة خادميًا بـ reports.view.
-           الصفحات الفرعية تُطابَق بالـ endpoint عبر متغيّرات m_*_states المعرّفة
-           أعلى الملف فيبقى التفعيل تلقائيًا عند زيارة أيٍّ منها. ── #}
+        {# ── الدخول والأمان — الصفحات الفرعية (?actor=…) تشارك مسار
+           حالات تسجيل الدخول فيبقى التفعيل تلقائيًا عبر request.path ── #}
         <div class="hb-side-subgroup{% if fam_auth_active %} is-open has-active{% endif %}"
              data-hb-subgroup="reports-auth">
           <button type="button" class="hb-side-subhead" data-hb-subgroup-toggle>
@@ -757,13 +746,10 @@
             <span class="hb-side-subchevron"><i class="fa-solid fa-chevron-down"></i></span>
           </button>
           <div class="hb-side-subgroup-body"><div class="hb-side-subgroup-body-inner">
-            {{ sub_item('radius.rep_login_states',             _('حالات تسجيل الدخول'),        m_reports_login_states) }}
-            {{ sub_item('radius.rep_login_states_subscribers', _('حالات دخول المشتركين'),      m_subs_login_states) }}
-            {{ sub_item('radius.rep_login_states_cards',       _('حالات دخول البطاقات'),       m_cards_login_states) }}
-            {{ sub_item('radius.rep_login_states_sub_portal',  _('حالات بوابة المشتركين'),     m_subs_portal_states) }}
-            {{ sub_item('radius.rep_login_states_card_store',  _('حالات بوابة متجر البطاقات'), m_cards_store_states) }}
-            {{ sub_item('radius.rep_login_states_admin',       _('حالات دخول المدراء'),        m_admin_login_states) }}
-            {{ sub_item('radius.rep_failed_logins',            _('فشل دخول الشبكة'),           m_reports_failed_logins) }}
+            {{ sub_item('radius.rep_login_states',         _('حالات تسجيل الدخول'),   m_reports_login_states) }}
+            {{ sub_item('radius.rep_failed_logins',        _('فشل دخول الشبكة'),      m_reports_failed_logins) }}
+            {{ sub_item('radius.rep_login_status',         _('حالة دخول المشتركين'),  m_reports_login_status) }}
+            {{ sub_item('radius.rep_manager_login_status', _('حالة دخول المدراء'),    m_reports_manager_login) }}
           </div></div>
         </div>
 

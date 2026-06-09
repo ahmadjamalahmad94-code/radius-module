@@ -66,103 +66,6 @@
   {%- endif -%}
 {%- endmacro %}
 
-{# Human-readable package duration from a minutes value. Collapses to
-   whole days / hours when the value divides evenly so 1440 reads
-   «يوم واحد» not «1440 دقيقة». Arabic dual/plural handled for the
-   common small cases. #}
-{% macro mins_label(minutes) -%}
-  {%- set m = (minutes or 0)|int -%}
-  {%- if m <= 0 -%}—
-  {%- elif m % 1440 == 0 -%}
-    {%- set d = m // 1440 -%}
-    {%- if d == 1 -%}يوم واحد{%- elif d == 2 -%}يومان{%- elif d <= 10 -%}{{ d }} أيام{%- else -%}{{ d }} يوم{%- endif -%}
-  {%- elif m % 60 == 0 -%}
-    {%- set h = m // 60 -%}
-    {%- if h == 1 -%}ساعة واحدة{%- elif h == 2 -%}ساعتان{%- elif h <= 10 -%}{{ h }} ساعات{%- else -%}{{ h }} ساعة{%- endif -%}
-  {%- else -%}{{ m }} دقيقة
-  {%- endif -%}
-{%- endmacro %}
-
-{# ═════════════════════ CARD LIFETIME BLOCK (R13.A.10) ═════════════════════
-   A single at-a-glance band that answers the owner's four questions:
-   مدّة الباقة · تاريخ الانتهاء · الوقت المتبقّي · أوّل استخدام.
-   An unused card has no expiry/remaining yet — the timer is armed and
-   starts at first connection — so we say so explicitly instead of leaving
-   blanks. `card.started_at` is the real first-connection moment (first_used_at
-   with a radacct fallback in card_checker.py). #}
-{% macro lifetime_block(card) -%}
-  {%- set p = card.profile or {} -%}
-  {%- set _started = card.started_at -%}
-  {%- set _rem = card.remaining_seconds -%}
-  <section class="cc-lifetime" data-cc-section="lifetime">
-    <header class="cc-lifetime-head">
-      <span class="cc-lifetime-head-icon"><i class="fa-solid fa-hourglass-half"></i></span>
-      <span class="cc-lifetime-head-title">{{ _('دورة حياة البطاقة') }}</span>
-      {%- if not _started %}
-      <span class="cc-pill cc-pill-grey cc-lifetime-flag"><span class="dot"></span>{{ _('لم تبدأ بعد') }}</span>
-      {%- elif (_rem or 0) > 0 %}
-      <span class="cc-pill cc-pill-green cc-lifetime-flag"><span class="dot"></span>{{ _('سارية') }}</span>
-      {%- else %}
-      <span class="cc-pill cc-pill-red cc-lifetime-flag"><span class="dot"></span>{{ _('منتهية') }}</span>
-      {%- endif %}
-    </header>
-    <div class="cc-lifetime-grid">
-      {# مدّة الباقة — duration_minutes formatted nicely; validity_days as sub. #}
-      <div class="cc-lifetime-cell" data-cc-field="lifetime.duration">
-        <span class="cc-lifetime-cell-ic purple"><i class="fa-solid fa-stopwatch"></i></span>
-        <div class="cc-lifetime-cell-body">
-          <div class="cc-lifetime-cell-label">{{ _('مدّة الباقة') }}</div>
-          <div class="cc-lifetime-cell-value">
-            {%- if (p.duration_minutes or 0) > 0 -%}{{ mins_label(p.duration_minutes) }}
-            {%- elif (p.validity_days or 0) > 0 -%}{{ p.validity_days }} {{ _('يوم') }}
-            {%- else -%}{{ _('بلا حد زمني') }}{%- endif -%}
-          </div>
-          {%- if (p.duration_minutes or 0) > 0 and (p.validity_days or 0) > 0 %}
-          <div class="cc-lifetime-cell-sub">{{ _('صلاحية') }} {{ p.validity_days }} {{ _('يوم') }}</div>
-          {%- endif %}
-        </div>
-      </div>
-
-      {# تاريخ الانتهاء — explicit "starts at first use" when no expiry yet. #}
-      <div class="cc-lifetime-cell" data-cc-field="lifetime.expires_at">
-        <span class="cc-lifetime-cell-ic amber"><i class="fa-solid fa-calendar-xmark"></i></span>
-        <div class="cc-lifetime-cell-body">
-          <div class="cc-lifetime-cell-label">{{ _('تاريخ الانتهاء') }}</div>
-          <div class="cc-lifetime-cell-value">
-            {%- if card.expires_at -%}{{ dt(card.expires_at) }}
-            {%- else -%}<span class="cc-lifetime-soft">{{ _('تبدأ عند أوّل استخدام') }}</span>{%- endif -%}
-          </div>
-        </div>
-      </div>
-
-      {# الوقت المتبقّي — countdown via duration(); armed-not-started state. #}
-      <div class="cc-lifetime-cell" data-cc-field="lifetime.remaining">
-        <span class="cc-lifetime-cell-ic green"><i class="fa-solid fa-clock"></i></span>
-        <div class="cc-lifetime-cell-body">
-          <div class="cc-lifetime-cell-label">{{ _('الوقت المتبقّي') }}</div>
-          <div class="cc-lifetime-cell-value">
-            {%- if not _started -%}<span class="cc-lifetime-soft">{{ _('— (لم تبدأ بعد)') }}</span>
-            {%- elif (_rem or 0) > 0 -%}{{ duration(_rem) }}
-            {%- else -%}<span class="cc-lifetime-soft">{{ _('انتهت الصلاحية') }}</span>{%- endif -%}
-          </div>
-        </div>
-      </div>
-
-      {# أوّل استخدام — first real connection. #}
-      <div class="cc-lifetime-cell" data-cc-field="lifetime.first_used_at">
-        <span class="cc-lifetime-cell-ic cyan"><i class="fa-solid fa-flag-checkered"></i></span>
-        <div class="cc-lifetime-cell-body">
-          <div class="cc-lifetime-cell-label">{{ _('أوّل استخدام') }}</div>
-          <div class="cc-lifetime-cell-value">
-            {%- if _started -%}{{ dt(card.started_at) }}
-            {%- else -%}<span class="cc-lifetime-soft">{{ _('لم تُستخدَم بعد') }}</span>{%- endif -%}
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-{%- endmacro %}
-
 {% macro hidden_ops(card, query) -%}
   <input type="hidden" name="query" value="{{ query or card.username }}">
   <input type="hidden" name="username" value="{{ card.username }}">
@@ -479,7 +382,7 @@
   {% set _hero_kpis = [] %}
   {% if result and result.exists %}
     {% set _hs = result.accounting_summary or {} %}
-    {% set _x = _hero_kpis.extend([
+    {% set _ = _hero_kpis.extend([
       {'label': 'الجلسات',          'value': _hs.sessions_count or 0,
        'icon': 'wave-square',       'variant': 'brand'},
       {'label': 'أجهزة متّصلة الآن', 'value': _hs.online_sessions or 0,
@@ -593,7 +496,7 @@
        result-shell level instead of inside each mode's button. #}
     {% set _active_sessions = [] %}
     {% for ses in (s.latest_sessions or []) if ses.online %}
-      {% set _x = _active_sessions.append({
+      {% set _ = _active_sessions.append({
         'id':       ses.session_id or (ses.id|string),
         'mac':      ses.mac_address or '',
         'ip':       ses.ip_address or '',
@@ -643,10 +546,6 @@
           </div>
         </div>
       </div>
-
-      {# Row 1.5: Card lifetime band — duration / expiry / remaining /
-         first-use, made obvious at a glance (owner request). #}
-      {{ lifetime_block(card) }}
 
       {# Row 2: metric tiles — 10 tiles laid out in TWO rows of 5
          per user request. Row A (top) = connectivity story:
@@ -946,40 +845,29 @@
                   <td class="mono small">{{ dt(ses.started_at) }}</td>
                   <td class="mono small">{{ dt(ses.stopped_at) if ses.stopped_at else '—' }}</td>
                   <td class="num">{{ duration(ses.duration_seconds or 0) }}</td>
-                  {# معرّف الخدمة — human-readable FIRST: the session's
-                     service type, else the card's plan/profile name. The
-                     raw technical acctsessionid is NEVER the main value
-                     (it's a meaningless long string to the operator) — it
-                     lives in the tooltip + a tiny muted suffix only. #}
-                  {% set _svc = ses.service_type or ses.framed_protocol or (card.profile.name if card.profile else '') %}
-                  <td class="cc-svc-cell"
-                      title="{% if _svc %}{{ _svc }}{% endif %}{% if ses.session_id %} · معرّف تقني: {{ ses.session_id }}{% endif %}">
+                  {# معرّف الخدمة — combines the human-readable service
+                     (servicetype) with the technical session_id in a
+                     tooltip so the operator sees something meaningful at
+                     a glance. Falls back to whichever is non-empty. #}
+                  <td class="mono small" title="{{ ses.session_id or '' }}{% if ses.service_type %} · {{ ses.service_type }}{% endif %}{% if ses.framed_protocol %} · {{ ses.framed_protocol }}{% endif %}">
+                    {% set _svc = ses.service_type or ses.framed_protocol %}
                     {% if _svc %}
-                      <span class="cc-svc-label">{{ _svc }}</span>
-                      {% if ses.session_id %}<span class="cc-svc-id mono">#{{ ses.session_id[:8] }}</span>{% endif %}
+                      {{ _svc }}
                     {% elif ses.session_id %}
-                      <span class="cc-svc-id mono">#{{ ses.session_id[:12] + '…' if ses.session_id|length > 12 else ses.session_id }}</span>
-                    {% else %}<span class="muted">—</span>{% endif %}
+                      {{ ses.session_id[:14] + '…' if ses.session_id|length > 14 else ses.session_id }}
+                    {% else %}—{% endif %}
                   </td>
-                  {# منفذ الاتصال — show the CONCRETE interface the client
-                     connected on, not just the abstract medium. For
-                     MikroTik hotspot the real interface lives in
-                     NAS-Port-Id (nasportid → ses.nas_port, e.g. ether2 /
-                     bridge) and the AP/server in Called-Station-Id
-                     (ses.called_station). Prefer those as the primary
-                     value; the friendly type (Wireless-802.11 / Ethernet)
-                     becomes a muted sub-label + tooltip. If only the type
-                     exists we show it without pretending it's an
-                     interface. #}
-                  {% set _iface = ses.nas_port or ses.called_station %}
-                  <td class="cc-port-cell"
-                      title="{% if ses.nas_port_type %}النوع: {{ ses.nas_port_type }}{% endif %}{% if ses.nas_port %} · المنفذ: {{ ses.nas_port }}{% endif %}{% if ses.called_station %} · الوجهة: {{ ses.called_station }}{% endif %}">
-                    {% if _iface %}
-                      <span class="cc-port-iface mono">{{ _iface[:18] + '…' if _iface|length > 18 else _iface }}</span>
-                      {% if ses.nas_port_type %}<span class="cc-port-type">{{ ses.nas_port_type }}</span>{% endif %}
-                    {% elif ses.nas_port_type %}
-                      <span class="cc-port-type cc-port-type-only">{{ ses.nas_port_type }}</span>
-                    {% else %}<span class="muted">—</span>{% endif %}
+                  {# منفذ الاتصال — prefer the human-readable port type
+                     (Ethernet / Wireless / etc.), then the technical
+                     NAS port descriptor. nas_port_type is the friendly
+                     label; nas_port is the raw value (often an integer
+                     from MT hotspot). Tooltip shows both. #}
+                  <td class="mono small" title="{% if ses.nas_port_type %}{{ ses.nas_port_type }}{% endif %}{% if ses.nas_port %} · {{ ses.nas_port }}{% endif %}">
+                    {% if ses.nas_port_type %}
+                      {{ ses.nas_port_type }}
+                    {% elif ses.nas_port %}
+                      {{ ses.nas_port[:14] + '…' if ses.nas_port and ses.nas_port|length > 14 else ses.nas_port }}
+                    {% else %}—{% endif %}
                   </td>
                 </tr>
                 {% endfor %}
@@ -1111,7 +999,7 @@
             {% set _mac_meta = {} %}
             {% for _m in (s.macs or []) %}
               {% if _m.mac and _m.dhcp_device and _m.dhcp_device.label %}
-                {% set _x = _mac_meta.update({_m.mac.upper(): _m.dhcp_device.label}) %}
+                {% set _ = _mac_meta.update({_m.mac.upper(): _m.dhcp_device.label}) %}
               {% endif %}
             {% endfor %}
             {% set _locked_macs_raw = (card.locked_mac or '')|trim
@@ -1119,7 +1007,7 @@
             {% set _locked_macs = _locked_macs_raw.split(',') %}
             {% set _locked_macs_clean = [] %}
             {% for _lm in _locked_macs %}
-              {% if _lm %}{% set _x = _locked_macs_clean.append(_lm.upper()) %}{% endif %}
+              {% if _lm %}{% set _ = _locked_macs_clean.append(_lm.upper()) %}{% endif %}
             {% endfor %}
             {% set _recent_session_macs = (s.macs or []) | map(attribute='mac') | select | list %}
             {% set _picker_macs = (_locked_macs_clean + _recent_session_macs) | unique | list %}
@@ -1169,7 +1057,7 @@
             {% set _mac_meta = {} %}
             {% for _m in (s.macs or []) %}
               {% if _m.mac and _m.dhcp_device and _m.dhcp_device.label %}
-                {% set _x = _mac_meta.update({_m.mac.upper(): _m.dhcp_device.label}) %}
+                {% set _ = _mac_meta.update({_m.mac.upper(): _m.dhcp_device.label}) %}
               {% endif %}
             {% endfor %}
             <form method="post" action="{{ url_for('radius.cards_checker') }}" data-cc-form="lock-mac">
@@ -1339,9 +1227,6 @@
         {{ metric('الوقت المتبقّي',  duration(card.remaining_seconds or 0), 'clock', 'amber', '', 'remaining_seconds') }}
         {{ metric('الاستهلاك',       bytes_size((s.total_upload_bytes or 0) + (s.total_download_bytes or 0)), 'gauge-high', 'green', '', 'stats.total_traffic') }}
       </div>
-
-      {# Card lifetime band — same at-a-glance block as advanced mode. #}
-      {{ lifetime_block(card) }}
 
       {# Latest activity + current device #}
       <div class="cc-grid-2">

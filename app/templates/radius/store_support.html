@@ -239,7 +239,7 @@
           </thead>
           <tbody>
             {% for d in deposit_pending %}
-            <tr id="dep-{{ d.id }}">
+            <tr>
               <td>{{ d.payer_name or '—' }}<br><small style="color:var(--muted);direction:ltr">{{ d.payer_phone or '' }}</small></td>
               <td>{{ d.method_ar }}<br><small style="color:var(--muted);direction:ltr">{{ d.reference or '' }}</small></td>
               <td style="direction:ltr">{{ money(d.amount_claimed) }} {{ d.currency or '' }}</td>
@@ -317,7 +317,7 @@
           </thead>
           <tbody>
             {% for w in withdrawal_pending %}
-            <tr id="wd-{{ w.id }}">
+            <tr>
               <td>{{ w.payee_name or '—' }}</td>
               <td style="direction:ltr">{{ w.payee_account or '—' }}</td>
               <td style="direction:ltr">{{ money(w.amount) }} {{ w.currency or '' }}</td>
@@ -569,29 +569,9 @@
   tabs.forEach(function(t){
     t.addEventListener('click', function(){ show(t.getAttribute('data-ssp-tab')); });
   });
-  // التعميق من جرس التنبيهات: نختار التبويب الصحيح ونمرّر للصفّ المقصود.
-  //  • ?chat= أو #chat → تبويب المحادثات.
-  //  • ?tab=deposits|withdrawals|chat|wallets → ذلك التبويب مباشرة.
-  //  • #dep-<id> / #wd-<id> → تبويب الشحن/السحب ثم تظليل الصفّ والتمرير إليه.
-  var params = new URLSearchParams(location.search);
-  var hash = location.hash || '';
-  var tab = params.get('tab');
-  var rowHash = /^#(dep|wd)-/.test(hash) ? hash.slice(1) : '';
-  if(hash === '#chat' || params.get('chat')){
+  // إن فُتح الشات عبر ?chat= أو وسم #chat، اعرض تبويب المحادثات تلقائيًا.
+  if(location.hash === '#chat' || /[?&]chat=/.test(location.search)){
     show('chat');
-  } else if(rowHash){
-    show(rowHash.indexOf('dep-') === 0 ? 'deposits' : 'withdrawals');
-  } else if(tab && ['deposits','withdrawals','chat','wallets'].indexOf(tab) !== -1){
-    show(tab);
-  }
-  if(rowHash){
-    var row = document.getElementById(rowHash);
-    if(row){
-      try{ row.scrollIntoView({block:'center'}); }catch(e){ row.scrollIntoView(); }
-      row.style.transition = 'background-color .6s';
-      row.style.backgroundColor = '#fff7e6';
-      setTimeout(function(){ row.style.backgroundColor = ''; }, 2400);
-    }
   }
 })();
 </script>

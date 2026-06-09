@@ -242,8 +242,8 @@
   </button>
 </div>
 
-{# ── ماكرو جدول محافظ مجموعة (يُعاد استخدامه لكل نوع مالك) ── #}
-{% macro wallet_table(group_wallets) %}
+{% call hub.section("قائمة الخزائن والمحافظ", icon="wallet", meta=(wallets|length|string + " محفظة"), flush=True) %}
+  {% if wallets %}
   <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
     <table class="hub-table">
       <thead>
@@ -257,34 +257,23 @@
         </tr>
       </thead>
       <tbody>
-      {% for wallet in group_wallets %}
+      {% for wallet in wallets %}
         <tr>
           <td class="num mono">{{ wallet.id }}</td>
-          <td>
-            {# الاسم الحقيقي مع رقم المعرّف كتلميح #}
-            {% if wallet.owner_name %}
-              <strong><bdi>{{ wallet.owner_name }}</bdi></strong>
-              {% if wallet.owner_id %}
-                <span class="rep-sub" title="{{ wallet.owner_type ~ ' #' ~ wallet.owner_id }}">#{{ wallet.owner_id }}</span>
-              {% endif %}
-            {% else %}
-              {{ owner_label(wallet.owner_type) }}{% if wallet.owner_id %} <span class="rep-sub">#{{ wallet.owner_id }}</span>{% endif %}
-            {% endif %}
-          </td>
+          <td>{{ owner_label(wallet.owner_type) }}{% if wallet.owner_id %} #{{ wallet.owner_id }}{% endif %}</td>
           <td class="num"><strong>{{ wallet.balance|money }}</strong></td>
+          {# الحالة بالعربي دائمًا؛ الخام يبقى في title للتتبّع التقني #}
           <td title="{{ wallet.status }}">{{ hub.pill(wallet_status_label(wallet.status), "green" if wallet.status == "active" else "grey") }}</td>
           <td>
             {% for tx in tx_by_wallet.get(wallet.id, []) %}
-              <div style="font-size:12px">
-                {{ tx_label(tx.transaction_type) }} —
-                <strong>{{ tx.amount|money }}</strong> —
-                <span class="rep-sub" style="display:inline">{{ tx.created_at|dt_local }}</span>
-              </div>
+              <div style="font-size:12px">{{ tx_label(tx.transaction_type) }} — {{ tx.amount|money }} — {{ tx.created_at|dt_local }}</div>
             {% else %}
-              <span class="rep-muted">{{ _('لا توجد حركات بعد.') }}</span>
+              <span class="muted">{{ _('لا توجد حركات بعد.') }}</span>
             {% endfor %}
           </td>
           <td>
+            {# حقل واحد مدمج: نوع الحركة (شحن/خصم) + المبلغ — نصف عرض الحقلين السابقين.
+               الحركة تبدّل وجهة النموذج بين مسارَي الشحن والخصم، واسم الحقل المُرسَل يبقى amount. #}
             <form method="post" class="fc-wallet-form fcw-act"
                   action="{{ url_for('radius.business_finance_wallet_credit', wallet_id=wallet.id) }}"
                   data-fcw-act
@@ -309,55 +298,10 @@
       </tbody>
     </table>
   </div>
-{% endmacro %}
-
-{# ── فرز المحافظ حسب النوع ── #}
-{% set company_wallets     = wallets | selectattr("owner_type", "eq", "company")     | list %}
-{% set manager_wallets     = wallets | selectattr("owner_type", "eq", "manager")     | list %}
-{% set distributor_wallets = wallets | selectattr("owner_type", "eq", "distributor") | list %}
-{% set subscriber_wallets  = wallets | selectattr("owner_type", "eq", "subscriber")  | list %}
-{% set card_user_wallets   = wallets | selectattr("owner_type", "eq", "card_user")   | list %}
-
-{% if wallets %}
-
-{% if company_wallets %}
-{% call hub.section("محفظة الشركة", icon="building",
-    meta=company_wallets|length|string ~ " محفظة", flush=True) %}
-  {{ wallet_table(company_wallets) }}
+  {% else %}
+    {{ hub.empty("لا توجد محافظ بعد.", sub="ابدأ بمحفظة الشركة أو محفظة مدير أو موزّع.", icon="wallet") }}
+  {% endif %}
 {% endcall %}
-{% endif %}
-
-{% if manager_wallets %}
-{% call hub.section("محافظ المدراء", icon="user-tie",
-    meta=manager_wallets|length|string ~ " محفظة", flush=True) %}
-  {{ wallet_table(manager_wallets) }}
-{% endcall %}
-{% endif %}
-
-{% if distributor_wallets %}
-{% call hub.section("محافظ الموزّعين", icon="people-arrows",
-    meta=distributor_wallets|length|string ~ " محفظة", flush=True) %}
-  {{ wallet_table(distributor_wallets) }}
-{% endcall %}
-{% endif %}
-
-{% if subscriber_wallets %}
-{% call hub.section("محافظ المشتركين", icon="users",
-    meta=subscriber_wallets|length|string ~ " محفظة", flush=True) %}
-  {{ wallet_table(subscriber_wallets) }}
-{% endcall %}
-{% endif %}
-
-{% if card_user_wallets %}
-{% call hub.section("محافظ مستخدمي البطاقات", icon="id-card",
-    meta=card_user_wallets|length|string ~ " محفظة", flush=True) %}
-  {{ wallet_table(card_user_wallets) }}
-{% endcall %}
-{% endif %}
-
-{% else %}
-  {{ hub.empty("لا توجد محافظ بعد.", sub="ابدأ بمحفظة الشركة أو محفظة مدير أو موزّع.", icon="wallet") }}
-{% endif %}
 
 {# ───────────── صندوق عائم: إنشاء محفظة ───────────── #}
 <div class="fcw-modal" data-fcw-modal="wallet-create" hidden>

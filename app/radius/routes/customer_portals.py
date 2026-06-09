@@ -107,8 +107,7 @@ def subscriber_login():
         except PortalAuthError:
             from ..services.login_events import record_login_event
             record_login_event(actor_type="subscriber", username=request.form.get("username") or "",
-                               success=False, reason="bad_password", tenant_id=1,
-                               attempted_password=request.form.get("password") or "")
+                               success=False, reason="bad_password", tenant_id=1)
             flash("بيانات دخول المشترك غير صحيحة.", "error")
             return render_template("radius/portal_subscriber_login.html"), 401
         from ..services.login_events import record_login_event
@@ -193,8 +192,7 @@ def card_login():
         except PortalAuthError:
             from ..services.login_events import record_login_event
             record_login_event(actor_type="card", username=request.form.get("mobile") or "",
-                               success=False, reason="bad_password", tenant_id=1,
-                               attempted_password=request.form.get("password") or "")
+                               success=False, reason="bad_password", tenant_id=1)
             flash("رقم الجوال أو كلمة المرور غير صحيحة.", "error")
             return render_template("radius/portal_card_login.html"), 401
         from ..services.login_events import record_login_event

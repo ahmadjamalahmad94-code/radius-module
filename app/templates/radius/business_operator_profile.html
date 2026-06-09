@@ -79,26 +79,10 @@
     <form method="post" action="{{ url_for('radius.business_operator_policy', entity_type=profile.entity_type, entity_id=profile.entity_id) }}" class="op-form" data-testid="operator-policy-form">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
       {% if profile.permissions %}
-      {# خريطة تعريب مفاتيح الصلاحيات — مصدر موحّد داخل القالب #}
-      {% set PERM_AR = {
-        'can_create_subscriber':  'إنشاء مشترك',
-        'can_create_batch':       'إنشاء دفعة بطاقات',
-        'can_activate_subscriber':'تفعيل مشترك',
-        'can_give_free_days':     'منح أيام مجانية',
-        'can_give_trial_days':    'منح أيام تجربة',
-        'can_give_loan':          'منح سلفة',
-        'can_reset_password':     'إعادة كلمة المرور',
-        'can_disable_subscriber': 'تعطيل مشترك',
-        'can_extend_time':        'تمديد الوقت',
-        'can_change_plan':        'تغيير الباقة',
-        'can_view_financials':    'عرض المالية',
-        'can_export':             'تصدير البيانات',
-      } %}
       <div class="op-field"><span>{{ _('الصلاحيات') }}</span>
         <div class="op-checks">
           {% for key, value in profile.permissions.items() %}
-            {% set _lbl = PERM_AR.get(key, key|replace('can_','')|replace('_',' ')) %}
-            {{ toggle_switch(name=key, checked=value, value="1", on_label=_lbl, off_label=_lbl) }}
+            {{ toggle_switch(name=key, checked=value, value="1", on_label=key, off_label=key) }}
           {% endfor %}
         </div>
       </div>

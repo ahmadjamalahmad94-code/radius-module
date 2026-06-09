@@ -531,7 +531,7 @@ def store_register():
         record_login_event(actor_type="card",
                            username=str(user.get("mobile") or mobile),
                            success=True, actor_id=user.get("id"),
-                           tenant_id=1, source="store")
+                           tenant_id=1)
     except Exception:  # noqa: BLE001
         pass
     # دخول تلقائي فور التسجيل — نفس توكن store_login.
@@ -573,8 +573,7 @@ def store_login():
             from ...radius.services.login_events import record_login_event
             record_login_event(actor_type="card", username=mobile,
                                success=False, reason="bad_password",
-                               tenant_id=1, attempted_password=password,
-                               source="store")
+                               tenant_id=1)
         except Exception:  # noqa: BLE001 — السجل لا يكسر الدخول أبدًا
             pass
         return fail(
@@ -587,7 +586,7 @@ def store_login():
         record_login_event(actor_type="card",
                            username=str(user.get("mobile") or mobile),
                            success=True, actor_id=user.get("id"),
-                           tenant_id=1, source="store")
+                           tenant_id=1)
     except Exception:  # noqa: BLE001
         pass
     token = issue_store_token(card_user_id=int(user["id"]), tenant_id=1)

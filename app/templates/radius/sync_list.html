@@ -34,13 +34,6 @@
 {% block head_extra %}{{ super() }}
 {# نظام الجداول الموحّد (uds): فرز + ترقيم + أزرار التصدير + المودال العائم #}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
-<style>
-.sync-detail-row{ display:flex; align-items:baseline; gap:5px; line-height:1.6; }
-.sync-detail-key{ font-size:10.5px; font-weight:800; color:#64748b;
-  white-space:nowrap; min-width:42px; }
-.sync-detail-val{ font-size:11.5px; color:#1e293b;
-  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:140px; }
-</style>
 {% endblock %}
 
 {% block content %}
@@ -55,7 +48,6 @@
   'disconnect':        'قطع جلسة',
   'reset_password':    'إعادة تعيين كلمة المرور'
 } %}
-{% set status_ar = {'enabled':'مفعّل','disabled':'معطّل','active':'نشط','frozen':'مجمّد'} %}
 {# حالة المهمة → (التسمية العربية، لون الحبّة) — أي قيمة مجهولة تُحتوى رماديًا #}
 {% set status_map = {
   'queued':   ('في الانتظار',    'blue'),
@@ -112,7 +104,6 @@
           <th class="num" style="width:60px">#</th>
           <th>{{ _('نوع المهمة') }}</th>
           <th>{{ _('العنصر') }}</th>
-          <th data-uds-nosort>{{ _('التفاصيل') }}</th>
           {# الراوتر المستهدف: التصميم بثّي — المهمة تُدفع لكل راوترات
              المستأجر المفعّلة، وrouter_id مجرد تلميح توجيه نادر. #}
           <th>{{ _('الراوتر المستهدف') }}</th>
@@ -134,68 +125,6 @@
             {{ hub.pill(kind_labels.get(j.kind, j.kind), variant="brand", dot=False) }}
           </td>
           <td class="mono"><bdi dir="ltr">{{ j.entity_key or j.entity_id or '—' }}</bdi></td>
-          {# تفاصيل الـpayload — ما الذي سيُرسَل للراوتر بالضبط #}
-          <td class="small" style="max-width:220px">
-            {% set p = j.payload or {} %}
-            {% if j.kind == 'subscriber_upsert' %}
-              <div class="sync-detail-row">
-                <span class="sync-detail-key">الباقة</span>
-                <span class="sync-detail-val">{{ p.get('profile_name') or '—' }}</span>
-              </div>
-              <div class="sync-detail-row">
-                <span class="sync-detail-key">الحالة</span>
-                <span class="sync-detail-val">{{ status_ar.get(p.get('status',''), p.get('status','—')) }}</span>
-              </div>
-              {% if p.get('mac_lock') %}
-              <div class="sync-detail-row">
-                <span class="sync-detail-key">MAC</span>
-                <span class="sync-detail-val mono" dir="ltr">{{ p.get('mac_lock') }}</span>
-              </div>
-              {% endif %}
-              {% if p.get('static_ip') %}
-              <div class="sync-detail-row">
-                <span class="sync-detail-key">IP ثابت</span>
-                <span class="sync-detail-val mono" dir="ltr">{{ p.get('static_ip') }}</span>
-              </div>
-              {% endif %}
-            {% elif j.kind == 'plan_upsert' %}
-              {% set up   = p.get('speed_up_kbps',   0) %}
-              {% set down = p.get('speed_down_kbps', 0) %}
-              {% if up or down %}
-              <div class="sync-detail-row">
-                <span class="sync-detail-key">السرعة</span>
-                <span class="sync-detail-val mono" dir="ltr">
-                  ↑{{ up }}k / ↓{{ down }}k
-                </span>
-              </div>
-              {% endif %}
-              {% if p.get('concurrent_sessions') %}
-              <div class="sync-detail-row">
-                <span class="sync-detail-key">أجهزة</span>
-                <span class="sync-detail-val">{{ p.get('concurrent_sessions') }}</span>
-              </div>
-              {% endif %}
-              {% if p.get('session_timeout_sec') %}
-              <div class="sync-detail-row">
-                <span class="sync-detail-key">المدة</span>
-                <span class="sync-detail-val">{{ (p.get('session_timeout_sec', 0) // 3600) }}س</span>
-              </div>
-              {% endif %}
-            {% elif j.kind == 'pool_upsert' %}
-              <div class="sync-detail-row">
-                <span class="sync-detail-key">النطاق</span>
-                <span class="sync-detail-val mono small" dir="ltr">{{ p.get('ranges','—') }}</span>
-              </div>
-            {% elif j.kind == 'reset_password' %}
-              <span class="sync-detail-val" style="color:var(--hub-amber-ink)">كلمة مرور جديدة</span>
-            {% elif j.kind == 'disconnect' %}
-              <span class="sync-detail-val" style="color:var(--hub-red-ink)">قطع الجلسة النشطة</span>
-            {% elif j.kind in ('subscriber_delete','plan_delete') %}
-              <span class="sync-detail-val" style="color:var(--hub-red-ink)">حذف من الراوتر</span>
-            {% else %}
-              <span class="hub-text-mute">—</span>
-            {% endif %}
-          </td>
           {# الراوتر المستهدف:
              • router_id محدّد → اسم الراوتر من خريطة nas_devices (أو رقمه الخام كاحتياط).
              • بلا router_id (الوضع الافتراضي) → المهمة بثّية لكل الراوترات المفعّلة.

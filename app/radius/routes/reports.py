@@ -11,10 +11,6 @@ from flask import Blueprint, flash, g, jsonify, redirect, render_template, reque
 from ..core.tenant import DEFAULT_TENANT_ID
 from ..db.connection import db
 from ..services.dashboard_reports import DashboardReportsService
-from ..services.event_labels import (
-    event_key_label as _ev_label,
-    target_type_label as _tt_label,
-)
 
 
 def _tid() -> int:
@@ -109,83 +105,13 @@ def _payload_summary(raw: object) -> str:
     return "، ".join(bits) if bits else "تفاصيل محفوظة في السجل"
 
 
-# تعريب مفاتيح before_json / after_json المعروفة (حقول المشترك المخزّنة)
-_FIELD_AR: dict[str, str] = {
-    "plan_id": "رقم الباقة", "plan": "الباقة", "plan_name": "الباقة",
-    "status": "الحالة", "enabled": "مفعَّل", "disabled": "معطَّل",
-    "expire_at": "انتهاء الاشتراك", "expire_days": "أيام متبقّية",
-    "speed_down": "سرعة التنزيل", "speed_up": "سرعة الرفع",
-    "speed_profile": "ملف السرعة", "bandwidth_profile": "ملف عرض النطاق",
-    "quota": "الحصة", "quota_mb": "الحصة (MB)",
-    "amount": "المبلغ", "balance": "الرصيد",
-    "time_added": "وقت أضيف (دقيقة)", "minutes_added": "دقائق أضيفت",
-    "password": "كلمة المرور",
-    "mac": "عنوان الجهاز", "mac_address": "عنوان الجهاز",
-    "ip": "عنوان IP", "ip_address": "عنوان IP",
-    "username": "المستخدم", "email": "البريد",
-    "note": "ملاحظة", "notes": "ملاحظات",
-    "role": "الدور", "role_id": "رقم الدور",
-    "is_super_admin": "سوبر أدمن",
-    "distributor_id": "الموزّع", "distributor": "الموزّع",
-}
-
-_STATUS_AR: dict[str, str] = {
-    "enabled": "مفعَّل", "disabled": "معطَّل",
-    "active": "نشط", "expired": "منتهٍ",
-    "suspended": "موقوف", "archived": "مؤرشَف",
-    "1": "نعم", "0": "لا", "true": "نعم", "false": "لا",
-}
-
-
-def _fmt_val(key: str, val: object) -> str:
-    """تنسيق قيمة حقل واحد بالعربية."""
-    s = str(val) if val is not None else ""
-    if not s or s in ("{}", "[]", "null"):
-        return "—"
-    if key in ("enabled", "disabled", "is_super_admin") or s in _STATUS_AR:
-        return _STATUS_AR.get(s.lower(), s)
-    return s
-
-
-def _diff_summary(before_raw: object, after_raw: object) -> list[tuple[str, str, str]]:
-    """يُرجع قائمة (label_ar, قبل, بعد) للحقول التي تغيّرت (حتى 4 تغييرات)."""
-    try:
-        before = json.loads(str(before_raw or "{}") or "{}") if not isinstance(before_raw, dict) else before_raw
-        after  = json.loads(str(after_raw  or "{}") or "{}") if not isinstance(after_raw,  dict) else after_raw
-    except (TypeError, ValueError):
-        return []
-    if not isinstance(before, dict) or not isinstance(after, dict):
-        return []
-    changes: list[tuple[str, str, str]] = []
-    all_keys = dict.fromkeys(list(before.keys()) + list(after.keys()))
-    for k in all_keys:
-        bv = before.get(k)
-        av = after.get(k)
-        if bv != av:
-            label = _FIELD_AR.get(k, k.replace("_", " "))
-            changes.append((label, _fmt_val(k, bv), _fmt_val(k, av)))
-            if len(changes) >= 4:
-                break
-    return changes
-
-
 def _decorate_audit_rows(rows: list[dict]) -> list[dict]:
     for row in rows:
         row["actor_label"] = _display_actor(str(row.get("actor") or ""))
-        # الفعل: يأخذ من audit_log.action عبر event_key_label (مصدر موحّد)
-        action_raw = str(row.get("action") or "")
-        row["action_label"] = _ev_label(action_raw) if action_raw else "عملية"
-        # الهدف: نوع + معرّف بالعربية
-        tt = str(row.get("target_type") or "")
-        row["target_type_label"] = _tt_label(tt) if tt else "كيان"
-        row["target_display"] = (
-            f"{_tt_label(tt)} #{row.get('target_id')}"
-            if row.get("target_id") not in (None, "")
-            else _tt_label(tt)
-        )
+        row["action_label"] = _display_action(str(row.get("action") or ""))
+        row["target_type_label"] = _TARGET_LABELS.get(str(row.get("target_type") or ""), "كيان")
+        row["target_display"] = _display_target(str(row.get("target_type") or ""), row.get("target_id"))
         row["payload_summary"] = _payload_summary(row.get("payload_json"))
-        # قبل/بعد: قائمة تغييرات مقروءة
-        row["diff"] = _diff_summary(row.get("before_json"), row.get("after_json"))
     return rows
 
 
@@ -201,17 +127,6 @@ def register_reports_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/reports/failed_logins", "rep_failed_logins", rep_failed_logins, methods=["GET"])
     bp.add_url_rule("/reports/login_status", "rep_login_status", rep_login_status, methods=["GET"])
     bp.add_url_rule("/reports/login_states", "rep_login_states", rep_login_states, methods=["GET"])
-    # R12.5: خمس صفحات مخصّصة — كل نوع دخول له رابطه ومساره ومصدر بياناته الخاص.
-    bp.add_url_rule("/reports/login_states/cards", "rep_login_states_cards",
-                    rep_login_states_cards, methods=["GET"])
-    bp.add_url_rule("/reports/login_states/subscribers", "rep_login_states_subscribers",
-                    rep_login_states_subscribers, methods=["GET"])
-    bp.add_url_rule("/reports/login_states/sub_portal", "rep_login_states_sub_portal",
-                    rep_login_states_sub_portal, methods=["GET"])
-    bp.add_url_rule("/reports/login_states/card_store", "rep_login_states_card_store",
-                    rep_login_states_card_store, methods=["GET"])
-    bp.add_url_rule("/reports/login_states/admin", "rep_login_states_admin",
-                    rep_login_states_admin, methods=["GET"])
     bp.add_url_rule("/reports/mac_history", "rep_mac_history", rep_mac_history, methods=["GET"])
     bp.add_url_rule("/reports/profile_changes", "rep_profile_changes", rep_profile_changes, methods=["GET"])
     bp.add_url_rule("/reports/api_messages", "rep_api_messages", rep_api_messages, methods=["GET"])
@@ -384,20 +299,6 @@ def rep_failed_logins():
     rows = [dict(r) for r in db().execute(
         f"SELECT * FROM radpostauth WHERE {where_sql} ORDER BY id DESC LIMIT 500", params
     ).fetchall()]
-    # جلب أسماء/أنواع/موردي أجهزة الشبكة (nas_devices) دفعةً واحدة ثم دمج في الصفوف
-    try:
-        nas_rows = db().execute(
-            "SELECT address, name, vendor, nas_type FROM nas_devices WHERE tenant_id=? AND deleted_at IS NULL",
-            [_tid()]
-        ).fetchall()
-        nas_map: dict[str, dict] = {r["address"]: dict(r) for r in nas_rows}
-    except Exception:
-        nas_map = {}
-    for row in rows:
-        info = nas_map.get(row.get("nas") or "")
-        row["nas_name"]   = (info or {}).get("name", "")
-        row["nas_vendor"] = (info or {}).get("vendor", "")
-        row["nas_type"]   = (info or {}).get("nas_type", "")
     # مؤشّر «آخر 24 ساعة» — عدّ بسيط مستقل عن الفلاتر (نفس الجدول والشرط الأساسي)
     last24 = db().execute(
         "SELECT COUNT(*) AS c FROM radpostauth "
@@ -429,142 +330,59 @@ def rep_login_status():
 
 
 # ─────────────── 3b. Login states (unified: panel + portal + RADIUS) ───────────────
-# الصفحة الرئيسية لحالات تسجيل الدخول + خمس صفحات مخصّصة مفروزة بدقة.
-# كل قسم مرتبط بمصدر بيانات مختلف (RADIUS / بوابة الويب / لوحة الإدارة).
-# backward compat: ?actor=admin|subscriber|card يُعاد توجيهه للصفحة المخصّصة.
+# الصفحة الرئيسية لحالات تسجيل الدخول + ثلاث صفحات فرعية مفروزة بدقة حسب الفاعل.
+# نمط المسار: نفس العنوان /reports/login_states مع ?actor=admin|subscriber|card —
+# يحافظ على الروابط القديمة (?actor=…) كما هي ويُبقي تفعيل الشريط الجانبي تلقائيًا.
 
-# تعريف ثابت للأقسام الخمسة — عنوان وأيقونة وسطر تعريفي وراوت التفاصيل
+# تعريف ثابت للصفحات الفرعية الثلاث — عنوان وأيقونة وسطر تعريفي لكل فاعل
 _LOGIN_STATES_KINDS = {
-    "subscriber_net": {
-        "title": "حالات دخول المشتركين",
-        "icon": "user",
-        "subtitle": "محاولات مصادقة المشتركين عبر شبكة RADIUS (Access-Accept/Reject) — جهاز الشبكة وسبب الفشل.",
-        "search_ph": "بحث (اسم المشترك / جهاز الشبكة)…",
-        "detail_endpoint": "radius.rep_login_states_subscribers",
-        "css_class": "subscriber",
-    },
-    "card_net": {
-        "title": "حالات دخول البطاقات",
-        "icon": "ticket",
-        "subtitle": "محاولات مصادقة البطاقات عبر شبكة RADIUS — عنوان الجهاز وجهاز الشبكة وسبب الفشل.",
-        "search_ph": "بحث (اسم البطاقة / عنوان الجهاز / جهاز الشبكة)…",
-        "detail_endpoint": "radius.rep_login_states_cards",
-        "css_class": "card",
-    },
-    "subscriber_portal": {
-        "title": "حالات بوابة المشتركين",
-        "icon": "door-open",
-        "subtitle": "محاولات دخول المشتركين عبر بوابة المشتركين على الويب — عنوان الشبكة والمتصفح والجهاز.",
-        "search_ph": "بحث (اسم المشترك / عنوان الشبكة)…",
-        "detail_endpoint": "radius.rep_login_states_sub_portal",
-        "css_class": "subscriber-portal",
-    },
-    "card_store": {
-        "title": "حالات بوابة متجر البطاقات",
-        "icon": "store",
-        "subtitle": "محاولات دخول وتسجيل العملاء عبر متجر البطاقات (store API) — بالجوال وعنوان الشبكة.",
-        "search_ph": "بحث (رقم الجوال / عنوان الشبكة)…",
-        "detail_endpoint": "radius.rep_login_states_card_store",
-        "css_class": "card-store",
-    },
     "admin": {
         "title": "حالات دخول المدراء",
         "icon": "user-shield",
-        "subtitle": "كل محاولات دخول المدراء إلى لوحة الإدارة — نجاحًا وفشلًا، مع عنوان الشبكة والمتصفح.",
+        "subtitle": "كل محاولات دخول المدراء إلى لوحة الإدارة — نجاحًا وفشلًا، مع عنوان الشبكة والمتصفح والجهاز.",
         "search_ph": "بحث (اسم المدير / عنوان الشبكة)…",
-        "detail_endpoint": "radius.rep_login_states_admin",
-        "css_class": "admin",
+    },
+    "subscriber": {
+        "title": "حالات دخول المشتركين",
+        "icon": "user",
+        "subtitle": "محاولات دخول المشتركين عبر بوابة المشتركين وشبكة المصادقة — مع جهاز الشبكة وسبب الفشل.",
+        "search_ph": "بحث (اسم المشترك / عنوان الشبكة / جهاز الشبكة)…",
+    },
+    "card": {
+        "title": "حالات دخول الكروت",
+        "icon": "ticket",
+        "subtitle": "محاولات دخول الكروت عبر شبكة المصادقة والبوابة — مع عنوان الجهاز وجهاز الشبكة وسبب الفشل.",
+        "search_ph": "بحث (اسم الكرت / عنوان الجهاز / جهاز الشبكة)…",
     },
 }
 
-# توافق خلفي: الروابط القديمة ?actor=subscriber|card|admin → الصفحة المخصّصة
-_ACTOR_COMPAT = {
-    "subscriber": "radius.rep_login_states_subscribers",
-    "card":       "radius.rep_login_states_cards",
-    "admin":      "radius.rep_login_states_admin",
-}
-
-
-def _render_login_states_detail(actor: str, *, self_endpoint: str,
-                                  kind_key: str, source_lock: str = ""):
-    """يعرض صفحة حالات الدخول المفروزة لقسم واحد من الأقسام الخمسة.
-
-    ``self_endpoint``: الراوت الذي تعود إليه فلاتر الصفحة ونموذج البحث.
-    ``kind_key``: المفتاح في _LOGIN_STATES_KINDS (subscriber_net / card_net / …).
-    ``source_lock``: قيمة source مثبّتة على مستوى الراوت — لا يُمكن تجاوزها
-      من URL params (يحمي من خلط RADIUS بالبوابة). فارغ = source حرّ للمستخدم.
-
-    الفرز دقيق على مستوى الاستعلام في الخدمة: الويب يُقيَّد بـ target_type
-    والشبكة بعضوية جدول الكروت — لا تخمين بصيغة الاسم.
-    """
-    from ..services.login_events import (
-        fetch_login_events, ACTOR_LABELS, SOURCE_LABELS, PW_RETENTION_DAYS,
-    )
-    effective_source = source_lock if source_lock else (request.args.get("source") or "").strip()
-    filters = {
-        "actor":     actor,
-        "result":    (request.args.get("result") or "").strip(),
-        "source":    effective_source,
-        "q":         (request.args.get("q") or "").strip(),
-        "date_from": (request.args.get("date_from") or "").strip(),
-        "date_to":   (request.args.get("date_to") or "").strip(),
-    }
-    data = fetch_login_events(_tid(), **filters)
-    return render_template(
-        "radius/rep_login_states_detail.html",
-        kind=kind_key, meta=_LOGIN_STATES_KINDS[kind_key], kinds=_LOGIN_STATES_KINDS,
-        rows=data["rows"], stats=data["stats"],
-        shown=data["shown"], matched=data["matched"],
-        filters=filters, actor_labels=ACTOR_LABELS, source_labels=SOURCE_LABELS,
-        self_endpoint=self_endpoint, pw_retention_days=PW_RETENTION_DAYS,
-        source_locked=bool(source_lock),
-    )
-
-
-def rep_login_states_subscribers():
-    """«حالات دخول المشتركين» — RADIUS فقط (قسم المشتركون)."""
-    return _render_login_states_detail(
-        "subscriber", self_endpoint="radius.rep_login_states_subscribers",
-        kind_key="subscriber_net", source_lock="network")
-
-
-def rep_login_states_cards():
-    """«حالات دخول البطاقات» — RADIUS فقط (قسم البطاقات)."""
-    return _render_login_states_detail(
-        "card", self_endpoint="radius.rep_login_states_cards",
-        kind_key="card_net", source_lock="network")
-
-
-def rep_login_states_sub_portal():
-    """«حالات بوابة المشتركين» — بوابة الويب للمشتركين فقط (قسم المشتركون)."""
-    return _render_login_states_detail(
-        "subscriber", self_endpoint="radius.rep_login_states_sub_portal",
-        kind_key="subscriber_portal", source_lock="web")
-
-
-def rep_login_states_card_store():
-    """«حالات بوابة متجر البطاقات» — دخول/تسجيل المتجر (قسم البطاقات)."""
-    return _render_login_states_detail(
-        "card", self_endpoint="radius.rep_login_states_card_store",
-        kind_key="card_store", source_lock="web")
-
-
-def rep_login_states_admin():
-    """«حالات دخول المدراء» — لوحة الإدارة فقط (قسم الإدارة)."""
-    return _render_login_states_detail(
-        "admin", self_endpoint="radius.rep_login_states_admin",
-        kind_key="admin")
-
 
 def rep_login_states():
-    from ..services.login_events import login_states_overview
+    from ..services.login_events import (
+        fetch_login_events, login_states_overview, ACTOR_LABELS, SOURCE_LABELS,
+    )
     actor = (request.args.get("actor") or "").strip()
 
-    # توافق خلفي: ?actor=subscriber/card/admin → الصفحة المخصّصة الجديدة
-    if actor in _ACTOR_COMPAT:
-        return redirect(url_for(_ACTOR_COMPAT[actor]))
+    # ── الصفحات الفرعية الثلاث: فرز دقيق على مستوى الاستعلام حسب الفاعل ──
+    if actor in _LOGIN_STATES_KINDS:
+        filters = {
+            "actor":     actor,
+            "result":    (request.args.get("result") or "").strip(),
+            "source":    (request.args.get("source") or "").strip(),
+            "q":         (request.args.get("q") or "").strip(),
+            "date_from": (request.args.get("date_from") or "").strip(),
+            "date_to":   (request.args.get("date_to") or "").strip(),
+        }
+        data = fetch_login_events(_tid(), **filters)
+        return render_template(
+            "radius/rep_login_states_detail.html",
+            kind=actor, meta=_LOGIN_STATES_KINDS[actor], kinds=_LOGIN_STATES_KINDS,
+            rows=data["rows"], stats=data["stats"],
+            shown=data["shown"], matched=data["matched"],
+            filters=filters, actor_labels=ACTOR_LABELS, source_labels=SOURCE_LABELS,
+        )
 
-    # ── الصفحة الرئيسية: خمس بطاقات بعدّادات مصغّرة ──
+    # ── الصفحة الرئيسية: ثلاث بطاقات كبيرة بعدّادات مصغّرة لكل نوع فاعل ──
     overview = login_states_overview(_tid())
     totals = {
         "total": sum(v["total"] for v in overview.values()),
