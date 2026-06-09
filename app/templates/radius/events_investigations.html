@@ -1,3 +1,14 @@
+{# ═══════════════════════════════════════════════════════════════════════
+   التحقيقات — صدفة هيرو واحدة (hub-hero-shell) + نموذج «فتح تحقيق» + جدول
+   uds لقائمة التحقيقات. تتسق بصريًا مع شقيقاتها في مركز «الأحداث والمخاطر»
+   (الأحداث · تقييم المخاطر · الأمان · التحقيقات) — نفس megahero/helppanel/
+   section/pill/empty وألوان الخطورة المستخدمة في events_security/events_risk.
+
+   عقد المسار /admin/radius/events/investigations يبقى كما هو:
+     • GET  → عرض list_investigations()
+     • POST → create_investigation(...) ثم redirect
+   عقد الاختبارات: data-testid="investigations-table" + data-testid="events-nav".
+   ═══════════════════════════════════════════════════════════════════════ #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
@@ -10,30 +21,47 @@
 
 {% block content %}
 
-{% set _open = investigations|selectattr('status', 'equalto', 'open')|list|length %}
-{% set _critical = investigations|selectattr('severity', 'equalto', 'critical')|list|length %}
-
-{# ترجمات عربية لقيم الحالة والخطورة ونوع الكيان القادمة من الخادم #}
+{# ── خرائط التعريب: الحالة، الخطورة، نوع الكيان — موحّدة مع events_security/events_risk ── #}
 {% set _status_labels = {
-  'open': 'مفتوح', 'in_progress': 'قيد المراجعة', 'closed': 'مغلق', 'resolved': 'تمت المعالجة', 'dismissed': 'مرفوض'
+  'open':        'مفتوح',
+  'in_review':   'قيد المراجعة',
+  'in_progress': 'قيد المراجعة',
+  'closed':      'مغلق',
+  'resolved':    'تمت المعالجة',
+  'dismissed':   'مرفوض'
 } %}
-{% set _severity_labels = {
-  'info': 'معلومة', 'warning': 'تحذير', 'error': 'خطأ', 'critical': 'حرج'
+{% set _status_variant = {
+  'open':        'amber',
+  'in_review':   'blue',
+  'in_progress': 'blue',
+  'closed':      'green',
+  'resolved':    'green',
+  'dismissed':   'grey'
 } %}
+{% set _severity_labels  = {'info': 'معلومة', 'warning': 'تحذير', 'error': 'خطأ', 'critical': 'حرج'} %}
+{% set _severity_variant = {'info': 'blue',   'warning': 'amber', 'error': 'red', 'critical': 'red'} %}
 {% set _entity_labels = {
-  'subscriber': 'مشترك', 'card': 'بطاقة', 'card_batch': 'دفعة كروت', 'wallet': 'محفظة',
-  'admin': 'مدير', 'distributor': 'موزع', 'device': 'جهاز شبكة', 'router': 'راوتر',
-  'session': 'جلسة', 'event': 'حدث', 'invoice': 'فاتورة', 'plan': 'باقة'
+  'subscriber':  'مشترك', 'user':   'مشترك',
+  'card':        'بطاقة', 'card_batch': 'دفعة كروت',
+  'wallet':      'محفظة', 'admin':  'مدير',  'manager': 'مدير',
+  'distributor': 'موزّع', 'device': 'جهاز شبكة', 'router':  'راوتر',
+  'session':     'جلسة',  'event':  'حدث',   'invoice': 'فاتورة',
+  'payment':     'دفعة',  'plan':   'باقة',  'tenant':  'مستأجر'
 } %}
+
+{# عدّات KPI تُحسب على القائمة الكاملة — مفيدة في الصدر وفي meta عناوين الأقسام #}
+{% set _open       = investigations|selectattr('status', 'equalto', 'open')|list|length %}
+{% set _critical   = investigations|selectattr('severity', 'equalto', 'critical')|list|length %}
+{% set _closed     = investigations|selectattr('status', 'equalto', 'closed')|list|length %}
 
 {# متحكّم «انتقال سريع» المضغوط (data-testid="events-nav") — يُحقن في صف عنوان الهيرو #}
 {% set _events_jump %}{% include "radius/events_nav.html" %}{% endset %}
 
 {# ───── الصدفة الموحّدة: هيرو واحد (عنوان + KPI) — لا فلاتر في هذه الصفحة ───── #}
-<section class="hub-hero-shell">
+<section class="hub-hero-shell" data-testid="investigations-hero">
 {{ hub.megahero(
   "التحقيقات",
-  subtitle="التحقيق هو ملف مراجعة بشرية تفتحه عندما يلفت انتباهك حدث أو تنبيه مريب، لتتابع فحصه حتى الإغلاق — هذا تتبع فقط وليس إصلاحًا تلقائيًا.",
+  subtitle="التحقيق ملف مراجعة بشرية تفتحه عندما يلفت انتباهك حدث أو تنبيه مريب، لتتابع فحصه حتى الإغلاق — هذا تتبّع فقط وليس إصلاحًا تلقائيًا.",
   icon="magnifying-glass-chart",
   actions_html=_events_jump,
   kpis=[
@@ -44,24 +72,42 @@
 ) }}
 </section>{# /hub-hero-shell #}
 
-{# ───── Main (open form + carded table) + help panel on the LEFT ───── #}
+{# ───── الصفحات الشقيقة في مركز الأحداث والمخاطر — بطاقات تنقل سريعة على
+   نفس نمط events_center، لتبقى الأقسام الأربعة قريبة من بعضها بصريًا. ───── #}
+{% call hub.section("صفحات مركز الأحداث والمخاطر", icon="compass", meta="الأحداث · المخاطر · الأمان · التحقيقات") %}
+  <div class="hub-actions" data-testid="investigations-siblings">
+    {{ hub.action_card("الأحداث",     sub="سجل أحداث الأعمال للعرض والمراجعة",
+                       icon="timeline",       href=url_for('radius.events_center'),         variant="brand") }}
+    {{ hub.action_card("تقييم المخاطر", sub="تشغيل قواعد الفحص ومراجعة التنبيهات",
+                       icon="shield-halved",  href=url_for('radius.events_risk'),           variant="amber") }}
+    {{ hub.action_card("الأمان",       sub="أحداث الصلاحيات والدخول الفاشل",
+                       icon="lock",           href=url_for('radius.events_security'),       variant="red") }}
+    {{ hub.action_card("التحقيقات",    sub="أنت هنا — ملفات المراجعة البشرية المفتوحة",
+                       icon="magnifying-glass-chart", href=url_for('radius.events_investigations'),
+                       variant="brand", disabled=True) }}
+  </div>
+{% endcall %}
+
+{# ───── المحتوى الرئيسي (نموذج فتح + جدول مبطّق) + لوحة المساعدة على اليسار ───── #}
 {% call hub.worklayout(aside_html=hub.helppanel(
   "كيف تقرأ هذه الصفحة؟",
-  intro="كل صف هو حالة مراجعة بشرية فُتحت لملاحظة مخاطر أو احتيال. هذه الصفحة للتتبع فقط.",
+  intro="كل صف ملف مراجعة بشرية فُتح لمتابعة ملاحظة مخاطر أو احتيال. هذه الصفحة للتتبع فقط.",
   items=[
-    {'icon': 'plus',                 'text': 'استخدم نموذج «فتح تحقيق» لبدء حالة مراجعة جديدة مرتبطة بكيان.'},
+    {'icon': 'plus',                 'text': 'استخدم نموذج «فتح تحقيق» لبدء حالة مراجعة جديدة مرتبطة بكيان معيّن.'},
     {'icon': 'triangle-exclamation', 'text': 'الخطورة تساعدك على ترتيب الحالات الحرجة قبل العادية.'},
     {'icon': 'link',                 'text': 'نوع الكيان ورقمه يربطان التحقيق بالعنصر المعني في النظام.'},
     {'icon': 'folder-open',          'text': 'الحالة تبقى «مفتوحة» حتى تكتمل المراجعة البشرية.'},
   ],
   note="فتح تحقيق لا يطبّق أي إجراء تلقائي — إنه سجل مراجعة بشرية فقط."
 )) %}
+
+  {# ── نموذج «فتح تحقيق» — سجل مراجعة بشرية، بلا أي إجراء تلقائي ── #}
   {% call hub.section("فتح تحقيق", icon="plus", meta="سجل مراجعة بشرية — بلا أي إجراء تلقائي") %}
-    <p class="help" style="margin:0 0 10px;font-size:12px;color:var(--hub-text-mute);line-height:1.8">
+    <p class="help" style="margin:0 0 12px;font-size:12px;color:var(--hub-text-mute);line-height:1.85">
       املأ النموذج لفتح ملف متابعة جديد: اكتب عنوانًا واضحًا، حدّد مدى الخطورة، واربطه بالعنصر المعني
-      (مشترك، بطاقة، جهاز…) حتى يعرف أي مشغل لاحق ما الذي تجري مراجعته ولماذا.
+      (مشترك، بطاقة، جهاز…) حتى يعرف أي مشغّل لاحق ما الذي تجري مراجعته ولماذا.
     </p>
-    <form method="post" class="hub-form-grid" data-testid="investigation-form">
+    <form method="post" class="hub-form-grid" data-testid="investigation-form" autocomplete="off">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
       <label>{{ _('العنوان') }}
         <input class="hub-input" name="title" required placeholder="{{ _('مثال: محاولات دخول متكررة لمشترك واحد') }}">
@@ -70,7 +116,7 @@
       <label>{{ _('الخطورة') }}
         <select class="hub-input" name="severity">
           <option value="info">{{ _('معلومة') }}</option>
-          <option value="warning">{{ _('تحذير') }}</option>
+          <option value="warning" selected>{{ _('تحذير') }}</option>
           <option value="error">{{ _('خطأ') }}</option>
           <option value="critical">{{ _('حرج') }}</option>
         </select>
@@ -81,7 +127,7 @@
         <span class="help" style="font-size:11px;color:var(--hub-text-mute)">{{ _('نوع العنصر المعني بالتحقيق — يُكتب بمعرّفه اللاتيني كما في النظام (مثل') }} <bdi dir="ltr" class="mono">subscriber</bdi>).</span>
       </label>
       <label>{{ _('رقم الكيان') }}
-        <input class="hub-input" name="entity_id" type="number">
+        <input class="hub-input" name="entity_id" type="number" inputmode="numeric" min="0" placeholder="{{ _('مثلاً 1024') }}">
         <span class="help" style="font-size:11px;color:var(--hub-text-mute)">{{ _('الرقم التعريفي للعنصر نفسه (رقم المشترك أو البطاقة…).') }}</span>
       </label>
       <label class="hub-form-span">{{ _('الملخص') }}
@@ -92,23 +138,29 @@
     </form>
   {% endcall %}
 
-  {% call hub.section("التحقيقات", icon="folder-open", meta=investigations|length|string + " تحقيق", flush=True) %}
-    <p class="help" style="margin:0;padding:10px 14px;font-size:12px;color:var(--hub-text-mute);line-height:1.8;border-bottom:1px solid var(--hub-border-soft,#e2e8f0)">
+  {# ── قائمة التحقيقات — جدول uds موحّد مع شارات حالة/خطورة وفُتِح-بواسطة-ومتى ── #}
+  {% set _list_meta = (investigations|length|string) + ' تحقيق'
+                   ~ (' · ' ~ _open|string ~ ' مفتوح'   if _open       else '')
+                   ~ (' · ' ~ _critical|string ~ ' حرج' if _critical   else '')
+                   ~ (' · ' ~ _closed|string ~ ' مغلق' if _closed     else '') %}
+  {% call hub.section("قائمة التحقيقات", icon="folder-open", meta=_list_meta, flush=True) %}
+    <p class="help" style="margin:0;padding:10px 14px;font-size:12px;color:var(--hub-text-mute);line-height:1.85;border-bottom:1px solid var(--hub-border-soft,#e2e8f0)">
       كل صف ملف مراجعة واحد. ابدأ بالحالات «المفتوحة» ذات الخطورة «الحرجة»، راجع العنصر المرتبط بها،
       ثم أغلق الملف عند انتهاء المراجعة.
     </p>
-    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="15" style="border:none;border-radius:0">
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="15"
+         data-uds-export-title="{{ _('التحقيقات') }}" style="border:none;border-radius:0">
       <table class="hub-table" data-testid="investigations-table">
         <thead>
           <tr>
             <th class="num">{{ _('الرقم') }}
               <span class="hub-hint" tabindex="0" data-hint="رقم تسلسلي يميز ملف التحقيق — استخدمه عند الإشارة إليه في الملاحظات."><i class="fa-solid fa-info"></i></span>
             </th>
-            <th>{{ _('العنوان') }}
-              <span class="hub-hint" tabindex="0" data-hint="ملخص سبب فتح التحقيق كما كتبه المشغل."><i class="fa-solid fa-info"></i></span>
+            <th data-uds-nosort>{{ _('العنوان والملخّص') }}
+              <span class="hub-hint" tabindex="0" data-hint="ملخص سبب فتح التحقيق كما كتبه المشغّل، وأسفله الملخّص التفصيلي إن وُجد."><i class="fa-solid fa-info"></i></span>
             </th>
             <th>{{ _('الحالة') }}
-              <span class="hub-hint" tabindex="0" data-hint="«مفتوح» = المراجعة لم تكتمل بعد؛ «مغلق» = انتهت المراجعة."><i class="fa-solid fa-info"></i></span>
+              <span class="hub-hint" tabindex="0" data-hint="«مفتوح» = المراجعة لم تكتمل؛ «قيد المراجعة» = العمل جارٍ؛ «مغلق» = انتهت المراجعة."><i class="fa-solid fa-info"></i></span>
             </th>
             <th>{{ _('الخطورة') }}
               <span class="hub-hint" tabindex="0" data-hint="ترتيب أولوية المراجعة: حرج ثم خطأ ثم تحذير ثم معلومة."><i class="fa-solid fa-info"></i></span>
@@ -116,28 +168,63 @@
             <th>{{ _('الكيان') }}
               <span class="hub-hint" tabindex="0" data-hint="العنصر المعني بالتحقيق (مشترك، بطاقة، جهاز…) ورقمه التعريفي في النظام."><i class="fa-solid fa-info"></i></span>
             </th>
+            <th data-uds-nosort>{{ _('فُتح') }}
+              <span class="hub-hint" tabindex="0" data-hint="من فتح هذا الملف ومتى — يساعد على إسناد المتابعة لاحقًا."><i class="fa-solid fa-info"></i></span>
+            </th>
           </tr>
         </thead>
         <tbody>
           {% for item in investigations %}
             <tr>
               <td class="num mono"><bdi dir="ltr">#{{ item.id }}</bdi></td>
-              <td>{{ item.title }}</td>
-              <td>{{ hub.pill(_status_labels.get(item.status, item.status), variant=("green" if item.status == "closed" else "amber"), dot=True) }}</td>
-              <td>{{ hub.pill(_severity_labels.get(item.severity, item.severity), variant=("red" if item.severity in ("critical", "error") else ("amber" if item.severity == "warning" else "grey")), dot=False) }}</td>
+              <td>
+                <div class="inv-title" style="font-weight:600;line-height:1.5">{{ item.title }}</div>
+                {% if item.summary %}
+                  <div class="inv-summary small" style="margin-top:3px;color:var(--hub-text-mute);font-size:12px;line-height:1.7;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">{{ item.summary }}</div>
+                {% endif %}
+              </td>
+              <td>{{ hub.pill(
+                    _status_labels.get(item.status, item.status or '—'),
+                    variant=_status_variant.get(item.status, 'grey'),
+                    dot=True
+                  ) }}</td>
+              <td>{{ hub.pill(
+                    _severity_labels.get(item.severity, item.severity or '—'),
+                    variant=_severity_variant.get(item.severity, 'grey'),
+                    dot=False
+                  ) }}</td>
               <td>
                 {% if item.entity_type in _entity_labels %}
                   {{ _entity_labels[item.entity_type] }}
                 {% elif item.entity_type %}
                   <span class="mono small"><bdi dir="ltr">{{ item.entity_type }}</bdi></span>
                 {% else %}
-                  —
+                  <span style="color:var(--hub-text-mute)">—</span>
                 {% endif %}
-                {% if item.entity_id %}<bdi dir="ltr" class="mono">#{{ item.entity_id }}</bdi>{% endif %}
+                {% if item.entity_id %} <bdi dir="ltr" class="mono small">#{{ item.entity_id }}</bdi>{% endif %}
+              </td>
+              <td class="small">
+                {% if item.opened_by %}
+                  <div style="line-height:1.5"><i class="fa-solid fa-user" style="opacity:.55;margin-inline-end:4px"></i>{{ item.opened_by }}</div>
+                {% else %}
+                  <div style="color:var(--hub-text-mute);line-height:1.5">—</div>
+                {% endif %}
+                {% if item.created_at %}
+                  <div style="margin-top:2px;color:var(--hub-text-mute);font-size:11px;line-height:1.5">
+                    <i class="fa-regular fa-clock" style="opacity:.6;margin-inline-end:4px"></i>
+                    <bdi dir="ltr">{{ item.created_at|dt_local }}</bdi>
+                  </div>
+                {% endif %}
               </td>
             </tr>
           {% else %}
-            <tr><td colspan="5">{{ _('لا توجد تحقيقات بعد — افتح أول تحقيق من نموذج «فتح تحقيق».') }}</td></tr>
+            <tr><td colspan="6" style="padding:0">
+              {{ hub.empty(
+                  "لا توجد تحقيقات بعد",
+                  sub="افتح أول تحقيق من نموذج «فتح تحقيق» في الأعلى — كل ملف يبقى للمراجعة البشرية فقط.",
+                  icon="magnifying-glass-chart"
+              ) }}
+            </td></tr>
           {% endfor %}
         </tbody>
       </table>
