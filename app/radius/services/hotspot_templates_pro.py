@@ -113,80 +113,211 @@ function hexMD5(s){return binl2hex(coreMD5(str2binl(s)))}"""
 # %%THEME_TOKENS%% — كتلة ألوان النسخة (:root + body.dark-mode).
 # %%BODY_CLASS%%   — "dark-mode" للنسخة الليلية الافتراضية.
 # %%ICONS%% / %%MD5%% / %%AVATARS_JS%% — تُحقن وقت الاستيراد.
+#
+# تذكير صارم على هذه السلسلة (متصفح بوابة الهوت سبوت محدود):
+#   - التبويبات السفلية تُبدَّل عبر CSS خالص (radio + :checked
+#     + الشقيق ~). لا onclick يبدّل العرض، فلا تتعطّل عند فشل JS.
+#   - JS ES5 فقط: var/function، بلا arrow أو template literals أو
+#     async/await أو محلّلات URL الحديثة. كل سكربت في كتلة <script>
+#     منفصلة وبـ try/catch داخلي حتى لا يُسقط خطأ في تحسين واحد
+#     بقية الصفحة (الساعة/التاريخ/الحالة الحيّة كلها تحسينات).
+#   - الشعار يتراجع بأمان عبر onerror إن فشل تحميله؛ لا /img/logo.png
+#     مطلق يعطي 404 — المصمّم يعطينا data: أو رابطًا نسبيًا أو URL.
+#   - بلا fetch على login.html (لا حاجة لها قبل تسجيل الدخول).
+#   - الزر الذي يبني الفروقات: bottom-nav صار <label for=...> يُفعّل
+#     <input type="radio"> مخفي، وكل قسم يُعرض بقاعدة الشقيق ~.
 
 _BASE_HTML = """<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"><title>{{TENANT_NAME}}</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta http-equiv="pragma" content="no-cache">
+<meta http-equiv="expires" content="-1">
+<title>{{TENANT_NAME}}</title>
 <style>
-/* خط المراعي (Almarai) — الخط المعتمد: وزنان woff2 خفيفان. إن لم
-   توجد ملفات الخط بجانب login.html على الراوتر تسقط الصفحة
-   بأمان إلى خطوط النظام. */
 @font-face{font-family:'Almarai';src:url('fonts/Almarai-Regular.woff2') format('woff2');font-weight:400;font-style:normal;font-display:swap}
 @font-face{font-family:'Almarai';src:url('fonts/Almarai-Bold.woff2') format('woff2');font-weight:700;font-style:normal;font-display:swap}
 %%THEME_TOKENS%%
-*{margin:0;padding:0;box-sizing:border-box;font-family:var(--font-stack)!important;transition:all .3s;outline:0;-webkit-tap-highlight-color:transparent}
+/* ─── أساسيات ─── */
+*{margin:0;padding:0;box-sizing:border-box;font-family:var(--font-stack)!important;outline:0;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg-gradient);min-height:100vh;display:block;background-attachment:fixed;color:var(--text-main)}
+.mobile-container{width:100%;max-width:560px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;position:relative}
 
-.unified-gradient-card{background:var(--main-gradient);border-radius:var(--card-radius);padding:22px;color:white;position:relative;overflow:hidden;margin-bottom:25px;box-shadow:0 15px 35px var(--main-shadow-color);border:1px solid rgba(255,255,255,0.15);transition:transform 0.3s ease, box-shadow 0.3s ease}
+/* ─── ‏تبديل التبويبات: CSS خالص عبر radio + :checked ─── */
+/* الراديوهات مخفيّة بصريًا لكنها تبقى قابلة للتفعيل عبر <label for>.
+   لا نستخدم left:-9999px لأنه يوسّع الشجرة أفقيًا في RTL — نستخدم
+   نمط «الإخفاء البصري» القياسي بدون تأثير على التخطيط. */
+.hr-nav-r{position:absolute;top:0;left:0;width:1px;height:1px;opacity:0;pointer-events:none;margin:0;padding:0;border:0;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap}
+/* بلا fadeIn — على المتصفحات البطيئة/المعطّلة قد تُلتقط لقطة في
+   منتصف الأنيمشن فيبدو القسم باهتًا. الإظهار الفوري أسلم للقطعة. */
+.view-section{display:none}
+#hr-nav-home:checked ~ .content-scroll #home-view,
+#hr-nav-packages:checked ~ .content-scroll #packages-view,
+#hr-nav-distributors:checked ~ .content-scroll #distributors-view,
+#hr-nav-support:checked ~ .content-scroll #support-view,
+#hr-nav-info:checked ~ .content-scroll #info-view{display:block}
+.bottom-nav label.nav-item{cursor:pointer}
+#hr-nav-home:checked ~ .bottom-nav label[for="hr-nav-home"],
+#hr-nav-packages:checked ~ .bottom-nav label[for="hr-nav-packages"],
+#hr-nav-distributors:checked ~ .bottom-nav label[for="hr-nav-distributors"],
+#hr-nav-support:checked ~ .bottom-nav label[for="hr-nav-support"],
+#hr-nav-info:checked ~ .bottom-nav label[for="hr-nav-info"]{color:var(--primary-accent);font-weight:700}
+#hr-nav-home:checked ~ .bottom-nav label[for="hr-nav-home"]::after,
+#hr-nav-packages:checked ~ .bottom-nav label[for="hr-nav-packages"]::after,
+#hr-nav-distributors:checked ~ .bottom-nav label[for="hr-nav-distributors"]::after,
+#hr-nav-support:checked ~ .bottom-nav label[for="hr-nav-support"]::after,
+#hr-nav-info:checked ~ .bottom-nav label[for="hr-nav-info"]::after{content:'';position:absolute;bottom:10px;width:4px;height:4px;background:var(--primary-accent);border-radius:50%}
+
+/* ─── الشريط العلوي ─── */
+.top-system-bar{height:35px;background:var(--top-bar-bg);display:flex;justify-content:space-between;align-items:center;padding:0 20px;font-size:11px;color:var(--top-bar-text);border-bottom:1px solid var(--border-color);position:sticky;top:0;z-index:100}
+.ip-info{display:flex;align-items:center;gap:6px;font-family:monospace;letter-spacing:.5px}
+.connection-dot{width:6px;height:6px;background:var(--pulse-color);border-radius:50%;box-shadow:0 0 5px var(--pulse-color)}
+.brand-mini{font-weight:700}
+
+/* ─── مساحة المحتوى ─── */
+.content-scroll{flex:1;padding:20px 25px 90px 25px;overflow-x:hidden}
+
+/* ─── رأس الترحيب + شارات الوقت ─── */
+.header{display:flex;justify-content:space-between;align-items:center;margin-bottom:15px}
+.greeting h2{font-size:17px;color:var(--text-main);font-weight:700}
+.greeting p{font-size:13px;color:var(--text-sub)}
+.date-time-pills{display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;padding:0 5px}
+.dt-pill{background:var(--pill-bg);border:1px solid var(--pill-border);padding:6px 12px;border-radius:20px;font-size:11px;font-weight:600;color:var(--text-sub);display:flex;align-items:center;gap:6px}
+.dt-pill.time-pill{color:var(--primary-accent);font-family:monospace;letter-spacing:.5px;font-weight:700;direction:ltr}
+
+/* ─── بطاقة الدخول الموحّدة ─── */
+.unified-gradient-card{background:var(--main-gradient);border-radius:var(--card-radius);padding:22px;color:#fff;position:relative;overflow:hidden;margin-bottom:25px;box-shadow:0 15px 35px var(--main-shadow-color);border:1px solid rgba(255,255,255,0.15)}
 .insurance-card{min-height:230px;display:flex;flex-direction:column;justify-content:space-between}
 .circle-decor{position:absolute;border-radius:50%;background:rgba(255,255,255,0.1);pointer-events:none}
 .c1{width:160px;height:160px;top:-60px;right:-30px}
 .c2{width:220px;height:220px;bottom:-90px;left:30px}
 .card-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;z-index:2;position:relative}
 .card-icon{display:flex;align-items:center;gap:12px}
-.icon-box{background:rgba(255,255,255,0.2);width:40px;height:40px;border-radius:12px;backdrop-filter:blur(5px);display:flex;justify-content:center;align-items:center}
+.icon-box{background:rgba(255,255,255,0.2);width:40px;height:40px;border-radius:12px;display:flex;justify-content:center;align-items:center}
 .top-arrow{background:rgba(255,255,255,0.2);width:30px;height:30px;border-radius:50%;display:flex;justify-content:center;align-items:center;font-size:12px}
-/* حقول الدخول متراصّة عموديًا (تحت بعض) وزر الدخول في الوسط أسفلها */
 .login-fields-container{display:flex;flex-direction:column;align-items:stretch;margin-bottom:15px;position:relative;z-index:2;gap:12px}
 .field-group{flex:1;display:flex;flex-direction:column}
 .field-label{opacity:0.9;font-weight:500;font-size:11px;margin-bottom:5px;color:#e0f2fe}
-.custom-input{background:transparent;border:1px solid rgba(255,255,255,0.4);border-radius:25px;color:white;font-weight:600;font-size:14px;padding:8px 15px;width:100%;outline:none;transition:0.3s}
-.custom-input:focus{border-color:#ffffff;box-shadow:0 0 10px rgba(255,255,255,0.2)}
+.custom-input{background:transparent;border:1px solid rgba(255,255,255,0.4);border-radius:25px;color:#fff;font-weight:600;font-size:14px;padding:8px 15px;width:100%;outline:0}
+.custom-input:focus{border-color:#fff;box-shadow:0 0 10px rgba(255,255,255,0.2)}
 .custom-input::placeholder{color:rgba(255,255,255,0.6);font-weight:400}
 .card-footer{display:flex;justify-content:center;position:relative;z-index:2}
-.login-btn{background:#ffffff;color:var(--primary-accent);padding:12px 28px;border-radius:20px;border:none;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 5px 15px rgba(0, 0, 0, 0.1);display:flex;align-items:center;gap:8px;transition:transform 0.2s}
-.login-btn:hover{transform:translateY(-2px)}
+.login-btn{background:#fff;color:var(--primary-accent);padding:12px 28px;border-radius:20px;border:0;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 5px 15px rgba(0,0,0,.1);display:inline-flex;align-items:center;gap:8px}
+.mikrotik-error{background:rgba(239,68,68,0.92);color:#fff;padding:10px;border-radius:12px;font-size:12px;margin-bottom:15px;text-align:center;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 5px 15px rgba(239,68,68,0.3);border:1px solid rgba(255,255,255,0.2);position:relative;z-index:5}
 
-/* ─ زر «متجرك الإلكتروني» — يظهر فقط عند STORE_ENABLED=yes (يُفعَّل
-   من JS أسفل الصفحة بإضافة الصنف hr-store-on على body) ─ */
-.hr-store-card{display:none;align-items:center;gap:14px;background:var(--main-gradient);border-radius:18px;padding:16px 18px;color:#fff;text-decoration:none;margin-bottom:25px;box-shadow:0 12px 28px var(--main-shadow-color);border:1px solid rgba(255,255,255,0.18);position:relative;overflow:hidden;transition:transform .2s}
+/* ─── زر «متجرك الإلكتروني» — يظهر فقط عند STORE_ENABLED=yes ─── */
+.hr-store-card{display:none;align-items:center;gap:14px;background:var(--main-gradient);border-radius:18px;padding:16px 18px;color:#fff;text-decoration:none;margin-bottom:25px;box-shadow:0 12px 28px var(--main-shadow-color);border:1px solid rgba(255,255,255,0.18);position:relative;overflow:hidden}
 body.hr-store-on .hr-store-card{display:flex}
-.hr-store-card:hover{transform:translateY(-2px)}
-.hr-store-icon{width:46px;height:46px;border-radius:14px;background:rgba(255,255,255,0.22);backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.hr-store-icon{width:46px;height:46px;border-radius:14px;background:rgba(255,255,255,0.22);display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .hr-store-text{flex:1;position:relative;z-index:2}
 .hr-store-text h4{font-size:14px;font-weight:800;margin-bottom:3px}
 .hr-store-text p{font-size:11px;opacity:.9}
 .hr-store-arrow{width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .ico-cart{-webkit-mask-image:url("data:image/svg+xml;utf8,<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z'/></svg>");mask-image:url("data:image/svg+xml;utf8,<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z'/></svg>")}
 
+/* ─── بطاقة الدعم ─── */
 .support-hero-card{text-align:center}
-.support-icon-ring{width:70px;height:70px;background:rgba(255, 255, 255, 0.2);backdrop-filter:blur(5px);border-radius:50%;display:flex;justify-content:center;align-items:center;margin:0 auto 15px auto;color:white;font-size:28px;box-shadow:0 0 0 8px rgba(255, 255, 255, 0.1)}
-.support-hero-card .support-title{font-size:18px;font-weight:800;color:white;margin-bottom:5px}
-.support-hero-card .support-sub{font-size:12px;color:rgba(255, 255, 255, 0.9);margin-bottom:20px}
-.btn-call-main{background:#ffffff;color:var(--primary-accent);padding:12px 30px;border-radius:50px;text-decoration:none;font-weight:700;font-size:14px;display:inline-flex;align-items:center;gap:8px;box-shadow:0 5px 15px rgba(0, 0, 0, 0.1);transition:0.3s;direction:ltr}
-.btn-call-main:hover{transform:scale(1.05)}
-.server-status-box{background:rgba(0, 0, 0, 0.2);border:1px solid rgba(255, 255, 255, 0.2);border-radius:12px;padding:12px 15px;display:flex;align-items:center;justify-content:space-between;margin-top:20px}
-.server-status-box .status-label{font-size:11px;font-weight:700;color:white;display:flex;align-items:center;gap:6px}
+.support-icon-ring{width:70px;height:70px;background:rgba(255,255,255,0.2);border-radius:50%;display:flex;justify-content:center;align-items:center;margin:0 auto 15px auto;color:#fff;font-size:28px;box-shadow:0 0 0 8px rgba(255,255,255,0.1)}
+.support-hero-card .support-title{font-size:18px;font-weight:800;color:#fff;margin-bottom:5px}
+.support-hero-card .support-sub{font-size:12px;color:rgba(255,255,255,0.9);margin-bottom:20px}
+.btn-call-main{background:#fff;color:var(--primary-accent);padding:12px 30px;border-radius:50px;text-decoration:none;font-weight:700;font-size:14px;display:inline-flex;align-items:center;gap:8px;box-shadow:0 5px 15px rgba(0,0,0,0.1);direction:ltr}
+.server-status-box{background:rgba(0,0,0,0.2);border:1px solid rgba(255,255,255,0.2);border-radius:12px;padding:12px 15px;display:flex;align-items:center;justify-content:space-between;margin-top:20px}
+.server-status-box .status-label{font-size:11px;font-weight:700;color:#fff;display:flex;align-items:center;gap:6px}
 .server-status-box .status-percent{font-size:14px;font-weight:800;color:#bfdbfe}
 
+/* ─── بطاقة الحالة المباشرة + المعادل ─── */
+.network-pulse-card{background:var(--card-bg);border-radius:20px;padding:15px;display:flex;align-items:center;gap:15px;margin-bottom:25px;box-shadow:var(--box-shadow);border:1px solid var(--border-color);position:relative;overflow:hidden}
+.pulse-icon-area{position:relative;width:45px;height:45px;background:var(--pill-bg);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--primary-accent)}
+.live-indicator{position:absolute;top:0;right:0;width:12px;height:12px;background:var(--pulse-color);border:2px solid var(--card-bg);border-radius:50%;display:flex;align-items:center;justify-content:center}
+.blink-dot{width:100%;height:100%;background:var(--pulse-color);border-radius:50%;animation:ping 1.5s cubic-bezier(0,0,0.2,1) infinite;opacity:.75}
+@keyframes ping{75%,100%{transform:scale(2);opacity:0}}
+.pulse-content{flex:1;display:flex;flex-direction:column;justify-content:center}
+.pulse-label{font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:2px}
+.pulse-value{font-size:14px;font-weight:800;color:var(--text-main)}
+.network-visualizer{display:flex;align-items:flex-end;gap:3px;height:20px;padding-bottom:3px}
+.network-visualizer .bar{width:4px;background-color:var(--eq-1);border-radius:2px;animation:equalizer 1s ease-in-out infinite}
+.network-visualizer .bar:nth-child(1){height:40%;animation-delay:0s}
+.network-visualizer .bar:nth-child(2){height:80%;animation-delay:.2s;background-color:var(--eq-2)}
+.network-visualizer .bar:nth-child(3){height:50%;animation-delay:.4s;background-color:var(--eq-3)}
+.network-visualizer .bar:nth-child(4){height:70%;animation-delay:.1s}
+@keyframes equalizer{0%,100%{transform:scaleY(1);opacity:1}50%{transform:scaleY(0.5);opacity:0.7}}
+
+/* ─── العناوين الفرعية + التذييل ─── */
+.section-title{font-size:16px;color:var(--text-main);font-weight:700;margin-bottom:15px;display:flex;align-items:center;justify-content:space-between}
+.section-title span{font-size:12px;color:var(--primary-accent)}
+.network-about-footer{text-align:center;padding:20px;background:var(--card-bg);border-radius:20px;border:1px solid var(--border-color);box-shadow:var(--box-shadow);margin-top:10px}
+.footer-title{color:var(--primary-accent);font-size:16px;font-weight:800;margin-bottom:5px}
+.footer-desc{font-size:11px;color:var(--text-sub);margin-bottom:8px}
+.footer-copyright{font-size:10px;color:var(--text-sub);opacity:.7;border-top:1px solid var(--border-color);padding-top:8px;margin-top:8px}
+
+/* ─── الباقات (لما يولّده _offers_html) ─── */
+.packages-wrapper{display:flex;flex-direction:column;gap:12px;padding-bottom:20px}
+.pkg-card-big{background:var(--card-gradient-1);border-radius:24px;padding:20px;color:#fff;position:relative;overflow:hidden;box-shadow:0 15px 35px var(--main-shadow-color);border:1px solid rgba(255,255,255,0.1)}
+.glow-blob{position:absolute;border-radius:50%;filter:blur(40px);pointer-events:none}
+.gb-1{top:-30px;left:-30px;width:120px;height:120px;background:rgba(255,255,255,0.2)}
+.gb-2{bottom:0;right:0;width:100px;height:100px;background:var(--main-shadow-color)}
+.pkg-badge-top{position:absolute;top:0;left:0;background:#fff;color:var(--primary-accent);font-size:11px;font-weight:800;padding:5px 15px;border-bottom-right-radius:15px;box-shadow:0 2px 10px rgba(0,0,0,0.1)}
+.pkg-header-row{display:flex;justify-content:space-between;align-items:flex-start;margin-top:10px;position:relative;z-index:2}
+.pkg-icon-circle{width:45px;height:45px;background:rgba(255,255,255,0.2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;color:#fff}
+.pkg-price-row{display:flex;align-items:baseline;gap:5px;margin:15px 0;position:relative;z-index:2}
+.pkg-big-price{font-size:32px;font-weight:800;line-height:1}
+.pkg-card-medium{background:var(--card-gradient-2);border-radius:20px;padding:18px;color:#fff;position:relative;overflow:hidden;box-shadow:0 10px 25px var(--main-shadow-color);display:flex;flex-direction:column;justify-content:space-between;min-height:110px}
+.medium-blob{position:absolute;top:-20px;right:-20px;width:80px;height:80px;background:rgba(255,255,255,0.1);border-radius:50%}
+.medium-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;position:relative;z-index:2}
+.medium-tags{display:flex;gap:5px;margin-top:5px}
+.m-tag{font-size:10px;background:rgba(255,255,255,0.15);padding:2px 8px;border-radius:6px}
+.medium-bottom{display:flex;justify-content:space-between;align-items:flex-end;position:relative;z-index:2}
+.pkg-card-small{background:var(--card-bg);border:1px solid var(--border-color);border-radius:18px;padding:15px;display:flex;justify-content:space-between;align-items:center;box-shadow:var(--box-shadow)}
+.small-info h4{font-size:14px;font-weight:700;color:var(--text-main);margin-bottom:4px}
+.small-details{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text-sub)}
+.small-price{text-align:left}
+.s-price-val{font-size:18px;font-weight:800;color:var(--text-main)}
+
+/* ─── الموزعون + الخريطة ─── */
+.map-wrapper{background:var(--card-bg);border-radius:20px;padding:5px;box-shadow:var(--box-shadow);border:1px solid var(--border-color);margin-bottom:20px;position:relative;overflow:hidden;height:200px}
+.map-art{width:100%;height:100%;border-radius:16px;position:relative;overflow:hidden;background:var(--map-bg);background-image:linear-gradient(var(--map-grid) 1px,transparent 1px),linear-gradient(90deg,var(--map-grid) 1px,transparent 1px);background-size:34px 34px}
+.map-art::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 50% 50%,var(--main-shadow-color) 0,transparent 55%)}
+.map-road{position:absolute;background:var(--map-road);border-radius:8px}
+.mr1{width:140%;height:14px;top:38%;left:-20%;transform:rotate(-7deg)}
+.mr2{width:14px;height:140%;top:-20%;left:58%;transform:rotate(10deg)}
+.map-pin-user{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:15px;height:15px;background:var(--primary-accent);border:3px solid #fff;border-radius:50%;box-shadow:0 0 15px var(--main-shadow-color);z-index:10}
+.map-overlay-info{position:absolute;bottom:15px;right:15px;background:rgba(255,255,255,0.95);padding:6px 12px;border-radius:20px;font-size:10px;font-weight:700;color:var(--primary-accent)}
+.distributor-card{background:var(--card-bg);border:1px solid var(--border-color);border-radius:16px;padding:15px;display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;box-shadow:var(--box-shadow)}
+.dist-info{display:flex;align-items:center;gap:12px}
+.dist-icon{width:45px;height:45px;background:var(--pill-bg);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--primary-accent);border:1px solid transparent}
+.dist-text h4{font-size:13px;font-weight:700;color:var(--text-main);margin-bottom:3px}
+.dist-text p{font-size:11px;color:var(--text-sub)}
+
+/* ─── FAQ — تستخدم <details> الأصلي (لا JS) ─── */
+.faq-item{background:var(--card-bg);border:1px solid var(--border-color);border-radius:14px;overflow:hidden;margin-bottom:10px;box-shadow:var(--box-shadow)}
+.faq-header{padding:15px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:700;color:var(--text-main);list-style:none}
+.faq-header::-webkit-details-marker{display:none}
+.faq-body{background:var(--element-bg)}
+.faq-content{padding:15px;font-size:11px;color:var(--text-sub);line-height:1.5;border-top:1px solid var(--border-color)}
+
+/* ─── قسم «معلومات» ─── */
 .decor-profile{position:absolute;border-radius:50%;background:rgba(255,255,255,0.1);pointer-events:none}
 .dp1{width:200px;height:200px;top:-60px;right:-40px}
 .dp2{width:100px;height:100px;bottom:10px;left:-20px;border:2px solid rgba(255,255,255,0.15);background:transparent}
 .profile-header{display:flex;align-items:center;gap:15px;margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid rgba(255,255,255,0.2);position:relative;z-index:2}
-.profile-big-img{width:70px;height:70px;border-radius:50%;border:3px solid rgba(255,255,255,0.5);box-shadow:0 5px 15px rgba(0,0,0,0.1);object-fit:cover}
 .tech-details-list{display:flex;flex-direction:column;gap:10px;position:relative;z-index:2}
 .tech-row{display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,0.15);padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.1)}
 .tech-label{font-size:11px;color:rgba(255,255,255,0.95);display:flex;align-items:center;gap:8px;font-weight:600}
-.tech-val{font-size:11px;font-weight:700;color:#ffffff;font-family:monospace}
+.tech-val{font-size:11px;font-weight:700;color:#fff;font-family:monospace}
+.status-badge{background:#fff;color:var(--primary-accent);font-size:10px;padding:3px 8px;border-radius:6px;font-weight:800}
 
 %%ICONS%%
-#splash-screen{position:fixed;top:0;left:0;width:100%;height:100%;background:var(--bg-gradient);z-index:99999;display:flex;justify-content:center;align-items:center;transition:opacity .5s ease-out,visibility .5s}.splash-content{text-align:center;display:flex;flex-direction:column;align-items:center;gap:20px;width:80%}.splash-logo{width:200px;max-height:140px;object-fit:contain;height:auto;margin-bottom:10px;filter:drop-shadow(0 5px 15px rgba(0,0,0,0.1));animation:logoFloat 2s ease-in-out infinite}@keyframes logoFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}.splash-loader-track{width:150px;height:4px;background:rgba(0,0,0,0.1);border-radius:10px;overflow:hidden;position:relative}.splash-loader-bar{position:absolute;left:0;top:0;height:100%;width:0%;background-color:var(--primary-accent);border-radius:10px;box-shadow:0 0 10px var(--main-shadow-color);transition:width 2s linear}.splash-text{color:var(--text-main);font-size:12px;opacity:.8;font-weight:600;letter-spacing:.5px}.hide-splash{opacity:0;visibility:hidden;pointer-events:none}body{background:var(--bg-gradient);min-height:100vh;display:block;background-attachment:fixed}.mobile-container{width:100%;max-width:560px;margin:0 auto;min-height:100vh;position:relative;display:flex;flex-direction:column}.top-system-bar{height:35px;background:var(--top-bar-bg);backdrop-filter:blur(10px);display:flex;justify-content:space-between;align-items:center;padding:0 20px;font-size:11px;color:var(--top-bar-text);border-bottom:1px solid var(--border-color);position:sticky;top:0;z-index:100}.ip-info{display:flex;align-items:center;gap:6px;font-family:monospace;letter-spacing:.5px}.connection-dot{width:6px;height:6px;background:var(--pulse-color);border-radius:50%;box-shadow:0 0 5px var(--pulse-color)}.theme-switch{cursor:pointer;display:flex;align-items:center;gap:5px;font-weight:600}.content-scroll{flex:1;padding:20px 25px 90px 25px;overflow-x:hidden}.view-section{display:none;animation:fadeIn .4s ease-in-out}.view-section.active{display:block}@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}.header{display:flex;justify-content:space-between;align-items:center;margin-bottom:15px}.user-info{display:flex;align-items:center;gap:12px}.avatar-wrapper{position:relative;width:55px;height:55px}.avatar-wrapper img{width:100%;height:100%;border-radius:50%;object-fit:cover;border:2px solid white;box-shadow:0 5px 15px rgba(0,0,0,0.1)}.greeting h2{font-size:17px;color:var(--text-main);font-weight:700}.greeting p{font-size:13px;color:var(--text-sub)}.date-time-pills{display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;padding:0 5px}.dt-pill{background:var(--pill-bg);border:1px solid var(--pill-border);padding:6px 12px;border-radius:20px;font-size:11px;font-weight:600;color:var(--text-sub);display:flex;align-items:center;gap:6px}.dt-pill.time-pill{color:var(--primary-accent);font-family:monospace;letter-spacing:.5px;font-weight:700;direction:ltr}.mikrotik-error{background:rgba(239,68,68,0.92);color:white;padding:10px;border-radius:12px;font-size:12px;margin-bottom:15px;text-align:center;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 5px 15px rgba(239,68,68,0.3);border:1px solid rgba(255,255,255,0.2);position:relative;z-index:5}.network-pulse-card{background:var(--card-bg);border-radius:20px;padding:15px;display:flex;align-items:center;gap:15px;margin-bottom:25px;box-shadow:var(--box-shadow);border:1px solid var(--border-color);position:relative;overflow:hidden;transition:all .3s ease}.pulse-icon-area{position:relative;width:45px;height:45px;background:var(--pill-bg);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--primary-accent)}.live-indicator{position:absolute;top:0;right:0;width:12px;height:12px;background:var(--pulse-color);border:2px solid var(--card-bg);border-radius:50%;display:flex;align-items:center;justify-content:center}.blink-dot{width:100%;height:100%;background:var(--pulse-color);border-radius:50%;animation:ping 1.5s cubic-bezier(0,0,0.2,1) infinite;opacity:.75}@keyframes ping{75%,100%{transform:scale(2);opacity:0}}.pulse-content{flex:1;display:flex;flex-direction:column;justify-content:center}.pulse-label{font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:2px}.pulse-value{font-size:14px;font-weight:800;color:var(--text-main);transition:opacity .3s ease}.network-visualizer{display:flex;align-items:flex-end;gap:3px;height:20px;padding-bottom:3px}.network-visualizer .bar{width:4px;background-color:var(--eq-1);border-radius:2px;animation:equalizer 1s ease-in-out infinite}.network-visualizer .bar:nth-child(1){height:40%;animation-delay:0s}.network-visualizer .bar:nth-child(2){height:80%;animation-delay:.2s;background-color:var(--eq-2)}.network-visualizer .bar:nth-child(3){height:50%;animation-delay:.4s;background-color:var(--eq-3)}.network-visualizer .bar:nth-child(4){height:70%;animation-delay:.1s}@keyframes equalizer{0%,100%{transform:scaleY(1);opacity:1}50%{transform:scaleY(0.5);opacity:0.7}}.section-title{font-size:16px;color:var(--text-main);font-weight:700;margin-bottom:15px;display:flex;align-items:center;justify-content:space-between}.section-title span{font-size:12px;color:var(--primary-accent);cursor:pointer}.logs-container{display:flex;flex-direction:column;gap:12px;margin-bottom:25px}.log-card{background:var(--card-bg);border:1px solid var(--border-color);border-radius:16px;padding:12px 15px;display:flex;justify-content:space-between;align-items:center;backdrop-filter:blur(10px);cursor:pointer;position:relative;overflow:hidden;box-shadow:var(--box-shadow)}.log-user-info{display:flex;align-items:center;gap:12px}.log-avatar{width:40px;height:40px;border-radius:50%;object-fit:cover;border:2px solid var(--border-color)}.log-details h4{font-size:13px;font-weight:700;color:var(--text-main)}.log-meta{display:flex;align-items:center;gap:8px;font-size:10px;color:var(--text-sub);margin-top:2px}.device-badge{background:rgba(0,0,0,0.05);padding:2px 6px;border-radius:4px;display:flex;align-items:center;gap:3px}.action-btn-finger{width:35px;height:35px;border-radius:10px;background:var(--pill-bg);color:var(--primary-accent);display:flex;justify-content:center;align-items:center;font-size:16px;border:1px solid transparent}.network-about-footer{text-align:center;padding:20px;background:var(--card-bg);border-radius:20px;border:1px solid var(--border-color);box-shadow:var(--box-shadow);margin-top:10px}.footer-title{color:var(--primary-accent);font-size:16px;font-weight:800;margin-bottom:5px}.footer-desc{font-size:11px;color:var(--text-sub);margin-bottom:8px}.footer-copyright{font-size:10px;color:var(--text-sub);opacity:.7;border-top:1px solid var(--border-color);padding-top:8px;margin-top:8px}.packages-wrapper{display:flex;flex-direction:column;gap:12px;padding-bottom:20px}.pkg-card-big{background:var(--card-gradient-1);border-radius:24px;padding:20px;color:white;position:relative;overflow:hidden;box-shadow:0 15px 35px var(--main-shadow-color);border:1px solid rgba(255,255,255,0.1);transition:transform .3s}.pkg-card-big:hover{transform:scale(1.01)}.glow-blob{position:absolute;border-radius:50%;filter:blur(40px);pointer-events:none}.gb-1{top:-30px;left:-30px;width:120px;height:120px;background:rgba(255,255,255,0.2)}.gb-2{bottom:0;right:0;width:100px;height:100px;background:var(--main-shadow-color)}.pkg-badge-top{position:absolute;top:0;left:0;background:#fff;color:var(--primary-accent);font-size:11px;font-weight:800;padding:5px 15px;border-bottom-right-radius:15px;box-shadow:0 2px 10px rgba(0,0,0,0.1)}.pkg-header-row{display:flex;justify-content:space-between;align-items:flex-start;margin-top:10px;position:relative;z-index:2}.pkg-icon-circle{width:45px;height:45px;background:rgba(255,255,255,0.2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;color:#fff;backdrop-filter:blur(5px)}.pkg-price-row{display:flex;align-items:baseline;gap:5px;margin:15px 0;position:relative;z-index:2}.pkg-big-price{font-size:32px;font-weight:800;line-height:1}.pkg-unit{font-size:13px;opacity:.9}.pkg-features{display:flex;flex-direction:column;gap:8px;border-top:1px dashed rgba(255,255,255,0.3);padding-top:12px;position:relative;z-index:2}.pkg-feat-item{display:flex;align-items:center;gap:8px;font-size:12px;color:rgba(255,255,255,0.95)}.check-dot{width:16px;height:16px;background:rgba(255,255,255,0.3);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px}.pkg-card-medium{background:var(--card-gradient-2);border-radius:20px;padding:18px;color:white;position:relative;overflow:hidden;box-shadow:0 10px 25px var(--main-shadow-color);display:flex;flex-direction:column;justify-content:space-between;min-height:110px}.medium-blob{position:absolute;top:-20px;right:-20px;width:80px;height:80px;background:rgba(255,255,255,0.1);border-radius:50%}.medium-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;position:relative;z-index:2}.medium-tags{display:flex;gap:5px;margin-top:5px}.m-tag{font-size:10px;background:rgba(255,255,255,0.15);padding:2px 8px;border-radius:6px}.medium-bottom{display:flex;justify-content:space-between;align-items:flex-end;position:relative;z-index:2}.btn-medium-action{background:#fff;color:var(--primary-accent);border:none;padding:6px 14px;border-radius:10px;font-size:11px;font-weight:700;cursor:pointer}.pkg-card-small{background:var(--card-bg);border:1px solid var(--border-color);border-radius:18px;padding:15px;display:flex;justify-content:space-between;align-items:center;box-shadow:var(--box-shadow);transition:.3s}.pkg-card-small:hover{transform:translateY(-3px);border-color:var(--primary-accent)}.small-info h4{font-size:14px;font-weight:700;color:var(--text-main);margin-bottom:4px}.small-details{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text-sub)}.small-price{text-align:left}.s-price-val{font-size:18px;font-weight:800;color:var(--text-main)}.s-price-unit{font-size:10px;color:var(--text-sub)}.map-wrapper{background:var(--card-bg);border-radius:20px;padding:5px;box-shadow:var(--box-shadow);border:1px solid var(--border-color);margin-bottom:20px;position:relative;overflow:hidden;height:200px}.map-art{width:100%;height:100%;border-radius:16px;position:relative;overflow:hidden;background:var(--map-bg);background-image:linear-gradient(var(--map-grid) 1px,transparent 1px),linear-gradient(90deg,var(--map-grid) 1px,transparent 1px);background-size:34px 34px}.map-art::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 50% 50%,var(--main-shadow-color) 0,transparent 55%)}.map-road{position:absolute;background:var(--map-road);border-radius:8px}.mr1{width:140%;height:14px;top:38%;left:-20%;transform:rotate(-7deg)}.mr2{width:14px;height:140%;top:-20%;left:58%;transform:rotate(10deg)}.map-pin-user{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:15px;height:15px;background:var(--primary-accent);border:3px solid white;border-radius:50%;box-shadow:0 0 15px var(--main-shadow-color);z-index:10}.map-pin-user::after{content:'';position:absolute;inset:-10px;border:2px solid var(--primary-accent);border-radius:50%;opacity:.4;animation:ping 2s infinite}.map-overlay-info{position:absolute;bottom:15px;right:15px;background:rgba(255,255,255,0.95);padding:6px 12px;border-radius:20px;font-size:10px;font-weight:700;color:var(--primary-accent);backdrop-filter:blur(5px)}.distributor-card{background:var(--card-bg);border:1px solid var(--border-color);border-radius:16px;padding:15px;display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;transition:.3s;box-shadow:var(--box-shadow)}.dist-info{display:flex;align-items:center;gap:12px}.dist-icon{width:45px;height:45px;background:var(--pill-bg);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--primary-accent);border:1px solid transparent}.dist-text h4{font-size:13px;font-weight:700;color:var(--text-main);margin-bottom:3px}.dist-text p{font-size:11px;color:var(--text-sub)}.tools-box-medical{background:var(--card-bg);border:1px solid var(--border-color);border-radius:16px;padding:5px;margin-bottom:25px;box-shadow:var(--box-shadow)}.tool-btn-row{display:flex;align-items:center;width:100%;padding:15px;border:none;background:0 0;cursor:pointer;text-align:right;border-radius:12px;transition:.2s}.tool-btn-row:hover,.tool-btn-row:active{background:var(--element-bg)}.tool-icon-sq{width:40px;height:40px;border-radius:10px;display:flex;justify-content:center;align-items:center;font-size:18px;margin-left:12px;flex-shrink:0}.icon-teal-bg{background:rgba(34,211,238,0.12);color:#0891b2}.icon-purple-bg{background:rgba(139,92,246,0.12);color:#7c3aed}#testResultArea{display:none;padding:15px;margin:0 10px 10px 10px;background:var(--element-bg);border-radius:12px;border:1px solid var(--border-color)}.test-meta{display:flex;justify-content:space-between;font-size:11px;font-weight:700;color:var(--text-sub);margin-bottom:8px}.ping-val{background:var(--card-bg);padding:2px 8px;border-radius:6px;color:var(--text-main);box-shadow:0 2px 5px rgba(0,0,0,0.05)}.progress-track{width:100%;height:6px;background:rgba(0,0,0,0.1);border-radius:10px;overflow:hidden;margin-bottom:8px}body.dark-mode .progress-track{background:rgba(255,255,255,0.1)}.progress-bar{height:100%;width:0;background:var(--primary-accent);transition:width .3s ease,background-color .3s;border-radius:10px}.faq-item{background:var(--card-bg);border:1px solid var(--border-color);border-radius:14px;overflow:hidden;transition:.3s;margin-bottom:10px;box-shadow:var(--box-shadow)}.faq-header{padding:15px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:700;color:var(--text-main)}.faq-body{max-height:0;overflow:hidden;transition:max-height .3s ease-out;background:var(--element-bg)}.faq-content{padding:15px;font-size:11px;color:var(--text-sub);line-height:1.5;border-top:1px solid var(--border-color)}.faq-item.active .faq-body{max-height:150px}.status-badge{background:#fff;color:var(--primary-accent);font-size:10px;padding:3px 8px;border-radius:6px;font-weight:800}.settings-card{background:var(--card-bg);border-radius:20px;padding:20px;border:1px solid var(--border-color);box-shadow:var(--box-shadow)}.input-group-styled{margin-bottom:20px}.input-group-styled label{display:block;font-size:11px;font-weight:700;color:var(--text-main);margin-bottom:8px}.input-group-styled input{width:100%;padding:12px;border-radius:12px;border:1px solid var(--border-color);background:var(--element-bg);color:var(--text-main);font-family:inherit;outline:0;transition:.3s}.input-group-styled input:focus{border-color:var(--primary-accent);box-shadow:0 0 0 3px var(--main-shadow-color)}.avatar-selector-grid{display:flex;gap:10px;overflow-x:auto;padding-bottom:15px;margin-bottom:15px}.avatar-option{width:50px;height:50px;border-radius:50%;cursor:pointer;border:2px solid transparent;opacity:.6;transition:.3s}.avatar-option.active,.avatar-option:hover{opacity:1;border-color:var(--primary-accent);transform:scale(1.1)}.btn-save-profile{width:100%;padding:12px;background:var(--main-gradient);color:white;border:none;border-radius:12px;font-weight:700;cursor:pointer;box-shadow:0 10px 20px var(--main-shadow-color);transition:.3s}.bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:560px;height:70px;background:var(--card-bg);backdrop-filter:blur(15px);border-top:1px solid var(--border-color);display:flex;justify-content:space-around;align-items:center;border-top-left-radius:25px;border-top-right-radius:25px;box-shadow:0 -5px 20px rgba(0,0,0,0.05);z-index:1000}.nav-item{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:var(--text-sub);font-size:10px;width:60px;height:100%;cursor:pointer;position:relative}.nav-item.active{color:var(--primary-accent);font-weight:700}.nav-item.active .ico{transform:translateY(-2px)}.nav-item.active::after{content:'';position:absolute;bottom:10px;width:4px;height:4px;background:var(--primary-accent);border-radius:50%}.nav-item .ico{font-size:18px;transition:transform .2s}
+
+/* ─── شريط التبويب السفلي (الآن labels لا divs) ─── */
+.bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:560px;height:70px;background:var(--card-bg);border-top:1px solid var(--border-color);display:flex;justify-content:space-around;align-items:center;border-top-left-radius:25px;border-top-right-radius:25px;box-shadow:0 -5px 20px rgba(0,0,0,0.05);z-index:1000}
+.nav-item{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:var(--text-sub);font-size:10px;width:60px;height:100%;position:relative;user-select:none;-webkit-user-select:none;text-decoration:none}
+.nav-item .ico{font-size:18px}
 </style>
 </head>
 <body class="%%BODY_CLASS%%">
 
 $(if chap-id)
-<!-- نموذج الإرسال المخفي — يستقبل كلمة المرور بعد تهشيرها CHAP -->
 <form name="sendin" action="$(link-login-only)" method="post" style="display:none">
 <input type="hidden" name="username">
 <input type="hidden" name="password">
@@ -194,191 +325,256 @@ $(if chap-id)
 <input type="hidden" name="popup" value="true">
 </form>
 <script>
-/* MD5 (Paul Johnston, BSD) — مضمّن لدعم CHAP دون ملفات خارجية */
+/* MD5 (Paul Johnston, BSD) — مضمّن لدعم CHAP بلا ملفات خارجية */
 %%MD5%%
 window.hrChap=function(p){return hexMD5('$(chap-id)'+p+'$(chap-challenge)')};
 </script>
 $(endif)
 
-    <div id="splash-screen" $(if error)style="display:none !important;"$(endif)>
-        <div class="splash-content">
-            <img src="{{TENANT_LOGO_URL}}" alt="{{TENANT_NAME}}" class="splash-logo" onerror="this.style.display='none'">
-            <div class="splash-loader-track"><div class="splash-loader-bar"></div></div>
-            <p class="splash-text">جاري التحميل...</p>
-        </div>
-    </div>
-    <div class="mobile-container">
-        <div class="top-system-bar">
-            <div class="ip-info"><div class="connection-dot"></div><span>IP: <span id="user-ip">$(ip)</span></span></div>
-            <div class="theme-switch" onclick="toggleTheme()"><span class="ico ico-moon" id="theme-icon-small"></span><span id="theme-text" style="margin-right:5px;">ليلي</span></div>
-        </div>
-        <div class="content-scroll">
-            <div id="home-view" class="view-section active">
-                <header class="header">
-                    <div class="user-info">
-                        <div class="avatar-wrapper"><img src="" alt="Profile" id="current-user-avatar"></div>
-                        <div class="greeting"><h2 id="greeting-msg">مرحباً <span class="hi-emoji">👋</span> <span id="user-name-display">$(username)!</span></h2><p>مرحباً بك في {{TENANT_NAME}}</p></div>
-                    </div>
-                </header>
-                <div class="date-time-pills">
-                    <div class="dt-pill"><span class="ico ico-calendar"></span> <span id="date-display">-- --, --</span></div>
-                    <div class="dt-pill time-pill"><span class="ico ico-clock"></span> <span id="time-display">--:--</span></div>
-                </div>
-                <div class="insurance-card unified-gradient-card">
-                    <div class="circle-decor c1"></div><div class="circle-decor c2"></div>
-                    <div class="card-header"><div class="card-icon"><div class="icon-box"><span class="ico ico-shield" style="font-size:20px;"></span></div><div><h3 style="font-size:18px;font-weight:700;">بوابة الدخول</h3><p style="font-size:12px;opacity:0.9;">سجّل بيانات البطاقة</p></div></div><div class="top-arrow"><span class="ico ico-lock" style="font-size:12px;"></span></div></div>
-                    $(if error)<div class="mikrotik-error"><span class="ico ico-alert" style="font-size:16px;"></span><span>$(error)</span></div>$(endif)
-                    <form name="login" action="$(link-login-only)" method="post" onsubmit="return hrSubmit()">
-                        <input type="hidden" name="dst" value="$(link-orig)"><input type="hidden" name="popup" value="true">
-                        <div class="login-fields-container"><div class="field-group"><label class="field-label">رقم البطاقة</label><input type="text" name="username" class="custom-input user-field" placeholder="User ID" value="$(username)"></div><div class="field-group"><label class="field-label">رمز المرور</label><input type="password" name="password" class="custom-input pass-field" placeholder="••••••••"></div></div>
-                        <div class="card-footer"><button type="submit" class="login-btn">تحقق ودخول <span class="ico ico-arrow-left"></span></button></div>
-                    </form>
-                </div>
-                <div class="network-pulse-card">
-                    <div class="pulse-icon-area"><div class="live-indicator"><span class="blink-dot"></span></div><span class="ico ico-wifi_tethering" style="font-size:20px;"></span></div>
-                    <div class="pulse-content"><span class="pulse-label">الحالة المباشرة</span><div class="pulse-value-wrapper"><span id="liveStatusText" class="pulse-value">جاري التحليل...</span></div></div>
-                    <div class="network-visualizer"><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div></div>
-                </div>
-                <!-- زر متجرك الإلكتروني — يظهر فقط عند تفعيل STORE_ENABLED -->
-                <a class="hr-store-card" href="{{STORE_URL}}">
-                    <div class="hr-store-icon"><span class="ico ico-cart" style="font-size:22px;"></span></div>
-                    <div class="hr-store-text"><h4>متجر البطاقات الإلكتروني</h4><p>اشحن رصيدك واشترِ بطاقتك مباشرة من هنا</p></div>
-                    <div class="hr-store-arrow"><span class="ico ico-arrow-left" style="font-size:13px;"></span></div>
-                </a>
-                <br>
-                <div class="section-title"><h3>سجل الجلسات</h3><span>إدارة الوصول</span></div>
-                <div class="logs-container hr-saved-on" id="saved-sessions-container"><p style="font-size:11px;color:var(--text-sub);text-align:center;padding:10px;">لا يوجد سجل نشاطات</p></div>
-                <div class="network-about-footer">
-                    <h4 class="footer-title">{{TENANT_NAME}}</h4>
-                    <p class="footer-desc">{{WELCOME_TEXT}}</p>
-                    <div class="footer-copyright">© {{TENANT_NAME}} — جميع الحقوق محفوظة</div>
-                </div>
-            </div>
+<div class="mobile-container">
 
-<!-- ===================== الباقات ===================== -->
-<div id="packages-view" class="view-section">
-    <div class="section-title" style="margin-top: 10px;">
+  <!-- ‏مفاتيح التبويب المخفيّة (radio) — تتحكم بكل ما يليها عبر :checked ~ -->
+  <input class="hr-nav-r" type="radio" name="hr-nav" id="hr-nav-home" checked>
+  <input class="hr-nav-r" type="radio" name="hr-nav" id="hr-nav-packages">
+  <input class="hr-nav-r" type="radio" name="hr-nav" id="hr-nav-distributors">
+  <input class="hr-nav-r" type="radio" name="hr-nav" id="hr-nav-support">
+  <input class="hr-nav-r" type="radio" name="hr-nav" id="hr-nav-info">
+
+  <div class="top-system-bar">
+    <div class="ip-info"><div class="connection-dot"></div><span>IP: <span id="user-ip">$(ip)</span></span></div>
+    <div class="brand-mini">{{TENANT_NAME}}</div>
+  </div>
+
+  <div class="content-scroll">
+
+    <!-- ===================== الرئيسية ===================== -->
+    <div id="home-view" class="view-section">
+      <header class="header">
+        <div class="greeting">
+          <h2>مرحباً <span id="user-name-display">$(username)</span></h2>
+          <p>مرحباً بك في {{TENANT_NAME}}</p>
+        </div>
+      </header>
+      <div class="date-time-pills">
+        <div class="dt-pill"><span class="ico ico-calendar"></span> <span id="date-display">اليوم</span></div>
+        <div class="dt-pill time-pill"><span class="ico ico-clock"></span> <span id="time-display">--:--</span></div>
+      </div>
+      <div class="insurance-card unified-gradient-card">
+        <div class="circle-decor c1"></div><div class="circle-decor c2"></div>
+        <div class="card-header">
+          <div class="card-icon">
+            <div class="icon-box"><span class="ico ico-shield" style="font-size:20px;"></span></div>
+            <div>
+              <h3 style="font-size:18px;font-weight:700;">بوابة الدخول</h3>
+              <p style="font-size:12px;opacity:.9;">سجّل بيانات البطاقة</p>
+            </div>
+          </div>
+          <div class="top-arrow"><span class="ico ico-lock" style="font-size:12px;"></span></div>
+        </div>
+        $(if error)<div class="mikrotik-error"><span class="ico ico-alert" style="font-size:16px;"></span><span>$(error)</span></div>$(endif)
+        <form name="login" action="$(link-login-only)" method="post" onsubmit="return hrSubmit()">
+          <input type="hidden" name="dst" value="$(link-orig)">
+          <input type="hidden" name="popup" value="true">
+          <div class="login-fields-container">
+            <div class="field-group">
+              <label class="field-label">رقم البطاقة</label>
+              <input type="text" name="username" class="custom-input user-field" placeholder="User ID" value="$(username)">
+            </div>
+            <div class="field-group">
+              <label class="field-label">رمز المرور</label>
+              <input type="password" name="password" class="custom-input pass-field" placeholder="••••••••">
+            </div>
+          </div>
+          <div class="card-footer">
+            <button type="submit" class="login-btn">تحقق ودخول <span class="ico ico-arrow-left"></span></button>
+          </div>
+        </form>
+      </div>
+
+      <!-- ‏زر متجرك الإلكتروني — يظهر فقط عند STORE_ENABLED=yes -->
+      <a class="hr-store-card" href="{{STORE_URL}}">
+        <div class="hr-store-icon"><span class="ico ico-cart" style="font-size:22px;"></span></div>
+        <div class="hr-store-text"><h4>متجر البطاقات الإلكتروني</h4><p>اشحن رصيدك واشترِ بطاقتك مباشرة من هنا</p></div>
+        <div class="hr-store-arrow"><span class="ico ico-arrow-left" style="font-size:13px;"></span></div>
+      </a>
+
+      <div class="network-pulse-card">
+        <div class="pulse-icon-area"><div class="live-indicator"><span class="blink-dot"></span></div><span class="ico ico-wifi_tethering" style="font-size:20px;"></span></div>
+        <div class="pulse-content"><span class="pulse-label">الحالة المباشرة</span><div class="pulse-value-wrapper"><span id="liveStatusText" class="pulse-value">إشارة مستقرة وممتازة</span></div></div>
+        <div class="network-visualizer"><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div></div>
+      </div>
+
+      <div class="network-about-footer">
+        <h4 class="footer-title">{{TENANT_NAME}}</h4>
+        <p class="footer-desc">{{WELCOME_TEXT}}</p>
+        <div class="footer-copyright">© {{TENANT_NAME}} — جميع الحقوق محفوظة</div>
+      </div>
+    </div><!-- /home-view -->
+
+    <!-- ===================== الباقات ===================== -->
+    <div id="packages-view" class="view-section">
+      <div class="section-title" style="margin-top:10px;">
         <h3>بطاقات متنوعة</h3>
         <span>{{TENANT_NAME}}</span>
-    </div>
-    <div class="packages-wrapper">
-        <!-- العروض القابلة للتحرير من المصمّم — تُولَّد في render()
-             من OFFERS_JSON (باقة النخبة/الذهبية/الانطلاق) بنصوص مُهرَّبة. -->
+      </div>
+      <div class="packages-wrapper">
+        <!-- العروض القابلة للتحرير — تُولَّد من OFFERS_JSON عبر render() -->
         {{OFFERS_HTML}}
+      </div>
     </div>
-</div>
 
-<!-- ===================== الموزعون ===================== -->
-<div id="distributors-view" class="view-section">
-    <div class="section-title" style="margin-top: 10px;">
+    <!-- ===================== الموزعون ===================== -->
+    <div id="distributors-view" class="view-section">
+      <div class="section-title" style="margin-top:10px;">
         <h3>أقرب النقاط</h3>
         <span>تغطية شاملة</span>
-    </div>
-    <div class="map-wrapper">
+      </div>
+      <div class="map-wrapper">
         <div class="map-art"><div class="map-road mr1"></div><div class="map-road mr2"></div></div>
         <div class="map-pin-user"></div>
-        <div class="map-overlay-info">
-            <span class="ico ico-location-arrow"></span> أنت هنا
-        </div>
-    </div>
-    <div class="section-title">
-        <h3>نقاط البيع المعتمدة</h3>
-        <span>عدد النقاط</span>
-    </div>
-    <div class="distributors-list">
-        <!-- الموزعون القابلون للتحرير من المصمّم — تُولَّد القائمة
-             في render() من DISTRIBUTORS_JSON بنصوص مُهرَّبة. -->
+        <div class="map-overlay-info"><span class="ico ico-location-arrow"></span> أنت هنا</div>
+      </div>
+      <div class="section-title"><h3>نقاط البيع المعتمدة</h3><span>عدد النقاط</span></div>
+      <div class="distributors-list">
+        <!-- الموزعون القابلون للتحرير — من DISTRIBUTORS_JSON -->
         {{DISTRIBUTORS_HTML}}
+      </div>
     </div>
-</div>
-<!-- ===================== الدعم ===================== -->
 
-            <div id="support-view" class="view-section">
-                <div class="section-title" style="margin-top:10px;"><h3>الدعم الفني</h3><span>نحن هنا لمساعدتك</span></div>
-                <div class="support-hero-card unified-gradient-card">
-                    <div class="support-icon-ring"><span class="ico ico-headset" style="font-size:30px;"></span></div>
-                    <h2 class="support-title">هل تواجه مشكلة؟</h2><p class="support-sub">فريق دعم {{TENANT_NAME}} جاهز لمساعدتك — اتصل على {{SUPPORT_PHONE}}</p>
-                    <a href="tel:{{SUPPORT_PHONE}}" class="btn-call-main"><span class="ico ico-phone"></span> {{SUPPORT_PHONE}}</a>
-                    <div class="server-status-box"><div class="status-label"><div class="status-dot-pulse" style="width:8px;height:8px;background:#a5f3fc;border-radius:50%;margin-left:5px;"></div>الحالة العامة للنظام</div><div class="status-percent">98%</div></div>
-                </div>
-                <div class="tools-box-medical">
-                    <button type="button" class="tool-btn-row" onclick="startPingTest()" id="btnTestTrigger"><div class="tool-icon-sq icon-teal-bg"><span class="ico ico-speed" id="testIcon"></span></div><div style="flex:1"><h4 style="font-size:13px;font-weight:700;color:var(--text-main);margin-bottom:2px;">فحص الشبكة الذكي</h4><p style="font-size:10px;color:var(--text-sub);" id="testStatusText">تحليل جودة الاتصال بالبث</p></div><span class="ico ico-chevron-left" style="font-size:12px;color:var(--text-sub);"></span></button>
-                    <div id="testResultArea"><div class="test-meta"><span>النتيجة:</span><span id="pingValue" class="ping-val">--</span></div><div class="progress-track"><div id="pingBar" class="progress-bar"></div></div><p id="resultMsg" style="font-size:11px;font-weight:700;text-align:center;">جاري الاتصال...</p></div>
-                    <div style="height:1px;background:var(--border-color);margin:0 15px;"></div>
-                    <button type="button" class="tool-btn-row" onclick="location.reload()"><div class="tool-icon-sq icon-purple-bg"><span class="ico ico-refresh"></span></div><div style="flex:1"><h4 style="font-size:13px;font-weight:700;color:var(--text-main);margin-bottom:2px;">تحديث الصفحة</h4><p style="font-size:10px;color:var(--text-sub);">إعادة تحميل النظام</p></div><span class="ico ico-chevron-left" style="font-size:12px;color:var(--text-sub);"></span></button>
-                </div>
-                <div class="section-title"><h3>الأسئلة الشائعة</h3></div>
-
-                <div class="faq-container">
-                    <div class="faq-item" onclick="toggleFaq(this)">
-                        <div class="faq-header"><span>الصفحة لا تفتح بعد الاتصال</span><span class="ico ico-chevron-down"></span></div>
-                        <div class="faq-body"><div class="faq-content">قم بعمل "نسيان للشبكة" (Forget Network) من إعدادات الواي فاي في جهازك، ثم أعد الاتصال وأدخل كلمة المرور مرة أخرى.</div></div>
-                    </div>
-                    <div class="faq-item" onclick="toggleFaq(this)">
-                        <div class="faq-header"><span>الإنترنت بطيء جداً</span><span class="ico ico-chevron-down"></span></div>
-                        <div class="faq-body"><div class="faq-content">جودة الاتصال تعتمد على قوة الإشارة. كلما كنت أقرب من نقطة التوزيع (الراوتر) وبدون حواجز، كانت السرعة أفضل.</div></div>
-                    </div>
-                    <div class="faq-item" onclick="toggleFaq(this)">
-                        <div class="faq-header"><span>خطأ: المستخدم مسجل الدخول بالفعل</span><span class="ico ico-chevron-down"></span></div>
-                        <div class="faq-body"><div class="faq-content">هذا يعني أن حسابك نشط على جهاز آخر أو أن الجلسة السابقة لم تغلق بشكل صحيح. انتظر دقيقتين أو اتصل بالدعم لإنهاء الجلسة المعلقة.</div></div>
-                    </div>
-                </div>
-
-            </div>
-            <div id="info-view" class="view-section">
-                <div class="section-title" style="margin-top:10px;"><h3>الملف الشخصي</h3><span>بيانات الاتصال</span></div>
-                <div class="profile-card-tech unified-gradient-card">
-                    <div class="decor-profile dp1"></div><div class="decor-profile dp2"></div>
-                    <div class="profile-header"><img src="" id="profile-view-avatar" class="profile-big-img"><div class="profile-text"><h3 id="profile-view-name">$(username)</h3><span class="status-badge">مستخدم نشط</span></div></div>
-                    <div class="tech-details-list">
-                        <div class="tech-row"><div class="tech-label"><span class="ico ico-network" style="color:white"></span> IP Address</div><div class="tech-val" dir="ltr" id="info-ip">$(ip)</div></div>
-                        <div class="tech-row"><div class="tech-label"><span class="ico ico-fingerprint" style="color:white"></span> MAC Address</div><div class="tech-val" dir="ltr" id="info-mac">$(mac)</div></div>
-                        <div class="tech-row"><div class="tech-label"><span class="ico ico-mobile" style="color:white"></span> Device Type</div><div class="tech-val" id="info-device">Unknown</div></div>
-                    </div>
-                </div>
-                <div class="section-title"><h3>تخصيص الحساب</h3><span>دعنا نعرفك أكثر</span></div>
-                <div class="settings-card">
-                    <div class="input-group-styled"><label>الاسم المفضل</label><input type="text" id="input-new-name" placeholder="أدخل اسمك هنا..." maxlength="15"></div>
-                    <label style="font-size:11px;color:var(--text-sub);margin-bottom:10px;display:block;">اختر صورة رمزية (Avatar)</label>
-                    <div class="avatar-selector-grid"><img onclick="selectAvatar(this, '1')" class="avatar-option active"><img onclick="selectAvatar(this, '2')" class="avatar-option"><img onclick="selectAvatar(this, '3')" class="avatar-option"><img onclick="selectAvatar(this, '4')" class="avatar-option"><img onclick="selectAvatar(this, '5')" class="avatar-option"></div>
-                    <button type="button" class="btn-save-profile" onclick="saveUserProfile()"><span class="ico ico-save"></span> حفظ التغييرات</button>
-                </div>
-            </div>
+    <!-- ===================== الدعم ===================== -->
+    <div id="support-view" class="view-section">
+      <div class="section-title" style="margin-top:10px;"><h3>الدعم الفني</h3><span>نحن هنا لمساعدتك</span></div>
+      <div class="support-hero-card unified-gradient-card">
+        <div class="support-icon-ring"><span class="ico ico-headset" style="font-size:30px;"></span></div>
+        <h2 class="support-title">هل تواجه مشكلة؟</h2>
+        <p class="support-sub">فريق دعم {{TENANT_NAME}} جاهز لمساعدتك — اتصل على {{SUPPORT_PHONE}}</p>
+        <a href="tel:{{SUPPORT_PHONE}}" class="btn-call-main"><span class="ico ico-phone"></span> {{SUPPORT_PHONE}}</a>
+        <div class="server-status-box">
+          <div class="status-label"><div style="width:8px;height:8px;background:#a5f3fc;border-radius:50%;margin-left:5px;"></div>الحالة العامة للنظام</div>
+          <div class="status-percent">98%</div>
         </div>
-        <nav class="bottom-nav">
-            <div class="nav-item active" onclick="switchView('home-view', this)"><span class="ico ico-home"></span><span>الرئيسية</span></div>
-            <div class="nav-item" onclick="switchView('packages-view', this)"><span class="ico ico-cubes"></span><span>الباقات</span></div>
-            <div class="nav-item" onclick="switchView('distributors-view', this)"><span class="ico ico-map"></span><span>الموزعون</span></div>
-            <div class="nav-item" onclick="switchView('support-view', this)"><span class="ico ico-headset"></span><span>الدعم</span></div>
-            <div class="nav-item" onclick="switchView('info-view', this)"><span class="ico ico-info"></span><span>معلومات</span></div>
-        </nav>
+      </div>
+      <div class="section-title"><h3>الأسئلة الشائعة</h3></div>
+      <!-- FAQ بـ <details> الأصلي — يفتح/يُغلق بلا JS -->
+      <details class="faq-item">
+        <summary class="faq-header"><span>الصفحة لا تفتح بعد الاتصال</span><span class="ico ico-chevron-down"></span></summary>
+        <div class="faq-body"><div class="faq-content">قم بعمل "نسيان للشبكة" (Forget Network) من إعدادات الواي فاي في جهازك، ثم أعد الاتصال وأدخل كلمة المرور مرة أخرى.</div></div>
+      </details>
+      <details class="faq-item">
+        <summary class="faq-header"><span>الإنترنت بطيء جداً</span><span class="ico ico-chevron-down"></span></summary>
+        <div class="faq-body"><div class="faq-content">جودة الاتصال تعتمد على قوة الإشارة. كلما كنت أقرب من نقطة التوزيع (الراوتر) وبدون حواجز، كانت السرعة أفضل.</div></div>
+      </details>
+      <details class="faq-item">
+        <summary class="faq-header"><span>خطأ: المستخدم مسجل الدخول بالفعل</span><span class="ico ico-chevron-down"></span></summary>
+        <div class="faq-body"><div class="faq-content">هذا يعني أن حسابك نشط على جهاز آخر أو أن الجلسة السابقة لم تغلق بشكل صحيح. انتظر دقيقتين أو اتصل بالدعم لإنهاء الجلسة المعلقة.</div></div>
+      </details>
     </div>
-    <script>
-    /* الصور الرمزية المضمّنة (SVG data-URI) — بديل ملفات img/1..5.jpg */
-    var HR_AVATARS=%%AVATARS_JS%%;
-    /* تفعيل زر المتجر: المصمّم يستبدل {{STORE_ENABLED}} بقيمة yes/no —
-       عند yes نضيف صنفًا على body فيظهر زر «متجر البطاقات الإلكتروني». */
-    if('{{STORE_ENABLED}}'==='yes'){document.body.classList.add('hr-store-on');}
-    /* إرسال نموذج الدخول:
-       - يحفظ الجلسة محليًا (سجل الدخول السريع).
-       - إن كان CHAP مفعّلًا (hrChap معرّفة داخل كتلة $(if chap-id))
-         يُهشّر كلمة المرور ويُرسل عبر النموذج المخفي sendin.
-       - وإلا يُرسل النموذج مباشرة (PAP/HTTP). */
-    function hrSubmit(){
-        saveLoginData();
-        if(typeof window.hrChap==='function'&&document.sendin){
-            document.sendin.username.value=document.login.username.value;
-            document.sendin.password.value=window.hrChap(document.login.password.value);
-            document.sendin.submit();
-            return false;
-        }
-        return true;
+
+    <!-- ===================== معلومات ===================== -->
+    <div id="info-view" class="view-section">
+      <div class="section-title" style="margin-top:10px;"><h3>معلومات الجلسة</h3><span>بيانات الاتصال</span></div>
+      <div class="profile-card-tech unified-gradient-card">
+        <div class="decor-profile dp1"></div><div class="decor-profile dp2"></div>
+        <div class="profile-header">
+          <div class="profile-text"><h3 id="profile-view-name">$(username)</h3><span class="status-badge">مستخدم نشط</span></div>
+        </div>
+        <div class="tech-details-list">
+          <div class="tech-row"><div class="tech-label"><span class="ico ico-network" style="color:white"></span> IP Address</div><div class="tech-val" dir="ltr">$(ip)</div></div>
+          <div class="tech-row"><div class="tech-label"><span class="ico ico-fingerprint" style="color:white"></span> MAC Address</div><div class="tech-val" dir="ltr">$(mac)</div></div>
+          <div class="tech-row"><div class="tech-label"><span class="ico ico-mobile" style="color:white"></span> الجهاز</div><div class="tech-val" id="info-device">جهازك</div></div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content-scroll -->
+
+  <!-- ‏الشريط السفلي: labels تُفعّل الراديوهات أعلاه (CSS خالص). -->
+  <nav class="bottom-nav">
+    <label class="nav-item" for="hr-nav-home"><span class="ico ico-home"></span><span>الرئيسية</span></label>
+    <label class="nav-item" for="hr-nav-packages"><span class="ico ico-cubes"></span><span>الباقات</span></label>
+    <label class="nav-item" for="hr-nav-distributors"><span class="ico ico-map"></span><span>الموزعون</span></label>
+    <label class="nav-item" for="hr-nav-support"><span class="ico ico-headset"></span><span>الدعم</span></label>
+    <label class="nav-item" for="hr-nav-info"><span class="ico ico-info"></span><span>معلومات</span></label>
+  </nav>
+</div>
+
+<!-- ─── SCRIPT 1: تسليم النموذج (CHAP أو PAP) — جوهري للدخول. ES5. ─── -->
+<script>
+function hrSubmit(){
+  try{
+    if(typeof window.hrChap==='function' && document.sendin){
+      document.sendin.username.value=document.login.username.value;
+      document.sendin.password.value=window.hrChap(document.login.password.value);
+      document.sendin.submit();
+      return false;
     }
-    /* غطاء التحميل: شريط سريع وإخفاء بعد 800ms كحد أقصى — fail-open
-       (مقتطف الأمان المحقون في render() يضمن الإخفاء حتى لو فشل
-       هذا السكربت كله؛ لا اعتماد على أي مورد شبكة قبل الدخول). */
-    document.addEventListener('DOMContentLoaded',()=>{const e=document.getElementById('splash-screen'),t=document.querySelector('.splash-loader-bar');setTimeout(()=>{t&&(t.style.transition='width .6s linear',t.style.width='100%')},50),setTimeout(()=>{e&&e.classList.add('hide-splash')},800),syncThemeLabel(),loadUserProfile(),loadLastSession(),detectDeviceInfo(),initLivePulse()});function updateDateTime(){const e=new Date,t={hour:'numeric',minute:'2-digit',hour12:!0},n={weekday:'long',day:'numeric',month:'short'};document.getElementById('time-display').innerText=e.toLocaleTimeString('en-US',t),document.getElementById('date-display').innerText=e.toLocaleDateString('ar-EG-u-nu-latn',n)}setInterval(updateDateTime,1e3),updateDateTime();function autoFill(e,t){const n=document.querySelector('.user-field'),o=document.querySelector('.pass-field'),a=document.querySelector('.insurance-card');n&&(n.value=e),o&&t&&(o.value=t),a.style.transform="scale(1.02)",setTimeout(()=>{a.style.transform="scale(1)"},200)}function saveLoginData(){if('{{SAVED_SESSIONS_ENABLED}}'==='no')return!0;const e=document.querySelector('.user-field'),p=document.querySelector('.pass-field');if(e&&e.value){const u=e.value,pw=p?p.value:'',n=selectedAvatarImg;let o=JSON.parse(localStorage.getItem('mk_sessions')||'[]');o=o.filter(function(x){return x.user!==u}),o.unshift({user:u,pass:pw,avatar:n,date:(new Date).toISOString()}),o.length>5&&(o.length=5),localStorage.setItem('mk_sessions',JSON.stringify(o))}return!0}function loadLastSession(){const e=document.getElementById('saved-sessions-container');if('{{SAVED_SESSIONS_ENABLED}}'==='no'){if(e){e.style.display='none';var _pt=e.previousElementSibling;if(_pt)_pt.style.display='none';}return;}const t=JSON.parse(localStorage.getItem('mk_sessions')||'[]');t.length>0&&e&&(e.innerHTML='',t.forEach(t=>{const n=new Date(t.date).toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'});let o=t.avatar;(!o||'undefined'===o)&&(o='1');const a=`<div class="log-card" onclick="autoFill('${t.user}', '${t.pass||""}')"><div class="log-user-info"><img src="${HR_AVATARS[o]||HR_AVATARS['1']}" class="log-avatar"><div class="log-details"><h4>${t.user}</h4><div class="log-meta"><div class="device-badge"><span class="ico ico-fingerprint"></span> دخول سابق</div><span>• ${n}</span></div></div></div><div class="action-btn-finger"><span class="ico ico-arrow-left"></span></div></div>`;e.innerHTML+=a}))}function syncThemeLabel(){const e=document.body,t=document.getElementById('theme-icon-small'),n=document.getElementById('theme-text');if(!t||!n)return;e.classList.contains('dark-mode')?(t.classList.remove('ico-moon'),t.classList.add('ico-sun'),t.style.color="#F4B942",n.textContent="نهاري"):(t.classList.remove('ico-sun'),t.classList.add('ico-moon'),t.style.color="inherit",n.textContent="ليلي")}function toggleTheme(){document.body.classList.toggle('dark-mode'),syncThemeLabel()}function switchView(e,t){document.querySelectorAll('.view-section').forEach(e=>{e.classList.remove('active')}),document.getElementById(e).classList.add('active'),setActive(t)}function setActive(e){document.querySelectorAll('.nav-item').forEach(e=>e.classList.remove('active')),e.classList.add('active')}function toggleFaq(e){e.classList.toggle('active')}let selectedAvatarImg='1';function saveUserProfile(){const e=document.getElementById('input-new-name').value.trim();e&&localStorage.setItem('fastNet_userName',e),localStorage.setItem('fastNet_avatar',selectedAvatarImg),loadUserProfile();const t=document.querySelector('.btn-save-profile'),n=t.innerHTML;t.innerHTML='<span class="ico ico-check"></span> تم الحفظ!',setTimeout(()=>{t.innerHTML=n},2e3)}function loadUserProfile(){const e=localStorage.getItem('fastNet_userName');let t=localStorage.getItem('fastNet_avatar'),n='يا صديقي';const o="$(username)";o&&o!=='$'+'(username)'&&(n=o),e&&(n=e),document.getElementById('user-name-display')&&(document.getElementById('user-name-display').innerText=n+"!"),document.getElementById('profile-view-name')&&(document.getElementById('profile-view-name').innerText=n),document.getElementById('input-new-name').value='يا صديقي'===n?'':n,updateGreeting(n),(!t||'undefined'===t||'null'===t)&&(t='1'),selectedAvatarImg=t;const a=HR_AVATARS[t]||HR_AVATARS['1'];document.getElementById('current-user-avatar')&&(document.getElementById('current-user-avatar').src=a),document.getElementById('profile-view-avatar')&&(document.getElementById('profile-view-avatar').src=a),document.querySelectorAll('.avatar-option').forEach((e,i)=>{e.src=HR_AVATARS[String(i+1)],e.classList.remove('active'),e.getAttribute('onclick').includes(`'${t}'`)&&e.classList.add('active')})}function selectAvatar(e,t){document.querySelectorAll('.avatar-option').forEach(e=>e.classList.remove('active')),e.classList.add('active'),selectedAvatarImg=t}function updateGreeting(e){const t=(new Date).getHours();let n="مرحباً",o="👋";t>=5&&t<12?(n="صباح الخير",o="☀️"):t>=12&&t<17?(n="طاب يومك",o="🌤️"):(n="مساء الخير",o="🌙");const a=document.getElementById('greeting-msg');a&&(a.innerHTML=`${n} <span class="hi-emoji">${o}</span> <span id="user-name-display">${e}</span>`)}function detectDeviceInfo(){const e=navigator.userAgent;let t="Desktop PC";/Android/i.test(e)?t="Android Mobile":/iPhone|iPad|iPod/i.test(e)?t="Apple iOS":/Windows/i.test(e)?t="Windows PC":/Mac/i.test(e)&&(t="Macintosh"),document.getElementById('info-device')&&(document.getElementById('info-device').innerText=t)}async function startPingTest(){const e=document.getElementById('testResultArea'),t=document.getElementById('pingBar'),n=document.getElementById('pingValue'),o=document.getElementById('resultMsg'),a=document.getElementById('testIcon'),i=document.getElementById('btnTestTrigger');e.style.display="block",t.style.width="0%",n.textContent="--",o.textContent="جاري الاتصال بالبرج...",i.disabled=!0,a.style.transition="transform 1s linear";let s=0;const r=setInterval(()=>{s+=360,a.style.transform=`rotate(${s}deg)`},1e3);let c=[];for(let e=0;e<4;e++){const n=new Date;try{await fetch(window.location.href,{method:'HEAD',cache:'no-store'});const e=new Date;c.push(e-n)}catch(e){c.push(200)}t.style.width=`${25*(e+1)}%`,await new Promise(e=>setTimeout(e,300))}const l=Math.round(c.reduce((e,t)=>e+t)/c.length);n.textContent=l+" ms",clearInterval(r),a.style.transform="rotate(0deg)",i.disabled=!1;let d="",m="";l<60?(d="#06b6d4",m="ممتاز: الإشارة قوية جداً"):l<150?(d="#3b82f6",m="جيد: الاتصال مستقر"):(d="#EF4444",m="ضعيف: اقترب من الموزع"),t.style.backgroundColor=d,o.textContent=m,o.style.color=d}function initLivePulse(){const e=document.getElementById('liveStatusText');if(!e)return;const t=[{text:"إشارة مستقرة وممتازة",color:"#3b82f6"},{text:"زمن الاستجابة: 12ms",color:"#06b6d4"},{text:"جميع السيرفرات متصلة",color:"#8b5cf6"},{text:"فحص الأمان: آمن ✅",color:"#10B981"}];let n=0;setInterval(()=>{e.style.opacity='0',setTimeout(()=>{n=(n+1)%t.length,e.textContent=t[n].text,e.style.color=t[n].color,e.style.opacity='1'},300)},4e3)}
-    </script>
+  }catch(e){ /* اتركها تذهب لمسار PAP العادي */ }
+  return true;
+}
+</script>
+
+<!-- ─── SCRIPT 2: تفعيل صنف زر المتجر (مستقل) ─── -->
+<script>
+try{
+  if('{{STORE_ENABLED}}'==='yes' && document.body && document.body.classList){
+    document.body.classList.add('hr-store-on');
+  }
+}catch(e){}
+</script>
+
+<!-- ─── SCRIPT 3: الساعة + التاريخ (تحسين اختياري) ─── -->
+<script>
+(function(){
+  try{
+    var days=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+    var months=['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+    function pad(n){return n<10?'0'+n:''+n;}
+    function tick(){
+      try{
+        var d=new Date(), h=d.getHours(), m=d.getMinutes();
+        var ap=(h<12?'ص':'م'); var hh=h%12; if(hh===0) hh=12;
+        var t=document.getElementById('time-display');
+        if(t) t.firstChild?(t.firstChild.nodeValue=hh+':'+pad(m)+' '+ap):(t.innerHTML=hh+':'+pad(m)+' '+ap);
+        var dd=document.getElementById('date-display');
+        if(dd) dd.innerHTML=days[d.getDay()]+' '+d.getDate()+' '+months[d.getMonth()];
+      }catch(e){}
+    }
+    tick();
+    setInterval(tick,1000);
+  }catch(e){}
+})();
+</script>
+
+<!-- ─── SCRIPT 4: كشف الجهاز (تحسين اختياري) ─── -->
+<script>
+(function(){
+  try{
+    var u=navigator.userAgent||'', t='جهازك';
+    if(/Android/i.test(u)) t='Android';
+    else if(/iPhone|iPad|iPod/i.test(u)) t='Apple iOS';
+    else if(/Windows/i.test(u)) t='Windows';
+    else if(/Mac/i.test(u)) t='Macintosh';
+    var el=document.getElementById('info-device');
+    if(el) el.innerHTML=t;
+  }catch(e){}
+})();
+</script>
+
+<!-- ─── SCRIPT 5: تدوير رسائل الحالة (تحسين بصري) ─── -->
+<script>
+(function(){
+  try{
+    var el=document.getElementById('liveStatusText');
+    if(!el) return;
+    var msgs=['إشارة مستقرة وممتازة','جميع السيرفرات متصلة','فحص الأمان: آمن','زمن استجابة جيد'];
+    var i=0;
+    setInterval(function(){
+      try{ i=(i+1)%msgs.length; el.innerHTML=msgs[i]; }catch(e){}
+    },4000);
+  }catch(e){}
+})();
+</script>
+
 </body>
 </html>"""
 

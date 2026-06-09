@@ -1976,36 +1976,56 @@ _AUTOLOGIN_JS = (
     "// the keys, fills the form, and submits. If the keys are\n"
     "// missing the form falls back to manual login.\n"
     "//\n"
-    "// CHAP compatibility: f.submit() bypasses the form's\n"
-    "// onsubmit handler, so on templates that hash the password\n"
-    "// client-side (mikrotik / any CHAP template) the unhashed\n"
-    "// password would land at the wire. requestSubmit() fires\n"
-    "// onsubmit so the CHAP doLogin() transform runs. Clicking\n"
-    "// the submit button is the broad-compat fallback for older\n"
-    "// browsers without requestSubmit.\n"
+    "// ES5-only: captive-portal browsers (MikroTik built-in, old\n"
+    "// Android WebView, iOS pre-auth shim) often lack modern URL\n"
+    "// parsers and arrow functions. We parse location.search by hand and\n"
+    "// keep everything in `var`/`function`. Wrapped in try/catch in\n"
+    "// its own <script> block so failure cannot affect tabs/login.\n"
+    "//\n"
+    "// CHAP compatibility: clicking the submit button (instead of\n"
+    "// f.submit()) fires the form's onsubmit handler, so templates\n"
+    "// that hash the password client-side (mikrotik / CHAP) run\n"
+    "// doLogin(). requestSubmit() is preferred when available; the\n"
+    "// click fallback handles older browsers.\n"
     "(function () {\n"
-    '  try {\n'
-    '    var qs = new URLSearchParams(location.search);\n'
-    '    var u = qs.get("' + QR_AUTOLOGIN_USER_KEY + '");\n'
-    '    var p = qs.get("' + QR_AUTOLOGIN_PASS_KEY + '");\n'
-    '    if (!u || !p) return;\n'
+    "  try {\n"
+    "    // Manual location.search parser — no modern URL helpers.\n"
+    "    function qsGet(name) {\n"
+    "      var s = (location.search || '');\n"
+    "      if (s.charAt(0) === '?') s = s.substring(1);\n"
+    "      if (!s) return '';\n"
+    "      var parts = s.split('&');\n"
+    "      for (var i = 0; i < parts.length; i++) {\n"
+    "        var kv = parts[i].split('=');\n"
+    "        if (decodeURIComponent(kv[0] || '') === name) {\n"
+    "          try { return decodeURIComponent((kv[1] || '').replace(/\\+/g, ' ')); }\n"
+    "          catch (e) { return (kv[1] || '').replace(/\\+/g, ' '); }\n"
+    "        }\n"
+    "      }\n"
+    "      return '';\n"
+    "    }\n"
+    '    var u = qsGet("' + QR_AUTOLOGIN_USER_KEY + '");\n'
+    '    var p = qsGet("' + QR_AUTOLOGIN_PASS_KEY + '");\n'
+    "    if (!u || !p) return;\n"
     '    var f = document.forms["login"];\n'
-    '    if (!f) return;\n'
+    "    if (!f) return;\n"
     '    var ui = f.username || f.elements["username"];\n'
     '    var pi = f.password || f.elements["password"];\n'
-    '    if (ui) ui.value = u;\n'
-    '    if (pi) pi.value = p;\n'
-    '    // Small delay so RouterOS finishes setting up chap-id.\n'
+    "    if (ui) ui.value = u;\n"
+    "    if (pi) pi.value = p;\n"
+    "    // Small delay so RouterOS finishes setting up chap-id.\n"
     "    setTimeout(function () {\n"
-    '      if (typeof f.requestSubmit === "function") {\n'
-    "        f.requestSubmit();\n"
-    "      } else {\n"
-    '        var btn = f.querySelector(\n'
-    '          "input[type=submit], button[type=submit]");\n'
-    "        if (btn) { btn.click(); } else { f.submit(); }\n"
-    "      }\n"
+    "      try {\n"
+    '        if (typeof f.requestSubmit === "function") {\n'
+    "          f.requestSubmit();\n"
+    "          return;\n"
+    "        }\n"
+    "      } catch (e2) {}\n"
+    "      var btn = f.querySelector ? f.querySelector(\n"
+    '        "input[type=submit], button[type=submit]") : null;\n'
+    "      if (btn) { btn.click(); } else { f.submit(); }\n"
     "    }, 150);\n"
-    "  } catch (e) {}\n"
+    "  } catch (e) { /* fail-open — never block manual login */ }\n"
     "})();\n"
     "</script>\n"
 )
