@@ -82,6 +82,7 @@
     var err = $("#dh-form-error"); if (err) { err.hidden = true; err.textContent = ""; }
     var prev = $("#dh-plan-preview"); if (prev) prev.innerHTML = "";
     var t = modalTitle(); if (t) t.innerHTML = '<i class="fa-solid fa-tower-broadcast"></i> إضافة جهاز';
+    ifaceUseFreeText();  // each open starts as free-text until a router is picked
   }
 
   function fillForm(d) {
@@ -101,6 +102,8 @@
     if (chk) chk.checked = !!d.monitoring_enabled;
     // Make advanced section visible when it holds edited values.
     var adv = form.querySelector(".dh-advanced"); if (adv) adv.open = true;
+    // Load the router's interfaces, preselecting the saved one.
+    loadInterfaces(d.router_id, d.interface_name);
   }
 
   $all("[data-dh-add]").forEach(function (b) { b.addEventListener("click", resetForm); });
@@ -158,6 +161,68 @@
         clearTimeout(planTimer); planTimer = setTimeout(previewPlan, 350);
       });
     });
+  }
+
+  /* ── dependent interface dropdown (loads the router's LAN interfaces) ── */
+  var ifaceSelect = $("#dh-iface-select");
+  var ifaceInput = $("#dh-iface-input");
+  var ifaceHint = $("#dh-iface-hint");
+  var IFACE_DEFAULT_HINT = ifaceHint ? ifaceHint.textContent : "";
+
+  function schedulePreview() { clearTimeout(planTimer); planTimer = setTimeout(previewPlan, 350); }
+
+  function ifaceUseFreeText(msg) {
+    if (ifaceSelect) { ifaceSelect.hidden = true; ifaceSelect.removeAttribute("name"); ifaceSelect.required = false; }
+    if (ifaceInput) { ifaceInput.hidden = false; ifaceInput.setAttribute("name", "interface_name"); ifaceInput.required = true; }
+    if (ifaceHint) ifaceHint.textContent = msg || IFACE_DEFAULT_HINT;
+  }
+
+  function ifaceUseSelect(list, current) {
+    if (!ifaceSelect) return;
+    var cur = current || (ifaceInput ? ifaceInput.value : "") || "";
+    ifaceSelect.innerHTML = "";
+    var ph = document.createElement("option");
+    ph.value = ""; ph.textContent = "اختر المدخل…"; ifaceSelect.appendChild(ph);
+    var matched = false;
+    list.forEach(function (n) {
+      var o = document.createElement("option");
+      o.value = n; o.textContent = n;
+      if (n === cur) { o.selected = true; matched = true; }
+      ifaceSelect.appendChild(o);
+    });
+    if (cur && !matched) {  // keep a saved value even if it's now filtered out
+      var o2 = document.createElement("option");
+      o2.value = cur; o2.textContent = cur + " (محفوظ)"; o2.selected = true;
+      ifaceSelect.appendChild(o2);
+    }
+    ifaceSelect.hidden = false; ifaceSelect.setAttribute("name", "interface_name"); ifaceSelect.required = true;
+    if (ifaceInput) { ifaceInput.hidden = true; ifaceInput.removeAttribute("name"); ifaceInput.required = false; ifaceInput.value = ""; }
+    if (ifaceHint) ifaceHint.textContent = "مداخل هذا المايكروتيك / السيرفر (مداخل دخول النت والأنفاق مستبعدة).";
+    ifaceSelect.onchange = schedulePreview;
+  }
+
+  function loadInterfaces(routerId, current) {
+    if (!CFG.ifacesUrl) { ifaceUseFreeText(); return; }
+    if (!routerId) { ifaceUseFreeText(); return; }
+    if (ifaceHint) ifaceHint.textContent = "جارٍ جلب مداخل المايكروتيك / السيرفر…";
+    fetch(CFG.ifacesUrl + "?router_id=" + encodeURIComponent(routerId), { credentials: "same-origin" })
+      .then(function (r) { return r.json(); })
+      .then(function (res) {
+        if (res && res.ok && res.online && res.interfaces && res.interfaces.length) {
+          ifaceUseSelect(res.interfaces, current);
+        } else if (res && res.ok && res.online) {
+          ifaceUseFreeText("لا توجد مداخل LAN صالحة على هذا المايكروتيك / السيرفر — اكتب الاسم يدويًا.");
+        } else {
+          ifaceUseFreeText("تعذّر جلب المداخل (المايكروتيك / السيرفر غير متصل) — اكتب اسم المدخل يدويًا.");
+        }
+        schedulePreview();
+      })
+      .catch(function () { ifaceUseFreeText("تعذّر جلب المداخل — اكتب اسم المدخل يدويًا."); });
+  }
+
+  if (form) {
+    var routerSel = form.querySelector("[name=router_id]");
+    if (routerSel) routerSel.addEventListener("change", function () { loadInterfaces(routerSel.value); });
   }
 
   /* ── plan rendering ── */

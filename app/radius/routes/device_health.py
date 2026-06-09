@@ -63,6 +63,9 @@ def register_device_health_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/device-health/api/devices/<int:device_id>/alerts",
                     "device_health_api_alerts",
                     device_health_api_alerts, methods=["GET"])
+    bp.add_url_rule("/device-health/api/router-interfaces",
+                    "device_health_api_router_interfaces",
+                    device_health_api_router_interfaces, methods=["GET"])
     bp.add_url_rule("/device-health/api/plan", "device_health_api_plan",
                     device_health_api_plan, methods=["GET"])
 
@@ -229,6 +232,20 @@ def device_health_api_alerts(device_id: int):
     tenant_id = _tid()
     return jsonify({"ok": True,
                     "alerts": repo.list_alerts(tenant_id, device_id=device_id)})
+
+
+def device_health_api_router_interfaces():
+    """Live LAN interfaces for the selected router/CHR (WAN + tunnels excluded).
+    Offline router → {online: False} so the form falls back to free-text."""
+    tenant_id = _tid()
+    router_id = _int(request.args.get("router_id"))
+    if not router_id:
+        return jsonify({"ok": True, "online": False, "interfaces": []})
+    try:
+        result = svc.list_router_interfaces(tenant_id, router_id)
+    except DeviceHealthError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 404
+    return jsonify({"ok": True, **result})
 
 
 def device_health_api_plan():

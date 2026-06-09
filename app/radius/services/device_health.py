@@ -294,6 +294,54 @@ def live_plan(tenant_id: int, device_id: int) -> dict:
             "errors": state.get("errors", {})}
 
 
+def list_router_interfaces(tenant_id: int, router_id: int) -> dict:
+    """Live LAN-interface list for a router/CHR, for the add-device dropdown.
+
+    Reads /interface via the existing MikroTik admin client, then reuses the
+    loop/bt service's WAN+tunnel exclusion (port_script_services.filter_lan_ports
+    with the router's configured WAN resolved like the loop service does). On an
+    offline/unreachable router returns {online: False, interfaces: []} so the
+    form can fall back to free-text — never blocks.
+    """
+    tid = int(tenant_id)
+    nas = nas_repo.get_nas(tid, int(router_id))
+    if not nas:
+        raise DeviceHealthError("المايكروتيك / السيرفر غير موجود.")
+    from . import port_script_services as pss
+    from . import mikrotik_admin_client as mac
+    rows = pss.discover_interfaces(_nas_to_dict(nas), mac.interface_list)
+    if not rows:
+        return {"online": False, "interfaces": []}
+    wan = _resolve_wan_iface(tid, int(router_id))
+    lan = pss.filter_lan_ports(rows, wan_iface=wan)
+    seen: set[str] = set()
+    names: list[str] = []
+    for r in lan:
+        n = str(r.get("name") or "").strip()
+        if n and n not in seen:
+            seen.add(n)
+            names.append(n)
+    return {"online": True, "interfaces": names}
+
+
+def _resolve_wan_iface(tenant_id: int, router_id: int) -> str:
+    """Same lookup the loop/bt service uses — the WAN saved by the setup
+    wizard (setup_wizard_runs.selected_wan_interface). Empty → filter falls
+    back to its default ether1 guard. Best-effort; never raises."""
+    try:
+        from ..db.connection import db
+        row = db().execute(
+            "SELECT selected_wan_interface FROM setup_wizard_runs "
+            "WHERE tenant_id = ? AND router_id = ? "
+            "  AND selected_wan_interface != '' "
+            "ORDER BY id DESC LIMIT 1",
+            (int(tenant_id), int(router_id)),
+        ).fetchone()
+    except Exception:  # noqa: BLE001
+        return ""
+    return str(dict(row).get("selected_wan_interface") or "").strip() if row else ""
+
+
 def test_ping(tenant_id: int, device_id: int) -> dict:
     """Diagnostic ping from the router to the device. Read-only.
     Returns {ok, status, latency_ms, error}. Persists the observed status."""

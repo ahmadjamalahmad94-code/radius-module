@@ -173,8 +173,12 @@
       </select>
       <span class="hub-field-hint">{{ _('المايكروتيك (السيرفر) الذي يتبع له الجهاز — منه يُضاف عنوان الشبكة وتُركّب مراقبة Netwatch.') }}</span></label>
     <label class="hub-field"><span class="hub-field-label">{{ _('المدخل') }}<span class="req">*</span></span>
-      <input class="hub-input mono" name="interface_name" placeholder="ether2" required>
-      <span class="hub-field-hint">{{ _('منفذ المايكروتيك الموصول به الجهاز (مثل ether2) — إلزامي لأن نفس الشبكة قد تتكرّر على أكثر من مدخل.') }}</span></label>
+      {# Dependent dropdown: auto-loads the selected router's LAN interfaces
+         (WAN/tunnels excluded). Falls back to the free-text input when the
+         router is offline — only one of the two carries name=interface_name. #}
+      <select class="hub-input mono" id="dh-iface-select" hidden></select>
+      <input class="hub-input mono" id="dh-iface-input" name="interface_name" placeholder="ether2" required>
+      <span class="hub-field-hint" id="dh-iface-hint">{{ _('منفذ المايكروتيك الموصول به الجهاز (مثل ether2) — إلزامي لأن نفس الشبكة قد تتكرّر على أكثر من مدخل.') }}</span></label>
     <label class="hub-field"><span class="hub-field-label">{{ _('عنوان IP للجهاز') }}<span class="req">*</span></span>
       <input class="hub-input mono" name="ip_address" placeholder="192.168.15.10" required>
       <span class="hub-field-hint">{{ _('عنوان IP الثابت للجهاز — منه تُحسب الشبكة والبوابة، وعليه يعمل البنج وNetwatch.') }}</span></label>
@@ -239,7 +243,8 @@ window.__DH__ = {
   csrf: (document.querySelector('meta[name="csrf-token"]')||{}).content || '',
   base: "{{ url_for('radius.device_health_page') }}",
   api: "{{ url_for('radius.device_health_api_list') }}",
-  planUrl: "{{ url_for('radius.device_health_api_plan') }}"
+  planUrl: "{{ url_for('radius.device_health_api_plan') }}",
+  ifacesUrl: "{{ url_for('radius.device_health_api_router_interfaces') }}"
 };
 </script>
 <script src="{{ url_for('static', filename='js/device_health.js') }}"></script>
