@@ -2587,7 +2587,20 @@ def _svg_text(el: dict, *, uid: str) -> str:
     # This SVG is the source snapshot for PDF export. Do not rely on
     # the SVG rasterizer to shape Arabic; emit visual glyph order here
     # and keep the logical text only in data-original.
-    svg_direction = "ltr" if is_arabic else direction
+    #
+    # Geometry is ALWAYS laid out left-to-right and right-alignment for
+    # RTL engines is expressed purely by the anchor (`text-anchor="end"`
+    # at the box's right edge below). This mirrors the PDF adapter, which
+    # right-aligns every run with `drawRightString(x + max_width, …)`
+    # regardless of script. Leaving `direction="rtl"` on the <text> made
+    # the browser re-anchor/re-order pure-Latin runs (brand "HobeRadius",
+    # footer "support@hobe.net") to a different x than the PDF — so they
+    # walked off the canvas in the live preview while the export drew them
+    # correctly. Forcing ltr here keeps preview == print == export for
+    # Latin copy on Arabic (vertical and horizontal) cards. Arabic runs
+    # are already shaped into visual order above, so ltr is correct for
+    # them too; `bidi-override` simply locks that order.
+    svg_direction = "ltr"
     unicode_bidi = "bidi-override" if is_arabic else "embed"
     max_width = float(el.get("max_width") or 0)
     x = float(el["x"])
