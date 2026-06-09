@@ -267,13 +267,12 @@
         <tr>
           <td class="num mono">{{ wallet.id }}</td>
           <td>
+            {# عرض الاسم الحقيقي للمالك (full_name/display_name، أو username/mobile/name كاحتياط)؛
+               لا نُظهر القالب «النوع #id» مطلقًا. إن غاب الاسم (سجل محذوف) نُظهر شُرطة فقط. #}
             {%- if wallet.owner_name -%}
-              {{ wallet.owner_name }}
-              <span class="muted" style="font-size:12px">
-                — {{ owner_label(wallet.owner_type) }}{% if wallet.owner_id %} #{{ wallet.owner_id }}{% endif %}
-              </span>
+              <strong>{{ wallet.owner_name }}</strong>
             {%- else -%}
-              {{ owner_label(wallet.owner_type) }}{% if wallet.owner_id %} #{{ wallet.owner_id }}{% endif %}
+              <span class="muted">—</span>
             {%- endif -%}
           </td>
           <td class="num"><strong>{{ wallet.balance|money }}</strong></td>

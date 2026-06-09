@@ -44,49 +44,71 @@ def _can_wallet_debit(amount: str = "1.00") -> bool:
 
 
 def _enrich_wallets_names(wallets: list[dict]) -> list[dict]:
-    """Attach owner_name (real full_name/display_name) to each wallet dict."""
+    """Attach owner_name (real full_name/display_name/username) to each wallet.
+
+    Sources by owner_type — distributors live in their OWN table, not admins:
+      manager      -> admins.full_name      | admins.username
+      distributor  -> distributors.display_name | distributors.name
+      subscriber   -> subscribers.full_name | subscribers.username
+      card_user    -> card_users.display_name | card_users.mobile
+      company      -> «الشركة» (no row to look up)
+    """
     conn = db()
 
-    mgr_ids = list({w["owner_id"] for w in wallets
-                    if w.get("owner_type") in ("manager", "distributor") and w.get("owner_id")})
-    sub_ids = list({w["owner_id"] for w in wallets
-                    if w.get("owner_type") == "subscriber" and w.get("owner_id")})
-    cu_ids  = list({w["owner_id"] for w in wallets
-                    if w.get("owner_type") == "card_user" and w.get("owner_id")})
+    mgr_ids  = list({w["owner_id"] for w in wallets
+                     if w.get("owner_type") == "manager"     and w.get("owner_id")})
+    dist_ids = list({w["owner_id"] for w in wallets
+                     if w.get("owner_type") == "distributor" and w.get("owner_id")})
+    sub_ids  = list({w["owner_id"] for w in wallets
+                     if w.get("owner_type") == "subscriber"  and w.get("owner_id")})
+    cu_ids   = list({w["owner_id"] for w in wallets
+                     if w.get("owner_type") == "card_user"   and w.get("owner_id")})
 
     def _ph(ids: list) -> str:
         return ",".join("?" * len(ids))
 
-    mgr_names: dict[int, str] = {}
-    sub_names: dict[int, str] = {}
-    cu_names:  dict[int, str] = {}
+    mgr_names:  dict[int, str] = {}
+    dist_names: dict[int, str] = {}
+    sub_names:  dict[int, str] = {}
+    cu_names:   dict[int, str] = {}
 
     if mgr_ids:
         for r in conn.execute(
             f"SELECT id, full_name, username FROM admins WHERE id IN ({_ph(mgr_ids)})",
             mgr_ids,
         ).fetchall():
-            mgr_names[r["id"]] = r["full_name"] or r["username"] or ""
+            mgr_names[r["id"]] = (r["full_name"] or "").strip() or (r["username"] or "").strip()
+
+    if dist_ids:
+        for r in conn.execute(
+            f"SELECT id, display_name, name FROM distributors WHERE id IN ({_ph(dist_ids)})",
+            dist_ids,
+        ).fetchall():
+            dist_names[r["id"]] = (r["display_name"] or "").strip() or (r["name"] or "").strip()
 
     if sub_ids:
         for r in conn.execute(
             f"SELECT id, full_name, username FROM subscribers WHERE id IN ({_ph(sub_ids)})",
             sub_ids,
         ).fetchall():
-            sub_names[r["id"]] = r["full_name"] or r["username"] or ""
+            sub_names[r["id"]] = (r["full_name"] or "").strip() or (r["username"] or "").strip()
 
     if cu_ids:
         for r in conn.execute(
-            f"SELECT id, display_name FROM card_users WHERE id IN ({_ph(cu_ids)})",
+            f"SELECT id, display_name, mobile FROM card_users WHERE id IN ({_ph(cu_ids)})",
             cu_ids,
         ).fetchall():
-            cu_names[r["id"]] = r["display_name"] or ""
+            cu_names[r["id"]] = (r["display_name"] or "").strip() or (r["mobile"] or "").strip()
 
     for w in wallets:
         ot  = w.get("owner_type", "")
         oid = w.get("owner_id")
-        if ot in ("manager", "distributor") and oid:
+        if ot == "company":
+            w["owner_name"] = "الشركة"
+        elif ot == "manager" and oid:
             w["owner_name"] = mgr_names.get(oid, "")
+        elif ot == "distributor" and oid:
+            w["owner_name"] = dist_names.get(oid, "")
         elif ot == "subscriber" and oid:
             w["owner_name"] = sub_names.get(oid, "")
         elif ot == "card_user" and oid:
