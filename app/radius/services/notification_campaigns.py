@@ -22,6 +22,13 @@ class NotificationCampaignError(ValueError):
 
 CHANNELS = {"internal", "sms", "whatsapp", "telegram", "email", "push"}
 RECIPIENT_TYPES = {"subscriber", "card_user", "manager", "distributor", "company"}
+_RECIPIENT_TYPE_AR: dict[str, str] = {
+    "subscriber": "مشترك",
+    "card_user": "مستخدم بطاقة",
+    "manager": "مدير",
+    "distributor": "موزّع",
+    "company": "شركة",
+}
 
 
 def _json(value: Any) -> str:
@@ -390,7 +397,7 @@ class NotificationCampaignService:
         ]
 
     def delivery_log(self, *, limit: int = 100) -> list[dict[str, Any]]:
-        return [
+        rows = [
             self._delivery_row(row_to_dict(row))
             for row in db().execute(
                 """
@@ -403,6 +410,7 @@ class NotificationCampaignService:
                 (self.tenant_id, int(limit)),
             ).fetchall()
         ]
+        return self._resolve_recipient_names(rows)
 
     def get_notification(self, notification_id: int) -> dict[str, Any]:
         row = db().execute(
@@ -665,6 +673,75 @@ class NotificationCampaignService:
     def _notification_row(self, row: dict[str, Any]) -> dict[str, Any]:
         row["metadata"] = _load(row.get("metadata_json"), {})
         return row
+
+    def _resolve_recipient_names(self, rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        by_type: dict[str, list[int]] = {}
+        for row in rows:
+            rtype = row.get("recipient_type") or ""
+            rid = row.get("recipient_id")
+            if rtype and rid is not None:
+                by_type.setdefault(rtype, [])
+                if int(rid) not in by_type[rtype]:
+                    by_type[rtype].append(int(rid))
+
+        names: dict[tuple[str, int], str] = {}
+
+        if "subscriber" in by_type:
+            ids = by_type["subscriber"]
+            ph = ",".join("?" for _ in ids)
+            for r in db().execute(
+                f"SELECT id, full_name, username FROM subscribers WHERE tenant_id=? AND id IN ({ph})",
+                [self.tenant_id, *ids],
+            ).fetchall():
+                names[("subscriber", int(r["id"]))] = r["full_name"] or r["username"] or ""
+
+        if "card_user" in by_type:
+            ids = by_type["card_user"]
+            ph = ",".join("?" for _ in ids)
+            for r in db().execute(
+                f"SELECT id, display_name, mobile FROM card_users WHERE tenant_id=? AND id IN ({ph})",
+                [self.tenant_id, *ids],
+            ).fetchall():
+                names[("card_user", int(r["id"]))] = r["display_name"] or r["mobile"] or ""
+
+        if "manager" in by_type:
+            ids = by_type["manager"]
+            ph = ",".join("?" for _ in ids)
+            for r in db().execute(
+                f"SELECT id, full_name, username FROM admins WHERE id IN ({ph})",
+                ids,
+            ).fetchall():
+                names[("manager", int(r["id"]))] = r["full_name"] or r["username"] or ""
+
+        if "distributor" in by_type:
+            ids = by_type["distributor"]
+            ph = ",".join("?" for _ in ids)
+            for r in db().execute(
+                f"SELECT id, display_name, name FROM distributors WHERE tenant_id=? AND id IN ({ph})",
+                [self.tenant_id, *ids],
+            ).fetchall():
+                names[("distributor", int(r["id"]))] = r["display_name"] or r["name"] or ""
+
+        if "company" in by_type:
+            r = db().execute(
+                "SELECT display_name, name FROM tenants WHERE id=?",
+                [self.tenant_id],
+            ).fetchone()
+            tenant_name = (r["display_name"] or r["name"]) if r else ""
+            for tid in by_type["company"]:
+                names[("company", int(tid))] = tenant_name
+
+        for row in rows:
+            rtype = row.get("recipient_type") or ""
+            rid = row.get("recipient_id")
+            ar_label = _RECIPIENT_TYPE_AR.get(rtype, rtype)
+            if rid is not None:
+                real_name = names.get((rtype, int(rid)), "")
+                row["recipient_display"] = real_name if real_name else ar_label
+            else:
+                row["recipient_display"] = ar_label
+
+        return rows
 
     def _delivery_row(self, row: dict[str, Any]) -> dict[str, Any]:
         row["result"] = _load(row.get("result_json"), {})

@@ -205,7 +205,7 @@
                 <td class="num mono">#{{ item.id }}</td>
                 <td>{{ ch_label(item.channel) }}</td>
                 <td>{{ st_pill(item.status) }}</td>
-                <td>{{ item.recipient_type }} #{{ item.recipient_id }}</td>
+                <td>{{ item.recipient_display }}</td>
               </tr>
             {% endfor %}
           </tbody>

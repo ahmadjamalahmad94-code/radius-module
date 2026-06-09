@@ -107,7 +107,7 @@
                 <td>{{ ch_label(item.channel) }}</td>
                 <td>{{ st_pill(item.status) }}</td>
                 <td class="mono small" style="direction:ltr;text-align:start;white-space:nowrap">{{ item.provider_key or '—' }}</td>
-                <td>{{ item.recipient_type }} #{{ item.recipient_id }}</td>
+                <td>{{ item.recipient_display }}</td>
                 <td><span class="cdl-err">{{ item.error_message or '' }}</span></td>
               </tr>
             {% endfor %}
