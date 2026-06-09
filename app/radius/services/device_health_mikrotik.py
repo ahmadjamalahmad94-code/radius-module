@@ -98,14 +98,36 @@ def ping(nas: Mapping[str, Any], *, target: str, count: int = 4) -> mac.MtResult
 
 # ── writes (Phase 3 — gated, NOT wired to any route in this delivery) ──
 
+def live_apply_enabled() -> bool:
+    """Master deployment gate for live MikroTik writes. Default OFF so the
+    feature ships safe; the operator sets the env var to allow apply."""
+    flag = (os.environ.get("HOBERADIUS_DEVICE_HEALTH_LIVE_APPLY") or "").strip().lower()
+    return flag in ("1", "true", "yes", "on")
+
+
 def _live_apply_allowed(live: bool) -> tuple[bool, str]:
     if not live:
         return False, "التطبيق الحيّ غير مُفعّل لهذا الطلب (dry-run)."
-    flag = (os.environ.get("HOBERADIUS_DEVICE_HEALTH_LIVE_APPLY") or "").strip().lower()
-    if flag not in ("1", "true", "yes", "on"):
+    if not live_apply_enabled():
         return False, ("التطبيق الحيّ على الراوتر معطّل — "
                        "اضبط HOBERADIUS_DEVICE_HEALTH_LIVE_APPLY لتفعيله (Phase 3).")
     return True, ""
+
+
+def _created_id(result: mac.MtResult) -> str:
+    """Best-effort extraction of the new row's .id from an add reply.
+    RouterOS returns it as `ret` on the !done reply; tolerate any shape."""
+    if not result.ok:
+        return ""
+    rows = result.data if isinstance(result.data, list) else []
+    for s in rows:
+        if not isinstance(s, dict):
+            continue
+        attrs = s.get("attrs") or {}
+        rid = attrs.get("ret") or attrs.get(".id") or s.get("ret")
+        if rid:
+            return str(rid)
+    return ""
 
 
 def add_ip_address(
@@ -117,11 +139,12 @@ def add_ip_address(
         return mac.MtResult(ok=False, error=why)
     attrs = {"address": str(address), "interface": str(interface),
              "comment": managed_comment(device_id)}
-    return mac._run_mutation(
+    res = mac._run_mutation(
         nas, operation="ip/address/add",
         work=lambda c: c.run("/ip/address/add", attrs=attrs),
         invalidate=("ip/addresses",),
     )
+    return _with_created_id(res)
 
 
 def add_ip_binding(
@@ -133,11 +156,12 @@ def add_ip_binding(
         return mac.MtResult(ok=False, error=why)
     attrs = {"address": str(address), "type": str(binding_type),
              "comment": managed_comment(device_id)}
-    return mac._run_mutation(
+    res = mac._run_mutation(
         nas, operation="hotspot/ip-binding/add",
         work=lambda c: c.run("/ip/hotspot/ip-binding/add", attrs=attrs),
         invalidate=("hotspot/ip-binding",),
     )
+    return _with_created_id(res)
 
 
 def add_netwatch(
@@ -150,11 +174,22 @@ def add_netwatch(
     attrs = {"host": str(host), "type": "simple",
              "interval": _hms(interval_sec), "timeout": _hms(timeout_sec),
              "comment": managed_comment(device_id)}
-    return mac._run_mutation(
+    res = mac._run_mutation(
         nas, operation="tool/netwatch/add",
         work=lambda c: c.run("/tool/netwatch/add", attrs=attrs),
         invalidate=("tool/netwatch",),
     )
+    return _with_created_id(res)
+
+
+def _with_created_id(res: mac.MtResult) -> mac.MtResult:
+    """Return a copy of `res` whose .data is the created row id (string).
+    Keeps ok/error/took_ms so callers see one consistent envelope."""
+    if not res.ok:
+        return res
+    return mac.MtResult(ok=True, data=_created_id(res), error="",
+                        took_ms=res.took_ms, dialed_address=res.dialed_address,
+                        mode=res.mode)
 
 
 def _hms(seconds: int) -> str:

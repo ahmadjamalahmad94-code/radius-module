@@ -49,6 +49,9 @@ def register_device_health_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/device-health/api/devices/<int:device_id>/sync",
                     "device_health_api_sync",
                     device_health_api_sync, methods=["POST"])
+    bp.add_url_rule("/device-health/api/devices/<int:device_id>/apply",
+                    "device_health_api_apply",
+                    device_health_api_apply, methods=["POST"])
     bp.add_url_rule("/device-health/api/devices/<int:device_id>/test-ping",
                     "device_health_api_test_ping",
                     device_health_api_test_ping, methods=["POST"])
@@ -172,6 +175,20 @@ def device_health_api_sync(device_id: int):
     return jsonify(result)
 
 
+def device_health_api_apply(device_id: int):
+    """Phase 3 — controlled live apply. NO-OP (gated) unless the env master
+    switch is set; applies only missing planned items, idempotent, audited."""
+    tenant_id = _tid()
+    body = _payload()
+    actions = body.get("actions") if isinstance(body.get("actions"), list) else None
+    try:
+        result = svc.apply_device(tenant_id, device_id, actions=actions)
+    except DeviceHealthError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 400
+    status = 200 if (result.get("ok") or result.get("gated")) else 502
+    return jsonify(result), status
+
+
 def device_health_api_test_ping(device_id: int):
     tenant_id = _tid()
     try:
@@ -179,6 +196,8 @@ def device_health_api_test_ping(device_id: int):
     except DeviceHealthError as exc:
         return jsonify({"ok": False, "error": str(exc)}), 400
     return jsonify(result)
+
+
 
 
 def device_health_api_plan():

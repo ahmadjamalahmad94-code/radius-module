@@ -362,6 +362,154 @@ def _parse_router_time_ms(text: str) -> Optional[float]:
         return None
 
 
+# ── Phase 3: controlled live apply ─────────────────────────────
+
+# MikroTik item-kind → (write fn name, repo bookkeeping). Only items the live
+# plan marks `create` are written; `already_present` is recorded idempotently;
+# nothing is ever removed.
+_APPLY_KINDS = ("ip_address", "ip_binding", "netwatch")
+
+
+def apply_device(tenant_id: int, device_id: int,
+                 actions: Optional[list] = None) -> dict:
+    """Phase 3 — apply ONLY the missing planned items to the router.
+
+    Gated by device_health_mikrotik.live_apply_enabled() (env master switch):
+    when off, returns gated=True and performs NO router I/O. Idempotent
+    (`already_present` items are skipped), never destructive, writes managed-by
+    comments, and records an audit-log entry per item.
+
+    `actions` optionally restricts which kinds to apply (subset of
+    ip_address/ip_binding/netwatch); default = all.
+    """
+    tid = int(tenant_id)
+    from . import device_health_mikrotik as mt
+
+    if not mt.live_apply_enabled():
+        return {"ok": False, "gated": True,
+                "error": ("التطبيق الحيّ على الراوتر معطّل — اضبط متغيّر البيئة "
+                          "HOBERADIUS_DEVICE_HEALTH_LIVE_APPLY=1 لتفعيله."),
+                "applied": [], "already_present": [], "failed": []}
+
+    device = repo.get_device(tid, int(device_id))
+    if not device:
+        raise DeviceHealthError("الجهاز غير موجود.")
+    nas = nas_repo.get_nas(tid, device["router_id"])
+    if not nas:
+        raise DeviceHealthError("الراوتر المرتبط بالجهاز غير موجود.")
+
+    wanted = set(actions) if actions else set(_APPLY_KINDS)
+    nas_dict = _nas_to_dict(nas)
+    state = mt.read_router_state(nas_dict)
+    plan = planner.build_plan(
+        interface_name=device["interface_name"],
+        ip_address=device["ip_address"],
+        subnet_prefix=device["subnet_prefix"],
+        gateway_last_octet=device["gateway_last_octet"],
+        netwatch_interval_sec=device["netwatch_interval_sec"],
+        netwatch_timeout_sec=device["netwatch_timeout_sec"],
+        router_state=state, device_id=device["id"],
+    )
+    if not plan.get("valid"):
+        raise DeviceHealthError(plan.get("error") or "خطة غير صالحة.")
+
+    applied: list[str] = []
+    already: list[str] = []
+    failed: list[dict] = []
+    net = plan["network"]
+
+    for item in plan["items"]:
+        kind = item["kind"]
+        if kind not in wanted:
+            continue
+        if item["action"] == "already_present":
+            already.append(kind)
+            _record_apply_state(tid, device, net, kind, "already_present", "")
+            continue
+        # action == 'create' → write it (gated, managed-by comment).
+        res = _apply_one(mt, nas_dict, device, net, item)
+        if res.ok:
+            applied.append(kind)
+            _record_apply_state(tid, device, net, kind, "applied", "",
+                                mikrotik_id=str(res.data or ""))
+            _audit(device, kind, ok=True)
+        else:
+            failed.append({"kind": kind, "error": res.error})
+            _record_apply_state(tid, device, net, kind, "apply_failed", res.error)
+            _audit(device, kind, ok=False, error=res.error)
+
+    if failed:
+        repo.set_status(tenant_id=tid, device_id=device["id"],
+                        status="apply_failed")
+        repo.add_event(tenant_id=tid, device_id=device["id"],
+                       event_type="apply_failed", new_status="apply_failed",
+                       message="فشل تطبيق بعض العناصر على الراوتر.")
+    elif applied:
+        repo.add_event(tenant_id=tid, device_id=device["id"],
+                       event_type="updated", new_status=device["status"],
+                       message="تم تطبيق خطة الوصول على الراوتر.")
+
+    return {"ok": not failed, "gated": False, "applied": applied,
+            "already_present": already, "failed": failed,
+            "router_state_ok": state.get("ok", False)}
+
+
+def _apply_one(mt, nas_dict, device, net, item):
+    kind = item["kind"]
+    if kind == "ip_address":
+        return mt.add_ip_address(
+            nas_dict, address=net["gateway_address"],
+            interface=device["interface_name"], device_id=device["id"], live=True)
+    if kind == "ip_binding":
+        return mt.add_ip_binding(
+            nas_dict, address=net["network_cidr"], binding_type="bypassed",
+            device_id=device["id"], live=True)
+    if kind == "netwatch":
+        return mt.add_netwatch(
+            nas_dict, host=net["ip_address"],
+            interval_sec=device["netwatch_interval_sec"],
+            timeout_sec=device["netwatch_timeout_sec"],
+            device_id=device["id"], live=True)
+    from .device_health_mikrotik import mac
+    return mac.MtResult(ok=False, error=f"نوع غير معروف: {kind}")
+
+
+def _record_apply_state(tid, device, net, kind, status, error, mikrotik_id=""):
+    if kind == "ip_address":
+        repo.set_scope_apply(
+            tenant_id=tid, router_id=device["router_id"],
+            interface_name=device["interface_name"],
+            network_cidr=net["network_cidr"], apply_status=status,
+            mikrotik_address_id=mikrotik_id, error=error)
+    elif kind == "ip_binding":
+        repo.set_binding_apply(
+            tenant_id=tid, router_id=device["router_id"],
+            network_cidr=net["network_cidr"], binding_type="bypassed",
+            apply_status=status, mikrotik_binding_id=mikrotik_id, error=error)
+    elif kind == "netwatch" and mikrotik_id:
+        repo.set_netwatch_id(tid, device["id"], mikrotik_id)
+
+
+def _audit(device, kind, *, ok: bool, error: str = "") -> None:
+    """Record one audit-log entry per applied item. Never raises."""
+    try:
+        from .audit import get_audit_service
+        get_audit_service().record(
+            actor="device-health",
+            action=f"device_health_apply:{kind}",
+            target_type="network_device_monitor_device",
+            target_id=str(device["id"]),
+            router_id=device["router_id"],
+            severity="info" if ok else "warning",
+            result_status="success" if ok else "failed",
+            error_message=error or "",
+            payload={"interface": device["interface_name"],
+                     "ip": device["ip_address"], "kind": kind},
+        )
+    except Exception:  # noqa: BLE001 — audit must never break apply
+        pass
+
+
 # ── helpers ────────────────────────────────────────────────────
 
 def _nas_to_dict(nas) -> dict:

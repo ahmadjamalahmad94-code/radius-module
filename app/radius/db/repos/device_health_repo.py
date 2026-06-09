@@ -428,6 +428,26 @@ def upsert_scope(
         return int(cur.lastrowid)
 
 
+def set_scope_apply(
+    *, tenant_id: int, router_id: int, interface_name: str, network_cidr: str,
+    apply_status: str, mikrotik_address_id: str = "", error: str = "",
+) -> None:
+    """Record the outcome of a live apply on the matching scope row."""
+    now = now_iso()
+    with transaction() as conn:
+        conn.execute(
+            "UPDATE network_device_monitor_network_scopes "
+            "SET apply_status = ?, mikrotik_address_id = ?, apply_error = ?, "
+            "    last_applied_at = ?, updated_at = ? "
+            "WHERE tenant_id = ? AND router_id = ? AND interface_name = ? "
+            "AND network_cidr = ?",
+            (_norm_apply_status(apply_status), str(mikrotik_address_id or ""),
+             str(error or "")[:500], now, now,
+             int(tenant_id), int(router_id),
+             str(interface_name or "").strip(), str(network_cidr or "").strip()),
+        )
+
+
 # ── bindings ───────────────────────────────────────────────────
 
 def list_bindings(tenant_id: int, *, router_id: Optional[int] = None) -> list[dict]:
@@ -480,6 +500,36 @@ def upsert_binding(
              _norm_apply_status(apply_status), now, now),
         )
         return int(cur.lastrowid)
+
+
+def set_binding_apply(
+    *, tenant_id: int, router_id: int, network_cidr: str, binding_type: str,
+    apply_status: str, mikrotik_binding_id: str = "", error: str = "",
+) -> None:
+    now = now_iso()
+    with transaction() as conn:
+        conn.execute(
+            "UPDATE network_device_monitor_bindings "
+            "SET apply_status = ?, mikrotik_binding_id = ?, apply_error = ?, "
+            "    last_applied_at = ?, updated_at = ? "
+            "WHERE tenant_id = ? AND router_id = ? AND network_cidr = ? "
+            "AND binding_type = ?",
+            (_norm_apply_status(apply_status), str(mikrotik_binding_id or ""),
+             str(error or "")[:500], now, now,
+             int(tenant_id), int(router_id),
+             str(network_cidr or "").strip(),
+             str(binding_type or "bypassed").strip().lower()),
+        )
+
+
+def set_netwatch_id(tenant_id: int, device_id: int, netwatch_id: str) -> None:
+    with transaction() as conn:
+        conn.execute(
+            "UPDATE network_device_monitor_devices "
+            "SET mikrotik_netwatch_id = ?, updated_at = ? "
+            "WHERE tenant_id = ? AND id = ?",
+            (str(netwatch_id or ""), now_iso(), int(tenant_id), int(device_id)),
+        )
 
 
 # ── events ─────────────────────────────────────────────────────

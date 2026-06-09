@@ -237,9 +237,38 @@
         if (res.data && res.data.ok) {
           var extra = res.data.router_state_ok ? "" :
             '<div class="dh-plan-warn">تعذّر قراءة بعض موارد الراوتر — الخطة تقديرية.</div>';
-          openPlanModal(extra + renderPlan(res.data.plan, false));
+          var hasCreate = (res.data.plan.items || []).some(function (it) { return it.action === "create"; });
+          var applyBtn = hasCreate ?
+            '<div class="dh-plan-apply"><button class="hub-btn hub-btn--primary" data-dh-apply data-id="' + id +
+            '"><i class="fa-solid fa-cloud-arrow-up"></i> تطبيق العناصر المفقودة على الراوتر</button>' +
+            '<span class="dh-apply-hint">يتطلّب تفعيل التطبيق الحيّ — لا يحذف أي إعداد قائم.</span></div>' : "";
+          openPlanModal(extra + renderPlan(res.data.plan, false) + applyBtn);
         } else {
           openPlanModal('<div class="dh-plan-warn">' + esc((res.data && res.data.error) || "تعذّرت المزامنة") + '</div>');
+        }
+      });
+      return;
+    }
+
+    if (btn.hasAttribute("data-dh-apply")) {
+      var aid = btn.getAttribute("data-id");
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جارٍ التطبيق…';
+      request(api("/" + aid + "/apply"), "POST", {}).then(function (res) {
+        var d = res.data || {};
+        if (d.gated) {
+          toast("التطبيق الحيّ معطّل — فعّل HOBERADIUS_DEVICE_HEALTH_LIVE_APPLY.", "info");
+          btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> تطبيق العناصر المفقودة على الراوتر';
+          return;
+        }
+        if (d.ok) {
+          toast("تم التطبيق: " + (d.applied || []).length + " عنصر.", "success");
+          setTimeout(function () { location.reload(); }, 900);
+        } else {
+          var msg = (d.failed && d.failed.length) ? d.failed.map(function (f) { return f.kind + ": " + f.error; }).join(" · ")
+            : (d.error || "تعذّر التطبيق");
+          toast(msg, "error");
+          btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> إعادة المحاولة';
         }
       });
       return;
