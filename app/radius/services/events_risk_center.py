@@ -2,11 +2,19 @@
 from __future__ import annotations
 
 import json
+from collections import defaultdict
 from typing import Any
 
 from ..db.connection import db
 from ..db.helpers import now_iso, row_to_dict
 from .business_os_finance import EventService
+from .event_labels import (
+    ACTOR_TYPE_LABELS,
+    TARGET_TYPE_LABELS,
+    event_key_label,
+    category_label,
+    severity_label,
+)
 
 
 class EventsRiskError(ValueError):
@@ -22,6 +30,144 @@ def _load(raw: Any, default: Any = None) -> Any:
         return json.loads(raw or "")
     except (TypeError, ValueError):
         return {} if default is None else default
+
+
+def _ph(ids: list[int]) -> str:
+    """بناء placeholder لقائمة IN."""
+    return ",".join("?" * len(ids))
+
+
+def _bulk_names(
+    conn: Any,
+    *,
+    table: str,
+    name_col: str,
+    fallback_col: str,
+    ids: list[int],
+    tenant_id: int | None = None,
+) -> dict[int, str]:
+    """جلب الأسماء بشكل مجمّع من جدول ما لقائمة معرّفات."""
+    if not ids:
+        return {}
+    where = "id IN (" + _ph(ids) + ")"
+    params: list[Any] = list(ids)
+    if tenant_id is not None:
+        where += " AND tenant_id=?"
+        params.append(tenant_id)
+    rows = conn.execute(
+        f"SELECT id, {name_col}, {fallback_col} FROM {table} WHERE {where}",
+        tuple(params),
+    ).fetchall()
+    result: dict[int, str] = {}
+    for row in rows:
+        name = (row[name_col] or "").strip() or (row[fallback_col] or "").strip()
+        if name:
+            result[int(row["id"])] = name
+    return result
+
+
+def _resolve_names_bulk(
+    rows: list[dict[str, Any]],
+    *,
+    tenant_id: int,
+) -> dict[str, dict[int, str]]:
+    """
+    جمع كل (type, id) فريد من صفوف الأحداث، ثم جلب الأسماء الحقيقية
+    بثلاث استعلامات أقصى (admins, card_users, subscribers).
+    يُعيد {type_key: {id: name}}.
+    """
+    conn = db()
+    # تجميع المعرّفات الفريدة لكل نوع
+    admin_ids: set[int] = set()
+    card_user_ids: set[int] = set()
+    subscriber_ids: set[int] = set()
+
+    def _classify(typ: str | None, eid: Any) -> None:
+        if not eid:
+            return
+        try:
+            eid_int = int(eid)
+        except (TypeError, ValueError):
+            return
+        t = (typ or "").lower()
+        if t in ("admin", "manager"):
+            admin_ids.add(eid_int)
+        elif t == "card_user":
+            card_user_ids.add(eid_int)
+        elif t in ("subscriber", "user"):
+            subscriber_ids.add(eid_int)
+
+    for row in rows:
+        _classify(row.get("actor_type"), row.get("actor_id"))
+        _classify(row.get("target_type"), row.get("target_id"))
+
+    result: dict[str, dict[int, str]] = {}
+
+    if admin_ids:
+        result["admin"] = _bulk_names(
+            conn, table="admins",
+            name_col="full_name", fallback_col="username",
+            ids=list(admin_ids),
+        )
+
+    if card_user_ids:
+        result["card_user"] = _bulk_names(
+            conn, table="card_users",
+            name_col="display_name", fallback_col="display_name",
+            ids=list(card_user_ids), tenant_id=tenant_id,
+        )
+
+    if subscriber_ids:
+        result["subscriber"] = _bulk_names(
+            conn, table="subscribers",
+            name_col="full_name", fallback_col="username",
+            ids=list(subscriber_ids), tenant_id=tenant_id,
+        )
+
+    return result
+
+
+def _make_entity_label(
+    entity_type: str | None,
+    entity_id: Any,
+    name_map: dict[str, dict[int, str]],
+    *,
+    label_map: dict[str, str],
+) -> str:
+    """
+    بناء تسمية عربية للفاعل أو الهدف:
+    - نوع system/api/فارغ  → اسم ثابت
+    - معرَّف موجود في name_map → الاسم الحقيقي فقط
+    - معرَّف غير موجود     → الاسم النوعي العربي (بلا #id)
+    """
+    t = (entity_type or "").lower().strip()
+    if not t or t in ("system", "risk_engine"):
+        return "النظام"
+    if t in ("api_token", "api"):
+        return "واجهة برمجية"
+    if t == "anonymous":
+        return "غير معروف"
+
+    # تحديد مجموعة الأسماء المناسبة
+    if t in ("admin", "manager"):
+        names = name_map.get("admin", {})
+    elif t == "card_user":
+        names = name_map.get("card_user", {})
+    elif t in ("subscriber", "user"):
+        names = name_map.get("subscriber", {})
+    else:
+        names = {}
+
+    if entity_id:
+        try:
+            eid = int(entity_id)
+            if eid in names:
+                return names[eid]
+        except (TypeError, ValueError):
+            pass
+
+    # الاسم النوعي العربي — بلا # أو رقم
+    return label_map.get(t, t)
 
 
 class EventsRiskCenterService:
@@ -69,7 +215,13 @@ class EventsRiskCenterService:
             params.append(date_to)
         sql += " ORDER BY id DESC LIMIT ?"
         params.append(int(limit))
-        return [self._event_row(row_to_dict(row)) for row in db().execute(sql, tuple(params)).fetchall()]
+
+        raw_rows = [row_to_dict(row) for row in db().execute(sql, tuple(params)).fetchall()]
+
+        # جلب الأسماء الحقيقية بثلاث استعلامات مجمّعة كحد أقصى
+        name_map = _resolve_names_bulk(raw_rows, tenant_id=self.tenant_id)
+
+        return [self._event_row(row, name_map=name_map) for row in raw_rows]
 
     def get_event(self, event_id: int) -> dict[str, Any]:
         row = db().execute(
@@ -78,7 +230,9 @@ class EventsRiskCenterService:
         ).fetchone()
         if not row:
             raise EventsRiskError("event not found")
-        return self._event_row(row_to_dict(row))
+        d = row_to_dict(row)
+        name_map = _resolve_names_bulk([d], tenant_id=self.tenant_id)
+        return self._event_row(d, name_map=name_map)
 
     def entity_timeline(self, *, entity_type: str, entity_id: int, limit: int = 100) -> list[dict[str, Any]]:
         return self.list_events(target_type=entity_type, target_id=int(entity_id), limit=limit)
@@ -368,8 +522,34 @@ class EventsRiskCenterService:
             for row in rows
         ]
 
-    def _event_row(self, row: dict[str, Any]) -> dict[str, Any]:
+    def _event_row(
+        self,
+        row: dict[str, Any],
+        *,
+        name_map: dict[str, dict[int, str]] | None = None,
+    ) -> dict[str, Any]:
         row["metadata"] = _load(row.get("metadata_json"), {})
+
+        # تسميات عربية دقيقة
+        row["event_key_label"] = event_key_label(row.get("event_key"))
+        row["category_label"] = category_label(row.get("category"))
+        row["severity_label"] = severity_label(row.get("severity"))
+
+        nm = name_map or {}
+
+        row["actor_label"] = _make_entity_label(
+            row.get("actor_type"),
+            row.get("actor_id"),
+            nm,
+            label_map=ACTOR_TYPE_LABELS,
+        )
+        row["target_label"] = _make_entity_label(
+            row.get("target_type"),
+            row.get("target_id"),
+            nm,
+            label_map=TARGET_TYPE_LABELS,
+        )
+
         return row
 
     def _flag_row(self, row: dict[str, Any]) -> dict[str, Any]:
