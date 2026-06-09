@@ -48,10 +48,15 @@ def test_render_injects_autologin_script_by_default():
     from app.radius.services import hotspot_templates as ht
     out = ht.render("classic", {})
     # The script tag is the contract — the captive portal page
-    # MUST read ?u=...&p=... and submit the form.
+    # MUST read ?u=...&p=... and submit the form. ES5 manual
+    # parser (no URLSearchParams) so the captive-portal browser
+    # can run it.
     assert "<script>" in out
-    assert 'qs.get("u")' in out
-    assert 'qs.get("p")' in out
+    assert 'qsGet("u")' in out
+    assert 'qsGet("p")' in out
+    # Sanity: no ES6+ syntax that breaks the MikroTik built-in
+    # browser / old Android WebView.
+    assert "URLSearchParams" not in out
     # And it lands before </body>, not after.
     assert out.index("</script>") < out.index("</body>")
 
@@ -59,14 +64,14 @@ def test_render_injects_autologin_script_by_default():
 def test_render_with_autologin_false_skips_injection():
     from app.radius.services import hotspot_templates as ht
     raw = ht.render("classic", {}, with_autologin=False)
-    assert 'qs.get("u")' not in raw
+    assert 'qsGet("u")' not in raw
 
 
 def test_autologin_script_in_every_catalogue_template():
     from app.radius.services import hotspot_templates as ht
     for tmpl in ht.LIBRARY:
         out = ht.render(tmpl.slug, {})
-        assert 'qs.get("u")' in out, (
+        assert 'qsGet("u")' in out, (
             f"template {tmpl.slug!r} lost its autologin injection"
         )
         # And RouterOS placeholders are still intact next to the

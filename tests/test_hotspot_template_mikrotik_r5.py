@@ -210,8 +210,8 @@ def test_mikrotik_render_injects_autologin_script():
     from app.radius.services import hotspot_templates as ht
     out = ht.render("mikrotik", {})
     # Autologin contract markers
-    assert 'qs.get("u")' in out
-    assert 'qs.get("p")' in out
+    assert 'qsGet("u")' in out
+    assert 'qsGet("p")' in out
     assert "document.forms[\"login\"]" in out
     # Injection point is just before </body>
     assert out.index("</script>") < out.index("</body>")
@@ -247,7 +247,7 @@ def test_mikrotik_autologin_script_is_after_chap_setup():
     from app.radius.services import hotspot_templates as ht
     out = ht.render("mikrotik", {})
     chap_pos = out.find("function doLogin")
-    auto_pos = out.find('qs.get("u")')
+    auto_pos = out.find('qsGet("u")')
     assert chap_pos != -1 and auto_pos != -1
     assert chap_pos < auto_pos, (
         "autologin script must be injected AFTER the CHAP "
@@ -275,8 +275,8 @@ def test_qr_url_keys_match_what_autologin_reads():
     assert "p" in params and params["p"] == ["testpass"]
     # And the rendered template reads exactly those keys.
     out = ht.render("mikrotik", {})
-    assert 'qs.get("u")' in out
-    assert 'qs.get("p")' in out
+    assert 'qsGet("u")' in out
+    assert 'qsGet("p")' in out
 
 
 def test_qr_autologin_simulated_url_contract(monkeypatch):
@@ -286,7 +286,7 @@ def test_qr_autologin_simulated_url_contract(monkeypatch):
 
       1. URL builder produces /?u=testuser&p=testpass
       2. Render injects the autologin <script>
-      3. Script reads u/p from URLSearchParams
+      3. Script reads u/p via manual location.search parser (ES5)
       4. Script writes to the form's username + password fields
       5. Script triggers requestSubmit()
       6. onSubmit handler fires doLogin() (defined by the CHAP block)
@@ -304,11 +304,16 @@ def test_qr_autologin_simulated_url_contract(monkeypatch):
     )
     assert "?u=testuser&p=testpass" in url
 
-    # (2) + (3) Render produces a script that reads u/p
+    # (2) + (3) Render produces a script that reads u/p via the
+    # ES5 manual parser (captive-portal browsers often lack the
+    # modern URL parser API — see hotspot_templates._AUTOLOGIN_JS).
     out = ht.render("mikrotik", {})
-    assert "URLSearchParams(location.search)" in out
-    assert 'qs.get("u")' in out
-    assert 'qs.get("p")' in out
+    assert "function qsGet(name)" in out
+    assert 'qsGet("u")' in out
+    assert 'qsGet("p")' in out
+    # Hard sanity: the script must NOT use the modern URL parser
+    # — that's the regression the ES5 rewrite was meant to fix.
+    assert "URLSearchParams" not in out
 
     # (4) Script writes to form.username / form.password
     # Pin the exact field-access pattern so a rename of the
@@ -340,11 +345,13 @@ def test_rendering_through_designer_preview_path_still_carries_qr_contract():
     path R3 uses — preserves the full QR + CHAP contract."""
     from app.radius.services import hotspot_templates as ht
     out = ht.render("mikrotik", {})
-    # Required QR-pipeline markers all present.
+    # Required QR-pipeline markers all present. The script reads
+    # u/p via a manual qsGet() parser (ES5-only — captive-portal
+    # browsers often choke on URLSearchParams).
     for marker in (
-        "URLSearchParams(location.search)",
-        'qs.get("u")',
-        'qs.get("p")',
+        "function qsGet(name)",
+        'qsGet("u")',
+        'qsGet("p")',
         'document.forms["login"]',
         "f.requestSubmit",
     ):
@@ -383,7 +390,7 @@ def test_qr_contract_survives_variable_substitution():
     # And QR/CHAP plumbing still intact.
     assert "f.requestSubmit" in out
     assert "function doLogin" in out
-    assert 'qs.get("u")' in out
+    assert 'qsGet("u")' in out
 
 
 def test_qr_contract_survives_disabling_autologin_injection():
@@ -393,7 +400,7 @@ def test_qr_contract_survives_disabling_autologin_injection():
     from app.radius.services import hotspot_templates as ht
     out = ht.render("mikrotik", {}, with_autologin=False)
     # Autologin removed.
-    assert 'qs.get("u")' not in out
+    assert 'qsGet("u")' not in out
     # CHAP still there.
     assert "function doLogin" in out
     assert "$(chap-id)" in out
