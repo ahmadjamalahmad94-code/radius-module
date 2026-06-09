@@ -242,8 +242,14 @@
   </button>
 </div>
 
-{% call hub.section("قائمة الخزائن والمحافظ", icon="wallet", meta=(wallets|length|string + " محفظة"), flush=True) %}
-  {% if wallets %}
+{# ── تقسيم المحافظ إلى أقسام منفصلة بحسب نوع المالك بدل قائمة مختلطة:
+   المشتركون/مستخدمو البطاقات، المدراء (وخزائن الشركة)، الموزّعون.
+   كل قسم له جدول مستقل بنفس الأعمدة والإجراءات (شحن/خصم/تنفيذ). #}
+{% set subs_wallets  = wallets | selectattr('owner_type', 'in', ['subscriber', 'card_user']) | list %}
+{% set mgr_wallets   = wallets | selectattr('owner_type', 'in', ['manager', 'company'])      | list %}
+{% set dist_wallets  = wallets | selectattr('owner_type', 'equalto', 'distributor')          | list %}
+
+{% macro wallets_table(rows) %}
   <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
     <table class="hub-table">
       <thead>
@@ -257,10 +263,18 @@
         </tr>
       </thead>
       <tbody>
-      {% for wallet in wallets %}
+      {% for wallet in rows %}
         <tr>
           <td class="num mono">{{ wallet.id }}</td>
-          <td>{{ owner_label(wallet.owner_type) }}{% if wallet.owner_id %} #{{ wallet.owner_id }}{% endif %}</td>
+          <td>
+            {# عرض الاسم الحقيقي للمالك (full_name/display_name، أو username/mobile/name كاحتياط)؛
+               لا نُظهر القالب «النوع #id» مطلقًا. إن غاب الاسم (سجل محذوف) نُظهر شُرطة فقط. #}
+            {%- if wallet.owner_name -%}
+              <strong>{{ wallet.owner_name }}</strong>
+            {%- else -%}
+              <span class="muted">—</span>
+            {%- endif -%}
+          </td>
           <td class="num"><strong>{{ wallet.balance|money }}</strong></td>
           {# الحالة بالعربي دائمًا؛ الخام يبقى في title للتتبّع التقني #}
           <td title="{{ wallet.status }}">{{ hub.pill(wallet_status_label(wallet.status), "green" if wallet.status == "active" else "grey") }}</td>
@@ -298,10 +312,46 @@
       </tbody>
     </table>
   </div>
-  {% else %}
+{% endmacro %}
+
+{% if not wallets %}
+  {% call hub.section("قائمة الخزائن والمحافظ", icon="wallet", flush=True) %}
     {{ hub.empty("لا توجد محافظ بعد.", sub="ابدأ بمحفظة الشركة أو محفظة مدير أو موزّع.", icon="wallet") }}
-  {% endif %}
-{% endcall %}
+  {% endcall %}
+{% else %}
+  {# ── 1) قسم المشتركون / مستخدمو البطاقات ── #}
+  <section data-fw-group="subscribers">
+  {% call hub.section("المشتركون ومستخدمو البطاقات", icon="users", meta=(subs_wallets|length|string + " محفظة"), flush=True) %}
+    {% if subs_wallets %}
+      {{ wallets_table(subs_wallets) }}
+    {% else %}
+      {{ hub.empty("لا توجد محافظ لمشتركين أو مستخدمي بطاقات بعد.", sub="ستظهر هنا أي محفظة جديدة لمشترك أو مستخدم بطاقات.", icon="users") }}
+    {% endif %}
+  {% endcall %}
+  </section>
+
+  {# ── 2) قسم المدراء (يشمل محافظ الشركة الداخلية إن وُجدت) ── #}
+  <section data-fw-group="managers">
+  {% call hub.section("المدراء", icon="user-shield", meta=(mgr_wallets|length|string + " محفظة"), flush=True) %}
+    {% if mgr_wallets %}
+      {{ wallets_table(mgr_wallets) }}
+    {% else %}
+      {{ hub.empty("لا توجد محافظ مدراء بعد.", sub="محافظ المدراء وخزائن الشركة تظهر هنا.", icon="user-shield") }}
+    {% endif %}
+  {% endcall %}
+  </section>
+
+  {# ── 3) قسم الموزّعون ── #}
+  <section data-fw-group="distributors">
+  {% call hub.section("الموزّعون", icon="people-arrows", meta=(dist_wallets|length|string + " محفظة"), flush=True) %}
+    {% if dist_wallets %}
+      {{ wallets_table(dist_wallets) }}
+    {% else %}
+      {{ hub.empty("لا توجد محافظ موزّعين بعد.", sub="عند تعيين موزّعين سيظهر لكل منهم محفظته هنا.", icon="people-arrows") }}
+    {% endif %}
+  {% endcall %}
+  </section>
+{% endif %}
 
 {# ───────────── صندوق عائم: إنشاء محفظة ───────────── #}
 <div class="fcw-modal" data-fcw-modal="wallet-create" hidden>
