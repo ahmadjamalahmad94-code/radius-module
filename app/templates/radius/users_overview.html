@@ -1,6 +1,8 @@
 {# Users overview — REBUILT N11 (hub-v2). Backend untouched. #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
+{# ماكروهات تعريب قطاع المشتركين: حالة المشترك — لا قيمة خام في عمود الحالة. #}
+{% import "radius/_subs_labels.html" as L %}
 
 {% block title %}نظرة عامة — المشتركين{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-chart-pie"></i>{% endblock %}
@@ -59,11 +61,12 @@
                 <td class="num mono">{{ r.id }}</td>
                 <td class="mono"><strong>{{ r.username }}</strong></td>
                 <td>{{ r.full_name or '—' }}</td>
-                <td>
-                  {% if r.status == 'enabled' %}{{ hub.pill("مفعَّل", variant="green") }}
-                  {% elif r.status == 'expired' %}{{ hub.pill("منتهي", variant="amber") }}
-                  {% elif r.status == 'disabled' %}{{ hub.pill("معطَّل", variant="red") }}
-                  {% else %}{{ hub.pill(r.status or '—', variant="grey") }}{% endif %}
+                {# الحالة معرّبة عبر L.status (يؤنسن المجهول، لا سقوط للخام)؛ الخام في title. #}
+                <td title="{{ r.status }}">
+                  {% if r.status == 'enabled' %}{{ hub.pill(L.status(r.status), variant="green") }}
+                  {% elif r.status == 'expired' %}{{ hub.pill(L.status(r.status), variant="amber") }}
+                  {% elif r.status == 'disabled' %}{{ hub.pill(L.status(r.status), variant="red") }}
+                  {% else %}{{ hub.pill(L.status(r.status), variant="grey") }}{% endif %}
                 </td>
                 <td class="mono small">{{ r.created_at|date_local if r.created_at else '—' }}</td>
               </tr>

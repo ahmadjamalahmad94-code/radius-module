@@ -3,6 +3,8 @@
    Pattern: SERVICES_COOKBOOK §15. #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
+{# ماكروهات تعريب قطاع المشتركين: حالة العضو — لا قيمة خام. #}
+{% import "radius/_subs_labels.html" as L %}
 {% from "_partials/access_schedule.html" import access_schedule_picker %}
 {% from "_partials/toggle_switch.html" import toggle_switch %}
 
@@ -160,11 +162,12 @@
               </td>
               <td>{{ m.full_name or '—' }}</td>
               <td class="mono small">{{ m.mobile or '—' }}</td>
+              {# حالة العضو معرّبة عبر L.status (يؤنسن المجهول، الخام في title). #}
               <td title="{{ m.status }}">
-                {%- if m.status == 'enabled' -%}{{ hub.pill("مفعَّل", variant="green") }}
-                {%- elif m.status == 'disabled' -%}{{ hub.pill("معطَّل", variant="red") }}
-                {%- elif m.status == 'expired' -%}{{ hub.pill("منتهٍ", variant="amber") }}
-                {%- else -%}{{ hub.pill("غير معروف", variant="grey") }}{%- endif -%}
+                {%- if m.status == 'enabled' -%}{{ hub.pill(L.status(m.status), variant="green") }}
+                {%- elif m.status == 'disabled' -%}{{ hub.pill(L.status(m.status), variant="red") }}
+                {%- elif m.status == 'expired' -%}{{ hub.pill(L.status(m.status), variant="amber") }}
+                {%- else -%}{{ hub.pill(L.status(m.status), variant="grey") }}{%- endif -%}
               </td>
             </tr>
           {% endfor %}

@@ -1,35 +1,12 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
+{# ماكروهات التعريب المحلّية الموحّدة لقطاع المشتركين — خرائط كاملة + تأنيس للمجهول #}
+{% import "radius/_subs_labels.html" as L %}
 
 {% set sub = s360.subscriber %}
 {% set financial = s360.financial %}
 
-{# ───── معاجم تعريب القيم الخام (enum) + مُنسّقات وحدات ─────
-   القيمة الخام تبقى في title/data-* للبحث، والعربية تُعرض للمشغّل. #}
-{% set _STATUS_AR = {
-  "active": "نشط", "enabled": "مفعَّل", "disabled": "معطَّل",
-  "expired": "منتهٍ", "suspended": "موقوف", "archived": "مؤرشف",
-  "online": "متّصل", "offline": "غير متّصل", "pending": "قيد الانتظار",
-} %}
-{% set _SERVICE_AR = {
-  "hotspot": "هوت سبوت", "pppoe": "PPPoE", "both": "هوت سبوت و PPPoE",
-} %}
-{% set _METHOD_AR = {
-  "cash": "نقدًا", "card": "بطاقة", "wallet": "محفظة",
-  "bank": "تحويل بنكي", "transfer": "تحويل", "online": "دفع إلكتروني",
-} %}
-{% set _REPLY_AR = {
-  "Access-Accept": "قبول الدخول", "Access-Reject": "رفض الدخول",
-  "Access-Challenge": "تحدٍّ", "Accounting-Response": "استجابة محاسبة",
-} %}
-{% set _ENTRY_AR = {
-  "payment": "دفعة", "renewal": "تجديد", "loan": "سلفة",
-  "discount": "خصم", "adjustment": "تسوية", "refund": "استرداد",
-} %}
-
-{% macro ar_status(v) -%}
-  {%- if v -%}<bdi title="{{ v }}">{{ _STATUS_AR.get(v|string|lower, v) }}</bdi>{%- else -%}—{%- endif -%}
-{%- endmacro %}
+{# ───── مُنسّقات وحدات (بايت/ثوانٍ) — تعريب القيم الخام عبر ماكروهات L.* ───── #}
 
 {% macro fmt_bytes(n) -%}
   {%- set n = (n|int) -%}
@@ -86,8 +63,8 @@
   <div id="overview"></div>
   {% call hub.section("نظرة عامة", icon="circle-info") %}
     <div class="hub-tile-grid">
-      {{ hub.tile("الحالة", ar_status(s360.overview.status), icon="signal") }}
-      {{ hub.tile("نوع الخدمة", (_SERVICE_AR.get((s360.overview.service_type|string|lower), s360.overview.service_type) if s360.overview.service_type else "—"), icon="network-wired") }}
+      {{ hub.tile("الحالة", L.ident(L.status(s360.overview.status), s360.overview.status), icon="signal") }}
+      {{ hub.tile("نوع الخدمة", L.ident(L.service_type(s360.overview.service_type), s360.overview.service_type), icon="network-wired") }}
       {{ hub.tile("عدد الجلسات", "{:,}".format(s360.overview.session_count|int), icon="clock") }}
       {{ hub.tile("الخطة", s360.plan.name if s360.plan else "بدون خطة", icon="layer-group") }}
     </div>
@@ -130,8 +107,8 @@
           <tr>
             <td>{{ p.created_at|dt_local }}</td>
             <td>{{ p.amount|money }}</td>
-            <td><bdi title="{{ p.method }}">{{ _METHOD_AR.get((p.method|string|lower), p.method) or "—" }}</bdi></td>
-            <td>{{ p.created_by or "—" }}</td>
+            <td>{{ L.ident(L.pay_method(p.method), p.method) }}</td>
+            <td>{{ L.who(p.created_by) }}</td>
           </tr>
         {% else %}
           <tr><td colspan="4" class="hub-table-empty">{{ _('لا توجد مدفوعات بعد.') }}</td></tr>
@@ -167,7 +144,7 @@
       {% for device in s360.devices %}
         <div class="hub-list-row">
           <strong><bdi class="mono">{{ device.mac }}</bdi></strong>
-          <span>{{ "من بيانات المشترك" if device.source == "subscriber" else "من جلسة اتصال" }}</span>
+          <span>{{ L.ident(L.device_source(device.source), device.source) }}</span>
         </div>
       {% else %}
         {{ hub.empty("لا توجد أجهزة معروفة بعد", sub="ستظهر هنا عناوين MAC المربوطة بالمشترك أو المرصودة في جلساته.", icon="laptop") }}
@@ -180,7 +157,7 @@
     <div class="hub-list">
       {% for event in s360.login_events %}
         <div class="hub-list-row">
-          <strong><bdi title="{{ event.reply }}">{{ _REPLY_AR.get(event.reply, event.reply) }}</bdi></strong>
+          <strong>{{ L.ident(L.reply(event.reply), event.reply) }}</strong>
           <span>{{ event.authdate }} · <bdi class="mono">{{ event.nas }}</bdi></span>
         </div>
       {% else %}
@@ -194,11 +171,14 @@
 {% call hub.section("الخط الزمني", icon="timeline") %}
   <div class="hub-list" data-testid="subscriber-timeline">
     {% for item in s360.timeline %}
-      {%- set _raw = item.item.entry_type or item.item.event_key or item.item.reply or item.item.status -%}
-      {%- set _label = _ENTRY_AR.get(_raw, _STATUS_AR.get(_raw, _REPLY_AR.get(_raw, _raw))) -%}
+      {#- مصدر القيمة الخام بحسب نوع عنصر الخط الزمني: نوع قيد / مفتاح حدث / ردّ مصادقة / حالة -#}
+      {%- if item.item.entry_type -%}{%- set _raw = item.item.entry_type -%}{%- set _label = L.entry_type(_raw) -%}
+      {%- elif item.item.reply -%}{%- set _raw = item.item.reply -%}{%- set _label = L.reply(_raw) -%}
+      {%- elif item.item.status -%}{%- set _raw = item.item.status -%}{%- set _label = L.status(_raw) -%}
+      {%- else -%}{%- set _raw = item.item.event_key -%}{%- set _label = L.humanize(_raw) -%}{%- endif -%}
       <div class="hub-list-row">
         <strong>{{ item.created_at|dt_local if item.created_at else "—" }}</strong>
-        <span><bdi title="{{ _raw }}">{{ _label or "—" }}</bdi></span>
+        <span>{{ L.ident(_label, _raw) }}</span>
       </div>
     {% else %}
       {{ hub.empty("اللوحة فارغة", sub="لا توجد أحداث كافية لبناء خط زمني بعد.", icon="timeline") }}

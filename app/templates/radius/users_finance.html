@@ -3,6 +3,8 @@
    dry-run), AJAX submit (stay on page, inline errors). #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
+{# ماكروهات تعريب قطاع المشتركين: حالة الدفعة/نوع القيد/الاتجاه — لا قيمة خام. #}
+{% import "radius/_subs_labels.html" as L %}
 
 {% block title %}دفعات وسلف {{ sub.username }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-wallet"></i>{% endblock %}
@@ -67,19 +69,8 @@
 {% block content %}
 {% set open_loans = loans|selectattr('status','equalto','open')|list %}
 
-{# تعريب القيم الخام للعرض — المعرّف الإنجليزي يبقى في title للمرجع التقني.
-   نطابق خريطة التعريب المعتمدة في سجل القيود (accounting_ledger) لتوحيد المصطلح. #}
-{% set pay_status_ar = {
-  'paid': 'مدفوعة', 'pending': 'معلّقة', 'void': 'ملغاة',
-  'refunded': 'مستردّة', 'failed': 'فاشلة', 'completed': 'مكتملة'
-} %}
-{% set type_ar = {
-  'payment': 'دفعة', 'loan': 'سلفة', 'settlement': 'تسوية',
-  'void': 'إلغاء', 'reversal': 'عكسي', 'correction': 'تصحيح',
-  'invoice': 'فاتورة', 'refund': 'استرداد', 'adjustment': 'تعديل',
-  'collection': 'تحصيل', 'expense': 'مصروف', 'balance': 'رصيد',
-  'subscriber': 'مشترك', 'card': 'بطاقة', 'manual': 'يدوي'
-} %}
+{# التعريب يتم عبر ماكروهات radius/_subs_labels.html (L.pay_status / L.entry_type /
+   L.direction) — لا خرائط محلّية ولا سقوط للقيمة الخام. #}
 
 {# الهيرو الموحّد: megahero يدمج العنوان + الإجراءات + شريط الـKPIs في كتلة
    .uds-hero واحدة (بدّلنا hub.hero القديم + ff-kpis المنفصلة + غلاف
@@ -120,9 +111,10 @@
 
 {% if payments %}
 {% call hub.section("آخر الدفعات", icon="receipt", meta=payments|length|string + " دفعة", flush=True) %}
-  <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
+  <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10"
+       data-uds-export-title="{{ _('دفعات المستفيد') }}" style="border:none;border-radius:0">
     <table class="hub-table">
-      <thead><tr><th class="num" style="width:60px">#</th><th>{{ _('المبلغ') }}</th><th>{{ _('المدة المستحقة') }}</th><th>{{ _('الخصم') }}</th><th>{{ _('الحالة') }}</th><th>{{ _('التاريخ') }}</th></tr></thead>
+      <thead><tr><th class="num" style="width:60px">#</th><th>{{ _('المبلغ') }}</th><th>{{ _('المدة المستحقة') }}</th><th>{{ _('الخصم') }}</th><th data-uds-nosort>{{ _('الحالة') }}</th><th>{{ _('التاريخ') }}</th></tr></thead>
       <tbody>
         {% for p in payments %}
         <tr>
@@ -131,12 +123,13 @@
           <td>{{ p.earned_minutes|dur_days }}</td>
           <td class="mono">{{ (p.discount_amount or 0)|money }}</td>
           <td>
+            {# حالة الدفعة معرّبة عبر L.pay_status (لا سقوط للخام)؛ الخام في title. #}
             {% if p.status in ('void','refunded','failed') %}
-              <span title="{{ p.status }}">{{ hub.pill(pay_status_ar.get(p.status, p.status), variant="red") }}</span>
+              <span title="{{ p.status }}">{{ hub.pill(L.pay_status(p.status), variant="red") }}</span>
             {% elif p.status == 'pending' %}
-              <span title="{{ p.status }}">{{ hub.pill(pay_status_ar.get(p.status, p.status), variant="amber") }}</span>
+              <span title="{{ p.status }}">{{ hub.pill(L.pay_status(p.status), variant="amber") }}</span>
             {% else %}
-              <span title="{{ p.status }}">{{ hub.pill(pay_status_ar.get(p.status, p.status or 'مدفوعة'), variant="green") }}</span>
+              <span title="{{ p.status }}">{{ hub.pill(L.pay_status(p.status or 'paid'), variant="green") }}</span>
             {% endif %}
           </td>
           <td class="mono small">{{ p.created_at|dt_local }}</td>
@@ -152,9 +145,10 @@
 
 {% if loans %}
 {% call hub.section("السلف والتسويات", icon="handshake", meta=loans|length|string + " سلفة", flush=True) %}
-  <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
+  <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10"
+       data-uds-export-title="{{ _('سلف المستفيد') }}" style="border:none;border-radius:0">
     <table class="hub-table">
-      <thead><tr><th class="num" style="width:60px">#</th><th>{{ _('المدة') }}</th><th>{{ _('القيمة') }}</th><th>{{ _('الحالة') }}</th><th>{{ _('السبب') }}</th><th style="width:340px">{{ _('تسوية') }}</th></tr></thead>
+      <thead><tr><th class="num" style="width:60px">#</th><th>{{ _('المدة') }}</th><th>{{ _('القيمة') }}</th><th data-uds-nosort>{{ _('الحالة') }}</th><th>{{ _('السبب') }}</th><th data-uds-nosort data-uds-nocol style="width:340px">{{ _('تسوية') }}</th></tr></thead>
       <tbody>
         {% for loan in loans %}
         <tr>
@@ -191,21 +185,26 @@
 
 {% if ledger %}
 {% call hub.section("سجل القيود", icon="scale-balanced", meta=ledger|length|string + " قيد", flush=True) %}
-  <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
+  <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10"
+       data-uds-export-title="{{ _('سجل قيود المستفيد') }}" style="border:none;border-radius:0">
     <table class="hub-table">
-      <thead><tr><th class="num" style="width:60px">#</th><th>{{ _('النوع') }}</th><th>{{ _('الاتجاه') }}</th><th>{{ _('المبلغ') }}</th><th>{{ _('المصدر') }}</th><th>{{ _('ملاحظات') }}</th><th>{{ _('التاريخ') }}</th></tr></thead>
+      <thead><tr><th class="num" style="width:60px">#</th><th>{{ _('النوع') }}</th><th data-uds-nosort>{{ _('الاتجاه') }}</th><th>{{ _('المبلغ') }}</th><th>{{ _('المصدر') }}</th><th>{{ _('ملاحظات') }}</th><th>{{ _('التاريخ') }}</th></tr></thead>
       <tbody>
         {% for entry in ledger %}
         <tr>
           <td class="num mono">{{ entry.id }}</td>
-          <td><span title="{{ entry.entry_type }}">{{ type_ar.get(entry.entry_type, entry.entry_type) }}</span></td>
+          {# نوع القيد معرّب عبر L.entry_type؛ الخام في title. #}
+          <td>{{ L.ident(L.entry_type(entry.entry_type), entry.entry_type) }}</td>
           <td>
-            {% if entry.direction == 'credit' %}{{ hub.pill("دائن", variant="green", dot=False) }}
-            {% elif entry.direction == 'debit' %}{{ hub.pill("مدين", variant="amber", dot=False) }}
-            {% else %}{{ hub.pill(entry.direction or '—', variant="grey", dot=False) }}{% endif %}
+            {# الاتجاه معرّب عبر L.direction (دائن/مدين) — لا قيمة خام. #}
+            {% if entry.direction == 'credit' %}{{ hub.pill(L.direction(entry.direction), variant="green", dot=False) }}
+            {% elif entry.direction == 'debit' %}{{ hub.pill(L.direction(entry.direction), variant="amber", dot=False) }}
+            {% else %}{{ hub.pill(L.direction(entry.direction), variant="grey", dot=False) }}{% endif %}
           </td>
           <td class="mono"><strong>{{ entry.amount|money }}</strong></td>
-          <td class="small">{% if entry.source_type %}<span title="{{ entry.source_type }}">{{ type_ar.get(entry.source_type, entry.source_type) }}</span>{% else %}—{% endif %}{% if entry.source_id %} <span class="hub-text-mute mono">#{{ entry.source_id }}</span>{% endif %}</td>
+          {# المصدر: نوعه معرّب عبر L.entry_type؛ معرّفه الرقمي بتسمية عربية «مرجع رقم N»
+             (لا كلمة إنجليزية ولا «#») مع إبقاء الرقم الخام في title. #}
+          <td class="small">{% if entry.source_type %}{{ L.ident(L.entry_type(entry.source_type), entry.source_type) }}{% else %}—{% endif %}{% if entry.source_id %} <span class="hub-text-mute mono" title="source_id={{ entry.source_id }}">مرجع رقم {{ entry.source_id }}</span>{% endif %}</td>
           <td class="small">{{ entry.notes or '—' }}</td>
           <td class="mono small">{{ entry.created_at|dt_local }}</td>
         </tr>

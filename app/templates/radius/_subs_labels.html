@@ -1,0 +1,119 @@
+{#
+  ماكروهات تعريب محلّية — خاصّة بقطاع المشتركين والجلسات فقط.
+  لا يُضمَّن هذا الملف إلا من قوالب هذا القطاع (قائمة المشتركين، ملف المشترك،
+  المشترك 360، الجلسات المتصلة، مالية المشترك، مجموعات المشتركين).
+  ليس ملف تسميات عامًّا للمشروع.
+
+  المبدأ: لا تظهر قيمة enum خام بالإنجليزية ولا كود snake_case ولا «keyword #id»
+  في أي عمود. كل قيمة مجهولة تُؤنسَن (شرطات/شرطات سفليّة → مسافات) كحلّ أخير.
+  ضع القيمة الخام في title عند الحاجة عبر الماكرو ident().
+
+  الاستخدام:  {% import "radius/_subs_labels.html" as L %}
+              {{ L.status(u.status) }}   {{ L.service_type(s.service_type) }}
+              {{ L.who(row.manager_name) }}   {{ L.ident(L.entry_type(e.entry_type), e.entry_type) }}
+#}
+
+{%- macro humanize(v) -%}
+{{- (v|string).replace('_',' ').replace('-',' ').strip() or '—' -}}
+{%- endmacro -%}
+
+{#- حالة المشترك/الجلسة/البطاقة -#}
+{%- macro status(v) -%}
+{%- set k = (v|string|lower|trim) -%}
+{%- set m = {
+  'enabled':'مفعَّل','active':'نشط','disabled':'معطَّل','expired':'منتهٍ',
+  'suspended':'موقوف','pending':'قيد الانتظار','banned':'محظور',
+  'online':'متّصل','offline':'غير متّصل','grace':'مهلة سماح',
+  'revoked':'ملغى','used':'مُستخدَم','exhausted':'مُستنفَد','unused':'غير مُستخدَم',
+  'quota_exceeded':'تجاوز الكوتة','reachable':'يستجيب','unreachable':'تعذّر الوصول','timeout':'انتهت المهلة'
+} -%}
+{{- m.get(k, humanize(v)) if k else '—' -}}
+{%- endmacro -%}
+
+{#- نوع الخدمة -#}
+{%- macro service_type(v) -%}
+{%- set k = (v|string|lower|trim) -%}
+{%- set m = {'hotspot':'هوت سبوت','pppoe':'PPPoE','both':'هوت سبوت + PPPoE','static':'IP ثابت','dhcp':'DHCP'} -%}
+{{- m.get(k, humanize(v)) if k else '—' -}}
+{%- endmacro -%}
+
+{#- نوع المستخدم -#}
+{%- macro user_type(v) -%}
+{%- set k = (v|string|lower|trim) -%}
+{%- set m = {'subscriber':'مشترك','card':'بطاقة','trial':'تجريبي','voucher':'قسيمة','guest':'ضيف'} -%}
+{{- m.get(k, humanize(v)) if k else '—' -}}
+{%- endmacro -%}
+
+{#- نوع الحساب -#}
+{%- macro account_type(v) -%}
+{%- set k = (v|string|lower|trim) -%}
+{%- set m = {'personal':'شخصي','individual':'فردي','business':'تجاري','company':'شركة','family':'عائلي'} -%}
+{{- m.get(k, humanize(v)) if k else '—' -}}
+{%- endmacro -%}
+
+{#- طريقة الدفع -#}
+{%- macro pay_method(v) -%}
+{%- set k = (v|string|lower|trim) -%}
+{%- set m = {'cash':'نقدًا','card':'بطاقة','wallet':'محفظة','bank':'تحويل بنكي','transfer':'تحويل','bank_transfer':'تحويل بنكي','online':'دفع إلكتروني','voucher':'قسيمة','credit':'على الحساب','balance':'من الرصيد'} -%}
+{{- m.get(k, humanize(v)) if k else '—' -}}
+{%- endmacro -%}
+
+{#- نوع القيد المالي / مصدر القيد (دفتر الأستاذ) -#}
+{%- macro entry_type(v) -%}
+{%- set k = (v|string|lower|trim) -%}
+{%- set m = {
+  'payment':'دفعة','loan':'سلفة','settlement':'تسوية','void':'إلغاء قيد',
+  'writeoff':'شطب دَين','reversal':'عكس قيد','posted':'مُرحَّل',
+  'card_sale':'بيع بطاقة','payment_void':'إلغاء دفعة','loan_writeoff':'شطب سلفة',
+  'ledger_void':'إلغاء قيد','payment_collection_request':'طلب تحصيل','adjustment':'تسوية يدويّة'
+} -%}
+{{- m.get(k, humanize(v)) if k else '—' -}}
+{%- endmacro -%}
+
+{#- اتجاه القيد -#}
+{%- macro direction(v) -%}
+{%- set k = (v|string|lower|trim) -%}
+{{- {'credit':'دائن','debit':'مدين'}.get(k, humanize(v)) if k else '—' -}}
+{%- endmacro -%}
+
+{#- حالة السلفة -#}
+{%- macro loan_status(v) -%}
+{%- set k = (v|string|lower|trim) -%}
+{%- set m = {'open':'مفتوحة','settled':'مسدَّدة','voided':'ملغاة','void':'ملغاة','writeoff':'مشطوبة','overdue':'متأخّرة','partial':'سداد جزئي'} -%}
+{{- m.get(k, humanize(v)) if k else '—' -}}
+{%- endmacro -%}
+
+{#- حالة الدفعة / الفاتورة -#}
+{%- macro pay_status(v) -%}
+{%- set k = (v|string|lower|trim) -%}
+{%- set m = {
+  'paid':'مدفوعة','unpaid':'غير مدفوعة','pending':'معلّقة','void':'ملغاة','voided':'ملغاة',
+  'refunded':'مستردّة','failed':'فاشلة','completed':'مكتملة','posted':'مُرحَّلة',
+  'partial':'مدفوعة جزئيًا','cancelled':'ملغاة','canceled':'ملغاة','overdue':'متأخّرة','due':'مستحقّة'
+} -%}
+{{- m.get(k, humanize(v)) if k else '—' -}}
+{%- endmacro -%}
+
+{#- ردّ مصادقة الدخول (RADIUS) -#}
+{%- macro reply(v) -%}
+{%- set k = (v|string|trim) -%}
+{%- set m = {'Access-Accept':'قبول الدخول','Access-Reject':'رفض الدخول','Access-Challenge':'تحدٍّ','accept':'قبول الدخول','reject':'رفض الدخول'} -%}
+{{- m.get(k, m.get(k|lower, humanize(v))) if k else '—' -}}
+{%- endmacro -%}
+
+{#- مصدر بيانات الجهاز -#}
+{%- macro device_source(v) -%}
+{%- set k = (v|string|lower|trim) -%}
+{{- {'subscriber':'من بيانات المشترك','session':'من جلسة اتصال','manual':'يدويّ','dhcp':'من DHCP'}.get(k, humanize(v)) if k else '—' -}}
+{%- endmacro -%}
+
+{#- اسم منفِّذ/مالك: اسم حقيقي إن وُجد، وإلّا «النظام» — لا يظهر «admin #id» أبدًا -#}
+{%- macro who(name) -%}
+{%- set s = (name|string|trim) -%}
+{%- if (not s) or s|lower in ['system','none','null','—','#'] -%}النظام{%- else -%}{{ s }}{%- endif -%}
+{%- endmacro -%}
+
+{#- يعرض نصًّا عربيًّا مع إبقاء القيمة الخام في title (للبحث/التتبّع) -#}
+{%- macro ident(ar, raw) -%}
+<span title="{{ raw|e }}">{{ ar }}</span>
+{%- endmacro -%}

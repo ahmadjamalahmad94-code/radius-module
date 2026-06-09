@@ -13,6 +13,8 @@
    ═══════════════════════════════════════════════════════════════════════ #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
+{# ماكروهات تعريب قطاع المشتركين/الجلسات — لمنع ظهور enum خام في الأعمدة #}
+{% import "radius/_subs_labels.html" as L %}
 
 {% set mode_label = "يدوي" if settings.mode == "manual"
                        else ("مايكروتك" if settings.mode == "mikrotik"
@@ -679,7 +681,13 @@
           <td data-col="upload" class="num mono">{{ "%.1f"|format((s.bytes_out or 0)/1048576) }} MB</td>
           <td data-col="mac" class="mono">{{ s.mac_address or '—' }}</td>
           <td data-col="manager">{{ s.manager_name or '—' }}</td>
-          <td data-col="service">{{ s.service_type or s.user_type or '—' }}</td>
+          {# تعريب نوع الخدمة/المستخدم الخام (hotspot/pppoe/subscriber/card) عبر ماكروهات التعريب
+             مع إبقاء القيمة الخام في title للبحث/التتبّع. #}
+          <td data-col="service">
+            {%- if s.service_type -%}{{ L.ident(L.service_type(s.service_type), s.service_type) }}
+            {%- elif s.user_type -%}{{ L.ident(L.user_type(s.user_type), s.user_type) }}
+            {%- else -%}—{%- endif -%}
+          </td>
           {# #2: prefer the Called-Station-Id (hotspot-server / interface name)
              over the numeric nas_port_id; fall back to the port if empty. #}
           {% set _called = (called_station_by_session or {}).get(s.session_id) %}

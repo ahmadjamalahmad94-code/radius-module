@@ -14,6 +14,7 @@
 
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
+{% import "radius/_subs_labels.html" as L %}
 {% from "_partials/unit_input.html" import unit_input_picker %}
 
 {% block title %}قائمة المشتركين{% endblock %}
@@ -614,15 +615,12 @@
       <input class="hub-input usrch-date" type="date" data-users-date-to aria-label="{{ _('تاريخ الإنشاء إلى') }}">
     </label>
   </div>
-  {# تعريب قيم الحالة الخام للعرض؛ القيمة المُرسَلة للخادم تبقى الخام (enabled…) #}
-  {% set _status_ar = {
-    'enabled': 'مفعَّل', 'disabled': 'معطَّل', 'expired': 'منتهٍ',
-    'suspended': 'موقوف', 'pending': 'قيد الانتظار'
-  } %}
+  {# تعريب قيم الحالة الخام للعرض عبر L.status (لا سقوط للخام)؛
+     القيمة المُرسَلة للخادم تبقى الخام (enabled…) #}
   <select class="hub-select" name="status">
     <option value="">{{ _('كل الحالات') }}</option>
     {% for s in statuses %}
-      <option value="{{ s }}" {% if status == s %}selected{% endif %}>{{ _status_ar.get(s, s) }}</option>
+      <option value="{{ s }}" {% if status == s %}selected{% endif %}>{{ L.status(s) }}</option>
     {% endfor %}
   </select>
   <select class="hub-select" name="plan_id">
@@ -933,9 +931,10 @@
             {% if p %}{{ hub.pill(p.name, variant="brand", dot=False) }}{% else %}—{% endif %}
           </td>
           <td data-col="card" data-sort-value="{{ u.card_batch_id or 0 }}">
+            {# لا «#id» إنجليزي: نعرض «حزمة رقم N» عربيًّا والخام في title #}
             {% if u.card_batch_id %}
-              <span class="hub-pill hub-pill--violet" title="حزمة الكرت #{{ u.card_batch_id }}">
-                <i class="fa-solid fa-id-card"></i> #{{ u.card_batch_id }}
+              <span class="hub-pill hub-pill--violet" title="حزمة الكرت رقم {{ u.card_batch_id }}">
+                <i class="fa-solid fa-id-card"></i> حزمة رقم {{ u.card_batch_id }}
               </span>
             {% else %}<span class="hub-text-mute">—</span>{% endif %}
           </td>
@@ -943,9 +942,12 @@
           <td data-col="device" data-sort-value="{% set _fp = (dhcp_by_username or {}).get(u.username) %}{{ _fp.hostname if _fp and _fp.hostname else '' }}">
             {% set _fp = (dhcp_by_username or {}).get(u.username) %}
             {% if _fp %}
-              <span class="hub-pill hub-pill--blue" title="{{ _fp.dhcp_class_id or '' }}" style="border-color:#bfdbfe">
+              {# الاسم المقروء: اسم المضيف ثم العلامة ثم «جهاز غير معروف» — لا «—» خام؛
+                 بصمة DHCP الخام (dhcp_class_id) تبقى في title بعنوان عربي للتتبّع #}
+              {% set _dev_name = _fp.hostname or (_fp.device_brand|capitalize if _fp.device_brand else 'جهاز غير معروف') %}
+              <span class="hub-pill hub-pill--blue" title="بصمة الجهاز: {{ _fp.dhcp_class_id or '—' }}" style="border-color:#bfdbfe">
                 <i class="fa-solid fa-mobile-screen"></i>
-                <span>{{ _fp.hostname or (_fp.device_brand|capitalize if _fp.device_brand else '—') }}</span>
+                <span>{{ _dev_name }}</span>
                 {% if _fp.os_family %}<small style="opacity:.7">{{ _fp.os_family|capitalize }} {{ _fp.os_version or '' }}</small>{% endif %}
               </span>
             {% else %}<span class="hub-text-mute">—</span>{% endif %}
@@ -956,8 +958,8 @@
             {% elif u.status == 'disabled' %}{{ hub.pill("معطَّل", variant="red") }}
             {% elif u.status == 'suspended' %}{{ hub.pill("موقوف", variant="grey") }}
             {% elif u.status == 'pending' %}{{ hub.pill("قيد الانتظار", variant="grey") }}
-            {# لا تُعرَض حالة خام بالإنجليزية؛ الخام محفوظ في data-sort-value/title #}
-            {% else %}<span title="{{ u.status }}">{{ hub.pill(u.status, variant="grey") }}</span>{% endif %}
+            {# لا تُعرَض حالة خام بالإنجليزية؛ الخام محفوظ في title وتُعرَّب عبر L.status #}
+            {% else %}<span title="{{ u.status }}">{{ hub.pill(L.status(u.status), variant="grey") }}</span>{% endif %}
           </td>
           <td data-col="remaining" data-sort-value="{{ _expire_ts }}" data-expire-ts="{{ _expire_ts }}" class="num mono">
             {% if _expire_ts %}<span data-remaining-display>—</span>{% else %}—{% endif %}
