@@ -496,10 +496,40 @@ _PERM_WRITE_ONLY = {
     "cards_batch_edit",
 }
 
+# بنود تنقّل (sidebar) لها حارسها الخاص أو يُترك عرضها مفتوحًا عمدًا —
+# لا يُطبَّق عليها «حارس العرض» المركزي المشتقّ من خريطة _NAV_PERM:
+#   • audit_log_index/mt_alerts_index/hotspot_errors_page محروسة أصلًا
+#     بديكوريتر requires_perm (نطاق mikrotik.* + صفحة 403 معرّبة خاصة)؛
+#     الحارس المركزي يقطع قبلها بصفحة 403 افتراضية فيكسر تجربتها.
+#   • cards_checker: عرض الفاحص (GET) مفتوح عمدًا، والـPOST محروس
+#     بـcards.verify (انظر _PERM_WRITE_ONLY أعلاه).
+_NAV_VIEW_GUARD_SKIP = {
+    "audit_log_index", "mt_alerts_index", "hotspot_errors_page",
+    "cards_checker",
+}
+
 
 def _install_permission_guard(bp: Blueprint) -> None:
-    """RBAC server-side: يمنع الأدوار المحدودة من المسارات الحسّاسة."""
+    """RBAC server-side: يمنع الأدوار المحدودة من المسارات الحسّاسة.
+
+    حارسان متكاملان في دالة before_request واحدة:
+
+      (1) حارس الكتابة/السوبر (_PERM_GUARDED): يفحص مفاتيح الكتابة
+          (POST/…)‎ + المناطق super_admin-only. كما كان.
+
+      (2) حارس العرض (sidebar parity): كل بند تنقّل في خريطة _NAV_PERM
+          يفرض مفتاح «عرضه» خادميًا على القراءة (GET) — فلا يكفي أن
+          يُخفيه الشريط الجانبي، بل يُمنع الوصول المباشر بالعنوان (403).
+          بهذا تتطابق خريطة الشريط الجانبي مع حراسة المسار فعليًا
+          (إصلاح Broken Access Control: «الراوتر يحمي، لا الواجهة فقط»).
+
+    super_admin (ومنه «المدير الرئيسي») يتجاوز الحارسَين دائمًا.
+    """
     from flask import session, abort
+    # خريطة عرض الشريط الجانبي — مصدر واحد لربط endpoint بمفتاح عرضه.
+    # تُستورد مرّة عند تركيب الحارس (لا دورة استيراد: ui_permissions لا
+    # يستورد blueprint إلا كسولًا داخل perm_for_endpoint وقت الطلب).
+    from ..auth.ui_permissions import _NAV_PERM
 
     @bp.before_request
     def _perm_guard():
@@ -507,20 +537,29 @@ def _install_permission_guard(bp: Blueprint) -> None:
         if not ep.startswith("radius."):
             return None
         name = ep.split(".", 1)[1]
-        required = _PERM_GUARDED.get(name)
-        if required is None:
-            return None
-        # المسارات التي تخدم GET للعرض و POST للحفظ: نحرس الكتابة فقط
-        if name in _PERM_WRITE_ONLY and request.method in ("GET", "HEAD", "OPTIONS"):
-            return None
-        # super_admin يمرّ دائمًا
-        if session.get("is_super_admin"):
-            return None
-        if required == _PERM_SUPER:
-            abort(403)
+        is_super = bool(session.get("is_super_admin"))
         perms = session.get("permissions") or []
-        if required not in perms:
-            abort(403)
+
+        # ── (1) حارس الكتابة/السوبر ──
+        required = _PERM_GUARDED.get(name)
+        if required is not None and not (
+            name in _PERM_WRITE_ONLY
+            and request.method in ("GET", "HEAD", "OPTIONS")
+        ):
+            if not is_super:
+                if required == _PERM_SUPER or required not in perms:
+                    abort(403)
+
+        # ── (2) حارس العرض على القراءة (مطابقة الشريط الجانبي) ──
+        if (
+            request.method in ("GET", "HEAD", "OPTIONS")
+            and not is_super
+            and name not in _NAV_VIEW_GUARD_SKIP
+        ):
+            view_required = _NAV_PERM.get(name)
+            if view_required is not None:
+                if view_required == _PERM_SUPER or view_required not in perms:
+                    abort(403)
         return None
 
 
