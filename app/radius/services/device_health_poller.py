@@ -25,12 +25,10 @@ from typing import Callable, Optional
 
 from ..db.repos import device_health_repo as repo
 from ..db.repos import nas_repo
-from . import device_health_planner as planner
 
 _LOG = logging.getLogger(__name__)
 
 POLL_INTERVAL_SEC = 60.0
-PING_COUNT = 4
 
 
 # ── one sweep ──────────────────────────────────────────────────
@@ -80,47 +78,22 @@ def tick(tenant_id: Optional[int] = None,
 
 
 def _derive_status(device, nw_rows, nw_ok, nas_dict, mt) -> tuple[str, Optional[float]]:
-    """Resolve one device's status from Netwatch (+ ping for latency)."""
+    """Resolve one device's status via the SHARED reachability probe so Sync-All
+    NEVER contradicts the manual «فحص بنج». A direct ping is the source of truth;
+    applied netwatch only resolves a ping-down / can't-ping case; missing netwatch
+    data yields «unknown», never a false «مفصول».
+
+    The poller already read netwatch once for this router, so we hand those rows
+    in (when the read succeeded) and tell the probe not to re-read."""
     ip = (device.get("ip_address") or "").strip()
     if not ip:
         return "unknown", None
-
-    match = None
-    for row in nw_rows or []:
-        if planner._addr_ip(row.get("host", "")) == ip:
-            match = row
-            break
-
-    if match is not None:
-        nw_status = str(match.get("status") or "").strip().lower()
-        if nw_status in ("up", "ok"):
-            # Netwatch says up — ping for latency / high-latency classification.
-            return _ping_status(device, nas_dict, mt, default_up=True)
-        if nw_status in ("down", "timeout", "unreachable"):
-            return ("timeout" if nw_status == "timeout" else "down"), None
-        # Unknown netwatch status string → fall through to ping.
-        return _ping_status(device, nas_dict, mt, default_up=False)
-
-    if not nw_ok:
-        # Couldn't read Netwatch at all → try a direct ping; unknown if it fails.
-        return _ping_status(device, nas_dict, mt, default_up=False)
-
-    # Netwatch readable but no row for this host → ping fallback.
-    return _ping_status(device, nas_dict, mt, default_up=False)
-
-
-def _ping_status(device, nas_dict, mt, *, default_up: bool) -> tuple[str, Optional[float]]:
-    res = mt.ping(nas_dict, target=device["ip_address"], count=PING_COUNT)
-    if not res.ok:
-        # Router/ping unavailable. If Netwatch already declared it up, keep up
-        # (latency unknown); otherwise we genuinely don't know.
-        return ("up", None) if default_up else ("unknown", None)
-    status, latency = planner.summarize_ping(res.data or [], device["ping_threshold_ms"])
-    if status == "down" and default_up:
-        # Netwatch said up but ping had no replies (ICMP filtered) — trust
-        # Netwatch's reachability verdict, just without a latency figure.
-        return "up", None
-    return status, latency
+    from . import device_health as svc
+    probe = svc.probe_reachability(
+        device, nas_dict, mt=mt,
+        netwatch_rows=(nw_rows if nw_ok else None),
+        read_netwatch=False)
+    return probe["status"], probe["latency_ms"]
 
 
 def _commit_status(tid, device, status, latency, summary, alert_fn) -> None:

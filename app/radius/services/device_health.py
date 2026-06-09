@@ -362,9 +362,83 @@ def _resolve_wan_iface(tenant_id: int, router_id: int) -> str:
     return str(dict(row).get("selected_wan_interface") or "").strip() if row else ""
 
 
+# ── shared reachability (one source of truth for «فحص بنج» + «فحص الكل») ──
+
+# Used by BOTH the manual ping button and the Sync-All poller so their results
+# can NEVER contradict each other.
+PROBE_PING_COUNT = 4
+
+
+def _netwatch_verdict(device: dict, netwatch_rows) -> str:
+    """Status of an APPLIED netwatch row for this device, or '' when there is no
+    row (netwatch not applied / no data) or its status is ambiguous."""
+    ip = (device.get("ip_address") or "").strip()
+    if not ip or not netwatch_rows:
+        return ""
+    for row in netwatch_rows:
+        if planner._addr_ip(row.get("host", "")) == ip:
+            s = str(row.get("status") or "").strip().lower()
+            if s in ("up", "ok"):
+                return "up"
+            if s in ("down", "timeout", "unreachable"):
+                return "timeout" if s == "timeout" else "down"
+            return ""
+    return ""
+
+
+def _resolve_netwatch_verdict(device, netwatch_rows, nas_dict, mt,
+                              read_netwatch: bool) -> str:
+    """Netwatch verdict from rows already in hand, or fetched on demand (only
+    when needed — i.e. the ping was down or couldn't run)."""
+    rows = netwatch_rows
+    if rows is None and read_netwatch:
+        nw = mt.read_netwatch(nas_dict)
+        rows = nw.data if getattr(nw, "ok", False) else None
+    return _netwatch_verdict(device, rows)
+
+
+def probe_reachability(device: dict, nas_dict: dict, *, mt=None,
+                       netwatch_rows=None, read_netwatch: bool = True) -> dict:
+    """THE single reachability source of truth shared by «فحص بنج» (manual) and
+    «فحص الكل» / مزامنة (Sync-All) — so the two never disagree.
+
+    Logic (owner-confirmed):
+      • Direct router ping is the PRIMARY positive signal. If the device answers
+        the ping it is up/high_latency — exactly what the manual button reports.
+      • A ping with no replies is only «مفصول» when applied netwatch does NOT
+        say up (a netwatch=up overrides an ICMP-filtered ping → up).
+      • If the ping can't run at all (router unreachable): applied netwatch
+        decides (up/down); with no netwatch data the result is «unknown» (grey)
+        — NEVER a false «مفصول».
+    Returns {status, latency_ms, ping_ok, error}.
+    """
+    if mt is None:
+        from . import device_health_mikrotik as mt
+    ping = mt.ping(nas_dict, target=device["ip_address"], count=PROBE_PING_COUNT)
+    if ping.ok:
+        status, latency = planner.summarize_ping(
+            ping.data or [], device.get("ping_threshold_ms") or 80)
+        if status in ("up", "high_latency"):
+            return {"status": status, "latency_ms": latency,
+                    "ping_ok": True, "error": ""}
+        # Ping ran but got no replies → down, UNLESS applied netwatch says up.
+        nw = _resolve_netwatch_verdict(device, netwatch_rows, nas_dict, mt, read_netwatch)
+        if nw == "up":
+            return {"status": "up", "latency_ms": None, "ping_ok": True, "error": ""}
+        return {"status": "down", "latency_ms": None, "ping_ok": True, "error": ""}
+    # Ping could not run (router unreachable) → applied netwatch, else unknown.
+    nw = _resolve_netwatch_verdict(device, netwatch_rows, nas_dict, mt, read_netwatch)
+    if nw == "up":
+        return {"status": "up", "latency_ms": None, "ping_ok": False, "error": ping.error}
+    if nw in ("down", "timeout"):
+        return {"status": nw, "latency_ms": None, "ping_ok": False, "error": ping.error}
+    return {"status": "unknown", "latency_ms": None, "ping_ok": False, "error": ping.error}
+
+
 def test_ping(tenant_id: int, device_id: int) -> dict:
-    """Diagnostic ping from the router to the device. Read-only.
-    Returns {ok, status, latency_ms, error}. Persists the observed status."""
+    """Manual «فحص بنج» from a table row. Uses the SHARED probe_reachability so
+    it always agrees with «فحص الكل» (Sync-All). Persists the observed status.
+    Returns {ok, status, latency_ms, error}."""
     tid = int(tenant_id)
     device = repo.get_device(tid, int(device_id))
     if not device:
@@ -375,18 +449,16 @@ def test_ping(tenant_id: int, device_id: int) -> dict:
     if not nas:
         raise DeviceHealthError("الراوتر المرتبط بالجهاز غير موجود.")
     from . import device_health_mikrotik as mt
-    res = mt.ping(_nas_to_dict(nas), target=device["ip_address"], count=4)
-    if not res.ok:
-        return {"ok": False, "status": "", "latency_ms": None, "error": res.error}
-
-    status, latency = planner.summarize_ping(res.data or [], device["ping_threshold_ms"])
+    probe = probe_reachability(device, _nas_to_dict(nas), mt=mt)
+    status, latency = probe["status"], probe["latency_ms"]
     repo.set_status(tenant_id=tid, device_id=int(device_id),
                     status=status, latency_ms=latency)
     repo.add_event(
         tenant_id=tid, device_id=int(device_id), event_type=status,
         previous_status=device["status"], new_status=status,
         latency_ms=latency, message="فحص ping يدوي.")
-    return {"ok": True, "status": status, "latency_ms": latency, "error": ""}
+    return {"ok": True, "status": status, "latency_ms": latency,
+            "error": probe["error"]}
 
 
 # ── live-apply panel toggle (owner: «كله من اللوحة مش التيرمنال») ──
