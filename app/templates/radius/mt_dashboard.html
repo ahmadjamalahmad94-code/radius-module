@@ -913,6 +913,184 @@
    السريعة أُزيلت — تبويب «خدماتي» هو بيت الخدمات الوحيد الآن.) */
 .mt-router-hero .mt-tabs-row{
   margin:0;
+  /* الشريط لا يلتفّ — يصبح شريطًا قابلًا للسحب الأفقي على الشاشات
+     الضيقة (تابلت/جوال) مع تلاشي حافّتيه ليُبيّن للمستخدم أن هناك
+     محتوى مخفيًّا. لا اعتماد على JS — كل السلوك CSS بحت. */
+  flex-wrap:nowrap !important;
+  border-bottom:0;
+  position:relative;
+  isolation:isolate;
+}
+/* ──────────────────────────────────────────────────────────────
+   شريط التبويبات المتجاوب الكامل (يونيو 2026)
+   نظام موحّد يعمل بسلاسة على 1440px (سطح المكتب)، 768px (تابلت)،
+   و375px (جوال). على كل المقاسات الشريط أفقي بسحب طبيعي مع snap.
+   الخصائص:
+   • شريط حبوب (pills) داخل حاوية واحدة بحدّ مدوّر فاتح.
+   • التبويب النشط: حبّة ملوّنة (بنفسجي/نيلي) — لا حدّ سفلي خطّي.
+   • ارتفاع لمسة ≥44px في كل المقاسات (تنطبق مع تَوصيات WCAG/iOS).
+   • سكرول أفقي مخفي + scroll-snap-type يجعل التبويبات تلتقط.
+   • تلاشي بصري على حافّتي الشريط ليكشف وجود محتوى مخفي.
+   • RTL سليم: تتدفّق التبويبات من اليمين، الـsnap يحترم الاتجاه.
+   • تبويب «خدماتي» يحتفظ بهالته البنفسجيّة المميّزة.
+   ────────────────────────────────────────────────────────────── */
+.mt-router-hero .mt-tabs{
+  display:flex !important;
+  flex-wrap:nowrap !important;
+  align-items:stretch;
+  gap:4px !important;
+  width:100%;
+  margin:0 !important;
+  padding:5px !important;
+  background:#F5F6FA;
+  border:1px solid #E5E7EB;
+  border-radius:14px;
+  overflow-x:auto;
+  overflow-y:hidden;
+  scroll-behavior:smooth;
+  scroll-snap-type:x proximity;
+  scroll-padding-inline:6px;
+  -webkit-overflow-scrolling:touch;
+  overscroll-behavior-x:contain;
+  /* إخفاء شريط التمرير في كل المتصفحات. */
+  scrollbar-width:none;
+  -ms-overflow-style:none;
+}
+.mt-router-hero .mt-tabs::-webkit-scrollbar{
+  display:none;height:0;width:0;
+}
+/* تلاشي الحافّتين — يُبيّن المستخدم أن هناك تبويبات مخفيّة على
+   جانبي الشريط حين يكون قابلًا للسحب. (نستخدم mask-image لإنتاج
+   تلاشٍ شفّاف فعليًّا فوق سطح الحاوية الرماديّة الفاتحة.) */
+@media (max-width: 900px){
+  .mt-router-hero .mt-tabs{
+    -webkit-mask-image:linear-gradient(90deg,transparent 0,#000 14px,#000 calc(100% - 14px),transparent 100%);
+            mask-image:linear-gradient(90deg,transparent 0,#000 14px,#000 calc(100% - 14px),transparent 100%);
+  }
+}
+/* كل تبويب — حبّة لمس مريحة + scroll-snap للالتقاط. */
+.mt-router-hero .mt-tabs .mt-tab{
+  flex:0 0 auto;
+  min-height:42px;
+  padding:8px 14px !important;
+  border:1px solid transparent !important;
+  border-radius:10px !important;
+  background:transparent !important;
+  color:#475569 !important;
+  font-weight:700 !important;
+  font-size:13.5px !important;
+  white-space:nowrap;
+  scroll-snap-align:start;
+  scroll-margin-inline:6px;
+  transition:background .15s,color .15s,border-color .15s,box-shadow .15s,transform .12s !important;
+  /* مهم لتعطيل الـborder-bottom النشِط القديم. */
+  border-bottom-color:transparent !important;
+  animation:none !important;
+}
+.mt-router-hero .mt-tabs .mt-tab i{
+  font-size:13px;
+  color:#64748B;
+  transition:color .15s;
+  animation:none !important;
+}
+.mt-router-hero .mt-tabs .mt-tab:hover{
+  background:#fff !important;
+  color:#0F172A !important;
+  border-color:#E5E7EB !important;
+  box-shadow:0 1px 2px rgba(15,23,42,.04);
+}
+.mt-router-hero .mt-tabs .mt-tab:hover i{color:#0F172A}
+.mt-router-hero .mt-tabs .mt-tab:focus-visible{
+  outline:2px solid #6B5AED;
+  outline-offset:1px;
+}
+/* التبويب النشط — حبّة ممتلئة بِلون العلامة. لا حدّ سفلي خطّي. */
+.mt-router-hero .mt-tabs .mt-tab.is-active{
+  background:#fff !important;
+  color:#4338CA !important;
+  border-color:#C7D2FE !important;
+  border-bottom-color:#C7D2FE !important;
+  box-shadow:0 2px 6px rgba(67,56,202,.14), 0 1px 2px rgba(15,23,42,.04);
+}
+.mt-router-hero .mt-tabs .mt-tab.is-active i{color:#4338CA !important}
+/* تبويب «خدماتي» — يحتفظ بِلونه البنفسجي المميّز ضمن النظام الجديد. */
+.mt-router-hero .mt-tabs .mt-tab[data-mt-tab="my-services"]{
+  margin:0 !important;
+  padding:8px 14px !important;
+  border-radius:10px !important;
+  background:linear-gradient(135deg,#F5F3FF,#EDE9FE) !important;
+  color:#5B21B6 !important;
+  border-color:#DDD6FE !important;
+  border-bottom-color:#DDD6FE !important;
+  font-weight:800 !important;
+  box-shadow:0 1px 2px rgba(124,58,237,.08);
+}
+.mt-router-hero .mt-tabs .mt-tab[data-mt-tab="my-services"] i{
+  color:#7C3AED !important;
+}
+.mt-router-hero .mt-tabs .mt-tab[data-mt-tab="my-services"]::after{display:none !important}
+.mt-router-hero .mt-tabs .mt-tab[data-mt-tab="my-services"]:hover{
+  background:linear-gradient(135deg,#EDE9FE,#DDD6FE) !important;
+  color:#4C1D95 !important;
+  border-color:#C4B5FD !important;
+  box-shadow:0 3px 10px rgba(124,58,237,.18);
+  transform:translateY(-1px);
+}
+.mt-router-hero .mt-tabs .mt-tab[data-mt-tab="my-services"].is-active{
+  background:linear-gradient(135deg,#DDD6FE,#C4B5FD) !important;
+  color:#4C1D95 !important;
+  border-color:#A78BFA !important;
+  box-shadow:0 4px 14px rgba(124,58,237,.22);
+}
+.mt-router-hero .mt-tabs .mt-tab[data-mt-tab="my-services"].is-active i{color:#5B21B6 !important}
+
+/* ─── تابلت 768px ─── حافظ على نفس الحبوب، نقّص حشوة الحاوية قليلًا. */
+@media (max-width: 900px){
+  .mt-router-hero{padding:14px 14px 12px}
+  .mt-router-hero-top{margin-bottom:12px}
+  .mt-router-hero .mt-tabs{
+    padding:4px !important;
+    border-radius:12px;
+  }
+  .mt-router-hero .mt-tabs .mt-tab,
+  .mt-router-hero .mt-tabs .mt-tab[data-mt-tab="my-services"]{
+    padding:9px 13px !important;
+    font-size:13px !important;
+  }
+}
+/* ─── جوال 600px وأقل ─── سحب أفقي ناعم + تركيز على الحبوب. */
+@media (max-width: 600px){
+  .mt-router-hero{padding:12px 12px 10px;border-radius:14px}
+  .mt-router-hero-name{font-size:18px;margin-top:8px}
+  .mt-router-hero-sub{font-size:12px}
+  .mt-router-hero-top{
+    flex-direction:column;align-items:flex-start;gap:10px;margin-bottom:10px;
+  }
+  .mt-router-hero .mt-tabs-status--hero{padding:0}
+  .mt-router-hero .mt-tabs{
+    border-radius:11px;
+    background:#F4F5FA;
+  }
+  .mt-router-hero .mt-tabs .mt-tab,
+  .mt-router-hero .mt-tabs .mt-tab[data-mt-tab="my-services"]{
+    min-height:40px;
+    padding:8px 12px !important;
+    font-size:12.5px !important;
+    gap:6px !important;
+  }
+  .mt-router-hero .mt-tabs .mt-tab i{font-size:12.5px}
+}
+/* ─── جوال صغير 380px وأقل ─── الأيقونات + النص يبقيان كما هما،
+   فقط ضيِّق الحشوة قليلًا حتى يظهر أكثر من تبويب على الشاشة. */
+@media (max-width: 380px){
+  .mt-router-hero .mt-tabs .mt-tab,
+  .mt-router-hero .mt-tabs .mt-tab[data-mt-tab="my-services"]{
+    padding:8px 10px !important;
+  }
+}
+/* احترام تفضيل تقليل الحركة — لا انيميشن على التبويب النشط. */
+@media (prefers-reduced-motion: reduce){
+  .mt-router-hero .mt-tabs .mt-tab{transition:none !important}
 }
 
 /* ──────────────────────────────────────────────────────────────
@@ -2229,8 +2407,15 @@ body.mt-modal-open{overflow:hidden}
       </div>
       <div class="rh-svc-error" data-rh-inv-error hidden></div>
 
-      {# ── مجموعة 1: برمجة وتشغيل ───────────────────────────── #}
-      <h5 class="rh-svc-group">{{ _('برمجة وتشغيل') }}</h5>
+      {# ─── شبكة موحّدة لكل الخدمات — كل خدمة بطاقة مستقلّة (يونيو 2026)
+         طلب المالك: «كل خدمة بسطر/بطاقة خاصّة بها بدون أن تكون
+         مغلّفة تحت عنوان جامع كـ«خدمات المنافذ»». حُذفت العناوين
+         الفرعية الثلاثة (برمجة وتشغيل / الحماية والمواقع / أدوات
+         وصفحات) ودمجت كل البطاقات في شبكة auto-fit واحدة — كل
+         خدمة سطح متساوٍ بلا تسلسل هرمي وسيط. خطافات الاختبار
+         (data-mt-router-link / data-rh-svc-card / data-test=
+         "mt-dashboard-npc-link" / data-rh-loop-tile) محفوظة كما
+         هي على نفس البطاقات. #}
       <div class="np-svc-grid">
         {# برمجة الشبكة الكاملة (أداة — لا حالة جرد). #}
         <a class="np-svc-card np-svc-card--tool"
@@ -2266,14 +2451,6 @@ body.mt-modal-open{overflow:hidden}
           <h5 class="np-svc-title">{{ _('مصمّم صفحة الدخول') }}</h5>
           <span class="np-svc-status-dot is-tool" title="{{ _('أداة') }}"></span>
         </a>
-        {# أُزيل من لوحة العميل — يُعاد مركزياً عبر لوحة التراخيص (قرار معماري):
-           بطاقة «نفق تغيير IP» المدفوعة (تفتح نافذة طلب الخدمة/الترخيص).
-           خدمة مركزية للمالك، لا تخص لوحة العميل المباعة. #}
-      </div>
-
-      {# ── مجموعة 2: الحماية والمواقع ───────────────────────── #}
-      <h5 class="rh-svc-group">{{ _('الحماية والمواقع') }}</h5>
-      <div class="np-svc-grid">
         {# سياسات الشبكة — صفحة الهبوط المُجزّأة لكل راوتر (أداة).
            تحمل data-test="mt-dashboard-npc-link" لاختبار NPC. #}
         <a class="np-svc-card np-svc-card--tool"
@@ -2315,12 +2492,9 @@ body.mt-modal-open{overflow:hidden}
           <h5 class="np-svc-title">{{ _('المواقع المسموحة') }}</h5>
           <span class="np-svc-status-dot is-inactive" data-rh-svc-status title="{{ _('غير مفعّلة') }}"></span>
         </a>
-        {# منع بث البلوتوث والواي فاي — صفحة خدمة واحدة مخصّصة، تمامًا
-           مثل بقية الخدمات: رابط <a> مباشر (نفس شكل البطاقة) إلى صفحة
-           «خدمات المنافذ» مُضيَّقة على هذه الخدمة وحدها (slug=
-           bt_wifi_block) — لا نافذة عائمة ولا صفحة مشتركة تجمع خدمتين.
-           نفس endpoints/handlers بلا أي تغيير في الـbackend. الحالة +
-           شارة «بانتظار السكربت» من جهة الخادم (pss_services). #}
+        {# منع بث البلوتوث والواي فاي — بطاقة خدمة مستقلّة بمستواها
+           الأعلى (لم تَعُد تحت عنوان «خدمات المنافذ»). نفس endpoints
+           والـslug=bt_wifi_block. #}
         {% set _btw = (pss_services or {}).get('bt_wifi_block', {}) %}
         <a class="np-svc-card"
            data-mt-router-link="bt-wifi-block"
@@ -2333,14 +2507,6 @@ body.mt-modal-open{overflow:hidden}
           <span class="np-svc-status-dot {{ 'is-active' if _btw.get('enabled') else 'is-inactive' }}"
                 title="{{ 'مفعّلة على المنافذ: ' ~ (_btw.get('ports') | join(', ')) if _btw.get('enabled') else 'غير مفعّلة' }}"></span>
         </a>
-        {# اللوب صار بطاقة لوب واحدة فقط في «أدوات وصفحات» (تتبّع اللوب)
-           تفتح صفحة الخدمة الواحدة المخصّصة port-services?slug=loop_detect
-           — لا تكرار، ولا ظهور للّوب داخل صفحة مشتركة. #}
-      </div>
-
-      {# ── مجموعة 3: أدوات وصفحات ───────────────────────────── #}
-      <h5 class="rh-svc-group">{{ _('أدوات وصفحات') }}</h5>
-      <div class="np-svc-grid">
         {# النسخ الاحتياطية (أداة). #}
         <a class="np-svc-card np-svc-card--tool"
            data-mt-router-link="backups"
@@ -2349,11 +2515,9 @@ body.mt-modal-open{overflow:hidden}
           <h5 class="np-svc-title">{{ _('النسخ الاحتياطية') }}</h5>
           <span class="np-svc-status-dot is-tool" title="{{ _('أداة') }}"></span>
         </a>
-        {# تتبّع اللوب — صفحة الخدمة الواحدة المخصّصة (مثل بقية الخدمات):
-           رابط <a> مباشر لصفحة «خدمات المنافذ» مُضيَّقة على loop_detect
-           وحدها (اختيار المنافذ → تركيب HR-LoopDetect عبر dhcp-client →
-           فحص اللوب الحيّ → إزالة) بنفس endpoints. نقطة الحالة من
-           loop_active (قراءة فقط، server-side). #}
+        {# تتبّع اللوب — بطاقة خدمة مستقلّة بمستواها الأعلى (لم تَعُد
+           تحت عنوان «خدمات المنافذ»). نفس endpoints والـslug=
+           loop_detect. نقطة الحالة من loop_active (قراءة فقط). #}
         <a class="np-svc-card" data-rh-loop-tile
            href="{{ url_for('radius.mt_port_services_form', nas_id=nas.id, slug='loop_detect') }}"
            title="{{ _('كشف اللوب عبر مجس DHCP على منافذ الزبائن') }}">
