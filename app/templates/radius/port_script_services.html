@@ -7,6 +7,45 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
+{% block head_extra %}
+<style>
+/* ─── ترميم تخطيط لوحة تفعيل خدمة المنافذ (يونيو 2026) ───
+   كان «صنف الشارة الدائريّة .hub-hint» (20×20px من hub_v2.css)
+   يُستخدم خطأً لتغليف فقرة المساعدة الطويلة تحت شبكة المنافذ —
+   فينحشر النص داخل دائرة 20px ويفيض فيرتطم بصرياً بزر «معاينة
+   سكربت التفعيل» في الصفّ التالي. صار النص الآن hub-field-hint
+   عادي + صفّ أزرار بنطاقه الخاصّ ومسافة آمنة. */
+.pss-field-hint{
+  display:block;
+  margin-top:8px;
+  font-size:12.5px;
+  line-height:1.65;
+  color:#64748B;
+  font-weight:600;
+}
+/* صفّ الأزرار: clear بعد شبكة المنافذ، مع gap كافٍ، ويلتفّ
+   عند الجوال فيوزّع الأزرار على أسطر متتابعة بدل التداخل. */
+.pss-actions-row{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  margin-top:22px;
+  padding-top:14px;
+  border-top:1px dashed #E5E7EB;
+  clear:both;
+}
+.pss-actions-row > .hub-btn{
+  /* الزرّ كتلة مستقلّة بحدّ أدنى مريح للمس، لا يتقلّص دون قراءة. */
+  flex:0 0 auto;
+  min-height:42px;
+}
+@media (max-width:600px){
+  .pss-actions-row{gap:8px;margin-top:18px}
+  .pss-actions-row > .hub-btn{flex:1 1 100%}
+}
+</style>
+{% endblock %}
+
 {% block title %}خدمات المنافذ — {{ nas.name }}{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-diagram-project"></i>{% endblock %}
 {% block page_title %}خدمات المنافذ على {{ nas.name }}{% endblock %}
@@ -132,17 +171,25 @@
           </label>
           {% endfor %}
         </div>
-        <div class="help hub-hint" style="margin-top:6px">{{ _('اكتشفنا قائمة الواجهات من الراوتر تلقائيًا مع حالتها. حدّد المنافذ التي تنطبق عليها الخدمة.') }}</div>
+        {# نصّ مساعد عادي تحت شبكة المنافذ. الصنف القديم
+           «hub-hint» كان شارة دائريّة 20×20px (badge) من hub_v2.css،
+           فكان النص الطويل ينحشر فيها ويفيض فيرتطم بزر «معاينة
+           سكربت التفعيل» أسفله. استبدلناه بصنف نصّ المساعدة الصحيح
+           hub-field-hint (لا تموضع، لا badge) — فيظهر فقرة عاديّة. #}
+        <div class="hub-field-hint pss-field-hint">{{ _('اكتشفنا قائمة الواجهات من الراوتر تلقائيًا مع حالتها. حدّد المنافذ التي تنطبق عليها الخدمة.') }}</div>
         {% else %}
         <input class="hub-input" type="text" name="ports"
                placeholder="{{ _('اكتب أسماء المنافذ مفصولة بفواصل، مثل ether2,ether3') }}"
                data-pss-port-manual
                value="{{ selected_ports|join(',') }}">
-        <div class="help hub-hint" style="margin-top:6px">{{ _('تعذّر اكتشاف منافذ الراوتر — أدخلها يدويًا مفصولة بفواصل.') }}</div>
+        <div class="hub-field-hint pss-field-hint">{{ _('تعذّر اكتشاف منافذ الراوتر — أدخلها يدويًا مفصولة بفواصل.') }}</div>
         {% endif %}
       </div>
 
-      <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
+      {# صفّ الأزرار: على سطر مستقلّ بمسافة عاموديّة واضحة فوق
+         (لا تَرَاكُب على نصّ المساعدة)، ويلتفّ على الجوال أفقيًّا
+         قبل أن يضيق المتصفّح فيركم الأزرار فوق بعضها. #}
+      <div class="pss-actions-row">
         {# توليد معاينة سكربت التفعيل (mode=apply الافتراضي) #}
         <button type="submit" name="mode" value="apply" class="hub-btn hub-btn--primary" data-pss-submit>
           <i class="fa-solid fa-rotate-right"></i>

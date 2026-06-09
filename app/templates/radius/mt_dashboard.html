@@ -2425,13 +2425,18 @@ body.mt-modal-open{overflow:hidden}
           <h5 class="np-svc-title">{{ _('برمجة الشبكة') }}</h5>
           <span class="np-svc-status-dot is-tool" title="{{ _('أداة') }}"></span>
         </a>
-        {# بوابة الدخول — خدمة، نقطة الحالة من جرد hotspot. #}
+        {# الهوت سبوت — خدمة، نقطة الحالة من جرد hotspot.
+           الاسم العرضي في هذه الشبكة فقط = «الهوت سبوت» (طلب
+           المالك). المُعرّف/الـservice_key ومسار المعالج
+           وخطّاف الحالة hotspot لم تتغيّر — لا نُغيّر النصّ
+           «بوابة الدخول» في باقي الصفحات (~20 موضعاً غير ذي
+           صلة: قوالب الزبون، الفواتير، الوثائق…). #}
         <a class="np-svc-card"
            data-rh-svc-card="hotspot"
            href="{{ url_for('radius.setup_wizard_v3_router_service_flow',
                             router_id=nas.id, service_key='hotspot') }}">
           <span class="np-svc-icon np-svc-icon--blue"><i class="fa-solid fa-wifi"></i></span>
-          <h5 class="np-svc-title">{{ _('بوابة الدخول') }}</h5>
+          <h5 class="np-svc-title">{{ _('الهوت سبوت') }}</h5>
           <span class="np-svc-status-dot is-inactive" data-rh-svc-status title="{{ _('غير مفعّلة') }}"></span>
         </a>
         {# البرودباند — خدمة، نقطة الحالة من جرد broadband. #}
@@ -2528,12 +2533,21 @@ body.mt-modal-open{overflow:hidden}
           </h5>
           <span class="np-svc-status-dot {{ 'is-active' if loop_active else 'is-inactive' }}" title="{{ _('كشف اللوب عبر مجس DHCP على منافذ الزبائن') }}"></span>
         </a>
-        {# تشخيص الفلِيت (أداة — لكل المستأجر، لا nas_id). #}
-        <a class="np-svc-card np-svc-card--tool"
+        {# «تشخيص الراوترات» — أداة على مستوى المستأجر (لا nas_id).
+           اسم أوضح بدل «الفلِيت» (مصطلح أعجمي مُعرَّب). الصفحة
+           فعلًا تفحص اتصال + تسجيل API + هويّة كل راوترات المستأجر
+           وتعرض الأسباب وأوامر MikroTik للإصلاح
+           (radius.routes.status.diagnostics → mt_diagnostics.html).
+           أضفنا سطر وصف موجز داخل البطاقة يطابق وظيفتها الفعليّة. #}
+        <a class="np-svc-card np-svc-card--tool rh-inv-card--diag"
            data-mt-router-link="diagnostics"
-           href="{{ url_for('radius.diagnostics') }}">
+           href="{{ url_for('radius.diagnostics') }}"
+           title="{{ _('فحص اتصال كل راوترات الأسطول واكتشاف الأعطال مبكراً') }}">
           <span class="np-svc-icon np-svc-icon--slate"><i class="fa-solid fa-stethoscope"></i></span>
-          <h5 class="np-svc-title">{{ _('تشخيص الفلِيت') }}</h5>
+          <span class="rh-inv-card-text">
+            <h5 class="np-svc-title">{{ _('تشخيص الراوترات') }}</h5>
+            <span class="rh-inv-card-desc">{{ _('فحص الاتصال والصحّة لكل راوترات الأسطول مع أسباب الأعطال') }}</span>
+          </span>
           <span class="np-svc-status-dot is-tool" title="{{ _('أداة') }}"></span>
         </a>
       </div>
@@ -2722,6 +2736,38 @@ body.mt-modal-open{overflow:hidden}
 }
 .rh-inventory .np-svc-hint ~ .np-svc-status-dot{
   margin-inline-start:6px;
+}
+
+/* ─── بطاقة «تشخيص الراوترات» — الوحيدة في الشبكة التي تعرض
+   سطرَين (عنوان + وصف موجز) لأنها أداة على مستوى المستأجر
+   أوسع نطاقاً من الخدمات المرتبطة بهذا الراوتر. باقي البطاقات
+   تبقى سطراً واحداً مدمجاً كما هي. */
+.rh-inventory .np-svc-card.rh-inv-card--diag{
+  align-items:center;
+  padding:9px 13px;
+  min-height:54px;
+}
+.rh-inventory .np-svc-card.rh-inv-card--diag .rh-inv-card-text{
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+  flex:1;
+  min-width:0;
+}
+.rh-inventory .np-svc-card.rh-inv-card--diag .np-svc-title{
+  flex:initial;
+  margin:0;
+  /* داخل غلاف النصّ الجديد، العنوان يحجز سطره الخاصّ. */
+}
+.rh-inventory .np-svc-card.rh-inv-card--diag .rh-inv-card-desc{
+  display:block;
+  font-size:10.5px;
+  line-height:1.35;
+  color:#64748B;
+  font-weight:600;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
 }
 
 /* ─── قسم «الخدمات المضافة على الراوتر» ──────────────────────
