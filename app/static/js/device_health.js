@@ -194,7 +194,7 @@
     });
     if (!plan.live) {
       html += '<div class="dh-plan-warn" style="background:#F1F5F9;color:#475569;border-color:#E2E8F0">' +
-        'معاينة محسوبة — اضغط «مزامنة» للتحقق من حالة الراوتر الفعلية.</div>';
+        'معاينة محسوبة — اضغط «مزامنة» للتحقق من حالة المايكروتيك / السيرفر الفعلية.</div>';
     }
     return html;
   }
@@ -249,15 +249,15 @@
 
     if (btn.hasAttribute("data-dh-sync")) {
       var id = rowData(btn).d.id;
-      openPlanModal('<div class="dh-plan-net">جارٍ قراءة الراوتر…</div>');
+      openPlanModal('<div class="dh-plan-net">جارٍ قراءة المايكروتيك / السيرفر…</div>');
       request(api("/" + id + "/sync"), "POST").then(function (res) {
         if (res.data && res.data.ok) {
           var extra = res.data.router_state_ok ? "" :
-            '<div class="dh-plan-warn">تعذّر قراءة بعض موارد الراوتر — الخطة تقديرية.</div>';
+            '<div class="dh-plan-warn">تعذّر قراءة بعض موارد المايكروتيك / السيرفر — الخطة تقديرية.</div>';
           var hasCreate = (res.data.plan.items || []).some(function (it) { return it.action === "create"; });
           var applyBtn = hasCreate ?
             '<div class="dh-plan-apply"><button class="hub-btn hub-btn--primary" data-dh-apply data-id="' + id +
-            '"><i class="fa-solid fa-cloud-arrow-up"></i> تطبيق العناصر المفقودة على الراوتر</button>' +
+            '"><i class="fa-solid fa-cloud-arrow-up"></i> تطبيق العناصر المفقودة على المايكروتيك / السيرفر</button>' +
             '<span class="dh-apply-hint">يتطلّب تفعيل التطبيق الحيّ — لا يحذف أي إعداد قائم.</span></div>' : "";
           openPlanModal(extra + renderPlan(res.data.plan, false) + applyBtn);
         } else {
@@ -275,7 +275,7 @@
         var d = res.data || {};
         if (d.gated) {
           toast("التطبيق الحيّ معطّل — فعّل HOBERADIUS_DEVICE_HEALTH_LIVE_APPLY.", "info");
-          btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> تطبيق العناصر المفقودة على الراوتر';
+          btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> تطبيق العناصر المفقودة على المايكروتيك / السيرفر';
           return;
         }
         if (d.ok) {

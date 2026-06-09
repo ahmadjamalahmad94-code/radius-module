@@ -29,8 +29,12 @@
 .dh-form .hub-field-label { font-size: 12.5px; font-weight: 600; }
 .dh-form .req { color: #DC2626; margin-inline-start: 3px; }
 
-.dh-check { flex-direction: row !important; align-items: center; gap: 8px; }
+.dh-check { flex-direction: row !important; align-items: center; gap: 8px; flex-wrap: wrap; }
 .dh-check input { width: 16px; height: 16px; }
+.dh-check .hub-field-hint { flex-basis: 100%; margin-top: 2px; }
+
+/* form-field hint spacing inside the add/edit modal */
+.dh-form .hub-field-hint { margin-top: 2px; line-height: 1.5; }
 
 .dh-advanced { margin-top: 14px; border-top: 1px dashed var(--hub-border, #E2E8F0); padding-top: 10px; }
 .dh-advanced > summary { cursor: pointer; font-weight: 600; font-size: 13px; color: var(--hub-accent, #6366F1); }

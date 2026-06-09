@@ -47,7 +47,7 @@
   <input class="hub-input grow" type="search" id="dh-search"
          placeholder="{{ _('ابحث بالاسم أو الـIP أو المكان…') }}">
   <select class="hub-input" id="dh-filter-router">
-    <option value="">{{ _('كل الراوترات') }}</option>
+    <option value="">{{ _('كل المايكروتيك / السيرفرات') }}</option>
     {% for r in routers %}<option value="{{ r.id }}">{{ r.name }}</option>{% endfor %}
   </select>
   <select class="hub-input" id="dh-filter-type">
@@ -66,13 +66,13 @@
 </section>
 
 {%- set _help = hub.helppanel(_('كيف تقرأ هذه الصفحة'),
-      intro=_('تُسجَّل الأجهزة هنا ثم تُجهَّز خطة وصول الراوتر (عنوان/بوابة + تجاوز Hotspot + Netwatch). لا يُطبَّق أي تغيير على الراوتر تلقائيًا في هذه المرحلة.'),
+      intro=_('تُسجَّل الأجهزة هنا ثم تُجهَّز خطة وصول المايكروتيك / السيرفر (عنوان/بوابة + تجاوز Hotspot + Netwatch). لا يُطبَّق أي تغيير على المايكروتيك / السيرفر تلقائيًا في هذه المرحلة.'),
       items=[
         {'icon':'circle-check','text': _('أخضر = متصل · أحمر = مفصول · كهرماني = بنج عالٍ.')},
-        {'icon':'diagram-project','text': _('المدخل إلزامي — مفتاح النطاق هو الراوتر + المدخل + الشبكة.')},
+        {'icon':'diagram-project','text': _('المدخل إلزامي — مفتاح النطاق هو المايكروتيك / السيرفر + المدخل + الشبكة.')},
         {'icon':'flask','text': _('«معاينة الخطة» و«مزامنة» تعرضان ما سيُضاف للراوتر دون أي طفرة حيّة.')}
       ],
-      note=_('منع التكرار فعّال: نفس الراوتر بنفس الـIP لا يُضاف مرتين.')) -%}
+      note=_('منع التكرار فعّال: نفس المايكروتيك / السيرفر بنفس الـIP لا يُضاف مرتين.')) -%}
 
 {% call hub.worklayout(aside_html=_help) %}
   {% call hub.section(_('الأجهزة المُسجّلة'), icon='list', meta=(devices|length ~ ' ' ~ _('جهاز')), flush=True) %}
@@ -119,7 +119,7 @@
             <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-dh-plan
                     title="{{ _('معاينة الخطة') }}"><i class="fa-solid fa-diagram-project"></i></button>
             <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-dh-sync
-                    title="{{ _('مزامنة مع الراوتر') }}"><i class="fa-solid fa-rotate"></i></button>
+                    title="{{ _('مزامنة مع المايكروتيك / السيرفر') }}"><i class="fa-solid fa-rotate"></i></button>
             <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-dh-ping
                     title="{{ _('فحص ping') }}"><i class="fa-solid fa-satellite-dish"></i></button>
             <button class="hub-btn hub-btn--ghost hub-btn--sm" type="button" data-dh-events
@@ -159,46 +159,59 @@
   <input type="hidden" name="device_id" value="">
   <div class="dh-form-grid">
     <label class="hub-field"><span class="hub-field-label">{{ _('اسم الجهاز') }}<span class="req">*</span></span>
-      <input class="hub-input" name="name" required></label>
+      <input class="hub-input" name="name" required>
+      <span class="hub-field-hint">{{ _('اسم واضح للجهاز كما تعرفه (مثل: نقطة وصول السطح) — يظهر في الجدول والتنبيهات.') }}</span></label>
     <label class="hub-field"><span class="hub-field-label">{{ _('النوع') }}<span class="req">*</span></span>
       <select class="hub-input" name="device_type">
         {% for t in device_types %}<option value="{{ t }}">{{ _type_labels.get(t, t) }}</option>{% endfor %}
-      </select></label>
-    <label class="hub-field"><span class="hub-field-label">{{ _('الراوتر') }}<span class="req">*</span></span>
+      </select>
+      <span class="hub-field-hint">{{ _('نوع الجهاز (نقطة وصول/سويتش/وصلة…) — لتصنيف وفلترة الأجهزة فقط، لا يؤثّر على المراقبة.') }}</span></label>
+    <label class="hub-field"><span class="hub-field-label">{{ _('المايكروتيك / السيرفر') }}<span class="req">*</span></span>
       <select class="hub-input" name="router_id" required>
-        <option value="">{{ _('اختر الراوتر…') }}</option>
+        <option value="">{{ _('اختر المايكروتيك / السيرفر…') }}</option>
         {% for r in routers %}<option value="{{ r.id }}">{{ r.name }}</option>{% endfor %}
-      </select></label>
+      </select>
+      <span class="hub-field-hint">{{ _('المايكروتيك (السيرفر) الذي يتبع له الجهاز — منه يُضاف عنوان الشبكة وتُركّب مراقبة Netwatch.') }}</span></label>
     <label class="hub-field"><span class="hub-field-label">{{ _('المدخل') }}<span class="req">*</span></span>
-      <input class="hub-input mono" name="interface_name" placeholder="ether2" required></label>
+      <input class="hub-input mono" name="interface_name" placeholder="ether2" required>
+      <span class="hub-field-hint">{{ _('منفذ المايكروتيك الموصول به الجهاز (مثل ether2) — إلزامي لأن نفس الشبكة قد تتكرّر على أكثر من مدخل.') }}</span></label>
     <label class="hub-field"><span class="hub-field-label">{{ _('عنوان IP للجهاز') }}<span class="req">*</span></span>
-      <input class="hub-input mono" name="ip_address" placeholder="192.168.15.10" required></label>
+      <input class="hub-input mono" name="ip_address" placeholder="192.168.15.10" required>
+      <span class="hub-field-hint">{{ _('عنوان IP الثابت للجهاز — منه تُحسب الشبكة والبوابة، وعليه يعمل البنج وNetwatch.') }}</span></label>
     <label class="hub-field"><span class="hub-field-label">{{ _('المكان') }}</span>
-      <input class="hub-input" name="location" placeholder="{{ _('برج/موقع') }}"></label>
+      <input class="hub-input" name="location" placeholder="{{ _('برج/موقع') }}">
+      <span class="hub-field-hint">{{ _('وصف الموقع الفعلي (برج/طابق/فرع) — يساعد على تحديد الجهاز بسرعة عند العطل. اختياري.') }}</span></label>
   </div>
 
   <details class="dh-advanced">
     <summary>{{ _('إعدادات متقدّمة') }}</summary>
     <div class="dh-form-grid">
       <label class="hub-field"><span class="hub-field-label">{{ _('بادئة الشبكة') }}</span>
-        <input class="hub-input mono" name="subnet_prefix" type="number" min="1" max="32" value="24"></label>
+        <input class="hub-input mono" name="subnet_prefix" type="number" min="1" max="32" value="24">
+        <span class="hub-field-hint">{{ _('حجم الشبكة الفرعية (CIDR). الافتراضي 24 = ‎255.255.255.0‎. غيّره فقط إذا كانت شبكتك أوسع/أضيق.') }}</span></label>
       <label class="hub-field"><span class="hub-field-label">{{ _('آخر أوكتت للبوابة') }}</span>
-        <input class="hub-input mono" name="gateway_last_octet" type="number" min="1" max="254" value="254"></label>
+        <input class="hub-input mono" name="gateway_last_octet" type="number" min="1" max="254" value="254">
+        <span class="hub-field-hint">{{ _('الرقم الأخير لعنوان بوابة المايكروتيك داخل الشبكة. الافتراضي 254 → مثال: ‎192.168.15.254‎.') }}</span></label>
       <label class="hub-field"><span class="hub-field-label">{{ _('حد البنج (ms)') }}</span>
-        <input class="hub-input mono" name="ping_threshold_ms" type="number" min="1" value="80"></label>
+        <input class="hub-input mono" name="ping_threshold_ms" type="number" min="1" value="80">
+        <span class="hub-field-hint">{{ _('فوق هذا الزمن (مللي ثانية) تُعتبر الحالة «بنج عالٍ» ويُطلق تنبيه. الافتراضي 80.') }}</span></label>
       <label class="hub-field"><span class="hub-field-label">{{ _('فترة Netwatch (ث)') }}</span>
-        <input class="hub-input mono" name="netwatch_interval_sec" type="number" min="1" value="60"></label>
+        <input class="hub-input mono" name="netwatch_interval_sec" type="number" min="1" value="60">
+        <span class="hub-field-hint">{{ _('كل كم ثانية يفحص المايكروتيك الجهاز عبر Netwatch. الافتراضي 60 ثانية.') }}</span></label>
       <label class="hub-field"><span class="hub-field-label">{{ _('مهلة Netwatch (ث)') }}</span>
-        <input class="hub-input mono" name="netwatch_timeout_sec" type="number" min="1" value="3"></label>
+        <input class="hub-input mono" name="netwatch_timeout_sec" type="number" min="1" value="3">
+        <span class="hub-field-hint">{{ _('مدة انتظار الردّ قبل اعتبار الفحص فاشلاً. الافتراضي 3 ثوانٍ.') }}</span></label>
       <label class="hub-field"><span class="hub-field-label">{{ _('قناة التنبيه') }}</span>
         <select class="hub-input" name="alert_channel">
           <option value="">{{ _('افتراضي المستأجر') }}</option>
           <option value="telegram">Telegram</option>
           <option value="sms">SMS</option>
           <option value="whatsapp">WhatsApp</option>
-        </select></label>
+        </select>
+        <span class="hub-field-hint">{{ _('القناة التي تصلك عبرها تنبيهات هذا الجهاز. «افتراضي المستأجر» يستخدم إعداد الإشعارات العام.') }}</span></label>
       <label class="hub-field dh-check"><input type="checkbox" name="monitoring_enabled" checked>
-        <span>{{ _('تفعيل المراقبة') }}</span></label>
+        <span>{{ _('تفعيل المراقبة') }}</span>
+        <span class="hub-field-hint">{{ _('عند الإيقاف يبقى الجهاز مُسجّلاً لكن لا يُفحَص ولا يُطلق تنبيهات (حالته «معطّل»).') }}</span></label>
     </div>
   </details>
 
@@ -208,7 +221,7 @@
 {% endcall %}
 
 {# ── Plan / sync result modal ── #}
-{% call hub.modal('dh-plan-modal', _('خطة وصول الراوتر'), icon='diagram-project', size='lg') %}
+{% call hub.modal('dh-plan-modal', _('خطة وصول المايكروتيك / السيرفر'), icon='diagram-project', size='lg') %}
 <div id="dh-plan-body" aria-live="polite"></div>
 {% endcall %}
 
