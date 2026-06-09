@@ -210,7 +210,7 @@ def _nas_name(router_id: Optional[int]) -> str:
         "SELECT name FROM nas_devices WHERE id=? AND tenant_id=?",
         (int(router_id), _tid()),
     ).fetchone()
-    return row["name"] if row else f"router #{router_id}"
+    return row["name"] if row else f"راوتر #{router_id}"
 
 
 # ─── Per-service repo + planner adapters ─────────────────────
@@ -1215,7 +1215,14 @@ def _make_changes_view(svc: _ServiceDef):
         decorated: list[dict] = []
         for r in rows:
             r = dict(r)
-            r["targets"] = cs_repo.list_targets(int(r["id"]))
+            # تزيين كل هدف باسم الراوتر الفعلي ليعرضه القالب بدل «#رقم» خام
+            _tgts = []
+            for t in cs_repo.list_targets(int(r["id"])):
+                t = dict(t)
+                t["router_name"] = _nas_name(t.get("router_id")) \
+                    or f"راوتر #{t.get('router_id')}"
+                _tgts.append(t)
+            r["targets"] = _tgts
             r["rollback_eligible"] = (
                 r["action_type"] == cs_repo.ACTION_APPLY
                 and r["status"] in (
