@@ -32,7 +32,9 @@
   {'label': _('المعطّلة'),       'value': counts.disabled,     'icon':'circle-pause',  'variant':'grey'}
 ] -%}
 
-{%- set _add_btn = hub.btn(_('إضافة جهاز'), variant='primary', icon='plus', size='sm',
+{%- set _poll_btn = hub.btn(_('فحص الكل الآن'), variant='ghost', icon='satellite-dish', size='sm',
+                            attrs='data-dh-poll') -%}
+{%- set _add_btn = _poll_btn ~ hub.btn(_('إضافة جهاز'), variant='primary', icon='plus', size='sm',
                            attrs='data-uds-modal-open="dh-device-modal" data-dh-add') -%}
 
 <section class="hub-hero-shell">

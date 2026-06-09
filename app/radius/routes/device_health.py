@@ -55,6 +55,8 @@ def register_device_health_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/device-health/api/devices/<int:device_id>/test-ping",
                     "device_health_api_test_ping",
                     device_health_api_test_ping, methods=["POST"])
+    bp.add_url_rule("/device-health/api/poll", "device_health_api_poll",
+                    device_health_api_poll, methods=["POST"])
     bp.add_url_rule("/device-health/api/plan", "device_health_api_plan",
                     device_health_api_plan, methods=["GET"])
 
@@ -198,6 +200,15 @@ def device_health_api_test_ping(device_id: int):
     return jsonify(result)
 
 
+
+
+def device_health_api_poll():
+    """Phase 4 — run one polling sweep on demand for this tenant (router
+    reads only; no mutation). Returns the sweep summary."""
+    tenant_id = _tid()
+    from ..services import device_health_poller as poller
+    summary = poller.tick(tenant_id=tenant_id)
+    return jsonify({"ok": True, "summary": summary})
 
 
 def device_health_api_plan():

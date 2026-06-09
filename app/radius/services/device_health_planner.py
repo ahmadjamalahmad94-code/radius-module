@@ -242,3 +242,47 @@ def _hms(seconds: int) -> str:
     h, rem = divmod(s, 3600)
     m, s2 = divmod(rem, 60)
     return f"{h:02d}:{m:02d}:{s2:02d}"
+
+
+# ── ping summarisation (shared by test_ping + poller) ──────────
+
+import re as _re  # noqa: E402
+
+
+def parse_router_time_ms(text: str) -> Optional[float]:
+    """Parse RouterOS ping time tokens ('2ms', '500us', '1s200ms') → ms."""
+    s = str(text or "").strip().lower()
+    if not s:
+        return None
+    total = 0.0
+    found = False
+    for value, unit in _re.findall(r"(\d+(?:\.\d+)?)(us|ms|s)", s):
+        found = True
+        v = float(value)
+        total += v / 1000.0 if unit == "us" else (v * 1000.0 if unit == "s" else v)
+    if found:
+        return round(total, 3)
+    try:
+        return float(s)  # bare number → assume ms
+    except ValueError:
+        return None
+
+
+def summarize_ping(rows: list, threshold_ms: int) -> tuple[str, Optional[float]]:
+    """Reduce /ping !re rows to (status, avg_latency_ms).
+    No replies / all timeouts → ('down', None); avg over threshold →
+    ('high_latency', avg); else ('up', avg)."""
+    latencies: list[float] = []
+    for r in rows or []:
+        t = str(r.get("time") or "").strip()
+        if r.get("status") and not t:
+            continue  # 'timeout' / 'host unreachable' rows
+        ms = parse_router_time_ms(t)
+        if ms is not None:
+            latencies.append(ms)
+    if not latencies:
+        return "down", None
+    avg = sum(latencies) / len(latencies)
+    if avg > float(threshold_ms or 80):
+        return "high_latency", round(avg, 1)
+    return "up", round(avg, 1)

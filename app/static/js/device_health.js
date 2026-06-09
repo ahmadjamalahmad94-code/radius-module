@@ -217,6 +217,23 @@
     var btn = e.target.closest("button");
     if (!btn) return;
 
+    if (btn.hasAttribute("data-dh-poll")) {
+      btn.disabled = true;
+      var orig = btn.innerHTML;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جارٍ الفحص…';
+      request((CFG.base || "") + "/api/poll", "POST", {}).then(function (res) {
+        btn.disabled = false; btn.innerHTML = orig;
+        if (res.data && res.data.ok) {
+          var s = res.data.summary || {};
+          toast("فُحص " + (s.scanned || 0) + " · متصل " + (s.up || 0) + " · مفصول " + (s.down || 0), "success");
+          setTimeout(function () { location.reload(); }, 900);
+        } else {
+          toast("تعذّر الفحص", "error");
+        }
+      });
+      return;
+    }
+
     if (btn.hasAttribute("data-dh-edit")) { fillForm(rowData(btn).d); return; }
 
     if (btn.hasAttribute("data-dh-plan")) {

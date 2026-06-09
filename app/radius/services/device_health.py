@@ -311,7 +311,7 @@ def test_ping(tenant_id: int, device_id: int) -> dict:
     if not res.ok:
         return {"ok": False, "status": "", "latency_ms": None, "error": res.error}
 
-    status, latency = _summarize_ping(res.data or [], device["ping_threshold_ms"])
+    status, latency = planner.summarize_ping(res.data or [], device["ping_threshold_ms"])
     repo.set_status(tenant_id=tid, device_id=int(device_id),
                     status=status, latency_ms=latency)
     repo.add_event(
@@ -319,47 +319,6 @@ def test_ping(tenant_id: int, device_id: int) -> dict:
         previous_status=device["status"], new_status=status,
         latency_ms=latency, message="فحص ping يدوي.")
     return {"ok": True, "status": status, "latency_ms": latency, "error": ""}
-
-
-def _summarize_ping(rows: list, threshold_ms: int) -> tuple[str, Optional[float]]:
-    """Reduce /ping !re rows to (status, avg_latency_ms)."""
-    latencies: list[float] = []
-    received = 0
-    for r in rows:
-        # RouterOS returns time like '2ms' / '2us' / '1m500us'; also 'status'.
-        t = str(r.get("time") or "").strip()
-        if r.get("status") and not t:
-            continue  # 'timeout' / 'host unreachable' rows
-        ms = _parse_router_time_ms(t)
-        if ms is not None:
-            latencies.append(ms)
-            received += 1
-    if received == 0:
-        return "down", None
-    avg = sum(latencies) / len(latencies)
-    if avg > float(threshold_ms or 80):
-        return "high_latency", round(avg, 1)
-    return "up", round(avg, 1)
-
-
-def _parse_router_time_ms(text: str) -> Optional[float]:
-    """Parse RouterOS ping time tokens ('2ms', '500us', '1s200ms') → ms."""
-    s = str(text or "").strip().lower()
-    if not s:
-        return None
-    import re
-    total = 0.0
-    found = False
-    for value, unit in re.findall(r"(\d+(?:\.\d+)?)(us|ms|s)", s):
-        found = True
-        v = float(value)
-        total += v / 1000.0 if unit == "us" else (v * 1000.0 if unit == "s" else v)
-    if found:
-        return round(total, 3)
-    try:
-        return float(s)  # bare number → assume ms
-    except ValueError:
-        return None
 
 
 # ── Phase 3: controlled live apply ─────────────────────────────
