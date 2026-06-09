@@ -41,7 +41,8 @@
     {% else %}{{ hub.pill("معلومة", variant="brand") }}{% endif %}
   </td>
   <td class="small">{{ _type_labels.get(p.type, p.type) }}</td>
-  <td class="mono small">{% if p.router_id %}#{{ p.router_id }}{% else %}<span class="hub-text-mute">—</span>{% endif %}</td>
+  {# عمود «الراوتر» — اسم الجهاز الفعلي (router_name) بدل «#رقم» الخام #}
+  <td class="small">{% if p.router_id %}{{ p.router_name }}{% else %}<span class="hub-text-mute">—</span>{% endif %}</td>
   <td class="mono small">{% if p.last_seen %}{{ p.last_seen|dt_local }}{% else %}<span class="hub-text-mute">—</span>{% endif %}</td>
   <td>
     <a class="hub-btn hub-btn--secondary hub-btn--sm" href="{{ p.suggested_href }}" data-mt-problem-action="{{ p.type }}">

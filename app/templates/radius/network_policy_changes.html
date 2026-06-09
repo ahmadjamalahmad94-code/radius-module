@@ -103,13 +103,18 @@
         {% elif cs.status == 'partially_rolled_back' %}
           {{ hub.pill("تراجع جزئي", variant="amber") }}
         {% else %}
-          {{ hub.pill(cs.status, variant="grey") }}
+          {{ hub.pill("حالة أخرى", variant="grey") }}
         {% endif %}
 
+        {# تعريب وضع التنفيذ (full/canary/staged/rollback) بدل المفتاح الخام #}
+        {% set _mode_ar = {
+          'full': 'كامل', 'canary': 'تجريبي محدود',
+          'staged': 'مرحلي', 'rollback': 'تراجع'
+        } %}
         <span class="npc-cs-meta" style="margin-inline-start:auto;">
           <span class="mono tnum" style="direction:ltr">{{ cs.created_at|dt_local }}</span>
           {{ _('· بواسطة') }} <strong>{{ cs.created_by or '—' }}</strong>
-          {{ _('· وضع:') }} <code>{{ cs.execution_mode }}</code>
+          {{ _('· وضع:') }} <strong>{{ _mode_ar.get(cs.execution_mode, cs.execution_mode or '—') }}</strong>
         </span>
       </div>
 
@@ -131,8 +136,9 @@
                 'partially_succeeded': 'نجاح جزئي'
               } %}
               <i class="fa-solid fa-router"></i>
-              {{ _('راوتر') }} <span class="mono tnum" style="direction:ltr">#{{ t.router_id }}</span>
-              {{ _('· حالة:') }} <strong>{{ _t_status_ar.get(t.status, t.status) }}</strong>
+              {# اسم الراوتر الفعلي (router_name مُزيّن من المسار) بدل «#رقم» خام #}
+              <strong>{{ t.router_name or (_('راوتر') ~ ' #' ~ t.router_id) }}</strong>
+              {{ _('· حالة:') }} <strong>{{ _t_status_ar.get(t.status, 'حالة أخرى') }}</strong>
               {% if t.error_message %}
                 · <span style="font-family:ui-monospace,monospace; direction:ltr;">
                   {{ t.error_message[:120] }}

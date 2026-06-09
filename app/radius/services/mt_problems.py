@@ -101,7 +101,8 @@ def _problems_for_router(ov) -> list[Problem]:
         return []
     out: list[Problem] = []
     rid = ov.nas_id
-    rname = ov.name or f"#{rid}"
+    # اسم عرض ودّي: عند غياب الاسم نستخدم «راوتر #رقم» بدل «#رقم» الخام
+    rname = ov.name or f"راوتر #{rid}"
     href_overview = f"/admin/radius/mt/{rid}/overview"
 
     if not ov.enabled:

@@ -117,7 +117,9 @@
               {{ hub.pill("معلومة", variant="blue") }}
               {% endif %}
             </td>
-            <td class="mono small">{% if a.router_id %}#{{ a.router_id }}{% else %}<span class="hub-text-mute">—</span>{% endif %}</td>
+            {# عمود «الراوتر» — اسم الجهاز الفعلي من خريطة router_names؛
+               عند غياب الاسم نعرض «راوتر #رقم» بدل «#رقم» الخام. #}
+            <td class="small">{% if a.router_id %}{{ router_names.get(a.router_id, 'راوتر #' ~ a.router_id) }}{% else %}<span class="hub-text-mute">—</span>{% endif %}</td>
             <td class="mono small">{{ a.rule }}</td>
             <td class="mono small">{{ a.last_seen|dt_local }}</td>
             <td>

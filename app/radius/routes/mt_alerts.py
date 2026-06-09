@@ -117,6 +117,18 @@ def mt_alerts_index():
     else:
         rows = alerts_repo.list_resolved(tid, router_id=router_id)
 
+    # خريطة {معرّف الراوتر → اسمه} ليعرض عمود «الراوتر» اسمًا حقيقيًّا
+    # بدل «#رقم» خام في الجدول. صفوف list_nas كائنات (وصول بالسمة).
+    from ..db.repos import nas_repo
+    try:
+        _devs = nas_repo.list_nas(tid, limit=1000)
+    except Exception:  # noqa: BLE001
+        _devs = []
+    router_names = {
+        int(getattr(d, "id")): (getattr(d, "name", None) or "")
+        for d in _devs
+    }
+
     return render_template(
         "radius/mt_alerts_index.html",
         rows=rows,
@@ -124,6 +136,7 @@ def mt_alerts_index():
         severities=["info", "warning", "critical"],
         settings=smart_alerts.global_settings(tid),
         routers=_routers_with_thresholds(tid),
+        router_names=router_names,
     )
 
 

@@ -3,6 +3,19 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
+{# ── خرائط عربية محلية لأعمدة الجدول — تمنع ظهور مفاتيح enum خام
+   (mikrotik / hotspot / pppoe …) كنصّ ظاهر. أسماء المُصنِّعين تبقى
+   بصيغتها التجارية الصحيحة، وأنواع الخدمة تُعرَّب. #}
+{% set _vendor_labels = {
+  'mikrotik': 'MikroTik', 'cisco': 'Cisco', 'huawei': 'Huawei',
+  'ubiquiti': 'Ubiquiti', 'other': 'أخرى'
+} %}
+{% set _nas_type_labels = {
+  'hotspot': 'بوابة دخول', 'pppoe': 'برودباند (PPPoE)', 'dhcp': 'DHCP',
+  'router': 'راوتر', 'ap': 'أكسس بوينت', 'switch': 'سويتش',
+  'firewall': 'جدار حماية', 'other': 'أخرى'
+} %}
+
 {% block title %}أجهزة الشبكة / NAS{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-server"></i>{% endblock %}
 {% block page_title %}أجهزة الشبكة / NAS{% endblock %}
@@ -87,8 +100,8 @@
                 <div class="hub-text-mono hub-text-mute" style="font-size:11px">{{ d.tags }}</div>
               {% endif %}
             </td>
-            <td>{{ hub.pill(d.vendor, variant="grey", dot=False) }}</td>
-            <td>{{ hub.pill(d.nas_type, variant="blue", dot=False) }}</td>
+            <td>{{ hub.pill(_vendor_labels.get(d.vendor, d.vendor or '—'), variant="grey", dot=False) }}</td>
+            <td>{{ hub.pill(_nas_type_labels.get(d.nas_type, d.nas_type or '—'), variant="blue", dot=False) }}</td>
             <td>{{ d.location or '—' }}</td>
             <td class="mono small">
               {{ d.auth_port }}/{{ d.acct_port }}
