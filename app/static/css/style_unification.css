@@ -1,0 +1,197 @@
+/* ══════════════════════════════════════════════════════════════════════
+   STYLE UNIFICATION — global polish layer.
+
+   Loaded site-wide AFTER hub_v2.css/unified_design.css/admin_design_system.css
+   so it acts as the final normalize over any legacy ad-hoc styling that
+   slipped through the per-page redesigns. Goals:
+
+     1. Generic <table> in the admin shell inherits the same restrained
+        hub-table look — even tables that were never explicitly given a
+        class still feel like part of the design system.
+     2. <button>/<input>/<select>/<textarea> stripped of OS chrome and
+        given the same restrained radius + spacing as hub-input / hub-btn
+        when the page didn't bother to add the class.
+     3. A single .uds-toast widget — invisible by default, slides up from
+        the bottom-center on .is-on. Used by the global `window.UDS.toast()`
+        bridge that replaces native alert().
+     4. Spacing/colour tokens proxied for any legacy raw hex so the
+        ----visual feel----- stays in line even on the older pages.
+
+   NOTHING in this file changes layout structure or hides content. It
+   normalises native controls toward the design system; pages that already
+   adopt hub-*/uds-* override it cleanly (their classes win on specificity).
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* ── Native-control normalize (admin shell only — never touches portal/login) ── */
+.main button:not([class*="hub-btn"]):not([class*="cc-"]):not([class*="hb-"]):not([class*="uds-"]):not(.flash-close):not(.cfm-foot button):not(.hr-page-nav-list button):not(.tab):not(.fcw-btn):not(.ic):not(.hb-burger){
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.4;
+  border: 1px solid var(--hub-border, #E2E8F0);
+  background: #fff;
+  color: var(--hub-text, #0F172A);
+  border-radius: 10px;
+  padding: 7px 14px;
+  cursor: pointer;
+  transition: background .15s ease, border-color .15s ease, color .15s ease, box-shadow .15s ease;
+}
+.main button:not([class*="hub-btn"]):not([class*="cc-"]):not([class*="hb-"]):not([class*="uds-"]):not(.flash-close):not(.cfm-foot button):not(.hr-page-nav-list button):not(.tab):not(.fcw-btn):not(.ic):not(.hb-burger):hover{
+  background: var(--hub-soft, #F4F1FE);
+  border-color: var(--hub-brand, #6B5AED);
+  color: var(--hub-brand-700, #4F3AD0);
+}
+.main button[type="submit"]:not([class*="hub-btn"]):not([class*="cc-"]):not([class*="hb-"]):not([class*="uds-"]):not(.flash-close):not(.tab):not(.fcw-btn){
+  background: var(--hub-brand, #6B5AED);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 2px 6px rgba(107, 90, 237, .18);
+}
+.main button[type="submit"]:not([class*="hub-btn"]):not([class*="cc-"]):not([class*="hb-"]):not([class*="uds-"]):not(.flash-close):not(.tab):not(.fcw-btn):hover{
+  background: var(--hub-brand-700, #4F3AD0);
+  color: #fff;
+}
+
+/* Native form controls picked up by the auto-help finder usually live
+   inside `.field` / `.form-field` boxes — make sure they at least look
+   tidy if the page never explicitly added .hub-input. */
+.main input[type="text"]:not([class*="hub-"]):not([class*="cc-"]):not(.fcw-input),
+.main input[type="search"]:not([class*="hub-"]):not([class*="cc-"]):not(.fcw-input),
+.main input[type="email"]:not([class*="hub-"]):not([class*="cc-"]):not(.fcw-input),
+.main input[type="number"]:not([class*="hub-"]):not([class*="cc-"]):not(.fcw-input),
+.main input[type="password"]:not([class*="hub-"]):not([class*="cc-"]):not(.fcw-input),
+.main input[type="tel"]:not([class*="hub-"]):not([class*="cc-"]):not(.fcw-input),
+.main input[type="url"]:not([class*="hub-"]):not([class*="cc-"]):not(.fcw-input),
+.main input[type="date"]:not([class*="hub-"]):not([class*="cc-"]):not(.fcw-input),
+.main input[type="datetime-local"]:not([class*="hub-"]):not([class*="cc-"]):not(.fcw-input),
+.main input[type="time"]:not([class*="hub-"]):not([class*="cc-"]):not(.fcw-input),
+.main select:not([class*="hub-"]):not([class*="cc-"]):not(.fcw-input),
+.main textarea:not([class*="hub-"]):not([class*="cc-"]):not(.fcw-input){
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--hub-text, #0F172A);
+  background: #fff;
+  border: 1px solid var(--hub-border, #E2E8F0);
+  border-radius: 10px;
+  padding: 8px 12px;
+  min-height: 36px;
+  outline: none;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.main input[type="text"]:not([class*="hub-"]):not([class*="cc-"]):not(.fcw-input):focus,
+.main input[type="search"]:not([class*="hub-"]):not([class*="cc-"]):not(.fcw-input):focus,
+.main input[type="email"]:not([class*="hub-"]):not([class*="cc-"]):not(.fcw-input):focus,
+.main input[type="number"]:not([class*="hub-"]):not([class*="cc-"]):not(.fcw-input):focus,
+.main input[type="password"]:not([class*="hub-"]):not([class*="cc-"]):not(.fcw-input):focus,
+.main input[type="tel"]:not([class*="hub-"]):not([class*="cc-"]):not(.fcw-input):focus,
+.main input[type="url"]:not([class*="hub-"]):not([class*="cc-"]):not(.fcw-input):focus,
+.main input[type="date"]:not([class*="hub-"]):not([class*="cc-"]):not(.fcw-input):focus,
+.main input[type="datetime-local"]:not([class*="hub-"]):not([class*="cc-"]):not(.fcw-input):focus,
+.main input[type="time"]:not([class*="hub-"]):not([class*="cc-"]):not(.fcw-input):focus,
+.main select:not([class*="hub-"]):not([class*="cc-"]):not(.fcw-input):focus,
+.main textarea:not([class*="hub-"]):not([class*="cc-"]):not(.fcw-input):focus{
+  border-color: var(--hub-brand, #6B5AED);
+  box-shadow: 0 0 0 3px rgba(107, 90, 237, .14);
+}
+
+/* ── Generic <table> in admin pages ──
+   Tables without any class still need to look part of the family. The
+   real uds tables (`.hub-table`, `.uds-table`) already have rich styling
+   and win on specificity. */
+.main table:not([class]):not(.hub-table):not(.uds-table){
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 12.5px;
+  color: var(--hub-text, #0F172A);
+  background: #fff;
+  border: 1px solid var(--hub-border-soft, #ECE9E0);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.main table:not([class]):not(.hub-table):not(.uds-table) thead th{
+  background: var(--hub-soft, #F4F1FE);
+  color: var(--hub-text, #0F172A);
+  font-weight: 800;
+  text-align: start;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--hub-border-soft, #ECE9E0);
+  white-space: nowrap;
+}
+.main table:not([class]):not(.hub-table):not(.uds-table) tbody td{
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--hub-border-soft, #ECE9E0);
+  vertical-align: middle;
+}
+.main table:not([class]):not(.hub-table):not(.uds-table) tbody tr:last-child td{
+  border-bottom: 0;
+}
+.main table:not([class]):not(.hub-table):not(.uds-table) tbody tr:nth-child(even){
+  background: rgba(244, 241, 254, .35);
+}
+.main table:not([class]):not(.hub-table):not(.uds-table) tbody tr:hover{
+  background: var(--hub-soft, #F4F1FE);
+}
+
+/* ── Global toast (replaces native alert) ──
+   A single, polite slide-from-bottom-centre widget. The DOM element is
+   inserted lazily by style_unification.js so pages that never call
+   `UDS.toast()` pay zero cost. */
+.uds-toast{
+  position: fixed;
+  inset-block-end: 24px;
+  inset-inline: 0;
+  margin-inline: auto;
+  width: max-content;
+  max-width: min(92vw, 460px);
+  z-index: 9999;
+  display: none;
+  align-items: flex-start;
+  gap: 10px;
+  background: var(--hub-text, #1F2937);
+  color: #fff;
+  padding: 13px 18px;
+  border-radius: 14px;
+  font-weight: 700;
+  font-size: 13.5px;
+  line-height: 1.6;
+  box-shadow: 0 18px 48px rgba(15, 23, 42, .34);
+  text-align: start;
+}
+.uds-toast.is-on{
+  display: flex;
+  animation: udsToastRise .22s ease;
+}
+.uds-toast i{
+  font-size: 15px;
+  margin-top: 2px;
+  color: var(--hub-amber, #F59E0B);
+}
+.uds-toast.is-ok i{ color: var(--hub-green, #10B981); }
+.uds-toast.is-err i{ color: var(--hub-red, #EF4444); }
+.uds-toast .uds-toast-msg{ flex: 1; }
+@keyframes udsToastRise{
+  from{ opacity: 0; transform: translateY(8px); }
+  to{   opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce){
+  .uds-toast.is-on{ animation: none; }
+}
+
+/* ── Section card fallback ──
+   Random ad-hoc `<div class="card">` blocks on legacy pages — give them a
+   look in line with `hub-section` so they don't visually sit outside the
+   design system. Pages with their own `.card` definition still override
+   this because their CSS is loaded later through head_extra. */
+.main > .card:not(.no-uds-card),
+.main > section.card:not(.no-uds-card){
+  background: #fff;
+  border: 1px solid var(--hub-border-soft, #ECE9E0);
+  border-radius: 14px;
+  box-shadow: var(--hr-shadow-sm, 0 1px 2px rgba(15, 23, 42, .04));
+  padding: 14px 16px;
+  margin-block-end: 14px;
+}
+
+/* ── Small visual polish for the auto-injected page nav ── */
+.hr-page-nav-list a.is-active{ font-weight: 900; }
