@@ -908,7 +908,8 @@
            وإن لم يوجد رابط → مركز التنبيهات الذكية كوجهة افتراضية. #}
         {%- set _ep = alert.link_endpoint if (alert.link_endpoint and endpoint_exists(alert.link_endpoint)) else
                       ('radius.mt_alerts_index' if endpoint_exists('radius.mt_alerts_index') else none) -%}
-        <a class="ops-alert ops-alert--link" href="{{ url_for(_ep) if _ep else '#' }}"
+        {%- set _link_args = alert.link_args if (alert.link_args and alert.link_endpoint == _ep) else {} -%}
+        <a class="ops-alert ops-alert--link" href="{{ url_for(_ep, **_link_args) if _ep else '#' }}"
            style="--tone:{{ '#ef4444' if alert.level == 'danger' else ('#f59e0b' if alert.level == 'warn' else '#2563eb') }};--tone-soft:{{ '#fff1f2' if alert.level == 'danger' else ('#fffbeb' if alert.level == 'warn' else '#eff6ff') }}">
           <i class="fa-solid {{ 'fa-circle-exclamation' if alert.level == 'danger' else ('fa-triangle-exclamation' if alert.level == 'warn' else 'fa-circle-info') }}"></i>
           <span>{{ alert.message }}</span>

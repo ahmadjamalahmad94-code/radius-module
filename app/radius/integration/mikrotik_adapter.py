@@ -178,6 +178,7 @@ class MikrotikAdapter(RadiusAdapter):
         status: Optional[str] = None,
         user_type: Optional[str] = None,
         search: Optional[str] = None,
+        expiring_within_days: Optional[int] = None,
         limit: int = 100,
         offset: int = 0,
     ) -> Sequence[RadiusAccount]:
@@ -189,6 +190,13 @@ class MikrotikAdapter(RadiusAdapter):
         # R9.0: in-memory filters للتوافق مع SqliteAdapter signature.
         if user_type:
             out = [s for s in out if getattr(s, "user_type", None) == user_type]
+        if expiring_within_days is not None and expiring_within_days > 0:
+            from datetime import datetime, timedelta, timezone
+            now = datetime.now(timezone.utc).replace(tzinfo=None)
+            cutoff = now + timedelta(days=int(expiring_within_days))
+            out = [s for s in out
+                   if getattr(s, "expire_at", None) is not None
+                   and now <= s.expire_at < cutoff]
         if search:
             t = search.lower()
             out = [s for s in out

@@ -115,6 +115,7 @@ def list_subscribers(tenant_id: int, *,
                       status: Optional[str] = None,
                       user_type: Optional[str] = None,
                       search: Optional[str] = None,
+                      expiring_within_days: Optional[int] = None,
                       limit: int = 500, offset: int = 0,
                       include_deleted: bool = False) -> list[Subscriber]:
     """قائمة المشتركين مع فلاتر SQL.
@@ -126,6 +127,9 @@ def list_subscribers(tenant_id: int, *,
       - `search`: pushdown إلى SQL عبر LIKE على username/full_name/mobile.
         كان سابقاً يفلتر بعد LIMIT في الـ service → مع 2000+ سجلّ يفوت
         المستخدم البحث عنه. الآن يصل لكل DB قبل LIMIT.
+      - `expiring_within_days`: حصْر النتائج على المشتركين الذين تنتهي
+        صلاحيتهم خلال N أيام (expire_at بين الآن والآن+N) — يطابق
+        حسابة «ينتهي قريبًا» في تنبيهات لوحة التحكم بالضبط.
     """
     sql = "SELECT * FROM subscribers WHERE tenant_id = ?"
     vals: list = [tenant_id]
@@ -137,6 +141,11 @@ def list_subscribers(tenant_id: int, *,
     if user_type:
         sql += " AND user_type = ?"
         vals.append(user_type)
+    if expiring_within_days is not None and expiring_within_days > 0:
+        sql += (" AND expire_at IS NOT NULL "
+                "AND expire_at >= datetime('now') "
+                "AND expire_at <  datetime('now', ?)")
+        vals.append(f"+{int(expiring_within_days)} days")
     if search:
         pat = f"%{search}%"
         sql += (" AND (username LIKE ? OR full_name LIKE ? OR mobile LIKE ?)")

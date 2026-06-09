@@ -141,6 +141,7 @@ class ManualAdapter(RadiusAdapter):
         status: Optional[str] = None,
         user_type: Optional[str] = None,
         search: Optional[str] = None,
+        expiring_within_days: Optional[int] = None,
         limit: int = 100,
         offset: int = 0,
     ) -> Sequence[RadiusAccount]:
@@ -152,6 +153,13 @@ class ManualAdapter(RadiusAdapter):
         # R9.0: in-memory filters للتوافق مع SqliteAdapter signature.
         if user_type:
             items = [a for a in items if getattr(a, "user_type", None) == user_type]
+        if expiring_within_days is not None and expiring_within_days > 0:
+            from datetime import datetime, timedelta, timezone
+            now = datetime.now(timezone.utc).replace(tzinfo=None)
+            cutoff = now + timedelta(days=int(expiring_within_days))
+            items = [a for a in items
+                     if getattr(a, "expire_at", None) is not None
+                     and now <= a.expire_at < cutoff]
         if search:
             s = search.lower()
             items = [a for a in items

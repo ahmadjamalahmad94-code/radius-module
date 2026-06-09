@@ -110,10 +110,12 @@ class SqliteAdapter(RadiusAdapter):
                        status: Optional[str] = None,
                        user_type: Optional[str] = None,
                        search: Optional[str] = None,
+                       expiring_within_days: Optional[int] = None,
                        limit: int = 100, offset: int = 0) -> Sequence[Subscriber]:
         # R9.0: user_type + search يُمرَّران إلى SQL في الـ repo.
         items = subscribers_repo.list_subscribers(
             _tid(), status=status, user_type=user_type, search=search,
+            expiring_within_days=expiring_within_days,
             limit=limit, offset=offset,
         )
         if beneficiary_id is not None:

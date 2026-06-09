@@ -84,6 +84,7 @@ class RadiusAdapter(ABC):
         status: Optional[str] = None,
         user_type: Optional[str] = None,
         search: Optional[str] = None,
+        expiring_within_days: Optional[int] = None,
         limit: int = 100,
         offset: int = 0,
     ) -> Sequence[RadiusAccount]: ...

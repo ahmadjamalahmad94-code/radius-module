@@ -24,7 +24,8 @@ class UsersService:
 
     def list(self, *, status: Optional[str] = None, plan_id: Optional[int] = None,
              user_type: Optional[str] = "subscriber",
-             search: str = "", limit: int = 500, offset: int = 0) -> Sequence[Subscriber]:
+             search: str = "", expiring_within_days: Optional[int] = None,
+             limit: int = 500, offset: int = 0) -> Sequence[Subscriber]:
         """قائمة المشتركين.
 
         R9.0:
@@ -35,9 +36,12 @@ class UsersService:
             تمرير `user_type='card'` يعرض البطاقات.
           - `search` يُمرَّر إلى SQL pushdown في الـ adapter/repo بدل
             الفلترة بعد LIMIT. مهم مع >1000 سجلّ.
+          - `expiring_within_days`: حصْر النتائج على من تنتهي صلاحيتهم
+            خلال N أيام (يطابق حساب «ينتهي قريبًا» في الـ Dashboard).
         """
         items = list(self._adapter.list_accounts(
             status=status, user_type=user_type, search=(search or None),
+            expiring_within_days=expiring_within_days,
             limit=limit, offset=offset,
         ))
         if plan_id is not None:

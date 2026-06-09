@@ -45,21 +45,32 @@ def _scalar(sql: str, params=()) -> int:
 # 2. Subscribers section
 # ────────────────────────────────────────────────────────────────
 def get_subscriber_counts(tenant_id: Optional[int] = None) -> dict:
-    """العدّادات بصيغة بسيطة. كل count محمي بـ _scalar."""
+    """العدّادات بصيغة بسيطة. كل count محمي بـ _scalar.
+
+    «expired» و«expiring_soon» تُستخدمان كروابط من بطاقة «ما يحتاج انتباه»
+    إلى صفحة المشتركين، لذلك يُقيَّدان بنفس مجال الصفحة
+    (user_type='subscriber' و deleted_at IS NULL) لضمان «العدّاد = عدد
+    الصفوف بعد التصفية» في الواجهة.
+    """
     t = tenant_id if tenant_id is not None else _tid()
     return {
         "total":         _scalar("SELECT COUNT(*) FROM subscribers WHERE tenant_id=?", (t,)),
         "active":        _scalar("SELECT COUNT(*) FROM subscribers WHERE tenant_id=? AND status='enabled'", (t,)),
-        "expired":       _scalar("SELECT COUNT(*) FROM subscribers WHERE tenant_id=? AND status='expired'", (t,)),
+        "expired":       _scalar(
+            "SELECT COUNT(*) FROM subscribers "
+            "WHERE tenant_id=? AND status='expired' "
+            "AND user_type='subscriber' AND deleted_at IS NULL", (t,)),
         "suspended":     _scalar("SELECT COUNT(*) FROM subscribers WHERE tenant_id=? AND status='suspended'", (t,)),
         "disabled":      _scalar("SELECT COUNT(*) FROM subscribers WHERE tenant_id=? AND status='disabled'", (t,)),
         "banned":        _scalar("SELECT COUNT(*) FROM subscribers WHERE tenant_id=? AND status='banned'", (t,)),
-        # ينتهي خلال 3 أيام (تستثني المنتهية فعلًا)
+        # ينتهي خلال 3 أيام (تستثني المنتهية فعلًا) — يطابق مجال صفحة
+        # المشتركين بالضبط (user_type='subscriber' و deleted_at IS NULL).
         "expiring_soon": _scalar(
             "SELECT COUNT(*) FROM subscribers "
             "WHERE tenant_id=? AND expire_at IS NOT NULL "
             "AND expire_at >= datetime('now') "
-            "AND expire_at <  datetime('now','+3 days')", (t,)),
+            "AND expire_at <  datetime('now','+3 days') "
+            "AND user_type='subscriber' AND deleted_at IS NULL", (t,)),
     }
 
 
@@ -244,14 +255,18 @@ def build_alerts(*, subs: dict, cards: dict, plans: dict,
                          "message": _("استخدام %(label)s مرتفع (%(v)s%%).",
                                       label=label, v=v)})
 
-    # مشتركون
+    # مشتركون — كل تنبيه يحمل link_args ليفتح قائمة المشتركين مفلترة
+    # على نفس المجموعة بالضبط (?attention=expiring_3d أو ?attention=expired)
+    # حتى يطابق عدد الصفوف العدّاد المعروض هنا.
     exp_soon = subs.get("expiring_soon") or 0
     if exp_soon > 0:
         out.append({"level": "warn", "link_endpoint": "radius.users_list",
+                     "link_args": {"attention": "expiring_3d"},
                      "message": _("%(n)s مشترك ينتهي اشتراكه خلال 3 أيام.", n=exp_soon)})
     expired = subs.get("expired") or 0
     if expired > 0:
         out.append({"level": "info", "link_endpoint": "radius.users_list",
+                     "link_args": {"attention": "expired"},
                      "message": _("%(n)s مشترك انتهى اشتراكه — جدّد أو احذف.", n=expired)})
 
     # كروت

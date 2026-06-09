@@ -594,7 +594,22 @@ def users_list():
     plan_id = int(plan_id) if plan_id else None
     group_id_raw = (request.args.get("group_id") or "").strip()
     group_id = int(group_id_raw) if group_id_raw.isdigit() else None
-    items = get_users_service().list(status=status, plan_id=plan_id, search=q, limit=1000)
+    # «ما يحتاج انتباه» — تصفية مرتبطة بتنبيهات لوحة التحكم.
+    #   • expiring_3d → نفس نافذة العدّاد في dashboard_metrics:
+    #       expire_at IS NOT NULL AND expire_at >= now AND expire_at < now+3 days
+    #   • expired     → status='expired' (نفس تعريف العدّاد)
+    # القيم الأخرى تُتجاهَل.
+    attention = (request.args.get("attention") or "").strip() or None
+    if attention not in (None, "expired", "expiring_3d"):
+        attention = None
+    _expiring_within_days = None
+    if attention == "expired":
+        status = "expired"
+    elif attention == "expiring_3d":
+        _expiring_within_days = 3
+    items = get_users_service().list(status=status, plan_id=plan_id, search=q,
+                                       expiring_within_days=_expiring_within_days,
+                                       limit=1000)
     subscriber_groups = []
     selected_group = None
     if group_id:
@@ -641,6 +656,7 @@ def users_list():
         group_id=group_id, subscriber_groups=subscriber_groups,
         selected_group=selected_group,
         statuses=ACCOUNT_STATUSES,
+        attention=attention,
         dhcp_by_username=dhcp_by_username)
 
 
