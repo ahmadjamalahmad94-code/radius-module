@@ -913,30 +913,24 @@
    السريعة أُزيلت — تبويب «خدماتي» هو بيت الخدمات الوحيد الآن.) */
 .mt-router-hero .mt-tabs-row{
   margin:0;
-  /* الشريط لا يلتفّ — يصبح شريطًا قابلًا للسحب الأفقي على الشاشات
-     الضيقة (تابلت/جوال) مع تلاشي حافّتيه ليُبيّن للمستخدم أن هناك
-     محتوى مخفيًّا. لا اعتماد على JS — كل السلوك CSS بحت. */
-  flex-wrap:nowrap !important;
   border-bottom:0;
   position:relative;
   isolation:isolate;
 }
 /* ──────────────────────────────────────────────────────────────
-   شريط التبويبات المتجاوب الكامل (يونيو 2026)
-   نظام موحّد يعمل بسلاسة على 1440px (سطح المكتب)، 768px (تابلت)،
-   و375px (جوال). على كل المقاسات الشريط أفقي بسحب طبيعي مع snap.
-   الخصائص:
-   • شريط حبوب (pills) داخل حاوية واحدة بحدّ مدوّر فاتح.
-   • التبويب النشط: حبّة ملوّنة (بنفسجي/نيلي) — لا حدّ سفلي خطّي.
-   • ارتفاع لمسة ≥44px في كل المقاسات (تنطبق مع تَوصيات WCAG/iOS).
-   • سكرول أفقي مخفي + scroll-snap-type يجعل التبويبات تلتقط.
-   • تلاشي بصري على حافّتي الشريط ليكشف وجود محتوى مخفي.
-   • RTL سليم: تتدفّق التبويبات من اليمين، الـsnap يحترم الاتجاه.
-   • تبويب «خدماتي» يحتفظ بهالته البنفسجيّة المميّزة.
+   شريط التبويبات المتجاوب الكامل (يونيو 2026 — مُحدَّث)
+   تصحيح المالك (يونيو 2026): كان الشريط على الشاشات الضيقة سكرولاً
+   أفقياً يُخفي 6 من 9 تبويبات. صار يلفّ على أسطر متعدّدة (2-3 صفوف)
+   فتبقى كل التبويبات مرئيّة وقابلة للنقر بلا أيّ سحب.
+   • سطح المكتب (≥901px): صفّ واحد — كل التبويبات تتّسع أفقيًّا.
+   • تابلت (≤900px): شبكة تلقائيّة 3 تبويبات في الصفّ تقريبًا (3×3).
+   • جوال (≤600px): 2 تبويبات في الصفّ تقريبًا (نحو 4-5 صفوف).
+   • ارتفاع لمسة ≥42px، فجوات صفّ موحّدة، التبويب النشط واضح بحبّة
+     ممتلئة، RTL سليم، بلا اعتماد على JS.
    ────────────────────────────────────────────────────────────── */
 .mt-router-hero .mt-tabs{
   display:flex !important;
-  flex-wrap:nowrap !important;
+  flex-wrap:wrap !important;   /* صفّ واحد على سطح المكتب — 9 تبويبات تتّسع. */
   align-items:stretch;
   gap:4px !important;
   width:100%;
@@ -945,30 +939,11 @@
   background:#F5F6FA;
   border:1px solid #E5E7EB;
   border-radius:14px;
-  overflow-x:auto;
-  overflow-y:hidden;
-  scroll-behavior:smooth;
-  scroll-snap-type:x proximity;
-  scroll-padding-inline:6px;
-  -webkit-overflow-scrolling:touch;
-  overscroll-behavior-x:contain;
-  /* إخفاء شريط التمرير في كل المتصفحات. */
-  scrollbar-width:none;
-  -ms-overflow-style:none;
+  /* لا overflow ولا snap — التبويبات تلفّ، لا تُسحَب. */
+  overflow:visible;
 }
-.mt-router-hero .mt-tabs::-webkit-scrollbar{
-  display:none;height:0;width:0;
-}
-/* تلاشي الحافّتين — يُبيّن المستخدم أن هناك تبويبات مخفيّة على
-   جانبي الشريط حين يكون قابلًا للسحب. (نستخدم mask-image لإنتاج
-   تلاشٍ شفّاف فعليًّا فوق سطح الحاوية الرماديّة الفاتحة.) */
-@media (max-width: 900px){
-  .mt-router-hero .mt-tabs{
-    -webkit-mask-image:linear-gradient(90deg,transparent 0,#000 14px,#000 calc(100% - 14px),transparent 100%);
-            mask-image:linear-gradient(90deg,transparent 0,#000 14px,#000 calc(100% - 14px),transparent 100%);
-  }
-}
-/* كل تبويب — حبّة لمس مريحة + scroll-snap للالتقاط. */
+/* كل تبويب — حبّة لمس مريحة. flex:0 0 auto على سطح المكتب
+   ليبقى كلّ تبويب بحجمه الطبيعي على صفّ واحد. */
 .mt-router-hero .mt-tabs .mt-tab{
   flex:0 0 auto;
   min-height:42px;
@@ -980,8 +955,6 @@
   font-weight:700 !important;
   font-size:13.5px !important;
   white-space:nowrap;
-  scroll-snap-align:start;
-  scroll-margin-inline:6px;
   transition:background .15s,color .15s,border-color .15s,box-shadow .15s,transform .12s !important;
   /* مهم لتعطيل الـborder-bottom النشِط القديم. */
   border-bottom-color:transparent !important;
@@ -1044,21 +1017,33 @@
 }
 .mt-router-hero .mt-tabs .mt-tab[data-mt-tab="my-services"].is-active i{color:#5B21B6 !important}
 
-/* ─── تابلت 768px ─── حافظ على نفس الحبوب، نقّص حشوة الحاوية قليلًا. */
+/* ─── تابلت ≤900px ─── شبكة لفّ: تقريبًا 3 تبويبات في الصفّ.
+   نستخدم Grid مع repeat(auto-fit, minmax) ليتوزّع تلقائيًا حسب العرض
+   المتاح: على 768px تظهر 3 تبويبات في الصفّ → 3 صفوف لـ9 تبويبات،
+   وعلى أعرض قليلاً قد يصير 4×… بطبيعة auto-fit. كل تبويب يمتلئ خليّته
+   فيتساوى عرضه مع جاره. لا overflow ولا حاجة لسحب. */
 @media (max-width: 900px){
   .mt-router-hero{padding:14px 14px 12px}
   .mt-router-hero-top{margin-bottom:12px}
   .mt-router-hero .mt-tabs{
-    padding:4px !important;
+    display:grid !important;
+    grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)) !important;
+    gap:6px !important;
+    padding:6px !important;
     border-radius:12px;
   }
   .mt-router-hero .mt-tabs .mt-tab,
   .mt-router-hero .mt-tabs .mt-tab[data-mt-tab="my-services"]{
-    padding:9px 13px !important;
+    /* داخل الـgrid: التبويب يملأ خليّته بالكامل ويتمحور أفقيًّا. */
+    flex:initial;
+    justify-content:center;
+    padding:9px 12px !important;
     font-size:13px !important;
+    min-height:42px;
+    width:100%;
   }
 }
-/* ─── جوال 600px وأقل ─── سحب أفقي ناعم + تركيز على الحبوب. */
+/* ─── جوال ≤600px ─── تبويبان في الصفّ تقريبًا (minmax أصغر). */
 @media (max-width: 600px){
   .mt-router-hero{padding:12px 12px 10px;border-radius:14px}
   .mt-router-hero-name{font-size:18px;margin-top:8px}
@@ -1068,24 +1053,30 @@
   }
   .mt-router-hero .mt-tabs-status--hero{padding:0}
   .mt-router-hero .mt-tabs{
+    grid-template-columns:repeat(auto-fit, minmax(115px, 1fr)) !important;
+    gap:6px !important;
     border-radius:11px;
     background:#F4F5FA;
   }
   .mt-router-hero .mt-tabs .mt-tab,
   .mt-router-hero .mt-tabs .mt-tab[data-mt-tab="my-services"]{
-    min-height:40px;
-    padding:8px 12px !important;
+    min-height:42px;
+    padding:8px 10px !important;
     font-size:12.5px !important;
     gap:6px !important;
   }
   .mt-router-hero .mt-tabs .mt-tab i{font-size:12.5px}
 }
-/* ─── جوال صغير 380px وأقل ─── الأيقونات + النص يبقيان كما هما،
-   فقط ضيِّق الحشوة قليلًا حتى يظهر أكثر من تبويب على الشاشة. */
+/* ─── جوال صغير ≤380px ─── الأيقونة + النص يبقيان كما هما،
+   فقط minmax أصغر لكي يستوعب صفّ من تبويبَين بأمان. */
 @media (max-width: 380px){
+  .mt-router-hero .mt-tabs{
+    grid-template-columns:repeat(auto-fit, minmax(105px, 1fr)) !important;
+  }
   .mt-router-hero .mt-tabs .mt-tab,
   .mt-router-hero .mt-tabs .mt-tab[data-mt-tab="my-services"]{
-    padding:8px 10px !important;
+    padding:8px 8px !important;
+    font-size:12px !important;
   }
 }
 /* احترام تفضيل تقليل الحركة — لا انيميشن على التبويب النشط. */
