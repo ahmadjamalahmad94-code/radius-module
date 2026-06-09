@@ -37,6 +37,88 @@ def _real_sum(table: str, column: str, where: str = "tenant_id=?", params: tuple
     return f"{float(value or 0):.2f}"
 
 
+# ── تعريب مصدر الإيراد (source_type في revenue_records) ──────────────────
+# قاموس كامل يغطّي كل قيم source_type التي تُدرَج فعليًا في الجدول
+# (card_user_purchase وcard_batch من الخدمات، وmanual_sale من التسجيل
+# اليدوي/الاختبارات) إضافةً للقيم القديمة المحتملة — حتى لا يسقط أي مفتاح
+# كنص إنجليزي خام. أي مفتاح غير معروف يُعرض كوصف عربي عام لا بالإنجليزية.
+_REVENUE_SOURCE_LABELS: dict[str, str] = {
+    "card_user_purchase": "شراء بطاقة",
+    "card_batch": "دفعة بطاقات",
+    "card_sale": "بيع بطاقات",
+    "manual_sale": "مبيعة يدوية",
+    "manual": "تسجيل يدوي",
+    "subscriber_payment": "دفعة مشترك",
+    "payment": "دفعة",
+    "renewal": "تجديد اشتراك",
+    "invoice": "فاتورة",
+    "voucher": "كوبون",
+    "topup": "شحن رصيد",
+    "subscriber_quota_topup": "شحن رصيد",
+    "wallet": "محفظة",
+}
+
+
+def _revenue_entity_name(source_type: str, source_id: Any, tenant_id: int) -> str:
+    """الاسم الحقيقي للكيان المرتبط بسجل الإيراد بدل المعرّف الرقمي.
+
+    لكل نوع مصدر نَصِل لاسم بشري واضح (اسم المشتري + اسم الباقة لشراء
+    بطاقة، اسم باقة الدفعة لدفعة البطاقات). أي تعذّر في الوصل يُرجع نصًّا
+    فارغًا فيكتفي العرض بالتسمية العربية للنوع — لا يكسر الصفحة أبدًا ولا
+    يُظهر معرّفًا خامًا.
+    """
+    try:
+        sid = int(source_id)
+    except (TypeError, ValueError):
+        return ""
+    if sid <= 0:
+        return ""
+    try:
+        if source_type == "card_user_purchase":
+            row = db().execute(
+                "SELECT cu.display_name AS buyer, p.name AS package "
+                "FROM card_user_purchases cup "
+                "LEFT JOIN card_users cu ON cu.id = cup.card_user_id "
+                "LEFT JOIN card_marketplace_packages p ON p.id = cup.package_id "
+                "WHERE cup.id = ? AND cup.tenant_id = ?",
+                (sid, int(tenant_id)),
+            ).fetchone()
+            if row:
+                buyer = (row["buyer"] or "").strip()
+                package = (row["package"] or "").strip()
+                if buyer and package:
+                    return f"{buyer} — {package}"
+                return buyer or package
+        elif source_type == "card_batch":
+            row = db().execute(
+                "SELECT package_name, batch_code FROM card_batches "
+                "WHERE id = ? AND tenant_id = ?",
+                (sid, int(tenant_id)),
+            ).fetchone()
+            if row:
+                return (row["package_name"] or "").strip() or (row["batch_code"] or "").strip()
+    except Exception:  # noqa: BLE001 — وصل عرضي فقط، لا يكسر الصفحة
+        return ""
+    return ""
+
+
+def revenue_source_display(source_type: str, source_id: Any, tenant_id: int) -> str:
+    """نص المصدر النهائي للعرض: «تسمية النوع بالعربية — الاسم الحقيقي».
+
+    صفر إنجليزي وصفر معرّف رقمي خام: النوع يُترجم من القاموس، والاسم
+    يُحلّ من قاعدة البيانات. النوع غير المعروف يُعرض «مصدر إيراد آخر».
+    """
+    base = _REVENUE_SOURCE_LABELS.get((source_type or "").strip(), "")
+    name = _revenue_entity_name((source_type or "").strip(), source_id, tenant_id)
+    if base and name:
+        return f"{base} — {name}"
+    if base:
+        return base
+    if name:
+        return name
+    return "مصدر إيراد آخر"
+
+
 class FinanceCenterService:
     """Small query facade for finance dashboard and section pages."""
 
@@ -85,6 +167,10 @@ class FinanceCenterService:
                     item[key[:-6]] = minor_to_money(item[key])
             item["collected"] = item.get("collected_amount", "0.00")
             item["metadata"] = json_load(item.get("metadata_json"), {})
+            # نص المصدر معرَّب بالكامل مع الاسم الحقيقي بدل source_type#id الخام
+            item["source_display"] = revenue_source_display(
+                item.get("source_type"), item.get("source_id"), tenant_id
+            )
             items.append(item)
         return items
 

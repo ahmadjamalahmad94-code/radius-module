@@ -69,8 +69,8 @@
         {% for item in revenue %}
         <tr>
           <td>{{ item.id }}</td>
-          {# تعريب المصدر بدل عرض القيمة الإنجليزية الخام #}
-          <td>{{ revenue_source_label(item.source_type) }}{% if item.source_id %} #{{ item.source_id }}{% endif %}</td>
+          {# المصدر معرَّب بالكامل بالاسم الحقيقي (يُبنى في الخدمة) — الخام في title للتتبّع فقط #}
+          <td title="{{ item.source_type }}{% if item.source_id %} #{{ item.source_id }}{% endif %}">{{ item.source_display or 'مصدر إيراد آخر' }}</td>
           <td>{{ item.original_price|money }}</td>
           <td>{{ item.collected|money }}</td>
           <td>{{ item.wholesale_cost|money }}</td>
