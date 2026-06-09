@@ -287,8 +287,14 @@
         عمود اسم المستخدم وعمود كلمة المرور تلقائيًّا ويعبّئ مربّع النص بالأسفل.
       </div>
       <div class="ci-smart-body">
-        <input type="file" id="ci-smart-file"
-               accept=".csv,.tsv,.txt,.xlsx,.pdf,text/csv,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+        <label style="display:block;cursor:pointer">
+          <input type="file" id="ci-smart-file" hidden
+                 accept=".csv,.tsv,.txt,.xlsx,.pdf,text/csv,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+          <span style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid #cbd5e1;border-radius:10px;background:#fff;cursor:pointer;font-size:13px;color:#475569;box-sizing:border-box;min-height:42px">
+            <i class="fa-solid fa-folder-open" style="color:#5b21b6;flex:none"></i>
+            <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ _('اختر ملف للتحليل...') }}</span>
+          </span>
+        </label>
         <button type="button" id="ci-smart-btn" class="ci-smart-btn">
           <i class="fa-solid fa-bolt static"></i>
           <i class="fa-solid fa-circle-notch spin"></i>

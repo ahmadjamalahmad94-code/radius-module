@@ -3,9 +3,9 @@
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}أجهزة الشبكة{% endblock %}
+{% block title %}أجهزة الشبكة / NAS{% endblock %}
 {% block page_icon %}<i class="fa-solid fa-server"></i>{% endblock %}
-{% block page_title %}أجهزة الشبكة{% endblock %}
+{% block page_title %}أجهزة الشبكة / NAS{% endblock %}
 {% block page_sub %}
   <span class="sub">
     {{ items|length }}
@@ -26,7 +26,7 @@
 
 {# ───── Merged hero: title + actions + KPI strip ───── #}
 {% call hub.megahero(
-  "أجهزة الشبكة",
+  "أجهزة الشبكة / NAS",
   subtitle="إدارة الراوترات: العنوان، المنافذ، الحالة، والصلاحيات — كل أجهزة الشبكة التي تتصل بنظام الراديوس في مكان واحد.",
   icon="server",
   actions_html='

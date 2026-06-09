@@ -476,9 +476,21 @@
               <label class="market-field full"><span>{{ _('تعليمات للزبون') }}</span>
                 <textarea name="instructions">{{ m.instructions }}</textarea></label>
               <label class="market-field"><span>{{ _('تغيير الشعار (اختياري)') }}</span>
-                <input type="file" name="logo_image" accept="image/*"></label>
+                <input type="file" name="logo_image" accept="image/*" hidden
+                       onchange="this.parentElement.querySelector('.mf-fn').textContent=this.files.length?this.files[0].name:''">
+                <span class="market-btn market-btn--sm" style="display:flex;width:100%;justify-content:center;margin-bottom:0;cursor:pointer">
+                  <i class="fa-solid fa-image"></i> {{ _('اختر صورة') }}
+                </span>
+                <span class="mf-fn" style="margin-bottom:0;font-size:10.5px;color:#64748b;font-family:ui-monospace,monospace;word-break:break-all"></span>
+              </label>
               <label class="market-field"><span>{{ _('تغيير الـQR (اختياري)') }}</span>
-                <input type="file" name="qr_image" accept="image/*"></label>
+                <input type="file" name="qr_image" accept="image/*" hidden
+                       onchange="this.parentElement.querySelector('.mf-fn').textContent=this.files.length?this.files[0].name:''">
+                <span class="market-btn market-btn--sm" style="display:flex;width:100%;justify-content:center;margin-bottom:0;cursor:pointer">
+                  <i class="fa-solid fa-qrcode"></i> {{ _('اختر صورة QR') }}
+                </span>
+                <span class="mf-fn" style="margin-bottom:0;font-size:10.5px;color:#64748b;font-family:ui-monospace,monospace;word-break:break-all"></span>
+              </label>
               <div class="full" style="display:flex;justify-content:flex-end">
                 <button class="market-btn market-btn--primary market-btn--sm" type="submit"><i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ التعديلات') }}</button>
               </div>
@@ -541,11 +553,21 @@
           </label>
           <label class="market-field">
             <span>{{ _('شعار/أيقونة القناة (اختياري)') }}</span>
-            <input type="file" name="logo_image" accept="image/*">
+            <input type="file" name="logo_image" accept="image/*" hidden
+                   onchange="this.parentElement.querySelector('.mf-fn').textContent=this.files.length?this.files[0].name:''">
+            <span class="market-btn market-btn--sm" style="display:flex;width:100%;justify-content:center;margin-bottom:0;cursor:pointer">
+              <i class="fa-solid fa-image"></i> {{ _('اختر صورة') }}
+            </span>
+            <span class="mf-fn" style="margin-bottom:0;font-size:10.5px;color:#64748b;font-family:ui-monospace,monospace;word-break:break-all"></span>
           </label>
           <label class="market-field">
             <span>{{ _('صورة QR (اختياري)') }}</span>
-            <input type="file" name="qr_image" accept="image/*">
+            <input type="file" name="qr_image" accept="image/*" hidden
+                   onchange="this.parentElement.querySelector('.mf-fn').textContent=this.files.length?this.files[0].name:''">
+            <span class="market-btn market-btn--sm" style="display:flex;width:100%;justify-content:center;margin-bottom:0;cursor:pointer">
+              <i class="fa-solid fa-qrcode"></i> {{ _('اختر صورة QR') }}
+            </span>
+            <span class="mf-fn" style="margin-bottom:0;font-size:10.5px;color:#64748b;font-family:ui-monospace,monospace;word-break:break-all"></span>
           </label>
           <div class="full" style="display:flex;justify-content:flex-end">
             <button class="market-btn market-btn--primary" type="submit"><i class="fa-solid fa-plus"></i> {{ _('إضافة القناة') }}</button>

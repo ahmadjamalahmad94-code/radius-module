@@ -189,9 +189,14 @@
       </div>
       <div class="fcw-body">
         <p class="cm-note cm-note--inline"><i class="fa-solid fa-circle-info"></i><span>{{ _('يقرأ المحرك ملفات Excel و CSV و PDF ويستخرج أزواج اسم المستخدم وكلمة المرور، ثم يضيفها إلى مخزون هذا العرض. الأسماء المكررة تُتخطّى تلقائيًا. الحدّ الأقصى') }} <bdi dir="ltr">12MB</bdi> {{ _('و') }}<bdi dir="ltr">5000</bdi> {{ _('بطاقة في الدفعة.') }}</span></p>
-        <label>
-          <span>{{ _('ملف البطاقات') }}</span>
-          <input type="file" name="file" accept=".csv,.tsv,.txt,.xlsx,.pdf" required>
+        <label style="display:block">
+          <span style="display:block;font-size:12.5px;font-weight:700;color:#475569;margin-bottom:7px">{{ _('ملف البطاقات') }}</span>
+          <input type="file" name="file" accept=".csv,.tsv,.txt,.xlsx,.pdf" required hidden
+                 onchange="this.parentElement.querySelector('.fcw-fn').textContent=this.files.length?this.files[0].name:''">
+          <span class="hub-btn hub-btn--ghost" style="width:100%;justify-content:center;cursor:pointer">
+            <i class="fa-solid fa-folder-open"></i> {{ _('اختر ملف') }}
+          </span>
+          <span class="fcw-fn" style="display:block;font-size:11px;color:#64748b;margin-top:5px;font-family:ui-monospace,monospace;word-break:break-all"></span>
         </label>
       </div>
       <div class="fcw-foot">

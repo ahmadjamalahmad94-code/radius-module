@@ -927,7 +927,12 @@
           <p class="fcw-note">{{ _('يقرأ المحرك ملفات Excel / CSV / PDF ويستخرج أزواج اسم المستخدم وكلمة المرور، ثم يضيفها إلى مخزون هذا العرض. الأسماء المكررة تُتخطى تلقائيًا. الحد الأقصى 12MB و5000 بطاقة بالدفعة.') }}</p>
           <label class="market-field">
             <span>{{ _('ملف البطاقات') }}</span>
-            <input type="file" name="file" accept=".csv,.tsv,.txt,.xlsx,.pdf" required>
+            <input type="file" name="file" accept=".csv,.tsv,.txt,.xlsx,.pdf" required hidden
+                   onchange="this.parentElement.querySelector('.mf-fn').textContent=this.files.length?this.files[0].name:''">
+            <span class="market-btn market-btn--sm" style="display:flex;width:100%;justify-content:center;margin-bottom:0;cursor:pointer">
+              <i class="fa-solid fa-folder-open"></i> {{ _('اختر ملف') }}
+            </span>
+            <span class="mf-fn" style="margin-bottom:0;font-size:11px;color:#64748b;font-family:ui-monospace,monospace;word-break:break-all"></span>
           </label>
         </div>
         <div class="fcw-foot">
