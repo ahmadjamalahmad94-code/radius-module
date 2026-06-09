@@ -61,13 +61,13 @@
     </span>
   </div>
   {% if can_toggle_enforcement %}
-  <form method="post" action="{{ url_for('radius.tok_enforcement') }}" style="display:inline;margin:0"
-        onsubmit="return confirm({{ ('تعطيل الفرض المركزي؟' if enforcement_on else 'تفعيل الفرض على كل النقاط؟ أي تطبيق لا يرسل مفتاحًا/اعتمادًا سيتوقف فورًا.')|tojson }});">
+  {% set _enf_msg = 'تعطيل الفرض المركزي؟' if enforcement_on else 'تفعيل الفرض على كل النقاط؟ أي تطبيق لا يرسل مفتاحًا/اعتمادًا سيتوقف فورًا.' %}
+  <form method="post" action="{{ url_for('radius.tok_enforcement') }}" style="display:inline;margin:0">
     <input type="hidden" name="enable" value="{{ '0' if enforcement_on else '1' }}">
     {% if enforcement_on %}
-      <button class="hub-btn hub-btn--secondary" type="submit"><i class="fa-solid fa-toggle-off"></i> {{ _('تعطيل الفرض') }}</button>
+      <button class="hub-btn hub-btn--secondary" type="submit" data-confirm="{{ _enf_msg }}"><i class="fa-solid fa-toggle-off"></i> {{ _('تعطيل الفرض') }}</button>
     {% else %}
-      <button class="hub-btn hub-btn--danger" type="submit"><i class="fa-solid fa-toggle-on"></i> {{ _('تفعيل الفرض الآن') }}</button>
+      <button class="hub-btn hub-btn--danger" type="submit" data-confirm="{{ _enf_msg }}"><i class="fa-solid fa-toggle-on"></i> {{ _('تفعيل الفرض الآن') }}</button>
     {% endif %}
   </form>
   {% else %}
@@ -130,9 +130,9 @@
             <td>
               {% if not t.revoked %}
                 <form method="post" action="{{ url_for('radius.tok_revoke', tid=t.id) }}"
-                      onsubmit="return confirm('إلغاء الرمز؟ لا يمكن استعادته.')"
                       style="display:inline; margin:0">
-                  <button class="hub-btn hub-btn--danger hub-btn--sm" type="submit">
+                  <button class="hub-btn hub-btn--danger hub-btn--sm" type="submit"
+                          data-confirm="إلغاء الرمز «{{ t.name|e }}»؟ لا يمكن استعادته.">
                     <i class="fa-solid fa-ban"></i> {{ _('إلغاء') }}
                   </button>
                 </form>
@@ -184,6 +184,8 @@
 })();
 </script>
 
+{# مودال تأكيد موحّد بديل عن confirm() المتصفّح #}
+{% include "radius/_confirm_modal.html" %}
 {% endblock %}
 </content>
 </invoke>

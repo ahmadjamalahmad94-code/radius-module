@@ -34,7 +34,10 @@
   'card_purchase': 'شراء كرت',
   'recharge':      'شحن',
   'adjustment':    'تسوية',
-  'refund':        'استرداد'
+  'refund':        'استرداد',
+  'void':          'إبطال',
+  'settlement':    'تسوية حساب',
+  'writeoff':      'شطب دين'
 } %}
 {% set source_labels = {
   'subscriber':  'مشترك',
@@ -119,8 +122,9 @@
             <span class="rep-primary">{{ _dl[:10] or '—' }}</span>
             <span class="rep-sub">{{ _dl[11:16] }}</span>
           </td>
+          {# القيمة الخام تبقى في title؛ أي نوع غير معروف يظهر «غير محدد» عربيًا — لا كود إنجليزي خام #}
           <td title="{{ r.entry_type or '' }}">
-            {{ entry_labels.get(r.entry_type, r.entry_type|replace('_', ' ') if r.entry_type else '—') }}
+            {{ entry_labels.get(r.entry_type, 'غير محدد') if r.entry_type else '—' }}
           </td>
           <td>
             {% if r.direction == 'credit' %}{{ hub.pill("إضافة", variant="green") }}

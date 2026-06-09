@@ -1,0 +1,67 @@
+{# ═══════════════════════════════════════════════════════════════════════
+   مودال تأكيد موحّد — بديل محلّي عن confirm()/alert() المتصفّح الأصلية.
+
+   الاستخدام: أعطِ أي زر/رابط داخل نموذج السمة:
+       data-confirm="نص رسالة التأكيد"
+   وضمّن هذا الجزء مرّة واحدة قرب نهاية كتلة المحتوى:
+       {% include "radius/_confirm_modal.html" %}
+
+   آلية العمل (التقاط في طور الـcapture ثم إعادة النقر بتجاوز): النقرة الأولى
+   تُعترَض فتُمنع وتُفتح النافذة؛ عند «متابعة» يُعاد نقر العنصر نفسه بعلم
+   تجاوز فيمضي السلوك الأصلي تمامًا — يحترم formaction/formmethod وعقد
+   النموذج كما هو دون أي تغيير في الخادم. لا يعتمد على أي JS خارجي.
+   ═══════════════════════════════════════════════════════════════════════ #}
+<div id="cfmModal" class="cfm-ov" hidden role="dialog" aria-modal="true" aria-label="تأكيد العملية">
+  <div class="cfm-box">
+    <div class="cfm-head"><i class="fa-solid fa-triangle-exclamation"></i><span>تأكيد العملية</span></div>
+    <div class="cfm-msg" id="cfmMsg"></div>
+    <div class="cfm-foot">
+      <button type="button" class="hub-btn hub-btn--ghost" id="cfmCancel">إلغاء</button>
+      <button type="button" class="hub-btn hub-btn--danger" id="cfmOk"><i class="fa-solid fa-check"></i> متابعة</button>
+    </div>
+  </div>
+</div>
+<style>
+.cfm-ov{position:fixed;inset:0;z-index:1300;display:grid;place-items:center;padding:24px;
+  background:rgba(15,23,42,.52)}
+.cfm-ov[hidden]{display:none}
+.cfm-box{width:min(440px,100%);background:var(--hub-bg-card,#fff);border-radius:16px;
+  box-shadow:0 8px 22px rgba(0,0,0,.12);overflow:hidden;animation:cfmIn .16s ease-out}
+@keyframes cfmIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.cfm-box{animation:none}}
+.cfm-head{display:flex;align-items:center;gap:10px;padding:15px 18px;font-weight:800;font-size:15px;
+  color:var(--hub-text,#0f172a);border-bottom:1px solid var(--hub-border,#ece9e0)}
+.cfm-head i{color:var(--hub-amber,#f59e0b)}
+.cfm-msg{padding:16px 18px;line-height:1.7;color:var(--hub-text-soft,#475569);font-size:13.5px}
+.cfm-foot{display:flex;gap:8px;justify-content:flex-start;padding:12px 18px 16px}
+</style>
+<script>
+(function(){
+  "use strict";
+  var ov = document.getElementById("cfmModal");
+  if (!ov) return;
+  var msg = document.getElementById("cfmMsg"),
+      ok  = document.getElementById("cfmOk"),
+      cancel = document.getElementById("cfmCancel");
+  var pend = null, bypass = false;
+  // التقاط في طور الـcapture كي نعترض قبل إرسال النموذج
+  document.addEventListener("click", function (e) {
+    var b = e.target.closest("[data-confirm]");
+    if (!b) return;
+    if (bypass) { bypass = false; return; }   // نقرة المتابعة المُعاد إطلاقها
+    e.preventDefault();
+    e.stopPropagation();
+    pend = b;
+    msg.textContent = b.getAttribute("data-confirm") || "هل تريد المتابعة؟";
+    ov.hidden = false;
+  }, true);
+  function close(){ ov.hidden = true; pend = null; }
+  ok.addEventListener("click", function () {
+    var b = pend; close();
+    if (b) { bypass = true; b.click(); }      // أعد السلوك الأصلي (يحترم formaction)
+  });
+  cancel.addEventListener("click", close);
+  ov.addEventListener("click", function (e){ if (e.target === ov) close(); });
+  document.addEventListener("keydown", function (e){ if (e.key === "Escape" && !ov.hidden) close(); });
+})();
+</script>

@@ -107,7 +107,8 @@
               style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
             {{ r.amount|money(r.currency) }}
           </td>
-          <td title="{{ r.method or '' }}">{{ method_labels.get(r.method, r.method or '—') }}</td>
+          {# الطريقة الخام في title؛ أي طريقة غير معروفة → «أخرى» عربيًا لا كود إنجليزي #}
+          <td title="{{ r.method or '' }}">{{ method_labels.get(r.method, 'أخرى') if r.method else '—' }}</td>
           <td>
             {% set _sp = status_pills.get(r.status) %}
             {% if _sp %}{{ hub.pill(_sp[0], variant=_sp[1]) }}
