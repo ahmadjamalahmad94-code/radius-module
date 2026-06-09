@@ -2382,11 +2382,17 @@ body.mt-modal-open{overflow:hidden}
        login-designer/backups/network-policies/npc-*/diagnostics)،
        data-test="mt-dashboard-npc-link"، روابط network-policies
        الثلاثة المُجزّأة، data-rh-loop-tile + وصف اللوب. #}
-    <div class="np-status-panel rh-svc-panel" data-mt-router-quicknav
-         aria-label="{{ _('خدمات الراوتر وأدواته') }}">
+    {# قسم «كل الخدمات» (Section A) — بطاقة مستقلّة بإطارها وحدها.
+       تَفصلها مسافة generous + سطح بصري واضح عن قسم «الخدمات المضافة»
+       أدناه. كانا في نفس .np-status-panel فيظهران كقطعة واحدة؛ صار
+       لكلٍّ منهما .np-status-panel خاصّ به (نفس قالب الـsurface) لكي
+       يَقرأهما المشغّل كقسمَين مستقلّين. */ #}
+    <div class="np-status-panel rh-svc-panel rh-svc-panel--all"
+         data-mt-router-quicknav
+         aria-label="{{ _('كل الخدمات') }}">
       <div class="rh-svc-head">
         <div class="rh-svc-head-text">
-          <h4>{{ _('خدمات الراوتر وأدواته') }}</h4>
+          <h4>{{ _('كل الخدمات') }}</h4>
           <p>كل خدمات الراوتر وصفحاته في مكان واحد — اضغط أي بطاقة لإدارتها.
              النقطة الملوّنة على البطاقة تبيّن إن كانت الخدمة مفعّلة على الراوتر.</p>
         </div>
@@ -2590,15 +2596,25 @@ body.mt-modal-open{overflow:hidden}
         </a>
       </div>
 
-      {# ── قسم «الخدمات المضافة على الراوتر» ───────────────────
-         رجوع القسم الوظيفي المهم (يونيو 2026): قائمة مدمجة من نفس
-         جرد /inventory تعرض كل خدمة مُضافة فعليًا — الاسم + النوع +
-         مصدر الإضافة (يدوي / تلقائي عبر الراديوس) بشارة ملوّنة +
-         التاريخ إن وُجد + زر حذف بنافذة تأكيد fcw تستدعي نفس
-         endpoint الحذف القديم (/inventory/remove). يتغذّى من نفس
-         جلب النقاط الملوّنة فوق (طلب واحد). الفلاتر حبوب صغيرة. #}
-      <div class="rh-svc-group rh-svc-group--added">
-        <span>{{ _('الخدمات المضافة على الراوتر') }} (<span data-rh-added-total>0</span>)</span>
+    </div>{# /.rh-svc-panel--all — نهاية قسم «كل الخدمات» #}
+
+    {# ── قسم «الخدمات المضافة على الراوتر» (Section B) — بطاقة
+       مستقلّة بإطارها وحدها، مفصولة عن قسم «كل الخدمات» أعلاه بمسافة
+       generous وسطح بصريّ خاصّ. قائمة مدمجة من جرد /inventory + صفوف
+       اصطناعيّة من PSS_STATE (منع البث/تتبّع اللوب) — تَعرض كل خدمة
+       مُضافة فعليًا: الاسم + النوع + مصدر الإضافة (يدوي / تلقائي عبر
+       الراديوس) بشارة ملوّنة + التاريخ إن وُجد + زر حذف بنافذة تأكيد
+       fcw تستدعي نفس endpoint الحذف القديم (/inventory/remove). #}
+    <div class="np-status-panel rh-svc-panel rh-svc-panel--added"
+         aria-label="{{ _('الخدمات المضافة على الراوتر') }}">
+      <div class="rh-svc-head">
+        <div class="rh-svc-head-text">
+          <h4>
+            {{ _('الخدمات المضافة على الراوتر') }}
+            <span class="rh-svc-head-count">(<span data-rh-added-total>0</span>)</span>
+          </h4>
+          <p>{{ _('قائمة الخدمات الفعّالة على هذا الراوتر — مصنّفة حسب نوع الخدمة وكلّ صفّ يَحمل اسم الواجهة ومصدر الإضافة.') }}</p>
+        </div>
         <div class="rh-added-bar" role="tablist" aria-label="{{ _('تصفية الخدمات المضافة') }}">
           <button type="button" class="rh-added-chip is-active"
                   data-rh-added-filter="all" role="tab" aria-selected="true">
@@ -2625,7 +2641,7 @@ body.mt-modal-open{overflow:hidden}
         </div>
         <div class="rh-added-list" data-rh-added-list></div>
       </div>
-    </div>{# /.rh-svc-panel #}
+    </div>{# /.rh-svc-panel--added — نهاية قسم «الخدمات المضافة» #}
 
     {# حالة خدمتَي السكربت على المنافذ (محفوظة جانب الخادم في
        tenant_settings) — يُحقَنها سكربت my-services أدناه كصفوف
@@ -2911,10 +2927,10 @@ body.mt-modal-open{overflow:hidden}
   display:grid !important;
   grid-template-columns:repeat(2, minmax(0, 1fr)) !important;
   gap:14px !important;
-  /* فاصل عاموديّ كبير قبل قسم «الخدمات المضافة» — كان 8px فيلتصق
-     بالقسم التالي. التحديث: padding-bottom + margin-bottom + خط
-     فاصل خفيف فوق العنوان التالي (يُرى أدناه). */
-  margin:0 0 28px;
+  /* لا حاجة لـmargin-bottom على الشبكة — قسم «الخدمات المضافة» في
+     .np-status-panel آخر مستقلّ، والفاصل بينهما من margin-bottom
+     على القسم الأوّل (انظر .rh-svc-panel--all أدناه). */
+  margin:0;
 }
 .rh-inventory .np-svc-card{
   display:inline-flex;
@@ -3038,27 +3054,39 @@ body.mt-modal-open{overflow:hidden}
 /* ─── قسم «الخدمات المضافة على الراوتر» ──────────────────────
    قائمة مدمجة وظيفية (اسم + نوع + مصدر + تاريخ + حذف) تحت شبكة
    البطاقات، بترويسة تحمل حبوب الفلترة الصغيرة. */
-/* فصل بصريّ كبير بين شبكة بطاقات الخدمات (فوق) وقائمة «الخدمات
-   المضافة على الراوتر» (تحت) — كان المالك يَشتكي من التصاقهما. الآن:
-   مسافة عاموديّة + خطّ فاصل خفيف فوق الترويسة + علامة عنوان أكبر
-   قليلًا فيُلتقَط القسم بالعين فورًا. */
-.rh-svc-group--added{
-  justify-content:space-between;flex-wrap:wrap;gap:10px;
-  margin-top:32px !important;
-  padding-top:24px !important;
-  border-top:1px solid #E2E8F0;
-  color:#0F172A !important;
-  font-size:13px !important;
-  letter-spacing:0 !important;
+/* ─── قسمَان مستقلّان (يونيو 2026): «كل الخدمات» (أعلى) و«الخدمات
+   المضافة على الراوتر» (أسفل) — كلٌّ منهما .np-status-panel خاصّ به،
+   فيَقرأهما المشغّل كقسمَين مستقلّين بصريًا لا كقطعة واحدة. القواعد
+   القديمة (.rh-svc-group--added مع border-top داخلي) لم تَعُد مطلوبة
+   لأنّ كلّ قسم يَملك سطحه وحدوده. */
+.rh-inventory .rh-svc-panel{margin-bottom:24px}
+/* فجوة generous بين القسمَين: 28px من margin-bottom على القسم الأوّل
+   (موروثة من .np-status-panel في dashboard_premium.css) + 4-8px
+   إضافيّة من margin-top على القسم الثاني — ليَشعر المشغّل أنّ هذين
+   قسمَين، لا قطعة واحدة. */
+.rh-inventory .rh-svc-panel--all{margin-bottom:28px}
+.rh-inventory .rh-svc-panel--added{margin-top:8px}
+/* عدّاد «(N)» بجانب العنوان: بنفس لون النصّ المساعد، أصغر قليلاً. */
+.rh-svc-head-count{
+  display:inline-block;
+  margin-inline-start:6px;
+  font-size:13px;
+  font-weight:700;
+  color:#64748B;
 }
-.rh-svc-group--added::after{display:none}
-.rh-svc-group--added > span:first-child{
-  font-weight:900;
-  font-size:14px;
-  color:#0F172A;
+/* داخل قسم «الخدمات المضافة»: شريط الفلترة يَطفو إلى نهاية الـhead
+   لتوازن الترويسة بصريّاً (عنوان+شرح يسار، فلاتر يمين في RTL). */
+.rh-svc-panel--added .rh-svc-head{
+  align-items:center;
+  gap:14px;
+  flex-wrap:wrap;
+}
+.rh-svc-panel--added .rh-svc-head .rh-added-bar{
+  flex-shrink:0;
+  margin-inline-start:auto;
 }
 /* مسافة تنفّس بين ترويسة القسم وقائمة الصفوف نفسها. */
-.rh-added{margin-top:14px}
+.rh-svc-panel--added .rh-added{margin-top:14px}
 .rh-added-bar{
   display:inline-flex;gap:4px;padding:3px;flex-wrap:wrap;
   background:#fff;border:1px solid #E2E8F0;border-radius:999px;
