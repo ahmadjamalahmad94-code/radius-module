@@ -290,3 +290,116 @@ def test_loop_check_reports_live_status(app, client, monkeypatch):
     assert "لا لوب على ether3" in body
     # مُرِّر صفّ الراوتر الخام (يحمل بيانات اعتماد api_user)
     assert captured["nas"].get("api_user") == "hr-test"
+
+
+def test_loop_check_returns_probe_for_every_selected_port(app, client, monkeypatch):
+    """ISSUE A — تكامل: يختار المشغّل 9 منافذ لكن /ip dhcp-client يحتوي
+    قواعد HR-LoopDetect لـ4 منها فقط (apply الأخير شُغِّل بـ4). قبل
+    الإصلاح: النتيجة 4. بعد الإصلاح: 9 بطاقات بنفس ترتيب الاختيار،
+    والـ5 الباقية تظهر بشكل صريح كـ«قاعدة غير مُركّبة»."""
+    _seed(app)
+    from app.radius.routes import port_script_services as route
+    monkeypatch.setattr(route, "_discover", lambda nas: [])
+
+    class _Res:
+        ok = True
+        error = ""
+        def __init__(self, data):
+            self.data = data
+
+    def fake_dhcp(nas):
+        return _Res([
+            {"interface": "ether2", "status": "bound",
+             "address": "10.0.0.4/24", "comment": "HR-LoopDetect ether2"},
+            {"interface": "ether3", "status": "searching...",
+             "comment": "HR-LoopDetect ether3"},
+            {"interface": "ether4", "status": "searching...",
+             "comment": "HR-LoopDetect ether4"},
+            {"interface": "ether5", "status": "bound",
+             "address": "10.0.0.5/24", "comment": "HR-LoopDetect ether5"},
+        ])
+    monkeypatch.setattr(route.mac, "dhcp_client_list", fake_dhcp)
+
+    _login(client)
+    token = _csrf(client)
+    selected = ["ether2", "ether3", "ether4", "ether5",
+                "ether6", "ether7", "ether8", "sfp1", "sfp2"]
+    # نموذج يقبل ports متعدّدة عبر CSV — _ports_from_form يقسّم بفواصل.
+    res = client.post(
+        "/admin/radius/mt/1/port-services/loop_detect/loop-check",
+        data={"_csrf_token": token, "ports": ",".join(selected)},
+    )
+    body = res.get_data(as_text=True)
+    assert res.status_code == 200
+    # كل المنافذ التسعة لها بطاقة في DOM (data-pss-loop-iface فريد لكل واحد)
+    for port in selected:
+        assert f'data-pss-loop-iface="{port}"' in body, \
+            f"missing probe for {port}"
+    # ether2/ether5: لوب ⇒ data-pss-loop-probe="loop"
+    assert body.count('data-pss-loop-probe="loop"') == 2
+    # ether3/ether4: لا لوب ⇒ data-pss-loop-probe="clear"
+    assert body.count('data-pss-loop-probe="clear"') == 2
+    # ether6..ether8 + sfp1/sfp2 (5 منافذ): «no-rule» ⇒ تنبيه بانتظار apply
+    assert body.count('data-pss-loop-probe="no-rule"') == 5
+    assert "لم تُركَّب قاعدة كشف اللوب على ether6" in body
+
+
+def test_apply_rejects_wan_and_tunnel_ports(app, client, monkeypatch):
+    """ISSUE B — تكامل: المشغّل يصوغ POST بـ ether1 (WAN) ضمن المنافذ.
+    حارس _validate_lan_ports يردّ رسالة عربية واضحة ولا يدفع السكربت."""
+    _seed(app)
+    _install_real_script(monkeypatch, "loop_detect")
+
+    fake = _FakeClient()
+    from app.radius.routes import port_script_services as route
+    monkeypatch.setattr(route, "_connect_client", lambda nas: fake)
+    monkeypatch.setattr(route, "_discover", lambda nas: [
+        {"name": "ether1", "running": True, "type": "ether"},
+        {"name": "ether2", "running": True, "type": "ether"},
+        {"name": "hr-wg",  "running": True, "type": "wireguard"},
+    ])
+    _login(client)
+    token = _csrf(client)
+    # 3 منافذ: ether1 (WAN افتراضي) + hr-wg (نفق) + ether2 (LAN صالح)
+    res = client.post(
+        "/admin/radius/mt/1/port-services/loop_detect/apply",
+        data={"_csrf_token": token, "confirm": "1",
+              "ports": "ether1,hr-wg,ether2"},
+    )
+    body = res.get_data(as_text=True)
+    assert res.status_code == 200
+    # رسالة الخطأ ظاهرة وتُسمّي الواجهات الممنوعة
+    assert "WAN/نفق" in body or "WAN" in body
+    assert "ether1" in body and "hr-wg" in body
+    # لم يُدفع أيّ سكربت إلى الراوتر
+    assert fake.calls == []
+
+
+def test_picker_hides_wan_and_tunnel_interfaces(app, client, monkeypatch):
+    """ISSUE B — تكامل عرض: شبكة المربّعات تعرض ether2..ether8 + sfp1 فقط،
+    ولا تعرض ether1 (WAN افتراضي) ولا hr-wg/hr-pppoe-ether1/lo/hobe-vpn."""
+    _seed(app)
+    from app.radius.routes import port_script_services as route
+    monkeypatch.setattr(route, "_discover", lambda nas: [
+        {"name": "ether1",          "type": "ether",      "running": True},
+        {"name": "ether2",          "type": "ether",      "running": True},
+        {"name": "ether3",          "type": "ether",      "running": True},
+        {"name": "ether8",          "type": "ether",      "running": True},
+        {"name": "sfp1",            "type": "ether",      "running": True},
+        {"name": "hr-pppoe-ether1", "type": "pppoe-out",  "running": True},
+        {"name": "hr-wg",           "type": "wireguard",  "running": True},
+        {"name": "lo",              "type": "loopback",   "running": True},
+        {"name": "hobe-vpn",        "type": "wireguard",  "running": True},
+    ])
+    _login(client)
+    body = client.get(
+        "/admin/radius/mt/1/port-services?slug=loop_detect"
+    ).get_data(as_text=True)
+    # نُدقّق على value="<iface>" الذي يُصدِره القالب لكل مربّع.
+    assert 'value="ether2"' in body
+    assert 'value="ether8"' in body
+    assert 'value="sfp1"' in body
+    # الواجهات الممنوعة لا تظهر في النموذج (لا مربّع باسمها)
+    for blocked in ("ether1", "hr-pppoe-ether1", "hr-wg", "lo", "hobe-vpn"):
+        assert f'value="{blocked}"' not in body, \
+            f"{blocked} should not appear in the picker"

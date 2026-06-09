@@ -44,6 +44,109 @@ LOOP_DETECT_TAG = "HR-LoopDetect"  # عميل DHCP على المنفذ لكشف 
 _INTERFACE_NAME_RE = re.compile(r"^[A-Za-z0-9\-_\.]{1,32}$")
 
 
+# ─── مرشّح «LAN-only» المُشترَك بين خدمتَي loop_detect وbt_wifi_block ──
+#
+# الخدمتان تنطبقان فقط على منافذ الوصول الداخلي (LAN). تركيب dhcp-client
+# على واجهة WAN يكسر التوجيه، وتثبيت TTL=1 على نفق VPN يقطع الاتصال
+# المركزي. لذلك نستبعد عبر مرشّح موحّد:
+#   (أ) واجهة WAN: إن مُرِّر اسمها صراحةً (محفوظ في wizard_runs.
+#       selected_wan_interface) نستبعدها؛ وإلا نستبعد default_wan="ether1"
+#       كاحتراز افتراضي فقط (لا تثبيت صلب — يمكن للمناداة تجاوزه).
+#   (ب) واجهات الأنفاق/الـVPN عبر type — هذا هو الفحص البنيوي القاسي:
+#       pppoe/pptp/l2tp/sstp/ovpn/openvpn/ipsec/wireguard/gre/ipip/eoip/
+#       vrrp/loopback. مفيد في حال تغيّر اسم النفق.
+#   (ج) واجهات الأنفاق المعروفة في حُزمة Hoberadius عبر الاسم (احتراز
+#       ثانٍ في حال أعاد الراوتر إعلان type غير دقيق): hr-wg، hobe-vpn،
+#       lo، وكل ما يبدأ بـhr-pppoe-/pppoe-/pptp-/l2tp-/sstp-/ovpn-/
+#       ipsec-/wg-/wireguard-.
+
+_LAN_FILTER_EXCLUDE_TYPES: frozenset[str] = frozenset({
+    "pppoe-in", "pppoe-out", "pppoe", "ppp-client",
+    "pptp-in", "pptp-out", "pptp",
+    "l2tp-in", "l2tp-out", "l2tp",
+    "sstp-in", "sstp-out", "sstp",
+    "ovpn-in", "ovpn-out", "ovpn",
+    "openvpn-in", "openvpn-out", "openvpn",
+    "ipsec",
+    "wireguard", "wg",
+    "gre", "gre-tunnel", "gre6", "gre6-tunnel",
+    "ipip", "ipip-tunnel", "ipip6", "ipip6-tunnel",
+    "eoip", "eoip-tunnel",
+    "vrrp",
+    "loopback", "lo",
+})
+
+_LAN_FILTER_EXCLUDE_NAMES: frozenset[str] = frozenset({
+    "lo", "loopback",
+    "hr-wg",       # نفق WireGuard إلى الـ VPS المركزي (طبقة إدارة)
+    "hobe-vpn",    # اسم بديل للنفق المركزي
+})
+
+_LAN_FILTER_EXCLUDE_NAME_PREFIXES: tuple[str, ...] = (
+    "hr-pppoe-",   # عملاء PPPoE التي يبنيها معالج الإعداد على المنفذ
+    "pppoe-",
+    "pptp-",
+    "l2tp-",
+    "sstp-",
+    "ovpn-",
+    "openvpn-",
+    "ipsec-",
+    "wg-",
+    "wireguard-",
+)
+
+_DEFAULT_WAN_HINT = "ether1"
+
+
+def is_lan_port(row: Mapping[str, Any], *,
+                wan_iface: str = "",
+                default_wan: str = _DEFAULT_WAN_HINT) -> bool:
+    """يحدّد ما إذا كانت الواجهة منفذًا LAN صالحًا لخدمات port-based.
+
+    True فقط للمنافذ المسموحة (ether/bridge/wlan/vlan ميدانية، ليست WAN
+    ولا نفقًا). الفحص دفاعي: يستبعد عبر type أولًا (الأقوى) ثم بالأسماء
+    (احتراز)، وأخيرًا يستبعد اسم الـWAN المُمرَّر (أو الافتراضي ether1).
+
+    إن مُرِّر wan_iface صراحةً يُحجَب فقط هو (default_wan لا يُطبَّق) — هذا
+    يسمح للمعرفة المُسجّلة في wizard_runs بتجاوز الاحتراز الافتراضي.
+    """
+    name = str(row.get("name") or "").strip()
+    if not name:
+        return False
+    name_lc = name.lower()
+    # (أ) WAN
+    wan_name = (wan_iface or "").strip()
+    if wan_name:
+        if name == wan_name or name_lc == wan_name.lower():
+            return False
+    else:
+        # لا WAN معروف ⇒ نستخدم احتراز افتراضي قابل للتجاوز.
+        dflt = (default_wan or "").strip()
+        if dflt and (name == dflt or name_lc == dflt.lower()):
+            return False
+    # (ب) type
+    type_str = str(row.get("type") or "").strip().lower()
+    if type_str and type_str in _LAN_FILTER_EXCLUDE_TYPES:
+        return False
+    # (ج) name + prefixes
+    if name_lc in _LAN_FILTER_EXCLUDE_NAMES:
+        return False
+    for prefix in _LAN_FILTER_EXCLUDE_NAME_PREFIXES:
+        if name_lc.startswith(prefix):
+            return False
+    return True
+
+
+def filter_lan_ports(rows: Sequence[Mapping[str, Any]], *,
+                     wan_iface: str = "",
+                     default_wan: str = _DEFAULT_WAN_HINT
+                     ) -> list[dict]:
+    """يُرجع نسخة من rows مع استبعاد كل ما لا يجتاز is_lan_port.
+    يحافظ على الترتيب الأصلي وعلى كل حقول الصفوف."""
+    return [dict(r) for r in (rows or [])
+            if is_lan_port(r, wan_iface=wan_iface, default_wan=default_wan)]
+
+
 # ─── العنصر الأساسي: تعريف خدمة سكربت مبنيّة على المنافذ ──────────
 
 
@@ -390,48 +493,86 @@ def _clean(value: Any) -> str:
     return str(value or "").strip()
 
 
+def _probe_from_row(iface: str, row: Mapping[str, Any]) -> "LoopProbe":
+    """يصنع LoopProbe من صفّ dhcp-client موجود — bound أو searching."""
+    status = _clean(row.get("status")).lower()
+    address = _clean(row.get("address"))
+    gateway = _clean(row.get("gateway"))
+    dhcp_server = _clean(row.get("dhcp-server") or row.get("dhcp_server"))
+    has_addr = bool(address) and not address.startswith("0.0.0.0")
+    is_loop = status.startswith("bound") or has_addr
+    if is_loop:
+        msg = f"لوب مكتشف على {iface} — رجع IP {address or '—'}"
+        if dhcp_server:
+            msg += f" من DHCP server {dhcp_server}"
+    else:
+        msg = f"لا لوب على {iface} (الحالة: {status or 'searching'})"
+    return LoopProbe(
+        iface=iface, status=status, address=address, gateway=gateway,
+        dhcp_server=dhcp_server, is_loop=is_loop, message=msg,
+    )
+
+
+def _probe_missing(iface: str) -> "LoopProbe":
+    """منفذ مُختار لكنه لم يجد له قاعدة HR-LoopDetect مركّبة — نُنبّه
+    المشغّل بدل إسقاطه من النتيجة بصمت."""
+    return LoopProbe(
+        iface=iface, status="no-rule", address="", gateway="",
+        dhcp_server="", is_loop=False,
+        message=(
+            f"لم تُركَّب قاعدة كشف اللوب على {iface} بعد — "
+            "اضغط «معاينة سكربت التفعيل» ثم «تطبيق» أولًا."
+        ),
+    )
+
+
 def parse_loop_status(rows: Sequence[Mapping[str, Any]], *,
                       only_ports: Sequence[str] | None = None,
                       tag: str = LOOP_DETECT_TAG) -> list[LoopProbe]:
-    """يحوّل صفوف /ip dhcp-client (كما يعيدها العميل) إلى قائمة LoopProbe.
+    """يحوّل صفوف /ip dhcp-client إلى نتائج فحص اللوب — *واحد لكل منفذ
+    مُختار* (لا تسقط بنود بصمت).
 
-    يأخذ فقط الإدخالات الموسومة بـ`tag` (HR-LoopDetect افتراضيًا). إن
-    مُرِّر only_ports يقصر النتيجة على تلك الواجهات. منطق اللوب:
-      status يبدأ بـ"bound"  → لوب (الطلب دار وعاد فاستُلِم عنوان).
-      أو عاد عنوان غير 0.0.0.0 → لوب أيضًا (احتياط لاختلاف صيغ RouterOS).
-      غير ذلك (searching/…)    → لا لوب.
+    منطق اللوب لصفّ موسوم HR-LoopDetect:
+      status يبدأ بـ"bound"           → لوب (دار الطلب وعاد فاستُلِم عنوان).
+      أو عاد address غير 0.0.0.0     → لوب أيضًا (احتراز لاختلاف صيغ ROS).
+      غير ذلك (searching/…)           → لا لوب.
+
+    سلوك only_ports — *إصلاح فحص اللوب* (يونيو 2026):
+      الإصدار السابق كان يكرّر على صفوف /ip dhcp-client ويُسقِط أيّ منفذ
+      مُختار لم يجد له صفًّا (= حذف بصمت). نتيجة: يختار المشغّل 9 منافذ
+      فيرى 4 فقط — لأن apply كان شُغِّل بـ4 فقط. الآن: نُفهرس الصفوف
+      الموسومة بالاسم ثم نُولّد بطاقة لكلّ منفذ من only_ports بنفس
+      ترتيبه: موجود ⇒ probe حقيقي؛ مفقود ⇒ probe «no-rule» يُنبّه.
+    إن لم يُمرّر only_ports نُخرج كل الإدخالات الموسومة كما هي (سلوك العرض
+    العامّ — صفحة الخدمة بلا اختيار).
     """
-    wanted = {p for p in only_ports} if only_ports else None
-    out: list[LoopProbe] = []
+    # 1) فهرسة الصفوف الموسومة باسم الواجهة.
+    tagged: dict[str, Mapping[str, Any]] = {}
     for row in rows or []:
         comment = _clean(row.get("comment"))
         if tag not in comment:
             continue
         iface = _clean(row.get("interface"))
-        if wanted is not None and iface not in wanted:
+        if not iface:
             continue
-        status = _clean(row.get("status")).lower()
-        address = _clean(row.get("address"))
-        gateway = _clean(row.get("gateway"))
-        dhcp_server = _clean(row.get("dhcp-server") or row.get("dhcp_server"))
-        has_addr = bool(address) and not address.startswith("0.0.0.0")
-        is_loop = status.startswith("bound") or has_addr
-        if is_loop:
-            msg = f"لوب مكتشف على {iface} — رجع IP {address or '—'}"
-            if dhcp_server:
-                msg += f" من DHCP server {dhcp_server}"
-        else:
-            msg = f"لا لوب على {iface} (الحالة: {status or 'searching'})"
-        out.append(LoopProbe(
-            iface=iface,
-            status=status,
-            address=address,
-            gateway=gateway,
-            dhcp_server=dhcp_server,
-            is_loop=is_loop,
-            message=msg,
-        ))
-    return out
+        tagged.setdefault(iface, row)
+
+    # 2) only_ports — بطاقة لكل منفذ مُختار بترتيبه.
+    if only_ports is not None:
+        out: list[LoopProbe] = []
+        seen: set[str] = set()
+        for raw in only_ports:
+            port = _clean(raw)
+            if not port or port in seen:
+                continue
+            seen.add(port)
+            row = tagged.get(port)
+            out.append(_probe_from_row(port, row) if row is not None
+                       else _probe_missing(port))
+        return out
+
+    # 3) العرض العامّ — كل الموسومين كما هم.
+    return [_probe_from_row(iface, row) for iface, row in tagged.items()]
 
 
 def read_loop_status(nas_call: Mapping[str, Any],
@@ -474,4 +615,6 @@ __all__ = [
     "discover_interfaces",
     "parse_loop_status",
     "read_loop_status",
+    "is_lan_port",
+    "filter_lan_ports",
 ]

@@ -244,6 +244,19 @@
             </div>
           </div>
         </div>
+        {% elif p.status == 'no-rule' %}
+        {# منفذ مُختار لكن قاعدة كشف اللوب لم تُركّب عليه بعد — نُنبّه
+           بصراحة بدل إسقاطه من النتيجة كما كانت تفعل النسخة السابقة. #}
+        <div data-pss-loop-probe="no-rule" data-pss-loop-iface="{{ p.iface }}"
+             style="display:flex;align-items:flex-start;gap:10px;background:#FFFBEB;border:1px solid #FDE68A;color:#92400E;padding:12px 14px;border-radius:var(--hub-r-md);font-size:14px">
+          <i class="fa-solid fa-circle-info" style="margin-top:2px"></i>
+          <div>
+            <div style="font-weight:700">{{ p.message }}</div>
+            <div class="hub-text-mute" style="font-size:12.5px;margin-top:4px">
+              <code>{{ p.iface }}</code> {{ _('· الحالة:') }} <code>{{ _('قاعدة غير مُركّبة') }}</code>
+            </div>
+          </div>
+        </div>
         {% else %}
         <div data-pss-loop-probe="clear" data-pss-loop-iface="{{ p.iface }}"
              style="display:flex;align-items:flex-start;gap:10px;background:#ECFDF5;border:1px solid #A7F3D0;color:#166534;padding:12px 14px;border-radius:var(--hub-r-md);font-size:14px">

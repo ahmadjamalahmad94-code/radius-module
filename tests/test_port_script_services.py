@@ -156,6 +156,148 @@ def test_parse_loop_status_filters_by_only_ports():
     assert [p.iface for p in probes] == ["ether3"]
 
 
+def test_parse_loop_status_yields_probe_per_selected_port():
+    """ISSUE A (يونيو 2026): «فحص اللوب» يجب أن يُعيد بطاقة لكل منفذ
+    اختاره المشغّل — حتى لو لم توجد قاعدة HR-LoopDetect مركّبة عليه.
+
+    قبل الإصلاح: النسخة السابقة كانت تكرّر على الصفوف الموسومة فقط
+    فيختار المشغّل 9 منافذ فيرى 4 (لأن apply الأخير شُغِّل بـ4 فقط)
+    والباقي يسقط بصمت. الآن: نتيجة بطول 9 — 4 probes حقيقية و5 «no-rule».
+    """
+    selected = [f"ether{i}" for i in range(2, 9)] + ["sfp1", "sfp2"]
+    rows = [
+        {"interface": "ether2", "status": "bound",
+         "address": "192.168.88.7/24", "comment": "HR-LoopDetect ether2"},
+        {"interface": "ether3", "status": "searching...",
+         "comment": "HR-LoopDetect ether3"},
+        {"interface": "ether4", "status": "searching...",
+         "comment": "HR-LoopDetect ether4"},
+        {"interface": "ether5", "status": "bound",
+         "address": "10.10.10.4/24", "comment": "HR-LoopDetect ether5"},
+    ]
+    probes = pss.parse_loop_status(rows, only_ports=selected)
+    # بطاقة لكل منفذ من selected بنفس الترتيب
+    assert [p.iface for p in probes] == selected
+    assert len(probes) == 9
+    # الموجودة: ether2/ether5 لوب، ether3/ether4 لا لوب، الباقي «no-rule»
+    by_iface = {p.iface: p for p in probes}
+    assert by_iface["ether2"].is_loop is True
+    assert by_iface["ether5"].is_loop is True
+    assert by_iface["ether3"].is_loop is False
+    assert by_iface["ether3"].status != "no-rule"
+    assert by_iface["ether4"].is_loop is False
+    # المفقودة من /ip dhcp-client تأتي بشكل صريح «no-rule»
+    for missing in ("ether6", "ether7", "ether8", "sfp1", "sfp2"):
+        assert by_iface[missing].status == "no-rule"
+        assert by_iface[missing].is_loop is False
+        assert "لم تُركَّب" in by_iface[missing].message
+
+
+def test_parse_loop_status_dedups_only_ports():
+    rows = [{"interface": "ether2", "status": "bound",
+             "address": "1.2.3.4/24", "comment": "HR-LoopDetect ether2"}]
+    probes = pss.parse_loop_status(
+        rows, only_ports=["ether2", "ether2", "  ", "ether3"])
+    assert [p.iface for p in probes] == ["ether2", "ether3"]
+    assert probes[1].status == "no-rule"
+
+
+# ─── ISSUE B: مرشّح LAN-only المُشترَك (يستبعد WAN + الأنفاق) ─────
+
+
+def test_is_lan_port_excludes_default_wan_ether1():
+    """بلا wan_iface معرّفًا نستخدم احتراز ether1 — لا تركيب dhcp-client
+    على WAN يكسر التوجيه."""
+    assert pss.is_lan_port({"name": "ether1", "type": "ether"}) is False
+    assert pss.is_lan_port({"name": "ether2", "type": "ether"}) is True
+
+
+def test_is_lan_port_respects_explicit_wan_iface():
+    """مع wan_iface صريح (مأخوذ من setup_wizard_runs) نُستبعِده هو، لا
+    ether1 — أيّ منفذ من الإيثرنت يمكن أن يكون الـWAN على راوتر معيّن."""
+    assert pss.is_lan_port({"name": "ether1", "type": "ether"},
+                           wan_iface="ether3") is True
+    assert pss.is_lan_port({"name": "ether3", "type": "ether"},
+                           wan_iface="ether3") is False
+
+
+def test_is_lan_port_excludes_vpn_tunnel_types():
+    """الفحص البنيوي القاسي عبر type — يلتقط الأنفاق حتى لو سُمّيت
+    عشوائيًا. يغطي pppoe/pptp/l2tp/sstp/ovpn/ipsec/wireguard/gre/eoip."""
+    tunnel_rows = [
+        {"name": "hr-pppoe-ether1",  "type": "pppoe-out"},
+        {"name": "pptp-out1",        "type": "pptp-out"},
+        {"name": "hr-wg",            "type": "wireguard"},
+        {"name": "ovpn-corp",        "type": "ovpn-out"},
+        {"name": "ipsec-mgmt",       "type": "ipsec"},
+        {"name": "l2tp-customer",    "type": "l2tp-out"},
+        {"name": "sstp-mgmt",        "type": "sstp-out"},
+        {"name": "gre-1",            "type": "gre-tunnel"},
+        {"name": "eoip-1",           "type": "eoip-tunnel"},
+        {"name": "lo",               "type": "loopback"},
+        {"name": "hobe-vpn",         "type": "wireguard"},
+    ]
+    for r in tunnel_rows:
+        assert pss.is_lan_port(r) is False, f"{r} should be excluded"
+
+
+def test_is_lan_port_excludes_tunnel_names_even_with_blank_type():
+    """احتراز ثانٍ: إن أعاد الراوتر type فارغًا/مشوّهًا، يلتقطها الاسم
+    (lo، hr-wg، hobe-vpn، وبادئات pppoe-/pptp-/l2tp-/…)."""
+    name_only = [
+        {"name": "lo", "type": ""},
+        {"name": "hr-wg", "type": ""},
+        {"name": "hobe-vpn", "type": ""},
+        {"name": "hr-pppoe-ether1", "type": ""},
+        {"name": "pppoe-out2", "type": ""},
+        {"name": "pptp-out9", "type": ""},
+        {"name": "wireguard-test", "type": ""},
+    ]
+    for r in name_only:
+        assert pss.is_lan_port(r) is False, f"{r} should be excluded"
+
+
+def test_is_lan_port_keeps_typical_lan_ports():
+    """ether2..ether8، bridge، vlan، wlan، sfp جميعها LAN ports صالحة."""
+    rows = [
+        {"name": "ether2",     "type": "ether"},
+        {"name": "ether8",     "type": "ether"},
+        {"name": "sfp1",       "type": "ether"},
+        {"name": "bridge-lan", "type": "bridge"},
+        {"name": "vlan-100",   "type": "vlan"},
+        {"name": "wlan1",      "type": "wlan"},
+    ]
+    for r in rows:
+        assert pss.is_lan_port(r) is True, f"{r} should be allowed"
+
+
+def test_filter_lan_ports_keeps_order_and_drops_excluded():
+    """مثال واقعي مطابق لوصف العطل: ether1 (WAN افتراضي)، hr-pppoe-ether1،
+    hr-wg، pptp-out1، lo، hobe-vpn ⇒ تُسقَط. ether2..ether8، sfp1 ⇒ تبقى."""
+    interfaces = [
+        {"name": "ether1",          "type": "ether"},
+        {"name": "ether2",          "type": "ether"},
+        {"name": "ether3",          "type": "ether"},
+        {"name": "ether4",          "type": "ether"},
+        {"name": "ether5",          "type": "ether"},
+        {"name": "ether6",          "type": "ether"},
+        {"name": "ether7",          "type": "ether"},
+        {"name": "ether8",          "type": "ether"},
+        {"name": "sfp1",            "type": "ether"},
+        {"name": "hr-pppoe-ether1", "type": "pppoe-out"},
+        {"name": "pptp-out1",       "type": "pptp-out"},
+        {"name": "hr-wg",           "type": "wireguard"},
+        {"name": "lo",              "type": "loopback"},
+        {"name": "hobe-vpn",        "type": "wireguard"},
+    ]
+    out = pss.filter_lan_ports(interfaces)
+    names = [r["name"] for r in out]
+    assert names == ["ether2", "ether3", "ether4", "ether5", "ether6",
+                     "ether7", "ether8", "sfp1"]
+    # الحقول الأخرى محفوظة لكل صفّ ناجح
+    assert out[0]["type"] == "ether"
+
+
 class _StubRes:
     """نتيجة API ستب على شكل MtResult (ok/data/error) بلا راوتر."""
     def __init__(self, *, ok, data=None, error=""):
@@ -301,14 +443,56 @@ def test_service_state_round_trip(app):
 
 
 def test_port_rows_extracts_interface_state(app):
+    """يستخرج اسم/running/disabled لكل صفّ مُكتشف.
+
+    تحديث (يونيو 2026 — ISSUE B): _port_rows صارت تطبّق مرشّح LAN-only،
+    فـether1 يُستبعَد افتراضًا (احتراز WAN). لإثبات منطق الاستخراج نفسه
+    نمرّر wan_iface="" مع صفوف LAN آمنة (ether2/ether5)."""
     with app.app_context():
         from app.radius.routes import port_script_services as route
         rows = route._port_rows([
-            {"name": "ether1", "running": True, "type": "ether"},
-            {"name": "ether2", "running": False, "disabled": "true"},
+            {"name": "ether2", "running": True, "type": "ether"},
+            {"name": "ether5", "running": False, "disabled": "true",
+             "type": "ether"},
             {"name": "", "running": True},  # يُتجاهَل (بلا اسم)
         ])
-        assert [r["name"] for r in rows] == ["ether1", "ether2"]
+        assert [r["name"] for r in rows] == ["ether2", "ether5"]
         assert rows[0]["running"] is True
         assert rows[1]["running"] is False
         assert rows[1]["disabled"] is True
+
+
+def test_port_rows_drops_wan_default_and_tunnels(app):
+    """_port_rows تستبعد ether1 (WAN افتراضي) والأنفاق المعروفة قبل
+    عرض المربّعات على المشغّل — لا يستطيع اختيار WAN/VPN لتركيب
+    dhcp-client أو TTL=1 عليه أصلًا."""
+    with app.app_context():
+        from app.radius.routes import port_script_services as route
+        rows = route._port_rows([
+            {"name": "ether1",          "type": "ether", "running": True},
+            {"name": "ether2",          "type": "ether", "running": True},
+            {"name": "hr-pppoe-ether1", "type": "pppoe-out", "running": True},
+            {"name": "pptp-out1",       "type": "pptp-out", "running": True},
+            {"name": "hr-wg",           "type": "wireguard", "running": True},
+            {"name": "lo",              "type": "loopback", "running": True},
+            {"name": "hobe-vpn",        "type": "wireguard", "running": True},
+            {"name": "sfp1",            "type": "ether", "running": False},
+        ])
+        names = [r["name"] for r in rows]
+        assert names == ["ether2", "sfp1"]
+
+
+def test_port_rows_honours_explicit_wan_iface(app):
+    """إن مُرِّر wan_iface صراحةً يُحجَب هو فقط — لا تطبيق ether1
+    الافتراضي. (يحاكي راوترًا الـWAN فيه ether3 لا ether1.)"""
+    with app.app_context():
+        from app.radius.routes import port_script_services as route
+        rows = route._port_rows([
+            {"name": "ether1", "type": "ether", "running": True},
+            {"name": "ether2", "type": "ether", "running": True},
+            {"name": "ether3", "type": "ether", "running": True},
+        ], wan_iface="ether3")
+        names = [r["name"] for r in rows]
+        assert "ether1" in names
+        assert "ether2" in names
+        assert "ether3" not in names

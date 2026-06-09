@@ -133,6 +133,30 @@ def _discover(nas: dict) -> list[dict]:
     return pss.discover_interfaces(_nas_for_mac(nas), mac.interface_list)
 
 
+def _resolve_wan_iface(nas: dict) -> str:
+    """يستخرج اسم واجهة WAN لهذا الراوتر من معالج الإعداد إن سُجِّل،
+    وإلا يُرجع ''. يُستخدم كمدخل لـpss.filter_lan_ports فتُستبعد الـWAN
+    من قائمة المنافذ الصالحة لخدمتَي loop_detect وbt_wifi_block.
+
+    لا نرمي حدث الخطأ — البحث best-effort، فإن لم نجد قيمة محفوظة نُعيد
+    سلسلة فارغة فيقع المرشّح على احتراز ether1 الافتراضي.
+    """
+    try:
+        row = db().execute(
+            "SELECT selected_wan_interface "
+            "FROM setup_wizard_runs "
+            "WHERE tenant_id=? AND router_id=? "
+            "  AND selected_wan_interface != '' "
+            "ORDER BY id DESC LIMIT 1",
+            (_tid(), int(nas["id"])),
+        ).fetchone()
+    except Exception:  # noqa: BLE001
+        return ""
+    if not row:
+        return ""
+    return str(dict(row).get("selected_wan_interface") or "").strip()
+
+
 def _interface_names(interfaces: list[dict]) -> list[str]:
     names = []
     for r in interfaces:
@@ -142,21 +166,65 @@ def _interface_names(interfaces: list[dict]) -> list[str]:
     return names
 
 
-def _port_rows(interfaces: list[dict]) -> list[dict]:
-    """صفوف اختيار المنافذ مع حالتها الحقيقية (للعرض كـ checkboxes):
-    الاسم + هل الواجهة تعمل (running) + النوع + معطّلة؟."""
-    rows: list[dict] = []
-    for r in interfaces:
-        name = (r.get("name") or "").strip()
-        if not name:
-            continue
-        rows.append({
-            "name": name,
-            "running": bool(r.get("running")),
-            "disabled": str(r.get("disabled") or "").lower() in ("yes", "true", "1"),
-            "type": (r.get("type") or "").strip(),
-        })
-    return rows
+def _port_rows(interfaces: list[dict], *, wan_iface: str = "") -> list[dict]:
+    """صفوف اختيار المنافذ — *منافذ LAN فقط* لخدمتَي loop_detect/
+    bt_wifi_block. تركيب dhcp-client على WAN يكسر التوجيه وتثبيت TTL=1
+    على نفق VPN يقطع الاتصال المركزي، فنستبعد الاثنين هنا قبل عرض المربّعات.
+
+    المرشّح المُشترَك pss.filter_lan_ports يُستبعد:
+      • واجهة WAN (wan_iface المُمرَّر من معالج الإعداد، أو ether1 افتراضًا).
+      • أنفاق VPN/PPPoE/PPTP/L2TP/SSTP/OVPN/IPsec/WireGuard/GRE/IPIP/EoIP
+        بحسب type (الفحص البنيوي).
+      • أنفاق مُسمّاة (hr-wg, hobe-vpn, lo) وكل ما يبدأ بـhr-pppoe-/
+        pppoe-/pptp-/l2tp-/sstp-/ovpn-/ipsec-/wg-/wireguard- (احتراز اسم).
+    """
+    safe = pss.filter_lan_ports(
+        [{"name": (r.get("name") or "").strip(),
+          "type": (r.get("type") or "").strip(),
+          "running": bool(r.get("running")),
+          "disabled": str(r.get("disabled") or "").lower() in ("yes", "true", "1")}
+         for r in interfaces if (r.get("name") or "").strip()],
+        wan_iface=wan_iface,
+    )
+    # نُعيد بناء الصفوف على نفس بنية النموذج (name/running/disabled/type)
+    # حتى لا يلاحظ القالب أي تغيير.
+    return [
+        {"name": r["name"], "running": r["running"],
+         "disabled": r["disabled"], "type": r["type"]}
+        for r in safe
+    ]
+
+
+def _validate_lan_ports(nas: dict, ports: list[str]) -> tuple[list[str], str]:
+    """يُتحقّق أنّ كل منفذ مُختار من المشغّل هو منفذ LAN (يجتاز نفس مرشّح
+    العرض). يردّ (clean, error): clean = المنافذ المسموحة بنفس ترتيبها،
+    وerror = رسالة عربية إن وُجد منفذ ممنوع (WAN/نفق) فنوقف العملية.
+
+    نستخدمه قبل apply/plan/loop_check بحيث لا يستطيع المشغّل تجاوز المرشّح
+    عبر طلب POST مُصاغ يدويًا. الإزالة (remove) لا تستدعيه — تنظيف بقايا
+    قاعدة قديمة على واجهة صارت WAN يجب أن يبقى ممكنًا.
+    """
+    if not ports:
+        return [], ""
+    wan = _resolve_wan_iface(nas)
+    # نحتاج صفوف الواجهات مع type للقرار البنيوي؛ نلتقطها مرّة واحدة هنا.
+    interfaces = _discover(nas)
+    by_name = {(r.get("name") or "").strip(): r for r in interfaces
+               if (r.get("name") or "").strip()}
+    bad: list[str] = []
+    clean: list[str] = []
+    for p in ports:
+        row = by_name.get(p, {"name": p})  # غير مكتشَفة ⇒ نُقيّم بالاسم فقط
+        if pss.is_lan_port(row, wan_iface=wan):
+            clean.append(p)
+        else:
+            bad.append(p)
+    if bad:
+        return clean, (
+            "هذه الواجهات لا يُسمح بتطبيق الخدمة عليها (WAN/نفق): "
+            + ", ".join(bad)
+        )
+    return clean, ""
 
 
 def _states_for(nas_id: int) -> dict:
@@ -173,6 +241,7 @@ def _render(nas: dict, *, service=None, plan=None, selected_ports=None,
     loop_probes غير None فقط بعد «فحص اللوب» (قائمة حالات المنافذ)."""
     if interfaces is None:
         interfaces = _discover(nas)
+    wan = _resolve_wan_iface(nas)
     return render_template(
         "radius/port_script_services.html",
         nas=nas,
@@ -180,7 +249,7 @@ def _render(nas: dict, *, service=None, plan=None, selected_ports=None,
         service=service,
         interfaces=interfaces,
         interface_names=_interface_names(interfaces),
-        port_rows=_port_rows(interfaces),
+        port_rows=_port_rows(interfaces, wan_iface=wan),
         plan=plan,
         plan_mode=plan_mode,
         selected_ports=selected_ports or [],
@@ -228,10 +297,17 @@ def mt_port_services_plan(nas_id: int, slug: str):
     remove = request.form.get("mode") == "remove"
     plan = None
     error = None
-    try:
-        plan = pss.build_plan(slug, selected_ports, remove=remove)
-    except ValueError as e:
-        error = str(e)
+    # حارس LAN-only: نمنع توليد خطة تفعيل على واجهة WAN/نفق حتى لو
+    # صُيغ النموذج يدويًا. الإزالة لا تستدعيه (لتمكين تنظيف بقايا قديمة).
+    if not remove and selected_ports:
+        selected_ports, lan_err = _validate_lan_ports(nas, selected_ports)
+        if lan_err:
+            error = lan_err
+    if error is None:
+        try:
+            plan = pss.build_plan(slug, selected_ports, remove=remove)
+        except ValueError as e:
+            error = str(e)
     return _render(nas, service=service, plan=plan,
                    selected_ports=selected_ports, error=error,
                    plan_mode=("remove" if remove else "apply"))
@@ -304,10 +380,19 @@ def mt_port_services_apply(nas_id: int, slug: str):
     error = None
     apply_result = None
 
-    try:
-        plan = pss.build_plan(slug, selected_ports)
-    except ValueError as e:
-        error = str(e)
+    # حارس LAN-only — نفس مبدأ plan: لا نسمح بـapply على WAN/نفق حتى
+    # لو تجاوز المشغّل قائمة العرض. تركيب dhcp-client على WAN يكسر
+    # التوجيه، وtTL=1 على نفق VPN يقطع الإدارة المركزية.
+    if selected_ports:
+        selected_ports, lan_err = _validate_lan_ports(nas, selected_ports)
+        if lan_err:
+            error = lan_err
+
+    if error is None:
+        try:
+            plan = pss.build_plan(slug, selected_ports)
+        except ValueError as e:
+            error = str(e)
 
     if plan is not None:
         if service.is_placeholder:
