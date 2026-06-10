@@ -430,16 +430,19 @@ class SqliteAdapter(RadiusAdapter):
             ))
         return out
 
-    # ─────────────── Policies (لاحقًا) ───────────────
+    # ─────────────── Policies ───────────────
 
     def list_policies(self) -> Sequence[RadiusPolicy]:
-        return []
+        from ..db.repos import radius_policies_repo
+        return radius_policies_repo.list_policies(_tid())
 
     def upsert_policy(self, policy: RadiusPolicy) -> RadiusPolicy:
-        return policy
+        from ..db.repos import radius_policies_repo
+        return radius_policies_repo.upsert_policy(_tid(), policy)
 
     def delete_policy(self, policy_id: int) -> None:
-        return None
+        from ..db.repos import radius_policies_repo
+        radius_policies_repo.delete_policy(_tid(), int(policy_id))
 
 
 # ─────────────── mappers ───────────────

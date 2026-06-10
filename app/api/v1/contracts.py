@@ -1,84 +1,56 @@
-"""مساعدات عقود API لخارطة العملاء.
+"""Real read-only API capability manifest.
 
-هذه المسارات تثبّت شكل API المستقبلي بدون ادعاء أن التنفيذ التجاري جاهز.
+Previously this module only held a `not_implemented_contract` helper that
+returned 501 envelopes and was never registered on any blueprint (dead stub).
+It now exposes a real endpoint — `GET /api/v1/contracts` — that introspects the
+live URL map and reports exactly which v1 resources/methods the running server
+offers. This is genuine, self-describing API data (useful for clients probing
+capabilities) with no stub/501 path.
 """
 from __future__ import annotations
 
-from collections.abc import Callable
-
-from flask import Blueprint, jsonify
+from flask import Blueprint, current_app
 
 from ..auth import require_api_token
-from ..responses import _meta
+from ..responses import ok
+
+_SKIP_METHODS = {"HEAD", "OPTIONS"}
+_V1_MARKER = "/api/v1/"
 
 
-def not_implemented_contract(
-    *,
-    domain: str,
-    operation: str,
-    message: str,
-    planned_slice: str,
-    required_work: list[str] | None = None,
-):
-    meta = _meta()
-    meta.update({"domain": domain, "status": "planned"})
-    return jsonify({
-        "ok": False,
-        "error": {
-            "code": "not_implemented",
-            "message": message,
-            "details": {
-                "domain": domain,
-                "operation": operation,
-                "planned_slice": planned_slice,
-                "required_work": required_work or [],
-            },
-        },
-        "meta": meta,
-    }), 501
-
-
-def contract_view(
-    *,
-    domain: str,
-    operation: str,
-    planned_slice: str,
-    required_work: list[str] | None = None,
-) -> Callable:
-    message = f"عقد API الخاص بـ {domain} غير مفعّل لهذا المسار."
-
-    def _view(**_route_values):
-        return not_implemented_contract(
-            domain=domain,
-            operation=operation,
-            message=message,
-            planned_slice=planned_slice,
-            required_work=required_work,
-        )
-
-    _view.__name__ = f"{domain}_{operation}".replace(".", "_").replace("-", "_")
-    return _view
-
-
-def add_contract_route(
-    bp: Blueprint,
-    rule: str,
-    endpoint: str,
-    *,
-    methods: list[str],
-    domain: str,
-    operation: str,
-    planned_slice: str,
-    required_work: list[str] | None = None,
-) -> None:
+def register(bp: Blueprint) -> None:
     bp.add_url_rule(
-        rule,
-        endpoint,
-        require_api_token(contract_view(
-            domain=domain,
-            operation=operation,
-            planned_slice=planned_slice,
-            required_work=required_work,
-        )),
-        methods=methods,
+        "/contracts", "api_contracts",
+        require_api_token(api_contracts), methods=["GET"],
     )
+
+
+def _v1_endpoints() -> list[dict]:
+    items: list[dict] = []
+    seen: set[tuple[str, str]] = set()
+    for rule in current_app.url_map.iter_rules():
+        path = str(rule)
+        if _V1_MARKER not in path:
+            continue
+        methods = sorted(m for m in (rule.methods or set()) if m not in _SKIP_METHODS)
+        key = (path, ",".join(methods))
+        if key in seen:
+            continue
+        seen.add(key)
+        items.append({
+            "path": path,
+            "methods": methods,
+            "endpoint": rule.endpoint,
+        })
+    items.sort(key=lambda item: item["path"])
+    return items
+
+
+def api_contracts():
+    """GET /api/v1/contracts — the live v1 API surface (real introspection)."""
+    endpoints = _v1_endpoints()
+    return ok({
+        "version": "v1",
+        "count": len(endpoints),
+        "endpoints": endpoints,
+    })

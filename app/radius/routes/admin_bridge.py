@@ -42,6 +42,23 @@ def _tid() -> int:
     return int(session.get("tenant_id") or 1)
 
 
+def _flag_on(name: str) -> bool:
+    return (os.environ.get(name) or "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _restore_apply_enabled() -> bool:
+    return _flag_on("HOBERADIUS_ADMIN_RESTORE_APPLY_ENABLED")
+
+
+def _public_ip_apply_enabled() -> bool:
+    return _flag_on("HOBERADIUS_PUBLIC_IP_CHANGE_LIVE_APPLY_ENABLED")
+
+
+def _endpoint_exists(endpoint: str) -> bool:
+    from flask import current_app
+    return endpoint in current_app.view_functions
+
+
 def _safe(label: str, callback: Callable[[], Any], fallback: Any) -> Any:
     try:
         return callback()
@@ -101,20 +118,32 @@ def admin_bridge():
         {
             "title": "النسخ الاحتياطي",
             "icon": "database",
-            "status": "غير مفعل إنتاجيًا",
-            "note": "لا رفع نسخ احتياطية من هذه الصفحة.",
+            "status": "مفعّل",
+            "note": "نسخ محلّي + رفع إلى جوجل درايف من صفحة «النسخ الاحتياطي».",
+            "action_url": url_for("radius.backups") if _endpoint_exists("radius.backups") else "",
+            "action_label": "إدارة النسخ الاحتياطي",
         },
         {
             "title": "طلبات الاستعادة",
             "icon": "clock-rotate-left",
-            "status": "وضع جاف",
-            "note": "لا تنفيذ استعادة أو تطبيق تغييرات.",
+            "status": ("جاهز للتطبيق" if _restore_apply_enabled() else "بانتظار تفعيلك"),
+            "note": (
+                "الاستعادة الفعلية تستبدل قاعدة البيانات بعد نسخة وقاية + تحقّق "
+                "بصمة. التطبيق المباشر مفعّل."
+                if _restore_apply_enabled() else
+                "الاستعادة الفعلية جاهزة لكنها مقفلة بعلم الأمان "
+                "HOBERADIUS_ADMIN_RESTORE_APPLY_ENABLED — فعّله من إعدادات النظام."),
         },
         {
-            "title": "تفعيل الخدمات",
-            "icon": "toggle-off",
-            "status": "غير مفعل إنتاجيًا",
-            "note": "لا تفعيل خدمات أو تغيير Public IP من هنا.",
+            "title": "تفعيل الخدمات وتغيير Public IP",
+            "icon": "toggle-on",
+            "status": ("جاهز للتطبيق" if _public_ip_apply_enabled() else "بانتظار تفعيلك"),
+            "note": (
+                "تغيير عنوان الإنترنت العام يطبّق قاعدة src-nat موسومة على الراوتر. "
+                "التطبيق المباشر مفعّل."
+                if _public_ip_apply_enabled() else
+                "التطبيق المباشر مقفل بعلم الأمان "
+                "HOBERADIUS_PUBLIC_IP_CHANGE_LIVE_APPLY_ENABLED — فعّله من إعدادات النظام."),
         },
         {
             "title": "سجل أحداث الجسر",
