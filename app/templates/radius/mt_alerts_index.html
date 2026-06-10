@@ -99,9 +99,11 @@
         <tbody>
           {% for a in rows %}
           <tr data-mt-alert-row="{{ a.id }}">
-            {# عنوان التنبيه نفسه رابط لصفحة التفاصيل — وليس زر «التفاصيل» فقط #}
+            {# عنوان التنبيه رابط لمورده/إجرائه المباشر (لوحة الراوتر، شات/إيداع/
+               سحب الدعم، صفحة المشترك) عبر alert_target_url. زر «التفاصيل» أدناه
+               يبقى للوصول لصفحة تفاصيل التنبيه نفسه. #}
             <td>
-              <a href="{{ url_for('radius.mt_alerts_detail', alert_id=a.id) }}"
+              <a href="{{ alert_target_url(a) if alert_target_url is defined else url_for('radius.mt_alerts_detail', alert_id=a.id) }}"
                  style="text-decoration:none"
                  onmouseover="this.firstElementChild.style.textDecoration='underline'"
                  onmouseout="this.firstElementChild.style.textDecoration='none'">
