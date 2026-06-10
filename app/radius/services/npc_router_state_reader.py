@@ -106,14 +106,21 @@ class NullStateReader:
     """The default reader. Refuses every call.
 
     Wired by `get_state_reader()` whenever an environment
-    hasn't opted in. Keeps `npc_snapshot_capture_service` honest
-    even if some future code path forgets to inject a fake —
-    the snapshot fails closed rather than silently returning
-    empty data."""
+    hasn't opted in (kill-switch `HOBERADIUS_NPC_DISABLE_LIVE=1`
+    is set, or tests reset the override). Keeps
+    `npc_snapshot_capture_service` honest even if some future
+    code path forgets to inject a fake — the snapshot fails
+    closed rather than silently returning empty data.
+
+    Rule: never present empty data as if it were a real read.
+    The caller (apply route + UI) translates this exception to
+    «لا توجد بيانات حيّة — اتصل بالراوتر أو راجع الإعدادات»."""
 
     _ERR = (
-        "router state reader is not configured for this "
-        "environment. Snapshots and apply cannot proceed."
+        "لا توجد بيانات حيّة من الراوتر: قارئ الحالة غير مفعّل في "
+        "هذه البيئة (kill-switch HOBERADIUS_NPC_DISABLE_LIVE=1). "
+        "لا يمكن إنشاء لقطة قبل التطبيق ولا التطبيق نفسه. اطلب من "
+        "المشغّل إزالة المفتاح أو راجع إعدادات الـNPC."
     )
 
     def read_firewall_filters(self, router_id: int):

@@ -1203,7 +1203,10 @@ class OperationsService:
             }
 
         raw_sample = sample if isinstance(sample, dict) else {}
-        sample_username = str(raw_sample.get("username") or "CARD1234")
+        # لا قيمة وهمية تظهر كاسم بطاقة حقيقي: العلامة المحايدة «—» تكفي
+        # كمعاينة قبل اختيار دفعة. المسار الذي يستدعي هذه الدالة يمرّر
+        # اسم بطاقة حقيقية إن وُجدت (راجع print_templates._first_real_card_sample).
+        sample_username = str(raw_sample.get("username") or "—")
         sample_payload = {
             "username": sample_username,
             "has_password": bool(raw_sample.get("has_password", True)),
@@ -1342,9 +1345,9 @@ class OperationsService:
             if not cards:
                 cards = [{
                     "id": "",
-                    "username": sample_payload.get("username") or "CARD1234",
+                    "username": sample_payload.get("username") or "—",
                     "password": sample_payload.get("password") or "********",
-                    "serial": "SAMPLE",
+                    "serial": "",
                 }]
         if not cards:
             raise RadiusValidationError("selected batch has no cards")

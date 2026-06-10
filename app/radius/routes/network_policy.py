@@ -1104,12 +1104,13 @@ def _make_apply_view(svc: _ServiceDef):
             rollback=rollback, render_error=render_error,
         )
 
-        # Snapshot — best effort. If the reader is the default
-        # null one (which it is until a live adapter ships)
-        # the capture raises StateReaderNotConfigured; we
-        # interpret that as "no snapshot" and let the contracts
-        # engine refuse with NO_SNAPSHOT.
+        # Snapshot قبل التطبيق — قراءة حيّة من الراوتر عبر
+        # LiveRouterStateReader (مُفعَّل افتراضيًا). عند فشل القراءة
+        # (راوتر غير متّصل / kill-switch مُفعَّل / اعتمادات API ناقصة)
+        # نمسك السبب العربي ونمرّره كـflash للمشغّل بدل blocker جاف،
+        # ثم نترك المحرّك يرفض التطبيق بـNO_SNAPSHOT.
         snapshot_id: Optional[int] = None
+        snapshot_reason_ar: str = ""
         try:
             cap = snapshot_capture_svc.capture_pre_apply_snapshot(
                 tenant_id=_tid(),
@@ -1119,8 +1120,14 @@ def _make_apply_view(svc: _ServiceDef):
                 created_by=_actor(),
             )
             snapshot_id = int(cap.snapshot_id)
-        except Exception:  # noqa: BLE001
+        except Exception as _snap_err:  # noqa: BLE001
             snapshot_id = None
+            snapshot_reason_ar = str(_snap_err) or (
+                "تعذّر التقاط لقطة الحالة الحيّة من الراوتر — تحقّق "
+                "من الاتصال واعتمادات API."
+            )
+        if snapshot_reason_ar:
+            flash(snapshot_reason_ar, "warning")
 
         # Confirmations supplied via form fields named
         # `confirm__<code>=on`.

@@ -76,6 +76,16 @@ _URL_RE = re.compile(
     r"|/[A-Za-z0-9\.\-_/]*"
     r"|data:image/(png|jpe?g|gif|webp|svg\+xml);base64,"
     r"[A-Za-z0-9+/=]+)$")
+# نسخة اختيارية من _URL_RE: تقبل قيمة فارغة بالإضافة لأي رابط صالح.
+# تُستخدم لحقول الرابط التي تكون «اختيارية» بمعنى «اتركه فارغًا
+# ليُحتسب الرابط تلقائيًا من إعدادات النظام» — STORE_URL هو الحالة
+# الوحيدة الآن. الحقول الإلزامية (مثل TENANT_LOGO_URL) تبقى على
+# _URL_RE الصارم.
+_URL_OPT_RE = re.compile(
+    r"^(|https?://[A-Za-z0-9\.\-_/:%?=&]+"
+    r"|/[A-Za-z0-9\.\-_/]*"
+    r"|data:image/(png|jpe?g|gif|webp|svg\+xml);base64,"
+    r"[A-Za-z0-9+/=]+)$")
 _WELCOME_RE = re.compile(r"^[^<>{}]{0,160}$")
 # رقم هاتف الدعم — أرقام مع + و مسافات وشرطات فقط (آمن داخل tel:).
 _PHONE_RE = re.compile(r"^[+]?[0-9][0-9\s\-]{2,19}$")
@@ -282,25 +292,12 @@ def resolve_store_api_base(tenant_id: int = 1) -> str:
         STORE_PORTAL_PATH) else url
 
 
-# القيم الافتراضية للقوائم — تعيد إنتاج المحتوى التجريبي الذي كان
-# مكتوبًا يدويًا داخل القوالب، فلا يتغير شكل المعاينة الافتراضية.
-_DISTRIBUTORS_DEFAULT = _json.dumps([
-    {"name": "محل الاتصالات المركزي", "phone": "0599000001",
-     "area": "الشارع الرئيسي"},
-    {"name": "ماركت النور", "phone": "0599000002",
-     "area": "حي الجامعة"},
-], ensure_ascii=False)
-
-_OFFERS_DEFAULT = _json.dumps([
-    {"tier": "featured", "title": "باقة الألعاب Pro", "price": "2 وحدة",
-     "desc": "ساعتان متواصلتان — سرعة 5 ميجا"},
-    {"tier": "high", "title": "الباقة الأساسية", "price": "1 وحدة",
-     "desc": "8 ساعات — 2 ميجا"},
-    {"tier": "normal", "title": "الباقة القياسية", "price": "2 وحدة",
-     "desc": "10 ساعات — 3 ميجا"},
-    {"tier": "normal", "title": "الباقة الكاملة", "price": "3 وحدة",
-     "desc": "24 ساعة — 2 ميجا"},
-], ensure_ascii=False)
+# القوائم الافتراضية فارغة عمدًا: لا موزّعين ولا عروض وهمية تظهر
+# كأنّها حقيقية. القوالب الداعمة ترسم رسالة «لا يوجد موزعون/عروض
+# بعد» تلقائيًا من _distributors_html / _offers_html. المشغّل يضيف
+# عناصر حقيقية من مصمّم الهوت سبوت — تبويب «المتجر/الموزعون/العروض».
+_DISTRIBUTORS_DEFAULT = _json.dumps([], ensure_ascii=False)
+_OFFERS_DEFAULT = _json.dumps([], ensure_ascii=False)
 
 
 TEMPLATE_VARIABLES: list[TemplateVariable] = [
@@ -336,8 +333,10 @@ TEMPLATE_VARIABLES: list[TemplateVariable] = [
     # عبر resolve_store_url() — المصمّم يحقن الرابط المحسوب كقيمة
     # افتراضية فلا يكتب المشغّل أي رابط يدويًا؛ الحقل يبقى متاحًا
     # كتجاوز يدوي اختياري (قسم متقدم مطوي في الواجهة).
+    # الافتراض فارغ عمدًا: لا قيمة وهمية مثل 192.168.88.2 — حتى يضبط
+    # المشغّل IP الراديوس من الإعدادات أو يكتب رابطًا يدويًا.
     TemplateVariable("STORE_URL",       "رابط المتجر (تجاوز يدوي اختياري)",
-                     "http://192.168.88.2" + STORE_PORTAL_PATH, _URL_RE),
+                     "", _URL_OPT_RE),
     # إظهار حقل كلمة المرور — عند "no" يُخفى الحقل ويُرسل النموذج
     # باسم المستخدم فقط (دخول MikroTik «يوزر فقط»). يعمل على كل
     # التصاميم عبر كتلة الإضافات المحقونة في render().
