@@ -17,7 +17,26 @@
 {% block page_title %}التحقيقات{% endblock %}
 {% block page_sub %}<span class="sub">{{ _('مسار مراجعة بشرية لملاحظات المخاطر والاحتيال.') }}</span>{% endblock %}
 {% block head_extra %}{{ super() }}<link rel="stylesheet" href="{{ url_for('static', filename='css/ops_risk_redesign.css') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">{% endblock %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
+<style>
+  /* ops_risk_redesign.css scopes all form-grid rules under .opsx-redesign, which
+     this page doesn't use. Mirror the layout rules directly so the form breathes. */
+  .hub-form-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+    gap:14px;
+    align-items:end;
+  }
+  .hub-form-grid label{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    font-size:12.5px;
+    font-weight:600;
+    color:var(--hub-text);
+  }
+  .hub-form-grid .hub-form-span{ grid-column:1 / -1; }
+</style>{% endblock %}
 
 {% block content %}
 

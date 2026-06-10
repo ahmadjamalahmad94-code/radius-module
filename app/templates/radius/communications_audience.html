@@ -11,9 +11,13 @@
 <style>
   /* segment form layout — bespoke, mirrors the converted send page */
   .caud-form{ display:grid; gap:var(--hub-gap-section,16px); }
-  .caud-row{ display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:13px; }
+  .caud-row{ display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:13px; align-items:start; }
   .caud-foot{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; padding-top:4px; }
   .caud-note{ font-size:11.5px; color:var(--hub-text-mute,#64748b); }
+  /* normalize hub-input / hub-select to the same height — selects can render 1-3px
+     taller than text inputs in some browsers due to internal arrow padding */
+  .caud-form .hub-input,
+  .caud-form .hub-select{ height:36px; min-height:36px; box-sizing:border-box; }
 </style>
 {% endblock %}
 
