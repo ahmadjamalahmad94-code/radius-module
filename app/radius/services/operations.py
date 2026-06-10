@@ -4,6 +4,7 @@ from __future__ import annotations
 import re
 import sqlite3
 import os
+from ..core import env_settings
 import threading
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
@@ -877,7 +878,7 @@ class OperationsService:
         if not schedule:
             raise RadiusNotFound("schedule not found")
         rate = _rate_limit_from_schedule(schedule)
-        live_enabled = os.environ.get("HOBERADIUS_ENABLE_LIVE_SPEED_APPLY") == "1"
+        live_enabled = env_settings.env("HOBERADIUS_ENABLE_LIVE_SPEED_APPLY") == "1"
         if not live or not live_enabled:
             message = (
                 "Live RADIUS apply is disabled; dry-run only."
@@ -1814,7 +1815,7 @@ class OperationsService:
 
     # ── Local backup files: listing / retention / download / restore ──
     # Time-based window (days). Env-overridable; 0 disables time pruning.
-    LOCAL_BACKUP_RETENTION_DAYS = max(0, int(os.environ.get("HOBERADIUS_BACKUP_RETENTION_DAYS") or 30))
+    LOCAL_BACKUP_RETENTION_DAYS = max(0, int(env_settings.env("HOBERADIUS_BACKUP_RETENTION_DAYS") or 30))
 
     def _backup_dir(self) -> Path:
         backup_dir = Path(db_path()).parent / "backups"
@@ -1852,7 +1853,7 @@ class OperationsService:
     # instance/backups/ small by default; override with HOBERADIUS_BACKUP_MAX_COUNT.
     # A per-tenant DB setting / license-contract value still takes precedence
     # (see backup_max_count + _contract_backup_max_count below).
-    BACKUP_MAX_COUNT_DEFAULT = max(1, int(os.environ.get("HOBERADIUS_BACKUP_MAX_COUNT") or 10))
+    BACKUP_MAX_COUNT_DEFAULT = max(1, int(env_settings.env("HOBERADIUS_BACKUP_MAX_COUNT") or 10))
 
     def _contract_backup_max_count(self, *, tenant_id: int) -> int | None:
         """Backup cap defined on the license panel (per edition/fees), delivered
@@ -2174,7 +2175,7 @@ class OperationsService:
         """
         from datetime import datetime
 
-        if str(os.environ.get("HOBERADIUS_LOCAL_RESTORE_DISABLED", "")).strip().lower() in {"1", "true", "yes", "on"}:
+        if str(env_settings.env("HOBERADIUS_LOCAL_RESTORE_DISABLED", "")).strip().lower() in {"1", "true", "yes", "on"}:
             return {"ok": False, "code": "restore_disabled",
                     "message": "الاستعادة داخل التطبيق معطّلة على هذا الخادم."}
 

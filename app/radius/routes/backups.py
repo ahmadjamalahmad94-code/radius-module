@@ -3,6 +3,7 @@ download, and a heavily-gated in-app restore."""
 from __future__ import annotations
 
 import os
+from ..core import env_settings
 
 from flask import (
     Blueprint, flash, g, jsonify, redirect, render_template, request, send_file,
@@ -41,7 +42,7 @@ def _actor() -> str:
 def _restore_enabled() -> bool:
     # In-app restore is available by default (commercial deployments must not
     # need terminal access). Set HOBERADIUS_LOCAL_RESTORE_DISABLED=1 to hard-off.
-    return str(os.environ.get("HOBERADIUS_LOCAL_RESTORE_DISABLED", "")).strip().lower() not in {"1", "true", "yes", "on"}
+    return str(env_settings.env("HOBERADIUS_LOCAL_RESTORE_DISABLED", "")).strip().lower() not in {"1", "true", "yes", "on"}
 
 
 def _backup_service_state(tid: int) -> dict:

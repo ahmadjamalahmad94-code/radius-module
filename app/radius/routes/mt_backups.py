@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+from ..core import env_settings
 from datetime import datetime
 
 from flask import Blueprint, abort, flash, g, redirect, render_template, request, url_for
@@ -52,7 +53,7 @@ def _load_nas(nas_id: int) -> dict | None:
 def _storage_root() -> str:
     """Where backup files live on disk. Defaults to the
     instance folder under `backups/`; overridable for tests."""
-    path = os.environ.get("HOBERADIUS_BACKUP_DIR") or "/tmp/hr-backups"
+    path = env_settings.env("HOBERADIUS_BACKUP_DIR") or "/tmp/hr-backups"
     os.makedirs(path, exist_ok=True)
     return path
 

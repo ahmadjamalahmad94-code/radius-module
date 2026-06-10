@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import logging
 import os
+from ..core import env_settings
 from importlib import import_module
 from threading import Lock
 from typing import Optional
@@ -30,7 +31,7 @@ _ADAPTER_MODULES = {
 
 
 def _resolve_mode() -> str:
-    raw = (os.environ.get("RADIUS_MODE") or "sqlite").strip().lower()
+    raw = (env_settings.env("RADIUS_MODE") or "sqlite").strip().lower()
     if raw in {"sqlite", "db"}: return "sqlite"
     if raw == "manual": return "manual"
     if raw in {"mikrotik", "direct"}: return "direct"

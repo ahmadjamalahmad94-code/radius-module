@@ -870,6 +870,11 @@
           <span style="margin-inline-start:auto;display:inline-flex;align-items:center;gap:4px;padding:1px 8px;border-radius:999px;background:#FEE2E2;color:#B91C1C;font-size:10px;font-weight:900;border:1px solid #FECACA;line-height:1.7"><i class="fa-solid fa-crown" style="font-size:9px"></i> {{ _('سوبر') }}</span>
         </a>
         {% endif %}
+        {# إعدادات النظام والبيئة — للمدير الرئيسي/السوبر فقط (مفاتيح مستوى النسخة) #}
+        {%- if session.get('is_super_admin') %}
+        {{ sub_item('radius.system_settings_page', _('النظام والبيئة'),
+            path == url_for('radius.system_settings_page')) }}
+        {%- endif %}
         {# طابور المزامنة — عصب التحكم بالراوترات: اسم أوضح + شارة بعدد
            المهام المنتظرة (queued/retrying/syncing) حتى يُرى التعثّر فورًا.
            sync_pending_count دالة كسولة من context processor التطبيق:

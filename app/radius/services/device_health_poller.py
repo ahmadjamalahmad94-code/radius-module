@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import logging
 import os
+from ..core import env_settings
 import threading
 import time
 from typing import Callable, Optional
@@ -208,7 +209,7 @@ _lock = threading.Lock()
 
 
 def poll_enabled() -> bool:
-    return (os.environ.get("HOBERADIUS_DEVICE_HEALTH_POLL") or "").strip().lower() \
+    return (env_settings.env("HOBERADIUS_DEVICE_HEALTH_POLL") or "").strip().lower() \
         in ("1", "true", "yes", "on")
 
 

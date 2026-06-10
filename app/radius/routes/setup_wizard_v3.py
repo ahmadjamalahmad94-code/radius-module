@@ -45,6 +45,7 @@ Endpoints
 from __future__ import annotations
 
 import os
+from ..core import env_settings
 from flask import Blueprint, Response, g, jsonify, render_template, request
 
 from ..core.tenant import DEFAULT_TENANT_ID
@@ -454,7 +455,7 @@ def _plan_hotspot(router_id: int, inputs: dict) -> dict:
     inputs.setdefault("router_vpn_ip", str(nas.address or ""))
     inputs.setdefault(
         "radius_server_ip",
-        os.environ.get("HOBERADIUS_WG_SERVER_IP", "10.10.0.1"),
+        env_settings.env("HOBERADIUS_WG_SERVER_IP", "10.10.0.1"),
     )
     try:
         result = HotspotPhasePlanner().plan(run_id=router_id, inputs=inputs)
@@ -3076,13 +3077,13 @@ def setup_wizard_v3_generate_script(run_id: int):
     body = _body()
     endpoint = (
         body.get("vps_public_endpoint")
-        or os.environ.get("HOBERADIUS_PUBLIC_HOST")
-        or os.environ.get("HOBERADIUS_WG_SERVER_ENDPOINT", "").split(":")[0]
+        or env_settings.env("HOBERADIUS_PUBLIC_HOST")
+        or env_settings.env("HOBERADIUS_WG_SERVER_ENDPOINT", "").split(":")[0]
         or (request.host.split(":")[0] if request else "")
     )
     pubkey = (
         body.get("vps_wg_pubkey")
-        or os.environ.get("HOBERADIUS_WG_SERVER_PUBKEY")
+        or env_settings.env("HOBERADIUS_WG_SERVER_PUBKEY")
         or ""
     )
     if not endpoint:

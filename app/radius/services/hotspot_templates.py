@@ -268,7 +268,8 @@ def resolve_store_url(tenant_id: int = 1) -> str:
     except Exception:  # noqa: BLE001 — بلا قاعدة بيانات (اختبارات وحدات)
         host = ""
     if not host:
-        host = (os.environ.get("HOBERADIUS_PUBLIC_IP") or "").strip()
+        from ..core import env_settings
+        host = (env_settings.env("HOBERADIUS_PUBLIC_IP") or "").strip()
     if not host:
         return ""
     # تطبيع ودّي: المشغّل يكتب IP مجردًا — نضيف البروتوكول والمسار.

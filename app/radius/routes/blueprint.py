@@ -295,6 +295,9 @@ def _register_all(bp: Blueprint) -> None:
     from .settings import register_settings_routes
     register_settings_routes(bp)
 
+    from .system_settings import register_system_settings_routes
+    register_system_settings_routes(bp)
+
     from .overviews import register_overview_routes
     register_overview_routes(bp)
 

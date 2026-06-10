@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import os
+from ..core import env_settings
 
 from flask import Blueprint, flash, render_template, request, session
 
@@ -34,7 +35,7 @@ def collection_frozen(settings) -> bool:
     مهرب تطويري اختياري: HOBERADIUS_COLLECTION_FORCE_OPEN=1 يفتح القسم
     قسرًا (للتطوير والاختبار فقط).
     """
-    if os.environ.get("HOBERADIUS_COLLECTION_FORCE_OPEN") == "1":
+    if env_settings.env("HOBERADIUS_COLLECTION_FORCE_OPEN") == "1":
         return False
     if not settings:
         return True
