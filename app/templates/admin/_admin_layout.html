@@ -44,6 +44,10 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_design_system.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_visual_polish.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/reports.css') }}">
+  {# طبقة توحيد الأسلوب — تطبيع شامل للأزرار/الحقول/الجداول والـtoast الموحّد
+     (تُحمَّل أخيرًا لتُسجّل فوق أي بقايا ad-hoc من الصفحات القديمة، مع الحفاظ
+     على فاعلية تخصيصات head_extra لكل صفحة على حدة عبر cascade الترتيب). #}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style_unification.css') }}">
   <style>
     /* ───── Light topbar overrides (Sidebar Rebuild) ───── */
     .topbar{
@@ -460,6 +464,10 @@
 
   {% block content %}{% endblock %}
 
+  {# مودال التأكيد الموحّد — مخبوز في الواجهة كلها فتعمل خاصيّة data-confirm
+     على أي زر/رابط في أي صفحة دون الحاجة لتضمين الجزء يدويًا. #}
+  {% include "radius/_confirm_modal.html" %}
+
   <div class="app-footer">
     <span>{{ _('الإصدار %(v)s', v='0.1.0') }}</span>
     <span>{{ _('حقوق النشر') }} © <bdi dir="ltr">2017–2026</bdi> Hobe Hub</span>
@@ -476,6 +484,13 @@
 <script src="{{ url_for('static', filename='js/hub_date.js') }}"></script>
 {# بطاقات الشرح العائمة الموحّدة (.hub-hint) — portal لا يُقص أبدًا #}
 <script src="{{ url_for('static', filename='js/hub_hint.js') }}"></script>
+{# نظام النوافذ العائمة الموحّد (مودالات data-uds-modal-open) — مخبوز عالميًا
+   حتى تعمل أي نافذة hub.modal دون تحميل يدوي لكل صفحة. #}
+<script src="{{ url_for('static', filename='js/unified_design.js') }}"></script>
+{# جسر توحيد الأسلوب — يستبدل alert() بـtoast موحّد وينقل أي
+   onsubmit/onclick="return confirm('…')" إلى data-confirm تلقائيًا
+   (يعالجها مودال التأكيد المخبوز أعلاه). يجب تحميله بعد unified_design.js. #}
+<script src="{{ url_for('static', filename='js/style_unification.js') }}"></script>
 <script>
   // ───── حزمة الترجمة لنصوص JavaScript المرئية ─────
   // كل النصوص العربية التي يبنيها السكربت ديناميكيًا تُبثّ هنا من Jinja عبر
