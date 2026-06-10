@@ -902,4 +902,30 @@
   }
 
   applyFilters();
+
+  /* ── تحديث تلقائي خفيف لسجل الفحوصات ──
+     الفحص الدوري يَجري في الخادم (device_health_poll_worker كل دقيقة)؛ بدون
+     تحديث UI تلقائي يَظنّ المالك أنّ شيئًا لم يَحدث رغم كتابة صفوف جديدة في
+     network_device_health_checks. نَستطلع نقطة `checksUrl` كل 30 ثانية
+     فقط عندما تكون التبويبة ظاهرة (document.hidden=false) ـ نَتكاسل عن
+     إرهاق المتصفّح في تبويبات الخلفية. نُلغي المؤقّت عند تغيير الرؤية
+     ونُعيد جدولته عند الرجوع، فلا طلبات مهدورة. لا تَأثير على «فحص الكل
+     الآن» اليدوي ـ بقي كما هو يَستدعي refreshChecks فور انتهاء البث. */
+  var _refreshTimer = null;
+  function startChecksAutoRefresh() {
+    if (_refreshTimer) return;
+    if (!CFG.checksUrl) return;
+    _refreshTimer = setInterval(function () {
+      if (document.hidden) return;
+      try { refreshChecks(); } catch (e) {}
+    }, 30000);
+  }
+  function stopChecksAutoRefresh() {
+    if (_refreshTimer) { clearInterval(_refreshTimer); _refreshTimer = null; }
+  }
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden) stopChecksAutoRefresh();
+    else                 startChecksAutoRefresh();
+  });
+  startChecksAutoRefresh();
 })();
