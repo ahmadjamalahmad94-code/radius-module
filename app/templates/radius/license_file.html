@@ -398,9 +398,11 @@
     <div id="act-result" style="display:none; margin-top:.8rem"></div>
     <script>
     (function () {
-      function getCsrf() {
-        return (document.cookie.match(/csrf_token=([^;]+)/) || ['', ''])[1];
-      }
+      /* CSRF token is stored in the Flask session, not in a JS-readable cookie.
+         Read it directly from the Jinja2 template context at render time. */
+      var _csrf = '{{ csrf_token() }}';
+      function getCsrf() { return _csrf; }
+
       function showResult(ok, text) {
         var el = document.getElementById('act-result');
         el.style.display = 'block';
@@ -408,12 +410,16 @@
           '<i class="fa-solid fa-' + (ok ? 'circle-check' : 'circle-xmark') + '"></i> ' +
           text + '</div>';
       }
+      function showLoading(text) {
+        var el = document.getElementById('act-result');
+        el.style.display = 'block';
+        el.innerHTML = '<div class="hub-alert"><i class="fa-solid fa-spinner fa-spin"></i> ' + text + '</div>';
+      }
       function doActivate() {
         var baseUrl = document.getElementById('act-base-url').value.trim();
         var code = document.getElementById('act-code').value.trim();
         if (!code) { showResult(false, 'أدخل كود التفعيل أولاً.'); return; }
-        showResult(null, '<i class="fa-solid fa-spinner fa-spin"></i> جارٍ التفعيل…');
-        document.getElementById('act-result').querySelector('div').className = 'hub-alert';
+        showLoading('جارٍ التفعيل…');
         fetch('{{ url_for("radius.bridge_activate") }}', {
           method: 'POST',
           headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrf()},
@@ -430,22 +436,22 @@
             showResult(false, d.message_ar || 'فشل التفعيل.');
           }
         })
-        .catch(function() { showResult(false, 'تعذّر الاتصال بالخادم.'); });
+        .catch(function(e) { showResult(false, 'تعذّر الاتصال بالخادم: ' + (e && e.message || '')); });
       }
       function doTestBridge() {
-        showResult(null, '<i class="fa-solid fa-spinner fa-spin"></i> جارٍ الاختبار…');
-        document.getElementById('act-result').style.display = 'block';
-        document.getElementById('act-result').querySelector && (document.getElementById('act-result').innerHTML =
-          '<div class="hub-alert"><i class="fa-solid fa-spinner fa-spin"></i> جارٍ الاختبار…</div>');
-        document.getElementById('act-result').style.display = 'block';
+        /* Pass the base_url from the form so the backend can test that URL's
+           reachability, not just whatever is already stored in config. */
+        var baseUrl = document.getElementById('act-base-url').value.trim();
+        showLoading('جارٍ اختبار الاتصال…');
         fetch('{{ url_for("radius.bridge_test") }}', {
           method: 'POST',
           headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrf()},
+          body: JSON.stringify({test_url: baseUrl}),
           credentials: 'same-origin',
         })
         .then(function(r) { return r.json(); })
         .then(function(d) { showResult(d.ok, d.message_ar || d.status); })
-        .catch(function() { showResult(false, 'تعذّر الاتصال بالخادم.'); });
+        .catch(function(e) { showResult(false, 'تعذّر الاتصال بالخادم: ' + (e && e.message || '')); });
       }
       window.doActivate = doActivate;
       window.doTestBridge = doTestBridge;

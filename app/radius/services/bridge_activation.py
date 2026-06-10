@@ -187,15 +187,31 @@ def activate_bridge(
     }
 
 
-def test_bridge_connection(*, tenant_id: int = 0) -> dict[str, Any]:
-    """Check whether the bridge credentials are stored and the panel is reachable.
+def test_bridge_connection(
+    *, tenant_id: int = 0, test_url: str = ""
+) -> dict[str, Any]:
+    """Check whether the panel URL is reachable, with specific error details.
 
-    Returns a dict with:
-      ``configured`` — True if all three credentials are set in tenant_settings.
-      ``reachable``  — True if the panel /api/health endpoint responded 200.
-      ``status``     — human-readable status string.
-      ``message_ar`` — Arabic status message for the UI.
+    Two modes:
+    - ``test_url`` provided (pre-activation): probe that URL's /api/health and
+      report the specific failure reason (DNS, timeout, TLS, HTTP status).
+      Stored credentials are NOT required.
+    - ``test_url`` absent: verify stored credentials exist, then probe the
+      configured base_url.
     """
+    target = (test_url or "").strip().rstrip("/")
+
+    if target:
+        if not target.startswith(("https://", "http://")):
+            return {
+                "ok": False,
+                "configured": False,
+                "reachable": False,
+                "status": "invalid_url",
+                "message_ar": "الرابط غير صحيح — يجب أن يبدأ بـ https://",
+            }
+        return _probe_url(target)
+
     cfg = AdminBridgeConfig.from_env()
 
     if not cfg.base_url or not cfg.license_key or not cfg.shared_secret:
@@ -207,28 +223,94 @@ def test_bridge_connection(*, tenant_id: int = 0) -> dict[str, Any]:
             "message_ar": "الجسر غير مُفعَّل بعد. أدخل كود التفعيل أو اضبط الإعدادات يدوياً.",
         }
 
-    # Ping /api/health — does NOT send credentials, just checks connectivity.
-    health_url = f"{cfg.base_url}/api/health"
+    result = _probe_url(cfg.base_url)
+    result["configured"] = True
+    if result.get("ok"):
+        result["status"] = "connected"
+        result["message_ar"] = f"الجسر مُفعَّل والاتصال بلوحة التراخيص يعمل. ({cfg.base_url})"
+    return result
+
+
+def _probe_url(base_url: str) -> dict[str, Any]:
+    """Probe ``{base_url}/api/health`` and return a detailed status dict."""
+    import socket
+
+    health_url = f"{base_url}/api/health"
     try:
         ctx = ssl.create_default_context()
-        with urllib.request.urlopen(health_url, timeout=5, context=ctx) as resp:
-            reachable = resp.status == 200
-    except Exception:
-        reachable = False
-
-    if reachable:
-        return {
-            "ok": True,
-            "configured": True,
-            "reachable": True,
-            "status": "connected",
-            "message_ar": f"الجسر مُفعَّل والاتصال بلوحة التراخيص يعمل. ({cfg.base_url})",
-        }
-    else:
+        with urllib.request.urlopen(health_url, timeout=7, context=ctx) as resp:
+            http_status = resp.status
+    except urllib.error.HTTPError as exc:
         return {
             "ok": False,
-            "configured": True,
-            "reachable": False,
-            "status": "unreachable",
-            "message_ar": f"الإعدادات موجودة لكن لوحة التراخيص غير قابلة للوصول حالياً ({cfg.base_url}).",
+            "configured": False,
+            "reachable": True,
+            "status": "http_error",
+            "message_ar": f"الخادم على {base_url} رد بخطأ HTTP {exc.code}.",
         }
+    except urllib.error.URLError as exc:
+        reason = exc.reason
+        if isinstance(reason, ssl.SSLError):
+            return {
+                "ok": False,
+                "configured": False,
+                "reachable": False,
+                "status": "tls_error",
+                "message_ar": f"خطأ في شهادة TLS على {base_url}: {reason}",
+            }
+        reason_str = str(reason)
+        if any(s in reason_str for s in ("nodename nor servname", "Name or service not known", "getaddrinfo failed")):
+            return {
+                "ok": False,
+                "configured": False,
+                "reachable": False,
+                "status": "dns_error",
+                "message_ar": f"خطأ DNS — تعذّر حلّ اسم النطاق: {base_url}",
+            }
+        if "timed out" in reason_str or isinstance(reason, socket.timeout):
+            return {
+                "ok": False,
+                "configured": False,
+                "reachable": False,
+                "status": "timeout",
+                "message_ar": f"انتهت مهلة الاتصال بـ {base_url} — تحقق من إعدادات الشبكة.",
+            }
+        if "Connection refused" in reason_str:
+            return {
+                "ok": False,
+                "configured": False,
+                "reachable": False,
+                "status": "connection_refused",
+                "message_ar": f"رُفض الاتصال بـ {base_url} — قد يكون الخادم متوقفاً.",
+            }
+        return {
+            "ok": False,
+            "configured": False,
+            "reachable": False,
+            "status": "connection_error",
+            "message_ar": f"تعذّر الاتصال بـ {base_url}: {reason_str}",
+        }
+    except Exception as exc:
+        return {
+            "ok": False,
+            "configured": False,
+            "reachable": False,
+            "status": "error",
+            "message_ar": f"خطأ غير متوقع عند الاتصال بـ {base_url}: {exc}",
+        }
+
+    if http_status == 200:
+        return {
+            "ok": True,
+            "configured": False,
+            "reachable": True,
+            "status": "reachable",
+            "message_ar": f"الخادم على {base_url} يستجيب بشكل سليم.",
+        }
+    return {
+        "ok": False,
+        "configured": False,
+        "reachable": True,
+        "status": "unexpected_status",
+        "message_ar": f"الخادم على {base_url} رد بحالة غير متوقعة: HTTP {http_status}.",
+    }

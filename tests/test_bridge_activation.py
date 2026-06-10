@@ -288,7 +288,7 @@ class TestTestBridgeConnection:
         assert result["reachable"] is True
         assert result["status"] == "connected"
 
-    def test_returns_unreachable_when_panel_down(self):
+    def test_returns_specific_status_when_panel_down(self):
         from app.radius.services.bridge_activation import test_bridge_connection
         import urllib.error
 
@@ -298,10 +298,93 @@ class TestTestBridgeConnection:
         mock_cfg.shared_secret = "s" * 64
 
         with patch("app.radius.services.bridge_activation.AdminBridgeConfig") as MockCfg, \
-             patch("urllib.request.urlopen", side_effect=urllib.error.URLError("timeout")):
+             patch("urllib.request.urlopen", side_effect=urllib.error.URLError("conn refused")):
             MockCfg.from_env.return_value = mock_cfg
             result = test_bridge_connection(tenant_id=1)
 
         assert result["configured"] is True
         assert result["reachable"] is False
-        assert result["status"] == "unreachable"
+        assert result["ok"] is False
+        # status is now specific (connection_error / dns_error / timeout / …),
+        # no longer the generic "unreachable" string from the old implementation.
+        assert result["status"] not in ("connected", "not_configured")
+
+    # ── pre-activation test_url path ──────────────────────────────────────────
+
+    def test_test_url_reachable(self):
+        from app.radius.services.bridge_activation import test_bridge_connection
+
+        mock_resp = MagicMock()
+        mock_resp.__enter__ = lambda s: s
+        mock_resp.__exit__ = MagicMock(return_value=False)
+        mock_resp.status = 200
+
+        with patch("urllib.request.urlopen", return_value=mock_resp):
+            result = test_bridge_connection(test_url="https://hoberadius.com")
+
+        assert result["ok"] is True
+        assert result["reachable"] is True
+        assert result["status"] == "reachable"
+        # configured=False because we haven't activated yet
+        assert result["configured"] is False
+
+    def test_test_url_dns_error(self):
+        from app.radius.services.bridge_activation import test_bridge_connection
+        import urllib.error
+
+        with patch("urllib.request.urlopen",
+                   side_effect=urllib.error.URLError("getaddrinfo failed")):
+            result = test_bridge_connection(test_url="https://unreachable.invalid")
+
+        assert result["ok"] is False
+        assert result["reachable"] is False
+        assert result["status"] == "dns_error"
+        assert "DNS" in result["message_ar"]
+
+    def test_test_url_timeout(self):
+        from app.radius.services.bridge_activation import test_bridge_connection
+        import urllib.error
+
+        with patch("urllib.request.urlopen",
+                   side_effect=urllib.error.URLError("timed out")):
+            result = test_bridge_connection(test_url="https://slow.example.com")
+
+        assert result["ok"] is False
+        assert result["status"] == "timeout"
+
+    def test_test_url_http_error(self):
+        from app.radius.services.bridge_activation import test_bridge_connection
+
+        with patch("urllib.request.urlopen",
+                   side_effect=_http_error(503, {"message": "overloaded"})):
+            result = test_bridge_connection(test_url="https://panel.example.com")
+
+        assert result["ok"] is False
+        assert result["reachable"] is True
+        assert result["status"] == "http_error"
+        assert "503" in result["message_ar"]
+
+    def test_test_url_invalid_scheme_rejected(self):
+        from app.radius.services.bridge_activation import test_bridge_connection
+
+        result = test_bridge_connection(test_url="not-a-url")
+        assert result["ok"] is False
+        assert result["status"] == "invalid_url"
+
+    def test_test_url_does_not_require_stored_credentials(self):
+        """Providing test_url bypasses the AdminBridgeConfig lookup entirely."""
+        from app.radius.services.bridge_activation import test_bridge_connection
+
+        mock_resp = MagicMock()
+        mock_resp.__enter__ = lambda s: s
+        mock_resp.__exit__ = MagicMock(return_value=False)
+        mock_resp.status = 200
+
+        import app.radius.services.bridge_activation as _svc
+        with patch.object(_svc, "AdminBridgeConfig") as MockCfg, \
+             patch("urllib.request.urlopen", return_value=mock_resp):
+            result = test_bridge_connection(test_url="https://hoberadius.com")
+
+        # AdminBridgeConfig.from_env() must NOT have been called
+        MockCfg.from_env.assert_not_called()
+        assert result["ok"] is True
