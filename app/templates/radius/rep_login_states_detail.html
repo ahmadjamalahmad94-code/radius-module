@@ -22,6 +22,11 @@
 {% endblock %}
 
 {% block content %}
+{# self_endpoint: الراوت الذي تعود إليه فلاتر الصفحة (البحث/إعادة الضبط).
+   على المسار المشترك يبقى rep_login_states؛ وعلى الصفحتين المخصّصتين
+   (حالات البطاقات / حالات دخول المشتركين) يصير راوتهما الخاص فتبقى
+   الصفحة قائمة بذاتها على رابطها دون قفزة لرابط التجميع. #}
+{% set self_endpoint = self_endpoint|default('radius.rep_login_states') %}
 {# متحكّم «انتقال سريع» المضغوط — يُحقن في صف عنوان الهيرو بدل الشريطين الكبيرين #}
 {% set _report_jump %}{% include "radius/reports_nav.html" %}{% endset %}
 
@@ -68,7 +73,7 @@
     {'label': 'فاشلة',         'value': stats.fail,       'icon': 'circle-xmark', 'variant': 'red'},
     {'label': 'جهات فريدة',    'value': stats.uniq_users, 'icon': 'fingerprint',  'variant': 'blue'},
   ],
-  search_action=url_for('radius.rep_login_states')
+  search_action=url_for(self_endpoint)
 ) %}
   {# الفاعل ثابت لهذه الصفحة — يُمرَّر مخفيًا ليبقى الفرز دقيقًا عبر الفلاتر #}
   <input type="hidden" name="actor" value="{{ kind }}">
@@ -94,7 +99,7 @@
   {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
   {% if filters.result or filters.source or filters.q or filters.date_from or filters.date_to %}
     {{ hub.btn("إعادة ضبط", icon="rotate-left", variant="ghost", size="sm",
-               attrs='onclick="window.location=' + "'" + url_for('radius.rep_login_states', actor=kind) + "'" + '"') }}
+               attrs='onclick="window.location=' + "'" + url_for(self_endpoint) + "'" + '"') }}
   {% endif %}
   <span class="hub-hint" tabindex="0"
         data-hint="هذه الصفحة مفروزة بدقة على {{ meta.title }} فقط — الفرز يتم في قاعدة البيانات نفسها. البحث يطابق الاسم أو عنوان الشبكة أو عنوان الجهاز أو جهاز الشبكة، ونطاق التاريخ يعمل على وقت المحاولة. تُعرض حتى 600 محاولة من الأحدث للأقدم، والبيانات للقراءة فقط."><i class="fa-solid fa-info"></i></span>

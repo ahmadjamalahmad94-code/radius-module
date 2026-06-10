@@ -152,6 +152,7 @@
 {%- set m_users_list   = ('/users' in path and '/users/new' not in path and '/overview' not in path and '/subscriber-groups' not in path) -%}
 {%- set m_users_new    = (path == url_for('radius.users_new')) -%}
 {%- set m_online_users = (path == url_for('radius.online_list') and request.args.get('type') != 'card') -%}
+{%- set m_subs_login_states = (endpoint == 'radius.rep_login_states_subscribers') -%}
 {%- set m_subscriber_groups = ('/subscriber-groups' in path) -%}
 {%- set m_subscribers_overview = (endpoint_exists is defined and endpoint_exists('radius.subscribers_overview') and path == url_for('radius.subscribers_overview')) -%}
 
@@ -162,6 +163,7 @@
 {%- set m_cards_batches    = '/cards/batches' in path -%}
 {%- set m_cards_generate   = '/cards/generate' in path -%}
 {%- set m_cards_online     = (path == url_for('radius.online_list') and request.args.get('type') == 'card') -%}
+{%- set m_cards_login_states = (endpoint == 'radius.rep_login_states_cards') -%}
 {%- set m_print_templates  = '/print-templates' in path -%}
 
 {# Plans & Bandwidth #}
@@ -309,8 +311,8 @@
 {%- set m_tenants = (path == url_for('radius.tenants_list')) -%}
 
 {# Section-level active flags (used to auto-open parent of active link) #}
-{%- set sec_subs_active     = m_users_list or m_users_new or m_online_users or m_subscriber_groups or m_subscribers_360 or m_subscribers_overview -%}
-{%- set sec_cards_active    = m_cards_overview or m_cards_checker or m_cards_batches or m_cards_generate or m_cards_online or m_print_templates or m_cards_print -%}
+{%- set sec_subs_active     = m_users_list or m_users_new or m_online_users or m_subs_login_states or m_subscriber_groups or m_subscribers_360 or m_subscribers_overview -%}
+{%- set sec_cards_active    = m_cards_overview or m_cards_checker or m_cards_batches or m_cards_generate or m_cards_online or m_cards_login_states or m_print_templates or m_cards_print -%}
 {%- set m_cards_recharge    = '/cards/recharge' in path -%}
 {%- set m_store_support     = ('/store-support' in path) -%}
 {%- set sec_e_cards_active  = m_card_users or m_card_marketplace or m_cards_recharge or m_store_support -%}
@@ -388,7 +390,7 @@
     </a>
 
     {# ───────── المشتركون ───────── #}
-    {%- set _eps_subs = ['subscribers_overview','subscribers_list','users_new','subscriber_groups_list','online_list'] -%}
+    {%- set _eps_subs = ['subscribers_overview','subscribers_list','users_new','subscriber_groups_list','online_list','rep_login_states_subscribers'] -%}
     {% if section_can(_eps_subs)|trim %}
     <div class="hb-side-section{% if sec_subs_active %} is-open has-active{% endif %}"
          data-hb-section="subscribers" data-hb-tone="sky">
@@ -404,12 +406,13 @@
         {{ sub_item('radius.users_new',   _('إضافة مشترك'),     m_users_new) }}
         {{ sub_item('radius.subscriber_groups_list', _('مجموعات المشتركين'), m_subscriber_groups) }}
         {{ sub_item('radius.online_list', _('المشتركون المتصلون'), m_online_users) }}
+        {{ sub_item('radius.rep_login_states_subscribers', _('حالات دخول المشتركين/البوابة'), m_subs_login_states) }}
       </div></div>
     </div>
     {% elif _ui_mode == 'freeze' %}{{ frozen_section(_('المشتركون'), 'users') }}{% endif %}
 
     {# ───────── البطاقات ───────── #}
-    {%- set _eps_cards = ['cards_overview','cards_checker','cards_batches','cards_generate','cards_print_list','online_list','print_templates'] -%}
+    {%- set _eps_cards = ['cards_overview','cards_checker','cards_batches','cards_generate','cards_print_list','online_list','rep_login_states_cards','print_templates'] -%}
     {% if section_can(_eps_cards)|trim %}
     <div class="hb-side-section{% if sec_cards_active %} is-open has-active{% endif %}"
          data-hb-section="cards" data-hb-tone="indigo">
@@ -426,6 +429,7 @@
         {{ sub_item('radius.cards_generate', _('إضافة حزمة'),      m_cards_generate) }}
         {{ sub_item('radius.cards_print_list', _('🖨️ بطاقات الطباعة'), m_cards_print) }}
         {{ sub_item('radius.online_list', _('البطاقات المتصلة'), m_cards_online, {'type':'card'}) }}
+        {{ sub_item('radius.rep_login_states_cards', _('حالات البطاقات'), m_cards_login_states) }}
         {{ sub_item('radius.print_templates', _('قوالب الطباعة'),   m_print_templates) }}
       </div></div>
     </div>
