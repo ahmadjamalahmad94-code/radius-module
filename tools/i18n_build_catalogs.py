@@ -147,6 +147,10 @@ def main() -> int:
     ids = _load_pot_ids()
     print(f"  إجمالي الـ msgids: {len(ids)}")
 
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # تفادي كسر console غير UTF-8
+    except Exception:
+        pass
     print("» بناء الكتالوجات …")
     for loc in ALL_LOCALES:
         t, total = _build_locale(loc, ids)

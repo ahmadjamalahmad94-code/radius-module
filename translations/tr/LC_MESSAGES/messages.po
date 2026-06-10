@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-06-06 15:38+0300\n"
+"POT-Creation-Date: 2026-06-10 09:57+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: tr\n"
@@ -1869,6 +1869,11 @@ msgstr "«Otomatik işlendi»"
 msgid "«معاينة البطاقة»"
 msgstr "“Kupon önizleme”"
 
+msgid "«معاينة الخطة» و«مزامنة» تعرضان ما سيُضاف للراوتر دون أي طفرة حيّة."
+msgstr ""
+"«Plan önizleme» ve «Eşitle» yönlendiriciye eklenecekleri canlı bir "
+"değişiklik yapmadan gösterir."
+
 msgid "«معطَّل»"
 msgstr "Devre dışı"
 
@@ -2077,6 +2082,9 @@ msgstr "Son 5 Ödeme"
 
 msgid "آخر MAC"
 msgstr "Son MAC"
+
+msgid "آخر أوكتت للبوابة"
+msgstr "Ağ geçidinin son okteti"
 
 msgid "آخر اتصال"
 msgstr "Son bağlantı"
@@ -2291,6 +2299,9 @@ msgstr "Diğer"
 msgid "أخضر"
 msgstr "Yeşil"
 
+msgid "أخضر = متصل · أحمر = مفصول · كهرماني = بنج عالٍ."
+msgstr "Yeşil = bağlı · Kırmızı = bağlantı kesik · Kehribar = yüksek ping."
+
 msgid "أخضر — «وضع الكروت مستقر ولا توجد ملاحظات عاجلة.»:"
 msgstr "Yeşil — «Kupon durumu istikrarlı ve acil bir not yok.»:"
 
@@ -2346,9 +2357,6 @@ msgstr "Sıfırdan büyük bir satış fiyatı girin"
 
 msgid "أدناه (‎"
 msgstr "aşağıda (‎"
-
-msgid "أدوات وصفحات"
-msgstr "Araçlar ve sayfalar"
 
 msgid "أربع بطاقات أرقام سريعة:"
 msgstr "Dört hızlı sayı kartı:"
@@ -3167,6 +3175,9 @@ msgstr "İşlemler:"
 msgid "إجمالي"
 msgstr "Toplam"
 
+msgid "إجمالي الأجهزة"
+msgstr "Toplam cihaz"
+
 msgid "إجمالي الأرباح"
 msgstr "Toplam kâr"
 
@@ -3318,6 +3329,9 @@ msgstr "Yönetim"
 
 msgid "إدارة الأسطول أصبحت داخل غرفة الراوترات"
 msgstr "Filo yönetimi artık yönlendiriciler odasında"
+
+msgid "إدارة الأقسام (إخفاء/تعطيل)"
+msgstr "Bölüm yönetimi (gizle/devre dışı bırak)"
 
 msgid "إدارة البطاقات والحزم"
 msgstr "Kuponları ve paketleri yönet"
@@ -3494,6 +3508,9 @@ msgstr "Ayarları gönder"
 msgid "إرسال البيانات كنموذج"
 msgstr "Verileri form olarak gönder"
 
+msgid "إرسال الطلب"
+msgstr "Talebi gönder"
+
 msgid "إرسال الطلب إلى لوحة التراخيص"
 msgstr "İsteği lisans paneline gönder"
 
@@ -3544,6 +3561,9 @@ msgstr "Yüklenen logoyu kaldır"
 
 msgid "إزالة الصورة"
 msgstr "Resmi Kaldır"
+
+msgid "إزالة الفلتر"
+msgstr "Filtreyi kaldır"
 
 msgid "إزالة الملف"
 msgstr "Dosyayı Kaldır"
@@ -3662,6 +3682,9 @@ msgstr "Hız programı ekle"
 msgid "إضافة جدولة/قاعدة سرعة جديدة"
 msgstr "Yeni bir zamanlama/hız kuralı ekle"
 
+msgid "إضافة جهاز"
+msgstr "Cihaz ekle"
+
 msgid "إضافة حزمة"
 msgstr "Paket Ekle"
 
@@ -3727,6 +3750,9 @@ msgstr "Kota / GB ekle:"
 
 msgid "إضافة للطابور"
 msgstr "Kuyruğa ekle"
+
+msgid "إضافة للمحفظة"
+msgstr "Cüzdana ekle"
 
 msgid "إضافة للمخزون"
 msgstr "Envantere ekle"
@@ -3946,6 +3972,9 @@ msgstr "İsteğe bağlı gelişmiş ayarlar"
 msgid "إعدادات متقدمة — API والبنية التحتية"
 msgstr "Gelişmiş ayarlar — API ve altyapı"
 
+msgid "إعدادات متقدّمة"
+msgstr "Gelişmiş ayarlar"
+
 msgid "إغلاق"
 msgstr "Kapat"
 
@@ -4082,6 +4111,9 @@ msgstr "Anlık Görüntü Oluştur"
 msgid "إنشاء المجموعة"
 msgstr "Grup oluştur"
 
+msgid "إنشاء المحفظة"
+msgstr "Cüzdan oluştur"
+
 msgid "إنشاء المدير"
 msgstr "Yönetici oluştur"
 
@@ -4093,6 +4125,9 @@ msgstr "Paket oluştur"
 
 msgid "إنشاء حزمة جديدة"
 msgstr "Yeni paket oluştur"
+
+msgid "إنشاء حساب العميل"
+msgstr "Müşteri hesabı oluştur"
 
 msgid "إنشاء رسالة يدوية وحفظها في طابور الإرسال بشكل آمن."
 msgstr "Manuel bir mesaj oluşturup gönderim kuyruğuna güvenle kaydedin."
@@ -4159,6 +4194,9 @@ msgstr "Yönlendiriciyi kurulum akışından durdur"
 msgid "إيقاف الكرت"
 msgstr "Kuponu Devre Dışı Bırak"
 
+msgid "إيقاف المراقبة"
+msgstr "İzlemeyi durdur"
+
 msgid "إيقاف عند انتهاء الوقت"
 msgstr "Süre dolunca durdur"
 
@@ -4176,6 +4214,9 @@ msgstr "Bu hizmet durdurulsun mu?"
 
 msgid "ابحث باسم أو وصف المجموعة…"
 msgstr "Grup adına veya açıklamasına göre ara…"
+
+msgid "ابحث بالاسم أو الـIP أو المكان…"
+msgstr "Ada, IP'ye veya konuma göre ara…"
 
 msgid "ابحث بالاسم أو اليوزر..."
 msgstr "Ada veya kullanıcı adına göre ara..."
@@ -4473,6 +4514,9 @@ msgstr "Gerçekleştirmek istediğiniz işlemi seçin."
 msgid "اختر العنصر، ثم وسيلة الدفع، وأدخل رقم محفظتك."
 msgstr "Öğeyi, ardından ödeme yöntemini seçin ve cüzdan numaranızı girin."
 
+msgid "اختر المايكروتيك / السيرفر…"
+msgstr "MikroTik / sunucu seçin…"
+
 msgid "اختر المجموعات"
 msgstr "Grupları seçin"
 
@@ -4542,6 +4586,12 @@ msgstr ""
 msgid "اختر شكل القالب"
 msgstr "Şablon stilini seçin"
 
+msgid "اختر صورة"
+msgstr "Görsel seçin"
+
+msgid "اختر صورة QR"
+msgstr "QR görseli seçin"
+
 msgid "اختر صورة الخلفية"
 msgstr "Arka plan resmini seçin"
 
@@ -4602,8 +4652,17 @@ msgstr "Görüntülemek için listeden bir konuşma seçin."
 msgid "اختر مشتركًا واحدًا"
 msgstr "Tek bir abone seçin"
 
+msgid "اختر ملف"
+msgstr "Dosya seçin"
+
+msgid "اختر ملف (.sqlite3)"
+msgstr "Dosya seçin (.sqlite3)"
+
 msgid "اختر ملف الكروت"
 msgstr "Kupon dosyasını seçin"
+
+msgid "اختر ملف للتحليل..."
+msgstr "Analiz için dosya seçin..."
 
 msgid "اختر منافذ الشبكة الآمنة للخدمة"
 msgstr "Hizmet için güvenli ağ portlarını seçin"
@@ -5032,6 +5091,9 @@ msgstr "Galerideki tasarım adı"
 msgid "اسم الجدول"
 msgstr "Tablo adı"
 
+msgid "اسم الجهاز"
+msgstr "Cihaz adı"
+
 msgid "اسم الجهاز (جوال، لابتوب…)"
 msgstr "Cihaz adı (telefon, dizüstü…)"
 
@@ -5119,6 +5181,9 @@ msgstr "Kayıtlı şablon adı"
 
 msgid "اسم القالب المحفوظ — مثل: تصميم رمضان"
 msgstr "Kaydedilen şablon adı — örn.: Ramazan tasarımı"
+
+msgid "اسم القناة"
+msgstr "Kanal adı"
 
 msgid "اسم القناة (يظهر للزبون)"
 msgstr "Kanal adı (müşteriye gösterilir)"
@@ -5242,6 +5307,13 @@ msgstr "Yönlendiricideki bağlantı eşi adı"
 msgid "اسم نفق الإدارة"
 msgstr "Yönetim tüneli adı"
 
+msgid ""
+"اسم واضح للجهاز كما تعرفه (مثل: نقطة وصول السطح) — يظهر في الجدول "
+"والتنبيهات."
+msgstr ""
+"Cihazı tanıdığınız şekilde net bir ad (örn. Çatı erişim noktası) — "
+"tabloda ve uyarılarda görünür."
+
 msgid "اسم واضح للراوتر أو الموقع"
 msgstr "Yönlendirici veya konum için açık bir ad"
 
@@ -5340,6 +5412,9 @@ msgid "اضغط «إرسال رسالة اختبار» — إن فشل، الر�
 msgstr ""
 "\"Test mesajı gönder\"e tıklayın — başarısız olursa mesaj nedenini "
 "açıklar."
+
+msgid "اضغط «إضافة جهاز» لتسجيل أول جهاز."
+msgstr "İlk cihazı kaydetmek için «Cihaz ekle» düğmesine basın."
 
 msgid "اضغط «اكتشف الواجهات» لتحميل قائمة المنافذ من الراوتر."
 msgstr ""
@@ -5560,6 +5635,9 @@ msgstr "Kayıtlı şablonlar penceresini açın ve parti için uygun tasarımı 
 
 msgid "افتراضي"
 msgstr "Varsayılan"
+
+msgid "افتراضي المستأجر"
+msgstr "Kiracı varsayılanı"
 
 msgid "افتراضيًا"
 msgstr "Varsayılan olarak"
@@ -5805,11 +5883,17 @@ msgstr "Keşfedilen komşu cihazlar."
 msgid "الأجهزة المكتشَفة على الشبكة"
 msgstr "Ağda keşfedilen cihazlar"
 
+msgid "الأجهزة المُسجّلة"
+msgstr "Kayıtlı cihazlar"
+
 msgid "الأجهزة والعناوين"
 msgstr "Cihazlar ve adresler"
 
 msgid "الأجهزة والمعدّات"
 msgstr "Cihazlar ve Donanım"
+
+msgid "الأحداث"
+msgstr "Olaylar"
 
 msgid "الأحداث والمخاطر"
 msgstr "Olaylar ve Riskler"
@@ -6376,6 +6460,9 @@ msgstr "Seçilen kupon bir onay işaretiyle mora döner."
 msgid "البلاطة"
 msgstr "Kart"
 
+msgid "البنج"
+msgstr "Ping"
+
 msgid "البند"
 msgstr "Kalem"
 
@@ -6527,6 +6614,9 @@ msgstr "Giriş doğrulaması"
 msgid "التحقق: بانتظار التنفيذ"
 msgstr "Doğrulama: yürütme bekleniyor"
 
+msgid "التحقيقات"
+msgstr "İncelemeler"
+
 msgid "التحقّق"
 msgstr "Doğrulama"
 
@@ -6633,6 +6723,13 @@ msgstr ""
 
 msgid "التطبيق"
 msgstr "Uygulama"
+
+msgid ""
+"التطبيق الحي مُعطَّل قسريًّا من إعداد الخادم — المفتاح لن يأخذ مفعوله حتى"
+" يُرفع القيد."
+msgstr ""
+"Canlı uygulama sunucu ayarından zorla devre dışı bırakıldı — kısıtlama "
+"kaldırılana kadar anahtar etkili olmayacak."
 
 msgid "التطبيق المباشر للسياسات متوقف حاليًا — تُحفظ كأساس قابل للتوسعة لاحقًا."
 msgstr ""
@@ -7026,9 +7123,6 @@ msgstr "Alanlar:"
 msgid "الحل"
 msgstr "Çözüm"
 
-msgid "الحماية والمواقع"
-msgstr "Koruma ve siteler"
-
 msgid "الحمل اللحظي"
 msgstr "Anlık Yük"
 
@@ -7402,6 +7496,13 @@ msgstr "Yükleme (Kbps)"
 
 msgid "الرقم"
 msgstr "Numara"
+
+msgid ""
+"الرقم الأخير لعنوان بوابة المايكروتيك داخل الشبكة. الافتراضي 254 → مثال: "
+"‎192.168.15.254‎."
+msgstr ""
+"Ağ içindeki MikroTik ağ geçidi adresinin son rakamı. Varsayılan 254 → "
+"örnek: ‎192.168.15.254‎."
 
 msgid "الرقم الأصغر يُفحص أولًا إذا تداخلت أكثر من قاعدة داخل نفس النطاق."
 msgstr ""
@@ -8129,6 +8230,9 @@ msgstr "Kısa başlık"
 msgid "العنوان المسموح للمرور"
 msgstr "Trafiğe izin verilen adres"
 
+msgid "العنوان والملخّص"
+msgstr "Adres ve özet"
+
 msgid "العودة إلى الخدمات"
 msgstr "Hizmetlere dön"
 
@@ -8309,6 +8413,13 @@ msgstr "Kanal"
 msgid "القناة / المرجع"
 msgstr "Kanal / referans"
 
+msgid ""
+"القناة التي تصلك عبرها تنبيهات هذا الجهاز. «افتراضي المستأجر» يستخدم "
+"إعداد الإشعارات العام."
+msgstr ""
+"Bu cihazın uyarılarının size ulaştığı kanal. «Kiracı varsayılanı» genel "
+"bildirim ayarını kullanır."
+
 msgid "القناة غير مهيأة بعد"
 msgstr "Kanal henüz yapılandırılmadı"
 
@@ -8433,6 +8544,9 @@ msgstr "Kullanılan miktar"
 msgid "الكمية:"
 msgstr "Miktar:"
 
+msgid "الكمّيّة المطلوبة (ميغابايت)"
+msgstr "İstenen miktar (megabayt)"
+
 msgid "الكوبون"
 msgstr "Kupon"
 
@@ -8556,6 +8670,16 @@ msgstr "Finans ve bütçeler:"
 msgid "المالية:"
 msgstr "Mali:"
 
+msgid ""
+"المايكروتيك (السيرفر) الذي يتبع له الجهاز — منه يُضاف عنوان الشبكة "
+"وتُركّب مراقبة Netwatch."
+msgstr ""
+"Cihazın bağlı olduğu MikroTik (sunucu) — ağ adresi buradan eklenir ve "
+"Netwatch izlemesi buradan kurulur."
+
+msgid "المايكروتيك / السيرفر"
+msgstr "MikroTik / sunucu"
+
 msgid "المباع"
 msgstr "Satılan"
 
@@ -8621,6 +8745,9 @@ msgstr ""
 
 msgid "المتصل"
 msgstr "Çevrimiçi"
+
+msgid "المتصلة"
+msgstr "Bağlı olanlar"
 
 msgid "المتصلون"
 msgstr "Bağlı"
@@ -8769,6 +8896,14 @@ msgstr ""
 "Etkinlik olmadığında yöneticinin otomatik olarak oturumunun "
 "kapatılmasından önceki süre. Daha kısa değer = daha yüksek güvenlik, daha"
 " uzun değer = daha fazla rahatlık."
+
+msgid "المدخل"
+msgstr "Bağlantı noktası"
+
+msgid "المدخل إلزامي — مفتاح النطاق هو المايكروتيك / السيرفر + المدخل + الشبكة."
+msgstr ""
+"Bağlantı noktası zorunludur — kapsam anahtarı MikroTik / sunucu + "
+"bağlantı noktası + ağ'dır."
 
 msgid "المدراء"
 msgstr "Yöneticiler"
@@ -9102,6 +9237,9 @@ msgstr "Kimlik"
 msgid "المعرّف المختصر"
 msgstr "Kısa Kimlik"
 
+msgid "المعطّلة"
+msgstr "Devre dışı olanlar"
+
 msgid "المعلومات الأساسية"
 msgstr "Temel bilgiler"
 
@@ -9132,6 +9270,9 @@ msgstr "Paylaşılan anahtar, ağ cihazının ayarıyla eşleşmelidir."
 msgid "المفتوحة"
 msgstr "Açık"
 
+msgid "المفصولة"
+msgstr "Bağlantısı kesik olanlar"
+
 msgid "المقاسات"
 msgstr "Boyutlar"
 
@@ -9140,6 +9281,9 @@ msgstr "Boyutlar:"
 
 msgid "المقدار"
 msgstr "Miktar"
+
+msgid "المكان"
+msgstr "Konum"
 
 msgid "المكان الجديد"
 msgstr "Yeni konum"
@@ -9414,6 +9558,9 @@ msgstr "Alan adları veya hedefler"
 msgid "النطاقات الأخرى تتطلب صلاحية تطبيق منفصلة."
 msgstr "Diğer paketler ayrı bir uygulama izni gerektirir."
 
+msgid "النظام والبيئة"
+msgstr "Sistem ve ortam"
+
 msgid ""
 "النظام يعرض ما هو محفوظ فعليًا في الجداول. نوع نظام الجهاز أو الشركة "
 "المصنعة لا يتوفر عادة من خدمة المصادقة إلا إذا أرسله جهاز الشبكة داخل "
@@ -9501,6 +9648,9 @@ msgstr "Hedef"
 msgid "الهوامش الأربعة (mm):"
 msgstr "Dört kenar boşluğu (mm):"
 
+msgid "الهوت سبوت"
+msgstr "Hotspot"
+
 msgid "الهوتسبوت أو البرودباند يجهزان بمعاينة آمنة."
 msgstr "Hotspot veya geniş bant, güvenli bir önizlemeyle hazırlanır."
 
@@ -9557,9 +9707,6 @@ msgstr "Açıklama:"
 
 msgid "الوصل"
 msgstr "Makbuz"
-
-msgid "الوصول البعيد"
-msgstr "Uzaktan erişim"
 
 msgid "الوضع «بسيط» — للفحص السريع على الكاشير"
 msgstr "\"Basit\" mod — kasada hızlı kontrol için"
@@ -9761,6 +9908,9 @@ msgstr "Dört alanla:"
 
 msgid "بادئة أو لاحقة تميّز كروتك — مثل"
 msgstr "Kuponlarınızı ayırt edecek bir önek veya sonek — örneğin"
+
+msgid "بادئة الشبكة"
+msgstr "Ağ ön eki"
 
 msgid "بادئة قديمة للتوافق"
 msgstr "Uyumluluk için eski önek"
@@ -10123,14 +10273,14 @@ msgstr "Al-Salam Kulesi"
 msgid "برج-A"
 msgstr "Kule-A"
 
+msgid "برج/موقع"
+msgstr "Kule/konum"
+
 msgid "برمجة البرودباند"
 msgstr "Geniş bant programlama"
 
 msgid "برمجة البرودباند:"
 msgstr "Geniş bant programlama:"
-
-msgid "برمجة الشبكة"
-msgstr "Ağ Programlama"
 
 msgid "برمجة الشبكة:"
 msgstr "Ağ programlama:"
@@ -10140,9 +10290,6 @@ msgstr "Giriş Portalı Programlama"
 
 msgid "برمجة بوابة الدخول:"
 msgstr "Giriş portalını yapılandırma:"
-
-msgid "برمجة وتشغيل"
-msgstr "Programlama ve Çalıştırma"
 
 msgid "برمز"
 msgstr "Kodla"
@@ -10155,9 +10302,6 @@ msgstr "Geniş bant"
 
 msgid "برودباند عبر مزود الإنترنت"
 msgstr "İnternet sağlayıcısı üzerinden geniş bant"
-
-msgid "برودباند فقط"
-msgstr "Yalnızca geniş bant"
 
 msgid "برودباند:"
 msgstr "Geniş bant:"
@@ -10399,6 +10543,9 @@ msgstr ""
 msgid "بناء الكروت"
 msgstr "Kupon Oluştur"
 
+msgid "بنج عالٍ"
+msgstr "Yüksek ping"
+
 msgid "بنفسجي"
 msgstr "Mor"
 
@@ -10557,11 +10704,17 @@ msgstr "Yönlendiricinin sunucuya bağlı olduğundan emin olun"
 msgid "تأكيد"
 msgstr "Onayla"
 
+msgid "تأكيد إيداع"
+msgstr "Yatırmayı onayla"
+
 msgid "تأكيد استعادة النسخة"
 msgstr "Yedek geri yüklemeyi onayla"
 
 msgid "تأكيد الاستعادة"
 msgstr "Geri yüklemeyi onayla"
+
+msgid "تأكيد الحذف"
+msgstr "Silmeyi onayla"
 
 msgid "تأكيد الدفع"
 msgstr "Ödemeyi Onayla"
@@ -10758,6 +10911,9 @@ msgstr "Muhasebe sekmeleri"
 
 msgid "تبويبات المركز المالي"
 msgstr "Finans Merkezi Sekmeleri"
+
+msgid "تتبع حالة الأجهزة"
+msgstr "Cihaz durumu izleme"
 
 msgid "تتبّع اللوب"
 msgstr "Döngü izleme"
@@ -10996,6 +11152,9 @@ msgstr "Adres havuzunu güncelle"
 
 msgid "تحديث كلمة المرور"
 msgstr "Parolayı güncelle"
+
+msgid "تحديث كلمة مرور البوابة"
+msgstr "Ağ geçidi parolasını güncelle"
 
 msgid "تحديث مشترك"
 msgstr "Aboneyi güncelle"
@@ -11271,6 +11430,9 @@ msgstr "Kalan süreyi devret"
 msgid "ترخيص النظام"
 msgstr "Sistem lisansı"
 
+msgid "ترقية"
+msgstr "Yükselt"
+
 msgid "ترقيم بطاقات العرض"
 msgstr "Gösterim kartlarının numaralandırılması"
 
@@ -11367,6 +11529,9 @@ msgstr "Borç kaydet (borç)"
 msgid "تسجيل دين فرق السعر"
 msgstr "Fiyat farkı borcunu kaydet"
 
+msgid "تسجيل ذاتي للعميل"
+msgstr "Müşteri öz kaydı"
+
 msgid "تسجيل صرف"
 msgstr "Para çekme kaydet"
 
@@ -11415,9 +11580,6 @@ msgstr "Şimdi tanıla"
 
 msgid "تشخيص الراوترات"
 msgstr "Yönlendirici Tanılaması"
-
-msgid "تشخيص الفلِيت"
-msgstr "Filo tanılaması"
 
 msgid "تشخيص وقراءة"
 msgstr "Tanılama ve okuma"
@@ -11608,6 +11770,9 @@ msgstr "Paketi düzenle"
 msgid "تعديل القالب"
 msgstr "Şablonu düzenle"
 
+msgid "تعديل القناة"
+msgstr "Kanalı düzenle"
+
 msgid "تعديل المجموعة › الخدمات"
 msgstr "Grubu Düzenle › Hizmetler"
 
@@ -11616,6 +11781,9 @@ msgstr "Aboneyi düzenle"
 
 msgid "تعديل المشترك › الباقة والإدارة"
 msgstr "Aboneyi düzenle › Paket ve yönetim"
+
+msgid "تعديل الوقت المتبقّي"
+msgstr "Kalan süreyi düzenle"
 
 msgid "تعديل بيانات الراوتر"
 msgstr "Yönlendirici bilgilerini düzenle"
@@ -11712,6 +11880,9 @@ msgstr "Seçileni devre dışı bırak"
 msgid "تعطيل المحدّد:"
 msgstr "Seçileni devre dışı bırak:"
 
+msgid "تعطيل بطاقة"
+msgstr "Kartı devre dışı bırak"
+
 msgid "تعطيل كل القواعد"
 msgstr "Tüm kuralları devre dışı bırak"
 
@@ -11723,6 +11894,9 @@ msgstr "Yorum"
 
 msgid "تعليمات الاستخدام"
 msgstr "Kullanım talimatları"
+
+msgid "تعليمات للزبون"
+msgstr "Müşteri talimatları"
 
 msgid "تعليمات للزبون (اختياري)"
 msgstr "Müşteri için talimatlar (isteğe bağlı)"
@@ -11762,6 +11936,9 @@ msgstr "Hızı değiştir"
 msgid "تغيير السرعة:"
 msgstr "Hızı değiştir:"
 
+msgid "تغيير الشعار (اختياري)"
+msgstr "Logoyu değiştir (isteğe bağlı)"
+
 msgid "تغيير العرض"
 msgstr "Görünümü değiştir"
 
@@ -11792,6 +11969,9 @@ msgstr ""
 
 msgid "تغيير العروض"
 msgstr "Teklifleri değiştir"
+
+msgid "تغيير الـQR (اختياري)"
+msgstr "QR'ı değiştir (isteğe bağlı)"
 
 msgid "تغيير اللغة"
 msgstr "Dili Değiştir"
@@ -11929,6 +12109,9 @@ msgstr "Hız kontrolünü etkinleştir"
 msgid "تفعيل التشفير"
 msgstr "Şifrelemeyi etkinleştir"
 
+msgid "تفعيل التطبيق الحي على الراوترات"
+msgstr "Yönlendiricilerde canlı uygulamayı etkinleştir"
+
 msgid "تفعيل التنبيهات الذكية"
 msgstr "Akıllı uyarıları etkinleştir"
 
@@ -11959,11 +12142,17 @@ msgstr "Seçileni etkinleştir"
 msgid "تفعيل المحدّد:"
 msgstr "Seçileni etkinleştir:"
 
+msgid "تفعيل المراقبة"
+msgstr "İzlemeyi etkinleştir"
+
 msgid "تفعيل النسخ التلقائي"
 msgstr "Otomatik yedeklemeyi etkinleştir"
 
 msgid "تفعيل بالكارت"
 msgstr "Kuponla etkinleştir"
+
+msgid "تفعيل بطاقة"
+msgstr "Kartı etkinleştir"
 
 msgid "تفعيل تحصيل الدفعات"
 msgstr "Ödeme tahsilatını etkinleştir"
@@ -12534,6 +12723,15 @@ msgstr ""
 "Günlük kota her abone için ayrı ayrı geri yüklenir (ve varsa tutar her "
 "biri için kaydedilir)."
 
+msgid ""
+"تُسجَّل الأجهزة هنا ثم تُجهَّز خطة وصول المايكروتيك / السيرفر "
+"(عنوان/بوابة + تجاوز Hotspot + Netwatch). لا يُطبَّق أي تغيير على "
+"المايكروتيك / السيرفر تلقائيًا في هذه المرحلة."
+msgstr ""
+"Cihazlar burada kaydedilir, ardından MikroTik / sunucu erişim planı "
+"hazırlanır (adres/ağ geçidi + Hotspot atlama + Netwatch). Bu aşamada "
+"MikroTik / sunucuya hiçbir değişiklik otomatik olarak uygulanmaz."
+
 msgid "تُسجَّل قيمتها كدين على المشترك."
 msgstr "Değeri abonenin borcu olarak kaydedilir."
 
@@ -12662,9 +12860,6 @@ msgstr "Önizleme hazırlanıyor…"
 msgid "جارٍ تحميل القائمة الحاليّة من الراوتر…"
 msgstr "Geçerli liste yönlendiriciden yükleniyor…"
 
-msgid "جارٍ تحميل تدفّق المنافذ…"
-msgstr "Port akışı yükleniyor…"
-
 msgid "جارٍ تحميل قائمة عقد الخروج…"
 msgstr "Çıkış sözleşmeleri listesi yükleniyor…"
 
@@ -12673,6 +12868,9 @@ msgstr "Komut oluşturuluyor…"
 
 msgid "جارٍ توليد السكربت…"
 msgstr "Komut dosyası oluşturuluyor…"
+
+msgid "جارٍ فحص الكل…"
+msgstr "Tümü kontrol ediliyor…"
 
 msgid "جارٍ قراءة الخدمات المضافة من الراوتر…"
 msgstr "Eklenen hizmetler yönlendiriciden okunuyor…"
@@ -12929,6 +13127,9 @@ msgstr "Ağ Cihazı (NAS)"
 msgid "جهاز الشبكة:"
 msgstr "Ağ cihazı:"
 
+msgid "جهاز في النتائج"
+msgstr "sonuçtaki cihaz"
+
 msgid "جهاز مهم"
 msgstr "Önemli cihaz"
 
@@ -13110,6 +13311,13 @@ msgstr ""
 "Yazı tipi boyutu, rengi, arka planı ve kullanıcının kart üzerindeki "
 "konumu."
 
+msgid ""
+"حجم الشبكة الفرعية (CIDR). الافتراضي 24 = ‎255.255.255.0‎. غيّره فقط إذا "
+"كانت شبكتك أوسع/أضيق."
+msgstr ""
+"Alt ağ boyutu (CIDR). Varsayılan 24 = ‎255.255.255.0‎. Yalnızca ağınız "
+"daha geniş/dar ise değiştirin."
+
 msgid "حجم الكوتة (والمبلغ إن وُجد) يُضاف لكل مشترك على حدة، لا يُقسَّم بينهم."
 msgstr ""
 "Kota boyutu (ve varsa tutar) her aboneye ayrı ayrı eklenir, aralarında "
@@ -13155,6 +13363,9 @@ msgstr "Kredi limiti"
 
 msgid "حد الاتصال اليومي"
 msgstr "Günlük bağlantı sınırı"
+
+msgid "حد البنج (ms)"
+msgstr "Ping eşiği (ms)"
 
 msgid "حد التنبيه (اختياري)"
 msgstr "Uyarı eşiği (isteğe bağlı)"
@@ -13289,6 +13500,9 @@ msgstr "Yedeği sil"
 msgid "حذف باقة"
 msgstr "Paketi sil"
 
+msgid "حذف بطاقة"
+msgstr "Kartı sil"
+
 msgid "حذف حزمة الشحن"
 msgstr "Yükleme paketini sil"
 
@@ -13297,6 +13511,9 @@ msgstr "Yazdırma paketini sil"
 
 msgid "حذف سجل تدقيق أقدم من"
 msgstr "Şundan eski denetim kayıtlarını sil"
+
+msgid "حذف قناة الاستلام هذه؟ لن تظهر للزبائن بعد الآن."
+msgstr "Bu alım kanalı silinsin mi? Artık müşterilere görünmeyecek."
 
 msgid "حذف محاولات إشعارات الربط الفاشلة"
 msgstr "Başarısız bağlama bildirimi denemelerini sil"
@@ -13316,14 +13533,14 @@ msgstr "Şundan eski tamamlanmış eşitleme işlerini sil:"
 msgid "حذف نهائي"
 msgstr "Kalıcı Silme"
 
+msgid "حذف نهائي للبطاقة"
+msgstr "Kartı kalıcı olarak sil"
+
 msgid "حذف نهائي للتحديد"
 msgstr "Seçimi kalıcı olarak sil"
 
 msgid "حذف نهائيًا"
 msgstr "Kalıcı olarak sil"
-
-msgid "حذف هذه القناة؟"
-msgstr "Bu kanal silinsin mi?"
 
 msgid "حذف:"
 msgstr "Sil:"
@@ -13464,6 +13681,9 @@ msgstr ""
 
 msgid "حظر"
 msgstr "Engelle"
+
+msgid "حظر المواقع"
+msgstr "Site engelleme"
 
 msgid "حفظ"
 msgstr "Kaydet"
@@ -13660,9 +13880,6 @@ msgstr "Ek hizmetler"
 msgid "خدمات إضافيّة (اختياري)"
 msgstr "Ek hizmetler (isteğe bağlı)"
 
-msgid "خدمات الراوتر وأدواته"
-msgstr "Yönlendirici hizmetleri ve araçları"
-
 msgid "خدمات المجموعة"
 msgstr "Grup hizmetleri"
 
@@ -13699,6 +13916,9 @@ msgid "خدمة مدفوعة محدودة السرعة — ليست مجانية
 msgstr ""
 "Ücretli, hız sınırlı bir hizmet — ücretsiz değil ve abonenin denetiminde "
 "değil"
+
+msgid "خدمة مدفوعة — اضغط لطلب التفعيل"
+msgstr "Ücretli hizmet — etkinleştirme talebi için tıklayın"
 
 msgid "خدمة مستخدمين عبر اتصال المزود مع المصادقة المركزية."
 msgstr ""
@@ -13749,6 +13969,9 @@ msgstr "Hata"
 
 msgid "خطة التطبيق الآمنة"
 msgstr "Güvenli uygulama planı"
+
+msgid "خطة وصول المايكروتيك / السيرفر"
+msgstr "MikroTik / sunucu erişim planı"
 
 msgid "خطر"
 msgstr "Tehlike"
@@ -13912,6 +14135,9 @@ msgstr "Gelişmiş mağaza desteği"
 msgid "دعم وطلبات الشحن/السحب"
 msgstr "Destek ve yükleme/para çekme talepleri"
 
+msgid "دعم وطلبات المتجر"
+msgstr "Mağaza destek ve talepleri"
+
 msgid "دعم، تحصيل"
 msgstr "Destek, Tahsilat"
 
@@ -13930,9 +14156,6 @@ msgstr "Resmi mali kayıtlardan bağımsız dahili bir operasyonel defter"
 msgid "دفع إلكتروني"
 msgstr "Çevrimiçi ödeme"
 
-msgid "دفع بيانات التوزيع"
-msgstr "Dağıtım verilerini gönder"
-
 msgid "دفعات"
 msgstr "Ödemeler"
 
@@ -13941,6 +14164,9 @@ msgstr "Ödemeler / Avanslar:"
 
 msgid "دفعات الطباعة"
 msgstr "Baskı partileri"
+
+msgid "دفعات المستفيد"
+msgstr "Abone ödemeleri"
 
 msgid "دفعات المستفيدين:"
 msgstr "Abone ödemeleri:"
@@ -14301,6 +14527,9 @@ msgstr "Bakiyem"
 msgid "رفض"
 msgstr "Reddet"
 
+msgid "رفض إيداع"
+msgstr "Yatırmayı reddet"
+
 msgid "رفض الإثبات"
 msgstr "Kanıtı reddet"
 
@@ -14565,6 +14794,9 @@ msgstr ""
 "Bir müşteri kartının «çalındığını» mı söylüyor? Oturumunu seçin ve "
 "tıklayın"
 
+msgid "زبون غير مُسمّى"
+msgstr "Adsız müşteri"
+
 msgid "زبون يشتكي من كرت؟ → افتح"
 msgstr "Müşteri kupondan şikayetçi mi? → Açın"
 
@@ -14584,6 +14816,16 @@ msgstr ""
 
 msgid "زر «تطبيق»:"
 msgstr "«Uygula» düğmesi:"
+
+msgid ""
+"زر «تواصل عبر واتساب» لا يظهر للزبائن لأن رقم واتساب الدعم غير مضبوط. "
+"اضبطه من «رقم واتساب الدعم» في مصمّم صفحة الدخول (قسم المتجر) ثم أعِد نشر"
+" المتجر."
+msgstr ""
+"«WhatsApp ile iletişim» düğmesi, destek WhatsApp numarası ayarlanmadığı "
+"için müşterilere görünmüyor. Bunu giriş sayfası tasarımcısındaki (mağaza "
+"bölümü) «Destek WhatsApp numarası» alanından ayarlayın, ardından mağazayı"
+" yeniden yayınlayın."
 
 msgid "زر «صرف كوبون» يفتح نافذة تدخل فيها"
 msgstr "«Kupon kullan» düğmesi, içine bilgi girdiğiniz bir pencere açar"
@@ -14680,6 +14922,9 @@ msgstr "Ret nedeni"
 msgid "سبب السلفة"
 msgstr "Avans Sebebi"
 
+msgid "سبب الطلب أو متطلّبات إضافيّة…"
+msgstr "Talep nedeni veya ek gereksinimler…"
+
 msgid "سبب الفشل"
 msgstr "Hata nedeni"
 
@@ -14731,6 +14976,9 @@ msgstr "Müşteri olay günlüğü"
 msgid "سجل الأحداث"
 msgstr "Olay günlüğü"
 
+msgid "سجل الأحداث والتنبيهات"
+msgstr "Olay ve uyarı günlüğü"
+
 msgid "سجل الأحداث يجمع المشتريات وحركات المحفظة وأحداث النظام مرتبة زمنيًا."
 msgstr ""
 "Olay günlüğü; satın alımları, cüzdan hareketlerini ve sistem olaylarını "
@@ -14762,6 +15010,9 @@ msgstr "Bağlama Mesajı Günlüğü"
 
 msgid "سجل عمليات الشراء مصفّحًا."
 msgstr "Sayfalı satın alma günlüğü."
+
+msgid "سجل قيود المستفيد"
+msgstr "Abone kısıtlama günlüğü"
 
 msgid "سجل كامل"
 msgstr "Tam kayıt"
@@ -15083,6 +15334,9 @@ msgstr "Yönlendirici filtre zinciri"
 msgid "سلف"
 msgstr "Avanslar"
 
+msgid "سلف المستفيد"
+msgstr "Abone avansı"
+
 msgid "سلف المشتركين الحالية من سجل المحاسبة"
 msgstr "Muhasebe defterinden mevcut abone avansları"
 
@@ -15151,6 +15405,9 @@ msgstr "Yıllık:"
 
 msgid "سنوية — سنة كاملة"
 msgstr "Yıllık — tam yıl"
+
+msgid "سوبر"
+msgstr "Süper"
 
 msgid "سوق البطاقات"
 msgstr "Kupon Pazarı"
@@ -15374,7 +15631,7 @@ msgstr "Satın al"
 
 #, python-format
 msgid "شراء «%(name)s»"
-msgstr ""
+msgstr "«%(name)s» satın al"
 
 msgid "شراء الآن"
 msgstr "Şimdi satın al"
@@ -15382,8 +15639,14 @@ msgstr "Şimdi satın al"
 msgid "شراء البطاقة"
 msgstr "Kupon Satın Al"
 
+msgid "شراء بطاقة"
+msgstr "Kart satın al"
+
 msgid "شراء بطاقة من السوق"
 msgstr "Pazardan kart satın al"
+
+msgid "شراء عبر بوابة الكروت"
+msgstr "Kart geçidi üzerinden satın al"
 
 msgid "شرح المصطلحات"
 msgstr "Terimler Sözlüğü"
@@ -15469,6 +15732,9 @@ msgstr "Renkli çubuk"
 
 msgid "شعار النظام"
 msgstr "Sistem logosu"
+
+msgid "شعار/أيقونة القناة (اختياري)"
+msgstr "Kanal logosu/simgesi (isteğe bağlı)"
 
 msgid "شغّل المزامنة بعد إكمال إعدادات الربط."
 msgstr "Bağlantı ayarlarını tamamladıktan sonra eşitlemeyi çalıştırın."
@@ -15747,6 +16013,9 @@ msgstr "Hızlı bakım"
 msgid "صُرف،"
 msgstr "Ödendi,"
 
+msgid "ضبط السرعة"
+msgstr "Hız ayarı"
+
 msgid "ضع رابط الإرسال من المزوّد هنا"
 msgstr "Sağlayıcının gönderim bağlantısını buraya girin"
 
@@ -15843,14 +16112,35 @@ msgstr "Tüm zaman rakamlarını toplama yöntemi"
 msgid "طريقة قديمة — لصق السكربت كاملاً يدوياً"
 msgstr "Eski yöntem — betiğin tamamını manuel olarak yapıştırma"
 
+msgid "طلب"
+msgstr "Talep"
+
+msgid "طلب إيداع"
+msgstr "Yatırma talebi"
+
 msgid "طلب الخدمة"
 msgstr "Hizmet Talebi"
+
+msgid "طلب ترقية المواصفات"
+msgstr "Özellik yükseltme talebi"
+
+msgid "طلب ترقية مواصفات الخدمة"
+msgstr "Hizmet özellik yükseltme talebi"
+
+msgid "طلب ترقية مواصفات الخطّة"
+msgstr "Plan özellik yükseltme talebi"
 
 msgid "طلب تفعيل"
 msgstr "Etkinleştirme İsteği"
 
 msgid "طلب تفعيل النسخ على اللوحة"
 msgstr "Panoda kopyalamayı etkinleştirme isteği"
+
+msgid "طلب تفعيل بمواصفات"
+msgstr "Özellikli etkinleştirme talebi"
+
+msgid "طلب تفعيل/ترقية الخدمة بمواصفاتها"
+msgstr "Hizmeti özellikleriyle etkinleştirme/yükseltme talebi"
 
 msgid "طلب حزمة رسائل"
 msgstr "Mesaj paketi talep et"
@@ -16280,11 +16570,17 @@ msgstr "Gruptan bağlı olanları göster"
 msgid "عرض المحتوى"
 msgstr "İçeriği göster"
 
+msgid "عرض المرفق"
+msgstr "Eki görüntüle"
+
 msgid "عرض المستفيدين"
 msgstr "Yararlanıcıları görüntüle"
 
 msgid "عرض الواجهات المقترحة"
 msgstr "Önerilen arayüzleri göster"
+
+msgid "عرض الوصل"
+msgstr "Makbuzu görüntüle"
 
 msgid "عرض ترويجي"
 msgstr "Promosyon teklifi"
@@ -16501,6 +16797,13 @@ msgstr ""
 "Devre dışı bırakıldığında bot gelen hiçbir mesaja yanıt vermez (hiçbir "
 "şey gönderilmez). Her zaman etkin bırakabilirsiniz."
 
+msgid ""
+"عند الإيقاف يبقى الجهاز مُسجّلاً لكن لا يُفحَص ولا يُطلق تنبيهات (حالته "
+"«معطّل»)."
+msgstr ""
+"Durdurulduğunda cihaz kayıtlı kalır ancak kontrol edilmez ve uyarı "
+"tetiklemez (durumu «devre dışı»)."
+
 msgid "عند الإيقاف، تبقى الإعدادات محفوظة لكن لن ترسل أي تنبيهات."
 msgstr "Durdurulduğunda ayarlar kayıtlı kalır ancak hiçbir uyarı gönderilmez."
 
@@ -16533,6 +16836,16 @@ msgid ""
 msgstr ""
 "Etkinleştirildiğinde indirme/yükleme/birleşik kota uygulanır; devre dışı "
 "bırakıldığında sınırsız kullanıma izin verilir."
+
+msgid ""
+"عند التفعيل سيكتب النظام فعليًا على المايكروتيك/السيرفر (إضافة عنوان "
+"IP/بوابة + تجاوز Hotspot + Netwatch). أبقِه مُطفأً ما لم ترِد تطبيق الخطط"
+" على الأجهزة الحقيقية — وهو مُطفأ افتراضيًا للأمان."
+msgstr ""
+"Etkinleştirildiğinde sistem MikroTik/sunucuya gerçekten yazar (IP "
+"adresi/ağ geçidi ekleme + Hotspot atlama + Netwatch). Planları gerçek "
+"cihazlara uygulamak istemiyorsanız kapalı tutun — güvenlik için "
+"varsayılan olarak kapalıdır."
 
 msgid ""
 "عند التفعيل يستطيع المستخدمون طلب إعادة تعيين كلمة المرور. عطّله إذا أردت"
@@ -16614,11 +16927,21 @@ msgstr "IP adresi"
 msgid "عنوان IP (dst_address)"
 msgstr "IP adresi (dst_address)"
 
+msgid ""
+"عنوان IP الثابت للجهاز — منه تُحسب الشبكة والبوابة، وعليه يعمل البنج "
+"وNetwatch."
+msgstr ""
+"Cihazın statik IP adresi — ağ ve ağ geçidi buradan hesaplanır, ping ve "
+"Netwatch buna göre çalışır."
+
 msgid "عنوان IP سيرفر الراديوس"
 msgstr "RADIUS Sunucu IP Adresi"
 
 msgid "عنوان IP سيرفر الراديوس — يشغّل متجر البطاقات"
 msgstr "RADIUS sunucusu IP adresi — kart mağazasını çalıştırır"
+
+msgid "عنوان IP للجهاز"
+msgstr "Cihazın IP adresi"
 
 msgid "عنوان MAC"
 msgstr "MAC adresi"
@@ -16870,6 +17193,9 @@ msgstr "Geceleri sınırsız"
 msgid "غير محدودة"
 msgstr "Sınırsız"
 
+msgid "غير محدّد"
+msgstr "Belirtilmemiş"
+
 msgid "غير محدّدة"
 msgstr "Belirtilmemiş"
 
@@ -17012,6 +17338,9 @@ msgstr "Yönetici dosyasını aç"
 msgid "فتح ملف الموزّع"
 msgstr "Dağıtıcı dosyasını aç"
 
+msgid "فترة Netwatch (ث)"
+msgstr "Netwatch aralığı (sn)"
+
 msgid "فترة الأرشفة"
 msgstr "Arşivleme süresi"
 
@@ -17024,17 +17353,30 @@ msgstr "Bir pencere açılacak"
 msgid "فحص"
 msgstr "Denetim"
 
+msgid "فحص ping"
+msgstr "Ping kontrolü"
+
 msgid "فحص wg show"
 msgstr "wg show denetimi"
 
 msgid "فحص اتصال جهاز الشبكة"
 msgstr "Ağ cihazı bağlantısını denetle"
 
+msgid "فحص اتصال كل راوترات الأسطول واكتشاف الأعطال مبكراً"
+msgstr ""
+"Tüm filo yönlendiricilerinin bağlantısını kontrol et ve arızaları erken "
+"tespit et"
+
 msgid "فحص الآن"
 msgstr "Şimdi kontrol et"
 
 msgid "فحص الاتصال الآن"
 msgstr "Bağlantıyı şimdi kontrol et"
+
+msgid "فحص الاتصال والصحّة لكل راوترات الأسطول مع أسباب الأعطال"
+msgstr ""
+"Tüm filo yönlendiricilerinin bağlantı ve sağlık kontrolü, arıza "
+"nedenleriyle birlikte"
 
 msgid "فحص الاستكمال"
 msgstr "Tamamlama kontrolü"
@@ -17050,6 +17392,9 @@ msgstr "Ağ denetimi"
 
 msgid "فحص الصحة"
 msgstr "Sağlık denetimi"
+
+msgid "فحص الكل الآن"
+msgstr "Tümünü şimdi kontrol et"
 
 msgid "فحص اللوب"
 msgstr "Döngü denetimi"
@@ -17212,6 +17557,9 @@ msgstr "MAC çöz"
 msgid "فك التثبيت"
 msgstr "Kaldır"
 
+msgid "فكّ قفل الجهاز"
+msgstr "Cihaz kilidini aç"
+
 msgid "فلاتر التاريخ"
 msgstr "Tarih filtreleri"
 
@@ -17313,6 +17661,13 @@ msgstr "Cüzdanlar listesinin üstünde bir düğme var"
 msgid "فوق معاينة البطاقة مباشرة (في العمود الثاني) يجلس"
 msgstr "Kupon önizlemesinin hemen üstünde (ikinci sütunda) şu bulunur"
 
+msgid ""
+"فوق هذا الزمن (مللي ثانية) تُعتبر الحالة «بنج عالٍ» ويُطلق تنبيه. "
+"الافتراضي 80."
+msgstr ""
+"Bu süreyi (milisaniye) aştığında durum «yüksek ping» sayılır ve bir uyarı"
+" tetiklenir. Varsayılan 80."
+
 msgid "في"
 msgstr "İçinde"
 
@@ -17364,6 +17719,9 @@ msgid ""
 msgstr ""
 "Toplu pencerelerde (örneğin \"Süre ekle\") seçilenlerin listesini "
 "adlarıyla ve değeri görürsünüz"
+
+msgid "في انتظار تأكيد الحالة من الراوتر"
+msgstr "Yönlendiriciden durum onayı bekleniyor"
 
 msgid "في بنر أصفر — انسخه فوراً."
 msgstr "sarı bir banner içinde — hemen kopyalayın."
@@ -17449,6 +17807,9 @@ msgstr ""
 "Şablon tasarımcısını ve canlı önizlemeyi içerir — şablonu burada "
 "oluşturur veya düzenlersiniz."
 
+msgid "فُتح"
+msgstr "Açıldı"
+
 msgid "قائمة «أعمدة» — علّم ما تريد رؤيته وأخفِ الباقي."
 msgstr "«Sütunlar» menüsü — görmek istediklerinizi işaretleyin, gerisini gizleyin."
 
@@ -17472,6 +17833,13 @@ msgstr "Durum listesi:"
 
 msgid "قائمة الحزم"
 msgstr "Paket listesi"
+
+msgid ""
+"قائمة الخدمات الفعّالة على هذا الراوتر — مصنّفة حسب نوع الخدمة وكلّ صفّ "
+"يَحمل اسم الواجهة ومصدر الإضافة."
+msgstr ""
+"Bu yönlendiricide etkin olan hizmetlerin listesi — hizmet türüne göre "
+"sınıflandırılmış olup her satır arayüz adını ve ekleme kaynağını taşır."
 
 msgid "قائمة السلف"
 msgstr "Avans Listesi"
@@ -17558,6 +17926,9 @@ msgid ""
 msgstr ""
 "Oluşturulur oluşturulmaz partiye kaydedilen bir hız kuralı; örneğin "
 "partinin tüm kuponları için geceleri hızı düşürmek."
+
+msgid "قاعدة غير مُركّبة"
+msgstr "Kural kurulmamış"
 
 msgid "قالب جاهز فقط ولا يطبق شيئًا."
 msgstr "Yalnızca hazır bir şablon — hiçbir şey uygulamaz."
@@ -17790,6 +18161,9 @@ msgstr "Bağlantı kesilince MAC kilitle"
 msgid "قفل MAC:"
 msgstr "MAC kilidi:"
 
+msgid "قفل جهاز البطاقة"
+msgstr "Kart cihazını kilitle"
+
 msgid "قفل ماك أدرس، IP ثابت، عدد الأجهزة المسموحة."
 msgstr "MAC adresi kilidi, sabit IP, izin verilen cihaz sayısı."
 
@@ -17801,6 +18175,9 @@ msgstr "Listeyi buraya yapıştırın."
 
 msgid "قناة الإرسال"
 msgstr "Gönderim kanalı"
+
+msgid "قناة التنبيه"
+msgstr "Uyarı kanalı"
 
 msgid "قناة واتساب غير مهيأة بعد — اتبع الخطوات من البداية."
 msgstr "WhatsApp kanalı henüz yapılandırılmadı — adımları baştan izleyin."
@@ -17954,6 +18331,13 @@ msgstr "Düzeltme kayıtları"
 msgid "قيود تصحيحية:"
 msgstr "Düzeltme kayıtları:"
 
+msgid ""
+"قَلب «الإخفاء/التعطيل» لكل قسم — يُغلق الوصول المباشر بالعنوان لغير "
+"المدير الرئيسي."
+msgstr ""
+"Her bölüm için «gizle/devre dışı bırak» durumunu değiştir — ana yönetici "
+"dışındakiler için URL ile doğrudan erişimi kapatır."
+
 msgid "كامل (full)"
 msgstr "Tam (full)"
 
@@ -18056,6 +18440,9 @@ msgstr "Müşteri portlarında DHCP yoklaması ile döngü tespiti"
 msgid "كشف كلمة المرور"
 msgstr "Parolayı göster"
 
+msgid "كشف كلمة مرور البطاقة"
+msgstr "Kart parolasını göster"
+
 msgid "كل"
 msgstr "Tümü"
 
@@ -18129,6 +18516,9 @@ msgstr "Tüm durumlar / enabled / expired / disabled..."
 msgid "كل الحزم"
 msgstr "Tüm paketler"
 
+msgid "كل الخدمات"
+msgstr "Tüm hizmetler"
+
 msgid "كل الدفعات"
 msgstr "Tüm partiler"
 
@@ -18172,6 +18562,9 @@ msgid "كل الكروت في النظام (بكل حالاتها) — يكبر 
 msgstr ""
 "Sistemdeki tüm kartlar (her durumda) — her oluşturma veya içe aktarmayla "
 "artar."
+
+msgid "كل المايكروتيك / السيرفرات"
+msgstr "Tüm MikroTik / sunucular"
 
 msgid "كل المجموعات"
 msgstr "Tüm gruplar"
@@ -18307,6 +18700,11 @@ msgstr "Partideki tüm kuponlar."
 
 msgid "كل كم ثانية يبلّغ الراوتر عن استهلاك الجلسة."
 msgstr "Yönlendiricinin oturum kullanımını kaç saniyede bir bildirdiği."
+
+msgid "كل كم ثانية يفحص المايكروتيك الجهاز عبر Netwatch. الافتراضي 60 ثانية."
+msgstr ""
+"MikroTik'in cihazı Netwatch ile kaç saniyede bir kontrol edeceği. "
+"Varsayılan 60 saniye."
 
 msgid "كل ما دخل النظام من بيع وتحصيل."
 msgstr "Satış ve tahsilattan sisteme giren her şey."
@@ -18556,6 +18954,9 @@ msgstr "Bu sayfa nasıl çalışır?"
 msgid "كيف تقرأ هذا الملف؟"
 msgstr "Bu dosya nasıl okunur?"
 
+msgid "كيف تقرأ هذه الصفحة"
+msgstr "Bu sayfa nasıl okunur"
+
 msgid "كيف يتصل الراوتر بالإنترنت؟"
 msgstr "Yönlendirici İnternet'e nasıl bağlanır?"
 
@@ -18647,6 +19048,9 @@ msgstr "Bu kupon için henüz kayıtlı MAC yok."
 msgid "لا توجد أجهزة NAS مُسجَّلة — أضِف router/AP."
 msgstr "Kayıtlı NAS cihazı yok — bir router/AP ekleyin."
 
+msgid "لا توجد أجهزة مُسجّلة بعد"
+msgstr "Henüz kayıtlı cihaz yok"
+
 msgid "لا توجد أحداث مطابقة لهذا الفلتر."
 msgstr "Bu filtreyle eşleşen olay yok."
 
@@ -18676,9 +19080,6 @@ msgstr "Bu filtre içinde veri yok."
 
 msgid "لا توجد بيانات وصفية لهذا الحدث."
 msgstr "Bu olay için üst veri yok."
-
-msgid "لا توجد تحقيقات بعد — افتح أول تحقيق من نموذج «فتح تحقيق»."
-msgstr "Henüz inceleme yok — ilk incelemeyi \"İnceleme aç\" formundan açın."
 
 msgid "لا توجد تفاصيل استخدام بعد."
 msgstr "Henüz kullanım ayrıntısı yok."
@@ -18836,6 +19237,9 @@ msgstr "Henüz alım kanalı yok — aşağıdaki formdan ilk kanalı ekleyin."
 
 msgid "لا محادثات بعد."
 msgstr "Henüz konuşma yok."
+
+msgid "لا نتائج مطابقة للفلاتر"
+msgstr "Filtrelerle eşleşen sonuç yok"
 
 msgid "لا نشاط بعد"
 msgstr "Henüz etkinlik yok"
@@ -19198,6 +19602,9 @@ msgstr "Kurulumu sihirbaz aracılığıyla henüz tamamlanmadı."
 
 msgid "لم يكتمل الإعداد بعد"
 msgstr "Kurulum henüz tamamlanmadı"
+
+msgid "لم يُختر ملف"
+msgstr "Dosya seçilmedi"
 
 msgid "لما تبدّل من شهري لسنوي، الفترة المختارة ترجع تلقائيًا"
 msgstr "Aylıktan yıllığa geçtiğinizde, seçili dönem otomatik olarak sıfırlanır"
@@ -19573,6 +19980,9 @@ msgstr "Etkinleştirmeye 112 kaldı"
 msgid "متجاورة:"
 msgstr "Bitişik:"
 
+msgid "متجر"
+msgstr "Mağaza"
+
 msgid "متجر الإنترنت"
 msgstr "İnternet mağazası"
 
@@ -19818,6 +20228,9 @@ msgstr "Örneğin \"7 avans · 3 açık\" veya \"dönem içinde 1.205 oturum\"."
 msgid "مثل: 0599123456"
 msgstr "örn.: 0599123456"
 
+msgid "مثل: 1024"
+msgstr "Örn: 1024"
+
 msgid "مثل: 12345"
 msgstr "örn.: 12345"
 
@@ -19841,6 +20254,9 @@ msgstr "örn. Ana şube yönlendiricisi"
 
 msgid "مثل: للموزّع أحمد — منطقة الشمال"
 msgstr "Örneğin: Dağıtıcı Ahmad için — kuzey bölgesi"
+
+msgid "مثلاً 1024"
+msgstr "Örneğin 1024"
 
 msgid "مثلاً: hsprof1"
 msgstr "örn.: hsprof1"
@@ -20144,6 +20560,11 @@ msgstr "Geçici hız süresi"
 msgid "مدة الصلاحية بالدقائق"
 msgstr "Geçerlilik süresi (dakika)"
 
+msgid "مدة انتظار الردّ قبل اعتبار الفحص فاشلاً. الافتراضي 3 ثوانٍ."
+msgstr ""
+"Kontrolün başarısız sayılmadan önce yanıt bekleme süresi. Varsayılan 3 "
+"saniye."
+
 msgid "مدة تشغيل التطبيق"
 msgstr "Uygulama çalışma süresi"
 
@@ -20239,6 +20660,21 @@ msgstr "Sihirbaz aşamaları"
 
 msgid "مراحل عملية الدفع"
 msgstr "Ödeme süreci aşamaları"
+
+msgid ""
+"مراقبة الراوترات ونقاط الوصول والروابط وUniFi/LiteBeam عبر MikroTik "
+"Netwatch"
+msgstr ""
+"MikroTik Netwatch ile yönlendiricileri, erişim noktalarını, bağlantıları "
+"ve UniFi/LiteBeam'i izle"
+
+msgid "مراقبة دوريّة لكل أجهزة الشبكة مع تنبيه فوريّ عند العطل"
+msgstr "Tüm ağ cihazlarının periyodik izlenmesi, arıza durumunda anlık uyarı ile"
+
+msgid "مراقبة مستمرة لحالة كل أجهزة الشبكة مع إشعار عند العطل"
+msgstr ""
+"Tüm ağ cihazlarının durumunun sürekli izlenmesi, arıza durumunda bildirim"
+" ile"
 
 msgid "مربع الاختيار"
 msgstr "Onay kutusu"
@@ -20367,6 +20803,9 @@ msgstr "Zaman senkronizasyonu"
 msgid "مزامنة سريعة قبل تسجيل الدخول"
 msgstr "Girişten önce hızlı eşitleme"
 
+msgid "مزامنة مع المايكروتيك / السيرفر"
+msgstr "MikroTik / sunucu ile eşitle"
+
 msgid "مزود إنترنت أساسي"
 msgstr "Birincil internet sağlayıcısı"
 
@@ -20428,6 +20867,9 @@ msgstr "İsimsiz kullanıcı"
 
 msgid "مستخدم بطاقات"
 msgstr "Kupon kullanıcısı"
+
+msgid "مستخدم بطاقة"
+msgstr "Kart kullanıcısı"
 
 msgid "مستخدم غير متصل"
 msgstr "Çevrimdışı kullanıcı"
@@ -20660,6 +21102,9 @@ msgstr "Hedef kitleyi önizle"
 
 msgid "معاينة الحزمة"
 msgstr "Paket önizlemesi"
+
+msgid "معاينة الخطة"
+msgstr "Plan önizleme"
 
 msgid "معاينة السكربت"
 msgstr "Betik önizlemesi"
@@ -20965,6 +21410,9 @@ msgstr "Açık"
 
 msgid "مفتوحة"
 msgstr "Açık"
+
+msgid "مفصول"
+msgstr "Bağlantı kesik"
 
 msgid "مفصول بعد (د)"
 msgstr "Şu süre sonra kesildi (dk)"
@@ -21422,14 +21870,16 @@ msgstr "Kuponlar için rastgele MAC'i engelle"
 msgid "منع MAC العشوائي في المشتركين"
 msgstr "Aboneler için rastgele MAC'i engelle"
 
+msgid "منع التكرار فعّال: نفس المايكروتيك / السيرفر بنفس الـIP لا يُضاف مرتين."
+msgstr ""
+"Yineleme önleme etkin: aynı MikroTik / sunucu aynı IP ile iki kez "
+"eklenmez."
+
 msgid "منع الماك العشوائي"
 msgstr "Rastgele MAC'i engelle"
 
 msgid "منع المدير من تغيير الاشتراك"
 msgstr "Yöneticinin aboneliği değiştirmesini engelle"
-
-msgid "منع بث البلوتوث والواي فاي"
-msgstr "Bluetooth ve Wi-Fi yayınını engelle"
 
 msgid "منع بث البلوتوث/الواي فاي وتتبّع اللوب."
 msgstr "Bluetooth/Wi-Fi yayınını engelle ve döngü algılaması."
@@ -21463,6 +21913,13 @@ msgstr "Metin giriş bağlantı noktası"
 
 msgid "منفذ الربط"
 msgstr "Bağlama Portu"
+
+msgid ""
+"منفذ المايكروتيك الموصول به الجهاز (مثل ether2) — إلزامي لأن نفس الشبكة "
+"قد تتكرّر على أكثر من مدخل."
+msgstr ""
+"Cihazın bağlı olduğu MikroTik bağlantı noktası (örn. ether2) — zorunludur"
+" çünkü aynı ağ birden fazla bağlantı noktasında tekrarlanabilir."
 
 msgid "منفذ المحاسبة"
 msgstr "Muhasebe portu"
@@ -21507,6 +21964,9 @@ msgstr "Günlük operasyonel görevler"
 
 msgid "مهام عملية — جاوب أسئلتك اليومية من هالصفحة"
 msgstr "Pratik görevler — günlük sorularınızı bu sayfadan yanıtlayın"
+
+msgid "مهلة Netwatch (ث)"
+msgstr "Netwatch zaman aşımı (sn)"
 
 msgid "مهلة الخمول (ث)"
 msgstr "Boşta kalma süresi (sn)"
@@ -21612,8 +22072,14 @@ msgstr "Kim ne zaman ne ödedi"
 msgid "مين يدخل فيها"
 msgstr "Kimler erişebilir"
 
+msgid "مُستردّة"
+msgstr "İade edildi"
+
 msgid "مُطبَّق"
 msgstr "Uygulandı"
+
+msgid "مُطفأ"
+msgstr "Kapalı"
 
 msgid "مُعرّف الإعداد"
 msgstr "Yapılandırma kimliği"
@@ -21848,9 +22314,6 @@ msgstr "Tarih Aralığı"
 
 msgid "نطاق التطبيق"
 msgstr "Uygulama kapsamı"
-
-msgid "نطاق الخدمة"
-msgstr "Hizmet paketi"
 
 msgid "نطاق الشبكة الداخليّة"
 msgstr "Dahili ağ aralığı"
@@ -22157,6 +22620,13 @@ msgstr "Uyarı türü"
 msgid "نوع الجهاز"
 msgstr "Cihaz türü"
 
+msgid ""
+"نوع الجهاز (نقطة وصول/سويتش/وصلة…) — لتصنيف وفلترة الأجهزة فقط، لا يؤثّر "
+"على المراقبة."
+msgstr ""
+"Cihaz türü (erişim noktası/anahtar/bağlantı…) — yalnızca cihazları "
+"sınıflandırmak ve filtrelemek içindir, izlemeyi etkilemez."
+
 msgid "نوع الجهاز:"
 msgstr "Cihaz türü:"
 
@@ -22411,6 +22881,14 @@ msgstr ""
 "Hizmetler sayfasına geri dönün ve tamamen yapılandırılmış bir hizmet "
 "seçin."
 
+msgid ""
+"هذه الخدمة مدفوعة ومُدارة مركزيًّا عند المالك. حدّد الكمّيّة المطلوبة "
+"(ميغابايت) ورسالة موجزة، فيُرسَل الطلب للمراجعة."
+msgstr ""
+"Bu hizmet ücretlidir ve sahibi tarafından merkezi olarak yönetilir. "
+"İstenen miktarı (megabayt) ve kısa bir mesaj belirtin, talep incelemeye "
+"gönderilsin."
+
 msgid "هذه الخطوة"
 msgstr "Bu Adım"
 
@@ -22471,6 +22949,9 @@ msgstr ""
 "Bu aşama yalnızca güvenli planlar gösterir ve mevcut ağ politikası "
 "merkezini ve çıkış adresi değiştirme yolunu yeniden kullanır. Buradan "
 "doğrudan uygulama yoktur."
+
+msgid "هذه خدمة مدفوعة — طلب تفعيل"
+msgstr "Bu ücretli bir hizmettir — etkinleştirme talebi"
 
 msgid "هذه خطة استشاريّة فقط — التراجع التلقائي غير مفعّل في هذه المرحلة."
 msgstr ""
@@ -22597,12 +23078,6 @@ msgstr "Hotspot"
 
 msgid "هوتسبوت + برودباند"
 msgstr "Hotspot + Geniş Bant"
-
-msgid "هوتسبوت فقط"
-msgstr "Yalnızca hotspot"
-
-msgid "هوتسبوت وبرودباند"
-msgstr "Hotspot ve geniş bant"
 
 msgid "هون القرار الأهم: حقل"
 msgstr "İşte en önemli karar: alan"
@@ -22848,6 +23323,13 @@ msgstr "ve kendi cüzdanını yüklemesine."
 
 msgid "وصف (اختياري)"
 msgstr "Açıklama (isteğe bağlı)"
+
+msgid ""
+"وصف الموقع الفعلي (برج/طابق/فرع) — يساعد على تحديد الجهاز بسرعة عند "
+"العطل. اختياري."
+msgstr ""
+"Gerçek konumun açıklaması (kule/kat/şube) — arıza durumunda cihazı "
+"hızlıca bulmaya yardımcı olur. İsteğe bağlı."
 
 msgid "وصف حر لما لاحظته وما ينبغي على المراجع التالي فعله."
 msgstr ""
@@ -23218,9 +23700,6 @@ msgid "يحدد ما الذي يُحاسَب عليه العرض: وقت أم ح
 msgstr ""
 "Teklifin neye göre ücretlendirileceğini belirler: süre, kota veya her "
 "ikisi."
-
-msgid "يحدد نوع الخدمة الذي ينطبق عليه العرض."
-msgstr "Teklifin uygulandığı hizmet türünü belirler."
 
 msgid "يحدّد أثر الحركة: تحصيل/سحب يخصم، إيداع/رصيد يضيف."
 msgstr "İşlemin etkisini belirler: tahsilat/çekim düşer, yatırma/kredi ekler."
@@ -23935,6 +24414,12 @@ msgstr "Yalnızca “stok” paketlerini gösterir."
 
 msgid "يُعدّ مفصولًا بعد (دقيقة)"
 msgstr "Şu süreden sonra bağlantısı kesilmiş sayılır (dakika)"
+
+msgid "يُعرض: مشتركون انتهى اشتراكهم"
+msgstr "Gösterilen: aboneliği sona ermiş aboneler"
+
+msgid "يُعرض: مشتركون ينتهي اشتراكهم خلال 3 أيام"
+msgstr "Gösterilen: aboneliği 3 gün içinde sona erecek aboneler"
 
 msgid "يُكمل على الكوتا والجلسات السابقة عند التفعيل."
 msgstr "Etkinleştirildiğinde önceki kota ve oturumlardan devam eder."
