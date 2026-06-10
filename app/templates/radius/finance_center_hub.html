@@ -64,6 +64,23 @@
   }.get(status, status or 'غير محددة') }}
 {%- endmacro %}
 
+{# شريط بحث رئيسي للقسم: يفلتر كل جداول uds داخل نطاقه حيًّا (finance_search.js).
+   scope_id = معرّف الحاوية التي تضم الجداول؛ count_id = معرّف عدّاد النتائج. #}
+{% macro section_search(placeholder, scope_id, count_id) -%}
+<div class="fc-search-bar">
+  <div class="fc-search-field">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <input type="search" inputmode="search" autocomplete="off" spellcheck="false"
+           placeholder="{{ placeholder }}"
+           aria-label="{{ placeholder }}"
+           data-fc-search
+           data-fc-search-scope="#{{ scope_id }}"
+           data-fc-search-count="#{{ count_id }}">
+  </div>
+  <span class="fc-search-count" id="{{ count_id }}" aria-live="polite"></span>
+</div>
+{%- endmacro %}
+
 {% block head_extra %}
 {# نظام الجداول الموحد: أنماط uds-table (فرز + اختيار أعمدة + ترقيم صفحات) #}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
@@ -121,6 +138,38 @@
 .fcw-foot{ display:flex; justify-content:flex-end; gap:8px; padding:13px 18px; border-top:1px solid var(--hub-border-soft,#e2e8f0); background:#fbfdff; }
 /* شريط الإجراءات فوق قائمة الخزائن والمحافظ (يحتضن زر فتح النافذة) */
 .fcw-actions{ display:flex; justify-content:flex-end; margin-bottom:12px; }
+
+/* ── شريط البحث الرئيسي لكل قسم (يفلتر جداول القسم حيًّا) ── */
+.fc-search-bar{
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  margin-bottom:14px;
+}
+.fc-search-field{
+  position:relative; flex:1 1 320px; min-width:0; max-width:560px;
+}
+.fc-search-field > i.fa-magnifying-glass{
+  position:absolute; inset-inline-start:14px; top:50%; transform:translateY(-50%);
+  color:var(--hub-text-mute); font-size:14px; pointer-events:none;
+}
+.fc-search-field input{
+  width:100%; box-sizing:border-box;
+  padding:11px 14px 11px 40px; padding-inline-start:40px; padding-inline-end:14px;
+  border:1px solid var(--hub-border-soft); border-radius:12px; background:#fff;
+  font-size:14px; font-weight:700; color:var(--hub-text);
+  transition:border-color .15s, box-shadow .15s;
+}
+.fc-search-field input:focus{
+  outline:none; border-color:var(--hub-brand-soft);
+  box-shadow:0 0 0 3px var(--hub-brand-soft);
+}
+.fc-search-field input.fc-search--empty{
+  border-color:var(--hub-amber-soft,#fde68a);
+  box-shadow:0 0 0 3px var(--hub-amber-soft,#fef3c7);
+}
+.fc-search-count{
+  font-size:12.5px; font-weight:800; color:var(--hub-text-mute);
+  font-variant-numeric:tabular-nums; white-space:nowrap;
+}
 </style>
 {% endblock %}
 
@@ -319,6 +368,8 @@
     {{ hub.empty("لا توجد محافظ بعد.", sub="ابدأ بمحفظة الشركة أو محفظة مدير أو موزّع.", icon="wallet") }}
   {% endcall %}
 {% else %}
+  {{ section_search("ابحث في المحافظ: الاسم، الرقم، الرصيد، الحالة…", "fc-wallets-scope", "fc-wallets-count") }}
+  <div id="fc-wallets-scope" data-fc-section>
   {# ── 1) قسم المشتركون / مستخدمو البطاقات ── #}
   <section data-fw-group="subscribers">
   {% call hub.section("المشتركون ومستخدمو البطاقات", icon="users", meta=(subs_wallets|length|string + " محفظة"), flush=True) %}
@@ -351,6 +402,7 @@
     {% endif %}
   {% endcall %}
   </section>
+  </div>{# /#fc-wallets-scope #}
 {% endif %}
 
 {# ───────────── صندوق عائم: إنشاء محفظة ───────────── #}
@@ -423,6 +475,8 @@
 {% endif %}
 
 {% if tab == 'revenue' %}
+{% if revenue %}{{ section_search("ابحث في الإيرادات: المصدر، المبلغ، التاريخ…", "fc-revenue-scope", "fc-revenue-count") }}{% endif %}
+<div id="fc-revenue-scope" data-fc-section>
 {% call hub.section("سجلات الإيرادات", icon="receipt", meta=(revenue|length|string + " سجل"), flush=True) %}
   {% if revenue %}
   <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="10" style="border:none;border-radius:0">
@@ -458,9 +512,12 @@
     {{ hub.empty("لا توجد سجلات إيراد بعد.", sub="ستظهر هنا سجلات البيع والتحصيل عند تسجيل العمليات المالية.", icon="receipt") }}
   {% endif %}
 {% endcall %}
+</div>{# /#fc-revenue-scope #}
 {% endif %}
 
 {% if tab == 'loans_debts' %}
+{% if debts['items'] or loans %}{{ section_search("ابحث في الذمم والسلف: المشترك، المبلغ، السبب، الحالة…", "fc-loans-scope", "fc-loans-count") }}{% endif %}
+<div id="fc-loans-scope" data-fc-section>
 {% call hub.section("الذمم المفتوحة", icon="file-invoice-dollar", meta=(debts['count']|string + " ذمة"), flush=True) %}
   {% if debts['items'] %}
   <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="20" style="border:none;border-radius:0">
@@ -531,7 +588,10 @@
     {{ hub.empty("لا توجد سلف ضمن هذا الفلتر.", sub="تظهر السلف المسجلة من صفحة المشترك المالية هنا.", icon="hand-holding-dollar") }}
   {% endif %}
 {% endcall %}
+</div>{# /#fc-loans-scope #}
 {% endif %}
 {# نظام الجداول الموحد (فرز + أعمدة + ترقيم صفحات) لجداول المركز المالي #}
 <script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
+{# البحث الحيّ لكل قسم — يجب تحميله بعد uds_table.js حتى يتوفّر __udsApi #}
+<script src="{{ url_for('static', filename='js/finance_search.js') }}"></script>
 {% endblock %}
