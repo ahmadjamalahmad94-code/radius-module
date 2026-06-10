@@ -11,7 +11,12 @@ from flask import Blueprint, Response, flash, g, jsonify, redirect, render_templ
 from PIL import Image, ImageOps, UnidentifiedImageError
 
 from ..core.errors import RadiusError, RadiusValidationError
-from ..services.card_renderer import build_card_render_model, normalize_render_engine, render_card_svg
+from ..services.card_renderer import (
+    build_card_render_model,
+    card_mm_box,
+    normalize_render_engine,
+    render_card_svg,
+)
 from ..services.cards import get_cards_service
 from ..services.operations import get_operations_service
 
@@ -632,11 +637,9 @@ def _effective_field_layout(form_state: dict | None) -> dict:
         return {}
     canvas_w = float(model["canvas"]["width"]) or 1.0
     canvas_h = float(model["canvas"]["height"]) or 1.0
-    try:
-        card_w_mm = max(float(layout.get("card_width_mm") or 85), 1.0)
-        card_h_mm = max(float(layout.get("card_height_mm") or 54), 1.0)
-    except (TypeError, ValueError):
-        card_w_mm, card_h_mm = 85.0, 54.0
+    # نفس صندوق mm الموجَّه الذي يقسم عليه المحرك (card_mm_box) — وإلا
+    # انعكست القيم المعبأة بأبعاد معاكسة على المحركات العمودية.
+    card_w_mm, card_h_mm = card_mm_box(layout, (canvas_w, canvas_h))
 
     def _round_step(value: float, step: float) -> float:
         return round(round(value / step) * step, 1)

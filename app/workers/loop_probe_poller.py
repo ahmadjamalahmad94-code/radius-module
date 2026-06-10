@@ -63,15 +63,18 @@ def _all_tenants() -> list[int]:
     ).fetchall()]
 
 
-def _loop_enabled_routers(tenant_id: int) -> list[tuple[int, list[str]]]:
+def _loop_enabled_routers(tenant_id: int) -> list[tuple[int, list[str], dict]]:
     """راوترات هذا المستأجر التي فُعِّلت عليها خدمة loop_detect — مع منافذها
-    المحفوظة. تُقرأ من tenant_settings بمفاتيح port_script_services:
-      pss.<nas_id>.loop_detect.enabled = 1
-      pss.<nas_id>.loop_detect.ports   = "ether2,ether3"
+    المحفوظة وإعدادات فحصها الدوري. تُقرأ من tenant_settings بمفاتيح
+    port_script_services:
+      pss.<nas_id>.loop_detect.enabled       = 1
+      pss.<nas_id>.loop_detect.ports         = "ether2,ether3"
+      pss.<nas_id>.loop_detect.poll_enabled  = 1/0   (افتراضي مفعّل)
+      pss.<nas_id>.loop_detect.poll_minutes  = فترة الفحص بالدقائق (افتراضي 5)
     """
     from app.radius.db.repos import tenants_repo
 
-    out: list[tuple[int, list[str]]] = []
+    out: list[tuple[int, list[str], dict]] = []
     try:
         settings = tenants_repo.list_settings(tenant_id)
     except Exception:  # noqa: BLE001
@@ -92,8 +95,42 @@ def _loop_enabled_routers(tenant_id: int) -> list[tuple[int, list[str]]]:
             continue
         ports_raw = settings.get(f"pss.{nas_id}.{_LOOP_SLUG}.ports", "")
         ports = [p for p in (ports_raw or "").split(",") if p]
-        out.append((nas_id, ports))
+        poll_enabled_raw = settings.get(
+            f"pss.{nas_id}.{_LOOP_SLUG}.poll_enabled", "1")
+        try:
+            poll_minutes = int(str(settings.get(
+                f"pss.{nas_id}.{_LOOP_SLUG}.poll_minutes", "5")).strip() or 5)
+        except ValueError:
+            poll_minutes = 5
+        poll = {
+            "enabled": str(poll_enabled_raw or "1").strip().lower() in _STATE_TRUE,
+            "minutes": max(1, poll_minutes),
+        }
+        out.append((nas_id, ports, poll))
     return out
+
+
+def _poll_due(tenant_id: int, nas_id: int, poll: dict) -> bool:
+    """هل حان موعد الفحص الدوري لهذا الراوتر؟ يحترم إعدادات المشغّل:
+    معطَّل ⇒ لا، وإلا يقارن آخر فحص دوري مسجَّل بفترة poll_minutes.
+    عند غياب السجل (جدول قديم/لا فحص سابق) ⇒ نعم (يفحص الآن)."""
+    if not poll.get("enabled", True):
+        return False
+    minutes = max(1, int(poll.get("minutes") or 5))
+    try:
+        from app.radius.db.repos import router_loop_checks_repo
+        last = router_loop_checks_repo.last_check_at(
+            tenant_id, nas_id, source="poller")
+    except Exception:  # noqa: BLE001
+        return True
+    if not last:
+        return True
+    from datetime import datetime, timedelta
+    try:
+        last_dt = datetime.fromisoformat(last.rstrip("Z"))
+    except ValueError:
+        return True
+    return datetime.utcnow() - last_dt >= timedelta(minutes=minutes)
 
 
 def _router_cfg(tenant_id: int, nas_id: int) -> dict | None:
@@ -147,11 +184,14 @@ def _read_dhcp_clients(cfg: dict) -> list[dict] | None:
 
 
 def record_router_probes(tenant_id: int, router_id: int, dhcp_rows,
-                         *, only_ports=None) -> dict:
+                         *, only_ports=None, log_source: str = "") -> dict:
     """يحوّل صفوف /ip dhcp-client لكل راوتر إلى قراءات مخزّنة + يقيّم التنبيهات.
 
     منفصلة عن الاستطلاع الشبكي كي تكون قابلة للاختبار بصفوف اصطناعية بلا
-    راوتر. تُعيد {recorded, opened, resolved}."""
+    راوتر. تُعيد {recorded, opened, resolved}.
+
+    log_source غير فارغ ⇒ يُدوَّن الفحص أيضًا في سجل router_loop_checks
+    (يستعمله الـpoller بـ"poller" — الفحص اليدوي يُدوِّنه مساره بنفسه)."""
     from app.radius.db.repos import router_loop_probes_repo
     from app.radius.services import port_script_services as pss
     from app.radius.services import smart_alerts
@@ -166,6 +206,20 @@ def record_router_probes(tenant_id: int, router_id: int, dhcp_rows,
             lease_ip=pr.address,
             server_ip=pr.dhcp_server or pr.gateway,
         )
+    if log_source:
+        try:
+            from app.radius.db.repos import router_loop_checks_repo
+            router_loop_checks_repo.insert_check(
+                tenant_id=tenant_id, router_id=router_id,
+                source=log_source, ok=True,
+                details=[{
+                    "iface": pr.iface, "status": pr.status,
+                    "is_loop": bool(pr.is_loop), "address": pr.address,
+                    "server": pr.dhcp_server or pr.gateway,
+                } for pr in probes])
+        except Exception:  # noqa: BLE001 — السجل ثانوي، لا يكسر الاستطلاع
+            _LOG.exception("loop_poller: check log failed tenant=%s router=%s",
+                           tenant_id, router_id)
     opened = resolved = 0
     try:
         res = smart_alerts.evaluate_loops(tenant_id, router_id)
@@ -181,10 +235,16 @@ def poll_once() -> dict:
     """دورة استطلاع واحدة لكل المستأجرين/الراوترات المُفعَّلة. تُعيد إحصاءات
     للنبضة (heartbeat) والتنقيح اليدوي."""
     stats = {"tenants": 0, "routers_polled": 0, "routers_skipped": 0,
-             "probes_recorded": 0, "loops_open": 0}
+             "routers_not_due": 0, "probes_recorded": 0, "loops_open": 0}
     for tenant_id in _all_tenants():
         stats["tenants"] += 1
-        for nas_id, ports in _loop_enabled_routers(tenant_id):
+        for nas_id, ports, poll in _loop_enabled_routers(tenant_id):
+            # إعدادات المشغّل لكل راوتر: فحص دوري معطَّل أو فترته لم
+            # تنقضِ بعد ⇒ نتخطّى هذه الدورة (الدورة العامة كل 300s
+            # تبقى مجرد «دقّة ساعة» — الفترة الفعلية يحدّدها المشغّل).
+            if not _poll_due(tenant_id, nas_id, poll):
+                stats["routers_not_due"] += 1
+                continue
             cfg = _router_cfg(tenant_id, nas_id)
             if cfg is None:
                 continue
@@ -194,7 +254,8 @@ def poll_once() -> dict:
                 continue
             stats["routers_polled"] += 1
             s = record_router_probes(tenant_id, nas_id, rows,
-                                     only_ports=ports or None)
+                                     only_ports=ports or None,
+                                     log_source="poller")
             stats["probes_recorded"] += s["recorded"]
             stats["loops_open"] += s["opened"]
     return stats

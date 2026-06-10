@@ -35,7 +35,8 @@ POLL_INTERVAL_SEC = 60.0
 # ── one sweep ──────────────────────────────────────────────────
 
 def iter_tick(tenant_id: Optional[int] = None,
-              *, mt=None, alert_fn: Optional[Callable] = None):
+              *, mt=None, alert_fn: Optional[Callable] = None,
+              log_source: str = ""):
     """Streaming variant of tick(): yields one progress event per device as it
     is checked, then a final 'done' event. Lets the UI render a live progress
     bar («يفحص 3/10…») without changing the polling semantics.
@@ -45,16 +46,24 @@ def iter_tick(tenant_id: Optional[int] = None,
       {"type":"progress","index":i,"total":N,"device":name,"device_id":id,
        "status":..,"latency_ms":..,"summary":{…}}
       {"type":"done","summary":{…}}
+
+    log_source غير فارغ ("manual"/"poller") ⇒ تُدوَّن الدورة كاملة في سجل
+    network_device_health_checks (الملخّص + حالة كل جهاز + المدة) — يغذّي
+    قسم «سجل الفحوصات» والإحصائيات في الصفحة. تنبيه: التدوين لكل مستأجر،
+    فعند المسح الشامل (tenant_id=None) تُدوَّن دورة لكل مستأجر مفحوص.
     """
     if mt is None:
         from . import device_health_mikrotik as mt  # noqa: PLW0127
     if alert_fn is None:
         alert_fn = _default_alert_fn
 
+    started = time.monotonic()
     devices = _watched_devices(tenant_id)
     total = len(devices)
     summary = {"scanned": total, "up": 0, "down": 0,
                "high_latency": 0, "unknown": 0, "changed": 0, "alerts": 0}
+    # تفاصيل كل جهاز لكل مستأجر — للسجل.
+    details_by_tenant: dict[int, list[dict]] = {}
     yield {"type": "start", "total": total}
 
     # Group by (tenant_id, router_id) so we read Netwatch once per router.
@@ -78,10 +87,20 @@ def iter_tick(tenant_id: Optional[int] = None,
             else:
                 status, latency = _derive_status(d, nw_rows, nw_ok, nas_dict, mt)
             _commit_status(tid, d, status, latency, summary, alert_fn)
+            details_by_tenant.setdefault(tid, []).append({
+                "device_id": d["id"],
+                "name": d.get("name") or f"#{d['id']}",
+                "status": status,
+                "latency_ms": latency,
+            })
             yield {"type": "progress", "index": idx, "total": total,
                    "device": d.get("name") or f"#{d['id']}", "device_id": d["id"],
                    "status": status, "latency_ms": latency,
                    "summary": dict(summary)}
+
+    if log_source:
+        _log_check(tenant_id, log_source, summary, details_by_tenant,
+                   duration_ms=int((time.monotonic() - started) * 1000))
 
     _LOG.info("[device-health] tick scanned=%d up=%d down=%d high=%d "
               "unknown=%d changed=%d alerts=%d",
@@ -91,14 +110,55 @@ def iter_tick(tenant_id: Optional[int] = None,
     yield {"type": "done", "summary": summary}
 
 
+def _log_check(tenant_id, log_source, summary, details_by_tenant,
+               *, duration_ms: int) -> None:
+    """يدوّن الدورة في سجل الفحوصات — لا يكسر الفحص أبدًا عند فشل الكتابة.
+
+    فحص مستأجر واحد ⇒ صفّ واحد بملخّص الدورة كما هو. مسح شامل ⇒ صفّ لكل
+    مستأجر بملخّص مُشتق من تفاصيله هو (لا نخلط أرقام المستأجرين)."""
+    from ..db.repos import device_health_checks_repo as checks_repo
+
+    def _summary_from(details: list[dict], scanned: int) -> dict:
+        s = {"scanned": scanned, "up": 0, "down": 0, "high_latency": 0,
+             "unknown": 0, "changed": 0, "alerts": 0}
+        for d in details:
+            st = d.get("status")
+            if st == "up":
+                s["up"] += 1
+            elif st in ("down", "timeout"):
+                s["down"] += 1
+            elif st == "high_latency":
+                s["high_latency"] += 1
+            elif st == "unknown":
+                s["unknown"] += 1
+        return s
+
+    try:
+        if tenant_id is not None:
+            details = details_by_tenant.get(int(tenant_id), [])
+            checks_repo.insert_check(
+                tenant_id=int(tenant_id), source=log_source, ok=True,
+                summary=summary, duration_ms=duration_ms, details=details)
+            return
+        for tid, details in details_by_tenant.items():
+            checks_repo.insert_check(
+                tenant_id=tid, source=log_source, ok=True,
+                summary=_summary_from(details, len(details)),
+                duration_ms=duration_ms, details=details)
+    except Exception:  # noqa: BLE001 — السجل ثانوي
+        _LOG.exception("[device-health] check log failed")
+
+
 def tick(tenant_id: Optional[int] = None,
-         *, mt=None, alert_fn: Optional[Callable] = None) -> dict:
+         *, mt=None, alert_fn: Optional[Callable] = None,
+         log_source: str = "") -> dict:
     """Poll every monitoring-enabled device (optionally one tenant) and return
     the final summary. Thin wrapper over iter_tick() so the non-streaming
     callers (route, background loop, tests) are unchanged."""
     summary = {"scanned": 0, "up": 0, "down": 0, "high_latency": 0,
                "unknown": 0, "changed": 0, "alerts": 0}
-    for ev in iter_tick(tenant_id, mt=mt, alert_fn=alert_fn):
+    for ev in iter_tick(tenant_id, mt=mt, alert_fn=alert_fn,
+                        log_source=log_source):
         if ev.get("type") in ("start", "done"):
             summary = ev.get("summary", summary) if ev["type"] == "done" \
                 else {**summary, "scanned": ev.get("total", 0)}

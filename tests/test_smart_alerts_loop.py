@@ -108,7 +108,9 @@ def test_poll_resolves_when_probe_back_to_searching(app, client):
 
 
 def test_loop_enabled_routers_reads_pss_state(app, client):
-    """الاستطلاع يستهدف فقط الراوترات المُفعَّل عليها loop_detect عبر حالة PSS."""
+    """الاستطلاع يستهدف فقط الراوترات المُفعَّل عليها loop_detect عبر حالة PSS —
+    ومع كل راوتر إعدادات فحصه الدوري (poll_enabled/poll_minutes) بقيمها
+    الافتراضية (مفعّل / كل 5 دقائق) أو المحفوظة من صفحة الخدمة."""
     from app.workers.loop_probe_poller import _loop_enabled_routers
     with app.app_context():
         from app.radius.db.repos import tenants_repo
@@ -116,8 +118,17 @@ def test_loop_enabled_routers_reads_pss_state(app, client):
         tenants_repo.set_setting(1, "pss.77.loop_detect.ports", "ether2,ether3")
         tenants_repo.set_setting(1, "pss.88.loop_detect.enabled", "0")  # off → skip
         tenants_repo.set_setting(1, "pss.99.bt_wifi_block.enabled", "1")  # other svc → skip
-        got = dict(_loop_enabled_routers(1))
-        assert got == {77: ["ether2", "ether3"]}
+        got = {nas: (ports, poll)
+               for nas, ports, poll in _loop_enabled_routers(1)}
+        assert set(got) == {77}
+        assert got[77][0] == ["ether2", "ether3"]
+        # افتراضيات الفحص الدوري: مفعّل وكل 5 دقائق.
+        assert got[77][1] == {"enabled": True, "minutes": 5}
+        # إعدادات محفوظة من صفحة الخدمة تُقرأ كما هي.
+        tenants_repo.set_setting(1, "pss.77.loop_detect.poll_enabled", "0")
+        tenants_repo.set_setting(1, "pss.77.loop_detect.poll_minutes", "30")
+        got2 = {nas: poll for nas, _p, poll in _loop_enabled_routers(1)}
+        assert got2[77] == {"enabled": False, "minutes": 30}
 
 
 def test_old_ingest_endpoint_is_gone(app, client):
