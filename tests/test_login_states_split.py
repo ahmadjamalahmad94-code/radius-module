@@ -86,7 +86,8 @@ def test_cards_page_lists_only_cards(app):
         assert f"<bdi>{u}</bdi>" in html, f"card {u} missing"
     for u in SUB_USERS:
         assert u not in html, f"subscriber {u} leaked onto cards page"
-    assert "حالات دخول الكروت" in html
+    # After 5-way split: title is «حالات دخول البطاقات» (RADIUS لمست-source=network).
+    assert "حالات دخول البطاقات" in html
 
 
 def test_subscribers_page_lists_only_subscribers(app):
@@ -103,21 +104,27 @@ def test_subscribers_page_lists_only_subscribers(app):
 
 
 def test_sidebar_links_under_correct_sections(app):
+    """After the 5-way restore, the login_states links live under
+    «التقارير → الدخول والأمان» (consolidated), not scattered under
+    Subscribers / Cards sections. Both URLs must be present and reachable
+    from the sidebar; the surrounding group is data-hb-subgroup="reports-auth".
+    """
     with app.test_client() as client:
         _auth(client)
         html = client.get("/admin/radius/").get_data(as_text=True)
-    assert "حالات البطاقات" in html
-    assert "حالات دخول المشتركين/البوابة" in html
+    # Both URLs must be on the page somewhere.
     assert "/reports/login_states/cards" in html
     assert "/reports/login_states/subscribers" in html
-    # placement: subscribers section precedes cards section in the markup;
-    # each link must fall inside its own section block.
-    i_subs_sec = html.find('data-hb-section="subscribers"')
-    i_cards_sec = html.find('data-hb-section="cards"')
-    i_subs_link = html.find("حالات دخول المشتركين/البوابة")
-    i_cards_link = html.find("حالات البطاقات")
-    assert i_subs_sec < i_subs_link < i_cards_sec, "subs link not in المشتركون section"
-    assert i_cards_sec < i_cards_link, "cards link not in البطاقات section"
+    # New consolidated labels under Reports → الدخول والأمان.
+    assert "حالات دخول البطاقات" in html
+    assert "حالات دخول المشتركين" in html
+    # Placement: both URLs fall inside the reports-auth subgroup block.
+    auth_sec = html.find('data-hb-subgroup="reports-auth"')
+    i_cards_url = html.find("/reports/login_states/cards")
+    i_subs_url = html.find("/reports/login_states/subscribers")
+    assert auth_sec != -1, "reports-auth subgroup not found"
+    assert auth_sec < i_cards_url, "cards link not under reports-auth subgroup"
+    assert auth_sec < i_subs_url, "subscribers link not under reports-auth subgroup"
 
 
 def test_dedicated_routes_registered(app):

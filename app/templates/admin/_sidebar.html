@@ -290,6 +290,11 @@
 {%- set m_reports_coa_failures = (path == url_for('radius.rep_coa_failures')) -%}
 {%- set m_reports_api_messages = (path == url_for('radius.rep_api_messages')) -%}
 {%- set m_reports_login_states = (path == url_for('radius.rep_login_states')) -%}
+{%- set m_reports_login_states_subs = (endpoint == 'radius.rep_login_states_subscribers') -%}
+{%- set m_reports_login_states_cards = (endpoint == 'radius.rep_login_states_cards') -%}
+{%- set m_reports_login_states_sub_portal = (endpoint == 'radius.rep_login_states_sub_portal') -%}
+{%- set m_reports_login_states_card_store = (endpoint == 'radius.rep_login_states_card_store') -%}
+{%- set m_reports_login_states_admin = (endpoint == 'radius.rep_login_states_admin') -%}
 {%- set m_reports_login_status = (path == url_for('radius.rep_login_status')) -%}
 {%- set m_reports_manager_login = (path == url_for('radius.rep_manager_login_status')) -%}
 {%- set m_reports_mac_history = (path == url_for('radius.rep_mac_history')) -%}
@@ -406,7 +411,6 @@
         {{ sub_item('radius.users_new',   _('إضافة مشترك'),     m_users_new) }}
         {{ sub_item('radius.subscriber_groups_list', _('مجموعات المشتركين'), m_subscriber_groups) }}
         {{ sub_item('radius.online_list', _('المشتركون المتصلون'), m_online_users) }}
-        {{ sub_item('radius.rep_login_states_subscribers', _('حالات دخول المشتركين/البوابة'), m_subs_login_states) }}
       </div></div>
     </div>
     {% elif _ui_mode == 'freeze' %}{{ frozen_section(_('المشتركون'), 'users') }}{% endif %}
@@ -429,7 +433,6 @@
         {{ sub_item('radius.cards_generate', _('إضافة حزمة'),      m_cards_generate) }}
         {{ sub_item('radius.cards_print_list', _('🖨️ بطاقات الطباعة'), m_cards_print) }}
         {{ sub_item('radius.online_list', _('البطاقات المتصلة'), m_cards_online, {'type':'card'}) }}
-        {{ sub_item('radius.rep_login_states_cards', _('حالات البطاقات'), m_cards_login_states) }}
         {{ sub_item('radius.print_templates', _('قوالب الطباعة'),   m_print_templates) }}
       </div></div>
     </div>
@@ -766,10 +769,13 @@
             <span class="hb-side-subchevron"><i class="fa-solid fa-chevron-down"></i></span>
           </button>
           <div class="hb-side-subgroup-body"><div class="hb-side-subgroup-body-inner">
-            {{ sub_item('radius.rep_login_states',         _('حالات تسجيل الدخول'),   m_reports_login_states) }}
-            {{ sub_item('radius.rep_failed_logins',        _('فشل دخول الشبكة'),      m_reports_failed_logins) }}
-            {{ sub_item('radius.rep_login_status',         _('حالة دخول المشتركين'),  m_reports_login_status) }}
-            {{ sub_item('radius.rep_manager_login_status', _('حالة دخول المدراء'),    m_reports_manager_login) }}
+            {{ sub_item('radius.rep_login_states',                 _('حالات تسجيل الدخول'),         m_reports_login_states) }}
+            {{ sub_item('radius.rep_login_states_subscribers',     _('حالات دخول المشتركين'),       m_reports_login_states_subs) }}
+            {{ sub_item('radius.rep_login_states_cards',           _('حالات دخول البطاقات'),        m_reports_login_states_cards) }}
+            {{ sub_item('radius.rep_login_states_sub_portal',      _('حالات بوابة المشتركين'),      m_reports_login_states_sub_portal) }}
+            {{ sub_item('radius.rep_login_states_card_store',      _('حالات بوابة متجر البطاقات'),  m_reports_login_states_card_store) }}
+            {{ sub_item('radius.rep_login_states_admin',           _('حالات دخول المدراء'),         m_reports_login_states_admin) }}
+            {{ sub_item('radius.rep_failed_logins',                _('فشل دخول الشبكة'),            m_reports_failed_logins) }}
           </div></div>
         </div>
 
