@@ -129,6 +129,48 @@ def _float(name: str, default: float = 0) -> float:
         return default
 
 
+# علامة بصرية محايدة تُستخدم بدل سلاسل وهمية مثل «SAMPLE» / «CARD1234»
+# في معاينات التصميم/المصغّرات قبل ربطها بدفعة حقيقية. الشرطة الطويلة
+# (em-dash) إشارة معروفة لـ«لا قيمة بعد» فلا تظهر كرقم بطاقة حقيقي.
+_PLACEHOLDER_CARD_TEXT = "—"
+
+
+def _first_real_card_sample() -> dict:
+    """يلتقط أول بطاقة حقيقية من أي دفعة لهذا المستأجر — تُستخدم في
+    المعاينات/المصغّرات بدلًا من سلاسل وهمية. عند انعدامها يعيد قاموسًا
+    بعلامة «—» مع `is_real=False` ليستطيع المستدعي إظهار شارة
+    «معاينة بدون بطاقات حقيقية بعد»."""
+    fallback = {
+        "id": "",
+        "username": _PLACEHOLDER_CARD_TEXT,
+        "password": "********",
+        "qr_payload": _PLACEHOLDER_CARD_TEXT,
+        "is_real": False,
+    }
+    try:
+        cards = get_cards_service().list_cards(limit=1, offset=0)
+    except Exception:  # pragma: no cover — defensive (DB not ready)
+        return fallback
+    if not cards:
+        return fallback
+    card = cards[0] if isinstance(cards, list) else cards
+    if not isinstance(card, dict):
+        try:
+            card = dict(card)
+        except Exception:  # pragma: no cover — non-iterable row
+            return fallback
+    username = (card.get("username") or "").strip()
+    if not username:
+        return fallback
+    return {
+        "id": card.get("id") or "",
+        "username": username,
+        "password": "********",
+        "qr_payload": username,
+        "is_real": True,
+    }
+
+
 def _checked(name: str, default: bool = False) -> bool:
     if name not in request.form:
         return default
@@ -577,7 +619,9 @@ def _effective_field_layout(form_state: dict | None) -> dict:
         "qr_y": fs.get("qr_y") or 0,
         "layout_json": layout,
     }
-    sample = {"id": "", "username": "SAMPLE", "password": "********"}
+    # تُستخدم القيمة في حسابات هندسية بحتة (موقع العناصر)؛ النص لا يظهر
+    # في أي معاينة مرئية للمشغّل. نتركها رمزًا عامًا «—» بلا قيمة وهمية.
+    sample = {"id": "", "username": _PLACEHOLDER_CARD_TEXT, "password": "********"}
     try:
         model = build_card_render_model(template_for_render, sample)
     except Exception:
@@ -682,7 +726,9 @@ def print_templates_thumbnail(template_id: int):
         abort(404)
     try:
         from ..services.card_renderer import build_card_render_model, render_card_svg
-        sample = {"id": "", "username": "CARD1234", "password": "********", "qr_payload": "CARD1234"}
+        # المصغّرة تظهر في «معرض القوالب» — قبل ربط القالب بدفعة حقيقية،
+        # نلتقط أول بطاقة حقيقية للمستأجر إن وُجدت؛ وإلا «—» محايد.
+        sample = _first_real_card_sample()
         layout = tpl.get("layout_json") or {}
         model = build_card_render_model({**tpl, "layout_json": layout}, sample)
         # embed_fonts=True: المصغّرة تُعرض داخل <img> حيث لا تصل خطوط
@@ -785,13 +831,18 @@ def print_templates_update(template_id: int):
 
 def print_templates_preview(template_id: int):
     try:
+        # العيّنة: اسم المستخدم المُدخل يدويًا له الأولوية، ثم أول بطاقة
+        # حقيقية للمستأجر إن وُجدت، وإلا «—» بدلًا من سلاسل وهمية ثابتة.
+        _typed = (request.form.get("sample_username") or "").strip()
+        _real = _first_real_card_sample()
+        _username = _typed or _real["username"]
         preview = get_operations_service().render_print_template_preview(
             tenant_id=_tid(),
             template_id=template_id,
             sample={
-                "username": request.form.get("sample_username") or "CARD1234",
+                "username": _username,
                 "has_password": True,
-                "qr_payload": request.form.get("sample_username") or "CARD1234",
+                "qr_payload": _username,
             },
         )
         return render_template("radius/print_templates.html", **_page_context(preview=preview))
@@ -853,9 +904,13 @@ def print_templates_designer_svg():
         "qr_y": _float("qr_y", 0),
         "layout_json": layout,
     }
+    # المصمم الحي: إن لم يكتب المشغّل اسمًا، التقط أول بطاقة حقيقية
+    # للمستأجر إن وُجدت، وإلا «—» محايد بدل سلسلة وهمية ثابتة.
+    _typed = (request.form.get("sample_username") or "").strip()
+    _real = _first_real_card_sample()
     sample = {
         "id": "",
-        "username": request.form.get("sample_username") or "SAMPLE",
+        "username": _typed or _real["username"],
         # The SVG adapter masks the password automatically — we still
         # pass a non-empty placeholder so the PASS pill renders.
         "password": "********",
@@ -1019,13 +1074,19 @@ def print_templates_cleanup_fixtures():
 def print_templates_export_pdf(template_id: int):
     try:
         batch_id = _batch_id_from_request()
+        # عند تصدير PDF بلا دفعة: لا نستخدم سلسلة وهمية ثابتة. الإدخال
+        # اليدوي له الأولوية، ثم أول بطاقة حقيقية، وإلا «—» محايد.
+        _typed_u = (request.args.get("sample_username") or "").strip()
+        _typed_p = (request.args.get("sample_password") or "").strip()
+        _real = _first_real_card_sample()
+        _u = _typed_u or _real["username"]
         payload = get_operations_service().export_print_template_pdf(
             tenant_id=_tid(),
             template_id=template_id,
             sample={
-                "username": request.args.get("sample_username") or "CARD1234",
-                "password": request.args.get("sample_password") or "********",
-                "qr_payload": request.args.get("sample_username") or "CARD1234",
+                "username": _u,
+                "password": _typed_p or "********",
+                "qr_payload": _u,
             },
             batch_id=batch_id,
             layout_overrides=_export_layout_overrides_from_request(),
@@ -1046,13 +1107,19 @@ def print_templates_export_pdf(template_id: int):
 def print_templates_export_job_start(template_id: int):
     try:
         batch_id = _batch_id_from_request()
+        # نفس قاعدة export_pdf: لا سلاسل وهمية. المُدخل اليدوي ثم أول
+        # بطاقة حقيقية للمستأجر إن وُجدت، وإلا «—» محايد.
+        _typed_u = (request.values.get("sample_username") or "").strip()
+        _typed_p = (request.values.get("sample_password") or "").strip()
+        _real = _first_real_card_sample()
+        _u = _typed_u or _real["username"]
         job = get_operations_service().start_print_template_export_job(
             tenant_id=_tid(),
             template_id=template_id,
             sample={
-                "username": request.values.get("sample_username") or "CARD1234",
-                "password": request.values.get("sample_password") or "********",
-                "qr_payload": request.values.get("sample_username") or "CARD1234",
+                "username": _u,
+                "password": _typed_p or "********",
+                "qr_payload": _u,
             },
             batch_id=batch_id,
             layout_overrides=_export_layout_overrides_from_request(),

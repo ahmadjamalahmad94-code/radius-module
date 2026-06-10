@@ -137,9 +137,12 @@ class LiveRouterStateReader:
                 "npc live reader: %s failed router=%d",
                 api_path, rid,
             )
+            # رسالة عربية وودودة للمشغّل بدل صياغة API الخام —
+            # الـUI يعرضها كسبب «لا توجد بيانات حيّة الآن».
             raise StateReadError(
-                f"reading {api_path} on router {rid} "
-                f"failed: {type(e).__name__}: {e}"
+                f"تعذّر قراءة حالة الراوتر #{rid} (المسار "
+                f"{api_path}): {type(e).__name__} — تحقّق من اتصال "
+                "الراوتر واعتمادات API ثم أعد المحاولة."
             ) from e
 
         items: list[RouterItem] = []
@@ -161,9 +164,11 @@ class LiveRouterStateReader:
         from .npc_live_router_executor import LiveRouterExecutor
         nas = LiveRouterExecutor._lookup_nas(router_id)
         if nas is None:
+            # «لا توجد بيانات» الصريحة — لا يوجد راوتر بهذا المعرّف
+            # أو معطّل. الـUI يعرضها بدل أن يظهر صفر صنفي زائف.
             raise StateReadError(
-                f"router {router_id} not found in "
-                f"nas_devices or disabled."
+                f"الراوتر #{router_id} غير موجود في «الراوترات» أو "
+                "غير مفعَّل — أضِف راوترًا وفعّله من قسم الراوترات."
             )
         return LiveRouterExecutor._build_cfg(nas)
 

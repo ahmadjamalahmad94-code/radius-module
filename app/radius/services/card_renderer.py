@@ -2070,7 +2070,7 @@ def _pdf_qr(pdf, el: dict, ch: float) -> None:
         pdf.roundRect(el["x"], pdf_y_bottom, size, size, size * 0.10,
                       stroke=0, fill=1)
 
-    payload = str(el.get("payload") or "SAMPLE")
+    payload = str(el.get("payload") or "—")
     inner = size * 0.92  # 4% padding each side — visually tight
     inner_x = el["x"] + (size - inner) / 2
     inner_y = pdf_y_bottom + (size - inner) / 2
@@ -2370,7 +2370,7 @@ def _qr_login_payload(layout: dict, username: str, password: str, card_id: str) 
     /login?username=&password= فقط، وبدون أي عنوان ← اسم المستخدم
     نصًا كما كان.
     """
-    user = str(username or card_id or "SAMPLE")
+    user = str(username or card_id or "—")
     secret = str(password or "")
     # الحقل المخصص الجديد — يضيف مفتاحي u/p للتوافق مع جافاسكربت
     # صفحة الدخول إضافة إلى صيغة ميكروتك القياسية.
@@ -2405,8 +2405,11 @@ def _override(overrides: dict, key: str, layout: dict, default: str) -> str:
 
 
 def _extract_card_fields(card: dict | object | None) -> tuple[str, str, str]:
+    # لا نُعيد قيمًا وهمية تظهر كاسم بطاقة حقيقي. عند انعدام البطاقة
+    # نُعيد «—» علامةً محايدة، والمستدعي يقرّر هل يرسم البطاقة كمعاينة
+    # هندسية أو يُظهر شارة «بدون بطاقات حقيقية بعد».
     if card is None:
-        return "SAMPLE", "********", ""
+        return "—", "********", ""
     if isinstance(card, dict):
         username = str(card.get("username") or "").strip()
         password = str(card.get("password") or "").strip()
@@ -2415,7 +2418,7 @@ def _extract_card_fields(card: dict | object | None) -> tuple[str, str, str]:
         username = str(getattr(card, "username", "") or "").strip()
         password = str(getattr(card, "password", "") or "").strip()
         card_id  = str(getattr(card, "id", "") or "").strip()
-    return username or "SAMPLE", password or "********", card_id
+    return username or "—", password or "********", card_id
 
 
 def _text_element(*, id: str, text: str, pos: dict, canvas: tuple[int, int],
