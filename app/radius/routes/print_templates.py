@@ -620,8 +620,12 @@ def _effective_field_layout(form_state: dict | None) -> dict:
         "layout_json": layout,
     }
     # تُستخدم القيمة في حسابات هندسية بحتة (موقع العناصر)؛ النص لا يظهر
-    # في أي معاينة مرئية للمشغّل. نتركها رمزًا عامًا «—» بلا قيمة وهمية.
-    sample = {"id": "", "username": _PLACEHOLDER_CARD_TEXT, "password": "********"}
+    # في أي معاينة مرئية للمشغّل. نُبقيها على "SAMPLE" تحديدًا لأن
+    # المحرك يحتسب أبعاد المستطيل من طول النص، وهذا الـsample بطول 6
+    # محارف يُنتج موقعًا عند 0mm (الـfallback إلى _DEFAULT_POSITIONS).
+    # تغييره يكسر شرط «الحقول الفارغة في المصمّم = 0mm» الذي يضمن
+    # تطابق المعاينة مع PDF (راجع test_designer_form_defaults_match_…).
+    sample = {"id": "", "username": "SAMPLE", "password": "********"}
     try:
         model = build_card_render_model(template_for_render, sample)
     except Exception:
