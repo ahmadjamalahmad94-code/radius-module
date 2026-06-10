@@ -1,15 +1,24 @@
-"""Dry-run V40 adapter for network.public_ip_change.
+"""V40 adapter for network.public_ip_change.
 
-This adapter deliberately plans only. It does not open a MikroTik session,
-does not call an executor, and does not mutate router state.
+Dry-run plans the tagged src-nat command without touching the router. Live
+apply (dry_run=False) is a real, gated operation: when the owner enables the
+HOBERADIUS_PUBLIC_IP_CHANGE_LIVE_APPLY_ENABLED flag it opens a MikroTik session
+and adds the tagged src-nat rule (add-only). With the flag off it returns a
+clear «بانتظار تفعيلك» envelope — never a silent no-op.
 """
 from __future__ import annotations
 
 import ipaddress
+import os
 from typing import Any
 
 ACTION_KEY = "network.public_ip_change"
 LIVE_APPLY_CODE = "public_ip_change_live_apply_not_enabled"
+LIVE_APPLY_FLAG = "HOBERADIUS_PUBLIC_IP_CHANGE_LIVE_APPLY_ENABLED"
+
+
+def _truthy(value: str | None) -> bool:
+    return (value or "").strip().lower() in {"1", "true", "yes", "on"}
 
 
 class PublicIpChangeDryRunAdapter:
@@ -34,16 +43,26 @@ class PublicIpChangeDryRunAdapter:
                 "warnings": validation["warnings"],
             }
         if not dry_run:
-            return {
-                "status": "failed",
-                "supported": True,
-                "dry_run": False,
-                "error": {
-                    "code": LIVE_APPLY_CODE,
-                    "message": "التطبيق الفعلي لتغيير عنوان الإنترنت العام معطّل عمدًا في هذه المرحلة.",
-                },
-                "warnings": validation["warnings"],
-            }
+            if not _truthy(os.environ.get(LIVE_APPLY_FLAG)):
+                return {
+                    "status": "failed",
+                    "supported": True,
+                    "dry_run": False,
+                    "error": {
+                        "code": LIVE_APPLY_CODE,
+                        "message": (
+                            "بانتظار تفعيلك: التطبيق الفعلي لتغيير عنوان الإنترنت "
+                            "العام مقفل. فعّل العلم "
+                            "HOBERADIUS_PUBLIC_IP_CHANGE_LIVE_APPLY_ENABLED من "
+                            "إعدادات النظام لتمكين التطبيق المباشر على الراوتر."),
+                    },
+                    "warnings": validation["warnings"],
+                }
+            return self._apply_live(
+                job=job,
+                normalized=validation["normalized"],
+                warnings=validation["warnings"],
+            )
 
         normalized = validation["normalized"]
         tag = f"HOBERADIUS_ADMIN_BRIDGE:public-ip-change:{job.get('reference') or 'pending'}"
@@ -74,6 +93,68 @@ class PublicIpChangeDryRunAdapter:
                 "Dry-run only. No MikroTik connection was opened.",
                 "A fresh router backup/export is required before any future live apply.",
             ],
+        }
+
+
+    def _apply_live(
+        self, *, job: dict[str, Any], normalized: dict[str, str],
+        warnings: list[str],
+    ) -> dict[str, Any]:
+        """Open a real MikroTik session and add the tagged src-nat rule."""
+        from app.radius.db.connection import db
+        from app.radius.services import mikrotik_admin_client as mac
+
+        tenant_id = int(job.get("tenant_id") or 1)
+        try:
+            router_id = int(normalized["router_id"])
+        except (TypeError, ValueError):
+            return {
+                "status": "failed", "supported": True, "dry_run": False,
+                "error": {"code": "invalid_router_id",
+                          "message": "معرّف الراوتر غير صالح."},
+                "warnings": warnings,
+            }
+        row = db().execute(
+            "SELECT * FROM nas_devices WHERE id = ? AND tenant_id = ? "
+            "AND (deleted_at IS NULL OR deleted_at = '')",
+            (router_id, tenant_id),
+        ).fetchone()
+        if not row:
+            return {
+                "status": "failed", "supported": True, "dry_run": False,
+                "error": {"code": "router_not_found",
+                          "message": "الراوتر غير موجود لهذا المستأجر."},
+                "warnings": warnings,
+            }
+        tag = f"HOBERADIUS_ADMIN_BRIDGE:public-ip-change:{job.get('reference') or 'pending'}"
+        result = mac.firewall_nat_add(
+            dict(row),
+            chain="srcnat",
+            action="src-nat",
+            to_addresses=normalized["requested_public_ip"],
+            out_interface=normalized.get("wan_interface", ""),
+            comment=tag,
+        )
+        if result.ok:
+            return {
+                "status": "completed", "supported": True, "dry_run": False,
+                "target": {
+                    "router_id": normalized["router_id"],
+                    "router_label": normalized["router_label"],
+                },
+                "applied": {
+                    "action_key": ACTION_KEY,
+                    "requested_public_ip": normalized["requested_public_ip"],
+                    "wan_interface": normalized["wan_interface"],
+                    "comment_tag": tag,
+                },
+                "warnings": warnings,
+            }
+        return {
+            "status": "failed", "supported": True, "dry_run": False,
+            "error": {"code": "live_apply_failed",
+                      "message": result.error or "تعذّر تطبيق التغيير على الراوتر."},
+            "warnings": warnings,
         }
 
 

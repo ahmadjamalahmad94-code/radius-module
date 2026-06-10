@@ -740,6 +740,40 @@ def address_list_add(
     )
 
 
+def firewall_nat_add(
+    nas: Mapping[str, Any], *, chain: str, action: str,
+    to_addresses: str = "", out_interface: str = "",
+    src_address: str = "", comment: str = "",
+) -> MtResult:
+    """`/ip/firewall/nat/add ...` — add-only NAT rule.
+
+    Used by the public-IP-change live apply: an `action=src-nat
+    to-addresses=<ip>` rule on the WAN out-interface, tagged with a
+    HOBERADIUS comment so it can be found/rolled back later. Add-only;
+    never edits or deletes existing rules. The router validates the
+    inputs and any rejection surfaces as a clean MtResult error.
+    """
+    ch = (chain or "").strip()
+    act = (action or "").strip()
+    if not ch or not act:
+        return MtResult(ok=False, error="chain/action غير محدّدين")
+    attrs: dict = {"chain": ch, "action": act}
+    if to_addresses:
+        attrs["to-addresses"] = str(to_addresses).strip()
+    if out_interface:
+        attrs["out-interface"] = str(out_interface).strip()
+    if src_address:
+        attrs["src-address"] = str(src_address).strip()
+    if comment:
+        attrs["comment"] = str(comment)
+    return _run_mutation(
+        nas,
+        operation="firewall/nat/add",
+        work=lambda c: c.run("/ip/firewall/nat/add", attrs=attrs),
+        invalidate=("firewall/nat",),
+    )
+
+
 def address_list_remove(
     nas: Mapping[str, Any], entry_id: str,
 ) -> MtResult:

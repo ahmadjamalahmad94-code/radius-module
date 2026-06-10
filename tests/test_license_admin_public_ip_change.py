@@ -135,3 +135,54 @@ def test_live_apply_disabled_by_default(app_db):
 
     assert execution["status"] == "failed"
     assert execution["result_json"]["error"]["code"] == "public_ip_change_live_apply_not_enabled"
+    assert "بانتظار تفعيلك" in execution["result_json"]["error"]["message"]
+
+
+def _seed_router(app_db, *, nas_id=7):
+    from datetime import datetime
+
+    from app.radius.db.connection import transaction
+    now = datetime.utcnow().isoformat() + "Z"
+    with transaction() as c:
+        c.execute(
+            """INSERT INTO nas_devices
+                (id, tenant_id, name, address, secret, vendor, nas_type,
+                 enabled, created_at, connection_mode, api_user, api_password)
+               VALUES (?, 1, 'lab', '203.0.113.7', 's', 'mikrotik', 'hotspot',
+                       1, ?, 'direct', 'admin', 'x')""",
+            (nas_id, now),
+        )
+
+
+def test_live_apply_runs_real_nat_add_when_enabled(app_db, monkeypatch):
+    from app.radius.services import mikrotik_admin_client as mac
+
+    _seed_router(app_db, nas_id=7)
+    monkeypatch.setenv("HOBERADIUS_PUBLIC_IP_CHANGE_LIVE_APPLY_ENABLED", "1")
+    calls = {}
+
+    def fake_nat_add(nas, **kw):
+        calls.update(kw)
+        calls["host"] = nas.get("address")
+        return mac.MtResult(ok=True)
+
+    monkeypatch.setattr(mac, "firewall_nat_add", fake_nat_add)
+    service = _service({"ok": True, "status": "ok", "items": [_job()]})
+
+    execution = service.poll_once(tenant_id=1, dry_run=False)["recorded"][0]
+
+    assert execution["status"] == "completed"
+    assert calls["action"] == "src-nat"
+    assert calls["to_addresses"] == "8.8.4.4"
+    assert calls["out_interface"] == "ether1"
+    assert "HOBERADIUS_ADMIN_BRIDGE:public-ip-change:pubip-1" in calls["comment"]
+
+
+def test_live_apply_router_not_found(app_db, monkeypatch):
+    monkeypatch.setenv("HOBERADIUS_PUBLIC_IP_CHANGE_LIVE_APPLY_ENABLED", "1")
+    service = _service({"ok": True, "status": "ok", "items": [_job()]})
+
+    execution = service.poll_once(tenant_id=1, dry_run=False)["recorded"][0]
+
+    assert execution["status"] == "failed"
+    assert execution["result_json"]["error"]["code"] == "router_not_found"

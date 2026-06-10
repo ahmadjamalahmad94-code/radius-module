@@ -174,7 +174,11 @@ class ServiceActivationService:
             )
 
         try:
-            adapter_result = adapter.execute(job=sanitize_bridge_payload(job), dry_run=dry_run)
+            # Thread tenant_id through so live-apply adapters can resolve the
+            # tenant's router row before mutating it.
+            _job = dict(sanitize_bridge_payload(job))
+            _job["tenant_id"] = int(tenant_id)
+            adapter_result = adapter.execute(job=_job, dry_run=dry_run)
             if not isinstance(adapter_result, dict):
                 raise ValueError("service activation adapter must return a JSON object")
             status = str(adapter_result.get("status") or ("planned" if dry_run else "completed"))
