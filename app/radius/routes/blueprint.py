@@ -159,6 +159,8 @@ def _register_all(bp: Blueprint) -> None:
     from .setup_wizard_v3 import (
         register_setup_wizard_v3_routes,
     )
+    # نظام مواصفات الخدمات الموحّد — نافذة spec + نقاط تفعيل/ترقية.
+    from .service_requests import register_service_requests_routes
 
     register_dashboard_routes(bp)
     register_account_routes(bp)
@@ -207,6 +209,7 @@ def _register_all(bp: Blueprint) -> None:
     register_payments_lab_routes(bp)
     register_setup_wizard_routes(bp)
     register_setup_wizard_v3_routes(bp)
+    register_service_requests_routes(bp)
 
     from .saas_modules import register_saas_routes
     register_saas_routes(bp)

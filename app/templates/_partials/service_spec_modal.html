@@ -1,0 +1,511 @@
+{#-
+  service_spec_modal — نافذة موحّدة لطلب «تفعيل/ترقية» أيّ خدمة.
+
+  الاستخدام:
+    1) ضمّن هذا الجزء مرّة في الصفحة:
+         {% include "_partials/service_spec_modal.html" %}
+    2) ضع أيّ زرّ/بطاقة تحمل البيانات التالية لفتح النافذة:
+         data-svc-spec-modal-open
+         data-svc-type="public-ip"        # نوع الخدمة (راجع SERVICE_TYPE_MAP)
+         data-svc-action="activate"       # أو "upgrade"
+         data-svc-scope="42"              # اختياري — nas_id / plan_id / …
+         data-svc-defaults='{"quota_mb":2048}'  # اختياري — قيم مبدئيّة JSON
+       بقيّة الحقول تُجلَب من /admin/radius/service-requests/schema/<type>
+       فيرسمها الـJS ديناميكيًّا حسب SpecKind المرتبط بالنوع.
+    3) الإرسال يقع على
+         POST /admin/radius/service-requests
+       والاستجابة تُظهر شارة toast نجاح/فشل بصمت.
+
+  ملاحظات تصميميّة:
+    • لا alert/confirm أصيلَين — توست + النافذة فقط (قاعدة المالك).
+    • لا اعتمادات JS خارجيّة — fetch + DOM فقط.
+    • CSP-safe — لا inline event handlers، بل event delegation.
+    • تنبع الحقول من الخادم فقط (مصدر واحد للحقيقة: service_specs).
+-#}
+
+<div class="ssm-modal" data-ssm-modal hidden>
+  <div class="ssm-dialog" role="dialog" aria-modal="true"
+       aria-labelledby="ssm-title">
+    <div class="ssm-head">
+      <div>
+        <h3 id="ssm-title" data-ssm-title>{{ _('طلب تفعيل خدمة') }}</h3>
+        <p class="ssm-sub" data-ssm-sub>{{ _('حدّد المواصفات المطلوبة لإرسال الطلب.') }}</p>
+      </div>
+      <button type="button" class="ssm-x" data-ssm-close
+              aria-label="{{ _('إغلاق') }}">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    <div class="ssm-body">
+      <div class="ssm-target" data-ssm-target></div>
+      <div class="ssm-spec" data-ssm-spec>
+        {# يُملأ ديناميكيًّا من المخطّط #}
+      </div>
+      <div class="ssm-error" data-ssm-error hidden role="alert"></div>
+    </div>
+    <div class="ssm-foot">
+      <button type="button" class="hub-btn hub-btn--ghost" data-ssm-close>
+        {{ _('إلغاء') }}
+      </button>
+      <button type="button" class="hub-btn hub-btn--primary" data-ssm-submit>
+        <i class="fa-solid fa-paper-plane"></i>
+        <span data-ssm-submit-label>{{ _('إرسال الطلب') }}</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+{# توست محلّي في حال لم يكن متاحًا في الصفحة. لا alert/confirm. #}
+<div class="ssm-toast" data-ssm-toast hidden role="status" aria-live="polite"></div>
+
+<style>
+/* ─── نافذة المواصفات الموحّدة (Service Spec Modal) ─────────────
+   تَستخدم نفس لغة hub_v2.css — لا ألوان جديدة، لا خطوط جديدة. */
+.ssm-modal{
+  position:fixed;inset:0;z-index:9998;display:none;
+  align-items:center;justify-content:center;
+  background:rgba(15,23,42,.42);
+  padding:20px;
+}
+.ssm-modal.is-open{display:flex}
+.ssm-modal[hidden]{display:none !important}
+.ssm-dialog{
+  background:#fff;border-radius:14px;max-width:560px;width:100%;
+  max-height:92vh;display:flex;flex-direction:column;
+  box-shadow:0 24px 64px rgba(15,23,42,.32);
+  overflow:hidden;
+  direction:rtl;text-align:start;
+}
+.ssm-head{
+  display:flex;align-items:flex-start;justify-content:space-between;
+  gap:14px;padding:16px 20px 12px;
+  border-bottom:1px solid #E2E8F0;background:#FBFDFF;
+}
+.ssm-head h3{
+  margin:0;font-size:15px;font-weight:900;color:#0F172A;
+  display:inline-flex;align-items:center;gap:8px;
+}
+.ssm-sub{margin:4px 0 0;font-size:12.5px;color:#64748B;line-height:1.6}
+.ssm-x{
+  border:0;background:transparent;color:#64748B;font-size:16px;
+  width:32px;height:32px;border-radius:8px;cursor:pointer;
+  display:inline-flex;align-items:center;justify-content:center;
+}
+.ssm-x:hover{background:#F1F5F9;color:#0F172A}
+.ssm-body{
+  padding:14px 20px 4px;overflow:auto;flex:1 1 auto;
+}
+.ssm-target{
+  background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;
+  padding:10px 12px;margin-bottom:14px;
+  font-size:12.5px;color:#0F172A;
+}
+.ssm-target strong{color:#0F172A}
+.ssm-target code{font-family:monospace;color:#7C3AED;font-size:12px}
+.ssm-spec{display:flex;flex-direction:column;gap:12px}
+.ssm-field{display:flex;flex-direction:column;gap:5px}
+.ssm-field-label{
+  font-size:12.5px;font-weight:800;color:#0F172A;
+  display:flex;align-items:center;gap:6px;
+}
+.ssm-field-label .ssm-req{color:#DC2626;font-size:11px}
+.ssm-field input[type=text],
+.ssm-field input[type=number],
+.ssm-field select,
+.ssm-field textarea{
+  width:100%;padding:9px 12px;border:1px solid #E2E8F0;border-radius:9px;
+  font:inherit;background:#fff;color:#0F172A;
+  transition:border-color .12s, box-shadow .12s;
+}
+.ssm-field input:focus,.ssm-field select:focus,.ssm-field textarea:focus{
+  outline:none;border-color:#7C3AED;
+  box-shadow:0 0 0 3px rgba(124,58,237,.16);
+}
+.ssm-field input[type=number]{text-align:start;direction:ltr}
+.ssm-field textarea{min-height:84px;resize:vertical}
+.ssm-field .ssm-help{
+  font-size:11.5px;color:#64748B;line-height:1.5;
+}
+.ssm-checkbox{
+  display:inline-flex;align-items:center;gap:8px;
+  background:#FBFDFF;border:1px solid #E2E8F0;border-radius:9px;
+  padding:9px 12px;cursor:pointer;
+  font-size:12.5px;color:#0F172A;font-weight:700;
+}
+.ssm-checkbox input{width:16px;height:16px;accent-color:#7C3AED}
+.ssm-error{
+  margin-top:12px;padding:10px 12px;border-radius:9px;
+  background:#FEF2F2;border:1px solid #FCA5A5;color:#7F1D1D;
+  font-size:12.5px;font-weight:700;display:flex;align-items:flex-start;gap:8px;
+}
+.ssm-error::before{content:"\f071";font-family:"Font Awesome 6 Free";font-weight:900;color:#DC2626}
+.ssm-foot{
+  display:flex;justify-content:flex-end;gap:8px;
+  padding:12px 20px;border-top:1px solid #E2E8F0;background:#FBFDFF;
+}
+
+/* عرض «الترقية»: شارة برتقاليّة في الترويسة بدل الزرقاء. */
+.ssm-modal[data-ssm-action="upgrade"] .ssm-head{background:#FFFBEB}
+.ssm-modal[data-ssm-action="upgrade"] .ssm-head h3 i{color:#B45309}
+.ssm-modal[data-ssm-action="upgrade"] .ssm-foot{background:#FFFBEB}
+
+/* توست محلّي — مطابق لـrh-toast في mt_dashboard لكن باسم مستقلّ. */
+.ssm-toast{
+  position:fixed;inset-inline-end:24px;bottom:24px;z-index:9999;
+  max-width:340px;padding:11px 16px;border-radius:11px;
+  font-size:13px;font-weight:700;color:#0F172A;
+  background:#fff;border:1px solid #E2E8F0;
+  box-shadow:0 8px 24px rgba(15,23,42,.12);
+}
+.ssm-toast.is-success{border-color:#A7F3D0;background:#ECFDF5;color:#065F46}
+.ssm-toast.is-error{border-color:#FCA5A5;background:#FEF2F2;color:#7F1D1D}
+.ssm-toast[hidden]{display:none}
+
+@media (max-width:600px){
+  .ssm-modal{padding:8px}
+  .ssm-dialog{max-height:96vh}
+}
+</style>
+
+<script>
+/*  service_spec_modal — Vanilla JS controller.
+    يُفتح/يُغلق النافذة، يجلب المخطّط من /service-requests/schema/<type>،
+    يرسم الحقول، يتحقّق من المُدخلات، ويُرسل POST.
+
+    يُصدر window.svcSpecModal بواجهة بسيطة:
+      open({service_type, action, scope, defaults, title?, sub?})
+      close()
+      toast(msg, kind?)
+
+    قاعدة المالك: لا alert/confirm أصيل — فقط هذه النافذة + التوست. */
+(function () {
+  "use strict";
+  if (window.svcSpecModal) return;  // ضُمّن مرّتين — اكتفِ بأوّل تحميل.
+
+  const SCHEMA_URL = "/admin/radius/service-requests/schema/";
+  const CREATE_URL = "/admin/radius/service-requests";
+
+  const modal = document.querySelector("[data-ssm-modal]");
+  if (!modal) return;
+  const titleEl  = modal.querySelector("[data-ssm-title]");
+  const subEl    = modal.querySelector("[data-ssm-sub]");
+  const targetEl = modal.querySelector("[data-ssm-target]");
+  const specEl   = modal.querySelector("[data-ssm-spec]");
+  const errEl    = modal.querySelector("[data-ssm-error]");
+  const submitBtn= modal.querySelector("[data-ssm-submit]");
+  const submitLabel = modal.querySelector("[data-ssm-submit-label]");
+  const toastEl  = document.querySelector("[data-ssm-toast]");
+
+  let current = null;   // { service_type, action, scope, kind }
+  let toastTimer = null;
+
+  function esc(s) {
+    return String(s == null ? "" : s)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
+  function csrfToken() {
+    const el = document.querySelector('input[name="_csrf_token"]');
+    if (el && el.value) return el.value;
+    const m = document.querySelector('meta[name="csrf-token"]');
+    return (m && m.getAttribute("content")) || "";
+  }
+  function showError(msg) {
+    if (!errEl) return;
+    errEl.textContent = String(msg || "");
+    errEl.hidden = !msg;
+  }
+  function clearError() { showError(""); }
+
+  function toast(msg, kind) {
+    if (!toastEl) return;
+    toastEl.textContent = String(msg || "");
+    toastEl.className = "ssm-toast is-" + (kind || "info");
+    toastEl.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { toastEl.hidden = true; }, 3600);
+  }
+
+  function renderField(f, defaults) {
+    const req = f.required
+      ? '<span class="ssm-req" title="مطلوب">*</span>' : '';
+    const help = f.help_text
+      ? '<span class="ssm-help">' + esc(f.help_text) + '</span>' : '';
+    const ph = f.placeholder ? ' placeholder="' + esc(f.placeholder) + '"' : '';
+    const val = defaults[f.key];
+
+    if (f.type === "checkbox") {
+      const checked = val == null ? f.default : val;
+      return (
+        '<label class="ssm-field"><span class="ssm-checkbox">' +
+          '<input type="checkbox" data-ssm-input data-ssm-key="' + esc(f.key) +
+          '" data-ssm-type="checkbox"' +
+          (checked ? ' checked' : '') + '>' +
+          esc(f.label) +
+        '</span>' + help + '</label>'
+      );
+    }
+
+    if (f.type === "select") {
+      const cur = val == null ? f.default : val;
+      const opts = (f.options || []).map((o) => {
+        const sel = String(o.value) === String(cur) ? ' selected' : '';
+        return '<option value="' + esc(o.value) + '"' + sel + '>' +
+               esc(o.label) + '</option>';
+      }).join("");
+      return (
+        '<div class="ssm-field">' +
+          '<span class="ssm-field-label">' + esc(f.label) + ' ' + req + '</span>' +
+          '<select data-ssm-input data-ssm-key="' + esc(f.key) +
+          '" data-ssm-type="select">' + opts + '</select>' +
+          help +
+        '</div>'
+      );
+    }
+
+    if (f.type === "textarea") {
+      return (
+        '<div class="ssm-field">' +
+          '<span class="ssm-field-label">' + esc(f.label) + ' ' + req + '</span>' +
+          '<textarea data-ssm-input data-ssm-key="' + esc(f.key) +
+          '" data-ssm-type="textarea"' +
+          (f.max_length ? ' maxlength="' + (f.max_length|0) + '"' : '') +
+          ph + '>' + esc(val == null ? "" : val) + '</textarea>' +
+          help +
+        '</div>'
+      );
+    }
+
+    if (f.type === "number") {
+      const attrs = [];
+      if (f.min != null) attrs.push('min="' + f.min + '"');
+      if (f.max != null) attrs.push('max="' + f.max + '"');
+      const init = val == null ? (f.default == null ? "" : f.default) : val;
+      return (
+        '<div class="ssm-field">' +
+          '<span class="ssm-field-label">' + esc(f.label) + ' ' + req + '</span>' +
+          '<input type="number" inputmode="numeric" step="1" ' + attrs.join(" ") +
+          ' data-ssm-input data-ssm-key="' + esc(f.key) +
+          '" data-ssm-type="number" value="' + esc(init) + '"' + ph + '>' +
+          help +
+        '</div>'
+      );
+    }
+
+    // text (افتراضي)
+    const init = val == null ? (f.default == null ? "" : f.default) : val;
+    return (
+      '<div class="ssm-field">' +
+        '<span class="ssm-field-label">' + esc(f.label) + ' ' + req + '</span>' +
+        '<input type="text" data-ssm-input data-ssm-key="' + esc(f.key) +
+        '" data-ssm-type="text" value="' + esc(init) + '"' +
+        (f.max_length ? ' maxlength="' + (f.max_length|0) + '"' : '') +
+        ph + '>' +
+        help +
+      '</div>'
+    );
+  }
+
+  function renderSpec(fields, defaults) {
+    if (!fields || !fields.length) {
+      specEl.innerHTML =
+        '<div class="ssm-error" style="position:static;background:#FFFBEB;' +
+        'border-color:#FDE68A;color:#92400E">' +
+        '<i class="fa-solid fa-circle-info"></i> هذا النوع بلا حقول مواصفات.</div>';
+      return;
+    }
+    specEl.innerHTML = (fields || []).map((f) => renderField(f, defaults || {})).join("");
+  }
+
+  function collectSpec() {
+    const out = {};
+    specEl.querySelectorAll("[data-ssm-input]").forEach((el) => {
+      const k = el.getAttribute("data-ssm-key");
+      const t = el.getAttribute("data-ssm-type");
+      if (t === "checkbox") out[k] = !!el.checked;
+      else if (t === "number") {
+        const v = el.value;
+        if (v !== "" && v != null) out[k] = Number(v);
+      } else {
+        const v = (el.value || "").trim();
+        if (v !== "") out[k] = v;
+      }
+    });
+    return out;
+  }
+
+  async function open(opts) {
+    clearError();
+    const o = opts || {};
+    const serviceType = String(o.service_type || "").trim();
+    if (!serviceType) {
+      toast("نوع الخدمة مفقود.", "error");
+      return;
+    }
+    const action = (o.action === "upgrade") ? "upgrade" : "activate";
+    const scope = o.scope == null ? "" : String(o.scope);
+    const defaults = o.defaults || {};
+
+    // ابدأ بحالة «جارٍ التحميل».
+    if (titleEl) {
+      titleEl.innerHTML =
+        '<i class="fa-solid fa-' +
+        (action === "upgrade" ? "arrow-up-right-dots" : "circle-plus") +
+        '"></i> <span data-ssm-action-label>' +
+        (action === "upgrade" ? "ترقية الخدمة" : "تفعيل الخدمة") +
+        '</span>';
+    }
+    if (subEl) subEl.textContent = "جارٍ تحميل مواصفات الخدمة…";
+    if (targetEl) targetEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> …';
+    if (specEl) specEl.innerHTML = '';
+    if (submitLabel) {
+      submitLabel.textContent = action === "upgrade" ? "إرسال طلب الترقية" : "إرسال طلب التفعيل";
+    }
+    modal.setAttribute("data-ssm-action", action);
+    modal.classList.add("is-open");
+    modal.hidden = false;
+
+    // اجلب المخطّط (kind+fields) من الخادم — المصدر الوحيد للحقيقة.
+    let data;
+    try {
+      const res = await fetch(SCHEMA_URL + encodeURIComponent(serviceType),
+                              { headers: { "Accept": "application/json" } });
+      data = await res.json();
+      if (!res.ok || data.ok === false) {
+        showError(data && data.error || ("تعذّر تحميل المخطّط — رمز " + res.status));
+        return;
+      }
+    } catch (err) {
+      showError(String((err && err.message) || err));
+      return;
+    }
+
+    current = {
+      service_type: serviceType,
+      action: action,
+      scope: scope,
+      kind: data.kind,
+      service_label: data.service_label,
+    };
+
+    if (subEl) subEl.textContent = (data.kind && data.kind.summary) || "";
+    if (titleEl) {
+      titleEl.innerHTML =
+        '<i class="fa-solid fa-' +
+        (action === "upgrade" ? "arrow-up-right-dots" : "circle-plus") +
+        '"></i> ' +
+        esc(action === "upgrade" ? "ترقية: " : "تفعيل: ") +
+        '<span style="color:#7C3AED">' + esc(data.service_label) + '</span>';
+    }
+    if (targetEl) {
+      let line = '<strong>' + esc(data.service_label) + '</strong>';
+      line += ' · معرّف: <code>' + esc(serviceType) + '</code>';
+      if (scope) line += ' · نطاق: <code>' + esc(scope) + '</code>';
+      line += ' · العمليّة: <strong>' +
+              (action === "upgrade" ? "ترقية" : "تفعيل") + '</strong>';
+      targetEl.innerHTML = line;
+    }
+    renderSpec(data.kind && data.kind.fields, defaults);
+
+    // التركيز على أوّل حقل قابل للكتابة.
+    setTimeout(() => {
+      const first = specEl.querySelector("[data-ssm-input]");
+      if (first && first.focus) first.focus();
+    }, 30);
+  }
+
+  function close() {
+    modal.classList.remove("is-open");
+    modal.hidden = true;
+    current = null;
+    clearError();
+    if (specEl) specEl.innerHTML = "";
+  }
+
+  async function submit() {
+    clearError();
+    if (!current) return;
+    const spec = collectSpec();
+    const body = {
+      service_type: current.service_type,
+      action: current.action,
+      scope: current.scope || "",
+      spec: spec,
+    };
+    submitBtn.disabled = true;
+    const prev = submitLabel ? submitLabel.textContent : "";
+    if (submitLabel) submitLabel.textContent = "جارٍ الإرسال…";
+    try {
+      const res = await fetch(CREATE_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+          "X-CSRFToken": csrfToken(),
+        },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json().catch(() => ({ ok: false }));
+      if (!res.ok || data.ok === false) {
+        const msg = (data && (data.error || (data.errors && data.errors[0])))
+                  || ("تعذّر الإرسال — رمز " + res.status);
+        showError(msg);
+        return;
+      }
+      const verb = body.action === "upgrade" ? "الترقية" : "التفعيل";
+      toast("تم إرسال طلب " + verb + " (" +
+            (data.service_label || current.service_type) + ").", "success");
+      close();
+      // أعلن الحدث للصفحة (تتولّى تحديث القائمة لو لزم).
+      try {
+        document.dispatchEvent(new CustomEvent("svc-spec-modal:submitted", {
+          detail: { service_type: current && current.service_type,
+                    action: body.action, request_id: data.request_id }
+        }));
+      } catch (_) { /* ignore */ }
+    } catch (err) {
+      showError(String((err && err.message) || err));
+    } finally {
+      submitBtn.disabled = false;
+      if (submitLabel) submitLabel.textContent = prev;
+    }
+  }
+
+  // ─── ربط الأحداث ─────────────────────────────────────────────
+  // فتح من أيّ زرّ في الصفحة يحمل data-svc-spec-modal-open.
+  document.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-svc-spec-modal-open]");
+    if (!btn) return;
+    // كلٌّ من preventDefault + stopPropagation مطلوبان: قد يكون الزرّ
+    // مدمجًا داخل <a> (بطاقة خدمة) فلا نُريد تنقّلًا للصفحة الأصليّة،
+    // ولا تشغيل معالجات أبٍ مثل «hub-card» أو «np-svc-card».
+    e.preventDefault();
+    e.stopPropagation();
+    let defaults = {};
+    const raw = btn.getAttribute("data-svc-defaults");
+    if (raw) {
+      try { defaults = JSON.parse(raw); }
+      catch (_) { defaults = {}; }
+    }
+    open({
+      service_type: btn.getAttribute("data-svc-type"),
+      action:       btn.getAttribute("data-svc-action") || "activate",
+      scope:        btn.getAttribute("data-svc-scope") || "",
+      defaults:     defaults,
+      title:        btn.getAttribute("data-svc-title") || "",
+    });
+  });
+
+  // إغلاق عبر زرّ × أو زرّ «إلغاء» أو خلفية أو Escape.
+  modal.addEventListener("click", (e) => {
+    if (e.target.closest("[data-ssm-close]") || e.target === modal) close();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && modal.classList.contains("is-open")) close();
+  });
+  submitBtn.addEventListener("click", submit);
+
+  // الواجهة العامّة.
+  window.svcSpecModal = { open, close, toast };
+})();
+</script>

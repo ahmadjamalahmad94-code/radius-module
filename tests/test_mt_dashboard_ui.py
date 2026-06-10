@@ -262,13 +262,16 @@ def test_dashboard_shows_all_services_including_paid_public_ip(app, client):
     assert "تتبّع اللوب" in html
     # «تغيير IP الخروج» — بطاقة مدفوعة جديدة (public-ip).
     assert 'data-rh-svc-card="public-ip"' in html
-    assert 'data-pss-paid="public-ip"' in html
+    # تحديث (يونيو 2026): البطاقة المدفوعة هاجرت إلى نافذة المواصفات
+    # الموحّدة — لا data-pss-paid بعد الآن، بل data-svc-spec-modal-open
+    # data-svc-type="public-ip" data-svc-action="activate".
+    assert 'data-svc-type="public-ip"' in html
+    assert 'data-svc-action="activate"' in html
     assert "تغيير IP الخروج" in html
     assert "مدفوعة" in html
-    # نافذة الطلب موجودة وفيها حقل الكمّيّة (ميغابايت).
-    assert 'data-fcw-modal="paid-req"' in html
-    assert "data-paid-req-mb" in html
-    assert "الكمّيّة المطلوبة (ميغابايت)" in html
+    # نافذة المواصفات الموحّدة مضمَّنة في الصفحة (data-ssm-modal).
+    assert 'data-ssm-modal' in html
+    assert 'data-ssm-spec' in html
 
 
 def test_service_request_route_persists_and_audits(app, client):
