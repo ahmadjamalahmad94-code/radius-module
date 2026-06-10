@@ -229,6 +229,10 @@ def _register_all(bp: Blueprint) -> None:
     from .hotspot_errors import register_hotspot_errors_routes
     register_hotspot_errors_routes(bp)
 
+    # واجهة إدارة أعلام الأقسام (إخفاء/تعطيل قسم بكامله) — super_admin فقط
+    from .sections_admin import register_sections_admin_routes
+    register_sections_admin_routes(bp)
+
     from .jobs import register_jobs_routes
     register_jobs_routes(bp)
 
@@ -368,6 +372,11 @@ _PERM_GUARDED: dict[str, str] = {
     # أزيل رابطه من شريط إدارة الراوترات (network_ops_nav.html)، والمسار
     # /admin/radius/setup-wizard يبقى مسجّلًا لكنه super_admin فقط.
     "setup_wizard_page": _PERM_SUPER,
+    # ── واجهة إدارة أعلام الأقسام (إخفاء/تعطيل قسم بكامله) — super_admin فقط ──
+    # حتى لا يُعطّل غير السوبر القائمةَ على نفسه.
+    "sections_admin_page":  _PERM_SUPER,
+    "sections_admin_save":  _PERM_SUPER,
+    "sections_admin_reset": _PERM_SUPER,
     # حفظ إعدادات النظام — تتطلّب صلاحية settings.edit (تُفحص على الكتابة فقط)
     "settings_page": "settings.edit",
     # الأنفاق — طلب/مزامنة نفق عبر الجسر (كتابة) تتطلّب api.use
@@ -512,7 +521,7 @@ _NAV_VIEW_GUARD_SKIP = {
 def _install_permission_guard(bp: Blueprint) -> None:
     """RBAC server-side: يمنع الأدوار المحدودة من المسارات الحسّاسة.
 
-    حارسان متكاملان في دالة before_request واحدة:
+    ثلاثة حُرّاس متكاملون في دالة before_request واحدة:
 
       (1) حارس الكتابة/السوبر (_PERM_GUARDED): يفحص مفاتيح الكتابة
           (POST/…)‎ + المناطق super_admin-only. كما كان.
@@ -523,13 +532,24 @@ def _install_permission_guard(bp: Blueprint) -> None:
           بهذا تتطابق خريطة الشريط الجانبي مع حراسة المسار فعليًا
           (إصلاح Broken Access Control: «الراوتر يحمي، لا الواجهة فقط»).
 
-    super_admin (ومنه «المدير الرئيسي») يتجاوز الحارسَين دائمًا.
+      (3) حارس أعلام القسم (section flags): سجلّ مركزي يربط كل قسم
+          بـendpointاته ويحمل علمَي «إخفاء/تعطيل» قابلين للقلب من
+          واجهة الإدارة. يُغلق الـendpointات التي خرجت من الشريط
+          الجانبي لكنّ مساراتها بقيت مفتوحة (شبكة العمليات التجريبية،
+          دفع بيانات التوزيع، الإعداد الهندسي، إعداد الأسطول…) ـ
+          فيُعيد 403 على أيّ method لمن ليس سوبر.
+
+    super_admin (ومنه «المدير الرئيسي» المثبَّت في session_helpers
+    عبر primary_admin_id()) يتجاوز الحُرّاس الثلاثة دائمًا.
     """
     from flask import session, abort
     # خريطة عرض الشريط الجانبي — مصدر واحد لربط endpoint بمفتاح عرضه.
     # تُستورد مرّة عند تركيب الحارس (لا دورة استيراد: ui_permissions لا
     # يستورد blueprint إلا كسولًا داخل perm_for_endpoint وقت الطلب).
     from ..auth.ui_permissions import _NAV_PERM
+    # سجلّ أعلام الأقسام — تُقرأ كلّها مرّة لكل طلب عبر flask.g (راجع
+    # section_flags.is_section_blocked). لا استيرادات حلقية.
+    from ..auth.section_flags import is_section_blocked
 
     @bp.before_request
     def _perm_guard():
@@ -539,6 +559,12 @@ def _install_permission_guard(bp: Blueprint) -> None:
         name = ep.split(".", 1)[1]
         is_super = bool(session.get("is_super_admin"))
         perms = session.get("permissions") or []
+
+        # ── (3) حارس أعلام القسم — يُقدّم على RBAC لأنّه حظر مستوى
+        #        المستأجر بالكامل، ولا مَعنى لقياس صلاحيات داخل قسم
+        #        مُغلَق أساسًا. السوبر دائمًا يَتجاوز. ──
+        if not is_super and is_section_blocked(name):
+            abort(403)
 
         # ── (1) حارس الكتابة/السوبر ──
         required = _PERM_GUARDED.get(name)
