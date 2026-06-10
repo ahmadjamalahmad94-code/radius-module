@@ -207,8 +207,10 @@ def _start_workers(app: Flask) -> None:
                                   start_admin_bridge_sync_worker,
                                   start_backup_scheduler_worker,
                                   start_device_fingerprint_worker,
+                                  start_device_health_poll_worker,
                                   start_dunning_worker,
                                   start_lifecycle_worker,
+                                  start_loop_probe_poller,
                                   start_mt_reconciler,
                                   start_stale_session_reaper,
                                   start_sync_worker,
@@ -223,6 +225,18 @@ def _start_workers(app: Flask) -> None:
         start_backup_scheduler_worker()
         start_dunning_worker()
         start_temp_speed_expiry()
+        # ── الفحص الدوري لتتبّع حالة الأجهزة (device_health) ──
+        # كان مُعرَّفًا في `app/workers/device_health_poll_worker.py` ومُصدَّرًا في
+        # `app/workers/__init__.py` لكنّ السطر لم يكن يُستدعى هنا (سقط في تجديد
+        # ملف الإقلاع بدفعة QA phase-b: 94ff5f8) فلم يَبدأ أيّ thread، فلم تَجرِ
+        # دورات «الفحص الدوري التلقائي» مهما حُفظت الإعدادات. إعادة استدعائه هنا
+        # تَستعيد سلوكها الأصلي. السوبر/الإدارة تَتحكّم بالتفعيل والـminutes من
+        # واجهة device-health، والـworker يَقرأها لكل مستأجر كل tick (60s).
+        start_device_health_poll_worker()
+        # ── الفحص الدوري لكشف اللوب على الراوترات (loop_probe_poller) ──
+        # نفس فئة الخطأ المعماري كالعلوي ـ معروف ومُصدَّر لكنّه لم يكن يُشغَّل.
+        # إعادة استدعائه يُعيد القراءة الاستطلاعيّة لـ/ip dhcp-client كل دورة.
+        start_loop_probe_poller()
     except Exception:  # noqa: BLE001
         app.logger.exception("workers start failed")
     try:
