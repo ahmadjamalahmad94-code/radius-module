@@ -1,23 +1,24 @@
 {# ═══════════════════════════════════════════════════════════════════════
-   حالة دخول المدراء — إعادة تصميم قوية من الصفر على نظام hub_v2:
+   سجل محاولات دخول المدراء — صف لكل محاولة دخول مدير (نجاحًا أو فشلًا):
      • صدفة هيرو واحدة (hub-hero-shell): عنوان + سطر تعريفي إنساني +
-       4 مؤشرات بصف واحد + حزام الفلترة 42px — بلا أي هيروات مكدّسة.
-     • جدول uds موحّد (فرز + ترقيم + تصدير) بأعمدة موسّطة تحت رؤوسها،
-       الدور معرّب (roles.display_name) واليوزر/البريد بخط أحادي <bdi>.
-     • معطيات المسار: `items` (مدراء مع username/full_name/email/role_id/
-       role_name/is_super_admin/enabled/last_login_at/created_at)
-       و `filters` (q) — عقد الفلاتر GET كما هو بلا أي تغيير.
+       4 مؤشرات بصف واحد (إجمالي/ناجحة/فاشلة/اليوم) + حزام الفلترة 42px.
+     • جدول uds موحّد (فرز + ترقيم + تصدير): الوقت، اسم المدير، النتيجة
+       (نجاح/فشل بحبّة ملوّنة)، الشبكة (IP)، المتصفح، السبب عند الفشل.
+     • فلاتر GET: result (نجاح/فشل)، q (المدير/IP)، date_from، date_to.
+     • مصدر البيانات: login_events.fetch_login_events مع actor=admin —
+       نفس مصدر «سجل محاولات تسجيل الدخول» وحالات الـ5-way (panel فقط).
+     • معطيات المسار: rows + stats + shown + matched + filters + labels.
    ═══════════════════════════════════════════════════════════════════════ #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}حالة دخول المدراء{% endblock %}
-{% block page_icon %}<i class="fa-solid fa-user-clock"></i>{% endblock %}
-{% block page_title %}حالة دخول المدراء{% endblock %}
-{% block page_sub %}<span class="sub">{{ items|length }} مدير</span>{% endblock %}
+{% block title %}{{ _('سجل محاولات دخول المدراء') }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-user-shield"></i>{% endblock %}
+{% block page_title %}{{ _('سجل محاولات دخول المدراء') }}{% endblock %}
+{% block page_sub %}<span class="sub">{{ matched }} {{ _('محاولة') }}</span>{% endblock %}
 
 {% block head_extra %}{{ super() }}
-{# نظام الجداول الموحد (uds): فرز + ترقيم صفحات + تصدير لجدول المدراء #}
+{# نظام الجداول الموحد (uds): فرز + ترقيم صفحات + تصدير #}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
 {% endblock %}
 
@@ -25,97 +26,96 @@
 {# متحكّم «انتقال سريع» المضغوط — يُحقن في صف عنوان الهيرو بدل الشريطين الكبيرين #}
 {% set _report_jump %}{% include "radius/reports_nav.html" %}{% endset %}
 
-{# ── مؤشرات مشتقة من نفس `items` (بلا أي استعلام إضافي) ── #}
-{% set _active   = items|selectattr('enabled')|list|length %}
-{% set _disabled = items|length - _active %}
-{% set _never    = items|rejectattr('last_login_at')|list|length %}
-
-{# ── توسيط موحّد لجدول المدراء: الرؤوس والخلايا تحت أسمائها تمامًا ── #}
+{# ── توسيط موحّد لجدول المحاولات: الرؤوس والخلايا تحت أسمائها تمامًا ── #}
 <style>
 .hub-table.rep-table thead th,
 .hub-table.rep-table tbody td{ text-align:center !important; }
+.hub-table.rep-table .rep-cell-dev{ justify-content:center; text-align:start; display:inline-flex; }
 </style>
 
 {# ───── صدفة الهيرو الواحدة: عنوان + سطر تعريفي + مؤشرات بصف واحد + حزام الفلترة ───── #}
 <section class="hub-hero-shell" data-testid="manager-login-status-hero">
 {% call hub.megahero(
-  "حالة دخول المدراء",
-  subtitle="من يدير النظام فعليًا؟ كل حساب مدير مع دوره وحالته وآخر مرة دخل فيها — مرتّبة من الأحدث دخولًا.",
-  icon="user-clock",
+  _("سجل محاولات دخول المدراء"),
+  subtitle=_("كل محاولة دخول مدير إلى لوحة الإدارة — نجاحًا أو فشلًا — مع الوقت، اسم المدير، عنوان الشبكة، المتصفح، وسبب الفشل عند وجوده. الترتيب من الأحدث للأقدم. للقراءة فقط."),
+  icon="user-shield",
   actions_html=_report_jump,
   kpis=[
-    {'label': 'إجمالي المدراء',  'value': items|length, 'icon': 'users-gear',     'variant': 'brand'},
-    {'label': 'مفعَّلون',         'value': _active,       'icon': 'circle-check',   'variant': 'green'},
-    {'label': 'معطَّلون',         'value': _disabled,     'icon': 'circle-pause',   'variant': 'red'},
-    {'label': 'لم يدخلوا قط',    'value': _never,        'icon': 'user-clock',     'variant': 'amber'},
+    {'label': _('محاولات اليوم'), 'value': stats.today,      'icon': 'calendar-day', 'variant': 'brand',
+     'sub': _('من إجمالي ') ~ matched ~ _(' محاولة مطابقة')},
+    {'label': _('ناجحة'),         'value': stats.ok,         'icon': 'circle-check', 'variant': 'green'},
+    {'label': _('فاشلة'),         'value': stats.fail,       'icon': 'circle-xmark', 'variant': 'red'},
+    {'label': _('مدراء فريدون'),  'value': stats.uniq_users, 'icon': 'fingerprint',  'variant': 'blue'},
   ],
   search_action=url_for('radius.rep_manager_login_status')
 ) %}
   <input class="hub-input grow" type="text" name="q"
-         value="{{ filters.q if filters else '' }}"
-         placeholder="{{ _('بحث (اسم المدير / اليوزر / البريد)…') }}">
+         value="{{ filters.q }}" placeholder="{{ _('بحث (اسم المدير / عنوان الشبكة)…') }}">
+  <select class="hub-input" name="result" title="{{ _('نتيجة المحاولة') }}">
+    <option value="">{{ _('كل النتائج') }}</option>
+    <option value="success" {% if filters.result=='success' %}selected{% endif %}>{{ _('نجاح') }}</option>
+    <option value="fail"    {% if filters.result=='fail' %}selected{% endif %}>{{ _('فشل') }}</option>
+  </select>
+  <input class="hub-input" type="date" name="date_from"
+         value="{{ filters.date_from }}" title="{{ _('من تاريخ') }}">
+  <input class="hub-input" type="date" name="date_to"
+         value="{{ filters.date_to }}" title="{{ _('إلى تاريخ') }}">
   {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
-  {% if filters and filters.q %}
+  {% if filters.q or filters.result or filters.date_from or filters.date_to %}
     {{ hub.btn("إعادة ضبط", icon="rotate-left", variant="ghost", size="sm",
                attrs='onclick="window.location=' + "'" + url_for('radius.rep_manager_login_status') + "'" + '"') }}
   {% endif %}
   <span class="hub-hint" tabindex="0"
-        data-hint="البحث يطابق اليوزر أو الاسم الكامل أو البريد الإلكتروني. الترتيب من الأحدث دخولًا للأقدم، ومن لم يدخل قط يظهر في النهاية. البيانات للقراءة فقط من جدول المدراء."><i class="fa-solid fa-info"></i></span>
+        data-hint="{{ _('كل صف هنا = محاولة دخول مدير واحدة. البحث يطابق اسم المدير وعنوان الشبكة، فلتر النتيجة يفرز نجاحًا أو فشلًا، نطاق التاريخ يعمل على وقت المحاولة. مصدر البيانات نفس مصدر «سجل محاولات تسجيل الدخول» مع تثبيت الفاعل على «مدير».') }}"><i class="fa-solid fa-info"></i></span>
 {% endcall %}
 </section>{# /hub-hero-shell #}
 
-{% if items %}
-{# ───── جدول المدراء — uds موحّد (فرز + ترقيم + تصدير) ───── #}
-{% call hub.section("حسابات المدراء", icon="table-list",
-                    meta=items|length|string + " حساب", flush=True) %}
+{% if rows %}
+{# ───── جدول محاولات المدراء — uds موحّد (فرز + ترقيم + تصدير) ───── #}
+{% call hub.section(_("سجل المحاولات"), icon="table-list",
+                    meta=(shown|string) ~ (_(" من ") ~ matched|string if matched > shown else _(" محاولة")), flush=True) %}
   <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25"
        style="border:none;border-radius:0">
     <table class="hub-table rep-table">
       <thead>
         <tr>
-          <th class="num" style="width:60px" data-uds-nosort>{{ _('الرقم') }}</th>
+          <th>{{ _('الوقت') }}</th>
           <th>{{ _('المدير') }}</th>
-          <th>{{ _('الدور') }}</th>
-          <th>{{ _('البريد الإلكتروني') }}</th>
-          <th data-uds-nosort>{{ _('الحالة') }}</th>
-          <th>{{ _('آخر دخول') }}</th>
-          <th>{{ _('أُنشئ في') }}</th>
+          <th data-uds-nosort>{{ _('النتيجة') }}</th>
+          <th data-uds-nosort>{{ _('عنوان الشبكة') }}</th>
+          <th data-uds-nosort>{{ _('المتصفح / الجهاز') }}</th>
+          <th data-uds-nosort>{{ _('السبب') }}</th>
         </tr>
       </thead>
       <tbody>
-        {% for r in items %}
-        <tr class="{{ '' if r.enabled else 'is-fail' }}">
-          <td class="num mono"><bdi>#{{ r.id }}</bdi></td>
-          {# الاسم الكامل أساسيًا واليوزر سطرًا فرعيًا بخط أحادي #}
-          <td>
-            <span class="rep-primary">{{ r.full_name or r.username }}</span>
-            <span class="rep-sub rep-mono"><bdi>{{ r.username }}</bdi></span>
+        {% for r in rows %}
+        <tr class="{{ 'is-fail' if not r.success else '' }}">
+          {% set _dl = r.when|dt_local if r.when else '' %}
+          <td class="rep-mono"
+              style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
+            <span class="rep-primary">{{ _dl[:10] or '—' }}</span>
+            <span class="rep-sub">{{ _dl[11:16] }}</span>
           </td>
-          {# الدور: «مدير عام» للسوبر، وإلا اسم الدور من جدول الأدوار — والمعرّف الخام في title #}
+          <td><strong><bdi>{{ r.username or '—' }}</bdi></strong></td>
           <td>
-            {% if r.is_super_admin %}
-              <span title="super_admin">{{ hub.pill("مدير عام", variant="brand") }}</span>
-            {% elif r.role_name %}
-              <span title="role_id: {{ r.role_id }}">{{ hub.pill(r.role_name, variant="blue") }}</span>
-            {% else %}<span class="rep-muted">{{ _('بدون دور') }}</span>{% endif %}
+            {% if r.success %}{{ hub.pill(_("نجاح"), variant="green") }}
+            {% else %}{{ hub.pill(_("فشل"), variant="red") }}{% endif %}
           </td>
-          <td class="rep-mono small">
-            {% if r.email %}<bdi>{{ r.email }}</bdi>
+          <td class="rep-cell-dev"
+              style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr;font-family:var(--font-mono,monospace)">
+            {% if r.ip %}<bdi>{{ r.ip }}</bdi>
+            {% else %}<span class="rep-muted">—</span>{% endif %}
+          </td>
+          <td class="rep-cell-dev"
+              style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
+            {% if r.browser %}<span class="rep-primary">{{ r.browser }}</span>
+            {% elif r.mac %}<bdi>{{ r.mac }}</bdi>
             {% else %}<span class="rep-muted">—</span>{% endif %}
           </td>
           <td>
-            {% if r.enabled %}{{ hub.pill("مفعَّل", variant="green") }}
-            {% else %}{{ hub.pill("معطَّل", variant="red") }}{% endif %}
-          </td>
-          {% set _ll = r.last_login_at|dt_local if r.last_login_at else '' %}
-          <td class="rep-mono"
-              style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
-            {% if _ll %}<span class="rep-primary">{{ _ll[:10] }}</span><span class="rep-sub">{{ _ll[11:16] }}</span>
-            {% else %}<span class="rep-sub">{{ _('لم يدخل قط') }}</span>{% endif %}
-          </td>
-          <td class="rep-mono"
-              style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
-            {{ r.created_at|date_local if r.created_at else '—' }}
+            {% if r.success %}<span class="rep-muted">—</span>
+            {% elif r.reason %}<span title="{{ r.reason }}"><bdi>{{ r.reason }}</bdi></span>
+            {% else %}<span class="rep-muted">{{ _('غير محدد') }}</span>{% endif %}
           </td>
         </tr>
         {% endfor %}
@@ -125,9 +125,9 @@
 {% endcall %}
 {% else %}
 {{ hub.empty(
-  "لا مدراء مطابقين",
-  sub="غيّر كلمة البحث — أو لم تُنشأ حسابات مدراء بعد لتظهر هنا.",
-  icon="user-clock"
+  _("لا محاولات مطابقة"),
+  sub=_("غيّر البحث أو الفلاتر — أو لا توجد محاولات دخول مدراء مسجَّلة في هذه الفترة بعد."),
+  icon="circle-info"
 ) }}
 {% endif %}
 
