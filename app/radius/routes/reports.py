@@ -327,24 +327,36 @@ def rep_failed_logins():
                            items=rows, total=total, last24=last24, filters=f, limit=500)
 
 
-# ─────────────── 3. Login status (last login per user) ───────────────
+# ─────────────── 3. Login status — flat login-attempts log ───────────────
+#
+# توضيح المعنى (يونيو 2026): هذه الصفحة سجلٌّ مسطّح لكل محاولة دخول
+# (نجاحًا أو فشلًا) — لا روستر حالات لكل مشترك. كانت تقرأ سابقًا من جدول
+# `subscribers` (صف لكل مشترك مع آخر دخول وحالة الاشتراك)، وهذا يخالف
+# اسمها ودلالتها كـ«حالة الدخول» (login status). الآن تقرأ من نفس مصدر
+# login_events الذي تستخدمه `failed_logins` و`login_states` — تعرض كل
+# المحاولات (الناجحة + الفاشلة) بفلتر النتيجة (الكل/نجاح/فشل) + بحث +
+# نطاق تاريخ. تبقى distinct عن `login_states` الذي يقسّمها إلى 5 شرائح
+# مخصّصة، وعن `failed_logins` الذي يَقصرها على الإخفاقات فقط.
 
 def rep_login_status():
-    f = _args()
-    status = (request.args.get("status") or "").strip()
-    where = ["tenant_id = ?"]
-    params: list = [_tid()]
-    if f["q"]:
-        where.append("username LIKE ?"); params.append(f"%{f['q']}%")
-    if status in ("enabled", "disabled", "expired"):
-        where.append("status = ?"); params.append(status)
-    where_sql = " AND ".join(where)
-    rows = [dict(r) for r in db().execute(f"""
-        SELECT username, last_login_at, last_seen_at, status, expire_at, online_count
-        FROM subscribers WHERE {where_sql}
-        ORDER BY last_seen_at DESC NULLS LAST LIMIT 500
-    """, params).fetchall()]
-    return render_template("radius/rep_login_status.html", items=rows, filters=f, status=status)
+    from ..services.login_events import (
+        fetch_login_events, ACTOR_LABELS, SOURCE_LABELS,
+    )
+    filters = {
+        "result":    (request.args.get("result") or "").strip(),
+        "source":    (request.args.get("source") or "").strip(),
+        "q":         (request.args.get("q") or "").strip(),
+        "date_from": (request.args.get("date_from") or "").strip(),
+        "date_to":   (request.args.get("date_to") or "").strip(),
+    }
+    data = fetch_login_events(_tid(), **filters)
+    return render_template(
+        "radius/rep_login_status.html",
+        rows=data["rows"], stats=data["stats"],
+        shown=data["shown"], matched=data["matched"],
+        filters=filters,
+        actor_labels=ACTOR_LABELS, source_labels=SOURCE_LABELS,
+    )
 
 
 # ─────────────── 3b. Login states (unified: panel + portal + RADIUS) ───────────────
