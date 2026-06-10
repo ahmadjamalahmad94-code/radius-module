@@ -421,3 +421,143 @@ def test_redesign_added_services_uses_new_grp_classes(app, client):
     assert '<header class="rh-grp-head">' in html
     assert "rh-grp-ico" in html
     assert '<div class="rh-grp-body">' in html
+
+
+# ──────────────────────────────────────────────────────────────
+# يونيو 2026 — round 2 على fix/my-services-redesign:
+#   (4) تَناسُق حالة البطاقة الواحدة. لا يَجوز لبطاقة أن تَعرض
+#       «مفعّلة» + «مدفوعة» + «طلب التفعيل» في آنٍ معًا.
+#   (5) ارتفاع موحَّد لبطاقات «الخدمات المُضافة»: grid-auto-rows:1fr
+#       + min-height + height:100% على .rh-grp.
+# ──────────────────────────────────────────────────────────────
+
+
+def test_redesign_paid_card_is_not_button_modal_trigger(app, client):
+    """قاعدة الـcoherence: بطاقة «تغيير IP الخروج» (المدفوعة) لا تَعمل
+    كزرّ يَفتح المودال. التَّفاعل محصور في pill «طلب التفعيل»."""
+    _seed_router(app, nas_id=51, name="paid-rtr", address="203.0.113.51")
+    _login(client)
+    res = client.get("/admin/radius/mt/51/dashboard")
+    assert res.status_code == 200
+    html = res.get_data(as_text=True)
+
+    # حدّد البطاقة المدفوعة كاملةً.
+    idx = html.find('data-rh-svc-card="public-ip"')
+    assert idx >= 0
+    # نَبحث للوراء عن وسم الفتح، وللأمام عن الإغلاق الموافق.
+    open_lt = html.rfind("<", 0, idx)
+    # البطاقة الآن div (لا button) — لا تَفتح المودال على نَقرة عامّة.
+    assert html[open_lt:idx].startswith("<div"), \
+        "paid card should be a <div>, not <button>/<a>"
+
+    # البطاقة نفسها لا تَحمل data-svc-spec-modal-open.
+    close_div = html.find("</div>", idx)
+    card_html = html[idx:close_div]
+    # تَحمل pill activate داخلها (الزرّ الوحيد المسؤول عن المودال).
+    assert 'data-svc-action="activate"' in card_html
+    assert 'class="ssm-upgrade-pill ssm-pill--activate"' in card_html
+    # البطاقة الأمّ بنفسها لا تَحمل data-svc-spec-modal-open على
+    # العنصر الجذري — تَحمله الـpill داخلها. نتأكّد بأنّ النَّسق المُسبَق
+    # `<div class="np-svc-card np-svc-card--paid is-unknown"
+    #        data-rh-svc-card="public-ip"` لا يَتضمَّن السمة.
+    card_open_to_first_gt = html[open_lt:html.find(">", idx)+1]
+    assert "data-svc-spec-modal-open" not in card_open_to_first_gt, \
+        "the paid card root should NOT itself open the modal"
+
+
+def test_redesign_dual_pills_on_port_script_cards(app, client):
+    """قاعدة الـcoherence: bt_wifi_block وloop_detect تَملك pill-ين:
+    «تفعيل» و«ترقية». الـCSS يُظهر الصحيح بحسب حالة البطاقة."""
+    _seed_router(app, nas_id=52, name="ps-rtr", address="203.0.113.52")
+    _login(client)
+    res = client.get("/admin/radius/mt/52/dashboard")
+    assert res.status_code == 200
+    html = res.get_data(as_text=True)
+
+    for slug in ("bt_wifi_block", "loop_detect"):
+        idx = html.find(f'data-rh-svc-card="{slug}"')
+        assert idx >= 0, f"missing {slug} card"
+        # حَدّ الـ</a> الأقرب — هو نهاية البطاقة.
+        end = html.find("</a>", idx)
+        card_html = html[idx:end]
+        # كلا الـpills موجودان داخل البطاقة.
+        assert 'ssm-pill--activate' in card_html, \
+            f"{slug}: activate pill missing"
+        assert 'ssm-pill--upgrade' in card_html, \
+            f"{slug}: upgrade pill missing"
+        # كلاهما يَستهدف نفس النوع.
+        assert f'data-svc-type="{slug}"' in card_html
+        # data-svc-action مَوجودة لكلا الإجراءَين.
+        assert 'data-svc-action="activate"' in card_html
+        assert 'data-svc-action="upgrade"' in card_html
+
+
+def test_redesign_css_gates_pills_by_state(app, client):
+    """الـCSS يُخفي pill «تفعيل» على البطاقة المفعّلة، وpill «ترقية»
+    على غير المفعّلة. هذا هو ما يَضمن عَدم التَّناقُض البصري."""
+    _seed_router(app, nas_id=53, name="css-rtr", address="203.0.113.53")
+    _login(client)
+    res = client.get("/admin/radius/mt/53/dashboard")
+    html = res.get_data(as_text=True)
+
+    # الإخفاء الافتراضي للـpill-ين، ثم القاعدتان الإستثنائيّتان حسب الحالة.
+    assert ".ssm-pill--activate,\n.rh-inventory .ssm-pill--upgrade{display:none}" in html \
+        or ".ssm-pill--activate" in html and "display:none" in html
+    # «تفعيل» على .is-inactive وعلى .is-unknown.
+    assert ".np-svc-card.is-inactive .ssm-pill--activate" in html
+    assert ".np-svc-card.is-unknown  .ssm-pill--activate" in html or \
+           ".np-svc-card.is-unknown .ssm-pill--activate" in html
+    # «ترقية» على .is-active فقط.
+    assert ".np-svc-card.is-active .ssm-pill--upgrade" in html
+
+
+def test_redesign_initial_card_state_classes(app, client):
+    """البطاقات تَحمل صنف حالة مبدئيّ في server-render:
+       hotspot/broadband/block-sites/open-sites → is-inactive
+       bt_wifi_block/loop_detect/public-ip      → is-unknown
+    حتى يَعمل الـCSS فور تحميل الصفحة قبل وصول الـprobe."""
+    _seed_router(app, nas_id=54, name="state-rtr", address="203.0.113.54")
+    _login(client)
+    res = client.get("/admin/radius/mt/54/dashboard")
+    html = res.get_data(as_text=True)
+    # الخدمات المفتوحة + سياسات المواقع تَنطلق inactive.
+    for slug in ("hotspot", "broadband", "block-sites", "open-sites"):
+        idx = html.find(f'data-rh-svc-card="{slug}"')
+        assert idx >= 0
+        open_lt = html.rfind("<", 0, idx)
+        opener = html[open_lt:idx]
+        assert 'is-inactive' in opener, f"{slug} missing initial is-inactive"
+    # خدمات سكربت المنافذ + الـpublic-ip تَنطلق unknown.
+    for slug in ("bt_wifi_block", "loop_detect", "public-ip"):
+        idx = html.find(f'data-rh-svc-card="{slug}"')
+        assert idx >= 0
+        open_lt = html.rfind("<", 0, idx)
+        opener = html[open_lt:idx]
+        assert 'is-unknown' in opener, f"{slug} missing initial is-unknown"
+
+
+def test_redesign_setDot_propagates_to_card_class(app, client):
+    """الـJS setDot يَضيف صنف الحالة على البطاقة الأمّ (لا الـdot فقط).
+    هذا هو الجسر بين الـprobe والـCSS الذي يُغلِّق الـpills."""
+    _seed_router(app, nas_id=55, name="js-rtr", address="203.0.113.55")
+    _login(client)
+    res = client.get("/admin/radius/mt/55/dashboard")
+    html = res.get_data(as_text=True)
+    # السطر الذي يَنعَكس فيه الحال على البطاقة الأمّ.
+    assert 'card.classList.remove("is-active", "is-inactive", "is-unknown")' in html
+    assert 'card.classList.add(state)' in html
+
+
+def test_redesign_grp_card_uniform_heights(app, client):
+    """ارتفاع موحَّد لبطاقات «الخدمات المُضافة»: grid-auto-rows:1fr +
+    height:100% + min-height على .rh-grp."""
+    _seed_router(app, nas_id=56, name="grp-rtr", address="203.0.113.56")
+    _login(client)
+    res = client.get("/admin/radius/mt/56/dashboard")
+    html = res.get_data(as_text=True)
+    # الشبكة تَستخدم grid-auto-rows:1fr لكي تَتطابق صفوف البطاقات.
+    assert "grid-auto-rows:1fr" in html
+    # .rh-grp بـmin-height محدَّد + height:100% فيَملأ خليّته.
+    assert "min-height:200px" in html
+    # .rh-grp-body بـflex:1 1 auto + align-content:start.
+    assert "align-content:start" in html

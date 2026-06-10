@@ -2429,7 +2429,7 @@ body.mt-modal-open{overflow:hidden}
            وخطّاف الحالة hotspot لم تتغيّر — لا نُغيّر النصّ
            «بوابة الدخول» في باقي الصفحات (~20 موضعاً غير ذي
            صلة: قوالب الزبون، الفواتير، الوثائق…). #}
-        <a class="np-svc-card"
+        <a class="np-svc-card is-inactive"
            data-rh-svc-card="hotspot"
            href="{{ url_for('radius.setup_wizard_v3_router_service_flow',
                             router_id=nas.id, service_key='hotspot') }}">
@@ -2442,7 +2442,7 @@ body.mt-modal-open{overflow:hidden}
           <span class="np-svc-status-dot is-inactive" data-rh-svc-status title="{{ _('غير مفعّلة') }}"></span>
         </a>
         {# البرودباند — خدمة، نقطة الحالة من جرد broadband. #}
-        <a class="np-svc-card"
+        <a class="np-svc-card is-inactive"
            data-rh-svc-card="broadband"
            href="{{ url_for('radius.setup_wizard_v3_router_service_flow',
                             router_id=nas.id, service_key='broadband') }}">
@@ -2464,7 +2464,7 @@ body.mt-modal-open{overflow:hidden}
            الـrouting المُجزّأ الموجود فعلًا للراوتر — نَستخدمه مباشرةً
            كرابط الخدمة كما طلب المالك بعد إزالة غلاف NPC. الاسم
            العرضي «حظر المواقع» (طلب المالك). #}
-        <a class="np-svc-card"
+        <a class="np-svc-card is-inactive"
            data-mt-router-link="npc-web-block"
            data-rh-svc-card="block-sites"
            href="{{ url_for('radius.npc_web_block_list_scoped', nas_id=nas.id) }}">
@@ -2474,7 +2474,7 @@ body.mt-modal-open{overflow:hidden}
         </a>
         {# «المواقع المسموحة» — بطاقة مباشرة. نفس فكرة «حظر المواقع»:
            رابط مباشر إلى npc_walled_garden_list_scoped بلا غلاف NPC. #}
-        <a class="np-svc-card"
+        <a class="np-svc-card is-inactive"
            data-mt-router-link="npc-walled-garden"
            data-rh-svc-card="open-sites"
            href="{{ url_for('radius.npc_walled_garden_list_scoped', nas_id=nas.id) }}">
@@ -2493,7 +2493,11 @@ body.mt-modal-open{overflow:hidden}
            الراوتر متّصل فعلًا. حين يفشل الفحص (نفق إدارة معطّل) تبقى
            النقطة رماديّة — منعًا من إيهام المشغّل بحالة «فعّال» مزيّفة. #}
         {% set _btw = (pss_services or {}).get('bt_wifi_block', {}) %}
-        <a class="np-svc-card"
+        {# الحالة المبدئيّة على البطاقة (is-unknown) قبل وصول جرد
+           /inventory + setDot. CSS أدناه يُخفي «طلب التفعيل» على
+           البطاقة المفعّلة و«ترقية» على غير المفعّلة فلا يَجتمعان
+           على بطاقة واحدة. #}
+        <a class="np-svc-card is-unknown"
            data-mt-router-link="bt-wifi-block"
            data-rh-svc-card="bt_wifi_block"
            data-pss-saved-enabled="{{ '1' if _btw.get('enabled') else '0' }}"
@@ -2504,21 +2508,27 @@ body.mt-modal-open{overflow:hidden}
             منع البث (بلوتوث/واي فاي)
             {% if _btw.get('placeholder') %}<span class="rh-svc-await">{{ _('بانتظار السكربت') }}</span>{% endif %}
           </h5>
-          {# نافذة المواصفات الموحّدة (port_script) — للترقية إن كانت
-             مفعّلة، وللتفعيل خلاف ذلك. الـports المحفوظة تُمَرَّر كقيمة
-             مبدئيّة فيرى المشغّل ما يُعدّل (لا «جدول من الصفر»). #}
-          <span class="ssm-upgrade-pill" data-svc-spec-modal-open
-                data-svc-type="bt_wifi_block"
-                data-svc-action="{{ 'upgrade' if _btw.get('enabled') else 'activate' }}"
-                data-svc-scope="nas:{{ nas.id }}"
-                data-svc-defaults='{"ports": "{{ (_btw.get("ports") or []) | join(",") }}"}'
-                title="{{ _('طلب تفعيل/ترقية الخدمة بمواصفاتها') }}">
-            <i class="fa-solid fa-arrow-up-right-dots"></i>
-            {{ _('ترقية') if _btw.get('enabled') else _('طلب') }}
-          </span>
           <span class="np-svc-status-dot is-unknown"
                 data-rh-svc-status
                 title="{{ _('في انتظار تأكيد الحالة من الراوتر') }}"></span>
+          {# pill «التفعيل» — يَظهر على البطاقة غير المفعّلة فقط. #}
+          <span class="ssm-upgrade-pill ssm-pill--activate"
+                data-svc-spec-modal-open
+                data-svc-type="bt_wifi_block" data-svc-action="activate"
+                data-svc-scope="nas:{{ nas.id }}"
+                data-svc-defaults='{"ports": "{{ (_btw.get("ports") or []) | join(",") }}"}'
+                title="{{ _('طلب تفعيل الخدمة بمواصفاتها') }}">
+            <i class="fa-solid fa-bolt"></i> {{ _('تفعيل') }}
+          </span>
+          {# pill «الترقية» — يَظهر على البطاقة المفعّلة فقط. #}
+          <span class="ssm-upgrade-pill ssm-pill--upgrade"
+                data-svc-spec-modal-open
+                data-svc-type="bt_wifi_block" data-svc-action="upgrade"
+                data-svc-scope="nas:{{ nas.id }}"
+                data-svc-defaults='{"ports": "{{ (_btw.get("ports") or []) | join(",") }}"}'
+                title="{{ _('طلب ترقية مواصفات الخدمة') }}">
+            <i class="fa-solid fa-arrow-up-right-dots"></i> {{ _('ترقية') }}
+          </span>
         </a>
         {# النسخ الاحتياطية (أداة). #}
         <a class="np-svc-card np-svc-card--tool"
@@ -2540,7 +2550,8 @@ body.mt-modal-open{overflow:hidden}
            «—» — لا «فعّال» مزيّف للمشغّل. #}
         {% set _loop_known = loop_active or
             ((pss_services or {}).get('loop_detect', {}) or {}).get('enabled') %}
-        <a class="np-svc-card" data-rh-loop-tile
+        {# نفس مبدأ بطاقة bt_wifi_block: pill واحد فقط ظاهرة في كل حالة. #}
+        <a class="np-svc-card is-unknown" data-rh-loop-tile
            data-rh-svc-card="loop_detect"
            data-pss-saved-enabled="{{ '1' if _loop_known else '0' }}"
            href="{{ url_for('radius.mt_port_services_form', nas_id=nas.id, slug='loop_detect') }}"
@@ -2551,31 +2562,36 @@ body.mt-modal-open{overflow:hidden}
             <span class="rh-svc-loop is-unknown" data-rh-loop-badge
                   data-saved-label="{{ 'مفعّل' if _loop_known else 'غير مفعّل' }}">—</span>
           </h5>
-          <span class="ssm-upgrade-pill" data-svc-spec-modal-open
-                data-svc-type="loop_detect"
-                data-svc-action="{{ 'upgrade' if _loop_known else 'activate' }}"
-                data-svc-scope="nas:{{ nas.id }}"
-                title="{{ _('طلب تفعيل/ترقية الخدمة بمواصفاتها') }}">
-            <i class="fa-solid fa-arrow-up-right-dots"></i>
-            {{ _('ترقية') if _loop_known else _('طلب') }}
-          </span>
           <span class="np-svc-status-dot is-unknown"
                 data-rh-svc-status
                 title="{{ _('في انتظار تأكيد الحالة من الراوتر') }}"></span>
+          <span class="ssm-upgrade-pill ssm-pill--activate"
+                data-svc-spec-modal-open
+                data-svc-type="loop_detect" data-svc-action="activate"
+                data-svc-scope="nas:{{ nas.id }}"
+                title="{{ _('طلب تفعيل الخدمة بمواصفاتها') }}">
+            <i class="fa-solid fa-bolt"></i> {{ _('تفعيل') }}
+          </span>
+          <span class="ssm-upgrade-pill ssm-pill--upgrade"
+                data-svc-spec-modal-open
+                data-svc-type="loop_detect" data-svc-action="upgrade"
+                data-svc-scope="nas:{{ nas.id }}"
+                title="{{ _('طلب ترقية مواصفات الخدمة') }}">
+            <i class="fa-solid fa-arrow-up-right-dots"></i> {{ _('ترقية') }}
+          </span>
         </a>
         {# تغيير IP الخروج (خدمة مدفوعة) — بطاقة مستقلّة بمستواها الأعلى
-           لا تختفي. تفتح «نافذة المواصفات الموحّدة» (service_spec_modal):
-           يُجلَب مخطّط النوع quota (الكمّيّة + الصلاحية + الملاحظات)
-           ديناميكيًّا فيُرسَل POST /admin/radius/service-requests
-           مع spec محقّق، ويُسجَّل حدث audit للمراجعة (نظام موحّد
-           لجميع الخدمات — راجع service_specs.py). #}
-        <button type="button" class="np-svc-card np-svc-card--paid"
-                data-rh-svc-card="public-ip"
-                data-svc-spec-modal-open
-                data-svc-type="public-ip"
-                data-svc-action="activate"
-                data-svc-scope="nas:{{ nas.id }}"
-                title="{{ _('خدمة مدفوعة — اضغط لطلب التفعيل') }}">
+           لا تختفي. التَّفاعل صار محصورًا في pill الفعل (لا البطاقة
+           كلّها)، فالبطاقة <div> غير مَمسكة بـmodal trigger؛ كان
+           جعلها <button>+data-svc-spec-modal-open يَفتح النافذة حتى
+           وهي «مفعّلة» — حالة تَناقُض. الآن:
+             • شارة «مدفوعة» = تَصنيف النوع فقط (دائمة الظهور).
+             • status-dot = حالة الراوتر الحيّة («مفعّلة»/«غير مفعّلة»).
+             • pill «طلب التفعيل» = فعل واحد، يَختفي حين تَصبح
+               البطاقة .is-active. #}
+        <div class="np-svc-card np-svc-card--paid is-unknown"
+             data-rh-svc-card="public-ip"
+             title="{{ _('خدمة مدفوعة — مركزيّة عند المالك') }}">
           <span class="np-svc-icon np-svc-icon--amber"><i class="fa-solid fa-globe"></i></span>
           <h5 class="np-svc-title">
             {{ _('تغيير IP الخروج') }}
@@ -2583,8 +2599,15 @@ body.mt-modal-open{overflow:hidden}
           </h5>
           <span class="np-svc-status-dot is-unknown"
                 data-rh-svc-status
-                title="{{ _('خدمة مدفوعة — اضغط لطلب التفعيل') }}"></span>
-        </button>
+                title="{{ _('في انتظار تأكيد الحالة من الراوتر') }}"></span>
+          <span class="ssm-upgrade-pill ssm-pill--activate"
+                data-svc-spec-modal-open
+                data-svc-type="public-ip" data-svc-action="activate"
+                data-svc-scope="nas:{{ nas.id }}"
+                title="{{ _('طلب تفعيل الخدمة بمواصفاتها') }}">
+            <i class="fa-solid fa-bolt"></i> {{ _('طلب التفعيل') }}
+          </span>
+        </div>
         {# «تشخيص الراوترات» — أداة على مستوى المستأجر (لا nas_id).
            اسم أوضح بدل «الفلِيت» (مصطلح أعجمي مُعرَّب). الصفحة
            فعلًا تفحص اتصال + تسجيل API + هويّة كل راوترات المستأجر
@@ -3146,35 +3169,46 @@ body.mt-modal-open{overflow:hidden}
 .rh-added-empty i{color:#CBD5E1;font-size:16px}
 /* قائمة المجموعات: عمود واحد عمودي على الجوال، عمودَين على الشاشات
    الواسعة — تَحتفظ كل خدمة بحاويتها الخاصّة (.rh-grp). الفجوة الواسعة
-   تَمنح كل خدمة سطحًا بصريًّا مستقلًاّ بدل تدفّق مُسطَّح. */
+   تَمنح كل خدمة سطحًا بصريًّا مستقلًاّ بدل تدفّق مُسطَّح.
+
+   تصحيح المالك (يونيو 2026): كل بطاقة كانت تَتشكَّل بحسب محتواها فيظهر
+   التَّخطيط راجلاً (مجموعة بسطر = صغيرة، مجموعة بـ4 بنود = ضِعفها).
+   grid-auto-rows:1fr يَجعل كل صفّ في الشبكة بنفس الارتفاع، وكلّ بطاقة
+   داخله بـheight:100% — فالبطاقات في نفس الصفّ متطابقة دائمًا، ومع
+   min-height موحَّد على البطاقة نفسها تَبقى متناسبة بصريًا عبر الصفوف. */
 .rh-added-list{
   display:grid;
   grid-template-columns:repeat(2, minmax(0, 1fr));
+  grid-auto-rows:1fr;
   gap:14px;
 }
 @media (max-width: 840px){
   .rh-added-list{grid-template-columns: 1fr}
 }
 
-/* ── حاوية الخدمة (.rh-grp) — تصميم بطاقي بترويسة وجسم ──────
-   إعادة تصميم المالك (يونيو 2026): كانت ترويسة المجموعة مجرّد سطر
-   نصّي يَنام على شبكة flat فيَضيع التسلسل الهرمي حين تُدرَج مجموعات
-   متعدّدة (تغيير الجذور / الهوت سبوت / حظر المواقع / منع البث /
-   تتبّع اللوب). صار لكل خدمة بطاقتُها الخاصّة بحدّ هادئ، خلفية
-   أفتح قليلاً، ترويسة بأيقونة ملوّنة وعنوان وعدّاد، وجسم بشبكة
-   منظَّمة من الواجهات. تَتميَّز الواجهات تنفّسًا واضحًا بدل الازدحام. */
+/* ── حاوية الخدمة (.rh-grp) — تصميم بطاقي موحَّد ─────────────
+   كل بطاقة بنفس: الحدود، نصف القطر، الحشو الداخلي، ترتيب الترويسة،
+   حشو الجسم. min-height مَوحَّد + flex-direction:column + body:flex:1
+   يَضمن أنّ كل البطاقات تَتمدّد لنفس الارتفاع في صفّها — لا واحدة
+   نَحيلة وأخرى ممتلئة. */
 .rh-grp{
   background:#FBFDFF;
   border:1px solid #E2E8F0;
   border-radius:14px;
   padding:14px;
   display:flex;flex-direction:column;gap:12px;
+  /* min-height يَضمن حدًّا أدنى لصفّ يَخصّ بطاقة وحيدة في صفّها — فلا
+     تَنكمش لارتفاع 60px وحدها بينما جيرانها 220px. */
+  min-height:200px;
+  height:100%;
 }
 .rh-grp[hidden]{display:none}
 .rh-grp-head{
   display:flex;align-items:center;gap:10px;
   padding-bottom:11px;
   border-bottom:1px dashed #E2E8F0;
+  /* الترويسة لا تَنمو — كل ارتفاع زائد يَذهب للجسم. */
+  flex:0 0 auto;
 }
 .rh-grp-ico{
   width:30px;height:30px;border-radius:9px;color:#fff;flex:0 0 auto;
@@ -3197,7 +3231,12 @@ body.mt-modal-open{overflow:hidden}
 .rh-grp-body{
   display:grid;
   grid-template-columns:repeat(auto-fill, minmax(168px, 1fr));
+  /* align-content:start يَمنع الصفوف من التمدّد عاموديًّا لملء الفراغ —
+     يبقَين بحجمهنّ الطبيعيّ ويَتجمَّعن في أعلى الجسم، فيَظهر أيّ فراغ
+     زائد كمسافة تنفّس متّسقة في أسفل البطاقة. */
+  align-content:start;
   gap:8px;
+  flex:1 1 auto;
 }
 
 /* صفّ الواجهة داخل بطاقة المجموعة — اسم الواجهة (ether2…) + شارات
@@ -3286,19 +3325,22 @@ body.mt-modal-open{overflow:hidden}
 .rh-inventory [data-pss-paid] .np-svc-title{
   display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap;
 }
-/* شارة «ترقية/طلب» داخل بطاقة الخدمة — تفتح نافذة المواصفات
+/* شارة «ترقية/تفعيل/طلب» داخل بطاقة الخدمة — تفتح نافذة المواصفات
    الموحّدة (service_spec_modal). تُوضَع في الصفّ السفلي بعد كسر
    السطر (flex-basis: 100%) فتظهر كفعل واضح أسفل العنوان وحالته،
-   لا كعنصر ثالث مزدحم على الصفّ العلوي مع الحالة. */
+   لا كعنصر ثالث مزدحم على الصفّ العلوي مع شارة الحالة. */
 .rh-inventory .ssm-upgrade-pill{
   flex:0 0 100%;
   order:4;
   margin:0;
   font-size:10.5px;font-weight:900;
-  color:#5B21B6;background:#F5F3FF;border:1px solid #DDD6FE;
   border-radius:8px;padding:6px 10px;cursor:pointer;
   display:inline-flex;align-items:center;justify-content:center;gap:6px;
   transition:background .12s,border-color .12s,color .12s,box-shadow .12s;
+}
+/* اللون الافتراضي للـpill — تَستخدمه «الترقية» أيضًا. */
+.rh-inventory .ssm-upgrade-pill{
+  color:#5B21B6;background:#F5F3FF;border:1px solid #DDD6FE;
 }
 .rh-inventory .ssm-upgrade-pill:hover{
   background:#7C3AED;border-color:#7C3AED;color:#fff;
@@ -3308,6 +3350,37 @@ body.mt-modal-open{overflow:hidden}
    عرضيًّا حين المؤشّر فوق الزرّ. */
 .rh-inventory .np-svc-card:has(.ssm-upgrade-pill:hover){
   border-color:#DDD6FE;
+}
+
+/* ─── تَناسُق حالة البطاقة ─────────────────────────────────
+   قاعدة المالك (يونيو 2026): البطاقة لا تَعرض حالتَين متناقضتَين
+   في آنٍ معًا. كانت بطاقة «تغيير IP الخروج» تَعرض «مفعّلة» (خضراء)
+   + «مدفوعة» (قفل) + «طلب التفعيل» — سَلطة. الإصلاح:
+     1) لكل بطاقة تَدعم الفعل ثَنائي pills:
+          .ssm-pill--activate  → يَظهر فقط حين البطاقة .is-inactive/.is-unknown.
+          .ssm-pill--upgrade   → يَظهر فقط حين البطاقة .is-active.
+     2) شارة «مدفوعة» = تَصنيف نوع، لا حالة — تَبقى ظاهرة دائمًا.
+     3) JS setDot يَعكس حالة الـdot على البطاقة الأمّ (.np-svc-card)
+        فيَستجيب الـCSS التالي.
+     4) لون pill الـactivate أخضر (دعوة فعل ابتدائيّ)، ولون pill
+        الـupgrade بنفسجي (دعوة ترقية لخدمة قائمة). */
+.rh-inventory .ssm-pill--activate,
+.rh-inventory .ssm-pill--upgrade{display:none}
+/* «تفعيل» يَظهر على البطاقة غير المفعّلة + المجهولة. */
+.rh-inventory .np-svc-card.is-inactive .ssm-pill--activate,
+.rh-inventory .np-svc-card.is-unknown  .ssm-pill--activate{
+  display:inline-flex;
+  /* لون الفعل الأوّليّ: عشبيّ، يَدلّ على «ابدأ هذه الخدمة». */
+  color:#15803D;background:#F0FDF4;border-color:#A7F3D0;
+}
+.rh-inventory .np-svc-card.is-inactive .ssm-pill--activate:hover,
+.rh-inventory .np-svc-card.is-unknown  .ssm-pill--activate:hover{
+  background:#16A34A;border-color:#16A34A;color:#fff;
+  box-shadow:0 2px 6px rgba(22,163,74,.2);
+}
+/* «ترقية» يَظهر على البطاقة المفعّلة فقط. */
+.rh-inventory .np-svc-card.is-active .ssm-pill--upgrade{
+  display:inline-flex;
 }
 .rh-svc-loop{
   flex-shrink:0;font-size:10px;font-weight:800;
@@ -3655,6 +3728,15 @@ body.mt-modal-open{overflow:hidden}
     dot.title = state === "is-active" ? "مفعّلة على الراوتر"
               : state === "is-unknown" ? "تعذّر فحص الحالة"
               : "غير مفعّلة";
+    // أيضًا أَعكِس الحالة على البطاقة نفسها لكي تَستهدفها قواعد CSS
+    // المسؤولة عن تَناسُق حالة البطاقة (إخفاء «طلب التفعيل» على بطاقة
+    // مفعّلة، إظهار «ترقية» مكانها). من دون هذا الانعكاس كانت البطاقة
+    // تَعرض شارة «مفعّلة» + زرّ «طلب التفعيل» في آنٍ معًا = سَلطة.
+    const card = dot.closest(".np-svc-card");
+    if (card) {
+      card.classList.remove("is-active", "is-inactive", "is-unknown");
+      card.classList.add(state);
+    }
   }
 
   // تركيب نص تلميح «كيف تفعّلت الخدمة» من نفس عناصر الجرد التي
@@ -3960,10 +4042,12 @@ body.mt-modal-open{overflow:hidden}
       Object.keys(byKey).forEach((key) => {
         const card = byKey[key].card;
         const items = itemsByKey[key] || [];
-        // البطاقات المدفوعة (data-pss-paid) لا تُلوَّن خضراء من الجرد
-        // — حالتها مدارة عبر المالك. تبقى is-unknown دلالةً على
-        // «خدمة مدفوعة، طلب التفعيل بنقرة».
-        if (card.hasAttribute("data-pss-paid")) {
+        // البطاقات المدفوعة (.np-svc-card--paid) حالتها مُدارة مركزيًّا
+        // عند المالك — جرد /inventory المحلّي لا يَحسم تفعيلها. تَبقى
+        // is-unknown فيَظهر pill «طلب التفعيل» بِلَون أخضر كدعوة فعل،
+        // وتُخفى شارة «مفعّلة» الخضراء (= لا تَناقُض). المالك يُحدّث
+        // حالتها لاحقًا من لوحته بعد الموافقة على الطلب.
+        if (card.classList.contains("np-svc-card--paid")) {
           setDot(byKey[key].dot, "is-unknown");
           setDetails(byKey[key], null);
           return;
