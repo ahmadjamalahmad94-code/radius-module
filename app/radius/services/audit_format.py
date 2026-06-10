@@ -106,6 +106,37 @@ ACTION_LABELS: dict[str, str] = {
     "setup_wizard.run.complete": "إكمال معالج الإعداد",
     "license.apply": "تطبيق ترخيص",
     "license.revoke": "سحب ترخيص",
+    # ── البطاقات (services/cards.py تكتب هذه الأفعال نصًّا حرفيًّا) ─────
+    # نُدرجها هنا للدقة بدل تركها للمُركِّب العام؛ يَستفيد منها تقرير
+    # «رسائل واجهة الربط» مباشرةً لأنّ سرّ المفاتيح أعمال CRUD على البطاقة.
+    "card.enable": "تفعيل البطاقة",
+    "card.disable": "تعطيل البطاقة",
+    "card.disconnect": "قطع جلسة البطاقة",
+    "card.lock_mac": "تثبيت ماك على البطاقة",
+    "card.unlock_mac": "فكّ تثبيت ماك البطاقة",
+    "card.reset_usage": "تصفير استخدام البطاقة",
+    "card.soft_delete": "أرشفة البطاقة",
+    "card.delete_permanent": "حذف نهائي للبطاقة",
+    # ── النسخ الاحتياطية الإضافية ───────────────────────────
+    "backup.uploaded_import": "استيراد نسخة احتياطية مرفوعة",
+    # ── أفعال CRUD عامّة (target_type يَحمل الكيان في عمود مستقل) ──
+    # تَمنع سقوط «extend_time» إلى ذيلٍ خام في تقرير الرسائل.
+    "extend_time": "تمديد الوقت",
+    # ── حملات الإشعارات والاتصالات ────────────────────────────
+    # المُركِّب لا يَستطيع تَكوينها لأنّ «manual» و«queued» ليستا verb/noun
+    # في خرائطنا، فيَبقى ذيلٌ إنجليزي. نُدرجها بمفاتيحها الكاملة.
+    "notification.manual_queued": "رسالة يدويّة مُجدوَلة",
+    "notification.campaign_queued": "حملة رسائل مُجدوَلة",
+    "notification.send": "إرسال رسالة",
+    "notification.cancel": "إلغاء رسالة",
+    # ── التحصيل والمدفوعات ────────────────────────────────────
+    "payment_collection.settings_saved": "حفظ إعدادات التحصيل",
+    "payment_collection.request_approved": "اعتماد طلب دفع",
+    "payment_collection.request_rejected": "رفض طلب دفع",
+    # ── المهام الجماعية ──────────────────────────────────────
+    "bulk_set_speeds": "تحديث جماعي للسرعات",
+    # ── إعادة تعيين كلمة المرور ──────────────────────────────
+    "reset_password": "إعادة تعيين كلمة المرور",
 }
 
 
@@ -338,6 +369,17 @@ TARGET_TYPE_AR: dict[str, str] = {
     "backup_job": "مهمة نسخ احتياطي", "backup_file": "ملف نسخة احتياطية",
     "ledger": "قيد مالي", "session": "جلسة",
     "system": "النظام", "tenant": "مستأجر",
+    # أنواع كانت ناقصة في الخريطة العامّة ـ تَستخدمها API/services في
+    # حقل `target_type` بحيث كانت تظهر خامًا في تقرير الرسائل قبل الدمج.
+    "service": "خدمة", "tunnel": "نفق",
+    "notification_campaign": "حملة رسائل",
+    "payment_request": "طلب دفع",
+    "loan": "سلفة", "payment": "دفعة",
+    "ip_pool": "نطاق عناوين", "pool": "نطاق عناوين",
+    "voucher": "كوبون", "invoice": "فاتورة",
+    "webhook": "إشعار ربط", "token": "مفتاح واجهة", "api_token": "مفتاح واجهة",
+    "interface": "واجهة", "bandwidth_schedule": "جدول السرعات",
+    "subscriber_group": "مجموعة مشتركين", "share_group": "مجموعة مشاركة",
 }
 
 

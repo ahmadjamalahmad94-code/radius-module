@@ -26,6 +26,10 @@ def _actor() -> str:
     return session.get("admin_name") or session.get("admin_user") or "غير معروف"
 
 
+# خرائط محلّيّة أُبقيت لتوافق رجعي مع callsites أخرى داخل هذا الملف،
+# لكنّ المُعرِّب الفعلي صار يَعتمد على خدمة `services/audit_format` التي
+# تَملك خريطة دقيقة موسّعة (90+ مفتاحًا) + مُركِّب verb+noun تلقائي.
+# الفصل هنا (خرائط محلّيّة، عبور خدمي) يُبقي الـimport محصورًا داخل الدوال.
 _ACTION_LABELS = {
     "create": "إنشاء",
     "update": "تعديل",
@@ -58,29 +62,74 @@ _TARGET_LABELS = {
 
 
 def _display_action(action: str) -> str:
-    """تعريب مفتاح الفعل — يستخدم event_key_label كمصدر موحّد مع احتياطي _ACTION_LABELS."""
+    """تعريب مفتاح الفعل بترتيب فحوصات: خريطة محلية → audit_format.action_label
+    (التغطية الموسّعة mt.*/radius.*/subscriber.*/admin.*/card.* مع مُركِّب
+    verb+noun) → event_key_label (المصدر الموحّد لأحداث الإدارة). لا
+    إنجليزي يَخرج أبدًا — كل مسار يَسقط على عربيّ مفهوم."""
     action = (action or "").strip()
     if not action:
         return "غير محدد"
-    # خريطة محلية أولًا (لتغطية الحالات القديمة المختصرة)
     if action in _ACTION_LABELS:
         return _ACTION_LABELS[action]
-    # ثم المصدر الموحّد لمفاتيح الأحداث
+    try:
+        from ..services.audit_format import action_label as _act
+        out = _act(action)
+        if out and out != action:
+            return out
+    except Exception:  # noqa: BLE001
+        pass
+    # المصدر الموحّد لمفاتيح أحداث المدراء — مفيد عند الانتقال الجزئيّ
+    # نحو event_key_label (manager-events).
     return event_key_label(action)
 
 
+def _display_target_type(target_type: str) -> str:
+    """يُعرِّب نوع الهدف من الخريطة الموحّدة في audit_format. لا إنجليزي."""
+    raw = (target_type or "").strip().lower()
+    if not raw:
+        return "—"
+    try:
+        from ..services.audit_format import TARGET_TYPE_AR
+        if raw in TARGET_TYPE_AR:
+            return TARGET_TYPE_AR[raw]
+    except Exception:  # noqa: BLE001
+        pass
+    if raw in _TARGET_LABELS:
+        return _TARGET_LABELS[raw]
+    # تأنيس أخير: snake_case → عربيّ مكسور أحرفًا بدل عرض المفتاح خامًا.
+    return raw.replace("_", " ").strip() or "كيان"
+
+
 def _display_target(target_type: str, target_id: object) -> str:
-    label = _TARGET_LABELS.get((target_type or "").strip(), "كيان")
+    label = _display_target_type(target_type)
     return f"{label} #{target_id}" if target_id not in (None, "") else label
 
 
 def _display_actor(actor: str) -> str:
+    """يُعرِّب حقل الفاعل ـ يُبرز رقم مفتاح الواجهة عند توفّره.
+
+    صياغة الفاعل المكتوبة من الـAPI: «api-token:N» (انظر
+    app/api/v1/router_alerts.py). كنّا نَعرضها «مفتاح ربط» مجرّدًا فيَفقد
+    المراجع الرقم. الآن نَستخرج المعرّف ونَعرض «مفتاح ربط #N» — يَبقى الرقم
+    دلالةً يَستطيع المراجع بها مطابقة المفتاح في صفحة مفاتيح الواجهة.
+    """
     actor = (actor or "").strip()
-    if actor.startswith("api-token"):
-        return "مفتاح ربط"
+    if not actor:
+        return "غير معروف"
     if actor == "system":
         return "النظام"
-    return actor or "غير معروف"
+    if actor.startswith("api-token"):
+        # api-token:N أو api-token-N أو api-token (بلا معرّف)
+        token_id = ""
+        for sep in (":", "-"):
+            if sep in actor:
+                tail = actor.split(sep, 1)[1].strip()
+                # تجاهل العلامة الجزئية «api-token» قبل الفاصل الفعلي
+                if tail and tail.lower() != "token":
+                    token_id = tail
+                    break
+        return f"مفتاح ربط #{token_id}" if token_id else "مفتاح ربط"
+    return actor
 
 
 _SOURCE_LABELS: dict[str, str] = {
@@ -327,10 +376,16 @@ def _build_manager_event_detail(row: dict) -> str:
 
 
 def _decorate_audit_rows(rows: list[dict]) -> list[dict]:
+    """يَضيف للأعمدة الـmلصقات العربيّة (الفاعل/الفعل/نوع الهدف/ملخّص الحمولة).
+
+    target_type_label يَستخدم خريطة `audit_format.TARGET_TYPE_AR` الأوسع بدل
+    خريطة محلّيّة بـ12 إدخالاً ـ يَلتقط أنواعًا كانت تَظهر خامًا في «رسائل
+    واجهة الربط» (service / tunnel / loan / payment / pool / token …).
+    """
     for row in rows:
         row["actor_label"] = _display_actor(str(row.get("actor") or ""))
         row["action_label"] = _display_action(str(row.get("action") or ""))
-        row["target_type_label"] = _TARGET_LABELS.get(str(row.get("target_type") or ""), "كيان")
+        row["target_type_label"] = _display_target_type(str(row.get("target_type") or ""))
         row["target_display"] = _display_target(str(row.get("target_type") or ""), row.get("target_id"))
         row["detail_display"] = _build_manager_event_detail(row)
         # payload_summary مُوحَّد مع detail_display — نفس المصدر الغني يُغذّي
