@@ -108,9 +108,21 @@ def _parse_payload(raw: object) -> dict:
         return {}
 
 
-def _payload_summary(raw: object) -> str:
-    """ملخّص مختصر للـpayload (يُستخدم في صفحات التقارير الأخرى غير مدير الأحداث)."""
-    data = _parse_payload(raw)
+def _payload_summary(row_or_raw: object) -> str:
+    """ملخّص تفصيلي حقيقي لعمود «التفاصيل» — يُستخدم في جميع صفحات التقارير.
+
+    يقبل صف dict كامل (الحالة المُفضَّلة) أو raw payload فقط (للتوافق الخلفي).
+    لا يُعيد «محفوظة بالسجل» أبدًا — البديل سلسلة فارغة ('') ويعرض القالب «—».
+    يُفوِّض للدالة الغنية _build_manager_event_detail لضمان توحيد المصدر.
+    """
+    if isinstance(row_or_raw, dict):
+        # الحالة الجديدة: صف كامل يحتوي action/payload_json/before_json/after_json
+        result = _build_manager_event_detail(row_or_raw)
+        # _build_manager_event_detail تُعيد "—" كملاذ أخير — نُحوّله إلى ''
+        # حتى يعرض القالب شرطته الخاصة بدل تكرار الشرطة
+        return "" if result == "—" else result
+    # الحالة القديمة: raw payload_json فقط (للتوافق الخلفي إن استُدعيت مباشرة)
+    data = _parse_payload(row_or_raw)
     if not data:
         return ""
     keys = {
@@ -121,6 +133,8 @@ def _payload_summary(raw: object) -> str:
         "amount": "المبلغ",
         "channel": "القناة",
         "count": "العدد",
+        "name": "الاسم",
+        "filename": "الملف",
     }
     bits = []
     for key, label in keys.items():
@@ -318,8 +332,12 @@ def _decorate_audit_rows(rows: list[dict]) -> list[dict]:
         row["action_label"] = _display_action(str(row.get("action") or ""))
         row["target_type_label"] = _TARGET_LABELS.get(str(row.get("target_type") or ""), "كيان")
         row["target_display"] = _display_target(str(row.get("target_type") or ""), row.get("target_id"))
-        row["payload_summary"] = _payload_summary(row.get("payload_json"))
         row["detail_display"] = _build_manager_event_detail(row)
+        # payload_summary مُوحَّد مع detail_display — نفس المصدر الغني يُغذّي
+        # كل الصفحات الثلاث (rep_manager_events/rep_user_events/rep_profile_changes)
+        # نُحوّل "—" إلى '' حتى يعرض القالب شرطته الخاصة بلا تكرار.
+        _d = row["detail_display"]
+        row["payload_summary"] = "" if _d == "—" else _d
         # تعريب مصدر الحدث (source / actor_source)
         src = str(row.get("source") or row.get("actor_source") or "")
         row["source_label"] = _SOURCE_LABELS.get(src.lower(), src or "الواجهة")
