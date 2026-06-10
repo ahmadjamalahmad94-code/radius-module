@@ -1,11 +1,11 @@
 {# ═══════════════════════════════════════════════════════════════════════
-   أحداث المدراء — إعادة تصميم من الصفر على نظام hub_v2:
+   أحداث المدراء — إعادة تصميم على نظام hub_v2:
      • صدفة هيرو واحدة (hub-hero-shell): عنوان + سطر تعريفي + مؤشرات بصف
        واحد + حزام الفلترة — بلا أي هيروات/لافتات مكدّسة.
      • جدول uds موحّد (فرز + ترقيم + تصدير) مع تعريب كل القيم الظاهرة
-       (الفعل والكيان معرَّبان في المسار، والقيمة الخام تبقى في title).
+       (الفعل معرَّب عبر event_key_label، والقيمة الخام تبقى في title).
      • نفس معطيات المسار: `items` (صفوف audit_log لمدير بشري — مزخرفة
-       بـ actor_label/action_label/target_type_label/payload_summary)،
+       بـ actor_label/action_label/target_type_label/source_label/detail_display)،
        `total`، `filters` — صفر تغيير على المسار أو عقد الفلاتر
        (q/date_from/date_to).
    ═══════════════════════════════════════════════════════════════════════ #}
@@ -97,7 +97,7 @@
           <td title="{{ r.target_type or '' }}">{{ r.target_type_label or '—' }}</td>
           <td class="mono small"><bdi>{{ r.target_id or '—' }}</bdi></td>
           <td class="mono small"><bdi>{{ r.ip_address or '—' }}</bdi></td>
-          <td class="rep-sub" style="max-width:240px">{{ r.payload_summary or '—' }}</td>
+          <td class="rep-sub" style="max-width:240px">{{ r.detail_display or '—' }}</td>
         </tr>
         {% endfor %}
       </tbody>

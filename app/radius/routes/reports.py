@@ -11,6 +11,7 @@ from flask import Blueprint, flash, g, jsonify, redirect, render_template, reque
 from ..core.tenant import DEFAULT_TENANT_ID
 from ..db.connection import db
 from ..services.dashboard_reports import DashboardReportsService
+from ..services.event_labels import event_key_label
 
 
 def _tid() -> int:
@@ -57,10 +58,15 @@ _TARGET_LABELS = {
 
 
 def _display_action(action: str) -> str:
+    """تعريب مفتاح الفعل — يستخدم event_key_label كمصدر موحّد مع احتياطي _ACTION_LABELS."""
     action = (action or "").strip()
     if not action:
         return "غير محدد"
-    return _ACTION_LABELS.get(action, action.replace("_", " ").replace(".", " "))
+    # خريطة محلية أولًا (لتغطية الحالات القديمة المختصرة)
+    if action in _ACTION_LABELS:
+        return _ACTION_LABELS[action]
+    # ثم المصدر الموحّد لمفاتيح الأحداث
+    return event_key_label(action)
 
 
 def _display_target(target_type: str, target_id: object) -> str:
@@ -77,15 +83,36 @@ def _display_actor(actor: str) -> str:
     return actor or "غير معروف"
 
 
-def _payload_summary(raw: object) -> str:
+_SOURCE_LABELS: dict[str, str] = {
+    "ui":        "الواجهة",
+    "web":       "الواجهة",
+    "api":       "واجهة برمجية",
+    "system":    "النظام",
+    "scheduler": "المجدوِل",
+    "cron":      "المجدوِل",
+    "unknown":   "غير معروف",
+    "cli":       "سطر الأوامر",
+    "portal":    "البوابة",
+    "admin":     "لوحة الإدارة",
+}
+
+
+def _parse_payload(raw: object) -> dict:
+    """يُحوِّل payload_json إلى dict — يُعيد {} عند الفشل."""
     if not raw:
-        return ""
+        return {}
     try:
         data = json.loads(str(raw))
+        return data if isinstance(data, dict) else {}
     except (TypeError, ValueError):
-        return "تفاصيل محفوظة في السجل"
-    if not isinstance(data, dict) or not data:
-        return "تفاصيل محفوظة في السجل"
+        return {}
+
+
+def _payload_summary(raw: object) -> str:
+    """ملخّص مختصر للـpayload (يُستخدم في صفحات التقارير الأخرى غير مدير الأحداث)."""
+    data = _parse_payload(raw)
+    if not data:
+        return ""
     keys = {
         "username": "المستخدم",
         "plan": "الباقة",
@@ -102,7 +129,187 @@ def _payload_summary(raw: object) -> str:
             bits.append(f"{label}: {value}")
         if len(bits) >= 3:
             break
-    return "، ".join(bits) if bits else "تفاصيل محفوظة في السجل"
+    return "، ".join(bits)
+
+
+def _build_manager_event_detail(row: dict) -> str:
+    """يبني سطر تفاصيل عربيًّا حقيقيًّا لصفحة أحداث المدراء.
+
+    يفحص payload_json + before_json/after_json ويُعيد نصًّا مقروءًا.
+    لا يُعيد «محفوظة بالسجل» أبدًا — البديل «—».
+    """
+    action = (row.get("action") or "").strip()
+    target_id = row.get("target_id") or ""
+    ip = row.get("ip_address") or ""
+
+    # جمع كل الـpayload المتاحة
+    payload = _parse_payload(row.get("payload_json"))
+    before  = _parse_payload(row.get("before_json"))
+    after   = _parse_payload(row.get("after_json"))
+
+    # دمج: payload أولًا، ثم after لاستخراج الحقول
+    merged = {**before, **payload, **after}
+
+    def _v(*keys):
+        """أول قيمة غير فارغة من merged."""
+        for k in keys:
+            v = merged.get(k)
+            if v not in (None, "", [], {}):
+                return str(v)
+        return ""
+
+    bits: list[str] = []
+
+    # ── تسجيل الدخول/الخروج ──
+    if action in ("auth_login", "login.success", "login.save", "auth_login.save"):
+        if ip:
+            return f"دخل من IP: {ip}"
+        return "تسجيل دخول ناجح"
+
+    if action in ("auth_login_failed", "login.failed"):
+        username = _v("username", "user")
+        if username:
+            bits.append(f"المستخدم: {username}")
+        if ip:
+            bits.append(f"IP: {ip}")
+        return "، ".join(bits) if bits else "محاولة دخول فاشلة"
+
+    if action in ("auth_logout", "logout"):
+        return f"تسجيل خروج من IP: {ip}" if ip else "تسجيل خروج"
+
+    # ── النسخ الاحتياطية ──
+    if "backup" in action:
+        filename = _v("filename", "file", "name", "backup_file", "path")
+        if filename:
+            return f"نسخة: {filename}"
+        count = _v("count", "total")
+        if count:
+            return f"نسخ: {count}"
+        if target_id:
+            return f"ملف: {target_id}"
+        return "نسخة احتياطية جديدة"
+
+    # ── قوالب طباعة البطاقات ──
+    if "card_print_template" in action or "print_template" in action:
+        name = _v("name", "label", "template_name")
+        if name:
+            return f"قالب: {name}"
+        if target_id:
+            return f"قالب #{target_id}"
+        return ""
+
+    # ── جدولة عرض النطاق ──
+    if "bandwidth_schedule" in action:
+        name = _v("name", "label")
+        start = _v("start_time", "start", "from")
+        end = _v("end_time", "end", "to")
+        if name:
+            bits.append(name)
+        if start and end:
+            bits.append(f"من {start} إلى {end}")
+        elif start:
+            bits.append(f"من {start}")
+        if bits:
+            return "، ".join(bits)
+        if target_id:
+            return f"جدولة #{target_id}"
+        return ""
+
+    # ── خدمات المنافذ (mt.port_services.*) ──
+    if "port_services" in action or "port_script" in action:
+        device = _v("device", "nas", "router", "router_name", "nas_name")
+        ports = _v("ports", "selected_ports")
+        if device:
+            bits.append(f"جهاز: {device}")
+        if ports:
+            bits.append(f"منافذ: {ports}")
+        if bits:
+            return "، ".join(bits)
+        if target_id:
+            return f"جهاز #{target_id}"
+        return ""
+
+    # ── المشتركون ──
+    if action.startswith("subscriber.") or (row.get("target_type") or "") in ("user", "subscriber"):
+        username = _v("username", "user", "subscriber")
+        plan = _v("plan", "plan_name", "new_plan")
+        if username:
+            bits.append(f"مشترك: {username}")
+        if plan:
+            bits.append(f"باقة: {plan}")
+        if bits:
+            return "، ".join(bits)
+        if target_id:
+            return f"مشترك #{target_id}"
+        return ""
+
+    # ── دُفعات البطاقات ──
+    if "card_batch" in action or "batch" in action:
+        name = _v("name", "batch_name", "label")
+        count = _v("count", "quantity")
+        if name:
+            bits.append(name)
+        if count:
+            bits.append(f"عدد: {count}")
+        if bits:
+            return "، ".join(bits)
+        if target_id:
+            return f"دفعة #{target_id}"
+        return ""
+
+    # ── البطاقات الفردية ──
+    if action.startswith("card."):
+        username = _v("username", "card", "card_id")
+        if username:
+            return f"بطاقة: {username}"
+        if target_id:
+            return f"بطاقة #{target_id}"
+        return ""
+
+    # ── الإعدادات ──
+    if "settings" in action:
+        keys_changed = _v("keys", "fields", "changed_keys")
+        if keys_changed:
+            return f"مفاتيح: {keys_changed}"
+        if target_id:
+            return f"إعداد #{target_id}"
+        return ""
+
+    # ── الصلاحيات والأدوار ──
+    if "role" in action or "permissions" in action:
+        role = _v("role", "role_name", "name")
+        if role:
+            return f"دور: {role}"
+        if target_id:
+            return f"دور #{target_id}"
+        return ""
+
+    # ── المدراء ──
+    if action in ("create", "update", "delete", "enable", "disable") and \
+            (row.get("target_type") or "") in ("admin", "manager"):
+        username = _v("username", "name")
+        if username:
+            return f"مدير: {username}"
+        if target_id:
+            return f"مدير #{target_id}"
+        return ""
+
+    # ── عام: اسم + هدف ──
+    # حاول استخراج اسم أو وصف من أي حقل شائع
+    name = _v("name", "label", "username", "filename", "title")
+    if name:
+        bits.append(name)
+    status = _v("status", "result")
+    if status:
+        bits.append(f"الحالة: {status}")
+    if bits:
+        return "، ".join(bits)
+
+    # target_id كملاذ أخير
+    if target_id:
+        return f"#{target_id}"
+
+    return "—"
 
 
 def _decorate_audit_rows(rows: list[dict]) -> list[dict]:
@@ -112,6 +319,10 @@ def _decorate_audit_rows(rows: list[dict]) -> list[dict]:
         row["target_type_label"] = _TARGET_LABELS.get(str(row.get("target_type") or ""), "كيان")
         row["target_display"] = _display_target(str(row.get("target_type") or ""), row.get("target_id"))
         row["payload_summary"] = _payload_summary(row.get("payload_json"))
+        row["detail_display"] = _build_manager_event_detail(row)
+        # تعريب مصدر الحدث (source / actor_source)
+        src = str(row.get("source") or row.get("actor_source") or "")
+        row["source_label"] = _SOURCE_LABELS.get(src.lower(), src or "الواجهة")
     return rows
 
 
