@@ -2429,37 +2429,26 @@ body.mt-modal-open{overflow:hidden}
            وخطّاف الحالة hotspot لم تتغيّر — لا نُغيّر النصّ
            «بوابة الدخول» في باقي الصفحات (~20 موضعاً غير ذي
            صلة: قوالب الزبون، الفواتير، الوثائق…). #}
-        <a class="np-svc-card"
+        <a class="np-svc-card is-inactive"
            data-rh-svc-card="hotspot"
            href="{{ url_for('radius.setup_wizard_v3_router_service_flow',
                             router_id=nas.id, service_key='hotspot') }}">
           <span class="np-svc-icon np-svc-icon--blue"><i class="fa-solid fa-wifi"></i></span>
           <h5 class="np-svc-title">{{ _('الهوت سبوت') }}</h5>
-          {# شارة «ترقية» — تفتح نافذة المواصفات الموحّدة (bandwidth_plan)
-             للخدمة. النموذج يجمع السرعتَين والكوتا والصلاحية، ثم يُرسل
-             POST /admin/radius/service-requests كطلب ترقية. لا تنقّل
-             للصفحة بفضل preventDefault/stopPropagation في الـpartial. #}
-          <span class="ssm-upgrade-pill" data-svc-spec-modal-open
-                data-svc-type="hotspot" data-svc-action="upgrade"
-                data-svc-scope="nas:{{ nas.id }}"
-                title="{{ _('طلب ترقية مواصفات الخدمة') }}">
-            <i class="fa-solid fa-arrow-up-right-dots"></i> {{ _('ترقية') }}
-          </span>
+          {# لا شارة ترقية — «الهوت سبوت» خدمة مفتوحة بلا فئات تتراقى
+             إليها (طلب المالك، يونيو 2026). التفعيل/الإيقاف فقط؛
+             الترقيات تبقى للخدمات ذات المواصفات الفعليّة (loop_detect،
+             bt_wifi_block، public-ip). راجع service_specs.py. #}
           <span class="np-svc-status-dot is-inactive" data-rh-svc-status title="{{ _('غير مفعّلة') }}"></span>
         </a>
         {# البرودباند — خدمة، نقطة الحالة من جرد broadband. #}
-        <a class="np-svc-card"
+        <a class="np-svc-card is-inactive"
            data-rh-svc-card="broadband"
            href="{{ url_for('radius.setup_wizard_v3_router_service_flow',
                             router_id=nas.id, service_key='broadband') }}">
           <span class="np-svc-icon np-svc-icon--green"><i class="fa-solid fa-ethernet"></i></span>
           <h5 class="np-svc-title">{{ _('البرودباند') }}</h5>
-          <span class="ssm-upgrade-pill" data-svc-spec-modal-open
-                data-svc-type="broadband" data-svc-action="upgrade"
-                data-svc-scope="nas:{{ nas.id }}"
-                title="{{ _('طلب ترقية مواصفات الخدمة') }}">
-            <i class="fa-solid fa-arrow-up-right-dots"></i> {{ _('ترقية') }}
-          </span>
+          {# لا شارة ترقية — «البرودباند» خدمة مفتوحة كذلك. #}
           <span class="np-svc-status-dot is-inactive" data-rh-svc-status title="{{ _('غير مفعّلة') }}"></span>
         </a>
         {# مصمّم صفحة الدخول (أداة). #}
@@ -2475,7 +2464,7 @@ body.mt-modal-open{overflow:hidden}
            الـrouting المُجزّأ الموجود فعلًا للراوتر — نَستخدمه مباشرةً
            كرابط الخدمة كما طلب المالك بعد إزالة غلاف NPC. الاسم
            العرضي «حظر المواقع» (طلب المالك). #}
-        <a class="np-svc-card"
+        <a class="np-svc-card is-inactive"
            data-mt-router-link="npc-web-block"
            data-rh-svc-card="block-sites"
            href="{{ url_for('radius.npc_web_block_list_scoped', nas_id=nas.id) }}">
@@ -2485,7 +2474,7 @@ body.mt-modal-open{overflow:hidden}
         </a>
         {# «المواقع المسموحة» — بطاقة مباشرة. نفس فكرة «حظر المواقع»:
            رابط مباشر إلى npc_walled_garden_list_scoped بلا غلاف NPC. #}
-        <a class="np-svc-card"
+        <a class="np-svc-card is-inactive"
            data-mt-router-link="npc-walled-garden"
            data-rh-svc-card="open-sites"
            href="{{ url_for('radius.npc_walled_garden_list_scoped', nas_id=nas.id) }}">
@@ -2504,7 +2493,11 @@ body.mt-modal-open{overflow:hidden}
            الراوتر متّصل فعلًا. حين يفشل الفحص (نفق إدارة معطّل) تبقى
            النقطة رماديّة — منعًا من إيهام المشغّل بحالة «فعّال» مزيّفة. #}
         {% set _btw = (pss_services or {}).get('bt_wifi_block', {}) %}
-        <a class="np-svc-card"
+        {# الحالة المبدئيّة على البطاقة (is-unknown) قبل وصول جرد
+           /inventory + setDot. CSS أدناه يُخفي «طلب التفعيل» على
+           البطاقة المفعّلة و«ترقية» على غير المفعّلة فلا يَجتمعان
+           على بطاقة واحدة. #}
+        <a class="np-svc-card is-unknown"
            data-mt-router-link="bt-wifi-block"
            data-rh-svc-card="bt_wifi_block"
            data-pss-saved-enabled="{{ '1' if _btw.get('enabled') else '0' }}"
@@ -2515,21 +2508,27 @@ body.mt-modal-open{overflow:hidden}
             منع البث (بلوتوث/واي فاي)
             {% if _btw.get('placeholder') %}<span class="rh-svc-await">{{ _('بانتظار السكربت') }}</span>{% endif %}
           </h5>
-          {# نافذة المواصفات الموحّدة (port_script) — للترقية إن كانت
-             مفعّلة، وللتفعيل خلاف ذلك. الـports المحفوظة تُمَرَّر كقيمة
-             مبدئيّة فيرى المشغّل ما يُعدّل (لا «جدول من الصفر»). #}
-          <span class="ssm-upgrade-pill" data-svc-spec-modal-open
-                data-svc-type="bt_wifi_block"
-                data-svc-action="{{ 'upgrade' if _btw.get('enabled') else 'activate' }}"
-                data-svc-scope="nas:{{ nas.id }}"
-                data-svc-defaults='{"ports": "{{ (_btw.get("ports") or []) | join(",") }}"}'
-                title="{{ _('طلب تفعيل/ترقية الخدمة بمواصفاتها') }}">
-            <i class="fa-solid fa-arrow-up-right-dots"></i>
-            {{ _('ترقية') if _btw.get('enabled') else _('طلب') }}
-          </span>
           <span class="np-svc-status-dot is-unknown"
                 data-rh-svc-status
                 title="{{ _('في انتظار تأكيد الحالة من الراوتر') }}"></span>
+          {# pill «التفعيل» — يَظهر على البطاقة غير المفعّلة فقط. #}
+          <span class="ssm-upgrade-pill ssm-pill--activate"
+                data-svc-spec-modal-open
+                data-svc-type="bt_wifi_block" data-svc-action="activate"
+                data-svc-scope="nas:{{ nas.id }}"
+                data-svc-defaults='{"ports": "{{ (_btw.get("ports") or []) | join(",") }}"}'
+                title="{{ _('طلب تفعيل الخدمة بمواصفاتها') }}">
+            <i class="fa-solid fa-bolt"></i> {{ _('تفعيل') }}
+          </span>
+          {# pill «الترقية» — يَظهر على البطاقة المفعّلة فقط. #}
+          <span class="ssm-upgrade-pill ssm-pill--upgrade"
+                data-svc-spec-modal-open
+                data-svc-type="bt_wifi_block" data-svc-action="upgrade"
+                data-svc-scope="nas:{{ nas.id }}"
+                data-svc-defaults='{"ports": "{{ (_btw.get("ports") or []) | join(",") }}"}'
+                title="{{ _('طلب ترقية مواصفات الخدمة') }}">
+            <i class="fa-solid fa-arrow-up-right-dots"></i> {{ _('ترقية') }}
+          </span>
         </a>
         {# النسخ الاحتياطية (أداة). #}
         <a class="np-svc-card np-svc-card--tool"
@@ -2551,7 +2550,8 @@ body.mt-modal-open{overflow:hidden}
            «—» — لا «فعّال» مزيّف للمشغّل. #}
         {% set _loop_known = loop_active or
             ((pss_services or {}).get('loop_detect', {}) or {}).get('enabled') %}
-        <a class="np-svc-card" data-rh-loop-tile
+        {# نفس مبدأ بطاقة bt_wifi_block: pill واحد فقط ظاهرة في كل حالة. #}
+        <a class="np-svc-card is-unknown" data-rh-loop-tile
            data-rh-svc-card="loop_detect"
            data-pss-saved-enabled="{{ '1' if _loop_known else '0' }}"
            href="{{ url_for('radius.mt_port_services_form', nas_id=nas.id, slug='loop_detect') }}"
@@ -2562,31 +2562,36 @@ body.mt-modal-open{overflow:hidden}
             <span class="rh-svc-loop is-unknown" data-rh-loop-badge
                   data-saved-label="{{ 'مفعّل' if _loop_known else 'غير مفعّل' }}">—</span>
           </h5>
-          <span class="ssm-upgrade-pill" data-svc-spec-modal-open
-                data-svc-type="loop_detect"
-                data-svc-action="{{ 'upgrade' if _loop_known else 'activate' }}"
-                data-svc-scope="nas:{{ nas.id }}"
-                title="{{ _('طلب تفعيل/ترقية الخدمة بمواصفاتها') }}">
-            <i class="fa-solid fa-arrow-up-right-dots"></i>
-            {{ _('ترقية') if _loop_known else _('طلب') }}
-          </span>
           <span class="np-svc-status-dot is-unknown"
                 data-rh-svc-status
                 title="{{ _('في انتظار تأكيد الحالة من الراوتر') }}"></span>
+          <span class="ssm-upgrade-pill ssm-pill--activate"
+                data-svc-spec-modal-open
+                data-svc-type="loop_detect" data-svc-action="activate"
+                data-svc-scope="nas:{{ nas.id }}"
+                title="{{ _('طلب تفعيل الخدمة بمواصفاتها') }}">
+            <i class="fa-solid fa-bolt"></i> {{ _('تفعيل') }}
+          </span>
+          <span class="ssm-upgrade-pill ssm-pill--upgrade"
+                data-svc-spec-modal-open
+                data-svc-type="loop_detect" data-svc-action="upgrade"
+                data-svc-scope="nas:{{ nas.id }}"
+                title="{{ _('طلب ترقية مواصفات الخدمة') }}">
+            <i class="fa-solid fa-arrow-up-right-dots"></i> {{ _('ترقية') }}
+          </span>
         </a>
         {# تغيير IP الخروج (خدمة مدفوعة) — بطاقة مستقلّة بمستواها الأعلى
-           لا تختفي. تفتح «نافذة المواصفات الموحّدة» (service_spec_modal):
-           يُجلَب مخطّط النوع quota (الكمّيّة + الصلاحية + الملاحظات)
-           ديناميكيًّا فيُرسَل POST /admin/radius/service-requests
-           مع spec محقّق، ويُسجَّل حدث audit للمراجعة (نظام موحّد
-           لجميع الخدمات — راجع service_specs.py). #}
-        <button type="button" class="np-svc-card np-svc-card--paid"
-                data-rh-svc-card="public-ip"
-                data-svc-spec-modal-open
-                data-svc-type="public-ip"
-                data-svc-action="activate"
-                data-svc-scope="nas:{{ nas.id }}"
-                title="{{ _('خدمة مدفوعة — اضغط لطلب التفعيل') }}">
+           لا تختفي. التَّفاعل صار محصورًا في pill الفعل (لا البطاقة
+           كلّها)، فالبطاقة <div> غير مَمسكة بـmodal trigger؛ كان
+           جعلها <button>+data-svc-spec-modal-open يَفتح النافذة حتى
+           وهي «مفعّلة» — حالة تَناقُض. الآن:
+             • شارة «مدفوعة» = تَصنيف النوع فقط (دائمة الظهور).
+             • status-dot = حالة الراوتر الحيّة («مفعّلة»/«غير مفعّلة»).
+             • pill «طلب التفعيل» = فعل واحد، يَختفي حين تَصبح
+               البطاقة .is-active. #}
+        <div class="np-svc-card np-svc-card--paid is-unknown"
+             data-rh-svc-card="public-ip"
+             title="{{ _('خدمة مدفوعة — مركزيّة عند المالك') }}">
           <span class="np-svc-icon np-svc-icon--amber"><i class="fa-solid fa-globe"></i></span>
           <h5 class="np-svc-title">
             {{ _('تغيير IP الخروج') }}
@@ -2594,8 +2599,15 @@ body.mt-modal-open{overflow:hidden}
           </h5>
           <span class="np-svc-status-dot is-unknown"
                 data-rh-svc-status
-                title="{{ _('خدمة مدفوعة — اضغط لطلب التفعيل') }}"></span>
-        </button>
+                title="{{ _('في انتظار تأكيد الحالة من الراوتر') }}"></span>
+          <span class="ssm-upgrade-pill ssm-pill--activate"
+                data-svc-spec-modal-open
+                data-svc-type="public-ip" data-svc-action="activate"
+                data-svc-scope="nas:{{ nas.id }}"
+                title="{{ _('طلب تفعيل الخدمة بمواصفاتها') }}">
+            <i class="fa-solid fa-bolt"></i> {{ _('طلب التفعيل') }}
+          </span>
+        </div>
         {# «تشخيص الراوترات» — أداة على مستوى المستأجر (لا nas_id).
            اسم أوضح بدل «الفلِيت» (مصطلح أعجمي مُعرَّب). الصفحة
            فعلًا تفحص اتصال + تسجيل API + هويّة كل راوترات المستأجر
@@ -2960,28 +2972,44 @@ body.mt-modal-open{overflow:hidden}
    المدمجة الموحّدة + لوحة القسم + نافذة نفق تغيير IP. */
 .rh-inventory{padding:0 !important}
 
-/* ─── بطاقات الخدمات المدمجة الموحّدة ────────────────────────
-   تصحيح المالك (يونيو 2026): الشبكة كانت auto-fit تتسبّب بحشو
-   حتى 5 بطاقات في الصفّ على سطح المكتب، فتصير عيّنات النصّ
-   الطويلة (منع البث/تشخيص الراوترات…) مقصوصة بـellipsis. صار
-   اللاي-آوت قسمَين (column-2) بمسافات أوسع — كل بطاقة بعرض
-   مريح يستوعب العنوان كاملاً بلا قصّ، ومسافة عاموديّة واضحة
-   تفصل الشبكة عن قائمة «الخدمات المضافة» أسفلها. */
+/* ─── شبكة بطاقات الخدمات الموحّدة ─────────────────────────
+   إعادة تصميم المالك (يونيو 2026): الشبكة عمودان كانت تَترك
+   فراغًا واسعًا على سطح المكتب وتُحشر العناصر في عمودَين طويلَين.
+   صارت ثلاثة أعمدة على الشاشات الواسعة، تنخفض إلى عمودَين على
+   الشاشات المتوسطة (≤1080px) وعمود واحد على الجوال (≤640px).
+   .np-svc-grid أصبحت grid حقيقيّة بمسافات متوازنة، وبطاقاتها
+   ذات بنية عمودَين عاموديَّتَين بداخلها: صفّ علوي بأيقونة وعنوان
+   وحالة، وصفّ سفلي اختياري لبطاقة فعل (ترقية/طلب/مدفوعة). هذا
+   يَضمن ارتفاع موحَّدًا لكل البطاقات بدون نَطّ. */
 .rh-inventory .np-svc-grid{
   display:grid !important;
-  grid-template-columns:repeat(2, minmax(0, 1fr)) !important;
+  grid-template-columns:repeat(3, minmax(0, 1fr)) !important;
   gap:14px !important;
-  /* لا حاجة لـmargin-bottom على الشبكة — قسم «الخدمات المضافة» في
-     .np-status-panel آخر مستقلّ، والفاصل بينهما من margin-bottom
-     على القسم الأوّل (انظر .rh-svc-panel--all أدناه). */
   margin:0;
 }
+@media (max-width: 1080px){
+  .rh-inventory .np-svc-grid{
+    grid-template-columns:repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+@media (max-width: 640px){
+  .rh-inventory .np-svc-grid{
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+}
 .rh-inventory .np-svc-card{
-  display:inline-flex;
+  /* بنية بطاقة موحّدة: صفّ علوي (أيقونة + عنوان + حالة) ثم صفّ
+     سفلي اختياري (شارة فعل). flex-direction:row مع flex-wrap
+     يُسمح للصفّ الثاني بأن يتشكّل تلقائيًّا حين توجد شارة فعل،
+     ويبقى مَخفيًّا غير مزعج حين لا توجد. */
+  display:flex;
+  flex-direction:row;
   align-items:center;
-  gap:12px;
-  padding:14px 18px;
-  min-height:56px;
+  flex-wrap:wrap;
+  gap:10px 12px;
+  padding:14px 16px;
+  min-height:64px;
   border-radius:12px;
   box-shadow:none;
   /* إعادة ضبط أي بطاقة <button> لتطابق بطاقات <a> تمامًا. */
@@ -2991,63 +3019,61 @@ body.mt-modal-open{overflow:hidden}
   cursor:pointer;
   background:#fff;
   border:1px solid #EAECF0;
-}
-/* جوال: عمود واحد فقط — كل بطاقة سطر كامل. */
-@media (max-width: 640px){
-  .rh-inventory .np-svc-grid{
-    grid-template-columns: 1fr !important;
-    gap: 10px !important;
-  }
+  /* ارتفاع موحَّد عبر الشبكة — يَملأ خليّته كاملةً فلا تَتفاوت
+     ارتفاعات البطاقات وتشكّل أسنانًا غير منتظمة. */
+  height:100%;
+  /* انتقال هادئ لتأثير hover. */
+  transition:border-color .14s,box-shadow .14s,transform .14s;
 }
 .rh-inventory .np-svc-card::before{display:none}
 .rh-inventory .np-svc-card:hover{
-  transform:none;
+  transform:translateY(-1px);
   border-color:#CBD5E1;
-  box-shadow:0 1px 4px rgba(15,23,42,.06);
+  box-shadow:0 4px 12px rgba(15,23,42,.06);
 }
 .rh-inventory .np-svc-icon{
-  width:28px;height:28px;
-  flex-shrink:0;
-  border-radius:8px;
-  font-size:13px;
+  width:36px;height:36px;
+  flex:0 0 36px;
+  border-radius:10px;
+  font-size:14.5px;
   margin-bottom:0;
   box-shadow:none;
+  display:inline-flex;align-items:center;justify-content:center;
 }
-/* العنوان يلتفّ بدل القصّ بـellipsis (طلب المالك: «كلام مقصوص»). البطاقة
-   الأعرض في تخطيط القسمَين تستوعب أيّ عنوان من الخدمات الحاليّة على
-   سطر واحد، لكن إن طال يأخذ سطرَين بلا قصّ. */
+/* العنوان يَلتفّ بدل القصّ. flex:1 يَأخذ المساحة المتاحة بين
+   الأيقونة وشارة الحالة. */
 .rh-inventory .np-svc-title{
   margin:0;
-  font-size:13.5px;
+  font-size:14px;
   line-height:1.4;
   white-space:normal;
   overflow:visible;
   text-overflow:clip;
   min-width:0;
-  flex:1;
+  flex:1 1 auto;
   color:#0F172A;
   font-weight:800;
-  /* يضمن أنّ كلمات RTL الطويلة لا تكسر التخطيط بدل أن تَلِف. */
   word-break:break-word;
   overflow-wrap:anywhere;
 }
-/* الوصف والسهم يختفيان في الوضع المدمج — البطاقة سطر واحد فقط. */
+/* الوصف والسهم يختفيان في الوضع المدمج. */
 .rh-inventory .np-svc-desc{display:none}
 .rh-inventory .np-svc-arrow{display:none}
-/* مؤشّر الحالة: كان نقطة 8px تحمل ثلاث دلالات مختلفة بنفس الشكل
-   الرمادي (أداة / غير مفعّلة / بانتظار التأكيد) فلا يميّزها المشغّل.
-   صار شارة نصية صريحة عبر ::after — نفس العنصر ونفس أصناف الحالة
-   ونفس خطافات JS (setDot/data-rh-svc-status) بلا أي تغيير سلوكي. */
+/* مؤشّر الحالة: شارة نصية صريحة عبر ::after — نفس العنصر ونفس
+   أصناف الحالة ونفس خطافات JS (setDot/data-rh-svc-status). تُجلَس
+   في نهاية الصفّ العلوي (auto margin) ولا تَنزلق للصفّ الثاني
+   لأن `order:3` يُبقيها بعد العنوان وقبل شارة الفعل. */
 .rh-inventory .np-svc-status-dot{
   position:static;
-  flex-shrink:0;
+  flex:0 0 auto;
   order:3;
   margin-inline-start:auto;
   width:auto;height:auto;border-radius:999px;
   background:#F1F5F9;color:#94A3B8;box-shadow:none;
-  font-size:9.5px;font-weight:900;letter-spacing:.02em;
-  line-height:1;padding:4px 9px;
+  font-size:10px;font-weight:900;letter-spacing:.02em;
+  line-height:1;padding:5px 10px;
   display:inline-flex;align-items:center;
+  white-space:nowrap;
 }
 .rh-inventory .np-svc-status-dot::after{content:"—"}
 .rh-inventory .np-svc-status-dot.is-active{
@@ -3141,52 +3167,94 @@ body.mt-modal-open{overflow:hidden}
 .rh-added-loading[hidden],.rh-added-empty[hidden]{display:none}
 .rh-added-loading i{color:#7C3AED}
 .rh-added-empty i{color:#CBD5E1;font-size:16px}
-/* شبكة بطاقات مدمجة متجاوبة (auto-fill) بدل صفّ كامل العرض لكل
-   واجهة — تستوعب 20+ عنصرًا في جزء صغير من الارتفاع السابق. كل
-   بطاقة: أيقونة + اسم الواجهة + (النوع/المصدر/التاريخ) + زر حذف
-   بالزاوية. نفس الأصناف وخطافات JS (rh-added-row/data-src/
-   rh-added-del) فيبقى الفلتر والحذف يعملان بلا تغيير. */
+/* قائمة المجموعات: عمود واحد عمودي على الجوال، عمودَين على الشاشات
+   الواسعة — تَحتفظ كل خدمة بحاويتها الخاصّة (.rh-grp). الفجوة الواسعة
+   تَمنح كل خدمة سطحًا بصريًّا مستقلًاّ بدل تدفّق مُسطَّح.
+
+   تصحيح المالك (يونيو 2026): كل بطاقة كانت تَتشكَّل بحسب محتواها فيظهر
+   التَّخطيط راجلاً (مجموعة بسطر = صغيرة، مجموعة بـ4 بنود = ضِعفها).
+   grid-auto-rows:1fr يَجعل كل صفّ في الشبكة بنفس الارتفاع، وكلّ بطاقة
+   داخله بـheight:100% — فالبطاقات في نفس الصفّ متطابقة دائمًا، ومع
+   min-height موحَّد على البطاقة نفسها تَبقى متناسبة بصريًا عبر الصفوف. */
 .rh-added-list{
   display:grid;
-  grid-template-columns:repeat(auto-fill,minmax(208px,1fr));
-  gap:8px;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  grid-auto-rows:1fr;
+  gap:14px;
 }
-/* ترويسة مجموعة (نوع الواجهة) تمتدّ على عرض الشبكة كاملًا قبل بطاقاتها. */
-.rh-added-group-h{
-  grid-column:1 / -1;
-  display:flex;align-items:center;gap:7px;
-  margin:4px 0 1px;font-size:11.5px;font-weight:900;
-  letter-spacing:.02em;color:#475569;
+@media (max-width: 840px){
+  .rh-added-list{grid-template-columns: 1fr}
 }
-.rh-added-group-h:first-child{margin-top:0}
-.rh-added-group-h::after{content:"";flex:1;height:1px;background:#EEF2F7}
-/* أيقونة النوع الملوّنة — مرّة واحدة في الترويسة (أُزيلت من البطاقات).
-   ألوان np-svc-icon--* من dashboard_premium.css؛ نلغي ظلّها هنا. */
-.rh-added-group-ico{
-  width:20px;height:20px;border-radius:6px;color:#fff;flex:0 0 auto;
+
+/* ── حاوية الخدمة (.rh-grp) — تصميم بطاقي موحَّد ─────────────
+   كل بطاقة بنفس: الحدود، نصف القطر، الحشو الداخلي، ترتيب الترويسة،
+   حشو الجسم. min-height مَوحَّد + flex-direction:column + body:flex:1
+   يَضمن أنّ كل البطاقات تَتمدّد لنفس الارتفاع في صفّها — لا واحدة
+   نَحيلة وأخرى ممتلئة. */
+.rh-grp{
+  background:#FBFDFF;
+  border:1px solid #E2E8F0;
+  border-radius:14px;
+  padding:14px;
+  display:flex;flex-direction:column;gap:12px;
+  /* min-height يَضمن حدًّا أدنى لصفّ يَخصّ بطاقة وحيدة في صفّها — فلا
+     تَنكمش لارتفاع 60px وحدها بينما جيرانها 220px. */
+  min-height:200px;
+  height:100%;
+}
+.rh-grp[hidden]{display:none}
+.rh-grp-head{
+  display:flex;align-items:center;gap:10px;
+  padding-bottom:11px;
+  border-bottom:1px dashed #E2E8F0;
+  /* الترويسة لا تَنمو — كل ارتفاع زائد يَذهب للجسم. */
+  flex:0 0 auto;
+}
+.rh-grp-ico{
+  width:30px;height:30px;border-radius:9px;color:#fff;flex:0 0 auto;
   display:inline-flex;align-items:center;justify-content:center;
-  font-size:9px;box-shadow:none !important;
+  font-size:12.5px;box-shadow:none !important;
 }
-.rh-added-group-n{
-  font-size:10px;font-weight:900;border-radius:999px;padding:0 7px;
-  min-width:16px;text-align:center;background:#EEF2F7;color:#64748B;flex:0 0 auto;
+.rh-grp-name{
+  margin:0;font-size:13.5px;font-weight:900;color:#0F172A;
+  letter-spacing:.005em;flex:1 1 auto;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;
 }
-.rh-added-group-h[hidden]{display:none}
-/* بطاقة مدمجة سطر واحد غالبًا: اسم الواجهة + (شارات استثنائية فقط).
-   لا أيقونة ولا اسم نوع داخل البطاقة — الترويسة فوقها تحملهما. */
+.rh-grp-count{
+  flex:0 0 auto;
+  font-size:11px;font-weight:900;
+  background:#fff;color:#475569;
+  border:1px solid #E2E8F0;
+  border-radius:999px;padding:2px 10px;
+  min-width:28px;text-align:center;
+}
+.rh-grp-body{
+  display:grid;
+  grid-template-columns:repeat(auto-fill, minmax(168px, 1fr));
+  /* align-content:start يَمنع الصفوف من التمدّد عاموديًّا لملء الفراغ —
+     يبقَين بحجمهنّ الطبيعيّ ويَتجمَّعن في أعلى الجسم، فيَظهر أيّ فراغ
+     زائد كمسافة تنفّس متّسقة في أسفل البطاقة. */
+  align-content:start;
+  gap:8px;
+  flex:1 1 auto;
+}
+
+/* صفّ الواجهة داخل بطاقة المجموعة — اسم الواجهة (ether2…) + شارات
+   اختيارية + زرّ حذف ظلّيّ يَظهر عند المرور. */
 .rh-added-row{
   position:relative;
-  display:flex;flex-direction:column;justify-content:center;gap:2px;
-  min-height:38px;
-  padding:7px 10px;padding-inline-end:36px;
-  background:#fff;border:1px solid #EAECF0;border-radius:11px;
-  transition:border-color .14s;
+  display:flex;flex-direction:column;justify-content:center;gap:3px;
+  min-height:42px;
+  padding:9px 12px;padding-inline-end:36px;
+  background:#fff;border:1px solid #EAECF0;border-radius:10px;
+  transition:border-color .14s, box-shadow .14s;
 }
-.rh-added-row:hover{border-color:#CBD5E1}
+.rh-added-row:hover{border-color:#CBD5E1;box-shadow:0 1px 3px rgba(15,23,42,.04)}
 .rh-added-row[hidden]{display:none}
 .rh-added-name{
   font-size:12.5px;font-weight:800;color:#0F172A;font-family:monospace;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  letter-spacing:.01em;
 }
 .rh-added-meta{
   display:flex;align-items:center;gap:6px;
@@ -3244,8 +3312,10 @@ body.mt-modal-open{overflow:hidden}
 .rh-svc-paid{
   flex-shrink:0;font-size:9.5px;font-weight:900;letter-spacing:.02em;
   color:#92400e;background:#fef3c7;border:1px solid #fde68a;
-  border-radius:999px;padding:1px 8px;
+  border-radius:999px;padding:2px 9px;
+  display:inline-flex;align-items:center;gap:4px;
 }
+.rh-svc-paid i{font-size:8px}
 /* حدّ صلب هادئ بدل المتقطّع الأصفر — المتقطّع + الخلفية الصفراء كانا
    يقرآن كلغة «تحذير/خطأ» بينما المقصود «خدمة مدفوعة عند الطلب». */
 .rh-inventory .np-svc-card--paid{
@@ -3253,27 +3323,64 @@ body.mt-modal-open{overflow:hidden}
 }
 .rh-inventory .np-svc-card--paid:hover{border-color:#F59E0B;background:#FEF3C7}
 .rh-inventory [data-pss-paid] .np-svc-title{
-  display:inline-flex;align-items:center;gap:6px;
+  display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap;
 }
-/* شارة «ترقية/طلب» داخل بطاقة الخدمة — تفتح نافذة المواصفات
-   الموحّدة (service_spec_modal). نجلسها بمحاذاة النقطة في الزاوية
-   ولها تأثير حدّ بنفسجي للإشارة إلى أنّها فعل (لا حالة). */
+/* شارة «ترقية/تفعيل/طلب» داخل بطاقة الخدمة — تفتح نافذة المواصفات
+   الموحّدة (service_spec_modal). تُوضَع في الصفّ السفلي بعد كسر
+   السطر (flex-basis: 100%) فتظهر كفعل واضح أسفل العنوان وحالته،
+   لا كعنصر ثالث مزدحم على الصفّ العلوي مع شارة الحالة. */
 .rh-inventory .ssm-upgrade-pill{
-  flex-shrink:0;order:2;
-  margin-inline-start:auto;margin-inline-end:6px;
-  font-size:10px;font-weight:900;
-  color:#5B21B6;background:#EDE9FE;border:1px solid #DDD6FE;
-  border-radius:999px;padding:2px 9px;cursor:pointer;
-  display:inline-flex;align-items:center;gap:5px;
-  transition:background .12s,border-color .12s,color .12s;
+  flex:0 0 100%;
+  order:4;
+  margin:0;
+  font-size:10.5px;font-weight:900;
+  border-radius:8px;padding:6px 10px;cursor:pointer;
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  transition:background .12s,border-color .12s,color .12s,box-shadow .12s;
+}
+/* اللون الافتراضي للـpill — تَستخدمه «الترقية» أيضًا. */
+.rh-inventory .ssm-upgrade-pill{
+  color:#5B21B6;background:#F5F3FF;border:1px solid #DDD6FE;
 }
 .rh-inventory .ssm-upgrade-pill:hover{
   background:#7C3AED;border-color:#7C3AED;color:#fff;
+  box-shadow:0 2px 6px rgba(124,58,237,.2);
 }
 /* البطاقة ذات الـpill لها سلوك hover معتدل — لا نُريد أن يبدو الفعل
    عرضيًّا حين المؤشّر فوق الزرّ. */
 .rh-inventory .np-svc-card:has(.ssm-upgrade-pill:hover){
   border-color:#DDD6FE;
+}
+
+/* ─── تَناسُق حالة البطاقة ─────────────────────────────────
+   قاعدة المالك (يونيو 2026): البطاقة لا تَعرض حالتَين متناقضتَين
+   في آنٍ معًا. كانت بطاقة «تغيير IP الخروج» تَعرض «مفعّلة» (خضراء)
+   + «مدفوعة» (قفل) + «طلب التفعيل» — سَلطة. الإصلاح:
+     1) لكل بطاقة تَدعم الفعل ثَنائي pills:
+          .ssm-pill--activate  → يَظهر فقط حين البطاقة .is-inactive/.is-unknown.
+          .ssm-pill--upgrade   → يَظهر فقط حين البطاقة .is-active.
+     2) شارة «مدفوعة» = تَصنيف نوع، لا حالة — تَبقى ظاهرة دائمًا.
+     3) JS setDot يَعكس حالة الـdot على البطاقة الأمّ (.np-svc-card)
+        فيَستجيب الـCSS التالي.
+     4) لون pill الـactivate أخضر (دعوة فعل ابتدائيّ)، ولون pill
+        الـupgrade بنفسجي (دعوة ترقية لخدمة قائمة). */
+.rh-inventory .ssm-pill--activate,
+.rh-inventory .ssm-pill--upgrade{display:none}
+/* «تفعيل» يَظهر على البطاقة غير المفعّلة + المجهولة. */
+.rh-inventory .np-svc-card.is-inactive .ssm-pill--activate,
+.rh-inventory .np-svc-card.is-unknown  .ssm-pill--activate{
+  display:inline-flex;
+  /* لون الفعل الأوّليّ: عشبيّ، يَدلّ على «ابدأ هذه الخدمة». */
+  color:#15803D;background:#F0FDF4;border-color:#A7F3D0;
+}
+.rh-inventory .np-svc-card.is-inactive .ssm-pill--activate:hover,
+.rh-inventory .np-svc-card.is-unknown  .ssm-pill--activate:hover{
+  background:#16A34A;border-color:#16A34A;color:#fff;
+  box-shadow:0 2px 6px rgba(22,163,74,.2);
+}
+/* «ترقية» يَظهر على البطاقة المفعّلة فقط. */
+.rh-inventory .np-svc-card.is-active .ssm-pill--upgrade{
+  display:inline-flex;
 }
 .rh-svc-loop{
   flex-shrink:0;font-size:10px;font-weight:800;
@@ -3621,6 +3728,15 @@ body.mt-modal-open{overflow:hidden}
     dot.title = state === "is-active" ? "مفعّلة على الراوتر"
               : state === "is-unknown" ? "تعذّر فحص الحالة"
               : "غير مفعّلة";
+    // أيضًا أَعكِس الحالة على البطاقة نفسها لكي تَستهدفها قواعد CSS
+    // المسؤولة عن تَناسُق حالة البطاقة (إخفاء «طلب التفعيل» على بطاقة
+    // مفعّلة، إظهار «ترقية» مكانها). من دون هذا الانعكاس كانت البطاقة
+    // تَعرض شارة «مفعّلة» + زرّ «طلب التفعيل» في آنٍ معًا = سَلطة.
+    const card = dot.closest(".np-svc-card");
+    if (card) {
+      card.classList.remove("is-active", "is-inactive", "is-unknown");
+      card.classList.add(state);
+    }
   }
 
   // تركيب نص تلميح «كيف تفعّلت الخدمة» من نفس عناصر الجرد التي
@@ -3771,10 +3887,12 @@ body.mt-modal-open{overflow:hidden}
       const src = row.getAttribute("data-src") || "hoberadius";
       row.hidden = !(addedFilter === "all" || src === addedFilter);
     });
-    // أخفِ ترويسة أي مجموعة لم تَعُد تملك بطاقة ظاهرة بعد الفلترة.
-    addedList.querySelectorAll(".rh-added-group-h").forEach((h) => {
-      const key = h.getAttribute("data-rh-added-group");
-      h.hidden = !addedList.querySelector(
+    // أخفِ بطاقة المجموعة كاملةً إن لم تَعُد تملك صفًّا ظاهرًا بعد
+    // الفلترة. (التصميم الجديد يَستبدل .rh-added-group-h بـ.rh-grp
+    // الحاوية، فنُخفي الحاوية كلّها بدلاً من الترويسة فقط.)
+    addedList.querySelectorAll(".rh-grp").forEach((grp) => {
+      const key = grp.getAttribute("data-rh-added-group");
+      grp.hidden = !grp.querySelector(
         '.rh-added-row[data-group="' + key + '"]:not([hidden])');
     });
   }
@@ -3823,14 +3941,16 @@ body.mt-modal-open{overflow:hidden}
     );
   }
 
-  // يبني القائمة مقسّمةً إلى أقسام حسب «نوع الخدمة» (service_type) مع
-  // عنوان قسم + عدّاد، والعناصر داخل كل قسم مرتّبة طبيعيًا + يحدّث العدّادات.
+  // يبني القائمة مقسّمةً إلى **بطاقات** حسب «نوع الخدمة» (service_type)،
+  // كل خدمة في حاوية مستقلّة (.rh-grp) ذات ترويسة وجسم. العناصر داخل
+  // الجسم مرتّبة طبيعيًا. هذا التصميم (يونيو 2026) يَستبدل التدفّق
+  // المُسطَّح القديم (.rh-added-group-h ينام على شبكة أفقيّة مع البطاقات)
+  // بـ«تَجمّعات» واضحة المرئيّة، يَسهُل مَسحُها بصريًا.
   function renderAdded(groups) {
     if (!addedList) return;
     let cAuto = 0, cMan = 0;
     let nItems = 0;
-    // جمّع حسب نوع الخدمة بترتيب أوّل ظهور (نفس ترتيب الخادم). نوع فارغ
-    // → قسم «أخرى». عنصرٌ بلا meta معروفة يأخذ اسم/أيقونة احتياطية.
+    // جمّع حسب نوع الخدمة بترتيب أوّل ظهور.
     const sections = [];
     const byKey = {};
     (groups || []).forEach((g) => {
@@ -3839,8 +3959,6 @@ body.mt-modal-open{overflow:hidden}
       const key = g.service_type || "other";
       let sec = byKey[key];
       if (!sec) {
-        // أيقونة النوع الملوّنة صارت في الترويسة (مرة واحدة للمجموعة)
-        // بدل تكرارها داخل كل بطاقة — كثافة أقل وتسلسل هرمي أوضح.
         sec = { key: key, label: (g.service_type ? meta.ar : "أخرى"),
                 icon: meta.icon, color: meta.color, items: [] };
         byKey[key] = sec; sections.push(sec);
@@ -3856,12 +3974,21 @@ body.mt-modal-open{overflow:hidden}
     sections.forEach((sec) => {
       if (!sec.items.length) return;
       sec.items.sort((a, b) => natKey(a.it.label).localeCompare(natKey(b.it.label)));
-      html.push('<div class="rh-added-group-h" data-rh-added-group="' + esc(sec.key) + '">' +
-                '<span class="rh-added-group-ico ' + esc(sec.color) + '">' +
-                  '<i class="fa-solid fa-' + esc(sec.icon) + '"></i></span>' +
-                esc(sec.label) +
-                ' <span class="rh-added-group-n">' + sec.items.length + '</span></div>');
+      // بطاقة المجموعة: ترويسة (أيقونة ملوّنة + اسم + عدّاد) + جسم
+      // (شبكة عناصر الواجهات المتساوية بمسافات تنفّس). الخطّافات
+      // (data-rh-added-group / data-group) محفوظة لمنطق الفلترة.
+      html.push(
+        '<section class="rh-grp" data-rh-added-group="' + esc(sec.key) + '">' +
+          '<header class="rh-grp-head">' +
+            '<span class="rh-grp-ico ' + esc(sec.color) + '">' +
+              '<i class="fa-solid fa-' + esc(sec.icon) + '"></i></span>' +
+            '<h6 class="rh-grp-name">' + esc(sec.label) + '</h6>' +
+            '<span class="rh-grp-count">' + sec.items.length + '</span>' +
+          '</header>' +
+          '<div class="rh-grp-body">'
+      );
       sec.items.forEach((e) => html.push(addedCardHtml(e)));
+      html.push('</div></section>');
     });
     addedList.innerHTML = html.join("");
     const setCount = (k, n) => {
@@ -3915,10 +4042,12 @@ body.mt-modal-open{overflow:hidden}
       Object.keys(byKey).forEach((key) => {
         const card = byKey[key].card;
         const items = itemsByKey[key] || [];
-        // البطاقات المدفوعة (data-pss-paid) لا تُلوَّن خضراء من الجرد
-        // — حالتها مدارة عبر المالك. تبقى is-unknown دلالةً على
-        // «خدمة مدفوعة، طلب التفعيل بنقرة».
-        if (card.hasAttribute("data-pss-paid")) {
+        // البطاقات المدفوعة (.np-svc-card--paid) حالتها مُدارة مركزيًّا
+        // عند المالك — جرد /inventory المحلّي لا يَحسم تفعيلها. تَبقى
+        // is-unknown فيَظهر pill «طلب التفعيل» بِلَون أخضر كدعوة فعل،
+        // وتُخفى شارة «مفعّلة» الخضراء (= لا تَناقُض). المالك يُحدّث
+        // حالتها لاحقًا من لوحته بعد الموافقة على الطلب.
+        if (card.classList.contains("np-svc-card--paid")) {
           setDot(byKey[key].dot, "is-unknown");
           setDetails(byKey[key], null);
           return;
