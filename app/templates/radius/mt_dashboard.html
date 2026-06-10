@@ -2435,6 +2435,16 @@ body.mt-modal-open{overflow:hidden}
                             router_id=nas.id, service_key='hotspot') }}">
           <span class="np-svc-icon np-svc-icon--blue"><i class="fa-solid fa-wifi"></i></span>
           <h5 class="np-svc-title">{{ _('الهوت سبوت') }}</h5>
+          {# شارة «ترقية» — تفتح نافذة المواصفات الموحّدة (bandwidth_plan)
+             للخدمة. النموذج يجمع السرعتَين والكوتا والصلاحية، ثم يُرسل
+             POST /admin/radius/service-requests كطلب ترقية. لا تنقّل
+             للصفحة بفضل preventDefault/stopPropagation في الـpartial. #}
+          <span class="ssm-upgrade-pill" data-svc-spec-modal-open
+                data-svc-type="hotspot" data-svc-action="upgrade"
+                data-svc-scope="nas:{{ nas.id }}"
+                title="{{ _('طلب ترقية مواصفات الخدمة') }}">
+            <i class="fa-solid fa-arrow-up-right-dots"></i> {{ _('ترقية') }}
+          </span>
           <span class="np-svc-status-dot is-inactive" data-rh-svc-status title="{{ _('غير مفعّلة') }}"></span>
         </a>
         {# البرودباند — خدمة، نقطة الحالة من جرد broadband. #}
@@ -2444,6 +2454,12 @@ body.mt-modal-open{overflow:hidden}
                             router_id=nas.id, service_key='broadband') }}">
           <span class="np-svc-icon np-svc-icon--green"><i class="fa-solid fa-ethernet"></i></span>
           <h5 class="np-svc-title">{{ _('البرودباند') }}</h5>
+          <span class="ssm-upgrade-pill" data-svc-spec-modal-open
+                data-svc-type="broadband" data-svc-action="upgrade"
+                data-svc-scope="nas:{{ nas.id }}"
+                title="{{ _('طلب ترقية مواصفات الخدمة') }}">
+            <i class="fa-solid fa-arrow-up-right-dots"></i> {{ _('ترقية') }}
+          </span>
           <span class="np-svc-status-dot is-inactive" data-rh-svc-status title="{{ _('غير مفعّلة') }}"></span>
         </a>
         {# مصمّم صفحة الدخول (أداة). #}
@@ -2499,6 +2515,18 @@ body.mt-modal-open{overflow:hidden}
             منع البث (بلوتوث/واي فاي)
             {% if _btw.get('placeholder') %}<span class="rh-svc-await">{{ _('بانتظار السكربت') }}</span>{% endif %}
           </h5>
+          {# نافذة المواصفات الموحّدة (port_script) — للترقية إن كانت
+             مفعّلة، وللتفعيل خلاف ذلك. الـports المحفوظة تُمَرَّر كقيمة
+             مبدئيّة فيرى المشغّل ما يُعدّل (لا «جدول من الصفر»). #}
+          <span class="ssm-upgrade-pill" data-svc-spec-modal-open
+                data-svc-type="bt_wifi_block"
+                data-svc-action="{{ 'upgrade' if _btw.get('enabled') else 'activate' }}"
+                data-svc-scope="nas:{{ nas.id }}"
+                data-svc-defaults='{"ports": "{{ (_btw.get("ports") or []) | join(",") }}"}'
+                title="{{ _('طلب تفعيل/ترقية الخدمة بمواصفاتها') }}">
+            <i class="fa-solid fa-arrow-up-right-dots"></i>
+            {{ _('ترقية') if _btw.get('enabled') else _('طلب') }}
+          </span>
           <span class="np-svc-status-dot is-unknown"
                 data-rh-svc-status
                 title="{{ _('في انتظار تأكيد الحالة من الراوتر') }}"></span>
@@ -2534,20 +2562,30 @@ body.mt-modal-open{overflow:hidden}
             <span class="rh-svc-loop is-unknown" data-rh-loop-badge
                   data-saved-label="{{ 'مفعّل' if _loop_known else 'غير مفعّل' }}">—</span>
           </h5>
+          <span class="ssm-upgrade-pill" data-svc-spec-modal-open
+                data-svc-type="loop_detect"
+                data-svc-action="{{ 'upgrade' if _loop_known else 'activate' }}"
+                data-svc-scope="nas:{{ nas.id }}"
+                title="{{ _('طلب تفعيل/ترقية الخدمة بمواصفاتها') }}">
+            <i class="fa-solid fa-arrow-up-right-dots"></i>
+            {{ _('ترقية') if _loop_known else _('طلب') }}
+          </span>
           <span class="np-svc-status-dot is-unknown"
                 data-rh-svc-status
                 title="{{ _('في انتظار تأكيد الحالة من الراوتر') }}"></span>
         </a>
         {# تغيير IP الخروج (خدمة مدفوعة) — بطاقة مستقلّة بمستواها الأعلى
-           لا تختفي. الخدمة مركزيّة عند المالك (نفق VPS) فلا نملك تفعيلها
-           محلّيًا، لكن نعرضها دائمًا بشكل واضح؛ النقرة تفتح نافذة
-           «طلب تفعيل خدمة مدفوعة» مع حقل الكمّيّة (ميغابايت) ورسالة
-           التوضيح — يُحفظ الطلب في tenant_settings ويُسجَّل في الأحداث
-           ليراجعه المالك (تدفّق طلب ذكيّ، جانب الزبون). #}
+           لا تختفي. تفتح «نافذة المواصفات الموحّدة» (service_spec_modal):
+           يُجلَب مخطّط النوع quota (الكمّيّة + الصلاحية + الملاحظات)
+           ديناميكيًّا فيُرسَل POST /admin/radius/service-requests
+           مع spec محقّق، ويُسجَّل حدث audit للمراجعة (نظام موحّد
+           لجميع الخدمات — راجع service_specs.py). #}
         <button type="button" class="np-svc-card np-svc-card--paid"
                 data-rh-svc-card="public-ip"
-                data-pss-paid="public-ip"
-                data-pss-paid-title="{{ _('تغيير IP الخروج') }}"
+                data-svc-spec-modal-open
+                data-svc-type="public-ip"
+                data-svc-action="activate"
+                data-svc-scope="nas:{{ nas.id }}"
                 title="{{ _('خدمة مدفوعة — اضغط لطلب التفعيل') }}">
           <span class="np-svc-icon np-svc-icon--amber"><i class="fa-solid fa-globe"></i></span>
           <h5 class="np-svc-title">
@@ -2662,6 +2700,15 @@ body.mt-modal-open{overflow:hidden}
     </script>
 
   </section>{# /my-services panel #}
+
+  {# ── نافذة المواصفات الموحّدة (service_spec_modal) ──────────
+       تُضمَّن مرّةً واحدة. أيّ زرّ/شارة في الصفحة تحمل
+       data-svc-spec-modal-open + data-svc-type + data-svc-action
+       تفتحها، فتُجلب الحقول من /service-requests/schema/<type>
+       وتُرسَل لـ /service-requests. تحلّ محلّ نافذة paid-req
+       القديمة، وتُغطّي كل أنواع الخدمات (port_script / quota /
+       bandwidth_plan / tunnel / site_policy). #}
+  {% include "_partials/service_spec_modal.html" %}
 
   {# ── نافذة تأكيد حذف خدمة مُضافة (fcw) — تستدعي نفس endpoint
        الحذف القديم. المحتوى يُملأ بـJS عند فتحها من زر الحذف. #}
@@ -3212,6 +3259,26 @@ body.mt-modal-open{overflow:hidden}
 .rh-inventory .np-svc-card--paid:hover{border-color:#F59E0B;background:#FEF3C7}
 .rh-inventory [data-pss-paid] .np-svc-title{
   display:inline-flex;align-items:center;gap:6px;
+}
+/* شارة «ترقية/طلب» داخل بطاقة الخدمة — تفتح نافذة المواصفات
+   الموحّدة (service_spec_modal). نجلسها بمحاذاة النقطة في الزاوية
+   ولها تأثير حدّ بنفسجي للإشارة إلى أنّها فعل (لا حالة). */
+.rh-inventory .ssm-upgrade-pill{
+  flex-shrink:0;order:2;
+  margin-inline-start:auto;margin-inline-end:6px;
+  font-size:10px;font-weight:900;
+  color:#5B21B6;background:#EDE9FE;border:1px solid #DDD6FE;
+  border-radius:999px;padding:2px 9px;cursor:pointer;
+  display:inline-flex;align-items:center;gap:5px;
+  transition:background .12s,border-color .12s,color .12s;
+}
+.rh-inventory .ssm-upgrade-pill:hover{
+  background:#7C3AED;border-color:#7C3AED;color:#fff;
+}
+/* البطاقة ذات الـpill لها سلوك hover معتدل — لا نُريد أن يبدو الفعل
+   عرضيًّا حين المؤشّر فوق الزرّ. */
+.rh-inventory .np-svc-card:has(.ssm-upgrade-pill:hover){
+  border-color:#DDD6FE;
 }
 .rh-svc-loop{
   flex-shrink:0;font-size:10px;font-weight:800;

@@ -228,10 +228,26 @@
           {{ _('فحص اللوب') }}
         </button>
         {% endif %}
+        {# طلب تفعيل/ترقية الخدمة بمواصفاتها — يفتح نافذة المواصفات
+           الموحّدة. الـports المُختارة في النموذج تُمَرَّر كقيمة مبدئيّة
+           فيُعدِّلها المشغّل في النافذة قبل الإرسال. لا «بطاقة بلا
+           تحكّم» — قاعدة المالك: كل خدمة لها نقطة تفعيل واضحة. #}
+        <button type="button" class="hub-btn hub-btn--ghost"
+                data-svc-spec-modal-open
+                data-svc-type="{{ service.slug }}"
+                data-svc-action="{{ 'upgrade' if state and state.enabled else 'activate' }}"
+                data-svc-scope="nas:{{ nas.id }}"
+                data-svc-defaults='{"ports": "{{ (selected_ports or (state.ports if state else [])) | join(",") }}"}'>
+          <i class="fa-solid fa-arrow-up-right-dots"></i>
+          {{ _('طلب ترقية المواصفات') if state and state.enabled else _('طلب تفعيل بمواصفات') }}
+        </button>
       </div>
     </form>
   {% endcall %}
   {% endif %}
+
+  {# ضمّن نافذة المواصفات الموحّدة — تُستدعى من زرّ «طلب…» أعلاه. #}
+  {% include "_partials/service_spec_modal.html" %}
 
   {% if loop_probes is not none %}
   {# ── نتيجة فحص اللوب الحيّة (قراءة /ip dhcp-client الموسومة) ── #}

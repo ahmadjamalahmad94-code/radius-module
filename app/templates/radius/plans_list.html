@@ -270,6 +270,17 @@
                       data-uds-modal-open="pl-detail-modal" data-pl-detail-for="{{ p.id }}">
                 <i class="fa-solid fa-circle-info"></i>
               </button>
+              {# ترقية الخطّة — يفتح نافذة المواصفات الموحّدة
+                 (bandwidth_plan): السرعتَان + الكوتا + الصلاحية.
+                 الـscope يحمل plan:<id> فيُحفَظ الطلب مربوطًا بالخطّة. #}
+              <button type="button" class="hub-btn hub-btn--ghost hub-btn--icon"
+                      title="{{ _('طلب ترقية مواصفات الخطّة') }}"
+                      data-svc-spec-modal-open
+                      data-svc-type="bandwidth_plan"
+                      data-svc-action="upgrade"
+                      data-svc-scope="plan:{{ p.id }}">
+                <i class="fa-solid fa-arrow-up-right-dots"></i>
+              </button>
               <a class="hub-btn hub-btn--ghost hub-btn--icon" title="{{ _('تعديل') }}"
                  href="{{ url_for('radius.plans_edit', plan_id=p.id) }}">
                 <i class="fa-solid fa-pen"></i>
@@ -575,5 +586,8 @@
   });
 })();
 </script>
+
+{# نافذة المواصفات الموحّدة — تُستدعى من زرّ ترقية الخطّة. #}
+{% include "_partials/service_spec_modal.html" %}
 
 {% endblock %}
