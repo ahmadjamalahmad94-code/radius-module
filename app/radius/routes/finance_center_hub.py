@@ -131,7 +131,10 @@ def finance_center_hub():
         loan_status = ""
 
     tenant_id = _tid()
-    wallets = _enrich_wallets_names(svc.wallets(tenant_id=tenant_id, limit=150))
+    # حدّ مرتفع: تُحمَّل كل المحافظ (مئات) دفعةً واحدة حتى يعمل البحث الحيّ
+    # في المتصفح على القائمة كاملة لا على أول 150 فقط. العدّاد في شريط
+    # المؤشرات يأتي من COUNT(*) الحقيقي في dashboard() لا من طول هذه القائمة.
+    wallets = _enrich_wallets_names(svc.wallets(tenant_id=tenant_id, limit=2000))
     tx_by_wallet = {
         wallet["id"]: svc.wallet_transactions(
             tenant_id=tenant_id,
