@@ -905,10 +905,56 @@ def test_backup_save_accepts_normal_names(fake_nas_direct):
 # ─── K8.1b: file download (honest unsupported) ───────────────────
 
 
-def test_file_download_stream_raises_not_supported(fake_nas_direct):
-    """Pin the current behaviour — once a real helper lands the
-    test expectation flips, but until then we must NOT silently
-    return empty bytes."""
+class _FakeFTP:
+    """Minimal stand-in for ftplib.FTP that serves a fixed payload."""
+
+    def __init__(self, payload=b"", *, perm_error=False):
+        self._payload = payload
+        self._perm_error = perm_error
+        self.quit_called = False
+        self.retr_arg = None
+
+    def retrbinary(self, cmd, callback, blocksize=8192):
+        import ftplib
+        self.retr_arg = cmd
+        if self._perm_error:
+            raise ftplib.error_perm("550 No such file")
+        for i in range(0, len(self._payload), blocksize):
+            callback(self._payload[i:i + blocksize])
+
+    def quit(self):
+        self.quit_called = True
+
+
+def test_file_download_stream_returns_bytes_over_ftp(fake_nas_direct, monkeypatch):
+    """Real FTP path: the helper streams the router file's bytes and
+    reports the size — never fabricated/empty bytes."""
+    payload = b"BACKUP-BINARY-CONTENT" * 5000  # ~100KB, exercises chunking
+    fake = _FakeFTP(payload)
+    monkeypatch.setattr(mac, "_ftp_connect",
+                        lambda *a, **k: fake)
+
+    size, stream = mac.file_download_stream(fake_nas_direct, "weekly.backup")
+    collected = b"".join(stream)
+
+    assert size == len(payload)
+    assert collected == payload
+    assert fake.retr_arg == "RETR weekly.backup"
+    assert fake.quit_called is True
+
+
+def test_file_download_stream_missing_file_raises_download_error(fake_nas_direct, monkeypatch):
+    monkeypatch.setattr(mac, "_ftp_connect",
+                        lambda *a, **k: _FakeFTP(perm_error=True))
+    with pytest.raises(mac.FileDownloadError):
+        size, stream = mac.file_download_stream(fake_nas_direct, "missing.backup")
+        list(stream)
+
+
+def test_file_download_stream_no_address_raises_not_supported(fake_nas_direct, monkeypatch):
+    """A router with no resolvable address is the only path that still
+    raises FileDownloadNotSupported (cannot even be dialed)."""
+    monkeypatch.setattr(mac, "resolve_connection_address", lambda nas: "")
     with pytest.raises(mac.FileDownloadNotSupported):
         mac.file_download_stream(fake_nas_direct, "any.backup")
 

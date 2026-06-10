@@ -164,6 +164,7 @@ class RestoreWorkflowService:
             request_id=int(request["id"]),
             status="ready_for_manual_apply",
             checksum_verified=True,
+            candidate_path=str(candidate_path),
             result_message="Checksum verified. Restore remains manual/gated.",
         )
         return self.get(int(request["id"])) or {}
@@ -191,11 +192,75 @@ class RestoreWorkflowService:
                 "code": "destructive_restore_disabled",
                 "request": request,
             }
+        candidate = str(request.get("candidate_path") or "").strip()
+        if not candidate or not Path(candidate).exists():
+            self._update_request(
+                request_id=int(request["id"]),
+                status="failed",
+                result_message="Verified candidate backup file is missing on disk.",
+            )
+            return {
+                "ok": False,
+                "status": "failed",
+                "code": "candidate_missing",
+                "request": self.get(int(request["id"])) or request,
+            }
+        # Re-verify the candidate is a real SQLite database before we overwrite
+        # the live one. A truncated/corrupt candidate must never replace prod.
+        try:
+            with sqlite3.connect(candidate) as probe:
+                probe.execute("PRAGMA schema_version;").fetchone()
+        except sqlite3.DatabaseError as exc:
+            self._update_request(
+                request_id=int(request["id"]),
+                status="failed",
+                result_message=f"Candidate is not a valid SQLite database: {exc}",
+            )
+            return {
+                "ok": False,
+                "status": "failed",
+                "code": "candidate_corrupt",
+                "request": self.get(int(request["id"])) or request,
+                "error": str(exc),
+            }
+        self._update_request(
+            request_id=int(request["id"]),
+            status="applying",
+            result_message="Applying verified restore via online backup swap.",
+        )
+        try:
+            # Online restore: copy the candidate OVER the live database using
+            # SQLite's backup API on the live connection. This replaces every
+            # page atomically inside the connection without racing open file
+            # handles (Windows-safe — no file rename of an in-use DB).
+            live = db()
+            with sqlite3.connect(candidate) as src:
+                src.backup(live)
+            live.commit()
+        except Exception as exc:  # noqa: BLE001 - destructive op must report, not crash
+            self._update_request(
+                request_id=int(request["id"]),
+                status="failed",
+                result_message=f"Restore apply failed; pre-restore snapshot is intact: {exc}",
+            )
+            return {
+                "ok": False,
+                "status": "failed",
+                "code": "restore_apply_failed",
+                "request": self.get(int(request["id"])) or request,
+                "error": str(exc),
+            }
+        self._update_request(
+            request_id=int(request["id"]),
+            status="completed",
+            result_message="Restore applied successfully from verified candidate.",
+            applied_at=_utcnow(),
+            applied_by="admin",
+        )
         return {
-            "ok": False,
-            "status": "not_implemented",
-            "code": "restore_apply_not_implemented_in_p08",
-            "request": request,
+            "ok": True,
+            "status": "completed",
+            "request": self.get(int(request["id"])) or {},
         }
 
     def send_status_callback(self, *, tenant_id: int, reference: str) -> dict[str, Any]:
@@ -243,6 +308,9 @@ class RestoreWorkflowService:
         result_message: str,
         local_snapshot_path: str | None = None,
         checksum_verified: bool | None = None,
+        candidate_path: str | None = None,
+        applied_at: str | None = None,
+        applied_by: str | None = None,
     ) -> None:
         if status not in RESTORE_STATES:
             raise ValueError(f"unsupported restore status: {status}")
@@ -254,6 +322,15 @@ class RestoreWorkflowService:
         if checksum_verified is not None:
             fields.append("checksum_verified = ?")
             params.append(1 if checksum_verified else 0)
+        if candidate_path is not None:
+            fields.append("candidate_path = ?")
+            params.append(candidate_path)
+        if applied_at is not None:
+            fields.append("applied_at = ?")
+            params.append(applied_at)
+        if applied_by is not None:
+            fields.append("applied_by = ?")
+            params.append(applied_by)
         params.append(int(request_id))
         db().execute(
             f"UPDATE license_admin_restore_requests SET {', '.join(fields)} WHERE id = ?",

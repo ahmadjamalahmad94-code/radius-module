@@ -1143,33 +1143,110 @@ def system_identity_set(
 
 
 class FileDownloadNotSupported(NotImplementedError):
-    """Raised by `file_download_stream` until a real binary helper
-    lands. Distinct exception type so route + tests can target it
-    without catching unrelated NotImplementedError."""
+    """Raised when the router cannot be addressed for a file download
+    at all (no resolvable address). Distinct exception type so the
+    route + tests can target it without catching unrelated errors."""
 
 
-# K8.1b — binary file download from the router.
+class FileDownloadError(RuntimeError):
+    """Raised when a real FTP download attempt fails — auth refused,
+    file missing/forbidden, or the transfer broke mid-stream. The
+    route layer turns this into a 502 envelope (the router was
+    reachable but the download itself failed)."""
+
+
+# K8.1b — real binary file download from the router over FTP.
 #
-# The current `MikrotikClient` only speaks the text-based RouterOS
-# API; it has no binary stream / SCP / FTP code path. A .backup
-# file read via `/file/print contents=` comes back as base64 inside
-# the reply, but the wire client doesn't expose a way to request
-# large `contents=` payloads safely (size limits, chunking, memory
-# pressure). Rather than fake a streaming response, the public
-# helper raises a distinct `FileDownloadNotSupported` exception
-# that the route layer translates into a 501 envelope. When a real
-# implementation lands (SCP side-channel or a wire-client binary
-# helper), this function returns an iterator of bytes chunks plus
-# a Content-Length hint instead.
+# The RouterOS API is text-only and won't stream large binary
+# `contents=` payloads safely, so we use the router's built-in FTP
+# service instead (RouterOS shares one user database across API/FTP/
+# SSH — the same `api_user` works as long as that user's group has
+# the `ftp` policy). We RETR the file into a spooled buffer, then
+# hand the route an iterator of byte chunks plus a Content-Length
+# hint so the browser gets a real download with a progress bar.
+FTP_TIMEOUT_SEC = 20
+FTP_CHUNK_BYTES = 64 * 1024
+_FTP_SPOOL_MAX = 8 * 1024 * 1024  # keep ≤8MB in RAM, spill bigger to disk
+
+
+def _ftp_connect(host: str, port: int, username: str, password: str, timeout: int):
+    """Open + authenticate an FTP control connection. Isolated so
+    tests can monkeypatch it with a fake transport."""
+    import ftplib
+
+    ftp = ftplib.FTP()
+    ftp.connect(host, port or 21, timeout=timeout)
+    ftp.login(username or "anonymous", password or "")
+    return ftp
+
+
 def file_download_stream(
-    nas: Mapping[str, Any], filename: str,
+    nas: Mapping[str, Any], filename: str, *, chunk_size: int = FTP_CHUNK_BYTES,
 ):
-    """Always raises `FileDownloadNotSupported` for now. Tests pin
-    the current behaviour so a regression surfaces immediately."""
-    raise FileDownloadNotSupported(
-        "تنزيل الملفات الثنائية من الراوتر غير مدعوم بعد — "
-        "الـ RouterOS API لا يوفّر تدفّق ثنائي عبر العميل الحالي."
-    )
+    """Download `filename` from the router over FTP.
+
+    Returns ``(size_bytes, iterator)`` where the iterator yields the
+    file's bytes in `chunk_size` chunks. Raises
+    `FileDownloadNotSupported` when the router has no resolvable
+    address, or `FileDownloadError` when the FTP transfer itself
+    fails. Never returns fabricated/empty bytes silently.
+    """
+    import ftplib
+    import tempfile
+
+    cfg = _build_router_cfg(nas)
+    host = str(cfg.get("host") or "").strip()
+    if not host:
+        raise FileDownloadNotSupported("عنوان الراوتر غير محدد لتنزيل الملف.")
+    ftp_port = int(nas.get("ftp_port") or 21)
+    try:
+        ftp = _ftp_connect(host, ftp_port, cfg.get("username", ""),
+                           cfg.get("password", ""), FTP_TIMEOUT_SEC)
+    except Exception as exc:  # noqa: BLE001 - normalise every dial error
+        raise FileDownloadError(
+            f"تعذّر الاتصال بخدمة FTP على الراوتر ({host}:{ftp_port}). "
+            f"تأكّد أن خدمة FTP مفعّلة وأن صلاحية المستخدم تتضمّن ftp. ({exc})"
+        ) from exc
+
+    buf = tempfile.SpooledTemporaryFile(max_size=_FTP_SPOOL_MAX)
+    try:
+        ftp.retrbinary(f"RETR {filename}", buf.write, blocksize=chunk_size)
+    except ftplib.error_perm as exc:
+        buf.close()
+        try:
+            ftp.quit()
+        except Exception:  # noqa: BLE001
+            pass
+        raise FileDownloadError(
+            f"تعذّر تنزيل «{filename}» — الملف غير موجود أو الوصول مرفوض. ({exc})"
+        ) from exc
+    except Exception as exc:  # noqa: BLE001
+        buf.close()
+        try:
+            ftp.quit()
+        except Exception:  # noqa: BLE001
+            pass
+        raise FileDownloadError(f"انقطع تنزيل الملف من الراوتر. ({exc})") from exc
+    finally:
+        try:
+            ftp.quit()
+        except Exception:  # noqa: BLE001
+            pass
+
+    size = buf.tell()
+    buf.seek(0)
+
+    def _generate():
+        try:
+            while True:
+                chunk = buf.read(chunk_size)
+                if not chunk:
+                    break
+                yield chunk
+        finally:
+            buf.close()
+
+    return size, _generate()
 
 
 def file_list(nas: Mapping[str, Any]) -> MtResult:

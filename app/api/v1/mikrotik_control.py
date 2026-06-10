@@ -924,14 +924,13 @@ def mt_system_backup_save(nas_id: int):
 
 
 def mt_file_download(nas_id: int, filename: str):
-    """K8.1b — honest unsupported response.
+    """K8.1b — real binary file download from the router over FTP.
 
-    The MikroTik wire client doesn't stream binary file contents
-    yet. Until a real helper lands we return a 501 envelope so
-    callers can detect the gap programmatically and the UI can
-    show a clear "not supported" notice rather than a broken
-    progress bar. The filename is still sanitized here so a future
-    real implementation inherits the security check unchanged.
+    Streams the file's bytes back as an attachment so the operator
+    can download a `.backup`/export straight from the dashboard with
+    no terminal. The filename is sanitized first (no path traversal),
+    then `mac.file_download_stream` pulls the bytes over the router's
+    FTP service and we wrap the iterator in a streaming Response.
     """
     nas = _load_nas(nas_id)
     if not nas:
@@ -949,10 +948,7 @@ def mt_file_download(nas_id: int, filename: str):
             status=400,
         )
     try:
-        # Once the helper streams real bytes this branch is replaced
-        # with a Flask `Response(generator, mimetype="application/
-        # octet-stream", headers={...})`.
-        mac.file_download_stream(nas, safe_name)
+        size, stream = mac.file_download_stream(nas, safe_name)
     except mac.FileDownloadNotSupported as exc:
         return fail(
             "not_supported",
@@ -960,9 +956,25 @@ def mt_file_download(nas_id: int, filename: str):
             status=501,
             details={"filename": safe_name, "router_id": nas_id},
         )
-    return fail(  # pragma: no cover
-        "not_supported", "تنزيل الملفات غير مدعوم", status=501,
+    except mac.FileDownloadError as exc:
+        return fail(
+            "download_failed",
+            str(exc),
+            status=502,
+            details={"filename": safe_name, "router_id": nas_id},
+        )
+    _audit_mutation(
+        nas_id=nas_id, action="mt.file.download",
+        target_id=safe_name, result=mac.MtResult(ok=True),
+        extra={"filename": safe_name, "size_bytes": size},
     )
+    headers = {
+        "Content-Disposition": f'attachment; filename="{safe_name}"',
+        "X-Accel-Buffering": "no",
+    }
+    if size:
+        headers["Content-Length"] = str(size)
+    return Response(stream, mimetype="application/octet-stream", headers=headers)
 
 
 def mt_system_reboot(nas_id: int):

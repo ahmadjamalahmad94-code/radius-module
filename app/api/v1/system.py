@@ -131,6 +131,12 @@ def register(bp: Blueprint) -> None:
         methods=["POST"],
     )
     bp.add_url_rule(
+        "/system/admin-bridge/restore/<reference>/apply",
+        "system_admin_bridge_restore_apply",
+        require_api_token(system_admin_bridge_restore_apply),
+        methods=["POST"],
+    )
+    bp.add_url_rule(
         "/system/admin-bridge/service-activations/poll",
         "system_admin_bridge_service_activations_poll",
         require_api_token(system_admin_bridge_service_activations_poll),
@@ -446,6 +452,52 @@ def system_admin_bridge_restore_snapshot(reference: str):
     except ValueError as exc:
         return fail("not_found", str(exc), status=404)
     return ok({"request": result})
+
+
+def system_admin_bridge_restore_apply(reference: str):
+    """Apply a verified restore candidate over the live database.
+
+    Real destructive operation, gated by THREE independent safety locks that
+    must ALL be satisfied (a local pre-restore snapshot exists, the candidate
+    checksum was verified, and the HOBERADIUS_ADMIN_RESTORE_APPLY_ENABLED flag
+    is on). When a lock is open the call returns a clear `blocked` envelope
+    naming the missing lock — never a silent no-op.
+    """
+    from ...radius.services.license_admin_restore import RestoreWorkflowService
+
+    try:
+        result = RestoreWorkflowService().apply_restore(
+            tenant_id=_tid(),
+            reference=reference,
+        )
+    except ValueError as exc:
+        return fail("not_found", str(exc), status=404)
+    if result.get("ok"):
+        return ok(result)
+    # Distinguish "blocked by a safety lock" (409) from "tried and failed" (500).
+    blocked_codes = {
+        "local_snapshot_required",
+        "checksum_not_verified",
+        "destructive_restore_disabled",
+        "candidate_missing",
+        "candidate_corrupt",
+    }
+    code = str(result.get("code") or "restore_apply_failed")
+    status = 409 if code in blocked_codes else 500
+    return fail(code, result.get("error") or _restore_block_message(code),
+                status=status, details={"request": result.get("request")})
+
+
+def _restore_block_message(code: str) -> str:
+    return {
+        "local_snapshot_required": "أنشئ نسخة وقاية محلّية قبل أي استعادة.",
+        "checksum_not_verified": "لم يُتحقّق من بصمة ملف النسخة المرشّحة بعد.",
+        "destructive_restore_disabled": (
+            "تطبيق الاستعادة المدمّرة مقفل — فعّل العلم "
+            "HOBERADIUS_ADMIN_RESTORE_APPLY_ENABLED من إعدادات النظام أولًا."),
+        "candidate_missing": "ملف النسخة المرشّحة غير موجود على القرص.",
+        "candidate_corrupt": "ملف النسخة المرشّحة ليس قاعدة SQLite صالحة.",
+    }.get(code, "تعذّر تطبيق الاستعادة.")
 
 
 def system_admin_bridge_service_activations_poll():
