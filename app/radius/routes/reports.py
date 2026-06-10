@@ -601,6 +601,11 @@ def rep_failed_logins():
     rows = [dict(r) for r in db().execute(
         f"SELECT * FROM radpostauth WHERE {where_sql} ORDER BY id DESC LIMIT 500", params
     ).fetchall()]
+    # تعريب عمود «السبب»: رمز radpostauth.class → عربي عبر الخريطة الموحّدة،
+    # وأي رمز غير معروف يُؤنَّس (لا snake_case إنجليزي خام). الخام يبقى في title.
+    from ..services.login_events import reason_label
+    for r in rows:
+        r["reason_ar"] = reason_label(r.get("class") or "")
     # مؤشّر «آخر 24 ساعة» — عدّ بسيط مستقل عن الفلاتر (نفس الجدول والشرط الأساسي)
     last24 = db().execute(
         "SELECT COUNT(*) AS c FROM radpostauth "

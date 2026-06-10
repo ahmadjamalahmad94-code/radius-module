@@ -117,10 +117,12 @@
           <td><strong><bdi>{{ r.username or '—' }}</bdi></strong></td>
           {# الردّ معرّب — والقيمة الخام (Access-Reject…) تبقى في title للمراجعة الفنية #}
           <td><span title="{{ r.reply }}">{{ hub.pill(REPLY_AR.get(r.reply, 'رفض غير معروف') if r.reply else '—', variant="red") }}</span></td>
-          {# السبب من عمود class معرّب — والرمز الخام في title #}
+          {# السبب معرّب عبر الخريطة الموحّدة (login_events.reason_label) المحقونة
+             في المسار كـ reason_ar — أي رمز غير معروف يُؤنَّس، لا snake_case خام.
+             الرمز الخام يبقى في title للمراجعة الفنية. #}
           <td>
             {% if r['class'] %}
-              <span class="rep-reason" title="{{ r['class'] }}">{{ REASON_AR.get(r['class'], r['class']) }}</span>
+              <span class="rep-reason" title="{{ r['class'] }}">{{ r.reason_ar or (REASON_AR.get(r['class']) or r['class']|replace('_',' ')) }}</span>
             {% else %}<span class="rep-muted">—</span>{% endif %}
           </td>
           <td class="rep-mono small">
