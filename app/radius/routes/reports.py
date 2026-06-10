@@ -616,24 +616,36 @@ def rep_failed_logins():
                            items=rows, total=total, last24=last24, filters=f, limit=500)
 
 
-# ─────────────── 3. Login status (last login per user) ───────────────
+# ─────────────── 3. Login status — flat login-attempts log ───────────────
+#
+# توضيح المعنى (يونيو 2026): هذه الصفحة سجلٌّ مسطّح لكل محاولة دخول
+# (نجاحًا أو فشلًا) — لا روستر حالات لكل مشترك. كانت تقرأ سابقًا من جدول
+# `subscribers` (صف لكل مشترك مع آخر دخول وحالة الاشتراك)، وهذا يخالف
+# اسمها ودلالتها كـ«حالة الدخول» (login status). الآن تقرأ من نفس مصدر
+# login_events الذي تستخدمه `failed_logins` و`login_states` — تعرض كل
+# المحاولات (الناجحة + الفاشلة) بفلتر النتيجة (الكل/نجاح/فشل) + بحث +
+# نطاق تاريخ. تبقى distinct عن `login_states` الذي يقسّمها إلى 5 شرائح
+# مخصّصة، وعن `failed_logins` الذي يَقصرها على الإخفاقات فقط.
 
 def rep_login_status():
-    f = _args()
-    status = (request.args.get("status") or "").strip()
-    where = ["tenant_id = ?"]
-    params: list = [_tid()]
-    if f["q"]:
-        where.append("username LIKE ?"); params.append(f"%{f['q']}%")
-    if status in ("enabled", "disabled", "expired"):
-        where.append("status = ?"); params.append(status)
-    where_sql = " AND ".join(where)
-    rows = [dict(r) for r in db().execute(f"""
-        SELECT username, last_login_at, last_seen_at, status, expire_at, online_count
-        FROM subscribers WHERE {where_sql}
-        ORDER BY last_seen_at DESC NULLS LAST LIMIT 500
-    """, params).fetchall()]
-    return render_template("radius/rep_login_status.html", items=rows, filters=f, status=status)
+    from ..services.login_events import (
+        fetch_login_events, ACTOR_LABELS, SOURCE_LABELS,
+    )
+    filters = {
+        "result":    (request.args.get("result") or "").strip(),
+        "source":    (request.args.get("source") or "").strip(),
+        "q":         (request.args.get("q") or "").strip(),
+        "date_from": (request.args.get("date_from") or "").strip(),
+        "date_to":   (request.args.get("date_to") or "").strip(),
+    }
+    data = fetch_login_events(_tid(), **filters)
+    return render_template(
+        "radius/rep_login_status.html",
+        rows=data["rows"], stats=data["stats"],
+        shown=data["shown"], matched=data["matched"],
+        filters=filters,
+        actor_labels=ACTOR_LABELS, source_labels=SOURCE_LABELS,
+    )
 
 
 # ─────────────── 3b. Login states (unified: panel + portal + RADIUS) ───────────────
@@ -862,24 +874,37 @@ def rep_manager_events():
     return render_template("radius/rep_manager_events.html", items=rows, total=total, filters=f)
 
 
-# ─────────────── 9. Manager login status (admins) ───────────────
+# ─────────────── 9. Manager login status — flat manager-attempts log ─────
+#
+# توضيح المعنى (يونيو 2026): نفس الإصلاح الدلاليّ في rep_login_status —
+# هذه الصفحة سجلٌّ مسطّح لمحاولات دخول المدراء (نجاح/فشل) لا روستر
+# للمدراء بحالة حساباتهم. كانت تقرأ سابقًا من جدول `admins` (صف لكل
+# مدير مع آخر دخول وحالة الحساب)، وهذا يخالف اسمها ودلالتها.
+# الآن تقرأ من login_events.fetch_login_events مع actor مثبَّت على "admin"
+# (مصدر panel) — نفس مصدر الـ5-way وlogin_status — وتعرض كل محاولات
+# المدراء (الناجحة + الفاشلة) بفلتر النتيجة (الكل/نجاح/فشل) + بحث +
+# نطاق تاريخ.
 
 def rep_manager_login_status():
-    f = _args()
-    where, params = [], []
-    if f["q"]:
-        where.append("(username LIKE ? OR full_name LIKE ? OR email LIKE ?)")
-        params += [f"%{f['q']}%"] * 3
-    where_sql = (" WHERE " + " AND ".join(where)) if where else ""
-    # ضمّ اسم الدور العربي (roles.display_name / name) ليُعرض بدل role_id الرقمي
-    rows = [dict(r) for r in db().execute(f"""
-        SELECT a.id, a.username, a.full_name, a.email, a.role_id,
-               a.is_super_admin, a.enabled, a.last_login_at, a.created_at,
-               COALESCE(NULLIF(r.display_name, ''), r.name) AS role_name
-        FROM admins a LEFT JOIN roles r ON r.id = a.role_id
-        {where_sql} ORDER BY a.last_login_at DESC NULLS LAST
-    """, params).fetchall()]
-    return render_template("radius/rep_manager_login_status.html", items=rows, filters=f)
+    from ..services.login_events import (
+        fetch_login_events, ACTOR_LABELS, SOURCE_LABELS,
+    )
+    filters = {
+        "result":    (request.args.get("result") or "").strip(),
+        "q":         (request.args.get("q") or "").strip(),
+        "date_from": (request.args.get("date_from") or "").strip(),
+        "date_to":   (request.args.get("date_to") or "").strip(),
+    }
+    # actor مقفل على "admin" — المصدر طبيعي panel (لوحة الإدارة) فلا
+    # حاجة لفلتر مصدر هنا. شريحة دخول المدراء فقط.
+    data = fetch_login_events(_tid(), actor="admin", **filters)
+    return render_template(
+        "radius/rep_manager_login_status.html",
+        rows=data["rows"], stats=data["stats"],
+        shown=data["shown"], matched=data["matched"],
+        filters=filters,
+        actor_labels=ACTOR_LABELS, source_labels=SOURCE_LABELS,
+    )
 
 
 # ─────────────── 10. User events (per subscriber) ───────────────

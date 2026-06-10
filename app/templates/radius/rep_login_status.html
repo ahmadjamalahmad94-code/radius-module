@@ -1,23 +1,25 @@
 {# ═══════════════════════════════════════════════════════════════════════
-   حالة دخول المشتركين — إعادة تصميم قوية من الصفر على نظام hub_v2:
+   سجل محاولات تسجيل الدخول — صف لكل محاولة (نجاحًا أو فشلًا):
      • صدفة هيرو واحدة (hub-hero-shell): عنوان + سطر تعريفي إنساني +
-       4 مؤشرات بصف واحد + حزام الفلترة 42px — بلا أي هيروات مكدّسة.
-     • جدول uds موحّد (فرز + ترقيم + تصدير) بأعمدة موسّطة تحت رؤوسها،
-       حالات معرّبة بحبوب ملوّنة (مفعَّل/منتهٍ/معطَّل) والخام في title.
-     • معطيات المسار: `items` (مشتركون مع last_login_at/last_seen_at/
-       status/expire_at/online_count)، `filters` (q)، `status` —
-       عقد الفلاتر GET كما هو بلا أي تغيير (q + status).
+       4 مؤشرات بصف واحد (إجمالي/ناجحة/فاشلة/اليوم) + حزام الفلترة 42px.
+     • جدول uds موحّد (فرز + ترقيم + تصدير): الوقت، المستخدم، نتيجة
+       المحاولة (حبّة خضراء/حمراء)، المصدر معرّب (شبكة/بوابة/لوحة)،
+       الشبكة (IP/NAS) + الجهاز (المتصفح/MAC)، السبب عند الفشل.
+     • فلاتر GET: result (نجاح/فشل)، q، date_from، date_to، source.
+     • مصدر البيانات: login_events.fetch_login_events — نفس مصدر صفحات
+       الـlogin_states الخمس وصفحة failed_logins (مع رفع شرط الفشل).
+     • معطيات المسار: rows + stats + shown + matched + filters + labels.
    ═══════════════════════════════════════════════════════════════════════ #}
 {% extends "admin/_admin_layout.html" %}
 {% import "_partials/hub.html" as hub %}
 
-{% block title %}حالة دخول المشتركين{% endblock %}
-{% block page_icon %}<i class="fa-solid fa-circle-check"></i>{% endblock %}
-{% block page_title %}حالة دخول المشتركين{% endblock %}
-{% block page_sub %}<span class="sub">{{ items|length }} مشترك</span>{% endblock %}
+{% block title %}{{ _('سجل محاولات تسجيل الدخول') }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-right-to-bracket"></i>{% endblock %}
+{% block page_title %}{{ _('سجل محاولات تسجيل الدخول') }}{% endblock %}
+{% block page_sub %}<span class="sub">{{ matched }} {{ _('محاولة') }}</span>{% endblock %}
 
 {% block head_extra %}{{ super() }}
-{# نظام الجداول الموحد (uds): فرز + ترقيم صفحات + تصدير لجدول المشتركين #}
+{# نظام الجداول الموحد (uds): فرز + ترقيم صفحات + تصدير #}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
 {% endblock %}
 
@@ -25,102 +27,113 @@
 {# متحكّم «انتقال سريع» المضغوط — يُحقن في صف عنوان الهيرو بدل الشريطين الكبيرين #}
 {% set _report_jump %}{% include "radius/reports_nav.html" %}{% endset %}
 
-{# ── مؤشرات مشتقة من نفس `items` (بلا أي استعلام إضافي) ── #}
-{% set _online  = items|selectattr('online_count')|list|length %}
-{% set _active  = items|selectattr('status','equalto','enabled')|list|length %}
-{% set _expired = items|selectattr('status','equalto','expired')|list|length %}
-
-{# ── توسيط موحّد لجدول الحالة: الرؤوس والخلايا تحت أسمائها تمامًا ── #}
+{# ── توسيط موحّد لجدول المحاولات: الرؤوس والخلايا تحت أسمائها تمامًا ── #}
 <style>
 .hub-table.rep-table thead th,
 .hub-table.rep-table tbody td{ text-align:center !important; }
+.hub-table.rep-table .rep-cell-dev{ justify-content:center; text-align:start; display:inline-flex; }
 </style>
 
 {# ───── صدفة الهيرو الواحدة: عنوان + سطر تعريفي + مؤشرات بصف واحد + حزام الفلترة ───── #}
 <section class="hub-hero-shell" data-testid="login-status-hero">
 {% call hub.megahero(
-  "حالة دخول المشتركين",
-  subtitle="لمحة سريعة عن كل مشترك: حالته الآن، متى دخل آخر مرة، متى شوهد آخر نشاط له، وكم جهازًا متصلًا لديه حاليًا.",
-  icon="circle-check",
+  _("سجل محاولات تسجيل الدخول"),
+  subtitle=_("كل محاولة دخول إلى النظام — نجاحًا أو فشلًا — مع الوقت، المستخدم، الشبكة والجهاز، وسبب الفشل عند وجوده. الترتيب من الأحدث للأقدم. للقراءة فقط."),
+  icon="right-to-bracket",
   actions_html=_report_jump,
   kpis=[
-    {'label': 'إجمالي المطابق', 'value': items|length, 'icon': 'users',        'variant': 'brand',
-     'sub': 'يُعرض حتى 500 مشترك'},
-    {'label': 'مفعَّلون',        'value': _active,       'icon': 'circle-check', 'variant': 'green'},
-    {'label': 'منتهون',          'value': _expired,      'icon': 'hourglass-end','variant': 'amber'},
-    {'label': 'متصلون الآن',     'value': _online,       'icon': 'wifi',         'variant': 'blue'},
+    {'label': _('محاولات اليوم'), 'value': stats.today,      'icon': 'calendar-day', 'variant': 'brand',
+     'sub': _('من إجمالي ') ~ matched ~ _(' محاولة مطابقة')},
+    {'label': _('ناجحة'),         'value': stats.ok,         'icon': 'circle-check', 'variant': 'green'},
+    {'label': _('فاشلة'),         'value': stats.fail,       'icon': 'circle-xmark', 'variant': 'red'},
+    {'label': _('جهات فريدة'),    'value': stats.uniq_users, 'icon': 'fingerprint',  'variant': 'blue'},
   ],
   search_action=url_for('radius.rep_login_status')
 ) %}
   <input class="hub-input grow" type="text" name="q"
-         value="{{ filters.q if filters else '' }}" placeholder="{{ _('بحث باسم المشترك…') }}">
-  {# حالة الاشتراك — select عادي يحوّله hub_select.js تلقائيًا إلى hbsel #}
-  <select class="hub-input" name="status" title="{{ _('حالة الاشتراك') }}">
-    <option value="">{{ _('كل الحالات') }}</option>
-    <option value="enabled"  {% if status=='enabled' %}selected{% endif %}>{{ _('مفعَّل') }}</option>
-    <option value="expired"  {% if status=='expired' %}selected{% endif %}>{{ _('منتهٍ') }}</option>
-    <option value="disabled" {% if status=='disabled' %}selected{% endif %}>{{ _('معطَّل') }}</option>
+         value="{{ filters.q }}" placeholder="{{ _('بحث (المستخدم / عنوان الشبكة / جهاز الشبكة)…') }}">
+  <select class="hub-input" name="result" title="{{ _('نتيجة المحاولة') }}">
+    <option value="">{{ _('كل النتائج') }}</option>
+    <option value="success" {% if filters.result=='success' %}selected{% endif %}>{{ _('نجاح') }}</option>
+    <option value="fail"    {% if filters.result=='fail' %}selected{% endif %}>{{ _('فشل') }}</option>
   </select>
+  <select class="hub-input" name="source" title="{{ _('المصدر') }}">
+    <option value="">{{ _('كل المصادر') }}</option>
+    <option value="network" {% if filters.source=='network' %}selected{% endif %}>{{ _('شبكة المصادقة') }}</option>
+    <option value="portal"  {% if filters.source=='portal' %}selected{% endif %}>{{ _('البوابة/الويب') }}</option>
+    <option value="panel"   {% if filters.source=='panel' %}selected{% endif %}>{{ _('لوحة الإدارة') }}</option>
+  </select>
+  <input class="hub-input" type="date" name="date_from"
+         value="{{ filters.date_from }}" title="{{ _('من تاريخ') }}">
+  <input class="hub-input" type="date" name="date_to"
+         value="{{ filters.date_to }}" title="{{ _('إلى تاريخ') }}">
   {{ hub.btn("تطبيق", icon="filter", variant="primary", type="submit", size="sm") }}
-  {% if (filters and filters.q) or status %}
+  {% if filters.q or filters.result or filters.source or filters.date_from or filters.date_to %}
     {{ hub.btn("إعادة ضبط", icon="rotate-left", variant="ghost", size="sm",
                attrs='onclick="window.location=' + "'" + url_for('radius.rep_login_status') + "'" + '"') }}
   {% endif %}
   <span class="hub-hint" tabindex="0"
-        data-hint="البحث يطابق اسم المشترك، وفلتر الحالة يفرز على حالة الاشتراك (مفعَّل/منتهٍ/معطَّل). الترتيب من الأحدث ظهورًا للأقدم، وتُعرض حتى 500 مشترك. البيانات للقراءة فقط من جدول المشتركين."><i class="fa-solid fa-info"></i></span>
+        data-hint="{{ _('كل صف هنا = محاولة تسجيل دخول واحدة. البحث يطابق المستخدم وعنوان الشبكة وجهاز الشبكة، فلتر النتيجة يفرز نجاحًا أو فشلًا، نطاق التاريخ يعمل على وقت المحاولة. مصدر البيانات نفس مصدر «حالات تسجيل الدخول» و«فشل دخول الشبكة».') }}"><i class="fa-solid fa-info"></i></span>
 {% endcall %}
 </section>{# /hub-hero-shell #}
 
-{% if items %}
-{# ───── جدول حالة الدخول — uds موحّد (فرز + ترقيم + تصدير) ───── #}
-{% call hub.section("حالة الدخول لكل مشترك", icon="table-list",
-                    meta=items|length|string + " مشترك", flush=True) %}
+{% if rows %}
+{# ───── جدول المحاولات — uds موحّد (فرز + ترقيم + تصدير) ───── #}
+{% call hub.section(_("سجل المحاولات"), icon="table-list",
+                    meta=(shown|string) ~ (_(" من ") ~ matched|string if matched > shown else _(" محاولة")), flush=True) %}
   <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="25"
        style="border:none;border-radius:0">
     <table class="hub-table rep-table">
       <thead>
         <tr>
-          <th>{{ _('المشترك') }}</th>
-          <th data-uds-nosort>{{ _('الحالة') }}</th>
-          <th>{{ _('آخر تسجيل دخول') }}</th>
-          <th>{{ _('آخر ظهور') }}</th>
-          <th class="num">{{ _('متصل الآن') }}</th>
-          <th>{{ _('ينتهي في') }}</th>
+          <th>{{ _('الوقت') }}</th>
+          <th>{{ _('المستخدم') }}</th>
+          <th data-uds-nosort>{{ _('النتيجة') }}</th>
+          <th>{{ _('المصدر') }}</th>
+          <th data-uds-nosort>{{ _('الشبكة (عنوان / جهاز)') }}</th>
+          <th data-uds-nosort>{{ _('الجهاز (المتصفح / عنوان MAC)') }}</th>
+          <th data-uds-nosort>{{ _('السبب') }}</th>
         </tr>
       </thead>
       <tbody>
-        {% for r in items %}
-        <tr class="{{ 'is-fail' if r.status == 'disabled' else ('is-warn' if r.status == 'expired' else '') }}">
-          <td><strong><bdi>{{ r.username }}</bdi></strong></td>
-          {# الحالة معرّبة بحبّة ملوّنة — والقيمة الخام تبقى في title للمراجعة الفنية #}
+        {% for r in rows %}
+        <tr class="{{ 'is-fail' if not r.success else '' }}">
+          {% set _dl = r.when|dt_local if r.when else '' %}
+          <td class="rep-mono"
+              style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
+            <span class="rep-primary">{{ _dl[:10] or '—' }}</span>
+            <span class="rep-sub">{{ _dl[11:16] }}</span>
+          </td>
+          <td><strong><bdi>{{ r.username or '—' }}</bdi></strong>
+            {% if r.actor_type %}<br><small style="color:var(--muted)">{{ actor_labels.get(r.actor_type, r.actor_type) }}</small>{% endif %}
+          </td>
           <td>
-            <span title="{{ r.status }}">
-              {% if r.status == 'enabled' %}{{ hub.pill("مفعَّل", variant="green") }}
-              {% elif r.status == 'expired' %}{{ hub.pill("منتهٍ", variant="amber") }}
-              {% elif r.status == 'disabled' %}{{ hub.pill("معطَّل", variant="red") }}
-              {% else %}{{ hub.pill(r.status or '—', variant="grey") }}{% endif %}
-            </span>
+            {% if r.success %}{{ hub.pill(_("نجاح"), variant="green") }}
+            {% else %}{{ hub.pill(_("فشل"), variant="red") }}{% endif %}
           </td>
-          {% set _ll = r.last_login_at|dt_local if r.last_login_at else '' %}
-          <td class="rep-mono"
-              style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
-            {% if _ll %}<span class="rep-primary">{{ _ll[:10] }}</span><span class="rep-sub">{{ _ll[11:16] }}</span>
-            {% else %}<span class="rep-sub">{{ _('لم يدخل بعد') }}</span>{% endif %}
+          <td>
+            {% set _src = r.source %}
+            {% if _src == 'network' %}{{ hub.pill(_("شبكة المصادقة"), variant="indigo") }}
+            {% elif _src == 'portal' %}{{ hub.pill(_("البوابة/الويب"), variant="amber") }}
+            {% elif _src == 'panel' %}{{ hub.pill(_("لوحة الإدارة"), variant="grey") }}
+            {% else %}<span class="rep-muted">{{ source_labels.get(_src, _src or '—') }}</span>{% endif %}
           </td>
-          {% set _ls = r.last_seen_at|dt_local if r.last_seen_at else '' %}
-          <td class="rep-mono"
-              style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
-            {% if _ls %}<span class="rep-primary">{{ _ls[:10] }}</span><span class="rep-sub">{{ _ls[11:16] }}</span>
-            {% else %}<span class="rep-sub">{{ _('لا نشاط بعد') }}</span>{% endif %}
+          <td class="rep-cell-dev"
+              style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr;font-family:var(--font-mono,monospace)">
+            {% if r.ip %}<span class="rep-primary"><bdi>{{ r.ip }}</bdi></span>{% endif %}
+            {% if r.nas %}<span class="rep-sub" style="direction:ltr">{{ r.nas }}</span>{% endif %}
+            {% if not r.ip and not r.nas %}<span class="rep-muted">—</span>{% endif %}
           </td>
-          <td class="num">
-            {% if r.online_count and r.online_count > 0 %}
-              <span title="{{ _('عدد الجلسات النشطة حاليًا') }}">{{ hub.pill((r.online_count|string) ~ ' جهاز', variant="green") }}</span>
-            {% else %}<span class="rep-muted">{{ _('غير متصل') }}</span>{% endif %}
+          <td class="rep-cell-dev"
+              style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr;font-family:var(--font-mono,monospace)">
+            {% if r.browser %}<span class="rep-primary">{{ r.browser }}</span>{% endif %}
+            {% if r.mac %}<span class="rep-sub"><bdi>{{ r.mac }}</bdi></span>{% endif %}
+            {% if not r.browser and not r.mac %}<span class="rep-muted">—</span>{% endif %}
           </td>
-          <td class="rep-mono"
-              style="white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr">
-            {{ r.expire_at|date_local if r.expire_at else '—' }}
+          <td>
+            {% if r.success %}<span class="rep-muted">—</span>
+            {% elif r.reason %}<span title="{{ r.reason }}"><bdi>{{ r.reason }}</bdi></span>
+            {% else %}<span class="rep-muted">{{ _('غير محدد') }}</span>{% endif %}
           </td>
         </tr>
         {% endfor %}
@@ -130,9 +143,9 @@
 {% endcall %}
 {% else %}
 {{ hub.empty(
-  "لا مشتركين مطابقين",
-  sub="غيّر البحث أو فلتر الحالة — أو لا يوجد مشتركون بعد ليُعرض دخولهم هنا.",
-  icon="users-slash"
+  _("لا محاولات مطابقة"),
+  sub=_("غيّر البحث أو الفلاتر — أو لا توجد محاولات مسجَّلة في هذه الفترة بعد."),
+  icon="circle-info"
 ) }}
 {% endif %}
 
