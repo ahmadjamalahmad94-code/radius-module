@@ -337,3 +337,87 @@ def test_service_request_rejects_bad_inputs(app, client):
     r3 = client.post("/admin/radius/mt/9999/service-request",
                      json={"slug": "public-ip", "mb": 1024}, headers=hdrs)
     assert r3.status_code == 404
+
+
+# ──────────────────────────────────────────────────────────────
+# يونيو 2026 — إعادة تصميم «خدماتي» (fix/my-services-redesign).
+# يُثبّت هذا القسم القرارات الثلاثة التي يُصدّرها التصميم الجديد:
+#   (1) شبكة بطاقات الخدمات 3 أعمدة على الشاشات الواسعة.
+#   (2) لا شارة «ترقية» على hotspot ولا broadband (خدمات مفتوحة).
+#   (3) قسم «الخدمات المُضافة» يَستخدم تصميم بطاقات (.rh-grp) لا
+#       تدفّقًا مُسطَّحًا، والـJS يَبني .rh-grp/.rh-grp-head/.rh-grp-body.
+# ──────────────────────────────────────────────────────────────
+
+
+def test_redesign_card_grid_is_three_columns_wide(app, client):
+    """شبكة البطاقات: 3 أعمدة على سطح المكتب الواسع."""
+    _seed_router(app, nas_id=41, name="grid-rtr", address="203.0.113.41")
+    _login(client)
+    res = client.get("/admin/radius/mt/41/dashboard")
+    assert res.status_code == 200
+    html = res.get_data(as_text=True)
+    # قاعدة الـCSS الأساسيّة (3 أعمدة) لا بدّ من حضورها.
+    assert "grid-template-columns:repeat(3, minmax(0, 1fr))" in html
+    # خطوة استجابة متوسّطة (≤1080px) تَنزل لعمودَين.
+    assert "max-width: 1080px" in html
+    # خطوة الجوال (≤640px) تَنزل لعمود واحد.
+    assert "max-width: 640px" in html
+
+
+def test_redesign_hotspot_and_broadband_have_no_upgrade_pill(app, client):
+    """قاعدة (2): الـhotspot والـbroadband خدمات مفتوحة — لا «ترقية»."""
+    _seed_router(app, nas_id=42, name="open-rtr", address="203.0.113.42")
+    _login(client)
+    res = client.get("/admin/radius/mt/42/dashboard")
+    assert res.status_code == 200
+    html = res.get_data(as_text=True)
+
+    # حدّد بطاقة hotspot كاملةً ثم تأكّد أنها لا تَحوي pill.
+    h_idx = html.find('data-rh-svc-card="hotspot"')
+    assert h_idx >= 0
+    hotspot_card = html[h_idx: html.find("</a>", h_idx)]
+    assert 'data-svc-type="hotspot"' not in hotspot_card
+    assert 'ssm-upgrade-pill' not in hotspot_card
+
+    # وكذلك broadband.
+    b_idx = html.find('data-rh-svc-card="broadband"')
+    assert b_idx >= 0
+    broadband_card = html[b_idx: html.find("</a>", b_idx)]
+    assert 'data-svc-type="broadband"' not in broadband_card
+    assert 'ssm-upgrade-pill' not in broadband_card
+
+
+def test_redesign_other_services_still_have_upgrade_pill(app, client):
+    """بقيّة الخدمات (loop_detect, bt_wifi_block, public-ip) تَحتفظ
+    بشاراتها — التصميم الجديد لم يَلمسها."""
+    _seed_router(app, nas_id=43, name="other-rtr", address="203.0.113.43")
+    _login(client)
+    res = client.get("/admin/radius/mt/43/dashboard")
+    assert res.status_code == 200
+    html = res.get_data(as_text=True)
+    assert 'data-svc-type="bt_wifi_block"' in html
+    assert 'data-svc-type="loop_detect"' in html
+    assert 'data-svc-type="public-ip"' in html
+
+
+def test_redesign_added_services_uses_new_grp_classes(app, client):
+    """قاعدة (3): قسم «الخدمات المُضافة» — الـCSS الجديد للـ.rh-grp
+    حاضر، والـJS يَبني سكشن .rh-grp / .rh-grp-head / .rh-grp-body."""
+    _seed_router(app, nas_id=44, name="grp-rtr", address="203.0.113.44")
+    _login(client)
+    res = client.get("/admin/radius/mt/44/dashboard")
+    assert res.status_code == 200
+    html = res.get_data(as_text=True)
+
+    # CSS الجديد للحاوية الجماعيّة + الترويسة + الجسم.
+    assert ".rh-grp{" in html
+    assert ".rh-grp-head{" in html
+    assert ".rh-grp-name{" in html
+    assert ".rh-grp-count{" in html
+    assert ".rh-grp-body{" in html
+
+    # الـJS يَبني سكشن <section class="rh-grp"> ووصفه.
+    assert '<section class="rh-grp"' in html
+    assert '<header class="rh-grp-head">' in html
+    assert "rh-grp-ico" in html
+    assert '<div class="rh-grp-body">' in html
