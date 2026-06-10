@@ -207,10 +207,8 @@ def _start_workers(app: Flask) -> None:
                                   start_admin_bridge_sync_worker,
                                   start_backup_scheduler_worker,
                                   start_device_fingerprint_worker,
-                                  start_device_health_poll_worker,
                                   start_dunning_worker,
                                   start_lifecycle_worker,
-                                  start_loop_probe_poller,
                                   start_mt_reconciler,
                                   start_stale_session_reaper,
                                   start_sync_worker,
@@ -219,11 +217,9 @@ def _start_workers(app: Flask) -> None:
         start_accounting_puller()
         start_stale_session_reaper()
         start_device_fingerprint_worker()
-        start_device_health_poll_worker()
         start_lifecycle_worker()
         start_admin_bridge_sync_worker()
         start_mt_reconciler()
-        start_loop_probe_poller()
         start_backup_scheduler_worker()
         start_dunning_worker()
         start_temp_speed_expiry()
@@ -333,108 +329,6 @@ def _install_cli(app: Flask) -> None:
         for key in sorted(summary):
             click.echo(f"- {key}: {summary[key]}")
 
-    @app.cli.command("sync-license")
-    @click.option("--tenant-id", default=1, type=int, help="Tenant ID (default: 1)")
-    def _sync_license_command(tenant_id: int = 1) -> None:
-        """يزامن الترخيص والتخصيصات من لوحة التراخيص. شغّله كل 5 دقائق عبر cron."""
-        from app.radius.services.license_sync_service import sync
-
-        result = sync(tenant_id)
-        if result.get("ok"):
-            click.echo(
-                f"sync-license OK: "
-                f"allocations_synced={result.get('allocations_synced', 0)} "
-                f"status={result.get('license_status', '?')}"
-            )
-        else:
-            click.echo(
-                f"sync-license FAIL: reason={result.get('reason', '?')} "
-                f"detail={result.get('detail', '')}",
-                err=True,
-            )
-
-    @app.cli.command("run-radius-auth")
-    @click.option("--host", default=None, help="Listen host (env: HOBERADIUS_RADIUS_LISTEN_HOST)")
-    @click.option("--auth-port", default=None, type=int, help="Auth UDP port (env: HOBERADIUS_RADIUS_AUTH_PORT)")
-    @click.option("--acct-port", default=None, type=int, help="Acct UDP port (env: HOBERADIUS_RADIUS_ACCT_PORT)")
-    @click.option("--tenant-id", default=None, type=int, help="Tenant ID (env: HOBERADIUS_TENANT_ID)")
-    def _run_radius_auth_command(
-        host=None, auth_port=None, acct_port=None, tenant_id=None
-    ) -> None:
-        """يشغّل خادم RADIUS للمصادقة على حسابات VPN (PAP + MS-CHAPv2).
-
-        يستمع على UDP 1812 (auth) و 1813 (acct) بشكل افتراضي.
-        ضبط HOBERADIUS_RADIUS_SECRET مطلوب.
-        """
-        import asyncio
-        from app.radius.services.radius_auth_server import run_server
-
-        asyncio.run(run_server(
-            host=host,
-            auth_port=auth_port,
-            acct_port=acct_port,
-            tenant_id=tenant_id,
-        ))
-
-    @app.cli.command("sync-wg-quota")
-    @click.option("--tenant-id", default=1, type=int, help="Tenant ID (default: 1)")
-    def _sync_wg_quota_command(tenant_id: int = 1) -> None:
-        """يقرأ `wg show <iface> transfer` ويُحدِّث quota_bytes_used لكل peer.
-
-        شغّله دوريًا عبر systemd timer (كل 5 دقائق).
-        """
-        from app.radius.services.wg_data_manager import sync_quota
-
-        result = sync_quota(tenant_id)
-        if result.get("ok"):
-            click.echo(
-                f"sync-wg-quota OK: "
-                f"peers_updated={result.get('peers_updated', 0)} "
-                f"total_bytes={result.get('total_bytes', 0)}"
-            )
-        else:
-            click.echo(
-                f"sync-wg-quota FAIL: {result.get('error', '?')}",
-                err=True,
-            )
-
-    @app.cli.command("enforce-expiry")
-    @click.option("--tenant-id", default=1, type=int, help="Tenant ID (default: 1)")
-    @click.option(
-        "--dry-run/--apply",
-        default=True,
-        help=(
-            "--dry-run (default): اقرأ فقط — اعرض ما سيتغيّر دون كتابة أي شيء. "
-            "--apply: طبِّق التغييرات فعليًا (اكتب DB واستدعِ wg)."
-        ),
-    )
-    def _enforce_expiry_command(tenant_id: int = 1, dry_run: bool = True) -> None:
-        """يُطبّق انتهاء الصلاحية والكوتا تلقائيًا:
-        - يُعطّل التخصيصات المنتهية ويُتبِعها بتعطيل VPN accounts
-        - يُعطّل WireGuard peers تجاوزت transfer_limit_bytes
-        - يُعطّل خدمة wg-data عند تجاوز كوتا الخدمة
-        - يُعيد تفعيل الكوتا عند بدء شهر جديد
-
-        الافتراضي: dry-run (لا يكتب شيئًا).
-        شغّله مع --apply عبر systemd timer كل 15 دقيقة.
-        """
-        from app.radius.services.expiry_enforcer import run
-
-        result = run(tenant_id, dry_run=dry_run)
-        mode = "DRY-RUN" if dry_run else "APPLY"
-        parts = []
-        for k, v in sorted(result.items()):
-            if k not in ("error", "dry_run"):
-                parts.append(f"{k}={v}")
-        summary = " ".join(parts)
-        if "error" in result:
-            click.echo(
-                f"enforce-expiry [{mode}] ERROR: {result['error']} | {summary}",
-                err=True,
-            )
-        else:
-            click.echo(f"enforce-expiry [{mode}]: {summary}")
-
 
 # ─────────────── stubs (تحاكي HobeHub) ───────────────
 
@@ -500,26 +394,6 @@ def _install_stubs(app: Flask) -> None:
         except Exception:  # noqa: BLE001 — الشارة لا تكسر أي صفحة أبدًا
             return 0
 
-    def _store_pending_count() -> int:
-        """عدد عناصر المتجر المفتوحة بانتظار المدير (شارة sidebar لبند
-        «دعم وطلبات المتجر»): تنبيهات المتجر القابلة للمعالجة المفتوحة
-        (إيداع + سحب + شات) — يُستثنى التسجيل غير القابل للمعالجة.
-        استعلام عدّ واحد خفيف على جدول التنبيهات، ولا يكسر أي صفحة."""
-        try:
-            from flask import g as _g
-            from app.radius.core.tenant import DEFAULT_TENANT_ID
-            from app.radius.db.connection import db as _db
-            tid = int(getattr(_g, "tenant_id", DEFAULT_TENANT_ID))
-            row = _db().execute(
-                "SELECT COUNT(*) AS c FROM alerts "
-                "WHERE tenant_id = ? AND status = 'open' "
-                "AND rule IN ('store.deposit','store.withdrawal','store.chat')",
-                (tid,),
-            ).fetchone()
-            return int(row["c"] if row else 0)
-        except Exception:  # noqa: BLE001 — الشارة لا تكسر أي صفحة أبدًا
-            return 0
-
     def _collection_is_frozen() -> bool:
         """هل قسم التحصيل مجمّد؟ (شارة الـ sidebar فقط).
 
@@ -540,51 +414,42 @@ def _install_stubs(app: Flask) -> None:
         except Exception:  # noqa: BLE001 — الشارة لا تكسر أي صفحة أبدًا
             return True
 
-    # ── صلاحيات الواجهة (RBAC UI) — أغلفة آمنة حول auth/ui_permissions ──
-    # المنطق الكامل (التخزين لكل طلب + خريطة endpoint→صلاحية) يعيش في
-    # app/radius/auth/ui_permissions.py؛ هنا فقط أغلفة لا تكسر أي صفحة.
-    def _ui_can(perm_key: str) -> bool:
+    # ── صلاحيات الواجهة (RBAC UI) — حقن مشروط بطبقة auth/ui_permissions ──
+    # المنطق الكامل (can/perm_for_endpoint/ui_unauth_mode + التخزين لكل طلب
+    # + خريطة endpoint→صلاحية) يعيش في app/radius/auth/ui_permissions.py.
+    #
+    # عقد fail-open الحاسم: نحقن can/perm_for_endpoint **فقط** عندما تُستورَد
+    # الطبقة بنجاح. إن غاب الملف أو فشل الاستيراد لأي سبب، نُسقط المفتاحين
+    # عمدًا — فيقرأ السايدبار `_rbac_ui = (can is defined and
+    # perm_for_endpoint is defined)` كـFalse ويرتدّ لـ«عرض الكل» (fail-open).
+    #
+    # هذا يعالج جذر عطل الإنتاج: الأغلفة القديمة كانت محقونة **دائمًا** لكنها
+    # تبتلع ImportError وتُرجِع False لكل مفتاح — فيبقى _rbac_ui=True بينما
+    # can() يفشل بصمت ⇒ تجميد كل الأقسام حتى للسوبر. الآن: استيراد فاشل =
+    # لا حقن = عرض الكل، بدل التجميد الكارثي.
+    def _rbac_ui_context() -> dict:
         try:
-            from app.radius.auth.ui_permissions import can as _can
-            return _can(perm_key)
-        except Exception:  # noqa: BLE001 — فشل الفحص = لا صلاحية (الوضع الآمن)
-            return False
-
-    def _ui_unauth_mode() -> str:
-        try:
-            from app.radius.auth.ui_permissions import ui_unauth_mode as _m
-            return _m()
-        except Exception:  # noqa: BLE001 — الافتراضي: تجميد بقفل
-            return "freeze"
-
-    def _ui_perm_for_endpoint(endpoint: str):
-        try:
-            from app.radius.auth.ui_permissions import perm_for_endpoint as _p
-            return _p(endpoint)
-        except Exception:  # noqa: BLE001 — endpoint مجهول = بند مفتوح
-            return None
-
-    # ── أعلام الأقسام (إخفاء/تعطيل قسم بكامله) — أغلفة آمنة حول
-    # auth/section_flags. تعيد False عند أي فشل (الوضع الآمن: لا تكسر القالب،
-    # ويبقى الحارس الخادمي وحده مصدر الحقيقة لمنع الوصول.)
-    def _section_hidden(name: str) -> bool:
-        try:
-            from app.radius.auth.section_flags import is_section_hidden as _h
-            return _h(name)
-        except Exception:  # noqa: BLE001
-            return False
-
-    def _section_disabled(name: str) -> bool:
-        try:
-            from app.radius.auth.section_flags import is_section_disabled as _d
-            return _d(name)
-        except Exception:  # noqa: BLE001
-            return False
+            from app.radius.auth import ui_permissions as _uip
+        except Exception:  # noqa: BLE001 — الطبقة غائبة/معطوبة → fail-open
+            app.logger.exception(
+                "RBAC-UI layer unavailable — sidebar fails OPEN "
+                "(all sections visible). Check app/radius/auth/ui_permissions.py "
+                "is present in the build (was historically eaten by the '????/' "
+                ".gitignore rule on the 4-char 'auth/' dir)."
+            )
+            return {}
+        # الدوال نفسها تبتلع أخطاءها الداخلية وتُرجِع قيمًا آمنة، فحقنها مباشرةً
+        # آمن — can() يُرجِع True للسوبر دائمًا (يفحص session['is_super_admin']).
+        return {
+            "can": _uip.can,
+            "ui_unauth_mode": _uip.ui_unauth_mode,
+            "perm_for_endpoint": _uip.perm_for_endpoint,
+        }
 
     @app.context_processor
     def _inject():
         from flask import session as flask_session
-        return {
+        ctx = {
             "csrf_token": csrf_token,
             "csrf_token_input": csrf_token_input,
             "session": flask_session,
@@ -608,32 +473,20 @@ def _install_stubs(app: Flask) -> None:
             # المهام المنتظرة بجانب رابط «طابور المزامنة». استعلام عدّ واحد،
             # ولا تكسر أي صفحة عند الخطأ (تُرجع صفرًا).
             "sync_pending_count": _sync_pending_count,
-            # شارة «دعم وطلبات المتجر»: دالة كسولة تستدعيها الـ sidebar
-            # لعرض عدد طلبات/رسائل المتجر المفتوحة (إيداع/سحب/شات). استعلام
-            # عدّ واحد على التنبيهات، ولا تكسر أي صفحة عند الخطأ (صفر).
-            "store_pending_count": _store_pending_count,
-            # ── صلاحيات الواجهة (RBAC UI) ──
-            # can(perm): هل يملك المسؤول الحالي الصلاحية؟ (super_admin دائمًا نعم)
-            # ui_unauth_mode(): "freeze" تجميد بقفل أو "hide" إخفاء كلي —
-            #   يضبطه مالك الريدياس من إعدادات النظام (security.unauthorized_ui).
-            # perm_for_endpoint(ep): مفتاح الصلاحية لبند sidebar حسب endpoint.
-            # كلها مخزّنة لكل طلب ولا تكسر أي صفحة عند الخطأ.
-            "can": _ui_can,
-            "ui_unauth_mode": _ui_unauth_mode,
-            "perm_for_endpoint": _ui_perm_for_endpoint,
             # is_super_admin: علم صريح يُقرأ من الجلسة مباشرةً — مصدر حقيقة
             # مستقل عن can()/طبقة الـRBAC. الـ sidebar يعتمد عليه ليفتح كل
             # الأقسام للمدير الرئيسي دائمًا (fail-open) حتى لو فشل حقن أو
             # تحليل الصلاحيات بصمت. قراءة قاموس واحدة، لا تكسر أي صفحة.
             "is_super_admin": bool(flask_session.get("is_super_admin")),
-            # ── أعلام الأقسام (مصدر الحقيقة الواحد لإخفاء/تعطيل قسم) ──
-            # is_section_hidden(name)/is_section_disabled(name): تَستدعيهما
-            # القوالب لرسم شارة «مخفي/موقوف» للسوبر، أو لإخفاء بطاقة قسم.
-            # غير السوبر يُحجب أصلًا في الحارس الخادمي قبل بلوغ القالب،
-            # فلا حاجة لمنطق إضافي. لا تكسر أي صفحة عند الخطأ.
-            "is_section_hidden":   _section_hidden,
-            "is_section_disabled": _section_disabled,
         }
+        # ── صلاحيات الواجهة (RBAC UI) — حقن مشروط (fail-open عند الغياب) ──
+        # can(perm): هل يملك المسؤول الحالي الصلاحية؟ (super_admin دائمًا نعم)
+        # ui_unauth_mode(): "freeze" تجميد بقفل أو "hide" إخفاء كلي.
+        # perm_for_endpoint(ep): مفتاح الصلاحية لبند sidebar حسب endpoint.
+        # تُحقن فقط إن استُورِدت الطبقة؛ وإلا تُترك غير معرّفة → السايدبار
+        # يرتدّ لعرض الكل بدل التجميد. راجع _rbac_ui_context أعلاه.
+        ctx.update(_rbac_ui_context())
+        return ctx
 
     # Unified system config (currency / timezone / branding) + money & local-time
     # filters — single source of truth read from tenant_settings.
