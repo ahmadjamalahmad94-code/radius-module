@@ -27,21 +27,57 @@ WEB_LOGIN_ACTIONS = ("auth_login", "auth_login_failed")
 ACTOR_LABELS = {"admin": "مدير", "subscriber": "مشترك", "card": "كرت"}
 SOURCE_LABELS = {"panel": "لوحة الإدارة", "portal": "بوابة المشتركين", "network": "شبكة المصادقة"}
 
-# ترجمة أسباب رفض RADIUS الشائعة (من policy_engine._MSG)
+# ───────────── خريطة أسباب رفض الدخول → عربي (مصدر موحّد) ─────────────
+# المصدر الأساسي للرموز: policy_engine._reject(reason) الذي يكتب الرمز في
+# عمود radpostauth.class عبر _log_attempt. نُغطّي رموز policy_engine._MSG
+# الحالية + المرادفات/الرموز التاريخية التي قد تبقى في صفوف قديمة، كي لا
+# يظهر أي كود إنجليزي خام في عمود «السبب». أي رمز غير معروف → تأنيس عربي
+# آمن عبر reason_label() (لا snake_case خام أبدًا).
 REASON_LABELS = {
-    "expired": "اشتراك منتهٍ",
-    "disabled": "حساب معطّل",
-    "no_plan": "بدون باقة",
-    "out_of_schedule": "خارج وقت السماح",
-    "mac_locked": "عنوان الجهاز غير مطابق",
-    "mac_mismatch": "عنوان الجهاز غير مطابق",
+    # رموز policy_engine._MSG (مسار المصادقة الحالي)
+    "user_not_found":     "اسم المستخدم غير موجود",
+    "password_wrong":     "كلمة المرور غير صحيحة",
+    "disabled":           "الحساب معطَّل",
+    "expired":            "انتهت صلاحية الاشتراك",
+    "outside_hours":      "خارج أوقات الدوام المسموحة",
+    "outside_days":       "خارج أيام الدوام المسموحة",
+    "quota_exhausted":    "نفدت الكوتا — يلزم تجديد",
+    "mac_mismatch":       "عنوان الجهاز (MAC) غير مطابق",
     "random_mac_blocked": "عنوان MAC عشوائي/خاص ممنوع",
-    "quota_exceeded": "تجاوز الحصة",
-    "concurrency": "تجاوز عدد الأجهزة",
-    "bad_password": "كلمة مرور خاطئة",
-    "unknown_user": "مستخدم غير معروف",
-    "not_found": "غير موجود",
+    "concurrent_limit":   "تجاوز الحد الأقصى للجلسات المتزامنة",
+    # مرادفات/رموز تاريخية قد تبقى في صفوف radpostauth قديمة
+    "bad_password":       "كلمة مرور خاطئة",
+    "password_mismatch":  "كلمة المرور غير صحيحة",
+    "unknown_user":       "مستخدم غير معروف",
+    "user_mismatch":      "عدم تطابق المستخدم",
+    "not_found":          "غير موجود",
+    "account_disabled":   "حساب موقوف",
+    "account_expired":    "انتهت صلاحية الحساب",
+    "no_plan":            "بدون باقة",
+    "out_of_schedule":    "خارج وقت السماح",
+    "outside_schedule":   "خارج وقت السماح",
+    "mac_locked":         "عنوان الجهاز غير مطابق",
+    "quota_exceeded":     "تجاوز الحصة",
+    "concurrency":        "تجاوز عدد الأجهزة المتزامنة",
+    "concurrent":         "تجاوز عدد الأجهزة المتزامنة",
+    "no_active":          "لا جلسة نشطة",
+    "no_active_session":  "لا جلسة نشطة",
+    "shared_blocked":     "مشاركة الحساب ممنوعة",
+    "reject":             "مرفوض",
+    "rejected":           "مرفوض",
 }
+
+
+def reason_label(code: str | None) -> str:
+    """التسمية العربية لرمز سبب الرفض. أي رمز غير معروف يُؤنَّس (يُستبدل
+    «_» بمسافة) فلا يظهر snake_case إنجليزي خام في عمود «السبب»."""
+    raw = (code or "").strip()
+    if not raw:
+        return ""
+    hit = REASON_LABELS.get(raw) or REASON_LABELS.get(raw.lower())
+    if hit:
+        return hit
+    return raw.replace("_", " ").strip()
 
 
 # ───────────────────────── التسجيل ─────────────────────────
@@ -194,7 +230,7 @@ def _collect_rows(tenant_id: int, *, actor: str = "", source: str = "",
                 "actor_type": at,
                 "username": r["actor"] or r["target_id"] or "—",
                 "success": (r["result_status"] == "success"),
-                "reason": REASON_LABELS.get(reason_code, reason_code),
+                "reason": reason_label(reason_code),
                 "reason_code": reason_code,
                 "ip": r["ip_address"] or "",
                 "mac": "",
@@ -233,7 +269,7 @@ def _collect_rows(tenant_id: int, *, actor: str = "", source: str = "",
                     "actor_type": at,
                     "username": uname or "—",
                     "success": (r["reply"] == "Access-Accept"),
-                    "reason": REASON_LABELS.get(reason_code, reason_code),
+                    "reason": reason_label(reason_code),
                     "reason_code": reason_code,
                     "ip": "",
                     "mac": card_mac.get(uname, ""),
