@@ -149,6 +149,128 @@ EVENT_KEY_LABELS: dict[str, str] = {
     "bulk_set_speeds": "تحديث جماعي للسرعات",
     "change_plan":     "تغيير باقة المشترك",
     "revoke":          "سحب البطاقة",
+    # ───── خدمات المنافذ (port-script-services) ─────
+    # الصيغة الفعلية: mt.port_services.{slug}.{verb}
+    "mt.port_services.loop_detect.apply":       "تطبيق قاعدة كشف اللوب",
+    "mt.port_services.loop_detect.remove":      "إزالة قاعدة كشف اللوب",
+    "mt.port_services.loop_detect.loop_check":  "فحص كشف اللوب",
+    "mt.port_services.bt_wifi_block.apply":     "تطبيق حجب WiFi عبر TTL",
+    "mt.port_services.bt_wifi_block.remove":    "إزالة حجب WiFi عبر TTL",
+    # صيغ بنقاط (تُكتب أحياناً بشرطة)
+    "mt.port_services.loop-detect.apply":       "تطبيق قاعدة كشف اللوب",
+    "mt.port_services.loop-detect.remove":      "إزالة قاعدة كشف اللوب",
+    "mt.port_services.loop-detect.loop_check":  "فحص كشف اللوب",
+    "mt.port_services.bt-wifi-block.apply":     "تطبيق حجب WiFi عبر TTL",
+    "mt.port_services.bt-wifi-block.remove":    "إزالة حجب WiFi عبر TTL",
+    # خدمات المنافذ — مؤشر الفحص الدوري
+    "mt.port_services.loop_detect.apply_port":  "تطبيق قاعدة لوب (منفذ)",
+    "mt.port_services.loop_detect.remove_port": "إزالة قاعدة لوب (منفذ)",
+    # ───── جدولة عرض النطاق الترددي ─────
+    "bandwidth_schedule.create":       "إنشاء جدولة النطاق الترددي",
+    "bandwidth_schedule.update":       "تحديث جدولة النطاق الترددي",
+    "bandwidth_schedule.delete":       "حذف جدولة النطاق الترددي",
+    "bandwidth_schedule.enable":       "تفعيل جدولة النطاق الترددي",
+    "bandwidth_schedule.disable":      "تعطيل جدولة النطاق الترددي",
+    "bandwidth_schedule.bulk_enable":  "تفعيل جماعي لجداول النطاق",
+    "bandwidth_schedule.bulk_disable": "تعطيل جماعي لجداول النطاق",
+    "bandwidth_schedule.apply_planned": "تطبيق جدولة النطاق (مجدوَلة)",
+    "bandwidth_schedule.apply_live":   "تطبيق فوري للنطاق الترددي",
+    # ───── النسخ الاحتياطية المحلية ─────
+    "backup.local_run":            "تشغيل نسخة احتياطية محلية",
+    "backup.local_pruned":         "تنظيف نسخ احتياطية قديمة",
+    "backup.local_count_pruned":   "تنظيف نسخ احتياطية (بالعدد)",
+    "backup.local_deleted":        "حذف نسخة احتياطية",
+    "backup.uploaded_import":      "استيراد نسخة احتياطية مرفوعة",
+    "backup.restore_aborted":      "إلغاء عملية الاستعادة",
+    "backup.restore_failed":       "فشل عملية الاستعادة",
+    "backup.restore_applied":      "تطبيق استعادة النسخة الاحتياطية",
+    # ───── قوالب طباعة البطاقات (تسمية موحّدة بنقاط) ─────
+    "card_print_template.purge_fixtures": "حذف قوالب التهيئة",
+    # ───── أحداث تسجيل الدخول/الخروج ─────
+    "auth_login.save":       "تسجيل دخول (حفظ الجلسة)",
+    "login.save":            "تسجيل دخول (حفظ الجلسة)",
+    # ───── الموزّعون ─────
+    "distributor.create":              "إنشاء موزّع",
+    "distributor.update":              "تحديث موزّع",
+    "distributor.ledger_post":         "قيد موزّع",
+    "card_batch.assign_distributor":   "تعيين موزّع لدفعة بطاقات",
+    # ───── الأجهزة والشبكة ─────
+    "network.device.added":    "إضافة جهاز شبكة",
+    "network.device.updated":  "تحديث جهاز شبكة",
+    "network.device.deleted":  "حذف جهاز شبكة",
+    "network.device.health.check": "فحص صحة جهاز الشبكة",
+    "network.policy.created":  "إنشاء سياسة شبكة",
+    "network.policy.updated":  "تعديل سياسة شبكة",
+    "network.policy.deleted":  "حذف سياسة شبكة",
+    # ───── سياسات RADIUS ─────
+    "radius.policy.created":   "إنشاء سياسة RADIUS",
+    "radius.policy.updated":   "تعديل سياسة RADIUS",
+    "radius.policy.deleted":   "حذف سياسة RADIUS",
+    # ───── المشتركون (أفعال المدير) ─────
+    "subscriber.plan.changed":       "تغيير باقة مشترك",
+    "subscriber.speed.temporary":    "سرعة مؤقتة للمشترك",
+    "subscriber.speed.reset":        "إعادة ضبط سرعة المشترك",
+    "subscriber.time.extended":      "تمديد وقت المشترك",
+    "subscriber.free_days.granted":  "منح أيام مجانية",
+    "subscriber.trial.started":      "بدء فترة تجربة",
+    "subscriber.password.reset":     "إعادة تعيين كلمة مرور المشترك",
+    # ───── دُفعات البطاقات (أفعال المدير) ─────
+    "card.batch.generated": "توليد دفعة بطاقات",
+    "card.batch.archived":  "أرشفة دفعة بطاقات",
+    "card.batch.restored":  "استعادة دفعة بطاقات",
+    # ───── تذاكر الدعم في المتجر ─────
+    "store.support.ticket.opened": "فتح تذكرة دعم",
+    "store.support.ticket.closed": "إغلاق تذكرة دعم",
+    # ───── الباقات ─────
+    "plan.created": "إنشاء باقة",
+    "plan.updated": "تحديث باقة",
+    "plan.deleted": "حذف باقة",
+    # ───── الإعدادات والأدوار ─────
+    "settings.updated":           "تحديث الإعدادات",
+    "settings_update":            "تحديث إعدادات النظام",
+    "system_settings_update":     "تحديث إعدادات النظام",
+    "role.permissions.updated":   "تحديث صلاحيات الدور",
+    "store_key_rotate":           "تدوير مفتاح المتجر",
+    # ───── قوالب الهوتسبوت ─────
+    "hotspot.template.created":  "إنشاء قالب هوتسبوت",
+    "hotspot.template.updated":  "تعديل قالب هوتسبوت",
+    "hotspot.template.deleted":  "حذف قالب هوتسبوت",
+    "hotspot.error_messages.save":  "حفظ رسائل خطأ الهوتسبوت",
+    "hotspot.error_messages.reset": "إعادة تعيين رسائل خطأ الهوتسبوت",
+    # ───── مصمّم صفحة الدخول لـMikroTik ─────
+    "mt.login_designer.save":         "حفظ تصميم صفحة الدخول",
+    "mt.login_designer.deploy":       "نشر تصميم صفحة الدخول",
+    "mt.login_designer.preset_save":  "حفظ قالب صفحة دخول",
+    "mt.login_designer.preset_apply": "تطبيق قالب صفحة دخول",
+    "mt.login_designer.custom_upload": "رفع ملف مخصّص لصفحة الدخول",
+    "mt.login_designer.custom_delete": "حذف ملف مخصّص لصفحة الدخول",
+    # ───── نسخ MikroTik الاحتياطية ─────
+    "mt.backup.save": "حفظ نسخة MikroTik الاحتياطية",
+    # ───── طلبات الخدمة ─────
+    "mt.service_request.create": "إنشاء طلب خدمة MikroTik",
+    "service_request.create":    "إنشاء طلب خدمة",
+    # ───── مجموعات المشاركة ─────
+    "add_member":  "إضافة عضو لمجموعة",
+    # ───── الجسر الإداري ─────
+    "bridge_activated":                        "تفعيل الجسر الإداري",
+    "license_admin_bridge_config_update":      "تحديث إعداد جسر الترخيص",
+    "license_service_activation_requested":    "طلب تفعيل خدمة الترخيص",
+    # ───── الاتصالات ─────
+    "comms_quota_package_requested": "طلب حزمة اتصالات",
+    "comms_quota_manual_credit":     "إضافة يدوية لرصيد الاتصالات",
+    # ───── NAT ─────
+    "nat.rule.add":    "إضافة قاعدة NAT",
+    "nat.rule.remove": "حذف قاعدة NAT",
+    # ───── خروج الموقع ─────
+    "site_exit.apply_attempted":  "محاولة تطبيق خروج الموقع",
+    "site_exit.apply_succeeded":  "تطبيق خروج الموقع بنجاح",
+    "site_exit.apply_failed":     "فشل تطبيق خروج الموقع",
+    # ───── مخزون الشركة ─────
+    "company_inventory.item.create":     "إضافة صنف للمخزون",
+    "company_inventory.item.deactivate": "تعطيل صنف المخزون",
+    "company_inventory.incoming.add":    "إضافة وارد للمخزون",
+    "company_inventory.usage.add":       "تسجيل استهلاك من المخزون",
+    "company_expense.add":               "إضافة مصروف للشركة",
 }
 
 # ── 2) مفردات المُركِّب التلقائي للمفاتيح غير المعرّفة ──
@@ -164,6 +286,7 @@ _KEY_PREFIX_NOUNS: dict[str, str] = {
     "card":                 "البطاقة",
     "price_snapshot":       "لقطة السعر",
     "hotspot_cards_portal": "بوابة كروت الهوتسبوت",
+    "hotspot":              "الهوتسبوت",
     "notification":         "الإشعار",
     "customer_portal":      "بوابة العميل",
     "subscriber":           "المشترك",
@@ -192,6 +315,28 @@ _KEY_PREFIX_NOUNS: dict[str, str] = {
     "temporary_speed":      "السرعة المؤقتة",
     "radius":               "RADIUS",
     "payment_collection":   "التحصيل المالي",
+    # مفاهيم إضافية لأحداث المدراء
+    "net":                  "الشبكة",
+    "network":              "الشبكة",
+    "bandwidth":            "عرض النطاق",
+    "bandwidth_schedule":   "جدولة النطاق",
+    "nat":                  "NAT",
+    "audit":                "التدقيق",
+    "mt":                   "MikroTik",
+    "settings":             "الإعدادات",
+    "service":              "الخدمة",
+    "service_request":      "طلب الخدمة",
+    "company":              "الشركة",
+    "company_inventory":    "مخزون الشركة",
+    "company_expense":      "مصروف الشركة",
+    "site":                 "الموقع",
+    "site_exit":            "خروج الموقع",
+    "bridge":               "الجسر",
+    "comms":                "الاتصالات",
+    "print":                "الطباعة",
+    "template":             "القالب",
+    "share":                "مجموعة المشاركة",
+    "share_groups":         "مجموعات المشاركة",
 }
 
 _KEY_VERBS: dict[str, str] = {
@@ -249,6 +394,43 @@ _KEY_VERBS: dict[str, str] = {
     "degraded":       "تدهور",
     "refreshed":      "تحديث",
     "changed":        "تغيير",
+    "check":          "فحص",
+    "run":            "تشغيل",
+    "restore":        "استعادة",
+    "reverted":       "تراجع",
+    "deployed":       "نشر",
+    "deploy":         "نشر",
+    "uploaded":       "رفع",
+    "upload":         "رفع",
+    "download":       "تنزيل",
+    "import":         "استيراد",
+    "export":         "تصدير",
+    "rotate":         "تدوير",
+    "assign":         "تعيين",
+    "added":          "إضافة",
+    "add":            "إضافة",
+    "granted":        "منح",
+    "grant":          "منح",
+    "pruned":         "تنظيف",
+    "purge":          "حذف نهائي",
+    "aborted":        "إلغاء",
+    "abort":          "إلغاء",
+    "poll":           "استطلاع",
+    "live":           "مباشر",
+    "planned":        "مجدوَل",
+    "bulk":           "جماعي",
+    "save":           "حفظ",
+    "reset":          "إعادة ضبط",
+    "reveal":         "كشف",
+    "lock":           "قفل",
+    "unlock":         "فكّ قفل",
+    "disconnect":     "قطع الاتصال",
+    "soft":           "حذف مؤقت",
+    "permanent":      "نهائي",
+    "post":           "قيد",
+    "costed":         "تسعير",
+    "extended":       "تمديد",
+    "temporary":      "مؤقت",
 }
 
 # ── خريطة أنواع الأهداف (target_type → عربي) ──
@@ -370,9 +552,10 @@ _FALLBACK_ACTION_VERBS: dict[str, str] = {
 
 
 def _humanize(raw: str) -> str:
-    """تأنيس أخير: «a.b_c» → «b c» (آخر مقطع، شُرَط مكان «_»)."""
+    """تأنيس أخير: «a.b_c» → «b c» (آخر مقطع، شُرَط مكان «_» والشرطة).
+    لا تُعيد نصًّا يحوي نقاطًا أو أحرفًا لاتينية خامة إذا أمكن التحويل."""
     tail = raw.split(".")[-1] if raw else raw
-    return tail.replace("_", " ").strip() or raw
+    return tail.replace("_", " ").replace("-", " ").strip() or raw
 
 
 def event_key_label(key: str | None) -> str:
