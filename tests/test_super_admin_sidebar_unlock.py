@@ -40,11 +40,12 @@ def _render_sidebar(app, *, session_overrides: dict):
     from flask import render_template, session
 
     # نضمن أن إعداد المستأجر الافتراضي = تجميد (freeze) — وهو الافتراضي أصلًا،
-    # لكن نثبّته صراحةً حتى لا يعتمد الاختبار على قيمة ضمنية.
-    from app.radius.auth.ui_permissions import UNAUTH_UI_SETTING_KEY
+    # لكن نثبّته صراحةً حتى لا يعتمد الاختبار على قيمة ضمنية. نستخدم المفتاح
+    # الحرفي بدل استيراده من ui_permissions حتى يعمل المساعد حتى عندما يحاكي
+    # اختبارٌ غيابَ الطبقة (تصفير وحدتها في sys.modules).
     from app.radius.core.tenant import DEFAULT_TENANT_ID
     from app.radius.db.repos import tenants_repo
-    tenants_repo.set_setting(DEFAULT_TENANT_ID, UNAUTH_UI_SETTING_KEY, "freeze")
+    tenants_repo.set_setting(DEFAULT_TENANT_ID, "security.unauthorized_ui", "freeze")
 
     with app.test_request_context("/admin/radius/dashboard"):
         for k, v in session_overrides.items():
@@ -88,6 +89,35 @@ def test_super_admin_unlocked_even_if_can_fails_silently(app, monkeypatch):
     })
     assert "hb-side-frozen" not in html, (
         "حتى مع فشل can() الصامت، السوبر أدمن يجب أن يرى كل الأقسام (fail-open)"
+    )
+    assert "المشتركون" in html and "الشبكة" in html
+
+
+def test_layer_missing_fails_open_for_everyone(app, monkeypatch):
+    """طبقة الصلاحيات غائبة (محاكاة بناء إنتاج ناقص الملف) → عرض الكل لغير-السوبر.
+
+    قبل الإصلاح: الأغلفة محقونة دائمًا وتبتلع ImportError وتُرجِع False ⇒
+    _rbac_ui=True + كل can()=False ⇒ تجميد كامل. بعد الإصلاح: الحقن مشروط
+    باستيراد الطبقة؛ فشل الاستيراد ⇒ can/perm_for_endpoint غير محقونتين ⇒
+    _rbac_ui=False ⇒ fail-open (لا تجميد) حتى لغير-السوبر.
+    """
+    import sys
+
+    import app.radius.auth as _auth_pkg
+    # نجعل `from app.radius.auth import ui_permissions` يفشل بـImportError:
+    # يلزم تصفير مدخل sys.modules **و** إزالة السمة المخبّأة على الحزمة الأب
+    # (وإلا أعادها from-import مباشرةً من كائن الحزمة متجاوزًا sys.modules).
+    monkeypatch.delattr(_auth_pkg, "ui_permissions", raising=False)
+    monkeypatch.setitem(sys.modules, "app.radius.auth.ui_permissions", None)
+
+    html = _render_sidebar(app, session_overrides={
+        "admin_id": 3,
+        "is_super_admin": False,         # حتى غير-السوبر يُعرض له الكل عند غياب الطبقة
+        "tenant_id": 1,
+        "permissions": [],
+    })
+    assert "hb-side-frozen" not in html, (
+        "عند غياب طبقة الصلاحيات يجب أن يرتدّ السايدبار لعرض الكل لا التجميد"
     )
     assert "المشتركون" in html and "الشبكة" in html
 
