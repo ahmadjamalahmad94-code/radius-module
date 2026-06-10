@@ -1,0 +1,109 @@
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+{% from "_partials/toggle_switch.html" import toggle_switch %}
+
+{% block title %}إعدادات النظام والبيئة{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-sliders"></i>{% endblock %}
+{% block page_title %}إعدادات النظام والبيئة{% endblock %}
+{% block page_sub %}<span class="sub">مفاتيح كانت تُضبط من الطرفية — صارت تُحرَّر من هنا. القراءة: قيمة الواجهة ← متغيّر البيئة ← الافتراضي.</span>{% endblock %}
+
+{% block head_extra %}{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/unified_design.css') }}">
+<style>
+.es-grid{ display:grid; grid-template-columns:1fr; gap:14px; }
+.es-row{ display:grid; grid-template-columns:minmax(220px,1fr) minmax(260px,1.4fr); gap:16px;
+  align-items:start; padding:14px 0; border-bottom:1px solid var(--hub-border-soft,#eef0f4); }
+.es-row:last-child{ border-bottom:0; }
+.es-meta{ display:flex; flex-direction:column; gap:4px; }
+.es-label{ font-weight:800; color:var(--hub-text,#0f172a); font-size:13.5px; }
+.es-help{ font-size:11.5px; color:var(--hub-text-mute,#94a3b8); line-height:1.6; }
+.es-note{ font-size:11px; color:var(--hub-amber-ink,#b45309); }
+.es-key{ font-size:10.5px; color:var(--hub-text-faint,#b6bcc8); direction:ltr; }
+.es-ctl{ display:flex; flex-direction:column; gap:6px; }
+.es-src{ display:inline-flex; align-items:center; gap:5px; font-size:10.5px; font-weight:800;
+  padding:2px 9px; border-radius:999px; width:fit-content; }
+.es-src--db{ background:var(--hub-green-soft,#dcfce7); color:var(--hub-green-ink,#15803d); }
+.es-src--env{ background:var(--hub-blue-soft,#e3edf9); color:var(--hub-blue-ink,#1e5c9f); }
+.es-src--default{ background:var(--hub-bg-soft,#eef0f4); color:var(--hub-text-mute,#64748b); }
+.es-secret-row{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.es-clear{ display:inline-flex; align-items:center; gap:5px; font-size:11.5px; color:var(--hub-text-soft,#475569); }
+.es-savebar{ position:sticky; bottom:0; z-index:5; display:flex; justify-content:flex-start; gap:10px;
+  padding:14px 18px; margin-top:16px; background:var(--hub-bg-card,#fff);
+  border:1px solid var(--hub-border,#ece9e0); border-radius:14px;
+  box-shadow:0 -2px 10px rgba(15,23,42,.05); }
+</style>
+{% endblock %}
+
+{% block content %}
+{% set _kpis = [
+  {'label':'مفاتيح قابلة للتحرير', 'value': groups|sum(attribute='items', start=[])|length, 'icon':'sliders', 'variant':'brand'},
+  {'label':'مجموعات', 'value': groups|length, 'icon':'layer-group', 'variant':'blue'},
+] %}
+{{ hub.megahero("إعدادات النظام والبيئة",
+   subtitle="كل مفتاح هنا يُقرأ أولًا من قاعدة البيانات (هذه الواجهة)، فإن لم يُضبط فمن متغيّر البيئة، فالافتراضي. الأسرار تُخزَّن مشفّرة وتُعرض مُقنّعة.",
+   icon="sliders", kpis=_kpis) }}
+
+<form method="post" action="{{ url_for('radius.system_settings_page') }}">
+  {% for g in groups %}
+  {% call hub.section(g.title, icon=g.icon) %}
+    <div class="es-grid">
+      {% for it in g['items'] %}
+      <div class="es-row">
+        <div class="es-meta">
+          <span class="es-label">{{ it.label }}</span>
+          {% if it.help %}<span class="es-help">{{ it.help }}</span>{% endif %}
+          {% if it.note %}<span class="es-note"><i class="fa-solid fa-circle-info"></i> {{ it.note }}</span>{% endif %}
+          <span class="es-key"><bdi dir="ltr">{{ it.key }}</bdi></span>
+        </div>
+        <div class="es-ctl">
+          {# شارة المصدر #}
+          {% if it.source == 'db' %}
+            <span class="es-src es-src--db"><i class="fa-solid fa-pen-to-square"></i> تجاوز من الواجهة</span>
+          {% elif it.source == 'env' %}
+            <span class="es-src es-src--env"><i class="fa-solid fa-terminal"></i> من متغيّر البيئة</span>
+          {% else %}
+            <span class="es-src es-src--default"><i class="fa-solid fa-circle-dot"></i> القيمة الافتراضية</span>
+          {% endif %}
+
+          {# المتحكّم حسب النوع #}
+          {% if it.kind == 'bool' %}
+            {{ toggle_switch(name='set__' ~ it.key, checked=(it.value|string|lower in ['1','true','yes','on']),
+                             on_label='مُفعّل', off_label='مُعطّل') }}
+          {% elif it.kind == 'select' %}
+            <select class="hub-select" name="set__{{ it.key }}" style="max-width:280px">
+              {% for ov, ol in it.options %}
+              <option value="{{ ov }}" {% if (it.value or it.default) == ov %}selected{% endif %}>{{ ol }}</option>
+              {% endfor %}
+            </select>
+          {% elif it.secret %}
+            <div class="es-secret-row">
+              <input class="hub-input" type="password" name="set__{{ it.key }}" autocomplete="new-password"
+                     placeholder="{{ ('مضبوط: ' ~ it.display) if it.is_set else 'غير مضبوط — أدخل قيمة' }}"
+                     dir="ltr" style="max-width:280px">
+              {% if it.has_override %}
+              <label class="es-clear"><input type="checkbox" name="clear__{{ it.key }}"> مسح التجاوز</label>
+              {% endif %}
+            </div>
+            <span class="es-help">اتركه فارغًا للإبقاء على القيمة الحالية.</span>
+          {% else %}
+            <input class="hub-input" type="{{ 'number' if it.kind == 'int' else 'text' }}"
+                   name="set__{{ it.key }}" value="{{ it.value }}"
+                   placeholder="{{ it.default or 'غير مضبوط' }}" dir="ltr" style="max-width:280px">
+            <span class="es-help">اتركه فارغًا للعودة لقيمة البيئة/الافتراضي.</span>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  {% endcall %}
+  {% endfor %}
+
+  <div class="es-savebar">
+    {{ hub.btn("حفظ إعدادات النظام", icon="floppy-disk", variant="primary", type="submit") }}
+    <span class="es-help" style="align-self:center">التغييرات تُحفظ في قاعدة البيانات وتتجاوز متغيّرات البيئة فورًا (عدا ما يتطلب إعادة تشغيل).</span>
+  </div>
+</form>
+
+{# ترقية القوائم المنسدلة (hbsel) #}
+<script src="{{ url_for('static', filename='js/hub_select.js') }}"></script>
+{% endblock %}

@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import ipaddress
 import os
+from ..core import env_settings
 from dataclasses import dataclass
 from typing import Any, Iterable, Mapping
 
@@ -175,7 +176,7 @@ def classify_interface(
     routes = list(routes or ())
     addresses = list(addresses or ())
     if wg_subnet is None:
-        wg_subnet = (os.environ.get("HOBERADIUS_WG_SUBNET")
+        wg_subnet = (env_settings.env("HOBERADIUS_WG_SUBNET")
                      or "").strip() or None
 
     verdict = RISK_UNKNOWN

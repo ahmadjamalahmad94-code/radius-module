@@ -23,6 +23,7 @@ Three endpoints back the Phase-L wizard flow:
 from __future__ import annotations
 
 import os
+from ..core import env_settings
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -65,7 +66,7 @@ def _default_server_ip() -> str:
       3. Empty string — the form shows a placeholder asking the
          operator to type it.
     """
-    env_ip = (os.environ.get("HOBERADIUS_PUBLIC_IP") or "").strip()
+    env_ip = (env_settings.env("HOBERADIUS_PUBLIC_IP") or "").strip()
     if env_ip:
         return env_ip
     try:
@@ -125,7 +126,7 @@ def _provisioned_peer_ips() -> "set[str] | None":
     wg-peers.d) كي لا يدّعي المُستدعي زوراً «لا يوجد peer».
     """
     try:
-        peers_dir = Path(os.environ.get(wpm.PEERS_DIR_ENV) or wpm.PEERS_DIR_DEFAULT)
+        peers_dir = Path(env_settings.env(wpm.PEERS_DIR_ENV) or wpm.PEERS_DIR_DEFAULT)
         if not peers_dir.is_dir():
             return None
         ips: "set[str]" = set()

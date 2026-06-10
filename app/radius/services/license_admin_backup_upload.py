@@ -10,6 +10,7 @@ import base64
 import hashlib
 import json
 import os
+from ..core import env_settings
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -161,11 +162,11 @@ class BackupUploadService:
         # Content upload is ENABLED by default (commercial deployments must not
         # need terminal/env access). It can be turned OFF by setting
         # HOBERADIUS_ADMIN_BACKUP_CONTENT_UPLOAD_DISABLED=1.
-        content_allowed = not _truthy(os.environ.get(CONTENT_UPLOAD_DISABLED_FLAG))
+        content_allowed = not _truthy(env_settings.env(CONTENT_UPLOAD_DISABLED_FLAG))
         # Default cap 200 MB (matches the panel's stored-content cap); override
         # via HOBERADIUS_ADMIN_BACKUP_CONTENT_MAX_BYTES if ever needed.
         max_bytes = _safe_int(
-            os.environ.get(CONTENT_UPLOAD_MAX_BYTES),
+            env_settings.env(CONTENT_UPLOAD_MAX_BYTES),
             200 * 1024 * 1024,
             minimum=1,
             maximum=500 * 1024 * 1024,
@@ -173,7 +174,7 @@ class BackupUploadService:
         content_included = bool(include_content and content_allowed and size <= max_bytes and path.exists())
         payload = {
             "license_key": self.config.license_key,
-            "instance_id": os.environ.get("HOBERADIUS_INSTANCE_ID", ""),
+            "instance_id": env_settings.env("HOBERADIUS_INSTANCE_ID", ""),
             "module": "radius-module",
             "backup_reference": artifact.get("backup_reference"),
             "kind": artifact.get("kind") or "sqlite",

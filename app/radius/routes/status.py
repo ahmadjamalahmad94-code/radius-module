@@ -162,8 +162,9 @@ def diagnostics():
              request.remote_addr or "YOUR_VPS_IP"
     # WG subnet for the VPN-mode repair branch. Falls back to the
     # documented default if the env var isn't set yet.
+    from ..core import env_settings
     wg_subnet = (
-        os.environ.get("HOBERADIUS_WG_SUBNET") or "10.10.0.0/24"
+        env_settings.env("HOBERADIUS_WG_SUBNET") or "10.10.0.0/24"
     ).strip()
     return render_template(
         "radius/mt_diagnostics.html",

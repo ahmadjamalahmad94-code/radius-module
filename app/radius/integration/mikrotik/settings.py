@@ -6,6 +6,7 @@ MikrotikConfigStore — اتصالات الـ MTs المُدارة.
 from __future__ import annotations
 
 import os
+from ...core import env_settings
 from dataclasses import dataclass, field, replace
 from itertools import count
 from threading import Lock
@@ -45,20 +46,20 @@ class MikrotikConfigStore:
 
     def _load_from_env(self) -> None:
         """يقرأ اتصالًا واحدًا من env (للبدء السريع)."""
-        host = os.environ.get("MIKROTIK_HOST")
+        host = env_settings.env("MIKROTIK_HOST")
         if not host:
             return
         cfg = MikrotikConfig(
             id=next(self._seq),
-            name=os.environ.get("MIKROTIK_NAME", "default"),
+            name=env_settings.env("MIKROTIK_NAME", "default"),
             host=host,
-            port=int(os.environ.get("MIKROTIK_PORT", "0") or 0)
-                  or (8729 if os.environ.get("MIKROTIK_TLS") in {"1","true","yes","on"} else 8728),
-            username=os.environ.get("MIKROTIK_USER", "admin"),
-            password=os.environ.get("MIKROTIK_PASSWORD", ""),
-            use_tls=os.environ.get("MIKROTIK_TLS", "").lower() in {"1","true","yes","on"},
-            verify_tls=os.environ.get("MIKROTIK_TLS_VERIFY", "1").lower() in {"1","true","yes","on"},
-            timeout_sec=int(os.environ.get("MIKROTIK_TIMEOUT", "10")),
+            port=int(env_settings.env("MIKROTIK_PORT", "0") or 0)
+                  or (8729 if env_settings.env("MIKROTIK_TLS") in {"1","true","yes","on"} else 8728),
+            username=env_settings.env("MIKROTIK_USER", "admin"),
+            password=env_settings.env("MIKROTIK_PASSWORD", ""),
+            use_tls=env_settings.env("MIKROTIK_TLS", "").lower() in {"1","true","yes","on"},
+            verify_tls=env_settings.env("MIKROTIK_TLS_VERIFY", "1").lower() in {"1","true","yes","on"},
+            timeout_sec=int(env_settings.env("MIKROTIK_TIMEOUT", "10")),
         )
         self._by_id[cfg.id] = cfg
 

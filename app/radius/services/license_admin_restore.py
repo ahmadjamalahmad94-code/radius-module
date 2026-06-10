@@ -8,6 +8,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+from ..core import env_settings
 import sqlite3
 from datetime import datetime
 from pathlib import Path
@@ -64,7 +65,7 @@ class RestoreWorkflowService:
     def poll_once(self, *, tenant_id: int = 1) -> dict[str, Any]:
         payload = {
             "license_key": self.config.license_key,
-            "instance_id": os.environ.get("HOBERADIUS_INSTANCE_ID", ""),
+            "instance_id": env_settings.env("HOBERADIUS_INSTANCE_ID", ""),
             "module": "radius-module",
             "generated_at": _utcnow(),
         }
@@ -184,7 +185,7 @@ class RestoreWorkflowService:
                 "code": "checksum_not_verified",
                 "request": request,
             }
-        if not _truthy(os.environ.get(RESTORE_APPLY_FLAG)):
+        if not _truthy(env_settings.env(RESTORE_APPLY_FLAG)):
             return {
                 "ok": False,
                 "status": "blocked",

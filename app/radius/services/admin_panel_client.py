@@ -12,6 +12,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+from ..core import env_settings
 import hashlib
 import secrets
 import hmac
@@ -123,7 +124,7 @@ def bridge_setting(key: str, default: str = "") -> str:
 
 
 def bridge_flag(env_name: str, setting_key: str, default: bool = False) -> bool:
-    raw_env = os.environ.get(env_name)
+    raw_env = env_settings.env(env_name)
     if raw_env is not None and raw_env.strip() != "":
         return _truthy(raw_env)
     raw_setting = bridge_setting(setting_key, "1" if default else "0")
@@ -132,7 +133,7 @@ def bridge_flag(env_name: str, setting_key: str, default: bool = False) -> bool:
 
 def _env_or_bridge_setting(env_names: tuple[str, ...], setting_key: str, default: str = "") -> str:
     for env_name in env_names:
-        raw = os.environ.get(env_name)
+        raw = env_settings.env(env_name)
         if raw is not None and raw.strip() != "":
             return raw.strip()
     return bridge_setting(setting_key, default)
@@ -622,7 +623,7 @@ class AdminPanelClient:
         # spend time storing + forwarding it, so the tiny default bridge
         # timeout (≈3s) is far too short. Use a dedicated, generous timeout.
         backup_timeout = _safe_float(
-            os.environ.get("HOBERADIUS_ADMIN_BACKUP_TIMEOUT_SECONDS"),
+            env_settings.env("HOBERADIUS_ADMIN_BACKUP_TIMEOUT_SECONDS"),
             180.0,
             minimum=30.0,
             maximum=900.0,
@@ -1158,8 +1159,8 @@ def _server_fingerprint() -> str:
     """
     # 1 — explicit env var (highest priority, always wins)
     explicit = (
-        os.environ.get("HOBERADIUS_SERVER_FINGERPRINT")
-        or os.environ.get("HOBERADIUS_INSTANCE_FINGERPRINT")
+        env_settings.env("HOBERADIUS_SERVER_FINGERPRINT")
+        or env_settings.env("HOBERADIUS_INSTANCE_FINGERPRINT")
         or ""
     ).strip()
     if explicit:
@@ -1183,9 +1184,9 @@ def _server_fingerprint() -> str:
         seed = "|".join(
             part
             for part in (
-                os.environ.get("HOBERADIUS_INSTANCE_ID", "").strip(),
+                env_settings.env("HOBERADIUS_INSTANCE_ID", "").strip(),
                 _hostname(),
-                os.environ.get("HOBERADIUS_DB_PATH", "").strip(),
+                env_settings.env("HOBERADIUS_DB_PATH", "").strip(),
             )
             if part
         ) or (_hostname() or "hoberadius-local-instance")
@@ -1201,24 +1202,24 @@ def _hostname() -> str:
 
 def _module_version() -> str:
     return (
-        os.environ.get("HOBERADIUS_BUILD_SHA")
-        or os.environ.get("HOBERADIUS_VERSION")
+        env_settings.env("HOBERADIUS_BUILD_SHA")
+        or env_settings.env("HOBERADIUS_VERSION")
         or "radius-module"
     )[:80]
 
 
 def _install_id() -> str:
     return (
-        os.environ.get("HOBERADIUS_INSTANCE_ID")
-        or os.environ.get("HOBERADIUS_INSTALL_ID")
+        env_settings.env("HOBERADIUS_INSTANCE_ID")
+        or env_settings.env("HOBERADIUS_INSTALL_ID")
         or _server_fingerprint()
     )[:120]
 
 
 def _public_domain() -> str:
     raw = (
-        os.environ.get("HOBERADIUS_PUBLIC_URL")
-        or os.environ.get("HOBERADIUS_DOMAIN")
+        env_settings.env("HOBERADIUS_PUBLIC_URL")
+        or env_settings.env("HOBERADIUS_DOMAIN")
         or ""
     ).strip()
     if not raw:

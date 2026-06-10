@@ -22,6 +22,7 @@ The managed-comment marker lets a future remove step sweep only our rows.
 from __future__ import annotations
 
 import os
+from ..core import env_settings
 from typing import Any, Mapping, Optional
 
 from . import mikrotik_admin_client as mac
@@ -109,7 +110,7 @@ _FALSE = ("0", "false", "no", "off")
 
 def env_force_disabled() -> bool:
     """True when the env var is explicitly set to a falsey value → hard off."""
-    raw = os.environ.get("HOBERADIUS_DEVICE_HEALTH_LIVE_APPLY")
+    raw = env_settings.env("HOBERADIUS_DEVICE_HEALTH_LIVE_APPLY")
     return raw is not None and raw.strip().lower() in _FALSE
 
 

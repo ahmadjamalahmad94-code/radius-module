@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import os
+from ..core import env_settings
 import re
 import time
 
@@ -56,10 +57,10 @@ def _ui_api_token() -> str:
     empty token and the JS surfaces an "auth not configured" error
     instead of silently failing.
     """
-    raw = (os.environ.get("HOBERADIUS_API_TOKENS") or "").strip()
+    raw = (env_settings.env("HOBERADIUS_API_TOKENS") or "").strip()
     if raw:
         return raw.split(",", 1)[0].strip()
-    env = (os.environ.get("HOBERADIUS_ENV") or os.environ.get("FLASK_ENV") or "").lower()
+    env = (env_settings.env("HOBERADIUS_ENV") or env_settings.env("FLASK_ENV") or "").lower()
     if env in {"prod", "production"}:
         return ""
     return "dev-token-please-change"

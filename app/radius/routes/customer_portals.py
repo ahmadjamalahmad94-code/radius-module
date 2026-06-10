@@ -220,9 +220,9 @@ def card_home():
     # default configurations DNS-rewrite "hotspot" to the gateway
     # IP so http://hotspot/login Just Works while connected, and
     # operators can override via env var when the IP differs.
-    import os
+    from ..core import env_settings
     hotspot_login_url = (
-        os.environ.get("HOBERADIUS_HOTSPOT_LOGIN_URL")
+        env_settings.env("HOBERADIUS_HOTSPOT_LOGIN_URL")
         or "http://hotspot/login"
     )
     return render_template(
