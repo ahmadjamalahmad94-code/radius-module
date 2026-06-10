@@ -163,6 +163,28 @@
     </div>
     {% endif %}
 
+    {# بانر التناقض (لخدمة كشف اللوب): «مفعّلة» المحفوظة قد لا تطابق
+       الراوتر فعليًا — حين تُظهر قراءة حقيقية (حية أو دورية) أن قاعدة
+       الكشف غير مركّبة على منفذ محفوظ، نقولها صراحةً بدل ترك بانر
+       أخضر يناقض نتيجة الفحص أسفله. #}
+    {% if service.slug == 'loop_detect' and loop_table %}
+    {% set _missing_rules = loop_table
+         | selectattr('saved') | selectattr('source')
+         | rejectattr('rule_installed') | map(attribute='port') | list %}
+    {% if _missing_rules %}
+    <div role="alert" data-pss-loop-mismatch
+         style="display:flex;align-items:flex-start;gap:8px;margin-bottom:14px;background:#FFFBEB;border:1px solid #FDE68A;color:#92400E;padding:10px 14px;border-radius:var(--hub-r-md);font-size:13px">
+      <i class="fa-solid fa-triangle-exclamation" style="margin-top:2px"></i>
+      <div>
+        {{ _('التفعيل المحفوظ لا يطابق الراوتر:') }}
+        {{ _('قاعدة الكشف غير مركّبة فعليًا على') }}
+        <bdi class="mono">{{ _missing_rules | join(', ') }}</bdi>.
+        {{ _('استخدم زر «تركيب» في جدول حالة المنافذ أدناه لإصلاحها منفذًا منفذًا.') }}
+      </div>
+    </div>
+    {% endif %}
+    {% endif %}
+
     <form class="hub-form" method="post"
           action="{{ url_for('radius.mt_port_services_plan', nas_id=nas.id, slug=service.slug) }}"
           data-pss-form>
@@ -245,6 +267,209 @@
     </form>
   {% endcall %}
   {% endif %}
+
+  {% if service and service.slug == 'loop_detect' %}
+  {# ══ إدارة كشف اللوب الاحترافية ══════════════════════════════
+     ثلاثة أقسام تجيب عن أسئلة المشغّل مباشرة:
+       1) جدول حالة المنافذ — هل القاعدة مركّبة فعلًا؟ هل عليه لوب؟
+          متى آخر قراءة؟ مع تركيب/إزالة لكل منفذ على حدة.
+       2) إعدادات الفحص الدوري — تفعيل + الفترة بالدقائق (poller).
+       3) سجل الفحوصات — كم فحص جرى، متى، وماذا وجد كل واحد. #}
+
+  {% call hub.section("حالة منافذ كشف اللوب", icon="table-cells") %}
+    {% if not loop_table %}
+    <div style="display:flex;align-items:center;gap:8px;background:#F8FAFC;border:1px solid #E2E8F0;color:#475569;padding:12px 14px;border-radius:var(--hub-r-md);font-size:14px"
+         data-pss-loop-table-empty>
+      <i class="fa-solid fa-circle-info"></i>
+      {{ _('لا منافذ بعد — اختر المنافذ أعلاه وفعّل الخدمة، أو اضغط «فحص اللوب» لقراءة الواقع من الراوتر.') }}
+    </div>
+    {% else %}
+    <div style="overflow-x:auto">
+      <table class="hub-table" data-pss-loop-table
+             data-pss-port-url="{{ url_for('radius.mt_port_services_apply_port', nas_id=nas.id, slug=service.slug) }}"
+             style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead>
+          <tr style="color:#64748B;font-size:12px">
+            <th style="text-align:start;padding:8px 10px">{{ _('المنفذ') }}</th>
+            <th style="text-align:start;padding:8px 10px">{{ _('التفعيل المحفوظ') }}</th>
+            <th style="text-align:start;padding:8px 10px">{{ _('القاعدة على الراوتر') }}</th>
+            <th style="text-align:start;padding:8px 10px">{{ _('حالة اللوب') }}</th>
+            <th style="text-align:start;padding:8px 10px">{{ _('العنوان المستلَم') }}</th>
+            <th style="text-align:start;padding:8px 10px">{{ _('آخر قراءة') }}</th>
+            <th style="text-align:start;padding:8px 10px">{{ _('إجراء') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in loop_table %}
+          <tr data-pss-loop-row="{{ r.port }}"
+              style="border-top:1px solid #EEF2F7{% if r.is_loop and r.rule_installed %};background:#FEF2F2{% endif %}">
+            <td style="padding:8px 10px"><code>{{ r.port }}</code></td>
+            <td style="padding:8px 10px">
+              {% if r.saved %}
+              <span style="color:#166534;font-weight:700"><i class="fa-solid fa-check"></i> {{ _('نعم') }}</span>
+              {% else %}
+              <span style="color:#94A3B8">{{ _('لا') }}</span>
+              {% endif %}
+            </td>
+            <td style="padding:8px 10px" data-pss-rule-cell>
+              {% if r.rule_installed %}
+              <span style="background:#DCFCE7;color:#166534;font-size:11px;font-weight:800;padding:2px 9px;border-radius:999px">{{ _('مركّبة') }}</span>
+              {% elif r.rule_installed is sameas false %}
+              <span style="background:#FEF3C7;color:#92400E;font-size:11px;font-weight:800;padding:2px 9px;border-radius:999px">{{ _('غير مركّبة') }}</span>
+              {% else %}
+              <span style="background:#F1F5F9;color:#94A3B8;font-size:11px;font-weight:800;padding:2px 9px;border-radius:999px">{{ _('لم تُقرأ بعد') }}</span>
+              {% endif %}
+              {% if r.source == 'live' %}<span style="font-size:10px;color:#7C3AED;font-weight:700"> · {{ _('فحص حي') }}</span>
+              {% elif r.source == 'poller' %}<span style="font-size:10px;color:#64748B;font-weight:700"> · {{ _('فحص دوري') }}</span>{% endif %}
+            </td>
+            <td style="padding:8px 10px">
+              {% if not r.source or r.rule_installed is not sameas true %}
+              <span style="color:#94A3B8">—</span>
+              {% elif r.is_loop %}
+              <span style="color:#B91C1C;font-weight:800"><i class="fa-solid fa-circle-exclamation"></i> {{ _('لوب!') }}</span>
+              {% else %}
+              <span style="color:#166534;font-weight:700"><i class="fa-solid fa-circle-check"></i> {{ _('سليم') }}</span>
+              {% endif %}
+            </td>
+            <td style="padding:8px 10px"><code style="direction:ltr">{{ r.address or '—' }}</code></td>
+            <td style="padding:8px 10px;color:#64748B;font-size:12px">
+              {% if r.source == 'live' %}{{ _('الآن') }}
+              {% elif r.last_reading_at %}<span class="mono" style="direction:ltr">{{ r.last_reading_at[:16] | replace('T', ' ') }} UTC</span>
+              {% else %}—{% endif %}
+            </td>
+            <td style="padding:8px 10px" data-pss-port-action-cell>
+              {% if r.rule_installed is sameas false or (r.saved and r.source == '') %}
+              <button type="button" class="hub-btn hub-btn--primary" style="padding:4px 12px;font-size:12px"
+                      data-pss-port-action="apply" data-pss-port="{{ r.port }}">
+                <i class="fa-solid fa-screwdriver-wrench"></i> {{ _('تركيب') }}
+              </button>
+              {% endif %}
+              {% if r.rule_installed or r.saved %}
+              <button type="button" class="hub-btn hub-btn--ghost" style="padding:4px 12px;font-size:12px"
+                      data-pss-port-action="remove" data-pss-port="{{ r.port }}">
+                <i class="fa-solid fa-eraser"></i> {{ _('إزالة') }}
+              </button>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="hub-field-hint pss-field-hint">
+      {{ _('«القاعدة على الراوتر» من آخر قراءة فعلية (فحص حي أو دوري) — وهي الحقيقة، لا الحالة المحفوظة. أزرار تركيب/إزالة تنفّذ على المنفذ الواحد فورًا.') }}
+    </div>
+    {% endif %}
+  {% endcall %}
+
+  {% call hub.section("الفحص الدوري التلقائي", icon="clock") %}
+    <form class="hub-form" method="post" data-pss-loop-settings-form
+          action="{{ url_for('radius.mt_port_services_loop_settings', nas_id=nas.id, slug=service.slug) }}"
+          style="display:flex;flex-wrap:wrap;align-items:flex-end;gap:14px">
+      <label style="display:inline-flex;align-items:center;gap:8px;font-size:13.5px;font-weight:700;cursor:pointer;padding-bottom:9px">
+        <input type="checkbox" name="poll_enabled" value="1"
+               data-pss-poll-enabled
+               {% if loop_settings and loop_settings.enabled %}checked{% endif %}>
+        {{ _('فحص اللوب دوريًا في الخلفية') }}
+      </label>
+      <div class="hub-field" style="margin:0">
+        <label style="font-size:12px">{{ _('الفترة بين الفحوصات (دقائق)') }}</label>
+        <input class="hub-input" type="number" name="poll_minutes"
+               min="5" max="1440" step="1" style="max-width:140px"
+               data-pss-poll-minutes
+               value="{{ loop_settings.minutes if loop_settings else 5 }}">
+      </div>
+      <button type="submit" class="hub-btn hub-btn--primary" style="margin-bottom:1px">
+        <i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ الإعدادات') }}
+      </button>
+    </form>
+    <div class="hub-field-hint pss-field-hint">
+      {{ _('الفحص الدوري يقرأ حالة كل المنافذ المفعّلة تلقائيًا ويسجّل النتيجة في السجل أدناه، ويفتح تنبيهًا ذكيًا فور اكتشاف لوب. أدنى فترة 5 دقائق (دقة دورة الخادم).') }}
+    </div>
+  {% endcall %}
+
+  {% call hub.section("سجل الفحوصات", icon="clock-rotate-left") %}
+    {% if not loop_history %}
+    <div style="display:flex;align-items:center;gap:8px;background:#F8FAFC;border:1px solid #E2E8F0;color:#475569;padding:12px 14px;border-radius:var(--hub-r-md);font-size:14px"
+         data-pss-loop-history-empty>
+      <i class="fa-solid fa-circle-info"></i>
+      {{ _('لا فحوصات مسجّلة بعد — أول فحص (يدوي أو دوري) سيظهر هنا.') }}
+    </div>
+    {% else %}
+    <div style="overflow-x:auto">
+      <table class="hub-table" data-pss-loop-history
+             style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead>
+          <tr style="color:#64748B;font-size:12px">
+            <th style="text-align:start;padding:8px 10px">{{ _('الوقت') }}</th>
+            <th style="text-align:start;padding:8px 10px">{{ _('المصدر') }}</th>
+            <th style="text-align:start;padding:8px 10px">{{ _('منافذ') }}</th>
+            <th style="text-align:start;padding:8px 10px">{{ _('لوب') }}</th>
+            <th style="text-align:start;padding:8px 10px">{{ _('قواعد مفقودة') }}</th>
+            <th style="text-align:start;padding:8px 10px">{{ _('النتيجة') }}</th>
+            <th style="text-align:start;padding:8px 10px">{{ _('تفاصيل') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in loop_history %}
+          <tr data-pss-loop-check="{{ c.id }}" style="border-top:1px solid #EEF2F7">
+            <td style="padding:8px 10px;color:#475569;font-size:12px">
+              <span class="mono" style="direction:ltr">{{ (c.created_at or '')[:16] | replace('T', ' ') }} UTC</span>
+            </td>
+            <td style="padding:8px 10px">
+              {% if c.source == 'poller' %}
+              <span style="background:#EDE9FE;color:#5B21B6;font-size:11px;font-weight:800;padding:2px 9px;border-radius:999px">{{ _('دوري') }}</span>
+              {% else %}
+              <span style="background:#E0F2FE;color:#0369A1;font-size:11px;font-weight:800;padding:2px 9px;border-radius:999px">{{ _('يدوي') }}</span>
+              {% endif %}
+            </td>
+            <td style="padding:8px 10px">{{ c.ports_total }}</td>
+            <td style="padding:8px 10px">
+              {% if c.loops_found %}
+              <span style="color:#B91C1C;font-weight:800">{{ c.loops_found }}</span>
+              {% else %}<span style="color:#166534">0</span>{% endif %}
+            </td>
+            <td style="padding:8px 10px">
+              {% if c.rules_missing %}
+              <span style="color:#92400E;font-weight:800">{{ c.rules_missing }}</span>
+              {% else %}<span style="color:#94A3B8">0</span>{% endif %}
+            </td>
+            <td style="padding:8px 10px">
+              {% if not c.ok %}
+              <span style="color:#B91C1C;font-weight:700"><i class="fa-solid fa-circle-xmark"></i> {{ _('تعذّر الفحص') }}</span>
+              {% elif c.loops_found %}
+              <span style="color:#B91C1C;font-weight:700">{{ _('لوب مكتشف') }}</span>
+              {% else %}
+              <span style="color:#166534;font-weight:700">{{ _('سليم') }}</span>
+              {% endif %}
+            </td>
+            <td style="padding:8px 10px">
+              {% if c.details %}
+              <details>
+                <summary style="cursor:pointer;color:#7C3AED;font-size:12px">{{ _('عرض التفاصيل') }}</summary>
+                <ul style="list-style:none;margin:6px 0 0;padding:0;display:flex;flex-direction:column;gap:3px;font-size:12px">
+                  {% for d in c.details %}
+                  <li>
+                    <code>{{ d.iface }}</code> ·
+                    {% if d.is_loop %}<span style="color:#B91C1C;font-weight:700">{{ _('لوب') }}{% if d.address %} ({{ d.address }}){% endif %}</span>
+                    {% elif d.status == 'no-rule' %}<span style="color:#92400E">{{ _('قاعدة غير مركّبة') }}</span>
+                    {% else %}<span style="color:#166534">{{ _('سليم') }}</span> <span style="color:#94A3B8">({{ d.status or 'searching' }})</span>{% endif %}
+                  </li>
+                  {% endfor %}
+                </ul>
+              </details>
+              {% elif c.error %}
+              <span style="color:#B91C1C;font-size:12px">{{ c.error }}</span>
+              {% else %}—{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  {% endcall %}
+  {% endif %}{# /loop_detect management #}
 
   {# ضمّن نافذة المواصفات الموحّدة — تُستدعى من زرّ «طلب…» أعلاه. #}
   {% include "_partials/service_spec_modal.html" %}
@@ -336,6 +561,7 @@
       <form method="post"
             action="{{ url_for('radius.mt_port_services_remove' if _is_remove else 'radius.mt_port_services_apply', nas_id=nas.id, slug=plan.slug) }}"
             data-pss-apply-form data-pss-mode="{{ plan_mode }}"
+            data-pss-port-url="{{ url_for('radius.mt_port_services_apply_port', nas_id=nas.id, slug=plan.slug) }}"
             style="display:flex;flex-direction:column;gap:12px">
         {% for p in plan.selected_ports %}
         <input type="hidden" name="ports" value="{{ p }}">
@@ -367,6 +593,29 @@
           {% endif %}
         </div>
       </form>
+
+      {# ── تقدم التنفيذ منفذًا منفذًا — يملؤه السكربت أسفل الصفحة.
+         بدل سكربت واحد «نجح كله أو فشل بصمت»: كل منفذ يُدفَع وحده
+         فيظهر حيًّا أيّ منفذ قيد التركيب، أيّها نجح، وأيّها فشل ولماذا. #}
+      <div data-pss-progress hidden style="margin-top:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px">
+          <strong style="font-size:13.5px">{{ _('التنفيذ على الراوتر — منفذًا منفذًا') }}</strong>
+          <span data-pss-progress-label style="font-size:12.5px;color:#64748B;font-weight:700"></span>
+        </div>
+        <div style="height:8px;background:#EEF2F7;border-radius:999px;overflow:hidden">
+          <div data-pss-progress-bar
+               style="height:100%;width:0%;background:#7C3AED;border-radius:999px;transition:width .25s"></div>
+        </div>
+        <ul data-pss-progress-list
+            style="list-style:none;margin:10px 0 0;padding:0;font-size:13px"></ul>
+        <div data-pss-progress-summary hidden role="status"
+             style="margin-top:10px;padding:10px 14px;border:1px solid;border-radius:var(--hub-r-md);font-size:13px"></div>
+        <button type="button" data-pss-progress-reload hidden
+                class="hub-btn hub-btn--ghost" style="margin-top:10px"
+                onclick="window.location.reload()">
+          <i class="fa-solid fa-rotate-right"></i> {{ _('تحديث الصفحة لرؤية الحالة الجديدة') }}
+        </button>
+      </div>
     </div>
   {% endcall %}
   {% endif %}
@@ -386,5 +635,155 @@
   {% endcall %}{# /worklayout #}
 
 </section>
+
+<script>
+(function(){
+  "use strict";
+  const root = document.querySelector('[data-mt-port-services]');
+  if(!root) return;
+
+  function csrf(){
+    const el = document.querySelector('input[name="_csrf_token"]');
+    return el ? el.value : '';
+  }
+  // مودال التأكيد الموحّد (UDS.confirm يعيد Promise) مع سقوط آمن
+  // للـconfirm الأصلي في بيئات لا تحمّل style_unification.
+  async function ask(message){
+    if(window.UDS && typeof window.UDS.confirm === 'function'){
+      return await window.UDS.confirm({message: message});
+    }
+    return window.confirm(message);
+  }
+  async function applyPort(url, port, mode){
+    const body = new URLSearchParams();
+    body.set('port', port);
+    body.set('mode', mode);
+    body.set('_csrf_token', csrf());
+    let res;
+    try {
+      res = await fetch(url, {
+        method: 'POST',
+        headers: {'X-CSRFToken': csrf(), 'Accept': 'application/json'},
+        body: body,
+      });
+    } catch (e) {
+      return {ok:false, port:port, error:'تعذّر الاتصال بالخادم: ' + e};
+    }
+    let data = null;
+    try { data = await res.json(); } catch (_e) { /* نصّ غير JSON */ }
+    if(!data) data = {ok:false, port:port, error:'استجابة غير مفهومة من الخادم (HTTP ' + res.status + ').'};
+    return data;
+  }
+
+  /* ── تقدم تنفيذ الخطة منفذًا منفذًا ──
+     يعترض إرسال نموذج «تطبيق/إزالة على الراوتر» (بعد تأشير التأكيد)
+     ويستبدل الدفعة الواحدة بدفع كل منفذ وحده عبر apply-port — فيظهر
+     حيًّا أين وصل التنفيذ وأين فشل. بلا JS يسقط للنموذج الأصلي كما هو. */
+  const form = root.querySelector('[data-pss-apply-form]');
+  const progress = root.querySelector('[data-pss-progress]');
+  if(form && progress && form.dataset.pssPortUrl){
+    form.addEventListener('submit', function(ev){
+      const confirmBox = form.querySelector('[data-pss-confirm]');
+      if(confirmBox && !confirmBox.checked) return; // الخادم يعرض رسالته
+      const ports = Array.from(form.querySelectorAll('input[name="ports"]'))
+        .map(i => i.value).filter(Boolean);
+      if(!ports.length) return;
+      ev.preventDefault();
+      runSequence(ports, form.dataset.pssMode === 'remove' ? 'remove' : 'apply');
+    });
+  }
+
+  async function runSequence(ports, mode){
+    const url = form.dataset.pssPortUrl;
+    const list = progress.querySelector('[data-pss-progress-list]');
+    const bar = progress.querySelector('[data-pss-progress-bar]');
+    const label = progress.querySelector('[data-pss-progress-label]');
+    const summary = progress.querySelector('[data-pss-progress-summary]');
+    const reload = progress.querySelector('[data-pss-progress-reload]');
+    progress.hidden = false;
+    form.querySelectorAll('button[type="submit"]').forEach(b => { b.disabled = true; });
+    list.innerHTML = '';
+    const cells = {};
+    ports.forEach(function(p){
+      const li = document.createElement('li');
+      li.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px dashed #EEF2F7';
+      const code = document.createElement('code');
+      code.textContent = p;
+      const st = document.createElement('span');
+      st.style.cssText = 'color:#94A3B8;font-size:12.5px';
+      st.innerHTML = '<i class="fa-regular fa-clock"></i> بانتظار الدور…';
+      li.appendChild(code); li.appendChild(st);
+      list.appendChild(li);
+      cells[p] = st;
+    });
+    let done = 0, okCount = 0;
+    const failed = [];
+    for(const p of ports){
+      cells[p].style.color = '#7C3AED';
+      cells[p].innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جارٍ التنفيذ على الراوتر…';
+      const r = await applyPort(url, p, mode);
+      done++;
+      if(r.ok){
+        okCount++;
+        cells[p].style.color = '#166534';
+        cells[p].innerHTML = '<i class="fa-solid fa-circle-check"></i> تم';
+      } else {
+        failed.push(p);
+        cells[p].style.color = '#B91C1C';
+        cells[p].innerHTML = '<i class="fa-solid fa-circle-xmark"></i> فشل — ';
+        const err = document.createElement('span');
+        err.style.cssText = 'font-size:12px';
+        err.textContent = r.error || 'خطأ غير معروف';
+        cells[p].appendChild(err);
+      }
+      if(bar) bar.style.width = Math.round(done * 100 / ports.length) + '%';
+      if(bar && failed.length) bar.style.background = '#F59E0B';
+      if(label) label.textContent = done + ' / ' + ports.length + (failed.length ? ' — فشل: ' + failed.length : '');
+    }
+    if(summary){
+      summary.hidden = false;
+      if(failed.length){
+        summary.style.background = '#FFFBEB';
+        summary.style.borderColor = '#FDE68A';
+        summary.style.color = '#92400E';
+        summary.textContent = 'اكتمل التنفيذ: نجح ' + okCount + ' وفشل ' + failed.length +
+          ' (' + failed.join(', ') + '). الحالة المحفوظة حُدِّثت بالمنافذ الناجحة فقط.';
+      } else {
+        summary.style.background = '#ECFDF5';
+        summary.style.borderColor = '#A7F3D0';
+        summary.style.color = '#166534';
+        summary.textContent = 'اكتمل التنفيذ بنجاح على كل المنافذ (' + okCount + ').';
+      }
+    }
+    if(reload) reload.hidden = false;
+  }
+
+  /* ── تركيب/إزالة منفذ واحد من جدول حالة المنافذ ── */
+  const table = root.querySelector('[data-pss-loop-table]');
+  if(table && table.dataset.pssPortUrl){
+    table.addEventListener('click', async function(ev){
+      const btn = ev.target.closest('[data-pss-port-action]');
+      if(!btn) return;
+      const port = btn.dataset.pssPort;
+      const mode = btn.dataset.pssPortAction === 'remove' ? 'remove' : 'apply';
+      const verb = mode === 'remove'
+        ? 'إزالة قاعدة كشف اللوب من ' : 'تركيب قاعدة كشف اللوب على ';
+      if(!(await ask(verb + port + '؟'))) return;
+      const cell = btn.closest('[data-pss-port-action-cell]');
+      cell.innerHTML = '<span style="color:#7C3AED;font-size:12px"><i class="fa-solid fa-spinner fa-spin"></i> جارٍ التنفيذ…</span>';
+      const r = await applyPort(table.dataset.pssPortUrl, port, mode);
+      if(r.ok){
+        cell.innerHTML = '<span style="color:#166534;font-weight:700;font-size:12px"><i class="fa-solid fa-circle-check"></i> تم — حدّث الصفحة للحالة الجديدة</span>';
+      } else {
+        cell.innerHTML = '<span style="color:#B91C1C;font-size:12px"><i class="fa-solid fa-circle-xmark"></i> فشل — </span>';
+        const err = document.createElement('span');
+        err.style.cssText = 'color:#B91C1C;font-size:12px';
+        err.textContent = r.error || 'خطأ غير معروف';
+        cell.appendChild(err);
+      }
+    });
+  }
+})();
+</script>
 
 {% endblock %}

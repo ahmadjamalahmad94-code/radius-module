@@ -76,6 +76,15 @@ def register_device_health_routes(bp: Blueprint) -> None:
                     device_health_api_live_apply, methods=["GET", "POST"])
     bp.add_url_rule("/device-health/api/plan", "device_health_api_plan",
                     device_health_api_plan, methods=["GET"])
+    # إعدادات الفحص الدوري (تفعيل + الفترة بالدقائق) — يقرؤها/يحفظها
+    # نموذج الصفحة ويحترمها device_health_poll_worker كل دورة.
+    bp.add_url_rule("/device-health/api/poll-settings",
+                    "device_health_api_poll_settings",
+                    device_health_api_poll_settings, methods=["GET", "POST"])
+    # سجل الفحوصات (للتحديث الحي بعد «فحص الكل») + الإحصائيات.
+    bp.add_url_rule("/device-health/api/checks",
+                    "device_health_api_checks",
+                    device_health_api_checks, methods=["GET"])
 
 
 # ── helpers ────────────────────────────────────────────────────
@@ -105,6 +114,15 @@ def device_health_page():
     tenant_id = _tid()
     data = svc.list_with_routers(tenant_id)
     counts = svc.summary(tenant_id)
+    # سجل الفحوصات + إحصائياته + إعدادات الفحص الدوري — أقسام «الإدارة
+    # الاحترافية». دفاعية على جدول ناقص في بيئة لم تشغّل المهاجرة بعد.
+    try:
+        from ..db.repos import device_health_checks_repo as checks_repo
+        checks = checks_repo.list_checks(tenant_id, limit=20)
+        check_stats = checks_repo.stats(tenant_id, hours=24)
+    except Exception:  # noqa: BLE001
+        checks, check_stats = [], {}
+    from ...workers.device_health_poll_worker import poll_settings
     return render_template(
         "radius/device_health.html",
         devices=data["devices"],
@@ -113,6 +131,9 @@ def device_health_page():
         device_types=sorted(repo.ALLOWED_DEVICE_TYPES),
         alert_channels=["", "telegram", "sms", "whatsapp"],
         live_apply=svc.live_apply_state(tenant_id),
+        checks=checks,
+        check_stats=check_stats,
+        poll_settings=poll_settings(tenant_id),
     )
 
 
@@ -238,10 +259,11 @@ def device_health_api_test_ping(device_id: int):
 
 def device_health_api_poll():
     """Phase 4 — run one polling sweep on demand for this tenant (router
-    reads only; no mutation). Returns the sweep summary."""
+    reads only; no mutation). Returns the sweep summary. يُدوَّن في سجل
+    الفحوصات (source=manual)."""
     tenant_id = _tid()
     from ..services import device_health_poller as poller
-    summary = poller.tick(tenant_id=tenant_id)
+    summary = poller.tick(tenant_id=tenant_id, log_source="manual")
     return jsonify({"ok": True, "summary": summary})
 
 
@@ -249,14 +271,16 @@ def device_health_api_poll_stream():
     """Streaming «فحص الكل» — emits one NDJSON line per device as it is checked
     (start → progress×N → done) so the UI shows a live progress bar. Router
     reads only; no mutation. stream_with_context keeps g.tenant_id + the DB
-    connection alive for the duration of the sweep."""
+    connection alive for the duration of the sweep. يُدوَّن في سجل الفحوصات
+    (source=manual)."""
     tenant_id = _tid()
     from ..services import device_health_poller as poller
 
     @stream_with_context
     def generate():
         try:
-            for ev in poller.iter_tick(tenant_id=tenant_id):
+            for ev in poller.iter_tick(tenant_id=tenant_id,
+                                       log_source="manual"):
                 yield json.dumps(ev, ensure_ascii=False) + "\n"
         except Exception as exc:  # noqa: BLE001 — surface as a stream event
             yield json.dumps({"type": "error", "error": str(exc)},
@@ -265,6 +289,43 @@ def device_health_api_poll_stream():
     return Response(generate(), mimetype="application/x-ndjson",
                     headers={"Cache-Control": "no-cache",
                              "X-Accel-Buffering": "no"})
+
+
+def device_health_api_poll_settings():
+    """قراءة (GET) أو حفظ (POST {enabled, minutes}) إعدادات الفحص الدوري
+    لهذا المستأجر — device_health_poll_worker يحترمها من الدورة التالية."""
+    tenant_id = _tid()
+    from ...workers.device_health_poll_worker import poll_settings
+    if request.method == "GET":
+        return jsonify({"ok": True, **poll_settings(tenant_id)})
+    body = _payload()
+    enabled = _to_bool(body.get("enabled"))
+    minutes = max(1, min(24 * 60, _int(body.get("minutes"), 5) or 5))
+    from ..db.repos import tenants_repo
+    try:
+        by = int(session.get("admin_id") or 0)
+    except (TypeError, ValueError):
+        by = 0
+    tenants_repo.set_setting(tenant_id, "device_health.poll_enabled",
+                             "1" if enabled else "0", by=by)
+    tenants_repo.set_setting(tenant_id, "device_health.poll_minutes",
+                             str(minutes), by=by)
+    return jsonify({"ok": True, **poll_settings(tenant_id)})
+
+
+def device_health_api_checks():
+    """آخر فحوصات السجل + الإحصائيات — لتحديث القسم بعد «فحص الكل» بلا
+    إعادة تحميل الصفحة."""
+    tenant_id = _tid()
+    try:
+        from ..db.repos import device_health_checks_repo as checks_repo
+        return jsonify({
+            "ok": True,
+            "checks": checks_repo.list_checks(tenant_id, limit=20),
+            "stats": checks_repo.stats(tenant_id, hours=24),
+        })
+    except Exception as exc:  # noqa: BLE001 — جدول ناقص في بيئة قديمة
+        return jsonify({"ok": False, "error": str(exc)}), 500
 
 
 def device_health_api_events(device_id: int):

@@ -207,6 +207,7 @@ def _start_workers(app: Flask) -> None:
                                   start_admin_bridge_sync_worker,
                                   start_backup_scheduler_worker,
                                   start_device_fingerprint_worker,
+                                  start_device_health_poll_worker,
                                   start_dunning_worker,
                                   start_lifecycle_worker,
                                   start_loop_probe_poller,
@@ -218,6 +219,7 @@ def _start_workers(app: Flask) -> None:
         start_accounting_puller()
         start_stale_session_reaper()
         start_device_fingerprint_worker()
+        start_device_health_poll_worker()
         start_lifecycle_worker()
         start_admin_bridge_sync_worker()
         start_mt_reconciler()

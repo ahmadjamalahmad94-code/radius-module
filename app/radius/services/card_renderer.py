@@ -2159,6 +2159,26 @@ def _hydrate_layout(template: dict) -> dict:
     return layout
 
 
+def card_mm_box(layout: dict, canvas: tuple[float, float]) -> tuple[float, float]:
+    """صندوق mm للبطاقة موجَّهًا باتجاه كانفس التصيير.
+
+    الحفظ (operations._template_layout) يبدّل العرض/الارتفاع للبطاقات
+    العمودية (85×54 ← 54×85) بينما معاينة غرفة التصميم الحية ترسل قيم
+    الحقول كما هي بلا تبديل — فكانت قسمة mm→كسر تختلف بين ما يراه
+    المستخدم قبل الحفظ وبين المعاينة/الطباعة بعده (انزياح العناصر
+    للأعلى ولليمين على المحركات العمودية). توجيه الصندوق هنا مرة واحدة
+    حسب اتجاه الكانفس يجعل كل المسارات تقسم على نفس البعدين مهما كان
+    مصدر القيم (نموذج حي أو صف محفوظ). نفس المعادلة حرفيًا في
+    cardSizeMm() بالواجهة وفي _effective_field_layout بالمسارات.
+    """
+    w = max(_float(layout.get("card_width_mm"), 85), 1.0)
+    h = max(_float(layout.get("card_height_mm"), 54), 1.0)
+    canvas_is_portrait = canvas[1] > canvas[0]
+    if w != h and canvas_is_portrait != (h > w):
+        w, h = h, w
+    return w, h
+
+
 def _resolve_positions(
     template: dict,
     layout: dict,
@@ -2177,8 +2197,7 @@ def _resolve_positions(
     back to `_DEFAULT_POSITIONS`. This is the bug that made the old
     PDF stack USER/PASS/QR in the top-left corner.
     """
-    card_w_mm = max(_float(layout.get("card_width_mm"), 85), 1.0)
-    card_h_mm = max(_float(layout.get("card_height_mm"), 54), 1.0)
+    card_w_mm, card_h_mm = card_mm_box(layout, canvas)
 
     orientation = "vertical" if canvas[1] > canvas[0] else "horizontal"
     positions = _engine_default_positions(render_direction, orientation=orientation)
@@ -2272,8 +2291,7 @@ def _logo_element(layout: dict, canvas: tuple[int, int]) -> dict | None:
     if not image_url.startswith("data:image/"):
         return None
     canvas_w, canvas_h = canvas
-    card_w_mm = max(_float(layout.get("card_width_mm"), 85), 1.0)
-    card_h_mm = max(_float(layout.get("card_height_mm"), 54), 1.0)
+    card_w_mm, card_h_mm = card_mm_box(layout, canvas)
 
     size_pct = _optional_positive_float(layout.get("logo_size_pct"))
     size_frac = max(0.05, min(0.6, (size_pct / 100.0))) if size_pct else 0.18

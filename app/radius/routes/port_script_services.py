@@ -15,11 +15,24 @@ from __future__ import annotations
 
 import uuid
 
-from flask import Blueprint, abort, g, render_template, request
+from flask import (
+    Blueprint,
+    abort,
+    g,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    url_for,
+)
 
 from ..core.tenant import DEFAULT_TENANT_ID
 from ..db.connection import db
-from ..db.repos import tenants_repo
+from ..db.repos import (
+    router_loop_checks_repo,
+    router_loop_probes_repo,
+    tenants_repo,
+)
 from ..services import mikrotik_admin_client as mac
 from ..services import mt_programming as mtp
 from ..services import port_script_services as pss
@@ -65,6 +78,48 @@ def _set_state(nas_id: int, slug: str, *, enabled: bool,
     tenants_repo.set_setting(
         _tid(), _state_key(nas_id, slug, "ports"),
         ",".join(ports), by=by)
+
+
+# ─── إعدادات الفحص الدوري للوب (لكل راوتر) ─────────────────────────
+#
+# نفس مخزن tenant_settings وبنفس عائلة المفاتيح pss.<nas>.<slug>.*:
+#   pss.<nas>.loop_detect.poll_enabled  → "1"/"0" (افتراضي مفعّل)
+#   pss.<nas>.loop_detect.poll_minutes  → فترة الفحص بالدقائق (افتراضي 5)
+# يقرؤها loop_probe_poller كل دورة فيحترم تعطيل/فترة كل راوتر.
+# الحد الأدنى 5 دقائق = دورة الـpoller نفسها (300s) — فترة أقصر لن
+# تُنفَّذ أسرع من دقّة الدورة فلا نوهم المشغّل بدقة غير موجودة.
+_POLL_MIN_MINUTES = 5
+_POLL_MAX_MINUTES = 24 * 60
+_POLL_DEFAULT_MINUTES = 5
+
+
+def _loop_poll_settings(nas_id: int, slug: str = "loop_detect") -> dict:
+    enabled_raw = tenants_repo.get_setting(
+        _tid(), _state_key(nas_id, slug, "poll_enabled"), "1")
+    minutes_raw = tenants_repo.get_setting(
+        _tid(), _state_key(nas_id, slug, "poll_minutes"),
+        str(_POLL_DEFAULT_MINUTES))
+    try:
+        minutes = int(str(minutes_raw or "").strip() or _POLL_DEFAULT_MINUTES)
+    except ValueError:
+        minutes = _POLL_DEFAULT_MINUTES
+    minutes = max(_POLL_MIN_MINUTES, min(_POLL_MAX_MINUTES, minutes))
+    return {
+        "enabled": str(enabled_raw or "").strip().lower() in _STATE_TRUE,
+        "minutes": minutes,
+    }
+
+
+def _set_loop_poll_settings(nas_id: int, slug: str, *, enabled: bool,
+                            minutes: int) -> None:
+    by = int(getattr(g, "admin_id", 0) or 0)
+    minutes = max(_POLL_MIN_MINUTES, min(_POLL_MAX_MINUTES, int(minutes)))
+    tenants_repo.set_setting(
+        _tid(), _state_key(nas_id, slug, "poll_enabled"),
+        "1" if enabled else "0", by=by)
+    tenants_repo.set_setting(
+        _tid(), _state_key(nas_id, slug, "poll_minutes"),
+        str(minutes), by=by)
 
 
 def _load_nas(nas_id: int) -> dict | None:
@@ -124,6 +179,21 @@ def register_port_script_services_routes(bp: Blueprint) -> None:
         "/mt/<int:nas_id>/port-services/<slug>/loop-check",
         "mt_port_services_loop_check",
         requires_perm(PERM_PROGRAM)(mt_port_services_loop_check),
+        methods=["POST"],
+    )
+    # تطبيق/إزالة الخدمة على منفذ واحد (JSON) — تستهلكه واجهة التقدم
+    # منفذًا منفذًا، فيُعرف بالضبط أيّ منفذ نجح وأيّ منفذ فشل ولماذا.
+    bp.add_url_rule(
+        "/mt/<int:nas_id>/port-services/<slug>/apply-port",
+        "mt_port_services_apply_port",
+        requires_perm(PERM_PROGRAM)(mt_port_services_apply_port),
+        methods=["POST"],
+    )
+    # حفظ إعدادات الفحص الدوري للوب (تفعيل/فترة بالدقائق).
+    bp.add_url_rule(
+        "/mt/<int:nas_id>/port-services/<slug>/loop-settings",
+        "mt_port_services_loop_settings",
+        requires_perm(PERM_PROGRAM)(mt_port_services_loop_settings),
         methods=["POST"],
     )
 
@@ -232,6 +302,97 @@ def _states_for(nas_id: int) -> dict:
     return {s.slug: _get_state(nas_id, s.slug) for s in pss.list_services()}
 
 
+def _probe_is_loop(status: str, lease_ip: str) -> bool:
+    """نفس منطق pss._probe_from_row لكن على قراءة مخزّنة (poller)."""
+    st = str(status or "").strip().lower()
+    addr = str(lease_ip or "").strip()
+    return st.startswith("bound") or (bool(addr) and not addr.startswith("0.0.0.0"))
+
+
+def _loop_table_rows(nas_id: int, state: dict | None, loop_probes) -> list[dict]:
+    """صفوف جدول «حالة المنافذ» لخدمة كشف اللوب — دمج ثلاثة مصادر:
+
+      1. الفحص الحي (loop_probes) إن جرى الآن — المصدر الأصدق.
+      2. آخر قراءة دورية مخزّنة (router_loop_probes) — من الـpoller.
+      3. الحالة المحفوظة (tenant_settings) — «ما طُلب تفعيله».
+
+    لكل منفذ صفّ واحد يجيب صراحةً: هل القاعدة مركّبة فعلًا على الراوتر؟
+    وهل عليه لوب؟ ومتى آخر قراءة؟ — فلا يتناقض بانر «مفعّلة» مع الواقع.
+    rule_installed: True/False من قراءة فعلية، None = لم تُقرأ بعد.
+    """
+    saved_ports = [p for p in ((state or {}).get("ports") or []) if p]
+    try:
+        repo_rows = {r["interface"]: r for r in
+                     router_loop_probes_repo.list_for_router(_tid(), nas_id)}
+    except Exception:  # noqa: BLE001 — جدول ناقص في بيئة قديمة
+        repo_rows = {}
+    live = {p.iface: p for p in (loop_probes or [])}
+
+    ordered: list[str] = []
+    for name in [*saved_ports, *sorted(set(repo_rows) | set(live))]:
+        if name and name not in ordered:
+            ordered.append(name)
+
+    rows: list[dict] = []
+    for name in ordered:
+        row = {
+            "port": name,
+            "saved": name in saved_ports,
+            "source": "",            # live | poller | ''
+            "rule_installed": None,   # True/False/None=غير معروف بعد
+            "is_loop": False,
+            "status": "",
+            "address": "",
+            "server": "",
+            "last_reading_at": "",
+        }
+        probe = live.get(name)
+        stored = repo_rows.get(name)
+        if probe is not None:
+            row.update({
+                "source": "live",
+                "rule_installed": probe.status != "no-rule",
+                "is_loop": probe.is_loop,
+                "status": probe.status,
+                "address": probe.address,
+                "server": probe.dhcp_server or probe.gateway,
+            })
+        elif stored is not None:
+            # الـpoller يخزّن أيضًا قراءة «no-rule» (منفذ مطلوب بلا
+            # قاعدة) — نفسّرها هنا كقاعدة غير مركّبة لا كحالة فحص.
+            stored_status = str(stored.get("last_status") or "")
+            row.update({
+                "source": "poller",
+                "rule_installed": stored_status != "no-rule",
+                "is_loop": _probe_is_loop(stored_status,
+                                          stored.get("last_lease_ip")),
+                "status": stored_status,
+                "address": stored.get("last_lease_ip") or "",
+                "server": stored.get("last_server_ip") or "",
+                "last_reading_at": stored.get("last_reading_at") or "",
+            })
+        rows.append(row)
+    return rows
+
+
+def _loop_context(nas_id: int, service, state: dict | None,
+                  loop_probes) -> dict:
+    """سياق إدارة اللوب للقالب — لا شيء منه يُحسب لغير خدمة loop_detect."""
+    if service is None or service.slug != "loop_detect":
+        return {"loop_table": None, "loop_settings": None,
+                "loop_history": None}
+    try:
+        history = router_loop_checks_repo.list_for_router(
+            _tid(), nas_id, limit=20)
+    except Exception:  # noqa: BLE001 — جدول ناقص في بيئة قديمة
+        history = []
+    return {
+        "loop_table": _loop_table_rows(nas_id, state, loop_probes),
+        "loop_settings": _loop_poll_settings(nas_id),
+        "loop_history": history,
+    }
+
+
 def _render(nas: dict, *, service=None, plan=None, selected_ports=None,
             error=None, apply_result=None, interfaces=None,
             plan_mode: str = "apply", loop_probes=None, loop_error=None):
@@ -242,6 +403,7 @@ def _render(nas: dict, *, service=None, plan=None, selected_ports=None,
     if interfaces is None:
         interfaces = _discover(nas)
     wan = _resolve_wan_iface(nas)
+    state = _get_state(nas["id"], service.slug) if service else None
     return render_template(
         "radius/port_script_services.html",
         nas=nas,
@@ -256,9 +418,10 @@ def _render(nas: dict, *, service=None, plan=None, selected_ports=None,
         error=error,
         apply_result=apply_result,
         states=_states_for(nas["id"]),
-        state=(_get_state(nas["id"], service.slug) if service else None),
+        state=state,
         loop_probes=loop_probes,
         loop_error=loop_error,
+        **_loop_context(nas["id"], service, state, loop_probes),
     )
 
 
@@ -492,5 +655,116 @@ def mt_port_services_loop_check(nas_id: int, slug: str):
         nas, mac.dhcp_client_list, only_ports=only)
     _audit_push(nas_id, slug, action="loop_check",
                 ports=selected_ports, ok=not loop_error)
+    # سجل الفحوصات: كل فحص يدوي يُدوَّن بنتيجته وتفاصيل كل منفذ —
+    # يجيب لاحقًا عن «كم فحص جرى ومتى وماذا وجد كل واحد».
+    _record_loop_check(nas_id, source="manual",
+                       probes=loop_probes, error=loop_error)
     return _render(nas, service=service, selected_ports=selected_ports,
                    loop_probes=loop_probes, loop_error=loop_error)
+
+
+def _record_loop_check(nas_id: int, *, source: str, probes,
+                       error: str = "") -> None:
+    """يدوّن فحص لوب في السجل — لا يكسر الطلب أبدًا عند فشل الكتابة."""
+    try:
+        details = [{
+            "iface": p.iface,
+            "status": p.status,
+            "is_loop": bool(p.is_loop),
+            "address": p.address,
+            "server": p.dhcp_server or p.gateway,
+        } for p in (probes or [])]
+        router_loop_checks_repo.insert_check(
+            tenant_id=_tid(), router_id=nas_id, source=source,
+            ok=not error, error=error or "", details=details)
+    except Exception:  # noqa: BLE001 — السجل ثانوي، لا يفشل الفحص لأجله
+        pass
+
+
+def mt_port_services_apply_port(nas_id: int, slug: str):
+    """تطبيق/إزالة الخدمة على *منفذ واحد* — JSON لواجهة التقدم.
+
+    بدل دفع سكربت واحد لكل المنافذ (فلا يُعرف أين فشل)، تستدعي الواجهة
+    هذا المسار منفذًا منفذًا فتعرض تقدمًا حيًّا: أي منفذ قيد التركيب،
+    أيها نجح، وأيها فشل ولماذا. الحالة المحفوظة تُحدَّث تراكميًا بعد كل
+    منفذ ناجح فقط — فلا يُحفَظ «مفعّلة على 8» بينما نجح التركيب على 5
+    (مصدر التناقض الذي كان بين البانر الأخضر ونتيجة الفحص).
+    """
+    nas = _load_nas(nas_id)
+    if not nas:
+        abort(404)
+    service = pss.get_service(slug)
+    if service is None:
+        abort(404)
+    port = (request.form.get("port") or "").strip()
+    remove = request.form.get("mode") == "remove"
+    if not port:
+        return jsonify({"ok": False, "port": "", "error": "حدّد منفذًا."}), 400
+    if service.is_placeholder:
+        return jsonify({
+            "ok": False, "port": port,
+            "error": "الخدمة بقالب مبدئي — لا سكربت يُدفَع بعد.",
+        }), 400
+    if not remove:
+        _, lan_err = _validate_lan_ports(nas, [port])
+        if lan_err:
+            return jsonify({"ok": False, "port": port, "error": lan_err}), 400
+    try:
+        plan = pss.build_plan(slug, [port], remove=remove)
+    except ValueError as e:
+        return jsonify({"ok": False, "port": port, "error": str(e)}), 400
+
+    apply_result, error = _push_to_router(nas, plan, service.comment)
+    ok = bool(apply_result and apply_result.ok and not error)
+    if apply_result is not None and not apply_result.ok and not error:
+        error = apply_result.error or "فشل تنفيذ السكربت على الراوتر."
+
+    if ok:
+        # تحديث الحالة تراكميًا: تركيب يضيف المنفذ، إزالة تحذفه.
+        ports = _get_state(nas_id, slug)["ports"]
+        if remove:
+            ports = [p for p in ports if p != port]
+        elif port not in ports:
+            ports.append(port)
+        _set_state(nas_id, slug, enabled=bool(ports), ports=ports)
+
+    _audit_push(nas_id, slug,
+                action=("remove_port" if remove else "apply_port"),
+                ports=[port], ok=ok)
+    steps = []
+    if apply_result is not None:
+        steps = [{"path": s.path, "ok": bool(s.ok), "error": s.error or ""}
+                 for s in apply_result.steps]
+    return jsonify({
+        "ok": ok,
+        "port": port,
+        "mode": "remove" if remove else "apply",
+        "error": "" if ok else (error or "فشل غير معروف."),
+        "steps": steps,
+    })
+
+
+def mt_port_services_loop_settings(nas_id: int, slug: str):
+    """حفظ إعدادات الفحص الدوري (تفعيل + الفترة بالدقائق) ثم العودة
+    لصفحة الخدمة. يقرؤها loop_probe_poller كل دورة فيحترمها فورًا."""
+    nas = _load_nas(nas_id)
+    if not nas:
+        abort(404)
+    if pss.get_service(slug) is None:
+        abort(404)
+    enabled = request.form.get("poll_enabled") in ("1", "on", "true", "yes")
+    try:
+        minutes = int(request.form.get("poll_minutes") or _POLL_DEFAULT_MINUTES)
+    except ValueError:
+        minutes = _POLL_DEFAULT_MINUTES
+    _set_loop_poll_settings(nas_id, slug, enabled=enabled, minutes=minutes)
+    get_audit_service().record(
+        actor=str(getattr(g, "admin_id", None) or "ui"),
+        action=f"mt.port_services.{slug}.poll_settings",
+        target_type="mikrotik_nas",
+        target_id=str(nas_id),
+        router_id=int(nas_id),
+        payload={"enabled": enabled, "minutes": minutes},
+    )
+    return redirect(url_for("radius.mt_port_services_form",
+                            nas_id=nas_id) + f"?slug={slug}")

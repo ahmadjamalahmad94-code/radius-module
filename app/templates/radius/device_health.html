@@ -89,6 +89,38 @@
   {% endif %}
 </section>
 
+{# ── إعدادات الفحص الدوري التلقائي — يحترمها worker الخلفية فورًا ── #}
+<section class="dh-liveapply" id="dh-pollsettings" style="margin-top:10px">
+  <div class="dh-liveapply-main">
+    <div class="dh-liveapply-text">
+      <div class="dh-liveapply-title">
+        <i class="fa-solid fa-clock"></i>
+        {{ _('الفحص الدوري التلقائي') }}
+      </div>
+      <div class="dh-liveapply-warn">
+        {{ _('يفحص النظام كل الأجهزة المُراقَبة تلقائيًا في الخلفية ويسجّل كل دورة في «سجل الفحوصات» أدناه ويُطلق التنبيهات عند الانقطاع. حدّد الفترة بين الفحوصات بالدقائق (أدنى دقة فعلية: دقيقة).') }}
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <label style="display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:700;cursor:pointer">
+        <input type="checkbox" id="dh-poll-enabled"
+               {% if poll_settings and poll_settings.enabled %}checked{% endif %}>
+        {{ _('مفعّل') }}
+      </label>
+      <label style="display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:700">
+        {{ _('كل') }}
+        <input class="hub-input mono" type="number" id="dh-poll-minutes"
+               min="1" max="1440" step="1" style="width:90px"
+               value="{{ poll_settings.minutes if poll_settings else 5 }}">
+        {{ _('دقيقة') }}
+      </label>
+      <button type="button" class="hub-btn hub-btn--primary hub-btn--sm" id="dh-poll-save">
+        <i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ') }}
+      </button>
+    </div>
+  </div>
+</section>
+
 {# ── Check-All live progress bar (shown by JS while «فحص الكل» streams) ── #}
 <div class="dh-progress-wrap" id="dh-progress" hidden aria-live="polite">
   <div class="dh-progress-head">
@@ -181,6 +213,99 @@
     <div class="dh-empty-filtered" hidden>{{ hub.empty(_('لا نتائج مطابقة للفلاتر')) }}</div>
   </div>
   {% endcall %}
+
+  {# ── سجل الفحوصات + إحصائياته — كل دورة فحص (يدوية أو دورية) صفّ
+     بملخّصها، و«المزيد» يفتح تفاصيل كل جهاز في تلك الدورة. ── #}
+  {% call hub.section(_('سجل الفحوصات'), icon='clock-rotate-left',
+                      meta=(checks|length ~ ' ' ~ _('فحص أخير'))) %}
+    <div id="dh-checks-stats"
+         style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px">
+      {% set _stat_items = [
+        (_('فحوصات آخر 24 ساعة'), check_stats.get('checks', 0), 'satellite-dish', '#6366F1'),
+        (_('انقطاعات رُصدت'), check_stats.get('downs', 0), 'circle-xmark', '#DC2626'),
+        (_('تغييرات حالة'), check_stats.get('changes', 0), 'shuffle', '#D97706'),
+        (_('تنبيهات أُرسلت'), check_stats.get('alerts', 0), 'bell', '#0369A1'),
+      ] %}
+      {% for label, value, icon, color in _stat_items %}
+      <div style="flex:1;min-width:150px;display:flex;align-items:center;gap:10px;background:#fff;border:1px solid #EAECF0;border-radius:11px;padding:10px 14px">
+        <i class="fa-solid fa-{{ icon }}" style="color:{{ color }}"></i>
+        <div>
+          <div style="font-size:18px;font-weight:900;color:#0F172A" data-dh-stat="{{ loop.index0 }}">{{ value }}</div>
+          <div style="font-size:11px;color:#64748B;font-weight:700">{{ label }}</div>
+        </div>
+      </div>
+      {% endfor %}
+      <div style="flex:1;min-width:170px;display:flex;align-items:center;gap:10px;background:#fff;border:1px solid #EAECF0;border-radius:11px;padding:10px 14px">
+        <i class="fa-solid fa-clock" style="color:#16A34A"></i>
+        <div>
+          <div style="font-size:12.5px;font-weight:800;color:#0F172A;direction:ltr" data-dh-stat="last">
+            {{ (check_stats.get('last_at') or '—')[:16] | replace('T', ' ') }}</div>
+          <div style="font-size:11px;color:#64748B;font-weight:700">{{ _('آخر فحص (UTC)') }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="dh-table-wrap" id="dh-checks-wrap">
+      <table class="hub-table" id="dh-checks-table" style="width:100%">
+        <thead>
+          <tr>
+            <th>{{ _('الوقت') }}</th>
+            <th>{{ _('المصدر') }}</th>
+            <th>{{ _('المفحوصة') }}</th>
+            <th>{{ _('متصل') }}</th>
+            <th>{{ _('مفصول') }}</th>
+            <th>{{ _('بنج عالٍ') }}</th>
+            <th>{{ _('تغيّرت') }}</th>
+            <th>{{ _('المدة') }}</th>
+            <th>{{ _('النتيجة') }}</th>
+            <th>{{ _('المزيد') }}</th>
+          </tr>
+        </thead>
+        <tbody id="dh-checks-body">
+          {% for c in checks %}
+          <tr data-dh-check="{{ c.id }}">
+            <td class="mono" style="direction:ltr;font-size:12px">{{ (c.created_at or '')[:16] | replace('T', ' ') }}</td>
+            <td>
+              {% if c.source == 'poller' %}
+              <span class="hub-pill hub-pill--brand">{{ _('دوري') }}</span>
+              {% else %}
+              <span class="hub-pill hub-pill--grey">{{ _('يدوي') }}</span>
+              {% endif %}
+            </td>
+            <td>{{ c.scanned }}</td>
+            <td style="color:#16A34A;font-weight:800">{{ c.up_count }}</td>
+            <td style="color:{{ '#DC2626' if c.down_count else '#94A3B8' }};font-weight:800">{{ c.down_count }}</td>
+            <td style="color:{{ '#D97706' if c.high_latency else '#94A3B8' }};font-weight:800">{{ c.high_latency }}</td>
+            <td>{{ c.changed }}</td>
+            <td class="mono" style="font-size:12px">{{ '%.1f'|format(c.duration_ms / 1000) }}s</td>
+            <td>
+              {% if not c.ok %}
+              <span class="hub-pill hub-pill--red">{{ _('تعذّر الفحص') }}</span>
+              {% elif c.down_count %}
+              <span class="hub-pill hub-pill--red">{{ _('انقطاعات') }}</span>
+              {% elif c.high_latency %}
+              <span class="hub-pill hub-pill--amber">{{ _('بنج عالٍ') }}</span>
+              {% else %}
+              <span class="hub-pill hub-pill--green">{{ _('سليم') }}</span>
+              {% endif %}
+            </td>
+            <td>
+              <button type="button" class="hub-btn hub-btn--ghost hub-btn--sm"
+                      data-dh-check-details data-details='{{ c.details | tojson }}'
+                      title="{{ _('تفاصيل كل جهاز في هذه الدورة') }}">
+                <i class="fa-solid fa-list"></i> {{ _('المزيد') }}
+              </button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <div id="dh-checks-empty" {% if checks %}hidden{% endif %}>
+        {{ hub.empty(_('لا فحوصات مسجّلة بعد'),
+                     sub=_('أول فحص (يدوي أو دوري) سيظهر هنا.'), icon='clock-rotate-left') }}
+      </div>
+    </div>
+  {% endcall %}
 {% endcall %}
 
 {# ── Add / Edit modal ── #}
@@ -257,7 +382,37 @@
 
   <div class="dh-plan-preview" id="dh-plan-preview" aria-live="polite"></div>
   <div class="dh-form-error" id="dh-form-error" hidden></div>
+
+  {# ── تقدم تركيب الإعدادات على المايكروتيك بعد الإضافة — يملؤه JS:
+     لكل عنصر (عنوان البوابة / تجاوز Hotspot / Netwatch) سطر يعرض
+     الأمر الفعلي المدفوع ونتيجته (تم/موجود مسبقًا/فشل + السبب). ── #}
+  <div id="dh-install-progress" hidden style="margin-top:14px">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px">
+      <strong style="font-size:13.5px">
+        <i class="fa-solid fa-cloud-arrow-up"></i>
+        {{ _('تركيب الإعدادات على المايكروتيك / السيرفر') }}
+      </strong>
+      <span id="dh-install-count" style="font-size:12px;color:#64748B;font-weight:700"></span>
+    </div>
+    <div style="height:8px;background:#EEF2F7;border-radius:999px;overflow:hidden">
+      <div id="dh-install-bar"
+           style="height:100%;width:0%;background:#6366F1;border-radius:999px;transition:width .25s"></div>
+    </div>
+    <div id="dh-install-items" style="margin-top:10px;display:flex;flex-direction:column;gap:8px"></div>
+    <div id="dh-install-summary" hidden role="status"
+         style="margin-top:10px;padding:10px 14px;border:1px solid;border-radius:11px;font-size:13px"></div>
+    <button type="button" id="dh-install-done" hidden
+            class="hub-btn hub-btn--primary" style="margin-top:10px"
+            onclick="window.location.reload()">
+      <i class="fa-solid fa-rotate-right"></i> {{ _('تم — تحديث الصفحة') }}
+    </button>
+  </div>
 </form>
+{% endcall %}
+
+{# ── نافذة تفاصيل دورة فحص من السجل ── #}
+{% call hub.modal('dh-check-modal', _('تفاصيل دورة الفحص'), icon='list', size='lg') %}
+<div id="dh-check-body" aria-live="polite"></div>
 {% endcall %}
 
 {# ── Plan / sync result modal ── #}
@@ -283,7 +438,10 @@ window.__DH__ = {
   ifacesUrl: "{{ url_for('radius.device_health_api_router_interfaces') }}",
   liveApplyUrl: "{{ url_for('radius.device_health_api_live_apply') }}",
   pollUrl: "{{ url_for('radius.device_health_api_poll') }}",
-  pollStreamUrl: "{{ url_for('radius.device_health_api_poll_stream') }}"
+  pollStreamUrl: "{{ url_for('radius.device_health_api_poll_stream') }}",
+  pollSettingsUrl: "{{ url_for('radius.device_health_api_poll_settings') }}",
+  checksUrl: "{{ url_for('radius.device_health_api_checks') }}",
+  liveApplyEnabled: {{ 'true' if live_apply.effective else 'false' }}
 };
 </script>
 <script src="{{ url_for('static', filename='js/device_health.js') }}"></script>

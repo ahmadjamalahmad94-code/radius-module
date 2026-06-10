@@ -212,6 +212,33 @@ def test_internal_ratios_preserved_across_cards_per_row():
     assert m1["elements"] == m2["elements"]
 
 
+def test_vertical_custom_positions_identical_before_and_after_save_swap():
+    """غرفة التصميم ترسل أبعاد الحقول كما هي (85×54) بينما الحفظ يبدّلها
+    للبطاقات العمودية (54×85) — يجب أن يحلّ المحرك إحداثيات mm المخصصة
+    إلى نفس النقاط على الكانفس في الحالتين، وإلا انزاحت العناصر للأعلى
+    ولليمين في المعاينة/الطباعة بعد الحفظ (الخلل المُبلَّغ)."""
+    from app.radius.services.card_renderer import build_card_render_model
+
+    def make(width_mm, height_mm):
+        return _make_template(
+            username_x=5.0, username_y=40.0,
+            password_x=5.0, password_y=50.0,
+            qr_x=30.0, qr_y=12.0,
+            layout={
+                "render_engine": "ar_vertical",
+                "card_orientation": "vertical",
+                "card_width_mm": width_mm,
+                "card_height_mm": height_mm,
+            },
+        )
+
+    card = {"id": 9, "username": "3375724386", "password": "58703"}
+    live_form = build_card_render_model(make(85, 54), card)   # قبل الحفظ
+    saved_row = build_card_render_model(make(54, 85), card)   # بعد التبديل
+    assert live_form["canvas"] == {"width": 600, "height": 1000}
+    assert live_form["elements"] == saved_row["elements"]
+
+
 def test_qr_uses_canvas_units_not_sheet_cell():
     """QR `x`, `y`, `size` come from the canvas (1000x600), never the
     final sheet cell. This is the invariant that stops sheet layout
@@ -580,43 +607,49 @@ def test_arabic_shaping_pipeline_runs():
 def test_designer_form_defaults_match_renderer_default_positions(client):
     """Designer/export/PDF parity guard.
 
-    The interactive designer canvas (`.pr-card-preview` in
-    print_templates.html) renders USER/PASS/QR at the same percentages
-    listed in `_DEFAULT_POSITIONS` inside card_renderer.py. For a
-    newly-created template to look identical in the export preview
-    and the PDF, the designer's mm-based position inputs must default
-    to 0 — that triggers the renderer's fallback to those same
-    canonical fractions instead of treating "10 mm / 24 mm" as a real
-    custom coordinate.
+    The designer's mm-based position inputs are pre-filled server-side
+    with the EFFECTIVE coordinates the unified renderer actually draws
+    (`_effective_field_layout`), flagged `data-auto-default="1"`. The
+    inverse mapping is exact (mm = canvas-fraction × card mm box), so
+    re-submitting these values reproduces the same positions — designer,
+    export preview and PDF stay identical for a fresh template.
 
-    This test reads the rendered HTML of the designer page and pins
-    each position field's `value=` attribute at 0.
+    This test pins each position field to the renderer-derived value
+    instead of the old hardcoded 0 sentinel.
     """
+    from app.radius.routes.print_templates import _effective_field_layout
+
     _web_login(client)
     page = client.get("/admin/radius/print-templates")
     assert page.status_code == 200
     html = page.get_data(as_text=True)
+    with client.application.test_request_context("/admin/radius/print-templates"):
+        effective = _effective_field_layout({})
     for name in (
         "username_x", "username_y",
         "password_x", "password_y",
         "qr_x", "qr_y",
     ):
-        # Whitespace-tolerant: matches `name="username_x" ... value="0"`
-        # in either attribute order.
         assert (
             f'name="{name}"' in html
         ), f"position field {name} is missing from the designer form"
-        # The literal value="0" must be present on the same input.
-        # We split around the name= attribute to scope the search to
-        # that input's tag.
+        # Scope the attribute search to that input's tag.
         before, after = html.split(f'name="{name}"', 1)
         tag_end = after.find(">")
         assert tag_end != -1
         tag_attrs = after[:tag_end]
-        # Either order: `value="0"` directly inside the input tag.
-        assert 'value="0"' in tag_attrs, (
-            f'designer form field `{name}` must default to value="0" so '
-            f'the renderer falls back to _DEFAULT_POSITIONS — got: <input ... {name}{tag_attrs}>'
+        expected = effective.get(name)
+        assert expected is not None, f"no effective value computed for {name}"
+        assert (
+            f'value="{expected}"' in tag_attrs
+        ), (
+            f'designer form field `{name}` must be pre-filled with the '
+            f'renderer\'s effective coordinate {expected} — got: '
+            f"<input ... {name}{tag_attrs}>"
+        )
+        assert 'data-auto-default="1"' in tag_attrs, (
+            f"pre-filled `{name}` must stay flagged auto-default so engine "
+            f"switches can re-derive it"
         )
 
 
