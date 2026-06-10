@@ -10,50 +10,167 @@
 {% block head_extra %}
 {{ super() }}
 <style>
-  .cnf{ display:grid; gap:16px; }
-  /* group title strip */
-  .cnf-group{ display:flex; align-items:center; gap:9px; margin:6px 2px 2px; font-size:13px; font-weight:800; color:#5b21b6; }
-  .cnf-group .ln{ flex:1; height:1px; background:linear-gradient(90deg,#ede9fe,transparent); }
-  /* event card */
-  .cnf-card{ border:1px solid #e8edf3; border-radius:14px; background:#fcfcff; overflow:hidden; transition:.15s; }
-  .cnf-card.on{ border-color:#c4b5fd; box-shadow:0 4px 14px rgba(91,33,182,.06); }
-  .cnf-head{ display:flex; align-items:center; gap:12px; padding:13px 15px; }
+  /* ═════════════════════════════════════════════════════════════════
+     الإشعارات الحدثية — نظام إيقاع وفصل بصري موحَّد على توكنات التصميم.
+     قواعد المسافات والتباين:
+       • النموذج .cnf مغلِّف flex-column يُعطي أبناءه (قسم «كيف تعمل»،
+         قسم «الأحداث») فجوة موحَّدة = --hub-gap-lg.
+       • قائمة البطاقات .cnf-list أيضًا flex-column بنفس الفجوة فلا
+         تلتصق البطاقات ببعضها — كل بطاقة جزيرة مستقلّة.
+       • شريط اسم المجموعة .cnf-group يأخذ هامشًا عُلويًا أكبر بين
+         المجموعات (ليس قبل الأولى) ليبدو فاصلًا حقيقيًا لا تسمية رخوة.
+       • البطاقة .cnf-card لها حواف وخلفية وحشوة واضحة دائمًا (حتى
+         المعطَّلة) — تباين بصري ظاهر دون اعتماد على الحالة فقط.
+       • داخل البطاقة: head وbody يستخدمان حشوة وفجوات من التوكنات
+         نفسها بحيث «التحكّمات مجمَّعة» بإيقاع واحد لا 13px هنا و9px
+         هناك.
+     ═════════════════════════════════════════════════════════════════ */
+
+  /* المغلِّف الأعلى للنموذج: قسمَا «كيف تعمل» و«الأحداث» يفصلهما gap. */
+  .cnf{ display:flex; flex-direction:column; gap: var(--hub-gap-lg); }
+
+  /* قائمة البطاقات: مصدر الإيقاع العمودي بين بطاقات الأحداث. */
+  .cnf-list{ display:flex; flex-direction:column; gap: var(--hub-gap-lg); }
+
+  /* شريط اسم المجموعة: ترويسة فاصلة قوية بين مجموعات الأحداث.
+     لا يُعطى margin-top إن كان أوّل بطاقة في القائمة (راجع `+` أدناه)،
+     لكن أي شريط لاحق يأخذ مسافة --hub-gap-xl تفصل المجموعات بصريًا. */
+  .cnf-group{
+    display:flex; align-items:center; gap: var(--hub-gap-md);
+    font-size:13px; font-weight:800; color:#5b21b6;
+    padding: var(--hub-gap-sm) var(--hub-gap-xs);
+    border-bottom:1px solid #ede9fe;
+  }
+  .cnf-list > .cnf-group + .cnf-card{ /* أوّل بطاقة بعد ترويسة المجموعة */
+    margin-top: 0; /* لا نضاعف الفجوة — gap القائمة يكفي */
+  }
+  .cnf-list > .cnf-card + .cnf-group,
+  .cnf-list > .cnf-card + * + .cnf-group{
+    /* أي ترويسة مجموعة لاحقة (لها بطاقة قبلها): فجوة أكبر تفصل
+       المجموعات بصريًا فلا يبدو الكل كحائط واحد. */
+    margin-top: var(--hub-gap-md);
+  }
+  .cnf-group .ln{
+    flex:1; height:1px;
+    background: linear-gradient(90deg,#ede9fe,transparent);
+  }
+
+  /* بطاقة الحدث: تباين بصري دائم (لا يعتمد على .on وحدها).
+     الحشوة والحواف موحَّدة على توكنات التصميم. */
+  .cnf-card{
+    border:1px solid var(--hub-border, #e2e8f0);
+    border-radius:14px;
+    background:#ffffff;
+    overflow:hidden;
+    transition:.15s;
+    box-shadow: 0 1px 2px rgba(15,23,42,.04);
+  }
+  .cnf-card.on{
+    border-color:#c4b5fd;
+    background:#fcfcff;
+    box-shadow: 0 4px 14px rgba(91,33,182,.07);
+  }
+
+  /* رأس البطاقة: المفتاح + العنوان. حشوة من --hub-gap-lg وفجوة
+     داخلية من --hub-gap-md — إيقاع موحَّد. */
+  .cnf-head{
+    display:flex; align-items:center;
+    gap: var(--hub-gap-md);
+    padding: var(--hub-gap-lg);
+  }
   .cnf-head .ttl{ font-size:14px; font-weight:800; color:#0f172a; flex:1; }
-  .cnf-head .ttl .ek{ font-family:ui-monospace,Consolas,monospace; font-size:10.5px; color:#94a3b8; font-weight:600; margin-inline-start:7px; direction:ltr; unicode-bidi:isolate; }
-  /* card body (revealed when enabled) */
-  .cnf-body{ padding:0 15px 15px; display:grid; gap:13px; border-top:1px solid #f1f5f9; }
+  .cnf-head .ttl .ek{
+    font-family:ui-monospace,Consolas,monospace;
+    font-size:10.5px; color:#94a3b8; font-weight:600;
+    margin-inline-start: var(--hub-gap-sm);
+    direction:ltr; unicode-bidi:isolate;
+  }
+
+  /* جسم البطاقة (يظهر عند التفعيل): حشوة + فجوة موحَّدتان.
+     الفاصل العُلوي حدّ خفيف يميّز الإعدادات عن الرأس بصريًا. */
+  .cnf-body{
+    padding: var(--hub-gap-lg);
+    padding-top: var(--hub-gap-lg);
+    display:flex; flex-direction:column;
+    gap: var(--hub-gap-md);
+    border-top:1px solid #f1f5f9;
+    background: #fcfcff;
+  }
   .cnf-card:not(.on) .cnf-body{ display:none; }
-  /* channels row */
-  .cnf-chans{ display:flex; flex-wrap:wrap; gap:9px; padding-top:13px; }
-  .cnf-chan{ display:inline-flex; align-items:center; gap:8px; border:1px solid #e2e8f0; border-radius:10px; padding:8px 13px;
-    font-size:12.5px; font-weight:800; color:#334155; cursor:pointer; background:#fff; transition:.13s; user-select:none; }
+
+  /* صفّ القنوات: شارات اختيار. fgaps from token. */
+  .cnf-chans{ display:flex; flex-wrap:wrap; gap: var(--hub-gap-sm); }
+  .cnf-chan{
+    display:inline-flex; align-items:center;
+    gap: var(--hub-gap-sm);
+    border:1px solid #e2e8f0; border-radius:10px;
+    padding: var(--hub-gap-sm) var(--hub-gap-md);
+    font-size:12.5px; font-weight:800; color:#334155;
+    cursor:pointer; background:#fff; transition:.13s; user-select:none;
+  }
   .cnf-chan input{ width:16px; height:16px; accent-color:#7c3aed; cursor:pointer; }
   .cnf-chan:hover{ border-color:#c4b5fd; }
   .cnf-chan.sel{ background:#f5f3ff; border-color:#c4b5fd; color:#5b21b6; }
   .cnf-chan .warn{ font-size:10.5px; font-weight:700; color:#b45309; }
-  /* message field */
-  .cnf-field{ display:grid; gap:6px; }
+
+  /* حقل الرسالة. */
+  .cnf-field{ display:flex; flex-direction:column; gap: var(--hub-gap-xs); }
   .cnf-field label{ font-size:12.5px; font-weight:800; color:#0f172a; }
-  .cnf-area{ width:100%; border:1px solid #cbd5e1; border-radius:10px; padding:10px 12px; font:inherit; font-size:12.5px;
-    background:#fff; color:#0f172a; min-height:74px; resize:vertical; line-height:1.85; }
+  .cnf-area{
+    width:100%; border:1px solid #cbd5e1; border-radius:10px;
+    padding: var(--hub-gap-md);
+    font:inherit; font-size:12.5px;
+    background:#fff; color:#0f172a;
+    min-height:74px; resize:vertical; line-height:1.85;
+  }
   .cnf-area:focus{ outline:0; border-color:#7c3aed; box-shadow:0 0 0 3px rgba(124,58,237,.14); }
-  /* variable chips */
-  .cnf-vars{ display:flex; gap:6px; flex-wrap:wrap; }
-  .cnf-var{ font-family:ui-monospace,Consolas,monospace; font-size:11px; background:#f1f5f9; border:1px solid #e2e8f0; border-radius:6px;
-    padding:3px 8px; color:#5b21b6; direction:ltr; unicode-bidi:isolate; cursor:pointer; transition:.12s; }
+
+  /* رقاقات المتغيرات. */
+  .cnf-vars{ display:flex; gap: var(--hub-gap-xs); flex-wrap:wrap; }
+  .cnf-var{
+    font-family:ui-monospace,Consolas,monospace;
+    font-size:11px; background:#f1f5f9; border:1px solid #e2e8f0;
+    border-radius:6px; padding:3px var(--hub-gap-sm);
+    color:#5b21b6; direction:ltr; unicode-bidi:isolate;
+    cursor:pointer; transition:.12s;
+  }
   .cnf-var:hover{ background:#ede9fe; border-color:#c4b5fd; }
-  /* days_before inline field */
-  .cnf-days{ display:flex; align-items:center; gap:10px; background:#fffbeb; border:1px solid #fde68a; border-radius:10px; padding:9px 13px; }
+
+  /* حقل days_before. */
+  .cnf-days{
+    display:flex; align-items:center;
+    gap: var(--hub-gap-md);
+    background:#fffbeb; border:1px solid #fde68a; border-radius:10px;
+    padding: var(--hub-gap-sm) var(--hub-gap-md);
+  }
   .cnf-days label{ font-size:12.5px; font-weight:800; color:#92400e; }
-  .cnf-days input{ width:74px; border:1px solid #fcd34d; border-radius:8px; padding:6px 9px; font:inherit; font-size:13px; text-align:center; background:#fff; }
+  .cnf-days input{
+    width:74px; border:1px solid #fcd34d; border-radius:8px;
+    padding: var(--hub-gap-xs) var(--hub-gap-sm);
+    font:inherit; font-size:13px; text-align:center; background:#fff;
+  }
   .cnf-days .u{ font-size:12px; color:#a16207; font-weight:700; }
-  /* notes */
-  .cnf-note{ display:flex; gap:10px; align-items:flex-start; font-size:12.5px; line-height:1.7; border-radius:12px; padding:11px 14px; }
+
+  /* ملاحظة info داخل قسم «كيف تعمل». */
+  .cnf-note{
+    display:flex; gap: var(--hub-gap-md);
+    align-items:flex-start;
+    font-size:12.5px; line-height:1.7;
+    border-radius:12px;
+    padding: var(--hub-gap-md) var(--hub-gap-lg);
+  }
   .cnf-note.info{ background:#eff6ff; color:#1e40af; border:1px solid #bfdbfe; }
   .cnf-note a{ color:inherit; font-weight:800; text-decoration:underline; }
-  /* sticky save bar */
-  .cnf-save{ position:sticky; bottom:0; display:flex; gap:10px; align-items:center; flex-wrap:wrap; padding:13px 0 2px;
-    background:linear-gradient(0deg,var(--bg,#f6f7fb) 65%,transparent); }
+
+  /* شريط الحفظ السفلي اللاصق. */
+  .cnf-save{
+    position:sticky; bottom:0;
+    display:flex; gap: var(--hub-gap-md);
+    align-items:center; flex-wrap:wrap;
+    padding: var(--hub-gap-md) 0 var(--hub-gap-xs);
+    margin-top: var(--hub-gap-md);
+    background: linear-gradient(0deg, var(--bg, #f6f7fb) 65%, transparent);
+  }
   .cnf-save .hint{ font-size:12px; color:#64748b; }
 </style>
 {% endblock %}
@@ -114,7 +231,10 @@
   {% endcall %}
 
   {% call hub.section("الأحداث", icon="bell") %}
-  {# group the events by their group key, in registry order #}
+  {# قائمة البطاقات: مغلِّف صريح لـgap موحَّد بين البطاقات وبين
+     ترويسات المجموعات. كل بطاقة جزيرة بصرية مستقلّة بحدّ وخلفية
+     وحشوة واضحة — لا «حائط واحد ملزّق». #}
+  <div class="cnf-list">
   {%- set ns = namespace(current='') -%}
   {% for rule in rules %}
     {%- if rule.event.group != ns.current -%}
@@ -170,6 +290,7 @@
       </div>
     </div>
   {% endfor %}
+  </div>{# /cnf-list #}
 
   <div class="cnf-save">
     {{ hub.btn("حفظ كل الإعدادات", icon="floppy-disk", variant="primary", type="submit") }}
