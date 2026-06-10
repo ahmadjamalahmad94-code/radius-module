@@ -43,6 +43,7 @@ def _loop() -> None:
             report_result = _maybe_report_admins()
             identity_result = _maybe_sync_identity()
             tunnel_result = _maybe_sync_tunnels()
+            bridge_token_result = _maybe_sync_bridge_token()
             info = {
                 "interval_sec": interval,
                 "ok": bool(result.get("ok")),
@@ -54,6 +55,8 @@ def _loop() -> None:
                 "admins_reported": report_result.get("reported_count") if report_result else None,
                 "super_overrides": identity_result.get("super_overrides") if identity_result else None,
                 "tunnels_ok": tunnel_result.get("ok") if tunnel_result else None,
+                "bridge_token_ok": bridge_token_result.get("ok") if bridge_token_result else None,
+                "bridge_token_action": bridge_token_result.get("action") if bridge_token_result else None,
             }
         except Exception as exc:  # noqa: BLE001
             _LOG.exception("admin bridge sync worker tick failed")
@@ -86,6 +89,17 @@ def _maybe_sync_tunnels() -> dict | None:
     from app.radius.services.license_tunnel_bridge import LicenseTunnelBridgeService
 
     return LicenseTunnelBridgeService().sync_tunnels(tenant_id=1)
+
+
+def _maybe_sync_bridge_token() -> dict | None:
+    if not bridge_flag("HOBERADIUS_ADMIN_BRIDGE_WORKER", "license_admin_bridge.worker_enabled"):
+        return None
+    try:
+        from app.radius.services.license_bridge_token_sync import BridgeTokenSyncService
+        return BridgeTokenSyncService().ensure_token_and_report_pending(tenant_id=1)
+    except Exception:  # noqa: BLE001
+        _LOG.warning("bridge_token sync step failed", exc_info=True)
+        return None
 
 
 def start_admin_bridge_sync_worker() -> None:
