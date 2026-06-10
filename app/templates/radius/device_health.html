@@ -35,10 +35,25 @@
   {'label': _('المعطّلة'),       'value': counts.disabled,     'icon':'circle-pause',  'variant':'grey'}
 ] -%}
 
+{# ── أزرار رأس الصفحة: «فحص الكل» + «إضافة جهاز» + «الإعدادات» (مودال) ──
+   نقلنا شريطَي «التطبيق الحي» و«الفحص الدوري» إلى مودال إعدادات واحد فلا
+   يظغمان رأس الصفحة. الزر يحمل نقطة لونٍ صغيرة تنعكس على حالة التطبيق
+   الحي (كهرماني = شغّال، رمادي = مطفأ) ليرى المالك الحالة دون فتح المودال. #}
+{%- set _live_dot_cls = 'is-on' if live_apply.effective else '' -%}
+{%- set _settings_btn -%}
+  <button type="button" class="hub-btn hub-btn--ghost hub-btn--sm dh-settings-trigger {{ _live_dot_cls }}"
+          data-uds-modal-open="dh-settings-modal" id="dh-settings-trigger"
+          title="{{ _('إعدادات الفحص والتطبيق الحي') }}">
+    <i class="fa-solid fa-gear"></i>
+    <span>{{ _('الإعدادات') }}</span>
+    <span class="dh-settings-dot" aria-hidden="true"></span>
+  </button>
+{%- endset -%}
 {%- set _poll_btn = hub.btn(_('فحص الكل الآن'), variant='ghost', icon='satellite-dish', size='sm',
                             attrs='data-dh-poll') -%}
 {%- set _add_btn = _poll_btn ~ hub.btn(_('إضافة جهاز'), variant='primary', icon='plus', size='sm',
-                           attrs='data-uds-modal-open="dh-device-modal" data-dh-add') -%}
+                           attrs='data-uds-modal-open="dh-device-modal" data-dh-add')
+                   ~ _settings_btn -%}
 
 <section class="hub-hero-shell">
 {% call hub.megahero(_('تتبع حالة الأجهزة'),
@@ -66,60 +81,11 @@
 {% endcall %}
 </section>
 
-{# ── Live-apply control (panel toggle — «كله من اللوحة مش التيرمنال») ── #}
-<section class="dh-liveapply{% if live_apply.enabled %} is-on{% endif %}" id="dh-liveapply">
-  <div class="dh-liveapply-main">
-    <div class="dh-liveapply-text">
-      <div class="dh-liveapply-title">
-        <i class="fa-solid fa-triangle-exclamation"></i>
-        {{ _('تفعيل التطبيق الحي على الراوترات') }}
-      </div>
-      <div class="dh-liveapply-warn">
-        {{ _('عند التفعيل سيكتب النظام فعليًا على المايكروتيك/السيرفر (إضافة عنوان IP/بوابة + تجاوز Hotspot + Netwatch). أبقِه مُطفأً ما لم ترِد تطبيق الخطط على الأجهزة الحقيقية — وهو مُطفأ افتراضيًا للأمان.') }}
-      </div>
-    </div>
-    {{ toggle_switch(name="dh_live_apply", id="dh-live-apply-toggle",
-                     checked=live_apply.enabled, on_label=_('مُفعّل'), off_label=_('مُطفأ')) }}
-  </div>
-  {% if live_apply.env_forced_off %}
-  <div class="dh-liveapply-forced">
-    <i class="fa-solid fa-lock"></i>
-    {{ _('التطبيق الحي مُعطَّل قسريًّا من إعداد الخادم — المفتاح لن يأخذ مفعوله حتى يُرفع القيد.') }}
-  </div>
-  {% endif %}
-</section>
-
-{# ── إعدادات الفحص الدوري التلقائي — يحترمها worker الخلفية فورًا ── #}
-<section class="dh-liveapply" id="dh-pollsettings" style="margin-top:10px">
-  <div class="dh-liveapply-main">
-    <div class="dh-liveapply-text">
-      <div class="dh-liveapply-title">
-        <i class="fa-solid fa-clock"></i>
-        {{ _('الفحص الدوري التلقائي') }}
-      </div>
-      <div class="dh-liveapply-warn">
-        {{ _('يفحص النظام كل الأجهزة المُراقَبة تلقائيًا في الخلفية ويسجّل كل دورة في «سجل الفحوصات» أدناه ويُطلق التنبيهات عند الانقطاع. حدّد الفترة بين الفحوصات بالدقائق (أدنى دقة فعلية: دقيقة).') }}
-      </div>
-    </div>
-    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-      <label style="display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:700;cursor:pointer">
-        <input type="checkbox" id="dh-poll-enabled"
-               {% if poll_settings and poll_settings.enabled %}checked{% endif %}>
-        {{ _('مفعّل') }}
-      </label>
-      <label style="display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:700">
-        {{ _('كل') }}
-        <input class="hub-input mono" type="number" id="dh-poll-minutes"
-               min="1" max="1440" step="1" style="width:90px"
-               value="{{ poll_settings.minutes if poll_settings else 5 }}">
-        {{ _('دقيقة') }}
-      </label>
-      <button type="button" class="hub-btn hub-btn--primary hub-btn--sm" id="dh-poll-save">
-        <i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ') }}
-      </button>
-    </div>
-  </div>
-</section>
+{# ── شريطا «التطبيق الحي» و«الفحص الدوري» أُزيلا من رأس الصفحة وانتقلا
+     إلى مودال «الإعدادات» الموحّد أدناه (data-uds-modal-open="dh-settings-modal").
+     معرّفات العناصر (dh-live-apply-toggle / dh-poll-enabled / dh-poll-minutes /
+     dh-poll-save) محفوظة كما هي حتى لا يتغيّر JS الموجود في
+     static/js/device_health.js ولا أي endpoint POST. ── #}
 
 {# ── Check-All live progress bar (shown by JS while «فحص الكل» streams) ── #}
 <div class="dh-progress-wrap" id="dh-progress" hidden aria-live="polite">
@@ -427,6 +393,70 @@
   <button type="button" class="dh-tab" data-dh-tab="alerts">{{ _('التنبيهات') }}</button>
 </div>
 <div id="dh-events-body" aria-live="polite"></div>
+{% endcall %}
+
+{# ───── إعدادات الصفحة (يحلّ محلّ الشريطَين في أعلى الصفحة) ─────
+   مجموعتان واضحتان داخل مودال واحد:
+     1) التطبيق الحي على الراوترات   → toggle + التحذير + ملاحظة القفل القسري.
+     2) الفحص الدوري التلقائي         → مفتاح تفعيل + فاصل دقائق + زر حفظ.
+   كل المُعرّفات (dh-live-apply-toggle / dh-poll-enabled / dh-poll-minutes /
+   dh-poll-save) محفوظة لأنّ static/js/device_health.js يربط الأحداث عليها
+   بالاسم — فالنقل بصريّ فقط، لا تغيير في الـ endpoints أو في عقد الحفظ. #}
+{% set _settings_foot %}
+  <button type="button" class="hub-btn hub-btn--ghost" data-uds-modal-close>{{ _('إغلاق') }}</button>
+{% endset %}
+{% call hub.modal('dh-settings-modal', _('إعدادات «تتبع حالة الأجهزة»'),
+                  icon='gear', size='md', footer_html=_settings_foot) %}
+<div class="dh-settings">
+
+  {# ── (1) التطبيق الحي على الراوترات ── #}
+  <section class="dh-settings-card" data-dh-settings-section="live-apply">
+    <header class="dh-settings-head">
+      <span class="dh-settings-ic dh-settings-ic--amber"><i class="fa-solid fa-triangle-exclamation"></i></span>
+      <div class="dh-settings-head-text">
+        <div class="dh-settings-title">{{ _('التطبيق الحي على الراوترات') }}</div>
+        <div class="dh-settings-sub">{{ _('عند التفعيل يكتب النظام فعليًا على المايكروتيك/السيرفر (عنوان IP/بوابة + تجاوز Hotspot + Netwatch). أبقِه مُطفأً ما لم ترِد تطبيق الخطط على الأجهزة الحقيقية — مُطفأ افتراضيًا للأمان.') }}</div>
+      </div>
+    </header>
+    <div class="dh-settings-control">
+      {{ toggle_switch(name="dh_live_apply", id="dh-live-apply-toggle",
+                       checked=live_apply.enabled, on_label=_('مُفعّل'), off_label=_('مُطفأ')) }}
+    </div>
+    {% if live_apply.env_forced_off %}
+    <div class="dh-settings-notice dh-settings-notice--lock">
+      <i class="fa-solid fa-lock"></i>
+      <span>{{ _('التطبيق الحي مُعطَّل قسريًّا من إعداد الخادم — المفتاح لن يأخذ مفعوله حتى يُرفع القيد.') }}</span>
+    </div>
+    {% endif %}
+  </section>
+
+  {# ── (2) الفحص الدوري التلقائي ── #}
+  <section class="dh-settings-card" data-dh-settings-section="poll">
+    <header class="dh-settings-head">
+      <span class="dh-settings-ic dh-settings-ic--brand"><i class="fa-solid fa-clock"></i></span>
+      <div class="dh-settings-head-text">
+        <div class="dh-settings-title">{{ _('الفحص الدوري التلقائي') }}</div>
+        <div class="dh-settings-sub">{{ _('يفحص النظام كل الأجهزة المُراقَبة تلقائيًا في الخلفية، يسجّل كل دورة في «سجل الفحوصات» ويُطلق التنبيهات عند الانقطاع. حدّد الفترة بين الفحوصات بالدقائق (أدنى دقة فعلية: دقيقة).') }}</div>
+      </div>
+    </header>
+    <div class="dh-settings-control dh-settings-control--row">
+      <label class="dh-settings-toggle">
+        <input type="checkbox" id="dh-poll-enabled"
+               {% if poll_settings and poll_settings.enabled %}checked{% endif %}>
+        <span>{{ _('مفعّل') }}</span>
+      </label>
+      <label class="dh-settings-interval">
+        <span class="dh-settings-interval-pre">{{ _('كل') }}</span>
+        <input class="hub-input mono" type="number" id="dh-poll-minutes"
+               min="1" max="1440" step="1" value="{{ poll_settings.minutes if poll_settings else 5 }}">
+        <span class="dh-settings-interval-post">{{ _('دقيقة') }}</span>
+      </label>
+      <button type="button" class="hub-btn hub-btn--primary hub-btn--sm" id="dh-poll-save">
+        <i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ') }}
+      </button>
+    </div>
+  </section>
+</div>
 {% endcall %}
 
 <script>

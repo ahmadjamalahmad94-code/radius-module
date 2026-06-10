@@ -36,7 +36,11 @@
 .dh-row.dh-flash { animation: dh-flash 1s ease; }
 @keyframes dh-flash { 0% { background: color-mix(in srgb, var(--hub-accent, #6366F1) 16%, transparent); } 100% { background: transparent; } }
 
-/* Live-apply panel toggle strip */
+/* ── Live-apply panel toggle strip (مهجور — انتقل إلى مودال الإعدادات،
+   نُبقي القواعد لأنّ نفس toggle_switch يُستخدم داخل المودال ولأنّ
+   `static/js/device_health.js` يحاول classList.toggle('is-on') على
+   #dh-liveapply القديم بأمان عبر `if (strip)`. لا تأثير بصري متبقٍ
+   على رأس الصفحة بعد إزالة `<section class="dh-liveapply">`.) ── */
 .dh-liveapply {
   margin: 0 0 16px; padding: 14px 18px; border-radius: 14px;
   background: #FFFBEB; border: 1px solid #FDE68A;
@@ -56,6 +60,100 @@
   background: #FEF2F2; border: 1px solid #FECACA; color: #991B1B;
   font-size: 12px; display: flex; align-items: center; gap: 8px;
 }
+
+/* ───── زر «الإعدادات» في رأس الصفحة + نقطة الحالة الصغيرة ─────
+   النقطة كهرمانية عندما يكون التطبيق الحي مُفعَّلًا فعليًّا (live_apply.effective)
+   ـ يُضاف الكلاس `.is-on` من القالب على نفس الزر. لا تتطلّب أيّ JS. */
+.dh-settings-trigger {
+  position: relative;
+  display: inline-flex; align-items: center; gap: 7px;
+}
+.dh-settings-trigger .dh-settings-dot {
+  width: 9px; height: 9px; border-radius: 999px;
+  background: #94A3B8;
+  box-shadow: 0 0 0 2px #fff;
+  margin-inline-start: 2px;
+  transition: background .2s, box-shadow .2s;
+}
+.dh-settings-trigger.is-on .dh-settings-dot {
+  background: #F59E0B;
+  box-shadow: 0 0 0 2px #FFFBEB, 0 0 0 4px #FDE68A;
+}
+
+/* ───── محتوى مودال الإعدادات ─────
+   عمودان من «بطاقات إعداد» (header + control) فيهما زاوية ناعمة وحدّ خفيف
+   حتى تبقى المجموعتان متمايزتَين بصريًّا داخل مودال واحد. RTL-safe. */
+.dh-settings {
+  display: flex; flex-direction: column; gap: 14px;
+  padding-block: 4px;
+}
+.dh-settings-card {
+  display: flex; flex-direction: column; gap: 12px;
+  padding: 14px 16px;
+  background: var(--hub-bg-card, #FFFFFF);
+  border: 1px solid var(--hub-border-soft, #ECE9E0);
+  border-radius: 14px;
+}
+.dh-settings-card[data-dh-settings-section="live-apply"] {
+  background: #FFFBEB; border-color: #FDE68A;
+}
+.dh-settings-card[data-dh-settings-section="poll"] {
+  background: #F8FAFC; border-color: #E2E8F0;
+}
+.dh-settings-head {
+  display: flex; align-items: flex-start; gap: 12px;
+}
+.dh-settings-ic {
+  flex: 0 0 auto;
+  width: 36px; height: 36px; border-radius: 11px;
+  display: inline-grid; place-items: center;
+  font-size: 15px;
+}
+.dh-settings-ic--amber { background: #FEF3C7; color: #92400E; }
+.dh-settings-ic--brand { background: #EEF2FF; color: #4338CA; }
+.dh-settings-head-text { flex: 1; min-width: 0; }
+.dh-settings-title {
+  font-size: 14px; font-weight: 900;
+  color: var(--hub-text, #0F172A); line-height: 1.5;
+}
+.dh-settings-sub {
+  margin-top: 4px;
+  font-size: 12.5px; line-height: 1.85;
+  color: var(--hub-text-soft, #475569);
+}
+.dh-settings-control {
+  display: flex; align-items: center; justify-content: flex-start;
+}
+.dh-settings-control--row {
+  flex-wrap: wrap; gap: 12px;
+}
+.dh-settings-toggle {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: 13px; font-weight: 800; cursor: pointer;
+  padding: 7px 12px; border-radius: 10px;
+  background: #fff; border: 1px solid var(--hub-border-soft, #ECE9E0);
+}
+.dh-settings-toggle input { margin: 0; }
+.dh-settings-interval {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 13px; font-weight: 800;
+  padding: 4px 12px; border-radius: 10px;
+  background: #fff; border: 1px solid var(--hub-border-soft, #ECE9E0);
+}
+.dh-settings-interval .hub-input {
+  width: 80px; padding-block: 6px;
+}
+.dh-settings-interval-pre,
+.dh-settings-interval-post { color: var(--hub-text-soft, #475569); }
+.dh-settings-notice {
+  display: flex; align-items: flex-start; gap: 8px;
+  padding: 8px 12px; border-radius: 10px;
+  font-size: 12.5px; line-height: 1.7;
+}
+.dh-settings-notice--lock {
+  background: #FEF2F2; border: 1px solid #FECACA; color: #991B1B;
+}
+.dh-settings-notice i { margin-top: 3px; }
 
 .dh-table-wrap { overflow-x: auto; }
 .dh-table { width: 100%; }
