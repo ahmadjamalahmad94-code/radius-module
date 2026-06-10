@@ -565,6 +565,15 @@ def _install_stubs(app: Flask) -> None:
             csrf_token()  # يولّد ويحفظ في session
             return redirect(request.referrer or "/admin/radius/login")
         if sent != expected:
+            # Return JSON for AJAX/JSON requests so fetch().then(r.json()) works
+            # and the UI shows a readable message instead of swallowing the error.
+            if request.is_json or request.headers.get("X-CSRFToken") is not None:
+                from flask import jsonify as _jsonify
+                return _jsonify({
+                    "ok": False,
+                    "status": "csrf_error",
+                    "message_ar": "انتهت صلاحية نموذج الحماية. حدّث الصفحة وحاول مرة أخرى.",
+                }), 400
             return ("انتهت صلاحية نموذج الحماية. حدّث الصفحة وحاول مرة أخرى", 400)
         return None
 

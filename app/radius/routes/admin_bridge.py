@@ -453,10 +453,17 @@ def bridge_activate():
 def bridge_test():
     """POST /bridge/test — check bridge connectivity without modifying settings.
 
+    Optional body (JSON): ``{"test_url": "https://hoberadius.com"}``
+    When ``test_url`` is present the backend probes that URL's /api/health and
+    reports the specific failure reason (DNS / timeout / TLS / HTTP status).
+    When absent it falls back to the stored bridge config.
+
     Response: JSON ``{ok, configured, reachable, status, message_ar}``.
     """
     from ..services.bridge_activation import test_bridge_connection
 
     tenant_id = _tid()
-    result = test_bridge_connection(tenant_id=tenant_id)
+    body = request.get_json(silent=True) or {}
+    test_url = str(body.get("test_url") or "").strip()
+    result = test_bridge_connection(tenant_id=tenant_id, test_url=test_url)
     return jsonify(result)
