@@ -1,0 +1,126 @@
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}إدارة الأقسام — Hobe Hub{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-toggle-on"></i>{% endblock %}
+{% block page_title %}إدارة أقسام الواجهة{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('قَلب «الإخفاء/التعطيل» لكل قسم — يُغلق الوصول المباشر بالعنوان لغير المدير الرئيسي.') }}</span>{% endblock %}
+
+{% block content %}
+
+{% set _hidden_n   = sections|selectattr('hidden')|list|length %}
+{% set _disabled_n = sections|selectattr('disabled')|list|length %}
+
+<section class="hub-hero-shell">
+{{ hub.megahero(
+  "إدارة أقسام الواجهة",
+  subtitle="مكان واحد للتحكّم بإظهار/إخفاء/تعطيل كل قسم — تنعكس الإعدادات على الشريط الجانبي وعلى الحارس الخادمي معاً، فلا يكفي إخفاء البطاقة ليبقى المسار مفتوحاً.",
+  icon="toggle-on",
+  kpis=[
+    {'label': 'إجمالي الأقسام', 'value': sections|length, 'icon': 'layer-group',       'variant': 'brand'},
+    {'label': 'مُخفية',          'value': _hidden_n,      'icon': 'eye-slash',         'variant': 'amber'},
+    {'label': 'موقوفة',          'value': _disabled_n,    'icon': 'ban',               'variant': 'red'},
+  ]
+) }}
+</section>
+
+{% call hub.worklayout(aside_html=hub.helppanel(
+  "كيف يَعمل هذا؟",
+  intro="لكل قسم علَمان مستقلّان: «إخفاء» و«تعطيل». كلاهما يُغلق كل مسارات القسم على غير المدير الرئيسي.",
+  items=[
+    {'icon': 'eye-slash', 'text': 'الإخفاء = القسم لا يَظهر في الشريط الجانبي، والمحاولة المباشرة بالعنوان تُرجع 403.'},
+    {'icon': 'ban',       'text': 'التعطيل = نفس الحظر الخادمي، لكنّ القسم يَبقى في الشريط الجانبي للمدير الرئيسي بشارة «موقوف».'},
+    {'icon': 'crown',     'text': 'المدير الرئيسي/السوبر يَتجاوز الإغلاقَين دائماً (مصدر الحقيقة: primary_admin_id() + علم الجلسة).'},
+    {'icon': 'arrows-rotate', 'text': '«إعادة الافتراضي» تُرجع علمَي القسم إلى ما هو مسجَّل في السجلّ المركزي.'},
+  ],
+  note="الإعدادات تُحفَظ لكل مستأجر (tenant_settings) — لا تؤثّر على المستأجرين الآخرين."
+)) %}
+
+  {% call hub.section("الأقسام", icon="layer-group", meta=sections|length|string + " قسم") %}
+    <div class="sections-grid" data-testid="sections-admin-grid"
+         style="display:grid;grid-template-columns:1fr;gap:12px">
+      {% for s in sections %}
+        {% set is_dirty = (s.hidden != s.default_hidden) or (s.disabled != s.default_disabled) %}
+        <article class="sec-card" data-section="{{ s.name }}"
+                 style="background:#fff;border:1px solid var(--hub-border-soft,#ECE9E0);border-radius:14px;padding:14px 16px;display:grid;gap:10px;
+                        {% if s.disabled %}border-color:#FECACA;background:linear-gradient(0deg,#FEF2F2,#fff){% elif s.hidden %}border-color:#FDE68A;background:linear-gradient(0deg,#FFFBEB,#fff){% endif %}">
+          <header style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <div style="flex:1;min-width:0">
+              <div style="font-size:14px;font-weight:900;color:var(--hub-text,#0F172A);line-height:1.45">{{ s.label }}</div>
+              <div class="mono small" style="font-size:11px;color:var(--hub-text-mute);direction:ltr;text-align:start;margin-top:2px">section.{{ s.name }}</div>
+            </div>
+            {% if s.disabled %}{{ hub.pill("موقوف",  variant="red",   dot=False) }}
+            {% elif s.hidden %}{{ hub.pill("مخفي",   variant="amber", dot=False) }}
+            {% else %}        {{ hub.pill("ظاهر",   variant="green", dot=True) }}{% endif %}
+            {% if is_dirty %}{{ hub.pill("مُخصَّص", variant="blue", dot=False) }}{% endif %}
+          </header>
+          {% if s.description %}
+          <p style="margin:0;font-size:12.5px;line-height:1.85;color:var(--hub-text-soft,#475569)">{{ s.description }}</p>
+          {% endif %}
+          <details style="border:1px dashed var(--hub-border-soft,#ECE9E0);border-radius:10px;padding:8px 12px">
+            <summary style="cursor:pointer;font-size:12px;font-weight:800;color:var(--hub-text-mute);list-style:none">
+              <i class="fa-solid fa-list" style="margin-inline-end:6px;opacity:.7"></i>{{ s.endpoints|length }} مسار يَنتمي لهذا القسم
+            </summary>
+            <ul class="mono small" style="margin:8px 0 0;padding-inline-start:18px;list-style:square;direction:ltr;text-align:start;color:var(--hub-text-soft);font-size:11.5px;line-height:1.9">
+              {% for ep in s.endpoints %}<li>radius.{{ ep }}</li>{% endfor %}
+            </ul>
+          </details>
+
+          <form method="post" action="{{ url_for('radius.sections_admin_save') }}"
+                style="display:flex;gap:10px;flex-wrap:wrap;align-items:center" data-testid="section-form-{{ s.name }}">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+            <input type="hidden" name="section" value="{{ s.name }}">
+            <input type="hidden" name="hidden"   value="{{ '1' if s.hidden   else '0' }}" data-flag="hidden">
+            <input type="hidden" name="disabled" value="{{ '1' if s.disabled else '0' }}" data-flag="disabled">
+
+            <label class="sec-toggle" style="display:inline-flex;align-items:center;gap:8px;padding:7px 12px;border:1px solid var(--hub-border-soft,#ECE9E0);border-radius:10px;cursor:pointer;user-select:none;background:{{ '#FFFBEB' if s.hidden else '#fff' }}">
+              <input type="checkbox" data-toggle-target="hidden" {% if s.hidden %}checked{% endif %} style="margin:0">
+              <i class="fa-solid fa-eye-slash" style="font-size:11px;color:#B45309"></i>
+              <span style="font-size:12.5px;font-weight:800">إخفاء القسم</span>
+            </label>
+            <label class="sec-toggle" style="display:inline-flex;align-items:center;gap:8px;padding:7px 12px;border:1px solid var(--hub-border-soft,#ECE9E0);border-radius:10px;cursor:pointer;user-select:none;background:{{ '#FEF2F2' if s.disabled else '#fff' }}">
+              <input type="checkbox" data-toggle-target="disabled" {% if s.disabled %}checked{% endif %} style="margin:0">
+              <i class="fa-solid fa-ban" style="font-size:11px;color:#B91C1C"></i>
+              <span style="font-size:12.5px;font-weight:800">تعطيل القسم</span>
+            </label>
+
+            <span style="flex:1"></span>
+            {{ hub.btn("حفظ", icon="check", variant="primary", type="submit", size="sm") }}
+          </form>
+
+          {% if is_dirty %}
+          <form method="post" action="{{ url_for('radius.sections_admin_reset') }}" style="margin-top:-4px"
+                data-testid="section-reset-{{ s.name }}">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+            <input type="hidden" name="section" value="{{ s.name }}">
+            <button type="submit" class="hub-btn hub-btn--ghost hub-btn--sm"
+                    data-confirm="إعادة هذا القسم إلى علاماته الافتراضية؟">
+              <i class="fa-solid fa-arrows-rotate"></i> إرجاع إلى الافتراضي
+            </button>
+          </form>
+          {% endif %}
+        </article>
+      {% else %}
+        <div>{{ hub.empty("لا توجد أقسام في السجلّ.", icon="layer-group") }}</div>
+      {% endfor %}
+    </div>
+  {% endcall %}
+
+{% endcall %}
+
+<script>
+/* ربط الـcheckboxات بالـhidden inputات: نريد قيمة صريحة "1"/"0" تُرسل دائماً
+   حتى لو أُلغي تحديد الـcheckbox (وإلا لن يُرسل المتصفّح القيمة أصلاً). */
+(function(){
+  document.querySelectorAll('.sec-card').forEach(function(card){
+    card.querySelectorAll('input[type="checkbox"][data-toggle-target]').forEach(function(cb){
+      cb.addEventListener('change', function(){
+        var target = cb.getAttribute('data-toggle-target');
+        var hid = card.querySelector('input[data-flag="' + target + '"]');
+        if (hid) hid.value = cb.checked ? '1' : '0';
+      });
+    });
+  });
+})();
+</script>
+{% endblock %}

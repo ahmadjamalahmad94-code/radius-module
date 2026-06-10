@@ -562,6 +562,23 @@ def _install_stubs(app: Flask) -> None:
         except Exception:  # noqa: BLE001 — endpoint مجهول = بند مفتوح
             return None
 
+    # ── أعلام الأقسام (إخفاء/تعطيل قسم بكامله) — أغلفة آمنة حول
+    # auth/section_flags. تعيد False عند أي فشل (الوضع الآمن: لا تكسر القالب،
+    # ويبقى الحارس الخادمي وحده مصدر الحقيقة لمنع الوصول.)
+    def _section_hidden(name: str) -> bool:
+        try:
+            from app.radius.auth.section_flags import is_section_hidden as _h
+            return _h(name)
+        except Exception:  # noqa: BLE001
+            return False
+
+    def _section_disabled(name: str) -> bool:
+        try:
+            from app.radius.auth.section_flags import is_section_disabled as _d
+            return _d(name)
+        except Exception:  # noqa: BLE001
+            return False
+
     @app.context_processor
     def _inject():
         from flask import session as flask_session
@@ -607,6 +624,13 @@ def _install_stubs(app: Flask) -> None:
             # الأقسام للمدير الرئيسي دائمًا (fail-open) حتى لو فشل حقن أو
             # تحليل الصلاحيات بصمت. قراءة قاموس واحدة، لا تكسر أي صفحة.
             "is_super_admin": bool(flask_session.get("is_super_admin")),
+            # ── أعلام الأقسام (مصدر الحقيقة الواحد لإخفاء/تعطيل قسم) ──
+            # is_section_hidden(name)/is_section_disabled(name): تَستدعيهما
+            # القوالب لرسم شارة «مخفي/موقوف» للسوبر، أو لإخفاء بطاقة قسم.
+            # غير السوبر يُحجب أصلًا في الحارس الخادمي قبل بلوغ القالب،
+            # فلا حاجة لمنطق إضافي. لا تكسر أي صفحة عند الخطأ.
+            "is_section_hidden":   _section_hidden,
+            "is_section_disabled": _section_disabled,
         }
 
     # Unified system config (currency / timezone / branding) + money & local-time
