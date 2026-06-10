@@ -163,6 +163,21 @@ class LicenseAdminRuntimeSyncService:
                 "source": "runtime_contract",
                 "error": {"code": "missing_runtime_contract"},
             }
+        # Consume bridge_token block using the raw (pre-sanitize) response so
+        # the token value isn't masked before extraction. Failures are non-fatal.
+        try:
+            from app.radius.services.license_bridge_token_sync import BridgeTokenSyncService
+            raw = contract_result.get("_raw_response") or payload
+            BridgeTokenSyncService(
+                config=self.config,
+                admin_client=self.admin_client,
+            ).consume_panel_token(raw, tenant_id=tenant_id)
+        except Exception:  # noqa: BLE001
+            import logging as _logging
+            _logging.getLogger(__name__).debug(
+                "bridge_token consume step skipped (non-fatal)", exc_info=True
+            )
+
         contract = payload.get("contract") if isinstance(payload.get("contract"), dict) else payload
         license_info = contract.get("license") if isinstance(contract.get("license"), dict) else {}
         return {

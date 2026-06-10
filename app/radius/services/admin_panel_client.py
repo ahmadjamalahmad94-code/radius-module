@@ -62,6 +62,9 @@ VPN_TUNNELS_ACK_PATH = "/api/integration/hoberadius/vpn/tunnels/ack"
 # admins may be super. This module reports its admin inventory and applies the
 # overrides the panel returns in the identity-sync response.
 ADMINS_REPORT_PATH = "/api/integration/hoberadius/admins/report"
+# Bridge-token rotation — customer reports locally-minted tokens to the panel
+# so both sides converge on the same rotating credential.
+BRIDGE_TOKEN_REPORT_PATH = "/api/integration/hoberadius/bridge-token/report"
 RESTORE_POLL_PATH = "/api/integration/hoberadius/backup-restore/poll"
 RESTORE_STATUS_PATH_TEMPLATE = "/api/integration/hoberadius/backup-restore/{reference}/status"
 SERVICE_ACTIVATION_POLL_PATH = "/api/integration/hoberadius/service-activations/poll"
@@ -831,6 +834,34 @@ class AdminPanelClient:
         path = SERVICE_ACTIVATION_STATUS_PATH_TEMPLATE.format(reference=safe_reference)
         return self._post_bridge_payload(path=path, payload=payload)
 
+    def post_bridge_token_report(
+        self, *, token: str, issued_at: str | None = None
+    ) -> dict[str, Any]:
+        """Report a locally-generated bridge token to the panel.
+
+        The raw ``token`` value is sent over HTTPS (required) inside the
+        signed envelope and MUST NOT be logged by the caller.  The panel
+        responds with ``{ok: true, seq: "<version>"}`` on acceptance.
+        """
+        if not str(self.config.base_url or "").lower().startswith("https://"):
+            return {
+                "ok": False,
+                "status": "https_required",
+                "error": {
+                    "code": "https_required",
+                    "message": "Bridge token report requires an HTTPS panel URL.",
+                },
+            }
+        now = _utcnow()
+        payload = self._license_check_payload(
+            {
+                "bridge_token": str(token or ""),
+                "bridge_token_issued_at": str(issued_at or now),
+                "bridge_token_source": "customer",
+            }
+        )
+        return self._post_bridge_payload(path=BRIDGE_TOKEN_REPORT_PATH, payload=payload)
+
     def _post_bridge_payload(
         self, *, path: str, payload: dict[str, Any], sanitize: bool = True
     ) -> dict[str, Any]:
@@ -996,6 +1027,11 @@ class AdminPanelClient:
             "ok": True,
             "status": normalized,
             "payload": snapshot["payload_json"],
+            # Raw unsanitized response — for immediate transient processing only;
+            # do NOT persist or log this value.  Used by sync_runtime_contract_once
+            # to extract secrets (like bridge_token) before the sanitized snapshot
+            # masks them.
+            "_raw_response": response,
             "state": fallback_state(),
             "snapshot": snapshot,
         }
@@ -1089,6 +1125,12 @@ def _validate_runtime_contract_payload(payload: dict[str, Any]) -> list[str]:
         problems.append("services must be an object")
     if "limits" in node and not isinstance(node["limits"], dict):
         problems.append("limits must be an object")
+    bridge_token = payload.get("bridge_token")
+    if bridge_token is not None and not isinstance(bridge_token, dict):
+        problems.append("bridge_token must be an object when present")
+    if isinstance(bridge_token, dict) and "token" in bridge_token:
+        if not isinstance(bridge_token["token"], str):
+            problems.append("bridge_token.token must be a string")
     return problems
 
 
