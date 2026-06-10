@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta http-equiv="pragma" content="no-cache">
+<meta http-equiv="expires" content="-1">
+<title>شبكة الاختبار</title>
+<style>
+@font-face{font-family:'Almarai';src:url('fonts/Almarai-Regular.woff2') format('woff2');font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:'Almarai';src:url('fonts/Almarai-Bold.woff2') format('woff2');font-weight:700;font-style:normal;font-display:swap}
+:root {
+    --font-stack: 'Almarai', 'Tajawal', 'Segoe UI', system-ui, sans-serif;
+    --main-gradient: linear-gradient(135deg, #22d3ee 0%, #3b82f6 50%, #a855f7 100%);
+    --card-gradient-1: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+    --card-gradient-2: linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%);
+    --main-shadow-color: rgba(59, 130, 246, 0.3);
+    --primary-accent: #4F46E5;
+    --bg-gradient: linear-gradient(180deg, #F0F9FF 0%, #ffffff 100%);
+    --text-main: #1e293b; --text-sub: #64748B; --card-bg: #ffffff; --element-bg: #F8FAFC;
+    --border-color: #E2E8F0; --box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+    --top-bar-bg: rgba(255,255,255,0.9); --top-bar-text: #4F46E5;
+    --card-radius: 24px;
+    --pulse-color: #22d3ee;
+    --pill-bg: rgba(59,130,246,0.1); --pill-border: rgba(59,130,246,0.2);
+    --eq-1: #3b82f6; --eq-2: #8b5cf6; --eq-3: #06b6d4;
+    --map-bg: #e0f2fe; --map-grid: rgba(59,130,246,0.12); --map-road: rgba(255,255,255,0.85);
+}
+body.dark-mode{--main-gradient:linear-gradient(135deg,#0e7490 0%,#1d4ed8 50%,#7e22ce 100%);--card-gradient-1:linear-gradient(135deg,#4338ca 0%,#7e22ce 100%);--card-gradient-2:linear-gradient(135deg,#0891b2 0%,#1d4ed8 100%);--main-shadow-color:rgba(59,130,246,0.4);--bg-gradient:linear-gradient(135deg,#0f172a 0%,#1e1b4b 100%);--text-main:#F1F5F9;--text-sub:#94A3B8;--card-bg:#1e293b;--element-bg:rgba(255,255,255,0.05);--border-color:rgba(59,130,246,0.2);--top-bar-bg:rgba(15,23,42,0.9);--top-bar-text:#818cf8;--pill-bg:rgba(255,255,255,0.05);--pill-border:rgba(255,255,255,0.1);--map-bg:#0f172a;--map-grid:rgba(129,140,248,0.15);--map-road:rgba(255,255,255,0.12)}
+/* ─── أساسيات ─── */
+*{margin:0;padding:0;box-sizing:border-box;font-family:var(--font-stack)!important;outline:0;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg-gradient);min-height:100vh;display:block;background-attachment:fixed;color:var(--text-main)}
+.mobile-container{width:100%;max-width:560px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;position:relative}
+
+/* ─── ‏تبديل التبويبات: CSS خالص عبر radio + :checked ─── */
+/* الراديوهات مخفيّة بصريًا لكنها تبقى قابلة للتفعيل عبر <label for>.
+   لا نستخدم left:-9999px لأنه يوسّع الشجرة أفقيًا في RTL — نستخدم
+   نمط «الإخفاء البصري» القياسي بدون تأثير على التخطيط. */
+.hr-nav-r{position:absolute;top:0;left:0;width:1px;height:1px;opacity:0;pointer-events:none;margin:0;padding:0;border:0;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap}
+/* بلا fadeIn — على المتصفحات البطيئة/المعطّلة قد تُلتقط لقطة في
+   منتصف الأنيمشن فيبدو القسم باهتًا. الإظهار الفوري أسلم للقطعة. */
+.view-section{display:none}
+#hr-nav-home:checked ~ .content-scroll #home-view,
+#hr-nav-packages:checked ~ .content-scroll #packages-view,
+#hr-nav-distributors:checked ~ .content-scroll #distributors-view,
+#hr-nav-support:checked ~ .content-scroll #support-view,
+#hr-nav-info:checked ~ .content-scroll #info-view{display:block}
+.bottom-nav label.nav-item{cursor:pointer}
+#hr-nav-home:checked ~ .bottom-nav label[for="hr-nav-home"],
+#hr-nav-packages:checked ~ .bottom-nav label[for="hr-nav-packages"],
+#hr-nav-distributors:checked ~ .bottom-nav label[for="hr-nav-distributors"],
+#hr-nav-support:checked ~ .bottom-nav label[for="hr-nav-support"],
+#hr-nav-info:checked ~ .bottom-nav label[for="hr-nav-info"]{color:var(--primary-accent);font-weight:700}
+#hr-nav-home:checked ~ .bottom-nav label[for="hr-nav-home"]::after,
+#hr-nav-packages:checked ~ .bottom-nav label[for="hr-nav-packages"]::after,
+#hr-nav-distributors:checked ~ .bottom-nav label[for="hr-nav-distributors"]::after,
+#hr-nav-support:checked ~ .bottom-nav label[for="hr-nav-support"]::after,
+#hr-nav-info:checked ~ .bottom-nav label[for="hr-nav-info"]::after{content:'';position:absolute;bottom:10px;width:4px;height:4px;background:var(--primary-accent);border-radius:50%}
+
+/* ─── الشريط العلوي ─── */
+.top-system-bar{height:35px;background:var(--top-bar-bg);display:flex;justify-content:space-between;align-items:center;padding:0 20px;font-size:11px;color:var(--top-bar-text);border-bottom:1px solid var(--border-color);position:sticky;top:0;z-index:100}
+.ip-info{display:flex;align-items:center;gap:6px;font-family:monospace;letter-spacing:.5px}
+.connection-dot{width:6px;height:6px;background:var(--pulse-color);border-radius:50%;box-shadow:0 0 5px var(--pulse-color)}
+.brand-mini{font-weight:700}
+
+/* ─── مساحة المحتوى ─── */
+.content-scroll{flex:1;padding:20px 25px 90px 25px;overflow-x:hidden}
+
+/* ─── رأس الترحيب + شارات الوقت ─── */
+.header{display:flex;justify-content:space-between;align-items:center;margin-bottom:15px}
+.greeting h2{font-size:17px;color:var(--text-main);font-weight:700}
+.greeting p{font-size:13px;color:var(--text-sub)}
+.date-time-pills{display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;padding:0 5px}
+.dt-pill{background:var(--pill-bg);border:1px solid var(--pill-border);padding:6px 12px;border-radius:20px;font-size:11px;font-weight:600;color:var(--text-sub);display:flex;align-items:center;gap:6px}
+.dt-pill.time-pill{color:var(--primary-accent);font-family:monospace;letter-spacing:.5px;font-weight:700;direction:ltr}
+
+/* ─── بطاقة الدخول الموحّدة ─── */
+.unified-gradient-card{background:var(--main-gradient);border-radius:var(--card-radius);padding:22px;color:#fff;position:relative;overflow:hidden;margin-bottom:25px;box-shadow:0 15px 35px var(--main-shadow-color);border:1px solid rgba(255,255,255,0.15)}
+.insurance-card{min-height:230px;display:flex;flex-direction:column;justify-content:space-between}
+.circle-decor{position:absolute;border-radius:50%;background:rgba(255,255,255,0.1);pointer-events:none}
+.c1{width:160px;height:160px;top:-60px;right:-30px}
+.c2{width:220px;height:220px;bottom:-90px;left:30px}
+.card-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;z-index:2;position:relative}
+.card-icon{display:flex;align-items:center;gap:12px}
+.icon-box{background:rgba(255,255,255,0.2);width:40px;height:40px;border-radius:12px;display:flex;justify-content:center;align-items:center}
+.top-arrow{background:rgba(255,255,255,0.2);width:30px;height:30px;border-radius:50%;display:flex;justify-content:center;align-items:center;font-size:12px}
+.login-fields-container{display:flex;flex-direction:column;align-items:stretch;margin-bottom:15px;position:relative;z-index:2;gap:12px}
+.field-group{flex:1;display:flex;flex-direction:column}
+.field-label{opacity:0.9;font-weight:500;font-size:11px;margin-bottom:5px;color:#e0f2fe}
+.custom-input{background:transparent;border:1px solid rgba(255,255,255,0.4);border-radius:25px;color:#fff;font-weight:600;font-size:14px;padding:8px 15px;width:100%;outline:0}
+.custom-input:focus{border-color:#fff;box-shadow:0 0 10px rgba(255,255,255,0.2)}
+.custom-input::placeholder{color:rgba(255,255,255,0.6);font-weight:400}
+.card-footer{display:flex;justify-content:center;position:relative;z-index:2}
+.login-btn{background:#fff;color:var(--primary-accent);padding:12px 28px;border-radius:20px;border:0;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 5px 15px rgba(0,0,0,.1);display:inline-flex;align-items:center;gap:8px}
+.mikrotik-error{background:rgba(239,68,68,0.92);color:#fff;padding:10px;border-radius:12px;font-size:12px;margin-bottom:15px;text-align:center;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 5px 15px rgba(239,68,68,0.3);border:1px solid rgba(255,255,255,0.2);position:relative;z-index:5}
+
+/* ─── زر «متجرك الإلكتروني» — يظهر فقط عند STORE_ENABLED=yes ─── */
+.hr-store-card{display:none;align-items:center;gap:14px;background:var(--main-gradient);border-radius:18px;padding:16px 18px;color:#fff;text-decoration:none;margin-bottom:25px;box-shadow:0 12px 28px var(--main-shadow-color);border:1px solid rgba(255,255,255,0.18);position:relative;overflow:hidden}
+body.hr-store-on .hr-store-card{display:flex}
+.hr-store-icon{width:46px;height:46px;border-radius:14px;background:rgba(255,255,255,0.22);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.hr-store-text{flex:1;position:relative;z-index:2}
+.hr-store-text h4{font-size:14px;font-weight:800;margin-bottom:3px}
+.hr-store-text p{font-size:11px;opacity:.9}
+.hr-store-arrow{width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.ico-cart{-webkit-mask-image:url("data:image/svg+xml;utf8,<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z'/></svg>");mask-image:url("data:image/svg+xml;utf8,<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z'/></svg>")}
+
+/* ─── بطاقة الدعم ─── */
+.support-hero-card{text-align:center}
+.support-icon-ring{width:70px;height:70px;background:rgba(255,255,255,0.2);border-radius:50%;display:flex;justify-content:center;align-items:center;margin:0 auto 15px auto;color:#fff;font-size:28px;box-shadow:0 0 0 8px rgba(255,255,255,0.1)}
+.support-hero-card .support-title{font-size:18px;font-weight:800;color:#fff;margin-bottom:5px}
+.support-hero-card .support-sub{font-size:12px;color:rgba(255,255,255,0.9);margin-bottom:20px}
+.btn-call-main{background:#fff;color:var(--primary-accent);padding:12px 30px;border-radius:50px;text-decoration:none;font-weight:700;font-size:14px;display:inline-flex;align-items:center;gap:8px;box-shadow:0 5px 15px rgba(0,0,0,0.1);direction:ltr}
+.server-status-box{background:rgba(0,0,0,0.2);border:1px solid rgba(255,255,255,0.2);border-radius:12px;padding:12px 15px;display:flex;align-items:center;justify-content:space-between;margin-top:20px}
+.server-status-box .status-label{font-size:11px;font-weight:700;color:#fff;display:flex;align-items:center;gap:6px}
+.server-status-box .status-percent{font-size:14px;font-weight:800;color:#bfdbfe}
+
+/* ─── بطاقة الحالة المباشرة + المعادل ─── */
+.network-pulse-card{background:var(--card-bg);border-radius:20px;padding:15px;display:flex;align-items:center;gap:15px;margin-bottom:25px;box-shadow:var(--box-shadow);border:1px solid var(--border-color);position:relative;overflow:hidden}
+.pulse-icon-area{position:relative;width:45px;height:45px;background:var(--pill-bg);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--primary-accent)}
+.live-indicator{position:absolute;top:0;right:0;width:12px;height:12px;background:var(--pulse-color);border:2px solid var(--card-bg);border-radius:50%;display:flex;align-items:center;justify-content:center}
+.blink-dot{width:100%;height:100%;background:var(--pulse-color);border-radius:50%;animation:ping 1.5s cubic-bezier(0,0,0.2,1) infinite;opacity:.75}
+@keyframes ping{75%,100%{transform:scale(2);opacity:0}}
+.pulse-content{flex:1;display:flex;flex-direction:column;justify-content:center}
+.pulse-label{font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:2px}
+.pulse-value{font-size:14px;font-weight:800;color:var(--text-main)}
+.network-visualizer{display:flex;align-items:flex-end;gap:3px;height:20px;padding-bottom:3px}
+.network-visualizer .bar{width:4px;background-color:var(--eq-1);border-radius:2px;animation:equalizer 1s ease-in-out infinite}
+.network-visualizer .bar:nth-child(1){height:40%;animation-delay:0s}
+.network-visualizer .bar:nth-child(2){height:80%;animation-delay:.2s;background-color:var(--eq-2)}
+.network-visualizer .bar:nth-child(3){height:50%;animation-delay:.4s;background-color:var(--eq-3)}
+.network-visualizer .bar:nth-child(4){height:70%;animation-delay:.1s}
+@keyframes equalizer{0%,100%{transform:scaleY(1);opacity:1}50%{transform:scaleY(0.5);opacity:0.7}}
+
+/* ─── العناوين الفرعية + التذييل ─── */
+.section-title{font-size:16px;color:var(--text-main);font-weight:700;margin-bottom:15px;display:flex;align-items:center;justify-content:space-between}
+.section-title span{font-size:12px;color:var(--primary-accent)}
+.network-about-footer{text-align:center;padding:20px;background:var(--card-bg);border-radius:20px;border:1px solid var(--border-color);box-shadow:var(--box-shadow);margin-top:10px}
+.footer-title{color:var(--primary-accent);font-size:16px;font-weight:800;margin-bottom:5px}
+.footer-desc{font-size:11px;color:var(--text-sub);margin-bottom:8px}
+.footer-copyright{font-size:10px;color:var(--text-sub);opacity:.7;border-top:1px solid var(--border-color);padding-top:8px;margin-top:8px}
+
+/* ─── الباقات (لما يولّده _offers_html) ─── */
+.packages-wrapper{display:flex;flex-direction:column;gap:12px;padding-bottom:20px}
+.pkg-card-big{background:var(--card-gradient-1);border-radius:24px;padding:20px;color:#fff;position:relative;overflow:hidden;box-shadow:0 15px 35px var(--main-shadow-color);border:1px solid rgba(255,255,255,0.1)}
+.glow-blob{position:absolute;border-radius:50%;filter:blur(40px);pointer-events:none}
+.gb-1{top:-30px;left:-30px;width:120px;height:120px;background:rgba(255,255,255,0.2)}
+.gb-2{bottom:0;right:0;width:100px;height:100px;background:var(--main-shadow-color)}
+.pkg-badge-top{position:absolute;top:0;left:0;background:#fff;color:var(--primary-accent);font-size:11px;font-weight:800;padding:5px 15px;border-bottom-right-radius:15px;box-shadow:0 2px 10px rgba(0,0,0,0.1)}
+.pkg-header-row{display:flex;justify-content:space-between;align-items:flex-start;margin-top:10px;position:relative;z-index:2}
+.pkg-icon-circle{width:45px;height:45px;background:rgba(255,255,255,0.2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;color:#fff}
+.pkg-price-row{display:flex;align-items:baseline;gap:5px;margin:15px 0;position:relative;z-index:2}
+.pkg-big-price{font-size:32px;font-weight:800;line-height:1}
+.pkg-card-medium{background:var(--card-gradient-2);border-radius:20px;padding:18px;color:#fff;position:relative;overflow:hidden;box-shadow:0 10px 25px var(--main-shadow-color);display:flex;flex-direction:column;justify-content:space-between;min-height:110px}
+.medium-blob{position:absolute;top:-20px;right:-20px;width:80px;height:80px;background:rgba(255,255,255,0.1);border-radius:50%}
+.medium-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;position:relative;z-index:2}
+.medium-tags{display:flex;gap:5px;margin-top:5px}
+.m-tag{font-size:10px;background:rgba(255,255,255,0.15);padding:2px 8px;border-radius:6px}
+.medium-bottom{display:flex;justify-content:space-between;align-items:flex-end;position:relative;z-index:2}
+.pkg-card-small{background:var(--card-bg);border:1px solid var(--border-color);border-radius:18px;padding:15px;display:flex;justify-content:space-between;align-items:center;box-shadow:var(--box-shadow)}
+.small-info h4{font-size:14px;font-weight:700;color:var(--text-main);margin-bottom:4px}
+.small-details{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text-sub)}
+.small-price{text-align:left}
+.s-price-val{font-size:18px;font-weight:800;color:var(--text-main)}
+
+/* ─── الموزعون + الخريطة ─── */
+.map-wrapper{background:var(--card-bg);border-radius:20px;padding:5px;box-shadow:var(--box-shadow);border:1px solid var(--border-color);margin-bottom:20px;position:relative;overflow:hidden;height:200px}
+.map-art{width:100%;height:100%;border-radius:16px;position:relative;overflow:hidden;background:var(--map-bg);background-image:linear-gradient(var(--map-grid) 1px,transparent 1px),linear-gradient(90deg,var(--map-grid) 1px,transparent 1px);background-size:34px 34px}
+.map-art::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 50% 50%,var(--main-shadow-color) 0,transparent 55%)}
+.map-road{position:absolute;background:var(--map-road);border-radius:8px}
+.mr1{width:140%;height:14px;top:38%;left:-20%;transform:rotate(-7deg)}
+.mr2{width:14px;height:140%;top:-20%;left:58%;transform:rotate(10deg)}
+.map-pin-user{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:15px;height:15px;background:var(--primary-accent);border:3px solid #fff;border-radius:50%;box-shadow:0 0 15px var(--main-shadow-color);z-index:10}
+.map-overlay-info{position:absolute;bottom:15px;right:15px;background:rgba(255,255,255,0.95);padding:6px 12px;border-radius:20px;font-size:10px;font-weight:700;color:var(--primary-accent)}
+.distributor-card{background:var(--card-bg);border:1px solid var(--border-color);border-radius:16px;padding:15px;display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;box-shadow:var(--box-shadow)}
+.dist-info{display:flex;align-items:center;gap:12px}
+.dist-icon{width:45px;height:45px;background:var(--pill-bg);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--primary-accent);border:1px solid transparent}
+.dist-text h4{font-size:13px;font-weight:700;color:var(--text-main);margin-bottom:3px}
+.dist-text p{font-size:11px;color:var(--text-sub)}
+
+/* ─── FAQ — تستخدم <details> الأصلي (لا JS) ─── */
+.faq-item{background:var(--card-bg);border:1px solid var(--border-color);border-radius:14px;overflow:hidden;margin-bottom:10px;box-shadow:var(--box-shadow)}
+.faq-header{padding:15px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:700;color:var(--text-main);list-style:none}
+.faq-header::-webkit-details-marker{display:none}
+.faq-body{background:var(--element-bg)}
+.faq-content{padding:15px;font-size:11px;color:var(--text-sub);line-height:1.5;border-top:1px solid var(--border-color)}
+
+/* ─── قسم «معلومات» ─── */
+.decor-profile{position:absolute;border-radius:50%;background:rgba(255,255,255,0.1);pointer-events:none}
+.dp1{width:200px;height:200px;top:-60px;right:-40px}
+.dp2{width:100px;height:100px;bottom:10px;left:-20px;border:2px solid rgba(255,255,255,0.15);background:transparent}
+.profile-header{display:flex;align-items:center;gap:15px;margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid rgba(255,255,255,0.2);position:relative;z-index:2}
+.tech-details-list{display:flex;flex-direction:column;gap:10px;position:relative;z-index:2}
+.tech-row{display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,0.15);padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.1)}
+.tech-label{font-size:11px;color:rgba(255,255,255,0.95);display:flex;align-items:center;gap:8px;font-weight:600}
+.tech-val{font-size:11px;font-weight:700;color:#fff;font-family:monospace}
+.status-badge{background:#fff;color:var(--primary-accent);font-size:10px;padding:3px 8px;border-radius:6px;font-weight:800}
+
+.ico{display:inline-block;width:1em;height:1em;background-color:currentColor;-webkit-mask-size:contain;mask-size:contain;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center;vertical-align:middle}
+.ico-home{-webkit-mask-image:url("data:image/svg+xml;utf8,<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z'/></svg>");mask-image:url("data:image/svg+xml;utf8,<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z'/></svg>")}.ico-cubes{-webkit-mask-image:url("data:image/svg+xml;utf8,<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M11.99 18.54l-7.37-5.73L3 14.07l9 7 9-7-1.63-1.27-7.38 5.74zM12 16l7.36-5.73L21 9l-9-7-9 7 1.63 1.27L12 16zM11.99 2.54L3 9.58l9 7.04 9-7.04z'/></svg>");mask-image:url("data:image/svg+xml;utf8,<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M11.99 18.54l-7.37-5.73L3 14.07l9 7 9-7-1.63-1.27-7.38 5.74zM12 16l7.36-5.73L21 9l-9-7-9 7 1.63 1.27L12 16zM11.99 2.54L3 9.58l9 7.04 9-7.04z'/></svg>")}.ico-map{-webkit-mask-image:url("data:image/svg+xml;utf8,<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M20.5 3l-.16.03L15 5.1 9 3 3.36 4.9c-.21.07-.36.25-.36.48V20.5c0 .28.22.5.5.5l.16-.03L9 18.9l6 2.1 5.64-1.9c.21-.07.36-.25.36-.48V3.5c0-.28-.22-.5-.5-.5zM15 19l-6-2.11V5l6 2.11V19z'/></svg>");mask-image:url("data:image/svg+xml;utf8,<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M20.5 3l-.16.03L15 5.1 9 3 3.36 4.9c-.21.07-.36.25-.36.48V20.5c0 .28.22.5.5.5l.16-.03L9 18.9l6 2.1 5.64-1.9c.21-.07.36-.25.36-.48V3.5c0-.28-.22-.5-.5-.5zM15 19l-6-2.11V5l6 2.11V19z'/></svg>")}.ico-headset{-webkit-mask-image:url("data:image/svg+xml;utf8,<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M12 1a9 9 0 0 0-9 9v7c0 1.66 1.34 3 3 3h3v-8H5v-2c0-3.87 3.13-7 7-7s7 3.13 7 7v2h-4v8h3c1.66 0 3-1.34 3-3v-7a9 9 0 0 0-9-9z'/></svg>");mask-image:url("data:image/svg+xml;utf8,<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M12 1a9 9 0 0 0-9 9v7c0 1.66 1.34 3 3 3h3v-8H5v-2c0-3.87 3.13-7 7-7s7 3.13 7 7v2h-4v8h3c1.66 0 3-1.34 3-3v-7a9 9 0 0 0-9-9z'/></svg>")}.ico-info{-webkit-mask-image:url("data:image/svg+xml;utf8,<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z'/></svg>");mask-image:url("data:image/svg+xml;utf8,<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z'/></svg>")}.ico-moon{-webkit-mask-image:url("data:image/svg+xml;utf8,<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M9.37 5.51A7.35 7.35 0 0 0 9.1 7.5c0 4.08 3.32 7.4 7.4 7.4.68 0 1.35-.09 1.99-.27A7.014 7.014 0 0 1 12 21c-5.52 0-10-4.48-10-10 0-3.21 1.56-6.05 3.97-7.87.56 1.05 1.76 1.83 3.4 2.38z'/></svg>");mask-image:url("data:image/svg+xml;utf8,<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M9.37 5.51A7.35 7.35 0 0 0 9.1 7.5c0 4.08 3.32 7.4 7.4 7.4.68 0 1.35-.09 1.99-.27A7.014 7.014 0 0 1 12 21c-5.52 0-10-4.48-10-10 0-3.21 1.56-6.05 3.97-7.87.56 1.05 1.76 1.83 3.4 2.38z'/></svg>")}.ico-sun{-webkit-mask-image:url("data:image/svg+xml;utf8,<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M6.76 4.84l-1.8-1.79-1.41 1.41 1.79 1.79 1.42-1.41zM4 10.5H1v2h3v-2zm9-9.95h-2V3.5h2V.55zm7.45 3.91l-1.41-1.41-1.79 1.79 1.41 1.41 1.79-1.79zm-3.21 13.7l1.79 1.8 1.41-1.41-1.8-1.79-1.4 1.4zM20 10.5v2h3v-2h-3zm-8-5c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6zm-1 16.95h2V19.5h-2v2.95zm-7.45-3.91l1.41 1.41 1.79-1.8-1.41-1.41-1.79 1.8z'/></svg>");mask-image:url("data:image/svg+xml;utf8,<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M6.76 4.84l-1.8-1.79-1.41 1.41 1.79 1.79 1.42-1.41zM4 10.5H1v2h3v-2zm9-9.95h-2V3.5h2V.55zm7.45 3.91l-1.41-1.41-1.79 1.79 1.41 1.41 1.79-1.79zm-3.21 13.7l1.79 1.8 1.41-1.41-1.8-1.79-1.4 1.4zM20 10.5v2h3v-2h-3zm-8-5c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6zm-1 16.95h2V19.5h-2v2.95zm-7.45-3.91l1.41 1.41 1.79-1.8-1.41-1.41-1.79 1.8z'/></svg>")}.ico-calendar{-webkit-mask-image:url("data:image/svg+xml;utf8,<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19a2 2 0 0 0 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z'/></svg>");mask-image:url("data:image/svg+xml;utf8,<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19a2 2 0 0 0 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z'/></svg>")}.ico-clock{-webkit-mask-image:url("data:image/svg+xml;utf8,<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z'/></svg>");mask-image:url("data:image/svg+xml;utf8,<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z'/></svg>")}.ico-shield{-webkit-mask-image:url("data:image/svg+xml;utf8,<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z'/></svg>");mask-image:url("data:image/svg+xml;utf8,<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z'/></svg>")}.ico-lock{-webkit-mask-image:url("data:image/svg+xml;utf8,<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3 3.1-3 1.71 0 3.1 1.29 3.1 3v2z'/></svg>");mask-image:url("data:image/svg+xml;utf8,<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3 3.1-3 1.71 0 3.1 1.29 3.1 3v2z'/></svg>")}.ico-arrow-left{-webkit-mask-image:url("data:image/svg+xml;utf8,<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z'/></svg>");mask-image:url("data:image/svg+xml;utf8,<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z'/></svg>")}.ico-bolt{-webkit-mask-image:url("data:image/svg+xml;utf8,<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M11 21h-1l1-7H7.5c-.58 0-.57-.32-.38-.66.19-.34.05-.08.07-.12C8.48 10.94 10.42 7.54 13 3h1l-1 7h3.5c.49 0 .56.33.47.51l-.07.15C12.96 17.55 11 21 11 21z'/></svg>");mask-image:url("data:image/svg+xml;utf8,<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M11 21h-1l1-7H7.5c-.58 0-.57-.32-.38-.66.19-.34.05-.08.07-.12C8.48 10.94 10.42 7.54 13 3h1l-1 7h3.5c.49 0 .56.33.47.51l-.07.15C12.96 17.55 11 21 11 21z'/></svg>")}.ico-mobile{-webkit-mask-image:url("data:image/svg+xml;utf8,<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M17 1.01L7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z'/></svg>");mask-image:url("data:image/svg+xml;utf8,<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M17 1.01L7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z'/></svg>")}.ico-fingerprint{-webkit-mask-image:url("data:image/svg+xml;utf8,<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M17.81 4.47c-.08 0-.16-.02-.23-.06C15.66 3.42 14 3 12.01 3c-1.98 0-3.86.47-5.57 1.41-.24.13-.54.04-.68-.2-.13-.24-.04-.55.2-.68C7.82 2.52 9.86 2 12.01 2c2.13 0 3.99.47 6.03 1.52.25.13.34.43.21.67-.09.18-.26.28-.44.28zM3.5 9.72c-.1 0-.2-.03-.29-.09-.23-.16-.28-.47-.12-.7.99-1.4 2.25-2.5 3.75-3.27C9.98 4.04 14 4.03 17.15 5.65c1.5.77 2.76 1.86 3.75 3.25.16.22.11.54-.12.7-.23.16-.54.11-.7-.12-.9-1.26-2.04-2.25-3.39-2.94-2.87-1.47-6.54-1.47-9.4.01-1.36.7-2.5 1.7-3.4 2.96-.08.14-.23.21-.39.21zm6.25 12.07c-.13 0-.26-.05-.35-.15-.87-.87-1.34-1.43-2.01-2.64-.69-1.23-1.05-2.73-1.05-4.34 0-2.97 2.54-5.39 5.66-5.39s5.66 2.42 5.66 5.39c0 .28-.22.5-.5.5s-.5-.22-.5-.5c0-2.42-2.09-4.39-4.66-4.39-2.57 0-4.66 1.97-4.66 4.39 0 1.44.32 2.77.93 3.85.64 1.15 1.08 1.64 1.85 2.42.19.2.19.51 0 .71-.11.1-.24.15-.37.15zm7.17-1.85c-1.19 0-2.24-.3-3.1-.89-1.49-1.01-2.38-2.65-2.38-4.39 0-.28.22-.5.5-.5s.5.22.5.5c0 1.41.72 2.74 1.94 3.56.71.48 1.54.71 2.54.71.24 0 .64-.03 1.04-.1.27-.05.53.13.58.41.05.27-.13.53-.41.58-.57.11-1.07.12-1.21.12zM14.91 22c-.04 0-.09-.01-.13-.02-1.59-.44-2.63-1.03-3.72-2.1-1.4-1.39-2.17-3.24-2.17-5.22 0-1.62 1.38-2.94 3.08-2.94 1.7 0 3.08 1.32 3.08 2.94 0 1.07.93 1.94 2.08 1.94.17 0 .32.02.48.05.27.05.45.31.4.58-.05.27-.3.45-.58.4-.29-.05-.56-.09-.85-.09-1.7 0-3.08-1.27-3.08-2.83 0-1.07-.88-1.94-1.97-1.94-1.09 0-1.97.87-1.97 1.94 0 1.71.66 3.31 1.87 4.51.95.94 1.86 1.46 3.27 1.85.27.07.42.35.35.61-.05.23-.26.38-.47.38z'/></svg>");mask-image:url("data:image/svg+xml;utf8,<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M17.81 4.47c-.08 0-.16-.02-.23-.06C15.66 3.42 14 3 12.01 3c-1.98 0-3.86.47-5.57 1.41-.24.13-.54.04-.68-.2-.13-.24-.04-.55.2-.68C7.82 2.52 9.86 2 12.01 2c2.13 0 3.99.47 6.03 1.52.25.13.34.43.21.67-.09.18-.26.28-.44.28zM3.5 9.72c-.1 0-.2-.03-.29-.09-.23-.16-.28-.47-.12-.7.99-1.4 2.25-2.5 3.75-3.27C9.98 4.04 14 4.03 17.15 5.65c1.5.77 2.76 1.86 3.75 3.25.16.22.11.54-.12.7-.23.16-.54.11-.7-.12-.9-1.26-2.04-2.25-3.39-2.94-2.87-1.47-6.54-1.47-9.4.01-1.36.7-2.5 1.7-3.4 2.96-.08.14-.23.21-.39.21zm6.25 12.07c-.13 0-.26-.05-.35-.15-.87-.87-1.34-1.43-2.01-2.64-.69-1.23-1.05-2.73-1.05-4.34 0-2.97 2.54-5.39 5.66-5.39s5.66 2.42 5.66 5.39c0 .28-.22.5-.5.5s-.5-.22-.5-.5c0-2.42-2.09-4.39-4.66-4.39-2.57 0-4.66 1.97-4.66 4.39 0 1.44.32 2.77.93 3.85.64 1.15 1.08 1.64 1.85 2.42.19.2.19.51 0 .71-.11.1-.24.15-.37.15zm7.17-1.85c-1.19 0-2.24-.3-3.1-.89-1.49-1.01-2.38-2.65-2.38-4.39 0-.28.22-.5.5-.5s.5.22.5.5c0 1.41.72 2.74 1.94 3.56.71.48 1.54.71 2.54.71.24 0 .64-.03 1.04-.1.27-.05.53.13.58.41.05.27-.13.53-.41.58-.57.11-1.07.12-1.21.12zM14.91 22c-.04 0-.09-.01-.13-.02-1.59-.44-2.63-1.03-3.72-2.1-1.4-1.39-2.17-3.24-2.17-5.22 0-1.62 1.38-2.94 3.08-2.94 1.7 0 3.08 1.32 3.08 2.94 0 1.07.93 1.94 2.08 1.94.17 0 .32.02.48.05.27.05.45.31.4.58-.05.27-.3.45-.58.4-.29-.05-.56-.09-.85-.09-1.7 0-3.08-1.27-3.08-2.83 0-1.07-.88-1.94-1.97-1.94-1.09 0-1.97.87-1.97 1.94 0 1.71.66 3.31 1.87 4.51.95.94 1.86 1.46 3.27 1.85.27.07.42.35.35.61-.05.23-.26.38-.47.38z'/></svg>")}.ico-check{-webkit-mask-image:url("data:image/svg+xml;utf8,<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z'/></svg>");mask-image:url("data:image/svg+xml;utf8,<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z'/></svg>")}.ico-leaf{-webkit-mask-image:url("data:image/svg+xml;utf8,<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M17 8C8 10 5.9 16.17 3.82 21.34 5.71 20.73 7.5 20 9 20c2.5 0 6-1.5 8-6 4-9-6-13-6-13s.7 5.07-2 8.5c-.86-3.23.15-7.5-.5-9.5-3.01 1-6.5 5.5-6.5 5.5s1.25-.97 2.47-1.33C9.36 6.3 6.94 7.97 5.5 11c-2 4.19-2.5 7.5-2.5 7.5s3.5-1.5 7.5-2.5c4.78-1.2 8.5-5 6.5-8z'/></svg>");mask-image:url("data:image/svg+xml;utf8,<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M17 8C8 10 5.9 16.17 3.82 21.34 5.71 20.73 7.5 20 9 20c2.5 0 6-1.5 8-6 4-9-6-13-6-13s.7 5.07-2 8.5c-.86-3.23.15-7.5-.5-9.5-3.01 1-6.5 5.5-6.5 5.5s1.25-.97 2.47-1.33C9.36 6.3 6.94 7.97 5.5 11c-2 4.19-2.5 7.5-2.5 7.5s3.5-1.5 7.5-2.5c4.78-1.2 8.5-5 6.5-8z'/></svg>")}.ico-store{-webkit-mask-image:url("data:image/svg+xml;utf8,<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M20 4H4v2h16V4zm1 10v-2l-1-5H4l-1 5v2h1v6h10v-6h4v6h2v-6h1zm-9 4H6v-4h6v4z'/></svg>");mask-image:url("data:image/svg+xml;utf8,<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M20 4H4v2h16V4zm1 10v-2l-1-5H4l-1 5v2h1v6h10v-6h4v6h2v-6h1zm-9 4H6v-4h6v4z'/></svg>")}.ico-phone{-webkit-mask-image:url("data:image/svg+xml;utf8,<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z'/></svg>");mask-image:url("data:image/svg+xml;utf8,<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z'/></svg>")}.ico-location-arrow{-webkit-mask-image:url("data:image/svg+xml;utf8,<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z'/></svg>");mask-image:url("data:image/svg+xml;utf8,<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z'/></svg>")}.ico-speed{-webkit-mask-image:url("data:image/svg+xml;utf8,<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M20.38 8.57l-1.23 1.85a8 8 0 0 1-.22 7.58H5.07A8 8 0 0 1 15.58 6.85l1.85-1.23A10 10 0 0 0 3.35 19a2 2 0 0 0 1.72 1h13.85a2 2 0 0 0 1.74-1 10 10 0 0 0-.27-10.44zm-9.79 6.84a2 2 0 0 0 2.83 0l5.66-8.49-8.49 5.66a2 2 0 0 0 0 2.83z'/></svg>");mask-image:url("data:image/svg+xml;utf8,<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M20.38 8.57l-1.23 1.85a8 8 0 0 1-.22 7.58H5.07A8 8 0 0 1 15.58 6.85l1.85-1.23A10 10 0 0 0 3.35 19a2 2 0 0 0 1.72 1h13.85a2 2 0 0 0 1.74-1 10 10 0 0 0-.27-10.44zm-9.79 6.84a2 2 0 0 0 2.83 0l5.66-8.49-8.49 5.66a2 2 0 0 0 0 2.83z'/></svg>")}.ico-refresh{-webkit-mask-image:url("data:image/svg+xml;utf8,<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z'/></svg>");mask-image:url("data:image/svg+xml;utf8,<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z'/></svg>")}.ico-chevron-left{-webkit-mask-image:url("data:image/svg+xml;utf8,<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z'/></svg>");mask-image:url("data:image/svg+xml;utf8,<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z'/></svg>")}.ico-chevron-down{-webkit-mask-image:url("data:image/svg+xml;utf8,<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M16.59 8.59L12 13.17 7.41 8.59 6 10l6 6 6-6z'/></svg>");mask-image:url("data:image/svg+xml;utf8,<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M16.59 8.59L12 13.17 7.41 8.59 6 10l6 6 6-6z'/></svg>")}.ico-network{-webkit-mask-image:url("data:image/svg+xml;utf8,<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M20 18h-3V6.83l-2 2V21h-2V8.83l-2 2V21h-2V13.85l-5.74 5.75c-.78.78-2.05.78-2.83 0l-.06-.06c-.78-.78-.78-2.05 0-2.83L12 5l1.41 1.41L4.83 15H10v-3h2v3h2v-7h2v7h3z'/></svg>");mask-image:url("data:image/svg+xml;utf8,<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M20 18h-3V6.83l-2 2V21h-2V8.83l-2 2V21h-2V13.85l-5.74 5.75c-.78.78-2.05.78-2.83 0l-.06-.06c-.78-.78-.78-2.05 0-2.83L12 5l1.41 1.41L4.83 15H10v-3h2v3h2v-7h2v7h3z'/></svg>")}.ico-save{-webkit-mask-image:url("data:image/svg+xml;utf8,<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z'/></svg>");mask-image:url("data:image/svg+xml;utf8,<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z'/></svg>")}.ico-wifi_tethering{-webkit-mask-image:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 11c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm6 2c0-3.31-2.69-6-6-6s-6 2.69-6 6c0 2.22 1.21 4.15 3 5.19l1.42-1.42c-1.17-.68-1.97-1.95-1.97-3.42 0-2.21 1.79-4 4-4s4 1.79 4 4c0 1.47-.8 2.74-1.97 3.43l1.42 1.42C20.79 17.15 22 15.22 22 13c0-3.31-2.69-6-6-6zm-8.5 7.5h5v2h-5z"/></svg>');mask-image:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 11c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm6 2c0-3.31-2.69-6-6-6s-6 2.69-6 6c0 2.22 1.21 4.15 3 5.19l1.42-1.42c-1.17-.68-1.97-1.95-1.97-3.42 0-2.21 1.79-4 4-4s4 1.79 4 4c0 1.47-.8 2.74-1.97 3.43l1.42 1.42C20.79 17.15 22 15.22 22 13c0-3.31-2.69-6-6-6zm-8.5 7.5h5v2h-5z"/></svg>')}.ico-alert{-webkit-mask-image:url('data:image/svg+xml;utf8,<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>');mask-image:url('data:image/svg+xml;utf8,<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>')}
+.ico-home,.ico-cubes,.ico-map,.ico-headset,.ico-info{width:22px;height:22px}
+
+/* ─── شريط التبويب السفلي (الآن labels لا divs) ─── */
+.bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:560px;height:70px;background:var(--card-bg);border-top:1px solid var(--border-color);display:flex;justify-content:space-around;align-items:center;border-top-left-radius:25px;border-top-right-radius:25px;box-shadow:0 -5px 20px rgba(0,0,0,0.05);z-index:1000}
+.nav-item{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:var(--text-sub);font-size:10px;width:60px;height:100%;position:relative;user-select:none;-webkit-user-select:none;text-decoration:none}
+.nav-item .ico{font-size:18px}
+</style>
+</head>
+<body class="">
+
+
+<form name="sendin" action="" method="post" style="display:none">
+<input type="hidden" name="username">
+<input type="hidden" name="password">
+<input type="hidden" name="dst" value="">
+<input type="hidden" name="popup" value="true">
+</form>
+<script>
+/* MD5 (Paul Johnston, BSD) — مضمّن لدعم CHAP بلا ملفات خارجية */
+function safe_add(x,y){var lsw=(x&0xFFFF)+(y&0xFFFF);var msw=(x>>16)+(y>>16)+(lsw>>16);return(msw<<16)|(lsw&0xFFFF)}
+function rol(num,cnt){return(num<<cnt)|(num>>>(32-cnt))}
+function cmn(q,a,b,x,s,t){return safe_add(rol(safe_add(safe_add(a,q),safe_add(x,t)),s),b)}
+function ff(a,b,c,d,x,s,t){return cmn((b&c)|((~b)&d),a,b,x,s,t)}
+function gg(a,b,c,d,x,s,t){return cmn((b&d)|(c&(~d)),a,b,x,s,t)}
+function hh(a,b,c,d,x,s,t){return cmn(b^c^d,a,b,x,s,t)}
+function ii(a,b,c,d,x,s,t){return cmn(c^(b|(~d)),a,b,x,s,t)}
+function coreMD5(x){
+var a=1732584193,b=-271733879,c=-1732584194,d=271733878;
+for(var i=0;i<x.length;i+=16){
+var olda=a,oldb=b,oldc=c,oldd=d;
+a=ff(a,b,c,d,x[i+0],7,-680876936);d=ff(d,a,b,c,x[i+1],12,-389564586);c=ff(c,d,a,b,x[i+2],17,606105819);b=ff(b,c,d,a,x[i+3],22,-1044525330);
+a=ff(a,b,c,d,x[i+4],7,-176418897);d=ff(d,a,b,c,x[i+5],12,1200080426);c=ff(c,d,a,b,x[i+6],17,-1473231341);b=ff(b,c,d,a,x[i+7],22,-45705983);
+a=ff(a,b,c,d,x[i+8],7,1770035416);d=ff(d,a,b,c,x[i+9],12,-1958414417);c=ff(c,d,a,b,x[i+10],17,-42063);b=ff(b,c,d,a,x[i+11],22,-1990404162);
+a=ff(a,b,c,d,x[i+12],7,1804603682);d=ff(d,a,b,c,x[i+13],12,-40341101);c=ff(c,d,a,b,x[i+14],17,-1502002290);b=ff(b,c,d,a,x[i+15],22,1236535329);
+a=gg(a,b,c,d,x[i+1],5,-165796510);d=gg(d,a,b,c,x[i+6],9,-1069501632);c=gg(c,d,a,b,x[i+11],14,643717713);b=gg(b,c,d,a,x[i+0],20,-373897302);
+a=gg(a,b,c,d,x[i+5],5,-701558691);d=gg(d,a,b,c,x[i+10],9,38016083);c=gg(c,d,a,b,x[i+15],14,-660478335);b=gg(b,c,d,a,x[i+4],20,-405537848);
+a=gg(a,b,c,d,x[i+9],5,568446438);d=gg(d,a,b,c,x[i+14],9,-1019803690);c=gg(c,d,a,b,x[i+3],14,-187363961);b=gg(b,c,d,a,x[i+8],20,1163531501);
+a=gg(a,b,c,d,x[i+13],5,-1444681467);d=gg(d,a,b,c,x[i+2],9,-51403784);c=gg(c,d,a,b,x[i+7],14,1735328473);b=gg(b,c,d,a,x[i+12],20,-1926607734);
+a=hh(a,b,c,d,x[i+5],4,-378558);d=hh(d,a,b,c,x[i+8],11,-2022574463);c=hh(c,d,a,b,x[i+11],16,1839030562);b=hh(b,c,d,a,x[i+14],23,-35309556);
+a=hh(a,b,c,d,x[i+1],4,-1530992060);d=hh(d,a,b,c,x[i+4],11,1272893353);c=hh(c,d,a,b,x[i+7],16,-155497632);b=hh(b,c,d,a,x[i+10],23,-1094730640);
+a=hh(a,b,c,d,x[i+13],4,681279174);d=hh(d,a,b,c,x[i+0],11,-358537222);c=hh(c,d,a,b,x[i+3],16,-722521979);b=hh(b,c,d,a,x[i+6],23,76029189);
+a=hh(a,b,c,d,x[i+9],4,-640364487);d=hh(d,a,b,c,x[i+12],11,-421815835);c=hh(c,d,a,b,x[i+15],16,530742520);b=hh(b,c,d,a,x[i+2],23,-995338651);
+a=ii(a,b,c,d,x[i+0],6,-198630844);d=ii(d,a,b,c,x[i+7],10,1126891415);c=ii(c,d,a,b,x[i+14],15,-1416354905);b=ii(b,c,d,a,x[i+5],21,-57434055);
+a=ii(a,b,c,d,x[i+12],6,1700485571);d=ii(d,a,b,c,x[i+3],10,-1894986606);c=ii(c,d,a,b,x[i+10],15,-1051523);b=ii(b,c,d,a,x[i+1],21,-2054922799);
+a=ii(a,b,c,d,x[i+8],6,1873313359);d=ii(d,a,b,c,x[i+15],10,-30611744);c=ii(c,d,a,b,x[i+6],15,-1560198380);b=ii(b,c,d,a,x[i+13],21,1309151649);
+a=ii(a,b,c,d,x[i+4],6,-145523070);d=ii(d,a,b,c,x[i+11],10,-1120210379);c=ii(c,d,a,b,x[i+2],15,718787259);b=ii(b,c,d,a,x[i+9],21,-343485551);
+a=safe_add(a,olda);b=safe_add(b,oldb);c=safe_add(c,oldc);d=safe_add(d,oldd);
+}
+return[a,b,c,d];
+}
+function binl2hex(b){var t="0123456789abcdef",s="";for(var i=0;i<b.length*4;i++){s+=t.charAt((b[i>>2]>>((i%4)*8+4))&0xF)+t.charAt((b[i>>2]>>((i%4)*8))&0xF)}return s}
+function str2binl(s){var n=((s.length+8)>>6)+1,r=new Array(n*16),i;for(i=0;i<n*16;i++)r[i]=0;for(i=0;i<s.length;i++)r[i>>2]|=(s.charCodeAt(i)&0xFF)<<((i%4)*8);r[i>>2]|=0x80<<((i%4)*8);r[n*16-2]=s.length*8;return r}
+function hexMD5(s){return binl2hex(coreMD5(str2binl(s)))}
+window.hrChap=function(p){return hexMD5(''+p+'')};
+</script>
+
+
+<div class="mobile-container">
+
+  <!-- ‏مفاتيح التبويب المخفيّة (radio) — تتحكم بكل ما يليها عبر :checked ~ -->
+  <input class="hr-nav-r" type="radio" name="hr-nav" id="hr-nav-home" checked>
+  <input class="hr-nav-r" type="radio" name="hr-nav" id="hr-nav-packages">
+  <input class="hr-nav-r" type="radio" name="hr-nav" id="hr-nav-distributors">
+  <input class="hr-nav-r" type="radio" name="hr-nav" id="hr-nav-support">
+  <input class="hr-nav-r" type="radio" name="hr-nav" id="hr-nav-info">
+
+  <div class="top-system-bar">
+    <div class="ip-info"><div class="connection-dot"></div><span>IP: <span id="user-ip"></span></span></div>
+    <div class="brand-mini">شبكة الاختبار</div>
+  </div>
+
+  <div class="content-scroll">
+
+    <!-- ===================== الرئيسية ===================== -->
+    <div id="home-view" class="view-section">
+      <header class="header">
+        <div class="greeting">
+          <h2>مرحباً <span id="user-name-display"></span></h2>
+          <p>مرحباً بك في شبكة الاختبار</p>
+        </div>
+      </header>
+      <div class="date-time-pills">
+        <div class="dt-pill"><span class="ico ico-calendar"></span> <span id="date-display">اليوم</span></div>
+        <div class="dt-pill time-pill"><span class="ico ico-clock"></span> <span id="time-display">--:--</span></div>
+      </div>
+      <div class="insurance-card unified-gradient-card">
+        <div class="circle-decor c1"></div><div class="circle-decor c2"></div>
+        <div class="card-header">
+          <div class="card-icon">
+            <div class="icon-box"><span class="ico ico-shield" style="font-size:20px;"></span></div>
+            <div>
+              <h3 style="font-size:18px;font-weight:700;">بوابة الدخول</h3>
+              <p style="font-size:12px;opacity:.9;">سجّل بيانات البطاقة</p>
+            </div>
+          </div>
+          <div class="top-arrow"><span class="ico ico-lock" style="font-size:12px;"></span></div>
+        </div>
+        
+        <form name="login" action="" method="post" onsubmit="return hrSubmit()">
+          <input type="hidden" name="dst" value="">
+          <input type="hidden" name="popup" value="true">
+          <div class="login-fields-container">
+            <div class="field-group">
+              <label class="field-label">رقم البطاقة</label>
+              <input type="text" name="username" class="custom-input user-field" placeholder="User ID" value="">
+            </div>
+            <div class="field-group">
+              <label class="field-label">رمز المرور</label>
+              <input type="password" name="password" class="custom-input pass-field" placeholder="••••••••">
+            </div>
+          </div>
+          <div class="card-footer">
+            <button type="submit" class="login-btn">تحقق ودخول <span class="ico ico-arrow-left"></span></button>
+          </div>
+        </form>
+      </div>
+
+      <!-- ‏زر متجرك الإلكتروني — يظهر فقط عند STORE_ENABLED=yes -->
+      <a class="hr-store-card" href="http://10.10.0.1/portal/card">
+        <div class="hr-store-icon"><span class="ico ico-cart" style="font-size:22px;"></span></div>
+        <div class="hr-store-text"><h4>متجر البطاقات الإلكتروني</h4><p>اشحن رصيدك واشترِ بطاقتك مباشرة من هنا</p></div>
+        <div class="hr-store-arrow"><span class="ico ico-arrow-left" style="font-size:13px;"></span></div>
+      </a>
+
+      <div class="network-pulse-card">
+        <div class="pulse-icon-area"><div class="live-indicator"><span class="blink-dot"></span></div><span class="ico ico-wifi_tethering" style="font-size:20px;"></span></div>
+        <div class="pulse-content"><span class="pulse-label">الحالة المباشرة</span><div class="pulse-value-wrapper"><span id="liveStatusText" class="pulse-value">إشارة مستقرة وممتازة</span></div></div>
+        <div class="network-visualizer"><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div></div>
+      </div>
+
+      <div class="network-about-footer">
+        <h4 class="footer-title">شبكة الاختبار</h4>
+        <p class="footer-desc">إزالة الزر العائم المكرّر</p>
+        <div class="footer-copyright">© شبكة الاختبار — جميع الحقوق محفوظة</div>
+      </div>
+    </div><!-- /home-view -->
+
+    <!-- ===================== الباقات ===================== -->
+    <div id="packages-view" class="view-section">
+      <div class="section-title" style="margin-top:10px;">
+        <h3>بطاقات متنوعة</h3>
+        <span>شبكة الاختبار</span>
+      </div>
+      <div class="packages-wrapper">
+        <!-- العروض القابلة للتحرير — تُولَّد من OFFERS_JSON عبر render() -->
+        <div class="pkg-card-big"><div class="glow-blob gb-1"></div><div class="glow-blob gb-2"></div><div class="pkg-badge-top">⭐ النخبة</div><div class="pkg-header-row"><div><h2 style="font-size:20px;font-weight:800;margin-bottom:2px;">باقة الألعاب Pro</h2><p style="font-size:12px;opacity:0.9;">ساعتان متواصلتان — سرعة 5 ميجا</p></div><div class="pkg-icon-circle"><span class="ico ico-bolt"></span></div></div><div class="pkg-price-row"><span class="pkg-big-price">2 وحدة</span></div></div>
+<div class="pkg-card-medium"><div class="medium-blob"></div><div class="medium-top"><div><h3 style="font-size:16px;font-weight:700;">الباقة الأساسية</h3><div class="medium-tags"><span class="m-tag">8 ساعات — 2 ميجا</span></div></div><div style="font-size:22px;opacity:0.8;"><span class="ico ico-leaf"></span></div></div><div class="medium-bottom"><div><span style="font-size:24px;font-weight:800;">1 وحدة</span></div></div></div>
+<div class="pkg-card-small"><div class="small-info"><h4>الباقة القياسية</h4><div class="small-details"><span>10 ساعات — 3 ميجا</span></div></div><div class="small-price"><div class="s-price-val">2 وحدة</div></div></div>
+<div class="pkg-card-small"><div class="small-info"><h4>الباقة الكاملة</h4><div class="small-details"><span>24 ساعة — 2 ميجا</span></div></div><div class="small-price"><div class="s-price-val">3 وحدة</div></div></div>
+      </div>
+    </div>
+
+    <!-- ===================== الموزعون ===================== -->
+    <div id="distributors-view" class="view-section">
+      <div class="section-title" style="margin-top:10px;">
+        <h3>أقرب النقاط</h3>
+        <span>تغطية شاملة</span>
+      </div>
+      <div class="map-wrapper">
+        <div class="map-art"><div class="map-road mr1"></div><div class="map-road mr2"></div></div>
+        <div class="map-pin-user"></div>
+        <div class="map-overlay-info"><span class="ico ico-location-arrow"></span> أنت هنا</div>
+      </div>
+      <div class="section-title"><h3>نقاط البيع المعتمدة</h3><span>عدد النقاط</span></div>
+      <div class="distributors-list">
+        <!-- الموزعون القابلون للتحرير — من DISTRIBUTORS_JSON -->
+        <div class="distributor-card"><div class="dist-info"><div class="dist-icon"><span class="ico ico-store"></span></div><div class="dist-text"><h4>محل الاتصالات المركزي</h4><p>الشارع الرئيسي</p></div></div><a href="tel:0599000001" style="text-decoration:none;font-size:11px;font-weight:700;padding:6px 12px;border-radius:999px;background:var(--pill-bg,#eef2ff);color:var(--primary-accent,#4f46e5);direction:ltr">0599000001</a></div>
+<div class="distributor-card"><div class="dist-info"><div class="dist-icon"><span class="ico ico-store"></span></div><div class="dist-text"><h4>ماركت النور</h4><p>حي الجامعة</p></div></div><a href="tel:0599000002" style="text-decoration:none;font-size:11px;font-weight:700;padding:6px 12px;border-radius:999px;background:var(--pill-bg,#eef2ff);color:var(--primary-accent,#4f46e5);direction:ltr">0599000002</a></div>
+      </div>
+    </div>
+
+    <!-- ===================== الدعم ===================== -->
+    <div id="support-view" class="view-section">
+      <div class="section-title" style="margin-top:10px;"><h3>الدعم الفني</h3><span>نحن هنا لمساعدتك</span></div>
+      <div class="support-hero-card unified-gradient-card">
+        <div class="support-icon-ring"><span class="ico ico-headset" style="font-size:30px;"></span></div>
+        <h2 class="support-title">هل تواجه مشكلة؟</h2>
+        <p class="support-sub">فريق دعم شبكة الاختبار جاهز لمساعدتك — اتصل على 0599000000</p>
+        <a href="tel:0599000000" class="btn-call-main"><span class="ico ico-phone"></span> 0599000000</a>
+        <div class="server-status-box">
+          <div class="status-label"><div style="width:8px;height:8px;background:#a5f3fc;border-radius:50%;margin-left:5px;"></div>الحالة العامة للنظام</div>
+          <div class="status-percent">98%</div>
+        </div>
+      </div>
+      <div class="section-title"><h3>الأسئلة الشائعة</h3></div>
+      <!-- FAQ بـ <details> الأصلي — يفتح/يُغلق بلا JS -->
+      <details class="faq-item">
+        <summary class="faq-header"><span>الصفحة لا تفتح بعد الاتصال</span><span class="ico ico-chevron-down"></span></summary>
+        <div class="faq-body"><div class="faq-content">قم بعمل "نسيان للشبكة" (Forget Network) من إعدادات الواي فاي في جهازك، ثم أعد الاتصال وأدخل كلمة المرور مرة أخرى.</div></div>
+      </details>
+      <details class="faq-item">
+        <summary class="faq-header"><span>الإنترنت بطيء جداً</span><span class="ico ico-chevron-down"></span></summary>
+        <div class="faq-body"><div class="faq-content">جودة الاتصال تعتمد على قوة الإشارة. كلما كنت أقرب من نقطة التوزيع (الراوتر) وبدون حواجز، كانت السرعة أفضل.</div></div>
+      </details>
+      <details class="faq-item">
+        <summary class="faq-header"><span>خطأ: المستخدم مسجل الدخول بالفعل</span><span class="ico ico-chevron-down"></span></summary>
+        <div class="faq-body"><div class="faq-content">هذا يعني أن حسابك نشط على جهاز آخر أو أن الجلسة السابقة لم تغلق بشكل صحيح. انتظر دقيقتين أو اتصل بالدعم لإنهاء الجلسة المعلقة.</div></div>
+      </details>
+    </div>
+
+    <!-- ===================== معلومات ===================== -->
+    <div id="info-view" class="view-section">
+      <div class="section-title" style="margin-top:10px;"><h3>معلومات الجلسة</h3><span>بيانات الاتصال</span></div>
+      <div class="profile-card-tech unified-gradient-card">
+        <div class="decor-profile dp1"></div><div class="decor-profile dp2"></div>
+        <div class="profile-header">
+          <div class="profile-text"><h3 id="profile-view-name"></h3><span class="status-badge">مستخدم نشط</span></div>
+        </div>
+        <div class="tech-details-list">
+          <div class="tech-row"><div class="tech-label"><span class="ico ico-network" style="color:white"></span> IP Address</div><div class="tech-val" dir="ltr"></div></div>
+          <div class="tech-row"><div class="tech-label"><span class="ico ico-fingerprint" style="color:white"></span> MAC Address</div><div class="tech-val" dir="ltr"></div></div>
+          <div class="tech-row"><div class="tech-label"><span class="ico ico-mobile" style="color:white"></span> الجهاز</div><div class="tech-val" id="info-device">جهازك</div></div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content-scroll -->
+
+  <!-- ‏الشريط السفلي: labels تُفعّل الراديوهات أعلاه (CSS خالص). -->
+  <nav class="bottom-nav">
+    <label class="nav-item" for="hr-nav-home"><span class="ico ico-home"></span><span>الرئيسية</span></label>
+    <label class="nav-item" for="hr-nav-packages"><span class="ico ico-cubes"></span><span>الباقات</span></label>
+    <label class="nav-item" for="hr-nav-distributors"><span class="ico ico-map"></span><span>الموزعون</span></label>
+    <label class="nav-item" for="hr-nav-support"><span class="ico ico-headset"></span><span>الدعم</span></label>
+    <label class="nav-item" for="hr-nav-info"><span class="ico ico-info"></span><span>معلومات</span></label>
+  </nav>
+</div>
+
+<!-- ─── SCRIPT 1: تسليم النموذج (CHAP أو PAP) — جوهري للدخول. ES5. ─── -->
+<script>
+function hrSubmit(){
+  try{
+    if(typeof window.hrChap==='function' && document.sendin){
+      document.sendin.username.value=document.login.username.value;
+      document.sendin.password.value=window.hrChap(document.login.password.value);
+      document.sendin.submit();
+      return false;
+    }
+  }catch(e){ /* اتركها تذهب لمسار PAP العادي */ }
+  return true;
+}
+</script>
+
+<!-- ─── SCRIPT 2: تفعيل صنف زر المتجر (مستقل) ─── -->
+<script>
+try{
+  if('yes'==='yes' && document.body && document.body.classList){
+    document.body.classList.add('hr-store-on');
+  }
+}catch(e){}
+</script>
+
+<!-- ─── SCRIPT 3: الساعة + التاريخ (تحسين اختياري) ─── -->
+<script>
+(function(){
+  try{
+    var days=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+    var months=['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+    function pad(n){return n<10?'0'+n:''+n;}
+    function tick(){
+      try{
+        var d=new Date(), h=d.getHours(), m=d.getMinutes();
+        var ap=(h<12?'ص':'م'); var hh=h%12; if(hh===0) hh=12;
+        var t=document.getElementById('time-display');
+        if(t) t.firstChild?(t.firstChild.nodeValue=hh+':'+pad(m)+' '+ap):(t.innerHTML=hh+':'+pad(m)+' '+ap);
+        var dd=document.getElementById('date-display');
+        if(dd) dd.innerHTML=days[d.getDay()]+' '+d.getDate()+' '+months[d.getMonth()];
+      }catch(e){}
+    }
+    tick();
+    setInterval(tick,1000);
+  }catch(e){}
+})();
+</script>
+
+<!-- ─── SCRIPT 4: كشف الجهاز (تحسين اختياري) ─── -->
+<script>
+(function(){
+  try{
+    var u=navigator.userAgent||'', t='جهازك';
+    if(/Android/i.test(u)) t='Android';
+    else if(/iPhone|iPad|iPod/i.test(u)) t='Apple iOS';
+    else if(/Windows/i.test(u)) t='Windows';
+    else if(/Mac/i.test(u)) t='Macintosh';
+    var el=document.getElementById('info-device');
+    if(el) el.innerHTML=t;
+  }catch(e){}
+})();
+</script>
+
+<!-- ─── SCRIPT 5: تدوير رسائل الحالة (تحسين بصري) ─── -->
+<script>
+(function(){
+  try{
+    var el=document.getElementById('liveStatusText');
+    if(!el) return;
+    var msgs=['إشارة مستقرة وممتازة','جميع السيرفرات متصلة','فحص الأمان: آمن','زمن استجابة جيد'];
+    var i=0;
+    setInterval(function(){
+      try{ i=(i+1)%msgs.length; el.innerHTML=msgs[i]; }catch(e){}
+    },4000);
+  }catch(e){}
+})();
+</script>
+
+
+<!-- HR add-on: الجلسات المحفوظة (آخر 5 بطاقات) -->
+<style>
+.hr-sessions{max-width:340px;margin:14px auto 0;font-family:inherit;text-align:right;direction:rtl}
+.hr-ss-h{display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:800;color:#475569;margin-bottom:8px;padding:0 2px}
+.hr-ss-clear{font-size:11px;color:#ef4444;cursor:pointer;font-weight:700;background:0;border:0;font-family:inherit}
+.hr-ss-item{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:8px 11px;margin-bottom:8px;cursor:pointer;transition:.15s;box-shadow:0 4px 12px rgba(15,23,42,.05)}
+.hr-ss-item:active{transform:scale(.99)}
+.hr-ss-av{width:34px;height:34px;border-radius:50%;background:#4F46E5;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;flex-shrink:0}
+.hr-ss-tx{flex:1;min-width:0}
+.hr-ss-u{display:block;font-size:13px;font-weight:800;color:#0f172a;font-family:'Courier New',monospace;direction:ltr;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hr-ss-t{display:block;font-size:10.5px;color:#94a3b8}
+.hr-ss-go{color:#4F46E5;font-weight:800;font-size:16px}
+.hr-ss-del{border:0;background:#f1f5f9;color:#64748b;width:26px;height:26px;border-radius:50%;cursor:pointer;font-size:15px;font-weight:800;line-height:1;flex-shrink:0}
+.hr-ss-del:hover{background:#fee2e2;color:#ef4444}
+</style>
+<script>
+(function(){
+  var f=document.forms['login']; if(!f) return;
+  var K='hr_sessions', MAX=5;
+  // القسم يُدرَج تحت نموذج الدخول مباشرة، مخفيًا حتى يمتلئ.
+  var box=document.createElement('div');
+  box.className='hr-sessions'; box.style.display='none';
+  f.insertAdjacentElement('afterend', box);
+  function load(){try{return JSON.parse(localStorage.getItem(K))||[];}catch(e){return [];}}
+  function store(a){try{localStorage.setItem(K,JSON.stringify(a));}catch(e){}}
+  // قرار المالك: نحفظ اسم المستخدم + كلمة المرور معًا.
+  function save(u,p){u=(u||'').trim(); if(!u) return;
+    var a=load().filter(function(x){return x.u!==u;});
+    a.unshift({u:u,p:p||'',t:Date.now()});
+    if(a.length>MAX) a=a.slice(0,MAX); store(a); render();}
+  function delOne(u){store(load().filter(function(x){return x.u!==u;})); render();}
+  function rel(t){var s=Math.floor((Date.now()-t)/1000);
+    if(s<60) return 'الآن';
+    var m=Math.floor(s/60); if(m<60) return 'قبل '+m+' دقيقة';
+    var h=Math.floor(m/60); if(h<24) return 'قبل '+h+' ساعة';
+    var d=Math.floor(h/24); if(d===1) return 'أمس';
+    return 'قبل '+d+' يوم';}
+  // نقرة البطاقة: تعبئة الحقلين ثم إرسال النموذج (يشغّل
+  // onsubmit/hrSubmit فيعمل CHAP إن كان مفعّلًا).
+  function use(it){var ui=f.elements['username'],pi=f.elements['password'];
+    if(ui) ui.value=it.u; if(pi) pi.value=it.p||'';
+    var b=f.querySelector('button[type=submit],input[type=submit],button');
+    if(b){b.click();} else if(f.requestSubmit){f.requestSubmit();} else {f.submit();}}
+  function item(it){var row=document.createElement('div');
+    row.className='hr-ss-item';
+    var av=document.createElement('span');
+    av.className='hr-ss-av';
+    av.textContent=(it.u[0]||'?').toUpperCase();
+    var tx=document.createElement('span');
+    tx.className='hr-ss-tx';
+    var u=document.createElement('span'); u.className='hr-ss-u';
+    u.textContent=it.u;
+    var tm=document.createElement('span'); tm.className='hr-ss-t';
+    tm.textContent='آخر استخدام '+rel(it.t);
+    tx.appendChild(u); tx.appendChild(tm);
+    var del=document.createElement('button'); del.type='button';
+    del.className='hr-ss-del'; del.textContent='×';
+    del.title='حذف';
+    del.onclick=function(ev){ev.stopPropagation();delOne(it.u);};
+    var go=document.createElement('span'); go.className='hr-ss-go';
+    go.textContent='‹';
+    row.appendChild(av); row.appendChild(tx);
+    row.appendChild(del); row.appendChild(go);
+    row.onclick=function(){use(it);};
+    return row;}
+  function render(){var a=load(); box.innerHTML='';
+    if(!a.length){box.style.display='none'; return;}
+    box.style.display='block';
+    var head=document.createElement('div');
+    head.className='hr-ss-h';
+    var b=document.createElement('b');
+    b.textContent='⏱ الجلسات الأخيرة';
+    var clr=document.createElement('button'); clr.type='button';
+    clr.className='hr-ss-clear'; clr.textContent='مسح الكل';
+    clr.onclick=function(){store([]); render();};
+    head.appendChild(b); head.appendChild(clr);
+    box.appendChild(head);
+    a.forEach(function(it){box.appendChild(item(it));});}
+  // نلتقط البيانات لحظة الإرسال — الحدث يُطلَق في CHAP وPAP.
+  f.addEventListener('submit',function(){try{var ui=f.elements['username'],pi=f.elements['password'];
+    save(ui?ui.value:'', pi?pi.value:'');}catch(e){}});
+  render();
+})();
+</script>
+<script>
+// R4 — QR auto-login. The card-printed QR encodes a URL like
+// http://<gateway>/?u=USERNAME&p=PASSWORD; this snippet reads
+// the keys, fills the form, and submits. If the keys are
+// missing the form falls back to manual login.
+//
+// ES5-only: captive-portal browsers (MikroTik built-in, old
+// Android WebView, iOS pre-auth shim) often lack modern URL
+// parsers and arrow functions. We parse location.search by hand and
+// keep everything in `var`/`function`. Wrapped in try/catch in
+// its own <script> block so failure cannot affect tabs/login.
+//
+// CHAP compatibility: clicking the submit button (instead of
+// f.submit()) fires the form's onsubmit handler, so templates
+// that hash the password client-side (mikrotik / CHAP) run
+// doLogin(). requestSubmit() is preferred when available; the
+// click fallback handles older browsers.
+(function () {
+  try {
+    // Manual location.search parser — no modern URL helpers.
+    function qsGet(name) {
+      var s = (location.search || '');
+      if (s.charAt(0) === '?') s = s.substring(1);
+      if (!s) return '';
+      var parts = s.split('&');
+      for (var i = 0; i < parts.length; i++) {
+        var kv = parts[i].split('=');
+        if (decodeURIComponent(kv[0] || '') === name) {
+          try { return decodeURIComponent((kv[1] || '').replace(/\+/g, ' ')); }
+          catch (e) { return (kv[1] || '').replace(/\+/g, ' '); }
+        }
+      }
+      return '';
+    }
+    var u = qsGet("u");
+    var p = qsGet("p");
+    if (!u || !p) return;
+    var f = document.forms["login"];
+    if (!f) return;
+    var ui = f.username || f.elements["username"];
+    var pi = f.password || f.elements["password"];
+    if (ui) ui.value = u;
+    if (pi) pi.value = p;
+    // Small delay so RouterOS finishes setting up chap-id.
+    setTimeout(function () {
+      try {
+        if (typeof f.requestSubmit === "function") {
+          f.requestSubmit();
+          return;
+        }
+      } catch (e2) {}
+      var btn = f.querySelector ? f.querySelector(
+        "input[type=submit], button[type=submit]") : null;
+      if (btn) { btn.click(); } else { f.submit(); }
+    }, 150);
+  } catch (e) { /* fail-open — never block manual login */ }
+})();
+</script>
+</body>
+</html>

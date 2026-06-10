@@ -415,6 +415,228 @@ def test_apply_rejects_wan_and_tunnel_ports(app, client, monkeypatch):
     assert fake.calls == []
 
 
+# ─── الإدارة الاحترافية لكشف اللوب (يونيو 2026) ───────────────────
+#   • apply-port: تطبيق/إزالة منفذًا منفذًا (JSON) + حالة تراكمية صادقة.
+#   • سجل الفحوصات (router_loop_checks) من الفحص اليدوي.
+#   • إعدادات الفحص الدوري + احترام الـpoller لها.
+#   • جدول حالة المنافذ + بانر التناقض بين المحفوظ والواقع.
+
+
+def test_apply_port_updates_state_incrementally(app, client, monkeypatch):
+    """apply-port يدفع سكربت المنفذ الواحد ويُحدّث الحالة تراكميًا —
+    منفذان ناجحان يظهران معًا، وإزالة أحدهما تُبقي الآخر."""
+    _seed(app)
+    _install_real_script(monkeypatch, "loop_detect")
+    fake = _FakeClient()
+    from app.radius.routes import port_script_services as route
+    monkeypatch.setattr(route, "_connect_client", lambda nas: fake)
+    monkeypatch.setattr(route, "_discover", lambda nas: [
+        {"name": "ether2", "running": True, "type": "ether"},
+        {"name": "ether3", "running": True, "type": "ether"},
+    ])
+    _login(client)
+    token = _csrf(client)
+
+    res = client.post(
+        "/admin/radius/mt/1/port-services/loop_detect/apply-port",
+        data={"_csrf_token": token, "port": "ether2", "mode": "apply"},
+    )
+    assert res.status_code == 200
+    data = res.get_json()
+    assert data["ok"] is True and data["port"] == "ether2"
+    assert [p for p, _ in fake.calls] == [
+        "/system/script/add", "/system/script/run", "/system/script/remove",
+    ]
+    assert "ether2" in fake.calls[0][1]["source"]
+
+    res2 = client.post(
+        "/admin/radius/mt/1/port-services/loop_detect/apply-port",
+        data={"_csrf_token": token, "port": "ether3", "mode": "apply"},
+    )
+    assert res2.get_json()["ok"] is True
+    # الحالة تراكمت: المنفذان معًا
+    from app.radius.routes.port_script_services import _get_state
+    with app.app_context(), app.test_request_context():
+        st = _get_state(1, "loop_detect")
+    assert st["enabled"] is True
+    assert st["ports"] == ["ether2", "ether3"]
+
+    # إزالة منفذ واحد تُبقي الآخر
+    res3 = client.post(
+        "/admin/radius/mt/1/port-services/loop_detect/apply-port",
+        data={"_csrf_token": token, "port": "ether2", "mode": "remove"},
+    )
+    assert res3.get_json()["ok"] is True
+    with app.app_context(), app.test_request_context():
+        st2 = _get_state(1, "loop_detect")
+    assert st2["enabled"] is True
+    assert st2["ports"] == ["ether3"]
+
+
+def test_apply_port_failure_keeps_state_honest(app, client, monkeypatch):
+    """فشل التركيب على منفذ لا يُسجّله «مفعّلًا» — مصدر التناقض القديم:
+    بانر أخضر يدّعي 8 منافذ بينما القاعدة مركّبة على 5 فقط."""
+    _seed(app)
+    _install_real_script(monkeypatch, "loop_detect")
+    from app.radius.routes import port_script_services as route
+    monkeypatch.setattr(route, "_discover", lambda nas: [
+        {"name": "ether2", "running": True, "type": "ether"},
+    ])
+    monkeypatch.setattr(
+        route, "_push_to_router",
+        lambda nas, plan, comment: (None, "تعذّر الاتصال بالراوتر"))
+    _login(client)
+    token = _csrf(client)
+    res = client.post(
+        "/admin/radius/mt/1/port-services/loop_detect/apply-port",
+        data={"_csrf_token": token, "port": "ether2", "mode": "apply"},
+    )
+    data = res.get_json()
+    assert data["ok"] is False
+    assert "تعذّر الاتصال" in data["error"]
+    from app.radius.routes.port_script_services import _get_state
+    with app.app_context(), app.test_request_context():
+        st = _get_state(1, "loop_detect")
+    assert st["enabled"] is False and st["ports"] == []
+
+
+def test_loop_check_writes_history_and_page_shows_it(app, client, monkeypatch):
+    """كل فحص يدوي يُدوَّن في سجل router_loop_checks بملخّصه (منافذ/لوب/
+    قواعد مفقودة) وتفاصيل كل منفذ، ويظهر في قسم «سجل الفحوصات»."""
+    _seed(app)
+    from app.radius.routes import port_script_services as route
+    monkeypatch.setattr(route, "_discover", lambda nas: [])
+
+    class _Res:
+        ok = True
+        error = ""
+        def __init__(self, data):
+            self.data = data
+
+    monkeypatch.setattr(route.mac, "dhcp_client_list", lambda nas: _Res([
+        {"interface": "ether2", "status": "bound",
+         "address": "10.0.0.4/24", "comment": "HR-LoopDetect ether2"},
+        {"interface": "ether3", "status": "searching...",
+         "comment": "HR-LoopDetect ether3"},
+    ]))
+    _login(client)
+    token = _csrf(client)
+    res = client.post(
+        "/admin/radius/mt/1/port-services/loop_detect/loop-check",
+        data={"_csrf_token": token, "ports": "ether2,ether3,ether4"},
+    )
+    assert res.status_code == 200
+
+    with app.app_context():
+        from app.radius.db.repos import router_loop_checks_repo
+        checks = router_loop_checks_repo.list_for_router(1, 1)
+    assert len(checks) == 1
+    c = checks[0]
+    assert c["source"] == "manual" and c["ok"] == 1
+    assert c["ports_total"] == 3
+    assert c["loops_found"] == 1          # ether2 bound
+    assert c["rules_missing"] == 1        # ether4 بلا قاعدة
+    assert {d["iface"] for d in c["details"]} == {"ether2", "ether3", "ether4"}
+
+    # السجل ظاهر في الصفحة (نفس استجابة الفحص تعرضه)
+    body = res.get_data(as_text=True)
+    assert "سجل الفحوصات" in body
+    assert 'data-pss-loop-check=' in body
+    # وجدول الحالة يعرض القاعدة المفقودة + بانر التناقض غائب (لا حالة محفوظة)
+    assert "حالة منافذ كشف اللوب" in body
+    assert 'data-pss-loop-row="ether4"' in body
+
+
+def test_loop_table_mismatch_banner_when_saved_state_disagrees(app, client, monkeypatch):
+    """الحالة المحفوظة تقول «مفعّلة على ether2,ether3» بينما الفحص الحي
+    يجد قاعدة على ether2 فقط ⇒ بانر تناقض صريح + صفّ «غير مركّبة»."""
+    _seed(app)
+    from app.radius.routes import port_script_services as route
+    monkeypatch.setattr(route, "_discover", lambda nas: [])
+
+    class _Res:
+        ok = True
+        error = ""
+        def __init__(self, data):
+            self.data = data
+
+    monkeypatch.setattr(route.mac, "dhcp_client_list", lambda nas: _Res([
+        {"interface": "ether2", "status": "searching...",
+         "comment": "HR-LoopDetect ether2"},
+    ]))
+    _login(client)
+    with app.app_context():
+        from app.radius.db.repos import tenants_repo
+        tenants_repo.set_setting(1, "pss.1.loop_detect.enabled", "1")
+        tenants_repo.set_setting(1, "pss.1.loop_detect.ports", "ether2,ether3")
+    token = _csrf(client)
+    res = client.post(
+        "/admin/radius/mt/1/port-services/loop_detect/loop-check",
+        data={"_csrf_token": token},  # المنافذ من الحالة المحفوظة
+    )
+    body = res.get_data(as_text=True)
+    assert res.status_code == 200
+    # بانر التناقض يسمّي المنفذ الناقص
+    assert "data-pss-loop-mismatch" in body
+    assert "ether3" in body
+    # الجدول: ether2 مركّبة، ether3 غير مركّبة مع زر تركيب
+    assert 'data-pss-loop-row="ether2"' in body
+    assert 'data-pss-loop-row="ether3"' in body
+    assert "غير مركّبة" in body
+    assert 'data-pss-port-action="apply" data-pss-port="ether3"' in body
+
+
+def test_loop_poll_settings_saved_and_respected_by_poller(app, client, monkeypatch):
+    """حفظ إعدادات الفحص الدوري من الصفحة + احترام الـpoller لها:
+    معطَّل ⇒ لا فحص، فترة لم تنقضِ ⇒ لا فحص، انقضت/لا سجل ⇒ فحص."""
+    _seed(app)
+    from app.radius.routes import port_script_services as route
+    monkeypatch.setattr(route, "_discover", lambda nas: [])
+    _login(client)
+    token = _csrf(client)
+    res = client.post(
+        "/admin/radius/mt/1/port-services/loop_detect/loop-settings",
+        data={"_csrf_token": token, "poll_minutes": "30"},  # بلا poll_enabled = إيقاف
+        follow_redirects=False,
+    )
+    assert res.status_code in {302, 303}
+    page = client.get(
+        "/admin/radius/mt/1/port-services?slug=loop_detect"
+    ).get_data(as_text=True)
+    assert "الفحص الدوري التلقائي" in page
+    assert 'value="30"' in page
+
+    from app.workers.loop_probe_poller import _poll_due
+    with app.app_context():
+        # معطَّل ⇒ ليس مستحقًا
+        assert _poll_due(1, 1, {"enabled": False, "minutes": 30}) is False
+        # مفعَّل بلا سجل سابق ⇒ مستحق الآن
+        assert _poll_due(1, 1, {"enabled": True, "minutes": 30}) is True
+        # فحص دوري للتو ⇒ غير مستحق قبل انقضاء الفترة
+        from app.radius.db.repos import router_loop_checks_repo
+        router_loop_checks_repo.insert_check(
+            tenant_id=1, router_id=1, source="poller", ok=True, details=[])
+        assert _poll_due(1, 1, {"enabled": True, "minutes": 30}) is False
+
+
+def test_poller_logs_checks_in_history(app, client):
+    """دورة الـpoller تسجّل فحصًا في السجل (source=poller) بنتائجه."""
+    _seed(app)
+    with app.app_context():
+        from app.workers.loop_probe_poller import record_router_probes
+        record_router_probes(1, 1, [
+            {"interface": "ether2", "status": "bound",
+             "address": "10.0.0.9/24", "comment": "HR-LoopDetect ether2"},
+        ], only_ports=["ether2", "ether3"], log_source="poller")
+        from app.radius.db.repos import router_loop_checks_repo
+        checks = router_loop_checks_repo.list_for_router(1, 1)
+    assert len(checks) == 1
+    assert checks[0]["source"] == "poller"
+    assert checks[0]["ports_total"] == 2
+    assert checks[0]["loops_found"] == 1
+    assert checks[0]["rules_missing"] == 1
+
+
 def test_picker_hides_wan_and_tunnel_interfaces(app, client, monkeypatch):
     """ISSUE B — تكامل عرض: شبكة المربّعات تعرض ether2..ether8 + sfp1 فقط،
     ولا تعرض ether1 (WAN افتراضي) ولا hr-wg/hr-pppoe-ether1/lo/hobe-vpn."""

@@ -1,0 +1,1719 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  
+  <meta name="csrf-token" content="SqViJXMmqMSHGGUNlpxw-eNwSMUm68fu">
+  <title>مركز الأحداث — Hobe Hub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <style>
+    /* Local Cairo fallback — keeps the UI (and the card SVG preview)
+       on the exact same family the PDF export embeds, even when the
+       Google Fonts CDN is unreachable. The CDN stylesheet below is
+       parsed later, so when it loads its faces win (unchanged look);
+       offline, these shipped TTFs take over. */
+    @font-face{font-family:'Cairo';font-style:normal;font-weight:400;font-display:swap;
+      src:url("/static/fonts/Cairo-Regular.ttf") format('truetype')}
+    @font-face{font-family:'Cairo';font-style:normal;font-weight:500 700;font-display:swap;
+      src:url("/static/fonts/Cairo-Bold.ttf") format('truetype')}
+    @font-face{font-family:'Cairo';font-style:normal;font-weight:800 900;font-display:swap;
+      src:url("/static/fonts/Cairo-Black.ttf") format('truetype')}
+    /* خط المراعي (Almarai) — خط البطاقات الأساسي: معاينة SVG في مصمم
+       البطاقات تطلب 'Almarai' أولًا، وتصدير PDF يرسم بنفس ملفات TTF
+       المشحونة هذه، فتتطابق المعاينة مع الملف المطبوع حرفًا بحرف.
+       الأوزان: 400 عادي، 700 عريض، 800-950 عريض جدًا (ExtraBold). */
+    @font-face{font-family:'Almarai';font-style:normal;font-weight:400;font-display:swap;
+      src:url("/static/fonts/Almarai-Regular.ttf") format('truetype')}
+    @font-face{font-family:'Almarai';font-style:normal;font-weight:500 700;font-display:swap;
+      src:url("/static/fonts/Almarai-Bold.ttf") format('truetype')}
+    @font-face{font-family:'Almarai';font-style:normal;font-weight:800 950;font-display:swap;
+      src:url("/static/fonts/Almarai-ExtraBold.ttf") format('truetype')}
+  </style>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap">
+  
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="/static/css/admin_layout.css">
+  <link rel="stylesheet" href="/static/css/sidebar_v2.css">
+  <link rel="stylesheet" href="/static/css/hub_v2.css">
+  
+  <link rel="stylesheet" href="/static/css/unified_design.css">
+  <link rel="stylesheet" href="/static/css/admin_design_system.css">
+  <link rel="stylesheet" href="/static/css/admin_visual_polish.css">
+  <link rel="stylesheet" href="/static/css/reports.css">
+  <style>
+    /* ───── Light topbar overrides (Sidebar Rebuild) ───── */
+    .topbar{
+      background:#FFFFFF !important;
+      border-bottom:1px solid #EEEDF3 !important;
+      box-shadow:0 1px 0 rgba(15,23,42,.02);
+      /* Sit BESIDE the sidebar, not above it. The topbar's inline-start
+         edge (visual RIGHT in RTL) is offset by the sidebar's current
+         width, so the sidebar runs the full viewport height while the
+         topbar covers only the content area. Transition matches the
+         sidebar's collapse animation so they move together. */
+      inset-inline-start:var(--hb-side-current-w, var(--hr-sidebar-w, 260px)) !important;
+      inset-inline-end:0 !important;
+      transition:inset-inline-start .2s ease, padding .2s ease;
+      flex-direction:row-reverse !important;
+    }
+    /* The big brand block on the right of the topbar duplicated the
+       sidebar's Ho mark + 'Hobe Hub' wordmark. Now hidden — sidebar
+       owns the brand. */
+    .topbar .brand-area{ display:none !important; }
+    /* On mobile (sidebar becomes a drawer), the topbar reclaims the
+       full width — drawer floats over it instead of sitting beside. */
+    @media (max-width: 900px){
+      .topbar{ inset-inline-start:0 !important; }
+    }
+    .topbar .brand-area{
+      color:#1F2937;
+      border-inline-start:1px solid #EEEDF3;
+    }
+    .topbar .brand-area .logo-mark{
+      background:linear-gradient(135deg,#6B5AED,#5B4BD8) !important;
+      box-shadow:0 3px 8px rgba(107,90,237,.25);
+    }
+    .topbar .actions .ic{
+      color:#475569;
+    }
+    .topbar .actions .ic:hover{
+      background:#F4F1FE;
+      color:#6B5AED;
+    }
+    .topbar .actions .ic .dot{
+      background:#EF4444;
+    }
+    .topbar .user-pill{
+      background:#F4F1FE !important;
+      color:#1F2937 !important;
+      border:1px solid #E3E1EC;
+    }
+    .topbar .user-pill .ava{
+      background:linear-gradient(135deg,#6B5AED,#5B4BD8) !important;
+      color:#fff !important;
+    }
+    .topbar .tenant-pill{
+      background:#F4F1FE !important;
+      color:#1F2937 !important;
+      border:1px solid #E3E1EC !important;
+    }
+    .topbar .tenant-pill .fa-building{
+      color:#6B5AED !important;
+    }
+    /* Hamburger button — only visible on mobile */
+    .topbar .hb-burger{
+      display:none;
+      width:36px;height:36px;
+      border:0;background:transparent;border-radius:8px;
+      color:#475569;font-size:16px;cursor:pointer;
+      margin-inline-end:8px;
+    }
+    .topbar .hb-burger:hover{background:#F4F1FE;color:#6B5AED}
+    @media (max-width: 900px){
+      .topbar .hb-burger{display:inline-grid;place-items:center}
+      .topbar .brand-area{width:auto;border-inline-start:0;padding-inline-start:0}
+    }
+  </style>
+  <style>
+    .hr-page-nav-host{max-width:1240px!important}
+    .hr-page-nav{
+      background:#fff;border:1px solid var(--hr-border);border-radius:8px;
+      box-shadow:var(--hr-shadow-sm);padding:12px;min-width:0;
+    }
+    .hr-page-nav-title{
+      display:flex;align-items:center;gap:8px;margin:2px 0 10px;
+      font-size:13px;font-weight:900;color:var(--hr-text);
+    }
+    .hr-page-nav-title i{color:var(--hr-cyan-700);font-size:12px}
+    .hr-page-nav-list{display:flex;flex-direction:column;gap:4px}
+    .hr-page-nav-list a{
+      display:flex;align-items:center;gap:8px;min-height:32px;padding:7px 8px;
+      border-radius:7px;color:var(--hr-text-soft);font-size:12px;font-weight:800;
+      text-decoration:none;transition:.16s ease;
+    }
+    .hr-page-nav-list a i{width:14px;text-align:center;color:var(--hr-text-muted);font-size:11px}
+    .hr-page-nav-list a:hover,.hr-page-nav-list a.is-active{
+      background:var(--hr-cyan-100);color:var(--hr-cyan-800,#0f7492);
+    }
+    .hr-page-nav-list a:hover i,.hr-page-nav-list a.is-active i{color:var(--hr-cyan-700)}
+    .hr-page-nav-note{
+      margin-top:12px;padding:10px;border:1px dashed var(--hr-border);
+      border-radius:7px;background:var(--hr-soft);font-size:11.5px;line-height:1.8;
+      color:var(--hr-text-muted);
+    }
+    .sec-card,.card{scroll-margin-top:96px}
+    .field-help.auto-help,.hint.auto-help{
+      display:block;flex-basis:100%;width:100%;margin-top:3px;
+      font-size:11px;line-height:1.7;color:var(--hr-text-muted);
+    }
+    @media (min-width:1180px){
+      .hr-page-nav-host{
+        display:grid!important;grid-template-columns:214px minmax(0,1fr);
+        gap:16px;align-items:start;direction:ltr;
+      }
+      .hr-page-nav-host > .hr-page-nav{
+        grid-column:1;position:sticky;top:84px;direction:rtl;z-index:5;
+      }
+      .hr-page-nav-host > form,
+      .hr-page-nav-host > .hr-page-main,
+      .hr-page-nav-host > .sec-card,
+      .hr-page-nav-host > .card,
+      .hr-page-nav-host > .actions-bar{
+        grid-column:2;direction:rtl;min-width:0;
+      }
+    }
+    @media (max-width:1179px){
+      .hr-page-nav{margin-bottom:12px}
+      .hr-page-nav-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+    }
+    @media (max-width:640px){
+      .hr-page-nav{padding:10px}
+      .hr-page-nav-list{grid-template-columns:1fr}
+    }
+  </style>
+  <link rel="stylesheet" href="/static/css/ops_risk_redesign.css">
+<link rel="stylesheet" href="/static/css/unified_design.css">
+</head>
+<body>
+
+
+<div class="hb-bg-net" aria-hidden="true">
+  <span class="hb-orb hb-orb-a"></span>
+  <span class="hb-orb hb-orb-b"></span>
+  <span class="hb-wifi hb-wifi-a1"></span>
+  <span class="hb-wifi hb-wifi-a2"></span>
+  <span class="hb-wifi hb-wifi-a3"></span>
+  <span class="hb-wifi hb-wifi-b1"></span>
+  <span class="hb-wifi hb-wifi-b2"></span>
+  <span class="hb-wifi hb-wifi-b3"></span>
+  <span class="hb-node hb-node-1"></span>
+  <span class="hb-node hb-node-2"></span>
+  <span class="hb-node hb-node-3"></span>
+  <span class="hb-node hb-node-4"></span>
+  <span class="hb-node hb-node-5"></span>
+  <span class="hb-pkt  hb-pkt-1"></span>
+  <span class="hb-pkt  hb-pkt-2"></span>
+  <span class="hb-pkt  hb-pkt-3"></span>
+</div>
+
+<header class="topbar">
+  <button type="button" class="hb-burger" data-hb-mobile-open aria-label="فتح القائمة">
+    <i class="fa-solid fa-bars"></i>
+  </button>
+  <div class="actions">
+    
+    <a class="ic" title="إعدادات الراديوس"
+       href="/admin/radius/settings">
+      <i class="fa-solid fa-gear"></i>
+    </a>
+    
+    
+    
+    <div class="bell-wrap" style="position:relative">
+      <a class="ic" title="مركز التنبيهات" href="/admin/radius/alerts" id="bell-toggle"
+         onclick="var m=document.getElementById('bell-menu');if(m){event.preventDefault();m.classList.toggle('open');m.style.display=m.classList.contains('open')?'block':'none';}">
+        <i class="fa-solid fa-bell"></i>
+        <span class="dot">4</span>
+      </a>
+      
+      <div id="bell-menu"
+           style="display:none;position:absolute;top:44px;inset-inline-end:0;background:#fff;
+                  border:1px solid #EEEDF3;border-radius:14px;padding:6px;
+                  box-shadow:0 10px 30px rgba(15,23,42,.10), 0 2px 8px rgba(15,23,42,.06);
+                  min-width:300px;max-width:340px;z-index:90;overflow:hidden">
+        <div style="padding:8px 12px;font-size:11px;color:#2E1F8C;
+                    letter-spacing:.4px;font-weight:800;border-radius:9px;
+                    background:#F4F1FE;margin-bottom:4px;
+                    display:flex;align-items:center;justify-content:space-between">
+          <span><i class="fa-solid fa-bell" style="font-size:10px;margin-inline-end:5px;color:#6B5AED"></i>التنبيهات المفتوحة</span>
+          <span style="background:#EDE9FE;color:#2E1F8C;border-radius:999px;padding:1px 8px;font-size:10.5px">4</span>
+        </div>
+        
+          
+          
+          <a href="/admin/radius/alerts/1"
+             style="display:flex;align-items:flex-start;gap:9px;padding:9px 10px;text-decoration:none;
+                    color:#1F2937;font-size:12.5px;line-height:1.6;border-radius:9px"
+             onmouseover="this.style.background='#F4F1FE'"
+             onmouseout="this.style.background='transparent'">
+            <i class="fa-solid fa-triangle-exclamation"
+               style="margin-top:3px;font-size:12px;
+                      color:#F59E0B"></i>
+            <span style="flex:1;font-weight:700">MT-HQ-Core بلا نسخة احتياطية</span>
+            <i class="fa-solid fa-chevron-left" style="margin-top:4px;font-size:9px;color:#94A3B8"></i>
+          </a>
+          
+          
+          <a href="/admin/radius/alerts/2"
+             style="display:flex;align-items:flex-start;gap:9px;padding:9px 10px;text-decoration:none;
+                    color:#1F2937;font-size:12.5px;line-height:1.6;border-radius:9px"
+             onmouseover="this.style.background='#F4F1FE'"
+             onmouseout="this.style.background='transparent'">
+            <i class="fa-solid fa-triangle-exclamation"
+               style="margin-top:3px;font-size:12px;
+                      color:#F59E0B"></i>
+            <span style="flex:1;font-weight:700">MT-Branch-A بلا نسخة احتياطية</span>
+            <i class="fa-solid fa-chevron-left" style="margin-top:4px;font-size:9px;color:#94A3B8"></i>
+          </a>
+          
+          
+          <a href="/admin/radius/alerts/3"
+             style="display:flex;align-items:flex-start;gap:9px;padding:9px 10px;text-decoration:none;
+                    color:#1F2937;font-size:12.5px;line-height:1.6;border-radius:9px"
+             onmouseover="this.style.background='#F4F1FE'"
+             onmouseout="this.style.background='transparent'">
+            <i class="fa-solid fa-triangle-exclamation"
+               style="margin-top:3px;font-size:12px;
+                      color:#F59E0B"></i>
+            <span style="flex:1;font-weight:700">MT-PPPoE بلا نسخة احتياطية</span>
+            <i class="fa-solid fa-chevron-left" style="margin-top:4px;font-size:9px;color:#94A3B8"></i>
+          </a>
+          
+          
+          <a href="/admin/radius/alerts/4"
+             style="display:flex;align-items:flex-start;gap:9px;padding:9px 10px;text-decoration:none;
+                    color:#1F2937;font-size:12.5px;line-height:1.6;border-radius:9px"
+             onmouseover="this.style.background='#F4F1FE'"
+             onmouseout="this.style.background='transparent'">
+            <i class="fa-solid fa-circle-info"
+               style="margin-top:3px;font-size:12px;
+                      color:#3D8DD6"></i>
+            <span style="flex:1;font-weight:700">MT-Lab معطّل</span>
+            <i class="fa-solid fa-chevron-left" style="margin-top:4px;font-size:9px;color:#94A3B8"></i>
+          </a>
+          
+        
+        <a href="/admin/radius/alerts"
+           style="display:block;margin-top:4px;padding:9px 12px;text-decoration:none;text-align:center;
+                  color:#6B5AED;font-size:11.5px;font-weight:800;background:#F4F1FE;border-radius:9px"
+           onmouseover="this.style.background='#EDE9FE'"
+           onmouseout="this.style.background='#F4F1FE'">
+          عرض كل التنبيهات <i class="fa-solid fa-arrow-left" style="font-size:10px"></i>
+        </a>
+      </div>
+    </div>
+    <a class="ic" title="رسائل لوحة التراخيص"
+       href="/admin/radius/communications/deliveries">
+      <i class="fa-solid fa-envelope"></i>
+      <span class="dot">3</span>
+    </a>
+
+    
+    
+    <div class="lang-wrap" style="position:relative">
+      <span class="lang-pill" id="lang-toggle"
+            onclick="document.getElementById('lang-menu').classList.toggle('open')"
+            title="تغيير اللغة"
+            style="display:flex;align-items:center;gap:7px;background:#F4F1FE;
+                   color:#1F2937;padding:5px 12px;border-radius:8px;font-size:12px;
+                   font-weight:700;cursor:pointer;border:1px solid #E3E1EC">
+        <span style="font-size:14px;line-height:1">🇸🇦</span>
+        <span>العربية</span>
+        <i class="fa-solid fa-caret-down" style="font-size:9px;opacity:.7"></i>
+      </span>
+      <div id="lang-menu"
+           style="display:none;position:absolute;top:44px;inset-inline-end:0;background:#fff;
+                  border:1px solid #EEEDF3;border-radius:14px;padding:6px;
+                  box-shadow:0 10px 30px rgba(15,23,42,.10), 0 2px 8px rgba(15,23,42,.06);
+                  min-width:200px;z-index:90;overflow:hidden">
+        <div style="padding:8px 12px;font-size:11px;color:#2E1F8C;
+                    letter-spacing:.4px;font-weight:800;border-radius:9px;
+                    background:#F4F1FE;margin-bottom:4px">
+          <i class="fa-solid fa-globe" style="font-size:10px;margin-inline-end:5px;color:#6B5AED"></i>اللغة
+        </div>
+        
+        
+        <a href="/admin/radius/set-locale?locale=ar&amp;next=/admin/radius/events"
+           style="display:flex;align-items:center;gap:9px;padding:9px 10px;text-decoration:none;
+                  color:#1F2937;font-size:12.5px;font-weight:700;border-radius:9px;
+                  background:#F4F1FE"
+           onmouseover="this.style.background='#F4F1FE'"
+           onmouseout="this.style.background='#F4F1FE'">
+          <span style="font-size:15px;line-height:1">🇸🇦</span>
+          <span style="flex:1">العربية</span>
+          <i class="fa-solid fa-check" style="font-size:10px;color:#6B5AED"></i>
+        </a>
+        
+        
+        <a href="/admin/radius/set-locale?locale=en&amp;next=/admin/radius/events"
+           style="display:flex;align-items:center;gap:9px;padding:9px 10px;text-decoration:none;
+                  color:#1F2937;font-size:12.5px;font-weight:700;border-radius:9px;
+                  "
+           onmouseover="this.style.background='#F4F1FE'"
+           onmouseout="this.style.background='transparent'">
+          <span style="font-size:15px;line-height:1">🇬🇧</span>
+          <span style="flex:1">English</span>
+          
+        </a>
+        
+        
+        <a href="/admin/radius/set-locale?locale=fr&amp;next=/admin/radius/events"
+           style="display:flex;align-items:center;gap:9px;padding:9px 10px;text-decoration:none;
+                  color:#1F2937;font-size:12.5px;font-weight:700;border-radius:9px;
+                  "
+           onmouseover="this.style.background='#F4F1FE'"
+           onmouseout="this.style.background='transparent'">
+          <span style="font-size:15px;line-height:1">🇫🇷</span>
+          <span style="flex:1">Français</span>
+          
+        </a>
+        
+        
+        <a href="/admin/radius/set-locale?locale=tr&amp;next=/admin/radius/events"
+           style="display:flex;align-items:center;gap:9px;padding:9px 10px;text-decoration:none;
+                  color:#1F2937;font-size:12.5px;font-weight:700;border-radius:9px;
+                  "
+           onmouseover="this.style.background='#F4F1FE'"
+           onmouseout="this.style.background='transparent'">
+          <span style="font-size:15px;line-height:1">🇹🇷</span>
+          <span style="flex:1">Türkçe</span>
+          
+        </a>
+        
+        
+        <a href="/admin/radius/set-locale?locale=es&amp;next=/admin/radius/events"
+           style="display:flex;align-items:center;gap:9px;padding:9px 10px;text-decoration:none;
+                  color:#1F2937;font-size:12.5px;font-weight:700;border-radius:9px;
+                  "
+           onmouseover="this.style.background='#F4F1FE'"
+           onmouseout="this.style.background='transparent'">
+          <span style="font-size:15px;line-height:1">🇪🇸</span>
+          <span style="flex:1">Español</span>
+          
+        </a>
+        
+      </div>
+    </div>
+
+    
+    
+    
+    <div class="tenant-switch" style="position:relative">
+      <span class="tenant-pill"
+            onclick="document.getElementById('tenant-menu').classList.toggle('open')"
+            style="display:flex;align-items:center;gap:7px;background:rgba(255,255,255,.06);
+                   color:#cdd3da;padding:5px 12px;border-radius:6px;font-size:12px;
+                   font-weight:700;cursor:pointer;border:1px solid rgba(255,255,255,.08)">
+        <i class="fa-solid fa-building" style="font-size:11px;color:var(--hr-cyan-500)"></i>
+        <span>Hobe Hub</span>
+        <i class="fa-solid fa-caret-down" style="font-size:9px;opacity:.7"></i>
+      </span>
+      <div id="tenant-menu"
+           style="display:none;position:absolute;top:42px;inset-inline-end:0;background:#fff;
+                  border:1px solid var(--hr-border);border-radius:8px;
+                  box-shadow:var(--hr-shadow-pop);min-width:220px;z-index:60;overflow:hidden">
+        <div style="padding:7px 12px;font-size:10px;color:var(--hr-text-muted);
+                    text-transform:uppercase;letter-spacing:.8px;font-weight:800;
+                    border-bottom:1px solid var(--hr-border);background:var(--hr-soft)">
+          تبديل الجهة
+        </div>
+        
+        <form method="post" action="/admin/radius/switch-tenant" style="margin:0"><input type="hidden" name="_csrf_token" value="SqViJXMmqMSHGGUNlpxw-eNwSMUm68fu">
+          <input type="hidden" name="tenant_id" value="1">
+          <button type="submit"
+                  style="width:100%;text-align:right;padding:9px 12px;border:0;background:transparent;
+                         color:var(--hr-text);font-family:inherit;font-size:12.5px;cursor:pointer;
+                         display:flex;align-items:center;gap:8px;
+                         background:var(--hr-cyan-100);font-weight:800">
+            <i class="fa-solid fa-check" style="color:var(--hr-cyan-700);font-size:10px"></i>
+            <span style="flex:1">Hobe Hub</span>
+            <span class="pill pill-cyan" style="font-size:9px">starter</span>
+          </button>
+        </form>
+        
+        <form method="post" action="/admin/radius/switch-tenant" style="margin:0"><input type="hidden" name="_csrf_token" value="SqViJXMmqMSHGGUNlpxw-eNwSMUm68fu">
+          <input type="hidden" name="tenant_id" value="2">
+          <button type="submit"
+                  style="width:100%;text-align:right;padding:9px 12px;border:0;background:transparent;
+                         color:var(--hr-text);font-family:inherit;font-size:12.5px;cursor:pointer;
+                         display:flex;align-items:center;gap:8px;
+                         ">
+            <span style="width:10px"></span>
+            <span style="flex:1">ACME ISP</span>
+            <span class="pill pill-cyan" style="font-size:9px">pro</span>
+          </button>
+        </form>
+        
+        
+        <a href="/admin/radius/tenants"
+           style="display:block;padding:8px 12px;border-top:1px solid var(--hr-border);
+                  text-decoration:none;color:var(--hr-cyan-700);font-size:11.5px;
+                  background:var(--hr-soft);font-weight:700">
+          <i class="fa-solid fa-cog"></i>&nbsp; إدارة الجهات
+        </a>
+        
+      </div>
+    </div>
+    
+
+    
+    <div style="position:relative">
+      <span class="user-pill"
+            onclick="document.getElementById('user-menu').classList.toggle('open')"
+            style="cursor:pointer">
+        <span class="ava">i</span>
+        <span>admin</span>
+        <i class="fa-solid fa-caret-down" style="font-size:10px;margin-inline-start:4px;opacity:.8"></i>
+      </span>
+      <div id="user-menu"
+           style="display:none;position:absolute;top:42px;inset-inline-end:0;background:#fff;
+                  border:1px solid var(--hr-border);border-radius:8px;
+                  box-shadow:var(--hr-shadow-pop);min-width:180px;z-index:60;overflow:hidden">
+        <a href="/admin/radius/account"
+           style="display:block;padding:9px 12px;text-decoration:none;color:var(--hr-text);font-size:12.5px;border-bottom:1px solid var(--hr-divider, var(--hr-border))">
+          <i class="fa-solid fa-user-shield"></i>&nbsp; الملف الشخصي
+        </a>
+        <a href="/admin/radius/logout"
+           style="display:block;padding:9px 12px;text-decoration:none;color:var(--hr-red);font-size:12.5px;background:#FCEEF1;font-weight:700">
+          <i class="fa-solid fa-right-from-bracket"></i>&nbsp; تسجيل الخروج
+        </a>
+      </div>
+    </div>
+  </div>
+  <div class="brand-area">
+    <span>Hobe Hub</span>
+    <span class="logo-mark"
+          style="background:linear-gradient(135deg, #2BAACC, #2BAACCDD)">
+      Ho
+    </span>
+  </div>
+</header>
+
+
+
+
+
+
+
+
+<aside class="hb-side" id="hb-side">
+
+  
+  <div class="hb-side-brand">
+    <div class="hb-side-logo">
+      <span class="hb-side-logo-mark">Ho</span>
+      <div class="hb-side-logo-text">
+        <div class="hb-side-logo-title">Hobe Hub</div>
+        <div class="hb-side-logo-sub">مركز الإدارة</div>
+      </div>
+    </div>
+    <button type="button" class="hb-side-collapse-btn"
+            data-hb-toggle="collapse"
+            aria-label="طيّ القائمة">
+      <i class="fa-solid fa-chevron-right"></i>
+    </button>
+    <button type="button" class="hb-side-mobile-close"
+            data-hb-toggle="mobile-close"
+            aria-label="إغلاق">
+      <i class="fa-solid fa-xmark"></i>
+    </button>
+  </div>
+
+  
+  <nav class="hb-side-nav" aria-label="القائمة الرئيسية">
+
+    
+    <a class="hb-side-item"
+       href="/admin/radius/"
+       data-hb-label="لوحة التحكم">
+      <span class="hb-side-icon"><i class="fa-solid fa-gauge-high"></i></span>
+      <span class="hb-side-text">لوحة التحكم</span>
+    </a>
+
+    
+    <div class="hb-side-section"
+         data-hb-section="subscribers" data-hb-tone="sky">
+      <button type="button" class="hb-side-section-head"
+              data-hb-section-toggle data-hb-label="المشتركون">
+        <span class="hb-side-icon"><i class="fa-solid fa-users"></i></span>
+        <span class="hb-side-text">المشتركون</span>
+        <span class="hb-side-chevron"><i class="fa-solid fa-chevron-down"></i></span>
+      </button>
+      <div class="hb-side-section-body"><div class="hb-side-section-body-inner">
+        <a class="hb-side-subitem"
+   href="/admin/radius/subscribers/overview">
+  <span class="hb-side-text">نظرة عامة</span>
+</a>
+        <a class="hb-side-subitem"
+   href="/admin/radius/subscribers">
+  <span class="hb-side-text">المشتركين 360</span>
+</a>
+        <a class="hb-side-subitem"
+   href="/admin/radius/users/new">
+  <span class="hb-side-text">إضافة مشترك</span>
+</a>
+        <a class="hb-side-subitem"
+   href="/admin/radius/subscriber-groups">
+  <span class="hb-side-text">مجموعات المشتركين</span>
+</a>
+        <a class="hb-side-subitem"
+   href="/admin/radius/online">
+  <span class="hb-side-text">المشتركون المتصلون</span>
+</a>
+      </div></div>
+    </div>
+    
+
+    
+    <div class="hb-side-section"
+         data-hb-section="cards" data-hb-tone="indigo">
+      <button type="button" class="hb-side-section-head"
+              data-hb-section-toggle data-hb-label="البطاقات">
+        <span class="hb-side-icon"><i class="fa-solid fa-id-card"></i></span>
+        <span class="hb-side-text">البطاقات</span>
+        <span class="hb-side-chevron"><i class="fa-solid fa-chevron-down"></i></span>
+      </button>
+      <div class="hb-side-section-body"><div class="hb-side-section-body-inner">
+        <a class="hb-side-subitem"
+   href="/admin/radius/cards/overview">
+  <span class="hb-side-text">نظرة عامة</span>
+</a>
+        <a class="hb-side-subitem"
+   href="/admin/radius/cards/checker">
+  <span class="hb-side-text">فحص بطاقة</span>
+</a>
+        <a class="hb-side-subitem"
+   href="/admin/radius/cards/batches">
+  <span class="hb-side-text">حزم البطاقات</span>
+</a>
+        <a class="hb-side-subitem"
+   href="/admin/radius/cards/generate">
+  <span class="hb-side-text">إضافة حزمة</span>
+</a>
+        <a class="hb-side-subitem"
+   href="/admin/radius/cards/print">
+  <span class="hb-side-text">🖨️ بطاقات الطباعة</span>
+</a>
+        <a class="hb-side-subitem"
+   href="/admin/radius/online?type=card">
+  <span class="hb-side-text">البطاقات المتصلة</span>
+</a>
+        <a class="hb-side-subitem"
+   href="/admin/radius/print-templates">
+  <span class="hb-side-text">قوالب الطباعة</span>
+</a>
+      </div></div>
+    </div>
+    
+
+    
+    <div class="hb-side-section"
+         data-hb-section="electronic-cards" data-hb-tone="cyan">
+      <button type="button" class="hb-side-section-head"
+              data-hb-section-toggle data-hb-label="البطاقات الإلكترونية">
+        <span class="hb-side-icon"><i class="fa-solid fa-wallet"></i></span>
+        <span class="hb-side-text">البطاقات الإلكترونية</span>
+        <span class="hb-side-chevron"><i class="fa-solid fa-chevron-down"></i></span>
+      </button>
+      <div class="hb-side-section-body"><div class="hb-side-section-body-inner">
+        <a class="hb-side-subitem"
+   href="/admin/radius/card-marketplace">
+  <span class="hb-side-text">سوق البطاقات</span>
+</a>
+        <a class="hb-side-subitem"
+   href="/admin/radius/card-users">
+  <span class="hb-side-text">مستخدمو البطاقات</span>
+</a>
+        <a class="hb-side-subitem"
+   href="/admin/radius/cards/recharge">
+  <span class="hb-side-text">⚡ بطاقات الشحن المسبق</span>
+</a>
+        
+        
+          
+        
+        <a class="hb-side-subitem"
+           href="/admin/radius/store-support">
+          <span class="hb-side-text">دعم وطلبات المتجر</span>
+          
+        </a>
+          
+        
+      </div></div>
+    </div>
+    
+
+    
+    <div class="hb-side-section"
+         data-hb-section="offers" data-hb-tone="amber">
+      <button type="button" class="hb-side-section-head"
+              data-hb-section-toggle data-hb-label="العروض والسرعات">
+        <span class="hb-side-icon"><i class="fa-solid fa-tags"></i></span>
+        <span class="hb-side-text">العروض والسرعات</span>
+        <span class="hb-side-chevron"><i class="fa-solid fa-chevron-down"></i></span>
+      </button>
+      <div class="hb-side-section-body"><div class="hb-side-section-body-inner">
+        
+        <a class="hb-side-subitem"
+   href="/admin/radius/plans/overview">
+  <span class="hb-side-text">نظرة عامة</span>
+</a>
+        <a class="hb-side-subitem"
+   href="/admin/radius/plans">
+  <span class="hb-side-text">قائمة العروض</span>
+</a>
+        <a class="hb-side-subitem"
+   href="/admin/radius/plans/new">
+  <span class="hb-side-text">إضافة عرض</span>
+</a>
+        <a class="hb-side-subitem"
+   href="/admin/radius/bandwidth">
+  <span class="hb-side-text">السرعات</span>
+</a>
+        <a class="hb-side-subitem"
+   href="/admin/radius/bandwidth-schedules">
+  <span class="hb-side-text">جدولة السرعات</span>
+</a>
+      </div></div>
+    </div>
+    
+
+    
+    
+    <div class="hb-side-section"
+         data-hb-section="network" data-hb-tone="emerald">
+      <button type="button" class="hb-side-section-head"
+              data-hb-section-toggle data-hb-label="الشبكة">
+        <span class="hb-side-icon"><i class="fa-solid fa-network-wired"></i></span>
+        <span class="hb-side-text">الشبكة</span>
+        <span class="hb-side-chevron"><i class="fa-solid fa-chevron-down"></i></span>
+      </button>
+      <div class="hb-side-section-body"><div class="hb-side-section-body-inner">
+
+        
+        <div class="hb-side-subgroup"
+             data-hb-subgroup="network-routers">
+          <button type="button" class="hb-side-subhead" data-hb-subgroup-toggle>
+            <i class="fa-solid fa-server"></i><span class="hb-side-text">إدارة الراوترات</span>
+            <span class="hb-side-subchevron"><i class="fa-solid fa-chevron-down"></i></span>
+          </button>
+          <div class="hb-side-subgroup-body"><div class="hb-side-subgroup-body-inner">
+            
+            <a class="hb-side-subitem"
+   href="/admin/radius/mt/operations">
+  <span class="hb-side-text">🛜 غرفة عمليات الراوترات</span>
+</a>
+            <a class="hb-side-subitem"
+   href="/admin/radius/devices">
+  <span class="hb-side-text">أجهزة الشبكة</span>
+</a>
+            <a class="hb-side-subitem"
+   href="/admin/radius/pools">
+  <span class="hb-side-text">نطاقات العناوين</span>
+</a>
+            
+            <a class="hb-side-subitem"
+   href="/admin/radius/hotspot-errors">
+  <span class="hb-side-text">رسائل أخطاء الهوتسبوت</span>
+</a>
+            
+            <a class="hb-side-subitem"
+   href="/admin/radius/device-health">
+  <span class="hb-side-text">تتبع حالة الأجهزة</span>
+</a>
+            
+            
+            
+            
+          </div></div>
+        </div>
+        
+
+        
+        <div class="hb-side-subgroup"
+             data-hb-subgroup="network-setup">
+          <button type="button" class="hb-side-subhead" data-hb-subgroup-toggle>
+            <i class="fa-solid fa-wand-magic-sparkles"></i><span class="hb-side-text">إضافة وإعداد</span>
+            <span class="hb-side-subchevron"><i class="fa-solid fa-chevron-down"></i></span>
+          </button>
+          <div class="hb-side-subgroup-body"><div class="hb-side-subgroup-body-inner">
+            <a class="hb-side-subitem"
+   href="/admin/radius/mt/setup">
+  <span class="hb-side-text">إضافة راوتر (سريع)</span>
+</a>
+            <a class="hb-side-subitem"
+   href="/admin/radius/setup-wizard-v3">
+  <span class="hb-side-text">إعداد راوتر متقدم</span>
+</a>
+          </div></div>
+        </div>
+        
+
+        
+        <div class="hb-side-subgroup"
+             data-hb-subgroup="network-speed">
+          <button type="button" class="hb-side-subhead" data-hb-subgroup-toggle>
+            <i class="fa-solid fa-gauge-high"></i><span class="hb-side-text">التحكم بالسرعة</span>
+            <span class="hb-side-subchevron"><i class="fa-solid fa-chevron-down"></i></span>
+          </button>
+          <div class="hb-side-subgroup-body"><div class="hb-side-subgroup-body-inner">
+            <a class="hb-side-subitem"
+   href="/admin/radius/operations/speed-control">
+  <span class="hb-side-text">مجدول</span>
+</a>
+            <a class="hb-side-subitem"
+   href="/admin/radius/operations/speed-control/manual">
+  <span class="hb-side-text">يدوي</span>
+</a>
+          </div></div>
+        </div>
+        
+
+        
+        <div class="hb-side-subgroup"
+             data-hb-subgroup="network-watch">
+          <button type="button" class="hb-side-subhead" data-hb-subgroup-toggle>
+            <i class="fa-solid fa-satellite-dish"></i><span class="hb-side-text">المراقبة والسجلات</span>
+            <span class="hb-side-subchevron"><i class="fa-solid fa-chevron-down"></i></span>
+          </button>
+          <div class="hb-side-subgroup-body"><div class="hb-side-subgroup-body-inner">
+            <a class="hb-side-subitem"
+   href="/admin/radius/alerts">
+  <span class="hb-side-text">التنبيهات الذكيّة</span>
+</a>
+            <a class="hb-side-subitem"
+   href="/admin/radius/audit">
+  <span class="hb-side-text">سجل العمليات</span>
+</a>
+            
+          </div></div>
+        </div>
+        
+
+      </div></div>
+    </div>
+    
+
+    
+    <div class="hb-side-section"
+         data-hb-section="billing" data-hb-tone="green">
+      <button type="button" class="hb-side-section-head"
+              data-hb-section-toggle data-hb-label="المال والتحصيل">
+        <span class="hb-side-icon"><i class="fa-solid fa-file-invoice-dollar"></i></span>
+        <span class="hb-side-text">المال والتحصيل</span>
+        <span class="hb-side-chevron"><i class="fa-solid fa-chevron-down"></i></span>
+      </button>
+      <div class="hb-side-section-body"><div class="hb-side-section-body-inner">
+        
+        <a class="hb-side-subitem"
+   href="/admin/radius/recharge">
+  <span class="hb-side-text">⚡ لوحة الشحن</span>
+</a>
+        <a class="hb-side-subitem"
+   href="/admin/radius/finance-center">
+  <span class="hb-side-text">المركز المالي</span>
+</a>
+        <a class="hb-side-subitem"
+   href="/admin/radius/finance/accounting">
+  <span class="hb-side-text">السجل والتقارير المحاسبية</span>
+</a>
+        <a class="hb-side-subitem"
+   href="/admin/radius/finance/billing">
+  <span class="hb-side-text">الفواتير والكوبونات</span>
+</a>
+        
+        
+          
+        <a class="hb-side-subitem"
+           href="/admin/radius/finance/collection">
+          <span class="hb-side-text">التحصيل والمدفوعات</span>
+          
+          <span style="margin-inline-start:auto;display:inline-flex;align-items:center;gap:4px;padding:1px 8px;border-radius:999px;background:#FEF3C7;color:#B45309;font-size:10px;font-weight:900;border:1px solid #FDE68A;line-height:1.7"><i class="fa-solid fa-snowflake" style="font-size:9px"></i> مجمّد</span>
+          
+        </a>
+          
+        
+        
+        
+          
+        <a class="hb-side-subitem"
+           href="/admin/radius/payments-lab">
+          <span class="hb-side-text">مختبر الدفع الإلكتروني</span>
+          <span style="margin-inline-start:auto;display:inline-flex;align-items:center;gap:4px;padding:1px 8px;border-radius:999px;background:#F3EEFF;color:#6D28D9;font-size:10px;font-weight:900;border:1px solid #DDD0FB;line-height:1.7"><i class="fa-solid fa-flask" style="font-size:9px"></i> تجريبي</span>
+        </a>
+          
+        
+        <a class="hb-side-subitem"
+   href="/admin/radius/company-inventory">
+  <span class="hb-side-text">مخزون ومصروفات الشركة</span>
+</a>
+      </div></div>
+    </div>
+    
+
+    
+    <div class="hb-side-section is-open has-active"
+         data-hb-section="engagement" data-hb-tone="rose">
+      <button type="button" class="hb-side-section-head"
+              data-hb-section-toggle data-hb-label="التشغيل والمخاطر">
+        <span class="hb-side-icon"><i class="fa-solid fa-tower-broadcast"></i></span>
+        <span class="hb-side-text">التشغيل والمخاطر</span>
+        <span class="hb-side-chevron"><i class="fa-solid fa-chevron-down"></i></span>
+      </button>
+      <div class="hb-side-section-body"><div class="hb-side-section-body-inner">
+        
+        <a class="hb-side-subitem"
+   href="/admin/radius/communications">
+  <span class="hb-side-text">التواصل والحملات</span>
+</a>
+        <a class="hb-side-subitem"
+   href="/admin/radius/whatsapp">
+  <span class="hb-side-text">رسائل واتساب للمشتركين</span>
+</a>
+        
+        <a class="hb-side-subitem is-active"
+   href="/admin/radius/events">
+  <span class="hb-side-text">الأحداث والمخاطر</span>
+</a>
+        <a class="hb-side-subitem"
+   href="/admin/radius/operations">
+  <span class="hb-side-text">مركز العمليات</span>
+</a>
+      </div></div>
+    </div>
+    
+
+    
+    <div class="hb-side-section"
+         data-hb-section="reports" data-hb-tone="slate">
+      <button type="button" class="hb-side-section-head"
+              data-hb-section-toggle data-hb-label="التقارير">
+        <span class="hb-side-icon"><i class="fa-solid fa-chart-line"></i></span>
+        <span class="hb-side-text">التقارير</span>
+        <span class="hb-side-chevron"><i class="fa-solid fa-chevron-down"></i></span>
+      </button>
+      <div class="hb-side-section-body"><div class="hb-side-section-body-inner">
+        
+
+        
+        <div class="hb-side-subgroup"
+             data-hb-subgroup="reports-exec">
+          <button type="button" class="hb-side-subhead" data-hb-subgroup-toggle>
+            <i class="fa-solid fa-chart-line"></i><span class="hb-side-text">التقارير التنفيذية</span>
+            <span class="hb-side-subchevron"><i class="fa-solid fa-chevron-down"></i></span>
+          </button>
+          <div class="hb-side-subgroup-body"><div class="hb-side-subgroup-body-inner">
+            <a class="hb-side-subitem"
+   href="/admin/radius/reports">
+  <span class="hb-side-text">نظرة عامة</span>
+</a>
+            <a class="hb-side-subitem"
+   href="/admin/radius/reports/financial">
+  <span class="hb-side-text">التقرير المالي</span>
+</a>
+            <a class="hb-side-subitem"
+   href="/admin/radius/reports/cards">
+  <span class="hb-side-text">تقارير البطاقات</span>
+</a>
+            <a class="hb-side-subitem"
+   href="/admin/radius/reports/distributors">
+  <span class="hb-side-text">تقارير الموزعين</span>
+</a>
+            <a class="hb-side-subitem"
+   href="/admin/radius/reports/archive">
+  <span class="hb-side-text">الأرشيف</span>
+</a>
+          </div></div>
+        </div>
+
+        
+        <div class="hb-side-subgroup"
+             data-hb-subgroup="reports-auth">
+          <button type="button" class="hb-side-subhead" data-hb-subgroup-toggle>
+            <i class="fa-solid fa-right-to-bracket"></i><span class="hb-side-text">الدخول والأمان</span>
+            <span class="hb-side-subchevron"><i class="fa-solid fa-chevron-down"></i></span>
+          </button>
+          <div class="hb-side-subgroup-body"><div class="hb-side-subgroup-body-inner">
+            <a class="hb-side-subitem"
+   href="/admin/radius/reports/login_states">
+  <span class="hb-side-text">حالات تسجيل الدخول</span>
+</a>
+            <a class="hb-side-subitem"
+   href="/admin/radius/reports/failed_logins">
+  <span class="hb-side-text">فشل دخول الشبكة</span>
+</a>
+            <a class="hb-side-subitem"
+   href="/admin/radius/reports/login_status">
+  <span class="hb-side-text">حالة دخول المشتركين</span>
+</a>
+            <a class="hb-side-subitem"
+   href="/admin/radius/reports/manager_login_status">
+  <span class="hb-side-text">حالة دخول المدراء</span>
+</a>
+          </div></div>
+        </div>
+
+        
+        <div class="hb-side-subgroup"
+             data-hb-subgroup="reports-network">
+          <button type="button" class="hb-side-subhead" data-hb-subgroup-toggle>
+            <i class="fa-solid fa-network-wired"></i><span class="hb-side-text">الشبكة والجلسات</span>
+            <span class="hb-side-subchevron"><i class="fa-solid fa-chevron-down"></i></span>
+          </button>
+          <div class="hb-side-subgroup-body"><div class="hb-side-subgroup-body-inner">
+            <a class="hb-side-subitem"
+   href="/admin/radius/reports/sessions">
+  <span class="hb-side-text">تقارير الجلسات</span>
+</a>
+            <a class="hb-side-subitem"
+   href="/admin/radius/reports/mac_history">
+  <span class="hb-side-text">سجل تغييرات الماك</span>
+</a>
+            <a class="hb-side-subitem"
+   href="/admin/radius/reports/coa_failures">
+  <span class="hb-side-text">فشل الفصل/التحديث</span>
+</a>
+            <a class="hb-side-subitem"
+   href="/admin/radius/reports/speed_failures">
+  <span class="hb-side-text">فشل تحديث السرعة</span>
+</a>
+          </div></div>
+        </div>
+
+        
+        <div class="hb-side-subgroup"
+             data-hb-subgroup="reports-activity">
+          <button type="button" class="hb-side-subhead" data-hb-subgroup-toggle>
+            <i class="fa-solid fa-clock-rotate-left"></i><span class="hb-side-text">النشاط والأحداث</span>
+            <span class="hb-side-subchevron"><i class="fa-solid fa-chevron-down"></i></span>
+          </button>
+          <div class="hb-side-subgroup-body"><div class="hb-side-subgroup-body-inner">
+            <a class="hb-side-subitem"
+   href="/admin/radius/reports/manager_events">
+  <span class="hb-side-text">أحداث المدراء</span>
+</a>
+            <a class="hb-side-subitem"
+   href="/admin/radius/reports/user_events">
+  <span class="hb-side-text">أحداث المشتركين</span>
+</a>
+            <a class="hb-side-subitem"
+   href="/admin/radius/reports/profile_changes">
+  <span class="hb-side-text">تغيير العروض</span>
+</a>
+            <a class="hb-side-subitem"
+   href="/admin/radius/reports/api_messages">
+  <span class="hb-side-text">سجل رسائل الربط</span>
+</a>
+          </div></div>
+        </div>
+
+        
+        <div class="hb-side-subgroup"
+             data-hb-subgroup="reports-finance">
+          <button type="button" class="hb-side-subhead" data-hb-subgroup-toggle>
+            <i class="fa-solid fa-coins"></i><span class="hb-side-text">المالية والموازنات</span>
+            <span class="hb-side-subchevron"><i class="fa-solid fa-chevron-down"></i></span>
+          </button>
+          <div class="hb-side-subgroup-body"><div class="hb-side-subgroup-body-inner">
+            <a class="hb-side-subitem"
+   href="/admin/radius/reports/used_cards">
+  <span class="hb-side-text">كروت الشحن المستخدمة</span>
+</a>
+            <a class="hb-side-subitem"
+   href="/admin/radius/reports/cash_transactions">
+  <span class="hb-side-text">معاملات الكاش</span>
+</a>
+            <a class="hb-side-subitem"
+   href="/admin/radius/reports/balance_movements">
+  <span class="hb-side-text">تحويلات الرصيد</span>
+</a>
+            <a class="hb-side-subitem"
+   href="/admin/radius/finance/reports">
+  <span class="hb-side-text">تقارير المحاسبة</span>
+</a>
+          </div></div>
+        </div>
+      </div></div>
+    </div>
+    
+
+    
+    <div class="hb-side-section"
+         data-hb-section="support" data-hb-tone="cyan">
+      <button type="button" class="hb-side-section-head"
+              data-hb-section-toggle data-hb-label="الدعم">
+        <span class="hb-side-icon"><i class="fa-solid fa-headset"></i></span>
+        <span class="hb-side-text">الدعم</span>
+        <span class="hb-side-chevron"><i class="fa-solid fa-chevron-down"></i></span>
+      </button>
+      <div class="hb-side-section-body"><div class="hb-side-section-body-inner">
+        <a class="hb-side-subitem"
+   href="/admin/radius/tickets">
+  <span class="hb-side-text">التذاكر</span>
+</a>
+        <a class="hb-side-subitem"
+   href="/admin/radius/services">
+  <span class="hb-side-text">الخدمات / المعدّات</span>
+</a>
+        <a class="hb-side-subitem"
+   href="/admin/radius/customer-portals">
+  <span class="hb-side-text">بوابات العملاء</span>
+</a>
+      </div></div>
+    </div>
+    
+
+    
+    <div class="hb-side-section"
+         data-hb-section="administration" data-hb-tone="orange">
+      <button type="button" class="hb-side-section-head"
+              data-hb-section-toggle data-hb-label="الإدارة">
+        <span class="hb-side-icon"><i class="fa-solid fa-user-shield"></i></span>
+        <span class="hb-side-text">الإدارة</span>
+        <span class="hb-side-chevron"><i class="fa-solid fa-chevron-down"></i></span>
+      </button>
+      <div class="hb-side-section-body"><div class="hb-side-section-body-inner">
+        
+        <a class="hb-side-subitem"
+   href="/admin/radius/business-operators">
+  <span class="hb-side-text">المدراء والموزعون</span>
+</a>
+        
+        <a class="hb-side-subitem"
+   href="/admin/radius/admins/pricing">
+  <span class="hb-side-text">أسعار العروض للمدراء</span>
+</a>
+        <a class="hb-side-subitem"
+   href="/admin/radius/roles">
+  <span class="hb-side-text">الأدوار والصلاحيات</span>
+</a>
+        
+        <a class="hb-side-subitem"
+   href="/admin/radius/backups">
+  <span class="hb-side-text">البيانات والحفظ والأرشفة</span>
+</a>
+        <a class="hb-side-subitem"
+   href="/admin/radius/settings">
+  <span class="hb-side-text">إعدادات النظام</span>
+</a>
+        
+        
+          
+        
+        <a class="hb-side-subitem"
+           href="/admin/radius/sync">
+          <span class="hb-side-text">طابور المزامنة</span>
+          
+        </a>
+          
+        
+        <a class="hb-side-subitem"
+   href="/admin/radius/tenants">
+  <span class="hb-side-text">المستأجرون</span>
+</a>
+      </div></div>
+    </div>
+    
+
+    
+    <div class="hb-side-section"
+         data-hb-section="integration" data-hb-tone="blue">
+      <button type="button" class="hb-side-section-head"
+              data-hb-section-toggle data-hb-label="التكامل والجسر">
+        <span class="hb-side-icon"><i class="fa-solid fa-plug-circle-bolt"></i></span>
+        <span class="hb-side-text">التكامل والجسر</span>
+        <span class="hb-side-chevron"><i class="fa-solid fa-chevron-down"></i></span>
+      </button>
+      <div class="hb-side-section-body"><div class="hb-side-section-body-inner">
+        <a class="hb-side-subitem"
+   href="/admin/radius/admin-bridge">
+  <span class="hb-side-text">جسر الإدارة</span>
+</a>
+        
+        <a class="hb-side-subitem"
+   href="/admin/radius/license-file">
+  <span class="hb-side-text">ترخيص النظام</span>
+</a>
+        
+        <a class="hb-side-subitem"
+   href="/admin/radius/tunnels">
+  <span class="hb-side-text">الأنفاق</span>
+</a>
+        <a class="hb-side-subitem"
+   href="/admin/radius/webhooks">
+  <span class="hb-side-text">إشعارات الربط</span>
+</a>
+        <a class="hb-side-subitem"
+   href="/admin/radius/tokens">
+  <span class="hb-side-text">مفاتيح الواجهة</span>
+</a>
+        
+        
+        <a class="hb-side-subitem" href="/api/docs" target="_blank">
+          <span class="hb-side-text">توثيق الواجهة</span>
+        </a>
+        
+      </div></div>
+    </div>
+    
+
+    
+    <a class="hb-side-item"
+   href="/admin/radius/docs"
+   data-hb-label="كيف تستخدمني">
+  <span class="hb-side-icon"><i class="fa-solid fa-graduation-cap"></i></span>
+  <span class="hb-side-text">كيف تستخدمني</span>
+</a>
+
+  </nav>
+
+  
+  <div class="hb-side-foot">
+    <div class="hb-side-user">
+      <span class="hb-side-user-ava">I</span>
+      <div class="hb-side-user-text">
+        <div class="hb-side-user-name">admin</div>
+        <div class="hb-side-user-role">مدير النظام</div>
+      </div>
+      <i class="fa-solid fa-chevron-down hb-side-user-caret"></i>
+    </div>
+  </div>
+
+</aside>
+
+
+<div class="hb-side-overlay" data-hb-toggle="mobile-close" aria-hidden="true"></div>
+
+<main class="main">
+
+  
+
+  
+  
+    <div class="mt-warn-banner" role="alert">
+      <i class="fa-solid fa-triangle-exclamation"></i>
+      <span>
+        1 راوتر مايكروتيك غير متاح حالياً — لن تعمل عمليات DHCP / reconciliation / CoA حتى يعود.
+      </span>
+      <a class="mt-warn-cta" href="/admin/radius/diagnostics">
+        تشخيص الآن <i class="fa-solid fa-arrow-left"></i>
+      </a>
+    </div>
+  
+
+  
+    
+  
+
+  
+
+
+
+
+
+<section class="hub-hero-shell" data-testid="events-hero">
+<section class="uds-hero">
+  <div class="uds-hero-top">
+    <div class="uds-hero-id">
+      <span class="uds-hero-icon"><i class="fa-solid fa-timeline"></i></span>
+      <div>
+        <h1 class="uds-hero-title">مركز الأحداث</h1><div class="uds-hero-sub">بوابة واحدة لأحداث التشغيل: سجل المراجعة، تقييم المخاطر، الأمان، والتحقيقات — للعرض والتحقيق فقط، لا إجراءات حذف من هنا.</div></div>
+    </div><div class="uds-hero-actions">
+
+
+
+
+
+
+
+
+
+<style>
+.report-jump{display:inline-flex;align-items:center;gap:8px;min-height:42px}
+.report-jump-tag{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;
+  font-weight:800;color:var(--hub-text-soft,#64748b);white-space:nowrap}
+.report-jump-tag i{font-size:11px;color:var(--hub-brand,#6B5AED)}
+/* قبل ترقية hub_select.js: select أصلي أنيق بنفس الارتفاع — لا وميض تخطيط */
+.report-jump select.report-jump-select{min-height:42px;min-width:210px;
+  border:1px solid var(--hub-border,#e2e8f0);border-radius:12px;
+  background:#fff;color:var(--hub-text,#0f172a);font-weight:800;
+  font-size:12.5px;padding:0 12px}
+/* بعد الترقية: غلاف hbsel يرث الحد الأدنى للعرض حتى لا ينكمش الزر */
+.report-jump .hbsel{min-width:210px}
+</style>
+<div class="report-jump" data-testid="events-nav">
+  <span class="report-jump-tag"><i class="fa-solid fa-shuffle"></i> انتقال سريع</span>
+  <select class="report-jump-select" aria-label="انتقال سريع بين صفحات القسم"
+          onchange="if(this.value && this.value !== window.location.pathname + window.location.search){window.location = this.value}">
+    <option value="/admin/radius/events" selected>الأحداث</option>
+    <option value="/admin/radius/events/risk">تقييم المخاطر</option>
+    <option value="/admin/radius/events/security">الأمان</option>
+    <option value="/admin/radius/events/investigations">التحقيقات</option>
+  </select>
+</div></div></div>
+  <div class="uds-hero-kpis">
+      <div class="hub-kpi hub-kpi--brand">
+  <span class="hub-kpi-icon"><i class="fa-solid fa-list"></i></span>
+  <div class="hub-kpi-body">
+    <div class="hub-kpi-label">الأحداث</div>
+    <div class="hub-kpi-value">5</div></div>
+</div>
+      <div class="hub-kpi hub-kpi--amber">
+  <span class="hub-kpi-icon"><i class="fa-solid fa-flag"></i></span>
+  <div class="hub-kpi-body">
+    <div class="hub-kpi-label">التنبيهات المفتوحة</div>
+    <div class="hub-kpi-value">0</div></div>
+</div>
+      <div class="hub-kpi hub-kpi--red">
+  <span class="hub-kpi-icon"><i class="fa-solid fa-triangle-exclamation"></i></span>
+  <div class="hub-kpi-body">
+    <div class="hub-kpi-label">حرجة</div>
+    <div class="hub-kpi-value">0</div></div>
+</div>
+  </div>
+  <form class="uds-hero-search" method="get" action="/admin/radius/events">
+    
+    <button type="button" class="uds-search-ic" aria-label="الانتقال إلى حقل البحث"
+            onclick="var f=this.closest('form'),i=f&&f.querySelector('input[type=text],input[type=search],input:not([type]),input[type=number],input[type=tel]');if(i){i.focus();if(i.select)i.select();}">
+      <i class="fa-solid fa-magnifying-glass"></i>
+    </button>
+    
+  <input class="hub-input" name="category"       placeholder="الفئة"        value="">
+  <input class="hub-input" name="severity"       placeholder="الخطورة"      value="">
+  <input class="hub-input" name="actor_type"     placeholder="نوع الفاعل"   value="">
+  <input class="hub-input" name="actor_id"  type="number" placeholder="رقم الفاعل" value="">
+  <input class="hub-input" name="target_type"    placeholder="نوع الهدف"    value="">
+  <input class="hub-input" name="target_id" type="number" placeholder="رقم الهدف"  value="">
+  <input class="hub-input grow" name="correlation_id" placeholder="معرّف الترابط" value="">
+  <button class="hub-btn hub-btn--primary hub-btn--sm"
+   type="submit" ><i class="fa-solid fa-filter"></i>فلترة
+</button>
+
+  </form>
+</section>
+</section>
+
+
+<section class="hub-section"><header class="hub-section-head"><span class="hub-section-head-icon"><i class="fa-solid fa-compass"></i></span><span class="hub-section-head-title">أقسام المركز</span><span class="hub-section-head-meta">المخاطر · الأمان · التحقيقات</span></header><div class="hub-section-body">
+    
+  <div class="hub-actions" data-testid="events-sections">
+    <a class="hub-action" href="/admin/radius/events/risk" >
+  <span class="hub-action-icon hub-action-icon--amber"><i class="fa-solid fa-shield-halved"></i></span>
+  <div class="hub-action-body">
+    <div class="hub-action-title">تقييم المخاطر</div><div class="hub-action-sub">تشغيل قواعد كشف الاحتيال ومراجعة الإشارات المفتوحة</div></div>
+</a>
+    <a class="hub-action" href="/admin/radius/events/security" >
+  <span class="hub-action-icon hub-action-icon--red"><i class="fa-solid fa-lock"></i></span>
+  <div class="hub-action-body">
+    <div class="hub-action-title">الأمان</div><div class="hub-action-sub">أحداث فئة الأمان + إشارات الاحتيال المفتوحة</div></div>
+</a>
+    <a class="hub-action" href="/admin/radius/events/investigations" >
+  <span class="hub-action-icon hub-action-icon--brand"><i class="fa-solid fa-magnifying-glass-chart"></i></span>
+  <div class="hub-action-body">
+    <div class="hub-action-title">التحقيقات</div><div class="hub-action-sub">فتح ومتابعة تحقيقات على الكيانات المشبوهة</div></div>
+</a>
+  </div>
+
+  </div>
+</section>
+
+
+<div class="uds-worklayout">
+  <main class="uds-main">
+  <section class="hub-section"><header class="hub-section-head"><span class="hub-section-head-icon"><i class="fa-solid fa-list"></i></span><span class="hub-section-head-title">قائمة الأحداث</span><span class="hub-section-head-meta">5 حدث</span></header><div class="hub-section-body hub-section-body--flush">
+    
+    <div class="hub-table-wrap uds-table-wrap" data-uds-table data-uds-page-size="15" style="border:none;border-radius:0">
+      <table class="hub-table" data-testid="events-table">
+        <thead>
+          <tr>
+            <th class="num">الرقم</th>
+            <th>الفئة</th>
+            <th>الخطورة</th>
+            <th>المفتاح</th>
+            <th>الفاعل</th>
+            <th>الهدف</th>
+            <th>الترابط</th>
+          </tr>
+        </thead>
+        <tbody>
+          
+            <tr>
+              <td class="num"><a href="/admin/radius/events/5">#5</a></td>
+              <td title="system">النظام</td>
+              <td><span class="hub-pill hub-pill--blue"><span class="dot"></span>معلومة
+</span></td>
+              <td title="speed_control.dry_run_saved">حفظ تجربة تحكّم السرعة</td>
+              <td title="admin">مدير</td>
+              <td title="speed_control_policy">سياسة تحكّم السرعة</td>
+              <td class="mono small">—</td>
+            </tr>
+          
+            <tr>
+              <td class="num"><a href="/admin/radius/events/4">#4</a></td>
+              <td title="notification">الإشعارات</td>
+              <td><span class="hub-pill hub-pill--blue"><span class="dot"></span>معلومة
+</span></td>
+              <td title="notification.manual_queued">جدولة إشعار يدوي</td>
+              <td title="admin">مدير</td>
+              <td title="notification_campaign">حملة إشعارات</td>
+              <td class="mono small">—</td>
+            </tr>
+          
+            <tr>
+              <td class="num"><a href="/admin/radius/events/3">#3</a></td>
+              <td title="notification">الإشعارات</td>
+              <td><span class="hub-pill hub-pill--blue"><span class="dot"></span>معلومة
+</span></td>
+              <td title="notification.manual_queued">جدولة إشعار يدوي</td>
+              <td title="admin">مدير</td>
+              <td title="notification_campaign">حملة إشعارات</td>
+              <td class="mono small">—</td>
+            </tr>
+          
+            <tr>
+              <td class="num"><a href="/admin/radius/events/2">#2</a></td>
+              <td title="notification">الإشعارات</td>
+              <td><span class="hub-pill hub-pill--blue"><span class="dot"></span>معلومة
+</span></td>
+              <td title="notification.manual_queued">جدولة إشعار يدوي</td>
+              <td title="admin">مدير</td>
+              <td title="notification_campaign">حملة إشعارات</td>
+              <td class="mono small">—</td>
+            </tr>
+          
+            <tr>
+              <td class="num"><a href="/admin/radius/events/1">#1</a></td>
+              <td title="financial">مالية</td>
+              <td><span class="hub-pill hub-pill--blue"><span class="dot"></span>معلومة
+</span></td>
+              <td title="wallet.created">إنشاء محفظة</td>
+              <td title="">النظام</td>
+              <td title="company #599043337">company</td>
+              <td class="mono small">—</td>
+            </tr>
+          
+        </tbody>
+      </table>
+    </div>
+  
+  </div>
+</section>
+</main>
+<details class="uds-help" aria-label="كيف تقرأ هذه الصفحة؟">
+  <summary class="uds-help-head" style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:10px">
+    <span class="uds-help-ic"><i class="fa-solid fa-compass"></i></span>
+    <span class="uds-help-title" style="flex:1">كيف تقرأ هذه الصفحة؟</span>
+    <i class="fa-solid fa-chevron-down" style="font-size:10px;color:var(--hub-text-mute, #94A3B8)"></i>
+  </summary>
+  <div class="uds-help-body"><div class="uds-help-intro">كل صف هو حدث تشغيل محفوظ كسجل للمراجعة. استخدم الفلاتر في الأعلى لتضييق النتائج.</div>
+    <ul class="uds-help-list">
+      <li>
+        <i class="fa-solid fa-hashtag"></i>
+        <span>الرقم رابط إلى تفاصيل الحدث وخطه الزمني للكيان المرتبط.</span>
+      </li>
+      <li>
+        <i class="fa-solid fa-layer-group"></i>
+        <span>الفئة والمفتاح يحدّدان نوع الحدث ومصدره داخل النظام.</span>
+      </li>
+      <li>
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <span>الخطورة تساعدك على تمييز الأحداث الحرجة عن العادية.</span>
+      </li>
+      <li>
+        <i class="fa-solid fa-link"></i>
+        <span>معرّف الترابط يجمع الأحداث المرتبطة بنفس العملية معًا.</span>
+      </li>
+    </ul><div class="uds-help-note"><i class="fa-solid fa-circle-info"></i><span>هذه الصفحة للعرض فقط — لا توجد إجراءات حذف أو تعديل على الأحداث من هنا.</span></div></div>
+</details></div>
+
+<script src="/static/js/uds_table.js"></script>
+
+
+  <div class="app-footer">
+    <span>الإصدار 0.1.0</span>
+    <span>حقوق النشر © <bdi dir="ltr">2017–2026</bdi> Hobe Hub</span>
+  </div>
+</main>
+
+<script src="/static/js/dashboard_table.js"></script>
+<script src="/static/js/sidebar_v2.js"></script>
+<script src="/static/js/page_guide_collapse.js"></script>
+
+<script src="/static/js/hub_select.js"></script>
+
+<script src="/static/js/hub_date.js"></script>
+
+<script src="/static/js/hub_hint.js"></script>
+<script>
+  // ───── حزمة الترجمة لنصوص JavaScript المرئية ─────
+  // كل النصوص العربية التي يبنيها السكربت ديناميكيًا تُبثّ هنا من Jinja عبر
+  // _() ثم |tojson، فتُترجم تلقائيًا عند اختيار الإنجليزية (صفر عربي مكتوب
+  // داخل JS). قاموس مساعدة الحقول (hints) يُبثّ كذلك مع _() لكل قيمة.
+  window.__I18N__ = {
+    pageSections: "\u0623\u0642\u0633\u0627\u0645 \u0627\u0644\u0635\u0641\u062d\u0629",
+    sectionsNote: "\u0627\u0628\u062f\u0623 \u0645\u0646 \u0627\u0644\u0642\u0633\u0645 \u0627\u0644\u0623\u0642\u0631\u0628 \u0644\u0639\u0645\u0644\u0643. \u0639\u0646\u062f \u0627\u0644\u0627\u0646\u062a\u0642\u0627\u0644 \u0644\u0642\u0633\u0645 \u0645\u063a\u0644\u0642 \u0633\u0623\u0641\u062a\u062d\u0647 \u0644\u0643 \u062a\u0644\u0642\u0627\u0626\u064a\u064b\u0627.",
+    sectionPrefix: "\u0627\u0644\u0642\u0633\u0645",
+    hints: {
+      username: "\u0627\u0633\u0645 \u0627\u0644\u062f\u062e\u0648\u0644 \u0627\u0644\u0630\u064a \u064a\u0633\u062a\u062e\u062f\u0645\u0647 \u0627\u0644\u0634\u062e\u0635 \u0639\u0646\u062f \u0627\u0644\u0627\u062a\u0635\u0627\u0644 \u0623\u0648 \u062a\u0633\u062c\u064a\u0644 \u0627\u0644\u062f\u062e\u0648\u0644.",
+      password: "\u0627\u0643\u062a\u0628 \u0643\u0644\u0645\u0629 \u0645\u0631\u0648\u0631 \u0622\u0645\u0646\u0629\u060c \u0648\u0627\u062a\u0631\u0643\u0647\u0627 \u0641\u0627\u0631\u063a\u0629 \u0625\u0630\u0627 \u0644\u0645 \u062a\u0643\u0646 \u062a\u0631\u064a\u062f \u062a\u063a\u064a\u064a\u0631\u0647\u0627.",
+      name: "\u0627\u0643\u062a\u0628 \u0627\u0633\u0645\u064b\u0627 \u0648\u0627\u0636\u062d\u064b\u0627 \u064a\u0638\u0647\u0631 \u0641\u064a \u0627\u0644\u0642\u0648\u0627\u0626\u0645 \u0648\u064a\u0633\u0647\u0651\u0644 \u0627\u0644\u0628\u062d\u062b.",
+      code: "\u0631\u0645\u0632 \u062f\u0627\u062e\u0644\u064a \u0642\u0635\u064a\u0631 \u064a\u0633\u0627\u0639\u062f\u0643 \u0641\u064a \u0627\u0644\u062a\u0631\u062a\u064a\u0628 \u0648\u0627\u0644\u0628\u062d\u062b.",
+      display_name: "\u0627\u0644\u0627\u0633\u0645 \u0627\u0644\u0638\u0627\u0647\u0631 \u0644\u0644\u0645\u0633\u062a\u062e\u062f\u0645 \u062f\u0627\u062e\u0644 \u0627\u0644\u0648\u0627\u062c\u0647\u0629.",
+      full_name: "\u0627\u0644\u0627\u0633\u0645 \u0627\u0644\u062d\u0642\u064a\u0642\u064a \u0623\u0648 \u0627\u0644\u0648\u0635\u0641\u064a \u0644\u0635\u0627\u062d\u0628 \u0627\u0644\u062d\u0633\u0627\u0628.",
+      email: "\u0628\u0631\u064a\u062f \u0644\u0644\u062a\u0648\u0627\u0635\u0644 \u0623\u0648 \u0627\u0633\u062a\u0644\u0627\u0645 \u0627\u0644\u062a\u0646\u0628\u064a\u0647\u0627\u062a \u0639\u0646\u062f \u0627\u0644\u062d\u0627\u062c\u0629.",
+      mobile: "\u0631\u0642\u0645 \u062c\u0648\u0627\u0644 \u0648\u0627\u0636\u062d \u0644\u0644\u062a\u0648\u0627\u0635\u0644 \u0627\u0644\u0633\u0631\u064a\u0639.",
+      phone: "\u0631\u0642\u0645 \u0628\u062f\u064a\u0644 \u0625\u0646 \u0648\u062c\u062f.",
+      notes: "\u0645\u0644\u0627\u062d\u0638\u0627\u062a \u062f\u0627\u062e\u0644\u064a\u0629 \u062a\u0633\u0627\u0639\u062f\u0643 \u0639\u0646\u062f \u0627\u0644\u0645\u0631\u0627\u062c\u0639\u0629 \u0648\u0644\u0627 \u062a\u0638\u0647\u0631 \u0639\u0627\u062f\u0629 \u0644\u0644\u0645\u0633\u062a\u0641\u064a\u062f.",
+      description: "\u0648\u0635\u0641 \u0642\u0635\u064a\u0631 \u064a\u0648\u0636\u0651\u062d \u0627\u0644\u0647\u062f\u0641 \u0645\u0646 \u0647\u0630\u0627 \u0627\u0644\u0639\u0646\u0635\u0631.",
+      enabled: "\u0639\u0646\u062f \u0627\u0644\u062a\u0639\u0637\u064a\u0644 \u064a\u0628\u0642\u0649 \u0627\u0644\u0639\u0646\u0635\u0631 \u0645\u062d\u0641\u0648\u0638\u064b\u0627 \u0644\u0643\u0646\u0647 \u0644\u0627 \u064a\u0639\u0645\u0644 \u0641\u064a \u0627\u0644\u0627\u0633\u062a\u062e\u062f\u0627\u0645 \u0627\u0644\u062c\u062f\u064a\u062f.",
+      status: "\u0627\u062e\u062a\u0631 \u0627\u0644\u062d\u0627\u0644\u0629 \u0627\u0644\u062d\u0627\u0644\u064a\u0629 \u0644\u0647\u0630\u0627 \u0627\u0644\u0639\u0646\u0635\u0631.",
+      plan_id: "\u0627\u062e\u062a\u0631 \u0628\u0627\u0642\u0629 \u0627\u0644\u062e\u062f\u0645\u0629 \u0627\u0644\u062a\u064a \u062a\u062d\u062f\u062f \u0627\u0644\u0633\u0631\u0639\u0629 \u0648\u0627\u0644\u062d\u0635\u0629 \u0648\u0645\u062f\u0629 \u0627\u0644\u0627\u0633\u062a\u062e\u062f\u0627\u0645.",
+      service_type: "\u0627\u062e\u062a\u0631 \u0646\u0648\u0639 \u0627\u0644\u062e\u062f\u0645\u0629 \u0627\u0644\u062a\u064a \u0633\u064a\u0633\u062a\u062e\u062f\u0645\u0647\u0627 \u0627\u0644\u062d\u0633\u0627\u0628 \u0639\u0644\u0649 \u0627\u0644\u0634\u0628\u0643\u0629.",
+      account_type: "\u0627\u062e\u062a\u0631 \u0646\u0648\u0639 \u0627\u0644\u062d\u0633\u0627\u0628 \u062d\u0633\u0628 \u0637\u0631\u064a\u0642\u0629 \u0627\u0633\u062a\u062e\u062f\u0627\u0645\u0647.",
+      auth_mode: "\u0637\u0631\u064a\u0642\u0629 \u0627\u0644\u062f\u062e\u0648\u0644 \u0627\u0644\u062a\u064a \u0633\u064a\u0633\u062a\u062e\u062f\u0645\u0647\u0627 \u0627\u0644\u0645\u0633\u062a\u0641\u064a\u062f \u0639\u0644\u0649 \u0627\u0644\u0634\u0628\u0643\u0629.",
+      group_name: "\u0627\u0633\u0645 \u0645\u062c\u0645\u0648\u0639\u0629 \u0627\u062e\u062a\u064a\u0627\u0631\u064a \u0644\u062a\u0646\u0638\u064a\u0645 \u0627\u0644\u062d\u0633\u0627\u0628\u0627\u062a \u0627\u0644\u0645\u062a\u0634\u0627\u0628\u0647\u0629.",
+      manager_id: "\u0631\u0642\u0645 \u0627\u0644\u0645\u062f\u064a\u0631 \u0627\u0644\u0645\u0633\u0624\u0648\u0644 \u0625\u0646 \u0643\u0646\u062a \u062a\u0633\u062a\u062e\u062f\u0645 \u062a\u0648\u0632\u064a\u0639\u064b\u0627 \u0625\u062f\u0627\u0631\u064a\u064b\u0627.",
+      subscriber_ref: "\u0645\u0631\u062c\u0639 \u0627\u062e\u062a\u064a\u0627\u0631\u064a \u064a\u0631\u0628\u0637 \u0627\u0644\u062d\u0633\u0627\u0628 \u0628\u0633\u062c\u0644 \u062f\u0627\u062e\u0644\u064a \u0622\u062e\u0631.",
+      package_name: "\u0627\u0633\u0645 \u0648\u0627\u0636\u062d \u0644\u0647\u0630\u0647 \u0627\u0644\u062f\u0641\u0639\u0629 \u062d\u062a\u0649 \u062a\u0645\u064a\u0651\u0632\u0647\u0627 \u0639\u0646\u062f \u0627\u0644\u0645\u0631\u0627\u062c\u0639\u0629.",
+      count: "\u0639\u062f\u062f \u0627\u0644\u0639\u0646\u0627\u0635\u0631 \u0627\u0644\u062a\u064a \u0633\u064a\u062a\u0645 \u0625\u0646\u0634\u0627\u0624\u0647\u0627 \u0641\u064a \u0647\u0630\u0647 \u0627\u0644\u0639\u0645\u0644\u064a\u0629.",
+      username_length: "\u0639\u062f\u062f \u062e\u0627\u0646\u0627\u062a \u0627\u0633\u0645 \u0627\u0644\u062f\u062e\u0648\u0644 \u0627\u0644\u0630\u064a \u0633\u064a\u062a\u0645 \u062a\u0648\u0644\u064a\u062f\u0647.",
+      password_length: "\u0639\u062f\u062f \u062e\u0627\u0646\u0627\u062a \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u0627\u0644\u062a\u064a \u0633\u064a\u062a\u0645 \u062a\u0648\u0644\u064a\u062f\u0647\u0627.",
+      password_generation_type: "\u0627\u062e\u062a\u0631 \u0646\u0645\u0637 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u062d\u0633\u0628 \u0645\u0633\u062a\u0648\u0649 \u0627\u0644\u0623\u0645\u0627\u0646 \u0627\u0644\u0645\u0637\u0644\u0648\u0628.",
+      prefix_or_suffix_value: "\u0646\u0635 \u0627\u062e\u062a\u064a\u0627\u0631\u064a \u064a\u064f\u0636\u0627\u0641 \u0642\u0628\u0644 \u0623\u0648 \u0628\u0639\u062f \u0627\u0644\u0627\u0633\u0645 \u0627\u0644\u0645\u0648\u0644\u0651\u062f.",
+      time_value: "\u0627\u0633\u062a\u062e\u062f\u0645 0 \u0639\u0646\u062f\u0645\u0627 \u062a\u0631\u064a\u062f \u0627\u0644\u0627\u0639\u062a\u0645\u0627\u062f \u0639\u0644\u0649 \u0642\u064a\u0645\u0629 \u0627\u0644\u0628\u0627\u0642\u0629 \u0627\u0644\u0623\u0633\u0627\u0633\u064a\u0629.",
+      time_unit: "\u0627\u0644\u0648\u062d\u062f\u0629 \u0627\u0644\u062a\u064a \u0633\u064a\u062a\u0645 \u0627\u062d\u062a\u0633\u0627\u0628 \u0645\u062f\u0629 \u0627\u0644\u0628\u0637\u0627\u0642\u0629 \u0623\u0648 \u0627\u0644\u062d\u0633\u0627\u0628 \u0628\u0647\u0627.",
+      device_count: "\u0623\u0642\u0635\u0649 \u0639\u062f\u062f \u0623\u062c\u0647\u0632\u0629 \u064a\u0645\u0643\u0646\u0647\u0627 \u0627\u0633\u062a\u062e\u062f\u0627\u0645 \u0646\u0641\u0633 \u0627\u0644\u062d\u0633\u0627\u0628 \u0641\u064a \u0646\u0641\u0633 \u0627\u0644\u0648\u0642\u062a.",
+      quota_total_mb: "\u0625\u062c\u0645\u0627\u0644\u064a \u0627\u0644\u062d\u0635\u0629 \u0628\u0627\u0644\u0645\u064a\u062c\u0627\u0628\u0627\u064a\u062a\u060c \u06480 \u064a\u0639\u0646\u064a \u0628\u0644\u0627 \u062d\u062f \u062e\u0627\u0635.",
+      daily_download_quota_mb: "\u0643\u0645\u064a\u0629 \u0627\u0644\u062a\u0646\u0632\u064a\u0644 \u0627\u0644\u0645\u062a\u0627\u062d\u0629 \u064a\u0648\u0645\u064a\u064b\u0627 \u0644\u0647\u0630\u0627 \u0627\u0644\u062d\u0633\u0627\u0628 \u0623\u0648 \u0627\u0644\u0628\u0627\u0642\u0629.",
+      daily_upload_quota_mb: "\u0643\u0645\u064a\u0629 \u0627\u0644\u0631\u0641\u0639 \u0627\u0644\u0645\u062a\u0627\u062d\u0629 \u064a\u0648\u0645\u064a\u064b\u0627 \u0644\u0647\u0630\u0627 \u0627\u0644\u062d\u0633\u0627\u0628 \u0623\u0648 \u0627\u0644\u0628\u0627\u0642\u0629.",
+      monthly_download_quota_mb: "\u0643\u0645\u064a\u0629 \u0627\u0644\u062a\u0646\u0632\u064a\u0644 \u0627\u0644\u0645\u062a\u0627\u062d\u0629 \u062e\u0644\u0627\u0644 \u0627\u0644\u0634\u0647\u0631.",
+      monthly_upload_quota_mb: "\u0643\u0645\u064a\u0629 \u0627\u0644\u0631\u0641\u0639 \u0627\u0644\u0645\u062a\u0627\u062d\u0629 \u062e\u0644\u0627\u0644 \u0627\u0644\u0634\u0647\u0631.",
+      speed_down_kbps: "\u0633\u0631\u0639\u0629 \u0627\u0644\u062a\u0646\u0632\u064a\u0644 \u0628\u0627\u0644\u0643\u064a\u0644\u0648\u0628\u062a\u060c 1024 \u062a\u0639\u0646\u064a \u062a\u0642\u0631\u064a\u0628\u064b\u0627 1 \u0645\u064a\u062c\u0627\u0628\u062a.",
+      speed_up_kbps: "\u0633\u0631\u0639\u0629 \u0627\u0644\u0631\u0641\u0639 \u0628\u0627\u0644\u0643\u064a\u0644\u0648\u0628\u062a\u060c 1024 \u062a\u0639\u0646\u064a \u062a\u0642\u0631\u064a\u0628\u064b\u0627 1 \u0645\u064a\u062c\u0627\u0628\u062a.",
+      address: "\u0639\u0646\u0648\u0627\u0646 \u0627\u0644\u062c\u0647\u0627\u0632 \u0623\u0648 \u0627\u0644\u062e\u0627\u062f\u0645 \u062f\u0627\u062e\u0644 \u0627\u0644\u0634\u0628\u0643\u0629.",
+      shortname: "\u0627\u0633\u0645 \u0645\u062e\u062a\u0635\u0631 \u064a\u0638\u0647\u0631 \u0641\u064a \u0627\u0644\u0633\u062c\u0644\u0627\u062a \u0648\u0627\u0644\u0642\u0648\u0627\u0626\u0645.",
+      secret: "\u0627\u0644\u0645\u0641\u062a\u0627\u062d \u0627\u0644\u0645\u0634\u062a\u0631\u0643 \u064a\u062c\u0628 \u0623\u0646 \u064a\u0637\u0627\u0628\u0642 \u0625\u0639\u062f\u0627\u062f \u062c\u0647\u0627\u0632 \u0627\u0644\u0634\u0628\u0643\u0629.",
+      auth_port: "\u0645\u0646\u0641\u0630 \u0627\u0644\u0645\u0635\u0627\u062f\u0642\u0629 \u0627\u0644\u0642\u064a\u0627\u0633\u064a \u063a\u0627\u0644\u0628\u064b\u0627 1812.",
+      acct_port: "\u0645\u0646\u0641\u0630 \u0627\u0644\u0645\u062d\u0627\u0633\u0628\u0629 \u0627\u0644\u0642\u064a\u0627\u0633\u064a \u063a\u0627\u0644\u0628\u064b\u0627 1813.",
+      coa_port: "\u0645\u0646\u0641\u0630 \u0642\u0637\u0639 \u0627\u0644\u062c\u0644\u0633\u0629 \u0623\u0648 \u062a\u062d\u062f\u064a\u062b\u0647\u0627 \u063a\u0627\u0644\u0628\u064b\u0627 3799.",
+      api_port: "\u0645\u0646\u0641\u0630 \u0648\u0627\u062c\u0647\u0629 \u0627\u0644\u0631\u0628\u0637\u060c \u063a\u0627\u0644\u0628\u064b\u0627 8728 \u0623\u0648 8729 \u0644\u0644\u0627\u062a\u0635\u0627\u0644 \u0627\u0644\u0622\u0645\u0646.",
+      api_user: "\u0627\u0633\u0645 \u0645\u0633\u062a\u062e\u062f\u0645 \u0627\u0644\u0631\u0627\u0648\u062a\u0631 \u0627\u0644\u0645\u0633\u0645\u0648\u062d \u0644\u0647 \u0628\u0625\u062f\u0627\u0631\u0629 \u0627\u0644\u0625\u0639\u062f\u0627\u062f\u0627\u062a.",
+      api_password: "\u0643\u0644\u0645\u0629 \u0645\u0631\u0648\u0631 \u0627\u0644\u0631\u0627\u0648\u062a\u0631\u060c \u0627\u062d\u0641\u0638\u0647\u0627 \u0628\u0639\u0646\u0627\u064a\u0629.",
+      snmp_community: "\u0646\u0635 \u064a\u0633\u062a\u062e\u062f\u0645\u0647 \u0627\u0644\u0646\u0638\u0627\u0645 \u0644\u0642\u0631\u0627\u0621\u0629 \u0628\u064a\u0627\u0646\u0627\u062a \u0627\u0644\u0645\u0631\u0627\u0642\u0628\u0629 \u0645\u0646 \u0627\u0644\u062c\u0647\u0627\u0632.",
+      role_id: "\u0627\u0644\u062f\u0648\u0631 \u064a\u062d\u062f\u062f \u0627\u0644\u0635\u0644\u0627\u062d\u064a\u0627\u062a \u0627\u0644\u062a\u064a \u064a\u062d\u0635\u0644 \u0639\u0644\u064a\u0647\u0627 \u0647\u0630\u0627 \u0627\u0644\u0645\u062f\u064a\u0631.",
+      permissions: "\u0627\u062e\u062a\u0631 \u0627\u0644\u0635\u0644\u0627\u062d\u064a\u0627\u062a \u0627\u0644\u0645\u0646\u0627\u0633\u0628\u0629 \u0641\u0642\u0637 \u0644\u0647\u0630\u0627 \u0627\u0644\u062f\u0648\u0631.",
+      currency: "\u0631\u0645\u0632 \u0627\u0644\u0639\u0645\u0644\u0629 \u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645 \u0641\u064a \u0627\u0644\u0639\u0631\u0636 \u0648\u0627\u0644\u062a\u0642\u0627\u0631\u064a\u0631.",
+      price: "\u0627\u0644\u0633\u0639\u0631 \u0627\u0644\u0645\u0631\u062c\u0639\u064a \u0623\u0648 \u0627\u0644\u062a\u062c\u0627\u0631\u064a \u0644\u0647\u0630\u0627 \u0627\u0644\u0639\u0646\u0635\u0631.",
+      tags: "\u0648\u0633\u0648\u0645 \u0642\u0635\u064a\u0631\u0629 \u0644\u0644\u062a\u0646\u0638\u064a\u0645\u060c \u0627\u0641\u0635\u0644 \u0628\u064a\u0646\u0647\u0627 \u0628\u0641\u0627\u0635\u0644\u0629 \u0639\u0646\u062f \u0627\u0644\u062d\u0627\u062c\u0629.",
+      slug: "\u0645\u0639\u0631\u0651\u0641 \u0642\u0635\u064a\u0631 \u0645\u0646\u0627\u0633\u0628 \u0644\u0644\u0631\u0627\u0628\u0637\u060c \u0648\u064a\u0641\u0636\u0651\u0644 \u062a\u062b\u0628\u064a\u062a\u0647 \u0628\u0639\u062f \u0627\u0633\u062a\u062e\u062f\u0627\u0645\u0647.",
+      plan_tier: "\u0641\u0626\u0629 \u0627\u0644\u0627\u0634\u062a\u0631\u0627\u0643 \u062a\u062d\u062f\u062f \u0627\u0644\u062d\u062f\u0648\u062f \u0627\u0644\u0627\u0641\u062a\u0631\u0627\u0636\u064a\u0629 \u0644\u0647\u0630\u0647 \u0627\u0644\u062c\u0647\u0629.",
+      max_subscribers: "\u0623\u0642\u0635\u0649 \u0639\u062f\u062f \u0645\u0633\u062a\u0641\u064a\u062f\u064a\u0646 \u0645\u0633\u0645\u0648\u062d\u060c \u06480 \u064a\u0639\u0646\u064a \u0627\u0633\u062a\u062e\u062f\u0627\u0645 \u062d\u062f \u0627\u0644\u0641\u0626\u0629.",
+      max_nas: "\u0623\u0642\u0635\u0649 \u0639\u062f\u062f \u0623\u062c\u0647\u0632\u0629 \u0634\u0628\u0643\u0629 \u0645\u0633\u0645\u0648\u062d \u0644\u0647\u0630\u0647 \u0627\u0644\u062c\u0647\u0629.",
+      api_rpm: "\u0639\u062f\u062f \u0637\u0644\u0628\u0627\u062a \u0648\u0627\u062c\u0647\u0629 \u0627\u0644\u0631\u0628\u0637 \u0627\u0644\u0645\u0633\u0645\u0648\u062d \u0628\u0647\u0627 \u0641\u064a \u0627\u0644\u062f\u0642\u064a\u0642\u0629.",
+      locale: "\u0644\u063a\u0629 \u0627\u0644\u0648\u0627\u062c\u0647\u0629 \u0627\u0644\u0627\u0641\u062a\u0631\u0627\u0636\u064a\u0629 \u0644\u0647\u0630\u0647 \u0627\u0644\u062c\u0647\u0629.",
+      timezone: "\u0627\u0644\u0645\u0646\u0637\u0642\u0629 \u0627\u0644\u0632\u0645\u0646\u064a\u0629 \u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645\u0629 \u0641\u064a \u0627\u0644\u062a\u0648\u0627\u0631\u064a\u062e \u0648\u0627\u0644\u062a\u0642\u0627\u0631\u064a\u0631.",
+      primary_color: "\u0644\u0648\u0646 \u0627\u0644\u0639\u0644\u0627\u0645\u0629 \u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645 \u0641\u064a \u0623\u062c\u0632\u0627\u0621 \u0645\u0646 \u0627\u0644\u0648\u0627\u062c\u0647\u0629.",
+      logo_url: "\u0631\u0627\u0628\u0637 \u0627\u0644\u0634\u0639\u0627\u0631 \u0625\u0646 \u0643\u0646\u062a \u062a\u0631\u064a\u062f \u0625\u0638\u0647\u0627\u0631\u0647 \u0644\u0644\u062c\u0647\u0629.",
+      pool_name: "\u0627\u0633\u0645 \u0646\u0637\u0627\u0642 \u0627\u0644\u0639\u0646\u0627\u0648\u064a\u0646 \u0643\u0645\u0627 \u0633\u064a\u0638\u0647\u0631 \u0641\u064a \u0627\u0644\u0642\u0648\u0627\u0626\u0645.",
+      range_ip: "\u0645\u062f\u0649 \u0627\u0644\u0639\u0646\u0627\u0648\u064a\u0646 \u0627\u0644\u0630\u064a \u0633\u064a\u0648\u0632\u0651\u0639 \u0645\u0646\u0647 \u062c\u0647\u0627\u0632 \u0627\u0644\u0634\u0628\u0643\u0629.",
+      local_ip: "\u0639\u0646\u0648\u0627\u0646 \u0627\u0644\u0628\u0648\u0627\u0628\u0629 \u0627\u0644\u0645\u062d\u0644\u064a\u0629 \u0627\u0644\u0645\u0631\u062a\u0628\u0637\u0629 \u0628\u0647\u0630\u0627 \u0627\u0644\u0646\u0637\u0627\u0642.",
+      router_id: "\u0627\u062e\u062a\u0631 \u062c\u0647\u0627\u0632 \u0627\u0644\u0634\u0628\u0643\u0629 \u0627\u0644\u0645\u0633\u0624\u0648\u0644 \u0639\u0646 \u0647\u0630\u0627 \u0627\u0644\u0646\u0637\u0627\u0642.",
+      rate_down: "\u0633\u0631\u0639\u0629 \u0627\u0644\u062a\u0646\u0632\u064a\u0644 \u0644\u0647\u0630\u0627 \u0627\u0644\u0645\u0644\u0641.",
+      rate_up: "\u0633\u0631\u0639\u0629 \u0627\u0644\u0631\u0641\u0639 \u0644\u0647\u0630\u0627 \u0627\u0644\u0645\u0644\u0641.",
+      burst: "\u0625\u0639\u062f\u0627\u062f \u0627\u062e\u062a\u064a\u0627\u0631\u064a \u0644\u0644\u0633\u0631\u0639\u0629 \u0627\u0644\u0645\u0624\u0642\u062a\u0629 \u0639\u0644\u0649 \u0627\u0644\u0631\u0627\u0648\u062a\u0631.",
+      host: "\u0639\u0646\u0648\u0627\u0646 \u0627\u0644\u0631\u0627\u0648\u062a\u0631 \u0623\u0648 \u0627\u0633\u0645 \u0627\u0644\u0645\u0636\u064a\u0641.",
+      port: "\u0645\u0646\u0641\u0630 \u0627\u0644\u0627\u062a\u0635\u0627\u0644 \u0645\u0639 \u0627\u0644\u062c\u0647\u0627\u0632.",
+      timeout_sec: "\u0645\u062f\u0629 \u0627\u0644\u0627\u0646\u062a\u0638\u0627\u0631 \u0642\u0628\u0644 \u0627\u0639\u062a\u0628\u0627\u0631 \u0627\u0644\u0627\u062a\u0635\u0627\u0644 \u063a\u064a\u0631 \u0646\u0627\u062c\u062d.",
+      target_url: "\u0627\u0644\u0631\u0627\u0628\u0637 \u0627\u0644\u0630\u064a \u0633\u062a\u064f\u0631\u0633\u0644 \u0644\u0647 \u0625\u0634\u0639\u0627\u0631\u0627\u062a \u0627\u0644\u0631\u0628\u0637.",
+      subscriber_id: "\u0631\u0642\u0645 \u0627\u0644\u0645\u0633\u062a\u0641\u064a\u062f \u0627\u0644\u0645\u0631\u062a\u0628\u0637 \u0628\u0647\u0630\u0627 \u0627\u0644\u0633\u062c\u0644.",
+      amount: "\u0627\u0644\u0645\u0628\u0644\u063a \u0627\u0644\u0645\u0627\u0644\u064a \u0627\u0644\u0645\u0637\u0644\u0648\u0628 \u0623\u0648 \u0627\u0644\u0645\u0633\u062c\u0644.",
+      payment_method: "\u0637\u0631\u064a\u0642\u0629 \u0627\u0644\u062f\u0641\u0639 \u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645\u0629 \u0623\u0648 \u0627\u0644\u0645\u0631\u062c\u0639\u064a\u0629.",
+      expiration_at: "\u062a\u0627\u0631\u064a\u062e \u0627\u0646\u062a\u0647\u0627\u0621 \u0635\u0644\u0627\u062d\u064a\u0629 \u0647\u0630\u0627 \u0627\u0644\u0633\u062c\u0644.",
+      subject: "\u0639\u0646\u0648\u0627\u0646 \u0645\u062e\u062a\u0635\u0631 \u064a\u0648\u0636\u062d \u0633\u0628\u0628 \u0627\u0644\u062a\u0630\u0643\u0631\u0629.",
+      category: "\u0627\u0644\u0641\u0626\u0629 \u062a\u0633\u0627\u0639\u062f \u0641\u0631\u064a\u0642 \u0627\u0644\u062f\u0639\u0645 \u0639\u0644\u0649 \u0641\u0631\u0632 \u0627\u0644\u0637\u0644\u0628.",
+      body: "\u0627\u0643\u062a\u0628 \u0627\u0644\u062a\u0641\u0627\u0635\u064a\u0644 \u0627\u0644\u0645\u0637\u0644\u0648\u0628\u0629 \u0628\u0648\u0636\u0648\u062d.",
+      priority: "\u0627\u0644\u0623\u0648\u0644\u0648\u064a\u0629 \u062a\u062d\u062f\u062f \u062a\u0631\u062a\u064a\u0628 \u0627\u0644\u0645\u0639\u0627\u0644\u062c\u0629.",
+      serial: "\u0627\u0644\u0631\u0642\u0645 \u0627\u0644\u062a\u0633\u0644\u0633\u0644\u064a \u0644\u0644\u062c\u0647\u0627\u0632 \u0623\u0648 \u0627\u0644\u0645\u0639\u062f\u0629 \u0625\u0646 \u0648\u062c\u062f.",
+      mac: "\u0639\u0646\u0648\u0627\u0646 \u0627\u0644\u062c\u0647\u0627\u0632 \u0627\u0644\u0641\u064a\u0632\u064a\u0627\u0626\u064a \u0639\u0646\u062f \u0627\u0644\u062d\u0627\u062c\u0629 \u0644\u0644\u0631\u0628\u0637.",
+      rent_per_month: "\u0642\u064a\u0645\u0629 \u0627\u0644\u0625\u064a\u062c\u0627\u0631 \u0627\u0644\u0634\u0647\u0631\u064a \u0625\u0646 \u0643\u0627\u0646\u062a \u0627\u0644\u062e\u062f\u0645\u0629 \u0645\u0624\u062c\u0631\u0629.",
+      given_at: "\u062a\u0627\u0631\u064a\u062e \u062a\u0633\u0644\u064a\u0645 \u0627\u0644\u0645\u0639\u062f\u0629 \u0623\u0648 \u0628\u062f\u0621 \u0627\u0644\u062e\u062f\u0645\u0629.",
+      returned_at: "\u062a\u0627\u0631\u064a\u062e \u0627\u0644\u0625\u0631\u062c\u0627\u0639 \u0625\u0646 \u0648\u062c\u062f.",
+      usernames: "\u0627\u0643\u062a\u0628 \u0643\u0644 \u0627\u0633\u0645 \u062f\u062e\u0648\u0644 \u0641\u064a \u0633\u0637\u0631 \u0645\u0633\u062a\u0642\u0644.",
+      action: "\u0627\u062e\u062a\u0631 \u0627\u0644\u0639\u0645\u0644\u064a\u0629 \u0627\u0644\u062a\u064a \u062a\u0631\u064a\u062f \u062a\u0646\u0641\u064a\u0630\u0647\u0627.",
+      minutes: "\u0639\u062f\u062f \u0627\u0644\u062f\u0642\u0627\u0626\u0642 \u0627\u0644\u062a\u064a \u0633\u062a\u0636\u0627\u0641 \u0623\u0648 \u062a\u0639\u062f\u0644.",
+      new_password: "\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u0627\u0644\u062c\u062f\u064a\u062f\u0629 \u0644\u0644\u062d\u0633\u0627\u0628\u0627\u062a \u0627\u0644\u0645\u062d\u062f\u062f\u0629.",
+      mult_down: "\u0645\u0636\u0627\u0639\u0641 \u0633\u0631\u0639\u0629 \u0627\u0644\u062a\u0646\u0632\u064a\u0644\u060c \u0645\u062b\u0644 0.5 \u0644\u0644\u062a\u0646\u0635\u064a\u0641.",
+      mult_up: "\u0645\u0636\u0627\u0639\u0641 \u0633\u0631\u0639\u0629 \u0627\u0644\u0631\u0641\u0639\u060c \u0645\u062b\u0644 2 \u0644\u0644\u0645\u0636\u0627\u0639\u0641\u0629.",
+      set_down: "\u0642\u064a\u0645\u0629 \u062a\u0646\u0632\u064a\u0644 \u062b\u0627\u0628\u062a\u0629 \u062a\u062a\u062c\u0627\u0648\u0632 \u0627\u0644\u0645\u0636\u0627\u0639\u0641 \u0639\u0646\u062f \u062a\u0639\u0628\u0626\u062a\u0647\u0627.",
+      set_up: "\u0642\u064a\u0645\u0629 \u0631\u0641\u0639 \u062b\u0627\u0628\u062a\u0629 \u062a\u062a\u062c\u0627\u0648\u0632 \u0627\u0644\u0645\u0636\u0627\u0639\u0641 \u0639\u0646\u062f \u062a\u0639\u0628\u0626\u062a\u0647\u0627.",
+      calling_station_id: "\u0639\u0646\u0648\u0627\u0646 \u062c\u0647\u0627\u0632 \u0627\u0644\u0645\u0633\u062a\u0641\u064a\u062f \u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645 \u0641\u064a \u0627\u0644\u0627\u062e\u062a\u0628\u0627\u0631.",
+      called_station_id: "\u0645\u0639\u0631\u0651\u0641 \u0646\u0642\u0637\u0629 \u0627\u0644\u0627\u062a\u0635\u0627\u0644 \u0623\u0648 \u0627\u0644\u062c\u0647\u0627\u0632 \u0627\u0644\u0645\u0633\u062a\u0642\u0628\u0644.",
+      nas_ip: "\u0639\u0646\u0648\u0627\u0646 \u062c\u0647\u0627\u0632 \u0627\u0644\u0634\u0628\u0643\u0629 \u0627\u0644\u0630\u064a \u0633\u062a\u0631\u0633\u0644 \u0645\u0646\u0647 \u062a\u062c\u0631\u0628\u0629 \u0627\u0644\u0645\u0635\u0627\u062f\u0642\u0629.",
+      nas_port_type: "\u0646\u0648\u0639 \u0645\u0646\u0641\u0630 \u0627\u0644\u0627\u062a\u0635\u0627\u0644 \u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645 \u0641\u064a \u0627\u0644\u0627\u062e\u062a\u0628\u0627\u0631."
+    }
+  };
+
+  // dropdowns (tenant + user + bell التنبيهات)
+  (function(){
+    function applyOpen(){
+      document.querySelectorAll('#tenant-menu.open, #user-menu.open, #bell-menu.open, #lang-menu.open').forEach(el => el.style.display='block');
+    }
+    document.addEventListener('click', function(e){
+      var tEl = document.getElementById('tenant-menu');
+      var uEl = document.getElementById('user-menu');
+      var bEl = document.getElementById('bell-menu');
+      var lEl = document.getElementById('lang-menu');
+      var tSwitch = e.target.closest('.tenant-switch');
+      var uPill = e.target.closest('.user-pill');
+      var bWrap = e.target.closest('.bell-wrap');
+      var lWrap = e.target.closest('.lang-wrap');
+      if (tEl && !tSwitch && !e.target.closest('#tenant-menu')) {
+        tEl.classList.remove('open'); tEl.style.display='none';
+      }
+      if (uEl && !uPill && !e.target.closest('#user-menu')) {
+        uEl.classList.remove('open'); uEl.style.display='none';
+      }
+      // إغلاق قائمة الجرس عند النقر خارجها (مع إبقاء روابط عناصرها تعمل)
+      if (bEl && !bWrap) {
+        bEl.classList.remove('open'); bEl.style.display='none';
+      }
+      // إغلاق قائمة اللغة عند النقر خارجها
+      if (lEl && !lWrap) {
+        lEl.classList.remove('open'); lEl.style.display='none';
+      }
+      applyOpen();
+    });
+    document.querySelectorAll('.tenant-pill, .user-pill, #bell-toggle, .lang-pill').forEach(function(el){
+      el.addEventListener('click', function(){ setTimeout(applyOpen, 0); });
+    });
+  })();
+
+  // page section navigator + gentle Arabic field help
+  (function(){
+    function cleanHeadingText(card){
+      var h = card.querySelector(':scope > h3') ||
+              card.querySelector(':scope > .card-header .title') ||
+              card.querySelector(':scope > .card-header');
+      if (!h) return '';
+      var clone = h.cloneNode(true);
+      clone.querySelectorAll('i,svg,button').forEach(function(el){ el.remove(); });
+      return (clone.textContent || '').replace(/\s+/g, ' ').trim();
+    }
+
+    function sectionStoragePrefix(card){
+      var host = card.closest('[data-form-ls]');
+      if (host && host.getAttribute('data-form-ls')) return host.getAttribute('data-form-ls');
+      if (card.closest('.usr-form')) return 'hr:user-form:sec:';
+      if (card.closest('.pln-form')) return 'hr:plan-form:sec:';
+      if (card.closest('.cb-form')) return 'hr:cb-form:sec:';
+      if (card.closest('.nd-form')) return 'hr:nd-form:sec:';
+      if (card.closest('.ad-form')) return 'hr:ad-form:sec:';
+      if (card.closest('.rl-form')) return 'hr:role-form:sec:';
+      return 'hr:auto:' + location.pathname + ':sec:';
+    }
+
+    function openAndScrollTo(target){
+      if (!target) return;
+      if (target.classList.contains('is-collapsed')) {
+        target.classList.remove('is-collapsed');
+        if (target.dataset.sec) {
+          try { localStorage.setItem(sectionStoragePrefix(target) + target.dataset.sec, 'open'); } catch(_) {}
+        }
+      }
+      var header = document.querySelector('.topbar') || document.querySelector('.admin-topbar');
+      var offset = (header ? header.getBoundingClientRect().height : 64) + 18;
+      var y = target.getBoundingClientRect().top + window.pageYOffset - offset;
+      window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
+    }
+
+    function buildPageNav(){
+      if (document.querySelector('.sub-side, .hr-page-nav')) return;
+      var cards = Array.prototype.slice.call(document.querySelectorAll('.main .sec-card, .main form > .card'))
+        .filter(function(card){
+          return card.querySelector(':scope > h3') ||
+                 card.querySelector(':scope > .card-header .title') ||
+                 card.querySelector(':scope > .card-header');
+        });
+      if (cards.length < 2) return;
+
+      var first = cards[0];
+      var form = first.closest('form');
+      var host = first.closest('.pln-form,.cb-form,.nd-form,.ad-form,.rl-form,.tn-form,.mt-form,.bw-form,.pool-form,.svc-form,.tk-form,.vch-form,.sg-form,.tool-form,.settings-form') ||
+                 form || first.parentElement;
+      if (!host) return;
+
+      host.classList.add('hr-page-nav-host');
+      var nav = document.createElement('aside');
+      nav.className = 'hr-page-nav';
+      nav.setAttribute('aria-label', window.__I18N__.pageSections);
+      nav.innerHTML =
+        '<div class="hr-page-nav-title"><i class="fa-solid fa-compass"></i><span></span></div>' +
+        '<nav class="hr-page-nav-list"></nav>' +
+        '<div class="hr-page-nav-note"></div>';
+      nav.querySelector('.hr-page-nav-title span').textContent = window.__I18N__.pageSections;
+      nav.querySelector('.hr-page-nav-note').textContent = window.__I18N__.sectionsNote;
+
+      var list = nav.querySelector('.hr-page-nav-list');
+      cards.forEach(function(card, index){
+        if (!card.id) card.id = 'hr-section-' + (index + 1);
+        var label = cleanHeadingText(card) || (window.__I18N__.sectionPrefix + ' ' + (index + 1));
+        var a = document.createElement('a');
+        a.href = '#' + card.id;
+        a.innerHTML = '<i class="fa-solid fa-angle-left"></i><span></span>';
+        a.querySelector('span').textContent = label;
+        list.appendChild(a);
+      });
+
+      if (form && form.parentElement === host) host.insertBefore(nav, form);
+      else host.insertBefore(nav, first);
+
+      var links = Array.prototype.slice.call(list.querySelectorAll('a'));
+      links.forEach(function(link){
+        link.addEventListener('click', function(e){
+          e.preventDefault();
+          var target = document.getElementById(link.getAttribute('href').slice(1));
+          openAndScrollTo(target);
+          if (history.pushState) history.pushState(null, '', link.getAttribute('href'));
+        });
+      });
+
+      function updateActive(){
+        var header = document.querySelector('.topbar') || document.querySelector('.admin-topbar');
+        var marker = (header ? header.getBoundingClientRect().height : 64) + 28;
+        var active = cards[0];
+        cards.forEach(function(card){
+          if (card.getBoundingClientRect().top <= marker) active = card;
+        });
+        links.forEach(function(link){
+          link.classList.toggle('is-active', link.getAttribute('href') === '#' + active.id);
+        });
+      }
+      updateActive();
+      document.addEventListener('scroll', updateActive, { passive:true });
+    }
+
+    function addFieldHelp(){
+      // قاموس مساعدة الحقول يُقرأ من حزمة الترجمة المبثوثة من Jinja أعلاه
+      // (window.__I18N__.hints) — كل قيمة مرّت عبر _() فتُترجم تلقائيًا،
+      // فلا يبقى أي نص عربي مكتوب داخل JavaScript.
+      var hints = (window.__I18N__ && window.__I18N__.hints) || {};
+      document.querySelectorAll('.main .sec-card .f-field, .main .sec-card .form-field, .main .sec-card .field-group, .main .card .field, .main .card .form-field, .main .card .field-group').forEach(function(box){
+        if (box.querySelector('.field-help, .hint')) return;
+        var control = box.querySelector('input:not([type="hidden"]):not([type="submit"]):not([type="button"]), select, textarea');
+        if (!control) return;
+        var key = control.getAttribute('name') || control.id || control.getAttribute('type') || '';
+        var text = hints[key] || hints[(key || '').replace(/\[\]$/, '')];
+        if (!text) return;
+        var help = document.createElement('div');
+        help.className = 'field-help auto-help';
+        help.textContent = text;
+        try {
+          if (getComputedStyle(box).display === 'flex') box.style.flexWrap = box.style.flexWrap || 'wrap';
+        } catch(_) {}
+        box.appendChild(help);
+      });
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', function(){ buildPageNav(); addFieldHelp(); });
+    } else {
+      buildPageNav();
+      addFieldHelp();
+    }
+  })();
+</script>
+</body>
+</html>

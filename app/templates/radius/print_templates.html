@@ -1342,12 +1342,17 @@
     return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
   }
   function cardSizeMm(){
-    // ملاحظة: المحرك (card_renderer._resolve_positions) يقسم دائمًا على
-    // card_width_mm/card_height_mm كما أُرسلا — بلا تبديل في الوضع
-    // العمودي. كان الـ JS يبدّلهما هنا فتنحرف إحداثيات السحب والمزامنة
-    // على المحركات العمودية؛ الآن نفس معادلة الخادم حرفيًا.
-    const w = numeric('card_width_mm', 85);
-    const h = numeric('card_height_mm', 54);
+    // ملاحظة: المحرك (card_renderer.card_mm_box) يوجّه صندوق mm حسب
+    // اتجاه الكانفس قبل القسمة — لأن الحفظ يبدّل العرض/الارتفاع للبطاقات
+    // العمودية بينما الحقول هنا تبقى كما كتبها المستخدم. نطبق نفس
+    // التوجيه حرفيًا حتى يطابق تحويل السحب mm↔كانفس ما يرسمه الخادم
+    // قبل الحفظ وبعده على كل المحركات.
+    let w = numeric('card_width_mm', 85);
+    let h = numeric('card_height_mm', 54);
+    const isVertical = activeRenderEngine().endsWith('_vertical');
+    if(w !== h && isVertical !== (h > w)){
+      const swapped = w; w = h; h = swapped;
+    }
     return {w, h};
   }
   function syncRangeOutput(input){

@@ -2590,7 +2590,7 @@ body.mt-modal-open{overflow:hidden}
           <span class="np-svc-icon np-svc-icon--amber"><i class="fa-solid fa-globe"></i></span>
           <h5 class="np-svc-title">
             {{ _('تغيير IP الخروج') }}
-            <span class="rh-svc-paid">{{ _('مدفوعة') }}</span>
+            <span class="rh-svc-paid"><i class="fa-solid fa-lock"></i> {{ _('مدفوعة') }}</span>
           </h5>
           <span class="np-svc-status-dot is-unknown"
                 data-rh-svc-status
@@ -2602,15 +2602,15 @@ body.mt-modal-open{overflow:hidden}
            وتعرض الأسباب وأوامر MikroTik للإصلاح
            (radius.routes.status.diagnostics → mt_diagnostics.html).
            أضفنا سطر وصف موجز داخل البطاقة يطابق وظيفتها الفعليّة. #}
-        <a class="np-svc-card np-svc-card--tool rh-inv-card--diag"
+        {# سطر الوصف أُزيل (يونيو 2026): كانت هذه البطاقة و«تتبع حالة
+           الأجهزة» الوحيدتَين بسطرَين فتكسران تساوي ارتفاعات الشبكة.
+           النص الكامل باقٍ في title (تلميح المرور) على البطاقة نفسها. #}
+        <a class="np-svc-card np-svc-card--tool"
            data-mt-router-link="diagnostics"
            href="{{ url_for('radius.diagnostics') }}"
            title="{{ _('فحص اتصال كل راوترات الأسطول واكتشاف الأعطال مبكراً') }}">
           <span class="np-svc-icon np-svc-icon--slate"><i class="fa-solid fa-stethoscope"></i></span>
-          <span class="rh-inv-card-text">
-            <h5 class="np-svc-title">{{ _('تشخيص الراوترات') }}</h5>
-            <span class="rh-inv-card-desc">{{ _('فحص الاتصال والصحّة لكل راوترات الأسطول مع أسباب الأعطال') }}</span>
-          </span>
+          <h5 class="np-svc-title">{{ _('تشخيص الراوترات') }}</h5>
           <span class="np-svc-status-dot is-tool" title="{{ _('أداة') }}"></span>
         </a>
         {# «تتبع حالة الأجهزة» — أداة مراقبة مستمرّة على مستوى
@@ -2621,15 +2621,12 @@ body.mt-modal-open{overflow:hidden}
            في app/radius/routes/device_health.py باسم endpoint
            «device_health_page». رمز الـqrcode-network ليعكس فكرة
            «شبكة من الأجهزة المُراقَبة». #}
-        <a class="np-svc-card np-svc-card--tool rh-inv-card--diag"
+        <a class="np-svc-card np-svc-card--tool"
            data-mt-router-link="device-health"
            href="{{ url_for('radius.device_health_page') }}"
            title="{{ _('مراقبة مستمرة لحالة كل أجهزة الشبكة مع إشعار عند العطل') }}">
           <span class="np-svc-icon np-svc-icon--teal"><i class="fa-solid fa-heart-pulse"></i></span>
-          <span class="rh-inv-card-text">
-            <h5 class="np-svc-title">{{ _('تتبع حالة الأجهزة') }}</h5>
-            <span class="rh-inv-card-desc">{{ _('مراقبة دوريّة لكل أجهزة الشبكة مع تنبيه فوريّ عند العطل') }}</span>
-          </span>
+          <h5 class="np-svc-title">{{ _('تتبع حالة الأجهزة') }}</h5>
           <span class="np-svc-status-dot is-tool" title="{{ _('أداة') }}"></span>
         </a>
       </div>
@@ -3037,18 +3034,37 @@ body.mt-modal-open{overflow:hidden}
 /* الوصف والسهم يختفيان في الوضع المدمج — البطاقة سطر واحد فقط. */
 .rh-inventory .np-svc-desc{display:none}
 .rh-inventory .np-svc-arrow{display:none}
-/* نقطة الحالة: عنصر مضمّن بنهاية السطر (لا زاوية مطلقة). الألوان
-   (is-active/is-inactive/is-unknown) تأتي من dashboard_premium.css.
-   is-tool نقطة محايدة للأدوات (لا حالة تشغيل حقيقية لها). */
+/* مؤشّر الحالة: كان نقطة 8px تحمل ثلاث دلالات مختلفة بنفس الشكل
+   الرمادي (أداة / غير مفعّلة / بانتظار التأكيد) فلا يميّزها المشغّل.
+   صار شارة نصية صريحة عبر ::after — نفس العنصر ونفس أصناف الحالة
+   ونفس خطافات JS (setDot/data-rh-svc-status) بلا أي تغيير سلوكي. */
 .rh-inventory .np-svc-status-dot{
   position:static;
   flex-shrink:0;
   order:3;
   margin-inline-start:auto;
+  width:auto;height:auto;border-radius:999px;
+  background:#F1F5F9;color:#94A3B8;box-shadow:none;
+  font-size:9.5px;font-weight:900;letter-spacing:.02em;
+  line-height:1;padding:4px 9px;
+  display:inline-flex;align-items:center;
 }
+.rh-inventory .np-svc-status-dot::after{content:"—"}
+.rh-inventory .np-svc-status-dot.is-active{
+  background:#DCFCE7;color:#15803D;box-shadow:none;
+}
+.rh-inventory .np-svc-status-dot.is-active::after{content:"مفعّلة"}
+.rh-inventory .np-svc-status-dot.is-inactive{
+  background:#F1F5F9;color:#94A3B8;box-shadow:none;
+}
+.rh-inventory .np-svc-status-dot.is-inactive::after{content:"غير مفعّلة"}
 .rh-inventory .np-svc-status-dot.is-tool{
-  background:#CBD5E1;box-shadow:none;
+  background:#EDE9FE;color:#5B21B6;box-shadow:none;
 }
+.rh-inventory .np-svc-status-dot.is-tool::after{content:"أداة"}
+/* شارة العنوان في بطاقة اللوب صارت تكرارًا حرفيًا لشارة الحالة
+   الجديدة — تُخفى بصريًا (JS يحدّثها كما هو بلا كسر). */
+.rh-inventory .rh-svc-loop{display:none}
 /* بطاقة خدمة مفعّلة: خلفية خضراء فاتحة خفيفة تُرى بلمحة. */
 .rh-inventory .np-svc-card.is-on{
   background:#F0FDF4;border-color:#BBF7D0;
@@ -3062,40 +3078,6 @@ body.mt-modal-open{overflow:hidden}
 }
 .rh-inventory .np-svc-hint ~ .np-svc-status-dot{
   margin-inline-start:6px;
-}
-
-/* ─── بطاقات سطرَين (عنوان + وصف موجز) — لأدوات على مستوى المستأجر
-   أوسع نطاقًا من خدمات راوتر بعينه (تشخيص الراوترات / تتبع حالة
-   الأجهزة). تتساوى أبعادها مع بقيّة بطاقات الشبكة بعد تكبير الحشو
-   ليصير القَسمَان متناسقَين بصرياً. */
-.rh-inventory .np-svc-card.rh-inv-card--diag{
-  align-items:center;
-  padding:14px 18px;
-  min-height:64px;
-}
-.rh-inventory .np-svc-card.rh-inv-card--diag .rh-inv-card-text{
-  display:flex;
-  flex-direction:column;
-  gap:3px;
-  flex:1;
-  min-width:0;
-}
-.rh-inventory .np-svc-card.rh-inv-card--diag .np-svc-title{
-  flex:initial;
-  margin:0;
-}
-.rh-inventory .np-svc-card.rh-inv-card--diag .rh-inv-card-desc{
-  display:block;
-  font-size:12px;
-  line-height:1.45;
-  color:#64748B;
-  font-weight:600;
-  /* السماح بالالتفاف بدل قصّ ellipsis — نفس فلسفة العنوان أعلاه. */
-  white-space:normal;
-  overflow:visible;
-  text-overflow:clip;
-  word-break:break-word;
-  overflow-wrap:anywhere;
 }
 
 /* ─── قسم «الخدمات المضافة على الراوتر» ──────────────────────
@@ -3173,62 +3155,73 @@ body.mt-modal-open{overflow:hidden}
 .rh-added-group-h{
   grid-column:1 / -1;
   display:flex;align-items:center;gap:7px;
-  margin:6px 0 1px;font-size:11px;font-weight:900;
-  letter-spacing:.02em;color:#64748B;
+  margin:4px 0 1px;font-size:11.5px;font-weight:900;
+  letter-spacing:.02em;color:#475569;
 }
 .rh-added-group-h:first-child{margin-top:0}
 .rh-added-group-h::after{content:"";flex:1;height:1px;background:#EEF2F7}
-.rh-added-group-h span{
+/* أيقونة النوع الملوّنة — مرّة واحدة في الترويسة (أُزيلت من البطاقات).
+   ألوان np-svc-icon--* من dashboard_premium.css؛ نلغي ظلّها هنا. */
+.rh-added-group-ico{
+  width:20px;height:20px;border-radius:6px;color:#fff;flex:0 0 auto;
+  display:inline-flex;align-items:center;justify-content:center;
+  font-size:9px;box-shadow:none !important;
+}
+.rh-added-group-n{
   font-size:10px;font-weight:900;border-radius:999px;padding:0 7px;
   min-width:16px;text-align:center;background:#EEF2F7;color:#64748B;flex:0 0 auto;
 }
 .rh-added-group-h[hidden]{display:none}
+/* بطاقة مدمجة سطر واحد غالبًا: اسم الواجهة + (شارات استثنائية فقط).
+   لا أيقونة ولا اسم نوع داخل البطاقة — الترويسة فوقها تحملهما. */
 .rh-added-row{
   position:relative;
-  display:grid;
-  grid-template-columns:auto minmax(0,1fr);
-  grid-template-areas:"icon name" "icon meta";
-  align-items:center;column-gap:9px;row-gap:2px;
-  padding:8px 10px;padding-inline-end:34px;
+  display:flex;flex-direction:column;justify-content:center;gap:2px;
+  min-height:38px;
+  padding:7px 10px;padding-inline-end:36px;
   background:#fff;border:1px solid #EAECF0;border-radius:11px;
   transition:border-color .14s;
 }
 .rh-added-row:hover{border-color:#CBD5E1}
 .rh-added-row[hidden]{display:none}
-.rh-added-row-icon{
-  grid-area:icon;
-  width:28px;height:28px;border-radius:7px;flex-shrink:0;color:#fff;
-  display:inline-flex;align-items:center;justify-content:center;font-size:11px;
-}
 .rh-added-name{
-  grid-area:name;
   font-size:12.5px;font-weight:800;color:#0F172A;font-family:monospace;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
 .rh-added-meta{
-  grid-area:meta;display:flex;align-items:center;gap:6px;
+  display:flex;align-items:center;gap:6px;
   flex-wrap:wrap;min-width:0;
 }
-.rh-added-type{font-size:10.5px;color:#94A3B8;font-weight:700;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;}
 .rh-added-src{
   font-size:9.5px;font-weight:900;padding:1px 7px;border-radius:999px;
   white-space:nowrap;flex-shrink:0;
 }
-.rh-added-src--auto{background:#EDE9FE;color:#5B21B6}
 .rh-added-src--man{background:#FEF3C7;color:#92400E}
 .rh-added-date{
   font-size:10px;color:#94A3B8;font-family:monospace;
   white-space:nowrap;flex-shrink:0;direction:ltr;
 }
+/* زر الحذف شبحيّ افتراضيًا — 35 زرًا أحمر دائمًا كانت أثقل عنصر بصري
+   في الصفحة لإجراء نادر وخطير. يظهر بلونه التحذيري عند المرور على
+   البطاقة أو التركيز عليه، ويبقى ظاهرًا دائمًا على شاشات اللمس. */
 .rh-added-del{
-  position:absolute;inset-inline-end:6px;top:6px;
+  position:absolute;inset-inline-end:6px;top:0;bottom:0;margin-block:auto;
   flex-shrink:0;width:26px;height:26px;border-radius:7px;
-  border:1px solid #FCA5A5;background:#FEF2F2;color:#B91C1C;
+  border:1px solid transparent;background:transparent;color:#CBD5E1;
+  opacity:0;
   cursor:pointer;font-size:10.5px;transition:all .12s;
   display:inline-flex;align-items:center;justify-content:center;
 }
+.rh-added-row:hover .rh-added-del,
+.rh-added-row:focus-within .rh-added-del{
+  opacity:1;border-color:#FCA5A5;background:#FEF2F2;color:#B91C1C;
+}
 .rh-added-del:hover{background:#FECACA;border-color:#F87171}
+@media (hover:none){
+  .rh-added-del{
+    opacity:1;border-color:#FCA5A5;background:#FEF2F2;color:#B91C1C;
+  }
+}
 .rh-added-del-target{
   background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;
   padding:10px 12px;font-family:monospace;font-size:12.5px;color:#0F172A;
@@ -3253,8 +3246,10 @@ body.mt-modal-open{overflow:hidden}
   color:#92400e;background:#fef3c7;border:1px solid #fde68a;
   border-radius:999px;padding:1px 8px;
 }
+/* حدّ صلب هادئ بدل المتقطّع الأصفر — المتقطّع + الخلفية الصفراء كانا
+   يقرآن كلغة «تحذير/خطأ» بينما المقصود «خدمة مدفوعة عند الطلب». */
 .rh-inventory .np-svc-card--paid{
-  cursor:pointer;border:1px dashed #FDE68A;background:#FFFBEB;
+  cursor:pointer;border:1px solid #FDE68A;background:#FFFBEB;
 }
 .rh-inventory .np-svc-card--paid:hover{border-color:#F59E0B;background:#FEF3C7}
 .rh-inventory [data-pss-paid] .np-svc-title{
@@ -3289,11 +3284,10 @@ body.mt-modal-open{overflow:hidden}
 /* شارة اللوب الرماديّة عند انعدام التأكيد الحيّ — لا «مفعّل» مزيّف
    ما لم يُؤكَّد من /inventory. */
 .rh-svc-loop.is-unknown{background:#f1f5f9;color:#94a3b8}
-/* نقطة الحالة الرماديّة (is-unknown) عند فشل الفحص الحيّ — تُورَث من
-   dashboard_premium.css؛ نضمن لونها هنا احترازًا في حال لم يُحمَّل
-   ذلك الـCSS على هذه الصفحة (بيئات منفصلة). */
+/* حالة «بانتظار التأكيد» (is-unknown) — شارة «—» رمادية محايدة، تلغي
+   تلوين dashboard_premium.css البرتقالي حتى لا توحي بإنذار. */
 .rh-inventory .np-svc-status-dot.is-unknown{
-  background:#CBD5E1;box-shadow:none;
+  background:#F1F5F9;color:#94A3B8;box-shadow:none;
 }
 
 /* توست داخل اللوحة — لا alert/confirm أصيل، تظهر/تختفي بـhidden. */
@@ -3812,20 +3806,19 @@ body.mt-modal-open{overflow:hidden}
         ' data-type="' + esc(meta.ar) + '">' +
         '<i class="fa-solid fa-trash"></i></button>'
     );
+    // النوع لا يُكرَّر داخل البطاقة (ترويسة المجموعة فوقها تحمله مع
+    // أيقونته الملوّنة)، وشارة المصدر تظهر للاستثناء فقط: «يدويّة»
+    // النادرة — «تلقائيّة» الغالبة تُفهم ضمنًا ومن فلاتر الأعلى.
+    const badges =
+      (isMan ? '<span class="rh-added-src rh-added-src--man">يدويّة</span>' : '') +
+      (date ? '<span class="rh-added-date">' + date + '</span>' : '');
     return (
       '<div class="rh-added-row" data-src="' + (isMan ? "operator" : "hoberadius") +
         '" data-group="' + esc(e.svcKey) + '"' +
         (isSyn ? ' data-pss-row="1"' : '') + '>' +
         delBtn +
-        '<span class="rh-added-row-icon ' + meta.color + '">' +
-          '<i class="fa-solid fa-' + meta.icon + '"></i></span>' +
         '<span class="rh-added-name" title="' + esc(it.label) + '">' + esc(it.label || "—") + '</span>' +
-        '<span class="rh-added-meta">' +
-          '<span class="rh-added-type">' + esc(meta.ar) + '</span>' +
-          '<span class="rh-added-src ' + (isMan ? "rh-added-src--man" : "rh-added-src--auto") + '">' +
-            (isMan ? "يدويّة" : "تلقائيّة") + '</span>' +
-          (date ? '<span class="rh-added-date">' + date + '</span>' : '') +
-        '</span>' +
+        (badges ? '<span class="rh-added-meta">' + badges + '</span>' : '') +
       '</div>'
     );
   }
@@ -3846,7 +3839,10 @@ body.mt-modal-open{overflow:hidden}
       const key = g.service_type || "other";
       let sec = byKey[key];
       if (!sec) {
-        sec = { key: key, label: (g.service_type ? meta.ar : "أخرى"), items: [] };
+        // أيقونة النوع الملوّنة صارت في الترويسة (مرة واحدة للمجموعة)
+        // بدل تكرارها داخل كل بطاقة — كثافة أقل وتسلسل هرمي أوضح.
+        sec = { key: key, label: (g.service_type ? meta.ar : "أخرى"),
+                icon: meta.icon, color: meta.color, items: [] };
         byKey[key] = sec; sections.push(sec);
       }
       (g.items || []).forEach((it) => {
@@ -3861,7 +3857,10 @@ body.mt-modal-open{overflow:hidden}
       if (!sec.items.length) return;
       sec.items.sort((a, b) => natKey(a.it.label).localeCompare(natKey(b.it.label)));
       html.push('<div class="rh-added-group-h" data-rh-added-group="' + esc(sec.key) + '">' +
-                esc(sec.label) + ' <span>' + sec.items.length + '</span></div>');
+                '<span class="rh-added-group-ico ' + esc(sec.color) + '">' +
+                  '<i class="fa-solid fa-' + esc(sec.icon) + '"></i></span>' +
+                esc(sec.label) +
+                ' <span class="rh-added-group-n">' + sec.items.length + '</span></div>');
       sec.items.forEach((e) => html.push(addedCardHtml(e)));
     });
     addedList.innerHTML = html.join("");
