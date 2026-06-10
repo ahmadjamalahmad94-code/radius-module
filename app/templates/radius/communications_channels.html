@@ -58,17 +58,39 @@
   /* ── رقاقات الكود أحادية المسافة داخل التلميحات ── */
   .cch-hint code{ font-family:ui-monospace,Consolas,monospace; background:#f1f5f9; border:1px solid #e2e8f0; border-radius:5px; padding:1px 6px; color:#5b21b6; direction:ltr; unicode-bidi:isolate; font-size:11px; }
 
-  /* ── أداة «إرسال اختبار» داخل بطاقة القناة ── */
-  .cch-test{ border:1px dashed #e2e8f0; border-radius:13px; padding:13px; background:#fcfcff; display:grid; gap:10px; }
-  .cch-test-title{ font-size:12.5px; font-weight:800; color:#0f172a; display:flex; align-items:center; gap:7px; }
-  .cch-test-row{ display:flex; gap:9px; flex-wrap:wrap; align-items:end; }
+  /* ── إيقاع عمودي موحّد داخل بطاقة القناة ──
+       جذر الاتساق: المغلِّف (cch-card) flex-column يُعطي كل أبناءه
+       (الشارات/النموذج/أداة الاختبار) فجوة موحّدة = --hub-gap-lg.
+       لا margin-top/bottom مباشرة على عناصر داخلية — كل المسافات
+       تنشأ من gap الأب فقط. النموذج .hub-form يفعل الشيء نفسه
+       داخليًا (gap = --hub-gap-lg). والشارات/الحقول/الأزرار جميعها
+       تنسجم على نفس المقياس. #}
+  .cch-card{ display:flex; flex-direction:column; gap: var(--hub-gap-lg); }
+  /* صف الشارات: يستخدم gap داخلي للشارات نفسها فقط — العزل عما
+       حوله من المغلِّف .cch-card (لا margin خارجي). */
+  .cch-status{ display:flex; gap: var(--hub-gap-sm); flex-wrap:wrap; }
+
+  /* ── أداة «إرسال اختبار» داخل بطاقة القناة ──
+       الحشوة الداخلية = --hub-gap-lg ليساوي إيقاع البطاقة الخارجي
+       فلا تظهر «جزيرة ضيّقة» وسط نموذج أوسع. والفجوة الداخلية =
+       --hub-gap-md لتمييز عناصر الأداة دون فصلها عن بعضها بفجوة
+       أكبر من الفجوة بين حقول النموذج (--hub-gap-lg). #}
+  .cch-test{ border:1px dashed #e2e8f0; border-radius:13px; padding: var(--hub-gap-lg); background:#fcfcff; display:flex; flex-direction:column; gap: var(--hub-gap-md); }
+  .cch-test-title{ font-size:12.5px; font-weight:800; color:#0f172a; display:flex; align-items:center; gap: var(--hub-gap-sm); }
+  .cch-test-row{ display:flex; gap: var(--hub-gap-md); flex-wrap:wrap; align-items:end; }
   .cch-test-row .grow{ flex:1; min-width:160px; }
-  .cch-result{ display:none; font-size:12.5px; line-height:1.7; border-radius:10px; padding:10px 12px; }
+  .cch-result{ display:none; font-size:12.5px; line-height:1.7; border-radius:10px; padding: var(--hub-gap-md) var(--hub-gap-lg); }
   .cch-result.show{ display:block; }
   .cch-result.ok{ background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; }
   .cch-result.err{ background:#fef2f2; border:1px solid #fecaca; color:#991b1b; }
   .cch-result.info{ background:#eff6ff; border:1px solid #bfdbfe; color:#1e40af; }
-  .cch-result .ex{ display:block; margin-top:6px; font-family:ui-monospace,Consolas,monospace; font-size:11px; direction:ltr; unicode-bidi:isolate; word-break:break-all; color:#475569; }
+  .cch-result .ex{ display:block; margin-top: var(--hub-gap-xs); font-family:ui-monospace,Consolas,monospace; font-size:11px; direction:ltr; unicode-bidi:isolate; word-break:break-all; color:#475569; }
+
+  /* ── صف الإجراء (زر الحفظ) داخل النموذج ──
+       تغليف نظيف للزر بحيث يَكسب فجوة --hub-gap-lg من الأب
+       (.hub-form) كأي حقل آخر — فلا «لزقة» مع آخر حقل ولا فجوة
+       غريبة. لا margin مباشر. #}
+  .cch-actions{ display:flex; }
 </style>
 {% endblock %}
 
@@ -123,9 +145,10 @@
     icon=ch_icon(ch),
     meta="إرسال عبر رابط ويب عام من مزوّد الخدمة"
   ) %}
-    <div data-testid="channel-{{ ch }}">
-      {# صف شارات الحالة: التفعيل + النمط + الرصيد (إن وجد) #}
-      <div class="cch-status" style="margin-bottom:14px">
+    <div class="cch-card" data-testid="channel-{{ ch }}">
+      {# صف شارات الحالة: التفعيل + النمط + الرصيد (إن وجد).
+         الفجوة عن النموذج بعده تأتي من gap المغلِّف .cch-card. #}
+      <div class="cch-status">
         {% if st.enabled %}
           <span class="cch-badge on"><span class="dot"></span> {{ _('مفعّلة') }}</span>
         {% else %}
@@ -151,7 +174,10 @@
           <div class="hub-field-hint">{{ _('عند الإيقاف تبقى الرسائل في الطابور دون إرسال خارجي.') }}</div>
         </div>
 
-        <div class="hub-grid hub-grid--2">
+        {# نمط التشغيل + طريقة الطلب صفّان متوازيان: نستخدم .hub-form-row
+           من نظام التصميم (grid auto-fit بحد أدنى 250px + gap من التوكنات)
+           بدلًا من .hub-grid--2 الذي ليس له قاعدة أساس فيلصق الحقلين. #}
+        <div class="hub-form-row">
           <div class="hub-field">
             <label for="mode-{{ ch }}">{{ _('نمط التشغيل') }}
               <span class="hub-hint" tabindex="0" data-hint="«ربط مباشر من العميل»: تستخدم رابط مزوّدك الخاص بلا حدود. «رصيد مخصص من الإدارة»: يُخصم من رصيد رسائل تمنحه الإدارة لكل قناة."><i class="fa-solid fa-info"></i></span>
@@ -194,16 +220,16 @@
           <div class="hub-field-hint">{{ _('رابط لاستعلام رصيد المزوّد — يُحفظ مع إعدادات القناة لاستخدامه عند فحص الرصيد.') }}</div>
         </div>
 
-        <div>
+        <div class="cch-actions">
           <button type="submit" class="hub-btn hub-btn--primary"><i class="fa-solid fa-floppy-disk"></i> {{ _('حفظ إعدادات القناة') }}</button>
         </div>
       </form>
 
-      {# ── أداة «إرسال اختبار»: تستخدم الإعدادات المحفوظة وتعرض نتيجة المزوّد ── #}
+      {# ── أداة «إرسال اختبار»: تستخدم الإعدادات المحفوظة وتعرض نتيجة المزوّد.
+           الفجوة عمّا قبلها (النموذج) من gap المغلِّف .cch-card — لا margin مباشر. #}
       <div class="cch-test" data-test-block data-channel="{{ ch }}"
            data-url="{{ url_for('radius.communications_channels_test') }}"
-           data-csrf="{{ csrf_token() }}"
-           style="margin-top:16px">
+           data-csrf="{{ csrf_token() }}">
         <div class="cch-test-title"><i class="fa-solid fa-flask" style="color:#7c3aed"></i> {{ _('إرسال اختبار') }}</div>
         <div class="cch-test-row">
           <div class="hub-field grow">
