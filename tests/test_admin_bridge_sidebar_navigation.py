@@ -62,9 +62,14 @@ def test_admin_bridge_index_returns_html_with_dry_run_safety_labels(app):
 
     assert response.status_code == 200
     assert "text/html" in response.content_type
+    # Read-only status cards keep their dry/advisory labels…
     assert "وضع جاف" in html
-    assert "غير مفعل إنتاجيًا" in html
     assert "يحتاج تأكيد عقود الإدارة" in html
+    # …while the now-real-but-gated operations show an honest
+    # «بانتظار تفعيلك» seam (restore-apply / public-ip live apply flags off
+    # by default in tests) instead of the old "غير مفعل إنتاجيًا" stub label.
+    assert "بانتظار تفعيلك" in html
+    assert "غير مفعل إنتاجيًا" not in html
     assert "super-secret-test-value" not in html
     assert "license-secret-test-value" not in html
 

@@ -212,18 +212,52 @@ def test_backup_save_rejects_non_object_body(client):
 # ─── K8.1b: file download (honest unsupported) ───────────────────
 
 
-def test_file_download_returns_501_not_supported(client):
-    res = client.get(
-        "/api/v1/mikrotik/1/files/b1.backup/download",
-        headers=AUTH,
-    )
-    assert res.status_code == 501
+class _FakeFTP:
+    def __init__(self, payload=b"", *, perm_error=False):
+        self._payload = payload
+        self._perm_error = perm_error
+
+    def retrbinary(self, cmd, callback, blocksize=8192):
+        import ftplib
+        if self._perm_error:
+            raise ftplib.error_perm("550 No such file")
+        for i in range(0, len(self._payload), blocksize):
+            callback(self._payload[i:i + blocksize])
+
+    def quit(self):
+        pass
+
+
+def test_file_download_streams_real_bytes(client, monkeypatch):
+    """The download endpoint now streams the router file over FTP as a
+    real attachment (200 + bytes), not a 501 stub."""
+    from app.radius.services import mikrotik_admin_client as mac
+
+    payload = b"REAL-BACKUP-BYTES" * 1000
+    monkeypatch.setattr(mac, "_ftp_connect", lambda *a, **k: _FakeFTP(payload))
+
+    res = client.get("/api/v1/mikrotik/1/files/b1.backup/download", headers=AUTH)
+
+    assert res.status_code == 200
+    assert res.data == payload
+    assert res.mimetype == "application/octet-stream"
+    assert 'attachment; filename="b1.backup"' in res.headers["Content-Disposition"]
+
+
+def test_file_download_502_when_ftp_fails(client, monkeypatch):
+    """Router reachable but the file is missing/forbidden → honest 502,
+    never fabricated bytes."""
+    from app.radius.services import mikrotik_admin_client as mac
+
+    monkeypatch.setattr(mac, "_ftp_connect", lambda *a, **k: _FakeFTP(perm_error=True))
+
+    res = client.get("/api/v1/mikrotik/1/files/missing.backup/download", headers=AUTH)
+
+    assert res.status_code == 502
     body = res.get_json()
     assert body["ok"] is False
-    assert body["error"]["code"] == "not_supported"
-    assert "غير مدعوم" in body["error"]["message"]
-    assert body["error"]["details"]["filename"] == "b1.backup"
-    assert body["error"]["details"]["router_id"] == 1
+    assert body["error"]["code"] == "download_failed"
+    assert body["error"]["details"]["filename"] == "missing.backup"
 
 
 def test_file_download_rejects_traversal_segment(client):

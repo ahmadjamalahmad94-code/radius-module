@@ -247,13 +247,22 @@
                 <span class="hub-pill hub-pill--grey"><span class="dot"></span>{{ card.status }}</span>
               {% elif 'يحتاج' in card.status %}
                 <span class="hub-pill hub-pill--blue"><span class="dot"></span>{{ card.status }}</span>
-              {% elif 'جاهز' in card.status %}
+              {% elif 'بانتظار' in card.status %}
+                <span class="hub-pill hub-pill--amber"><span class="dot"></span>{{ card.status }}</span>
+              {% elif 'مفعّل' in card.status or 'جاهز' in card.status %}
                 <span class="hub-pill hub-pill--green"><span class="dot"></span>{{ card.status }}</span>
               {% else %}
                 <span class="hub-pill hub-pill--grey"><span class="dot"></span>{{ card.status }}</span>
               {% endif %}
             </div>
             <div class="ab-path-note">{{ card.note }}</div>
+            {% if card.action_url %}
+            <a class="hub-btn hub-btn--ghost hub-btn--sm" href="{{ card.action_url }}"
+               style="margin-top:8px;display:inline-flex">
+              <i class="fa-solid fa-arrow-up-right-from-square"></i>
+              {{ card.action_label or 'فتح' }}
+            </a>
+            {% endif %}
           </div>
         </div>
       {% endfor %}

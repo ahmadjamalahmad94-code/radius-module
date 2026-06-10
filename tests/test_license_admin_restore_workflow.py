@@ -180,6 +180,76 @@ def test_destructive_apply_disabled_by_default(app_db, tmp_path):
     assert result["code"] == "destructive_restore_disabled"
 
 
+def _prepare_verified(service, tmp_path, *, reference, candidate_bytes):
+    service.record_restore_request(
+        tenant_id=1,
+        job={"reference": reference, "requested_backup_reference": "local"},
+    )
+    service.create_local_snapshot(tenant_id=1, reference=reference)
+    candidate = tmp_path / f"{reference}.sqlite3"
+    candidate.write_bytes(candidate_bytes)
+    service.verify_candidate_checksum(
+        tenant_id=1,
+        reference=reference,
+        candidate_path=os.fspath(candidate),
+        expected_sha256=hashlib.sha256(candidate_bytes).hexdigest(),
+    )
+    return candidate
+
+
+def test_apply_restore_swaps_live_db_when_enabled(app_db, tmp_path, monkeypatch):
+    import sqlite3
+
+    from app.radius.db.connection import db
+
+    from app.radius.db.connection import db
+
+    service, _transport = _service({"ok": True, "status": "ok", "items": []})
+    # Record + snapshot first so the restore-requests row exists, THEN build a
+    # full-DB candidate (a real backup is a copy of this same app DB) and add a
+    # unique marker table so we can prove the live DB was actually replaced.
+    service.record_restore_request(
+        tenant_id=1,
+        job={"reference": "restore-ok", "requested_backup_reference": "local"},
+    )
+    service.create_local_snapshot(tenant_id=1, reference="restore-ok")
+    cand = tmp_path / "good.sqlite3"
+    with sqlite3.connect(os.fspath(cand)) as dst:
+        db().backup(dst)
+        dst.execute("CREATE TABLE restore_marker (note TEXT)")
+        dst.execute("INSERT INTO restore_marker VALUES ('applied-ok')")
+        dst.commit()
+    cand_bytes = cand.read_bytes()
+    service.verify_candidate_checksum(
+        tenant_id=1,
+        reference="restore-ok",
+        candidate_path=os.fspath(cand),
+        expected_sha256=hashlib.sha256(cand_bytes).hexdigest(),
+    )
+    monkeypatch.setenv("HOBERADIUS_ADMIN_RESTORE_APPLY_ENABLED", "1")
+
+    result = service.apply_restore(tenant_id=1, reference="restore-ok")
+
+    assert result["ok"] is True
+    assert result["status"] == "completed"
+    assert result["request"]["applied_at"]
+    # The live DB now reflects the candidate content (real online swap).
+    row = db().execute("SELECT note FROM restore_marker").fetchone()
+    assert row["note"] == "applied-ok"
+
+
+def test_apply_restore_rejects_corrupt_candidate(app_db, tmp_path, monkeypatch):
+    service, _transport = _service({"ok": True, "status": "ok", "items": []})
+    _prepare_verified(service, tmp_path, reference="restore-bad",
+                      candidate_bytes=b"not a sqlite file at all")
+    monkeypatch.setenv("HOBERADIUS_ADMIN_RESTORE_APPLY_ENABLED", "1")
+
+    result = service.apply_restore(tenant_id=1, reference="restore-bad")
+
+    assert result["ok"] is False
+    assert result["code"] == "candidate_corrupt"
+
+
 def test_restore_poll_route_returns_json(client):
     res = client.post(
         "/api/v1/system/admin-bridge/restore/poll",
