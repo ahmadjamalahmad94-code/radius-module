@@ -216,13 +216,28 @@ def license_file():
             "has_license_key": bool(config.license_key),
             "has_shared_secret": bool(config.shared_secret),
         },
-        missing=config.missing_fields() + ([] if config.shared_secret else ["HOBERADIUS_ADMIN_SHARED_SECRET"]),
+        # Simplified contract: ``shared_secret`` is OPTIONAL (bearer-in-body
+        # is the default). Only the panel URL + license_key are required.
+        missing=config.missing_fields(),
         latest=latest,
         capacity=_safe("capacity", lambda: CapacityEnforcementService().capacity_status(tenant_id=tenant_id), {"status": "unavailable"}),
     )
 
 
 def license_file_config():
+    """Save the license-bridge configuration.
+
+    Simplified link (يونيو 2026 — قاعدة المالك): the only credential
+    required from the operator is the ``license_key`` (a 16-char string).
+    All advanced fields (``shared_secret`` / ``server_fingerprint`` /
+    worker toggles / sync interval) are OPTIONAL and live under the
+    «إعدادات متقدّمة» disclosure; their absence is no longer an error.
+
+    Backwards-compat: an admin who linked the old way (with a signed
+    ``shared_secret`` stored) keeps using signed requests. The new
+    bearer-in-body path is exercised only when ``shared_secret`` is
+    empty — see ``AdminPanelClient._headers()``.
+    """
     tenant_id = _tid()
     from ..db.repos import audit_repo, tenants_repo
     from ..services.admin_panel_client import AdminBridgeConfig
@@ -230,6 +245,7 @@ def license_file_config():
     config = AdminBridgeConfig.from_env()
     base_url = (request.form.get("base_url") or config.base_url or LICENSE_PANEL_BASE_URL).strip().rstrip("/")
     license_key = (request.form.get("license_key") or "").strip()
+    # Advanced (optional) fields — absent on the simple flow.
     shared_secret = (request.form.get("shared_secret") or "").strip()
     server_fingerprint = (request.form.get("server_fingerprint") or "").strip()[:255]
     worker_enabled = bool(request.form.get("worker_enabled"))
@@ -264,11 +280,11 @@ def license_file_config():
     elif not config.license_key:
         flash("انسخ مفتاح الترخيص من صفحة العميل في لوحة التراخيص ثم الصقه هنا.", "error")
         return redirect(url_for("radius.license_file"))
+    # shared_secret no longer required on the simple bearer path. Save only
+    # if explicitly provided (keeps existing signed configs intact and lets
+    # the operator opt-in to the legacy signed path from advanced settings).
     if shared_secret:
         updates["license_admin_bridge.shared_secret"] = shared_secret
-    elif not config.shared_secret:
-        flash("انسخ سر الربط من صفحة العميل في لوحة التراخيص ثم الصقه هنا.", "error")
-        return redirect(url_for("radius.license_file"))
 
     changed: list[str] = []
     admin_id = int(session.get("admin_id") or 0)
@@ -381,8 +397,15 @@ def _sync_status_label(status: Any) -> str:
         # ── error statuses ──
         "blocked":             "الترخيص محظور",
         "config_missing":      "إعدادات الربط غير مكتملة",
+        # NEW (يونيو 2026) — لوحة التراخيص أرجعت 403 + reason=customer_pending
+        # لأنّ بطاقة العميل في اللوحة لم تُفعَّل بعد. نُظهر الرسالة الواضحة
+        # التي يَطلبها المالك بدل «403 raw» المُربك. الإصلاح في صفحة العميل
+        # في لوحة التراخيص نفسها — ليس في الريدياس.
+        "customer_pending":    "حساب العميل غير مفعّل بعد في لوحة التراخيص — فعّله من صفحة العميل هناك ثم أعد المحاولة.",
+        "customer_inactive":   "حساب العميل غير مفعّل في لوحة التراخيص — فعّله من صفحة العميل ثم أعد المحاولة.",
         "disabled":            "الجسر غير مفعّل",
-        "denied":              "فشل التحقق من سر الربط أو التوقيع",
+        "denied":              "فشل التحقق من مفتاح الترخيص أو سر الربط",
+        "unauthorized":        "مفتاح الترخيص مرفوض من لوحة التراخيص — تحقّق من نسخه كاملاً",
         "expired":             "الترخيص منتهي",
         "fingerprint_denied":  "بصمة الخادم غير مسموحة",
         "https_required":      "الاتصال الآمن (HTTPS) مطلوب",
