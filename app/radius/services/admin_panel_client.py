@@ -116,6 +116,27 @@ def _safe_float(value: str | None, default: float, *, minimum: float, maximum: f
     return max(minimum, min(maximum, parsed))
 
 
+def mask_license_key(value: str | None) -> str:
+    """Return a redacted ``lic_…xxxx`` form of a license key — safe for logs.
+
+    Never logs the full key. Returns the first 4 chars (or ``lic`` if the key
+    is too short) joined by ``…`` to the last 4. Empty/None → ``""`` so the
+    helper is safe to drop into any string-formatting context.
+
+    Used by the bearer-in-body path: the key IS the secret, so any debug
+    line that references it must mask first. ``sanitize_bridge_payload``
+    already masks dict-shaped payloads through ``SENSITIVE_KEYS``; this
+    helper covers the rare cases where the key is interpolated into a
+    bare string before logging.
+    """
+    s = str(value or "").strip()
+    if not s:
+        return ""
+    if len(s) <= 8:
+        return s[:2] + "…"
+    return s[:4] + "…" + s[-4:]
+
+
 def bridge_setting(key: str, default: str = "") -> str:
     try:
         from app.radius.core.tenant import DEFAULT_TENANT_ID
@@ -251,8 +272,37 @@ class UrlLibAdminBridgeTransport:
             headers={**headers, "Content-Type": "application/json"},
             method=method,
         )
-        with urllib.request.urlopen(request, timeout=timeout_seconds) as response:
-            raw = response.read(1024 * 1024)
+        # Parse 4xx/5xx JSON bodies too. The simplified panel contract returns
+        # ``403 {"ok":false,"status":"customer_pending","reason":"customer_pending"}``
+        # when the customer card hasn't been activated yet — we MUST surface
+        # that as a normal status so the route layer can map it to the owner's
+        # Arabic friendly message instead of leaking «cryptic 403».
+        # Without this, urllib raises HTTPError → URLError branch → status
+        # collapses to ``unavailable`` and the reason is lost.
+        try:
+            with urllib.request.urlopen(request, timeout=timeout_seconds) as response:
+                raw = response.read(1024 * 1024)
+        except urllib.error.HTTPError as http_err:
+            # 401/403 from the panel carries a JSON body with ``status``+``reason``.
+            try:
+                raw_err = http_err.read(1024 * 1024) if http_err.fp else b""
+            except Exception:  # noqa: BLE001
+                raw_err = b""
+            try:
+                parsed_err = json.loads((raw_err or b"").decode("utf-8") or "{}")
+            except (ValueError, UnicodeDecodeError):
+                parsed_err = {}
+            if isinstance(parsed_err, dict) and parsed_err:
+                # Make sure ``status`` is present so _normalize_status doesn't
+                # collapse to "unknown".
+                if "status" not in parsed_err and parsed_err.get("reason"):
+                    parsed_err["status"] = str(parsed_err["reason"]).strip().lower()
+                parsed_err.setdefault("ok", False)
+                parsed_err.setdefault("http_status", http_err.code)
+                return parsed_err
+            # Empty/unparseable error body — re-raise so the caller falls
+            # into the ``unavailable`` branch (existing behavior).
+            raise
         parsed = json.loads(raw.decode("utf-8") or "{}")
         if not isinstance(parsed, dict):
             raise ValueError("admin panel response must be a JSON object")
@@ -612,11 +662,17 @@ class AdminPanelClient:
                 "error": {"code": "config_missing", "missing": missing},
             }
         # The upload payload was built through sanitize_bridge_payload(), which
-        # MASKS sensitive keys including `license_key` — so the panel would
+        # MASKS sensitive keys including ``license_key`` — so the panel would
         # receive a masked key and fail to resolve the license/secret (401).
-        # Restore the real license_key, and carry the integration secret in the
-        # BODY too (reverse proxies often strip custom request headers; over
-        # HTTPS the body is equivalent in confidentiality to the header).
+        # Restore the real license_key, and carry the integration credential
+        # in the BODY as well (reverse proxies often strip custom request
+        # headers; over HTTPS the body is equivalent in confidentiality).
+        #
+        # Two auth modes (mirror of ``_headers()``):
+        #   • shared_secret stored  → ``admin_secret`` in body (legacy signed).
+        #   • shared_secret absent  → no extra field; ``license_key`` is itself
+        #     the bearer secret and Authorization header carries it too. The
+        #     panel's bearer-in-body acceptor reads license_key from the body.
         body = dict(payload)
         if self.config.license_key:
             body["license_key"] = self.config.license_key
@@ -1038,12 +1094,32 @@ class AdminPanelClient:
         }
 
     def _headers(self) -> dict[str, str]:
+        """Outbound headers for every bridge request.
+
+        Two auth modes, mutually exclusive at the header layer:
+          • Legacy signed path — sends ``X-HobeRadius-Admin-Secret`` when a
+            ``shared_secret`` is stored locally. The body also carries
+            ``timestamp/nonce/signature`` (HMAC-SHA256). Kept for back-compat
+            with panels that still verify signatures.
+          • Simple bearer path — sends ``Authorization: Bearer <license_key>``
+            when no shared_secret is configured. Per docs/SIMPLE_LINK_CONTRACT
+            (panel repo) the panel accepts the license key as a bearer secret
+            both in the Authorization header AND in the body (reverse proxies
+            sometimes strip custom request headers — the body is the
+            authoritative copy).
+
+        Backwards-compat: an admin who linked the old way (with a
+        shared_secret stored) keeps using signed requests; a freshly-linked
+        admin (post-simplification) uses bearer-in-body.
+        """
         headers = {
             "Accept": "application/json",
             "User-Agent": "HobeRadius-AdminBridge/1",
         }
         if self.config.shared_secret:
             headers["X-HobeRadius-Admin-Secret"] = self.config.shared_secret
+        elif self.config.license_key:
+            headers["Authorization"] = "Bearer " + self.config.license_key
         return headers
 
     def _license_check_payload(self, extra: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -1058,9 +1134,14 @@ class AdminPanelClient:
         if extra:
             payload.update(extra)
         if self.config.shared_secret:
+            # Legacy signed-payload path stays bit-for-bit identical.
             payload["timestamp"] = int(time.time())
             payload["nonce"] = uuid.uuid4().hex
             payload["signature"] = sign_admin_bridge_payload(payload, self.config.shared_secret)
+        # Simple bearer path: nothing else needed. license_key is already in
+        # the body (authoritative bearer copy) and ``_headers()`` adds the
+        # matching Authorization header. The panel ignores fields it doesn't
+        # care about, so we don't need to gate other extras.
         return payload
 
 
