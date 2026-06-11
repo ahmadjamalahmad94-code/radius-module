@@ -616,12 +616,22 @@ class AdminPanelClient:
                 "status": "config_missing",
                 "error": {"code": "config_missing", "missing": missing},
             }
+        # The heartbeat payload was built through ``sanitize_bridge_payload``
+        # (caller side), which MASKS ``license_key``. The panel needs the
+        # REAL key in the wire body — it's the bearer secret per
+        # SIMPLE_LINK_CONTRACT. Mirror what ``post_backup_upload`` does:
+        # restore the live license_key just before transmit. Same reasoning
+        # for the new ``provision_on_link`` fields the panel reads to mint
+        # the RADIUS instance + ProxyRealmRoute.
+        body = dict(payload)
+        if self.config.license_key:
+            body["license_key"] = self.config.license_key
         try:
             response = self.transport.request_json(
                 method="POST",
                 url=source_url,
                 headers=self._headers(),
-                json_body=payload,
+                json_body=body,
                 timeout_seconds=self.config.timeout_seconds,
             )
         except (TimeoutError, socket.timeout) as exc:
@@ -640,6 +650,11 @@ class AdminPanelClient:
             "ok": True,
             "status": _normalize_status(response),
             "response": sanitize_bridge_payload(response),
+            # Raw response — for immediate transient processing only (e.g.
+            # extracting the panel-minted ``shared_secret`` before it gets
+            # masked by ``sanitize_bridge_payload``). Caller must NOT persist
+            # or log this value. Mirrors ``_fetch_snapshot``'s ``_raw_response``.
+            "_raw_response": response,
         }
 
     def post_backup_upload(self, *, payload: dict[str, Any]) -> dict[str, Any]:

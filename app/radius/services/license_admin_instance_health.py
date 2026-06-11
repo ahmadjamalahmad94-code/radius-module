@@ -3,12 +3,33 @@
 All checks are read-only/best-effort. The service never restarts services,
 never shells out, and never touches RADIUS, MikroTik, FreeRADIUS, or CoA live
 paths.
+
+يونيو 2026 — provision-on-link contract
+=======================================
+The panel's ``POST /api/integration/hoberadius/instance-ops/heartbeat`` now
+ALSO calls ``provision_on_link(...)``, which idempotently creates the
+customer's RADIUS instance + ProxyRealmRoute and mints a fresh shared
+secret. The panel reads these provision fields from the heartbeat body:
+
+    license_key       — bearer-in-body (already present)
+    radius_auth_ip    — this instance's RADIUS server IP (operator-reachable)
+    realm             — proxy realm for this customer
+    radius_auth_port  — 1812
+    radius_acct_port  — 1813
+
+If a fresh ``shared_secret`` is returned in the response, we persist it
+locally as ``license_admin_bridge.instance_radius_secret`` so the operator
+can paste it into ``clients.conf`` (or future automation can apply it). The
+operation is idempotent on the panel side; re-sync never duplicates.
 """
 from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import os
+import re
+import socket
 import sqlite3
 from dataclasses import dataclass
 from datetime import datetime
@@ -19,12 +40,127 @@ from app.radius.db.connection import db, db_path
 from app.radius.services.admin_panel_client import (
     AdminPanelClient,
     AdminBridgeConfig,
+    bridge_setting,
+    mask_license_key,
     sanitize_bridge_payload,
 )
+
+_LOG = logging.getLogger(__name__)
+
+# Standard FreeRADIUS ports the panel uses to wire ProxyRealmRoute.
+RADIUS_AUTH_PORT = 1812
+RADIUS_ACCT_PORT = 1813
+
+# Settings keys for the provision contract.
+SETTING_RADIUS_AUTH_IP = "instance.radius_auth_ip"
+SETTING_REALM = "instance.realm"
+# Where the panel-minted shared secret lands. Distinct from
+# ``license_admin_bridge.shared_secret`` (legacy signed-path credential):
+# this one is the FreeRADIUS clients.conf secret for the proxy realm.
+SETTING_INSTANCE_RADIUS_SECRET = "license_admin_bridge.instance_radius_secret"
+
+_REALM_SAFE_RE = re.compile(r"[^a-z0-9._-]+")
 
 
 def _utcnow() -> str:
     return datetime.utcnow().isoformat() + "Z"
+
+
+def _slugify_realm(value: str) -> str:
+    """Normalize an arbitrary string into a safe RADIUS realm.
+
+    Lowercases, replaces unsupported chars with ``-``, strips edges, caps
+    length. Used to build a fallback realm from the license-key prefix or
+    hostname when the operator hasn't set one explicitly.
+    """
+    s = (value or "").strip().lower()
+    s = _REALM_SAFE_RE.sub("-", s).strip("-.")
+    return s[:64] or "default"
+
+
+def _derive_radius_auth_ip(config: AdminBridgeConfig) -> str:
+    """Compute the RADIUS server's reachable IP for the panel's ProxyRealm.
+
+    Priority chain (highest → lowest):
+      1) ``instance.radius_auth_ip`` setting (operator override).
+      2) ``network.radius_server_ip`` setting (existing customer-facing IP
+         used by login-designer / store APIs — same machine).
+      3) ``HOBERADIUS_PUBLIC_IP`` env var.
+      4) Local hostname → resolved A record (best-effort).
+      5) Empty string — the panel will reject the heartbeat with a clear
+         error and the operator gets a flash hint to set it.
+    """
+    override = bridge_setting(SETTING_RADIUS_AUTH_IP, "").strip()
+    if override:
+        return override
+    radius_ip = bridge_setting("network.radius_server_ip", "").strip()
+    if radius_ip:
+        return radius_ip
+    env_ip = (os.environ.get("HOBERADIUS_PUBLIC_IP") or "").strip()
+    if env_ip:
+        return env_ip
+    try:
+        return socket.gethostbyname(socket.gethostname()) or ""
+    except (socket.gaierror, OSError):
+        return ""
+
+
+def _derive_realm(config: AdminBridgeConfig) -> str:
+    """Pick the proxy realm for this customer.
+
+    Priority chain:
+      1) ``instance.realm`` setting (operator-supplied).
+      2) Slugified first 8 chars of the license key — stable per customer,
+         unique enough across the panel, never leaks the full key.
+      3) Hostname slug.
+      4) Literal ``"default"``.
+    """
+    override = bridge_setting(SETTING_REALM, "").strip()
+    if override:
+        return _slugify_realm(override)
+    lk = (config.license_key or "").strip()
+    if lk:
+        return _slugify_realm("hr-" + lk[:8])
+    try:
+        host = socket.gethostname()
+    except OSError:
+        host = ""
+    return _slugify_realm(host) or "default"
+
+
+def build_provision_fields(config: AdminBridgeConfig) -> dict[str, Any]:
+    """Build the provision-contract sub-dict the panel reads in
+    ``provision_on_link``: license_key + radius_auth_ip + realm + ports.
+
+    Kept as a standalone helper so the worker, the manual sync route, and
+    the rich-heartbeat builder can all share the same field shape.
+    """
+    return {
+        "license_key": config.license_key,
+        "radius_auth_ip": _derive_radius_auth_ip(config),
+        "realm": _derive_realm(config),
+        "radius_auth_port": RADIUS_AUTH_PORT,
+        "radius_acct_port": RADIUS_ACCT_PORT,
+    }
+
+
+def store_provisioned_secret(secret: str, *, tenant_id: int = 1) -> str:
+    """Persist the panel-minted shared_secret to tenant_settings.
+
+    Returns the stored value (or empty string when blank). Logs only the
+    masked form. The operator surfaces the value via the licensing page
+    (it's also retrievable for FreeRADIUS clients.conf automation).
+    """
+    s = str(secret or "").strip()
+    if not s:
+        return ""
+    from app.radius.db.repos import tenants_repo
+    tenants_repo.set_setting(int(tenant_id), SETTING_INSTANCE_RADIUS_SECRET, s, by=0)
+    _LOG.info(
+        "instance radius secret stored (masked=%s)",
+        mask_license_key(s),
+    )
+    return s
 
 
 def _table_exists(table: str) -> bool:
@@ -67,8 +203,20 @@ class InstanceHealthService:
 
     def build_payload(self, *, tenant_id: int = 1) -> dict[str, Any]:
         warnings: list[str] = []
+        # Provision-on-link fields the panel reads when minting the
+        # RADIUS instance + ProxyRealmRoute. Merged at the TOP level so
+        # the panel's contract matches what's documented in SIMPLE_LINK
+        # (license_key + radius_auth_ip + realm + ports as bearer body).
+        provision = build_provision_fields(self.config)
         payload = {
+            # provision fields first (matches panel's order-independent
+            # reader but keeps the body readable).
             "license_key": self.config.license_key,
+            "radius_auth_ip": provision["radius_auth_ip"],
+            "realm": provision["realm"],
+            "radius_auth_port": provision["radius_auth_port"],
+            "radius_acct_port": provision["radius_acct_port"],
+            # health/operational fields (existing).
             "instance_id": os.environ.get("HOBERADIUS_INSTANCE_ID", ""),
             "module": "radius-module",
             "app_version": os.environ.get("HOBERADIUS_BUILD_SHA", ""),
@@ -84,6 +232,10 @@ class InstanceHealthService:
             "warnings": warnings,
             "errors": [],
         }
+        # If we couldn't derive a radius_auth_ip, warn the operator —
+        # the panel will reject without it and we want a clear signal.
+        if not provision["radius_auth_ip"]:
+            warnings.append("radius_auth_ip_missing")
         payload["idempotency_key"] = self.idempotency_key(tenant_id=tenant_id, payload=payload)
         return sanitize_bridge_payload(payload)
 
@@ -104,6 +256,42 @@ class InstanceHealthService:
 
         result = self.admin_client.post_instance_heartbeat(payload=payload)
         status = str(result.get("status") or ("sent" if result.get("ok") else "failed"))
+
+        # ── provision-on-link: capture & persist the panel-minted secret ──
+        # The panel's ``provision_on_link`` flow returns ``shared_secret``
+        # in the response when it (re-)mints the customer's RADIUS instance
+        # + ProxyRealmRoute. Idempotent on the panel side; the panel returns
+        # the SAME secret on every successful heartbeat for the same instance.
+        # We persist it locally so the operator can paste it into
+        # ``clients.conf`` (or future automation can apply it).
+        provisioned_secret = ""
+        if result.get("ok"):
+            # CRITICAL: use the RAW response, not the sanitized one. The
+            # ``shared_secret`` key is in ``SENSITIVE_KEYS`` so the public
+            # ``response`` field carries it MASKED (``fres…aaaa``). The
+            # transport returns the raw object under ``_raw_response`` for
+            # exactly this kind of one-shot extraction. We MUST NOT persist
+            # or log the raw object — only pull the secret and drop it.
+            resp = result.get("_raw_response") or {}
+            if isinstance(resp, dict):
+                # ``shared_secret`` may appear top-level or nested under
+                # ``provision``. Both shapes accepted (panel may evolve).
+                candidate = resp.get("shared_secret")
+                if not candidate:
+                    provision_node = resp.get("provision")
+                    if isinstance(provision_node, dict):
+                        candidate = provision_node.get("shared_secret")
+                if candidate:
+                    try:
+                        provisioned_secret = store_provisioned_secret(
+                            str(candidate), tenant_id=tenant_id,
+                        )
+                    except Exception:  # noqa: BLE001
+                        _LOG.warning(
+                            "failed to persist provisioned shared_secret",
+                            exc_info=True,
+                        )
+
         attempt = self.record_attempt(
             HeartbeatAttempt(
                 tenant_id=tenant_id,
@@ -116,7 +304,7 @@ class InstanceHealthService:
                 sent_at=_utcnow() if result.get("ok") else None,
             )
         )
-        return {
+        out = {
             "ok": bool(result.get("ok")),
             "dry_run": False,
             "status": attempt.get("status") or status,
@@ -125,6 +313,10 @@ class InstanceHealthService:
             "response": result.get("response") or {},
             "error": result.get("error") or {},
         }
+        if provisioned_secret:
+            out["provisioned_secret_masked"] = mask_license_key(provisioned_secret)
+            out["provisioned"] = True
+        return out
 
     def idempotency_key(self, *, tenant_id: int, payload: dict[str, Any]) -> str:
         stable = {

@@ -410,15 +410,17 @@ def license_file_service_request():
 def license_file_sync():
     tenant_id = _tid()
     action = (request.form.get("action") or "runtime").strip()
+    runtime_ok = False
     if action in {"runtime", "both"}:
         from ..services.license_admin_runtime_sync import LicenseAdminRuntimeSyncService
 
         result = LicenseAdminRuntimeSyncService().sync_once(tenant_id=tenant_id)
+        runtime_ok = bool(result.get("ok"))
         flash(
             "تمت مزامنة عقد التشغيل."
-            if result.get("ok")
+            if runtime_ok
             else f"تعذرت مزامنة عقد التشغيل: {_sync_status_label(result.get('status'))}",
-            "success" if result.get("ok") else "error",
+            "success" if runtime_ok else "error",
         )
     if action in {"identity", "both"}:
         from ..services.license_admin_identity_sync import LicenseAdminIdentitySyncService
@@ -430,6 +432,37 @@ def license_file_sync():
             else f"تعذرت مزامنة الهوية: {_sync_status_label(result.get('status'))}",
             "success" if result.get("ok") else "error",
         )
+
+    # ── auto-provision tick after a successful runtime sync ───────
+    # Fires the instance-ops/heartbeat → panel's provision_on_link
+    # mints the RADIUS instance + ProxyRealmRoute and returns the
+    # shared_secret which we persist locally. Best-effort; failure is
+    # surfaced as info, never blocks the sync result above.
+    if runtime_ok:
+        try:
+            from ..services.license_admin_instance_health import InstanceHealthService
+
+            hb = InstanceHealthService().send_heartbeat(
+                tenant_id=tenant_id, dry_run=False,
+            )
+            if hb.get("ok") and hb.get("provisioned"):
+                masked = hb.get("provisioned_secret_masked") or ""
+                flash(
+                    "تم توفير مثيل RADIUS تلقائيًّا في لوحة التراخيص "
+                    "وحفظ السرّ المُولَّد محلّيًّا (مقنَّع: " + masked + ").",
+                    "success",
+                )
+            elif not hb.get("ok"):
+                flash(
+                    "تَعذَّر إرسال نَبضة المزامنة للوحة التراخيص: "
+                    + _sync_status_label(hb.get("status")) + ". المثيل قد "
+                    "لا يظهر تلقائيًّا في لوحة الراديوس.",
+                    "info",
+                )
+        except Exception:  # noqa: BLE001
+            # Never let a heartbeat hiccup bubble — sync result above
+            # already told the operator what they need to know.
+            pass
     return redirect(url_for("radius.license_file"))
 
 
