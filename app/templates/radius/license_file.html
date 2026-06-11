@@ -58,34 +58,6 @@
   }
   .lf-toggle-cell .lf-toggle-title{ font-weight:800; color:var(--hub-text, #0f172a); font-size:13.5px; }
 
-  /* Simple-link variant — only «تفعيل الجسر» visible on the simple flow. */
-  .lf-toggle-grid--simple{ grid-template-columns: 1fr; }
-
-  /* Advanced-settings disclosure (collapsible). RTL-friendly arrow + clear
-     summary affordance. Closed by default unless the legacy signed path
-     is in use (Jinja adds ``open`` then). */
-  .hub-disclosure{
-    border:1px dashed var(--hub-border-soft, #e2e8f0);
-    border-radius:12px;
-    background:var(--hub-bg-soft, #f8fafc);
-    padding:12px 16px;
-  }
-  .hub-disclosure > summary{
-    cursor:pointer; list-style:none;
-    font-weight:800; color:var(--hub-text, #0f172a); font-size:13.5px;
-    display:flex; align-items:center; gap:10px;
-    padding:4px 0;
-  }
-  .hub-disclosure > summary::-webkit-details-marker{display:none}
-  .hub-disclosure > summary::after{
-    content:"\f078"; /* chevron-down */
-    font-family:"Font Awesome 6 Free"; font-weight:900;
-    margin-inline-start:auto; color:#94a3b8; font-size:11px;
-    transition:transform .18s;
-  }
-  .hub-disclosure[open] > summary::after{transform:rotate(180deg)}
-  .hub-disclosure[open]{background:var(--hub-bg-card, #fff)}
-
   /* ── Services as clean cards (no tall narrow column) ───────────── */
   .lf-svc-grid{
     display:grid;
@@ -209,7 +181,6 @@
   'HOBERADIUS_ADMIN_BASE_URL': 'رابط لوحة التراخيص',
   'HOBERADIUS_LICENSE_KEY': 'مفتاح الترخيص',
   'INSTANCE_LICENSE_KEY': 'مفتاح الترخيص',
-  'HOBERADIUS_ADMIN_SHARED_SECRET': 'سر الربط',
   'HOBERADIUS_ADMIN_BRIDGE_ENABLED': 'تفعيل الجسر'
 } %}
 {# ══════════════════════════════════════════════════════════════════
@@ -367,8 +338,8 @@
      "كيف يعمل ترخيص النظام",
      intro="الريدياس يأخذ ترخيصه وصلاحياته من لوحة التراخيص السحابية. هذه الصفحة تربط الجسر، تعرض آخر اللقطات المستلمة، والخدمات والحدود التي يطبّقها عقدك.",
      items=[
-       {'icon': 'link',          'text': 'انسخ مفتاح الترخيص وسر الربط من صفحة العميل في لوحة التراخيص والصقهما في نموذج الربط.'},
-       {'icon': 'arrows-rotate', 'text': 'بعد الحفظ اضغط «مزامنة الكل» بالأعلى ليقرأ الريدياس عقد التشغيل عبر واجهة ربط موقّعة.'},
+       {'icon': 'link',          'text': 'انسخ مفتاح الترخيص من صفحة العميل في لوحة التراخيص والصقه في نموذج الربط — لا تحتاج سرًّا آخر.'},
+       {'icon': 'arrows-rotate', 'text': 'بعد الحفظ اضغط «مزامنة الكل» بالأعلى ليقرأ الريدياس عقد التشغيل من اللوحة عبر اتصال آمن.'},
        {'icon': 'clock-rotate-left', 'text': 'آخر اللقطات تُظهر حالة فحص الترخيص وعقد التشغيل ومزامنة الهوية وتاريخ آخر تحديث.'},
        {'icon': 'shapes',        'text': 'الخدمات والحدود تصل من العقد — تُعرض هنا مقسّمة حسب الفئة بدون JSON خام.'},
        {'icon': 'circle-info',   'text': 'لا تخلط بينها وبين «تراخيص أنفاق الراوترات» (قسم الإدارة): تلك لحوكمة خدمة نفق تغيير IP المدفوعة لكل راوتر — أمّا هذه فلترخيص النظام نفسه واتصاله بلوحة التراخيص.'},
@@ -394,98 +365,11 @@
     {% endcall %}
   {% endif %}
 
-  {# ── Activation card — zero-terminal SaaS onboarding ── #}
-  {% call hub.section("تفعيل الجسر — ربط تلقائي", icon="plug") %}
-    <p style="margin:0 0 10px; color:var(--hub-text-soft); font-size:13.5px; line-height:1.8">
-      اطلب من الأدمن في لوحة التراخيص إنشاء <strong>كود تفعيل</strong> لنسختك، ثم الصقه هنا
-      وسيتم ربط الجسر تلقائياً — دون الحاجة لنسخ المفاتيح يدوياً.
-      الكود صالح للاستخدام <strong>مرة واحدة فقط</strong> لمدة 30 دقيقة.
-    </p>
-    <div style="display:flex; flex-wrap:wrap; gap:.6rem; align-items:flex-end; margin-bottom:1rem">
-      <div style="flex:1; min-width:220px">
-        <label class="hub-label" for="act-base-url">رابط لوحة التراخيص</label>
-        <input id="act-base-url" class="hub-input ltr" type="url"
-               value="{{ config_form.base_url or 'https://hoberadius.com' }}"
-               placeholder="https://hoberadius.com" style="direction:ltr">
-      </div>
-      <div style="flex:2; min-width:260px">
-        <label class="hub-label" for="act-code">كود التفعيل</label>
-        <input id="act-code" class="hub-input ltr" type="text"
-               placeholder="XXXXXXXX-XXXXXXXX-XXXXXXXX"
-               autocomplete="off" spellcheck="false" style="letter-spacing:.08em; direction:ltr">
-      </div>
-    </div>
-    <div style="display:flex; gap:.5rem; flex-wrap:wrap">
-      <button type="button" class="hub-btn hub-btn--primary" onclick="doActivate()">
-        <i class="fa-solid fa-plug-circle-bolt"></i> ربط النسخة
-      </button>
-      <button type="button" class="hub-btn hub-btn--secondary" onclick="doTestBridge()">
-        <i class="fa-solid fa-wifi"></i> اختبار الاتصال
-      </button>
-    </div>
-    <div id="act-result" style="display:none; margin-top:.8rem"></div>
-    <script>
-    (function () {
-      /* CSRF token is stored in the Flask session, not in a JS-readable cookie.
-         Read it directly from the Jinja2 template context at render time. */
-      var _csrf = '{{ csrf_token() }}';
-      function getCsrf() { return _csrf; }
-
-      function showResult(ok, text) {
-        var el = document.getElementById('act-result');
-        el.style.display = 'block';
-        el.innerHTML = '<div class="hub-alert hub-alert--' + (ok ? 'success' : 'error') + '">' +
-          '<i class="fa-solid fa-' + (ok ? 'circle-check' : 'circle-xmark') + '"></i> ' +
-          text + '</div>';
-      }
-      function showLoading(text) {
-        var el = document.getElementById('act-result');
-        el.style.display = 'block';
-        el.innerHTML = '<div class="hub-alert"><i class="fa-solid fa-spinner fa-spin"></i> ' + text + '</div>';
-      }
-      function doActivate() {
-        var baseUrl = document.getElementById('act-base-url').value.trim();
-        var code = document.getElementById('act-code').value.trim();
-        if (!code) { showResult(false, 'أدخل كود التفعيل أولاً.'); return; }
-        showLoading('جارٍ التفعيل…');
-        fetch('{{ url_for("radius.bridge_activate") }}', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrf()},
-          body: JSON.stringify({base_url: baseUrl, activation_code: code}),
-          credentials: 'same-origin',
-        })
-        .then(function(r) { return r.json(); })
-        .then(function(d) {
-          if (d.ok) {
-            showResult(true, d.message_ar || 'تم تفعيل الجسر بنجاح!');
-            document.getElementById('act-code').value = '';
-            setTimeout(function() { window.location.reload(); }, 1800);
-          } else {
-            showResult(false, d.message_ar || 'فشل التفعيل.');
-          }
-        })
-        .catch(function(e) { showResult(false, 'تعذّر الاتصال بالخادم: ' + (e && e.message || '')); });
-      }
-      function doTestBridge() {
-        /* Pass the base_url from the form so the backend can test that URL's
-           reachability, not just whatever is already stored in config. */
-        var baseUrl = document.getElementById('act-base-url').value.trim();
-        showLoading('جارٍ اختبار الاتصال…');
-        fetch('{{ url_for("radius.bridge_test") }}', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrf()},
-          body: JSON.stringify({test_url: baseUrl}),
-          credentials: 'same-origin',
-        })
-        .then(function(r) { return r.json(); })
-        .then(function(d) { showResult(d.ok, d.message_ar || d.status); })
-        .catch(function(e) { showResult(false, 'تعذّر الاتصال بالخادم: ' + (e && e.message || '')); });
-      }
-      window.doActivate = doActivate;
-      window.doTestBridge = doTestBridge;
-    })();
-    </script>
-  {% endcall %}
+  {# Activation-code card («تفعيل الجسر — ربط تلقائي») REMOVED 2026-06-11
+     (feat/radius-purge-legacy-linking). The one-time code flow relied on
+     the panel returning a shared_secret + signed-path auth, which the
+     panel no longer supports. The only linking mechanism is now pasting
+     the license key into the simple setup form below. #}
 
   {% call hub.section("ربط الترخيص من صفحة العميل", icon="link") %}
     {# يونيو 2026 — قاعدة المالك: «مفتاح واحد لا أكثر».
@@ -510,72 +394,34 @@
         <input class="hub-input ltr" name="license_key" autocomplete="off" placeholder="{{ 'موجود ومحفوظ' if config_form.has_license_key else 'الصق مفتاح الترخيص هنا (16 حرفًا)' }}" data-simple-link-key>
         <div class="hub-field-hint">{{ _('هذا المفتاح هو سرّ الربط الوحيد. اتركه فارغًا إن كان محفوظًا. لا نعرضه كاملًا في الصفحة.') }}</div>
       </div>
+      {# Toggles — ONLY: تفعيل الجسر + sync toggles. The legacy
+         «إعدادات متقدّمة» disclosure (shared_secret / server_fingerprint /
+         sync_interval) was REMOVED 2026-06-11. Owner directive: «نموذج
+         الإعداد فقط: رابط + مفتاح + مفتاح التفعيل + مفاتيح المزامنة. لا شيء آخر.» #}
       <div class="full">
-        <div class="lf-toggle-grid lf-toggle-grid--simple">
+        <div class="lf-toggle-grid">
           <div class="lf-toggle-cell">
             <span class="lf-toggle-title">{{ _('تفعيل الجسر مع لوحة التراخيص') }}</span>
             {{ toggle_switch(name="enabled", checked=config_view.enabled, value="1", id="lf-enabled") }}
           </div>
+          <div class="lf-toggle-cell">
+            <span class="lf-toggle-title">{{ _('استخدام عقد التشغيل الجديد') }}</span>
+            {{ toggle_switch(name="runtime_contract_sync", checked=config_view.runtime_contract_sync, value="1", id="lf-runtime") }}
+          </div>
+          <div class="lf-toggle-cell">
+            <span class="lf-toggle-title">{{ _('مزامنة الهوية عبر اتصال آمن') }}</span>
+            {{ toggle_switch(name="identity_sync_enabled", checked=config_view.identity_sync_enabled, value="1", id="lf-identity") }}
+          </div>
+          <div class="lf-toggle-cell">
+            <span class="lf-toggle-title">{{ _('مزامنة سريعة قبل تسجيل الدخول') }}</span>
+            {{ toggle_switch(name="identity_sync_on_login", checked=config_view.identity_sync_on_login, value="1", id="lf-onlogin") }}
+          </div>
+          <div class="lf-toggle-cell">
+            <span class="lf-toggle-title">{{ _('تشغيل عامل المزامنة الخلفي') }}</span>
+            {{ toggle_switch(name="worker_enabled", checked=config_view.worker_enabled, value="1", id="lf-worker") }}
+          </div>
         </div>
       </div>
-
-      {# ── إعدادات متقدّمة (مَطويّة) — للمسار الموقَّع legacy ──── #}
-      <details class="hub-disclosure full" data-license-advanced
-               {% if config_form.has_shared_secret or config_view.server_fingerprint_saved %}open{% endif %}>
-        <summary>
-          <i class="fa-solid fa-sliders"></i>
-          {{ _('إعدادات متقدّمة (لمسار الربط الموقَّع legacy)') }}
-        </summary>
-        <div class="hub-form-grid" style="padding-top:14px">
-          <div class="hub-field full">
-            <label>{{ _('سر الربط (legacy)') }}</label>
-            <input class="hub-input ltr" name="shared_secret" type="password" autocomplete="new-password" placeholder="{{ 'موجود ومحفوظ' if config_form.has_shared_secret else 'اتركه فارغًا للمسار المبسّط' }}">
-            <div class="hub-field-hint">{{ _('عند توفّره يُوقَّع كل طلب بـHMAC-SHA256. اتركه فارغًا لاستخدام المسار المبسّط (المفتاح bearer).') }}</div>
-          </div>
-          <div class="full">
-            <div class="lf-toggle-grid">
-              <div class="lf-toggle-cell">
-                <span class="lf-toggle-title">{{ _('استخدام عقد التشغيل الجديد') }}</span>
-                {{ toggle_switch(name="runtime_contract_sync", checked=config_view.runtime_contract_sync, value="1", id="lf-runtime") }}
-              </div>
-              <div class="lf-toggle-cell">
-                <span class="lf-toggle-title">{{ _('مزامنة الهوية عبر اتصال آمن') }}</span>
-                {{ toggle_switch(name="identity_sync_enabled", checked=config_view.identity_sync_enabled, value="1", id="lf-identity") }}
-              </div>
-              <div class="lf-toggle-cell">
-                <span class="lf-toggle-title">{{ _('مزامنة سريعة قبل تسجيل الدخول') }}</span>
-                {{ toggle_switch(name="identity_sync_on_login", checked=config_view.identity_sync_on_login, value="1", id="lf-onlogin") }}
-              </div>
-              <div class="lf-toggle-cell">
-                <span class="lf-toggle-title">{{ _('تشغيل عامل المزامنة الخلفي') }}</span>
-                {{ toggle_switch(name="worker_enabled", checked=config_view.worker_enabled, value="1", id="lf-worker") }}
-              </div>
-            </div>
-          </div>
-          <div class="hub-field">
-            <label>{{ _('فاصل المزامنة التلقائية') }}</label>
-            <input class="hub-input" name="sync_interval_seconds" type="number" min="60" max="86400" step="30" value="{{ config_view.sync_interval_seconds or 300 }}">
-            <div class="hub-field-hint">{{ _('اكتب عدد الثواني بين كل مزامنة وأخرى. أقل قيمة مسموحة 60 ثانية.') }}</div>
-          </div>
-          <div class="hub-field full">
-            <label>
-              {{ _('بصمة السيرفر الثابتة (اختياريّة)') }}
-              {% if config_view.fingerprint_is_stable %}
-                <span class="hub-pill hub-pill--green" style="font-size:11px"><i class="fa-solid fa-lock"></i> {{ _('ثابتة ومحفوظة') }}</span>
-              {% else %}
-                <span class="hub-pill hub-pill--amber" style="font-size:11px"><i class="fa-solid fa-triangle-exclamation"></i> {{ _('تلقائية — قد تتغيّر') }}</span>
-              {% endif %}
-            </label>
-            <input class="hub-input ltr" name="server_fingerprint"
-                   value="{{ config_view.server_fingerprint_saved or '' }}"
-                   placeholder="{{ config_view.server_fingerprint_active or 'اتركه فارغاً أو اكتب أي نص ثابت مثل: vps-prod-1' }}">
-            <div class="hub-field-hint">
-              {{ _('البصمة الحاليّة (التلقائيّة):') }} <code class="mono">{{ config_view.server_fingerprint_active or '—' }}</code><br>
-              {{ _('المسار المبسّط لا يَتطلَّب بصمة ثابتة — اللوحة تَستخرج هويّة السيرفر من المفتاح نفسه.') }}
-            </div>
-          </div>
-        </div>
-      </details>
 
       <div class="hub-form-foot full" style="padding-top:4px">
         <button class="hub-btn hub-btn--primary" type="submit">
@@ -585,26 +431,17 @@
     </form>
   {% endcall %}
 
-  {# ───── Connection settings (key/value detail list) ─────── #}
+  {# ───── Connection settings (key/value detail list) ───────
+     يونيو 2026 (feat/radius-purge-legacy-linking) — تَمت إزالة صفّ
+     «سر الربط (legacy)» وصفّ «بصمة السيرفر» وصفّ «وضع الربط»
+     والـ«فاصل المزامنة التلقائية». المسار الوحيد المتبقّي هو
+     bearer-in-body، فلا حاجة لعرض «وضع» اختياري. #}
   {% call hub.section("إعدادات الاتصال الحالية", icon="sliders") %}
-    {# يونيو 2026 — نَعرض «وضع التراخيص» الواضح في الصدارة: المسار
-       المُبسَّط (bearer) أم المسار الموقَّع (legacy). ما يُحدّد ذلك
-       هو وجود shared_secret في الإعدادات. #}
-    {% set _auth_mode = ('signed' if config_view.shared_secret else 'bearer') %}
     {{ hub.kv([
       {'label': 'رابط لوحة التراخيص', 'value': config_form.base_url or '—', 'mono': True},
       {'label': 'مفتاح الترخيص', 'value': config_view.license_key or '—', 'mono': True},
-      {'label': 'وضع الربط',
-       'value': ('المسار الموقَّع (legacy)' if _auth_mode == 'signed' else 'المسار المُبسَّط (المفتاح وحده)')},
-    ] + ([
-      {'label': 'سر الربط (legacy)', 'value': config_view.shared_secret or '—', 'mono': True},
-      {'label': 'بصمة السيرفر' ~ (' (ثابتة)' if config_view.fingerprint_is_stable else ' (غير ثابتة)'),
-       'value': (config_view.server_fingerprint_active[:20] ~ '…' if config_view.server_fingerprint_active and config_view.server_fingerprint_active|length > 20 else (config_view.server_fingerprint_active or '—')),
-       'mono': True},
-    ] if _auth_mode == 'signed' else []) + [
       {'label': 'المزامنة عند تسجيل الدخول', 'value': ('مفعَّلة' if config_view.identity_sync_on_login else 'غير مفعَّلة')},
       {'label': 'عامل المزامنة الخلفي', 'value': ('يعمل' if config_view.worker_enabled else 'متوقف')},
-      {'label': 'فاصل المزامنة التلقائية', 'value': (config_view.sync_interval_seconds or 300) ~ ' ثانية', 'mono': True},
     ]) }}
     <p class="hub-field-hint" style="margin-top:12px">
       {{ _('المفتاح يظهر مختصرًا فقط. كل عمليات المزامنة تتم عبر اتصال آمن — لا يمكن استخدام اتصال غير آمن.') }}
