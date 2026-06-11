@@ -68,7 +68,6 @@ def _config():
         enabled=True,
         base_url="https://license-panel.test",
         license_key="HBR-2026-TEST-AAAA",
-        shared_secret="test-shared-secret-at-least-32-chars",
         timeout_seconds=1.0,
         retry_count=0,
     )
@@ -211,7 +210,6 @@ def test_generate_and_report_panel_down(app_db):
         enabled=True,
         base_url="https://license-panel.test",
         license_key="HBR-TEST",
-        shared_secret="secret" * 8,
         timeout_seconds=1.0,
         retry_count=0,
     )
@@ -240,7 +238,6 @@ def test_report_includes_https_check(app_db):
         enabled=True,
         base_url="http://insecure-panel.test",
         license_key="HBR-TEST",
-        shared_secret="secret" * 8,
         timeout_seconds=1.0,
         retry_count=0,
     )
@@ -525,9 +522,13 @@ def test_report_request_is_signed(app_db):
         None,
     )
     assert report_body is not None
-    assert "signature" in report_body
-    assert "nonce" in report_body
-    assert "timestamp" in report_body
+    # Post 2026-06-11 (feat/radius-purge-legacy-linking): the report uses
+    # bearer-in-body auth. license_key carries the secret; signature /
+    # nonce / timestamp were removed permanently.
+    assert "license_key" in report_body
+    assert "signature" not in report_body
+    assert "nonce" not in report_body
+    assert "timestamp" not in report_body
     assert "bridge_token" in report_body
     # The raw token value IS in the POST body (intentional — sent over HTTPS)
     # but it must NOT appear in the DB (already verified in separate tests).

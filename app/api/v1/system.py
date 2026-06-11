@@ -236,7 +236,6 @@ def system_license_file():
         bridge_setting,
         sanitize_bridge_payload,
     )
-    from ...radius.services.admin_panel_client import _server_fingerprint
     from ...radius.services.license_admin_capacity import CapacityEnforcementService
 
     tenant_id = _tid()
@@ -258,7 +257,6 @@ def system_license_file():
         "HOBERADIUS_ADMIN_BRIDGE_WORKER",
         "license_admin_bridge.worker_enabled",
     )
-    saved_fingerprint = bridge_setting("license_admin_bridge.server_fingerprint", "")
     latest_license = store.latest(tenant_id=tenant_id, snapshot_type=SNAPSHOT_LICENSE)
     latest_contract = store.latest(tenant_id=tenant_id, snapshot_type=SNAPSHOT_CAPACITY)
     latest_identity = store.latest(tenant_id=tenant_id, snapshot_type=SNAPSHOT_IDENTITY)
@@ -268,9 +266,10 @@ def system_license_file():
         if isinstance(payload, dict):
             contract_payload = payload.get("contract") if isinstance(payload.get("contract"), dict) else payload
 
+    # SIMPLE_LINK only (post 2026-06-11 purge) — shared_secret_configured,
+    # sync_interval_seconds, and server_fingerprint dropped from the
+    # response payload. The bridge has one credential only: the license key.
     missing = config.missing_fields()
-    if not config.shared_secret:
-        missing.append("HOBERADIUS_ADMIN_SHARED_SECRET")
     capacity_status = CapacityEnforcementService().capacity_status(tenant_id=tenant_id)
     contract_services = contract_payload.get("services", {})
     if isinstance(capacity_status, dict) and isinstance(capacity_status.get("services"), dict):
@@ -284,22 +283,12 @@ def system_license_file():
                 "https_ready": str(config.base_url or "").lower().startswith("https://"),
                 "license_key_configured": bool(config.license_key),
                 "license_key_masked": sanitize_bridge_payload({"license_key": config.license_key}).get("license_key"),
-                "shared_secret_configured": bool(config.shared_secret),
                 "timeout_seconds": config.timeout_seconds,
                 "retry_count": config.retry_count,
                 "runtime_contract_sync": runtime_sync,
                 "identity_sync_enabled": identity_sync,
                 "identity_sync_on_login": identity_on_login,
                 "worker_enabled": worker_enabled,
-                "sync_interval_seconds": bridge_setting(
-                    "license_admin_bridge.sync_interval_seconds",
-                    "300",
-                ),
-                "server_fingerprint": {
-                    "saved": saved_fingerprint,
-                    "active": _server_fingerprint(),
-                    "stable": bool(saved_fingerprint),
-                },
             },
             "missing": missing,
             "snapshots": {

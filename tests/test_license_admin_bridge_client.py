@@ -48,23 +48,25 @@ def app_db(monkeypatch, tmp_path):
 
 
 def _enabled_config():
+    """SIMPLE_LINK config — bearer-in-body only (post 2026-06-11 purge)."""
     from app.radius.services.admin_panel_client import AdminBridgeConfig
 
     return AdminBridgeConfig(
         enabled=True,
         base_url="https://admin.example.test",
         license_key="lic_test_123456789",
-        shared_secret="shared-secret-value",
         timeout_seconds=1.0,
         retry_count=0,
     )
 
 
 def test_successful_license_snapshot_fetch(app_db):
+    """Bearer-in-body fetch (post-purge): Authorization header carries the
+    real key, body carries license_key (masked in the stored snapshot),
+    NO X-HobeRadius-Admin-Secret, NO signature/timestamp/nonce."""
     from app.radius.services.admin_panel_client import (
         AdminPanelClient,
         get_current_license_state,
-        sign_admin_bridge_payload,
     )
 
     transport = MockTransport(
@@ -86,16 +88,17 @@ def test_successful_license_snapshot_fetch(app_db):
     assert result["snapshot"]["stale_after_seconds"] == 600
     assert transport.calls[0]["url"] == "https://admin.example.test/api/license/check"
     assert transport.calls[0]["timeout_seconds"] == 1.0
-    assert transport.calls[0]["headers"]["X-HobeRadius-Admin-Secret"] == "shared-secret-value"
+    # Bearer header carries the real key.
+    assert transport.calls[0]["headers"]["Authorization"] == "Bearer lic_test_123456789"
+    # Legacy signed-path header is GONE.
+    assert "X-HobeRadius-Admin-Secret" not in transport.calls[0]["headers"]
     request_body = transport.calls[0]["json_body"]
     assert request_body["license_key"] == "lic_test_123456789"
     assert request_body["server_fingerprint"]
-    assert request_body["timestamp"]
-    assert request_body["nonce"]
-    assert request_body["signature"] == sign_admin_bridge_payload(
-        request_body,
-        "shared-secret-value",
-    )
+    # NO HMAC fields — these were removed permanently 2026-06-11.
+    assert "signature" not in request_body
+    assert "timestamp" not in request_body
+    assert "nonce" not in request_body
 
     state = get_current_license_state(tenant_id=7)
     assert state["ok"] is True
@@ -103,22 +106,15 @@ def test_successful_license_snapshot_fetch(app_db):
     assert state["last_success"]["payload_json"]["license_key"] == "lic_...6789"
 
 
-def test_license_check_signature_uses_canonical_payload():
-    from app.radius.services.admin_panel_client import canonical_admin_bridge_payload, sign_admin_bridge_payload
-
-    payload = {
-        "server_fingerprint": "server-1",
-        "license_key": "lic_123",
-        "timestamp": 123,
-        "nonce": "abc",
-        "signature": "ignored",
-    }
-
-    assert canonical_admin_bridge_payload(payload) == (
-        '{"license_key":"lic_123","nonce":"abc","server_fingerprint":"server-1","timestamp":123}'
+def test_legacy_signing_helpers_are_gone():
+    """The HMAC helpers were deleted 2026-06-11 — importing them must fail."""
+    from app.radius.services import admin_panel_client as apc
+    assert not hasattr(apc, "sign_admin_bridge_payload"), (
+        "sign_admin_bridge_payload was supposed to be deleted by "
+        "feat/radius-purge-legacy-linking"
     )
-    assert sign_admin_bridge_payload(payload, "secret") == (
-        "625036195da9947c81ec8471655673db7c5af8bf44b3ebb0ef5a65ca2f57f71a"
+    assert not hasattr(apc, "canonical_admin_bridge_payload"), (
+        "canonical_admin_bridge_payload was supposed to be deleted"
     )
 
 
@@ -216,7 +212,6 @@ def test_missing_env_or_disabled_bridge_disables_remote_fetch_safely(app_db):
         enabled=False,
         base_url="",
         license_key="",
-        shared_secret="",
         timeout_seconds=1.0,
         retry_count=0,
     )
@@ -230,8 +225,10 @@ def test_missing_env_or_disabled_bridge_disables_remote_fetch_safely(app_db):
     assert transport.calls == []
 
 
-def test_post_customer_service_request_sends_signed_ticket_payload(app_db):
-    from app.radius.services.admin_panel_client import AdminPanelClient, sign_admin_bridge_payload
+def test_post_customer_service_request_sends_bearer_ticket_payload(app_db):
+    """Service-request POST goes through the same bearer-in-body path —
+    no HMAC signature on the body (post-purge)."""
+    from app.radius.services.admin_panel_client import AdminPanelClient
 
     transport = MockTransport({
         "ok": True,
@@ -253,7 +250,10 @@ def test_post_customer_service_request_sends_signed_ticket_payload(app_db):
     assert payload["service_key"] == "cards"
     assert payload["request_type"] == "activation"
     assert payload["desired_limits"]["generate_per_batch"] == 100
-    assert payload["signature"] == sign_admin_bridge_payload(payload, "shared-secret-value")
+    # No signature; the body carries license_key + Authorization header is set.
+    assert "signature" not in payload
+    assert payload["license_key"] == "lic_test_123456789"
+    assert transport.calls[0]["headers"]["Authorization"] == "Bearer lic_test_123456789"
 
 
 def test_env_config_clamps_timeout_retry_and_prefers_hoberadius_license(monkeypatch):

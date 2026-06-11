@@ -68,7 +68,6 @@ def test_remote_success_is_stored(app_db):
         enabled=True,
         base_url="https://admin.example.test",
         license_key="lic_test_123456789",
-        shared_secret="shared",
         timeout_seconds=1,
         retry_count=0,
     )
@@ -94,7 +93,6 @@ def test_remote_failure_is_stored_but_app_continues(app_db):
         enabled=True,
         base_url="https://admin.example.test",
         license_key="lic_test_123456789",
-        shared_secret="",
         timeout_seconds=1,
         retry_count=0,
     )
