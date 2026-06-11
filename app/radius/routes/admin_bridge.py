@@ -286,13 +286,43 @@ def license_file_config():
     if shared_secret:
         updates["license_admin_bridge.shared_secret"] = shared_secret
 
+    # ── change detection with SEMANTIC equivalence ─────────────────
+    # ``tenants_repo.get_setting`` returns ``""`` for unset keys. The
+    # update step normalises booleans to ``"0"``/``"1"`` and numeric
+    # fields to their literal default. Without semantic equivalence a
+    # first-save flips every unset key into its default and registers
+    # as «success» despite no user-visible change — and symmetrically
+    # a no-op resubmit logs spurious diffs. Treat ``""`` (key never
+    # set) as equivalent to the key's documented default so only real
+    # changes count as «تغييرات».
+    _DEFAULTS: dict[str, str] = {
+        "license_admin_bridge.enabled": "0",
+        "license_admin_bridge.runtime_contract_sync": "0",
+        "license_admin_bridge.identity_sync_enabled": "0",
+        "license_admin_bridge.identity_sync_on_login": "0",
+        "license_admin_bridge.worker_enabled": "0",
+        "license_admin_bridge.sync_interval_seconds": "300",
+        "license_admin_bridge.server_fingerprint": "",
+        "license_admin_bridge.base_url": "",
+        "license_admin_bridge.license_key": "",
+        "license_admin_bridge.shared_secret": "",
+    }
+
+    def _equiv(old: str, new: str, key: str) -> bool:
+        if old == new:
+            return True
+        if old.strip() == "" and new == _DEFAULTS.get(key, ""):
+            return True
+        return False
+
     changed: list[str] = []
     admin_id = int(session.get("admin_id") or 0)
     for key, value in updates.items():
         old = tenants_repo.get_setting(tenant_id, key, "")
-        if old != value:
-            tenants_repo.set_setting(tenant_id, key, value, by=admin_id)
-            changed.append(key)
+        if _equiv(old, value, key):
+            continue
+        tenants_repo.set_setting(tenant_id, key, value, by=admin_id)
+        changed.append(key)
     if changed:
         audit_repo.record(
             tenant_id=tenant_id,
@@ -305,7 +335,30 @@ def license_file_config():
         flash("تم حفظ بيانات الربط. شغّل المزامنة الآن ليأخذ الريدياس الترخيص والصلاحيات من لوحة التراخيص.", "success")
     else:
         flash("لا توجد تغييرات في بيانات الربط.", "info")
-    if worker_enabled:
+
+    # ── env-override diagnostic ────────────────────────────────────
+    # The display reads ``config.enabled`` via ``bridge_flag``, which
+    # honours ``HOBERADIUS_ADMIN_BRIDGE_ENABLED`` env BEFORE the DB. If
+    # the operator just enabled the toggle but env forces it off, the
+    # toggle reverts on the next render and «لا توجد تغييرات» appears
+    # to be «the save didn't work». Surface that truthfully so they
+    # know what to fix — was the literal owner symptom on 2026-06-11.
+    bridge_wanted_on = bool(request.form.get("enabled"))
+    env_raw = (os.environ.get("HOBERADIUS_ADMIN_BRIDGE_ENABLED") or "").strip()
+    if bridge_wanted_on and env_raw and env_raw.lower() not in {"1", "true", "yes", "on"}:
+        flash(
+            "تنبيه: متغيّر البيئة HOBERADIUS_ADMIN_BRIDGE_ENABLED="
+            + env_raw + " يَفرض إيقاف الجسر بعد الحفظ ويَتجاوز إعداد "
+            "قاعدة البيانات. احذف هذا المتغيّر أو اضبطه على 1 وأعد "
+            "تشغيل الخدمة.", "error",
+        )
+
+    # ── worker auto-start (simple-flow semantics) ──────────────────
+    # Owner's mental model: ONE switch turns the bridge on. When the
+    # operator enables the bridge from the simple form, they expect the
+    # background sync worker to start too — even though they didn't
+    # touch the (advanced) ``worker_enabled`` toggle. Logical OR.
+    if worker_enabled or bridge_wanted_on:
         try:
             from app.workers.admin_bridge_sync_worker import start_admin_bridge_sync_worker
 
