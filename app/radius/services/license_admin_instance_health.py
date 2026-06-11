@@ -81,11 +81,34 @@ class InstanceHealthService:
             "storage": self._storage_status(),
             "scheduler": self._scheduler_status(warnings),
             "admin_bridge": self._admin_bridge_status(),
+            # CUSTOMER_RADIUS_TUNNEL_DESIGN §3.1 — wg-radius public key +
+            # interface health + applied config fingerprint. The panel reads
+            # this to register our pubkey in the proxy peer set and to surface
+            # the «secret in sync ✓» chip on the customer page (§6.4).
+            "wg_radius": self._wg_radius_request_state(warnings),
             "warnings": warnings,
             "errors": [],
         }
         payload["idempotency_key"] = self.idempotency_key(tenant_id=tenant_id, payload=payload)
         return sanitize_bridge_payload(payload)
+
+    def _wg_radius_request_state(self, warnings: list[str]) -> dict[str, Any]:
+        """Collect the wg-radius heartbeat block. Never raises — a failure here
+        must NEVER take down the heartbeat itself; the panel just sees an
+        empty pubkey and the tunnel stays in «بانتظار التقارب»."""
+        try:
+            from .proxy_tunnel_manager import ProxyTunnelManager
+            return ProxyTunnelManager().collect_request_state()
+        except Exception as exc:  # noqa: BLE001
+            warnings.append(f"wg_radius_state_failed:{type(exc).__name__}")
+            return {
+                "public_key": "",
+                "interface_up": False,
+                "tunnel_ip": "",
+                "last_handshake_age_s": None,
+                "freeradius_proxy_client_present": False,
+                "config_fingerprint": "",
+            }
 
     def send_heartbeat(self, *, tenant_id: int = 1, dry_run: bool = True) -> dict[str, Any]:
         payload = self.build_payload(tenant_id=tenant_id)
@@ -104,6 +127,22 @@ class InstanceHealthService:
 
         result = self.admin_client.post_instance_heartbeat(payload=payload)
         status = str(result.get("status") or ("sent" if result.get("ok") else "failed"))
+
+        # CUSTOMER_RADIUS_TUNNEL_DESIGN §3.2 / §6.2 — when the panel returns a
+        # `radius_tunnel` block on the heartbeat response, hand it to the tunnel
+        # manager so it can (re)write wg-radius.conf + FreeRADIUS proxy-client.
+        # The manager is idempotent by SHA256 fingerprint, so identical heartbeats
+        # are cheap no-ops. Result is mirrored into the saved attempt record for
+        # the operator UI. Never raises into the heartbeat path.
+        tunnel_step: dict[str, Any] = {}
+        try:
+            resp_block = result.get("response") or {}
+            radius_tunnel = resp_block.get("radius_tunnel") if isinstance(resp_block, dict) else None
+            if radius_tunnel is not None:
+                from .proxy_tunnel_manager import ProxyTunnelManager
+                tunnel_step = ProxyTunnelManager().apply_response(radius_tunnel).as_dict()
+        except Exception as exc:  # noqa: BLE001
+            tunnel_step = {"ok": False, "reason": f"apply_failed:{type(exc).__name__}"}
         attempt = self.record_attempt(
             HeartbeatAttempt(
                 tenant_id=tenant_id,
@@ -124,6 +163,9 @@ class InstanceHealthService:
             "attempt": attempt,
             "response": result.get("response") or {},
             "error": result.get("error") or {},
+            # Surface the tunnel manager's outcome so workers/UI can show
+            # actions=[...] / warnings=[...] / fingerprint without re-applying.
+            "radius_tunnel_step": tunnel_step,
         }
 
     def idempotency_key(self, *, tenant_id: int, payload: dict[str, Any]) -> str:
