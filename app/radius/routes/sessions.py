@@ -22,6 +22,13 @@ def register_sessions_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/online/lock-ip", "online_lock_ip", online_lock_ip, methods=["POST"])
     bp.add_url_rule("/online/temp-speed", "online_temp_speed", online_temp_speed, methods=["POST"])
     bp.add_url_rule("/online/temp-speed/cancel", "online_temp_speed_cancel", online_temp_speed_cancel, methods=["POST"])
+    # Live CoA control (RFC 5176) — owner-triggered, one packet per click.
+    # Owner proved on a live MikroTik that PPPoE Framed-IP-Address via CoA
+    # changes the user's IP WITHOUT disconnect (item #17 — تغيير IP المواقع).
+    bp.add_url_rule("/online/coa/set-ip",    "online_coa_set_ip",
+                    online_coa_set_ip,    methods=["POST"])
+    bp.add_url_rule("/online/coa/set-speed", "online_coa_set_speed",
+                    online_coa_set_speed, methods=["POST"])
 
 
 def _actor() -> str:
@@ -615,4 +622,85 @@ def online_temp_speed_cancel():
             flash(f"لا توجد سرعة مؤقتة فعّالة لـ {username}.", "info")
     except RadiusError as e:
         flash(e.message or "تعذّر إلغاء السرعة المؤقتة", "error")
+    return _return_to_online()
+
+
+# ── Live CoA control (RFC 5176) ─────────────────────────────────────
+# Owner-triggered, one packet per click. NO background mutation.
+# Errors surface verbatim via flash() — never fake success.
+
+
+def _coa_collect_session_args() -> tuple[str, str]:
+    username = (request.form.get("username") or "").strip()
+    session_id = (request.form.get("session_id") or "").strip()
+    return username, session_id
+
+
+def online_coa_set_ip():
+    """Action (a) — تغيير IP المواقع. PPPoE only (hotspot surfaces unsupported)."""
+    from ..services.live_session_control import change_ip_live
+    username, session_id = _coa_collect_session_args()
+    new_ip = (request.form.get("new_ip") or "").strip()
+    if not username or not new_ip:
+        flash("اسم المستخدم والـIP الجديد مطلوبان", "error")
+        return _return_to_online()
+    try:
+        out = change_ip_live(
+            tenant_id=_tid(), username=username,
+            new_ip=new_ip, session_id=session_id,
+        )
+    except ValueError as e:
+        flash(f"قيمة غير صالحة: {e}", "error")
+        return _return_to_online()
+    if out.ok:
+        flash(
+            f"تم تغيير IP لـ {username} إلى {new_ip} على المايكروتيك/السيرفر "
+            f"{out.nas_ip} — {out.code_name}.",
+            "success",
+        )
+    else:
+        flash(
+            f"فشل تغيير IP لـ {username}: {out.code_name}"
+            + (f" — {out.reply_message}" if out.reply_message else "")
+            + (f" ({out.detail})" if out.detail else ""),
+            "error",
+        )
+    return _return_to_online()
+
+
+def online_coa_set_speed():
+    """Action (b) — تطبيق سرعة حيّة عبر CoA (Mikrotik-Rate-Limit).
+    Works for both PPPoE and hotspot (per-session match key).
+    """
+    from ..services.live_session_control import change_speed_live
+    username, session_id = _coa_collect_session_args()
+    try:
+        rx = int((request.form.get("rx_kbps") or "0").strip())
+        tx = int((request.form.get("tx_kbps") or "0").strip())
+    except (TypeError, ValueError):
+        flash("rx_kbps و tx_kbps يجب أن تكون أرقامًا", "error")
+        return _return_to_online()
+    if not username:
+        flash("اسم المستخدم مطلوب", "error")
+        return _return_to_online()
+    try:
+        out = change_speed_live(
+            tenant_id=_tid(), username=username,
+            rx_kbps=rx, tx_kbps=tx, session_id=session_id,
+        )
+    except ValueError as e:
+        flash(f"قيمة غير صالحة: {e}", "error")
+        return _return_to_online()
+    if out.ok:
+        flash(
+            f"تم تطبيق السرعة {rx}k/{tx}k على {username} (الجلسة {out.session_id}) "
+            f"— {out.code_name}.",
+            "success",
+        )
+    else:
+        flash(
+            f"فشل تطبيق السرعة على {username}: {out.code_name}"
+            + (f" — {out.reply_message}" if out.reply_message else ""),
+            "error",
+        )
     return _return_to_online()

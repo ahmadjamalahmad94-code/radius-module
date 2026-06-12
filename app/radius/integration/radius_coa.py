@@ -247,18 +247,26 @@ def send_coa(*, nas_ip: str, nas_secret: str,
               username: str, session_id: str = "",
               framed_ip: str = "", calling_station_id: str = "",
               new_rate_limit: str = "",
+              new_framed_ip: str = "",
               session_timeout: int = 0,
               port: int = 3799, timeout: float = 5.0) -> CoaResult:
     """
     CoA-Request (Code=43) — يغيّر attributes لجلسة جارية دون قطع.
     استخدامات شائعة:
       • تغيير Mikrotik-Rate-Limit (السرعة الفورية).
+      • تغيير Framed-IP-Address (تغيير IP المتصل دون فصل) — هذا ما يُفعّل
+        خدمة «تغيير IP المواقع» المدفوعة (item #17). أثبت المالك حيًّا أنّ
+        إرسال Framed-IP-Address جديد إلى MT على PPPoE active session
+        يُغيّر IP المتصل فورًا دون قطع.
       • تغيير Session-Timeout (الوقت المتبقي قبل قطع الجلسة) — يُستعمل
         لتطبيق "تعديل وقت البطاقة" على الجلسات الحيّة دون قطعها.
 
     R11.12: نُضيف Framed-IP-Address + Calling-Station-Id (مثل send_disconnect)
     حتى يستطيع MT أن يعثر على hotspot client بـ IP/MAC وليس فقط بـ User-Name.
     بدون Framed-IP-Address، MT 7.x يُرجع CoA-NAK: "Radius with no ip provided".
+
+    `new_framed_ip`: إذا مُرّر فهو الـ IP الجديد المطلوب تطبيقه؛ يَحلّ مَحلّ
+    `framed_ip` (الذي يَبقى مفتاحَ مطابقة للجلسة الحالية) في الـ packet.
     """
     secret = nas_secret.encode("utf-8")
     ident = _sec.randbits(8)
@@ -269,9 +277,14 @@ def send_coa(*, nas_ip: str, nas_secret: str,
         attrs += encode_string_attr(ATTR_ACCT_SESSION_ID, session_id)
     try: attrs += encode_ipv4_attr(ATTR_NAS_IP_ADDRESS, nas_ip)
     except ValueError: pass
-    # R11.12: session keys التي يتوقّعها MT
-    if framed_ip:
-        try: attrs += encode_ipv4_attr(ATTR_FRAMED_IP_ADDRESS, framed_ip)
+    # R11.12: session keys التي يتوقّعها MT.
+    # أولوية new_framed_ip على framed_ip: عند طلب تغيير IP المتصل (action a)
+    # نُرسل الـ IP الجديد كقيمة Framed-IP-Address في نفس الـ slot؛ MT يَجمع
+    # المطابقة من User-Name + Acct-Session-Id ويُحدّث الـ IP. عندما لا نَطلب
+    # تغيير IP، نُرسل framed_ip القديم كمفتاح مطابقة فقط.
+    target_framed_ip = (new_framed_ip or framed_ip or "").strip()
+    if target_framed_ip:
+        try: attrs += encode_ipv4_attr(ATTR_FRAMED_IP_ADDRESS, target_framed_ip)
         except ValueError: pass
     if calling_station_id:
         attrs += encode_string_attr(ATTR_CALLING_STATION_ID, calling_station_id)
