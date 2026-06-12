@@ -2591,7 +2591,7 @@ body.mt-modal-open{overflow:hidden}
                البطاقة .is-active. #}
         <div class="np-svc-card np-svc-card--paid is-unknown"
              data-rh-svc-card="public-ip"
-             title="{{ _('خدمة مدفوعة — مركزيّة عند المالك') }}">
+             title="{{ _('خدمة مدفوعة — تغيير IP حيّ عبر CoA (RFC 5176) دون قطع') }}">
           <span class="np-svc-icon np-svc-icon--amber"><i class="fa-solid fa-globe"></i></span>
           <h5 class="np-svc-title">
             {{ _('تغيير IP الخروج') }}
@@ -2600,12 +2600,26 @@ body.mt-modal-open{overflow:hidden}
           <span class="np-svc-status-dot is-unknown"
                 data-rh-svc-status
                 title="{{ _('في انتظار تأكيد الحالة من الراوتر') }}"></span>
-          <span class="ssm-upgrade-pill ssm-pill--activate"
+          {# CoA primary action — deep-link to the sessions page filtered
+             to this router (nas address) with a hint flag the page reads
+             to surface a one-shot banner pointing at the set-IP button.
+             The actual CoA Framed-IP-Address packet is sent by the modal
+             already built on the sessions page (see online_coa_set_ip);
+             hotspot rows are flagged unsupported there without a packet.
+             We KEEP the existing «request the paid quota» modal alongside
+             as the secondary path (panel-side activation). #}
+          <a class="ssm-upgrade-pill ssm-pill--activate"
+             href="{{ url_for('radius.online_list', nas=nas.address, hint='coa_setip') }}"
+             data-rh-coa-setip
+             title="{{ _('تطبيق تغيير IP حيّ على جلسة عبر CoA (بدون قطع)') }}">
+            <i class="fa-solid fa-bolt"></i> {{ _('تطبيق IP حيّ') }}
+          </a>
+          <span class="ssm-upgrade-pill ssm-pill--quota"
                 data-svc-spec-modal-open
                 data-svc-type="public-ip" data-svc-action="activate"
                 data-svc-scope="nas:{{ nas.id }}"
-                title="{{ _('طلب تفعيل الخدمة بمواصفاتها') }}">
-            <i class="fa-solid fa-bolt"></i> {{ _('طلب التفعيل') }}
+                title="{{ _('طلب تفعيل/زيادة السقف من المالك (طلب مركزي)') }}">
+            <i class="fa-solid fa-circle-up"></i> {{ _('طلب سقف') }}
           </span>
         </div>
         {# «تشخيص الراوترات» — أداة على مستوى المستأجر (لا nas_id).

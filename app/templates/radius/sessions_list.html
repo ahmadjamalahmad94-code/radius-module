@@ -404,6 +404,33 @@
     </div>
   </div>
 
+  {# ── CoA set-IP deep-link banner ─────────────────────────────────
+       The «public_ip» service card on mt_dashboard.html deep-links
+       here with ?hint=coa_setip — render a one-shot banner pointing
+       the operator at the per-row ↻ button (which opens the modal
+       that actually sends the CoA Framed-IP-Address packet). The
+       banner is dismissible by clicking «حسنًا» (sets a sessionStorage
+       flag so re-entering the same page doesn't re-show it). #}
+  {% if request.args.get('hint') == 'coa_setip' %}
+  <div id="coa-setip-hint-banner" class="coa-setip-hint"
+       data-coa-hint role="status" aria-live="polite"
+       style="display:flex;align-items:center;gap:12px;
+              background:#FFFBEB;border:1px solid #FDE68A;color:#92400E;
+              border-radius:11px;padding:12px 14px;margin:0 0 14px;
+              font-size:13px;line-height:1.7">
+    <i class="fa-solid fa-lightbulb" style="font-size:16px;color:#B45309"></i>
+    <div style="flex:1">
+      <strong>{{ _('تطبيق IP حيّ عبر CoA') }}.</strong>
+      {{ _('اختر جلسة من القائمة أدناه ثم انقر زرّ ↻ في عمود الإجراءات لإرسال CoA-Request مع Framed-IP-Address الجديد ـ بدون قطع الجلسة.') }}
+      {{ _('جلسات Hotspot غير مدعومة لهذه العملية وسيُعرض ذلك بوضوح في نافذة التأكيد.') }}
+    </div>
+    <button type="button" class="hub-btn hub-btn--ghost hub-btn--sm"
+            onclick="this.closest('#coa-setip-hint-banner').style.display='none'">
+      <i class="fa-solid fa-check"></i> {{ _('حسنًا') }}
+    </button>
+  </div>
+  {% endif %}
+
   {# KPI strip — comes right after the title #}
   <div class="ol-hero-kpis">
     {{ hub.kpi("جلسات نشطة", items|length, icon="wifi",        variant="green") }}
