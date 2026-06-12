@@ -701,15 +701,36 @@
                 <i class="fa-solid fa-pen-to-square"></i>
               </a>
               <form method="post" action="{{ url_for('radius.online_disconnect') }}"
-                    onsubmit="return confirm('قطع جلسة «{{ s.username|e }}»؟');"
                     style="display:inline">
                 <input type="hidden" name="next" value="{{ request.full_path }}">
                 <input type="hidden" name="username" value="{{ s.username }}">
                 <input type="hidden" name="session_id" value="{{ s.session_id }}">
-                <button type="submit" class="hub-btn hub-btn--danger hub-btn--sm" title="{{ _('قطع') }}">
+                <button type="submit" class="hub-btn hub-btn--danger hub-btn--sm" title="{{ _('قطع') }}"
+                        data-confirm="قطع جلسة «{{ s.username|e }}»؟">
                   <i class="fa-solid fa-plug-circle-xmark"></i>
                 </button>
               </form>
+              {# ── Live CoA controls (RFC 5176) — owner-triggered.
+                   Open the spec modal for each action; the modal collects
+                   the new value and POSTs to /online/coa/set-ip|set-speed.
+                   Hotspot sessions can't set-ip via CoA (MT NAKs); the
+                   modal explains that when the row is hotspot. ── #}
+              <button type="button"
+                      class="hub-btn hub-btn--secondary hub-btn--sm online-coa-setip-open"
+                      title="{{ _('تغيير IP المتصل (CoA — بدون فصل)') }}"
+                      data-username="{{ s.username }}"
+                      data-session-id="{{ s.session_id }}"
+                      data-framed-ip="{{ s.framed_ip_address or '' }}"
+                      data-session-type="{{ 'hotspot' if (s.nas_port_type or '')|lower in ('ethernet','hotspot','wireless-other','wireless') else 'pppoe' }}">
+                <i class="fa-solid fa-arrows-rotate"></i>
+              </button>
+              <button type="button"
+                      class="hub-btn hub-btn--secondary hub-btn--sm online-coa-setspeed-open"
+                      title="{{ _('تطبيق سرعة حيّة (CoA — بدون فصل)') }}"
+                      data-username="{{ s.username }}"
+                      data-session-id="{{ s.session_id }}">
+                <i class="fa-solid fa-tachograph-digital"></i>
+              </button>
               {# #50c: a real floating modal (was a <details> popover that clipped
                  inside the scrolling table). The trigger flags the row data; the
                  single shared modal below is populated + centered on open. #}
@@ -1174,6 +1195,165 @@
     });
   });
   applyColumns();
+})();
+</script>
+
+{# ══════════════════════════════════════════════════════════════════════
+   Live CoA modals (RFC 5176) — design-system, RTL, NO native alert/confirm.
+   Set-IP modal warns when the row is a hotspot session (MT can't CoA-set
+   the IP on hotspot — owner reads it before sending a packet that NAKs).
+   ══════════════════════════════════════════════════════════════════════ #}
+<style>
+  .coa-modal{position:fixed;inset:0;background:rgba(15,23,42,.55);
+              display:none;align-items:center;justify-content:center;z-index:6000;padding:18px}
+  .coa-modal.is-open{display:flex}
+  .coa-modal-card{background:#fff;border-radius:14px;width:min(440px,100%);
+                  box-shadow:0 22px 60px rgba(15,23,42,.32);overflow:hidden;direction:rtl}
+  .coa-modal-head{display:flex;align-items:center;gap:10px;padding:14px 16px;
+                  border-bottom:1px solid #E2E8F0;background:#F8FAFC}
+  .coa-modal-head i{color:#6B5AED;font-size:18px}
+  .coa-modal-head h3{margin:0;font-size:15px;font-weight:900;color:#0F172A;flex:1}
+  .coa-modal-head .coa-modal-close{border:0;background:transparent;color:#64748B;
+                  cursor:pointer;font-size:18px;padding:4px 6px;border-radius:8px}
+  .coa-modal-head .coa-modal-close:hover{background:#EEF2FF;color:#4338CA}
+  .coa-modal-body{padding:14px 16px;display:flex;flex-direction:column;gap:12px}
+  .coa-modal-row{display:flex;flex-direction:column;gap:5px}
+  .coa-modal-row label{font-size:12.5px;font-weight:800;color:#0F172A}
+  .coa-modal-row input{padding:8px 10px;border:1px solid #E2E8F0;border-radius:9px;
+                       font:inherit;font-size:13px;background:#fff}
+  .coa-modal-row input:focus{outline:none;border-color:#6B5AED;
+                             box-shadow:0 0 0 3px rgba(107,90,237,.14)}
+  .coa-modal-hint{font-size:11.5px;color:#64748B;line-height:1.7}
+  .coa-modal-warn{display:none;padding:9px 12px;border-radius:9px;
+                  background:#FEF3C7;color:#92400E;border:1px solid #FDE68A;
+                  font-size:12.5px;line-height:1.7;align-items:flex-start;gap:8px}
+  .coa-modal-warn.is-on{display:flex}
+  .coa-modal-foot{display:flex;gap:8px;justify-content:flex-start;padding:12px 16px;
+                  border-top:1px solid #E2E8F0;background:#F8FAFC}
+  .coa-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+</style>
+
+{# (a) — Set-IP modal — item #17 (تغيير IP المواقع) #}
+<div class="coa-modal" id="coa-setip-modal" role="dialog" aria-modal="true" aria-label="تغيير IP المتصل">
+  <form class="coa-modal-card" method="post" action="{{ url_for('radius.online_coa_set_ip') }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+    <input type="hidden" name="next" value="{{ request.full_path }}">
+    <input type="hidden" name="username" data-coa-username>
+    <input type="hidden" name="session_id" data-coa-session-id>
+    <div class="coa-modal-head">
+      <i class="fa-solid fa-arrows-rotate"></i>
+      <h3>{{ _('تغيير IP المتصل عبر CoA') }}</h3>
+      <button type="button" class="coa-modal-close" data-coa-close aria-label="إغلاق">×</button>
+    </div>
+    <div class="coa-modal-body">
+      <div class="coa-modal-hint">
+        {{ _('يُرسل النظام CoA-Request إلى المايكروتيك/السيرفر مع Framed-IP-Address الجديد فيُغيَّر الـ IP فورًا دون قطع الجلسة. مُثبت حيًّا على PPPoE.') }}
+      </div>
+      <div class="coa-modal-warn" data-coa-hotspot-warn>
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <span>{{ _('هذه جلسة Hotspot — مايكروتيك لا يقبل تغيير IP عبر CoA. سيُرفض الطلب وسيُعرض «unsupported». استخدم «تغيير IP» من راوتر الهوتسبوت مباشرة بدلًا من ذلك.') }}</span>
+      </div>
+      <div class="coa-modal-row">
+        <label>{{ _('المستخدم') }}</label>
+        <input type="text" data-coa-username-display readonly style="background:#F8FAFC">
+      </div>
+      <div class="coa-modal-row">
+        <label>{{ _('IP الحالي') }}</label>
+        <input type="text" data-coa-framed-ip-display readonly style="background:#F8FAFC;font-family:ui-monospace,monospace">
+      </div>
+      <div class="coa-modal-row">
+        <label for="coa-setip-new">{{ _('IP الجديد') }} <span style="color:#DC2626">*</span></label>
+        <input type="text" id="coa-setip-new" name="new_ip" required
+               placeholder="192.168.10.55" style="font-family:ui-monospace,monospace">
+        <div class="coa-modal-hint">{{ _('عنوان IPv4 صالح فقط. سيُرسل في Framed-IP-Address.') }}</div>
+      </div>
+    </div>
+    <div class="coa-modal-foot">
+      <button type="submit" class="hub-btn hub-btn--primary">
+        <i class="fa-solid fa-paper-plane"></i> {{ _('إرسال CoA') }}
+      </button>
+      <button type="button" class="hub-btn hub-btn--secondary" data-coa-close>{{ _('إلغاء') }}</button>
+    </div>
+  </form>
+</div>
+
+{# (b) — Set-speed modal #}
+<div class="coa-modal" id="coa-setspeed-modal" role="dialog" aria-modal="true" aria-label="تطبيق سرعة حيّة">
+  <form class="coa-modal-card" method="post" action="{{ url_for('radius.online_coa_set_speed') }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+    <input type="hidden" name="next" value="{{ request.full_path }}">
+    <input type="hidden" name="username" data-coa-username>
+    <input type="hidden" name="session_id" data-coa-session-id>
+    <div class="coa-modal-head">
+      <i class="fa-solid fa-tachograph-digital"></i>
+      <h3>{{ _('تطبيق سرعة حيّة عبر CoA') }}</h3>
+      <button type="button" class="coa-modal-close" data-coa-close aria-label="إغلاق">×</button>
+    </div>
+    <div class="coa-modal-body">
+      <div class="coa-modal-hint">
+        {{ _('يُرسل النظام Mikrotik-Rate-Limit الجديد عبر CoA فتُطبَّق السرعة على الجلسة الجارية فورًا (PPPoE وHotspot).') }}
+      </div>
+      <div class="coa-modal-row">
+        <label>{{ _('المستخدم') }}</label>
+        <input type="text" data-coa-username-display readonly style="background:#F8FAFC">
+      </div>
+      <div class="coa-grid-2">
+        <div class="coa-modal-row">
+          <label for="coa-setspeed-rx">{{ _('تنزيل (Kbps)') }} <span style="color:#DC2626">*</span></label>
+          <input type="number" id="coa-setspeed-rx" name="rx_kbps" required min="1" placeholder="51200">
+        </div>
+        <div class="coa-modal-row">
+          <label for="coa-setspeed-tx">{{ _('رفع (Kbps)') }} <span style="color:#DC2626">*</span></label>
+          <input type="number" id="coa-setspeed-tx" name="tx_kbps" required min="1" placeholder="10240">
+        </div>
+      </div>
+      <div class="coa-modal-hint">{{ _('قيم بالكيلوبت/ثانية. مثال: 51200 ≈ 50 ميجا.') }}</div>
+    </div>
+    <div class="coa-modal-foot">
+      <button type="submit" class="hub-btn hub-btn--primary">
+        <i class="fa-solid fa-paper-plane"></i> {{ _('إرسال CoA') }}
+      </button>
+      <button type="button" class="hub-btn hub-btn--secondary" data-coa-close>{{ _('إلغاء') }}</button>
+    </div>
+  </form>
+</div>
+
+<script>
+(function(){
+  function openModal(modal, btn){
+    if (!modal || !btn) return;
+    var username  = btn.getAttribute('data-username') || '';
+    var sessionId = btn.getAttribute('data-session-id') || '';
+    var framedIp  = btn.getAttribute('data-framed-ip') || '';
+    var stype     = btn.getAttribute('data-session-type') || '';
+    modal.querySelectorAll('[data-coa-username]').forEach(function(i){ i.value = username; });
+    modal.querySelectorAll('[data-coa-session-id]').forEach(function(i){ i.value = sessionId; });
+    modal.querySelectorAll('[data-coa-username-display]').forEach(function(i){ i.value = username; });
+    modal.querySelectorAll('[data-coa-framed-ip-display]').forEach(function(i){ i.value = framedIp; });
+    var warn = modal.querySelector('[data-coa-hotspot-warn]');
+    if (warn) warn.classList.toggle('is-on', stype === 'hotspot');
+    modal.classList.add('is-open');
+    var firstInput = modal.querySelector('input:not([type="hidden"]):not([readonly])');
+    if (firstInput) try { firstInput.focus(); } catch(_) {}
+  }
+  function closeModal(modal){ if (modal) modal.classList.remove('is-open'); }
+  document.addEventListener('click', function(e){
+    var openSetIp = e.target.closest('.online-coa-setip-open');
+    var openSetSp = e.target.closest('.online-coa-setspeed-open');
+    var closer    = e.target.closest('[data-coa-close]');
+    if (openSetIp) { openModal(document.getElementById('coa-setip-modal'), openSetIp); return; }
+    if (openSetSp) { openModal(document.getElementById('coa-setspeed-modal'), openSetSp); return; }
+    if (closer) { closeModal(closer.closest('.coa-modal')); return; }
+    // click on the scrim closes
+    if (e.target.classList && e.target.classList.contains('coa-modal')) {
+      closeModal(e.target);
+    }
+  });
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape') {
+      document.querySelectorAll('.coa-modal.is-open').forEach(closeModal);
+    }
+  });
 })();
 </script>
 {% endblock %}
