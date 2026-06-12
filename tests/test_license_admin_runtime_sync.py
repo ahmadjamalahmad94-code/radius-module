@@ -46,7 +46,6 @@ def _config():
         enabled=True,
         base_url="http://178.105.180.6",
         license_key="lic_live_test_123456789",
-        shared_secret="shared-secret-value",
         timeout_seconds=1.0,
         retry_count=0,
     )

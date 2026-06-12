@@ -17,9 +17,10 @@ def register_admin_bridge_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/license-file/sync", "license_file_sync", license_file_sync, methods=["POST"])
     bp.add_url_rule("/license-file/service-request", "license_file_service_request", license_file_service_request, methods=["POST"])
     bp.add_url_rule("/license-file/portal-sso", "license_file_portal_sso", license_file_portal_sso, methods=["GET"])
-    # Admin Bridge activation — zero-terminal SaaS onboarding.
-    bp.add_url_rule("/bridge/activate", "bridge_activate", bridge_activate, methods=["POST"])
-    bp.add_url_rule("/bridge/test", "bridge_test", bridge_test, methods=["POST"])
+    # NOTE: /bridge/activate and /bridge/test routes were REMOVED on
+    # 2026-06-11 (feat/radius-purge-legacy-linking). The activation-code
+    # flow used the legacy shared_secret + signed path; the only link
+    # mechanism now is pasting the license key into the simple setup form.
 
 
 def license_file_portal_sso():
@@ -188,24 +189,20 @@ def license_file():
         "runtime_contract": store.latest(tenant_id=tenant_id, snapshot_type=SNAPSHOT_CAPACITY),
         "identity_sync": store.latest(tenant_id=tenant_id, snapshot_type=SNAPSHOT_IDENTITY),
     }
-    from ..services.admin_panel_client import _server_fingerprint as _compute_fingerprint
-    current_fingerprint = _compute_fingerprint()
-    saved_fingerprint = bridge_setting("license_admin_bridge.server_fingerprint", "")
+    # شَطب 2026-06-11 (feat/radius-purge-legacy-linking): الحقول التَّابعة
+    # للمسار الموقَّع (shared_secret / server_fingerprint / fingerprint_is_stable
+    # / sync_interval_seconds) لم تَعُد تَظهر في القالب. لم نَعُد نُمرّرها
+    # كي لا يُسأل عنها أحدٌ مستقبلاً ويَعتقد أنّها مَستخدَمة.
     config_view = sanitize_bridge_payload({
         "enabled": config.enabled,
         "base_url": config.base_url,
         "license_key": config.license_key,
-        "shared_secret": config.shared_secret,
         "timeout_seconds": config.timeout_seconds,
         "retry_count": config.retry_count,
         "runtime_contract_sync": _bridge_flag("HOBERADIUS_ADMIN_RUNTIME_CONTRACT_SYNC", "license_admin_bridge.runtime_contract_sync"),
         "identity_sync_enabled": _bridge_flag("HOBERADIUS_ADMIN_IDENTITY_SYNC_ENABLED", "license_admin_bridge.identity_sync_enabled"),
         "identity_sync_on_login": _bridge_flag("HOBERADIUS_ADMIN_IDENTITY_SYNC_ON_LOGIN", "license_admin_bridge.identity_sync_on_login"),
         "worker_enabled": _bridge_flag("HOBERADIUS_ADMIN_BRIDGE_WORKER", "license_admin_bridge.worker_enabled"),
-        "sync_interval_seconds": bridge_setting("license_admin_bridge.sync_interval_seconds", "300"),
-        "server_fingerprint_saved": saved_fingerprint,
-        "server_fingerprint_active": current_fingerprint,
-        "fingerprint_is_stable": bool(saved_fingerprint or os.environ.get("HOBERADIUS_SERVER_FINGERPRINT") or os.environ.get("HOBERADIUS_INSTANCE_FINGERPRINT")),
     })
     panel_base_url = (config.base_url or LICENSE_PANEL_BASE_URL).strip().rstrip("/")
     return render_template(
@@ -214,10 +211,8 @@ def license_file():
         config_form={
             "base_url": panel_base_url,
             "has_license_key": bool(config.license_key),
-            "has_shared_secret": bool(config.shared_secret),
         },
-        # Simplified contract: ``shared_secret`` is OPTIONAL (bearer-in-body
-        # is the default). Only the panel URL + license_key are required.
+        # SIMPLE_LINK contract: only the panel URL + license_key are required.
         missing=config.missing_fields(),
         latest=latest,
         capacity=_safe("capacity", lambda: CapacityEnforcementService().capacity_status(tenant_id=tenant_id), {"status": "unavailable"}),
@@ -227,16 +222,12 @@ def license_file():
 def license_file_config():
     """Save the license-bridge configuration.
 
-    Simplified link (يونيو 2026 — قاعدة المالك): the only credential
-    required from the operator is the ``license_key`` (a 16-char string).
-    All advanced fields (``shared_secret`` / ``server_fingerprint`` /
-    worker toggles / sync interval) are OPTIONAL and live under the
-    «إعدادات متقدّمة» disclosure; their absence is no longer an error.
-
-    Backwards-compat: an admin who linked the old way (with a signed
-    ``shared_secret`` stored) keeps using signed requests. The new
-    bearer-in-body path is exercised only when ``shared_secret`` is
-    empty — see ``AdminPanelClient._headers()``.
+    SIMPLE_LINK only (يونيو 2026 — purge): the operator submits the panel
+    URL + license_key + the bridge-enable + sync toggles. The legacy
+    ``shared_secret`` / ``server_fingerprint`` / ``sync_interval_seconds``
+    intake was REMOVED 2026-06-11 (feat/radius-purge-legacy-linking).
+    Any old values left in tenant_settings are inert — the client no
+    longer reads them.
     """
     tenant_id = _tid()
     from ..db.repos import audit_repo, tenants_repo
@@ -245,22 +236,13 @@ def license_file_config():
     config = AdminBridgeConfig.from_env()
     base_url = (request.form.get("base_url") or config.base_url or LICENSE_PANEL_BASE_URL).strip().rstrip("/")
     license_key = (request.form.get("license_key") or "").strip()
-    # Advanced (optional) fields — absent on the simple flow.
-    shared_secret = (request.form.get("shared_secret") or "").strip()
-    server_fingerprint = (request.form.get("server_fingerprint") or "").strip()[:255]
     worker_enabled = bool(request.form.get("worker_enabled"))
-    raw_interval = (request.form.get("sync_interval_seconds") or "300").strip()
 
     if base_url and not base_url.lower().startswith(("http://", "https://")):
         flash("رابط لوحة التراخيص يجب أن يبدأ باتصال ويب صحيح.", "error")
         return redirect(url_for("radius.license_file"))
     if base_url.lower().startswith("http://") and request.form.get("identity_sync_enabled"):
         flash("مزامنة الهوية وكلمات المرور تحتاج رابطًا آمنًا للوحة التراخيص.", "error")
-        return redirect(url_for("radius.license_file"))
-    try:
-        sync_interval_seconds = max(60, min(86400, int(raw_interval or 300)))
-    except ValueError:
-        flash("فاصل المزامنة يجب أن يكون رقمًا بالثواني، ولا يقل عن 60 ثانية.", "error")
         return redirect(url_for("radius.license_file"))
 
     updates = {
@@ -269,43 +251,29 @@ def license_file_config():
         "license_admin_bridge.identity_sync_enabled": "1" if request.form.get("identity_sync_enabled") else "0",
         "license_admin_bridge.identity_sync_on_login": "1" if request.form.get("identity_sync_on_login") else "0",
         "license_admin_bridge.worker_enabled": "1" if worker_enabled else "0",
-        "license_admin_bridge.sync_interval_seconds": str(sync_interval_seconds),
     }
     if base_url:
         updates["license_admin_bridge.base_url"] = base_url
-    # Server fingerprint: save even if empty (allows clearing back to auto-computed)
-    updates["license_admin_bridge.server_fingerprint"] = server_fingerprint
     if license_key:
         updates["license_admin_bridge.license_key"] = license_key
     elif not config.license_key:
         flash("انسخ مفتاح الترخيص من صفحة العميل في لوحة التراخيص ثم الصقه هنا.", "error")
         return redirect(url_for("radius.license_file"))
-    # shared_secret no longer required on the simple bearer path. Save only
-    # if explicitly provided (keeps existing signed configs intact and lets
-    # the operator opt-in to the legacy signed path from advanced settings).
-    if shared_secret:
-        updates["license_admin_bridge.shared_secret"] = shared_secret
 
     # ── change detection with SEMANTIC equivalence ─────────────────
-    # ``tenants_repo.get_setting`` returns ``""`` for unset keys. The
-    # update step normalises booleans to ``"0"``/``"1"`` and numeric
-    # fields to their literal default. Without semantic equivalence a
-    # first-save flips every unset key into its default and registers
-    # as «success» despite no user-visible change — and symmetrically
-    # a no-op resubmit logs spurious diffs. Treat ``""`` (key never
-    # set) as equivalent to the key's documented default so only real
-    # changes count as «تغييرات».
+    # ``tenants_repo.get_setting`` returns ``""`` for unset keys, while
+    # the update step normalises booleans to ``"0"``/``"1"``. Treating
+    # ``""`` (key never set) as equivalent to the documented default
+    # keeps the no-changes detector honest — only real on/off transitions
+    # count as «تغييرات». See test_bridge_config_toggle_save.py.
     _DEFAULTS: dict[str, str] = {
         "license_admin_bridge.enabled": "0",
         "license_admin_bridge.runtime_contract_sync": "0",
         "license_admin_bridge.identity_sync_enabled": "0",
         "license_admin_bridge.identity_sync_on_login": "0",
         "license_admin_bridge.worker_enabled": "0",
-        "license_admin_bridge.sync_interval_seconds": "300",
-        "license_admin_bridge.server_fingerprint": "",
         "license_admin_bridge.base_url": "",
         "license_admin_bridge.license_key": "",
-        "license_admin_bridge.shared_secret": "",
     }
 
     def _equiv(old: str, new: str, key: str) -> bool:
@@ -513,66 +481,9 @@ def _sync_status_label(status: Any) -> str:
     return "حالة غير معروفة من لوحة التراخيص"
 
 
-# ── Admin Bridge activation routes ───────────────────────────────────────────
-
-def bridge_activate():
-    """POST /bridge/activate — activate the Admin Bridge using a one-time code.
-
-    Body (JSON or form): activation_code, base_url (optional).
-    Response: JSON ``{ok, message_ar, license_key, base_url, customer_name}``
-    The shared_secret is stored in tenant_settings and NEVER returned to the UI.
-    """
-    from ..services.bridge_activation import activate_bridge, BridgeActivationError
-
-    tenant_id = _tid()
-    admin_id = int(session.get("admin_id") or 0)
-
-    if request.is_json:
-        body = request.get_json(silent=True) or {}
-    else:
-        body = request.form
-
-    base_url = str(body.get("base_url") or LICENSE_PANEL_BASE_URL).strip().rstrip("/")
-    activation_code = str(body.get("activation_code") or "").strip()
-
-    try:
-        result = activate_bridge(
-            base_url=base_url,
-            activation_code=activation_code,
-            tenant_id=tenant_id,
-            admin_id=admin_id,
-        )
-    except BridgeActivationError as exc:
-        return jsonify({
-            "ok": False,
-            "status": exc.status,
-            "message_ar": exc.message_ar,
-        }), exc.http_status
-
-    return jsonify({
-        "ok": True,
-        "status": "activated",
-        "message_ar": f"تم تفعيل الجسر بنجاح. مرحباً {result['customer_name']}!",
-        "license_key": result["license_key"],
-        "base_url": result["base_url"],
-        "customer_name": result["customer_name"],
-    })
-
-
-def bridge_test():
-    """POST /bridge/test — check bridge connectivity without modifying settings.
-
-    Optional body (JSON): ``{"test_url": "https://hoberadius.com"}``
-    When ``test_url`` is present the backend probes that URL's /api/health and
-    reports the specific failure reason (DNS / timeout / TLS / HTTP status).
-    When absent it falls back to the stored bridge config.
-
-    Response: JSON ``{ok, configured, reachable, status, message_ar}``.
-    """
-    from ..services.bridge_activation import test_bridge_connection
-
-    tenant_id = _tid()
-    body = request.get_json(silent=True) or {}
-    test_url = str(body.get("test_url") or "").strip()
-    result = test_bridge_connection(tenant_id=tenant_id, test_url=test_url)
-    return jsonify(result)
+# ── REMOVED 2026-06-11 ───────────────────────────────────────────────────────
+# ``bridge_activate`` and ``bridge_test`` route handlers were deleted as part
+# of feat/radius-purge-legacy-linking. The one-time activation-code flow was
+# the sole consumer of the shared_secret / signed-path the panel no longer
+# accepts. The simple setup form (``license_file_config``) is the only
+# linking mechanism. ``bridge_activation.py`` was deleted in the same commit.

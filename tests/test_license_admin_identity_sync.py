@@ -64,7 +64,6 @@ def _config():
         enabled=True,
         base_url="https://license-panel.test",
         license_key="HBR-2026-AAAA-BBBB-CCCC",
-        shared_secret="shared-secret-value-at-least-32",
         timeout_seconds=1.0,
         retry_count=0,
     )
@@ -186,7 +185,10 @@ def test_runtime_password_change_posts_to_license_panel_then_syncs_hash(app_db):
     assert [call["url"].split("/")[-1] for call in transport.calls] == ["password-change", "identity-sync"]
     assert transport.calls[0]["json_body"]["external_user_id"] == "7"
     assert transport.calls[0]["json_body"]["new_password"] == "RuntimeSecret123!"
-    assert transport.calls[0]["json_body"]["signature"]
+    # Bearer-in-body (post 2026-06-11 purge): license_key carries the
+    # auth, not an HMAC signature.
+    assert transport.calls[0]["json_body"]["license_key"]
+    assert "signature" not in transport.calls[0]["json_body"]
     assert admins_repo.verify_password("RuntimeSecret123!", updated.password_hash) is True
     assert updated.external_password_version == 5
 
@@ -198,7 +200,6 @@ def test_identity_sync_requires_https_before_password_hash_transfer(app_db):
         enabled=True,
         base_url="http://license-panel.test",
         license_key="HBR-2026-AAAA-BBBB-CCCC",
-        shared_secret="shared-secret-value-at-least-32",
         timeout_seconds=1.0,
         retry_count=0,
     )
@@ -243,7 +244,6 @@ def test_runtime_password_change_requires_https_client_side(app_db):
         enabled=True,
         base_url="http://license-panel.test",
         license_key="HBR-2026-AAAA-BBBB-CCCC",
-        shared_secret="shared-secret-value-at-least-32",
         timeout_seconds=1.0,
         retry_count=0,
     )

@@ -208,10 +208,8 @@ def test_system_license_file_returns_safe_bridge_state(client):
     tenants_repo.set_setting(1, "license_admin_bridge.enabled", "1")
     tenants_repo.set_setting(1, "license_admin_bridge.base_url", "https://hoberadius.com")
     tenants_repo.set_setting(1, "license_admin_bridge.license_key", "HBR-SECRET-LICENSE-123456")
-    tenants_repo.set_setting(1, "license_admin_bridge.shared_secret", "super-secret-link")
     tenants_repo.set_setting(1, "license_admin_bridge.runtime_contract_sync", "1")
     tenants_repo.set_setting(1, "license_admin_bridge.identity_sync_enabled", "1")
-    tenants_repo.set_setting(1, "license_admin_bridge.sync_interval_seconds", "180")
 
     store = LicenseAdminSnapshotStore()
     store.save(
@@ -250,12 +248,14 @@ def test_system_license_file_returns_safe_bridge_state(client):
     assert data["config"]["enabled"] is True
     assert data["config"]["base_url"] == "https://hoberadius.com"
     assert data["config"]["license_key_configured"] is True
-    assert data["config"]["shared_secret_configured"] is True
-    assert data["config"]["sync_interval_seconds"] == "180"
+    # Legacy keys (shared_secret_configured / sync_interval_seconds /
+    # server_fingerprint) were dropped 2026-06-11.
+    assert "shared_secret_configured" not in data["config"]
+    assert "sync_interval_seconds" not in data["config"]
+    assert "server_fingerprint" not in data["config"]
     assert data["snapshots"]["license"]["status"] == "active"
     assert data["snapshots"]["runtime_contract"]["status"] == "active"
     assert data["contract"]["services"]["ip_change_vpn"]["download_mbps"] == 50
     raw = str(res.get_json())
     assert "HBR-SECRET-LICENSE-123456" not in raw
-    assert "super-secret-link" not in raw
     assert "nested-secret" not in raw

@@ -78,26 +78,18 @@ def client(app_db):
 
 
 def _bearer_config():
-    """Simplified config: license_key set, shared_secret EMPTY."""
+    """SIMPLE_LINK config — license_key is the only credential.
+
+    The legacy ``shared_secret`` field was permanently removed from
+    ``AdminBridgeConfig`` on 2026-06-11
+    (feat/radius-purge-legacy-linking) — there is no longer a dual-mode
+    fixture in this suite.
+    """
     from app.radius.services.admin_panel_client import AdminBridgeConfig
     return AdminBridgeConfig(
         enabled=True,
         base_url="https://panel.example.test",
         license_key="lic_simple_abcdef12",
-        shared_secret="",          # <— the whole point of the simplified path
-        timeout_seconds=1.0,
-        retry_count=0,
-    )
-
-
-def _signed_config():
-    """Legacy config: shared_secret present → signed path."""
-    from app.radius.services.admin_panel_client import AdminBridgeConfig
-    return AdminBridgeConfig(
-        enabled=True,
-        base_url="https://panel.example.test",
-        license_key="lic_legacy_abcdef12",
-        shared_secret="shared-secret-value",
         timeout_seconds=1.0,
         retry_count=0,
     )
@@ -135,32 +127,24 @@ def test_bearer_path_sends_authorization_header_and_no_signature(app_db):
     assert "nonce" not in body
 
 
-def test_signed_path_remains_backwards_compatible(app_db):
-    """Legacy config (with shared_secret) → headers carry the legacy
-    ``X-HobeRadius-Admin-Secret``, body carries signature/timestamp/nonce.
-    NO bearer header (one auth scheme per request — no double-auth)."""
-    from app.radius.services.admin_panel_client import (
-        AdminPanelClient, sign_admin_bridge_payload,
+def test_signed_path_was_removed(app_db):
+    """The legacy signed path was removed permanently 2026-06-11. The
+    AdminBridgeConfig dataclass no longer has a ``shared_secret`` field;
+    ``_headers()`` no longer emits ``X-HobeRadius-Admin-Secret``;
+    ``_license_check_payload`` no longer emits HMAC fields. These
+    deletions are tracked by the ``test_legacy_signing_helpers_are_gone``
+    assertion in ``test_license_admin_bridge_client.py`` — here we lock
+    in the dataclass shape."""
+    from app.radius.services.admin_panel_client import AdminBridgeConfig
+    import dataclasses as _dc
+    field_names = {f.name for f in _dc.fields(AdminBridgeConfig)}
+    assert "shared_secret" not in field_names, (
+        "AdminBridgeConfig.shared_secret was supposed to be deleted"
     )
 
-    transport = MockTransport({"status": "active", "valid": True})
-    AdminPanelClient(config=_signed_config(), transport=transport).fetch_license_snapshot(
-        tenant_id=1,
-    )
 
-    call = transport.calls[0]
-    assert call["headers"]["X-HobeRadius-Admin-Secret"] == "shared-secret-value"
-    # No bearer Authorization in the signed path.
-    assert "Authorization" not in call["headers"]
-    body = call["json_body"]
-    # Signed fields are still emitted.
-    assert "signature" in body and "timestamp" in body and "nonce" in body
-    assert body["signature"] == sign_admin_bridge_payload(body, "shared-secret-value")
-
-
-def test_bearer_path_omits_shared_secret_from_missing_fields(app_db):
-    """Simplified config has NO shared_secret — ``missing_fields()`` must
-    NOT complain about that. Only base_url + license_key matter now."""
+def test_bearer_path_missing_fields_only_url_and_key(app_db):
+    """Only base_url + license_key matter for ``missing_fields()``."""
     cfg = _bearer_config()
     assert cfg.missing_fields() == []
 
@@ -195,18 +179,18 @@ def test_backup_upload_uses_bearer_on_simple_path(app_db):
     assert "X-HobeRadius-Admin-Secret" not in call["headers"]
 
 
-def test_backup_upload_signed_path_still_carries_admin_secret(app_db):
-    """Backwards-compat: a configured shared_secret still gets serialized
-    into the backup-upload body so legacy panels keep accepting it."""
+def test_backup_upload_never_includes_admin_secret(app_db):
+    """``admin_secret`` body field was REMOVED from the backup upload
+    on 2026-06-11. The license_key is the only secret."""
     from app.radius.services.admin_panel_client import AdminPanelClient
 
     transport = MockTransport({"ok": True, "status": "stored"})
-    AdminPanelClient(config=_signed_config(), transport=transport).post_backup_upload(
+    AdminPanelClient(config=_bearer_config(), transport=transport).post_backup_upload(
         payload={"filename": "b.sqlite3", "content_b64": "BBBB"},
     )
     body = transport.calls[0]["json_body"]
-    assert body["admin_secret"] == "shared-secret-value"
-    assert body["license_key"] == "lic_legacy_abcdef12"
+    assert "admin_secret" not in body
+    assert body["license_key"] == "lic_simple_abcdef12"
 
 
 # ════════════════════════════════════════════════════════════════════
@@ -331,20 +315,31 @@ def test_setup_persists_with_only_url_and_key(client, app_db):
     ) in ("", "_NONE_"), "shared_secret should NOT be written on simple path"
 
 
-def test_setup_template_renders_two_field_form(client, app_db):
-    """The form must show only 2 primary inputs (base_url + license_key);
-    the legacy fields are nested inside a collapsible disclosure."""
+def test_setup_template_renders_minimal_form(client, app_db):
+    """The form has ONLY: panel URL (readonly) + license_key + bridge-enable
+    toggle + sync toggles. The legacy ``shared_secret`` /
+    ``server_fingerprint`` / ``sync_interval_seconds`` inputs and the
+    ``data-license-advanced`` disclosure were DELETED 2026-06-11
+    (feat/radius-purge-legacy-linking)."""
     _login_super(client)
     res = client.get("/admin/radius/license-file")
     assert res.status_code == 200
     html = res.get_data(as_text=True)
-    # Primary inputs.
+    # Primary inputs present.
     assert 'name="base_url"' in html
     assert 'name="license_key"' in html
     assert "data-simple-link-key" in html
-    # Legacy inputs live under the collapsible disclosure.
-    assert "data-license-advanced" in html
-    assert 'class="hub-disclosure' in html
+    # Legacy inputs + disclosure are GONE.
+    assert 'name="shared_secret"' not in html
+    assert 'name="server_fingerprint"' not in html
+    assert 'name="sync_interval_seconds"' not in html
+    assert "data-license-advanced" not in html
+    assert "hub-disclosure" not in html
+    # Sync toggles are still on the form (visible, not hidden behind disclosure).
+    assert 'name="enabled"' in html
+    assert 'name="runtime_contract_sync"' in html
+    assert 'name="identity_sync_enabled"' in html
+    assert 'name="worker_enabled"' in html
     # Hint text reflects the new contract.
     assert "هذا المفتاح هو سرّ الربط الوحيد" in html
 

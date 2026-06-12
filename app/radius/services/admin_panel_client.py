@@ -15,13 +15,11 @@ import os
 from ..core import env_settings
 import hashlib
 import secrets
-import hmac
 import socket
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
-import uuid
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Callable, Protocol
@@ -186,10 +184,16 @@ def sanitize_bridge_payload(value: Any) -> Any:
 
 @dataclass(frozen=True)
 class AdminBridgeConfig:
+    """Bridge configuration — SIMPLE_LINK only (يونيو 2026 purge).
+
+    The legacy ``shared_secret`` field + HMAC signed-path were removed
+    permanently. Auth is bearer-in-body: the ``license_key`` is the
+    only credential the client and the panel both know. See the
+    Simple_Link contract on the panel side.
+    """
     enabled: bool
     base_url: str
     license_key: str
-    shared_secret: str
     timeout_seconds: float
     retry_count: int
 
@@ -214,10 +218,6 @@ class AdminBridgeConfig:
             license_key=_env_or_bridge_setting(
                 ("HOBERADIUS_LICENSE_KEY", "INSTANCE_LICENSE_KEY"),
                 "license_admin_bridge.license_key",
-            ),
-            shared_secret=_env_or_bridge_setting(
-                ("HOBERADIUS_ADMIN_SHARED_SECRET",),
-                "license_admin_bridge.shared_secret",
             ),
             timeout_seconds=_safe_float(
                 timeout_value,
@@ -465,8 +465,6 @@ class AdminPanelClient:
             )
             return {"ok": False, "status": "https_required", "error": snapshot["error_json"], "snapshot": snapshot}
         missing = self.config.missing_fields()
-        if self.config.shared_secret == "":
-            missing.append("HOBERADIUS_ADMIN_SHARED_SECRET")
         if missing:
             snapshot = self.store.save(
                 tenant_id=tenant_id,
@@ -560,8 +558,6 @@ class AdminPanelClient:
                 "error": {"code": "https_required", "message": "Password sync requires HTTPS admin panel URL."},
             }
         missing = self.config.missing_fields()
-        if self.config.shared_secret == "":
-            missing.append("HOBERADIUS_ADMIN_SHARED_SECRET")
         if missing:
             return {
                 "ok": False,
@@ -679,20 +675,12 @@ class AdminPanelClient:
         # The upload payload was built through sanitize_bridge_payload(), which
         # MASKS sensitive keys including ``license_key`` — so the panel would
         # receive a masked key and fail to resolve the license/secret (401).
-        # Restore the real license_key, and carry the integration credential
-        # in the BODY as well (reverse proxies often strip custom request
-        # headers; over HTTPS the body is equivalent in confidentiality).
-        #
-        # Two auth modes (mirror of ``_headers()``):
-        #   • shared_secret stored  → ``admin_secret`` in body (legacy signed).
-        #   • shared_secret absent  → no extra field; ``license_key`` is itself
-        #     the bearer secret and Authorization header carries it too. The
-        #     panel's bearer-in-body acceptor reads license_key from the body.
+        # Restore the real license_key in the body — it's the bearer
+        # secret per the panel's Simple_Link contract, and the upstream
+        # ``sanitize_bridge_payload`` step masked it before we got here.
         body = dict(payload)
         if self.config.license_key:
             body["license_key"] = self.config.license_key
-        if self.config.shared_secret:
-            body["admin_secret"] = self.config.shared_secret
         # Backup uploads carry the full DB content (many MB) and the panel may
         # spend time storing + forwarding it, so the tiny default bridge
         # timeout (≈3s) is far too short. Use a dedicated, generous timeout.
@@ -1109,31 +1097,18 @@ class AdminPanelClient:
         }
 
     def _headers(self) -> dict[str, str]:
-        """Outbound headers for every bridge request.
+        """Outbound headers — SIMPLE_LINK bearer-in-body only.
 
-        Two auth modes, mutually exclusive at the header layer:
-          • Legacy signed path — sends ``X-HobeRadius-Admin-Secret`` when a
-            ``shared_secret`` is stored locally. The body also carries
-            ``timestamp/nonce/signature`` (HMAC-SHA256). Kept for back-compat
-            with panels that still verify signatures.
-          • Simple bearer path — sends ``Authorization: Bearer <license_key>``
-            when no shared_secret is configured. Per docs/SIMPLE_LINK_CONTRACT
-            (panel repo) the panel accepts the license key as a bearer secret
-            both in the Authorization header AND in the body (reverse proxies
-            sometimes strip custom request headers — the body is the
-            authoritative copy).
-
-        Backwards-compat: an admin who linked the old way (with a
-        shared_secret stored) keeps using signed requests; a freshly-linked
-        admin (post-simplification) uses bearer-in-body.
+        Per the panel's Simple_Link contract the ``license_key`` is the
+        single bearer secret, carried in BOTH the Authorization header
+        AND the request body (the body copy is authoritative — reverse
+        proxies sometimes strip custom request headers).
         """
         headers = {
             "Accept": "application/json",
             "User-Agent": "HobeRadius-AdminBridge/1",
         }
-        if self.config.shared_secret:
-            headers["X-HobeRadius-Admin-Secret"] = self.config.shared_secret
-        elif self.config.license_key:
+        if self.config.license_key:
             headers["Authorization"] = "Bearer " + self.config.license_key
         return headers
 
@@ -1148,15 +1123,6 @@ class AdminPanelClient:
         }
         if extra:
             payload.update(extra)
-        if self.config.shared_secret:
-            # Legacy signed-payload path stays bit-for-bit identical.
-            payload["timestamp"] = int(time.time())
-            payload["nonce"] = uuid.uuid4().hex
-            payload["signature"] = sign_admin_bridge_payload(payload, self.config.shared_secret)
-        # Simple bearer path: nothing else needed. license_key is already in
-        # the body (authoritative bearer copy) and ``_headers()`` adds the
-        # matching Authorization header. The panel ignores fields it doesn't
-        # care about, so we don't need to gate other extras.
         return payload
 
 
@@ -1267,20 +1233,6 @@ def _normalize_status(payload: dict[str, Any]) -> str:
     if not status:
         return "ok" if payload.get("ok") is True else "unknown"
     return status
-
-
-def canonical_admin_bridge_payload(body: dict[str, Any]) -> str:
-    payload = {
-        key: value
-        for key, value in body.items()
-        if key not in {"signature", "hmac_signature"}
-    }
-    return json.dumps(payload, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
-
-
-def sign_admin_bridge_payload(body: dict[str, Any], secret: str) -> str:
-    canonical = canonical_admin_bridge_payload(body)
-    return hmac.new(secret.encode("utf-8"), canonical.encode("utf-8"), hashlib.sha256).hexdigest()
 
 
 def _server_fingerprint() -> str:

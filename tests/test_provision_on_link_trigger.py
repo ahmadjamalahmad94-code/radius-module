@@ -76,11 +76,14 @@ def app_db(monkeypatch, tmp_path):
 def _bearer_config():
     """Simplified bridge config (bearer-in-body, no shared_secret)."""
     from app.radius.services.admin_panel_client import AdminBridgeConfig
+    # NOTE (smart-merge): the legacy purge (fix/radius-purge-legacy-linking,
+    # already on main) removed the `shared_secret` field from
+    # AdminBridgeConfig — the bridge is now bearer-in-body only. Don't pass
+    # the dropped kwarg.
     return AdminBridgeConfig(
         enabled=True,
         base_url="https://panel.example.test",
         license_key="lic_simple_abcdef12",
-        shared_secret="",
         timeout_seconds=1.0,
         retry_count=0,
     )

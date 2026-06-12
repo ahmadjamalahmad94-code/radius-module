@@ -70,7 +70,6 @@ def _config():
         enabled=True,
         base_url="https://license-panel.test",
         license_key="HBR-2026-AAAA-BBBB-CCCC",
-        shared_secret="shared-secret-value-at-least-32",
         timeout_seconds=1.0,
         retry_count=0,
     )
@@ -183,7 +182,10 @@ def test_admins_report_producer_sends_inventory_without_password(app_db):
     assert result["ok"] is True
     assert result["reported_count"] == len(inventory)
     body = transport.calls[0]["json_body"]
-    assert body["signature"]
+    # Bearer-in-body (post 2026-06-11 purge): license_key carries the
+    # auth, signature is gone.
+    assert body["license_key"]
+    assert "signature" not in body
     assert isinstance(body["admins"], list)
     assert all("password_hash" not in a for a in body["admins"])
 
