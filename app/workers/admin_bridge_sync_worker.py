@@ -44,6 +44,11 @@ def _loop() -> None:
             identity_result = _maybe_sync_identity()
             tunnel_result = _maybe_sync_tunnels()
             bridge_token_result = _maybe_sync_bridge_token()
+            # Auto-provision tick: after a successful runtime sync, fire
+            # the heartbeat → panel's provision_on_link mints the RADIUS
+            # instance + ProxyRealmRoute and returns the shared secret.
+            # Idempotent on both sides; safe to fire every cycle.
+            provision_result = _maybe_send_heartbeat(result)
             info = {
                 "interval_sec": interval,
                 "ok": bool(result.get("ok")),
@@ -57,6 +62,9 @@ def _loop() -> None:
                 "tunnels_ok": tunnel_result.get("ok") if tunnel_result else None,
                 "bridge_token_ok": bridge_token_result.get("ok") if bridge_token_result else None,
                 "bridge_token_action": bridge_token_result.get("action") if bridge_token_result else None,
+                "provision_ok": provision_result.get("ok") if provision_result else None,
+                "provision_status": provision_result.get("status") if provision_result else None,
+                "provisioned": provision_result.get("provisioned") if provision_result else None,
             }
         except Exception as exc:  # noqa: BLE001
             _LOG.exception("admin bridge sync worker tick failed")
@@ -99,6 +107,32 @@ def _maybe_sync_bridge_token() -> dict | None:
         return BridgeTokenSyncService().ensure_token_and_report_pending(tenant_id=1)
     except Exception:  # noqa: BLE001
         _LOG.warning("bridge_token sync step failed", exc_info=True)
+        return None
+
+
+def _maybe_send_heartbeat(sync_result: dict | None) -> dict | None:
+    """Fire the instance-ops/heartbeat after a SUCCESSFUL runtime sync.
+
+    This is the trigger for the panel's ``provision_on_link`` flow: the
+    body carries license_key + radius_auth_ip + realm + 1812/1813, and
+    the panel idempotently creates the customer's RADIUS instance +
+    ProxyRealmRoute and returns the shared_secret which we persist
+    locally for FreeRADIUS clients.conf.
+
+    Best-effort by design: a heartbeat failure must NOT break the rest
+    of the sync cycle. Returns the heartbeat result dict (or None when
+    skipped, e.g. sync was not OK).
+    """
+    if not sync_result or not sync_result.get("ok"):
+        # No successful sync this tick → don't pester the panel.
+        return None
+    try:
+        from app.radius.services.license_admin_instance_health import (
+            InstanceHealthService,
+        )
+        return InstanceHealthService().send_heartbeat(tenant_id=1, dry_run=False)
+    except Exception:  # noqa: BLE001
+        _LOG.warning("provision heartbeat step failed", exc_info=True)
         return None
 
 
