@@ -295,6 +295,9 @@ def _register_all(bp: Blueprint) -> None:
     from .settings import register_settings_routes
     register_settings_routes(bp)
 
+    from .access_control import register_access_control_routes
+    register_access_control_routes(bp)
+
     from .system_settings import register_system_settings_routes
     register_system_settings_routes(bp)
 
@@ -385,6 +388,10 @@ _PERM_GUARDED: dict[str, str] = {
     "sections_admin_reset": _PERM_SUPER,
     # حفظ إعدادات النظام — تتطلّب صلاحية settings.edit (تُفحص على الكتابة فقط)
     "settings_page": "settings.edit",
+    # «الحظر والتحكم بالدخول» — كتابة محروسة بـsettings.edit (العرض بـsettings.view)
+    "access_control_save_settings": "settings.edit",
+    "access_control_add_block": "settings.edit",
+    "access_control_clear_block": "settings.edit",
     # الأنفاق — طلب/مزامنة نفق عبر الجسر (كتابة) تتطلّب api.use
     "tunnels_request": "api.use",
     "tunnels_sync": "api.use",

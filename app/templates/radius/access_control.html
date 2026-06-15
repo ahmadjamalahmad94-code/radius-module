@@ -1,0 +1,296 @@
+{# «التحكم بالدخول» — طبقتان متمايزتان (feat/access-control-blocking).
+   الطبقة A «تعليق الوصول»: نطاقي + أنماط مدّة، رسالة مهذّبة للمستخدم.
+   الطبقة B «حظر»: IP/MAC يدوي + تلقائي + منع MAC العشوائي.
+   تصميم موحّد، flash-stack بدل alert، تأكيد عبر data-confirm. #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}التحكم بالدخول{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-user-lock"></i>{% endblock %}
+{% block page_title %}التحكم بالدخول{% endblock %}
+{% block page_sub %}<span class="sub">تعليق وصول وحظر</span>{% endblock %}
+
+{% block content %}
+
+{% set _sus_active = suspensions|selectattr('active')|list|length if suspensions else 0 %}
+{% set _blk_active = blocks|selectattr('active')|list|length if blocks else 0 %}
+{% set _auto = blocks|selectattr('source','equalto','auto')|selectattr('active')|list|length if blocks else 0 %}
+
+{{ hub.megahero(
+  "التحكم بالدخول",
+  subtitle="طبقتان: «تعليق الوصول» يحكم متى/هل يُسمح للمشترك بالدخول (جدولة وتعليق مؤقت برسالة مهذّبة) — و«الحظر» الأمني لعناوين IP/MAC يدويًا وتلقائيًا عند تكرار الفشل. الإنفاذ وقت المصادقة على الخادم.",
+  icon="user-lock",
+  kpis=[
+    {'label': 'تعليق فعّال', 'value': _sus_active, 'icon': 'clock',  'variant': 'amber'},
+    {'label': 'حظر فعّال',   'value': _blk_active, 'icon': 'ban',    'variant': 'red'},
+    {'label': 'حظر تلقائي',  'value': _auto,       'icon': 'robot',  'variant': 'brand'},
+  ]
+) }}
+
+{# ════════════════════════════════════════════════════════════════════
+   الطبقة A — «تعليق الوصول»
+   ════════════════════════════════════════════════════════════════════ #}
+{% call hub.section("تعليق الوصول", icon="clock", meta="متى/هل يُسمح بالدخول") %}
+  <p class="card-intro">
+    {{ _('يحكم متى/هل يستطيع المشترك تسجيل الدخول (جدولة أو تعليق مؤقت). ليس حظرًا أمنيًا — عند المنع يرى المستخدم رسالة عربية مهذّبة تشرح السبب.') }}
+  </p>
+  <form method="post" action="{{ url_for('radius.access_control_add_block') }}" id="sus-form">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+    <div class="hub-flex-row" style="gap:14px;flex-wrap:wrap">
+      <div class="field">
+        <label for="sus-scope">{{ _('النطاق') }} <span style="color:var(--err)">*</span></label>
+        <select id="sus-scope" name="block_type" required>
+          {% for val, label in suspension_scope_labels %}
+          <option value="{{ val }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field" id="sus-target-field" style="flex:1;min-width:200px">
+        <label for="sus-target" id="sus-target-label">{{ _('الهدف') }}</label>
+        <input type="text" id="sus-target" name="target"
+               placeholder="{{ _('اسم المستخدم / المجموعة / المعرّف') }}">
+      </div>
+    </div>
+    <div class="hub-flex-row" style="gap:14px;flex-wrap:wrap">
+      <div class="field">
+        <label for="sus-mode">{{ _('مدّة التعليق') }} <span style="color:var(--err)">*</span></label>
+        <select id="sus-mode" name="duration_mode" required>
+          {% for val, label in duration_labels %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="field sus-dur sus-dur-daily" style="display:none">
+        <label for="sus-wstart">{{ _('من') }}</label>
+        <input type="time" id="sus-wstart" name="window_start">
+      </div>
+      <div class="field sus-dur sus-dur-daily" style="display:none">
+        <label for="sus-wend">{{ _('إلى') }}</label>
+        <input type="time" id="sus-wend" name="window_end">
+      </div>
+      <div class="field sus-dur sus-dur-until" style="display:none">
+        <label for="sus-expires">{{ _('حتى') }}</label>
+        <input type="datetime-local" id="sus-expires" name="expires_at">
+      </div>
+    </div>
+    <div class="field">
+      <label for="sus-reason">{{ _('السبب (يظهر للمستخدم في رسالة المنع)') }}</label>
+      <input type="text" id="sus-reason" name="reason" maxlength="300"
+             placeholder="{{ _('مثل: صيانة مجدولة / إيقاف مؤقت للمراجعة') }}">
+    </div>
+    {{ hub.btn("تعليق الوصول", variant="primary", icon="clock", type="submit") }}
+  </form>
+
+  {% if suspensions %}
+  <div class="hub-table-wrap" style="margin-top:16px">
+    <table class="hub-table" data-testid="suspensions-table">
+      <thead><tr>
+        <th>{{ _('النطاق') }}</th><th>{{ _('الهدف') }}</th><th>{{ _('المدّة') }}</th>
+        <th>{{ _('السبب') }}</th><th>{{ _('الحالة') }}</th><th>{{ _('إجراء') }}</th>
+      </tr></thead>
+      <tbody>
+        {% for b in suspensions %}
+        <tr>
+          <td>{{ scope_label_map.get(b.block_type, b.block_type) }}</td>
+          <td class="mono small">{{ b.target or '—' }}</td>
+          <td class="small">
+            {% if b.duration_mode == 'daily_window' %}{{ _('يوميًا') }} {{ b.window_start }}→{{ b.window_end }}
+            {% elif b.duration_mode == 'until' %}{{ _('حتى') }} {{ b.expires_at|dt_local if b.expires_at else '—' }}
+            {% else %}{{ _('دائم') }}{% endif %}
+          </td>
+          <td class="small">{{ b.reason or '—' }}</td>
+          <td>{{ hub.pill('فعّال', variant='amber') if b.active else hub.pill('مرفوع', variant='green') }}</td>
+          <td>
+            {% if b.active %}
+            <form method="post" action="{{ url_for('radius.access_control_clear_block', block_id=b.id) }}" style="display:inline;margin:0">
+              <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+              <button class="hub-btn hub-btn--secondary hub-btn--sm" type="submit" data-confirm="رفع التعليق عن هذا النطاق؟">
+                <i class="fa-solid fa-unlock"></i> {{ _('رفع') }}
+              </button>
+            </form>
+            {% else %}<span class="hub-text-mute" style="font-size:12px">—</span>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="hub-text-mute" style="margin-top:12px">{{ _('لا تعليقات وصول بعد.') }}</p>
+  {% endif %}
+{% endcall %}
+
+{# ════════════════════════════════════════════════════════════════════
+   الطبقة B — «حظر» أمني (IP/MAC + تلقائي + MAC عشوائي)
+   ════════════════════════════════════════════════════════════════════ #}
+{% call hub.section("إعدادات الحظر الأمني", icon="shield-halved") %}
+  <form method="post" action="{{ url_for('radius.access_control_save_settings') }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+    <div class="field" style="display:flex;align-items:center;gap:10px">
+      <input type="checkbox" id="rm_subs" name="security.block_random_mac_subscribers" value="1"
+             {{ 'checked' if settings['security.block_random_mac_subscribers'] in ('1','true','on') else '' }}>
+      <label for="rm_subs" style="margin:0">{{ _('منع دخول المشتركين بعنوان MAC عشوائي (خاص)') }}</label>
+    </div>
+    <div class="field" style="display:flex;align-items:center;gap:10px">
+      <input type="checkbox" id="rm_cards" name="security.block_random_mac_cards" value="1"
+             {{ 'checked' if settings['security.block_random_mac_cards'] in ('1','true','on') else '' }}>
+      <label for="rm_cards" style="margin:0">{{ _('منع دخول البطاقات بعنوان MAC عشوائي (خاص)') }}</label>
+    </div>
+    <hr style="border:none;border-top:1px solid var(--hub-border-soft,#e2e8f0);margin:16px 0">
+    <div class="field" style="display:flex;align-items:center;gap:10px">
+      <input type="checkbox" id="ab_on" name="{{ ac_keys.enabled }}" value="1"
+             {{ 'checked' if settings[ac_keys.enabled] in ('1','true','on') else '' }}>
+      <label for="ab_on" style="margin:0"><strong>{{ _('تفعيل الحظر التلقائي عند تكرار محاولات الدخول الفاشلة (fail2ban)') }}</strong></label>
+    </div>
+    <div class="hub-flex-row" style="gap:14px;flex-wrap:wrap">
+      <div class="field">
+        <label for="ab_threshold">{{ _('عتبة المحاولات') }}</label>
+        <input type="number" min="1" id="ab_threshold" name="{{ ac_keys.threshold }}" value="{{ settings[ac_keys.threshold] }}">
+      </div>
+      <div class="field">
+        <label for="ab_window">{{ _('نافذة العدّ (ثانية)') }}</label>
+        <input type="number" min="1" id="ab_window" name="{{ ac_keys.window }}" value="{{ settings[ac_keys.window] }}">
+      </div>
+      <div class="field">
+        <label for="ab_duration">{{ _('مدّة الحظر التلقائي (دقيقة)') }}</label>
+        <input type="number" min="1" id="ab_duration" name="{{ ac_keys.duration }}" value="{{ settings[ac_keys.duration] }}">
+      </div>
+      <div class="field">
+        <label for="ab_target">{{ _('يحظر حسب') }}</label>
+        <select id="ab_target" name="{{ ac_keys.target }}">
+          <option value="mac"  {{ 'selected' if settings[ac_keys.target]=='mac'  else '' }}>{{ _('عنوان MAC') }}</option>
+          <option value="ip"   {{ 'selected' if settings[ac_keys.target]=='ip'   else '' }}>{{ _('عنوان IP') }}</option>
+          <option value="both" {{ 'selected' if settings[ac_keys.target]=='both' else '' }}>{{ _('كلاهما') }}</option>
+        </select>
+      </div>
+    </div>
+    <p class="hub-text-mute" style="font-size:12px;margin:6px 0 12px">
+      <i class="fa-solid fa-circle-info"></i>
+      {{ _('ملاحظة: عند المصادقة لا يتوفّر إلا عنوان IP الراوتر (NAS) لا جهاز العميل — لذا «حظر IP» قد يحظر كل من خلف الراوتر. «MAC» أدقّ لتمييز الجهاز.') }}
+    </p>
+    {{ hub.btn("حفظ الإعدادات", variant="primary", icon="floppy-disk", type="submit") }}
+  </form>
+{% endcall %}
+
+{% call hub.section("حظر IP / MAC يدويًا", icon="ban") %}
+  <form method="post" action="{{ url_for('radius.access_control_add_block') }}" id="blk-form">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+    <div class="hub-flex-row" style="gap:14px;flex-wrap:wrap">
+      <div class="field">
+        <label for="blk-scope">{{ _('النوع') }} <span style="color:var(--err)">*</span></label>
+        <select id="blk-scope" name="block_type" required>
+          {% for val, label in block_scope_labels %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="field" style="flex:1;min-width:200px">
+        <label for="blk-target" id="blk-target-label">{{ _('العنوان') }} <span style="color:var(--err)">*</span></label>
+        <input type="text" id="blk-target" name="target" required
+               placeholder="{{ _('عنوان IP أو MAC (AA:BB:CC:DD:EE:FF)') }}">
+      </div>
+    </div>
+    <div class="hub-flex-row" style="gap:14px;flex-wrap:wrap">
+      <div class="field">
+        <label for="blk-mode">{{ _('مدّة الحظر') }} <span style="color:var(--err)">*</span></label>
+        <select id="blk-mode" name="duration_mode" required>
+          {% for val, label in duration_labels %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="field blk-dur blk-dur-daily" style="display:none">
+        <label for="blk-wstart">{{ _('من') }}</label>
+        <input type="time" id="blk-wstart" name="window_start">
+      </div>
+      <div class="field blk-dur blk-dur-daily" style="display:none">
+        <label for="blk-wend">{{ _('إلى') }}</label>
+        <input type="time" id="blk-wend" name="window_end">
+      </div>
+      <div class="field blk-dur blk-dur-until" style="display:none">
+        <label for="blk-expires">{{ _('حتى') }}</label>
+        <input type="datetime-local" id="blk-expires" name="expires_at">
+      </div>
+    </div>
+    <div class="field">
+      <label for="blk-reason">{{ _('السبب (اختياري)') }}</label>
+      <input type="text" id="blk-reason" name="reason" maxlength="300" placeholder="{{ _('سبب الحظر — يظهر في القائمة') }}">
+    </div>
+    {{ hub.btn("حظر", variant="primary", icon="ban", type="submit") }}
+  </form>
+
+  {% if blocks %}
+  <div class="hub-table-wrap" style="margin-top:16px">
+    <table class="hub-table" data-testid="blocks-table">
+      <thead><tr>
+        <th>{{ _('النوع') }}</th><th>{{ _('العنوان') }}</th><th>{{ _('المدّة') }}</th>
+        <th>{{ _('السبب') }}</th><th>{{ _('المصدر') }}</th><th>{{ _('الحالة') }}</th><th>{{ _('إجراء') }}</th>
+      </tr></thead>
+      <tbody>
+        {% for b in blocks %}
+        <tr>
+          <td>{{ scope_label_map.get(b.block_type, b.block_type) }}</td>
+          <td class="mono small">{{ b.target or '—' }}</td>
+          <td class="small">
+            {% if b.duration_mode == 'daily_window' %}{{ _('يوميًا') }} {{ b.window_start }}→{{ b.window_end }}
+            {% elif b.duration_mode == 'until' %}{{ _('حتى') }} {{ b.expires_at|dt_local if b.expires_at else '—' }}
+            {% else %}{{ _('دائم') }}{% endif %}
+          </td>
+          <td class="small">{{ b.reason or '—' }}</td>
+          <td>{{ hub.pill('تلقائي', variant='amber') if b.source == 'auto' else hub.pill('يدوي', variant='grey') }}</td>
+          <td>{{ hub.pill('فعّال', variant='red') if b.active else hub.pill('مرفوع', variant='green') }}</td>
+          <td>
+            {% if b.active %}
+            <form method="post" action="{{ url_for('radius.access_control_clear_block', block_id=b.id) }}" style="display:inline;margin:0">
+              <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+              <button class="hub-btn hub-btn--secondary hub-btn--sm" type="submit" data-confirm="رفع هذا الحظر؟">
+                <i class="fa-solid fa-unlock"></i> {{ _('رفع') }}
+              </button>
+            </form>
+            {% else %}<span class="hub-text-mute" style="font-size:12px">—</span>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="hub-text-mute" style="margin-top:12px">{{ _('لا حظور بعد.') }}</p>
+  {% endif %}
+{% endcall %}
+
+<script>
+(() => {
+  // نموذج «تعليق الوصول»: حقل الهدف يختفي للنطاقات الشاملة + حقول المدّة.
+  const ALL = ['all_subscribers','all_hotspot','all_cards','all_pppoe'];
+  const SUS_LABELS = {subscriber:'اسم المستخدم', group:'اسم المجموعة',
+    plan:'معرّف العرض/الباقة', card_batch:'معرّف حزمة البطاقات'};
+  const sScope = document.getElementById('sus-scope');
+  const sField = document.getElementById('sus-target-field');
+  const sInput = document.getElementById('sus-target');
+  const sLabel = document.getElementById('sus-target-label');
+  function syncSus(){
+    const v = sScope.value, isAll = ALL.indexOf(v) !== -1;
+    sField.style.display = isAll ? 'none' : '';
+    if (sInput) sInput.required = !isAll;
+    if (sLabel && SUS_LABELS[v]) sLabel.textContent = SUS_LABELS[v];
+  }
+  if (sScope){ sScope.addEventListener('change', syncSus); syncSus(); }
+
+  // مبدّل حقول المدّة لكلا النموذجين (بادئة sus-/blk-).
+  function wireDuration(prefix){
+    const mode = document.getElementById(prefix + '-mode');
+    if (!mode) return;
+    function sync(){
+      const v = mode.value;
+      document.querySelectorAll('.' + prefix + '-dur-daily').forEach(e => e.style.display = (v==='daily_window')?'':'none');
+      document.querySelectorAll('.' + prefix + '-dur-until').forEach(e => e.style.display = (v==='until')?'':'none');
+    }
+    mode.addEventListener('change', sync); sync();
+  }
+  wireDuration('sus'); wireDuration('blk');
+
+  // تسمية حقل العنوان في نموذج الحظر حسب IP/MAC.
+  const bScope = document.getElementById('blk-scope');
+  const bLabel = document.getElementById('blk-target-label');
+  if (bScope && bLabel){
+    const f = () => { bLabel.textContent = (bScope.value === 'mac') ? 'عنوان MAC' : 'عنوان IP'; };
+    bScope.addEventListener('change', f); f();
+  }
+})();
+</script>
+{% endblock %}

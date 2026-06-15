@@ -68,9 +68,20 @@ _MSG = {
     "mac_mismatch":      "هذا الجهاز غير مصرَّح بالدخول لهذا الحساب",
     "random_mac_blocked": "هذا الجهاز يستخدم عنوان MAC عشوائي/خاص — أوقف «العنوان الخاص» في إعدادات الواي فاي ثم أعد المحاولة",
     "concurrent_limit":  "تجاوزت الحد الأقصى للجلسات المتزامنة",
+    # «تعليق الوصول» (الطبقة A): رسالة مهذّبة موجّهة للمستخدم.
+    "access_suspended":   "تسجيل الدخول معلّق مؤقتاً — راجع الإدارة",
+    # «حظر» أمني (الطبقة B): IP/MAC.
+    "access_blocked":     "الدخول محظور حاليًا — راجع الإدارة",
     "ok_welcome":        "أهلًا بك",
     "ok_expires_soon":   "اشتراكك ينتهي قريبًا — جدّد قبل الانقطاع",
 }
+
+# fail2ban — قائمة سماح: العدّاد التلقائي يُحسب **فقط** على فشل المصادقة
+# الحقيقي (اعتماد خاطئ). صراحةً نستثني كل رفض سياسة/تفويض (expired,
+# quota_exhausted, outside_hours, outside_days, concurrent_limit,
+# mac_mismatch, random_mac_blocked) وكذلك access_suspended/access_blocked.
+# توسعة هذه القائمة قرار أمني مقصود — لا تُضِف رموز سياسة هنا.
+_FAIL2BAN_REASONS = frozenset({"password_wrong", "user_not_found"})
 
 
 # ─────────────── الفحوصات ───────────────
@@ -237,6 +248,46 @@ def _check_random_mac(req: AuthRequest, source: str) -> Optional[AuthDecision]:
     return None
 
 
+def _check_blocks(sub: Subscriber, plan: Optional[AccessPlan], req: AuthRequest,
+                  source: str, now: datetime) -> Optional[AuthDecision]:
+    """«التحكم بالدخول» (الطبقتان) — يرفض إذا انطبق سجلّ فعّال وسارٍ:
+      • «تعليق وصول» نطاقي (مشترك/مجموعة/عرض/حزمة/شامل) → reason=access_suspended
+        مع رسالة مهذّبة موجّهة للمستخدم في Reply-Message (يرى لماذا/متى).
+      • «حظر» أمني على IP/MAC → reason=access_blocked برسالة عامّة.
+
+    محصّن: أي خطأ في الطبقة لا يكسر مسار الـauth (يُرجع None = سماح)."""
+    try:
+        from ..services import access_control as acl
+        # service_type الحقيقي يأتي من الباقة (الكارت يرث Hotspot افتراضيًا
+        # في _card_to_subscriber)؛ نفضّل plan.service_type لئلّا يُخطئ نطاقا
+        # all_hotspot/all_pppoe في تصنيف الكروت.
+        svc = (getattr(plan, "service_type", "") if plan else "") \
+            or getattr(sub, "service_type", "") or ""
+        ctx = acl.AuthContext(
+            source=source,
+            username=sub.username,
+            group=getattr(sub, "group", "") or "",
+            plan_id=sub.plan_id,
+            card_batch_id=sub.card_batch_id,
+            service_type=svc,
+            nas_ip=req.nas_ip,
+            mac=req.calling_station_id,
+        )
+        hit = acl.find_active_block(req.tenant_id, ctx, now=now)
+        if hit is not None:
+            # رمز داخلي بحسب الطبقة + رسالة المستخدم المهذّبة (Reply-Message).
+            reason = ("access_blocked"
+                      if acl.layer_of(hit.get("block_type")) == acl.LAYER_BLOCK
+                      else "access_suspended")
+            msg = acl.user_message_for(hit)
+            return AuthDecision(ok=False, reason=reason, message=msg,
+                                reply_attrs={"Reply-Message": msg})
+    except Exception:  # noqa: BLE001 — لا نكسر الـauth أبدًا بسبب هذا الفحص
+        _LOG.warning("policy_engine: access-control check failed for %r",
+                      req.username, exc_info=True)
+    return None
+
+
 def _check_concurrent(sub: Subscriber, plan: Optional[AccessPlan]) -> Optional[AuthDecision]:
     limit = sub.override_concurrent or (plan.concurrent_sessions if plan else 0) or 0
     if limit <= 0: return None
@@ -317,6 +368,8 @@ def authorize(req: AuthRequest) -> AuthDecision:
         _LOG.warning("auth_decision user=%r reason=user_not_found "
                       "(لا subscriber ولا card في tenant=%d)",
                       req.username, req.tenant_id)
+        # محاولة باسم غير موجود = brute-force محتمل → تُحسب في عدّاد fail2ban.
+        _register_failed_attempt(req, datetime.utcnow())
         return _reject("user_not_found")
 
     plan: Optional[AccessPlan] = None
@@ -327,6 +380,9 @@ def authorize(req: AuthRequest) -> AuthDecision:
     now = datetime.utcnow()
 
     for fn in (
+        # «الحظر والتحكم بالدخول» أولًا: المحظور يُرفض فورًا بصرف النظر عن
+        # صحّة كلمة المرور (لا نُسرّب صحّتها ولا نزيد عدّاد fail2ban له).
+        lambda: _check_blocks(sub, plan, req, source, now),
         lambda: _check_password(sub, req),
         lambda: _check_status(sub),
         lambda: _check_expiration(sub),
@@ -342,6 +398,13 @@ def authorize(req: AuthRequest) -> AuthDecision:
             _LOG.warning("auth_decision user=%r source=%s rejected reason=%s",
                           req.username, source, bad.reason)
             _log_attempt(req, accepted=False, reason=bad.reason)
+            # عدّاد الفشل + الحظر التلقائي (fail2ban): يُحسب **فقط** على فشل
+            # مصادقة حقيقي (قائمة سماح _FAIL2BAN_REASONS) — لا على رفض
+            # السياسة/التفويض (expired/quota_exhausted/outside_hours/
+            # concurrent_limit/mac_mismatch/…) كي لا يَحظر مستخدم شرعي نفسه
+            # بسبب واي‑فاي متقطّع مثلًا، ولا على التعليق/الحظر نفسه.
+            if bad.reason in _FAIL2BAN_REASONS:
+                _register_failed_attempt(req, now)
             return bad
 
     # ─ ✅ Accept ─
@@ -455,6 +518,19 @@ def _parse_hm(s: str) -> tuple[int, int]:
         return (int(s), 0)
     h, m = s.split(":", 1)
     return (int(h), int(m))
+
+
+def _register_failed_attempt(req: AuthRequest, now: datetime) -> None:
+    """يُمرّر محاولة فاشلة لطبقة «الحظر والتحكم بالدخول» (عدّاد + حظر تلقائي).
+    محصّن — لا يكسر مسار الـauth (الذي رفض أصلًا)."""
+    try:
+        from ..services.access_control import register_failed_attempt
+        register_failed_attempt(
+            req.tenant_id, ip=req.nas_ip, mac=req.calling_station_id,
+            username=req.username, now=now)
+    except Exception:  # noqa: BLE001
+        _LOG.warning("policy_engine: register_failed_attempt failed for %r",
+                      req.username, exc_info=True)
 
 
 def _log_attempt(req: AuthRequest, *, accepted: bool, reason: str = "") -> None:
