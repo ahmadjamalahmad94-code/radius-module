@@ -1,9 +1,10 @@
-"""«الحظر والتحكم بالدخول» — مسارات الإدارة (feat/access-control-blocking).
+"""«التحكم بالدخول» — مسارات الإدارة (feat/access-control-blocking).
 
-صفحة مُدارة مستقلّة (ليست ضمن قائمة الإعدادات المسطّحة): إعدادات الأمان
-(منع MAC العشوائي + الحظر التلقائي)، نموذج إضافة حظر بنطاقاته الثمانية
-وأنماط مدّته الثلاثة، وجدول قائمة الحظر مع زر الرفع. الإنفاذ في
-policy_engine عبر services/access_control.
+صفحة مُدارة بطبقتين متمايزتين في القسم نفسه:
+  • «تعليق الوصول» (suspension): نطاقي (مشترك/مجموعة/عرض/حزمة/شامل) + أنماط
+    المدّة — يحكم متى/هل يُسمح بالدخول (رسالة مهذّبة للمستخدم).
+  • «حظر» (block): IP/MAC يدوي + تلقائي (fail2ban) + منع MAC العشوائي.
+الإنفاذ في policy_engine عبر services/access_control.
 """
 from __future__ import annotations
 
@@ -25,8 +26,8 @@ _SECURITY_KEYS = {
     ac.SK_AUTOBLOCK_TARGET: "mac",
 }
 
-# النطاقات وأنماط المدّة — تُمرَّر للقالب لبناء القوائم المنسدلة (تسميات عربية).
-SCOPE_LABELS = [
+# نطاقات «تعليق الوصول» (الطبقة A) — تُمرَّر لنموذج التعليق.
+SUSPENSION_SCOPE_LABELS = [
     ("subscriber", "مشترك محدّد"),
     ("group", "مجموعة مشتركين"),
     ("plan", "عرض/باقة"),
@@ -35,9 +36,14 @@ SCOPE_LABELS = [
     ("all_hotspot", "كل الهوتسبوت"),
     ("all_cards", "كل البطاقات"),
     ("all_pppoe", "كل PPPoE"),
+]
+# نطاقات «الحظر» الأمني (الطبقة B) — تُمرَّر لنموذج الحظر.
+BLOCK_SCOPE_LABELS = [
     ("ip", "عنوان IP"),
     ("mac", "عنوان MAC"),
 ]
+# خريطة موحّدة لعرض التسمية في الجداول.
+SCOPE_LABEL_MAP = dict(SUSPENSION_SCOPE_LABELS + BLOCK_SCOPE_LABELS)
 DURATION_LABELS = [
     ("permanent", "دائم حتى الرفع اليدوي"),
     ("daily_window", "نافذة يومية متكرّرة"),
@@ -73,15 +79,18 @@ def access_control_page():
         access_blocks_repo.deactivate_expired(tid)
     except Exception:  # noqa: BLE001
         pass
-    blocks = access_blocks_repo.list_blocks(tid)
+    suspensions = access_blocks_repo.list_blocks(tid, layer=ac.LAYER_SUSPENSION)
+    blocks = access_blocks_repo.list_blocks(tid, layer=ac.LAYER_BLOCK)
     settings = {k: tenants_repo.get_setting(tid, k, d) for k, d in _SECURITY_KEYS.items()}
     return render_template(
         "radius/access_control.html",
+        suspensions=suspensions,
         blocks=blocks,
         settings=settings,
-        scope_labels=SCOPE_LABELS,
+        suspension_scope_labels=SUSPENSION_SCOPE_LABELS,
+        block_scope_labels=BLOCK_SCOPE_LABELS,
         duration_labels=DURATION_LABELS,
-        scope_label_map=dict(SCOPE_LABELS),
+        scope_label_map=SCOPE_LABEL_MAP,
         duration_label_map=dict(DURATION_LABELS),
         ac_keys={
             "enabled": ac.SK_AUTOBLOCK_ENABLED,
@@ -125,10 +134,13 @@ def access_control_save_settings():
 def access_control_add_block():
     tid = _tid()
     actor, admin_id = _actor()
+    block_type = request.form.get("block_type") or ""
+    is_block = ac.layer_of(block_type) == ac.LAYER_BLOCK
+    noun = "الحظر" if is_block else "التعليق"
     try:
         block_id = ac.create_block_from_input(
             tenant_id=tid,
-            block_type=request.form.get("block_type") or "",
+            block_type=block_type,
             target=request.form.get("target") or "",
             reason=request.form.get("reason") or "",
             duration_mode=request.form.get("duration_mode") or "permanent",
@@ -137,10 +149,10 @@ def access_control_add_block():
             expires_at=request.form.get("expires_at") or "",
             created_by=admin_id,
         )
-        audit_repo.record(tenant_id=tid, actor=actor, action="access_block_add",
-                          target_type="access_block", target_id=str(block_id),
-                          payload={"block_type": request.form.get("block_type")})
-        flash("تم إضافة الحظر.", "success")
+        audit_repo.record(tenant_id=tid, actor=actor, action="access_control_add",
+                          target_type="access_control", target_id=str(block_id),
+                          payload={"block_type": block_type, "layer": ac.layer_of(block_type)})
+        flash(f"تم إضافة {noun}.", "success")
     except ac.AccessControlError as exc:
         flash(str(exc), "error")
     return redirect(url_for("radius.access_control_page"))
@@ -149,11 +161,15 @@ def access_control_add_block():
 def access_control_clear_block(block_id: int):
     tid = _tid()
     actor, admin_id = _actor()
+    existing = access_blocks_repo.get_block(tid, int(block_id))
+    noun = "الحظر"
+    if existing and ac.layer_of(existing.get("block_type")) == ac.LAYER_SUSPENSION:
+        noun = "التعليق"
     if access_blocks_repo.clear_block(tid, int(block_id), by=admin_id):
-        audit_repo.record(tenant_id=tid, actor=actor, action="access_block_clear",
-                          target_type="access_block", target_id=str(block_id),
+        audit_repo.record(tenant_id=tid, actor=actor, action="access_control_clear",
+                          target_type="access_control", target_id=str(block_id),
                           payload={"cleared": True})
-        flash("تم رفع الحظر.", "success")
+        flash(f"تم رفع {noun}.", "success")
     else:
-        flash("الحظر غير موجود أو مرفوع سابقًا.", "info")
+        flash("السجلّ غير موجود أو مرفوع سابقًا.", "info")
     return redirect(url_for("radius.access_control_page"))

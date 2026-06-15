@@ -68,6 +68,9 @@ _MSG = {
     "mac_mismatch":      "هذا الجهاز غير مصرَّح بالدخول لهذا الحساب",
     "random_mac_blocked": "هذا الجهاز يستخدم عنوان MAC عشوائي/خاص — أوقف «العنوان الخاص» في إعدادات الواي فاي ثم أعد المحاولة",
     "concurrent_limit":  "تجاوزت الحد الأقصى للجلسات المتزامنة",
+    # «تعليق الوصول» (الطبقة A): رسالة مهذّبة موجّهة للمستخدم.
+    "access_suspended":   "تسجيل الدخول معلّق مؤقتاً — راجع الإدارة",
+    # «حظر» أمني (الطبقة B): IP/MAC.
     "access_blocked":     "الدخول محظور حاليًا — راجع الإدارة",
     "ok_welcome":        "أهلًا بك",
     "ok_expires_soon":   "اشتراكك ينتهي قريبًا — جدّد قبل الانقطاع",
@@ -240,18 +243,20 @@ def _check_random_mac(req: AuthRequest, source: str) -> Optional[AuthDecision]:
 
 def _check_blocks(sub: Subscriber, plan: Optional[AccessPlan], req: AuthRequest,
                   source: str, now: datetime) -> Optional[AuthDecision]:
-    """«الحظر والتحكم بالدخول» — يرفض إذا انطبق حظر فعّال وسارٍ على هذا
-    المستخدم/المجموعة/الباقة/الحزمة/النطاق الشامل أو على IP/MAC الطلب.
+    """«التحكم بالدخول» (الطبقتان) — يرفض إذا انطبق سجلّ فعّال وسارٍ:
+      • «تعليق وصول» نطاقي (مشترك/مجموعة/عرض/حزمة/شامل) → reason=access_suspended
+        مع رسالة مهذّبة موجّهة للمستخدم في Reply-Message (يرى لماذا/متى).
+      • «حظر» أمني على IP/MAC → reason=access_blocked برسالة عامّة.
 
-    محصّن: أي خطأ في طبقة الحظر لا يكسر مسار الـauth (يُرجع None = سماح)."""
+    محصّن: أي خطأ في الطبقة لا يكسر مسار الـauth (يُرجع None = سماح)."""
     try:
-        from ..services.access_control import AuthContext, find_active_block
+        from ..services import access_control as acl
         # service_type الحقيقي يأتي من الباقة (الكارت يرث Hotspot افتراضيًا
         # في _card_to_subscriber)؛ نفضّل plan.service_type لئلّا يُخطئ نطاقا
         # all_hotspot/all_pppoe في تصنيف الكروت.
         svc = (getattr(plan, "service_type", "") if plan else "") \
             or getattr(sub, "service_type", "") or ""
-        ctx = AuthContext(
+        ctx = acl.AuthContext(
             source=source,
             username=sub.username,
             group=getattr(sub, "group", "") or "",
@@ -261,10 +266,17 @@ def _check_blocks(sub: Subscriber, plan: Optional[AccessPlan], req: AuthRequest,
             nas_ip=req.nas_ip,
             mac=req.calling_station_id,
         )
-        if find_active_block(req.tenant_id, ctx, now=now) is not None:
-            return _reject("access_blocked")
+        hit = acl.find_active_block(req.tenant_id, ctx, now=now)
+        if hit is not None:
+            # رمز داخلي بحسب الطبقة + رسالة المستخدم المهذّبة (Reply-Message).
+            reason = ("access_blocked"
+                      if acl.layer_of(hit.get("block_type")) == acl.LAYER_BLOCK
+                      else "access_suspended")
+            msg = acl.user_message_for(hit)
+            return AuthDecision(ok=False, reason=reason, message=msg,
+                                reply_attrs={"Reply-Message": msg})
     except Exception:  # noqa: BLE001 — لا نكسر الـauth أبدًا بسبب هذا الفحص
-        _LOG.warning("policy_engine: block check failed for %r",
+        _LOG.warning("policy_engine: access-control check failed for %r",
                       req.username, exc_info=True)
     return None
 
@@ -380,8 +392,9 @@ def authorize(req: AuthRequest) -> AuthDecision:
                           req.username, source, bad.reason)
             _log_attempt(req, accepted=False, reason=bad.reason)
             # عدّاد الفشل + الحظر التلقائي (fail2ban): كل رفض حقيقي يُحسب
-            # ما عدا «محظور أصلًا» (تفادي حلقة التغذية الراجعة).
-            if bad.reason != "access_blocked":
+            # ما عدا الرفض من طبقة التحكم بالدخول نفسها (محظور/معلّق) — تفادي
+            # حلقة التغذية الراجعة وعدم احتساب التعليق المجدول كفشل دخول.
+            if bad.reason not in ("access_blocked", "access_suspended"):
                 _register_failed_attempt(req, now)
             return bad
 

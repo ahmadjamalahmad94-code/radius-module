@@ -106,6 +106,27 @@ class TestScopeMatching:
     def test_normalize_mac(self):
         assert ac.normalize_mac("aa-bb-cc-dd-ee-ff") == "AA:BB:CC:DD:EE:FF"
 
+    def test_layer_of(self):
+        # النطاقات النطاقية = تعليق؛ IP/MAC = حظر
+        for bt in ("subscriber", "group", "plan", "card_batch",
+                   "all_subscribers", "all_hotspot", "all_cards", "all_pppoe"):
+            assert ac.layer_of(bt) == ac.LAYER_SUSPENSION
+        assert ac.layer_of("ip") == ac.LAYER_BLOCK
+        assert ac.layer_of("mac") == ac.LAYER_BLOCK
+
+    def test_user_message_for(self):
+        # تعليق: رسالة مهذّبة بحسب النمط + إلحاق السبب
+        m = ac.user_message_for({"block_type": "subscriber",
+                                 "duration_mode": "permanent", "reason": "صيانة"})
+        assert m.startswith(ac.MSG_SUSPENDED) and "صيانة" in m
+        assert ac.user_message_for({"block_type": "subscriber",
+                                    "duration_mode": "daily_window"}) == ac.MSG_SUSPENDED_WINDOW
+        assert ac.user_message_for({"block_type": "subscriber",
+                                    "duration_mode": "until"}) == ac.MSG_SUSPENDED_UNTIL
+        # حظر: رسالة أمنية عامّة لا تُلحق سبب المشغّل
+        assert ac.user_message_for({"block_type": "ip",
+                                    "reason": "internal"}) == ac.MSG_BLOCKED
+
     def test_daily_window_applies_tz_offset(self):
         # نافذة 16:00→08:00 محلّية، إزاحة +3. الساعة 20:00 محلّي = 17:00 UTC.
         b = {"active": 1, "duration_mode": "daily_window",
@@ -167,6 +188,19 @@ class TestRepoAndFind:
         # رفع ثانٍ لا يغيّر شيئًا
         assert not repo.clear_block(1, bid)
 
+    def test_list_filters_by_layer(self, app_ctx):
+        from app.radius.db.repos import access_blocks_repo as repo
+        repo.create_block(tenant_id=1, layer="suspension", block_type="subscriber", target="u1")
+        repo.create_block(tenant_id=1, layer="block", block_type="ip", target="1.2.3.4")
+        sus = repo.list_blocks(1, layer="suspension")
+        blk = repo.list_blocks(1, layer="block")
+        assert len(sus) == 1 and sus[0]["block_type"] == "subscriber"
+        assert len(blk) == 1 and blk[0]["block_type"] == "ip"
+        # create_block_from_input يشتقّ الطبقة تلقائيًا من النوع
+        ac.create_block_from_input(tenant_id=1, block_type="mac",
+                                   target="AA:BB:CC:DD:EE:FF")
+        assert len(repo.list_blocks(1, layer="block")) == 2
+
     def test_find_active_block_matches_subscriber(self, app_ctx):
         from app.radius.db.repos import access_blocks_repo as repo
         repo.create_block(tenant_id=1, block_type="subscriber", target="u1")
@@ -216,38 +250,58 @@ class TestEnforcementInPolicyEngine:
         d = self._authorize()
         assert d.ok is True
 
-    def test_blocked_subscriber_rejected(self, app_ctx):
+    def test_suspended_subscriber_rejected_with_message(self, app_ctx):
+        # نطاق المشترك = طبقة «تعليق الوصول» → reason=access_suspended + رسالة
+        # مهذّبة تُحمَل في Reply-Message وتشمل سبب المشغّل.
         from app.radius.db.repos import access_blocks_repo as repo
         _mk_sub()
-        repo.create_block(tenant_id=1, block_type="subscriber", target="u1")
+        repo.create_block(tenant_id=1, layer="suspension", block_type="subscriber",
+                          target="u1", reason="صيانة مجدولة")
         d = self._authorize()
-        assert d.ok is False and d.reason == "access_blocked"
+        assert d.ok is False and d.reason == "access_suspended"
+        assert "معلّق" in d.message and "صيانة مجدولة" in d.message
+        assert d.reply_attrs.get("Reply-Message") == d.message
 
-    def test_all_subscribers_scope(self, app_ctx):
+    def test_all_subscribers_scope_is_suspension(self, app_ctx):
         from app.radius.db.repos import access_blocks_repo as repo
         _mk_sub()
-        repo.create_block(tenant_id=1, block_type="all_subscribers")
-        assert self._authorize().reason == "access_blocked"
+        repo.create_block(tenant_id=1, layer="suspension", block_type="all_subscribers")
+        assert self._authorize().reason == "access_suspended"
 
-    def test_ip_scope(self, app_ctx):
+    def test_daily_window_message(self, app_ctx):
+        # نافذة يومية → رسالة «لا يمكن تسجيل الدخول بهذا الوقت» (حين السريان).
         from app.radius.db.repos import access_blocks_repo as repo
         _mk_sub()
-        repo.create_block(tenant_id=1, block_type="ip", target="9.8.7.6")
-        assert self._authorize(nas_ip="9.8.7.6").reason == "access_blocked"
+        repo.create_block(tenant_id=1, layer="suspension", block_type="subscriber",
+                          target="u1", duration_mode="daily_window",
+                          window_start="00:00", window_end="00:00")  # 24س
+        d = self._authorize()
+        assert d.reason == "access_suspended"
+        assert d.message == ac.MSG_SUSPENDED_WINDOW
+
+    def test_ip_scope_is_block(self, app_ctx):
+        # IP/MAC = طبقة «الحظر» الأمني → reason=access_blocked برسالة عامّة.
+        from app.radius.db.repos import access_blocks_repo as repo
+        _mk_sub()
+        repo.create_block(tenant_id=1, layer="block", block_type="ip", target="9.8.7.6")
+        d = self._authorize(nas_ip="9.8.7.6")
+        assert d.reason == "access_blocked" and d.message == ac.MSG_BLOCKED
         # IP مختلف غير متأثّر
         assert self._authorize(nas_ip="1.1.1.1").ok is True
 
-    def test_mac_scope(self, app_ctx):
+    def test_mac_scope_is_block(self, app_ctx):
         from app.radius.db.repos import access_blocks_repo as repo
         _mk_sub()
-        repo.create_block(tenant_id=1, block_type="mac", target="AA:BB:CC:DD:EE:FF")
+        repo.create_block(tenant_id=1, layer="block", block_type="mac",
+                          target="AA:BB:CC:DD:EE:FF")
         assert self._authorize(mac="aa:bb:cc:dd:ee:ff").reason == "access_blocked"
 
     def test_clear_unblocks(self, app_ctx):
         from app.radius.db.repos import access_blocks_repo as repo
         _mk_sub()
-        bid = repo.create_block(tenant_id=1, block_type="subscriber", target="u1")
-        assert self._authorize().reason == "access_blocked"
+        bid = repo.create_block(tenant_id=1, layer="suspension",
+                                block_type="subscriber", target="u1")
+        assert self._authorize().reason == "access_suspended"
         repo.clear_block(1, bid)
         assert self._authorize().ok is True
 
@@ -331,8 +385,10 @@ class TestRoutePage:
     def test_page_renders(self, app_ctx):
         c = self._client(app_ctx)
         html = c.get("/admin/radius/access-control").get_data(as_text=True)
-        assert "الحظر والتحكم بالدخول" in html
-        assert 'id="ac-add-form"' in html
+        assert "التحكم بالدخول" in html
+        assert "تعليق الوصول" in html          # الطبقة A
+        assert 'id="sus-form"' in html         # نموذج التعليق
+        assert 'id="blk-form"' in html         # نموذج الحظر
 
     def test_add_and_clear_via_routes(self, app_ctx):
         from app.radius.db.repos import access_blocks_repo as repo

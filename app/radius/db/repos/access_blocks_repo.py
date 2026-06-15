@@ -1,7 +1,7 @@
-"""access_blocks — repo لـ«الحظر والتحكم بالدخول» (migration 123).
+"""access_blocks — repo لـ«التحكم بالدخول» بطبقتيه (migration 123).
 
-جدولان:
-  * access_blocks — قائمة الحظر الموحّدة (نطاقات + IP/MAC، 3 أنماط مدّة).
+جدولان (التخزين مشترك للطبقتين، التمييز بعمود ``layer``):
+  * access_blocks — سجلّات «تعليق الوصول» (نطاقي) و«الحظر» (IP/MAC)، 3 أنماط مدّة.
   * login_failure_tracker — عدّاد محاولات الفشل للحظر التلقائي (fail2ban).
 
 كله tenant-scoped. لا منطق إنفاذ هنا (ذلك في services/access_control.py)؛
@@ -32,19 +32,21 @@ def create_block(
     *, tenant_id: int, block_type: str, target: str = "", reason: str = "",
     duration_mode: str = "permanent", window_start: str = "", window_end: str = "",
     expires_at: str = "", source: str = "manual", created_by: int = 0,
+    layer: str = "suspension",
 ) -> int:
     now = now_iso()
     with transaction() as conn:
         cur = conn.execute(
             """
             INSERT INTO access_blocks
-                (tenant_id, block_type, target, reason, duration_mode,
+                (tenant_id, layer, block_type, target, reason, duration_mode,
                  window_start, window_end, expires_at, source, active,
                  created_by, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?)
             """,
-            (int(tenant_id), str(block_type), str(target or ""), str(reason or ""),
-             str(duration_mode), str(window_start or ""), str(window_end or ""),
+            (int(tenant_id), str(layer or "suspension"), str(block_type),
+             str(target or ""), str(reason or ""), str(duration_mode),
+             str(window_start or ""), str(window_end or ""),
              str(expires_at or ""), str(source or "manual"), int(created_by or 0),
              now, now),
         )
@@ -52,11 +54,14 @@ def create_block(
 
 
 def list_blocks(tenant_id: int, *, active_only: bool = False,
-                limit: int = 1000) -> list[dict]:
+                layer: Optional[str] = None, limit: int = 1000) -> list[dict]:
     sql = "SELECT * FROM access_blocks WHERE tenant_id = ?"
     vals: list = [int(tenant_id)]
     if active_only:
         sql += " AND active = 1"
+    if layer:
+        sql += " AND layer = ?"
+        vals.append(str(layer))
     sql += " ORDER BY active DESC, id DESC LIMIT ?"
     vals.append(int(limit))
     return [row_to_dict(r) for r in db().execute(sql, vals).fetchall()]

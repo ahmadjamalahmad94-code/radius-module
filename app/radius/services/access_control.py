@@ -1,15 +1,22 @@
-"""«الحظر والتحكم بالدخول» — منطق الإنفاذ (feat/access-control-blocking).
+"""«التحكم بالدخول» — منطق الإنفاذ لطبقتين متمايزتين (feat/access-control-blocking).
 
-طبقة الخدمة فوق ``access_blocks_repo``. تحوي:
-  * منطق نمط المدّة (permanent / daily_window / until) — دوال خالصة قابلة
-    للاختبار (``is_block_in_effect``، ``in_daily_window``).
-  * مطابقة النطاق (subscriber/group/plan/card_batch/ALL_*/ip/mac).
-  * نقطة الإنفاذ ``find_active_block`` التي يستدعيها policy_engine وقت الـauth.
-  * الحظر التلقائي على محاولات الفشل المتكرّرة (fail2ban):
-    ``register_failed_attempt``.
-  * قرّاء إعدادات الأمان (tenants_repo، نفس نمط security.block_random_mac_*).
+طبقتان مختلفتان مفهوميًّا تتشاركان جدول التخزين والمنطق الزمني:
 
-كل شيء tenant-scoped. الإنفاذ هنا — ليس في الواجهة فقط.
+  • الطبقة A — «تعليق الوصول» (access **suspension**): قائمة على النطاق
+    (subscriber/group/plan/card_batch/ALL_*). تحكم متى/هل يُسمح للمشترك
+    بالدخول (جدولة، تعليق مؤقت) — **ليست حظرًا أمنيًا**. عند الرفض يحصل
+    المستخدم على رسالة عربية مهذّبة (مثل «لا يمكن تسجيل الدخول بهذا الوقت»
+    أو «تسجيل الدخول معلّق مؤقتاً») تُحمَل في Reply-Message.
+
+  • الطبقة B — «حظر» (security **block**): حظر IP/MAC، يدوي + تلقائي عند
+    تكرار الفشل (fail2ban). رسالة أمنية عامة.
+
+الطبقة تُشتقّ من ``block_type`` (راجع ``layer_of``) وتُخزَّن صراحةً في عمود
+``layer`` للتصفية في الواجهة.
+
+طبقة الخدمة فوق ``access_blocks_repo``. تحوي: منطق نمط المدّة الخالص، مطابقة
+النطاق، ``find_active_block`` (الإنفاذ)، ``register_failed_attempt`` (التلقائي)،
+ورسائل المستخدم. كل شيء tenant-scoped. الإنفاذ هنا — ليس في الواجهة فقط.
 """
 from __future__ import annotations
 
@@ -23,6 +30,53 @@ from ..db.helpers import parse_dt
 from ..db.repos import access_blocks_repo as repo
 
 _LOG = logging.getLogger(__name__)
+
+# ════════════════════════════════════════════════════════════════════════
+# الطبقتان: «تعليق الوصول» (suspension) و«حظر» (block)
+# ════════════════════════════════════════════════════════════════════════
+LAYER_SUSPENSION = "suspension"   # نطاقي: مشترك/مجموعة/عرض/حزمة/شامل
+LAYER_BLOCK = "block"             # أمني: IP/MAC
+
+# النطاقات التي تنتمي لطبقة «تعليق الوصول».
+SUSPENSION_SCOPES = (
+    "subscriber", "group", "plan", "card_batch",
+    "all_subscribers", "all_hotspot", "all_cards", "all_pppoe",
+)
+# نطاقات طبقة «الحظر» الأمني.
+BLOCK_SCOPES = ("ip", "mac")
+
+
+def layer_of(block_type: str) -> str:
+    """يشتقّ الطبقة من نوع النطاق: IP/MAC = حظر، والباقي = تعليق وصول."""
+    return LAYER_BLOCK if str(block_type) in BLOCK_SCOPES else LAYER_SUSPENSION
+
+
+# رسائل المستخدم المهذّبة لطبقة «تعليق الوصول» (تُحمَل في Reply-Message).
+MSG_SUSPENDED = "تسجيل الدخول معلّق مؤقتاً — راجع الإدارة"
+MSG_SUSPENDED_WINDOW = "لا يمكن تسجيل الدخول بهذا الوقت"
+MSG_SUSPENDED_UNTIL = "تسجيل الدخول معلّق مؤقتاً حتى إشعار لاحق"
+# رسالة طبقة «الحظر» الأمني (عامّة).
+MSG_BLOCKED = "الدخول محظور حاليًا — راجع الإدارة"
+
+
+def user_message_for(block: dict) -> str:
+    """الرسالة العربية التي يراها المستخدم عند رفض الدخول بسبب هذا السجلّ.
+
+    لطبقة «تعليق الوصول»: رسالة مهذّبة بحسب نمط المدّة، مع إلحاق سبب المشغّل
+    إن وُجد كي يعرف المستخدم «لماذا». لطبقة «الحظر»: رسالة أمنية عامّة."""
+    bt = str(block.get("block_type") or "")
+    reason = str(block.get("reason") or "").strip()
+    if layer_of(bt) == LAYER_BLOCK:
+        return MSG_BLOCKED
+    mode = str(block.get("duration_mode") or "permanent")
+    if mode == "daily_window":
+        base = MSG_SUSPENDED_WINDOW
+    elif mode == "until":
+        base = MSG_SUSPENDED_UNTIL
+    else:
+        base = MSG_SUSPENDED
+    return f"{base} — {reason}" if reason else base
+
 
 # ════════════════════════════════════════════════════════════════════════
 # مفاتيح إعدادات الأمان (tenant_settings) + الافتراضات
@@ -271,7 +325,8 @@ def register_failed_attempt(tenant_id: int, *, ip: str = "", mac: str = "",
             created = repo.create_block(
                 tenant_id=tenant_id, block_type=block_type, target=value,
                 reason=f"حظر تلقائي بعد {count} محاولة فاشلة خلال {window_sec}ث",
-                duration_mode="until", expires_at=expires_at, source="auto")
+                duration_mode="until", expires_at=expires_at, source="auto",
+                layer=LAYER_BLOCK)
             _LOG.warning("access_control: auto-blocked %s=%s after %d failures",
                          block_type, value, count)
         return created
@@ -352,10 +407,13 @@ def create_block_from_input(
         tenant_id=tenant_id, block_type=block_type, target=target,
         reason=(reason or "").strip()[:300], duration_mode=duration_mode,
         window_start=window_start, window_end=window_end, expires_at=expires_at,
-        source="manual", created_by=created_by)
+        source="manual", created_by=created_by, layer=layer_of(block_type))
 
 
 __all__ = [
+    "LAYER_SUSPENSION", "LAYER_BLOCK", "SUSPENSION_SCOPES", "BLOCK_SCOPES",
+    "layer_of", "user_message_for", "MSG_SUSPENDED", "MSG_SUSPENDED_WINDOW",
+    "MSG_SUSPENDED_UNTIL", "MSG_BLOCKED",
     "AuthContext", "normalize_mac", "AccessControlError", "create_block_from_input",
     "in_daily_window", "is_block_in_effect", "block_matches", "find_active_block",
     "register_failed_attempt", "autoblock_enabled",

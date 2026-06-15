@@ -7,11 +7,14 @@
 -- وظيفي؛ لكن إن دُمج الفرعان معًا أعِد ترقيم أحدهما (مثلًا هذا إلى 124) كي
 -- لا يتكرّر البادئة الرقمية. (راجع نمط _MIGRATION_ALIASES في الـrunner.)
 
--- (1) access_blocks — قائمة الحظر الموحّدة. صفّ لكل حظر فعّال أو ملغى.
+-- (1) access_blocks — التخزين المشترك لطبقتي التحكم بالدخول. صفّ لكل سجلّ.
+--   layer يميّز الطبقة المفهومية:
+--     suspension — «تعليق الوصول» (نطاقي: متى/هل يُسمح بالدخول، رسالة مهذّبة)
+--     block      — «حظر» أمني (IP/MAC، يدوي/تلقائي، رسالة عامّة)
 --   block_type يحدّد النطاق المستهدف:
---     subscriber | group | plan | card_batch         (محدّد، target = القيمة)
---     all_subscribers | all_hotspot | all_cards | all_pppoe  (شامل، target فارغ)
---     ip | mac                                        (طبقة منفصلة، target = العنوان)
+--     subscriber | group | plan | card_batch         (تعليق، target = القيمة)
+--     all_subscribers | all_hotspot | all_cards | all_pppoe  (تعليق شامل، target فارغ)
+--     ip | mac                                        (حظر، target = العنوان)
 --   duration_mode:
 --     permanent     — حتى الرفع اليدوي
 --     daily_window  — نافذة يومية متكرّرة [window_start, window_end] (تدعم العبور
@@ -21,6 +24,7 @@
 CREATE TABLE IF NOT EXISTS access_blocks (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
     tenant_id     INTEGER NOT NULL DEFAULT 1,
+    layer         TEXT    NOT NULL DEFAULT 'suspension',  -- suspension | block
     block_type    TEXT    NOT NULL,
     target        TEXT    NOT NULL DEFAULT '',   -- فارغ للنطاقات الشاملة
     reason        TEXT    NOT NULL DEFAULT '',
@@ -38,7 +42,7 @@ CREATE TABLE IF NOT EXISTS access_blocks (
 );
 
 CREATE INDEX IF NOT EXISTS ix_access_blocks_tenant_active
-    ON access_blocks (tenant_id, active, block_type);
+    ON access_blocks (tenant_id, active, layer);
 
 -- (2) login_failure_tracker — عدّاد محاولات الدخول الفاشلة (fail2ban).
 --   صفّ لكل محاولة فاشلة (IP + MAC + username + الوقت). يُقرأ ضمن نافذة

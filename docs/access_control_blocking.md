@@ -1,63 +1,61 @@
-# «الحظر والتحكم بالدخول» (feat/access-control-blocking)
+# «التحكم بالدخول» — طبقتان (feat/access-control-blocking)
 
-تحكّم بمن يُسمح له بالمصادقة في RADIUS. الإنفاذ وقت المصادقة على الخادم
-(policy_engine) — ليس في الواجهة فقط. إضافي/خامل: لا يلمس أي مسار حيّ قائم،
-والافتراضات لا تحظر أحدًا حتى يُضيف المشغّل حظرًا أو يُفعّل الحظر التلقائي.
+قسم واحد، **مفهومان متمايزان**. الإنفاذ وقت مصادقة RADIUS على الخادم
+(policy_engine) — ليس الواجهة فقط. إضافي/خامل؛ الافتراضات لا تمنع أحدًا.
 
-## النموذج
-**جدول `access_blocks`** (migration 123) — قائمة الحظر الموحّدة، صفّ لكل حظر:
-- `block_type` (النطاق): `subscriber` · `group` · `plan` · `card_batch` ·
-  `all_subscribers` · `all_hotspot` · `all_cards` · `all_pppoe` · `ip` · `mac`.
-- `target`: القيمة (اسم مستخدم/مجموعة/معرّف/IP/MAC)؛ فارغ للنطاقات الشاملة.
-- `duration_mode` (3 أنماط): `permanent` (حتى الرفع) · `daily_window`
-  (نافذة يومية متكرّرة `window_start`→`window_end`، تدعم العبور بعد منتصف
-  الليل مثل 16:00→08:00) · `until` (`expires_at` ثم ينتهي تلقائيًا).
-- `source`: `manual` | `auto` (fail2ban). `active` + ختم الرفع (`cleared_at/by`).
+## الطبقة A — «تعليق الوصول» (access suspension)
+نطاقي: `subscriber` · `group` · `plan` · `card_batch` · `all_subscribers` ·
+`all_hotspot` · `all_cards` · `all_pppoe`. يحكم **متى/هل** يُسمح للمشترك
+بالدخول (جدولة، تعليق مؤقت) — **ليس حظرًا أمنيًا**. عند الرفض يحصل المستخدم
+على **رسالة عربية مهذّبة** تُحمَل في `Reply-Message`:
+- نافذة يومية → «لا يمكن تسجيل الدخول بهذا الوقت».
+- حتى تاريخ → «تسجيل الدخول معلّق مؤقتاً حتى إشعار لاحق».
+- دائم → «تسجيل الدخول معلّق مؤقتاً — راجع الإدارة».
+- + إلحاق سبب المشغّل إن أُدخل (يعرف المستخدم «لماذا»).
+رمز الرفض الداخلي: `access_suspended`.
 
-**جدول `login_failure_tracker`** (migration 123) — عدّاد محاولات الفشل
-(IP+MAC+username+الوقت) لقرار الحظر التلقائي ضمن نافذة زمنية. يُقلَّم محصورًا.
+## الطبقة B — «حظر» (security block)
+`ip` · `mac`، يدوي + **تلقائي** (fail2ban) عند تكرار الفشل، + منع MAC
+العشوائي. رسالة أمنية عامّة «الدخول محظور حاليًا — راجع الإدارة». رمز الرفض:
+`access_blocked`.
 
-**MAC العشوائي**: يُعاد استخدام مفتاحَي policy_engine القائمين
-`security.block_random_mac_subscribers` / `_cards` (يُعرضان/يُحفظان في نفس الصفحة).
-
-**إعدادات الحظر التلقائي** (tenant_settings، تُحفظ من الصفحة):
-`security.autoblock_enabled` · `_threshold` (5) · `_window_sec` (300) ·
-`_duration_min` (60) · `_target` (`mac` افتراضيًا | `ip` | `both`).
+## النموذج (migration 123، schema-heal)
+- **`access_blocks`** — تخزين مشترك للطبقتين، التمييز بعمود **`layer`**
+  (`suspension`|`block`، يُشتقّ من `block_type` عبر `access_control.layer_of`).
+  أعمدة: `block_type`, `target`, `reason`, `duration_mode`
+  (`permanent`/`daily_window`/`until`), `window_start/end`, `expires_at`,
+  `source` (`manual`/`auto`), `active` + ختم الرفع.
+- **`login_failure_tracker`** — عدّاد fail2ban (نافذة + تقليم محصور).
+- إعدادات `security.autoblock_*` (افتراض الهدف `mac`) + `security.block_random_mac_*`.
 
 ## نقاط الإنفاذ (policy_engine.authorize)
-1. `_check_blocks(sub, plan, req, source, now)` — **أول فحص في السلسلة**: يُرفض
-   المحظور فورًا (`reason=access_blocked`) قبل فحص كلمة المرور (لا يُسرّب
-   صحّتها، ولا يُغذّي عدّاد fail2ban). يبني `AuthContext` ويستدعي
-   `access_control.find_active_block` الذي يطابق النطاق + يتحقّق من السريان
-   الزمني (`is_block_in_effect`). `service_type` يُؤخذ من الباقة (تصنيف
-   hotspot/pppoe صحيح حتى للكروت).
-2. عند أي رفض حقيقي (عدا `access_blocked`) → `_register_failed_attempt` يسجّل
-   المحاولة ويُنشئ حظرًا تلقائيًا (`until`) عند بلوغ العتبة (مع منع التكرار).
-   يشمل ذلك الرفض المبكر `user_not_found` (brute-force بأسماء عشوائية).
-3. `find_active_block` لا يكتب في DB (مسار ساخن)؛ انتهاء `until` يُحتسب منطقيًّا.
-   كنس الصفوف المنتهية (active=0) كسول في صفحة الإدارة + `deactivate_expired`.
-- **fail-open**: أي خطأ في طبقة الحظر يُرجع سماحًا — لا يكسر الـauth أبدًا.
+1. `_check_blocks(sub, plan, req, source, now)` **أول السلسلة**: يطابق النطاق
+   + السريان الزمني، ويُرجع رفضًا بالرمز/الرسالة بحسب الطبقة عبر
+   `access_control.user_message_for` — `Reply-Message` يحمل الرسالة للمستخدم.
+   `service_type` يُؤخذ من الباقة (تصنيف hotspot/pppoe صحيح للكروت).
+2. أي رفض حقيقي عدا (`access_suspended`/`access_blocked`) →
+   `_register_failed_attempt` (عدّاد + حظر تلقائي `until` عند العتبة، بلا تكرار).
+   التعليق المجدول لا يُحتسب فشلًا.
+3. `find_active_block` لا يكتب في DB (مسار ساخن)؛ انتهاء `until` منطقي؛ الكنس
+   كسول في الصفحة + `deactivate_expired`. **fail-open** على أي خطأ.
 
 ## الواجهة `/admin/radius/access-control`
-صفحة مُدارة (تصميم موحّد، flash-stack بدل alert، تأكيد عبر `data-confirm`):
-إعدادات الأمان · نموذج إضافة حظر (نطاق ديناميكي + نمط مدّة) · جدول قائمة الحظر
-مع زر رفع. محروسة RBAC: العرض `settings.view`، الكتابة `settings.edit` + CSRF.
+صفحة بقسمين: «تعليق الوصول» (نموذج + جدول) و«الحظر الأمني» (إعدادات + نموذج
+IP/MAC + جدول). تصميم موحّد، flash-stack بدل alert، `data-confirm` بدل confirm،
+RBAC: عرض `settings.view` / كتابة `settings.edit` + CSRF.
 
-## دلالات وحدود (مقصودة وموثّقة)
-- **IP = عنوان NAS**: وقت مصادقة RADIUS لا يتوفّر إلا عنوان الراوتر (NAS) لا
-  جهاز العميل. لذا «حظر IP» (يدوي/تلقائي) يطابق عنوان الـNAS؛ قد يحظر كل من
-  خلفه. لذلك الحظر التلقائي يفترض **MAC** (يميّز الجهاز). مُنبّه في الواجهة.
+## دلالات وحدود (موثّقة)
+- **«حظر IP» = عنوان NAS** (وقت المصادقة لا يتوفّر عنوان العميل)؛ لذا الحظر
+  التلقائي يفترض **MAC**. مُنبّه في الواجهة.
 - **التوقيت**: النوافذ اليومية حائطية محلّية تتبع `billing.timezone_offset`؛
-  `until` يُحوَّل من المحلّي إلى UTC عند الإنشاء ويُقارن بـUTC (متّسق مع التلقائي).
+  `until` يُحوَّل من المحلّي إلى UTC عند الإنشاء ويُقارن بـUTC.
+- **migration 123** تتشارك بادئتها مع `feat/data-connection-oneclick` (جدولان
+  مختلفان، الـrunner يتتبّع بالاسم الكامل)؛ أعِد ترقيم أحدهما عند الدمج.
+- إخفاقات `test_failed_login_attempted_password.py` (4) سابقة على main — ليست انحدارًا.
 
-## ترقيم migration
-استُخدم الرقم **123** (التالي على main). فرع `feat/data-connection-oneclick`
-استخدم أيضًا 123 لجدول مختلف؛ الـrunner يتتبّع بالاسم الكامل لا البادئة، فلا
-تصادم وظيفي. **إن دُمج الفرعان أعِد ترقيم أحدهما (مثلًا هذا إلى 124)**.
-
-## الاختبارات (tests/test_access_control.py — 36، شغّل الملف وحده)
-منطق المدّة الثلاثي + العبور + الإزاحة الزمنية · مطابقة كل نطاق · الإنفاذ في
-policy_engine (رفض المحظور لكل نطاق/IP/MAC، قبول الطبيعي) · النافذة اليومية
-داخل/خارج · الحظر التلقائي عند N + منع التكرار + التعطيل + المسار الكامل عبر
-authorize · الانتهاء التلقائي (until) · الرفع يُلغي · تحقّق المدخلات (IP/until) ·
-مسارات الصفحة (عرض/إضافة/رفع/حفظ إعدادات).
+## الاختبارات (tests/test_access_control.py — 40، شغّل الملف وحده)
+الطبقة + اشتقاقها + رسائل المستخدم · منطق المدّة الثلاثي + العبور + الإزاحة
+الزمنية · مطابقة كل نطاق · تصفية القائمة بالطبقة · الإنفاذ في policy_engine
+(تعليق برسالة Reply-Message، حظر IP/MAC، قبول الطبيعي) · النافذة داخل/خارج ·
+الحظر التلقائي + منع التكرار + التعطيل + المسار الكامل · الانتهاء التلقائي ·
+الرفع · تحقّق المدخلات · مسارات الصفحة.
