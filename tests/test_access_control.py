@@ -369,6 +369,138 @@ class TestAutoBlockFail2ban:
         assert repo.count_recent_failures(1, ip="8.8.8.8", since=since) == 0
 
 
+class TestFail2banOnlyCountsAuthFailures:
+    """FINDING 1: عدّاد fail2ban يُحسب فقط على فشل مصادقة حقيقي (كلمة مرور
+    خاطئة / مستخدم غير موجود) — لا على رفض السياسة/التفويض، كي لا يَحظر
+    مستخدم شرعي نفسه (مثل concurrent_limit بسبب واي‑فاي متقطّع)."""
+
+    def _enable(self, threshold=2, target="ip"):
+        from app.radius.db.repos import tenants_repo
+        tenants_repo.set_setting(1, ac.SK_AUTOBLOCK_ENABLED, "1")
+        tenants_repo.set_setting(1, ac.SK_AUTOBLOCK_THRESHOLD, str(threshold))
+        tenants_repo.set_setting(1, ac.SK_AUTOBLOCK_WINDOW_SEC, "300")
+        tenants_repo.set_setting(1, ac.SK_AUTOBLOCK_DURATION_MIN, "60")
+        tenants_repo.set_setting(1, ac.SK_AUTOBLOCK_TARGET, target)
+
+    def _authorize(self, **kw):
+        from app.radius.services.policy_engine import AuthRequest, authorize
+        return authorize(AuthRequest(tenant_id=1, **kw))
+
+    def _autoblocked(self, ip):
+        return ac.find_active_block(1, _ctx(username="z", nas_ip=ip)) is not None
+
+    def test_expired_does_not_autoblock(self, app_ctx):
+        self._enable(threshold=2, target="ip")
+        _mk_sub(username="exp", password="pw", status="expired")
+        for _ in range(4):
+            d = self._authorize(username="exp", password="pw", nas_ip="20.0.0.1")
+            assert d.reason == "expired"
+        assert not self._autoblocked("20.0.0.1")     # رفض سياسة → لا حظر تلقائي
+
+    def test_concurrent_limit_does_not_autoblock(self, app_ctx):
+        self._enable(threshold=2, target="ip")
+        _mk_sub(username="conc", password="pw", override_concurrent=1)
+        # جلسة مفتوحة واحدة → الحدّ (1) متجاوَز عند كل محاولة لاحقة
+        from app.radius.db.connection import transaction
+        with transaction() as conn:
+            conn.execute("INSERT INTO radacct(tenant_id, username) VALUES(1, 'conc')")
+        for _ in range(4):
+            d = self._authorize(username="conc", password="pw", nas_ip="20.0.0.2")
+            assert d.reason == "concurrent_limit"
+        assert not self._autoblocked("20.0.0.2")
+
+    def test_quota_exhausted_does_not_autoblock(self, app_ctx):
+        # باقة بكوتا صغيرة + استهلاك يتجاوزها → quota_exhausted (رفض سياسة)
+        from app.radius.db.repos import plans_repo
+        from app.radius.core.types import AccessPlan
+        self._enable(threshold=2, target="ip")
+        plan = plans_repo.upsert_plan(AccessPlan(
+            id=None, name="tiny", tenant_id=1, quota_total_mb=1, limit_type="Data_Limit"))
+        _mk_sub(username="q", password="pw", plan_id=plan.id,
+                combined_quota_mb=1, quota_limit_enabled=True,
+                used_bytes_in=5 * 1024 * 1024, used_bytes_out=5 * 1024 * 1024)
+        for _ in range(4):
+            d = self._authorize(username="q", password="pw", nas_ip="20.0.0.3")
+            assert d.reason == "quota_exhausted"
+        assert not self._autoblocked("20.0.0.3")
+
+    def test_bad_password_does_autoblock(self, app_ctx):
+        # المقابل: كلمة مرور خاطئة فشل مصادقة حقيقي → يُحظر عند العتبة
+        self._enable(threshold=3, target="ip")
+        _mk_sub(username="bp", password="right")
+        for _ in range(3):
+            d = self._authorize(username="bp", password="wrong", nas_ip="20.0.0.4")
+            assert d.reason == "password_wrong"
+        assert self._autoblocked("20.0.0.4")
+
+    def test_unknown_user_does_autoblock(self, app_ctx):
+        # مستخدم غير موجود أيضًا فشل مصادقة (brute-force أسماء)
+        self._enable(threshold=2, target="ip")
+        for _ in range(2):
+            d = self._authorize(username="ghost", password="x", nas_ip="20.0.0.5")
+            assert d.reason == "user_not_found"
+        assert self._autoblocked("20.0.0.5")
+
+    def test_allow_list_is_exactly_auth_failures(self):
+        from app.radius.services import policy_engine as pe
+        assert pe._FAIL2BAN_REASONS == frozenset({"password_wrong", "user_not_found"})
+
+
+class TestSchemaHealLayer:
+    """FINDING 2: قاعدة طبّقت migration 123 قبل عمود layer تُشفى ذاتيًّا."""
+
+    def test_ensure_schema_adds_missing_layer(self, app_ctx):
+        from app.radius.db.connection import db, transaction
+        from app.radius.db.repos import access_blocks_repo as repo
+        # حاكِ حالة ما قبل العمود: أعد بناء الجدول بلا عمود layer
+        with transaction() as conn:
+            conn.execute("DROP TABLE access_blocks")
+            conn.execute("""
+                CREATE TABLE access_blocks (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    tenant_id INTEGER NOT NULL DEFAULT 1,
+                    block_type TEXT NOT NULL,
+                    target TEXT NOT NULL DEFAULT '',
+                    reason TEXT NOT NULL DEFAULT '',
+                    duration_mode TEXT NOT NULL DEFAULT 'permanent',
+                    window_start TEXT NOT NULL DEFAULT '',
+                    window_end TEXT NOT NULL DEFAULT '',
+                    expires_at TEXT NOT NULL DEFAULT '',
+                    source TEXT NOT NULL DEFAULT 'manual',
+                    active INTEGER NOT NULL DEFAULT 1,
+                    created_by INTEGER NOT NULL DEFAULT 0,
+                    created_at TEXT NOT NULL DEFAULT '',
+                    updated_at TEXT NOT NULL DEFAULT '',
+                    cleared_at TEXT NOT NULL DEFAULT '',
+                    cleared_by INTEGER NOT NULL DEFAULT 0
+                )""")
+            conn.execute("INSERT INTO access_blocks(tenant_id, block_type, target) "
+                         "VALUES(1, 'ip', '9.9.9.9')")
+            conn.execute("INSERT INTO access_blocks(tenant_id, block_type, target) "
+                         "VALUES(1, 'subscriber', 'u1')")
+        cols = {r["name"] for r in db().execute("PRAGMA table_info(access_blocks)").fetchall()}
+        assert "layer" not in cols                       # محاكاة ما قبل العمود
+        # الشفاء الذاتي
+        repo.ensure_schema()
+        cols = {r["name"] for r in db().execute("PRAGMA table_info(access_blocks)").fetchall()}
+        assert "layer" in cols
+        # الصفوف القديمة صُحّحت: IP=block، subscriber=suspension (الافتراضي)
+        rows = {r["block_type"]: r["layer"]
+                for r in db().execute("SELECT block_type, layer FROM access_blocks").fetchall()}
+        assert rows["ip"] == "block" and rows["subscriber"] == "suspension"
+        # ممتنع التكرار: استدعاء ثانٍ لا يفشل
+        repo.ensure_schema()
+        # القراءة عبر الـrepo تعمل بعد الشفاء
+        assert any(b["block_type"] == "ip" for b in repo.list_blocks(1, layer="block"))
+
+    def test_ensure_schema_noop_when_present(self, app_ctx):
+        # على قاعدة حديثة (العمود موجود) لا يفعل شيئًا ولا يفشل
+        from app.radius.db.repos import access_blocks_repo as repo
+        repo.ensure_schema()
+        repo.create_block(tenant_id=1, layer="block", block_type="ip", target="1.1.1.1")
+        assert repo.list_blocks(1, layer="block")
+
+
 class TestRoutePage:
     """يرندر صفحة الإدارة فعليًّا ويختبر إضافة/رفع حظر عبر test client.
     الصفحة محروسة بـsettings.view/edit؛ نضبط جلسة سوبر لتجاوز RBAC."""

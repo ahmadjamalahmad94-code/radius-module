@@ -76,6 +76,13 @@ _MSG = {
     "ok_expires_soon":   "اشتراكك ينتهي قريبًا — جدّد قبل الانقطاع",
 }
 
+# fail2ban — قائمة سماح: العدّاد التلقائي يُحسب **فقط** على فشل المصادقة
+# الحقيقي (اعتماد خاطئ). صراحةً نستثني كل رفض سياسة/تفويض (expired,
+# quota_exhausted, outside_hours, outside_days, concurrent_limit,
+# mac_mismatch, random_mac_blocked) وكذلك access_suspended/access_blocked.
+# توسعة هذه القائمة قرار أمني مقصود — لا تُضِف رموز سياسة هنا.
+_FAIL2BAN_REASONS = frozenset({"password_wrong", "user_not_found"})
+
 
 # ─────────────── الفحوصات ───────────────
 
@@ -391,10 +398,12 @@ def authorize(req: AuthRequest) -> AuthDecision:
             _LOG.warning("auth_decision user=%r source=%s rejected reason=%s",
                           req.username, source, bad.reason)
             _log_attempt(req, accepted=False, reason=bad.reason)
-            # عدّاد الفشل + الحظر التلقائي (fail2ban): كل رفض حقيقي يُحسب
-            # ما عدا الرفض من طبقة التحكم بالدخول نفسها (محظور/معلّق) — تفادي
-            # حلقة التغذية الراجعة وعدم احتساب التعليق المجدول كفشل دخول.
-            if bad.reason not in ("access_blocked", "access_suspended"):
+            # عدّاد الفشل + الحظر التلقائي (fail2ban): يُحسب **فقط** على فشل
+            # مصادقة حقيقي (قائمة سماح _FAIL2BAN_REASONS) — لا على رفض
+            # السياسة/التفويض (expired/quota_exhausted/outside_hours/
+            # concurrent_limit/mac_mismatch/…) كي لا يَحظر مستخدم شرعي نفسه
+            # بسبب واي‑فاي متقطّع مثلًا، ولا على التعليق/الحظر نفسه.
+            if bad.reason in _FAIL2BAN_REASONS:
                 _register_failed_attempt(req, now)
             return bad
 

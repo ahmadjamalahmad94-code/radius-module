@@ -262,10 +262,14 @@ def _start_workers(app: Flask) -> None:
 def _init_db(app: Flask) -> None:
     """يُنفّذ migrations الجديدة + يبذُر الـ defaults (tenant + roles)."""
     from app.radius.db import run_pending_migrations
-    from app.radius.db.repos import admins_repo, tenants_repo
+    from app.radius.db.repos import access_blocks_repo, admins_repo, tenants_repo
     n = run_pending_migrations()
     if n:
         app.logger.info("applied %d migration(s)", n)
+    # schema self-heal: العمود access_blocks.layer أُضيف لـmigration 123 في
+    # منتصف الفرع؛ قاعدة طبّقت 123 قبل ذلك لا تُعاد تشغيلها (تتبّع بالاسم)
+    # فتُشفى هنا بإضافة العمود إن غاب (ممتنع التكرار).
+    access_blocks_repo.ensure_schema()
     tenants_repo.ensure_default_tenant()
     admins_repo.ensure_default_roles()
 

@@ -24,6 +24,29 @@ DURATION_MODES = ("permanent", "daily_window", "until")
 
 
 # ════════════════════════════════════════════════════════════════════════
+# schema self-heal — العمود layer أُضيف لـmigration 123 في منتصف الفرع
+# ════════════════════════════════════════════════════════════════════════
+def ensure_schema() -> None:
+    """يُصلح ذاتيًّا قاعدة بيانات طبّقت migration 123 قبل إضافة عمود ``layer``.
+
+    نمط schema-heal آمن وممتنع التكرار (ALTER TABLE ADD COLUMN فقط عند الغياب):
+      * يفحص PRAGMA table_info؛ إن لم يوجد جدول access_blocks بعد لا يفعل شيئًا
+        (migration ستُنشئه كاملًا بالعمود).
+      * إن وُجد الجدول وغاب العمود: يضيفه ثم يصحّح صفوف IP/MAC القديمة إلى
+        الطبقة ``block`` (الباقي يبقى على الافتراضي ``suspension``).
+    يُستدعى عند الإقلاع (بعد run_pending_migrations) — وفي الاختبارات لمحاكاة
+    حالة ما قبل العمود."""
+    conn = db()
+    cols = {r["name"] for r in conn.execute("PRAGMA table_info(access_blocks)").fetchall()}
+    if not cols or "layer" in cols:
+        return  # الجدول غير موجود بعد، أو العمود موجود → لا شيء
+    with transaction() as c:
+        c.execute("ALTER TABLE access_blocks ADD COLUMN layer TEXT NOT NULL DEFAULT 'suspension'")
+        # تصحيح الصفوف الموجودة: IP/MAC = حظر، والباقي يبقى تعليقًا (الافتراضي).
+        c.execute("UPDATE access_blocks SET layer = 'block' WHERE block_type IN ('ip', 'mac')")
+
+
+# ════════════════════════════════════════════════════════════════════════
 # access_blocks
 # ════════════════════════════════════════════════════════════════════════
 
@@ -155,7 +178,7 @@ def has_active_block(tenant_id: int, *, block_type: str, target: str) -> bool:
 
 
 __all__ = [
-    "BLOCK_TYPES", "DURATION_MODES",
+    "BLOCK_TYPES", "DURATION_MODES", "ensure_schema",
     "create_block", "list_blocks", "get_block", "clear_block",
     "deactivate_expired", "record_failure", "count_recent_failures",
     "purge_old_failures", "has_active_block",
