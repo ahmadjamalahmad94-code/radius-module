@@ -116,6 +116,7 @@ _NAV_PERM: dict[str, str] = {
     "licensing_index": "licensing.view",
     "backups": _PERM_SUPER,
     "settings_page": "settings.view",
+    "access_control_page": "settings.view",
     "sync_list": "nas.view",
     "tenants_list": _PERM_SUPER,
 
