@@ -102,8 +102,9 @@ def sync_subscriber(sub: Subscriber, plan: AccessPlan | None = None) -> None:
         user_reply.append(("Tunnel-Private-Group-Id", ":=", str(sub.vlan_id)))
 
     # feat/accel-ppp-radius-attrs — transport branch. A ``vps_accel``
-    # subscriber is served by accel-ppp (Filter-Id shaper + quota), NOT
-    # MikroTik, so it gets a DIFFERENT reply set. The ``chr_mikrotik``
+    # subscriber is served DIRECTLY by accel-ppp on the customer RADIUS VPS
+    # (Filter-Id 5 Mbit shaper ONLY — unlimited data, no quota/Disconnect,
+    # no CHR/proxy), so it gets a DIFFERENT reply set. The ``chr_mikrotik``
     # branch (else) is the ORIGINAL code, byte-for-byte unchanged — a
     # subscriber is one transport or the other, never both, so the two
     # never collide in radreply.
