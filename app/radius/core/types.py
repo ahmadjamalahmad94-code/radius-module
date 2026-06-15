@@ -268,10 +268,12 @@ class Subscriber:
     # feat/accel-ppp-radius-attrs — which DATA transport serves this
     # subscriber. ``chr_mikrotik`` (default, back-compat) = the existing
     # MikroTik/CHR reply set (Mikrotik-Rate-Limit). ``vps_accel`` = served
-    # by accel-ppp on the customer RADIUS VPS (Filter-Id shaper + quota
-    # watcher). Additive + APPENDED AT THE END of the dataclass so no
-    # positional Subscriber(...) construction shifts. Every existing row
-    # defaults to chr_mikrotik → the live path is byte-for-byte unchanged.
+    # DIRECTLY by accel-ppp on the customer RADIUS VPS — reply set is the
+    # Filter-Id 5 Mbit shaper ONLY (unlimited data, no quota, no
+    # disconnect, no CHR/proxy). Additive + APPENDED AT THE END of the
+    # dataclass so no positional Subscriber(...) construction shifts. Every
+    # existing row defaults to chr_mikrotik → the live path is byte-for-
+    # byte unchanged.
     transport: str = "chr_mikrotik"
 
 
