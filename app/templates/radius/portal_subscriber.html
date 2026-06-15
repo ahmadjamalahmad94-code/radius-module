@@ -185,8 +185,10 @@
 {% set pf = portal_flags if portal_flags is defined else {
      'show_usage': true, 'show_sessions': true, 'show_invoices': true,
      'allow_renewal_request': true, 'allow_loan_request': true,
-     'show_support': true} %}
+     'show_support': true, 'allow_data_connection': true} %}
 {% set pf_requests = pf.allow_renewal_request or pf.allow_loan_request or pf.show_support %}
+{# feat/data-connection-oneclick — جاهزية تبويب «اتصال بيانات» #}
+{% set dc = data_connection if data_connection is defined else {'configured': false, 'speed_kbit': 5120} %}
 
 {# ── status → UDS variant + label, computed once ── #}
 {% if st == 'expired' %}
@@ -252,6 +254,7 @@
     {% if pf.show_usage %}<button class="tab" data-tab="usage" id="tab-usage" role="tab" aria-selected="false" aria-controls="pane-usage"><i class="fa-solid fa-chart-area" aria-hidden="true"></i> {{ _('الاستخدام') }}</button>{% endif %}
     {% if pf.show_invoices %}<button class="tab" data-tab="billing" id="tab-billing" role="tab" aria-selected="false" aria-controls="pane-billing"><i class="fa-solid fa-receipt" aria-hidden="true"></i> {{ _('الفواتير والمحفظة') }}</button>{% endif %}
     {% if pf_requests %}<button class="tab" data-tab="requests" id="tab-requests" role="tab" aria-selected="false" aria-controls="pane-requests"><i class="fa-solid fa-hand-holding-dollar" aria-hidden="true"></i> {{ _('الطلبات والدعم') }}</button>{% endif %}
+    {% if pf.allow_data_connection %}<button class="tab" data-tab="data" id="tab-data" role="tab" aria-selected="false" aria-controls="pane-data"><i class="fa-solid fa-network-wired" aria-hidden="true"></i> {{ _('اتصال بيانات') }}</button>{% endif %}
   </nav>
 
   {# ════════════ نظرة عامة ════════════ #}
@@ -554,6 +557,99 @@
   </section>
   {% endif %}{# /pf_requests #}
 
+  {# ════════════ اتصال بيانات (feat/data-connection-oneclick) ════════════
+     زر واحد: المشترك يختار إصدار المايكروتيك (6/7)؛ للإصدار 6 يختار
+     البروتوكول (SSTP/PPTP)؛ السرعة ثابتة 5 ميجابت بلا كوتا ولا قطع. كل
+     شيء يحدث على الـVPS — لا بروكسي ولا CHR ولا لوحة تراخيص في المسار. #}
+  {% if pf.allow_data_connection %}
+  <section class="pane" data-pane="data" id="pane-data" role="tabpanel" aria-labelledby="tab-data" tabindex="0">
+
+    {# رسائل النجاح/الخطأ (هذا القالب لا يعرض flash عمومًا، فنعرضها هنا) #}
+    {% with msgs = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in msgs %}
+        <div class="hub-banner {{ 'is-err' if cat == 'error' else 'is-ok' }}"
+             data-testid="dc-flash"
+             style="margin-bottom:14px;padding:12px 14px;border-radius:12px;
+                    border:1px solid {{ 'var(--err-line)' if cat=='error' else 'var(--success-line)' }};
+                    background:{{ 'var(--err-soft)' if cat=='error' else 'var(--success-soft)' }};
+                    color:{{ 'var(--err)' if cat=='error' else 'var(--success)' }}">
+          {{ msg }}
+        </div>
+      {% endfor %}
+    {% endwith %}
+
+    {% call hub.section("ربط مايكروتيك جديد", icon="network-wired") %}
+      <p class="card-intro">
+        {{ _('اربط مايكروتيك جديدًا بضغطة واحدة. اختر إصدار جهازك واضغط الزر، ثم انسخ السكربت أو نزّله والصقه في طرفية المايكروتيك.') }}
+        <strong>{{ _('السرعة ثابتة 5 ميجابت — بلا حد للبيانات وبلا قطع.') }}</strong>
+      </p>
+
+      {% if not dc.configured %}
+      <div class="hub-banner" data-testid="dc-not-configured"
+           style="margin:8px 0 14px;padding:12px 14px;border-radius:12px;
+                  border:1px solid var(--warn-line);background:var(--warn-soft);color:var(--warn)">
+        {{ _('الميزة قيد التهيئة من قِبل المشغّل (لم يُضبط نطاق الاتصال بعد). يمكنك المحاولة لاحقًا.') }}
+      </div>
+      {% endif %}
+
+      <form method="post" action="{{ url_for('radius.portal_subscriber_data_connection') }}"
+            data-testid="dc-form" id="dc-form">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+
+        <div class="field">
+          <label for="dc-version">{{ _('إصدار المايكروتيك') }} <span style="color:var(--err)">*</span></label>
+          <select name="version" id="dc-version" required>
+            <option value="6">{{ _('الإصدار 6 (RouterOS v6)') }}</option>
+            <option value="7">{{ _('الإصدار 7 (RouterOS v7)') }}</option>
+          </select>
+        </div>
+
+        {# البروتوكول يظهر فقط للإصدار 6؛ الإصدار 7 = WireGuard تلقائيًا #}
+        <div class="field" id="dc-protocol-field">
+          <label for="dc-protocol">{{ _('البروتوكول') }}</label>
+          <select name="protocol" id="dc-protocol">
+            <option value="sstp">{{ _('SSTP (موصى به — يعمل خلف الجدران)') }}</option>
+            <option value="pptp">{{ _('PPTP (أبسط، أقل أمانًا)') }}</option>
+          </select>
+        </div>
+
+        <p class="card-intro" id="dc-wg-note" style="display:none">
+          <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+          {{ _('الإصدار 7 يستخدم WireGuard تلقائيًا (أحدث وأسرع).') }}
+        </p>
+
+        {{ hub.btn("إنشاء الاتصال", variant="primary", icon="bolt", type="submit") }}
+      </form>
+    {% endcall %}
+
+    {% if dc_result and dc_result.script %}
+    {% call hub.section("سكربت الاتصال جاهز", icon="file-code") %}
+      <p class="card-intro" data-testid="dc-result-meta">
+        {{ _('الإصدار') }}: <strong>{{ dc_result.version }}</strong> ·
+        {{ _('البروتوكول') }}: <strong>{{ dc_result.protocol|upper }}</strong> ·
+        {{ _('الوجهة') }}: <strong>{{ dc_result.target_host }}</strong> ·
+        {{ _('السرعة') }}: <strong>{{ (dc_result.speed_kbit // 1024) }} {{ _('ميجابت') }}</strong>
+      </p>
+      <pre data-testid="dc-script" id="dc-script-text"
+           style="background:#0f172a;color:#e2e8f0;padding:14px;border-radius:12px;
+                  overflow:auto;direction:ltr;text-align:left;white-space:pre;
+                  font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px">{{ dc_result.script }}</pre>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
+        <a class="hub-btn" data-testid="dc-download"
+           href="{{ url_for('radius.portal_subscriber_data_connection_download') }}"
+           style="text-decoration:none">
+          <i class="fa-solid fa-download" aria-hidden="true"></i> {{ _('تنزيل ملف .rsc') }}
+        </a>
+        <button type="button" class="hub-btn" id="dc-copy-btn">
+          <i class="fa-solid fa-copy" aria-hidden="true"></i> {{ _('نسخ السكربت') }}
+        </button>
+      </div>
+    {% endcall %}
+    {% endif %}
+
+  </section>
+  {% endif %}{# /pf.allow_data_connection #}
+
 </main>
 
 {# ── UDS table behaviour (toolbar / sort / pager) for the standalone portal ── #}
@@ -577,6 +673,48 @@
   let saved = null;
   try{ saved = localStorage.getItem('sp:tab'); }catch(_){}
   if (saved && tabs.some(t => t.dataset.tab === saved)) show(saved);
+  // فتح تبويب «اتصال بيانات» تلقائيًا عند العودة بعد التوليد (#pane-data)
+  if (location.hash === '#pane-data' && tabs.some(t => t.dataset.tab === 'data')) show('data');
+})();
+
+// feat/data-connection-oneclick — إظهار/إخفاء البروتوكول حسب الإصدار + نسخ السكربت
+(function(){
+  const ver = document.getElementById('dc-version');
+  const protoField = document.getElementById('dc-protocol-field');
+  const wgNote = document.getElementById('dc-wg-note');
+  function syncProto(){
+    if (!ver) return;
+    const isV6 = ver.value === '6';
+    if (protoField) protoField.style.display = isV6 ? '' : 'none';
+    if (wgNote) wgNote.style.display = isV6 ? 'none' : '';
+  }
+  if (ver){ ver.addEventListener('change', syncProto); syncProto(); }
+
+  const copyBtn = document.getElementById('dc-copy-btn');
+  const scriptEl = document.getElementById('dc-script-text');
+  if (copyBtn && scriptEl){
+    copyBtn.addEventListener('click', function(){
+      const text = scriptEl.textContent || '';
+      const done = function(){
+        const old = copyBtn.innerHTML;
+        copyBtn.innerHTML = '<i class="fa-solid fa-check"></i> {{ _("تم النسخ") }}';
+        setTimeout(function(){ copyBtn.innerHTML = old; }, 1800);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text).then(done).catch(function(){
+          const r = document.createRange(); r.selectNode(scriptEl);
+          const s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+          try{ document.execCommand('copy'); done(); }catch(_){}
+          s.removeAllRanges();
+        });
+      } else {
+        const r = document.createRange(); r.selectNode(scriptEl);
+        const s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+        try{ document.execCommand('copy'); done(); }catch(_){}
+        s.removeAllRanges();
+      }
+    });
+  }
 })();
 </script>
 </body>

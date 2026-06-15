@@ -49,6 +49,21 @@ REGISTRY: list[Setting] = [
     Setting("HOBERADIUS_HOTSPOT_LOGIN_URL", "network", "رابط دخول الهوتسبوت",
             help="صفحة تسجيل الدخول الخارجية للهوتسبوت."),
 
+    # «اتصال بيانات» (feat/data-connection-oneclick) — الهدف الوحيد لكل
+    # سكربتات اتصال المشترك. تُنشئه لوحة التراخيص لاحقًا عبر Cloudflare؛
+    # حتى ذلك الحين يضبطه المالك يدويًا. LAB-PENDING.
+    Setting("HOBERADIUS_CLIENT_SUBDOMAIN", "network", "نطاق اتصال البيانات للعميل",
+            help="مثل client7.hoberadius.com — وجهة سكربتات «اتصال بيانات». "
+                 "فارغ = الميزة قيد التهيئة."),
+    Setting("HOBERADIUS_DATA_WG_POOL", "network", "مجمّع WireGuard لاتصال البيانات",
+            help="نطاق عناوين أقران بيانات v7 (مستقلّ عن نفق الإدارة).",
+            default="10.60.0.0/24"),
+    Setting("HOBERADIUS_DATA_WG_PORT", "network", "منفذ WireGuard لاتصال البيانات",
+            kind="int", default="51821",
+            help="منفذ استماع WG للبيانات على الـVPS (غير منفذ الإدارة). LAB-PENDING."),
+    Setting("HOBERADIUS_DATA_WG_PUBKEY", "network", "المفتاح العام لخادم WG (بيانات)",
+            help="مفتاح عام (ليس سرًّا) يدخل في كل سكربت WG. LAB-PENDING."),
+
     # نفق WireGuard
     Setting("HOBERADIUS_WG_SERVER_IP", "wireguard", "عنوان IP لخادم WireGuard",
             help="عنوان الخادم داخل نفق الإدارة.", default="10.10.0.1"),

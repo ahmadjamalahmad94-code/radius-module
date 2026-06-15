@@ -101,16 +101,27 @@ def sync_subscriber(sub: Subscriber, plan: AccessPlan | None = None) -> None:
         user_reply.append(("Tunnel-Medium-Type", ":=", "IEEE-802"))
         user_reply.append(("Tunnel-Private-Group-Id", ":=", str(sub.vlan_id)))
 
-    # Per-user speed override — covers BOTH card-level override (migration
-    # 024) and the legacy subscriber-level bandwidth_control fields. The
-    # row gets written into radreply, which beats the plan-level
-    # radgroupreply for the same attribute. Skipped silently when both
-    # values are 0 (no override → plan default applies).
-    if (sub.bandwidth_control_enabled
-            and sub.download_speed_kbps > 0
-            and sub.upload_speed_kbps > 0):
-        rate = f"{int(sub.upload_speed_kbps)}k/{int(sub.download_speed_kbps)}k"
-        user_reply.append(("Mikrotik-Rate-Limit", "=", rate))
+    # feat/accel-ppp-radius-attrs — transport branch. A ``vps_accel``
+    # subscriber is served DIRECTLY by accel-ppp on the customer RADIUS VPS
+    # (Filter-Id 5 Mbit shaper ONLY — unlimited data, no quota/Disconnect,
+    # no CHR/proxy), so it gets a DIFFERENT reply set. The ``chr_mikrotik``
+    # branch (else) is the ORIGINAL code, byte-for-byte unchanged — a
+    # subscriber is one transport or the other, never both, so the two
+    # never collide in radreply.
+    if getattr(sub, "transport", "chr_mikrotik") == "vps_accel":
+        from . import accel_attributes
+        user_reply.extend(accel_attributes.accel_reply_attrs(sub, plan))
+    else:
+        # Per-user speed override — covers BOTH card-level override (migration
+        # 024) and the legacy subscriber-level bandwidth_control fields. The
+        # row gets written into radreply, which beats the plan-level
+        # radgroupreply for the same attribute. Skipped silently when both
+        # values are 0 (no override → plan default applies).
+        if (sub.bandwidth_control_enabled
+                and sub.download_speed_kbps > 0
+                and sub.upload_speed_kbps > 0):
+            rate = f"{int(sub.upload_speed_kbps)}k/{int(sub.download_speed_kbps)}k"
+            user_reply.append(("Mikrotik-Rate-Limit", "=", rate))
 
     freeradius_repo.replace_user_reply(tid, username, user_reply)
 
