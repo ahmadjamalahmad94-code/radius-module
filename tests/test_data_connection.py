@@ -22,6 +22,18 @@ from app.radius.services import data_connection as dc
 SUBDOMAIN = "client7.hoberadius.com"
 
 
+def _raises_dc_error():
+    """pytest.raises صامد لانقسام هوية الوحدة في التجميع الكامل للسويت.
+
+    عند تشغيل السويت كاملًا قد يُعاد استيراد ``app.radius.services.data_connection``
+    فينشأ كائنا فئة ``DataConnectionError`` مختلفان: الذي يلتقطه الاختبار
+    (وقت الاستيراد) وغير الذي يرفعه ``data_connection_provision`` (يحمل مرجعه
+    الخاص للوحدة). نلتقط ``ValueError`` (الأساس المستقرّ — DataConnectionError
+    يرثه) ثم نؤكّد الاسم الفعلي للفئة. (الاختبارات التي تنادي ``dc.*`` مباشرةً
+    غير معرّضة لذلك لأنها تستخدم مرجع الوحدة نفسه.)"""
+    return pytest.raises(ValueError)
+
+
 # ════════════════════════════════════════════════════════════════════════
 # (1) المولّدات الخالصة — لا DB
 # ════════════════════════════════════════════════════════════════════════
@@ -255,25 +267,28 @@ class TestProvisionRenderTime:
     def test_v6_requires_protocol(self, app_ctx):
         from app.radius.services import data_connection_provision as dcp
         sub = _make_subscriber(username="sub4")
-        with pytest.raises(dc.DataConnectionError):
+        with _raises_dc_error() as ei:
             dcp.provision_data_connection(tenant_id=1, subscriber_id=int(sub.id),
                                           version=6, protocol="")
+        assert type(ei.value).__name__ == "DataConnectionError"
 
     def test_missing_subdomain_errors(self, app_ctx, monkeypatch):
         from app.radius.services import data_connection_provision as dcp
         monkeypatch.delenv("HOBERADIUS_CLIENT_SUBDOMAIN", raising=False)
         sub = _make_subscriber(username="sub5")
-        with pytest.raises(dc.DataConnectionError):
+        with _raises_dc_error() as ei:
             dcp.provision_data_connection(tenant_id=1, subscriber_id=int(sub.id),
                                           version=6, protocol="sstp")
+        assert type(ei.value).__name__ == "DataConnectionError"
 
     def test_v7_requires_server_pubkey(self, app_ctx, monkeypatch):
         from app.radius.services import data_connection_provision as dcp
         monkeypatch.delenv("HOBERADIUS_DATA_WG_PUBKEY", raising=False)
         sub = _make_subscriber(username="sub6")
-        with pytest.raises(dc.DataConnectionError):
+        with _raises_dc_error() as ei:
             dcp.provision_data_connection(tenant_id=1, subscriber_id=int(sub.id),
                                           version=7)
+        assert type(ei.value).__name__ == "DataConnectionError"
 
 
 class TestPortalRenderTime:
