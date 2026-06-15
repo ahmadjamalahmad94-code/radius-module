@@ -1,7 +1,8 @@
 """Self-scoped subscriber and card user portal routes."""
 from __future__ import annotations
 
-from flask import Blueprint, flash, redirect, render_template, request, session, url_for
+from flask import (Blueprint, Response, flash, redirect, render_template,
+                   request, session, url_for)
 
 from ..core.errors import RadiusValidationError
 from ..db.repos import tenants_repo
@@ -15,6 +16,8 @@ def register_customer_portal_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/portal/subscriber", "portal_subscriber_home", subscriber_home, methods=["GET"])
     bp.add_url_rule("/portal/subscriber/loan-request", "portal_subscriber_loan_request", subscriber_loan_request, methods=["POST"])
     bp.add_url_rule("/portal/subscriber/renewal-request", "portal_subscriber_renewal_request", subscriber_renewal_request, methods=["POST"])
+    bp.add_url_rule("/portal/subscriber/data-connection", "portal_subscriber_data_connection", subscriber_data_connection, methods=["POST"])
+    bp.add_url_rule("/portal/subscriber/data-connection/download", "portal_subscriber_data_connection_download", subscriber_data_connection_download, methods=["GET"])
     bp.add_url_rule("/portal/card/login", "portal_card_login", card_login, methods=["GET", "POST"])
     bp.add_url_rule("/portal/card/logout", "portal_card_logout", card_logout, methods=["GET", "POST"])
     bp.add_url_rule("/portal/card", "portal_card_home", card_home, methods=["GET"])
@@ -36,6 +39,8 @@ def build_customer_portal_root_blueprint() -> Blueprint:
     bp.add_url_rule("/portal/subscriber",        "subscriber_home",   subscriber_home,   methods=["GET"])
     bp.add_url_rule("/portal/subscriber/loan-request",    "subscriber_loan_request",    subscriber_loan_request,    methods=["POST"])
     bp.add_url_rule("/portal/subscriber/renewal-request", "subscriber_renewal_request", subscriber_renewal_request, methods=["POST"])
+    bp.add_url_rule("/portal/subscriber/data-connection", "subscriber_data_connection", subscriber_data_connection, methods=["POST"])
+    bp.add_url_rule("/portal/subscriber/data-connection/download", "subscriber_data_connection_download", subscriber_data_connection_download, methods=["GET"])
     # Card user portal
     bp.add_url_rule("/portal/card/login",    "card_login",    card_login,    methods=["GET", "POST"])
     bp.add_url_rule("/portal/card/logout",   "card_logout",   card_logout,   methods=["GET", "POST"])
@@ -83,6 +88,9 @@ def _portal_flags() -> dict:
         "allow_password_change": _portal_flag("portal.allow_password_change"),
         "allow_self_purchase":   _portal_flag("portal.allow_self_purchase", "0"),
         "allow_plan_change":     _portal_flag("portal.allow_plan_change", "0"),
+        # feat/data-connection-oneclick — زر «اتصال بيانات». مفعّل افتراضيًا؛
+        # دورمنت عمليًّا حتى يُضبط النطاق الفرعي/مفتاح WG في الإعدادات.
+        "allow_data_connection": _portal_flag("portal.allow_data_connection"),
     }
 
 
@@ -131,10 +139,72 @@ def subscriber_home():
     if not subscriber_id:
         return redirect(url_for("portal.subscriber_login"))
     dashboard = _svc().subscriber_dashboard(int(subscriber_id))
+    # feat/data-connection-oneclick — السياق لتبويب «اتصال بيانات». نقرأ
+    # ناتج آخر توليد من الجلسة (إن وُجد) لعرض السكربت بعد الضغط.
+    last = session.get("dc_last")
     return render_template(
         "radius/portal_subscriber.html",
         dashboard=dashboard,
         portal_flags=_portal_flags(),
+        data_connection=_data_connection_context(),
+        dc_result=last if isinstance(last, dict) else None,
+    )
+
+
+def _data_connection_context() -> dict:
+    """جاهزية ميزة «اتصال بيانات» للعرض في القالب (دون كشف أي سرّ)."""
+    from ..services import data_connection as dc
+    return {
+        "configured": bool(dc.client_subdomain()),
+        "speed_kbit": dc.DATA_SPEED_KBIT,
+    }
+
+
+def subscriber_data_connection():
+    """ينشئ الحساب على الـVPS ويبني سكربت الاتصال (زر «اتصال بيانات»)."""
+    subscriber_id = session.get("portal_subscriber_id")
+    if not subscriber_id:
+        return redirect(url_for("portal.subscriber_login"))
+    if not _portal_flag("portal.allow_data_connection"):
+        return _portal_denied("ميزة «اتصال بيانات» غير مُفعَّلة في بوابة المشترك حاليًا.")
+    from ..services import data_connection as dc
+    from ..services import data_connection_provision as dcp
+    try:
+        result = dcp.provision_data_connection(
+            tenant_id=_tenant_id(),
+            subscriber_id=int(subscriber_id),
+            version=request.form.get("version") or "",
+            protocol=request.form.get("protocol") or "",
+        )
+        session["dc_last"] = {
+            "version": result.version,
+            "protocol": result.protocol,
+            "filename": result.filename,
+            "script": result.script,
+            "target_host": result.target_host,
+            "speed_kbit": result.speed_kbit,
+        }
+        flash("تم إنشاء الاتصال. انسخ السكربت أو نزّله والصقه في المايكروتيك.", "success")
+    except dc.DataConnectionError as exc:
+        session.pop("dc_last", None)
+        flash(str(exc), "error")
+    return redirect(url_for("portal.subscriber_home") + "#pane-data")
+
+
+def subscriber_data_connection_download():
+    """ينزّل آخر سكربت تمّ توليده (من الجلسة) كملفّ .rsc."""
+    subscriber_id = session.get("portal_subscriber_id")
+    if not subscriber_id:
+        return redirect(url_for("portal.subscriber_login"))
+    last = session.get("dc_last")
+    if not isinstance(last, dict) or not last.get("script"):
+        flash("لا يوجد سكربت لتنزيله. أنشئ الاتصال أولًا.", "error")
+        return redirect(url_for("portal.subscriber_home") + "#pane-data")
+    filename = str(last.get("filename") or "hobe-data.rsc")
+    return Response(
+        last["script"] + "\n",
+        mimetype="application/x-rsc",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 
 

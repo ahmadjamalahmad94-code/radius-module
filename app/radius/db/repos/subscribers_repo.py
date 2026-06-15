@@ -108,6 +108,10 @@ def _row(r) -> Subscriber:
         deleted_by=_g(r, "deleted_by", "") or "",
         delete_reason=_g(r, "delete_reason", "") or "",
         created_at=parse_dt(r["created_at"]), updated_at=parse_dt(r["updated_at"]),
+        # feat/data-connection-oneclick — DATA transport (migration 123).
+        # Read with a safe default so DBs without the column (pre-123) still
+        # map to the back-compat chr_mikrotik path.
+        transport=_g(r, "transport", "chr_mikrotik") or "chr_mikrotik",
     )
 
 
@@ -256,6 +260,21 @@ def reset_password(tenant_id: int, username: str, new_password: str) -> None:
         conn.execute(
             "UPDATE subscribers SET password = ?, updated_at = ? WHERE tenant_id = ? AND username = ?",
             (new_password, now_iso(), tenant_id, username)
+        )
+
+
+def set_data_transport(tenant_id: int, username: str, transport: str) -> None:
+    """feat/data-connection-oneclick — يضبط حقل النقل (chr_mikrotik|vps_accel).
+
+    دالة مُخصّصة صغيرة بدل تمرير transport عبر الـupsert الكبير، كي يبقى
+    مسار الحفظ الحيّ بترتيبه الموضعي دون تغيير. آمنة قبل migration 123؟
+    لا — تتطلّب العمود؛ تُستدعى فقط من مسار اتصال البيانات (بعد 123)."""
+    t = "vps_accel" if str(transport) == "vps_accel" else "chr_mikrotik"
+    with transaction() as conn:
+        conn.execute(
+            "UPDATE subscribers SET transport = ?, updated_at = ? "
+            "WHERE tenant_id = ? AND username = ?",
+            (t, now_iso(), tenant_id, username),
         )
 
 
