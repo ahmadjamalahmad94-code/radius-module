@@ -229,16 +229,45 @@ Deferred (group-7 follow-up): bulk `poll` (+SSE stream) and per-device `apply`
 
 Tests: `tests/test_api_device_health.py` (8).
 
-### 7b–7i — REMAINING (not yet built)
-Each is a web-only MikroTik page to expose as `/api/v1` JSON, reusing its
-existing service (one module + commit each):
-- **topology** — `routes/mt_topology.py` (graph/nodes/links state).
-- **login-designer** — `routes/mt_login_designer.py` (hotspot login template CRUD/preview).
-- **programming** — `routes/mt_programming.py` (object inventory + Q4 cleanup; live ops gated).
-- **audit-timeline** — `routes/mt_audit_timeline.py` (per-router change timeline, read-only).
-- **recovery-plan / problems** — `routes/mt_recovery_plan.py` + `routes/mt_problems.py`.
-- **permission-matrix** — `routes/mt_permission_matrix.py` (read; saves are super-only).
-- **metrics / push script-generators** — `routes/mt_*` script generators (read-only generators).
-- device-health `poll`/`apply` (from 7a) — live-wire, gated.
+### 7b — Topology ✅ (`app/api/v1/mt_topology.py`)
+`GET /api/v1/mikrotik/topology` — server + routers + links + per-router health,
+`show`/`health`/`q` filters (mirrors `mt_topology`). Secret-safe nodes.
+Tests: `test_api_mt_topology.py` (5).
 
-See the RESUME NOTE in the session for exact next steps.
+### 7c — Login-designer ✅ (`app/api/v1/mt_login_designer.py`)
+`GET /api/v1/mikrotik/<nas_id>/login-designer` (design + gallery + variable
+schema + presets + last_deploy) · `POST /save` · `POST /presets` ·
+`POST /presets/<id>/apply` · `DELETE /presets/<id>`. Deferred (HTML/binary/
+live): preview, deploy(+stream/FTP, gated), download.zip, custom upload, fonts.
+Tests: `test_api_mt_login_designer.py` (7).
+
+### 7d — Audit-timeline ✅ (`app/api/v1/mt_audit_timeline.py`)
+`GET /api/v1/mikrotik/<nas_id>/timeline` — per-router activity timeline
+(`audit_repo.recent` + `present_many`), `?limit`. Tests: `test_api_mt_audit_timeline.py` (5).
+
+### 7e — Problems + recovery-plan ✅ (`app/api/v1/mt_diagnostics.py`)
+`GET /api/v1/mikrotik/problems` (`build_problems`, filters router_id/severity/
+type) · `GET /api/v1/mikrotik/recovery/<audit_id>` (`build_plan`, 404). Read-only.
+Tests: `test_api_mt_diagnostics.py` (5).
+
+### 7f — Permission-matrix ✅ (`app/api/v1/mt_permission_matrix.py`)
+`GET /api/v1/mikrotik/permissions` — `build_matrix`: permissions + admin rows +
+grant counts + group cards + summary + risky perms. Read-only (web has no save).
+Tests: `test_api_mt_permission_matrix.py` (3).
+
+### 7g — Metrics / push setup-scripts ✅ (`app/api/v1/mt_setup_scripts.py`)
+`GET /api/v1/mikrotik/push-setup` (DHCP push → `/devices/ingest`) ·
+`GET /api/v1/mikrotik/metrics-setup` (metrics → `/routers/<id>/metrics/ingest`).
+Returns the server-side inputs (base_url, ingest_url, scheduler name/interval,
+token names, routers) the page provides; the final scheduler script is
+assembled client-side (as the web JS does). Token value never returned.
+Tests: `test_api_mt_setup_scripts.py` (6).
+
+### Still deferred (live-wire, explicitly flagged)
+- **programming** (`mt_programming`) — plan reads live router state; apply/
+  unprogram push to the router (PERM_PROGRAM/PERM_ROLLBACK). Live-wire; not a
+  JSON-data screen.
+- device-health `poll`/`apply` (from 7a) — gated by `HOBERADIUS_DEVICE_HEALTH_LIVE_APPLY`.
+- login-designer preview/deploy/zip/custom/fonts (HTML/binary/FTP).
+These need VPS/NAS acceptance; the Flutter client can call the existing web
+endpoints for them in the interim.
