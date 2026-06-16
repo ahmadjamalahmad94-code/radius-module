@@ -13,13 +13,13 @@ def register_v1(parent: Blueprint) -> None:
 
     from . import (
         accounting, accounts, admins, audit, backups, bandwidth_profiles, bandwidth_schedules, business_os,
-        contracts,
+        contracts, events, device_health,
         card_checker, card_users, cards, communications, customer_portals, dashboard, devices, distributors, health, internal_auth,
         hotspot_cards, invoices, ledger, lifecycle, loans, mikrotik, mikrotik_control, nas, network_devices, network_policy,
-        operational_reports,
+        operational_reports, network_telegram, reports_login_states, mt_topology, mt_login_designer, mt_audit_timeline, mt_diagnostics, mt_permission_matrix, mt_setup_scripts,
         payments, pools, print_templates, profiles, recycle_bin, reports, router_alerts, router_metrics, service_requests, services, sessions,
-        settings, share_groups, store, system, tenants, tickets, tokens, tools, vouchers, webhooks, whatsapp,
-        setup_wizard, subscriber_portal,
+        settings, share_groups, site_exit, store, subscriber_groups, system, tenants, tickets, tokens, tools, vouchers, webhooks, whatsapp,
+        setup_wizard, subscriber_portal, whatsapp_bot,
     )
     health.register(v1)
     accounts.register(v1)
@@ -41,6 +41,7 @@ def register_v1(parent: Blueprint) -> None:
     payments.register(v1)
     distributors.register(v1)
     reports.register(v1)
+    reports_login_states.register(v1)
     operational_reports.register(v1)
     bandwidth_profiles.register(v1)
     bandwidth_schedules.register(v1)
@@ -69,6 +70,18 @@ def register_v1(parent: Blueprint) -> None:
     service_requests.register(v1)
     services.register(v1)
     share_groups.register(v1)
+    subscriber_groups.register(v1)
+    site_exit.register(v1)
+    events.register(v1)
+    network_telegram.register(v1)
+    whatsapp_bot.register(v1)
+    device_health.register(v1)
+    mt_topology.register(v1)
+    mt_login_designer.register(v1)
+    mt_audit_timeline.register(v1)
+    mt_diagnostics.register(v1)
+    mt_permission_matrix.register(v1)
+    mt_setup_scripts.register(v1)
     system.register(v1)
     settings.register(v1)
     tokens.register(v1)

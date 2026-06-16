@@ -226,8 +226,12 @@ def delete(tenant_id: int, gid: int) -> None:
 
 
 def list_members(tenant_id: int, gid: int, limit: int = 500) -> list[dict]:
+    # NOTE: columns qualified with ``s.`` — both subscribers and
+    # subscriber_groups expose ``id``, so the bare ``id``/columns made the
+    # SELECT raise "ambiguous column name: id" (the member list never loaded,
+    # on the web edit page too). Qualifying is the obviously-intended query.
     cur = db().execute("""
-        SELECT id, username, full_name, status, mobile
+        SELECT s.id, s.username, s.full_name, s.status, s.mobile
           FROM subscribers s
           JOIN subscriber_groups g
             ON g.tenant_id = s.tenant_id
@@ -236,7 +240,7 @@ def list_members(tenant_id: int, gid: int, limit: int = 500) -> list[dict]:
          WHERE s.tenant_id = ?
            AND (s.subscriber_group_id = g.id OR s.group_name = g.name)
            AND s.deleted_at IS NULL
-         ORDER BY username
+         ORDER BY s.username
          LIMIT ?
     """, (gid, tenant_id, limit))
     return [dict(r) for r in cur.fetchall()]

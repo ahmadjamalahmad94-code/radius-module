@@ -21,6 +21,59 @@ def _svc():
     return get_operations_service()
 
 
+# الحقول التي تُنسخ من جدول مصدر عند source_schedule_id (يطابق
+# _payload_from_saved_schedule في صفحة الويب).
+_COPY_FIELDS = (
+    "target_type", "plan_id", "subscriber_username", "card_batch_id",
+    "subscriber_group_id", "priority", "starts_at_time", "ends_at_time",
+    "days_csv", "speed_down_kbps", "speed_up_kbps", "cir_down_kbps",
+    "cir_up_kbps", "restore_mode", "enabled", "notes",
+)
+
+
+def _normalise_days(body: dict) -> dict:
+    """يقبل ``sr_days`` (قائمة أو CSV — اسم حقل صفحة قواعد السرعة) كمرادف
+    لـ``days_csv``. لا يلمس days_csv إن أُرسل صراحةً."""
+    if "sr_days" in body and not str(body.get("days_csv") or "").strip():
+        days = body.get("sr_days")
+        if isinstance(days, (list, tuple)):
+            days = ",".join(str(d).strip() for d in days if str(d).strip())
+        body["days_csv"] = str(days or "").strip()
+    return body
+
+
+def _apply_source_schedule(body: dict) -> dict:
+    """نسخ من جدول محفوظ (source_schedule_id) — يعكس copy-from في الويب.
+    حقول الجسم الصريحة تتقدّم على قيم المصدر. مصدر غير موجود → يُتجاهل
+    (كما يفعل الويب)."""
+    sid_raw = body.get("source_schedule_id")
+    if not sid_raw:
+        return body
+    try:
+        sid = int(sid_raw)
+    except (TypeError, ValueError):
+        return body
+    src = _svc().get_bandwidth_schedule(tenant_id=_tid(), schedule_id=sid)
+    if not src:
+        return body
+    merged = {k: src.get(k) for k in _COPY_FIELDS if src.get(k) is not None}
+    merged["name"] = (str(body.get("name") or "").strip()
+                      or f"نسخة من {src.get('name') or 'جدول محفوظ'}")
+    merged["metadata"] = {
+        "copied_from_schedule_id": sid,
+        "copied_from_target_type": src.get("target_type"),
+    }
+    # تجاوزات الجسم الصريحة تفوز على قيم المصدر. نتجاهل الفارغ/الغائب كي لا
+    # يمسح حقلًا مأخوذًا من المصدر، و«name» مُحتسب أعلاه بقيمة احتياطية.
+    for key, value in body.items():
+        if key in ("source_schedule_id", "name"):
+            continue
+        if value is None or value == "":
+            continue
+        merged[key] = value
+    return merged
+
+
 def register(bp: Blueprint) -> None:
     bp.add_url_rule("/bandwidth-schedules",
                     "bandwidth_schedules_list",
@@ -62,6 +115,9 @@ def bandwidth_schedules_list():
 
 def bandwidth_schedules_create():
     body = request.get_json(silent=True) or {}
+    # parity: نسخ من جدول محفوظ (source_schedule_id) + قبول sr_days كمرادف
+    # لـdays_csv (اسم حقل الأيام في صفحة قواعد السرعة).
+    body = _normalise_days(_apply_source_schedule(body))
     try:
         schedule = _svc().create_bandwidth_schedule(
             tenant_id=_tid(), actor=_actor(), data=body

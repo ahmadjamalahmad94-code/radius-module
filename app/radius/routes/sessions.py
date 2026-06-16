@@ -155,54 +155,11 @@ def _int_or_zero(raw) -> int:
 
 
 def _temporary_speed_states(usernames: set[str], now: datetime) -> dict[str, dict]:
-    if not usernames:
-        return {}
-
-    from ..db.connection import db
-
-    placeholders = ",".join("?" for _ in usernames)
-    rows = db().execute(
-        f"""
-        SELECT username, temporary_speed, custom_speed, metadata, updated_at
-          FROM subscribers
-         WHERE tenant_id = ?
-           AND username IN ({placeholders})
-        """,
-        (_tid(), *sorted(usernames)),
-    ).fetchall()
-
-    states: dict[str, dict] = {}
-    for row in rows:
-        username = row["username"]
-        has_flag = bool(row["temporary_speed"])
-        meta = _parse_meta(row["metadata"])
-        started_at = _parse_datetime(_meta_value(meta, "temporary_speed_from"))
-        ends_at = _parse_datetime(_meta_value(meta, "temporary_speed_to"))
-        duration_min = _int_or_zero(_meta_value(meta, "temporary_speed_duration_minutes"))
-        # #50a: compute the window end STRICTLY from temporary_speed_from +
-        # duration (or explicit _to). NEVER fall back to updated_at — an
-        # unrelated row update would otherwise slide the apparent end and make
-        # a just-applied window look expired within seconds.
-        if not ends_at and started_at and duration_min > 0:
-            ends_at = started_at + timedelta(minutes=duration_min)
-
-        unknown = bool(has_flag and not ends_at)
-        remaining = int((ends_at - now).total_seconds()) if ends_at else None
-        active = bool(has_flag and (unknown or (remaining is not None and remaining > 0)))
-        states[username] = {
-            "active": active,
-            "unknown": unknown,
-            "expired": bool(has_flag and ends_at and not active),
-            "remaining_seconds": max(0, remaining) if remaining is not None else None,
-            "ends_at": ends_at.isoformat(timespec="seconds") if ends_at else "",
-            # epoch ثوانٍ UTC لوقت النهاية — العدّاد في الواجهة يحسب المتبقي
-            # كل ثانية من ساعة الحائط (Date.now) بدل إنقاص لقطة، فلا ينحرف
-            # إذا نام التبويب ويستمر من وقت النهاية المخزَّن دائماً.
-            "ends_at_epoch": (int(ends_at.replace(tzinfo=timezone.utc).timestamp())
-                              if ends_at else 0),
-            "custom_speed": bool(row["custom_speed"]),
-        }
-    return states
+    # المصدر الوحيد لهذا المنطق صار services.temp_speed.temp_speed_states (كي
+    # يستهلكه v1 API أيضًا). المخرجات مطابقة تمامًا لما كان هنا: نهاية النافذة
+    # بدقّة من from+duration أو to الصريح، بلا fallback لـupdated_at (#50a).
+    from ..services.temp_speed import temp_speed_states
+    return temp_speed_states(_tid(), usernames, now)
 
 
 def _temporary_speed_end(row) -> datetime | None:
