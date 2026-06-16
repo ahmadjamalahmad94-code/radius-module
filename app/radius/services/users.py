@@ -57,6 +57,11 @@ class UsersService:
         self._audit.record(actor=actor, action=AUDIT_ACTION_CREATE,
                            target_type="user", target_id=saved.username,
                            payload={"plan_id": saved.plan_id})
+        _notify_alert(saved.tenant_id, "subscriber_new", {
+            "full_name": saved.full_name or "—", "username": saved.username,
+            "plan": _plan_label(saved.tenant_id, saved.plan_id),
+            "mobile": saved.mobile or "—", "actor": actor,
+        }, dedup_key=saved.username)
         return saved
 
     def update(self, *, actor: str, sub: Subscriber) -> Subscriber:
@@ -82,6 +87,10 @@ class UsersService:
         saved = self._adapter.upsert_account(sub)
         self._audit.record(actor=actor, action=AUDIT_ACTION_UPDATE,
                            target_type="user", target_id=saved.username)
+        _notify_alert(saved.tenant_id, "subscriber_edited", {
+            "username": saved.username, "full_name": saved.full_name or "—",
+            "changed": "—", "actor": actor,
+        }, dedup_key=saved.username)
         return saved
 
     def change_plan(self, *, actor: str, username: str, plan_id: int,
@@ -583,3 +592,23 @@ def get_users_service() -> UsersService:
     from ..integration.factory import get_radius_adapter
     from .audit import get_audit_service
     return UsersService(get_radius_adapter(), audit=get_audit_service())
+
+
+# ── تنبيهات الإدارة (تلجرام) — محصّنة، لا تكسر العملية أبدًا ──────────────
+def _notify_alert(tenant_id, key: str, context: dict, *, dedup_key: str = "") -> None:
+    try:
+        from .admin_alerts import dispatch
+        dispatch(int(tenant_id or 1), key, context, dedup_key=dedup_key)
+    except Exception:  # noqa: BLE001
+        pass
+
+
+def _plan_label(tenant_id, plan_id) -> str:
+    if not plan_id:
+        return "—"
+    try:
+        from ..db.repos import plans_repo
+        plan = plans_repo.get_plan(int(tenant_id or 1), int(plan_id))
+        return (getattr(plan, "name", "") or "—") if plan else "—"
+    except Exception:  # noqa: BLE001
+        return "—"

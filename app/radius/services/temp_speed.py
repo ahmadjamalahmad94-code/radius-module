@@ -289,6 +289,17 @@ def apply_temp_speed(
     except Exception:  # noqa: BLE001 — audit must never break the action
         _LOG.exception("temp-speed apply audit failed for %s", username)
 
+    # تنبيه إدارة (تلجرام) — محصّن، لا يكسر العملية.
+    try:
+        from .admin_alerts import dispatch
+        dispatch(int(tenant_id), "speed_boost", {
+            "username": username, "down": down_kbps, "up": up_kbps,
+            "duration": duration_minutes, "ends_at": meta.get(_K_TO) or "—",
+            "actor": actor or "—",
+        }, dedup_key=f"{username}:{meta.get(_K_TO)}")
+    except Exception:  # noqa: BLE001
+        pass
+
     return {"ends_at": meta[_K_TO], "rate": rate, "coa": _coa_summary(coa)}
 
 

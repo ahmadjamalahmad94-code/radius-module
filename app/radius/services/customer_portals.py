@@ -244,6 +244,18 @@ class CustomerPortalService:
             requested_minutes=requested,
             result=result,
         )
+        # تنبيه إدارة (تلجرام) — محصّن، لا يكسر الطلب.
+        try:
+            from .admin_alerts import dispatch
+            _status_ar = {"auto_approved": "مقبولة تلقائيًا",
+                          "requires_approval": "بانتظار الموافقة"}.get(status, status)
+            _sub = self.get_subscriber(subscriber_id)
+            dispatch(self.tenant_id, "loan_granted", {
+                "username": _sub.get("username") or subscriber_id,
+                "minutes": requested, "status": _status_ar, "reason": reason or "—",
+            }, dedup_key=f"{subscriber_id}:{request_id}")
+        except Exception:  # noqa: BLE001
+            pass
         return self.get_request(request_id)
 
     def submit_renewal_request(self, *, subscriber_id: int, reason: str = "") -> dict[str, Any]:
