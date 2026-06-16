@@ -173,8 +173,23 @@ def sessions_online():
     kind = aliases.get(kind, kind)
     if kind not in {"all", "subscriber", "card"}:
         return fail("validation_error", "نوع الجلسات يجب أن يكون الكل أو مشترك أو كرت.", status=422)
+    # فلتر نوع السرعة — يطابق صفحة الجلسات المتصلة (selected_speed):
+    #   ""/all = الكل · special = سرعة خاصة أو مؤقتة فعّالة · temporary = مؤقتة
+    #   فعّالة فقط · normal = بدون سرعة خاصة.
+    speed = (request.args.get("speed") or "").strip().lower()
+    speed = {"": "all", "all": "all"}.get(speed, speed)
+    if speed not in {"all", "special", "temporary", "normal"}:
+        return fail("validation_error", "نوع السرعة يجب أن يكون الكل أو خاصة أو مؤقتة أو عادية.", status=422)
     if len(query) > 80:
         return fail("validation_error", "عبارة البحث طويلة جدًا.", status=422)
+
+    # موازاةً لصفحة الويب: نُنهي نوافذ السرعة المؤقتة المنتهية (revert CoA)
+    # قبل القراءة كي لا تُعرض جلسة مخنوقة بعد انتهاء نافذتها. محصّن.
+    try:
+        from ...radius.services.temp_speed import expire_due_temp_speeds
+        expire_due_temp_speeds(tenant_id=_tid())
+    except Exception:  # noqa: BLE001
+        pass
 
     items = []
     for session in _svc().list(limit=500):
@@ -191,19 +206,47 @@ def sessions_online():
         if _matches_query(enriched, query):
             items.append(enriched)
 
+    # حالة السرعة لكل جلسة (يطابق منطق صفحة الويب: _has_active_temporary_speed
+    # / _has_special_speed) عبر مصدر temp_speed المشترك.
+    from ...radius.services.temp_speed import temp_speed_states
+    temp_states = temp_speed_states(
+        _tid(), {it.get("username") for it in items if it.get("username")})
+    for item in items:
+        st = temp_states.get(item.get("username"))
+        has_active_temp = bool(st["active"]) if st is not None else bool(item.get("has_temporary_speed"))
+        has_special = bool(item.get("has_custom_speed")) or has_active_temp
+        item["has_active_temporary_speed"] = has_active_temp
+        item["has_special_speed"] = has_special
+        item["speed_state"] = (
+            "temporary" if has_active_temp
+            else ("custom" if item.get("has_custom_speed") else "normal")
+        )
+        item["temporary_speed_window"] = st  # None عند غياب أي نافذة
+
+    if speed == "special":
+        items = [it for it in items if it["has_special_speed"]]
+    elif speed == "temporary":
+        items = [it for it in items if it["has_active_temporary_speed"]]
+    elif speed == "normal":
+        items = [it for it in items if not it["has_special_speed"]]
+
     states: dict[str, int] = {}
     types: dict[str, int] = {"subscriber": 0, "card": 0}
+    speeds: dict[str, int] = {"normal": 0, "custom": 0, "temporary": 0}
     for item in items:
         states[item["state"]] = states.get(item["state"], 0) + 1
         user_type = item.get("user_type") or "subscriber"
         types[user_type] = types.get(user_type, 0) + 1
+        speeds[item["speed_state"]] = speeds.get(item["speed_state"], 0) + 1
     return ok({
         "items": items,
         "count": len(items),
         "states": states,
         "types": types,
+        "speeds": speeds,
         "query": query,
         "type": kind,
+        "speed": speed,
     })
 
 

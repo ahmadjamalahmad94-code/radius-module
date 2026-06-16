@@ -26,7 +26,7 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from ..db.connection import db
@@ -122,6 +122,51 @@ def _ends_at(meta: dict, updated_at: Any = None) -> datetime | None:
     if not ends and started and duration > 0:
         ends = started + timedelta(minutes=duration)
     return ends
+
+
+def temp_speed_states(tenant_id: int, usernames, now: datetime | None = None) -> dict:
+    """حالة نافذة السرعة المؤقتة لكل مشترك من المجموعة المعطاة.
+
+    المصدر الوحيد لمنطق «حالة السرعة المؤقتة» الذي تعرضه صفحة الجلسات
+    المتصلة (routes/sessions._temporary_speed_states تفوّض إلى هنا) كي
+    يستهلكه أيضًا v1 API. نهاية النافذة تُحسب بدقّة من from+duration أو to
+    الصريح (لا fallback لـupdated_at — راجع _ends_at). يُرجع لكل username:
+    ``{active, unknown, expired, remaining_seconds, ends_at, ends_at_epoch,
+    custom_speed}``."""
+    names = {u for u in (usernames or []) if u}
+    if not names:
+        return {}
+    now = now or _utcnow()
+    placeholders = ",".join("?" for _ in names)
+    rows = db().execute(
+        f"""
+        SELECT username, temporary_speed, custom_speed, metadata, updated_at
+          FROM subscribers
+         WHERE tenant_id = ?
+           AND username IN ({placeholders})
+        """,
+        (tenant_id, *sorted(names)),
+    ).fetchall()
+    states: dict[str, dict] = {}
+    for row in rows:
+        username = row["username"]
+        has_flag = bool(row["temporary_speed"])
+        meta = _parse_meta(row["metadata"])
+        ends_at = _ends_at(meta)
+        unknown = bool(has_flag and not ends_at)
+        remaining = int((ends_at - now).total_seconds()) if ends_at else None
+        active = bool(has_flag and (unknown or (remaining is not None and remaining > 0)))
+        states[username] = {
+            "active": active,
+            "unknown": unknown,
+            "expired": bool(has_flag and ends_at and not active),
+            "remaining_seconds": max(0, remaining) if remaining is not None else None,
+            "ends_at": ends_at.isoformat(timespec="seconds") if ends_at else "",
+            "ends_at_epoch": (int(ends_at.replace(tzinfo=timezone.utc).timestamp())
+                              if ends_at else 0),
+            "custom_speed": bool(row["custom_speed"]),
+        }
+    return states
 
 
 def _rate_str(up_kbps: int, down_kbps: int) -> str:

@@ -47,3 +47,38 @@ selected unqualified `id` while joining `subscribers` + `subscriber_groups`
 behavior change beyond the list now loading.
 
 Tests: `tests/test_api_subscriber_groups.py` (13).
+
+---
+
+## Group 2 — Sessions speed data + speed filter
+Extends `GET /api/v1/sessions/online` to mirror the **speed** columns/filter of
+the web online-sessions list (`routes/sessions.py:online_list`). Additive —
+existing fields/filters (`type`, `q`) unchanged. File: `app/api/v1/sessions.py`.
+
+**Per-session fields added** (raw speed fields `rate_down_kbps`, `rate_up_kbps`,
+`plan_down_kbps`, `plan_up_kbps`, `has_custom_speed`, `has_temporary_speed`
+were already present via the `OnlineSession` dataclass):
+- `speed_state`: `"temporary"` (active temp window) → `"custom"` (permanent
+  override) → `"normal"`. Same precedence as the web row pill.
+- `has_active_temporary_speed` (bool), `has_special_speed` (bool).
+- `temporary_speed_window`: `{active, unknown, expired, remaining_seconds,
+  ends_at, ends_at_epoch, custom_speed}` or `null` — the same window state the
+  web countdown uses.
+
+**New query param** `speed` (mirrors web `selected_speed`):
+`all`/empty · `special` (custom OR active temp) · `temporary` (active temp
+only) · `normal` (no special). Unknown value → `422`.
+
+**Response additions:** `speeds` breakdown `{normal, custom, temporary}` and the
+echoed `speed`. Like the web page, the endpoint first runs
+`expire_due_temp_speeds` (revert CoA for elapsed windows) so the listing never
+shows a throttled session past its window.
+
+**Single source of truth:** the temp-window logic moved to
+`services/temp_speed.temp_speed_states(tenant_id, usernames, now)`; the web
+route's `_temporary_speed_states` now delegates to it (output byte-identical) so
+web + API share one implementation (no duplicated logic, no web behavior
+change).
+
+Tests: `tests/test_api_sessions_speed.py` (7). (`test_online_list_separation`'s
+4 failures are the pre-existing 403/RBAC ones, unrelated.)
