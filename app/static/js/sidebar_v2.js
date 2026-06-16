@@ -136,6 +136,14 @@
       }
       sec.classList.toggle('is-open');
 
+      // أكورديون (backlog #11): عند فتح قسم رئيسي، أغلق بقية الأقسام
+      // المفتوحة على نفس المستوى — فيبقى المفتوح للتو وحده موسَّعًا.
+      if (sec.classList.contains('is-open')){
+        side.querySelectorAll('.hb-side-section.is-open').forEach(function(s){
+          if (s !== sec) s.classList.remove('is-open');
+        });
+      }
+
       // persist (excluding the active-bearing one — it stays open regardless)
       var openIds = [];
       side.querySelectorAll('.hb-side-section.is-open').forEach(function(s){
@@ -156,6 +164,15 @@
       var grp = subHead.closest('.hb-side-subgroup');
       if (!grp) return;
       grp.classList.toggle('is-open');
+
+      // أكورديون (backlog #11): عند فتح عائلة فرعية، أغلق العوائل الشقيقة
+      // المفتوحة داخل نفس القسم الأب (نفس المستوى) فقط.
+      if (grp.classList.contains('is-open')){
+        var parentSec = grp.closest('.hb-side-section') || side;
+        parentSec.querySelectorAll('.hb-side-subgroup.is-open').forEach(function(g){
+          if (g !== grp) g.classList.remove('is-open');
+        });
+      }
 
       var openSubIds = [];
       side.querySelectorAll('.hb-side-subgroup.is-open').forEach(function(g){
