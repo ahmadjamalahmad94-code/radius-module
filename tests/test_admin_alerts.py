@@ -186,7 +186,7 @@ class TestRoutePage:
         return {"X-CSRFToken": "tok", "X-Requested-With": "XMLHttpRequest"}
 
     def test_page_renders(self, app_ctx):
-        html = self._client(app_ctx).get("/admin/radius/alerts").get_data(as_text=True)
+        html = self._client(app_ctx).get("/admin/radius/alerts/telegram").get_data(as_text=True)
         assert "إشعارات التلجرام" in html
         assert 'data-testid="alerts-table"' in html
         assert "إضافة مشترك جديد" in html  # عنصر من الجرد
@@ -194,20 +194,20 @@ class TestRoutePage:
     def test_toggle_via_ajax(self, app_ctx):
         from app.radius.services import admin_alerts as aa
         c = self._client(app_ctx)
-        r = c.post("/admin/radius/alerts/toggle", headers=self._hdr(),
+        r = c.post("/admin/radius/alerts/telegram/toggle", headers=self._hdr(),
                    data={"key": "quota_exhausted", "enabled": "1"})
         assert r.status_code == 200 and r.get_json()["enabled"] is True
         assert aa.is_enabled(1, "quota_exhausted") is True
 
     def test_toggle_unknown_404(self, app_ctx):
-        r = self._client(app_ctx).post("/admin/radius/alerts/toggle",
+        r = self._client(app_ctx).post("/admin/radius/alerts/telegram/toggle",
                                        headers=self._hdr(), data={"key": "bogus"})
         assert r.status_code == 404
 
     def test_test_alert_ajax(self, app_ctx, monkeypatch):
         sent = _capture_sends(monkeypatch)
         _configure_bot(enabled=True)
-        r = self._client(app_ctx).post("/admin/radius/alerts/test",
+        r = self._client(app_ctx).post("/admin/radius/alerts/telegram/test",
                                        headers=self._hdr(), data={"key": "subscriber_new"})
         assert r.status_code == 200
         body = r.get_json()
@@ -216,11 +216,11 @@ class TestRoutePage:
     def test_save_bot_keeps_token_when_blank(self, app_ctx):
         from app.radius.db.repos import tenant_telegram_settings_repo as repo
         c = self._client(app_ctx)
-        c.post("/admin/radius/alerts/bot", data={
+        c.post("/admin/radius/alerts/telegram/bot", data={
             "bot_token": "TOK-1", "chat_id": "-100", "enabled": "1", "_csrf_token": "tok"})
         assert repo.get(1)["bot_token"] == "TOK-1"
         # حفظ ثانٍ بتوكن فارغ → يبقى التوكن
-        c.post("/admin/radius/alerts/bot", data={
+        c.post("/admin/radius/alerts/telegram/bot", data={
             "bot_token": "", "chat_id": "-200", "enabled": "1", "_csrf_token": "tok"})
         cfg = repo.get(1)
         assert cfg["bot_token"] == "TOK-1" and cfg["chat_id"] == "-200"
@@ -228,7 +228,7 @@ class TestRoutePage:
     def test_test_connection_ajax(self, app_ctx, monkeypatch):
         _capture_sends(monkeypatch)
         _configure_bot(enabled=True)
-        r = self._client(app_ctx).post("/admin/radius/alerts/test-connection", headers=self._hdr())
+        r = self._client(app_ctx).post("/admin/radius/alerts/telegram/test-connection", headers=self._hdr())
         assert r.status_code == 200 and r.get_json()["ok"] is True
 
 

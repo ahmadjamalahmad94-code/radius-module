@@ -39,16 +39,18 @@ def _int_or_none(value):
 
 
 def register(bp: Blueprint) -> None:
-    bp.add_url_rule("/events", "events_list", require_api_token(events_list), methods=["GET"])
-    bp.add_url_rule("/events/risk", "events_risk", require_api_token(events_risk), methods=["GET"])
-    bp.add_url_rule("/events/risk/run", "events_risk_run", require_api_token(events_risk_run), methods=["POST"])
-    bp.add_url_rule("/events/security", "events_security", require_api_token(events_security), methods=["GET"])
-    bp.add_url_rule("/events/investigations", "events_investigations_list",
+    # ملاحظة: الأساس /events-center (لا /events) لأنّ /api/v1/events محجوز
+    # لعقد business_os القديم (events list/record). أسماء الـendpointات ثابتة.
+    bp.add_url_rule("/events-center", "events_list", require_api_token(events_list), methods=["GET"])
+    bp.add_url_rule("/events-center/risk", "events_risk", require_api_token(events_risk), methods=["GET"])
+    bp.add_url_rule("/events-center/risk/run", "events_risk_run", require_api_token(events_risk_run), methods=["POST"])
+    bp.add_url_rule("/events-center/security", "events_security", require_api_token(events_security), methods=["GET"])
+    bp.add_url_rule("/events-center/investigations", "events_investigations_list",
                     require_api_token(investigations_list), methods=["GET"])
-    bp.add_url_rule("/events/investigations", "events_investigations_create",
+    bp.add_url_rule("/events-center/investigations", "events_investigations_create",
                     require_api_token(investigations_create), methods=["POST"])
     # detail last so it doesn't shadow the literal sub-paths above.
-    bp.add_url_rule("/events/<int:event_id>", "events_detail",
+    bp.add_url_rule("/events-center/<int:event_id>", "events_detail",
                     require_api_token(events_detail), methods=["GET"])
 
 

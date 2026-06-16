@@ -20,12 +20,15 @@ from ..services import admin_alerts
 
 
 def register_admin_alerts_routes(bp: Blueprint) -> None:
-    bp.add_url_rule("/alerts", "admin_alerts_page", alerts_page, methods=["GET"])
-    bp.add_url_rule("/alerts/bot", "admin_alerts_save_bot", save_bot, methods=["POST"])
-    bp.add_url_rule("/alerts/test-connection", "admin_alerts_test_connection",
+    # ملاحظة: المسار تحت /alerts/telegram (لا /alerts) لأنّ /alerts محجوز
+    # لصفحة «التنبيهات الذكية» (mt_alerts_index). أسماء الـendpointات ثابتة
+    # فلا يتأثّر url_for في القالب.
+    bp.add_url_rule("/alerts/telegram", "admin_alerts_page", alerts_page, methods=["GET"])
+    bp.add_url_rule("/alerts/telegram/bot", "admin_alerts_save_bot", save_bot, methods=["POST"])
+    bp.add_url_rule("/alerts/telegram/test-connection", "admin_alerts_test_connection",
                     test_connection, methods=["POST"])
-    bp.add_url_rule("/alerts/toggle", "admin_alerts_toggle", toggle_alert, methods=["POST"])
-    bp.add_url_rule("/alerts/test", "admin_alerts_test", test_alert, methods=["POST"])
+    bp.add_url_rule("/alerts/telegram/toggle", "admin_alerts_toggle", toggle_alert, methods=["POST"])
+    bp.add_url_rule("/alerts/telegram/test", "admin_alerts_test", test_alert, methods=["POST"])
 
 
 def _tid() -> int:
