@@ -128,3 +128,22 @@ Mirrors `routes/events_risk.py` (`/admin/radius/events*`). File:
 `risk`/`security`/`investigations` are never shadowed.)
 
 Tests: `tests/test_api_events.py` (8).
+
+---
+
+## Group 5 — Network Telegram Alerts
+Mirrors `routes/network_telegram_settings.py` (`/admin/radius/network/telegram`).
+File: `app/api/v1/network_telegram.py`. Reuses `tenant_telegram_settings_repo`
++ `telegram_notifier`.
+
+| Method | Path | Mirrors | Notes |
+|---|---|---|---|
+| GET | `/api/v1/network/telegram` | `network_telegram_settings` | → `{settings}`. Token **never** returned raw: `has_bot_token` + `bot_token_masked` + `chat_id, thread_id, enabled, updated_at, ready`. |
+| PATCH/PUT | `/api/v1/network/telegram` | `network_telegram_save` | PATCH-style: only body keys change (absent `bot_token` preserved — no accidental secret wipe). → `{settings}`. |
+| POST | `/api/v1/network/telegram/test` | `network_telegram_test` | Sends a live test message. → `{sent:true}` or `502 {sent:false}`. |
+
+Secret-safety note: GET masks the token (the web form pre-fills it; the API
+does not echo secrets). `ready` mirrors the web's "alerts will work" condition
+(`enabled && bot_token && chat_id`).
+
+Tests: `tests/test_api_network_telegram.py` (6).
