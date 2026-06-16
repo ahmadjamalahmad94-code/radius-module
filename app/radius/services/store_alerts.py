@@ -32,6 +32,15 @@ RULE_WITHDRAWAL = "store.withdrawal"
 _SUPPORT = "/admin/radius/store-support"
 
 
+def _tg(tenant_id, key: str, ctx: dict, dedup_key: str = "") -> None:
+    """تنبيه إدارة عبر تلجرام (catalogue) — محصّن، لا يكسر تدفّق المتجر."""
+    try:
+        from .admin_alerts import dispatch
+        dispatch(int(tenant_id or 1), key, ctx, dedup_key=dedup_key)
+    except Exception:  # noqa: BLE001
+        pass
+
+
 def _open(tenant_id, rule, dedup_key, title_ar, *, severity="info",
           recommended_action_ar="", link=""):
     try:
@@ -67,6 +76,19 @@ def _card_user_name(tenant_id, card_user_id) -> str:
     return f"#{card_user_id}"
 
 
+def _card_user_mobile(tenant_id, card_user_id) -> str:
+    try:
+        row = db().execute(
+            "SELECT mobile FROM card_users WHERE tenant_id=? AND id=?",
+            (int(tenant_id or 1), int(card_user_id)),
+        ).fetchone()
+        if row:
+            return str(row["mobile"] or "")
+    except Exception:  # noqa: BLE001
+        pass
+    return ""
+
+
 # ───────────────────────── تسجيل ذاتي ─────────────────────────
 
 def notify_registration(tenant_id, card_user_id, name):
@@ -74,6 +96,10 @@ def notify_registration(tenant_id, card_user_id, name):
           f"مشترك بطاقات جديد: {name}", severity="info",
           recommended_action_ar="افتح «مستخدمو البطاقات» لمراجعة الحساب الجديد.",
           link="/admin/radius/card-users")
+    _tg(tenant_id, "store_registration",
+        {"name": name or _card_user_name(tenant_id, card_user_id),
+         "mobile": _card_user_mobile(tenant_id, card_user_id)},
+        dedup_key=f"store_registration:{int(card_user_id)}")
 
 
 # ───────────────────────── شات الدعم ─────────────────────────
@@ -84,6 +110,8 @@ def notify_chat(tenant_id, card_user_id, name=""):
           f"رسالة دعم جديدة من {nm}", severity="info",
           recommended_action_ar="افتح محادثات الدعم في لوحة «دعم وطلبات المتجر».",
           link=f"{_SUPPORT}?chat={int(card_user_id)}#chat")
+    _tg(tenant_id, "store_chat", {"name": nm},
+        dedup_key=f"store_chat:{int(card_user_id)}")
 
 
 def resolve_chat(tenant_id, card_user_id):
@@ -98,6 +126,10 @@ def notify_deposit(tenant_id, request_id, amount, currency, name=""):
           f"طلب شحن جديد: {amount} {currency}{who}", severity="warning",
           recommended_action_ar="راجع الوصل وأكّد/ارفض من «طلبات الشحن».",
           link=f"{_SUPPORT}?tab=deposits")
+    _tg(tenant_id, "store_deposit",
+        {"name": name or "—", "amount": amount, "currency": currency,
+         "request_id": request_id},
+        dedup_key=f"store_deposit:{int(request_id)}")
 
 
 def resolve_deposit(tenant_id, request_id):
@@ -112,6 +144,10 @@ def notify_withdrawal(tenant_id, request_id, amount, currency, name=""):
           f"طلب سحب جديد: {amount} {currency}{who}", severity="warning",
           recommended_action_ar="نفّذ التحويل ثم أكّد/ارفض من «طلبات السحب».",
           link=f"{_SUPPORT}?tab=withdrawals")
+    _tg(tenant_id, "store_withdrawal",
+        {"name": name or "—", "amount": amount, "currency": currency,
+         "request_id": request_id},
+        dedup_key=f"store_withdrawal:{int(request_id)}")
 
 
 def resolve_withdrawal(tenant_id, request_id):

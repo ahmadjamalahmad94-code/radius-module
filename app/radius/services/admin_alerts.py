@@ -48,6 +48,9 @@ GROUPS: list[tuple[str, str, str]] = [
     ("subscribers", "المشتركون", "users"),
     ("network", "الشبكة والمايكروتيك", "network-wired"),
     ("finance", "المال والتحصيل", "money-bill-transfer"),
+    ("store", "المتجر والموزّعون", "store"),
+    ("security", "الأمان", "shield-halved"),
+    ("system", "النظام", "server"),
 ]
 
 ALERTS: list[AlertSpec] = [
@@ -171,6 +174,156 @@ ALERTS: list[AlertSpec] = [
         {"username": "ahmad99", "amount": "20.0", "currency": "₪", "actor": "المحصّل"},
         default_enabled=False,
     ),
+    # ── الشبكة (إضافات smart_alerts) ───────────────────────────────────
+    AlertSpec(
+        "router_offline", "network", "راوتر غير متصل",
+        "يُرسل عند توقّف راوتر عن دفع بياناته (smart_alerts.sweep_offline، "
+        "auto.router.offline). ⚑ يُرسل حاليًا عبر مسار smart_alerts المستقل.",
+        "🔌 <b>راوتر غير متصل</b>\n"
+        "الراوتر: {router}\n"
+        "آخر اتصال: منذ {minutes} دقيقة",
+        {"router": "MT-Main", "minutes": "12"},
+    ),
+    AlertSpec(
+        "router_high_traffic", "network", "حركة مرور مرتفعة على راوتر",
+        "يُرسل عند تجاوز ذروة السرعة الحدّ (smart_alerts، auto.router.high_traffic).",
+        "📈 <b>حركة مرور مرتفعة</b>\n"
+        "الراوتر: {router}\n"
+        "الذروة: {peak_mbps} م.بت/ث على {interface}",
+        {"router": "MT-Main", "peak_mbps": "920", "interface": "ether1"},
+        default_enabled=False,
+    ),
+    AlertSpec(
+        "router_high_usage", "network", "استهلاك مرتفع على راوتر",
+        "يُرسل عند تجاوز الاستهلاك في النافذة الحدّ (smart_alerts، auto.router.high_usage).",
+        "📊 <b>استهلاك مرتفع</b>\n"
+        "الراوتر: {router}\n"
+        "الاستهلاك: {usage_gb} ج.بايت خلال {window}",
+        {"router": "MT-Main", "usage_gb": "350", "window": "اليوم"},
+        default_enabled=False,
+    ),
+    # ── المتجر والموزّعون ──────────────────────────────────────────────
+    AlertSpec(
+        "store_registration", "store", "تسجيل عميل متجر جديد",
+        "يُرسل عند تسجيل مستخدم بطاقات ذاتيًّا (store_alerts.notify_registration).",
+        "🛒 <b>تسجيل متجر جديد</b>\n"
+        "العميل: {name}\n"
+        "الجوال: {mobile}",
+        {"name": "سالم", "mobile": "0599000111"},
+    ),
+    AlertSpec(
+        "store_deposit", "store", "طلب إيداع في المتجر",
+        "يُرسل عند طلب إيداع رصيد (store_alerts.notify_deposit) — بانتظار التأكيد.",
+        "💵 <b>طلب إيداع</b>\n"
+        "العميل: {name}\n"
+        "المبلغ: {amount} {currency}\n"
+        "رقم الطلب: <code>{request_id}</code>",
+        {"name": "سالم", "amount": "50.0", "currency": "₪", "request_id": "1042"},
+    ),
+    AlertSpec(
+        "store_withdrawal", "store", "طلب سحب من المتجر",
+        "يُرسل عند طلب سحب رصيد (store_alerts.notify_withdrawal) — بانتظار التأكيد.",
+        "🏧 <b>طلب سحب</b>\n"
+        "العميل: {name}\n"
+        "المبلغ: {amount} {currency}\n"
+        "رقم الطلب: <code>{request_id}</code>",
+        {"name": "سالم", "amount": "30.0", "currency": "₪", "request_id": "1043"},
+    ),
+    AlertSpec(
+        "store_chat", "store", "رسالة دعم في المتجر",
+        "يُرسل عند رسالة دعم جديدة من عميل المتجر (store_alerts.notify_chat).",
+        "💬 <b>رسالة دعم (متجر)</b>\n"
+        "العميل: {name}",
+        {"name": "سالم"},
+        default_enabled=False,
+    ),
+    # ── المال/العمليات (إضافات) ────────────────────────────────────────
+    AlertSpec(
+        "payment_pending_review", "finance", "دفعة بانتظار المراجعة",
+        "يُرسل عند تحويل يدوي/دفعة تنتظر موافقة المدير (payment_review_queue). "
+        "⚑ موقع المُطلِق متابعة.",
+        "🧾 <b>دفعة بانتظار المراجعة</b>\n"
+        "المشترك: <code>{username}</code>\n"
+        "المبلغ: {amount} {currency}\n"
+        "الطريقة: {method}",
+        {"username": "ahmad99", "amount": "20.0", "currency": "₪", "method": "تحويل بنكي"},
+    ),
+    AlertSpec(
+        "service_request_new", "finance", "طلب خدمة جديد",
+        "يُرسل عند طلب مشترك خدمة مدفوعة (service_requests).",
+        "🆕 <b>طلب خدمة</b>\n"
+        "المشترك: <code>{username}</code>\n"
+        "الخدمة: {service}\n"
+        "الحالة: {status}",
+        {"username": "ahmad99", "service": "IP ثابت", "status": "بانتظار الموافقة"},
+    ),
+    AlertSpec(
+        "service_request_approved", "finance", "اعتماد طلب خدمة",
+        "يُرسل عند الموافقة على طلب خدمة مدفوعة (service_requests).",
+        "✅ <b>اعتماد طلب خدمة</b>\n"
+        "المشترك: <code>{username}</code>\n"
+        "الخدمة: {service}\n"
+        "بواسطة: {actor}",
+        {"username": "ahmad99", "service": "IP ثابت", "actor": "المدير"},
+    ),
+    AlertSpec(
+        "card_batch_low", "finance", "حزمة بطاقات شارفت على النفاد",
+        "يُرسل عند قرب نفاد حزمة بطاقات (cards). ⚑ موقع المُطلِق متابعة.",
+        "🎟️ <b>حزمة بطاقات شارفت على النفاد</b>\n"
+        "الحزمة: {batch}\n"
+        "المتبقّي: {remaining} من {total}",
+        {"batch": "بطاقة 5 ساعات", "remaining": "8", "total": "200"},
+        default_enabled=False,
+    ),
+    # ── الأمان ─────────────────────────────────────────────────────────
+    AlertSpec(
+        "auto_block_triggered", "security", "حظر تلقائي (fail2ban)",
+        "يُرسل عند حظر IP/MAC تلقائيًّا بعد تكرار فشل الدخول "
+        "(access_control.register_failed_attempt).",
+        "🚫 <b>حظر تلقائي</b>\n"
+        "النوع: {block_type}\n"
+        "الهدف: <code>{target}</code>\n"
+        "السبب: {reason}",
+        {"block_type": "IP", "target": "3.3.3.3", "reason": "5 محاولات فاشلة خلال 300ث"},
+    ),
+    AlertSpec(
+        "access_suspended", "security", "تعليق وصول",
+        "يُرسل عند تطبيق «تعليق وصول» على نطاق (access_control / access_blocks).",
+        "⏸️ <b>تعليق وصول</b>\n"
+        "النطاق: {scope}\n"
+        "الهدف: <code>{target}</code>\n"
+        "المدّة: {duration}",
+        {"scope": "مشترك", "target": "ahmad99", "duration": "دائم"},
+        default_enabled=False,
+    ),
+    # ── النظام (إضافات smart_alerts) ───────────────────────────────────
+    AlertSpec(
+        "backup_stale", "system", "نسخة احتياطية قديمة",
+        "يُرسل عند تقادم آخر نسخة احتياطية (smart_alerts، auto.backup.stale). "
+        "⚑ مسار smart_alerts المستقل.",
+        "🗄️ <b>نسخة احتياطية قديمة</b>\n"
+        "آخر نسخة: منذ {age}\n"
+        "الحدّ المسموح: {threshold}",
+        {"age": "8 أيام", "threshold": "3 أيام"},
+        default_enabled=False,
+    ),
+    AlertSpec(
+        "backup_failed", "system", "فشل نسخة احتياطية",
+        "يُرسل عند فشل عملية نسخ احتياطي. ⚑ موقع المُطلِق متابعة.",
+        "❌ <b>فشل نسخة احتياطية</b>\n"
+        "الوجهة: {target}\n"
+        "الخطأ: {error}",
+        {"target": "Google Drive", "error": "انتهت صلاحية المصادقة"},
+    ),
+    AlertSpec(
+        "audit_failure", "system", "فشل في سجلّ التدقيق",
+        "يُرسل عند رصد فشل/شذوذ في التدقيق (smart_alerts، auto.audit.failure). "
+        "⚑ مسار smart_alerts المستقل.",
+        "🛡️ <b>تنبيه تدقيق</b>\n"
+        "التفاصيل: {details}",
+        {"details": "تكرار عمليات حسّاسة فاشلة"},
+        default_enabled=False,
+    ),
 ]
 
 _BY_KEY = {a.key: a for a in ALERTS}
@@ -212,15 +365,82 @@ class _SafeDict(dict):
         return "—"
 
 
+def _instance_label() -> str:
+    """اسم النسخة/العميل (للوضوح متعدّد النسخ) — من إعدادات النظام. فارغ إن
+    لم يوجد مصدر معقول (أو الاسم الافتراضي العام)."""
+    try:
+        from ..core.system_config import system_config
+        name = str((system_config() or {}).get("system_name") or "").strip()
+        return name if name and name.lower() != "hoberadius" else ""
+    except Exception:  # noqa: BLE001
+        return ""
+
+
+def _now_local_str() -> str:
+    """الوقت المحلّي للمستأجر (متى وقع الحدث)."""
+    from datetime import datetime
+    try:
+        from ..core.system_config import to_local
+        return to_local(datetime.utcnow()).strftime("%Y-%m-%d %H:%M")
+    except Exception:  # noqa: BLE001
+        return datetime.utcnow().strftime("%Y-%m-%d %H:%M") + " UTC"
+
+
+def _footer() -> str:
+    """سطر تذييل خفيف يُلحَق بكل قالب: وقت الحدث + اسم النسخة إن وُجد.
+
+    سطر فارغ قبله (\\n\\n) ليفصله بوضوح عن الجسم، ومائل (<i>) للتخفيف."""
+    line = "🕐 " + _now_local_str()
+    inst = _instance_label()
+    if inst:
+        line += "  ·  🏷️ " + inst
+    return "\n\n<i>" + line + "</i>"
+
+
+def _format_body(body: str) -> str:
+    """Part A — تنسيق مقروء موحّد لكل القوالب (تلجرام HTML mode).
+
+    يحوّل ناتج format_map إلى شكل «متنفّس»:
+      • سطر فارغ بعد العنوان (السطر الأول) ليفصله عن الحقول.
+      • تغميق تسمية كل حقل: «التسمية: القيمة» → «<b>التسمية:</b> القيمة»
+        (الفصل على أوّل «: » فقط، فلا تتأثّر القيم التي تحوي «:» كالأوقات).
+      • الحقول التي تبدأ أصلًا بوسم HTML (مثل <code>/<b>) تُترك كما هي.
+
+    يعمل مركزيًّا فيبقى كل القوالب موحّدة دون تعديل كلٍّ منها، ويشمل أيّ قالب
+    يُضاف لاحقًا. القيم تبقى كما هي (بما فيها وسوم <code>)."""
+    lines = body.split("\n")
+    if not lines:
+        return body
+    title = lines[0].rstrip()
+    fields: list[str] = []
+    for raw in lines[1:]:
+        s = raw.strip()
+        if not s:
+            continue
+        if not s.startswith("<") and ": " in s:
+            label, _sep, value = s.partition(": ")
+            s = "<b>" + label + ":</b> " + value
+        fields.append(s)
+    if not fields:
+        return title
+    return title + "\n\n" + "\n".join(fields)
+
+
 def render(key: str, context: dict | None = None) -> str:
     spec = _BY_KEY.get(key)
     if not spec:
         return ""
     ctx = _SafeDict({k: ("" if v is None else v) for k, v in (context or {}).items()})
     try:
-        return spec.template.format_map(ctx)
+        body = spec.template.format_map(ctx)
     except Exception:  # noqa: BLE001 — قالب لا يكسر الإرسال أبدًا
-        return spec.template
+        body = spec.template
+    # Part A: تنسيق مقروء موحّد (سطر فارغ بعد العنوان + تغميق التسميات) ثمّ
+    # تذييل الوقت المحلّي + اسم النسخة — كلّه مركزيّ على كل القوالب.
+    try:
+        return _format_body(body) + _footer()
+    except Exception:  # noqa: BLE001 — التنسيق لا يكسر الإرسال أبدًا
+        return body
 
 
 def preview(key: str) -> str:

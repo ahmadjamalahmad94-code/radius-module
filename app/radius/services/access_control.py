@@ -31,6 +31,16 @@ from ..db.repos import access_blocks_repo as repo
 
 _LOG = logging.getLogger(__name__)
 
+
+def _tg(tenant_id, key: str, ctx: dict, dedup_key: str = "") -> None:
+    """تنبيه إدارة عبر تلجرام (catalogue) — محصّن، لا يكسر منطق الإنفاذ."""
+    try:
+        from .admin_alerts import dispatch
+        dispatch(int(tenant_id or 1), key, ctx, dedup_key=dedup_key)
+    except Exception:  # noqa: BLE001
+        pass
+
+
 # ════════════════════════════════════════════════════════════════════════
 # الطبقتان: «تعليق الوصول» (suspension) و«حظر» (block)
 # ════════════════════════════════════════════════════════════════════════
@@ -329,6 +339,10 @@ def register_failed_attempt(tenant_id: int, *, ip: str = "", mac: str = "",
                 layer=LAYER_BLOCK)
             _LOG.warning("access_control: auto-blocked %s=%s after %d failures",
                          block_type, value, count)
+            _tg(tenant_id, "auto_block_triggered",
+                {"block_type": block_type.upper(), "target": value,
+                 "reason": f"{count} محاولة فاشلة خلال {window_sec}ث"},
+                dedup_key=f"auto_block:{block_type}:{value}")
         return created
     except Exception:  # noqa: BLE001
         _LOG.warning("access_control: register_failed_attempt failed", exc_info=True)
@@ -403,11 +417,22 @@ def create_block_from_input(
     else:
         window_start = window_end = expires_at = ""  # permanent: لا حقول مدّة
 
-    return repo.create_block(
+    block_id = repo.create_block(
         tenant_id=tenant_id, block_type=block_type, target=target,
         reason=(reason or "").strip()[:300], duration_mode=duration_mode,
         window_start=window_start, window_end=window_end, expires_at=expires_at,
         source="manual", created_by=created_by, layer=layer_of(block_type))
+
+    # تنبيه إدارة فقط لطبقة «تعليق الوصول» (النطاقات)؛ حظر IP/MAC اليدوي
+    # ليس «تعليقًا» ولا يولّد تنبيه auto_block (ذاك للتلقائي فقط).
+    if layer_of(block_type) == LAYER_SUSPENSION:
+        _duration = {
+            "permanent": "دائم", "until": "حتى تاريخ", "daily_window": "نافذة يومية",
+        }.get(duration_mode, duration_mode)
+        _tg(tenant_id, "access_suspended",
+            {"scope": block_type, "target": target or "—", "duration": _duration},
+            dedup_key=f"access_suspended:{block_id}")
+    return block_id
 
 
 __all__ = [

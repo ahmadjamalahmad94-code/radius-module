@@ -287,6 +287,18 @@ class CustomerPortalService:
                 "message_ar": "تم تسجيل الطلب بانتظار مراجعة الإدارة.",
             },
         )
+        # تنبيه إدارة (تلجرام) — محصّن، لا يكسر الطلب.
+        try:
+            from .admin_alerts import dispatch
+            _svc = {"support": "دعم/شكوى", "renewal": "تجديد اشتراك"}.get(
+                request_type, "طلب خدمة")
+            _sub = self.get_subscriber(subscriber_id)
+            dispatch(self.tenant_id, "service_request_new", {
+                "username": _sub.get("username") or subscriber_id,
+                "service": _svc, "status": "بانتظار الموافقة",
+            }, dedup_key=f"svc_req:{request_id}")
+        except Exception:  # noqa: BLE001
+            pass
         return self.get_request(request_id)
 
     def purchase_card_package(self, *, card_user_id: int, package_id: int) -> dict[str, Any]:
