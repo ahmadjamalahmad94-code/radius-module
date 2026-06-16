@@ -82,3 +82,28 @@ change).
 
 Tests: `tests/test_api_sessions_speed.py` (7). (`test_online_list_separation`'s
 4 failures are the pre-existing 403/RBAC ones, unrelated.)
+
+---
+
+## Group 3 — Site-Exit
+Mirrors the site-exit web page (`routes/site_exit.py`,
+`/admin/radius/site-exit/<nas_id>`). File: `app/api/v1/site_exit.py`. Reuses
+`site_exit_policies_repo` / `_deployments_repo` / `_targets_repo` /
+`vps_exit_nodes_repo` + `site_exit_script_planner` / `_renderer` / `_presets`.
+
+| Method | Path | Mirrors | Notes |
+|---|---|---|---|
+| GET | `/api/v1/site-exit/routers/{nas_id}` | `site_exit_page` / `_render_page` | Page state. `?policy_id=` selects a policy. → `{nas, policies, policy, deployment, targets, group_counts, vps_nodes, presets, group_meta, apply_disabled_reason}`. 404 if router missing. |
+| POST | `/api/v1/site-exit/routers/{nas_id}/policies` | `site_exit_policy_create` | Body `{name*, exit_node_id*, fail_mode?, include_subdomains?, include_router_output?}`. → `201 {policy}`. 422 bad name/node, 409 duplicate. |
+| GET | `/api/v1/site-exit/routers/{nas_id}/policies/{policy_id}/plan` | `site_exit_preview` | Read-only plan: `{can_apply, forward_script, rollback_script, summary, total_commands, warnings, blocking_errors, targets_skipped}`. `?wan_interface_list=`. No wire. |
+
+`presets` returns metadata only (`key, label_ar, description_ar, target_count`)
+— the large raw preset body is omitted.
+
+**Follow-up (deferred, explicit):** live **apply** (forward/rollback crossing
+the wire) + **targets-save** + **seed-import**. Apply needs the 5-confirmation
+safety gate (`site_exit_safety.evaluate`) and VPS/NAS acceptance, and the web
+apply button is itself UI-gated today; the plan endpoint already exposes the
+rollback script so the app can display it. These land as a later sub-task.
+
+Tests: `tests/test_api_site_exit.py` (7).
