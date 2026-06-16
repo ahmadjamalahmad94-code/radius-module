@@ -13,7 +13,7 @@ def register_v1(parent: Blueprint) -> None:
 
     from . import (
         accounting, accounts, admins, audit, backups, bandwidth_profiles, bandwidth_schedules, business_os,
-        contracts, events,
+        contracts, events, device_health,
         card_checker, card_users, cards, communications, customer_portals, dashboard, devices, distributors, health, internal_auth,
         hotspot_cards, invoices, ledger, lifecycle, loans, mikrotik, mikrotik_control, nas, network_devices, network_policy,
         operational_reports, network_telegram, reports_login_states,
@@ -75,6 +75,7 @@ def register_v1(parent: Blueprint) -> None:
     events.register(v1)
     network_telegram.register(v1)
     whatsapp_bot.register(v1)
+    device_health.register(v1)
     system.register(v1)
     settings.register(v1)
     tokens.register(v1)

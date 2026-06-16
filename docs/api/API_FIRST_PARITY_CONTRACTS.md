@@ -201,3 +201,44 @@ Each kind pins the **same actor + source-lock** as its web route (e.g.
 `?source=` query can't override a locked kind.
 
 Tests: `tests/test_api_reports_login_states.py` (6).
+
+---
+
+## Group 7 — MikroTik web-only pages → JSON (sub-series)
+
+### 7a — Device Health ✅
+Mirrors `routes/device_health.py` (`/admin/radius/device-health`). File:
+`app/api/v1/device_health.py`. Reuses `device_health` service + repo.
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/api/v1/device-health` | `{summary, devices, routers}` (overview). Filters `router_id, status, device_type`. |
+| GET | `/api/v1/device-health/devices` | `{devices, summary}`. |
+| POST | `/api/v1/device-health/devices` | Create. → `201 {device, warnings, network}`. 422 invalid. |
+| PATCH | `/api/v1/device-health/devices/{id}` | Update. → `{device, warnings}`. |
+| DELETE | `/api/v1/device-health/devices/{id}` | → `{id, deleted}`. |
+| POST | `/api/v1/device-health/devices/{id}/enable`\|`/disable` | Monitoring toggle. |
+| GET | `/api/v1/device-health/devices/{id}/events` | Status-change history. |
+| GET | `/api/v1/device-health/devices/{id}/alerts` | Alert decisions. |
+| POST | `/api/v1/device-health/devices/{id}/test-ping` | Live reachability probe. |
+| GET | `/api/v1/device-health/router-interfaces?router_id=` | Router interface list. |
+| GET\|POST | `/api/v1/device-health/live-apply` | Panel live-apply toggle (get/set). |
+
+Deferred (group-7 follow-up): bulk `poll` (+SSE stream) and per-device `apply`
+(push to router, gated by `HOBERADIUS_DEVICE_HEALTH_LIVE_APPLY`).
+
+Tests: `tests/test_api_device_health.py` (8).
+
+### 7b–7i — REMAINING (not yet built)
+Each is a web-only MikroTik page to expose as `/api/v1` JSON, reusing its
+existing service (one module + commit each):
+- **topology** — `routes/mt_topology.py` (graph/nodes/links state).
+- **login-designer** — `routes/mt_login_designer.py` (hotspot login template CRUD/preview).
+- **programming** — `routes/mt_programming.py` (object inventory + Q4 cleanup; live ops gated).
+- **audit-timeline** — `routes/mt_audit_timeline.py` (per-router change timeline, read-only).
+- **recovery-plan / problems** — `routes/mt_recovery_plan.py` + `routes/mt_problems.py`.
+- **permission-matrix** — `routes/mt_permission_matrix.py` (read; saves are super-only).
+- **metrics / push script-generators** — `routes/mt_*` script generators (read-only generators).
+- device-health `poll`/`apply` (from 7a) — live-wire, gated.
+
+See the RESUME NOTE in the session for exact next steps.
