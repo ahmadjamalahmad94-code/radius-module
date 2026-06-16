@@ -107,3 +107,24 @@ apply button is itself UI-gated today; the plan endpoint already exposes the
 rollback script so the app can display it. These land as a later sub-task.
 
 Tests: `tests/test_api_site_exit.py` (7).
+
+---
+
+## Group 4 — Events / Risk / Security / Investigations
+Mirrors `routes/events_risk.py` (`/admin/radius/events*`). File:
+`app/api/v1/events.py`. Reuses `EventsRiskCenterService`.
+
+| Method | Path | Mirrors | Notes |
+|---|---|---|---|
+| GET | `/api/v1/events` | `events_center` | Filters: `category, severity, actor_type, actor_id, target_type, target_id, correlation_id, from, to`. → `{events, count, summary}`. |
+| GET | `/api/v1/events/{event_id}` | `events_detail` | → `{event, timeline}`. 404 if missing. |
+| GET | `/api/v1/events/risk` | `events_risk` GET | → `{flags, summary}`. |
+| POST | `/api/v1/events/risk/run` | `events_risk` POST | Runs risk rules. → `{result, flags}`. |
+| GET | `/api/v1/events/security` | `events_security` | → `{events (category=security), flags (open)}`. |
+| GET | `/api/v1/events/investigations` | `events_investigations` GET | `?status=`. → `{investigations}`. |
+| POST | `/api/v1/events/investigations` | `events_investigations` POST | Body `{title*, severity?, entity_type?, entity_id?, summary?}`. → `201 {investigation}`. 422 missing title. |
+
+(The `/events/{id}` int route is registered after the literal sub-paths so
+`risk`/`security`/`investigations` are never shadowed.)
+
+Tests: `tests/test_api_events.py` (8).
