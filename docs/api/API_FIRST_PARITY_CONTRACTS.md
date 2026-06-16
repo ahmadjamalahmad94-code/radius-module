@@ -163,3 +163,22 @@ existing `/whatsapp` endpoints are the notification provider settings).
 | PUT/PATCH | `/api/v1/whatsapp/bot` | bot settings POST | Save. Absent keys preserved. `commands` = rules `[{keyword, reply_template, enabled}]` (empty entries dropped by `save_bot_config`). → `{config, webhook_url}`. |
 
 Tests: `tests/test_api_whatsapp_bot.py` (4).
+
+---
+
+## Group 9 — Bandwidth schedules: `sr_days` + copy-from
+Extends the existing `POST /api/v1/bandwidth-schedules` (no new routes) to
+match the web speed-rules form (`_speed_rules_panel.html` /
+`_payload_from_saved_schedule`). File: `app/api/v1/bandwidth_schedules.py`.
+
+- **`sr_days`** — the web's day-checkbox field. Now accepted as an alias for
+  `days_csv` (list `["sat","sun"]` or CSV `"sat,sun"`). Explicit `days_csv`
+  still wins. (`days_csv` already round-tripped via the service.)
+- **`source_schedule_id`** (copy-from) — copies speed/CIR/time/days/restore
+  from a saved schedule into the new one (mirrors `_payload_from_saved_schedule`,
+  reuses `operations.get_bandwidth_schedule`); explicit non-empty body fields
+  override, `name` defaults to «نسخة من …», `metadata.copied_from_schedule_id`
+  is recorded. Missing source → ignored (same as web). List responses already
+  include `days_csv`.
+
+Tests: `tests/test_api_bandwidth_schedules_parity.py` (7).
