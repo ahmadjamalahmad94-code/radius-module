@@ -182,3 +182,22 @@ match the web speed-rules form (`_speed_rules_panel.html` /
   include `days_csv`.
 
 Tests: `tests/test_api_bandwidth_schedules_parity.py` (7).
+
+---
+
+## Group 8 — Reports: login-states detail
+Mirrors `routes/reports.py` `rep_login_states*` (`_render_login_states_detail`
++ `rep_login_states` overview). File: `app/api/v1/reports_login_states.py`.
+Reuses `login_events.fetch_login_events` + `login_states_overview`.
+
+| Method | Path | Mirrors | Notes |
+|---|---|---|---|
+| GET | `/api/v1/reports/login-states` | `rep_login_states` | → `{overview, kinds}`. |
+| GET | `/api/v1/reports/login-states/{kind}` | `rep_login_states_{kind}` | `kind ∈ subscribers, cards, sub_portal, card_store, admin`. Filters `result, source, q, date_from, date_to`. → `{kind, actor, source_locked, rows, stats, shown, matched}`. 404 unknown kind. |
+
+Each kind pins the **same actor + source-lock** as its web route (e.g.
+`subscribers`/`cards` → `source=network`, `sub_portal`/`card_store` →
+`source=portal`, `admin` free) so RADIUS and portal events never mix; the
+`?source=` query can't override a locked kind.
+
+Tests: `tests/test_api_reports_login_states.py` (6).
