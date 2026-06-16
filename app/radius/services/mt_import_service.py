@@ -146,6 +146,14 @@ def _s(rec: Mapping[str, Any], *keys: str) -> str:
     return ""
 
 
+def _is_disabled(rec: Mapping[str, Any]) -> bool:
+    """علم التعطيل — من `_disabled` المُطبَّع (بعد الجلب) أو `disabled` الخام
+    (نصّ RouterOS «true»/«false») كي يعمل البناء على السجلّ الخام أو المُطبَّع."""
+    if "_disabled" in rec:
+        return bool(rec.get("_disabled"))
+    return str(rec.get("disabled") or "").strip().lower() in ("true", "yes", "1")
+
+
 def build_candidate(record: Mapping[str, Any], import_type: str) -> Candidate:
     """يطبّق خرائط الحقول على سجلّ راوتر خام → Candidate (بلا ربط خطّة بعد)."""
     itype = _norm_import_type(import_type)
@@ -155,7 +163,7 @@ def build_candidate(record: Mapping[str, Any], import_type: str) -> Candidate:
         profile=_s(record, "profile"),
         service_type=_SERVICE_TYPE[itype],
         comment=_s(record, "comment"),
-        disabled=bool(record.get("_disabled")),
+        disabled=_is_disabled(record),
         raw_id=_s(record, "_id", ".id", "id"),
     )
     if itype == IMPORT_HOTSPOT:
