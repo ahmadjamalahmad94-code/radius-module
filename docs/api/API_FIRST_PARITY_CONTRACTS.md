@@ -147,3 +147,19 @@ does not echo secrets). `ready` mirrors the web's "alerts will work" condition
 (`enabled && bot_token && chat_id`).
 
 Tests: `tests/test_api_network_telegram.py` (6).
+
+---
+
+## Group 6 — WhatsApp Auto-Reply Bot
+Mirrors `routes/communications.py:communications_bot_settings`
+(`/admin/radius/communications/bot`). File: `app/api/v1/whatsapp_bot.py`.
+Reuses `comms_bot.load_bot_config` / `save_bot_config` (storage
+`tenant_settings comms.bot.*`, no migration). Mounted at `/whatsapp/bot` (the
+existing `/whatsapp` endpoints are the notification provider settings).
+
+| Method | Path | Mirrors | Notes |
+|---|---|---|---|
+| GET | `/api/v1/whatsapp/bot` | bot settings GET | → `{config:{enabled, greeting, fallback, commands[], active_commands_count}, webhook_url, channel_ready}`. |
+| PUT/PATCH | `/api/v1/whatsapp/bot` | bot settings POST | Save. Absent keys preserved. `commands` = rules `[{keyword, reply_template, enabled}]` (empty entries dropped by `save_bot_config`). → `{config, webhook_url}`. |
+
+Tests: `tests/test_api_whatsapp_bot.py` (4).

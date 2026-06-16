@@ -19,7 +19,7 @@ def register_v1(parent: Blueprint) -> None:
         operational_reports, network_telegram,
         payments, pools, print_templates, profiles, recycle_bin, reports, router_alerts, router_metrics, service_requests, services, sessions,
         settings, share_groups, site_exit, store, subscriber_groups, system, tenants, tickets, tokens, tools, vouchers, webhooks, whatsapp,
-        setup_wizard, subscriber_portal,
+        setup_wizard, subscriber_portal, whatsapp_bot,
     )
     health.register(v1)
     accounts.register(v1)
@@ -73,6 +73,7 @@ def register_v1(parent: Blueprint) -> None:
     site_exit.register(v1)
     events.register(v1)
     network_telegram.register(v1)
+    whatsapp_bot.register(v1)
     system.register(v1)
     settings.register(v1)
     tokens.register(v1)
