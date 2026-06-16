@@ -1,0 +1,206 @@
+{# «إشعارات التلجرام» — جرد تنبيهات الإدارة + إعداد البوت (feat/telegram-admin-alerts).
+   تصميم موحّد، toast داخلي (لا alert/confirm أصلي). التوكن مُقنّع. #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}إشعارات التلجرام{% endblock %}
+{% block page_icon %}<i class="fa-brands fa-telegram"></i>{% endblock %}
+{% block page_title %}إشعارات التلجرام{% endblock %}
+{% block page_sub %}<span class="sub">{{ catalogue|length }} تنبيه</span>{% endblock %}
+
+{% block content %}
+<input type="hidden" id="ac-csrf" value="{{ csrf_token() if csrf_token is defined else '' }}">
+
+{% set _on = catalogue|selectattr('enabled')|list|length %}
+{{ hub.megahero(
+  "إشعارات التلجرام",
+  subtitle="اربط بوت تلجرام، فعّل التنبيهات التي تريد استقبالها، جرّب كل واحدة بضغطة، وعايِن شكل الرسالة قبل أن تصل فعليًا.",
+  icon="bell",
+  kpis=[
+    {'label': 'حالة البوت', 'value': ('جاهز' if bot.ready else 'غير مضبوط'), 'icon': 'robot', 'variant': ('green' if bot.ready else 'amber')},
+    {'label': 'تنبيهات مفعّلة', 'value': _on, 'icon': 'bell', 'variant': 'brand'},
+    {'label': 'إجمالي الجرد', 'value': catalogue|length, 'icon': 'list', 'variant': 'slate'},
+  ]
+) }}
+
+{# ═══════════ إعداد البوت ═══════════ #}
+{% call hub.section("إعداد بوت التلجرام", icon="robot",
+                    meta=("مضبوط" if bot.ready else "غير مكتمل")) %}
+  <p class="card-intro">{{ _('الصق توكن البوت ومعرّف المحادثة/القناة، فعّل الإشعارات، ثم اضغط «اختبار الاتصال».') }}
+    {% if bot.has_token %}<br><span class="hub-text-mute">{{ _('التوكن الحالي محفوظ مشفّرًا') }}: <code>{{ bot.token_masked }}</code> — {{ _('اتركه فارغًا للإبقاء عليه.') }}</span>{% endif %}
+  </p>
+  <form method="post" action="{{ url_for('radius.admin_alerts_save_bot') }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+    <div class="hub-flex-row" style="gap:14px;flex-wrap:wrap">
+      <div class="field" style="flex:1;min-width:260px">
+        <label for="bot_token">{{ _('توكن البوت (Bot Token)') }}</label>
+        <input type="password" id="bot_token" name="bot_token" autocomplete="off"
+               placeholder="{{ '••••••••' if bot.has_token else '123456:ABC-DEF…' }}">
+      </div>
+      <div class="field">
+        <label for="chat_id">{{ _('معرّف المحادثة/القناة (Chat ID)') }}</label>
+        <input type="text" id="chat_id" name="chat_id" value="{{ bot.chat_id }}" placeholder="-1001234567890">
+      </div>
+      <div class="field">
+        <label for="thread_id">{{ _('معرّف الموضوع (اختياري)') }}</label>
+        <input type="text" id="thread_id" name="thread_id" value="{{ bot.thread_id }}" placeholder="—">
+      </div>
+    </div>
+    <div class="field" style="display:flex;align-items:center;gap:10px">
+      <input type="checkbox" id="enabled" name="enabled" value="1" {{ 'checked' if bot.enabled else '' }}>
+      <label for="enabled" style="margin:0">{{ _('تفعيل إرسال الإشعارات إلى تلجرام') }}</label>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      {{ hub.btn("حفظ بيانات البوت", variant="primary", icon="floppy-disk", type="submit") }}
+      <button type="button" class="hub-btn hub-btn--secondary" id="ac-test-conn">
+        <i class="fa-solid fa-paper-plane"></i> {{ _('اختبار الاتصال') }}
+      </button>
+    </div>
+  </form>
+{% endcall %}
+
+{# ═══════════ جرد التنبيهات ═══════════ #}
+{% for gkey, glabel, gicon in groups %}
+  {% set rows = catalogue|selectattr('group','equalto',gkey)|list %}
+  {% if rows %}
+  {% call hub.section(glabel, icon=gicon, meta=(rows|length|string)) %}
+    <div class="hub-table-wrap">
+      <table class="hub-table" data-testid="alerts-table">
+        <thead><tr>
+          <th>{{ _('التنبيه') }}</th>
+          <th style="width:90px">{{ _('مفعّل') }}</th>
+          <th style="width:110px">{{ _('اختبار') }}</th>
+          <th style="width:120px">{{ _('معاينة') }}</th>
+        </tr></thead>
+        <tbody>
+          {% for a in rows %}
+          <tr data-alert-row="{{ a.key }}">
+            <td>
+              <div style="font-weight:700">{{ a.label }}</div>
+              <div class="hub-text-mute" style="font-size:12px">{{ a.description }}</div>
+            </td>
+            <td>
+              <label class="ac-switch">
+                <input type="checkbox" class="ac-toggle" data-key="{{ a.key }}" {{ 'checked' if a.enabled else '' }}>
+                <span></span>
+              </label>
+            </td>
+            <td>
+              <button type="button" class="hub-btn hub-btn--secondary hub-btn--sm ac-test" data-key="{{ a.key }}">
+                <i class="fa-solid fa-paper-plane"></i> {{ _('اختبار') }}
+              </button>
+            </td>
+            <td>
+              <button type="button" class="hub-btn hub-btn--ghost hub-btn--sm ac-preview" data-key="{{ a.key }}">
+                <i class="fa-solid fa-eye"></i> {{ _('عرض') }}
+              </button>
+            </td>
+          </tr>
+          <tr class="ac-preview-row" id="ac-prev-{{ a.key }}" style="display:none">
+            <td colspan="4">
+              <pre data-testid="preview-{{ a.key }}" style="white-space:pre-wrap;direction:rtl;text-align:right;
+                   background:#0f172a;color:#e2e8f0;padding:12px;border-radius:10px;margin:0;
+                   font-family:'Cairo',sans-serif;font-size:13px">{{ a.preview|safe }}</pre>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endcall %}
+  {% endif %}
+{% endfor %}
+
+{# toast داخلي #}
+<div id="ac-toast" role="alert" aria-live="assertive"
+     style="position:fixed;inset-block-end:22px;inset-inline-start:22px;z-index:9999;display:none;
+            max-width:380px;padding:13px 16px;border-radius:12px;font-weight:600;
+            box-shadow:0 10px 30px rgba(0,0,0,.18)"></div>
+
+<style>
+  .ac-switch{position:relative;display:inline-block;width:42px;height:24px}
+  .ac-switch input{opacity:0;width:0;height:0}
+  .ac-switch span{position:absolute;cursor:pointer;inset:0;background:#cbd5e1;border-radius:24px;transition:.2s}
+  .ac-switch span::before{content:"";position:absolute;height:18px;width:18px;inset-inline-start:3px;top:3px;
+    background:#fff;border-radius:50%;transition:.2s}
+  .ac-switch input:checked + span{background:#16a34a}
+  .ac-switch input:checked + span::before{transform:translateX(18px)}
+  html[dir="rtl"] .ac-switch input:checked + span::before{transform:translateX(-18px)}
+</style>
+
+<script>
+(() => {
+  const csrf = (document.getElementById('ac-csrf') || {}).value || '';
+  const toastEl = document.getElementById('ac-toast');
+  let toastT = null;
+  function toast(msg, ok) {
+    if (!toastEl) return;
+    toastEl.textContent = msg;
+    toastEl.style.background = ok ? '#dcfce7' : '#fee2e2';
+    toastEl.style.color = ok ? '#14532d' : '#7f1d1d';
+    toastEl.style.border = '1px solid ' + (ok ? '#86efac' : '#fca5a5');
+    toastEl.style.display = 'block';
+    clearTimeout(toastT);
+    toastT = setTimeout(() => { toastEl.style.display = 'none'; }, 4200);
+  }
+  async function post(url, data) {
+    const body = new URLSearchParams(data || {});
+    const r = await fetch(url, {
+      method: 'POST',
+      headers: { 'X-CSRFToken': csrf, 'X-Requested-With': 'XMLHttpRequest',
+                 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: body.toString(),
+    });
+    return r.json();
+  }
+
+  // اختبار الاتصال
+  const tc = document.getElementById('ac-test-conn');
+  if (tc) tc.addEventListener('click', async () => {
+    tc.disabled = true;
+    try {
+      const res = await post('{{ url_for("radius.admin_alerts_test_connection") }}', {});
+      toast(res.ok ? '✅ وصلت رسالة الاختبار — البوت يعمل.' : ('فشل: ' + (res.error || '—')), !!res.ok);
+    } catch (e) { toast('تعذّر تنفيذ الطلب.', false); }
+    tc.disabled = false;
+  });
+
+  // مفاتيح التفعيل
+  document.querySelectorAll('.ac-toggle').forEach(cb => {
+    cb.addEventListener('change', async () => {
+      const key = cb.dataset.key;
+      try {
+        const res = await post('{{ url_for("radius.admin_alerts_toggle") }}',
+                               { key, enabled: cb.checked ? '1' : '0' });
+        if (!res.ok) { cb.checked = !cb.checked; toast(res.error || 'تعذّر الحفظ.', false); }
+        else toast(cb.checked ? 'تم تفعيل التنبيه.' : 'تم تعطيل التنبيه.', true);
+      } catch (e) { cb.checked = !cb.checked; toast('تعذّر الحفظ.', false); }
+    });
+  });
+
+  // أزرار الاختبار لكل تنبيه
+  document.querySelectorAll('.ac-test').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const key = btn.dataset.key; const old = btn.innerHTML;
+      btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+      try {
+        const res = await post('{{ url_for("radius.admin_alerts_test") }}', { key });
+        toast(res.ok ? '✅ أُرسل نموذج التنبيه إلى تلجرام.' : ('لم يُرسَل: ' + (res.error || '—')), !!res.ok);
+        // أظهر المعاينة بعد الاختبار
+        const prev = document.getElementById('ac-prev-' + key);
+        if (prev) prev.style.display = '';
+      } catch (e) { toast('تعذّر تنفيذ الطلب.', false); }
+      btn.disabled = false; btn.innerHTML = old;
+    });
+  });
+
+  // عرض/إخفاء المعاينة
+  document.querySelectorAll('.ac-preview').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const prev = document.getElementById('ac-prev-' + btn.dataset.key);
+      if (prev) prev.style.display = prev.style.display === 'none' ? '' : 'none';
+    });
+  });
+})();
+</script>
+{% endblock %}

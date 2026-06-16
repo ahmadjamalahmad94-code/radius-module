@@ -16,6 +16,27 @@ from typing import Optional
 from ..connection import db, transaction
 from ..helpers import now_iso
 
+# توكن البوت سرّ — يُخزَّن مشفّرًا (Fernet مشتق من FLASK_SECRET) ببادئة
+# ``enc:``. الصفوف القديمة (نص خام) تبقى مقروءة (توافق خلفي).
+_ENC_PREFIX = "enc:"
+
+
+def _encrypt_token(token: str) -> str:
+    token = (token or "").strip()
+    if not token:
+        return ""
+    from ...core.env_settings import _encrypt
+    ct = _encrypt(token)
+    return (_ENC_PREFIX + ct) if ct else token
+
+
+def _decrypt_token(stored: str) -> str:
+    stored = stored or ""
+    if not stored.startswith(_ENC_PREFIX):
+        return stored  # نص خام قديم (توافق خلفي)
+    from ...core.env_settings import _decrypt
+    return _decrypt(stored[len(_ENC_PREFIX):])
+
 
 def get(tenant_id: int) -> Optional[dict]:
     """Return the tenant's Telegram config, or None if the row
@@ -31,7 +52,7 @@ def get(tenant_id: int) -> Optional[dict]:
         return None
     return {
         "tenant_id":  int(r["tenant_id"]),
-        "bot_token":  r["bot_token"] or "",
+        "bot_token":  _decrypt_token(r["bot_token"] or ""),
         "chat_id":    r["chat_id"] or "",
         "enabled":    bool(r["enabled"]),
         "thread_id":  r["thread_id"] or "",
@@ -63,7 +84,7 @@ def upsert(
             "  updated_at = excluded.updated_at",
             (
                 int(tenant_id),
-                str(bot_token or "").strip(),
+                _encrypt_token(bot_token),
                 str(chat_id or "").strip(),
                 1 if enabled else 0,
                 str(thread_id or "").strip(),

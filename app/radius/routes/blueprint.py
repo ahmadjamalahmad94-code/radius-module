@@ -172,6 +172,8 @@ def _register_all(bp: Blueprint) -> None:
     register_remote_device_access_routes(bp)
     register_router_events_routes(bp)
     register_network_telegram_routes(bp)
+    from .admin_alerts import register_admin_alerts_routes
+    register_admin_alerts_routes(bp)
     register_sessions_routes(bp)
     register_plans_routes(bp)
     register_users_routes(bp)
