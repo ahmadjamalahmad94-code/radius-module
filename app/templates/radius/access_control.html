@@ -253,6 +253,203 @@
   {% endif %}
 {% endcall %}
 
+{# ════════════════════════════════════════════════════════════════════
+   «نمط السماح» (Allow-mode) — مكمّل عكسي لقائمة الحظر.
+   ثلاثة أنماط لكل عرض/باقة أو حزمة بطاقات: open / TOFU / manual.
+   تطبيق اختياري — بدون سياسة = السلوك الطبيعي.
+   ════════════════════════════════════════════════════════════════════ #}
+<a id="allow-mode"></a>
+{% call hub.section("نمط السماح", icon="check-double",
+                     meta="مكمّل عكسي لقائمة الحظر — اختياري لكل عرض/حزمة") %}
+  <p class="card-intro">
+    {{ _('عكس قائمة الحظر: «نمط السماح» يقصر الدخول على أجهزة معروفة بدل منع أجهزة محدّدة. ثلاثة أنماط: ') }}
+    <b>{{ _('Open') }}</b> — {{ _('بلا ربط أجهزة (للبطاقات العامة، يستخدم حدّ الجلسات من العرض).') }}
+    <b>{{ _('TOFU') }}</b> — {{ _('أوّل دخول ناجح يربط الجهاز تلقائيًّا، سقف N أجهزة (مضادّ مشاركة البطاقة).') }}
+    <b>{{ _('Manual') }}</b> — {{ _('قائمة سماح يدوية، الافتراضي رفض (مكتب/مبنى مغلق).') }}
+  </p>
+
+  <form method="post" action="{{ url_for('radius.access_control_allow_mode_upsert') }}" id="am-form">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+    <div class="hub-flex-row" style="gap:14px;flex-wrap:wrap">
+      <div class="field">
+        <label for="am-scope">{{ _('النطاق') }} <span style="color:var(--err)">*</span></label>
+        <select id="am-scope" name="scope_type" required data-am-scope>
+          <option value="plan">{{ _('عرض/باقة') }}</option>
+          <option value="card_batch">{{ _('حزمة بطاقات') }}</option>
+        </select>
+      </div>
+      <div class="field" style="flex:1;min-width:240px">
+        <label for="am-scope-id" id="am-scope-id-label">{{ _('العرض/الباقة') }} <span style="color:var(--err)">*</span></label>
+        <select id="am-scope-id" name="scope_id" required data-am-target>
+          <optgroup label="{{ _('العروض') }}" data-am-target-plans>
+            {% for p in am_plans %}
+              <option value="{{ p.id }}" data-scope="plan">{{ p.name or p.id }}</option>
+            {% endfor %}
+          </optgroup>
+          <optgroup label="{{ _('الحزم') }}" data-am-target-batches style="display:none">
+            {% for b in am_batches %}
+              <option value="{{ b.id }}" data-scope="card_batch">{{ b.name or b.id }}</option>
+            {% endfor %}
+          </optgroup>
+        </select>
+      </div>
+      <div class="field">
+        <label for="am-mode">{{ _('النمط') }} <span style="color:var(--err)">*</span></label>
+        <select id="am-mode" name="mode" required data-am-mode>
+          {% for v, l in am_mode_labels %}
+            <option value="{{ v }}">{{ l }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field" data-am-tofu-cap style="display:none">
+        <label for="am-max">{{ _('الحدّ الأقصى للأجهزة (TOFU)') }}</label>
+        <input type="number" id="am-max" name="max_devices" min="1" value="2">
+      </div>
+    </div>
+    <div class="field">
+      <label for="am-note">{{ _('ملاحظة (اختياري)') }}</label>
+      <input type="text" id="am-note" name="note" maxlength="200"
+             placeholder="{{ _('مثل: مكتب الإدارة، بطاقات الكاشير، ...') }}">
+    </div>
+    <div class="field" style="display:flex;align-items:center;gap:10px">
+      <input type="checkbox" id="am-active" name="active" value="1" checked>
+      <label for="am-active" style="margin:0">{{ _('السياسة فعّالة') }}</label>
+    </div>
+    {{ hub.btn("حفظ السياسة", variant="primary", icon="floppy-disk", type="submit") }}
+  </form>
+
+  {% if am_policies %}
+  <div class="hub-table-wrap" style="margin-top:16px">
+    <table class="hub-table" data-testid="am-policies-table">
+      <thead><tr>
+        <th>{{ _('النطاق') }}</th>
+        <th>{{ _('الهدف') }}</th>
+        <th>{{ _('النمط') }}</th>
+        <th>{{ _('سقف الأجهزة') }}</th>
+        <th>{{ _('عدد الأجهزة') }}</th>
+        <th>{{ _('الحالة') }}</th>
+        <th>{{ _('ملاحظة') }}</th>
+        <th>{{ _('إجراء') }}</th>
+      </tr></thead>
+      <tbody>
+        {% for p in am_policies %}
+        <tr data-policy-id="{{ p.id }}">
+          <td class="small">{{ 'حزمة بطاقات' if p.scope_type == 'card_batch' else 'عرض/باقة' }}</td>
+          <td class="small">{{ p.scope_name }}</td>
+          <td>
+            {% if p.mode == 'tofu' %}{{ hub.pill('TOFU', variant='brand') }}
+            {% elif p.mode == 'manual' %}{{ hub.pill('Manual', variant='amber') }}
+            {% else %}{{ hub.pill('Open', variant='gray') }}{% endif %}
+          </td>
+          <td class="small mono">{{ p.max_devices if p.mode == 'tofu' else '—' }}</td>
+          <td class="small mono">{{ p.devices|length }}</td>
+          <td>
+            {% if p.active %}{{ hub.pill('فعّال', variant='green') }}
+            {% else %}{{ hub.pill('معلَّق', variant='gray') }}{% endif %}
+          </td>
+          <td class="small">{{ p.note or '—' }}</td>
+          <td>
+            <form method="post"
+                  action="{{ url_for('radius.access_control_allow_mode_toggle_policy', policy_id=p.id) }}"
+                  style="display:inline;margin:0">
+              <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+              <button class="hub-btn hub-btn--secondary hub-btn--sm" type="submit">
+                <i class="fa-solid fa-{{ 'pause' if p.active else 'play' }}"></i>
+                {{ _('تعليق') if p.active else _('تفعيل') }}
+              </button>
+            </form>
+            <form method="post"
+                  action="{{ url_for('radius.access_control_allow_mode_delete_policy', policy_id=p.id) }}"
+                  style="display:inline;margin:0">
+              <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+              <button class="hub-btn hub-btn--danger hub-btn--sm" type="submit"
+                      data-confirm="حذف السياسة وكل أجهزتها؟">
+                <i class="fa-solid fa-trash"></i> {{ _('حذف') }}
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% if p.mode in ('manual', 'tofu') %}
+        <tr class="am-devices-row">
+          <td colspan="8" style="background:rgba(0,0,0,0.02)">
+            <details {% if p.devices %}open{% endif %}>
+              <summary>
+                <i class="fa-solid fa-mobile-screen"></i>
+                {{ _('الأجهزة') }} ({{ p.devices|length }})
+                {% if p.mode == 'tofu' %} — {{ _('TOFU: تُضاف تلقائيًّا عند أوّل دخول') }}{% endif %}
+              </summary>
+              <div style="padding:10px">
+                <form method="post" action="{{ url_for('radius.access_control_allow_mode_add_device') }}"
+                      style="display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin-bottom:12px">
+                  <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+                  <input type="hidden" name="policy_id" value="{{ p.id }}">
+                  <div class="field">
+                    <label>{{ _('اسم المستخدم (فارغ = مشترك)') }}</label>
+                    <input type="text" name="username" placeholder="{{ _('اختياري') }}">
+                  </div>
+                  <div class="field">
+                    <label>{{ _('MAC') }} <span style="color:var(--err)">*</span></label>
+                    <input type="text" name="mac" required placeholder="AA:BB:CC:DD:EE:FF" style="font-family:monospace">
+                  </div>
+                  <div class="field" style="flex:1;min-width:160px">
+                    <label>{{ _('وصف (اختياري)') }}</label>
+                    <input type="text" name="label" maxlength="120" placeholder="{{ _('مثل: جهاز كاشير #1') }}">
+                  </div>
+                  {{ hub.btn("إضافة جهاز", variant="secondary", icon="plus", type="submit", size="sm") }}
+                </form>
+                {% if p.devices %}
+                <table class="hub-table" style="width:auto">
+                  <thead><tr>
+                    <th>{{ _('المستخدم') }}</th><th>{{ _('MAC') }}</th>
+                    <th>{{ _('المصدر') }}</th><th>{{ _('الوصف') }}</th>
+                    <th>{{ _('آخر استخدام') }}</th><th></th>
+                  </tr></thead>
+                  <tbody>
+                    {% for d in p.devices %}
+                    <tr>
+                      <td class="mono small">{{ d.username or '— (مشترك)' }}</td>
+                      <td class="mono small">{{ d.mac }}</td>
+                      <td class="small">
+                        {% if d.source == 'auto' %}{{ hub.pill('تلقائي', variant='brand') }}
+                        {% else %}{{ hub.pill('يدوي', variant='gray') }}{% endif %}
+                      </td>
+                      <td class="small">{{ d.label or '—' }}</td>
+                      <td class="small mono">
+                        {% if d.last_seen_at %}{{ d.last_seen_at[:16] }} · {{ d.use_count }}✓
+                        {% else %}—{% endif %}
+                      </td>
+                      <td>
+                        <form method="post"
+                              action="{{ url_for('radius.access_control_allow_mode_delete_device', device_id=d.id) }}"
+                              style="display:inline;margin:0">
+                          <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+                          <button class="hub-btn hub-btn--danger hub-btn--sm" type="submit"
+                                  data-confirm="حذف هذا الجهاز من القائمة؟">
+                            <i class="fa-solid fa-trash"></i>
+                          </button>
+                        </form>
+                      </td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+                {% else %}
+                <p class="hub-text-mute small">{{ _('لا أجهزة بعد.') }}</p>
+                {% endif %}
+              </div>
+            </details>
+          </td>
+        </tr>
+        {% endif %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="hub-text-mute" style="margin-top:12px">{{ _('لا سياسات نمط سماح بعد. أضف واحدة من النموذج أعلاه.') }}</p>
+  {% endif %}
+{% endcall %}
+
 <script>
 (() => {
   // نموذج «تعليق الوصول»: حقل الهدف يختفي للنطاقات الشاملة + حقول المدّة.
@@ -290,6 +487,37 @@
   if (bScope && bLabel){
     const f = () => { bLabel.textContent = (bScope.value === 'mac') ? 'عنوان MAC' : 'عنوان IP'; };
     bScope.addEventListener('change', f); f();
+  }
+
+  // «نمط السماح»: تبديل قائمة الهدف بحسب النطاق + إظهار سقف TOFU.
+  const amScope = document.querySelector('[data-am-scope]');
+  const amTarget = document.querySelector('[data-am-target]');
+  const amPlans = document.querySelector('[data-am-target-plans]');
+  const amBatches = document.querySelector('[data-am-target-batches]');
+  const amScopeLabel = document.getElementById('am-scope-id-label');
+  if (amScope && amTarget){
+    const syncAmScope = () => {
+      const isPlan = amScope.value === 'plan';
+      if (amPlans)   amPlans.style.display   = isPlan ? '' : 'none';
+      if (amBatches) amBatches.style.display = isPlan ? 'none' : '';
+      if (amScopeLabel) amScopeLabel.textContent = isPlan ? 'العرض/الباقة' : 'حزمة البطاقات';
+      const wantedScope = isPlan ? 'plan' : 'card_batch';
+      for (const opt of amTarget.options){
+        if (opt.dataset.scope === wantedScope){
+          amTarget.value = opt.value;
+          break;
+        }
+      }
+    };
+    amScope.addEventListener('change', syncAmScope);
+    syncAmScope();
+  }
+  const amMode = document.querySelector('[data-am-mode]');
+  const amCap = document.querySelector('[data-am-tofu-cap]');
+  if (amMode && amCap){
+    const syncAmMode = () => { amCap.style.display = (amMode.value === 'tofu') ? '' : 'none'; };
+    amMode.addEventListener('change', syncAmMode);
+    syncAmMode();
   }
 })();
 </script>

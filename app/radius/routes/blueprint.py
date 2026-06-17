@@ -396,6 +396,12 @@ _PERM_GUARDED: dict[str, str] = {
     "access_control_save_settings": "settings.edit",
     "access_control_add_block": "settings.edit",
     "access_control_clear_block": "settings.edit",
+    # «نمط السماح» — كتابة محروسة بنفس مفتاح صلاحية القسم.
+    "access_control_allow_mode_upsert":         "settings.edit",
+    "access_control_allow_mode_delete_policy":  "settings.edit",
+    "access_control_allow_mode_toggle_policy":  "settings.edit",
+    "access_control_allow_mode_add_device":     "settings.edit",
+    "access_control_allow_mode_delete_device":  "settings.edit",
     # الأنفاق — طلب/مزامنة نفق عبر الجسر (كتابة) تتطلّب api.use
     "tunnels_request": "api.use",
     "tunnels_sync": "api.use",
