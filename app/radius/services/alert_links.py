@@ -113,6 +113,7 @@ ACTION_ALERTS = frozenset({
     "store_deposit",            # طلب إيداع → تبويب الإيداعات للتأكيد
     "store_withdrawal",         # طلب سحب → تبويب السحوبات للتنفيذ
     "auto_block_triggered",     # حظر تلقائي → صفحة التحكّم بالدخول للمراجعة
+    "mac_clone_detected",       # كشف استنساخ MAC → صفحة منع الاستنساخ للمراجعة
 })
 
 
@@ -204,6 +205,9 @@ def action_link(key: str, context: dict | None = None) -> str | None:
 
         if key == "auto_block_triggered":
             return _abs("radius.access_control_page")
+
+        if key == "mac_clone_detected":
+            return _abs("radius.anti_mac_clone_page")
     except Exception:  # noqa: BLE001 — التعميق لا يكسر الإرسال أبدًا
         _LOG.debug("action_link failed for %s", key, exc_info=True)
     return None

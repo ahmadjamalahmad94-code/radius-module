@@ -45,7 +45,9 @@ class AuthRequest:
     calling_station_id: str = ""       # MAC العميل
     called_station_id: str = ""        # MAC الـ NAS / SSID
     nas_ip: str = ""
+    nas_port: str = ""                 # NAS-Port
     nas_port_type: str = ""
+    user_agent: str = ""               # من البوابة عند توفّره (anti-mac-clone)
 
 
 @dataclass
@@ -72,6 +74,12 @@ _MSG = {
     "access_suspended":   "تسجيل الدخول معلّق مؤقتاً — راجع الإدارة",
     # «حظر» أمني (الطبقة B): IP/MAC.
     "access_blocked":     "الدخول محظور حاليًا — راجع الإدارة",
+    # «منع استنساخ MAC» (anti-mac-clone): جهاز مختلف بنفس MAC.
+    "mac_clone_detected": "تنبيه أمني: تم رصد محاولة دخول من جهاز مختلف بنفس عنوان MAC — الدخول مرفوض",
+    # نمط step-up: رفض أوّل لإجبار إعادة كتابة كلمة المرور كتأكيد على
+    # «هذا جهازي الجديد». المحاولة الثانية بنفس البصمة الحيّة ضمن النافذة
+    # تُعامَل كتأكيد قانوني → سماح + إعادة ربط.
+    "stepup_required":    "هذا الجهاز جديد — أعد كتابة كلمة المرور للتأكيد",
     "ok_welcome":        "أهلًا بك",
     "ok_expires_soon":   "اشتراكك ينتهي قريبًا — جدّد قبل الانقطاع",
 }
@@ -288,6 +296,48 @@ def _check_blocks(sub: Subscriber, plan: Optional[AccessPlan], req: AuthRequest,
     return None
 
 
+def _check_anti_mac_clone(req: AuthRequest, sub: Subscriber,
+                           plan: Optional[AccessPlan],
+                           source: str) -> Optional[AuthDecision]:
+    """«منع استنساخ MAC»: يُستدعى بعد فحوصات السلامة (password/status/expire/…)
+    وقبل إصدار Accept. يفوّض كل المنطق للخدمة المخصّصة (toggle + scope + بصمة
+    + قرار + binding/event/alert/CoA).
+
+    Verdict.action:
+      • allow / monitor / None → لا رفض (نمضي للقبول).
+      • deny                   → نُحوّله لـ AuthDecision Reject مع رسالة عربية.
+
+    محصّن بالكامل: أي خطأ يُسقط الفحص (سماح) كي لا نكسر مسار الـauth."""
+    try:
+        from .anti_mac_clone import check_after_auth
+        v = check_after_auth(
+            int(req.tenant_id),
+            username=sub.username, source=source,
+            plan_id=sub.plan_id,
+            group=getattr(sub, "group", "") or "",
+            calling_station_id=req.calling_station_id,
+            called_station_id=req.called_station_id,
+            nas_ip=req.nas_ip,
+            nas_port=req.nas_port,
+            nas_port_type=req.nas_port_type,
+            user_agent=req.user_agent,
+        )
+        if v is None or v.action != "deny":
+            return None
+        # تمييز سبب الرفض: stepup_required (نمط step-up أوّل محاولة) عن
+        # mac_clone_detected (نمط enforce). كلاهما رفض، لكن الرسالة مختلفة.
+        reason = v.reason if v.reason in (
+            "mac_clone_detected", "stepup_required") else "mac_clone_detected"
+        msg = v.message or _MSG.get(reason) or _MSG["mac_clone_detected"]
+        return AuthDecision(ok=False, reason=reason,
+                             message=msg,
+                             reply_attrs={"Reply-Message": msg})
+    except Exception:  # noqa: BLE001 — never break auth
+        _LOG.warning("policy_engine: anti-mac-clone check failed for %r",
+                      req.username, exc_info=True)
+        return None
+
+
 def _check_concurrent(sub: Subscriber, plan: Optional[AccessPlan]) -> Optional[AuthDecision]:
     limit = sub.override_concurrent or (plan.concurrent_sessions if plan else 0) or 0
     if limit <= 0: return None
@@ -406,6 +456,17 @@ def authorize(req: AuthRequest) -> AuthDecision:
             if bad.reason in _FAIL2BAN_REASONS:
                 _register_failed_attempt(req, now)
             return bad
+
+    # «منع استنساخ MAC» (anti-mac-clone) — يجري بعد كل فحوصات السلامة وقبل
+    # إصدار Accept. الفحص يفترض أن كلمة المرور صحّت (لا نُعاقب من فشل auth).
+    # محصّن: أي خطأ يُسقط الفحص ولا يكسر مسار الـauth (سماح آمن).
+    anti_clone = _check_anti_mac_clone(req, sub, plan, source)
+    if anti_clone is not None:
+        _LOG.warning("auth_decision user=%r source=%s rejected reason=%s "
+                      "(anti-mac-clone)",
+                      req.username, source, anti_clone.reason)
+        _log_attempt(req, accepted=False, reason=anti_clone.reason)
+        return anti_clone
 
     # ─ ✅ Accept ─
     reply = _build_accept_attrs(sub, plan)

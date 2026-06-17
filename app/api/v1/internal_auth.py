@@ -126,7 +126,11 @@ def internal_auth():
             calling_station_id=g("Calling-Station-Id"),
             called_station_id=g("Called-Station-Id"),
             nas_ip=g("NAS-IP-Address"),
+            nas_port=g("NAS-Port"),
             nas_port_type=g("NAS-Port-Type"),
+            # بوابة الكابتيف الخارجية قد تُمرّر User-Agent عبر هذا الحقل المخصّص
+            # (anti-mac-clone). FreeRADIUS لا يحمل UA عادةً.
+            user_agent=g("X-User-Agent") or g("User-Agent") or "",
         )
         # ـ WARNING level مؤقت للتشخيص ـ يحتوي username + النوع فقط، بلا secrets ـ
         _LOG.warning(

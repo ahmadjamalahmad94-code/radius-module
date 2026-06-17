@@ -1,0 +1,337 @@
+{# «منع استنساخ MAC» (feat/anti-mac-clone).
+   الهدف: إيقاف سرقة الجلسة عبر استنساخ MAC (نسخ العنوان من جهاز شرعي
+   للاتصال من جهاز ثانٍ) بدون تعطيل الـMAC-cookie. يتمّ بربط MAC ببصمة
+   جهاز عند أول دخول ناجح ثم إعادة التحقّق على كل auth.
+   صفحة قراءة + إعدادات + قائمة الارتباطات + سجلّ الأحداث.
+   التصميم: hub macros + flash-stack (لا alerts متصفّح أصلية). #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}منع استنساخ MAC{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-shield-virus"></i>{% endblock %}
+{% block page_title %}منع استنساخ MAC{% endblock %}
+{% block page_sub %}<span class="sub">يحمي تجربة الدخول السلس من سرقة الجلسة</span>{% endblock %}
+
+{% block content %}
+
+{{ hub.megahero(
+  "منع استنساخ MAC",
+  subtitle="عند تشغيل الميزة: نربط عنوان MAC ببصمة الجهاز عند أول دخول ناجح، ثم نُعيد التحقّق على كل auth. نفس الـMAC ببصمة مختلفة = استنساخ → رفض + تنبيه + ركل الجلسة الحيّة. الميزة OFF افتراضيًّا — إن أردتها لباقات/مجموعات محدّدة استخدم النطاق.",
+  icon="shield-virus",
+  kpis=[
+    {'label': 'ارتباطات نشطة', 'value': counts.active_bindings, 'icon': 'link',         'variant': 'brand'},
+    {'label': 'كشف استنساخ',   'value': counts.clone_detected,  'icon': 'user-secret',  'variant': 'red'},
+    {'label': 'تحقّق ناجح',    'value': counts.verify_ok,       'icon': 'circle-check', 'variant': 'green'},
+    {'label': 'ركل جلسات',     'value': counts.concurrent_kick, 'icon': 'ban',          'variant': 'amber'},
+  ]
+) }}
+
+{# ════════════════════════════════════════════════════════════════════
+   الإعدادات
+   ════════════════════════════════════════════════════════════════════ #}
+{% call hub.section("إعدادات الميزة", icon="sliders") %}
+  <form method="post" action="{{ url_for('radius.anti_mac_clone_save_settings') }}" id="amc-form">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+
+    {# الـtoggle العام — صريح وواضح، الافتراضي مغلق. #}
+    <div class="field" style="display:flex;align-items:center;gap:10px">
+      <input type="checkbox" id="amc-on" name="{{ sk.enabled }}" value="1"
+             {{ 'checked' if settings[sk.enabled] in ('1','true','on') else '' }}>
+      <label for="amc-on" style="margin:0">
+        <strong>{{ _('تشغيل ميزة منع استنساخ MAC') }}</strong>
+        <span class="hub-text-mute" style="font-size:12px">
+          ({{ _('OFF افتراضيًّا — عند الإطفاء لا يتغيّر سلوك MAC-cookie المعتاد') }})
+        </span>
+      </label>
+    </div>
+
+    <hr style="border:none;border-top:1px solid var(--hub-border-soft,#e2e8f0);margin:16px 0">
+
+    <div class="hub-flex-row" style="gap:14px;flex-wrap:wrap">
+      <div class="field">
+        <label for="amc-mode">{{ _('النمط') }}</label>
+        <select id="amc-mode" name="{{ sk.mode }}" data-amc-mode>
+          <option value="enforce" {{ 'selected' if settings[sk.mode]=='enforce' else '' }}>
+            {{ _('Enforce — ارفض الدخول + ركل الجلسة عند الكشف') }}
+          </option>
+          <option value="stepup" {{ 'selected' if settings[sk.mode]=='stepup' else '' }}>
+            {{ _('Step-up — ارفض أوّل محاولة، فإن أعاد المستخدم كتابة كلمة المرور من نفس الجهاز الجديد ضمن النافذة فاسمح وأعد الربط') }}
+          </option>
+          <option value="monitor" {{ 'selected' if settings[sk.mode]=='monitor' else '' }}>
+            {{ _('Monitor — سجّل وأخبر فقط (بدون رفض)') }}
+          </option>
+        </select>
+      </div>
+      <div class="field" data-amc-stepup-window
+           style="display:{{ 'block' if settings[sk.mode]=='stepup' else 'none' }}">
+        <label for="amc-stepwin">{{ _('نافذة الثقة الثانية (ث) — للنمط Step-up') }}</label>
+        <input type="number" min="15" max="3600" id="amc-stepwin"
+               name="{{ sk.stepup_window_sec }}" value="{{ settings[sk.stepup_window_sec] }}">
+      </div>
+      <div class="field">
+        <label for="amc-conf">{{ _('حدّ الثقة الأدنى لاتخاذ القرار') }}</label>
+        <select id="amc-conf" name="{{ sk.confidence_min }}">
+          <option value="low"    {{ 'selected' if settings[sk.confidence_min]=='low'    else '' }}>{{ _('منخفض (حسّاس — قد يُكثر التنبيهات)') }}</option>
+          <option value="medium" {{ 'selected' if settings[sk.confidence_min]=='medium' else '' }}>{{ _('متوسط (مُوصى به)') }}</option>
+          <option value="high"   {{ 'selected' if settings[sk.confidence_min]=='high'   else '' }}>{{ _('عالٍ (متحفّظ — يفلت الحالات الضعيفة)') }}</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="amc-rawlim">{{ _('عدد الأحداث المعروضة') }}</label>
+        <input type="number" min="10" max="2000" id="amc-rawlim"
+               name="{{ sk.raw_limit }}" value="{{ settings[sk.raw_limit] }}">
+      </div>
+    </div>
+
+    <div class="field" style="display:flex;align-items:center;gap:10px;margin-top:8px">
+      <input type="checkbox" id="amc-conc" name="{{ sk.concurrent_guard }}" value="1"
+             {{ 'checked' if settings[sk.concurrent_guard] in ('1','true','on') else '' }}>
+      <label for="amc-conc" style="margin:0">
+        {{ _('حارس الجلسات المتزامنة (ترحال مستحيل: نفس MAC من راوتر/AP مختلف بآن واحد = استنساخ)') }}
+      </label>
+    </div>
+    <div class="field" style="display:flex;align-items:center;gap:10px">
+      <input type="checkbox" id="amc-coa" name="{{ sk.coa_disconnect }}" value="1"
+             {{ 'checked' if settings[sk.coa_disconnect] in ('1','true','on') else '' }}>
+      <label for="amc-coa" style="margin:0">
+        {{ _('ركل الجلسة الحيّة (CoA-Disconnect) عند كشف استنساخ — يتطلّب نمط Enforce') }}
+      </label>
+    </div>
+    <div class="field" style="display:flex;align-items:center;gap:10px">
+      <input type="checkbox" id="amc-alert" name="{{ sk.alert_enabled }}" value="1"
+             {{ 'checked' if settings[sk.alert_enabled] in ('1','true','on') else '' }}>
+      <label for="amc-alert" style="margin:0">
+        {{ _('إرسال تنبيه إدارة عبر تلجرام عند الكشف (يستخدم بوت التلجرام المُعدّ في صفحة إشعارات الإدارة)') }}
+      </label>
+    </div>
+
+    <hr style="border:none;border-top:1px solid var(--hub-border-soft,#e2e8f0);margin:16px 0">
+
+    <div class="field">
+      <label for="amc-scope">{{ _('نطاق التطبيق') }}</label>
+      <select id="amc-scope" name="{{ sk.scope }}" data-amc-scope>
+        <option value="all"    {{ 'selected' if settings[sk.scope]=='all'    else '' }}>{{ _('كل المشتركين والبطاقات') }}</option>
+        <option value="plans"  {{ 'selected' if settings[sk.scope]=='plans'  else '' }}>{{ _('عروض/باقات محدّدة') }}</option>
+        <option value="groups" {{ 'selected' if settings[sk.scope]=='groups' else '' }}>{{ _('مجموعات مشتركين محدّدة') }}</option>
+      </select>
+    </div>
+
+    {% set _selected_plans = (settings[sk.scope_plan_ids] or '').split(',') if settings[sk.scope_plan_ids] else [] %}
+    {% set _selected_groups = (settings[sk.scope_group_names] or '').split(',') if settings[sk.scope_group_names] else [] %}
+
+    <div class="field" data-amc-scope-plans
+         style="display:{{ 'block' if settings[sk.scope]=='plans' else 'none' }}">
+      <label for="amc-plans">{{ _('العروض/الباقات') }}</label>
+      <select id="amc-plans" name="{{ sk.scope_plan_ids }}" multiple size="6"
+              style="min-width:280px">
+        {% for p in plans %}
+        <option value="{{ p.id }}"
+                {{ 'selected' if (p.id|string) in _selected_plans else '' }}>
+          {{ p.name or p.id }}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="field" data-amc-scope-groups
+         style="display:{{ 'block' if settings[sk.scope]=='groups' else 'none' }}">
+      <label for="amc-groups">{{ _('المجموعات') }}</label>
+      <select id="amc-groups" name="{{ sk.scope_group_names }}" multiple size="6"
+              style="min-width:280px">
+        {% for g in groups %}
+        <option value="{{ g.name }}"
+                {{ 'selected' if g.name in _selected_groups else '' }}>
+          {{ g.name }}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <p class="hub-text-mute" style="font-size:12px;margin:8px 0 12px">
+      <i class="fa-solid fa-circle-info"></i>
+      {{ _('تحفّظ مهم: جهازان من نفس الطراز قد يتشابهان في الإشارات (false positive). استخدم النمط Monitor قبل Enforce حتى تطمئنّ للنطاق. تجوال نفس الجهاز بين الـAP الواحد لا يُحسب استنساخًا. تجديد DHCP لنفس الجهاز بنفس MAC/IP ليس استنساخًا. عناوين MAC العشوائية في كل اتصال جديد ليست استنساخًا أصلًا.') }}
+    </p>
+
+    {{ hub.btn("حفظ الإعدادات", variant="primary", icon="floppy-disk", type="submit") }}
+  </form>
+{% endcall %}
+
+{# ════════════════════════════════════════════════════════════════════
+   قائمة الارتباطات (mac_clone_bindings)
+   ════════════════════════════════════════════════════════════════════ #}
+{% call hub.section("ارتباطات (MAC ↔ بصمة الجهاز)", icon="link",
+                     meta=(counts.active_bindings|string + ' فعّال · ' + counts.bindings|string + ' إجمالي')) %}
+  {% if bindings %}
+  <div class="hub-table-wrap">
+    <table class="hub-table" data-testid="amc-bindings-table">
+      <thead><tr>
+        <th>{{ _('المستخدم') }}</th>
+        <th>{{ _('MAC') }}</th>
+        <th>{{ _('OS') }}</th>
+        <th>{{ _('الجهاز') }}</th>
+        <th>{{ _('Hostname') }}</th>
+        <th>{{ _('Class-Id') }}</th>
+        <th>{{ _('NAS / AP') }}</th>
+        <th>{{ _('الحالة') }}</th>
+        <th>{{ _('تحقّق/تباين') }}</th>
+        <th>{{ _('آخر ظهور') }}</th>
+        <th>{{ _('إجراء') }}</th>
+      </tr></thead>
+      <tbody>
+        {% for b in bindings %}
+        <tr data-binding-id="{{ b.id }}">
+          <td class="mono small">{{ b.username }}</td>
+          <td class="mono small">{{ b.mac }}</td>
+          <td class="small">{{ b.os_family or '—' }}</td>
+          <td class="small">
+            {% if b.device_brand or b.device_model %}
+              {{ b.device_brand }} {{ b.device_model }}
+            {% else %}—{% endif %}
+          </td>
+          <td class="mono small">{{ b.hostname or '—' }}</td>
+          <td class="mono small" style="max-width:120px;overflow:hidden;text-overflow:ellipsis">{{ b.dhcp_class_id or '—' }}</td>
+          <td class="mono small">
+            {{ b.nas_ip or '—' }}
+            {% if b.called_station %}<br><span class="hub-text-mute" style="font-size:11px">{{ b.called_station }}</span>{% endif %}
+          </td>
+          <td>
+            {% if b.status == 'active' %}{{ hub.pill('فعّال', variant='green') }}
+            {% elif b.status == 'suspended' %}{{ hub.pill('معلَّق', variant='amber') }}
+            {% else %}{{ hub.pill('مستبدَل', variant='gray') }}{% endif %}
+          </td>
+          <td class="small">
+            <span style="color:var(--ok,#16a34a)">✓ {{ b.verify_count }}</span>
+            {% if b.mismatch_count %}
+              <span style="color:var(--err,#dc2626);margin-inline-start:8px">✗ {{ b.mismatch_count }}</span>
+            {% endif %}
+          </td>
+          <td class="small mono">{{ b.last_seen_at[:16] if b.last_seen_at else '—' }}</td>
+          <td>
+            <form method="post"
+                  action="{{ url_for('radius.anti_mac_clone_binding_action', binding_id=b.id, action='suspend') }}"
+                  style="display:inline;margin:0">
+              <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+              <button class="hub-btn hub-btn--secondary hub-btn--sm" type="submit"
+                      data-confirm="تعليق هذا الارتباط؟ سيُمنع الجهاز من الاستخدام السلس حتى التفعيل.">
+                <i class="fa-solid fa-pause"></i> {{ _('تعليق') }}
+              </button>
+            </form>
+            <form method="post"
+                  action="{{ url_for('radius.anti_mac_clone_binding_action', binding_id=b.id, action='delete') }}"
+                  style="display:inline;margin:0">
+              <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+              <button class="hub-btn hub-btn--danger hub-btn--sm" type="submit"
+                      data-confirm="حذف الارتباط؟ سيُعاد إنشاؤه عند أوّل دخول ناجح لاحق.">
+                <i class="fa-solid fa-trash"></i> {{ _('حذف') }}
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="hub-text-mute" style="margin-top:12px">
+    {% if feature_enabled %}
+      {{ _('لا ارتباطات بعد. ستظهر هنا فور أوّل دخول ناجح بعد تفعيل الميزة.') }}
+    {% else %}
+      {{ _('الميزة مغلقة حاليًا — لن تُسجَّل ارتباطات.') }}
+    {% endif %}
+  </p>
+  {% endif %}
+{% endcall %}
+
+{# ════════════════════════════════════════════════════════════════════
+   سجلّ الأحداث (mac_clone_events) — للمراجعة
+   ════════════════════════════════════════════════════════════════════ #}
+{% call hub.section("سجلّ أحداث الكشف", icon="clipboard-list",
+                     meta=(events|length|string + ' من آخر ' + counts.clone_detected|string + ' كشفًا')) %}
+  {% if events %}
+  <div class="hub-table-wrap">
+    <table class="hub-table" data-testid="amc-events-table">
+      <thead><tr>
+        <th>{{ _('الوقت') }}</th>
+        <th>{{ _('المستخدم') }}</th>
+        <th>{{ _('MAC') }}</th>
+        <th>{{ _('الحدث') }}</th>
+        <th>{{ _('القرار') }}</th>
+        <th>{{ _('الثقة') }}</th>
+        <th>{{ _('الدرجة') }}</th>
+        <th>{{ _('الإشارات المتباينة') }}</th>
+        <th>{{ _('السياق') }}</th>
+      </tr></thead>
+      <tbody>
+        {% for e in events %}
+        {% set _evtype = e.event_type %}
+        {% set _evlabel = {'bind':'ربط أوّل', 'verify_ok':'تحقّق ✓',
+                            'clone_detected':'كشف استنساخ',
+                            'stepup_required':'مطلوب تصعيد',
+                            'concurrent_kick':'ركل جلسة'}.get(_evtype, _evtype) %}
+        <tr>
+          <td class="mono small">{{ e.created_at[:19] if e.created_at else '—' }}</td>
+          <td class="mono small">{{ e.username }}</td>
+          <td class="mono small">{{ e.mac }}</td>
+          <td>
+            {% if _evtype == 'clone_detected' %}{{ hub.pill('كشف استنساخ', variant='red') }}
+            {% elif _evtype == 'stepup_required' %}{{ hub.pill('مطلوب تصعيد', variant='amber') }}
+            {% elif _evtype == 'concurrent_kick' %}{{ hub.pill('ركل جلسة', variant='amber') }}
+            {% elif _evtype == 'bind' %}{{ hub.pill('ربط', variant='brand') }}
+            {% elif _evtype == 'verify_ok' %}{{ hub.pill('تحقّق', variant='green') }}
+            {% else %}{{ hub.pill(_evlabel, variant='gray') }}{% endif %}
+          </td>
+          <td class="small">{{ e.decision or '—' }}</td>
+          <td class="small">
+            {% if e.confidence == 'high' %}{{ hub.pill('عالية', variant='red') }}
+            {% elif e.confidence == 'medium' %}{{ hub.pill('متوسطة', variant='amber') }}
+            {% elif e.confidence == 'low' %}{{ hub.pill('منخفضة', variant='gray') }}
+            {% else %}—{% endif %}
+          </td>
+          <td class="small mono">{{ e.score }}</td>
+          <td class="small">
+            {% set _div = e.signals_obj.get('diverged') if e.signals_obj else None %}
+            {% if _div %}{{ _div|join('، ') }}{% else %}—{% endif %}
+          </td>
+          <td class="mono small">
+            {{ e.nas_ip or '—' }}
+            {% if e.called_station %}<br><span class="hub-text-mute" style="font-size:11px">{{ e.called_station }}</span>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="hub-text-mute" style="margin-top:12px">{{ _('لا أحداث مسجّلة بعد.') }}</p>
+  {% endif %}
+{% endcall %}
+
+<script>
+  // تبديل ظهور حقول النطاق ونافذة Step-up حسب الاختيار. لا alerts متصفّح أصلية
+  // (نعتمد flash-stack — توستات نظام التصميم).
+  (function () {
+    var scope = document.querySelector('[data-amc-scope]');
+    var plans = document.querySelector('[data-amc-scope-plans]');
+    var groups = document.querySelector('[data-amc-scope-groups]');
+    if (scope) {
+      var syncScope = function () {
+        var v = scope.value;
+        if (plans)  plans.style.display  = (v === 'plans')  ? 'block' : 'none';
+        if (groups) groups.style.display = (v === 'groups') ? 'block' : 'none';
+      };
+      scope.addEventListener('change', syncScope);
+      syncScope();
+    }
+    var mode = document.querySelector('[data-amc-mode]');
+    var win = document.querySelector('[data-amc-stepup-window]');
+    if (mode && win) {
+      var syncMode = function () {
+        win.style.display = (mode.value === 'stepup') ? 'block' : 'none';
+      };
+      mode.addEventListener('change', syncMode);
+      syncMode();
+    }
+  })();
+</script>
+
+{% endblock %}

@@ -315,6 +315,23 @@ ALERTS: list[AlertSpec] = [
         {"scope": "مشترك", "target": "ahmad99", "duration": "دائم"},
         default_enabled=False,
     ),
+    AlertSpec(
+        "mac_clone_detected", "security", "كشف استنساخ MAC",
+        "يُرسل عند رصد محاولة دخول من جهاز ببصمة مختلفة بنفس عنوان MAC "
+        "(anti_mac_clone). فعّال فقط عند تفعيل الميزة في إعداداتها.",
+        "🕵️ <b>كشف استنساخ MAC</b>\n"
+        "المشترك: <code>{username}</code>\n"
+        "العنوان: <code>{mac}</code>\n"
+        "الثقة: {confidence}\n"
+        "درجة الخطورة: {score}\n"
+        "إشارات متباينة: {diverged}\n"
+        "الراوتر: <code>{nas_ip}</code>\n"
+        "AP/SSID: <code>{called_station}</code>",
+        {"username": "ahmad99", "mac": "AA:BB:CC:DD:EE:FF",
+         "confidence": "عالية", "score": "82",
+         "diverged": "os_family، device_brand",
+         "nas_ip": "10.0.0.1", "called_station": "0C:11:22:33:44:55"},
+    ),
     # ── النظام (إضافات smart_alerts) ───────────────────────────────────
     AlertSpec(
         "backup_stale", "system", "نسخة احتياطية قديمة",
