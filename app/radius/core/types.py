@@ -54,6 +54,10 @@ class NasDevice:
     delete_reason: str = ""
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+    # feat/mikrotik-user-import (migration 124) — واجهة الإدارة المفضّلة
+    # لجلب المستخدمين: 'auto' (REST ثم API) | 'rest' | 'api'. مُلحَق في
+    # نهاية الـdataclass فلا يُزيح أي بناء موضعي قائم.
+    api_type: str = "auto"
 
 
 @dataclass(frozen=True)

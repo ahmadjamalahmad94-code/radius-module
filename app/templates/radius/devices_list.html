@@ -132,6 +132,11 @@
                     <i class="fa-solid fa-bolt"></i>
                   </button>
                 </form>
+                <button type="button" class="hub-btn hub-btn--secondary hub-btn--icon"
+                        title="{{ _('استيراد المشتركين من الراوتر') }}"
+                        data-mt-import="{{ d.id }}" data-mt-name="{{ d.name|e }}">
+                  <i class="fa-solid fa-file-import"></i>
+                </button>
                 <a class="hub-btn hub-btn--ghost hub-btn--icon" title="{{ _('تعديل') }}"
                    href="{{ url_for('radius.devices_edit', nas_id=d.id) }}">
                   <i class="fa-solid fa-pen"></i>
@@ -160,4 +165,5 @@
 {% endif %}
 
 <script src="{{ url_for('static', filename='js/uds_table.js') }}"></script>
+<script src="{{ url_for('static', filename='js/mt_import.js') }}"></script>
 {% endblock %}

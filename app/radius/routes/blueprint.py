@@ -165,6 +165,8 @@ def _register_all(bp: Blueprint) -> None:
     register_dashboard_routes(bp)
     register_account_routes(bp)
     register_devices_routes(bp)
+    from .mt_import import register_mt_import_routes
+    register_mt_import_routes(bp)
     register_network_devices_routes(bp)
     register_device_health_routes(bp)
     register_network_device_bypass_routes(bp)

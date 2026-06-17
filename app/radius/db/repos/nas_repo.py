@@ -40,6 +40,9 @@ def _row(r) -> NasDevice:
         deleted_by=_g(r, "deleted_by", "") or "",
         delete_reason=_g(r, "delete_reason", "") or "",
         created_at=parse_dt(r["created_at"]), updated_at=parse_dt(r["updated_at"]),
+        # feat/mikrotik-user-import — واجهة الجلب المفضّلة (migration 124).
+        # قراءة آمنة (افتراضي auto لقواعد ما قبل 124).
+        api_type=_g(r, "api_type", "auto") or "auto",
     )
 
 
@@ -124,6 +127,16 @@ def record_check(tenant_id: int, nas_id: int, *, status: str) -> None:
             "UPDATE nas_devices SET last_check_at=?, last_check_status=?, updated_at=? "
             "WHERE tenant_id=? AND id=?",
             (now_iso(), status, now_iso(), tenant_id, nas_id))
+
+
+def set_api_type(tenant_id: int, nas_id: int, api_type: str) -> None:
+    """feat/mikrotik-user-import — يضبط واجهة الجلب المفضّلة (auto|rest|api).
+    دالة مخصّصة صغيرة (لا تمرّ عبر upsert الكبير)."""
+    val = api_type if api_type in ("auto", "rest", "api") else "auto"
+    with transaction() as conn:
+        conn.execute(
+            "UPDATE nas_devices SET api_type=?, updated_at=? WHERE tenant_id=? AND id=?",
+            (val, now_iso(), int(tenant_id), int(nas_id)))
 
 
 def delete_nas(tenant_id: int, nas_id: int) -> None:
