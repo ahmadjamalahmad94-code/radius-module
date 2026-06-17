@@ -104,14 +104,54 @@ def notify_registration(tenant_id, card_user_id, name):
 
 # ───────────────────────── شات الدعم ─────────────────────────
 
+def _chat_pending_state(tenant_id, card_user_id):
+    """يحدّد إن كانت رسالة الزبون الحالية تفتح دور «بانتظار ردّ» جديدًا.
+
+    تُستدعى بعد إدراج رسالة الزبون مباشرة، فأحدث صفّ في الخيط هو رسالتها.
+    ننظر إلى مرسِل الرسالة **السابقة** (store_chat_messages.sender):
+      • لا خيط سابق (أوّل رسالة)     → دور جديد (يُنبَّه).
+      • السابقة من المدير (admin)    → الزبون أعاد فتح الخيط بعد ردّ
+        الموظّف → دور جديد (يُنبَّه).
+      • السابقة من الزبون (customer) → الخيط منتظِر أصلًا → لا تنبيه.
+
+    يُعيد (opens: bool, latest_msg_id: int|None). أي خطأ → fail-open
+    (opens=True) كي لا نفقد تنبيه «يحتاج ردًّا»."""
+    try:
+        rows = db().execute(
+            "SELECT id, sender FROM store_chat_messages "
+            "WHERE tenant_id=? AND card_user_id=? ORDER BY id DESC LIMIT 2",
+            (int(tenant_id or 1), int(card_user_id)),
+        ).fetchall()
+        if not rows:
+            return True, None
+        latest_id = int(rows[0]["id"])
+        if len(rows) < 2:
+            return True, latest_id            # أوّل رسالة في الخيط
+        prev_sender = str(rows[1]["sender"] or "").strip().lower()
+        return (prev_sender != "customer"), latest_id
+    except Exception:  # noqa: BLE001 — لا نمنع التنبيه عند تعذّر القراءة
+        return True, None
+
+
 def notify_chat(tenant_id, card_user_id, name=""):
     nm = name or _card_user_name(tenant_id, card_user_id)
+    # تنبيه اللوحة (جرس «التنبيهات المفتوحة») — يبقى تنبيهًا واحدًا للخيط
+    # يتجدّد كما كان (dedup_key ثابت لكل زبون).
     _open(tenant_id, RULE_CHAT, f"{RULE_CHAT}:{int(card_user_id)}",
           f"رسالة دعم جديدة من {nm}", severity="info",
           recommended_action_ar="افتح محادثات الدعم في لوحة «دعم وطلبات المتجر».",
           link=f"{_SUPPORT}?chat={int(card_user_id)}#chat")
-    _tg(tenant_id, "store_chat", {"name": nm},
-        dedup_key=f"store_chat:{int(card_user_id)}")
+    # تلجرام: تنبيه واحد فقط عند **فتح دور «بانتظار ردّ»** (بداية محادثة أو
+    # عودة الزبون بعد ردّ الموظّف) — لا لكل رسالة متتابعة في خيط منتظِر أصلًا.
+    # dedup_key يحمل معرّف الرسالة فيكون كل دور جديد فريدًا (نافذة الـ60ث
+    # تمنع التكرار الحقيقي فقط، لا الدور الجديد المشروع).
+    opens, latest_id = _chat_pending_state(tenant_id, card_user_id)
+    if opens:
+        dk = (f"store_chat:{int(card_user_id)}:{latest_id}" if latest_id
+              else f"store_chat:{int(card_user_id)}")
+        _tg(tenant_id, "store_chat",
+            {"name": nm, "card_user_id": int(card_user_id)},
+            dedup_key=dk)
 
 
 def resolve_chat(tenant_id, card_user_id):

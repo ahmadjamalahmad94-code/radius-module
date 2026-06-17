@@ -122,6 +122,15 @@ ALERTS: list[AlertSpec] = [
         {"username": "ahmad99", "full_name": "أحمد علي", "expired_at": "2026-06-16"},
         default_enabled=False,
     ),
+    AlertSpec(
+        "portal_message", "subscribers", "رسالة من بوابة المشترك",
+        "يُرسل عند إرسال مشترك رسالة/شكوى من بوابته تحتاج ردًّا "
+        "(customer_portals.submit_renewal_request، نوع support). يحمل رابط الردّ.",
+        "📨 <b>رسالة من بوابة المشترك</b>\n"
+        "المشترك: <code>{username}</code>\n"
+        "الرسالة: {message}",
+        {"username": "ahmad99", "message": "الإنترنت بطيء منذ الصباح، أرجو المتابعة."},
+    ),
     # ── الشبكة والمايكروتيك ────────────────────────────────────────────
     AlertSpec(
         "mikrotik_connection_problem", "network", "مشاكل اتصال المايكروتيك",
@@ -231,11 +240,11 @@ ALERTS: list[AlertSpec] = [
     ),
     AlertSpec(
         "store_chat", "store", "رسالة دعم في المتجر",
-        "يُرسل عند رسالة دعم جديدة من عميل المتجر (store_alerts.notify_chat).",
+        "يُرسل مرّة عند فتح دور «بانتظار ردّ» في شات المتجر (بداية محادثة أو "
+        "عودة الزبون بعد ردّ الموظّف) — لا لكل رسالة (store_alerts.notify_chat).",
         "💬 <b>رسالة دعم (متجر)</b>\n"
         "العميل: {name}",
         {"name": "سالم"},
-        default_enabled=False,
     ),
     # ── المال/العمليات (إضافات) ────────────────────────────────────────
     AlertSpec(
@@ -435,12 +444,23 @@ def render(key: str, context: dict | None = None) -> str:
         body = spec.template.format_map(ctx)
     except Exception:  # noqa: BLE001 — قالب لا يكسر الإرسال أبدًا
         body = spec.template
-    # Part A: تنسيق مقروء موحّد (سطر فارغ بعد العنوان + تغميق التسميات) ثمّ
-    # تذييل الوقت المحلّي + اسم النسخة — كلّه مركزيّ على كل القوالب.
+    # Part A: تنسيق مقروء موحّد (سطر فارغ بعد العنوان + تغميق التسميات).
+    # سطر «🔗 للتدخّل» للتنبيهات التي تتطلّب إجراءً فقط (مركزيّ عبر
+    # alert_links.action_link؛ الإخباري بلا رابط). ثمّ تذييل الوقت/النسخة.
     try:
-        return _format_body(body) + _footer()
+        return _format_body(body) + _action_line(key, context) + _footer()
     except Exception:  # noqa: BLE001 — التنسيق لا يكسر الإرسال أبدًا
         return body
+
+
+def _action_line(key: str, context: dict | None) -> str:
+    """سطر رابط التدخّل المباشر — فقط للتنبيهات الإجرائية؛ وإلا فارغ."""
+    try:
+        from .alert_links import action_link
+        url = action_link(key, context or {})
+        return ("\n\n🔗 للتدخّل: " + url) if url else ""
+    except Exception:  # noqa: BLE001 — الرابط لا يكسر الإرسال أبدًا
+        return ""
 
 
 def preview(key: str) -> str:

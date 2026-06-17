@@ -287,16 +287,24 @@ class CustomerPortalService:
                 "message_ar": "تم تسجيل الطلب بانتظار مراجعة الإدارة.",
             },
         )
-        # تنبيه إدارة (تلجرام) — محصّن، لا يكسر الطلب.
+        # تنبيه إدارة (تلجرام) — محصّن، لا يكسر الطلب. نفصل: «شكوى/دعم» =
+        # رسالة بوابة تحتاج ردًّا (portal_message، برابط الردّ)؛ «تجديد» = طلب
+        # خدمة (service_request_new، برابط صفحة الطلبات).
         try:
             from .admin_alerts import dispatch
-            _svc = {"support": "دعم/شكوى", "renewal": "تجديد اشتراك"}.get(
-                request_type, "طلب خدمة")
             _sub = self.get_subscriber(subscriber_id)
-            dispatch(self.tenant_id, "service_request_new", {
-                "username": _sub.get("username") or subscriber_id,
-                "service": _svc, "status": "بانتظار الموافقة",
-            }, dedup_key=f"svc_req:{request_id}")
+            _uname = _sub.get("username") or subscriber_id
+            if request_type == "support":
+                dispatch(self.tenant_id, "portal_message", {
+                    "username": _uname,
+                    "message": (clean_reason.replace("[شكوى]", "").strip()
+                                or "رسالة من بوابة المشترك"),
+                }, dedup_key=f"portal_msg:{request_id}")
+            else:
+                dispatch(self.tenant_id, "service_request_new", {
+                    "username": _uname,
+                    "service": "تجديد اشتراك", "status": "بانتظار الموافقة",
+                }, dedup_key=f"svc_req:{request_id}")
         except Exception:  # noqa: BLE001
             pass
         return self.get_request(request_id)
