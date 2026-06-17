@@ -11,7 +11,7 @@
 {%- endmacro %}
 
 {% macro money(value, currency=None) -%}
-  {{ value|money }}
+  {{ value|money(currency) }}
 {%- endmacro %}
 
 {% macro duration_minutes_label(minutes) -%}

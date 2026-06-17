@@ -131,12 +131,12 @@
         <tr>
           <td>{{ wallet.id }}</td>
           <td>{{ owner_label(wallet.owner_type) }}{% if wallet.owner_id %} #{{ wallet.owner_id }}{% endif %}</td>
-          <td><strong>{{ wallet.balance|money }}</strong></td>
+          <td><strong>{{ wallet.balance|money(wallet.currency) }}</strong></td>
           {# تعريب الحالة المعروضة عبر status_label؛ المقارنة تبقى على القيمة الخام active #}
           <td>{{ hub.pill(status_label(wallet.status), "green" if wallet.status == "active" else "grey") }}</td>
           <td>
             {% for tx in tx_by_wallet.get(wallet.id, []) %}
-              <div style="font-size:12px">{{ tx_label(tx.transaction_type) }} — {{ tx.amount|money }} — {{ tx.created_at|dt_local }}</div>
+              <div style="font-size:12px">{{ tx_label(tx.transaction_type) }} — {{ tx.amount|money(tx.currency) }} — {{ tx.created_at|dt_local }}</div>
             {% else %}
               <span class="muted">{{ _('لا توجد حركات بعد.') }}</span>
             {% endfor %}

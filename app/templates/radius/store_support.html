@@ -5,8 +5,8 @@
 {% block page_title %}{{ _('دعم المتجر المتقدّم') }}{% endblock %}
 {% block page_sub %}<span class="sub">{{ _('راجع طلبات الشحن والسحب، حادث الزبائن، واضبط محافظ الاستلام.') }}</span>{% endblock %}
 
-{% macro money(value) -%}
-  {{ value|money }}
+{% macro money(value, currency=None) -%}
+  {{ value|money(currency) }}
 {%- endmacro %}
 
 {% macro date_label(value) -%}
@@ -252,7 +252,7 @@
             <tr>
               <td>{{ d.payer_name or _('غير معروف') }}<br><small style="color:var(--muted);direction:ltr">{{ d.payer_phone or '' }}</small></td>
               <td>{{ d.method_ar }}<br><small style="color:var(--muted);direction:ltr">{{ d.reference or '' }}</small></td>
-              <td style="direction:ltr">{{ money(d.amount_claimed) }} {{ d.currency or '' }}</td>
+              <td style="direction:ltr">{{ money(d.amount_claimed, d.currency) }}</td>
               <td>
                 {% if d.receipt_image_url %}
                   <a class="ssp-thumb ssp-att" href="{{ d.receipt_image_url }}" target="_blank" rel="noopener"><img src="{{ d.receipt_image_url }}" alt="{{ _('وصل') }}" onerror="this.style.display='none';this.parentNode.classList.add('att-fail')"><span class="att-fb">📎 {{ _('عرض الوصل') }}</span></a>
@@ -299,7 +299,7 @@
             <tr>
               <td>{{ d.payer_name or _('غير معروف') }}</td>
               <td>{{ d.method_ar }}</td>
-              <td style="direction:ltr">{{ money(d.confirmed_amount if d.confirmed_amount is not none else d.amount_claimed) }} {{ d.currency or '' }}</td>
+              <td style="direction:ltr">{{ money(d.confirmed_amount if d.confirmed_amount is not none else d.amount_claimed, d.currency) }}</td>
               <td><span class="market-pill {{ 'market-pill--ok' if d.status in ['confirmed','adjusted'] else 'market-pill--bad' }}">{{ d.status_ar }}</span>{% if d.status == 'rejected' and d.admin_note %}<br><small style="color:#dc2626">{{ _('السبب') }}: {{ d.admin_note }}</small>{% endif %}</td>
               <td><small>{{ date_label(d.resolved_at or d.created_at) }}</small></td>
             </tr>
@@ -333,7 +333,7 @@
             <tr>
               <td>{{ w.payee_name or _('غير معروف') }}</td>
               <td style="direction:ltr">{{ w.payee_account or _('غير محدّد') }}</td>
-              <td style="direction:ltr">{{ money(w.amount) }} {{ w.currency or '' }}</td>
+              <td style="direction:ltr">{{ money(w.amount, w.currency) }}</td>
               <td><small>{{ date_label(w.created_at) }}</small></td>
               <td>
                 <div class="ssp-actions">
@@ -375,7 +375,7 @@
             <tr>
               <td>{{ w.payee_name or _('غير معروف') }}</td>
               <td style="direction:ltr">{{ w.payee_account or _('غير محدّد') }}</td>
-              <td style="direction:ltr">{{ money(w.amount) }} {{ w.currency or '' }}</td>
+              <td style="direction:ltr">{{ money(w.amount, w.currency) }}</td>
               <td><span class="market-pill {{ 'market-pill--ok' if w.status == 'confirmed' else 'market-pill--bad' }}">{{ w.status_ar }}</span>{% if w.status == 'rejected' and w.admin_note %}<br><small style="color:#dc2626">{{ _('السبب') }}: {{ w.admin_note }}</small>{% endif %}</td>
               <td><small>{{ date_label(w.resolved_at or w.created_at) }}</small></td>
             </tr>

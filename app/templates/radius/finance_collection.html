@@ -269,10 +269,11 @@
           </select>
         </label>
         <label>العملة
-          {# تعريب أسماء العملات: نعرض الاسم العربي + الكود مع إبقاء value الخام (ILS/USD/JOD) كما يعتمده الـPOST #}
-          {% set _currency_names = {'ILS': 'شيكل ₪', 'USD': 'دولار $', 'JOD': 'دينار أردني'} %}
+          {# قائمة العملات الكاملة؛ الافتراضي المحدَّد = عملة المستأجر الحالية
+             (cfg.currency) لا قيمة مثبّتة. value يبقى الكود الخام كما يعتمده الـPOST. #}
+          {% set _currency_names = {'JOD':'دينار أردني','ILS':'شيكل','USD':'دولار','IQD':'دينار عراقي','SAR':'ريال سعودي','EGP':'جنيه مصري','AED':'درهم إماراتي','EUR':'يورو','TRY':'ليرة تركية'} %}
           <select class="hub-select" name="currency">
-            {% for c in ['ILS','USD','JOD'] %}<option value="{{ c }}" {% if (settings.currency if settings else 'ILS') == c %}selected{% endif %}>{{ _currency_names.get(c, c) }} ({{ c }})</option>{% endfor %}
+            {% for c in ['JOD','ILS','USD','IQD','SAR','EGP','AED','EUR','TRY'] %}<option value="{{ c }}" {% if (settings.currency if settings else cfg.currency) == c %}selected{% endif %}>{{ _currency_names.get(c, c) }} ({{ c }})</option>{% endfor %}
           </select>
         </label>
         <label>{{ _('رقم المحفظة') }}<input class="hub-input" name="wallet_number" value="{{ settings.wallet_number if settings else '' }}"></label>

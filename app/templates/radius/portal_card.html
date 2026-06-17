@@ -521,9 +521,9 @@
     <div class="balance-side">
       <div class="label">{{ _('رصيد المحفظة') }}</div>
       <div class="amount">
-        <span>{{ wallet_balance|money }}</span>
-        {# عرض وحدة العملة (كان wallet_currency يُحسب ولا يُستخدم) #}
-        <span class="currency">{{ wallet_currency }}</span>
+        {# عملة المحفظة المخزّنة (أو عملة المستأجر للمحافظ الجديدة) — رمز واحد
+           عبر فلتر money، بلا تكرار كود العملة بعده. #}
+        <span>{{ wallet_balance|money(wallet_currency) }}</span>
       </div>
       <div class="greeting">
         {{ _('مرحباً') }} <strong>{{ user_name }}</strong>
@@ -641,9 +641,7 @@
           {% endif %}
         </div>
         <div class="market-price">
-          <span class="val">{{ _price|money }}</span>
-          {# وحدة العملة (كلاس .ccy كان معرّفاً بلا استخدام) #}
-          <span class="ccy">{{ wallet_currency }}</span>
+          <span class="val">{{ _price|money(wallet_currency) }}</span>
         </div>
         <button type="button" class="market-buy"
                 {% if not _affordable %}disabled{% endif %}
