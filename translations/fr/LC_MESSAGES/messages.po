@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-06-10 09:57+0300\n"
+"POT-Creation-Date: 2026-06-17 14:03+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: fr\n"
@@ -17,6 +17,15 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.18.0\n"
+
+msgid " محاولة"
+msgstr " tentative(s)"
+
+msgid " محاولة مطابقة"
+msgstr " tentative(s) correspondante(s)"
+
+msgid " من "
+msgstr " sur "
 
 msgid "# قاعدة walled-garden التي يضيفها النظام تلقائيًا:"
 msgstr "# La règle walled-garden que le système ajoute automatiquement :"
@@ -54,10 +63,10 @@ msgid "(1–12): الافتراضي 3×5 = 15 بطاقة في الصفحة."
 msgstr "(1–12) : la valeur par défaut est 3×5 = 15 coupons par page."
 
 msgid "(1–5000) و"
-msgstr ""
+msgstr "(1–5000) et "
 
 msgid "(1–8) و"
-msgstr ""
+msgstr "(1–8) et "
 
 msgid "(IP) ثم"
 msgstr "(IP) puis"
@@ -437,7 +446,7 @@ msgid ") مع منسدلة"
 msgstr ") avec menu déroulant"
 
 msgid ") و"
-msgstr ""
+msgstr ") et "
 
 msgid ") ووسم"
 msgstr ") et étiquette"
@@ -460,9 +469,6 @@ msgstr ""
 
 msgid "). الأعمدة تصير سنواتك المسجّلة."
 msgstr "). Les colonnes deviennent vos années enregistrées."
-
-msgid "). لن تحتاج reset البصمات أبداً."
-msgstr "). Vous n'aurez plus jamais besoin de réinitialiser les empreintes."
 
 msgid "+ حجم الخط واللون والخلفية. وتقدر ببساطة"
 msgstr "+ taille de police, couleur et arrière-plan. Et vous pouvez simplement"
@@ -673,7 +679,7 @@ msgid "12 يوم"
 msgstr "12 jours"
 
 msgid "12د"
-msgstr ""
+msgstr "12 min"
 
 msgid "15 دقيقة"
 msgstr "15 minutes"
@@ -754,7 +760,7 @@ msgid "4. معاينة الربط والمصادقة"
 msgstr "4. Aperçu de la connexion et de l'authentification"
 
 msgid "41د"
-msgstr ""
+msgstr "41 min"
 
 msgid "5 سلف · 9 يوم"
 msgstr "5 avances · 9 jours"
@@ -799,9 +805,6 @@ msgstr ""
 msgid "8728 عادي، 8729 للاتصال المشفّر."
 msgstr "8728 standard, 8729 pour une connexion chiffrée."
 
-msgid ": اكتب أي نص ثابت من اختيارك (مثال:"
-msgstr ": saisissez n'importe quel texte fixe de votre choix (ex. :"
-
 msgid ": اكتب اسم المشترك ورقم"
 msgstr ": Saisissez le nom de l'abonné et le numéro"
 
@@ -809,13 +812,6 @@ msgid ": الباقة المرتبطة — تحدد السرعة والكوتا 
 msgstr ""
 ": Le forfait lié — il détermine le débit et le quota qui s'activent à "
 "l'utilisation. Obligatoire."
-
-msgid ""
-": البصمة التلقائية تتغيّر لو تغيّر الـ hostname (Docker restart، reboot، "
-"تغيير الإعدادات) → يرفضك النظام."
-msgstr ""
-": l'empreinte automatique change si le hostname change (redémarrage "
-"Docker, reboot, modification des paramètres) → le système vous rejette."
 
 msgid ": الصلاحيات مرتّبة في"
 msgstr ": les permissions sont organisées en"
@@ -928,8 +924,14 @@ msgstr "ILS (Shekel)"
 msgid "ILS — شيكل"
 msgstr "ILS — Shekel"
 
+msgid "IP الجديد"
+msgstr "Nouvelle IP"
+
 msgid "IP الجهاز"
 msgstr "IP de l'appareil"
+
+msgid "IP الحالي"
+msgstr "IP actuelle"
 
 msgid "IP الخادم كما ظهر للطلب"
 msgstr "IP du serveur telle qu'affichée pour la requête"
@@ -986,6 +988,9 @@ msgstr "PNG · JPG · SVG · WEBP — 2 Mo max"
 msgid "PPP مفعَّل"
 msgstr "PPP activé"
 
+msgid "PPTP (أبسط، أقل أمانًا)"
+msgstr "PPTP (plus simple, moins sécurisé)"
+
 msgid "QR / الباركود"
 msgstr "QR / code-barres"
 
@@ -1005,6 +1010,9 @@ msgid "SMS أو واتساب مع قوالب جاهزة (ترحيب، تذكير
 msgstr ""
 "SMS ou WhatsApp avec des modèles prêts à l'emploi (bienvenue, rappel "
 "d'expiration, confirmation de paiement...)."
+
+msgid "SSTP (موصى به — يعمل خلف الجدران)"
+msgstr "SSTP (recommandé — fonctionne derrière les pare-feu)"
 
 msgid "SSTP (نفق إدارة)"
 msgstr "SSTP (tunnel de gestion)"
@@ -1369,6 +1377,14 @@ msgstr "« Période affichée »"
 
 msgid "«الفواتير والكوبونات»"
 msgstr "« Factures et coupons »"
+
+msgid ""
+"«القاعدة على الراوتر» من آخر قراءة فعلية (فحص حي أو دوري) — وهي الحقيقة، "
+"لا الحالة المحفوظة. أزرار تركيب/إزالة تنفّذ على المنفذ الواحد فورًا."
+msgstr ""
+"« Règle sur le routeur » provient de la dernière lecture réelle (sonde en"
+" direct ou périodique) — c'est la vérité, pas l'état enregistré. Les "
+"boutons Installer/Supprimer agissent instantanément sur un port."
 
 msgid "«الكروت»"
 msgstr "« Coupons »"
@@ -2037,7 +2053,7 @@ msgid "»، وفيه ثلاثة أزرار:"
 msgstr "», avec trois boutons :"
 
 msgid "،"
-msgstr ""
+msgstr ","
 
 msgid "، أو"
 msgstr ", ou"
@@ -2066,7 +2082,7 @@ msgstr ""
 "sensibles."
 
 msgid "، و"
-msgstr ""
+msgstr ", et "
 
 msgid "، والسعر يُثبَّت وقت الطلب حسب السرعة المختارة."
 msgstr ", et le prix est fixé au moment de la commande selon la vitesse choisie."
@@ -2107,7 +2123,7 @@ msgid "؛ يفتح نافذة عائمة بثلاثة حقول:"
 msgstr "; il ouvre une fenêtre flottante à trois champs :"
 
 msgid "؟"
-msgstr ""
+msgstr " ?"
 
 msgid "آخر 12 فترة من اليمين لليسار — العمود الأطول هو أعلى فترة."
 msgstr ""
@@ -2155,9 +2171,6 @@ msgstr "Dernière mise à jour"
 
 msgid "آخر تحديث:"
 msgstr "Dernière mise à jour :"
-
-msgid "آخر تسجيل دخول"
-msgstr "Dernière connexion"
 
 msgid "آخر تشغيل"
 msgstr "Dernière exécution"
@@ -2214,8 +2227,14 @@ msgstr "Dernière facture"
 msgid "آخر فحص"
 msgstr "Dernière vérification"
 
+msgid "آخر فحص (UTC)"
+msgstr "Dernière vérification (UTC)"
+
 msgid "آخر فصل"
 msgstr "Dernière déconnexion"
+
+msgid "آخر قراءة"
+msgstr "Dernière lecture"
 
 msgid ""
 "آخر قسم بالصفحة، بنفس نظام الجدول الموحّد (نفس أزرار الأعمدة والتصدير "
@@ -3033,6 +3052,9 @@ msgstr ""
 "Les deux premières lignes colorées sous l'en-tête résument la période "
 "financière sous deux angles opposés :"
 
+msgid "أول فحص (يدوي أو دوري) سيظهر هنا."
+msgstr "La première vérification (manuelle ou périodique) apparaîtra ici."
+
 msgid "أول ما يطلع كرت بنفسجي فاخر بشكل بطاقة ائتمان — هذا ملخص هوية البطاقة:"
 msgstr ""
 "La première chose qui apparaît est une élégante carte violette en forme "
@@ -3153,9 +3175,6 @@ msgstr ""
 
 msgid "أُنشئ"
 msgstr "Créé"
-
-msgid "أُنشئ في"
-msgstr "Créé le"
 
 msgid "أُنشئت"
 msgstr "Créé"
@@ -3559,6 +3578,9 @@ msgstr "Envoyer + aperçu de l'ajout de jours gratuits sans exécution"
 msgid "إرسال + معاينة إضافة رصيد للمحفظة بدون تنفيذ"
 msgstr "Envoi + aperçu de l'ajout de solde au portefeuille sans exécution"
 
+msgid "إرسال CoA"
+msgstr "Envoyer CoA"
+
 msgid "إرسال أحداث النظام إلى خدمة خارجية"
 msgstr "Envoyer les événements système à un service externe"
 
@@ -3686,6 +3708,9 @@ msgstr "Émettre la facture"
 
 msgid "إصدار الفواتير وتوليد الكوبونات في صفحة واحدة"
 msgstr "Émettre les factures et générer les coupons sur une seule page"
+
+msgid "إصدار المايكروتيك"
+msgstr "Version MikroTik"
 
 msgid "إصدار النظام"
 msgstr "Version du système"
@@ -3989,6 +4014,9 @@ msgstr "Configurez le client de métriques sur le routeur →"
 msgid "إعداد يدوي"
 msgstr "Configuration manuelle"
 
+msgid "إعدادات «تتبع حالة الأجهزة»"
+msgstr "Paramètres du « moniteur de santé des appareils »"
+
 msgid "إعدادات إضافية"
 msgstr "Paramètres supplémentaires"
 
@@ -4006,6 +4034,9 @@ msgstr "Paramètres des routeurs"
 
 msgid "إعدادات الطباعة"
 msgstr "Paramètres d’impression"
+
+msgid "إعدادات الفحص والتطبيق الحي"
+msgstr "Paramètres de sondage et d'application en direct"
 
 msgid "إعدادات المحفظة اليدوية"
 msgstr "Paramètres du portefeuille manuel"
@@ -4399,11 +4430,6 @@ msgstr ""
 msgid "اترك مجموعة"
 msgstr "Quitter le groupe"
 
-msgid "اتركه فارغًا إذا كان محفوظًا بالفعل. لا نعرض المفتاح كاملًا بعد الحفظ."
-msgstr ""
-"Laissez-le vide s'il est déjà enregistré. Nous n'affichons pas la clé "
-"complète après l'enregistrement."
-
 msgid "اتركه فارغًا إذا كان نفس اسم الدخول الأساسي."
 msgstr "Laissez-le vide s'il est identique au nom de connexion principal."
 
@@ -4421,6 +4447,9 @@ msgstr "Laissez vide pour approuver le montant déclaré"
 
 msgid "اتركه فارغًا لبداية مفتوحة."
 msgstr "Laisser vide pour un début ouvert."
+
+msgid "اتركه فارغًا للإبقاء عليه."
+msgstr "Laissez vide pour le conserver."
 
 msgid "اتركه فارغًا للسماح من أي عنوان. الأفضل أمنيّاً تحديد عنوان الفنّي العام."
 msgstr ""
@@ -4462,6 +4491,9 @@ msgstr "Connexion sécurisée chiffrée"
 
 msgid "اتصال بحساب من المزوّد"
 msgstr "Connexion avec un compte du fournisseur"
+
+msgid "اتصال بيانات"
+msgstr "Connexion de données"
 
 msgid "اتصال عن بُعد"
 msgstr "Connexion à distance"
@@ -4519,6 +4551,9 @@ msgstr "Enregistrez un instantané fixe — et consultez-le plus tard"
 
 msgid "احفظ — وشوف وين راح المشترك"
 msgstr "Enregistrez — et voyez où l'abonné est passé"
+
+msgid "اختبار"
+msgstr "Test"
 
 msgid "اختبار الاتصال"
 msgstr "Test de connexion"
@@ -4647,6 +4682,14 @@ msgid "اختر باقة من العروض التالية. تُخصم القيم
 msgstr ""
 "Choisissez un forfait parmi les offres suivantes. Le montant est déduit "
 "du solde de votre portefeuille."
+
+msgid ""
+"اختر جلسة من القائمة أدناه ثم انقر زرّ ↻ في عمود الإجراءات لإرسال CoA-"
+"Request مع Framed-IP-Address الجديد ـ بدون قطع الجلسة."
+msgstr ""
+"Choisissez une session ci-dessous, puis cliquez sur le bouton ↻ dans la "
+"colonne actions pour envoyer une CoA-Request avec la nouvelle Framed-IP-"
+"Address — sans interrompre la session."
 
 msgid "اختر جهاز الشبكة المسؤول عن هذا النطاق."
 msgstr "Sélectionnez le périphérique réseau responsable de cette plage."
@@ -4951,6 +4994,14 @@ msgstr ""
 msgid "اربط درايفك بضغطة من بوابة عميلك (صلاحية محدودة"
 msgstr "Liez votre disque en un clic depuis votre portail client (accès limité"
 
+msgid ""
+"اربط مايكروتيك جديدًا بضغطة واحدة. اختر إصدار جهازك واضغط الزر، ثم انسخ "
+"السكربت أو نزّله والصقه في طرفية المايكروتيك."
+msgstr ""
+"Connectez un nouveau MikroTik en un clic. Choisissez la version de votre "
+"appareil, appuyez sur le bouton, puis copiez le script (ou téléchargez-"
+"le) et collez-le dans le terminal MikroTik."
+
 msgid "ارجع لتبويب"
 msgstr "Retour à l'onglet"
 
@@ -5044,6 +5095,11 @@ msgid "استخدم بيانات المدير التي أنشأتها عند ا�
 msgstr ""
 "Utilisez les identifiants administrateur que vous avez créés lors de "
 "l'installation."
+
+msgid "استخدم زر «تركيب» في جدول حالة المنافذ أدناه لإصلاحها منفذًا منفذًا."
+msgstr ""
+"Utilisez le bouton « Installer » dans le tableau d'état des ports ci-"
+"dessous pour les corriger port par port."
 
 msgid "استخدم هذا الأمر على الراوتر إذا أردت إيقاف إرسال المقاييس لهذا الخادم."
 msgstr ""
@@ -5150,6 +5206,9 @@ msgid "استورد ملفات الكروت الجاهزة وحوّلها إلى
 msgstr ""
 "Importez des fichiers de coupons prêts à l'emploi et convertissez-les en "
 "fichiers d'impression professionnels"
+
+msgid "استيراد المشتركين من الراوتر"
+msgstr "Importer les abonnés depuis le routeur"
 
 msgid "استيراد دفعة جديدة"
 msgstr "Importer un nouveau lot"
@@ -5330,6 +5389,9 @@ msgstr "Nom d'utilisateur (pour la facture)"
 
 msgid "اسم المستخدم (من المزوّد)"
 msgstr "Nom d'utilisateur (du fournisseur)"
+
+msgid "اسم المستخدم / المجموعة / المعرّف"
+msgstr "Nom d'utilisateur / Groupe / ID"
 
 msgid "اسم المستخدم / كلمة المرور"
 msgstr "Nom d'utilisateur / Mot de passe"
@@ -5963,11 +6025,6 @@ msgstr ""
 "Saisissez la phrase de confirmation qui vous est affichée avant "
 "d'appliquer"
 
-msgid "اكتب عدد الثواني بين كل مزامنة وأخرى. أقل قيمة مسموحة 60 ثانية."
-msgstr ""
-"Saisissez le nombre de secondes entre chaque synchronisation. La valeur "
-"minimale autorisée est de 60 secondes."
-
 msgid "اكتب عنوان بوابة الهوت سبوت عندك (مثل"
 msgstr "Saisissez l'adresse du portail hotspot chez vous (p. ex."
 
@@ -6235,14 +6292,25 @@ msgstr "Version"
 msgid "الإصدار %(v)s"
 msgstr "Version %(v)s"
 
+msgid "الإصدار 6 (RouterOS v6)"
+msgstr "Version 6 (RouterOS v6)"
+
 msgid "الإصدار 6 (v6)"
 msgstr "Version 6 (v6)"
 
 msgid "الإصدار 6:"
 msgstr "Version 6 :"
 
+msgid "الإصدار 7 (RouterOS v7)"
+msgstr "Version 7 (RouterOS v7)"
+
 msgid "الإصدار 7 (v7)"
 msgstr "Version 7 (v7)"
+
+msgid "الإصدار 7 يستخدم WireGuard تلقائيًا (أحدث وأسرع)."
+msgstr ""
+"La version 7 utilise WireGuard automatiquement (plus récent et plus "
+"rapide)."
 
 msgid "الإصدار 7:"
 msgstr "Version 7 :"
@@ -6652,6 +6720,9 @@ msgstr "Portail"
 msgid "البوابة (اختياري)"
 msgstr "Passerelle (facultatif)"
 
+msgid "البوابة/الويب"
+msgstr "Portail / Web"
+
 msgid "البوت"
 msgstr "Bot"
 
@@ -6882,6 +6953,9 @@ msgstr ""
 msgid "التطبيق"
 msgstr "Application"
 
+msgid "التطبيق الحي على الراوترات"
+msgstr "Application en direct aux routeurs"
+
 msgid ""
 "التطبيق الحي مُعطَّل قسريًّا من إعداد الخادم — المفتاح لن يأخذ مفعوله حتى"
 " يُرفع القيد."
@@ -6925,6 +6999,12 @@ msgstr "Détail"
 
 msgid "التفعيل"
 msgstr "Activation"
+
+msgid "التفعيل المحفوظ"
+msgstr "Activation enregistrée"
+
+msgid "التفعيل المحفوظ لا يطابق الراوتر:"
+msgstr "L'activation enregistrée ne correspond pas au routeur :"
 
 msgid "التفعيل لا يتم من هنا مباشرةً، بل من"
 msgstr "L'activation ne se fait pas directement ici, mais depuis"
@@ -6989,6 +7069,9 @@ msgstr "Téléchargement (Kbps)"
 msgid "التنزيل والرفع (كيلوبت/ث)"
 msgstr "Téléchargement et envoi (kbit/s)"
 
+msgid "التنفيذ على الراوتر — منفذًا منفذًا"
+msgstr "Exécution sur le routeur — port par port"
+
 msgid "التواصل"
 msgstr "Communication"
 
@@ -7000,6 +7083,9 @@ msgstr "Recommandation"
 
 msgid "التوقيت والجلسات"
 msgstr "Horaire et sessions"
+
+msgid "التوكن الحالي محفوظ مشفّرًا"
+msgstr "Le jeton actuel est stocké chiffré"
 
 msgid "الجانب المالي"
 msgstr "Aspect financier"
@@ -7096,6 +7182,9 @@ msgstr "Entités"
 
 msgid "الجهاز"
 msgstr "Appareil"
+
+msgid "الجهاز (المتصفح / عنوان MAC)"
+msgstr "Appareil (navigateur / adresse MAC)"
 
 msgid "الجهاز (المتصفح / عنوان الجهاز)"
 msgstr "Appareil (navigateur / adresse de l'appareil)"
@@ -7278,9 +7367,6 @@ msgstr "Champs"
 
 msgid "الحقول:"
 msgstr "Champs :"
-
-msgid "الحل"
-msgstr "Solution"
 
 msgid "الحمل اللحظي"
 msgstr "Charge instantanée"
@@ -7775,6 +7861,9 @@ msgstr "Raison"
 msgid "السبب (اختياري)"
 msgstr "Motif (facultatif)"
 
+msgid "السبب (يظهر للمستخدم في رسالة المنع)"
+msgstr "Motif (affiché à l'utilisateur dans le message de refus)"
+
 msgid "السجل"
 msgstr "Journal"
 
@@ -7813,19 +7902,6 @@ msgstr "Journaux"
 
 msgid "السر الموقِّع للـ Webhook"
 msgstr "Secret de signature du Webhook"
-
-msgid ""
-"السر يظهر مختصرًا فقط. كل عمليات المزامنة تتم عبر اتصال آمن — لا يمكن "
-"استخدام اتصال غير آمن."
-msgstr ""
-"Le secret n'est affiché qu'en abrégé. Toutes les synchronisations "
-"s'effectuent via une connexion sécurisée — une connexion non sécurisée ne"
-" peut pas être utilisée."
-
-msgid "السر يوقّع الطلبات بين الريدياس ولوحة التراخيص ولا يظهر كاملًا في الصفحة."
-msgstr ""
-"Le secret signe les requêtes entre RADIUS et le panneau de licences et ne"
-" s'affiche pas en entier sur la page."
 
 msgid "السرعات"
 msgstr "Débits"
@@ -7868,6 +7944,9 @@ msgstr "Vitesse programmée"
 
 msgid "السرعة المجدولة:"
 msgstr "Vitesse programmée :"
+
+msgid "السرعة ثابتة 5 ميجابت — بلا حد للبيانات وبلا قطع."
+msgstr "La vitesse est fixée à 5 Mbit/s — sans plafond de données ni coupure."
 
 msgid "السرعة والحصة ومدة الاشتراك والسعر"
 msgstr "Vitesse, quota, durée d'abonnement et prix"
@@ -7989,6 +8068,9 @@ msgstr "Réseaux à ne pas utiliser"
 
 msgid "الشبكة"
 msgstr "Réseau"
+
+msgid "الشبكة (عنوان / جهاز)"
+msgstr "Réseau (adresse / appareil)"
 
 msgid "الشبكة (عنوان الشبكة / جهاز الشبكة)"
 msgstr "Réseau (adresse réseau / périphérique réseau)"
@@ -8153,6 +8235,13 @@ msgstr "Coller la sortie"
 
 msgid "الصق السكربت كما هو."
 msgstr "Collez le script tel quel."
+
+msgid ""
+"الصق توكن البوت ومعرّف المحادثة/القناة، فعّل الإشعارات، ثم اضغط «اختبار "
+"الاتصال»."
+msgstr ""
+"Collez le jeton du bot et l'ID du chat/canal, activez les notifications, "
+"puis cliquez sur « Tester la connexion »."
 
 msgid "الصق رمز الربط من شاشة إدارة الرموز"
 msgstr "Collez le code de liaison depuis l'écran de gestion des jetons"
@@ -8406,6 +8495,9 @@ msgstr "Adresse locale (facultatif)"
 msgid "العنوان المختصر"
 msgstr "Titre abrégé"
 
+msgid "العنوان المستلَم"
+msgstr "Adresse reçue"
+
 msgid "العنوان المسموح للمرور"
 msgstr "Adresse autorisée pour le trafic"
 
@@ -8473,8 +8565,24 @@ msgstr "Période (du–au)"
 msgid "الفترة المعروضة: 2026-06"
 msgstr "Période affichée : 2026-06"
 
+msgid "الفترة بين الفحوصات (دقائق)"
+msgstr "Intervalle entre les vérifications (minutes)"
+
 msgid "الفحص"
 msgstr "Vérification"
+
+msgid "الفحص الدوري التلقائي"
+msgstr "Vérification périodique automatique"
+
+msgid ""
+"الفحص الدوري يقرأ حالة كل المنافذ المفعّلة تلقائيًا ويسجّل النتيجة في "
+"السجل أدناه، ويفتح تنبيهًا ذكيًا فور اكتشاف لوب. أدنى فترة 5 دقائق (دقة "
+"دورة الخادم)."
+msgstr ""
+"La vérification périodique lit automatiquement l'état de chaque port "
+"activé, enregistre le résultat ci-dessous et ouvre une alerte "
+"intelligente dès qu'une boucle est détectée. Intervalle minimum : 5 "
+"minutes (granularité du cycle serveur)."
 
 msgid "الفحص ناجح"
 msgstr "Vérification réussie"
@@ -8555,6 +8663,9 @@ msgstr "La règle d'or dans tous les champs de vitesse et de quota :"
 
 msgid "القاعدة الذهبية للصفحة:"
 msgstr "La règle d'or de cette page :"
+
+msgid "القاعدة على الراوتر"
+msgstr "Règle sur le routeur"
 
 msgid "القالب"
 msgstr "Modèle"
@@ -8920,6 +9031,9 @@ msgstr "Contrôlés"
 msgid "المتصفح"
 msgstr "Navigateur"
 
+msgid "المتصفح / الجهاز"
+msgstr "Navigateur / appareil"
+
 msgid "المتصفّح → خادم الربط:المنفذ → نفق الإدارة → الراوتر → الجهاز"
 msgstr ""
 "Navigateur → serveur de liaison:port → tunnel d'administration → routeur "
@@ -9125,6 +9239,9 @@ msgstr ""
 
 msgid "المدينة"
 msgstr "Ville"
+
+msgid "المدّة"
+msgstr "Durée"
 
 msgid "المراجعة"
 msgstr "Révision"
@@ -9457,8 +9574,19 @@ msgstr ""
 "Le secret partagé doit correspondre à la configuration du périphérique "
 "réseau."
 
+msgid ""
+"المفتاح يظهر مختصرًا فقط. كل عمليات المزامنة تتم عبر اتصال آمن — لا يمكن "
+"استخدام اتصال غير آمن."
+msgstr ""
+"La clé n'est affichée que de manière abrégée. Toutes les opérations de "
+"synchronisation passent par une connexion sécurisée — les connexions non "
+"sécurisées ne sont pas autorisées."
+
 msgid "المفتوحة"
 msgstr "Ouvertes"
+
+msgid "المفحوصة"
+msgstr "Vérifiés"
 
 msgid "المفصولة"
 msgstr "Déconnectés"
@@ -9616,6 +9744,13 @@ msgstr "Emplacement"
 
 msgid "الميزة الذهبية هي حقل"
 msgstr "La fonctionnalité phare est le champ"
+
+msgid ""
+"الميزة قيد التهيئة من قِبل المشغّل (لم يُضبط نطاق الاتصال بعد). يمكنك "
+"المحاولة لاحقًا."
+msgstr ""
+"La fonctionnalité est en cours de configuration par l'opérateur (la plage"
+" de connexion n'est pas encore définie). Veuillez réessayer plus tard."
 
 msgid "المُحصّل"
 msgstr "Encaisseur"
@@ -10114,6 +10249,12 @@ msgstr "Cliquer pour copier"
 msgid "انقضى تاريخها."
 msgstr "Elle a expiré."
 
+msgid "انقطاعات"
+msgstr "Pannes"
+
+msgid "انقطاعات رُصدت"
+msgstr "Pannes détectées"
+
 msgid "ب) أزرار شريط الجدول — كل زر شو بيعمل بالضبط"
 msgstr ""
 "b) Les boutons de la barre du tableau — ce que fait exactement chaque "
@@ -10311,14 +10452,17 @@ msgstr "Rechercher (action / cible)…"
 msgid "بحث (اسم الكرت / عنوان الجهاز)…"
 msgstr "Rechercher (nom de la carte / adresse de l'appareil)…"
 
-msgid "بحث (اسم المدير / اليوزر / البريد)…"
-msgstr "Rechercher (nom du gestionnaire / utilisateur / e-mail)…"
+msgid "بحث (اسم المدير / عنوان الشبكة)…"
+msgstr "Rechercher (nom d'admin / adresse réseau)…"
 
 msgid "بحث (الطرف / المنفّذ / نوع الحركة)…"
 msgstr "Rechercher (partie / exécutant / type de transaction)…"
 
 msgid "بحث (المستخدم / جهاز الشبكة / السبب)…"
 msgstr "Rechercher (utilisateur / équipement réseau / motif)…"
+
+msgid "بحث (المستخدم / عنوان الشبكة / جهاز الشبكة)…"
+msgstr "Rechercher (utilisateur / adresse réseau / appareil réseau)…"
 
 msgid "بحث (المنفّذ / الهدف / جزء من الإجراء)…"
 msgstr "Recherche (acteur / cible / partie de l'action)…"
@@ -10352,9 +10496,6 @@ msgstr "Rechercher par nom de coupon, MAC ou IP..."
 
 msgid "بحث باسم المستخدم..."
 msgstr "Rechercher par nom d'utilisateur..."
-
-msgid "بحث باسم المشترك…"
-msgstr "Rechercher par nom d'abonné…"
 
 msgid "بحث بالاسم أو اسم الدخول أو الجوال..."
 msgstr "Rechercher par nom, identifiant ou mobile…"
@@ -10456,9 +10597,6 @@ msgstr "Sans forfait"
 
 msgid "بدون تاريخ"
 msgstr "Sans date"
-
-msgid "بدون دور"
-msgstr "Sans rôle"
 
 msgid "بدون سرعة خاصة"
 msgstr "Sans vitesse particulière"
@@ -11375,6 +11513,9 @@ msgstr "Mettre à jour le statut"
 msgid "تحديث الخط الزمني"
 msgstr "Actualiser la chronologie"
 
+msgid "تحديث الصفحة لرؤية الحالة الجديدة"
+msgstr "Actualisez la page pour voir le nouvel état"
+
 msgid "تحديث باقة"
 msgstr "Mettre à jour le forfait"
 
@@ -11688,8 +11829,14 @@ msgstr "Mettre à niveau"
 msgid "ترقيم بطاقات العرض"
 msgstr "Numérotation des cartes d'affichage"
 
+msgid "تركيب"
+msgstr "Installer"
+
 msgid "تركيب / استبدال"
 msgstr "Installer / remplacer"
+
+msgid "تركيب الإعدادات على المايكروتيك / السيرفر"
+msgstr "Installer la configuration sur le MikroTik / serveur"
 
 msgid "تزامن وقت الراوتر / NTP غير مفعّل"
 msgstr "Synchronisation de l'heure du routeur / NTP non activée"
@@ -11911,6 +12058,12 @@ msgstr "Inclure le numéro du forfait"
 msgid "تطبيق"
 msgstr "Appliquer"
 
+msgid "تطبيق IP حيّ"
+msgstr "Application IP en direct"
+
+msgid "تطبيق IP حيّ عبر CoA"
+msgstr "Application IP en direct via CoA"
+
 msgid "تطبيق آمن"
 msgstr "Application sécurisée"
 
@@ -11928,6 +12081,11 @@ msgstr "Appliquer le service"
 msgid "تطبيق المدة فورًا على الحساب"
 msgstr "Appliquer la durée immédiatement au compte"
 
+msgid "تطبيق تغيير IP حيّ على جلسة عبر CoA (بدون قطع)"
+msgstr ""
+"Appliquer un changement d'IP en direct à une session via CoA (sans "
+"coupure)"
+
 msgid "تطبيق تلقائي"
 msgstr "Application automatique"
 
@@ -11936,6 +12094,12 @@ msgstr "Appliquer la limite de quota"
 
 msgid "تطبيق حد وقت الاتصال"
 msgstr "Appliquer la limite de temps de connexion"
+
+msgid "تطبيق سرعة حيّة (CoA — بدون فصل)"
+msgstr "Application de vitesse en direct (CoA — sans coupure)"
+
+msgid "تطبيق سرعة حيّة عبر CoA"
+msgstr "Application de vitesse en direct via CoA"
 
 msgid "تطبيق سياسة الاستخدام العادل عند تجاوز حد معيّن."
 msgstr ""
@@ -12092,6 +12256,9 @@ msgstr "Échec de l'envoi"
 msgid "تعذّر الاتصال بقاعدة البيانات."
 msgstr "Impossible de se connecter à la base de données."
 
+msgid "تعذّر الفحص"
+msgstr "Échec de la vérification"
+
 msgid "تعذّر تجهيز walled-garden آليًا"
 msgstr "Échec de la configuration automatique du walled-garden"
 
@@ -12179,6 +12346,12 @@ msgstr "Changer l'IP de sortie (Site Exit)"
 msgid "تغيير IP الخروج:"
 msgstr "Changer l'IP de sortie :"
 
+msgid "تغيير IP المتصل (CoA — بدون فصل)"
+msgstr "Changer l'IP connectée (CoA — sans coupure)"
+
+msgid "تغيير IP المتصل عبر CoA"
+msgstr "Changer l'IP connectée via CoA"
+
 msgid "تغيير إداري مباشر للعرض فقط مع بقاء تاريخ الانتهاء كما هو."
 msgstr ""
 "Une modification administrative directe de l'offre uniquement, la date "
@@ -12257,6 +12430,12 @@ msgstr ""
 "Modifiez le mot de passe des deux côtés, le panneau des licences restant "
 "la référence"
 
+msgid "تغييرات حالة"
+msgstr "Changements d'état"
+
+msgid "تغيّرت"
+msgstr "Modifié"
+
 msgid "تفاصيل"
 msgstr "Détails"
 
@@ -12305,8 +12484,14 @@ msgstr "Détails techniques du hotspot"
 msgid "تفاصيل داخلية تظهر مع الفاتورة — لا تُرسل للمشترك."
 msgstr "Détails internes affichés avec la facture — non envoyés à l'abonné."
 
+msgid "تفاصيل دورة الفحص"
+msgstr "Détails du cycle de vérification"
+
 msgid "تفاصيل صحة peer"
 msgstr "Détails de l’état du peer"
+
+msgid "تفاصيل كل جهاز في هذه الدورة"
+msgstr "Détails de chaque appareil dans ce cycle"
 
 msgid "تفاصيل هندسية"
 msgstr "Détails techniques"
@@ -12355,6 +12540,9 @@ msgstr "Activer le NAT pour le VLAN"
 msgid "تفعيل NAT لهذه الواجهة"
 msgstr "Activer le NAT pour cette interface"
 
+msgid "تفعيل إرسال الإشعارات إلى تلجرام"
+msgstr "Activer l'envoi des notifications à Telegram"
+
 msgid "تفعيل الإرسال"
 msgstr "Activer l'envoi"
 
@@ -12373,9 +12561,6 @@ msgstr "Activer le contrôle de la vitesse"
 msgid "تفعيل التشفير"
 msgstr "Activer le chiffrement"
 
-msgid "تفعيل التطبيق الحي على الراوترات"
-msgstr "Activer l'application en direct sur les routeurs"
-
 msgid "تفعيل التنبيهات الذكية"
 msgstr "Activer les alertes intelligentes"
 
@@ -12384,6 +12569,9 @@ msgstr "Activer la liaison avec le panneau des licences"
 
 msgid "تفعيل الحزمة"
 msgstr "Activer le forfait"
+
+msgid "تفعيل الحظر التلقائي عند تكرار محاولات الدخول الفاشلة (fail2ban)"
+msgstr "Activer le blocage automatique après échecs répétés (fail2ban)"
 
 msgid "تفعيل الراوتر"
 msgstr "Activer le routeur"
@@ -12532,9 +12720,6 @@ msgstr "Automatique selon la langue"
 msgid "تلقائياً ونُكمل."
 msgstr "automatiquement, et nous poursuivons."
 
-msgid "تلقائية — قد تتغيّر"
-msgstr "Automatique — peut changer"
-
 msgid "تلقائيًا"
 msgstr "Automatiquement"
 
@@ -12596,6 +12781,9 @@ msgstr "Le port Internet et l'interface correcte ont été vérifiés"
 
 msgid "تم الدفع بنجاح"
 msgstr "Paiement réussi"
+
+msgid "تم النسخ"
+msgstr "Copié"
 
 msgid "تم النشر بنجاح"
 msgstr "Publié avec succès"
@@ -12664,6 +12852,9 @@ msgstr ""
 " ont été déplacés vers la page de gestion des routeurs afin que toutes "
 "les opérations réseau se trouvent à un seul endroit clair."
 
+msgid "تم — تحديث الصفحة"
+msgstr "Terminé — actualisation de la page"
+
 msgid "تمت الإزالة"
 msgstr "Supprimé"
 
@@ -12718,6 +12909,9 @@ msgstr "Avertissement :"
 msgid "تنبيهات"
 msgstr "Alertes"
 
+msgid "تنبيهات أُرسلت"
+msgstr "Alertes envoyées"
+
 msgid ""
 "تنبيهات الأجهزة تُطلق فقط للأجهزة المفعّل عليها «أرسل تنبيه عند الانقطاع»"
 " من صفحة الجهاز."
@@ -12765,6 +12959,9 @@ msgstr "Expire le :"
 msgid "تنزيل"
 msgstr "Télécharger"
 
+msgid "تنزيل (Kbps)"
+msgstr "Téléchargement (Kbps)"
+
 msgid "تنزيل (MB)"
 msgstr "Téléchargement (MB)"
 
@@ -12784,6 +12981,9 @@ msgid "تنزيل مباشر من المتصفح (UTF-8 مع BOM) — يفتح �
 msgstr ""
 "Téléchargement direct depuis le navigateur (UTF-8 avec BOM) — s'ouvre "
 "dans n'importe quel tableur."
+
+msgid "تنزيل ملف .rsc"
+msgstr "Télécharger le fichier .rsc"
 
 msgid "تنظيف القوالب المؤقتة"
 msgstr "Nettoyer les modèles temporaires"
@@ -12859,6 +13059,9 @@ msgstr "Heure du système, délai d'expiration de la session d'administration."
 
 msgid "توقيع آمن بكل طلب."
 msgstr "Signature sécurisée à chaque requête."
+
+msgid "توكن البوت (Bot Token)"
+msgstr "Jeton du bot (Bot Token)"
 
 msgid "توكنات الـ API"
 msgstr "Jetons API"
@@ -13042,9 +13245,6 @@ msgstr "Les jetons sont créés et gérés depuis un groupe"
 
 msgid "ثابت"
 msgstr "Statique"
-
-msgid "ثابتة ومحفوظة"
-msgstr "Fixe et enregistré"
 
 msgid "ثانية"
 msgstr "seconde"
@@ -13284,6 +13484,11 @@ msgstr "Pont d'administration"
 msgid "جلب الواجهات المرشّحة"
 msgstr "Récupérer les interfaces candidates"
 
+msgid "جلسات Hotspot غير مدعومة لهذه العملية وسيُعرض ذلك بوضوح في نافذة التأكيد."
+msgstr ""
+"Les sessions Hotspot ne sont pas prises en charge pour cette opération ; "
+"cela est clairement indiqué dans la boîte de dialogue de confirmation."
+
 msgid "جلسات PPP"
 msgstr "Sessions PPP"
 
@@ -13385,6 +13590,9 @@ msgstr ""
 "Tous les éléments ci-dessus sont générés directement à partir des "
 "routeurs réels du serveur."
 
+msgid "جهات فريدة"
+msgstr "Sources uniques"
+
 msgid "جهاز"
 msgstr "Appareil"
 
@@ -13460,6 +13668,12 @@ msgstr "États de la tâche"
 msgid "حالات المهمة الخمس"
 msgstr "Les cinq états de la tâche"
 
+msgid "حالات بوابة المشتركين"
+msgstr "États du portail des abonnés"
+
+msgid "حالات بوابة متجر البطاقات"
+msgstr "États du portail de la boutique de cartes"
+
 msgid "حالات تسجيل الدخول"
 msgstr "États de connexion"
 
@@ -13469,6 +13683,9 @@ msgid ""
 msgstr ""
 "États de connexion, échecs de connexion réseau, état de connexion des "
 "abonnés et état de connexion des gestionnaires."
+
+msgid "حالات دخول البطاقات"
+msgstr "États de connexion des cartes"
 
 msgid "حالات دخول الكروت"
 msgstr "États de connexion des coupons"
@@ -13483,9 +13700,6 @@ msgid "حالة «متصل/غير متصل» تأتي من فحص حيّ لوا�
 msgstr ""
 "L'état « en ligne/hors ligne » provient d'une vérification en direct de "
 "l'interface de liaison — mis à jour périodiquement."
-
-msgid "حالة الاشتراك"
-msgstr "Statut de l'abonnement"
 
 msgid "حالة الاشتراك والاستهلاك"
 msgstr "État de l'abonnement et de la consommation"
@@ -13511,6 +13725,9 @@ msgstr "État de la vitesse et compteur en direct"
 msgid "حالة السلفة:"
 msgstr "Statut de l'avance :"
 
+msgid "حالة اللوب"
+msgstr "État de la boucle"
+
 msgid "حالة المستأجر"
 msgstr "Statut du locataire"
 
@@ -13519,12 +13736,6 @@ msgstr "État du déploiement"
 
 msgid "حالة النظام"
 msgstr "État du système"
-
-msgid "حالة دخول المدراء"
-msgstr "État de connexion des administrateurs"
-
-msgid "حالة دخول المشتركين"
-msgstr "État de connexion des abonnés"
 
 msgid "حاليًا إلى مجلد البوابة على الراوتر."
 msgstr "actuellement vers le dossier du portail sur le routeur."
@@ -13543,6 +13754,9 @@ msgstr "Pastilles colorées —"
 
 msgid "حبيبات معلومات على الجانبين:"
 msgstr "Pastilles d'information des deux côtés :"
+
+msgid "حتى"
+msgstr "jusqu'à"
 
 msgid "حتى اللحظة"
 msgstr "Jusqu'à présent"
@@ -13947,6 +14161,9 @@ msgstr "Par forfait"
 msgid "حسب تاريخ انتهاء البطاقة"
 msgstr "Par date d'expiration du coupon"
 
+msgid "حسنًا"
+msgstr "OK"
+
 msgid "حسّاس"
 msgstr "Sensible"
 
@@ -14203,8 +14420,8 @@ msgstr "Service Jawwal Pay - actuellement non activé"
 msgid "خدمة مدفوعة محدودة السرعة — ليست مجانية ولا بيد المشترك"
 msgstr "Un service payant à débit limité — ni gratuit ni géré par l'abonné"
 
-msgid "خدمة مدفوعة — اضغط لطلب التفعيل"
-msgstr "Service payant — cliquez pour demander l'activation"
+msgid "خدمة مدفوعة — تغيير IP حيّ عبر CoA (RFC 5176) دون قطع"
+msgstr "Service payant — changement d'IP en direct via CoA (RFC 5176) sans coupure"
 
 msgid "خدمة مستخدمين عبر اتصال المزود مع المصادقة المركزية."
 msgstr ""
@@ -14338,6 +14555,9 @@ msgstr "Options avancées — URL personnalisée au lieu de l'automatique"
 
 msgid "خيارات مصدر الإنترنت"
 msgstr "Options de la source Internet"
+
+msgid "دائم"
+msgstr "Permanent"
 
 msgid "دائم (لا يُحذف تلقائياً)"
 msgstr "Permanent (non supprimé automatiquement)"
@@ -14508,6 +14728,9 @@ msgstr "Étage ·"
 
 msgid "دور نظام محمي — لا يمكن أرشفته"
 msgstr "Un rôle système protégé — il ne peut pas être archivé"
+
+msgid "دوري"
+msgstr "Périodique"
 
 msgid ""
 "دولة تشغيل النظام — تُستخدم كمرجع للموقع الافتراضي في الواجهات والتقارير "
@@ -14832,6 +15055,9 @@ msgstr "Rejeter la preuve"
 
 msgid "رفع"
 msgstr "Téléverser"
+
+msgid "رفع (Kbps)"
+msgstr "Envoi (Kbps)"
 
 msgid "رفع (MB)"
 msgstr "Téléversement (MB)"
@@ -15219,6 +15445,9 @@ msgstr "Motif de la désactivation"
 msgid "سبب الجدول أو ملاحظات التشغيل"
 msgstr "Motif de la planification ou notes d'exploitation"
 
+msgid "سبب الحظر — يظهر في القائمة"
+msgstr "Motif du blocage — affiché dans la liste"
+
 msgid "سبب الرفض"
 msgstr "Motif du refus"
 
@@ -15301,11 +15530,17 @@ msgstr "Journal des sessions et des paiements"
 msgid "سجل العمليات"
 msgstr "Journal des opérations"
 
+msgid "سجل الفحوصات"
+msgstr "Journal des vérifications"
+
 msgid "سجل المبيعات"
 msgstr "Journal des ventes"
 
 msgid "سجل المبيعات حسب الفترة"
 msgstr "Journal des ventes par période"
+
+msgid "سجل المحاولات"
+msgstr "Journal des tentatives"
 
 msgid "سجل تغييرات الماك"
 msgstr "Journal des changements MAC"
@@ -15324,6 +15559,12 @@ msgstr "Journal complet"
 
 msgid "سجل كامل."
 msgstr "Journal complet."
+
+msgid "سجل محاولات تسجيل الدخول"
+msgstr "Journal des tentatives de connexion"
+
+msgid "سجل محاولات دخول المدراء"
+msgstr "Journal des tentatives de connexion d'administrateur"
 
 msgid "سجلات الإيراد"
 msgstr "Registres de revenus"
@@ -15356,12 +15597,6 @@ msgid "سداد يقفل سلفة مفتوحة ويصفّر دينها — ال�
 msgstr ""
 "Un paiement clôture une avance ouverte et remet sa dette à zéro — "
 "l'avance d'origine reste visible dans le journal."
-
-msgid "سر الربط"
-msgstr "Secret de liaison"
-
-msgid "سر الربط من صفحة العميل"
-msgstr "Secret de liaison depuis la page du client"
 
 msgid "سر المصادقة"
 msgstr "Secret d'authentification"
@@ -16450,9 +16685,6 @@ msgstr "Méthode d'agrégation de tous les chiffres temporels"
 msgid "طريقة قديمة — لصق السكربت كاملاً يدوياً"
 msgstr "Ancienne méthode — coller le script complet manuellement"
 
-msgid "طلب"
-msgstr "Demander"
-
 msgid "طلب إيداع"
 msgstr "Demander un dépôt"
 
@@ -16471,20 +16703,28 @@ msgstr "Demander une mise à niveau des spécifications du forfait"
 msgid "طلب تفعيل"
 msgstr "Demande d'activation"
 
+msgid "طلب تفعيل الخدمة بمواصفاتها"
+msgstr "Demander l'activation de ce service"
+
 msgid "طلب تفعيل النسخ على اللوحة"
 msgstr "Demander l'activation de la copie sur le tableau de bord"
 
 msgid "طلب تفعيل بمواصفات"
 msgstr "Demander une activation avec spécifications"
 
-msgid "طلب تفعيل/ترقية الخدمة بمواصفاتها"
-msgstr "Demander l'activation/la mise à niveau du service avec ses spécifications"
+msgid "طلب تفعيل/زيادة السقف من المالك (طلب مركزي)"
+msgstr ""
+"Demander activation / augmentation de plafond au propriétaire (demande "
+"centrale)"
 
 msgid "طلب حزمة رسائل"
 msgstr "Demander un lot de messages"
 
 msgid "طلب خدمة"
 msgstr "Demande de service"
+
+msgid "طلب سقف"
+msgstr "Demande de plafond"
 
 msgid "طلب سلفة وقت أو تجديد"
 msgstr "Demander une avance de temps ou un renouvellement"
@@ -16620,6 +16860,9 @@ msgstr "Saisissez l'identifiant et le mot de passe"
 msgid "عتبة التنبيه قبل نفاد الكوتا اليومية."
 msgstr "Seuil d'alerte avant l'épuisement du quota quotidien."
 
+msgid "عتبة المحاولات"
+msgstr "Seuil de tentatives"
+
 msgid "عدد"
 msgstr "Nombre"
 
@@ -16664,9 +16907,6 @@ msgstr "Nombre de sessions ayant généré cette consommation."
 
 msgid "عدد الجلسات المتزامنة المسموحة."
 msgstr "Nombre de sessions simultanées autorisées."
-
-msgid "عدد الجلسات النشطة حاليًا"
-msgstr "Nombre de sessions actives actuellement"
 
 msgid "عدد الحصص"
 msgstr "Nombre de quotas"
@@ -16883,6 +17123,9 @@ msgstr "Afficher les sections non autorisées"
 
 msgid "عرض البطاقات"
 msgstr "Afficher les cartes"
+
+msgid "عرض التفاصيل"
+msgstr "Afficher les détails"
 
 msgid "عرض التفاصيل المتقدمة"
 msgstr "Afficher les détails avancés"
@@ -17197,23 +17440,22 @@ msgstr ""
 "s'applique ; désactivé, une utilisation illimitée est autorisée."
 
 msgid ""
-"عند التفعيل سيكتب النظام فعليًا على المايكروتيك/السيرفر (إضافة عنوان "
-"IP/بوابة + تجاوز Hotspot + Netwatch). أبقِه مُطفأً ما لم ترِد تطبيق الخطط"
-" على الأجهزة الحقيقية — وهو مُطفأ افتراضيًا للأمان."
-msgstr ""
-"Une fois activé, le système écrira réellement sur le MikroTik/serveur "
-"(ajout d'une adresse IP/passerelle + contournement du Hotspot + "
-"Netwatch). Laissez-le désactivé sauf si vous souhaitez appliquer les "
-"plans aux appareils réels — il est désactivé par défaut pour des raisons "
-"de sécurité."
-
-msgid ""
 "عند التفعيل يستطيع المستخدمون طلب إعادة تعيين كلمة المرور. عطّله إذا أردت"
 " أن يمرّ كل تغيير عبر الإدارة فقط."
 msgstr ""
 "Lorsqu'il est activé, les utilisateurs peuvent demander une "
 "réinitialisation de mot de passe. Désactivez-le si vous voulez que toute "
 "modification passe uniquement par l'administration."
+
+msgid ""
+"عند التفعيل يكتب النظام فعليًا على المايكروتيك/السيرفر (عنوان IP/بوابة + "
+"تجاوز Hotspot + Netwatch). أبقِه مُطفأً ما لم ترِد تطبيق الخطط على "
+"الأجهزة الحقيقية — مُطفأ افتراضيًا للأمان."
+msgstr ""
+"Une fois activé, le système écrit réellement sur le MikroTik/serveur "
+"(IP/passerelle + contournement Hotspot + Netwatch). Laissez-le désactivé "
+"sauf si vous voulez appliquer les plans au matériel réel — désactivé par "
+"défaut pour la sécurité."
 
 msgid ""
 "عند التفعيل يُطبَّق وقت الاتصال أعلاه؛ لو معطَّل يُتجاهَل الحدّ حتى لو "
@@ -17293,6 +17535,9 @@ msgstr "Adresse IP"
 msgid "عنوان IP (dst_address)"
 msgstr "Adresse IP (dst_address)"
 
+msgid "عنوان IP أو MAC (AA:BB:CC:DD:EE:FF)"
+msgstr "Adresse IP ou MAC (AA:BB:CC:DD:EE:FF)"
+
 msgid ""
 "عنوان IP الثابت للجهاز — منه تُحسب الشبكة والبوابة، وعليه يعمل البنج "
 "وNetwatch."
@@ -17309,6 +17554,9 @@ msgstr "L'adresse IP du serveur RADIUS — fait fonctionner la boutique de carte
 
 msgid "عنوان IP للجهاز"
 msgstr "Adresse IP de l'appareil"
+
+msgid "عنوان IPv4 صالح فقط. سيُرسل في Framed-IP-Address."
+msgstr "Adresse IPv4 valide uniquement. Sera envoyée dans Framed-IP-Address."
 
 msgid "عنوان MAC"
 msgstr "Adresse MAC"
@@ -17575,6 +17823,9 @@ msgstr "Non spécifié"
 msgid "غير مدعومة في هذا المسار حاليًا"
 msgstr "Non prise en charge sur ce chemin actuellement"
 
+msgid "غير مركّبة"
+msgstr "Non installé"
+
 msgid "غير مضبوط"
 msgstr "Non défini"
 
@@ -17595,6 +17846,18 @@ msgstr "Désactivée"
 
 msgid "غيغا"
 msgstr "Go"
+
+msgid ""
+"غيّر البحث أو الفلاتر — أو لا توجد محاولات دخول مدراء مسجَّلة في هذه "
+"الفترة بعد."
+msgstr ""
+"Modifiez la recherche ou les filtres — ou aucune tentative de connexion "
+"d'administrateur n'est encore enregistrée pour cette période."
+
+msgid "غيّر البحث أو الفلاتر — أو لا توجد محاولات مسجَّلة في هذه الفترة بعد."
+msgstr ""
+"Modifiez la recherche ou les filtres — ou aucune tentative n'est encore "
+"enregistrée pour cette période."
 
 msgid "فئة الاشتراك"
 msgstr "Catégorie d'abonnement"
@@ -17633,9 +17896,6 @@ msgstr ""
 
 msgid "فاشلة"
 msgstr "Échouée"
-
-msgid "فاصل المزامنة التلقائية"
-msgstr "Intervalle de synchronisation automatique"
 
 msgid "فايبر أخضر"
 msgstr "Vert Viber"
@@ -17735,6 +17995,9 @@ msgstr "Vérification ping"
 msgid "فحص wg show"
 msgstr "Vérification wg show"
 
+msgid "فحص أخير"
+msgstr "Dernière vérification"
+
 msgid "فحص اتصال جهاز الشبكة"
 msgstr "Vérifier la connexion de l'appareil réseau"
 
@@ -17748,11 +18011,6 @@ msgstr "Vérifier maintenant"
 
 msgid "فحص الاتصال الآن"
 msgstr "Vérifier la connexion maintenant"
-
-msgid "فحص الاتصال والصحّة لكل راوترات الأسطول مع أسباب الأعطال"
-msgstr ""
-"Vérifier la connectivité et l'état de santé de tous les routeurs du parc "
-"avec les causes des pannes"
 
 msgid "فحص الاستكمال"
 msgstr "Vérification de l'exhaustivité"
@@ -17775,6 +18033,9 @@ msgstr "Vérifier tout maintenant"
 msgid "فحص اللوب"
 msgstr "Vérification de boucle"
 
+msgid "فحص اللوب دوريًا في الخلفية"
+msgstr "Sonde de boucle périodique en arrière-plan"
+
 msgid "فحص المنفذ، دخول واجهة الربط، هوية الراوتر، وأوامر إصلاح قابلة للنسخ"
 msgstr ""
 "Vérification du port, connexion à l'interface de liaison, identité du "
@@ -17794,6 +18055,12 @@ msgstr "Vérification de carte › Numéros"
 
 msgid "فحص بطاقة › الجهاز الحالي"
 msgstr "Vérifier le coupon › Appareil actuel"
+
+msgid "فحص حي"
+msgstr "Vérification en direct"
+
+msgid "فحص دوري"
+msgstr "Vérification périodique"
 
 msgid "فحص صحة peer"
 msgstr "Vérification de l'état du peer"
@@ -17815,6 +18082,9 @@ msgstr ""
 
 msgid "فحوص وأدوات استكشاف الأعطال."
 msgstr "Contrôles et outils de dépannage."
+
+msgid "فحوصات آخر 24 ساعة"
+msgstr "Vérifications dans les dernières 24h"
 
 msgid "فحوصات سليمة"
 msgstr "Vérifications saines"
@@ -18308,6 +18578,9 @@ msgstr "Comparez les deux dernières colonnes du chemin"
 msgid "قاعدة الأمان المالي:"
 msgstr "Règle de sécurité financière :"
 
+msgid "قاعدة الكشف غير مركّبة فعليًا على"
+msgstr "La règle de détection n'est pas réellement installée sur"
+
 msgid "قاعدة المشترك لها أعلى أولوية عند تسجيل الدخول."
 msgstr "La règle de l'abonné a la priorité la plus élevée lors de la connexion."
 
@@ -18323,6 +18596,9 @@ msgid ""
 msgstr ""
 "Une règle de vitesse enregistrée sur le lot dès sa création, par ex. "
 "réduire la vitesse la nuit pour tous les coupons du lot."
+
+msgid "قاعدة غير مركّبة"
+msgstr "Règle non installée"
 
 msgid "قاعدة غير مُركّبة"
 msgstr "Règle non installée"
@@ -18628,6 +18904,9 @@ msgstr "Règles avec plages horaires et jours précis"
 msgid "قواعد سرعة مجدوَلة"
 msgstr "Règles de vitesse planifiées"
 
+msgid "قواعد مفقودة"
+msgstr "Règles manquantes"
+
 msgid "قوالب الطباعة"
 msgstr "Modèles d'impression"
 
@@ -18681,6 +18960,9 @@ msgstr "une nouvelle écriture de contrepassation"
 msgid "قيدًا قابلًا للتدقيق"
 msgstr "Une écriture auditable"
 
+msgid "قيم بالكيلوبت/ثانية. مثال: 51200 ≈ 50 ميجا."
+msgstr "Valeurs en Kbps. Exemple : 51200 ≈ 50 Mbps."
+
 msgid "قيم ثابتة تتجاوز سرعة الباقة. اتركها 0 لاستخدام قيمة الباقة."
 msgstr ""
 "Valeurs fixes qui remplacent la vitesse du forfait. Laissez-les à 0 pour "
@@ -18695,8 +18977,8 @@ msgstr "Montant de l'avance (automatique)"
 msgid "قيمة السلفة (تُحتسب تلقائيًا)"
 msgstr "Montant de l'avance (calculé automatiquement)"
 
-msgid "قيمة الفاتورة بالشيكل ₪ — يُحتسب على رصيد المشترك."
-msgstr "Montant de la facture en shekels ₪ — imputé sur le solde de l'abonné."
+msgid "قيمة الفاتورة بـ"
+msgstr "Valeur de la facture en"
 
 msgid "قيمة الفاتورة."
 msgstr "Montant de la facture."
@@ -19074,6 +19356,30 @@ msgstr ""
 msgid "كل صف قيد، وأعمدته:"
 msgstr "Chaque ligne est une écriture, et ses colonnes :"
 
+msgid ""
+"كل صف هنا = محاولة تسجيل دخول واحدة. البحث يطابق المستخدم وعنوان الشبكة "
+"وجهاز الشبكة، فلتر النتيجة يفرز نجاحًا أو فشلًا، نطاق التاريخ يعمل على "
+"وقت المحاولة. مصدر البيانات نفس مصدر «حالات تسجيل الدخول» و«فشل دخول "
+"الشبكة»."
+msgstr ""
+"Chaque ligne ici = une tentative de connexion. La recherche cible "
+"l'utilisateur, l'adresse réseau et l'appareil ; le filtre de résultat "
+"trie succès vs échec ; la plage de dates s'applique à l'heure de la "
+"tentative. Source identique à « États de connexion » et « Échecs de "
+"connexion réseau »."
+
+msgid ""
+"كل صف هنا = محاولة دخول مدير واحدة. البحث يطابق اسم المدير وعنوان الشبكة،"
+" فلتر النتيجة يفرز نجاحًا أو فشلًا، نطاق التاريخ يعمل على وقت المحاولة. "
+"مصدر البيانات نفس مصدر «سجل محاولات تسجيل الدخول» مع تثبيت الفاعل على "
+"«مدير»."
+msgstr ""
+"Chaque ligne ici = une tentative de connexion d'administrateur. La "
+"recherche cible le nom de l'admin et l'adresse réseau ; le filtre de "
+"résultat trie succès vs échec ; la plage de dates s'applique à l'heure de"
+" la tentative. Source identique au « Journal des tentatives de connexion "
+"» avec l'acteur fixé sur « admin »."
+
 msgid "كل صف يمثّل فئة من بطاقات الشحن. مثلاً:"
 msgstr "Chaque ligne représente une catégorie de cartes de recharge. Par exemple :"
 
@@ -19140,6 +19446,23 @@ msgid "كل محاولات الاتصال المسجلة"
 msgstr "Toutes les tentatives de connexion enregistrées"
 
 msgid ""
+"كل محاولة دخول إلى النظام — نجاحًا أو فشلًا — مع الوقت، المستخدم، الشبكة "
+"والجهاز، وسبب الفشل عند وجوده. الترتيب من الأحدث للأقدم. للقراءة فقط."
+msgstr ""
+"Chaque tentative de connexion — réussie ou échouée — avec l'heure, "
+"l'utilisateur, le réseau et l'appareil, et le motif d'échec le cas "
+"échéant. Plus récent en premier. Lecture seule."
+
+msgid ""
+"كل محاولة دخول مدير إلى لوحة الإدارة — نجاحًا أو فشلًا — مع الوقت، اسم "
+"المدير، عنوان الشبكة، المتصفح، وسبب الفشل عند وجوده. الترتيب من الأحدث "
+"للأقدم. للقراءة فقط."
+msgstr ""
+"Chaque tentative de connexion d'administrateur — réussie ou échouée — "
+"avec l'heure, le nom de l'admin, l'adresse réseau, le navigateur et le "
+"motif d'échec le cas échéant. Plus récent en premier. Lecture seule."
+
+msgid ""
 "كل مسار في الجسر له بطاقة منفصلة بأيقونة وحالة وملاحظة توضّح ما يفعله — "
 "وما لا يفعله."
 msgstr ""
@@ -19160,6 +19483,9 @@ msgid "كل نوع قيد يؤثر على الأرقام بشكل مختلف —
 msgstr ""
 "Chaque type d'écriture affecte les chiffres différemment — voici les "
 "types les plus courants :"
+
+msgid "كلاهما"
+msgstr "Les deux"
 
 msgid "كلاهما لا رجوع فيه — الكوبون لا يُصرف مرتين، وإلغاؤه"
 msgstr ""
@@ -19474,6 +19800,9 @@ msgstr ""
 "Aucune modification non enregistrée — toutes les valeurs correspondent au"
 " dernier enregistrement."
 
+msgid "لا تعليقات وصول بعد."
+msgstr "Aucune suspension d'accès pour le moment."
+
 msgid "لا تغيّرها إلا إذا كنت تعرف أثرها"
 msgstr "Ne la modifiez pas sauf si vous en connaissez l'effet"
 
@@ -19678,6 +20007,9 @@ msgstr "Non déduit"
 msgid "لا حذف مباشر إطلاقًا"
 msgstr "Aucune suppression directe"
 
+msgid "لا حظور بعد."
+msgstr "Aucun blocage pour le moment."
+
 msgid "لا خصائص رد."
 msgstr "Aucun attribut de réponse."
 
@@ -19687,6 +20019,14 @@ msgstr "Aucun message dans cette conversation pour l'instant."
 msgid "لا شيء يُحذف أبدًا"
 msgstr "Rien n'est jamais supprimé"
 
+msgid "لا فحوصات مسجّلة بعد"
+msgstr "Aucune vérification enregistrée"
+
+msgid "لا فحوصات مسجّلة بعد — أول فحص (يدوي أو دوري) سيظهر هنا."
+msgstr ""
+"Aucune vérification enregistrée — la première vérification (manuelle ou "
+"périodique) apparaîtra ici."
+
 msgid "لا قنوات استلام بعد — أضف أول قناة من النموذج بالأسفل."
 msgstr ""
 "Aucun canal de réception pour l'instant — ajoutez le premier canal depuis"
@@ -19695,11 +20035,19 @@ msgstr ""
 msgid "لا محادثات بعد."
 msgstr "Aucune conversation pour l'instant."
 
+msgid "لا محاولات مطابقة"
+msgstr "Aucune tentative correspondante"
+
+msgid ""
+"لا منافذ بعد — اختر المنافذ أعلاه وفعّل الخدمة، أو اضغط «فحص اللوب» "
+"لقراءة الواقع من الراوتر."
+msgstr ""
+"Aucun port pour le moment — choisissez des ports ci-dessus et activez le "
+"service, ou cliquez sur « Vérifier la boucle » pour lire l'état en direct"
+" depuis le routeur."
+
 msgid "لا نتائج مطابقة للفلاتر"
 msgstr "Aucun résultat correspondant aux filtres"
-
-msgid "لا نشاط بعد"
-msgstr "Aucune activité pour l'instant"
 
 msgid "لا وصل"
 msgstr "Aucun reçu"
@@ -20009,6 +20357,9 @@ msgstr ""
 "Aucun coupon sélectionné pour le moment. Cliquez sur un modèle à gauche, "
 "puis choisissez un lot."
 
+msgid "لم تُقرأ بعد"
+msgstr "Pas encore lu"
+
 msgid "لم نجد كائنات مطابقة في:"
 msgstr "Aucun objet correspondant trouvé dans :"
 
@@ -20056,12 +20407,6 @@ msgstr "L'état de préparation n'a pas encore été vérifié."
 
 msgid "لم يتم فحص صحة الربط بعد."
 msgstr "L'état de la connexion n'a pas encore été vérifié."
-
-msgid "لم يدخل بعد"
-msgstr "Ne s'est pas encore connecté"
-
-msgid "لم يدخل قط"
-msgstr "Jamais connecté"
 
 msgid "لم يكتمل إعداده بعد عبر المعالج."
 msgstr "Sa configuration n'a pas encore été terminée via l'assistant."
@@ -20156,8 +20501,20 @@ msgstr "Si le statut « Routeur connecté » apparaît — tout est prêt."
 msgid "لو عنوان الخادم يبدأ بـ"
 msgstr "Si l'adresse du serveur commence par"
 
+msgid "لوب"
+msgstr "Boucle"
+
+msgid "لوب مكتشف"
+msgstr "Boucle détectée"
+
+msgid "لوب!"
+msgstr "Boucle !"
+
 msgid "لوحة"
 msgstr "Tableau de bord"
+
+msgid "لوحة الإدارة"
+msgstr "Panneau d'administration"
 
 msgid "لوحة التحكم"
 msgstr "Tableau de bord"
@@ -20730,6 +21087,9 @@ msgstr "Par exemple : lot de recharge du mois 8"
 msgid "مثل: راوتر الفرع الرئيسي"
 msgstr "ex. : routeur de la succursale principale"
 
+msgid "مثل: صيانة مجدولة / إيقاف مؤقت للمراجعة"
+msgstr "Ex. : maintenance planifiée / suspension temporaire pour examen"
+
 msgid "مثل: للموزّع أحمد — منطقة الشمال"
 msgstr "Par exemple : Pour le distributeur Ahmad — région nord"
 
@@ -20850,8 +21210,14 @@ msgstr "Tentatives de connexion"
 msgid "محاولات المشتركين من"
 msgstr "Tentatives des abonnés depuis"
 
+msgid "محاولات اليوم"
+msgstr "Tentatives du jour"
+
 msgid "محاولات دخول لوحة الإدارة"
 msgstr "Tentatives de connexion au panneau d'administration"
+
+msgid "محاولة"
+msgstr "tentative"
 
 msgid "محاولة التطبيق: محظورة افتراضيًا"
 msgstr "Tentative d'application : bloquée par défaut"
@@ -21059,6 +21425,9 @@ msgstr "Durée de fonctionnement du serveur de liaison"
 msgid "مدة مُنحت قبل الدفع —"
 msgstr "Durée accordée avant paiement —"
 
+msgid "مدراء فريدون"
+msgstr "Admins uniques"
+
 msgid "مدراء مسموحون"
 msgstr "Gestionnaires autorisés"
 
@@ -21104,8 +21473,17 @@ msgstr "Ville de résidence de l'abonné."
 msgid "مدّة الإتاحة"
 msgstr "Durée de disponibilité"
 
+msgid "مدّة التعليق"
+msgstr "Durée de la suspension"
+
 msgid "مدّة الجلسة"
 msgstr "Durée de la session"
+
+msgid "مدّة الحظر"
+msgstr "Durée du blocage"
+
+msgid "مدّة الحظر التلقائي (دقيقة)"
+msgstr "Durée du blocage automatique (minutes)"
 
 msgid "مراجعة"
 msgstr "Révision"
@@ -21150,11 +21528,6 @@ msgid ""
 msgstr ""
 "Surveillance des routeurs, des points d'accès, des liaisons et "
 "d'UniFi/LiteBeam via MikroTik Netwatch"
-
-msgid "مراقبة دوريّة لكل أجهزة الشبكة مع تنبيه فوريّ عند العطل"
-msgstr ""
-"Surveillance périodique de tous les appareils réseau avec alerte "
-"immédiate en cas de panne"
 
 msgid "مراقبة مستمرة لحالة كل أجهزة الشبكة مع إشعار عند العطل"
 msgstr ""
@@ -21275,6 +21648,9 @@ msgstr "Centre de vérification des coupons"
 
 msgid "مركز فحص البطاقات جاهز"
 msgstr "Le centre de vérification des cartes est prêt"
+
+msgid "مركّبة"
+msgstr "Installé"
 
 msgid "مرّت أكثر من 5 دقائق دون تأكيد الرمز — ابدأ عملية جديدة."
 msgstr ""
@@ -21732,6 +22108,12 @@ msgstr ""
 "L'ID de discussion détermine à qui les alertes sont envoyées. La méthode "
 "la plus simple :"
 
+msgid "معرّف المحادثة/القناة (Chat ID)"
+msgstr "ID du chat/canal"
+
+msgid "معرّف الموضوع (اختياري)"
+msgstr "ID du sujet (facultatif)"
+
 msgid "معرّف الهدف"
 msgstr "Identifiant de la cible"
 
@@ -22056,6 +22438,15 @@ msgstr ""
 "Remarque : les clients DHCP existants pour la détection de boucle portent"
 " le commentaire"
 
+msgid ""
+"ملاحظة: عند المصادقة لا يتوفّر إلا عنوان IP الراوتر (NAS) لا جهاز العميل "
+"— لذا «حظر IP» قد يحظر كل من خلف الراوتر. «MAC» أدقّ لتمييز الجهاز."
+msgstr ""
+"Remarque : à l'authentification, seule l'IP du routeur (NAS) est "
+"disponible, pas celle du client — bloquer par IP peut donc bloquer tout "
+"le monde derrière ce routeur. Le MAC est plus précis pour identifier un "
+"appareil."
+
 msgid "ملتصقة بحقل"
 msgstr "Accolée à un champ"
 
@@ -22191,6 +22582,9 @@ msgstr ""
 msgid "من أول اتصال"
 msgstr "Dès la première connexion"
 
+msgid "من إجمالي "
+msgstr "sur "
+
 msgid "من الباقات"
 msgstr "Depuis les forfaits"
 
@@ -22295,6 +22689,9 @@ msgstr ""
 
 msgid "مناسب لخدمة الهوتسبوت."
 msgstr "Convient au service hotspot."
+
+msgid "منافذ"
+msgstr "Ports"
 
 msgid "منافذ إضافيّة مفصولة بفاصلة"
 msgstr "Ports supplémentaires séparés par des virgules"
@@ -22412,6 +22809,12 @@ msgstr "Bloquer la diffusion Bluetooth/Wi-Fi et la détection de boucle."
 
 msgid "منع تغيير الاشتراك (مستخدم)"
 msgstr "Empêcher le changement d'abonnement (utilisateur)"
+
+msgid "منع دخول البطاقات بعنوان MAC عشوائي (خاص)"
+msgstr "Bloquer les connexions de cartes depuis des MAC aléatoires (privées)"
+
+msgid "منع دخول المشتركين بعنوان MAC عشوائي (خاص)"
+msgstr "Bloquer les connexions d'abonnés depuis des MAC aléatoires (privées)"
 
 msgid "منع مشاركة الاتصال"
 msgstr "Empêcher le partage de connexion"
@@ -22589,6 +22992,9 @@ msgstr "Générateur"
 msgid "ميجا"
 msgstr "Mo"
 
+msgid "ميجابت"
+msgstr "Mbit/s"
+
 msgid "ميزة التنفيذ ما زالت متوقفة إلا داخل تجربة مضبوطة"
 msgstr ""
 "La fonction d'exécution est toujours désactivée, sauf dans le cadre d'un "
@@ -22645,6 +23051,12 @@ msgstr ""
 
 msgid "نافذة الطباعة: اختر القالب واضبط الورقة"
 msgstr "Fenêtre d'impression : choisissez le modèle et configurez la feuille"
+
+msgid "نافذة العدّ (ثانية)"
+msgstr "Fenêtre de comptage (secondes)"
+
+msgid "نتيجة المحاولة"
+msgstr "Résultat de la tentative"
 
 msgid "نجاح"
 msgstr "Succès"
@@ -22981,6 +23393,9 @@ msgstr ""
 
 msgid "نظيف"
 msgstr "Propre"
+
+msgid "نعم"
+msgstr "Oui"
 
 msgid "نعم، أوقف الخدمة"
 msgstr "Oui, arrêter le service"
@@ -23345,6 +23760,13 @@ msgstr ""
 "Cette section répond à la question la plus importante pour tout "
 "fournisseur :"
 
+msgid ""
+"هذا المفتاح هو سرّ الربط الوحيد. اتركه فارغًا إن كان محفوظًا. لا نعرضه "
+"كاملًا في الصفحة."
+msgstr ""
+"Cette clé est le seul secret de liaison. Laissez vide si elle est déjà "
+"enregistrée. Nous ne l'affichons jamais en entier sur la page."
+
 msgid "هذا النشر يرفع الملفات بدفع API مباشر ("
 msgstr "Ce déploiement téléverse les fichiers via un envoi API direct ("
 
@@ -23497,6 +23919,15 @@ msgstr ""
 "Cette étape n'affiche que des plans sûrs et réutilise le centre de "
 "politiques réseau et le chemin de changement d'adresse de sortie "
 "existants. Il n'y a aucune application directe depuis ici."
+
+msgid ""
+"هذه جلسة Hotspot — مايكروتيك لا يقبل تغيير IP عبر CoA. سيُرفض الطلب "
+"وسيُعرض «unsupported». استخدم «تغيير IP» من راوتر الهوتسبوت مباشرة بدلًا "
+"من ذلك."
+msgstr ""
+"Ceci est une session Hotspot — MikroTik n'accepte pas le changement d'IP "
+"via CoA. La demande sera rejetée et affichée comme « unsupported ». "
+"Utilisez plutôt « Changer l'IP » directement sur le routeur Hotspot."
 
 msgid "هذه خدمة مدفوعة — طلب تفعيل"
 msgstr "Ce service est payant — demande d'activation"
@@ -23672,7 +24103,7 @@ msgstr ""
 "sont des raccourcis vers les deux pages dont vous aurez le plus besoin."
 
 msgid "و"
-msgstr ""
+msgstr "et"
 
 msgid "وأعد تشغيل خدمة التشغيل."
 msgstr "Et redémarrez le service d'exécution."
@@ -24320,6 +24751,9 @@ msgstr ""
 "Cette action supprime tous les enregistrements de provisionnement des "
 "routeurs."
 
+msgid "يحظر حسب"
+msgstr "Bloquer par"
+
 msgid "يحفظ MAC أول جهاز يتصل ويربط البطاقة عليه."
 msgstr ""
 "Enregistre la MAC du premier appareil qui se connecte et lui lie le "
@@ -24329,6 +24763,14 @@ msgid "يحفظ الشريحة ثم يعرض جمهورها — لا يتم إر
 msgstr ""
 "Il enregistre le segment puis affiche son audience — aucun message n'est "
 "envoyé."
+
+msgid ""
+"يحكم متى/هل يستطيع المشترك تسجيل الدخول (جدولة أو تعليق مؤقت). ليس حظرًا "
+"أمنيًا — عند المنع يرى المستخدم رسالة عربية مهذّبة تشرح السبب."
+msgstr ""
+"Contrôle quand/si l'abonné peut se connecter (planification ou suspension"
+" temporaire). Ce n'est pas un blocage de sécurité — l'utilisateur voit un"
+" message poli expliquant pourquoi."
 
 msgid "يحمي واجهة المتجر من الاستدعاء الخارجي."
 msgstr "Protège l'interface de la boutique contre les appels externes."
@@ -24707,6 +25149,16 @@ msgstr ""
 "Le système vérifie périodiquement la connexion de l'équipement et met à "
 "jour son statut dans la liste."
 
+msgid ""
+"يفحص النظام كل الأجهزة المُراقَبة تلقائيًا في الخلفية، يسجّل كل دورة في "
+"«سجل الفحوصات» ويُطلق التنبيهات عند الانقطاع. حدّد الفترة بين الفحوصات "
+"بالدقائق (أدنى دقة فعلية: دقيقة)."
+msgstr ""
+"Le système vérifie automatiquement chaque appareil surveillé en arrière-"
+"plan, consigne chaque cycle dans le « Journal des vérifications » et "
+"déclenche des alertes en cas de panne. Définissez l'intervalle entre les "
+"vérifications en minutes (résolution minimale effective : une minute)."
+
 msgid "يفرغ /ip dns cache"
 msgstr "Vide /ip dns cache"
 
@@ -24980,6 +25432,21 @@ msgstr ""
 "l'examine et crédite le solde après approbation. Votre solde ne change "
 "qu'après approbation."
 
+msgid ""
+"يُرسل النظام CoA-Request إلى المايكروتيك/السيرفر مع Framed-IP-Address "
+"الجديد فيُغيَّر الـ IP فورًا دون قطع الجلسة. مُثبت حيًّا على PPPoE."
+msgstr ""
+"Le système envoie une CoA-Request au MikroTik/serveur avec la nouvelle "
+"Framed-IP-Address, l'IP change immédiatement sans interrompre la session."
+" Vérifié en direct sur PPPoE."
+
+msgid ""
+"يُرسل النظام Mikrotik-Rate-Limit الجديد عبر CoA فتُطبَّق السرعة على "
+"الجلسة الجارية فورًا (PPPoE وHotspot)."
+msgstr ""
+"Le système envoie la nouvelle Mikrotik-Rate-Limit via CoA, et la vitesse "
+"s'applique immédiatement à la session en cours (PPPoE et Hotspot)."
+
 msgid "يُرسَل إشعار تلجرام عند توقّف الجهاز (يحتاج إعداد تلجرام مفعّلًا)."
 msgstr ""
 "Une notification Telegram est envoyée lorsque l'appareil s'arrête "
@@ -25067,7 +25534,7 @@ msgstr ""
 "le vide."
 
 msgid "٥٠٠"
-msgstr ""
+msgstr "500"
 
 msgid "— أول بند في القسم. أعلى الصفحة رح تشوف العنوان"
 msgstr ""
@@ -25336,6 +25803,9 @@ msgstr ""
 
 msgid "— يوديك مباشرة على الصفحة اللي تعالج فيها المشكلة:"
 msgstr "— vous amène directement à la page où vous traitez le problème :"
+
+msgid "— يُحتسب على رصيد المشترك."
+msgstr "— prélevé sur le solde de l'abonné."
 
 msgid "→ السابق"
 msgstr "→ Précédent"
