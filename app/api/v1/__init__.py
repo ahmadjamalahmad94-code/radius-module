@@ -22,10 +22,12 @@ def register_v1(parent: Blueprint) -> None:
         setup_wizard, subscriber_portal, whatsapp_bot,
         admin_alerts as admin_alerts_api,
         store_admin,
+        mt_programming as mt_programming_api,
     )
     health.register(v1)
     admin_alerts_api.register(v1)
     store_admin.register(v1)
+    mt_programming_api.register(v1)
     accounts.register(v1)
     cards.register(v1)
     card_users.register(v1)
