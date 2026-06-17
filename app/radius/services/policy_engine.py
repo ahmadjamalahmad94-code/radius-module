@@ -80,6 +80,10 @@ _MSG = {
     # «هذا جهازي الجديد». المحاولة الثانية بنفس البصمة الحيّة ضمن النافذة
     # تُعامَل كتأكيد قانوني → سماح + إعادة ربط.
     "stepup_required":    "هذا الجهاز جديد — أعد كتابة كلمة المرور للتأكيد",
+    # «نمط السماح» (allow-mode):
+    "allow_mode_unknown_device": "هذا الجهاز غير مُسجَّل في قائمة الأجهزة المسموح بها — راجع الإدارة",
+    "allow_mode_at_capacity":    "تم الوصول للحدّ الأقصى للأجهزة المربوطة بهذا الحساب — تواصل مع الإدارة",
+    "allow_mode_bind_failed":    "تعذّر ربط هذا الجهاز — تواصل مع الإدارة",
     "ok_welcome":        "أهلًا بك",
     "ok_expires_soon":   "اشتراكك ينتهي قريبًا — جدّد قبل الانقطاع",
 }
@@ -338,6 +342,39 @@ def _check_anti_mac_clone(req: AuthRequest, sub: Subscriber,
         return None
 
 
+def _check_allow_mode(sub: Subscriber, req: AuthRequest) -> Optional[AuthDecision]:
+    """«نمط السماح»: يُستدعى بعد فحوصات السلامة (password/expiry/MAC/…)
+    وقبل حدّ الجلسات المتزامنة. يفوّض كل المنطق للخدمة المخصّصة.
+
+    Verdict.action:
+      • None              → لا سياسة (السلوك الطبيعي يستمر).
+      • allow             → السماح (TOFU bind / مطابقة allowlist / open).
+      • deny              → نُحوّله إلى Reject مع رسالة عربية.
+
+    محصّن بالكامل: أي خطأ يُسقط الفحص (سماح) كي لا نكسر مسار الـauth."""
+    try:
+        from .allow_mode import check_after_password
+        v = check_after_password(
+            int(req.tenant_id),
+            username=sub.username,
+            plan_id=sub.plan_id,
+            card_batch_id=sub.card_batch_id,
+            calling_station_id=req.calling_station_id,
+        )
+        if v is None or v.action != "deny":
+            return None
+        reason = v.reason if v.reason in (
+            "allow_mode_unknown_device", "allow_mode_at_capacity",
+            "allow_mode_bind_failed") else "allow_mode_unknown_device"
+        msg = v.message or _MSG.get(reason) or _MSG["allow_mode_unknown_device"]
+        return AuthDecision(ok=False, reason=reason, message=msg,
+                             reply_attrs={"Reply-Message": msg})
+    except Exception:  # noqa: BLE001 — never break auth
+        _LOG.warning("policy_engine: allow-mode check failed for %r",
+                      req.username, exc_info=True)
+        return None
+
+
 def _check_concurrent(sub: Subscriber, plan: Optional[AccessPlan]) -> Optional[AuthDecision]:
     limit = sub.override_concurrent or (plan.concurrent_sessions if plan else 0) or 0
     if limit <= 0: return None
@@ -441,6 +478,14 @@ def authorize(req: AuthRequest) -> AuthDecision:
         lambda: _check_quota(sub, plan),
         lambda: _check_mac(sub, req),
         lambda: _check_random_mac(req, source),
+        # «نمط السماح» (allow-mode): يأتي بعد سلامة MAC وقبل حدّ الجلسات
+        # المتزامنة. يفحص الانتماء لقائمة سماح أو يطبّق TOFU binding.
+        lambda: _check_allow_mode(sub, req),
+        # «منع استنساخ MAC» (anti-mac-clone): قرار أمني (بصمة الجهاز مقابل MAC)
+        # بعد كل فحوصات السلامة + نمط السماح، وقبل حدّ الجلسات المتزامنة —
+        # للأمان أولوية على السعة. يفترض أن كلمة المرور صحّت (لا يُعاقب فشل
+        # auth)؛ محصّن بالكامل (أي خطأ → سماح آمن).
+        lambda: _check_anti_mac_clone(req, sub, plan, source),
         lambda: _check_concurrent(sub, plan),
     ):
         bad = fn()
@@ -451,22 +496,11 @@ def authorize(req: AuthRequest) -> AuthDecision:
             # عدّاد الفشل + الحظر التلقائي (fail2ban): يُحسب **فقط** على فشل
             # مصادقة حقيقي (قائمة سماح _FAIL2BAN_REASONS) — لا على رفض
             # السياسة/التفويض (expired/quota_exhausted/outside_hours/
-            # concurrent_limit/mac_mismatch/…) كي لا يَحظر مستخدم شرعي نفسه
-            # بسبب واي‑فاي متقطّع مثلًا، ولا على التعليق/الحظر نفسه.
+            # concurrent_limit/mac_mismatch/mac_clone_detected/…) كي لا يَحظر
+            # مستخدم شرعي نفسه بسبب واي‑فاي متقطّع مثلًا، ولا على التعليق/الحظر.
             if bad.reason in _FAIL2BAN_REASONS:
                 _register_failed_attempt(req, now)
             return bad
-
-    # «منع استنساخ MAC» (anti-mac-clone) — يجري بعد كل فحوصات السلامة وقبل
-    # إصدار Accept. الفحص يفترض أن كلمة المرور صحّت (لا نُعاقب من فشل auth).
-    # محصّن: أي خطأ يُسقط الفحص ولا يكسر مسار الـauth (سماح آمن).
-    anti_clone = _check_anti_mac_clone(req, sub, plan, source)
-    if anti_clone is not None:
-        _LOG.warning("auth_decision user=%r source=%s rejected reason=%s "
-                      "(anti-mac-clone)",
-                      req.username, source, anti_clone.reason)
-        _log_attempt(req, accepted=False, reason=anti_clone.reason)
-        return anti_clone
 
     # ─ ✅ Accept ─
     reply = _build_accept_attrs(sub, plan)

@@ -402,6 +402,12 @@ _PERM_GUARDED: dict[str, str] = {
     # «منع استنساخ MAC» — كتابة محروسة بـsettings.edit (نفس نمط access_control)
     "anti_mac_clone_save_settings":  "settings.edit",
     "anti_mac_clone_binding_action": "settings.edit",
+    # «نمط السماح» — كتابة محروسة بنفس مفتاح صلاحية القسم.
+    "access_control_allow_mode_upsert":         "settings.edit",
+    "access_control_allow_mode_delete_policy":  "settings.edit",
+    "access_control_allow_mode_toggle_policy":  "settings.edit",
+    "access_control_allow_mode_add_device":     "settings.edit",
+    "access_control_allow_mode_delete_device":  "settings.edit",
     # الأنفاق — طلب/مزامنة نفق عبر الجسر (كتابة) تتطلّب api.use
     "tunnels_request": "api.use",
     "tunnels_sync": "api.use",

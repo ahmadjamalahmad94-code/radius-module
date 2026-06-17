@@ -12,7 +12,10 @@ from flask import (Blueprint, flash, g, redirect, render_template, request,
                    session, url_for)
 
 from ..core.tenant import DEFAULT_TENANT_ID
-from ..db.repos import access_blocks_repo, audit_repo, tenants_repo
+from ..db.repos import (
+    access_blocks_repo, allow_mode_repo, audit_repo, cards_repo,
+    plans_repo, tenants_repo,
+)
 from ..services import access_control as ac
 
 # مفاتيح إعدادات الأمان المعروضة/المحفوظة في هذه الصفحة (toggle/قيمة).
@@ -61,6 +64,22 @@ def register_access_control_routes(bp: Blueprint) -> None:
     bp.add_url_rule("/access-control/block/<int:block_id>/clear",
                     "access_control_clear_block",
                     access_control_clear_block, methods=["POST"])
+    # «نمط السماح» — السياسات + الأجهزة
+    bp.add_url_rule("/access-control/allow-mode/policy",
+                    "access_control_allow_mode_upsert",
+                    allow_mode_upsert, methods=["POST"])
+    bp.add_url_rule("/access-control/allow-mode/policy/<int:policy_id>/delete",
+                    "access_control_allow_mode_delete_policy",
+                    allow_mode_delete_policy, methods=["POST"])
+    bp.add_url_rule("/access-control/allow-mode/policy/<int:policy_id>/toggle",
+                    "access_control_allow_mode_toggle_policy",
+                    allow_mode_toggle_policy, methods=["POST"])
+    bp.add_url_rule("/access-control/allow-mode/device",
+                    "access_control_allow_mode_add_device",
+                    allow_mode_add_device, methods=["POST"])
+    bp.add_url_rule("/access-control/allow-mode/device/<int:device_id>/delete",
+                    "access_control_allow_mode_delete_device",
+                    allow_mode_delete_device, methods=["POST"])
 
 
 def _tid() -> int:
@@ -82,6 +101,37 @@ def access_control_page():
     suspensions = access_blocks_repo.list_blocks(tid, layer=ac.LAYER_SUSPENSION)
     blocks = access_blocks_repo.list_blocks(tid, layer=ac.LAYER_BLOCK)
     settings = {k: tenants_repo.get_setting(tid, k, d) for k, d in _SECURITY_KEYS.items()}
+
+    # «نمط السماح»: السياسات + قائمة Plans/CardBatches + الأجهزة لكل سياسة.
+    try:
+        am_policies = allow_mode_repo.list_policies(tid)
+    except Exception:  # noqa: BLE001
+        am_policies = []
+    try:
+        plans_list = plans_repo.list_plans(tid, limit=500)
+    except Exception:  # noqa: BLE001
+        plans_list = []
+    try:
+        batches_list = cards_repo.list_batches(tid, limit=500)
+    except Exception:  # noqa: BLE001
+        batches_list = []
+    plan_by_id = {int(getattr(p, "id", 0)): p for p in plans_list if getattr(p, "id", None)}
+    batch_by_id = {int(getattr(b, "id", 0)): b for b in batches_list if getattr(b, "id", None)}
+
+    am_view = []
+    for pol in am_policies:
+        try:
+            devs = allow_mode_repo.list_devices(int(pol["id"]))
+        except Exception:  # noqa: BLE001
+            devs = []
+        if pol.get("scope_type") == "plan":
+            obj = plan_by_id.get(int(pol.get("scope_id") or 0))
+            scope_name = getattr(obj, "name", None) or f"plan #{pol.get('scope_id')}"
+        else:
+            obj = batch_by_id.get(int(pol.get("scope_id") or 0))
+            scope_name = getattr(obj, "name", None) or f"batch #{pol.get('scope_id')}"
+        am_view.append({**pol, "devices": devs, "scope_name": scope_name})
+
     return render_template(
         "radius/access_control.html",
         suspensions=suspensions,
@@ -99,6 +149,15 @@ def access_control_page():
             "duration": ac.SK_AUTOBLOCK_DURATION_MIN,
             "target": ac.SK_AUTOBLOCK_TARGET,
         },
+        # Allow-mode
+        am_policies=am_view,
+        am_plans=plans_list,
+        am_batches=batches_list,
+        am_mode_labels=[
+            ("open",   "Open — بلا ربط أجهزة (حدّ الجلسات من العرض)"),
+            ("tofu",   "TOFU — أوّل دخول ناجح يربط الجهاز، سقف N أجهزة"),
+            ("manual", "Manual — قائمة سماح يدوية (افتراضي رفض)"),
+        ],
     )
 
 
@@ -173,3 +232,155 @@ def access_control_clear_block(block_id: int):
     else:
         flash("السجلّ غير موجود أو مرفوع سابقًا.", "info")
     return redirect(url_for("radius.access_control_page"))
+
+
+# ════════════════════════════════════════════════════════════════════════
+# «نمط السماح» (Allow-mode) — Handlers
+# ════════════════════════════════════════════════════════════════════════
+def _redirect_am():
+    return redirect(url_for("radius.access_control_page", _anchor="allow-mode"))
+
+
+def allow_mode_upsert():
+    """ينشئ/يحدّث سياسة نمط سماح (UNIQUE على tenant+scope_type+scope_id)."""
+    tid = _tid()
+    actor, admin_id = _actor()
+    scope_type = (request.form.get("scope_type") or "").strip()
+    try:
+        scope_id = int(request.form.get("scope_id") or 0)
+    except (TypeError, ValueError):
+        scope_id = 0
+    mode = (request.form.get("mode") or "open").strip()
+    try:
+        max_devices = int(request.form.get("max_devices") or 0)
+    except (TypeError, ValueError):
+        max_devices = 0
+    active = (request.form.get("active") or "1") in ("1", "on", "true")
+    note = (request.form.get("note") or "").strip()[:200]
+
+    if scope_type not in allow_mode_repo.VALID_SCOPES:
+        flash("نطاق السياسة غير صالح.", "error")
+        return _redirect_am()
+    if scope_id <= 0:
+        flash("اختر العرض/الحزمة المستهدفة.", "error")
+        return _redirect_am()
+    if mode not in allow_mode_repo.VALID_MODES:
+        flash("نمط السماح غير صالح.", "error")
+        return _redirect_am()
+    if mode == "tofu" and max_devices <= 0:
+        flash("نمط TOFU يحتاج عددًا صالحًا (1 على الأقل) للأجهزة المسموحة.", "error")
+        return _redirect_am()
+
+    try:
+        pol = allow_mode_repo.upsert_policy(
+            tenant_id=tid, scope_type=scope_type, scope_id=scope_id,
+            mode=mode, max_devices=max_devices, active=active,
+            note=note, by=admin_id)
+        audit_repo.record(tenant_id=tid, actor=actor,
+                          action="allow_mode_upsert",
+                          target_type="allow_mode_policy",
+                          target_id=str(pol["id"]),
+                          payload={"scope_type": scope_type,
+                                    "scope_id": scope_id,
+                                    "mode": mode,
+                                    "max_devices": max_devices,
+                                    "active": active})
+        flash("تم حفظ سياسة نمط السماح.", "success")
+    except ValueError as exc:
+        flash(str(exc), "error")
+    return _redirect_am()
+
+
+def allow_mode_delete_policy(policy_id: int):
+    tid = _tid()
+    actor, admin_id = _actor()
+    if allow_mode_repo.delete_policy(tid, int(policy_id)):
+        audit_repo.record(tenant_id=tid, actor=actor,
+                          action="allow_mode_delete_policy",
+                          target_type="allow_mode_policy",
+                          target_id=str(policy_id),
+                          payload={"deleted": True})
+        flash("حُذفت السياسة وكل أجهزتها.", "success")
+    else:
+        flash("السياسة غير موجودة.", "info")
+    return _redirect_am()
+
+
+def allow_mode_toggle_policy(policy_id: int):
+    tid = _tid()
+    actor, admin_id = _actor()
+    pol = allow_mode_repo.get_policy_by_id(tid, int(policy_id))
+    if not pol:
+        flash("السياسة غير موجودة.", "info")
+        return _redirect_am()
+    new_active = not bool(pol.get("active"))
+    if allow_mode_repo.set_policy_active(tid, int(policy_id), new_active):
+        audit_repo.record(tenant_id=tid, actor=actor,
+                          action="allow_mode_toggle_policy",
+                          target_type="allow_mode_policy",
+                          target_id=str(policy_id),
+                          payload={"active": new_active})
+        flash("تم تفعيل السياسة." if new_active else "تم تعليق السياسة.",
+              "success")
+    return _redirect_am()
+
+
+def allow_mode_add_device():
+    """إضافة جهاز يدويًّا لسياسة. username='' = مشترك بين كل المستخدمين."""
+    tid = _tid()
+    actor, admin_id = _actor()
+    try:
+        policy_id = int(request.form.get("policy_id") or 0)
+    except (TypeError, ValueError):
+        policy_id = 0
+    pol = allow_mode_repo.get_policy_by_id(tid, policy_id)
+    if not pol:
+        flash("السياسة غير موجودة.", "error")
+        return _redirect_am()
+    username = (request.form.get("username") or "").strip()
+    mac = (request.form.get("mac") or "").strip()
+    label = (request.form.get("label") or "").strip()[:120]
+    norm = allow_mode_repo.normalize_mac(mac)
+    import re as _re
+    if not _re.match(r"^[0-9A-F]{2}(:[0-9A-F]{2}){5}$", norm):
+        flash("صيغة MAC غير صالحة (مثال: AA:BB:CC:DD:EE:FF).", "error")
+        return _redirect_am()
+    dev = allow_mode_repo.add_device(
+        policy_id=policy_id, username=username, mac=norm,
+        source="manual", label=label, by=admin_id)
+    if dev:
+        audit_repo.record(tenant_id=tid, actor=actor,
+                          action="allow_mode_add_device",
+                          target_type="allow_mode_device",
+                          target_id=str(dev["id"]),
+                          payload={"policy_id": policy_id,
+                                    "username": username,
+                                    "mac": norm})
+        flash("تمت إضافة الجهاز.", "success")
+    else:
+        flash("تعذّر إضافة الجهاز.", "error")
+    return _redirect_am()
+
+
+def allow_mode_delete_device(device_id: int):
+    tid = _tid()
+    actor, admin_id = _actor()
+    # نتحقّق أنّ الجهاز يخصّ سياسة لنفس المستأجر قبل الحذف.
+    from app.radius.db.connection import db as _db
+    row = _db().execute(
+        "SELECT d.id FROM allow_mode_devices d "
+        "JOIN allow_mode_policies p ON p.id = d.policy_id "
+        "WHERE d.id = ? AND p.tenant_id = ?",
+        (int(device_id), tid),
+    ).fetchone()
+    if not row:
+        flash("الجهاز غير موجود.", "info")
+        return _redirect_am()
+    if allow_mode_repo.delete_device(int(device_id)):
+        audit_repo.record(tenant_id=tid, actor=actor,
+                          action="allow_mode_delete_device",
+                          target_type="allow_mode_device",
+                          target_id=str(device_id),
+                          payload={"deleted": True})
+        flash("حُذف الجهاز.", "success")
+    return _redirect_am()

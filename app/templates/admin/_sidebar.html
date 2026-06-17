@@ -876,6 +876,10 @@
            والقائمة وسجلّ الأحداث. #}
         {{ sub_item('radius.anti_mac_clone_page', _('منع استنساخ MAC'),
             '/anti-mac-clone' in path) }}
+        {# الأمان والتحكّم بالدخول — يصل لصفحة طبقتي «تعليق الوصول» و«الحظر»
+           إضافةً لقسم «نمط السماح» (allow-mode). #}
+        {{ sub_item('radius.access_control_page', _('التحكم بالدخول'),
+            '/access-control' in path) }}
         {# إدارة أقسام الواجهة — super-only؛ الحارس الخادمي يُغلقها على غير
            السوبر، ونُخفي البند هنا حتى لا يَظهر في الشريط الجانبي عنده. #}
         {% if _is_super and endpoint_exists is defined and endpoint_exists('radius.sections_admin_page') %}

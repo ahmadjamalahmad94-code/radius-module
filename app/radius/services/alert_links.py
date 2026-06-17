@@ -114,6 +114,7 @@ ACTION_ALERTS = frozenset({
     "store_withdrawal",         # طلب سحب → تبويب السحوبات للتنفيذ
     "auto_block_triggered",     # حظر تلقائي → صفحة التحكّم بالدخول للمراجعة
     "mac_clone_detected",       # كشف استنساخ MAC → صفحة منع الاستنساخ للمراجعة
+    "allow_mode_unknown_device", # رفض نمط السماح → صفحة التحكّم بالدخول
 })
 
 
@@ -208,6 +209,12 @@ def action_link(key: str, context: dict | None = None) -> str | None:
 
         if key == "mac_clone_detected":
             return _abs("radius.anti_mac_clone_page")
+
+        if key == "allow_mode_unknown_device":
+            # نفس الصفحة (allow-mode قسم داخل access_control_page) — مرساة قسم
+            # «نمط السماح» للاستقرار على المكان الصحيح بصرف النظر عن الأقسام
+            # الأعلى منه.
+            return _abs("radius.access_control_page", _anchor="allow-mode")
     except Exception:  # noqa: BLE001 — التعميق لا يكسر الإرسال أبدًا
         _LOG.debug("action_link failed for %s", key, exc_info=True)
     return None

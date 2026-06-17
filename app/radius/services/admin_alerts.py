@@ -332,6 +332,21 @@ ALERTS: list[AlertSpec] = [
          "diverged": "os_family، device_brand",
          "nas_ip": "10.0.0.1", "called_station": "0C:11:22:33:44:55"},
     ),
+    AlertSpec(
+        "allow_mode_unknown_device", "security", "رفض نمط السماح",
+        "يُرسل عند رفض دخول بسبب «نمط السماح» (allow_mode): الجهاز غير "
+        "مسجّل ضمن السياسة، أو تجاوز الحدّ في نمط TOFU. الميزة OFF افتراضيًّا.",
+        "🛡️ <b>رفض نمط السماح</b>\n"
+        "الحساب: <code>{username}</code>\n"
+        "العنوان: <code>{mac}</code>\n"
+        "النمط: {mode}\n"
+        "السبب: {reason}\n"
+        "النطاق: {scope} (<code>{scope_id}</code>)",
+        {"username": "ahmad99", "mac": "AA:BB:CC:DD:EE:FF",
+         "mode": "manual", "reason": "جهاز غير مسجّل (manual)",
+         "scope": "حزمة بطاقات", "scope_id": "12"},
+        default_enabled=False,
+    ),
     # ── النظام (إضافات smart_alerts) ───────────────────────────────────
     AlertSpec(
         "backup_stale", "system", "نسخة احتياطية قديمة",
