@@ -76,6 +76,12 @@ def register_store_support_routes(bp: Blueprint) -> None:
         store_support_chat_post,
         methods=["POST"],
     )
+    bp.add_url_rule(
+        "/store-support/chat/<int:card_user_id>/status",
+        "store_support_chat_status",
+        store_support_chat_status,
+        methods=["POST"],
+    )
 
 
 def _tid() -> int:
@@ -162,6 +168,15 @@ def store_support():
             except StoreChatError:
                 open_thread = None
 
+    # حالة الخيط المفتوح (open|resolved) لزرّ «وضع كمُعالَجة».
+    open_thread_status = ""
+    if open_chat_id:
+        try:
+            open_thread_status = chat_svc.get_thread_meta(
+                card_user_id=open_chat_id).get("status") or "open"
+        except Exception:  # noqa: BLE001
+            open_thread_status = ""
+
     chat_threads = chat_svc.list_threads(limit=200)
     # مجموع رسائل الزبائن غير المقروءة (للمدير) — شارة تبويب الشات.
     chat_unread_count = sum(
@@ -177,6 +192,7 @@ def store_support():
         chat_unread_count=chat_unread_count,
         open_thread=open_thread,
         open_chat_id=open_chat_id,
+        open_thread_status=open_thread_status,
         payment_methods=deposits_svc.list_payment_methods(),
         deposit_pending_count=deposits_svc.pending_count(),
         withdrawal_pending_count=withdrawals_svc.pending_count(),
@@ -319,6 +335,20 @@ def store_support_chat_post(card_user_id: int):
     except (StoreChatError, StoreUploadError, ValueError) as exc:
         flash(str(exc), "error")
     return redirect(url_for("radius.store_support", chat=card_user_id))
+
+
+def store_support_chat_status(card_user_id: int):
+    """ضبط حالة خيط الشات (resolved/open) من المدير — «مُعالَجة» تُسكِت تذكير
+    «بانتظار ردّ» حتى دون ردّ نصّي."""
+    status = (request.form.get("status") or "resolved").strip().lower()
+    try:
+        new = _chat().set_status(card_user_id=card_user_id, status=status,
+                                 actor=_actor())
+        flash("تم وضع المحادثة كمُعالَجة." if new == "resolved"
+              else "أُعيد فتح المحادثة.", "success")
+    except (StoreChatError, ValueError) as exc:
+        flash(str(exc), "error")
+    return redirect(url_for("radius.store_support", chat=card_user_id) + "#chat")
 
 
 __all__ = ["register_store_support_routes"]

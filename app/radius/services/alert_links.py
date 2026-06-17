@@ -108,6 +108,7 @@ ACTION_ALERTS = frozenset({
     "payment_pending_review",   # دفعة/تحويل بانتظار المراجعة → صفحة المراجعة
     "service_request_new",      # طلب خدمة جديد → صفحة الطلبات
     "store_chat",               # رسالة دعم متجر → خيط المحادثة للردّ
+    "store_chat_unanswered",    # تذكير رسالة متأخّرة → خيط المحادثة للردّ
     "portal_message",           # رسالة من بوابة المشترك → صفحة البوابة للردّ
     "store_deposit",            # طلب إيداع → تبويب الإيداعات للتأكيد
     "store_withdrawal",         # طلب سحب → تبويب السحوبات للتنفيذ
@@ -175,7 +176,7 @@ def action_link(key: str, context: dict | None = None) -> str | None:
         if key == "service_request_new":
             return _abs("radius.service_request_list")
 
-        if key == "store_chat":
+        if key in ("store_chat", "store_chat_unanswered"):
             cu = _int(ctx.get("card_user_id"))
             if cu is not None:
                 url = _abs("radius.store_support", chat=cu, _anchor="chat")

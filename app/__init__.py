@@ -213,6 +213,7 @@ def _start_workers(app: Flask) -> None:
                                   start_loop_probe_poller,
                                   start_mt_reconciler,
                                   start_stale_session_reaper,
+                                  start_store_chat_reminder_worker,
                                   start_sync_worker,
                                   start_temp_speed_expiry)
         start_sync_worker()
@@ -237,6 +238,11 @@ def _start_workers(app: Flask) -> None:
         # نفس فئة الخطأ المعماري كالعلوي ـ معروف ومُصدَّر لكنّه لم يكن يُشغَّل.
         # إعادة استدعائه يُعيد القراءة الاستطلاعيّة لـ/ip dhcp-client كل دورة.
         start_loop_probe_poller()
+        # ── تذكير محادثات شات المتجر غير المُجابة (store_chat_reminder) ──
+        # يمسح الخيوط التي آخر رسالة فيها من الزبون، بلا ردّ ولا حالة
+        # «مُعالَجة»، أقدم من العتبة (افتراضي 60د) فيُرسل تنبيهًا واحدًا. يُمرَّر
+        # app لبناء رابط الردّ المطلق عند ضبط عنوان عام.
+        start_store_chat_reminder_worker(app)
     except Exception:  # noqa: BLE001
         app.logger.exception("workers start failed")
     try:

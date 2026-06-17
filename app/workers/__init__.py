@@ -10,5 +10,6 @@ from .lifecycle_worker import start_lifecycle_worker  # noqa: F401
 from .loop_probe_poller import start_loop_probe_poller  # noqa: F401
 from .mt_reconciler import start_mt_reconciler  # noqa: F401
 from .stale_session_reaper import start_stale_session_reaper  # noqa: F401
+from .store_chat_reminder_worker import start_store_chat_reminder_worker  # noqa: F401
 from .sync_worker import start_sync_worker  # noqa: F401
 from .temp_speed_expiry_worker import start_temp_speed_expiry  # noqa: F401
