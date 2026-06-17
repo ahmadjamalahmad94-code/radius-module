@@ -160,7 +160,8 @@ class TestNewSpecs:
     def test_noisy_defaults_off(self):
         from app.radius.services import admin_alerts as aa
         by = {a.key: a for a in aa.ALERTS}
-        for k in ("router_high_traffic", "router_high_usage", "store_chat",
+        # store_chat صار ON (منخفض الضوضاء: تنبيه واحد لكل دور «بانتظار ردّ»).
+        for k in ("router_high_traffic", "router_high_usage",
                   "card_batch_low", "access_suspended", "backup_stale",
                   "audit_failure"):
             assert by[k].default_enabled is False, f"{k} يجب أن يكون OFF افتراضيًّا"
@@ -169,14 +170,15 @@ class TestNewSpecs:
         from app.radius.services import admin_alerts as aa
         by = {a.key: a for a in aa.ALERTS}
         for k in ("router_offline", "store_registration", "store_deposit",
-                  "auto_block_triggered", "backup_failed"):
+                  "auto_block_triggered", "backup_failed", "store_chat"):
             assert by[k].default_enabled is True, f"{k} يجب أن يكون ON افتراضيًّا"
 
     def test_toggle_new_spec_persisted(self, app_ctx):
         from app.radius.services import admin_alerts as aa
-        assert aa.is_enabled(1, "store_chat") is False  # افتراضه OFF
-        aa.set_enabled(1, "store_chat", True)
-        assert aa.is_enabled(1, "store_chat") is True
+        # card_batch_low افتراضه OFF — نتأكّد من التبديل والتخزين.
+        assert aa.is_enabled(1, "card_batch_low") is False
+        aa.set_enabled(1, "card_batch_low", True)
+        assert aa.is_enabled(1, "card_batch_low") is True
 
 
 # ════════════════════════════════════════════════════════════════════════
