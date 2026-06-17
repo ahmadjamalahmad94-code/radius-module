@@ -246,6 +246,16 @@ ALERTS: list[AlertSpec] = [
         "العميل: {name}",
         {"name": "سالم"},
     ),
+    AlertSpec(
+        "store_chat_unanswered", "store", "رسالة دعم متأخّرة (بانتظار ردّ)",
+        "تذكير دوري: رسالة زبون في شات المتجر بقيت بلا ردّ ولا حالة «مُعالَجة» "
+        "أطول من العتبة (alerts.store_chat.unanswered_reminder_minutes، افتراضي "
+        "60) — store_chat_reminder_worker. يحمل رابط الردّ.",
+        "⏰ <b>رسالة دعم بانتظار ردّ</b>\n"
+        "العميل: {name}\n"
+        "بانتظار منذ: {since}",
+        {"name": "سالم", "since": "ساعة و٢٠ دقيقة"},
+    ),
     # ── المال/العمليات (إضافات) ────────────────────────────────────────
     AlertSpec(
         "payment_pending_review", "finance", "دفعة بانتظار المراجعة",

@@ -99,6 +99,8 @@ class StoreChatService:
             )
             message_id = int(cur.lastrowid)
         if snd == "customer":
+            # رسالة زبون جديدة تُعيد الخيط إلى open (إن كان المدير قد عالجه).
+            self._reopen_thread(int(card_user_id))
             try:
                 self.events.record_event(
                     tenant_id=self.tenant_id,
@@ -238,6 +240,81 @@ class StoreChatService:
         return self.list_thread(
             card_user_id=card_user_id, after_id=after_id, limit=limit
         )
+
+    # ───────────────────────── حالة الخيط (resolved/open) ─────────────────
+    def get_thread_meta(self, *, card_user_id: int) -> dict[str, Any]:
+        """حالة الخيط: {status, status_by, status_at, reminded_at}. الخيط بلا
+        صفّ في store_chat_threads يُعتبر open (الافتراضي)."""
+        row = db().execute(
+            "SELECT status, status_by, status_at, reminded_at "
+            "FROM store_chat_threads WHERE tenant_id=? AND card_user_id=?",
+            (self.tenant_id, int(card_user_id)),
+        ).fetchone()
+        if not row:
+            return {"status": "open", "status_by": "", "status_at": "", "reminded_at": ""}
+        d = row_to_dict(row)
+        d["status"] = d.get("status") or "open"
+        return d
+
+    def set_status(self, *, card_user_id: int, status: str, actor: str = "") -> str:
+        """يضبط حالة الخيط (open|resolved) من المدير. «resolved» يُسكِت تذكير
+        «بانتظار ردّ» حتى لو كانت آخر رسالة من الزبون (المدير عالجها بلا ردّ)."""
+        st = str(status or "").strip().lower()
+        if st not in ("open", "resolved"):
+            raise StoreChatError("حالة غير صالحة.")
+        self._upsert_thread(card_user_id, status=st,
+                            status_by=str(actor or ""), status_at=now_iso())
+        # ضبط «resolved» يحلّ تنبيه اللوحة أيضًا (عولج الخيط).
+        if st == "resolved":
+            try:
+                from .store_alerts import resolve_chat
+                resolve_chat(self.tenant_id, int(card_user_id))
+            except Exception:  # noqa: BLE001
+                pass
+        return st
+
+    def mark_reminded(self, *, card_user_id: int, when: str = "") -> None:
+        """يسجّل وقت آخر تذكير «بانتظار ردّ» (إزالة تكرار التذكير الدوري)."""
+        self._upsert_thread(card_user_id, reminded_at=(when or now_iso()))
+
+    def _reopen_thread(self, card_user_id: int) -> None:
+        """رسالة زبون جديدة تُعيد الخيط إلى open (إن كان resolved)."""
+        self._upsert_thread(card_user_id, status="open")
+
+    def _upsert_thread(self, card_user_id: int, **fields) -> None:
+        """upsert صفّ حالة الخيط — يحدّث الحقول الممرّرة فقط. محصّن."""
+        cols = ("status", "status_by", "status_at", "reminded_at")
+        sets = {k: v for k, v in fields.items() if k in cols}
+        if not sets:
+            return
+        now = now_iso()
+        try:
+            with transaction() as conn:
+                row = conn.execute(
+                    "SELECT id FROM store_chat_threads "
+                    "WHERE tenant_id=? AND card_user_id=?",
+                    (self.tenant_id, int(card_user_id)),
+                ).fetchone()
+                if row:
+                    assigns = ", ".join(f"{k}=?" for k in sets) + ", updated_at=?"
+                    conn.execute(
+                        f"UPDATE store_chat_threads SET {assigns} "
+                        "WHERE tenant_id=? AND card_user_id=?",
+                        (*sets.values(), now, self.tenant_id, int(card_user_id)),
+                    )
+                else:
+                    base = {"status": "open", "status_by": "", "status_at": "",
+                            "reminded_at": ""}
+                    base.update(sets)
+                    conn.execute(
+                        "INSERT INTO store_chat_threads(tenant_id, card_user_id, "
+                        "status, status_by, status_at, reminded_at, updated_at) "
+                        "VALUES(?,?,?,?,?,?,?)",
+                        (self.tenant_id, int(card_user_id), base["status"],
+                         base["status_by"], base["status_at"], base["reminded_at"], now),
+                    )
+        except Exception:  # noqa: BLE001 — حالة الخيط ثانوية، لا تكسر الشات
+            pass
 
     # ───────────────────────── internals ─────────────────────────
     def _get(self, message_id: int) -> dict[str, Any]:

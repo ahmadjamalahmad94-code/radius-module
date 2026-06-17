@@ -104,31 +104,76 @@ def notify_registration(tenant_id, card_user_id, name):
 
 # ───────────────────────── شات الدعم ─────────────────────────
 
+_DEFAULT_IDLE_GAP_MIN = 10
+SK_IDLE_GAP_MIN = "alerts.store_chat.idle_gap_minutes"
+
+
+def _idle_gap_minutes(tenant_id) -> int:
+    """عتبة الفجوة الزمنية (دقائق) لاعتبار رسالة الزبون «دورًا جديدًا» حتى لو
+    كان الخيط منتظِرًا — من tenant_settings (افتراضي 10)."""
+    try:
+        from ..db.repos import tenants_repo
+        raw = tenants_repo.get_setting(int(tenant_id or 1), SK_IDLE_GAP_MIN,
+                                       str(_DEFAULT_IDLE_GAP_MIN))
+        return max(1, int(str(raw).strip()))
+    except Exception:  # noqa: BLE001
+        return _DEFAULT_IDLE_GAP_MIN
+
+
+def _parse_iso(ts) -> "datetime | None":
+    from datetime import datetime
+    s = str(ts or "").strip().replace("Z", "").replace("T", " ")
+    s = s.split(".")[0][:19]
+    for f in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%Y-%m-%d"):
+        try:
+            return datetime.strptime(s, f)
+        except ValueError:
+            continue
+    return None
+
+
 def _chat_pending_state(tenant_id, card_user_id):
     """يحدّد إن كانت رسالة الزبون الحالية تفتح دور «بانتظار ردّ» جديدًا.
 
     تُستدعى بعد إدراج رسالة الزبون مباشرة، فأحدث صفّ في الخيط هو رسالتها.
-    ننظر إلى مرسِل الرسالة **السابقة** (store_chat_messages.sender):
-      • لا خيط سابق (أوّل رسالة)     → دور جديد (يُنبَّه).
-      • السابقة من المدير (admin)    → الزبون أعاد فتح الخيط بعد ردّ
-        الموظّف → دور جديد (يُنبَّه).
-      • السابقة من الزبون (customer) → الخيط منتظِر أصلًا → لا تنبيه.
+    يُطلَق التنبيه (مرّة) في أيٍّ من الحالات:
+      • لا خيط سابق (أوّل رسالة في الخيط).
+      • الرسالة السابقة من المدير (admin) → الزبون عاد بعد ردّ الموظّف.
+      • رسالة الزبون الحالية تحمل **مرفقًا/صورة** (image_path) — مهمّة حتى لو
+        كان الخيط منتظِرًا.
+      • **فجوة خمول**: الفارق بين رسالة الزبون الحالية والسابقة ≥ العتبة
+        (alerts.store_chat.idle_gap_minutes، افتراضي 10) — يُحسب عبر الطوابع
+        الزمنية فيشمل فوارق الساعات/الأيام (٨ ساعات/اليوم التالي يُطلِق).
+    ويُكتَم فقط عند: السابقة من الزبون + بلا مرفق + ضمن نافذة الخمول (رسائل
+    نصّية متتابعة سريعة في خيط منتظِر أصلًا).
 
-    يُعيد (opens: bool, latest_msg_id: int|None). أي خطأ → fail-open
-    (opens=True) كي لا نفقد تنبيه «يحتاج ردًّا»."""
+    يُعيد (opens: bool, latest_msg_id: int|None). أي خطأ → fail-open."""
     try:
         rows = db().execute(
-            "SELECT id, sender FROM store_chat_messages "
+            "SELECT id, sender, image_path, created_at FROM store_chat_messages "
             "WHERE tenant_id=? AND card_user_id=? ORDER BY id DESC LIMIT 2",
             (int(tenant_id or 1), int(card_user_id)),
         ).fetchall()
         if not rows:
             return True, None
-        latest_id = int(rows[0]["id"])
+        latest = rows[0]
+        latest_id = int(latest["id"])
+        has_attachment = bool(str(latest["image_path"] or "").strip())
         if len(rows) < 2:
             return True, latest_id            # أوّل رسالة في الخيط
-        prev_sender = str(rows[1]["sender"] or "").strip().lower()
-        return (prev_sender != "customer"), latest_id
+        prev = rows[1]
+        if str(prev["sender"] or "").strip().lower() != "customer":
+            return True, latest_id            # عاد بعد ردّ الموظّف
+        if has_attachment:
+            return True, latest_id            # مرفق مهمّ حتى لو منتظِر
+        # فجوة الخمول (عبر الساعات/الأيام).
+        cur_dt = _parse_iso(latest["created_at"])
+        prev_dt = _parse_iso(prev["created_at"])
+        if cur_dt and prev_dt:
+            from datetime import timedelta
+            if cur_dt - prev_dt >= timedelta(minutes=_idle_gap_minutes(tenant_id)):
+                return True, latest_id        # فجوة طويلة = دور جديد
+        return False, latest_id               # نصّ متتابع سريع → كتم
     except Exception:  # noqa: BLE001 — لا نمنع التنبيه عند تعذّر القراءة
         return True, None
 

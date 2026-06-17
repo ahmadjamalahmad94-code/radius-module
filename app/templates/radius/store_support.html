@@ -417,7 +417,21 @@
           {% if open_chat_id and open_thread %}
             {# اسم الزبون الحقيقي في ترويسة المحادثة بدل «#معرّف» — نستخرجه من قائمة الخيوط #}
             {% set _ot = (chat_threads | selectattr('card_user_id', 'equalto', open_chat_id) | list | first) %}
-            <div class="ssp-conv-head"><i class="fa-solid fa-user"></i> {{ _('محادثة الزبون') }}: {% if _ot and _ot.display_name %}{{ _ot.display_name }}{% elif _ot and _ot.mobile %}<bdi dir="ltr">{{ _ot.mobile }}</bdi>{% else %}{{ _('زبون غير مُسمّى') }}{% endif %}</div>
+            <div class="ssp-conv-head" style="display:flex;align-items:center;gap:10px;justify-content:space-between;flex-wrap:wrap">
+              <span><i class="fa-solid fa-user"></i> {{ _('محادثة الزبون') }}: {% if _ot and _ot.display_name %}{{ _ot.display_name }}{% elif _ot and _ot.mobile %}<bdi dir="ltr">{{ _ot.mobile }}</bdi>{% else %}{{ _('زبون غير مُسمّى') }}{% endif %}</span>
+              {# زرّ حالة المحادثة — «وضع كمُعالَجة» يُسكِت تذكير «بانتظار ردّ»
+                 حتى دون ردّ نصّي؛ ورسالة زبون جديدة تُعيد فتحها تلقائيًا. #}
+              <form method="post" action="{{ url_for('radius.store_support_chat_status', card_user_id=open_chat_id) }}" style="margin:0">
+                <input type="hidden" name="_csrf_token" value="{{ CSRF }}">
+                {% if open_thread_status == 'resolved' %}
+                  <input type="hidden" name="status" value="open">
+                  <button type="submit" class="market-btn market-btn--sm" title="{{ _('إعادة فتح المحادثة') }}"><i class="fa-solid fa-rotate-left"></i> {{ _('معالَجة') }}</button>
+                {% else %}
+                  <input type="hidden" name="status" value="resolved">
+                  <button type="submit" class="market-btn market-btn--sm market-btn--ok" title="{{ _('وضع المحادثة كمُعالَجة — يوقف تذكير الانتظار') }}"><i class="fa-solid fa-check"></i> {{ _('وضع كمُعالَجة') }}</button>
+                {% endif %}
+              </form>
+            </div>
             <div class="ssp-msgs">
               {% for m in open_thread['items'] %}
               <div class="ssp-msg {{ 'from-admin' if m.sender == 'admin' else 'from-customer' }}">
