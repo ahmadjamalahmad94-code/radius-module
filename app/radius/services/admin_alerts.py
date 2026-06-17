@@ -329,7 +329,7 @@ ALERTS: list[AlertSpec] = [
         "AP/SSID: <code>{called_station}</code>",
         {"username": "ahmad99", "mac": "AA:BB:CC:DD:EE:FF",
          "confidence": "عالية", "score": "82",
-         "diverged": "os_family، device_brand",
+         "diverged": "نوع النظام، ماركة الجهاز",
          "nas_ip": "10.0.0.1", "called_station": "0C:11:22:33:44:55"},
     ),
     AlertSpec(

@@ -612,3 +612,27 @@ class TestAdminRoutes:
         from app.radius.db.repos import tenants_repo
         assert tenants_repo.get_setting(1, svc.SK_MODE, "") == "stepup"
         assert tenants_repo.get_setting(1, svc.SK_STEPUP_WINDOW_SEC, "") == "180"
+
+
+class TestDivergedSignalLabels:
+    """تعريب مفاتيح الإشارات المتباينة في نصّ التنبيه (المفاتيح الخام تبقى في
+    signals/سجلّ الأحداث — الترجمة للعرض البشري فقط)."""
+
+    def test_maps_known_keys_to_arabic(self):
+        from app.radius.services import anti_mac_clone as svc
+        assert svc._ar_signals(["os_family", "device_brand"]) == "نوع النظام، ماركة الجهاز"
+        assert svc._ar_signals(["dhcp_class_id"]) == "بصمة DHCP"
+        assert svc._ar_signals(["nas_ip", "called_station"]) == "IP الراوتر، نقطة الوصول"
+
+    def test_empty_and_unknown(self):
+        from app.radius.services import anti_mac_clone as svc
+        assert svc._ar_signals([]) == "—"
+        assert svc._ar_signals(None) == "—"
+        # مفتاح غير معروف يبقى كما هو (لا انهيار)
+        assert svc._ar_signals(["mystery_key"]) == "mystery_key"
+
+    def test_no_raw_english_key_leaks(self):
+        from app.radius.services import anti_mac_clone as svc
+        out = svc._ar_signals(list(svc._SIGNAL_LABELS.keys()))
+        for k in svc._SIGNAL_LABELS:
+            assert k not in out, f"مفتاح إنجليزي خام تسرّب: {k}"
