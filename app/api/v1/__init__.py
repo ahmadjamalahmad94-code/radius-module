@@ -21,9 +21,11 @@ def register_v1(parent: Blueprint) -> None:
         settings, share_groups, site_exit, store, subscriber_groups, system, tenants, tickets, tokens, tools, vouchers, webhooks, whatsapp,
         setup_wizard, subscriber_portal, whatsapp_bot,
         admin_alerts as admin_alerts_api,
+        store_admin,
     )
     health.register(v1)
     admin_alerts_api.register(v1)
+    store_admin.register(v1)
     accounts.register(v1)
     cards.register(v1)
     card_users.register(v1)
