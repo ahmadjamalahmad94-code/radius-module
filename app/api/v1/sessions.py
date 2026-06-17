@@ -336,6 +336,20 @@ def sessions_lock_ip():
     })
 
 
+def _effective_duration_minutes(body: dict) -> int:
+    """مدّة التطبيق بالدقائق — تكافؤ مع نموذج الويب الذي يقبل
+    duration + duration_unit (minutes|hours). `duration_minutes` (إن وُجد)
+    له الأولوية للتوافق الخلفي."""
+    dm = _int_or_zero(body.get("duration_minutes"))
+    if dm:
+        return dm
+    dur = _int_or_zero(body.get("duration"))
+    unit = str(body.get("duration_unit") or "minutes").strip().lower()
+    if unit in ("hours", "hour", "hrs", "hr", "h", "ساعات", "ساعة"):
+        return dur * 60
+    return dur
+
+
 def sessions_temp_speed():
     body = _body()
     try:
@@ -351,7 +365,7 @@ def sessions_temp_speed():
             username=username,
             down_kbps=_int_or_zero(body.get("down_kbps")),
             up_kbps=_int_or_zero(body.get("up_kbps")),
-            duration_minutes=_int_or_zero(body.get("duration_minutes")),
+            duration_minutes=_effective_duration_minutes(body),
         )
     except PermissionError:
         return deny_out_of_scope()
