@@ -701,7 +701,7 @@ def apply_decision(tenant_id: int, *, username: str,
                 "mac": live.mac,
                 "confidence": _ar_confidence(verdict.confidence),
                 "score": str(verdict.score),
-                "diverged": "، ".join(verdict.signals.get("diverged") or []) or "—",
+                "diverged": _ar_signals(verdict.signals.get("diverged")),
                 "nas_ip": live.nas_ip or "—",
                 "called_station": live.called_station or "—",
             }, dedup_key=f"mac_clone:{username}:{live.mac}")
@@ -739,6 +739,30 @@ def apply_decision(tenant_id: int, *, username: str,
 
 def _ar_confidence(c: str) -> str:
     return {"low": "منخفضة", "medium": "متوسطة", "high": "عالية"}.get(c or "", c or "")
+
+
+# تسميات عربية لمفاتيح إشارات البصمة — للعرض البشري فقط (نصّ التنبيه/الحدث).
+# المفاتيح الخام تبقى كما هي في signals وسجلّ الأحداث (لا تُترجَم عند التخزين).
+_SIGNAL_LABELS = {
+    "os_family": "نوع النظام",
+    "device_brand": "ماركة الجهاز",
+    "device_model": "الموديل",
+    "dhcp_class_id": "بصمة DHCP",
+    "hostname": "اسم الجهاز",
+    "ua_hash": "بصمة المتصفح",
+    "vendor_oui": "مُصنّع MAC",
+    "nas_ip": "IP الراوتر",
+    "called_station": "نقطة الوصول",
+    "nas_port": "منفذ الراوتر",
+    "nas_port_type": "نوع المنفذ",
+}
+
+
+def _ar_signals(keys) -> str:
+    """يحوّل قائمة مفاتيح الإشارات المتباينة إلى نصّ عربي مقروء؛ المفتاح غير
+    المعروف يبقى كما هو. يُعيد «—» للقائمة الفارغة."""
+    labels = [_SIGNAL_LABELS.get(str(k), str(k)) for k in (keys or [])]
+    return "، ".join(labels) if labels else "—"
 
 
 # ════════════════════════════════════════════════════════════════════════
