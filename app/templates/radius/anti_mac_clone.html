@@ -50,14 +50,23 @@
     <div class="hub-flex-row" style="gap:14px;flex-wrap:wrap">
       <div class="field">
         <label for="amc-mode">{{ _('النمط') }}</label>
-        <select id="amc-mode" name="{{ sk.mode }}">
+        <select id="amc-mode" name="{{ sk.mode }}" data-amc-mode>
           <option value="enforce" {{ 'selected' if settings[sk.mode]=='enforce' else '' }}>
             {{ _('Enforce — ارفض الدخول + ركل الجلسة عند الكشف') }}
+          </option>
+          <option value="stepup" {{ 'selected' if settings[sk.mode]=='stepup' else '' }}>
+            {{ _('Step-up — ارفض أوّل محاولة، فإن أعاد المستخدم كتابة كلمة المرور من نفس الجهاز الجديد ضمن النافذة فاسمح وأعد الربط') }}
           </option>
           <option value="monitor" {{ 'selected' if settings[sk.mode]=='monitor' else '' }}>
             {{ _('Monitor — سجّل وأخبر فقط (بدون رفض)') }}
           </option>
         </select>
+      </div>
+      <div class="field" data-amc-stepup-window
+           style="display:{{ 'block' if settings[sk.mode]=='stepup' else 'none' }}">
+        <label for="amc-stepwin">{{ _('نافذة الثقة الثانية (ث) — للنمط Step-up') }}</label>
+        <input type="number" min="15" max="3600" id="amc-stepwin"
+               name="{{ sk.stepup_window_sec }}" value="{{ settings[sk.stepup_window_sec] }}">
       </div>
       <div class="field">
         <label for="amc-conf">{{ _('حدّ الثقة الأدنى لاتخاذ القرار') }}</label>
@@ -265,6 +274,7 @@
           <td class="mono small">{{ e.mac }}</td>
           <td>
             {% if _evtype == 'clone_detected' %}{{ hub.pill('كشف استنساخ', variant='red') }}
+            {% elif _evtype == 'stepup_required' %}{{ hub.pill('مطلوب تصعيد', variant='amber') }}
             {% elif _evtype == 'concurrent_kick' %}{{ hub.pill('ركل جلسة', variant='amber') }}
             {% elif _evtype == 'bind' %}{{ hub.pill('ربط', variant='brand') }}
             {% elif _evtype == 'verify_ok' %}{{ hub.pill('تحقّق', variant='green') }}
@@ -297,19 +307,30 @@
 {% endcall %}
 
 <script>
-  // تبديل ظهور حقول النطاق حسب الاختيار. لا alerts متصفّح أصلية (نعتمد flash-stack).
+  // تبديل ظهور حقول النطاق ونافذة Step-up حسب الاختيار. لا alerts متصفّح أصلية
+  // (نعتمد flash-stack — توستات نظام التصميم).
   (function () {
     var scope = document.querySelector('[data-amc-scope]');
     var plans = document.querySelector('[data-amc-scope-plans]');
     var groups = document.querySelector('[data-amc-scope-groups]');
-    if (!scope) return;
-    function sync() {
-      var v = scope.value;
-      if (plans)  plans.style.display  = (v === 'plans')  ? 'block' : 'none';
-      if (groups) groups.style.display = (v === 'groups') ? 'block' : 'none';
+    if (scope) {
+      var syncScope = function () {
+        var v = scope.value;
+        if (plans)  plans.style.display  = (v === 'plans')  ? 'block' : 'none';
+        if (groups) groups.style.display = (v === 'groups') ? 'block' : 'none';
+      };
+      scope.addEventListener('change', syncScope);
+      syncScope();
     }
-    scope.addEventListener('change', sync);
-    sync();
+    var mode = document.querySelector('[data-amc-mode]');
+    var win = document.querySelector('[data-amc-stepup-window]');
+    if (mode && win) {
+      var syncMode = function () {
+        win.style.display = (mode.value === 'stepup') ? 'block' : 'none';
+      };
+      mode.addEventListener('change', syncMode);
+      syncMode();
+    }
   })();
 </script>
 

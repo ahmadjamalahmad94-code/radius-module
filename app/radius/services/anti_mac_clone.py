@@ -35,7 +35,7 @@ _TRUE = {"1", "true", "t", "on", "yes"}
 # مفاتيح الإعدادات في tenant_settings (نفس نمط access_control)
 # ════════════════════════════════════════════════════════════════════════
 SK_ENABLED            = "anti_mac_clone.enabled"            # 0/1 — توقّف الميزة كلّيًا
-SK_MODE               = "anti_mac_clone.mode"               # monitor | enforce
+SK_MODE               = "anti_mac_clone.mode"               # monitor | stepup | enforce
 SK_SCOPE              = "anti_mac_clone.scope"              # all | plans | groups
 SK_SCOPE_PLAN_IDS     = "anti_mac_clone.scope_plan_ids"     # "1,3,5"
 SK_SCOPE_GROUP_NAMES  = "anti_mac_clone.scope_group_names"  # "البرنزي,VIP"
@@ -44,6 +44,10 @@ SK_CONCURRENT_GUARD   = "anti_mac_clone.concurrent_guard"   # 0/1
 SK_ALERT_ENABLED      = "anti_mac_clone.alert_enabled"      # 0/1
 SK_COA_DISCONNECT     = "anti_mac_clone.coa_disconnect"     # 0/1 — اركل الجلسة عند الكشف
 SK_RAW_LIMIT          = "anti_mac_clone.recent_events_limit"  # عرض
+# نمط stepup: نافذة الثقة الثانية (ث) — إذا حاول نفس الجهاز الجديد التسجيل
+# مرّة ثانية خلال هذه النافذة بكلمة مرور صحيحة + بصمة حيّة مطابقة، نُعامله
+# كتأكيد المستخدم على «هذا جهازي الجديد» ونُعيد الربط لبصمته بدل القديمة.
+SK_STEPUP_WINDOW_SEC  = "anti_mac_clone.stepup_window_sec"
 
 _DEFAULTS = {
     SK_ENABLED:           "0",         # مغلق افتراضيًّا
@@ -56,6 +60,7 @@ _DEFAULTS = {
     SK_ALERT_ENABLED:     "1",
     SK_COA_DISCONNECT:    "1",
     SK_RAW_LIMIT:         "200",
+    SK_STEPUP_WINDOW_SEC: "120",       # دقيقتان: كفايتان لإعادة كتابة كلمة المرور
 }
 
 _CONFIDENCE_RANK = {"low": 1, "medium": 2, "high": 3}
@@ -103,11 +108,17 @@ def _normalize_setting_value(key: str, raw: str, default: str) -> str:
     if key in (SK_ENABLED, SK_CONCURRENT_GUARD, SK_ALERT_ENABLED, SK_COA_DISCONNECT):
         return "1" if raw.lower() in _TRUE else "0"
     if key == SK_MODE:
-        return raw if raw in ("monitor", "enforce") else default
+        return raw if raw in ("monitor", "stepup", "enforce") else default
     if key == SK_SCOPE:
         return raw if raw in ("all", "plans", "groups") else default
     if key == SK_CONFIDENCE_MIN:
         return raw if raw in ("low", "medium", "high") else default
+    if key == SK_STEPUP_WINDOW_SEC:
+        try:
+            n = max(15, min(3600, int(raw or default)))
+        except ValueError:
+            n = int(default or 120)
+        return str(n)
     if key == SK_SCOPE_PLAN_IDS:
         # قائمة أرقام عرض/باقة بفاصلة، نُسقط ما ليس رقمًا
         ids = [p.strip() for p in raw.replace("،", ",").split(",")]
@@ -421,12 +432,72 @@ class Verdict:
 
 
 MSG_CLONE = "تنبيه أمني: تم رصد محاولة دخول من جهاز مختلف بنفس عنوان MAC — الدخول مرفوض"
-MSG_STEPUP = "هذا الجهاز جديد — أعد إدخال كلمة المرور للتأكيد"
+MSG_STEPUP = "هذا الجهاز جديد — أعد كتابة كلمة المرور للتأكيد"
 
 
 def _confidence_min(tenant_id: int) -> str:
     val = _setting(tenant_id, SK_CONFIDENCE_MIN) or "medium"
     return val if val in _CONFIDENCE_RANK else "medium"
+
+
+# ─────────────────────────────────────────────────────────────────────
+# Step-up: تطابق بصمة حيّة مع رفض سابق ضمن نافذة (نمط stepup)
+# ─────────────────────────────────────────────────────────────────────
+def live_fingerprint_hash(fp: AuthFingerprint) -> str:
+    """بصمة مُجزَّأة قصيرة (SHA-256 hex) للحقول الجوهرية للجهاز (لا السياق
+    الشبكي القابل للتغيّر). تُستخدم لمطابقة «نفس الجهاز الجديد يحاول مرّة
+    ثانية» في نمط step-up: إذا أعاد الجهاز نفسه (نفس os_family + brand +
+    dhcp_class_id + ua_hash + hostname) محاولة الدخول خلال النافذة وكلمة
+    المرور صحيحة، نعتبره تأكيدًا من المستخدم على «هذا جهازي الجديد»."""
+    parts = "|".join([
+        fp.os_family or "", fp.device_brand or "", fp.device_model or "",
+        fp.dhcp_class_id or "", fp.hostname or "", fp.ua_hash or "",
+        fp.vendor_oui or "",
+    ])
+    return hashlib.sha256(parts.encode("utf-8", errors="ignore")).hexdigest()
+
+
+def _stepup_window_sec(tenant_id: int) -> int:
+    try:
+        n = int(_setting(tenant_id, SK_STEPUP_WINDOW_SEC) or "120")
+    except ValueError:
+        n = 120
+    return max(15, min(3600, n))
+
+
+def _has_recent_stepup_pending(tenant_id: int, *, username: str, mac: str,
+                                live_hash: str, window_sec: int) -> bool:
+    """يبحث في mac_clone_events عن stepup_required سابق لنفس (المستخدم، MAC،
+    بصمة حيّة) ضمن النافذة الزمنية. وجوده = «هذا الجهاز الجديد طُلب منه إعادة
+    كلمة المرور سابقًا، والآن عاد بنفسه بكلمة مرور صحيحة» = تأكيد قانوني."""
+    from datetime import datetime, timedelta
+    try:
+        cutoff = (datetime.utcnow() - timedelta(seconds=int(window_sec))).isoformat()
+        rows = db().execute(
+            """
+            SELECT signals FROM mac_clone_events
+             WHERE tenant_id = ?
+               AND username  = ?
+               AND mac       = ?
+               AND event_type = 'stepup_required'
+               AND created_at >= ?
+             ORDER BY created_at DESC
+             LIMIT 5
+            """,
+            (int(tenant_id), username, mac, cutoff),
+        ).fetchall()
+    except Exception:  # noqa: BLE001
+        return False
+    import json as _json
+    for r in rows:
+        raw = r["signals"] or ""
+        try:
+            obj = _json.loads(raw) if raw else {}
+        except (TypeError, ValueError):
+            continue
+        if isinstance(obj, dict) and obj.get("live_hash") == live_hash:
+            return True
+    return False
 
 
 def evaluate(tenant_id: int, *,
@@ -449,6 +520,7 @@ def evaluate(tenant_id: int, *,
         mode = (_setting(tenant_id, SK_MODE) or "enforce").lower()
         threshold = _confidence_min(tenant_id)
         binding = mac_clone_repo.get_binding(tenant_id, username, live.mac)
+        live_hash = live_fingerprint_hash(live)
 
         # حارس الجلسات المتزامنة — أقوى إشارة على وجود استنساخ.
         concurrent_clone = False
@@ -493,6 +565,39 @@ def evaluate(tenant_id: int, *,
                            signals=signals)
 
         # نطلق قرار «استنساخ»:
+        signals["live_hash"] = live_hash
+
+        # تزامن من سياق متباعد = استنساخ مؤكَّد. لا يستحقّ تنازلًا (step-up
+        # لا يَحلّه: التأكيد بكلمة المرور لا يبرّر وجود جلستين متزامنتين من
+        # مكانين مختلفين). نُعامله كاستنساخ صريح في enforce و stepup كليهما،
+        # ونحتفظ بـmonitor كنمط مراقبة محض.
+        if concurrent_clone and mode != "monitor":
+            return Verdict(action="deny", reason="mac_clone_detected",
+                           message=MSG_CLONE,
+                           confidence=cmp_.confidence, score=cmp_.score,
+                           signals=signals, coa_kick=coa_kick)
+
+        # نمط stepup: إن سبق رفض هذا الجهاز نفسه (نفس live_hash) ضمن نافذة
+        # الثقة الثانية، نعتبر هذه المحاولة تأكيدًا من المستخدم على «هذا
+        # جهازي الجديد» (كلمة المرور صحّت = إذن قانوني) → نُعيد الربط للجهاز
+        # الجديد ونسمح. وإلا فالمحاولة الأولى = رفض + علامة stepup_required.
+        if mode == "stepup":
+            window = _stepup_window_sec(tenant_id)
+            if _has_recent_stepup_pending(
+                    tenant_id, username=username, mac=live.mac,
+                    live_hash=live_hash, window_sec=window):
+                signals["stepup_confirmed"] = True
+                signals["stepup_window_sec"] = window
+                return Verdict(action="allow", reason="stepup_confirmed",
+                               message="",
+                               confidence=cmp_.confidence, score=cmp_.score,
+                               signals=signals)
+            signals["stepup_window_sec"] = window
+            return Verdict(action="deny", reason="stepup_required",
+                           message=MSG_STEPUP,
+                           confidence=cmp_.confidence, score=cmp_.score,
+                           signals=signals, coa_kick=coa_kick)
+
         if mode == "enforce":
             return Verdict(action="deny", reason="mac_clone_detected",
                            message=MSG_CLONE,
@@ -519,14 +624,20 @@ def apply_decision(tenant_id: int, *, username: str,
     لا يكسر الـauth أبدًا (try/except حول كل الـside effects)."""
     if not verdict:
         return
+    # خريطة reason → event_type لجدول mac_clone_events.
+    _EVT_MAP = {
+        "first_bind":         "bind",
+        "verify_ok":          "verify_ok",
+        "mac_clone_detected": "clone_detected",
+        "stepup_required":    "stepup_required",
+        "stepup_confirmed":   "verify_ok",   # نجاح التصعيد = تحقّق ناجح فعليًّا
+    }
+    event_type = _EVT_MAP.get(verdict.reason, "verify_ok")
     try:
         # كل فعل auth نسجّله — للتدقيق + لوحة الحوادث.
         mac_clone_repo.log_event(
             tenant_id=tenant_id, username=username, mac=live.mac,
-            event_type=("clone_detected"
-                        if verdict.reason == "mac_clone_detected"
-                        else ("bind" if verdict.reason == "first_bind"
-                              else "verify_ok")),
+            event_type=event_type,
             decision=verdict.action,
             confidence=verdict.confidence, score=verdict.score,
             signals=verdict.signals,
@@ -536,11 +647,33 @@ def apply_decision(tenant_id: int, *, username: str,
     except Exception:  # noqa: BLE001
         _LOG.warning("anti_mac_clone: failed to log event", exc_info=True)
 
-    # binding: نُحدّث أو نُنشئ على المسارات السلمية. على clone_detected لا نكتب
-    # فوق binding (نحافظ على «الجهاز الشرعي»)، لكن نزيد عدّاد mismatch.
+    # binding: قواعد التحديث بحسب القرار:
+    #   • first_bind / verify_ok          → upsert (last_seen + verify_count).
+    #   • stepup_confirmed                → REBIND إلى البصمة الحيّة الجديدة
+    #                                       (المستخدم أكّد بكلمة المرور).
+    #   • mac_clone_detected / stepup_required → لا نكتب فوق binding الشرعي،
+    #                                            فقط نزيد mismatch_count.
     try:
-        if verdict.reason == "mac_clone_detected":
+        if verdict.reason in ("mac_clone_detected", "stepup_required"):
             mac_clone_repo.bump_mismatch(tenant_id, username, live.mac)
+        elif verdict.reason == "stepup_confirmed":
+            # إعادة الربط الكاملة للجهاز الجديد: نحذف القديم ثم نُنشئ binding
+            # طازجًا كي تُمسح إشارات الجهاز السابق ولا تختلط بالجديد. عدّادات
+            # verify/mismatch تبدأ من الصفر — مقصود (دورة حياة جديدة).
+            existing = mac_clone_repo.get_binding(tenant_id, username, live.mac)
+            if existing:
+                mac_clone_repo.delete_binding(tenant_id, int(existing["id"]))
+            mac_clone_repo.upsert_binding(
+                tenant_id=tenant_id, username=username, mac=live.mac,
+                hostname=live.hostname, dhcp_class_id=live.dhcp_class_id,
+                os_family=live.os_family, device_brand=live.device_brand,
+                device_model=live.device_model,
+                ua_hash=live.ua_hash, ua_sample=live.ua_sample,
+                vendor_oui=live.vendor_oui,
+                nas_ip=live.nas_ip, called_station=live.called_station,
+                nas_port=live.nas_port, nas_port_type=live.nas_port_type,
+                bind_confidence="medium",
+            )
         else:
             mac_clone_repo.upsert_binding(
                 tenant_id=tenant_id, username=username, mac=live.mac,
@@ -557,8 +690,10 @@ def apply_decision(tenant_id: int, *, username: str,
     except Exception:  # noqa: BLE001
         _LOG.warning("anti_mac_clone: binding upsert failed", exc_info=True)
 
-    # تنبيه إدارة على الكشف الفعلي فقط (لا نُغرق بـverify_ok).
-    if verdict.reason == "mac_clone_detected" and _flag(tenant_id, SK_ALERT_ENABLED):
+    # تنبيه إدارة على الكشف الفعلي فقط (لا نُغرق بـverify_ok). كلٌّ من
+    # clone_detected و stepup_required يستحقّ التنبيه — كلاهما رفض حيّ.
+    if (verdict.reason in ("mac_clone_detected", "stepup_required")
+            and _flag(tenant_id, SK_ALERT_ENABLED)):
         try:
             from .admin_alerts import dispatch
             dispatch(int(tenant_id), "mac_clone_detected", {
@@ -645,12 +780,14 @@ __all__ = [
     "SK_ENABLED", "SK_MODE", "SK_SCOPE", "SK_SCOPE_PLAN_IDS",
     "SK_SCOPE_GROUP_NAMES", "SK_CONFIDENCE_MIN", "SK_CONCURRENT_GUARD",
     "SK_ALERT_ENABLED", "SK_COA_DISCONNECT", "SK_RAW_LIMIT",
+    "SK_STEPUP_WINDOW_SEC",
     # data classes
     "AuthFingerprint", "Comparison", "Verdict",
     "ScopeContext", "ConcurrentSession",
     # API
     "is_enabled", "get_settings", "set_settings",
     "scope_applies", "build_fingerprint", "hash_user_agent",
+    "live_fingerprint_hash",
     "compare", "find_concurrent_sessions", "is_divergent_context",
     "evaluate", "apply_decision", "check_after_auth",
     # messages

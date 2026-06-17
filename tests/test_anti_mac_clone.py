@@ -276,6 +276,18 @@ class TestSettingsNormalization:
         svc.set_settings(1, {svc.SK_RAW_LIMIT: "1"})
         assert tenants_repo.get_setting(1, svc.SK_RAW_LIMIT, "") == "10"
 
+    def test_stepup_window_clamped(self, app_ctx):
+        from app.radius.db.repos import tenants_repo
+        svc.set_settings(1, {svc.SK_STEPUP_WINDOW_SEC: "99999"})
+        assert tenants_repo.get_setting(1, svc.SK_STEPUP_WINDOW_SEC, "") == "3600"
+        svc.set_settings(1, {svc.SK_STEPUP_WINDOW_SEC: "1"})
+        assert tenants_repo.get_setting(1, svc.SK_STEPUP_WINDOW_SEC, "") == "15"
+
+    def test_mode_accepts_stepup(self, app_ctx):
+        from app.radius.db.repos import tenants_repo
+        svc.set_settings(1, {svc.SK_MODE: "stepup"})
+        assert tenants_repo.get_setting(1, svc.SK_MODE, "") == "stepup"
+
 
 # ════════════════════════════════════════════════════════════════════════
 # (7) الإنفاذ في policy_engine
@@ -404,6 +416,139 @@ class TestPolicyEngineEnforcement:
 
 
 # ════════════════════════════════════════════════════════════════════════
+# (7b) نمط Step-up — الرفض الأوّل ثم التأكيد بإعادة كلمة المرور
+# ════════════════════════════════════════════════════════════════════════
+class TestStepupMode:
+    """يتحقّق من سيناريو الترقية المشروعة لجهاز جديد:
+       1. ربط جهاز iOS أولًا.
+       2. جهاز Android جديد بنفس MAC + كلمة مرور صحيحة → رفض stepup_required.
+       3. نفس الجهاز Android يعاود المحاولة فورًا (نفس البصمة) → سماح + إعادة ربط.
+    """
+
+    def _auth(self, **kw):
+        from app.radius.services.policy_engine import AuthRequest, authorize
+        base = dict(username="u1", password="pw1", tenant_id=1,
+                     calling_station_id="AA:BB:CC:DD:EE:FF",
+                     called_station_id="0C:11:22:33:44:55",
+                     nas_ip="10.0.0.1", nas_port="ether1",
+                     nas_port_type="Wireless-802.11")
+        base.update(kw)
+        return authorize(AuthRequest(**base))
+
+    def _bind_ios_first(self):
+        from app.radius.db.repos import tenants_repo, device_fingerprints_repo
+        _mk_sub()
+        tenants_repo.set_setting(1, svc.SK_ENABLED, "1")
+        tenants_repo.set_setting(1, svc.SK_MODE, "stepup")
+        tenants_repo.set_setting(1, svc.SK_STEPUP_WINDOW_SEC, "300")
+        device_fingerprints_repo.upsert(
+            tenant_id=1, mac="AA:BB:CC:DD:EE:FF",
+            os_family="ios", device_brand="Apple", hostname="iphone-of-x")
+        return self._auth()  # ربط أوّل
+
+    def test_first_attempt_rejected_with_stepup_required(self, app_ctx):
+        assert self._bind_ios_first().ok
+        from app.radius.db.repos import device_fingerprints_repo, mac_clone_repo
+        # تغيير البصمة الحيّة لجهاز Android جديد (نفس MAC).
+        device_fingerprints_repo.upsert(
+            tenant_id=1, mac="AA:BB:CC:DD:EE:FF",
+            os_family="android", device_brand="Samsung", hostname="galaxy")
+        d = self._auth()
+        assert not d.ok
+        assert d.reason == "stepup_required"
+        # لم يُكتب فوق binding الشرعي (iOS لا يزال موجودًا).
+        b = mac_clone_repo.get_binding(1, "u1", "AA:BB:CC:DD:EE:FF")
+        assert b["os_family"] == "ios"
+        # حدث stepup_required مُسجَّل مع live_hash.
+        events = mac_clone_repo.list_events(1, username="u1",
+                                             event_type="stepup_required")
+        assert events
+        assert events[0]["signals_obj"].get("live_hash")
+
+    def test_second_attempt_same_device_confirmed(self, app_ctx):
+        """التأكيد بإعادة كلمة المرور: نفس الجهاز الجديد يعاود = سماح + إعادة ربط."""
+        assert self._bind_ios_first().ok
+        from app.radius.db.repos import device_fingerprints_repo, mac_clone_repo
+        device_fingerprints_repo.upsert(
+            tenant_id=1, mac="AA:BB:CC:DD:EE:FF",
+            os_family="android", device_brand="Samsung", hostname="galaxy")
+        d1 = self._auth()
+        assert not d1.ok and d1.reason == "stepup_required"
+        # محاولة ثانية فورًا (نفس البصمة الحيّة) → تأكيد ← سماح.
+        d2 = self._auth()
+        assert d2.ok
+        # binding أُعيد ربطه للجهاز الجديد (Android الآن).
+        b = mac_clone_repo.get_binding(1, "u1", "AA:BB:CC:DD:EE:FF")
+        assert b["os_family"] == "android"
+        assert b["device_brand"] == "Samsung"
+        # عدّاد التحقّق ابتدأ من الصفر (دورة حياة جديدة بعد إعادة الربط).
+        # (verify_count يُزاد على المحاولات اللاحقة فقط)
+        assert b["mismatch_count"] == 0
+
+    def test_third_party_device_within_window_NOT_confirmed(self, app_ctx):
+        """جهاز ثالث مختلف عن الذي طُلب منه التصعيد يبقى مرفوضًا — التأكيد
+        مشروط بأنّ المحاولة الثانية من نفس الجهاز الجديد (live_hash)."""
+        assert self._bind_ios_first().ok
+        from app.radius.db.repos import device_fingerprints_repo
+        device_fingerprints_repo.upsert(
+            tenant_id=1, mac="AA:BB:CC:DD:EE:FF",
+            os_family="android", device_brand="Samsung")
+        d1 = self._auth()
+        assert d1.reason == "stepup_required"
+        # «جهاز ثالث» — Windows بنفس MAC.
+        device_fingerprints_repo.upsert(
+            tenant_id=1, mac="AA:BB:CC:DD:EE:FF",
+            os_family="windows", device_brand="Dell")
+        d2 = self._auth()
+        # ليس تأكيدًا — هذا جهاز مختلف عن الذي طُلب منه التصعيد.
+        assert not d2.ok
+        assert d2.reason == "stepup_required"
+
+    def test_stepup_window_expired_does_not_confirm(self, app_ctx, monkeypatch):
+        """انتهاء النافذة ⇒ المحاولة الثانية تُعامَل كمحاولة جديدة (رفض من جديد)."""
+        assert self._bind_ios_first().ok
+        from app.radius.db.repos import tenants_repo, device_fingerprints_repo
+        tenants_repo.set_setting(1, svc.SK_STEPUP_WINDOW_SEC, "15")  # الحدّ الأدنى
+        device_fingerprints_repo.upsert(
+            tenant_id=1, mac="AA:BB:CC:DD:EE:FF",
+            os_family="android", device_brand="Samsung")
+        # نُزوّر «الماضي» بأن نُنفّذ الأولى، ثمّ ندفع created_at لما قبل النافذة.
+        d1 = self._auth()
+        assert d1.reason == "stepup_required"
+        from app.radius.db.connection import transaction
+        with transaction() as conn:
+            conn.execute(
+                "UPDATE mac_clone_events SET created_at = '2020-01-01T00:00:00' "
+                "WHERE event_type = 'stepup_required'")
+        d2 = self._auth()
+        # خارج النافذة — لا تأكيد، رفض من جديد.
+        assert not d2.ok
+        assert d2.reason == "stepup_required"
+
+    def test_concurrent_clone_skips_stepup_path(self, app_ctx):
+        """تزامن من سياق متباعد (impossible-travel) لا يدخل في step-up — يُرفض
+        كاستنساخ صريح حتى في نمط stepup (لأن التأكيد بكلمة المرور لا يبرّر
+        وجود جلستين متزامنتين من مكانين)."""
+        assert self._bind_ios_first().ok
+        from app.radius.db.connection import transaction
+        from app.radius.db.repos import device_fingerprints_repo
+        # ضع جلسة حيّة من راوتر آخر (سياق متباعد).
+        with transaction() as conn:
+            conn.execute(
+                "INSERT INTO radacct(tenant_id, username, callingstationid, "
+                "nasipaddress, calledstationid, acctsessionid) "
+                "VALUES(1, 'other', 'AA:BB:CC:DD:EE:FF', '10.99.99.99', "
+                "       'DD:EE:FF:11:22:33', 'sess-x')")
+        device_fingerprints_repo.upsert(
+            tenant_id=1, mac="AA:BB:CC:DD:EE:FF",
+            os_family="android", device_brand="Samsung")
+        d = self._auth()
+        # حتى في نمط stepup نَرفض كاستنساخ صريح (لا تأكيد بكلمة المرور).
+        assert not d.ok
+        assert d.reason == "mac_clone_detected"
+
+
+# ════════════════════════════════════════════════════════════════════════
 # (8) AlertSpec موجودة + ACTION_ALERTS deep-link
 # ════════════════════════════════════════════════════════════════════════
 class TestAlertWiring:
@@ -453,15 +598,17 @@ class TestAdminRoutes:
         rv = client.post("/admin/radius/anti-mac-clone/settings", data={
             "_csrf_token": token,
             svc.SK_ENABLED: "1",
-            svc.SK_MODE: "monitor",
+            svc.SK_MODE: "stepup",
             svc.SK_CONFIDENCE_MIN: "medium",
             svc.SK_SCOPE: "all",
             svc.SK_CONCURRENT_GUARD: "1",
             svc.SK_ALERT_ENABLED: "1",
             svc.SK_COA_DISCONNECT: "1",
             svc.SK_RAW_LIMIT: "300",
+            svc.SK_STEPUP_WINDOW_SEC: "180",
         }, follow_redirects=False)
         assert rv.status_code in (302, 303)
         assert svc.is_enabled(1)
         from app.radius.db.repos import tenants_repo
-        assert tenants_repo.get_setting(1, svc.SK_MODE, "") == "monitor"
+        assert tenants_repo.get_setting(1, svc.SK_MODE, "") == "stepup"
+        assert tenants_repo.get_setting(1, svc.SK_STEPUP_WINDOW_SEC, "") == "180"

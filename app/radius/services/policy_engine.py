@@ -76,6 +76,10 @@ _MSG = {
     "access_blocked":     "الدخول محظور حاليًا — راجع الإدارة",
     # «منع استنساخ MAC» (anti-mac-clone): جهاز مختلف بنفس MAC.
     "mac_clone_detected": "تنبيه أمني: تم رصد محاولة دخول من جهاز مختلف بنفس عنوان MAC — الدخول مرفوض",
+    # نمط step-up: رفض أوّل لإجبار إعادة كتابة كلمة المرور كتأكيد على
+    # «هذا جهازي الجديد». المحاولة الثانية بنفس البصمة الحيّة ضمن النافذة
+    # تُعامَل كتأكيد قانوني → سماح + إعادة ربط.
+    "stepup_required":    "هذا الجهاز جديد — أعد كتابة كلمة المرور للتأكيد",
     "ok_welcome":        "أهلًا بك",
     "ok_expires_soon":   "اشتراكك ينتهي قريبًا — جدّد قبل الانقطاع",
 }
@@ -320,8 +324,12 @@ def _check_anti_mac_clone(req: AuthRequest, sub: Subscriber,
         )
         if v is None or v.action != "deny":
             return None
-        msg = v.message or _MSG["mac_clone_detected"]
-        return AuthDecision(ok=False, reason="mac_clone_detected",
+        # تمييز سبب الرفض: stepup_required (نمط step-up أوّل محاولة) عن
+        # mac_clone_detected (نمط enforce). كلاهما رفض، لكن الرسالة مختلفة.
+        reason = v.reason if v.reason in (
+            "mac_clone_detected", "stepup_required") else "mac_clone_detected"
+        msg = v.message or _MSG.get(reason) or _MSG["mac_clone_detected"]
+        return AuthDecision(ok=False, reason=reason,
                              message=msg,
                              reply_attrs={"Reply-Message": msg})
     except Exception:  # noqa: BLE001 — never break auth

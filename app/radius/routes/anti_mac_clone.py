@@ -90,6 +90,7 @@ def page():
             "alert_enabled":     svc.SK_ALERT_ENABLED,
             "coa_disconnect":    svc.SK_COA_DISCONNECT,
             "raw_limit":         svc.SK_RAW_LIMIT,
+            "stepup_window_sec": svc.SK_STEPUP_WINDOW_SEC,
         },
         bindings=bindings,
         events=events,
@@ -126,6 +127,7 @@ def save_settings():
         svc.SK_SCOPE:             (request.form.get(svc.SK_SCOPE) or "").strip(),
         svc.SK_CONFIDENCE_MIN:    (request.form.get(svc.SK_CONFIDENCE_MIN) or "").strip(),
         svc.SK_RAW_LIMIT:         (request.form.get(svc.SK_RAW_LIMIT) or "").strip(),
+        svc.SK_STEPUP_WINDOW_SEC: (request.form.get(svc.SK_STEPUP_WINDOW_SEC) or "").strip(),
     }
     # multi-select قد تكون قائمة قيم.
     plan_ids = ",".join(request.form.getlist(svc.SK_SCOPE_PLAN_IDS))
