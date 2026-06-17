@@ -409,6 +409,19 @@ def payment_collection_submit_proof(request_id: int):
         PaymentRequestRepository().update_status(_tid(), request_id, "proof_submitted")
     except ValueError as exc:
         return fail("validation_error", _payment_error_message(exc), status=422)
+    # تنبيه إدارة (تلجرام): دفعة/تحويل من البوابة بانتظار المراجعة — برابط
+    # مباشر لصفحة مراجعة الطلب. محصّن، لا يكسر تدفّق إرسال الإثبات.
+    try:
+        from app.radius.services.admin_alerts import dispatch
+        dispatch(_tid(), "payment_pending_review", {
+            "username": request_row.get("payer_id") or "—",
+            "amount": request_row.get("amount") or 0,
+            "currency": request_row.get("currency") or "",
+            "method": request_row.get("provider") or request_row.get("purpose") or "—",
+            "request_id": request_id,
+        }, dedup_key=f"pay_review:{request_id}")
+    except Exception:  # noqa: BLE001
+        pass
     return ok({"proof": _proof_payload(proof)}, status=201)
 
 

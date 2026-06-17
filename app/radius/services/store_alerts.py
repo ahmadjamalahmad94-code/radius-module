@@ -110,7 +110,8 @@ def notify_chat(tenant_id, card_user_id, name=""):
           f"رسالة دعم جديدة من {nm}", severity="info",
           recommended_action_ar="افتح محادثات الدعم في لوحة «دعم وطلبات المتجر».",
           link=f"{_SUPPORT}?chat={int(card_user_id)}#chat")
-    _tg(tenant_id, "store_chat", {"name": nm},
+    _tg(tenant_id, "store_chat",
+        {"name": nm, "card_user_id": int(card_user_id)},
         dedup_key=f"store_chat:{int(card_user_id)}")
 
 

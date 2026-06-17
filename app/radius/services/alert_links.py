@@ -99,4 +99,113 @@ def alert_target_url(alert) -> str:
     return "#"
 
 
-__all__ = ["alert_target_url"]
+# ════════════════════════════════════════════════════════════════════════
+# روابط تلجرام العميقة (مطلقة) للتنبيهات التي تتطلّب تدخّل المدير فقط
+# ════════════════════════════════════════════════════════════════════════
+# تنبيهات تحتاج إجراءً من المدير → تحمل رابطًا مباشرًا للصفحة المعالِجة.
+# التنبيهات الإخبارية (إضافة مشترك، رفع سرعة، فصل شبكة…) لا رابط لها.
+ACTION_ALERTS = frozenset({
+    "payment_pending_review",   # دفعة/تحويل بانتظار المراجعة → صفحة المراجعة
+    "service_request_new",      # طلب خدمة جديد → صفحة الطلبات
+    "store_chat",               # رسالة دعم متجر → خيط المحادثة للردّ
+    "portal_message",           # رسالة من بوابة المشترك → صفحة البوابة للردّ
+    "store_deposit",            # طلب إيداع → تبويب الإيداعات للتأكيد
+    "store_withdrawal",         # طلب سحب → تبويب السحوبات للتنفيذ
+    "auto_block_triggered",     # حظر تلقائي → صفحة التحكّم بالدخول للمراجعة
+})
+
+
+def _configured_base() -> str:
+    """عنوان اللوحة العام المضبوط (اختياري) — يفيد خلف بروكسي عكسي حيث قد
+    لا يكون host الطلب صحيحًا. فارغ → نعتمد host الطلب عبر _external."""
+    try:
+        from flask import g
+        from ..core.tenant import DEFAULT_TENANT_ID
+        from ..db.repos import tenants_repo
+        tid = int(getattr(g, "tenant_id", DEFAULT_TENANT_ID))
+        return str(tenants_repo.get_setting(tid, "system.public_base_url", "") or "").strip().rstrip("/")
+    except Exception:  # noqa: BLE001
+        return ""
+
+
+def _abs(endpoint: str, **params) -> str | None:
+    """رابط مطلق لنقطة داخلية. يفضّل العنوان المضبوط ثمّ host الطلب
+    (_external). يُعيد None إن تعذّر البناء (لا سياق طلب / endpoint غائب)."""
+    if not _has(endpoint):
+        return None
+    from flask import url_for
+    base = _configured_base()
+    if base:
+        try:
+            return base + url_for(endpoint, **params)
+        except Exception:  # noqa: BLE001
+            pass
+    try:
+        return url_for(endpoint, _external=True, **params)
+    except Exception:  # noqa: BLE001 — لا سياق طلب (مُطلِق غير ويب) → بلا رابط
+        return None
+
+
+def _int(v):
+    try:
+        return int(v)
+    except (TypeError, ValueError):
+        return None
+
+
+def action_link(key: str, context: dict | None = None) -> str | None:
+    """رابط مطلق للصفحة التي يُعالَج فيها التنبيه — للتنبيهات التي تتطلّب
+    تدخّلًا فقط. غيرها (إخباري) → None (بلا رابط). لا يرفع استثناءً أبدًا.
+
+    `context` نفس قاموس سياق dispatch؛ نستخرج منه معرّف الكيان لبناء رابط
+    مثبَّت على العنصر (مثل request_id / card_user_id / ticket_id)، وإلا
+    نرتدّ لصفحة القسم."""
+    if key not in ACTION_ALERTS:
+        return None
+    ctx = context or {}
+    try:
+        if key == "payment_pending_review":
+            rid = _int(ctx.get("request_id"))
+            if rid is not None:
+                url = _abs("radius.payment_collection_request_detail", request_id=rid)
+                if url:
+                    return url
+            return _abs("radius.payment_collection_review_queue_web")
+
+        if key == "service_request_new":
+            return _abs("radius.service_request_list")
+
+        if key == "store_chat":
+            cu = _int(ctx.get("card_user_id"))
+            if cu is not None:
+                url = _abs("radius.store_support", chat=cu, _anchor="chat")
+                if url:
+                    return url
+            return _abs("radius.store_support")
+
+        if key == "portal_message":
+            tk = _int(ctx.get("ticket_id"))
+            if tk is not None:
+                url = _abs("radius.tk_view", tid=tk)
+                if url:
+                    return url
+            return _abs("radius.customer_portals_admin")
+
+        if key == "store_deposit":
+            rid = _int(ctx.get("request_id"))
+            anchor = f"dep-{rid}" if rid is not None else "deposits"
+            return _abs("radius.store_support", tab="deposits", _anchor=anchor)
+
+        if key == "store_withdrawal":
+            rid = _int(ctx.get("request_id"))
+            anchor = f"wd-{rid}" if rid is not None else "withdrawals"
+            return _abs("radius.store_support", tab="withdrawals", _anchor=anchor)
+
+        if key == "auto_block_triggered":
+            return _abs("radius.access_control_page")
+    except Exception:  # noqa: BLE001 — التعميق لا يكسر الإرسال أبدًا
+        _LOG.debug("action_link failed for %s", key, exc_info=True)
+    return None
+
+
+__all__ = ["alert_target_url", "action_link", "ACTION_ALERTS"]
