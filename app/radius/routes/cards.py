@@ -583,7 +583,7 @@ def _cards_sales_snapshot(tenant_id: int) -> dict:
         "SELECT currency FROM tenants WHERE id = ?",
         (tenant_id,),
     ).fetchone()
-    currency = str((currency_row and currency_row["currency"]) or "ILS").upper()
+    currency = str((currency_row and currency_row["currency"]) or default_currency()).upper()
     printed = {period: _printed_sales_total(tenant_id, period, filters) for period in periods}
     electronic = {period: _electronic_sales_total(tenant_id, period, filters) for period in periods}
     total = {

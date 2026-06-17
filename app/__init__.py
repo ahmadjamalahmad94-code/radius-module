@@ -518,7 +518,7 @@ def _install_stubs(app: Flask) -> None:
             from app.radius.core.system_config import (
                 CURRENCY_NAMES, CURRENCY_SYMBOLS, _DEFAULTS,
             )
-            cur = (_DEFAULTS.get("billing.currency") or "ILS").upper()
+            cur = (_DEFAULTS.get("billing.currency") or "JOD").upper()
             return {"cfg": {"currency": cur,
                             "currency_symbol": CURRENCY_SYMBOLS.get(cur, cur),
                             "currency_name": CURRENCY_NAMES.get(cur, cur),

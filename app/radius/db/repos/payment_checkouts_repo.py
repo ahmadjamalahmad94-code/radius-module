@@ -55,6 +55,10 @@ class PaymentCheckoutRepository:
         amount_minor = int(amount_minor)
         if amount_minor <= 0:
             raise ValueError("amount_minor")
+        if not currency:
+            # المرجع الموحّد لعملة المستأجر بدل تثبيت قيمة قديمة.
+            from ...core.system_config import default_currency
+            currency = default_currency()
         with transaction() as conn:
             cur = conn.execute(
                 """
@@ -67,7 +71,7 @@ class PaymentCheckoutRepository:
                 (
                     int(tenant_id), provider, reference,
                     (subscriber_username or None),
-                    amount_minor, (currency or "ILS").upper()[:8],
+                    amount_minor, currency.upper()[:8],
                     status, otp_hash, otp_expires_at,
                     now_iso(), json_dump(metadata or {}),
                 ),

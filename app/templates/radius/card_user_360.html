@@ -201,7 +201,7 @@
       <span class="u360-wallet-ic"><i class="fa-solid fa-wallet" aria-hidden="true"></i></span>
       <div class="u360-wallet-main">
         <span class="u360-wallet-label">{{ _('الرصيد المتاح') }}</span>
-        <span class="u360-wallet-amt">{{ balance|money }}<span class="ccy">{{ currency }}</span></span>
+        <span class="u360-wallet-amt">{{ balance|money(currency) }}</span>
         {% if pending and pending > 0 %}
           <span class="u360-wallet-pending">
             <i class="fa-solid fa-hourglass-half" aria-hidden="true"></i>
