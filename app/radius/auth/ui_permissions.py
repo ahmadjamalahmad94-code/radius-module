@@ -120,6 +120,9 @@ _NAV_PERM: dict[str, str] = {
     "anti_mac_clone_page": "settings.view",
     "sync_list": "nas.view",
     "tenants_list": _PERM_SUPER,
+    # حالة منح المزوّد — تشخيصية، يفضّل قصرها على السوبر لأنّها تكشف
+    # محتوى عقد التراخيص. صفحة blocked عامة (تظهر لمن يصل لخدمة موقوفة).
+    "provider_grants_status_page": _PERM_SUPER,
 
     # ── التكامل والجسر ──
     "admin_bridge": "api.use",

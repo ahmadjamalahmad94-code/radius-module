@@ -1,0 +1,43 @@
+{# الخدمة موقوفة من المزوّد — صفحة لطيفة بدل 403 العام.
+   يُحوَّل إليها حارس بوابة المزوّد (provider gate) في blueprint.py عند طلب
+   صفحة GET لخدمة موقوفة. حتى السوبر-أدمن يصل لهذه الصفحة عند الحظر — منح
+   المزوّد فوق RBAC. #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}{{ _('الخدمة غير مفعّلة من المزوّد') }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-lock"></i>{% endblock %}
+{% block page_title %}{{ _('الخدمة غير مفعّلة من المزوّد') }}{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('قرار تجاري من لوحة التراخيص — راجع مزوّد الخدمة') }}</span>{% endblock %}
+
+{% block content %}
+{{ hub.megahero(
+  _('الخدمة غير مفعّلة من المزوّد'),
+  subtitle=_('هذه الخدمة موقوفة في عقد الخدمة الحالي من مزوّد النظام. لا يمكن استخدامها من أي مستوى صلاحية — بما في ذلك المدير الرئيسي — حتى يتم تفعيلها من لوحة التراخيص. هذا قرار تجاري وليس قيدًا داخليًّا.'),
+  icon='lock',
+  kpis=[
+    {'label': _('الخدمة'),   'value': service_key or '—', 'icon': 'tag',           'variant': 'gray'},
+    {'label': _('الحالة'),   'value': (grant.status if grant and grant.status else '—'), 'icon': 'circle-info', 'variant': 'red'},
+    {'label': _('الميزة'),   'value': (grant.feature_state if grant else '—'),     'icon': 'sliders',       'variant': 'amber'},
+  ]
+) }}
+
+{% call hub.section(_('ما الذي يعنيه هذا؟'), icon='circle-question') %}
+  <p class="card-intro">
+    {{ _('تباع الخدمات في هذا النظام عبر لوحة تراخيص خارجية (لوحة المزوّد). عندما يضع المزوّد خدمة في الحالة «موقوفة (إيقاف فعلي)»، تُمنع نهائيًّا في كل أنحاء الريديوس — البند يختفي من الشريط الجانبي، الرابط المباشر لا يفتح، وكل عمليات الكتابة المرتبطة تُرفض. هذا ينطبق حتى على المدير الرئيسي (السوبر) عمدًا، لأن المزوّد سلطة تجارية أعلى من الصلاحيات الداخلية.') }}
+  </p>
+  <ul class="hub-list">
+    <li>{{ _('للوصول إلى الخدمة: اتّصل بمزوّد النظام وعدّل حالتها في لوحة التراخيص إلى «مفعّلة».') }}</li>
+    <li>{{ _('بعد التعديل، قد يستغرق ظهور الحالة الجديدة دقائق حتى ينتهي تزامن العقد (capacity contract).') }}</li>
+    <li>{{ _('بإمكانك مراجعة حالة كل المنح الحالية من صفحة «حالة منح المزوّد» في إدارة النظام.') }}</li>
+  </ul>
+  <div class="hub-actions">
+    {{ hub.btn(_('حالة منح المزوّد'),
+                href=url_for('radius.provider_grants_status_page'),
+                variant='secondary', icon='clipboard-list') }}
+    {{ hub.btn(_('العودة للوحة'),
+                href=url_for('radius.dashboard'),
+                variant='primary', icon='house') }}
+  </div>
+{% endcall %}
+{% endblock %}

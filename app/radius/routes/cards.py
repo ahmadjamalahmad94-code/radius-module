@@ -1689,6 +1689,25 @@ def cards_generate():
             plan_id = _form_int("plan_id")
             count = _form_int("count")
             opts = _collect_batch_options()
+            # حارس سقف المزوّد لخدمة البطاقات — يُرفض إنشاء دفعة تتجاوز
+            # سقف الباتش الواحد (cards.generate_per_batch) أو السقف الشهري
+            # (cards.monthly_generated). السوبر لا يتجاوز. آمن.
+            try:
+                from ..services import provider_grant
+                _lim_b = provider_grant.check_limit(_tid(), "cards_batch",
+                                                      increment=int(count or 0))
+                if not _lim_b.allowed:
+                    flash(_lim_b.message_ar, "error")
+                    raise RadiusError(_lim_b.message_ar)
+                _lim_m = provider_grant.check_limit(_tid(), "cards",
+                                                      increment=int(count or 0))
+                if not _lim_m.allowed:
+                    flash(_lim_m.message_ar, "error")
+                    raise RadiusError(_lim_m.message_ar)
+            except RadiusError:
+                raise
+            except Exception:  # noqa: BLE001
+                pass
             batch, cards = get_cards_service().generate_batch(
                 actor=_actor(), plan_id=plan_id, count=count, **opts,
             )
