@@ -81,9 +81,14 @@ _NEW_SLUGS = {
     "customer-portal", "service-requests", "plans-speeds",
     "store-support", "card-users", "finance-collection", "sessions-report",
     "add-router", "mikrotik-operations", "radius", "hotspot",
-    "access-control", "anti-mac-clone", "network-policies",
+    "access-control", "anti-mac-clone",
     "admins", "message-templates", "backups", "alerts",
 }
+
+
+# «سياسات الشبكة» لم تعد دليلًا/صفحة مستقلّة — نُقلت إلى لوحة الراوتر
+# (commit 80e9483) وطُويت داخل دليل «إعداد وتشغيل المايكروتيك».
+_REMOVED_SLUGS = {"network-policies"}
 
 
 @pytest.mark.parametrize("cat_slug,slug", _ready_pages())
@@ -112,3 +117,25 @@ def test_new_guides_all_ready_and_reachable(app_ctx):
 def test_count_ready_guides(app_ctx):
     # تأكيد أنّ التغطية اتسعت فعليًّا (≥ 35 دليلًا جاهزًا).
     assert len(_ready_pages()) >= 35
+
+
+def test_network_policies_not_standalone(app_ctx):
+    """«سياسات الشبكة» أُزيلت كدليل مستقلّ: لا في CATEGORIES، ولا تفتح، ولا في الهبّ."""
+    from app.radius.routes.docs_center import CATEGORIES
+    all_slugs = {p["slug"] for cat in CATEGORIES.values() for p in cat["pages"]}
+    for slug in _REMOVED_SLUGS:
+        assert slug not in all_slugs, f"دليل مُزال ما زال مُسجَّلًا: {slug}"
+    c = _client(app_ctx)
+    # الراوت يردّ 404 لأن الدليل غير موجود/غير جاهز
+    assert c.get("/admin/radius/docs/network-policies").status_code == 404
+    # لا يظهر عنوانه المستقلّ في الهبّ
+    hub = c.get("/admin/radius/docs").get_data(as_text=True)
+    assert "دليل: سياسات الشبكة" not in hub
+
+
+def test_network_policies_folded_into_mikrotik_ops(app_ctx):
+    """محتوى سياسات الشبكة (حظر/سماح المواقع) مطويّ داخل دليل عمليات المايكروتيك."""
+    html = _client(app_ctx).get("/admin/radius/docs/mikrotik-operations").get_data(as_text=True)
+    assert "سياسات الشبكة" in html
+    assert "حظر المواقع" in html
+    assert "المواقع المسموحة" in html or "walled-garden" in html

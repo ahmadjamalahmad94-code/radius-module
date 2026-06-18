@@ -419,12 +419,12 @@ CATEGORIES: dict[str, dict] = {
             {
                 "slug": "mikrotik-operations",
                 "title": "إعداد وتشغيل المايكروتيك",
-                "desc": "عمليات الراوتر: اللوحة الحيّة، معالج البرمجة (هوت سبوت/PPPoE)، مصمّم صفحة الدخول، التشخيص، والنسخ.",
+                "desc": "عمليات الراوتر: اللوحة الحيّة، سياسات الشبكة (حظر/سماح المواقع)، معالج البرمجة (هوت سبوت/PPPoE)، مصمّم صفحة الدخول، التشخيص، والنسخ.",
                 "icon": "screwdriver-wrench",
                 "template": "radius/docs_mikrotik_operations.html",
                 "ready": True,
-                "minutes": 13,
-                "steps": 7,
+                "minutes": 14,
+                "steps": 8,
             },
             {
                 "slug": "radius",
@@ -453,7 +453,7 @@ CATEGORIES: dict[str, dict] = {
         "title": "الأمان والتحكّم",
         "icon": "shield-halved",
         "color": "#dc2626",
-        "desc": "سياسات الشبكة، التحكّم بالدخول ووضع السماح، ومنع استنساخ MAC — حماية شبكتك ومشتركيك.",
+        "desc": "التحكّم بالدخول ووضع السماح، ومنع استنساخ MAC — حماية شبكتك ومشتركيك.",
         "pages": [
             {
                 "slug": "access-control",
@@ -475,16 +475,9 @@ CATEGORIES: dict[str, dict] = {
                 "minutes": 9,
                 "steps": 7,
             },
-            {
-                "slug": "network-policies",
-                "title": "سياسات الشبكة",
-                "desc": "حظر المواقع والمواقع المسموحة (walled-garden) لكل راوتر: المعاينة، التطبيق، وسجلّ التغييرات.",
-                "icon": "diagram-project",
-                "template": "radius/docs_network_policies.html",
-                "ready": True,
-                "minutes": 9,
-                "steps": 7,
-            },
+            # ملاحظة: «سياسات الشبكة» لم تعد ميزة/صفحة مستقلّة — نُقلت إلى لوحة كل
+            # راوتر (حظر المواقع + المواقع المسموحة) في commit 80e9483، وحُذف جزء
+            # الوصول البعيد. شرحها مطوي ضمن دليل «إعداد وتشغيل المايكروتيك».
         ],
     },
     # ─── التقارير — قوالب الأدلة تكتبها جلسات متوازية ───

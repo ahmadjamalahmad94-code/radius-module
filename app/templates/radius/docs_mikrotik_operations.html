@@ -12,7 +12,7 @@
 
 {{ hub.hero(
   "دليل: إعداد وتشغيل المايكروتيك",
-  subtitle="كل عمليات الراوتر الواحد في مكان واحد: لوحة الراوتر، معالج البرمجة (هوت سبوت / PPPoE) مع التخطيط والتأكيد، مصمّم صفحة الدخول، التشخيص، والنسخ الاحتياطي.",
+  subtitle="كل عمليات الراوتر الواحد في مكان واحد: لوحة الراوتر، سياسات الشبكة (حظر/سماح المواقع)، معالج البرمجة (هوت سبوت / PPPoE) مع التخطيط والتأكيد، مصمّم صفحة الدخول، التشخيص، والنسخ الاحتياطي.",
   icon="sliders",
   actions_html='
     <button type="button" class="hub-btn hub-btn--secondary" onclick="window.print()">
@@ -30,11 +30,12 @@
     <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> {{ _('فهرس الخطوات') }}</div>
     <a href="#dg-s1" data-dg-toc><span class="n">1</span> من أين تبدأ العمليات</a>
     <a href="#dg-s2" data-dg-toc><span class="n">2</span> لوحة الراوتر</a>
-    <a href="#dg-s3" data-dg-toc><span class="n">3</span> معالج البرمجة: الخطة</a>
-    <a href="#dg-s4" data-dg-toc><span class="n">4</span> الفحص والتأكيد والتطبيق</a>
-    <a href="#dg-s5" data-dg-toc><span class="n">5</span> مصمّم صفحة الدخول</a>
-    <a href="#dg-s6" data-dg-toc><span class="n">6</span> التشخيص</a>
-    <a href="#dg-s7" data-dg-toc><span class="n">7</span> النسخ الاحتياطي</a>
+    <a href="#dg-s3" data-dg-toc><span class="n">3</span> سياسات الشبكة لكل راوتر</a>
+    <a href="#dg-s4" data-dg-toc><span class="n">4</span> معالج البرمجة: الخطة</a>
+    <a href="#dg-s5" data-dg-toc><span class="n">5</span> الفحص والتأكيد والتطبيق</a>
+    <a href="#dg-s6" data-dg-toc><span class="n">6</span> مصمّم صفحة الدخول</a>
+    <a href="#dg-s7" data-dg-toc><span class="n">7</span> التشخيص</a>
+    <a href="#dg-s8" data-dg-toc><span class="n">8</span> النسخ الاحتياطي</a>
   </nav>
 
   <div class="dg-main">
@@ -89,6 +90,54 @@
     <section class="dg-step" id="dg-s3">
       <div class="dg-badge">3</div>
       <div class="dg-card">
+        <h2><i class="fa-solid fa-shield-halved"></i> سياسات الشبكة لكل راوتر: حظر/سماح المواقع</h2>
+        <p>
+          من بطاقات «خدماتي» في لوحة الراوتر نفسها تجد بطاقتَي سياسات الشبكة — لا توجد صفحة عامّة
+          منفصلة في القائمة الجانبية، فكل سياسة مرتبطة براوتر واحد بعينه:
+        </p>
+        <ul>
+          <li><strong>«حظر المواقع»:</strong> تبني قائمة عناوين (نطاق/IP/CIDR) ثم قاعدة <code>drop</code>
+            واحدة على سلسلة <code>forward</code> تستهدف هذه القائمة فقط — لا تلمس الـ NAT ولا الـ DHCP
+            ولا بقية قواعد الجدار الناري.</li>
+          <li><strong>«المواقع المسموحة» (walled-garden):</strong> تفتح مواقع محدّدة <em>قبل</em> تسجيل
+            دخول الهوت سبوت (مثل صفحة الدفع أو موقعك) دون فتح الإنترنت كاملًا — وقواعد الدخول نفسها
+            لا تُلمس.</li>
+        </ul>
+        <p>
+          الطريقة واحدة للنوعين: <strong>أنشئ سياسة</strong> (اسم + الراوتر مُثبَّت) ← <strong>أضف
+          الوجهات/الإدخالات</strong> ← فعّلها ← <strong>عايِن</strong>. النظام يعمل بمبدأ «معاينة أولًا»:
+          المعاينة تعرض «ماذا سيتم» و«ماذا لن يُلمَس» ودرجة السلامة دون أن تكتب شيئًا على الراوتر.
+        </p>
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">لوحة الراوتر ← سياسات الشبكة</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-mock-sechead"><span class="ic"><i class="fa-solid fa-shield-halved"></i></span> بطاقتا السياسة على لوحة الراوتر</div>
+            <div class="dg-mf">
+              <label><i class="fa-solid fa-ban"></i> حظر المواقع</label>
+              <div class="dg-mf-input">قائمة عناوين + قاعدة drop واحدة</div>
+            </div>
+            <div class="dg-mf">
+              <label><i class="fa-solid fa-door-open"></i> المواقع المسموحة</label>
+              <div class="dg-mf-input">إدخالات walled-garden قبل الدخول</div>
+            </div>
+            <div class="dg-mock-actions">
+              <span class="dg-mock-btn"><i class="fa-solid fa-eye"></i> معاينة</span>
+              <span class="dg-mock-btn primary"><i class="fa-solid fa-circle-check"></i> تطبيق</span>
+            </div>
+          </div>
+        </div>
+        <div class="dg-info">
+          <span class="ic">ℹ️</span>
+          <span>عند التطبيق يأخذ النظام لقطة للحالة الحيّة ثم ينفّذ السكربت، ويسجّل العملية في
+          <strong>«سجل التغييرات»</strong> — ومنه زر <strong>«تراجع»</strong> يعيد الحالة عبر سكربت
+          rollback يطابق التعليقات المُدارة فقط ولا يلمس قاعدة لم يُنشئها النظام.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s4">
+      <div class="dg-badge">4</div>
+      <div class="dg-card">
         <h2><i class="fa-solid fa-wand-magic-sparkles"></i> معالج البرمجة: ابنِ الخطة أولًا</h2>
         <p>
           <strong>معالج البرمجة</strong> يولّد إعداد الراوتر لك بدل كتابة أوامر يدويًّا. اختر النوع:
@@ -130,8 +179,8 @@
       </div>
     </section>
 
-    <section class="dg-step" id="dg-s4">
-      <div class="dg-badge">4</div>
+    <section class="dg-step" id="dg-s5">
+      <div class="dg-badge">5</div>
       <div class="dg-card">
         <h2><i class="fa-solid fa-shield-halved"></i> الفحص والتأكيد والتطبيق</h2>
         <p>
@@ -156,8 +205,8 @@
       </div>
     </section>
 
-    <section class="dg-step" id="dg-s5">
-      <div class="dg-badge">5</div>
+    <section class="dg-step" id="dg-s6">
+      <div class="dg-badge">6</div>
       <div class="dg-card">
         <h2><i class="fa-solid fa-paintbrush"></i> مصمّم صفحة الدخول</h2>
         <p>
@@ -183,8 +232,8 @@
       </div>
     </section>
 
-    <section class="dg-step" id="dg-s6">
-      <div class="dg-badge">6</div>
+    <section class="dg-step" id="dg-s7">
+      <div class="dg-badge">7</div>
       <div class="dg-card">
         <h2><i class="fa-solid fa-stethoscope"></i> التشخيص</h2>
         <p>
@@ -200,8 +249,8 @@
       </div>
     </section>
 
-    <section class="dg-step" id="dg-s7">
-      <div class="dg-badge">7</div>
+    <section class="dg-step" id="dg-s8">
+      <div class="dg-badge">8</div>
       <div class="dg-card">
         <h2><i class="fa-solid fa-floppy-disk"></i> النسخ الاحتياطي</h2>
         <p>
