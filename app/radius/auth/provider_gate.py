@@ -363,6 +363,61 @@ def template_helpers() -> dict[str, object]:
             tid = 1
         return provider_grant.is_service_disabled(tid, service_key)
 
+    def _provider_multi_tenant_granted() -> bool:
+        """True فقط عندما يَكون مُنحة «الجهات» (multi_tenant) ساريًا.
+
+        قاعدة الاستعمال: مَركبة فوق ـmulti_tenant خدمة افتراضيًّا غير
+        موجودة في معظم العقود؛ تَظهر فقط على العقود التي تُمنَح حقّ
+        تشغيل عدّة جهات. لذا:
+
+          • العقد لا يَحوي ـmulti_tenant → نَعتبره «غير ممنوح» (False)
+          • العقد يَحويه و disabled → False (الفئة العاديّة للسايدبار)
+          • العقد يَحويه و requires_upgrade → False (مدفوع غير مُفعَّل)
+          • العقد يَحويه و enabled = active → True
+
+        فائدته الأساسيّة: مفتاح بوابة لـ«تبديل الجهة» في الـtopbar (لا
+        يَكفي ـprovider_service_disabled لأنّه يَفترض السماح الافتراضيّ).
+        """
+        try:
+            from flask import g
+            from ..core.tenant import DEFAULT_TENANT_ID
+            tid = int(getattr(g, "tenant_id", None) or DEFAULT_TENANT_ID)
+        except Exception:  # noqa: BLE001
+            tid = 1
+        try:
+            g_obj = provider_grant.lookup(tid, "multi_tenant")
+            if not g_obj.present:
+                return False  # عقد لا يَذكره أصلًا = لم يُمنَح
+            if g_obj.disabled:
+                return False
+            if g_obj.requires_upgrade:
+                return False
+            return True
+        except Exception:  # noqa: BLE001 — fail-closed على هذه الخدمة عمدًا
+            return False
+
+    def _provider_multi_tenant_entity_limit() -> int:
+        """عدد الجهات المسموح به في العقد (limits.multi_tenant.entity_count).
+        قراءة من أيّ من الأسماء البديلة. None/0 = بلا حدّ → نُعيد قيمة
+        كبيرة (10000) كي لا تَقطع القائمة عرضًا."""
+        try:
+            from flask import g
+            from ..core.tenant import DEFAULT_TENANT_ID
+            tid = int(getattr(g, "tenant_id", None) or DEFAULT_TENANT_ID)
+        except Exception:  # noqa: BLE001
+            tid = 1
+        for path in ("multi_tenant.entity_count",
+                      "multi_tenant.max",
+                      "entities.max",
+                      "tenants.max"):
+            try:
+                v = provider_grant.get_limit(tid, path)
+            except Exception:  # noqa: BLE001
+                v = None
+            if v is not None and int(v) > 0:
+                return int(v)
+        return 10000
+
     def _provider_endpoint_requires_upgrade(endpoint: str) -> bool:
         """True عند locked_upgrade — السايدبار يَعرض الشارة، الماكرو يُبقي
         البند مرئيًّا. الـredirect إلى صفحة الترقية يحدث على مستوى الـperm
@@ -387,6 +442,8 @@ def template_helpers() -> dict[str, object]:
         "provider_endpoint_blocked": _provider_endpoint_blocked,
         "provider_service_disabled": _provider_service_disabled,
         "provider_endpoint_requires_upgrade": _provider_endpoint_requires_upgrade,
+        "provider_multi_tenant_granted": _provider_multi_tenant_granted,
+        "provider_multi_tenant_entity_limit": _provider_multi_tenant_entity_limit,
         "provider_service_label_ar": service_label_ar,
         "provider_service_status_ar": service_status_ar,
         "provider_feature_state_ar": feature_state_ar,
