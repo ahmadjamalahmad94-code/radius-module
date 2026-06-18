@@ -84,6 +84,10 @@ _MSG = {
     "allow_mode_unknown_device": "هذا الجهاز غير مُسجَّل في قائمة الأجهزة المسموح بها — راجع الإدارة",
     "allow_mode_at_capacity":    "تم الوصول للحدّ الأقصى للأجهزة المربوطة بهذا الحساب — تواصل مع الإدارة",
     "allow_mode_bind_failed":    "تعذّر ربط هذا الجهاز — تواصل مع الإدارة",
+    # سقف «اكتف» — العدد الإجمالي للجلسات المتزامنة المتصلة الآن (cards +
+    # subscribers + PPPoE + hotspot) عند سقف الباقة من المزوّد. يَرفض
+    # الجلسة الجديدة فقط (المُعاد المصادقة لمستخدم قائم لا يُحتَسَب).
+    "provider_active_cap": "تم بلوغ الحدّ الأقصى للمتصلين المتزامنين لباقتك — انتظر انتهاء جلسة أو رقّ باقتك",
     "ok_welcome":        "أهلًا بك",
     "ok_expires_soon":   "اشتراكك ينتهي قريبًا — جدّد قبل الانقطاع",
 }
@@ -388,6 +392,40 @@ def _check_concurrent(sub: Subscriber, plan: Optional[AccessPlan]) -> Optional[A
     return None
 
 
+def _check_provider_active_cap(sub: Subscriber, req: AuthRequest) -> Optional[AuthDecision]:
+    """سقف «اكتف» — أعلى سلطة على عدد الجلسات المتزامنة لهذه النسخة.
+
+    تعريف المالك: «اكتف» = العدد الإجمالي للجلسات المفتوحة حاليًّا عبر
+    كل أنواع الاتصال (cards + subscribers + PPPoE + hotspot). كل جلسة
+    حيّة في radacct = 1. السقف يَأتي من عقد المزوّد (limits.active_online.max
+    أو أحد البدائل). unlimited عند غياب الحقل.
+
+    منطق إعادة المصادقة: المستخدم الذي لديه جلسة مفتوحة الآن يُسمَح
+    بإعادة المصادقة حتى لو الإجمالي عند السقف — لن يَزيد العدد فعليًّا
+    (جلسته القديمة تُغلَق فور فتح الجديدة). فقط مستخدم جديد بلا جلسة
+    قائمة يَنبغي عَدُّه ضدّ السقف.
+
+    fail-safe: أيّ خطأ في القراءة يُسقط الفحص (سماح) كي لا تَنكسر الـauth.
+    """
+    try:
+        from . import provider_grant
+        cap = provider_grant.get_active_online_cap(int(req.tenant_id))
+        if cap is None or cap <= 0:
+            return None  # Unlimited
+        # إعفاء re-auth: لو لدى المستخدم جلسة مفتوحة، لن يَزيد العدد.
+        if provider_grant.user_has_open_session(int(req.tenant_id), sub.username):
+            return None
+        # مستخدم جديد ينضمّ — قارن العدد الإجمالي بالسقف.
+        current = provider_grant.count_active_sessions(int(req.tenant_id))
+        if current >= cap:
+            return _reject("provider_active_cap")
+        return None
+    except Exception:  # noqa: BLE001 — fail-safe (لا نَكسر الـauth)
+        _LOG.warning("policy_engine: provider_active_cap check failed for %r",
+                      req.username, exc_info=True)
+        return None
+
+
 # ─────────────── المنفّذ الرئيسي ───────────────
 
 
@@ -487,6 +525,11 @@ def authorize(req: AuthRequest) -> AuthDecision:
         # auth)؛ محصّن بالكامل (أي خطأ → سماح آمن).
         lambda: _check_anti_mac_clone(req, sub, plan, source),
         lambda: _check_concurrent(sub, plan),
+        # سقف «اكتف» — أعلى سلطة على إجمالي الجلسات المتزامنة لهذه النسخة.
+        # يَأتي بعد _check_concurrent (per-user) كي لا يَستهلك مستخدمٌ مُتجاوز
+        # لحدّه الخاص مَحلًّا من الإجمالي العام. سقف يَأتي من عقد المزوّد
+        # (limits.active_online.max). لا يُحتسَب في fail2ban (رفض سعة لا فشل auth).
+        lambda: _check_provider_active_cap(sub, req),
     ):
         bad = fn()
         if bad is not None:
