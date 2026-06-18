@@ -131,11 +131,28 @@ def service_key_for_endpoint(endpoint: str) -> Optional[str]:
 
 def is_endpoint_blocked_by_provider(tenant_id: int,
                                       endpoint: str) -> tuple[bool, str]:
-    """يُرجع (مُغلَق؟، مفتاح-الخدمة-المسؤول). True = نمنع — حتى للسوبر."""
+    """يُرجع (مُغلَق؟، مفتاح-الخدمة-المسؤول). True = نمنع — حتى للسوبر.
+
+    «مُغلَق» يعني «موقوفة» فقط (disabled/suspended/locked/hidden في feature).
+    «مدفوعة-غير-مفعّلة» (locked_upgrade) ليست مُغلَقة بهذا المعنى — لها
+    دالّتها المنفصلة is_endpoint_requires_upgrade التي يَستهلكها الحارس
+    لإعادة التوجيه إلى صفحة «طلب تفعيل / ترقية» بدل blocked.
+    """
     skey = service_key_for_endpoint(endpoint)
     if not skey:
         return False, ""
     return provider_grant.is_service_disabled(int(tenant_id), skey), skey
+
+
+def is_endpoint_requires_upgrade(tenant_id: int,
+                                   endpoint: str) -> tuple[bool, str]:
+    """يُرجع (يحتاج ترقية؟، مفتاح-الخدمة). True → نُعيد التوجيه لصفحة
+    «طلب تفعيل / ترقية» (لا hard-block ولا hide). للسوبر-أدمن أيضًا
+    (قرار تجاري، فوق RBAC)."""
+    skey = service_key_for_endpoint(endpoint)
+    if not skey:
+        return False, ""
+    return provider_grant.requires_upgrade(int(tenant_id), skey), skey
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -169,15 +186,30 @@ def template_helpers() -> dict[str, object]:
             tid = 1
         return provider_grant.is_service_disabled(tid, service_key)
 
+    def _provider_endpoint_requires_upgrade(endpoint: str) -> bool:
+        """True عند locked_upgrade — السايدبار يَعرض الشارة، الماكرو يُبقي
+        البند مرئيًّا. الـredirect إلى صفحة الترقية يحدث على مستوى الـperm
+        guard، لا هنا."""
+        try:
+            from flask import g
+            from ..core.tenant import DEFAULT_TENANT_ID
+            tid = int(getattr(g, "tenant_id", None) or DEFAULT_TENANT_ID)
+        except Exception:  # noqa: BLE001
+            tid = 1
+        needs, _ = is_endpoint_requires_upgrade(tid, endpoint)
+        return needs
+
     return {
         "provider_endpoint_blocked": _provider_endpoint_blocked,
         "provider_service_disabled": _provider_service_disabled,
+        "provider_endpoint_requires_upgrade": _provider_endpoint_requires_upgrade,
     }
 
 
 __all__ = [
     "service_key_for_endpoint",
     "is_endpoint_blocked_by_provider",
+    "is_endpoint_requires_upgrade",
     "template_helpers",
     "_ENDPOINT_TO_SERVICE",
 ]

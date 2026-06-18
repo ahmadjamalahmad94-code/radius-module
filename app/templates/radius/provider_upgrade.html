@@ -1,0 +1,60 @@
+{# «طلب تفعيل / ترقية» — لخدمات المزوّد المدفوعة-غير-مفعّلة (locked_upgrade).
+
+   مختلف جوهريًّا عن provider_blocked.html: الخدمة موجودة في الكتالوج
+   ومرئية في الشريط الجانبي بشارة قفل، ضغطها يفتح هذه الصفحة بدل 403.
+   CTA لطيف للتواصل مع المزوّد لتفعيلها، لا تخطّي من السوبر-أدمن (قرار
+   تجاري). #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}{{ _('طلب تفعيل / ترقية') }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-lock-open"></i>{% endblock %}
+{% block page_title %}{{ _('طلب تفعيل / ترقية') }}{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('هذه الخدمة جاهزة — تحتاج تفعيلًا من مزوّد النظام') }}</span>{% endblock %}
+
+{% block content %}
+{{ hub.megahero(
+  _('طلب تفعيل / ترقية'),
+  subtitle=_('هذه الخدمة موجودة في كتالوج النظام لكنها مدفوعة ولم تُفعَّل لحسابك بعد. الخدمة جاهزة للعمل فور التفعيل من لوحة التراخيص — تواصل مع مزوّد النظام لطلب التفعيل أو الترقية. القرار تجاري، لا يتجاوزه المدير الرئيسي.'),
+  icon='lock-open',
+  kpis=[
+    {'label': _('الخدمة'),    'value': service_key or '—', 'icon': 'tag',         'variant': 'gray'},
+    {'label': _('الحالة'),    'value': (grant.status if grant and grant.status else _('مقفلة — ترقية')), 'icon': 'lock', 'variant': 'amber'},
+    {'label': _('الميزة'),    'value': (grant.feature_state if grant else '—'),  'icon': 'sliders',    'variant': 'gray'},
+  ]
+) }}
+
+{% call hub.section(_('كيف أُفعّل هذه الخدمة؟'), icon='list-ol') %}
+  <ol class="hub-list">
+    <li>{{ _('تواصل مع مزوّد النظام (الجهة التي تبيع لك الترخيص).') }}</li>
+    <li>{{ _('اطلب «تفعيل» هذه الخدمة على عقد التراخيص الحالي. لن تحتاج تثبيت أي شيء — التفعيل يتم من لوحة المزوّد.') }}</li>
+    <li>{{ _('بعد التفعيل، قد يستغرق ظهور الحالة الجديدة دقائق حتى ينتهي تزامن العقد. حدّث الصفحة وستفتح الخدمة مباشرة.') }}</li>
+  </ol>
+  <div class="hub-actions">
+    {% if endpoint_exists is defined and endpoint_exists('radius.license_file') %}
+      {{ hub.btn(_('ترخيص النظام'),
+                  href=url_for('radius.license_file'),
+                  variant='primary', icon='id-card') }}
+    {% endif %}
+    {% if endpoint_exists is defined and endpoint_exists('radius.admin_bridge') %}
+      {{ hub.btn(_('جسر الإدارة (مزامنة الآن)'),
+                  href=url_for('radius.admin_bridge'),
+                  variant='secondary', icon='link') }}
+    {% endif %}
+    {% if endpoint_exists is defined and endpoint_exists('radius.provider_grants_status_page') %}
+      {{ hub.btn(_('حالة منح المزوّد (تشخيصي)'),
+                  href=url_for('radius.provider_grants_status_page'),
+                  variant='secondary', icon='clipboard-list') }}
+    {% endif %}
+    {{ hub.btn(_('العودة للوحة'),
+                href=url_for('radius.dashboard'),
+                variant='secondary', icon='house') }}
+  </div>
+{% endcall %}
+
+{% call hub.section(_('الفرق عن «الخدمة موقوفة»'), icon='circle-info') %}
+  <p class="hub-text-mute">
+    {{ _('«موقوفة (إيقاف فعلي)» تختفي تمامًا من الواجهة وتُرفَض كل طلباتها. أما «مقفلة — ترقية» (هذه الحالة) فالخدمة تَبقى مرئية في الشريط الجانبي بشارة قفل صغيرة، وضغطها يفتح هذه الصفحة كي تعرف أنّها متاحة للتفعيل، لا أنّها متوقّفة عنك.') }}
+  </p>
+{% endcall %}
+{% endblock %}

@@ -381,6 +381,7 @@ def _install_global_login_guard(bp: Blueprint) -> None:
 _PROVIDER_GATE_SKIP: frozenset[str] = frozenset({
     "provider_blocked_page",       # صفحة «الخدمة غير مفعّلة من المزوّد»
     "provider_grants_status_page", # حالة المنح من المزوّد (تشخيصية)
+    "provider_upgrade_page",       # صفحة «طلب تفعيل / ترقية» (locked_upgrade)
     "license_activate_page",       # «فعّل الترخيص» (لم يُفعَّل)
     "license_expired_page",        # «الترخيص منتهي — جدّد»
     "auth_login", "auth_logout",   # ضرورية للدخول/الخروج
@@ -399,6 +400,7 @@ _LIFECYCLE_GATE_SKIP: frozenset[str] = frozenset({
     "license_expired_page",
     "provider_grants_status_page", # تشخيصي — مفيد لرؤية اللقطة
     "provider_blocked_page",       # قد يصل إليها من رابط قديم
+    "provider_upgrade_page",       # locked_upgrade page reachable من رابط قديم
     "auth_login", "auth_logout",
     "set_locale",
     "license_file",
@@ -695,6 +697,23 @@ def _install_permission_guard(bp: Blueprint) -> None:
                 if request.method in ("GET", "HEAD"):
                     return redirect(url_for(
                         "radius.provider_blocked_page", service=skey))
+                abort(403)
+
+            # ── (0c) فحص locked_upgrade — «مدفوعة-غير-مفعّلة». ──
+            # الخدمة مرئية في السايدبار بشارة قفل، الرابط يُعيد إلى صفحة
+            # «طلب تفعيل / ترقية» (ليست hard-block ولا hidden). للسوبر-أدمن
+            # أيضًا — قرار تجاري فوق RBAC. الكتابة على خدمة locked_upgrade
+            # نَردّها بـ403 لئلّا تَنفلت كتابة عابرة.
+            try:
+                from ..auth.provider_gate import is_endpoint_requires_upgrade
+                needs_up, up_skey = is_endpoint_requires_upgrade(tid, name)
+            except Exception:  # noqa: BLE001
+                needs_up, up_skey = False, ""
+            if needs_up:
+                from flask import redirect, url_for
+                if request.method in ("GET", "HEAD"):
+                    return redirect(url_for(
+                        "radius.provider_upgrade_page", service=up_skey))
                 abort(403)
 
         # ── (3) حارس أعلام القسم — يُقدّم على RBAC لأنّه حظر مستوى

@@ -21,6 +21,8 @@ def register_provider_gate_pages(bp: Blueprint) -> None:
                     blocked_page, methods=["GET"])
     bp.add_url_rule("/_provider/grants", "provider_grants_status_page",
                     grants_status_page, methods=["GET"])
+    bp.add_url_rule("/_provider/upgrade", "provider_upgrade_page",
+                    upgrade_page, methods=["GET"])
 
 
 def _tid() -> int:
@@ -48,11 +50,24 @@ def grants_status_page():
         has_snapshot=provider_grant.has_snapshot(tid),
         # ملخصات حسّاسة لعرض الكاب
         disabled_count=sum(1 for g in grants if g["disabled"]),
+        requires_upgrade_count=sum(1 for g in grants if g.get("requires_upgrade")),
         hidden_portal_count=sum(1 for g in grants if g["hidden_from_portal_effective"]
                                  and not g["disabled"]),
         readonly_count=sum(1 for g in grants if g["readonly"]),
         total_count=len(grants),
     )
+
+
+def upgrade_page():
+    """صفحة «طلب تفعيل / ترقية» — تَظهر عند الضغط على بند locked_upgrade.
+
+    تختلف عن blocked: الخدمة موجودة في الكتالوج لكنها مدفوعة ولم تُفعَّل
+    لهذا العميل. CTA واضح للتواصل مع المزوّد + تفاصيل الخدمة. السوبر-أدمن
+    لا يَتجاوز (قرار تجاري)."""
+    service_key = (request.args.get("service") or "").strip().lower()
+    grant = provider_grant.lookup(_tid(), service_key) if service_key else None
+    return render_template("radius/provider_upgrade.html",
+                            service_key=service_key, grant=grant)
 
 
 __all__ = ["register_provider_gate_pages"]

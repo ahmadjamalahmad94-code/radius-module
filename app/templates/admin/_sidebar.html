@@ -100,12 +100,17 @@
     when the route is confirmed present.
     RBAC: same contract as nav_item — `perm` overrides automatic
     perm_for_endpoint(endpoint); non-permitted → hide or freeze.
-    Provider gate (سلطة المزوّد فوق RBAC): إذا أوقف المزوّد الخدمة
-    المرتبطة بهذا الـendpoint، نُخفيه بصمت من الشريط الجانبي حتى
-    للسوبر-أدمن. provider_endpoint_blocked محقون من i18n/context. -#}
+    Provider gate (سلطة المزوّد فوق RBAC):
+      • disabled (موقوفة) → نُخفي تمامًا حتى للسوبر.
+      • locked_upgrade (مدفوعة-غير-مفعّلة) → نُبقي البند مرئيًّا مع
+        شارة قفل صغيرة؛ النقر يُعيد إلى صفحة «طلب تفعيل / ترقية»
+        (يَتولّاها _perm_guard، لا الماكرو).
+    -#}
 {%- if endpoint_exists is defined and endpoint_exists(endpoint) -%}
   {%- set _prov_blocked = (provider_endpoint_blocked is defined)
                             and provider_endpoint_blocked(endpoint) -%}
+  {%- set _prov_upgrade = (provider_endpoint_requires_upgrade is defined)
+                            and provider_endpoint_requires_upgrade(endpoint) -%}
   {%- if _prov_blocked -%}
     {#- خدمة موقوفة من المزوّد — لا ظهور (لا حتى للسوبر). -#}
   {%- elif nav_can(endpoint, perm)|trim -%}
@@ -114,9 +119,14 @@
   {%- else -%}
     {%- set _href = url_for(endpoint) -%}
   {%- endif -%}
-<a class="hb-side-subitem{% if match %} is-active{% endif %}"
-   href="{{ _href }}">
+<a class="hb-side-subitem{% if match %} is-active{% endif %}{% if _prov_upgrade %} hb-side-upgrade{% endif %}"
+   href="{{ _href }}"
+   {% if _prov_upgrade %}data-provider-upgrade="1" title="{{ _('مدفوعة — تحتاج تفعيل من المزوّد') }}"{% endif %}>
   <span class="hb-side-text">{{ label }}</span>
+  {% if _prov_upgrade %}
+  <span class="hb-side-upgrade-badge" aria-label="{{ _('تحتاج ترقية') }}"
+        style="margin-inline-start:auto;display:inline-flex;align-items:center;gap:4px;padding:1px 6px;border-radius:999px;background:#FEF3C7;color:#92400E;font-size:9px;font-weight:800;border:1px solid #FDE68A;line-height:1.6"><i class="fa-solid fa-lock" style="font-size:8px"></i> {{ _('ترقية') }}</span>
+  {% endif %}
 </a>
   {%- elif _ui_mode == 'freeze' -%}
 {{ frozen_row(label, sub=True) }}
