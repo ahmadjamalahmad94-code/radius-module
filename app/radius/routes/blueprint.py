@@ -332,6 +332,13 @@ def _register_all(bp: Blueprint) -> None:
     from .license_lifecycle_pages import register_license_lifecycle_pages
     register_license_lifecycle_pages(bp)
 
+    # «ربط وتفعيل النسخة» — صفحة موحَّدة بسيطة تَستبدل التَعقيد القائم في
+    # license_file + admin_bridge. زرّ واحد كبير «ربط وتفعيل الآن» +
+    # «فكّ الربط» لإعادة الدورة. تُسجَّل مبكرًا كي يَنفذ الـredirect إليها
+    # من شاشة activate قبل أن يَكتمل تركيب الحارس.
+    from .activation_connect import register_activation_connect_routes
+    register_activation_connect_routes(bp)
+
     # مركز الأدلة «كيف تستخدمني» — شروحات مصوّرة داخل الموقع
     from .docs_center import register_docs_center_routes
     register_docs_center_routes(bp)
@@ -384,6 +391,11 @@ _PROVIDER_GATE_SKIP: frozenset[str] = frozenset({
     "provider_upgrade_page",       # صفحة «طلب تفعيل / ترقية» (locked_upgrade)
     "license_activate_page",       # «فعّل الترخيص» (لم يُفعَّل)
     "license_expired_page",        # «الترخيص منتهي — جدّد»
+    # «ربط وتفعيل» الموحّد + actions (link/reset/sync-now) لا تُحجَب
+    "license_connect_page",
+    "license_connect_link",
+    "license_connect_sync_now",
+    "license_connect_reset",
     "auth_login", "auth_logout",   # ضرورية للدخول/الخروج
     "set_locale",                  # مبدّل اللغة
     "license_file",                # صفحة الترخيص (تعرض حالة الاتصال بالمزوّد)
@@ -401,6 +413,12 @@ _LIFECYCLE_GATE_SKIP: frozenset[str] = frozenset({
     "provider_grants_status_page", # تشخيصي — مفيد لرؤية اللقطة
     "provider_blocked_page",       # قد يصل إليها من رابط قديم
     "provider_upgrade_page",       # locked_upgrade page reachable من رابط قديم
+    # «ربط وتفعيل» الموحّد — أهم صفحة على نسخة مقفلة، أكشن link الفعلي
+    # الذي يُفعِّلها، sync-now للمحاولة الثانية، reset للاختبار.
+    "license_connect_page",
+    "license_connect_link",
+    "license_connect_sync_now",
+    "license_connect_reset",
     "auth_login", "auth_logout",
     "set_locale",
     "license_file",
@@ -437,6 +455,11 @@ _PERM_GUARDED: dict[str, str] = {
     "sections_admin_page":  _PERM_SUPER,
     "sections_admin_save":  _PERM_SUPER,
     "sections_admin_reset": _PERM_SUPER,
+    # ── «ربط وتفعيل النسخة» — مفاتيح ربط/فكّ ربط النسخة مع لوحة المزوّد:
+    # super_admin فقط (قرار تجاري + تخريبي عند الخطأ — يَمسح التزامن). ──
+    "license_connect_link":     _PERM_SUPER,
+    "license_connect_reset":    _PERM_SUPER,
+    "license_connect_sync_now": _PERM_SUPER,
     # حفظ إعدادات النظام — تتطلّب صلاحية settings.edit (تُفحص على الكتابة فقط)
     "settings_page": "settings.edit",
     # «الحظر والتحكم بالدخول» — كتابة محروسة بـsettings.edit (العرض بـsettings.view)

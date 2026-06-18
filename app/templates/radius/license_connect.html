@@ -1,0 +1,170 @@
+{# «ربط وتفعيل النسخة» — صفحة واحدة بسيطة لإستبدال 3 صفحات معقّدة.
+   نموذج مبسَّط (رابط + مفتاح) + زرّ كبير «ربط وتفعيل الآن» + لوحة حالة
+   مرئية. تَبقى متاحة حتى لو كانت اللوحة مقفلة (في _LIFECYCLE_GATE_SKIP). #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}{{ _('ربط وتفعيل النسخة') }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-link"></i>{% endblock %}
+{% block page_title %}{{ _('ربط وتفعيل النسخة') }}{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('خطوة واحدة بسيطة لتفعيل النسخة مع لوحة المزوّد') }}</span>{% endblock %}
+
+{% block content %}
+{% set _phase = state.phase %}
+{% set _is_active = (_phase == 'active') %}
+{% set _is_expired = (_phase == 'expired') %}
+{% set _is_pending = (_phase == 'pending') %}
+{% set _is_linked_syncing = (_phase == 'linked_syncing') %}
+{% set _phase_variant = ('green' if _is_active else ('red' if _is_expired else ('amber' if _is_linked_syncing else 'gray'))) %}
+
+{{ hub.megahero(
+  _('ربط وتفعيل النسخة'),
+  subtitle=_('الصق رابط لوحة المزوّد ومفتاح الترخيص، ثم اضغط زرّ «ربط وتفعيل الآن». ستَتولّى النسخة الباقي تلقائيًّا: حفظ الإعدادات + جلب أوّل لقطة من المزوّد + فتح اللوحة.'),
+  icon='link',
+  kpis=[
+    {'label': _('الحالة'),         'value': state.phase_ar,
+     'icon': ('circle-check' if _is_active else ('circle-xmark' if _is_expired else 'rotate')),
+     'variant': _phase_variant},
+    {'label': _('انتهاء العقد'),   'value': (state.expires_at[:16] if state.expires_at else _('—')),
+     'icon': 'calendar-xmark', 'variant': ('amber' if state.expires_at else 'gray')},
+    {'label': _('آخر تزامن ناجح'),'value': (state.fetched_at[:16] if state.fetched_at else _('لم يحدث بعد')),
+     'icon': 'rotate', 'variant': 'gray'},
+  ]
+) }}
+
+{# ════════════════════════════════════════════════════════════════════
+   تنبيهات env-override (إعدادات بيئة تَتجاوز DB)
+   ════════════════════════════════════════════════════════════════════ #}
+{% if state.env_overrides %}
+<div style="margin:8px 0 14px;padding:12px 14px;border-radius:10px;background:#FEF3C7;border:1px solid #FDE68A;color:#92400E;font-size:13px">
+  <i class="fa-solid fa-triangle-exclamation"></i>
+  <b>{{ _('تنبيه:') }}</b>
+  {{ _('متغيّرات بيئة تَتجاوز إعدادات قاعدة البيانات على هذه النسخة:') }}
+  {% for name in state.env_overrides %}<code>{{ name }}</code>{% if not loop.last %}، {% endif %}{% endfor %}
+  — {{ _('ما تَحفظه هنا قد لا يَأخذ مفعوله حتى تُمسح هذه المتغيّرات من ملف البيئة وتُعاد النسخة.') }}
+</div>
+{% endif %}
+
+{# ════════════════════════════════════════════════════════════════════
+   اللوحة الأولى: ربط وتفعيل (النموذج الرئيسي)
+   ════════════════════════════════════════════════════════════════════ #}
+{% call hub.section(_('ربط وتفعيل الآن'), icon='link', meta=_('الخطوة الوحيدة')) %}
+  <p class="card-intro">
+    {{ _('تَحتاج بَعدَ تفعيل الترخيص من لوحة المزوّد إلى أمرين فقط لنقل العقد إلى هذه النسخة: رابط لوحة المزوّد + مفتاح الترخيص الخاص بك. يَجلبهما النظام مَرّة، يَحفظهما، ويَفتح اللوحة فورًا.') }}
+  </p>
+
+  <form method="post" action="{{ url_for('radius.license_connect_link') }}" id="connect-form">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+
+    <div class="field">
+      <label for="cn-url"><b>{{ _('رابط لوحة المزوّد') }}</b> <span style="color:var(--err)">*</span></label>
+      <input type="url" id="cn-url" name="base_url" required
+             value="{{ state.config.base_url or 'https://hoberadius.com' }}"
+             placeholder="https://hoberadius.com"
+             style="direction:ltr;text-align:left;font-family:monospace">
+      <div class="hub-text-mute small" style="margin-top:4px">
+        {{ _('عادةً https://hoberadius.com — لا تَترك مسافات أو شَرطة مائلة في النهاية.') }}
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="cn-key"><b>{{ _('مفتاح الترخيص') }}</b> <span style="color:var(--err)">*</span></label>
+      <input type="text" id="cn-key" name="license_key" required
+             placeholder="{{ _('انسخ المفتاح من صفحة العميل في لوحة المزوّد') }}"
+             {% if state.config.has_license_key %}value=""
+             style="direction:ltr;text-align:left;font-family:monospace"
+             {% else %}style="direction:ltr;text-align:left;font-family:monospace"
+             {% endif %}>
+      {% if state.config.has_license_key %}
+      <div class="hub-text-mute small" style="margin-top:4px">
+        <i class="fa-solid fa-circle-info"></i>
+        {{ _('مفتاح محفوظ حاليًّا:') }} <code>{{ state.config.license_key_masked }}</code>
+        — {{ _('اتركه فارغًا للإبقاء عليه، أو الصق مفتاحًا جديدًا للاستبدال.') }}
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="hub-actions" style="margin-top:14px">
+      <button class="hub-btn hub-btn--primary"
+              type="submit"
+              style="font-size:16px;padding:14px 28px;font-weight:700">
+        <i class="fa-solid fa-bolt"></i>
+        {{ _('ربط وتفعيل الآن') }}
+      </button>
+      {% if state.has_config %}
+      <button class="hub-btn hub-btn--secondary"
+              formaction="{{ url_for('radius.license_connect_sync_now') }}"
+              formmethod="post" type="submit">
+        <i class="fa-solid fa-rotate"></i>
+        {{ _('مزامنة الآن (بدون تعديل)') }}
+      </button>
+      {% endif %}
+    </div>
+  </form>
+{% endcall %}
+
+{# ════════════════════════════════════════════════════════════════════
+   لوحة الحالة الحالية — تشخيصية
+   ════════════════════════════════════════════════════════════════════ #}
+{% call hub.section(_('الحالة الحالية'), icon='circle-info') %}
+  <ul class="hub-list">
+    <li><b>{{ _('الحالة العامّة') }}:</b>
+      {% if _is_active %}<span style="color:var(--ok,#16a34a);font-weight:700">{{ state.phase_ar }}</span>
+      {% elif _is_expired %}<span style="color:var(--err,#dc2626);font-weight:700">{{ state.phase_ar }}</span>
+      {% else %}<span style="color:var(--warn,#92400E);font-weight:700">{{ state.phase_ar }}</span>{% endif %}
+    </li>
+    <li><b>{{ _('إعدادات الربط محفوظة') }}:</b>
+      {% if state.has_config %}{{ hub.pill(_('نعم'), variant='green') }}
+      {% else %}{{ hub.pill(_('لا'), variant='gray') }}{% endif %}
+    </li>
+    <li><b>{{ _('لقطة من المزوّد') }}:</b>
+      {% if state.has_snapshot %}{{ hub.pill(_('وصلت'), variant='green') }}
+      {% else %}{{ hub.pill(_('لم تَصل بعد'), variant='gray') }}{% endif %}
+    </li>
+    {% if state.license_reason %}
+    <li><b>{{ _('السبب الداخلي') }}:</b> <code>{{ state.license_reason }}</code></li>
+    {% endif %}
+    {% if state.config.base_url %}
+    <li><b>{{ _('رابط محفوظ') }}:</b> <code style="direction:ltr">{{ state.config.base_url }}</code></li>
+    {% endif %}
+    {% if state.config.license_key_masked %}
+    <li><b>{{ _('مفتاح محفوظ') }}:</b> <code style="direction:ltr">{{ state.config.license_key_masked }}</code></li>
+    {% endif %}
+  </ul>
+
+  <div class="hub-actions" style="margin-top:10px">
+    {% if endpoint_exists is defined and endpoint_exists('radius.provider_grants_status_page') %}
+      {{ hub.btn(_('حالة منح المزوّد (تشخيصي)'),
+                  href=url_for('radius.provider_grants_status_page'),
+                  variant='secondary', icon='clipboard-list') }}
+    {% endif %}
+    {% if endpoint_exists is defined and endpoint_exists('radius.license_file') %}
+      {{ hub.btn(_('الإعدادات المتقدّمة (ترخيص النظام)'),
+                  href=url_for('radius.license_file'),
+                  variant='secondary', icon='gear') }}
+    {% endif %}
+  </div>
+{% endcall %}
+
+{# ════════════════════════════════════════════════════════════════════
+   فكّ الربط (للاختبار وإعادة الدورة) — تأكيد مزدوج
+   ════════════════════════════════════════════════════════════════════ #}
+{% call hub.section(_('فكّ الربط / إعادة التفعيل'), icon='link-slash') %}
+  <p class="hub-text-mute">
+    {{ _('يَمسح إعدادات الربط ولقطات المزوّد المخزّنة محلّيًّا. النسخة تَعود إلى حالة «بانتظار التفعيل» (الشاشة المقفلة). تَستطيع بعدها بدء دورة ربط جديدة من الأوّل — مفيد لاختبار التفعيل أو للتبديل بين بيئات.') }}
+  </p>
+  <p class="hub-text-mute small">
+    <i class="fa-solid fa-triangle-exclamation"></i>
+    {{ _('لا يؤثّر على عقد المزوّد نفسه (الذي تَبيعه أنت) — يَمسح فقط النسخة المحلّية من العقد. عند الربط مرّة أخرى تَستعيد كل المنح والسقوف.') }}
+  </p>
+  <form method="post" action="{{ url_for('radius.license_connect_reset') }}"
+        style="margin-top:10px">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+    <button class="hub-btn hub-btn--danger" type="submit"
+            data-confirm="فكّ الربط نهائيًّا؟ ستَعود النسخة إلى شاشة «بانتظار التفعيل». لا أثر على عقد المزوّد نفسه.">
+      <i class="fa-solid fa-link-slash"></i>
+      {{ _('فكّ الربط الآن') }}
+    </button>
+  </form>
+{% endcall %}
+{% endblock %}

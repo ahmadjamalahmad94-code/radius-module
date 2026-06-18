@@ -944,9 +944,14 @@
         <span class="hb-side-chevron"><i class="fa-solid fa-chevron-down"></i></span>
       </button>
       <div class="hb-side-section-body"><div class="hb-side-section-body-inner">
+        {# «ربط وتفعيل النسخة» — البند الأبرز في القسم: زرّ واحد للتفعيل
+           + فكّ الربط لإعادة الدورة. يَستبدل المسار الموزَّع بين
+           license_file و admin_bridge بنموذج موحَّد بسيط. #}
+        {{ sub_item('radius.license_connect_page', _('ربط وتفعيل النسخة'),
+            '/_license/connect' in path) }}
         {{ sub_item('radius.admin_bridge', _('جسر الإدارة'), m_admin_bridge) }}
         {# ترخيص النظام — اتصال الريدياس بلوحة التراخيص السحابية وعقد التشغيل (ليس تراخيص أنفاق الراوترات) #}
-        {{ sub_item('radius.license_file', _('ترخيص النظام'), m_license_file) }}
+        {{ sub_item('radius.license_file', _('ترخيص النظام (إعدادات متقدّمة)'), m_license_file) }}
         {# حالة منح المزوّد — تشخيصية: تعرض عقد القدرات كما وصل (موقوفة/مخفية
            من البوابة/قراءة فقط). صفحة مستثناة من حارس البوابة كي تبقى مرئية
            حتى لو أوقف المزوّد كل الخدمات. سوبر-أدمن فقط. #}
