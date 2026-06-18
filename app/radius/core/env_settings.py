@@ -138,6 +138,17 @@ REGISTRY: list[Setting] = [
     # الواجهة البرمجية
     Setting("HOBERADIUS_API_TOKENS", "api", "توكنات الواجهة البرمجية (CSV)",
             kind="secret", help="قائمة مفصولة بفواصل — تُخزَّن مشفّرة."),
+
+    # رابط الباقات والتسعير (lockout CTA)
+    # يَظهر زرٌّ بارز «اعرض الباقات / جدّد اشتراكك» في صفحتي الترخيص:
+    # «فعّل الترخيص» و «الترخيص منتهي». الرابط من العقد إن وُجد، وإلّا
+    # من هذا الإعداد، وإلّا الافتراضي. أي تحديث لا يَتطلّب إعادة نشر.
+    Setting("HOBERADIUS_PRICING_URL", "license",
+            "رابط الباقات والتسعير (lockout CTA)",
+            help="يُستعمل في صفحتي «فعّل الترخيص» و«الترخيص منتهي» كزرّ بارز "
+                 "للمالك ليفتح صفحة المزوّد ويختار باقة/يجدّد. القيمة في "
+                 "العقد (capacity_contract.pricing_url) تتقدّم لو وُجدت.",
+            default="https://hoberadius.com/pricing"),
 ]
 
 _BY_KEY: dict[str, Setting] = {s.key: s for s in REGISTRY}
@@ -153,6 +164,7 @@ GROUPS: list[tuple[str, str, str]] = [
     ("collection",    "التحصيل",                  "money-bill-transfer"),
     ("bridge",        "جسر اللوحة والمزامنة",     "tower-broadcast"),
     ("api",           "الواجهة البرمجية",         "plug"),
+    ("license",       "الترخيص والباقات",         "key"),
 ]
 
 

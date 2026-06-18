@@ -188,7 +188,9 @@ class TestEndpointMapping:
     def test_unknown_endpoint_returns_none(self):
         from app.radius.auth.provider_gate import service_key_for_endpoint
         # لا تعيين = لا حظر من البوابة (السماح هو الافتراضي)
-        assert service_key_for_endpoint("dashboard") is None
+        # ملاحظة: بعد توسعة الخريطة (2026-06-18) معظم الـadmin endpoints
+        # صار له مرشّحات؛ هنا اسم تخيّليّ تمامًا لا يَلتقطه أي prefix.
+        assert service_key_for_endpoint("zzz_truly_nonexistent_xyz") is None
 
     def test_blocked_check_uses_mapping(self, app_ctx):
         from app.radius.auth.provider_gate import is_endpoint_blocked_by_provider

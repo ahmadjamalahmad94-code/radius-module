@@ -90,12 +90,21 @@ class TestServiceNameMap:
                 f"{k} expected '{expected}', got '{service_label_ar(k)}'"
 
     def test_internal_taxonomy_translated(self):
-        """مفاتيح تصنيفي الداخلي (subscribers/cards/reports/…) كلّها عربية."""
+        """مفاتيح تصنيفي الداخلي (subscribers/cards/reports/…) كلّها عربية.
+
+        2026-06-18: قيم الخريطة صارت tuples (مرشّحات مرتّبة) — نَفلِّش وكلّ
+        مرشّحة يَجب أن تَكون مُعجَمة.
+        """
         from app.radius.services.provider_service_labels import (
             service_label_ar, SERVICE_NAMES_AR)
-        from app.radius.auth.provider_gate import _ENDPOINT_TO_SERVICE
-        # كل قيمة في خريطة endpoint→service يجب أن تكون مُعجَمة
-        for svc_key in set(_ENDPOINT_TO_SERVICE.values()):
+        from app.radius.auth.provider_gate import (
+            _ENDPOINT_TO_SERVICE, _PREFIX_TO_SERVICE)
+        all_keys: set[str] = set()
+        for v in _ENDPOINT_TO_SERVICE.values():
+            all_keys.update(v if isinstance(v, (tuple, list)) else (v,))
+        for _, v in _PREFIX_TO_SERVICE:
+            all_keys.update(v if isinstance(v, (tuple, list)) else (v,))
+        for svc_key in all_keys:
             label = service_label_ar(svc_key)
             assert label, f"empty label for {svc_key}"
             assert svc_key in SERVICE_NAMES_AR, \
