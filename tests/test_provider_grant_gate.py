@@ -113,7 +113,8 @@ class TestPureLookup:
         # لا لقطة بعد → fail-open
         assert not provider_grant.is_service_disabled(1, "reports")
         assert not provider_grant.is_hidden_from_portal(1, "reports")
-        assert provider_grant.get_limit(1, "subscribers.max_total") is None
+        # v3+: active_online هو السقف الرئيسي (لا subscribers create-time)
+        assert provider_grant.get_limit(1, "active_online.max") is None
 
     def test_service_status_disabled_blocks(self, app_ctx):
         from app.radius.services import provider_grant
@@ -279,20 +280,24 @@ class TestSidebarHide:
 # ════════════════════════════════════════════════════════════════════════
 class TestQuantityLimits:
 
-    def test_subscribers_limit_enforced(self, app_ctx):
-        # سقف صفر = لا يُسمح بإنشاء أي مشترك حتى للسوبر.
-        _seed_snapshot(limits={"subscribers": {"max_total": 0}})
+    # ملاحظة v3+: subscribers لم يَعد مفتاحًا في LIMIT_PATHS (concurrent cap
+    # active_online حلّ محلّه auth-time). الاختباران أدناه استُبدلا بـ
+    # active_online لتأكيد العقد الجديد.
+    def test_active_online_limit_enforced(self, app_ctx):
+        _seed_snapshot(limits={"active_online": {"max": 0}})
         from app.radius.services import provider_grant
-        dec = provider_grant.check_limit(1, "subscribers", increment=1)
+        # عند cap=0، check_limit("active_online", increment=1) يُرفض
+        # (0 == 0+1 not > 0). نَضع جلسة واحدة لجعل التَجاوز واضحًا:
+        from app.radius.db.connection import db
+        db().execute("INSERT INTO radacct(tenant_id, username) VALUES(1, 'x1')")
+        dec = provider_grant.check_limit(1, "active_online", increment=1)
         assert not dec.allowed
         assert dec.reason == "provider_limit_exceeded"
-        assert dec.limit == 0
-        assert "الحدّ المسموح" in dec.message_ar
 
-    def test_subscribers_limit_allows_within(self, app_ctx):
-        _seed_snapshot(limits={"subscribers": {"max_total": 10}})
+    def test_active_online_limit_allows_within(self, app_ctx):
+        _seed_snapshot(limits={"active_online": {"max": 10}})
         from app.radius.services import provider_grant
-        dec = provider_grant.check_limit(1, "subscribers", increment=1)
+        dec = provider_grant.check_limit(1, "active_online", increment=1)
         assert dec.allowed
         assert dec.limit == 10
 

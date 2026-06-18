@@ -397,9 +397,11 @@ class TestFlutterApiReflectsFixes:
         assert reports["requires_upgrade"] is True
         assert reports["disabled"] is False
 
-    def test_api_schema_version_bumped_to_2(self, app_ctx):
+    def test_api_schema_version_bumped(self, app_ctx):
+        # v3 (feat/active-online-cap, 2026-06-18): subscribers لم يَعد سقفًا،
+        # active_online مُضاف بدلاً منه في limits.
         _seed_capacity(payload={"status": "active",
                                   "services": {"x": {"status": "active"}}})
         rv = app_ctx.test_client().get(
             "/api/v1/provider/grants", headers=self.AUTH)
-        assert rv.get_json()["data"]["schema_version"] == 2
+        assert rv.get_json()["data"]["schema_version"] == 3

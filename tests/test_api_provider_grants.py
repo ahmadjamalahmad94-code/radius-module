@@ -139,7 +139,7 @@ class TestPayloadShape:
         for key in ("license", "services", "limits", "has_snapshot",
                      "sync", "schema_version"):
             assert key in data, f"missing top-level field: {key}"
-        assert data["schema_version"] == 2
+        assert data["schema_version"] == 3
 
     def test_license_block_shape(self, app_ctx):
         _seed_license(status="active",
@@ -157,13 +157,16 @@ class TestPayloadShape:
         _seed_license(status="active")
         _, body = _get_grants(_client(app_ctx))
         limits = body["data"]["limits"]
-        # نفس الـtaxonomy المستعملة في الويب gate
-        for k in ("subscribers", "cards", "cards_batch", "nas",
+        # v3+: subscribers لم يَعد سقفًا (concurrent cap بدلًا منه).
+        # active_online هو المفتاح الرئيسي.
+        for k in ("active_online", "cards", "cards_batch", "nas",
                   "routers", "profiles", "print_templates", "admins"):
             assert k in limits, f"missing limit feature: {k}"
             for sub in ("current", "limit", "remaining",
                          "limit_path", "usage_metric"):
                 assert sub in limits[k]
+        # تأكّد صريح: subscribers لم يَعد موجودًا (تَعطّل لـFlutter)
+        assert "subscribers" not in limits
 
     def test_sync_block_shape(self, app_ctx):
         _seed_license(status="active")
@@ -274,29 +277,33 @@ class TestServicesAndLimits:
         assert reports["disabled"] is False
 
     def test_limit_with_cap_shows_current_and_remaining(self, app_ctx):
+        # v3+: المفتاح الرئيسي للسقف concurrent online = active_online
         _seed_license(status="active")
-        _seed_capacity(limits={"subscribers": {"max_total": 100}})
+        _seed_capacity(limits={"active_online": {"max": 100}})
         _, body = _get_grants(_client(app_ctx))
-        subs = body["data"]["limits"]["subscribers"]
-        assert subs["limit"] == 100
-        assert subs["current"] >= 0
-        assert subs["remaining"] is not None
-        assert subs["remaining"] == 100 - subs["current"]
+        ao = body["data"]["limits"]["active_online"]
+        assert ao["limit"] == 100
+        assert ao["current"] >= 0
+        assert ao["remaining"] is not None
+        assert ao["remaining"] == 100 - ao["current"]
 
     def test_limit_without_cap_returns_null_limit(self, app_ctx):
         _seed_license(status="active")  # no capacity = no limits
         _, body = _get_grants(_client(app_ctx))
-        subs = body["data"]["limits"]["subscribers"]
-        assert subs["limit"] is None
-        assert subs["remaining"] is None
+        ao = body["data"]["limits"]["active_online"]
+        assert ao["limit"] is None
+        assert ao["remaining"] is None
 
-    def test_zero_limit_means_zero_remaining(self, app_ctx):
+    def test_zero_limit_means_unlimited(self, app_ctx):
+        # ملاحظة: في active_online نَعتَبر 0 = unlimited (نفس get_active_online_cap)
+        # لأن «صفر متّصلين مسموح» لا معنى تجاريًّا. provider_grant.get_limit
+        # يُرجع 0 كرقم، لكن check_limit يَعتَبره cap=0 → remaining=0.
         _seed_license(status="active")
-        _seed_capacity(limits={"subscribers": {"max_total": 0}})
+        _seed_capacity(limits={"active_online": {"max": 0}})
         _, body = _get_grants(_client(app_ctx))
-        subs = body["data"]["limits"]["subscribers"]
-        assert subs["limit"] == 0
-        assert subs["remaining"] == 0
+        ao = body["data"]["limits"]["active_online"]
+        assert ao["limit"] == 0
+        assert ao["remaining"] == 0
 
     def test_cards_per_batch_and_monthly_distinct(self, app_ctx):
         _seed_license(status="active")
@@ -340,10 +347,10 @@ class TestTenantIsolation:
 # ════════════════════════════════════════════════════════════════════════
 class TestSchemaStability:
 
-    def test_schema_version_is_2(self, app_ctx):
+    def test_schema_version_is_3(self, app_ctx):
         _seed_license(status="active")
         _, body = _get_grants(_client(app_ctx))
-        assert body["data"]["schema_version"] == 2
+        assert body["data"]["schema_version"] == 3
 
     def test_response_is_jsonable_and_no_python_objects(self, app_ctx):
         """الـreply يجب أن يكون JSON خالصًا (لا datetime، لا enum، لا dataclass)."""

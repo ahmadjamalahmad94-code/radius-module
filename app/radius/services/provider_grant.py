@@ -254,8 +254,15 @@ def get_limit(tenant_id: int, dotted_path: str) -> Optional[int]:
 
 # الخرائط المعتمدة بين «مفتاح خدمة» و(مفتاح-قياس-استخدام، مسار-سقف).
 # نمط متوافق مع license_admin_capacity.CAPACITY_FEATURES.
+#
+# ملاحظة جوهرية (2026-06-18): «اكتف»/active-online ليست سقفًا على إجمالي
+# الحسابات (subscribers.max_total) بل على عدد الجلسات المتزامنة المتصلة
+# الآن في كل أنواع الاتصال (cards + subscribers + PPPoE + hotspot). يُفرَض
+# auth-time في policy_engine._check_provider_active_cap، لا create-time.
+# لذلك أُزيلت subscribers من LIMIT_PATHS وأُضيفت active_online بصِفته
+# السقف الرئيسي. تَبقى create-time caps الأخرى (cards/nas/…) كما هي.
 LIMIT_PATHS: dict[str, tuple[str, str]] = {
-    "subscribers":    ("subscribers_total",       "subscribers.max_total"),
+    "active_online":  ("active_online_now",       "active_online.max"),
     "cards":          ("cards_generated_month",   "cards.monthly_generated"),
     "cards_batch":    ("",                         "cards.generate_per_batch"),
     "nas":            ("nas_count",               "nas.max_total"),
@@ -264,6 +271,80 @@ LIMIT_PATHS: dict[str, tuple[str, str]] = {
     "print_templates":("print_templates_count",   "print_templates.max_active"),
     "admins":         ("admins_count",            "admins.max_total"),
 }
+
+
+# ─────────────────────────────────────────────────────────────────────
+# «اكتف» — السقف الرئيسي للمتصلين المتزامنين (concurrent online sessions)
+# ─────────────────────────────────────────────────────────────────────
+# مسارات حقل العقد التي نَقرأ منها السقف. الأوّل المفضَّل، البواقي توافقية.
+# نَتبع التَدرّج لكي يَعمل النظام مع أكثر من صيغة يُرسلها المزوّد بدون
+# تحديثات قسرية. التَوصية للمزوّد: استعمال active_online.max.
+_ACTIVE_ONLINE_PATHS: tuple[str, ...] = (
+    "active_online.max",        # ← المفضَّل
+    "active.max",
+    "concurrent_online.max",
+    "active_subscribers.max",   # تَوافقية مع الاسم القديم (كان يُفهَم خطأً
+                                #  كـtotal accounts؛ بقي للاسم نفسه فقط).
+)
+
+
+def get_active_online_cap(tenant_id: int) -> Optional[int]:
+    """يَقرأ سقف «اكتف» من العقد. يَحاول عدّة مسارات للحقل (المُفضَّل أوّلًا).
+
+    None  = لا سقف (Unlimited).
+    عدد   = السقف (e.g. 100 للtrial، 250/500/1000 للباقات).
+    """
+    for path in _ACTIVE_ONLINE_PATHS:
+        val = get_limit(int(tenant_id), path)
+        if val is not None:
+            return val
+    return None
+
+
+def count_active_sessions(tenant_id: int,
+                            *, exclude_username: str = "") -> int:
+    """عدد الجلسات المفتوحة (acctstoptime IS NULL) لهذا المستأجر عبر كل
+    أنواع NAS/الجلسات (cards + subscribers + PPPoE + hotspot). يُستعمَل
+    auth-time لإنفاذ سقف «اكتف».
+
+    exclude_username (اختياري): يَستبعد جلسات هذا المستخدم من العدّ —
+    مفيد عند فحص re-auth كي لا تُحتسب جلسات المستخدم الراهنة ضدّه.
+    """
+    try:
+        from ..db.connection import db
+        if exclude_username:
+            row = db().execute(
+                "SELECT COUNT(*) AS n FROM radacct "
+                "WHERE tenant_id = ? AND acctstoptime IS NULL "
+                "  AND username != ?",
+                (int(tenant_id), str(exclude_username)),
+            ).fetchone()
+        else:
+            row = db().execute(
+                "SELECT COUNT(*) AS n FROM radacct "
+                "WHERE tenant_id = ? AND acctstoptime IS NULL",
+                (int(tenant_id),),
+            ).fetchone()
+        return int(row["n"]) if row else 0
+    except Exception:  # noqa: BLE001 — fail-safe: 0 يَفتح الباب (آمن للـauth)
+        return 0
+
+
+def user_has_open_session(tenant_id: int, username: str) -> bool:
+    """هل لدى هذا المستخدم جلسة مفتوحة الآن؟ يَفيد لاستثناء re-auth من
+    حساب السقف (المستخدم لن يَزيد الإجمالي عند re-auth)."""
+    if not username:
+        return False
+    try:
+        from ..db.connection import db
+        row = db().execute(
+            "SELECT 1 FROM radacct WHERE tenant_id = ? AND username = ? "
+            "  AND acctstoptime IS NULL LIMIT 1",
+            (int(tenant_id), str(username)),
+        ).fetchone()
+        return row is not None
+    except Exception:  # noqa: BLE001
+        return False
 
 
 @dataclass(frozen=True)
@@ -277,9 +358,13 @@ class LimitDecision:
 
 
 def _current_usage(tenant_id: int, metric: str) -> int:
-    """عدّاد استخدام حالي — يفوّض لـlicense_admin_usage_metering."""
+    """عدّاد استخدام حالي — يفوّض لـlicense_admin_usage_metering لكلّ مقياس
+    عادي، ويُحوّل لـcount_active_sessions لمقياس «اكتف» الخاصّ (لأنّه
+    قراءة مباشرة من radacct، ليس عبر usage metering service)."""
     if not metric:
         return 0
+    if metric == "active_online_now":
+        return count_active_sessions(int(tenant_id))
     try:
         from .license_admin_usage_metering import UsageMeteringService
         return int(UsageMeteringService().collect_metrics(
@@ -350,4 +435,7 @@ __all__ = [
     "requires_upgrade",
     "get_limit", "check_limit", "LIMIT_PATHS",
     "list_all_grants", "has_snapshot",
+    # active-online (concurrent cap) — السقف الرئيسي «اكتف»
+    "get_active_online_cap", "count_active_sessions",
+    "user_has_open_session",
 ]
