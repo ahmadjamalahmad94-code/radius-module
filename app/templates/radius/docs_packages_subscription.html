@@ -1,0 +1,175 @@
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}دليل: الباقات والاشتراك ونموذج الترخيص — كيف تستخدمني{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/docs_guide.css') }}">
+{% endblock %}
+
+{% block content %}
+
+{{ hub.hero(
+  "دليل: الباقات والاشتراك ونموذج الترخيص",
+  subtitle="افهم المجاني مقابل المدفوع، ولماذا الحدّ على المتصلين أونلاين لا على عدد المشتركين، وماذا يحدث عند انتهاء الترخيص.",
+  icon="scale-balanced",
+  actions_html='
+    <button type="button" class="hub-btn hub-btn--secondary" onclick="window.print()">
+      <i class="fa-solid fa-file-pdf"></i> حفظ كـ PDF
+    </button>
+    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.docs_center') + '">
+      <i class="fa-solid fa-arrow-right"></i> كل الأدلة
+    </a>
+  '
+) }}
+
+<div class="dg-layout">
+
+  <nav class="dg-toc dg-noprint" aria-label="{{ _('فهرس الدليل') }}">
+    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> {{ _('فهرس الخطوات') }}</div>
+    <a href="#dg-s1" data-dg-toc><span class="n">1</span> كيف يعمل النموذج</a>
+    <a href="#dg-s2" data-dg-toc><span class="n">2</span> المجاني مقابل المدفوع</a>
+    <a href="#dg-s3" data-dg-toc><span class="n">3</span> حدّ المتصلين لا المشتركين</a>
+    <a href="#dg-s4" data-dg-toc><span class="n">4</span> الباقة تحدّد الميزات</a>
+    <a href="#dg-s5" data-dg-toc><span class="n">5</span> انتهاء التجربة/الترخيص</a>
+    <a href="#dg-s6" data-dg-toc><span class="n">6</span> اختر باقتك الصحيحة</a>
+  </nav>
+
+  <div class="dg-main">
+
+    <div class="dg-lead">
+      <span class="ic"><i class="fa-solid fa-lightbulb"></i></span>
+      <div>
+        <h3>قبل ما نبدأ — ما الفرق بين «الترخيص» و«الباقة»؟</h3>
+        <p>
+          الترخيص هو الاتفاق الذي يربط نسختك بمزوّد النظام، والباقة هي مستوى هذا الترخيص: كم متصل
+          مسموح في آنٍ واحد، وأيّ ميزات مفعّلة. هذا الدليل مفاهيمي — يشرح المنطق العامّ حتى تختار
+          الباقة المناسبة وتتفادى المفاجآت. لقراءة قيم ترخيصك الفعلية راجع دليل
+          «حالة منح المزوّد والترخيص».
+        </p>
+      </div>
+    </div>
+
+    <section class="dg-step" id="dg-s1">
+      <div class="dg-badge">1</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-diagram-project"></i> كيف يعمل نموذج الترخيص</h2>
+        <p>
+          النظام يعمل بنموذج باقات: مجموعة ميزات أساسية متاحة دائمًا، وميزات متقدّمة تُفتح حسب باقتك
+          لدى المزوّد. عند الربط، يستلم النظام <strong>عقد التشغيل</strong> من لوحة التراخيص، وفيه
+          الحدود والميزات، ويطبّقها تلقائيًّا.
+        </p>
+        <div class="dg-info">
+          <span class="ic">ℹ️</span>
+          <span>لا تحتاج لإعداد يدوي للحدود — النظام يقرأها من العقد. مهمتك أن تختار الباقة الصحيحة
+          مع المزوّد وتجدّدها في وقتها.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s2">
+      <div class="dg-badge">2</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-scale-balanced"></i> المجاني/الأساسي مقابل المدفوع/المتقدّم</h2>
+        <p>
+          القاعدة العملية للتمييز:
+        </p>
+        <ul>
+          <li><strong>المجاني/الأساسي:</strong> إدارة المشتركين والبطاقات والباقات (العروض) والراوترات
+              والتقارير الأساسية — كل ما تحتاجه لتشغيل شبكة صغيرة.</li>
+          <li><strong>المدفوع/المتقدّم:</strong> حدّ متصلين أعلى، وميزات إضافية يحدّدها المزوّد حسب
+              الباقة (مثل خدمات متقدّمة، تكاملات، أو سعة أكبر).</li>
+        </ul>
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة:</b> لمعرفة ما تشمله باقتك <strong>بالضبط</strong>، افتح صفحة الترخيص وانظر
+          قسم «الخدمات المفعّلة في عقدك» — هو المرجع الدقيق، لا التخمين.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s3">
+      <div class="dg-badge">3</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-users-between-lines"></i> الحدّ على المتصلين أونلاين — لا على عدد المشتركين</h2>
+        <p>
+          هذه أهمّ نقطة يُساء فهمها. الترخيص يحدّ
+          <strong>عدد المتصلين أونلاين في آنٍ واحد</strong> (الجلسات النشطة المتزامنة)،
+          <strong>وليس</strong> العدد الكلّي للمشتركين المسجّلين.
+        </p>
+        <ul>
+          <li>تقدر تسجّل <strong>آلاف المشتركين</strong> في النظام — لا حدّ عملي على عددهم.</li>
+          <li>المحدود هو كم منهم <strong>متّصل في نفس اللحظة</strong>؛ هذا ما يحسبه الترخيص.</li>
+          <li>مثال: باقة بحدّ ٢٠٠ متّصل تكفي لقاعدة فيها ١٠٠٠ مشترك، لأنّ نادرًا ما يتّصلون كلّهم معًا.</li>
+        </ul>
+        <div class="dg-warn">
+          <span class="ic">⚠️</span>
+          <span><b>انتبه:</b> عند بلوغ حدّ المتصلين، الجلسات الجديدة تُرفض حتى تنتهي جلسات قائمة. لو
+          صار هذا متكرّرًا في ساعات الذروة، فالحلّ ترقية الباقة لرفع الحدّ — لا حذف مشتركين.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s4">
+      <div class="dg-badge">4</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-shapes"></i> كيف تنعكس الباقة على الميزات</h2>
+        <p>
+          باقتك تحدّد أيّ خدمات وميزات «مفعّلة» في عقدك. تظهر هذه في صفحة الترخيص مقسّمة حسب الفئة،
+          كلٌّ بحالتها وحدودها:
+        </p>
+        <ul>
+          <li><strong>مفعّلة:</strong> ميزة مشمولة في باقتك وتعمل الآن.</li>
+          <li><strong>موقوفة/معطَّلة:</strong> غير مشمولة — يمكنك طلب تفعيلها من المزوّد.</li>
+          <li><strong>منتهية:</strong> كانت مفعّلة وانتهت صلاحيتها وتحتاج تجديدًا.</li>
+        </ul>
+        <p>
+          فرفع الباقة لا يعني فقط متصلين أكثر، بل قد يفتح خدمات إضافية حسب ما يعرضه المزوّد.
+        </p>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s5">
+      <div class="dg-badge">5</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-hourglass-end"></i> ماذا يحدث عند انتهاء التجربة أو الترخيص</h2>
+        <p>
+          عند انتهاء الفترة (تجريبية أو مدفوعة) يدخل النظام <strong>وضعًا مقيّدًا</strong>. النقاط
+          المهمّة لتطمئنّ وتتصرّف بصواب:
+        </p>
+        <ul>
+          <li><strong>بياناتك سليمة:</strong> المشتركون والبطاقات والتقارير وكل شيء يبقى محفوظًا — لا يُحذف.</li>
+          <li><strong>القيود:</strong> قد تتوقّف المصادقة للمشتركين الجدد أو تُحدَّد بعض الوظائف حتى التجديد.</li>
+          <li><strong>الحلّ:</strong> جدّد مع المزوّد ثم اضغط «مزامنة» في صفحة الترخيص ليرجع كل شيء لطبيعته.</li>
+        </ul>
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة ذهبية:</b> راقب تاريخ الانتهاء في صفحة الترخيص وجدّد <strong>قبل</strong> اليوم
+          الأخير. التجديد المبكر يعني صفر انقطاع لزبائنك.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s6">
+      <div class="dg-badge">6</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-circle-check"></i> اختر باقتك الصحيحة</h2>
+        <p>
+          خلاصة عملية لاختيار الباقة المناسبة لشبكتك:
+        </p>
+        <ol>
+          <li>قدّر <strong>ذروة المتصلين معًا</strong> (لا عدد المشتركين) واختر باقة تغطّيها بهامش.</li>
+          <li>راجع الميزات التي تحتاجها فعلًا وتأكّد أنها ضمن الباقة.</li>
+          <li>تابع صفحة الترخيص دوريًّا — الحالة، الحدّ، الانتهاء — وجدّد في وقته.</li>
+        </ol>
+        <div class="dg-flash"><i class="fa-solid fa-circle-check"></i> صار عندك صورة واضحة عن نموذج الترخيص وكيف تختار وتجدّد.</div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/docs_guide.js') }}"></script>
+
+{% endblock %}

@@ -1,0 +1,190 @@
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}دليل: التحصيل والمتابعة الميدانية{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/docs_guide.css') }}">
+{% endblock %}
+
+{% block content %}
+
+{{ hub.hero(
+  "دليل: التحصيل والمتابعة الميدانية",
+  subtitle="مركز التحصيل والمدفوعات: تتبّع الطلبات، راجع إثباتات الدفع، طابِق القيود، وتابِع أرصدة الموزّعين — كل ذلك من صفحة واحدة بتبويبات.",
+  icon="hand-holding-dollar",
+  actions_html='
+    <button type="button" class="hub-btn hub-btn--secondary" onclick="window.print()">
+      <i class="fa-solid fa-file-pdf"></i> حفظ كـ PDF
+    </button>
+    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.docs_center') + '">
+      <i class="fa-solid fa-arrow-right"></i> كل الأدلة
+    </a>
+  '
+) }}
+
+<div class="dg-layout">
+
+  <nav class="dg-toc dg-noprint" aria-label="{{ _('فهرس الدليل') }}">
+    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> {{ _('فهرس الخطوات') }}</div>
+    <a href="#dg-s1" data-dg-toc><span class="n">1</span> مركز التحصيل وتبويباته</a>
+    <a href="#dg-s2" data-dg-toc><span class="n">2</span> فكّ تجميد القسم</a>
+    <a href="#dg-s3" data-dg-toc><span class="n">3</span> تابِع طلبات الدفع</a>
+    <a href="#dg-s4" data-dg-toc><span class="n">4</span> راجع إثباتات الدفع</a>
+    <a href="#dg-s5" data-dg-toc><span class="n">5</span> اعتمد وطبِّق الخدمة</a>
+    <a href="#dg-s6" data-dg-toc><span class="n">6</span> المطابقة وأرصدة الموزّعين</a>
+  </nav>
+
+  <div class="dg-main">
+
+    <div class="dg-lead">
+      <span class="ic"><i class="fa-solid fa-lightbulb"></i></span>
+      <div>
+        <h3>قبل ما نبدأ — ما هو مركز التحصيل؟</h3>
+        <p>
+          مركز التحصيل والمدفوعات صفحة موحّدة تتابع مسار كل دفعة: من إنشاء الطلب، إلى رفع إثبات الدفع،
+          إلى مراجعتك واعتمادك، ثم ترحيله إلى دفتر القيود. يخدم الديون المستحقّة على المشتركين،
+          التجديدات الشهرية، وأرصدة الموزّعين. القراءة فقط لا تغيّر منطق الدفع — كل اعتماد بيدك.
+        </p>
+      </div>
+    </div>
+
+    <section class="dg-step" id="dg-s1">
+      <div class="dg-badge">1</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-table-columns"></i> مركز التحصيل وتبويباته الأربعة</h2>
+        <p>
+          افتح <strong>«التحصيل والمدفوعات»</strong> من قسم المالية. الصفحة الواحدة فيها أربعة
+          تبويبات:
+        </p>
+        <ul>
+          <li><strong>الطلبات:</strong> كل طلبات الدفع مع فلاتر الحالة والغرض ونوع الدافع.</li>
+          <li><strong>المراجعة:</strong> قائمة الطلبات التي رفعت إثباتًا وتنتظر قرارك.</li>
+          <li><strong>المطابقة:</strong> ملخّص المُحصَّل مقابل المتوقّع لكشف الفروقات.</li>
+          <li><strong>الإعدادات:</strong> بوابة الدفع، المحفظة، والحدود — تُحفظ في مودال.</li>
+        </ul>
+        <div class="dg-info">
+          <span class="ic">ℹ️</span>
+          <span>أغراض الدفع تشمل: شراء بطاقات، اشتراك شهري، تجديد مشترك، شحن استهلاك، تمديد وقت،
+          دفعات الموزّعين، وتسوية الديون. ونوع الدافع قد يكون مشتركًا أو موزّعًا.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s2">
+      <div class="dg-badge">2</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-lock-open"></i> افهم تجميد القسم وكيف يُفكّ</h2>
+        <p>
+          قسم التحصيل <strong>مجمّد افتراضيًّا</strong> كإجراء أمان حتى تربط بوابة دفع حقيقية. أثناء
+          التجميد يظهر شريط تنبيه وتتعطّل أزرار الاعتماد/الرفض/تطبيق الخدمة — لكنّ <strong>حفظ
+          الإعدادات يبقى متاحًا دائمًا</strong> للتحضير.
+        </p>
+        <p>
+          يُفكّ التجميد تلقائيًّا حين تكتمل الشروط من تبويب الإعدادات: تفعيل التحصيل، اختيار بوابة دفع
+          فعلية، وضبط التأكيد على الربط الآلي.
+        </p>
+        <div class="dg-warn">
+          <span class="ic">⚠️</span>
+          <span><b>انتبه:</b> المحفظة اليدوية أو المراجعة اليدوية وحدها لا تكفي لفكّ التجميد — لا بدّ
+          من بوابة دفع مربوطة فعليًّا. اضبط الإعدادات أولًا ثم ستُفعَّل أزرار الإجراءات.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s3">
+      <div class="dg-badge">3</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-list-check"></i> تابِع طلبات الدفع والديون المستحقّة</h2>
+        <p>
+          من تبويب <strong>الطلبات</strong> اقرأ كل طلب دفع وحالته، وصفِّ القائمة لتصل للمطلوب بسرعة:
+        </p>
+        <ul>
+          <li><strong>بالحالة:</strong> بانتظار / رُفع إثبات / قيد المراجعة / مدفوع / مرفوض / منتهٍ /
+          ملغى / فاشل.</li>
+          <li><strong>بالغرض:</strong> تجديد، اشتراك شهري، تسوية دين… إلخ.</li>
+          <li><strong>بنوع الدافع:</strong> مشترك أو موزّع.</li>
+        </ul>
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة:</b> رشِّح بحالة «قيد المراجعة» أو «رُفع إثبات» لتركّز على ما يحتاج قرارك
+          الآن، بدل تصفّح كل السجل.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s4">
+      <div class="dg-badge">4</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-receipt"></i> راجع إثباتات الدفع</h2>
+        <p>
+          حين يرفع الدافع إثباتًا، يظهر الطلب في تبويب <strong>المراجعة</strong>. افتح تفاصيل الطلب
+          لترى المبلغ والعملة والغرض وصورة الإثبات المرفوع. الطلب قابل للمراجعة فقط إن كانت حالته
+          «رُفع إثبات» أو «قيد المراجعة» ووُجد إثبات مرفوع.
+        </p>
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">التحصيل ← تفاصيل الطلب</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-mock-sechead"><span class="ic"><i class="fa-solid fa-file-invoice-dollar"></i></span> طلب دفع #88 — قيد المراجعة</div>
+            <div class="dg-mf">
+              <label>ملاحظة المراجعة (اختياري)</label>
+              <div class="dg-mf-input">تطابق المبلغ مع الإيصال البنكي.</div>
+              <div class="dg-mf-help">تُحفَظ مع قرار الاعتماد/الرفض كأثر تدقيق.</div>
+            </div>
+            <div class="dg-mock-actions">
+              <span class="dg-mock-btn primary"><i class="fa-solid fa-check"></i> قبول الدفع</span>
+              <span class="dg-mock-btn"><i class="fa-solid fa-xmark"></i> رفض الإثبات</span>
+            </div>
+          </div>
+        </div>
+        <div class="dg-info">
+          <span class="ic">ℹ️</span>
+          <span>الرفض يضع الإثبات «مرفوضًا» ويعيد الطلب إلى حالة «مرفوض» — ويبقى للدافع رفع إثبات
+          جديد لاحقًا إن لزم.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s5">
+      <div class="dg-badge">5</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-circle-check"></i> اعتمد الدفع ثم طبِّق الخدمة</h2>
+        <p>
+          عند <strong>قبول الدفع</strong>: يُعلَّم الإثبات «معتمَدًا»، يصبح الطلب «مدفوعًا»، تُسجَّل
+          معاملة دفع، ويُرحَّل المبلغ إلى دفتر القيود. لكنّ <strong>تفعيل الخدمة خطوة منفصلة</strong>
+          بعد الاعتماد — تضغط <strong>«تطبيق الخدمة»</strong> من صفحة الطلب.
+        </p>
+        <div class="dg-warn">
+          <span class="ic">⚠️</span>
+          <span><b>القبول لا يفعّل الخدمة تلقائيًّا.</b> الفصل متعمَّد: المال يُرحَّل عند القبول، ثم
+          يُسجَّل تطبيق الخدمة يدويًّا — بلا أي إجراء مباشر على RADIUS أو CoA أو MikroTik من هنا. يمكن
+          تطبيق الطلبات المدفوعة فقط.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s6">
+      <div class="dg-badge">6</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-scale-balanced"></i> المطابقة وأرصدة الموزّعين</h2>
+        <p>
+          تبويب <strong>المطابقة</strong> يعرض ملخّصًا يطابق المُحصَّل فعليًّا مقابل المتوقّع، فتكتشف
+          الفروقات والطلبات المعلّقة. أمّا دفعات الموزّعين فتظهر بغرض «دفعة موزّع» وبنوع دافع
+          «موزّع»، وعند اعتمادها تُرحَّل إلى دفتر قيود الموزّع لتعكس رصيده.
+        </p>
+        <ul>
+          <li><strong>تتبّع الديون:</strong> رشِّح الطلبات المعلّقة لتعرف المستحقّ على كل طرف.</li>
+          <li><strong>المدفوعات الميدانية:</strong> سجِّلها كطلب دفع مع إثبات، ثم اعتمدها لترحَّل.</li>
+          <li><strong>أرصدة الموزّعين:</strong> راجع حركاتهم عبر «حركات الرصيد» في التقارير.</li>
+        </ul>
+        <div class="dg-flash"><i class="fa-solid fa-circle-check"></i> أصبح مسار التحصيل واضحًا: طلب ← إثبات ← اعتماد ← قيد ← تطبيق خدمة، مع متابعة الموزّعين والمطابقة.</div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/docs_guide.js') }}"></script>
+
+{% endblock %}

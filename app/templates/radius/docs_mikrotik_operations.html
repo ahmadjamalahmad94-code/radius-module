@@ -1,0 +1,227 @@
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}دليل: إعداد وتشغيل المايكروتيك — كيف تستخدمني{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/docs_guide.css') }}">
+{% endblock %}
+
+{% block content %}
+
+{{ hub.hero(
+  "دليل: إعداد وتشغيل المايكروتيك",
+  subtitle="كل عمليات الراوتر الواحد في مكان واحد: لوحة الراوتر، معالج البرمجة (هوت سبوت / PPPoE) مع التخطيط والتأكيد، مصمّم صفحة الدخول، التشخيص، والنسخ الاحتياطي.",
+  icon="sliders",
+  actions_html='
+    <button type="button" class="hub-btn hub-btn--secondary" onclick="window.print()">
+      <i class="fa-solid fa-file-pdf"></i> حفظ كـ PDF
+    </button>
+    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.docs_center') + '">
+      <i class="fa-solid fa-arrow-right"></i> كل الأدلة
+    </a>
+  '
+) }}
+
+<div class="dg-layout">
+
+  <nav class="dg-toc dg-noprint" aria-label="{{ _('فهرس الدليل') }}">
+    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> {{ _('فهرس الخطوات') }}</div>
+    <a href="#dg-s1" data-dg-toc><span class="n">1</span> من أين تبدأ العمليات</a>
+    <a href="#dg-s2" data-dg-toc><span class="n">2</span> لوحة الراوتر</a>
+    <a href="#dg-s3" data-dg-toc><span class="n">3</span> معالج البرمجة: الخطة</a>
+    <a href="#dg-s4" data-dg-toc><span class="n">4</span> الفحص والتأكيد والتطبيق</a>
+    <a href="#dg-s5" data-dg-toc><span class="n">5</span> مصمّم صفحة الدخول</a>
+    <a href="#dg-s6" data-dg-toc><span class="n">6</span> التشخيص</a>
+    <a href="#dg-s7" data-dg-toc><span class="n">7</span> النسخ الاحتياطي</a>
+  </nav>
+
+  <div class="dg-main">
+
+    <div class="dg-lead">
+      <span class="ic"><i class="fa-solid fa-lightbulb"></i></span>
+      <div>
+        <h3>ما الذي تقدمه «عمليات المايكروتيك»؟</h3>
+        <p>
+          بعد أن تُعرّف الراوتر وتربطه، تحصل على مجموعة عمليات خاصّة بكل راوتر على حِدة: تراقب موارده،
+          تبرمج عليه هوت سبوت أو PPPoE بشكل آمن وموثّق، تصمّم صفحة الدخول وتنشرها، تشخّص المشاكل،
+          وتأخذ نسخًا احتياطية. كل عملية تُسجَّل في مركز الأحداث، والعمليات الخطرة محميّة بتأكيد
+          وفحص سلامة قبل أن تلمس الراوتر.
+        </p>
+      </div>
+    </div>
+
+    <section class="dg-step" id="dg-s1">
+      <div class="dg-badge">1</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-diagram-project"></i> من أين تبدأ العمليات</h2>
+        <p>
+          افتح <strong>مركز عمليات الراوترات</strong> من القائمة الجانبية. اختر الراوتر الذي تريد
+          العمل عليه — تفتح صفحته الخاصّة، ومنها تتفرّع كل العمليات: لوحة الراوتر، البرمجة، مصمّم
+          صفحة الدخول، التشخيص، والنسخ الاحتياطي.
+        </p>
+        <div class="dg-info">
+          <span class="ic">ℹ️</span>
+          <span>كل عملية محكومة بصلاحيات: العرض للقراءة، والبرمجة والنشر والاستعادة تحتاج صلاحيات
+          أعلى — فلا يطبّق تغييرًا إلا من يملك إذنه.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s2">
+      <div class="dg-badge">2</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-gauge-high"></i> لوحة الراوتر</h2>
+        <p>
+          <strong>لوحة الراوتر</strong> هي نظرة سريعة على حالة الجهاز: شريط مؤشّرات علوي ولوحات
+          تُحمّل بياناتها حيًّا من الراوتر — لا أرقام وهمية. منها تتابع الموارد والجلسات الحيّة،
+          وتظهر بطاقات «خدماتي» التشغيلية (مثل تتبّع اللوب ومنع بث البلوتوث/الواي فاي على المنافذ).
+        </p>
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة:</b> اللوحة تعكس حالة الراوتر لحظيًّا — إن ظهرت مؤشّرات فارغة تأكّد أولًا أن
+          الراوتر متّصل من زر «فحص» في مركز العمليات.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s3">
+      <div class="dg-badge">3</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-wand-magic-sparkles"></i> معالج البرمجة: ابنِ الخطة أولًا</h2>
+        <p>
+          <strong>معالج البرمجة</strong> يولّد إعداد الراوتر لك بدل كتابة أوامر يدويًّا. اختر النوع:
+        </p>
+        <ul>
+          <li><strong>هوت سبوت (Hotspot):</strong> صفحة دخول مع مجمّع عناوين وبوابة و DNS ومدّة الإيجار
+            وحدّ السرعة.</li>
+          <li><strong>PPPoE:</strong> ملف اتصال وخدمة ومجمّع عناوين وعنوان محلّي و DNS.</li>
+        </ul>
+        <p>
+          عبّئ الحقول (الواجهة، نطاق العنوان، الاسم، خوادم DNS …) ثم اضغط لتوليد <strong>الخطة</strong>.
+          المعالج يقرأ حالة الراوتر الحالية (الواجهات والعناوين والمسارات) ليكشف أي <strong>تعارضات</strong>،
+          ويعرض لك <strong>معاينة «قبل/بعد»</strong> توضّح ماذا سيتغيّر بالضبط — كل ذلك دون أن يلمس
+          الراوتر بعد.
+        </p>
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">معالج البرمجة ← خطة الهوت سبوت</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-mock-sechead"><span class="ic"><i class="fa-solid fa-list-check"></i></span> معاينة الخطة (قبل التطبيق)</div>
+            <div class="dg-mf">
+              <label>الواجهة</label>
+              <div class="dg-mf-input">ether2</div>
+            </div>
+            <div class="dg-mf">
+              <label>النطاق (CIDR)</label>
+              <div class="dg-mf-input">10.5.50.1/24</div>
+            </div>
+            <div class="dg-mock-actions">
+              <span class="dg-mock-btn"><i class="fa-solid fa-list-check"></i> توليد الخطة</span>
+              <span class="dg-mock-btn primary"><i class="fa-solid fa-circle-check"></i> تأكيد وتطبيق</span>
+            </div>
+          </div>
+        </div>
+        <div class="dg-warn">
+          <span class="ic">⚠️</span>
+          <span><b>المخاطر تُوقف التطبيق:</b> إن أظهرت الخطة مخاطر (تعارض في عنوان أو واجهة)، لا يمكن
+          التطبيق حتى تصحّح المدخلات وتعيد الفحص. هذا مقصود لحمايتك من كسر إعداد قائم.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s4">
+      <div class="dg-badge">4</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-shield-halved"></i> الفحص والتأكيد والتطبيق</h2>
+        <p>
+          عندما تكون الخطة خالية من المخاطر، يصبح زر <strong>«تأكيد وتطبيق»</strong> فعّالًا. قبل أن
+          يكتب النظام أي أمر على الراوتر يمرّ بثلاث حمايات:
+        </p>
+        <ul>
+          <li><strong>تأكيد صريح:</strong> يجب أن تؤكّد العملية — لا تُطبَّق بالخطأ.</li>
+          <li><strong>فحص سلامة:</strong> قد يحجب العملية لأسباب تشغيلية ويعرض السبب بوضوح.</li>
+          <li><strong>تنبيه النسخ الاحتياطي:</strong> إن لم توجد نسخة احتياطية حديثة، يحذّرك النظام
+            <em>قبل</em> الضغط لأنك لن تستطيع الاستعادة لو فشل التطبيق.</li>
+        </ul>
+        <p>
+          بعد التطبيق يعرض النظام نتيجة كل أمر (نجح / تُخطّي / فشل)، ويسجّل العملية في مركز الأحداث.
+          إن نجح بعض الأوامر وفشل بعضها (تطبيق جزئي) تُرفَع خطورة الحدث لتلفت انتباهك للتنظيف.
+        </p>
+        <div class="dg-info">
+          <span class="ic">ℹ️</span>
+          <span>هناك أيضًا عملية <strong>«إزالة البرمجة»</strong> تحذف ما برمجه النظام من الراوتر —
+          وهي عملية هدّامة تتطلّب صلاحية أعلى وتأكيدًا مستقلًّا.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s5">
+      <div class="dg-badge">5</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-paintbrush"></i> مصمّم صفحة الدخول</h2>
+        <p>
+          <strong>مصمّم صفحة الدخول</strong> يتيح اختيار تصميم جاهز من المعرض (الكلاسيكي، الليلي،
+          التدرّج الاحترافي، بوابة المتجر …) أو رفع تصميم خاص، ثم تخصيص المتغيّرات (الشعار، اسم
+          المزوّد، الألوان، رابط المتجر). تعاين النتيجة مباشرة دون أن تلمس الراوتر.
+        </p>
+        <p>
+          بعد الحفظ، اضغط <strong>«نشر»</strong> لرفع الصفحة إلى الراوتر. يظهر <strong>شريط تقدّم
+          حيّ</strong> يبيّن كل مرحلة: الاتصال، رفع <code>login.html</code>، رسائل الأخطاء، الصفحات
+          المرافقة، وعند تفعيل المتجر صفحة المتجر وقائمة السماح. فشل ملف فرعي لا يُفشل الباقي، وتُسجَّل
+          كل محاولة نشر في مركز الأحداث.
+        </p>
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة:</b> تقدر «تحميل الحزمة (ZIP)» لرفعها يدويًّا على الراوتر، وحفظ مجموعة
+          المتغيّرات الحالية كـ«قالب محفوظ» لإعادة تطبيقها على راوتر آخر بسرعة.</span>
+        </div>
+        <div class="dg-info">
+          <span class="ic">ℹ️</span>
+          <span>للتفاصيل الكاملة عن التصاميم والنشر، راجع دليل <strong>«الهوت سبوت وصفحة الدخول»</strong>.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s6">
+      <div class="dg-badge">6</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-stethoscope"></i> التشخيص</h2>
+        <p>
+          أدوات <strong>التشخيص</strong> تساعدك على معرفة سبب أي خلل قبل أن تلمس الإعداد: فحوص اتصال
+          الراوتر وجاهزيته، وكشف مشاكل شائعة (مثل اختلاف ساعة الراوتر الذي يكسر مصافحة الأنفاق).
+          النتائج تأتي مرتّبة بأسباب واضحة وخطوات إصلاح مقترحة بدل رسائل خام.
+        </p>
+        <div class="dg-warn">
+          <span class="ic">⚠️</span>
+          <span><b>تنبيه:</b> إن ظهر أن ساعة الراوتر قديمة، صحّحها (أو فعّل NTP) قبل أي عملية على
+          الأنفاق — الساعة الخاطئة تكسر مصافحة الاتصال المشفّر.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s7">
+      <div class="dg-badge">7</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-floppy-disk"></i> النسخ الاحتياطي</h2>
+        <p>
+          <strong>مركز النسخ الاحتياطي</strong> لكل راوتر يتيح <strong>أخذ نسخة</strong> من إعداده
+          وحفظها، وعرض قائمة النسخ السابقة. خذ نسخة <em>قبل</em> أي برمجة كبيرة — فهي شبكة الأمان
+          الوحيدة لو احتجت التراجع.
+        </p>
+        <div class="dg-info">
+          <span class="ic">ℹ️</span>
+          <span><b>تخطيط الاستعادة:</b> النظام يتيح رفع ملف نسخة وفحص بياناته وتحذيراته (تخطيط فقط)،
+          بينما <strong>التطبيق الفعلي للاستعادة</strong> عملية أعلى خطورة محميّة بمسار منفصل — فلا
+          تُستعاد نسخة بضغطة عابرة.</span>
+        </div>
+        <div class="dg-flash"><i class="fa-solid fa-circle-check"></i> راوترك مُعدّ ومُشغّل وموثّق — كل عملية مسجّلة ومحميّة بتأكيد.</div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/docs_guide.js') }}"></script>
+
+{% endblock %}
