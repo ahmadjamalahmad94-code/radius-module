@@ -233,6 +233,41 @@
     color: var(--hub-text-mute, #64748B);
   }
   .mtld-loop-note p { font-size: 11.5px; margin: 8px 0 6px; line-height: 1.7; }
+
+  /* ── لوح الإضافات الاختيارية (P1) ── */
+  .mtld-addons { display: grid; gap: 16px; margin-top: 6px; }
+  .mtld-addon-cat-title {
+    margin: 4px 0 8px; font-size: 13px; font-weight: 900;
+    color: var(--hub-brand, #2563EB);
+    border-bottom: 1px solid var(--hub-border, #e6eaf2); padding-bottom: 5px;
+  }
+  .mtld-addon {
+    border: 1px solid var(--hub-border, #e6eaf2); border-radius: 12px;
+    padding: 11px 13px; margin-bottom: 9px; background: #fff;
+  }
+  .mtld-addon-head {
+    display: flex; align-items: center; gap: 9px; cursor: pointer;
+    font-weight: 800; font-size: 13.5px;
+  }
+  .mtld-addon-head input[type=checkbox] { width: 17px; height: 17px; flex: none; }
+  .mtld-addon-name { display: inline-flex; align-items: center; gap: 7px; }
+  .mtld-addon-tag {
+    font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 999px;
+  }
+  .mtld-addon-tag.pre  { background: #ecfdf5; color: #047857; }
+  .mtld-addon-tag.post { background: #eff6ff; color: #1d4ed8; }
+  .mtld-addon-tag.both { background: #fef3c7; color: #b45309; }
+  .mtld-addon-desc {
+    font-size: 11.5px; color: var(--hub-text-mute, #64748B);
+    margin: 5px 0 0; line-height: 1.6;
+  }
+  .mtld-addon-cfg {
+    margin-top: 10px; padding-top: 10px; display: grid; gap: 9px;
+    border-top: 1px dashed var(--hub-border, #e6eaf2);
+  }
+  .mtld-addon-cfg[hidden] { display: none; }
+  .mtld-addon-fld-label { display: block; font-size: 11.5px; font-weight: 700; margin-bottom: 3px; }
+  .mtld-addon-fld-help { font-size: 10.5px; color: var(--hub-text-mute, #64748B); margin-top: 3px; }
 </style>
 {% endblock %}
 
@@ -672,6 +707,81 @@
             المحفوظة وأزرار التطبيق/الحذف أسفل الصفحة.
           </div>
         </div>
+
+      {# ── لوح الإضافات الاختيارية (P1) — مفاتيح تشغيل + حقول إعداد،
+         مجمّعة بالتصنيف. القيم تُسلسَل إلى الحقل المخفي addons_json
+         عند الإرسال عبر سكربت addons أسفل الصفحة. ── #}
+      <div class="mtld-field" data-mtld-sec="addons">
+        <label class="mtld-field-label">
+          <i class="fa-solid fa-puzzle-piece"></i> {{ _('الإضافات الاختيارية') }}
+        </label>
+        <div class="mtld-field-help">
+          فعّل ما تريده من إضافات صفحة الدخول — كلٌّ منها اختياري ومستقل.
+          الإضافات المعلَّمة «قبل الدخول» تعمل بلا إنترنت (تُخبَز في الصفحة)،
+          و«بعد الدخول» تظهر في صفحة ما بعد الاتصال.
+        </div>
+        <input type="hidden" name="addons_json" id="mtld-addons-json"
+               value="{{ addons_config|tojson|forceescape }}">
+        <div class="mtld-addons" data-mtld-addons>
+          {% for cat, specs in addons_by_cat.items() %}
+          <div class="mtld-addon-cat">
+            <h4 class="mtld-addon-cat-title">{{ addons_cat_labels[cat] }}</h4>
+            {% for spec in specs %}
+            {% set st = addons_config.get(spec.key) or {} %}
+            {% set scfg = st.get('config') or {} %}
+            <div class="mtld-addon" data-addon-key="{{ spec.key }}">
+              <label class="mtld-addon-head">
+                <input type="checkbox" data-addon-toggle
+                       {% if st.get('enabled') %}checked{% endif %}>
+                <span class="mtld-addon-name">
+                  <i class="fa-solid fa-{{ spec.icon }}"></i> {{ spec.label_ar }}
+                  {% if spec.surface == 'pre' %}<span class="mtld-addon-tag pre">قبل الدخول</span>
+                  {% elif spec.surface == 'post' %}<span class="mtld-addon-tag post">بعد الدخول</span>
+                  {% else %}<span class="mtld-addon-tag both">قبل وبعد</span>{% endif %}
+                </span>
+              </label>
+              <div class="mtld-addon-desc">{{ spec.desc_ar }}</div>
+              {% if spec.fields %}
+              <div class="mtld-addon-cfg" data-addon-cfg
+                   {% if not st.get('enabled') %}hidden{% endif %}>
+                {% for f in spec.fields %}
+                <div class="mtld-addon-fld">
+                  <label class="mtld-addon-fld-label">{{ f.label_ar }}</label>
+                  {% if f.kind == 'bool' %}
+                  <input type="checkbox" data-addon-field="{{ f.key }}"
+                         {% if scfg.get(f.key) == 'yes' %}checked{% endif %}>
+                  {% elif f.kind == 'textarea' %}
+                  <textarea class="hub-input" rows="3" data-addon-field="{{ f.key }}"
+                            placeholder="{{ f.placeholder }}" maxlength="{{ f.max_len }}">{{ scfg.get(f.key, '') }}</textarea>
+                  {% elif f.kind == 'select' %}
+                  <select class="hub-input" data-addon-field="{{ f.key }}">
+                    {% for val, lbl in f.options %}
+                    <option value="{{ val }}" {% if scfg.get(f.key) == val %}selected{% endif %}>{{ lbl }}</option>
+                    {% endfor %}
+                  </select>
+                  {% elif f.kind == 'color' %}
+                  <input type="color" data-addon-field="{{ f.key }}"
+                         value="{{ scfg.get(f.key) or f.default or '#2563EB' }}">
+                  {% elif f.kind == 'number' %}
+                  <input type="number" class="hub-input" data-addon-field="{{ f.key }}"
+                         value="{{ scfg.get(f.key, f.default) }}"
+                         min="{{ f.min_num }}" max="{{ f.max_num }}">
+                  {% else %}
+                  <input type="{{ 'url' if f.kind == 'url' else 'text' }}" class="hub-input"
+                         data-addon-field="{{ f.key }}" placeholder="{{ f.placeholder }}"
+                         value="{{ scfg.get(f.key, '') }}" maxlength="{{ f.max_len }}">
+                  {% endif %}
+                  {% if f.help_ar %}<div class="mtld-addon-fld-help">{{ f.help_ar }}</div>{% endif %}
+                </div>
+                {% endfor %}
+              </div>
+              {% endif %}
+            </div>
+            {% endfor %}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
 
         <div class="mtld-save-row">
           <button type="submit" class="hub-btn hub-btn--primary">
@@ -1760,6 +1870,59 @@
     e.preventDefault();
     streamDeploy();
   });
+})();
+</script>
+
+{# ════ لوح الإضافات (P1) — كتلة <script> مستقلّة ════
+   يبني خريطة addons_json من مفاتيح التشغيل وحقول الإعداد قبل أي
+   إرسال (حفظ/قالب/ZIP)، ويُظهر/يُخفي حقول الإعداد مع التشغيل. ES5
+   بحت بلا اعتماديات. #}
+<script>
+(function () {
+  'use strict';
+  var root = document.querySelector('[data-mtld-addons]');
+  var hidden = document.getElementById('mtld-addons-json');
+  if (!root || !hidden) return;
+
+  function collect() {
+    var out = {};
+    var cards = root.querySelectorAll('[data-addon-key]');
+    for (var i = 0; i < cards.length; i++) {
+      var card = cards[i];
+      var key = card.getAttribute('data-addon-key');
+      var toggle = card.querySelector('[data-addon-toggle]');
+      var cfg = {};
+      var flds = card.querySelectorAll('[data-addon-field]');
+      for (var j = 0; j < flds.length; j++) {
+        var f = flds[j], fk = f.getAttribute('data-addon-field');
+        if (f.type === 'checkbox') { cfg[fk] = f.checked ? 'yes' : 'no'; }
+        else { cfg[fk] = f.value; }
+      }
+      out[key] = { enabled: !!(toggle && toggle.checked), config: cfg };
+    }
+    return out;
+  }
+
+  function sync() {
+    try { hidden.value = JSON.stringify(collect()); } catch (e) {}
+  }
+
+  // إظهار/إخفاء حقول الإعداد مع مفتاح التشغيل + تحديث الحقل المخفي.
+  root.addEventListener('change', function (ev) {
+    var t = ev.target;
+    if (t && t.getAttribute && t.getAttribute('data-addon-toggle') !== null) {
+      var card = t.closest('[data-addon-key]');
+      var cfg = card && card.querySelector('[data-addon-cfg]');
+      if (cfg) { if (t.checked) cfg.removeAttribute('hidden');
+                 else cfg.setAttribute('hidden', 'hidden'); }
+    }
+    sync();
+  });
+
+  // اجمع قبل أي إرسال للنموذج (حفظ/قالب/تحميل ZIP).
+  var form = hidden.closest('form');
+  if (form) { form.addEventListener('submit', sync); }
+  sync();
 })();
 </script>
 

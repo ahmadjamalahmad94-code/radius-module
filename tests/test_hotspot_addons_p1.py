@@ -356,3 +356,114 @@ def test_repo_preset_addons_roundtrip(app_ctx):
     pid = presets[0]["id"]
     one = repo.get_preset(1, 9, pid)
     assert one["addons"]["social_links"]["config"]["whatsapp"] == "https://wa.me/1"
+
+
+# ════════════════════════════════════════════════════════════════
+# (9) تكامل المصمّر — لوح الإضافات يُرسَم، والحفظ يثبّتها
+# ════════════════════════════════════════════════════════════════
+import sys as _sys  # noqa: E402
+import tempfile as _tempfile  # noqa: E402
+from datetime import datetime as _dt  # noqa: E402
+from uuid import uuid4 as _uuid4  # noqa: E402
+
+
+@pytest.fixture
+def rt_app(monkeypatch):
+    tmp = _tempfile.mkdtemp(prefix="hr_addui_")
+    monkeypatch.setenv("HOBERADIUS_DB_PATH", os.path.join(tmp, "test.db"))
+    monkeypatch.setenv("HOBERADIUS_NO_WORKER", "1")
+    monkeypatch.setenv("HOBERADIUS_NO_SEED", "1")
+    monkeypatch.delenv("HOBERADIUS_ENV", raising=False)
+    monkeypatch.delenv("FLASK_ENV", raising=False)
+    for k in list(_sys.modules):
+        if k.startswith("app."):
+            del _sys.modules[k]
+    from app import create_app
+    yield create_app()
+    for k in list(_sys.modules):
+        if k.startswith("app."):
+            del _sys.modules[k]
+
+
+def _login(client):
+    from app.radius.db.repos import admins_repo
+    u = f"adui_{_uuid4().hex[:8]}"
+    admins_repo.create_admin(username=u, password="p", full_name="T",
+                             is_super_admin=True)
+    client.post("/admin/radius/login", data={"username": u, "password": "p"})
+
+
+def _csrf(client):
+    client.get("/admin/radius/mt/operations")
+    with client.session_transaction() as s:
+        return s["_csrf_token"]
+
+
+def _seed(app, nas_id=1):
+    with app.app_context():
+        from app.radius.db.connection import transaction
+        now = _dt.utcnow().isoformat() + "Z"
+        with transaction() as c:
+            c.execute(
+                "INSERT INTO nas_devices (id, tenant_id, name, address, "
+                "secret, vendor, nas_type, enabled, created_at, "
+                "connection_mode) VALUES (?,1,'r','203.0.113.9','s',"
+                "'mikrotik','hotspot',1,?,'direct')", (nas_id, now))
+
+
+def test_designer_get_shows_addons_panel(rt_app):
+    c = rt_app.test_client()
+    _seed(rt_app, 1)
+    _login(c)
+    html = c.get("/admin/radius/mt/1/login-designer").get_data(as_text=True)
+    assert "data-mtld-addons" in html
+    assert 'name="addons_json"' in html
+    # كل إضافة مسجَّلة لها بطاقة + تسمية عربية
+    from app.radius.services import hotspot_addons as ad
+    for spec in ad.all_addons():
+        assert f'data-addon-key="{spec.key}"' in html
+        assert spec.label_ar in html
+
+
+def test_designer_save_persists_addons(rt_app):
+    import json as _j
+    c = rt_app.test_client()
+    _seed(rt_app, 1)
+    _login(c)
+    tok = _csrf(c)
+    addons = {"live_clock": {"enabled": True, "config": {"format": "12h"}},
+              "social_links": {"enabled": True,
+                               "config": {"whatsapp": "https://wa.me/9"}}}
+    res = c.post("/admin/radius/mt/1/login-designer/save", data={
+        "_csrf_token": tok, "template_slug": "classic",
+        "TENANT_NAME": "مقهى", "ACCENT_COLOR": "#16A34A",
+        "TENANT_LOGO_URL": "/img/logo.png", "WELCOME_TEXT": "أهلاً",
+        "BG_COLOR": "#F8FAFC", "addons_json": _j.dumps(addons),
+    })
+    assert res.status_code == 200
+    with rt_app.app_context():
+        from app.radius.db.repos import hotspot_designs_repo as r
+        row = r.get_design(1, 1)
+        assert row["addons"]["live_clock"]["enabled"] is True
+        assert row["addons"]["live_clock"]["config"]["format"] == "12h"
+        assert row["addons"]["social_links"]["config"]["whatsapp"] == \
+            "https://wa.me/9"
+
+
+def test_designer_save_ignores_unknown_addon(rt_app):
+    import json as _j
+    c = rt_app.test_client()
+    _seed(rt_app, 1)
+    _login(c)
+    tok = _csrf(c)
+    res = c.post("/admin/radius/mt/1/login-designer/save", data={
+        "_csrf_token": tok, "template_slug": "classic",
+        "TENANT_NAME": "x", "ACCENT_COLOR": "#16A34A",
+        "TENANT_LOGO_URL": "/img/logo.png", "WELCOME_TEXT": "hi",
+        "BG_COLOR": "#F8FAFC",
+        "addons_json": _j.dumps({"evil_xyz": {"enabled": True}}),
+    })
+    assert res.status_code == 200
+    with rt_app.app_context():
+        from app.radius.db.repos import hotspot_designs_repo as r
+        assert "evil_xyz" not in (r.get_design(1, 1)["addons"])

@@ -33,6 +33,7 @@ from ..core.tenant import DEFAULT_TENANT_ID
 from ..db.connection import db
 from ..db.repos import hotspot_designs_repo
 from ..integration.mikrotik.client import MikrotikClient
+from ..services import hotspot_addons as ha
 from ..services import hotspot_templates as ht
 from ..services.audit import get_audit_service
 from ..services.nas_connection import resolve_connection_address
@@ -310,6 +311,7 @@ def _current_design(nas_id: int) -> dict:
         return {
             "template_slug": "classic",
             "variables": _variable_defaults(),
+            "addons": ha.normalize_config({}),
         }
     variables = {**_variable_defaults(), **(row.get("variables") or {})}
     # ترقية ودّية: الرابط المخزَّن هو المثال الثابت القديم أو فارغ
@@ -327,6 +329,9 @@ def _current_design(nas_id: int) -> dict:
     return {
         "template_slug": slug,
         "variables": variables,
+        # خريطة الإضافات المطبَّعة (P1) — تُغذّي مفاتيح التشغيل وحقول
+        # الإعداد في لوح الإضافات بالمصمّم.
+        "addons": ha.normalize_config(row.get("addons") or {}),
     }
 
 
@@ -408,6 +413,11 @@ def _render_designer(nas_id: int, nas: dict, design: dict, *,
         store_api_base_auto=_auto_api_base(),
         store_ping_key=store_ping_key,
         radius_ip_configured=radius_ip_configured,
+        # كتالوج الإضافات (P1) مجمّعًا بالتصنيف + تسميات التصنيفات،
+        # ليرسم لوح الإضافات مفاتيح التشغيل وحقول الإعداد.
+        addons_by_cat=ha.by_category(),
+        addons_cat_labels=ha.CATEGORY_LABELS,
+        addons_config=design.get("addons") or ha.normalize_config({}),
     )
 
 
@@ -426,6 +436,9 @@ def mt_login_designer_save(nas_id: int):
     slug = (request.form.get("template_slug") or "").strip()
     values = {v.slug: (request.form.get(v.slug) or "").strip()
               for v in ht.TEMPLATE_VARIABLES}
+    # خريطة الإضافات (P1) — حقل JSON واحد يبنيه لوح الإضافات في
+    # المتصفّح؛ نطبّعه خادميًّا (يُسقِط المجهول، يهرّب، يقيّد) قبل الحفظ.
+    addons_cfg = ha.normalize_config(request.form.get("addons_json") or "{}")
     # رابط متجر فارغ = «استخدم الرابط التلقائي» — يُحقن الرابط
     # المحسوب من إعداد IP الراديوس قبل التحقق فيُحفظ رابط صالح
     # دائمًا دون أي إدخال يدوي من المشغّل.
@@ -448,7 +461,7 @@ def mt_login_designer_save(nas_id: int):
             prev = hotspot_designs_repo.get_design(_tid(), nas_id) or {}
             hotspot_designs_repo.save_design(
                 _tid(), nas_id,
-                template_slug=slug, variables=safe,
+                template_slug=slug, variables=safe, addons=addons_cfg,
             )
             saved = True
             values = safe
@@ -470,7 +483,7 @@ def mt_login_designer_save(nas_id: int):
                        "variables": safe},
             )
     design = {"template_slug": slug if slug else "classic",
-              "variables": values}
+              "variables": values, "addons": addons_cfg}
     return _render_designer(nas_id, nas, design,
                             saved=saved, error=error)
 
