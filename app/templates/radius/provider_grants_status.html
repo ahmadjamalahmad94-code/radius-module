@@ -40,7 +40,7 @@
   <div class="hub-table-wrap">
     <table class="hub-table" data-testid="provider-grants-table">
       <thead><tr>
-        <th>{{ _('المفتاح') }}</th>
+        <th>{{ _('الخدمة') }}</th>
         <th>{{ _('حالة الخدمة') }}</th>
         <th>{{ _('حالة الميزة') }}</th>
         <th>{{ _('النتيجة') }}</th>
@@ -48,19 +48,28 @@
       </tr></thead>
       <tbody>
         {% for g in grants %}
+        {# الاسم العربي + المفتاح الخام كـsubtitle صغير للتطابق مع لوحة المزوّد #}
+        {% set _ar_name = provider_service_label_ar(g.key) if provider_service_label_ar is defined else g.key %}
+        {% set _ar_status = provider_service_status_ar(g.status) if provider_service_status_ar is defined else g.status %}
+        {% set _ar_feature = provider_feature_state_ar(g.feature_state) if provider_feature_state_ar is defined else g.feature_state %}
         <tr>
-          <td class="mono small">{{ g.key }}</td>
+          <td>
+            <div style="font-weight:600">{{ _ar_name }}</div>
+            <div class="mono small hub-text-mute" style="font-size:11px;margin-top:2px">{{ g.key }}</div>
+          </td>
           <td class="small">
             {% if g.present %}
-              {% if g.status == 'active' and g.enabled %}{{ hub.pill(_('مفعّلة'), variant='green') }}
-              {% else %}{{ hub.pill(g.status or _('—'), variant='red') }}{% endif %}
+              {% if g.status == 'active' and g.enabled %}{{ hub.pill(_ar_status or _('مفعّلة'), variant='green') }}
+              {% elif g.requires_upgrade %}{{ hub.pill(_ar_status or _('بانتظار التفعيل / ترقية'), variant='amber') }}
+              {% else %}{{ hub.pill(_ar_status or _('—'), variant='red') }}{% endif %}
             {% else %}<span class="hub-text-mute">{{ _('غير مذكورة') }}</span>{% endif %}
           </td>
           <td class="small">
             {% if g.feature_state == 'enabled' %}{{ hub.pill(_('متاحة'), variant='green') }}
-            {% elif g.feature_state in ('locked','hidden') %}{{ hub.pill(g.feature_state, variant='red') }}
+            {% elif g.feature_state in ('locked','hidden') %}{{ hub.pill(_ar_feature, variant='red') }}
             {% elif g.feature_state in ('readonly','read_only') %}{{ hub.pill(_('قراءة فقط'), variant='amber') }}
-            {% else %}{{ hub.pill(g.feature_state, variant='gray') }}{% endif %}
+            {% elif g.feature_state in ('locked_upgrade','requires_activation','upgrade_required') %}{{ hub.pill(_ar_feature, variant='amber') }}
+            {% else %}{{ hub.pill(_ar_feature, variant='gray') }}{% endif %}
           </td>
           <td>
             {% if g.disabled %}{{ hub.pill(_('موقوفة (إيقاف فعلي)'), variant='red') }}

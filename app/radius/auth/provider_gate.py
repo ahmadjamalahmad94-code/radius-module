@@ -199,10 +199,20 @@ def template_helpers() -> dict[str, object]:
         needs, _ = is_endpoint_requires_upgrade(tid, endpoint)
         return needs
 
+    # تسميات عربية للخدمات والحالات — تُستعمل في صفحة «حالة منح المزوّد»
+    # والـtooltips في السايدبار. صدر مركزي واحد كي لا تَنبثق ترجمات
+    # متفرّقة في القوالب.
+    from ..services.provider_service_labels import (
+        service_label_ar, service_status_ar, feature_state_ar,
+    )
+
     return {
         "provider_endpoint_blocked": _provider_endpoint_blocked,
         "provider_service_disabled": _provider_service_disabled,
         "provider_endpoint_requires_upgrade": _provider_endpoint_requires_upgrade,
+        "provider_service_label_ar": service_label_ar,
+        "provider_service_status_ar": service_status_ar,
+        "provider_feature_state_ar": feature_state_ar,
     }
 
 
