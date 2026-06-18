@@ -56,13 +56,43 @@ def _ready_pages():
     return out
 
 
+# أقسام الهبّ تطابق أقسام القائمة الجانبية للموقع بالاسم والترتيب
+# (مصدر الحقيقة app/templates/admin/_sidebar.html) — «البداية والترخيص»
+# قسم تمهيدي يسبقها. حدّث هذه القائمة عند تغيير القائمة الجانبية.
+_WEB_SIDEBAR_ORDER = [
+    "البداية والترخيص",   # تمهيدي (يسبق أقسام السايدبار)
+    "المشتركون",
+    "البطاقات",
+    "البطاقات الإلكترونية",
+    "العروض والسرعات",
+    "الشبكة",
+    "المال والتحصيل",
+    "التشغيل والمخاطر",
+    "التقارير",
+    "الدعم",
+    "الإدارة",
+    "التكامل والجسر",
+]
+
+
 def test_hub_renders_and_lists_categories(app_ctx):
     from app.radius.routes.docs_center import CATEGORIES
     html = _client(app_ctx).get("/admin/radius/docs").get_data(as_text=True)
     assert "كيف تستخدمني" in html or "الأدلة" in html
-    # كل قسم له بطاقة (نتحقّق من ظهور عناوين الأقسام الجديدة على الأقل)
-    for title in ("البداية والترخيص", "الأمان والتحكّم", "الباقات والسرعات"):
+    # كل قسم من أقسام القائمة الجانبية له بطاقة في الهبّ
+    for title in _WEB_SIDEBAR_ORDER:
         assert title in html, f"قسم مفقود من الهبّ: {title}"
+
+
+def test_categories_mirror_web_sidebar_order(app_ctx):
+    """ترتيب أقسام مركز الأدلة يطابق ترتيب أقسام القائمة الجانبية للموقع 1:1."""
+    from app.radius.routes.docs_center import CATEGORIES
+    titles = [cat["title"] for cat in CATEGORIES.values()]
+    assert titles == _WEB_SIDEBAR_ORDER, (
+        f"ترتيب الأقسام لا يطابق القائمة الجانبية.\n"
+        f"المتوقّع: {_WEB_SIDEBAR_ORDER}\nالفعلي: {titles}")
+    # لا قسم «أمان» مستقلّ بعد الآن — الأمان تحت «الإدارة» كما في الموقع
+    assert "الأمان والتحكّم" not in titles
 
 
 def test_all_sections_open(app_ctx):

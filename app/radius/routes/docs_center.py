@@ -7,13 +7,23 @@
 بفهرس جانبي ثابت + خطوات مرقّمة + رسوم توضيحية مبنية بالتصميم نفسه
 (محاكاة مصغّرة للصفحة الحقيقية بدل لقطات شاشة تَقدُم بسرعة).
 
-البنية بعد إعادة الهيكلة (أقسام رئيسية ← أدلة)
-----------------------------------------------
-الأدلة الآن منظّمة في «أقسام» تطابق أقسام القائمة الجانبية: كل قسم
-(المشتركون، البطاقات، المحاسبة...) يضم دليلًا مفصّلًا لكل صفحة تحته.
+البنية (أقسام رئيسية ← أدلة) — مرآة للقائمة الجانبية للموقع
+----------------------------------------------------------
+ترتيب الأقسام وأسماؤها وعضويّة كل دليل تُطابق قائمة الموقع الجانبية
+(``app/templates/admin/_sidebar.html``) 1:1 — تمامًا كما نطابق بنية
+تطبيق فلاتر مع الويب. أي صفحة في الدليل تقابل قسمًا/صفحة حقيقية في
+الموقع الحالي؛ والميزات المُلغاة/المدموجة لا دليل مستقلّ لها (مثال:
+«سياسات الشبكة» نُقلت إلى لوحة الراوتر فطُويت داخل دليل المايكروتيك).
+
+ترتيب أقسام القائمة الجانبية للموقع (مصدر الحقيقة):
+  لوحة التحكم · المشتركون · البطاقات · البطاقات الإلكترونية ·
+  العروض والسرعات · الشبكة · المال والتحصيل · التشغيل والمخاطر ·
+  التقارير · الدعم · الإدارة · التكامل والجسر · كيف تستخدمني
+ونُضيف «البداية والترخيص» قسمًا تمهيديًّا أوّلًا (شروح تأهيل المشغّل
+الجديد التي لا تقابل صفحة مفردة واحدة).
+
 السجل ``CATEGORIES`` أدناه هو مصدر الحقيقة الوحيد: صفحة الهبوط وصفحات
-الأقسام وراوت الدليل العام كلها تُبنى منه — إضافة دليل جديد = إضافة
-قاموس صفحة واحدة هنا + كتابة قالبه.
+الأقسام وراوت الدليل العام كلها تُبنى منه.
 
 الصفحات
 -------
@@ -38,9 +48,8 @@ from flask import Blueprint, abort, render_template
 # ════════════════════════════════════════════════════════════════════
 # سجل الأقسام والأدلة — مصدر الحقيقة الوحيد لمركز الأدلة كله.
 #
-# لماذا dict ثابت في الكود ولا جدول DB؟ الأدلة محتوى منسَّق يُراجَع
-# يدويًا مع كل إصدار (نصوص + قوالب)، وإدخاله كبيانات يضيف تعقيدًا
-# بلا أي فائدة — لا أحد «يضيف دليلًا» من الواجهة.
+# الترتيب أدناه يطابق ترتيب أقسام القائمة الجانبية للموقع. عند تغيير
+# القائمة الجانبية، حدّث هذا السجل ليبقى مرآةً لها.
 #
 # شكل كل قسم:
 #   slug → {
@@ -64,12 +73,13 @@ from flask import Blueprint, abort, render_template
 # ════════════════════════════════════════════════════════════════════
 
 CATEGORIES: dict[str, dict] = {
-    # ─── البداية والترخيص — أول ما يقرأه المشغّل الجديد ───
+    # ─── البداية والترخيص — قسم تمهيدي (يسبق أقسام القائمة الجانبية) ───
+    # شروح تأهيل المشغّل الجديد التي لا تقابل صفحة مفردة في السايدبار.
     "getting-started": {
         "title": "البداية والترخيص",
         "icon": "rocket",
         "color": "#7c3aed",
-        "desc": "أول دخول، ربط النسخة بترخيص المزوّد، حالة المنح، والباقات ونموذج الاشتراك (المجاني مقابل المدفوع وحدّ المتصلين).",
+        "desc": "أول دخول، ربط النسخة بترخيص المزوّد، والباقات ونموذج الاشتراك (المجاني مقابل المدفوع وحدّ المتصلين).",
         "pages": [
             {
                 "slug": "getting-started",
@@ -79,16 +89,6 @@ CATEGORIES: dict[str, dict] = {
                 "template": "radius/docs_getting_started.html",
                 "ready": True,
                 "minutes": 8,
-                "steps": 6,
-            },
-            {
-                "slug": "provider-license",
-                "title": "حالة منح المزوّد والترخيص",
-                "desc": "قراءة صفحة منح المزوّد: حالة التفعيل، حدّ المتصلين، تاريخ الانتهاء، والميزات المتاحة في عقدك.",
-                "icon": "id-badge",
-                "template": "radius/docs_provider_license.html",
-                "ready": True,
-                "minutes": 7,
                 "steps": 6,
             },
             {
@@ -160,48 +160,9 @@ CATEGORIES: dict[str, dict] = {
                 "minutes": 7,
                 "steps": 6,
             },
-            {
-                "slug": "customer-portal",
-                "title": "بوابة الزبون",
-                "desc": "البوابة الذاتية للمشترك وزبون البطاقات: الرصيد والاستهلاك والجلسات، الشحن، وطلبات التجديد/الدعم.",
-                "icon": "user-gear",
-                "template": "radius/docs_customer_portal.html",
-                "ready": True,
-                "minutes": 8,
-                "steps": 6,
-            },
-            {
-                "slug": "service-requests",
-                "title": "طلبات تفعيل الخدمات",
-                "desc": "طلبات تفعيل الخدمات (IP ثابت/تغيير IP بالترافيك، باقات SMS): الإنشاء، المراجعة، الاعتماد، والتطبيق.",
-                "icon": "bolt",
-                "template": "radius/docs_service_requests.html",
-                "ready": True,
-                "minutes": 8,
-                "steps": 6,
-            },
         ],
     },
-    # ─── الباقات والسرعات ───
-    "plans": {
-        "title": "الباقات والسرعات",
-        "icon": "gauge-high",
-        "color": "#0ea5e9",
-        "desc": "إنشاء الباقات وضبط السرعات والحصص والمدد، وجداول السرعة الزمنية (سرعة الليل/النوافذ).",
-        "pages": [
-            {
-                "slug": "plans-speeds",
-                "title": "الباقات والسرعات والجداول",
-                "desc": "إنشاء باقة: السرعة (تنزيل/رفع + برست)، حدود الوقت والبيانات، الصلاحية، وجداول السرعة الزمنية.",
-                "icon": "gauge-high",
-                "template": "radius/docs_plans_speeds.html",
-                "ready": True,
-                "minutes": 12,
-                "steps": 7,
-            },
-        ],
-    },
-    # ─── البطاقات — القسم الثاني الجاهز ───
+    # ─── البطاقات ───
     "cards": {
         "title": "البطاقات",
         "icon": "id-card",
@@ -270,12 +231,12 @@ CATEGORIES: dict[str, dict] = {
             },
         ],
     },
-    # ─── البطاقات الإلكترونية — قوالب الأدلة تكتبها جلسات متوازية ───
+    # ─── البطاقات الإلكترونية ───
     "e-cards": {
         "title": "البطاقات الإلكترونية",
         "icon": "store",
         "color": "#10b981",
-        "desc": "سوق البطاقات الإلكترونية ومتجر MikroTik: عرض المنتجات، البيع، ومتابعة مستخدمي البطاقات.",
+        "desc": "سوق البطاقات الإلكترونية، مستخدمو البطاقات، دعم وطلبات المتجر، والمتجر المنشور على الراوتر.",
         "pages": [
             {
                 "slug": "card-marketplace",
@@ -285,16 +246,6 @@ CATEGORIES: dict[str, dict] = {
                 "template": "radius/docs_card_marketplace.html",
                 "ready": True,
                 "minutes": 10,
-                "steps": 6,
-            },
-            {
-                "slug": "mikrotik-store",
-                "title": "متجر MikroTik",
-                "desc": "ربط المتجر بالراوتر وبيع باقات الهوت سبوت مباشرة — الإعداد والتشغيل خطوة بخطوة.",
-                "icon": "shop",
-                "template": "radius/docs_mikrotik_store.html",
-                "ready": True,
-                "minutes": 9,
                 "steps": 6,
             },
             {
@@ -309,7 +260,7 @@ CATEGORIES: dict[str, dict] = {
             },
             {
                 "slug": "store-support",
-                "title": "دعم المتجر: الطلبات والشات والمحافظ",
+                "title": "دعم وطلبات المتجر",
                 "desc": "مراجعة طلبات الشحن والسحب (الرصيد يتحرّك عند التأكيد فقط)، شات الدعم، وقنوات الاستلام.",
                 "icon": "headset",
                 "template": "radius/docs_store_support.html",
@@ -317,64 +268,43 @@ CATEGORIES: dict[str, dict] = {
                 "minutes": 10,
                 "steps": 6,
             },
-        ],
-    },
-    # ─── المحاسبة والمالية — الأدلة الثلاثة يكتبها صاحب هذا السجل ───
-    "finance": {
-        "title": "المحاسبة والمالية",
-        "icon": "file-invoice-dollar",
-        "color": "#f59e0b",
-        "desc": "المركز المالي، الفواتير والكوبونات، والسجل والتقارير المحاسبية — قراءةً وتشغيلًا.",
-        "pages": [
             {
-                "slug": "finance-center",
-                "title": "المركز المالي",
-                "desc": "الخزائن والمحافظ والإيرادات والديون والسلف في صفحة واحدة: شو يعني كل KPI، وكيف تنشئ محفظة وتشحن وتخصم بأمان.",
-                "icon": "coins",
-                "template": "radius/docs_finance_center.html",
-                "ready": True,
-                "minutes": 12,
-                "steps": 7,
-            },
-            {
-                "slug": "billing-vouchers",
-                "title": "الفواتير والكوبونات",
-                "desc": "أصدر فاتورة لمشترك وولّد دفعة كوبونات شحن واصرفها — كل حقل في النماذج شو معناه وكل حالة شو تعني.",
-                "icon": "file-invoice-dollar",
-                "template": "radius/docs_billing_vouchers.html",
-                "ready": True,
-                "minutes": 10,
-                "steps": 6,
-            },
-            {
-                "slug": "accounting",
-                "title": "السجل والتقارير المحاسبية",
-                "desc": "دفتر القيود التراكمي والتقارير المالية: شو يعني «القيد»، أثر كل حركة، كيف تعكس قيدًا، وكيف تقرأ التقارير وتحفظ لقطة ثابتة.",
-                "icon": "scale-balanced",
-                "template": "radius/docs_accounting.html",
-                "ready": True,
-                "minutes": 14,
-                "steps": 7,
-            },
-            {
-                # دليل التحصيل الميداني — صفحة موجودة، قالبه لاحقًا.
-                "slug": "finance-collection",
-                "title": "التحصيل والمتابعة الميدانية",
-                "desc": "متابعة الديون المستحقة وتسجيل الدفعات الميدانية وأرصدة الموزعين والمطابقة.",
-                "icon": "hand-holding-dollar",
-                "template": "radius/docs_finance_collection.html",
+                "slug": "mikrotik-store",
+                "title": "المتجر المنشور على الراوتر",
+                "desc": "متجر الهوت سبوت المنشور على الراوتر: ربطه، نشره، وواجهة الزبون (المعرض/رصيدي/بطاقاتي/السجل).",
+                "icon": "shop",
+                "template": "radius/docs_mikrotik_store.html",
                 "ready": True,
                 "minutes": 9,
                 "steps": 6,
             },
         ],
     },
-    # ─── الراوترات والشبكة — قوالب الأدلة تكتبها جلسات متوازية ───
+    # ─── العروض والسرعات ───
+    "plans": {
+        "title": "العروض والسرعات",
+        "icon": "gauge-high",
+        "color": "#0ea5e9",
+        "desc": "إنشاء العروض/الباقات وضبط السرعات والحصص والمدد، وجداول السرعة الزمنية (سرعة الليل/النوافذ).",
+        "pages": [
+            {
+                "slug": "plans-speeds",
+                "title": "العروض والسرعات والجداول",
+                "desc": "إنشاء عرض: السرعة (تنزيل/رفع + برست)، حدود الوقت والبيانات، الصلاحية، وجداول السرعة الزمنية.",
+                "icon": "gauge-high",
+                "template": "radius/docs_plans_speeds.html",
+                "ready": True,
+                "minutes": 12,
+                "steps": 7,
+            },
+        ],
+    },
+    # ─── الشبكة ───
     "network": {
-        "title": "الراوترات والشبكة",
+        "title": "الشبكة",
         "icon": "wifi",
         "color": "#6366f1",
-        "desc": "إضافة راوترات MikroTik وربطها بالنظام، مراقبة الأجهزة، ومزامنة الأوامر معها.",
+        "desc": "غرفة عمليات الراوترات، إضافة وإعداد راوترات MikroTik، تشغيل المايكروتيك، RADIUS، والهوت سبوت.",
         "pages": [
             {
                 "slug": "routers-operations",
@@ -394,16 +324,6 @@ CATEGORIES: dict[str, dict] = {
                 "template": "radius/docs_router_dashboard.html",
                 "ready": True,
                 "minutes": 9,
-                "steps": 6,
-            },
-            {
-                "slug": "sync-queue",
-                "title": "طابور المزامنة",
-                "desc": "الأوامر المنتظرة والمرسَلة للراوترات: قراءة الحالات، إعادة المحاولة، ومعالجة الفشل.",
-                "icon": "arrows-rotate",
-                "template": "radius/docs_sync_queue.html",
-                "ready": True,
-                "minutes": 8,
                 "steps": 6,
             },
             {
@@ -448,39 +368,86 @@ CATEGORIES: dict[str, dict] = {
             },
         ],
     },
-    # ─── الأمان والتحكّم بالدخول ───
-    "security": {
-        "title": "الأمان والتحكّم",
-        "icon": "shield-halved",
-        "color": "#dc2626",
-        "desc": "التحكّم بالدخول ووضع السماح، ومنع استنساخ MAC — حماية شبكتك ومشتركيك.",
+    # ─── المال والتحصيل ───
+    "finance": {
+        "title": "المال والتحصيل",
+        "icon": "file-invoice-dollar",
+        "color": "#f59e0b",
+        "desc": "المركز المالي، السجل والتقارير المحاسبية، الفواتير والكوبونات، والتحصيل والمدفوعات.",
         "pages": [
             {
-                "slug": "access-control",
-                "title": "التحكم بالدخول ووضع السماح",
-                "desc": "تعليق الوصول بالنطاق، حظر IP/MAC وfail2ban، أنماط المدّة الثلاثة، ووضع السماح (allowlist/TOFU).",
-                "icon": "user-lock",
-                "template": "radius/docs_access_control.html",
+                "slug": "finance-center",
+                "title": "المركز المالي",
+                "desc": "الخزائن والمحافظ والإيرادات والديون والسلف في صفحة واحدة: شو يعني كل KPI، وكيف تنشئ محفظة وتشحن وتخصم بأمان.",
+                "icon": "coins",
+                "template": "radius/docs_finance_center.html",
                 "ready": True,
-                "minutes": 11,
+                "minutes": 12,
                 "steps": 7,
             },
             {
-                "slug": "anti-mac-clone",
-                "title": "منع استنساخ MAC",
-                "desc": "كشف جهاز مختلف يعيد استخدام نفس الـMAC عبر بصمة الجهاز: الأنماط، الإشارات المتباينة، والربط.",
-                "icon": "fingerprint",
-                "template": "radius/docs_anti_mac_clone.html",
+                "slug": "accounting",
+                "title": "السجل والتقارير المحاسبية",
+                "desc": "دفتر القيود التراكمي والتقارير المالية: شو يعني «القيد»، أثر كل حركة، كيف تعكس قيدًا، وكيف تقرأ التقارير وتحفظ لقطة ثابتة.",
+                "icon": "scale-balanced",
+                "template": "radius/docs_accounting.html",
                 "ready": True,
-                "minutes": 9,
+                "minutes": 14,
                 "steps": 7,
             },
-            # ملاحظة: «سياسات الشبكة» لم تعد ميزة/صفحة مستقلّة — نُقلت إلى لوحة كل
-            # راوتر (حظر المواقع + المواقع المسموحة) في commit 80e9483، وحُذف جزء
-            # الوصول البعيد. شرحها مطوي ضمن دليل «إعداد وتشغيل المايكروتيك».
+            {
+                "slug": "billing-vouchers",
+                "title": "الفواتير والكوبونات",
+                "desc": "أصدر فاتورة لمشترك وولّد دفعة كوبونات شحن واصرفها — كل حقل في النماذج شو معناه وكل حالة شو تعني.",
+                "icon": "file-invoice-dollar",
+                "template": "radius/docs_billing_vouchers.html",
+                "ready": True,
+                "minutes": 10,
+                "steps": 6,
+            },
+            {
+                # دليل التحصيل الميداني — صفحة «التحصيل والمدفوعات» (collection_hub).
+                "slug": "finance-collection",
+                "title": "التحصيل والمدفوعات",
+                "desc": "متابعة الديون المستحقة وتسجيل الدفعات الميدانية وأرصدة الموزعين والمطابقة.",
+                "icon": "hand-holding-dollar",
+                "template": "radius/docs_finance_collection.html",
+                "ready": True,
+                "minutes": 9,
+                "steps": 6,
+            },
         ],
     },
-    # ─── التقارير — قوالب الأدلة تكتبها جلسات متوازية ───
+    # ─── التشغيل والمخاطر ───
+    "operations": {
+        "title": "التشغيل والمخاطر",
+        "icon": "tower-broadcast",
+        "color": "#f97316",
+        "desc": "التواصل والحملات وقوالب الرسائل، وتنبيهات تلجرام/SMS/واتساب.",
+        "pages": [
+            {
+                "slug": "message-templates",
+                "title": "قوالب الرسائل والتواصل",
+                "desc": "تصميم قوالب الواتساب والرسائل والمتغيّرات المتاحة فيها والقنوات، ضمن مركز التواصل والحملات.",
+                "icon": "comment-dots",
+                "template": "radius/docs_message_templates.html",
+                "ready": True,
+                "minutes": 7,
+                "steps": 6,
+            },
+            {
+                "slug": "alerts",
+                "title": "التنبيهات: تلجرام وSMS وواتساب",
+                "desc": "ضبط بوت تلجرام وجرد تنبيهات الإدارة (تفعيل/اختبار كل تنبيه)، وقنوات SMS/واتساب.",
+                "icon": "bell",
+                "template": "radius/docs_alerts.html",
+                "ready": True,
+                "minutes": 9,
+                "steps": 6,
+            },
+        ],
+    },
+    # ─── التقارير ───
     "reports": {
         "title": "التقارير",
         "icon": "chart-column",
@@ -519,21 +486,50 @@ CATEGORIES: dict[str, dict] = {
             },
         ],
     },
-    # ─── الإعدادات والإدارة — قوالب الأدلة تكتبها جلسات متوازية ───
-    "settings": {
-        "title": "الإعدادات والإدارة",
-        "icon": "gear",
-        "color": "#64748b",
-        "desc": "إعدادات النظام، المدراء، الأدوار والصلاحيات، وقوالب الرسائل.",
+    # ─── الدعم ───
+    "support": {
+        "title": "الدعم",
+        "icon": "headset",
+        "color": "#14b8a6",
+        "desc": "الخدمات والمعدّات وطلبات تفعيلها، وبوابات العملاء الذاتية.",
         "pages": [
             {
-                "slug": "system-settings",
-                "title": "إعدادات النظام",
-                "desc": "الإعدادات العامة: العملة، المنطقة الزمنية، الهوية البصرية، وخيارات التشغيل — شو يعني كل إعداد.",
-                "icon": "sliders",
-                "template": "radius/docs_system_settings.html",
+                "slug": "service-requests",
+                "title": "طلبات تفعيل الخدمات",
+                "desc": "طلبات تفعيل الخدمات (IP ثابت/تغيير IP بالترافيك، باقات SMS): الإنشاء، المراجعة، الاعتماد، والتطبيق.",
+                "icon": "bolt",
+                "template": "radius/docs_service_requests.html",
                 "ready": True,
-                "minutes": 9,
+                "minutes": 8,
+                "steps": 6,
+            },
+            {
+                "slug": "customer-portal",
+                "title": "بوابات العملاء",
+                "desc": "البوابة الذاتية للمشترك وزبون البطاقات: الرصيد والاستهلاك والجلسات، الشحن، وطلبات التجديد/الدعم.",
+                "icon": "user-gear",
+                "template": "radius/docs_customer_portal.html",
+                "ready": True,
+                "minutes": 8,
+                "steps": 6,
+            },
+        ],
+    },
+    # ─── الإدارة ───
+    "settings": {
+        "title": "الإدارة",
+        "icon": "gear",
+        "color": "#64748b",
+        "desc": "المدراء والأدوار والصلاحيات، النسخ والحفظ، إعدادات النظام، الأمان (منع استنساخ MAC والتحكم بالدخول)، وطابور المزامنة.",
+        "pages": [
+            {
+                "slug": "admins",
+                "title": "المدراء والمستخدمون الإداريون",
+                "desc": "إضافة مدير، تعيين دوره، وتفعيله أو إيقافه — ومفهوم المدير الرئيسي (سوبر).",
+                "icon": "user-tie",
+                "template": "radius/docs_admins.html",
+                "ready": True,
+                "minutes": 7,
                 "steps": 6,
             },
             {
@@ -547,26 +543,6 @@ CATEGORIES: dict[str, dict] = {
                 "steps": 6,
             },
             {
-                "slug": "admins",
-                "title": "المدراء والمستخدمون الإداريون",
-                "desc": "إضافة مدير، تعيين دوره، وتفعيله أو إيقافه — ومفهوم المدير الرئيسي (سوبر).",
-                "icon": "user-tie",
-                "template": "radius/docs_admins.html",
-                "ready": True,
-                "minutes": 7,
-                "steps": 6,
-            },
-            {
-                "slug": "message-templates",
-                "title": "قوالب الرسائل",
-                "desc": "تصميم قوالب الواتساب والرسائل والمتغيّرات المتاحة فيها والقنوات.",
-                "icon": "comment-dots",
-                "template": "radius/docs_message_templates.html",
-                "ready": True,
-                "minutes": 7,
-                "steps": 6,
-            },
-            {
                 "slug": "backups",
                 "title": "النسخ الاحتياطي والاستعادة",
                 "desc": "نسخ النظام، الجدولة التلقائية (Google Drive)، نسخ الراوترات، والاستعادة بأمان.",
@@ -577,13 +553,62 @@ CATEGORIES: dict[str, dict] = {
                 "steps": 6,
             },
             {
-                "slug": "alerts",
-                "title": "التنبيهات: تلجرام وSMS وواتساب",
-                "desc": "ضبط بوت تلجرام وجرد تنبيهات الإدارة (تفعيل/اختبار كل تنبيه)، وقنوات SMS/واتساب.",
-                "icon": "bell",
-                "template": "radius/docs_alerts.html",
+                "slug": "system-settings",
+                "title": "إعدادات النظام",
+                "desc": "الإعدادات العامة: العملة، المنطقة الزمنية، الهوية البصرية، وخيارات التشغيل — شو يعني كل إعداد.",
+                "icon": "sliders",
+                "template": "radius/docs_system_settings.html",
                 "ready": True,
                 "minutes": 9,
+                "steps": 6,
+            },
+            {
+                "slug": "anti-mac-clone",
+                "title": "منع استنساخ MAC",
+                "desc": "كشف جهاز مختلف يعيد استخدام نفس الـMAC عبر بصمة الجهاز: الأنماط، الإشارات المتباينة، والربط.",
+                "icon": "fingerprint",
+                "template": "radius/docs_anti_mac_clone.html",
+                "ready": True,
+                "minutes": 9,
+                "steps": 7,
+            },
+            {
+                "slug": "access-control",
+                "title": "التحكم بالدخول ووضع السماح",
+                "desc": "تعليق الوصول بالنطاق، حظر IP/MAC وfail2ban، أنماط المدّة الثلاثة، ووضع السماح (allowlist/TOFU).",
+                "icon": "user-lock",
+                "template": "radius/docs_access_control.html",
+                "ready": True,
+                "minutes": 11,
+                "steps": 7,
+            },
+            {
+                "slug": "sync-queue",
+                "title": "طابور المزامنة",
+                "desc": "الأوامر المنتظرة والمرسَلة للراوترات: قراءة الحالات، إعادة المحاولة، ومعالجة الفشل.",
+                "icon": "arrows-rotate",
+                "template": "radius/docs_sync_queue.html",
+                "ready": True,
+                "minutes": 8,
+                "steps": 6,
+            },
+        ],
+    },
+    # ─── التكامل والجسر ───
+    "integration": {
+        "title": "التكامل والجسر",
+        "icon": "plug",
+        "color": "#0891b2",
+        "desc": "ربط النسخة بترخيص المزوّد وقراءة حالة منح المزوّد (التفعيل، حدّ المتصلين، الميزات المتاحة).",
+        "pages": [
+            {
+                "slug": "provider-license",
+                "title": "حالة منح المزوّد والترخيص",
+                "desc": "قراءة صفحة منح المزوّد: حالة التفعيل، حدّ المتصلين، تاريخ الانتهاء، والميزات المتاحة في عقدك.",
+                "icon": "id-badge",
+                "template": "radius/docs_provider_license.html",
+                "ready": True,
+                "minutes": 7,
                 "steps": 6,
             },
         ],
