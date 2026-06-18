@@ -91,7 +91,7 @@ SERVICE_NAMES_AR: dict[str, str] = {
     "system":              "النظام",
     "tools":               "الأدوات",
     "tokens":              "مفاتيح API",
-    "webhooks":            "Webhooks",
+    "webhooks":            "إشعارات الربط",
     "share_groups":        "مجموعات المشاركة",
     "business_os":         "أعمال HobeOS",
     "print_templates":     "قوالب الطباعة",
@@ -135,6 +135,26 @@ SERVICE_NAMES_AR: dict[str, str] = {
     "internal_auth":       "المصادقة الداخلية",
     "health":              "الصحة",
     "i18n":                "تعدّد اللغات",
+
+    # ── مفاتيح كتالوج المزوّد الإضافية ──
+    "customer_support":         "الدعم والتذاكر",
+    "integration_bridge":       "جسر التكامل",
+    "integration_tokens":       "مفاتيح الواجهة",
+    "ip_change_vpn":            "تغيير IP / VPN",
+    "ip_pools":                 "نطاقات العناوين",
+    "loop_detection":           "كشف اللوب",
+    "multi_tenant":             "الجهات (المستأجرون)",
+    "network_policies":         "سياسات الشبكة",
+    "operations_center":        "مركز العمليات",
+    "public_ip_change":         "تغيير IP العام",
+    "radius_customer_portals":  "بوابات عملاء الريدياس",
+    "remote_access":            "الوصول البعيد",
+    "remote_health_fix":        "صيانة عن بعد",
+    "remote_support":           "دعم فني عن بعد",
+    "risk_events":              "الأحداث والمخاطر",
+    "router_diagnostics":       "تشخيص الراوترات",
+    "sms_gateway":              "بوابة SMS",
+    "whatsapp_gateway":         "واتساب",
 }
 
 

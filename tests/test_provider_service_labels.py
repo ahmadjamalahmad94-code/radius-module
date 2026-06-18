@@ -110,6 +110,34 @@ class TestServiceNameMap:
             assert svc_key in SERVICE_NAMES_AR, \
                 f"{svc_key} missing from SERVICE_NAMES_AR"
 
+    def test_provider_catalog_extra_keys_translated(self):
+        """مفاتيح كتالوج المزوّد الإضافية (كانت تَظهر إنجليزية خام) صارت عربية."""
+        from app.radius.services.provider_service_labels import service_label_ar
+        cases = {
+            "customer_support":        "الدعم والتذاكر",
+            "integration_bridge":      "جسر التكامل",
+            "integration_tokens":      "مفاتيح الواجهة",
+            "ip_change_vpn":           "تغيير IP / VPN",
+            "ip_pools":                "نطاقات العناوين",
+            "loop_detection":          "كشف اللوب",
+            "multi_tenant":            "الجهات (المستأجرون)",
+            "network_policies":        "سياسات الشبكة",
+            "operations_center":       "مركز العمليات",
+            "public_ip_change":        "تغيير IP العام",
+            "radius_customer_portals": "بوابات عملاء الريدياس",
+            "remote_access":           "الوصول البعيد",
+            "remote_health_fix":       "صيانة عن بعد",
+            "remote_support":          "دعم فني عن بعد",
+            "risk_events":             "الأحداث والمخاطر",
+            "router_diagnostics":      "تشخيص الراوترات",
+            "sms_gateway":             "بوابة SMS",
+            "webhooks":                "إشعارات الربط",
+            "whatsapp_gateway":        "واتساب",
+        }
+        for k, expected in cases.items():
+            got = service_label_ar(k)
+            assert got == expected, f"{k} expected '{expected}', got '{got}'"
+
     def test_unknown_key_humanized_fallback(self):
         """مفتاح غير مُعجَم: نَسقط لـhumanized بدلًا من KeyError."""
         from app.radius.services.provider_service_labels import service_label_ar
