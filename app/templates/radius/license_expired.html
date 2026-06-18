@@ -1,0 +1,88 @@
+{# «الترخيص منتهي — جدّد الترخيص» — لقطة موجودة لكن العقد منتهٍ/موقوف
+   أو السماحية المحلّية لتزامن متقطّع نفدت. اللوحة كلّها مقفلة (إلا
+   الصفحات التشخيصية وتسجيل الدخول/الخروج). #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}{{ _('الترخيص منتهي — جدّد الترخيص') }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-hourglass-end"></i>{% endblock %}
+{% block page_title %}{{ _('الترخيص منتهي — جدّد الترخيص') }}{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('عقد الخدمة الحالي لم يعد ساريًا') }}</span>{% endblock %}
+
+{% block content %}
+{% set _is_sync = decision.state.value == 'sync_outage_beyond_grace' %}
+{{ hub.megahero(
+  _('الترخيص منتهي — جدّد الترخيص') if not _is_sync
+    else _('انقطاع تزامن طويل — تأكّد من الترخيص'),
+  subtitle=(_('انقطع تزامن الترخيص أطول من السماحية المحلّية. لا نعرف يقينًا هل العقد لا يزال ساريًا — نقفل اللوحة احتياطًا. أعد الاتصال بلوحة المزوّد لتجديد التزامن، أو راجع الترخيص لو انتهى فعلًا.') if _is_sync
+              else _('عقد الخدمة الحالي لم يعد ساريًا (موقوف/منتهٍ/معلَّق). تبقى اللوحة مقفلة لجميع المستخدمين بما في ذلك المدير الرئيسي حتى يُجدَّد الترخيص من لوحة المزوّد.')),
+  icon='hourglass-end',
+  kpis=[
+    {'label': _('حالة الترخيص'), 'value': decision.last_status or '—',
+     'icon': 'circle-exclamation', 'variant': 'red'},
+    {'label': _('انتهاء العقد'),
+     'value': (decision.expires_at[:16] if decision.expires_at else _('غير محدّد')),
+     'icon': 'calendar-xmark', 'variant': 'amber'},
+    {'label': _('آخر تزامن ناجح'),
+     'value': (decision.fetched_at[:16] if decision.fetched_at else '—'),
+     'icon': 'rotate', 'variant': 'gray'},
+  ]
+) }}
+
+{% call hub.section(_('سبب القفل'), icon='circle-info') %}
+  <ul class="hub-list">
+    <li><b>{{ _('الرمز الداخلي') }}:</b> <code>{{ decision.reason or '—' }}</code></li>
+    {% if decision.last_status %}
+    <li><b>{{ _('حالة العقد') }}:</b> <code>{{ decision.last_status }}</code></li>
+    {% endif %}
+    {% if decision.expires_at %}
+    <li><b>{{ _('انتهاء العقد') }}:</b> <span class="mono small">{{ decision.expires_at }}</span></li>
+    {% endif %}
+    {% if decision.grace_until %}
+    <li><b>{{ _('نهاية السماحية من المزوّد') }}:</b> <span class="mono small">{{ decision.grace_until }}</span></li>
+    {% endif %}
+    {% if _is_sync %}
+    <li><b>{{ _('تأخّر التزامن') }}:</b> {{ decision.stale_days }} {{ _('يوم') }} ({{ _('السماحية المحلّية') }} {{ _('انتهت') }})</li>
+    {% endif %}
+  </ul>
+{% endcall %}
+
+{% call hub.section(_('ما الخطوات؟'), icon='list-ol') %}
+  <ol class="hub-list">
+    {% if _is_sync %}
+    <li>{{ _('تأكّد من اتصال جسر التكامل (admin_bridge) وأنه يصل لمزوّد الخدمة.') }}</li>
+    <li>{{ _('اضغط «مزامنة الآن» من صفحة جسر الإدارة لإحضار لقطة طازجة.') }}</li>
+    <li>{{ _('لو ظهرت اللقطة بحالة «منتهية» فعلًا، اتبع الخطوات أدناه لتجديد الترخيص.') }}</li>
+    {% endif %}
+    <li>{{ _('تواصل مع مزوّد النظام لتجديد عقد الخدمة من لوحة التراخيص.') }}</li>
+    <li>{{ _('بعد التجديد، اضغط «مزامنة الآن» من صفحة جسر الإدارة.') }}</li>
+    <li>{{ _('حدّث هذه الصفحة — اللوحة ستفتح مباشرة.') }}</li>
+  </ol>
+  <div class="hub-actions">
+    {% if endpoint_exists is defined and endpoint_exists('radius.license_file') %}
+      {{ hub.btn(_('ترخيص النظام'),
+                  href=url_for('radius.license_file'),
+                  variant='primary', icon='id-card') }}
+    {% endif %}
+    {% if endpoint_exists is defined and endpoint_exists('radius.admin_bridge') %}
+      {{ hub.btn(_('جسر الإدارة'),
+                  href=url_for('radius.admin_bridge'),
+                  variant='secondary', icon='link') }}
+    {% endif %}
+    {% if endpoint_exists is defined and endpoint_exists('radius.provider_grants_status_page') %}
+      {{ hub.btn(_('حالة المنح (تشخيصي)'),
+                  href=url_for('radius.provider_grants_status_page'),
+                  variant='secondary', icon='clipboard-list') }}
+    {% endif %}
+    {{ hub.btn(_('تسجيل الخروج'),
+                href=url_for('radius.auth_logout'),
+                variant='danger', icon='arrow-right-from-bracket') }}
+  </div>
+{% endcall %}
+
+{% call hub.section(_('لماذا حتى السوبر-أدمن لا يتجاوز؟'), icon='circle-question') %}
+  <p class="hub-text-mute">
+    {{ _('قرار انتهاء الترخيص قرار تجاري بين العميل والمزوّد — وليس RBAC داخليًّا. الصلاحيات الداخلية (super_admin) تحكم من يفعل ماذا داخل العقد، لا أن تتجاوز العقد نفسه. الإقفال يشمل كل الأدوار حتى تنتهي إجراءات التجديد.') }}
+  </p>
+{% endcall %}
+{% endblock %}

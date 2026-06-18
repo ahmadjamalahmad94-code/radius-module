@@ -512,6 +512,21 @@ def _install_stubs(app: Flask) -> None:
         ctx.update(_rbac_ui_context())
         return ctx
 
+    # Provider gate template helpers — provider_endpoint_blocked /
+    # provider_service_disabled. Used by the sidebar macro to silently hide
+    # provider-disabled items (no super-admin override). Memoized per request
+    # inside provider_grant.get_payload via flask.g.
+    @app.context_processor
+    def _inject_provider_gate():
+        try:
+            from app.radius.auth.provider_gate import template_helpers
+            return template_helpers()
+        except Exception:  # noqa: BLE001 — never break a page on helper import
+            return {
+                "provider_endpoint_blocked": lambda _ep: False,
+                "provider_service_disabled": lambda _k: False,
+            }
+
     # Unified system config (currency / timezone / branding) + money & local-time
     # filters — single source of truth read from tenant_settings.
     @app.context_processor

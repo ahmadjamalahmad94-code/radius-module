@@ -25,6 +25,13 @@ tempfile.tempdir = str(_SESSION_TMP_ROOT)
 os.environ.setdefault("TMP", str(_SESSION_TMP_ROOT))
 os.environ.setdefault("TEMP", str(_SESSION_TMP_ROOT))
 os.environ.setdefault("TMPDIR", str(_SESSION_TMP_ROOT))
+# License-lifecycle gate: tests run on fresh DBs without provider license
+# snapshots, which the live gate would treat as NEVER_ACTIVATED → full panel
+# lockout. The gate respects a dual-key bypass (must combine with
+# HOBERADIUS_NO_SEED=1, which every test fixture sets) so production cannot
+# accidentally disable it. License-lifecycle tests that exercise the gate
+# explicitly delete this env via monkeypatch.delenv.
+os.environ.setdefault("HOBERADIUS_LICENSE_GATE_TEST_BYPASS", "1")
 _ORIGINAL_MKDTEMP = tempfile.mkdtemp
 _CREATED_TMP_DIRS: list[Path] = []
 

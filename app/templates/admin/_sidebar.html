@@ -99,9 +99,16 @@
     in app/__init__.py — O(1) lookup; `url_for` is only called
     when the route is confirmed present.
     RBAC: same contract as nav_item — `perm` overrides automatic
-    perm_for_endpoint(endpoint); non-permitted → hide or freeze. -#}
+    perm_for_endpoint(endpoint); non-permitted → hide or freeze.
+    Provider gate (سلطة المزوّد فوق RBAC): إذا أوقف المزوّد الخدمة
+    المرتبطة بهذا الـendpoint، نُخفيه بصمت من الشريط الجانبي حتى
+    للسوبر-أدمن. provider_endpoint_blocked محقون من i18n/context. -#}
 {%- if endpoint_exists is defined and endpoint_exists(endpoint) -%}
-  {%- if nav_can(endpoint, perm)|trim -%}
+  {%- set _prov_blocked = (provider_endpoint_blocked is defined)
+                            and provider_endpoint_blocked(endpoint) -%}
+  {%- if _prov_blocked -%}
+    {#- خدمة موقوفة من المزوّد — لا ظهور (لا حتى للسوبر). -#}
+  {%- elif nav_can(endpoint, perm)|trim -%}
   {%- if args -%}
     {%- set _href = url_for(endpoint, **args) -%}
   {%- else -%}
@@ -930,6 +937,11 @@
         {{ sub_item('radius.admin_bridge', _('جسر الإدارة'), m_admin_bridge) }}
         {# ترخيص النظام — اتصال الريدياس بلوحة التراخيص السحابية وعقد التشغيل (ليس تراخيص أنفاق الراوترات) #}
         {{ sub_item('radius.license_file', _('ترخيص النظام'), m_license_file) }}
+        {# حالة منح المزوّد — تشخيصية: تعرض عقد القدرات كما وصل (موقوفة/مخفية
+           من البوابة/قراءة فقط). صفحة مستثناة من حارس البوابة كي تبقى مرئية
+           حتى لو أوقف المزوّد كل الخدمات. سوبر-أدمن فقط. #}
+        {{ sub_item('radius.provider_grants_status_page', _('حالة منح المزوّد'),
+            '/_provider/grants' in path) }}
         {# الأنفاق — استهلاك جسر أنفاق CHR الموقّع (عرض + طلب فقط، لا أسرار خام) #}
         {{ sub_item('radius.tunnels_list', _('الأنفاق'), m_tunnels) }}
         {{ sub_item('radius.wh_settings', _('إشعارات الربط'),    m_webhooks) }}

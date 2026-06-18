@@ -799,6 +799,23 @@ def users_temp_speed_cancel(username: str):
 
 def users_create():
     dto = _form_dto()
+    # حارس سقف المزوّد — يُرفض الإنشاء إن تجاوز الحدّ المباع. ينطبق على
+    # السوبر-أدمن (سلطة المزوّد فوق RBAC). آمن: أي خطأ يُسقط الفحص.
+    try:
+        from ..services import provider_grant
+        _lim = provider_grant.check_limit(_tid(), "subscribers", increment=1)
+        if not _lim.allowed:
+            flash(_lim.message_ar, "error")
+            plans = list(get_plans_service().list(limit=500))
+            return render_template("radius/users_form.html",
+                sub=_sub_with_meta_for_template(dto), plans=plans, statuses=ACCOUNT_STATUSES,
+                user_types=USER_TYPES, is_new=True,
+                speed_rules_panel=_new_subscriber_speed_panel(),
+                login_macs=[],
+                default_country=_default_country(),
+                **_form_select_options()), 403
+    except Exception:  # noqa: BLE001
+        pass
     try:
         saved = get_users_service().create(actor=_actor(), sub=dto)
     except RadiusError as e:

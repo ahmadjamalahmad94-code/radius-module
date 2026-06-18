@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, g, jsonify, request
 
 _TEMPLATES_DIR = Path(__file__).resolve().parent.parent / "templates"
 
@@ -321,6 +321,17 @@ def _register_all(bp: Blueprint) -> None:
     from .table_export import register_table_export_routes
     register_table_export_routes(bp)
 
+    # صفحات بوابة المزوّد (provider gate): «الخدمة موقوفة» + «حالة المنح».
+    # تُسجَّل مبكرًا لضمان توفّر الـendpoint قبل أوّل redirect من الحارس.
+    from .provider_gate_pages import register_provider_gate_pages
+    register_provider_gate_pages(bp)
+
+    # صفحات دورة حياة الترخيص: «فعّل الترخيص» (لم يُفعَّل) + «منتهٍ — جدّد».
+    # تُسجَّل مبكرًا لضمان توفّر الـendpoint قبل أوّل redirect من حارس
+    # _perm_guard على نسخ غير مفعّلة/منتهية.
+    from .license_lifecycle_pages import register_license_lifecycle_pages
+    register_license_lifecycle_pages(bp)
+
     # مركز الأدلة «كيف تستخدمني» — شروحات مصوّرة داخل الموقع
     from .docs_center import register_docs_center_routes
     register_docs_center_routes(bp)
@@ -362,6 +373,37 @@ def _install_global_login_guard(bp: Blueprint) -> None:
             flash("سجّل الدخول للمتابعة.", "warning")
             return redirect(url_for("radius.auth_login", next=request.path))
         return None
+
+
+# صفحات تبقى مكشوفة لحارس مُنحة المزوّد (provider gate) — حتى لو أوقف المزوّد
+# كل الخدمات، تظلّ هذه الصفحات قابلة للوصول كي يرى المسؤول ما الذي حدث ويتصل
+# بالمزوّد. مفاتيح بلا بادئة 'radius.'.
+_PROVIDER_GATE_SKIP: frozenset[str] = frozenset({
+    "provider_blocked_page",       # صفحة «الخدمة غير مفعّلة من المزوّد»
+    "provider_grants_status_page", # حالة المنح من المزوّد (تشخيصية)
+    "license_activate_page",       # «فعّل الترخيص» (لم يُفعَّل)
+    "license_expired_page",        # «الترخيص منتهي — جدّد»
+    "auth_login", "auth_logout",   # ضرورية للدخول/الخروج
+    "set_locale",                  # مبدّل اللغة
+    "license_file",                # صفحة الترخيص (تعرض حالة الاتصال بالمزوّد)
+    "admin_bridge",                # جسر التكامل (لإعادة المزامنة)
+    "dashboard",                   # تبقى قابلة للوصول للقراءة (بدون إجراءات)
+})
+
+# صفحات تبقى مكشوفة لحارس دورة حياة الترخيص (license lifecycle gate) —
+# مجموعة أضيق: فقط ما يحتاجه المسؤول للإصلاح/الخروج/التشخيص. لا نُضيف
+# dashboard هنا لأنّ ترخيصًا منتهيًا/غير مفعَّل = اللوحة كاملة مقفلة بما
+# فيها الصفحة الرئيسية. الفرق عن provider gate: هذا أعلى سلطة وأقفل أوسع.
+_LIFECYCLE_GATE_SKIP: frozenset[str] = frozenset({
+    "license_activate_page",
+    "license_expired_page",
+    "provider_grants_status_page", # تشخيصي — مفيد لرؤية اللقطة
+    "provider_blocked_page",       # قد يصل إليها من رابط قديم
+    "auth_login", "auth_logout",
+    "set_locale",
+    "license_file",
+    "admin_bridge",
+})
 
 
 # الحارس الثاني: صلاحيات الدور (RBAC) على المسارات الحسّاسة.
@@ -592,6 +634,68 @@ def _install_permission_guard(bp: Blueprint) -> None:
         name = ep.split(".", 1)[1]
         is_super = bool(session.get("is_super_admin"))
         perms = session.get("permissions") or []
+
+        # ── (0) حارس مُنحة المزوّد — أعلى سلطة، فوق السوبر-أدمن. ──
+        # المزوّد (لوحة التراخيص) يبيع الخدمات للعميل؛ إيقافها/إخفاؤها يسري
+        # على كل الريديوس بما في ذلك المدير الرئيسي. هذا قرار تجاري، ليس
+        # RBAC داخلي — السوبر يتجاوز RBAC لكن لا يتجاوز عقد المزوّد. الحارس
+        # هنا لا يستثني السوبر عمدًا.
+        # نقاط الإدارة التشخيصية لصفحة حالة المنح + اللوحات التشخيصية
+        # الأساسية + login/logout تبقى مكشوفة كي يظلّ المسؤول قادرًا على
+        # رؤية وضع المزوّد حتى لو أوقف خدمة كاملة.
+        # ── (0a) حارس دورة حياة الترخيص — أعلى سلطة على الإطلاق. ──
+        # يفصل بين «انقطاع تزامن عابر» (fail-open، الإبقاء على آخر معلوم
+        # ضمن السماحية المحلّية) و«ترخيص منتهٍ/غير مفعّل» (fail-closed،
+        # إقفال شامل). لا تخطّي من السوبر-أدمن — قرار تجاري بين العميل
+        # والمزوّد فوق RBAC الداخلي.
+        # المجموعة _LIFECYCLE_GATE_SKIP ضيّقة عمدًا: فقط ما يحتاجه المسؤول
+        # للإصلاح/الخروج/التشخيص (lockout pages + login/logout + locale +
+        # ترخيص + جسر + حالة المنح).
+        if name not in _LIFECYCLE_GATE_SKIP:
+            try:
+                from ..services.license_lifecycle import (
+                    evaluate_cached, LifecycleState)
+                from ..core.tenant import DEFAULT_TENANT_ID
+                tid = int(getattr(g, "tenant_id", None)
+                           or session.get("tenant_id")
+                           or DEFAULT_TENANT_ID)
+                decision = evaluate_cached(tid)
+            except Exception:  # noqa: BLE001 — لا نكسر اللوحة على باج فحص
+                decision = None
+            if decision is not None and decision.blocks_panel:
+                from flask import redirect, url_for
+                if decision.state == LifecycleState.NEVER_ACTIVATED:
+                    target = "radius.license_activate_page"
+                else:
+                    # EXPIRED أو SYNC_OUTAGE_BEYOND_GRACE → نفس الصفحة
+                    # (مع تفسير مختلف داخل القالب حسب decision.state).
+                    target = "radius.license_expired_page"
+                if request.method in ("GET", "HEAD"):
+                    return redirect(url_for(target))
+                # كتابة على نسخة مقفولة → 403 صريح.
+                abort(403)
+
+        if name not in _PROVIDER_GATE_SKIP:
+            blocked = False
+            skey = ""
+            try:
+                from ..auth.provider_gate import is_endpoint_blocked_by_provider
+                from ..core.tenant import DEFAULT_TENANT_ID
+                tid = int(getattr(g, "tenant_id", None)
+                           or session.get("tenant_id")
+                           or DEFAULT_TENANT_ID)
+                blocked, skey = is_endpoint_blocked_by_provider(tid, name)
+            except Exception:  # noqa: BLE001 — fail-open (لا نكسر اللوحة)
+                # تعطّل تزامن المزوّد لا يَكسر اللوحة — السماح هو الافتراضي.
+                pass
+            if blocked:
+                # خدمة موقوفة من المزوّد — لا تخطّي من السوبر.
+                # GET → صفحة blocked الودودة. الكتابة → 403 (يُترجَم في الـUI).
+                from flask import redirect, url_for
+                if request.method in ("GET", "HEAD"):
+                    return redirect(url_for(
+                        "radius.provider_blocked_page", service=skey))
+                abort(403)
 
         # ── (3) حارس أعلام القسم — يُقدّم على RBAC لأنّه حظر مستوى
         #        المستأجر بالكامل، ولا مَعنى لقياس صلاحيات داخل قسم

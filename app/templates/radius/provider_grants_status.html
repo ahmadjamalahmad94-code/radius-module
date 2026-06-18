@@ -1,0 +1,96 @@
+{# حالة منح المزوّد (provider grants status) — صفحة تشخيصية للمسؤول.
+   تعرض كل ما وصل من لقطة عقد القدرات (capacity contract): قائمة الخدمات/
+   الميزات وتفسير كل حالة (موقوفة/مخفية من البوابة/للقراءة فقط). #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}{{ _('حالة منح المزوّد') }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-clipboard-list"></i>{% endblock %}
+{% block page_title %}{{ _('حالة منح المزوّد') }}{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('ما تراه هنا هو عقد الخدمة كما وصل من لوحة التراخيص') }}</span>{% endblock %}
+
+{% block content %}
+{{ hub.megahero(
+  _('حالة منح المزوّد'),
+  subtitle=_('عرض كامل لما أرسله المزوّد في عقد القدرات (capacity contract): كل خدمة موقوفة هنا = موقوفة في كل أنحاء الريديوس بما في ذلك المدير الرئيسي. لا يمكن تجاوزها داخليًّا — راجع المزوّد لتعديل العقد.'),
+  icon='clipboard-list',
+  kpis=[
+    {'label': _('إجمالي الخدمات'),    'value': total_count,        'icon': 'list',          'variant': 'brand'},
+    {'label': _('موقوفة'),            'value': disabled_count,     'icon': 'lock',          'variant': 'red'},
+    {'label': _('مخفية من البوابة'),  'value': hidden_portal_count,'icon': 'eye-slash',     'variant': 'amber'},
+    {'label': _('للقراءة فقط'),       'value': readonly_count,     'icon': 'eye',           'variant': 'gray'},
+  ]
+) }}
+
+{% if not has_snapshot %}
+{% call hub.section(_('لا توجد لقطة عقد من المزوّد بعد'), icon='circle-info') %}
+  <p class="hub-text-mute">
+    {{ _('لم تصل بعد أي لقطة capacity contract من لوحة التراخيص. حتى يتم أول تزامن ناجح، كل الخدمات معاملة كمسموحة (fail-open). إذا كنت تظنّ أن النظام يجب أن يكون مربوطًا، راجع جسر التكامل وصفحة «ترخيص النظام».') }}
+  </p>
+  <div class="hub-actions">
+    {{ hub.btn(_('صفحة ترخيص النظام'),
+                href=url_for('radius.license_file') if endpoint_exists('radius.license_file') else '#',
+                variant='secondary', icon='id-card') }}
+  </div>
+{% endcall %}
+{% else %}
+{% call hub.section(_('قائمة الخدمات والميزات'), icon='list',
+                     meta=(grants|length|string ~ ' ' ~ _('عنصر'))) %}
+  <div class="hub-table-wrap">
+    <table class="hub-table" data-testid="provider-grants-table">
+      <thead><tr>
+        <th>{{ _('المفتاح') }}</th>
+        <th>{{ _('حالة الخدمة') }}</th>
+        <th>{{ _('حالة الميزة') }}</th>
+        <th>{{ _('النتيجة') }}</th>
+        <th>{{ _('التفسير') }}</th>
+      </tr></thead>
+      <tbody>
+        {% for g in grants %}
+        <tr>
+          <td class="mono small">{{ g.key }}</td>
+          <td class="small">
+            {% if g.present %}
+              {% if g.status == 'active' and g.enabled %}{{ hub.pill(_('مفعّلة'), variant='green') }}
+              {% else %}{{ hub.pill(g.status or _('—'), variant='red') }}{% endif %}
+            {% else %}<span class="hub-text-mute">{{ _('غير مذكورة') }}</span>{% endif %}
+          </td>
+          <td class="small">
+            {% if g.feature_state == 'enabled' %}{{ hub.pill(_('متاحة'), variant='green') }}
+            {% elif g.feature_state in ('locked','hidden') %}{{ hub.pill(g.feature_state, variant='red') }}
+            {% elif g.feature_state in ('readonly','read_only') %}{{ hub.pill(_('قراءة فقط'), variant='amber') }}
+            {% else %}{{ hub.pill(g.feature_state, variant='gray') }}{% endif %}
+          </td>
+          <td>
+            {% if g.disabled %}{{ hub.pill(_('موقوفة (إيقاف فعلي)'), variant='red') }}
+            {% elif g.readonly %}{{ hub.pill(_('للقراءة فقط'), variant='amber') }}
+            {% elif g.hidden_from_portal_effective %}{{ hub.pill(_('مخفية من البوابة'), variant='amber') }}
+            {% else %}{{ hub.pill(_('مسموحة'), variant='green') }}{% endif %}
+          </td>
+          <td class="small hub-text-mute">
+            {% if g.disabled %}
+              {{ _('ممنوعة في كل أنحاء الريديوس — السوبر لا يتجاوز.') }}
+            {% elif g.readonly %}
+              {{ _('ميزة معروضة لكن لا تقبل كتابة.') }}
+            {% elif g.hidden_from_portal_effective %}
+              {{ _('بوّابة المشترك/الزبون لا تعرضها — الإدارة تستعملها عاديًّا.') }}
+            {% else %}
+              {{ _('متاحة بالكامل بحسب العقد.') }}
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endcall %}
+{% endif %}
+
+{% call hub.section(_('كيف يُترجَم العقد إلى سلوك؟'), icon='circle-question') %}
+  <ul class="hub-list">
+    <li><b>{{ _('موقوفة (إيقاف فعلي)') }}</b> — {{ _('البند يختفي من الشريط الجانبي، الرابط المباشر يُعيد توجيه لصفحة «الخدمة غير مفعّلة»، عمليات الكتابة تُرفض بـ403. السوبر-أدمن لا يتجاوز.') }}</li>
+    <li><b>{{ _('مخفية من البوابة') }}</b> — {{ _('تُخفى عن بوّابة المشترك/الزبون فقط؛ الإدارة تراها وتستعملها عاديًّا.') }}</li>
+    <li><b>{{ _('مجانية محدودة') }}</b> — {{ _('سقف كمّي يُفرَض خادميًّا: الإنشاء بعد الوصول للسقف يُرفض برسالة عربية واضحة.') }}</li>
+  </ul>
+{% endcall %}
+{% endblock %}

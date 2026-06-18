@@ -23,6 +23,7 @@ def register_v1(parent: Blueprint) -> None:
         admin_alerts as admin_alerts_api,
         store_admin,
         mt_programming as mt_programming_api,
+        provider_grants as provider_grants_api,
     )
     health.register(v1)
     admin_alerts_api.register(v1)
@@ -96,6 +97,8 @@ def register_v1(parent: Blueprint) -> None:
     network_policy.register(v1)
     business_os.register(v1)
     contracts.register(v1)
+    # عقد منح المزوّد للكلاينت (Flutter) — يَعكس قرار حارس اللوحة الويب.
+    provider_grants_api.register(v1)
 
     # introspection — مفيد للـ HobeHub لاكتشاف ما هو متاح
     from ..auth import require_api_token
