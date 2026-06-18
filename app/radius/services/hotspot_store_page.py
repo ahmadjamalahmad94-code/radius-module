@@ -195,6 +195,77 @@ def ensure_walled_garden(client: object, *, api_base: str) -> WalledGardenResult
                               command=cmd)
 
 
+# ─── walled-garden بالنطاقات (host-based) — لإضافات المصمّم ─────
+# الإضافات (راديو/راعٍ/تواصل...) قد تحتاج نطاقات خارجية لتعمل. على
+# عكس قاعدة الـIP أعلاه (للوصول لخادم الراديوس)، النطاقات تُضاف عبر
+# /ip/hotspot/walled-garden (host-based، يدعم dst-host بالنطاق/wildcard).
+# idempotent بالتعليق المميّز HobeRadius-Addon + فحص dst-host الموجود.
+
+WALLED_GARDEN_ADDON_COMMENT = "HobeRadius-Addon"
+
+
+def walled_garden_hosts_command(hosts: list[str]) -> str:
+    """أوامر RouterOS جاهزة للنسخ لفتح النطاقات يدويًّا (سطر لكل نطاق)."""
+    out = []
+    for h in hosts:
+        h = str(h or "").strip().lower()
+        if not h:
+            continue
+        out.append("/ip hotspot walled-garden add action=allow "
+                   f'dst-host={h} comment="{WALLED_GARDEN_ADDON_COMMENT}"')
+    return "\n".join(out)
+
+
+@dataclass
+class WalledGardenHostsResult:
+    ok: bool
+    added: int = 0
+    existing: int = 0
+    error: str = ""
+    command: str = ""
+
+
+def ensure_walled_garden_hosts(
+        client: object, *, hosts: list[str]) -> WalledGardenHostsResult:
+    """يضيف نطاقات walled-garden (host-based) للإضافات المفعّلة —
+    idempotent: يفحص dst-host الموجود قبل الإضافة. عند الفشل يعيد
+    ok=False مع أوامر النسخ اليدوي بدل إفشال النشر."""
+    wanted = [str(h or "").strip().lower() for h in (hosts or [])]
+    wanted = [h for h in wanted if h]
+    cmd = walled_garden_hosts_command(wanted)
+    if not wanted:
+        return WalledGardenHostsResult(ok=True)
+    try:
+        rows = client.run("/ip/hotspot/walled-garden/print") or []
+    except Exception as e:  # noqa: BLE001
+        return WalledGardenHostsResult(
+            ok=False, command=cmd,
+            error="تعذّر قراءة قواعد walled-garden: " + str(e))
+    existing_hosts = {
+        str(r.get("dst-host") or "").strip().lower()
+        for r in rows if str(r.get("dst-host") or "").strip()
+    }
+    added = 0
+    existing = 0
+    for h in wanted:
+        if h in existing_hosts:
+            existing += 1
+            continue
+        try:
+            client.run("/ip/hotspot/walled-garden/add", attrs={
+                "action": "allow",
+                "dst-host": h,
+                "comment": WALLED_GARDEN_ADDON_COMMENT,
+            })
+            added += 1
+        except Exception as e:  # noqa: BLE001
+            return WalledGardenHostsResult(
+                ok=False, added=added, existing=existing, command=cmd,
+                error="إضافة نطاق walled-garden فشلت: " + str(e))
+    return WalledGardenHostsResult(ok=True, added=added, existing=existing,
+                                   command=cmd)
+
+
 def normalize_api_base(api_base: str) -> str:
     """يطبّع عنوان الـ API لما يُحقن في store.html.
 

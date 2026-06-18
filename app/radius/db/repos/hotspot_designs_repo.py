@@ -17,10 +17,18 @@ def _now() -> str:
     return datetime.utcnow().isoformat() + "Z"
 
 
+def _parse_json(raw: object) -> dict:
+    try:
+        v = json.loads(raw or "{}")
+        return v if isinstance(v, dict) else {}
+    except (TypeError, ValueError):
+        return {}
+
+
 def get_design(tenant_id: int, nas_id: int) -> dict[str, Any] | None:
     row = db().execute(
         "SELECT id, tenant_id, nas_id, template_slug, variables_json, "
-        "       updated_at "
+        "       addons_json, updated_at "
         "FROM hotspot_designs "
         "WHERE tenant_id=? AND nas_id=?",
         (int(tenant_id), int(nas_id)),
@@ -28,34 +36,49 @@ def get_design(tenant_id: int, nas_id: int) -> dict[str, Any] | None:
     if not row:
         return None
     out = dict(row)
-    try:
-        out["variables"] = json.loads(out["variables_json"] or "{}")
-    except (TypeError, ValueError):
-        out["variables"] = {}
+    out["variables"] = _parse_json(out.get("variables_json"))
+    # addons_json أُضيف في migration 128 — قد يغيب على صفوف قديمة
+    # في قواعد لم تُرحّل بعد، فنتسامح ونعيد {}.
+    out["addons"] = _parse_json(out.get("addons_json"))
     return out
 
 
 def save_design(
     tenant_id: int, nas_id: int, *,
     template_slug: str, variables: dict[str, str],
+    addons: dict | str | None = None,
 ) -> None:
-    """UPSERT a design. `variables` is JSON-serialized at the
-    boundary so the caller doesn't have to remember the column
-    is text; nothing else writes to this table."""
+    """UPSERT a design. `variables`/`addons` are JSON-serialized at
+    the boundary so the caller doesn't have to remember the columns
+    are text; nothing else writes to this table. `addons` خريطة
+    إضافات المصمّم (migration 128) — None يُبقي '{}'."""
     payload = json.dumps(variables, ensure_ascii=False)
+    addons_payload = _addons_text(addons)
     with transaction() as c:
         # SQLite UPSERT — relies on the UNIQUE(tenant_id, nas_id)
         # index from the 036 migration.
         c.execute(
             "INSERT INTO hotspot_designs "
-            "  (tenant_id, nas_id, template_slug, variables_json, updated_at) "
-            "VALUES (?, ?, ?, ?, ?) "
+            "  (tenant_id, nas_id, template_slug, variables_json, "
+            "   addons_json, updated_at) "
+            "VALUES (?, ?, ?, ?, ?, ?) "
             "ON CONFLICT(tenant_id, nas_id) DO UPDATE SET "
             "  template_slug = excluded.template_slug, "
             "  variables_json = excluded.variables_json, "
+            "  addons_json = excluded.addons_json, "
             "  updated_at = excluded.updated_at",
-            (int(tenant_id), int(nas_id), template_slug, payload, _now()),
+            (int(tenant_id), int(nas_id), template_slug, payload,
+             addons_payload, _now()),
         )
+
+
+def _addons_text(addons: dict | str | None) -> str:
+    """يطبّع وسيط addons إلى نص JSON صالح للتخزين."""
+    if addons is None:
+        return "{}"
+    if isinstance(addons, str):
+        return addons or "{}"
+    return json.dumps(addons, ensure_ascii=False)
 
 
 def delete_design(tenant_id: int, nas_id: int) -> None:
@@ -74,7 +97,8 @@ def delete_design(tenant_id: int, nas_id: int) -> None:
 
 def list_presets(tenant_id: int, nas_id: int) -> list[dict[str, Any]]:
     rows = db().execute(
-        "SELECT id, name, template_slug, variables_json, updated_at "
+        "SELECT id, name, template_slug, variables_json, addons_json, "
+        "       updated_at "
         "FROM hotspot_design_presets "
         "WHERE tenant_id=? AND nas_id=? "
         "ORDER BY updated_at DESC",
@@ -83,10 +107,8 @@ def list_presets(tenant_id: int, nas_id: int) -> list[dict[str, Any]]:
     out = []
     for r in rows:
         d = dict(r)
-        try:
-            d["variables"] = json.loads(d["variables_json"] or "{}")
-        except (TypeError, ValueError):
-            d["variables"] = {}
+        d["variables"] = _parse_json(d.get("variables_json"))
+        d["addons"] = _parse_json(d.get("addons_json"))
         out.append(d)
     return out
 
@@ -94,7 +116,8 @@ def list_presets(tenant_id: int, nas_id: int) -> list[dict[str, Any]]:
 def get_preset(tenant_id: int, nas_id: int,
                preset_id: int) -> dict[str, Any] | None:
     row = db().execute(
-        "SELECT id, name, template_slug, variables_json, updated_at "
+        "SELECT id, name, template_slug, variables_json, addons_json, "
+        "       updated_at "
         "FROM hotspot_design_presets "
         "WHERE tenant_id=? AND nas_id=? AND id=?",
         (int(tenant_id), int(nas_id), int(preset_id)),
@@ -102,30 +125,31 @@ def get_preset(tenant_id: int, nas_id: int,
     if not row:
         return None
     out = dict(row)
-    try:
-        out["variables"] = json.loads(out["variables_json"] or "{}")
-    except (TypeError, ValueError):
-        out["variables"] = {}
+    out["variables"] = _parse_json(out.get("variables_json"))
+    out["addons"] = _parse_json(out.get("addons_json"))
     return out
 
 
 def save_preset(
     tenant_id: int, nas_id: int, *,
     name: str, template_slug: str, variables: dict[str, str],
+    addons: dict | str | None = None,
 ) -> None:
     payload = json.dumps(variables, ensure_ascii=False)
+    addons_payload = _addons_text(addons)
     with transaction() as c:
         c.execute(
             "INSERT INTO hotspot_design_presets "
             "  (tenant_id, nas_id, name, template_slug, "
-            "   variables_json, updated_at) "
-            "VALUES (?, ?, ?, ?, ?, ?) "
+            "   variables_json, addons_json, updated_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?) "
             "ON CONFLICT(tenant_id, nas_id, name) DO UPDATE SET "
             "  template_slug = excluded.template_slug, "
             "  variables_json = excluded.variables_json, "
+            "  addons_json = excluded.addons_json, "
             "  updated_at = excluded.updated_at",
             (int(tenant_id), int(nas_id), name, template_slug,
-             payload, _now()),
+             payload, addons_payload, _now()),
         )
 
 
