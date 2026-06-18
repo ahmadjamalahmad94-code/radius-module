@@ -21,6 +21,37 @@
 ) }}
 
 {# ════════════════════════════════════════════════════════════════════
+   CTA الباقات والتسعير — للمستخدم الذي لم يَختَر باقة بعد، أو لتجريبيّ
+   بحاجة للتحويل إلى اشتراك مدفوع. الرابط من العقد أو من system.pricing_url.
+   ════════════════════════════════════════════════════════════════════ #}
+{% if pricing_url %}
+<div data-pricing-cta="activate"
+     style="text-align:center;padding:26px 20px;margin:20px 0 18px;
+            border:2px solid #16A34A;border-radius:14px;
+            background:linear-gradient(135deg,#ECFDF5 0%,#F0FDF4 100%);
+            box-shadow:0 8px 20px rgba(22,163,74,0.18)">
+  <p style="font-size:16px;color:#14532D;margin:0 0 14px;font-weight:700">
+    <i class="fa-solid fa-tags"></i>
+    {{ _('لم تختر باقة بعد؟ اعرض باقات المزوّد واختر الأنسب لك.') }}
+  </p>
+  <a class="hub-btn hub-btn--primary"
+     data-pricing-link
+     href="{{ pricing_url }}"
+     target="_blank" rel="noopener noreferrer"
+     style="font-size:18px;padding:18px 42px;font-weight:800;
+            background:#16A34A;border-color:#16A34A;
+            box-shadow:0 6px 18px rgba(22,163,74,0.40)">
+    <i class="fa-solid fa-tags"></i>
+    {{ _('اعرض الباقات / اشترك الآن') }}
+  </a>
+  <p style="margin:10px 0 0;font-size:12px;color:#15803D">
+    <i class="fa-solid fa-up-right-from-square"></i>
+    {{ _('يَفتح في تبويب جديد على لوحة المزوّد') }}
+  </p>
+</div>
+{% endif %}
+
+{# ════════════════════════════════════════════════════════════════════
    CTA كبير وبارز — صفحة الربط الموحَّدة (الخطوة الوحيدة الفعليّة)
    ════════════════════════════════════════════════════════════════════ #}
 {% if endpoint_exists is defined and endpoint_exists('radius.license_connect_page') %}

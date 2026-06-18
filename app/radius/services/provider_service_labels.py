@@ -43,12 +43,15 @@ SERVICE_NAMES_AR: dict[str, str] = {
 
     # ── المالية والمحاسبة ──
     "finance":             "المالية",
+    "finance_center":      "المركز المالي",
     "accounting":          "المحاسبة والتحصيل",
+    "billing":             "الفواتير والتحصيل",
     "payments":            "الدفعات",
     "invoices":            "الفواتير",
     "ledger":              "دفتر الأستاذ",
     "loans":               "السلف",
     "payment_collection":  "تحصيل المدفوعات",
+    "admin_pricing":       "تسعير الإدارة",
 
     # ── التقارير والتدقيق ──
     "reports":             "التقارير",
@@ -96,6 +99,8 @@ SERVICE_NAMES_AR: dict[str, str] = {
 
     # ── الاتصالات والإشعارات ──
     "communications":      "الرسائل والتنبيهات",
+    "messaging":           "الرسائل",
+    "notifications":       "الإشعارات",
     "alerts":              "التنبيهات",
     "admin_alerts":        "تنبيهات الإدارة",
     "telegram":            "تلجرام",
