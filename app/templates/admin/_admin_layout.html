@@ -321,48 +321,90 @@
       </div>
     </div>
 
-    {# Tenant switcher #}
+    {# ── Tenant switcher («تبديل الجهة» / multi-tenant) ──
+       يَظهر فقط عندما يَكون مُنحة multi_tenant ساريًا في عقد المزوّد
+       (provider_multi_tenant_granted) — لا يَكفي وجود عدّة جهات في DB
+       المحلّيّة. لو لم يُمنَح، نَختفي تمامًا (لا pill، لا dropdown، لا
+       «إدارة الجهات»). عند المنح، نَعرض حتّى ـentity_limit من الجهات. #}
     {% set _admin_tenants = admin_tenants() %}
-    {% if _admin_tenants and _admin_tenants|length > 0 %}
-    <div class="tenant-switch" style="position:relative">
+    {% set _mt_granted = provider_multi_tenant_granted is defined
+                          and provider_multi_tenant_granted() %}
+    {% if _mt_granted and _admin_tenants and _admin_tenants|length > 0 %}
+    {% set _ent_limit = (provider_multi_tenant_entity_limit() if
+                          provider_multi_tenant_entity_limit is defined
+                          else 10000) %}
+    {% set _visible_tenants = _admin_tenants[:_ent_limit] %}
+    <div class="tenant-switch" style="position:relative" data-mt-switcher="1">
       <span class="tenant-pill"
+            data-mt-pill="1"
             onclick="document.getElementById('tenant-menu').classList.toggle('open')"
-            style="display:flex;align-items:center;gap:7px;background:rgba(255,255,255,.06);
-                   color:#cdd3da;padding:5px 12px;border-radius:6px;font-size:12px;
-                   font-weight:700;cursor:pointer;border:1px solid rgba(255,255,255,.08)">
+            style="display:inline-flex;align-items:center;gap:8px;
+                   background:rgba(255,255,255,.06);color:#cdd3da;
+                   padding:6px 12px;border-radius:8px;font-size:12px;
+                   font-weight:700;cursor:pointer;
+                   border:1px solid rgba(255,255,255,.10);
+                   transition:background .15s ease">
         <i class="fa-solid fa-building" style="font-size:11px;color:var(--hr-cyan-500)"></i>
-        <span>{{ tenant.display_name if tenant else 'Default' }}</span>
+        <span style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ tenant.display_name if tenant else 'Default' }}</span>
         <i class="fa-solid fa-caret-down" style="font-size:9px;opacity:.7"></i>
       </span>
       <div id="tenant-menu"
-           style="display:none;position:absolute;top:42px;inset-inline-end:0;background:#fff;
-                  border:1px solid var(--hr-border);border-radius:8px;
-                  box-shadow:var(--hr-shadow-pop);min-width:220px;z-index:60;overflow:hidden">
-        <div style="padding:7px 12px;font-size:10px;color:var(--hr-text-muted);
-                    text-transform:uppercase;letter-spacing:.8px;font-weight:800;
-                    border-bottom:1px solid var(--hr-border);background:var(--hr-soft)">
-          {{ _('تبديل الجهة') }}
+           role="menu"
+           style="display:none;position:absolute;top:44px;inset-inline-end:0;
+                  background:#fff;border:1px solid #EEEDF3;border-radius:14px;
+                  padding:6px;box-shadow:0 10px 30px rgba(15,23,42,.10),
+                                          0 2px 8px rgba(15,23,42,.06);
+                  min-width:248px;z-index:90;overflow:hidden">
+        <div style="padding:8px 12px;font-size:11px;color:#2E1F8C;
+                    letter-spacing:.4px;font-weight:800;border-radius:9px;
+                    background:#F4F1FE;margin-bottom:4px;display:flex;
+                    align-items:center;gap:6px">
+          <i class="fa-solid fa-building" style="font-size:10px;color:#6B5AED"></i>
+          <span style="flex:1">{{ _('تبديل الجهة') }}</span>
+          {% if _admin_tenants|length > _visible_tenants|length %}
+          <span title="{{ _('سقف العقد') }}: {{ _ent_limit }}"
+                style="font-size:9px;color:#6B5AED;font-weight:700">
+            {{ _visible_tenants|length }}/{{ _admin_tenants|length }}
+          </span>
+          {% endif %}
         </div>
-        {% for t in _admin_tenants %}
+        {% for t in _visible_tenants %}
         <form method="post" action="{{ url_for('radius.auth_switch_tenant') }}" style="margin:0">
           <input type="hidden" name="tenant_id" value="{{ t.id }}">
           <button type="submit"
-                  style="width:100%;text-align:right;padding:9px 12px;border:0;background:transparent;
-                         color:var(--hr-text);font-family:inherit;font-size:12.5px;cursor:pointer;
-                         display:flex;align-items:center;gap:8px;
-                         {% if t.id == tenant_id %}background:var(--hr-cyan-100);font-weight:800{% endif %}">
-            {% if t.id == tenant_id %}<i class="fa-solid fa-check" style="color:var(--hr-cyan-700);font-size:10px"></i>{% else %}<span style="width:10px"></span>{% endif %}
-            <span style="flex:1">{{ t.display_name or t.name }}</span>
-            <span class="pill pill-cyan" style="font-size:9px">{{ t.plan_tier }}</span>
+                  style="width:100%;text-align:start;padding:9px 10px;border:0;
+                         background:{% if t.id == tenant_id %}#F4F1FE{% else %}transparent{% endif %};
+                         color:#1F2937;font-family:inherit;font-size:12.5px;
+                         font-weight:{% if t.id == tenant_id %}800{% else %}700{% endif %};
+                         cursor:pointer;display:flex;align-items:center;gap:9px;
+                         border-radius:9px;margin-bottom:2px"
+                  onmouseover="this.style.background='#F4F1FE'"
+                  onmouseout="this.style.background='{% if t.id == tenant_id %}#F4F1FE{% else %}transparent{% endif %}'">
+            {% if t.id == tenant_id %}
+              <i class="fa-solid fa-check" style="color:#6B5AED;font-size:11px;width:12px"></i>
+            {% else %}
+              <span style="width:12px"></span>
+            {% endif %}
+            <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ t.display_name or t.name }}</span>
+            {% if t.plan_tier %}
+            <span class="pill pill-cyan"
+                  style="font-size:9px;padding:2px 7px;border-radius:6px;
+                         text-transform:lowercase;font-weight:700">
+              {{ t.plan_tier }}
+            </span>
+            {% endif %}
           </button>
         </form>
         {% endfor %}
-        {% if session.get('is_super_admin') %}
+        {% if session.get('is_super_admin') and endpoint_exists is defined and endpoint_exists('radius.tenants_list') %}
         <a href="{{ url_for('radius.tenants_list') }}"
-           style="display:block;padding:8px 12px;border-top:1px solid var(--hr-border);
-                  text-decoration:none;color:var(--hr-cyan-700);font-size:11.5px;
-                  background:var(--hr-soft);font-weight:700">
-          <i class="fa-solid fa-cog"></i>&nbsp; {{ _('إدارة الجهات') }}
+           role="menuitem"
+           style="display:flex;align-items:center;gap:8px;padding:9px 10px;
+                  margin-top:4px;border-top:1px solid #EEEDF3;border-radius:9px;
+                  text-decoration:none;color:#2E1F8C;font-size:11.5px;
+                  background:#F8F7FE;font-weight:700">
+          <i class="fa-solid fa-gear" style="font-size:10px"></i>
+          <span>{{ _('إدارة الجهات') }}</span>
         </a>
         {% endif %}
       </div>
