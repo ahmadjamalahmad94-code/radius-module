@@ -13,16 +13,22 @@
 {% block page_sub %}<span class="sub">{{ _('هذه الخدمة جاهزة — تحتاج تفعيلًا من مزوّد النظام') }}</span>{% endblock %}
 
 {% block content %}
+{% set _ar_name = provider_service_label_ar(service_key) if (provider_service_label_ar is defined and service_key) else (service_key or '—') %}
+{% set _ar_status = provider_service_status_ar(grant.status) if (provider_service_status_ar is defined and grant and grant.status) else (grant.status if grant else _('بانتظار التفعيل / ترقية')) %}
+{% set _ar_feature = provider_feature_state_ar(grant.feature_state) if (provider_feature_state_ar is defined and grant and grant.feature_state) else (grant.feature_state if grant else '—') %}
 {{ hub.megahero(
   _('طلب تفعيل / ترقية'),
   subtitle=_('هذه الخدمة موجودة في كتالوج النظام لكنها مدفوعة ولم تُفعَّل لحسابك بعد. الخدمة جاهزة للعمل فور التفعيل من لوحة التراخيص — تواصل مع مزوّد النظام لطلب التفعيل أو الترقية. القرار تجاري، لا يتجاوزه المدير الرئيسي.'),
   icon='lock-open',
   kpis=[
-    {'label': _('الخدمة'),    'value': service_key or '—', 'icon': 'tag',         'variant': 'gray'},
-    {'label': _('الحالة'),    'value': (grant.status if grant and grant.status else _('مقفلة — ترقية')), 'icon': 'lock', 'variant': 'amber'},
-    {'label': _('الميزة'),    'value': (grant.feature_state if grant else '—'),  'icon': 'sliders',    'variant': 'gray'},
+    {'label': _('الخدمة'),    'value': _ar_name,    'icon': 'tag',         'variant': 'gray'},
+    {'label': _('الحالة'),    'value': _ar_status,  'icon': 'lock',        'variant': 'amber'},
+    {'label': _('الميزة'),    'value': _ar_feature, 'icon': 'sliders',     'variant': 'gray'},
   ]
 ) }}
+{% if service_key and _ar_name != service_key %}
+<p class="hub-text-mute small" style="margin:-12px 0 14px"><i class="fa-solid fa-tag"></i> {{ _('المفتاح الخام') }}: <code>{{ service_key }}</code></p>
+{% endif %}
 
 {% call hub.section(_('كيف أُفعّل هذه الخدمة؟'), icon='list-ol') %}
   <ol class="hub-list">

@@ -11,16 +11,22 @@
 {% block page_sub %}<span class="sub">{{ _('قرار تجاري من لوحة التراخيص — راجع مزوّد الخدمة') }}</span>{% endblock %}
 
 {% block content %}
+{% set _ar_name = provider_service_label_ar(service_key) if (provider_service_label_ar is defined and service_key) else (service_key or '—') %}
+{% set _ar_status = provider_service_status_ar(grant.status) if (provider_service_status_ar is defined and grant and grant.status) else (grant.status if grant else '—') %}
+{% set _ar_feature = provider_feature_state_ar(grant.feature_state) if (provider_feature_state_ar is defined and grant and grant.feature_state) else (grant.feature_state if grant else '—') %}
 {{ hub.megahero(
   _('الخدمة غير مفعّلة من المزوّد'),
   subtitle=_('هذه الخدمة موقوفة في عقد الخدمة الحالي من مزوّد النظام. لا يمكن استخدامها من أي مستوى صلاحية — بما في ذلك المدير الرئيسي — حتى يتم تفعيلها من لوحة التراخيص. هذا قرار تجاري وليس قيدًا داخليًّا.'),
   icon='lock',
   kpis=[
-    {'label': _('الخدمة'),   'value': service_key or '—', 'icon': 'tag',           'variant': 'gray'},
-    {'label': _('الحالة'),   'value': (grant.status if grant and grant.status else '—'), 'icon': 'circle-info', 'variant': 'red'},
-    {'label': _('الميزة'),   'value': (grant.feature_state if grant else '—'),     'icon': 'sliders',       'variant': 'amber'},
+    {'label': _('الخدمة'),   'value': _ar_name,    'icon': 'tag',           'variant': 'gray'},
+    {'label': _('الحالة'),   'value': _ar_status,  'icon': 'circle-info', 'variant': 'red'},
+    {'label': _('الميزة'),   'value': _ar_feature, 'icon': 'sliders',       'variant': 'amber'},
   ]
 ) }}
+{% if service_key and _ar_name != service_key %}
+<p class="hub-text-mute small" style="margin:-12px 0 14px"><i class="fa-solid fa-tag"></i> {{ _('المفتاح الخام') }}: <code>{{ service_key }}</code></p>
+{% endif %}
 
 {% call hub.section(_('ما الذي يعنيه هذا؟'), icon='circle-question') %}
   <p class="card-intro">
