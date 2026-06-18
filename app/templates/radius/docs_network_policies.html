@@ -1,0 +1,215 @@
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}دليل: سياسات الشبكة — حظر المواقع والمواقع المسموحة{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/docs_guide.css') }}">
+{% endblock %}
+
+{% block content %}
+
+{{ hub.hero(
+  "دليل: سياسات الشبكة",
+  subtitle="تحكّم بسلوك شبكة المشتركين: حظر مواقع، أو فتح مواقع مسموحة قبل الدخول — بنمط «معاينة أولاً» آمن لا يلمس الراوتر حتى تعتمد.",
+  icon="diagram-project",
+  actions_html='
+    <button type="button" class="hub-btn hub-btn--secondary" onclick="window.print()">
+      <i class="fa-solid fa-file-pdf"></i> حفظ كـ PDF
+    </button>
+    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.docs_center') + '">
+      <i class="fa-solid fa-arrow-right"></i> كل الأدلة
+    </a>
+  '
+) }}
+
+<div class="dg-layout">
+
+  <nav class="dg-toc dg-noprint" aria-label="{{ _('فهرس الدليل') }}">
+    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> {{ _('فهرس الخطوات') }}</div>
+    <a href="#dg-s1" data-dg-toc><span class="n">1</span> ما هي سياسات الشبكة؟</a>
+    <a href="#dg-s2" data-dg-toc><span class="n">2</span> اختر الراوتر ثم نوع السياسة</a>
+    <a href="#dg-s3" data-dg-toc><span class="n">3</span> أنشئ سياسة جديدة</a>
+    <a href="#dg-s4" data-dg-toc><span class="n">4</span> أضف الوجهات أو الإدخالات</a>
+    <a href="#dg-s5" data-dg-toc><span class="n">5</span> النطاق والتفعيل</a>
+    <a href="#dg-s6" data-dg-toc><span class="n">6</span> عايِن قبل التطبيق</a>
+    <a href="#dg-s7" data-dg-toc><span class="n">7</span> طبّق وراجِع السجلّ</a>
+  </nav>
+
+  <div class="dg-main">
+
+    <div class="dg-lead">
+      <span class="ic"><i class="fa-solid fa-lightbulb"></i></span>
+      <div>
+        <h3>قبل ما نبدأ — ماذا تفعل سياسات الشبكة؟</h3>
+        <p>
+          «سياسات الشبكة» قسم يديره النظام لضبط سلوك شبكة مشتركيك على الراوتر، عبر خدمتين:
+          <strong>«حظر المواقع»</strong> (يمنع الوصول لمواقع/عناوين تحدّدها) و<strong>«المواقع المسموحة»</strong>
+          (walled-garden — يفتح مواقع معيّنة <em>قبل</em> تسجيل الدخول، مثل صفحة الدفع أو موقعك).
+          كل سياسة مرتبطة براوتر واحد، والنظام يعمل بمبدأ <strong>«معاينة أولاً»</strong>: لا يُكتب
+          أي شيء على الراوتر إلا بعد أن تراجع الخطّة وتعتمدها بنفسك — وكل تطبيق قابل للتراجع.
+        </p>
+      </div>
+    </div>
+
+    <section class="dg-step" id="dg-s1">
+      <div class="dg-badge">1</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-diagram-project"></i> ما هي سياسات الشبكة؟</h2>
+        <p>
+          هناك نوعان من السياسات يتشاركان نفس الصفحة والأدوات:
+        </p>
+        <ul>
+          <li><strong>حظر المواقع:</strong> تبني قائمة عناوين (نطاقات/IP/CIDR) ثم قاعدة <code>drop</code>
+            واحدة على سلسلة <code>forward</code> تستهدف هذه القائمة فقط — لا تلمس الـ NAT ولا الـ DHCP
+            ولا بقية قواعد الجدار الناري.</li>
+          <li><strong>المواقع المسموحة (walled-garden):</strong> تسمح بمواقع محدّدة قبل تسجيل دخول
+            الهوتسبوت — مفيدة لفتح صفحة الدفع أو موقع الشركة دون فتح الإنترنت كاملًا.</li>
+        </ul>
+        <div class="dg-info">
+          <span class="ic">ℹ️</span>
+          <span>السياسات هنا تكتب في قاعدة بياناتك المحلّية فقط حتى لحظة الاعتماد. الفرق بين النوعين
+          هو ما يفعله السكربت الناتج، لكن طريقة العمل (إنشاء ← إضافة ← معاينة ← تطبيق) واحدة.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s2">
+      <div class="dg-badge">2</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-server"></i> اختر الراوتر ثم نوع السياسة</h2>
+        <p>
+          افتح <strong>الشبكة ← سياسات الشبكة</strong>. أول ما يظهر صفحة اختيار راوتر، لأن كل سياسة
+          مرتبطة براوتر واحد بعينه (وهكذا يُحدَّد نطاق التأثير على الراوتر نفسه). اختر الراوتر، ثم
+          بدّل بين تبويبَي <strong>«حظر المواقع»</strong> و<strong>«المواقع المسموحة»</strong> لترى سياسات
+          ذلك الراوتر في كلّ خدمة.
+        </p>
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة:</b> تقدر تدخل القسم مباشرة من لوحة الراوتر نفسها — السياسات تظهر كتبويب ضمن
+          لوحة كل راوتر، وهذا مدخلك اليومي الأسرع.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s3">
+      <div class="dg-badge">3</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-plus"></i> أنشئ سياسة جديدة</h2>
+        <p>
+          اضغط <strong>«إضافة سياسة»</strong>. عبّئ الحقول الأساسية:
+        </p>
+        <ul>
+          <li><strong>اسم السياسة</strong> (مطلوب) — اسم واضح يميّزها لاحقًا.</li>
+          <li><strong>الراوتر المستهدف</strong> (مطلوب) — يُثبَّت بعد الإنشاء ولا يتغيّر؛ لنقلها لراوتر
+            آخر أنشئ سياسة جديدة أو استخدم زر «نسخة».</li>
+          <li>لـ«حظر المواقع»: حقل <strong>fail-open</strong> (عند فشل القائمة هل نسمح أم نمنع) إضافةً
+            للنطاق (الخطوة 5).</li>
+          <li>لـ«المواقع المسموحة»: حقل <strong>ملف الهوتسبوت</strong> (hotspot profile) المعنيّ.</li>
+        </ul>
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">إضافة سياسة — حظر المواقع</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-mock-sechead"><span class="ic"><i class="fa-solid fa-pen"></i></span> بيانات السياسة</div>
+            <div class="dg-mf">
+              <label>اسم السياسة <span class="req">*</span></label>
+              <div class="dg-mf-input hl">حظر مواقع البالغين</div>
+            </div>
+            <div class="dg-mf">
+              <label>الراوتر المستهدف <span class="req">*</span></label>
+              <div class="dg-mf-input">الفرع الرئيسي — 192.168.88.1</div>
+            </div>
+            <div class="dg-mock-actions">
+              <span class="dg-mock-btn primary"><i class="fa-solid fa-save"></i> حفظ</span>
+            </div>
+          </div>
+        </div>
+        <div class="dg-info">
+          <span class="ic">ℹ️</span>
+          <span>بعد الحفظ تنتقل مباشرةً لصفحة تحرير السياسة، وستظهر رسالة تذكّرك بأنّ هذا <b>معاينة فقط</b>
+          ولم يُطبَّق على الراوتر بعد.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s4">
+      <div class="dg-badge">4</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-list"></i> أضف الوجهات أو الإدخالات</h2>
+        <p>
+          السياسة بلا محتوى لا تفعل شيئًا. من صفحة التحرير أضف العناصر:
+        </p>
+        <ul>
+          <li><strong>في «حظر المواقع»</strong> أضف <em>وجهات الحظر</em>: نطاق (مثل <code>example.com</code>)
+            أو عنوان IP أو نطاق CIDR. النظام يُحلّل المُدخَل ويرفض الصيغ غير الصالحة برسالة عربية.</li>
+          <li><strong>في «المواقع المسموحة»</strong> أضف <em>إدخالات الاستثناء</em>: اختر النوع (host / IP)
+            والقيمة، مع منفذ وبروتوكول اختياريين.</li>
+        </ul>
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة:</b> ابدأ بعدد صغير من الوجهات للتجربة، عايِن النتيجة، ثم وسّع القائمة. حذف أي
+          عنصر يتمّ بضغطة من نفس الصفحة.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s5">
+      <div class="dg-badge">5</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-toggle-on"></i> النطاق والتفعيل</h2>
+        <p>
+          في «حظر المواقع» حقل <strong>«النطاق»</strong> يحدّد على مَن تُطبَّق القاعدة (الافتراضي: كل
+          المستخدمين على الراوتر). أمّا مفتاح <strong>«مفعّلة»</strong> فيحدّد هل تدخل السياسة ضمن السكربت
+          الذي سيُطبَّق:
+        </p>
+        <ul>
+          <li><strong>مفعّلة:</strong> ستُدرَج ضمن خطّة التطبيق على الراوتر.</li>
+          <li><strong>غير مفعّلة:</strong> تبقى محفوظة كمسوّدة دون أثر على الشبكة.</li>
+        </ul>
+        <div class="dg-warn">
+          <span class="ic">⚠️</span>
+          <span><b>انتبه:</b> تفعيل السياسة وحده لا يطبّقها — التفعيل يعني فقط أنّها ستُدرَج في المعاينة
+          والتطبيق. الأثر الحقيقي لا يحدث إلا بعد خطوة <b>التطبيق</b> (الخطوة 7).</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s6">
+      <div class="dg-badge">6</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-eye"></i> عايِن قبل التطبيق</h2>
+        <p>
+          اضغط <strong>«معاينة»</strong>. النظام يولّد السكربت ويعرض لك بلغة عربية مفهومة:
+          <strong>«ماذا سيتم»</strong> (مثلًا: إنشاء قائمة عناوين + قاعدة drop واحدة)،
+          <strong>«ماذا لن يُلمَس»</strong> (NAT/DHCP/قواعد الجدار الأخرى)، إضافةً لتحليل الأثر والتعارضات
+          ودرجة السلامة. تقدر أيضًا <strong>تنزيل السكربت</strong> كملف <code>.rsc</code>.
+        </p>
+        <div class="dg-info">
+          <span class="ic">ℹ️</span>
+          <span>المعاينة لا تلمس الراوتر إطلاقًا. هي قراءة وتحليل فقط، ويمكنك تكرارها بأمان كلّما عدّلت
+          السياسة حتى تطمئنّ للخطّة.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s7">
+      <div class="dg-badge">7</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-flag-checkered"></i> طبّق وراجِع السجلّ</h2>
+        <p>
+          إن خلت المعاينة من الموانع وكانت لديك صلاحية التطبيق، يظهر زر التطبيق. عند الضغط يأخذ النظام
+          <strong>لقطة للحالة الحيّة</strong> أولًا ثم ينفّذ السكربت على الراوتر — والنتيجة تُسجَّل كاملةً.
+          من صفحة <strong>«سجل التغييرات»</strong> تتابع كل عملية تطبيق، ومنها زر <strong>«تراجع»</strong>
+          يعيد الحالة عبر سكربت rollback الذي يطابق التعليقات المُدارة فقط ولا يلمس قاعدة لم يُنشئها النظام.
+        </p>
+        <div class="dg-flash"><i class="fa-solid fa-circle-check"></i> سياستك مُطبَّقة، مُسجَّلة، وقابلة للتراجع بضغطة.</div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/docs_guide.js') }}"></script>
+
+{% endblock %}

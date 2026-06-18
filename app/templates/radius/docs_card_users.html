@@ -1,0 +1,194 @@
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}دليل: مستخدمو البطاقات — الزبائن والمحافظ والمشتريات{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/docs_guide.css') }}">
+{% endblock %}
+
+{% block content %}
+
+{{ hub.hero(
+  "دليل: مستخدمو البطاقات",
+  subtitle="زبائن متجر البطاقات: محافظهم وأرصدتهم، مشترياتهم وحالتهم، وكيف تقرأ ملف الزبون الكامل (عرض 360).",
+  icon="users",
+  actions_html='
+    <button type="button" class="hub-btn hub-btn--secondary" onclick="window.print()">
+      <i class="fa-solid fa-file-pdf"></i> حفظ كـ PDF
+    </button>
+    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.docs_center') + '">
+      <i class="fa-solid fa-arrow-right"></i> كل الأدلة
+    </a>
+  '
+) }}
+
+<div class="dg-layout">
+
+  <nav class="dg-toc dg-noprint" aria-label="{{ _('فهرس الدليل') }}">
+    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> {{ _('فهرس الخطوات') }}</div>
+    <a href="#dg-s1" data-dg-toc><span class="n">1</span> من هم مستخدمو البطاقات</a>
+    <a href="#dg-s2" data-dg-toc><span class="n">2</span> اقرأ قائمة الزبائن</a>
+    <a href="#dg-s3" data-dg-toc><span class="n">3</span> أضف زبونًا يدويًّا</a>
+    <a href="#dg-s4" data-dg-toc><span class="n">4</span> ملف الزبون (عرض 360)</a>
+    <a href="#dg-s5" data-dg-toc><span class="n">5</span> اشحن المحفظة أو اشترِ كرتًا</a>
+    <a href="#dg-s6" data-dg-toc><span class="n">6</span> كلمة المرور والحالة</a>
+  </nav>
+
+  <div class="dg-main">
+
+    <div class="dg-lead">
+      <span class="ic"><i class="fa-solid fa-lightbulb"></i></span>
+      <div>
+        <h3>قبل ما نبدأ — من هو «مستخدم البطاقات»؟</h3>
+        <p>
+          مستخدم البطاقات هو زبون سجّل في <strong>متجر/سوق البطاقات</strong> برقم جواله — له
+          <strong>محفظة تشغيلية</strong> يشحنها ويشتري بها بطاقات إلكترونية مباشرةً دون وسيط. هذه
+          الصفحة هي سجلّ كل هؤلاء الزبائن: أرصدتهم، مشترياتهم، حالتهم، وملفّهم الكامل.
+        </p>
+      </div>
+    </div>
+
+    <section class="dg-step" id="dg-s1">
+      <div class="dg-badge">1</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-users"></i> من هم مستخدمو البطاقات</h2>
+        <p>
+          يختلف هؤلاء عن المشتركين العاديّين: لا اتصال شبكة لهم مباشرةً، بل هم زبائن متجر يملكون
+          محفظة مالية. أعلى الصفحة بطاقات ملخّص سريعة:
+        </p>
+        <ul>
+          <li><strong>عدد الزبائن</strong> و<strong>النشِطون</strong> منهم.</li>
+          <li><strong>إجمالي البطاقات المملوكة</strong> و<strong>عدد المشتريات</strong>.</li>
+          <li><strong>إجمالي أرصدة المحافظ</strong> بعملة المتجر.</li>
+        </ul>
+        <div class="dg-info">
+          <span class="ic">ℹ️</span>
+          <span>الزبائن يُسجّلون أنفسهم عادةً من المتجر، لكنّك تقدر إضافتهم يدويًّا من اللوحة
+          (الخطوة 3). إدارة طلبات الشحن والسحب وشات الدعم لهؤلاء الزبائن تتمّ من دليل
+          <strong>«دعم المتجر»</strong>.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s2">
+      <div class="dg-badge">2</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-table-list"></i> اقرأ قائمة الزبائن</h2>
+        <p>
+          جدول الزبائن يعرض لكل صفّ القيم المهمّة بنظرة واحدة:
+        </p>
+        <ul>
+          <li><strong>الاسم والجوال:</strong> هوية الزبون في المتجر.</li>
+          <li><strong>رصيد المحفظة:</strong> المتاح للشراء الآن (مع رصيد معلّق إن وُجد).</li>
+          <li><strong>المُنفَق:</strong> إجمالي قيمة مشترياته المكتملة.</li>
+          <li><strong>عدد المشتريات والبطاقات المملوكة.</strong></li>
+          <li><strong>الحالة:</strong> نشِط / غير نشِط، وآخر عملية شراء.</li>
+        </ul>
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة:</b> اضغط اسم أي زبون لتفتح <strong>ملفّه الكامل (عرض 360)</strong> — هناك
+          كل تفاصيله وأدوات إدارته.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s3">
+      <div class="dg-badge">3</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-user-plus"></i> أضف زبونًا يدويًّا</h2>
+        <p>
+          من زرّ <strong>«إضافة مستفيد»</strong> أنشئ حساب زبون من اللوحة مباشرةً. يطبّق النظام نفس
+          قواعد تسجيل المتجر:
+        </p>
+        <ul>
+          <li><strong>اسم ثلاثي</strong> و<strong>رقم جوال صالح</strong> (لا يتكرّر لزبون نشِط آخر).</li>
+          <li><strong>كلمة مرور</strong> ٤ أحرف على الأقل لبوابة الزبون.</li>
+          <li><strong>رصيد ابتدائي</strong> اختياري — إن أدخلت مبلغًا موجبًا يُشحن فورًا.</li>
+        </ul>
+        <p>
+          يُنشأ الحساب فعّالًا فورًا مع محفظة تشغيلية جاهزة للاستخدام.
+        </p>
+        <div class="dg-warn">
+          <span class="ic">⚠️</span>
+          <span><b>انتبه:</b> رقم الجوال مفتاح الهوية — لا يمكن لزبونَين نشطَين أن يتشاركا نفس الرقم.
+          إن ظهرت رسالة تكرار، ابحث عن الحساب الموجود بدل إنشاء آخر.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s4">
+      <div class="dg-badge">4</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-id-card"></i> ملف الزبون الكامل (عرض 360)</h2>
+        <p>
+          صفحة الزبون تجمع كل ما يخصّه في مكان واحد:
+        </p>
+        <ul>
+          <li><strong>المحفظة:</strong> الرصيد الحالي والعملة.</li>
+          <li><strong>المشتريات:</strong> آخر عمليات الشراء وحالتها (مكتملة/ملغاة).</li>
+          <li><strong>البطاقات المملوكة:</strong> الكروت التي اشتراها واستهلاكها.</li>
+          <li><strong>السجلّ المالي:</strong> قيود الشحن والخصم على محفظته.</li>
+          <li><strong>الخطّ الزمني والأحداث:</strong> تسلسل عمليّاته بالترتيب.</li>
+        </ul>
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">مستخدمو البطاقات ← ملف الزبون</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-mock-sechead"><span class="ic"><i class="fa-solid fa-wallet"></i></span> محفظة الزبون</div>
+            <div class="dg-mf">
+              <label>الرصيد الحالي</label>
+              <div class="dg-mf-input hl">35.00</div>
+              <div class="dg-mf-help">المتاح للشراء الآن — يتغيّر بالشحن والمشتريات.</div>
+            </div>
+            <div class="dg-mock-actions">
+              <span class="dg-mock-btn primary"><i class="fa-solid fa-plus"></i> شحن المحفظة</span>
+              <span class="dg-mock-btn"><i class="fa-solid fa-cart-shopping"></i> شراء باقة</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s5">
+      <div class="dg-badge">5</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-cart-shopping"></i> اشحن المحفظة أو اشترِ كرتًا</h2>
+        <p>
+          من ملف الزبون تقدر التصرّف نيابةً عنه:
+        </p>
+        <ul>
+          <li><strong>شحن المحفظة:</strong> أدخل مبلغًا موجبًا فيُضاف لرصيده مع قيد مالي موثّق.</li>
+          <li><strong>شراء باقة:</strong> اختر باقة من السوق فيُخصم سعرها من المحفظة ويُسلَّم كرت
+          باسم الزبون.</li>
+        </ul>
+        <div class="dg-warn">
+          <span class="ic">⚠️</span>
+          <span><b>الرصيد يجب أن يكفي:</b> الشراء يُخصم من المحفظة، فإن كان الرصيد أقل من السعر يُرفض
+          مع رسالة واضحة. اشحن أولًا ثم اشترِ.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s6">
+      <div class="dg-badge">6</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-key"></i> كلمة المرور وحالة الحساب</h2>
+        <p>
+          من ملف الزبون تقدر <strong>تحديث كلمة مرور بوابته</strong> إن نسيها أو احتاج إعادة ضبط —
+          فيدخل بها لمتجره من جديد. كلمة المرور تُحفظ مهشَّمة ولا تُعرَض كنصّ.
+        </p>
+        <p>
+          راقب <strong>حالة الزبون</strong> (نشِط/غير نشِط) من القائمة والملف — وتابع رصيده ومشترياته
+          لاكتشاف أي خلل (مثل رصيد متوقّف أو مشتريات ملغاة متكرّرة).
+        </p>
+        <div class="dg-flash"><i class="fa-solid fa-circle-check"></i> أصبحت تقرأ زبائن المتجر وتديرهم: أرصدة، مشتريات، وملف كامل لكل زبون.</div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/docs_guide.js') }}"></script>
+
+{% endblock %}

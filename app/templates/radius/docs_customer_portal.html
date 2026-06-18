@@ -1,0 +1,183 @@
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}دليل: بوابة الزبون — كيف تستخدمني{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/docs_guide.css') }}">
+{% endblock %}
+
+{% block content %}
+
+{{ hub.hero(
+  "دليل: بوابة الزبون",
+  subtitle="بوابة خدمة ذاتية للمشتركين ومستخدمي الكروت: يدخلون، يرون الرصيد والاستهلاك والجلسات، يشحنون، يطلبون تجديدًا أو سلفة وقت، ويراسلون الدعم.",
+  icon="user-shield",
+  actions_html='
+    <button type="button" class="hub-btn hub-btn--secondary" onclick="window.print()">
+      <i class="fa-solid fa-file-pdf"></i> حفظ كـ PDF
+    </button>
+    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.docs_center') + '">
+      <i class="fa-solid fa-arrow-right"></i> كل الأدلة
+    </a>
+  '
+) }}
+
+<div class="dg-layout">
+
+  <nav class="dg-toc dg-noprint" aria-label="{{ _('فهرس الدليل') }}">
+    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> {{ _('فهرس الخطوات') }}</div>
+    <a href="#dg-s1" data-dg-toc><span class="n">1</span> ما بوابة الزبون؟</a>
+    <a href="#dg-s2" data-dg-toc><span class="n">2</span> دخول المشترك</a>
+    <a href="#dg-s3" data-dg-toc><span class="n">3</span> رصيد واستهلاك وجلسات</a>
+    <a href="#dg-s4" data-dg-toc><span class="n">4</span> تجديد وسلفة ودعم</a>
+    <a href="#dg-s5" data-dg-toc><span class="n">5</span> بوابة مستخدم الكروت</a>
+    <a href="#dg-s6" data-dg-toc><span class="n">6</span> تحكّم بما يظهر</a>
+    <a href="#dg-s7" data-dg-toc><span class="n">7</span> وصول الزبون المنتهي</a>
+  </nav>
+
+  <div class="dg-main">
+
+    <div class="dg-lead">
+      <span class="ic"><i class="fa-solid fa-lightbulb"></i></span>
+      <div>
+        <h3>قبل ما نبدأ — لمن البوابة؟</h3>
+        <p>
+          بوابة الزبون صفحة خدمة ذاتية مستقلّة عن لوحة الإدارة، يدخلها <strong>المشترك</strong> أو <strong>مستخدم الكروت</strong>
+          بنفسه ليتابع حسابه دون الاتصال بك. هناك بوابتان: <strong>بوابة المشترك</strong> (PPPoE/مشترك دائم) و<strong>بوابة الكروت</strong>
+          (محفظة + شراء كروت). هذا الدليل يشرح ما يراه الزبون وكيف تتحكّم به.
+        </p>
+      </div>
+    </div>
+
+    <section class="dg-step" id="dg-s1">
+      <div class="dg-badge">1</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-door-open"></i> ما بوابة الزبون؟</h2>
+        <ul>
+          <li><strong>بوابة المشترك:</strong> على المسار <code>/portal/subscriber</code> — لمشتركي الإنترنت لمتابعة الباقة والاستهلاك والفواتير.</li>
+          <li><strong>بوابة الكروت:</strong> على المسار <code>/portal/card</code> — لمستخدمي الكروت لإدارة محفظتهم وشراء كروت.</li>
+        </ul>
+        <div class="dg-info">
+          <span class="ic">ℹ️</span>
+          <span>البوابة تستخدم روابط عامّة لا تكشف مسارات الإدارة الداخلية، وكل زبون يرى بياناته هو فقط.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s2">
+      <div class="dg-badge">2</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-right-to-bracket"></i> دخول المشترك</h2>
+        <p>
+          يدخل المشترك بـ<strong>اسم المستخدم</strong> و<strong>كلمة المرور</strong> الخاصّين بحسابه. كل محاولة دخول
+          (ناجحة أو فاشلة) تُسجَّل في أحداث الدخول. بعد الدخول تظهر لوحته الشخصية بتبويبات منظّمة.
+        </p>
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">بوابة المشترك — دخول</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-mock-sechead"><span class="ic"><i class="fa-solid fa-user"></i></span> تسجيل الدخول</div>
+            <div class="dg-mf">
+              <label>اسم المستخدم <span class="req">*</span></label>
+              <div class="dg-mf-input hl">ahmad99</div>
+              <div class="dg-mf-help">نفس بيانات اشتراكه.</div>
+            </div>
+            <div class="dg-mock-actions">
+              <span class="dg-mock-btn primary"><i class="fa-solid fa-right-to-bracket"></i> دخول</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s3">
+      <div class="dg-badge">3</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-gauge-high"></i> الرصيد والاستهلاك والجلسات</h2>
+        <p>
+          لوحة المشترك تعرض حالته في تبويبات:
+        </p>
+        <ul>
+          <li><strong>نظرة عامة:</strong> الباقة، حالة الاشتراك، الأيام المتبقّية، والرصيد/الدَّيْن إن وُجد.</li>
+          <li><strong>الاستهلاك:</strong> إجمالي التحميل والرفع وزمن الجلسات.</li>
+          <li><strong>الجلسات:</strong> سجلّ آخر جلسات الاتصال (بدء/انتهاء، الـIP، المدّة، البيانات).</li>
+          <li><strong>الفوترة:</strong> الفواتير والسلف وسجلّ المدفوعات.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s4">
+      <div class="dg-badge">4</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-hand-holding-dollar"></i> طلب تجديد وسلفة وقت ورسالة دعم</h2>
+        <p>
+          من تبويب <strong>«الطلبات»</strong> يستطيع المشترك إرسال طلبات تصل إليك مباشرة:
+        </p>
+        <ul>
+          <li><strong>طلب تجديد:</strong> يُسجَّل بانتظار مراجعتك وتُفتح له تذكرة متابعة.</li>
+          <li><strong>طلب سلفة وقت:</strong> دقائق إضافية مؤقتة. قد تُعتمد <strong>تلقائيًّا</strong> حسب سياسة الباقة (مثلًا أول طلب حتى يومين)، أو تتطلّب موافقتك.</li>
+          <li><strong>رسالة دعم/شكوى:</strong> رسالة حرّة تصلك مع رابط ردّ سريع.</li>
+        </ul>
+        <div class="dg-info">
+          <span class="ic">ℹ️</span>
+          <span>تصلك هذه الطلبات كتنبيه تلجرام (سلفة، طلب خدمة، رسالة بوابة) إن فعّلت ذلك في دليل التنبيهات، وتُفتح لكل طلب تذكرة في قسم الدعم.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s5">
+      <div class="dg-badge">5</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-wallet"></i> بوابة مستخدم الكروت</h2>
+        <p>
+          يدخل مستخدم الكروت بـ<strong>رقم الجوال</strong> و<strong>كلمة المرور</strong>. بوابته تتمحور حول المحفظة:
+        </p>
+        <ul>
+          <li><strong>شحن الرصيد:</strong> يدخل <strong>رقم الكرت</strong> و<strong>الرقم السري</strong> فتُضاف قيمته إلى محفظته.</li>
+          <li><strong>شراء كرت:</strong> من معرض الباقات يشتري كرتًا برصيد محفظته.</li>
+          <li><strong>بطاقاتي وآخر العمليات:</strong> سجلّ بطاقاته وعمليات الشحن والشراء.</li>
+        </ul>
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة:</b> بعد الشراء يستطيع الزبون الدخول مباشرة إلى صفحة دخول الهوتسبوت من البوابة باستخدام بيانات كرته الجديد.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s6">
+      <div class="dg-badge">6</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-sliders"></i> تحكّم بما يظهر في البوابة</h2>
+        <p>
+          من <strong>الإعدادات ← صفحة المشترك</strong> تتحكّم بما يراه المشترك وما يُسمح له به عبر مفاتيح، أبرزها المفعّلة فعليًّا:
+        </p>
+        <ul>
+          <li>إظهار الاستهلاك · إظهار الجلسات · إظهار الفواتير.</li>
+          <li>السماح بطلب التجديد · السماح بطلب السلفة · إظهار قسم الدعم.</li>
+        </ul>
+        <div class="dg-warn">
+          <span class="ic">⚠️</span>
+          <span><b>انتبه:</b> إيقاف مفتاح يُخفي القسم <em>ويمنع</em> استدعاء مساره مباشرةً (يُرفض بـ403)، فلا يمكن تجاوز الإخفاء عبر الرابط. بعض المفاتيح (تغيير كلمة المرور، الشراء الذاتي، تغيير الباقة) «قيد الربط» — تُحفظ بلا أثر بعد.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s7">
+      <div class="dg-badge">7</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-shield-halved"></i> وصول الزبون المنتهي للبوابة</h2>
+        <p>
+          المشترك المنتهي يبقى قادرًا على رؤية بوابته ليجدّد. لكي يصل إليها وهو على شبكة مقيّدة، أضِف رابط البوابة إلى
+          <strong>قائمة السماح (Walled Garden)</strong> في المايكروتيك — وهي ملاحظة تظهر داخل البوابة أيضًا.
+        </p>
+        <div class="dg-flash"><i class="fa-solid fa-circle-check"></i> بوابة خدمة ذاتية = زبائن يخدمون أنفسهم وعبء أقل عليك.</div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/docs_guide.js') }}"></script>
+
+{% endblock %}

@@ -1,0 +1,244 @@
+/* ════════════════════════════════════════════════════════════════════
+   docs_guide.css — نمط أدلة «كيف تستخدمني» الموحّد (مستخرَج من
+   docs_add_subscriber.html ليُعاد استخدامه في كل الأدلة بلا تكرار).
+   فهرس جانبي لاصق (order:2) + بطاقات خطوات مرقّمة + محاكاة مصغّرة +
+   صناديق تلميح/تحذير + قواعد طباعة «حفظ كـ PDF».
+   ════════════════════════════════════════════════════════════════════ */
+
+/* ── التخطيط: فهرس جانبي لاصق + عمود المحتوى ── */
+.dg-layout{ display:grid; grid-template-columns:minmax(0,1fr) 230px; gap:20px; align-items:start; }
+.dg-toc{ order:2; }
+.dg-main{ order:1; }
+@media (max-width:980px){ .dg-layout{ grid-template-columns:1fr; } .dg-toc{ order:1; } .dg-main{ order:2; } }
+
+.dg-toc{
+  position:sticky; top:84px;
+  background:#fff; border:1px solid #e8edf3; border-radius:14px;
+  padding:14px 13px; display:grid; gap:3px;
+}
+@media (max-width:980px){ .dg-toc{ position:static; } }
+.dg-toc-title{
+  display:flex; align-items:center; gap:8px; font-size:12px; font-weight:900;
+  color:#7c7a99; margin-bottom:7px; padding-inline:6px;
+}
+.dg-toc a{
+  display:flex; align-items:center; gap:9px;
+  padding:8px 10px; border-radius:9px; text-decoration:none;
+  font-size:12.5px; font-weight:700; color:#475569;
+  transition:background .14s, color .14s;
+}
+.dg-toc a .n{
+  width:21px; height:21px; border-radius:50%; flex:none;
+  display:grid; place-items:center; font-size:10.5px; font-weight:900;
+  background:#f1f5f9; color:#94a3b8;
+}
+.dg-toc a:hover{ background:#f5f3ff; color:#5b21b6; }
+.dg-toc a.is-active{ background:#ede9fe; color:#5b21b6; }
+.dg-toc a.is-active .n{ background:linear-gradient(135deg,#7c3aed,#5b21b6); color:#fff; }
+
+/* ── عمود الخطوات ── */
+.dg-main{ min-width:0; display:grid; gap:18px; }
+
+/* تمهيد «ماذا ستتعلم» */
+.dg-lead{
+  display:flex; gap:13px; align-items:flex-start;
+  background:linear-gradient(135deg,#f5f3ff,#fdfcff);
+  border:1px solid #e9e5fc; border-radius:14px; padding:15px 17px;
+}
+.dg-lead .ic{ width:40px;height:40px;border-radius:12px;flex:none;display:grid;place-items:center;
+  font-size:17px;background:#ede9fe;color:#6d28d9; }
+.dg-lead h3{ margin:0 0 4px; font-size:13.5px; font-weight:800; color:#241e4e; }
+.dg-lead p{ margin:0; font-size:12.5px; line-height:1.9; color:#5b5a78; }
+
+/* بطاقة الخطوة */
+.dg-step{ display:grid; grid-template-columns:auto 1fr; gap:15px; align-items:start; scroll-margin-top:90px; }
+@media (max-width:560px){ .dg-step{ grid-template-columns:1fr; } }
+.dg-badge{
+  width:42px; height:42px; border-radius:50%; flex:none;
+  display:grid; place-items:center; font-size:17px; font-weight:900; color:#fff;
+  background:linear-gradient(135deg,#7c3aed,#5b21b6);
+  box-shadow:0 8px 18px rgba(124,58,237,.3);
+}
+.dg-card{
+  min-width:0; background:#fff; border:1px solid #e8edf3; border-radius:15px;
+  padding:16px 18px;
+}
+.dg-card h2{
+  margin:0 0 8px; font-size:15.5px; font-weight:800; color:#0f172a;
+  display:flex; align-items:center; gap:9px; flex-wrap:wrap;
+}
+.dg-card h2 i{ color:#7c3aed; }
+.dg-card p{ margin:0 0 7px; font-size:13px; line-height:1.95; color:#475569; }
+.dg-card p:last-child{ margin-bottom:0; }
+.dg-card ul{ margin:4px 0 8px; padding-inline-start:22px; font-size:13px; line-height:2; color:#475569; }
+.dg-card ol{ margin:4px 0 8px; padding-inline-start:22px; font-size:13px; line-height:2; color:#475569; }
+.dg-card strong{ color:#241e4e; }
+.dg-kbd{
+  font-family:ui-monospace,Consolas,monospace; font-size:11.5px;
+  background:#f1f5f9; border:1px solid #e2e8f0; border-radius:5px;
+  padding:1px 7px; color:#5b21b6;
+}
+
+/* صناديق التلميح */
+.dg-tip, .dg-warn, .dg-info{
+  display:flex; gap:11px; align-items:flex-start;
+  border-radius:12px; padding:11px 14px; margin-top:11px;
+  font-size:12.5px; line-height:1.9;
+}
+.dg-tip{ background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; }
+.dg-warn{ background:#fffbeb; border:1px solid #fde68a; color:#92400e; }
+.dg-info{ background:#eff6ff; border:1px solid #bfdbfe; color:#1e40af; }
+.dg-tip .ic, .dg-warn .ic, .dg-info .ic{ flex:none; font-size:15px; line-height:1.6; }
+.dg-tip b, .dg-warn b, .dg-info b{ font-weight:900; }
+
+/* ════ الرسوم: محاكاة مصغّرة للصفحة الحقيقية ════ */
+.dg-mock{
+  border:1px solid #e2e8f0; border-radius:14px; overflow:hidden;
+  background:#fff; box-shadow:0 8px 20px rgba(15,23,42,.07);
+  margin-top:13px; max-width:560px;
+}
+.dg-mock-bar{
+  display:flex; align-items:center; gap:7px; padding:8px 12px;
+  background:#f1f5f9; border-bottom:1px solid #e2e8f0;
+}
+.dg-mock-bar .dots{ display:flex; gap:5px; }
+.dg-mock-bar .dots i{ width:9px; height:9px; border-radius:50%; }
+.dg-mock-bar .dots i:nth-child(1){ background:#f87171; }
+.dg-mock-bar .dots i:nth-child(2){ background:#fbbf24; }
+.dg-mock-bar .dots i:nth-child(3){ background:#34d399; }
+.dg-mock-bar .crumb{
+  flex:1; background:#fff; border:1px solid #e2e8f0; border-radius:7px;
+  padding:4px 10px; font-size:10.5px; font-weight:700; color:#64748b;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.dg-mock-body{ padding:14px; display:grid; gap:11px; }
+.dg-mock-sechead{
+  display:flex; align-items:center; gap:9px; font-size:12px; font-weight:800; color:#241e4e;
+  padding-bottom:9px; border-bottom:1px dashed #eef2f7;
+}
+.dg-mock-sechead .ic{
+  width:26px; height:26px; border-radius:8px; display:grid; place-items:center;
+  font-size:11px; background:#ede9fe; color:#6d28d9; flex:none;
+}
+.dg-mock-grid2{ display:grid; grid-template-columns:1fr 1fr; gap:11px; }
+@media (max-width:480px){ .dg-mock-grid2{ grid-template-columns:1fr; } }
+.dg-mf{ display:grid; gap:5px; min-width:0; }
+.dg-mf label{ font-size:10.5px; font-weight:800; color:#475569; }
+.dg-mf label .req{ color:#dc2626; }
+.dg-mf-input{
+  border:1.5px solid #e2e8f0; border-radius:8px; padding:8px 10px;
+  font-size:11.5px; color:#0f172a; background:#fff;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.dg-mf-input.hl{ border-color:#c4b5fd; background:#faf5ff; }
+.dg-mf-input.ph{ color:#a3aec2; }
+.dg-mf-help{ font-size:9.5px; color:#94a3b8; line-height:1.6; }
+
+/* بطاقات اختيار (نوع الخدمة/الوضع) — محاكاة */
+.dg-svc{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+@media (max-width:480px){ .dg-svc{ grid-template-columns:1fr; } }
+.dg-svc-card{
+  display:flex; gap:10px; align-items:center; border-radius:11px;
+  border:1.5px solid #e2e8f0; padding:10px 12px; background:#fff;
+}
+.dg-svc-card.on{
+  border-color:#7c3aed; background:#faf5ff;
+  box-shadow:0 0 0 3px rgba(124,58,237,.10);
+}
+.dg-svc-card .ic{
+  width:32px; height:32px; border-radius:9px; flex:none;
+  display:grid; place-items:center; font-size:13px;
+  background:#f1f5f9; color:#64748b;
+}
+.dg-svc-card.on .ic{ background:#ede9fe; color:#6d28d9; }
+.dg-svc-card .t{ font-size:11.5px; font-weight:800; color:#0f172a; }
+.dg-svc-card .d{ font-size:9.5px; color:#94a3b8; margin-top:2px; line-height:1.5; }
+.dg-svc-card .ck{
+  margin-inline-start:auto; width:17px; height:17px; border-radius:5px; flex:none;
+  border:1.5px solid #cbd5e1; display:grid; place-items:center; font-size:9px; color:#fff;
+}
+.dg-svc-card.on .ck{ background:#7c3aed; border-color:#7c3aed; }
+
+/* أزرار (محاكاة) */
+.dg-mock-actions{ display:flex; justify-content:flex-end; gap:9px; padding-top:4px; }
+.dg-mock-btn{
+  display:inline-flex; align-items:center; gap:7px; border:0; border-radius:9px;
+  padding:8px 16px; font:inherit; font-size:11.5px; font-weight:800; cursor:default;
+}
+.dg-mock-btn.primary{
+  background:linear-gradient(135deg,#7c3aed,#5b21b6); color:#fff;
+  box-shadow:0 6px 14px rgba(124,58,237,.28);
+}
+.dg-mock-btn.ghost{ background:#f1f5f9; color:#475569; }
+
+/* محاكاة القائمة الجانبية */
+.dg-sidemock{
+  max-width:250px; background:#fff; border:1px solid #e2e8f0; border-radius:13px;
+  padding:11px 10px; box-shadow:0 8px 20px rgba(15,23,42,.07); margin-top:13px;
+}
+.dg-sidemock .sec{
+  display:flex; align-items:center; gap:9px; padding:8px 10px; border-radius:9px;
+  font-size:11.5px; font-weight:800; color:#334155; background:#f8fafc;
+}
+.dg-sidemock .sec i.cv{ margin-inline-start:auto; font-size:9px; color:#94a3b8; transform:rotate(180deg); }
+.dg-sidemock .sub{
+  display:flex; align-items:center; gap:8px; padding:7px 10px 7px;
+  margin-inline-start:18px; border-radius:8px; font-size:11px; font-weight:700; color:#64748b;
+}
+.dg-sidemock .sub.on{
+  background:#ede9fe; color:#5b21b6; font-weight:900; position:relative;
+}
+.dg-sidemock .sub.on::after{
+  content:"\f060"; font-family:"Font Awesome 6 Free"; font-weight:900;
+  margin-inline-start:auto; font-size:9px; animation:dgPoint 1.2s ease-in-out infinite;
+}
+@keyframes dgPoint{ 0%,100%{ transform:translateX(0); } 50%{ transform:translateX(-4px); } }
+
+/* محاكاة شريط النجاح */
+.dg-flash{
+  display:flex; align-items:center; gap:10px; max-width:560px; margin-top:13px;
+  background:#f0fdf4; border:1px solid #86efac; border-radius:11px;
+  padding:10px 14px; font-size:12px; font-weight:800; color:#15803d;
+}
+.dg-flash i{ font-size:14px; }
+
+/* محاكاة صف جدول */
+.dg-rowmock{
+  max-width:560px; margin-top:11px; border:1px solid #e2e8f0; border-radius:12px;
+  overflow:hidden; box-shadow:0 6px 16px rgba(15,23,42,.06);
+}
+.dg-rowmock .hd, .dg-rowmock .rw{
+  display:grid; grid-template-columns:1.2fr 1fr .8fr .8fr; gap:8px;
+  padding:9px 13px; font-size:10.5px; align-items:center;
+}
+.dg-rowmock .hd{ background:#f5f3ff; color:#5b21b6; font-weight:900; }
+.dg-rowmock .rw{ background:#fff; color:#334155; font-weight:700; border-top:1px solid #f1f5f9; }
+.dg-rowmock .rw.new{ background:#faf5ff; }
+.dg-pill{
+  display:inline-flex; align-items:center; gap:5px; border-radius:999px;
+  padding:2px 9px; font-size:9.5px; font-weight:900; background:#dcfce7; color:#15803d;
+}
+.dg-pill.warn{ background:#fef3c7; color:#92400e; }
+.dg-pill.bad{ background:#fee2e2; color:#b91c1c; }
+.dg-pill .dot{ width:6px; height:6px; border-radius:50%; background:#16a34a; }
+.dg-pill.warn .dot{ background:#d97706; }
+.dg-pill.bad .dot{ background:#dc2626; }
+
+.dg-cap{ font-size:11px; color:#94a3b8; margin-top:8px; line-height:1.7; }
+.dg-cap i{ color:#c4b5fd; }
+
+/* ════ الطباعة: «حفظ كـ PDF» = window.print() ════ */
+@media print{
+  .hb-side, .hb-side-overlay, .hb-topbar, header.hb-top,
+  .dg-toc, .dg-noprint, .hub-hero-actions{ display:none !important; }
+  .dg-layout{ grid-template-columns:1fr; }
+  .dg-card, .dg-mock, .dg-sidemock, .dg-rowmock{
+    box-shadow:none !important; break-inside:avoid;
+  }
+  .dg-step{ break-inside:avoid; }
+  body{ background:#fff !important; }
+  .dg-badge, .dg-mock-btn.primary, .dg-svc-card.on, .dg-tip, .dg-warn, .dg-info,
+  .dg-flash, .dg-pill, .dg-rowmock .hd{
+    -webkit-print-color-adjust:exact; print-color-adjust:exact;
+  }
+}

@@ -1,0 +1,233 @@
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}دليل: الهوت سبوت وصفحة الدخول — كيف تستخدمني{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/docs_guide.css') }}">
+{% endblock %}
+
+{% block content %}
+
+{{ hub.hero(
+  "الهوت سبوت وصفحة الدخول",
+  subtitle="مفهوم الهوت سبوت، صفحة الدخول الأسيرة (Captive Portal)، تصميمها ونشرها على الراوتر، والفرق بين مستخدمي الهوت سبوت والمشتركين.",
+  icon="wifi",
+  actions_html='
+    <button type="button" class="hub-btn hub-btn--secondary" onclick="window.print()">
+      <i class="fa-solid fa-file-pdf"></i> حفظ كـ PDF
+    </button>
+    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.docs_center') + '">
+      <i class="fa-solid fa-arrow-right"></i> كل الأدلة
+    </a>
+  '
+) }}
+
+<div class="dg-layout">
+
+  <nav class="dg-toc dg-noprint" aria-label="{{ _('فهرس الدليل') }}">
+    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> {{ _('فهرس الخطوات') }}</div>
+    <a href="#dg-s1" data-dg-toc><span class="n">1</span> ما هو الهوت سبوت؟</a>
+    <a href="#dg-s2" data-dg-toc><span class="n">2</span> صفحة الدخول الأسيرة</a>
+    <a href="#dg-s3" data-dg-toc><span class="n">3</span> اختيار التصميم وتخصيصه</a>
+    <a href="#dg-s4" data-dg-toc><span class="n">4</span> المعاينة قبل النشر</a>
+    <a href="#dg-s5" data-dg-toc><span class="n">5</span> نشر الصفحة على الراوتر</a>
+    <a href="#dg-s6" data-dg-toc><span class="n">6</span> القوالب المحفوظة والحزمة</a>
+    <a href="#dg-s7" data-dg-toc><span class="n">7</span> مستخدمو الهوت سبوت مقابل المشتركين</a>
+  </nav>
+
+  <div class="dg-main">
+
+    <div class="dg-lead">
+      <span class="ic"><i class="fa-solid fa-lightbulb"></i></span>
+      <div>
+        <h3>ما الذي يجمعه هذا الدليل؟</h3>
+        <p>
+          الهوت سبوت هو الطريقة الأشهر لبيع الإنترنت بالبطاقات والباقات: يتّصل الزبون بالشبكة فتظهر
+          له صفحة دخول يُدخل فيها كوده، ثم يُسمح له بالإنترنت. هذا الدليل يشرح المفهوم، ثم يأخذك عبر
+          تصميم صفحة الدخول ونشرها على الراوتر من مصمّم اللوحة، وأخيرًا يوضّح الفرق بين «مستخدم
+          الهوت سبوت» و«المشترك» في نظامك.
+        </p>
+      </div>
+    </div>
+
+    <section class="dg-step" id="dg-s1">
+      <div class="dg-badge">1</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-wifi"></i> ما هو الهوت سبوت؟</h2>
+        <p>
+          <strong>الهوت سبوت (Hotspot)</strong> نمط تشغيل على الراوتر يفرض على كل من يتّصل بالشبكة أن
+          «يسجّل دخوله» قبل أن يُسمح له بالإنترنت. الزبون يتّصل بالواي فاي بحرّية، لكن أي محاولة تصفّح
+          تُعاد توجيهها إلى صفحة دخول. هذا النمط مثالي لبيع الإنترنت بالبطاقات: لا يحتاج الزبون إعدادًا
+          على جهازه، فقط يدخل كود البطاقة.
+        </p>
+        <div class="dg-info">
+          <span class="ic">ℹ️</span>
+          <span>إعداد نمط الهوت سبوت نفسه (الواجهة، مجمّع العناوين، البوابة) يتمّ من <strong>معالج
+          البرمجة</strong> — راجع دليل «إعداد وتشغيل المايكروتيك». هذا الدليل يركّز على <em>صفحة
+          الدخول</em>.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s2">
+      <div class="dg-badge">2</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-id-card-clip"></i> صفحة الدخول الأسيرة (Captive Portal)</h2>
+        <p>
+          الصفحة التي تظهر للزبون تُسمّى <strong>الصفحة الأسيرة</strong> — ملف <code>login.html</code>
+          يستضيفه الراوتر نفسه. فيها يُدخل الزبون كود بطاقته أو بيانات اشتراكه، فيرسلها الراوتر إلى
+          اللوحة عبر RADIUS، وحين تقبلها اللوحة يُفتح له الإنترنت.
+        </p>
+        <p>
+          إلى جانب <code>login.html</code> هناك <strong>صفحات مرافقة</strong> يرفعها النظام تلقائيًّا:
+          صفحة الحالة، صفحة الخروج، رسائل الأخطاء، وصفحات إعادة التوجيه — فتكون تجربة الدخول كاملة لا
+          ناقصة.
+        </p>
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة:</b> عند تفعيل المتجر، تُرفع أيضًا صفحة <strong>متجر الراوتر</strong>
+          (<code>store.html</code>) فيستطيع الزبون شراء باقة مباشرة من صفحة الدخول دون تدخّلك.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s3">
+      <div class="dg-badge">3</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-palette"></i> اختيار التصميم وتخصيصه</h2>
+        <p>
+          من <strong>مصمّم صفحة الدخول</strong> (داخل عمليات الراوتر) تختار تصميمًا من المعرض الجاهز:
+          <strong>الكلاسيكي</strong>، <strong>الليلي</strong>، <strong>التدرّج الاحترافي</strong>،
+          <strong>الزمرّدي</strong>، <strong>بوابة المتجر</strong>، <strong>توهّج الألياف</strong>،
+          و«MikroTik الرسمي» وغيرها — أو ترفع <strong>تصميمًا خاصًّا</strong> بك.
+        </p>
+        <p>
+          ثم تخصّص المتغيّرات: الشعار، اسم المزوّد، اللون المميّز، رابط المتجر، ورقم دعم الواتساب.
+          التغييرات لا تلمس الراوتر — تبقى محفوظة في اللوحة حتى تنشرها.
+        </p>
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">مصمّم صفحة الدخول</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-mock-sechead"><span class="ic"><i class="fa-solid fa-palette"></i></span> اختر تصميمًا وخصّصه</div>
+            <div class="dg-mf">
+              <label>التصميم</label>
+              <div class="dg-mf-input hl">التدرّج الاحترافي</div>
+            </div>
+            <div class="dg-mf">
+              <label>اسم المزوّد</label>
+              <div class="dg-mf-input">شبكتي للإنترنت</div>
+            </div>
+            <div class="dg-mf">
+              <label>اللون المميّز</label>
+              <div class="dg-mf-input">#0ea5e9</div>
+            </div>
+            <div class="dg-mock-actions">
+              <span class="dg-mock-btn"><i class="fa-solid fa-floppy-disk"></i> حفظ</span>
+              <span class="dg-mock-btn primary"><i class="fa-solid fa-upload"></i> نشر</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s4">
+      <div class="dg-badge">4</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-eye"></i> المعاينة قبل النشر</h2>
+        <p>
+          قبل أن تنشر، يعرض المصمّم <strong>معاينة حيّة</strong> لصفحة الدخول بقيمك الحالية — دون أي
+          اتصال بالراوتر. تتأكّد من شكل الشعار والألوان والنصوص كما سيراها الزبون. زرّ المتجر في
+          المعاينة يفتح صفحة المتجر المستقلّة الحقيقية ليطابق ما يُرفع فعلًا.
+        </p>
+        <div class="dg-info">
+          <span class="ic">ℹ️</span>
+          <span>المعاينة تُجري المحاكاة محليًّا (تُزال رموز الراوتر الخاصّة) — فما تراه هو الشكل
+          النهائي بدقّة، لكنه عرض فقط ولا يُفعّل الدخول الفعلي.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s5">
+      <div class="dg-badge">5</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-upload"></i> نشر الصفحة على الراوتر</h2>
+        <p>
+          احفظ تصميمك، ثم اضغط <strong>«نشر»</strong> وأكّد العملية. يرفع النظام الملفات إلى الراوتر
+          ويعرض <strong>شريط تقدّم حيّ</strong> بكل مرحلة:
+        </p>
+        <ol>
+          <li>تجهيز ملفات التصميم والتحقّق من صحّتها.</li>
+          <li>الاتصال بالراوتر.</li>
+          <li>رفع صفحة الدخول <code>login.html</code>.</li>
+          <li>رفع رسائل الأخطاء والصفحات المرافقة (الحالة/الخروج/إعادة التوجيه).</li>
+          <li>عند تفعيل المتجر: رفع <code>store.html</code> وتجهيز قائمة السماح (walled-garden).</li>
+        </ol>
+        <p>
+          فشل ملف فرعي لا يُفشل بقية النشر، وتظهر لك الخطوة الفاشلة <strong>وسببها الحقيقي</strong>
+          من الراوتر (صلاحية ناقصة، قرص ممتلئ …). كل محاولة نشر تُسجَّل في مركز الأحداث، وتظهر «حالة
+          النشر الأخيرة» في رأس الصفحة.
+        </p>
+        <div class="dg-warn">
+          <span class="ic">⚠️</span>
+          <span><b>عند تفعيل المتجر:</b> يحتاج النظام عنوان سيرفر راديوس صالحًا يصله أجهزة الزبائن
+          (لا عنوان محلّي) ليعمل المتجر — وإلّا يرفض نشر المتجر برسالة واضحة بدل صفحة لا تعمل.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s6">
+      <div class="dg-badge">6</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-box-archive"></i> القوالب المحفوظة وحزمة ZIP</h2>
+        <p>
+          لتسريع العمل على عدّة راوترات، يتيح المصمّم خيارين:
+        </p>
+        <ul>
+          <li><strong>قوالب محفوظة:</strong> احفظ مجموعة المتغيّرات الحالية باسم، ثم أعد تطبيقها على
+            هذا الراوتر أو احذفها لاحقًا.</li>
+          <li><strong>تحميل الحزمة (ZIP):</strong> ينزّل حزمة جاهزة (<code>login.html</code> بقيمك،
+            و<code>store.html</code> عند تفعيل المتجر، والخطوط إن لزمت) لرفعها يدويًّا على الراوتر مع
+            تعليمات مختصرة.</li>
+        </ul>
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة:</b> القالب المحفوظ يحمل تخصيصك كاملًا — مفيد حين تشغّل عدّة فروع بهويّة
+          بصرية موحّدة.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s7">
+      <div class="dg-badge">7</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-people-line"></i> مستخدمو الهوت سبوت مقابل المشتركين</h2>
+        <p>
+          تمييز مهم يحسم الكثير من الالتباس:
+        </p>
+        <ul>
+          <li><strong>المشترك:</strong> حساب دائم تديره في اللوحة بباقة وكوتا وصلاحية — غالبًا للزبون
+            الثابت (منزل/مكتب).</li>
+          <li><strong>مستخدم الهوت سبوت / البطاقة:</strong> هويّة تدخل عبر صفحة الدخول، وعادةً بطاقة
+            بكود محدود بزمن أو كمية — للزبون العابر.</li>
+        </ul>
+        <p>
+          في الحالتين، الراوتر يسأل <strong>نفس خادم RADIUS</strong> (لوحتك) وتطبّق <strong>نفس
+          سياسات القبول/الرفض</strong> (الحالة، الصلاحية، الكوتا، الجلسات المتزامنة). الفرق في طريقة
+          الإدارة لا في آليّة المصادقة.
+        </p>
+        <div class="dg-flash"><i class="fa-solid fa-circle-check"></i> صفحة دخولك جاهزة ومنشورة — والزبون يدخل بكوده فتقبله سياساتك تلقائيًّا.</div>
+        <div class="dg-info">
+          <span class="ic">ℹ️</span>
+          <span>لفهم آليّة القبول/الرفض بعمق، راجع دليل <strong>«نظام RADIUS — كيف يعمل»</strong>.</span>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/docs_guide.js') }}"></script>
+
+{% endblock %}

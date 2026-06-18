@@ -1,0 +1,205 @@
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}دليل: منع استنساخ MAC — كشف انتحال الجهاز{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/docs_guide.css') }}">
+{% endblock %}
+
+{% block content %}
+
+{{ hub.hero(
+  "دليل: منع استنساخ MAC",
+  subtitle="يكشف دخول جهاز مختلف بنفس عنوان MAC عبر «بصمة الجهاز»، ويتيح المراقبة أو المنع — مع إبقاء تجربة الدخول السلس سليمة. مغلق افتراضيًّا.",
+  icon="fingerprint",
+  actions_html='
+    <button type="button" class="hub-btn hub-btn--secondary" onclick="window.print()">
+      <i class="fa-solid fa-file-pdf"></i> حفظ كـ PDF
+    </button>
+    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.docs_center') + '">
+      <i class="fa-solid fa-arrow-right"></i> كل الأدلة
+    </a>
+  '
+) }}
+
+<div class="dg-layout">
+
+  <nav class="dg-toc dg-noprint" aria-label="{{ _('فهرس الدليل') }}">
+    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> {{ _('فهرس الخطوات') }}</div>
+    <a href="#dg-s1" data-dg-toc><span class="n">1</span> ما المشكلة وكيف نكشفها؟</a>
+    <a href="#dg-s2" data-dg-toc><span class="n">2</span> الإشارات المتباينة</a>
+    <a href="#dg-s3" data-dg-toc><span class="n">3</span> الأنماط الثلاثة</a>
+    <a href="#dg-s4" data-dg-toc><span class="n">4</span> النطاق وحدّ الثقة</a>
+    <a href="#dg-s5" data-dg-toc><span class="n">5</span> حارس الجلسات المتزامنة</a>
+    <a href="#dg-s6" data-dg-toc><span class="n">6</span> قائمة الارتباطات والأحداث</a>
+    <a href="#dg-s7" data-dg-toc><span class="n">7</span> التشغيل الآمن</a>
+  </nav>
+
+  <div class="dg-main">
+
+    <div class="dg-lead">
+      <span class="ic"><i class="fa-solid fa-lightbulb"></i></span>
+      <div>
+        <h3>قبل ما نبدأ — الفكرة باختصار</h3>
+        <p>
+          «استنساخ MAC» هو أن ينسخ شخصٌ عنوان MAC من جهاز شرعي ليدخل بحساب غيره من جهاز ثانٍ. هذه الميزة
+          تكشفه عبر <strong>«بصمة الجهاز»</strong>: على أوّل دخول ناجح يربط النظام الـ MAC ببصمة جهازه
+          (نوع النظام، ماركة الجهاز، بصمة DHCP، اسم الجهاز…)، ثم على كل دخول لاحق يعيد التحقق. نفس MAC ببصمة
+          مختلفة جدًّا = استنساخ. الميزة <strong>مغلقة افتراضيًّا</strong>، ولا تكسر مسار المصادقة أبدًا —
+          أي خطأ داخلي يُسقط الفحص (سماح آمن).
+        </p>
+      </div>
+    </div>
+
+    <section class="dg-step" id="dg-s1">
+      <div class="dg-badge">1</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-fingerprint"></i> ما المشكلة وكيف نكشفها؟</h2>
+        <p>
+          الهدف إيقاف سرقة الجلسة دون تعطيل خاصّية الدخول السلس (MAC-cookie). المنطق:
+        </p>
+        <ul>
+          <li>نفس MAC + بصمة مطابقة → جهاز حقيقي، يُسمح بلا احتكاك.</li>
+          <li>نفس MAC + بصمة مختلفة جدًّا → استنساخ → رفض/تصعيد + تنبيه.</li>
+          <li>نفس MAC + جلسة متزامنة من مكان متباعد → استنساخ مؤكَّد → رفض + ركل الجلسة الأولى.</li>
+        </ul>
+        <div class="dg-info">
+          <span class="ic">ℹ️</span>
+          <span>بصمة الجهاز تُثرى من بيانات DHCP المُزامَنة في الخلفية، فكلّما اكتملت معلومات الأجهزة لديك
+          صار الكشف أدقّ.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s2">
+      <div class="dg-badge">2</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-diagram-next"></i> ما معنى «الإشارات المتباينة»؟</h2>
+        <p>
+          عند كل دخول يقارن النظام بصمة الطلب الحالية بالبصمة المربوطة، ويحسب درجة خطورة. «الإشارات
+          المتباينة» هي الحقول التي اختلفت — وبعضها أقوى دلالةً من غيرها:
+        </p>
+        <ul>
+          <li><strong>نوع النظام</strong> و<strong>ماركة الجهاز</strong> — الأقوى: تغيّرها بنفس الـ MAC
+            يرفع الثقة إلى «عالية» مباشرةً (مستحيل أن يصير جهاز iOS أندرويد بنفس العتاد).</li>
+          <li><strong>بصمة DHCP</strong> و<strong>بصمة المتصفح</strong> — قويّة (ثقة متوسطة فأعلى).</li>
+          <li><strong>الموديل</strong> و<strong>اسم الجهاز</strong> — مساندة.</li>
+          <li><strong>سياق الشبكة</strong> (IP الراوتر، نقطة الوصول، المنفذ) — أوزان أخفّ لأنه قد يتغيّر
+            شرعيًّا عند تنقّل المستخدم بين الأجهزة.</li>
+        </ul>
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة:</b> الإشارات الفارغة في أحد الطرفين لا تُحتسب تباينًا — النظام لا يعاقب على نقص
+          معلومة، بل على اختلاف فعلي مؤكَّد.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s3">
+      <div class="dg-badge">3</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-sliders"></i> الأنماط الثلاثة</h2>
+        <p>
+          عند تفعيل الميزة اختر نمط الاستجابة:
+        </p>
+        <ul>
+          <li><strong>monitor (مراقبة):</strong> يسجّل الكشف فقط دون أي منع — مثالي للتجربة وفهم بياناتك
+            قبل الإنفاذ.</li>
+          <li><strong>stepup (تصعيد):</strong> عند الاشتباه يرفض المحاولة ويطلب من المستخدم إعادة كتابة كلمة
+            المرور؛ إن أعادها الجهاز نفسه بنجاح خلال نافذة التصعيد، يُعتبر تأكيدًا على «هذا جهازي الجديد»
+            فيُعاد الربط ويُسمح.</li>
+          <li><strong>enforce (إنفاذ):</strong> يرفض الاستنساخ مباشرةً ويُعيد رسالة تنبيه أمني.</li>
+        </ul>
+        <div class="dg-info">
+          <span class="ic">ℹ️</span>
+          <span>التصعيد لا يَحلّ حالة الجلستين المتزامنتين من مكانين مختلفين — تلك تُعامَل كاستنساخ صريح في
+          enforce و stepup كليهما، وتبقى monitor مراقبةً محضة.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s4">
+      <div class="dg-badge">4</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-crosshairs"></i> النطاق وحدّ الثقة</h2>
+        <p>
+          حدّد على مَن تنطبق الميزة عبر <strong>النطاق</strong>:
+        </p>
+        <ul>
+          <li><strong>all:</strong> كل المشتركين والبطاقات.</li>
+          <li><strong>plans:</strong> أصحاب عروض/باقات محدّدة تختارها من القائمة.</li>
+          <li><strong>groups:</strong> أعضاء مجموعات محدّدة بالاسم.</li>
+        </ul>
+        <p>
+          ثم اضبط <strong>حدّ الثقة الأدنى</strong> لاتخاذ القرار: <code>low</code> أو <code>medium</code>
+          (الافتراضي) أو <code>high</code>. كلّما رفعته قلّت الإنذارات الكاذبة لكن قد تمرّ حالات حدّية.
+        </p>
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة:</b> ابدأ بنطاق صغير (باقة واحدة مثلًا) وحدّ ثقة <code>medium</code> في نمط
+          monitor، وراقب الأحداث قبل التوسيع.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s5">
+      <div class="dg-badge">5</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-tower-broadcast"></i> حارس الجلسات المتزامنة</h2>
+        <p>
+          <strong>«حارس الجلسات المتزامنة»</strong> (impossible-travel) يكشف وجود جلسة حيّة بنفس الـ MAC من
+          راوتر أو نقطة وصول مختلفة في آنٍ واحد — وهي أقوى إشارة على الاستنساخ. عند تفعيله مع
+          <strong>«فصل CoA»</strong> يركل النظام الجلسة الأولى تلقائيًّا عند الكشف، ويسجّل ذلك حدثًا.
+          يمكنك أيضًا تفعيل <strong>تنبيه الإدارة</strong> ليصلك إشعار عند كل كشف فعلي.
+        </p>
+        <div class="dg-warn">
+          <span class="ic">⚠️</span>
+          <span><b>انتبه:</b> فصل CoA لا يحدث إلا في حالة الرفض (enforce/stepup) ومع تفعيل المفتاح. في نمط
+          monitor لا يُفصَل أحد — السجّل فقط.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s6">
+      <div class="dg-badge">6</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-link"></i> قائمة الارتباطات والأحداث</h2>
+        <p>
+          <strong>قائمة الارتباطات</strong> تعرض كل ربط نشط بين مستخدم و MAC وبصمة جهازه. لكل ارتباط تقدر:
+          <strong>حذفه</strong>، <strong>تعليقه</strong>، <strong>تفعيله</strong>، أو <strong>وسمه كمستبدَل</strong>.
+          أمّا <strong>سجلّ الأحداث</strong> فيعرض كل فعل (ربط جديد، تحقّق ناجح، كشف استنساخ، طلب تصعيد، ركل
+          جلسة) مع درجة الثقة والإشارات المتباينة — للمراجعة والتدقيق.
+        </p>
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة:</b> إن غيّر مستخدمٌ جهازه فعليًّا، احذف ارتباطه القديم ليُعاد ربطه نظيفًا من أوّل
+          دخول جديد — أو دعه يؤكّد بنفسه عبر نمط stepup.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s7">
+      <div class="dg-badge">7</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-flag-checkered"></i> التشغيل الآمن</h2>
+        <p>
+          الترتيب المنصوح به للتشغيل دون إزعاج مستخدميك:
+        </p>
+        <ol>
+          <li>فعّل الميزة في نمط <strong>monitor</strong> على نطاق محدود وحدّ ثقة <code>medium</code>.</li>
+          <li>راقب سجلّ الأحداث بضعة أيام وتأكّد أنّ الكشوف منطقية لا إنذارات كاذبة.</li>
+          <li>انتقل إلى <strong>stepup</strong> أو <strong>enforce</strong> حسب صرامتك المطلوبة.</li>
+          <li>فعّل حارس الجلسات المتزامنة وتنبيه الإدارة لتغطية الحالات المؤكَّدة.</li>
+        </ol>
+        <div class="dg-flash"><i class="fa-solid fa-circle-check"></i> الميزة جاهزة — ابدأ بالمراقبة ثم شدّد بثقة.</div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/docs_guide.js') }}"></script>
+
+{% endblock %}

@@ -1,0 +1,222 @@
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}دليل: نظام RADIUS — كيف يعمل{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/docs_guide.css') }}">
+{% endblock %}
+
+{% block content %}
+
+{{ hub.hero(
+  "نظام RADIUS — كيف يعمل",
+  subtitle="الفكرة من الأساس: ما هو RADIUS، كيف يسأل الراوتر لوحتك للتحقق من مشترك أو بطاقة، ما دور المفتاح المشترك، ولماذا يُقبَل مستخدم أو يُرفَض.",
+  icon="shield-halved",
+  actions_html='
+    <button type="button" class="hub-btn hub-btn--secondary" onclick="window.print()">
+      <i class="fa-solid fa-file-pdf"></i> حفظ كـ PDF
+    </button>
+    <a class="hub-btn hub-btn--secondary" href="' + url_for('radius.docs_center') + '">
+      <i class="fa-solid fa-arrow-right"></i> كل الأدلة
+    </a>
+  '
+) }}
+
+<div class="dg-layout">
+
+  <nav class="dg-toc dg-noprint" aria-label="{{ _('فهرس الدليل') }}">
+    <div class="dg-toc-title"><i class="fa-solid fa-list-ol"></i> {{ _('فهرس الخطوات') }}</div>
+    <a href="#dg-s1" data-dg-toc><span class="n">1</span> ما هو RADIUS؟</a>
+    <a href="#dg-s2" data-dg-toc><span class="n">2</span> الأطراف الثلاثة</a>
+    <a href="#dg-s3" data-dg-toc><span class="n">3</span> المفتاح المشترك</a>
+    <a href="#dg-s4" data-dg-toc><span class="n">4</span> رحلة المصادقة خطوة بخطوة</a>
+    <a href="#dg-s5" data-dg-toc><span class="n">5</span> لماذا يُقبَل أو يُرفَض</a>
+    <a href="#dg-s6" data-dg-toc><span class="n">6</span> المحاسبة وقطع الجلسة</a>
+    <a href="#dg-s7" data-dg-toc><span class="n">7</span> كيف يربط هذا بلوحتك</a>
+  </nav>
+
+  <div class="dg-main">
+
+    <div class="dg-lead">
+      <span class="ic"><i class="fa-solid fa-lightbulb"></i></span>
+      <div>
+        <h3>لماذا تحتاج أن تفهم RADIUS؟</h3>
+        <p>
+          RADIUS هو القلب الذي ينبض خلف كل اتصال في شبكتك: هو الذي يقرّر مَن يدخل ومَن يُرفَض، ويحسب
+          كم استهلك كل مشترك. عندما تفهم كيف يعمل، تصبح قراءة سجلّات الدخول وتشخيص «لماذا لم يتّصل
+          هذا المشترك؟» أمرًا بسيطًا. هذا الدليل مفاهيمي بحت — يشرح الصورة الكبيرة ويربطها بلوحتك.
+        </p>
+      </div>
+    </div>
+
+    <section class="dg-step" id="dg-s1">
+      <div class="dg-badge">1</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-circle-question"></i> ما هو RADIUS؟</h2>
+        <p>
+          <strong>RADIUS</strong> اختصار لـ «Remote Authentication Dial-In User Service» — بروتوكول
+          مركزي يؤدّي وظيفتين أساسيّتين:
+        </p>
+        <ul>
+          <li><strong>المصادقة (Authentication):</strong> التحقّق من هويّة من يحاول الاتصال — هل اسم
+            المستخدم وكلمة المرور (أو كود البطاقة) صحيحان، وهل يُسمح له بالدخول؟</li>
+          <li><strong>المحاسبة (Accounting):</strong> تسجيل ماذا فعل بعد دخوله — متى بدأت الجلسة، كم
+            استهلك من بيانات، ومتى انتهت.</li>
+        </ul>
+        <p>
+          الفكرة: بدل أن يحتفظ كل راوتر بقائمة المستخدمين لديه، يسأل <strong>مرجعًا مركزيًّا واحدًا</strong>
+          (لوحتك) — فتدير آلاف المشتركين والبطاقات من مكان واحد مهما كثرت الراوترات.
+        </p>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s2">
+      <div class="dg-badge">2</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-people-arrows"></i> الأطراف الثلاثة</h2>
+        <p>
+          أي عملية RADIUS فيها ثلاثة أطراف:
+        </p>
+        <ul>
+          <li><strong>المستخدِم (Supplicant):</strong> المشترك أو حامل البطاقة الذي يحاول الاتصال
+            عبر جهازه.</li>
+          <li><strong>الراوتر (NAS — خادم الوصول):</strong> جهاز MikroTik الذي يستقبل محاولة الاتصال،
+            لكنه <em>لا يقرّر بنفسه</em> — يحوّل السؤال إلى اللوحة.</li>
+          <li><strong>خادم RADIUS (لوحتك):</strong> العقل المركزي الذي يفحص الطلب مقابل بيانات
+            المشترك والباقة والسياسات، ويردّ بقبول أو رفض.</li>
+        </ul>
+        <div class="dg-mock" aria-hidden="true">
+          <div class="dg-mock-bar"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">مسار الطلب</span></div>
+          <div class="dg-mock-body">
+            <div class="dg-mock-sechead"><span class="ic"><i class="fa-solid fa-route"></i></span> من المستخدم إلى القرار</div>
+            <div class="dg-mf">
+              <div class="dg-mf-input hl">📱 المستخدِم &nbsp;←→&nbsp; 🛜 الراوتر (NAS) &nbsp;←→&nbsp; 🛡️ اللوحة (RADIUS)</div>
+              <div class="dg-mf-help">الراوتر وسيط ينقل السؤال ويطبّق الجواب — القرار في اللوحة.</div>
+            </div>
+          </div>
+        </div>
+        <div class="dg-info">
+          <span class="ic">ℹ️</span>
+          <span>في لوحتك، كل راوتر تعرّفه (دليل «إضافة راوتر») هو NAS مُسجّل يُسمح له بسؤال اللوحة.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s3">
+      <div class="dg-badge">3</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-key"></i> المفتاح المشترك (Shared Secret)</h2>
+        <p>
+          كيف تثق اللوحة أن السؤال جاء من راوترك فعلًا لا من جهاز دخيل؟ عبر <strong>المفتاح المشترك</strong>:
+          كلمة سرّ يعرفها الطرفان فقط — الراوتر واللوحة. يُستخدم لتوقيع رسائل RADIUS والتحقّق منها،
+          فلا يستطيع طرف لا يعرفه أن ينتحل صفة راوترك.
+        </p>
+        <div class="dg-warn">
+          <span class="ic">⚠️</span>
+          <span><b>يجب أن يتطابق تمامًا:</b> المفتاح المضبوط على الراوتر هو نفسه الذي أدخلته في حقل
+          «المفتاح المشترك» باللوحة — حرفًا بحرف. أي اختلاف (حتى فراغ) يجعل اللوحة تتجاهل طلبات
+          الراوتر أو ترفضها، وهو السبب الأشيع لـ«المصادقة لا تعمل أصلًا».</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s4">
+      <div class="dg-badge">4</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-arrows-turn-right"></i> رحلة المصادقة خطوة بخطوة</h2>
+        <p>
+          ماذا يحدث لحظة محاولة الاتصال:
+        </p>
+        <ol>
+          <li>المشترك يدخل بياناته (اسم/كلمة مرور أو كود بطاقة) على الراوتر.</li>
+          <li>الراوتر يبني طلب <strong>Access-Request</strong> ويوقّعه بالمفتاح المشترك ويرسله للوحة.</li>
+          <li>اللوحة تتحقّق من المفتاح، ثم تبحث عن المشترك/البطاقة وتطبّق سلسلة فحوصات السياسة.</li>
+          <li>اللوحة تردّ بـ<strong>Access-Accept</strong> (قبول) أو <strong>Access-Reject</strong> (رفض)
+            مع سبب.</li>
+          <li>الراوتر يطبّق الجواب: يفتح الاتصال ويطبّق حدود السرعة، أو يمنعه ويعرض رسالة.</li>
+        </ol>
+        <div class="dg-info">
+          <span class="ic">ℹ️</span>
+          <span>عند القبول، قد تُرسل اللوحة أيضًا <em>خصائص</em> مع الجواب — مثل حدّ السرعة (rate-limit)
+          — فيطبّقها الراوتر على جلسة هذا المشترك تحديدًا.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s5">
+      <div class="dg-badge">5</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-scale-balanced"></i> لماذا يُقبَل المشترك أو يُرفَض</h2>
+        <p>
+          القبول ليس مجرّد «كلمة المرور صحيحة». بعد التحقّق من الاعتماد، تمرّ اللوحة بسلسلة فحوصات
+          سياسة — يكفي أن يفشل واحد منها ليُرفض الطلب. أهمّها:
+        </p>
+        <ul>
+          <li><strong>الحالة:</strong> الحساب معطَّل أو موقوف → رفض «الحساب معطَّل — راجع الإدارة».</li>
+          <li><strong>الصلاحية (الانتهاء):</strong> انتهى تاريخ الاشتراك → رفض «انتهت صلاحية الاشتراك».</li>
+          <li><strong>الكوتا:</strong> استُهلكت كامل البيانات المسموحة → رفض «نفدت الكوتا — يلزم تجديد».</li>
+          <li><strong>الجلسات المتزامنة:</strong> تجاوز عدد الأجهزة المسموح بها معًا → رفض «تجاوزت الحد
+            الأقصى للجلسات المتزامنة».</li>
+          <li><strong>كلمة المرور:</strong> اعتماد خاطئ → رفض مصادقة فعلي.</li>
+        </ul>
+        <div class="dg-tip">
+          <span class="ic">💡</span>
+          <span><b>نصيحة عملية:</b> هذه الأسباب نفسها تظهر بالعربية في تقرير <strong>«حالات تسجيل
+          الدخول»</strong> — فحين يشكو مشترك من عدم الاتصال، السبب الدقيق مكتوب أمامك مباشرة.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s6">
+      <div class="dg-badge">6</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-chart-line"></i> المحاسبة وقطع الجلسة</h2>
+        <p>
+          بعد القبول وفتح الجلسة، يرسل الراوتر للوحة رسائل <strong>محاسبة</strong> دوريّة: بداية
+          الجلسة، تحديثات الاستهلاك، ونهايتها. من هذه الرسائل تعرف اللوحة <strong>من متّصل الآن</strong>،
+          وكم استهلك، وتحسب الكوتا فعليًّا.
+        </p>
+        <p>
+          وللتحكّم الحيّ بجلسة قائمة، يستخدم RADIUS رسائل <strong>تغيير التفويض / قطع الجلسة (CoA —
+          RFC 5176)</strong> على المنفذ <code>3799</code>: بها تقطع اللوحة جلسة مشترك أو تغيّر سرعته
+          دون انتظار انتهائها.
+        </p>
+        <div class="dg-info">
+          <span class="ic">ℹ️</span>
+          <span>لكي يعمل قطع الجلسة، يجب أن يكون منفذ CoA مضبوطًا ومطابقًا على الراوتر — وإلّا «لا
+          يصل أمر القطع» وتبقى الجلسة قائمة.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="dg-step" id="dg-s7">
+      <div class="dg-badge">7</div>
+      <div class="dg-card">
+        <h2><i class="fa-solid fa-diagram-project"></i> كيف يربط هذا كلّه بلوحتك</h2>
+        <p>
+          كل مفهوم أعلاه له مكانه في اللوحة:
+        </p>
+        <ul>
+          <li><strong>الراوترات (NAS):</strong> تُعرّفها في «أجهزة الشبكة» بمفتاحها المشترك ومنافذها.</li>
+          <li><strong>المستخدِمون:</strong> المشتركون والبطاقات الذين تصادق عليهم اللوحة.</li>
+          <li><strong>السياسات:</strong> الحالة والصلاحية والكوتا والجلسات المتزامنة — هي ما يقرّر
+            القبول والرفض.</li>
+          <li><strong>المتصلون الآن والتقارير:</strong> ثمرة رسائل المحاسبة.</li>
+        </ul>
+        <div class="dg-flash"><i class="fa-solid fa-circle-check"></i> صار لديك الصورة الكاملة: الراوتر يسأل، اللوحة تقرّر بالسياسة، والمحاسبة تتابع.</div>
+        <div class="dg-info">
+          <span class="ic">ℹ️</span>
+          <span>الخطوة التالية: دليل <strong>«الهوت سبوت وصفحة الدخول»</strong> ليتضّح كيف يلتقي كل
+          هذا على صفحة دخول حقيقية أمام المستخدم.</span>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/docs_guide.js') }}"></script>
+
+{% endblock %}
