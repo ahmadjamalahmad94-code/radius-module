@@ -1,0 +1,57 @@
+{# «فعّل الترخيص» — نسخة لم تستلم لقطة ترخيص ناجحة قطّ. اللوحة كلّها
+   مقفلة (إلا الصفحات التشخيصية وتسجيل الدخول/الخروج). #}
+{% extends "admin/_admin_layout.html" %}
+{% import "_partials/hub.html" as hub %}
+
+{% block title %}{{ _('فعّل الترخيص') }}{% endblock %}
+{% block page_icon %}<i class="fa-solid fa-key"></i>{% endblock %}
+{% block page_title %}{{ _('فعّل الترخيص') }}{% endblock %}
+{% block page_sub %}<span class="sub">{{ _('النسخة لم تُفعَّل بعد — لا توجد لقطة ترخيص') }}</span>{% endblock %}
+
+{% block content %}
+{{ hub.megahero(
+  _('فعّل الترخيص'),
+  subtitle=_('لم تَستلم هذه النسخة من النظام أيّ لقطة ترخيص ناجحة من لوحة المزوّد بعد. حتى يتم الربط وإصدار ترخيص فعّال، تبقى اللوحة مقفلة لجميع المستخدمين بما في ذلك المدير الرئيسي. هذا قرار سلامة تجارية — لا يمكن تقديم الخدمات قبل صدور الترخيص.'),
+  icon='key',
+  kpis=[
+    {'label': _('حالة الترخيص'), 'value': _('لم يُفعَّل'),    'icon': 'circle-xmark', 'variant': 'red'},
+    {'label': _('آخر تزامن'),    'value': _('لم يحدث بعد'),   'icon': 'rotate',        'variant': 'gray'},
+    {'label': _('السبب'),         'value': decision.reason or '—', 'icon': 'circle-info','variant': 'gray'},
+  ]
+) }}
+
+{% call hub.section(_('ما الخطوات؟'), icon='list-ol') %}
+  <ol class="hub-list">
+    <li>{{ _('افتح صفحة «ترخيص النظام» من القائمة أدناه أو من إعدادات النظام.') }}</li>
+    <li>{{ _('أدخل/تحقّق من مفتاح الترخيص + بيانات الربط مع لوحة المزوّد.') }}</li>
+    <li>{{ _('اضغط على «مزامنة الآن» في صفحة «جسر الإدارة» لإجبار جلب أول لقطة.') }}</li>
+    <li>{{ _('بعد نجاح الـعقد، حدّث الصفحة — اللوحة ستفتح مباشرة.') }}</li>
+  </ol>
+  <div class="hub-actions">
+    {% if endpoint_exists is defined and endpoint_exists('radius.license_file') %}
+      {{ hub.btn(_('ترخيص النظام'),
+                  href=url_for('radius.license_file'),
+                  variant='primary', icon='id-card') }}
+    {% endif %}
+    {% if endpoint_exists is defined and endpoint_exists('radius.admin_bridge') %}
+      {{ hub.btn(_('جسر الإدارة'),
+                  href=url_for('radius.admin_bridge'),
+                  variant='secondary', icon='link') }}
+    {% endif %}
+    {% if endpoint_exists is defined and endpoint_exists('radius.provider_grants_status_page') %}
+      {{ hub.btn(_('حالة المنح (تشخيصي)'),
+                  href=url_for('radius.provider_grants_status_page'),
+                  variant='secondary', icon='clipboard-list') }}
+    {% endif %}
+    {{ hub.btn(_('تسجيل الخروج'),
+                href=url_for('radius.auth_logout'),
+                variant='danger', icon='arrow-right-from-bracket') }}
+  </div>
+{% endcall %}
+
+{% call hub.section(_('لماذا اللوحة مقفلة؟'), icon='circle-question') %}
+  <p class="hub-text-mute">
+    {{ _('بيع الخدمات (المشتركون، البطاقات، التقارير، الشبكة، …) قائم على عقد مع مزوّد النظام. قبل صدور هذا العقد لا تبيع النسخة شيئًا، ولا تكتب على الراوترات، ولا تَفتح أيّ قسم. الإقفال يشمل المدير الرئيسي عمدًا — قرار العقد فوق الصلاحيات الداخلية.') }}
+  </p>
+{% endcall %}
+{% endblock %}

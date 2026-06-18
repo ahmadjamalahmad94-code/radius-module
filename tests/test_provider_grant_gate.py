@@ -48,8 +48,10 @@ def _seed_snapshot(tenant_id: int = 1, *,
                     services: dict | None = None,
                     features: dict | None = None,
                     limits: dict | None = None,
-                    status: str = "active") -> int:
-    """يكتب لقطة capacity_contract مباشرة في DB — يحاكي ما يصلنا من المزوّد."""
+                    status: str = "active",
+                    skip_license: bool = False) -> int:
+    """يكتب لقطة capacity_contract + لقطة license نشطة (ضرورية الآن لأنّ
+    حارس دورة حياة الترخيص يُقفل اللوحة بدون لقطة license)."""
     from app.radius.db.connection import db
     payload = {"status": status,
                 "services": services or {},
@@ -63,7 +65,33 @@ def _seed_snapshot(tenant_id: int = 1, *,
            VALUES (?, 'capacity_contract', 'active', 'test://provider',
                    ?, '{}', ?, 86400, ?)""",
         (int(tenant_id), json.dumps(payload, ensure_ascii=False), now, now))
+    if not skip_license:
+        # لقطة ترخيص نشطة كي تتجاوز حارس دورة الحياة (تعتبر اللوحة active).
+        db().execute(
+            """INSERT INTO license_admin_bridge_snapshots
+               (tenant_id, snapshot_type, normalized_status, source_url,
+                payload_json, error_json, fetched_at, stale_after_seconds, created_at)
+               VALUES (?, 'license', 'active', 'test://license',
+                       ?, '{}', ?, 86400, ?)""",
+            (int(tenant_id),
+             json.dumps({"status": "active"}, ensure_ascii=False),
+             now, now))
     return int(cur.lastrowid or 0)
+
+
+def _seed_active_license_only(tenant_id: int = 1) -> None:
+    """يضع فقط لقطة license نشطة (للاختبارات التي لا تحتاج capacity)."""
+    from app.radius.db.connection import db
+    now = datetime.utcnow().isoformat() + "Z"
+    db().execute(
+        """INSERT INTO license_admin_bridge_snapshots
+           (tenant_id, snapshot_type, normalized_status, source_url,
+            payload_json, error_json, fetched_at, stale_after_seconds, created_at)
+           VALUES (?, 'license', 'active', 'test://license',
+                   ?, '{}', ?, 86400, ?)""",
+        (int(tenant_id),
+         json.dumps({"status": "active"}, ensure_ascii=False),
+         now, now))
 
 
 def _client(app, *, super_admin: bool = True):
@@ -199,6 +227,8 @@ class TestRouteGuardEvenForSuper:
         assert rv.status_code == 403
 
     def test_super_admin_passes_when_no_snapshot(self, app_ctx):
+        # license نشط، لكن لا capacity → no provider grants → سماح كامل
+        _seed_active_license_only()
         client = _client(app_ctx, super_admin=True)
         rv = client.get("/admin/radius/reports/login_states",
                           follow_redirects=False)
@@ -324,6 +354,8 @@ class TestProviderPages:
         assert "store" in body
 
     def test_grants_status_in_sidebar(self, app_ctx):
+        # license نشط ضروري كي لا يقفل حارس دورة الحياة الـdashboard
+        _seed_active_license_only()
         client = _client(app_ctx, super_admin=True)
         rv = client.get("/admin/radius/")
         body = rv.get_data(as_text=True)
