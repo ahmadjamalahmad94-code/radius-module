@@ -20,23 +20,44 @@
   ]
 ) }}
 
+{# ════════════════════════════════════════════════════════════════════
+   CTA كبير وبارز — صفحة الربط الموحَّدة (الخطوة الوحيدة الفعليّة)
+   ════════════════════════════════════════════════════════════════════ #}
+{% if endpoint_exists is defined and endpoint_exists('radius.license_connect_page') %}
+<div style="text-align:center;padding:24px 20px;margin:16px 0 18px;
+            border:2px dashed #6B5AED;border-radius:14px;
+            background:linear-gradient(135deg,#F4F1FE 0%,#FAF8FF 100%)">
+  <p style="font-size:15px;color:#3F2EA8;margin:0 0 14px;font-weight:600">
+    <i class="fa-solid fa-bolt"></i>
+    {{ _('خطوة واحدة لتفعيل النسخة — افتح صفحة الربط، الصق الرابط والمفتاح، اضغط زرّ واحد.') }}
+  </p>
+  <a class="hub-btn hub-btn--primary"
+     href="{{ url_for('radius.license_connect_page') }}"
+     style="font-size:17px;padding:16px 36px;font-weight:800;
+            box-shadow:0 6px 18px rgba(107,90,237,0.35)">
+    <i class="fa-solid fa-link"></i>
+    {{ _('ربط وتفعيل النسخة الآن') }}
+  </a>
+</div>
+{% endif %}
+
 {% call hub.section(_('ما الخطوات؟'), icon='list-ol') %}
   <ol class="hub-list">
-    <li>{{ _('افتح صفحة «ترخيص النظام» من القائمة أدناه أو من إعدادات النظام.') }}</li>
-    <li>{{ _('أدخل/تحقّق من مفتاح الترخيص + بيانات الربط مع لوحة المزوّد.') }}</li>
-    <li>{{ _('اضغط على «مزامنة الآن» في صفحة «جسر الإدارة» لإجبار جلب أول لقطة.') }}</li>
-    <li>{{ _('بعد نجاح الـعقد، حدّث الصفحة — اللوحة ستفتح مباشرة.') }}</li>
+    <li>{{ _('اضغط زرّ «ربط وتفعيل النسخة الآن» أعلاه — يَفتح صفحة بسيطة فيها حقلان فقط.') }}</li>
+    <li>{{ _('الصق رابط لوحة المزوّد (https://hoberadius.com) + مفتاح الترخيص من صفحة العميل.') }}</li>
+    <li>{{ _('اضغط «ربط وتفعيل الآن» — سيَجلب النظام أوّل لقطة من المزوّد ويَفتح اللوحة مباشرة.') }}</li>
+    <li>{{ _('لو فشل التزامن: تَظهر رسالة عربية واضحة بسبب الفشل والإصلاح — اضغط «مزامنة الآن» للمحاولة من جديد.') }}</li>
   </ol>
   <div class="hub-actions">
     {% if endpoint_exists is defined and endpoint_exists('radius.license_file') %}
-      {{ hub.btn(_('ترخيص النظام'),
+      {{ hub.btn(_('الإعدادات المتقدّمة (ترخيص النظام)'),
                   href=url_for('radius.license_file'),
-                  variant='primary', icon='id-card') }}
+                  variant='secondary', icon='gear') }}
     {% endif %}
     {% if endpoint_exists is defined and endpoint_exists('radius.admin_bridge') %}
-      {{ hub.btn(_('جسر الإدارة'),
+      {{ hub.btn(_('جسر الإدارة (تشخيصي)'),
                   href=url_for('radius.admin_bridge'),
-                  variant='secondary', icon='link') }}
+                  variant='secondary', icon='gauge-high') }}
     {% endif %}
     {% if endpoint_exists is defined and endpoint_exists('radius.provider_grants_status_page') %}
       {{ hub.btn(_('حالة المنح (تشخيصي)'),

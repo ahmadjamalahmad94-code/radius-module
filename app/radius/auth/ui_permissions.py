@@ -123,6 +123,10 @@ _NAV_PERM: dict[str, str] = {
     # حالة منح المزوّد — تشخيصية، يفضّل قصرها على السوبر لأنّها تكشف
     # محتوى عقد التراخيص. صفحة blocked عامة (تظهر لمن يصل لخدمة موقوفة).
     "provider_grants_status_page": _PERM_SUPER,
+    # «ربط وتفعيل النسخة» — حساس (تخزين المفتاح + reset يَمسح اللقطات).
+    # super_admin فقط (مثل license_file السابق). ملاحظة: الصفحة نفسها
+    # مستثناة من lifecycle gate كي تَبقى متاحة على نسخة مقفلة.
+    "license_connect_page": _PERM_SUPER,
 
     # ── التكامل والجسر ──
     "admin_bridge": "api.use",
