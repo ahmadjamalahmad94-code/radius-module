@@ -15,10 +15,11 @@
   subtitle=_('عرض كامل لما أرسله المزوّد في عقد القدرات (capacity contract): كل خدمة موقوفة هنا = موقوفة في كل أنحاء الريديوس بما في ذلك المدير الرئيسي. لا يمكن تجاوزها داخليًّا — راجع المزوّد لتعديل العقد.'),
   icon='clipboard-list',
   kpis=[
-    {'label': _('إجمالي الخدمات'),    'value': total_count,        'icon': 'list',          'variant': 'brand'},
-    {'label': _('موقوفة'),            'value': disabled_count,     'icon': 'lock',          'variant': 'red'},
-    {'label': _('مخفية من البوابة'),  'value': hidden_portal_count,'icon': 'eye-slash',     'variant': 'amber'},
-    {'label': _('للقراءة فقط'),       'value': readonly_count,     'icon': 'eye',           'variant': 'gray'},
+    {'label': _('إجمالي الخدمات'),    'value': total_count,             'icon': 'list',          'variant': 'brand'},
+    {'label': _('موقوفة'),            'value': disabled_count,          'icon': 'lock',          'variant': 'red'},
+    {'label': _('مدفوعة-غير-مفعّلة'), 'value': requires_upgrade_count,  'icon': 'lock-open',     'variant': 'amber'},
+    {'label': _('مخفية من البوابة'),  'value': hidden_portal_count,     'icon': 'eye-slash',     'variant': 'amber'},
+    {'label': _('للقراءة فقط'),       'value': readonly_count,          'icon': 'eye',           'variant': 'gray'},
   ]
 ) }}
 
@@ -63,6 +64,7 @@
           </td>
           <td>
             {% if g.disabled %}{{ hub.pill(_('موقوفة (إيقاف فعلي)'), variant='red') }}
+            {% elif g.requires_upgrade %}{{ hub.pill(_('مدفوعة — تحتاج تفعيل'), variant='amber') }}
             {% elif g.readonly %}{{ hub.pill(_('للقراءة فقط'), variant='amber') }}
             {% elif g.hidden_from_portal_effective %}{{ hub.pill(_('مخفية من البوابة'), variant='amber') }}
             {% else %}{{ hub.pill(_('مسموحة'), variant='green') }}{% endif %}
@@ -70,6 +72,8 @@
           <td class="small hub-text-mute">
             {% if g.disabled %}
               {{ _('ممنوعة في كل أنحاء الريديوس — السوبر لا يتجاوز.') }}
+            {% elif g.requires_upgrade %}
+              {{ _('مرئية في الشريط الجانبي مع شارة قفل — الضغط يَفتح صفحة طلب تفعيل/ترقية (لا 403).') }}
             {% elif g.readonly %}
               {{ _('ميزة معروضة لكن لا تقبل كتابة.') }}
             {% elif g.hidden_from_portal_effective %}

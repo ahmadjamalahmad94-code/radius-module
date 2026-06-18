@@ -139,7 +139,7 @@ class TestPayloadShape:
         for key in ("license", "services", "limits", "has_snapshot",
                      "sync", "schema_version"):
             assert key in data, f"missing top-level field: {key}"
-        assert data["schema_version"] == 1
+        assert data["schema_version"] == 2
 
     def test_license_block_shape(self, app_ctx):
         _seed_license(status="active",
@@ -340,10 +340,10 @@ class TestTenantIsolation:
 # ════════════════════════════════════════════════════════════════════════
 class TestSchemaStability:
 
-    def test_schema_version_is_1(self, app_ctx):
+    def test_schema_version_is_2(self, app_ctx):
         _seed_license(status="active")
         _, body = _get_grants(_client(app_ctx))
-        assert body["data"]["schema_version"] == 1
+        assert body["data"]["schema_version"] == 2
 
     def test_response_is_jsonable_and_no_python_objects(self, app_ctx):
         """الـreply يجب أن يكون JSON خالصًا (لا datetime، لا enum، لا dataclass)."""

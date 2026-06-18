@@ -90,11 +90,15 @@ def provider_grants():
 
     return ok({
         "license":   license_block,
-        "services":  services,
+        "services":  services,   # كل عنصر فيه requires_upgrade (v2+) — يَستعمله
+                                  # الكلاينت لإبقاء البند مرئيًّا مع شارة قفل
+                                  # بدل إخفائه (الإخفاء فقط للموقوفة فعلًا).
         "limits":    limits,
         "has_snapshot": has_snapshot,
         "sync":      sync_block,
-        "schema_version": 1,
+        # v2: services[].requires_upgrade + license.state يَكشف الحالات
+        # الجديدة (active_via_capacity_license_block / active_via_capacity_grants).
+        "schema_version": 2,
     })
 
 

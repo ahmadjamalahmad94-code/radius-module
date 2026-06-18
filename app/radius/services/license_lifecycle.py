@@ -143,6 +143,58 @@ def _test_bypass_active() -> bool:
             and os.environ.get("HOBERADIUS_LICENSE_GATE_TEST_BYPASS") == "1")
 
 
+def _capacity_implies_active(tenant_id: int) -> tuple[Optional[dict],
+                                                         Optional[dict],
+                                                         Optional[dict]]:
+    """يقرأ آخر لقطة capacity_contract ناجحة + يُحاول استخراج license-block
+    منها. يُرجع (success_snapshot, payload, license_block) أو (None, None, None).
+
+    لقطة capacity من المزوّد قد تحمل license-block مدمجًا تحت أحد المسارَين:
+      payload.license.{status,expires_at,activated,…}
+      payload.contract.license.{...}
+    وقد لا تحمله إطلاقًا — في تلك الحالة وجود اللقطة نفسها (مع services
+    وlimits) دليل ضمنيّ على «تم التفعيل» من المزوّد. fail-safe."""
+    try:
+        from .admin_panel_client import (SNAPSHOT_CAPACITY,
+                                           LicenseAdminSnapshotStore)
+        store = LicenseAdminSnapshotStore()
+        st = store.state(tenant_id=int(tenant_id),
+                          snapshot_type=SNAPSHOT_CAPACITY)
+        success = st.get("last_success")
+        if not success:
+            return None, None, None
+        payload = success.get("payload_json") or {}
+        if not isinstance(payload, dict):
+            return success, {}, None
+        # license قد يكون على الجذر أو داخل contract.
+        lic = payload.get("license") if isinstance(payload.get("license"), dict) else None
+        if lic is None:
+            contract = payload.get("contract")
+            if isinstance(contract, dict):
+                lic = contract.get("license") if isinstance(contract.get("license"), dict) else None
+        return success, payload, lic
+    except Exception:  # noqa: BLE001
+        return None, None, None
+
+
+def _activated_from_license_block(lic: dict) -> bool:
+    """هل license-block يقول صراحةً «مفعّل»؟ يقبل عدّة أشكال متوقّعة من المزوّد:
+      • license.status in {active,valid,ok,healthy,grace}
+      • license.activated == True
+      • license.state in {active,valid,…}
+      • license.active == True (نمط قديم)
+    """
+    if not isinstance(lic, dict):
+        return False
+    if lic.get("activated") is True or lic.get("active") is True:
+        return True
+    for key in ("status", "state"):
+        val = str(lic.get(key) or "").strip().lower()
+        if val and val in _ACTIVE_STATUSES:
+            return True
+    return False
+
+
 def evaluate(tenant_id: int,
               *, now: Optional[datetime] = None) -> LifecycleDecision:
     """يحسم حالة دورة حياة الترخيص للمستأجر. fail-safe — أيّ خطأ يَعتَبَر
@@ -182,7 +234,74 @@ def evaluate(tenant_id: int,
             )
 
     if not success:
-        # لم يحدث تزامن ناجح للترخيص قطّ → نسخة لم تُفعَّل بعد.
+        # لا لقطة license مستقلّة. قبل أن نقفل بـ never_activated، ننظر
+        # في لقطة capacity_contract — قد تحمل license-block مدمجًا أو
+        # تكفي وجودها (مع services/limits) كدليل على «تم التفعيل» من
+        # المزوّد. هذا فيكس الحالة التي يُرسل فيها المزوّد عقد قدرات بدون
+        # license-block منفصل (لقطة شركتي).
+        cap_success, cap_payload, cap_license = _capacity_implies_active(tenant_id)
+        if cap_success and isinstance(cap_payload, dict):
+            cap_fetched_raw = cap_success.get("fetched_at")
+            cap_fetched_dt = _parse_iso(cap_fetched_raw)
+            # حالة موقوفة/منتهية صريحة في license-block المضمَّن → إقفال.
+            if isinstance(cap_license, dict):
+                lic_status = str(cap_license.get("status")
+                                  or cap_license.get("state")
+                                  or "").strip().lower()
+                if lic_status in _BLOCKING_STATUSES:
+                    return LifecycleDecision(
+                        state=LifecycleState.EXPIRED,
+                        reason=f"status_{lic_status}",
+                        last_status=lic_status,
+                        expires_at=str(cap_license.get("expires_at") or "") or None,
+                        grace_until=str(cap_license.get("grace_until") or "") or None,
+                        fetched_at=str(cap_fetched_raw) if cap_fetched_raw else None,
+                    )
+                # license-block يقول مفعّل: تحقّق من expires_at.
+                if _activated_from_license_block(cap_license):
+                    lic_expires = cap_license.get("expires_at")
+                    lic_grace = cap_license.get("grace_until")
+                    exp_dt = _parse_iso(lic_expires)
+                    grace_dt = _parse_iso(lic_grace)
+                    if exp_dt and now > exp_dt and (not grace_dt or now > grace_dt):
+                        return LifecycleDecision(
+                            state=LifecycleState.EXPIRED,
+                            reason="expires_at_passed",
+                            last_status=str(cap_license.get("status") or "expired"),
+                            expires_at=str(lic_expires) if lic_expires else None,
+                            grace_until=str(lic_grace) if lic_grace else None,
+                            fetched_at=str(cap_fetched_raw) if cap_fetched_raw else None,
+                        )
+                    return LifecycleDecision(
+                        state=LifecycleState.ACTIVE,
+                        reason="active_via_capacity_license_block",
+                        last_status=str(cap_license.get("status")
+                                          or cap_license.get("state") or "active"),
+                        expires_at=str(lic_expires) if lic_expires else None,
+                        grace_until=str(lic_grace) if lic_grace else None,
+                        fetched_at=str(cap_fetched_raw) if cap_fetched_raw else None,
+                    )
+            # لا license-block، لكن العقد نفسه يحمل grants فعلية (services
+            # أو limits أو features) من مزوّد متّصل → دليل ضمنيّ على
+            # التفعيل. هذا ما يُصلح حالة شركتي (44 خدمة + لا license-block).
+            has_grants = (isinstance(cap_payload.get("services"), dict)
+                          and bool(cap_payload.get("services"))) \
+                or (isinstance(cap_payload.get("limits"), dict)
+                    and bool(cap_payload.get("limits"))) \
+                or (isinstance(cap_payload.get("features"), dict)
+                    and bool(cap_payload.get("features"))) \
+                or (isinstance(cap_payload.get("contract"), dict)
+                    and any(isinstance(cap_payload["contract"].get(k), dict)
+                             and cap_payload["contract"][k]
+                             for k in ("services", "limits", "features")))
+            if has_grants:
+                return LifecycleDecision(
+                    state=LifecycleState.ACTIVE,
+                    reason="active_via_capacity_grants",
+                    last_status=str(cap_payload.get("status") or "active"),
+                    fetched_at=str(cap_fetched_raw) if cap_fetched_raw else None,
+                )
+        # لم تَفلح أيّ من المسارات → لم يُفعَّل بعد فعلًا.
         return LifecycleDecision(state=LifecycleState.NEVER_ACTIVATED,
                                   reason="no_successful_license_snapshot")
 

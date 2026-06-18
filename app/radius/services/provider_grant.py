@@ -94,7 +94,27 @@ def get_payload(tenant_id: int) -> Optional[dict[str, Any]]:
 # ─────────────────────────────────────────────────────────────────────
 # قراءة حقول الخدمة
 # ─────────────────────────────────────────────────────────────────────
+# حالات «الإيقاف الفعلي» — تختفي من الشريط الجانبي + الرابط يعطي 403/redirect.
+# تُعامَل بنفس قسوة «موقوفة (إيقاف فعلي)» من لوحة المزوّد.
 _DISABLED_STATUSES = {"disabled", "suspended", "expired", "cancelled"}
+
+# حالات «مدفوعة-غير-مفعّلة» (locked_upgrade): الخدمة موجودة في الكتالوج
+# ومرئية في القائمة، لكنها تحتاج طلب تفعيل/ترقية من المالك. تختلف جوهريًّا
+# عن «موقوفة»:
+#   • تبقى مرئية في الشريط الجانبي (مع شارة «مقفلة — ترقية»).
+#   • الرابط يُعيد التوجيه إلى صفحة «طلب تفعيل / ترقية» (لا 403 ولا hide).
+#   • الـAPI يَنقل requires_upgrade=true لتطبيقات الكلاينت.
+# نقبل عدّة أسماء يستعملها المزوّد كي تتطابق المعاجم بسلاسة:
+_LOCKED_UPGRADE_STATUSES = {
+    "locked_upgrade", "requires_activation", "requires_upgrade",
+    "paid_not_active", "paid_locked", "upgrade_required",
+    "pending_activation", "not_purchased",
+}
+
+# حالات الميزة (features.<k>) المقابلة لـ locked_upgrade.
+_LOCKED_UPGRADE_FEATURE_STATES = {
+    "locked_upgrade", "requires_activation", "upgrade_required",
+}
 
 
 @dataclass(frozen=True)
@@ -105,8 +125,23 @@ class ServiceGrant:
     enabled:          bool = True      # services.<k>.enabled (افتراضي True)
     status:           str  = "active"  # services.<k>.status
     hidden_portal:    bool = False     # services.<k>.hidden_portal
-    feature_state:    str  = "enabled" # features.<k> = enabled|locked|hidden|readonly
+    feature_state:    str  = "enabled" # features.<k> = enabled|locked|hidden|readonly|locked_upgrade
     raw:              dict = None      # type: ignore[assignment]
+
+    @property
+    def requires_upgrade(self) -> bool:
+        """«مدفوعة — غير مفعّلة»: تَظهر في القائمة بشارة ترقية، الرابط
+        يُعيد إلى صفحة «طلب تفعيل / ترقية» (ليست hard-block ولا hidden).
+
+        تختلف عن disabled في أن العرض الافتراضي مرئيّ + قرار الأكشن لطيف:
+        المالك ينقر فيرى شاشة طلب تفعيل بدل صفحة 403.
+        """
+        status_norm = (self.status or "").strip().lower()
+        if self.present and status_norm in _LOCKED_UPGRADE_STATUSES:
+            return True
+        if self.feature_state in _LOCKED_UPGRADE_FEATURE_STATES:
+            return True
+        return False
 
     @property
     def disabled(self) -> bool:
@@ -114,7 +149,12 @@ class ServiceGrant:
 
         تُعتبر موقوفة إذا (أ) services.<k>.enabled=False أو status ضمن
         قائمة الإيقاف، أو (ب) features.<k> = locked أو hidden.
+
+        ملاحظة: requires_upgrade ليست موقوفة — تَنبثق في مسار منفصل
+        (شارة + صفحة طلب تفعيل). لا نَخلطها بـdisabled عمدًا.
         """
+        if self.requires_upgrade:
+            return False  # locked_upgrade تتقدّم على القراءات الأخرى
         if self.present:
             if not self.enabled:
                 return True
@@ -186,6 +226,12 @@ def is_hidden_from_portal(tenant_id: int, service_key: str) -> bool:
 
 def is_readonly(tenant_id: int, service_key: str) -> bool:
     return lookup(tenant_id, service_key).readonly
+
+
+def requires_upgrade(tenant_id: int, service_key: str) -> bool:
+    """True إذا كانت الخدمة «مدفوعة-غير-مفعّلة» (locked_upgrade) — مرئية
+    في الشريط الجانبي بشارة ترقية، الرابط يَفتح صفحة «طلب تفعيل / ترقية»."""
+    return lookup(tenant_id, service_key).requires_upgrade
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -284,6 +330,7 @@ def list_all_grants(tenant_id: int) -> list[dict[str, Any]]:
             "status": g.status,
             "feature_state": g.feature_state,
             "disabled": g.disabled,
+            "requires_upgrade": g.requires_upgrade,
             "readonly": g.readonly,
             "hidden_portal": g.hidden_portal,
             "hidden_from_portal_effective": g.hidden_from_portal,
@@ -300,6 +347,7 @@ __all__ = [
     "ServiceGrant", "LimitDecision",
     "get_payload", "lookup",
     "is_service_disabled", "is_hidden_from_portal", "is_readonly",
+    "requires_upgrade",
     "get_limit", "check_limit", "LIMIT_PATHS",
     "list_all_grants", "has_snapshot",
 ]
