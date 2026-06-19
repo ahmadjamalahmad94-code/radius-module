@@ -26,6 +26,14 @@ VERTICALS: dict[str, tuple[str, str]] = {
     "clinic": ("عيادات ومراكز طبية", "stethoscope"),
     "mall": ("مولات ومجمّعات", "store"),
     "school": ("مدارس وجامعات", "graduation-cap"),
+    "gym": ("نوادٍ رياضية", "dumbbell"),
+    "barber": ("حلاقة وعناية رجالية", "scissors"),
+    "pharmacy": ("صيدليات", "prescription-bottle-medical"),
+    "coworking": ("مساحات عمل مشتركة", "laptop"),
+    "transport": ("مطارات ونقل", "plane"),
+    "event": ("مناسبات وأعراس", "champagne-glasses"),
+    "gas": ("محطات وقود", "gas-pump"),
+    "mosque": ("مساجد ومراكز", "mosque"),
 }
 VERTICAL_ORDER = tuple(VERTICALS.keys())
 
@@ -217,6 +225,364 @@ GALLERY: list[GalleryTemplate] = [
             "tos_consent": _ad("tos_consent", text="أوافق على سياسة الاستخدام المقبول"),
             "data_collection": _ad("data_collection", ask_phone="no"),
         }),
+
+    # ════════════════════════════════════════════════════════════
+    # توسعة المعرض — تشكيلات متنوّعة لكل نوع + أنواع جديدة
+    # ════════════════════════════════════════════════════════════
+
+    # ── شبكات / ISP (إضافات) ──
+    GalleryTemplate(
+        key="isp_gaming", name_ar="إنترنت للألعاب", vertical="isp",
+        desc_ar="مظهر ليلي حماسي مع عجلة حظ وترقية وروابط تواصل.",
+        base_slug="royal_night", icon="gamepad", tags=("ليلي", "ألعاب"),
+        variables={"ACCENT_COLOR": "#7c3aed"},
+        addons={"theme_dark": _ad("theme_dark"),
+                "animated_svg": _ad("animated_svg", shape="wifi"),
+                "spin_to_win": _ad("spin_to_win", prizes="سرعة مضاعفة ساعة\nخصم ترقية"),
+                "tier_upsell": _ad("tier_upsell"),
+                "social_links": _ad("social_links")}),
+    GalleryTemplate(
+        key="isp_family", name_ar="إنترنت العائلة", vertical="isp",
+        desc_ar="هوية هادئة مع إعلانات وموافقة استخدام وتذكّر المستخدم.",
+        base_slug="card", icon="house", tags=("عائلي", "بسيط"),
+        variables={"ACCENT_COLOR": "#0ea5e9"},
+        addons={"theme_branded": _ad("theme_branded"),
+                "announcements": _ad("announcements", title="إعلانات",
+                                     body="رقابة أبوية متاحة\nالدعم ٢٤/٧"),
+                "tos_consent": _ad("tos_consent"),
+                "returning_user": _ad("returning_user")}),
+
+    # ── مطاعم (إضافات) ──
+    GalleryTemplate(
+        key="restaurant_fine", name_ar="مطعم راقٍ", vertical="restaurant",
+        desc_ar="مظهر ليلي فاخر مع الطقس وتقييم جوجل وروابط تواصل.",
+        base_slug="royal_night", icon="wine-glass", tags=("راقٍ", "ليلي"),
+        variables={"ACCENT_COLOR": "#b45309"},
+        addons={"theme_dark": _ad("theme_dark"),
+                "weather": _ad("weather"),
+                "feedback_review": _ad("feedback_review"),
+                "social_links": _ad("social_links")}),
+    GalleryTemplate(
+        key="restaurant_fast", name_ar="وجبات سريعة", vertical="restaurant",
+        desc_ar="ألوان نابضة مع كوبون ومؤقّت وصول وقائمة QR.",
+        base_slug="swift_login", icon="burger", tags=("سريع", "كوبون"),
+        variables={"ACCENT_COLOR": "#dc2626"},
+        addons={"theme_gradient": _ad("theme_gradient"),
+                "coupons": _ad("coupons", desc="خصم الطلب الأول", code="FAST15"),
+                "qr_menu": _ad("qr_menu", title="قائمة الطعام"),
+                "countdown_access": _ad("countdown_access", seconds="5")}),
+
+    # ── كافيهات (إضافات) ──
+    GalleryTemplate(
+        key="cafe_minimal", name_ar="كافيه بسيط", vertical="cafe",
+        desc_ar="مظهر نظيف مع راديو وبرنامج ولاء.",
+        base_slug="minimal", icon="mug-saucer", tags=("بسيط", "هادئ"),
+        variables={"ACCENT_COLOR": "#92400e"},
+        addons={"theme_minimal": _ad("theme_minimal"),
+                "internet_radio": _ad("internet_radio", title="موسيقى الكافيه"),
+                "loyalty": _ad("loyalty")}),
+    GalleryTemplate(
+        key="cafe_morning", name_ar="كافيه الصباح", vertical="cafe",
+        desc_ar="تدرّج دافئ مع ساعة سعيدة مجدولة وروابط تواصل.",
+        base_slug="card", icon="sun", tags=("صباحي", "عروض"),
+        variables={"ACCENT_COLOR": "#ea580c"},
+        addons={"theme_gradient": _ad("theme_gradient"),
+                "scheduled_content": _ad("scheduled_content",
+                                         message="ساعة سعيدة ٧–٩ص: قهوتك علينا",
+                                         start_hour="7", end_hour="9"),
+                "social_links": _ad("social_links"),
+                "live_clock": _ad("live_clock")}),
+    GalleryTemplate(
+        key="cafe_artsy", name_ar="كافيه فنّي", vertical="cafe",
+        desc_ar="زجاجي أنيق مع معرض صور ورسوم متحرّكة.",
+        base_slug="fiber_glow", icon="palette", tags=("فنّي", "صور"),
+        variables={"ACCENT_COLOR": "#0d9488"},
+        addons={"theme_glass": _ad("theme_glass"),
+                "image_carousel": _ad("image_carousel"),
+                "animated_svg": _ad("animated_svg", shape="blob")}),
+
+    # ── محلات (إضافات) ──
+    GalleryTemplate(
+        key="shop_lux", name_ar="متجر فاخر", vertical="shop",
+        desc_ar="مظهر ليلي راقٍ مع معرض صور وكوبون وروابط تواصل.",
+        base_slug="royal_night", icon="gem", tags=("فاخر", "صور"),
+        variables={"ACCENT_COLOR": "#9333ea"},
+        addons={"theme_dark": _ad("theme_dark"),
+                "image_carousel": _ad("image_carousel"),
+                "coupons": _ad("coupons", code="VIP10"),
+                "social_links": _ad("social_links")}),
+    GalleryTemplate(
+        key="shop_sale", name_ar="متجر — تخفيضات", vertical="shop",
+        desc_ar="ثيم موسمي مع لافتة راعٍ ومؤقّت عرض.",
+        base_slug="aurora_store", icon="tags", tags=("تخفيضات", "موسمي"),
+        variables={"ACCENT_COLOR": "#e11d48"},
+        addons={"theme_seasonal": _ad("theme_seasonal", season="eid"),
+                "sponsor_banner": _ad("sponsor_banner", label="عرض محدود"),
+                "countdown_access": _ad("countdown_access", seconds="8",
+                                        label="ينتهي العرض خلال")}),
+
+    # ── فنادق (إضافات) ──
+    GalleryTemplate(
+        key="hotel_resort", name_ar="منتجع سياحي", vertical="hotel",
+        desc_ar="تدرّج منعش مع الطقس ومعرض صور ومبدّل لغة.",
+        base_slug="emerald", icon="umbrella-beach", tags=("منتجع", "متعدّد اللغات"),
+        variables={"ACCENT_COLOR": "#0d9488"},
+        addons={"theme_gradient": _ad("theme_gradient"),
+                "weather": _ad("weather"),
+                "image_carousel": _ad("image_carousel"),
+                "multilang": _ad("multilang")}),
+    GalleryTemplate(
+        key="hotel_business", name_ar="فندق أعمال", vertical="hotel",
+        desc_ar="مظهر بسيط احترافي مع مبدّل لغة واستبيان وتواصل.",
+        base_slug="minimal", icon="briefcase", tags=("أعمال", "بسيط"),
+        variables={"ACCENT_COLOR": "#1e40af"},
+        addons={"theme_minimal": _ad("theme_minimal"),
+                "multilang": _ad("multilang"),
+                "survey": _ad("survey", question="كيف نخدمك أفضل؟"),
+                "social_links": _ad("social_links")}),
+
+    # ── صالونات (إضافات) ──
+    GalleryTemplate(
+        key="salon_spa", name_ar="سبا واسترخاء", vertical="salon",
+        desc_ar="زجاجي ناعم مع معرض صور وولاء وساعة سعيدة.",
+        base_slug="card", icon="spa", tags=("سبا", "ولاء"),
+        variables={"ACCENT_COLOR": "#be185d"},
+        addons={"theme_glass": _ad("theme_glass"),
+                "image_carousel": _ad("image_carousel"),
+                "loyalty": _ad("loyalty"),
+                "scheduled_content": _ad("scheduled_content",
+                                         message="عرض منتصف الأسبوع",
+                                         start_hour="10", end_hour="14")}),
+    GalleryTemplate(
+        key="salon_modern", name_ar="صالون عصري", vertical="salon",
+        desc_ar="تدرّج جريء مع تقييم جوجل وروابط حجز.",
+        base_slug="fiber_glow", icon="wand-sparkles", tags=("عصري", "تقييم"),
+        variables={"ACCENT_COLOR": "#db2777"},
+        addons={"theme_gradient": _ad("theme_gradient"),
+                "feedback_review": _ad("feedback_review"),
+                "social_links": _ad("social_links")}),
+
+    # ── عيادات (إضافات) ──
+    GalleryTemplate(
+        key="clinic_modern", name_ar="مركز طبي حديث", vertical="clinic",
+        desc_ar="هوية طبية مع مواقيت الصلاة وإعلانات وموافقة.",
+        base_slug="card", icon="house-medical", tags=("حديث", "طبي"),
+        variables={"ACCENT_COLOR": "#0891b2"},
+        addons={"theme_branded": _ad("theme_branded"),
+                "prayer_times": _ad("prayer_times"),
+                "announcements": _ad("announcements", title="تنبيهات",
+                                     body="حملة فحص مجاني هذا الأسبوع"),
+                "tos_consent": _ad("tos_consent")}),
+    GalleryTemplate(
+        key="clinic_dental", name_ar="عيادة أسنان", vertical="clinic",
+        desc_ar="مظهر نظيف مع تقييم وإعلانات مواعيد.",
+        base_slug="minimal", icon="tooth", tags=("أسنان", "بسيط"),
+        variables={"ACCENT_COLOR": "#0ea5e9"},
+        addons={"theme_minimal": _ad("theme_minimal"),
+                "feedback_review": _ad("feedback_review"),
+                "announcements": _ad("announcements", title="مواعيد",
+                                     body="احجز موعدك أونلاين")}),
+
+    # ── مولات (إضافات) ──
+    GalleryTemplate(
+        key="mall_premium", name_ar="مول راقٍ", vertical="mall",
+        desc_ar="ليلي فاخر مع معرض صور ولافتة رعاة وتواصل.",
+        base_slug="royal_night", icon="bag-shopping", tags=("راقٍ", "رعاة"),
+        variables={"ACCENT_COLOR": "#6d28d9"},
+        addons={"theme_dark": _ad("theme_dark"),
+                "image_carousel": _ad("image_carousel"),
+                "sponsor_banner": _ad("sponsor_banner", label="رعاة المول"),
+                "social_links": _ad("social_links")}),
+    GalleryTemplate(
+        key="mall_family", name_ar="مول عائلي", vertical="mall",
+        desc_ar="تدرّج مرح مع عجلة حظ وكوبونات.",
+        base_slug="aurora_store", icon="children", tags=("عائلي", "جوائز"),
+        variables={"ACCENT_COLOR": "#9333ea"},
+        addons={"theme_gradient": _ad("theme_gradient"),
+                "spin_to_win": _ad("spin_to_win", prizes="خصم ١٠٪\nهدية للأطفال"),
+                "coupons": _ad("coupons", code="MALL5")}),
+
+    # ── مدارس/جامعات (إضافات) ──
+    GalleryTemplate(
+        key="school_uni", name_ar="جامعة", vertical="school",
+        desc_ar="هوية أكاديمية مع إعلانات ومبدّل لغة وجمع بيانات.",
+        base_slug="card", icon="building-columns", tags=("جامعي", "متعدّد اللغات"),
+        variables={"ACCENT_COLOR": "#1d4ed8"},
+        addons={"theme_branded": _ad("theme_branded"),
+                "announcements": _ad("announcements", title="إعلانات الحرم",
+                                     body="بدء التسجيل\nمواعيد الامتحانات"),
+                "multilang": _ad("multilang"),
+                "data_collection": _ad("data_collection", ask_phone="no")}),
+    GalleryTemplate(
+        key="school_kids", name_ar="مدرسة أطفال", vertical="school",
+        desc_ar="ألوان مبهجة مع رسوم متحرّكة وإعلانات.",
+        base_slug="card", icon="child-reaching", tags=("أطفال", "مرح"),
+        variables={"ACCENT_COLOR": "#16a34a"},
+        addons={"theme_gradient": _ad("theme_gradient"),
+                "animated_svg": _ad("animated_svg", shape="blob"),
+                "announcements": _ad("announcements", title="أخبار المدرسة",
+                                     body="رحلة نهاية الأسبوع")}),
+
+    # ── نوادٍ رياضية (جديد) ──
+    GalleryTemplate(
+        key="gym_power", name_ar="نادٍ رياضي قوي", vertical="gym",
+        desc_ar="ليلي حماسي مع رسوم متحرّكة وتقييم وتواصل.",
+        base_slug="royal_night", icon="dumbbell", tags=("قوّة", "ليلي"),
+        variables={"ACCENT_COLOR": "#dc2626"},
+        addons={"theme_dark": _ad("theme_dark"),
+                "animated_svg": _ad("animated_svg", shape="wifi"),
+                "feedback_review": _ad("feedback_review"),
+                "social_links": _ad("social_links")}),
+    GalleryTemplate(
+        key="gym_class", name_ar="نادٍ — حصص", vertical="gym",
+        desc_ar="تدرّج نشيط مع جدول حصص مجدول وتواصل.",
+        base_slug="swift_login", icon="person-running", tags=("حصص", "نشط"),
+        variables={"ACCENT_COLOR": "#f97316"},
+        addons={"theme_gradient": _ad("theme_gradient"),
+                "scheduled_content": _ad("scheduled_content",
+                                         message="حصة اليوغا ٦م",
+                                         start_hour="17", end_hour="19"),
+                "social_links": _ad("social_links")}),
+
+    # ── حلاقة (جديد) ──
+    GalleryTemplate(
+        key="barber_classic", name_ar="حلاقة كلاسيكية", vertical="barber",
+        desc_ar="مظهر ليلي أنيق مع معرض صور وبرنامج ولاء.",
+        base_slug="dark", icon="scissors", tags=("كلاسيك", "ولاء"),
+        variables={"ACCENT_COLOR": "#a16207"},
+        addons={"theme_dark": _ad("theme_dark"),
+                "image_carousel": _ad("image_carousel"),
+                "loyalty": _ad("loyalty"),
+                "social_links": _ad("social_links")}),
+    GalleryTemplate(
+        key="barber_modern", name_ar="حلاقة عصرية", vertical="barber",
+        desc_ar="زجاجي نظيف مع تقييم وحجز.",
+        base_slug="card", icon="user-tie", tags=("عصري", "حجز"),
+        variables={"ACCENT_COLOR": "#0f172a"},
+        addons={"theme_glass": _ad("theme_glass"),
+                "feedback_review": _ad("feedback_review"),
+                "social_links": _ad("social_links")}),
+
+    # ── صيدليات (جديد) ──
+    GalleryTemplate(
+        key="pharmacy_care", name_ar="صيدلية رعاية", vertical="pharmacy",
+        desc_ar="هوية صحية هادئة مع مواقيت الصلاة وإعلانات وموافقة.",
+        base_slug="minimal", icon="prescription-bottle-medical",
+        tags=("رعاية", "بسيط"),
+        variables={"ACCENT_COLOR": "#059669"},
+        addons={"theme_minimal": _ad("theme_minimal"),
+                "prayer_times": _ad("prayer_times"),
+                "announcements": _ad("announcements", title="تنبيهات",
+                                     body="توصيل مجاني للأدوية"),
+                "tos_consent": _ad("tos_consent")}),
+    GalleryTemplate(
+        key="pharmacy_24", name_ar="صيدلية ٢٤ ساعة", vertical="pharmacy",
+        desc_ar="هوية واضحة مع محتوى مجدول وإعلانات.",
+        base_slug="card", icon="clock", tags=("٢٤ ساعة",),
+        variables={"ACCENT_COLOR": "#0891b2"},
+        addons={"theme_branded": _ad("theme_branded"),
+                "scheduled_content": _ad("scheduled_content",
+                                         message="مناوبة ليلية متاحة الآن",
+                                         start_hour="22", end_hour="6"),
+                "announcements": _ad("announcements", title="خدمات",
+                                     body="استشارة صيدلانية مجانية")}),
+
+    # ── مساحات عمل مشتركة (جديد) ──
+    GalleryTemplate(
+        key="cowork_pro", name_ar="مساحة عمل احترافية", vertical="coworking",
+        desc_ar="مظهر بسيط مع تحليلات وقائمة QR وتواصل.",
+        base_slug="minimal", icon="laptop", tags=("احترافي", "تحليلات"),
+        variables={"ACCENT_COLOR": "#4f46e5"},
+        addons={"theme_minimal": _ad("theme_minimal"),
+                "analytics": _ad("analytics", vertical="coworking"),
+                "qr_menu": _ad("qr_menu", title="دليل المكان"),
+                "social_links": _ad("social_links")}),
+    GalleryTemplate(
+        key="cowork_creative", name_ar="مساحة إبداعية", vertical="coworking",
+        desc_ar="تدرّج حيوي مع معرض صور ورسوم متحرّكة.",
+        base_slug="fiber_glow", icon="lightbulb", tags=("إبداعي",),
+        variables={"ACCENT_COLOR": "#7c3aed"},
+        addons={"theme_gradient": _ad("theme_gradient"),
+                "image_carousel": _ad("image_carousel"),
+                "animated_svg": _ad("animated_svg", shape="waves")}),
+
+    # ── مطارات ونقل (جديد) ──
+    GalleryTemplate(
+        key="transport_air", name_ar="مطار", vertical="transport",
+        desc_ar="مظهر ليلي مع الطقس ومبدّل لغة وتواصل — للمسافرين.",
+        base_slug="royal_night", icon="plane", tags=("مطار", "متعدّد اللغات"),
+        variables={"ACCENT_COLOR": "#1e40af"},
+        addons={"theme_dark": _ad("theme_dark"),
+                "weather": _ad("weather"),
+                "multilang": _ad("multilang"),
+                "social_links": _ad("social_links")}),
+    GalleryTemplate(
+        key="transport_metro", name_ar="مترو/حافلات", vertical="transport",
+        desc_ar="هوية واضحة مع شريط أخبار ومبدّل لغة.",
+        base_slug="card", icon="train-subway", tags=("نقل عام",),
+        variables={"ACCENT_COLOR": "#0d9488"},
+        addons={"theme_branded": _ad("theme_branded"),
+                "news_ticker": _ad("news_ticker",
+                                   items="مواعيد محدّثة\nخطوط جديدة"),
+                "multilang": _ad("multilang")}),
+
+    # ── مناسبات وأعراس (جديد) ──
+    GalleryTemplate(
+        key="event_wedding", name_ar="عرس/مناسبة", vertical="event",
+        desc_ar="زجاجي راقٍ مع معرض صور وعدّاد ومشاركة.",
+        base_slug="card", icon="ring", tags=("عرس", "صور"),
+        variables={"ACCENT_COLOR": "#be123c"},
+        addons={"theme_glass": _ad("theme_glass"),
+                "image_carousel": _ad("image_carousel"),
+                "countdown_access": _ad("countdown_access", seconds="5",
+                                        label="نبدأ خلال"),
+                "referral": _ad("referral", message="شارك صور المناسبة")}),
+    GalleryTemplate(
+        key="event_party", name_ar="حفلة", vertical="event",
+        desc_ar="ألوان احتفالية مع عجلة حظ ومشاركة.",
+        base_slug="fiber_glow", icon="champagne-glasses", tags=("حفلة", "جوائز"),
+        variables={"ACCENT_COLOR": "#9333ea"},
+        addons={"theme_gradient": _ad("theme_gradient"),
+                "spin_to_win": _ad("spin_to_win", prizes="هدية\nصورة فورية"),
+                "social_links": _ad("social_links")}),
+
+    # ── محطات وقود (جديد) ──
+    GalleryTemplate(
+        key="gas_quick", name_ar="محطة — خدمة سريعة", vertical="gas",
+        desc_ar="هوية واضحة مع كوبون وقود وقائمة QR للمتجر.",
+        base_slug="card", icon="gas-pump", tags=("سريع", "كوبون"),
+        variables={"ACCENT_COLOR": "#16a34a"},
+        addons={"theme_branded": _ad("theme_branded"),
+                "coupons": _ad("coupons", desc="خصم غسيل السيارة", code="WASH5"),
+                "qr_menu": _ad("qr_menu", title="متجر المحطة")}),
+    GalleryTemplate(
+        key="gas_loyalty", name_ar="محطة — ولاء", vertical="gas",
+        desc_ar="تدرّج مع برنامج ولاء ولافتة راعٍ.",
+        base_slug="swift_login", icon="oil-can", tags=("ولاء",),
+        variables={"ACCENT_COLOR": "#ca8a04"},
+        addons={"theme_gradient": _ad("theme_gradient"),
+                "loyalty": _ad("loyalty", message="نقاط مع كل تعبئة"),
+                "sponsor_banner": _ad("sponsor_banner", label="شركاؤنا")}),
+
+    # ── مساجد ومراكز (جديد) ──
+    GalleryTemplate(
+        key="mosque_serene", name_ar="مسجد — مواقيت", vertical="mosque",
+        desc_ar="هوية هادئة مع مواقيت الصلاة والتاريخ الهجري وإعلانات.",
+        base_slug="emerald", icon="mosque", tags=("مواقيت", "هادئ"),
+        variables={"ACCENT_COLOR": "#047857"},
+        addons={"theme_branded": _ad("theme_branded"),
+                "prayer_times": _ad("prayer_times"),
+                "announcements": _ad("announcements", title="إعلانات المسجد",
+                                     body="درس بعد العشاء\nحلقة تحفيظ")}),
+    GalleryTemplate(
+        key="mosque_ramadan", name_ar="مسجد — رمضان", vertical="mosque",
+        desc_ar="ثيم رمضاني مع مواقيت الصلاة وإعلانات الأنشطة.",
+        base_slug="card", icon="star-and-crescent", tags=("رمضان", "موسمي"),
+        variables={"ACCENT_COLOR": "#16a34a"},
+        addons={"theme_seasonal": _ad("theme_seasonal", season="ramadan"),
+                "prayer_times": _ad("prayer_times"),
+                "announcements": _ad("announcements", title="برنامج رمضان",
+                                     body="تراويح ٩م\nإفطار صائم يوميًّا")}),
 ]
 
 GALLERY_BY_KEY = {t.key: t for t in GALLERY}
