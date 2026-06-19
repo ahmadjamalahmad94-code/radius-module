@@ -87,6 +87,9 @@ class AddonField:
     max_len: int = 200
     min_num: int = 0
     max_num: int = 1_000_000
+    # حقل textarea يحوي روابط (سطر لكل رابط) — يُشتقّ منه نطاقات
+    # walled-garden تلقائيًّا (مثل روابط صور المعرض).
+    url_list: bool = False
 
 
 @dataclass(frozen=True)
@@ -279,6 +282,11 @@ def collect_walled_garden_domains(cfg: dict[str, dict]) -> list[str]:
                 host = _domain_of(config.get(f.key, ""))
                 if host:
                     domains.add(host)
+            elif f.url_list:
+                for line in str(config.get(f.key, "")).split("\n"):
+                    host = _domain_of(line.strip())
+                    if host:
+                        domains.add(host)
     return sorted(domains)
 
 
@@ -520,6 +528,24 @@ register(AddonSpec(
     ),
     pre_fragment=_frag_countdown,
 ))
+
+
+# ════════════════════════════════════════════════════════════════
+# تحميل كتالوجات الإضافات — تُسجّل نفسها عند الاستيراد.
+# يُوضع في النهاية لأن الكتالوجات تستورد register/AddonSpec من هنا
+# (كلها مُعرَّفة الآن). أي كتالوج يفشل استيراده لا يُسقِط الإطار.
+# ════════════════════════════════════════════════════════════════
+def _load_catalogs() -> None:
+    for mod in ("hotspot_addons_content", "hotspot_addons_themes",
+                "hotspot_addons_money", "hotspot_addons_login",
+                "hotspot_addons_engagement"):
+        try:
+            __import__(f"{__package__}.{mod}")
+        except ModuleNotFoundError:
+            continue  # كتالوج لم يُكتب بعد (مرحلة قادمة)
+
+
+_load_catalogs()
 
 
 __all__ = [
