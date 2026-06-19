@@ -1815,6 +1815,7 @@ def deploy_login(
     *, target_path: str = DEFAULT_LOGIN_PATH, tenant_id: int = 1,
     on_retry=None, ftp: dict | None = None, on_progress=None,
     on_asset=None, addons: dict | str | None = None,
+    addon_ctx: dict | None = None,
 ) -> DeployResult:
     """Render the chosen template + upload it to the router.
 
@@ -1873,6 +1874,8 @@ def deploy_login(
                    "bg": values.get("BG_COLOR", "#F8FAFC"),
                    "tenant_name": values.get("TENANT_NAME", ""),
                    "logo": values.get("TENANT_LOGO_URL", "")}
+            if addon_ctx:
+                ctx.update(addon_ctx)
             frag = _ha.render_prelogin_fragments(cfg, ctx)
             if frag and "</body>" in html:
                 html = html.replace("</body>", frag + "\n</body>", 1)

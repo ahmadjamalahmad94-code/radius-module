@@ -88,6 +88,20 @@ def register_mt_login_designer_routes(bp: Blueprint) -> None:
         requires_perm(PERM_VIEW)(mt_login_designer_gallery_preview),
         methods=["GET"],
     )
+    # تحليلات صفحة الدخول: نقطة استقبال beacon (عامّة — تُنادى من أجهزة
+    # الزبائن بلا جلسة)، ولوحة تقارير محميّة per-template/vertical/A-B.
+    bp.add_url_rule(
+        "/hotspot-analytics/collect",
+        "hotspot_analytics_collect",
+        hotspot_analytics_collect,
+        methods=["POST"],
+    )
+    bp.add_url_rule(
+        "/hotspot-analytics",
+        "hotspot_analytics_dashboard",
+        requires_perm(PERM_VIEW)(hotspot_analytics_dashboard),
+        methods=["GET"],
+    )
     # المعاينة تقبل GET (مصغّرات المعرض — template_slug فقط، رابط
     # قصير) و POST (المعاينة الكبيرة — كل المتغيّرات في جسم الطلب).
     # سبب POST: متغيّرات قوائم JSON + شعار data-URL تجاوزت حدّ سطر
@@ -556,10 +570,66 @@ def mt_login_designer_gallery_preview(nas_id: int, key: str):
     except ValueError:
         safe = _variable_defaults()
     # نبني سطح login مع الإضافات ثم نجرّد $(...) كما يفعل preview.
-    html = hsf.render_login_surface(slug, safe, addons, tenant_id=_tid())
+    html = hsf.render_login_surface(
+        slug, safe, addons, tenant_id=_tid(),
+        extra_ctx={"analytics_url": _analytics_url(nas_id, slug)})
     html = re.sub(r"\$\(if error\).*?\$\(endif\)", "", html, flags=re.S)
     html = re.sub(r"\$\([^)]+\)", "", html)
     return Response(html, mimetype="text/html")
+
+
+# ─── تحليلات صفحة الدخول (استقبال beacon + لوحة) ────────────────
+def _analytics_url(nas_id: int, slug: str, *, absolute: bool = False) -> str:
+    """رابط نقطة استقبال beacon محمّلًا بالمستأجر/الراوتر/القالب.
+
+    absolute=True للصفحة المنشورة على الراوتر (يحتاج مضيف اللوحة من
+    إعداد radius_server_ip)؛ نسبي للمعاينة (نفس الأصل)."""
+    from urllib.parse import urlencode
+    qs = urlencode({"t": _tid(), "n": int(nas_id), "tpl": slug or ""})
+    path = url_for("radius.hotspot_analytics_collect") + "?" + qs
+    if absolute:
+        base = (_auto_api_base() or "").rstrip("/")
+        if base:
+            return base + path
+    return path
+
+
+def hotspot_analytics_collect(nas_id: int = 0):
+    """يستقبل beacon من صفحة الدخول المنشورة ويخزّنه. عام + CSRF-معفى
+    (يُنادى من أجهزة الزبائن بلا جلسة). fail-open دائمًا (204) فلا
+    يُعطّل أي صفحة. المستأجر/الراوتر/القالب من الـ query، والحدث/المجموعة
+    من جسم JSON الذي يرسله navigator.sendBeacon."""
+    import json as _json
+    try:
+        tenant_id = int(request.args.get("t") or 0)
+        if tenant_id <= 0:
+            return ("", 204)
+        nas = int(request.args.get("n") or 0)
+        tpl = (request.args.get("tpl") or "")[:80]
+        try:
+            body = _json.loads(request.get_data(as_text=True) or "{}")
+        except (TypeError, ValueError):
+            body = {}
+        from ..db.repos import hotspot_analytics_repo as _an
+        _an.record_event(
+            tenant_id, nas_id=nas, template_slug=tpl,
+            vertical=str(body.get("v") or "")[:40],
+            event=str(body.get("e") or ""),
+            ab_bucket=str(body.get("ab") or ""))
+    except Exception:  # noqa: BLE001 — التحليلات لا تُفشل أبدًا
+        pass
+    return ("", 204)
+
+
+def hotspot_analytics_dashboard():
+    """لوحة تحليلات صفحات الدخول — إجمالي + per-template + per-vertical
+    + per-A/B (معدّل التحويل = اتصالات/انطباعات)."""
+    from ..db.repos import hotspot_analytics_repo as _an
+    nas_id = request.args.get("nas_id", type=int)
+    data = _an.summary(_tid(), nas_id=nas_id)
+    return render_template(
+        "radius/hotspot_analytics.html", data=data, nas_id=nas_id,
+        gallery_verticals=hg.VERTICALS)
 
 
 def _companion_summary(ok_names: list[str], fail_names: list[str]) -> str:
@@ -667,12 +737,15 @@ def _iter_deploy(nas_id: int, nas: dict, design: dict, *, confirmed: bool):
     addons_cfg = ha.normalize_config(design.get("addons") or {})
     addon_hosts = ha.collect_walled_garden_domains(addons_cfg)
     needs_redirect = ha.has_postlogin(addons_cfg)
+    # التحليلات ترسل beacon لمضيف اللوحة (IP الراديوس) فيلزم فتحه في
+    # walled-garden ليصل الانطباع قبل الدخول (إن لم يُفتح أصلًا للمتجر).
+    analytics_on = bool((addons_cfg.get("analytics") or {}).get("enabled"))
     if needs_redirect:
         steps.append({"key": "redirect",
                       "label": "رفع صفحة ما بعد الدخول redirect.html"})
-    if addon_hosts:
+    if addon_hosts or analytics_on:
         steps.append({"key": "addon_walled_garden",
-                      "label": "فتح نطاقات الإضافات (walled-garden)"})
+                      "label": "فتح نطاقات/مضيف الإضافات (walled-garden)"})
     yield {"type": "plan", "steps": steps}
     yield _deploy_step("prepare", "ok", "التصميم صالح والملفات جاهزة.")
 
@@ -731,6 +804,8 @@ def _iter_deploy(nas_id: int, nas: dict, design: dict, *, confirmed: bool):
         deploy_result = ht.deploy_login(
             client, design["template_slug"], login_vars, tenant_id=_tid(),
             ftp=ftp_cfg, addons=addons_cfg,
+            addon_ctx={"analytics_url": _analytics_url(
+                nas_id, design["template_slug"], absolute=True)},
             on_retry=lambda att, reason: _login_retries.append((att, reason)),
             on_asset=lambda name, ok, nbytes: _assets_log.append(
                 (name, ok, nbytes)))
@@ -904,7 +979,10 @@ def _iter_deploy(nas_id: int, nas: dict, design: dict, *, confirmed: bool):
                                "جارٍ بناء ورفع صفحة ما بعد الدخول…")
             try:
                 from ..services import hotspot_surfaces as _sf
-                redirect_html = _sf.build_redirect_page(safe, addons_cfg)
+                redirect_html = _sf.build_redirect_page(
+                    safe, addons_cfg,
+                    extra_ctx={"analytics_url": _analytics_url(
+                        nas_id, design["template_slug"], absolute=True)})
                 _rr = ht.deploy_hotspot_file(
                     client, _sf.DEFAULT_REDIRECT_PATH.split("/")[-1],
                     redirect_html, ftp=ftp_cfg)
@@ -921,24 +999,29 @@ def _iter_deploy(nas_id: int, nas: dict, design: dict, *, confirmed: bool):
                     "redirect", "failed",
                     "تعذّر بناء صفحة ما بعد الدخول — لا يُفشل النشر.")
 
-        if deploy_result and deploy_result.ok and addon_hosts:
+        if deploy_result and deploy_result.ok and (addon_hosts or analytics_on):
             from ..services.hotspot_store_page import (
-                ensure_walled_garden_hosts,
+                ensure_walled_garden, ensure_walled_garden_hosts,
             )
             current = "addon_walled_garden"
             yield _deploy_step("addon_walled_garden", "running",
-                               f"جارٍ فتح {len(addon_hosts)} نطاقًا…")
-            awg = ensure_walled_garden_hosts(client, hosts=addon_hosts)
-            if awg and awg.ok:
-                yield _deploy_step(
-                    "addon_walled_garden", "ok",
-                    (f"فُتح {awg.added} نطاقًا." if awg.added
-                     else "النطاقات مفتوحة مسبقًا."))
-            else:
-                yield _deploy_step(
-                    "addon_walled_garden", "failed",
-                    (awg.error if awg else "")
-                    + " — انسخ أوامر النطاقات يدويًا.")
+                               "جارٍ فتح نطاقات/مضيف الإضافات…")
+            parts = []
+            ok_all = True
+            if addon_hosts:
+                awg = ensure_walled_garden_hosts(client, hosts=addon_hosts)
+                ok_all = ok_all and bool(awg and awg.ok)
+                parts.append(f"نطاقات: +{awg.added}" if awg and awg.ok
+                             else "نطاقات: فشل")
+            if analytics_on:
+                # مضيف اللوحة (IP الراديوس) بقاعدة IP — لبيكون التحليلات.
+                pwg = ensure_walled_garden(client, api_base=_auto_api_base())
+                ok_all = ok_all and bool(pwg and pwg.ok)
+                parts.append("مضيف التحليلات: مفتوح" if pwg and pwg.ok
+                             else "مضيف التحليلات: فشل")
+            yield _deploy_step(
+                "addon_walled_garden", "ok" if ok_all else "failed",
+                " | ".join(parts) or "تم.")
     except Exception as e:  # noqa: BLE001
         # السبب الحقيقي لفشل الاتصال/الرفع — يُصنَّف لرسالة عربية واضحة
         # (مصادقة/انقطاع/مهلة/مرفوض) ويُعرض على الخطوة الجارية.
@@ -1684,8 +1767,9 @@ def mt_login_designer_preview(nas_id: int):
     def _preview_surface(s: str, vals: dict) -> str:
         # نفس روح ht.preview لكن عبر سطح login (قالب + إضافات pre)،
         # ثم تجريد placeholders راوتر أو إس للعرض فقط.
-        out = hsf.render_login_surface(s, vals, preview_addons,
-                                       tenant_id=_tid())
+        out = hsf.render_login_surface(
+            s, vals, preview_addons, tenant_id=_tid(),
+            extra_ctx={"analytics_url": _analytics_url(nas_id, s)})
         out = re.sub(r"\$\(if error\).*?\$\(endif\)", "", out, flags=re.S)
         return re.sub(r"\$\([^)]+\)", "", out)
 

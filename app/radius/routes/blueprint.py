@@ -35,6 +35,9 @@ _PUBLIC_ENDPOINTS = {
     # incoming message and replies via the configured provider — never exposes
     # admin data — and always answers 200. Also CSRF-exempt (see app/__init__).
     "radius.communications_bot_webhook",
+    # تحليلات صفحة الدخول: beacon من أجهزة الزبائن على الهوت سبوت بلا
+    # جلسة إدارية. fail-open دائمًا (204) ولا يكشف أي بيانات إدارية.
+    "radius.hotspot_analytics_collect",
 }
 
 

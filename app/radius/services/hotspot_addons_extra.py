@@ -151,12 +151,16 @@ register(AddonSpec(
 # 5) تحليلات (engagement، both) — انطباعات/اتصالات/نقرات عبر beacon
 # ════════════════════════════════════════════════════════════════
 def _analytics_js(cfg: dict, ctx: dict) -> str:
-    ep = safe_url(cfg.get("endpoint", ""))
+    # نقطة القياس: المخصّصة في الإعداد، وإلا لوحة النظام (تُخبَز وقت
+    # النشر/المعاينة في ctx['analytics_url'] محمّلةً بالمستأجر/الراوتر/
+    # القالب). يحصي محليًّا دائمًا (أوفلاين)، ويُرسل beacon لنقطة القياس
+    # (نطاقها/مضيفها يُفتح في walled-garden) — للقياس per-vertical + A/B.
+    ep = safe_url(cfg.get("endpoint", "")) or str(ctx.get("analytics_url") or "")
     vert = _jstr(cfg.get("vertical") or "")
-    # يحصي محليًّا دائمًا (أوفلاين)، ويُرسل beacon عند توفّر نقطة نهاية
-    # (يُفتح نطاقها في walled-garden) — للقياس per-vertical.
     send = ("function S(ev){try{var u=" + _jstr(ep) + ";if(u&&navigator.sendBeacon){"
-            "navigator.sendBeacon(u,JSON.stringify({e:ev,v:" + vert + ",t:Date.now()}));}}catch(e){}}"
+            "var ab='';try{ab=localStorage.getItem('hr-ab')||'';}catch(e){}"
+            "navigator.sendBeacon(u,JSON.stringify({e:ev,v:" + vert
+            + ",ab:ab,t:Date.now()}));}}catch(e){}}"
             if ep else "function S(ev){}")
     return (
         "<script>(function(){"

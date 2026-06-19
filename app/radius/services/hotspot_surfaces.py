@@ -49,15 +49,20 @@ def render_login_surface(
     *,
     tenant_id: int = 1,
     with_autologin: bool = True,
+    extra_ctx: dict | None = None,
 ) -> str:
     """ينتج login.html النهائي: قالب المايكروتيك + أجزاء الإضافات pre.
 
     عند غياب إضافات مفعّلة يعيد ناتج render() كما هو تمامًا (لا فرق عن
-    المسار القديم) — فالتصاميم القائمة لا تتأثر."""
+    المسار القديم) — فالتصاميم القائمة لا تتأثر. `extra_ctx` يحمل سياقًا
+    إضافيًّا للإضافات (مثل رابط التحليلات المخبوز)."""
     base = _tpl.render(slug, values, with_autologin=with_autologin,
                        tenant_id=tenant_id)
     cfg = _ad.normalize_config(addons_cfg or {})
-    frag = _ad.render_prelogin_fragments(cfg, _ctx_from_values(values))
+    ctx = _ctx_from_values(values)
+    if extra_ctx:
+        ctx.update(extra_ctx)
+    frag = _ad.render_prelogin_fragments(cfg, ctx)
     if not frag:
         return base
     if "</body>" not in base:
@@ -75,6 +80,8 @@ DEFAULT_REDIRECT_PATH = "hotspot/redirect.html"
 def build_redirect_page(
     values: dict[str, str],
     addons_cfg: object = None,
+    *,
+    extra_ctx: dict | None = None,
 ) -> str:
     """يبني صفحة ما بعد الدخول كـHTML مستقلّ (RTL، عربي أولًا، موبايل
     أولًا). تحوي ودجت كل الإضافات المفعّلة ذات السطح post.
@@ -82,6 +89,8 @@ def build_redirect_page(
     تُعاد دائمًا صفحة صالحة حتى بلا ودجت (ترحيب باتصال ناجح) — فيمكن
     استخدامها وجهةَ redirect ثابتة بعد الدخول."""
     ctx = _ctx_from_values(values)
+    if extra_ctx:
+        ctx.update(extra_ctx)
     cfg = _ad.normalize_config(addons_cfg or {})
     widgets = _ad.render_postlogin_widgets(cfg, ctx)
     name = _esc(ctx["tenant_name"] or "شبكتنا")
