@@ -113,7 +113,7 @@ register(AddonSpec(
                    kind="textarea", max_len=1000,
                    placeholder="المركز الرئيسي|0590000000|شارع الحمراء\nفرع الشمال|0591111111|حي الزهور"),
         AddonField(key="payments", label_ar="مزوّدو الدفع (مفصولة بفواصل)",
-                   max_len=160, placeholder="مدى، STC Pay، أبل باي"),
+                   max_len=160, placeholder="بطاقة، محفظة رقمية، تحويل"),
     ),
     pre_fragment=_f_dealers))
 
