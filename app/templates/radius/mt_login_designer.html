@@ -1206,6 +1206,11 @@
     root.querySelectorAll("[data-mt-designer-var]").forEach(el => {
       params.set(el.dataset.mtDesignerVar, el.value);
     });
+    // الإضافات الحيّة: نمرّر addons_json فتعكس المعاينة الكبيرة
+    // الإضافات المفعّلة وثيمها فورًا (سكربت لوح الإضافات يحدّث هذا
+    // الحقل المخفي قبل أن تصل البَبْلة لمستمع المعاينة).
+    const aj = document.getElementById("mtld-addons-json");
+    if (aj) params.set("addons_json", aj.value);
     return params;
   }
 
@@ -1997,6 +2002,10 @@
     }
     sync();
   });
+  // مزامنة فورية أثناء الكتابة في حقول إعداد الإضافات (نص/رقم/لون)
+  // كي تعكس المعاينة الحيّة التعديل قبل مغادرة الحقل. تسبق هذه
+  // البَبْلة مستمع المعاينة على الجذر الأعلى (descendant قبل ancestor).
+  root.addEventListener('input', sync);
 
   // اجمع قبل أي إرسال للنموذج (حفظ/قالب/تحميل ZIP).
   var form = hidden.closest('form');

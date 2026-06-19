@@ -1668,11 +1668,32 @@ def mt_login_designer_preview(nas_id: int):
             and not _is_manual_store_url(tolerant.get("STORE_URL", ""))):
         tolerant["STORE_URL"] = url_for(
             "radius.mt_login_designer_store_preview", nas_id=nas_id)
+    # ── الإضافات في المعاينة الحيّة (P-extra) ──
+    # POST من المصمّم يرسل addons_json فتعكس المعاينة الكبيرة الإضافات
+    # والثيم فورًا مع كل تبديل. التحميل الأولي (GET بلا template_slug)
+    # يسقط لإضافات التصميم المحفوظ. مصغّرات مكتبة القوالب (GET بـ
+    # template_slug فقط، بلا addons_json) تعرض القالب الأساسي وحده.
+    if "addons_json" in request.values:
+        preview_addons = ha.normalize_config(request.values.get("addons_json"))
+    elif not _known_slug((request.values.get("template_slug") or "").strip()):
+        preview_addons = ha.normalize_config(
+            _current_design(nas_id).get("addons") or {})
+    else:
+        preview_addons = {}
+
+    def _preview_surface(s: str, vals: dict) -> str:
+        # نفس روح ht.preview لكن عبر سطح login (قالب + إضافات pre)،
+        # ثم تجريد placeholders راوتر أو إس للعرض فقط.
+        out = hsf.render_login_surface(s, vals, preview_addons,
+                                       tenant_id=_tid())
+        out = re.sub(r"\$\(if error\).*?\$\(endif\)", "", out, flags=re.S)
+        return re.sub(r"\$\([^)]+\)", "", out)
+
     try:
-        html = ht.preview(slug, tolerant, tenant_id=_tid())
+        html = _preview_surface(slug, tolerant)
     except ValueError:  # noqa: PERF203 — مسار نادر (قالب معطوب)
         try:
-            html = ht.preview(slug, {}, tenant_id=_tid())
+            html = _preview_surface(slug, {})
         except ValueError:
             # تصميم خاص حُذف بين تحميل الصفحة وطلب المصغّرة —
             # نعرض الكلاسيكي بدل صفحة خطأ داخل الـ iframe.
