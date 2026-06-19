@@ -15,12 +15,14 @@ def test_library_carries_the_full_catalogue():
     الألياف» (fiber_glow) followed. Adding a new template = update
     this set (the catalogue contract)."""
     from app.radius.services import hotspot_templates as ht
+    from app.radius.services import hotspot_skins as sk
     slugs = {t.slug for t in ht.LIBRARY}
-    assert slugs == {
+    expected = {
         "gradient_pro", "royal_night", "emerald", "aurora_store",
         "swift_login", "fiber_glow",
         "classic", "card", "dark", "minimal", "mikrotik",
-    }
+    } | set(sk.SKIN_SLUGS)  # الجلود الجديدة (feat/hotspot-gallery-expansion)
+    assert slugs == expected
 
 
 def test_every_template_carries_required_routeros_placeholders():

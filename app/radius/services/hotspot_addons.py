@@ -538,7 +538,8 @@ register(AddonSpec(
 def _load_catalogs() -> None:
     for mod in ("hotspot_addons_content", "hotspot_addons_themes",
                 "hotspot_addons_money", "hotspot_addons_login",
-                "hotspot_addons_engagement", "hotspot_addons_extra"):
+                "hotspot_addons_engagement", "hotspot_addons_extra",
+                "hotspot_addons_gallery"):
         try:
             __import__(f"{__package__}.{mod}")
         except ModuleNotFoundError:

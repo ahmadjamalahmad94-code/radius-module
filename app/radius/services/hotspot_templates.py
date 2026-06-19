@@ -313,6 +313,16 @@ TEMPLATE_VARIABLES: list[TemplateVariable] = [
                      "#2563EB", _HEX_COLOR_RE),
     TemplateVariable("BG_COLOR",        "لون الخلفية",
                      "#F8FAFC", _HEX_COLOR_RE),
+    # لون ثانوي (لمسة/تباين) — تستخدمه قوالب «Crimson Luxe» (قرمزي)
+    # و«Gilded Hospitality» (ذهبي) وغيرها كلون CTA/زخرفة ثانٍ. القوالب
+    # التي لا تذكره لا تتأثر.
+    TemplateVariable("ACCENT2_COLOR",   "اللون الثانوي",
+                     "#DC2626", _HEX_COLOR_RE),
+    # رابط صورة خلفية اختياري — تستخدمه قوالب «Photo Backdrop» و«Crimson
+    # Luxe» و«Gilded» و«Frost Glass» كخلفية CSS (فارغ = تدرّج بديل، بلا
+    # أيقونة صورة مكسورة). يقبل http(s)/مسار/data-URL أو فراغ.
+    TemplateVariable("BG_PHOTO_URL",    "صورة الخلفية (اختياري)",
+                     "", _URL_OPT_RE),
     # رقم هاتف الدعم الفني — تستخدمه القوالب الاحترافية (عائلة
     # «التدرج الاحترافي») في بطاقة الدعم وزر الاتصال المباشر.
     # القوالب القديمة لا تحتويه فلا يتأثر استبدالها.
@@ -2095,3 +2105,10 @@ __all__ = [
 # ملاحظة (تحديث): قوالب «التدرج الاحترافي» (gradient_pro / royal_night /
 # emerald) تُستورد أعلاه من hotspot_templates_pro وتُسجَّل في
 # LIBRARY مثل بقية القوالب — نفس مسار المعاينة والنشر بلا تغيير.
+
+# ─── الجلود الجديدة (hotspot_skins) — تُبنى من مولّد واحد مدفوع
+# بالرموز وتُلحَق بالمكتبة فتظهر في المعرض وتمرّ بـ render/preview/deploy
+# مثل بقية القوالب. تمرير LoginTemplate يتفادى دورة الاستيراد. ───
+from . import hotspot_skins as _hotspot_skins  # noqa: E402
+
+_hotspot_skins.register_into(LIBRARY, TEMPLATES_BY_SLUG, LoginTemplate)
