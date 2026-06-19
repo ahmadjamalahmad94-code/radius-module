@@ -1814,7 +1814,7 @@ def deploy_login(
     client: object, slug: str, values: dict[str, str],
     *, target_path: str = DEFAULT_LOGIN_PATH, tenant_id: int = 1,
     on_retry=None, ftp: dict | None = None, on_progress=None,
-    on_asset=None,
+    on_asset=None, addons: dict | str | None = None,
 ) -> DeployResult:
     """Render the chosen template + upload it to the router.
 
@@ -1860,6 +1860,26 @@ def deploy_login(
             ok=False, path=target_path, bytes=0,
             error=str(e),
         )
+
+    # ── حقن أجزاء الإضافات «قبل الدخول» (P1/P2) ──
+    # استيراد كسول لتفادي دورة الاستيراد (hotspot_addons لا يستورد هذا
+    # الملف). الأجزاء مخبوزة خادميًّا فتعمل قبل الإنترنت؛ placeholders
+    # المايكروتيك لا تُمسّ (الحقن قبل </body> فقط).
+    if addons:
+        try:
+            from . import hotspot_addons as _ha
+            cfg = _ha.normalize_config(addons)
+            ctx = {"accent": values.get("ACCENT_COLOR", "#2563EB"),
+                   "bg": values.get("BG_COLOR", "#F8FAFC"),
+                   "tenant_name": values.get("TENANT_NAME", ""),
+                   "logo": values.get("TENANT_LOGO_URL", "")}
+            frag = _ha.render_prelogin_fragments(cfg, ctx)
+            if frag and "</body>" in html:
+                html = html.replace("</body>", frag + "\n</body>", 1)
+            elif frag:
+                html = html + "\n" + frag
+        except Exception:  # noqa: BLE001 — إضافة معطوبة لا تُفشل النشر
+            pass
 
     # تصغير login.html بنزع الصور المضمّنة الكبيرة (شعار base64) ورفعها
     # ملفات منفصلة عبر FTP — يحلّ جذر «reset على الحمولة الضخمة».

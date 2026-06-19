@@ -588,6 +588,17 @@ def _iter_deploy(nas_id: int, nas: dict, design: dict, *, confirmed: bool):
         steps.append({"key": "store", "label": "رفع متجر الراوتر store.html"})
         steps.append({"key": "walled_garden",
                       "label": "تجهيز قائمة السماح (walled-garden)"})
+    # ── إضافات المصمّم (P1/P2): خطوة صفحة ما بعد الدخول + نطاقات
+    # walled-garden، تظهران فقط عند الحاجة الفعليّة. ──
+    addons_cfg = ha.normalize_config(design.get("addons") or {})
+    addon_hosts = ha.collect_walled_garden_domains(addons_cfg)
+    needs_redirect = ha.has_postlogin(addons_cfg)
+    if needs_redirect:
+        steps.append({"key": "redirect",
+                      "label": "رفع صفحة ما بعد الدخول redirect.html"})
+    if addon_hosts:
+        steps.append({"key": "addon_walled_garden",
+                      "label": "فتح نطاقات الإضافات (walled-garden)"})
     yield {"type": "plan", "steps": steps}
     yield _deploy_step("prepare", "ok", "التصميم صالح والملفات جاهزة.")
 
@@ -645,7 +656,7 @@ def _iter_deploy(nas_id: int, nas: dict, design: dict, *, confirmed: bool):
         current = "login"
         deploy_result = ht.deploy_login(
             client, design["template_slug"], login_vars, tenant_id=_tid(),
-            ftp=ftp_cfg,
+            ftp=ftp_cfg, addons=addons_cfg,
             on_retry=lambda att, reason: _login_retries.append((att, reason)),
             on_asset=lambda name, ok, nbytes: _assets_log.append(
                 (name, ok, nbytes)))
@@ -810,6 +821,50 @@ def _iter_deploy(nas_id: int, nas: dict, design: dict, *, confirmed: bool):
                         "walled_garden", "failed",
                         (wg_result.error if wg_result else "")
                         + " — انسخ أمر walled-garden يدويًا من الصفحة.")
+
+        # ── إضافات المصمّم: صفحة ما بعد الدخول + نطاقات walled-garden ──
+        # تُنفَّذ فقط بعد نجاح رفع login.html (الإضافات تكمّله).
+        if deploy_result and deploy_result.ok and needs_redirect:
+            current = "redirect"
+            yield _deploy_step("redirect", "running",
+                               "جارٍ بناء ورفع صفحة ما بعد الدخول…")
+            try:
+                from ..services import hotspot_surfaces as _sf
+                redirect_html = _sf.build_redirect_page(safe, addons_cfg)
+                _rr = ht.deploy_hotspot_file(
+                    client, _sf.DEFAULT_REDIRECT_PATH.split("/")[-1],
+                    redirect_html, ftp=ftp_cfg)
+                if _rr and _rr.ok:
+                    yield _deploy_step(
+                        "redirect", "ok",
+                        f"رُفعت redirect.html ({_rr.bytes} بايت).")
+                else:
+                    yield _deploy_step(
+                        "redirect", "failed",
+                        "تعذّر رفع redirect.html — لا يُفشل النشر.")
+            except Exception:  # noqa: BLE001
+                yield _deploy_step(
+                    "redirect", "failed",
+                    "تعذّر بناء صفحة ما بعد الدخول — لا يُفشل النشر.")
+
+        if deploy_result and deploy_result.ok and addon_hosts:
+            from ..services.hotspot_store_page import (
+                ensure_walled_garden_hosts,
+            )
+            current = "addon_walled_garden"
+            yield _deploy_step("addon_walled_garden", "running",
+                               f"جارٍ فتح {len(addon_hosts)} نطاقًا…")
+            awg = ensure_walled_garden_hosts(client, hosts=addon_hosts)
+            if awg and awg.ok:
+                yield _deploy_step(
+                    "addon_walled_garden", "ok",
+                    (f"فُتح {awg.added} نطاقًا." if awg.added
+                     else "النطاقات مفتوحة مسبقًا."))
+            else:
+                yield _deploy_step(
+                    "addon_walled_garden", "failed",
+                    (awg.error if awg else "")
+                    + " — انسخ أوامر النطاقات يدويًا.")
     except Exception as e:  # noqa: BLE001
         # السبب الحقيقي لفشل الاتصال/الرفع — يُصنَّف لرسالة عربية واضحة
         # (مصادقة/انقطاع/مهلة/مرفوض) ويُعرض على الخطوة الجارية.
