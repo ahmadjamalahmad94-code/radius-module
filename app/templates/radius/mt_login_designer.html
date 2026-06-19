@@ -268,6 +268,39 @@
   .mtld-addon-cfg[hidden] { display: none; }
   .mtld-addon-fld-label { display: block; font-size: 11.5px; font-weight: 700; margin-bottom: 3px; }
   .mtld-addon-fld-help { font-size: 10.5px; color: var(--hub-text-mute, #64748B); margin-top: 3px; }
+
+  /* ── معرض القوالب حسب نوع المنشأة (P4) ── */
+  .mtld-vert { margin-bottom: 18px; }
+  .mtld-vert-title {
+    margin: 6px 0 10px; font-size: 14px; font-weight: 900;
+    display: flex; align-items: center; gap: 8px;
+    color: var(--hub-brand, #2563EB);
+  }
+  .mtld-vgrid {
+    display: grid; gap: 14px;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  }
+  .mtld-vcard {
+    border: 1px solid var(--hub-border, #e6eaf2); border-radius: 14px;
+    overflow: hidden; background: #fff; display: flex; flex-direction: column;
+  }
+  .mtld-vthumb {
+    height: 150px; overflow: hidden; background: #f1f5f9;
+    border-bottom: 1px solid var(--hub-border, #e6eaf2); position: relative;
+  }
+  .mtld-vthumb iframe {
+    width: 390px; height: 390px; border: 0; transform: scale(.45);
+    transform-origin: top right; pointer-events: none;
+  }
+  .mtld-vbody { padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
+  .mtld-vname { font-weight: 800; font-size: 13.5px; }
+  .mtld-vdesc { font-size: 11.5px; color: var(--hub-text-mute, #64748B); line-height: 1.6; flex: 1; }
+  .mtld-vtags { display: flex; flex-wrap: wrap; gap: 4px; }
+  .mtld-vtag {
+    font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 999px;
+    background: #eff6ff; color: #1d4ed8;
+  }
+  .mtld-vbtn { width: 100%; justify-content: center; margin-top: 2px; }
 </style>
 {% endblock %}
 
@@ -321,6 +354,52 @@
   <div class="mtld-flash mtld-flash--err" role="alert">
     <i class="fa-solid fa-triangle-exclamation"></i> {{ error }}
   </div>
+  {% endif %}
+
+  {# ════ معرض القوالب الجاهزة حسب نوع المنشأة (P4) ════
+     كل قالب تركيبة (قالب أساسي + ثيم + إضافات) جاهزة لنوع منشأة.
+     «استخدم هذا القالب» يحمّله في المصمّم قابلًا للتحرير ثم ينشره. #}
+  {% if gallery_by_vertical %}
+  {% call hub.section("قوالب جاهزة حسب نوع منشأتك", icon="wand-magic-sparkles",
+                      meta="معرض") %}
+    <p class="mtld-lead">
+      اختر قالبًا يناسب نشاطك — يُحمَّل فورًا في المصمّم بكل إضافاته وثيمه،
+      قابلًا للتعديل قبل النشر. اسمك وشعارك ودعمك تبقى كما هي.
+    </p>
+    {% for vert, templates in gallery_by_vertical.items() %}
+    <div class="mtld-vert">
+      <h4 class="mtld-vert-title">
+        <i class="fa-solid fa-{{ gallery_verticals[vert][1] }}"></i>
+        {{ gallery_verticals[vert][0] }}
+      </h4>
+      <div class="mtld-vgrid">
+        {% for t in templates %}
+        <div class="mtld-vcard">
+          <div class="mtld-vthumb">
+            <iframe loading="lazy" title="{{ t.name_ar }}"
+                    sandbox="allow-same-origin allow-scripts"
+                    src="{{ url_for('radius.mt_login_designer_gallery_preview', nas_id=nas.id, key=t.key) }}"></iframe>
+          </div>
+          <div class="mtld-vbody">
+            <div class="mtld-vname"><i class="fa-solid fa-{{ t.icon }}"></i> {{ t.name_ar }}</div>
+            <div class="mtld-vdesc">{{ t.desc_ar }}</div>
+            {% if t.tags %}<div class="mtld-vtags">
+              {% for tag in t.tags %}<span class="mtld-vtag">{{ tag }}</span>{% endfor %}
+            </div>{% endif %}
+            <form method="post"
+                  action="{{ url_for('radius.mt_login_designer_gallery_apply', nas_id=nas.id) }}">
+              <input type="hidden" name="gallery_key" value="{{ t.key }}">
+              <button type="submit" class="hub-btn hub-btn--secondary mtld-vbtn">
+                <i class="fa-solid fa-download"></i> {{ _('استخدم هذا القالب') }}
+              </button>
+            </form>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+  {% endcall %}
   {% endif %}
 
   {# ════ نموذج الحفظ: يلفّ المعرض + حقول التخصيص (القالب والمتغيرات تُحفظ معًا) ════ #}

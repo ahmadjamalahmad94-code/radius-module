@@ -34,6 +34,8 @@ from ..db.connection import db
 from ..db.repos import hotspot_designs_repo
 from ..integration.mikrotik.client import MikrotikClient
 from ..services import hotspot_addons as ha
+from ..services import hotspot_gallery as hg
+from ..services import hotspot_surfaces as hsf
 from ..services import hotspot_templates as ht
 from ..services.audit import get_audit_service
 from ..services.nas_connection import resolve_connection_address
@@ -71,6 +73,20 @@ def register_mt_login_designer_routes(bp: Blueprint) -> None:
         "mt_login_designer_save",
         requires_perm(PERM_MANAGE)(mt_login_designer_save),
         methods=["POST"],
+    )
+    # معرض القوالب الجاهزة حسب نوع المنشأة (P4): تطبيق قالب (يحمّله
+    # في المصمّم قابلًا للتحرير) + معاينة بطاقة المعرض في iframe.
+    bp.add_url_rule(
+        "/mt/<int:nas_id>/login-designer/gallery/apply",
+        "mt_login_designer_gallery_apply",
+        requires_perm(PERM_MANAGE)(mt_login_designer_gallery_apply),
+        methods=["POST"],
+    )
+    bp.add_url_rule(
+        "/mt/<int:nas_id>/login-designer/gallery/preview/<key>",
+        "mt_login_designer_gallery_preview",
+        requires_perm(PERM_VIEW)(mt_login_designer_gallery_preview),
+        methods=["GET"],
     )
     # المعاينة تقبل GET (مصغّرات المعرض — template_slug فقط، رابط
     # قصير) و POST (المعاينة الكبيرة — كل المتغيّرات في جسم الطلب).
@@ -418,6 +434,9 @@ def _render_designer(nas_id: int, nas: dict, design: dict, *,
         addons_by_cat=ha.by_category(),
         addons_cat_labels=ha.CATEGORY_LABELS,
         addons_config=design.get("addons") or ha.normalize_config({}),
+        # معرض القوالب الجاهزة حسب نوع المنشأة (P4).
+        gallery_by_vertical=hg.by_vertical(),
+        gallery_verticals=hg.VERTICALS,
     )
 
 
@@ -486,6 +505,61 @@ def mt_login_designer_save(nas_id: int):
               "variables": values, "addons": addons_cfg}
     return _render_designer(nas_id, nas, design,
                             saved=saved, error=error)
+
+
+def mt_login_designer_gallery_apply(nas_id: int):
+    """يطبّق قالب معرض جاهز: يحلّه (يندمج فوق متغيّرات المستخدم الحالية)
+    ويحفظه تصميمًا حاليًّا، فيظهر في المصمّم قابلًا للتحرير بالكامل."""
+    nas = _load_nas(nas_id)
+    if not nas:
+        abort(404)
+    key = (request.form.get("gallery_key") or "").strip()
+    current = _current_design(nas_id)
+    resolved = hg.resolve(key, base_vars=current.get("variables") or {})
+    if not resolved:
+        return _render_designer(nas_id, nas, current,
+                                error="قالب المعرض غير معروف.")
+    slug, variables, addons = resolved
+    # رابط متجر فارغ = التلقائي (نفس منطق الحفظ العادي).
+    if not variables.get("STORE_URL"):
+        variables["STORE_URL"] = _auto_store_url()
+    try:
+        safe = ht.validate_vars(variables)
+    except ValueError as e:
+        return _render_designer(nas_id, nas, current, error=str(e))
+    addons_cfg = ha.normalize_config(addons)
+    hotspot_designs_repo.save_design(
+        _tid(), nas_id, template_slug=slug, variables=safe, addons=addons_cfg)
+    get_audit_service().record(
+        actor=str(getattr(g, "admin_id", None) or "ui"),
+        action="mt.login_designer.gallery_apply",
+        target_type="mikrotik_nas", target_id=str(nas_id),
+        severity="info", result_status="success", router_id=int(nas_id),
+        payload={"gallery_key": key, "template_slug": slug})
+    design = {"template_slug": slug, "variables": safe, "addons": addons_cfg}
+    return _render_designer(
+        nas_id, nas, design, saved=True,
+        flash_ok=f"تم تحميل قالب «{hg.get(key).name_ar}» — عدّله ثم انشره.")
+
+
+def mt_login_designer_gallery_preview(nas_id: int, key: str):
+    """معاينة بطاقة المعرض في iframe — يصيّر تركيبة القالب (سطح ما قبل
+    الدخول) مع تجريد placeholders المايكروتيك للعرض فقط."""
+    if not _load_nas(nas_id):
+        abort(404)
+    resolved = hg.resolve(key, base_vars=_variable_defaults())
+    if not resolved:
+        abort(404)
+    slug, variables, addons = resolved
+    try:
+        safe = ht.validate_vars(variables)
+    except ValueError:
+        safe = _variable_defaults()
+    # نبني سطح login مع الإضافات ثم نجرّد $(...) كما يفعل preview.
+    html = hsf.render_login_surface(slug, safe, addons, tenant_id=_tid())
+    html = re.sub(r"\$\(if error\).*?\$\(endif\)", "", html, flags=re.S)
+    html = re.sub(r"\$\([^)]+\)", "", html)
+    return Response(html, mimetype="text/html")
 
 
 def _companion_summary(ok_names: list[str], fail_names: list[str]) -> str:
