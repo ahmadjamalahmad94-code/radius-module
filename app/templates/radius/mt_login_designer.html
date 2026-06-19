@@ -301,6 +301,14 @@
     background: #eff6ff; color: #1d4ed8;
   }
   .mtld-vbtn { width: 100%; justify-content: center; margin-top: 2px; }
+
+  /* ── الأصول المستضافة (فيديو/خط) ── */
+  .mtld-asset-grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); margin-bottom: 14px; }
+  .mtld-asset-up { border: 1px dashed var(--hub-border, #cbd5e1); border-radius: 12px; padding: 12px; display: grid; gap: 8px; }
+  .mtld-asset-table { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid var(--hub-border, #e6eaf2); border-radius: 10px; overflow: hidden; }
+  .mtld-asset-table th, .mtld-asset-table td { padding: 8px 11px; text-align: right; border-bottom: 1px solid var(--hub-border, #eef2f7); font-size: 12.5px; }
+  .mtld-asset-table th { background: #f8fafc; font-weight: 800; }
+  .mtld-asset-del { color: #dc2626; padding: 4px 9px; }
 </style>
 {% endblock %}
 
@@ -401,6 +409,57 @@
     {% endfor %}
   {% endcall %}
   {% endif %}
+
+  {# ════ أصول مستضافة (فيديو سبلاش/إعلان + خط العلامة) ════
+     تُرفع وتُخزَّن وتُرسَل للراوتر عند النشر فتعمل ذاتيًّا بلا إنترنت.
+     استعملها بأسمائها في إضافات الفيديو، و«خط علامتي» في منتقي الخطوط. #}
+  {% call hub.section("الأصول المستضافة (فيديو/خط)", icon="folder-open", meta="رفع") %}
+    <p class="mtld-lead">
+      ارفع فيديو سبلاش/إعلان (≤ ١٢م.ب) أو خط علامتك (≤ ٢م.ب). تُرفع تلقائيًّا
+      إلى الراوتر عند النشر فتعمل قبل الدخول بلا إنترنت. أشِر للفيديو باسمه في
+      إضافة «فيديو سبلاش/شاهد إعلانًا»، واختر «خط علامتي» في منتقي الخطوط.
+    </p>
+    <div class="mtld-asset-grid">
+      <form method="post" enctype="multipart/form-data"
+            action="{{ url_for('radius.mt_login_designer_asset_upload', nas_id=nas.id) }}"
+            class="mtld-asset-up">
+        <input type="hidden" name="kind" value="video">
+        <label class="mtld-field-label"><i class="fa-solid fa-film"></i> رفع فيديو</label>
+        <input type="file" name="asset_file" accept=".mp4,.webm,.ogg" required class="hub-input">
+        <button type="submit" class="hub-btn hub-btn--secondary"><i class="fa-solid fa-upload"></i> رفع الفيديو</button>
+      </form>
+      <form method="post" enctype="multipart/form-data"
+            action="{{ url_for('radius.mt_login_designer_asset_upload', nas_id=nas.id) }}"
+            class="mtld-asset-up">
+        <input type="hidden" name="kind" value="font">
+        <label class="mtld-field-label"><i class="fa-solid fa-font"></i> رفع خط</label>
+        <input type="file" name="asset_file" accept=".woff2,.woff,.ttf,.otf" required class="hub-input">
+        <button type="submit" class="hub-btn hub-btn--secondary"><i class="fa-solid fa-upload"></i> رفع الخط</button>
+      </form>
+    </div>
+    {% if router_assets %}
+    <table class="mtld-asset-table">
+      <thead><tr><th>النوع</th><th>اسم الملف</th><th>الحجم</th><th></th></tr></thead>
+      <tbody>
+        {% for a in router_assets %}
+        <tr>
+          <td>{{ 'فيديو' if a.kind == 'video' else 'خط' }}</td>
+          <td dir="ltr">{{ a.filename }}</td>
+          <td>{{ (a.size_bytes // 1024) }} ك.ب</td>
+          <td>
+            <form method="post" action="{{ url_for('radius.mt_login_designer_asset_delete', nas_id=nas.id) }}">
+              <input type="hidden" name="asset_id" value="{{ a.id }}">
+              <button type="submit" class="hub-btn hub-btn--ghost mtld-asset-del"><i class="fa-solid fa-trash"></i></button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="mtld-field-help">لا أصول مرفوعة بعد.</div>
+    {% endif %}
+  {% endcall %}
 
   {# ════ نموذج الحفظ: يلفّ المعرض + حقول التخصيص (القالب والمتغيرات تُحفظ معًا) ════ #}
   <form method="post"

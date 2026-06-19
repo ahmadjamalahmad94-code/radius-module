@@ -88,6 +88,20 @@ def register_mt_login_designer_routes(bp: Blueprint) -> None:
         requires_perm(PERM_VIEW)(mt_login_designer_gallery_preview),
         methods=["GET"],
     )
+    # أصول مستضافة (فيديو سبلاش/إعلان، خط العلامة): رفع/حذف من المصمّم،
+    # تُرفع للراوتر عند النشر فتعمل ذاتيًّا بلا walled-garden.
+    bp.add_url_rule(
+        "/mt/<int:nas_id>/login-designer/asset/upload",
+        "mt_login_designer_asset_upload",
+        requires_perm(PERM_MANAGE)(mt_login_designer_asset_upload),
+        methods=["POST"],
+    )
+    bp.add_url_rule(
+        "/mt/<int:nas_id>/login-designer/asset/delete",
+        "mt_login_designer_asset_delete",
+        requires_perm(PERM_MANAGE)(mt_login_designer_asset_delete),
+        methods=["POST"],
+    )
     # تحليلات صفحة الدخول: نقطة استقبال beacon (عامّة — تُنادى من أجهزة
     # الزبائن بلا جلسة)، ولوحة تقارير محميّة per-template/vertical/A-B.
     bp.add_url_rule(
@@ -451,7 +465,14 @@ def _render_designer(nas_id: int, nas: dict, design: dict, *,
         # معرض القوالب الجاهزة حسب نوع المنشأة (P4).
         gallery_by_vertical=hg.by_vertical(),
         gallery_verticals=hg.VERTICALS,
+        # أصول مستضافة (فيديو/خط) مرفوعة لهذا الراوتر.
+        router_assets=_assets_list(nas_id),
     )
+
+
+def _assets_list(nas_id: int):
+    from ..db.repos import hotspot_assets_repo as assets
+    return assets.list_assets(_tid(), nas_id)
 
 
 def mt_login_designer(nas_id: int):
@@ -632,6 +653,72 @@ def hotspot_analytics_dashboard():
         gallery_verticals=hg.VERTICALS)
 
 
+# ─── أصول مستضافة (فيديو/خط) — رفع/حذف ─────────────────────────
+_ASSET_EXT = {
+    "video": {".mp4", ".webm", ".ogg"},
+    "font": {".woff2", ".woff", ".ttf", ".otf"},
+}
+
+
+def _safe_asset_name(name: str) -> str:
+    """اسم ملف آمن (بلا مسارات) — أحرف/أرقام/نقطة/شرطة فقط."""
+    base = os.path.basename(str(name or "").strip()).replace("\\", "")
+    return re.sub(r"[^A-Za-z0-9._-]", "", base)[:48]
+
+
+def mt_login_designer_asset_upload(nas_id: int):
+    """يرفع أصلًا (فيديو/خط) ويخزّنه؛ يظهر في المصمّم ويُرفع للراوتر
+    عند النشر فيُشار إليه باسمه النسبي (مستضاف ذاتيًّا، بلا walled-garden)."""
+    from ..db.repos import hotspot_assets_repo as assets
+    nas = _load_nas(nas_id)
+    if not nas:
+        abort(404)
+    design = _current_design(nas_id)
+    kind = (request.form.get("kind") or "").strip()
+    f = request.files.get("asset_file")
+    err = ""
+    if kind not in assets.KINDS:
+        err = "نوع أصل غير مدعوم."
+    elif not f or not f.filename:
+        err = "اختر ملفًا للرفع."
+    else:
+        fname = _safe_asset_name(f.filename)
+        ext = os.path.splitext(fname)[1].lower()
+        if ext not in _ASSET_EXT[kind]:
+            err = "صيغة الملف غير مدعومة لهذا النوع."
+        else:
+            data = f.read()
+            try:
+                assets.save_asset(_tid(), nas_id=nas_id, kind=kind,
+                                  filename=fname, content=data,
+                                  content_type=f.mimetype or "")
+            except ValueError as e:
+                err = str(e)
+    if err:
+        return _render_designer(nas_id, nas, design, error=err)
+    get_audit_service().record(
+        actor=str(getattr(g, "admin_id", None) or "ui"),
+        action="mt.login_designer.asset_upload",
+        target_type="mikrotik_nas", target_id=str(nas_id),
+        severity="info", result_status="success", router_id=int(nas_id),
+        payload={"kind": kind})
+    return _render_designer(nas_id, nas, design, saved=True,
+                            flash_ok="تم رفع الأصل — سيُرفع للراوتر عند النشر.")
+
+
+def mt_login_designer_asset_delete(nas_id: int):
+    from ..db.repos import hotspot_assets_repo as assets
+    nas = _load_nas(nas_id)
+    if not nas:
+        abort(404)
+    try:
+        assets.delete_asset(_tid(), nas_id, int(request.form.get("asset_id") or 0))
+    except (TypeError, ValueError):
+        pass
+    return _render_designer(nas_id, nas, _current_design(nas_id),
+                            flash_ok="حُذف الأصل.")
+
+
 def _companion_summary(ok_names: list[str], fail_names: list[str]) -> str:
     """يبني سطر ملخص عربيًا لرفع الصفحات المرافقة: «تم رفع: login,
     status, ... | فشل: ...» — يُلحق برسالة نجاح النشر فيرى المشغّل
@@ -746,6 +833,12 @@ def _iter_deploy(nas_id: int, nas: dict, design: dict, *, confirmed: bool):
     if addon_hosts or analytics_on:
         steps.append({"key": "addon_walled_garden",
                       "label": "فتح نطاقات/مضيف الإضافات (walled-garden)"})
+    # أصول مستضافة (فيديو/خط) مرفوعة من المصمّم — تُرفع بجانب login.html.
+    from ..db.repos import hotspot_assets_repo as _assets_repo
+    router_assets = _assets_repo.list_assets(_tid(), nas_id)
+    if router_assets:
+        steps.append({"key": "assets_files",
+                      "label": f"رفع أصول مستضافة ({len(router_assets)})"})
     yield {"type": "plan", "steps": steps}
     yield _deploy_step("prepare", "ok", "التصميم صالح والملفات جاهزة.")
 
@@ -805,7 +898,8 @@ def _iter_deploy(nas_id: int, nas: dict, design: dict, *, confirmed: bool):
             client, design["template_slug"], login_vars, tenant_id=_tid(),
             ftp=ftp_cfg, addons=addons_cfg,
             addon_ctx={"analytics_url": _analytics_url(
-                nas_id, design["template_slug"], absolute=True)},
+                nas_id, design["template_slug"], absolute=True),
+                "brand_font": _assets_repo.brand_font_filename(_tid(), nas_id)},
             on_retry=lambda att, reason: _login_retries.append((att, reason)),
             on_asset=lambda name, ok, nbytes: _assets_log.append(
                 (name, ok, nbytes)))
@@ -1022,6 +1116,44 @@ def _iter_deploy(nas_id: int, nas: dict, design: dict, *, confirmed: bool):
             yield _deploy_step(
                 "addon_walled_garden", "ok" if ok_all else "failed",
                 " | ".join(parts) or "تم.")
+
+        # ── رفع الأصول المستضافة (فيديو/خط) عبر FTP بجانب login.html ──
+        if deploy_result and deploy_result.ok and router_assets:
+            current = "assets_files"
+            if not ftp_cfg:
+                yield _deploy_step(
+                    "assets_files", "failed",
+                    "تعذّر رفع الأصول — FTP غير متاح على الراوتر. فعّله أو "
+                    "ارفع الملفات يدويًا إلى مجلد hotspot.")
+            else:
+                from ..db.repos import hotspot_assets_repo as _ar
+                from ..services.hotspot_file_transfer import (
+                    FtpUploadError, ftp_upload,
+                )
+                done, failed = 0, 0
+                yield _deploy_step("assets_files", "running",
+                                   f"0/{len(router_assets)}")
+                for a in router_assets:
+                    row = _ar.get_asset(_tid(), nas_id, a["filename"])
+                    if not row:
+                        failed += 1
+                        continue
+                    try:
+                        ftp_upload(ftp_cfg["host"], ftp_cfg["user"],
+                                   ftp_cfg["password"],
+                                   "hotspot/" + a["filename"], row["content"],
+                                   port=ftp_cfg.get("port", 21),
+                                   timeout=ftp_cfg.get("timeout", 30.0))
+                        done += 1
+                    except (FtpUploadError, Exception):  # noqa: BLE001
+                        failed += 1
+                    yield _deploy_step(
+                        "assets_files", "running",
+                        f"{done + failed}/{len(router_assets)} — {a['filename']}")
+                yield _deploy_step(
+                    "assets_files", "ok" if not failed else "failed",
+                    f"رُفع {done}/{len(router_assets)} أصلًا"
+                    + (f" — فشل {failed}" if failed else "."))
     except Exception as e:  # noqa: BLE001
         # السبب الحقيقي لفشل الاتصال/الرفع — يُصنَّف لرسالة عربية واضحة
         # (مصادقة/انقطاع/مهلة/مرفوض) ويُعرض على الخطوة الجارية.
@@ -1767,9 +1899,11 @@ def mt_login_designer_preview(nas_id: int):
     def _preview_surface(s: str, vals: dict) -> str:
         # نفس روح ht.preview لكن عبر سطح login (قالب + إضافات pre)،
         # ثم تجريد placeholders راوتر أو إس للعرض فقط.
+        from ..db.repos import hotspot_assets_repo as _ar
         out = hsf.render_login_surface(
             s, vals, preview_addons, tenant_id=_tid(),
-            extra_ctx={"analytics_url": _analytics_url(nas_id, s)})
+            extra_ctx={"analytics_url": _analytics_url(nas_id, s),
+                       "brand_font": _ar.brand_font_filename(_tid(), nas_id)})
         out = re.sub(r"\$\(if error\).*?\$\(endif\)", "", out, flags=re.S)
         return re.sub(r"\$\([^)]+\)", "", out)
 

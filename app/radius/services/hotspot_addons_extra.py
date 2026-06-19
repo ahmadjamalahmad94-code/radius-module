@@ -65,22 +65,33 @@ _FONT_STACKS = {
 
 
 def _frag_font(cfg: dict, ctx: dict) -> str:
-    stack = _FONT_STACKS.get(cfg.get("family") or "almarai",
-                             _FONT_STACKS["almarai"])
+    fam = cfg.get("family") or "almarai"
+    # خط العلامة المرفوع: @font-face نسبيّ لملف الخط المستضاف على
+    # الراوتر (ctx['brand_font'] = اسم الملف). يعمل أوفلاين بعد النشر.
+    if fam == "brand":
+        bf = str(ctx.get("brand_font") or "").strip()
+        if not bf:
+            return ""  # لا خط علامة مرفوع — لا نغيّر شيئًا
+        face = ("@font-face{font-family:'HRBrand';src:url('" + _esc(bf)
+                + "');font-display:swap}")
+        return ("<style>" + face + "body,input,button,select,textarea{"
+                "font-family:'HRBrand','Almarai',sans-serif!important}</style>")
+    stack = _FONT_STACKS.get(fam, _FONT_STACKS["almarai"])
     return ("<style>body,input,button,select,textarea{font-family:"
             + stack + "!important}</style>")
 
 
 register(AddonSpec(
     key="font_picker", category=CAT_THEME, label_ar="منتقي الخطوط",
-    desc_ar="اختر خطّ الصفحة من مجموعات آمنة تعمل أوفلاين (المراعي/نظام/مدوّر/رقعة/أحادي).",
+    desc_ar="اختر خطّ الصفحة من مجموعات آمنة أوفلاين، أو «خط علامتك» المرفوع من قسم الأصول.",
     surface=SURFACE_PRELOGIN, icon="font", server_side=True,
     fields=(
         AddonField(key="family", label_ar="الخط", kind="select",
                    default="almarai", options=(
                        ("almarai", "المراعي (مرفق)"), ("system", "خط النظام"),
                        ("rounded", "مدوّر"), ("serif", "رقعة/Serif"),
-                       ("mono", "أحادي المسافة"))),
+                       ("mono", "أحادي المسافة"),
+                       ("brand", "خط علامتي (مرفوع)"))),
     ),
     pre_fragment=_frag_font))
 
