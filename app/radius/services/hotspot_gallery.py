@@ -583,6 +583,195 @@ GALLERY: list[GalleryTemplate] = [
                 "prayer_times": _ad("prayer_times"),
                 "announcements": _ad("announcements", title="برنامج رمضان",
                                      body="تراويح ٩م\nإفطار صائم يوميًّا")}),
+    # ════════════════════════════════════════════════════════════
+    # قوالب الجلود الجديدة (feat/hotspot-gallery-expansion) عبر الأنواع
+    # ════════════════════════════════════════════════════════════
+    # ── Clean Card ──
+    GalleryTemplate(
+        key="clean_shop", name_ar="متجر نظيف", vertical="shop",
+        desc_ar="بطاقة فاتحة محايدة بسيطة — دعم 24/7 وتذييل المكان.",
+        base_slug="clean_card", icon="bag-shopping", tags=("بسيط", "نظيف"),
+        variables={"ACCENT_COLOR": "#2563EB", "BG_COLOR": "#F1F5F9"},
+        addons={"support_card": _ad("support_card", phone="0590000000"),
+                "venue_footer": _ad("venue_footer", address="شارع الحمراء",
+                                    phone="0590000000", tagline="نسعد بخدمتك")}),
+    GalleryTemplate(
+        key="clean_clinic", name_ar="عيادة نظيفة", vertical="clinic",
+        desc_ar="بطاقة هادئة مطمئنة — شريحة اتصال ودعم وتذييل المكان.",
+        base_slug="clean_card", icon="stethoscope", tags=("طبي", "بسيط"),
+        variables={"ACCENT_COLOR": "#0d9488", "BG_COLOR": "#F0FDFA"},
+        addons={"online_chip": _ad("online_chip"),
+                "support_card": _ad("support_card", phone="0590000000")}),
+    GalleryTemplate(
+        key="clean_office", name_ar="مكتب نظيف", vertical="coworking",
+        desc_ar="افتراضي محايد أنيق — تذكّرني وإظهار كلمة المرور.",
+        base_slug="clean_card", icon="briefcase", tags=("مكتب", "افتراضي"),
+        variables={"ACCENT_COLOR": "#4f46e5", "BG_COLOR": "#F1F5F9"},
+        addons={"remember_me": _ad("remember_me"), "password_eye": _ad("password_eye")}),
+
+    # ── Photo Backdrop ──
+    GalleryTemplate(
+        key="photo_hotel", name_ar="فندق بخلفية صورة", vertical="hotel",
+        desc_ar="صورة ملء الشاشة وبطاقة زجاجية — تاريخ/وقت ودعم وشراء بطاقة.",
+        base_slug="photo_backdrop", icon="hotel", tags=("صورة", "زجاجي"),
+        variables={"ACCENT_COLOR": "#0ea5e9", "BG_COLOR": "#0B1020"},
+        addons={"datetime_greeting": _ad("datetime_greeting"),
+                "support_card": _ad("support_card", phone="0590000000"),
+                "buy_card_cta": _ad("buy_card_cta", label="اشترِ بطاقة",
+                                    url="https://pay.example.com/topup")}),
+    GalleryTemplate(
+        key="photo_restaurant", name_ar="مطعم بخلفية صورة", vertical="restaurant",
+        desc_ar="صورة طعام شهيّة وبطاقة زجاجية — تقييم وروابط تواصل.",
+        base_slug="photo_backdrop", icon="utensils", tags=("صورة", "مطعم"),
+        variables={"ACCENT_COLOR": "#f97316", "BG_COLOR": "#1c1917"},
+        addons={"rating_badge": _ad("rating_badge", stars="5"),
+                "venue_footer": _ad("venue_footer", phone="0590000000",
+                                    tagline="ألذّ الأطباق بانتظارك")}),
+
+    # ── Food Co-Brand ──
+    GalleryTemplate(
+        key="food_resto", name_ar="مطعم تعاون", vertical="restaurant",
+        desc_ar="كريمي/خوخي مرح مع شعارين وتقييم وتذييل.",
+        base_slug="food_cobrand", icon="burger", tags=("طعام", "تعاون"),
+        variables={"ACCENT_COLOR": "#f97316", "ACCENT2_COLOR": "#ea580c"},
+        addons={"cobrand_dual_logo": _ad("cobrand_dual_logo"),
+                "rating_badge": _ad("rating_badge", stars="5")}),
+    GalleryTemplate(
+        key="food_cafe", name_ar="كافيه تعاون", vertical="cafe",
+        desc_ar="دافئ ومرح — ساعة سعيدة مجدولة وتواصل.",
+        base_slug="food_cobrand", icon="mug-hot", tags=("كافيه", "مرح"),
+        variables={"ACCENT_COLOR": "#d97706", "ACCENT2_COLOR": "#b45309"},
+        addons={"scheduled_content": _ad("scheduled_content",
+                                         message="ساعة سعيدة ٤–٦م", start_hour="16",
+                                         end_hour="18"),
+                "datetime_greeting": _ad("datetime_greeting")}),
+
+    # ── Crimson Luxe ──
+    GalleryTemplate(
+        key="crimson_fine", name_ar="مطعم فاخر قرمزي", vertical="restaurant",
+        desc_ar="أسود/قرمزي بشاشة منقسمة — تقييم وموثّق ودخول موظّفين وزخرفة.",
+        base_slug="crimson_luxe", icon="wine-glass", tags=("فاخر", "منقسم"),
+        variables={"ACCENT_COLOR": "#0b1020", "ACCENT2_COLOR": "#dc2626"},
+        addons={"rating_badge": _ad("rating_badge", stars="5"),
+                "staff_login_link": _ad("staff_login_link"),
+                "datetime_greeting": _ad("datetime_greeting"),
+                "ornamental_divider": _ad("ornamental_divider")}),
+    GalleryTemplate(
+        key="crimson_resort", name_ar="منتجع قرمزي", vertical="hotel",
+        desc_ar="فخامة داكنة بشاشة منقسمة — مبدّل لغة وشراء بطاقة.",
+        base_slug="crimson_luxe", icon="umbrella-beach", tags=("منتجع", "فخم"),
+        variables={"ACCENT_COLOR": "#0b1020", "ACCENT2_COLOR": "#b91c1c"},
+        addons={"multilang": _ad("multilang"),
+                "buy_card_cta": _ad("buy_card_cta", url="https://pay.example.com/x")}),
+
+    # ── Gilded Hospitality ──
+    GalleryTemplate(
+        key="gilded_resto", name_ar="مطعم مذهّب", vertical="restaurant",
+        desc_ar="عاجي/ذهبي بنصفين وزخارف — تقييم وتذييل تواصل.",
+        base_slug="gilded_hospitality", icon="crown", tags=("ذهبي", "راقٍ"),
+        variables={"ACCENT_COLOR": "#b8860b", "ACCENT2_COLOR": "#d4af37"},
+        addons={"ornamental_divider": _ad("ornamental_divider"),
+                "rating_badge": _ad("rating_badge", stars="5"),
+                "venue_footer": _ad("venue_footer", phone="0590000000")}),
+    GalleryTemplate(
+        key="gilded_boutique", name_ar="بوتيك مذهّب", vertical="shop",
+        desc_ar="عاجي/ذهبي أنيق — زخرفة وزر شراء.",
+        base_slug="gilded_hospitality", icon="gem", tags=("بوتيك", "ذهبي"),
+        variables={"ACCENT_COLOR": "#a16207", "ACCENT2_COLOR": "#d4af37"},
+        addons={"ornamental_divider": _ad("ornamental_divider"),
+                "buy_card_cta": _ad("buy_card_cta", url="https://pay.example.com/x")}),
+
+    # ── Soft Sky ──
+    GalleryTemplate(
+        key="soft_clinic", name_ar="عيادة سماوية", vertical="clinic",
+        desc_ar="باستيلي ناعم وأزرار حبّة — شريحة اتصال ودعم.",
+        base_slug="soft_sky", icon="stethoscope", tags=("ناعم", "طبي"),
+        variables={"ACCENT_COLOR": "#0ea5e9", "BG_COLOR": "#E0F2FE"},
+        addons={"online_chip": _ad("online_chip"),
+                "support_card": _ad("support_card", phone="0590000000")}),
+    GalleryTemplate(
+        key="soft_cowork", name_ar="مساحة عمل سماوية", vertical="coworking",
+        desc_ar="هادئ ومنعش — قراءة الجهاز وتحليلات.",
+        base_slug="soft_sky", icon="laptop", tags=("ناعم", "عمل"),
+        variables={"ACCENT_COLOR": "#06b6d4", "BG_COLOR": "#ECFEFF"},
+        addons={"device_readout": _ad("device_readout"),
+                "analytics": _ad("analytics", vertical="coworking")}),
+
+    # ── Carrier App ──
+    GalleryTemplate(
+        key="carrier_isp", name_ar="مزوّد إنترنت — تطبيق", vertical="isp",
+        desc_ar="بوابة متعدّدة التبويبات بشريط سفلي — باقات ونقاط بيع وحالة شبكة.",
+        base_slug="carrier_app", icon="wifi", tags=("تبويبات", "مشغّل"),
+        variables={"ACCENT_COLOR": "#16a34a", "BG_COLOR": "#F0FDF4"},
+        addons={"tab_bar_nav": _ad("tab_bar_nav"),
+                "dealers_directory": _ad("dealers_directory",
+                                         dealers="المركز|0590000000|الحمراء\nفرع الشمال|0591111111|الزهور",
+                                         payments="مدى، أبل باي"),
+                "package_ribbons": _ad("package_ribbons", title="باقة 100 جيجا",
+                                       ribbon="الأكثر طلبًا"),
+                "network_status_strip": _ad("network_status_strip")}),
+    GalleryTemplate(
+        key="carrier_reseller", name_ar="موزّع — تطبيق", vertical="shop",
+        desc_ar="تطبيق مشغّل بلون سماوي — نقاط بيع وشراء بطاقة.",
+        base_slug="carrier_app", icon="store", tags=("موزّع", "تبويبات"),
+        variables={"ACCENT_COLOR": "#0ea5e9", "BG_COLOR": "#F0F9FF"},
+        addons={"tab_bar_nav": _ad("tab_bar_nav"),
+                "dealers_directory": _ad("dealers_directory",
+                                         dealers="نقطتي|0590000000|السوق"),
+                "buy_card_cta": _ad("buy_card_cta", url="https://pay.example.com/x")}),
+
+    # ── Tech Terminal ──
+    GalleryTemplate(
+        key="terminal_isp", name_ar="شبكة — محطّة تقنية", vertical="isp",
+        desc_ar="داكن تقني بشريط حالة شبكة — قراءة الجهاز وشريحة اتصال.",
+        base_slug="tech_terminal", icon="network-wired", tags=("تقني", "داكن"),
+        variables={"ACCENT_COLOR": "#22c55e", "BG_COLOR": "#070B14"},
+        addons={"network_status_strip": _ad("network_status_strip"),
+                "device_readout": _ad("device_readout"),
+                "online_chip": _ad("online_chip")}),
+    GalleryTemplate(
+        key="terminal_cowork", name_ar="مساحة تقنية", vertical="coworking",
+        desc_ar="مظهر تقني داكن — تحليلات وقراءة جهاز.",
+        base_slug="tech_terminal", icon="laptop-code", tags=("تقني", "عمل"),
+        variables={"ACCENT_COLOR": "#10b981", "BG_COLOR": "#070B14"},
+        addons={"analytics": _ad("analytics", vertical="coworking"),
+                "device_readout": _ad("device_readout")}),
+
+    # ── Frost Glass Blue ──
+    GalleryTemplate(
+        key="frost_retail", name_ar="متجر زجاج ثلجي", vertical="shop",
+        desc_ar="زجاجية جليدية زرقاء — تذكّرني وشراء بطاقة وإظهار كلمة المرور.",
+        base_slug="frost_glass_blue", icon="snowflake", tags=("زجاجي", "أزرق"),
+        variables={"ACCENT_COLOR": "#1d4ed8", "BG_COLOR": "#DBEAFE"},
+        addons={"remember_me": _ad("remember_me"), "password_eye": _ad("password_eye"),
+                "buy_card_cta": _ad("buy_card_cta", url="https://pay.example.com/x")}),
+    GalleryTemplate(
+        key="frost_clinic", name_ar="عيادة زجاج ثلجي", vertical="clinic",
+        desc_ar="جليدي مطمئن — شريحة اتصال ودعم.",
+        base_slug="frost_glass_blue", icon="stethoscope", tags=("زجاجي", "طبي"),
+        variables={"ACCENT_COLOR": "#2563eb", "BG_COLOR": "#DBEAFE"},
+        addons={"online_chip": _ad("online_chip"),
+                "support_card": _ad("support_card", phone="0590000000")}),
+
+    # ── Telemetry Console ──
+    GalleryTemplate(
+        key="telemetry_network", name_ar="لوحة قياس الشبكة", vertical="isp",
+        desc_ar="جلد متصل بشريط حالة — إحصاءات MAC/IP وأشرطة سرعة وعدّاد وتحديث.",
+        base_slug="telemetry_console", icon="gauge-high", tags=("متصل", "إحصاءات"),
+        variables={"ACCENT_COLOR": "#0ea5e9", "BG_COLOR": "#0C4A6E"},
+        addons={"mac_dashboard": _ad("mac_dashboard"),
+                "throughput_bars": _ad("throughput_bars"),
+                "countdown_tile": _ad("countdown_tile", minutes="120"),
+                "network_status_strip": _ad("network_status_strip"),
+                "refresh_session": _ad("refresh_session")}),
+    GalleryTemplate(
+        key="telemetry_cowork", name_ar="مركز أعمال — لوحة قياس", vertical="coworking",
+        desc_ar="لوحة متصل لمراكز الأعمال — سرعة وعدّاد وتحديث جلسة.",
+        base_slug="telemetry_console", icon="building", tags=("أعمال", "متصل"),
+        variables={"ACCENT_COLOR": "#0891b2", "BG_COLOR": "#0C4A6E"},
+        addons={"throughput_bars": _ad("throughput_bars"),
+                "countdown_tile": _ad("countdown_tile", minutes="240"),
+                "refresh_session": _ad("refresh_session")}),
 ]
 
 GALLERY_BY_KEY = {t.key: t for t in GALLERY}
